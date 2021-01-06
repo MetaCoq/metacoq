@@ -132,7 +132,7 @@ Qed.
 
 Lemma build_branches_type_rename :
 forall ind mdecl idecl args u p brs f,
-  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
+  closed_ctx (subst_instance u (ind_params mdecl)) ->
   map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
   map_option_out (
       build_branches_type
@@ -183,7 +183,7 @@ induction ict in brs, n, h, f |- *.
     end
   end.
   { clear e' ety h IHict ety'.
-    rewrite <- rename_subst_instance_constr.
+    rewrite <- rename_subst_instance.
     rewrite arities_context_length.
     autorewrite with sigma.
     eapply inst_ext. intro i.
@@ -236,7 +236,7 @@ Admitted.
 
 Lemma build_branches_type_inst :
   forall ind mdecl idecl args u p brs σ,
-    closed_ctx (subst_instance_context u (ind_params mdecl)) ->
+    closed_ctx (subst_instance u (ind_params mdecl)) ->
     map_option_out (build_branches_type ind mdecl idecl args u p) = Some brs ->
     map_option_out (
         build_branches_type
@@ -279,7 +279,7 @@ Proof.
     eapply instantiate_params_inst with (σ := σ) in ety as ety'. 2: assumption.
     autorewrite with sigma. simpl.
     autorewrite with sigma in ety'.
-    rewrite <- inst_subst_instance_constr.
+    rewrite <- inst_subst_instance.
     autorewrite with sigma.
     match goal with
     | |- context [ instantiate_params _ _ ?t.[?σ] ] =>
@@ -343,13 +343,13 @@ Admitted.
 (* Proof. *)
 (*   intros Σ ind mdecl idecl npar args u p pty indctx pctx ps btys σ hΣ hdecl h. *)
 (*   unfold types_of_case in *. *)
-(*   case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) (firstn npar args) (subst_instance_constr u (ind_type idecl))) ; *)
+(*   case_eq (instantiate_params (subst_instance u (ind_params mdecl)) (firstn npar args) (subst_instance u (ind_type idecl))) ; *)
 (*     try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
 (*   intros ity eity. rewrite eity in h. *)
 (*   pose proof (on_declared_inductive hΣ as hdecl) [onmind onind]. *)
 (*   apply onParams in onmind as Hparams. *)
-(*   assert (closedparams : closed_ctx (subst_instance_context u (ind_params mdecl))). *)
-(*   { rewrite closedn_subst_instance_context. *)
+(*   assert (closedparams : closed_ctx (subst_instance u (ind_params mdecl))). *)
+(*   { rewrite closedn_subst_instance. *)
 (*     eapply PCUICWeakening.closed_wf_local. all: eauto. eauto. } *)
 (*   epose proof (inst_declared_inductive _ mdecl ind idecl σ hΣ) as hi. *)
 (*   forward hi by assumption. rewrite <- hi. *)

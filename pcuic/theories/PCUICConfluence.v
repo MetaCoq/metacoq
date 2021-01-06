@@ -544,7 +544,7 @@ Proof.
     eexists. split.
     + econstructor. all: eauto.
     + eapply (eq_term_upto_univ_leq _ _ _ 0); tas. auto. auto with arith.
-      now apply eq_term_upto_univ_subst_instance_constr.
+      now apply eq_term_upto_univ_subst_instance.
   - dependent destruction e.
     apply eq_term_upto_univ_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.

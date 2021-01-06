@@ -1393,11 +1393,11 @@ Section Conversion.
     unfold_constants Γ leq c u π1 h1 c' u' π2 h2 ne hx aux
     with inspect (lookup_env Σ c') := {
     | @exist (Some (ConstantDecl {| cst_body := Some b |})) eq1 :=
-      isconv_red leq (tConst c u) π1 (subst_instance_constr u' b) π2 aux ;
+      isconv_red leq (tConst c u) π1 (subst_instance u' b) π2 aux ;
     (* Inductive or not found *)
     | @exist _ eq1 with inspect (lookup_env Σ c) := {
       | @exist (Some (ConstantDecl {| cst_body := Some b |})) eq2 :=
-        isconv_red leq (subst_instance_constr u b) π1
+        isconv_red leq (subst_instance u b) π1
                         (tConst c' u') π2 aux ;
       (* Both Inductive or not found *)
       | @exist _ eq2 := no (NotFoundConstants c c')
@@ -2419,8 +2419,8 @@ Section Conversion.
           (* Unfold both constants at once *)
           | Error e h with inspect (lookup_env Σ c) := {
             | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq3 :=
-              isconv_red leq (subst_instance_constr u body) π1
-                             (subst_instance_constr u' body) π2 aux ;
+              isconv_red leq (subst_instance u body) π1
+                             (subst_instance u' body) π2 aux ;
             (* Inductive or not found *)
             | @exist _ _ := no (NotFoundConstant c)
             }
@@ -3945,7 +3945,7 @@ Section Conversion.
     reducible_head Γ (tConst c u) π h
     with inspect (lookup_env Σ c) := {
     | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq :=
-      Some (subst_instance_constr u body, π) ;
+      Some (subst_instance u body, π) ;
     | @exist _ _ := None
     } ;
 

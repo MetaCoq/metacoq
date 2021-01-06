@@ -285,37 +285,38 @@ Proof.
     simpl. autorewrite with sigma. reflexivity.
 Qed.
 
-Lemma Up_subst_instance_constr u σ :
-  ⇑ (subst_instance_constr u ∘ σ) =1 subst_instance_constr u ∘ ⇑ σ.
+Lemma Up_subst_instance u σ :
+  ⇑ (subst_instance u ∘ σ) =1 subst_instance u ∘ ⇑ σ.
 Proof.
   intros i => /=.
   rewrite - !up_Up /up.
   nat_compare_specs => //.
-  now rewrite rename_subst_instance_constr.
+  now rewrite rename_subst_instance.
 Qed.
 
-Lemma upn_subst_instance_constr u n σ :
-  up n (subst_instance_constr u ∘ σ) =1 subst_instance_constr u ∘ up n σ.
+Lemma upn_subst_instance u n σ :
+  up n (subst_instance u ∘ σ) =1 subst_instance u ∘ up n σ.
 Proof.
   intros i => /=.
   rewrite /up.
   nat_compare_specs => //.
-  now rewrite rename_subst_instance_constr.
+  now rewrite rename_subst_instance.
 Qed.
 
-Lemma Upn_subst_instance_constr u n σ :
-  ⇑^n (subst_instance_constr u ∘ σ) =1 subst_instance_constr u ∘ ⇑^n σ.
+Lemma Upn_subst_instance u n σ :
+  ⇑^n (subst_instance u ∘ σ) =1 subst_instance u ∘ ⇑^n σ.
 Proof.
-  rewrite - !up_Upn. rewrite upn_subst_instance_constr.
+  rewrite - !up_Upn. rewrite upn_subst_instance.
   intros i. now rewrite up_Upn.
 Qed.
 
-Lemma inst_subst_instance_constr :
+Lemma inst_subst_instance :
   forall u t σ,
-    (subst_instance_constr u t).[subst_instance_constr u ∘ σ] =
-    subst_instance_constr u t.[σ].
+    (subst_instance u t).[subst_instance u ∘ σ] =
+    subst_instance u t.[σ].
 Proof.
   intros u t σ.
+  rewrite /subst_instance /=.
   induction t in σ |- * using term_forall_list_ind.
   all: try solve [
     simpl ;
@@ -326,19 +327,19 @@ Proof.
   all: rewrite ?map_map_compose ?compose_on_snd ?compose_map_def ?map_length
     ?map_predicate_map_predicate ?map_branch_map_branch.
   all: try solve [ f_equal ; eauto ; solve_all ; eauto ].
-  all: try now rewrite IHt1; sigma; rewrite-IHt2 -?IHt3 ?Up_subst_instance_constr.
+  all: try now rewrite IHt1; sigma; rewrite-IHt2 -?IHt3 ?Up_subst_instance.
   - f_equal; auto.
     * solve_all. 
-      now rewrite upn_subst_instance_constr e.
+      now rewrite upn_subst_instance e.
     * solve_all. rewrite !map_branch_map_branch; solve_all.
       apply map_branch_eq_spec.
-      now rewrite upn_subst_instance_constr H.
+      now rewrite upn_subst_instance H.
   - f_equal. solve_all.
     apply map_def_eq_spec; auto.
-    now rewrite upn_subst_instance_constr.
+    now rewrite upn_subst_instance.
   - f_equal; solve_all.
     apply map_def_eq_spec; auto.
-    now rewrite upn_subst_instance_constr.
+    now rewrite upn_subst_instance.
 Qed.
 
 Lemma map_vass_map_def_inst g l s :
@@ -874,7 +875,7 @@ Proof.
   simpl. len.
   rewrite inst_context_subst; len.
   rewrite hlen'.
-  rewrite -{1}(context_assumptions_subst_instance_context (puinst p)).
+  rewrite -{1}(context_assumptions_subst_instance (puinst p)).
   rewrite -up_Upn.
   rewrite inst_closed_extended_subst.
   { now rewrite closedn_subst_instance_context. }
@@ -954,11 +955,11 @@ Proof.
       apply forallb_map_spec => t clt.
       rewrite !up_Upn.
       rewrite /expand_lets /expand_lets_k.
-      rewrite -inst_subst_instance_constr. len.
+      rewrite -inst_subst_instance. len.
       rewrite inst_subst. f_equal.
       rewrite inst_subst. rewrite (wf_predicate_length_pars wfp).
       rewrite (declared_minductive_ind_npars decli).
-      rewrite -{2}(context_assumptions_subst_instance_context (puinst p) (ind_params mdecl)).
+      rewrite -{2}(context_assumptions_subst_instance (puinst p) (ind_params mdecl)).
       setoid_rewrite <- up_Upn at 1.
       rewrite inst_closed_extended_subst.
       { rewrite closedn_subst_instance_context.
@@ -968,12 +969,12 @@ Proof.
       f_equal. rewrite Nat.add_comm inst_subst.
       rewrite inst_inds. f_equal.
       rewrite - Upn_Upn. len.
-      rewrite inst_closed ?closedn_subst_instance_constr //.
+      rewrite inst_closed ?closedn_subst_instance //.
       { eapply closed_upwards; tea; lia. }
       etransitivity. 
       { eapply inst_ext. intros x.
-        rewrite -(Upn_subst_instance_constr _ _ _ _). reflexivity. }
-      rewrite inst_closed ?closedn_subst_instance_constr //.
+        rewrite -(Upn_subst_instance _ _ _ _). reflexivity. }
+      rewrite inst_closed ?closedn_subst_instance //.
       { eapply closed_upwards; tea; lia. }
     ++ unfold id. f_equal. f_equal.
        rewrite map_app map_map_compose.
@@ -1520,7 +1521,7 @@ Proof.
     eapply inst_unfold_cofix. eassumption.
   - simpl.
     rewrite inst_closed0.
-    * rewrite closedn_subst_instance_constr.
+    * rewrite closedn_subst_instance.
       eapply declared_constant_closed_body. all: eauto.
     * do 2 econstructor; eauto.
   - simpl. rewrite inst_mkApps. simpl.
@@ -1738,12 +1739,12 @@ Proof.
     eapply meta_conv; [econstructor; eauto|].
     eapply declared_constant_closed_type in isdecl; eauto.
     rewrite inst_closed0; auto.
-    now rewrite closedn_subst_instance_constr.
+    now rewrite closedn_subst_instance.
   - intros Σ wfΣ Γ wfΓ ind u mdecl idecl isdecl X X0 hconst Δ σ hΔ hσ.
     eapply meta_conv; [econstructor; eauto|].
     eapply declared_inductive_closed_type in isdecl; eauto.
     rewrite inst_closed0; auto.
-    now rewrite closedn_subst_instance_constr.
+    now rewrite closedn_subst_instance.
   - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst Δ σ hΔ hσ.
     eapply meta_conv; [econstructor; eauto|].
     eapply declared_constructor_closed_type in isdecl; eauto.
@@ -1811,7 +1812,7 @@ Proof.
     * autorewrite with sigma.
       eapply declared_projection_closed in isdecl; auto.
       move: isdecl.
-      rewrite -(closedn_subst_instance_constr _ _ u).
+      rewrite -(closedn_subst_instance _ _ u).
       rewrite /ty.
       eapply inst_ext_closed.
       intros x Hx.

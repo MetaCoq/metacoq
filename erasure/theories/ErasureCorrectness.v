@@ -23,7 +23,7 @@ Local Existing Instance config.extraction_checker_flags.
 
 Lemma isArity_subst_instance u T :
   isArity T ->
-  isArity (PCUICUnivSubst.subst_instance_constr u T).
+  isArity (PCUICUnivSubst.subst_instance u T).
 Proof.
   induction T; cbn; intros; tauto.
 Qed.
@@ -35,11 +35,11 @@ Hint Resolve wf_ext_wk_wf : core.
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
   wf_ext_wk Σ ->  wf_local Σ Γ ->
-  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
+  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance u Γ) ->
   isErasable Σ Γ T ->
   sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
   consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
-  isErasable (Σ.1,univs) (PCUICUnivSubst.subst_instance_context u Γ) (PCUICUnivSubst.subst_instance_constr u T).
+  isErasable (Σ.1,univs) (PCUICUnivSubst.subst_instance u Γ) (PCUICUnivSubst.subst_instance u T).
 Proof.
   intros. destruct X2 as (? & ? & [ | (? & ? & ?)]).
   - eapply typing_subst_instance in t; eauto.
@@ -207,34 +207,34 @@ Qed.
 
 Lemma fix_context_subst_instance:
   forall (mfix : list (BasicAst.def term)) (u : Instance.t),
-    map (map_decl (PCUICUnivSubst.subst_instance_constr u))
+    map (map_decl (PCUICUnivSubst.subst_instance u))
         (PCUICLiftSubst.fix_context mfix) =
     PCUICLiftSubst.fix_context
       (map
-         (map_def (PCUICUnivSubst.subst_instance_constr u)
-                  (PCUICUnivSubst.subst_instance_constr u)) mfix).
+         (map_def (PCUICUnivSubst.subst_instance u)
+                  (PCUICUnivSubst.subst_instance u)) mfix).
 Proof.
   intros mfix. unfold PCUICLiftSubst.fix_context. intros.
   rewrite map_rev.
   rewrite mapi_map.
   rewrite map_mapi. f_equal. eapply mapi_ext. intros. cbn.
   unfold map_decl. cbn. unfold vass.
-  rewrite PCUICUnivSubst.lift_subst_instance_constr. reflexivity.
+  rewrite PCUICUnivSubst.subst_instance_lift. reflexivity.
 Qed.
 
 
 
-Lemma erases_subst_instance_constr0
+Lemma erases_subst_instance0
   : env_prop (fun Σ Γ t T => wf_ext_wk Σ ->
                            forall t' u univs,
-                             wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
+                             wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance u Γ) ->
       sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
-    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t')
+    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance u Γ) |- PCUICUnivSubst.subst_instance u t ⇝ℇ t')
     (fun Σ Γ wfΓ => wf_local Σ Γ).
 Proof.
-  apply typing_ind_env; intros; cbn -[PCUICUnivSubst.subst_instance_constr] in *; auto.
+  apply typing_ind_env; intros; cbn -[PCUICUnivSubst.subst_instance] in *; auto.
   all: match goal with [ H : erases _ _ ?a _ |- ?G ] => tryif is_var a then idtac else invs H end.
   all: try now (econstructor; eauto 2 using isErasable_subst_instance).
   - cbn. econstructor.
@@ -256,8 +256,8 @@ Proof.
     eapply All2_All_left. exact X3. intros ? ? [[? e] ?].
     exact e. exact X6.
     intros; cbn in *. destruct H. destruct p0. split; eauto.
-  - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
-    { (* rewrite subst_instance_context_app. *)
+  - assert (Hw :  wf_local (Σ.1, univs) (subst_instance u (Γ ,,, types))).
+    { (* rewrite subst_instance_app. *)
       assert(All (fun d => isType Σ Γ (dtype d)) mfix).
       eapply (All_impl X0); pcuicfo.
       now destruct X5 as [s [Hs ?]]; exists s.
@@ -285,14 +285,14 @@ Proof.
     intros; cbn in *. destruct X5. destruct p0. destruct p0.
     destruct p. repeat split; eauto.
     eapply e2 in e1.
-    unfold PCUICUnivSubst.subst_instance_context in *.
+    unfold PCUICUnivSubst.subst_instance in *.
     unfold map_context in *. rewrite  ->map_app in *. subst types. 2:eauto.
     eapply erases_ctx_ext. eassumption. unfold app_context.
     f_equal.
     eapply fix_context_subst_instance. all: eauto.
 
-  - assert (Hw :  wf_local (Σ.1, univs) (subst_instance_context u (Γ ,,, types))).
-  { (* rewrite subst_instance_context_app. *)
+  - assert (Hw :  wf_local (Σ.1, univs) (subst_instance u (Γ ,,, types))).
+  { (* rewrite subst_instance_app. *)
     assert(All (fun d => isType Σ Γ (dtype d)) mfix).
     eapply (All_impl X0); pcuicfo.
     destruct X5 as [s [Hs ?]]; now exists s.
@@ -320,25 +320,25 @@ Proof.
   intros; cbn in *. destruct X5. destruct p0. destruct p0.
   destruct p. repeat split; eauto.
   eapply e2 in e1.
-  unfold PCUICUnivSubst.subst_instance_context in *.
+  unfold PCUICUnivSubst.subst_instance in *.
   unfold map_context in *. rewrite -> map_app in *. subst types. 2:eauto.
   eapply erases_ctx_ext. eassumption. unfold app_context.
   f_equal.
   eapply fix_context_subst_instance. all: eauto.
 Qed.
 
-Lemma erases_subst_instance_constr :
+Lemma erases_subst_instance :
   forall Σ : global_env_ext, wf_ext_wk Σ ->
   forall Γ, wf_local Σ Γ ->
   forall t T, Σ ;;; Γ |- t : T ->
     forall t' u univs,
-  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance_context u Γ) ->
+  wf_local (Σ.1, univs) (PCUICUnivSubst.subst_instance u Γ) ->
 sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->      consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
-    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance_context u Γ) |- PCUICUnivSubst.subst_instance_constr u t ⇝ℇ t'.
+    (Σ.1,univs) ;;; (PCUICUnivSubst.subst_instance u Γ) |- PCUICUnivSubst.subst_instance u t ⇝ℇ t'.
 Proof.
   intros Σ X Γ X0 t T X1 t' u univs X2 H H0 H1.
-  unshelve eapply (erases_subst_instance_constr0 Σ _ Γ _ _ _); tea; eauto.
+  unshelve eapply (erases_subst_instance0 Σ _ Γ _ _ _); tea; eauto.
 Qed.
 
 Lemma erases_subst_instance'' Σ φ Γ t T u univs t' :
@@ -347,11 +347,11 @@ Lemma erases_subst_instance'' Σ φ Γ t T u univs t' :
   sub_context_set (monomorphic_udecl univs) (global_context_set Σ) ->
   consistent_instance_ext (Σ, φ) univs u ->
   (Σ, univs) ;;; Γ |- t ⇝ℇ t' ->
-  (Σ, φ) ;;; subst_instance_context u Γ
-            |- subst_instance_constr u t ⇝ℇ  t'.
+  (Σ, φ) ;;; subst_instance u Γ
+            |- subst_instance u t ⇝ℇ  t'.
 Proof.
   intros X X0 X1. intros.
-  eapply (erases_subst_instance_constr (Σ, univs)); tas.
+  eapply (erases_subst_instance (Σ, univs)); tas.
   eapply typing_wf_local; eassumption. eauto.
   eapply typing_wf_local.
   eapply typing_subst_instance''; eauto.
@@ -364,8 +364,8 @@ Lemma erases_subst_instance_decl Σ Γ t T c decl u t' :
   (Σ.1, universes_decl_of_decl decl) ;;; Γ |- t : T ->
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   (Σ.1, universes_decl_of_decl decl) ;;; Γ |- t ⇝ℇ t' ->
-   Σ ;;; subst_instance_context u Γ
-            |- subst_instance_constr u t ⇝ℇ  t'.
+   Σ ;;; subst_instance u Γ
+            |- subst_instance u t ⇝ℇ  t'.
 Proof.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   eapply erases_subst_instance''; tea. split; tas.
@@ -597,7 +597,7 @@ Proof.
   unfold type_of_constructor in t0.
   destruct s0 as [indctors [nthcs onc]].
   rewrite [x2.1.2]onc.(cstr_eq) in t0.
-  rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in t0.
+  rewrite !subst_instance_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in t0.
   len in t0.
   rewrite subst_cstr_concl_head in t0. 
   destruct decli. eapply nth_error_Some_length in H1; eauto.
@@ -632,7 +632,7 @@ Proof.
   unfold type_of_constructor in c0, X.
   destruct s as [indctors [nthcs onc]].
   rewrite [x1.1.2]onc.(cstr_eq) in c0, X.
-  rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in c0, X.
+  rewrite !subst_instance_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in c0, X.
   len in c0; len in X.
   rewrite subst_cstr_concl_head in c0, X. 
   destruct decli. eapply nth_error_Some_length in H1; eauto.

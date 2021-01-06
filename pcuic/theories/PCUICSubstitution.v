@@ -288,22 +288,22 @@ Qed.
 Lemma subst_declared_constant `{H:checker_flags} Σ cst decl n k u :
   wf Σ ->
   declared_constant Σ cst decl ->
-  map_constant_body (subst n k) (map_constant_body (subst_instance_constr u) decl) =
-  map_constant_body (subst_instance_constr u) decl.
+  map_constant_body (subst n k) (map_constant_body (subst_instance u) decl) =
+  map_constant_body (subst_instance u) decl.
 Proof.
   intros.
   eapply declared_decl_closed in H0; eauto.
   unfold map_constant_body.
   do 2 red in H0. destruct decl as [ty [body|] univs]; simpl in *.
   - rewrite -> andb_and in H0. intuition.
-    rewrite <- (closedn_subst_instance_constr 0 body u) in H1.
-    rewrite <- (closedn_subst_instance_constr 0 ty u) in H2.
+    rewrite <- (closedn_subst_instance 0 body u) in H1.
+    rewrite <- (closedn_subst_instance 0 ty u) in H2.
     f_equal.
     + apply subst_closedn; eauto using closed_upwards with arith wf.
     + f_equal. apply subst_closedn; eauto using closed_upwards with arith wf.
   - red in H0. f_equal.
     intuition. simpl in *.
-    rewrite <- (closedn_subst_instance_constr 0 ty u) in H0.
+    rewrite <- (closedn_subst_instance 0 ty u) in H0.
     rewrite andb_true_r in H0.
     eapply subst_closedn; eauto using closed_upwards with arith wf.
 Qed.
@@ -383,7 +383,7 @@ Qed.
 
 Lemma subst_declared_constructor {cf:checker_flags} Σ c u mdecl idecl cdecl n k :
   wf Σ -> declared_constructor Σ c mdecl idecl cdecl ->
-  subst (map (subst_instance_constr u) n) k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
+  subst (map (subst_instance u) n) k (type_of_constructor mdecl cdecl c u) = (type_of_constructor mdecl cdecl c u).
 Proof.
   unfold declared_constructor. destruct c as [i ci]. intros wfΣ [Hidecl Hcdecl].
   eapply (subst_declared_inductive _ _ _ _ n k) in Hidecl; eauto.
@@ -397,7 +397,7 @@ Proof.
   intros.
   rewrite <- H2 at 2.
   rewrite <- subst0_inds_subst. f_equal.
-  now rewrite <- subst_subst_instance_constr.
+  now rewrite <- subst_instance_subst.
 Qed.
 
 Lemma subst_declared_projection {cf:checker_flags} Σ c mdecl idecl pdecl n k :
@@ -541,7 +541,7 @@ Lemma on_constructor_closed {cf:checker_flags}  {Σ mind mdecl u idecl indices c
   wf Σ ->
   on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
-                    (subst_instance_constr u (snd (fst cdecl)))
+                    (subst_instance u (snd (fst cdecl)))
   in closed cty.
 Proof.
   intros wfΣ [? ? ? [s Hs] Hparams].
@@ -553,7 +553,7 @@ Proof.
   eapply (closedn_subst _ 0 0).
   - clear. unfold inds.
     induction #|ind_bodies mdecl|; simpl; try constructor; auto.
-  - simpl. now rewrite -> inds_length, closedn_subst_instance_constr.
+  - simpl. now rewrite -> inds_length, closedn_subst_instance.
 Qed.
 
 Lemma subst_cstr_concl_head ind u mdecl (arity : context) args :
@@ -561,14 +561,14 @@ Lemma subst_cstr_concl_head ind u mdecl (arity : context) args :
   let s := (inds (inductive_mind ind) u (ind_bodies mdecl)) in
   inductive_ind ind < #|ind_bodies mdecl| ->
   subst s (#|arity| + #|ind_params mdecl|)
-        (subst_instance_constr u (mkApps head (to_extended_list_k (ind_params mdecl) #|arity| ++ args)))
+        (subst_instance u (mkApps head (to_extended_list_k (ind_params mdecl) #|arity| ++ args)))
   = mkApps (tInd ind u) (to_extended_list_k (ind_params mdecl) #|arity| ++
-                        map (subst s (#|arity| + #|ind_params mdecl|)) (map (subst_instance_constr u) args)).
+                        map (subst s (#|arity| + #|ind_params mdecl|)) (map (subst_instance u) args)).
 Proof.
   intros.
-  rewrite subst_instance_constr_mkApps subst_mkApps.
+  rewrite subst_instance_mkApps subst_mkApps.
   f_equal.
-  - subst head. simpl subst_instance_constr.
+  - subst head. simpl subst_instance.
     rewrite (subst_rel_eq _ _ (#|ind_bodies mdecl| - S (inductive_ind ind)) (tInd ind u)) //; try lia.
     subst s. rewrite inds_spec rev_mapi nth_error_mapi /=.
     elim nth_error_spec.
@@ -576,7 +576,7 @@ Proof.
       f_equal. destruct ind; simpl. f_equal. f_equal. simpl in H. lia.
     + rewrite List.rev_length. lia.
   - rewrite !map_app. f_equal.
-    rewrite map_subst_instance_constr_to_extended_list_k.
+    rewrite map_subst_instance_to_extended_list_k.
     erewrite to_extended_list_k_map_subst at 2.
     + now rewrite Nat.add_comm.
     + lia.
@@ -627,7 +627,7 @@ Proof.
 Qed.
 
 Lemma subst_build_case_predicate_type ind mdecl idecl u params ps pty n k :
-  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
+  closed_ctx (subst_instance u (ind_params mdecl)) ->
   closed (ind_type idecl) ->
   build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
   build_case_predicate_type ind mdecl
@@ -639,14 +639,14 @@ Lemma subst_build_case_predicate_type ind mdecl idecl u params ps pty n k :
 Proof.
   intros closedparams closedtype.
   unfold build_case_predicate_type; simpl.
-  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) params
-                              (subst_instance_constr u (ind_type idecl)));
+  case_eq (instantiate_params (subst_instance u (ind_params mdecl)) params
+                              (subst_instance u (ind_type idecl)));
     [|discriminate ].
   intros ipars Hipars.
   apply (subst_instantiate_params n k) in Hipars; tas.
   rewrite ind_type_map. simpl.
   rewrite subst_closedn in Hipars.
-  { rewrite closedn_subst_instance_constr; eapply closed_upwards; tea; lia. }
+  { rewrite closedn_subst_instance; eapply closed_upwards; tea; lia. }
   rewrite subst_closedn; [eapply closed_upwards; tea; lia|].
   rewrite Hipars.
   specialize (subst_destArity [] ipars n k);
@@ -670,7 +670,7 @@ Lemma subst_build_branches_type {cf:checker_flags}
       n k Σ ind mdecl idecl indices args u p brs cs :
   wf Σ ->
   declared_inductive Σ ind mdecl idecl ->
-  closed_ctx (subst_instance_context u (ind_params mdecl)) ->
+  closed_ctx (subst_instance u (ind_params mdecl)) ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind ind) mdecl ->
   on_constructors (lift_typing typing) (Σ, ind_universes mdecl)
@@ -686,16 +686,16 @@ Proof.
   { eapply All2_All_left; tea. intros x y u'; exact (y; u'). }
   clear Honcs brs.
   intros j [[id t] i] [t' k'] [cs' Honc].
-  case_eq (instantiate_params (subst_instance_context u (ind_params mdecl)) args
+  case_eq (instantiate_params (subst_instance u (ind_params mdecl)) args
                               (subst0 (inds (inductive_mind ind) u
                                             (ind_bodies mdecl))
-                                      (subst_instance_constr u t)));
+                                      (subst_instance u t)));
     [|discriminate].
   intros ty Heq; cbn.
   pose proof (on_constructor_closed wfΣ (u:=u) Honc) as clt; cbn in clt.
   eapply (closed_upwards k) in clt; try lia.
   remember (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))
-                   (subst_instance_constr u t)) as ty'.
+                   (subst_instance u t)) as ty'.
   apply (subst_instantiate_params n k) in Heq as Heq'; tas.
   erewrite subst_closedn in Heq'; tas.
   rewrite Heq'.
@@ -705,18 +705,18 @@ Proof.
   rewrite Heqty' in Hty.
   destruct Honc as [Hcstr_args ? cdecl_eq Hty' _ _]; unfold cstr_type in *; simpl in *.
   rewrite cdecl_eq in Hty.
-  rewrite -> !subst_instance_constr_it_mkProd_or_LetIn in Hty.
+  rewrite -> !subst_instance_it_mkProd_or_LetIn in Hty.
   rewrite !subst_it_mkProd_or_LetIn in Hty.
   assert (H0: #|subst_context (inds (inductive_mind ind) u (ind_bodies mdecl)) 0
-                (subst_instance_context u (ind_params mdecl))|
-          = #|subst_instance_context u (ind_params mdecl)|). {
+                (subst_instance u (ind_params mdecl))|
+          = #|subst_instance u (ind_params mdecl)|). {
     now rewrite subst_context_length. }
   rewrite <- H0 in Hty.
   rewrite decompose_prod_n_assum_it_mkProd in Hty.
   injection Hty. clear Hty.
   intros Heqty'' <-. revert Heqty''.
-  rewrite !subst_instance_context_length Nat.add_0_r.
-  rewrite subst_context_length subst_instance_context_length.
+  rewrite !subst_instance_length Nat.add_0_r.
+  rewrite subst_context_length subst_instance_length.
   rewrite (subst_cstr_concl_head ind u mdecl cs'.(cstr_args) cs'.(cstr_indices)).
   { destruct wfidecl as [Hmdecl Hnth].
     now apply nth_error_Some_length in Hnth.
@@ -726,9 +726,9 @@ Proof.
           try by rewrite is_ind_app_head_mkApps.
   rewrite !decompose_app_mkApps; try by reflexivity.
   simpl. rewrite !map_app !subst_context_length
-                 !subst_instance_context_length Nat.add_0_r.
+                 !subst_instance_length Nat.add_0_r.
   eapply subst_to_extended_list_k with (k:=#|cs'.(cstr_args)|) in Hsubst as XX.
-  rewrite map_subst_instance_constr_to_extended_list_k in XX.
+  rewrite map_subst_instance_to_extended_list_k in XX.
   rewrite !XX; clear XX.
   apply make_context_subst_spec in Hsubst as Hsubst'.
   rewrite rev_involutive in Hsubst'.
@@ -738,7 +738,7 @@ Proof.
   move: E chopm.
   rewrite chop_n_app ?map_length. {
     rewrite <- H1. apply onNpars in onmind.
-    now rewrite subst_instance_context_assumptions. }
+    now rewrite subst_instance_assumptions. }
   move=> [= <- <-] chopm.
   move: {chopm}(chopm _ (subst n (#|cs'.(cstr_args)| + k))).
   rewrite map_app.
@@ -746,14 +746,14 @@ Proof.
   inversion 1; subst. f_equal. unfold on_snd; cbn; f_equal.
   rewrite !app_nil_r /on_snd /=.
   rewrite subst_it_mkProd_or_LetIn !subst_context_length !subst_mkApps
-          !subst_instance_context_length !map_app.
+          !subst_instance_length !map_app.
   f_equal. f_equal.
   -- rewrite -> commut_lift_subst_rec by lia. arith_congr.
   -- f_equal. simpl. f_equal.
      rewrite !subst_mkApps /= !map_app. f_equal.
      f_equal.
      rewrite /to_extended_list -to_extended_list_k_map_subst.
-     ++ rewrite !subst_context_length subst_instance_context_length. lia.
+     ++ rewrite !subst_context_length subst_instance_length. lia.
      ++ now rewrite to_extended_list_k_subst.
 Qed.
 
@@ -1899,7 +1899,7 @@ Proof.
     eapply on_declared_inductive in as isdecl [on_mind on_ind]; auto.
     apply onArity in on_ind as [[s' Hindty] _].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
-    move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
+    move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
     eapply closed_upwards. eauto. simpl; lia.
 
@@ -2149,7 +2149,7 @@ Proof.
     eapply on_declared_inductive in as isdecl [on_mind on_ind]; auto.
     apply onArity in on_ind as [s' Hindty].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
-    move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance_constr _ _ u) => Hty.
+    move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance _ _ u) => Hty.
     apply: (subst_closedn s #|Δ|); auto with wf.
     eapply closed_upwards. 1: eauto. simpl; lia.
 
@@ -2179,14 +2179,14 @@ Proof.
       * simpl in *. subst params. rewrite firstn_map.
         etransitivity; [|eapply H0; eauto]. f_equal.
         now erewrite subst_declared_inductive.
-      * now rewrite closedn_subst_instance_context.
+      * now rewrite closedn_subst_instance.
     + now rewrite !subst_mkApps in X4.
     + simpl.
       destruct (on_declared_inductive wfΣ as isdecl) [oind obod].
       pose obod.(onConstructors) as onc.
       eapply (subst_build_branches_type s #|Δ|) in H3; eauto.
       * subst params. rewrite firstn_map. exact H3.
-      * now rewrite closedn_subst_instance_context.
+      * now rewrite closedn_subst_instance.
     + solve_all.
       destruct b0 as [s' [Hs IH]]; eexists; eauto.
 
@@ -2202,7 +2202,7 @@ Proof.
       f_equal.
       eapply declared_projection_closed in isdecl; auto.
       symmetry; apply subst_closedn; eauto.
-      rewrite List.rev_length H. rewrite closedn_subst_instance_constr.
+      rewrite List.rev_length H. rewrite closedn_subst_instance.
       eapply closed_upwards; eauto. lia.
 
   - rewrite -> (map_dtype _ (subst s (#|mfix| + #|Δ|))).

@@ -98,7 +98,7 @@ Proof.
   { unfold to_extended_list. 
     rewrite (spine_subst_subst_to_extended_list_k_gen spa).
     unfold subst_context; rewrite to_extended_list_k_fold_context.
-    apply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k.
+    apply PCUICSubstitution.map_subst_instance_to_extended_list_k.
     subst npar.
     now rewrite firstn_skipn. }
   - constructor.
@@ -252,7 +252,7 @@ Proof.
       clear decli'.
       eapply typing_spine_strengthen in sp; eauto.
       rewrite (oib.(ind_arity_eq)) in sp.
-      rewrite !subst_instance_constr_it_mkProd_or_LetIn in sp.
+      rewrite !subst_instance_it_mkProd_or_LetIn in sp.
       rewrite -it_mkProd_or_LetIn_app in sp.
       eapply typing_spine_it_mkProd_or_LetIn_full_inv in sp; auto.
       split.
@@ -432,9 +432,9 @@ Proof.
   move: X hsp.
   unfold type_of_constructor.
   rewrite [cdecl'.1.2](onc.(cstr_eq)).
-  rewrite !subst_instance_constr_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
+  rewrite !subst_instance_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
   rewrite - {1}(firstn_skipn (ind_npars mdecl) args).
-  rewrite !subst_instance_constr_mkApps.
+  rewrite !subst_instance_mkApps.
   simpl.
   autorewrite with len.
   rewrite !subst_mkApps.
@@ -443,7 +443,7 @@ Proof.
   destruct (le_dec (ind_npars mdecl) #|args|).
   * intros X hsp.
     eapply PCUICSpine.typing_spine_inv in hsp as [parsub [[sub wat] sp]]; auto.
-    2:{ rewrite context_assumptions_subst subst_instance_context_assumptions.
+    2:{ rewrite context_assumptions_subst subst_instance_assumptions.
         autorewrite with len.
         rewrite firstn_length_le //. symmetry; eapply onNpars. eauto. }
     rewrite !subst_it_mkProd_or_LetIn in X, sp.
@@ -467,7 +467,7 @@ Proof.
     eapply nth_error_all in X1; eauto. simpl in X1.
     eapply sorts_local_ctx_instantiate in X0. 4:eapply cu.
     all: eauto.
-    rewrite subst_instance_context_app in X0.
+    rewrite subst_instance_app in X0.
     eapply weaken_sorts_local_ctx in X0; eauto.
     eapply (subst_sorts_local_ctx _ _) in X0; eauto.
     3:{ eapply subslet_app. 
@@ -476,7 +476,7 @@ Proof.
     2:{ eapply PCUICWeakening.weaken_wf_local; auto.
         unshelve eapply PCUICInductiveInversion.on_constructor_inst in oi; eauto.
         destruct oi as [oi _].
-        rewrite !subst_instance_context_app in oi.
+        rewrite !subst_instance_app in oi.
         now eapply wf_local_app_l in oi. }
 
     apply s.

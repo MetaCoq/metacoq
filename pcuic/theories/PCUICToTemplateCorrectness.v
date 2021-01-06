@@ -289,9 +289,9 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma trans_subst_instance_constr u t:
-  trans (PCUICUnivSubst.subst_instance_constr u t) =
-  Template.UnivSubst.subst_instance_constr u (trans t).
+Lemma trans_subst_instance u t:
+  trans (PCUICUnivSubst.subst_instance u t) =
+  Template.UnivSubst.subst_instance u (trans t).
 Proof.
   induction t using PCUICInduction.term_forall_list_ind;cbn;auto;try congruence.
   - do 2 rewrite map_map. 
@@ -300,7 +300,7 @@ Proof.
     apply X.
   - rewrite IHt1 IHt2.
     do 2 rewrite AstUtils.mkAppMkApps.
-    rewrite subst_instance_constr_mkApps.
+    rewrite subst_instance_mkApps.
     cbn.
     reflexivity.
   - f_equal.
@@ -379,7 +379,7 @@ Proof.
     + cbn.
       f_equal.
       apply IHind_bodies.
-  - rewrite trans_subst_instance_constr.
+  - rewrite trans_subst_instance.
     f_equal.
     destruct cdecl as [[? ?] ?].
     reflexivity.
@@ -466,12 +466,12 @@ Qed.
 
 Lemma trans_instantiate_params' u mdecl args npar x ty :
   ST.instantiate_params
-      (PCUICUnivSubst.subst_instance_context u (PCUICAst.ind_params mdecl))
+      (PCUICUnivSubst.subst_instance u (PCUICAst.ind_params mdecl))
       (firstn npar args)
       ty =
     Some x ->
  TT.instantiate_params
-   (subst_instance_context u
+   (subst_instance u
       (trans_local (PCUICAst.ind_params mdecl)))
    (firstn npar (map trans args))
    (trans ty) =
@@ -481,10 +481,10 @@ Proof.
   rewrite firstn_map.
   match goal with
   |- TT.instantiate_params ?A _ _ = _ =>
-      replace A with (trans_local (PCUICUnivSubst.subst_instance_context u (PCUICAst.ind_params mdecl)))
+      replace A with (trans_local (PCUICUnivSubst.subst_instance u (PCUICAst.ind_params mdecl)))
   end.
   2: {
-    unfold PCUICUnivSubst.subst_instance_context, trans_local.
+    unfold PCUICUnivSubst.subst_instance, trans_local.
     unfold PCUICAst.map_context.
     rewrite map_map.
     destruct mdecl.
@@ -497,8 +497,8 @@ Proof.
       do 2 rewrite option_map_two.
       f_equal.
       + destruct decl_body;cbn;trivial.
-        now rewrite trans_subst_instance_constr.
-      + now rewrite trans_subst_instance_constr.
+        now rewrite trans_subst_instance.
+      + now rewrite trans_subst_instance.
     - apply IHind_params.
   }
   rewrite <- trans_instantiate_params.
@@ -699,7 +699,7 @@ Proof.
     apply trans_unfold_cofix in H; eauto with wf.
     eapply TT.red_cofix_proj; eauto.
     
-  - rewrite trans_subst_instance_constr. econstructor.
+  - rewrite trans_subst_instance. econstructor.
     apply (trans_declared_constant _ c decl H).
     destruct decl. now simpl in *; subst cst_body.
 
@@ -821,7 +821,7 @@ Proof.
   unfold TT.build_case_predicate_type.
   simpl in *.
   apply trans_instantiate_params' in H.
-  rewrite trans_subst_instance_constr in H. rewrite H.
+  rewrite trans_subst_instance in H. rewrite H.
   simpl.
   rewrite trans_destr_arity H0. 
   simpl. f_equal.
@@ -1138,7 +1138,7 @@ Proof.
   apply trans_instantiate_params' in ipars.
   rewrite trans_subst in ipars.
   rewrite -trans_inds.
-  rewrite -trans_subst_instance_constr ipars.
+  rewrite -trans_subst_instance ipars.
   move: (trans_decompose_prod_assum [] t).
   destruct decompose_prod_assum => -> /=.
   move: (trans_decompose_app t0).
@@ -1552,12 +1552,12 @@ Proof.
       now simpl in X2.
       econstructor. simpl in X1. eapply X1.
       apply TT.cumul_refl'. assumption. constructor.
-  - rewrite trans_subst_instance_constr.
+  - rewrite trans_subst_instance.
     rewrite trans_cst_type.
     eapply TT.type_Const; eauto.
     + now apply trans_declared_constant.
     + now apply trans_consistent_instance_ext.
-  - rewrite trans_subst_instance_constr.
+  - rewrite trans_subst_instance.
     rewrite trans_ind_type.
     eapply TT.type_Ind; eauto.
     + now apply trans_declared_inductive.
@@ -1593,7 +1593,7 @@ Proof.
     + eapply All2_map. solve_all.
       destruct b0 as [s [Hs Hy]]. exists s; eauto.
   - rewrite trans_subst.
-    rewrite trans_subst_instance_constr.
+    rewrite trans_subst_instance.
     cbn.
     rewrite map_rev.
     change (trans ty) with ((on_snd trans pdecl).2).

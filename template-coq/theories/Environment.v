@@ -266,12 +266,17 @@ Module Environment (T : Term).
   
   Definition subst_telescope s k (Γ : context) : context :=
     mapi (fun k' decl => map_decl (subst s (k' + k)) decl) Γ.
-
+  
   Instance subst_instance_decl : UnivSubst context_decl
     := map_decl ∘ subst_instance.
   
   Instance subst_instance_context : UnivSubst context
     := map_context ∘ subst_instance.
+
+  Lemma subst_instance_length u (ctx : context)
+    : #|subst_instance u ctx| = #|ctx|.
+  Proof. unfold subst_instance, subst_instance_context, map_context. now rewrite map_length. Qed.
+  Hint Rewrite subst_instance_length : len.
 
   Definition set_binder_name (na : aname) (x : context_decl) : context_decl :=
     {| decl_name := na;

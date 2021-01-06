@@ -138,7 +138,7 @@ Section Inversion.
         wf_local Σ Γ ×
         declared_constant Σ c decl ×
         (consistent_instance_ext Σ decl.(cst_universes) u) ×
-        Σ ;;; Γ |- subst_instance_constr u (cst_type decl) <= T.
+        Σ ;;; Γ |- subst_instance u (cst_type decl) <= T.
   Proof.
     intros Γ c u T h. invtac h.
   Qed.
@@ -150,7 +150,7 @@ Section Inversion.
         wf_local Σ Γ ×
         declared_inductive Σ ind mdecl idecl ×
         consistent_instance_ext Σ (ind_universes mdecl) u ×
-        Σ ;;; Γ |- subst_instance_constr u idecl.(ind_type) <= T.
+        Σ ;;; Γ |- subst_instance u idecl.(ind_type) <= T.
   Proof.
     intros Γ ind u T h. invtac h.
   Qed.
@@ -198,7 +198,7 @@ Section Inversion.
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
         #|args| = ind_npars mdecl ×
         let ty := snd pdecl in
-        Σ ;;; Γ |- (subst0 (c :: List.rev args)) (subst_instance_constr u ty)
+        Σ ;;; Γ |- (subst0 (c :: List.rev args)) (subst_instance u ty)
                 <= T.
   Proof.
     intros Γ p c T h. invtac h.

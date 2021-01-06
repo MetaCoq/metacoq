@@ -195,7 +195,7 @@ Section Principality.
       
     - eapply inversion_Ind in hA as [mdecl [idecl [? [Hdecl ?]]]] => //; auto.
       repeat outtimes.
-      exists (subst_instance_constr u (ind_type idecl)).
+      exists (subst_instance u (ind_type idecl)).
       int inversion_Ind. destruct hB as [mdecl' [idecl' [? [Hdecl' ?]]]] => //.
       red in Hdecl, Hdecl'. destruct Hdecl as [? ?].
       destruct Hdecl' as [? ?]. red in H, H1.
@@ -260,7 +260,7 @@ Section Principality.
       specialize (IHu _ _ t) as [C HP].
       destruct (HP _ t).
       eapply invert_cumul_ind_r in c0 as [u' [x0' [redr [redu ?]]]]; auto.
-      exists (subst0 (u :: List.rev x0') (subst_instance_constr u' t0)).
+      exists (subst0 (u :: List.rev x0') (subst_instance u' t0)).
       intros B hB.
       eapply inversion_Proj in hB=>//; auto.
       repeat outsum. repeat outtimes.
@@ -287,7 +287,7 @@ Section Principality.
         { eapply validity in t2; eauto.
           destruct t2 as [s Hs].
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
-        transitivity (subst0 (u :: List.rev x0') (subst_instance_constr x2 t3)); cycle 1.
+        transitivity (subst0 (u :: List.rev x0') (subst_instance x2 t3)); cycle 1.
       eapply conv_cumul.
       assert (conv_terms Σ Γ x0' x7).
       { transitivity x4. eapply (All2_impl conv); auto using red_conv.
@@ -321,10 +321,10 @@ Section Principality.
       eapply (wf_projection_context _ (p:= (ind, k, pars))); pcuic.
       len. simpl. len. simpl.
       rewrite d0.(onNpars).
-      rewrite closedn_subst_instance_constr.
+      rewrite closedn_subst_instance.
       now apply (declared_projection_closed wfΣ d).
       simpl; len. rewrite d0.(onNpars).
-      rewrite closedn_subst_instance_constr.
+      rewrite closedn_subst_instance.
       now apply (declared_projection_closed wfΣ d).
       
     - pose proof (typing_wf_local hA).
@@ -548,7 +548,7 @@ Proof.
     econstructor; eauto.
     eapply conv_cumul. constructor.
     pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ H declc); subst decl'.
-    eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+    eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
   
   - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
     eapply type_Cumul'; eauto.
@@ -559,7 +559,7 @@ Proof.
     eapply conv_cumul.
     constructor.
     pose proof (PCUICWeakeningEnv.declared_inductive_inj isdecl declc) as [-> ->].
-    eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+    eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
   
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
     eapply type_Cumul'; eauto.
@@ -569,7 +569,7 @@ Proof.
     pose proof (PCUICWeakeningEnv.declared_constructor_inj isdecl declc) as [-> [-> ->]].
     unfold type_of_constructor.
     transitivity (subst0 (inds (inductive_mind (ind, i).1) u (ind_bodies mdecl))
-    (subst_instance_constr u0 cdecl'.1.2)).
+    (subst_instance u0 cdecl'.1.2)).
     * eapply conv_cumul.
       eapply (conv_subst_conv _ Γ _ _ []); eauto.
       { eapply conv_inds. now eapply R_global_instance_empty_universe_instance. }
@@ -583,7 +583,7 @@ Proof.
       destruct declc; eauto.
     * constructor. eapply PCUICEquality.subst_leq_term.
       eapply PCUICEquality.eq_term_leq_term.
-      eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance_constr; eauto; typeclasses eauto.
+      eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
 
   - eapply inversion_Case in X6 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & inv); auto.
     intuition auto.
@@ -618,7 +618,7 @@ Proof.
     now rewrite (All2_length _ _ X3').
     eapply PCUICValidity.validity; eauto.
     eapply type_Proj; eauto.
-    transitivity (subst0 (c :: List.rev args) (subst_instance_constr u pdecl'.2)).
+    transitivity (subst0 (c :: List.rev args) (subst_instance u pdecl'.2)).
     eapply conv_cumul.
     set (ctx := PCUICInductives.projection_context mdecl' idecl' p.1.1 u).
     set (ctx' := PCUICInductives.projection_context mdecl' idecl' p.1.1 u).

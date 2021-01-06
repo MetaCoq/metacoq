@@ -300,7 +300,7 @@ Section Typecheck.
       match lookup_env (fst Σ) cst with
       | Some (ConstantDecl d) =>
         check_consistent_instance d.(cst_universes) u ;;
-        let ty := subst_instance_constr u d.(cst_type) in
+        let ty := subst_instance u d.(cst_type) in
         ret (ty; _)
       |  _ => raise (UndeclaredConstant cst)
       end
@@ -308,7 +308,7 @@ Section Typecheck.
     | tInd ind u =>
       d <- lookup_ind_decl ind ;;
       check_consistent_instance d.π1.(ind_universes) u ;;
-      let ty := subst_instance_constr u d.π2.π1.(ind_type) in
+      let ty := subst_instance u d.π2.π1.(ind_type) in
       ret (ty; _)
 
     | tConstruct ind k u =>
@@ -382,7 +382,7 @@ Section Typecheck.
         check_eq_true (ind_npars d.π1 =? n)
                       (Msg "not the right number of parameters") ;;
         let ty := snd pdecl in
-        ret (subst0 (c :: List.rev args) (subst_instance_constr u ty);
+        ret (subst0 (c :: List.rev args) (subst_instance u ty);
                 _)
       | None => raise (Msg "projection not found")
       end

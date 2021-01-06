@@ -738,7 +738,7 @@ Section Rho.
     | construct0_cofix_other t nconscof => tProj (i, pars, narg) (rho Γ x) } ;
   rho Γ (tConst c u) with lookup_env Σ c := { 
     | Some (ConstantDecl decl) with decl.(cst_body) := { 
-      | Some body => subst_instance_constr u body; 
+      | Some body => subst_instance u body; 
       | None => tConst c u }; 
     | _ => tConst c u }; 
   rho Γ (tLambda na t u) => tLambda na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u); 
@@ -1662,7 +1662,7 @@ Section Rho.
       case eb: cst_body => [b|] //; simp rho.
       rewrite rename_inst inst_closed0 //.
       apply declared_decl_closed in e => //.
-      hnf in e. rewrite eb in e. rewrite closedn_subst_instance_constr; auto.
+      hnf in e. rewrite eb in e. rewrite closedn_subst_instance; auto.
       now move/andP: e => [-> _].
 
     - (* construct/cofix iota reduction *)
@@ -2918,7 +2918,7 @@ Section Rho.
       + solve_all. (* args *)
 
     - simpl. rewrite inst_closed0.
-      rewrite closedn_subst_instance_constr; auto.
+      rewrite closedn_subst_instance; auto.
       eapply declared_decl_closed in H; auto. hnf in H. rewrite H0 in H.
       rtoProp; auto.
       econstructor; eauto with pcuic.

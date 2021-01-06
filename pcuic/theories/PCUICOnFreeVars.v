@@ -170,9 +170,9 @@ Proof.
   intros i; rewrite /closedP /= //.
 Qed.
 
-Lemma on_free_vars_subst_instance {p u t} : on_free_vars p t = on_free_vars p (subst_instance_constr u t).
+Lemma on_free_vars_subst_instance {p u t} : on_free_vars p t = on_free_vars p (subst_instance u t).
 Proof.
-  revert t p.
+  rewrite /subst_instance /=. revert t p.
   apply: term_forall_list_ind; simpl => //; intros.
   all:try (rtoProp; now rewrite -?IHt1 -?IHt2 -?IHt3).
   - rewrite forallb_map. eapply All_forallb_eq_forallb; eauto.
@@ -721,10 +721,10 @@ Proof.
 Qed.
 
 Lemma on_free_vars_subst_instance_context P u Γ :
-  on_free_vars_ctx P (subst_instance_context u Γ) = on_free_vars_ctx P Γ.
+  on_free_vars_ctx P (subst_instance u Γ) = on_free_vars_ctx P Γ.
 Proof.
   rewrite /on_free_vars_ctx.
-  rewrite /subst_instance_context -map_rev alli_map.
+  rewrite /subst_instance -map_rev alli_map.
   apply alli_ext => i d.
   symmetry. apply on_free_vars_decl_map.
   intros. apply on_free_vars_subst_instance.
@@ -1066,7 +1066,7 @@ Proof.
     now rewrite hcofix.
   - move: hav; rewrite !on_free_vars_mkApps => /andP [] hcofix ->.
     eapply on_free_vars_unfold_cofix in H as ->; eauto.
-  - eapply closed_on_free_vars. rewrite closedn_subst_instance_constr.
+  - eapply closed_on_free_vars. rewrite closedn_subst_instance.
     eapply declared_constant_closed_body; eauto.
   - move: hav; rewrite on_free_vars_mkApps /=.
     now move/(nth_error_forallb H).

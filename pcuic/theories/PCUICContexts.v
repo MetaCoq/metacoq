@@ -60,8 +60,8 @@ Proof. induction 1; simpl; auto. Qed.
 Hint Resolve assumption_context_length : pcuic.
 
 
-Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
-  map (subst_instance_constr u) (to_extended_list_k ctx k)
+Lemma map_subst_instance_to_extended_list_k u ctx k :
+  map (subst_instance u) (to_extended_list_k ctx k)
   = to_extended_list_k ctx k.
 Proof.
   pose proof (to_extended_list_k_spec ctx k).
@@ -70,11 +70,11 @@ Proof.
 Qed.
 
 Lemma subst_instance_to_extended_list_k u l k
-  : map (subst_instance_constr u) (to_extended_list_k l k)
-    = to_extended_list_k (subst_instance_context u l) k.
+  : map (subst_instance u) (to_extended_list_k l k)
+    = to_extended_list_k (subst_instance u l) k.
 Proof.
   unfold to_extended_list_k.
-  change [] with (map (subst_instance_constr u) []) at 2.
+  change [] with (map (subst_instance u) []) at 2.
   generalize (@nil term). induction l as [|[aa [ab|] ac] bb] in k |- *.
   + reflexivity.
   + intros l; cbn. now rewrite IHbb.
@@ -130,7 +130,7 @@ Lemma instantiate_minductive {cf:checker_flags} Σ ind mdecl u Γ t T :
   declared_minductive Σ.1 ind mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   (Σ.1, ind_universes mdecl) ;;; Γ |- t : T ->
-  Σ ;;; subst_instance_context u Γ |- subst_instance_constr u t : subst_instance_constr u T.
+  Σ ;;; subst_instance u Γ |- subst_instance u t : subst_instance u T.
 Proof.
   intros wfΣ isdecl Hu Ht.
   red in isdecl. eapply PCUICUnivSubstitution.typing_subst_instance_decl in isdecl; eauto.
@@ -141,7 +141,7 @@ Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
   declared_minductive Σ.1 ind mdecl ->
   type_local_ctx (lift_typing typing) (Σ.1, ind_universes mdecl) Γ Δ s ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  type_local_ctx (lift_typing typing) Σ (subst_instance_context u Γ) (subst_instance_context u Δ) (subst_instance_univ u s).
+  type_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ) (subst_instance_univ u s).
 Proof.
   intros Hctx Hu.
   induction Δ; simpl in *; intuition auto.
@@ -154,11 +154,11 @@ Proof.
   - destruct a0.
     exists (subst_instance_univ u x).
     eapply instantiate_minductive in t; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_context_app in t.
+    now rewrite PCUICUnivSubstitution.subst_instance_app in t.
   - eapply instantiate_minductive in b1; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_context_app in b1.
+    now rewrite PCUICUnivSubstitution.subst_instance_app in b1.
   - eapply instantiate_minductive in b; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_context_app in b.
+    now rewrite PCUICUnivSubstitution.subst_instance_app in b.
 Qed.
 
 Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
@@ -166,7 +166,7 @@ Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
   declared_minductive Σ.1 ind mdecl ->
   sorts_local_ctx (lift_typing typing) (Σ.1, ind_universes mdecl) Γ Δ s ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  sorts_local_ctx (lift_typing typing) Σ (subst_instance_context u Γ) (subst_instance_context u Δ) 
+  sorts_local_ctx (lift_typing typing) Σ (subst_instance u Γ) (subst_instance u Δ) 
     (List.map (subst_instance_univ u) s).
 Proof.
   intros Hctx Hu.
@@ -176,12 +176,12 @@ Proof.
   - destruct a0.
     exists (subst_instance_univ u x).
     eapply instantiate_minductive in t; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_context_app in t.
+    now rewrite PCUICUnivSubstitution.subst_instance_app in t.
   - eapply instantiate_minductive in b1; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_context_app in b1.
+    now rewrite PCUICUnivSubstitution.subst_instance_app in b1.
   - destruct s; simpl; intuition eauto.
     eapply instantiate_minductive in b; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_context_app in b.
+    now rewrite PCUICUnivSubstitution.subst_instance_app in b.
 Qed.
 
 Lemma on_udecl_on_udecl_prop {cf:checker_flags} Σ ctx : 
@@ -194,7 +194,7 @@ Lemma wf_local_instantiate_poly {cf:checker_flags} Σ ctx Γ u :
   wf_ext (Σ.1, Polymorphic_ctx ctx) ->
   consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
   wf_local (Σ.1, Polymorphic_ctx ctx) Γ -> 
-  wf_local Σ (subst_instance_context u Γ).
+  wf_local Σ (subst_instance u Γ).
 Proof.
   intros wfΣ Huniv wf.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
@@ -209,7 +209,7 @@ Lemma wf_local_instantiate {cf:checker_flags} Σ (decl : global_decl) Γ u c :
   lookup_env Σ.1 c = Some decl ->
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
   wf_local (Σ.1, universes_decl_of_decl decl) Γ -> 
-  wf_local Σ (subst_instance_context u Γ).
+  wf_local Σ (subst_instance u Γ).
 Proof.
   intros wfΣ Hdecl Huniv wf.
   epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.

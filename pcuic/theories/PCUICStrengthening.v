@@ -613,13 +613,13 @@ Proof.
   - intros Σ wfΣ Γ wfΓ cst u decl X X0 isdecl hconst P Δ f hf.
     simpl. eapply meta_conv.
     + constructor. all: eauto. apply hf.
-    + rewrite rename_subst_instance_constr. f_equal.
+    + rewrite rename_subst_instance. f_equal.
       rewrite rename_closed. 2: auto.
       eapply declared_constant_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ind u mdecl idecl isdecl X X0 hconst P Δ σ hf.
     simpl. eapply meta_conv.
     + econstructor. all: eauto. apply hf.
-    + rewrite rename_subst_instance_constr. f_equal.
+    + rewrite rename_subst_instance. f_equal.
       rewrite rename_closed. 2: auto.
       eapply declared_inductive_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst P Δ f hf.
@@ -699,7 +699,7 @@ Proof.
         -- rewrite rename_mkApps. simpl. reflexivity.
       * rewrite map_length. assumption.
     + rewrite rename_subst0. simpl. rewrite map_rev. f_equal.
-      rewrite rename_subst_instance_constr. f_equal.
+      rewrite rename_subst_instance. f_equal.
       rewrite rename_closedn. 2: reflexivity.
       eapply declared_projection_closed_type in isdecl.
       rewrite List.rev_length. rewrite e. assumption.

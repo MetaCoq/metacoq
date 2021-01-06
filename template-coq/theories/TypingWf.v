@@ -166,8 +166,8 @@ Proof.
   unfold cofix_subst. generalize #|mfix|; intros. induction n; auto.
 Qed.
 
-Lemma wf_subst_instance_constr u c :
-  Ast.wf c -> Ast.wf (subst_instance_constr u c).
+Lemma wf_subst_instance u c :
+  Ast.wf c -> Ast.wf (subst_instance u c).
 Proof.
   induction 1 using term_wf_forall_list_ind; simpl; try solve [ constructor; auto using Forall_map ].
   - constructor; auto. destruct t; simpl in *; try congruence.
@@ -222,7 +222,7 @@ Ltac wf := intuition try (eauto with wf || congruence || solve [constructor]).
 Hint Unfold wf_decl vass vdef : wf.
 Hint Extern 10 => progress simpl : wf.
 Hint Unfold snoc : wf.
-Hint Extern 3 => apply wf_lift || apply wf_subst || apply wf_subst_instance_constr : wf.
+Hint Extern 3 => apply wf_lift || apply wf_subst || apply wf_subst_instance : wf.
 Hint Extern 10 => constructor : wf.
 Hint Resolve All_skipn : wf.
 
@@ -447,12 +447,12 @@ Qed.
 
 Lemma wf_subst_instance_context u Γ : 
   Forall wf_decl Γ ->
-  Forall wf_decl (subst_instance_context u Γ).
+  Forall wf_decl (subst_instance u Γ).
 Proof.
   induction 1; constructor; auto.
   destruct x as [na [b|] ty]; simpl in *.
-  destruct H. now split; apply wf_subst_instance_constr.
-  destruct H. now split; auto; apply wf_subst_instance_constr.
+  destruct H. now split; apply wf_subst_instance.
+  destruct H. now split; auto; apply wf_subst_instance.
 Qed.
 
 Lemma wf_extended_subst Γ n : 
@@ -558,7 +558,7 @@ Proof.
   - constructor; auto. apply wf_mkApps_napp in H0 as [Hcof Hargs]; auto.
     apply unfold_cofix_wf in H; auto.
     apply wf_mkApps; intuition auto.
-  - apply wf_subst_instance_constr.
+  - apply wf_subst_instance.
     unfold declared_constant in H.
     eapply lookup_on_global_env in H as [Σ' [onΣ' prf]]; eauto.
     destruct decl; simpl in *.
@@ -814,16 +814,16 @@ Proof.
     clear H0 H1 X.
     induction X0. wf. apply IHX0. constructor. wf.
     apply wf_subst. wf. wf. now inv H.
-  - split. wf. apply wf_subst_instance_constr. wf.
+  - split. wf. apply wf_subst_instance. wf.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
     red in prf. destruct decl; destruct cst_body; red in prf; simpl in *; wf.
     destruct prf. apply a.
 
-  - split. wf. apply wf_subst_instance_constr.
+  - split. wf. apply wf_subst_instance.
     eapply declared_inductive_wf; eauto.
 
   - split. wf. unfold type_of_constructor.
-    apply wf_subst; auto with wf. apply wf_subst_instance_constr.
+    apply wf_subst; auto with wf. apply wf_subst_instance.
     eapply declared_constructor_wf; eauto.
   - destruct H3 as [wfret wps].
     destruct H6 as [wfc wfapps].
@@ -837,7 +837,7 @@ Proof.
   - split. wf. apply wf_subst. solve_all. constructor. wf.
     apply wf_mkApps_inv in H3. apply All_rev. solve_all.
     subst ty. eapply declared_projection_wf in isdecl; eauto.
-    now eapply wf_subst_instance_constr. 
+    now eapply wf_subst_instance. 
 
   - subst types.
     clear H.

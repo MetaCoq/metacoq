@@ -106,7 +106,7 @@ Section Lookups.
   Definition lookup_constant_type cst u :=
     match lookup_env Σ cst with
     | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
-      ret (subst_instance_constr u ty)
+      ret (subst_instance u ty)
     |  _ => raise (UndeclaredConstant cst)
     end.
 
@@ -114,7 +114,7 @@ Section Lookups.
     match lookup_env Σ cst with
     | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
       let cstrs := polymorphic_constraints uctx in
-      ret (subst_instance_constr u ty, subst_instance_cstrs u cstrs)
+      ret (subst_instance u ty, subst_instance_cstrs u cstrs)
       |  _ => raise (UndeclaredConstant cst)
     end.
 
@@ -130,14 +130,14 @@ Section Lookups.
 
   Definition lookup_ind_type ind i (u : list Level.t) :=
     res <- lookup_ind_decl ind i ;;
-    ret (subst_instance_constr u (snd res).(ind_type)).
+    ret (subst_instance u (snd res).(ind_type)).
 
   Definition lookup_ind_type_cstrs ind i (u : list Level.t) :=
     res <- lookup_ind_decl ind i ;;
     let '(mib, body) := res in
     let uctx := mib.(ind_universes) in
     let cstrs := polymorphic_constraints uctx in
-    ret (subst_instance_constr u body.(ind_type), subst_instance_cstrs u cstrs).
+    ret (subst_instance u body.(ind_type), subst_instance_cstrs u cstrs).
 
   Definition lookup_constructor_decl ind i k :=
     res <- lookup_ind_decl ind i;;
@@ -150,13 +150,13 @@ Section Lookups.
   Definition lookup_constructor_type ind i k u :=
     res <- lookup_constructor_decl ind i k ;;
     let '(mib, cdecl) := res in
-    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance_constr u cdecl.(cstr_type))).
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance u cdecl.(cstr_type))).
 
   Definition lookup_constructor_type_cstrs ind i k u :=
     res <- lookup_constructor_decl ind i k ;;
     let '(mib, cdecl) := res in
     let cstrs := polymorphic_constraints mib.(ind_universes) in
-    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance_constr u cdecl.(cstr_type)),
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance u cdecl.(cstr_type)),
         subst_instance_cstrs u cstrs).
 End Lookups.
 
@@ -188,7 +188,7 @@ Section Reduce.
     if RedFlags.delta flags then
       match lookup_env Σ c with
       | Some (ConstantDecl {| cst_body := Some body |}) =>
-        let body' := subst_instance_constr u body in
+        let body' := subst_instance u body in
         reduce_stack Γ n body' stack
       | _ => ret (t, stack)
       end

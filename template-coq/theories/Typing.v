@@ -53,7 +53,7 @@ Qed.
 
 Definition type_of_constructor mdecl cdecl (c : inductive * nat) (u : list Level.t) :=
   let mind := inductive_mind (fst c) in
-  subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u cdecl.(cstr_type)).
+  subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance u cdecl.(cstr_type)).
 
 (** ** Reduction *)
 
@@ -186,12 +186,12 @@ Definition case_predicate_context ind mdecl idecl params puinst pctx : context :
   in
   let ictx := 
     subst_context params 0
-      (subst_instance_context puinst (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
+      (subst_instance puinst (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
   in
   map2 set_binder_name pctx (inddecl :: ictx).
 
 Definition case_branch_context_gen params puinst cdecl : context :=
-  subst_context params 0 (subst_instance_context puinst cdecl.(cstr_args)).
+  subst_context params 0 (subst_instance puinst cdecl.(cstr_args)).
 
 Definition case_branch_context p cdecl : context :=
   case_branch_context_gen p.(pparams) p.(puinst) cdecl.
@@ -206,7 +206,7 @@ Definition case_branch_type_gen ind params puinst ptm i cdecl : context * term :
   let cstr := tConstruct ind i puinst in
   let args := to_extended_list cdecl.(cstr_args) in
   let cstrapp := mkApps cstr (map (lift0 #|cdecl.(cstr_args)|) params ++ args) in
-  let brctx := subst_context params 0 (subst_instance_context puinst cdecl.(cstr_args)) in
+  let brctx := subst_context params 0 (subst_instance puinst cdecl.(cstr_args)) in
   let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (cdecl.(cstr_indices) ++ [cstrapp]) in
   (brctx, ty).
 
@@ -219,16 +219,16 @@ Definition case_branches_types ind idecl p ptm : list (context * term) :=
   (* (* 
 Variant case_predicate_context ind mdecl idecl params uinst : context -> Type :=
 | mk_case_predicate_context s ty ictx inds : 
-  instantiate_params_subst_spec (List.rev (subst_instance_context uinst (ind_params mdecl))) params []
-    (subst_instance_constr uinst (ind_type idecl)) s ty ->
+  instantiate_params_subst_spec (List.rev (subst_instance uinst (ind_params mdecl))) params []
+    (subst_instance uinst (ind_type idecl)) s ty ->
   let sty := subst s 0 ty in
   sty = it_mkProd_or_LetIn ictx (tSort inds) ->
   case_predicate_context ind mdecl idecl params uinst (ictx ,, inddecl).
 
 Variant case_branch_context ind mdecl cdecl p : context -> Type :=
 | mk_case_branch_context s ty argctx indices : 
-    instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
-      (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->
+    instantiate_params_subst_spec (List.rev (subst_instance p.(puinst) (ind_params mdecl))) p.(pparams) []
+      (subst_instance p.(puinst) (cdecl.1.2)) s ty ->
     let sty := subst s 0 ty in
     sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
     case_branch_context ind mdecl cdecl p argctx.
@@ -238,8 +238,8 @@ Definition case_branches_contexts ind mdecl idecl p : list context -> Type :=
     
 Variant case_branch_type ind mdecl (cdecl : constructor_body) i p pctx : context -> term -> Type :=
 | mk_case_branch_type s ty argctx indices : 
-  instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
-    (subst_instance_constr p.(puinst) (cdecl.1.2)) s ty ->
+  instantiate_params_subst_spec (List.rev (subst_instance p.(puinst) (ind_params mdecl))) p.(pparams) []
+    (subst_instance p.(puinst) (cdecl.1.2)) s ty ->
   let sty := subst s 0 ty in
   sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
   let cstr := tConstruct ind i p.(puinst) in
@@ -272,8 +272,8 @@ Qed.
 
 (* [params] and output already instantiated by [u] *)
 Definition build_case_predicate_context ind mdecl idecl params u : option context :=
-  index_part <- instantiate_params (subst_instance_context u (ind_params mdecl)) params
-                                   (subst_instance_constr u (ind_type idecl)) ;;
+  index_part <- instantiate_params (subst_instance u (ind_params mdecl)) params
+                                   (subst_instance u (ind_type idecl)) ;;
   '(Γ, _) <- destArity [] index_part ;;
   let inddecl :=
       {| decl_name := mkBindAnn (nNamed idecl.(ind_name)) idecl.(ind_relevance);
@@ -330,7 +330,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) (subst_instance_constr u body)
+    red1 Σ Γ (tConst c u) (subst_instance u body)
 
 (** Proj *)
 | red_proj i pars narg args u arg:
@@ -424,7 +424,7 @@ Lemma red1_ind_all :
 
        (forall (Γ : context) c (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
-        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
+        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance u body)) ->
 
        (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
          (arg : term),
@@ -679,7 +679,7 @@ Class GuardChecker :=
   fix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     fix_guard Σ Γ mfix ->
-    fix_guard (Σ.1, univs) (subst_instance_context u Γ) (map (map_def (subst_instance_constr u) (subst_instance_constr u))
+    fix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
                     mfix) ;
 
   fix_guard_extends Σ Γ mfix (Σ' : global_env_ext) : 
@@ -707,7 +707,7 @@ Class GuardChecker :=
   cofix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     cofix_guard Σ Γ mfix ->
-    cofix_guard (Σ.1, univs) (subst_instance_context u Γ) (map (map_def (subst_instance_constr u) (subst_instance_constr u))
+    cofix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
                     mfix) ;
   
   cofix_guard_extends Σ Γ mfix (Σ' : global_env_ext) : 
@@ -722,8 +722,8 @@ Existing Instance guard_checking.
 (*
 Definition build_branch_context ind mdecl (cty: term) p : option context :=
   let inds := inds ind.(inductive_mind) p.(puinst) mdecl.(ind_bodies) in
-  let ty := subst0 inds (subst_instance_constr p.(puinst) cty) in
-  match instantiate_params (subst_instance_context p.(puinst) mdecl.(ind_params)) p.(pparams) ty with
+  let ty := subst0 inds (subst_instance p.(puinst) cty) in
+  match instantiate_params (subst_instance p.(puinst) mdecl.(ind_params)) p.(pparams) ty with
   | Some ty =>
     let '(sign, ccl) := decompose_prod_assum [] ty in
     Some sign
@@ -734,8 +734,8 @@ Definition build_branch_context ind mdecl (cty: term) p : option context :=
 Definition build_branches_type ind mdecl idecl params u p : list (option (nat * context * term)) :=
   let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
   let branch_type i '(id, t, ar) :=
-    let ty := subst0 inds (subst_instance_constr u t) in
-    match instantiate_params (subst_instance_context u mdecl.(ind_params)) params ty with
+    let ty := subst0 inds (subst_instance u t) in
+    match instantiate_params (subst_instance u mdecl.(ind_params)) params ty with
     | Some ty =>
       let '(sign, ccl) := decompose_prod_assum [] ty in
       let nargs := List.length sign in
@@ -752,7 +752,7 @@ Lemma build_branches_type_ ind mdecl idecl params u p :
   build_branches_type ind mdecl idecl params u p
   = let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
     let branch_type i '(id, t, ar) :=
-        let ty := subst0 inds (subst_instance_constr u t) in
+        let ty := subst0 inds (subst_instance u t) in
         option_map (fun ty =>
          let '(sign, ccl) := decompose_prod_assum [] ty in
          let nargs := List.length sign in
@@ -761,7 +761,7 @@ Lemma build_branches_type_ ind mdecl idecl params u p :
          let cstr := tConstruct ind i u in
          let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
          (ar, sign, (mkApps (lift0 nargs p) args)))
-                  (instantiate_params (subst_instance_context u mdecl.(ind_params))
+                  (instantiate_params (subst_instance u mdecl.(ind_params))
                                       params ty)
     in mapi branch_type idecl.(ind_ctors).
 Proof.
@@ -895,13 +895,13 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_local Σ Γ ->
     forall decl (isdecl : declared_constant Σ.1 cst decl),
     consistent_instance_ext Σ decl.(cst_universes) u ->
-    Σ ;;; Γ |- (tConst cst u) : subst_instance_constr u decl.(cst_type)
+    Σ ;;; Γ |- (tConst cst u) : subst_instance u decl.(cst_type)
 
 | type_Ind ind u :
     wf_local Σ Γ ->
     forall mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
-    Σ ;;; Γ |- (tInd ind u) : subst_instance_constr u idecl.(ind_type)
+    Σ ;;; Γ |- (tInd ind u) : subst_instance u idecl.(ind_type)
 
 | type_Construct ind i u :
     wf_local Σ Γ ->
@@ -932,7 +932,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) args,
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     #|args| = ind_npars mdecl ->
-    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u pdecl.2)
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u pdecl.2)
 
 | type_Fix mfix n decl :
     fix_guard Σ Γ mfix ->
@@ -1239,14 +1239,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ wfΓ ->
         declared_constant Σ.1 cst decl ->
         consistent_instance_ext Σ decl.(cst_universes) u ->
-        P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
+        P Σ Γ (tConst cst u) (subst_instance u (cst_type decl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
           mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
         Forall_decls_typing P Σ.1 ->
         PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
-        P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
+        P Σ Γ (tInd ind u) (subst_instance u (ind_type idecl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
             mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
@@ -1289,7 +1289,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
         #|args| = ind_npars mdecl ->
-        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance_constr u ty))) ->
+        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in

@@ -1768,8 +1768,8 @@ Section UniverseClosedSubst.
       apply UnivExprSet.for_all_spec in H; proper. now apply H.
   Qed.
 
-  Lemma closedu_subst_instance_instance u t
-    : closedu_instance 0 t -> subst_instance_instance u t = t.
+  Lemma closedu_subst_instance u t
+    : closedu_instance 0 t -> subst_instance u t = t.
   Proof.
     intro H. apply forall_map_id_spec.
     apply Forall_forall; intros l Hl.
@@ -1780,7 +1780,7 @@ Section UniverseClosedSubst.
 End UniverseClosedSubst.
 
 Hint Resolve closedu_subst_instance_level closedu_subst_instance_level_expr
-     closedu_subst_instance_univ closedu_subst_instance_instance : substu.
+     closedu_subst_instance_univ closedu_subst_instance : substu.
 
 (** Substitution of a universe-closed instance of the right size
     produces a universe-closed term. *)
@@ -1821,8 +1821,8 @@ Section SubstInstanceClosed.
     now apply H.
   Qed.
 
-  Lemma subst_instance_instance_closedu t :
-    closedu_instance #|u| t -> closedu_instance 0 (subst_instance_instance u t).
+  Lemma subst_instance_closedu t :
+    closedu_instance #|u| t -> closedu_instance 0 (subst_instance u t).
   Proof.
     intro H. etransitivity. eapply forallb_map.
     eapply forallb_impl; tea.
@@ -1831,7 +1831,7 @@ Section SubstInstanceClosed.
 End SubstInstanceClosed.
 
 Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
-     subst_instance_univ_closedu subst_instance_instance_closedu : substu.
+     subst_instance_univ_closedu subst_instance_closedu : substu.
 
 
 Definition string_of_level (l : Level.t) : string :=

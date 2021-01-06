@@ -117,7 +117,7 @@ Section Wcbv.
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
       decl.(cst_body) = Some body ->
-      eval (subst_instance_constr u body) res ->
+      eval (subst_instance u body) res ->
       eval (tConst c u) res
 
   (** Case *)
@@ -198,9 +198,7 @@ Section Wcbv.
           declared_constant Σ c decl ->
           forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
-            eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
-      (forall c (decl : constant_body),
-          declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
+            eval (subst_instance u body) res -> P (subst_instance u body) res -> P (tConst c u) res) ->
       (forall ci (discr : term) (c : nat) (u : Instance.t)
               (args : list term) (p : predicate term) (brs : list (branch term)) (res : term),
           let ind := ci.(ci_ind) in
@@ -542,7 +540,7 @@ Section Wcbv.
     eval (tConst c u) v ->
     ∑ decl, declared_constant Σ c decl *
                  match cst_body decl with
-                 | Some body => eval (subst_instance_constr u body) v
+                 | Some body => eval (subst_instance u body) v
                  | None => False
                  end.
   Proof.
@@ -747,7 +745,7 @@ Tactic Notation "redt" uconstr(y) := eapply (transitivity (R:=red _ _) (y:=y)).
 (*     eapply red1_red. econstructor. *)
 (*     auto. *)
 
-(*   - redt (subst_instance_constr u body); auto. *)
+(*   - redt (subst_instance u body); auto. *)
 (*     eapply red1_red. econstructor; eauto. *)
 
 (*   - redt (tCase (ind, pars) p _ brs). *)

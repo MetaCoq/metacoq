@@ -921,8 +921,6 @@ Proof.
     destruct Nat.leb => //.
 Qed.
 
-Ltac tc := typeclasses eauto.
-
 (* TODO update Template Coq's eq_term to reflect PCUIC's cumulativity *)
 Lemma trans_eq_term_upto_univ {cf} :
   forall Σ Re Rle t u napp,

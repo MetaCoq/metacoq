@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CRelationClasses.
+From Coq Require Import ssreflect CRelationClasses.
 From MetaCoq.Template Require Import utils config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICWeakeningEnv
@@ -33,7 +33,7 @@ Lemma eq_val v v'
 Proof.
   intros []; cbnr. f_equal.
   assert (He : forall e : UnivExpr.t, val v e = val v' e). {
-    intros [[] b]; cbnr; rewrite ?H1, ?H2; reflexivity. }+
+    intros [[] b]; cbnr; rewrite ?H1 ?H2; reflexivity. }
   rewrite !val_fold_right.
   induction ((List.rev (Universe.exprs t).2)); cbn; congruence.
 Qed.
@@ -149,6 +149,12 @@ Proof.
   all: try eapply All2_map, All_All2; tea; cbn; intros; rdest; eauto.
   all: try (eapply X0 || eapply IHt || eapply IHt1 || eapply IHt2 || eapply e || eapply e0); try typeclasses eauto; auto.
   all: eauto using subst_equal_inst_global_inst.
+  - rewrite /eq_predicate /=. intuition auto.
+    * solve_all. eapply All_All2; tea; cbn; intros; rdest; eauto.
+      eapply X; eauto. tc.
+    * eapply subst_equal_inst_inst => //.
+    * eapply X => //.
+  - eapply X1 => //.
 Qed.
 
 Instance eq_universe_SubstUnivPreserving {cf:checker_flags} φ :
@@ -162,7 +168,7 @@ Proof.
     destruct e as [[] b]; cbnr.
     case_eq (nth_error u1 n).
     - intros l1 X. eapply Forall2_nth_error_Some_l in hu.
-      2: now rewrite nth_error_map, X.
+      2: now rewrite -> nth_error_map, X.
       destruct hu as [l2 [H1 H2]].
       rewrite nth_error_map in H1.
       destruct (nth_error u2 n) as [l2'|]; [|discriminate].
@@ -170,7 +176,7 @@ Proof.
       specialize (H2 v Hv).
       destruct l1, l2'; cbn in *; noconf H2; try lia.
     - intros X. eapply Forall2_nth_error_None_l in hu.
-      2: now rewrite nth_error_map, X.
+      2: now rewrite -> nth_error_map, X.
       rewrite nth_error_map in hu.
       destruct (nth_error u2 n); [discriminate|reflexivity]. }
   simpl.
@@ -199,7 +205,7 @@ Proof.
     destruct e as [[] b]; cbnr.
     case_eq (nth_error u1 n).
     - intros l1 X. eapply Forall2_nth_error_Some_l in hu.
-      2: now rewrite nth_error_map, X.
+      2: now rewrite -> nth_error_map, X.
       destruct hu as [l2 [H1 H2]].
       rewrite nth_error_map in H1.
       destruct (nth_error u2 n) as [l2'|]; [|discriminate].
@@ -207,7 +213,7 @@ Proof.
       specialize (H2 v Hv).
       destruct l1, l2'; cbn in *; noconf H2; try lia.
     - intros X. eapply Forall2_nth_error_None_l in hu.
-      2: now rewrite nth_error_map, X.
+      2: now rewrite -> nth_error_map, X.
       rewrite nth_error_map in hu.
       destruct (nth_error u2 n); [discriminate|reflexivity]. }
   simpl.
@@ -242,7 +248,7 @@ Global Instance subst_instance_def {A} `(UnivSubst A) : UnivSubst (def A)
 
 Global Instance subst_instance_prod {A B} `(UnivSubst A) `(UnivSubst B)
   : UnivSubst (A × B)
-  := fun u => on_pair (subst_instance u) (subst_instance u).
+  := fun u => map_pair (subst_instance u) (subst_instance u).
 
 Global Instance subst_instance_nat : UnivSubst nat
   := fun _ n => n.
@@ -307,15 +313,14 @@ Proof.
     auto using subst_instance_instance_two.
   - rewrite map_map. now apply All_map_eq.
   - apply subst_instance_univ_two.
-  - rewrite map_map. apply All_map_eq.
-    eapply All_impl; tea.
-    cbn. intros [? ?]; unfold on_snd; cbn; congruence.
-  - rewrite map_map. apply All_map_eq.
-    eapply All_impl; tea.
-    cbn. intros [? ? ?] [? ?]; cbn in *. unfold map_def; cbn; congruence.
-  - rewrite map_map. apply All_map_eq.
-    eapply All_impl; tea.
-    cbn. intros [? ? ?] [? ?]; cbn in *. unfold map_def; cbn; congruence.
+  - destruct X; red in X0. rewrite map_predicate_map_predicate.
+    apply map_predicate_eq_spec; solve_all.
+    now rewrite subst_instance_instance_two.
+  - rewrite map_map. apply All_map_eq. red in X0. solve_all.
+  - rewrite map_map. apply All_map_eq. solve_all.
+    rewrite map_def_map_def; solve_all.
+  - rewrite map_map. apply All_map_eq. solve_all.
+    rewrite map_def_map_def; solve_all.
 Qed.
 
 Lemma subst_instance_context_two u1 u2 Γ :
@@ -785,7 +790,7 @@ Global Instance leq_universe_subst_instance : SubstUnivPreserved leq_universe.
 Proof.
   intros φ φ' u HH t t' Htt'.
   unfold leq_universe in *; case_eq check_univs;
-    [intro Hcf; rewrite Hcf in *|trivial].
+    [intro Hcf; rewrite Hcf in Htt'|trivial].
   intros v Hv; cbn.
   rewrite !subst_instance_univ_val'; tas.
   apply Htt'. clear t t' Htt'.
@@ -796,7 +801,7 @@ Global Instance eq_universe_subst_instance : SubstUnivPreserved eq_universe.
 Proof.
   intros φ φ' u HH t t' Htt'.
   unfold eq_universe in *; case_eq check_univs;
-    [intro Hcf; rewrite Hcf in *|trivial].
+    [intro Hcf; rewrite Hcf in Htt'|trivial].
   intros v Hv; cbn.
   rewrite !subst_instance_univ_val'; tas.
   apply Htt'. clear t t' Htt'.
@@ -836,7 +841,7 @@ Lemma subst_instance_make'_make u l :
   subst_instance u (Universe.make' (UnivExpr.make l)) = 
   Universe.make' (UnivExpr.make (subst_instance_level u l)).
 Proof.
-  now rewrite subst_instance_univ_make', subst_instance_level_expr_make.
+  now rewrite subst_instance_univ_make' subst_instance_level_expr_make.
 Qed.
 
 Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
@@ -885,6 +890,10 @@ Proof.
   - inv X.
     eapply precompose_subst_instance_global__2.
     eapply R_global_instance_impl_same_napp; eauto.
+  - destruct X2 as [? [? [? ?]]].
+    repeat split; simpl; eauto; solve_all.
+    eapply precompose_subst_instance_instance.
+    eapply R_universe_instance_impl; eauto.
 Qed.
 
 Lemma leq_term_subst_instance Σ : SubstUnivPreserved (leq_term Σ).
@@ -971,13 +980,37 @@ Proof.
   apply sup_subst_instance_univ0.
 Qed.
 
-Lemma iota_red_subst_instance pars c args brs u :
-  subst_instance_constr u (iota_red pars c args brs)
-  = iota_red pars c (subst_instance u args) (subst_instance u brs).
+Lemma subst_instance_extended_subst u Γ : 
+  map (subst_instance_constr u) (extended_subst Γ 0) = 
+  extended_subst (subst_instance_context u Γ) 0. 
 Proof.
-  unfold iota_red. rewrite !subst_instance_constr_mkApps.
-  f_equal; simpl; eauto using map_skipn.
-  rewrite nth_map; simpl; auto.
+  induction Γ as [|[na [b|] ty] Γ]; auto; rewrite /=; len; f_equal; auto.
+  - rewrite -subst_subst_instance_constr IHΓ. f_equal.
+    now rewrite lift_subst_instance_constr.
+  - rewrite !(lift_extended_subst _ 1).
+    rewrite map_map_compose.
+    setoid_rewrite <- lift_subst_instance_constr.
+    now rewrite -map_map_compose IHΓ.
+Qed.
+
+Lemma expand_lets_subst_instance_constr u Γ t :
+  subst_instance_constr u (expand_lets Γ t) =
+  expand_lets (subst_instance_context u Γ)
+    (subst_instance_constr u t).
+Proof.
+  rewrite /expand_lets /expand_lets_k.
+  rewrite -subst_subst_instance_constr.
+  now rewrite subst_instance_extended_subst /= lift_subst_instance_constr; len.
+Qed.
+
+Lemma iota_red_subst_instance pars args ctx br u :
+  subst_instance_constr u (iota_red pars args ctx br)
+  = iota_red pars (map (subst_instance u) args) (subst_instance_context u ctx)
+     (map_branch (subst_instance u) br).
+Proof.
+  unfold iota_red.
+  rewrite -subst_subst_instance_constr map_skipn.
+  f_equal. now rewrite expand_lets_subst_instance_constr.
 Qed.
 
 Lemma fix_subst_subst_instance u mfix :
@@ -1018,7 +1051,7 @@ Lemma fix_context_subst_instance u mfix :
 Proof.
   unfold subst_instance_context, map_context, fix_context.
   rewrite map_rev. f_equal.
-  rewrite map_mapi, mapi_map. eapply mapi_ext.
+  rewrite map_mapi mapi_map. eapply mapi_ext.
   intros n x. unfold map_decl, vass; cbn. f_equal.
   symmetry; apply lift_subst_instance_constr.
 Qed.
@@ -1043,7 +1076,7 @@ Proof.
   - cbn. rewrite <- lift_subst_instance_constr. econstructor.
     unfold subst_instance_context.
     unfold option_map in *. destruct (nth_error Γ) eqn:E; inversion H.
-    unfold map_context. rewrite nth_error_map, E. cbn.
+    unfold map_context. rewrite nth_error_map E. cbn.
     rewrite map_decl_body. destruct c. cbn in H1. subst.
     reflexivity.
   - cbn. rewrite subst_instance_constr_mkApps. cbn.

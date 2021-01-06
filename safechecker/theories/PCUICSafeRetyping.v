@@ -227,11 +227,11 @@ Section TypeOf.
       ret (subst10 a pi.π2.π2.π1);
 
     infer Γ (tConst cst u) wt with inspect (lookup_env (fst Σ) cst) :=
-      { | ret (Some (ConstantDecl d)) := ret (subst_instance_constr u d.(cst_type));
+      { | ret (Some (ConstantDecl d)) := ret (subst_instance u d.(cst_type));
         |  _ := ! };
 
     infer Γ (tInd ind u) wt with inspect (lookup_ind_decl ind) :=
-      { | ret (Checked decl) := ret (subst_instance_constr u decl.π2.π1.(ind_type));
+      { | ret (Checked decl) := ret (subst_instance u decl.π2.π1.(ind_type));
         | ret (TypeError e) := ! };
     
     infer Γ (tConstruct ind k u) wt with inspect (lookup_ind_decl ind) :=
@@ -250,7 +250,7 @@ Section TypeOf.
         { | ret (Some pdecl) with inspect (reduce_to_ind hΣ Γ (infer Γ c _) _) :=
           { | ret (Checked indargs) => 
               let ty := snd pdecl in
-              ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance_constr indargs.π2.π1 ty));
+              ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty));
             | ret (TypeError _) => ! };
          | ret None => ! };
         | ret (TypeError e) => ! };
@@ -459,18 +459,18 @@ Section TypeOf.
             constructor. 
             unshelve epose proof (on_inductive_inst _ _ _ _ _ _ w ltac:(pcuic) _ _ oib cu); eauto.
             eapply on_declared_inductive; eauto.
-            rewrite oib.(ind_arity_eq) -it_mkProd_or_LetIn_app subst_instance_constr_it_mkProd_or_LetIn.
+            rewrite oib.(ind_arity_eq) -it_mkProd_or_LetIn_app subst_instance_it_mkProd_or_LetIn.
             eapply isType_weaken; eauto. pcuic.
-            rewrite oib.(ind_arity_eq) subst_instance_constr_it_mkProd_or_LetIn.
+            rewrite oib.(ind_arity_eq) subst_instance_it_mkProd_or_LetIn.
             eapply arity_spine_it_mkProd_or_LetIn; eauto.
-            rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+            rewrite subst_instance_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
             simpl. rewrite -(app_nil_r (skipn _ _)).
             eapply arity_spine_it_mkProd_or_LetIn_smash; eauto.
             2:{ simpl. constructor; auto. }
             eapply validity_term in Hty; eauto.
             unshelve epose proof (isType_mkApps_Ind w decli _ Hty) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
             eapply (subslet_cumul _ _ _ (smash_context [] (subst_context parsubst' 0 
-              (subst_instance_context u' (ind_indices oib))))); pcuic.
+              (subst_instance u' (ind_indices oib))))); pcuic.
             eapply wf_local_smash_end; eauto. eapply spargs'.
             eapply wf_local_smash_end; eauto. eapply spargs.  
             eapply inductive_cumulative_indices; eauto.
@@ -512,7 +512,7 @@ Section TypeOf.
           relativize (to_extended_list _).
           erewrite (spine_subst_subst_to_extended_list_k spargs').
           2:{ rewrite to_extended_list_k_subst. simpl. 
-              eapply PCUICSubstitution.map_subst_instance_constr_to_extended_list_k. }
+              eapply PCUICSubstitution.map_subst_instance_to_extended_list_k. }
           assumption.
         + simpl.
           eapply conv_cumul.
@@ -585,7 +585,7 @@ Section TypeOf.
           { eapply validity in Hc'''; eauto.
             destruct Hc''' as [s Hs]; auto.
             eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
-        transitivity (subst0 (c :: List.rev l) (subst_instance_constr u'' pdecl''.2)); cycle 1.
+        transitivity (subst0 (c :: List.rev l) (subst_instance u'' pdecl''.2)); cycle 1.
         eapply conv_cumul.
         eapply (subst_conv _ (projection_context mdecl idecl i u')
         (projection_context mdecl idecl i u'') []); auto.
@@ -612,10 +612,10 @@ Section TypeOf.
         eapply (wf_projection_context _ (p:= (i, n, k))); pcuic.
         len. simpl. len. simpl.
         rewrite declp.(onNpars).
-        rewrite PCUICClosed.closedn_subst_instance_constr.
+        rewrite PCUICClosed.closedn_subst_instance.
         now apply (PCUICClosed.declared_projection_closed w declp').
         simpl; len. rewrite declp.(onNpars).
-        rewrite PCUICClosed.closedn_subst_instance_constr.
+        rewrite PCUICClosed.closedn_subst_instance.
         now apply (PCUICClosed.declared_projection_closed w declp').
 
     - simpl in *.

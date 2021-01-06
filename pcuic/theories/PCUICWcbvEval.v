@@ -180,7 +180,7 @@ Section Wcbv.
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
       decl.(cst_body) = Some body ->
-      eval (subst_instance_constr u body) res ->
+      eval (subst_instance u body) res ->
       eval (tConst c u) res
 
   (** Axiom *)
@@ -479,10 +479,10 @@ Section Wcbv.
 
   Lemma closed_def `{checker_flags} c decl u b : wf Σ -> declared_constant Σ c decl -> 
     cst_body decl = Some b ->
-    closed (subst_instance_constr u b).
+    closed (subst_instance u b).
   Proof.
     move=> wfΣ Hc Hb.
-    rewrite PCUICClosed.closedn_subst_instance_constr.
+    rewrite PCUICClosed.closedn_subst_instance.
     apply declared_decl_closed in Hc => //. simpl in Hc. red in Hc.
     rewrite Hb in Hc. simpl in Hc. now move/andP: Hc.
   Qed.
@@ -860,7 +860,7 @@ Section Wcbv.
     eval (tConst c u) v ->
     ∑ decl, declared_constant Σ c decl *
                  match cst_body decl with
-                 | Some body => eval (subst_instance_constr u body) v
+                 | Some body => eval (subst_instance u body) v
                  | None => v = tConst c u
                  end.
   Proof.

@@ -338,7 +338,7 @@ Proof.
 Qed.
 Hint Resolve lift_is_constructor : core.
 
-Hint Rewrite lift_subst_instance_constr : lift.
+Hint Rewrite subst_instance_lift : lift.
 Hint Rewrite lift_mkApps : lift.
 Hint Rewrite distr_lift_subst distr_lift_subst10 : lift.
 
@@ -548,7 +548,7 @@ Definition lendb :=
    cofix_subst_length,
    fix_subst_length,
    fix_context_length,
-   subst_instance_context_length,
+   subst_instance_length,
    inds_length,
    forget_types_length,
    extended_subst_length,
@@ -558,7 +558,7 @@ Definition lendb :=
    @map_InP_length,
    context_assumptions_lift_context,
    context_assumptions_subst_context,
-   context_assumptions_subst_instance_context,
+   context_assumptions_subst_instance,
    context_assumptions_app,
    app_context_length).
 

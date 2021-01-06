@@ -367,7 +367,7 @@ Section Reduce.
     | red_view_Const c u π with RedFlags.delta flags := {
       | true with inspect (lookup_env (fst Σ) c) := {
         | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq :=
-          let body' := subst_instance_constr u body in
+          let body' := subst_instance u body in
           rec reduce body' π ;
         | @exist (Some (InductiveDecl _)) eq := False_rect _ _ ;
         | @exist (Some _) eq := give (tConst c u) π ;

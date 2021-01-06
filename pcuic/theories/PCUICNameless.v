@@ -697,11 +697,12 @@ Proof.
   - simpl. f_equal. apply ih.
 Qed.
 
-Lemma nl_subst_instance_constr :
+Lemma nl_subst_instance :
   forall u b,
-    nl (subst_instance_constr u b) = subst_instance_constr u (nl b).
+    nl (subst_instance u b) = subst_instance u (nl b).
 Proof.
   intros u b.
+  rewrite /subst_instance /=.
   induction b using term_forall_list_ind.
   all: try (simpl ; rewrite ?IHb ?IHb1 ?IHb2 ?IHb3 ; reflexivity).
   - simpl. f_equal. rename X into H; induction H.
@@ -1095,20 +1096,21 @@ Proof.
   + todo "ind_case_predicate_context".
 Qed.
 
-Lemma nlctx_subst_instance_context :
+Lemma nlctx_subst_instance :
   forall u Γ,
-    nlctx (subst_instance_context u Γ) = subst_instance_context u (nlctx Γ).
+    nlctx (subst_instance u Γ) = subst_instance u (nlctx Γ).
 Proof.
   intros u Γ.
+  rewrite /subst_instance /=.
   induction Γ as [| [na [b|] B] Δ ih] in Γ |- *; rewrite /= ?subst_context_snoc /snoc /=
     /map_decl.
   - reflexivity.
   - f_equal; auto.
     rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal;
-    now rewrite nl_subst_instance_constr.
+    now rewrite nl_subst_instance.
   - f_equal; [|apply ih].
     rewrite /subst_decl /map_decl /= /map_decl_anon /=; repeat f_equal;
-    now rewrite nl_subst_instance_constr.
+    now rewrite nl_subst_instance.
 Qed.
 
 Lemma nlctx_subst_context :
@@ -1198,13 +1200,13 @@ Proof.
   now rewrite /expand_lets nl_expand_lets_k.
 Qed.
 
-Lemma subst_instance_context_nlctx u ctx :
-  subst_instance_context u (nlctx ctx) = nlctx (subst_instance_context u ctx).
+Lemma subst_instance_nlctx u ctx :
+  subst_instance u (nlctx ctx) = nlctx (subst_instance u ctx).
 Proof.
   induction ctx; cbnr.
   f_equal. 2: apply IHctx.
   clear. destruct a as [? [] ?]; unfold map_decl, map_decl_anon; cbn; f_equal.
-  all: now rewrite nl_subst_instance_constr.
+  all: now rewrite nl_subst_instance.
 Qed.
 
 Lemma map_fold_context f g ctx : map (map_decl f) (fold_context g ctx) = fold_context (fun i => f ∘ g i) ctx.
@@ -1289,9 +1291,9 @@ Lemma nl_case_branch_context ind mdecl p br cdecl :
 Proof.
   unfold case_branch_context, case_branch_context_gen. simpl.
   rewrite nlctx_subst_context. f_equal.
-  rewrite nl_expand_lets_ctx nlctx_subst_instance_context.
+  rewrite nl_expand_lets_ctx nlctx_subst_instance.
   f_equal.
-  rewrite nl_subst_context nl_inds nlctx_subst_instance_context; len.
+  rewrite nl_subst_context nl_inds nlctx_subst_instance; len.
   f_equal. f_equal.
   now rewrite /nlctx map_map2 map2_map. 
 Qed.
@@ -1314,7 +1316,7 @@ Proof.
     rewrite !map_map_compose map_app /= !map_map_compose nl_mkApps.
     f_equal.
     * apply map_ext => idx. rewrite nl_subst nl_expand_lets_k.
-      now rewrite nlctx_subst_instance_context nl_subst nl_inds nl_subst_instance_constr.
+      now rewrite nlctx_subst_instance nl_subst nl_inds nl_subst_instance.
     * f_equal.
       simpl. f_equal.
       rewrite map_app !map_map_compose.
@@ -1358,7 +1360,7 @@ Proof.
   intros Σ Γ M N h.
   induction h using red1_ind_all.
   all: simpl.
-  all: rewrite ?nl_lift ?nl_subst ?nl_subst_instance_constr.
+  all: rewrite ?nl_lift ?nl_subst ?nl_subst_instance.
   all: try solve [ econstructor ; eauto ].
   - constructor. unfold nlctx. rewrite nth_error_map.
     destruct (nth_error Γ i). 2: discriminate.
@@ -1596,7 +1598,7 @@ Lemma typing_nlg {cf : checker_flags} :
 Proof.
   clear.
   apply typing_ind_env; intros; cbn in *;
-    rewrite ?nl_lift ?nl_subst ?nl_subst_instance_constr;
+    rewrite ?nl_lift ?nl_subst ?nl_subst_instance;
     try (econstructor; eauto using nlg_wf_local; fail).
   - induction X; simpl; constructor; auto.
     * now exists (tu.π1).
@@ -1794,7 +1796,7 @@ Local Ltac aa :=
   match goal with
   | |- ∑ _ : _, _ × ?t = _ => exists t
   end; split; [|symmetry; apply nl_two]; simpl;
-  rewrite ?nl_lift ?nl_subst ?nl_subst_instance_constr.
+  rewrite ?nl_lift ?nl_subst ?nl_subst_instance.
 
 Local Ltac bb :=
   repeat match goal with

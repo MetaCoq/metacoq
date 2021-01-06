@@ -322,7 +322,7 @@ Module PCUICTerm <: Term.
   Definition subst := subst.
   Definition closedn := closedn.
   Definition noccur_between := noccur_between.
-  Definition subst_instance_constr := subst_instance_constr.
+  Definition subst_instance_constr := subst_instance.
 End PCUICTerm.
 
 Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;

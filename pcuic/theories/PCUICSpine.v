@@ -142,9 +142,9 @@ Lemma ctx_inst_inst {cf:checker_flags} Σ ext u Γ i Δ  :
   wf_global_ext Σ.1 ext ->
   ctx_inst (Σ.1, ext) Γ i Δ ->
   consistent_instance_ext Σ ext u ->
-  ctx_inst Σ (subst_instance_context u Γ)
-    (map (subst_instance_constr u) i)
-    (subst_instance_context u Δ).
+  ctx_inst Σ (subst_instance u Γ)
+    (map (subst_instance u) i)
+    (subst_instance u Δ).
 Proof.
   intros wfext ctxi cu.
   induction ctxi; simpl; constructor; auto.
@@ -152,9 +152,9 @@ Proof.
     destruct Σ as [Σ univs].
     eapply (typing_subst_instance'' Σ); eauto. apply wfext.
     apply wfext.
-  * rewrite (subst_telescope_subst_instance_constr u [i]).
+  * rewrite (subst_telescope_subst_instance u [i]).
     apply IHctxi.
-  * rewrite (subst_telescope_subst_instance_constr u [b]).
+  * rewrite (subst_telescope_subst_instance u [b]).
     apply IHctxi.
 Qed.
 
@@ -660,30 +660,30 @@ Lemma spine_subst_inst {cf:checker_flags} Σ ext u Γ i s Δ  :
   wf_global_ext Σ.1 ext ->
   spine_subst (Σ.1, ext) Γ i s Δ ->
   consistent_instance_ext Σ ext u ->
-  spine_subst Σ (subst_instance_context u Γ)
-    (map (subst_instance_constr u) i)
-    (map (subst_instance_constr u) s)
-    (subst_instance_context u Δ).
+  spine_subst Σ (subst_instance u Γ)
+    (map (subst_instance u) i)
+    (map (subst_instance u) s)
+    (subst_instance u Δ).
 Proof.
   intros wfΣ wfext [wfdom wfcodom cs subsl] cu.
   split.
   eapply wf_local_subst_instance; eauto.
-  rewrite -subst_instance_context_app.
+  rewrite -subst_instance_app.
   eapply wf_local_subst_instance; eauto.
   clear -cs cu wfext wfΣ.
   induction cs; simpl; rewrite ?map_app; try constructor; auto.
   simpl.
-  rewrite -subst_subst_instance_constr.
+  rewrite -subst_instance_subst.
   constructor; auto.
 
   clear -subsl cu wfΣ wfext.
-  induction subsl; simpl; rewrite -?subst_subst_instance_constr; constructor; auto.
+  induction subsl; simpl; rewrite -?subst_instance_subst; constructor; auto.
   * destruct Σ as [Σ univs].
-    rewrite subst_subst_instance_constr.
+    rewrite subst_instance_subst.
     eapply (typing_subst_instance'' Σ); simpl; auto.
     apply wfext. simpl in wfext. apply t0. 
     apply wfext. auto.
-  * rewrite !subst_subst_instance_constr. simpl.
+  * rewrite !subst_instance_subst. simpl.
     destruct Σ as [Σ univs].
     eapply (typing_subst_instance'' Σ); simpl; auto.
     apply wfext. simpl in wfext. apply t0. 
@@ -1062,10 +1062,10 @@ Proof.
     specialize (IHΔ _ wfΔ _ subr). constructor; auto.
 Qed.
 
-Lemma subst_instance_context_rev u Γ :
-  subst_instance_context u (List.rev Γ) = List.rev (subst_instance_context u Γ).
+Lemma subst_instance_rev u Γ :
+  subst_instance u (List.rev Γ) = List.rev (subst_instance u Γ).
 Proof.
-  now rewrite /subst_instance_context /map_context List.map_rev.
+  now rewrite /subst_instance /map_context List.map_rev.
 Qed.
 
 Lemma subst_telescope_subst_context s k Γ :
@@ -1518,12 +1518,12 @@ Proof.
 Qed.
 
 Lemma subst_instance_lift_context u n k Γ : 
-  subst_instance_context u (lift_context n k Γ) = lift_context n k (subst_instance_context u Γ).
+  subst_instance u (lift_context n k Γ) = lift_context n k (subst_instance u Γ).
 Proof.
-  rewrite /subst_instance_context /map_context !lift_context_alt.
+  rewrite /subst_instance /map_context !lift_context_alt.
   rewrite map_mapi mapi_map. apply mapi_rec_ext.
   intros. rewrite /lift_decl !compose_map_decl. apply map_decl_ext => ?.
-  rewrite map_length. now rewrite lift_subst_instance_constr.
+  rewrite map_length. now rewrite subst_instance_lift.
 Qed.
 
 Lemma subst_lift_above s n k x : k = #|s| -> subst0 s (lift0 (n + k) x) = lift0 n x.

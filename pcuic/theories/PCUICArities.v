@@ -408,7 +408,7 @@ Proof.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4 5.
   induction l using rev_ind; simpl; first constructor.
-  rewrite /subst_instance_context /= /map_context.
+  rewrite /subst_instance /= /map_context.
   simpl. rewrite /arities_context rev_map_spec /=.
   rewrite map_app /= rev_app_distr /=. 
   rewrite /= app_length /= Nat.add_1_r.
@@ -427,7 +427,7 @@ Lemma subslet_inds {cf:checker_flags} Σ ind u mdecl idecl :
   declared_inductive Σ.1 ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   subslet Σ [] (inds (inductive_mind ind) u (ind_bodies mdecl))
-    (subst_instance_context u (arities_context (ind_bodies mdecl))).
+    (subst_instance u (arities_context (ind_bodies mdecl))).
 Proof.
   intros wfΣ isdecl univs.
   unfold inds.
@@ -435,7 +435,7 @@ Proof.
   pose proof declm as declm'.
   apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
   clear oc.
-  assert (Alli (fun i x => Σ ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : subst_instance_constr u (ind_type x)) 0 (ind_bodies mdecl)). 
+  assert (Alli (fun i x => Σ ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : subst_instance u (ind_type x)) 0 (ind_bodies mdecl)). 
   { apply forall_nth_error_Alli.
     econstructor; eauto. split; eauto. }
   clear oind.
@@ -443,7 +443,7 @@ Proof.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4 5.
   induction l using rev_ind; simpl; first constructor.
-  rewrite /subst_instance_context /= /map_context.
+  rewrite /subst_instance /= /map_context.
   simpl. rewrite /arities_context rev_map_spec /=.
   rewrite map_app /= rev_app_distr /=. 
   rewrite {1}/map_decl /= app_length /= Nat.add_1_r.
@@ -568,7 +568,7 @@ Lemma on_minductive_wf_params {cf : checker_flags} (Σ : global_env × universes
    wf Σ.1 ->
   declared_minductive Σ.1 ind mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  wf_local Σ (subst_instance_context u (ind_params mdecl)).
+  wf_local Σ (subst_instance u (ind_params mdecl)).
 Proof.
   intros; eapply (wf_local_instantiate _ (InductiveDecl mdecl)); eauto.
   eapply on_declared_minductive in H; auto.
@@ -622,13 +622,13 @@ Proof.
   now rewrite app_context_nil_l.
 Qed.
 
-Lemma subst_telescope_subst_instance_constr u s k Γ :
-  subst_telescope (map (subst_instance_constr u) s) k 
-    (subst_instance_context u Γ) =
-  subst_instance_context u (subst_telescope s k Γ).
+Lemma subst_telescope_subst_instance u s k Γ :
+  subst_telescope (map (subst_instance u) s) k 
+    (subst_instance u Γ) =
+  subst_instance u (subst_telescope s k Γ).
 Proof.
-  rewrite /subst_telescope /subst_instance_context /map_context.
+  rewrite /subst_telescope /subst_instance /map_context.
   rewrite map_mapi mapi_map. apply mapi_ext.
   intros. rewrite !compose_map_decl; apply map_decl_ext => ?.
-  now rewrite -subst_subst_instance_constr.
+  now rewrite -subst_instance_subst.
 Qed.

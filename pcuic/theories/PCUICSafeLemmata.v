@@ -848,7 +848,7 @@ Section Lemmata.
     forall {Γ c u cty cb cu},
       Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
       = lookup_env Σ c ->
-      red (fst Σ) Γ (tConst c u) (subst_instance_constr u cb).
+      red (fst Σ) Γ (tConst c u) (subst_instance u cb).
   Proof.
     intros Γ c u cty cb cu e.
     econstructor. econstructor.
@@ -860,7 +860,7 @@ Section Lemmata.
     forall {Γ c u cty cb cu},
       Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
       = lookup_env Σ c ->
-      cored (fst Σ) Γ (subst_instance_constr u cb) (tConst c u).
+      cored (fst Σ) Γ (subst_instance u cb) (tConst c u).
   Proof.
     intros Γ c u cty cb cu e.
     symmetry in e.

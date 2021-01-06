@@ -1658,12 +1658,12 @@ Section CheckEnv.
            syntactically the heads. *)
         check_args <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
           (check_leq_context true wfext 
-            (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
-            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))) ;;
+            (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
+            (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))) ;;
         check_indices <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
           (check_leq_terms false wfext
-            (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))
-            (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))) ;;
+            (map (subst_instance u ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))
+            (map (subst_instance u' ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))) ;;
         ret _
       | None => False_rect _ _
       end
@@ -1949,8 +1949,8 @@ Section CheckEnv.
         '(exist wfext eq) <- make_wf_env_ext Σ id univs0 ;;
         checkctx <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
           (check_leq_context true wfext
-            (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
-            (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))) ;;
+            (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+            (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))) ;;
         ret _
       | None => False_rect _ _
       end

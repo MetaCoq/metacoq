@@ -24,7 +24,7 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
  *)
 
 
-Hint Rewrite subst_instance_context_length 
+Hint Rewrite subst_instance_length 
   fix_context_length fix_subst_length cofix_subst_length : len.
 
 Fixpoint isArity T :=
@@ -37,7 +37,7 @@ Fixpoint isArity T :=
 
 Definition type_of_constructor mdecl (cdecl : constructor_body) (c : inductive * nat) (u : list Level.t) :=
   let mind := inductive_mind (fst c) in
-  subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance_constr u (cstr_type cdecl)).
+  subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance u (cstr_type cdecl)).
 
 Definition extends (Σ Σ' : global_env) :=
   { Σ'' & Σ' = Σ'' ++ Σ }.
@@ -80,7 +80,7 @@ Class GuardChecker :=
   fix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     fix_guard Σ Γ mfix ->
-    fix_guard (Σ.1, univs) (subst_instance_context u Γ) (map (map_def (subst_instance_constr u) (subst_instance_constr u))
+    fix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
                     mfix) ;
 
   fix_guard_extends Σ Γ mfix Σ' : 
@@ -113,7 +113,7 @@ Class GuardChecker :=
   cofix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     cofix_guard Σ Γ mfix ->
-    cofix_guard (Σ.1, univs) (subst_instance_context u Γ) (map (map_def (subst_instance_constr u) (subst_instance_constr u))
+    cofix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
                     mfix) ;
   
   cofix_guard_extends Σ Γ mfix Σ' : 
@@ -248,14 +248,14 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     forall decl, 
     declared_constant Σ.1 cst decl ->
     consistent_instance_ext Σ decl.(cst_universes) u ->
-    Σ ;;; Γ |- (tConst cst u) : subst_instance_constr u decl.(cst_type)
+    Σ ;;; Γ |- (tConst cst u) : subst_instance u decl.(cst_type)
 
 | type_Ind ind u :
     wf_local Σ Γ ->
     forall mdecl idecl,
     declared_inductive Σ.1 ind mdecl idecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
-    Σ ;;; Γ |- (tInd ind u) : subst_instance_constr u idecl.(ind_type)
+    Σ ;;; Γ |- (tInd ind u) : subst_instance u idecl.(ind_type)
 
 | type_Construct ind i u :
     wf_local Σ Γ ->
@@ -289,7 +289,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     #|args| = ind_npars mdecl ->
     let ty := snd pdecl in
-    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance_constr u ty)
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u ty)
 
 | type_Fix mfix n decl :
     fix_guard Σ Γ mfix ->
@@ -647,14 +647,14 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        PΓ Σ Γ ->
        declared_constant Σ.1 cst decl ->
        consistent_instance_ext Σ decl.(cst_universes) u ->
-       P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
+       P Σ Γ (tConst cst u) (subst_instance u (cst_type decl))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
          mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
        Forall_decls_typing P Σ.1 ->
        PΓ Σ Γ ->
        consistent_instance_ext Σ mdecl.(ind_universes) u ->
-       P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
+       P Σ Γ (tInd ind u) (subst_instance u (ind_type idecl))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
            mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
@@ -695,7 +695,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
        P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
        #|args| = ind_npars mdecl ->
-       let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance_constr u ty))) ->
+       let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
        let types := fix_context mfix in
@@ -1078,14 +1078,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
         PΓ Σ Γ ->
         declared_constant Σ.1 cst decl ->
         consistent_instance_ext Σ decl.(cst_universes) u ->
-        P Σ Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
+        P Σ Γ (tConst cst u) (subst_instance u (cst_type decl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
           mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
         Forall_decls_typing P Σ.1 ->
         PΓ Σ Γ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
-        P Σ Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
+        P Σ Γ (tInd ind u) (subst_instance u (ind_type idecl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
             mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
@@ -1126,7 +1126,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
         #|args| = ind_npars mdecl ->
-        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance_constr u ty))) ->
+        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in

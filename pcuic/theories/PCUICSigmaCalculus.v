@@ -1,7 +1,7 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst.
+  PCUICLiftSubst.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -1212,11 +1212,12 @@ Proof.
   (apply nth_error_None in Heq''|| apply nth_error_None in Heq'); lia.
 Qed.
 
-Lemma shift_subst_instance_constr :
+Lemma shift_subst_instance :
   forall u t k,
-    (subst_instance_constr u t).[⇑^k ↑] = subst_instance_constr u t.[⇑^k ↑].
+    (subst_instance u t).[⇑^k ↑] = subst_instance u t.[⇑^k ↑].
 Proof.
   intros u t k.
+  rewrite /subst_instance /=.
   induction t in k |- * using term_forall_list_ind.
   all: simpl. all: auto.
   all: sigma.
@@ -1566,20 +1567,6 @@ Proof.
   intros. simpl.
   rewrite map_subst_expand_lets_k //. f_equal.
   rewrite /expand_lets_k. lia_f_equal.
-Qed.
-
-
-Lemma extended_subst_subst_instance_constr u Γ n :
-  map (subst_instance_constr u) (extended_subst Γ n) =
-  extended_subst (subst_instance_context u Γ) n.
-Proof.
-  induction Γ as [|[?[]?] ?] in n |- *; simpl; auto.
-  - autorewrite with len.
-    f_equal; auto.
-    rewrite -subst_subst_instance_constr.
-    rewrite -lift_subst_instance_constr /=.
-    f_equal. apply IHΓ.
-  - f_equal; auto.
 Qed.
 
 Local Open Scope sigma_scope.

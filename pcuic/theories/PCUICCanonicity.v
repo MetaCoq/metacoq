@@ -726,7 +726,7 @@ Section Normalization.
       eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
       pose proof (on_declared_inductive wfΣ as decli) [onind oib].
       rewrite oib.(ind_arity_eq) in t0.
-      rewrite !subst_instance_constr_it_mkProd_or_LetIn in t0.
+      rewrite !subst_instance_it_mkProd_or_LetIn in t0.
       eapply typing_spine_arity_mkApps_Ind in t0; eauto.
       eexists; split; [sq|]; eauto.
       now do 2 eapply isArity_it_mkProd_or_LetIn.
@@ -947,7 +947,7 @@ Section WeakNormalization.
     eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
     pose proof (PCUICWeakeningEnv.on_declared_inductive wfΣ as decl) [onind oib].
     rewrite oib.(ind_arity_eq) in t0.
-    rewrite !subst_instance_constr_it_mkProd_or_LetIn in t0.
+    rewrite !subst_instance_it_mkProd_or_LetIn in t0.
     eapply typing_spine_arity_mkApps_Ind in t0; eauto.
     eexists; split; [sq|]; eauto.
     now do 2 eapply PCUICArities.isArity_it_mkProd_or_LetIn.
@@ -1138,7 +1138,7 @@ Section WeakNormalization.
     eapply t2. auto.
     
 
-  - redt (subst_instance_constr u body); auto.
+  - redt (subst_instance u body); auto.
     eapply red1_red. econstructor; eauto.
     eapply IHHe. eapply subject_reduction; eauto.
     eapply red1_red. econstructor; eauto.

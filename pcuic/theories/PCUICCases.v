@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction
+     PCUICLiftSubst PCUICEquality PCUICInduction
      PCUICContextSubst.
 
 Require Import ssreflect.
@@ -46,16 +46,15 @@ Proof.
   pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
 Qed.
 
-Lemma map_subst_instance_constr_to_extended_list_k u ctx k :
-  to_extended_list_k (subst_instance_context u ctx) k
+Lemma map_subst_instance_to_extended_list_k u ctx k :
+  to_extended_list_k (subst_instance u ctx) k
   = to_extended_list_k ctx k.
 Proof.
   unfold to_extended_list_k.
-  cut (map (subst_instance_constr u) [] = []); [|reflexivity].
+  cut (map (subst_instance u) [] = []); [|reflexivity].
   unf_term. generalize (@nil term); intros l Hl.
   induction ctx in k, l, Hl |- *; cbnr.
   destruct a as [? [] ?]; cbnr; eauto.
-  unf_term. eapply IHctx; cbn; congruence.
 Qed.
 
 Lemma to_extended_list_k_subst n k c k' :
@@ -109,7 +108,7 @@ Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : conte
   in
   let ictx := 
     subst_context params 0
-      (subst_instance_context puinst 
+      (subst_instance puinst 
       (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
   in
   map2 set_binder_name pctx (inddecl :: ictx).
@@ -120,11 +119,11 @@ Arguments case_predicate_context _ _ _ !_.
 
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
   subst_context params 0
-  (expand_lets_ctx (subst_instance_context puinst mdecl.(ind_params))
+  (expand_lets_ctx (subst_instance puinst mdecl.(ind_params))
     (* We expand the lets in the context of parameters before
       substituting the actual parameters *)
     (subst_context (inds (inductive_mind ind) puinst mdecl.(ind_bodies)) #|mdecl.(ind_params)|
-    (subst_instance_context puinst
+    (subst_instance puinst
       (map2 set_binder_name bctx cdecl.(cstr_args))))).
 
 Definition case_branch_context ind mdecl p bctx cdecl : context :=
@@ -142,13 +141,13 @@ Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params pu
   let args := to_extended_list cdecl.(cstr_args) in
   let cstrapp := mkApps cstr (map (lift0 #|cdecl.(cstr_args)|) params ++ args) in
   let brctx := case_branch_context_gen ind mdecl params puinst bctx cdecl in
-  let upars := subst_instance_context puinst mdecl.(ind_params) in
+  let upars := subst_instance puinst mdecl.(ind_params) in
   let indices :=
     (map (subst params #|cdecl.(cstr_args)|)
       (map (expand_lets_k upars #|cdecl.(cstr_args)|)
         (map (subst (inds (inductive_mind ind) puinst mdecl.(ind_bodies))
                     (#|mdecl.(ind_params)| + #|cdecl.(cstr_args)|))
-          (map (subst_instance_constr puinst) cdecl.(cstr_indices))))) in
+          (map (subst_instance puinst) cdecl.(cstr_indices))))) in
   let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (indices ++ [cstrapp]) in
   (brctx, ty).
 
@@ -360,8 +359,8 @@ Universe cpred.
 Variant ind_case_predicate_context ind mdecl idecl params puinst pctx : context -> Type@{cpred} :=
 | mk_ind_case_predicate_context s ty ictx inds : 
   instantiate_params_subst_spec 
-    (List.rev (subst_instance_context puinst (ind_params mdecl))) params []
-    (subst_instance_constr puinst (ind_type idecl)) s ty ->
+    (List.rev (subst_instance puinst (ind_params mdecl))) params []
+    (subst_instance puinst (ind_type idecl)) s ty ->
   let sty := subst s 0 ty in
   sty = it_mkProd_or_LetIn ictx (tSort inds) ->
   #|pctx| = S #|ictx| ->
@@ -384,8 +383,8 @@ Variant case_predicate_context Σ ci p : context -> Type@{cpred} :=
   
 Variant ind_case_branch_context ind mdecl (cdecl : constructor_body) p : context -> Type@{cpred} :=
 | mk_ind_case_branch_context s ty argctx indices : 
-    instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
-      (subst_instance_constr p.(puinst) (cdecl.(cstr_type))) s ty ->
+    instantiate_params_subst_spec (List.rev (subst_instance p.(puinst) (ind_params mdecl))) p.(pparams) []
+      (subst_instance p.(puinst) (cdecl.(cstr_type))) s ty ->
     let sty := subst s 0 ty in
     sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
     ind_case_branch_context ind mdecl cdecl p argctx.
@@ -401,8 +400,8 @@ Variant case_branches_contexts Σ ci p : list context -> Type@{cpred} :=
 
 Variant ind_case_branch_type ind mdecl (cdecl : constructor_body) i p pctx : context -> term -> Type@{cpred} :=
 | mk_ind_case_branch_type s ty argctx indices : 
-  instantiate_params_subst_spec (List.rev (subst_instance_context p.(puinst) (ind_params mdecl))) p.(pparams) []
-    (subst_instance_constr p.(puinst) (cdecl.(cstr_type))) s ty ->
+  instantiate_params_subst_spec (List.rev (subst_instance p.(puinst) (ind_params mdecl))) p.(pparams) []
+    (subst_instance p.(puinst) (cdecl.(cstr_type))) s ty ->
   let sty := subst s 0 ty in
   sty = it_mkProd_or_LetIn argctx (mkApps (tInd ind p.(puinst)) (map (lift0 #|argctx|) p.(pparams) ++ indices)) ->
   let cstr := tConstruct ind i p.(puinst) in
@@ -438,8 +437,8 @@ Qed.
 Definition build_branches_type ind mdecl idecl params u p : list (option (nat × term)) :=
   let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
   let branch_type i '(id, t, ar) :=
-    let ty := subst0 inds (subst_instance_constr u t) in
-    match instantiate_params (subst_instance_context u mdecl.(ind_params)) params ty with
+    let ty := subst0 inds (subst_instance u t) in
+    match instantiate_params (subst_instance u mdecl.(ind_params)) params ty with
     | Some ty =>
       let '(sign, ccl) := decompose_prod_assum [] ty in
       let nargs := List.length sign in
@@ -456,7 +455,7 @@ Lemma build_branches_type_ ind mdecl idecl params u p :
   build_branches_type ind mdecl idecl params u p
   = let inds := inds ind.(inductive_mind) u mdecl.(ind_bodies) in
     let branch_type i '(id, t, ar) :=
-        let ty := subst0 inds (subst_instance_constr u t) in
+        let ty := subst0 inds (subst_instance u t) in
         option_map (fun ty =>
          let '(sign, ccl) := decompose_prod_assum [] ty in
          let nargs := List.length sign in
@@ -465,7 +464,7 @@ Lemma build_branches_type_ ind mdecl idecl params u p :
          let cstr := tConstruct ind i u in
          let args := (args ++ [mkApps cstr (paramrels ++ to_extended_list sign)]) in
          (ar, it_mkProd_or_LetIn sign (mkApps (lift0 nargs p) args)))
-                  (instantiate_params (subst_instance_context u mdecl.(ind_params))
+                  (instantiate_params (subst_instance u mdecl.(ind_params))
                                       params ty)
     in mapi branch_type idecl.(ind_ctors).
 Proof.
@@ -476,8 +475,8 @@ Qed. *)
 
 (* [params] and output already instantiated by [u] *)
 Definition build_case_predicate_context ind mdecl idecl params u pctx : option context :=
-  index_part <- instantiate_params (subst_instance_context u (ind_params mdecl)) params
-                                   (subst_instance_constr u (ind_type idecl)) ;;
+  index_part <- instantiate_params (subst_instance u (ind_params mdecl)) params
+                                   (subst_instance u (ind_type idecl)) ;;
   '(Γ, _) <- destArity [] index_part ;;
   let inddecl :=
       {| decl_name := mkBindAnn (nNamed idecl.(ind_name)) idecl.(ind_relevance);
@@ -573,8 +572,8 @@ Qed.
 Lemma build_case_predicate_type_spec {cf:checker_flags} Σ ind mdecl idecl pars u pctx :
   forall (o : on_ind_body (lift_typing typing) Σ (inductive_mind ind) mdecl (inductive_ind ind) idecl),
   build_case_predicate_context ind mdecl idecl pars u = Some pctx ->
-  ∑ parsubst, (context_subst (subst_instance_context u (ind_params mdecl)) pars parsubst *
-  (pctx = (subst_context parsubst 0 (subst_instance_context u o.(ind_indices)) ,,
+  ∑ parsubst, (context_subst (subst_instance u (ind_params mdecl)) pars parsubst *
+  (pctx = (subst_context parsubst 0 (subst_instance u o.(ind_indices)) ,,
           (vass {| binder_name := nNamed (ind_name idecl); 
                    binder_relevance := idecl.(ind_relevance) |}
             (mkApps (tInd ind u) (map (lift0 #|o.(ind_indices)|) pars ++ 
@@ -589,19 +588,19 @@ Proof.
   * apply make_context_subst_spec in H0.
     now rewrite List.rev_involutive in H0.
   * clear onProjections. clear onConstructors.
-    assert (ctx = subst_context s' 0 (subst_instance_context u ind_indices)) as ->.
-    { move: H. rewrite ind_arity_eq subst_instance_constr_it_mkProd_or_LetIn.
+    assert (ctx = subst_context s' 0 (subst_instance u ind_indices)) as ->.
+    { move: H. rewrite ind_arity_eq subst_instance_it_mkProd_or_LetIn.
       rewrite decompose_prod_n_assum_it_mkProd app_nil_r => [=].
       move=> Hctx' Hty'.
       subst ty''  ctx'.
-      move: Har. rewrite subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+      move: Har. rewrite subst_instance_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
       rewrite destArity_it_mkProd_or_LetIn. simpl. move=> [=] <- /=. 
       now rewrite app_context_nil_l. }
-    f_equal. rewrite subst_context_length subst_instance_context_length.
+    f_equal. rewrite subst_context_length subst_instance_length.
     unfold vass.
     f_equal. f_equal. f_equal.
     unfold to_extended_list.
-    rewrite to_extended_list_k_subst map_subst_instance_constr_to_extended_list_k.
+    rewrite to_extended_list_k_subst map_subst_instance_to_extended_list_k.
     reflexivity.
 Qed.
 

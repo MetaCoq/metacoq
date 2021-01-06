@@ -219,12 +219,12 @@ Proof.
     change PCUICEnvironment.ind_params with ind_params in *.
     change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *.
     rewrite <- it_mkProd_or_LetIn_app in c2.
-    rewrite PCUICUnivSubst.subst_instance_constr_it_mkProd_or_LetIn in c2.
-    rewrite PCUICUnivSubst.subst_instance_constr_mkApps in c2.
+    rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in c2.
+    rewrite PCUICUnivSubst.subst_instance_mkApps in c2.
     rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in c2.
     rewrite subst_mkApps in c2.
     cbn in c2.
-    rewrite PCUICUnivSubst.subst_instance_context_length in c2.
+    rewrite PCUICUnivSubst.subst_instance_length in c2.
     rewrite app_length in c2.
     destruct (Nat.leb_spec (#|cstr_args s| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cstr_args s|)). 2:lia.
     clear H.

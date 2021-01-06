@@ -277,8 +277,8 @@ Proof.
   rewrite H. now apply lift_closed.
 Qed.
 
-Lemma closedn_subst_instance_constr k t u :
-  closedn k (subst_instance_constr u t) = closedn k t.
+Lemma closedn_subst_instance k t u :
+  closedn k (subst_instance u t) = closedn k t.
 Proof.
   revert k.
   induction t in |- * using term_forall_list_ind; intros;
@@ -307,11 +307,11 @@ Proof.
 Qed.
 
 Lemma closed_map_subst_instance n u l : 
-  forallb (closedn n) (map (subst_instance_constr u) l) = 
+  forallb (closedn n) (map (subst_instance u) l) = 
   forallb (closedn n) l.
 Proof.
   induction l; simpl; auto.
-  now rewrite closedn_subst_instance_constr IHl.
+  now rewrite closedn_subst_instance IHl.
 Qed.
 
 Lemma closedn_ctx_tip n d : closedn_ctx n [d] = closed_decl n d.
@@ -520,13 +520,13 @@ Proof.
 Qed.
 
 Lemma closedn_subst_instance_context {k Γ u} :
-  closedn_ctx k (subst_instance_context u Γ) = closedn_ctx k Γ.
+  closedn_ctx k (subst_instance u Γ) = closedn_ctx k Γ.
 Proof.
   unfold closedn_ctx.
-  rewrite rev_subst_instance_context.
+  rewrite rev_subst_instance.
   rewrite alli_map.
   apply alli_ext; intros i [? [] ?]; unfold closed_decl; cbn.
-  all: now rewrite !closedn_subst_instance_constr.
+  all: now rewrite !closedn_subst_instance.
 Qed.
 
 Lemma closedn_ctx_spec k Γ : closedn_ctx k Γ <~> Alli closed_decl k (List.rev Γ).
@@ -663,7 +663,7 @@ Proof.
     move=> Hs. apply: Hs => /=. simpl. rewrite H1 => //.
     rewrite Nat.add_1_r. auto.
 
-  - rewrite closedn_subst_instance_constr.
+  - rewrite closedn_subst_instance.
     eapply lookup_on_global_env in X0; eauto.
     destruct X0 as [Σ' [HΣ' IH]].
     repeat red in IH. destruct decl, cst_body. simpl in *.
@@ -674,7 +674,7 @@ Proof.
     rewrite -> andb_and in Hs. intuition auto.
     eauto using closed_upwards with arith.
 
-  - rewrite closedn_subst_instance_constr.
+  - rewrite closedn_subst_instance.
     eapply declared_inductive_inv in X0; eauto.
     apply onArity in X0. repeat red in X0.
     destruct X0 as [s Hs]. rewrite -> andb_and in Hs.
@@ -685,7 +685,7 @@ Proof.
     + unfold inds. clear. simpl. induction #|ind_bodies mdecl|. constructor.
       simpl. now rewrite IHn.
     + rewrite inds_length.
-      rewrite closedn_subst_instance_constr.
+      rewrite closedn_subst_instance.
       eapply declared_inductive_inv in X0; eauto.
       pose proof X0.(onConstructors) as XX.
       eapply All2_nth_error_Some in Hcdecl; eauto.
@@ -719,7 +719,7 @@ Proof.
     apply closedn_subst0.
     + simpl. rewrite closedn_mkApps in H3.
       rewrite forallb_rev H2. apply H3.
-    + rewrite closedn_subst_instance_constr.
+    + rewrite closedn_subst_instance.
       eapply declared_projection_closed_ind in X0; eauto.
       simpl; rewrite List.rev_length H1.
       eapply closed_upwards; eauto. lia.
@@ -1240,7 +1240,7 @@ Proof.
   eapply closedn_subst0.
   - eapply declared_minductive_closed_inds. all: eauto.
   - simpl. rewrite inds_length.
-    rewrite closedn_subst_instance_constr. assumption.
+    rewrite closedn_subst_instance. assumption.
 Qed.
 
 Lemma declared_constructor_closed_args {cf:checker_flags}

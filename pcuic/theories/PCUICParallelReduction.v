@@ -464,7 +464,7 @@ Section ParallelReduction.
   | pred_delta c decl body (isdecl : declared_constant Σ c decl) u :
       All2_local_env (on_decl pred1) Γ Γ' ->
       decl.(cst_body) = Some body ->
-      pred1 Γ Γ' (tConst c u) (subst_instance_constr u body)
+      pred1 Γ Γ' (tConst c u) (subst_instance u body)
 
   | pred_const c u :
       All2_local_env (on_decl pred1) Γ Γ' ->
@@ -613,7 +613,7 @@ Section ParallelReduction.
           Pctx Γ Γ' ->
           declared_constant Σ c decl ->
           forall u : Instance.t, cst_body decl = Some body ->
-                                        P Γ Γ' (tConst c u) (subst_instance_constr u body)) ->
+                                        P Γ Γ' (tConst c u) (subst_instance u body)) ->
       (forall (Γ Γ' : context) c (u : Instance.t),
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->

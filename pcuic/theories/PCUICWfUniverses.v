@@ -139,9 +139,9 @@ Section CheckerFlags.
     apply (wf_universe_subst_instance (Σ, univs) φ); auto.
   Qed.
 
-  Lemma subst_instance_instance_empty u : 
+  Lemma subst_instance_empty u : 
     forallb (fun x => ~~ Level.is_var x) u ->
-    subst_instance_instance [] u = u.
+    subst_instance [] u = u.
   Proof.
     induction u; simpl; intros Hu; auto.
     depelim Hu.
@@ -215,8 +215,8 @@ Section CheckerFlags.
     apply In_Forall. auto.
   Qed.
 
-  Lemma in_subst_instance_instance l u u' : 
-    In l (subst_instance_instance u u') ->
+  Lemma in_subst_instance l u u' : 
+    In l (subst_instance u u') ->
     In l u \/ In l u' \/ l = Level.lSet.
   Proof.
     induction u'; simpl; auto.
@@ -226,13 +226,13 @@ Section CheckerFlags.
     specialize (IHu' H). intuition auto.
   Qed.
 
-  Lemma wf_universe_subst_instance_instance Σ univs u u' φ : 
+  Lemma wf_universe_subst_instance Σ univs u u' φ : 
     wf Σ ->
     on_udecl_prop Σ univs ->
     wf_universe_instance (Σ, univs) u' ->
     wf_universe_instance (Σ, φ) u ->
     sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
-    wf_universe_instance (Σ, φ) (subst_instance_instance u u').
+    wf_universe_instance (Σ, φ) (subst_instance u u').
   Proof.
     intros wfΣ onup Hs cu subc.
     destruct univs.
@@ -381,15 +381,15 @@ Section CheckerFlags.
 
     - apply /andP; to_wfu; intuition eauto 4.
     - apply/wf_universe_instanceP.
-      eapply wf_universe_subst_instance_instance; eauto.
+      eapply wf_universe_subst_instance; eauto.
       destruct Σ; simpl in *.
       now move/wf_universe_instanceP: wft.
     - apply/wf_universe_instanceP.
-      eapply wf_universe_subst_instance_instance; eauto.
+      eapply wf_universe_subst_instance; eauto.
       destruct Σ; simpl in *.
       now move/wf_universe_instanceP: wft.
     - apply/wf_universe_instanceP.
-      eapply wf_universe_subst_instance_instance; eauto.
+      eapply wf_universe_subst_instance; eauto.
       destruct Σ; simpl in *.
       now move/wf_universe_instanceP: wft.
     

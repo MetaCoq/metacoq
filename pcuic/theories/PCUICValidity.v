@@ -79,7 +79,7 @@ Section Validity.
     lookup_env Σ.1 c = Some decl ->
     isType (Σ.1, universes_decl_of_decl decl) Γ T ->
     consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
-    isType Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+    isType Σ (subst_instance u Γ) (subst_instance u T).
   Proof.
     destruct Σ as [Σ φ]. intros X X0 [s Hs] X1.
     exists (subst_instance_univ u s).
@@ -91,11 +91,11 @@ Section Validity.
     lookup_env Σ.1 c = Some decl ->
     isWfArity (Σ.1, universes_decl_of_decl decl) Γ T ->
     consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
-    isWfArity Σ (subst_instance_context u Γ) (subst_instance_constr u T).
+    isWfArity Σ (subst_instance u Γ) (subst_instance u T).
   Proof.
     destruct Σ as [Σ φ]. intros X X0 [isTy [ctx [s eq]]] X1.
     split. eapply isType_subst_instance_decl; eauto.
-    exists (subst_instance_context u ctx), (subst_instance_univ u s).
+    exists (subst_instance u ctx), (subst_instance_univ u s).
     rewrite (subst_instance_destArity []) eq. intuition auto.
   Qed.
   
@@ -235,7 +235,7 @@ Section Validity.
       unfold to_extended_list.
       eapply spine_subst_subst_to_extended_list_k in sargsubst.
       rewrite to_extended_list_k_subst
-         PCUICSubstitution.map_subst_instance_constr_to_extended_list_k in sargsubst.
+         PCUICSubstitution.map_subst_instance_to_extended_list_k in sargsubst.
       rewrite sargsubst firstn_skipn. eauto.
 
     - (* Proj *)
@@ -251,7 +251,7 @@ Section Validity.
       unfold PCUICTypingDef.typing in *.
       eapply (weaken_ctx Γ) in Hs; eauto.
       rewrite -heq_length in sppar. rewrite firstn_all in sppar.
-      rewrite subst_instance_context_smash in Hs. simpl in Hs.
+      rewrite subst_instance_smash in Hs. simpl in Hs.
       eapply spine_subst_smash in sppar => //.
       eapply (substitution _ Γ _ _ [_] _ _ wf sppar) in Hs.
       simpl in Hs.
@@ -259,10 +259,10 @@ Section Validity.
       simpl in Hs. rewrite (subst_app_simpl [_]) /= //.
       constructor. constructor.
       simpl. rewrite subst_empty.
-      rewrite subst_instance_constr_mkApps subst_mkApps /=.
-      rewrite (subst_instance_instance_id Σ); auto.
+      rewrite subst_instance_mkApps subst_mkApps /=.
+      rewrite (subst_instance_id Σ); auto.
       rewrite subst_instance_to_extended_list.
-      rewrite subst_instance_context_smash.
+      rewrite subst_instance_smash.
       rewrite (spine_subst_subst_to_extended_list_k sppar).
       assumption.
       

@@ -93,8 +93,8 @@ Qed.
 Notation Tterm := Template.Ast.term.
 Notation Tcontext := Template.Ast.context.
 
-Lemma trans_subst_instance_constr u t : trans (Template.UnivSubst.subst_instance_constr u t) =
-                                        subst_instance_constr u (trans t).
+Lemma trans_subst_instance u t : trans (Template.UnivSubst.subst_instance u t) =
+                                        subst_instance u (trans t).
 Proof.
   induction t using Template.Induction.term_forall_list_ind; simpl; try congruence.
   { f_equal. rewrite !map_map_compose. solve_all. }
@@ -312,21 +312,21 @@ Proof.
   now rewrite IHctx.
 Qed.
 
-Lemma trans_local_subst_instance_context :
+Lemma trans_local_subst_instance :
   forall u Γ,
-    trans_local (UnivSubst.subst_instance_context u Γ) =
-    subst_instance_context u (trans_local Γ).
+    trans_local (UnivSubst.subst_instance u Γ) =
+    subst_instance u (trans_local Γ).
 Proof.
   intros u Γ.
   induction Γ as [| [na [b|] A] Γ ih ] in u |- *.
   - reflexivity.
   - simpl. f_equal. 2: eapply ih.
     unfold map_decl. simpl.
-    rewrite 2!trans_subst_instance_constr.
+    rewrite 2!trans_subst_instance.
     reflexivity.
   - simpl. f_equal. 2: eapply ih.
     unfold map_decl. simpl.
-    rewrite trans_subst_instance_constr.
+    rewrite trans_subst_instance.
     reflexivity.
 Qed.
 
@@ -512,8 +512,8 @@ Admitted.
   destruct ST.instantiate_params eqn:ipars => //.
   pose proof ipars as ipars'.
   apply trans_instantiate_params in ipars.
-  rewrite trans_subst trans_inds trans_subst_instance_constr in ipars.
-  rewrite [map _ _]trans_local_subst_instance_context trans_ind_params
+  rewrite trans_subst trans_inds trans_subst_instance in ipars.
+  rewrite [map _ _]trans_local_subst_instance trans_ind_params
     trans_ind_bodies in ipars.
   
   rewrite trans_ind_params trans_ind_bodies.
@@ -527,7 +527,7 @@ Admitted.
   destruct (chop _ (decompose_app (trans t0)).2) eqn:c'.
   f_equal. f_equal.
   rewrite [ty]oncs.(ST.cstr_eq) in ipars.
-  rewrite trans_it_mkProd_or_LetIn subst_instance_constr_it_mkProd_or_LetIn 
+  rewrite trans_it_mkProd_or_LetIn subst_instance_it_mkProd_or_LetIn 
     subst_it_mkProd_or_LetIn in ipars. len in ipars.
   rewrite closed_ctx_subst in ipars.
   rewrite [map _ _]trans_ind_params. admit.
@@ -538,7 +538,7 @@ Admitted.
   assert (l1 = map trans l /\ l2 = map trans l0) as [-> ->].
   { simpl in H.
     move: ipars.
-    rewrite trans_it_mkProd_or_LetIn subst_instance_constr_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
+    rewrite trans_it_mkProd_or_LetIn subst_instance_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
     rewrite /expand_lets expand_lets_it_mkProd_or_LetIn. len.
     rewrite subst_it_mkProd_or_LetIn.
     rewrite trans_mkApps.
@@ -594,7 +594,7 @@ Admitted.
   move: (trans_decompose_prod_assum [] t wft).
   destruct oncs. simpl in cstr_eq.
   rewrite trans_inds in ipars.
-  rewrite trans_subst_instance_constr in ipars.   
+  rewrite trans_subst_instance in ipars.   
   intros [= -> <-].
 
   destruct AstUtils.decompose_prod_assum eqn:dp => -> /=.
@@ -628,7 +628,7 @@ Admitted.
 (*   pose proof (on_declared_inductive wfΣ as Hidecl) [onmind onind]. *)
 (*   apply ST.onParams in onmind as Hparams. *)
 (*   (* Maybe have a lemma for this we do it all the time *) *)
-(*   assert (wc : Forall wf_decl (UnivSubst.subst_instance_context u (S.ind_params mdecl))). *)
+(*   assert (wc : Forall wf_decl (UnivSubst.subst_instance u (S.ind_params mdecl))). *)
 (*   { assert (h : Forall wf_decl (S.ind_params mdecl)). *)
 (*     { eapply typing_all_wf_decl ; revgoals. *)
 (*       - apply ST.onParams in onmind. *)
@@ -656,8 +656,8 @@ Admitted.
 (*   intros ity e. *)
 (*   rewrite e in ht. specialize ht with (4 := eq_refl). *)
 (*   change (map trans_decl) with trans_local in ht. *)
-(*   rewrite trans_subst_instance_constr in ht. *)
-(*   rewrite trans_local_subst_instance_context in ht. *)
+(*   rewrite trans_subst_instance in ht. *)
+(*   rewrite trans_local_subst_instance in ht. *)
 (*   rewrite ht. *)
 (*   all: auto using Forall_All with wf. *)
 (*   apply wf_instantiate_params in e as wfity. *)
@@ -703,11 +703,11 @@ Admitted.
 (*       rewrite map_rev in he. *)
 (*       rewrite trans_subst in he. *)
 (*       + auto using Forall_All with wf. *)
-(*       + apply wf_subst_instance_constr. *)
+(*       + apply wf_subst_instance. *)
 (*         now eapply typing_wf in t2. *)
-(*       + rewrite trans_subst_instance_constr trans_inds in he. *)
+(*       + rewrite trans_subst_instance trans_inds in he. *)
 (*         change (map trans_decl) with trans_local in he. *)
-(*         rewrite trans_local_subst_instance_context in he. *)
+(*         rewrite trans_local_subst_instance in he. *)
 (*         rewrite he. *)
 
 (*         rewrite List.rev_length map_length in hctx''. *)
@@ -717,21 +717,21 @@ Admitted.
 (*         rewrite List.rev_length map_length in hdecomp. *)
 (*         unfold trans_local in hdecomp. *)
 (*         rewrite map_length in hdecomp. *) *)
-(*         (* rewrite !Template.UnivSubst.subst_instance_constr_it_mkProd_or_LetIn *)
+(*         (* rewrite !Template.UnivSubst.subst_instance_it_mkProd_or_LetIn *)
 (*           in hdecomp. *) *)
 
 
 (*   (* apply PCUICSubstitution.instantiate_params_subst_make_context_subst in Heq. *) *)
 (*   (* destruct Heq as [ctx''' [Hs0 Hdecomp]]. *) *)
 (*   (* rewrite List.rev_length map_length in Hdecomp. *) *)
-(*   (* rewrite <- trans_subst_instance_constr in Hdecomp. *) *)
-(*   (* rewrite !Template.UnivSubst.subst_instance_constr_it_mkProd_or_LetIn in Hdecomp. *) *)
+(*   (* rewrite <- trans_subst_instance in Hdecomp. *) *)
+(*   (* rewrite !Template.UnivSubst.subst_instance_it_mkProd_or_LetIn in Hdecomp. *) *)
 (*   (* rewrite !trans_it_mkProd_or_LetIn in Hdecomp. *) *)
 (*   (* assert (#|Template.Ast.ind_params mdecl| = *) *)
 (*   (*   #|PCUICTyping.subst_context *) *)
 (*   (*     (inds (inductive_mind ind) u (map trans_one_ind_body (Template.Ast.ind_bodies mdecl))) 0 *) *)
-(*   (*     (map trans_decl (Template.UnivSubst.subst_instance_context u (Template.Ast.ind_params mdecl)))|). *) *)
-(*   (* now rewrite PCUICSubstitution.subst_context_length map_length Template.UnivSubst.subst_instance_context_length. *) *)
+(*   (*     (map trans_decl (Template.UnivSubst.subst_instance u (Template.Ast.ind_params mdecl)))|). *) *)
+(*   (* now rewrite PCUICSubstitution.subst_context_length map_length Template.UnivSubst.subst_instance_length. *) *)
 (*   (* rewrite H1 in Hdecomp. *) *)
 (*   (* rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in Hdecomp. *) *)
 (*   (* rewrite decompose_prod_n_assum_it_mkProd in Hdecomp. *) *)
@@ -1234,7 +1234,7 @@ Proof.
     eapply red_cofix_proj; eauto.
     apply trans_unfold_cofix; eauto with wf.
 
-  - rewrite trans_subst_instance_constr. econstructor.
+  - rewrite trans_subst_instance. econstructor.
     apply (forall_decls_declared_constant _ c decl H).
     destruct decl. now simpl in *; subst cst_body.
 
@@ -1709,14 +1709,14 @@ Proof.
         apply X2.
     * apply X2.
 
-  - rewrite trans_subst_instance_constr.
+  - rewrite trans_subst_instance.
     pose proof (forall_decls_declared_constant _ _ _ H).
     replace (trans (Template.Ast.cst_type decl)) with
         (cst_type (trans_constant_body decl)) by (destruct decl; reflexivity).
     constructor; eauto with trans.
     now apply (trans_consistent_instance_ext _ (S.ConstantDecl decl)).
 
-  - rewrite trans_subst_instance_constr.
+  - rewrite trans_subst_instance.
     pose proof (forall_decls_declared_inductive _ _ _ _ isdecl).
     replace (trans (Template.Ast.ind_type idecl)) with
         (ind_type (trans_one_ind_body idecl)) by (destruct idecl; reflexivity).
@@ -1726,7 +1726,7 @@ Proof.
   - pose proof (forall_decls_declared_constructor _ _ _ _ _ isdecl).
     unfold ST.type_of_constructor in *.
     rewrite trans_subst.
-    rewrite trans_subst_instance_constr.
+    rewrite trans_subst_instance.
     rewrite trans_inds. simpl.
     eapply refine_type. econstructor; eauto with trans.
     now apply (trans_consistent_instance_ext _ (S.InductiveDecl mdecl)).
@@ -1756,7 +1756,7 @@ Proof.
     destruct (typing_wf _ wfΣ _ _ _ X1) as [wfc wfind].
     eapply wf_mkApps_inv in wfind; auto.
     rewrite trans_subst; auto with wf. 
-    simpl. rewrite map_rev. rewrite trans_subst_instance_constr.
+    simpl. rewrite map_rev. rewrite trans_subst_instance.
     eapply (type_Proj _ _ _ _ _ _ _ (arity, trans ty)). eauto.
     rewrite trans_mkApps in X2; auto. rewrite map_length.
     destruct mdecl; auto.

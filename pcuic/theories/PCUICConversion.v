@@ -2559,8 +2559,8 @@ Lemma conv_subst_instance {cf:checker_flags} (Σ : global_env_ext) Γ u A B univ
   valid_constraints (global_ext_constraints (Σ.1, univs))
                     (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A = B ->
-  (Σ.1,univs) ;;; subst_instance_context u Γ
-                   |- subst_instance_constr u A = subst_instance_constr u B.
+  (Σ.1,univs) ;;; subst_instance u Γ
+                   |- subst_instance u A = subst_instance u B.
 Proof.
   intros HH X0. induction X0.
   - econstructor.
@@ -2571,16 +2571,16 @@ Qed.
 
 Lemma context_relation_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   wf Σ.1 ->
-  wf_local Σ Γ -> wf_local Σ (subst_instance_context u Δ) ->
+  wf_local Σ Γ -> wf_local Σ (subst_instance u Δ) ->
   R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
   context_relation
   (fun Γ0 Γ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
-  (subst_instance_context u Δ)
-  (subst_instance_context u' Δ).
+  (subst_instance u Δ)
+  (subst_instance u' Δ).
 Proof.
   move=> wfΣ wf wf0 equ.
   assert (cl := closed_wf_local wfΣ wf0).
-  rewrite closedn_subst_instance_context in cl.
+  rewrite closedn_subst_instance in cl.
   induction Δ as [|d Δ] in cl, wf0 |- *.
   - constructor.
   - simpl.
@@ -2592,19 +2592,19 @@ Proof.
       apply andb_and in cld as [clb clty].
       constructor; auto. constructor; [reflexivity|..].
       ** apply weaken_conv; auto; autorewrite with len.
-         1:now rewrite closedn_subst_instance_context.
-         1-2:now rewrite closedn_subst_instance_constr.
+         1:now rewrite closedn_subst_instance.
+         1-2:now rewrite closedn_subst_instance.
         constructor. red.
-        apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
+        apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
       ** constructor. red.
-        apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
+        apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
     * depelim wf0; simpl in *.
       simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
       constructor; auto. constructor; [reflexivity|..]. apply weaken_conv; auto.
-      1:now rewrite closedn_subst_instance_context.
-      1-2:autorewrite with len; now rewrite closedn_subst_instance_constr.
+      1:now rewrite closedn_subst_instance.
+      1-2:autorewrite with len; now rewrite closedn_subst_instance.
       constructor. red.
-      apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
+      apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
 Qed.
 
 Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
@@ -2614,7 +2614,7 @@ Lemma cumul_ctx_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   wf Σ.1 ->
   wf_local Σ Γ ->
   R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
-  cumul_ctx_rel Σ Γ (subst_instance_context u Δ) (subst_instance_context u' Δ).
+  cumul_ctx_rel Σ Γ (subst_instance u Δ) (subst_instance u' Δ).
 Proof.
   move=> wfΣ wf equ.
   induction Δ as [|d Δ].
@@ -2624,12 +2624,12 @@ Proof.
     * constructor; eauto. simpl. constructor. 
       + reflexivity.
       + constructor.
-        eapply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto; auto.
+        eapply eq_term_upto_univ_subst_instance; try typeclasses eauto; auto.
       + constructor. eapply eq_term_leq_term.
-        eapply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto; auto.
+        eapply eq_term_upto_univ_subst_instance; try typeclasses eauto; auto.
     * constructor; auto.
       constructor; auto. simpl. constructor.
-      apply eq_term_upto_univ_subst_instance_constr; try typeclasses eauto. auto.
+      apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
 Qed.
 
 Lemma context_relation_over_same {cf:checker_flags} Σ Γ Δ Δ' :

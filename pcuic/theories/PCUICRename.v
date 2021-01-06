@@ -26,11 +26,12 @@ Proof.
   autorewrite with sigma. f_equal.
 Qed.
 
-Lemma rename_subst_instance_constr :
+Lemma rename_subst_instance :
   forall u t f,
-    rename f (subst_instance_constr u t) = subst_instance_constr u (rename f t).
+    rename f (subst_instance u t) = subst_instance u (rename f t).
 Proof.
   intros u t f.
+  rewrite /subst_instance /=.
   induction t in f |- * using term_forall_list_ind.
   all: try solve [
     simpl ;
@@ -723,13 +724,13 @@ Proof.
   now rewrite Hfg.
 Qed.
 
-Lemma rename_context_subst_instance_context f u Γ : 
-  rename_context f (subst_instance_context u Γ) = 
-  subst_instance_context u (rename_context f Γ).
+Lemma rename_context_subst_instance f u Γ : 
+  rename_context f (subst_instance u Γ) = 
+  subst_instance u (rename_context f Γ).
 Proof. unfold rename_context.
   rewrite fold_context_map //.
   intros i x.
-  now rewrite rename_subst_instance_constr.
+  now rewrite rename_subst_instance.
 Qed.
 
 Lemma rename_context_subst_k f s k Γ : 
@@ -774,13 +775,13 @@ Proof.
   simpl. len.
   rewrite rename_context_subst; len.
   rewrite hlen'.
-  rewrite -{1}(context_assumptions_subst_instance_context (puinst p)).
+  rewrite -{1}(context_assumptions_subst_instance (puinst p)).
   rewrite rename_closed_extended_subst.
   { now rewrite closedn_subst_instance_context. }
   f_equal.
   rewrite shiftn_add Nat.add_comm.
   rewrite rename_context_lift. f_equal.
-  rewrite -rename_context_subst_instance_context.
+  rewrite -rename_context_subst_instance.
   rewrite rename_context_subst_k rename_inds. now len.
 Qed.
 
@@ -838,7 +839,7 @@ Proof.
         apply rename_shiftn.
       + now rewrite rename_to_extended_list.
     * rewrite -/(rename_context f _).
-      rewrite rename_context_subst rename_context_subst_instance_context.
+      rewrite rename_context_subst rename_context_subst_instance.
       f_equal. f_equal.
       rewrite rename_closedn_ctx //.
       pose proof (closedn_ctx_expand_lets (ind_params mdecl) (ind_indices idecl)
@@ -1017,12 +1018,12 @@ Proof.
   * rewrite /= rename_mkApps /=. f_equal.
     ++ rewrite !map_map_compose /id. apply map_ext => t.
       rewrite /expand_lets /expand_lets_k.
-      rewrite -rename_subst_instance_constr. len.
+      rewrite -rename_subst_instance. len.
       rewrite -shiftn_add -shiftn_add.
       rewrite rename_subst. f_equal.
       rewrite rename_subst. rewrite (wf_predicate_length_pars wfp).
       rewrite (declared_minductive_ind_npars decli).
-      rewrite -{2}(context_assumptions_subst_instance_context (puinst p) (ind_params mdecl)).
+      rewrite -{2}(context_assumptions_subst_instance (puinst p) (ind_params mdecl)).
       rewrite rename_closed_extended_subst. 
       { rewrite closedn_subst_instance_context.
         apply (declared_inductive_closed_params decli). }
@@ -1101,7 +1102,7 @@ Proof.
   - rewrite 2!rename_mkApps. simpl.
     eapply red_cofix_proj.
     eapply rename_unfold_cofix. eassumption.
-  - rewrite rename_subst_instance_constr.
+  - rewrite rename_subst_instance.
     econstructor.
     + eassumption.
     + rewrite rename_closed. 2: assumption.
@@ -1464,13 +1465,13 @@ Proof.
   - intros Σ wfΣ Γ wfΓ cst u decl X X0 isdecl hconst P Δ f hf.
     simpl. eapply meta_conv.
     + constructor. all: eauto. apply hf.
-    + rewrite rename_subst_instance_constr. f_equal.
+    + rewrite rename_subst_instance. f_equal.
       rewrite rename_closed. 2: auto.
       eapply declared_constant_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ind u mdecl idecl isdecl X X0 hconst P Δ σ hf.
     simpl. eapply meta_conv.
     + econstructor. all: eauto. apply hf.
-    + rewrite rename_subst_instance_constr. f_equal.
+    + rewrite rename_subst_instance. f_equal.
       rewrite rename_closed. 2: auto.
       eapply declared_inductive_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ind i u mdecl idecl cdecl isdecl X X0 hconst P Δ f hf.
@@ -1550,7 +1551,7 @@ Proof.
         -- rewrite rename_mkApps. simpl. reflexivity.
       * rewrite map_length. assumption.
     + rewrite rename_subst0. simpl. rewrite map_rev. f_equal.
-      rewrite rename_subst_instance_constr. f_equal.
+      rewrite rename_subst_instance. f_equal.
       rewrite rename_closedn. 2: reflexivity.
       eapply declared_projection_closed_type in isdecl.
       rewrite List.rev_length. rewrite e. assumption.

@@ -162,7 +162,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) (subst_instance_constr u body)
+    red1 Σ Γ (tConst c u) (subst_instance u body)
 
 (** Proj *)
 | red_proj i pars narg args u arg:
@@ -268,7 +268,7 @@ Lemma red1_ind_all :
 
        (forall (Γ : context) c (decl : constant_body) (body : term),
         declared_constant Σ c decl ->
-        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance_constr u body)) ->
+        forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance u body)) ->
 
        (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
          (arg : term),
@@ -2081,7 +2081,7 @@ Inductive tred1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Constant unfolding *)
 | tred_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
-    tred1 Σ Γ (tConst c u) (subst_instance_constr u body)
+    tred1 Σ Γ (tConst c u) (subst_instance u body)
 
 (** Proj *)
 | tred_proj i pars narg args u arg:

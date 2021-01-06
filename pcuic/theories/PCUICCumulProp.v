@@ -673,26 +673,26 @@ Proof.
 Qed.
   
 
-Lemma cumul_prop_subst_instance_instance Σ univs u u' i : 
+Lemma cumul_prop_subst_instance Σ univs u u' i : 
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
   consistent_instance_ext Σ univs u' ->
-  R_universe_instance eq_univ_prop (subst_instance_instance u i)
-    (subst_instance_instance u' i).
+  R_universe_instance eq_univ_prop (subst_instance u i)
+    (subst_instance u' i).
 Proof.
   intros wfΣ cu cu'. red.
   eapply All2_Forall2, All2_map.
-  unfold subst_instance_instance.
+  unfold subst_instance.
   eapply All2_map. eapply All2_refl.
   intros x. red.
   rewrite !is_prop_subst_instance_level /=. split; reflexivity.
 Qed.
 
-Lemma cumul_prop_subst_instance_constr Σ Γ univs u u' T : 
+Lemma cumul_prop_subst_instance Σ Γ univs u u' T : 
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
   consistent_instance_ext Σ univs u' ->
-  Σ ;;; Γ |- subst_instance_constr u T ~~ subst_instance_constr u' T.
+  Σ ;;; Γ |- subst_instance u T ~~ subst_instance u' T.
 Proof.
   intros wfΣ cu cu'.
   eapply cumul_prop_alt.
@@ -704,11 +704,11 @@ Proof.
   - constructor. eapply PCUICEquality.eq_term_upto_univ_impl in IHT1; eauto.
     all:try typeclasses eauto.
     apply IHT2.
-  - constructor. now eapply cumul_prop_subst_instance_instance.
+  - constructor. now eapply cumul_prop_subst_instance.
   - constructor. red. apply R_opt_variance_impl. intros x y; auto.
-    now eapply cumul_prop_subst_instance_instance. 
+    now eapply cumul_prop_subst_instance. 
   - constructor. red. apply R_opt_variance_impl. intros x y; auto.
-    now eapply cumul_prop_subst_instance_instance. 
+    now eapply cumul_prop_subst_instance. 
 Qed.
 
 Lemma All_All_All2 {A} (P Q : A -> Prop) l l' : 
@@ -741,7 +741,7 @@ Qed.
 
 Lemma untyped_subslet_inds Γ ind u u' mdecl :
   untyped_subslet Γ (inds (inductive_mind ind) u (ind_bodies mdecl))
-    (subst_instance_context u' (arities_context (ind_bodies mdecl))).
+    (subst_instance u' (arities_context (ind_bodies mdecl))).
 Proof.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4.
@@ -974,13 +974,13 @@ Proof.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ H declc); subst decl'.
-    eapply cumul_prop_subst_instance_constr; eauto.
+    eapply cumul_prop_subst_instance; eauto.
 
   - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
     pose proof (PCUICWeakeningEnv.declared_inductive_inj isdecl declc) as [-> ->].
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto. do 2 red in H.
-    now eapply cumul_prop_subst_instance_constr.
+    now eapply cumul_prop_subst_instance.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
     pose proof (PCUICWeakeningEnv.declared_constructor_inj isdecl declc) as [-> [-> ->]].
@@ -988,15 +988,15 @@ Proof.
     eapply cumul_prop_trans; eauto.
     unfold type_of_constructor.
     etransitivity. 
-    eapply (substitution_untyped_cumul_prop_equiv _ Γ (subst_instance_context u (arities_context mdecl.(ind_bodies))) []); auto.
+    eapply (substitution_untyped_cumul_prop_equiv _ Γ (subst_instance u (arities_context mdecl.(ind_bodies))) []); auto.
     eapply untyped_subslet_inds. eapply (untyped_subslet_inds _ ind u0 u).
     simpl. generalize (ind_bodies mdecl).
     induction l; simpl; constructor; auto.
     constructor. simpl. eapply R_opt_variance_impl. now intros x.
     eapply R_eq_univ_prop_consistent_instances; eauto. simpl.
-    eapply (substitution_untyped_cumul_prop _ Γ (subst_instance_context u0 (arities_context mdecl.(ind_bodies))) []) => //.
+    eapply (substitution_untyped_cumul_prop _ Γ (subst_instance u0 (arities_context mdecl.(ind_bodies))) []) => //.
     eapply untyped_subslet_inds. simpl.
-    eapply cumul_prop_subst_instance_constr => //; eauto.
+    eapply cumul_prop_subst_instance => //; eauto.
 
   - eapply inversion_Case in X6 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & inv); auto.
     intuition auto.
@@ -1019,7 +1019,7 @@ Proof.
     eapply cumul_prop_mkApps_Ind_inv in X2 => //.
     destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [<- [<- <-]].
     subst ty. 
-    transitivity (subst0 (c0 :: List.rev args') (subst_instance_constr u pdecl'.2)).
+    transitivity (subst0 (c0 :: List.rev args') (subst_instance u pdecl'.2)).
     eapply (substitution_untyped_cumul_prop_cumul Σ Γ (projection_context mdecl idecl p.1.1 u) []) => //.
     epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ isdecl wfΣ X1).
     eapply subslet_untyped_subslet. eapply X3, validity; eauto.
@@ -1034,7 +1034,7 @@ Proof.
     destruct a.
     eapply validity, (isType_mkApps_Ind wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
     eapply validity, (isType_mkApps_Ind wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
-    eapply cumul_prop_subst_instance_constr; eauto.
+    eapply cumul_prop_subst_instance; eauto.
 
   - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.

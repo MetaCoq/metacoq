@@ -33,6 +33,16 @@ Proof.
   destruct a as [na [b|] ty]; simpl; eauto.
 Qed.
 
+Lemma subst_instance_it_mkLambda_or_LetIn u ctx t :
+  subst_instance u (it_mkLambda_or_LetIn ctx t) =
+  it_mkLambda_or_LetIn (subst_instance u ctx) (subst_instance u t).
+Proof.
+  unfold subst_instance; cbn.
+  induction ctx in u, t |- *; simpl; unfold mkProd_or_LetIn; try congruence.
+  rewrite IHctx.  f_equal; unfold mkProd_or_LetIn.
+  destruct a as [na [b|] ty]; simpl; eauto.
+Qed.
+
 Lemma subst_instance_subst u c (s : list term) k :
   subst_instance u (subst s k c) = subst (subst_instance u s) k (subst_instance u c).
 Proof.

@@ -265,21 +265,6 @@ Proof.
   now eapply closed_wf_local.
 Qed.
 
-Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t =
-  let (ctx', t') := decompose_prod_assum [] t in
-  (ctx ,,, ctx', t').
-Proof.
-  induction t in ctx |- *; simpl; auto.
-  - simpl. rewrite IHt2.
-    rewrite (IHt2 ([] ,, vass _ _)).
-    destruct (decompose_prod_assum [] t2). simpl.
-    unfold snoc. now rewrite app_context_assoc.
-  - simpl. rewrite IHt3.
-    rewrite (IHt3 ([] ,, vdef _ _ _)).
-    destruct (decompose_prod_assum [] t3). simpl.
-    unfold snoc. now rewrite app_context_assoc.
-Qed.
-
 Lemma smash_context_lift Δ k n Γ :
   smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
   lift_context n k (smash_context Δ Γ).

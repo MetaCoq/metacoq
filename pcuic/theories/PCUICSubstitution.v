@@ -1218,6 +1218,22 @@ Proof.
   rewrite subst_consn_ge; try lia. lia_f_equal. 
 Qed.
 
+(* Lemma shift_subst_consn_lt (n k : nat) (σ : nat -> term) :
+  n <= k -> ↑^n ∘s (idsn k ⋅n σ) =1 idsn (k - n) ⋅n σ.
+Proof.
+  intros Hlt i.
+  rewrite /subst_compose /shiftk /= /Upn.
+  rewrite /subst_consn. len. unfold subst_compose.
+  case: nth_error_spec. 
+  * intros x; len. intros.
+    pose proof (nth_error_idsn_eq_Some _ _ _ e). subst x.
+    case: nth_error_spec; intros.
+    + len in l0. 
+      apply nth_error_idsn_eq_Some in e0. subst. subst. f_equal. lia.
+  destruct (Nat.ltb (n + i) k) eqn:.
+  rewrite subst_consn_lt'; len; try lia. lia_f_equal. 
+Qed. *)
+
 Lemma skipn_subst n s σ : 
   n <= #|s| ->
   skipn n s ⋅n σ =1 ↑^(n) ∘s (s ⋅n σ).
@@ -1451,7 +1467,7 @@ Proof.
 Qed.
 
 (** The cumulativity relation is substitutive, yay! *)
-
+(*
 Fixpoint subst_stack s k π :=
   match π with
   | ε => ε
@@ -1568,7 +1584,7 @@ Proof.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite map_app. cbn. reflexivity.
 Qed.
-
+*)
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> untyped_subslet Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
@@ -1857,16 +1873,69 @@ Proof.
 Qed.
 *)
 
+Lemma usubst_well_subst {cf} Σ Γ σ Δ : 
+  usubst Γ σ Δ ->
+  (forall x decl, nth_error Γ x = Some decl -> 
+    Σ ;;; Δ |- σ x : (decl.(decl_type)).[↑^(S x) ∘s σ]) ->
+  well_subst Σ Γ σ Δ.
+Proof.
+  intros us hty.
+  intros x decl hnth.
+  split.
+  * specialize (hty x decl hnth).
+    now sigma.
+  * apply (us x decl hnth).
+Qed.
+
+Lemma subslet_well_subst {cf} Σ Γ Γ' s Δ : 
+  subslet Σ Γ s Γ' ->
+  well_subst Σ (Γ ,,, Γ' ,,, Δ) (⇑^#|Δ| (s ⋅n ids)) (Γ ,,, subst_context s 0 Δ).
+Proof.
+  intros hs.
+  apply usubst_well_subst.
+  * apply (subslet_usubst hs).
+  * intros x decl.
+    case: nth_error_app_context => //.
+    { intros d hnth hn [= ->].
+      rewrite Upn_eq subst_consn_lt'; len => //; rewrite /subst_fn.
+      rewrite idsn_lt //.
+      eapply meta_conv.
+      - econstructor. 1:admit.
+        rewrite nth_error_app_lt; len => //.
+        now rewrite nth_error_subst_context hnth.
+      - rewrite /subst_decl. simpl. 
+        rewrite lift0_inst !subst_inst Nat.add_0_r.
+        
+        
+        apply inst_ext.
+        rewrite - !subst_compose_assoc -shiftk_shift.
+        replace (S x) with ((#|Δ| - S x) + #|Δ|) by lia. with ()
+        rewrite shift_subst_consn_ge.
+
+    eapply subslet_nth_error in hs; eauto.
+
+
+
 Theorem substitution_prop `{cf : checker_flags} : env_prop
   (fun Σ Γ0 t T =>
   forall (Γ Γ' Δ : context) (s : list term)
     (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
     Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T)
-  (fun Σ Γ0 _ =>
+  (fun Σ Γ0 =>
     forall (Γ Γ' Δ : context) (s : list term)
     (sub : subslet Σ Γ s Γ') (eqΓ0 : Γ0 = Γ ,,, Γ' ,,, Δ),
     wf_local Σ (Γ ,,, subst_context s 0 Δ)).
 Proof.
+  intros Σ wfΣ Γ t T HT.
+  pose proof (type_inst Σ wfΣ Γ t T HT) as [HΣ [HΓ HTy]].
+  intuition auto.
+  3:{ rewrite !subst_inst. eapply HTy. 1:admit.
+    subst Γ.
+  
+  }
+  eapply env_prop_impl.
+
+
   apply typing_ind_env;
   intros Σ wfΣ Γ0 wfΓ0; intros; subst Γ0; simpl in *; try solve [econstructor; eauto];
     try specialize (X _ _ _ _ sub eq_refl).

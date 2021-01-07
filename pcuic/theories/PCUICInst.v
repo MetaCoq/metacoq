@@ -1872,3 +1872,5 @@ Proof.
       * exact hσ.
       * apply hcum.
 Qed.
+
+End Sigma.

@@ -2446,11 +2446,6 @@ Proof.
      now symmetry.
 Qed.
 
-Lemma subslet_untyped_subslet {cf:checker_flags} Σ Γ s Γ' : subslet Σ Γ s Γ' -> untyped_subslet Γ s Γ'.
-Proof.
-  induction 1; constructor; auto.
-Qed.
-
 Lemma untyped_subst_conv {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ s s' T U :
   wf Σ.1 ->
   untyped_subslet Γ s Γ0 ->

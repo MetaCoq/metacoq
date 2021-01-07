@@ -191,6 +191,21 @@ Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   | tLetIn na b bty b' => decompose_prod_assum (Γ ,, vdef na b bty) b'
   | _ => (Γ, t)
   end.
+  
+Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t =
+  let (ctx', t') := decompose_prod_assum [] t in
+  (ctx ,,, ctx', t').
+Proof.
+  induction t in ctx |- *; simpl; auto.
+  - simpl. rewrite IHt2.
+    rewrite (IHt2 ([] ,, vass _ _)).
+    destruct (decompose_prod_assum [] t2). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+  - simpl. rewrite IHt3.
+    rewrite (IHt3 ([] ,, vdef _ _ _)).
+    destruct (decompose_prod_assum [] t3). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+Qed.
 
 Fixpoint decompose_prod_n_assum (Γ : context) n (t : term) : option (context * term) :=
   match n with

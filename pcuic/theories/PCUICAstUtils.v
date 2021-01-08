@@ -90,32 +90,6 @@ Proof.
   elim: H. intros -> => //. auto.
 Qed.
 
-Definition lookup_minductive Σ mind :=
-  match lookup_env Σ mind with
-  | Some (InductiveDecl decl) => Some decl
-  | _ => None
-  end.
-
-Definition lookup_inductive Σ ind :=
-  match lookup_minductive Σ (inductive_mind ind) with
-  | Some mdecl => 
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-    | Some idecl => Some (mdecl, idecl)
-    | None => None
-    end
-  | None => None
-  end.
-
-Definition lookup_constructor Σ ind k :=
-  match lookup_inductive Σ ind with
-  | Some (mdecl, idecl) => 
-    match nth_error idecl.(ind_ctors) k with
-    | Some cdecl => Some (mdecl, idecl, cdecl)
-    | None => None
-    end
-  | _ => None
-  end.
-
 Fixpoint decompose_app_rec (t : term) l :=
   match t with
   | tApp f a => decompose_app_rec f (a :: l)

@@ -1,8 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICInduction
      PCUICContextSubst.
+Import Reflect. (* Reflect.eqb has priority over String.eqb *)
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
@@ -97,7 +98,6 @@ Proof.
   intro e; now rewrite e in H.
 Qed.
 
-
 Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : context :=
   let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
   let inddecl := 
@@ -188,10 +188,26 @@ Definition wf_predicate_gen mdecl idecl (pparams : list term) (pcontext : list a
   (#|pparams| = mdecl.(ind_npars)) /\
   (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
     pcontext (decl :: idecl.(ind_indices))).
-    
+
 Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
   wf_predicate_gen mdecl idecl p.(pparams) p.(pcontext).
-    
+
+Definition wf_predicateb mdecl idecl (p : predicate term) : bool :=
+  let decl := idecl_binder idecl in
+  eqb #|p.(pparams)| mdecl.(ind_npars)
+  && forallb2 (fun na decl => eqb_binder_annot na decl.(decl_name))
+    p.(pcontext) (decl :: idecl.(ind_indices)).
+  
+Lemma wf_predicateP mdecl idecl p : reflect (wf_predicate mdecl idecl p) (wf_predicateb mdecl idecl p).
+Proof.
+  rewrite /wf_predicate /wf_predicate_gen /wf_predicateb.
+  case: Reflect.eqb_spec => eqpars /= //.
+  * case: (forallb2P _ _ (pcontext p) (idecl_binder idecl :: ind_indices idecl)
+      (fun na decl => eqb_annot_reflect na decl.(decl_name))); constructor => //.
+    intros [_ Hi]; contradiction.
+  * constructor; intros [H _]; contradiction.
+Qed.
+
 Definition wf_branch_gen cdecl (bctx : list aname) : Prop := 
   (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
     bctx cdecl.(cstr_args)).
@@ -199,12 +215,31 @@ Definition wf_branch_gen cdecl (bctx : list aname) : Prop :=
 Definition wf_branch cdecl (b : branch term) : Prop := 
   wf_branch_gen cdecl b.(bcontext).
 
+Definition wf_branchb cdecl (b : branch term) : bool :=
+  forallb2 (fun na decl => eqb_binder_annot na decl.(decl_name)) b.(bcontext) cdecl.(cstr_args).
+
+Lemma wf_branchP cdecl b : reflect (wf_branch cdecl b) (wf_branchb cdecl b).
+Proof.
+  rewrite /wf_branch /wf_branch_gen /wf_branchb.
+  apply (forallb2P _ _ (bcontext b) (cstr_args cdecl)
+    (fun na decl => eqb_annot_reflect na decl.(decl_name))).
+Qed.
+
 Definition wf_branches_gen (ctors : list constructor_body) (brs : list (list aname)) : Prop := 
   Forall2 wf_branch_gen ctors brs.
   
 Definition wf_branches idecl (brs : list (branch term)) : Prop := 
   Forall2 wf_branch idecl.(ind_ctors) brs.
+
+Definition wf_branchesb idecl (brs : list (branch term)) : bool :=
+  forallb2 wf_branchb idecl.(ind_ctors) brs.
   
+Lemma wf_branchesP idecl brs : reflect (wf_branches idecl brs) (wf_branchesb idecl brs).
+Proof.
+  rewrite /wf_branches /wf_branches_gen /wf_branchesb.
+  apply (forallb2P _ _ _ _ wf_branchP).
+Qed.
+
 Lemma case_predicate_context_length {ci mdecl idecl p} :
   wf_predicate mdecl idecl p ->
   #|case_predicate_context (ci_ind ci) mdecl idecl p| = #|p.(pcontext)|.
@@ -486,7 +521,7 @@ Definition build_case_predicate_context ind mdecl idecl params u pctx : option c
     let ictx := map2 set_binder_name pctx (Γ ,, inddecl) in
     ret ictx
   else None.
-
+*)
 Lemma lookup_inductive_declared Σ ind mdecl idecl :
   lookup_inductive Σ ind = Some (mdecl, idecl) ->
   declared_inductive Σ ind mdecl idecl.
@@ -499,6 +534,7 @@ Proof.
   intros [= -> ->]. now rewrite e.
 Qed.
 
+(*
 Definition onSome {A} (P : A -> Type) (x : option A) : Type :=
   match x with
   | Some x => P x

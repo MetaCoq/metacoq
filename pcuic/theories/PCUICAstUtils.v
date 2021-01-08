@@ -6,7 +6,11 @@ Require Import ssreflect.
 From Equations Require Import Equations.
 Set Equations Transparent.
 
-Derive Signature for All All2.
+Lemma eqb_annot_reflect {A} na na' : reflect (@eq_binder_annot A A na na') (eqb_binder_annot na na').
+Proof.
+  unfold eqb_binder_annot, eq_binder_annot.
+  destruct Classes.eq_dec; constructor; auto.
+Qed.
 
 Definition string_of_aname (b : binder_annot name) :=
   string_of_name b.(binder_name).
@@ -85,6 +89,32 @@ Proof.
   epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
   elim: H. intros -> => //. auto.
 Qed.
+
+Definition lookup_minductive Σ mind :=
+  match lookup_env Σ mind with
+  | Some (InductiveDecl decl) => Some decl
+  | _ => None
+  end.
+
+Definition lookup_inductive Σ ind :=
+  match lookup_minductive Σ (inductive_mind ind) with
+  | Some mdecl => 
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
+    | Some idecl => Some (mdecl, idecl)
+    | None => None
+    end
+  | None => None
+  end.
+
+Definition lookup_constructor Σ ind k :=
+  match lookup_inductive Σ ind with
+  | Some (mdecl, idecl) => 
+    match nth_error idecl.(ind_ctors) k with
+    | Some cdecl => Some (mdecl, idecl, cdecl)
+    | None => None
+    end
+  | _ => None
+  end.
 
 Fixpoint decompose_app_rec (t : term) l :=
   match t with

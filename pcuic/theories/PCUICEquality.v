@@ -39,32 +39,6 @@ Fixpoint R_universe_instance_variance Re Rle v u u' :=
   | _, _ => False
   end.
 
-Definition lookup_minductive Σ mind :=
-  match lookup_env Σ mind with
-  | Some (InductiveDecl decl) => Some decl
-  | _ => None
-  end.
-
-Definition lookup_inductive Σ ind :=
-  match lookup_minductive Σ (inductive_mind ind) with
-  | Some mdecl => 
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-    | Some idecl => Some (mdecl, idecl)
-    | None => None
-    end
-  | None => None
-  end.
-
-Definition lookup_constructor Σ ind k :=
-  match lookup_inductive Σ ind with
-  | Some (mdecl, idecl) => 
-    match nth_error idecl.(ind_ctors) k with
-    | Some cdecl => Some (mdecl, idecl, cdecl)
-    | None => None
-    end
-  | _ => None
-  end.
-
 Definition global_variance Σ gr napp :=
   match gr with
   | IndRef ind =>
@@ -1356,7 +1330,8 @@ Proof.
   induction u in v |- *; destruct v; simpl; auto.
   rtoProp. split; auto.
   destruct t; simpl; auto.
-  eapply forallb2_map, forallb2_refl; intro; apply eqb_refl.
+  rewrite /compare_universe_instance.
+  rewrite forallb2_map; eapply forallb2_refl; intro; apply eqb_refl.
 Qed.
 
 Lemma eq_dec_to_bool_refl {A} {ea : Classes.EqDec A} (x : A) : 
@@ -1389,7 +1364,7 @@ Proof.
   - induction X.
     + reflexivity.
     + simpl. rewrite -> p by assumption. auto.
-  - eapply forallb2_map. eapply forallb2_refl.
+  - rewrite forallb2_map. eapply forallb2_refl.
     intro l. eapply eqb_refl.
   - eapply compare_global_instance_refl; auto.
   - eapply compare_global_instance_refl; auto.
@@ -1398,7 +1373,7 @@ Proof.
     unfold eqb_predicate.
     rtoProp; repeat split.
     + solve_all. eapply All_All2; eauto.
-    + eapply forallb2_map, forallb2_refl; eauto.
+    + rewrite forallb2_map. apply forallb2_refl; eauto.
     + eapply forallb2_refl, eqb_annot_refl.
     + now apply i.
     + red in X0. solve_all. eapply All_All2; eauto. simpl.

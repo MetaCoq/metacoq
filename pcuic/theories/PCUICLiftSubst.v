@@ -741,3 +741,70 @@ Proof.
     f_equal. apply map_ext. intros.
     rewrite simpl_lift; lia_f_equal.
 Qed.
+
+Lemma subst_context_comm s s' Γ :
+  subst_context s 0 (subst_context s' 0 Γ) =
+  subst_context (map (subst s 0) s' ++ s) 0 Γ.
+Proof.
+  intros.
+  rewrite !subst_context_alt !mapi_compose.
+  apply mapi_ext => i x.
+  destruct x as [na [b|] ty] => //.
+  - rewrite /subst_decl /map_decl /=; f_equal.
+    + rewrite !mapi_length. f_equal. rewrite {2}Nat.add_0_r.
+      rewrite subst_app_simpl.
+      rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
+      rewrite map_length. f_equal; lia.
+    + rewrite mapi_length.
+      rewrite subst_app_simpl.
+      rewrite {2}Nat.add_0_r.
+      rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
+      rewrite map_length. f_equal; lia.
+  - rewrite /subst_decl /map_decl /=; f_equal.
+    rewrite !mapi_length. rewrite {2}Nat.add_0_r.
+    rewrite subst_app_simpl.
+    rewrite distr_subst_rec. rewrite Nat.add_0_r; f_equal; try lia.
+    rewrite map_length. f_equal. lia.
+Qed.
+
+Lemma context_assumptions_subst s n Γ :
+  context_assumptions (subst_context s n Γ) = context_assumptions Γ.
+Proof. apply context_assumptions_fold. Qed.
+Hint Rewrite context_assumptions_subst : pcuic.
+
+Lemma subst_app_context s s' Γ : subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' #|s| Γ).
+Proof.
+  induction Γ; simpl; auto.
+  rewrite !subst_context_snoc /= /subst_decl /map_decl /=. simpl.
+  rewrite IHΓ. f_equal. f_equal.
+  - destruct a as [na [b|] ty]; simpl; auto.
+    f_equal. rewrite subst_context_length Nat.add_0_r.
+    now rewrite subst_app_simpl.
+  - rewrite subst_context_length Nat.add_0_r.
+    now rewrite subst_app_simpl.
+Qed.
+
+Lemma subst_app_context' (s s' : list term) (Γ : context) n :
+  n = #|s| ->
+  subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' n Γ).
+Proof.
+  intros ->; apply subst_app_context.
+Qed.
+
+Lemma map_subst_app_simpl l l' k (ts : list term) :
+  map (subst l k ∘ subst l' (k + #|l|)) ts =
+  map (subst (l ++ l') k) ts.
+Proof.
+  eapply map_ext. intros.
+  now rewrite subst_app_simpl.
+Qed.
+
+Lemma simpl_map_lift x n k :
+  map (lift0 n ∘ lift0 k) x =
+  map (lift k n ∘ lift0 n) x.
+Proof.
+  apply map_ext => t.
+  rewrite simpl_lift => //; try lia.
+  rewrite simpl_lift; try lia.
+  now rewrite Nat.add_comm.
+Qed.

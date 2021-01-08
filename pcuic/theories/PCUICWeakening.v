@@ -647,13 +647,27 @@ Proof.
   now rewrite closed_ctx_lift in X.
 Qed.
 
-Lemma weakening_gen : forall (cf : checker_flags) (Σ : global_env × universes_decl)
+Lemma weakening_gen : forall (cf : checker_flags) (Σ : global_env_ext)
   (Γ Γ' : context) (t T : term) n, n = #|Γ'| ->
-  wf Σ.1 ->
+  wf Σ ->
   wf_local Σ (Γ ,,, Γ') ->
   Σ;;; Γ |- t : T -> Σ;;; Γ ,,, Γ' |- (lift0 n) t : (lift0 n) T.
 Proof.
   intros ; subst n; now apply weakening.
+Qed.
+
+(** Convenience lemma when going through instantiation for renaming. 
+    Δ is arbitrary here, it does not have to be the weakening of some other context. *)
+Lemma shift_typing {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t T n Δ} : 
+  Σ ;;; Γ |- t : T ->
+  wf_local Σ (Γ ,,, Δ) ->
+  n = #|Δ| ->
+  Σ ;;; Γ ,,, Δ |- t.[↑^n] : T.[↑^n].
+Proof.
+  intros ht hΔ ->.
+  eapply meta_conv_all. 3-4:now rewrite -rename_inst -lift0_rename.
+  2:reflexivity.
+  eapply weakening_gen => //.
 Qed.
 
 Corollary All_mfix_wf {cf:checker_flags} Σ Γ mfix :

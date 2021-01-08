@@ -867,6 +867,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         on_udecl Σ udecl ->
         on_global_decl (Σ, udecl) kn d ->
         on_global_env (Σ ,, (kn, d)).
+    Derive Signature for on_global_env.
 
     Definition on_global_env_ext `{checker_flags} (Σ : global_env_ext) :=
       on_global_env Σ.1 × on_udecl Σ.1 Σ.2.
@@ -1012,5 +1013,68 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (fn _ _ t _ (projT2 tty) + fn _ _ b t tty' + wf_local_size _ wfΓ)%nat
       end.
   End wf_local_size.
+
+  Lemma lift_typing_impl P Q Σ Γ t T :
+    (forall Γ t T, P Σ Γ t T -> Q Σ Γ t T) ->
+    lift_typing P Σ Γ t T -> lift_typing Q Σ Γ t T.
+  Proof.
+    intros HPQ.
+    destruct T; simpl. 
+    * apply HPQ.
+    * intros [s Hs]; exists s. now apply HPQ.
+  Qed.
+
+  (** Functoriality of global environment typing derivations + folding of the well-formed 
+    environment assumption. *)
+  Lemma on_wf_global_env_impl `{checker_flags} {Σ : global_env} {wfΣ : on_global_env (lift_typing typing) Σ} P Q :
+    (forall Σ Γ t T, on_global_env (lift_typing typing) Σ.1 -> 
+        on_global_env P Σ.1 -> 
+        on_global_env Q Σ.1 ->
+        P Σ Γ t T -> Q Σ Γ t T) ->
+    on_global_env P Σ -> on_global_env Q Σ.
+  Proof.
+    intros X X0.
+    simpl in *. revert wfΣ. induction X0; constructor; eauto.
+    { depelim wfΣ. eauto. }
+    depelim wfΣ. specialize (IHX0 wfΣ).
+    assert (X' := fun Γ t T => X (Σ, udecl0) Γ t T wfΣ X0 IHX0); clear X.
+    rename X' into X.
+    clear IHX0. destruct d; simpl.
+    - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
+    - red in o. simpl in *.
+      destruct o0 as [onI onP onNP].
+      constructor; auto.
+      -- eapply Alli_impl; tea. intros.
+        refine {| ind_arity_eq := X1.(ind_arity_eq);
+                  ind_cunivs := X1.(ind_cunivs) |}.
+        --- apply onArity in X1. unfold on_type in *; simpl in *.
+            now eapply X.
+        --- pose proof X1.(onConstructors) as X11. red in X11.
+            eapply All2_impl; eauto.
+            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
+            * apply X; eauto.
+            * clear -X0 X on_cargs0. revert on_cargs0.
+              generalize (cstr_args x0).
+              induction c in y |- *; destruct y; simpl; auto;
+                destruct a as [na [b|] ty]; simpl in *; auto;
+            split; intuition eauto.
+            * clear -X0 X on_cindices0.
+              revert on_cindices0.
+              generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+              generalize (cstr_indices x0).
+              induction 1; simpl; constructor; auto.
+        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
+        --- destruct X1. simpl. unfold check_ind_sorts in *.
+            destruct Universe.is_prop; auto.
+            destruct Universe.is_sprop; auto.
+            split.
+            * apply ind_sorts0.
+            * destruct indices_matter; auto.
+              eapply type_local_ctx_impl; eauto.
+              eapply ind_sorts0.
+        --- eapply X1.(onIndices).
+      -- red in onP. red.
+        eapply All_local_env_impl; tea.
+  Qed.
 
 End DeclarationTyping.

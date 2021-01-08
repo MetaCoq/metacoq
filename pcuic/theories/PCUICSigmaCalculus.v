@@ -1073,10 +1073,17 @@ Qed.
 Lemma subst_fn_subst_consn s : subst_fn s =1 subst_consn s ids.
 Proof. reflexivity. Qed.
 
+(** Substitution is faithfully modelled by instantiation *)
 Theorem subst_inst s k t : subst s k t = inst (⇑^k (subst_consn s ids)) t.
 Proof.
   rewrite subst_inst_aux up_Upn. apply inst_ext.
   unfold Upn. now rewrite subst_fn_subst_consn.
+Qed.
+
+(** Useful for point-free rewriting *)
+Corollary subst_inst' s k : subst s k =1 inst (⇑^k (subst_consn s ids)).
+Proof.
+  intros t; apply subst_inst.
 Qed.
 
 (** Simplify away [subst] to the σ-calculus [inst] primitive. *)
@@ -1456,18 +1463,6 @@ Proof.
   - depelim H. now eapply IHΓ.
 Qed.
 
-Lemma subst_app_context s s' Γ : subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' #|s| Γ).
-Proof.
-  induction Γ; simpl; auto.
-  rewrite !subst_context_snoc /= /subst_decl /map_decl /=. simpl.
-  rewrite IHΓ. f_equal. f_equal.
-  - destruct a as [na [b|] ty]; simpl; auto.
-    f_equal. rewrite subst_context_length Nat.add_0_r.
-    now rewrite subst_app_simpl.
-  - rewrite subst_context_length Nat.add_0_r.
-    now rewrite subst_app_simpl.
-Qed.
-
 Lemma expand_lets_assumption_context Γ Δ :
   assumption_context Γ -> expand_lets_ctx Γ Δ = Δ.
 Proof.
@@ -1717,4 +1712,37 @@ Proof.
     rewrite subst_consn_shiftn.
     2:now autorewrite with len.
     now autorewrite with sigma.
+Qed.
+
+Lemma shift_subst_consn_ge (n : nat) (l : list term) (σ : nat -> term) :
+  #|l| <= n -> ↑^n ∘s (l ⋅n σ) =1 ↑^(n - #|l|) ∘s σ.
+Proof.
+  intros Hlt i.
+  rewrite /subst_compose /shiftk /=.
+  rewrite subst_consn_ge; try lia. lia_f_equal. 
+Qed.
+
+Lemma skipn_subst n s σ : 
+  n <= #|s| ->
+  skipn n s ⋅n σ =1 ↑^(n) ∘s (s ⋅n σ).
+Proof.
+  intros hn i.
+  rewrite /subst_consn /shiftk /subst_compose /=.
+  rewrite nth_error_skipn. 
+  destruct nth_error => //.
+  rewrite List.skipn_length. lia_f_equal.
+Qed.
+
+Lemma subst_shift_comm k n s : ⇑^k s ∘s ↑^n =1 ↑^n ∘s ⇑^(k+n) s.
+Proof.
+  now rewrite Nat.add_comm Upn_Upn shiftn_consn_idsn.
+Qed.
+
+Lemma Upn_subst_consn_ge (n i : nat) s (σ : nat -> term) :
+  n + #|s| <= i -> (⇑^n (s ⋅n σ)) i = (σ ∘s ↑^n) (i - n - #|s|).
+Proof.
+  intros Hlt.
+  rewrite /subst_compose /shiftk /= /Upn.
+  rewrite subst_consn_ge; len; try lia.
+  now rewrite subst_consn_compose subst_consn_ge; len; try lia.
 Qed.

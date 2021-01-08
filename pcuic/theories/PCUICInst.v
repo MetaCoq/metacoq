@@ -379,13 +379,9 @@ Proof.
    now rewrite mapi_length fix_context_length.
 Qed.
 
-Section Sigma.
-
-Context `{cf: checker_flags}.
-
 (* Well-typedness of a substitution *)
 
-Definition well_subst Σ (Γ : context) σ (Δ : context) :=
+Definition well_subst {cf} Σ (Γ : context) σ (Δ : context) :=
   forall x decl,
     nth_error Γ x = Some decl ->
     Σ ;;; Δ |- σ x : ((lift0 (S x)) (decl_type decl)).[ σ ] ×
@@ -401,6 +397,36 @@ Definition well_subst Σ (Γ : context) σ (Δ : context) :=
 
 Notation "Σ ;;; Δ ⊢ σ : Γ" :=
   (well_subst Σ Γ σ Δ) (at level 50, Δ, σ, Γ at next level).
+
+
+(* Untyped substitution for untyped reduction / cumulativity *)
+Definition usubst (Γ : context) σ (Δ : context) :=
+  forall x decl,
+    nth_error Γ x = Some decl ->
+    (forall b,
+        decl.(decl_body) = Some b ->
+        (∑ x' decl', σ x = tRel x' ×
+          nth_error Δ x' = Some decl' ×
+          (** This is let-preservation *)
+          option_map (rename (rshiftk (S x'))) decl'.(decl_body) = Some (b.[↑^(S x) ∘s σ])) +
+        (* This allows to expand a let-binding everywhere *)
+        (σ x = b.[↑^(S x) ∘s σ])).
+
+Definition well_subst_usubst {cf} Σ Γ σ Δ :
+  Σ ;;; Δ ⊢ σ : Γ ->
+  usubst Γ σ Δ.
+Proof.
+  intros hσ x decl hnth b hb.
+  specialize (hσ x decl hnth) as [_ h].
+  now apply h.
+Qed.
+
+Coercion well_subst_usubst : well_subst >-> usubst.
+
+Section Sigma.
+
+Context `{cf: checker_flags}.
+  
 (* 
 Lemma shift_Up_comm σ : ↑ ∘s ⇑ σ =1 ⇑ (⇑ σ).
 Proof.
@@ -1307,29 +1333,6 @@ Lemma inst_predicate_set_preturn f p pret :
   inst_predicate f (set_preturn p pret) = 
   set_preturn (inst_predicate f p) (inst (up #|pcontext p| f) pret).
 Proof. reflexivity. Qed.
-
-(* Untyped substitution for untyped reduction / cumulativity *)
-Definition usubst (Γ : context) σ (Δ : context) :=
-  forall x decl,
-    nth_error Γ x = Some decl ->
-    (forall b,
-        decl.(decl_body) = Some b ->
-        (∑ x' decl', σ x = tRel x' ×
-          nth_error Δ x' = Some decl' ×
-          (** This is let-preservation *)
-          option_map (rename (rshiftk (S x'))) decl'.(decl_body) = Some (b.[↑^(S x) ∘s σ])) +
-        (* This allows to expand a let-binding everywhere *)
-        (σ x = b.[↑^(S x) ∘s σ])).
-
-Definition well_subst_usubst Σ Γ σ Δ :
-  Σ ;;; Δ ⊢ σ : Γ ->
-  usubst Γ σ Δ.
-Proof.
-  intros hσ x decl hnth b hb.
-  specialize (hσ x decl hnth) as [_ h].
-  now apply h.
-Qed.
-Coercion well_subst_usubst : well_subst >-> usubst.
 
 Lemma usubst_Up {Γ Δ σ na A} :
   usubst Γ σ Δ ->

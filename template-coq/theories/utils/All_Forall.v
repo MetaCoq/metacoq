@@ -156,7 +156,7 @@ Proof.
 Qed.
 
 Section Forallb2.
-  Context {A} (f : A -> A -> bool).
+  Context {A B} (f : A -> B -> bool).
 
   Fixpoint forallb2 l l' :=
     match l, l' with
@@ -179,16 +179,14 @@ Proof.
 Qed.
 
 Lemma forallb2_map :
-  forall A B (R : A -> A -> bool) f g (l : list B) (l' : list B),
-    forallb2 (fun x y => R (f x) (g y)) l l' ->
-    forallb2 R (map f l) (map g l').
+  forall A B C D (R : A -> B -> bool) f g (l : list C) (l' : list D),
+    forallb2 R (map f l) (map g l') =
+    forallb2 (fun x y => R (f x) (g y)) l l'.
 Proof.
-  intros A B R f g l l' h.
-  induction l in l', h |- *.
-  - destruct l'. 2: discriminate. reflexivity.
-  - destruct l'. 1: discriminate. simpl in *.
-    apply andb_true_iff in h as [e1 e2]. rewrite e1. simpl.
-    eapply IHl. assumption.
+  intros A B C D R f g l l'.
+  induction l in l' |- *.
+  - destruct l' => //.
+  - destruct l' => /= //; rewrite IHl //.
 Qed.
 
 Lemma forall_map_spec {A B} {l} {f g : A -> B} :
@@ -310,8 +308,8 @@ Proof.
   - constructor; auto.
 Qed.
 
-Lemma forallb2_All2 {A : Type} {p : A -> A -> bool}
-      {l l' : list A} :
+Lemma forallb2_All2 {A B : Type} {p : A -> B -> bool}
+      {l : list A} {l' : list B}:
   is_true (forallb2 p l l') -> All2 (fun x y => is_true (p x y)) l l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; intros; try congruence.
@@ -320,21 +318,21 @@ Proof.
     apply IHl. revert H; rewrite andb_and; intros [px pl]. auto.
 Qed.
 
-Lemma All2_forallb2 {A : Type} {p : A -> A -> bool}
-      {l l' : list A} :
+Lemma All2_forallb2 {A B : Type} {p : A -> B -> bool}
+      {l : list A} {l' : list B} :
   All2 (fun x y => is_true (p x y)) l l' -> is_true (forallb2 p l l').
 Proof.
   induction 1; simpl; intros; try congruence.
   rewrite andb_and. intuition auto.
 Qed.
 
-Lemma All2P {A : Type} {p : A -> A -> bool} {l l' : list A} :
+Lemma All2P {A B : Type} {p : A -> B -> bool} {l l'} :
   reflectT (All2 p l l') (forallb2 p l l').
 Proof.
   apply equiv_reflectT. apply All2_forallb2. apply forallb2_All2.
 Qed.
 
-Lemma forallb2_app {A} (p : A -> A -> bool) l l' q q' :
+Lemma forallb2_app {A B} (p : A -> B -> bool) l l' q q' :
   is_true (forallb2 p l l' && forallb2 p q q')
   -> is_true (forallb2 p (l ++ q) (l' ++ q')).
 Proof.
@@ -1576,7 +1574,7 @@ Proof.
   induction 1; simpl; intuition (f_equal; auto).
 Qed.
 
-Lemma forallb2_length {A} (p : A -> A -> bool) l l' : is_true (forallb2 p l l') -> length l = length l'.
+Lemma forallb2_length {A B} (p : A -> B -> bool) l l' : is_true (forallb2 p l l') -> length l = length l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; try congruence.
   rewrite !andb_and. intros [Hp Hl]. erewrite IHl; eauto.
@@ -2507,17 +2505,30 @@ Proof.
 Qed.
 
 Lemma forallb2_Forall2 :
-  forall A (p : A -> A -> bool) l l',
+  forall A B (p : A -> B -> bool) l l',
     forallb2 p l l' ->
     Forall2 (fun x y => p x y) l l'.
 Proof.
-  intros A p l l' h.
+  intros A B p l l' h.
   induction l in l', h |- *.
   - destruct l'. 2: discriminate.
     constructor.
   - destruct l'. 1: discriminate.
     simpl in h. move/andb_and: h => [? ?].
     constructor. all: auto.
+Qed.
+
+Lemma forallb2P {A B} (P : A -> B -> Prop) (p : A -> B -> bool) l l' :
+  (forall x y, reflect (P x y) (p x y)) -> 
+  reflect (Forall2 P l l') (forallb2 p l l').
+Proof.
+  intros Hp.
+  apply iff_reflect; change (forallb2 p l l' = true) with (forallb2 p l l' : Prop); split.
+  - induction 1; rewrite /= // IHForall2 // andb_true_r.
+    now destruct (Hp x y).
+  - induction l in l' |- *; destruct l'; rewrite /= //. rewrite andb_and.
+    intros [pa pl].
+    constructor; auto. now destruct (Hp a b).
 Qed.
 
 (** All, All2 and In interactions. *)

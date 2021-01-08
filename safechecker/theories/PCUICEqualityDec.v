@@ -86,12 +86,6 @@ Section EqualityDec.
     all: apply check_eqb_universe_refl.
   Qed.
 
-  Lemma eq_binder_annot_reflect {A} na na' : reflect (eq_binder_annot (A:=A) na na') (eqb_binder_annot na na').
-  Proof.
-    unfold eq_binder_annot, eqb_binder_annot.
-    destruct (eqb_spec na.(binder_relevance) na'.(binder_relevance)); constructor; auto.
-  Qed.
-
   Fixpoint eqb_ctx (Γ Δ : context) : bool :=
     match Γ, Δ with
     | [], [] => true

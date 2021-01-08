@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Reflect.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICSize PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICInduction
      PCUICContextSubst.
 Import Reflect. (* Reflect.eqb has priority over String.eqb *)

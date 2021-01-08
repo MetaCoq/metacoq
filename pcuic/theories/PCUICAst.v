@@ -338,6 +338,32 @@ Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
 Module PCUICEnvironment := Environment PCUICTerm.
 Include PCUICEnvironment.
 
+Definition lookup_minductive Σ mind :=
+  match lookup_env Σ mind with
+  | Some (InductiveDecl decl) => Some decl
+  | _ => None
+  end.
+
+Definition lookup_inductive Σ ind :=
+  match lookup_minductive Σ (inductive_mind ind) with
+  | Some mdecl => 
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
+    | Some idecl => Some (mdecl, idecl)
+    | None => None
+    end
+  | None => None
+  end.
+
+Definition lookup_constructor Σ ind k :=
+  match lookup_inductive Σ ind with
+  | Some (mdecl, idecl) => 
+    match nth_error idecl.(ind_ctors) k with
+    | Some cdecl => Some (mdecl, idecl, cdecl)
+    | None => None
+    end
+  | _ => None
+  end.
+  
 (** This function allows to forget type annotations on a binding context. 
     Useful to relate the "compact" case representation in terms, with 
     its typing relation, where the context has types *)

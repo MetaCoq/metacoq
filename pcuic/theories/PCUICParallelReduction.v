@@ -3,7 +3,9 @@ Require Import RelationClasses CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICAstUtils PCUICSize PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
-     PCUICSigmaCalculus PCUICWeakeningEnv PCUICWeakening PCUICSubstitution.
+     PCUICSigmaCalculus PCUICWeakeningEnv
+     PCUICRename PCUICInst     
+     PCUICWeakening PCUICSubstitution.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -147,7 +149,7 @@ Proof.
   eapply forallb2_ext => cdecl b.
   apply map_branch_wf_branchb.
 Qed.
-
+(* 
 Lemma wf_cases_rename Σ f t : wf_cases Σ (rename f t) = wf_cases Σ t.
 Proof.
   induction t in f |- * using PCUICInduction.term_forall_list_ind; simpl; auto; 
@@ -180,7 +182,7 @@ Proof.
   induction mfix; simpl; auto.
   move=> n /andP [/andP [wfa wfbod] wffix].
   now rewrite forallb_app /= /wf_cases_decl /= IHmfix // lift_rename wf_cases_rename wfa.
-Qed.
+Qed. *)
 
 Lemma term_forall_ctx_list_ind :
   forall (P : context -> term -> Type),
@@ -786,7 +788,7 @@ Section ParallelReduction.
           All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
           All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
-                        dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
+                        dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           unfold_cofix mfix1 idx = Some (narg, fn) ->
           All2 (P' Γ Γ') args0 args1 ->
           All2 (P' Γ Γ') p0.(pparams) p1.(pparams) ->
@@ -940,6 +942,7 @@ Section ParallelReduction.
     - eapply X5; eauto.
       * apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X21).
       * eapply (All2_local_env_impl a0). intros. red. red in X21. apply (aux _ _ _ _ X21).
+      * eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
       * eapply (All2_All2_prop (P:=pred1) (Q:=P') a2 (extendP aux Γ Γ')).
       * eapply (All2_All2_prop (P:=pred1) (Q:=P') a3 (extendP aux Γ Γ')).
       * split. eapply pr. apply aux => //.
@@ -1300,13 +1303,11 @@ Section ParallelWeakening.
     - (* Beta *)
       specialize (forall_Γ _ (Γ'0,, vass na t0) eq_refl _ (Δ' ,, vass na t1) eq_refl heq_length _ _ X5).
       specialize (forall_Γ1 heq_length _ _ X5).
-      rewrite /subst1. rewrite distr_lift_subst /=.
       econstructor; now rewrite !lift_context_snoc0 !Nat.add_0_r in forall_Γ.
 
     - (* Zeta *)
       specialize (forall_Γ1 _ (Γ'0,, vdef na d0 t0) eq_refl _ (Δ',, vdef na d1 t1)
                             eq_refl heq_length _ _ X5).
-      rewrite /subst1 distr_lift_subst /=.
       simpl. econstructor; eauto.
       now rewrite !lift_context_snoc0 !Nat.add_0_r in forall_Γ1.
 
@@ -1343,15 +1344,19 @@ Section ParallelWeakening.
       eapply X0; eauto.
       now constructor.
 
-    - assert(#|Γ''| = #|Δ''|). red in X3; pcuic.
+    - assert(#|Γ''| = #|Δ''|). pcuic.
       pose proof (All2_local_env_length predΓ').
-      rewrite !app_context_length in H0.
+      rewrite [lift #|Δ''| _ _]lift_rename.
+      rewrite !app_context_length in H2.
       assert (#|Γ'0| = #|Δ'|) by lia.
-      rewrite lift_iota_red.
+      rewrite rename_iota_red.
+      admit. admit.
       autorewrite with lift.
+      admit.
+      (* rewrite -lift_rename.
       constructor; auto.
       apply All2_map. solve_all.
-      apply All2_map. solve_all.
+      apply All2_map. solve_all. *)
 
     - assert(#|Γ''| = #|Δ''|) by pcuic.
       pose proof (All2_local_env_length predΓ').
@@ -1384,12 +1389,13 @@ Section ParallelWeakening.
       rewrite !app_context_length in H0.
       assert (#|Γ'0| = #|Δ'|) by lia.
       unfold unfold_cofix in heq_unfold_cofix.
-      destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_cofix. simpl.
-      econstructor; pcuic.
+      destruct (nth_error mfix1 idx) eqn:Hnth; noconf heq_unfold_cofix.
+      simpl.
+      econstructor. all:try solve [pcuic]. apply isdecl.
       rewrite !lift_fix_context.
       erewrite lift_fix_context.
       eapply All2_local_env_weaken_pred_ctx'; pcuic.
-      apply All2_map. clear X2. red in X3.
+      apply All2_map. clear X2 X6 X5 X4. simpl. red in X3.
       unfold on_Trel, id in *.
       solve_all. rename_all_hyps.
       specialize (forall_Γ0 Γ0 (Γ'0 ,,, fix_context mfix0)
@@ -1405,6 +1411,15 @@ Section ParallelWeakening.
       now rewrite (map_cofix_subst (fun k => lift #|Δ''| (k + #|Δ'|))).
       eapply All2_map. solve_all.
       eapply All2_map. solve_all.
+      destruct X6.
+      specialize (p2 Γ0 (Γ'0 ,,, case_predicate_context ci mdecl idecl p0)
+        ltac:(now rewrite app_context_assoc) 
+        Δ (Δ' ,,, case_predicate_context ci mdecl idecl p1)
+        ltac:(now rewrite app_context_assoc)).
+      forward p2 by pcuic.
+      specialize (p2 _ _ X8).
+      rewrite lift_context_app Nat.add_0_r in p2.
+      admit. admit.
 
     - assert(#|Γ''| = #|Δ''|) by pcuic.
       pose proof (All2_local_env_length predΓ').
@@ -1434,9 +1449,10 @@ Section ParallelWeakening.
 
     - assert(Hlen:#|Γ''| = #|Δ''|). eapply All2_local_env_length in X1; pcuic.
       pose proof (lift_declared_constant _ _ _ #|Δ''| #|Δ'| wfΣ H).
-      econstructor; eauto.
+      admit.
+      (* econstructor; eauto.
       rewrite H0.
-      now rewrite - !map_cst_body heq_cst_body.
+      now rewrite - !map_cst_body heq_cst_body. *)
 
     - simpl. eapply pred_proj with (map (lift #|Δ''| #|Δ'|) args1). auto.
       eapply All2_map; solve_all.

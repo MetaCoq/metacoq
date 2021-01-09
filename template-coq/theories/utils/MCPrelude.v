@@ -42,6 +42,11 @@ Proof.
   - intros x. now rewrite Hff', Hgg'.
 Qed.
 
+Instance id_proper_proxy {A} : ProperProxy (`=1`) (@id A).
+Proof.
+  intros x; reflexivity.
+Qed.
+
 (** Common abbreviations *)
 Ltac tas := try assumption.
 Ltac tea := try eassumption.

@@ -71,6 +71,26 @@ Definition isConstruct t :=
   | _ => false
   end.
 
+Definition isAssRel (Γ : context) x :=
+  match x with
+  | tRel i =>
+    match option_map decl_body (nth_error Γ i) with
+    | Some None => true
+    | _ => false
+    end
+  | _ => false
+  end.
+
+Definition isAxiom Σ x :=
+  match x with
+  | tConst c u =>
+    match lookup_env Σ c with
+    | Some (ConstantDecl {| cst_body := None |}) => true
+    | _ => false
+    end
+  | _ => false
+  end.
+
 Definition isStuckFix t args :=
   match t with
   | tFix mfix idx =>

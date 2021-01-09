@@ -513,7 +513,7 @@ Hint Resolve on_global_wf_Forall_decls : wf.
 Lemma wf_case_branches_context {cf:checker_flags} Σ ind mdecl idecl p :
   on_global_env (fun Σ => wf_decl_pred) Σ ->
   declared_inductive Σ ind mdecl idecl ->
-  Forall Ast.wf (Environment.pparams p) ->
+  Forall Ast.wf (pparams p) ->
   Forall (fun ctor => Forall wf_decl (cstr_args ctor)) (ind_ctors idecl) ->
   Forall (fun ctx => Forall wf_decl ctx) (case_branches_contexts idecl p).
 Proof.

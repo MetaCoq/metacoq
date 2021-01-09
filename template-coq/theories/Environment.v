@@ -30,24 +30,16 @@ Module Environment (T : Term).
   Existing Instance subst_instance_constr.
 
   (** ** Declarations *)
-
-  (** *** The context of De Bruijn indices *)
-
-  Record context_decl := mkdecl {
-    decl_name : aname ;
-    decl_body : option term ;
-    decl_type : term
-  }.
-  Derive NoConfusion for context_decl.
+  Notation context_decl := (context_decl term).
   
   (** Local (de Bruijn) variable binding *)
 
-  Definition vass x A :=
+  Definition vass x A : context_decl :=
     {| decl_name := x ; decl_body := None ; decl_type := A |}.
 
   (** Local (de Bruijn) let-binding *)
 
-  Definition vdef x t A :=
+  Definition vdef x t A : context_decl :=
     {| decl_name := x ; decl_body := Some t ; decl_type := A |}.
 
   (** Local (de Bruijn) context *)
@@ -59,11 +51,6 @@ Module Environment (T : Term).
   Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
   Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
-
-  Definition map_decl f (d : context_decl) :=
-    {| decl_name := d.(decl_name);
-       decl_body := option_map f d.(decl_body);
-       decl_type := f d.(decl_type) |}.       
 
   Definition test_decl (f : term -> bool) (d : context_decl) : bool :=
     f d.(decl_type) && foroptb f d.(decl_body).
@@ -83,36 +70,33 @@ Module Environment (T : Term).
     eapply foroptb_impl; eauto.
   Qed.
 
-  Instance map_decl_pointwise : Proper (`=1` ==> `=1`) map_decl.
+  Instance map_decl_pointwise : Proper (`=1` ==> `=1`) (@map_decl term term).
   Proof. intros f g Hfg x. rewrite /map_decl.
     destruct x => /=. f_equal.
     - now rewrite Hfg.
     - apply Hfg.
   Qed.
 
-  Lemma map_decl_type f decl : f (decl_type decl) = decl_type (map_decl f decl).
+  Lemma map_decl_type (f : term -> term) decl : f (decl_type decl) = decl_type (map_decl f decl).
   Proof. destruct decl; reflexivity. Qed.
 
-  Lemma map_decl_body f decl : option_map f (decl_body decl) = decl_body (map_decl f decl).
+  Lemma map_decl_body (f : term -> term) decl : option_map f (decl_body decl) = decl_body (map_decl f decl).
   Proof. destruct decl; reflexivity. Qed.
 
-  Lemma map_decl_id : map_decl id =1 id.
+  Lemma map_decl_id : @map_decl term term id =1 id.
   Proof. intros d; now destruct d as [? [] ?]. Qed.
   
-  Lemma option_map_decl_body_map_decl f x :
+  Lemma option_map_decl_body_map_decl (f : term -> term) x :
     option_map decl_body (option_map (map_decl f) x) =
     option_map (option_map f) (option_map decl_body x).
   Proof. destruct x; reflexivity. Qed.
 
-  Lemma option_map_decl_type_map_decl f x :
+  Lemma option_map_decl_type_map_decl (f : term -> term) x :
     option_map decl_type (option_map (map_decl f) x) =
     option_map f (option_map decl_type x).
   Proof. destruct x; reflexivity. Qed.
-
-  Definition map_context f c :=
-    List.map (map_decl f) c.
     
-  Lemma map_context_length f l : #|map_context f l| = #|l|.
+  Lemma map_context_length (f : term -> term) l : #|map_context f l| = #|l|.
   Proof. now unfold map_context; rewrite map_length. Qed.
   Hint Rewrite map_context_length : len.
 
@@ -168,18 +152,18 @@ Module Environment (T : Term).
     now rewrite map_decl_id.
   Qed.
 
-  Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
+  Lemma compose_map_decl (f g : term -> term) x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
   Proof.
     destruct x as [? [?|] ?]; reflexivity.
   Qed.
   
-  Lemma map_decl_ext f g x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
+  Lemma map_decl_ext (f g : term -> term) x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
   Proof.
     intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
     now rewrite (H t).
   Qed.
 
-  Instance map_decl_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) map_decl.
+  Instance map_decl_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_decl term term).
   Proof.
     intros f g Hfg x y ->. now apply map_decl_ext.
   Qed.
@@ -499,7 +483,7 @@ Module Environment (T : Term).
     generalize (le_refl p).
     generalize p at 1 3 5.
     induction Γ in p, l |- *. simpl. auto.
-    intros. destruct a. destruct decl_body0. simpl.
+    intros. destruct a. destruct decl_body. simpl.
     assert(p0 <= S p) by lia.
     specialize (IHΓ l (S p) p0 H1). rewrite <- Nat.add_succ_comm, Nat.add_1_r.
     simpl in *. rewrite <- Nat.add_succ_comm in H0. eauto.
@@ -529,7 +513,7 @@ Module Environment (T : Term).
     destruct H; eexists; intuition eauto.
   Qed.
 
-  Fixpoint reln_alt p Γ :=
+  Fixpoint reln_alt p (Γ : context) :=
     match Γ with
     | [] => []
     | {| decl_body := Some _ |} :: Γ => reln_alt (p + 1) Γ
@@ -747,161 +731,3 @@ End Environment.
 Module Type EnvironmentSig (T : Term).
  Include Environment T.
 End EnvironmentSig.
-
-(* Defined here since BasicAst does not have access to universe instances.
-   Parameterized by term types as they are not yet defined. *)
-Record predicate {term} := mkpredicate {
-  pparams : list term; (* The parameters *)
-  puinst : Instance.t; (* The universe instance *)
-  pcontext : list aname; (* Names of binders of indices and inductive application,
-                          in same order as context (i.e. name of "inductive application"
-                          binder is first). Types are obtained from inductive declaration.
-                          Also used for lifting/substitution for the return type. *)
-  preturn : term; (* The return type *) }.
-
-Arguments predicate : clear implicits.
-Arguments mkpredicate {_}.
-
-Derive NoConfusion for predicate.
-Global Instance predicate_eq_dec term :
-  Classes.EqDec term ->
-  Classes.EqDec (predicate term).
-Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
-
-Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
-  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
-  ^ "," ^ string_of_universe_instance (puinst p)
-  ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
-  ^ "," ^ f (preturn p) ^ ")".
-
-Definition test_predicate {term}
-           (instf : Instance.t -> bool) (paramf preturnf : term -> bool) (p : predicate term) :=
-  instf p.(puinst) && forallb paramf p.(pparams) && preturnf p.(preturn).
-
-Definition eqb_predicate {term} (eqb_univ_instance : Instance.t -> Instance.t -> bool) (eqterm : term -> term -> bool) (p p' : predicate term) :=
-  forallb2 eqterm p.(pparams) p'.(pparams) &&
-  eqb_univ_instance p.(puinst) p'.(puinst) &&
-  forallb2 eqb_binder_annot p.(pcontext) p'.(pcontext) &&
-  eqterm p.(preturn) p'.(preturn).
-  
-Section map_predicate.
-  Context {term term' : Type}.
-  Context (uf : Instance.t -> Instance.t).
-  Context (paramf preturnf : term -> term').
-  
-  Definition map_predicate (p : predicate term) :=
-    {| pparams := map paramf p.(pparams);
-       puinst := uf p.(puinst);
-       pcontext := p.(pcontext);
-       preturn := preturnf p.(preturn) |}.
-
-  Lemma map_pparams (p : predicate term) :
-    map paramf (pparams p) = pparams (map_predicate p).
-  Proof. reflexivity. Qed.
-
-  Lemma map_preturn (p : predicate term) :
-    preturnf (preturn p) = preturn (map_predicate p).
-  Proof. reflexivity. Qed.
-
-  Lemma map_puints (p : predicate term) :
-    uf (puinst p) = puinst (map_predicate p).
-  Proof. reflexivity. Qed.
-
-End map_predicate.
-
-Lemma map_predicate_map_predicate
-      {term term' term''}
-      (finst finst' : Instance.t -> Instance.t)
-      (f g : term' -> term'')
-      (f' g' : term -> term')
-      (p : predicate term) :
-  map_predicate finst f g (map_predicate finst' f' g' p) =
-  map_predicate (finst ∘ finst') (f ∘ f') (g ∘ g') p.
-Proof.
-  destruct p; cbv.
-  f_equal.
-  apply map_map.
-Qed.
-
-Lemma map_predicate_id {t} x : map_predicate (@id _) (@id t) (@id t) x = id x.
-Proof.
-  destruct x; cbv.
-  f_equal.
-  apply map_id.
-Qed.
-Hint Rewrite @map_predicate_id : map.
-
-Definition tCasePredProp {term}
-           (Pparams Preturn : term -> Type)
-           (p : predicate term) :=
-  All Pparams p.(pparams) × Preturn p.(preturn).
-(*
-Lemma map_predicate_spec
-      {term term'}
-      (f : term' -> term'')
-      (g : uinst' -> uinst'')
-      (h : term' -> term'')
-      (f' : term -> term')
-      (g' : uinst -> uinst')
-      (h' : term -> term')
-      (p : predicate term uinst) :
-
-Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
-  P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
-  (forall x, P' x -> f' x = g' x) ->
-  map_def f f' x = map_def g g' x.
-Proof.
-  intros. destruct x. unfold map_def. simpl.
-  now rewrite !H, !H0.
-Qed.
-*)
-
-Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t) (f f' g g' : A -> B) (p : predicate A) :
-  finst (puinst p) = finst' (puinst p) ->
-  map f (pparams p) = map g (pparams p) ->
-  f' (preturn p) = g' (preturn p) ->
-  map_predicate finst f f' p = map_predicate finst' g g' p.
-Proof.
-  intros. unfold map_predicate; f_equal; auto.
-Qed.
-Hint Resolve map_predicate_eq_spec : all.
-
-Lemma map_predicate_id_spec {A} finst (f f' : A -> A) (p : predicate A) :
-  finst (puinst p) = puinst p ->
-  map f (pparams p) = pparams p ->
-  f' (preturn p) = preturn p ->
-  map_predicate finst f f' p = p.
-Proof.
-  unfold map_predicate.
-  intros -> -> ->; destruct p; auto.
-Qed.
-Hint Resolve map_predicate_id_spec : all.
-
-Instance id_proper_proxy {A} : ProperProxy (`=1`) (@id A).
-Proof.
-  intros x; reflexivity.
-Qed.
-
-Instance map_predicate_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq) (@map_predicate term term id).
-Proof.
-  intros eqf0 eqf1 eqf.
-  intros eqf'0 eqf'1 eqf'.
-  intros x y ->.
-  apply map_predicate_eq_spec; auto.
-  now apply map_ext => x.
-Qed.
-
-Instance map_predicate_proper' {term} f : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_predicate term term id f).
-Proof.
-  intros eqf0 eqf1 eqf.
-  intros x y ->.
-  apply map_predicate_eq_spec; auto.
-Qed.
-
-Instance map_branch_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_branch term term).
-Proof.
-  intros eqf0 eqf1 eqf.
-  intros x y ->.
-  apply map_branch_eq_spec; auto.
-Qed.    
-  

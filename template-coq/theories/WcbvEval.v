@@ -71,7 +71,7 @@ Definition isConstruct t :=
   | _ => false
   end.
 
-Definition isAssRel Γ x :=
+Definition isAssRel (Γ : context) x :=
   match x with
   | tRel i =>
     match option_map decl_body (nth_error Γ i) with

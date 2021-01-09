@@ -350,42 +350,62 @@ Proof.
   eapply map_def_spec; eauto.
 Qed.
 
-(* Parameterized by term types as they are not yet defined. *)
-Record branch {term} := mkbranch {
-  bcontext : list aname; (* Names of binders of the branch, in "context" order.
-                          Also used for lifting/substitution for the branch body. *)
-  bbody : term; (* The branch body *) }.
-  
-Arguments branch : clear implicits.
-Arguments mkbranch {_}.
-  
-Derive NoConfusion for branch.
-Global Instance branch_eq_dec term :
-  Classes.EqDec term ->
-  Classes.EqDec (branch term).
-Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+Section Contexts.
+  Context {term : Type}.
+  (** *** The context of De Bruijn indices *)
 
-Definition string_of_branch {term} (f : term -> string) (b : branch term) :=
+  Record context_decl := mkdecl {
+    decl_name : aname ;
+    decl_body : option term ;
+    decl_type : term
+  }.
+  Derive NoConfusion for context_decl.
+
+  (* Parameterized by term types as they are not yet defined. *)
+  Record branch := mkbranch {
+    bcontext : list aname; (* Names of binders of the branch, in "context" order.
+                          Also used for lifting/substitution for the branch body. *)
+    bbody : term; (* The branch body *) }.
+  
+  Derive NoConfusion for branch.
+  Global Instance branch_eq_dec :
+    Classes.EqDec term ->
+    Classes.EqDec branch.
+  Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+
+  Definition string_of_branch (f : term -> string) (b : branch) :=
   "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
   ^ f (bbody b) ^ ")".
 
-Definition pretty_string_of_branch {term} (f : term -> string) (b : branch term) :=
+  Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
     String.concat " " (map (string_of_name ∘ binder_name) (bcontext b)) ^ " => " ^ f (bbody b).
   
-Definition test_branch {term} (bodyf : term -> bool) (b : branch term) :=
-  bodyf b.(bbody).
-  
+  Definition test_branch (bodyf : term -> bool) (b : branch) :=
+    bodyf b.(bbody).
+End Contexts.
+    
+Arguments context_decl : clear implicits.
+Arguments branch : clear implicits.
+
+Definition map_decl {term term'} (f : term -> term') (d : context_decl term) : context_decl term' :=
+  {| decl_name := d.(decl_name);
+     decl_body := option_map f d.(decl_body);
+     decl_type := f d.(decl_type) |}.
+
+Definition map_context {term term'} (f : term -> term') (c : list (context_decl term)) :=
+  List.map (map_decl f) c.
+
 Section map_branch.
   Context {term term' : Type}.
   Context (bbodyf : term -> term').
 
-  Definition map_branch (b : branch term) :=
+    Definition map_branch (b : branch term) :=
     {| bcontext := b.(bcontext);
-       bbody := bbodyf b.(bbody) |}.
+      bbody := bbodyf b.(bbody) |}.
 
-  Lemma map_bbody (b : branch term) :
-    bbodyf (bbody b) = bbody (map_branch b).
-  Proof. destruct b; auto. Qed.
+    Lemma map_bbody (b : branch term) :
+      bbodyf (bbody b) = bbody (map_branch b).
+    Proof. destruct b; auto. Qed.
 End map_branch.
 
 Lemma map_branch_map_branch

@@ -293,6 +293,93 @@ Proof.
     red. apply All_pair. split; apply auxl; simpl; auto.
 Defined.
 
+Lemma term_forall_ctx_list_ctx_ind :
+  forall (P : context -> term -> Type),
+    (forall Γ (n : nat), P Γ (tRel n)) ->
+    (forall Γ (i : ident), P Γ (tVar i)) ->
+    (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
+    (forall Γ s, P Γ (tSort s)) ->
+    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->
+    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tLambda n t t0)) ->
+    (forall Γ (n : aname) (t : term),
+        P Γ t -> forall t0 : term, P Γ t0 -> forall t1 : term, P (vdef n t t0 :: Γ) t1 -> P Γ (tLetIn n t t0 t1)) ->
+    (forall Γ (t u : term), P Γ t -> P Γ u -> P Γ (tApp t u)) ->
+    (forall Γ s (u : list Level.t), P Γ (tConst s u)) ->
+    (forall Γ (i : inductive) (u : list Level.t), P Γ (tInd i u)) ->
+    (forall Γ (i : inductive) (n : nat) (u : list Level.t), P Γ (tConstruct i n u)) ->
+    (* (forall Γ (ci : case_info) (p : predicate term) (t : term) (brs : list (branch term))
+      mdecl idecl,
+        declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+        wf_predicate mdecl idecl p ->
+        wf_branches idecl brs ->
+        tCasePredProp (P Γ) (P (Γ ,,, case_predicate_context ci.(ci_ind) mdecl idecl p)) p -> 
+        P Γ t ->
+        All2 (fun cdecl br => P (Γ ,,, case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl)
+          br.(bbody)) 
+          idecl.(ind_ctors) brs ->           
+        P Γ (tCase ci p t brs)) -> *)
+    (forall Γ (ci : case_info) (p : predicate term) (t : term) (brs : list (branch term)),
+      P Γ (tCase ci p t brs)) ->
+    (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
+    (forall Γ (m : mfixpoint term) (n : nat),
+        All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
+    (forall Γ (m : mfixpoint term) (n : nat),
+        All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
+    (forall Γ p, P Γ (tPrim p)) ->
+    forall Γ, All_local_env (on_local_decl P) Γ.
+Proof.
+  intros ????????????????? Γ.
+  specialize (term_forall_ctx_list_ind P X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14).
+  clear.
+  intros IH.
+  induction Γ as [|[na [b|] ty] Γ]; constructor; auto.
+  red. apply IH. red. split; apply IH. red. apply IH.
+Qed.
+
+Lemma term_forall_ctx_list_ctx_ind' Σ :
+  forall (Pinit : context -> term -> Type)
+    (P := fun Γ t => All_local_env (on_local_decl Pinit) Γ -> Pinit Γ t),
+    (forall Γ (n : nat), P Γ (tRel n)) ->
+    (forall Γ (i : ident), P Γ (tVar i)) ->
+    (forall Γ (n : nat) (l : list term), All (P Γ) l -> P Γ (tEvar n l)) ->
+    (forall Γ s, P Γ (tSort s)) ->
+    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tProd n t t0)) ->
+    (forall Γ (n : aname) (t : term), P Γ t -> forall t0 : term, P (vass n t :: Γ) t0 -> P Γ (tLambda n t t0)) ->
+    (forall Γ (n : aname) (t : term),
+        P Γ t -> forall t0 : term, P Γ t0 -> forall t1 : term, P (vdef n t t0 :: Γ) t1 -> P Γ (tLetIn n t t0 t1)) ->
+    (forall Γ (t u : term), P Γ t -> P Γ u -> P Γ (tApp t u)) ->
+    (forall Γ s (u : list Level.t), P Γ (tConst s u)) ->
+    (forall Γ (i : inductive) (u : list Level.t), P Γ (tInd i u)) ->
+    (forall Γ (i : inductive) (n : nat) (u : list Level.t), P Γ (tConstruct i n u)) ->
+    (forall Γ (ci : case_info) (p : predicate term) (t : term) (brs : list (branch term))
+      mdecl idecl,
+        declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+        wf_predicate mdecl idecl p ->
+        wf_branches idecl brs ->
+        tCasePredProp (P Γ) (P (Γ ,,, case_predicate_context ci.(ci_ind) mdecl idecl p)) p -> 
+        P Γ t ->
+        All2 (fun cdecl br => P (Γ ,,, case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl)
+          br.(bbody)) 
+          idecl.(ind_ctors) brs ->           
+        P Γ (tCase ci p t brs)) ->
+    (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
+    (forall Γ (m : mfixpoint term) (n : nat),
+        All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tFix m n)) ->
+    (forall Γ (m : mfixpoint term) (n : nat),
+        All_local_env (on_local_decl (fun Γ' t => P (Γ ,,, Γ') t)) (fix_context m) ->
+        tFixProp (P Γ) (P (Γ ,,, fix_context m)) m -> P Γ (tCoFix m n)) ->
+    (forall Γ p, P Γ (tPrim p)) ->
+    forall Γ t, P Γ t.
+Proof.
+Admitted.
+  (* intros ??????????????????? Γ t.
+  apply (term_forall_ctx_list_ind P X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X11 X12 X13 X14 X15).
+Qed. *)
+
+
 (** All2 lemmas *)
 
 Definition All2_prop_eq Γ Γ' {A B} (f : A -> term) (g : A -> B) (rel : forall (Γ Γ' : context) (t t' : term), Type) :=
@@ -677,13 +764,13 @@ Section ParallelReduction.
         idecl.(ind_ctors) brs0 brs1 ->
       pred1 Γ Γ' (tCase ci p0 c0 brs0) (tCase ci p1 c1 brs1)
 
-  | pred_case_refl ci p c brs :
+  (* | pred_case_refl ci p c brs :
     (** We add a specific trivial reflexivity rule for tCase to ensure the relation 
         is reflexive on *any* term (even ill-formed ones), to simplify the
         development. Otherwise we would have to reason on the shapes of the
         case_predicate_context/case_branch_context everywhere. *)
     All2_local_env (on_decl pred1) Γ Γ' ->
-    pred1 Γ Γ' (tCase ci p c brs) (tCase ci p c brs)
+    pred1 Γ Γ' (tCase ci p c brs) (tCase ci p c brs) *)
 
   | pred_proj_congr p c c' :
       pred1 Γ Γ' c c' -> pred1 Γ Γ' (tProj p c) (tProj p c')
@@ -870,10 +957,10 @@ Section ParallelReduction.
             idecl.(ind_ctors) brs0 brs1 ->
           P Γ Γ' (tCase ci p0 c0 brs0) (tCase ci p1 c1 brs1)) ->
 
-      (forall (Γ Γ' : context) ci p c brs,
+      (* (forall (Γ Γ' : context) ci p c brs,
           All2_local_env (on_decl pred1) Γ Γ' ->
           Pctx Γ Γ' ->
-          P Γ Γ' (tCase ci p c brs) (tCase ci p c brs)) ->
+          P Γ Γ' (tCase ci p c brs) (tCase ci p c brs)) -> *)
 
       (forall (Γ Γ' : context) (p : projection) (c c' : term), pred1 Γ Γ' c c' -> P Γ Γ' c c' -> P Γ Γ' (tProj p c) (tProj p c')) ->
 
@@ -908,7 +995,7 @@ Section ParallelReduction.
       forall (Γ Γ' : context) (t t0 : term), pred1 Γ Γ' t t0 -> P Γ Γ' t t0.
   Proof.
     intros P Pctx P' Hctx. intros. 
-    rename X21 into pr. revert Γ Γ' t t0 pr.
+    rename X20 into pr. revert Γ Γ' t t0 pr.
     fix aux 5. intros Γ Γ' t t'.
     move aux at top.
     destruct 1; match goal with
@@ -923,14 +1010,15 @@ Section ParallelReduction.
                 | H : _ |- _ => eapply H; eauto
                 end.
     - simpl. apply X1; auto.
-      clear X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18 X19 X20.
+      clear X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16 X17 X18 X19.
       apply Hctx.
       apply (All2_local_env_impl a). intros. eapply X1.
       apply (All2_local_env_impl a). intros. eapply (aux _ _ _ _ X1).
     - simpl. apply X2; auto.
-      apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X21).
-    - apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X21).
-    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 ((extendP aux) Γ Γ')).
+      apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
+    - apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
+  Admitted.    
+    (*- eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 ((extendP aux) Γ Γ')).
     - eapply (All2_All2_prop (P:=pred1) (Q:=P') a1 ((extendP aux) Γ Γ')).
     - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=bbody) (g:=bcontext) a2
          (extendP aux _ _)).
@@ -1002,12 +1090,12 @@ Section ParallelReduction.
     - eapply (Hctx _ _ a), (All2_local_env_impl a). intros. apply (aux _ _ _ _ X21).
     - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 (extendP aux Γ Γ')).
     - eapply (Hctx _ _ a), (All2_local_env_impl a). intros. apply (aux _ _ _ _ X21).
-  Defined.
+  Defined.*)
 
   Lemma pred1_pred1_ctx {Γ Δ t u} : pred1 Γ Δ t u -> pred1_ctx Γ Δ.
   Proof.
     intros H; revert Γ Δ t u H.
-    refine (pred1_ind_all_ctx _ (fun Γ Γ' => pred1_ctx Γ Γ') _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
+    refine (pred1_ind_all_ctx _ (fun Γ Γ' => pred1_ctx Γ Γ') _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
     all:try intros **; rename_all_hyps;
       try solve [specialize (forall_Γ _ X3); eauto]; eauto;
         try solve [eexists; split; constructor; eauto].
@@ -1017,7 +1105,7 @@ Section ParallelReduction.
   Proof.
     revert Γ'.
     revert Γ t.
-    apply: term_forall_ctx_list_ind;
+    apply: term_forall_ctx_list_ctx_ind';
     intros;
       try solve [(apply pred_atom; reflexivity) || constructor; auto];
       try solve [try red in X; constructor; unfold All2_prop2_eq, All2_prop2, on_Trel in *; solve_all];
@@ -1028,6 +1116,7 @@ Section ParallelReduction.
       constructor; try red; eauto with pcuic.
     - constructor; eauto. eapply X1.
       constructor; try red; eauto with pcuic.
+    - econstructor.
     - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ ,,, Δ) (Γ' ,,, Δ')))
                              (fix_context m) (fix_context m)).
       { revert X. clear -X1. generalize (fix_context m).

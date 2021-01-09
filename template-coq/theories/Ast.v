@@ -3,6 +3,7 @@ From MetaCoq.Template Require Import utils Environment.
 From MetaCoq.Template Require Export Universes.
 (* For primitive integers and floats  *)
 From Coq Require Int63 Floats.PrimFloat.
+From Coq Require Import Morphisms.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -33,6 +34,158 @@ From Coq Require Int63 Floats.PrimFloat.
     a universe graph [constraints].  *)
 
 From MetaCoq.Template Require Export BasicAst.
+
+(* Defined here since BasicAst does not have access to universe instances.
+  Parameterized by term types as they are not yet defined. *)
+Record predicate {term} := mkpredicate {
+  pparams : list term; (* The parameters *)
+  puinst : Instance.t; (* The universe instance *)
+  pcontext : list aname; (* Names of binders of indices and inductive application,
+                          in same order as context (i.e. name of "inductive application"
+                          binder is first). Types are obtained from inductive declaration.
+                          Also used for lifting/substitution for the return type. *)
+  preturn : term; (* The return type *) }.
+
+Arguments predicate : clear implicits.
+Arguments mkpredicate {_}.
+
+Derive NoConfusion for predicate.
+Global Instance predicate_eq_dec term :
+  Classes.EqDec term ->
+  Classes.EqDec (predicate term).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+
+Definition string_of_predicate {term} (f : term -> string) (p : predicate term) :=
+  "(" ^ "(" ^ String.concat "," (map f (pparams p)) ^ ")" 
+  ^ "," ^ string_of_universe_instance (puinst p)
+  ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
+  ^ "," ^ f (preturn p) ^ ")".
+
+Definition test_predicate {term}
+            (instf : Instance.t -> bool) (paramf preturnf : term -> bool) (p : predicate term) :=
+  instf p.(puinst) && forallb paramf p.(pparams) && preturnf p.(preturn).
+
+Definition eqb_predicate {term} (eqb_univ_instance : Instance.t -> Instance.t -> bool) (eqterm : term -> term -> bool) (p p' : predicate term) :=
+  forallb2 eqterm p.(pparams) p'.(pparams) &&
+  eqb_univ_instance p.(puinst) p'.(puinst) &&
+  forallb2 eqb_binder_annot p.(pcontext) p'.(pcontext) &&
+  eqterm p.(preturn) p'.(preturn).
+  
+Section map_predicate.
+  Context {term term' : Type}.
+  Context (uf : Instance.t -> Instance.t).
+  Context (paramf preturnf : term -> term').
+  
+  Definition map_predicate (p : predicate term) :=
+    {| pparams := map paramf p.(pparams);
+        puinst := uf p.(puinst);
+        pcontext := p.(pcontext);
+        preturn := preturnf p.(preturn) |}.
+
+  Lemma map_pparams (p : predicate term) :
+    map paramf (pparams p) = pparams (map_predicate p).
+  Proof. reflexivity. Qed.
+
+  Lemma map_preturn (p : predicate term) :
+    preturnf (preturn p) = preturn (map_predicate p).
+  Proof. reflexivity. Qed.
+
+  Lemma map_puints (p : predicate term) :
+    uf (puinst p) = puinst (map_predicate p).
+  Proof. reflexivity. Qed.
+
+End map_predicate.
+
+Lemma map_predicate_map_predicate
+      {term term' term''}
+      (finst finst' : Instance.t -> Instance.t)
+      (f g : term' -> term'')
+      (f' g' : term -> term')
+      (p : predicate term) :
+  map_predicate finst f g (map_predicate finst' f' g' p) =
+  map_predicate (finst ∘ finst') (f ∘ f') (g ∘ g') p.
+Proof.
+  destruct p; cbv.
+  f_equal.
+  apply map_map.
+Qed.
+
+Lemma map_predicate_id {t} x : map_predicate (@id _) (@id t) (@id t) x = id x.
+Proof.
+  destruct x; cbv.
+  f_equal.
+  apply map_id.
+Qed.
+Hint Rewrite @map_predicate_id : map.
+
+Definition tCasePredProp {term}
+            (Pparams Preturn : term -> Type)
+            (p : predicate term) :=
+  All Pparams p.(pparams) × Preturn p.(preturn).
+(*
+Lemma map_predicate_spec
+      {term term'}
+      (f : term' -> term'')
+      (g : uinst' -> uinst'')
+      (h : term' -> term'')
+      (f' : term -> term')
+      (g' : uinst -> uinst')
+      (h' : term -> term')
+      (p : predicate term uinst) :
+
+Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
+  P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
+  (forall x, P' x -> f' x = g' x) ->
+  map_def f f' x = map_def g g' x.
+Proof.
+  intros. destruct x. unfold map_def. simpl.
+  now rewrite !H, !H0.
+Qed.
+*)
+
+Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t) (f f' g g' : A -> B) (p : predicate A) :
+  finst (puinst p) = finst' (puinst p) ->
+  map f (pparams p) = map g (pparams p) ->
+  f' (preturn p) = g' (preturn p) ->
+  map_predicate finst f f' p = map_predicate finst' g g' p.
+Proof.
+  intros. unfold map_predicate; f_equal; auto.
+Qed.
+Hint Resolve map_predicate_eq_spec : all.
+
+Lemma map_predicate_id_spec {A} finst (f f' : A -> A) (p : predicate A) :
+  finst (puinst p) = puinst p ->
+  map f (pparams p) = pparams p ->
+  f' (preturn p) = preturn p ->
+  map_predicate finst f f' p = p.
+Proof.
+  unfold map_predicate.
+  intros -> -> ->; destruct p; auto.
+Qed.
+Hint Resolve map_predicate_id_spec : all.
+
+Instance map_predicate_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
+Proof.
+  intros eqf0 eqf1 eqf.
+  intros eqf'0 eqf'1 eqf'.
+  intros x y ->.
+  apply map_predicate_eq_spec; auto.
+  now apply map_ext => x.
+Qed.
+
+Instance map_predicate_proper' {term} f : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_predicate term term id f).
+Proof.
+  intros eqf0 eqf1 eqf.
+  intros x y ->.
+  apply map_predicate_eq_spec; auto.
+Qed.
+
+Instance map_branch_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_branch term term).
+Proof.
+  intros eqf0 eqf1 eqf.
+  intros x y ->.
+  apply map_branch_eq_spec; auto.
+Qed.
 
 Inductive term : Type :=
 | tRel (n : nat)

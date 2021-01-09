@@ -188,8 +188,9 @@ Register MetaCoq.Template.Ast.Build_one_inductive_entry as metacoq.ast.Build_one
 Register MetaCoq.Template.Ast.mutual_inductive_entry as metacoq.ast.mutual_inductive_entry.
 Register MetaCoq.Template.Ast.Build_mutual_inductive_entry as metacoq.ast.Build_mutual_inductive_entry.
 
-Register MetaCoq.Template.Ast.context_decl as metacoq.ast.context_decl.
-Register MetaCoq.Template.Ast.mkdecl as metacoq.ast.mkdecl.
+(* FIXME, now polymorphic *)
+Register MetaCoq.Template.BasicAst.context_decl as metacoq.ast.context_decl.
+Register MetaCoq.Template.BasicAst.mkdecl as metacoq.ast.mkdecl.
 Register MetaCoq.Template.Ast.context as metacoq.ast.context.
 
 Register MetaCoq.Template.Ast.one_inductive_body as metacoq.ast.one_inductive_body.

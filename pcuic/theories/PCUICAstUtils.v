@@ -56,8 +56,13 @@ Ltac solve_all_one :=
   | H: tCasePredProp _ _ _ |- _ => destruct H
   end;
   unfold tCaseBrsProp, tFixProp in *;
+  autorewrite with map;
   try apply map_predicate_eq_spec;
+  try apply map_predicate_k_eq_spec;
+  try apply map_branch_k_eq_spec;
   try apply map_predicate_id_spec;
+  try (eapply mapi_context_eqP_spec; tea);
+  try (eapply onctx_test; tea);
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto 4 with all.

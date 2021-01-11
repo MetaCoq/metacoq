@@ -5,13 +5,14 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Instance subst_instance_list A `{UnivSubst A} : UnivSubst (list A) :=
   fun u => List.map (subst_instance u).
 
+
 Lemma subst_instance_lift u c n k :
   subst_instance u (lift n k c) = lift n k (subst_instance u c).
 Proof.
   unfold subst_instance; cbn.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-      ?map_predicate_map_predicate, ?map_branch_map_branch;
+    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+      autorewrite with map;
     try solve [f_equal; eauto; solve_all; eauto].
 Qed.
 
@@ -66,25 +67,27 @@ Proof.
   solve_all. now destruct H as [n [-> _]].
 Qed.
 
+Hint Rewrite map_map_compose @compose_map_def map_length : map.
+
 Lemma closedu_subst_instance u t
   : closedu 0 t -> subst_instance u t = t.
 Proof.
   unfold subst_instance; cbn.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-      ?map_branch_map_branch, ?map_predicate_map_predicate;
-    try f_equal; eauto with substu; unfold test_predicate, test_def in *;
+    autorewrite with map;
+    try f_equal; eauto with substu; unfold test_predicate, test_branch, test_def in *;
       try solve [f_equal; eauto; repeat (rtoProp; solve_all); eauto with substu].
 Qed.
+
+Hint Rewrite test_context_map : map.
 
 Lemma subst_instance_closedu (u : Instance.t) (Hcl : closedu_instance 0 u) t :
   closedu #|u| t -> closedu 0 (subst_instance u t).
 Proof.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?forallb_map,
-      ?map_predicate_map_predicate;
+    autorewrite with map;
     try f_equal; auto with substu;
-      unfold test_def, test_predicate in *; simpl;
+      unfold test_def, test_predicate, test_branch in *; simpl;
       f_equal; eauto; repeat (rtoProp; solve_all); intuition auto with substu.
 Qed.
 
@@ -104,6 +107,6 @@ Proof.
     f_equal; auto.
     rewrite subst_instance_subst, <-IHΓ.
     rewrite <-subst_instance_lift; simpl.
-    f_equal. now len.
+    f_equal.
   - f_equal; auto.
 Qed.

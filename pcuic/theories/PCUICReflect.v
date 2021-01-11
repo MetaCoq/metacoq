@@ -7,26 +7,6 @@ From MetaCoq.Template Require Import utils.
 From MetaCoq.Template Require Export Reflect.
 
 Open Scope pcuic.
-Instance eqb_ctx : ReflectEq context := _.
-
-Instance eq_predicate {term} `{EqDec term} : EqDec (predicate term).
-Proof.
-  intros [] [].
-  fcase (eq_dec pparams0 pparams1).
-  fcase (eq_dec puinst0 puinst1).
-  fcase (eq_dec pcontext0 pcontext1).
-  fcase (eq_dec preturn preturn0).
-Defined.
-
-Global Instance predicate_eq_dec term :
-  Classes.EqDec term ->
-  Classes.EqDec (predicate term).
-Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
-
-Global Instance branch_eq_dec :
-  Classes.EqDec term ->
-  Classes.EqDec (branch term).
-Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 
 Local Ltac finish :=
@@ -67,6 +47,29 @@ Local Ltac term_dec_tac term_dec :=
 
 Derive NoConfusion NoConfusionHom for term.
 
+Lemma eq_dec_ctx_IH ctx :
+  onctx (fun x : term => forall y : term, {x = y} + {x <> y}) ctx ->
+  forall ctx',
+    {ctx = ctx'} + {ctx <> ctx'}.
+Proof.
+  induction 1.
+  - intros []; [left; reflexivity|right; discriminate].
+  - intros []; [right; discriminate|].
+    destruct p as [pty pbod].
+    destruct x as [xna [xbod|] xty]; cbn in *.
+    destruct c as [cname [cbod|] cty]; cbn in *; nodec.
+    fcase (eq_dec xna cname).
+    destruct (pty cty) ; nodec.
+    destruct (pbod cbod); nodec.
+    destruct (IHX l0) ; nodec.
+    subst; left; reflexivity.
+    destruct c as [cname [cbod|] cty]; cbn in *; nodec.
+    fcase (eq_dec xna cname).
+    destruct (pty cty) ; nodec.
+    destruct (IHX l0) ; nodec.
+    subst; left; reflexivity.
+Qed.
+
 Instance EqDec_term : EqDec term.
 Proof.
   intro x; induction x using term_forall_list_ind ; intro t ;
@@ -94,10 +97,10 @@ Proof.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
     subst. left. reflexivity.
-  - destruct (IHx t) ; nodec.
+  - destruct (IHx t) ; nodec. subst x. clear IHx.
     destruct p, p0; subst; cbn.
     term_dec_tac term_dec.
-    destruct X as (?&?).
+    destruct X as (?&?&?).
     destruct (s preturn0); cbn in * ; nodec.
     subst.
     assert ({pparams = pparams0} + {pparams <> pparams0}) as []; nodec.
@@ -109,7 +112,11 @@ Proof.
         destruct (p t) ; nodec.
         destruct (IHa l0) ; nodec.
         subst; left; reflexivity. }
-    subst. revert brs. clear IHx.
+    subst.
+    assert ({pcontext = pcontext0} + {pcontext <> pcontext0}) as []; nodec.
+    { revert pcontext0. now apply eq_dec_ctx_IH. }
+    subst pcontext.
+    revert brs. clear -X0.
     induction X0 ; intro l0.
     + destruct l0.
       * left. reflexivity.
@@ -117,8 +124,10 @@ Proof.
     + destruct l0.
       * right. discriminate.
       * destruct (IHX0 l0) ; nodec.
-        destruct (p (bbody b)) ; nodec.
-        destruct (eq_dec (bcontext x) (bcontext b)) ; nodec.
+        destruct p as (hctx & hbod).
+        destruct (hbod (bbody b)) ; nodec.
+        assert ({bcontext x = bcontext b} + {bcontext x <> bcontext b}) as []; nodec.
+        { now apply eq_dec_ctx_IH. }
         destruct x, b.
         left.
         cbn in *. subst. inversion e. reflexivity.
@@ -159,6 +168,20 @@ Defined.
 (** Avoid name clash with template's reflect term, namespace handlining bug in extraction. *)
 Instance reflect_pcuic_term : ReflectEq term :=
   let h := EqDec_ReflectEq term in _.
+
+Instance eqb_ctx : ReflectEq context := _.
+
+Instance eq_predicate : EqDec (predicate term).
+Proof.
+  intros [] [].
+  fcase (eq_dec pparams pparams0).
+  fcase (eq_dec puinst puinst0).
+  fcase (eq_dec pcontext pcontext0).
+  fcase (eq_dec preturn preturn0).
+Defined.
+
+Global Instance branch_eq_dec : EqDec (branch term).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 Definition eqb_context_decl (x y : context_decl) :=
   let (na, b, ty) := x in

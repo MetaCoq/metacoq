@@ -45,31 +45,42 @@ Proof.
   destruct t; match goal with
                  H : _ |- _ => apply H
               end; auto.
-  revert l.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt.
-  split.
-  generalize (pparams p).
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl']. apply auxt.
-  apply auxt.
+  * revert l.
+    fix auxl' 1.
+    destruct l; constructor; [|apply auxl'].
+    apply auxt.
+  * split.
+    generalize (pparams p).
+    fix auxl' 1.
+    destruct l; constructor; [|apply auxl']. apply auxt.
+    split.
+    + generalize (pcontext p).
+      fix auxc 1.
+      destruct l; constructor; [|apply auxc]. 
+      destruct c. split. apply auxt.
+      simpl. destruct decl_body; simpl. apply auxt. constructor.
+    + apply auxt.
 
-  revert brs.
-  fix auxl' 1.
-  destruct brs; constructor; [|apply auxl'].
-  apply auxt.
+  * revert brs.
+    fix auxl' 1.
+    destruct brs; constructor; [|apply auxl'].
+    split.
+    + generalize (bcontext b).
+      fix auxc 1.
+      destruct l; constructor; [|apply auxc]. 
+      destruct c. split. apply auxt.
+      simpl. destruct decl_body; simpl. apply auxt. constructor.
+    + apply auxt.
 
-  revert mfix.
-  fix auxm 1.
-  destruct mfix; constructor; [|apply auxm].
-  split; apply auxt.
-  revert mfix.
-  fix auxm 1.
-  destruct mfix; constructor; [|apply auxm].
-  split; apply auxt.
+  * revert mfix.
+    fix auxm 1.
+    destruct mfix; constructor; [|apply auxm].
+    split; apply auxt.
+  * revert mfix.
+    fix auxm 1.
+    destruct mfix; constructor; [|apply auxm].
+    split; apply auxt.
 Defined.
-
 
 Inductive ForallT {A} (P : A -> Type) : list A -> Type :=
 | ForallT_nil : ForallT P []
@@ -219,6 +230,18 @@ Definition mkApps_decompose_app t :
 
 From Equations Require Import Equations.
 
+Lemma liftP_ctx_ind (P : term -> Type) (ctx : context) : 
+  (forall y, size y < context_size size ctx -> P y) ->
+  All (ondecl P) ctx.
+Proof.
+  induction ctx; simpl; constructor; auto.
+  * split.
+    + apply X; cbn. unfold decl_size. simpl. lia.
+    + destruct decl_body eqn:db; cbn. apply X; unfold decl_size.
+      rewrite db; simpl; lia. exact tt.
+  * apply IHctx; intros; apply X. lia.
+Qed.
+
 Lemma term_forall_mkApps_ind :
   forall P : term -> Type,
     (forall n : nat, P (tRel n)) ->
@@ -292,16 +315,19 @@ Proof.
            inversion E. destruct l; inv H3.
            now rewrite Et1.
   - eapply X10; [|apply auxt; hnf; cbn; lia.. | ].
-    split; [|apply auxt; hnf; cbn; lia].
-    unfold MR in auxt. simpl in auxt. revert auxt.
-    generalize (pparams p).
-    fix auxt' 1.
-    destruct l; constructor. apply auxt. hnf; cbn; lia. apply auxt'. intros. apply auxt.
-    hnf in *; cbn in *. lia. 
-    rename brs into l.
-    revert l auxt. unfold MR; cbn. fix auxt' 1.
-    destruct l; constructor. apply auxt. hnf; cbn; lia. apply auxt'. intros. apply auxt.
-    hnf in *; cbn in *. lia. 
+    repeat split; [| |apply auxt; hnf; cbn; lia].
+    * unfold MR in auxt. simpl in auxt. revert auxt.
+      generalize (pparams p).
+      fix auxt' 1.
+      destruct l; constructor. apply auxt. hnf; cbn; lia. apply auxt'. intros. apply auxt.
+      hnf in *; cbn in *. lia.
+    * eapply liftP_ctx_ind. intros. apply auxt. red. simpl. lia.
+    * rename brs into l.
+      revert l auxt. unfold MR; cbn. fix auxt' 1.
+      destruct l; constructor. split; [|apply auxt; hnf; cbn; lia].
+      + apply liftP_ctx_ind; intros. apply auxt; red; simpl; lia.
+      + apply auxt'. intros. apply auxt.
+        hnf in *; cbn in *. lia. 
   - eapply X12; [apply auxt; hnf; cbn; lia.. | ]. rename mfix into l.
     revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. split.
@@ -319,8 +345,19 @@ Proof.
     hnf in *; cbn in *. unfold mfixpoint_size, def_size in *. lia. 
 Defined.
 
+Lemma liftP_ctx (P : term -> Type) : 
+  (forall t, P t) ->
+  (forall ctx, All (ondecl P) ctx).
+Proof.
+  induction ctx; simpl; constructor; auto.
+  split.
+  + apply X; cbn.
+  + destruct decl_body eqn:db; cbn. apply X; unfold decl_size.
+    exact tt.
+Qed.
+
 Lemma ctx_length_ind (P : context -> Type) (p0 : P [])
-  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (d :: Γ)) 
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ| -> P Γ') -> P (d :: Γ)) 
   Γ : P Γ.
 Proof.
   generalize (le_n #|Γ|).

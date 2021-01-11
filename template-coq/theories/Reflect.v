@@ -48,16 +48,16 @@ Ltac nodec :=
   let bot := fresh "bot" in
   try solve [ constructor ; intro bot ; inversion bot ; subst ; tauto ].
 
-Definition eq_option {A} `{ReflectEq A} (u v : option A) : bool :=
+Definition eq_option {A} (eqA : A -> A -> bool) (u v : option A) : bool :=
   match u, v with
-  | Some u, Some v => eqb u v
+  | Some u, Some v => eqA u v
   | None, None => true
   | _, _ => false
   end.
 
 Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A).
 Proof.
-  intros A RA. refine {| eqb := eq_option |}.
+  intros A RA. refine {| eqb := eq_option eqb |}.
   intros x y. destruct x, y.
   all: cbn.
   all: try solve [ constructor ; easy ].
@@ -545,16 +545,18 @@ Defined.
 Derive NoConfusion NoConfusionHom for sig.
 Derive NoConfusion NoConfusionHom for prod.
 
-Definition eqb_context_decl (x y : context_decl) :=
+Definition eqb_context_decl {term : Type} (eqterm : term -> term -> bool) 
+  (x y : BasicAst.context_decl term) :=
   let (na, b, ty) := x in
   let (na', b', ty') := y in
-  eqb na na' && eqb b b' && eqb ty ty'.
+  eqb na na' && eq_option eqterm b b' && eqterm ty ty'.
 
-Instance eq_ctx : ReflectEq context_decl.
+Instance eq_decl_reflect {term} {Ht : ReflectEq term} : ReflectEq (BasicAst.context_decl term).
 Proof.
-  refine {| eqb := eqb_context_decl |}.
+  refine {| eqb := eqb_context_decl eqb |}.
   intros.
   destruct x as [na b ty], y as [na' b' ty']. cbn -[eqb].
+  change (eq_option eqb b b') with (eqb b b').
   destruct (eqb_spec na na'); subst;
     destruct (eqb_spec b b'); subst;
       destruct (eqb_spec ty ty'); subst; constructor; congruence.

@@ -1,8 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils Reflect.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICSize PCUICAstUtils
-     PCUICLiftSubst PCUICEquality PCUICInduction
-     PCUICContextSubst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 Import Reflect. (* Reflect.eqb has priority over String.eqb *)
 
 Require Import ssreflect.
@@ -37,67 +35,6 @@ Proof.
   - now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
 Qed.
 
-Lemma subst_it_mkProd_or_LetIn n k ctx t :
-  subst n k (it_mkProd_or_LetIn ctx t) =
-  it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
-Proof.
-  induction ctx in n, k, t |- *; simpl; try congruence.
-  pose (subst_context_snoc n k ctx a). unfold snoc in e. rewrite e. clear e.
-  simpl. rewrite -> IHctx.
-  pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
-Qed.
-
-Lemma map_subst_instance_to_extended_list_k u ctx k :
-  to_extended_list_k (subst_instance u ctx) k
-  = to_extended_list_k ctx k.
-Proof.
-  unfold to_extended_list_k.
-  cut (map (subst_instance u) [] = []); [|reflexivity].
-  unf_term. generalize (@nil term); intros l Hl.
-  induction ctx in k, l, Hl |- *; cbnr.
-  destruct a as [? [] ?]; cbnr; eauto.
-Qed.
-
-Lemma to_extended_list_k_subst n k c k' :
-  to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
-Proof.
-  unfold to_extended_list_k. revert k'.
-  unf_term. generalize (@nil term) at 1 2.
-  induction c in n, k |- *; simpl; intros. 1: reflexivity.
-  rewrite subst_context_snoc. unfold snoc. simpl.
-  destruct a. destruct decl_body.
-  - unfold subst_decl, map_decl. simpl.
-    now rewrite IHc.
-  - simpl. apply IHc.
-Qed.
-Lemma it_mkProd_or_LetIn_inj ctx s ctx' s' :
-  it_mkProd_or_LetIn ctx (tSort s) = it_mkProd_or_LetIn ctx' (tSort s') ->
-  ctx = ctx' /\ s = s'.
-Proof.
-  move/(f_equal (destArity [])).
-  rewrite !destArity_it_mkProd_or_LetIn /=.
-  now rewrite !app_context_nil_l => [= -> ->].
-Qed.
-
-Lemma destArity_spec ctx T :
-  match destArity ctx T with
-  | Some (ctx', s) => it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s)
-  | None => True
-  end.
-Proof.
-  induction T in ctx |- *; simpl; try easy.
-  - specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
-  - specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
-Qed.
-
-Lemma destArity_spec_Some ctx T ctx' s :
-  destArity ctx T = Some (ctx', s)
-  -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
-Proof.
-  pose proof (destArity_spec ctx T) as H.
-  intro e; now rewrite e in H.
-Qed.
-
 Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : context :=
   let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
   let inddecl := 
@@ -113,8 +50,21 @@ Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : conte
   in
   map2 set_binder_name pctx (inddecl :: ictx).
 
+(** This function allows to forget type annotations on a binding context. 
+    Useful to relate the "compact" case representation in terms, with 
+    its typing relation, where the context has types *)
+Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname := 
+  map (fun decl => decl.(decl_name)) c.
+
+Lemma forget_types_length {term} (ctx : list (BasicAst.context_decl term)) :
+  #|forget_types ctx| = #|ctx|.
+Proof.
+  now rewrite /forget_types map_length.
+Qed.
+Hint Rewrite @forget_types_length : len.
+
 Definition case_predicate_context ind mdecl idecl p : context :=
-  case_predicate_context_gen ind mdecl idecl p.(pparams) p.(puinst) p.(pcontext).
+  case_predicate_context_gen ind mdecl idecl p.(pparams) p.(puinst) (forget_types p.(pcontext)).
 Arguments case_predicate_context _ _ _ !_.
 
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
@@ -152,7 +102,7 @@ Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params pu
   (brctx, ty).
 
 Definition case_branch_type ind mdecl idecl p (b : branch term) ptm i cdecl : context * term :=
-  case_branch_type_gen ind mdecl idecl p.(pparams) p.(puinst) b.(bcontext) ptm i cdecl.
+  case_branch_type_gen ind mdecl idecl p.(pparams) p.(puinst) (forget_types b.(bcontext)) ptm i cdecl.
 Arguments case_branch_type _ _ _ _ _ _ _ !_.
   
 (* Definition case_branches_types_gen ind mdecl idecl params puinst ptm : list (context * term) :=
@@ -190,19 +140,19 @@ Definition wf_predicate_gen mdecl idecl (pparams : list term) (pcontext : list a
     pcontext (decl :: idecl.(ind_indices))).
 
 Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
-  wf_predicate_gen mdecl idecl p.(pparams) p.(pcontext).
+  wf_predicate_gen mdecl idecl p.(pparams) (forget_types p.(pcontext)).
 
 Definition wf_predicateb mdecl idecl (p : predicate term) : bool :=
   let decl := idecl_binder idecl in
   eqb #|p.(pparams)| mdecl.(ind_npars)
   && forallb2 (fun na decl => eqb_binder_annot na decl.(decl_name))
-    p.(pcontext) (decl :: idecl.(ind_indices)).
+    (forget_types p.(pcontext)) (decl :: idecl.(ind_indices)).
   
 Lemma wf_predicateP mdecl idecl p : reflect (wf_predicate mdecl idecl p) (wf_predicateb mdecl idecl p).
 Proof.
   rewrite /wf_predicate /wf_predicate_gen /wf_predicateb.
   case: Reflect.eqb_spec => eqpars /= //.
-  * case: (forallb2P _ _ (pcontext p) (idecl_binder idecl :: ind_indices idecl)
+  * case: (forallb2P _ _ (forget_types (pcontext p)) (idecl_binder idecl :: ind_indices idecl)
       (fun na decl => eqb_annot_reflect na decl.(decl_name))); constructor => //.
     intros [_ Hi]; contradiction.
   * constructor; intros [H _]; contradiction.
@@ -213,15 +163,15 @@ Definition wf_branch_gen cdecl (bctx : list aname) : Prop :=
     bctx cdecl.(cstr_args)).
       
 Definition wf_branch cdecl (b : branch term) : Prop := 
-  wf_branch_gen cdecl b.(bcontext).
+  wf_branch_gen cdecl (forget_types b.(bcontext)).
 
 Definition wf_branchb cdecl (b : branch term) : bool :=
-  forallb2 (fun na decl => eqb_binder_annot na decl.(decl_name)) b.(bcontext) cdecl.(cstr_args).
+  forallb2 (fun na decl => eqb_binder_annot na decl.(decl_name)) (forget_types b.(bcontext)) cdecl.(cstr_args).
 
 Lemma wf_branchP cdecl b : reflect (wf_branch cdecl b) (wf_branchb cdecl b).
 Proof.
   rewrite /wf_branch /wf_branch_gen /wf_branchb.
-  apply (forallb2P _ _ (bcontext b) (cstr_args cdecl)
+  apply (forallb2P _ _ (forget_types (bcontext b)) (cstr_args cdecl)
     (fun na decl => eqb_annot_reflect na decl.(decl_name))).
 Qed.
 
@@ -246,9 +196,10 @@ Lemma case_predicate_context_length {ci mdecl idecl p} :
 Proof.
   intros hl.
   unfold case_predicate_context, case_predicate_context_gen.
-  rewrite map2_length /= //. len.
+  rewrite map2_length /= //.
+  2:len => //.
   destruct hl.
-  now rewrite (Forall2_length H0).
+  rewrite (Forall2_length H0). now len.
 Qed.
 
 Lemma case_predicate_context_length_indices {ci mdecl idecl p} :
@@ -259,7 +210,7 @@ Proof.
   unfold case_predicate_context, case_predicate_context_gen.
   pose proof (Forall2_length (proj2 hl)). simpl in H.
   rewrite -H.
-  now rewrite map2_length /= //; len.
+  rewrite map2_length /= //; len. now len in H.
 Qed.
 
 Lemma wf_predicate_length_pars {mdecl idecl p} :
@@ -274,27 +225,29 @@ Lemma wf_predicate_length_pcontext {mdecl idecl p} :
   #|p.(pcontext)| = S #|ind_indices idecl|.
 Proof.
   intros [].
-  now rewrite (Forall2_length H0).
+  pose proof (Forall2_length H0). now len in H1.
 Qed.
 
 Lemma wf_branch_length {cdecl br} :
   wf_branch cdecl br ->
   #|br.(bcontext)| = #|cstr_args cdecl|.
-Proof. apply Forall2_length. Qed.
+Proof. intros H. apply Forall2_length in H. now len in H. Qed.
 
 Lemma case_branch_context_length {ind mdecl p br cdecl} :
   wf_branch cdecl br ->
-  #|case_branch_context ind mdecl p br.(bcontext) cdecl| = #|br.(bcontext)|.
+  #|case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl| = #|br.(bcontext)|.
 Proof.
   intros hl.
   unfold case_branch_context, case_branch_context_gen; len.
-  rewrite map2_length //. red in hl.
-  now rewrite (Forall2_length hl).
+  rewrite map2_length //.
+  * red in hl.
+    now rewrite (Forall2_length hl).
+  * now len.
 Qed.
 
 Lemma case_branch_context_length_args {ind mdecl p br cdecl} :
   wf_branch cdecl br ->
-  #|case_branch_context ind mdecl p br.(bcontext) cdecl| = #|cdecl.(cstr_args)|.
+  #|case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl| = #|cdecl.(cstr_args)|.
 Proof.
   intros hl.
   unfold case_branch_context, case_branch_context_gen; len.
@@ -304,7 +257,7 @@ Qed.
 
 Lemma case_branch_context_assumptions {ind mdecl p br cdecl} :
   wf_branch cdecl br ->
-  context_assumptions (case_branch_context ind mdecl p br.(bcontext) cdecl) = 
+  context_assumptions (case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl) = 
   context_assumptions cdecl.(cstr_args).
 Proof.
   intros hl.

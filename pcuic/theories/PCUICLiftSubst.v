@@ -653,21 +653,6 @@ Proof.
   apply mapi_rec_ext. intros.
   f_equal. rewrite List.skipn_length. lia.
 Qed.
-
-Lemma expand_lets_k_ctx_length Γ k Δ : #|expand_lets_k_ctx Γ k Δ| = #|Δ|.
-Proof. now rewrite /expand_lets_k_ctx; len. Qed.
-Hint Rewrite expand_lets_k_ctx_length : len.
-
-Lemma expand_lets_ctx_length Γ Δ : #|expand_lets_ctx Γ Δ| = #|Δ|.
-Proof. now rewrite /expand_lets_ctx; len. Qed.
-Hint Rewrite expand_lets_ctx_length : len.
-
-Lemma extended_subst_length Γ n : #|extended_subst Γ n| = #|Γ|.
-Proof.
-  induction Γ in n |- *; simpl; auto.
-  now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ.
-Qed.
-Hint Rewrite extended_subst_length : len.
   
 Lemma lift_extended_subst (Γ : context) k :
   extended_subst Γ k = map (lift0 k) (extended_subst Γ 0).
@@ -807,4 +792,65 @@ Proof.
   rewrite simpl_lift => //; try lia.
   rewrite simpl_lift; try lia.
   now rewrite Nat.add_comm.
+Qed.
+
+Lemma subst_it_mkProd_or_LetIn n k ctx t :
+  subst n k (it_mkProd_or_LetIn ctx t) =
+  it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
+Proof.
+  induction ctx in n, k, t |- *; simpl; try congruence.
+  pose (subst_context_snoc n k ctx a). unfold snoc in e. rewrite e. clear e.
+  simpl. rewrite -> IHctx.
+  pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
+Qed.
+
+Lemma map_subst_instance_to_extended_list_k u ctx k :
+  to_extended_list_k (subst_instance u ctx) k
+  = to_extended_list_k ctx k.
+Proof.
+  unfold to_extended_list_k.
+  cut (map (subst_instance u) [] = []); [|reflexivity].
+  unf_term. generalize (@nil term); intros l Hl.
+  induction ctx in k, l, Hl |- *; cbnr.
+  destruct a as [? [] ?]; cbnr; eauto.
+Qed.
+
+Lemma to_extended_list_k_subst n k c k' :
+  to_extended_list_k (subst_context n k c) k' = to_extended_list_k c k'.
+Proof.
+  unfold to_extended_list_k. revert k'.
+  unf_term. generalize (@nil term) at 1 2.
+  induction c in n, k |- *; simpl; intros. 1: reflexivity.
+  rewrite subst_context_snoc. unfold snoc. simpl.
+  destruct a. destruct decl_body.
+  - unfold subst_decl, map_decl. simpl.
+    now rewrite IHc.
+  - simpl. apply IHc.
+Qed.
+Lemma it_mkProd_or_LetIn_inj ctx s ctx' s' :
+  it_mkProd_or_LetIn ctx (tSort s) = it_mkProd_or_LetIn ctx' (tSort s') ->
+  ctx = ctx' /\ s = s'.
+Proof.
+  move/(f_equal (destArity [])).
+  rewrite !destArity_it_mkProd_or_LetIn /=.
+  now rewrite !app_context_nil_l => [= -> ->].
+Qed.
+
+Lemma destArity_spec ctx T :
+  match destArity ctx T with
+  | Some (ctx', s) => it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s)
+  | None => True
+  end.
+Proof.
+  induction T in ctx |- *; simpl; try easy.
+  - specialize (IHT2 (ctx,, vass na T1)). now destruct destArity.
+  - specialize (IHT3 (ctx,, vdef na T1 T2)). now destruct destArity.
+Qed.
+
+Lemma destArity_spec_Some ctx T ctx' s :
+  destArity ctx T = Some (ctx', s)
+  -> it_mkProd_or_LetIn ctx T = it_mkProd_or_LetIn ctx' (tSort s).
+Proof.
+  pose proof (destArity_spec ctx T) as H.
+  intro e; now rewrite e in H.
 Qed.

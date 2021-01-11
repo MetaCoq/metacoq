@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect ssrfun Morphisms Setoid.
 From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Template Require Import Universes.
-From Coq Require Import ssreflect ssrfun Morphisms.
 
 Module Type Term.
 
@@ -52,15 +52,6 @@ Module Environment (T : Term).
 
   Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 
-  Definition test_decl (f : term -> bool) (d : context_decl) : bool :=
-    f d.(decl_type) && foroptb f d.(decl_body).
-
-  Instance test_decl_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) test_decl.
-  Proof. 
-    intros f g Hfg [na [b|] ty] ? <- => /=; rewrite /test_decl /=;
-    now rewrite Hfg.
-  Qed.
-
   Lemma test_decl_impl (f g : term -> bool) x : (forall x, f x -> g x) -> 
     test_decl f x -> test_decl g x.
   Proof.
@@ -69,14 +60,7 @@ Module Environment (T : Term).
     apply/andb_and; split; eauto.
     eapply foroptb_impl; eauto.
   Qed.
-
-  Instance map_decl_pointwise : Proper (`=1` ==> `=1`) (@map_decl term term).
-  Proof. intros f g Hfg x. rewrite /map_decl.
-    destruct x => /=. f_equal.
-    - now rewrite Hfg.
-    - apply Hfg.
-  Qed.
-
+  
   Lemma map_decl_type (f : term -> term) decl : f (decl_type decl) = decl_type (map_decl f decl).
   Proof. destruct decl; reflexivity. Qed.
 
@@ -95,10 +79,6 @@ Module Environment (T : Term).
     option_map decl_type (option_map (map_decl f) x) =
     option_map f (option_map decl_type x).
   Proof. destruct x; reflexivity. Qed.
-    
-  Lemma map_context_length (f : term -> term) l : #|map_context f l| = #|l|.
-  Proof. now unfold map_context; rewrite map_length. Qed.
-  Hint Rewrite map_context_length : len.
 
   Definition fold_context f (Γ : context) : context :=
     List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).
@@ -113,6 +93,20 @@ Module Environment (T : Term).
     apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
   Qed.
 
+  Lemma mapi_context_fold f Γ :
+    mapi_context f Γ = fold_context f Γ.
+  Proof.
+    setoid_replace f with (fun k => f (k - 0)) using relation 
+      (pointwise_relation nat (pointwise_relation term (@Logic.eq term)))%signature at 1.
+    rewrite fold_context_alt. unfold mapi.
+    generalize 0.
+    induction Γ as [|d Γ]; intros n; simpl; auto. f_equal.
+    rewrite IHΓ. rewrite mapi_rec_Sk.
+    apply mapi_rec_ext => k x. intros.
+    apply map_decl_ext => t. lia_f_equal.
+    intros k. now rewrite Nat.sub_0_r.
+  Qed.
+    
   Lemma fold_context_tip f d : fold_context f [d] = [map_decl (f 0) d].
   Proof. reflexivity. Qed.
   
@@ -152,22 +146,6 @@ Module Environment (T : Term).
     now rewrite map_decl_id.
   Qed.
 
-  Lemma compose_map_decl (f g : term -> term) x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
-  Proof.
-    destruct x as [? [?|] ?]; reflexivity.
-  Qed.
-  
-  Lemma map_decl_ext (f g : term -> term) x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
-  Proof.
-    intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
-    now rewrite (H t).
-  Qed.
-
-  Instance map_decl_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_decl term term).
-  Proof.
-    intros f g Hfg x y ->. now apply map_decl_ext.
-  Qed.
-
   Lemma fold_context_compose f g Γ : 
     fold_context f (fold_context g Γ) = 
     fold_context (fun i => f i ∘ g i) Γ.
@@ -200,7 +178,7 @@ Module Environment (T : Term).
     now rewrite fold_context_alt /mapi alli_mapi.
   Qed.
 
-  Lemma test_decl_map_decl f g x : test_decl f (map_decl g x) = test_decl (f ∘ g) x.
+  Lemma test_decl_map_decl f g x : (@test_decl term) f (map_decl g x) = @test_decl term (f ∘ g) x.
   Proof.
     rewrite /test_decl /map_decl /=.
     f_equal. rewrite /foroptb. f_equal.
@@ -316,6 +294,13 @@ Module Environment (T : Term).
     end
   end.
 
+  Lemma extended_subst_length Γ n : #|extended_subst Γ n| = #|Γ|.
+  Proof.
+    induction Γ in n |- *; simpl; auto.
+    now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ.
+  Qed.
+  Hint Rewrite extended_subst_length : len.
+  
   Definition expand_lets_k Γ k t := 
     (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
 
@@ -326,6 +311,14 @@ Module Environment (T : Term).
 
   Definition expand_lets_ctx Γ Δ := expand_lets_k_ctx Γ 0 Δ.
 
+  Lemma expand_lets_k_ctx_length Γ k Δ : #|expand_lets_k_ctx Γ k Δ| = #|Δ|.
+  Proof. now rewrite /expand_lets_k_ctx; len. Qed.
+  Hint Rewrite expand_lets_k_ctx_length : len.
+
+  Lemma expand_lets_ctx_length Γ Δ : #|expand_lets_ctx Γ Δ| = #|Δ|.
+  Proof. now rewrite /expand_lets_ctx; len. Qed.
+  Hint Rewrite expand_lets_ctx_length : len.
+  
   Definition fix_context (m : mfixpoint term) : context :=
     List.rev (mapi (fun i d => vass d.(dname) (lift i 0 d.(dtype))) m).
   

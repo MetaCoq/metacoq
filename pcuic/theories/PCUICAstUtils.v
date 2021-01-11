@@ -294,7 +294,7 @@ Proof.
   destruct H; eexists; intuition eauto.
 Qed.
 
-Fixpoint reln_alt p Γ :=
+Fixpoint reln_alt p (Γ : context) :=
   match Γ with
   | [] => []
   | {| decl_body := Some _ |} :: Γ => reln_alt (p + 1) Γ

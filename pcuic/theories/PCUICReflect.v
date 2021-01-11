@@ -7,6 +7,27 @@ From MetaCoq.Template Require Import utils.
 From MetaCoq.Template Require Export Reflect.
 
 Open Scope pcuic.
+Instance eqb_ctx : ReflectEq context := _.
+
+Instance eq_predicate {term} `{EqDec term} : EqDec (predicate term).
+Proof.
+  intros [] [].
+  fcase (eq_dec pparams0 pparams1).
+  fcase (eq_dec puinst0 puinst1).
+  fcase (eq_dec pcontext0 pcontext1).
+  fcase (eq_dec preturn preturn0).
+Defined.
+
+Global Instance predicate_eq_dec term :
+  Classes.EqDec term ->
+  Classes.EqDec (predicate term).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+
+Global Instance branch_eq_dec :
+  Classes.EqDec term ->
+  Classes.EqDec (branch term).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+
 
 Local Ltac finish :=
   let h := fresh "h" in

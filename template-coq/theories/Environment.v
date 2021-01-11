@@ -707,6 +707,15 @@ Module Environment (T : Term).
      context_assumptions_subst_context context_assumptions_lift_context : len.
 
   Lemma fold_context_map f g Γ : 
+    fold_context f (map_context g Γ) = 
+    fold_context (fun k => f k ∘ g) Γ.
+  Proof.
+    rewrite !fold_context_alt mapi_map.
+    apply mapi_ext => n d //. len.
+    now rewrite compose_map_decl.
+  Qed.
+  
+  Lemma fold_context_map_comm f g Γ : 
     (forall i x, f i (g x) = g (f i x)) ->
     fold_context f (map_context g Γ) = map_context g (fold_context f Γ).
   Proof.

@@ -1209,12 +1209,6 @@ Proof.
   all: now rewrite nl_subst_instance.
 Qed.
 
-Lemma map_fold_context f g ctx : map (map_decl f) (fold_context g ctx) = fold_context (fun i => f ∘ g i) ctx.
-Proof.
-  rewrite !fold_context_alt map_mapi. 
-  apply mapi_ext => i d. now rewrite compose_map_decl.
-Qed.
-
 Lemma map_anon_fold_context g g' ctx : 
   (forall i, nl ∘ g i =1 g' i ∘ nl) ->
   map (map_decl_anon nl) (fold_context g ctx) = 

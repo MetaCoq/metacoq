@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Int63 FloatOps FloatAxioms.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases.
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
 Set Warnings "+notation-overridden".
@@ -10,13 +10,23 @@ Definition uint63_from_model (i : uint63_model) : Int63.int :=
 
 Definition float64_from_model (f : float64_model) : PrimFloat.float :=
   FloatOps.SF2Prim (proj1_sig f).
-
+    
 Definition trans_prim (t : prim_val) : Ast.term :=
   match t.π2 with
   | primIntModel i => Ast.tInt (uint63_from_model i)
   | primFloatModel f => Ast.tFloat (float64_from_model f)
   end.
 
+Definition trans_predicate (t : PCUICAst.predicate Ast.term) : predicate Ast.term :=
+  {| pparams := t.(PCUICAst.pparams); 
+     puinst := t.(PCUICAst.puinst);
+     pcontext := forget_types t.(PCUICAst.pcontext);
+     preturn := t.(PCUICAst.preturn) |}.
+
+Definition trans_branch (t : PCUICAst.branch Ast.term) : branch Ast.term :=
+  {| bcontext := forget_types t.(PCUICAst.bcontext);
+     bbody := t.(PCUICAst.bbody) |}.
+    
 Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   match t with
   | PCUICAst.tRel n => tRel n
@@ -31,9 +41,9 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tProd na A B => tProd na (trans A) (trans B)
   | PCUICAst.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | PCUICAst.tCase ind p c brs =>
-    let p' := map_predicate id trans trans p in
-    let brs' := List.map (map_branch trans) brs in
-    tCase ind p' (trans c) brs'
+    let p' := PCUICAst.map_predicate id trans trans p in
+    let brs' := List.map (PCUICAst.map_branch trans) brs in
+    tCase ind (trans_predicate p') (trans c) (map trans_branch brs')
   | PCUICAst.tProj p c => tProj p (trans c)
   | PCUICAst.tFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
@@ -45,7 +55,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   end.
 
 Definition trans_decl (d : PCUICAst.context_decl) :=
-  let 'PCUICAst.mkdecl na b t := d in
+  let 'mkdecl na b t := d in
   {| decl_name := na;
      decl_body := option_map trans b;
      decl_type := trans t |}.

@@ -521,12 +521,6 @@ Proof.
   now rewrite /forget_types map_decl_name_fold_context.
 Qed.
 
-Lemma forget_types_length ctx :
-  #|forget_types ctx| = #|ctx|.
-Proof.
-  now rewrite /forget_types map_length.
-Qed.
-
 Definition lendb := 
   (rename_context_length,
    idsn_length,

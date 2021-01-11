@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import utils Environment.
 From MetaCoq.Template Require Export Universes.
 (* For primitive integers and floats  *)
-From Coq Require Int63 Floats.PrimFloat.
+From Coq Require Int63 Floats.PrimFloat Floats.SpecFloat.
 From Coq Require Import Morphisms.
 
 (** * AST of Coq kernel terms and kernel data structures
@@ -122,26 +122,6 @@ Definition tCasePredProp {term}
             (Pparams Preturn : term -> Type)
             (p : predicate term) :=
   All Pparams p.(pparams) × Preturn p.(preturn).
-(*
-Lemma map_predicate_spec
-      {term term'}
-      (f : term' -> term'')
-      (g : uinst' -> uinst'')
-      (h : term' -> term'')
-      (f' : term -> term')
-      (g' : uinst -> uinst')
-      (h' : term -> term')
-      (p : predicate term uinst) :
-
-Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
-  P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
-  (forall x, P' x -> f' x = g' x) ->
-  map_def f f' x = map_def g g' x.
-Proof.
-  intros. destruct x. unfold map_def. simpl.
-  now rewrite !H, !H0.
-Qed.
-*)
 
 Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t) (f f' g g' : A -> B) (p : predicate A) :
   finst (puinst p) = finst' (puinst p) ->
@@ -180,12 +160,208 @@ Proof.
   apply map_predicate_eq_spec; auto.
 Qed.
 
+Section Branch.
+  Context {term : Type}.
+  (* Parameterized by term types as they are not yet defined. *)
+  Record branch := mkbranch {
+    bcontext : list aname; (* Names of binders of the branch, in "context" order.
+                          Also used for lifting/substitution for the branch body. *)
+    bbody : term; (* The branch body *) }.
+  
+  Derive NoConfusion for branch.
+  Global Instance branch_eq_dec :
+    Classes.EqDec term ->
+    Classes.EqDec branch.
+  Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+
+  Definition string_of_branch (f : term -> string) (b : branch) :=
+  "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
+  ^ f (bbody b) ^ ")".
+
+  Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
+    String.concat " " (map (string_of_name ∘ binder_name) (bcontext b)) ^ " => " ^ f (bbody b).
+  
+  Definition test_branch (bodyf : term -> bool) (b : branch) :=
+    bodyf b.(bbody).
+End Branch.  
+Arguments branch : clear implicits.
+
+Section map_branch.
+  Context {term term' : Type}.
+  Context (bbodyf : term -> term').
+
+    Definition map_branch (b : branch term) :=
+    {| bcontext := b.(bcontext);
+      bbody := bbodyf b.(bbody) |}.
+
+    Lemma map_bbody (b : branch term) :
+      bbodyf (bbody b) = bbody (map_branch b).
+    Proof. destruct b; auto. Qed.
+End map_branch.
+
+Lemma map_branch_map_branch
+      {term term' term''}
+      (f : term' -> term'')
+      (f' : term -> term')
+      (b : branch term) :
+  map_branch f (map_branch f' b) =
+  map_branch (f ∘ f') b.
+Proof.
+  destruct b; cbv.
+  f_equal.
+Qed.
+
+Lemma map_branch_id {t} x : map_branch (@id t) x = id x.
+Proof.
+  destruct x; cbv.
+  f_equal.
+Qed.
+Hint Rewrite @map_branch_id : map.
+
+Lemma map_branch_eq_spec {A B} (f g : A -> B) (x : branch A) :
+  f (bbody x) = g (bbody x) ->
+  map_branch f x = map_branch g x.
+Proof.
+  intros. unfold map_branch; f_equal; auto.
+Qed.
+Hint Resolve map_branch_eq_spec : all.
+
 Instance map_branch_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_branch term term).
 Proof.
   intros eqf0 eqf1 eqf.
   intros x y ->.
   apply map_branch_eq_spec; auto.
 Qed.
+
+Lemma map_branch_id_spec {A} (f : A -> A) (x : branch A) :
+  f (bbody x) = (bbody x) ->
+  map_branch f x = x.
+Proof.
+  intros. rewrite (map_branch_eq_spec _ id); auto. destruct x; auto.
+Qed.
+Hint Resolve map_branch_id_spec : all.
+
+Lemma map_branches_map_branches
+      {term term' term''}
+      (f : term' -> term'')
+      (f' : term -> term')
+      (l : list (branch term)) :
+  map (fun b => map_branch f (map_branch f' b)) l =
+  map (map_branch (f ∘ f')) l.
+Proof.
+  eapply map_ext => b. apply map_branch_map_branch.
+Qed.
+
+Definition map_branches {term B} (f : term -> B) l := List.map (map_branch f) l.
+
+Definition tCaseBrsProp {A} (P : A -> Type) (l : list (branch A)) :=
+  All (fun x => P (bbody x)) l.
+
+Notation map_branches_k f k brs :=
+  (List.map (fun b => map_branch (f (#|b.(bcontext)| + k)) b) brs).
+
+Notation test_branches_k test k brs :=
+  (List.forallb (fun b => test_branch (test (#|b.(bcontext)| + k)) b) brs).
+
+Lemma map_branches_k_map_branches_k
+      {term term' term''}
+      (f : nat -> term' -> term'')
+      (g : term -> term')
+      (f' : nat -> term -> term') k
+      (l : list (branch term)) :
+  map (fun b => map_branch (f #|bcontext (map_branch g b)|) (map_branch (f' k) b)) l =
+  map (fun b => map_branch (f #|bcontext b|) (map_branch (f' k) b)) l.
+Proof.
+  eapply map_ext => b. rewrite map_branch_map_branch.
+  rewrite map_branch_map_branch.
+  now apply map_branch_eq_spec.
+Qed.
+
+Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B} :
+  tCaseBrsProp P l -> (forall x, P x -> f x = g x) ->
+  map_branches f l = map_branches g l.
+Proof.
+  intros. red in X.
+  eapply All_map_eq. eapply All_impl; eauto. simpl; intros.
+  apply map_branch_eq_spec; eauto.
+Qed.
+
+Lemma case_brs_map_k_spec {A B} {P : A -> Type} {k l} {f g : nat -> A -> B} :
+  tCaseBrsProp P l -> (forall k x, P x -> f k x = g k x) ->
+  map_branches_k f k l = map_branches_k g k l.
+Proof.
+  intros. red in X.
+  eapply All_map_eq. eapply All_impl; eauto. simpl; intros.
+  apply map_branch_eq_spec; eauto.
+Qed.
+
+Lemma case_brs_forallb_map_spec {A B} {P : A -> Type} {p : A -> bool}
+      {l} {f g : A -> B} :
+  tCaseBrsProp P l ->
+  forallb (test_branch p) l ->
+  (forall x, P x -> p x -> f x = g x) ->
+  map (map_branch f) l = map (map_branch g) l.
+Proof.
+  intros.
+  eapply All_map_eq. red in X. apply forallb_All in H.
+  eapply All_impl. eapply All_prod. exact X. exact H.
+  intros [] []; unfold map_branch; cbn. f_equal. now apply H0.
+Qed.
+
+Lemma tfix_forallb_map_spec {A B} {P P' : A -> Prop} {p p'} {l} {f f' g g' : A -> B} :
+  tFixProp P P' l ->
+  forallb (test_def p p') l ->
+  (forall x, P x -> p x -> f x = g x) ->
+  (forall x, P' x -> p' x -> f' x = g' x) ->
+  map (map_def f f') l = map (map_def g g') l.
+Proof.
+  intros.
+  eapply All_map_eq; red in X. apply forallb_All in H.
+  eapply All_impl. eapply All_prod. exact X. exact H.
+  intros [] [[] ?]; unfold map_def, test_def in *; cbn in *. rtoProp.
+  f_equal; eauto.
+Qed.
+
+Ltac apply_spec :=
+  match goal with
+  | H : All _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (All_forallb_map_spec H H')
+  | H : All _ _, H' : forallb _ _ = _ |- forallb _ _ = _ =>
+    eapply (All_forallb_forallb_spec H H')
+  | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (case_brs_forallb_map_spec H H')
+  | H : All _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
+    eapply (All_forallb_map_spec H H')
+  | H : All _ _, H' : is_true (forallb _ _) |- forallb _ _ = _ =>
+    eapply (All_forallb_forallb_spec H H')
+  | H : tCaseBrsProp _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
+    eapply (case_brs_forallb_map_spec H H')
+  | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
+    eapply (case_brs_map_spec H)
+  | H : tFixProp _ _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
+    eapply (tfix_forallb_map_spec H H')
+  | H : tFixProp _ _ _ |- map _ _ = map _ _ =>
+    eapply (tfix_map_spec H)
+  | H : All _ _ |- map _ _ = map _ _ =>
+    eapply (All_map_eq H)
+  | H : All _ _ |- map _ _ = _ =>
+    eapply (All_map_id H)
+  | H : All _ _ |- is_true (forallb _ _) =>
+    eapply (All_forallb _ _ H); clear H
+  end.
+
+Ltac close_All :=
+  match goal with
+  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
+  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
+  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
+  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
+  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H); clear H; simpl
+  | H : All _ _ |- All2 _ _ _ =>
+    apply (All_All2 H); clear H; simpl
+  | H : All2 _ _ _ |- All _ _ =>
+    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
+  end.
 
 Inductive term : Type :=
 | tRel (n : nat)
@@ -532,3 +708,46 @@ Record mutual_inductive_entry := {
   mind_entry_private   : option bool
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
+
+(** Helpers for "compact" case representation, reconstructing predicate and 
+  branch contexts. *)
+  
+Definition case_predicate_context ind mdecl idecl params puinst pctx : context :=
+  let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
+  let inddecl := 
+    {| decl_name := 
+      {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
+        decl_body := None;
+        decl_type := indty |}
+  in
+  let ictx := 
+    subst_context params 0
+      (subst_instance puinst (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
+  in
+  map2 set_binder_name pctx (inddecl :: ictx).
+
+Definition case_branch_context_gen params puinst cdecl : context :=
+  subst_context params 0 (subst_instance puinst cdecl.(cstr_args)).
+
+Definition case_branch_context p cdecl : context :=
+  case_branch_context_gen p.(pparams) p.(puinst) cdecl.
+  
+Definition case_branches_contexts_gen idecl params puinst : list context :=
+  map (case_branch_context_gen params puinst) idecl.(ind_ctors).
+
+Definition case_branches_contexts idecl p : list context :=
+  map (case_branch_context_gen p.(pparams) p.(puinst)) idecl.(ind_ctors).
+  
+Definition case_branch_type_gen ind params puinst ptm i cdecl : context * term :=
+  let cstr := tConstruct ind i puinst in
+  let args := to_extended_list cdecl.(cstr_args) in
+  let cstrapp := mkApps cstr (map (lift0 #|cdecl.(cstr_args)|) params ++ args) in
+  let brctx := subst_context params 0 (subst_instance puinst cdecl.(cstr_args)) in
+  let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (cdecl.(cstr_indices) ++ [cstrapp]) in
+  (brctx, ty).
+
+Definition case_branches_types_gen ind idecl params puinst ptm : list (context * term) :=
+  mapi (case_branch_type_gen ind params puinst ptm) idecl.(ind_ctors).
+
+Definition case_branches_types ind idecl p ptm : list (context * term) :=
+  mapi (case_branch_type_gen ind p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).     

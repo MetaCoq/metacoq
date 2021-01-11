@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect Morphisms.
 From MetaCoq.Template Require Import utils.
-From Coq Require Import Floats.SpecFloat.
+From Coq Require Floats.SpecFloat.
 
 (** ** Reification of names ** *)
 
@@ -101,7 +102,10 @@ Definition aname := binder_annot name.
 Instance anqme_eqdec : Classes.EqDec aname := _.
 
 Definition eqb_binder_annot {A} (b b' : binder_annot A) : bool :=
-  if Classes.eq_dec b.(binder_relevance) b'.(binder_relevance) then true else false.
+  match Classes.eq_dec b.(binder_relevance) b'.(binder_relevance) with
+  | left _ => true
+  | right _ => false
+  end.
 
 Definition string_of_name (na : name) :=
   match na with
@@ -194,14 +198,14 @@ Definition eq_projection p p' :=
 Lemma eq_inductive_refl i : eq_inductive i i.
 Proof.
   destruct i as [mind k].
-  unfold eq_inductive. now rewrite eq_kername_refl, PeanoNat.Nat.eqb_refl.
+  unfold eq_inductive. now rewrite eq_kername_refl PeanoNat.Nat.eqb_refl.
 Qed.
 
 Lemma eq_projection_refl i : eq_projection i i.
 Proof.
   destruct i as [[mind k] p].
   unfold eq_projection.
-  now rewrite eq_inductive_refl, !PeanoNat.Nat.eqb_refl.
+  now rewrite eq_inductive_refl !PeanoNat.Nat.eqb_refl.
 Qed.
 
 (** The kind of a cast *)
@@ -303,7 +307,7 @@ Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
   map_def f f' x = map_def g g' x.
 Proof.
   intros. destruct x. unfold map_def. simpl.
-  now rewrite !H, !H0.
+  now rewrite !H // !H0.
 Qed.
 
 Hint Extern 10 (_ < _)%nat => lia : all.
@@ -360,210 +364,125 @@ Section Contexts.
     decl_type : term
   }.
   Derive NoConfusion for context_decl.
-
-  (* Parameterized by term types as they are not yet defined. *)
-  Record branch := mkbranch {
-    bcontext : list aname; (* Names of binders of the branch, in "context" order.
-                          Also used for lifting/substitution for the branch body. *)
-    bbody : term; (* The branch body *) }.
-  
-  Derive NoConfusion for branch.
-  Global Instance branch_eq_dec :
-    Classes.EqDec term ->
-    Classes.EqDec branch.
-  Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
-
-  Definition string_of_branch (f : term -> string) (b : branch) :=
-  "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
-  ^ f (bbody b) ^ ")".
-
-  Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
-    String.concat " " (map (string_of_name ∘ binder_name) (bcontext b)) ^ " => " ^ f (bbody b).
-  
-  Definition test_branch (bodyf : term -> bool) (b : branch) :=
-    bodyf b.(bbody).
 End Contexts.
     
 Arguments context_decl : clear implicits.
-Arguments branch : clear implicits.
 
 Definition map_decl {term term'} (f : term -> term') (d : context_decl term) : context_decl term' :=
   {| decl_name := d.(decl_name);
      decl_body := option_map f d.(decl_body);
      decl_type := f d.(decl_type) |}.
 
+Lemma compose_map_decl {term term' term''} (g : term -> term') (f : term' -> term'') x :
+  map_decl f (map_decl g x) = map_decl (f ∘ g) x.
+Proof.
+  destruct x as [? [?|] ?]; reflexivity.
+Qed.
+   
+Lemma map_decl_ext {term term'} (f g : term -> term') x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
+Proof.
+  intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
+  now rewrite (H t).
+Qed.
+
+Instance map_decl_proper {term term'} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_decl term term').
+Proof.
+  intros f g Hfg x y ->. now apply map_decl_ext.
+Qed.
+
+Instance map_decl_pointwise {term term'} : Proper (`=1` ==> `=1`) (@map_decl term term').
+Proof. intros f g Hfg x. rewrite /map_decl.
+  destruct x => /=. f_equal.
+  - now rewrite Hfg.
+  - apply Hfg.
+Qed.
+(*
+
+Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
+Proof.
+  intros f g Hfg x y ->. now rewrite Hfg.
+Qed.
+
+Instance pointwise_subrelation_inv {A B} : subrelation (@Logic.eq A ==> @Logic.eq B)%signature  (`=1`).
+Proof.
+  intros f g Hfg x. now specialize (Hfg x x eq_refl).
+Qed.*)
+
 Definition map_context {term term'} (f : term -> term') (c : list (context_decl term)) :=
   List.map (map_decl f) c.
 
-Section map_branch.
-  Context {term term' : Type}.
-  Context (bbodyf : term -> term').
-
-    Definition map_branch (b : branch term) :=
-    {| bcontext := b.(bcontext);
-      bbody := bbodyf b.(bbody) |}.
-
-    Lemma map_bbody (b : branch term) :
-      bbodyf (bbody b) = bbody (map_branch b).
-    Proof. destruct b; auto. Qed.
-End map_branch.
-
-Lemma map_branch_map_branch
-      {term term' term''}
-      (f : term' -> term'')
-      (f' : term -> term')
-      (b : branch term) :
-  map_branch f (map_branch f' b) =
-  map_branch (f ∘ f') b.
+Instance map_context_proper {term term'} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_context term term').
 Proof.
-  destruct b; cbv.
-  f_equal.
+  intros f g Hfg x y ->.
+  now rewrite /map_context Hfg.
 Qed.
 
-Lemma map_branch_id {t} x : map_branch (@id t) x = id x.
-Proof.
-  destruct x; cbv.
-  f_equal.
-Qed.
-Hint Rewrite @map_branch_id : map.
+Lemma map_context_length {term term'} (f : term -> term') l : #|map_context f l| = #|l|.
+Proof. now unfold map_context; rewrite map_length. Qed.
+Hint Rewrite @map_context_length : len.
 
-Lemma map_branch_eq_spec {A B} (f g : A -> B) (x : branch A) :
-  f (bbody x) = g (bbody x) ->
-  map_branch f x = map_branch g x.
-Proof.
-  intros. unfold map_branch; f_equal; auto.
-Qed.
-Hint Resolve map_branch_eq_spec : all.
+Definition test_decl {term} (f : term -> bool) (d : context_decl term) : bool :=
+  f d.(decl_type) && foroptb f d.(decl_body).
 
-Lemma map_branch_id_spec {A} (f : A -> A) (x : branch A) :
-  f (bbody x) = (bbody x) ->
-  map_branch f x = x.
-Proof.
-  intros. rewrite (map_branch_eq_spec _ id); auto. destruct x; auto.
-Qed.
-Hint Resolve map_branch_id_spec : all.
-
-Lemma map_branches_map_branches
-      {term term' term''}
-      (f : term' -> term'')
-      (f' : term -> term')
-      (l : list (branch term)) :
-  map (fun b => map_branch f (map_branch f' b)) l =
-  map (map_branch (f ∘ f')) l.
-Proof.
-  eapply map_ext => b. apply map_branch_map_branch.
+Instance test_decl_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@test_decl term).
+Proof. 
+  intros f g Hfg [na [b|] ty] ? <- => /=; rewrite /test_decl /=;
+  now rewrite Hfg.
 Qed.
 
-Definition map_branches {term B} (f : term -> B) l := List.map (map_branch f) l.
+Section ContextMap.
+  Context {term term' : Type} (f : nat -> term -> term').
 
-Definition tCaseBrsProp {A} (P : A -> Type) (l : list (branch A)) :=
-  All (fun x => P (bbody x)) l.
-
-Notation map_branches_k f k brs :=
-  (List.map (fun b => map_branch (f (#|b.(bcontext)| + k)) b) brs).
-
-Notation test_branches_k test k brs :=
-  (List.forallb (fun b => test_branch (test (#|b.(bcontext)| + k)) b) brs).
-
-Lemma map_branches_k_map_branches_k
-      {term term' term''}
-      (f : nat -> term' -> term'')
-      (g : term -> term')
-      (f' : nat -> term -> term') k
-      (l : list (branch term)) :
-  map (fun b => map_branch (f #|bcontext (map_branch g b)|) (map_branch (f' k) b)) l =
-  map (fun b => map_branch (f #|bcontext b|) (map_branch (f' k) b)) l.
-Proof.
-  eapply map_ext => b. rewrite map_branch_map_branch.
-  rewrite map_branch_map_branch.
-  now apply map_branch_eq_spec.
-Qed.
-
-Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B} :
-  tCaseBrsProp P l -> (forall x, P x -> f x = g x) ->
-  map_branches f l = map_branches g l.
-Proof.
-  intros. red in X.
-  eapply All_map_eq. eapply All_impl; eauto. simpl; intros.
-  apply map_branch_eq_spec; eauto.
-Qed.
-
-Lemma case_brs_map_k_spec {A B} {P : A -> Type} {k l} {f g : nat -> A -> B} :
-  tCaseBrsProp P l -> (forall k x, P x -> f k x = g k x) ->
-  map_branches_k f k l = map_branches_k g k l.
-Proof.
-  intros. red in X.
-  eapply All_map_eq. eapply All_impl; eauto. simpl; intros.
-  apply map_branch_eq_spec; eauto.
-Qed.
-
-Lemma case_brs_forallb_map_spec {A B} {P : A -> Type} {p : A -> bool}
-      {l} {f g : A -> B} :
-  tCaseBrsProp P l ->
-  forallb (test_branch p) l ->
-  (forall x, P x -> p x -> f x = g x) ->
-  map (map_branch f) l = map (map_branch g) l.
-Proof.
-  intros.
-  eapply All_map_eq. red in X. apply forallb_All in H.
-  eapply All_impl. eapply All_prod. exact X. exact H.
-  intros [] []; unfold map_branch; cbn. f_equal. now apply H0.
-Qed.
-
-Lemma tfix_forallb_map_spec {A B} {P P' : A -> Prop} {p p'} {l} {f f' g g' : A -> B} :
-  tFixProp P P' l ->
-  forallb (test_def p p') l ->
-  (forall x, P x -> p x -> f x = g x) ->
-  (forall x, P' x -> p' x -> f' x = g' x) ->
-  map (map_def f f') l = map (map_def g g') l.
-Proof.
-  intros.
-  eapply All_map_eq; red in X. apply forallb_All in H.
-  eapply All_impl. eapply All_prod. exact X. exact H.
-  intros [] [[] ?]; unfold map_def, test_def in *; cbn in *. rtoProp.
-  f_equal; eauto.
-Qed.
-
-Ltac apply_spec :=
-  match goal with
-  | H : All _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
-    eapply (All_forallb_map_spec H H')
-  | H : All _ _, H' : forallb _ _ = _ |- forallb _ _ = _ =>
-    eapply (All_forallb_forallb_spec H H')
-  | H : tCaseBrsProp _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
-    eapply (case_brs_forallb_map_spec H H')
-  | H : All _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
-    eapply (All_forallb_map_spec H H')
-  | H : All _ _, H' : is_true (forallb _ _) |- forallb _ _ = _ =>
-    eapply (All_forallb_forallb_spec H H')
-  | H : tCaseBrsProp _ _, H' : is_true (forallb _ _) |- map _ _ = map _ _ =>
-    eapply (case_brs_forallb_map_spec H H')
-  | H : tCaseBrsProp _ _ |- map _ _ = map _ _ =>
-    eapply (case_brs_map_spec H)
-  | H : tFixProp _ _ _, H' : forallb _ _ = _ |- map _ _ = map _ _ =>
-    eapply (tfix_forallb_map_spec H H')
-  | H : tFixProp _ _ _ |- map _ _ = map _ _ =>
-    eapply (tfix_map_spec H)
-  | H : All _ _ |- map _ _ = map _ _ =>
-    eapply (All_map_eq H)
-  | H : All _ _ |- map _ _ = _ =>
-    eapply (All_map_id H)
-  | H : All _ _ |- is_true (forallb _ _) =>
-    eapply (All_forallb _ _ H); clear H
+  Fixpoint mapi_context (c : list (context_decl term)) : list (context_decl term') :=
+    match c with
+    | d :: Γ => map_decl (f #|Γ|) d :: mapi_context Γ
+    | [] => []
   end.
+End ContextMap.
 
-Ltac close_All :=
-  match goal with
-  | H : Forall _ _ |- Forall _ _ => apply (Forall_impl H); clear H; simpl
-  | H : All _ _ |- All _ _ => apply (All_impl H); clear H; simpl
-  | H : OnOne2 _ _ _ |- OnOne2 _ _ _ => apply (OnOne2_impl H); clear H; simpl
-  | H : All2 _ _ _ |- All2 _ _ _ => apply (All2_impl H); clear H; simpl
-  | H : Forall2 _ _ _ |- Forall2 _ _ _ => apply (Forall2_impl H); clear H; simpl
-  | H : All _ _ |- All2 _ _ _ =>
-    apply (All_All2 H); clear H; simpl
-  | H : All2 _ _ _ |- All _ _ =>
-    (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
-  end.
+Instance mapi_context_proper {term term'} : Proper (`=2` ==> Logic.eq ==> Logic.eq) (@mapi_context term term').
+Proof.
+  intros f g Hfg Γ ? <-.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; f_equal; auto; now rewrite Hfg.
+Qed.
+
+Lemma mapi_context_length {term} (f : nat -> term -> term) l : #|mapi_context f l| = #|l|.
+Proof.
+  induction l; simpl; auto.  
+Qed.
+Hint Rewrite @mapi_context_length : len.
+
+Section ContextTest.
+  Context {term : Type} (f : term -> bool).
+  
+  Fixpoint test_context (c : list (context_decl term)) : bool :=
+    match c with
+    | d :: Γ => test_decl f d && test_context Γ
+    | [] => true
+    end.
+End ContextTest.
+
+Instance test_context_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@test_context term).
+Proof. 
+  intros f g Hfg Γ ? <-.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; f_equal; auto; now rewrite Hfg.
+Qed.
+
+Section ContextTestK.
+  Context {term : Type} (f : nat -> term -> bool) (k : nat).
+  
+  Fixpoint test_context_k (c : list (context_decl term)) : bool :=
+    match c with
+    | d :: Γ => test_decl (f (#|Γ| + k)) d && test_context_k Γ
+    | [] => true
+    end.
+End ContextTestK.
+
+Instance test_context_k_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq ==> Logic.eq) (@test_context_k term).
+Proof. 
+  intros f g Hfg k ? <- Γ ? <-.
+  induction Γ as [|[na [b|] ty] Γ]; simpl; auto; f_equal; auto; now rewrite Hfg.
+Qed.
 
 (** Primitive types models (axiom free) *)
 
@@ -578,7 +497,7 @@ Definition string_of_uint63_model (i : uint63_model) := string_of_Z (proj1_sig i
 Definition prec := 53%Z.
 Definition emax := 1024%Z.
 (** We consider valid binary encordings of floats as our model *)
-Definition float64_model := sig (valid_binary prec emax).
+Definition float64_model := sig (SpecFloat.valid_binary prec emax).
 
 Definition string_of_float64_model (i : float64_model) := 
   "<float>".

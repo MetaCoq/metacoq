@@ -176,45 +176,6 @@ Proof.
       now apply IHparams.
 Qed.
 
-Definition case_predicate_context ind mdecl idecl params puinst pctx : context :=
-  let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
-  let inddecl := 
-    {| decl_name := 
-      {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
-       decl_body := None;
-       decl_type := indty |}
-  in
-  let ictx := 
-    subst_context params 0
-      (subst_instance puinst (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
-  in
-  map2 set_binder_name pctx (inddecl :: ictx).
-
-Definition case_branch_context_gen params puinst cdecl : context :=
-  subst_context params 0 (subst_instance puinst cdecl.(cstr_args)).
-
-Definition case_branch_context p cdecl : context :=
-  case_branch_context_gen p.(pparams) p.(puinst) cdecl.
-  
-Definition case_branches_contexts_gen idecl params puinst : list context :=
-  map (case_branch_context_gen params puinst) idecl.(ind_ctors).
-
-Definition case_branches_contexts idecl p : list context :=
-  map (case_branch_context_gen p.(pparams) p.(puinst)) idecl.(ind_ctors).
-  
-Definition case_branch_type_gen ind params puinst ptm i cdecl : context * term :=
-  let cstr := tConstruct ind i puinst in
-  let args := to_extended_list cdecl.(cstr_args) in
-  let cstrapp := mkApps cstr (map (lift0 #|cdecl.(cstr_args)|) params ++ args) in
-  let brctx := subst_context params 0 (subst_instance puinst cdecl.(cstr_args)) in
-  let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (cdecl.(cstr_indices) ++ [cstrapp]) in
-  (brctx, ty).
-
-Definition case_branches_types_gen ind idecl params puinst ptm : list (context * term) :=
-  mapi (case_branch_type_gen ind params puinst ptm) idecl.(ind_ctors).
-
-Definition case_branches_types ind idecl p ptm : list (context * term) :=
-  mapi (case_branch_type_gen ind p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).
     
   (* (* 
 Variant case_predicate_context ind mdecl idecl params uinst : context -> Type :=

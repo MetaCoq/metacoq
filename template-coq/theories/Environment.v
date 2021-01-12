@@ -728,6 +728,35 @@ Module Environment (T : Term).
     rewrite Hfg.
     now len.
   Qed.
+
+  Inductive context_relation {P : context -> context -> context_decl -> context_decl -> Type}
+            : forall (Γ Γ' : context), Type :=
+  | ctx_rel_nil : context_relation nil nil
+  | ctx_rel_vass {na na' T U Γ Γ'} :
+      context_relation Γ Γ' ->
+      P Γ Γ' (vass na T) (vass na' U) ->
+      context_relation (vass na T :: Γ) (vass na' U :: Γ')
+  | ctx_rel_def {na na' t T u U Γ Γ'} :
+      context_relation Γ Γ' ->
+      P Γ Γ' (vdef na t T) (vdef na' u U) ->
+      context_relation (vdef na t T :: Γ) (vdef na' u U :: Γ').
+
+  Derive Signature NoConfusion for context_relation.
+  Arguments context_relation P Γ Γ' : clear implicits.
+
+  Lemma context_relation_length {P Γ Γ'} :
+    context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
+  Proof.
+    induction 1; cbn; congruence.
+  Qed.
+
+  Lemma context_relation_impl {P Q Γ Γ'} :
+    context_relation P Γ Γ' -> (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
+    context_relation Q Γ Γ'.
+  Proof.
+    induction 1; constructor; auto.
+  Qed.
+
 End Environment.
 
 Module Type EnvironmentSig (T : Term).

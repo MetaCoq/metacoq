@@ -146,34 +146,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
-  Inductive context_relation (P : context -> context -> context_decl -> context_decl -> Type)
-            : forall (Γ Γ' : context), Type :=
-  | ctx_rel_nil : context_relation P nil nil
-  | ctx_rel_vass na na' T U Γ Γ' :
-      context_relation P Γ Γ' ->
-      P Γ Γ' (vass na T) (vass na' U) ->
-      context_relation P (vass na T :: Γ) (vass na' U :: Γ')
-  | ctx_rel_def na na' t T u U Γ Γ' :
-      context_relation P Γ Γ' ->
-      P Γ Γ' (vdef na t T) (vdef na' u U) ->
-      context_relation P (vdef na t T :: Γ) (vdef na' u U :: Γ').
-
-  Derive Signature for context_relation.
-  Arguments context_relation P Γ Γ' : clear implicits.
-
-  Lemma context_relation_length {P Γ Γ'} :
-    context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
-  Proof.
-    induction 1; cbn; congruence.
-  Qed.
-
-  Lemma context_relation_impl {P Q Γ Γ'} :
-    context_relation P Γ Γ' -> (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
-    context_relation Q Γ Γ'.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
   Section All2_local_env.
 
   Definition on_decl (P : context -> context -> term -> term -> Type)

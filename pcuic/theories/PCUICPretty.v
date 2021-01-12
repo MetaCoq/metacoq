@@ -82,7 +82,7 @@ Section print_term.
         decl_type := decl_type decl;
         decl_body := decl_body decl |}.
   
-  Definition build_return_context
+  (* Definition build_return_context
               (ind : inductive)
               (oib : one_inductive_body)
               (pred : predicate term) : option context :=
@@ -98,7 +98,7 @@ Section print_term.
           ,,
           vass ind_binder_name (mkApps (tInd ind (puinst pred)) (pparams pred)))
     | None => None
-    end.
+    end. *)
     
   Definition fresh_names (Γ : list ident) (Γ' : context) : list ident :=
     let fix aux Γids Γ :=
@@ -164,15 +164,9 @@ Section print_term.
                           ^ string_of_universe_instance u ^ ")"
     end
   | tCase {| ci_ind := mkInd mind i as ind; ci_npar := pars |} p t brs =>
-  match lookup_ind_decl Σ mind i with
-  | Some (_, oib) =>
-    match build_return_context ind oib p with
-    | None =>
-      "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-              ^ string_of_predicate string_of_term p ^ "," ^ 
-              string_of_list (pretty_string_of_branch string_of_term) brs ^ ")"
-
-    | Some Γret =>
+    match lookup_ind_decl Σ mind i with
+    | Some (_, oib) =>
+      let Γret := p.(pcontext) in
       let Γret := fresh_names Γ Γret in
       let ret_binders := firstn #|pcontext p| Γret in
       let (as_name, indices) := (hd "_" ret_binders, MCList.rev (tail ret_binders)) in
@@ -183,12 +177,13 @@ Section print_term.
           match names with
           | [] => "=> " ^ prbr Γ
           | na :: l =>
-            let na' := (fresh_name Γ na.(binder_name) None) in
+            let na' := (fresh_name Γ na.(decl_name).(binder_name) None) in
               na' ^ "  " ^ print_branch (na' :: Γ) l prbr
           end
       in
 
-      let brs := map (fun br => print_branch Γ (List.rev br.(bcontext)) (fun Γ => print_term Γ true false br.(bbody))) brs in
+      let brs := map (fun br => print_branch Γ (List.rev br.(bcontext)) 
+        (fun Γ => print_term Γ true false br.(bbody))) brs in
       let brs := combine brs oib.(ind_ctors) in
                             
       parens top ("match " ^ print_term Γ true false t ^
@@ -198,7 +193,6 @@ Section print_term.
                   " with " ^ nl ^
                   print_list (fun '(b, cdecl) => cdecl.(cstr_name) ^ " " ^ b)
                   (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
-    end
   | None =>
     "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
             ^ string_of_predicate string_of_term p ^ "," ^ 

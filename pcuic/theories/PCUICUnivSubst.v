@@ -5,14 +5,12 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Instance subst_instance_list A `{UnivSubst A} : UnivSubst (list A) :=
   fun u => List.map (subst_instance u).
 
-
 Lemma subst_instance_lift u c n k :
   subst_instance u (lift n k c) = lift n k (subst_instance u c).
 Proof.
   unfold subst_instance; cbn.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-      autorewrite with map;
+    autorewrite with map;
     try solve [f_equal; eauto; solve_all; eauto].
 Qed.
 
@@ -49,8 +47,7 @@ Lemma subst_instance_subst u c (s : list term) k :
 Proof.
   unfold subst_instance, subst_instance_list; cbn.
   induction c in k |- * using term_forall_list_ind; simpl; auto;
-    rewrite ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-      ?map_branch_map_branch, ?map_predicate_map_predicate;
+    autorewrite with map;
     try solve [f_equal; eauto; solve_all; eauto].
 
   elim (Nat.leb k n); auto.
@@ -67,8 +64,6 @@ Proof.
   solve_all. now destruct H as [n [-> _]].
 Qed.
 
-Hint Rewrite map_map_compose @compose_map_def map_length : map.
-
 Lemma closedu_subst_instance u t
   : closedu 0 t -> subst_instance u t = t.
 Proof.
@@ -78,8 +73,6 @@ Proof.
     try f_equal; eauto with substu; unfold test_predicate, test_branch, test_def in *;
       try solve [f_equal; eauto; repeat (rtoProp; solve_all); eauto with substu].
 Qed.
-
-Hint Rewrite test_context_map : map.
 
 Lemma subst_instance_closedu (u : Instance.t) (Hcl : closedu_instance 0 u) t :
   closedu #|u| t -> closedu 0 (subst_instance u t).

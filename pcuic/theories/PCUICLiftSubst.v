@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
+Require Import ssreflect Morphisms. 
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
-Require Import ssreflect Morphisms. Import Nat.
+Import Nat.
 
 (** * Lifting and substitution for the AST
 
@@ -10,38 +11,6 @@ Require Import ssreflect Morphisms. Import Nat.
   a term is closed. *)
 
 Derive Signature for Peano.le.
-
-(** Shift a renaming [f] by [k]. *)
-Definition shiftn k f :=
-  fun n => if Nat.ltb n k then n else k + (f (n - k)).
-
-Notation map_branches_shift f fn brs :=
-  (map (fun b => map_branch (f (shiftn #|bcontext b| fn)) b) brs).
-
-Definition rename_predicate (rename : (nat -> nat) -> term -> term) f p := 
-  map_predicate id (rename f) (rename (shiftn #|p.(pcontext)| f)) p.
-  
-Fixpoint rename f t : term :=
-  match t with
-  | tRel i => tRel (f i)
-  | tEvar ev args => tEvar ev (List.map (rename f) args)
-  | tLambda na T M => tLambda na (rename f T) (rename (shiftn 1 f) M)
-  | tApp u v => tApp (rename f u) (rename f v)
-  | tProd na A B => tProd na (rename f A) (rename (shiftn 1 f) B)
-  | tLetIn na b t b' => tLetIn na (rename f b) (rename f t) (rename (shiftn 1 f) b')
-  | tCase ind p c brs =>
-    let p' := rename_predicate rename f p in
-    let brs' := map_branches_shift rename f brs in
-    tCase ind p' (rename f c) brs'
-  | tProj p c => tProj p (rename f c)
-  | tFix mfix idx =>
-    let mfix' := List.map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
-    tFix mfix' idx
-  | tCoFix mfix idx =>
-    let mfix' := List.map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
-    tCoFix mfix' idx
-  | x => x
-  end.
 
 (** Assumptions contexts do not contain let-ins. *)  
 
@@ -163,6 +132,13 @@ Proof. induction l; simpl; auto. now rewrite lift0_id. Qed.
 Lemma lift0_p : forall M, lift0 0 M = M.
 Proof. intro; apply lift0_id. Qed.
 
+Lemma shiftf0 {A B} (f : nat -> A -> B) k x : shiftf f 0 k x = f k x.
+Proof.
+  now rewrite /shiftf Nat.add_0_r.
+Qed.
+
+Hint Rewrite @shiftf0 : map.
+
 Lemma simpl_lift :
   forall M n k p i,
     i <= k + n ->
@@ -170,9 +146,7 @@ Lemma simpl_lift :
 Proof.
   intros M.
   elim M using term_forall_list_ind;
-    intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
-        ?map_predicate_map_predicate;
+    intros; simpl; autorewrite with map;
       try (rewrite -> H, ?H0, ?H1; auto); try (f_equal; auto; solve_all).
 
   elim (leb_spec k n); intros.
@@ -188,6 +162,8 @@ Lemma simpl_lift_ext n k p i :
   lift p i ∘ lift n k =1 lift (p + n) k.
 Proof. intros ? ? ?; now apply simpl_lift. Qed.
 
+Hint Extern 10 => rewrite !Nat.add_assoc : all.
+
 Lemma permute_lift :
   forall M n k p i,
     i <= k ->
@@ -196,9 +172,8 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-      ?map_predicate_map_predicate,
-      ?map_length, ?Nat.add_assoc; f_equal;
+      autorewrite with map;
+      rewrite ?Nat.add_assoc; f_equal;
       try solve [solve_all]; repeat nth_leb_simpl.
 Qed.
 
@@ -225,9 +200,7 @@ Lemma simpl_subst_rec :
     k <= p -> subst N p (lift (List.length N + n) k M) = lift n k M.
 Proof.
   intros M. induction M using term_forall_list_ind;
-    intros; simpl;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
-        ?map_predicate_map_predicate;
+    intros; simpl; autorewrite with map;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
 Qed.
 
@@ -357,21 +330,18 @@ Proof.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
       ?map_predicate_map_predicate, ?map_branch_map_branch;
     simpl closed in *; 
-    unfold test_predicate, test_def in *;
+    unfold test_predicate_k, test_def, test_branch_k in *;
     try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
-  - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
-  - simpl lift. f_equal. solve_all. unfold test_def in b. toProp. solve_all.
 Qed.
 
 Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
 Proof.
   revert k k'.
   elim t using term_forall_list_ind; intros; try lia;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
-      ?map_predicate_map_predicate;
-    simpl closed in *; unfold test_snd, test_def, test_predicate, test_branch in *;
+    autorewrite with map;
+    simpl closed in *; unfold test_snd, test_def, test_predicate_k, test_branch_k in *;
       try solve [(try f_equal; simpl; repeat (rtoProp; solve_all); eauto)].
 
   - elim (ltb_spec n k'); auto. intros.
@@ -827,6 +797,7 @@ Proof.
     now rewrite IHc.
   - simpl. apply IHc.
 Qed.
+
 Lemma it_mkProd_or_LetIn_inj ctx s ctx' s' :
   it_mkProd_or_LetIn ctx (tSort s) = it_mkProd_or_LetIn ctx' (tSort s') ->
   ctx = ctx' /\ s = s'.

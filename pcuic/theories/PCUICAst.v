@@ -170,7 +170,7 @@ Notation map_branches_k f k brs :=
   (List.map (map_branch_k f k) brs).
 
 Notation test_branches_k test k brs :=
-  (List.forallb (fun b => test_branch (test (#|b.(bcontext)| + k)) b) brs).
+  (List.forallb (test_branch_k test k) brs).
 
 Inductive term :=
 | tRel (n : nat)
@@ -544,6 +544,12 @@ Definition eqb_predicate_gen (eqb_univ_instance : Instance.t -> Instance.t -> bo
 Definition eqb_predicate (eqterm : term -> term -> bool) (p p' : predicate term) :=
   eqb_predicate_gen eqb (eqb_context_decl eqterm) eqterm p p'.
   
+(** Theory of [map] variants on branches and predicates. *)
+
+(* The [map] rewrite database gathers all the map composition rewrite lemmas
+  on these types. *)
+Hint Rewrite map_map_compose @compose_map_def map_length : map.
+
 Lemma map_predicate_map_predicate
       {term term' term''}
       (finst finst' : Instance.t -> Instance.t)
@@ -597,12 +603,12 @@ Qed.
 Hint Resolve map_predicate_eq_spec : all.
 
 Lemma map_predicate_k_eq_spec {A} (finst finst' : Instance.t -> Instance.t) 
-  (f g : nat -> A -> A) k (p : predicate A) :
+  (f g : nat -> A -> A) k k' (p : predicate A) :
   finst (puinst p) = finst' (puinst p) ->
-  map (f k) (pparams p) = map (g k) (pparams p) ->
-  mapi_context (shiftf f k) (pcontext p) = mapi_context (shiftf g k) (pcontext p) ->
-  shiftf f k #|pcontext p| (preturn p) = shiftf g k #|pcontext p| (preturn p) ->
-  map_predicate_k finst f k p = map_predicate_k finst' g k p.
+  map (f k) (pparams p) = map (g k') (pparams p) ->
+  mapi_context (shiftf f k) (pcontext p) = mapi_context (shiftf g k') (pcontext p) ->
+  shiftf f k #|pcontext p| (preturn p) = shiftf g k' #|pcontext p| (preturn p) ->
+  map_predicate_k finst f k p = map_predicate_k finst' g k' p.
 Proof.
   intros. unfold map_predicate_k; f_equal; auto.
 Qed.
@@ -669,6 +675,18 @@ Proof.
 Qed.
 Hint Resolve map_predicate_id_spec : all.
 
+Lemma map_predicate_k_id_spec {A} finst (f : nat -> A -> A) k (p : predicate A) :
+  finst (puinst p) = puinst p ->
+  map (f k) (pparams p) = pparams p ->
+  mapi_context (shiftf f k) (pcontext p) = pcontext p ->
+  shiftf f k #|p.(pcontext)| (preturn p) = preturn p ->
+  map_predicate_k finst f k p = p.
+Proof.
+  unfold map_predicate_k, shiftf.
+  intros -> -> -> ->; destruct p; auto.
+Qed.
+Hint Resolve map_predicate_k_id_spec : all.
+
 Instance map_predicate_proper {term} : 
   Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
 Proof.
@@ -693,6 +711,22 @@ Proof.
   rewrite !fold_context_alt, map_mapi. 
   apply mapi_ext => i d. now rewrite compose_map_decl.
 Qed.
+
+Lemma map_predicate_k_map_predicate_k 
+  (finst finst' : Instance.t -> Instance.t)
+  (f f' : nat -> term -> term)
+  k k' (p : predicate term) :
+  map_predicate_k finst f k (map_predicate_k finst' f' k' p) =
+  map_predicate_k (finst ∘ finst') (fun i => f (i + k) ∘ f' (i + k')) 0 p.
+Proof.
+  unfold map_predicate, map_predicate_k. destruct p; cbn.
+  f_equal.
+  now rewrite map_map.
+  rewrite !mapi_context_fold, fold_context_compose.
+  unfold shiftf. now setoid_rewrite Nat.add_0_r.
+  now len.
+Qed.
+Hint Rewrite map_predicate_k_map_predicate_k : map.
 
 Lemma map_predicate_map_predicate_k 
   (finst finst' : Instance.t -> Instance.t)
@@ -738,6 +772,18 @@ Proof.
   rewrite map_map.
   now setoid_rewrite compose_map_decl.
 Qed.
+
+Lemma map_branch_k_map_branch_k (f f' : nat -> term -> term) k k' (b : branch term) :
+  map_branch_k f k (map_branch_k f' k' b) =
+  map_branch_k (fun i => f (i + k) ∘ f' (i + k')) 0 b.
+Proof.
+  unfold map_branch, map_branch_k; destruct b; cbn. len.
+  f_equal.
+  rewrite !mapi_context_fold.
+  rewrite !fold_context_compose; unfold shiftf.
+  now setoid_rewrite Nat.add_0_r.
+Qed.
+Hint Rewrite map_branch_k_map_branch_k : map.
 
 Lemma map_branch_map_branch_k
       (f : term -> term)
@@ -806,10 +852,10 @@ Proof.
 Qed.
 Hint Resolve map_branch_eq_spec : all.
 
-Lemma map_branch_k_eq_spec {A B} (f g : nat -> A -> B) k (x : branch A) :
-  mapi_context (shiftf f k) (bcontext x) = mapi_context (shiftf g k) (bcontext x) ->  
-  shiftf f k #|x.(bcontext)| (bbody x) = shiftf g k #|x.(bcontext)| (bbody x) ->
-  map_branch_k f k x = map_branch_k g k x.
+Lemma map_branch_k_eq_spec {A B} (f g : nat -> A -> B) k k' (x : branch A) :
+  mapi_context (shiftf f k) (bcontext x) = mapi_context (shiftf g k') (bcontext x) ->  
+  shiftf f k #|x.(bcontext)| (bbody x) = shiftf g k' #|x.(bcontext)| (bbody x) ->
+  map_branch_k f k x = map_branch_k g k' x.
 Proof.
   intros. unfold map_branch_k; f_equal; auto.
 Qed.
@@ -840,6 +886,16 @@ Proof.
   now rewrite map_context_id.
 Qed.
 Hint Resolve map_branch_id_spec : all.
+
+Lemma map_branch_k_id_spec (f : nat -> term -> term) k (x : branch term) :
+  mapi_context (shiftf f k) (bcontext x) = bcontext x ->
+  shiftf f k #|x.(bcontext)| (bbody x) = (bbody x) ->
+  map_branch_k f k x = x.
+Proof.
+  intros. unfold map_branch_k.
+  destruct x; simpl in *; f_equal; eauto.
+Qed.
+Hint Resolve map_branch_k_id_spec : all.
 
 Lemma map_branches_map_branches
       {term term' term''}
@@ -921,6 +977,53 @@ Proof.
   * eauto.
 Qed.
 
+Lemma mapi_context_eqP_id_spec {A} {P : A -> Type} {ctx} {f : nat -> A -> A} :
+  All (ondecl P) ctx ->
+  (forall k x, P x -> f k x = x) ->
+  mapi_context f ctx = ctx.
+Proof.
+  intros Ha Hfg. induction Ha; simpl; auto.
+  rewrite IHHa; f_equal.
+  destruct p as [Hty Hbody].
+  unfold map_decl; destruct x ; cbn in *; f_equal.
+  * destruct decl_body; cbn in *; auto.
+    f_equal. eauto.
+  * eauto.
+Qed.
+
+Lemma mapi_context_eqP_test_id_spec {A} {P : A -> Type} (p : nat -> A -> bool)
+  k {ctx} {f : nat -> A -> A} :
+  All (ondecl P) ctx ->
+  test_context_k p k ctx ->
+  (forall k (x : A), P x -> p k x -> f k x = x) ->
+  mapi_context (shiftf f k) ctx = ctx.
+Proof.
+  intros Ha ht Hfg. revert ht.
+  induction Ha; simpl; auto.
+  intros [[hty hbod]%andb_and hl]%andb_and.
+  rewrite IHHa; auto; f_equal.
+  destruct p0 as [Hty Hbody].
+  unfold map_decl; destruct x ; cbn in *; f_equal; eauto.
+  destruct decl_body; cbn in *; auto.
+  f_equal. unfold shiftf. eapply Hfg; auto. 
+Qed.
+
+Lemma test_context_k_eqP_id_spec {A} {P : A -> Type} (p q : nat -> A -> bool) k k' {ctx} :
+  All (ondecl P) ctx ->
+  test_context_k p k ctx ->
+  (forall i (x : A), P x -> p (i + k) x -> q (i + k') x) ->
+  test_context_k q k' ctx.
+Proof.
+  intros Ha ht Hfg. revert ht.
+  induction Ha; simpl; auto.
+  intros [[hty hbod]%andb_and hl]%andb_and.
+  rewrite IHHa; auto; f_equal.
+  destruct p0 as [Hty Hbody].
+  unfold test_decl; destruct x ; cbn in *; f_equal; eauto.
+  destruct decl_body; cbn in *; auto;
+  rewrite !Hfg; auto.
+Qed.
+
 Lemma case_brs_map_spec_cond {A B} {P : A -> Type} p {l} {f g : A -> B} :
   tCaseBrsProp P l -> 
   forallb (test_branch p) l ->
@@ -972,6 +1075,7 @@ Proof.
   rewrite IHctx. f_equal.
   now rewrite test_decl_map_decl.
 Qed.
+Hint Rewrite test_context_map : map.
 
 Lemma onctx_test P (p q : term -> bool) ctx : 
   onctx P ctx ->

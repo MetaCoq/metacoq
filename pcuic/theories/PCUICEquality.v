@@ -2,7 +2,7 @@
 From Coq Require Import CMorphisms.
 From MetaCoq.Template Require Import LibHypsNaming config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICReflect.
+     PCUICLiftSubst PCUICReflect PCUICContextRelation.
 
 Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
@@ -87,11 +87,54 @@ Proof.
   intros H x y xy. eapply Forall2_impl ; tea.
 Qed.
 
+Definition eq_decl (eq_term : term -> term -> Type) (d d' : context_decl) : Type :=
+  match d, d' with
+  | {| decl_name := na; decl_body := None; decl_type := T |},
+    {| decl_name := na'; decl_body := None; decl_type := T' |} =>
+    eq_binder_annot na na' × eq_term T T'
+  | {| decl_name := na; decl_body := Some b; decl_type := T |},
+    {| decl_name := na'; decl_body := Some b'; decl_type := T' |} =>
+    eq_binder_annot na na' × eq_term b b' × eq_term T T'
+  | _, _ => False
+  end.
+
+Definition eq_context (eq_term : term -> term -> Type) :=
+  context_relation (fun _ _ => eq_decl eq_term).
+
 Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   All2 eq_term p.(pparams) p'.(pparams) *
   (R_universe_instance Re p.(puinst) p'.(puinst) *
-    ((All2 (on_rel eq binder_relevance) p.(pcontext) p'.(pcontext)) *
-      eq_term p.(preturn) p'.(preturn))).
+  ((eq_context eq_term p.(pcontext) p'.(pcontext)) *
+    eq_term p.(preturn) p'.(preturn))).
+
+Instance eq_context_refl eq_term : CRelationClasses.Reflexive eq_term -> CRelationClasses.Reflexive (eq_context eq_term).    
+Proof.
+  intros hr x.
+  eapply context_relation_refl.
+  intros. 
+  destruct x0 as [na [b|] ty]; simpl; intuition auto; reflexivity.
+Qed.
+
+Instance eq_context_sym eq_term : 
+  CRelationClasses.Symmetric eq_term -> 
+  CRelationClasses.Symmetric (eq_context eq_term).    
+Proof.
+  intros hr x.
+  eapply context_relation_sym.
+  intros. 
+  destruct x0 as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; intuition auto;
+  now symmetry.
+Qed.
+
+Instance eq_context_trans eq_term : 
+  CRelationClasses.Transitive eq_term -> 
+  CRelationClasses.Transitive (eq_context eq_term).    
+Proof.
+  intros hr x y z.
+  eapply context_relation_trans; intros. 
+  destruct x0 as [na [b|] ty], y0 as [na' [b'|] ty'], z0 as [? [?|] ?]; simpl in *; intuition auto;
+  etransitivity; eauto.
+Qed.
 
 (** ** Syntactic equality up-to universes
   We don't look at printing annotations *)
@@ -155,7 +198,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p' ->
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
-      All2 (eq_binder_annot) (bcontext x) (bcontext y) *
+      eq_context (eq_term_upto_univ_napp Σ Re Re 0) (bcontext x) (bcontext y) *
       eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
     ) brs brs' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
@@ -229,6 +272,18 @@ Lemma eq_binder_relevances_refl (x : list aname) : All2 (on_rel eq binder_releva
 Proof. now eapply All_All2_refl, All_refl. Qed.
 Hint Resolve eq_binder_relevances_refl : core.
 
+Lemma onctx_eq_ctx P ctx eq_term :
+  onctx P ctx ->
+  (forall x, P x -> eq_term x x) ->
+  context_relation (fun _ _ => eq_decl eq_term) ctx ctx.
+Proof.
+  intros onc HP.
+  induction onc.
+  - constructor; auto.
+  - destruct x as [na [b|] ty]; destruct p; simpl in *;
+    constructor; auto; simpl; intuition auto.
+Qed.
+
 Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -244,8 +299,12 @@ Proof.
   all: try solve [unfold eq_predicate; solve_all; eapply All_All2; eauto].
   - apply R_global_instance_refl; auto.
   - apply R_global_instance_refl; auto.
-  - eapply All_All2; eauto. simpl; intuition eauto.
-  - eapply All_All2; eauto; simpl; intuition eauto.  
+  - destruct X as [? [? ?]].
+    eapply onctx_eq_ctx in o; eauto.
+  - eapply All_All2; eauto; simpl; intuition eauto.
+    eapply onctx_eq_ctx in a; eauto.
+  - eapply All_All2; eauto; simpl; intuition eauto.
+  - eapply All_All2; eauto; simpl; intuition eauto.
 Qed.
 
 Instance eq_term_refl `{checker_flags} Σ φ : Reflexive (eq_term Σ φ).
@@ -289,6 +348,18 @@ Proof.
     apply IHu; auto.
   - apply Forall2_symP; eauto.
 Qed.
+ 
+Lemma onctx_eq_ctx_sym P ctx ctx' eq_term :
+  onctx P ctx ->
+  (forall x, P x -> forall y, eq_term x y -> eq_term y x) ->
+  context_relation (fun _ _ => eq_decl eq_term) ctx ctx' ->
+  context_relation (fun _ _ => eq_decl eq_term) ctx' ctx.
+Proof.
+  intros onc HP H1.
+  induction H1; depelim onc; constructor; intuition auto; simpl in *.
+  intuition auto. now symmetry.
+  intuition auto. now symmetry.
+Qed.
 
 Instance eq_term_upto_univ_sym Σ Re Rle napp :
   RelationClasses.Symmetric Re ->
@@ -314,9 +385,9 @@ Proof.
     eapply All2_sym; solve_all.
     unfold R_universe_instance in r |- *.
     eapply Forall2_symP; eauto.
+    eapply onctx_eq_ctx_sym in o; eauto.
     eapply All2_sym; solve_all.
-    eapply All2_sym; solve_all.
-    eapply All2_symP; eauto.
+    eapply onctx_eq_ctx_sym in a0; eauto.
   - econstructor.
     eapply All2_All_mix_left in X as h; eauto.
     clear a X.

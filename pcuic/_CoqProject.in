@@ -35,6 +35,7 @@ theories/PCUICContextRelation.v
 theories/PCUICContextConversion.v
 theories/PCUICConversion.v
 theories/PCUICConvCumInversion.v
+theories/PCUICRedTypeIrrelevance.v
 theories/PCUICGeneration.v
 theories/PCUICAlpha.v
 theories/PCUICCtxShape.v

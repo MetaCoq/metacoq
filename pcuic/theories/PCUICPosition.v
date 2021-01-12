@@ -824,8 +824,10 @@ Inductive stack : Type :=
 | CoFix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
 | CoFix_mfix_ty (na : aname) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
 | CoFix_mfix_bd (na : aname) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
-| Case_pars (ci : case_info) (pars1 pars2 : list term) (puint : Instance.t) (pcontext : list aname) (preturn : term) (c : term) (brs : list (branch term)) (π : stack)
-| Case_p (ci : case_info) (pars : list term) (puinst : Instance.t) (pcontext : context) (c : term) (brs : list (branch term)) (π : stack)
+| Case_pars (ci : case_info) (pars1 pars2 : list term) (puint : Instance.t) 
+  (pcontext : context) (preturn : term) (c : term) (brs : list (branch term)) (π : stack)
+| Case_p (ci : case_info) (pars : list term) (puinst : Instance.t)
+  (pcontext : context) (c : term) (brs : list (branch term)) (π : stack)
 | Case (ci : case_info) (p : predicate term) (brs : list (branch term)) (π : stack)
 | Case_brs (ci : case_info) (p : predicate term) (c : term) (bctx : context) (brs1 brs2 : list (branch term)) (π : stack)
 | Proj (p : projection) (π : stack)
@@ -854,7 +856,7 @@ Defined.
 
 Instance reflect_stack : ReflectEq stack :=
   let h := EqDec_ReflectEq stack in _.
-
+(*
 Section WfStack.
   Context (Σ : global_env).
 
@@ -868,9 +870,7 @@ Section WfStack.
     | CoFix _ _ _ π
     | CoFix_mfix_ty _ _ _ _ _ _ π
     | CoFix_mfix_bd _ _ _ _ _ _ π => wf_stack π
-    | Case_pars ci _ _ _ _ _ _ _ π =>
-      (∑ mdecl idecl,
-        declared_inductive Σ (ci_ind ci) mdecl idecl) * (wf_stack π)
+    | Case_pars ci _ _ _ _ _ _ _ π => (wf_stack π)
     | Case_p ci ppars puinst pctx c brs π => 
       (∑ mdecl idecl,
         declared_inductive Σ (ci_ind ci) mdecl idecl * 
@@ -900,7 +900,7 @@ Section WfStack.
     | coApp _ π => wf_stack π
       end.
 End WfStack.
-
+*)
 Fixpoint zipc t stack :=
   match stack with
   | ε => t
@@ -919,11 +919,11 @@ Fixpoint zipc t stack :=
       zipc (tCase ci {| pparams := pars1 ++ t :: pars2; puinst := puinst; pcontext := pctx; 
                      preturn := pret |} c brs) π
   | Case_p ci ppars puinst pctx c brs π => 
-    let p' := {| pparams := ppars; puinst := puinst; pcontext := forget_types pctx; preturn := t |} in
+    let p' := {| pparams := ppars; puinst := puinst; pcontext :=  pctx; preturn := t |} in
     zipc (tCase ci p' c brs) π
   | Case ci pred brs π => zipc (tCase ci pred t brs) π
   | Case_brs ci pred c bctx brs1 brs2 π =>
-      zipc (tCase ci pred c (brs1 ++ {| bcontext := forget_types bctx; bbody := t |} :: brs2)) π
+      zipc (tCase ci pred c (brs1 ++ {| bcontext := bctx; bbody := t |} :: brs2)) π
   | Proj p π => zipc (tProj p t) π
   | Prod_l na B π => zipc (tProd na t B) π
   | Prod_r na A π => zipc (tProd na A t) π
@@ -1306,8 +1306,8 @@ Section Stacks.
       { inversion e. reflexivity. }
       apply app_inv_head in eb. inversion eb. reflexivity.
     - apply IHπ in e.
-      assert (eb : brs1 ++ {| bcontext := forget_types bctx; bbody := u |} :: brs2 =
-         brs1 ++ {| bcontext := forget_types bctx; bbody := v |} :: brs2).
+      assert (eb : brs1 ++ {| bcontext := bctx; bbody := u |} :: brs2 =
+         brs1 ++ {| bcontext := bctx; bbody := v |} :: brs2).
       { inversion e. reflexivity. }
       apply app_inv_head in eb. inversion eb. reflexivity.
   Qed.
@@ -1332,7 +1332,7 @@ Section Stacks.
   Definition zipx (Γ : context) (t : term) (π : stack) : term :=
     it_mkLambda_or_LetIn Γ (zipc t π).
 
-  Fixpoint context_position Γ : position :=
+  Fixpoint context_position (Γ : context) : position :=
     match Γ with
     | [] => []
     | {| decl_name := na ; decl_body := None ; decl_type := A |} :: Γ =>

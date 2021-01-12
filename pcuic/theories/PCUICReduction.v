@@ -39,8 +39,8 @@ Qed.
 Definition tDummy := tVar String.EmptyString.
 Definition dummy_branch : branch term := mkbranch [] tDummy.
 
-Definition iota_red npar args bctx br :=
-  subst (List.skipn npar args) 0 (expand_lets bctx (bbody br)).
+Definition iota_red npar args br :=
+  subst (List.skipn npar args) 0 (expand_lets br.(bcontext) (bbody br)).
 
 (** ** Reduction *)
 
@@ -115,7 +115,7 @@ Definition set_pparams (p : predicate term) (pars' : list term) : predicate term
      puinst := p.(puinst);
      pcontext := p.(pcontext);
      preturn := p.(preturn) |}.
-    
+     
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
@@ -131,15 +131,12 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tRel i) (lift0 (S i) body)
 
 (** Case *)
-| red_iota ci mdecl idecl cdecl c u args p brs br
-    (isdecl : declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl) :
+| red_iota ci c u args p brs br :
     nth_error brs c = Some br ->
-    wf_predicate mdecl idecl p -> 
-    wf_branch cdecl br ->
-    let brctx := case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl in
-    #|skipn (ci_npar ci) args| = context_assumptions brctx ->
+    (* #|p.(pparams)| = ci.(ind_npars) ->
+    #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) -> *)
     red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
-         (iota_red ci.(ci_npar) args brctx br)
+         (iota_red ci.(ci_npar) args br)
 
 (** Fix unfolding, with guard *)
 | red_fix mfix idx args narg fn :
@@ -182,11 +179,8 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tCase ci p c brs)
              (tCase ci (set_pparams p params') c brs)
 
-| case_red_return ci mdecl idecl p preturn' c brs 
-  (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl) :
-  let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-  wf_predicate mdecl idecl p -> 
-  red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
+| case_red_return ci p preturn' c brs :
+  red1 Σ (Γ ,,, p.(pcontext)) p.(preturn) preturn' ->
   red1 Σ Γ (tCase ci p c brs)
           (tCase ci (set_preturn p preturn') c brs)
     
@@ -194,13 +188,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
   red1 Σ Γ c c' -> 
   red1 Σ Γ (tCase ci p c brs) (tCase ci p c' brs)
 
-| case_red_brs ci mdecl idecl p c brs brs' 
-    (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl) :
-    wf_predicate mdecl idecl p -> 
-    wf_branches idecl brs ->  
-    OnOne2All (fun cdecl br br' =>
-      let brctx := case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl in
-      on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') idecl.(ind_ctors) brs brs' ->
+| case_red_brs ci p c brs brs' :    
+    OnOne2 (fun br br' =>
+      on_Trel_eq (red1 Σ (Γ ,,, br.(bcontext))) bbody bcontext br br') brs brs' ->
     red1 Σ Γ (tCase ci p c brs) (tCase ci p c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
@@ -242,16 +232,11 @@ Lemma red1_ind_all :
        (forall (Γ : context) (i : nat) (body : term),
         option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
 
-       (forall (Γ : context) (ci : case_info) mdecl idecl cdecl (c : nat) (u : Instance.t) (args : list term)
-          (p : predicate term) (brs : list (branch term)) br
-          (isdecl : declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl),
+       (forall (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
+          (p : predicate term) (brs : list (branch term)) br,
           nth_error brs c = Some br ->
-          let brctx := case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl in
-          wf_predicate mdecl idecl p ->
-          wf_branch cdecl br ->
-          #|skipn (ci_npar ci) args| = context_assumptions brctx ->
           P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
-              (iota_red ci.(ci_npar) args brctx br)) ->
+              (iota_red ci.(ci_npar) args br)) ->
 
        (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
         unfold_fix mfix idx = Some (narg, fn) ->
@@ -295,26 +280,19 @@ Lemma red1_ind_all :
            P Γ (tCase ci p c brs)
                (tCase ci (set_pparams p params') c brs)) ->
 
-       (forall (Γ : context) (ci : case_info) mdecl idecl p preturn' c brs
-          (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl),
-          let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in       
-          wf_predicate mdecl idecl p ->
-          red1 Σ (Γ ,,, pctx) p.(preturn) preturn' ->
-          P (Γ ,,, pctx) p.(preturn) preturn' ->
+       (forall (Γ : context) (ci : case_info) p preturn' c brs,
+          red1 Σ (Γ ,,, p.(pcontext)) p.(preturn) preturn' ->
+          P (Γ ,,, p.(pcontext)) p.(preturn) preturn' ->
           P Γ (tCase ci p c brs)
               (tCase ci (set_preturn p preturn') c brs)) ->
        
        (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
 
-       (forall (Γ : context) ci mdecl idecl p c brs brs' 
-          (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl),
-          wf_predicate mdecl idecl p ->
-          wf_branches idecl brs ->
-          OnOne2All (fun cdecl br br' =>
-          let brctx := case_branch_context ci.(ci_ind) mdecl p br.(bcontext) cdecl in
-          on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) 
-            bbody bcontext br br') idecl.(ind_ctors) brs brs' ->
+       (forall (Γ : context) ci p c brs brs',
+          OnOne2 (fun br br' =>
+          on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, br.(bcontext))) (P (Γ ,,, br.(bcontext))))
+            bbody bcontext br br') brs brs' ->
           P Γ (tCase ci p c brs) (tCase ci p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->

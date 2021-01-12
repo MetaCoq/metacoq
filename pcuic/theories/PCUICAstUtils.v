@@ -53,16 +53,25 @@ Hint Extern 10 => progress unfold map_branches_k : all.
 
 Ltac solve_all_one :=
   try lazymatch goal with
-  | H: tCasePredProp _ _ _ |- _ => destruct H
+  | H: tCasePredProp _ _ _ |- _ => destruct H as [? [? ?]]
   end;
   unfold tCaseBrsProp, tFixProp in *;
   autorewrite with map;
+  rtoProp;
   try apply map_predicate_eq_spec;
   try apply map_predicate_k_eq_spec;
-  try apply map_branch_k_eq_spec;
   try apply map_predicate_id_spec;
-  try (eapply mapi_context_eqP_spec; tea);
-  try (eapply onctx_test; tea);
+  try apply map_predicate_k_id_spec;
+  try apply map_branch_k_eq_spec;
+  try apply map_branch_k_id_spec;
+  try apply map_def_eq_spec;
+  try apply map_def_id_spec;
+  try (eapply mapi_context_eqP_test_id_spec; [eassumption|eassumption|]);
+  try (eapply mapi_context_eqP_spec; [eassumption|]);
+  try (eapply mapi_context_eqP_id_spec; [eassumption|]);
+  try (eapply onctx_test; [eassumption|eassumption|]);
+  try (eapply test_context_k_eqP_id_spec; [eassumption|eassumption|]);
+  try (eapply map_context_eq_spec; [eassumption|]);
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto 4 with all.

@@ -54,7 +54,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tPrim i => trans_prim i
   end.
 
-Definition trans_decl (d : PCUICAst.context_decl) :=
+Definition trans_decl (d : PCUICAst.PCUICEnvironment.context_decl) :=
   let 'mkdecl na b t := d in
   {| decl_name := na;
      decl_body := option_map trans b;
@@ -62,45 +62,45 @@ Definition trans_decl (d : PCUICAst.context_decl) :=
 
 Definition trans_local Γ := List.map trans_decl Γ.
 
-Definition trans_constructor_body (d : PCUICAst.constructor_body) :=
-  {| cstr_name := d.(PCUICAst.cstr_name); 
-     cstr_args := trans_local d.(PCUICAst.cstr_args);
-     cstr_indices := map trans d.(PCUICAst.cstr_indices); 
-     cstr_type := trans d.(PCUICAst.cstr_type);
-     cstr_arity := d.(PCUICAst.cstr_arity) |}.
+Definition trans_constructor_body (d : PCUICEnvironment.constructor_body) :=
+  {| cstr_name := d.(PCUICEnvironment.cstr_name); 
+     cstr_args := trans_local d.(PCUICEnvironment.cstr_args);
+     cstr_indices := map trans d.(PCUICEnvironment.cstr_indices); 
+     cstr_type := trans d.(PCUICEnvironment.cstr_type);
+     cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.
       
-Definition trans_one_ind_body (d : PCUICAst.one_inductive_body) :=
-  {| ind_name := d.(PCUICAst.ind_name);
-     ind_relevance := d.(PCUICAst.ind_relevance);
-     ind_indices := trans_local d.(PCUICAst.ind_indices);
-     ind_type := trans d.(PCUICAst.ind_type);
-     ind_sort := d.(PCUICAst.ind_sort);
-     ind_kelim := d.(PCUICAst.ind_kelim);
-     ind_ctors := List.map trans_constructor_body d.(PCUICAst.ind_ctors);
-     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(PCUICAst.ind_projs) |}.
+Definition trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
+  {| ind_name := d.(PCUICEnvironment.ind_name);
+     ind_relevance := d.(PCUICEnvironment.ind_relevance);
+     ind_indices := trans_local d.(PCUICEnvironment.ind_indices);
+     ind_type := trans d.(PCUICEnvironment.ind_type);
+     ind_sort := d.(PCUICEnvironment.ind_sort);
+     ind_kelim := d.(PCUICEnvironment.ind_kelim);
+     ind_ctors := List.map trans_constructor_body d.(PCUICEnvironment.ind_ctors);
+     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(PCUICEnvironment.ind_projs) |}.
 
 Definition trans_constant_body bd :=
-  {| cst_type := trans bd.(PCUICAst.cst_type); cst_body := option_map trans bd.(PCUICAst.cst_body);
-     cst_universes := bd.(PCUICAst.cst_universes) |}.
+  {| cst_type := trans bd.(PCUICEnvironment.cst_type); cst_body := option_map trans bd.(PCUICEnvironment.cst_body);
+     cst_universes := bd.(PCUICEnvironment.cst_universes) |}.
 
 
 Definition trans_minductive_body md :=
-  {| ind_finite := md.(PCUICAst.ind_finite);
-     ind_npars := md.(PCUICAst.ind_npars);
-     ind_params := trans_local md.(PCUICAst.ind_params);
-     ind_bodies := map trans_one_ind_body md.(PCUICAst.ind_bodies);
-     ind_universes := md.(PCUICAst.ind_universes);
-     ind_variance := md.(PCUICAst.ind_variance)
+  {| ind_finite := md.(PCUICEnvironment.ind_finite);
+     ind_npars := md.(PCUICEnvironment.ind_npars);
+     ind_params := trans_local md.(PCUICEnvironment.ind_params);
+     ind_bodies := map trans_one_ind_body md.(PCUICEnvironment.ind_bodies);
+     ind_universes := md.(PCUICEnvironment.ind_universes);
+     ind_variance := md.(PCUICEnvironment.ind_variance)
   |}.
 
-Definition trans_global_decl (d : PCUICAst.global_decl) :=
+Definition trans_global_decl (d : PCUICEnvironment.global_decl) :=
   match d with
-  | PCUICAst.ConstantDecl bd => ConstantDecl (trans_constant_body bd)
-  | PCUICAst.InductiveDecl bd => InductiveDecl (trans_minductive_body bd)
+  | PCUICEnvironment.ConstantDecl bd => ConstantDecl (trans_constant_body bd)
+  | PCUICEnvironment.InductiveDecl bd => InductiveDecl (trans_minductive_body bd)
   end.
 
-Definition trans_global_decls (d : PCUICAst.global_env) : global_env :=
+Definition trans_global_decls (d : PCUICEnvironment.global_env) : global_env :=
   List.map (on_snd trans_global_decl) d.
 
-Definition trans_global (Σ : PCUICAst.global_env_ext) : global_env_ext :=
+Definition trans_global (Σ : PCUICEnvironment.global_env_ext) : global_env_ext :=
   (trans_global_decls (fst Σ), snd Σ).

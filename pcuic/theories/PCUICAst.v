@@ -481,12 +481,11 @@ Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
 (* These functors derive the notion of local context and lift substitution, term lifting, 
   the closed predicate to them. *)                 
 Module PCUICEnvironment := Environment PCUICTerm.
-Include PCUICEnvironment.
-(* Print Rewrite HintDb len. This sadly duplicates the rewrite database... *)
+Export PCUICEnvironment.
+(* Do NOT `Include` this module, as this would sadly duplicates the rewrite database... *)
 
 Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
 (** Included in PCUICTyping only *)
-Include PCUICEnvTyping.
 
 Definition lookup_minductive Σ mind :=
   match lookup_env Σ mind with
@@ -1135,7 +1134,7 @@ Proof.
   destruct (decl_body x); simpl in *; eauto.
 Qed.
 
-Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.
-Include PCUICLookup.
+Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.
+Export PCUICLookup.
 
 Derive NoConfusion for global_decl.

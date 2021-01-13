@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils BasicAst AstUtils
-     Universes Environment.
+From MetaCoq.Template Require Import config utils BasicAst Universes Environment.
 From Equations Require Import Equations.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).

@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
-From MetaCoq.Template Require Export utils Universes BasicAst
-     Environment EnvironmentTyping.
-From MetaCoq.Template Require Import Reflect.
+From MetaCoq.Template Require Export utils Universes BasicAst Environment Reflect.
+From MetaCoq.Template Require EnvironmentTyping.
 From MetaCoq.PCUIC Require Export PCUICPrimitive.
 From Equations Require Import Equations.
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
@@ -483,9 +482,11 @@ Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
   the closed predicate to them. *)                 
 Module PCUICEnvironment := Environment PCUICTerm.
 Include PCUICEnvironment.
+(* Print Rewrite HintDb len. This sadly duplicates the rewrite database... *)
 
-Module PCUICEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
+Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
 (** Included in PCUICTyping only *)
+Include PCUICEnvTyping.
 
 Definition lookup_minductive Σ mind :=
   match lookup_env Σ mind with
@@ -1127,12 +1128,11 @@ Proof.
   intros Hc tc HP. revert tc.
   induction Hc; simpl; auto.
   destruct p0.
-  intros [[pty pbod]%andb_and pl]%andb_and.
+  intros [[pbod pty]%andb_and pl]%andb_and.
   rewrite (IHHc pl), andb_true_r.
   unfold test_decl.
-  rewrite (HP _ p0 pty); simpl.
+  rewrite (HP _ p0 pty), andb_true_r; simpl.
   destruct (decl_body x); simpl in *; eauto.
-  unfold foroptb. simpl. eauto.
 Qed.
 
 Module PCUICLookup := Lookup PCUICTerm PCUICEnvironment.

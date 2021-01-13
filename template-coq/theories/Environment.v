@@ -58,7 +58,7 @@ Module Environment (T : Term).
     intros Hf; rewrite /test_decl.
     move/andb_and=> [Hd Hb].
     apply/andb_and; split; eauto.
-    eapply foroptb_impl; eauto.
+    destruct (decl_body x); simpl in *; eauto.
   Qed.
   
   Lemma map_decl_type (f : term -> term) decl : f (decl_type decl) = decl_type (map_decl f decl).
@@ -181,8 +181,8 @@ Module Environment (T : Term).
   Lemma test_decl_map_decl f g x : (@test_decl term) f (map_decl g x) = @test_decl term (f ∘ g) x.
   Proof.
     rewrite /test_decl /map_decl /=.
-    f_equal. rewrite /foroptb. f_equal.
-    now rewrite option_map_two.
+    f_equal. rewrite /option_default.
+    destruct (decl_body x) => //.
   Qed.
   
   Definition lift_decl n k d := (map_decl (lift n k) d).

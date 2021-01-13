@@ -49,8 +49,6 @@ Ltac change_Sk :=
     | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
   end.
 
-Hint Extern 10 => progress unfold map_branches_k : all.
-
 Ltac solve_all_one :=
   try lazymatch goal with
   | H: tCasePredProp _ _ _ |- _ => destruct H as [? [? ?]]

@@ -422,7 +422,7 @@ Proof. now unfold map_context; rewrite map_length. Qed.
 Hint Rewrite @map_context_length : len.
 
 Definition test_decl {term} (f : term -> bool) (d : context_decl term) : bool :=
-  f d.(decl_type) && foroptb f d.(decl_body).
+  option_default f d.(decl_body) true && f d.(decl_type).
 
 Instance test_decl_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@test_decl term).
 Proof. 

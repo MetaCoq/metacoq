@@ -1563,17 +1563,18 @@ Proof.
   - f_equal.
     * destruct X. solve_all.
       unfold map_predicate_shift, map_predicate.
-      destruct p; cbn in *; simpl; f_equal; solve_all.
-      + rewrite !mapi_context_fold fold_context_map map_fold_context - !mapi_context_fold.
+      destruct p; cbn in *; simpl; f_equal.
+      + solve_all.
+      + rewrite mapi_context_map_context [map _ _]map_context_mapi_context.
         solve_all. now rewrite up_Upn -Upn_Upn.
-      + now rewrite up_Upn -Upn_Upn.
+      + solve_all. now rewrite up_Upn -Upn_Upn.
     * apply IHt.
     * solve_all.
       unfold map_branch_shift, map_branch.
-      destruct x; cbn in *; simpl; f_equal; solve_all.
-      + rewrite !mapi_context_fold fold_context_map map_fold_context - !mapi_context_fold.
+      destruct x; cbn in *; simpl; f_equal.
+      + rewrite mapi_context_map_context.
         solve_all. now rewrite up_Upn -Upn_Upn.
-      + now rewrite up_Upn -Upn_Upn.
+      + solve_all. now rewrite up_Upn -Upn_Upn.
   - f_equal.
     red in X.
     eapply All_map_eq. eapply (All_impl X).

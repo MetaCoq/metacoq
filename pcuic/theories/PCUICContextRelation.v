@@ -68,3 +68,54 @@ Proof.
   constructor. apply IHX0. simpl in H; lia.
   apply p.
 Qed.
+
+Lemma context_relation_impl_onctx P P' Γ Δ Q :  
+  onctx Q Γ ->
+  context_relation P Γ Δ ->
+  (forall Γ Δ d d', 
+    context_relation P Γ Δ -> 
+    P Γ Δ d d' ->
+    ondecl Q d ->
+    P' Γ Δ d d') ->
+  context_relation P' Γ Δ.
+Proof.
+  intros onc cr Hcr.
+  induction cr; depelim onc; constructor; intuition eauto.
+  eapply Hcr; eauto. red. split; simpl; auto.
+  eapply Hcr; eauto. split; eauto.
+Qed.
+
+Lemma context_relation_mapi P Γ Δ f g : 
+  context_relation (fun Γ Δ d d' =>
+    P (mapi_context f Γ) (mapi_context g Δ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d')) Γ Δ 
+  <~> context_relation P (mapi_context f Γ) (mapi_context g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(context_relation_length X).
+  - induction Γ as [|[na [b|] ty] Γ] in Δ |- *; destruct Δ as [|[na' [b'|] ty'] Δ]; simpl; intros H;
+    depelim H; constructor; simpl in *; auto.
+    * pose proof (context_relation_length H). len in H0.
+      now rewrite <- H0 in p.
+    * pose proof (context_relation_length H). len in H0.
+      now rewrite <- H0 in p.
+Qed.
+
+Lemma context_relation_map P Γ Δ f g : 
+  context_relation (fun Γ Δ d d' =>
+    P (map_context f Γ) (map_context g Δ) (map_decl f d) (map_decl g d')) Γ Δ <~>
+  context_relation P (map_context f Γ) (map_context g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(context_relation_length X).
+  - induction Γ as [|[na [b|] ty] Γ] in Δ |- *; destruct Δ as [|[na' [b'|] ty'] Δ]; simpl; intros H;
+      depelim H; constructor; auto.
+Qed.
+
+Lemma context_relation_forallb2 (P : context_decl -> context_decl -> bool) Γ Δ : 
+  context_relation (fun _ _ => P) Γ Δ ->
+  forallb2 P Γ Δ.
+Proof.
+  induction 1; simpl; auto; now rewrite p, IHX.
+Qed.

@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-  PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases PCUICTyping.
+  PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
+  PCUICTyping PCUICContextRelation.
 From Equations Require Import Equations.
 
 Require Import ssreflect.
@@ -120,18 +121,16 @@ Lemma eq_decl_subset {cf:checker_flags} le Σ φ φ' d d'
   : ConstraintSet.Subset φ φ'
     -> eq_decl le Σ φ d d' -> eq_decl le Σ φ' d d'.
 Proof.
-  intros Hφ [[Hann H1] H2]. split; [|eapply compare_term_subset; eauto].
-  destruct d as [na [bd|] ty], d' as [na' [bd'|] ty']; cbn in *; split; trivial.
-  eapply eq_term_subset; eauto.
+  intros Hφ.
+  destruct d as [na [bd|] ty], d' as [na' [bd'|] ty'], le; cbn in *; intuition auto;
+  eauto using leq_term_subset, eq_term_subset.
 Qed.
 
 Lemma eq_context_subset {cf:checker_flags} le Σ φ φ' Γ Γ'
   : ConstraintSet.Subset φ φ'
     -> eq_context le Σ φ Γ Γ' ->  eq_context le Σ φ' Γ Γ'.
 Proof.
-  intros Hφ. induction 1; constructor.
-  - eapply eq_decl_subset; eassumption.
-  - assumption.
+  intros Hφ. induction 1; constructor; auto; eapply eq_decl_subset; eassumption.
 Qed.
 
 Ltac my_rename_hyp h th :=
@@ -278,6 +277,16 @@ Proof.
     * eauto using R_universe_instance_impl'.
 Qed.
 
+Lemma compare_decl_impl le eq_term leq_term eq_term' leq_term' :
+  RelationClasses.subrelation eq_term eq_term' ->
+  RelationClasses.subrelation leq_term leq_term' ->
+  CRelationClasses.subrelation (compare_decl le eq_term leq_term)
+    (compare_decl le eq_term' leq_term').
+Proof.
+  intros he hle [na [b|] ty] [na' [b'|] ty']; rewrite /compare_decl /= //;
+    destruct le; intuition auto.
+Qed.
+
 Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' napp :
   wf Σ' -> extends Σ Σ' ->
   RelationClasses.subrelation Re Re' ->
@@ -297,13 +306,19 @@ Proof.
     eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
   - inversion 1; subst; constructor.
     eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
-  - inversion 1; subst; constructor; eauto.
-    * destruct X. destruct X2.
+  - inversion 1; subst; destruct X as [? [? ?]]; constructor; eauto.
+    * destruct X2 as [? [? ?]].
       constructor; intuition auto; solve_all.
-      eauto using R_universe_instance_impl'.
+      + eauto using R_universe_instance_impl'.
+      + eapply context_relation_impl_onctx; tea; simpl; intuition eauto.
+        destruct d as [na [bod|] ty], d' as [na' [b'|] ty']; cbn in *;
+        intuition eauto.        
     * eapply All2_impl'; tea.
       eapply All_impl; eauto.
-      cbn. intros x ? y [? ?]. split; eauto.
+      cbn. intros x [? ?] y [? ?]. split; eauto.
+      eapply context_relation_impl_onctx; tea; simpl; intuition eauto.
+      destruct d as [na [bod|] ty], d' as [na' [b'|] ty']; cbn in *;
+      intuition eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
@@ -378,6 +393,46 @@ Proof.
   - econstructor 3; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
 Qed.
 
+Lemma weakening_env_conv_decls {cf} {Σ φ Σ' Γ Γ'} :
+  wf Σ' -> extends Σ Σ' ->
+  CRelationClasses.subrelation (conv_decls (Σ, φ) Γ Γ') (conv_decls (Σ', φ) Γ Γ').
+Proof.
+  intros wf ext d d' Hd; depelim Hd; constructor; tas;
+    eapply weakening_env_conv; tea.
+Qed.
+
+Lemma weakening_env_cumul_decls {cf} {Σ φ Σ' Γ Γ'} :
+  wf Σ' -> extends Σ Σ' ->
+  CRelationClasses.subrelation (cumul_decls (Σ, φ) Γ Γ') (cumul_decls (Σ', φ) Γ Γ').
+Proof.
+  intros wf ext d d' Hd; depelim Hd; constructor; tas;
+    (eapply weakening_env_conv || eapply weakening_env_cumul); tea.
+Qed.
+
+Lemma weakening_env_conv_ctx {cf} {Σ Σ' φ Γ Δ} :
+  wf Σ' ->
+  extends Σ Σ' ->
+  conv_context (Σ, φ) Γ Δ ->
+  conv_context (Σ', φ) Γ Δ.
+Proof.
+  intros wf ext.
+  intros; eapply context_relation_impl; tea => Γ0 Γ' d d'.
+  now eapply weakening_env_conv_decls.
+Qed.
+Hint Resolve @weakening_env_conv_ctx : extends.
+
+Lemma weakening_env_cumul_ctx {cf} {Σ Σ' φ Γ Δ} :
+  wf Σ' ->
+  extends Σ Σ' ->
+  cumul_context (Σ, φ) Γ Δ ->
+  cumul_context (Σ', φ) Γ Δ.
+Proof.
+  intros wf ext.
+  intros; eapply context_relation_impl; tea => Γ0 Γ' d d'.
+  now eapply weakening_env_cumul_decls.
+Qed.
+Hint Resolve @weakening_env_cumul_ctx : extends.
+
 Lemma weakening_env_is_allowed_elimination `{CF:checker_flags} Σ Σ' φ u allowed :
   wf Σ' -> extends Σ Σ' ->
   is_allowed_elimination (global_ext_constraints (Σ, φ)) u allowed ->
@@ -393,7 +448,6 @@ Proof.
   destruct allowed; auto; cbn in *; destruct ?; auto.
 Qed.
 Hint Resolve weakening_env_is_allowed_elimination : extends.
-
 
 Lemma weakening_All_local_env_impl `{checker_flags}
       (P Q : context -> term -> option term -> Type) l :
@@ -514,7 +568,11 @@ Proof.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
   - econstructor; eauto 2 with extends.
-    close_Forall. intros; intuition eauto with extends.
+    * eapply weakening_env_conv_ctx; eauto.
+      now destruct Σ.
+    * close_Forall. intros; intuition eauto with extends.
+      eapply weakening_env_conv_ctx; eauto.
+      now destruct Σ.
   - econstructor; eauto with extends.
     + eapply fix_guard_extends; eauto.
     + specialize (forall_Σ' _ wfΣ' extΣ).

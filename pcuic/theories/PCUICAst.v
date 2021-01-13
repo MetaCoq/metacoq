@@ -484,6 +484,9 @@ Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
 Module PCUICEnvironment := Environment PCUICTerm.
 Include PCUICEnvironment.
 
+Module PCUICEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
+(** Included in PCUICTyping only *)
+
 Definition lookup_minductive Σ mind :=
   match lookup_env Σ mind with
   | Some (InductiveDecl decl) => Some decl

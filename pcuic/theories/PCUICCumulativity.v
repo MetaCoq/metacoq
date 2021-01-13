@@ -17,9 +17,8 @@ it is oriented.
 
 Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
 [conv] which are defined as "reducing to a common term". It tunrs out to be equivalent
-to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v .
+to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v.
 *)
-
 
 Section ConvCumulDefs.
   Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).
@@ -29,7 +28,6 @@ Section ConvCumulDefs.
 
   Definition conv1 : relation term
     := clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (eq_term Σ Σ)).
-
 
   Lemma conv0_conv1 M N :
     conv0 M N <~> conv1 M N.
@@ -81,6 +79,16 @@ where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
 
 Hint Resolve cumul_refl conv_refl : pcuic.
 
+Module PCUICConversionPar <: ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
+  Definition conv := @conv.
+  Definition cumul := @cumul.
+End PCUICConversionPar.
+
+Module PCUICConversion := Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar.
+Include PCUICConversion.  
+
+Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
+Notation cumul_context Σ Γ Γ' := (context_relation (cumul_decls Σ) Γ Γ').
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 

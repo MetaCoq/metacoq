@@ -606,7 +606,7 @@ Proof.
   intros HPΣ wfΣ' Hext Hdecl.
   destruct decl.
   1:{
-    destruct c. destruct cst_body.
+    destruct c. destruct cst_body0.
     - simpl in *.
       red in Hdecl |- *. simpl in *.
       eapply HPΣ; eauto.

@@ -47,7 +47,6 @@ Section ConvCumulDefs.
       + etransitivity; eassumption.
   Defined.
 
-
   Definition cumul1 : relation term
     := clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
 
@@ -79,13 +78,13 @@ where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
 
 Hint Resolve cumul_refl conv_refl : pcuic.
 
-Module PCUICConversionPar <: ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
+Module PCUICConversionPar <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition conv := @conv.
   Definition cumul := @cumul.
 End PCUICConversionPar.
 
-Module PCUICConversion := Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar.
-Include PCUICConversion.  
+Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar.
+Include PCUICConversion.
 
 Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
 Notation cumul_context Σ Γ Γ' := (context_relation (cumul_decls Σ) Γ Γ').

@@ -291,34 +291,17 @@ Module Type EnvTypingSig (T : Term) (E : EnvironmentSig T).
   Include EnvTyping T E.
 End EnvTypingSig.
 
-Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
+Module Type ConversionParSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Import T E ET.
 
   Parameter (conv : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
   Parameter (cumul : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
 
-  Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+End ConversionParSig.
 
-  Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
-
-  Notation " Σ ;;; Γ |- t : T " :=
-    (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
-
-  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
-  Parameter destArity : term -> option (context * Universe.t).
-
-  Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
-
-End Typing.
-
-Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
-  (ET : EnvTypingSig T E) (Ty : Typing T E ET) (L : LookupSig T E).
-
-  Import T E Ty L ET.
-
-  Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
-    { s : _ & Σ ;;; Γ |- t : tSort s }.
+Module Conversion (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
+  Import T E ET CT.
 
   Section ContextConversion.
     Context {cf : checker_flags}.
@@ -355,6 +338,44 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
   Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
     context_relation (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
+
+End Conversion.
+
+Module Type ConversionSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
+  Include Conversion T E ET CT.
+End ConversionSig.
+
+Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) 
+  (CS : ConversionParSig T E ET) (CT : ConversionSig T E ET CS).
+
+  Import T E ET CS CT.
+
+  Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+
+  Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
+
+  Notation " Σ ;;; Γ |- t : T " :=
+    (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
+
+  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+  Parameter destArity : term -> option (context * Universe.t).
+
+  Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
+
+End Typing.
+
+Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
+  (ET : EnvTypingSig T E) 
+  (CS : ConversionParSig T E ET)
+  (CT : ConversionSig T E ET CS) (Ty : Typing T E ET CS CT) 
+  (L : LookupSig T E).
+
+  Import T E Ty L ET CS CT.
+
+  Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
+    { s : _ & Σ ;;; Γ |- t : tSort s }.
+
+
 
   (** *** Typing of inductive declarations *)
 

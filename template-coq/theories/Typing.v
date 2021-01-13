@@ -577,7 +577,7 @@ where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
   Reduction to terms in the eq_term relation
  *)
 
- Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
  | conv_refl t u : eq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
  | conv_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
  | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t = u
@@ -611,6 +611,14 @@ Definition eq_context `{checker_flags} Σ φ (Γ Δ : context) :=
 
 Module TemplateEnvTyping := EnvTyping TemplateTerm TemplateEnvironment.
 Include TemplateEnvTyping.
+
+Module TemplateConversionPar <: ConversionParSig TemplateTerm TemplateEnvironment TemplateEnvTyping.
+  Definition conv := @conv.
+  Definition cumul := @cumul.
+End TemplateConversionPar.
+
+Module TemplateConversion := Conversion TemplateTerm TemplateEnvironment TemplateEnvTyping TemplateConversionPar.
+Include TemplateConversion.  
 
 Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = Σ'' ++ Σ }.
 
@@ -942,7 +950,8 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
 
-Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTyping.
+Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTyping
+  TemplateConversionPar TemplateConversion.
 
   Definition typing := @typing.
   Definition wf_universe := @wf_universe.
@@ -957,6 +966,8 @@ Module TemplateDeclarationTyping :=
     TemplateTerm
     TemplateEnvironment
     TemplateEnvTyping
+    TemplateConversionPar
+    TemplateConversion
     TemplateTyping
     TemplateLookup.
 Include TemplateDeclarationTyping.

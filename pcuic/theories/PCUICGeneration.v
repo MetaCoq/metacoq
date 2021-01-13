@@ -5,11 +5,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
-Derive NoConfusion NoConfusionHom for term.
-Derive NoConfusion NoConfusionHom for context_decl.
-Derive NoConfusion NoConfusionHom for list.
-Derive NoConfusion NoConfusionHom for option.
-
 Section Generation.
   Context `{cf : config.checker_flags}.
 

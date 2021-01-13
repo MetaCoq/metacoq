@@ -793,9 +793,6 @@ Section ContextConversion.
 
 End ContextConversion.
 
-Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
-Notation cumul_context Σ Γ Γ' := (context_relation (cumul_decls Σ) Γ Γ').
-
 Hint Resolve conv_ctx_refl' cumul_ctx_refl' : pcuic.
 Hint Constructors conv_decls cumul_decls : pcuic.
 

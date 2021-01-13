@@ -353,7 +353,7 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
 
-Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar PCUICConversion.
+Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar PCUICConversion.
 
   Definition typing := @typing.
   Definition wf_universe := @wf_universe.
@@ -362,7 +362,7 @@ Module PCUICTypingDef <: Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICC
 End PCUICTypingDef.
 
 Module PCUICDeclarationTyping :=
-  DeclarationTyping
+  EnvironmentTyping.DeclarationTyping
     PCUICTerm
     PCUICEnvironment
     PCUICEnvTyping
@@ -778,7 +778,7 @@ Proof.
     * simpl. simpl in *.
       destruct d; simpl.
       + destruct c; simpl in *.
-        destruct cst_body; simpl in *.
+        destruct cst_body0; simpl in *.
         simpl.
         red in Xg; simpl in Xg. intros. red. simpl.
         specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Xg)))))).

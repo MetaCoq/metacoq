@@ -190,15 +190,15 @@ Proof.
     exact (List.map LocalAssum types).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].
-    refine {| mind_entry_typename := ind_name;
-              mind_entry_arity := remove_arity decl.(ind_npars) ind_type;
+    refine {| mind_entry_typename := ind_name0;
+              mind_entry_arity := remove_arity decl.(ind_npars) ind_type0;
               mind_entry_template := false;
               mind_entry_consnames := _;
               mind_entry_lc := _;
             |}.
-    refine (List.map (fun x => cstr_name x) ind_ctors).
+    refine (List.map (fun x => cstr_name x) ind_ctors0).
     refine (List.map (fun x => remove_arity decl.(ind_npars)
-                                                (cstr_type x)) ind_ctors).
+                                                (cstr_type x)) ind_ctors0).
 Defined.
 
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=

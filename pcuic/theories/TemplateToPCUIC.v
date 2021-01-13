@@ -17,7 +17,7 @@ Definition float64_to_model (f : PrimFloat.float) : float64_model :=
   exist _ (FloatOps.Prim2SF f) (FloatAxioms.Prim2SF_valid f).
 
 Section Trans.
-  Context (Σ : PCUICAst.global_env).
+  Context (Σ : global_env).
 
   Definition trans_predicate ind mdecl idecl pparams puinst pcontext preturn := 
     let pctx := case_predicate_context_gen ind mdecl idecl pparams puinst pcontext in

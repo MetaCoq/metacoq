@@ -32,6 +32,7 @@ theories/Environment.v
 theories/Ast.v
 theories/AstUtils.v
 theories/Reflect.v
+theories/ReflectAst.v
 theories/Kernames.v
 theories/Induction.v
 theories/LiftSubst.v

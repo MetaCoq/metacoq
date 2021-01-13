@@ -162,7 +162,7 @@ Lemma simpl_lift_ext n k p i :
   lift p i ∘ lift n k =1 lift (p + n) k.
 Proof. intros ? ? ?; now apply simpl_lift. Qed.
 
-Hint Extern 10 => rewrite !Nat.add_assoc : all.
+Hint Rewrite Nat.add_assoc : map.
 
 Lemma permute_lift :
   forall M n k p i,
@@ -172,9 +172,7 @@ Proof.
   intros M.
   elim M using term_forall_list_ind;
     intros; simpl;
-      autorewrite with map;
-      rewrite ?Nat.add_assoc; f_equal;
-      try solve [solve_all]; repeat nth_leb_simpl.
+      f_equal; try solve [solve_all]; repeat nth_leb_simpl.
 Qed.
 
 Lemma permute_lift0 :

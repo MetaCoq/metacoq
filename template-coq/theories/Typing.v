@@ -2,8 +2,8 @@
 (** This defines relation operators in Type *)
 From Equations.Type Require Import Relation.
 From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Environment LiftSubst UnivSubst
-     EnvironmentTyping Reflect TermEquality.
+From MetaCoq.Template Require Import config utils Ast AstUtils Environment 
+    LiftSubst UnivSubst EnvironmentTyping Reflect ReflectAst TermEquality.
 From Equations Require Import Equations.
 
 (** * Typing derivations

@@ -9,8 +9,7 @@ From Equations Require Import Equations.
 
 (** * Lemmas about the [closedn] predicate *)
 
-Definition closed_decl n d :=
-  option_default (closedn n) d.(decl_body) true && closedn n d.(decl_type).
+Definition closed_decl n (d : context_decl) := test_decl (closedn n) d.
 
 Arguments closed_decl _ !_.
 
@@ -24,15 +23,15 @@ Notation closed_ctx ctx := (closedn_ctx 0 ctx).
 
 Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /lift_decl /map_decl /=; unf_term.
+  case: d => na [body|] ty; rewrite /closed_decl /test_decl /lift_decl /map_decl /=; unf_term.
   - move/andP => [cb cty]. now rewrite !lift_closed //.
   - move=> cty; now rewrite !lift_closed //.
 Qed.
 
 Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /=.
-  - move/andP => [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
+  case: d => na [body|] ty; rewrite /closed_decl /test_decl /=.
+  - move/andP => /= [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   - move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
 
@@ -75,7 +74,7 @@ Proof.
   f_equal. rewrite IHctx // lift_decl_closed // Nat.add_comm //.
 Qed.
 
-Lemma map_decl_closed_ext f g k d : closed_decl k d -> 
+Lemma map_decl_closed_ext (f : term -> term) g k (d : context_decl) : closed_decl k d -> 
   (forall x, closedn k x -> f x = g x) -> 
   map_decl f d = map_decl g d.
 Proof.
@@ -87,15 +86,34 @@ Proof.
   now rewrite Hfg.
 Qed.
 
+Lemma test_decl_map_decl (p : term -> bool) (f : term -> term) d :
+  test_decl p (map_decl f d) = test_decl (p ∘ f) d.
+Proof.
+  rewrite /test_decl /map_decl; destruct d; simpl.
+  now destruct decl_body.
+Qed.
+
+Lemma plus_minus' n m : n + m - m = n.
+Proof. lia. Qed.
+
+Lemma test_context_k_mapi (p : nat -> term -> bool) k (f : nat -> term -> term) ctx :
+  test_context_k p k (mapi_context f ctx) =
+  test_context_k (fun i t => p i (f (i - k) t)) k ctx.
+Proof.
+  induction ctx; simpl; auto.
+  rewrite IHctx. f_equal. rewrite test_decl_map_decl.
+  len. now setoid_rewrite plus_minus'.
+Qed.
+Hint Rewrite test_context_k_mapi : map.
+
 Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
 Proof.
   revert k.
   induction t in n, k' |- * using term_forall_list_ind; intros;
     simpl in *; rewrite -> ?andb_and in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, 
-      ?Nat.add_assoc, ?map_predicate_map_predicate;
+    autorewrite with map;
     simpl closed in *; solve_all;
-    unfold test_def, test_snd, test_predicate, test_branch in *;
+    unfold test_def, test_snd, test_predicate_k, test_branch_k in *;
       try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
 
   - elim (Nat.leb_spec k' n0); intros. simpl.
@@ -103,6 +121,9 @@ Proof.
     simpl. elim (Nat.ltb_spec); auto. intros.
     apply Nat.ltb_lt in H. lia.
 
+  - simpl. rtoProp; solve_all. len.
+    now eapply i.
+  - simpl. rtoProp; solve_all. len. now eapply b0.
 Qed.
 
 Lemma closedn_lift_inv n k k' t : k <= k' ->
@@ -111,10 +132,11 @@ Lemma closedn_lift_inv n k k' t : k <= k' ->
 Proof.
   induction t in n, k, k' |- * using term_forall_list_ind; intros;
     simpl in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-       ?map_length, ?Nat.add_assoc in *;
+    autorewrite with map;
     simpl closed in *; repeat (rtoProp; simpl in *; solve_all); try change_Sk;
-    unfold test_def, on_snd, test_snd, test_predicate, test_branch in *; simpl in *; eauto with all.
+    unfold test_def, test_predicate_k, test_branch_k, shiftf in *; 
+    rewrite -> ?map_length, ?Nat.add_assoc in *;
+    simpl in *; eauto 2 with all.
 
   - revert H0.
     elim (Nat.leb_spec k n0); intros. simpl in *.
@@ -123,10 +145,21 @@ Proof.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt2 n (S k) (S k')). eauto with all.
   - specialize (IHt3 n (S k) (S k')). eauto with all.
-  - rtoProp. solve_all. eapply (i n (#|pcontext p| + k)); eauto. lia.
-  - rtoProp. solve_all. eapply (a0 n (#|bcontext x| + k)); eauto; try lia.
-    now rewrite -Nat.add_assoc.
-  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
+  - rtoProp. solve_all; unfold shiftf in *.
+    * rewrite test_context_k_mapi in H4.
+      eapply test_context_k_eqP_id_spec; tea. simpl; intuition auto.
+      rewrite Nat.add_assoc in H6.
+      eapply H5; [|tea]. lia.
+    * eapply (i n (#|pcontext p| + k)). lia.
+      now len in H3.
+  - rtoProp. solve_all; unfold shiftf in *.
+    * rewrite test_context_k_mapi in H1.
+      solve_all. rewrite Nat.add_assoc in H7.
+      eapply H6; [|eauto with all]. lia.
+    * eapply (b0 n (#|bcontext x| + k)); eauto; try lia.
+      now len in H3.
+  - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')).
+    rewrite -Nat.add_assoc in b0. len in H1. eauto with all.
   - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
 Qed.
 
@@ -138,6 +171,8 @@ Proof.
   - now rewrite IHu /= andb_assoc.
 Qed.
 
+Remove Hints absurd_eq_true trans_eq_bool f_equal2_nat f_equal_nat : core.
+
 Lemma closedn_subst_eq s k k' t :
   forallb (closedn k) s -> 
   closedn (k + k' + #|s|) t =
@@ -146,9 +181,12 @@ Proof.
   intros Hs. solve_all. revert Hs.
   induction t in k' |- * using term_forall_list_ind; intros;
     simpl in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    autorewrite with map => //;
     simpl closed in *; try change_Sk;
-    unfold test_def, on_snd, test_branch, test_predicate in *; simpl in *; eauto 4 with all.
+    unfold test_def, test_branch_k, test_predicate_k in *; simpl in *.
+  7:{ debug eauto 4 with all.
+
+    2:{ Print HintDb all. debug eauto with all. nocore. }
 
   - elim (Nat.leb_spec k' n); intros. simpl.
     destruct nth_error eqn:Heq.

@@ -1,6 +1,7 @@
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping PCUICLiftSubst PCUICReduction.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping PCUICLiftSubst 
+  PCUICReduction PCUICContextRelation.
 
 From Coq Require Import CRelationClasses.
 
@@ -124,7 +125,6 @@ Proof.
     rewrite <- H.
     induction HT in i |- *; destruct i; eauto.
     now inv p.
-  - econstructor. econstructor; eauto.
   - eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
   - eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
     eauto. econstructor. eauto. econstructor.
@@ -140,11 +140,11 @@ Proof.
   - eapply PCUICReduction.red_case_pars; eauto.
     simpl. eapply OnOne2_All2; eauto. simpl. intuition auto.
   - eapply PCUICReduction.red_case_p; eauto. eapply IHX0.
-    eapply context_relation_app_inv; auto.
+    eapply context_relation_app_inv; eauto.
     now eapply context_relation_refl.
   - eapply PCUICReduction.red_case_c; eauto.
   - eapply PCUICReduction.red_case_brs; eauto.
-    eapply OnOne2All_All3; eauto. simpl.
+    eapply OnOne2_All2; eauto. simpl.
     intros. intuition auto. eapply b0.
     eapply context_relation_app_inv; auto.
     now apply context_relation_refl.
@@ -210,26 +210,26 @@ Qed.
 End ContextChangeTypesReduction.
 
 Lemma fix_context_change_decl_types Γ mfix mfix' :
-#|mfix| = #|mfix'| ->
-context_relation (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
+  #|mfix| = #|mfix'| ->
+  context_relation (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
 Proof.
-intros len.
-apply context_relation_app_inv.
-- now rewrite !fix_context_length.
-- apply context_relation_refl.
-  intros.
-  destruct x.
-  destruct decl_body; constructor;
-  reflexivity.
-- unfold fix_context, mapi.
-  generalize 0 at 2 4.
-  induction mfix in mfix', len |- *; intros n.
-  + destruct mfix'; [|cbn in *; discriminate len].
-    constructor.
-  + destruct mfix'; cbn in *; [discriminate len|].
-    apply context_relation_app_inv.
-    * now rewrite !List.rev_length, !mapi_rec_length.
-    * constructor; [constructor|].
+  intros len.
+  apply context_relation_app_inv.
+  - now rewrite !fix_context_length.
+  - apply context_relation_refl.
+    intros.
+    destruct x.
+    destruct decl_body; constructor;
+    reflexivity.
+  - unfold fix_context, mapi.
+    generalize 0 at 2 4.
+    induction mfix in mfix', len |- *; intros n.
+    + destruct mfix'; [|cbn in *; discriminate len].
       constructor.
-    * apply IHmfix; lia.
+    + destruct mfix'; cbn in *; [discriminate len|].
+      apply context_relation_app_inv.
+      * now rewrite !List.rev_length, !mapi_rec_length.
+      * constructor; [constructor|].
+        constructor.
+      * apply IHmfix; lia.
 Qed.

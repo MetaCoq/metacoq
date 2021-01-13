@@ -666,6 +666,13 @@ Proof.
 Qed.
 Hint Resolve map_context_id_spec_cond : all.
 
+Lemma map_context_map (f : term -> term) g (ctx : context) :
+  map_context f (map g ctx) = map (map_decl f ∘ g) ctx.
+Proof.
+  induction ctx; simpl; f_equal; auto.
+Qed.
+Hint Rewrite map_context_map : map.
+
 Lemma map_predicate_id_spec {A} finst (f f' : A -> A) (p : predicate A) :
   finst (puinst p) = puinst p ->
   map f (pparams p) = pparams p ->
@@ -714,6 +721,37 @@ Proof.
   rewrite !fold_context_alt, map_mapi. 
   apply mapi_ext => i d. now rewrite compose_map_decl.
 Qed.
+Hint Rewrite map_fold_context : map.
+ 
+Lemma mapi_context_map (f : nat -> term -> term) g (ctx : context) :
+  mapi_context f (map g ctx) = mapi (fun i => map_decl (f (Nat.pred #|ctx| - i)) ∘ g) ctx.
+Proof.
+  rewrite mapi_context_fold, fold_context_alt, mapi_map. now len.
+Qed.
+Hint Rewrite mapi_context_map : map.
+ 
+Lemma mapi_context_map_context (f : nat -> term -> term) g (ctx : context) :
+  mapi_context f (map_context g ctx) = 
+  mapi_context (fun i => f i ∘ g) ctx.
+Proof.
+  now rewrite !mapi_context_fold, fold_context_map.
+Qed.
+Hint Rewrite mapi_context_map_context : map.
+
+Lemma map_context_mapi_context (f : term -> term) (g : nat -> term -> term) (ctx : context) :
+  map_context f (mapi_context g ctx) = 
+  mapi_context (fun i => f ∘ g i) ctx.
+Proof.
+  rewrite !mapi_context_fold. now unfold map_context; rewrite map_fold_context.
+Qed.
+Hint Rewrite map_context_mapi_context : map.
+
+Lemma map_mapi_context (f : context_decl -> context_decl) (g : nat -> term -> term) (ctx : context) :
+  map f (mapi_context g ctx) = mapi (fun i => f ∘ map_decl (g (Nat.pred #|ctx| - i))) ctx.
+Proof.
+  now rewrite mapi_context_fold, fold_context_alt, map_mapi.
+Qed.
+Hint Rewrite map_mapi_context : map.
 
 Lemma map_predicate_k_map_predicate_k 
   (finst finst' : Instance.t -> Instance.t)

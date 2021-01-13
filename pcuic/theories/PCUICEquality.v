@@ -821,31 +821,6 @@ Local Ltac lih :=
     eapply ih
   end.
 
-Lemma context_relation_impl_onctx P P' Γ Δ Q :  
-  onctx Q Γ ->
-  context_relation P Γ Δ ->
-  (forall Γ Δ d d', 
-    context_relation P Γ Δ -> 
-    P Γ Δ d d' ->
-    ondecl Q d ->
-    P' Γ Δ d d') ->
-  context_relation P' Γ Δ.
-Proof.
-  intros onc cr Hcr.
-  induction cr; depelim onc; constructor; intuition eauto.
-  eapply Hcr; eauto. red. split; simpl; auto.
-  eapply Hcr; eauto. split; eauto.
-Qed.
-
-Lemma context_relation_mapi P Γ Δ f g : 
-  context_relation (fun Γ Δ d d' =>
-    P (mapi_context f Γ) (mapi_context g Δ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d')) Γ Δ ->
-  context_relation P (mapi_context f Γ) (mapi_context g Δ).
-Proof.
-  induction 1; simpl; constructor; intuition auto;
-  now rewrite -(context_relation_length X).
-Qed.
-
 Lemma eq_term_upto_univ_lift Σ Re Rle n n' k :
   Proper (eq_term_upto_univ_napp Σ Re Rle n' ==> eq_term_upto_univ_napp Σ Re Rle n') (lift n k).
 Proof.
@@ -1259,13 +1234,6 @@ Proof.
     now apply eqb_annot_spec.
   - eqspec; [|discriminate]. constructor.
 Qed.*)
-
-Lemma context_relation_forallb2 (P : context_decl -> context_decl -> bool) Γ Δ : 
-  context_relation (fun _ _ => P) Γ Δ ->
-  forallb2 P Γ Δ.
-Proof.
-  induction 1; simpl; auto; now rewrite p IHX.
-Qed.
 
 Lemma forallb2_bcompare_decl_context_relation
   (P : term -> term -> bool) Γ Δ : 

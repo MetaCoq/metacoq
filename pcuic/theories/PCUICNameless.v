@@ -3,6 +3,7 @@ From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICTyping PCUICPosition PCUICUnivSubst
+     PCUICContextRelation
      PCUICSigmaCalculus (* for context manipulations *).
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
@@ -26,6 +27,10 @@ Definition anon (na : name) : bool :=
 
 Definition banon (na : binder_annot name) : bool := anon na.(binder_name).
 
+Definition nameless_decl nameless (d : context_decl) :=
+  banon (decl_name d) && nameless d.(decl_type) &&
+  option_default nameless d.(decl_body) true.
+
 Fixpoint nameless (t : term) : bool :=
   match t with
   | tRel n => true
@@ -41,9 +46,9 @@ Fixpoint nameless (t : term) : bool :=
   | tConstruct i n u => true
   | tCase ci p c brs =>
     forallb nameless p.(pparams) && 
-    forallb banon p.(pcontext) &&
+    forallb (nameless_decl nameless) p.(pcontext) &&
     nameless p.(preturn) && nameless c && 
-    forallb (fun b => forallb banon b.(bcontext) && nameless b.(bbody)) brs
+    forallb (fun b => forallb (nameless_decl nameless) b.(bcontext) && nameless b.(bbody)) brs
   | tProj p c => nameless c
   | tFix mfix idx =>
     forallb (fun d => banon d.(dname)) mfix &&
@@ -53,6 +58,8 @@ Fixpoint nameless (t : term) : bool :=
     forallb (test_def nameless nameless) mfix
   | tPrim _ => true
   end.
+
+Notation nameless_ctx := (forallb (nameless_decl nameless)).
 
 Definition anonymize (b : binder_annot name) : binder_annot name :=  
   map_binder_annot (fun _ => nAnon) b.
@@ -64,14 +71,20 @@ Definition map_def_anon {A B} (tyf bodyf : A -> B) (d : def A) := {|
   rarg  := d.(rarg)
 |}.
 
+Definition map_decl_anon (f : term -> term) (d : context_decl) := {|
+  decl_name := anonymize d.(decl_name) ;
+  decl_body := option_map f d.(decl_body) ;
+  decl_type := f d.(decl_type)
+|}.
+
 Definition nl_predicate (nl : term -> term) (p : predicate term) : predicate term :=
   {| pparams := map nl p.(pparams);
      puinst := p.(puinst);
-     pcontext := map anonymize p.(pcontext);
+     pcontext := map (map_decl_anon nl) p.(pcontext);
      preturn := nl p.(preturn); |}.
 
 Definition nl_branch (nl : term -> term) (b : branch term) : branch term :=
-  {| bcontext := map anonymize b.(bcontext);
+  {| bcontext := map (map_decl_anon nl) b.(bcontext);
      bbody := nl b.(bbody); |}.
 
 Fixpoint nl (t : term) : term :=
@@ -94,15 +107,8 @@ Fixpoint nl (t : term) : term :=
   | tPrim p => tPrim p
   end.
 
-Definition map_decl_anon f (d : context_decl) := {|
-  decl_name := anonymize d.(decl_name) ;
-  decl_body := option_map f d.(decl_body) ;
-  decl_type := f d.(decl_type)
-|}.
-
 Definition nlctx (Γ : context) : context :=
   map (map_decl_anon nl) Γ.
-
 
 Definition nl_constant_body c :=
   Build_constant_body
@@ -140,9 +146,12 @@ Definition nl_global_decl (d : global_decl) : global_decl :=
   | InductiveDecl mib => InductiveDecl (nl_mutual_inductive_body mib)
   end.
 
+Definition nl_global_env (Σ : global_env) : global_env :=
+  (map (on_snd nl_global_decl) Σ).
+
 Definition nlg (Σ : global_env_ext) : global_env_ext :=
   let '(Σ, φ) := Σ in
-  (map (on_snd nl_global_decl) Σ, φ).
+  (nl_global_env Σ, φ).
 
 Ltac destruct_one_andb :=
   lazymatch goal with
@@ -178,6 +187,32 @@ Proof.
   now unfold eq_binder_annot; simpl; intros ->.
 Qed.
 
+Lemma nameless_eqctx_IH P ctx ctx' :
+  nameless_ctx ctx -> nameless_ctx ctx' ->
+  eq_context_gen false upto_names' upto_names' ctx ctx' ->
+  onctx P ctx ->
+  (forall napp x, P x ->
+    forall y, nameless x -> nameless y ->
+    eq_term_upto_univ_napp [] eq eq napp x y -> x = y) ->
+  ctx = ctx'.
+Proof.
+  solve_all.
+  induction X; depelim H; depelim H0; depelim X0; auto; f_equal; auto.
+  - destruct p.
+    unfold nameless_decl in i, i0; rtoProp.
+    f_equal.
+    * eapply banon_eq_binder_annot; eauto.
+    * simpl in *.
+      eapply H1; eauto. apply p0.
+  - destruct p as [? [? ?]], p0.
+    unfold nameless_decl in i, i0; rtoProp.
+    f_equal.
+    * eapply banon_eq_binder_annot; eauto.
+    * simpl in *.
+      eapply H1; eauto.
+    * simpl in *. eapply H1; eauto.
+Qed.
+
 Lemma nameless_eq_term_spec :
   forall u v napp,
     nameless u ->
@@ -211,15 +246,16 @@ Proof.
     eapply eq_univ_make. assumption.
   - f_equal ; try solve [ ih ].
     * destruct e as [eqpar [eqinst [eqctx eqret]]].
+      destruct X as [? [? ?]]. 
       destruct p, p'; simpl in *. f_equal.
       + apply All2_eq; solve_all.
       + red in eqinst.
         apply Forall2_eq. eapply Forall2_map_inv in eqinst.
         eapply (Forall2_impl eqinst); solve_all.
         now apply Universe.make_inj in H.
-      + apply All2_eq; solve_all.
-        now eapply banon_eq_binder_annot.
-      + destruct X. ih.
+      + simpl in *.
+        eapply nameless_eqctx_IH; eauto.
+      + ih.
     * revert brs' H3 H0 a.
       induction l ; intros brs' h1 h2 h.
       + destruct brs' ; inversion h. reflexivity.
@@ -231,9 +267,10 @@ Proof.
         f_equal.
         ++ destruct a, b. cbn in *. destruct X1.
            depelim h. destruct p0. depelim X0. simpl in *.
+           destruct X4.
            f_equal; try ih.
-           apply All2_eq.
-           solve_all. now apply banon_eq_binder_annot.
+           { eapply nameless_eqctx_IH; eauto; solve_all. }
+           solve_all. 
         ++ eapply IHl ; tas. now depelim X0.
   - f_equal ; try solve [ ih ].
     revert mfix' H1 H2 H H0 a.
@@ -285,15 +322,21 @@ Proof.
   all: try reflexivity.
   all: try (simpl ; repeat (eapply andb_true_intro ; split) ; assumption).
   - cbn. eapply All_forallb. eapply All_map. assumption.
-  - destruct X.
+  - destruct X as [? [? ?]].
     simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
     * eapply All_forallb, All_map; assumption.
-    * now rewrite forallb_map banon_list.
+    * rewrite forallb_map.
+      eapply All_forallb. red in o. solve_all.
+      rewrite /nameless_decl /= a0.
+      destruct (decl_body x); simpl in *; auto.
     * induction l.
       + reflexivity.
-      + cbn. inversion X0. subst.
+      + cbn. depelim X0. destruct p0.
         repeat (eapply andb_true_intro ; split) ; try assumption.
-        ++ now rewrite forallb_map banon_list.
+        ++ rewrite forallb_map.
+           eapply All_forallb. red in o0. solve_all.
+           rewrite /nameless_decl /= a1.
+          destruct (decl_body x); simpl in *; auto.
         ++ eapply IHl. assumption.
   - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
     + induction m.
@@ -319,7 +362,7 @@ Qed.
 
 Lemma nl_lookup_env :
   forall Σ c,
-    lookup_env (map (on_snd nl_global_decl) Σ) c
+    lookup_env (nl_global_env Σ) c
     = option_map nl_global_decl (lookup_env Σ c).
 Proof.
   intros Σ c.
@@ -350,7 +393,7 @@ Proof.
 Qed.
 
 Lemma global_variance_nl_sigma_mon {Σ gr napp} :
-  global_variance (map (on_snd nl_global_decl) Σ) gr napp =
+  global_variance (nl_global_env Σ) gr napp =
   global_variance Σ gr napp.
 Proof.
   rewrite /global_variance /lookup_constructor /lookup_inductive /lookup_minductive.
@@ -374,17 +417,35 @@ Qed.
 
 Lemma R_global_instance_nl Σ Re Rle gr napp :
   CRelationClasses.subrelation (R_global_instance Σ Re Rle gr napp)
-       (R_global_instance (map (on_snd nl_global_decl) Σ) Re Rle gr napp).
+       (R_global_instance (nl_global_env Σ) Re Rle gr napp).
 Proof.
   intros t t'.
   unfold R_global_instance.
   now rewrite global_variance_nl_sigma_mon.
 Qed.
 
+Lemma eq_context_nl_IH Σ Re ctx ctx' :
+  (forall (napp : nat) (t t' : term)
+        (Rle : Universe.t -> Universe.t -> Prop),
+      eq_term_upto_univ_napp Σ Re Rle napp t t' ->
+      eq_term_upto_univ_napp (nl_global_env Σ) Re Rle napp
+        (nl t) (nl t')) ->
+  eq_context_gen false (eq_term_upto_univ Σ Re Re)
+    (eq_term_upto_univ Σ Re Re) ctx ctx' ->
+  eq_context_gen false
+    (eq_term_upto_univ (nl_global_env Σ) Re Re)
+    (eq_term_upto_univ (nl_global_env Σ) Re Re)
+    (map (map_decl_anon nl) ctx)
+    (map (map_decl_anon nl) ctx').
+Proof.
+  intros aux H.
+  induction H; constructor; simpl; destruct p; intuition auto.
+Defined.
+
 Lemma nl_eq_term_upto_univ :
   forall Σ Re Rle napp t t',
     eq_term_upto_univ_napp Σ Re Rle napp t t' ->
-    eq_term_upto_univ_napp (map (on_snd nl_global_decl) Σ) Re Rle napp (nl t) (nl t').
+    eq_term_upto_univ_napp (nl_global_env Σ) Re Rle napp (nl t) (nl t').
 Proof.
   intros Σ Re Rle napp t t' h.
   revert napp t t' Rle h. fix aux 5.
@@ -403,12 +464,12 @@ Proof.
   - econstructor; eauto.
     + red. destruct e; intuition auto; simpl.
       * induction a0; constructor; auto.
-      * solve_all.
+      * apply eq_context_nl_IH; tas.
       * apply aux. auto.
     + induction a; constructor; auto.
       intuition auto; simpl.
-      1:solve_all.
-      destruct x, y; simpl in *. apply aux; auto.
+      * apply eq_context_nl_IH; tas.
+      * destruct x, y; simpl in *. apply aux; auto.
   - econstructor; eauto.
     induction a; constructor; auto.
     intuition auto.
@@ -421,10 +482,23 @@ Proof.
     * destruct x, y; simpl in *. apply aux; auto.
 Qed.
 
+Lemma eq_context_nl Σ le Re Rle ctx ctx' :
+  eq_context_gen le (eq_term_upto_univ Σ Re Re)
+    (eq_term_upto_univ Σ Re Rle) ctx ctx' ->
+  eq_context_gen le
+    (eq_term_upto_univ (nl_global_env Σ) Re Re)
+    (eq_term_upto_univ (nl_global_env Σ) Re Rle)
+    (nlctx ctx) (nlctx ctx').
+Proof.
+  intros H.
+  induction H; constructor; simpl; destruct p, le; intuition auto using
+    nl_eq_term_upto_univ.
+Qed.
+
 Lemma nl_leq_term {cf:checker_flags} Σ:
   forall φ t t',
     leq_term Σ φ t t' ->
-    leq_term (map (on_snd nl_global_decl) Σ) φ (nl t) (nl t').
+    leq_term (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
   intros. apply nl_eq_term_upto_univ. assumption.
 Qed.
@@ -432,7 +506,7 @@ Qed.
 Lemma nl_eq_term {cf:checker_flags} Σ:
   forall φ t t',
     eq_term Σ φ t t' ->
-    eq_term (map (on_snd nl_global_decl) Σ) φ (nl t) (nl t').
+    eq_term (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
   intros. apply nl_eq_term_upto_univ. assumption.
 Qed.
@@ -440,7 +514,7 @@ Qed.
 Lemma nl_compare_term {cf:checker_flags} le Σ:
   forall φ t t',
     compare_term le Σ φ t t' ->
-    compare_term le (map (on_snd nl_global_decl) Σ) φ (nl t) (nl t').
+    compare_term le (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
   destruct le; intros.
   - apply nl_leq_term. assumption.
@@ -466,6 +540,29 @@ Local Ltac ih3 :=
     eapply ih ; assumption
   end.
 
+Lemma eq_context_nl_inv_IH Σ Re ctx ctx' :
+  onctx
+  (fun u : term =>
+ forall (Rle : Universe.t -> Universe.t -> Prop) 
+   (napp : nat) (v : term),
+ eq_term_upto_univ_napp Σ Re Rle napp (nl u) (nl v) ->
+ eq_term_upto_univ_napp Σ Re Rle napp u v) ctx ->
+ eq_context_gen false
+ (eq_term_upto_univ Σ Re Re)
+ (eq_term_upto_univ Σ Re Re)
+ (map (map_decl_anon nl) ctx)
+ (map (map_decl_anon nl) ctx') ->
+ eq_context_gen false (eq_term_upto_univ Σ Re Re)
+    (eq_term_upto_univ Σ Re Re) ctx ctx'.
+Proof.
+  intros Hctx.
+  induction ctx as [|[na [b|] ty] Γ] in ctx', Hctx |- *; 
+  destruct ctx' as [|[na' [b'|] ty'] Δ]; simpl; intros H;
+  depelim H; constructor; simpl in *; depelim Hctx; intuition eauto.
+  * eapply IHΓ; eauto.
+  * eapply IHΓ; eauto.
+Qed.
+
 Lemma eq_term_upto_univ_nl_inv :
   forall Σ Re Rle napp u v,
     eq_term_upto_univ_napp Σ Re Rle napp (nl u) (nl v) ->
@@ -489,36 +586,22 @@ Proof.
   - cbn in H. inversion H. subst. constructor ; try ih3.
     + red. destruct e; solve_all.
       * simpl in a0. eapply All2_map_inv in a0. solve_all.
-      * simpl in a3. eapply All2_map_inv in a3; solve_all.
+      * eapply eq_context_nl_inv_IH; tea.
     + apply All2_map_inv in a. solve_all.
-      eapply All2_map_inv in a1. solve_all.
+      eapply eq_context_nl_inv_IH; tea.
   - cbn in H. inversion H. subst. constructor ; try ih3.
     apply All2_map_inv in a. solve_all.
   - cbn in H. inversion H. subst. constructor ; try ih3.
     apply All2_map_inv in a. solve_all.
 Qed.
 
-(* TODO MOVE *)
-Definition test_option {A} f (o : option A) : bool :=
-  match o with
-  | None => true
-  | Some x => f x
-  end.
-
-Definition nameless_ctx (Γ : context) : bool :=
-  forallb (fun d =>
-    banon d.(decl_name) &&
-    test_option nameless d.(decl_body) &&
-    nameless d.(decl_type)
-  ) Γ.
-
 Lemma nlctx_spec :
   forall Γ, nameless_ctx (nlctx Γ).
 Proof.
   intros Γ. induction Γ as [| [na [b|] B] Γ ih].
   - reflexivity.
-  - simpl. rewrite 2!nl_spec ih. reflexivity.
-  - simpl. rewrite nl_spec ih. reflexivity.
+  - simpl. rewrite /nameless_decl /= 2!nl_spec ih. reflexivity.
+  - simpl. rewrite /nameless_decl /= nl_spec ih. reflexivity.
 Qed.
 
 Lemma binder_anonymize n : eq_binder_annot n (anonymize n).
@@ -544,11 +627,19 @@ Proof.
     * destruct X; red; simpl in *; intuition auto.
       + induction a; constructor; auto.
       + reflexivity.
-      + induction pcontext; constructor; auto. red. reflexivity.
+      + clear -a0 hRe hRle. induction a0.
+        { constructor; auto. }
+        destruct x as [na [b|] ty]; simpl; constructor; auto; 
+          destruct p; simpl in *; intuition auto.
     * induction l.
       + constructor.
-      + simpl. inversion X0. subst. simpl in *. repeat constructor.
-        ++ simpl. induction (bcontext a); constructor; auto.
+      + simpl. depelim X0. destruct p.
+        simpl in *. repeat constructor.
+        ++ simpl.
+          clear -hRe hRle o.
+          induction o; [constructor; auto|].
+          destruct x as [na [b|] ty]; simpl; constructor; auto; 
+          destruct p; simpl in *; intuition auto.
         ++ auto.
         ++ eapply IHl. assumption.
   - simpl. constructor. induction m.
@@ -590,7 +681,8 @@ Fixpoint nlstack (π : stack) : stack :=
   | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
     CoFix_mfix_bd (anonymize na) (nl ty) ra (map (map_def_anon nl nl) mfix1) (map (map_def_anon nl nl) mfix2) idx (nlstack ρ)
   | Case_pars ci pars1 pars2 pinst pctx pret c brs ρ =>
-    Case_pars ci (map nl pars1) (map nl pars2) pinst (map anonymize pctx) (nl pret) (nl c) (map (nl_branch nl) brs) (nlstack ρ)
+    Case_pars ci (map nl pars1) (map nl pars2) pinst (nlctx pctx) (nl pret) 
+    (nl c) (map (nl_branch nl) brs) (nlstack ρ)
   | Case_p ci pars pinst pctx c brs ρ =>
     Case_p ci (map nl pars) pinst (nlctx pctx) (nl c) (map (nl_branch nl) brs) (nlstack ρ)
   | Case ci p brs ρ =>
@@ -710,12 +802,17 @@ Proof.
     + simpl. rewrite p IHAll. reflexivity.
   - simpl. rewrite IHb. f_equal.
     * unfold nl_predicate, map_predicate. simpl. f_equal; solve_all. simpl.
-      rewrite !map_map_compose; solve_all.
+      red in o; solve_all.
+      unfold map_decl_anon, map_decl; destruct x as [na [bod|] ty]; simpl in *;
+        f_equal; auto. f_equal; auto.
     * induction X0.
       + reflexivity.
       + simpl. f_equal.
         ++ destruct x. simpl in *. unfold nl_branch, map_branch.
-          simpl. f_equal. solve_all.
+          simpl. f_equal; solve_all.
+          red in a0; solve_all.
+          unfold map_decl_anon, map_decl; destruct x as [na [bod|] ty]; simpl in *;
+            f_equal; auto. f_equal; auto.
         ++ apply IHX0.
   - simpl. f_equal. induction X ; try reflexivity.
     simpl. rewrite IHX. f_equal.
@@ -784,13 +881,8 @@ Proof.
     f_equal. unfold nl_predicate; simpl; f_equal; solve_all.
     rewrite map_app. cbn. reflexivity.
   - simpl. rewrite IHπ. cbn. f_equal.
-    f_equal. unfold nl_predicate; simpl; f_equal; solve_all.
-    unfold forget_types, nlctx. rewrite !map_map_compose.
-    reflexivity.
-  - simpl. rewrite IHπ. cbn. f_equal.
-    f_equal. rewrite map_app /nl_branch /=. f_equal. simpl. f_equal.
-    f_equal. unfold forget_types. rewrite !map_map_compose.
-    reflexivity.
+    f_equal. unfold nl_predicate, nlctx; simpl; f_equal; solve_all.
+    now rewrite map_app /=. 
 Qed.
 
 Lemma nl_zipx :
@@ -870,7 +962,7 @@ Proof.
     + simpl. f_equal.
       * eapply p.
       * eapply IHAll.
-  - rewrite map_length.
+  - rewrite /map_predicate_k /= map_length.
     f_equal; auto.
     * unfold nl_predicate, map_predicate; simpl; f_equal; solve_all.
       rewrite !map_map_compose; solve_all.
@@ -989,7 +1081,7 @@ Qed.
 Lemma nl_eq_decl {cf:checker_flags} :
   forall le Σ φ d d',
     eq_decl le Σ φ d d' ->
-    eq_decl le (map (on_snd nl_global_decl) Σ) φ (map_decl nl d) (map_decl nl d').
+    eq_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
   intros le Σ φ d d' [[hann h1] h2].
   split.
@@ -1003,7 +1095,7 @@ Qed.
 Lemma nl_eq_decl' {cf:checker_flags} :
   forall le Σ φ d d',
     eq_decl le Σ φ d d' ->
-    eq_decl le (map (on_snd nl_global_decl) Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
+    eq_decl le (nl_global_env Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
   intros le Σ φ d d' [[hann h1] h2].
   split.
@@ -1017,7 +1109,7 @@ Qed.
 Lemma nl_eq_context {cf:checker_flags} :
   forall le Σ φ Γ Γ',
     eq_context le Σ φ Γ Γ' ->
-    eq_context le (map (on_snd nl_global_decl) Σ) φ (nlctx Γ) (nlctx Γ').
+    eq_context le (nl_global_env Σ) φ (nlctx Γ) (nlctx Γ').
 Proof.
   intros le Σ φ Γ Γ' h.
   unfold eq_context, nlctx.
@@ -1065,7 +1157,7 @@ From MetaCoq.PCUIC Require Import PCUICCases.
 
 Lemma nl_declared_inductive Σ ind mdecl idecl :
   declared_inductive Σ ind mdecl idecl ->
-  declared_inductive (map (on_snd nl_global_decl) Σ) ind
+  declared_inductive (nl_global_env Σ) ind
     (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl).
 Proof.
   intros []. split.
@@ -1077,7 +1169,7 @@ Qed.
 
 Lemma nl_declared_constructor Σ c mdecl idecl cdecl :
   declared_constructor Σ c mdecl idecl cdecl ->
-  declared_constructor (map (on_snd nl_global_decl) Σ) c
+  declared_constructor (nl_global_env Σ) c
     (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl)
     (nl_constructor_body cdecl).
 Proof.
@@ -1349,7 +1441,7 @@ Qed.
 Lemma nl_red1 :
   forall Σ Γ M N,
     red1 Σ Γ M N ->
-    red1 (map (on_snd nl_global_decl) Σ) (nlctx Γ) (nl M) (nl N).
+    red1 (nl_global_env Σ) (nlctx Γ) (nl M) (nl N).
 Proof.
   intros Σ Γ M N h.
   induction h using red1_ind_all.
@@ -1544,7 +1636,7 @@ Proof.
   - destruct m; reflexivity.
 Qed.
 
-Lemma nl_global_levels Σ : global_levels (map (on_snd nl_global_decl) Σ) = global_levels Σ.
+Lemma nl_global_levels Σ : global_levels (nl_global_env Σ) = global_levels Σ.
 Proof.
   induction Σ; simpl; auto.
   destruct a; simpl. now rewrite IHΣ nl_monomorphic_levels_decl.
@@ -2059,7 +2151,7 @@ Proof.
   (* Lemma fresh_global_nl : *)
   (*   forall Σ k, *)
   (*     fresh_global k Σ -> *)
-  (*     fresh_global k (map (on_snd nl_global_decl) Σ). *)
+  (*     fresh_global k (nl_global_env Σ). *)
   (* Proof. *)
   (*   intros Σ k h. eapply Forall_map. *)
   (*   eapply Forall_impl ; try eassumption. *)

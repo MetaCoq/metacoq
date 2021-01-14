@@ -366,7 +366,6 @@ Module Environment (T : Term).
                   (map (on_snd (f (S npars))) ind_projs) ind_relevance
     end.
 
-
   (** See [mutual_inductive_body] from [declarations.ml]. *)
   Record mutual_inductive_body := {
     ind_finite : recursivity_kind;
@@ -398,6 +397,7 @@ Module Environment (T : Term).
   Inductive global_decl :=
   | ConstantDecl : constant_body -> global_decl
   | InductiveDecl : mutual_inductive_body -> global_decl.
+  Derive NoConfusion for global_decl.
 
   Definition global_env := list (kername * global_decl).
 

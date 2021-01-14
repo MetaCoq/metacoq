@@ -98,8 +98,6 @@ Lemma context_relation_impl_onctx P P' Γ Δ Q :
 Proof.
   intros onc cr Hcr.
   induction cr; depelim onc; constructor; intuition eauto.
-  eapply Hcr; eauto. red. split; simpl; auto.
-  eapply Hcr; eauto. split; eauto.
 Qed.
 
 Lemma context_relation_mapi P Γ Δ f g : 

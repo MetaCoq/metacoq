@@ -199,19 +199,20 @@ Lemma nameless_eqctx_IH P ctx ctx' :
   ctx = ctx'.
 Proof.
   solve_all.
-  induction X; depelim H; depelim H0; depelim X0; auto; f_equal; auto.
+  induction X; auto.
+  all:destruct p; depelim H0; depelim X0; auto; f_equal; auto.
   - destruct p.
     unfold nameless_decl in i, i0; rtoProp.
     f_equal.
     * eapply banon_eq_binder_annot; eauto.
     * simpl in *.
-      eapply H1; eauto. apply p0.
-  - destruct p as [? [? ?]], p0.
+      eapply H1; eauto. apply o.
+  - destruct p as [? ?], p0 as [? [? ?]].
     unfold nameless_decl in i, i0; rtoProp.
     f_equal.
     * eapply banon_eq_binder_annot; eauto.
     * simpl in *.
-      eapply H1; eauto.
+      eapply H1; eauto. 
     * simpl in *. eapply H1; eauto.
 Qed.
 
@@ -269,10 +270,10 @@ Proof.
         f_equal.
         ++ destruct a, b. cbn in *. destruct X1.
            depelim h. destruct p0. depelim X0. simpl in *.
+           destruct p0 as [].
            destruct X4.
            f_equal; try ih.
-           { eapply nameless_eqctx_IH; eauto; solve_all. }
-           solve_all. 
+           { eapply nameless_eqctx_IH; eauto; solve_all. } 
         ++ eapply IHl ; tas. now depelim X0.
   - f_equal ; try solve [ ih ].
     revert mfix' H1 H2 H H0 a.
@@ -328,7 +329,7 @@ Proof.
     simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
     * eapply All_forallb, All_map; assumption.
     * rewrite forallb_map.
-      eapply All_forallb. red in o. solve_all.
+      eapply All_forallb. unfold ondecl in *. solve_all.
       rewrite /nameless_decl /= a0.
       destruct (decl_body x); simpl in *; auto.
     * induction l.
@@ -336,8 +337,8 @@ Proof.
       + cbn. depelim X0. destruct p0.
         repeat (eapply andb_true_intro ; split) ; try assumption.
         ++ rewrite forallb_map.
-           eapply All_forallb. red in o0. solve_all.
-           rewrite /nameless_decl /= a1.
+           eapply All_forallb. unfold ondecl in *; solve_all.
+           rewrite /nameless_decl /= a2.
           destruct (decl_body x); simpl in *; auto.
         ++ eapply IHl. assumption.
   - simpl ; repeat (eapply andb_true_intro ; split) ; try assumption.
@@ -557,7 +558,7 @@ Lemma eq_context_nl_inv_IH Σ Re ctx ctx' :
  eq_context_gen false (eq_term_upto_univ Σ Re Re)
     (eq_term_upto_univ Σ Re Re) ctx ctx'.
 Proof.
-  intros Hctx.
+  intros Hctx. unfold ondecl in *.
   induction ctx as [|[na [b|] ty] Γ] in ctx', Hctx |- *; 
   destruct ctx' as [|[na' [b'|] ty'] Δ]; simpl; intros H;
   depelim H; constructor; simpl in *; depelim Hctx; intuition eauto.
@@ -638,8 +639,8 @@ Proof.
       + simpl. depelim X0. destruct p.
         simpl in *. repeat constructor.
         ++ simpl.
-          clear -hRe hRle o.
-          induction o; [constructor; auto|].
+          clear -hRe hRle a0.
+          induction a0; [constructor; auto|].
           destruct x as [na [b|] ty]; simpl; constructor; auto; 
           destruct p; simpl in *; intuition auto.
         ++ auto.
@@ -804,7 +805,7 @@ Proof.
     + simpl. rewrite p IHAll. reflexivity.
   - simpl. rewrite IHb. f_equal.
     * unfold nl_predicate, map_predicate. simpl. f_equal; solve_all. simpl.
-      red in o; solve_all.
+      unfold ondecl in *; solve_all.
       unfold map_decl_anon, map_decl; destruct x as [na [bod|] ty]; simpl in *;
         f_equal; auto. f_equal; auto.
     * induction X0.
@@ -812,7 +813,7 @@ Proof.
       + simpl. f_equal.
         ++ destruct x. simpl in *. unfold nl_branch, map_branch.
           simpl. f_equal; solve_all.
-          red in a0; solve_all.
+          unfold ondecl in *; solve_all.
           unfold map_decl_anon, map_decl; destruct x as [na [bod|] ty]; simpl in *;
             f_equal; auto. f_equal; auto.
         ++ apply IHX0.
@@ -1493,7 +1494,8 @@ Proof.
     epose proof (nth_error_map (nl_branch nl) c brs).
     change (nlctx (bcontext br)) with (bcontext (nl_branch nl br)).
     eapply red_iota => //.
-    rewrite H0 H //.
+    * rewrite H1 H //.
+    * now rewrite !List.skipn_length in H0 |- *; len.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.
@@ -1938,11 +1940,11 @@ Proof.
   - destruct X; cbnr.
     f_equal; solve_all.
     * unfold nl_predicate; cbn; f_equal; solve_all.
-      red in a0; solve_all.
+      unfold ondecl in *; solve_all.
       unfold nldecl; destruct x as [na [bod|] ty]; simpl in *; f_equal; auto.
       f_equal; eauto.
     * unfold nl_branch; destruct x; cbn. f_equal; auto.
-      red in a1; solve_all.
+      unfold ondecl in *; solve_all.
       unfold nldecl; destruct x as [na [bod|] ty]; simpl; f_equal; auto.
       f_equal; eauto.
   - f_equal. induction X; cbnr. f_equal; tas.

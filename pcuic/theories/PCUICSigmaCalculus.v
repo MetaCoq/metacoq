@@ -419,11 +419,6 @@ Proof.
   * len. apply Hff'.
 Qed.
 
-Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
-Proof.
-  intros f g Hfg x y ->. now rewrite Hfg.
-Qed.
-
 Lemma map_predicate_shift_map_predicate
       {T} {fn : (nat -> T) -> term -> term}
       {shift : nat -> (nat -> T) -> nat -> T}

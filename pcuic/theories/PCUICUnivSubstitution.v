@@ -153,6 +153,7 @@ Proof.
     * solve_all. eapply All_All2; tea; cbn; intros; rdest; eauto.
       eapply X; eauto. tc.
     * eapply subst_equal_inst_inst => //.
+    * admit.
     * eapply X => //.
   - eapply X1 => //.
 Qed.

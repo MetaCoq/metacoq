@@ -277,16 +277,6 @@ Proof.
     * eauto using R_universe_instance_impl'.
 Qed.
 
-Lemma compare_decl_impl le eq_term leq_term eq_term' leq_term' :
-  RelationClasses.subrelation eq_term eq_term' ->
-  RelationClasses.subrelation leq_term leq_term' ->
-  CRelationClasses.subrelation (compare_decl le eq_term leq_term)
-    (compare_decl le eq_term' leq_term').
-Proof.
-  intros he hle [na [b|] ty] [na' [b'|] ty']; rewrite /compare_decl /= //;
-    destruct le; intuition auto.
-Qed.
-
 Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' napp :
   wf Σ' -> extends Σ Σ' ->
   RelationClasses.subrelation Re Re' ->

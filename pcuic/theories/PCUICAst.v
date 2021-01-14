@@ -815,6 +815,7 @@ Proof.
   rewrite map_map.
   now setoid_rewrite compose_map_decl.
 Qed.
+Hint Rewrite @map_branch_map_branch : map.
 
 Lemma map_branch_k_map_branch_k (f f' : nat -> term -> term) k k' (b : branch term) :
   map_branch_k f k (map_branch_k f' k' b) =

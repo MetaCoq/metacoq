@@ -8,6 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
+Implicit Types cf : checker_flags.
+
 (** Typing / conversion does not rely on name annotations of binders.
 
   We prove this by constructing a type-preserving translation to 
@@ -424,22 +426,22 @@ Proof.
   now rewrite global_variance_nl_sigma_mon.
 Qed.
 
-Lemma eq_context_nl_IH Σ Re ctx ctx' :
+Lemma eq_context_nl_IH Σ le Re Rle ctx ctx' :
   (forall (napp : nat) (t t' : term)
         (Rle : Universe.t -> Universe.t -> Prop),
       eq_term_upto_univ_napp Σ Re Rle napp t t' ->
       eq_term_upto_univ_napp (nl_global_env Σ) Re Rle napp
         (nl t) (nl t')) ->
-  eq_context_gen false (eq_term_upto_univ Σ Re Re)
-    (eq_term_upto_univ Σ Re Re) ctx ctx' ->
-  eq_context_gen false
+  eq_context_gen le (eq_term_upto_univ Σ Re Re)
+    (eq_term_upto_univ Σ Re Rle) ctx ctx' ->
+  eq_context_gen le
     (eq_term_upto_univ (nl_global_env Σ) Re Re)
-    (eq_term_upto_univ (nl_global_env Σ) Re Re)
+    (eq_term_upto_univ (nl_global_env Σ) Re Rle)
     (map (map_decl_anon nl) ctx)
     (map (map_decl_anon nl) ctx').
 Proof.
   intros aux H.
-  induction H; constructor; simpl; destruct p; intuition auto.
+  induction H; constructor; simpl; destruct p, le; intuition auto.
 Defined.
 
 Lemma nl_eq_term_upto_univ :
@@ -1107,12 +1109,10 @@ Lemma nl_eq_decl {cf:checker_flags} :
     eq_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
   intros le Σ φ d d'.
-  split.
-  - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
-    all: cbn in *.
-    all: split; trivial.
-    apply nl_eq_term. assumption.
-  - apply nl_compare_term. assumption.
+  rewrite /eq_decl.
+  destruct d as [? [?|] ?], d' as [? [?|] ?].
+  all: cbn in *; auto.
+  all: destruct le; intuition auto using nl_eq_term, nl_leq_term.
 Qed.
 
 Lemma nl_eq_decl' {cf:checker_flags} :
@@ -1120,13 +1120,11 @@ Lemma nl_eq_decl' {cf:checker_flags} :
     eq_decl le Σ φ d d' ->
     eq_decl le (nl_global_env Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
-  intros le Σ φ d d' [[hann h1] h2].
-  split.
-  - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
-    all: cbn in *.
-    all: split; trivial.
-    apply nl_eq_term. assumption.
-  - apply nl_compare_term. assumption.
+  intros le Σ φ d d'.
+  rewrite /eq_decl.
+  destruct d as [? [?|] ?], d' as [? [?|] ?].
+  all: cbn in *; auto.
+  all: destruct le; intuition auto using nl_eq_term, nl_leq_term.
 Qed.
 
 Lemma nl_eq_context {cf:checker_flags} :
@@ -1136,9 +1134,7 @@ Lemma nl_eq_context {cf:checker_flags} :
 Proof.
   intros le Σ φ Γ Γ' h.
   unfold eq_context, nlctx.
-  eapply All2_map, All2_impl.
-  - eassumption.
-  - apply nl_eq_decl'.
+  now eapply eq_context_nl.
 Qed.
 
 Lemma nl_decompose_app :
@@ -1420,7 +1416,8 @@ Proof.
   intros ptm.
   unfold case_branch_type, case_branch_type_gen.
   simpl. unfold map_pair. simpl. f_equal.
-  - now rewrite nl_case_branch_context.
+  - rewrite nl_case_branch_context.
+    now rewrite /forget_types !map_map_compose.
   - rewrite nl_mkApps nl_lift; len. f_equal.
     rewrite !map_map_compose map_app /= !map_map_compose nl_mkApps.
     f_equal.
@@ -1433,13 +1430,21 @@ Proof.
       now rewrite nl_to_extended_list.
 Qed.
 
+Lemma nl_forget_types ctx : 
+  forget_types (map (map_decl_anon nl) ctx) = 
+  map anonymize (forget_types ctx).
+Proof.
+  now rewrite /forget_types !map_map_compose.
+Qed.
 
 Lemma nl_wf_predicate mdecl idecl p : 
   wf_predicate mdecl idecl p ->
   wf_predicate (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) (nl_predicate nl p).
 Proof.
-  intros []; split; len => //.
-  depelim H0. rewrite H2. simpl. constructor; auto.
+  intros []; split. 
+  { len => //. }
+  depelim H0.
+  simpl. rewrite nl_forget_types H2 /=. constructor; auto.
   eapply Forall2_map. solve_all.
 Qed.
 
@@ -1448,7 +1453,9 @@ Lemma nl_wf_branch cdecl br :
   wf_branch (nl_constructor_body cdecl) (nl_branch nl br).  
 Proof.
   unfold wf_branch, wf_branch_gen.
-  simpl. intros H; apply Forall2_map; solve_all.
+  simpl.
+  rewrite nl_forget_types /=.
+  intros H; apply Forall2_map; solve_all.
 Qed.
 
 Lemma nl_wf_branches idecl brs :
@@ -1476,25 +1483,17 @@ Proof.
     cbn in *. apply some_inj in H. rewrite H. reflexivity.
   - rewrite nl_mkApps. cbn.
     rewrite map_skipn nl_extended_subst nl_lift.
-    rewrite -(nl_context_assumptions brctx).
+    rewrite -(nl_context_assumptions (bcontext br)).
     change (nl (bbody br)) with (bbody (nl_branch nl br)).
-    rewrite -(nlctx_length brctx).
-    change (subst0 (extended_subst (nlctx brctx) 0)
-    (lift (context_assumptions (nlctx brctx)) #|
-       nlctx brctx| (bbody (nl_branch nl br)))) with
-     (expand_lets (nlctx brctx) (bbody (nl_branch nl br))).
-    subst brctx.
+    rewrite -(nlctx_length (bcontext br)).
+    change (subst0 (extended_subst (nlctx br.(bcontext)) 0)
+    (lift (context_assumptions (nlctx br.(bcontext))) #|
+       nlctx br.(bcontext)| (bbody (nl_branch nl br)))) with
+     (expand_lets (nlctx br.(bcontext)) (bbody (nl_branch nl br))).
     epose proof (nth_error_map (nl_branch nl) c brs).
-    rewrite nl_case_branch_context.
-    rewrite H in H3. simpl in H3.
-    change (map anonymize (bcontext br)) with (bcontext (nl_branch nl br)).
+    change (nlctx (bcontext br)) with (bcontext (nl_branch nl br)).
     eapply red_iota => //.
-    + now eapply nl_declared_constructor.
-    + now apply nl_wf_predicate.
-    + now apply nl_wf_branch.
-    + rewrite -nl_case_branch_context. 
-      rewrite nl_context_assumptions -H2.
-      now rewrite !List.skipn_length !map_length.
+    rewrite H0 H //.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.
@@ -1547,21 +1546,12 @@ Proof.
     eapply OnOne2_map, OnOne2_impl. 1: eassumption.
     solve_all.
   - rewrite nl_pred_set_preturn. econstructor.
-    * now eapply nl_declared_inductive. 
-    * now apply nl_wf_predicate.
-    * rewrite -nl_case_predicate_context; eauto.
-      rewrite -nlctx_app_context. apply IHh.
+    rewrite -nlctx_app_context. apply IHh.
   - econstructor; tea.
-    * now eapply nl_declared_inductive.
-    * now apply nl_wf_predicate.
-    * now apply nl_wf_branches.
-    * simpl.
-      eapply OnOne2All_map_all, OnOne2All_impl. 1: eassumption.
-      cbn. intros x y [? ?]; cbn. solve_all. red; simpl.
-      subst bcontext.
-      rewrite -nl_case_branch_context.
-      split; auto.
-      now rewrite -[_ ++ _]nlctx_app_context.
+    simpl.
+    eapply OnOne2_map, OnOne2_impl. 1: eassumption.
+    cbn. intros x y [? ?]; cbn. solve_all. red; simpl.
+    rewrite e. now rewrite -nlctx_app_context.
   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
     cbn. intros x y [? ?]; auto.
   - constructor. apply OnOne2_map. eapply OnOne2_impl; [eassumption|].
@@ -1579,6 +1569,22 @@ Proof.
     + cbn. congruence.
 Qed.
 
+Lemma nl_conv {cf:checker_flags} :
+  forall Σ Γ A B,
+    Σ ;;; Γ |- A = B ->
+    nlg Σ ;;; nlctx Γ |- nl A = nl B.
+Proof.
+  intros Σ Γ A B h.
+  induction h.
+  - constructor. rewrite global_ext_constraints_nlg.
+    unfold nlg. destruct Σ. apply nl_eq_term.
+    assumption.
+  - eapply conv_red_l. 2: eassumption.
+    destruct Σ. apply nl_red1. assumption.
+  - eapply conv_red_r. 1: eassumption.
+    destruct Σ. apply nl_red1. assumption.
+Qed.
+
 Lemma nl_cumul {cf:checker_flags} :
   forall Σ Γ A B,
     Σ ;;; Γ |- A <= B ->
@@ -1594,6 +1600,43 @@ Proof.
   - eapply cumul_red_r. 1: eassumption.
     destruct Σ. apply nl_red1. assumption.
 Qed.
+
+Notation nldecl := (map_decl_anon nl).
+
+Lemma nl_conv_decls {cf} {Σ Γ Γ'} {d d'} :
+  conv_decls Σ Γ Γ' d d' ->
+  conv_decls (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
+Proof.
+  intros Hd; depelim Hd; constructor; tas;
+    eapply nl_conv; tea.
+Qed.
+
+Lemma nl_cumul_decls {cf} {Σ Γ Γ' d d'} :
+   cumul_decls Σ Γ Γ' d d' ->
+   cumul_decls (nlg Σ) (nlctx Γ) (nlctx Γ') (nldecl d) (nldecl d').
+Proof.
+  intros Hd; depelim Hd; constructor; tas;
+    (eapply nl_conv || eapply nl_cumul); tea.
+Qed.
+
+Lemma nl_conv_ctx {cf} {Σ Γ Δ} :
+  conv_context Σ Γ Δ ->
+  conv_context (nlg Σ) (nlctx Γ) (nlctx Δ).
+Proof.
+  intros.
+  induction X; simpl; constructor; eauto; simpl; now eapply nl_conv_decls in p.
+Qed.
+Hint Resolve @nl_conv_ctx : nl.
+
+Lemma nl_cumul_ctx {cf} {Σ Γ Δ} :
+  cumul_context Σ Γ Δ ->
+  cumul_context (nlg Σ) (nlctx Γ) (nlctx Δ).
+Proof.
+  intros.
+  induction X; simpl; constructor; eauto; simpl; now 
+    (eapply nl_conv_decls in p || eapply nl_cumul_decls in p).
+Qed.
+Hint Resolve @nl_cumul_ctx : nl.
 
 (*
 Lemma nl_instantiate_params :
@@ -1760,23 +1803,31 @@ Proof.
         rewrite nth_error_map HH2. reflexivity.
     + destruct H0 as [wfpars wfpctx].
       split; simpl; rewrite ?map_length //.
-      clear -wfpctx. depelim wfpctx. rewrite H0.
+      clear -wfpctx. depelim wfpctx.
+      rewrite nl_forget_types H0 /=.
       simpl. constructor => //.
       eapply Forall2_map; solve_all.
-    + rewrite -nl_case_predicate_context; eauto.
-      now rewrite -nlctx_app_context.
-    + simpl. now apply nl_is_allowed_elimination.
-    + now rewrite nl_mkApps map_app in X4.
+    + now rewrite -nlctx_app_context.
+    + simpl.
+      rewrite -nl_case_predicate_context.
+      rewrite - !nlctx_app_context.
+      eapply nl_conv_ctx; tea.
+    + now rewrite -nl_case_predicate_context - !nlctx_app_context.
+    + now apply nl_is_allowed_elimination.
+    + now rewrite nl_mkApps map_app in X6.
     + now eapply nl_wf_branches.
-    + eapply All2i_map, (All2i_impl X5).
+    + eapply All2i_map, (All2i_impl X7).
       intros i cdecl br.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _) in *.
-      intros (bbodyty & IHbody & bty & IHbty).
+      intros ((wfctx & convctx) & (bbodyty & wfbctx) & IHbody & bty & IHbty).
       rewrite -nl_case_predicate_context.
       simpl preturn. rewrite -nl_it_mkLambda_or_LetIn.
       rewrite nl_case_branch_type.
       rewrite -/cbt. unfold map_pair. cbn.
       repeat split.
+      * now rewrite -[_ ++ _]nlctx_app_context.
+      * rewrite - ![_ ++ _]nlctx_app_context.
+        now eapply nl_conv_ctx.
       * now rewrite nlctx_app_context in IHbody.
       * now rewrite nlctx_app_context in IHbty.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
@@ -1887,11 +1938,13 @@ Proof.
   - destruct X; cbnr.
     f_equal; solve_all.
     * unfold nl_predicate; cbn; f_equal; solve_all.
-      induction (pcontext p); constructor; auto.
+      red in a0; solve_all.
+      unfold nldecl; destruct x as [na [bod|] ty]; simpl in *; f_equal; auto.
+      f_equal; eauto.
     * unfold nl_branch; destruct x; cbn. f_equal; auto.
-      clear.
-      induction bcontext; simpl; try constructor; auto.
-      destruct a; simpl; f_equal; auto.
+      red in a1; solve_all.
+      unfold nldecl; destruct x as [na [bod|] ty]; simpl; f_equal; auto.
+      f_equal; eauto.
   - f_equal. induction X; cbnr. f_equal; tas.
     destruct p, x; unfold map_def_anon; simpl in *.
     rewrite anonymize_two; congruence.

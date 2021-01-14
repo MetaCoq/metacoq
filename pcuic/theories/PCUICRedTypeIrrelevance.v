@@ -140,13 +140,13 @@ Proof.
   - eapply PCUICReduction.red_case_pars; eauto.
     simpl. eapply OnOne2_All2; eauto. simpl. intuition auto.
   - eapply PCUICReduction.red_case_p; eauto. eapply IHX0.
-    eapply context_relation_app_inv; eauto.
+    eapply context_relation_app; eauto.
     now eapply context_relation_refl.
   - eapply PCUICReduction.red_case_c; eauto.
   - eapply PCUICReduction.red_case_brs; eauto.
     eapply OnOne2_All2; eauto. simpl.
     intros. intuition auto. eapply b0.
-    eapply context_relation_app_inv; auto.
+    eapply context_relation_app; auto.
     now apply context_relation_refl.
   -
     eapply PCUICReduction.red_proj_c. eauto.
@@ -214,7 +214,7 @@ Lemma fix_context_change_decl_types Γ mfix mfix' :
   context_relation (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
 Proof.
   intros len.
-  apply context_relation_app_inv.
+  apply context_relation_app.
   - now rewrite !fix_context_length.
   - apply context_relation_refl.
     intros.
@@ -227,7 +227,7 @@ Proof.
     + destruct mfix'; [|cbn in *; discriminate len].
       constructor.
     + destruct mfix'; cbn in *; [discriminate len|].
-      apply context_relation_app_inv.
+      apply context_relation_app.
       * now rewrite !List.rev_length, !mapi_rec_length.
       * constructor; [constructor|].
         constructor.

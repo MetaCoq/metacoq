@@ -64,11 +64,13 @@ Ltac solve_all_one :=
   try apply map_branch_k_id_spec;
   try apply map_def_eq_spec;
   try apply map_def_id_spec;
+  try (eapply All_forallb_eq_forallb; [eassumption|]);
   try (eapply mapi_context_eqP_test_id_spec; [eassumption|eassumption|]);
   try (eapply mapi_context_eqP_spec; [eassumption|]);
   try (eapply mapi_context_eqP_id_spec; [eassumption|]);
   try (eapply onctx_test; [eassumption|eassumption|]);
   try (eapply test_context_k_eqP_id_spec; [eassumption|eassumption|]);
+  try (eapply test_context_k_eqP_eq_spec; [eassumption|]);
   try (eapply map_context_eq_spec; [eassumption|]);
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;

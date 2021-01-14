@@ -2,35 +2,35 @@
 From Coq Require Import Morphisms. 
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv.
+     PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICTyping PCUICWeakeningEnv.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
 (** * Lemmas about the [closedn] predicate *)
 
-Definition closed_decl n (d : context_decl) := test_decl (closedn n) d.
+Notation closed_decl n := (test_decl (closedn n)).
+Notation closedn_ctx := (test_context_k closedn).
+Notation closed_ctx := (closedn_ctx 0).
 
-Arguments closed_decl _ !_.
-
-Definition closedn_ctx n ctx :=
-  alli (fun k d => closed_decl (n + k) d) 0 (List.rev ctx).
-
-(** Rather use higher-level algebraic lemmas below *)  
-Arguments closedn_ctx _ _ : simpl never.
-
-Notation closed_ctx ctx := (closedn_ctx 0 ctx).
+Lemma test_context_k_eq (p : nat -> term -> bool) n ctx : 
+  test_context_k p n ctx = alli (fun k d => test_decl (p (n + k)) d) 0 (List.rev ctx).
+Proof.
+  induction ctx; simpl; auto.
+  rewrite IHctx alli_app /= andb_comm andb_true_r. f_equal.
+  len. now rewrite Nat.add_comm.
+Qed.
 
 Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /test_decl /lift_decl /map_decl /=; unf_term.
+  case: d => na [body|] ty; rewrite /test_decl /lift_decl /map_decl /=; unf_term.
   - move/andP => [cb cty]. now rewrite !lift_closed //.
   - move=> cty; now rewrite !lift_closed //.
 Qed.
 
 Lemma closed_decl_upwards k d : closed_decl k d -> forall k', k <= k' -> closed_decl k' d.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /test_decl /=.
+  case: d => na [body|] ty; rewrite /test_decl /=.
   - move/andP => /= [cb cty] k' lek'. do 2 rewrite (@closed_upwards k) //.
   - move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
@@ -52,17 +52,24 @@ Qed.
 
 Lemma closedn_ctx_cons n d Γ : closedn_ctx n (d :: Γ) = closedn_ctx n Γ && closed_decl (n + #|Γ|) d.
 Proof.
-  now rewrite /closedn_ctx /= alli_app List.rev_length /= Nat.add_0_r andb_true_r.
+  rewrite /=. rewrite Nat.add_comm. bool_congr.
+Qed.
+
+Lemma test_context_k_app p n Γ Γ' :
+  test_context_k p n (Γ ,,, Γ') =
+  test_context_k p n Γ && test_context_k p (n + #|Γ|) Γ'.
+Proof.
+  rewrite /app_context /= !test_context_k_eq List.rev_app_distr alli_app /=. f_equal.
+  rewrite List.rev_length.
+  rewrite Nat.add_0_r alli_shift.
+  now setoid_rewrite Nat.add_assoc.
 Qed.
 
 Lemma closedn_ctx_app n Γ Γ' :
   closedn_ctx n (Γ ,,, Γ') =
   closedn_ctx n Γ && closedn_ctx (n + #|Γ|) Γ'.
 Proof.
-  rewrite /closedn_ctx /app_context /= List.rev_app_distr alli_app /=. f_equal.
-  rewrite List.rev_length.
-  rewrite Nat.add_0_r alli_shift.
-  now setoid_rewrite Nat.add_assoc.
+  now rewrite test_context_k_app.
 Qed.
 
 Lemma closed_ctx_lift n k ctx : closedn_ctx k ctx -> lift_context n k ctx = ctx.
@@ -105,6 +112,16 @@ Proof.
   len. now setoid_rewrite plus_minus'.
 Qed.
 Hint Rewrite test_context_k_mapi : map.
+
+Lemma test_context_k_map (p : nat -> term -> bool) k (f : term -> term) ctx :
+  test_context_k p k (map_context f ctx) =
+  test_context_k (fun i t => p i (f t)) k ctx.
+Proof.
+  induction ctx; simpl; auto.
+  rewrite IHctx. f_equal. rewrite test_decl_map_decl.
+  now len.
+Qed.
+Hint Rewrite test_context_k_map : map.
 
 Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
 Proof.
@@ -159,7 +176,7 @@ Proof.
     * eapply (b0 n (#|bcontext x| + k)); eauto; try lia.
       now len in H3.
   - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')).
-    rewrite -Nat.add_assoc in b0. len in H1. eauto with all.
+    now len in H1.
   - rtoProp. solve_all. specialize (b0 n (#|m| + k) (#|m| + k')). eauto with all.
 Qed.
 
@@ -183,10 +200,8 @@ Proof.
     simpl in *;
     autorewrite with map => //;
     simpl closed in *; try change_Sk;
-    unfold test_def, test_branch_k, test_predicate_k in *; simpl in *.
-  7:{ debug eauto 4 with all.
-
-    2:{ Print HintDb all. debug eauto with all. nocore. }
+    unfold test_def, test_branch_k, test_predicate_k in *; simpl in *;
+    solve_all.
 
   - elim (Nat.leb_spec k' n); intros. simpl.
     destruct nth_error eqn:Heq.
@@ -202,9 +217,6 @@ Proof.
       elim: Nat.ltb_spec; symmetry. apply Nat.ltb_lt. lia.
       apply Nat.ltb_nlt. intro. lia.
 
-  - rewrite forallb_map.
-    eapply All_forallb_eq_forallb; eauto.
-
   - specialize (IHt2 (S k')).
     rewrite <- Nat.add_succ_comm in IHt2.
     rewrite IHt1 // IHt2 //.
@@ -215,32 +227,27 @@ Proof.
     rewrite <- Nat.add_succ_comm in IHt3.
     rewrite IHt1 // IHt2 // IHt3 //.
   - rewrite IHt //.
-    rewrite forallb_map. simpl.
-    destruct X.
-    f_equal. f_equal. f_equal.
-    * eapply All_forallb_eq_forallb; eauto.
+    f_equal; [|solve_all;f_equal]. f_equal. f_equal. f_equal.
+    all:len; solve_all.
+    * rewrite (Nat.add_comm i) -(Nat.add_assoc k). rewrite H //.
+      unfold shiftf. lia_f_equal.
     * specialize (e (#|pcontext p| + k')).
-      rewrite Nat.add_assoc in e.
-      now rewrite (Nat.add_comm k) in e.
-    * rewrite forallb_map. eapply All_forallb_eq_forallb. eauto.
-      intuition auto.
-      specialize (H (#|bcontext x| + k')).
-      rewrite Nat.add_assoc (Nat.add_comm k) in H.
-      now rewrite !Nat.add_assoc.
-  - rewrite forallb_map. simpl.
-    eapply All_forallb_eq_forallb; eauto. simpl.
-    intros x [h1 h2]. rewrite h1 //.
-    specialize (h2 (#|m| + k')).
-    rewrite Nat.add_assoc in h2.
-    rewrite (Nat.add_comm k #|m|) in h2. 
-    rewrite h2 //.
-  - rewrite forallb_map. simpl.
-    eapply All_forallb_eq_forallb; eauto. simpl.
-    intros x [h1 h2]. rewrite h1 //.
-    specialize (h2 (#|m| + k')).
-    rewrite Nat.add_assoc in h2.
-    rewrite (Nat.add_comm k #|m|) in h2. 
-    rewrite h2 //.
+      now rewrite Nat.add_assoc (Nat.add_comm k) in e.
+    * specialize (H (i + k')).
+      rewrite (Nat.add_comm i) -(Nat.add_assoc k). rewrite H //.
+      unfold shiftf. lia_f_equal.
+    * specialize (b (#|bcontext x| + k')).
+      now rewrite Nat.add_assoc (Nat.add_comm k) in b.
+  - rewrite a //.
+    specialize (b (#|m| + k')).
+    rewrite Nat.add_assoc in b.
+    rewrite (Nat.add_comm k #|m|) in b. 
+    rewrite b //.
+  - rewrite a //.
+    specialize (b (#|m| + k')).
+    rewrite Nat.add_assoc in b.
+    rewrite (Nat.add_comm k #|m|) in b. 
+    rewrite b //.
 Qed.
 
 Lemma closedn_subst_eq' s k k' t :
@@ -250,7 +257,7 @@ Proof.
   intros Hs. solve_all. revert Hs.
   induction t in k' |- * using term_forall_list_ind; intros;
     simpl in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    autorewrite with map;
     simpl closed in *; repeat (rtoProp; f_equal; solve_all);  try change_Sk;
     unfold test_def, map_branch, test_branch, test_predicate in *; simpl in *; eauto 4 with all.
 
@@ -274,11 +281,19 @@ Proof.
     rewrite !Nat.add_assoc in hret.
     specialize (i (#|pcontext p| + k')).
     rewrite Nat.add_assoc (Nat.add_comm k) in i.
-    rewrite i //.
-    rewrite andb_true_r. solve_all.
-  - specialize (a0 (#|bcontext x| + k')).
-    rewrite Nat.add_assoc (Nat.add_comm k) in a0.
-    rewrite !Nat.add_assoc in b. eauto.
+    simpl in *. red in o; unfold test_predicate_k. simpl. solve_all.
+    * rewrite test_context_k_mapi /shiftf in H2. solve_all.
+      rewrite (Nat.add_comm i0) -(Nat.add_assoc k); eauto.
+      eapply H3.
+      red; rewrite -H4. lia_f_equal.
+    * rewrite i //. len in hret. eauto.
+  - unfold test_branch_k in *. rtoProp; solve_all.
+    * rewrite test_context_k_mapi /shiftf in H0.
+      solve_all. rewrite (Nat.add_comm i0) -(Nat.add_assoc k); eauto.
+      eapply H3. red; rewrite -H4; lia_f_equal. 
+    * specialize (b0 (#|bcontext x| + k')).
+      rewrite Nat.add_assoc (Nat.add_comm k) in b0.
+      simpl in H2. len in H2. rewrite !Nat.add_assoc in H2. eauto.
   - move/andP: b => [hty hbod]. rewrite a0 //.
     specialize (b0 (#|m| + k')).
     rewrite Nat.add_assoc (Nat.add_comm k #|m|) in b0. 
@@ -321,26 +336,16 @@ Proof.
   revert k.
   induction t in |- * using term_forall_list_ind; intros;
     simpl in *; rewrite -> ?andb_and in *;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-      ?map_predicate_map_predicate;
-    try solve [repeat (f_equal; eauto)];  simpl closed in *;
-      try rewrite ?map_length; intuition auto.
+    autorewrite with map; len;
+    unfold test_predicate_k, test_branch_k in *; solve_all.
 
-  - rewrite forallb_map; eapply All_forallb_eq_forallb; eauto.
-  - destruct X.
-    unfold test_predicate, map_predicate; simpl.
-    f_equal. f_equal. f_equal.
-    * rewrite forallb_map; eapply All_forallb_eq_forallb; eauto.
-    * eauto.
-    * eauto.
-    * rewrite !forallb_map. eapply All_forallb_eq_forallb; eauto.
-  - red in X. rewrite forallb_map.
-    eapply All_forallb_eq_forallb; eauto.
-    unfold test_def, map_def. simpl.
+  - unfold test_predicate_k, map_predicate; simpl.
+    f_equal. f_equal. f_equal. f_equal.
+    all: len; solve_all.
+    f_equal; len; solve_all.
+  - unfold test_def, map_def. simpl.
     do 3 (f_equal; intuition eauto).
-  - red in X. rewrite forallb_map.
-    eapply All_forallb_eq_forallb; eauto.
-    unfold test_def, map_def. simpl.
+  - unfold test_def, map_def. simpl.
     do 3 (f_equal; intuition eauto).
 Qed.
 
@@ -353,7 +358,7 @@ Proof.
 Qed.
 
 Lemma closedn_ctx_tip n d : closedn_ctx n [d] = closed_decl n d.
-Proof. now rewrite /closedn_ctx /= andb_true_r Nat.add_0_r. Qed.
+Proof. now rewrite test_context_k_eq /= andb_true_r Nat.add_0_r. Qed.
 
 Lemma closedn_All_local_closed:
   forall (cf : checker_flags) (Σ : global_env_ext) (Γ : context) (ctx : list context_decl)
@@ -368,14 +373,14 @@ Proof.
   induction Γ. simpl. intros. subst. unfold app_context in *. rewrite app_nil_r in wfΓ' al.
   induction al; try constructor;
   rewrite closedn_ctx_cons /=; cbn.
-  move/andP: p => [] -> _. now rewrite IHal.
-  now rewrite IHal /= /closed_decl /=.
+  move/andP: p => [] /= -> _. now rewrite IHal.
+  now rewrite IHal /= /test_decl /=.
   intros.
-  unfold app_context in *. subst Γ'. simpl.
+  unfold app_context in *. subst Γ'.
   rewrite closedn_ctx_cons /=.
   specialize (IHΓ (ctx ++ a :: Γ) wfΓ' (ctx ++ [a])).
   rewrite -app_assoc in IHΓ. specialize (IHΓ eq_refl al).
-  now rewrite closedn_ctx_app /= Nat.add_1_r andb_assoc /= closedn_ctx_tip in IHΓ.
+  now rewrite closedn_ctx_app /= Nat.add_1_r andb_true_r /= andb_assoc in IHΓ.
 Qed.
 
 Lemma closedn_mkProd_or_LetIn n d T :
@@ -389,7 +394,7 @@ Lemma closedn_mkLambda_or_LetIn (Γ : context) d T :
     closedn (S #|Γ|) T -> closedn #|Γ| (mkLambda_or_LetIn d T).
 Proof.
   destruct d as [na [b|] ty]; simpl in *. unfold closed_decl.
-  simpl. now move/andP => [] -> ->.
+  simpl. now move/andP => [] /= -> ->.
   simpl. now move/andP => [] /= _ -> ->.
 Qed.
 
@@ -508,17 +513,17 @@ Proof.
     rewrite subst_context_snoc. simpl. eapply Alli_app_inv.
     eapply IHΔ'; eauto. constructor; [|constructor].
     simpl. 
-    rewrite /closed_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
-    inv X'. unfold closed_decl in H0. simpl in H0.
+    rewrite /test_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
+    inv X'. unfold test_decl in H0. simpl in H0.
     rewrite List.rev_length Nat.add_0_r in H0.
-    move/andP: H0 => [Hl Hr].
+    move/andP: H0 => [Hl Hr];
     rewrite !closedn_subst /= ?H //; eapply closed_upwards; eauto; try lia.
   - intros. eapply Alli_app in X as [X X'].
     rewrite subst_context_snoc. simpl. eapply Alli_app_inv.
     eapply IHΔ'; eauto. constructor; [|constructor].
     simpl. 
-    rewrite /closed_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
-    inv X'. unfold closed_decl in H0. simpl in H0.
+    rewrite /test_decl /map_decl /= Nat.add_0_r List.rev_length subst_context_length.
+    inv X'. unfold test_decl in H0. simpl in H0.
     rewrite List.rev_length Nat.add_0_r in H0.
     rewrite !closedn_subst /= ?H //; eapply closed_upwards; eauto; try lia.
 Qed.
@@ -544,7 +549,7 @@ Proof.
     rewrite List.rev_length Nat.add_0_r in H.
     clear X1. rewrite List.rev_app_distr.
     eapply Alli_app_inv; repeat constructor.
-    now rewrite /closed_decl Nat.add_0_r /=.
+    now rewrite Nat.add_0_r /=.
     rewrite List.rev_length /=. clear -X0.
     apply Alli_shift, (Alli_impl _ X0). intros.
     eapply closed_decl_upwards; eauto; lia.
@@ -560,14 +565,14 @@ Qed.
 Lemma closedn_subst_instance_context {k Γ u} :
   closedn_ctx k (subst_instance u Γ) = closedn_ctx k Γ.
 Proof.
-  unfold closedn_ctx.
+  rewrite !test_context_k_eq.
   rewrite rev_subst_instance.
   rewrite alli_map.
-  apply alli_ext; intros i [? [] ?]; unfold closed_decl; cbn.
+  apply alli_ext; intros i [? [] ?]; unfold closed_decl, test_decl; cbn.
   all: now rewrite !closedn_subst_instance.
 Qed.
 
-Lemma closedn_ctx_spec k Γ : closedn_ctx k Γ <~> Alli closed_decl k (List.rev Γ).
+Lemma closedn_ctx_spec k Γ : closedn_ctx k Γ <~> Alli (fun k => closed_decl k) k (List.rev Γ).
 Proof.
   split.
   - induction Γ as [|d ?].
@@ -577,8 +582,8 @@ Proof.
       repeat constructor. now rewrite List.rev_length.
   - induction Γ in k |- * => //.
     simpl. move/Alli_app => [clΓ cld].
-    simpl. depelim cld. rewrite List.rev_length Nat.add_comm in i.
-    now rewrite closedn_ctx_cons IHΓ.
+    simpl. depelim cld. rewrite List.rev_length in i.
+    now rewrite i IHΓ.
 Qed.
 
 Lemma closedn_smash_context (Γ : context) n :
@@ -671,11 +676,8 @@ Proof.
   apply typing_ind_env; intros * wfΣ Γ wfΓ *; intros; cbn in *;
   rewrite -> ?andb_and in *; try solve [intuition auto].
 
-  - induction X0; cbn; auto.
-    rewrite (closedn_ctx_app _ Γ [_]); simpl.
-    rewrite IHX0 /= closedn_ctx_tip /closed_decl /=.
-    now move/andP: p => [] -> _.
-    now rewrite closedn_ctx_cons /= IHX0 /= /closed_decl /= p.
+  - induction X0; auto; rewrite closedn_ctx_cons /= IHX0 /= //.
+    now move/andP: p => [] /= -> _.
 
   - pose proof (nth_error_Some_length H).
     elim (Nat.ltb_spec n #|Γ|); intuition auto. all: try lia. clear H1.
@@ -686,9 +688,9 @@ Proof.
     rewrite -Nat.add_1_r. apply closedn_lift.
     rewrite closedn_ctx_cons in H0. move/andP: H0 => [_ ca].
     destruct a as [na [b|] ty]. simpl in ca.
-    rewrite /closed_decl /= in ca.
+    rewrite /test_decl /= in ca.
     now move/andP: ca => [_ cty].
-    now rewrite /closed_decl /= in ca.
+    now rewrite /test_decl /= in ca.
     simpl.
     rewrite -Nat.add_1_r. 
     rewrite -(simpl_lift _ (S n) 0 1 0); try lia.
@@ -704,7 +706,7 @@ Proof.
   - rewrite closedn_subst_instance.
     eapply lookup_on_global_env in X0; eauto.
     destruct X0 as [Σ' [HΣ' IH]].
-    repeat red in IH. destruct decl, cst_body. simpl in *.
+    repeat red in IH. destruct decl, cst_body0. simpl in *.
     rewrite -> andb_and in IH. intuition auto.
     eauto using closed_upwards with arith.
     simpl in *.
@@ -733,23 +735,28 @@ Proof.
       rewrite arities_context_length in Hs.
       eauto using closed_upwards with arith.
 
-  - destruct H2 as [clret _].
-    destruct H5 as [clc clty].
+  - destruct H3 as [clret _].
+    destruct H6 as [clc clty].
     rewrite closedn_mkApps in clty. simpl in clty.
     rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
     rewrite app_context_length in clret.
-    red in H7. eapply Forall2_All2 in H7.
-    eapply All2i_All2_mix_left in X2; eauto.
+    red in H8. eapply Forall2_All2 in H8.
+    eapply All2i_All2_mix_left in X3; eauto.
     intuition auto. 
-    + unfold test_predicate. simpl. rtoProp; eauto.
-      now rewrite (case_predicate_context_length H1) in clret.
-    + unfold test_branch. clear H7. solve_all.
-      move/andP: a0 => [].
-      rewrite app_context_length case_branch_context_length //.
+    + unfold test_predicate_k. simpl. rtoProp; eauto.
+      rewrite (case_predicate_context_length H1) in clret; repeat split; tas.
+      rewrite closedn_ctx_app in H2.
+      now move/andP: H2 => [].
+    + unfold test_branch_k. clear H8. solve_all.
+      * rewrite closedn_ctx_app in a1.
+        now move/andP: a1 => [].
+      * admit.
+         (* eapply context_relation_app_inv_l in b as [_ conv] => //.
+        move/andP: a0 => []. *)
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
-      rewrite closedn_ctx_app in H3.
-      now move/andP: H3 => [].
+      rewrite closedn_ctx_app in H4.
+      now move/andP: H4 => [].
       now rewrite Nat.add_comm.
       rewrite forallb_app. simpl. now rewrite clc clinds.
 

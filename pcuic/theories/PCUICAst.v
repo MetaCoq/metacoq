@@ -552,6 +552,7 @@ Definition eqb_predicate (eqterm : term -> term -> bool) (p p' : predicate term)
 (* The [map] rewrite database gathers all the map composition rewrite lemmas
   on these types. *)
 Hint Rewrite map_map_compose @compose_map_def map_length : map.
+Hint Rewrite @forallb_map : map.
 
 Lemma map_predicate_map_predicate
       {term term' term''}
@@ -1058,6 +1059,20 @@ Proof.
   intros Ha ht Hfg. revert ht.
   induction Ha; simpl; auto.
   intros [[hty hbod]%andb_and hl]%andb_and.
+  rewrite IHHa; auto; f_equal.
+  destruct p0 as [Hty Hbody].
+  unfold test_decl; destruct x ; cbn in *; f_equal; eauto.
+  destruct decl_body; cbn in *; auto;
+  rewrite !Hfg; auto.
+Qed.
+
+Lemma test_context_k_eqP_eq_spec {A} {P : A -> Type} (p q : nat -> A -> bool) k k' {ctx} :
+  All (ondecl P) ctx ->
+  (forall i (x : A), P x -> p (i + k) x = q (i + k') x) ->
+  test_context_k p k ctx = test_context_k q k' ctx.
+Proof.
+  intros Ha Hfg.
+  induction Ha; simpl; auto.
   rewrite IHHa; auto; f_equal.
   destruct p0 as [Hty Hbody].
   unfold test_decl; destruct x ; cbn in *; f_equal; eauto.

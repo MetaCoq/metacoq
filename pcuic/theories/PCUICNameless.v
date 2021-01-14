@@ -949,6 +949,15 @@ Proof.
     + assumption.
 Qed.
 
+Lemma All_mapi_spec {A B} {P : A -> Type} {l} {f g : nat -> A -> B} {n} :
+  All P l -> (forall n x, P x -> f n x = g n x) ->
+  mapi_rec f l n = mapi_rec g l n.
+Proof.
+  induction 1 in n |- *; simpl; trivial.
+  intros Heq. rewrite Heq; f_equal; auto.
+Qed.
+Hint Resolve All_mapi_spec : all.
+
 Lemma nl_lift :
   forall n k t,
     nl (lift n k t) = lift n k (nl t).
@@ -965,11 +974,17 @@ Proof.
   - rewrite /map_predicate_k /= map_length.
     f_equal; auto.
     * unfold nl_predicate, map_predicate; simpl; f_equal; solve_all.
-      rewrite !map_map_compose; solve_all.
+      eapply All_mapi_spec; [tea|].
+      intros i x []. rewrite /map_decl_anon /map_decl /shiftf /=.
+      f_equal; auto. rewrite !option_map_two.
+      destruct (decl_body x) => /= //. f_equal; auto.
     * induction X0. 1: reflexivity.
       simpl. f_equal. 2: assumption.
-      rewrite map_length.
-      unfold nl_branch, map_branch. cbn. f_equal. auto.
+      unfold nl_branch, map_branch_k. cbn. f_equal; auto; solve_all.
+      eapply All_mapi_spec; [tea|].
+      intros i' x' []. rewrite /map_decl_anon /map_decl /shiftf /=.
+      f_equal; auto. rewrite !option_map_two.
+      destruct (decl_body x') => /= //. f_equal; auto.
   - f_equal. rewrite map_length.
     generalize (#|m| + k). intro l.
     induction X.
@@ -1054,8 +1069,12 @@ Proof.
       * eapply p.
       * eapply IHAll.
   - f_equal; auto.
-    * unfold nl_predicate, map_predicate; simpl; f_equal; 
-      rewrite ?map_map_compose ?map_length; solve_all.
+    * unfold nl_predicate, map_predicate_k; simpl; f_equal; 
+      rewrite ?map_map_compose ?map_length.
+      + solve_all.
+      + solve_all. rewrite /shiftf. solve_all. destruct X as [? [? ?]].
+
+
     * induction X0. 1: reflexivity.
       simpl. f_equal. 2: assumption.
       rewrite map_length.
@@ -1065,7 +1084,7 @@ Proof.
     induction X.
     + reflexivity.
     + simpl. f_equal.
-      * unfold map_def_anon, map_def. simpl.
+      * unfold map_def_anon, ma.p_def. simpl.
         f_equal. all: eapply p.
       * assumption.
   - f_equal. rewrite map_length.

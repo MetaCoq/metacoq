@@ -41,7 +41,7 @@ Proof.
   induction H; constructor; auto.
 Qed.
 
-Lemma context_relation_app {P} Γ Γ' Δ Δ' :
+Lemma context_relation_app_inv {P} Γ Γ' Δ Δ' :
   #|Δ| = #|Δ'| ->
   context_relation P (Γ ,,, Δ) (Γ' ,,, Δ') ->
   context_relation P Γ Γ' * context_relation (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ'.
@@ -56,7 +56,24 @@ Proof.
   constructor; auto.
 Qed.
 
-Lemma context_relation_app_inv {P} Γ Γ' Δ Δ' :
+Lemma context_relation_app_inv_l {P} Γ Γ' Δ Δ' :
+  #|Γ| = #|Γ'| ->
+  context_relation P (Γ ,,, Δ) (Γ' ,,, Δ') ->
+  context_relation P Γ Γ' * context_relation (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ'.
+Proof.
+  intros H.
+  induction Δ in H, Δ', Γ, Γ' |- *;
+  destruct Δ'; try discriminate.
+  intuition auto. constructor.
+  intros H'; generalize (context_relation_length H'). simpl. len. lia.
+  intros H'; generalize (context_relation_length H'). simpl. len. lia.
+  intros H'. simpl in H.
+  specialize (IHΔ Γ Γ' Δ' ltac:(lia)).
+  depelim H'; specialize (IHΔ H'); intuition auto;
+  constructor; auto.
+Qed.
+
+Lemma context_relation_app {P} Γ Γ' Δ Δ' :
   #|Δ| = #|Δ'| ->
   context_relation P Γ Γ' -> context_relation (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ' ->
   context_relation P (Γ ,,, Δ) (Γ' ,,, Δ').

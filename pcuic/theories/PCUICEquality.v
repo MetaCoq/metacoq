@@ -100,6 +100,16 @@ Definition compare_decl (le : bool) (eq_term leq_term : term -> term -> Type) (d
   | _, _ => False
   end.
 
+Lemma compare_decl_impl le eq_term leq_term eq_term' leq_term' :
+  RelationClasses.subrelation eq_term eq_term' ->
+  RelationClasses.subrelation leq_term leq_term' ->
+  CRelationClasses.subrelation (compare_decl le eq_term leq_term)
+    (compare_decl le eq_term' leq_term').
+Proof.
+  intros he hle [na [b|] ty] [na' [b'|] ty']; rewrite /compare_decl /= //;
+    destruct le; intuition auto.
+Qed.
+
 Definition bcompare_decl (le : bool) (eq_term leq_term : term -> term -> bool) (d d' : context_decl) : bool :=
   match d, d' with
   | {| decl_name := na; decl_body := None; decl_type := T |},

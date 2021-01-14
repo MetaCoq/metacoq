@@ -1069,22 +1069,26 @@ Proof.
       * eapply p.
       * eapply IHAll.
   - f_equal; auto.
-    * unfold nl_predicate, map_predicate_k; simpl; f_equal; 
-      rewrite ?map_map_compose ?map_length.
-      + solve_all.
-      + solve_all. rewrite /shiftf. solve_all. destruct X as [? [? ?]].
-
-
+    * unfold nl_predicate, map_predicate_k; simpl; f_equal;
+      rewrite ?map_map_compose ?map_length; solve_all.
+      eapply All_mapi_spec; eauto.
+      rewrite /ondecl /map_decl_anon /map_decl /=. intuition auto.
+      rewrite !option_map_two; f_equal; solve_all.
+      destruct (decl_body x) => /= //. f_equal; eauto.
     * induction X0. 1: reflexivity.
       simpl. f_equal. 2: assumption.
-      rewrite map_length.
-      unfold nl_branch, map_branch. cbn. f_equal. auto.
+      unfold nl_branch, map_branch_k. cbn.
+      rewrite map_length. f_equal; solve_all.
+      eapply All_mapi_spec; eauto.
+      rewrite /ondecl /map_decl_anon /map_decl /=. intuition auto.
+      rewrite !option_map_two; f_equal; solve_all.
+      destruct (decl_body x0) => /= //. f_equal; eauto.
   - f_equal. rewrite map_length.
     generalize (#|m| + k). intro l.
     induction X.
     + reflexivity.
     + simpl. f_equal.
-      * unfold map_def_anon, ma.p_def. simpl.
+      * unfold map_def_anon, map_def. simpl.
         f_equal. all: eapply p.
       * assumption.
   - f_equal. rewrite map_length.
@@ -1102,7 +1106,7 @@ Lemma nl_eq_decl {cf:checker_flags} :
     eq_decl le Σ φ d d' ->
     eq_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
-  intros le Σ φ d d' [[hann h1] h2].
+  intros le Σ φ d d'.
   split.
   - simpl. destruct d as [? [?|] ?], d' as [? [?|] ?].
     all: cbn in *.

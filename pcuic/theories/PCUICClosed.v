@@ -750,9 +750,9 @@ Proof.
     + unfold test_branch_k. clear H8. solve_all.
       * rewrite closedn_ctx_app in a1.
         now move/andP: a1 => [].
-      * admit.
-         (* eapply context_relation_app_inv_l in b as [_ conv] => //.
-        move/andP: a0 => []. *)
+      * eapply context_relation_app_inv_l in b as [_ conv] => //.
+        len in H8.
+        now rewrite (context_relation_length conv).
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
       rewrite closedn_ctx_app in H4.
@@ -800,7 +800,7 @@ Proof.
   intros X X0.
   simpl in *. induction X0; constructor; auto.
   clear IHX0. destruct d; simpl.
-  - destruct c; simpl. destruct cst_body; simpl in *; now eapply X.
+  - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
   - red in o. simpl in *.
     destruct o0 as [onI onP onNP].
     constructor; auto.
@@ -861,7 +861,6 @@ Proof.
   intros cl Hfg.
   induction l in n, cl, Hfg |- *; simpl; try congruence.
   intros. rewrite Hfg; simpl; try lia.
-  simpl in cl.
   rewrite closedn_ctx_cons in cl.
   move/andP: cl => [cll clr]. eapply closed_decl_upwards; eauto. lia.
   f_equal.
@@ -1079,15 +1078,15 @@ Lemma closedn_ctx_lift n k k' Γ : closedn_ctx k Γ ->
   closedn_ctx (n + k) (lift_context n k' Γ).
 Proof.
   induction Γ as [|d ?]; cbn; auto; rewrite lift_context_snoc !closedn_ctx_cons /=;
-    move/andP=> [clΓ cld]; rewrite IHΓ //;
+    move/andP=> [cld clΓ]; rewrite IHΓ //;
   autorewrite with len in cld.
-  move: cld;  rewrite /closed_decl. simpl.
+  move: cld; rewrite /test_decl. simpl.
   move/andP=> [clb clt]; apply andb_and; split.
   destruct (decl_body d) => /= //. simpl in clb |- *.
   eapply (closedn_lift n) in clb.
-  autorewrite with len. now rewrite -Nat.add_assoc Nat.add_comm.
+  autorewrite with len. now rewrite Nat.add_comm (Nat.add_comm n) Nat.add_assoc.
   eapply (closedn_lift n) in clt.
-  autorewrite with len. now rewrite -Nat.add_assoc Nat.add_comm.
+  autorewrite with len. now rewrite Nat.add_comm (Nat.add_comm n) Nat.add_assoc.
 Qed.
 
 Lemma closedn_ctx_subst k k' s Γ : 
@@ -1095,10 +1094,10 @@ Lemma closedn_ctx_subst k k' s Γ :
   forallb (closedn k) s ->
   closedn_ctx (k + k') (subst_context s k' Γ).
 Proof.
-  induction Γ as [|d ?] in k' |- *; simpl; auto; rewrite subst_context_snoc !closedn_ctx_cons /=;
+  induction Γ as [|d ?] in k' |- *; auto; rewrite subst_context_snoc !closedn_ctx_cons /=;
   move/andP=> [clΓ cld]  cls; rewrite IHΓ //;
   autorewrite with len in cld.
-  move: cld;  rewrite /closed_decl. simpl.
+  move: cld; rewrite /test_decl. simpl.
   move/andP=> [clb clt]; apply andb_and; split.
   destruct (decl_body d) => /= //. simpl in clb |- *.
   rewrite -Nat.add_assoc [#|s| + _]Nat.add_comm Nat.add_assoc in clb.
@@ -1123,8 +1122,7 @@ Lemma closedn_extended_subst_gen Γ k k' :
   closedn_ctx k Γ -> 
   forallb (closedn (k' + k + context_assumptions Γ)) (extended_subst Γ k').
 Proof.
-  induction Γ as [|[? [] ?] ?] in k, k' |- *; simpl; auto;
-  rewrite ?closedn_ctx_cons;
+  induction Γ as [|[? [] ?] ?] in k, k' |- *; auto; rewrite ?closedn_ctx_cons /=;
    move/andP => [clΓ /andP[clb clt]].
   - rewrite IHΓ //.
     epose proof (closedn_subst (extended_subst Γ k') (k' + k + context_assumptions Γ) 0).
@@ -1323,6 +1321,19 @@ Proof.
   intros decl.
   now eapply declared_projection_closed in decl.
 Qed.
+
+Definition onctx_k (P : nat -> term -> Type) k (ctx : context) :=
+  Alli (fun i d => ondecl (P (Nat.pred #|ctx| - i + k)) d) 0 ctx.
+
+Definition tCasePredProp_k
+            (P : nat -> term -> Type)
+            k (p : predicate term) :=
+  All (P k) p.(pparams) × onctx_k P k p.(pcontext) ×
+  P (#|p.(pcontext)| + k) p.(preturn).
+
+Definition tCaseBrsProp_k (P : nat -> term -> Type) k (l : list (branch term)) :=
+  All (fun x => onctx_k P k (bcontext x) × P (#|x.(bcontext)| + k) (bbody x)) l.
+  
 Lemma term_closedn_list_ind :
   forall (P : nat -> term -> Type), 
     (forall k (n : nat), n < k -> P k (tRel n)) ->
@@ -1337,9 +1348,10 @@ Lemma term_closedn_list_ind :
     (forall k s (u : list Level.t), P  k (tConst s u)) ->
     (forall k (i : inductive) (u : list Level.t), P k (tInd i u)) ->
     (forall k (i : inductive) (n : nat) (u : list Level.t), P k (tConstruct i n u)) ->
-    (forall k (ci : case_info) (p : Environment.predicate term),
-        tCasePredProp (P k) (P (#|p.(pcontext)| + k)) p -> forall t0 : term, P k t0 -> forall l : list (branch term),
-        All (fun x => P (#|bcontext x| + k) (bbody x)) l -> P k (tCase ci p t0 l)) ->
+    (forall k (ci : case_info) (p : predicate term),
+        tCasePredProp_k P k p -> 
+        forall t0 : term, P k t0 -> forall l : list (branch term),
+        tCaseBrsProp_k P k l -> P k (tCase ci p t0 l)) ->
     (forall k (s : projection) (t : term), P k t -> P k (tProj s t)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tFix m n)) ->
     (forall k (m : mfixpoint term) (n : nat), tFixProp (P k) (P (#|fix_context m| + k)) m -> P k (tCoFix m n)) ->
@@ -1356,51 +1368,84 @@ Proof.
             try move/andP: clt => [cl1 cl2]; 
             try move/andP: cl1 => [cl1 cl1'];
             try solve[apply auxt; auto];
-              simpl in *. now apply Nat.ltb_lt in clt. 
-  revert l clt.
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt. simpl in clt. now move/andP: clt  => [clt cll].
-  now  move/andP: clt => [clt cll].
+              simpl in *.
+              
+  - now apply Nat.ltb_lt in clt. 
+  - revert l clt.
+    fix auxl' 1.
+    destruct l; constructor; [|apply auxl'].
+    apply auxt. simpl in clt. now move/andP: clt  => [clt cll].
+    now move/andP: clt => [clt cll].
 
-  red.
-  move/andP: cl1 => /= [clpars clret].
-  split.
-  revert clpars. generalize (pparams p).
-  fix auxl' 1.
-  destruct l; constructor; [|apply auxl'].
-  apply auxt. now move/andP: clpars => [].
-  now move/andP: clpars => [].
-  now apply auxt.
+  - red. move/andP: cl1 => /= [clpars clret].
+    split.
+    * revert clpars. generalize (pparams p).
+      fix auxl' 1.
+      destruct l; [constructor|].
+      move=>  /andP []. simpl. move=> /= /andP [] clt cll clctx.
+      constructor; [|apply auxl'].
+      apply auxt => //. rewrite cll clctx //.
+    * move: clpars => /andP [] clpars clctx.
+      split.
+      revert clctx.
+      unfold onctx_k.
+      generalize (pcontext p).
+      fix auxl' 1.
+      destruct l; [constructor|]. simpl.
+      move=>  /andP []. simpl. move=> /= /andP [] clt cll clctx.
+      destruct c as [na [b|] ty]; simpl in *;
+      constructor; simpl.
+      split; apply auxt; rewrite Nat.sub_0_r //.
+      eapply Alli_shift, Alli_impl; eauto. simpl.
+      intros n x. now replace (Nat.pred #|l| - n + k) with (#|l| - S n + k) by lia.
+      rewrite Nat.sub_0_r //. split; auto. exact tt.
+      eapply Alli_shift, Alli_impl; eauto. simpl.
+      intros n x. now replace (Nat.pred #|l| - n + k) with (#|l| - S n + k) by lia.
+      apply auxt => //.
+  - unfold tCaseBrsProp_k.
+    revert brs cl2. clear cl1 cl1'.
+    rewrite /test_branch_k.
+    fix auxl' 1.
+    destruct brs; constructor; [|apply auxl'].
+    simpl in cl2. move/andP: cl2  => [/andP [clctx clt] cll].
+    split.
+    move: clctx.
+    generalize (bcontext b).
+    fix auxl'' 1.
+    destruct l; [constructor|]. simpl.
+    move=>  /andP []. simpl. move=> /= /andP [] clt' cll' clctx.
+    destruct c as [na [bod|] ty]; simpl in *;
+    constructor; simpl.
+    split; apply auxt; rewrite Nat.sub_0_r //.
+    eapply Alli_shift, Alli_impl; eauto. eapply auxl'' => //. simpl.
+    intros n x. now replace (Nat.pred #|l| - n + k) with (#|l| - S n + k) by lia.
+    repeat split. rewrite Nat.sub_0_r. apply auxt => //.
+    eapply Alli_shift, Alli_impl; eauto. eapply auxl'' => //. simpl.
+    intros n x. now replace (Nat.pred #|l| - n + k) with (#|l| - S n + k) by lia.
+    eapply auxt => //.
+    simpl in cl2. now move/andP: cl2 => [].
 
-  revert brs cl2. clear cl1 cl1'.
-  fix auxl' 1.
-  destruct brs; constructor; [|apply auxl'].
-  simpl in cl2. move/andP: cl2  => [clt cll].
-  apply auxt, clt. move/andP: cl2  => [clt cll].
-  apply cll.
+  - red.
+    rewrite fix_context_length.
+    revert clt.
+    generalize (#|mfix|).
+    revert mfix.
+    fix auxm 1. 
+    destruct mfix; intros; constructor.
+    simpl in clt. move/andP: clt  => [clt cll].
+    simpl in clt. move/andP: clt. intuition auto.
+    move/andP: clt => [cd cmfix]. apply auxm; auto.
 
-  red.
-  rewrite fix_context_length.
-  revert clt.
-  generalize (#|mfix|).
-  revert mfix.
-  fix auxm 1. 
-  destruct mfix; intros; constructor.
-  simpl in clt. move/andP: clt  => [clt cll].
-  simpl in clt. move/andP: clt. intuition auto.
-  move/andP: clt => [cd cmfix]. apply auxm; auto.
-
-  red.
-  rewrite fix_context_length.
-  revert clt.
-  generalize (#|mfix|).
-  revert mfix.
-  fix auxm 1. 
-  destruct mfix; intros; constructor.
-  simpl in clt. move/andP: clt  => [clt cll].
-  simpl in clt. move/andP: clt. intuition auto.
-  move/andP: clt => [cd cmfix]. apply auxm; auto.
+  - red.
+    rewrite fix_context_length.
+    revert clt.
+    generalize (#|mfix|).
+    revert mfix.
+    fix auxm 1. 
+    destruct mfix; intros; constructor.
+    simpl in clt. move/andP: clt  => [clt cll].
+    simpl in clt. move/andP: clt. intuition auto.
+    move/andP: clt => [cd cmfix]. apply auxm; auto.
 Defined.
 
 Lemma term_noccur_between_list_ind :
@@ -1417,10 +1462,10 @@ Lemma term_noccur_between_list_ind :
     (forall k n s (u : list Level.t), P k n (tConst s u)) ->
     (forall k n (i : inductive) (u : list Level.t), P k n (tInd i u)) ->
     (forall k n (i : inductive) (c : nat) (u : list Level.t), P k n (tConstruct i c u)) ->
-    (forall k n (ci : case_info) (p : Environment.predicate term),
-        tCasePredProp (P k n) (P (#|p.(pcontext)| + k) n) p -> forall t0 : term, P k n t0 -> 
+    (forall k n (ci : case_info) (p : predicate term),
+        tCasePredProp_k (fun k' => P k' n) k p -> forall t0 : term, P k n t0 -> 
         forall l : list (branch term),
-        All (fun b => P (#|b.(bcontext)| + k) n b.(bbody)) l -> P k n (tCase ci p t0 l)) ->
+        tCaseBrsProp_k (fun k' => P k' n) k l -> P k n (tCase ci p t0 l)) ->
     (forall k n (s : projection) (t : term), P k n t -> P k n (tProj s t)) ->
     (forall k n (m : mfixpoint term) (i : nat), tFixProp (P k n) (P (#|fix_context m| + k) n) m -> P k n (tFix m i)) ->
     (forall k n (m : mfixpoint term) (i : nat), tFixProp (P k n) (P (#|fix_context m| + k) n) m -> P k n (tCoFix m i)) ->
@@ -1454,16 +1499,41 @@ Proof.
     * revert clpars. generalize (pparams p).
       fix auxl' 1.
       destruct l; constructor; [|apply auxl'].
-      apply auxt. now move/andP: clpars  => [clt cll].
-      now move/andP: clpars => [clt cll].
-    * now apply auxt.
+      apply auxt.
+      now move/andP: clpars  => [/andP [clt _] cll].
+      simpl in clpars; now move/andP: clpars => [/andP [_ ->] cll].
+    * split; [|now apply auxt].
+      move/andP: clpars => [] _.
+      clear -auxt.
+      unfold onctx, ondecl.
+      generalize (pcontext p).
+      rewrite /onctx_k.
+      fix auxl' 1; destruct l; [constructor|]; simpl; rewrite ?Nat.sub_0_r.
+      move/andP => [/andP [tdef tty] tl]. constructor.
+      + rewrite Nat.sub_0_r. simpl. split; [apply auxt|]; tas.
+        destruct (decl_body c); simpl in *; auto. exact tt.
+      + eapply Alli_shift, Alli_impl; eauto. simpl.
+        intros n' x.
+        now replace (Nat.pred #|l| - n' + k) with (#|l| - S n' + k).
 
   - revert brs cl2. clear cl1 cl1'.
+    unfold test_branch_k, tCaseBrsProp_k.
     fix auxl' 1.
     destruct brs; constructor; [|apply auxl'].
-    simpl in cl2. move/andP: cl2  => [clt cll].
-    apply auxt, clt. move/andP: cl2  => [clt cll].
-    apply cll.
+    simpl in cl2. move/andP: cl2  => [/andP [clctx clb] cll].
+    split.
+    * unfold onctx_k, ondecl.
+      revert clctx.
+      generalize (bcontext b).
+      fix auxl'' 1; destruct l; [constructor|]; simpl; rewrite ?Nat.sub_0_r.
+      move/andP => [/andP [tdef tty] tl]. constructor.
+      + rewrite Nat.sub_0_r. simpl. split; [apply auxt|]; tas.
+        destruct (decl_body c); simpl in *; auto. exact tt.
+      + eapply Alli_shift, Alli_impl; eauto. simpl.
+        intros n' x.
+        now replace (Nat.pred #|l| - n' + k) with (#|l| - S n' + k).
+    * eapply auxt => //.
+    * now simpl in cl2; move/andP: cl2 => [].
 
   - red.
     rewrite fix_context_length.

@@ -17,7 +17,7 @@ Lemma test_context_k_eq (p : nat -> term -> bool) n ctx :
   test_context_k p n ctx = alli (fun k d => test_decl (p (n + k)) d) 0 (List.rev ctx).
 Proof.
   induction ctx; simpl; auto.
-  rewrite IHctx alli_app /= andb_comm andb_true_r. f_equal.
+  rewrite IHctx alli_app /= andb_comm andb_true_r andb_comm. f_equal.
   len. now rewrite Nat.add_comm.
 Qed.
 
@@ -281,7 +281,7 @@ Proof.
     rewrite !Nat.add_assoc in hret.
     specialize (i (#|pcontext p| + k')).
     rewrite Nat.add_assoc (Nat.add_comm k) in i.
-    simpl in *. red in o; unfold test_predicate_k. simpl. solve_all.
+    simpl in *.  unfold test_predicate_k. simpl. solve_all.
     * rewrite test_context_k_mapi /shiftf in H2. solve_all.
       rewrite (Nat.add_comm i0) -(Nat.add_assoc k); eauto.
       eapply H3.
@@ -377,10 +377,10 @@ Proof.
   now rewrite IHal /= /test_decl /=.
   intros.
   unfold app_context in *. subst Γ'.
-  rewrite closedn_ctx_cons /=.
   specialize (IHΓ (ctx ++ a :: Γ) wfΓ' (ctx ++ [a])).
   rewrite -app_assoc in IHΓ. specialize (IHΓ eq_refl al).
-  now rewrite closedn_ctx_app /= Nat.add_1_r andb_true_r /= andb_assoc in IHΓ.
+  rewrite closedn_ctx_app /= Nat.add_1_r andb_assoc in IHΓ.
+  now rewrite closedn_ctx_cons /=.
 Qed.
 
 Lemma closedn_mkProd_or_LetIn n d T :
@@ -1078,7 +1078,7 @@ Lemma closedn_ctx_lift n k k' Γ : closedn_ctx k Γ ->
   closedn_ctx (n + k) (lift_context n k' Γ).
 Proof.
   induction Γ as [|d ?]; cbn; auto; rewrite lift_context_snoc !closedn_ctx_cons /=;
-    move/andP=> [cld clΓ]; rewrite IHΓ //;
+    move/andP=> [clΓ cld]; rewrite IHΓ //;
   autorewrite with len in cld.
   move: cld; rewrite /test_decl. simpl.
   move/andP=> [clb clt]; apply andb_and; split.
@@ -1392,7 +1392,7 @@ Proof.
       generalize (pcontext p).
       fix auxl' 1.
       destruct l; [constructor|]. simpl.
-      move=>  /andP []. simpl. move=> /= /andP [] clt cll clctx.
+      move=>  /andP []. simpl. move=> /= clctx /andP [] clt cll.
       destruct c as [na [b|] ty]; simpl in *;
       constructor; simpl.
       split; apply auxt; rewrite Nat.sub_0_r //.
@@ -1413,7 +1413,7 @@ Proof.
     generalize (bcontext b).
     fix auxl'' 1.
     destruct l; [constructor|]. simpl.
-    move=>  /andP []. simpl. move=> /= /andP [] clt' cll' clctx.
+    move=>  /andP []. simpl. move=> /= clctx /andP [] clt' cll'.
     destruct c as [na [bod|] ty]; simpl in *;
     constructor; simpl.
     split; apply auxt; rewrite Nat.sub_0_r //.
@@ -1505,11 +1505,11 @@ Proof.
     * split; [|now apply auxt].
       move/andP: clpars => [] _.
       clear -auxt.
-      unfold onctx, ondecl.
+      unfold ondecl.
       generalize (pcontext p).
       rewrite /onctx_k.
       fix auxl' 1; destruct l; [constructor|]; simpl; rewrite ?Nat.sub_0_r.
-      move/andP => [/andP [tdef tty] tl]. constructor.
+      move/andP => [] tl /andP [tdef tty]. constructor.
       + rewrite Nat.sub_0_r. simpl. split; [apply auxt|]; tas.
         destruct (decl_body c); simpl in *; auto. exact tt.
       + eapply Alli_shift, Alli_impl; eauto. simpl.
@@ -1526,7 +1526,7 @@ Proof.
       revert clctx.
       generalize (bcontext b).
       fix auxl'' 1; destruct l; [constructor|]; simpl; rewrite ?Nat.sub_0_r.
-      move/andP => [/andP [tdef tty] tl]. constructor.
+      move/andP => [] tl /andP [tdef tty]. constructor.
       + rewrite Nat.sub_0_r. simpl. split; [apply auxt|]; tas.
         destruct (decl_body c); simpl in *; auto. exact tt.
       + eapply Alli_shift, Alli_impl; eauto. simpl.

@@ -161,7 +161,7 @@ Section map_branch_k.
   Proof. reflexivity. Qed.
   
   Lemma map_k_bcontext k (b : branch term) :
-    mapi_context (fun k' => f (k' + k)) (bcontext b) = bcontext (map_branch_k k b).
+    mapi_context (shiftf f k) (bcontext b) = bcontext (map_branch_k k b).
   Proof. reflexivity. Qed.
 End map_branch_k.
 
@@ -581,11 +581,8 @@ Hint Rewrite @map_predicate_id : map.
 
 Definition ondecl {A} (P : A -> Type) (d : BasicAst.context_decl A) :=
   P d.(decl_type) × option_default P d.(decl_body) unit. 
-
-Arguments ondecl {A} P /d.
-
-Definition onctx {A} (P : A -> Type) (d : list (BasicAst.context_decl A)) :=
-  All (ondecl P) d.
+  
+Notation onctx P := (All (ondecl P)).
 
 Definition tCasePredProp {term}
             (Pparams Preturn : term -> Type)
@@ -754,6 +751,11 @@ Proof.
 Qed.
 Hint Rewrite map_mapi_context : map.
 
+Lemma shiftf0 {A B} (f : nat -> A -> B) : shiftf f 0 =2 f.
+Proof. intros x. unfold shiftf. now rewrite Nat.add_0_r. Qed.
+
+Hint Rewrite @shiftf0 : map.
+
 Lemma map_predicate_k_map_predicate_k 
   (finst finst' : Instance.t -> Instance.t)
   (f f' : nat -> term -> term)
@@ -764,8 +766,7 @@ Proof.
   unfold map_predicate, map_predicate_k. destruct p; cbn.
   f_equal.
   now rewrite map_map.
-  rewrite !mapi_context_fold, fold_context_compose.
-  unfold shiftf. now setoid_rewrite Nat.add_0_r.
+  now rewrite !mapi_context_fold, fold_context_compose, shiftf0.
   now len.
 Qed.
 Hint Rewrite map_predicate_k_map_predicate_k : map.
@@ -822,8 +823,7 @@ Proof.
   unfold map_branch, map_branch_k; destruct b; cbn. len.
   f_equal.
   rewrite !mapi_context_fold.
-  rewrite !fold_context_compose; unfold shiftf.
-  now setoid_rewrite Nat.add_0_r.
+  now rewrite !fold_context_compose, shiftf0.
 Qed.
 Hint Rewrite map_branch_k_map_branch_k : map.
 
@@ -1042,7 +1042,7 @@ Lemma mapi_context_eqP_test_id_spec {A} {P : A -> Type} (p : nat -> A -> bool)
 Proof.
   intros Ha ht Hfg. revert ht.
   induction Ha; simpl; auto.
-  intros [[hty hbod]%andb_and hl]%andb_and.
+  intros [hl [hty hbod]%andb_and]%andb_and.
   rewrite IHHa; auto; f_equal.
   destruct p0 as [Hty Hbody].
   unfold map_decl; destruct x ; cbn in *; f_equal; eauto.
@@ -1058,11 +1058,11 @@ Lemma test_context_k_eqP_id_spec {A} {P : A -> Type} (p q : nat -> A -> bool) k 
 Proof.
   intros Ha ht Hfg. revert ht.
   induction Ha; simpl; auto.
-  intros [[hty hbod]%andb_and hl]%andb_and.
-  rewrite IHHa; auto; f_equal.
+  intros [hl [hty hbod]%andb_and]%andb_and.
+  rewrite IHHa; simpl; auto.
   destruct p0 as [Hty Hbody].
-  unfold test_decl; destruct x ; cbn in *; f_equal; eauto.
-  destruct decl_body; cbn in *; auto;
+  unfold test_decl; destruct x ; cbn in *; eauto.
+  destruct decl_body; cbn in *; auto.
   rewrite !Hfg; auto.
 Qed.
 
@@ -1078,6 +1078,40 @@ Proof.
   unfold test_decl; destruct x ; cbn in *; f_equal; eauto.
   destruct decl_body; cbn in *; auto;
   rewrite !Hfg; auto.
+Qed.
+
+Lemma test_context_k_eq_spec (p q : nat -> term -> bool) k k' {ctx} :
+  (p =2 q) ->
+  k = k' ->
+  test_context_k p k ctx = test_context_k q k' ctx.
+Proof.
+  intros Hfg <-.
+  induction ctx as [|[na [b|] ty] ctx]; simpl; auto; now rewrite IHctx, Hfg.
+Qed.
+
+Instance test_context_k_Proper : Proper (`=2` ==> Logic.eq ==> `=1`) (@test_context_k term).
+Proof.
+  intros f g Hfg k k' <- ctx.
+  now apply test_context_k_eq_spec.
+Qed.
+
+Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
+Proof.
+  intros f g Hfg x y ->. now rewrite Hfg.
+Qed.
+
+Instance test_predicate_k_Proper : Proper (`=1` ==> `=2` ==> Logic.eq ==> `=1`) (@test_predicate_k term).
+Proof.
+  intros hi hi' eqhi f g Hfg k k' <- ctx.
+  unfold test_predicate_k. rewrite eqhi.
+  now setoid_rewrite Hfg.
+Qed.
+
+Instance test_branch_k_Proper : Proper (`=2` ==> Logic.eq ==> `=1`) (@test_branch_k term).
+Proof.
+  intros f g Hfg k k' <- ctx.
+  unfold test_branch_k.
+  now setoid_rewrite Hfg.
 Qed.
 
 Lemma case_brs_map_spec_cond {A B} {P : A -> Type} p {l} {f g : A -> B} :
@@ -1142,8 +1176,8 @@ Proof.
   intros Hc tc HP. revert tc.
   induction Hc; simpl; auto.
   destruct p0.
-  intros [[pbod pty]%andb_and pl]%andb_and.
-  rewrite (IHHc pl), andb_true_r.
+  intros [pl [pbod pty]%andb_and]%andb_and.
+  rewrite (IHHc pl); simpl.
   unfold test_decl.
   rewrite (HP _ p0 pty), andb_true_r; simpl.
   destruct (decl_body x); simpl in *; eauto.

@@ -310,13 +310,13 @@ Proof.
     * destruct X2 as [? [? ?]].
       constructor; intuition auto; solve_all.
       + eauto using R_universe_instance_impl'.
-      + eapply context_relation_impl_onctx; tea; simpl; intuition eauto.
+      + eapply context_relation_impl_onctx; tea; simpl; unfold ondecl; intuition eauto.
         destruct d as [na [bod|] ty], d' as [na' [b'|] ty']; cbn in *;
         intuition eauto.        
     * eapply All2_impl'; tea.
       eapply All_impl; eauto.
       cbn. intros x [? ?] y [? ?]. split; eauto.
-      eapply context_relation_impl_onctx; tea; simpl; intuition eauto.
+      eapply context_relation_impl_onctx; tea; simpl; unfold ondecl; intuition eauto.
       destruct d as [na [bod|] ty], d' as [na' [b'|] ty']; cbn in *;
       intuition eauto.
   - inversion 1; subst; constructor.

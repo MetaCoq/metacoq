@@ -326,7 +326,7 @@ Proof.
   - apply R_global_instance_refl; auto.
   - apply R_global_instance_refl; auto.
   - destruct X as [? [? ?]].
-    eapply onctx_eq_ctx in o; eauto.
+    eapply onctx_eq_ctx in a0; eauto.
   - eapply All_All2; eauto; simpl; intuition eauto.
     eapply onctx_eq_ctx in a; eauto.
   - eapply All_All2; eauto; simpl; intuition eauto.
@@ -384,7 +384,8 @@ Proof.
   intros onc HP H1.
   induction H1; depelim onc; constructor; intuition auto; simpl in *.
   intuition auto. now symmetry.
-  intuition auto. now symmetry.
+  destruct o; eauto.
+  destruct o; intuition auto. now symmetry.
 Qed.
 
 Instance eq_term_upto_univ_sym Σ Re Rle napp :
@@ -411,7 +412,7 @@ Proof.
     eapply All2_sym; solve_all.
     unfold R_universe_instance in r |- *.
     eapply Forall2_symP; eauto.
-    eapply onctx_eq_ctx_sym in o; eauto.
+    eapply onctx_eq_ctx_sym in a1; eauto.
     eapply All2_sym; solve_all.
     eapply onctx_eq_ctx_sym in a0; eauto.
   - econstructor.
@@ -477,7 +478,8 @@ Proof.
   intros onc HP H1; revert ctx''.
   induction H1; depelim onc; intros ctx'' H; depelim H; constructor; intuition auto; simpl in *.
   intuition auto. now etransitivity. eauto.
-  intuition auto. now etransitivity. all:eauto.
+  destruct o; intuition eauto.
+  destruct o; intuition eauto. now etransitivity.
 Qed.
 
 Instance eq_term_upto_univ_trans Σ Re Rle napp :
@@ -721,8 +723,8 @@ Lemma onctx_eq_ctx_impl P ctx ctx' eq_term eq_term' :
   eq_context_gen false eq_term' eq_term' ctx ctx'.
 Proof.
   intros onc HP H1.
-  induction H1; depelim onc; constructor; intuition auto; simpl in *.
-  intuition auto. intuition auto.
+  induction H1; depelim onc; constructor; intuition auto; simpl in *;
+  destruct o; intuition auto.
 Qed.
 
 Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
@@ -747,7 +749,7 @@ Proof.
     eapply R_global_instance_impl. 5:eauto. all:eauto.
   - inversion 1; subst; constructor; unfold eq_predicate in *; eauto; solve_all.
     * eapply R_universe_instance_impl'; eauto.
-    * eapply onctx_eq_ctx_impl in o; tea. eauto.
+    * eapply onctx_eq_ctx_impl in a0; tea. eauto.
     * eapply onctx_eq_ctx_impl in a4; tea. eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
@@ -779,7 +781,7 @@ Proof.
     eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
   - inversion 1; subst; constructor; unfold eq_predicate in *; solve_all.
     * eapply R_universe_instance_impl'; eauto.
-    * eapply onctx_eq_ctx_impl in o; tea. eauto.
+    * eapply onctx_eq_ctx_impl in a0; tea. eauto.
     * eapply onctx_eq_ctx_impl in a4; tea. eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
@@ -833,10 +835,12 @@ Proof.
       rewrite -?(context_relation_length e).
     * apply context_relation_mapi.
       eapply context_relation_impl_onctx; tea; simpl; eauto.
+      unfold ondecl;
       intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
     * eapply hh0; eauto.
     * eapply context_relation_mapi.
       eapply context_relation_impl_onctx; tea; simpl; eauto.
+      unfold ondecl;
       intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
     * rewrite (context_relation_length a). now eapply hh4.
   - cbn. constructor.
@@ -895,11 +899,11 @@ Proof.
     constructor ; unfold eq_predicate; simpl; try sih ; solve_all.
     * eapply context_relation_mapi.
       eapply context_relation_impl_onctx; tea; simpl; eauto.
-      intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
+      unfold ondecl; intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
     * rewrite -(context_relation_length e). eapply e1; eauto.
     * eapply context_relation_mapi.
       eapply context_relation_impl_onctx; tea; simpl; eauto.
-      intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
+      unfold ondecl; intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
     * rewrite (context_relation_length a). now eapply b0.
   - cbn. constructor ; try sih ; eauto.
     pose proof (All2_length a).
@@ -1267,25 +1271,26 @@ Proof.
   eapply equiv_reflectT.
   - intros hcc'.
     eapply context_relation_forallb2, context_relation_impl_onctx; tea.
-    intuition auto.
+    unfold ondecl; intuition auto.
     destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //;
     intuition auto.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (a0 equ Re 0 hRe ty') => //.
-      destruct (b0 equ Re 0 hRe bod') => //.
+      destruct (a equ Re 0 hRe ty') => //.
+      destruct (b equ Re 0 hRe bod') => //.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (a0 equ Re 0 hRe ty') => //.
+      destruct (a equ Re 0 hRe ty') => //.
   - intros hcc'.
     eapply forallb2_bcompare_decl_context_relation in hcc'; tea.
     eapply context_relation_impl_onctx in onc; tea; simpl; intuition eauto.
+    destruct X0.
     move: H.
     destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (a equ Re 0 hRe ty') => //.
-      destruct (b equ Re 0 hRe bod') => //.
+      destruct (r equ Re 0 hRe ty') => //.
+      destruct (o equ Re 0 hRe bod') => //.
       now rewrite andb_false_r.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (a equ Re 0 hRe ty') => //.
+      destruct (r equ Re 0 hRe ty') => //.
 Qed.
 
 Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
@@ -1324,7 +1329,7 @@ Proof.
     * red in onuinst. 
       eapply Forall2_forallb2, Forall2_impl; eauto.
       now move=> x y /X.
-    * destruct (reflect_eq_context_IH X X0 (pcontext p) (pcontext p') o) => //.
+    * destruct (reflect_eq_context_IH X X0 (pcontext p) (pcontext p') a0) => //.
     * ih. contradiction.
   - move/andb_and => [/andb_and [/andb_and [ppars pinst] pctx] pret].
     intuition auto.
@@ -1333,7 +1338,7 @@ Proof.
     * solve_all. red. apply All2_Forall2.
       eapply (All2_impl pinst); eauto.
       now move=> x y /X.
-    * now destruct (reflect_eq_context_IH X X0 (pcontext p) (pcontext p') o).
+    * now destruct (reflect_eq_context_IH X X0 (pcontext p) (pcontext p') a0).
     * now destruct (r _ _ 0 X (preturn p')).
 Qed.
 

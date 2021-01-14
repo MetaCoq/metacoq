@@ -457,7 +457,7 @@ Section ContextTest.
   
   Fixpoint test_context (c : list (context_decl term)) : bool :=
     match c with
-    | d :: Γ => test_decl f d && test_context Γ
+    | d :: Γ => test_context Γ && test_decl f d
     | [] => true
     end.
 End ContextTest.
@@ -473,7 +473,7 @@ Section ContextTestK.
   
   Fixpoint test_context_k (c : list (context_decl term)) : bool :=
     match c with
-    | d :: Γ => test_decl (f (#|Γ| + k)) d && test_context_k Γ
+    | d :: Γ => test_context_k Γ && test_decl (f (#|Γ| + k)) d
     | [] => true
     end.
 End ContextTestK.

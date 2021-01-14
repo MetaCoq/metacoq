@@ -132,13 +132,6 @@ Proof. induction l; simpl; auto. now rewrite lift0_id. Qed.
 Lemma lift0_p : forall M, lift0 0 M = M.
 Proof. intro; apply lift0_id. Qed.
 
-Lemma shiftf0 {A B} (f : nat -> A -> B) k x : shiftf f 0 k x = f k x.
-Proof.
-  now rewrite /shiftf Nat.add_0_r.
-Qed.
-
-Hint Rewrite @shiftf0 : map.
-
 Lemma simpl_lift :
   forall M n k p i,
     i <= k + n ->
@@ -220,9 +213,7 @@ Lemma commut_lift_subst_rec M N n p k :
   k <= p -> lift n k (subst N p M) = subst N (p + n) (lift n k M).
 Proof.
   revert N n p k; elim M using term_forall_list_ind; intros; cbnr;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-    ?map_length, ?map_predicate_map_predicate, ?Nat.add_assoc;
-    try solve [f_equal; auto; solve_all].
+    f_equal; auto; solve_all; rewrite ?plus_Snm_nSm -?Nat.add_assoc; eauto with all.
 
   - repeat nth_leb_simpl.
     rewrite -> simpl_lift by easy. f_equal; lia.
@@ -239,9 +230,7 @@ Lemma distr_lift_subst_rec M N n p k :
     subst (List.map (lift n k) N) p (lift n (p + length N + k) M).
 Proof.
   revert N n p k; elim M using term_forall_list_ind; intros; cbnr;
-    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def,
-    ?map_length, ?map_predicate_map_predicate, ?Nat.add_assoc;
-    try solve [f_equal; auto; solve_all].
+    f_equal; auto; solve_all.
 
   - repeat nth_leb_simpl.
     rewrite nth_error_map in e0. rewrite e in e0.

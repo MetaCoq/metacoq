@@ -1926,28 +1926,6 @@ Section RedConfluence.
     econstructor 2; eauto.
   Qed.
 
-  Definition on_one_decl (P : context -> term -> term -> Type) (Γ : context) (b : option (term × term)) (t t' : term) :=
-    match b with
-    | Some (b0, b') => ((P Γ b0 b' * (t = t')) + (P Γ t t' * (b0 = b')))%type
-    | None => P Γ t t'
-    end.
-
-  Section OnOne_local_2.
-    Context (P : forall (Γ : context), option (term * term) -> term -> term -> Type).
-
-    (** We allow alpha-conversion *)
-    Inductive OnOne2_local_env : context -> context -> Type :=
-    | localenv2_cons_abs Γ na t t' :
-        P Γ None t t' ->
-        OnOne2_local_env (Γ ,, vass na t) (Γ ,, vass na t')
-    | localenv2_cons_def Γ na b b' t t' :
-        P Γ (Some (b, b')) t t' ->
-        OnOne2_local_env (Γ ,, vdef na b t) (Γ ,, vdef na b' t')
-    | localenv2_cons_tl Γ Γ' d :
-        OnOne2_local_env Γ Γ' ->
-        OnOne2_local_env (Γ ,, d) (Γ' ,, d).
-  End OnOne_local_2.
-
   Inductive clos_refl_trans_ctx_decl (R : relation context_decl) (x : context_decl) : context_decl -> Type :=
     rt_ctx_decl_step : forall y, R x y -> clos_refl_trans_ctx_decl R x y
   | rt_ctx_decl_refl y : eq_binder_annot x.(decl_name) y.(decl_name) -> 
@@ -1992,8 +1970,6 @@ Section RedConfluence.
   Proof.
     intros x y z; econstructor 3; eauto.
   Qed.
-
-  Definition red1_ctx := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ Δ t t'))).
 
   Definition red1_rel : relation (context * term) :=
     relation_disjunction (fun '(Γ, t) '(Δ, u) => (red1 Σ Γ t u * (Γ = Δ)))%type

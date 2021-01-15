@@ -110,6 +110,27 @@ Proof.
     destruct le; intuition auto.
 Qed.
 
+Lemma compare_decl_impl_ondecl P le eq_term leq_term eq_term' leq_term' d d' :
+  ondecl P d ->
+  (forall x y, P x -> eq_term x y -> eq_term' x y) ->
+  (forall x y, P x -> leq_term x y -> leq_term' x y) ->
+  compare_decl le eq_term leq_term d d' ->
+  compare_decl le eq_term' leq_term' d d'.
+Proof.
+  intros ond he hle; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; rewrite /compare_decl /= //;
+    destruct ond;
+    destruct le; intuition eauto.
+Qed.
+
+Lemma compare_decl_map le eq_term leq_term f g d d' :
+  compare_decl le (fun x y => eq_term (f x) (g y))
+    (fun x y => leq_term (f x) (g y)) d d' ->
+  compare_decl le eq_term leq_term (map_decl f d) (map_decl g d').
+Proof.
+  rewrite /compare_decl; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl;
+    destruct le; intuition auto.
+Qed.
+
 Definition bcompare_decl (le : bool) (eq_term leq_term : term -> term -> bool) (d d' : context_decl) : bool :=
   match d, d' with
   | {| decl_name := na; decl_body := None; decl_type := T |},

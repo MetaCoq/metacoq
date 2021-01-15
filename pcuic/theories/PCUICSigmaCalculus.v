@@ -445,6 +445,34 @@ Proof.
   * len. apply Hf''.
 Qed.
 
+Lemma map_predicate_shift_map_predicate_gen
+      {T} {fn : (nat -> T) -> term -> term}
+      {T'} {fn' : (nat -> T') -> term -> term}
+      {shift : nat -> (nat -> T) -> nat -> T}
+      {shift' : nat -> (nat -> T') -> nat -> T'}
+      {finst finst' f'}
+      {f : nat -> T}
+      {p : predicate term} 
+      (compose : (nat -> T) -> (term -> term) -> (nat -> T'))
+      :
+  Proper (`=1` ==> `=1`) fn ->
+  (map (fn f ∘ f') p.(pparams) = map (fn' (compose f f')) p.(pparams)) ->
+  mapi_context (fun (k : nat) (x : term) => fn (shift k f) (f' x)) p.(pcontext) =
+  mapi_context (fun k : nat => fn' (shift' k (compose f f'))) p.(pcontext) ->
+  fn (shift #|p.(pcontext)| f) (f' p.(preturn)) = fn' (shift' #|p.(pcontext)| (compose f f')) p.(preturn) ->
+  map_predicate_shift fn shift finst f (map_predicate finst' f' f' p) =
+  map_predicate_shift fn' shift' (finst ∘ finst') (compose f f') p.
+Proof.
+  intros Hfn Hf Hf' Hf''. unfold map_predicate_shift; destruct p; cbn.
+  f_equal.
+  * rewrite map_map.
+    now rewrite Hf.
+  * rewrite !mapi_context_fold fold_context_map.
+    rewrite - !mapi_context_fold.
+    now rewrite Hf'.
+  * len. apply Hf''.
+Qed.
+
 Lemma map_predicate_map_predicate_shift
       {T} {fn : (nat -> T) -> term -> term}
       {shift : nat -> (nat -> T) -> nat -> T}

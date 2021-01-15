@@ -3,7 +3,8 @@ From Coq Require Import CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.Template Require Import config utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICReduction.
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst
+     PCUICContextRelation PCUICReduction.
 
 Set Default Goal Selector "!".
 
@@ -368,3 +369,32 @@ Proof.
   - eapply cumul_red_r ; try eassumption.
     econstructor. assumption.
 Qed.
+
+Section ContextConversion.
+  Context {cf : checker_flags}.
+  Context (Σ : global_env_ext).
+
+  Notation conv_context Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
+  Notation cumul_context Γ Γ' := (context_relation (cumul_decls Σ) Γ Γ').
+
+  Global Instance conv_ctx_refl : Reflexive (context_relation (conv_decls Σ)).
+  Proof.
+    intro Γ; induction Γ; try econstructor.
+    destruct a as [na [b|] ty]; econstructor; eauto;
+      constructor; pcuic.
+  Qed.
+
+  Global Instance cumul_ctx_refl : Reflexive (context_relation (cumul_decls Σ)).
+  Proof.
+    intro Γ; induction Γ; try econstructor.
+    destruct a as [na [b|] ty]; econstructor; eauto;
+      constructor; pcuic; eapply cumul_refl'.
+  Qed.
+
+  Definition conv_ctx_refl' Γ : conv_context Γ Γ
+  := conv_ctx_refl Γ.
+
+  Definition cumul_ctx_refl' Γ : cumul_context Γ Γ
+    := cumul_ctx_refl Γ.
+
+End ContextConversion.

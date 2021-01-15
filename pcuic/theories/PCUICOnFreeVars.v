@@ -356,6 +356,20 @@ Proof.
   eapply closed_decl_on_free_vars.
 Qed.
 
+Lemma closedn_ctx_on_free_vars_shift {n ctx P} : 
+  closedn_ctx n ctx ->
+  on_free_vars_ctx (shiftnP n P) ctx.
+Proof.
+  move/closedn_ctx_on_free_vars.
+  rewrite /on_free_vars_ctx.
+  apply alli_impl => i x.
+  rewrite shiftnP_closedP shiftnP_add shiftnP_xpredT.
+  eapply on_free_vars_decl_impl => //.
+  intros k.
+  rewrite /closedP /shiftnP.
+  now nat_compare_specs => //.
+Qed.
+
 (** This uses absurdity elimination as [ctx] can't have any free variable *)
 Lemma closed_ctx_on_free_vars P ctx : closed_ctx ctx ->
   on_free_vars_ctx P ctx.

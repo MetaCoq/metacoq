@@ -100,6 +100,19 @@ Proof.
   induction cr; depelim onc; constructor; intuition eauto.
 Qed.
 
+Lemma context_relation_impl_ind P P' Γ Δ :  
+  context_relation P Γ Δ ->
+  (forall Γ Δ d d', 
+    context_relation P Γ Δ -> 
+    context_relation P' Γ Δ ->
+    P Γ Δ d d' ->
+    P' Γ Δ d d') ->
+  context_relation P' Γ Δ.
+Proof.
+  intros cr Hcr.
+  induction cr; constructor; intuition eauto.
+Qed.
+
 Lemma context_relation_mapi P Γ Δ f g : 
   context_relation (fun Γ Δ d d' =>
     P (mapi_context f Γ) (mapi_context g Δ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d')) Γ Δ 

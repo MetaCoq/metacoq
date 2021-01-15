@@ -605,6 +605,13 @@ Proof.
       now rewrite Nat.add_succ_r.
 Qed.
 
+Lemma skipn_map_length {A B} n (f : A -> B) (l : list A) : 
+  #|skipn n (map f l)| = #|skipn n l|.
+Proof.
+  now rewrite !List.skipn_length; len.
+Qed.
+Hint Rewrite @skipn_map_length : len.
+
 Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
 Proof.
   induction l in n |- *; simpl; intros; auto. now rewrite firstn_nil.

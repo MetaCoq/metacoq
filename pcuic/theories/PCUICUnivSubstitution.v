@@ -886,27 +886,6 @@ Definition precompose_subst_instance_global__1 Σ Re Rle gr napp u i i'
 Definition precompose_subst_instance_global__2 Σ Re Rle gr napp u i i'
   := snd (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
-Lemma compare_decl_impl_ondecl P le eq_term leq_term eq_term' leq_term' d d' :
-  ondecl P d ->
-  (forall x y, P x -> eq_term x y -> eq_term' x y) ->
-  (forall x y, P x -> leq_term x y -> leq_term' x y) ->
-  compare_decl le eq_term leq_term d d' ->
-  compare_decl le eq_term' leq_term' d d'.
-Proof.
-  intros ond he hle; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; rewrite /compare_decl /= //;
-    destruct ond;
-    destruct le; intuition eauto.
-Qed.
-
-Lemma compare_decl_map le eq_term leq_term f g d d' :
-  compare_decl le (fun x y => eq_term (f x) (g y))
-    (fun x y => leq_term (f x) (g y)) d d' ->
-  compare_decl le eq_term leq_term (map_decl f d) (map_decl g d').
-Proof.
-  rewrite /compare_decl; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl;
-    destruct le; intuition auto.
-Qed.
-
 Global Instance eq_term_upto_univ_subst_preserved Σ
   (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop) napp
   {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
@@ -1370,13 +1349,6 @@ Lemma subst_instance_predicate_set_preturn u p pret :
   subst_instance u (set_preturn p pret) = 
   set_preturn (subst_instance u p) (subst_instance u pret).
 Proof. reflexivity. Qed.
-
-Lemma skipn_map_length {A B} n (f : A -> B) (l : list A) : 
-  #|skipn n (map f l)| = #|skipn n l|.
-Proof.
-  now rewrite !List.skipn_length; len.
-Qed.
-Hint Rewrite @skipn_map_length : len.
 
 Lemma red1_subst_instance Σ Γ u s t :
   red1 Σ Γ s t ->

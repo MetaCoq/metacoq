@@ -10,13 +10,7 @@ From Equations Require Import Equations.
 Set Equations Transparent.
 Set Default Goal Selector "!".
 
-Inductive rtrans_clos {A} (R : A -> A -> Type) (x : A) : A -> Type :=
-| rtrans_clos_refl : rtrans_clos R x x
-| rtrans_clos_trans :
-    forall y z,
-      rtrans_clos R x y ->
-      R y z ->
-      rtrans_clos R x z.
+Notation rtrans_clos := clos_refl_trans_n1.
 
 Lemma All2_many_OnOne2 :
   forall A (R : A -> A -> Type) l l',
@@ -26,14 +20,14 @@ Proof.
   intros A R l l' h.
   induction h.
   - constructor.
-  - econstructor ; revgoals.
+  - econstructor.
     + constructor. eassumption.
     + clear - IHh. rename IHh into h.
       induction h.
       * constructor.
       * econstructor.
-        -- eassumption.
-        -- econstructor. assumption.
+        -- econstructor 2. eassumption.
+        -- assumption.
 Qed.
 
 Definition tDummy := tVar String.EmptyString.
@@ -104,6 +98,12 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 Local Open Scope type_scope.
 Arguments OnOne2 {A} P%type l l'.
 
+Definition set_pcontext (p : predicate term) (pctx' : context) : predicate term :=
+  {| pparams := p.(pparams);
+      puinst := p.(puinst);
+      pcontext := pctx';
+      preturn := p.(preturn) |}.
+
 Definition set_preturn (p : predicate term) (pret' : term) : predicate term :=
   {| pparams := p.(pparams);
       puinst := p.(puinst);
@@ -115,7 +115,29 @@ Definition set_pparams (p : predicate term) (pars' : list term) : predicate term
      puinst := p.(puinst);
      pcontext := p.(pcontext);
      preturn := p.(preturn) |}.
-     
+
+Definition on_one_decl (P : context -> term -> term -> Type) (Γ : context) (b : option (term × term)) (t t' : term) :=
+  match b with
+  | Some (b0, b') => ((P Γ b0 b' * (t = t')) + (P Γ t t' * (b0 = b')))%type
+  | None => P Γ t t'
+  end.
+
+Section OnOne_local_2.
+  Context (P : forall (Γ : context), option (term * term) -> term -> term -> Type).
+
+  (** We allow alpha-conversion *)
+  Inductive OnOne2_local_env : context -> context -> Type :=
+  | localenv2_cons_abs Γ na t t' :
+      P Γ None t t' ->
+      OnOne2_local_env (Γ ,, vass na t) (Γ ,, vass na t')
+  | localenv2_cons_def Γ na b b' t t' :
+      P Γ (Some (b, b')) t t' ->
+      OnOne2_local_env (Γ ,, vdef na b t) (Γ ,, vdef na b' t')
+  | localenv2_cons_tl Γ Γ' d :
+      OnOne2_local_env Γ Γ' ->
+      OnOne2_local_env (Γ ,, d) (Γ' ,, d).
+End OnOne_local_2.
+
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
@@ -179,6 +201,11 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tCase ci p c brs)
              (tCase ci (set_pparams p params') c brs)
 
+| case_red_pcontext ci p pcontext' c brs :
+    OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ'))) p.(pcontext) pcontext' ->
+    red1 Σ Γ (tCase ci p c brs)
+      (tCase ci (set_pcontext p pcontext') c brs)
+           
 | case_red_return ci p preturn' c brs :
   red1 Σ (Γ ,,, p.(pcontext)) p.(preturn) preturn' ->
   red1 Σ Γ (tCase ci p c brs)
@@ -190,7 +217,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 | case_red_brs ci p c brs brs' :    
     OnOne2 (fun br br' =>
-      on_Trel_eq (red1 Σ (Γ ,,, br.(bcontext))) bbody bcontext br br') brs brs' ->
+      on_Trel_eq (red1 Σ (Γ ,,, br.(bcontext))) bbody bcontext br br' + 
+      on_Trel_eq (OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ')))) bcontext bbody br br') 
+      brs brs' ->
     red1 Σ Γ (tCase ci p c brs) (tCase ci p c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
@@ -220,6 +249,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | cofix_red_body mfix0 mfix1 idx :
     OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
     red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+
+Definition red1_ctx Σ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ Δ t t'))).
+Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ (Γ ,,, Δ) t t'))).
 
 Lemma red1_ind_all :
   forall (Σ : global_env) (P : context -> term -> term -> Type),
@@ -281,6 +313,12 @@ Lemma red1_ind_all :
            P Γ (tCase ci p c brs)
                (tCase ci (set_pparams p params') c brs)) ->
 
+       (forall (Γ : context) (ci : case_info) p pcontext' c brs,
+          OnOne2_local_env (on_one_decl (fun Γ' => Trel_conj (red1 Σ (Γ ,,, Γ')) (P (Γ ,,, Γ'))))
+            p.(pcontext) pcontext' ->
+          P Γ (tCase ci p c brs)
+            (tCase ci (set_pcontext p pcontext') c brs)) ->
+
        (forall (Γ : context) (ci : case_info) p preturn' c brs,
           red1 Σ (Γ ,,, p.(pcontext)) p.(preturn) preturn' ->
           P (Γ ,,, p.(pcontext)) p.(preturn) preturn' ->
@@ -292,8 +330,11 @@ Lemma red1_ind_all :
 
        (forall (Γ : context) ci p c brs brs',
           OnOne2 (fun br br' =>
-          on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, br.(bcontext))) (P (Γ ,,, br.(bcontext))))
-            bbody bcontext br br') brs brs' ->
+          (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, br.(bcontext))) (P (Γ ,,, br.(bcontext))))
+            bbody bcontext br br') + 
+          (on_Trel_eq (OnOne2_local_env 
+            (on_one_decl (fun Γ' => Trel_conj (red1 Σ (Γ ,,, Γ')) (P (Γ ,,, Γ')))))
+            bcontext bbody br br')) brs brs' ->
           P Γ (tCase ci p c brs) (tCase ci p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->
@@ -336,7 +377,7 @@ Lemma red1_ind_all :
 
        forall (Γ : context) (t t0 : term), red1 Σ Γ t t0 -> P Γ t t0.
 Proof.
-  intros. rename X27 into Xlast. revert Γ t t0 Xlast.
+  intros. rename X28 into Xlast. revert Γ t t0 Xlast.
   fix aux 4. intros Γ t T.
   move aux at top.
   destruct 1; match goal with
@@ -358,11 +399,29 @@ Proof.
     + constructor. split; auto.
     + constructor. auto.
       
+  - revert pcontext' o.
+    generalize (pcontext p).
+    fix auxl 3.
+    intros l pctx' []; constructor.
+    * red in o. simpl. split; auto.
+    * simpl in *.
+      destruct o as [[]|[]]; [left|right]; split; auto.
+    * apply auxl, o.
+  
   - revert brs' o.
     revert brs.
     fix auxl 3.
     intros l l' Hl. destruct Hl.
     + simpl in *. constructor; intros; intuition auto.
+      right. split; auto.
+      revert a.
+      generalize (bcontext hd) (bcontext hd').
+      fix auxl' 3.
+      intros l pctx' []; constructor.
+      * red in o. simpl. split; auto.
+      * simpl in *.
+        destruct o as [[]|[]]; [left|right]; split; auto.
+      * apply auxl', o.
     + constructor. eapply auxl. apply Hl.
 
   - revert l l' o.
@@ -371,22 +430,22 @@ Proof.
     + constructor. split; auto.
     + constructor. auto.
 
-  - eapply X23.
+  - eapply X24.
     revert mfix0 mfix1 o; fix auxl 3.
     intros l l' Hl; destruct Hl;
     constructor; try split; auto; intuition.
 
-  - eapply X24.
+  - eapply X25.
     revert o. generalize (fix_context mfix0). intros c Xnew.
     revert mfix0 mfix1 Xnew; fix auxl 3; intros l l' Hl;
     destruct Hl; constructor; try split; auto; intuition.
 
-  - eapply X25.
+  - eapply X26.
     revert mfix0 mfix1 o.
     fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
 
-  - eapply X26.
+  - eapply X27.
     revert o. generalize (fix_context mfix0). intros c new.
     revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
       constructor; try split; auto; intuition.
@@ -395,6 +454,9 @@ Defined.
 Hint Constructors red1 : pcuic.
 
 Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
+
+Definition red_ctx Σ := clos_refl_trans (red1_ctx Σ).  
+Definition red_ctx_rel Σ Γ := clos_refl_trans (red1_ctx_rel Σ Γ).
 
 Lemma refl_red Σ Γ t : red Σ Γ t t.
 Proof.
@@ -713,6 +775,9 @@ Section ReductionCongruence.
     revert Γ y r.
     eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta;
       intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
+    eapply case_red_brs.
+    specialize (X _ _ X0).
+    solve_all.
   Qed.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
@@ -722,7 +787,7 @@ Section ReductionCongruence.
     - apply contextual_closure_red.
   Qed.
 
-  Lemma red_ctx {Γ} {M M'} ctx :
+  Lemma red_ctx_congr {Γ} {M M'} ctx :
     red Σ (hole_context ctx Γ) M M' ->
     red Σ Γ (fill_context M ctx) (fill_context M' ctx).
   Proof.
@@ -737,6 +802,17 @@ Section ReductionCongruence.
       (@OnOne2 (term × _) (Trel_conj (on_Trel (red1 Σ Γ) fst) (on_Trel eq snd))).
     Notation red_one_term Γ := 
       (@OnOne2 (term × _) (Trel_conj (on_Trel (red Σ Γ) fst) (on_Trel eq snd))).
+    
+    Notation red1_one_context_decl Γ :=
+      (@OnOne2 (context × _) (Trel_conj (on_Trel (red1_ctx_rel Σ Γ) fst) (on_Trel eq snd))).
+
+    Definition red_one_context_decl_rel Σ Γ := 
+      (OnOne2_local_env (on_one_decl (fun Δ t t' => red Σ (Γ ,,, Δ) t t'))).
+      
+    Notation red_one_context_decl Γ :=
+      (@OnOne2 (context × _) 
+      (Trel_conj (on_Trel (red_ctx_rel Σ Γ) fst) (on_Trel eq snd))).
+      
     Notation red1_one_branch Γ := 
       (@OnOne2 _ (fun br br' =>
         let ctx := snd br in
@@ -746,7 +822,7 @@ Section ReductionCongruence.
         let ctx := snd br in
         Trel_conj (on_Trel (red Σ (Γ ,,, ctx)) fst) (on_Trel eq snd) br br')).
 
-    Inductive redl {A} {P} l : list (term × A) -> Type :=
+    Inductive redl {T A} {P} l : list (T × A) -> Type :=
     | refl_redl : redl l l
     | trans_redl :
         forall l1 l2,
@@ -755,16 +831,17 @@ Section ReductionCongruence.
           redl l l2.
     Derive Signature for redl.
 
-    Lemma redl_preserve {A P} (l l' : list (term × A)) : 
-      (forall (x y : list (term × A)), P x y -> map snd x = map snd y) ->
-      @redl _ P l l' -> map snd l = map snd l'.
+    Lemma redl_preserve {T A P} (l l' : list (T × A)) : 
+      (forall (x y : list (T × A)), P x y -> map snd x = map snd y) ->
+      @redl _ _ P l l' -> map snd l = map snd l'.
     Proof.
       intros HP. induction 1; auto.
       rewrite IHX. now apply HP.
     Qed.
 
-    Definition redl_term {A} Γ := @redl A (red1_one_term Γ).
-    Definition redl_branch Γ := @redl _ (red1_one_branch Γ).
+    Definition redl_term {A} Γ := @redl term A (red1_one_term Γ).
+    Definition redl_context {A} Γ := @redl context A (red1_one_context_decl Γ).
+    Definition redl_branch Γ := @redl term _ (red1_one_branch Γ).
       
     Lemma OnOne2_red_redl :
       forall Γ A (l l' : list (term × A)),
@@ -782,6 +859,81 @@ Section ReductionCongruence.
           * eapply IHp1.
           * constructor. split ; eauto.
             reflexivity.
+      - clear h. rename IHh into h.
+        induction h.
+        + constructor.
+        + econstructor ; eauto. constructor ; eauto.
+    Qed.
+
+    Definition cons_decl {A} (d : context_decl) (l : list (context × A)) :=
+      match l with 
+      | [] => []
+      | (Γ , a) :: tl => (Γ ,, d, a) :: tl
+      end.
+
+    Lemma redl_context_impl {A} Γ (l l' : list (context × A)) :
+      redl_context Γ l l' ->
+      forall d, redl_context Γ (cons_decl d l) (cons_decl d l').
+    Proof.
+      induction 1; intros.
+      - constructor.
+      - econstructor. 
+        * eapply IHX.
+        * depelim p; simpl.
+          + destruct hd, hd'. destruct p.
+            constructor; unfold on_Trel in *; simpl in *.
+            split; auto. now constructor.
+          + destruct hd. now constructor.
+    Qed.
+
+    Lemma redl_context_trans {A} Γ (l l' l'' : list (context × A)) :
+      redl_context Γ l l' -> redl_context Γ l' l'' -> redl_context Γ l l''.
+    Proof.
+      intros Hl Hl'.
+      induction Hl' in l, Hl |- *; intros; tas.
+      econstructor.
+      * now eapply IHHl'.
+      * apply p.
+    Qed.
+
+    Lemma red_one_context_redl :
+      forall Γ A (l l' : list (context × A)),
+        red_one_context_decl Γ l l' ->
+        redl_context Γ l l'.
+    Proof.
+      intros Γ A l l' h.
+      induction h.
+      - destruct p as [p1 p2].
+        unfold on_Trel in p1, p2.
+        destruct hd as [t a], hd' as [t' a']. simpl in *. subst.
+        red in p1.
+        induction p1; unfold on_one_decl in *.
+        + red in r. induction r. 
+          * red in p. unfold redl_context.
+            econstructor.
+            2:{ constructor. unfold on_Trel. simpl.
+              instantiate (1 := (Γ0 ,, vass na t, a')).
+              simpl. intuition auto. constructor.
+              red. apply p. }
+            constructor.
+          * red in p.
+            destruct p as [[]|[]]; subst.
+            { econstructor.
+              2:{ constructor. unfold on_Trel. simpl.
+                instantiate (1 := (Γ0 ,, vdef na b t', a')).
+                simpl. intuition auto. constructor.
+                red. left. split; [apply r|reflexivity]. }
+              constructor. }
+            { econstructor.
+              2:{ constructor. unfold on_Trel. simpl.
+                instantiate (1 := (Γ0 ,, vdef na b' t, a')).
+                simpl. intuition auto. constructor.
+                red. right. split; [apply r|reflexivity]. }
+              constructor. }
+          * clear -IHr.
+            eapply (redl_context_impl _ _ _ IHr).
+        + constructor.
+        + eapply redl_context_trans; eauto.
       - clear h. rename IHh into h.
         induction h.
         + constructor.
@@ -829,6 +981,15 @@ Section ReductionCongruence.
       intros Γ A B f g l l' h.
       eapply OnOne2_red_redl.
       eapply OnOne2_map. eapply OnOne2_impl ; eauto.
+    Qed.
+
+    Lemma OnOne2_context_redl Γ {A B} (f : A -> context) (g : A -> B) l l' :
+      OnOne2 (on_Trel_eq (red_ctx_rel Σ Γ) f g) l l' ->
+      redl_context Γ (map (fun x => (f x, g x)) l) (map (fun x => (f x, g x)) l').
+    Proof.
+      intros h. eapply red_one_context_redl.
+      eapply OnOne2_map.
+      eapply OnOne2_impl; eauto.
     Qed.
 
     Lemma OnOne2All_on_Trel_eq_red_redl :
@@ -904,10 +1065,26 @@ Section ReductionCongruence.
 
     Notation decomp_branch := (fun x : branch term => (bbody x, bcontext x)).
     Notation recomp_branch := (fun x : term * context => {| bbody := x.1; bcontext := x.2 |}).
-
+    Notation decomp_branch' := (fun x : branch term => (bcontext x, bbody x)).
+    Notation recomp_branch' := (fun x : context * term => {| bbody := x.2; bcontext := x.1 |}).
+    
     Lemma list_map_swap_eq :
       forall l l',
         map decomp_branch l = map decomp_branch l' ->
+        l = l'.
+    Proof.
+      intros l l' h.
+      induction l in l', h |- *.
+      - destruct l' ; try discriminate. reflexivity.
+      - destruct l' ; try discriminate.
+        cbn in h. inversion h.
+        f_equal ; eauto.
+        destruct a, b. cbn in *. subst. reflexivity.
+    Qed.
+
+    Lemma list_map_swap_eq' :
+      forall l l',
+        map decomp_branch' l = map decomp_branch' l' ->
         l = l'.
     Proof.
       intros l l' h.
@@ -926,9 +1103,25 @@ Section ReductionCongruence.
       - reflexivity.
       - cbn. destruct a. rewrite <- IHl. reflexivity.
     Qed.
+    
+    Lemma map_recomp_decomp' :
+      forall l, l = map decomp_branch' (map recomp_branch' l).
+    Proof.
+      induction l.
+      - reflexivity.
+      - cbn. destruct a. rewrite <- IHl. reflexivity.
+    Qed.
 
     Lemma map_decomp_recomp :
       forall l, l = map recomp_branch (map decomp_branch l).
+    Proof.
+      induction l.
+      - reflexivity.
+      - cbn. destruct a. rewrite <- IHl. reflexivity.
+    Qed.
+    
+    Lemma map_decomp_recomp' :
+      forall l, l = map recomp_branch' (map decomp_branch' l).
     Proof.
       induction l.
       - reflexivity.
@@ -955,8 +1148,8 @@ Section ReductionCongruence.
       -> red Σ Γ (tLambda na M N) (tLambda na M' N').
     Proof.
       intros. transitivity (tLambda na M' N).
-      - now apply (red_ctx (tCtxLambda_l _ tCtxHole _)).
-      - now eapply (red_ctx (tCtxLambda_r _ _ tCtxHole)).
+      - now apply (red_ctx_congr (tCtxLambda_l _ tCtxHole _)).
+      - now eapply (red_ctx_congr (tCtxLambda_r _ _ tCtxHole)).
     Qed.
 
     Lemma red_app_r u v1 v2 :
@@ -972,8 +1165,8 @@ Section ReductionCongruence.
       red Σ Γ (tApp M0 N0) (tApp M1 N1).
     Proof.
       intros; transitivity (tApp M1 N0).
-      - now apply (red_ctx (tCtxApp_l tCtxHole _)).
-      - now eapply (red_ctx (tCtxApp_r _ tCtxHole)).
+      - now apply (red_ctx_congr (tCtxApp_l tCtxHole _)).
+      - now eapply (red_ctx_congr (tCtxApp_r _ tCtxHole)).
     Qed.
 
     Fixpoint mkApps_context l :=
@@ -1028,10 +1221,10 @@ Section ReductionCongruence.
       red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
     Proof.
       intros; transitivity (tLetIn na d1 t0 b0).
-      - now apply (red_ctx (tCtxLetIn_l _ tCtxHole _ _)).
+      - now apply (red_ctx_congr (tCtxLetIn_l _ tCtxHole _ _)).
       - transitivity (tLetIn na d1 t1 b0).
-        + now eapply (red_ctx (tCtxLetIn_b _ _ tCtxHole _)).
-        + now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
+        + now eapply (red_ctx_congr (tCtxLetIn_b _ _ tCtxHole _)).
+        + now eapply (red_ctx_congr (tCtxLetIn_r _ _ _ tCtxHole)).
     Qed.
         
     Lemma red_one_param :
@@ -1088,6 +1281,33 @@ Section ReductionCongruence.
     Qed.
 
     Coercion ci_ind : case_info >-> inductive.
+    
+    Lemma red_one_pcontext :
+      forall ci p c brs pcontext',
+        red1_ctx_rel Σ Γ p.(pcontext) pcontext' ->
+        red Σ Γ (tCase ci p c brs) (tCase ci (set_pcontext p pcontext') c brs).
+    Proof.
+      intros ci p c l l' h.
+      red in h.
+      constructor.
+      now constructor.
+    Qed.
+    
+    Lemma red_case_pcontext :
+      forall ci p c brs pcontext',
+        red_ctx_rel Σ Γ p.(pcontext) pcontext' ->
+        red Σ Γ (tCase ci p c brs) (tCase ci (set_pcontext p pcontext') c brs).
+    Proof.
+      intros ci p c brs pars' h.
+      red in h. eapply clos_rt_rtn1_iff in h.
+      induction h.
+      - destruct p; reflexivity.
+      - eapply red_trans.
+        + eapply IHh.
+        + assert (set_pcontext p z = set_pcontext (set_pcontext p y) z) as ->.
+          { now destruct p. }
+          eapply red_one_pcontext. eassumption.
+    Qed.
 
     Lemma red_case_p :
       forall ci p c brs pret',
@@ -1097,7 +1317,7 @@ Section ReductionCongruence.
     Proof.
       intros ci p c brs p' h.
       unshelve epose proof 
-        (red_ctx (tCtxCase_pred ci p.(pparams) p.(puinst) p.(pcontext) tCtxHole c brs) h).
+        (red_ctx_congr (tCtxCase_pred ci p.(pparams) p.(puinst) p.(pcontext) tCtxHole c brs) h).
       simp fill_context in X.
       destruct p; auto.
     Qed.
@@ -1112,7 +1332,7 @@ Section ReductionCongruence.
     Qed.
     
     Lemma map_bcontext_redl {l l' : list (term * context)} :  
-      @redl _ (red1_one_branch Γ) l l' -> map snd l = map snd l'.
+      @redl _ _ (red1_one_branch Γ) l l' -> map snd l = map snd l'.
     Proof.
       induction 1; auto. rewrite IHX.
       clear -p .
@@ -1133,24 +1353,57 @@ Section ReductionCongruence.
         solve_all.
     Qed. *)
 
+    Lemma OnOne2All_disj_on_Trel_eq_red_redl :
+      forall l l',
+        OnOne2 (fun br br' =>
+        let ctx := br.(bcontext) in
+        on_Trel_eq (red Σ (Γ ,,, ctx)) bbody bcontext br br' +
+        on_Trel_eq (red_ctx_rel Σ Γ)
+        bcontext bbody br br') l l' ->
+        OnOne2 (fun br br' =>
+        let ctx := br.(bcontext) in
+        on_Trel_eq (red Σ (Γ ,,, ctx)) bbody bcontext br br') l l' +
+        OnOne2 (on_Trel_eq (red_ctx_rel Σ Γ)
+          bcontext bbody) l l'.
+    Proof.
+      intros l l'; induction 1.
+      - destruct p; [left|right]; constructor; auto.
+      - destruct IHX; [left|right]; constructor; auto.
+    Qed.
+
     Lemma red_case_one_brs :
       forall (ci : case_info) p c brs brs',
         OnOne2 (fun br br' => 
           let brctx := br.(bcontext) in
-          on_Trel_eq (red Σ (Γ ,,, brctx)) bbody bcontext br br') 
+          on_Trel_eq (red Σ (Γ ,,, brctx)) bbody bcontext br br' + 
+          on_Trel_eq (red_ctx_rel Σ Γ) bcontext bbody br br')
           brs brs' ->
         red Σ Γ (tCase ci p c brs) (tCase ci p c brs').
     Proof.
       intros ci p c brs brs' h.
-      apply OnOne2All_on_Trel_eq_red_redl in h.
-      dependent induction h.
-      - apply list_map_swap_eq in H. now subst.
-      - etransitivity.
-        + eapply IHh; eauto. rewrite <- map_recomp_decomp. reflexivity.
-        + constructor. econstructor; eauto.
-          rewrite (map_decomp_recomp brs').
-          eapply OnOne2_map.
-          eapply OnOne2_impl ; eauto.
+      apply OnOne2All_disj_on_Trel_eq_red_redl in h as [h|h].
+      * apply OnOne2All_on_Trel_eq_red_redl in h.
+        dependent induction h.
+        - apply list_map_swap_eq in H. now subst.
+        - etransitivity.
+          + eapply IHh; eauto. rewrite <- map_recomp_decomp. reflexivity.
+          + constructor. econstructor; eauto.
+            rewrite (map_decomp_recomp brs').
+            eapply OnOne2_map.
+            eapply OnOne2_impl ; eauto. unfold on_Trel.
+            intros [] [] []; simpl in *. subst.
+            intuition auto.
+      * eapply OnOne2_context_redl in h.
+        dependent induction h.
+        - apply list_map_swap_eq' in H. now subst.
+        - etransitivity.
+          + eapply IHh. rewrite <- map_recomp_decomp'. reflexivity.
+          + constructor. econstructor; eauto.
+            rewrite (map_decomp_recomp' brs').
+            eapply OnOne2_map.
+            eapply OnOne2_impl; tea. unfold on_Trel.
+            intros [] [] []; simpl in *; subst.
+            intuition auto.
     Qed.
 
     Lemma All3_length {A B C} {R : A -> B -> C -> Type} l l' l'' :
@@ -1165,15 +1418,15 @@ Section ReductionCongruence.
       intros B A R lΔ l l' h.
       induction h.
       - constructor.
-      - econstructor ; revgoals.
+      - econstructor.
         + constructor; [eassumption|].
           eapply All3_length in h; intuition eauto. now transitivity #|l'|.
         + clear - IHh. rename IHh into h.
           induction h.
           * constructor.
           * econstructor.
+            -- econstructor 2. eassumption.
             -- eassumption.
-            -- econstructor. assumption.
     Qed.
     (* Lemma All2_many_OnOne2All :
       forall B A (R : B -> A -> A -> Type) lΔ l l',
@@ -1193,11 +1446,59 @@ Section ReductionCongruence.
             -- econstructor. assumption.
     Qed. *)
 
+    Definition red_brs_disj Γ brs brs' :=
+      OnOne2 (fun br br' => 
+        let ctx := br.(bcontext) in
+        on_Trel_eq (red Σ (Γ ,,, ctx)) bbody bcontext br br' + 
+        on_Trel_eq (red_ctx_rel Σ Γ) bcontext bbody br br')
+      brs brs'.
+
     Definition red_brs Γ brs brs' :=
       All2 (fun br br' => 
-      let ctx := br.(bcontext) in
-      on_Trel_eq (red Σ (Γ ,,, ctx)) bbody bcontext br br')
+        Trel_conj (on_Trel (red Σ (Γ ,,, br.(bcontext))) bbody)
+                  (on_Trel (red_ctx_rel Σ Γ) bcontext) br br')
       brs brs'.
+
+    Lemma rtrans_clos_incl {A} (R S : A -> A -> Type) : 
+      (forall x y, R x y -> rtrans_clos S x y) ->
+      forall x y, rtrans_clos R x y ->
+      rtrans_clos S x y.
+    Proof.
+      intros HR x y h.
+      eapply clos_rt_rtn1_iff in h.
+      induction h; eauto.
+      * econstructor.
+      * apply clos_rt_rtn1_iff.
+        apply clos_rt_rtn1_iff in IHh1.
+        apply clos_rt_rtn1_iff in IHh2.
+        now transitivity y.
+    Qed.
+
+    Lemma red_brs_disj_red_brs brs brs' :
+      red_brs Γ brs brs' ->
+      rtrans_clos (red_brs_disj Γ) brs brs'.
+    Proof.
+      rewrite /red_brs.
+      intros h.
+      eapply All2_many_OnOne2 in h.
+      eapply rtrans_clos_incl; tea. clear h.
+      intros x y h.
+      eapply clos_rt_rtn1_iff.
+      induction h.
+      * destruct p.
+        etransitivity.
+        - constructor. constructor. left.
+          instantiate (1 := {| bcontext := bcontext hd; bbody := bbody hd' |}).
+          simpl. split; auto.
+        - constructor.
+          constructor. right. simpl.
+          split; auto.
+      * clear -IHh. rename IHh into h.
+        induction h.
+        - constructor 1. constructor 2. apply r.
+        - constructor 2.
+        - econstructor 3; eauto.
+    Qed.
 
     Lemma red_case_brs :
       forall ci p c brs brs',
@@ -1205,7 +1506,7 @@ Section ReductionCongruence.
         red Σ Γ (tCase ci p c brs) (tCase ci p c brs').
     Proof.
       intros ci p c brs brs' h.
-      apply All2_many_OnOne2 in h.
+      eapply red_brs_disj_red_brs in h.
       induction h; trea.
       + eapply red_trans.
         * eapply IHh.
@@ -1229,20 +1530,22 @@ Section ReductionCongruence.
           simpl. constructor. auto.
     Qed.
 
-    Lemma red_case {ci p c brs pars' pret' c' brs'} :
+    Lemma red_case {ci p c brs pars' pcontext' pret' c' brs'} :
       red Σ (Γ ,,, p.(pcontext)) p.(preturn) pret' ->
+      red_ctx_rel Σ Γ p.(pcontext) pcontext' ->
       All2 (red Σ Γ) p.(pparams) pars' ->
       red Σ Γ c c' ->
       red_brs Γ brs brs' ->
       red Σ Γ (tCase ci p c brs) 
         (tCase ci {| pparams := pars'; puinst := p.(puinst);
-                     pcontext := p.(pcontext); preturn := pret' |} c' brs').
+                     pcontext := pcontext'; preturn := pret' |} c' brs').
     Proof.
-      intros h1 h2 h3 h4.
+      intros h1 h2 h3 h4 h5.
       eapply red_trans; [eapply red_case_brs|]; eauto.
       eapply red_trans; [eapply red_case_c|]; eauto.
       eapply red_trans; [eapply red_case_p|]; eauto.
       eapply red_trans; [eapply red_case_pars|]; eauto.
+      eapply red_trans; [eapply red_case_pcontext|]; eauto.
     Qed.
 
     Lemma red1_it_mkLambda_or_LetIn :

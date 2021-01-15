@@ -13,14 +13,6 @@ Notation closed_decl n := (test_decl (closedn n)).
 Notation closedn_ctx := (test_context_k closedn).
 Notation closed_ctx := (closedn_ctx 0).
 
-Lemma test_context_k_eq (p : nat -> term -> bool) n ctx : 
-  test_context_k p n ctx = alli (fun k d => test_decl (p (n + k)) d) 0 (List.rev ctx).
-Proof.
-  induction ctx; simpl; auto.
-  rewrite IHctx alli_app /= andb_comm andb_true_r andb_comm. f_equal.
-  len. now rewrite Nat.add_comm.
-Qed.
-
 Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
 Proof.
   case: d => na [body|] ty; rewrite /test_decl /lift_decl /map_decl /=; unf_term.
@@ -1321,18 +1313,6 @@ Proof.
   intros decl.
   now eapply declared_projection_closed in decl.
 Qed.
-
-Definition onctx_k (P : nat -> term -> Type) k (ctx : context) :=
-  Alli (fun i d => ondecl (P (Nat.pred #|ctx| - i + k)) d) 0 ctx.
-
-Definition tCasePredProp_k
-            (P : nat -> term -> Type)
-            k (p : predicate term) :=
-  All (P k) p.(pparams) × onctx_k P k p.(pcontext) ×
-  P (#|p.(pcontext)| + k) p.(preturn).
-
-Definition tCaseBrsProp_k (P : nat -> term -> Type) k (l : list (branch term)) :=
-  All (fun x => onctx_k P k (bcontext x) × P (#|x.(bcontext)| + k) (bbody x)) l.
   
 Lemma term_closedn_list_ind :
   forall (P : nat -> term -> Type), 

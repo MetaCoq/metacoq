@@ -44,3 +44,13 @@ Lemma reflectT_subrelation' {A} {R} {r : A -> A -> bool} : (forall x y, reflectT
 Proof.
   intros. intros x y h. destruct (X x y); auto. discriminate.
 Qed.
+
+Lemma reflectT_pred {A} {p : A -> bool} : forall x, reflectT (p x) (p x).
+Proof.
+  intros x. now apply equiv_reflectT.
+Qed.
+
+Lemma reflectT_pred2 {A B} {p : A -> B -> bool} : forall x y, reflectT (p x y) (p x y).
+Proof.
+  intros x y. now apply equiv_reflectT.
+Qed.

@@ -49,6 +49,16 @@ Proof.
   intros x; reflexivity.
 Qed.
 
+Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
+Proof.
+  intros f g Hfg x y ->. now rewrite Hfg.
+Qed.
+
+Instance pointwise_subrelation2 {A B C} : subrelation (`=2`) (@Logic.eq A ==> @Logic.eq B ==> @Logic.eq C)%signature.
+Proof.
+  intros f g Hfg x y -> ? ? ->. now rewrite Hfg.
+Qed.
+
 (** Common abbreviations *)
 Ltac tas := try assumption.
 Ltac tea := try eassumption.

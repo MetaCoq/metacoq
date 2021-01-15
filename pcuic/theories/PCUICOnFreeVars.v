@@ -108,48 +108,6 @@ Proof.
 Qed.
 Hint Rewrite test_context_k_ctx : map.
 
-Lemma reflect_option_default {A} {P : A -> Type} {p : A -> bool} : 
-  (forall x, reflectT (P x) (p x)) ->
-  forall x, reflectT (option_default P x unit) (option_default p x true).
-Proof.
-  intros Hp x.
-  destruct x => /= //. constructor. exact tt.
-Qed.
-
-Lemma ondeclP {P : term -> Type} {p : term -> bool} {d : context_decl} :
-  (forall x, reflectT (P x) (p x)) ->
-  reflectT (ondecl P d) (test_decl p d).
-Proof.
-  intros hr.
-  rewrite /ondecl /test_decl; destruct d; cbn.
-  destruct (hr decl_type) => //;
-  destruct (reflect_option_default hr decl_body) => /= //; now constructor.
-Qed.
-
-Lemma reflectT_pred {A} {p : A -> bool} : forall x, reflectT (p x) (p x).
-Proof.
-  intros x. now apply equiv_reflectT.
-Qed.
-
-Lemma reflectT_pred2 {A B} {p : A -> B -> bool} : forall x y, reflectT (p x y) (p x y).
-Proof.
-  intros x y. now apply equiv_reflectT.
-Qed.
-
-Lemma onctx_test {p : term -> bool} {ctx : context} :
-  reflectT (onctx p ctx) (test_context p ctx).
-Proof.
-  eapply equiv_reflectT.
-  - induction 1; simpl; auto. rewrite IHX /= //.
-    now move/(ondeclP reflectT_pred): p0.
-  - induction ctx.
-    * constructor.
-    * move => /= /andP [Hctx Hd]; constructor; eauto.
-      now move/(ondeclP reflectT_pred): Hd.
-Qed.
-
-Hint Rewrite test_context_k_ctx : map.
-
 Lemma on_free_vars_true t : on_free_vars xpredT t.
 Proof.
   revert t.
@@ -158,10 +116,10 @@ Proof.
     try rtoProp; solve_all).
   - rtoProp. setoid_rewrite shiftnP_xpredT.
     rewrite test_context_k_ctx.
-    now move/onctx_test: a0.
+    now move/onctxP: a0.
   - setoid_rewrite shiftnP_xpredT.
     rewrite test_context_k_ctx.
-    now move/onctx_test: a1.
+    now move/onctxP: a1.
   - unfold test_def in *. apply /andP. now rewrite shiftnP_xpredT.
   - unfold test_def in *. apply /andP. now rewrite shiftnP_xpredT.
 Qed.
@@ -188,62 +146,6 @@ Lemma shiftnP_closedP k n P : shiftnP k (closedP n P) =1 closedP (k + n) (shiftn
 Proof.
   intros i; rewrite /shiftnP /closedP.
   repeat nat_compare_specs => //.
-Qed.
-
-(** Useful for inductions *)
-Lemma onctx_k_rev {P : nat -> term -> Type} {k} {ctx} :
-  onctx_k P k ctx <~>
-  Alli (fun i => ondecl (P (i + k))) 0 (List.rev ctx).
-Proof.
-  split.
-  - unfold onctx_k.
-    intros Hi.
-    eapply forall_nth_error_Alli => i x hx.
-    pose proof (nth_error_Some_length hx).
-    rewrite nth_error_rev // in hx.
-    rewrite List.rev_involutive in hx.
-    len in hx.
-    eapply Alli_nth_error in Hi; tea.
-    simpl in Hi. simpl.
-    replace (Nat.pred #|ctx| - (#|ctx| - S i) + k) with (i + k) in Hi => //.
-    len in H; by lia.
-  - intros Hi.
-    eapply forall_nth_error_Alli => i x hx.
-    eapply Alli_rev_nth_error in Hi; tea.
-    simpl.
-    replace (#|ctx| - S i + k) with (Nat.pred #|ctx| - i + k) in Hi => //.
-    lia.
-Qed.
-
-Lemma onctx_k_shift {P : nat -> term -> Type} {k} {ctx} :
-  onctx_k P k ctx ->
-  onctx_k (fun k' => P (k' + k)) 0 ctx.
-Proof.
-  intros Hi%onctx_k_rev.
-  eapply onctx_k_rev.
-  eapply Alli_impl; tea => /= n x.
-  now rewrite Nat.add_0_r.
-Qed.
-
-Lemma onctx_k_P {P : nat -> term -> Type} {p : nat -> term -> bool} {k} {ctx : context} :
-  (forall x y, reflectT (P x y) (p x y)) ->
-  reflectT (onctx_k P k ctx) (test_context_k p k ctx).
-Proof.
-  intros HP.
-  eapply equiv_reflectT.
-  - intros Hi%onctx_k_rev.
-    rewrite test_context_k_eq.
-    induction Hi; simpl; auto.
-    rewrite Nat.add_comm.
-    rewrite IHHi /= //.
-    now move/(ondeclP (HP _)): p0 => ->.
-  - intros Hi. eapply onctx_k_rev.
-    move: ctx Hi. induction ctx.
-    * constructor.
-    * move => /= /andP [Hctx Hd].
-      eapply Alli_app_inv; eauto. constructor.
-      + move/(ondeclP (HP _)): Hd. now len.
-      + constructor.
 Qed.
 
 Lemma closedP_on_free_vars {n t} : closedn n t -> on_free_vars (closedP n xpredT) t.

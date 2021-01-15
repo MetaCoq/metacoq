@@ -986,13 +986,6 @@ Proof.
     rewrite -map_map_compose. now f_equal.
 Qed.
 
-Lemma context_assumptions_mapi_context f (ctx : context) : 
-  context_assumptions (mapi_context f ctx) = context_assumptions ctx.
-Proof. 
-  now rewrite mapi_context_fold; len.
-Qed.
-Hint Rewrite context_assumptions_mapi_context : len.
-
 Lemma rename_iota_red :
   forall f pars args br,
   #|skipn pars args| = context_assumptions br.(bcontext) ->

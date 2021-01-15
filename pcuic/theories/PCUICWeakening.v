@@ -41,9 +41,8 @@ Qed.
 Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.
 Proof.
   induction ctx in n, k |- *; auto.
-  unfold closed_ctx, id. simpl.
-  rewrite alli_app List.rev_length /= lift_context_snoc0 /snoc Nat.add_0_r.
-  move/andb_and => /= [Hctx /andb_and [Ha _]].
+  rewrite closedn_ctx_cons lift_context_snoc0 /snoc.
+  move/andb_and => /= [Hctx Hd].
   rewrite IHctx // lift_decl_closed //. now apply: closed_decl_upwards.
 Qed.
 
@@ -182,7 +181,7 @@ Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ').
 Proof.
   intros wfΓ' wfΓ''.
-  pose proof (env_prop_wf_local _ _ typing_rename_prop _ wfΣ _ wfΓ'). simpl in X.
+  pose proof (env_prop_wf_local _ _ typing_rename_prop _ wfΣ _ wfΓ') as [_ X]. simpl in X.
   eapply All_local_env_app_inv in X as [XΓ XΓ'].
   apply wf_local_app => //.
   rewrite /lift_context.
@@ -336,7 +335,7 @@ Proof.
   rewrite /map_constant_body; destruct decl; simpl; f_equal; rewrite ?lift_rename.
   - eapply declared_constant_closed_type in declc; eauto.
     now rewrite rename_closed.
-  - destruct cst_body eqn:cb => /= //.
+  - destruct cst_body0 eqn:cb => /= //.
     f_equal.
     eapply declared_constant_closed_body in declc; simpl; eauto.
     now rewrite lift_rename rename_closed.
@@ -451,7 +450,8 @@ Fixpoint lift_stack n k π :=
       Case_pars ci 
         (List.map (lift n k') pars1)
         (List.map (lift n k') pars2) 
-        puinst pctx
+        puinst 
+        (lift_context n k' pctx)
         (lift n (#|pctx| + k') p)
         (lift n k' c) brs' (lift_stack n k π)
   | Case_p ci pars puinst pctx c brs π =>
@@ -461,14 +461,14 @@ Fixpoint lift_stack n k π :=
         (lift n k' c) brs' (lift_stack n k π)
   | Case ci pred brs π =>
       let k' := #|stack_context π| + k in
-      let pred' := map_predicate id (lift n k') (lift n (#|pred.(pcontext)| + k')) pred in
+      let pred' := map_predicate_k id (lift n) k' pred in
       let brs' := map_branches_k (lift n) k' brs in
       Case ci pred' brs' (lift_stack n k π)
   | Case_brs ci pred c brctx brs1 brs2 π =>
       let k' := #|stack_context π| + k in
       let brs1' := map_branches_k (lift n) k' brs1 in
       let brs2' := map_branches_k (lift n) k' brs2 in
-      let pred' := map_predicate id (lift n k') (lift n (#|pred.(pcontext)| + k')) pred in
+      let pred' := map_predicate_k id (lift n) k' pred in
       Case_brs ci pred' (lift n k' c) (lift_context n k' brctx) brs1' brs2' (lift_stack n k π)
   | Proj p π =>
       Proj p (lift_stack n k π)
@@ -521,26 +521,6 @@ Proof.
   now rewrite /forget_types map_decl_name_fold_context.
 Qed.
 
-Definition lendb := 
-  (rename_context_length,
-   idsn_length,
-   cofix_subst_length,
-   fix_subst_length,
-   fix_context_length,
-   subst_instance_length,
-   inds_length,
-   forget_types_length,
-   extended_subst_length,
-   expand_lets_ctx_length,
-   expand_lets_k_ctx_length,
-   lift_context_length,
-   @map_InP_length,
-   context_assumptions_lift_context,
-   context_assumptions_subst_context,
-   context_assumptions_subst_instance,
-   context_assumptions_app,
-   app_context_length).
-
 Lemma lift_zipc :
   forall n k t π,
     let k' := #|stack_context π| + k in
@@ -574,13 +554,13 @@ Proof.
     rewrite !app_length. cbn. rewrite !map_length.
     f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
-    now rewrite /map_predicate /= map_app /= /id.
+    now rewrite /map_predicate_k /= map_app /= /id mapi_context_fold.
   - simpl. rewrite IHπ; cbn. f_equal. f_equal.
-    rewrite /map_predicate /=.
-    now rewrite forget_types_fold_context !lendb Nat.add_assoc.
+    rewrite /map_predicate_k /=.
+    now rewrite mapi_context_fold; len; rewrite Nat.add_assoc.
   - simpl. rewrite IHπ; cbn. f_equal. f_equal.
     rewrite map_app /=. f_equal. f_equal.
-    now rewrite /map_branch /= forget_types_fold_context !lendb.
+    rewrite /map_branch_k mapi_context_fold /=; len; now rewrite Nat.add_assoc.
 Qed.
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :

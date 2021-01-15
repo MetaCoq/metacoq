@@ -482,7 +482,14 @@ Ltac unf_term := unfold PCUICTerm.term in *; unfold PCUICTerm.tRel in *;
   the closed predicate to them. *)                 
 Module PCUICEnvironment := Environment PCUICTerm.
 Export PCUICEnvironment.
-(* Do NOT `Include` this module, as this would sadly duplicates the rewrite database... *)
+(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
+
+Lemma context_assumptions_mapi_context f (ctx : context) : 
+  context_assumptions (mapi_context f ctx) = context_assumptions ctx.
+Proof. 
+  now rewrite mapi_context_fold; len.
+Qed.
+Hint Rewrite context_assumptions_mapi_context : len.
 
 Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
 (** Included in PCUICTyping only *)
@@ -583,6 +590,37 @@ Definition ondecl {A} (P : A -> Type) (d : BasicAst.context_decl A) :=
   P d.(decl_type) × option_default P d.(decl_body) unit. 
   
 Notation onctx P := (All (ondecl P)).
+
+Definition onctx_k (P : nat -> term -> Type) k (ctx : context) :=
+  Alli (fun i d => ondecl (P (Nat.pred #|ctx| - i + k)) d) 0 ctx.
+
+Lemma ondeclP {P : term -> Type} {p : term -> bool} {d : context_decl} :
+  (forall x, reflectT (P x) (p x)) ->
+  reflectT (ondecl P d) (test_decl p d).
+Proof.
+  intros hr.
+  rewrite /ondecl /test_decl; destruct d; cbn.
+  destruct (hr decl_type) => //;
+  destruct (reflect_option_default hr decl_body) => /= //; now constructor.
+Qed.
+
+Lemma onctxP {p : term -> bool} {ctx : context} :
+  reflectT (onctx p ctx) (test_context p ctx).
+Proof.
+  eapply equiv_reflectT.
+  - induction 1; simpl; auto. rewrite IHX /= //.
+    now move/(ondeclP reflectT_pred): p0.
+  - induction ctx.
+    * constructor.
+    * move => /= /andb_and [Hctx Hd]; constructor; eauto.
+      now move/(ondeclP reflectT_pred): Hd.
+Qed.
+  
+Definition tCasePredProp_k
+            (P : nat -> term -> Type)
+            k (p : predicate term) :=
+  All (P k) p.(pparams) × onctx_k P k p.(pcontext) ×
+  P (#|p.(pcontext)| + k) p.(preturn).
 
 Definition tCasePredProp {term}
             (Pparams Preturn : term -> Type)
@@ -961,6 +999,9 @@ Qed.
 Definition tCaseBrsProp {A} (P : A -> Type) (l : list (branch A)) :=
   All (fun x => onctx P (bcontext x) × P (bbody x)) l.
 
+Definition tCaseBrsProp_k (P : nat -> term -> Type) k (l : list (branch term)) :=
+  All (fun x => onctx_k P k (bcontext x) × P (#|x.(bcontext)| + k) (bbody x)) l.
+
 Lemma map_branches_k_map_branches_k
       {term term' term''}
       (f : nat -> term' -> term'')
@@ -1097,15 +1138,18 @@ Proof.
   induction ctx as [|[na [b|] ty] ctx]; simpl; auto; now rewrite IHctx Hfg.
 Qed.
 
+Lemma test_context_k_eq (p : nat -> term -> bool) n ctx : 
+  test_context_k p n ctx = alli (fun k d => test_decl (p (n + k)) d) 0 (List.rev ctx).
+Proof.
+  induction ctx; simpl; auto.
+  rewrite IHctx alli_app /= andb_comm andb_true_r andb_comm. f_equal.
+  len. now rewrite Nat.add_comm.
+Qed.
+
 Instance test_context_k_Proper : Proper (`=2` ==> Logic.eq ==> `=1`) (@test_context_k term).
 Proof.
   intros f g Hfg k k' <- ctx.
   now apply test_context_k_eq_spec.
-Qed.
-
-Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
-Proof.
-  intros f g Hfg x y ->. now rewrite Hfg.
 Qed.
 
 Instance test_predicate_k_Proper : Proper (`=1` ==> `=2` ==> Logic.eq ==> `=1`) (@test_predicate_k term).
@@ -1189,6 +1233,62 @@ Proof.
   unfold test_decl.
   rewrite (HP _ p0 pty) andb_true_r; simpl.
   destruct (decl_body x); simpl in *; eauto.
+Qed.
+
+(** Useful for inductions *)
+Lemma onctx_k_rev {P : nat -> term -> Type} {k} {ctx} :
+  onctx_k P k ctx <~>
+  Alli (fun i => ondecl (P (i + k))) 0 (List.rev ctx).
+Proof.
+  split.
+  - unfold onctx_k.
+    intros Hi.
+    eapply forall_nth_error_Alli => i x hx.
+    pose proof (nth_error_Some_length hx).
+    rewrite nth_error_rev // in hx.
+    rewrite List.rev_involutive in hx.
+    len in hx.
+    eapply Alli_nth_error in Hi; tea.
+    simpl in Hi. simpl.
+    replace (Nat.pred #|ctx| - (#|ctx| - S i) + k) with (i + k) in Hi => //.
+    len in H; by lia.
+  - intros Hi.
+    eapply forall_nth_error_Alli => i x hx.
+    eapply Alli_rev_nth_error in Hi; tea.
+    simpl.
+    replace (#|ctx| - S i + k) with (Nat.pred #|ctx| - i + k) in Hi => //.
+    lia.
+Qed.
+
+Lemma onctx_k_shift {P : nat -> term -> Type} {k} {ctx} :
+  onctx_k P k ctx ->
+  onctx_k (fun k' => P (k' + k)) 0 ctx.
+Proof.
+  intros Hi%onctx_k_rev.
+  eapply onctx_k_rev.
+  eapply Alli_impl; tea => /= n x.
+  now rewrite Nat.add_0_r.
+Qed.
+
+Lemma onctx_k_P {P : nat -> term -> Type} {p : nat -> term -> bool} {k} {ctx : context} :
+  (forall x y, reflectT (P x y) (p x y)) ->
+  reflectT (onctx_k P k ctx) (test_context_k p k ctx).
+Proof.
+  intros HP.
+  eapply equiv_reflectT.
+  - intros Hi%onctx_k_rev.
+    rewrite test_context_k_eq.
+    induction Hi; simpl; auto.
+    rewrite Nat.add_comm.
+    rewrite IHHi /= //.
+    now move/(ondeclP (HP _)): p0 => ->.
+  - intros Hi. eapply onctx_k_rev.
+    move: ctx Hi. induction ctx.
+    * constructor.
+    * move => /= /andb_and [Hctx Hd].
+      eapply Alli_app_inv; eauto. constructor.
+      + move/(ondeclP (HP _)): Hd. now len.
+      + constructor.
 Qed.
 
 Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.

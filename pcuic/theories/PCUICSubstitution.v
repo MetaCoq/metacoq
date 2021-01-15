@@ -40,7 +40,7 @@ Inductive subs {cf:checker_flags} (Σ : global_env_ext) (Γ : context) : list te
 
 Lemma subs_length {cf:checker_flags} {Σ} {Γ s Δ} : subs Σ Γ s Δ -> #|s| = #|Δ|.
 Proof.
-  induction 1; simpl; auto.
+  induction 1; simpl; auto. f_equal. auto.
 Qed.
 
 (** Well-typed substitution into a context with let-ins *)
@@ -81,12 +81,12 @@ Qed.
 
 Lemma subslet_length {cf:checker_flags} {Σ Γ s Δ} : subslet Σ Γ s Δ -> #|s| = #|Δ|.
 Proof.
-  induction 1; simpl; auto with arith.
+  induction 1; simpl; f_equal; auto.
 Qed.
 
 Lemma subst_decl_closed n k d : closed_decl k d -> subst_decl n k d = d.
 Proof.
-  case: d => na [body|] ty; rewrite /closed_decl /subst_decl /map_decl /=.
+  case: d => na [body|] ty; rewrite /subst_decl /map_decl /=.
   - move/andb_and => [cb cty]. rewrite !subst_closedn //.
   - move=> cty; now rewrite !subst_closedn //.
 Qed.
@@ -94,9 +94,8 @@ Qed.
 Lemma closed_ctx_subst n k ctx : closed_ctx ctx = true -> subst_context n k ctx = ctx.
 Proof.
   induction ctx in n, k |- *; auto.
-  unfold closed_ctx, id.
-  rewrite alli_app List.rev_length /= Nat.add_0_r.
-  move/andb_and => /= [Hctx /andb_and [Ha _]].
+  rewrite closedn_ctx_cons.
+  move/andb_and => /= [Hctx Hd].
   rewrite subst_context_snoc /snoc /= IHctx // subst_decl_closed //.
   now apply: closed_decl_upwards.
 Qed.
@@ -105,7 +104,7 @@ Lemma closed_tele_subst n k ctx :
   closed_ctx ctx ->
   mapi (fun (k' : nat) (decl : context_decl) => subst_decl n (k' + k) decl) (List.rev ctx) = List.rev ctx.
 Proof.
-  rewrite /closedn_ctx /mapi. simpl. generalize 0.
+  rewrite test_context_k_eq /mapi. simpl. generalize 0.
   induction ctx using rev_ind; try easy.
   move=> n0.
   rewrite /closedn_ctx !rev_app_distr /id /=.
@@ -144,7 +143,7 @@ Qed.
 
 Lemma subst_length {cf:checker_flags} Σ Γ s Γ' : subs Σ Γ s Γ' -> #|s| = #|Γ'|.
 Proof.
-  induction 1; simpl; auto with arith.
+  induction 1; simpl; lia.
 Qed.
 
 Lemma subs_nth_error_ge {cf:checker_flags} Σ Γ Γ' Γ'' v s :
@@ -204,18 +203,18 @@ Proof.
   now rewrite Nat.add_comm.
 Qed.
 
-Lemma subst_iota_red s k pars args ctx br :
-  #|skipn pars args| = context_assumptions ctx ->
-  #|bcontext br| = #|ctx| ->
-  subst s k (iota_red pars args ctx br) =
-  iota_red pars (List.map (subst s k) args) 
-    (subst_context s k ctx) (map_branch (subst s (#|ctx| + k)) br).
+Lemma subst_iota_red s k pars args br :
+  #|skipn pars args| = context_assumptions br.(bcontext) ->
+  subst s k (iota_red pars args br) =
+  iota_red pars (List.map (subst s k) args) (map_branch_k (subst s) k br).
 Proof.
-  intros hctx hbr. rewrite !subst_inst. rewrite inst_iota_red // hbr.
+  intros hctx. rewrite !subst_inst. rewrite inst_iota_red //.
   f_equal; try setoid_rewrite <-subst_inst' => //.
-  * rewrite /inst_context /subst_context.
-    eapply fold_context_ext => i t; rewrite subst_inst. now sigma.
-  * setoid_rewrite subst_inst'. now sigma. 
+  rewrite /map_branch_k /map_branch_shift; f_equal.
+  * rewrite mapi_context_inst /shiftf. setoid_rewrite subst_inst'.
+    rewrite mapi_context_fold.
+    eapply fold_context_ext => i t. now sigma.
+  * simpl. rewrite subst_inst'. now sigma. 
 Qed.
 
 Lemma subst_unfold_fix n k mfix idx narg fn :
@@ -1217,7 +1216,7 @@ Qed.
 
 Lemma untyped_subslet_length {Γ s Δ} : untyped_subslet Γ s Δ -> #|s| = #|Δ|.
 Proof.
-  induction 1; simpl; auto with arith.
+  induction 1; simpl; lia.
 Qed.
 
 (* Let-expanding substitution *)
@@ -1342,22 +1341,22 @@ Proof.
   - apply subst_eq_term. 
 Qed.
 
-Lemma subst_eq_decl `{checker_flags} le Σ ϕ l k d d' :
+Lemma subst_eq_decl `{checker_flags} {le Σ ϕ l k d d'} :
   eq_decl le Σ ϕ d d' -> eq_decl le Σ ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.
-  destruct d, d', decl_body, decl_body0;
-    unfold eq_decl, map_decl; cbn; intuition auto using subst_compare_term, subst_eq_term.
+  destruct d, d', decl_body, decl_body0, le;
+    unfold eq_decl, map_decl; cbn; 
+    intuition eauto using subst_compare_term, subst_eq_term, subst_leq_term.
 Qed.
 
 Lemma subst_eq_context `{checker_flags} le Σ φ l l' n k :
   eq_context le Σ φ l l' ->
   eq_context le Σ φ (subst_context n k l) (subst_context n k l').
 Proof.
-  induction l in l', n, k |- *; inversion 1. 1: constructor.
-  rewrite !subst_context_snoc. constructor.
-  - erewrite All2_length by eassumption.
-    now apply subst_eq_decl.
-  - now apply IHl.
+  induction 1; rewrite ?subst_context_snoc /=; constructor; auto.
+  - erewrite (context_relation_length X). simpl.
+    apply (subst_eq_decl p).
+  - rewrite (context_relation_length X); simpl; apply (subst_eq_decl p).
 Qed.
 
 Lemma substitution_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M N :
@@ -1438,8 +1437,7 @@ Qed.
 
 (** The cumulativity relation is substitutive, yay! *)
 
-Notation subst_predicate s k p :=
-  (map_predicate id (subst s k) (subst s (#|pcontext p| + k)) p).
+Notation subst_predicate s := (map_predicate_k id (subst s)).
 
 Fixpoint subst_stack s k π :=
   match π with
@@ -1485,7 +1483,8 @@ Fixpoint subst_stack s k π :=
     let k' := #|stack_context π| + k in
     let brs' := map_branches_k (subst s) k' brs in
     Case_pars ci (map (subst s k') pars1) (map (subst s k') pars2)
-      pinst pctx
+      pinst 
+      (subst_context s k' pctx)
       (subst s (#|pctx| + k') pret)
       (subst s k' c) brs' (subst_stack s k π)
   | Case_p ci pars pinst pctx c brs π =>
@@ -1565,12 +1564,13 @@ Proof.
     rewrite !app_length. cbn. rewrite !map_length.
     f_equal. f_equal. lia.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
-    now rewrite /map_predicate /= map_app.
+    rewrite /map_predicate_k /= map_app.
+    now rewrite mapi_context_fold.
   - simpl; rewrite IHπ; cbn. f_equal. f_equal.
-    now rewrite /map_predicate /= forget_types_fold_context; len.
+    now rewrite /map_predicate_k /= mapi_context_fold; len.
   - simpl; rewrite IHπ; cbn; do 2 f_equal.
-    rewrite map_app forget_types_fold_context /=; len. do 2 f_equal.
-    now rewrite /map_branch /= Nat.add_assoc.
+    rewrite map_app /=; len. do 2 f_equal.
+    now rewrite /map_branch_k /= mapi_context_fold Nat.add_assoc.
 Qed.
 
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :

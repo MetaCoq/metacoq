@@ -1,5 +1,5 @@
 From Coq Require Import List ssreflect Arith Morphisms.
-From MetaCoq Require Import MCPrelude MCList MCProd.
+From MetaCoq Require Import MCPrelude MCList MCProd MCReflect.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with
@@ -123,6 +123,15 @@ Proof.
   destruct o => /= //.
   move=> [] <-. exists a; auto.
 Qed.
+
+Lemma reflect_option_default {A} {P : A -> Type} {p : A -> bool} : 
+  (forall x, reflectT (P x) (p x)) ->
+  forall x, reflectT (option_default P x unit) (option_default p x true).
+Proof.
+  intros Hp x.
+  destruct x => /= //. constructor. exact tt.
+Qed.
+
 
 (** Analogous to Forall, but for the [option] type *)
 (* Helpful for induction principles and predicates on [term] *)

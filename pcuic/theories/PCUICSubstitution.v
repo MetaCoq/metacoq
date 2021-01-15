@@ -346,6 +346,18 @@ Qed.
 Definition subst_mutual_inductive_body n k m :=
   map_mutual_inductive_body (fun k' => subst n (k' + k)) m.
 
+Lemma subst_fix_context:
+  forall (mfix : list (def term)) n (k : nat),
+    fix_context (map (map_def (subst n k) (subst n (#|mfix| + k))) mfix) =
+    subst_context n k (fix_context mfix).
+Proof.
+  intros mfix n k. unfold fix_context.
+  rewrite map_vass_map_def_subst rev_mapi.
+  fold (fix_context mfix).
+  rewrite (subst_context_alt n k (fix_context mfix)).
+   now rewrite /subst_decl mapi_length fix_context_length.
+Qed.
+
 (* Lemma subst_declared_minductive {cf:checker_flags} Σ cst decl n k :
   wf Σ ->
   declared_minductive Σ cst decl ->
@@ -446,18 +458,6 @@ Proof.
   rewrite subst_closedn.
   - eapply closed_upwards; eauto; try lia.
   - destruct pdecl; reflexivity.
-Qed.
-
-Lemma subst_fix_context:
-  forall (mfix : list (def term)) n (k : nat),
-    fix_context (map (map_def (subst n k) (subst n (#|mfix| + k))) mfix) =
-    subst_context n k (fix_context mfix).
-Proof.
-  intros mfix n k. unfold fix_context.
-  rewrite map_vass_map_def_subst rev_mapi.
-  fold (fix_context mfix).
-  rewrite (subst_context_alt n k (fix_context mfix)).
-   now rewrite /subst_decl mapi_length fix_context_length.
 Qed.
 
 Lemma subst_destArity ctx t n k :

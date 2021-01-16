@@ -9,69 +9,29 @@ Ltac pcuic :=
   try repeat red; cbn in *;
    try (solve [ intuition auto; eauto with pcuic || (try lia || congruence) ]).
 
-Lemma context_relation_nth {P n Γ Γ' d} :
-context_relation P Γ Γ' -> nth_error Γ n = Some d ->
-{ d' & ((nth_error Γ' n = Some d') *
-        let Γs := skipn (S n) Γ in
-        let Γs' := skipn (S n) Γ' in
-        context_relation P Γs Γs' *
-        P Γs Γs' d d')%type }.
-Proof.
-induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
-- depelim Hrel.
-  simpl. eexists; intuition eauto.
-  eexists; intuition eauto.
-- depelim Hrel.
-  destruct (IHn _ _ _ Hrel H).
-  cbn -[skipn] in *.
-  eexists; intuition eauto.
-  destruct (IHn _ _ _ Hrel H).
-  eexists; intuition eauto.
-Qed.
-
 Lemma context_relation_nth_ass {P n Γ Γ' d} :
-context_relation P Γ Γ' -> nth_error Γ n = Some d ->
-assumption_context Γ ->
-{ d' & ((nth_error Γ' n = Some d') *
-        let Γs := skipn (S n) Γ in
-        let Γs' := skipn (S n) Γ' in
-        context_relation P Γs Γs' *
-        (d.(decl_body) = None) *
-        P Γs Γs' d d')%type }.
+  context_relation P Γ Γ' -> nth_error Γ n = Some d ->
+  assumption_context Γ ->
+  { d' & ((nth_error Γ' n = Some d') *
+          let Γs := skipn (S n) Γ in
+          let Γs' := skipn (S n) Γ' in
+          context_relation P Γs Γs' *
+          (d.(decl_body) = None) *
+          P Γs Γs' d d')%type }.
 Proof.
-induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
-- depelim Hrel. intro ass. 
-  simpl. eexists; intuition eauto.
-  eexists; intuition eauto.
-  depelim H.
-- intros ass. depelim Hrel.
-  destruct (IHn _ _ _ Hrel H).
-  now depelim ass.
-  cbn -[skipn] in *.
-  eexists; intuition eauto.
-  destruct (IHn _ _ _ Hrel H).
-  now depelim ass.
-  eexists; intuition eauto.
-Qed.
-
-Lemma context_relation_nth_r {P n Γ Γ' d'} :
-context_relation P Γ Γ' -> nth_error Γ' n = Some d' ->
-{ d & ((nth_error Γ n = Some d) *
-        let Γs := skipn (S n) Γ in
-        let Γs' := skipn (S n) Γ' in
-        context_relation P Γs Γs' *
-        P Γs Γs' d d')%type }.
-Proof.
-induction n in Γ, Γ', d' |- *; destruct Γ'; intros Hrel H; noconf H.
-- depelim Hrel.
-  simpl. eexists; intuition eauto.
-  eexists; intuition eauto.
-- depelim Hrel.
-  destruct (IHn _ _ _ Hrel H).
-  cbn -[skipn] in *.
-  eexists; intuition eauto.
-  destruct (IHn _ _ _ Hrel H).
-  eexists; intuition eauto.
+  induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
+  - depelim Hrel. intro ass. 
+    simpl. eexists; intuition eauto.
+    eexists; intuition eauto.
+    depelim H.
+  - intros ass. depelim Hrel.
+    destruct (IHn _ _ _ Hrel H).
+    now depelim ass.
+    cbn -[skipn] in *.
+    eexists; intuition eauto.
+    destruct (IHn _ _ _ Hrel H).
+    now depelim ass.
+    eexists; intuition eauto.
 Qed.
 
 (** Types of variables are irrelevant during reduction *)

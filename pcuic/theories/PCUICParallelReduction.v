@@ -401,7 +401,7 @@ Section All2_local_env.
     eapply app_inj_length_r in heq_app_context0; try lia. intuition subst; auto.
     pose proof (All2_local_env_length a). lia.
   Qed.
-
+  
   Lemma nth_error_pred1_ctx {P} {Γ Δ} i body' :
     All2_local_env (on_decl P) Γ Δ ->
     option_map decl_body (nth_error Δ i) = Some (Some body') ->

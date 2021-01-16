@@ -165,6 +165,26 @@ Proof.
     auto.
 Qed.
 
+Lemma on_one_decl_mapi_context (P : context -> term -> term -> Type) f : 
+  forall Γ,
+    inclusion (on_one_decl (fun Γ => on_Trel (P (mapi_context f Γ)) (f #|Γ|)) Γ)
+    (on_Trel (on_one_decl P (mapi_context f Γ)) (map_decl (f #|Γ|))).
+Proof.
+  intros Γ x y.
+  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
+    auto.
+Qed.
+
+Lemma on_one_decl_test_impl (P Q : context -> term -> term -> Type) (p : term -> bool) : 
+  forall Γ d d', 
+    on_one_decl P Γ d d' ->
+    test_decl p d ->
+    (forall x y, p x -> P Γ x y -> Q Γ x y) ->
+    on_one_decl Q Γ d d'.
+Proof.
+  intros Γ [na [b|] ty] [na' [b'|] ty'] ond []%andb_and; simpl; firstorder auto.
+Qed.
+
 Section OnOne_local_2.
   Context (P : forall (Γ : context), context_decl -> context_decl -> Type).
 
@@ -182,7 +202,7 @@ End OnOne_local_2.
 
 Class HasLen (A : Type) (x y : nat) := len : A -> x = y.
 
-Notation length_of t := ltac:(let lemma := constr:(len t) in exact lemma).
+Notation length_of t := ltac:(let lemma := constr:(len t) in exact lemma) (only parsing).
 
 Instance OnOne2_local_env_length {P ctx ctx'} : 
   HasLen (OnOne2_local_env P ctx ctx') #|ctx| #|ctx'|.
@@ -280,6 +300,25 @@ Proof.
     subst; simpl; intuition eauto.
 Qed.
 
+Lemma OnOne2_local_env_impl_test {P Q ctx ctx'} {k} {p : nat -> term -> bool} : 
+  OnOne2_local_env P ctx ctx' ->
+  (forall Γ d d', 
+    P Γ d d' ->
+    test_context_k p k Γ ->
+    test_decl (p (#|Γ| + k)) d ->
+    Q Γ d d') ->
+  test_context_k p k ctx ->
+  OnOne2_local_env Q ctx ctx'.
+Proof.
+  intros onenv HPq.
+  induction onenv.
+  * move=> /= /andb_and [testq testd].
+    constructor; auto.
+  * move=> /= /andb_and [testq testd].
+    constructor; auto.
+  * move=> /= /andb_and [testq testd].
+    constructor; auto.
+Qed.
 
 (*Lemma OnOne2_local_env_mapi_context R (Γ Δ : context) (f g : nat -> term -> term) :
   OnOne2_local_env (fun Γ d d' => R (mapi_context f Γ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d)) Γ Δ ->

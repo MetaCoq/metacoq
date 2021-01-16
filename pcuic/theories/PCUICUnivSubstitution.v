@@ -1422,17 +1422,21 @@ Proof.
     eapply case_red_pcontext; eauto with pcuic. simpl.
     eapply OnOne2_local_env_map_context.
     eapply OnOne2_local_env_impl; tea. intros ? ? ? ?.
-    eapply on_one_decl_map.
-    now rewrite subst_instance_app in IHX0.
+    eapply on_one_decl_map, on_one_decl_impl; tea; cbn.
+    now intros ?; rewrite subst_instance_app.
   - cbn.
     rewrite [map_predicate _ _ _ (set_preturn _ _)]subst_instance_predicate_set_preturn.
     eapply case_red_return; eauto with pcuic.
     now rewrite subst_instance_app in IHX0.
   - cbn. econstructor; eauto with pcuic. 
-    * eapply OnOne2_map. eapply OnOne2_impl; [ eassumption | pcuicfo].
-      unfold on_Trel. simpl. intuition eauto.
-      + now rewrite subst_instance_app in b0.
-      + now rewrite b.
+    * eapply OnOne2_map. eapply OnOne2_impl; [eassumption | pcuicfo];
+      unfold on_Trel; simpl; intuition eauto.
+      + left. rewrite -b. now rewrite subst_instance_app in b0.
+      + right. rewrite -b0. split => //.
+        eapply OnOne2_local_env_map_context.
+        eapply OnOne2_local_env_impl; tea. intros ? ? ? ?.
+        eapply on_one_decl_map, on_one_decl_impl; tea; cbn.
+        now intros ?; rewrite subst_instance_app.
   - cbn; econstructor;
       eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | ].
     intros. destruct X1. now red.

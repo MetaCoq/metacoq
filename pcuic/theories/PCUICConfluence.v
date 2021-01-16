@@ -1390,34 +1390,6 @@ Section PredRed.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
-  Lemma red_abs_alt Γ na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M) N N' ->
-                                 red Σ Γ (tLambda na M N) (tLambda na M' N').
-  Proof.
-    intros. eapply (transitivity (y := tLambda na M N')).
-    now eapply (red_ctx (tCtxLambda_r _ _ tCtxHole)).
-    now eapply (red_ctx (tCtxLambda_l _ tCtxHole _)).
-  Qed.
-
-  Lemma red_letin_alt Γ na d0 d1 t0 t1 b0 b1 :
-    red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d0 t0) b0 b1 ->
-    red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
-  Proof.
-    intros; eapply (transitivity (y := tLetIn na d0 t0 b1)).
-    now eapply (red_ctx (tCtxLetIn_r _ _ _ tCtxHole)).
-    eapply (transitivity (y := tLetIn na d0 t1 b1)).
-    now eapply (red_ctx (tCtxLetIn_b _ _ tCtxHole _)).
-    now apply (red_ctx (tCtxLetIn_l _ tCtxHole _ _)).
-  Qed.
-
-  Lemma red_prod_alt Γ na M M' N N' :
-    red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
-    red Σ Γ (tProd na M N) (tProd na M' N').
-  Proof.
-    intros. eapply (transitivity (y := tProd na M' N)).
-    now eapply (red_ctx (tCtxProd_l _ tCtxHole _)).
-    now eapply (red_ctx (tCtxProd_r _ _ tCtxHole)).
-  Qed.
-
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
   Proof.

@@ -1,8 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
-     PCUICContextRelation PCUICReduction PCUICCases PCUICWeakening.
+     PCUICContextRelation PCUICReduction PCUICCases PCUICWeakening
+     PCUICTyping.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
@@ -22,38 +24,69 @@ Section CtxReduction.
     red Σ (Γ ,,, Γ') (lift0 n M) (lift0 n N).
   Proof. now move=> ->; apply (weakening_red Σ Γ [] Γ'). Qed.
 
+  Lemma red_abs_alt Γ na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M) N N' ->
+                                 red Σ Γ (tLambda na M N) (tLambda na M' N').
+  Proof.
+    intros. eapply (transitivity (y := tLambda na M N')).
+    * now eapply (red_ctx_congr (tCtxLambda_r _ _ tCtxHole)).
+    * now eapply (red_ctx_congr (tCtxLambda_l _ tCtxHole _)).
+  Qed.
 
-  Lemma red_red_ctx Γ Δ t u :
-    red Σ Γ t u ->
-    red_ctx Δ Γ ->
+  Lemma red_letin_alt Γ na d0 d1 t0 t1 b0 b1 :
+    red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d0 t0) b0 b1 ->
+    red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
+  Proof.
+    intros; eapply (transitivity (y := tLetIn na d0 t0 b1)).
+    * now eapply (red_ctx_congr (tCtxLetIn_r _ _ _ tCtxHole)).
+    * eapply (transitivity (y := tLetIn na d0 t1 b1)).
+      + now eapply (red_ctx_congr (tCtxLetIn_b _ _ tCtxHole _)).
+      + now apply (red_ctx_congr (tCtxLetIn_l _ tCtxHole _ _)).
+  Qed.
+
+  Lemma red_prod_alt Γ na M M' N N' :
+    red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
+    red Σ Γ (tProd na M N) (tProd na M' N').
+  Proof.
+    intros. eapply (transitivity (y := tProd na M' N)).
+    * now eapply (red_ctx_congr (tCtxProd_l _ tCtxHole _)).
+    * now eapply (red_ctx_congr (tCtxProd_r _ _ tCtxHole)).
+  Qed.
+
+  Lemma red1_red_ctx Γ Δ t u :
+    red1 Σ Γ t u ->
+    red_context Σ Δ Γ ->
     red Σ Δ t u.
   Proof.
-    move=> H Hctx. induction H.
+    move=> r Hctx.
     revert Δ Hctx.
     induction r using red1_ind_all; intros Δ Hctx; try solve [eapply red_step; repeat (constructor; eauto)].
     - red in Hctx.
-      eapply nth_error_pred1_ctx in Hctx; eauto.
+      destruct nth_error eqn:hnth => //; simpl in H; noconf H.
+      eapply context_relation_nth_r in Hctx; eauto.
       destruct Hctx as [x' [? ?]].
-      eapply red_step. constructor. eauto.
-      rewrite -(firstn_skipn (S i) Δ).
-      eapply weakening_red_0; auto.
-      rewrite firstn_length_le //.
-      destruct (nth_error Δ) eqn:Heq => //.
-      eapply nth_error_Some_length in Heq. lia.
+      destruct p as [cr rd]. destruct c => //; simpl in *.
+      depelim rd => //. noconf H.
+      eapply red_step.
+      * constructor. rewrite e => //.
+      * rewrite -(firstn_skipn (S i) Δ).
+        eapply weakening_red_0; auto.
+        rewrite firstn_length_le //.
+        eapply nth_error_Some_length in e. lia.
     - repeat econstructor; eassumption.
     - repeat econstructor; eassumption.
     - repeat econstructor; eassumption.
     - repeat econstructor; eassumption.
-    - eapply red_abs_alt. eauto. eauto.
-    - eapply red_abs_alt. eauto. apply (IHr (Δ ,, vass na N)).
-      constructor; auto. red. auto.
+    - eapply red_abs_alt; eauto.
+    - eapply red_abs_alt; eauto. apply (IHr (Δ ,, vass na N)).
+      constructor; auto. constructor; auto.
     - eapply red_letin; eauto.
     - eapply red_letin; eauto.
     - eapply red_letin_alt; eauto.
       eapply (IHr (Δ ,, vdef na b t)). constructor; eauto.
-      red. split; eauto.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
+      constructor; auto.
+    - eapply red_case_pars; eauto; pcuic.
+      eapply OnOne2_All2; tea => /=; intuition eauto.
+    - eapply red_case_pcontext; eauto. red. pcuic.
     - eapply red_case; eauto. unfold on_Trel; pcuic.
       eapply OnOne2_All2; eauto. simpl. intuition eauto.
     - eapply red_proj_c; eauto.

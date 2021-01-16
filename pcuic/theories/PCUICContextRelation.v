@@ -147,3 +147,44 @@ Lemma context_relation_forallb2 (P : context_decl -> context_decl -> bool) Γ Δ
 Proof.
   induction 1; simpl; auto; now rewrite p, IHX.
 Qed.
+
+
+Lemma context_relation_nth {P n Γ Γ' d} :
+  context_relation P Γ Γ' -> nth_error Γ n = Some d ->
+  { d' & ((nth_error Γ' n = Some d') *
+          let Γs := skipn (S n) Γ in
+          let Γs' := skipn (S n) Γ' in
+          context_relation P Γs Γs' *
+          P Γs Γs' d d')%type }.
+Proof.
+  induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
+  - depelim Hrel.
+    simpl. eexists; intuition eauto.
+    eexists; intuition eauto.
+  - depelim Hrel.
+    destruct (IHn _ _ _ Hrel H).
+    cbn -[skipn] in *.
+    eexists; intuition eauto.
+    destruct (IHn _ _ _ Hrel H).
+    eexists; intuition eauto.
+Qed.
+
+Lemma context_relation_nth_r {P n Γ Γ' d'} :
+  context_relation P Γ Γ' -> nth_error Γ' n = Some d' ->
+  { d & ((nth_error Γ n = Some d) *
+        let Γs := skipn (S n) Γ in
+        let Γs' := skipn (S n) Γ' in
+        context_relation P Γs Γs' *
+        P Γs Γs' d d')%type }.
+Proof.
+  induction n in Γ, Γ', d' |- *; destruct Γ'; intros Hrel H; noconf H.
+  - depelim Hrel.
+    simpl. eexists; intuition eauto.
+    eexists; intuition eauto.
+  - depelim Hrel.
+    destruct (IHn _ _ _ Hrel H).
+    cbn -[skipn] in *.
+    eexists; intuition eauto.
+    destruct (IHn _ _ _ Hrel H).
+    eexists; intuition eauto.
+Qed.

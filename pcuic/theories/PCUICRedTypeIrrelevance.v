@@ -1,7 +1,7 @@
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping PCUICLiftSubst 
-  PCUICReduction PCUICContextRelation.
+  PCUICReduction PCUICContextRelation PCUICContextReduction.
 
 From Coq Require Import CRelationClasses.
 
@@ -116,6 +116,24 @@ Proof.
   induction tl in bs, e |- *; destruct bs; simpl in e; try constructor; auto; try congruence.
 Qed.
 
+Lemma red_context_rel Σ Γ :=
+  context_relation
+
+Lemma red_ctx_rel_red_context : 
+  red_ctx_rel Σ Γ Δ Δ' <~>
+  context_relation 
+
+Lemma OnOne2_local_env_red_ctx_rel P Γ ctx ctx' : 
+  OnOne2_local_env (on_one_decl (P Γ)) ctx ctx' ->
+  (forall Γ' Γ'' t t', P Γ' Γ'' t t' -> red Σ (Γ ,,, Γ') t t') ->
+  red_ctx_rel Σ Γ ctx ctx'.
+Proof.
+  intros.
+  induction X. red in p.
+  eapply X0 in p.
+
+  red.
+
 Lemma context_change_decl_types_red1 Γ Γ' s t :
   context_relation (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
@@ -139,6 +157,9 @@ Proof.
     
   - eapply PCUICReduction.red_case_pars; eauto.
     simpl. eapply OnOne2_All2; eauto. simpl. intuition auto.
+  - eapply PCUICReduction.red_case_pcontext.
+    econstructor.
+    eapply red_one_context_redl in X.
   - eapply PCUICReduction.red_case_p; eauto. eapply IHX0.
     eapply context_relation_app; eauto.
     now eapply context_relation_refl.

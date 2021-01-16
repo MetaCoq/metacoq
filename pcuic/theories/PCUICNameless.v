@@ -1151,6 +1151,11 @@ Proof.
   apply IHt1.
 Qed.
 
+Lemma nl_pred_set_pcontext p pcontext : 
+  nl_predicate nl (set_pcontext p pcontext) = 
+  set_pcontext (nl_predicate nl p) (nlctx pcontext).
+Proof. reflexivity. Qed.
+
 Lemma nl_pred_set_preturn p pret : nl_predicate nl (set_preturn p pret) = 
   set_preturn (nl_predicate nl p) (nl pret).
 Proof. reflexivity. Qed.
@@ -1547,13 +1552,26 @@ Proof.
     econstructor; tea.
     eapply OnOne2_map, OnOne2_impl. 1: eassumption.
     solve_all.
+  - rewrite nl_pred_set_pcontext. econstructor.
+    simpl. eapply OnOne2_local_env_map, OnOne2_local_env_impl; tea.
+    unfold on_Trel; intros ? ?; intuition eauto.
+    eapply on_one_decl_map.
+    eapply on_one_decl_impl; tea.
+    intros Γ' x' y'. now rewrite nlctx_app_context.
   - rewrite nl_pred_set_preturn. econstructor.
     rewrite -nlctx_app_context. apply IHh.
   - econstructor; tea.
     simpl.
     eapply OnOne2_map, OnOne2_impl. 1: eassumption.
-    cbn. intros x y [? ?]; cbn. solve_all. red; simpl.
-    rewrite e. now rewrite -nlctx_app_context.
+    cbn. intros x y [[? ?]|]; cbn; solve_all.
+    * red; simpl; left. solve_all.
+      rewrite e. now rewrite -nlctx_app_context.
+    * right. simpl. rewrite -b; intuition auto.
+      eapply OnOne2_local_env_map, OnOne2_local_env_impl; tea.
+      unfold on_Trel; intros ? ?; intuition eauto.
+      eapply on_one_decl_map.
+      eapply on_one_decl_impl; tea.
+      intros Γ' x' y'. now rewrite nlctx_app_context.
   - constructor. eapply OnOne2_map, OnOne2_impl. 1: eassumption.
     cbn. intros x y [? ?]; auto.
   - constructor. apply OnOne2_map. eapply OnOne2_impl; [eassumption|].

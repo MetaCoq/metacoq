@@ -1039,15 +1039,27 @@ Proof.
       /foroptb /= h1 //.
   - solve_all.
     eapply OnOne2_impl_All_r; eauto. solve_all.
+  - erewrite <-(len X); rewrite h2 /= h5 andb_true_r.
+    eapply OnOne2_local_env_test_context_k; tea; auto.
+    { clear -hctx. intros. eapply on_one_decl_test_decl; tea; simpl; 
+      intuition eauto. eapply H1 => //.
+      rewrite Nat.add_0_r. eapply on_ctx_free_vars_extend => //.
+      now rewrite test_context_k_on_free_vars_ctx in H. }
   - eapply on_ctx_free_vars_extend => //.
     now rewrite test_context_k_on_free_vars_ctx in h3.
   - toAll.
     clear -hctx X h5.
     eapply OnOne2_All_mix_left in X; tea.
-    toAll. eapply OnOne2_impl_All_r in X; tea; solve_all; rewrite -b0 //.
-    eapply b1 => //.
-    rewrite test_context_k_on_free_vars_ctx in H0.
-    eapply on_ctx_free_vars_extend => //.
+    toAll. eapply OnOne2_impl_All_r in X; tea; solve_all; rewrite -?b0 //.
+    * eapply b1 => //.
+      rewrite test_context_k_on_free_vars_ctx in H0.
+      eapply on_ctx_free_vars_extend => //.
+    * eapply OnOne2_local_env_test_context_k; tea; auto.
+      clear -hctx. intros. eapply on_one_decl_test_decl; tea; simpl; 
+      intuition eauto. eapply H1 => //.
+      rewrite Nat.add_0_r. eapply on_ctx_free_vars_extend => //.
+      now rewrite test_context_k_on_free_vars_ctx in H.
+    * now rewrite -(length_of a).
   - rewrite (on_ctx_free_vars_concat _ _ [_]) // /=
       on_ctx_free_vars_tip /= addnP_shiftnP /on_free_vars_decl /test_decl /= h1 /= //.
   - toAll. eapply OnOne2_impl_All_r; eauto; solve_all.

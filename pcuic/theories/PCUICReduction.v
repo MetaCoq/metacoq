@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction PCUICCases.
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
+     PCUICContextRelation PCUICCases.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
@@ -95,7 +96,6 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
   Inspired by the reduction relation from Coq in Coq [Barras'99].
 *)
 
-Local Open Scope type_scope.
 Arguments OnOne2 {A} P%type l l'.
 
 Definition set_pcontext (p : predicate term) (pctx' : context) : predicate term :=
@@ -116,28 +116,180 @@ Definition set_pparams (p : predicate term) (pars' : list term) : predicate term
      pcontext := p.(pcontext);
      preturn := p.(preturn) |}.
 
-Definition on_one_decl (P : context -> term -> term -> Type) (Γ : context) (b : option (term × term)) (t t' : term) :=
-  match b with
-  | Some (b0, b') => ((P Γ b0 b' * (t = t')) + (P Γ t t' * (b0 = b')))%type
-  | None => P Γ t t'
+Definition map_decl_na (f : aname -> aname) (g : term -> term) d :=
+  {| decl_name := f (decl_name d);
+     decl_body := option_map g (decl_body d);
+     decl_type := g (decl_type d) |}.
+
+(** We do not allow alpha-conversion and P applies to only one of the 
+  fields in the context declaration. Used to define one-step context reduction. *)
+Definition on_one_decl (P : context -> term -> term -> Type)
+  Γ (d : context_decl) (d' : context_decl) : Type :=
+  match d, d' with
+  | {| decl_name := na; decl_body := None; decl_type := ty |},
+    {| decl_name := na'; decl_body := None; decl_type := ty' |} =>
+      na = na' × P Γ ty ty'
+  | {| decl_name := na; decl_body := Some b; decl_type := ty |},
+    {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} =>
+      na = na' × 
+      ((P Γ ty ty' × b = b') +
+        (P Γ b b' × ty = ty'))
+  | _, _ => False
   end.
 
-Section OnOne_local_2.
-  Context (P : forall (Γ : context), option (term * term) -> term -> term -> Type).
+Lemma on_one_decl_impl (P Q : context -> term -> term -> Type) : 
+  (forall Γ, inclusion (P Γ) (Q Γ)) ->
+  forall Γ, inclusion (on_one_decl P Γ) (on_one_decl Q Γ).
+Proof.
+  intros HP Γ x y.
+  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl; firstorder auto.
+Qed.
 
-  (** We allow alpha-conversion *)
+Lemma on_one_decl_map_na (P : context -> term -> term -> Type) f g : 
+  forall Γ,
+    inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl_na f g) Γ)) g) Γ)
+    (on_Trel (on_one_decl P (map (map_decl_na f g) Γ)) (map_decl_na f g)).
+Proof.
+  intros Γ x y.
+  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
+    auto.
+Qed.
+
+Lemma on_one_decl_map (P : context -> term -> term -> Type) f : 
+  forall Γ,
+    inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl f) Γ)) f) Γ)
+    (on_Trel (on_one_decl P (map (map_decl f) Γ)) (map_decl f)).
+Proof.
+  intros Γ x y.
+  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
+    auto.
+Qed.
+
+Section OnOne_local_2.
+  Context (P : forall (Γ : context), context_decl -> context_decl -> Type).
+
   Inductive OnOne2_local_env : context -> context -> Type :=
-  | localenv2_cons_abs Γ na t t' :
-      P Γ None t t' ->
-      OnOne2_local_env (Γ ,, vass na t) (Γ ,, vass na t')
-  | localenv2_cons_def Γ na b b' t t' :
-      P Γ (Some (b, b')) t t' ->
-      OnOne2_local_env (Γ ,, vdef na b t) (Γ ,, vdef na b' t')
+  | localenv2_cons_abs Γ na na' t t' :
+      P Γ (vass na t) (vass na' t') ->
+      OnOne2_local_env (Γ ,, vass na t) (Γ ,, vass na' t')
+  | localenv2_cons_def Γ na na' b b' t t' :
+      P Γ (vdef na b t) (vdef na' b' t') ->
+      OnOne2_local_env (Γ ,, vdef na b t) (Γ ,, vdef na' b' t')
   | localenv2_cons_tl Γ Γ' d :
       OnOne2_local_env Γ Γ' ->
       OnOne2_local_env (Γ ,, d) (Γ' ,, d).
 End OnOne_local_2.
 
+Class HasLen (A : Type) (x y : nat) := len : A -> x = y.
+
+Notation length_of t := ltac:(let lemma := constr:(len t) in exact lemma).
+
+Instance OnOne2_local_env_length {P ctx ctx'} : 
+  HasLen (OnOne2_local_env P ctx ctx') #|ctx| #|ctx'|.
+Proof.
+  induction 1; simpl; lia.
+Qed.
+
+Lemma OnOne2_local_env_impl R S :
+  (forall Δ, inclusion (R Δ) (S Δ)) ->
+  inclusion (OnOne2_local_env R)
+            (OnOne2_local_env S).
+Proof.
+  intros H x y H'.
+  induction H'; try solve [econstructor; firstorder].
+Qed.
+
+Lemma OnOne2_local_env_ondecl_impl P Q : 
+  (forall Γ, inclusion (P Γ) (Q Γ)) ->
+  inclusion (OnOne2_local_env (on_one_decl P)) (OnOne2_local_env (on_one_decl P)).
+Proof.
+  intros HP. now apply OnOne2_local_env_impl, on_one_decl_impl.
+Qed.
+
+Lemma OnOne2_local_env_map R Γ Δ (f : aname -> aname) (g : term -> term) :
+  OnOne2_local_env (fun Γ => on_Trel (R (map (map_decl_na f g) Γ)) (map_decl_na f g)) Γ Δ ->
+  OnOne2_local_env R (map (map_decl_na f g) Γ) (map (map_decl_na f g) Δ).
+Proof.
+  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
+Qed.
+
+Lemma OnOne2_local_env_map_context R Γ Δ (f : term -> term) :
+  OnOne2_local_env (fun Γ => on_Trel (R (map (map_decl f) Γ)) (map_decl f)) Γ Δ ->
+  OnOne2_local_env R (map_context f Γ) (map_context f Δ).
+Proof.
+  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
+Qed.
+
+Lemma OnOne2_local_env_mapi_context R Γ Δ (f : nat -> term -> term) :
+  OnOne2_local_env (fun Γ => on_Trel (R (mapi_context f Γ)) (map_decl (f #|Γ|))) Γ Δ ->
+  OnOne2_local_env R (mapi_context f Γ) (mapi_context f Δ).
+Proof.
+  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
+  rewrite -(length_of X). now constructor.
+Qed.
+
+Lemma test_context_k_impl {p q : nat -> term -> bool} {k k'} {ctx} :
+  (forall n t, p n t -> q n t) ->
+  k = k' ->
+  test_context_k p k ctx -> test_context_k q k' ctx.
+Proof.
+  intros Hfg <-.
+  induction ctx as [|[na [b|] ty] ctx]; simpl; auto;
+  move/andb_and=> [testp testd]; rewrite (IHctx testp);
+  eapply test_decl_impl; tea; eauto.
+Qed.
+
+Lemma OnOne2_local_env_test_context_k {P ctx ctx'} {k} {p q : nat -> term -> bool} : 
+  (forall n t, q n t -> p n t) ->
+  OnOne2_local_env P ctx ctx' ->
+  (forall Γ d d', 
+    P Γ d d' ->
+    test_context_k q k Γ ->
+    test_decl (q (#|Γ| + k)) d ->
+    test_decl (p (#|Γ| + k)) d') ->
+  test_context_k q k ctx ->
+  test_context_k p k ctx'.
+Proof.
+  intros hq onenv HPq.
+  induction onenv.
+  * move=> /= /andb_and [testq testd].
+    rewrite (test_context_k_impl _ _ testq) //.
+    simpl; eauto.
+  * move=> /= /andb_and [testq testd].
+    rewrite (test_context_k_impl _ _ testq) //.
+    simpl; eauto.
+  * move=> /= /andb_and [testq testd].
+    rewrite (IHonenv testq).
+    eapply test_decl_impl; tea.
+    intros x Hx. eapply hq.
+    now rewrite -(length_of onenv).
+Qed.
+
+Lemma on_one_decl_test_decl (P : context -> term -> term -> Type) Γ
+  (p q : term -> bool) d d' :
+  (forall t, p t -> q t) ->
+  (forall t t', P Γ t t' -> p t -> q t') ->
+  on_one_decl P Γ d d' ->
+  test_decl p d ->
+  test_decl q d'.
+Proof.
+  intros Hp.
+  unfold test_decl.
+  destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl in * => //;
+   intuition auto; rtoProp;
+    subst; simpl; intuition eauto.
+Qed.
+
+
+(*Lemma OnOne2_local_env_mapi_context R (Γ Δ : context) (f g : nat -> term -> term) :
+  OnOne2_local_env (fun Γ d d' => R (mapi_context f Γ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d)) Γ Δ ->
+  OnOne2_local_env R (mapi_context f Γ) (mapi_context g Δ).
+Proof.
+  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
+  * rewrite /map_decl /=. econstructor.
+Qed.*)
+
+Local Open Scope type_scope.
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
@@ -314,8 +466,7 @@ Lemma red1_ind_all :
                (tCase ci (set_pparams p params') c brs)) ->
 
        (forall (Γ : context) (ci : case_info) p pcontext' c brs,
-          OnOne2_local_env (on_one_decl (fun Γ' => Trel_conj (red1 Σ (Γ ,,, Γ')) (P (Γ ,,, Γ'))))
-            p.(pcontext) pcontext' ->
+          OnOne2_local_env (on_one_decl (fun Γ' => P (Γ ,,, Γ'))) p.(pcontext) pcontext' ->
           P Γ (tCase ci p c brs)
             (tCase ci (set_pcontext p pcontext') c brs)) ->
 
@@ -333,7 +484,7 @@ Lemma red1_ind_all :
           (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, br.(bcontext))) (P (Γ ,,, br.(bcontext))))
             bbody bcontext br br') + 
           (on_Trel_eq (OnOne2_local_env 
-            (on_one_decl (fun Γ' => Trel_conj (red1 Σ (Γ ,,, Γ')) (P (Γ ,,, Γ')))))
+            (on_one_decl (fun Γ' => (P (Γ ,,, Γ')))))
             bcontext bbody br br')) brs brs' ->
           P Γ (tCase ci p c brs) (tCase ci p c brs')) ->
 
@@ -403,9 +554,8 @@ Proof.
     generalize (pcontext p).
     fix auxl 3.
     intros l pctx' []; constructor.
-    * red in o. simpl. split; auto.
-    * simpl in *.
-      destruct o as [[]|[]]; [left|right]; split; auto.
+    * simpl in *. intuition auto.
+    * simpl in *. intuition auto.
     * apply auxl, o.
   
   - revert brs' o.
@@ -418,9 +568,8 @@ Proof.
       generalize (bcontext hd) (bcontext hd').
       fix auxl' 3.
       intros l pctx' []; constructor.
-      * red in o. simpl. split; auto.
-      * simpl in *.
-        destruct o as [[]|[]]; [left|right]; split; auto.
+      * simpl in *; intuition auto.
+      * simpl in *. intuition auto.
       * apply auxl', o.
     + constructor. eapply auxl. apply Hl.
 
@@ -454,9 +603,24 @@ Defined.
 Hint Constructors red1 : pcuic.
 
 Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
-
-Definition red_ctx Σ := clos_refl_trans (red1_ctx Σ).  
 Definition red_ctx_rel Σ Γ := clos_refl_trans (red1_ctx_rel Σ Γ).
+
+Inductive red_decls Σ (Γ Γ' : context) : forall (x y : context_decl), Type :=
+| red_vass na na' T T' :
+    eq_binder_annot na na' ->
+    red Σ Γ T T' ->
+    red_decls Σ Γ Γ' (vass na T) (vass na' T')
+
+| red_vdef_body na na' b b' T T' :
+    eq_binder_annot na na' ->
+    red Σ Γ b b' ->
+    red Σ Γ T T' ->
+    red_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T').
+Derive Signature NoConfusion for red_decls.
+
+Definition red_context Σ := context_relation (red_decls Σ).
+Definition red_context_rel Σ Γ :=
+  context_relation (fun Δ Δ' => red_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')).
 
 Lemma refl_red Σ Γ t : red Σ Γ t t.
 Proof.
@@ -917,18 +1081,18 @@ Section ReductionCongruence.
               red. apply p. }
             constructor.
           * red in p.
-            destruct p as [[]|[]]; subst.
-            { econstructor.
-              2:{ constructor. unfold on_Trel. simpl.
-                instantiate (1 := (Γ0 ,, vdef na b t', a')).
-                simpl. intuition auto. constructor.
-                red. left. split; [apply r|reflexivity]. }
-              constructor. }
+            destruct p as [<- [[]|[]]]; subst.
             { econstructor.
               2:{ constructor. unfold on_Trel. simpl.
                 instantiate (1 := (Γ0 ,, vdef na b' t, a')).
-                simpl. intuition auto. constructor.
-                red. right. split; [apply r|reflexivity]. }
+                simpl. intuition auto. constructor. simpl.
+                intuition auto. }
+              constructor. }
+            { econstructor.
+              2:{ constructor. unfold on_Trel. simpl.
+                instantiate (1 := (Γ0 ,, vdef na b t', a')).
+                simpl. intuition auto. constructor. simpl.
+                intuition auto. } 
               constructor. }
           * clear -IHr.
             eapply (redl_context_impl _ _ _ IHr).
@@ -2171,7 +2335,7 @@ Section Stacks.
       now rewrite app_context_assoc in h.
   Qed.
 
-  Corollary red_context :
+  Corollary red_context_zip :
     forall Γ t u π,
       red Σ (Γ ,,, stack_context π) t u ->
       red Σ Γ (zip (t, π)) (zip (u, π)).

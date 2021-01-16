@@ -1390,12 +1390,6 @@ Section PredRed.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
-  Lemma weakening_red_0 Γ Γ' M N n :
-    n = #|Γ'| ->
-    red Σ Γ M N ->
-    red Σ (Γ ,,, Γ') (lift0 n M) (lift0 n N).
-  Proof. now move=> ->; apply (weakening_red Σ Γ [] Γ'). Qed.
-
   Lemma red_abs_alt Γ na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M) N N' ->
                                  red Σ Γ (tLambda na M N) (tLambda na M' N').
   Proof.
@@ -2044,16 +2038,7 @@ Section RedConfluence.
     intros x y H.
     induction H; firstorder; try solve[econstructor; eauto].
   Qed.
-
-  Lemma OnOne2_local_env_impl R S :
-    (forall Δ, inclusion (R Δ) (S Δ)) ->
-    inclusion (OnOne2_local_env (on_one_decl R))
-              (OnOne2_local_env (on_one_decl S)).
-  Proof.
-    intros H x y H'.
-    induction H'; try solve [econstructor; firstorder].
-  Qed.
-
+  
   Lemma red_ctx_clos_rt_red1_ctx : inclusion red_ctx (clos_refl_trans_ctx red1_ctx).
   Proof.
     intros x y H.
@@ -2234,83 +2219,6 @@ Section RedConfluence.
     induction 1. constructor. red. left. pcuicfo.
     constructor 2.
     econstructor 3; eauto.
-  Qed.
-
-  Lemma red_red_ctx Γ Δ t u :
-    red Σ Γ t u ->
-    red_ctx Δ Γ ->
-    red Σ Δ t u.
-  Proof.
-    move=> H Hctx. induction H.
-    revert Δ Hctx.
-    induction r using red1_ind_all; intros Δ Hctx; try solve [eapply red_step; repeat (constructor; eauto)].
-    - red in Hctx.
-      eapply nth_error_pred1_ctx in Hctx; eauto.
-      destruct Hctx as [x' [? ?]].
-      eapply red_step. constructor. eauto.
-      rewrite -(firstn_skipn (S i) Δ).
-      eapply weakening_red_0; auto.
-      rewrite firstn_length_le //.
-      destruct (nth_error Δ) eqn:Heq => //.
-      eapply nth_error_Some_length in Heq. lia.
-    - repeat econstructor; eassumption.
-    - repeat econstructor; eassumption.
-    - repeat econstructor; eassumption.
-    - repeat econstructor; eassumption.
-    - eapply red_abs_alt. eauto. eauto.
-    - eapply red_abs_alt. eauto. apply (IHr (Δ ,, vass na N)).
-      constructor; auto. red. auto.
-    - eapply red_letin; eauto.
-    - eapply red_letin; eauto.
-    - eapply red_letin_alt; eauto.
-      eapply (IHr (Δ ,, vdef na b t)). constructor; eauto.
-      red. split; eauto.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
-      eapply OnOne2_All2; eauto. simpl. intuition eauto.
-    - eapply red_proj_c; eauto.
-    - eapply red_app; eauto.
-    - eapply red_app; eauto.
-    - eapply red_prod_alt; eauto.
-    - eapply red_prod_alt; eauto. apply (IHr (Δ ,, vass na M1)); constructor; auto.
-      red; eauto.
-    - eapply red_evar.
-      eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
-    - eapply red_fix_one_ty.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-    - eapply red_fix_one_body.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-      eapply ih.
-      clear - Hctx. induction (fix_context mfix0).
-      + assumption.
-      + simpl. destruct a as [na [b|] ty].
-        * constructor ; pcuicfo (hnf ; auto).
-        * constructor ; pcuicfo (hnf ; auto).
-    - eapply red_cofix_one_ty.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-    - eapply red_cofix_one_body.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-      eapply ih.
-      clear - Hctx. induction (fix_context mfix0).
-      + assumption.
-      + simpl. destruct a as [na [b|] ty].
-        * constructor ; pcuicfo (hnf ; auto).
-        * constructor ; pcuicfo (hnf ; auto).
-    - auto.
-    - eapply red_trans; eauto.
   Qed.
 
   Lemma clos_red_rel_out x y :

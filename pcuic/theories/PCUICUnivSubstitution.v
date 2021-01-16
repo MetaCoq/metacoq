@@ -1345,6 +1345,11 @@ Lemma subst_instance_predicate_set_pparams u p params :
   set_pparams (subst_instance u p) (map (subst_instance u) params).
 Proof. reflexivity. Qed.
 
+Lemma subst_instance_predicate_set_pcontext u p pcontext :
+  subst_instance u (set_pcontext p pcontext) = 
+  set_pcontext (subst_instance u p) (subst_instance u pcontext).
+Proof. reflexivity. Qed.
+
 Lemma subst_instance_predicate_set_preturn u p pret :
   subst_instance u (set_preturn p pret) = 
   set_preturn (subst_instance u p) (subst_instance u pret).
@@ -1412,6 +1417,13 @@ Proof.
     eapply OnOne2_map. eapply OnOne2_impl. 1: eassumption.
     (* Used to be pcuicfo *)
     simpl in *; intuition; simpl in *.
+  - cbn.
+    rewrite [map_predicate _ _ _ (set_pcontext _ _)]subst_instance_predicate_set_pcontext.
+    eapply case_red_pcontext; eauto with pcuic. simpl.
+    eapply OnOne2_local_env_map_context.
+    eapply OnOne2_local_env_impl; tea. intros ? ? ? ?.
+    eapply on_one_decl_map.
+    now rewrite subst_instance_app in IHX0.
   - cbn.
     rewrite [map_predicate _ _ _ (set_preturn _ _)]subst_instance_predicate_set_preturn.
     eapply case_red_return; eauto with pcuic.

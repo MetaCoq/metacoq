@@ -11,6 +11,7 @@ theories/PCUICLiftSubst.v
 theories/PCUICUnivSubst.v
 theories/PCUICCases.v
 theories/PCUICContextSubst.v
+theories/PCUICReduction.v
 theories/PCUICTyping.v
 theories/PCUICGlobalEnv.v
 theories/PCUICInversion.v
@@ -26,8 +27,8 @@ theories/PCUICInst.v
 theories/PCUICWeakening.v
 theories/PCUICUnivSubstitution.v
 theories/PCUICSubstitution.v
+theories/PCUICContextReduction.v
 theories/PCUICCumulativity.v
-theories/PCUICReduction.v
 theories/PCUICParallelReduction.v
 theories/PCUICParallelReductionConfluence.v
 theories/PCUICConfluence.v

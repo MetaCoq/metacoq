@@ -1355,6 +1355,13 @@ Lemma inst_predicate_set_pparams f p params :
   set_pparams (inst_predicate f p) (map (inst f) params).
 Proof. reflexivity. Qed.
 
+Lemma inst_predicate_set_pcontext f p pcontext' :
+  #|pcontext'| = #|p.(pcontext)| ->
+  inst_predicate f (set_pcontext p pcontext') = 
+  set_pcontext (inst_predicate f p) 
+  (mapi_context (fun k => inst (up k f)) pcontext').
+Proof. rewrite /inst_predicate /= /set_pcontext. simpl. intros ->. reflexivity. Qed.
+
 Lemma inst_predicate_set_preturn f p pret :
   inst_predicate f (set_preturn p pret) = 
   set_preturn (inst_predicate f p) (inst (up #|pcontext p| f) pret).
@@ -1558,6 +1565,17 @@ Proof.
     eapply red_case_pars.
     simpl. eapply All2_map.
     eapply OnOne2_All2; eauto; solve_all.
+  - simpl. rewrite inst_predicate_set_pcontext.
+    { now rewrite -(length_of X). }
+    eapply red_case_pcontext. red.
+    eapply OnOne2_local_env_mapi_context.
+    eapply OnOne2_local_env_impl_test; tea.
+    clear -hf; unfold on_Trel; intros.
+    eapply on_one_decl_mapi_context.
+    eapply on_one_decl_test_impl; tea => /=.
+    intros ? ? ? ?. red. eapply X0; tea.
+    rewrite !mapi_context_fold Nat.add_0_r.
+
   - simpl. rewrite inst_predicate_set_preturn.
     eapply red_case_p; eauto.
     simpl. 

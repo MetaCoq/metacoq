@@ -966,6 +966,13 @@ Lemma rename_predicate_set_pparams f p params :
   set_pparams (rename_predicate f p) (map (rename f) params).
 Proof. reflexivity. Qed.
 
+Lemma rename_predicate_set_pcontext f p pcontext' :
+  #|pcontext'| = #|p.(pcontext)| ->
+  rename_predicate f (set_pcontext p pcontext') = 
+  set_pcontext (rename_predicate f p) 
+  (mapi_context (fun k => rename (shiftn k f)) pcontext').
+Proof. rewrite /rename_predicate /= /set_pcontext. simpl. intros ->. reflexivity. Qed.
+
 Lemma rename_predicate_set_preturn f p pret :
   rename_predicate f (set_preturn p pret) = 
   set_preturn (rename_predicate f p) (rename (shiftn #|pcontext p| f) pret).
@@ -1080,7 +1087,7 @@ Lemma red1_rename :
     on_free_vars P u ->
     red1 Σ Γ u v ->
     red1 Σ Δ (rename f u) (rename f v).
-Proof.
+Proof using cf.
   intros P Σ Γ Δ u v f hΣ hf hav h.
   induction h using red1_ind_all in P, f, Δ, hav, hf |- *.
   all: try solve [
@@ -1132,6 +1139,18 @@ Proof.
     rewrite rename_predicate_set_pparams. econstructor.
     simpl. eapply OnOne2_map. repeat toAll.
     eapply OnOne2_All_mix_left in X; eauto. solve_all. red; eauto.
+  - move/and4P: hav=> [_ _ hpctx _].
+    rewrite rename_predicate_set_pcontext.
+    { now rewrite -(length_of X). }
+    eapply case_red_pcontext.
+    eapply OnOne2_local_env_mapi_context.
+    eapply OnOne2_local_env_impl_test; tea.
+    clear -hf; unfold on_Trel; intros.
+    eapply on_one_decl_mapi_context.
+    eapply on_one_decl_test_impl; tea => /=.
+    intros ? ? ? ?. red. eapply X0; tea.
+    rewrite !mapi_context_fold Nat.add_0_r.
+    now eapply urenaming_context.
   - move/and4P: hav=> [_ hret _ _].
     rewrite rename_predicate_set_preturn.
     eapply case_red_return; eauto.
@@ -1144,9 +1163,19 @@ Proof.
     eapply OnOne2_map. toAll.
     eapply OnOne2_All_mix_left in X; tea. clear hbrs.
     solve_all.
-    red; simpl. split; auto; rewrite -b0 //.
-    eapply b1; tea.
-    rewrite mapi_context_fold. now eapply urenaming_context.
+    * left. simpl. split; auto; rewrite -b0 //.
+      eapply b1; tea.
+      rewrite mapi_context_fold. now eapply urenaming_context.
+    * right. simpl; rewrite -b1.
+      rewrite -(length_of a). split => //.
+      eapply OnOne2_local_env_mapi_context.
+      eapply OnOne2_local_env_impl_test; tea.
+      clear -hf; unfold on_Trel; intros.
+      eapply on_one_decl_mapi_context.
+      eapply on_one_decl_test_impl; tea => /=.
+      intros ? ? ? ?. red. eapply X0; tea.
+      rewrite !mapi_context_fold Nat.add_0_r.
+      now eapply urenaming_context.
   - eapply OnOne2_All_mix_left in X; eauto.
     constructor.
     eapply OnOne2_map. solve_all. red. eauto.

@@ -1567,15 +1567,15 @@ Proof.
     eapply OnOne2_All2; eauto; solve_all.
   - simpl. rewrite inst_predicate_set_pcontext.
     { now rewrite -(length_of X). }
-    eapply red_case_pcontext. red.
+    eapply red_case_pcontext.
     eapply OnOne2_local_env_mapi_context.
-    eapply OnOne2_local_env_impl_test; tea.
-    clear -hf; unfold on_Trel; intros.
+    eapply OnOne2_local_env_impl; tea.
+    clear -hσ; unfold on_Trel; intros Δ' d d' h.
     eapply on_one_decl_mapi_context.
-    eapply on_one_decl_test_impl; tea => /=.
-    intros ? ? ? ?. red. eapply X0; tea.
-    rewrite !mapi_context_fold Nat.add_0_r.
-
+    eapply on_one_decl_impl; tea => /=.
+    intros ? ? ? ?. red. eapply X; tea.
+    rewrite !mapi_context_inst.
+    now apply usubst_app_up.
   - simpl. rewrite inst_predicate_set_preturn.
     eapply red_case_p; eauto.
     simpl. 
@@ -1587,10 +1587,24 @@ Proof.
     red.
     eapply All2_map.
     eapply OnOne2_All2 in X; eauto; clear X.
-    * intros x y [[? ?] ?]. simpl; rewrite -e. intuition auto.
-      eapply r0. rewrite mapi_context_inst.
-      now eapply usubst_app_up.
-    * intros x. split; auto.
+    * unfold on_Trel; intros x y [[[? ?] ?]|[? ?]].
+      + simpl; rewrite -e. intuition auto.
+        ++ eapply r0. rewrite mapi_context_inst.
+           now eapply usubst_app_up.
+        ++ reflexivity.
+      + simpl. rewrite -e. intuition auto.
+        ++ rewrite (length_of o). reflexivity.
+        ++ eapply red_one_decl_red_ctx_rel.
+           eapply OnOne2_local_env_mapi_context.
+           eapply OnOne2_local_env_impl; tea.
+           clear -hσ; unfold on_Trel; intros Δ' d d' h.
+           eapply on_one_decl_mapi_context.
+           eapply on_one_decl_impl; tea => /=.
+           intros ? ? ? ?. red. eapply X; tea.
+           rewrite !mapi_context_inst.
+           now apply usubst_app_up.
+    * intros x. unfold on_Trel; split; auto.
+      reflexivity.
   - simpl. now eapply red_proj_c.
   - simpl. now eapply red_app.
   - simpl. now eapply red_app_r.

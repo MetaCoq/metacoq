@@ -1527,7 +1527,7 @@ Section ReductionCongruence.
       now constructor.
     Qed.
     
-    Lemma red_case_pcontext :
+    Lemma red_case_pcontext_red_ctx_rel :
       forall ci p c brs pcontext',
         red_ctx_rel Σ Γ p.(pcontext) pcontext' ->
         red Σ Γ (tCase ci p c brs) (tCase ci (set_pcontext p pcontext') c brs).
@@ -1541,6 +1541,18 @@ Section ReductionCongruence.
         + assert (set_pcontext p z = set_pcontext (set_pcontext p y) z) as ->.
           { now destruct p. }
           eapply red_one_pcontext. eassumption.
+    Qed.
+    
+    Lemma red_case_pcontext :
+      forall ci p c brs pcontext',
+        OnOne2_local_env
+          (on_one_decl (fun (Δ : context) (t t' : term) => red Σ (Γ,,, Δ) t t')) 
+          p.(pcontext) pcontext' ->
+        red Σ Γ (tCase ci p c brs) (tCase ci (set_pcontext p pcontext') c brs).
+    Proof.
+      intros ci p c l l' h.
+      eapply red_one_decl_red_ctx_rel in h.
+      now eapply red_case_pcontext_red_ctx_rel.
     Qed.
 
     Lemma red_case_p :
@@ -1779,7 +1791,7 @@ Section ReductionCongruence.
       eapply red_trans; [eapply red_case_c|]; eauto.
       eapply red_trans; [eapply red_case_p|]; eauto.
       eapply red_trans; [eapply red_case_pars|]; eauto.
-      eapply red_trans; [eapply red_case_pcontext|]; eauto.
+      eapply red_trans; [eapply red_case_pcontext_red_ctx_rel|]; eauto.
     Qed.
 
     Lemma red1_it_mkLambda_or_LetIn :

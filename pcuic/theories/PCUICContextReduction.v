@@ -108,7 +108,6 @@ Section CtxReduction.
     - eapply red_case_pars; eauto; pcuic.
       eapply OnOne2_All2; tea => /=; intuition eauto.
     - eapply red_case_pcontext; eauto.
-      eapply red_one_decl_red_ctx_rel.
       eapply OnOne2_local_env_impl; tea.
       intros Δ' x y.
       eapply on_one_decl_impl => Γ' t t' IH.

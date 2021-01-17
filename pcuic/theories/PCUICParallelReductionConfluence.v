@@ -8,8 +8,9 @@ Require Import ssreflect ssrbool.
 Require Import Morphisms CRelationClasses.
 From Equations Require Import Equations.
 
-
 Derive Signature for pred1 All2_local_env.
+
+Local Open Scope sigma_scope.
 
 Local Set Keyed Unification.
 
@@ -42,6 +43,45 @@ Proof.
   funelim (map_In l g) => //; simpl; rewrite (H f0); trivial.
 Qed.
 
+Equations mapi_context_In (ctx : context) (f : nat -> forall (x : context_decl), In x ctx -> context_decl) : context :=
+mapi_context_In nil _ := nil;
+mapi_context_In (cons x xs) f := cons (f #|xs| x _) (mapi_context_In xs (fun n x H => f n x _)).
+
+Lemma mapi_context_In_spec (f : nat -> term -> term) (ctx : context) :
+  mapi_context_In ctx (fun n (x : context_decl) (_ : In x ctx) => map_decl (f n) x) = 
+  mapi_context f ctx.
+Proof.
+  remember (fun n (x : context_decl) (_ : In x ctx) => map_decl (f n) x) as g.
+  funelim (mapi_context_In ctx g) => //; simpl; rewrite (H f0); trivial.
+Qed.
+
+Equations fold_context_In (ctx : context) (f : context -> forall (x : context_decl), In x ctx -> context_decl) : context :=
+fold_context_In nil _ := nil;
+fold_context_In (cons x xs) f := 
+  let xs' := fold_context_In xs (fun n x H => f n x _) in
+  cons (f xs' x _) xs'.
+
+Equations fold_context (f : context -> context_decl -> context_decl) (ctx : context) : context :=
+  fold_context f nil := nil;
+  fold_context f (cons x xs) := 
+    let xs' := fold_context f xs in
+    cons (f xs' x ) xs'.
+  
+Lemma fold_context_In_spec (f : context -> context_decl -> context_decl) (ctx : context) :
+  fold_context_In ctx (fun n (x : context_decl) (_ : In x ctx) => f n x) = 
+  fold_context f ctx.
+Proof.
+  remember (fun n (x : context_decl) (_ : In x ctx) => f n x) as g.
+  funelim (fold_context_In ctx g) => //; simpl; rewrite (H f0); trivial.
+Qed.
+
+Lemma fold_context_Proper : Proper (`=2` ==> `=1`) fold_context.
+Proof.
+  intros f f' Hff' x.
+  funelim (fold_context f x); simpl; auto. simp fold_context.
+  now rewrite (H f' Hff').
+Qed.
+
 Section list_size.
   Context {A : Type} (f : A -> nat).
 
@@ -51,7 +91,7 @@ Section list_size.
     intros. induction xs.
     destruct H.
     * destruct H. simpl; subst. lia.
-    specialize (IHxs H). simpl. lia.
+      specialize (IHxs H). simpl. lia.
   Qed.
 
 End list_size.
@@ -219,7 +259,8 @@ Equations view_construct0_cofix (t : term) : construct0_cofix_view t :=
 
 (** This induction principle gives a general induction hypothesis for applications,
     allowing to apply the induction to their head. *)  
-Lemma term_ind_size_app : 
+(** Subsummed by term_forall_mkApps_ind? *)
+(* Lemma term_ind_size_app : 
   forall (P : term -> Type),
     (forall (n : nat), P (tRel n)) ->
     (forall (i : ident), P (tVar i)) ->
@@ -236,9 +277,9 @@ Lemma term_ind_size_app :
     (forall s (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
-    (forall (p : inductive * nat) (t : term),
-        P t -> forall t0 : term, P t0 -> forall l : list (nat * term),
-            tCaseBrsProp (P) l -> P (tCase p t t0 l)) ->
+    (forall (ci : case_info) (p : PCUICAst.predicate term) (c : term) (brs : list (branch term)),
+        tCasePredProp P P p -> P c ->
+        tCaseBrsProp P brs -> P (tCase ci p c brs)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat),
         tFixProp P P m -> P (tFix m n)) ->
@@ -266,12 +307,16 @@ Proof.
         | H : _ |- _ => solve [apply H; (eapply aux || eapply auxl); red; simpl; try lia]
         end.
 
-  eapply X12; try (apply aux; red; simpl; lia).
-  red. apply All_pair. split; apply auxl; simpl; auto.
+  * eapply X10. 2:{ apply aux; simpl; lia. }
+    split.
 
-  eapply X13; try (apply aux; red; simpl; lia).
-  red. apply All_pair. split; apply auxl; simpl; auto.
-Defined.
+
+  * eapply X12; try (apply aux; red; simpl; lia).
+    red. apply All_pair. split; apply auxl; simpl; auto.
+
+  * eapply X13; try (apply aux; red; simpl; lia).
+    red. apply All_pair. split; apply auxl; simpl; auto.
+Defined. *)
 
 Lemma fix_context_gen_assumption_context k Γ : assumption_context (fix_context_gen k Γ).
 Proof.
@@ -656,15 +701,57 @@ Section Rho.
     eapply (In_list_size size) in H. lia.
   Qed.
 
-  #[program] Definition map_brs {t} (rho : context -> forall x, size x < size t -> term) Γ (l : list (nat * term))
-    (H : list_size (fun x : nat * term => size x.2) l < size t) :=
-  (map_In l (fun x (H : In x l) => (x.1, rho Γ x.2 _))).
+  Section rho_ctx.
+    Context (Γ : context).
+    Context (rho : context -> forall x, size x <= context_size size Γ -> term).
+    
+    Program Definition rho_ctx_over_wf :=
+      fold_context_In Γ (fun Γ' d hin => 
+        match d with
+        | {| decl_name := na; decl_body := None; decl_type := T |} =>
+            vass na (rho Γ' T _)
+        | {| decl_name := na; decl_body := Some b; decl_type := T |} =>
+          vdef na (rho Γ' b _) (rho Γ' T _)
+        end).
+
+      Next Obligation.
+        eapply (In_list_size (decl_size size)) in hin.
+        unfold decl_size at 1 in hin. simpl in *. unfold context_size. lia.
+      Qed.
+
+      Next Obligation.
+        eapply (In_list_size (decl_size size)) in hin.
+        unfold decl_size at 1 in hin. simpl in *. unfold context_size. lia.
+      Qed.
+      Next Obligation.
+        eapply (In_list_size (decl_size size)) in hin.
+        unfold decl_size at 1 in hin. simpl in *. unfold context_size. lia.
+      Qed.
+  End rho_ctx.
+
+  Lemma rho_ctx_over_wf_eq (rho : context -> term -> term) (Γ : context) : 
+    rho_ctx_over_wf Γ (fun Γ x hin => rho Γ x) =
+    fold_context (fun Γ' => map_decl (rho Γ')) Γ.
+  Proof.
+    rewrite /rho_ctx_over_wf fold_context_In_spec.
+    apply fold_context_Proper. intros n x.
+    now destruct x as [na [b|] ty]; simpl.
+  Qed.
+
+  #[program] Definition map_brs {t} (rho : context -> forall x, size x < size t -> term) Γ 
+    (l : list (branch term))
+    (H : list_size (fun br : branch term => context_size size br.(bcontext) + size br.(bbody)) l < size t) :=
+  (map_In l (fun br (H : In br l) => (rho_ctx_over_wf br.(bcontext) (fun Γ x Hx => rho Γ x _), rho Γ br.(bbody) _))).
   Next Obligation.
-    eapply (In_list_size (fun x => size x.2)) in H. simpl in *. lia.
+    unfold context_size in Hx.
+    eapply (In_list_size (fun br => context_size size (bcontext br) + size (bbody br))) in H.
+    simpl in *. unfold context_size at 1 in H. lia.
   Qed.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
+  (** Needs well-founded recursion on the size of terms as we should reduce 
+      strings of applications in one go. *)
   Equations? rho (Γ : context) (t : term) : term by wf (size t) := 
   rho Γ (tApp t u) with view_lambda_fix_app t u := 
     { | fix_lambda_app_lambda na T b [] u' := 
@@ -690,19 +777,19 @@ Section Rho.
     | Some None => tRel i; 
     | None => tRel i }; 
 
-  rho Γ (tCase (ind, pars) p x brs) with inspect (decompose_app x) :=
+  rho Γ (tCase ci p x brs) with inspect (decompose_app x) :=
   { | exist (f, args) eqx with view_construct_cofix f := 
-  { | construct_cofix_construct ind' c u with eq_inductive ind ind' := 
+  { | construct_cofix_construct ind' c u with eq_inductive ci.(ci_ind) ind' := 
     { | true => 
         let p' := rho Γ p in 
         let args' := map_terms rho Γ args _ in 
         let brs' := map_brs rho Γ brs _ in 
-        iota_red pars c args' brs'; 
+        iota_red ci.(ci_npar) c args' brs'; 
       | false => 
         let p' := rho Γ p in 
         let x' := rho Γ x in 
         let brs' := map_brs rho Γ brs _ in 
-        tCase (ind, pars) p' x' brs' }; 
+        tCase ci p' x' brs' }; 
     | construct_cofix_cofix mfix idx :=
       let p' := rho Γ p in 
       let args' := map_terms rho Γ args _ in 
@@ -711,8 +798,8 @@ Section Rho.
       let mfix' := map_fix_rho (t:=tCase (ind, pars) p x brs) rho Γ mfixctx mfix _ in
         match nth_error mfix' idx with
         | Some d =>
-          tCase (ind, pars) p' (mkApps (subst0 (cofix_subst mfix') (dbody d)) args') brs'
-        | None => tCase (ind, pars) p' (rho Γ x) brs'
+          tCase ci p' (mkApps (subst0 (cofix_subst mfix') (dbody d)) args') brs'
+        | None => tCase ci p' (rho Γ x) brs'
         end; 
     | construct_cofix_other t nconscof => 
       let p' := rho Γ p in 
@@ -1844,22 +1931,6 @@ Section Rho.
     unfold lift_renaming. simpl. rewrite Nat.add_comm.
     rewrite nth_error_app_ge. lia. now rewrite Nat.add_sub Heq.
   Qed.
-
-  Section rho_ctx.
-    Context (Δ : context).
-    Fixpoint rho_ctx_over Γ :=
-      match Γ with
-      | [] => []
-      | {| decl_name := na; decl_body := None; decl_type := T |} :: Γ =>
-        let Γ' := rho_ctx_over Γ in
-        vass na (rho (Δ ,,, Γ') T) :: Γ'
-      | {| decl_name := na; decl_body := Some b; decl_type := T |} :: Γ =>
-        let Γ' := rho_ctx_over Γ in
-        vdef na (rho (Δ ,,, Γ') b) (rho (Δ ,,, Γ') T) :: Γ'
-      end.
-  End rho_ctx.
-
-  Definition rho_ctx Γ := (rho_ctx_over [] Γ).
 
   Lemma rho_ctx_over_length Δ Γ : #|rho_ctx_over Δ Γ| = #|Γ|.
   Proof.

@@ -200,7 +200,7 @@ Defined.
 Lemma negb_is_true b :
  ~ is_true b -> is_true (negb b).
 Proof.
-  destruct b; pcuicfo.
+  destruct b; pcuicfo. congruence.
 Qed.
 Hint Resolve negb_is_true : core.
 
@@ -316,7 +316,7 @@ Set Firstorder Solver auto with core.
 Definition whnf_whne_dec flags Σ Γ t :
   ({∥whnf flags Σ Γ t∥} + {~∥whnf flags Σ  Γ t∥}) *
   ({∥whne flags Σ Γ t∥} + {~∥whne flags Σ Γ t∥}).
-Proof with eauto using sq with pcuic.
+Proof with eauto using sq with pcuic; try congruence.
   induction t using term_forall_mkApps_ind in Γ |- *; split...
   all: try now (right; intros [H]; depelim H;help).
   - destruct (RedFlags.zeta flags) eqn:Er.
@@ -410,9 +410,7 @@ Proof with eauto using sq with pcuic.
                    apply n0; sq; auto.
                --- left. constructor. apply whne_mkApps. constructor. assumption.
          ++ right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
-            congruence.
       -- right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
-         congruence.
       * right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
   - destruct (RedFlags.delta flags) eqn:Er...
     destruct (lookup_env Σ s) as [[] | ] eqn:E.
@@ -725,6 +723,12 @@ Lemma whne_red1_ind
           whne flags Σ Γ c ->
           OnOne2 (red1 Σ Γ) p.(pparams) params' ->
           P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
+
+      (Hcase_pcontext : forall i p c brs pcontext',
+          whne flags Σ Γ c ->
+          OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ'))) p.(pcontext) pcontext' ->
+          P (tCase i p c brs) (tCase i (set_pcontext p pcontext') c brs))
+    
       (Hcase_discr : forall i  p c brs p',
           whne flags Σ Γ c ->
           red1 Σ (Γ ,,, p.(pcontext)) p.(preturn) p' ->
@@ -738,8 +742,9 @@ Lemma whne_red1_ind
           whne flags Σ Γ c ->          
           OnOne2 (fun br br' => 
             let ctx := br.(bcontext) in
-            on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br') 
-            brs brs' ->
+            (on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br' +
+            on_Trel_eq (OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ'))))
+              bcontext bbody br br'))%type brs brs' ->
           P (tCase i p c brs) (tCase i p c brs'))
       (Hcase_noiota : forall t' i p c brs,
           RedFlags.iota flags = false ->
@@ -973,16 +978,18 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tFix mfix idx) (tFix mfix' idx)
-| whnf_red_tCase ci motive motivepars motiveret discr discr' brs brs' :
+| whnf_red_tCase ci motive motivepars motivectx motiveret discr discr' brs brs' :
     All2 (red Σ Γ) motive.(pparams) motivepars ->
+    red_ctx_rel Σ Γ (pcontext motive) motivectx ->
     red Σ (Γ ,,, motive.(pcontext)) motive.(preturn) motiveret ->
     red Σ Γ discr discr' ->
-    All2 (fun br br' => br.(bcontext) = br'.(bcontext) ×
+    All2 (fun br br' =>
+      red_ctx_rel Σ Γ br.(bcontext) br'.(bcontext) ×
       red Σ (Γ ,,, br.(bcontext)) br.(bbody) br'.(bbody)) brs brs' ->
     whnf_red Σ Γ (tCase ci motive discr brs) 
       (tCase ci {| pparams := motivepars; 
                   puinst := motive.(puinst);
-                  pcontext := motive.(pcontext); 
+                  pcontext := motivectx;
                   preturn := motiveret |} discr' brs')
 | whnf_red_tProj p c c' :
     red Σ Γ c c' ->
@@ -1132,7 +1139,9 @@ Proof.
     apply All2_same; auto.
   - destruct p. econstructor; simpl; eauto.
     * eapply All2_same; auto.
-    * eapply All2_same; auto.
+    * reflexivity.
+    * eapply All2_same; intuition auto.
+      reflexivity.
 Qed.
 
 Lemma whnf_red_refl Σ Γ t :
@@ -1239,15 +1248,36 @@ Proof.
     + apply All2_same; auto.
   - constructor; auto.
     * eapply OnOne2_All2; eauto.
-    * eapply All2_same; auto.
-  - constructor; auto; apply All2_same; auto. 
-  - destruct p; econstructor; eauto; simpl;
-    eapply All2_same; auto.
+    * reflexivity.
+    * eapply All2_same; intuition auto. reflexivity.
+  - econstructor; auto. apply All2_same; auto.
+    eapply red_one_decl_red_ctx_rel. red.
+    eapply OnOne2_local_env_impl; tea.
+    intros Δ' x' y'.
+    eapply on_one_decl_impl => Γ' ? ? IH.
+    now constructor.
+    eapply All2_same; intuition auto. reflexivity.
+  - econstructor; auto.
+    * apply All2_same; auto.
+    * reflexivity.
+    * apply All2_same; intuition auto; reflexivity.
   - destruct p; econstructor; eauto; simpl.
     * eapply All2_same; auto.
+    * reflexivity.
+    * eapply All2_same; intuition auto. reflexivity.
+  - destruct p;  econstructor; eauto; simpl.
+    * eapply All2_same; reflexivity.
+    * reflexivity.
     * eapply OnOne2_All2; eauto.
-      cbn. intros ? ? (?&[= <-]).
-      intuition eauto.
+      cbn. intros ? ? [[? [= <-]]|[? ?]];
+      intuition eauto; try reflexivity.
+      + eapply red_one_decl_red_ctx_rel. red.
+        eapply OnOne2_local_env_impl; tea.
+        intros Δ' x' y'.
+        eapply on_one_decl_impl => Γ' ? ? IH.
+        now constructor.
+      + now rewrite -e.
+      + intuition auto. reflexivity.
 Qed.
 
 Lemma whnf_red1_inv Σ Γ t t' :

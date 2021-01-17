@@ -12,7 +12,10 @@
         {
             "label": "makevos",
             "type": "shell",
-            "command": "cd pcuic && opam exec -- make -f Makefile.pcuic vos",
+            "options": {
+              "cwd" : "pcuic",
+            },
+            "command": "opam exec -- make -f Makefile.pcuic vos",
             "group": {
                 "kind": "build",
                 "isDefault": true

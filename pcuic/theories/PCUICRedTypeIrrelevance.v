@@ -100,7 +100,6 @@ Proof.
   - eapply PCUICReduction.red_case_pars; eauto.
     simpl. eapply OnOne2_All2; eauto. simpl. intuition auto.
   - eapply PCUICReduction.red_case_pcontext.
-    eapply red_one_decl_red_ctx_rel.
     eapply OnOne2_local_env_impl; tea.
     intros Δ x y.
     eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.

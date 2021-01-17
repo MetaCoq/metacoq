@@ -642,19 +642,22 @@ Defined.
 Hint Constructors red1 : pcuic.
 
 Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
+
+Definition red_one_ctx_rel (Σ : global_env) (Γ : context) :=
+  OnOne2_local_env
+    (on_one_decl (fun (Δ : context) (t t' : term) => red Σ (Γ,,, Δ) t t')).
+
 Definition red_ctx_rel Σ Γ := clos_refl_trans (red1_ctx_rel Σ Γ).
 
 Inductive red_decls Σ (Γ Γ' : context) : forall (x y : context_decl), Type :=
-| red_vass na na' T T' :
-    eq_binder_annot na na' ->
+| red_vass na T T' :
     red Σ Γ T T' ->
-    red_decls Σ Γ Γ' (vass na T) (vass na' T')
+    red_decls Σ Γ Γ' (vass na T) (vass na T')
 
-| red_vdef_body na na' b b' T T' :
-    eq_binder_annot na na' ->
+| red_vdef_body na b b' T T' :
     red Σ Γ b b' ->
     red Σ Γ T T' ->
-    red_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T').
+    red_decls Σ Γ Γ' (vdef na b T) (vdef na b' T').
 Derive Signature NoConfusion for red_decls.
 
 Definition red_context Σ := context_relation (red_decls Σ).
@@ -712,7 +715,6 @@ Lemma red_trans Σ Γ t u v : red Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
 Proof.
   etransitivity; tea.
 Defined.
-
 
 (** For this notion of reductions, theses are the atoms that reduce to themselves:
 
@@ -1141,6 +1143,35 @@ Section ReductionCongruence.
         induction h.
         + constructor.
         + econstructor ; eauto. constructor ; eauto.
+    Qed.
+
+    Lemma red_one_decl_red_ctx_rel Γ :
+      inclusion (red_one_ctx_rel Σ Γ) (red_ctx_rel Σ Γ).
+    Proof.
+      intros x y h.
+      induction h.
+      - destruct p. subst. red.
+        eapply clos_rt_rt1n in r.
+        induction r.
+        * constructor 2.
+        * econstructor 3; tea. constructor. constructor; simpl.
+          split; pcuic.
+      - destruct p as [-> [[r <-]|[r <-]]].
+        * eapply clos_rt_rt1n in r.
+          induction r.
+          + constructor 2.
+          + econstructor 3; tea. constructor. constructor; simpl.
+            split; pcuic.
+        * eapply clos_rt_rt1n in r.
+          induction r.
+          + constructor 2.
+          + econstructor 3; tea.
+            do 3 constructor; pcuic.
+      - red in IHh |- *.
+        eapply clos_rt_rtn1 in IHh.
+        eapply clos_rt_rtn1_iff.
+        clear -IHh. induction IHh; econstructor; eauto.
+        red. constructor. apply r.
     Qed.
 
     Lemma OnOne2All_red_redl :

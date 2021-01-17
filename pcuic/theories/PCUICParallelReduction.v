@@ -462,6 +462,9 @@ Section ParallelReduction.
     | _ => false
     end.
 
+  Reserved Notation "'pred1_ctx'" (at level 9).
+  Reserved Notation "'pred1_ctx_over' Γ Γ'" (at level 9, Γ, Γ' at next level).
+
   Inductive pred1 (Γ Γ' : context) : term -> term -> Type :=
   (** Reductions *)
   (** Beta *)
@@ -478,29 +481,31 @@ Section ParallelReduction.
 
   (** Local variables *)
   | pred_rel_def_unfold i body :
-      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1_ctx Γ Γ' ->
       option_map decl_body (nth_error Γ' i) = Some (Some body) ->
       pred1 Γ Γ' (tRel i) (lift0 (S i) body)
 
   | pred_rel_refl i :
-      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1_ctx Γ Γ' ->
       pred1 Γ Γ' (tRel i) (tRel i)
 
   (** Case *)
   | pred_iota ci c u args0 args1 p0 brs0 brs1 br :
-      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1_ctx Γ Γ' ->
       All2 (pred1 Γ Γ') args0 args1 ->
       nth_error brs1 c = Some br -> 
       #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
-      All2 (fun br br' => on_Trel_eq (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-         bbody bcontext br br') brs0 brs1 ->
+      All2 (fun br br' => 
+        on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
+        on_Trel (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
+         bbody br br') brs0 brs1 ->
       pred1 Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
             (iota_red ci.(ci_npar) args1 br)
 
   (** Fix unfolding, with guard *)
   | pred_fix mfix0 mfix1 idx args0 args1 narg fn :
-      All2_local_env (on_decl pred1) Γ Γ' ->
-      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      pred1_ctx Γ Γ' ->
+      pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
       All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                     dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       unfold_fix mfix1 idx = Some (narg, fn) ->
@@ -510,25 +515,27 @@ Section ParallelReduction.
 
   (** CoFix-case unfolding *)
   | pred_cofix_case ci p0 p1 mfix0 mfix1 idx args0 args1 narg fn brs0 brs1 :
-      All2_local_env (on_decl pred1) Γ Γ' ->
-      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      pred1_ctx Γ Γ' ->
+      pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
       All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                     dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       unfold_cofix mfix1 idx = Some (narg, fn) ->
       All2 (pred1 Γ Γ') args0 args1 ->
       All2 (pred1 Γ Γ') p0.(pparams) p1.(pparams) ->
       p0.(puinst) = p1.(puinst) ->
-      p0.(pcontext) = p1.(pcontext) ->
+      on_Trel (pred1_ctx_over Γ Γ') pcontext p0 p1 ->
       pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
-      All2 (fun br br' => on_Trel_eq (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-      bbody bcontext br br') brs0 brs1 ->
+      All2 (fun br br' => 
+        on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
+        on_Trel (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
+         bbody br br') brs0 brs1 ->
       pred1 Γ Γ' (tCase ci p0 (mkApps (tCoFix mfix0 idx) args0) brs0)
             (tCase ci p1 (mkApps fn args1) brs1)
 
   (** CoFix-proj unfolding *)
   | pred_cofix_proj p mfix0 mfix1 idx args0 args1 narg fn :
-      All2_local_env (on_decl pred1) Γ Γ' ->
-      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      pred1_ctx Γ Γ' ->
+      pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
       All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                     dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       unfold_cofix mfix1 idx = Some (narg, fn) ->
@@ -539,17 +546,17 @@ Section ParallelReduction.
   (** Constant unfolding *)
 
   | pred_delta c decl body (isdecl : declared_constant Σ c decl) u :
-      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1_ctx Γ Γ' ->
       decl.(cst_body) = Some body ->
       pred1 Γ Γ' (tConst c u) (subst_instance u body)
 
   | pred_const c u :
-      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1_ctx Γ Γ' ->
       pred1 Γ Γ' (tConst c u) (tConst c u)
 
   (** Proj *)
   | pred_proj i pars narg u args0 args1 arg1 :
-      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1_ctx Γ Γ' ->
       All2 (pred1 Γ Γ') args0 args1 ->
       nth_error args1 (pars + narg) = Some arg1 ->
       pred1 Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args0)) arg1
@@ -570,10 +577,12 @@ Section ParallelReduction.
   | pred_case ci p0 p1 c0 c1 brs0 brs1 :
       All2 (pred1 Γ Γ') p0.(pparams) p1.(pparams) ->
       p0.(puinst) = p1.(puinst) ->
-      p0.(pcontext) = p1.(pcontext) ->
+      on_Trel (pred1_ctx_over Γ Γ') pcontext p0 p1 ->
       pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
-      All2 (fun br br' => on_Trel_eq (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-        bbody bcontext br br') brs0 brs1 ->
+      All2 (fun br br' => 
+        on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
+        on_Trel (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
+           bbody br br') brs0 brs1 ->
       pred1 Γ Γ' c0 c1 ->
       pred1 Γ Γ' (tCase ci p0 c0 brs0) (tCase ci p1 c1 brs1)
 
@@ -582,22 +591,22 @@ Section ParallelReduction.
         is reflexive on *any* term (even ill-formed ones), to simplify the
         development. Otherwise we would have to reason on the shapes of the
         case_predicate_context/case_branch_context everywhere. *)
-    All2_local_env (on_decl pred1) Γ Γ' ->
+    pred1_ctx Γ Γ' ->
     pred1 Γ Γ' (tCase ci p c brs) (tCase ci p c brs) *)
 
   | pred_proj_congr p c c' :
       pred1 Γ Γ' c c' -> pred1 Γ Γ' (tProj p c) (tProj p c')
 
   | pred_fix_congr mfix0 mfix1 idx :
-      All2_local_env (on_decl pred1) Γ Γ' ->
-      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      pred1_ctx Γ Γ' ->
+      pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
       All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                     dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       pred1 Γ Γ' (tFix mfix0 idx) (tFix mfix1 idx)
 
   | pred_cofix_congr mfix0 mfix1 idx :
-      All2_local_env (on_decl pred1) Γ Γ' ->
-      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      pred1_ctx Γ Γ' ->
+      pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
       All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                     dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
       pred1 Γ Γ' (tCoFix mfix0 idx) (tCoFix mfix1 idx)
@@ -606,14 +615,14 @@ Section ParallelReduction.
                                pred1 Γ Γ' (tProd na M0 N0) (tProd na M1 N1)
 
   | evar_pred ev l l' :
-      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1_ctx Γ Γ' ->
       All2 (pred1 Γ Γ') l l' -> pred1 Γ Γ' (tEvar ev l) (tEvar ev l')
 
   | pred_atom_refl t :
-      All2_local_env (on_decl pred1) Γ Γ' ->
-      pred_atom t -> pred1 Γ Γ' t t.
-
-  Notation pred1_ctx Γ Γ' := (All2_local_env (on_decl pred1) Γ Γ').
+      pred1_ctx Γ Γ' ->
+      pred_atom t -> pred1 Γ Γ' t t
+  where "'pred1_ctx'" := (All2_local_env (on_decl pred1))
+  and "'pred1_ctx_over' Γ Γ'" := (All2_local_env (on_decl (on_decl_over pred1 Γ Γ'))).
 
   Ltac my_rename_hyp h th :=
     match th with
@@ -634,7 +643,7 @@ Section ParallelReduction.
     forall (P : forall (Γ Γ' : context) (t t0 : term), Type)
            (Pctx : forall (Γ Γ' : context), Type),
       let P' Γ Γ' x y := ((pred1 Γ Γ' x y) * P Γ Γ' x y)%type in
-      (forall Γ Γ', All2_local_env (on_decl pred1) Γ Γ' -> All2_local_env (on_decl P) Γ Γ' -> Pctx Γ Γ') ->
+      (forall Γ Γ', pred1_ctx Γ Γ' -> All2_local_env (on_decl P) Γ Γ' -> Pctx Γ Γ') ->
       (forall (Γ Γ' : context) (na : aname) (t0 t1 b0 b1 a0 a1 : term),
           pred1 (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 -> P (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 ->
           pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
@@ -645,30 +654,33 @@ Section ParallelReduction.
           pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
           P (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 -> P Γ Γ' (tLetIn na d0 t0 b0) (b1 {0 := d1})) ->
       (forall (Γ Γ' : context) (i : nat) (body : term),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           option_map decl_body (nth_error Γ' i) = Some (Some body) ->
           P Γ Γ' (tRel i) (lift0 (S i) body)) ->
       (forall (Γ Γ' : context) (i : nat),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tRel i) (tRel i)) ->
       (forall Γ Γ' ci c u args0 args1 p0 brs0 brs1 br,
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           All2 (P' Γ Γ') args0 args1 ->
-          All2 (fun br br' => on_Trel_eq (P' (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-              bbody bcontext br br') brs0 brs1 ->
+          All2 (fun br br' => 
+            (on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
+             on_Trel (All2_local_env_over P Γ Γ') bcontext br br') × 
+            on_Trel (P' (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
+                bbody br br') brs0 brs1 ->
           nth_error brs1 c = Some br -> 
           #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
           P Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
                 (iota_red ci.(ci_npar) args1 br)) ->
 
       (forall (Γ Γ' : context) (mfix0 mfix1 : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn : term),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
-          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
-          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env_over P Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
                         (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           unfold_fix mfix1 idx = Some (narg, fn) ->
@@ -677,49 +689,53 @@ Section ParallelReduction.
           P Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)) ->
 
       (forall (Γ Γ' : context) ci p0 p1 mfix0 mfix1 idx args0 args1 narg fn brs0 brs1,
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
-          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
-          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env_over P Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                         dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           unfold_cofix mfix1 idx = Some (narg, fn) ->
           All2 (P' Γ Γ') args0 args1 ->
           All2 (P' Γ Γ') p0.(pparams) p1.(pparams) ->
           p0.(puinst) = p1.(puinst) ->
-          p0.(pcontext) = p1.(pcontext) ->
+          on_Trel pred1_ctx pcontext p0 p1 ->
+          on_Trel (All2_local_env_over P Γ Γ') pcontext p0 p1 -> 
           pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
           P (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
-          All2 (fun br br' => on_Trel_eq (P' (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-              bbody bcontext br br') brs0 brs1 ->
+          All2 (fun br br' => 
+            (on_Trel pred1_ctx bcontext br br' ×
+             on_Trel (All2_local_env_over P Γ Γ') bcontext br br') × 
+            on_Trel (P' (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
+                bbody br br') brs0 brs1 ->
           P Γ Γ' (tCase ci p0 (mkApps (tCoFix mfix0 idx) args0) brs0)
                 (tCase ci p1 (mkApps fn args1) brs1)) ->
 
       (forall (Γ Γ' : context) (p : projection) (mfix0 mfix1 : mfixpoint term)
          (idx : nat) (args0 args1 : list term)
          (narg : nat) (fn : term),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
-          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
-          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env_over P Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
                         (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           unfold_cofix mfix1 idx = Some (narg, fn) ->
           All2 (P' Γ Γ') args0 args1 ->
           P Γ Γ' (tProj p (mkApps (tCoFix mfix0 idx) args0)) (tProj p (mkApps fn args1))) ->
       (forall (Γ Γ' : context) c (decl : constant_body) (body : term),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           declared_constant Σ c decl ->
           forall u : Instance.t, cst_body decl = Some body ->
                                         P Γ Γ' (tConst c u) (subst_instance u body)) ->
       (forall (Γ Γ' : context) c (u : Instance.t),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tConst c u) (tConst c u)) ->
       (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (u : Instance.t)
               (args0 args1 : list term) (arg1 : term),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           All2 (pred1 Γ Γ') args0 args1 ->
           All2 (P Γ Γ') args0 args1 ->
@@ -743,36 +759,40 @@ Section ParallelReduction.
       (forall (Γ Γ' : context) ci p0 p1 c0 c1 brs0 brs1,
           All2 (P' Γ Γ') p0.(pparams) p1.(pparams) ->
           p0.(puinst) = p1.(puinst) ->
-          p0.(pcontext) = p1.(pcontext) ->
+          on_Trel pred1_ctx pcontext p0 p1 ->
+          on_Trel (All2_local_env_over P Γ Γ') pcontext p0 p1 -> 
           pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
           P (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
-          All2 (fun br br' => on_Trel_eq (P' (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-              bbody bcontext br br') brs0 brs1 ->
+          All2 (fun br br' => 
+            (on_Trel pred1_ctx bcontext br br' ×
+             on_Trel (All2_local_env_over P Γ Γ') bcontext br br') × 
+              on_Trel (P' (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
+                bbody br br') brs0 brs1 ->
           pred1 Γ Γ' c0 c1 ->
           P Γ Γ' c0 c1 ->
           P Γ Γ' (tCase ci p0 c0 brs0) (tCase ci p1 c1 brs1)) ->
 
       (* (forall (Γ Γ' : context) ci p c brs,
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tCase ci p c brs) (tCase ci p c brs)) -> *)
 
       (forall (Γ Γ' : context) (p : projection) (c c' : term), pred1 Γ Γ' c c' -> P Γ Γ' c c' -> P Γ Γ' (tProj p c) (tProj p c')) ->
 
       (forall (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
-          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
-          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env_over P Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
                         dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           P Γ Γ' (tFix mfix0 idx) (tFix mfix1 idx)) ->
 
       (forall (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
-          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
-          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          pred1_ctx_over Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env_over P Γ Γ' (fix_context mfix0) (fix_context mfix1) ->
           All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
           P Γ Γ' (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
       (forall (Γ Γ' : context) (na : aname) (M0 M1 N0 N1 : term),
@@ -780,11 +800,11 @@ Section ParallelReduction.
           P Γ Γ' M0 M1 -> pred1 (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 ->
           P (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 -> P Γ Γ' (tProd na M0 N0) (tProd na M1 N1)) ->
       (forall (Γ Γ' : context) (ev : nat) (l l' : list term),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           All2 (P' Γ Γ') l l' -> P Γ Γ' (tEvar ev l) (tEvar ev l')) ->
       (forall (Γ Γ' : context) (t : term),
-          All2_local_env (on_decl pred1) Γ Γ' ->
+          pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           pred_atom t -> P Γ Γ' t t) ->
       forall (Γ Γ' : context) (t t0 : term), pred1 Γ Γ' t t0 -> P Γ Γ' t t0.
@@ -814,12 +834,18 @@ Section ParallelReduction.
     - apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
     - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 ((extendP aux) Γ Γ')).
     - eapply (All2_branch_prop
-        (P:=fun Γ Γ' br br' => pred1 (Γ ,,, bcontext br) (Γ' ,,, bcontext br') (bbody br) (bbody br')
-          × bcontext br = bcontext br')
+        (P:=fun Γ Γ' br br' =>
+        on_Trel (pred1_ctx_over Γ Γ') bcontext br br' *
+        on_Trel (pred1 (Γ,,, bcontext br) (Γ',,, bcontext br')) bbody br br')
         (Q:=fun Γ Γ' br br' => 
-          P' (Γ ,,, bcontext br) (Γ' ,,, bcontext br') (bbody br) (bbody br') × _)
+          (on_Trel (pred1_ctx_over Γ Γ') bcontext br br' × 
+            on_Trel (All2_local_env_over P Γ Γ') bcontext br br') *
+          on_Trel (P' (Γ,,, bcontext br) (Γ',,, bcontext br')) bbody br br')
          a1).
-      intros x y []. split; auto. apply (extendP aux _ _). exact p.
+      intros x y []. split; auto. split => //.
+      * apply (All2_local_env_impl o); tas.
+        intros. eapply (aux _ _ _ _ X20).
+      * apply (extendP aux _ _). exact o0.
     - eapply X4; eauto.
       apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
       eapply (All2_local_env_impl a0). intros. red. red in X20. apply (aux _ _ _ _ X20).
@@ -831,13 +857,19 @@ Section ParallelReduction.
       * eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
       * eapply (All2_All2_prop (P:=pred1) (Q:=P') a2 (extendP aux Γ Γ')).
       * eapply (All2_All2_prop (P:=pred1) (Q:=P') a3 (extendP aux Γ Γ')).
+      * eapply Hctx, (All2_local_env_impl o). exact o. intros. apply (aux _ _ _ _ X20).
       * eapply (All2_branch_prop
-        (P:=fun Γ Γ' br br' => pred1 (Γ ,,, bcontext br) (Γ' ,,, bcontext br') (bbody br) (bbody br')
-          × bcontext br = bcontext br')
-        (Q:=fun Γ Γ' br br' => 
-          P' (Γ ,,, bcontext br) (Γ' ,,, bcontext br') (bbody br) (bbody br') × _)
-         a4).
-        intros x y []. split; auto. apply (extendP aux _ _). exact p.             
+          (P:=fun Γ Γ' br br' =>
+            on_Trel pred1_ctx bcontext br br' *
+              on_Trel (pred1 (Γ,,, bcontext br) (Γ',,, bcontext br')) bbody br br')
+            (Q:=fun Γ Γ' br br' => 
+            (on_Trel pred1_ctx bcontext br br' × on_Trel Pctx bcontext br br') *
+            on_Trel (P' (Γ,,, bcontext br) (Γ',,, bcontext br')) bbody br br')
+        a4).
+        intros x y []. 
+        split; auto. split => //.
+        + apply Hctx, (All2_local_env_impl o0); tas.
+        + apply (extendP aux _ _). exact o1.
     - eapply X6; eauto.
       apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
       eapply (All2_local_env_impl a0). intros. red. red in X20. apply (aux _ _ _ _ X20).
@@ -850,13 +882,19 @@ Section ParallelReduction.
     - apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
     - eapply (All2_All2_prop (P:=pred1) (Q:=P) a0). intros. apply (aux _ _ _ _ X20).
     - apply (All2_All2_prop (P:=pred1) (Q:=P') a (extendP aux _ _)).
+    - apply Hctx, (All2_local_env_impl o). exact o. intros. apply (aux _ _ _ _ X20).
     - eapply (All2_branch_prop
-        (P:=fun Γ Γ' br br' => pred1 (Γ ,,, bcontext br) (Γ' ,,, bcontext br') (bbody br) (bbody br')
-          × bcontext br = bcontext br')
-        (Q:=fun Γ Γ' br br' => 
-          P' (Γ ,,, bcontext br) (Γ' ,,, bcontext br') (bbody br) (bbody br') × _)
-        a0).
-        intros x y []. split; auto. apply (extendP aux _ _). exact p.             
+        (P:=fun Γ Γ' br br' =>
+          on_Trel pred1_ctx bcontext br br' *
+            on_Trel (pred1 (Γ,,, bcontext br) (Γ',,, bcontext br')) bbody br br')
+          (Q:=fun Γ Γ' br br' => 
+          (on_Trel pred1_ctx bcontext br br' × on_Trel Pctx bcontext br br') *
+          on_Trel (P' (Γ,,, bcontext br) (Γ',,, bcontext br')) bbody br br')
+      a0).
+      intros x y []. 
+      split; auto. split => //.
+      + apply Hctx, (All2_local_env_impl o0); tas.
+      + apply (extendP aux _ _). exact o1.
     - eapply X15.
       eapply (All2_local_env_impl a). intros. apply X20.
       eapply (Hctx _ _ a), (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
@@ -889,7 +927,7 @@ Section ParallelReduction.
     onctx_rel
     (fun (Γ : context) (t : term) =>
       forall Γ' : context, pred1_ctx Γ Γ' -> pred1 Γ Γ' t t) Γ Δ ->
-    All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) Δ Δ.
+    pred1_ctx_over Γ Γ' Δ Δ.
   Proof.
     intros Γ' pred onc.
     induction onc; simpl; constructor; auto.
@@ -916,6 +954,9 @@ Section ParallelReduction.
     - constructor; eauto. eapply X1.
       constructor; try red; eauto with pcuic.
     - red in X, X1; econstructor; solve_all.
+      * red.
+        apply onctx_rel_pred1_refl. => //.
+
       * eapply b0.
         eapply All2_local_env_app_inv => //.
         eapply onctx_rel_pred1_refl => //.
@@ -1840,7 +1881,7 @@ Section ParallelSubstitution.
           heq_length0 ltac:(now len) HΔ).
         len in b0. rewrite !mapi_context_fold.
         now rewrite !subst_context_app in b0; len in b0; rewrite !app_context_assoc in b0.
-        rewrite b. admit.
+        rewrite b. rewrite heq_length1. admit.
 
     - autorewrite with subst. simpl.
       unfold unfold_fix in heq_unfold_fix.

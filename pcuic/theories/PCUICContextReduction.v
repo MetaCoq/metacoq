@@ -52,6 +52,27 @@ Section CtxReduction.
     * now eapply (red_ctx_congr (tCtxProd_r _ _ tCtxHole)).
   Qed.
 
+  Lemma red_decls_refl Γ Δ d : red_decls Σ Γ Δ d d.
+  Proof.
+    destruct d as [na [b|] ty]; constructor; auto.
+  Qed.
+
+  Lemma red_context_refl Γ : red_context Σ Γ Γ.
+  Proof.
+    apply context_relation_refl => ? ?.
+    apply red_decls_refl.
+  Qed.
+  
+  Lemma red_context_app_same {Γ Δ Γ'} : 
+    red_context Σ Γ Δ ->
+    red_context Σ (Γ ,,, Γ') (Δ ,,, Γ').
+  Proof.
+    intros r.
+    eapply context_relation_app => //.
+    apply context_relation_refl.
+    intros; apply red_decls_refl.
+  Qed.
+
   Lemma red1_red_ctx Γ Δ t u :
     red1 Σ Γ t u ->
     red_context Σ Δ Γ ->
@@ -86,15 +107,37 @@ Section CtxReduction.
       constructor; auto.
     - eapply red_case_pars; eauto; pcuic.
       eapply OnOne2_All2; tea => /=; intuition eauto.
-    - eapply red_case_pcontext; eauto. red. pcuic.
-    - eapply red_case; eauto. unfold on_Trel; pcuic.
-      eapply OnOne2_All2; eauto. simpl. intuition eauto.
+    - eapply red_case_pcontext; eauto.
+      eapply red_one_decl_red_ctx_rel.
+      eapply OnOne2_local_env_impl; tea.
+      intros Δ' x y.
+      eapply on_one_decl_impl => Γ' t t' IH.
+      apply IH. 
+      now eapply red_context_app_same.
+    - eapply red_case_p. eapply IHr.
+      now apply red_context_app_same.
+    - eapply red_case_c; eauto. 
+    - eapply red_case_brs.
+      unfold on_Trel; pcuic.
+      unfold on_Trel.
+      eapply OnOne2_All2; eauto.
+      * simpl. intuition eauto.
+        + apply b0. now apply red_context_app_same.
+        + rewrite -b. reflexivity.
+        + rewrite -b0. now reflexivity.
+        + eapply red_one_decl_red_ctx_rel.
+          eapply OnOne2_local_env_impl; tea.
+          intros Δ' x' y'.
+          eapply on_one_decl_impl => Γ' t t' IH.
+          apply IH. 
+          now eapply red_context_app_same.
+      * intros x. split; pcuic.
     - eapply red_proj_c; eauto.
     - eapply red_app; eauto.
     - eapply red_app; eauto.
     - eapply red_prod_alt; eauto.
     - eapply red_prod_alt; eauto. apply (IHr (Δ ,, vass na M1)); constructor; auto.
-      red; eauto.
+      now constructor.
     - eapply red_evar.
       eapply OnOne2_All2; simpl; eauto. simpl. intuition eauto.
     - eapply red_fix_one_ty.
@@ -111,8 +154,8 @@ Section CtxReduction.
       clear - Hctx. induction (fix_context mfix0).
       + assumption.
       + simpl. destruct a as [na [b|] ty].
-        * constructor ; pcuicfo (hnf ; auto).
-        * constructor ; pcuicfo (hnf ; auto).
+        * constructor ; pcuicfo (constructor ; auto).
+        * constructor ; pcuicfo (constructor ; auto).
     - eapply red_cofix_one_ty.
       eapply OnOne2_impl ; eauto.
       intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
@@ -127,23 +170,103 @@ Section CtxReduction.
       clear - Hctx. induction (fix_context mfix0).
       + assumption.
       + simpl. destruct a as [na [b|] ty].
-        * constructor ; pcuicfo (hnf ; auto).
-        * constructor ; pcuicfo (hnf ; auto).
-    - auto.
-    - eapply red_trans; eauto.
+        * constructor ; pcuicfo (constructor ; auto).
+        * constructor ; pcuicfo (constructor ; auto).
   Qed.
 
+  Lemma red_red_ctx Γ Δ t u :
+    red Σ Γ t u ->
+    red_context Σ Δ Γ ->
+    red Σ Δ t u.
+  Proof.
+    induction 1; eauto using red1_red_ctx.
+    intros H.
+    now transitivity y.
+  Qed.
+
+  Lemma red_context_app {Γ Γ' Δ Δ'} : 
+    red_context Σ Γ Δ ->
+    red_context_rel Σ Γ Γ' Δ' ->
+    red_context Σ (Γ ,,, Γ') (Δ ,,, Δ').
+  Proof.
+    intros r r'.
+    eapply context_relation_app => //.
+    * now rewrite (context_relation_length r').
+    * eapply context_relation_impl; tea => /= Γ0 Γ'0 d d'.
+      intros h; depelim h; constructor; auto.
+  Qed.
+
+  Lemma red_context_app_same_left {Γ Γ' Δ'} : 
+    red_context_rel Σ Γ Γ' Δ' ->
+    red_context Σ (Γ ,,, Γ') (Γ ,,, Δ').
+  Proof.
+    intros h.
+    eapply context_relation_app => //.
+    * now rewrite (context_relation_length h).
+    * apply red_context_refl.
+  Qed.
   
-Lemma red_ctx_rel_red_context_rel Σ Γ : 
-  CRelationClasses.relation_equivalence (red_ctx_rel Σ Γ) (red_context_rel Σ Γ).
-Proof.
-  rewrite /red_ctx_rel /red_context_rel; split.
-  - induction 1.
-    * admit.
-    * eapply context_relation_refl => Δ [na [b|] ty]; constructor; auto; constructor 2.
-    * eapply context_relation_trans; eauto.
-      intros.
-      depelim X4; depelim X5; constructor; etransitivity; eauto.
+  Lemma red_context_app_right {Γ Γ' Δ Δ'} : 
+    red_context Σ Γ Δ ->
+    red_context_rel Σ Δ Γ' Δ' ->
+    red_context Σ (Γ ,,, Γ') (Δ ,,, Δ').
+  Proof.
+    intros r r'.
+    eapply context_relation_app => //.
+    * now rewrite (context_relation_length r').
+    * eapply context_relation_impl; tea => /= Γ0 Γ'0 d d'.
+      intros h; depelim h; constructor; auto; eapply red_red_ctx; tea;
+        now eapply red_context_app_same.
+  Qed.
+  
+  Lemma OnOne2_local_env_context_relation {P Q Γ Δ} :
+    OnOne2_local_env P Γ Δ ->
+    (forall Γ d d', P Γ d d' -> Q Γ Γ d d') ->
+    (forall Γ Δ d, Q Γ Δ d d) ->
+    context_relation Q Γ Δ.
+  Proof.
+    intros onc HPQ HQ. 
+    induction onc; try constructor; auto.
+    - apply context_relation_refl => //.
+    - apply context_relation_refl => //.
+    - destruct d as [na [b|] ty];constructor; auto.
+  Qed.
+
+  Lemma red_ctx_rel_red_context_rel Γ : 
+    CRelationClasses.relation_equivalence (red_ctx_rel Σ Γ) (red_context_rel Σ Γ).
+  Proof.
+    split.
+    - rewrite /red_ctx_rel /red_context_rel; induction 1.
+      * eapply OnOne2_local_env_context_relation; tea => ? d d'.
+        2:{ eapply red_decls_refl. }
+        destruct d as [na [b|] ty], d' as [na' [b'|] ty']; cbn; intuition auto;
+          subst; constructor; auto.
+      * eapply context_relation_refl => Δ [na [b|] ty]; constructor; auto; constructor 2.
+      * eapply context_relation_trans; eauto.
+        intros.
+        depelim X4; depelim X5; constructor; etransitivity; 
+          eauto; eapply red_red_ctx; tea; eauto using red_context_app_same_left.
+    - induction 1; try solve [constructor].
+      + depelim p.
+        transitivity (vass na U :: Γ0).
+        * eapply red_one_decl_red_ctx_rel.
+          do 2 constructor; auto.
+        * clear -IHX.
+          induction IHX; try now do 2 constructor.
+          econstructor 3; tea.
+      + depelim p.
+        transitivity (vdef na u T :: Γ0).
+      * eapply red_one_decl_red_ctx_rel.
+        do 2 constructor; auto. 
+      * transitivity (vdef na u U :: Γ0).
+        ++ eapply red_one_decl_red_ctx_rel.
+          do 2 constructor; auto. 
+        ++ clear -IHX.
+          induction IHX; try now do 2 constructor.
+          econstructor 3; tea.
+  Qed.
+        
+End CtxReduction.    
 
 
 

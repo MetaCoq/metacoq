@@ -76,24 +76,6 @@ Proof.
   induction tl in bs, e |- *; destruct bs; simpl in e; try constructor; auto; try congruence.
 Qed.
 
-Lemma red_context_rel Σ Γ :=
-  context_relation
-
-Lemma red_ctx_rel_red_context : 
-  red_ctx_rel Σ Γ Δ Δ' <~>
-  context_relation 
-
-Lemma OnOne2_local_env_red_ctx_rel P Γ ctx ctx' : 
-  OnOne2_local_env (on_one_decl (P Γ)) ctx ctx' ->
-  (forall Γ' Γ'' t t', P Γ' Γ'' t t' -> red Σ (Γ ,,, Γ') t t') ->
-  red_ctx_rel Σ Γ ctx ctx'.
-Proof.
-  intros.
-  induction X. red in p.
-  eapply X0 in p.
-
-  red.
-
 Lemma context_change_decl_types_red1 Γ Γ' s t :
   context_relation (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
@@ -118,26 +100,38 @@ Proof.
   - eapply PCUICReduction.red_case_pars; eauto.
     simpl. eapply OnOne2_All2; eauto. simpl. intuition auto.
   - eapply PCUICReduction.red_case_pcontext.
-    econstructor.
-    eapply red_one_context_redl in X.
+    eapply red_one_decl_red_ctx_rel.
+    eapply OnOne2_local_env_impl; tea.
+    intros Δ x y.
+    eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
+    eapply IH. eapply context_relation_app; auto.
+    eapply context_relation_refl.
+    intros; reflexivity.
   - eapply PCUICReduction.red_case_p; eauto. eapply IHX0.
     eapply context_relation_app; eauto.
     now eapply context_relation_refl.
   - eapply PCUICReduction.red_case_c; eauto.
   - eapply PCUICReduction.red_case_brs; eauto.
     eapply OnOne2_All2; eauto. simpl.
-    intros. intuition auto. eapply b0.
-    eapply context_relation_app; auto.
-    now apply context_relation_refl.
-  -
-    eapply PCUICReduction.red_proj_c. eauto.
-  -
-    eapply PCUICReduction.red_app; eauto.
-  -     eapply PCUICReduction.red_app; eauto.
-  -
-    eapply PCUICReduction.red_prod; eauto.
-  -
-    eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
+    * unfold on_Trel; intros br br'. intuition eauto.
+      + eapply b0. eapply context_relation_app; auto.
+        now apply context_relation_refl.
+      + rewrite b. reflexivity.
+      + rewrite b0; reflexivity.
+      + eapply red_one_decl_red_ctx_rel.
+        eapply OnOne2_local_env_impl; tea.
+        intros Δ x y.
+        eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
+        eapply IH. eapply context_relation_app; auto.
+        eapply context_relation_refl.
+        intros; reflexivity.
+    * intros br; unfold on_Trel. split; auto.
+      reflexivity.
+  - eapply PCUICReduction.red_proj_c. eauto.
+  - eapply PCUICReduction.red_app; eauto.
+  - eapply PCUICReduction.red_app; eauto.
+  - eapply PCUICReduction.red_prod; eauto.
+  - eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
     econstructor.
     eauto. econstructor. 
   - eapply PCUICReduction.red_evar; eauto.

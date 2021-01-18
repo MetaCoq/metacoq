@@ -12,6 +12,14 @@ Definition decl_size (size : term -> nat) (x : context_decl) :=
 
 Definition context_size (size : term -> nat) (l : context) :=
   list_size (decl_size size) l.
+ 
+Definition branch_size (size : term -> nat) (br : branch term) := 
+  context_size size br.(bcontext) + size br.(bbody).
+
+Definition predicate_size (size : term -> nat) (p : PCUICAst.predicate term) := 
+  list_size size p.(pparams) + 
+  context_size size p.(pcontext) +
+  size p.(preturn).
 
 Fixpoint size t : nat :=
   match t with
@@ -21,10 +29,8 @@ Fixpoint size t : nat :=
   | tApp u v => S (size u + size v)
   | tProd na A B => S (size A + size B)
   | tLetIn na b t b' => S (size b + size t + size b')
-  | tCase ind p c brs => S (list_size size p.(pparams) + 
-    context_size size p.(pcontext) +
-    size p.(preturn) + 
-    size c + list_size (fun br => context_size size br.(bcontext) + size (bbody br)) brs)
+  | tCase ind p c brs => S (predicate_size size p +
+    size c + list_size (branch_size size) brs)
   | tProj p c => S (size c)
   | tFix mfix idx => S (mfixpoint_size size mfix)
   | tCoFix mfix idx => S (mfixpoint_size size mfix)

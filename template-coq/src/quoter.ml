@@ -276,6 +276,7 @@ struct
       | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
       | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
+      | Constr.Array _ -> failwith "Array not supported by TemplateCoq"
       in
       let in_prop, env' = env in
       if is_cast_prop () && not in_prop then

@@ -63,7 +63,7 @@ safechecker: template-coq pcuic
 erasure: template-coq safechecker pcuic
 	$(MAKE) -C erasure
 
-examples: checker safechecker erasure
+examples: safechecker erasure
 	$(MAKE) -C examples
 
 test-suite: template-coq safechecker erasure

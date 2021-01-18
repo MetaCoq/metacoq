@@ -351,8 +351,9 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
   | TmLemmaTerm (name, typ) ->
     let ident = unquote_ident (reduce_all env evm name) in
     let evm,typ = denote_term env evm (reduce_all env evm typ) in
-    Plugin_core.run (Plugin_core.tmLemma ident ~poly typ) env evm
-      (fun env evm kn -> k (env, evm, quote_kn kn))
+    Plugin_core.run ~st
+      (Plugin_core.tmLemma ident ~poly typ) env evm
+      (fun ~st env evm kn -> k ~st env  evm (quote_kn kn))
 
   | TmAxiom (name,s,typ) ->
     if intactic
@@ -371,8 +372,8 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     else
       let name = unquote_ident (reduce_all env evm name) in
       let evm,typ = denote_term env evm (reduce_all env evm typ) in
-      Plugin_core.run (Plugin_core.tmAxiom name ~poly typ) env evm
-        (fun a b c -> k (a,b,quote_kn c))
+      Plugin_core.run ~st (Plugin_core.tmAxiom name ~poly typ) env evm
+        (fun ~st a b c -> k ~st a b (quote_kn c))
 
   | TmLemma (name,typ) ->
     let name = reduce_all env evm name in
@@ -447,8 +448,8 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
   | TmEvalTerm (s,trm) ->
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
     let evm,trm = denote_term env evm (reduce_all env evm trm) in
-    Plugin_core.run (Plugin_core.tmEval red trm) env evm
-      (fun env evm trm -> k (env, evm, quote_term env trm))
+    Plugin_core.run ~st (Plugin_core.tmEval red trm) env evm
+      (fun ~st env evm trm -> k ~st env evm (quote_term env trm))
   | TmMkInductive mind ->
     declare_inductive env evm mind;
     let env = Global.env () in
@@ -505,13 +506,13 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     end
   | TmInferInstanceTerm typ ->
     let evm,typ = denote_term env evm (reduce_all env evm typ) in
-    Plugin_core.run (Plugin_core.tmInferInstance typ) env evm
-      (fun env evm -> function
-           None -> k (env, evm, constr_mkAppl (cNone, [| tTerm|]))
+    Plugin_core.run ~st (Plugin_core.tmInferInstance typ) env evm
+      (fun ~st env evm -> function
+           None -> k ~st env evm (constr_mkAppl (cNone, [| tTerm|]))
          | Some trm ->
            let qtrm = quote_term env trm in
            k ~st env evm (constr_mkApp (cSome, [| Lazy.force tTerm; qtrm |])))
   | TmPrintTerm trm ->
     let evm,trm = denote_term env evm (reduce_all env evm trm) in
-    Plugin_core.run (Plugin_core.tmPrint trm) env evm
-      (fun env evm _ -> k (env, evm, Lazy.force unit_tt))
+    Plugin_core.run ~st  (Plugin_core.tmPrint trm) env evm
+      (fun ~st env evm _ -> k ~st env evm (Lazy.force unit_tt))

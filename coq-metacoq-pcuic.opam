@@ -22,7 +22,8 @@ install: [
   [make "-C" "pcuic" "install"]
 ]
 depends: [
-  "coq-equations" {= "dev" }
+  "coq" {>= "8.13" & < "8.14~"}
+  "coq-equations" { >= "1.2.3" }
   "coq-metacoq-template" {= version}
 ]
 synopsis: "A type system equivalent to Coq's and its metatheory"

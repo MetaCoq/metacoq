@@ -103,6 +103,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   | tFix _ _ | tCoFix _ _ => todo "tsl"
   | tVar _ | tEvar _ _ => todo "tsl"
   | tLambda _ _ _ => tVar "impossible"
+  | tInt _ | tFloat _ => todo "impossible"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})
                | None => t1 end
@@ -403,6 +404,9 @@ Module Axioms.
     intros H A B []; exact (H A A 1).
   Defined.
 
+  (* The import of CRelationClasses breaks rewrite *)
+  Set Typeclasses Depth 4.
+
   Theorem Univalence'_provably_parametric : forall h : Univalence', Univalence'ᵗ h.
   Proof.
     unfold Univalence', Univalence'ᵗ.
@@ -417,7 +421,7 @@ Module Axioms.
     intros x xᵗ; cbn. eapply pathsᵗ_ok2.
     set (coh x). set (q1 x) in *. set (q2 x) in *.
     clearbody p p1 p0; clear; cbn in *.
-    set (g x) in *. clearbody a.
+    set (g x) in *. clearbody a. simpl.
     rewrite transport_pp.
     destruct p1. cbn in *.
     match goal with

@@ -491,12 +491,12 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Next Obligation.
       split.
       - eapply VSetProp.Add_add.
-      - apply andP in Hp0 as [h1 h2].
+      - apply andb_andI in Hp0 as [h1 h2].
         apply negb_true_iff in h1. apply VSetFact.not_mem_iff in h1.
         assumption.
     Defined.
     Next Obligation.
-      apply andP in Hp0 as [? ?]. auto.
+      apply andb_andI in Hp0 as [? ?]. auto.
     Defined.
 
 
@@ -506,23 +506,6 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       revert q; induction p; intro q; cbn.
       reflexivity. specialize (IHp q); intuition.
     Qed.
-
-
-    (* Lemma DisjointAdd_add {s s' x y} (H : DisjointAdd x s s') (H' : x <> y) *)
-    (*   : DisjointAdd x (VSet.add y s) (VSet.add y s'). *)
-    (* Proof. *)
-    (*   repeat split. 2: intros [H0|H0]. *)
-    (*  - intro H0. apply VSet.add_spec in H0. *)
-    (*    destruct H0 as [H0|H0]. *)
-    (*    right; subst; apply VSet.add_spec; left; reflexivity. *)
-    (*    apply H in H0. destruct H0 as [H0|H0]; [left; assumption |right]. *)
-    (*    apply VSet.add_spec; right; assumption. *)
-    (*  - subst. apply VSet.add_spec; right. apply H; left; reflexivity. *)
-    (*  - apply VSet.add_spec in H0; apply VSet.add_spec; destruct H0 as [H0|H0]. *)
-    (*    left; assumption. right. apply H. right; assumption. *)
-    (*  - intro H0. apply VSet.add_spec in H0; destruct H0 as [H0|H0]. *)
-    (*    contradiction. now apply H. *)
-    (* Qed. *)
 
     Lemma DisjointAdd_add1 {s0 s1 s2 x y}
           (H1 : DisjointAdd x s0 s1) (H2 : DisjointAdd y s1 s2)

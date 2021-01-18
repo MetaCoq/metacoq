@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Induction.
+From MetaCoq.Template Require Import utils Ast AstUtils Induction.
+From Coq Require Import ssreflect.
+From Equations Require Import Equations.
 
 (** * Lifting and substitution for the AST
 
@@ -40,6 +42,13 @@ Definition lift_decl n k d := (map_decl (lift n k) d).
 
 Definition lift_context n k (Γ : context) : context :=
   fold_context (fun k' => lift n (k' + k)) Γ.
+
+Lemma lift_context_alt n k Γ :
+  lift_context n k Γ =
+  mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
+Proof.
+  unfold lift_context. apply fold_context_alt.
+Qed.
 
 (** Parallel substitution: it assumes that all terms in the substitution live in the
     same context *)
@@ -83,13 +92,35 @@ Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
 Definition subst_context s k (Γ : context) : context :=
   fold_context (fun k' => subst s (k' + k)) Γ.
 
+Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
+
 Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
 Proof.
   induction Γ as [|[na [body|] ty] tl] in Γ |- *; cbn; eauto.
-  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+  - rewrite !List.rev_length !mapi_rec_length !app_length !List.rev_length. simpl.
     lia.
-  - rewrite !List.rev_length, !mapi_rec_length, !app_length, !List.rev_length. simpl.
+  - rewrite !List.rev_length !mapi_rec_length !app_length !List.rev_length. simpl.
     lia.
+Qed.
+
+Lemma subst_context_nil s n : subst_context s n [] = [].
+Proof. reflexivity. Qed.
+
+Lemma subst_context_alt s k Γ :
+  subst_context s k Γ =
+  mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
+Proof.
+  unfold subst_context, fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
+  apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
+Qed.
+
+Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
+Proof.
+  unfold subst_context, fold_context.
+  rewrite !rev_mapi !rev_involutive /mapi mapi_rec_eqn /snoc.
+  f_equal. now rewrite Nat.sub_0_r List.rev_length.
+  rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
+  rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
 Qed.
 
 Definition subst_telescope s k (Γ : context) : context :=
@@ -120,7 +151,7 @@ Notation closed t := (closedn 0 t).
 
 Fixpoint noccur_between k n (t : term) : bool :=
   match t with
-  | tRel i => Nat.leb k i && Nat.ltb i (k + n)
+  | tRel i => Nat.ltb i k && Nat.leb (k + n) i
   | tEvar ev args => List.forallb (noccur_between k n) args
   | tLambda _ T M | tProd _ T M => noccur_between k n T && noccur_between (S k) n M
   | tApp u v => noccur_between k n u && List.forallb (noccur_between k n) v
@@ -241,7 +272,7 @@ Lemma subst_rel_eq :
     subst u n (tRel p) = lift0 n t.
 Proof.
   intros; simpl in |- *. subst p.
-  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1, H.
+  elim (leb_spec n (n + i)). intros. assert (n + i - n = i) by lia. rewrite H1 H.
   reflexivity. intros. lia.
 Qed.
 
@@ -614,7 +645,7 @@ Proof.
   - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
   - apply Forall_map. apply All_Forall. eapply All_impl; tea.
     intros [] XX; cbn in *; apply XX.
-  - solve_all. induction dbody; try discriminate. reflexivity.
+  - solve_all.
   - apply Forall_map. eapply All_Forall, All_impl; eauto.
     intros [] XX; cbn in *; split; apply XX.
 Qed.
@@ -644,7 +675,7 @@ Lemma lift_to_extended_list_k Γ k : forall k',
     to_extended_list_k Γ (k' + k) = map (lift0 k') (to_extended_list_k Γ k).
 Proof.
   unfold to_extended_list_k.
-  intros k'. rewrite !reln_alt_eq, !app_nil_r.
+  intros k'. rewrite !reln_alt_eq !app_nil_r.
   induction Γ in k, k' |- *; simpl; auto.
   destruct a as [na [body|] ty].
   now rewrite <- Nat.add_assoc, (IHΓ (k + 1) k').
@@ -702,12 +733,61 @@ Lemma map_vass_map_def g l n k :
         (map (map_def (lift n k) g) l)) =
   (mapi (fun i d => map_decl (lift n (i + k)) d) (mapi (fun i (d : def term) => vass (dname d) (lift0 i (dtype d))) l)).
 Proof.
-  rewrite mapi_mapi, mapi_map. apply mapi_ext.
+  rewrite mapi_mapi mapi_map. apply mapi_ext.
   intros. unfold map_decl, vass; simpl; f_equal.
-  rewrite permute_lift. f_equal; lia. lia.
+  rewrite permute_lift. lia. f_equal; lia.
 Qed.
 (* 
 Lemma noccur_between_subst k n t : noccur_between k n t -> 
   closedn (n + k) t -> closedn k t.
 Proof.
 Admitted. *)
+
+Lemma strip_casts_lift n k t : 
+  strip_casts (lift n k t) = lift n k (strip_casts t).
+Proof.
+  induction t in k |- * using term_forall_list_ind; simpl; auto; 
+    rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
+   f_equal; solve_all; eauto.
+
+  - rewrite lift_mkApps IHt map_map_compose.
+    f_equal; solve_all.
+Qed.
+Lemma mkApps_ex t u l : ∑ f args, Ast.mkApps t (u :: l) = Ast.tApp f args.
+Proof.
+  induction t; simpl; eexists _, _; reflexivity.
+Qed.
+(* 
+Lemma mkApps_tApp' f l l' : mkApps (tApp f l) l' = mkApps f (l ++ l').
+Proof.
+  induction l'; simpl. rewrite app_nil_r.  *)
+
+Lemma list_length_ind {A} (P : list A -> Type) (p0 : P [])
+  (pS : forall d Γ, (forall Γ', #|Γ'| <= #|Γ|  -> P Γ') -> P (d :: Γ)) 
+  Γ : P Γ.
+Proof.
+  generalize (le_n #|Γ|).
+  generalize #|Γ| at 2.
+  induction n in Γ |- *.
+  destruct Γ; [|simpl; intros; elimtype False; lia].
+  intros. apply p0.
+  intros.
+  destruct Γ; simpl in *.
+  apply p0. apply pS. intros. apply IHn. simpl. lia.
+Qed.
+
+Lemma strip_casts_mkApps_tApp f l : 
+  isApp f = false ->
+  strip_casts (mkApps f l) = strip_casts (tApp f l).
+Proof.
+  induction l. simpl; auto.
+  intros.
+  rewrite mkApps_tApp //.
+Qed.
+
+Lemma strip_casts_mkApps f l : 
+  isApp f = false ->
+  strip_casts (mkApps f l) = mkApps (strip_casts f) (map strip_casts l).
+Proof.
+  intros Hf. rewrite strip_casts_mkApps_tApp //.
+Qed.

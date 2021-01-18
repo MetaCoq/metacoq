@@ -4,6 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICSize.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
+Set Equations Transparent.
 
 Derive Signature for All All2.
 
@@ -35,6 +36,7 @@ Fixpoint string_of_term (t : term) :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  | tPrim i => "Int(" ^ string_of_prim string_of_term i ^ ")"
   end.
 
 Lemma lookup_env_nil c s : lookup_env [] c = Some s -> False.
@@ -68,6 +70,19 @@ Fixpoint decompose_app_rec (t : term) l :=
 
 Definition decompose_app t := decompose_app_rec t [].
 
+Definition mkApps_decompose_app_rec t l :
+  mkApps t l = mkApps (fst (decompose_app_rec t l)) (snd (decompose_app_rec t l)).
+Proof.
+  revert l; induction t; try reflexivity.
+  intro l; cbn in *.
+  transitivity (mkApps t1 ((t2 ::l))). reflexivity.
+  now rewrite IHt1.
+Qed.
+
+Definition mkApps_decompose_app t :
+  t = mkApps (fst (decompose_app t)) (snd (decompose_app t))
+  := mkApps_decompose_app_rec t [].
+  
 Lemma decompose_app_rec_mkApps f l l' : decompose_app_rec (mkApps f l) l' =
                                     decompose_app_rec f (l ++ l').
 Proof.
@@ -286,16 +301,6 @@ Qed.
 
 Hint Rewrite context_assumptions_map context_assumptions_mapi : len.
 
-Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
-  mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
-Proof.
-  induction l in k |- *; simpl; auto. now rewrite IHl.
-Qed.
-
-Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
-  mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
-Proof. apply mapi_rec_compose. Qed.
-
 Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
 Proof.
   destruct x as [? [?|] ?]; reflexivity.
@@ -371,6 +376,34 @@ Proof.
   eapply decompose_app_rec_notApp. eassumption.
 Qed.
 
+
+Lemma decompose_app_rec_inv {t l' f l} :
+  decompose_app_rec t l' = (f, l) ->
+  mkApps t l' = mkApps f l.
+Proof.
+  induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
+  simpl. apply/IHt1.
+Qed.
+
+Lemma decompose_app_inv {t f l} :
+  decompose_app t = (f, l) -> t = mkApps f l.
+Proof. by apply/decompose_app_rec_inv. Qed.
+
+Lemma decompose_app_nonnil t f l : 
+  isApp t ->
+  decompose_app t = (f, l) -> l <> [].
+Proof.
+  intros isApp.
+  destruct t; simpl => //.
+  intros da.
+  pose proof (decompose_app_notApp _ _ _ da).
+  apply decompose_app_inv in da.
+  destruct l using rev_ind.
+  unfold decompose_app => /=.
+  destruct f => //.
+  destruct l => //.
+Qed.
+
 Fixpoint nApp t :=
   match t with
   | tApp u _ => S (nApp u)
@@ -444,18 +477,6 @@ Proof.
   - rewrite -> 2!isApp_false_nApp by assumption. reflexivity.
   - assumption.
 Qed.
-
-Lemma decompose_app_rec_inv {t l' f l} :
-  decompose_app_rec t l' = (f, l) ->
-  mkApps t l' = mkApps f l.
-Proof.
-  induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
-  simpl. apply/IHt1.
-Qed.
-
-Lemma decompose_app_inv {t f l} :
-  decompose_app t = (f, l) -> t = mkApps f l.
-Proof. by apply/decompose_app_rec_inv. Qed.
 
 Lemma mkApps_Fix_spec mfix idx args t : mkApps (tFix mfix idx) args = t ->
                                         match decompose_app t with
@@ -777,6 +798,19 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma destArity_mkApps_None ctx t l :
+  destArity ctx t = None -> destArity ctx (mkApps t l) = None.
+Proof.
+  induction l in t |- *. trivial.
+  intros H. cbn. apply IHl. reflexivity.
+Qed.
+
+Lemma destArity_mkApps_Ind ctx ind u l :
+  destArity ctx (mkApps (tInd ind u) l) = None.
+Proof.
+  apply destArity_mkApps_None. reflexivity.
+Qed.
+
 (* Helper for nested recursive functions on well-typed terms *)
 
 Section MapInP.
@@ -788,7 +822,6 @@ Section MapInP.
   map_InP nil _ := nil;
   map_InP (cons x xs) H := cons (f x (H x (or_introl eq_refl))) (map_InP xs (fun x inx => H x _)).
 End MapInP.
-Global Transparent map_InP.
 
 Lemma map_InP_spec {A B : Type} {P : A -> Type} (f : A -> B) (l : list A) (H : forall x, In x l -> P x) :
   map_InP (fun (x : A) (_ : P x) => f x) l H = List.map f l.
@@ -816,3 +849,61 @@ Proof.
   induction l; simpl; auto.
 Qed.
 Hint Rewrite @map_InP_length : len.
+
+(** Views *)
+
+Definition isSort T :=
+  match T with
+  | tSort u => true
+  | _ => false
+  end.
+
+Inductive view_sort : term -> Type :=
+| view_sort_sort s : view_sort (tSort s)
+| view_sort_other t : ~ isSort t -> view_sort t.
+
+Equations view_sortc (t : term) : view_sort t :=
+  view_sortc (tSort s) := view_sort_sort s;
+  view_sortc t := view_sort_other t _.
+
+Fixpoint isProd t :=
+  match t with
+  | tProd na A B => true
+  | _ => false
+  end.
+
+Inductive view_prod : term -> Type :=
+| view_prod_prod na A b : view_prod (tProd na A b)
+| view_prod_other t : ~ isProd t -> view_prod t.
+
+Equations view_prodc (t : term) : view_prod t :=
+  view_prodc (tProd na A b) := view_prod_prod na A b;
+  view_prodc t := view_prod_other t _.
+
+Definition isInd (t : term) : bool :=
+  match t with
+  | tInd _ _ => true
+  | _ => false
+  end.
+
+Inductive view_ind : term -> Type :=
+| view_ind_tInd ind u : view_ind (tInd ind u)
+| view_ind_other t : negb (isInd t) -> view_ind t.
+
+Equations view_indc (t : term) : view_ind t :=
+  view_indc (tInd ind u) => view_ind_tInd ind u;
+  view_indc t => view_ind_other t _.
+
+Inductive view_prod_sort : term -> Type :=
+| view_prod_sort_prod na A B : view_prod_sort (tProd na A B)
+| view_prod_sort_sort u : view_prod_sort (tSort u)
+| view_prod_sort_other t :
+    ~isProd t ->
+    ~isSort t ->
+    view_prod_sort t.
+
+Equations view_prod_sortc (t : term) : view_prod_sort t := { 
+  | tProd na A B => view_prod_sort_prod na A B;
+  | tSort u => view_prod_sort_sort u;
+  | t => view_prod_sort_other t _ _
+  }.

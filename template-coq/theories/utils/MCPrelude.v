@@ -1,6 +1,13 @@
-Require Import Lia.
+Require Import String ZArith Lia.
+From Equations Require Import Equations.
+Set Equations Transparent.
+
+Derive NoConfusion EqDec for Strings.Ascii.ascii string positive Z.
 
 Declare Scope metacoq_scope.
+
+(** We cannot use ssrbool currently as it breaks extraction. *)
+Coercion is_true : bool >-> Sortclass.
 
 Notation "'eta_compose'" := (fun g f x => g (f x)).
 
@@ -26,6 +33,7 @@ Notation "x .π2" := (@projT2 _ _ x) (at level 3, format "x '.π2'").
 Create HintDb terms.
 
 Ltac arith_congr := repeat (try lia; progress f_equal).
+Ltac lia_f_equal := repeat (lia || f_equal).
 
 Ltac easy0 :=
   let rec use_hyp H :=
@@ -55,3 +63,5 @@ Hint Extern 10 (_ <= _)%nat => lia : terms.
 Hint Extern 10 (@eq nat _ _) => lia : terms.
 
 Ltac easy ::= easy0 || solve [intuition eauto 3 with core terms].
+
+Ltac inv H := inversion_clear H.

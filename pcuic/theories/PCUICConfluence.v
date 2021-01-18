@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICLiftSubst PCUICTyping
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
      PCUICParallelReduction PCUICParallelReductionConfluence.
 
@@ -2047,15 +2047,15 @@ Section RedConfluence.
     intros x y H.
     induction H; firstorder.
     - red in p.
-      induction p. repeat constructor. firstorder.
+      induction p. repeat constructor. pcuicfo.
       constructor 2.
       econstructor 3 with (Γ ,, vass na y); auto.
     - subst.
-      induction a. repeat constructor. firstorder.
+      induction a. repeat constructor. pcuicfo.
       constructor 2.
       econstructor 3 with (Γ ,, vdef na y t'); auto.
     - subst.
-      induction a. constructor. constructor. red. right. firstorder.
+      induction a. constructor. constructor. red. right. pcuicfo.
       constructor 2.
       econstructor 3 with (Γ ,, vdef na b' y); auto.
     - clear H. induction IHOnOne2_local_env. constructor. now constructor 3.
@@ -2262,7 +2262,7 @@ Section RedConfluence.
   Lemma clos_refl_trans_out Γ x y :
     clos_refl_trans (red1 Σ Γ) x y -> clos_refl_trans red1_rel (Γ, x) (Γ, y).
   Proof.
-    induction 1. constructor. red. left. firstorder.
+    induction 1. constructor. red. left. pcuicfo.
     constructor 2.
     econstructor 3; eauto.
   Qed.
@@ -2322,8 +2322,8 @@ Section RedConfluence.
       clear - Hctx. induction (fix_context mfix0).
       + assumption.
       + simpl. destruct a as [na [b|] ty].
-        * constructor ; firstorder (hnf ; auto).
-        * constructor ; firstorder (hnf ; auto).
+        * constructor ; pcuicfo (hnf ; auto).
+        * constructor ; pcuicfo (hnf ; auto).
     - eapply red_cofix_one_ty.
       eapply OnOne2_impl ; eauto.
       intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
@@ -2338,8 +2338,8 @@ Section RedConfluence.
       clear - Hctx. induction (fix_context mfix0).
       + assumption.
       + simpl. destruct a as [na [b|] ty].
-        * constructor ; firstorder (hnf ; auto).
-        * constructor ; firstorder (hnf ; auto).
+        * constructor ; pcuicfo (hnf ; auto).
+        * constructor ; pcuicfo (hnf ; auto).
     - auto.
     - eapply red_trans; eauto.
   Qed.
@@ -2637,7 +2637,7 @@ Section RedConfluence.
   Lemma clos_rt_red1_red1_rel_alpha Γ x y :
     clos_refl_trans (red1 Σ Γ) x y -> clos_refl_trans red1_rel_alpha (Γ, x) (Γ, y).
   Proof.
-    induction 1. constructor. red. left. firstorder.
+    induction 1. constructor. red. left. pcuicfo.
     constructor 2.
     econstructor 3; eauto.
   Qed.

@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlFloats.
+From MetaCoq.Template Require Import MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).
 
 (** * Extraction setup for the erasure phase of template-coq.
 
@@ -38,10 +39,7 @@ Extract Constant Equations.Init.pr1 => "fst".
 Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 
-Extract Constant PCUICTyping.fix_guard => "(fun x -> true)".
-Extract Constant PCUICTyping.cofix_guard => "(fun x -> true)".
-Extract Constant PCUICTyping.ind_guard => "(fun x -> true)".
-(* Extract Constant erase_mfix_obligation_1 => "(fun _ _ _ _ => ret typing_monad __)". *)
+Extract Constant PCUICTyping.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
 
 Cd "src".
 

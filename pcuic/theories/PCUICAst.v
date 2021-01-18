@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Export utils Universes BasicAst
      Environment EnvironmentTyping.
+From MetaCoq.PCUIC Require Export PCUICPrimitive.
 From Equations Require Import Equations.
 (** * AST of the Polymorphic Cumulative Calculus of Inductive Constructions
 
@@ -9,10 +10,16 @@ From Equations Require Import Equations.
    In particular, it has binary applications and all terms are well-formed.
    Casts are absent as well. *)
 
-
 Declare Scope pcuic.
 Delimit Scope pcuic with pcuic.
 Open Scope pcuic.
+
+(** DO NOT USE firstorder, since the introduction of Ints and Floats, it became unusuable. *)
+Ltac pcuicfo_gen tac :=
+  simpl in *; intuition (simpl; intuition tac).
+
+Tactic Notation "pcuicfo" := pcuicfo_gen auto.
+Tactic Notation "pcuicfo" tactic(tac) := pcuicfo_gen tac.
 
 Inductive term :=
 | tRel (n : nat)
@@ -29,9 +36,13 @@ Inductive term :=
 | tCase (indn : inductive * nat) (p c : term) (brs : list (nat * term)) (* # of parameters/type info/discriminee/branches *)
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
-| tCoFix (mfix : mfixpoint term) (idx : nat).
+| tCoFix (mfix : mfixpoint term) (idx : nat)
+(** We use faithful models of primitive type values in PCUIC *)
+| tPrim (prim : prim_val term).
 
 Derive NoConfusion for term.
+
+Notation prim_val := (prim_val term).
 
 Fixpoint mkApps t us :=
   match us with

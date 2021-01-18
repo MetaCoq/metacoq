@@ -1,4 +1,4 @@
-From Coq Require Import String.
+From Coq Require Import String Decimal DecimalString ZArith.
 From MetaCoq.Template Require Import MCCompare.
 
 Local Open Scope string_scope.
@@ -26,62 +26,19 @@ Definition parens (top : bool) (s : string) :=
   if top then s else "(" ++ s ++ ")".
 
 Definition string_of_nat n : string :=
-  match n with
-  | 0 => "0"
-  | 1 => "1"
-  | 2 => "2"
-  | 3 => "3"
-  | 4 => "4"
-  | 5 => "5"
-  | 6 => "6"
-  | 7 => "7"
-  | 8 => "8"
-  | 9 => "9"
-  | 10 => "10"
-  | 11 => "11"
-  | 12 => "12"
-  | 13 => "13"
-  | 14 => "14"
-  | 15 => "15"
-  | 16 => "16"
-  | 17 => "17"
-  | 18 => "18"
-  | 19 => "19"
-  | 20 => "20"
-  | 21 => "21"
-  | 22 => "22"
-  | 23 => "23"
-  | 24 => "24"
-  | 25 => "25"
-  | 26 => "26"
-  | 27 => "27"
-  | 28 => "28"
-  | 29 => "29"
-  | 30 => "30"
-  | 31 => "31"
-  | 32 => "32"
-  | 33 => "33"
-  | 34 => "34"
-  | 35 => "35"
-  | 36 => "36"
-  | 37 => "37"
-  | 38 => "38"
-  | 39 => "39"
-  | 40 => "40"
-  | 41 => "41"
-  | 42 => "42"
-  | 43 => "43"
-  | 44 => "44"
-  | 45 => "45"
-  | 46 => "46"
-  | 47 => "47"
-  | 48 => "48"
-  | 49 => "49"
-  | _ => "todo string_of_nat"
-  end.
+  DecimalString.NilEmpty.string_of_uint (Nat.to_uint n).
 
 Hint Resolve String.string_dec : eq_dec.
 
+Definition string_of_positive p := 
+  string_of_nat (Pos.to_nat p).
+
+Definition string_of_Z (z : Z) : string := 
+  match z with
+  | Z0 => "0"
+  | Zpos p => string_of_positive p
+  | Zneg p => "-" ++ string_of_positive p
+  end.
 
 Definition eq_string s s' :=
   match string_compare s s' with

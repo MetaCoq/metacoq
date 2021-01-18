@@ -1,15 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils Kernames.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
      PCUICReflect PCUICWeakeningEnv
      PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
      
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeRetyping.
+From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -20,7 +20,7 @@ Set Equations Transparent.
 Local Set Keyed Unification.
 Require Import ssreflect.
 
-Derive Signature for on_global_env.
+Derive Signature for PCUICTyping.on_global_env.
 
 (* To debug performance issues *)
 (* 
@@ -366,6 +366,11 @@ Section Erase.
   
   End EraseMfix.
 
+  Equations erase_prim (ep : prim_val term) : PCUICPrimitive.prim_val E.term :=
+  erase_prim (_; primIntModel i) := (_; primIntModel i);
+  erase_prim (_; primFloatModel f) := (_; primFloatModel f).
+  
+
   Equations? (noeqns noind) erase (Γ : context) (t : term) (Ht : welltyped Σ Γ t) : E.term
       by struct t :=
     erase Γ t Ht with (is_erasable Σ HΣ Γ t Ht) :=
@@ -403,7 +408,8 @@ Section Erase.
         E.tFix mfix' n;
       erase Γ (tCoFix mfix n) Ht _ :=
         let mfix' := erase_mfix (erase) Γ mfix _ in
-        E.tCoFix mfix' n
+        E.tCoFix mfix' n;
+      erase Γ (tPrim p) Ht _ := E.tPrim (erase_prim p)
     }.
   Proof.
     all:try clear b'; try clear f'; try clear brs'; try clear erase.
@@ -431,7 +437,7 @@ Section Erase.
       eexists; eauto.
     - eapply inversion_Fix in Ht as (? & ? & ? & ? & ? & ?); auto.
       eapply All_In in a0; eauto.
-      destruct a0 as [[a0 _]]. eexists; eauto.
+      destruct a0 as [a0]. eexists; eauto.
     - eapply inversion_CoFix in Ht as (? & ? & ? & ? & ? & ?); auto.
       eapply All_In in a0; eauto.
       destruct a0 as [a0]. eexists; eauto.
@@ -794,7 +800,7 @@ Proof.
     eapply Forall2_All2 in H.
     eapply All2_All_mix_left in H; eauto.
     eapply All2_In_right in H; eauto.
-    destruct H as [[def [[Hty _] Hdef]]].
+    destruct H as [[def [Hty Hdef]]].
     eapply Hdef; eauto.
 
   - apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.
@@ -1117,6 +1123,7 @@ Proof.
       sq. destruct X0 as [bod [bodty [[Hbod Hebod] Heqdeps]]].
       eapply (erase_global_erases_deps (Σ := (Σ, cst_universes c))); simpl; auto.
       constructor; simpl; auto.
+      red in w.
       depelim w. auto. eauto. eauto.
       eapply IHΣ.
 
@@ -1180,7 +1187,6 @@ Proof.
 Qed.
 
 Lemma erase_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' deps :
-  axiom_free Σ.1 ->
   forall wt : welltyped Σ [] t,
   erase Σ (sq wfΣ) [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
@@ -1188,10 +1194,9 @@ Lemma erase_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ :
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
-  intros axiomfree wt.
+  intros wt.
   generalize (sq wfΣ.1) as swfΣ.
   intros swfΣ HΣ' Hsub Ht' ev.
-  assert (extraction_pre Σ) by now constructor.
   pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
   rewrite HΣ' in H.
   destruct wt as [T wt].

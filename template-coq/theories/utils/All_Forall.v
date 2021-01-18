@@ -12,6 +12,7 @@ Inductive All {A} (P : A -> Type) : list A -> Type :=
     All_nil : All P []
   | All_cons : forall (x : A) (l : list A),
                   P x -> All P l -> All P (x :: l).
+Arguments All {A} P%type _.
 Arguments All_nil {_ _}.
 Arguments All_cons {_ _ _ _}.
 Derive Signature NoConfusion for All.
@@ -2354,6 +2355,12 @@ Proof.
     split ; constructor ; auto.
 Qed.
 
+Lemma All_pair {A} (P Q : A -> Type) l :
+  All (fun x => P x × Q x) l <~> (All P l × All Q l).
+Proof.
+  split. induction 1; intuition auto.
+  move=> [] Hl Hl'. induction Hl; depelim Hl'; intuition auto.
+Qed.
 
 Lemma All_prod :
   forall A P Q l,

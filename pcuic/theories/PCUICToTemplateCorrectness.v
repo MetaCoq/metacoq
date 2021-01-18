@@ -1427,7 +1427,7 @@ Proof.
 
     unfold decompose_app. simpl.
     rewrite PCUICAstUtils.atom_decompose_app. destruct t => /= //.
-    exists _, d2. split. lia.
+    eexists _, d2. split. lia.
     unshelve eexists.
     econstructor. exists s; eauto. reflexivity. assumption. constructor.
     simpl. lia.

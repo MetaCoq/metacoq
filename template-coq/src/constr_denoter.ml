@@ -147,7 +147,7 @@ struct
     else 
       let id = unquote_nat id in
       let ev = Evar.unsafe_of_int id in
-      evm, Constr.mkEvar (ev, Array.of_list args)
+      evm, Constr.mkEvar (ev, args)
 
   let unquote_relevance trm =
     if Constr.equal trm (Lazy.force tRelevant) then

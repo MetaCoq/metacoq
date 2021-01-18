@@ -227,7 +227,6 @@ let unquote_one_inductive_entry env evm trm (* of type one_inductive_entry *) : 
     | id::ar::cnames::ctms::[] ->
        let id = unquote_ident id in
        let evm, ar = denote_term env evm ar in
-       let template = unquote_bool template in
        let cnames = List.map unquote_ident (unquote_list cnames) in
        let evm, ctms = map_evm (denote_term env) evm (unquote_list ctms) in
        evm, { mind_entry_typename = id ;

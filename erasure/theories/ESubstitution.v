@@ -108,7 +108,7 @@ Proof.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
     eapply All2_impl. exact X1.
-    intros ? ? [[[]] [? []]].
+    intros ? ? [[?] [? []]].
     split; eauto.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
@@ -129,7 +129,7 @@ Lemma Is_type_weakening:
 Proof.
   intros. destruct X2 as (T & ? & ?).
   eexists. split. eapply weakening_typing; eauto.
-  now apply All_local_env_app in X1.
+  now apply All_local_env_app_inv in X1.
 
   destruct s as [? | [u []]].
   - left. clear - i. generalize (#|Γ''|), (#|Γ'|). induction T; cbn in *; intros; try now inv i.
@@ -137,7 +137,7 @@ Proof.
     + now eapply IHT3.
   - right. exists u. split; eauto.
     eapply weakening_typing in t1; eauto.
-    now apply All_local_env_app in X1.
+    now apply All_local_env_app_inv in X1.
 Qed.
 
 Require Import MetaCoq.PCUIC.PCUICInversion.
@@ -183,7 +183,7 @@ Proof.
     rewrite lift_context_snoc0, <- plus_n_O in *.
     eapply H1; eauto. cbn. econstructor.
     eauto. cbn. exists s1. eapply weakening_typing with (T := tSort s1); eauto.
-    now apply All_local_env_app in X2.
+    now apply All_local_env_app_inv in X2.
   - econstructor.
     + eapply H0; eauto.
     + pose proof (H1 Γ (PCUICAst.vdef n b b_ty :: Γ') Γ'').
@@ -191,8 +191,8 @@ Proof.
       eapply H2; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
       eapply weakening_typing in X0; eauto.
-      now apply All_local_env_app in X3.
-      now apply All_local_env_app in X3.
+      now apply All_local_env_app_inv in X3.
+      now apply All_local_env_app_inv in X3.
   - econstructor.
     + eauto.
     + eapply H4; eauto.
@@ -206,11 +206,12 @@ Proof.
       split; eauto.
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_impl. eassumption. intros.
-    destruct X4; cbn in *; firstorder.
-    eapply (All_impl X1). firstorder.
+    destruct X4; cbn in *; pcuicfo.
+    exists x0; auto.
+    eapply (All_impl X1). pcuicfo.
     
     eapply weakening_typing in HT; auto.
-    2:{ apply All_local_env_app in X2 as [X2 _]. eapply X2. }
+    2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
 
     cbn in HT.
     eapply inversion_Fix in HT as (? & ? & ? & ? & ? & ? & ?) ; auto. clear a0 c.
@@ -238,11 +239,12 @@ Proof.
 
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_impl. eassumption. intros.
-    destruct X4; cbn in *; firstorder.
-    eapply (All_impl X1). firstorder.
+    destruct X4; cbn in *; pcuicfo.
+    now exists x0.
+    eapply (All_impl X1). pcuicfo.
     
     eapply weakening_typing in HT; auto.
-    2:{ apply All_local_env_app in X2 as [X2 _]. eapply X2. }
+    2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
 
     cbn in HT.
     eapply inversion_CoFix in HT as (? & ? & ? & ? & ? & ? & ?) ; auto. clear a0 c.
@@ -397,10 +399,10 @@ Proof.
       eapply substitution; eauto.
     + econstructor.
       eapply is_type_subst; eauto.
-  - inv H1.
+  - inv H2.
     + cbn. econstructor.
-      eapply H; eauto.
       eapply H0; eauto.
+      eapply H1; eauto.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H1.
@@ -457,8 +459,8 @@ Proof.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, All2_length.
       * pose proof (substitution Σ Γ Γ' s (Δ ,,, PCUICLiftSubst.fix_context mfix)).
-        rewrite app_context_assoc in *. destruct Hs.
-        eapply X1 in t; eauto.
+        rewrite app_context_assoc in *.
+        eapply X1 in Hs; eauto.
         eapply typing_wf_local.  eassumption.
     + econstructor.
       eapply is_type_subst; eauto.

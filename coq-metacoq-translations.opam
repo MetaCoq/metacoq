@@ -19,7 +19,6 @@ install: [
 ]
 depends: [
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
 ]
 synopsis: "Translations built on top of MetaCoq"
 description: """

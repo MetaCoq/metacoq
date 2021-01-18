@@ -517,19 +517,19 @@ Proof.
   intros wfΣ.
   induction Γ in Δ |- *; simpl; auto.
   intros wfΓ wfΔ. depelim wfΓ; simpl.
-  - apply IHΓ; auto. eapply All_local_env_app_inv. split; auto.
+  - apply IHΓ; auto. eapply All_local_env_app. split; auto.
     repeat constructor; auto.
     eapply All_local_env_impl; eauto. simpl; intros.
     unfold lift_typing in X |- *.
     now rewrite app_context_assoc.
   - apply IHΓ. auto. eapply All_local_env_subst; eauto. simpl; intros.
-    destruct T; unfold lift_typing in X |- *; simpl in *; firstorder auto.
+    destruct T; unfold lift_typing in X |- *; simpl in *; pcuicfo auto.
     rewrite Nat.add_0_r.
     eapply (substitution _ (Δ' ,,, Γ) [vdef na b t] [b] Γ0) in X; eauto.
     rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
-    exists x.
+    destruct X as [s Hs]; exists s.
     rewrite Nat.add_0_r.
-    eapply (substitution _ _ [vdef na b t] [b] Γ0) in p; eauto.
+    eapply (substitution _ _ [vdef na b t] [b] Γ0) in Hs; eauto.
     rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
 Qed.
 
@@ -546,17 +546,17 @@ Lemma wf_local_smash_end {cf:checker_flags} Σ Γ Δ :
   wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
 Proof.
   intros wfΣ  wf. 
-  apply All_local_env_app_inv. split.
-  now apply All_local_env_app in wf.
+  apply All_local_env_app. split.
+  now apply All_local_env_app_inv in wf.
   eapply wf_local_rel_smash_context; auto.
 Qed.
 
 Lemma wf_local_rel_empty {cf:checker_flags} Σ Γ : wf_local_rel Σ [] Γ <~> wf_local Σ Γ.
 Proof.
   split.
-  - intros h. eapply (All_local_env_impl _ _ _ h). firstorder.
+  - intros h. eapply (All_local_env_impl _ _ _ h). pcuicfo.
     red in X |- *. now rewrite app_context_nil_l in X.
-  - intros h. eapply (All_local_env_impl _ _ _ h). firstorder.
+  - intros h. eapply (All_local_env_impl _ _ _ h). pcuicfo.
     red in X |- *. now rewrite app_context_nil_l.
 Qed.
 

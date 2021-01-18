@@ -4,8 +4,7 @@
 <img src="https://raw.githubusercontent.com/MetaCoq/metacoq.github.io/master/assets/LOGO.png" alt="MetaCoq" width="50px"/>
 </p>
 
-[![Build status](https://github.com/MetaCoq/metacoq/workflows/Test%20compilation/badge.svg?branch=coq-8.12)](https://github.com/MetaCoq/metacoq/actions)
-[![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
+[![Build status](https://github.com/MetaCoq/metacoq/workflows/Test%20compilation/badge.svg?branch=coq-8.12)](https://github.com/MetaCoq/metacoq/actions) [![MetaCoq Chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://coq.zulipchat.com)
 
 MetaCoq is a project formalizing Coq in Coq and providing tools for
 manipulating Coq terms and developing certified plugins
@@ -69,20 +68,13 @@ In addition to this representation of terms, Template Coq includes:
   checker, and inserting them in the global environment, in
   the style of MTac.
 
+- A formalisation of the expected typing rules reflecting the ones of Coq
 
-### [Checker](https://github.com/MetaCoq/metacoq/tree/coq-8.12/checker)
-
-A partial type-checker for the Calculus of Inductive Constructions,
-whose extraction to ML is runnable as a plugin (using command `MetaCoq
-Check foo`). This checker uses _fuel_, so it must be passed a number
-of maximal reduction steps to perform when calling conversion, and is
-NOT verified.
-
-### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.12/pcuic)
+### [PCUIC](https://github.com/MetaCoq/metacoq/tree/coq-8.11/pcuic)
 
 PCUIC, the Polymorphic Cumulative Calculus of Inductive Constructions is
 a cleaned up version of the term language of Coq and its associated
-type system, equivalent to the one of Coq. This version of the
+type system, shown equivalent to the one of Coq. This version of the
 calculus has proofs of standard metatheoretical results:
 
 - Weakening for global declarations, weakening and substitution for

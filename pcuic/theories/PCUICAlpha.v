@@ -348,13 +348,14 @@ Section Alpha.
         constructor. assumption.
         all: try (eapply upto_names_impl_eq_term ; assumption).
         all: eapply eq_term_refl.
-    - intros t na A B u ih ht iht hu ihu v e; invs e.
+    - intros t na A B s u ih hty ihty ht iht hu ihu v e; invs e.
       eapply type_Cumul'.
-      + econstructor.
+      + econstructor; cycle 1.
         * eapply iht.
           eapply eq_term_upto_univ_empty_impl in X; eauto.
           all:typeclasses eauto.
         * eapply ihu. assumption.
+        * eapply hty.
       + eapply validity_term ; eauto.
         econstructor ; eauto.
       + constructor.
@@ -460,7 +461,7 @@ Section Alpha.
       { now rewrite !fix_context_length, (All2_length _ _ X). } 
       eapply type_Cumul'.
       + econstructor.
-        * eapply (fix_guard_eq_term _ _ n); eauto.
+        * eapply (fix_guard_eq_term _ _ _ _ n); eauto.
           constructor. assumption.
         * eassumption.
         * assumption.
@@ -470,24 +471,21 @@ Section Alpha.
           destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
           exists s; apply IH; eauto.
         * solve_all.
-          ** destruct a0 as [s [Hs IH]].
-            specialize (IH _ a1).
-            specialize (b _ b3).
-            eapply context_conversion; eauto.
-            eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
-            exists s. rewrite <-H.
-            eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
-            apply cumul_refl. rewrite <- H.
-            eapply eq_term_upto_univ_lift.
-            eapply eq_term_upto_univ_empty_impl.
-            4: intuition eauto.
-            all: intros ? ? [].
-            *** eapply eq_universe_refl.
-            *** eapply leq_universe_refl.
-            *** eapply leq_universe_refl.
-          ** eapply isLambda_eq_term_l.
-            --- eassumption.
-            --- intuition eauto.
+          destruct a0 as [s [Hs IH]].
+          specialize (IH _ a).
+          specialize (b _ b2).
+          eapply context_conversion; eauto.
+          eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
+          exists s. rewrite <-H.
+          eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
+          apply cumul_refl. rewrite <- H.
+          eapply eq_term_upto_univ_lift.
+          eapply eq_term_upto_univ_empty_impl.
+          4: intuition eauto.
+          all: intros ? ? [].
+          *** eapply eq_universe_refl.
+          *** eapply leq_universe_refl.
+          *** eapply leq_universe_refl.
         * revert wffix.
           unfold wf_fixpoint.
           enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
@@ -532,7 +530,7 @@ Section Alpha.
     { now rewrite !fix_context_length, (All2_length _ _ X). } 
     eapply type_Cumul'.
     + econstructor.
-      * eapply (cofix_guard_eq_term _ _ n) ; eauto.
+      * eapply (cofix_guard_eq_term _ _ _ _ n) ; eauto.
         constructor. assumption.
       * eassumption.
       * eassumption.

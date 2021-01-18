@@ -16,7 +16,6 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 depends: [
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}
   "coq-metacoq-safechecker" {= version}
   "coq-metacoq-erasure" {= version}

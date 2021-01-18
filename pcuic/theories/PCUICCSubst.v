@@ -11,7 +11,6 @@ From Equations Require Import Equations.
 
     no lifting involved and one term at a time. *)
 
-
 Local Ltac inv H := inversion H; subst.
 
 Fixpoint csubst t k u :=

@@ -6,16 +6,15 @@ Utils
 
 WGraph
 UGraph0
-Typing0
 OrderedTypeAlt
 Kernames
-Reflect
 
 Init
 Classes0
 Logic1
 Relation
 Relation_Properties
+PCUICPrimitive
 PCUICAst
 PCUICAstUtils
 PCUICUnivSubst
@@ -30,14 +29,11 @@ PCUICNormal
 PCUICPosition
 PCUICPretty
 TemplateToPCUIC
-PCUICCumulativity
 
+PCUICErrors
 PCUICUnivSubst
 PCUICSafeReduce
-PCUICSafeConversion
-PCUICSafeChecker
 PCUICSafeRetyping
-SafeTemplateChecker
 
 EAst
 EAstUtils

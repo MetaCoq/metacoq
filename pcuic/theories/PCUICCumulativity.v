@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICRelations PCUICAst PCUICAstUtils
+From Coq Require Import CRelationClasses.
+From Equations.Type Require Import Relation Relation_Properties.
+From MetaCoq.Template Require Import config utils BasicAst.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICReduction.
 
 Set Default Goal Selector "!".
@@ -53,6 +55,7 @@ Section ConvCumulDefs.
 
 End ConvCumulDefs.
 
+(* todo mode typing notation *)
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
@@ -288,10 +291,6 @@ Proof.
     eapply red_conv_conv; eauto.
     eapply red_conv_conv_inv; eauto. now constructor.
 Qed.
-
-Inductive conv_pb :=
-| Conv
-| Cumul.
 
 Definition conv_cum {cf:checker_flags} leq Σ Γ u v :=
   match leq with

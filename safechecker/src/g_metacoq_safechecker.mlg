@@ -9,7 +9,18 @@ open PeanoNat.Nat
 open Datatypes
 open PCUICSafeChecker
 
-let pr_char_list l = str (Scanf.unescaped (Tm_util.list_to_string l))
+let bytes_of_list l =
+  let bytes = Bytes.create (List.length l) in
+  let rec fill acc = function
+    | [] -> bytes
+    | c :: cs ->
+      Bytes.set bytes acc c;
+      fill (1 + acc) cs
+  in fill 0 l
+
+let pr_char_list l =
+  (* We allow utf8 encoding *)
+  str (Bytes.to_string (bytes_of_list l))
 
 let time prefix f x =
   let start = Unix.gettimeofday () in

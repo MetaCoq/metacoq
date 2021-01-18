@@ -59,7 +59,7 @@ Proof.
   eapply cumul_alt in X0 as [w [w' [[redl' redr'] eq']]].
   destruct (red_confluence wfΣ redr redl') as [nf [nfl nfr]].
   eapply cumul_alt.
-  eapply red_eq_term_upto_univ_r in eq; tc;eauto with pcuic.
+  eapply red_eq_term_upto_univ_r in eq. all:tc;eauto with pcuic.
   destruct eq as [v'0 [red'0 eq2]].
   eapply red_eq_term_upto_univ_l in eq'; tc;eauto with pcuic.
   destruct eq' as [v'1 [red'1 eq1]].
@@ -2596,12 +2596,12 @@ Proof.
   induction Δ as [|d Δ] in cl, wf0 |- *.
   - constructor.
   - simpl.
-    rewrite closedn_ctx_cons in cl. apply andP in cl as [clctx cld].
+    rewrite closedn_ctx_cons in cl. apply andb_and in cl as [clctx cld].
     simpl in wf0.
     destruct d as [na [b|] ty] => /=.
     * depelim wf0; simpl in *.
       simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
-      apply andP in cld as [clb clty].
+      apply andb_and in cld as [clb clty].
       constructor; auto. constructor; [reflexivity|..].
       ** apply weaken_conv; auto; autorewrite with len.
          1:now rewrite closedn_subst_instance_context.
@@ -3048,8 +3048,8 @@ Proof.
   - simpl. constructor.
   - rewrite /= closed_ctx_decl in wf.
     rewrite /= closed_ctx_decl in wf'.
-    move/andP: wf => [wfd wf].
-    move/andP: wf' => [wfd' wf'].
+    move/andb_and: wf => [wfd wf].
+    move/andb_and: wf' => [wfd' wf'].
     constructor; auto.
     + now eapply IHX.
     + depelim p. constructor; auto.
@@ -3059,12 +3059,12 @@ Proof.
       now autorewrite with len in wfd'.
   - rewrite /= closed_ctx_decl in wf.
     rewrite /= closed_ctx_decl in wf'.
-    move/andP: wf => [wfd wf].
-    move/andP: wf' => [wfd' wf'].
+    move/andb_and: wf => [wfd wf].
+    move/andb_and: wf' => [wfd' wf'].
     constructor; auto.
     + now eapply IHX.
-    + move/andP: wfd => /= [wfb wft].
-      move/andP: wfd' => /= [wfb' wft'].
+    + move/andb_and: wfd => /= [wfb wft].
+      move/andb_and: wfd' => /= [wfb' wft'].
       autorewrite with len in *.
       rewrite <- (context_relation_length X) in *.
       depelim p; constructor; auto.

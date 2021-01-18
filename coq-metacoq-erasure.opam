@@ -23,7 +23,6 @@ install: [
 ]
 depends: [
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}
   "coq-metacoq-safechecker" {= version}
 ]

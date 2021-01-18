@@ -16,6 +16,7 @@ theories/utils/MCSquash.v
 theories/utils/MCString.v
 theories/utils/wGraph.v
 theories/utils/MCUtils.v
+theories/utils/MC_ExtrOCamlInt63.v
 
 # common
 theories/common/uGraph.v
@@ -36,8 +37,13 @@ theories/UnivSubst.v
 theories/Pretty.v
 theories/EnvironmentTyping.v
 theories/WfInv.v
+theories/TermEquality.v
 theories/Typing.v
+theories/Reduction.v
 theories/TypingWf.v
+theories/Normal.v
+theories/WcbvEval.v
+theories/Checker.v
 
 # The Template monad
 theories/TemplateMonad.v

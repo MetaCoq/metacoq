@@ -27,6 +27,8 @@ src/typing0.ml
 
 
 # From PCUIC
+src/pCUICPrimitive.mli
+src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml
@@ -83,10 +85,18 @@ src/pCUICPretty.mli
 src/pCUICPretty.ml
 
 # From SafeChecker
+src/pCUICErrors.mli
+src/pCUICErrors.ml
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
+src/pCUICEqualityDec.mli
+src/pCUICEqualityDec.ml
 src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
+# src/pCUICWfEnv.mli
+# src/pCUICWfEnv.ml
+src/pCUICTypeChecker.mli
+src/pCUICTypeChecker.ml
 src/pCUICSafeChecker.mli
 src/pCUICSafeChecker.ml
 src/safeTemplateChecker.mli

@@ -591,7 +591,7 @@ Proof.
       (arities_context (ind_bodies mdecl))).
   { eapply wf_arities_context; eauto. }
   eapply PCUICClosed.sorts_local_ctx_All_local_env in wfargs.
-  2:{ eapply All_local_env_app_inv. split; auto.
+  2:{ eapply All_local_env_app. split; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).
       intros. destruct T; simpl in *.
       - eapply weaken_ctx; auto.
@@ -678,7 +678,7 @@ Proof.
     eapply declared_minductive_closed_inds.
     2:destruct isdecl as [ [] ?]; eauto. eauto. } 
   rewrite -app_assoc in wfl.
-  apply All_local_env_app in wfl as [wfctx wfsargs].
+  apply All_local_env_app_inv in wfl as [wfctx wfsargs].
   rewrite smash_context_app in Heq'.
   rewrite smash_context_acc in Heq'. 
   rewrite nth_error_app_lt in Heq'.
@@ -719,8 +719,8 @@ Proof.
   { assert(wf_local (Σ.1, ind_universes mdecl)
       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, 
       smash_context [] (cshape_args c))).
-    apply All_local_env_app_inv; split; auto.
-    now apply All_local_env_app in wfargs as [wfindpars wfargs].
+    apply All_local_env_app; split; auto.
+    now apply All_local_env_app_inv in wfargs as [wfindpars wfargs].
     apply wf_local_rel_smash_context; auto.
     eapply closed_wf_local in X0; auto.
     eapply (closedn_ctx_decl (n:=idx)) in X0; eauto.
@@ -1192,21 +1192,21 @@ Lemma invert_type_mkApps_ind {cf:checker_flags} Σ Γ ind u args T mdecl idecl :
 Proof.
   intros wfΣ decli.
   intros H; dependent induction H; solve_discr.
-  - destruct args using rev_case; solve_discr. noconf H1.
-    rewrite -PCUICAstUtils.mkApps_nested in H1. simpl in H1.
-    noconf H1.  clear IHtyping2.
-    specialize (IHtyping1 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
+  - destruct args using rev_case; solve_discr. noconf H2.
+    rewrite -PCUICAstUtils.mkApps_nested in H2. simpl in H2.
+    noconf H2. clear IHtyping1 IHtyping3.
+    specialize (IHtyping2 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
       split; auto.
     destruct (on_declared_inductive wfΣ decli) as [onmind oib].
     eapply typing_spine_app; eauto.
-  - invs H0. destruct (declared_inductive_inj isdecl decli) as [-> ->].
+  - invs H0. destruct (declared_inductive_inj d decli) as [-> ->].
     clear decli. split; auto.
     constructor; [|reflexivity].
-    destruct (on_declared_inductive wfΣ isdecl) as [onmind oib].
+    destruct (on_declared_inductive wfΣ d) as [onmind oib].
     pose proof (oib.(onArity)) as ar.
     eapply isType_weaken; eauto.
     eapply (isType_subst_instance_decl _ []); eauto.
-    destruct isdecl; eauto.
+    destruct d; eauto.
     eapply oib.(onArity). auto.
   - specialize (IHtyping1 _ _ wfΣ decli) as [IH cu]; split; auto.
     eapply typing_spine_weaken_concl; pcuic.
@@ -1244,7 +1244,7 @@ Proof.
   rewrite subst_instance_context_length in subp, suba.
   subst parctx argctx.
   repeat split; eauto; rewrite ?subst_instance_context_length => //.
-  rewrite app_context_assoc in wfcodom. now apply All_local_env_app in wfcodom as [? ?].
+  rewrite app_context_assoc in wfcodom. now apply All_local_env_app_inv in wfcodom as [? ?].
   simpl.
   eapply substitution_wf_local; eauto. now rewrite app_context_assoc in wfcodom.
   unshelve eapply on_inductive_inst in declm; pcuic.
@@ -1302,7 +1302,10 @@ Lemma invert_red1_letin {cf:checker_flags} (Σ : global_env_ext) Γ C na d ty b 
     red1 Σ.1 (Γ ,, vdef na d ty) b b') +
   (C = subst10 d b)%type.
 Proof.
-  intros H; depelim H; try solve_discr; firstorder auto.
+  intros H; depelim H; try solve_discr; pcuicfo auto.
+  - left. left. left. eexists; eauto.
+  - left. left. right. eexists; eauto.
+  - left. right. eexists; eauto.
 Qed.
 
 Lemma decompose_prod_assum_it_mkProd_or_LetIn' ctx Γ t :
@@ -1362,7 +1365,7 @@ Lemma destInd_head_subst s k t f : destInd (head (subst s k t)) = Some f ->
   (destInd (head t) = Some f) +  
   (∑ n u, (head t = tRel n) /\ k <= n /\ (nth_error s (n - k) = Some u /\ destInd (head  (lift0 k u)) = Some f)).
 Proof.
-  induction t in s, k, f |- *; simpl; try solve [firstorder auto].
+  induction t in s, k, f |- *; simpl; try solve [pcuicfo auto].
   elim: leb_spec_Set => le; intros destI.
    right.
   destruct nth_error eqn:Heq.

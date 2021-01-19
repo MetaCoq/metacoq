@@ -202,7 +202,7 @@ End OnOne_local_2.
 
 Class HasLen (A : Type) (x y : nat) := len : A -> x = y.
 
-Notation length_of t := ltac:(let lemma := constr:(len t) in exact lemma) (only parsing).
+Notation length_of t := ltac:(let lemma := constr:(PCUICReduction.len t) in exact lemma) (only parsing).
 
 Instance OnOne2_local_env_length {P ctx ctx'} : 
   HasLen (OnOne2_local_env P ctx ctx') #|ctx| #|ctx'|.

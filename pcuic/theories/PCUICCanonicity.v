@@ -911,11 +911,11 @@ Section WeakNormalization.
     noconf unf.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
     rewrite /is_constructor. destruct (nth_error args (rarg x0)) eqn:hnth; [|assumption].
-    destruct_sigma t0. destruct t0.
+    destruct_sigma t0.
     intros axfree norm.
-    eapply whnf_ind_finite in t0; eauto.
+    eapply whnf_ind_finite in t1; eauto.
     intros chk.
-    pose proof (check_recursivity_kind_inj chk i1).
+    pose proof (check_recursivity_kind_inj chk t0).
     discriminate.
   Qed.
   

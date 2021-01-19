@@ -70,7 +70,7 @@ Section MapOpt.
 End MapOpt.
 
 Section MonadOperations.
-  Context {T} {M : Monad T}.
+  Context {T : Type -> Type} {M : Monad T}.
   Context {A B} (f : A -> T B).
   Fixpoint monad_map (l : list A)
     : T (list B)
@@ -112,14 +112,14 @@ End MonadOperations.
 Definition monad_iter {T : Type -> Type} {M A} (f : A -> T unit) (l : list A) : T unit
   := @monad_fold_left T M _ _ (fun _ => f) l tt.
 
-Fixpoint monad_All {T} {M : Monad T} {A} {P} (f : forall x, T (P x)) l : T (@All A P l) := match l with
+Fixpoint monad_All {T : Type -> Type} {M : Monad T} {A} {P} (f : forall x, T (P x)) l : T (@All A P l) := match l with
    | [] => ret All_nil
    | a :: l => X <- f a ;;
               Y <- monad_All f l ;;
               ret (All_cons X Y)
    end.
 
-Fixpoint monad_All2 {T E} {M : Monad T} {M' : MonadExc E T} wrong_sizes
+Fixpoint monad_All2 {T : Type -> Type} {E} {M : Monad T} {M' : MonadExc E T} wrong_sizes
   {A B R} (f : forall x y, T (R x y)) l1 l2 : T (@All2 A B R l1 l2) := 
   match l1, l2 with
    | [], [] => ret All2_nil
@@ -133,23 +133,23 @@ Definition monad_prod {T} {M : Monad T} {A B} (x : T A) (y : T B): T (A * B)%typ
   := X <- x ;; Y <- y ;; ret (X, Y).
  
 (** monadic checks *)
-Definition check_dec {T E} {M : Monad T} {M' : MonadExc E T} (e : E) {P}
+Definition check_dec {T : Type -> Type} {E : Type} {M : Monad T} {M' : MonadExc E T} (e : E) {P}
   (H : {P} + {~ P}) : T P
   := match H with
   | left x => ret x
   | right _ => raise e
   end.
 
-Definition check_eq_true {T E} {M : Monad T} {M' : MonadExc E T} (b : bool) (e : E) : T b := 
+Definition check_eq_true {T : Type -> Type} {E : Type} {M : Monad T} {M' : MonadExc E T} (b : bool) (e : E) : T b := 
   if b return T b then ret eq_refl else raise e.
 
-Definition check_eq_nat {T E} {M : Monad T} {M' : MonadExc E T} n m (e : E) : T (n = m) :=
+Definition check_eq_nat {T : Type -> Type} {E : Type} {M : Monad T} {M' : MonadExc E T} n m (e : E) : T (n = m) :=
   match PeanoNat.Nat.eq_dec n m with
   | left p => ret p
   | right p => raise e
   end.
 
-Program Fixpoint monad_Alli {T} {M : Monad T} {A} {P} (f : forall n x, T (∥ P n x ∥)) l n
+Program Fixpoint monad_Alli {T : Type -> Type} {M : Monad T} {A} {P} (f : forall n x, T (∥ P n x ∥)) l n
   : T (∥ @Alli A P n l ∥)
   := match l with
       | [] => ret (sq Alli_nil)
@@ -161,7 +161,7 @@ Next Obligation.
   sq. constructor; assumption.
 Defined.
 
-Program Fixpoint monad_Alli_All {T} {M : Monad T} {A} {P} {Q} (f : forall n x, ∥ Q x ∥ -> T (∥ P n x ∥)) l n :
+Program Fixpoint monad_Alli_All {T : Type -> Type} {M : Monad T} {A} {P} {Q} (f : forall n x, ∥ Q x ∥ -> T (∥ P n x ∥)) l n :
   ∥ All Q l ∥ -> T (∥ @Alli A P n l ∥)
   := match l with
       | [] => fun _ => ret (sq Alli_nil)
@@ -203,7 +203,7 @@ Section monad_Alli_nth.
 End monad_Alli_nth.
 
 Section MonadAllAll.
-  Context {T} {M : Monad T} {A} {P : A -> Type} {Q} (f : forall x, ∥ Q x ∥ -> T (∥ P x ∥)).
+  Context {T : Type -> Type} {M : Monad T} {A} {P : A -> Type} {Q} (f : forall x, ∥ Q x ∥ -> T (∥ P x ∥)).
   Program Fixpoint monad_All_All l : ∥ All Q l ∥ -> T (∥ All P l ∥) := 
     match l return ∥ All Q l ∥ -> T (∥ All P l ∥) with
       | [] => fun _ => ret (sq All_nil)
@@ -222,4 +222,3 @@ Section MonadAllAll.
     sq. constructor; assumption.
   Defined.
 End MonadAllAll.
-

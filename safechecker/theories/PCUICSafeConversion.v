@@ -894,8 +894,8 @@ Section Conversion.
   Proof.
     intros Γ mfix idx π h fn ξ eq.
     revert eq.
-    funelim (unfold_one_fix Γ mfix idx π h).
-    all: intro eq ; noconf eq.
+    apply_funelim (unfold_one_fix Γ mfix idx π h); intros; try discriminate.
+    all: noconf eq.
     unfold zipp.
     pose proof (eq_sym e0) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
@@ -945,8 +945,7 @@ Section Conversion.
   Proof.
     intros Γ mfix idx π h fn ξ eq.
     revert eq.
-    funelim (unfold_one_fix Γ mfix idx π h).
-    all: intro eq ; noconf eq.
+    apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
     unfold zippx.
     pose proof (eq_sym e0) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
@@ -994,8 +993,7 @@ Section Conversion.
   Proof.
     intros Γ mfix idx π h fn ξ eq.
     revert eq.
-    funelim (unfold_one_fix Γ mfix idx π h).
-    all: intro eq ; noconf eq.
+    apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
     pose proof (eq_sym e0) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
     rewrite !zipc_appstack. cbn.
@@ -1037,8 +1035,7 @@ Section Conversion.
   Proof.
     intros Γ mfix idx π h fn ξ eq.
     revert eq.
-    funelim (unfold_one_fix Γ mfix idx π h).
-    all: intro eq ; noconf eq.
+    apply_funelim (unfold_one_fix Γ mfix idx π h); intros ; noconf eq.
     pose proof (eq_sym e0) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
     rewrite !zipc_appstack. cbn.
@@ -1080,8 +1077,7 @@ Section Conversion.
   Proof.
     intros Γ mfix idx π h fn ξ eq.
     revert eq.
-    funelim (unfold_one_fix Γ mfix idx π h).
-    all: intro eq ; noconf eq.
+    apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
     pose proof (eq_sym e0) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
     rewrite 2!decompose_stack_appstack. cbn.

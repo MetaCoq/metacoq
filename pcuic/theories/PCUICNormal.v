@@ -52,6 +52,7 @@ Section Normal.
     end ->
     whnf Γ (mkApps (tFix mfix idx) v)
   | whnf_cofixapp mfix idx v : whnf Γ (mkApps (tCoFix mfix idx) v)
+  | whnf_prim p : whnf Γ (tPrim p)
 
   with whne (Γ : context) : term -> Type :=
   | whne_rel i :
@@ -155,7 +156,7 @@ Section Normal.
         right. exists x0, x1, x2, x3, x4. repeat split; eauto. now eapply nth_error_app_left.
       + rewrite <- mkApps_snoc in x.
         eapply (f_equal decompose_app) in x;
-          rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence.
+          rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence.
         inversion x. subst. 
         right. exists mfix, idx, rarg, body, arg. repeat split; eauto.
   Qed.
@@ -173,7 +174,7 @@ Local Ltac inv H := inversion H; subst; clear H.
 Ltac help' := try repeat match goal with
 | [ H0 : _ = mkApps _ _ |- _ ] => 
   eapply (f_equal decompose_app) in H0;
-    rewrite !decompose_app_mkApps in H0; cbn in *; firstorder congruence
+    rewrite !decompose_app_mkApps in H0; cbn in *; intuition congruence
 | [ H1 : tApp _ _ = mkApps _ ?args |- _ ] =>
   destruct args using rev_ind; cbn in *; [ inv H1 |
                                            rewrite <- mkApps_nested in H1; cbn in *; inv H1
@@ -198,7 +199,7 @@ Defined.
 Lemma negb_is_true b :
  ~ is_true b -> is_true (negb b).
 Proof.
-  destruct b; firstorder.
+  destruct b; pcuicfo.
 Qed.
 Hint Resolve negb_is_true : core.
 
@@ -249,6 +250,8 @@ Proof.
     lia.
   - destruct (mkApps_elim t l).
     apply mkApps_eq_inj in eq as (<-&<-); auto.
+  - destruct l using MCList.rev_ind; [|now rewrite <- mkApps_nested in eq].
+    cbn in *; subst; auto.
 Qed.
 
 Lemma whnf_fixapp' {flags} Σ Γ mfix idx narg body v :
@@ -307,6 +310,8 @@ Proof.
   - inv whn; solve_discr; easy.
 Qed.
 
+Set Firstorder Solver auto with core.
+
 Definition whnf_whne_dec flags Σ Γ t :
   ({∥whnf flags Σ Γ t∥} + {~∥whnf flags Σ  Γ t∥}) *
   ({∥whne flags Σ Γ t∥} + {~∥whne flags Σ Γ t∥}).
@@ -335,18 +340,18 @@ Proof with eauto using sq with pcuic.
         right. intros [w]. depelim w. depelim w. all:help. clear IHt.
         eapply whne_mkApps_inv in w as []...
         -- depelim w. help.
-        -- firstorder congruence.
+        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence.
       * destruct v as [ | ? v]...
         right. intros [w]. depelim w. depelim w. all:help. clear IHt.
         eapply whne_mkApps_inv in w as []...
         -- depelim w. help.
-        -- firstorder congruence.
+        -- destruct s0 as (?&?&?&?&?&?&?); congruence.
       * destruct v as [ | ? v]...
         destruct (RedFlags.beta flags) eqn:?.
         -- right. intros [w]. depelim w. depelim w. all:help. clear IHl.
            eapply whne_mkApps_inv in w as []...
            ++ depelim w. congruence. help.
-           ++ firstorder congruence.
+           ++ destruct s0 as (?&?&?&?&?&?&?); congruence.
         -- left; constructor.
            apply whnf_mkApps.
            constructor.
@@ -360,23 +365,29 @@ Proof with eauto using sq with pcuic.
                  eapply whne_mkApps_inv in w as []; eauto.
                  --- depelim w; [|congruence]. help. 
                      eapply (f_equal decompose_app) in x; 
-                       rewrite !decompose_app_mkApps in x; cbn in *; try firstorder congruence. 
+                       rewrite !decompose_app_mkApps in x; cbn in *; try intuition congruence. 
                      inv x. destruct rarg; inv e0.
                  --- destruct s0 as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
                      rewrite E1 in e0. inv e0.
                      eapply (nth_error_app_left v [x0]) in e1.
                      rewrite E2 in e1. inv e1...
-                 --- help.
-                     eapply (f_equal decompose_app) in x; 
-                       rewrite !decompose_app_mkApps in x;
-                       cbn in *; try firstorder congruence.
-                     inv x. rewrite E1 in y. congruence. 
+                 --- solve_discr.
+                     rewrite E1 in e. injection e as -> ->.
+                     rewrite E2 in e0. injection e0 as ->.
+                     apply n; sq; auto.
+                 --- solve_discr.
+                     rewrite E1 in y. congruence.
               ** left.
                  constructor.
                  apply whnf_mkApps.
                  constructor.
                  assumption.
         -- left. constructor. eapply whnf_fixapp. rewrite E1. eauto.
+      * destruct v as [ | ? v]...
+        right. intros [w]. depelim w. depelim w. all:help. clear IHt.
+        eapply whne_mkApps_inv in w as []...
+        -- depelim w. help.
+        -- destruct s0 as [? [? [? [? [? [? ?]]]]]]. congruence.
     + right. intros [w]. eapply n. constructor. now eapply whnf_mkApps_inv. 
   - destruct (IHt Γ) as [_ []].
     + left. destruct s as [w]. constructor. now eapply whne_mkApps.
@@ -392,7 +403,10 @@ Proof with eauto using sq with pcuic.
                    destruct s as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
                    rewrite E1 in e0. inv e0.
                    eapply (nth_error_app_left v [x0]) in e1.
-                   rewrite E2 in e1. inv e1...
+                   rewrite E2 in e1. inv e1... solve_discr.
+                   rewrite E1 in e. injection e as -> ->.
+                   rewrite E2 in e0. injection e0 as ->.
+                   apply n0; sq; auto.
                --- left. constructor. apply whne_mkApps. constructor. assumption.
          ++ right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
             congruence.
@@ -914,6 +928,7 @@ Proof.
       destruct s as [->|(?&?)]; [easy|].
       now inv e.
   - eapply red1_mkApps_tCoFix_inv in r as [[(?&->&?)|(?&->&?)]|(?&->&?)]; eauto.
+  - depelim r. solve_discr.
 Qed.
 
 Lemma whnf_pres Σ Γ t t' :
@@ -977,7 +992,8 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ Γ (dtype d) (dtype d') ×
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
-    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
+    whnf_red Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx)
+| whnf_red_tPrim i : whnf_red Σ Γ (tPrim i) (tPrim i).
 
 Derive Signature for whnf_red.
 
@@ -1263,6 +1279,7 @@ Proof.
       cbn.
       intros ? ? (?&[= -> -> ->]).
       auto.
+  - depelim r; solve_discr.
 Qed.
 
 Lemma whnf_red_inv Σ Γ t t' :
@@ -1352,6 +1369,7 @@ Proof.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in eq as (?&?&(?&?)&->).
     depelim e.
     apply whnf_cofixapp.
+  - depelim eq; auto.
 Qed.
 
 Lemma whnf_eq_term {cf:checker_flags} f Σ φ Γ t t' :

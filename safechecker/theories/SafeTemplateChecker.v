@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
 
 
 Program Definition infer_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
@@ -12,7 +12,7 @@ Program Definition infer_template_program {cf : checker_flags} (p : Ast.program)
   p <- typecheck_program (cf:=cf) (trans_global_decls p.1, trans p.2) φ Hφ ;;
   ret (p.π1 ; _).
 
-(** In Coq until 8.10, programs can be ill-formed w.r.t. universes as they don't include
+(** In Coq until 8.11 at least, programs can be ill-formed w.r.t. universes as they don't include
     all declarations of universes and constraints coming from section variable declarations.
     We hence write a program that computes the dangling universes in an Ast.program and registers
     them appropriately. *)
@@ -107,7 +107,7 @@ Program Definition infer_and_print_template_program {cf : checker_flags} (p : As
   | EnvError Σ (AlreadyDeclared id) =>
     inr ("Already declared: " ^ id)
   | EnvError Σ (IllFormedDecl id e) =>
-    inr ("Type error: " ^ PCUICSafeChecker.string_of_type_error Σ e ^ ", while checking " ^ id)
+    inr ("Type error: " ^ string_of_type_error Σ e ^ ", while checking " ^ id)
   end.
 
 (* Program Definition check_template_program {cf : checker_flags} (p : Ast.program) (ty : Ast.term) *)

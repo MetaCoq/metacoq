@@ -10,13 +10,9 @@ From Equations Require Import Equations.
 
 (** * Universe Substitution lemmas for typing derivations. *)
 
-
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
-Module CS := ConstraintSet.
-Module LS := LevelSet.
 
 Create HintDb univ_subst.
 
@@ -351,7 +347,7 @@ Proof.
                       /\ In c' (CS.elements ctrs)).
   - generalize (CS.elements ctrs), CS.empty.
     induction l; cbn.
-    + firstorder.
+    + pcuicfo. now destruct H0 as [? ?].
     + intros t. etransitivity. 1: eapply IHl.
       split; intros [HH|HH].
       * destruct a as [[l1 a] l2]. apply CS.add_spec in HH.
@@ -442,8 +438,8 @@ Qed.
 Context {cf : checker_flags}.
 
 Lemma consistent_instance_declared lvs φ uctx u :
-  consistent_instance lvs φ uctx u
-  -> forallb (fun l => LS.mem l lvs) u.
+  consistent_instance lvs φ uctx u -> 
+  forallb (fun l => LS.mem l lvs) u.
 Proof.
   unfold consistent_instance. destruct uctx as [ctx|ctx].
   1: destruct u; [reflexivity|discriminate].
@@ -1089,9 +1085,11 @@ Proof.
     econstructor. now rewrite nth_error_map, H.
   - cbn. econstructor; eauto.
     eapply OnOne2_map. eapply OnOne2_impl. 1: eassumption.
-    firstorder.
+    (* Used to be pcuicfo *)
+    simpl in *; intuition; simpl in *. unfold on_Trel.
+    simpl. split; auto.
   - cbn; econstructor;
-    eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | firstorder].
+    eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | pcuicfo].
   - cbn; econstructor;
       eapply OnOne2_map; eapply OnOne2_impl; [ eassumption | ].
     intros. destruct X1. destruct p. inversion e. destruct x, y; cbn in *; subst.
@@ -1454,20 +1452,6 @@ Proof.
   destruct destInd as [[i u']|]; simpl; auto.
 Qed.
 
-Axiom fix_guard_subst_instance :
-  forall mfix u,
-    fix_guard mfix ->
-    fix_guard (map (map_def (subst_instance_constr u) (subst_instance_constr u))
-                   mfix).
-
-
-Axiom cofix_guard_subst_instance :
-  forall mfix u,
-  cofix_guard mfix ->
-  cofix_guard (map (map_def (subst_instance_constr u) (subst_instance_constr u))
-                  mfix).
-
-
 Lemma All_local_env_over_subst_instance Σ Γ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
                      (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) t T (_ : Σ0;;; Γ0 |- t : T) =>
@@ -1596,10 +1580,11 @@ Proof.
     + eapply X3; aa.
   - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' HSub H.
     econstructor; eauto. eapply X5; aa.
-  - intros t0 na A B u X X0 X1 X2 X3 u0 univs wfΣ' HSub H.
+  - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' HSub H.
     rewrite <- subst_subst_instance_constr. cbn. econstructor.
     + eapply X1; eauto.
     + eapply X3; eauto.
+    + eapply X5; eauto.
   - intros. rewrite subst_instance_constr_two. econstructor; [aa|aa|].
     clear X X0; cbn in *.
     eapply consistent_ext_trans; eauto.
@@ -1664,23 +1649,22 @@ Proof.
 
   - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ' HSub.
     erewrite map_dtype. econstructor.
-    + now apply fix_guard_subst_instance.
+    + now eapply fix_guard_subst_instance.
     + rewrite nth_error_map, H0. reflexivity.
     + eapply H1; eauto.
     + apply All_map, (All_impl X); simpl; intuition auto.
       destruct X1 as [s Hs]. exists (subst_instance_univ u s).
       now apply Hs.
     + eapply All_map, All_impl; tea.
-      intros x [[X1 X2] X3]. split.
-      * specialize (X3 u univs wfΣ' HSub H2). erewrite map_dbody in X3.
-        rewrite <- lift_subst_instance_constr in X3.
-        rewrite fix_context_length, map_length in *.
-        erewrite map_dtype with (d := x) in X3.
-        unfold subst_instance_context, map_context in *.
-        rewrite map_app in *.
-        rewrite <- (fix_context_subst_instance u mfix).
-        eapply X3.
-      * destruct x as [? ? []]; cbn in *; tea.
+      intros x [X1 X3]. 
+      specialize (X3 u univs wfΣ' HSub H2). erewrite map_dbody in X3.
+      rewrite <- lift_subst_instance_constr in X3.
+      rewrite fix_context_length, map_length in *.
+      erewrite map_dtype with (d := x) in X3.
+      unfold subst_instance_context, map_context in *.
+      rewrite map_app in *.
+      rewrite <- (fix_context_subst_instance u mfix).
+      eapply X3.
     + red; rewrite <- wffix.
       unfold wf_fixpoint.
       rewrite map_map_compose.
@@ -1688,7 +1672,7 @@ Proof.
 
   - intros mfix n decl guard H X X0 X1 wfcofix u univs wfΣ' HSub H1.
     erewrite map_dtype. econstructor; tas.
-    + now apply cofix_guard_subst_instance.
+    + now eapply cofix_guard_subst_instance.
     + rewrite nth_error_map, H. reflexivity.
     + apply X; eauto.
     + apply All_map, (All_impl X0); simpl; intuition auto.
@@ -1889,74 +1873,6 @@ Section SubstIdentity.
       now rewrite mapi_nth.
   Qed.
 
-  Fixpoint unfold {A} (n : nat) (f : nat -> A) : list A :=
-    match n with
-    | 0 => []
-    | S n => unfold n f ++ [f n]
-    end.
-
-  Lemma mapi_irrel_list {A B} (f : nat -> A) (l l' : list B) :
-    #|l| = #|l'| ->
-    mapi (fun i (x : B) => f i) l = mapi (fun i x => f i) l'.
-  Proof.
-    induction l in f, l' |- *; destruct l' => //; simpl; auto.
-    intros [= eq]. f_equal.
-    rewrite !mapi_rec_Sk.
-    now rewrite [mapi_rec _ _ _](IHl (fun x => (f (S x))) l').
-  Qed.
-
-  Lemma mapi_unfold {A B} (f : nat -> B) l : mapi (fun i (x : A) => f i) l = unfold #|l| f.
-  Proof.
-    induction l in f |- *; simpl; auto.
-    rewrite mapi_rec_Sk.
-    rewrite -IHl. rewrite -(mapi_rec_Sk (fun i x => f i) l 0).
-    change [f #|l|] with (mapi_rec (fun i x => f i) [a] #|l|).
-    rewrite -(Nat.add_0_r #|l|). rewrite -mapi_rec_app.
-    change (f 0 :: _) with (mapi (fun i x => f i) (a :: l)).
-    apply mapi_irrel_list. simpl. rewrite app_length /=; lia.
-  Qed.
-
-  Lemma forallb_mapi {A B} (p : B -> bool) (f : nat -> B) l :
-    (forall i, i < #|l| -> p (f i)) ->
-    forallb p (mapi (fun i (x : A) => f i) l).
-  Proof.
-    intros Hp. rewrite (mapi_unfold f).
-    induction #|l| in *; simpl; auto.
-    rewrite forallb_app. simpl. now rewrite Hp // !andb_true_r.
-  Qed.
-
-  Lemma In_unfold n i : In (Level.Var i) (unfold n Level.Var) -> i < n.
-  Proof.
-    induction n; simpl => //.
-    intros H; apply in_app_or in H.
-    destruct H.
-    - specialize (IHn H). lia.
-    - simpl in H. destruct H; [injection H|].
-      * intros ->. auto.
-      * destruct H.
-  Qed.
-
-  Lemma In_fold_right_add x l :
-    In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
-  Proof.
-    split.
-    - induction l; simpl => //.
-      intros [<-|H].
-      * eapply LevelSet.add_spec; left; auto.
-      * eapply LevelSet.add_spec; right; auto.
-    - induction l; simpl => //.
-      * now rewrite LevelSetFact.empty_iff.
-      * rewrite LevelSet.add_spec. intuition auto.
-  Qed.
-
-  Lemma CS_For_all_union f cst cst' : ConstraintSet.For_all f (ConstraintSet.union cst cst') ->
-    ConstraintSet.For_all f cst.
-  Proof.
-    unfold CS.For_all.
-    intros IH x inx. apply (IH x).
-    now eapply CS.union_spec; left.
-  Qed.
-
   Lemma declared_inductive_wf_ext_wk Σ mdecl mind :
     wf Σ ->
     declared_minductive Σ mind mdecl ->
@@ -1981,50 +1897,6 @@ Section SubstIdentity.
 
   Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcuic.
 
-  Instance For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
-  Proof.
-    intros s s' eqs.
-    unfold CS.For_all. split; intros IH x inxs; apply (IH x);
-    now apply eqs.
-  Qed.
-
-  Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
-  Proof.
-    induction m; simpl; rewrite ?app_length /=; auto. lia.
-  Qed.
-
-  Lemma nth_error_unfold {A} (f : nat -> A) m n : n < m <-> nth_error (unfold m f) n = Some (f n).
-  Proof.
-    induction m in n |- *; split; intros Hn; try lia.
-    - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
-    - destruct (eq_dec n m); [subst|].
-      * simpl. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //.
-      * simpl. rewrite nth_error_app_lt ?unfold_length //; try lia.
-        apply IHm; lia.
-    - simpl in Hn. eapply nth_error_Some_length in Hn.
-      rewrite app_length /= unfold_length in Hn. lia.
-  Qed.
-
-  Lemma nth_error_unfold_inv {A} (f : nat -> A) m n t : nth_error (unfold m f) n = Some t -> t = (f n).
-  Proof.
-    induction m in n |- *; intros Hn; try lia.
-    - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
-    - simpl in Hn.
-      pose proof (nth_error_Some_length Hn).
-      rewrite app_length /= unfold_length in H.
-      destruct (eq_dec n m); [subst|].
-      * simpl. revert Hn. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //; congruence.
-      * simpl. revert Hn. rewrite nth_error_app_lt ?unfold_length //; try lia. auto.
-  Qed.
-
-  Lemma CS_For_all_add P x s : CS.For_all P (CS.add x s) -> P x /\ CS.For_all P s.
-  Proof.
-    intros.
-    split.
-    * apply (H x), CS.add_spec; left => //.
-    * intros y iny. apply (H y), CS.add_spec; right => //.
-  Qed.
-
   Lemma subst_instance_level_abs l n Σ :
     wf Σ ->
     LevelSet.In l (LevelSet.union
@@ -2035,9 +1907,9 @@ Section SubstIdentity.
     intros wfΣ lin.
     eapply LevelSet.union_spec in lin.
     destruct lin.
-    - apply In_fold_right_add in H.
+    - apply LevelSet_In_fold_right_add in H.
       destruct l; simpl; auto.
-      eapply In_unfold in H.
+      eapply In_unfold_inj in H; [|congruence].
       pose proof (proj1 (nth_error_unfold Level.Var n n0) H).
       now rewrite (nth_error_nth _ _ _ H0).
     - eapply not_var_global_levels in wfΣ.
@@ -2061,7 +1933,7 @@ Section SubstIdentity.
       apply LevelSet.mem_spec, LevelSet.union_spec. left.
       unfold levels_of_udecl. simpl.
       rewrite (mapi_unfold Level.Var).
-      eapply In_fold_right_add.
+      eapply LevelSet_In_fold_right_add.
       induction #|univs| in i, Hi |- *; try lia.
       simpl. eapply in_or_app. destruct (eq_dec i n).
       * subst. right; simpl; auto.
@@ -2102,9 +1974,6 @@ Section SubstIdentity.
       eapply CS_For_all_union.
   Qed.
 
-  Lemma isType_closed {Σ Γ T} : wf Σ.1 -> isType Σ Γ T -> closedn #|Γ| T.
-  Proof. intros wfΣ [s Hs]. now eapply subject_closed in Hs. Qed.
-
   Lemma udecl_prop_in_var_poly {Σ n} : on_udecl_prop Σ.1 Σ.2 -> LevelSet.In (Level.Var n) (levels_of_udecl Σ.2) ->
     ∑ ctx, Σ.2 = Polymorphic_ctx ctx.
   Proof.
@@ -2128,7 +1997,7 @@ Section SubstIdentity.
     - destruct cu as [decl' [sizeu vc]].
       clear sizeu vc.
       induction u; simpl; auto.
-      move/andP: decl' => [ina au]. specialize (IHu au).
+      move/andb_and: decl' => [ina au]. specialize (IHu au).
       rewrite [map _ u]IHu. f_equal. clear au.
       destruct a; simpl; auto.
       eapply LevelSet.mem_spec in ina.
@@ -2136,8 +2005,8 @@ Section SubstIdentity.
       destruct (udecl_prop_in_var_poly onu ina) as [[univs csts] eq].
       rewrite eq in IHu, ina |- *. simpl in *.
       rewrite mapi_unfold in IHu, ina |- *.
-      eapply In_fold_right_add in ina.
-      eapply In_unfold in ina.
+      eapply LevelSet_In_fold_right_add in ina.
+      eapply In_unfold_inj in ina; try congruence.
       eapply (nth_error_unfold Level.Var) in ina.
       now rewrite (nth_error_nth _ _ _ ina).
   Qed.
@@ -2154,12 +2023,12 @@ Section SubstIdentity.
     eapply udecl_prop_in_var_poly in onu as [[ctx cstrs] eq]; eauto.
     rewrite eq. simpl.
     rewrite eq in cu. simpl in cu.
-    apply In_fold_right_add in cu.
+    apply LevelSet_In_fold_right_add in cu.
     unfold AUContext.repr in *. rewrite (mapi_unfold Level.Var) in cu |- *.
     destruct nth_error eqn:hnth.
     * apply nth_error_unfold_inv in hnth. subst; auto.
     * apply nth_error_None in hnth. rewrite unfold_length in hnth.
-      apply In_unfold in cu. lia.
+      apply In_unfold_inj in cu; try lia. congruence.
   Qed.
 
   Lemma consistent_instance_ext_subst_abs_univ Σ u :

@@ -130,8 +130,8 @@ Proof.
       rewrite H [firstn _ [u]]firstn_0 // app_nil_r in Hr |- *.
       specialize (IHctx Hr). rewrite app_assoc.
       now econstructor.
-    * destruct a as [na' [b'|] ty']; simpl in *; noconf H.
-      rewrite skipn_S in Hl, Hr, H. subst b.
+    * rewrite skipn_S in Hl, Hr, H.
+      destruct a as [na' [b'|] ty']; simpl in *; noconf H.
       pose proof (context_subst_length Hl). rewrite subst_context_length in H.
       rewrite {3}H -subst_app_simpl [firstn #|ctx| _ ++ _]firstn_skipn. constructor.
       apply IHctx => //.
@@ -298,7 +298,7 @@ Lemma arity_typing_spine {cf:checker_flags} Σ Γ Γ' s inst s' :
   ∑ instsubst, spine_subst Σ Γ inst instsubst Γ'.
 Proof.
   intros wfΣ wfΓ'; revert s inst s'.
-  assert (wf_local Σ Γ). now apply wf_local_app in wfΓ'. move X after wfΓ'.
+  assert (wf_local Σ Γ). now apply wf_local_app_l in wfΓ'. move X after wfΓ'.
   rename X into wfΓ.
   generalize (le_n #|Γ'|).
   generalize (#|Γ'|) at 2.
@@ -325,12 +325,12 @@ Proof.
         specialize (IHn (subst_context [b] 0 l)).
         forward IHn. {
           rewrite app_context_assoc in wfΓ'.
-          apply All_local_env_app in wfΓ' as [wfb wfa].
+          apply All_local_env_app_inv in wfΓ' as [wfb wfa].
           depelim wfb.
           eapply substitution_wf_local. eauto. 
           epose proof (cons_let_def Σ Γ [] [] na b ty ltac:(constructor)).
           rewrite !subst_empty in X. eapply X. auto.
-          eapply All_local_env_app_inv; split.
+          eapply All_local_env_app; split.
           constructor; auto. apply wfa. }
         forward IHn by rewrite subst_context_length; lia.
         specialize (IHn s inst s' Hsp). 
@@ -349,7 +349,7 @@ Proof.
         * apply subslet_app. now rewrite subst_empty.
           repeat constructor.
           rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
-          apply wf_local_app in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
+          apply wf_local_app_l in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
       + rewrite PCUICCtxShape.context_assumptions_app /=.
         depelim Hsp. 
         now eapply cumul_Prod_Sort_inv in c.
@@ -359,14 +359,14 @@ Proof.
         specialize (IHn (subst_context [hd] 0 l)).
         forward IHn. {
           rewrite app_context_assoc in wfΓ'.
-          apply All_local_env_app in wfΓ' as [wfb wfa]; eauto.
+          apply All_local_env_app_inv in wfΓ' as [wfb wfa]; eauto.
           depelim wfb. 
           eapply substitution_wf_local. auto. 
           constructor. constructor. rewrite subst_empty.
           eapply type_Cumul'. eapply t.
           eapply l0.
           eapply conv_cumul; auto. now symmetry. 
-          eapply All_local_env_app_inv; eauto; split.
+          eapply All_local_env_app; eauto; split.
           constructor; eauto. eapply isType_tProd in i; intuition eauto. }
         forward IHn by rewrite subst_context_length; lia.
         specialize (IHn s tl s'). 
@@ -388,7 +388,7 @@ Proof.
         * apply subslet_app => //.
           repeat constructor.
           rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
-          apply wf_local_app in wfΓ'. depelim wfΓ'.
+          apply wf_local_app_l in wfΓ'. depelim wfΓ'.
           rewrite !subst_empty. red in l0.
           eapply type_Cumul'; eauto. eapply conv_cumul. now symmetry.
 Qed.
@@ -650,7 +650,7 @@ Proof.
   rewrite firstn_0 in csr => //. rewrite app_nil_r in csr.
   eapply subslet_app_inv in subs as [sl sr].
   split; split; auto. rewrite app_context_assoc in wfcodom.
-  now eapply All_local_env_app in wfcodom as [? ?].
+  now eapply All_local_env_app_inv in wfcodom as [? ?].
   eapply substitution_wf_local; eauto.
   now rewrite app_context_assoc in wfcodom.
 Qed.
@@ -1430,7 +1430,7 @@ Proof.
       pose proof wf as wf'.
       rewrite -eql in wf'.
       rewrite app_context_assoc in wf'.
-      apply wf_local_app in wf'. depelim wf'.
+      apply wf_local_app_l in wf'. depelim wf'.
       eapply (weakening_typing); auto.
     * rewrite app_length /= Nat.add_1_r in IHc.
       constructor; auto.
@@ -1438,7 +1438,7 @@ Proof.
       pose proof wf as wf'.
       rewrite -eql in wf'.
       rewrite app_context_assoc in wf'.
-      apply wf_local_app in wf'. depelim wf'.
+      apply wf_local_app_l in wf'. depelim wf'.
       rewrite Nat.add_0_r.
 
       eapply type_Cumul'.
@@ -1721,8 +1721,8 @@ Proof.
       * eapply subslet_app => //. eapply sps.
         rewrite -{1}(subst_empty 0 b).
         repeat constructor. rewrite !subst_empty.
-        eapply All_local_env_app in wfΓΔ as [_ wf].
-        eapply All_local_env_app in wf as [wfd _].
+        eapply All_local_env_app_inv in wfΓΔ as [_ wf].
+        eapply All_local_env_app_inv in wf as [wfd _].
         depelim wfd. apply l0.
       * rewrite subst_app_simpl.
         move: (context_subst_length sps).
@@ -1747,7 +1747,7 @@ Proof.
       2:{ eauto. }
       forward X. {
         pose proof wfΓΔ as wfΓΔ'.
-        rewrite app_context_assoc in wfΓΔ'. eapply All_local_env_app in wfΓΔ' as [wfΓΔ' _].
+        rewrite app_context_assoc in wfΓΔ'. eapply All_local_env_app_inv in wfΓΔ' as [wfΓΔ' _].
         eapply (isType_subst wfΣ wfΓΔ') in wat''; eauto.
         2:{ repeat constructor. now rewrite subst_empty. }
         now rewrite subst_it_mkProd_or_LetIn Nat.add_0_r in wat''. }
@@ -1783,7 +1783,7 @@ Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg :
 Proof.
   intros wfΣ H; revert arg.
   dependent induction H.
-  - intros arg  Harg. simpl. econstructor; eauto.
+  - intros arg Harg. simpl. econstructor; eauto.
     constructor. 2:reflexivity.
     eapply isType_tProd in i as [watd wat].
     eapply (isType_subst wfΣ (Δ:=[vass na A])); eauto.
@@ -1889,7 +1889,7 @@ Proof.
     simpl. rewrite smash_context_acc. simpl. auto.
     auto. }
   split; auto.
-  - eapply All_local_env_app_inv; split; auto.
+  - eapply All_local_env_app; split; auto.
     eapply wf_local_rel_smash_context; auto.
   - induction inst_subslet0 in inst, inst_ctx_subst0, spine_codom_wf0 |- *.
     depelim inst_ctx_subst0.

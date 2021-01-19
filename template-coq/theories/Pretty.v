@@ -67,6 +67,7 @@ Section print_term.
       | Some body => substring 0 1 (body.(ind_name))
       | None => "X"
       end
+    | tInt _ => "i"
     | _ => "U"
     end.
 
@@ -201,6 +202,8 @@ Section print_term.
   | tCoFix l n =>
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
+  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")"
   end.
 
 End print_term.

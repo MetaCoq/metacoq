@@ -19,7 +19,7 @@ Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
     declared_inductive (fst Σ) mdecl ind idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      PCUICWeakeningEnv.extends Σ Σ' ->
+      extends Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       ∥Is_proof Σ' Γ (mkApps (tConstruct ind n u) args)∥ /\
        #|ind_ctors idecl| <= 1 /\
@@ -30,7 +30,7 @@ Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
     declared_inductive (fst Σ) mdecl ind idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      PCUICWeakeningEnv.extends Σ Σ' ->
+      extends Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) -> False.
 
@@ -39,7 +39,7 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
     declared_inductive (fst Σ) mdecl ind idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf_ext Σ' ->
-      PCUICWeakeningEnv.extends Σ Σ' ->
+      extends Σ Σ' ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
@@ -292,12 +292,12 @@ Proof.
         eapply All_local_assum_subst; eauto.
         simpl. intros.
         destruct X as [s [Ht2 isp]].
-        exists s; firstorder.
+        exists s; pcuicfo.
         rewrite Nat.add_0_r. eapply (substitution _ Γ [vdef na b ty] [b] Γ1 _ (tSort s)); auto.
         rewrite -{1}(subst_empty 0 b).
         repeat (constructor; auto). rewrite !subst_empty.
         eapply typing_wf_local in Ht2.
-        rewrite app_context_assoc in Ht2. eapply All_local_env_app in Ht2 as [Ht2 _].
+        rewrite app_context_assoc in Ht2. eapply All_local_env_app_inv in Ht2 as [Ht2 _].
         depelim Ht2. apply l0.
         now rewrite app_context_assoc in Ht2.
       * intros mdecl idec decli oib.
@@ -342,7 +342,7 @@ Proof.
           eapply All_local_assum_subst; eauto.
           simpl. intros.
           destruct X as [s [Ht2 isp]].
-          exists s; firstorder auto.
+          exists s; pcuicfo auto.
           rewrite Nat.add_0_r. eapply (substitution _ Γ [vass na ty] [t] Γ1 _ (tSort s)); auto.
           repeat (constructor; auto). now rewrite subst_empty.
           now rewrite app_context_assoc in Ht2. }
@@ -477,7 +477,7 @@ Proof.
         unshelve eapply PCUICInductiveInversion.on_constructor_inst in oi; eauto.
         destruct oi as [oi _].
         rewrite !subst_instance_context_app in oi.
-        now eapply wf_local_app in oi. }
+        now eapply wf_local_app_l in oi. }
 
     apply s.
     rewrite subst_app_context in X0.
@@ -619,7 +619,7 @@ Proof.
   eapply build_branches_type_lookup in e2. eauto.
   2:eauto.
   3:destruct declc; eauto.
-  2:{ eapply (All2_impl a); firstorder eauto. }
+  2:{ eapply (All2_impl a); pcuicfo eauto. }
   destruct e2 as [nargs [br [brty [[[Hnth Hnth'] brtyped]]]]].
   epose proof (All2_nth_error _ _ _ a H).
   specialize (X0 Hnth').
@@ -773,7 +773,7 @@ Proof.
     now apply is_prop_gt in lt.
   - rewrite app_context_assoc in eq.
     pose proof eq as eq'.
-    eapply All_local_env_app in eq' as [wfΓ wf']. depelim wfΓ;
+    eapply All_local_env_app_inv in eq' as [wfΓ wf']. depelim wfΓ;
     rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
     + eapply invert_cumul_prod_l in X2 as (na' & A & B' & (red & conv) & cum).
       eapply subject_reduction in X1. 3:eassumption. all:auto.
@@ -837,7 +837,7 @@ Proof.
     apply is_prop_gt in lt; auto.
   - rewrite app_context_assoc in eq.
     pose proof eq as eq'.
-    eapply All_local_env_app in eq' as [wfΓ wf']. depelim wfΓ;
+    eapply All_local_env_app_inv in eq' as [wfΓ wf']. depelim wfΓ;
     rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
     + eapply invert_cumul_prod_r in X2 as (na' & A' & B' & (red & conv) & cum).
       eapply subject_reduction in X1. 3:eassumption. all:auto.
@@ -885,7 +885,7 @@ Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_prop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_prop_inv in H. 4:eauto. pcuicfo. auto.
   right; eauto.
 Qed.
 
@@ -899,7 +899,7 @@ Lemma cumul_prop2 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_prop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_prop_inv in H. 4:eauto. pcuicfo. auto.
   left; eauto.
 Qed.
 
@@ -913,7 +913,7 @@ Lemma cumul_sprop1 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_sprop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_sprop_inv in H. 4:eauto. pcuicfo. auto.
   right; eauto.
 Qed.
 
@@ -927,7 +927,7 @@ Lemma cumul_sprop2 (Σ : global_env_ext) Γ A B u :
 Proof.
   intros.
   destruct X0 as [s Hs].
-  eapply cumul_sprop_inv in H. 4:eauto. firstorder. auto.
+  eapply cumul_sprop_inv in H. 4:eauto. pcuicfo. auto.
   left; eauto.
 Qed.
 

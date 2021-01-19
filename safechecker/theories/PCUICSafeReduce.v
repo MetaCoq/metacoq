@@ -6,6 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICUnivSubst PCUICTyping PCUICPosition PCUICNormal
      PCUICInversion PCUICSafeLemmata PCUICSR PCUICSN
      PCUICUtils PCUICReduction PCUICValidity.
+From MetaCoq.SafeChecker Require Import PCUICWfReduction.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -1255,6 +1256,7 @@ Section Reduce.
       unfold is_true in typ.
       unfold PCUICAst.fst_ctx in *.
       congruence.
+    - now eapply inversion_Prim in typ.
   Qed.
   
   Definition isCoFix_app t :=
@@ -1286,6 +1288,7 @@ Section Reduce.
     - exfalso; eapply invert_fix_ind; eauto.
     - unfold isCoFix_app in cof.
       now rewrite decompose_app_mkApps in cof.
+    - now eapply inversion_Prim in typ.
   Qed.
   
   Lemma whnf_fix_arg_whne mfix idx body Γ t before args aftr ty :
@@ -1434,6 +1437,9 @@ Section Reduce.
           apply inversion_App in h as (?&?&?&?&?); auto.
           apply inversion_Prod in t0 as (?&?&?&?&?); auto.
           eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
+      + exfalso.
+        eapply welltyped_context in h as [s Hs]; tas.
+        now eapply inversion_Prim in Hs.
     - unfold zipp. case_eq (decompose_stack π0). intros l ρ e.
       constructor. constructor. eapply whne_mkApps.
       eapply whne_rel_nozeta. assumption.
@@ -1721,3 +1727,301 @@ Section Reduce.
   Qed.
 
 End Reduce.
+
+From MetaCoq.PCUIC Require Import PCUICConfluence PCUICConversion.
+From MetaCoq.SafeChecker Require Import PCUICErrors.
+
+Section ReduceFns.
+  Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥).
+
+  (* We get stack overflow on Qed after Equations definitions when this is transparent *)
+  Opaque reduce_stack_full.
+
+  Definition hnf := reduce_term RedFlags.default Σ HΣ.
+
+  Theorem hnf_sound {Γ t h} : ∥ red (fst Σ) Γ t (hnf Γ t h) ∥.
+  Proof.
+    apply reduce_term_sound.
+  Defined.
+  
+  Theorem hnf_complete {Γ t h} : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
+  Proof.
+    apply reduce_term_complete.
+  Qed.
+
+  Equations? reduce_to_sort (Γ : context) (t : term) (h : welltyped Σ Γ t)
+    : typing_result (∑ u, ∥ red (fst Σ) Γ t (tSort u) ∥) :=
+    reduce_to_sort Γ t h with view_sortc t := {
+      | view_sort_sort s => ret (s; sq (refl_red _ _ _));
+      | view_sort_other t _ with inspect (hnf Γ t h) :=
+        | exist hnft eq with view_sortc hnft := {
+          | view_sort_sort s => ret (s; _);
+          | view_sort_other t _ => raise (NotASort t)
+        }
+      }.
+  Proof.
+    pose proof (hnf_sound (h:=h)).
+    now rewrite eq.
+  Qed.
+
+  Lemma reduce_to_sort_complete {Γ t wt} e :
+    reduce_to_sort Γ t wt = TypeError e ->
+    (forall s, red Σ Γ t (tSort s) -> False).
+  Proof.
+    funelim (reduce_to_sort Γ t wt); try congruence.
+    intros _ s r.
+    pose proof (@hnf_complete Γ t0 h) as [wh].
+    pose proof (@hnf_sound Γ t0 h) as [r'].
+    destruct HΣ.
+    eapply red_confluence in r as (?&r1&r2); eauto.
+    apply invert_red_sort in r2 as ->.
+    eapply whnf_red_inv in r1; eauto.
+    depelim r1.
+    clear Heq.
+    rewrite H in n0.
+    now cbn in n0.
+  Qed.
+
+  Equations? reduce_to_prod (Γ : context) (t : term) (h : welltyped Σ Γ t)
+    : typing_result (∑ na a b, ∥ red (fst Σ) Γ t (tProd na a b) ∥) :=
+    reduce_to_prod Γ t h with view_prodc t := {
+      | view_prod_prod na a b => ret (na; a; b; sq (refl_red _ _ _));
+      | view_prod_other t _ with inspect (hnf Γ t h) :=
+        | exist hnft eq with view_prodc hnft := {
+          | view_prod_prod na a b => ret (na; a; b; _);
+          | view_prod_other t' _ => raise (NotAProduct t t')
+        }
+      }.
+  Proof.
+    pose proof (hnf_sound (h:=h)).
+    now rewrite eq.
+  Qed.
+
+  Lemma reduce_to_prod_complete {Γ t wt} e :
+    reduce_to_prod Γ t wt = TypeError e ->
+    (forall na a b, red Σ Γ t (tProd na a b) -> False).
+  Proof.
+    funelim (reduce_to_prod Γ t wt); try congruence.
+    intros _ na a b r.
+    pose proof (@hnf_complete Γ t0 h) as [wh].
+    pose proof (@hnf_sound Γ t0 h) as [r'].
+    destruct HΣ.
+    eapply red_confluence in r as (?&r1&r2); eauto.
+    apply invert_red_prod in r2 as (?&?&(->&?)&?); auto.
+    eapply whnf_red_inv in r1; auto.
+    depelim r1.
+    clear Heq.
+    rewrite H in n0.
+    now cbn in n0.
+  Qed.
+
+  Equations? reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
+    : typing_result (∑ i u l, ∥ red (fst Σ) Γ t (mkApps (tInd i u) l) ∥) :=
+    reduce_to_ind Γ t h with inspect (decompose_app t) := {
+      | exist (thd, args) eq_decomp with view_indc thd := {
+        | view_ind_tInd i u => ret (i; u; args; sq _);
+        | view_ind_other t _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t Empty h) := {
+          | exist (hnft, π) eq with view_indc hnft := {
+            | view_ind_tInd i u with inspect (decompose_stack π) := {
+              | exist (l, _) eq_decomp => ret (i; u; l; _)
+              };
+            | view_ind_other _ _ => raise (NotAnInductive t)
+            }
+          }
+        }
+      }.
+  Proof.
+    - assert (X : mkApps (tInd i u) args = t); [|rewrite X; apply refl_red].
+      etransitivity. 2: symmetry; eapply mkApps_decompose_app.
+      now rewrite <- eq_decomp.
+    - pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ Empty h).
+      rewrite <- eq in H.
+      cbn in *.
+      assert (π = appstack l ε) as ->.
+      2: { now rewrite zipc_appstack in H. }
+      unfold reduce_stack in eq.
+      destruct reduce_stack_full as (?&_&stack_val&?).
+      subst x.
+      unfold Pr in stack_val.
+      cbn in *.
+      assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
+      { rewrite stack_val.
+        now destruct decompose_stack. }
+      apply decompose_stack_eq in decomp as ->.
+      now rewrite <- eq_decomp0.
+  Qed.
+
+  Lemma reduce_to_ind_complete Γ ty wat e :
+    reduce_to_ind Γ ty wat = TypeError e ->
+    forall ind u args,
+      red Σ Γ ty (mkApps (tInd ind u) args) ->
+      False.
+  Proof.
+    funelim (reduce_to_ind Γ ty wat); try congruence.
+    intros _ ind u args r.
+    pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t ε h) as wh.
+    unfold reduce_stack in *.
+    destruct reduce_stack_full as ((hd&π)&r'&stack_valid&(notapp&_)).
+    destruct wh as [wh].
+    apply Req_red in r' as [r'].
+    unfold Pr in stack_valid.
+    cbn in *.
+    destruct HΣ.
+    eapply red_confluence in r as (?&r1&r2); [|eassumption|exact r'].
+    assert (exists args, π = appstack args ε) as (?&->).
+    { exists ((decompose_stack π).1).
+      assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
+      { now rewrite stack_valid; destruct decompose_stack. }
+      now apply decompose_stack_eq in decomp. }
+
+    unfold zipp in wh.
+    rewrite stack_context_appstack, decompose_stack_appstack in wh.
+    rewrite zipc_appstack in r1.
+    cbn in *.
+    rewrite app_nil_r in wh.
+    apply red_mkApps_tInd in r2 as (?&->&?); auto.
+    eapply whnf_red_inv in r1; eauto.
+    apply whnf_red_mkApps_inv in r1 as (?&?); auto.
+    depelim w.
+    noconf e0.
+    discriminate i0.
+  Qed.
+  
+  (* Definition of assumption-only arities (without lets) *)
+  Definition arity_ass := aname * term.
+
+  Fixpoint mkAssumArity (l : list arity_ass) (s : Universe.t) : term :=
+    match l with
+    | [] => tSort s
+    | (na, A) :: l => tProd na A (mkAssumArity l s)
+    end.
+  
+  Definition arity_ass_context := rev_map (fun '(na, A) => vass na A).
+  
+  Lemma assumption_context_arity_ass_context l :
+    assumption_context (arity_ass_context l).
+  Proof.
+    unfold arity_ass_context.
+    rewrite rev_map_spec.
+    induction l using MCList.rev_ind; cbn.
+    - constructor.
+    - rewrite map_app, rev_app_distr.
+      cbn.
+      destruct x.
+      constructor; auto.
+  Qed.
+  
+  Lemma mkAssumArity_it_mkProd_or_LetIn (l : list arity_ass) (s : Universe.t) :
+    mkAssumArity l s = it_mkProd_or_LetIn (arity_ass_context l) (tSort s).
+  Proof.
+    unfold arity_ass_context.
+    rewrite rev_map_spec.
+    induction l; auto.
+    cbn.
+    destruct a.
+    rewrite IHl, it_mkProd_or_LetIn_app; auto.
+  Qed.
+
+  Lemma isArity_mkAssumArity l s :
+    isArity (mkAssumArity l s).
+  Proof.
+    induction l as [|(na & A) l IH]; cbn; auto.
+  Qed.
+
+  Record conv_arity {Γ T} : Type :=
+    build_conv_arity {
+        conv_ar_context : list arity_ass;
+        conv_ar_univ : Universe.t;
+        conv_ar_red : ∥red Σ Γ T (mkAssumArity conv_ar_context conv_ar_univ)∥
+      }.
+
+  Global Arguments conv_arity : clear implicits.
+  
+  Lemma conv_arity_Is_conv_to_Arity {Γ T} :
+    conv_arity Γ T ->
+    Is_conv_to_Arity Σ Γ T.
+  Proof.
+    intros [asses univ r].
+    eexists.
+    split; [eassumption|].
+    apply isArity_mkAssumArity.
+  Qed.
+
+  Lemma isArity_red Γ u v :
+    isArity u ->
+    red Σ Γ u v ->
+    isArity v.
+  Proof.
+    intros arity_u r.
+    induction r using red_rect_n1; [easy|].
+    eapply isArity_red1; eassumption.
+  Qed.
+  
+  Lemma Is_conv_to_Arity_red Γ T T' :
+    Is_conv_to_Arity Σ Γ T ->
+    red Σ Γ T T' ->
+    Is_conv_to_Arity Σ Γ T'.
+  Proof.
+    unfold Is_conv_to_Arity.
+    intros [T'' (redT'' & is_arity)] red.
+    sq.
+    destruct (red_confluence HΣ red redT'') as (a & reda' & reda'').
+    exists a.
+    split; [easy|].
+    clear -is_arity reda''.
+    eapply isArity_red; eauto.
+  Qed.
+  
+  Local Instance wellfounded : WellFounded (@hnf_subterm_rel _ Σ) :=
+    @wf_hnf_subterm _ _ HΣ.
+  
+  Equations? (noeqns) reduce_to_arity (Γ : context) (T : term) (wt : welltyped Σ Γ T)
+    : (conv_arity Γ T) + {~Is_conv_to_Arity Σ Γ T}
+    by wf ((Γ;T; wt) : (∑ Γ t, welltyped Σ Γ t)) hnf_subterm_rel  :=
+    reduce_to_arity Γ T wt with inspect (hnf Γ T wt) :=
+      | exist Thnf eqhnf with view_prod_sortc Thnf := {
+        | view_prod_sort_prod na A B with reduce_to_arity (Γ,, vass na A) B _ := {
+          | inleft car => inleft {| conv_ar_context := (na, A) :: conv_ar_context car;
+                                    conv_ar_univ := conv_ar_univ car |};
+          | inright nocar => inright _
+          };
+        | view_prod_sort_sort u => inleft {| conv_ar_context := [];
+                                             conv_ar_univ := u |};
+        | view_prod_sort_other nonar notprod notsort => inright _
+        }.
+  Proof.
+    all: pose proof (@hnf_sound Γ T wt) as [r].
+    all: rewrite <- ?eqhnf in r.
+    all: destruct HΣ as [wf].
+    - destruct wt as (?&typ).
+      eapply subject_reduction in r; eauto.
+      apply inversion_Prod in r as (?&?&?&?&?); auto.
+      econstructor; eauto.
+    - constructor.
+      eexists _; split; eauto.
+      unshelve eexists _; [constructor; constructor|]; auto.
+    - destruct car as [c_ar c_univ [c_red]]; cbn.
+      constructor.
+      etransitivity; eauto.
+      eapply red_prod; eauto.
+    - eapply Is_conv_to_Arity_red in H as (?&[r']&isar); eauto.
+      apply invert_red_prod in r' as (?&?&(->&?)&?); auto.
+      contradiction nocar.
+      eexists; eauto using sq.
+    - constructor; auto.
+    - pose proof (@hnf_complete Γ T wt) as [w].
+      destruct HΣ.
+      apply Is_conv_to_Arity_inv in H as [(na&A&B&[r'])|(u&[r'])]; auto.
+      + eapply red_confluence in r' as (?&r1&r2); eauto.
+        apply invert_red_prod in r2 as (?&?&(->&?)&?); auto.
+        eapply whnf_red_inv in r1; eauto.
+        depelim r1.
+        rewrite H in notprod; auto.
+      + eapply red_confluence in r' as (?&r1&r2); eauto.
+        apply invert_red_sort in r2 as ->.
+        eapply whnf_red_inv in r1; eauto.
+        depelim r1.
+        rewrite H in notsort; cbn in *; auto.
+  Qed. 
+
+End ReduceFns.

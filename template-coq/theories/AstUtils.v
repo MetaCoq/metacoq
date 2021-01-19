@@ -1,8 +1,18 @@
+(* For primitive integers and floats  *)
+From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Ast.
 Require Import ssreflect.
+Require Import ZArith.
 
 (** Raw term printing *)
+
+Definition string_of_prim_int (i:Int63.int) : string := 
+  (* Better? DecimalString.NilZero.string_of_uint (BinNat.N.to_uint (BinInt.Z.to_N (Int63.to_Z i))). ? *)
+  string_of_Z (Numbers.Cyclic.Int63.Int63.to_Z i).
+
+Definition string_of_float (f : PrimFloat.float) :=
+  "<float>".
 
 Fixpoint string_of_term (t : term) :=
   match t with
@@ -42,8 +52,18 @@ Fixpoint string_of_term (t : term) :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
+  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")"
   end.
-
+  
+Fixpoint destArity Γ (t : term) :=
+  match t with
+  | tProd na t b => destArity (Γ ,, vass na t) b
+  | tLetIn na b b_ty b' => destArity (Γ ,, vdef na b b_ty) b'
+  | tSort s => Some (Γ, s)
+  | _ => None
+  end.
+  
 Definition decompose_app (t : term) :=
   match t with
   | tApp f l => (f, l)
@@ -69,6 +89,10 @@ Proof.
   destruct l. simpl. reflexivity.
   rewrite <- mkApps_nested. reflexivity.
 Qed.
+
+Lemma mkAppMkApps s t:
+  mkApp s t = mkApps s [t].
+Proof. reflexivity. Qed.
 
 Lemma mkApp_tApp f u : isApp f = false -> mkApp f u = tApp f [u].
 Proof. intros. destruct f; (discriminate || reflexivity). Qed.
@@ -141,11 +165,32 @@ apply (List.firstn decl.(ind_npars)) in types.
                                                 (snd (fst x))) ind_ctors).
 Defined.
 
+Fixpoint strip_casts t :=
+  match t with
+  | tEvar ev args => tEvar ev (List.map strip_casts args)
+  | tLambda na T M => tLambda na (strip_casts T) (strip_casts M)
+  | tApp u v => mkApps (strip_casts u) (List.map (strip_casts) v)
+  | tProd na A B => tProd na (strip_casts A) (strip_casts B)
+  | tCast c kind t => strip_casts c
+  | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
+  | tCase ind p c brs =>
+    let brs' := List.map (on_snd (strip_casts)) brs in
+    tCase ind (strip_casts p) (strip_casts c) brs'
+  | tProj p c => tProj p (strip_casts c)
+  | tFix mfix idx =>
+    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let mfix' := List.map (map_def strip_casts strip_casts) mfix in
+    tCoFix mfix' idx
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ 
+  | tInt _ | tFloat _ => t
+  end.
+  
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   match t with
   | tProd n A B => decompose_prod_assum (Γ ,, vass n A) B
   | tLetIn na b bty b' => decompose_prod_assum (Γ ,, vdef na b bty) b'
-  | tCast t _ _ => decompose_prod_assum Γ t
   | _ => (Γ, t)
   end.
 

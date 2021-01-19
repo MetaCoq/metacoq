@@ -8,7 +8,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
      
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
     ErasureFunction ELiftSubst.
 
@@ -28,7 +27,9 @@ Ltac introdep := let H := fresh in intros H; depelim H.
 
 Hint Constructors Ee.eval : core.
 
+Set Warnings "-notation-overridden".
 Import E.
+Set Warnings "+notation-overridden".
 
 Section optimize.
   Context (Σ : global_context).
@@ -65,6 +66,7 @@ Section optimize.
     | tVar _ => t
     | tConst _ => t
     | tConstruct _ _ => t
+    | tPrim _ => t
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
@@ -230,17 +232,15 @@ Proof.
 Qed.
 
 Lemma erasable_tBox_value (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v :
-  axiom_free Σ.1 ->
   forall wt : Σ ;;; [] |- t : T,
   Σ |-p t ▷ v -> erases Σ [] v tBox -> ∥ isErasable Σ [] t ∥.
 Proof.
   intros.
-  depind H0.
+  depind H.
   eapply Is_type_eval_inv; eauto. eexists; eauto.
 Qed.
 
 Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : global_env_ext}  {wfΣ : wf_ext Σ} {t v Σ' t' deps} :
-  axiom_free Σ.1 ->
   forall wt : welltyped Σ [] t,
   erase Σ (sq wfΣ) [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
@@ -248,9 +248,9 @@ Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : global_env_ext}  {w
   PCUICWcbvEval.eval Σ t v ->
   @Ee.eval Ee.default_wcbv_flags Σ' t' tBox -> ∥ isErasable Σ [] t ∥.
 Proof.
-  intros axiomfree [T wt].
+  intros [T wt].
   intros.
-  destruct (erase_correct Σ wfΣ _ _ _ _ _ axiomfree _ H H0 H1 X) as [ev [eg [eg']]].
+  destruct (erase_correct Σ wfΣ _ _ _ _ _ _ H H0 H1 X) as [ev [eg [eg']]].
   pose proof (Ee.eval_deterministic H2 eg'). subst.
   eapply erasable_tBox_value; eauto.
 Qed.
@@ -455,7 +455,6 @@ Proof.
 Qed.
 
 Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :
-  axiom_free Σ.1 ->
   forall wt : welltyped Σ [] t,
   erase Σ (sq wfΣ) [] t wt = t' ->
   erase_global (term_global_deps t') Σ (sq wfΣ.1) = Σ' ->
@@ -463,10 +462,9 @@ Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wf
   ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 
   ∥ @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ') (optimize Σ' t') (optimize Σ' v') ∥.
 Proof.
-  intros axiomfree wt.
+  intros wt.
   generalize (sq wfΣ.1) as swfΣ.
   intros swfΣ HΣ' Ht' ev.
-  assert (extraction_pre Σ) by now constructor.
   pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
   rewrite HΣ' in H.
   destruct wt as [T wt].
@@ -483,5 +481,3 @@ Proof.
   eapply KernameSet.subset_spec.
   intros x hin; auto.
 Qed.
-
-Print Assumptions erase_opt_correct.

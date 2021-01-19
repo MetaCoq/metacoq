@@ -220,15 +220,15 @@ let denote_universes_entry evm trm (* of type universes_entry *) : _ * Entries.u
   | _ -> bad_term_verb trm "denote_universes_entry"
 
 
-let unquote_one_inductive_entry evm trm (* of type one_inductive_entry *) : _ * Entries.one_inductive_entry =
+let unquote_one_inductive_entry env evm trm (* of type one_inductive_entry *) : _ * Entries.one_inductive_entry =
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_one_inductive_entry then
     match args with
     | id::ar::cnames::ctms::[] ->
        let id = unquote_ident id in
-       let evm, ar = denote_term evm ar in
+       let evm, ar = denote_term env evm ar in
        let cnames = List.map unquote_ident (unquote_list cnames) in
-       let evm, ctms = map_evm denote_term evm (unquote_list ctms) in
+       let evm, ctms = map_evm (denote_term env) evm (unquote_list ctms) in
        evm, { mind_entry_typename = id ;
               mind_entry_arity = ar;
               mind_entry_consnames = cnames;
@@ -242,32 +242,33 @@ let map_option f o =
   | Some x -> Some (f x)
   | None -> None          
 
-let denote_decl evm d = 
+let denote_decl env evm d = 
   let (h, args) = app_full d [] in
   if constr_equall h tmkdecl then
     match args with
     | name :: body :: typ :: [] ->
       let name = unquote_aname name in
-      let evm, ty = denote_term evm typ in
-      (match unquote_option body with
+      let evm, ty = denote_term env evm typ in
+      let evm, decl = (match unquote_option body with
       | None -> evm, Context.Rel.Declaration.LocalAssum (name, ty)
-      | Some body -> let evm, body = denote_term evm body in
+      | Some body -> let evm, body = denote_term env evm body in
         evm, Context.Rel.Declaration.LocalDef (name, body, ty))
+      in Environ.push_rel decl env, evm, decl
     | _ -> bad_term_verb d "denote_decl"
   else bad_term_verb d "denote_decl"
 
-let denote_context evm ctx =
-  map_evm denote_decl evm (unquote_list ctx)
+let denote_context env evm ctx =
+  fold_env_evm_right denote_decl env evm (unquote_list ctx)
   
-let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) : _ * Entries.mutual_inductive_entry =
+let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry *) : _ * Entries.mutual_inductive_entry =
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_mutual_inductive_entry then
     match args with
     | record::finite::params::inds::univs::template::cumulative::priv::[] ->
        let record = map_option (map_option (fun x -> [|x|])) (unquote_map_option (unquote_map_option unquote_ident) record) in
        let finite = denote_mind_entry_finite finite in
-       let evm, params = denote_context evm params in
-       let evm, inds = map_evm unquote_one_inductive_entry evm (unquote_list inds) in
+       let envpars, evm, params = denote_context env evm params in
+       let evm, inds = map_evm (unquote_one_inductive_entry env) evm (unquote_list inds) in
        let evm, univs = denote_universes_entry evm univs in
        let template = unquote_bool template in
        let cumulative = unquote_bool cumulative in
@@ -287,7 +288,7 @@ let unquote_mutual_inductive_entry evm trm (* of type mutual_inductive_entry *) 
 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
-  let evm, mind = unquote_mutual_inductive_entry evm mind in
+  let evm, mind = unquote_mutual_inductive_entry env evm mind in
   ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
 
 let not_in_tactic s =
@@ -334,19 +335,19 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     else
       let name = unquote_ident (reduce_all env evm name) in
       let opaque = unquote_bool (reduce_all env evm opaque) in
-      let evm,body = denote_term evm (reduce_all env evm body) in
+      let evm,body = denote_term env evm (reduce_all env evm body) in
       let evm,typ =
         match unquote_option typ with
         | None -> (evm, None)
         | Some t ->
-          let (evm, t) = denote_term evm (reduce_all env evm t) in
+          let (evm, t) = denote_term env evm (reduce_all env evm t) in
           (evm, Some t)
       in
       Plugin_core.run (Plugin_core.tmDefinition name ~poly ~opaque typ body) env evm
         (fun env evm res -> k (env, evm, quote_kn res))
   | TmLemmaTerm (name, typ) ->
     let ident = unquote_ident (reduce_all env evm name) in
-    let evm,typ = denote_term evm (reduce_all env evm typ) in
+    let evm,typ = denote_term env evm (reduce_all env evm typ) in
     Plugin_core.run (Plugin_core.tmLemma ident ~poly typ) env evm
       (fun env evm kn -> k (env, evm, quote_kn kn))
 
@@ -366,7 +367,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     then not_in_tactic "tmAxiom"
     else
       let name = unquote_ident (reduce_all env evm name) in
-      let evm,typ = denote_term evm (reduce_all env evm typ) in
+      let evm,typ = denote_term env evm (reduce_all env evm typ) in
       Plugin_core.run (Plugin_core.tmAxiom name ~poly typ) env evm
         (fun a b c -> k (a,b,quote_kn c))
 
@@ -439,7 +440,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     in k (env, evm, trm)
   | TmEvalTerm (s,trm) ->
     let red = unquote_reduction_strategy env evm (reduce_all env evm s) in
-    let evm,trm = denote_term evm (reduce_all env evm trm) in
+    let evm,trm = denote_term env evm (reduce_all env evm trm) in
     Plugin_core.run (Plugin_core.tmEval red trm) env evm
       (fun env evm trm -> k (env, evm, quote_term env trm))
   | TmMkInductive mind ->
@@ -450,7 +451,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     begin
        try
          let t = reduce_all env evm t in
-         let evm, t' = denote_term evm t in
+         let evm, t' = denote_term env evm t in
          let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in
          let evm, typ = Evarsolve.refresh_universes (Some false) env evm typ in
          let make_typed_term typ term evm =
@@ -467,7 +468,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
         with Reduction.NotArity -> CErrors.user_err (str "unquoting ill-typed term")
       end
   | TmUnquoteTyped (typ, t) ->
-       let evm, t' = denote_term evm (reduce_all env evm t) in
+       let evm, t' = denote_term env evm (reduce_all env evm t) in
        (* let t' = Typing.e_solve_evars env evdref (EConstr.of_constr t') in *)
        let evm = Typing.check env evm (EConstr.of_constr t') (EConstr.of_constr typ) in
        k (env, evm, t')
@@ -496,7 +497,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
         Not_found -> k (env, evm, constr_mkApp (cNone_instance, [|typ|]))
     end
   | TmInferInstanceTerm typ ->
-    let evm,typ = denote_term evm (reduce_all env evm typ) in
+    let evm,typ = denote_term env evm (reduce_all env evm typ) in
     Plugin_core.run (Plugin_core.tmInferInstance typ) env evm
       (fun env evm -> function
            None -> k (env, evm, constr_mkAppl (cNone, [| tTerm|]))
@@ -504,6 +505,6 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
            let qtrm = quote_term env trm in
            k (env, evm, constr_mkApp (cSome, [| Lazy.force tTerm; qtrm |])))
   | TmPrintTerm trm ->
-    let evm,trm = denote_term evm (reduce_all env evm trm) in
+    let evm,trm = denote_term env evm (reduce_all env evm trm) in
     Plugin_core.run (Plugin_core.tmPrint trm) env evm
       (fun env evm _ -> k (env, evm, Lazy.force unit_tt))

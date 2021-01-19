@@ -548,7 +548,6 @@ Qed.
 
 Lemma Is_type_eval (Σ : global_env_ext) t v:
   wf Σ ->
-  axiom_free Σ ->
   eval Σ t v ->
   isErasable Σ [] t ->
   isErasable Σ [] v.
@@ -563,13 +562,12 @@ Qed.
 
 Lemma Is_type_eval_inv (Σ : global_env_ext) t v:
   wf_ext Σ ->
-  axiom_free Σ ->
   PCUICSafeLemmata.welltyped Σ [] t ->
   PCUICWcbvEval.eval Σ t v ->
   isErasable Σ [] v ->
   ∥ isErasable Σ [] t ∥.
 Proof.
-  intros wfΣ axfree [T HT] ev [vt [Ht Hp]].
+  intros wfΣ [T HT] ev [vt [Ht Hp]].
   eapply wcbeval_red in ev; eauto.
   pose proof (subject_reduction _ _ _ _ _ wfΣ.1 HT ev).
   pose proof (common_typing _ wfΣ Ht X) as [P [Pvt [Pt vP]]].

@@ -34,6 +34,7 @@ Local Ltac term_dec_tac term_dec :=
          | i : string, i' : kername |- _ => fcase (string_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
          | n : aname, n' : aname |- _ => fcase (eq_dec n n')
+         | i : prim_val, j : prim_val |- _ => fcase (eq_dec i j)
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)

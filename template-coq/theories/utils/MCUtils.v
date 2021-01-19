@@ -51,9 +51,6 @@ Ltac rdest :=
   | |- sigT _ => eexists
   end.
 
-(** We cannot use ssrbool as it breaks extraction. *)
-Coercion is_true : bool >-> Sortclass.
-
 Tactic Notation "toProp" ident(H) :=
   match type of H with
   | is_true (_ <? _)%nat => apply PeanoNat.Nat.ltb_lt in H

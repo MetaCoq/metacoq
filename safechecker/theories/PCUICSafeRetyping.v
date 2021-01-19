@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
      PCUICWeakeningEnv PCUICContexts.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MonadNotation.
@@ -261,7 +261,9 @@ Section TypeOf.
 
     infer Γ (tCoFix mfix n) wt with inspect (nth_error mfix n) :=
       { | ret (Some f) => ret f.(dtype);
-        | ret None => ! }
+        | ret None => ! };
+
+    infer Γ (tPrim p) wt := !
   }.
   Proof.
     all:try clear infer.
@@ -342,7 +344,7 @@ Section TypeOf.
       sq. split.
       * simpl.
         eapply type_reduction in Htty; eauto.
-        eapply type_App; eauto.
+        eapply type_App'; eauto.
         specialize (pbty _ t0).
         assert (Σ ;;; Γ |- tProd na' A' B' <= tProd x x0 x1).
         eapply cumul_red_l_inv; eauto.
@@ -655,6 +657,8 @@ Section TypeOf.
         congruence.
       
     - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
+
+    - now eapply inversion_Prim in HT.
   Defined.
 
   Definition type_of Γ t wt : term := (infer Γ t wt).

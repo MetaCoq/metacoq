@@ -904,14 +904,14 @@ Proof.
   14:{ specialize (X1 _ _ H X5 _ X6).
       now eapply cumul_prop_cum_l. }
 
-  6:{ eapply inversion_App in X4 as (na' & A' & B' & hf & ha & cum); auto.
-      specialize (X1 _ _ H hf _ X5_1).
-      specialize (X3 _ _ H ha _ (eq_term_upto_univ_napp_leq X5_2)).
+  6:{ eapply inversion_App in X6 as (na' & A' & B' & hf & ha & cum); auto.
+      specialize (X3 _ _ H hf _ X7_1).
+      specialize (X5 _ _ H ha _ (eq_term_upto_univ_napp_leq X7_2)).
       eapply cumul_cumul_prop in cum; auto.
       transitivity (B' {0 := u0}) => //.
-      eapply cumul_prop_prod_inv in X1 => //.
+      eapply cumul_prop_prod_inv in X3 => //.
       transitivity (B' {0 := u}).
-      now eapply substitution1_untyped_cumul_prop in X1.
+      now eapply substitution1_untyped_cumul_prop in X3.
       constructor.
       eapply eq_term_eq_term_prop_impl => //.
       eapply PCUICEquality.eq_term_upto_univ_substs.

@@ -890,6 +890,16 @@ Qed.
 
 Hint Extern 4 (eq_term_upto_univ _ _ _ _ _) => reflexivity : pcuic.
 
+Axiom fix_guard_context_cumulativity : forall {cf:checker_flags} Σ Γ Γ' mfix,
+  cumul_context Σ Γ' Γ ->
+  fix_guard Σ Γ mfix ->
+  fix_guard Σ Γ' mfix.
+
+Axiom cofix_guard_context_cumulativity : forall {cf:checker_flags} Σ Γ Γ' mfix,
+  cumul_context Σ Γ' Γ ->
+  cofix_guard Σ Γ mfix ->
+  cofix_guard Σ Γ' mfix.
+
 Lemma context_cumulativity_prop {cf:checker_flags} :
   env_prop
     (fun Σ Γ t T =>
@@ -951,19 +961,8 @@ Proof.
   - econstructor; pcuic. intuition auto. eapply isdecl. eapply isdecl.
     eauto. solve_all.
     destruct b0 as [? [? ?]]; eauto.
-  - econstructor; pcuic.
-    eapply (All_impl X0).
-    intros x [s [Hs IH]].
-    exists s; eauto.
-    eapply (All_impl X1).
-    intros x [[Hs Hl] IH]. split; auto.
-    eapply IH.
-    now apply cumul_context_app_same.
-    eapply (All_mfix_wf); auto.
-    apply (All_impl X0); simpl.
-    intros x' [s [Hs' IH']]. exists s.
-    eapply IH'; auto.
-  - econstructor; pcuic.
+  - econstructor. eapply fix_guard_context_cumulativity; eauto.
+    all:pcuic.
     eapply (All_impl X0).
     intros x [s [Hs IH]].
     exists s; eauto.
@@ -975,6 +974,20 @@ Proof.
     apply (All_impl X0); simpl.
     intros x' [s [Hs' IH']]. exists s.
     eapply IH'; auto.
+  - econstructor.
+    eapply cofix_guard_context_cumulativity; eauto.
+    all:pcuic.
+    + eapply (All_impl X0).
+      intros x [s [Hs IH]].
+      exists s; eauto.
+    + eapply (All_impl X1).
+      intros x [Hs IH].
+      eapply IH.
+      now apply cumul_context_app_same.
+      eapply (All_mfix_wf); auto.
+      apply (All_impl X0); simpl.
+      intros x' [s [Hs' IH']]. exists s.
+      eapply IH'; auto.
     
   - econstructor; eauto.
     eapply cumul_cumul_ctx; eauto.

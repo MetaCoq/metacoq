@@ -178,10 +178,11 @@ Section Principality.
       eapply cumul_conv_ctx; eauto.
       constructor. apply conv_ctx_refl. constructor. assumption. 
       eapply conv_trans; eauto. now apply conv_sym.
-      econstructor. eapply type_reduction; eauto.
+      eapply type_App'.
+      eapply type_reduction; eauto.
       eapply type_Cumul'; eauto.
       2:transitivity dom; auto; now apply conv_cumul.
-      eapply type_reduction in t0. 3:eapply redA. 2:auto.
+      eapply type_reduction in t0. 2:eapply redA.
       eapply validity in t0; auto.
       eapply isType_tProd in t0 as [? ?]; eauto.
       eapply typing_wf_local; eauto.
@@ -278,7 +279,7 @@ Section Principality.
       solve_discr.
       etransitivity; eauto.
       assert (consistent_instance_ext Σ (ind_universes x0) u').
-      { eapply type_reduction in t1. 3:eapply redr. all:pcuic. 
+      { eapply type_reduction in t1. 2:eapply redr.
         eapply validity in t1; eauto.
         destruct t1 as [s Hs].
         eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
@@ -296,7 +297,7 @@ Section Principality.
       (projection_context x0 x1 ind x2) []); auto.
       eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
       simpl. eapply type_reduction; eauto. simpl.
-      eapply type_reduction in t0. 3:eapply redr. eapply validity; eauto. auto.
+      eapply type_reduction in t0. 2:eapply redr. eapply validity; eauto.
       eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
       simpl. eapply validity; eauto.
       constructor; auto. now apply All2_rev.
@@ -309,7 +310,7 @@ Section Principality.
       eapply (wf_projection_context _ (p:=(ind, k, pars))); pcuic.
       eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
       simpl. eapply type_reduction; eauto. simpl.
-      eapply type_reduction in t0. 3:eapply redr. all:eauto.
+      eapply type_reduction in t0. 2:eapply redr.
       eapply validity; eauto.
       rewrite e0 in redu'.
       unshelve epose proof (projection_cumulative_indices wfΣ d _ H H0 redu').
@@ -343,6 +344,7 @@ Section Principality.
       rewrite nthe' in nthe; noconf nthe.
       repeat split; eauto.
       eapply type_CoFix; eauto.
+    - now apply inversion_Prim in hA.
   Qed.
 
   (** A weaker version that is often convenient to use. *)
@@ -521,22 +523,22 @@ Proof.
     econstructor; eauto.
     eapply cum_LetIn; pcuic.
     
-  - eapply inversion_App in X4 as (na' & A' & B' & hf & ha & cum); auto.
+  - eapply inversion_App in X6 as (na' & A' & B' & hf & ha & cum); auto.
     unfold leq_term in X1.
-    eapply eq_term_upto_univ_empty_impl in X5_1.
-    specialize (X1 onu _ _ hf X5_1). all:try typeclasses eauto.
-    specialize (X3 onu _ _ ha (eq_term_empty_leq_term X5_2)).
-    eapply leq_term_empty_leq_term in X5_1.
-    eapply eq_term_empty_eq_term in X5_2.
+    eapply eq_term_upto_univ_empty_impl in X7_1.
+    specialize (X3 onu _ _ hf X7_1). all:try typeclasses eauto.
+    specialize (X5 onu _ _ ha (eq_term_empty_leq_term X7_2)).
+    eapply leq_term_empty_leq_term in X7_1.
+    eapply eq_term_empty_eq_term in X7_2.
     eapply type_Cumul'.
-    econstructor; [eapply X1|eapply X3].
+    eapply type_App'; [eapply X3|eapply X5].
     eapply PCUICValidity.validity; pcuic.
     eapply type_App; eauto.
     eapply conv_cumul. eapply (subst_conv Γ [vass na A] [vass na A] []); pcuic.
     repeat constructor. now rewrite subst_empty.
     repeat constructor. now rewrite subst_empty.
-    eapply PCUICValidity.validity in X0; auto.
-    apply PCUICArities.isType_tProd in X0 as [tyA]; auto.
+    eapply PCUICValidity.validity in X2; auto.
+    apply PCUICArities.isType_tProd in X2 as [tyA]; auto.
     constructor; auto.
 
   - eapply inversion_Const in X1 as [decl' [wf [declc [cu cum]]]]; auto.
@@ -594,7 +596,8 @@ Proof.
     eapply PCUICValidity.validity; eauto.
     eapply (type_Case _ _ (ind, npar)). eapply isdecl.
     all:eauto.
-    eapply (All2_impl X5); firstorder.
+    eapply (All2_impl X5); pcuicfo.
+    destruct b1 as [s [? ?]]. now exists s.
     eapply conv_cumul.
     eapply mkApps_conv_args; pcuic.
     eapply All2_app. simpl in *.
@@ -637,8 +640,9 @@ Proof.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
     econstructor. 2:eapply H0. all:eauto.
-    eapply (All_impl X0); firstorder.
-    eapply (All_impl X1); firstorder.
+    eapply (All_impl X0); pcuicfo.
+    destruct X2 as [s [Hs ?]]; now exists s.
+    eapply (All_impl X1); pcuicfo.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. eapply eq_term_empty_leq_term in eqty.
@@ -649,12 +653,13 @@ Proof.
     econstructor; eauto.
     eapply PCUICValidity.validity; eauto.
     eapply type_CoFix. 2:eapply H0. all:eauto.
-    eapply (All_impl X0); firstorder.
-    eapply (All_impl X1); firstorder.
+    eapply (All_impl X0); pcuicfo.
+    destruct X2 as [s [? ?]]; now exists s.
+    eapply (All_impl X1); pcuicfo.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. apply eq_term_empty_leq_term in eqty.
-    now eapply leq_term_empty_leq_term. Show Existentials.
+    now eapply leq_term_empty_leq_term.
 Qed.
 
 Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 

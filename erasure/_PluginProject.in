@@ -8,8 +8,8 @@ src/init.ml
 # src/classes0.ml
 
 # From Coq's stdlib
-src/mSetWeakList.mli
-src/mSetWeakList.ml
+# src/mSetWeakList.mli
+# src/mSetWeakList.ml
 # src/eqdepFacts.mli
 # src/eqdepFacts.ml
 src/orderedTypeAlt.mli
@@ -27,10 +27,12 @@ src/kernames.mli
 src/kernames.ml
 # src/reflect.mli
 # src/reflect.ml
-src/typing0.mli
-src/typing0.ml
+# src/typing0.mli
+# src/typing0.ml
 
 # From PCUIC
+src/pCUICPrimitive.mli
+src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml
@@ -45,8 +47,8 @@ src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICUnivSubst.ml
 src/pCUICUnivSubst.mli
-src/pCUICCumulativity.mli
-src/pCUICCumulativity.ml
+# src/pCUICCumulativity.mli
+# src/pCUICCumulativity.ml
 src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
@@ -77,16 +79,14 @@ src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 
 # From SafeChecker
+src/pCUICErrors.mli
+src/pCUICErrors.ml
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
-src/pCUICSafeConversion.mli
-src/pCUICSafeConversion.ml
-src/pCUICSafeChecker.mli
-src/pCUICSafeChecker.ml
+# src/pCUICSafeConversion.mli
+# src/pCUICSafeConversion.ml
 src/pCUICSafeRetyping.ml
 src/pCUICSafeRetyping.mli
-src/safeTemplateChecker.mli
-src/safeTemplateChecker.ml
 
 # src/ssreflect.mli
 # src/ssreflect.ml

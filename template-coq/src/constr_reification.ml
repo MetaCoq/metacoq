@@ -15,6 +15,8 @@ struct
   type quoted_kernel_name = Constr.t (* of type Ast.kername *)
   type quoted_inductive = Constr.t (* of type Ast.inductive *)
   type quoted_proj = Constr.t (* of type Ast.projection *)
+  type quoted_int63 = Constr.t (* of type UInt63.t *)
+  type quoted_float64 = Constr.t (* of type Float64.t *)
   type quoted_global_reference = Constr.t (* of type Ast.global_reference *)
 
   type quoted_sort_family = Constr.t (* of type Ast.sort_family *)
@@ -77,17 +79,17 @@ struct
   let cZ0 = resolve "metacoq.Z.zero"
   let cZpos = resolve "metacoq.Z.pos"
   let cZneg = resolve "metacoq.Z.neg"
-  
+
   let tpos = resolve "metacoq.pos.type"
   let cposzero = resolve "metacoq.pos.xH"
   let cposI = resolve "metacoq.pos.xI"
   let cposO = resolve "metacoq.pos.xO"
-  
+
   let cSome_instance = resolve "metacoq.option_instance.some"
   let cNone_instance = resolve "metacoq.option_instance.none"
 
   let unit_tt = resolve "metacoq.unit.intro"
-  
+
   let tAscii = resolve "metacoq.ascii.intro"
   let tlist = resolve "metacoq.list.type"
   let c_nil = resolve "metacoq.list.nil"
@@ -138,17 +140,18 @@ struct
   let tmkInd = ast "mkInd"
   let tmkdecl = ast "mkdecl"
   let (tTerm,tRel,tVar,tEvar,tSort,tCast,tProd,
-       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj) =
+       tLambda,tLetIn,tApp,tCase,tFix,tConstructor,tConst,tInd,tCoFix,tProj,tInt,tFloat) =
     (ast "term", ast "tRel", ast "tVar", ast "tEvar",
      ast "tSort", ast "tCast", ast "tProd", ast "tLambda",
      ast "tLetIn", ast "tApp", ast "tCase", ast "tFix",
-     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj")
+     ast "tConstruct", ast "tConst", ast "tInd", ast "tCoFix", ast "tProj", ast "tInt", ast "tFloat")
   let tkername = ast "kername"
   let tmodpath = ast "modpath"
   let tMPfile = ast "MPfile"
   let tMPbound = ast "MPbound"
   let tMPdot = ast "MPdot"
-
+  let tfresh_evar_id = ast "fresh_evar_id"
+  
   let tproplevel = ast "level.prop_level_type"
   let tlevelSProp = ast "level.lsprop"
   let tlevelProp = ast "level.lprop"
@@ -222,7 +225,7 @@ struct
   let cMonomorphic_entry = ast "Monomorphic_entry"
   let cPolymorphic_entry = ast "Polymorphic_entry"
 
-  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) = 
+  let (tcbv, tcbn, thnf, tall, tlazy, tunfold) =
     (template "cbv", template "cbn", template "hnf", template "all", template "lazy", template "unfold")
 
 

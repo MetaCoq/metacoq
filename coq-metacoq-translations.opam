@@ -21,7 +21,6 @@ depends: [
   "ocaml" {>= "4.07.1" & < "4.12~"}
   "coq" { >= "8.12~" & < "8.13~" }
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
 ]
 synopsis: "Translations built on top of MetaCoq"
 description: """

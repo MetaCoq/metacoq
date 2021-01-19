@@ -315,9 +315,11 @@ Module Axioms.
     apply eqᵗ_eq in H.
     refine (_ @ H).
     rewrite !transport_forall_constant.
-    rewrite transport_compose.
+    epose proof (transport_compose (Bᵗ x xᵗ) (fun x0 => x0 x) (h A B f g X) (fᵗ x xᵗ)).
+    symmetry in X0.
+    destruct X0.
     eapply ap10. eapply ap.
-    rewrite ap_apply_lD.
+    (* rewrite ap_apply_lD. *)
   Abort.
 
   (* Definition Funext *)

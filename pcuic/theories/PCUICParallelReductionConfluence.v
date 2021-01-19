@@ -69,6 +69,12 @@ Equations fold_context (f : context -> context_decl -> context_decl) (ctx : cont
     let xs' := fold_context f xs in
     cons (f xs' x ) xs'.
   
+Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
+Proof.
+  now apply_funelim (fold_context f Γ); intros; simpl; auto; f_equal.
+Qed.
+Hint Rewrite fold_context_length : len.
+
 Lemma fold_context_In_spec (f : context -> context_decl -> context_decl) (ctx : context) :
   fold_context_In ctx (fun n (x : context_decl) (_ : In x ctx) => f n x) = 
   fold_context f ctx.
@@ -77,7 +83,7 @@ Proof.
   funelim (fold_context_In ctx g) => //; simpl; rewrite (H f0); trivial.
 Qed.
 
-Lemma fold_context_Proper : Proper (`=2` ==> `=1`) fold_context.
+Instance fold_context_Proper : Proper (`=2` ==> `=1`) fold_context.
 Proof.
   intros f f' Hff' x.
   funelim (fold_context f x); simpl; auto. simp fold_context.
@@ -670,11 +676,11 @@ Section Rho.
       Qed.
   End rho_ctx.
 
-  Notation rho_ctx_over_gen rho := (fold_context (fun Γ' => map_decl (rho Γ'))).
+  Notation fold_context_term f := (fold_context (fun Γ' => map_decl (f Γ'))).
 
   Lemma rho_ctx_over_wf_eq (rho : context -> term -> term) (Γ : context) : 
     rho_ctx_over_wf Γ (fun Γ x hin => rho Γ x) =
-    rho_ctx_over_gen rho Γ.
+    fold_context_term rho Γ.
   Proof.
     rewrite /rho_ctx_over_wf fold_context_In_spec.
     apply fold_context_Proper. intros n x.
@@ -685,13 +691,15 @@ Section Rho.
   #[program]
   Definition map_br_wf {t} (rho : context -> forall x, size x < size t -> term) Γ 
     (br : branch term) (H : branch_size size br < size t) :=
-    {| bcontext := rho_ctx_over_wf br.(bcontext) (fun Γ x Hx => rho Γ x _);
-       bbody := rho Γ br.(bbody) _ |}.
+    let bcontext' := rho_ctx_over_wf br.(bcontext) (fun Γ x Hx => rho Γ x _) in
+    {| bcontext := bcontext';
+       bbody := rho (Γ ,,, bcontext') br.(bbody) _ |}.
     Solve Obligations with intros; unfold branch_size in *; lia.
 
   Definition map_br_gen (rho : context -> term -> term) Γ (br : branch term) :=
-    {| bcontext := rho_ctx_over_gen rho br.(bcontext);
-       bbody := rho Γ br.(bbody) |}.
+    let bcontext' := fold_context_term rho br.(bcontext) in
+    {| bcontext := bcontext';
+       bbody := rho (Γ ,,, bcontext') br.(bbody) |}.
 
   Lemma map_br_map (rho : context -> term -> term) t Γ l H : 
     @map_br_wf t (fun Γ x Hx => rho Γ x) Γ l H = map_br_gen rho Γ l. 
@@ -728,7 +736,7 @@ Section Rho.
 
   Definition rho_predicate_gen (rho : context -> term -> term) Γ
     (p : PCUICAst.predicate term) :=
-    let pcontext' := rho_ctx_over_gen rho p.(pcontext) in
+    let pcontext' := fold_context_term rho p.(pcontext) in
   {| pparams := map (rho Γ) p.(pparams);
      puinst := p.(puinst) ;
      pcontext := pcontext' ;
@@ -793,10 +801,17 @@ Section Rho.
   { | construct_cofix_construct ind' c u with eq_inductive ci.(ci_ind) ind' := 
     { | true with inspect (nth_error brs c) => 
         { | exist (Some br) eqbr =>
-            let p' := rho_predicate_wf rho Γ p _ in 
-            let args' := map_terms rho Γ args _ in 
-            let br' := map_br_wf rho Γ br _ in
-            iota_red ci.(ci_npar) args' br'; 
+            if eqb #|skipn (ci_npar ci) args| 
+              (context_assumptions (bcontext br)) then
+              let p' := rho_predicate_wf rho Γ p _ in 
+              let args' := map_terms rho Γ args _ in 
+              let br' := map_br_wf rho Γ br _ in
+              iota_red ci.(ci_npar) args' br'
+            else 
+              let p' := rho_predicate_wf rho Γ p _ in 
+              let brs' := map_brs_wf rho Γ brs _ in
+              let x' := rho Γ x in
+              tCase ci p' x' brs';
           | exist None eqbr => 
             let p' := rho_predicate_wf rho Γ p _ in 
             let brs' := map_brs_wf rho Γ brs _ in
@@ -891,7 +906,8 @@ Section Rho.
    
   Notation rho_predicate := (rho_predicate_gen rho).
   Notation rho_br := (map_br_gen rho).
-
+  Notation rho_ctx := (fold_context_term rho).
+  
   Definition rho_fix_context Γ mfix :=
     fold_fix_context rho Γ [] mfix.
 
@@ -1144,12 +1160,12 @@ Section Rho.
       if eq_inductive ci.(ci_ind) ind' then
         match nth_error brs c with
         | Some br => 
-          let p' := rho_predicate Γ p in 
-          let args' := map (rho Γ) args in 
-        let args' := map (rho Γ) args in 
-          let args' := map (rho Γ) args in 
-          let br' := rho_br Γ br in 
-          iota_red ci.(ci_npar) args' br'
+          if eqb #|skipn (ci_npar ci) args| (context_assumptions (bcontext br)) then
+            let p' := rho_predicate Γ p in 
+            let args' := map (rho Γ) args in 
+            let br' := rho_br Γ br in 
+            iota_red ci.(ci_npar) args' br'
+          else tCase ci (rho_predicate Γ p) (rho Γ x) (map (rho_br Γ) brs)
         | None => tCase ci (rho_predicate Γ p) (rho Γ x) (map (rho_br Γ) brs)
         end
       else tCase ci (rho_predicate Γ p) (rho Γ x) (map (rho_br Γ) brs)
@@ -1505,6 +1521,27 @@ Section Rho.
     apply r0.
   Qed.
 
+  Lemma shiftn_renaming Γ Δ ctx r :
+    renaming Γ Δ r ->
+    renaming (Γ ,,, ctx) (Δ ,,, rename_context r ctx) (shiftn #|ctx| r).
+  Proof.
+    induction ctx; simpl; auto.
+    * intros. rewrite shiftn0. apply H.
+    * intros. simpl.
+      rewrite shiftnS rename_context_snoc /=.
+      apply shiftn1_renaming. now apply IHctx.
+      simpl. destruct (decl_body a) => /= //.
+      now sigma.
+  Qed.
+
+  Lemma shiftn_renaming_eq Γ Δ ctx r k :
+    renaming Γ Δ r ->
+    k = #|ctx| ->
+    renaming (Γ ,,, ctx) (Δ ,,, rename_context r ctx) (shiftn k r).
+  Proof.
+    now intros hr ->; apply shiftn_renaming.
+  Qed.
+
   Lemma renaming_shift_rho_fix_context:
     forall (mfix : mfixpoint term) (Γ Δ : list context_decl) (r : nat -> nat),
       renaming Γ Δ r ->
@@ -1598,7 +1635,107 @@ Section Rho.
   Proof.
     destruct t; simpl; try congruence.
   Qed.
+  Transparent fold_context.
 
+  Lemma fold_context_mapi_context f g Γ : 
+    fold_context f (mapi_context g Γ) =
+    fold_context (fun Γ => f Γ ∘ map_decl (g #|Γ|)) Γ.
+  Proof.
+    induction Γ. simpl. auto.
+    simpl. f_equal; auto.
+    now rewrite -IHΓ; len.
+  Qed.
+
+  Lemma mapi_context_fold_context f g Γ : 
+    mapi_context f (fold_context (fun Γ => g (mapi_context f Γ)) Γ) =
+    fold_context (fun Γ => map_decl (f #|Γ|) ∘ g Γ) Γ.
+  Proof.
+    induction Γ. simpl. auto.
+    simpl. f_equal; auto. len.
+    now rewrite -IHΓ.
+  Qed.
+
+  Lemma onctx_fold_context_term P Γ (f g : context -> term -> term) :
+    onctx P Γ ->
+    (forall Γ x, 
+      onctx P Γ -> 
+      fold_context_term f Γ = fold_context_term g Γ ->
+      P x -> f (fold_context_term f Γ) x = g (fold_context_term g Γ) x) ->
+    fold_context_term f Γ = fold_context_term g Γ.
+  Proof.
+    intros onc Hp. induction onc; simpl; auto.
+    f_equal; auto.
+    eapply map_decl_eq_spec; tea.
+    intros. now apply Hp.
+  Qed.
+
+  Lemma rho_ctx_rename Γ r :
+    fold_context_term (fun Γ' x => rho Γ' (rename (shiftn #|Γ'| r) x)) Γ =
+    rho_ctx (rename_context r Γ).
+  Proof.
+    rewrite /rename_context.
+    rewrite -mapi_context_fold.
+    rewrite fold_context_mapi_context.
+    now setoid_rewrite compose_map_decl.
+  Qed.
+
+  Lemma rename_rho_ctx {r ctx} :
+    onctx
+      (fun t : term =>
+        forall (Γ Δ : list context_decl) (r : nat -> nat),
+        renaming Γ Δ r -> rename r (rho Γ t) = rho Δ (rename r t))
+      ctx ->
+    rename_context r (rho_ctx ctx) =
+    rho_ctx (rename_context r ctx).
+  Proof.
+    intros onc.
+    rewrite /rename_context - !mapi_context_fold.
+    induction onc; simpl; eauto.
+    f_equal; eauto.
+    rewrite !compose_map_decl.
+    eapply map_decl_eq_spec; tea => /= t.
+    intros IH.
+    erewrite IH. rewrite -IHonc. len. reflexivity.
+    rewrite mapi_context_fold.
+    rewrite -/(rename_context r (rho_ctx l)).
+    epose proof (shiftn_renaming [] [] (rho_ctx l) r).
+    rewrite !app_context_nil_l in H. eapply H.
+    now intros i; rewrite !nth_error_nil.
+  Qed.
+
+  Lemma mapi_context_rename r Γ :
+    mapi_context (fun k : nat => rename (shiftn k r)) Γ =
+    rename_context r Γ.
+  Proof. rewrite mapi_context_fold //. Qed.
+
+  Lemma inspect_nth_error_rename {r brs u res} (eq : nth_error brs u = res) :
+    ∑ prf,
+      inspect (nth_error (rename_branches r brs) u) = 
+      exist (option_map (rename_branch r) res) prf.
+  Proof. simpl.
+    rewrite nth_error_map eq. now exists eq_refl.
+  Qed.
+
+  Lemma rho_rename_pred Γ Δ p r :
+    renaming Γ Δ r ->
+    tCasePredProp
+      (fun t : term =>
+      forall (Γ Δ : list context_decl) (r : nat -> nat),
+      renaming Γ Δ r -> rename r (rho Γ t) = rho Δ (rename r t))
+      (fun t : term =>
+      forall (Γ Δ : list context_decl) (r : nat -> nat),
+      renaming Γ Δ r -> rename r (rho Γ t) = rho Δ (rename r t)) p ->
+    rename_predicate r (rho_predicate Γ p) = rho_predicate Δ (rename_predicate r p).
+  Proof.
+    intros Hr [? [? ?]].
+    rewrite /rename_predicate /rho_predicate; cbn; f_equal; solve_all.
+    * rewrite !mapi_context_rename rename_rho_ctx //.
+    * rewrite !mapi_context_rename. len.
+      eapply e. rewrite -rename_rho_ctx //.
+      eapply shiftn_renaming_eq; len => //.
+  Qed.
+
+  Require Import PCUICWeakening.
   Lemma rho_rename Γ Δ r t :
     renaming Γ Δ r ->
     rename r (rho Γ t) = rho Δ (rename r t).
@@ -1779,50 +1916,58 @@ Section Rho.
       { destruct X as [? [? ?]].
          simpl in *. rewrite !map_map_compose /rename_branch 
           /PCUICSigmaCalculus.rename_branch /rho_br /=. 
-         simpl. solve_all.
-         erewrite b. len.
-         }
+         simpl. solve_all. len.
+         rewrite !mapi_context_rename - !rename_rho_ctx; tea.
+         f_equal.
+         erewrite b. f_equal.
+         now eapply shiftn_renaming_eq; len. }
 
       simpl. destruct view_construct_cofix; simpl; simp rho.
 
-      * destruct (eq_inductive i ind) eqn:eqi.
-        simp rho. simpl. rewrite -H2. 
-        (* Reduction *)
-        rewrite /iota_red /= -map_skipn rename_mkApps !nth_map //.
-        f_equal. simpl. rewrite !map_skipn.
-        apply symmetry, decompose_app_inv in decapp. subst t0.
-        specialize (H0 _ _ _ H1).
-        rewrite !rho_app_construct !rename_mkApps in H0.
-        simpl in H0. rewrite rho_app_construct in H0.
-        apply mkApps_eq_inj in H0 as [_ Heq] => //. congruence.
-
-        simp rho. simpl.
-        erewrite H, H0; eauto.
-        now rewrite -H2.
+      * destruct (eq_inductive ci ind) eqn:eqi.
+        simp rho.
+        destruct inspect as [[br|] eqbr]=> //; simp rho;
+        destruct (inspect_nth_error_rename (r:=r) eqbr) as [prf ->]; simp rho.
+        set (pred := {| pparams := _ |}).
+        simpl. rewrite rename_iota_red //. len. admit.
+        f_equal.
+        + destruct X as [? [? ?]]; cbn in *.
+          apply decompose_app_inv in decapp. subst c.
+          specialize (H _ _ _ H0).
+          rewrite /= !rho_app_construct /= !rename_mkApps in H.
+          simpl in H. rewrite rho_app_construct in H.
+          apply mkApps_eq_inj in H as [_ Heq] => //.
+        + rewrite !map_map_compose in H1.
+          apply forall_map_spec in H1.
+          eapply nth_error_forall in H1; tea.
+          now simpl in H1.
+        + simpl. f_equal; auto.
+          erewrite -> rho_rename_pred => //.
+        + simp rho. simpl. f_equal; eauto.
+          erewrite -> rho_rename_pred => //.
 
       * simpl; simp rho.
         rewrite /map_fix !map_map_compose.
         red in X.
         rewrite /unfold_cofix !nth_error_map.
-        apply symmetry, decompose_app_inv in decapp. subst t0.
-        specialize (H0 _ _ _ H1).
-        simp rho in H0.
-        rewrite !rename_mkApps in H0.
-        simpl in H0. simp rho in H0.
-        apply mkApps_eq_inj in H0 as [Heqcof Heq] => //.
-        noconf Heqcof. simpl in H0. noconf H0.
-        autorewrite with len in H0.
-        rewrite /map_fix !map_map_compose in H0.
+        apply decompose_app_inv in decapp. subst c.
+        move: (H _ _ _ H0). clear H.
+        simp rho; rewrite !rename_mkApps /=. simp rho.
+        intros H; eapply mkApps_eq_inj in H as [Heqcof Heq] => //.
+        noconf Heqcof. simpl in H. noconf H.
+        autorewrite with len in H.
+        rewrite /map_fix !map_map_compose in H.
 
         case efix: (nth_error mfix idx) => [d|] /= //.
         + rewrite rename_mkApps !map_map_compose compose_map_def /on_snd.
-          f_equal. erewrite H; eauto. f_equal => //.
+          f_equal. erewrite -> rho_rename_pred => //.
+          f_equal => //.
           rewrite !subst_inst. sigma.
-          apply map_eq_inj in H0.
-          epose proof (nth_error_all efix H0).
-          simpl in H3. apply (f_equal dbody) in H3.
-          simpl in H3. autorewrite with sigma in H3.
-          rewrite -H3. sigma.
+          apply map_eq_inj in H.
+          epose proof (nth_error_all efix H).
+          simpl in H2. apply (f_equal dbody) in H2.
+          simpl in H2. autorewrite with sigma in H2.
+          rewrite -H2. sigma.
           apply inst_ext.
           rewrite -ren_shiftn. sigma.
           rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
@@ -1837,7 +1982,7 @@ Section Rho.
           apply map_ext => x; apply map_def_eq_spec => //.
           rewrite !map_map_compose.
           unfold cofix_subst. generalize #|mfix|.
-          clear -H0.
+          clear -H.
           induction n; simpl; auto. f_equal; auto.
           simp rho. simpl. simp rho. f_equal.
           rewrite /map_fix !map_map_compose.  autorewrite with len.

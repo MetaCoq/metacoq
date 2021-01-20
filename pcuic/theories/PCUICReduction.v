@@ -189,13 +189,13 @@ Section OnOne_local_2.
   Context (P : forall (Γ : context), context_decl -> context_decl -> Type).
 
   Inductive OnOne2_local_env : context -> context -> Type :=
-  | localenv2_cons_abs Γ na na' t t' :
+  | onone2_localenv_cons_abs Γ na na' t t' :
       P Γ (vass na t) (vass na' t') ->
       OnOne2_local_env (Γ ,, vass na t) (Γ ,, vass na' t')
-  | localenv2_cons_def Γ na na' b b' t t' :
+  | onone2_localenv_def Γ na na' b b' t t' :
       P Γ (vdef na b t) (vdef na' b' t') ->
       OnOne2_local_env (Γ ,, vdef na b t) (Γ ,, vdef na' b' t')
-  | localenv2_cons_tl Γ Γ' d :
+  | onone2_localenv_cons_tl Γ Γ' d :
       OnOne2_local_env Γ Γ' ->
       OnOne2_local_env (Γ ,, d) (Γ' ,, d).
 End OnOne_local_2.

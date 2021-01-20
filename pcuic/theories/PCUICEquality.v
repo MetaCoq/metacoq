@@ -1885,7 +1885,6 @@ Proof.
   all: reflexivity.
 Qed.
 
-
 (** ** Equality on contexts ** *)
 
 Inductive eq_context_upto Σ (Re Rle : Universe.t -> Universe.t -> Prop) : context -> context -> Type :=

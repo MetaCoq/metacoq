@@ -151,6 +151,15 @@ Definition leq_decl_gen (eq_term leq_term : term -> term -> Type) (d d' : contex
 Definition eq_context_gen le (eq_term leq_term : term -> term -> Type) :=
   context_relation (fun _ _ => compare_decl le eq_term leq_term).
 
+Instance compare_decl_refl le eq_term leq_term : 
+  CRelationClasses.Reflexive eq_term -> 
+  CRelationClasses.Reflexive leq_term -> 
+  CRelationClasses.Reflexive (compare_decl le eq_term leq_term).    
+Proof.
+  intros heq hle d.
+  destruct le; destruct d as [na [b|] ty]; simpl; intuition auto; try reflexivity.
+Qed.
+
 Instance eq_context_refl le eq_term leq_term : 
   CRelationClasses.Reflexive eq_term -> 
   CRelationClasses.Reflexive leq_term -> 
@@ -158,8 +167,15 @@ Instance eq_context_refl le eq_term leq_term :
 Proof.
   intros heq hle x.
   eapply context_relation_refl.
-  intros. 
-  destruct le; destruct x0 as [na [b|] ty]; simpl; intuition auto; try reflexivity.
+  intros. reflexivity. 
+Qed.
+
+Instance compare_decl_sym le eq_term :
+  CRelationClasses.Symmetric eq_term -> 
+  CRelationClasses.Symmetric (compare_decl le eq_term eq_term).    
+Proof.
+  intros heq d d'.
+  destruct le; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl; intuition auto; now symmetry.
 Qed.
 
 Instance eq_context_sym le eq_term : 
@@ -168,9 +184,17 @@ Instance eq_context_sym le eq_term :
 Proof.
   intros heq hle x.
   eapply context_relation_sym.
-  intros. 
-  destruct le; destruct x0 as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; intuition auto;
-  now symmetry.
+  intros. now symmetry. 
+Qed.
+
+Instance compare_decl_trans le eq_term leq_term :
+  CRelationClasses.Transitive eq_term -> 
+  CRelationClasses.Transitive leq_term -> 
+  CRelationClasses.Transitive (compare_decl le eq_term leq_term).    
+Proof.
+  intros hle hre x y z.
+  destruct le; destruct x as [na [b|] ty], y as [na' [b'|] ty'], z as [? [?|] ?]; simpl in *; intuition auto;
+  etransitivity; eauto.
 Qed.
 
 Instance eq_context_trans le eq_term leq_term : 
@@ -179,10 +203,8 @@ Instance eq_context_trans le eq_term leq_term :
   CRelationClasses.Transitive (eq_context_gen le eq_term leq_term).    
 Proof.
   intros hr x y z.
-  eapply context_relation_trans; intros. 
-  destruct le; 
-  destruct x0 as [na [b|] ty], y0 as [na' [b'|] ty'], z0 as [? [?|] ?]; simpl in *; intuition auto;
-  etransitivity; eauto.
+  eapply context_relation_trans; intros.
+  now transitivity y0. 
 Qed.
 
 Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=

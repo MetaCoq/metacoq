@@ -1785,19 +1785,28 @@ Section PredRed.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
+  (* Lemma red_red_decls Γ Γ' Δ Δ' :
+    All2_local_env_over (fun (Γ _ : context) (t t0 : term) => red Σ Γ t t0) Γ Γ' Δ Δ' ->
+    context_relation (fun Δ Δ' : context => red_decls Σ (Γ,,, Δ) (Γ,,, Δ')) Δ Δ'.
+  Proof.
+    induction 1; constructor; auto;
+    unfold on_decl, on_decl_over in *.
+    constructor.
+    simpl. *)
+
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
   Proof.
     revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _
-                                            (fun Γ Γ' =>
-       All2_local_env (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type);
-                   intros; try reflexivity; pcuic.
+      (fun Γ Γ' => All2_local_env (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type);
+      (* (fun Γ Γ' Δ Δ' => All2_local_env_over (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type); *)
+      intros; try reflexivity; pcuic.
     eapply All2_local_env_impl; eauto.
     - (* Contexts *)
       unfold on_decl => Δ Δ' t T U Hlen.
       destruct t; auto.
       destruct p; auto. intuition.
-
+      
     - (* Beta *)
       apply red_trans with (tApp (tLambda na t0 b1) a0).
       eapply (@red_app Σ); [apply red_abs|]; auto with pcuic.
@@ -1828,8 +1837,17 @@ Section PredRed.
     - (* Iota *)
       transitivity (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args1) brs1).
       etransitivity.
-      eapply red_case_c.
-      eapply red_mkApps. auto. eapply All2_
+      { eapply red_case_c. eapply red_mkApps. auto. solve_all. }
+      etransitivity.
+      { eapply red_case_brs. red. solve_all;
+        unfold on_Trel in *; intuition auto.
+        red in a0.
+        eapply red_ctx_rel_red_context_rel; eauto.
+        red. 
+        red.
+      } 
+      
+      eapply All2_
       
       
       solve_all. red in X2; solve_all.

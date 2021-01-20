@@ -61,10 +61,10 @@ to have a dedicated `opam` switch (see below).
 To get the source code:
 
     # git clone https://github.com/MetaCoq/metacoq.git
-    # git checkout -b coq-8.12 origin/coq-8.12
+    # git checkout -b coq-8.13 origin/coq-8.13
     # git status
 
-This checks that you are indeed on the `coq-8.12` branch.
+This checks that you are indeed on the `coq-8.13` branch.
 
 ### Setting up an `opam` switch
 
@@ -73,10 +73,10 @@ To setup a fresh `opam` installation, you might want to create a
 one yet. You need to use **opam 2** to obtain the right version of
 `Equations`.
 
-    # opam switch create coq.8.12 4.07.1
+    # opam switch create coq.8.13 4.07.1
     # eval $(opam env)
 
-This creates the `coq.8.12` switch which initially contains only the
+This creates the `coq.8.13` switch which initially contains only the
 basic `OCaml` `4.07.1` compiler, and puts you in the right environment
 (check with `ocamlc -v`).
 

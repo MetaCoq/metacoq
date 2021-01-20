@@ -13,19 +13,19 @@ The *main branch* or *current branch* is the one which appers when you go on
 Currently (unless you are reading the README of an outdated branch),
 it is the [coq-8.11](https://github.com/MetaCoq/metacoq/tree/coq-8.11).
 You should use it both for usage of MetaCoq and development of MetaCoq.
-We should move soon to [coq-8.12](https://github.com/MetaCoq/metacoq/tree/coq-8.12).
+We should move soon to [coq-8.13](https://github.com/MetaCoq/metacoq/tree/coq-8.12).
 
 The [master](https://github.com/MetaCoq/metacoq/tree/master) branch is following Coq's master
 branch and gets regular updates from the the main development branch which follows the latest
 stable release of Coq.
 
-The branch [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10)
-gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated
-"alpha"-quality `opam` packages.
+<!-- The branch ... -->
+<!-- gets backports from `coq-8.11` when possible. Both `coq-8.11` and `coq-8.10` have associated -->
+<!-- "alpha"-quality `opam` packages. -->
 
 The branches [coq-8.6](https://github.com/MetaCoq/metacoq/tree/coq-8.6),
 [coq-8.7](https://github.com/MetaCoq/metacoq/tree/coq-8.7), [coq-8.8](https://github.com/MetaCoq/metacoq/tree/coq-8.8)
-and [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9) are frozen.
+and [coq-8.9](https://github.com/MetaCoq/metacoq/tree/coq-8.9), and [coq-8.10](https://github.com/MetaCoq/metacoq/tree/coq-8.10) are frozen.
 
 
 

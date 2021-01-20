@@ -5,10 +5,12 @@ From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
-     PCUICCumulativity PCUICReduction
-     PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICUnivSubstitution
-     PCUICSigmaCalculus PCUICWeakening PCUICGeneration PCUICUtils.
+     PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICConfluence PCUICConversion PCUICContextConversion
+     PCUICParallelReductionConfluence PCUICWeakeningEnv
+     PCUICClosed PCUICSubstitution PCUICUnivSubstitution PCUICSigmaCalculus
+     PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape.
+
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
@@ -92,11 +94,7 @@ Qed.
 Derive Signature for subslet.
 
 Lemma closedn_ctx_snoc k Γ d : closedn_ctx k (Γ ,, d) = closedn_ctx k Γ && closed_decl (#|Γ| + k) d.
-Proof.
-  rewrite /closedn_ctx !mapi_rev /= forallb_app /= /closed_decl /id /=.
-  f_equal; first now rewrite mapi_rec_Sk.
-  now rewrite Nat.sub_0_r Nat.add_comm andb_true_r.
-Qed.
+Proof. reflexivity. Qed.
 
 Lemma type_local_ctx_wf_local {cf:checker_flags} Σ Γ Δ s : 
   wf_local Σ Γ ->

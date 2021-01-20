@@ -278,6 +278,21 @@ Section All2_local_env.
     induction 1; rewrite /=; constructor; auto.
   Qed.
 
+  Lemma All2_local_env_mapi_inv P Γ Δ f g : 
+    All2_local_env (on_decl P) (mapi_context f Γ) (mapi_context g Δ) ->
+    All2_local_env (on_decl
+    (fun Γ Γ' t t' => 
+      P (mapi_context f Γ) (mapi_context g Γ') (f #|Γ| t) (g #|Γ'| t'))) Γ Δ.
+  Proof.
+    induction Γ in Δ |- *; destruct Δ; intros h; depelim h.
+    - constructor.
+    - destruct a as [na [b|] ty], c as [na' [b'|] ty']; cbn in * => //.
+      constructor; auto.
+    - destruct a as [na [bod|] ty], c as [na' [bod'|] ty']; cbn in * => //.
+      noconf H; noconf H0.
+      constructor; auto.
+  Qed.
+
 End All2_local_env.
 
 Section ParallelReduction.

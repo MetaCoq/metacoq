@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
-     PCUICContextRelation
+     PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction
      PCUICParallelReduction PCUICParallelReductionConfluence.
 
 Require Import ssreflect.
@@ -119,7 +119,17 @@ Proof.
   - induction 1; [destruct p|destruct IHX]; try solve [(left + right); constructor; auto].
   - intros []; eapply OnOne2_impl; tea; eauto. 
 Qed.
-  
+
+Notation red1_ctx_rel Σ Δ := 
+  (OnOne2_local_env
+    (on_one_decl
+      (fun (Γ : context) (x0 y0 : term) => red1 Σ (Δ,,, Γ) x0 y0))).
+
+Notation eq_one_decl Σ Re Rle := 
+  (OnOne2_local_env
+    (on_one_decl
+      (fun _ (x0 y0 : term) => 
+        eq_term_upto_univ Σ Re Rle x0 y0))).
 
 Lemma red1_eq_context_upto_l Σ Rle Re Γ Δ u v :
   RelationClasses.Reflexive Rle ->
@@ -199,10 +209,8 @@ Proof.
     * eapply case_red_pcontext; tea.
     * econstructor; eauto; try reflexivity.
       red; intuition; simpl; eauto. red.
-      eapply OnOne2_local_env_context_relation; tea => /= //.
+      eapply OnOne2_local_env_context_relation; tea => /= //; try reflexivity.
       + intros *. now eapply on_one_decl_compare_decl.
-      + intros. reflexivity.
-      + intros; reflexivity.
       + eapply All2_same; split; reflexivity.
   - specialize (IHh (Δ ,,, pcontext p)).
     forward IHh. now apply eq_context_upto_cat.
@@ -225,7 +233,7 @@ Proof.
           specialize (IH (Δ ,,, bcontext x)).
           forward IH by now apply eq_context_upto_cat. exact IH. }
       eapply (OnOne2_exist' _ (fun x y => on_Trel_eq (red1 Σ (Δ ,,, bcontext x)) bbody bcontext x y)
-        (fun x y => eq_term_upto_univ Σ Re Re (bbody x) (bbody y))) in X as [brr [Hred Heq]]; tea.
+        (fun x y => on_Trel_eq (eq_term_upto_univ Σ Re Re) bbody bcontext x y)) in X as [brr [Hred Heq]]; tea.
       2:{ intros x y [[v' [redv' eq]] eqctx].
           exists {| bcontext := bcontext x; bbody := v' |}.
           intuition auto. }
@@ -233,43 +241,33 @@ Proof.
       eapply case_red_brs.
       + eapply OnOne2_disj. left; tea.
       + econstructor; eauto; try reflexivity.
-        reflexivity.
+        eapply OnOne2_All2; tea => /=; intuition eauto; try reflexivity.
+        now rewrite b.
+    * eapply (OnOne2_impl (Q:=fun x y => (∑ v', _) × bbody x = bbody y)) in X; tea.
+      2:{ intros x y [red eq]. split => //.
+        eapply (OnOne2_local_env_apply (fun Γ' u v => (Δ ,,, Γ'))) in red.
+        cbn in red.
+        eapply (OnOne2_local_env_apply_dep) in red; cycle 1.
+        intros. eapply eq_context_upto_cat; eauto. now reflexivity.
+        eapply (OnOne2_local_env_exist' _ (fun Γ x y => red1 Σ (Δ ,,, Γ) x y)) in red; intros.
+        2:{ exact X0. }
+        exact red. }
+    eapply (OnOne2_exist' _ 
+      (fun x y => on_Trel_eq (red1_ctx_rel Σ Δ) bcontext bbody x y)
+      (fun x y => on_Trel_eq (eq_one_decl Σ Re Re) bcontext bbody x y)) in X as [brr [Hred Heq]]; tea.
+    2:{ intros x y [[v' [redv' eqctx]] ->].
+        exists {| bcontext := v'; bbody := bbody y |}.
+        intuition (simpl; auto). }
+    eexists; split.
+    eapply case_red_brs.
+    + eapply OnOne2_disj. right; tea.
+    + econstructor; eauto; try reflexivity.
+      eapply OnOne2_All2; tea => /=; intuition eauto; try reflexivity.
+      red.
+      2:{ now rewrite b. }
+      eapply OnOne2_local_env_context_relation; tea => /= //; try reflexivity.
+      intros *. now eapply on_one_decl_compare_decl.
 
-    eapply OnOne2_prod_assoc in X as [_ X].
-    eapply OnOne2_apply in X; tea.
-    eapply 
-    assert (h : ∑ brs0,
-      OnOne2 (on_Trel_eq (red1 Σ Δ) snd fst) brs brs0 *
-      All2 (fun x y =>
-                (fst x = fst y) *
-                eq_term_upto_univ Σ Re Re (snd x) (snd y))%type
-       brs' brs0
-    ).
-    { induction X.
-      - destruct p0 as [[p1 p2] p3].
-        eapply p2 in e as hh.
-        destruct hh as [? [? ?]].
-        eexists. split.
-        + constructor.
-          instantiate (1 := (_,_)).
-          split ; eauto.
-        + constructor.
-          * split ; eauto.
-          * eapply All2_same.
-            intros. split ; eauto.
-            eapply eq_term_upto_univ_refl ; eauto.
-      - destruct IHX as [brs0 [? ?]].
-        eexists. split.
-        + eapply OnOne2_tl. eassumption.
-        + constructor.
-          * split ; eauto.
-            eapply eq_term_upto_univ_refl ; eauto.
-          * eassumption.
-    }
-    destruct h as [? [? ?]].
-    eexists. split.
-    + eapply case_red_brs. eassumption.
-    + econstructor. all: try eapply eq_term_upto_univ_refl ; eauto.
   - destruct (IHh _ e) as [x [redl redr]].
     exists (tApp x M2).
     split. constructor; auto.
@@ -527,6 +525,120 @@ Proof.
     + constructor; assumption.
 Qed.
 
+Lemma eq_context_gen_context_assumptions {le eq leq Γ Δ} :
+  eq_context_gen le eq leq Γ Δ ->
+  context_assumptions Γ = context_assumptions Δ.
+Proof.
+  induction 1; simpl; auto; lia.  
+Qed.
+
+Lemma eq_context_extended_subst {Σ le Re Rle Γ Δ k} :
+  eq_context_gen le (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle) Γ Δ ->
+  All2 (eq_term_upto_univ Σ Re Re) (extended_subst Γ k) (extended_subst Δ k).
+Proof.
+  intros Heq.
+  induction Heq in k |- *; simpl; constructor; auto.
+  constructor.
+  rewrite (eq_context_gen_context_assumptions Heq).
+  len. rewrite (context_relation_length Heq).
+  eapply eq_term_upto_univ_substs; eauto. tc.
+  eapply eq_term_upto_univ_lift, p.
+Qed.
+
+Lemma eq_context_gen_eq_context_upto Σ Re Rle Γ Γ' :
+  eq_context_gen false (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle) Γ Γ' ->
+  eq_context_upto Σ Re Re Γ Γ'.
+Proof.
+  rewrite /eq_context_gen.
+  induction 1; constructor; destruct p; intuition auto.
+Qed.
+
+Lemma red1_eq_context_upto_univ_l Σ Re Rle Γ ctx ctx' ctx'' :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  RelationClasses.Transitive Re ->
+  RelationClasses.Transitive Rle ->
+  SubstUnivPreserving Re ->
+  SubstUnivPreserving Rle ->
+  RelationClasses.subrelation Re Rle ->
+  eq_context_gen false (eq_term_upto_univ Σ Re Re)
+   (eq_term_upto_univ Σ Re Re) ctx ctx' ->
+  OnOne2_local_env (on_one_decl
+    (fun (Γ' : context) (u v : term) =>
+    forall (Rle : Relation_Definitions.relation Universe.t)
+      (napp : nat) (u' : term),
+    RelationClasses.Reflexive Re ->
+    RelationClasses.Reflexive Rle ->
+    RelationClasses.Transitive Re ->
+    RelationClasses.Transitive Rle ->
+    SubstUnivPreserving Re ->
+    SubstUnivPreserving Rle ->
+    (forall x y : Universe.t, Re x y -> Rle x y) ->
+    eq_term_upto_univ_napp Σ Re Rle napp u u' ->
+    ∑ v' : term,
+      red1 Σ (Γ,,, Γ') u' v'
+      × eq_term_upto_univ_napp Σ Re Rle napp v v')) ctx ctx'' ->
+  ∑ pctx,
+    red1_ctx_rel Σ Γ ctx' pctx *
+    eq_context_gen false (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx'' pctx.
+Proof.
+  intros. 
+  rename X into e, X0 into X.
+  induction X in e, ctx' |- *.
+  - red in p. simpl in p.
+    depelim e. destruct c.
+    destruct p as [-> p].
+    eapply p in e1 as hh ; eauto.
+    destruct hh as [? [? ?]].
+    eapply red1_eq_context_upto_l in r; cycle -1.
+    { eapply eq_context_upto_cat.
+      2:{ eapply eq_context_gen_eq_context_upto; tea. }
+      reflexivity. }
+    all:try tc.
+    destruct r as [v' [redv' eqv']].
+    eexists; split.
+    + constructor; tea. red. cbn. split; tea. reflexivity.
+    + constructor. all: eauto. red; cbn.
+    split; eauto. now transitivity x.
+  - depelim e.
+    destruct c as [? [? ?]]. 
+    destruct p as [-> [[p ->]|[p ->]]].
+    { eapply p in e2 as hh ; eauto.
+      destruct hh as [? [? ?]].
+      eapply red1_eq_context_upto_l in r; cycle -1.
+      { eapply eq_context_upto_cat.
+        2:{ eapply eq_context_gen_eq_context_upto; tea. }
+        reflexivity. }
+      all:try tc.
+      destruct r as [v' [redv' eqv']].
+      eexists; split.
+      + constructor; tea. red. cbn. split; tea. reflexivity.
+        left. split; tea. reflexivity.
+      + constructor. all: eauto. red; cbn.
+        repeat split; eauto. now transitivity x. }
+    { eapply p in e1 as hh ; eauto.
+      destruct hh as [? [? ?]].
+      eapply red1_eq_context_upto_l in r; cycle -1.
+      { eapply eq_context_upto_cat.
+        2:{ eapply eq_context_gen_eq_context_upto; tea. }
+        reflexivity. }
+      all:try tc.
+      destruct r as [v' [redv' eqv']].
+      eexists; split.
+      + constructor; tea. red. cbn. split; tea. reflexivity.
+        right. split; tea. reflexivity.
+      + constructor. all: eauto. red; cbn.
+        repeat split; eauto. now transitivity x. }
+  - red in e. depelim e.
+    destruct (IHX _ e) as [? [? ?]].
+    eexists. split.
+    + now eapply localenv2_cons_tl.
+    + constructor. all: eauto.
+    + specialize (IHX _ e) as [pctx' [red eq]].
+    eexists; split.
+    { now eapply localenv2_cons_tl. }
+    constructor; auto.
+Qed.
 
 Lemma red1_eq_term_upto_univ_l Σ Re Rle napp Γ u v u' :
   RelationClasses.Reflexive Re ->
@@ -553,7 +665,7 @@ Proof.
     ]
   ].
   (* tLambda and tProd *)
-  10,13:solve [
+  10,16:solve [
     dependent destruction e ;
     edestruct IHh as [? [? ?]] ; [ .. | eassumption | ] ; eauto ;
     clear h;
@@ -598,17 +710,24 @@ Proof.
     + constructor. eassumption.
     + eapply eq_term_upto_univ_refl ; assumption.
   - dependent destruction e.
-    apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [[h1 h2] h3]]]. subst.
+    apply eq_term_upto_univ_mkApps_l_inv in e0 as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
+    eapply All2_nth_error_Some in a as [t' [hnth [eqctx eqbod]]]; tea.
+    have lenctxass := eq_context_gen_context_assumptions eqctx.
+    have lenctx := context_relation_length eqctx.
     eexists. split.
-    + constructor.
-    + unfold iota_red. eapply eq_term_upto_univ_napp_mkApps.
-      * simpl. eapply (eq_term_upto_univ_leq _ _ _ 0). auto. auto with arith.
-        eapply All2_nth
-          with (P := fun x y =>  eq_term_upto_univ Σ Re Re (snd x) (snd y)).
-        -- solve_all.
-        -- cbn. eapply eq_term_upto_univ_refl ; eauto.
-      * eapply All2_skipn. assumption.
+    + constructor; tea. 
+      epose proof (All2_length h2). rewrite !List.skipn_length in H0 |- *. 
+      congruence.
+    + unfold iota_red.
+      eapply eq_term_upto_univ_substs => //.
+      { rewrite /expand_lets /expand_lets_k.
+        eapply eq_term_upto_univ_substs => //.
+        { simpl. rewrite lenctxass lenctx.
+          eapply eq_term_upto_univ_lift => //.
+          eapply eq_term_upto_univ_leq; tea. lia. }
+      eapply eq_context_extended_subst; tea. }
+      now eapply All2_skipn.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
     unfold unfold_fix in H.
@@ -641,13 +760,11 @@ Proof.
               constructor. assumption.
       * assumption.
   - dependent destruction e.
-    apply eq_term_upto_univ_mkApps_l_inv in e2 as [? [? [[h1 h2] h3]]]. subst.
+    apply eq_term_upto_univ_mkApps_l_inv in e0 as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
     unfold unfold_cofix in H.
-    case_eq (nth_error mfix idx) ;
-      try (intros e ; rewrite e in H ; discriminate H).
-    intros d e. rewrite e in H. inversion H. subst. clear H.
-    eapply All2_nth_error_Some in e as hh ; try eassumption.
+    destruct (nth_error mfix idx) eqn:hnth; noconf H.
+    eapply All2_nth_error_Some in a0 as hh ; tea.
     destruct hh as [d' [e' [[[? ?] erarg] eann]]].
     eexists. split.
     + eapply red_cofix_case.
@@ -732,33 +849,126 @@ Proof.
       eapply eq_term_upto_univ_trans ; eauto.
       eapply eq_term_upto_univ_leq ; eauto.
   - dependent destruction e.
-    assert (h : ∑ brs0,
-               OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs'0 brs0 *
-               All2 (fun x y =>
-                       (fst x = fst y) *
-                       (eq_term_upto_univ Σ Re Re (snd x) (snd y))
-                       )%type brs' brs0
+    destruct e as [? [? [? ?]]].
+    eapply OnOne2_prod_inv in X as [_ X].
+    assert (h : ∑ args,
+               OnOne2 (red1 Σ Γ) (pparams p') args *
+               All2 (eq_term_upto_univ Σ Re Re) params' args
            ).
-    { induction X in a, brs'0 |- *.
-      - destruct p0 as [[p1 p2] p3].
-        dependent destruction a. destruct p0 as [h1 h2].
-        eapply p2 in h2 as hh ; eauto.
+    { destruct p, p' as []; cbn in *.
+      induction X in a0, pparams, pparams0, X |- *.
+      - depelim a0.
+        eapply p in e as hh ; eauto.
         destruct hh as [? [? ?]].
         eexists. split.
-        + constructor.
-          instantiate (1 := (_, _)). cbn. split ; eauto.
+        + constructor; tea.
         + constructor. all: eauto.
-          split ; eauto. cbn. transitivity (fst hd) ; eauto.
-      - dependent destruction a.
-        destruct (IHX _ a) as [? [? ?]].
+      - depelim a0.
+        destruct (IHX _ a0) as [? [? ?]].
         eexists. split.
         + eapply OnOne2_tl. eassumption.
         + constructor. all: eauto.
     }
-    destruct h as [brs0 [? ?]].
+    destruct h as [pars0 [? ?]].
     eexists. split.
-    + eapply case_red_brs. eassumption.
+    + eapply case_red_param. eassumption.
     + constructor. all: eauto.
+      red; intuition eauto.
+  - dependent destruction e.
+    destruct e as [? [? [? ?]]].
+    destruct p, p'; cbn in *.
+    eapply red1_eq_context_upto_univ_l in X; tea; try tc.
+    destruct X as [pctx0 [? ?]].
+    eexists. split.
+    + eapply case_red_pcontext. eassumption.
+    + constructor. all: eauto.
+      red; intuition eauto.
+  - depelim e.
+    destruct e as [? [? [? ?]]].
+    eapply IHh in e1 => //.
+    destruct e1 as [v' [red eq]].
+    eapply red1_eq_context_upto_l in red.
+    7:{ eapply eq_context_upto_cat. 2:{ eapply eq_context_gen_eq_context_upto; tea. }
+        reflexivity. }
+    all:try tc.
+    destruct red as [ret' [redret eqret]].
+    eexists; split.
+    + eapply case_red_return; tea.
+    + econstructor; eauto.
+      red; simpl; intuition eauto.
+      now transitivity v'.
+
+  - depelim e.
+    eapply OnOne2_disj in X as [X|X].
+    + eapply OnOne2_prod_assoc in X as [_ X].
+      assert (h : ∑ brs0,
+               OnOne2 (fun br br' => on_Trel_eq (red1 Σ (Γ ,,, bcontext br)) bbody bcontext br br') brs' brs0 *
+               All2 (fun x y =>
+                       eq_context_gen false (eq_term_upto_univ Σ Re Re) 
+                        (eq_term_upto_univ Σ Re Re) (bcontext x) (bcontext y) *
+                       (eq_term_upto_univ Σ Re Re (bbody x) (bbody y))
+                       )%type brs'0 brs0
+           ).
+      { induction X in a, brs' |- *.
+        - destruct p0 as [p2 p3].
+          dependent destruction a. destruct p0 as [h1 h2].
+          eapply p2 in h2 as hh ; eauto.
+          destruct hh as [? [? ?]].
+          eapply red1_eq_context_upto_l in r; cycle -1.
+          { eapply eq_context_upto_cat.
+            2:{ eapply eq_context_gen_eq_context_upto, h1. }
+            reflexivity. }
+          all:try tc.
+          destruct r as [v' [redv' eqv']].
+          eexists. split.
+          + constructor.
+            instantiate (1 := {| bcontext := bcontext y; bbody := v' |}). cbn. split ; eauto.
+          + constructor. all: eauto.
+            split ; eauto. cbn. transitivity (bcontext hd) ; eauto.
+            now rewrite p3. simpl. now transitivity x.
+        - dependent destruction a.
+          destruct (IHX _ a) as [? [? ?]].
+          eexists. split.
+          + eapply OnOne2_tl. eassumption.
+          + constructor. all: eauto.
+      }
+      destruct h as [brs0 [? ?]].
+      eexists. split.
+      * eapply case_red_brs. eapply OnOne2_disj. left; tea.
+      * constructor. all: eauto.
+
+    + assert (h : ∑ brs0,
+               OnOne2 (fun br br' => on_Trel_eq (red1_ctx_rel Σ Γ) bcontext bbody br br') brs' brs0 *
+               All2 (fun x y =>
+                       eq_context_gen false (eq_term_upto_univ Σ Re Re) 
+                        (eq_term_upto_univ Σ Re Re) (bcontext x) (bcontext y) *
+                       eq_term_upto_univ Σ Re Re (bbody x) (bbody y)
+                       )%type brs'0 brs0
+           ).
+      { induction X in a, brs' |- *.
+        - destruct p0 as [p2 p3].
+          dependent destruction a. destruct p0 as [h1 h2].
+          eapply red1_eq_context_upto_univ_l in p2; tea; try tc.
+          destruct p2 as [pctx [pred peq]].
+          eexists. split.
+          + constructor. split.
+            instantiate (1 := {| bcontext := pctx; bbody := bbody y |}); tea.
+            reflexivity.
+          + constructor. split; eauto. simpl.
+            transitivity (bbody hd); eauto.
+            now rewrite -p3.
+            auto.
+        - dependent destruction a.
+          destruct (IHX _ a) as [? [? ?]].
+          eexists. split.
+          + eapply OnOne2_tl. eassumption.
+          + constructor. all: eauto.
+      }
+      destruct h as [brs0 [? ?]].
+      eexists. split.
+      * eapply case_red_brs. eapply OnOne2_disj. right; tea.
+      * constructor. all: eauto.
+      
   - dependent destruction e.
     assert (h : ∑ args,
                OnOne2 (red1 Σ Γ) args' args *
@@ -1403,14 +1613,51 @@ Section RedPred.
   Ltac noconf H := repeat (DepElim.noconf H; simpl NoConfusion in * ).
 
   Hint Extern 1 (eq_binder_annot _ _) => reflexivity : pcuic.
-  Hint Extern 2 (All2_local_env _ _ _) => apply localenv2_cons_abs : pcuic.
-  Hint Extern 2 (All2_local_env _ _ _) => apply localenv2_cons_def : pcuic.
-  
+  Hint Extern 2 (All2_local_env _ _ _) => apply PCUICEnvTyping.localenv2_cons_abs : pcuic.
+  Hint Extern 2 (All2_local_env _ _ _) => apply PCUICEnvTyping.localenv2_cons_def : pcuic.
+  Hint Resolve pred1_refl_gen : pcuic.
+
+  Lemma OnOne2_local_env_pred1_ctx_over Γ Δ Δ' :
+     OnOne2_local_env (on_one_decl (fun Δ M N => pred1 Σ (Γ ,,, Δ) (Γ ,,, Δ) M N)) Δ Δ' ->
+     pred1_ctx_over Σ Γ Γ Δ Δ'.
+  Proof.
+    induction 1.
+    1-2:constructor; destruct p; subst; intuition eauto.
+    - eapply pred1_pred1_ctx in p. pcuic.
+    - eapply pred1_pred1_ctx in a0. pcuic.
+    - eapply pred1_pred1_ctx in a. pcuic.
+    - unfold on_decl, on_decl_over; simpl; subst; intuition auto.
+      eapply pred1_refl.
+    - unfold on_decl, on_decl_over; simpl; subst; intuition auto.
+      eapply pred1_refl.
+    - eapply (All2_local_env_app_inv _ _ [d] _ [_]); pcuic.
+      destruct d as [na [b|] ty]; constructor; pcuic.
+      unfold on_decl, on_decl_over; simpl; subst; intuition pcuic.
+      eapply pred1_refl_gen. eapply All2_local_env_app_inv; pcuic.
+      eapply pred1_refl_gen. eapply All2_local_env_app_inv; pcuic.
+      unfold on_decl, on_decl_over; simpl; subst; intuition pcuic.
+      eapply pred1_refl_gen. eapply All2_local_env_app_inv; pcuic.
+  Qed.
+
+
   Lemma red1_pred1 Γ : forall M N, red1 Σ Γ M N -> pred1 Σ Γ Γ M N.
   Proof with pcuic.
     induction 1 using red1_ind_all; intros; pcuic.
     - constructor; pcuic.
       eapply OnOne2_All2...
+    - constructor; pcuic.
+      red. simpl. now eapply OnOne2_local_env_pred1_ctx_over in X.
+      eapply pred1_refl_gen.
+      eapply OnOne2_local_env_pred1_ctx_over in X.
+      eapply All2_local_env_app_inv; pcuic.
+    - constructor; pcuic.
+      eapply OnOne2_All2...
+      simpl. intros x y [[[? ?] ?]|?]; unfold on_Trel; intuition pcuic; rewrite -?e; auto.
+      eapply pred1_ctx_over_refl.
+      now eapply OnOne2_local_env_pred1_ctx_over in a.
+      eapply OnOne2_local_env_pred1_ctx_over in a. rewrite b; pcuic.
+      eapply pred1_refl_gen; eauto.
+      now apply All2_local_env_app_inv; pcuic.
     - constructor; pcuic.
       eapply OnOne2_All2...
     - constructor; pcuic.
@@ -1579,9 +1826,13 @@ Section PredRed.
       eapply nth_error_Some_length in Heq. lia. noconf Hnth.
 
     - (* Iota *)
-      transitivity (tCase (ind, pars) p (mkApps (tConstruct ind c u) args1) brs1).
-      eapply red_case; auto.
-      eapply red_mkApps. auto. solve_all. red in X2; solve_all.
+      transitivity (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args1) brs1).
+      etransitivity.
+      eapply red_case_c.
+      eapply red_mkApps. auto. eapply All2_
+      
+      
+      solve_all. red in X2; solve_all.
       eapply red1_red. constructor.
 
     - move: H H0.

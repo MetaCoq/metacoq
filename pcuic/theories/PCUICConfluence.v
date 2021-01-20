@@ -18,6 +18,13 @@ Proof.
   induction 1; split; constructor; intuition eauto.
 Qed.
 
+Lemma OnOne2_prod_assoc {A} (P Q R : A -> A -> Type) l l' : 
+  OnOne2 (fun x y => (P x y × Q x y) × R x y) l l' ->
+  OnOne2 P l l' × OnOne2 (fun x y => Q x y × R x y) l l'.
+Proof.
+  induction 1; split; constructor; intuition eauto.
+Qed.
+
 Lemma OnOne2_apply {A B} (P : B -> A -> A -> Type) l l' : 
   OnOne2 (fun x y => forall a : B, P a x y) l l' ->
   forall a : B, OnOne2 (P a) l l'.
@@ -103,6 +110,16 @@ Proof.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; cbn; intuition (subst; auto);
   reflexivity.
 Qed.
+
+Lemma OnOne2_disj {A} (P Q : A -> A -> Type) (l l' : list A) :
+  OnOne2 (fun x y => P x y + Q x y)%type l l' <~>
+  OnOne2 P l l' + OnOne2 Q l l'.
+Proof.
+  split.
+  - induction 1; [destruct p|destruct IHX]; try solve [(left + right); constructor; auto].
+  - intros []; eapply OnOne2_impl; tea; eauto. 
+Qed.
+  
 
 Lemma red1_eq_context_upto_l Σ Rle Re Γ Δ u v :
   RelationClasses.Reflexive Rle ->
@@ -201,7 +218,27 @@ Proof.
     + econstructor; try red; intuition (simpl; eauto); try reflexivity.
       * now eapply All2_same.
       * eapply All2_same. split; reflexivity.
-  - assert (h : ∑ brs0,
+  - eapply OnOne2_disj in X.
+    destruct X as [X|X].
+    * eapply (OnOne2_impl (Q:=fun x y => (∑ v', _) × bcontext x = bcontext y)) in X; tea.
+      2:{ intros x y [[red IH] eq]. split; tas. 
+          specialize (IH (Δ ,,, bcontext x)).
+          forward IH by now apply eq_context_upto_cat. exact IH. }
+      eapply (OnOne2_exist' _ (fun x y => on_Trel_eq (red1 Σ (Δ ,,, bcontext x)) bbody bcontext x y)
+        (fun x y => eq_term_upto_univ Σ Re Re (bbody x) (bbody y))) in X as [brr [Hred Heq]]; tea.
+      2:{ intros x y [[v' [redv' eq]] eqctx].
+          exists {| bcontext := bcontext x; bbody := v' |}.
+          intuition auto. }
+      eexists; split.
+      eapply case_red_brs.
+      + eapply OnOne2_disj. left; tea.
+      + econstructor; eauto; try reflexivity.
+        reflexivity.
+
+    eapply OnOne2_prod_assoc in X as [_ X].
+    eapply OnOne2_apply in X; tea.
+    eapply 
+    assert (h : ∑ brs0,
       OnOne2 (on_Trel_eq (red1 Σ Δ) snd fst) brs brs0 *
       All2 (fun x y =>
                 (fst x = fst y) *

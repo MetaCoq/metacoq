@@ -347,9 +347,36 @@ Proof. reflexivity. Qed.
 
 Hint Resolve @eq_binder_annot_refl : core.
 
+(* TODO MOVE *)
+Existing Instance All2_symP.
+
+(* TODO MOVE *)
+Instance Forall2_symP :
+  forall A (P : A -> A -> Prop),
+    RelationClasses.Symmetric P ->
+    Symmetric (Forall2 P).
+Proof.
+  intros A P h l l' hl.
+  induction hl. all: auto.
+Qed.
+
 Lemma eq_binder_relevances_refl (x : list aname) : All2 (on_rel eq binder_relevance) x x.
 Proof. now eapply All_All2_refl, All_refl. Qed.
 Hint Resolve eq_binder_relevances_refl : core.
+
+Instance R_universe_instance_refl Re : RelationClasses.Reflexive Re -> 
+  RelationClasses.Reflexive (R_universe_instance Re).
+Proof. intros tRe x. eapply Forall2_map. 
+  induction x; constructor; auto.
+Qed.
+
+Instance R_universe_instance_sym Re : RelationClasses.Symmetric Re -> 
+  RelationClasses.Symmetric (R_universe_instance Re).
+Proof. intros tRe x y. now eapply Forall2_symP. Qed.
+ 
+Instance R_universe_instance_trans Re : RelationClasses.Transitive Re -> 
+  RelationClasses.Transitive (R_universe_instance Re).
+Proof. intros tRe x y z. now eapply Forall2_trans. Qed.
 
 Lemma onctx_eq_ctx P ctx eq_term :
   onctx P ctx ->
@@ -363,6 +390,16 @@ Proof.
     constructor; auto; simpl; intuition auto.
 Qed.
 
+Instance eq_predicate_refl Re Ru :
+  CRelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Ru ->
+  CRelationClasses.Reflexive (eq_predicate Re Ru).
+Proof.
+  intros hre hru.
+  intros p. unfold eq_predicate; intuition auto; try reflexivity.
+  eapply All2_same; reflexivity.
+Qed.
+
 Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -373,12 +410,13 @@ Proof.
   all: simpl.
   all: try constructor. all: eauto.
   all: try solve [eapply All_All2 ; eauto].
-  4:unfold eq_predicate; intuition auto.
   all: try solve [eapply Forall2_same ; eauto].
   all: try solve [unfold eq_predicate; solve_all; eapply All_All2; eauto].
   - apply R_global_instance_refl; auto.
   - apply R_global_instance_refl; auto.
   - destruct X as [? [? ?]].
+    unfold eq_predicate; solve_all.
+    eapply All_All2; eauto. reflexivity.
     eapply onctx_eq_ctx in a0; eauto.
   - eapply All_All2; eauto; simpl; intuition eauto.
     eapply onctx_eq_ctx in a; eauto.
@@ -394,19 +432,6 @@ Qed.
 Instance leq_term_refl `{checker_flags} Σ φ : Reflexive (leq_term Σ φ).
 Proof.
   apply eq_term_upto_univ_refl; exact _.
-Qed.
-
-(* TODO MOVE *)
-Existing Instance All2_symP.
-
-(* TODO MOVE *)
-Instance Forall2_symP :
-  forall A (P : A -> A -> Prop),
-    RelationClasses.Symmetric P ->
-    Symmetric (Forall2 P).
-Proof.
-  intros A P h l l' hl.
-  induction hl. all: auto.
 Qed.
 
 Derive Signature for eq_term_upto_univ_napp.
@@ -484,24 +509,19 @@ Proof.
     constructor; auto.
 Qed.
 
+Instance eq_predicate_sym Re Ru :
+  CRelationClasses.Symmetric Re ->
+  RelationClasses.Symmetric Ru ->
+  CRelationClasses.Symmetric (eq_predicate Re Ru).
+Proof.
+  intros hre hru.
+  intros p. unfold eq_predicate; intuition auto; try now symmetry.
+Qed.
+
 Instance eq_term_sym `{checker_flags} Σ φ : Symmetric (eq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_sym. all: exact _.
 Qed.
-
-Instance R_universe_instance_refl Re : RelationClasses.Reflexive Re -> 
-  RelationClasses.Reflexive (R_universe_instance Re).
-Proof. intros tRe x. eapply Forall2_map. 
-  induction x; constructor; auto.
-Qed.
-
-Instance R_universe_instance_sym Re : RelationClasses.Symmetric Re -> 
-  RelationClasses.Symmetric (R_universe_instance Re).
-Proof. intros tRe x y. now eapply Forall2_symP. Qed.
- 
-Instance R_universe_instance_trans Re : RelationClasses.Transitive Re -> 
-  RelationClasses.Transitive (R_universe_instance Re).
-Proof. intros tRe x y z. now eapply Forall2_trans. Qed.
 
 Instance R_global_instance_trans Σ Re Rle gr napp :
   RelationClasses.Transitive Re ->
@@ -533,6 +553,16 @@ Proof.
   intuition auto. now etransitivity. eauto.
   destruct o; intuition eauto.
   destruct o; intuition eauto. now etransitivity.
+Qed.
+
+Instance eq_predicate_trans Re Ru :
+  CRelationClasses.Transitive Re ->
+  RelationClasses.Transitive Ru ->
+  CRelationClasses.Transitive (eq_predicate Re Ru).
+Proof.
+  intros hre hru.
+  intros p. unfold eq_predicate; intuition auto; try now etransitivity.
+  eapply All2_trans; tea.
 Qed.
 
 Instance eq_term_upto_univ_trans Σ Re Rle napp :
@@ -2227,13 +2257,6 @@ Proof.
   induction 1; intros; constructor; intuition auto.
   all:try solve [now symmetry].
   all:eauto using R_global_instance_flip.
-  - destruct e as (r & ? & eq & ?).
-    econstructor; rewrite ?e; unfold eq_predicate in *; solve_all; eauto.
-    * eapply All2_sym; solve_all. now symmetry.
-    * unfold R_universe_instance in r |- *.
-      eapply Forall2_symP; eauto.
-    * eapply eq_context_sym. tc. tas.
-    * unfold on_rel. eauto. now symmetry.
   - eapply All2_sym. solve_all.
     * eapply eq_context_sym. tc. tas. 
     * now eapply eq_term_upto_univ_sym.

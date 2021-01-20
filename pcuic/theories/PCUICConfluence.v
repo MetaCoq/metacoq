@@ -1841,7 +1841,6 @@ Section PredRed.
       etransitivity.
       { eapply red_case_brs. red. solve_all;
         unfold on_Trel in *; intuition auto.
-        red in a0.
         eapply red_ctx_rel_red_context_rel; eauto.
         red. 
         red.

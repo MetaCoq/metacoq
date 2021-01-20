@@ -2,6 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
+     PCUICContextRelation
      PCUICParallelReduction PCUICParallelReductionConfluence.
 
 Require Import ssreflect.
@@ -9,6 +10,99 @@ From Equations Require Import Equations.
 Require Import CRelationClasses CMorphisms.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
+
+Lemma OnOne2_prod {A} (P Q : A -> A -> Type) l l' : 
+  OnOne2 (fun x y => P x y × Q x y) l l' ->
+  OnOne2 P l l' × OnOne2 Q l l'.
+Proof.
+  induction 1; split; constructor; intuition eauto.
+Qed.
+
+Lemma OnOne2_apply {A B} (P : B -> A -> A -> Type) l l' : 
+  OnOne2 (fun x y => forall a : B, P a x y) l l' ->
+  forall a : B, OnOne2 (P a) l l'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma OnOne2_sigma {A B} (P : B -> A -> A -> Type) l l' : 
+  OnOne2 (fun x y => ∑ a : B, P a x y) l l' ->
+  ∑ a : B, OnOne2 (P a) l l'.
+Proof.
+  induction 1.
+  - exists p.π1. constructor; auto. exact p.π2.
+  - exists IHX.π1. constructor; auto. exact IHX.π2.
+Qed.
+
+Lemma OnOne2_local_env_apply {B} {P : B -> context -> term -> term -> Type} {l l'}
+  (f : context -> term -> term -> B) : 
+  OnOne2_local_env (on_one_decl (fun Γ x y => forall a : B, P a Γ x y)) l l' ->
+  OnOne2_local_env (on_one_decl (fun Γ x y => P (f Γ x y) Γ x y)) l l'.
+Proof.
+  intros; eapply OnOne2_local_env_impl; tea.
+  intros Δ x y. eapply on_one_decl_impl; intros Γ ? ?; eauto.
+Qed.
+
+Lemma OnOne2_local_env_apply_dep {B : context -> term -> term -> Type} 
+  {P : context -> term -> term -> Type} {l l'} :
+  (forall Γ' x y, B Γ' x y) ->
+  OnOne2_local_env (on_one_decl (fun Γ x y => B Γ x y -> P Γ x y)) l l' ->
+  OnOne2_local_env (on_one_decl (fun Γ x y => P Γ x y)) l l'.
+Proof.
+  intros; eapply OnOne2_local_env_impl; tea.
+  intros Δ x y. eapply on_one_decl_impl; intros Γ ? ?; eauto.
+Qed.
+
+Lemma OnOne2_exist' {A} (P Q R : A -> A -> Type) (l l' : list A) :
+  OnOne2 P l l' ->
+  (forall x y : A, P x y -> ∑ z : A, Q x z × R y z) ->
+  ∑ r : list A, OnOne2 Q l r × OnOne2 R l' r.
+Proof.
+  intros o Hp. induction o.
+  - specialize (Hp _ _ p) as [? []].
+    eexists; split; constructor; eauto.
+  - exists (hd :: IHo.π1). split; constructor; auto; apply IHo.π2.
+Qed.
+
+Lemma OnOne2_local_env_exist' (P Q R : context -> term -> term -> Type) (l l' : context) :
+  OnOne2_local_env (on_one_decl P) l l' ->
+  (forall Γ x y, P Γ x y -> ∑ z : term, Q Γ x z × R Γ y z) ->
+  ∑ r : context, OnOne2_local_env (on_one_decl Q) l r × OnOne2_local_env (on_one_decl R) l' r.
+Proof.
+  intros o Hp. induction o.
+  - destruct p; subst. specialize (Hp _ _ _ p) as [? []].
+    eexists; split; constructor; red; cbn; eauto.
+  - destruct p; subst.
+    destruct s as [[p ->]|[p ->]]; specialize (Hp _ _ _ p) as [? []];
+    eexists; split; constructor; red; cbn; eauto. 
+  - exists (d :: IHo.π1). split; constructor; auto; apply IHo.π2.
+Qed.
+
+Lemma OnOne2_local_env_context_relation (P : context -> term -> term -> Type) 
+  (Q : context -> context -> context_decl -> context_decl -> Type)
+  (l l' : context) :
+  OnOne2_local_env (on_one_decl P) l l' ->
+  (forall Γ x y, on_one_decl P Γ x y -> Q Γ Γ x y) ->
+  (forall Γ Γ' d, OnOne2_local_env (on_one_decl P) Γ Γ' -> Q Γ Γ' d d) ->
+  (forall Γ x, Q Γ Γ x x) ->
+  context_relation Q l l'.
+Proof.
+  intros onc HP IHQ HQ. induction onc; simpl; try constructor; eauto.
+  now eapply context_relation_refl.
+  now eapply context_relation_refl.
+  destruct d as [na [b|] ty]; constructor; auto.
+Qed.
+
+Lemma on_one_decl_compare_decl Σ Re Rle Γ x y :
+  RelationClasses.Reflexive Re ->
+  RelationClasses.Reflexive Rle ->
+  on_one_decl
+    (fun (_ : context) (y0 v' : term) => eq_term_upto_univ Σ Re Rle y0 v') Γ x y ->
+  compare_decl false (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle) x y.
+Proof.
+  destruct x as [na [b|] ty], y as [na' [b'|] ty']; cbn; intuition (subst; auto);
+  reflexivity.
+Qed.
 
 Lemma red1_eq_context_upto_l Σ Rle Re Γ Δ u v :
   RelationClasses.Reflexive Rle ->
@@ -71,26 +165,43 @@ Proof.
     eexists. split.
     + constructor. eassumption.
     + eapply eq_term_upto_univ_lift ; eauto.
-  - destruct ind. 
-    destruct (IHh _ e) as [? [? ?]].
+  - eapply OnOne2_prod in X as [_ X].
+    eapply OnOne2_apply, OnOne2_apply in X; tea.
+    eapply OnOne2_exist' in X as [pars' [parred pareq]]; intros; tea.
+    eexists. split. eapply case_red_param; tea.
+    econstructor; eauto.
+    red. intuition; eauto. reflexivity.
+    apply All2_same; intros. intuition eauto; reflexivity.
+  - eapply (OnOne2_local_env_apply (fun Γ' u v => (Δ ,,, Γ'))) in X.
+    cbn in X.
+    eapply (OnOne2_local_env_apply_dep) in X; cycle 1.
+    intros. eapply eq_context_upto_cat; eauto. reflexivity.
+    eapply (OnOne2_local_env_exist' _ (fun Γ x y => red1 Σ (Δ ,,, Γ) x y)) in X; intros; tea.
+    2:{ exact X0. }
+    destruct X as [ocontext'' [red eq]]. eexists; split.
+    * eapply case_red_pcontext; tea.
+    * econstructor; eauto; try reflexivity.
+      red; intuition; simpl; eauto. red.
+      eapply OnOne2_local_env_context_relation; tea => /= //.
+      + intros *. now eapply on_one_decl_compare_decl.
+      + intros. reflexivity.
+      + intros; reflexivity.
+      + eapply All2_same; split; reflexivity.
+  - specialize (IHh (Δ ,,, pcontext p)).
+    forward IHh. now apply eq_context_upto_cat.
+    destruct IHh as [? [? ?]].
     eexists. split.
     + solve [ econstructor ; eauto ].
-    + econstructor ; eauto.
-      * eapply eq_term_upto_univ_refl ; eauto.
-      * eapply All2_same.
-        intros. split ; eauto.
-        eapply eq_term_upto_univ_refl ; eauto.
-  - destruct (IHh _ e) as [? [? ?]].
+    + econstructor; try red; intuition (simpl; eauto); try reflexivity.
+      * now eapply All2_same.
+      * eapply All2_same. split; reflexivity.
+  - specialize (IHh _ e) as [? [? ?]].
     eexists. split.
     + solve [ econstructor ; eauto ].
-    + destruct ind.
-      econstructor ; eauto.
-      * eapply eq_term_upto_univ_refl ; eauto.
-      * eapply All2_same.
-        intros. split ; eauto.
-        eapply eq_term_upto_univ_refl ; eauto.
-  - destruct ind.
-    assert (h : ∑ brs0,
+    + econstructor; try red; intuition (simpl; eauto); try reflexivity.
+      * now eapply All2_same.
+      * eapply All2_same. split; reflexivity.
+  - assert (h : ∑ brs0,
       OnOne2 (on_Trel_eq (red1 Σ Δ) snd fst) brs brs0 *
       All2 (fun x y =>
                 (fst x = fst y) *

@@ -1,9 +1,15 @@
+From Coq Require Import ssreflect. 
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping PCUICLiftSubst 
   PCUICReduction PCUICContextRelation PCUICContextReduction.
 
 From Coq Require Import CRelationClasses.
+
+(** Types and names of variables are irrelevant during reduction. 
+    More precisely, we only need to preserve bodies of let declarations
+    in contexts for reductions to be preserved.
+*)
 
 Ltac pcuic :=
   try repeat red; cbn in *;
@@ -30,37 +36,38 @@ Proof.
     eexists; intuition eauto.
 Qed.
 
-(** Types of variables are irrelevant during reduction *)
+(** Types of variables and names are irrelevant during reduction:
+  Only bodies of let-bindings should be preserved to get the same reductions.
+*)
 
 Section ContextChangeTypesReduction.
-Context {cf : checker_flags}.
-Context (Σ : global_env).
 
-Inductive change_decl_type : context_decl -> context_decl -> Type :=
-| change_vass_type : forall (na na' : aname) (T T' : term),
-    change_decl_type (vass na T) (vass na' T')
-| change_vdef_type : forall (na na' : aname) (b T T'  : term),
-    change_decl_type (vdef na b T) (vdef na' b T').
+  Context {cf : checker_flags}.
+  Context (Σ : global_env).
 
-Derive Signature for change_decl_type.
+Definition pres_let_bodies (c : context_decl) (c' : context_decl) : Type :=
+  match c.(decl_body) with 
+  | None => unit
+  | Some b => decl_body c' = Some b
+  end.
 
-Global Instance change_decl_type_refl : Reflexive change_decl_type.
+Global Instance pres_let_bodies_refl : Reflexive pres_let_bodies.
 Proof. intros [? [|]]; constructor; reflexivity. Qed.
 
-Global Instance change_decl_type_sym : Symmetric change_decl_type.
+(* Global Instance pres_let_bodies_sym : Symmetric pres_let_bodies.
 Proof.
   intros x y rel.
   depelim rel; constructor; now symmetry.
-Qed.
+Qed. *)
 
-Global Instance change_decl_type_trans : Transitive change_decl_type.
+Global Instance pres_let_bodies_trans : Transitive pres_let_bodies.
 Proof.
-  intros x y z xy yz.
-  depelim xy; depelim yz; constructor; now etransitivity.
+  intros x y z; unfold pres_let_bodies.
+  now destruct decl_body => // ->.
 Qed.
 
-Global Instance change_decl_type_equiv : Equivalence change_decl_type.
-Proof. constructor; typeclasses eauto. Qed.
+(* Global Instance pres_let_bodies_equiv : Equivalence pres_let_bodies.
+Proof. constructor; typeclasses eauto. Qed. *)
 
 Lemma OnOne2All_All3 {A B} (P Q : A -> B -> B -> Type) l l' l'' :
   OnOne2All P l l' l'' ->
@@ -72,15 +79,16 @@ Proof.
   induction tl in bs, e |- *; destruct bs; simpl in e; try constructor; auto; try congruence.
 Qed.
 
-Lemma context_change_decl_types_red1 Γ Γ' s t :
-  All2_fold (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
+Lemma context_pres_let_bodiess_red1 Γ Γ' s t :
+  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros HT X0. induction X0 using red1_ind_all in Γ', HT |- *; eauto.
   all:pcuic.
   - econstructor. econstructor.
-    rewrite <- H.
-    induction HT in i |- *; destruct i; eauto.
-    now inv p.
+    move: H; case: nth_error_spec => [x hnth hi|hi] /= // [=] hbod.
+    eapply All2_fold_nth in HT as [d' [hnth' [_ pres]]]; eauto.
+    rewrite /pres_let_bodies hbod in pres.
+    now rewrite hnth' /= pres.
   - eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
   - eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
     eauto. econstructor. eauto. econstructor.
@@ -170,18 +178,18 @@ Proof.
       constructor. 
 Qed.
 
-Lemma context_change_decl_types_red Γ Γ' s t :
-  All2_fold (fun _ _ => change_decl_type) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
+Lemma context_pres_let_bodiess_red Γ Γ' s t :
+  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros. induction X0 using red_rect'; eauto.
   etransitivity. eapply IHX0.
-  eapply context_change_decl_types_red1; eauto.
+  eapply context_pres_let_bodiess_red1; eauto.
 Qed.
 End ContextChangeTypesReduction.
 
-Lemma fix_context_change_decl_types Γ mfix mfix' :
+Lemma fix_context_pres_let_bodiess Γ mfix mfix' :
   #|mfix| = #|mfix'| ->
-  All2_fold (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
+  All2_fold (fun _ _ => pres_let_bodies) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
 Proof.
   intros len.
   apply All2_fold_app.
@@ -198,7 +206,7 @@ Proof.
       constructor.
     + destruct mfix'; cbn in *; [discriminate len|].
       apply All2_fold_app.
-      * now rewrite !List.rev_length, !mapi_rec_length.
+      * now rewrite !List.rev_length !mapi_rec_length.
       * constructor; [constructor|].
         constructor.
       * apply IHmfix; lia.

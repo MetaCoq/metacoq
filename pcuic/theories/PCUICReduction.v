@@ -645,6 +645,7 @@ Definition red_one_ctx_rel (Σ : global_env) (Γ : context) :=
 
 Definition red_ctx_rel Σ Γ := clos_refl_trans (red1_ctx_rel Σ Γ).
 
+(* TODO move to All_decls *)
 Inductive red_decls Σ (Γ Γ' : context) : forall (x y : context_decl), Type :=
 | red_vass na T T' :
     red Σ Γ T T' ->

@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
-     PCUICSigmaCalculus
+     PCUICSigmaCalculus PCUICContextReduction
      PCUICContextConversion PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
 .
 
@@ -1409,16 +1409,76 @@ Section Inversions.
   Definition conv_predicate_gen Σ Γ p p' :=
     All2 (conv Σ Γ) p.(pparams) p'.(pparams) ×
     R_universe_instance (eq_universe Σ) (puinst p) (puinst p')
-    × conv_context Σ (pcontext p) (pcontext p')
+    × conv_context Σ (Γ ,,, pcontext p) (Γ ,,, pcontext p')
     × conv Σ (Γ ,,, pcontext p) (preturn p) (preturn p').
 
   Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
   Proof.
     intros x. apply All2_same. intros. reflexivity.
   Qed.
+  Definition set_puinst (p : predicate term) (puinst : Instance.t) : predicate term :=
+    {| pparams := p.(pparams);
+        puinst := puinst;
+        pcontext := p.(pcontext);
+        preturn := p.(preturn) |}.
+  
+  Definition set_preturn_two {p} pret pret' : set_preturn (set_preturn p pret') pret = set_preturn p pret := 
+    eq_refl.
+  
+  Instance red_decls_refl Γ Δ : Reflexive (red_decls Σ Γ Δ).
+  Proof.
+    intros x. apply red_decls_refl.
+  Qed.
 
-  Lemma set_pparams_two : 
-    set_pparams
+  Instance red_ctx_refl : Reflexive (All2_fold (red_decls Σ)).
+  Proof.
+    intros x. eapply All2_fold_refl. intros. apply red_decls_refl.
+  Qed.
+  Lemma red_context_rel_app Γ Δ Δ' : 
+    red_context_rel Σ Γ Δ Δ' <~> red_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
+  Proof.
+    split; intros h.
+    - eapply All2_fold_app.
+      + apply (length_of h).
+      + reflexivity.
+      + apply h.
+    - apply All2_fold_app_inv in h as [] => //.
+      pose proof (length_of h). len in H. lia.
+  Qed.  
+  
+  Lemma conv_context_red_context Γ Γ' Δ Δ' :
+    conv_context Σ (Γ ,,, Δ) (Γ' ,,, Δ') ->
+    #|Γ| = #|Γ'| ->
+    ∑ Δ1 Δ1', red_ctx_rel Σ Γ Δ Δ1 * red_ctx_rel Σ Γ' Δ' Δ1' * 
+      eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Δ1 Δ1'.
+  Proof.
+    intros.
+    pose proof (length_of X). len in H0.
+    eapply conv_context_red_context in X as [Δ1 [Δ1' [[redl redr] eq]]]; auto.
+    exists (firstn #|Δ| Δ1), (firstn #|Δ'| Δ1').
+    have l := (length_of redl). len in l.
+    have l' := (length_of redr). len in l'.
+    intuition auto.
+    - eapply red_ctx_rel_red_context_rel => //.
+      rewrite -(firstn_skipn #|Δ| Δ1) in redl.
+      eapply All2_fold_app_inv in redl as [].
+      * red. eapply All2_fold_impl; tea => /= //.
+        intros ???? []; constructor; auto.
+      * rewrite firstn_length_le //.
+        pose proof (length_of redl).
+        rewrite firstn_skipn in H1.
+        len in H0. lia.
+    - eapply red_ctx_rel_red_context_rel => //.
+      rewrite -(firstn_skipn #|Δ'| Δ1') in redr.
+      eapply All2_fold_app_inv in redr as [].
+      * red. eapply All2_fold_impl; tea => /= //.
+        intros ???? []; constructor; auto.
+      * rewrite firstn_length_le //. lia.
+    - rewrite -(firstn_skipn #|Δ'| Δ1') in eq.
+      rewrite -(firstn_skipn #|Δ| Δ1) in eq.
+      eapply All2_fold_app_inv in eq as [] => //.
+      rewrite !firstn_length_le => //; try lia.
+  Qed.
 
   Lemma conv_Case_p :
     forall Γ ci c brs p p',
@@ -1429,7 +1489,7 @@ Section Inversions.
     set (pred := p).
     destruct p, p'; simpl in *.
     transitivity (tCase ci (set_pparams pred pparams0) c brs).
-    - clear -wfΣ cpars.
+    { clear -wfΣ cpars.
       eapply All2_many_OnOne2 in cpars.
       induction cpars.
       * reflexivity.
@@ -1443,11 +1503,51 @@ Section Inversions.
             simpl. eapply All2_app; try reflexivity.
             constructor; auto; reflexivity. }
           { eapply conv_red_l; eauto.
-            change (set_pparams pred ())
-            eapply case_red_param.
-              econstructor. }
+            rewrite -[set_pparams _ (x1 ++ v :: _)](set_pparams_two (x1 ++ t :: x2)).
+            eapply case_red_param; simpl.
+            eapply OnOne2_app. now constructor. }
+          { eapply conv_red_r; eauto.
+            rewrite -[set_pparams _ (x1 ++ v :: _)](set_pparams_two (x1 ++ u :: x2)).
+            eapply case_red_param; simpl.
+            eapply OnOne2_app. now constructor. } }
+   transitivity (tCase ci (set_puinst (set_pparams pred pparams0) puinst0) c brs).
+   { do 2 constructor; try reflexivity.
+     2:apply All2_same; split; reflexivity.
+     red; intuition try reflexivity. }
+   transitivity (tCase ci (set_pcontext (set_puinst (set_pparams pred pparams0) puinst0) pcontext0) c brs).
+   { clear -wfΣ cctx. rewrite /pred /set_puinst /set_pparams /set_pcontext; cbn.
+     eapply conv_context_red_context in cctx as [Δ [Δ' [[redl redr] eqc]]] => //.
+     transitivity (tCase ci {|
+     pparams := pparams0;
+     puinst := puinst0;
+     pcontext := Δ;
+     preturn := preturn |} c brs).
+     + eapply red_conv. now eapply red_case_pcontext_red_ctx_rel.
+     + etransitivity.
+       2:{ symmetry. eapply red_conv.
+           eapply red_case_pcontext_red_ctx_rel; simpl; tea. }
+       rewrite /set_pcontext /=.
+       do 2 constructor; try reflexivity.
+       2:eapply All2_same; split; reflexivity.
+       red; intuition auto; simpl; try reflexivity.
+       eapply All2_
+       red in eqc.
+       unfold eq_context_gen. apply eqc.
+       
 
-  Admitted.
+
+
+       red. red in redl.
+
+       red.
+
+        red in redl. red.
+
+
+
+   }
+            
+
 (*         
         eapply red_conv, red_case_pars.
         + eapply conv_red_l.

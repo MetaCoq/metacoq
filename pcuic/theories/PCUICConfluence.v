@@ -3,7 +3,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
      PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction
-     PCUICParallelReduction PCUICParallelReductionConfluence.
+     PCUICParallelReduction PCUICParallelReductionConfluence
+     PCUICRedTypeIrrelevance.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -41,6 +42,36 @@ Instance All_decls_preorder P :
   PreOrder (All_decls P).
 Proof.
   intros []; split; tc.
+Qed.
+
+Instance All_decls_alpha_refl P : 
+  Reflexive P ->
+  Reflexive (All_decls_alpha P).
+Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed.
+  
+Instance All_decls_alpha_sym P : 
+  Symmetric P ->
+  Symmetric (All_decls_alpha P).
+Proof. intros hP d d' []; constructor; now symmetry. Qed.
+
+Instance All_decls_alpha_trans P : 
+  Transitive P ->
+  Transitive (All_decls_alpha P).
+Proof. intros hP d d' d'' [] h; depelim h; constructor; now etransitivity. Qed.
+
+Instance All_decls_alpha_equivalence P : 
+  Equivalence P ->
+  Equivalence (All_decls_alpha P).
+Proof.
+  intros []; split; tc.
+Qed.
+
+Lemma All2_fold_refl P : 
+  (forall Γ, Reflexive (P Γ Γ)) ->
+  Reflexive (All2_fold P).
+Proof.
+  intros HR x.
+  apply All2_fold_refl; intros. apply HR.
 Qed.
 
 Lemma OnOne2_prod {A} (P Q : A -> A -> Type) l l' : 
@@ -2804,33 +2835,16 @@ Section RedConfluence.
     intros.
     induction Δ; auto. constructor; auto. reflexivity.
   Qed.
-From MetaCoq.PCUIC Require Import PCUICRedTypeIrrelevance.
+
   Lemma red1_eq_context_upto_names Γ Γ' t u :
     eq_context_upto_names Γ Γ' ->
     red1 Σ Γ t u ->
     red1 Σ Γ' t u.
   Proof.
     move=> Hctx.
-    eapply context_change_decl_types_red1.
-
-
-    revert Γ' Hctx.
-    induction H using red1_ind_all; intros Δ Hctx; try solve [repeat (econstructor; eauto)].
-    - constructor.
-      now eapply decl_body_eq_context_upto_names.
-    - constructor. apply (IHred1 (Δ ,, vass na N)). constructor; auto.
-    - constructor. apply (IHred1 (Δ ,, vdef na b t)). constructor; auto.
-    - constructor. solve_all.
-    - constructor. apply (IHred1 (Δ ,, vass na M1)). constructor; auto.
-    - constructor. solve_all.
-    - constructor. solve_all.
-    - eapply fix_red_body; solve_all.
-      eapply (b0 (Δ ,,, fix_context mfix0)).
-      now apply eq_context_upto_names_app.
-    - eapply cofix_red_ty; solve_all.
-    - eapply cofix_red_body; solve_all.
-      eapply (b0 (Δ ,,, fix_context mfix0)).
-      now apply eq_context_upto_names_app.
+    eapply context_pres_let_bodies_red1.
+    eapply PCUICEnvironment.All2_fold_impl; tea => /= _ _ ? ? [] /=;
+    rewrite /pres_let_bodies /= //; intros; congruence.
   Qed.
 
   Lemma clos_rt_red1_eq_context_upto_names Γ Γ' t u :
@@ -2850,75 +2864,98 @@ From MetaCoq.PCUIC Require Import PCUICRedTypeIrrelevance.
     intros HΓ H. move: H. apply clos_rt_monotone => x y.
     now apply red1_eq_context_upto_names.
   Qed.
+  
+  Definition red_ctx_alpha : relation context :=
+    All2_fold (fun Γ _ => All_decls_alpha (red Σ Γ)).
 
   Lemma eq_context_upto_names_red_ctx Γ Δ Γ' Δ' :
     eq_context_upto_names Γ Γ' ->
     eq_context_upto_names Δ Δ' ->
     red_ctx Γ Δ ->
-    red_ctx Γ' Δ'.
+    red_ctx_alpha Γ' Δ'.
   Proof.
     intros.
     induction X in X0, Δ, Δ', X1 |- *. depelim X1. depelim X0. constructor.
-    destruct x as [na b ty], y as [na' b' ty']; simpl in *.
-    subst.
-    depelim X1. depelim X0. 
-    red in o. simpl in *. subst.
-    destruct y as [? [b'|] ?]; noconf e1. simpl.
-    constructor; auto. eapply IHX; eauto.
-    transitivity na. now symmetry.
-    transitivity na'0; auto.
-    red. eapply red_eq_context_upto_names; eauto.
-    destruct o. depelim X0. simpl in *.
-    destruct y as [? [b'|] ?]; noconf e1; subst; simpl in *.
-    constructor; auto.
-    eapply IHX; eauto.
-    transitivity na. now symmetry.
-    transitivity na'0; auto.
-    red.
-    split; eauto using red_eq_context_upto_names.
+    depelim X1. depelim X0.
+    constructor. eapply IHX; tea.
+    depelim p; depelim c; subst; depelim a; try constructor; eauto.
+    1,3:now etransitivity.
+    all:eapply red_eq_context_upto_names; eauto.
+  Qed.
+
+  Lemma eq_context_upto_names_red_ctx_alpha Γ Δ Γ' Δ' :
+    eq_context_upto_names Γ Γ' ->
+    eq_context_upto_names Δ Δ' ->
+    red_ctx_alpha Γ Δ ->
+    red_ctx_alpha Γ' Δ'.
+  Proof.
+    intros.
+    induction X in X0, Δ, Δ', X1 |- *. depelim X1. depelim X0. constructor.
+    depelim X1. depelim X0.
+    constructor. eapply IHX; tea.
+    depelim p; depelim c; subst; depelim a; try constructor; eauto.
+    1,3:now etransitivity.
+    all:eapply red_eq_context_upto_names; eauto.
   Qed.
 
   Instance proper_red_ctx :
-    Proper (eq_context_upto_names ==> eq_context_upto_names ==> iffT) red_ctx.
+    Proper (eq_context_upto_names ==> eq_context_upto_names ==> iffT) red_ctx_alpha.
   Proof.
     reduce_goal.
     split.
-    intros. eapply eq_context_upto_names_red_ctx; eauto.
-    intros. symmetry in X, X0. eapply eq_context_upto_names_red_ctx; eauto.
+    intros. eapply eq_context_upto_names_red_ctx_alpha; eauto.
+    intros. symmetry in X, X0. eapply eq_context_upto_names_red_ctx_alpha; eauto.
+  Qed.
+
+  Instance red_ctx_alpha_refl : Reflexive red_ctx_alpha.
+  Proof.
+    rewrite /red_ctx_alpha.
+    intros x; apply All2_fold_refl; tc.
+  Qed.
+
+  Lemma red_ctx_red_ctx_alpha_trans Γ Δ Δ' : 
+    red_ctx Γ Δ -> red_ctx_alpha Δ Δ' -> red_ctx_alpha Γ Δ'.
+  Proof.
+    intros r r'.
+    induction r in Δ', r' |- *; depelim r'; constructor; auto.
+    now eapply IHr.
+    depelim p; depelim a; constructor; auto.
+    all:etransitivity; tea.
+    all:eapply red_red_ctx; tea; now eapply red_ctx_red_context.
   Qed.
 
   Lemma clos_rt_red1_alpha_out x y :
     clos_refl_trans red1_rel_alpha x y ->
-    red_ctx (fst x) (fst y) *
+    red_ctx_alpha (fst x) (fst y) *
     clos_refl_trans (red1 Σ (fst x)) (snd x) (snd y).
   Proof.
     intros H.
     eapply clos_rt_rt1n_iff in H.
     induction H.
-    - split. red. induction (fst x) as [|[na [b|] ty] tl]; try constructor; hnf; eauto.
-      constructor 2.
+    - split; reflexivity.
     - destruct x as [Γ t], y as [Δ u], z as [Δ' u']; simpl in *.
       destruct IHclos_refl_trans_1n.
       red in r. destruct r.
       * destruct p. subst. split. auto.
         transitivity u; auto.
-      * destruct r. destruct p. subst. split.
+      * destruct r. destruct p. subst. split; auto.
         apply red1_ctx_pred1_ctx in r.
         apply pred1_ctx_red_ctx in r.
-        etransitivity; eauto.
+        eapply red_ctx_red_ctx_alpha_trans; tea.
         eapply red_red_ctx; eauto.
         apply red1_ctx_pred1_ctx in r.
-        now apply pred1_ctx_red_ctx in r.
+        apply pred1_ctx_red_ctx in r.
+        now eapply red_ctx_red_context.
         destruct p. subst.
         split; auto.
-        eapply eq_context_upto_names_red_ctx. 3:eauto. now symmetry in e. reflexivity.
+        eapply eq_context_upto_names_red_ctx_alpha. 3:eauto. now symmetry in e. reflexivity.
         eapply clos_rt_red1_eq_context_upto_names; eauto. now symmetry in e.
   Qed.
 
   Lemma red1_red1_ctx_inv Γ Δ Δ' t u :
      red1 Σ (Γ ,,, Δ) t u ->
      assumption_context Δ ->
-     red1_ctx (Γ ,,, Δ) (Γ ,,, Δ') ->
+     red1_ctx Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
      red Σ (Γ ,,, Δ') t u.
    Proof.
      intros redt assΔ redΔ.
@@ -2931,7 +2968,7 @@ From MetaCoq.PCUIC Require Import PCUICRedTypeIrrelevance.
   Lemma red_red1_ctx_inv Γ Δ Δ' t u :
     red Σ (Γ ,,, Δ) t u ->
     assumption_context Δ ->
-    red1_ctx (Γ ,,, Δ) (Γ ,,, Δ') ->
+    red1_ctx Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
     red Σ (Γ ,,, Δ') t u.
   Proof.
     intros redt assΔ redΔ. induction redt.
@@ -2946,7 +2983,7 @@ From MetaCoq.PCUIC Require Import PCUICRedTypeIrrelevance.
 
 
   Lemma clos_refl_trans_ctx_to_1n (x y : context) :
-    clos_refl_trans_ctx red1_ctx x y <~> clos_refl_trans_ctx_1n red1_ctx x y.
+    clos_refl_trans_ctx (red1_ctx Σ) x y <~> clos_refl_trans_ctx_1n (red1_ctx Σ) x y.
   Proof.
     split.
     induction 1. econstructor 2. eauto. constructor; auto.

@@ -90,7 +90,7 @@ Proof.
   eapply All2_fold_refl. intros. reflexivity.
 Qed.
 
-Lemma context_pres_let_bodiess_red1 Γ Γ' s t :
+Lemma context_pres_let_bodies_red1 Γ Γ' s t :
   All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
   red1 Σ Γ s t -> red1 Σ Γ' s t.
 Proof.
@@ -134,18 +134,18 @@ Proof.
     eapply pres_let_bodies_ctx_refl.
 Qed.
     
-Lemma context_pres_let_bodiess_red Γ Γ' s t :
+Lemma context_pres_let_bodies_red Γ Γ' s t :
   All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
   red Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros pres.
   eapply clos_rt_monotone => x y.
-  now apply context_pres_let_bodiess_red1.
+  now apply context_pres_let_bodies_red1.
 Qed.
 
 End ContextChangeTypesReduction.
 
-Lemma fix_context_pres_let_bodiess Γ mfix mfix' :
+Lemma fix_context_pres_let_bodies Γ mfix mfix' :
   #|mfix| = #|mfix'| ->
   All2_fold (fun _ _ => pres_let_bodies) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
 Proof.

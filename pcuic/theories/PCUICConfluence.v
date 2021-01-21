@@ -2804,13 +2804,16 @@ Section RedConfluence.
     intros.
     induction Δ; auto. constructor; auto. reflexivity.
   Qed.
-
+From MetaCoq.PCUIC Require Import PCUICRedTypeIrrelevance.
   Lemma red1_eq_context_upto_names Γ Γ' t u :
     eq_context_upto_names Γ Γ' ->
     red1 Σ Γ t u ->
     red1 Σ Γ' t u.
   Proof.
-    move=> Hctx H.
+    move=> Hctx.
+    eapply context_change_decl_types_red1.
+
+
     revert Γ' Hctx.
     induction H using red1_ind_all; intros Δ Hctx; try solve [repeat (econstructor; eauto)].
     - constructor.

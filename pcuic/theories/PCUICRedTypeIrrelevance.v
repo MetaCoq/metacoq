@@ -1,7 +1,7 @@
 From Coq Require Import ssreflect. 
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping PCUICLiftSubst 
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst 
   PCUICReduction PCUICContextRelation PCUICContextReduction.
 
 From Coq Require Import CRelationClasses.
@@ -79,112 +79,70 @@ Proof.
   induction tl in bs, e |- *; destruct bs; simpl in e; try constructor; auto; try congruence.
 Qed.
 
+Local Hint Extern 4 (pres_let_bodies _ _) => exact tt || exact eq_refl : core.
+Local Hint Extern 4 (All2_fold (fun _ _ => _) (_ ,, _) (_ ,, _)) => constructor : core.
+Hint Constructors unit : core.
+
+Lemma pres_let_bodies_ctx_refl : 
+  Reflexive (All2_fold (fun _ _ : context => pres_let_bodies)).
+Proof.
+  intros x.
+  eapply All2_fold_refl. intros. reflexivity.
+Qed.
+
 Lemma context_pres_let_bodiess_red1 Γ Γ' s t :
-  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
+  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
+  red1 Σ Γ s t -> red1 Σ Γ' s t.
 Proof.
   intros HT X0. induction X0 using red1_ind_all in Γ', HT |- *; eauto.
   all:pcuic.
-  - econstructor. econstructor.
+  all:try solve [econstructor; eauto; solve_all].
+  - econstructor.
     move: H; case: nth_error_spec => [x hnth hi|hi] /= // [=] hbod.
     eapply All2_fold_nth in HT as [d' [hnth' [_ pres]]]; eauto.
     rewrite /pres_let_bodies hbod in pres.
     now rewrite hnth' /= pres.
-  - eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
-  - eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
-    eauto. econstructor. eauto. econstructor.
-  -
-    eapply PCUICReduction.red_letin. eapply IHX0; eauto.
-    all:eauto.
-  -
-    eapply PCUICReduction.red_letin; eauto.
-  -
-    eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
-    econstructor. eauto. econstructor.
-    
-  - eapply PCUICReduction.red_case_pars; eauto.
-    simpl. eapply OnOne2_All2; eauto. simpl. intuition auto.
-  - eapply PCUICReduction.red_case_pcontext.
+  - econstructor; eauto.
     eapply OnOne2_local_env_impl; tea.
     intros Δ x y.
     eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
     eapply IH. eapply All2_fold_app; auto.
     eapply All2_fold_refl.
     intros; reflexivity.
-  - eapply PCUICReduction.red_case_p; eauto. eapply IHX0.
+  - econstructor; eauto. eapply IHX0.
     eapply All2_fold_app; eauto.
     now eapply All2_fold_refl.
-  - eapply PCUICReduction.red_case_c; eauto.
-  - eapply PCUICReduction.red_case_brs; eauto.
-    eapply OnOne2_All2; eauto. simpl.
-    * unfold on_Trel; intros br br'. intuition eauto.
-      + eapply b0. eapply All2_fold_app; auto.
-        now apply All2_fold_refl.
-      + rewrite b. reflexivity.
-      + rewrite b0; reflexivity.
-      + eapply red_one_decl_red_ctx_rel.
-        eapply OnOne2_local_env_impl; tea.
-        intros Δ x y.
-        eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
-        eapply IH. eapply All2_fold_app; auto.
-        eapply All2_fold_refl.
-        intros; reflexivity.
-    * intros br; unfold on_Trel. split; auto.
-      reflexivity.
-  - eapply PCUICReduction.red_proj_c. eauto.
-  - eapply PCUICReduction.red_app; eauto.
-  - eapply PCUICReduction.red_app; eauto.
-  - eapply PCUICReduction.red_prod; eauto.
-  - eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
-    econstructor.
-    eauto. econstructor. 
-  - eapply PCUICReduction.red_evar; eauto.
-    induction X; eauto. econstructor. eapply p; eauto.
-    induction tl; eauto.
-  - eapply PCUICReduction.red_fix_one_ty.
-    eapply OnOne2_impl ; eauto.
-    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-    inversion e. subst. clear e.
-    split ; auto.
-  - eapply PCUICReduction.red_fix_one_body.
-    eapply OnOne2_impl ; eauto.
-    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-    inversion e. subst. clear e.
-    split ; auto.
-    eapply ih ; auto.
-    clear - HT.
-    induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
-    + auto.
-    + simpl. constructor ; eauto.
-      constructor. 
-    + simpl. constructor ; eauto.
-      constructor. 
-  - eapply PCUICReduction.red_cofix_one_ty.
-    eapply OnOne2_impl ; eauto.
-    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-    inversion e. subst. clear e.
-    split ; auto.
-  - eapply PCUICReduction.red_cofix_one_body.
-    eapply OnOne2_impl ; eauto.
-    intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-    inversion e. subst. clear e.
-    split ; auto.
-    eapply ih ; auto.
-    clear - HT.
-    induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
-    + auto.
-    + simpl. constructor ; eauto.
-      constructor. 
-    + simpl. constructor ; eauto.
-      constructor. 
+  - econstructor; eauto. solve_all.
+    * rewrite -b. left; intuition eauto.
+      eapply b0; eauto.
+      eapply All2_fold_app; eauto.
+      eapply All2_fold_refl; intros; reflexivity.
+    * right. split; auto.
+      eapply OnOne2_local_env_impl; tea.
+      intros Δ ? ?.
+      eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
+      eapply IH. eapply All2_fold_app; auto.
+      eapply pres_let_bodies_ctx_refl.
+  - eapply fix_red_body; eauto. solve_all.
+    destruct x as [? ? ? ?], y as [? ? ? ?]. simpl in *. noconf b.
+    eapply b0; eauto.
+    eapply All2_fold_app; eauto.
+    eapply pres_let_bodies_ctx_refl.
+  - eapply cofix_red_body; eauto; solve_all.
+    eapply b0.
+    eapply All2_fold_app; eauto.
+    eapply pres_let_bodies_ctx_refl.
+Qed.
+    
+Lemma context_pres_let_bodiess_red Γ Γ' s t :
+  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> 
+  red Σ Γ s t -> red Σ Γ' s t.
+Proof.
+  intros pres.
+  eapply clos_rt_monotone => x y.
+  now apply context_pres_let_bodiess_red1.
 Qed.
 
-Lemma context_pres_let_bodiess_red Γ Γ' s t :
-  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
-Proof.
-  intros. induction X0 using red_rect'; eauto.
-  etransitivity. eapply IHX0.
-  eapply context_pres_let_bodiess_red1; eauto.
-Qed.
 End ContextChangeTypesReduction.
 
 Lemma fix_context_pres_let_bodiess Γ mfix mfix' :

@@ -191,7 +191,7 @@ Qed.
 
 Lemma nameless_eqctx_IH P ctx ctx' :
   nameless_ctx ctx -> nameless_ctx ctx' ->
-  eq_context_gen false upto_names' upto_names' ctx ctx' ->
+  eq_context_gen upto_names' upto_names' ctx ctx' ->
   onctx P ctx ->
   (forall napp x, P x ->
     forall y, nameless x -> nameless y ->
@@ -427,22 +427,21 @@ Proof.
   now rewrite global_variance_nl_sigma_mon.
 Qed.
 
-Lemma eq_context_nl_IH Σ le Re Rle ctx ctx' :
+Lemma eq_context_nl_IH Σ Re Rle ctx ctx' :
   (forall (napp : nat) (t t' : term)
         (Rle : Universe.t -> Universe.t -> Prop),
       eq_term_upto_univ_napp Σ Re Rle napp t t' ->
       eq_term_upto_univ_napp (nl_global_env Σ) Re Rle napp
         (nl t) (nl t')) ->
-  eq_context_gen le (eq_term_upto_univ Σ Re Re)
+  eq_context_gen (eq_term_upto_univ Σ Re Re)
     (eq_term_upto_univ Σ Re Rle) ctx ctx' ->
-  eq_context_gen le
-    (eq_term_upto_univ (nl_global_env Σ) Re Re)
+  eq_context_gen (eq_term_upto_univ (nl_global_env Σ) Re Re)
     (eq_term_upto_univ (nl_global_env Σ) Re Rle)
     (map (map_decl_anon nl) ctx)
     (map (map_decl_anon nl) ctx').
 Proof.
   intros aux H.
-  induction H; simpl; constructor; simpl; destruct p, le; simpl; 
+  induction H; simpl; constructor; simpl; destruct p; simpl; 
   intuition (constructor; auto).
 Defined.
 
@@ -486,16 +485,16 @@ Proof.
     * destruct x, y; simpl in *. apply aux; auto.
 Qed.
 
-Lemma eq_context_nl Σ le Re Rle ctx ctx' :
-  eq_context_gen le (eq_term_upto_univ Σ Re Re)
+Lemma eq_context_nl Σ Re Rle ctx ctx' :
+  eq_context_gen (eq_term_upto_univ Σ Re Re)
     (eq_term_upto_univ Σ Re Rle) ctx ctx' ->
-  eq_context_gen le
+  eq_context_gen
     (eq_term_upto_univ (nl_global_env Σ) Re Re)
     (eq_term_upto_univ (nl_global_env Σ) Re Rle)
     (nlctx ctx) (nlctx ctx').
 Proof.
   intros H.
-  induction H; constructor; simpl; destruct p, le; intuition 
+  induction H; constructor; simpl; destruct p; intuition 
     (constructor; auto using nl_eq_term_upto_univ).
 Qed.
 
@@ -551,12 +550,12 @@ Lemma eq_context_nl_inv_IH Σ Re ctx ctx' :
    (napp : nat) (v : term),
  eq_term_upto_univ_napp Σ Re Rle napp (nl u) (nl v) ->
  eq_term_upto_univ_napp Σ Re Rle napp u v) ctx ->
- eq_context_gen false
+ eq_context_gen 
  (eq_term_upto_univ Σ Re Re)
  (eq_term_upto_univ Σ Re Re)
  (map (map_decl_anon nl) ctx)
  (map (map_decl_anon nl) ctx') ->
- eq_context_gen false (eq_term_upto_univ Σ Re Re)
+ eq_context_gen (eq_term_upto_univ Σ Re Re)
     (eq_term_upto_univ Σ Re Re) ctx ctx'.
 Proof.
   intros Hctx. unfold ondecl in *.
@@ -1135,7 +1134,7 @@ Lemma nl_eq_context {cf:checker_flags} :
 Proof.
   intros le Σ φ Γ Γ' h.
   unfold eq_context, nlctx.
-  now eapply eq_context_nl.
+  destruct le; now eapply eq_context_nl.
 Qed.
 
 Lemma nl_decompose_app :

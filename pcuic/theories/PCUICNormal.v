@@ -1048,7 +1048,7 @@ Proof.
   - apply red_proj_c; auto.
   - apply red_prod; auto.
   - apply red_abs; auto.
-    eapply context_change_decl_types_red; eauto.
+    eapply context_pres_let_bodies_red; eauto.
     constructor; [|constructor].
     apply All2_fold_refl.
     reflexivity.
@@ -1180,8 +1180,8 @@ Proof.
     cbn.
     intros ? ? (->&->&?&?).
     do 3 (split; auto).
-    eapply context_change_decl_types_red; eauto.
-    apply fix_context_change_decl_types.
+    eapply context_pres_let_bodies_red; eauto.
+    apply fix_context_pres_let_bodies.
     now apply All2_length in a.
   - simpl.
     todo "trans red".
@@ -1193,12 +1193,12 @@ Proof.
   - constructor.
     etransitivity; eauto.
   - constructor; etransitivity; eauto.
-    eapply context_change_decl_types_red; eauto.
+    eapply context_pres_let_bodies_red; eauto.
     constructor; eauto; [|constructor].
     apply All2_fold_refl.
     intros; reflexivity.
   - constructor; etransitivity; eauto.
-    eapply context_change_decl_types_red; eauto.
+    eapply context_pres_let_bodies_red; eauto.
     constructor; eauto; [|constructor].
     apply All2_fold_refl.
     intros; reflexivity.
@@ -1211,8 +1211,8 @@ Proof.
     cbn.
     intros ? ? (->&->&?&?).
     do 3 (split; auto).
-    eapply context_change_decl_types_red; eauto.
-    apply fix_context_change_decl_types.
+    eapply context_pres_let_bodies_red; eauto.
+    apply fix_context_pres_let_bodies.
     now apply All2_length in a.
 Qed.
 

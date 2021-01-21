@@ -90,6 +90,18 @@ Include PCUICConversion.
 Notation conv_context Σ Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
 Notation cumul_context Σ Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
 
+Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls Σ Γ Γ').
+Proof.
+  intros x. destruct x as [na [b|] ty]; constructor; auto.
+  all:constructor; apply eq_term_refl.
+Qed.
+
+Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls Σ Γ Γ').
+Proof.
+  intros x. destruct x as [na [b|] ty]; constructor; auto.
+  all:constructor; apply eq_term_refl || apply leq_term_refl.
+Qed.
+
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 
   leq_term Σ (global_ext_constraints Σ) v v')%type } }.

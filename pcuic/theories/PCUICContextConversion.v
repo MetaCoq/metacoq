@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICTyping PCUICWeakening
+     PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCases
      PCUICCumulativity PCUICReduction
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICConfluence
@@ -37,6 +37,46 @@ Proof. intros; subst; now apply (weakening_cumul _ _ []). Qed.
 
 Hint Constructors red1 : pcuic.
 Hint Resolve refl_red : pcuic.
+
+Ltac tc := try typeclasses eauto.
+
+(** We need confluence to show transitivity of conv and cumul. *)
+
+Instance conv_trans {cf:checker_flags} (Σ : global_env_ext) {Γ} :
+  wf Σ -> Transitive (conv Σ Γ).
+Proof.
+  intros wfΣ t u v X0 X1.
+  eapply conv_alt_red in X0 as [t' [u' [[tt' uu'] eq]]].
+  eapply conv_alt_red in X1 as [u'' [v' [[uu'' vv'] eq']]].
+  eapply conv_alt_red.
+  destruct (red_confluence wfΣ uu' uu'') as [u'nf [ul ur]].
+  eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; tc.
+  eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; tc.
+  exists tnf, unf.
+  intuition auto.
+  - now transitivity t'.
+  - now transitivity v'.
+  - now transitivity u'nf.
+Qed.
+
+Instance cumul_trans {cf:checker_flags} (Σ : global_env_ext) Γ :
+  wf Σ -> Transitive (cumul Σ Γ).
+Proof.
+  intros wfΣ t u v X X0.
+  eapply cumul_alt in X as [v' [v'' [[redl redr] eq]]].
+  eapply cumul_alt in X0 as [w [w' [[redl' redr'] eq']]].
+  destruct (red_confluence wfΣ redr redl') as [nf [nfl nfr]].
+  eapply cumul_alt.
+  eapply red_eq_term_upto_univ_r in eq. all:tc;eauto with pcuic.
+  destruct eq as [v'0 [red'0 eq2]].
+  eapply red_eq_term_upto_univ_l in eq';tc;eauto with pcuic.
+  destruct eq' as [v'1 [red'1 eq1]].
+  exists v'0, v'1.
+  split. 1: split.
+  - transitivity v' ; auto.
+  - transitivity w' ; auto.
+  - eapply leq_term_trans with nf; eauto.
+Qed.
 
 Section ContextReduction.
   Context {cf : checker_flags}.
@@ -307,8 +347,8 @@ Section ContextConversion.
   Context (Σ : global_env_ext).
   Context {wfΣ : wf Σ}.
 
-  Notation conv_context Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
-  Notation cumul_context Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
+  Notation conv_context := (All2_fold (conv_decls Σ)).
+  Notation cumul_context := (All2_fold (cumul_decls Σ)).
 
   Hint Resolve conv_ctx_refl' cumul_ctx_refl' : pcuic.
 
@@ -795,6 +835,24 @@ Section ContextConversion.
   Hint Resolve conv_cumul_context : pcuic.
 
   #[global]
+  Instance conv_decls_sym Γ Γ' : Symmetric (conv_decls Σ Γ Γ').
+  Proof.
+    intros x y []; constructor; now symmetry.
+  Qed.
+  
+  #[global]
+  Instance conv_decls_trans Γ Γ' : Transitive (conv_decls Σ Γ Γ').
+  Proof.
+    intros x y z [] h; depelim h; constructor; etransitivity; eauto.
+  Qed.
+
+  #[global]
+  Instance cumul_decls_trans Γ Γ' : Transitive (cumul_decls Σ Γ Γ').
+  Proof.
+    intros x y z [] h; depelim h; constructor; etransitivity; eauto.
+  Qed.
+  
+  #[global]
   Instance conv_context_sym : Symmetric (fun Γ Γ' => conv_context Γ Γ').
   Proof.
     intros Γ Γ'.
@@ -835,6 +893,46 @@ Section ContextConversion.
     eapply cumul_red_ctx_inv in r; eauto.
     eapply cumul_red_ctx in l; eauto.
     eapply cumul_leq_context_upto_inv; eauto.
+  Qed.
+  
+  #[global]
+  Instance conv_context_trans : Transitive (fun Γ Γ' => conv_context Γ Γ').
+  Proof.
+    eapply All2_fold_trans.
+    intros.
+    depelim X2; depelim X3; try constructor; auto.
+    * etransitivity; eauto.
+    * etransitivity.
+      + eapply conv_trans; eauto.
+      + eapply conv_conv_ctx => //.
+        - apply c0.
+        - apply conv_context_sym => //.
+    * etransitivity; eauto.
+    * eapply conv_trans; eauto.
+      eapply conv_conv_ctx => //.
+      + apply c1.
+      + apply conv_context_sym => //.
+    * etransitivity; eauto.
+      apply conv_context_sym in X; auto.
+      eapply conv_conv_ctx; eauto.
+  Qed.
+    
+  #[global]
+  Instance cumul_context_trans : Transitive cumul_context.
+  Proof.
+    eapply All2_fold_trans.
+    intros.
+    depelim X2; depelim X3; try constructor; auto.
+    * etransitivity; eauto.
+    * etransitivity; eauto.
+      eapply cumul_cumul_ctx; eauto.
+    * etransitivity; eauto.
+    * eapply conv_trans; eauto.
+      eapply conv_cumul_ctx => //.
+      + apply c1.
+      + assumption.
+    * etransitivity; eauto.
+      eapply cumul_cumul_ctx; eauto.
   Qed.
 
 End ContextConversion.
@@ -931,6 +1029,78 @@ Axiom cofix_guard_context_cumulativity : forall {cf:checker_flags} Σ Γ Γ' mfi
   cofix_guard Σ Γ mfix ->
   cofix_guard Σ Γ' mfix.
 
+(* Definition on_decl (P : context -> term -> term -> Type)
+             (Γ : context) (t : term) (t' : option term) :=
+    match t' with
+    | Some (b, b') => (P Γ b b' * P Γ Γ' t t')%type
+    | None => P Γ Γ' t t'
+    end. *)
+Definition on_local_decl (P : context -> term -> option term -> Type) (Γ : context) (d : context_decl) :=
+  match decl_body d with
+  | Some b => P Γ b (Some (decl_type d)) * P Γ (decl_type d) None
+  | None => P Γ (decl_type d) None
+  end.
+
+Lemma nth_error_All_local_env {P Γ n} (isdecl : n < #|Γ|) :
+  All_local_env P Γ ->
+  on_some (on_local_decl P (skipn (S n) Γ)) (nth_error Γ n).
+Proof.
+  induction 1 in n, isdecl |- *. red; simpl.
+  - destruct n; simpl; inv isdecl.
+  - destruct n. red; simpl. red. simpl. apply t0.
+    simpl. apply IHX. simpl in isdecl. lia.
+  - destruct n; simpl in *.
+    * rewrite skipn_S skipn_0. red; cbn.
+      split; auto.
+    * rewrite !skipn_S. apply IHX. lia.
+Qed.
+
+Lemma context_cumulativity_wf_app {cf:checker_flags} Σ Γ Γ' Δ : 
+  cumul_context Σ Γ' Γ ->
+  wf_local Σ Γ' ->
+    All_local_env
+       (lift_typing
+          (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
+           forall Γ' : context,
+           cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ)
+       (Γ,,, Δ) ->
+  wf_local Σ (Γ' ,,, Δ).
+Proof.
+  intros.
+  eapply wf_local_app => //.
+  eapply All_local_env_app_inv in X1 as [].
+  eapply All_local_env_impl_ind; tea => /=.
+  rewrite /lift_typing => Γ'' t' [t wf IH|wf [s IH]]; try exists s; eauto; red.
+  eapply IH. eapply All2_fold_app => //.
+  eapply All2_fold_refl. intros. eapply cumul_decls_refl.
+  eapply All_local_env_app; split; auto.
+  eapply IH. 
+  eapply All2_fold_app => //.
+  eapply All2_fold_refl. intros. eapply cumul_decls_refl.
+  eapply All_local_env_app; split; auto.
+Qed.
+ 
+Lemma context_cumulativity_app {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ'} : 
+  cumul_context Σ Γ' Γ ->
+  conv_context Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
+  conv_context Σ (Γ' ,,, Δ) (Γ' ,,, Δ').
+Proof.
+  intros cum conv.
+  pose proof (length_of conv). len in H.
+  eapply All2_fold_app; eauto. lia.
+  reflexivity.
+  eapply All2_fold_app_inv in conv as []. 2:lia.
+  eapply All2_fold_impl_ind; tea.
+  intros. simpl in X1.
+  depelim X1; constructor; auto.
+  eapply conv_cumul_ctx; tea.
+  now eapply cumul_context_app_same.
+  eapply conv_cumul_ctx; tea.
+  now eapply cumul_context_app_same.
+  eapply conv_cumul_ctx; tea.
+  now eapply cumul_context_app_same.
+Qed.
+
 Lemma context_cumulativity_prop {cf:checker_flags} :
   env_prop
     (fun Σ Γ t T =>
@@ -951,16 +1121,14 @@ Proof.
     eapply (All2_fold_nth_r X0) in H as [d' [Hnth [Hrel Hconv]]].
     unshelve eapply nth_error_All_local_env in X; tea. 2:eapply nth_error_Some_length in heq_nth_error; lia.
     rewrite heq_nth_error /= in X.
-    destruct X as [onctx ondecl].
-    destruct lookup_wf_local_decl. red in ondecl.
     destruct decl as [na [b|] ty] => /=.
-    + specialize ondecl as [Hb Hty].
-      simpl in Hty. specialize (Hty _ Hrel).
+    + red in X. cbn in X. destruct X as [Hb Hty].
+      destruct Hty as [s Hty]. specialize (Hty _ Hrel).
       forward Hty by now eapply All_local_env_skipn.
-      eapply type_Cumul with _ o.2.π1.
+      eapply type_Cumul with _ s.
       * econstructor. auto. eauto.
       * rewrite -(firstn_skipn (S n) Γ').
-        change (tSort o.2.π1) with (lift0 (S n) (tSort o.2.π1)).
+        change (tSort s) with (lift0 (S n) (tSort s)).
         eapply weakening_length. auto.
         rewrite firstn_length_le. eapply nth_error_Some_length in Hnth. lia. auto.
         now rewrite /app_context firstn_skipn.
@@ -970,13 +1138,14 @@ Proof.
         eapply weakening_cumul0; auto.
         pose proof (nth_error_Some_length Hnth).
         rewrite firstn_length_le; lia.
-    + specialize (ondecl _ Hrel).
+    + cbn in X. destruct X as [s ondecl].
+      specialize (ondecl _ Hrel).
       depelim Hconv.
       forward ondecl by now eapply All_local_env_skipn.
-      eapply type_Cumul with _ o.π1.
+      eapply type_Cumul with _ s.
       * econstructor. auto. eauto.
       * rewrite -(firstn_skipn (S n) Γ').
-        change (tSort o.π1) with (lift0 (S n) (tSort o.π1)).
+        change (tSort s) with (lift0 (S n) (tSort s)).
         eapply weakening_length. auto.
         rewrite firstn_length_le. eapply nth_error_Some_length in Hnth. lia. auto.
         now rewrite /app_context firstn_skipn.
@@ -992,9 +1161,22 @@ Proof.
     eapply forall_Γ'0; repeat (constructor; pcuic).
   - econstructor; pcuic.
     eapply forall_Γ'1; repeat (constructor; pcuic).
-  - econstructor; pcuic. intuition auto. eapply isdecl. eapply isdecl.
-    eauto. solve_all.
-    destruct b0 as [? [? ?]]; eauto.
+  - econstructor; eauto. eapply context_cumulativity_wf_app; tea.
+    eapply context_cumulativity_app; tea.
+    eapply IHp0. rewrite /predctx.
+    eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+    eapply context_cumulativity_wf_app; tea.
+    eapply All2i_impl; tea => i cdecl br. cbv beta.
+    set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
+    cbn. intros [[hbctx convbctx] [[bbody Hbody] [IH [brctxty' IHbrctxty]]]].
+    intuition eauto; solve_all.
+    eapply context_cumulativity_wf_app; tea.
+    eapply context_cumulativity_app; tea.
+    eapply IH. eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+    eauto using context_cumulativity_app, context_cumulativity_wf_app.
+    eapply IHbrctxty.
+    eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+    eapply context_cumulativity_wf_app; tea.
   - econstructor. eapply fix_guard_context_cumulativity; eauto.
     all:pcuic.
     eapply (All_impl X0).

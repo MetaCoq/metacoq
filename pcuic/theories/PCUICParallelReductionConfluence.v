@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
      PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
      PCUICReflect PCUICInduction PCUICClosed
-     PCUICRename PCUICInst
-     PCUICParallelReduction.
+     PCUICRename PCUICInst PCUICParallelReduction PCUICWeakening.
 
 Require Import ssreflect ssrbool.
 Require Import Morphisms CRelationClasses.
@@ -1797,7 +1797,6 @@ Section Rho.
       eapply shiftn_renaming_eq; len => //.
   Qed.
 
-  Require Import PCUICWeakening.
   Lemma rho_rename Γ Δ r t :
     renaming Γ Δ r ->
     rename r (rho Γ t) = rho Δ (rename r t).
@@ -2876,9 +2875,7 @@ Section Rho.
     H : pred1_subst _ Δ Δ' _ _ |- _ =>
     apply (pred1_subst_pred1_ctx H)
   end : pcuic.
-
-  From Coq Require CMorphisms.
-
+  
   Lemma pred1_subst_ext Γ Δ Δ' σ σ' τ τ' : 
     σ =1 σ' ->
     τ =1 τ' ->

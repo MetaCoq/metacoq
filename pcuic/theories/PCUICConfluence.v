@@ -97,7 +97,6 @@ Proof.
   intros onc HP IHQ HQ. induction onc; simpl; try constructor; eauto.
   now eapply All2_fold_refl.
   now eapply All2_fold_refl.
-  destruct d as [na [b|] ty]; constructor; auto.
 Qed.
 
 Lemma on_one_decl_compare_decl Σ Re Rle Γ x y :
@@ -105,10 +104,11 @@ Lemma on_one_decl_compare_decl Σ Re Rle Γ x y :
   RelationClasses.Reflexive Rle ->
   on_one_decl
     (fun (_ : context) (y0 v' : term) => eq_term_upto_univ Σ Re Rle y0 v') Γ x y ->
-  compare_decl false (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle) x y.
+  compare_decls false (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle) x y.
 Proof.
+  intros heq hle.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; cbn; intuition (subst; auto);
-  reflexivity.
+  constructor; auto; reflexivity.
 Qed.
 
 Lemma OnOne2_disj {A} (P Q : A -> A -> Type) (l l' : list A) :
@@ -161,12 +161,13 @@ Proof.
   all: try solve [
     match goal with
     | r : red1 _ (?Γ ,, ?d) _ _ |- _ =>
-      assert (e' : eq_context_upto Σ Re Rle (Γ,, d) (Δ,, d)) ; [
-        constructor ; eauto ;
+      assert (e' : eq_context_upto Σ Re Rle (Γ,, d) (Δ,, d))
+      ; [
+        constructor ; [ eauto | constructor; eauto ] ;
         eapply eq_term_upto_univ_refl ; eauto
       |
       ]
-    end ;
+    end;
     destruct (IHh _ e') as [? [? ?]] ;
     eexists ; split ; [
       solve [ econstructor ; eauto ]
@@ -180,12 +181,10 @@ Proof.
     { induction i in Γ, Δ, H, e |- *.
       - destruct e.
         + cbn in *. discriminate.
-        + simpl in *. discriminate.
-        + simpl in *. inversion H. subst. clear H.
-          eexists. split ; try constructor; eauto.
+        + simpl in *. depelim c; noconf H.
+          simpl. eexists; split; eauto.
       - destruct e.
         + cbn in *. discriminate.
-        + simpl in *. eapply IHi in H ; eauto.
         + simpl in *. eapply IHi in H ; eauto.
     }
     destruct h as [b' [e1 e2]].
@@ -208,7 +207,7 @@ Proof.
     destruct X as [ocontext'' [red eq]]. eexists; split.
     * eapply case_red_pcontext; tea.
     * econstructor; eauto; try reflexivity.
-      red; intuition; simpl; eauto. red.
+      red; intuition; simpl; eauto.
       eapply OnOne2_local_env_All2_fold; tea => /= //; try reflexivity.
       + intros *. now eapply on_one_decl_compare_decl.
       + eapply All2_same; split; reflexivity.
@@ -263,7 +262,6 @@ Proof.
     + eapply OnOne2_disj. right; tea.
     + econstructor; eauto; try reflexivity.
       eapply OnOne2_All2; tea => /=; intuition eauto; try reflexivity.
-      red.
       2:{ now rewrite b. }
       eapply OnOne2_local_env_All2_fold; tea => /= //; try reflexivity.
       intros *. now eapply on_one_decl_compare_decl.
@@ -386,9 +384,7 @@ Proof.
         assert (
            e' : eq_context_upto Σ Re Rle (Γ ,,, fix_context L) (Δ ,,, fix_context L)
         ).
-        { eapply eq_context_upto_cat ; eauto.
-          eapply eq_context_upto_refl; assumption.
-        }
+        { eapply eq_context_upto_cat ; eauto. reflexivity. }
         eapply p2 in e' as hh. destruct hh as [? [? ?]].
         eexists. constructor.
         + constructor.
@@ -498,9 +494,7 @@ Proof.
         assert (
            e' : eq_context_upto Σ Re Rle (Γ ,,, fix_context L) (Δ ,,, fix_context L)
         ).
-        { eapply eq_context_upto_cat ; eauto.
-          eapply eq_context_upto_refl;assumption.
-        }
+        { eapply eq_context_upto_cat ; eauto. reflexivity. }
         eapply p2 in e' as hh. destruct hh as [? [? ?]].
         eexists. constructor.
         + constructor.
@@ -529,7 +523,8 @@ Lemma eq_context_gen_context_assumptions {le eq leq Γ Δ} :
   eq_context_gen le eq leq Γ Δ ->
   context_assumptions Γ = context_assumptions Δ.
 Proof.
-  induction 1; simpl; auto; lia.  
+  induction 1; simpl; auto;
+  destruct p, le => /= //; try lia.  
 Qed.
 
 Lemma eq_context_extended_subst {Σ le Re Rle Γ Δ k} :
@@ -537,20 +532,25 @@ Lemma eq_context_extended_subst {Σ le Re Rle Γ Δ k} :
   All2 (eq_term_upto_univ Σ Re Re) (extended_subst Γ k) (extended_subst Δ k).
 Proof.
   intros Heq.
-  induction Heq in k |- *; simpl; constructor; auto.
-  constructor.
-  rewrite (eq_context_gen_context_assumptions Heq).
-  len. rewrite (All2_fold_length Heq).
-  eapply eq_term_upto_univ_substs; eauto. tc.
-  eapply eq_term_upto_univ_lift, p.
+  induction Heq in k |- *; simpl.
+  - constructor; auto.
+  - depelim p => /=.
+    * constructor. eauto. constructor; eauto. eauto.
+    * constructor.
+      + rewrite (eq_context_gen_context_assumptions Heq).
+        len. rewrite (All2_fold_length Heq).
+        eapply eq_term_upto_univ_substs; eauto. tc.
+        eapply eq_term_upto_univ_lift, e0.
+      + eapply IHHeq.
 Qed.
 
 Lemma eq_context_gen_eq_context_upto Σ Re Rle Γ Γ' :
   eq_context_gen false (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle) Γ Γ' ->
   eq_context_upto Σ Re Re Γ Γ'.
 Proof.
-  rewrite /eq_context_gen.
-  induction 1; constructor; destruct p; intuition auto.
+  intros.
+  eapply All2_fold_impl_len; tea.
+  intros. depelim X0; constructor; auto.
 Qed.
 
 Lemma red1_eq_context_upto_univ_l Σ Re Rle Γ ctx ctx' ctx'' :
@@ -586,9 +586,9 @@ Proof.
   rename X into e, X0 into X.
   induction X in e, ctx' |- *.
   - red in p. simpl in p.
-    depelim e. destruct c.
+    depelim e. depelim c.
     destruct p as [-> p].
-    eapply p in e1 as hh ; eauto.
+    eapply p in y as hh ; eauto.
     destruct hh as [? [? ?]].
     eapply red1_eq_context_upto_l in r; cycle -1.
     { eapply eq_context_upto_cat.
@@ -598,12 +598,12 @@ Proof.
     destruct r as [v' [redv' eqv']].
     eexists; split.
     + constructor; tea. red. cbn. split; tea. reflexivity.
-    + constructor. all: eauto. red; cbn.
-    split; eauto. now transitivity x.
+    + constructor. all: eauto. constructor; auto.
+      now transitivity x.
   - depelim e.
-    destruct c as [? [? ?]]. 
+    depelim c.
     destruct p as [-> [[p ->]|[p ->]]].
-    { eapply p in e2 as hh ; eauto.
+    { eapply p in y as hh ; eauto.
       destruct hh as [? [? ?]].
       eapply red1_eq_context_upto_l in r; cycle -1.
       { eapply eq_context_upto_cat.
@@ -614,8 +614,8 @@ Proof.
       eexists; split.
       + constructor; tea. red. cbn. split; tea. reflexivity.
         left. split; tea. reflexivity.
-      + constructor. all: eauto. red; cbn.
-        repeat split; eauto. now transitivity x. }
+      + constructor. all: eauto. constructor; auto.
+        now transitivity x. }
     { eapply p in e1 as hh ; eauto.
       destruct hh as [? [? ?]].
       eapply red1_eq_context_upto_l in r; cycle -1.
@@ -627,17 +627,13 @@ Proof.
       eexists; split.
       + constructor; tea. red. cbn. split; tea. reflexivity.
         right. split; tea. reflexivity.
-      + constructor. all: eauto. red; cbn.
-        repeat split; eauto. now transitivity x. }
-  - red in e. depelim e.
+      + constructor. all: eauto. constructor; auto.
+        now transitivity x. }
+  - depelim e.
     destruct (IHX _ e) as [? [? ?]].
     eexists. split.
-    + now eapply localenv2_cons_tl.
+    + now eapply onone2_localenv_cons_tl.
     + constructor. all: eauto.
-    + specialize (IHX _ e) as [pctx' [red eq]].
-    eexists; split.
-    { now eapply localenv2_cons_tl. }
-    constructor; auto.
 Qed.
 
 Lemma red1_eq_term_upto_univ_l Σ Re Rle napp Γ u v u' :
@@ -674,11 +670,11 @@ Proof.
       e :  eq_term_upto_univ_napp _ _ _ _ ?A ?B
       |- _ =>
       let hh := fresh "hh" in
-      eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
-        eapply eq_context_vass (* with (nb := na) *) ; [
-          eassumption
-        | eassumption
-        | eapply eq_context_upto_refl ; eauto
+      eapply red1_eq_context_upto_l in r as hh ; revgoals;
+      [
+        constructor (* with (nb := na) *) ; [
+          eapply (eq_context_upto_refl _ Re Re); eauto
+        | constructor; tea
         ]
       | reflexivity
       | assumption
@@ -829,11 +825,9 @@ Proof.
       |- _ =>
       let hh := fresh "hh" in
       eapply red1_eq_context_upto_l in r as hh ; revgoals ; [
-        eapply eq_context_vdef (* with (nb := na) *) ; [
-          eassumption
-        | eapply e2
-        | eapply e1
-        | eapply eq_context_upto_refl ; eauto
+        constructor (* with (nb := na) *) ; [
+          eapply (eq_context_upto_refl _ Re Re) ; eauto
+        | econstructor; tea
         ]
       | reflexivity
       | assumption
@@ -885,8 +879,8 @@ Proof.
       red; intuition eauto.
   - depelim e.
     destruct e as [? [? [? ?]]].
-    eapply IHh in e1 => //.
-    destruct e1 as [v' [red eq]].
+    eapply IHh in e => //.
+    destruct e as [v' [red eq]].
     eapply red1_eq_context_upto_l in red.
     7:{ eapply eq_context_upto_cat. 2:{ eapply eq_context_gen_eq_context_upto; tea. }
         reflexivity. }
@@ -1332,7 +1326,7 @@ Lemma eq_context_upto_flip {Σ Re Rle Γ Δ}
   eq_context_upto Σ Re Rle Γ Δ ->
   eq_context_upto Σ Re (flip Rle) Δ Γ.
 Proof.
-  induction 1; constructor; auto.
+  induction 1; constructor; auto; depelim p; constructor; auto.
   - now symmetry.
   - now eapply eq_term_upto_univ_napp_flip; try typeclasses eauto.
   - now symmetry.
@@ -1444,22 +1438,19 @@ Lemma local_env_telescope P Γ Γ' Δ Δ' :
   All2_fold_over P Γ Γ' (List.rev Δ) (List.rev Δ').
 Proof.
   induction 1. simpl. constructor.
-  - simpl. eapply All2_fold_over_app. constructor. constructor. reflexivity.
-    simpl. apply p.
+  - depelim p. simpl. eapply All2_fold_over_app. repeat constructor => //.
+    simpl. 
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
-    constructor; auto. red in p0. red. red. red. red in p0.
-    rewrite !app_context_assoc. cbn. apply p0.
-    constructor; auto. destruct p0. unfold on_decls_over in *. simpl.
-    rewrite !app_context_assoc. cbn. intuition.
+    constructor; auto. depelim p0; constructor; auto;
+    unfold on_decls_over in *;
+    now rewrite !app_context_assoc.
   - simpl. eapply All2_fold_over_app. constructor. 2:auto. constructor.
-    simpl. unfold on_decls_over, on_decls in *. destruct p. split; intuition auto.
+    simpl. unfold on_decls_over in *. depelim p.
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
-    constructor; auto. red in p0. red. red. red. red in p0.
-    rewrite !app_context_assoc. cbn. apply p0.
-    constructor; auto. destruct p0. unfold on_decls_over in *. simpl.
-    rewrite !app_context_assoc. cbn. intuition.
+    constructor; auto. depelim p1; constructor; auto; unfold on_decls_over in *;
+    now rewrite !app_context_assoc.
 Qed.
 
 Lemma All_All2_telescopei_gen P (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
@@ -1477,13 +1468,13 @@ Proof.
   intros weakP.
   induction 1 in Δ, Δ' |- *; cbn. constructor.
   intros. destruct r. rewrite e. constructor.
-  red.
+  constructor.
   rewrite {2}(All2_fold_length X0).
   now eapply weakP.
   specialize (IHX (vass (dname y) (lift0 #|Δ| (dtype x)) :: Δ)
                   (vass (dname y) (lift0 #|Δ'| (dtype y)) :: Δ')).
   forward IHX.
-  constructor; auto. now eapply weakP. simpl in IHX.
+  constructor; auto. constructor. now eapply weakP. simpl in IHX.
   rewrite {2}(All2_fold_length X0).
   apply IHX.
 Qed.
@@ -1564,7 +1555,7 @@ Section RedPred.
       apply nth_error_assumption_context in H0 => //; rewrite H0 //.
       case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
       rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_fold_app in X0 as [_ X0] => //.
+      eapply All2_fold_app_inv in X0 as [_ X0] => //.
       pose proof (All2_fold_length X0).
       rewrite nth_error_app_ge. lia. now rewrite -H1 H0 /= e. }
     forward X1.
@@ -1601,7 +1592,7 @@ Section RedPred.
       apply nth_error_assumption_context in H0 => //; rewrite H0 //.
       case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
       rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_fold_app in X0 as [_ X0] => //.
+      eapply All2_fold_app_inv in X0 as [_ X0] => //.
       pose proof (All2_fold_length X0).
       rewrite nth_error_app_ge. lia. now rewrite lenΔ H0 /= e. }
     forward X1.
@@ -1613,9 +1604,10 @@ Section RedPred.
   Ltac noconf H := repeat (DepElim.noconf H; simpl NoConfusion in * ).
 
   Hint Extern 1 (eq_binder_annot _ _) => reflexivity : pcuic.
-  Hint Extern 2 (All2_fold _ _ _) => apply PCUICEnvTyping.localenv2_cons_abs : pcuic.
-  Hint Extern 2 (All2_fold _ _ _) => apply PCUICEnvTyping.localenv2_cons_def : pcuic.
   Hint Resolve pred1_refl_gen : pcuic.
+  Hint Extern 4 (All_decls _ _ _) => constructor : pcuic.
+  Hint Extern 4 (All2_fold _ _ _) => constructor : pcuic.
+  Hint Unfold on_decls_over : pcuic.
 
   Lemma OnOne2_local_env_pred1_ctx_over Γ Δ Δ' :
      OnOne2_local_env (on_one_decl (fun Δ M N => pred1 Σ (Γ ,,, Δ) (Γ ,,, Δ) M N)) Δ Δ' ->
@@ -1624,19 +1616,21 @@ Section RedPred.
     induction 1.
     1-2:constructor; destruct p; subst; intuition eauto.
     - eapply pred1_pred1_ctx in p. pcuic.
+    - now constructor.
     - eapply pred1_pred1_ctx in a0. pcuic.
     - eapply pred1_pred1_ctx in a. pcuic.
-    - unfold on_decls, on_decls_over; simpl; subst; intuition auto.
+    - constructor; unfold on_decls_over; simpl; subst; intuition auto.
       eapply pred1_refl.
-    - unfold on_decls, on_decls_over; simpl; subst; intuition auto.
+    - constructor; unfold on_decls_over; simpl; subst; intuition auto.
       eapply pred1_refl.
-    - eapply (All2_fold_app_inv _ _ [d] _ [_]); pcuic.
-      destruct d as [na [b|] ty]; constructor; pcuic.
-      unfold on_decls, on_decls_over; simpl; subst; intuition pcuic.
-      eapply pred1_refl_gen. eapply All2_fold_app_inv; pcuic.
-      eapply pred1_refl_gen. eapply All2_fold_app_inv; pcuic.
-      unfold on_decls, on_decls_over; simpl; subst; intuition pcuic.
-      eapply pred1_refl_gen. eapply All2_fold_app_inv; pcuic.
+    - eapply (All2_fold_app _ _ [d] _ [_]); pcuic.
+      destruct d as [na [b|] ty]; constructor; pcuic. 
+      constructor; unfold on_decls_over; simpl; subst; auto; intuition pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
+      unfold on_decls_over; simpl; subst; intuition pcuic.
+      constructor.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
   Qed.
 
 
@@ -1649,7 +1643,7 @@ Section RedPred.
       red. simpl. now eapply OnOne2_local_env_pred1_ctx_over in X.
       eapply pred1_refl_gen.
       eapply OnOne2_local_env_pred1_ctx_over in X.
-      eapply All2_fold_app_inv; pcuic.
+      eapply All2_fold_app; pcuic.
     - constructor; pcuic.
       eapply OnOne2_All2...
       simpl. intros x y [[[? ?] ?]|?]; unfold on_Trel; intuition pcuic; rewrite -?e; auto.
@@ -1657,7 +1651,7 @@ Section RedPred.
       now eapply OnOne2_local_env_pred1_ctx_over in a.
       eapply OnOne2_local_env_pred1_ctx_over in a. rewrite b; pcuic.
       eapply pred1_refl_gen; eauto.
-      now apply All2_fold_app_inv; pcuic.
+      now apply All2_fold_app; pcuic.
     - constructor; pcuic.
       eapply OnOne2_All2...
     - constructor; pcuic.
@@ -1670,7 +1664,7 @@ Section RedPred.
         unfold on_Trel; simpl; intros; intuition auto.
         noconf b; noconf H. rewrite H0. pcuic.
         apply pred1_refl_gen.
-        eapply All2_fold_app_inv; pcuic.
+        eapply All2_fold_app; pcuic.
         apply All2_All2_fold_fix_context.
         now intros; eapply weakening_pred1_pred1.
         eapply OnOne2_All2...
@@ -1681,7 +1675,7 @@ Section RedPred.
 
         pcuic.
         apply pred1_refl_gen; pcuic.
-        eapply All2_fold_app_inv; pcuic.
+        eapply All2_fold_app; pcuic.
         apply All2_All2_fold_fix_context.
         now intros; eapply weakening_pred1_pred1.
         eapply OnOne2_All2...
@@ -1798,14 +1792,9 @@ Section PredRed.
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
   Proof.
     revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _
-      (fun Γ Γ' => All2_fold (on_decls (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type);
+      (fun Γ Γ' => All2_fold (on_decls (fun Γ Γ' M N => red Σ Γ M N)) Γ Γ')%type);
       (* (fun Γ Γ' Δ Δ' => All2_fold_over (on_decls (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type); *)
       intros; try reflexivity; pcuic.
-    eapply All2_fold_impl; eauto.
-    - (* Contexts *)
-      unfold on_decls => Δ Δ' t T U Hlen.
-      destruct t; auto.
-      destruct p; auto. intuition.
       
     - (* Beta *)
       apply red_trans with (tApp (tLambda na t0 b1) a0).
@@ -1827,7 +1816,6 @@ Section PredRed.
       eapply red_trans with (lift0 (S i) body').
       eapply red1_red; constructor; auto.
       eapply nth_error_pred1_ctx_all_defs in H; eauto.
-      specialize (Hpred H).
       rewrite -(firstn_skipn (S i) Γ).
       eapply weakening_red_0 => //.
       rewrite firstn_length_le //.
@@ -1843,14 +1831,10 @@ Section PredRed.
         unfold on_Trel in *; intuition auto.
         eapply red_ctx_rel_red_context_rel; eauto.
         red. 
-        red.
-      } 
-      
-      eapply All2_
-      
-      
-      solve_all. red in X2; solve_all.
-      eapply red1_red. constructor.
+        eapply PCUICEnvironment.All2_fold_impl; tea.
+        intros. depelim X2; constructor; auto. }
+      reflexivity. 
+      eapply red1_red. constructor => //.
 
     - move: H H0.
       move => unf isc.
@@ -1860,7 +1844,10 @@ Section PredRed.
       eapply red_step. econstructor; eauto. 2:eauto.
       eapply (is_constructor_pred1 Σ). eapply (All2_impl X4); intuition eauto. auto.
 
-    - transitivity (tCase ip p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
+    - transitivity (tCase ci p1 (mkApps (tCoFix mfix1 idx) args1) brs1).
+      transitivity (tCase ci p1 (mkApps (tCoFix mfix0 idx) args0) brs0).
+      eapply red_case_p.
+
       eapply red_case; eauto.
       eapply red_mkApps; [|solve_all].
       eapply red_cofix_congr. red in X3; solve_all. eapply a0.
@@ -1919,12 +1906,12 @@ Section PredRed.
     red. red in p.
     unfold on_decls_over in *.
     rewrite - !app_context_assoc; eapply p; rewrite !app_context_assoc; try reflexivity.
-    eapply All2_fold_app_inv; auto.
+    eapply All2_fold_app; auto.
     destruct p; repeat red in o, o0 |- *; intuition auto; red.
     rewrite - !app_context_assoc; eapply o; rewrite !app_context_assoc; try reflexivity.
-    eapply All2_fold_app_inv; auto.
+    eapply All2_fold_app; auto.
     rewrite - !app_context_assoc; eapply o0; rewrite !app_context_assoc; try reflexivity.
-    eapply All2_fold_app_inv; auto.
+    eapply All2_fold_app; auto.
   Qed.
 
   Lemma pred1_red_r_gen Γ Γ' Δ Δ' : forall M N, pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') M N -> 
@@ -1972,7 +1959,7 @@ Section PredRed.
       intuition auto. eapply b1;  eauto.
       rewrite - !app_context_assoc; eapply b; 
         rewrite !app_context_assoc; try reflexivity.
-        apply All2_fold_app_inv; eauto.
+        apply All2_fold_app; eauto.
         eapply pred1_red_r_gen_fix_context; eauto.
       solve_all.
       
@@ -1983,7 +1970,7 @@ Section PredRed.
       intuition auto. eapply b2; eauto.
       rewrite - !app_context_assoc; eapply b0; 
         rewrite !app_context_assoc; try reflexivity.
-        apply All2_fold_app_inv; eauto.
+        apply All2_fold_app; eauto.
         eapply pred1_red_r_gen_fix_context; eauto.
       solve_all.
       solve_all.
@@ -1996,7 +1983,7 @@ Section PredRed.
       intuition auto. eapply b1; eauto.
       rewrite - !app_context_assoc; eapply b; 
         rewrite !app_context_assoc; try reflexivity.
-        apply All2_fold_app_inv; eauto.
+        apply All2_fold_app; eauto.
         eapply pred1_red_r_gen_fix_context; eauto.
       solve_all.
 
@@ -2022,7 +2009,7 @@ Section PredRed.
       eapply a; eauto.
       rewrite - !app_context_assoc; eapply b; 
       rewrite !app_context_assoc; try reflexivity.
-      apply All2_fold_app_inv; eauto.
+      apply All2_fold_app; eauto.
       eapply pred1_red_r_gen_fix_context; eauto.
 
     - econstructor; eauto.
@@ -2031,7 +2018,7 @@ Section PredRed.
       eapply a; eauto.
       rewrite - !app_context_assoc; eapply b; 
       rewrite !app_context_assoc; try reflexivity.
-      apply All2_fold_app_inv; eauto.
+      apply All2_fold_app; eauto.
       eapply pred1_red_r_gen_fix_context; eauto.
 
     - econstructor; eauto.

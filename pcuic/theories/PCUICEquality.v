@@ -1934,17 +1934,18 @@ Proof.
     + constructor ; eauto. constructor; auto.
     + constructor ; eauto. constructor; auto.
 Qed.
-(*
-Instance eq_context_upto_refl Σ Re Rle :
+
+Lemma eq_context_upto_refl Σ Re Rle :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
-  Reflexive (eq_context_upto Σ Re Rle) := _.
+  Reflexive (eq_context_upto Σ Re Rle).
+Proof. exact _. Qed.
 
-Instance eq_context_upto_sym Σ Re Rle :
+Lemma eq_context_upto_sym Σ Re Rle :
   RelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Rle ->
-  Symmetric (eq_context_upto Σ Re Rle) := _.
-*)
+  Symmetric (eq_context_upto Σ Re Rle).
+Proof. exact _. Qed.
 
 Lemma eq_context_upto_cat Σ Re Rle Γ Δ Γ' Δ' :
   eq_context_upto Σ Re Rle Γ Γ' ->

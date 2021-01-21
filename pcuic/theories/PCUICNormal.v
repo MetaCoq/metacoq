@@ -1050,7 +1050,7 @@ Proof.
   - apply red_abs; auto.
     eapply context_change_decl_types_red; eauto.
     constructor; [|constructor].
-    apply context_relation_refl.
+    apply All2_fold_refl.
     reflexivity.
   - apply red_cofix_congr.
     eapply All2_impl; eauto.
@@ -1195,12 +1195,12 @@ Proof.
   - constructor; etransitivity; eauto.
     eapply context_change_decl_types_red; eauto.
     constructor; eauto; [|constructor].
-    apply context_relation_refl.
+    apply All2_fold_refl.
     intros; reflexivity.
   - constructor; etransitivity; eauto.
     eapply context_change_decl_types_red; eauto.
     constructor; eauto; [|constructor].
-    apply context_relation_refl.
+    apply All2_fold_refl.
     intros; reflexivity.
   - constructor.
     eapply All2_trans; eauto.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
+     PCUICLiftSubst PCUICUnivSubst PCUICInduction (*PCUICEquality *)
      PCUICContextRelation PCUICCases.
 
 Require Import ssreflect.
@@ -199,10 +199,6 @@ Section OnOne_local_2.
       OnOne2_local_env Γ Γ' ->
       OnOne2_local_env (Γ ,, d) (Γ' ,, d).
 End OnOne_local_2.
-
-Class HasLen (A : Type) (x y : nat) := len : A -> x = y.
-
-Notation length_of t := ltac:(let lemma := constr:(PCUICReduction.len t) in exact lemma) (only parsing).
 
 Instance OnOne2_local_env_length {P ctx ctx'} : 
   HasLen (OnOne2_local_env P ctx ctx') #|ctx| #|ctx'|.
@@ -660,9 +656,9 @@ Inductive red_decls Σ (Γ Γ' : context) : forall (x y : context_decl), Type :=
     red_decls Σ Γ Γ' (vdef na b T) (vdef na b' T').
 Derive Signature NoConfusion for red_decls.
 
-Definition red_context Σ := context_relation (red_decls Σ).
+Definition red_context Σ := All2_fold (red_decls Σ).
 Definition red_context_rel Σ Γ :=
-  context_relation (fun Δ Δ' => red_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')).
+  All2_fold (fun Δ Δ' => red_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')).
 
 Lemma refl_red Σ Γ t : red Σ Γ t t.
 Proof.

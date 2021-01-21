@@ -154,7 +154,7 @@ Proof.
     * solve_all. eapply All_All2; tea; cbn; intros; rdest; eauto.
       eapply X; eauto. tc.
     * eapply subst_equal_inst_inst => //.
-    * solve_all. eapply context_relation_map.
+    * solve_all. eapply All2_fold_map.
       clear -hu ref hRe subr a0.
       unfold ondecl in a0.
       induction a0; try constructor; auto.
@@ -164,7 +164,7 @@ Proof.
         + eapply a; eauto; tc.
         + eapply a; eauto; tc.
     * eapply X => //.
-  - solve_all. eapply context_relation_map.
+  - solve_all. eapply All2_fold_map.
     clear -hu ref hRe subr a.
     unfold ondecl in a.
     induction a; try constructor; auto.
@@ -910,14 +910,14 @@ Proof.
     repeat split; simpl; eauto; solve_all.
     * eapply precompose_subst_instance.
       eapply R_universe_instance_impl; eauto.
-    * eapply context_relation_map.
-      clear -he hle a1 e.
-      eapply context_relation_impl_onctx; tea; solve_all.
+    * eapply All2_fold_map.
+      clear -he hle a0 a2 e.
+      eapply All2_fold_impl_onctx; tea; solve_all.
       eapply compare_decl_map.
       eapply compare_decl_impl_ondecl; tea; intuition auto.
-  - clear -he hle a e.
-    eapply context_relation_map.
-    eapply context_relation_impl_onctx; tea; solve_all.
+  - clear -he hle a a0.
+    eapply All2_fold_map.
+    eapply All2_fold_impl_onctx; tea; solve_all.
     eapply compare_decl_map.
     eapply compare_decl_impl_ondecl; tea; intuition auto.
 Qed.
@@ -1617,7 +1617,7 @@ Lemma conv_ctx_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs :
   conv_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
 Proof.
   intros valid.
-  intros; eapply context_relation_map, context_relation_impl; tea => ? ? d d'.
+  intros; eapply All2_fold_map, All2_fold_impl; tea => ? ? d d'.
   now eapply conv_decls_subst_instance.
 Qed.
 
@@ -1627,7 +1627,7 @@ Lemma cumul_ctx_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs :
   cumul_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
 Proof.
   intros valid.
-  intros; eapply context_relation_map, context_relation_impl; tea => ? ? d d'.
+  intros; eapply All2_fold_map, All2_fold_impl; tea => ? ? d d'.
   now eapply cumul_decls_subst_instance.
 Qed.
 
@@ -1648,13 +1648,13 @@ Qed.
 
 Global Instance eq_decl_subst_instance le Σ : SubstUnivPreserved (eq_decl le Σ).
 Proof.
-  intros φ1 φ2 u HH [? [?|] ?] [? [?|] ?] [] => /=; destruct le; intuition auto;
+  intros φ1 φ2 u HH ? ? [] => /=; destruct le; constructor; auto;
    (eapply eq_term_subst_instance || eapply leq_term_subst_instance); tea.
 Qed.
 
 Global Instance eq_context_subst_instance le Σ : SubstUnivPreserved (eq_context le Σ).
 Proof.
-  intros φ φ' u HH Γ Γ' X. eapply context_relation_map, context_relation_impl; tea.
+  intros φ φ' u HH Γ Γ' X. eapply All2_fold_map, All2_fold_impl; tea.
   intros. eapply eq_decl_subst_instance; eassumption.
 Qed.
 
@@ -2604,7 +2604,7 @@ Section SubstIdentity.
     subst_instance_univ u (ind_sort idecl) = ind_sort idecl.
   Proof.
     intros wfΣ decli u.
-    pose proof (on_declared_inductive decli) as [onmind oib].
+    pose proof (on_declsared_inductive decli) as [onmind oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona.
     red in ona. destruct ona.
@@ -2626,7 +2626,7 @@ Section SubstIdentity.
     subst_instance u (ind_type idecl) = ind_type idecl.
   Proof.
     intros wfΣ decli u.
-    pose proof (on_declared_inductive decli) as [_ oib].
+    pose proof (on_declsared_inductive decli) as [_ oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona |- *.
     red in ona. destruct ona.

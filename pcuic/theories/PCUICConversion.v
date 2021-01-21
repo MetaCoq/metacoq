@@ -71,7 +71,7 @@ Instance conv_context_trans {cf:checker_flags} Σ :
   wf Σ.1 -> Transitive (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
   intros wfΣ.
-  eapply context_relation_trans.
+  eapply All2_fold_trans.
   intros.
   depelim X2; depelim X3; try constructor; auto.
   * etransitivity; eauto.
@@ -94,7 +94,7 @@ Instance cumul_context_trans {cf:checker_flags} Σ :
   wf Σ.1 -> Transitive (fun Γ Γ' => cumul_context Σ Γ Γ').
 Proof.
   intros wfΣ.
-  eapply context_relation_trans.
+  eapply All2_fold_trans.
   intros.
   depelim X2; depelim X3; try constructor; auto.
   * etransitivity; eauto.
@@ -481,7 +481,7 @@ Proof.
         now eapply red_conv, red1_red.
       * eapply cumul_red_ctx_inv. 1: auto. 1: eauto.
         constructor.
-        -- eapply All2_local_env_red_refl.
+        -- eapply All2_fold_red_refl.
         -- reflexivity.
         -- red. now eapply red1_red.
     + destruct (IHcumul na na' _ _ _ _ wfΣ eq_refl) as [? [? ?]].
@@ -605,7 +605,7 @@ Section Inversions.
       + transitivity x0; auto.
         eapply PCUICConfluence.red_red_ctx. 1: auto. 1: eauto.
         constructor.
-        * eapply All2_local_env_red_refl.
+        * eapply All2_fold_red_refl.
         * reflexivity. 
         * red. auto.
   Qed.
@@ -814,7 +814,7 @@ Section Inversions.
       - left. do 3 eexists. repeat split; eauto with pcuic.
         * now transitivity r.
         * eapply PCUICConfluence.red_red_ctx; eauto.
-          simpl. constructor; auto using All2_local_env_red_refl.
+          simpl. constructor; auto using All2_fold_red_refl.
           simpl. split; auto.
       - right; auto. transitivity (b {0 := r}); auto.
         eapply (red_red _ _ [vass na ty] []); eauto.
@@ -822,7 +822,7 @@ Section Inversions.
       - left. do 3 eexists. repeat split; eauto with pcuic.
         * now transitivity r.
         * eapply PCUICConfluence.red_red_ctx; eauto.
-          simpl. constructor; auto using All2_local_env_red_refl.
+          simpl. constructor; auto using All2_fold_red_refl.
           simpl. split; auto.
       - right; auto.
       - left. do 3 eexists. repeat split; eauto with pcuic.
@@ -998,7 +998,7 @@ Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ c
   assumption_context ctx ->
   assumption_context ctx' ->
   Σ ;;; Γ |- it_mkProd_or_LetIn ctx (tSort s) <= it_mkProd_or_LetIn ctx' (tSort s') ->
-  context_relation (fun ctx ctx' => conv_decls Σ (Γ ,,, ctx) (Γ ,,, ctx')) ctx ctx' *
+  All2_fold (fun ctx ctx' => conv_decls Σ (Γ ,,, ctx) (Γ ,,, ctx')) ctx ctx' *
    leq_term Σ.1 Σ (tSort s) (tSort s').
 Proof.
   intros wfΣ.
@@ -1036,10 +1036,10 @@ Proof.
         specialize (IHctx (Γ ,, vass na' ty') l0 s s' H H0 Hcodom).
         clear IHctx'.
         intuition auto.
-        eapply context_relation_app_inv.
-        ** eapply (context_relation_length a).
+        eapply All2_fold_app_inv.
+        ** eapply (All2_fold_length a).
         ** constructor; [constructor|constructor; auto].
-        ** unshelve eapply (context_relation_impl a).
+        ** unshelve eapply (All2_fold_impl a).
            simpl; intros Γ0 Γ' d d'.
            rewrite !app_context_assoc.
            intros X; destruct X.
@@ -2256,10 +2256,10 @@ Section Inversions.
       conv_cum leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2).
   Proof.
     induction Δ1 in Δ2, t1, t2 |- *; intros X Y.
-    - apply context_relation_length in X.
+    - apply All2_fold_length in X.
       destruct Δ2; cbn in *; [trivial|].
       rewrite app_length in X; lia.
-    - apply context_relation_length in X as X'.
+    - apply All2_fold_length in X as X'.
       destruct Δ2 as [|c Δ2]; simpl in *; [rewrite app_length in X'; lia|].
       dependent destruction X.
       + eapply IHΔ1; tas; cbn.
@@ -2274,10 +2274,10 @@ Section Inversions.
       Σ ;;; Γ |- it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2.
   Proof.
     induction Δ1 in Δ2, t1, t2 |- *; intros X Y.
-    - apply context_relation_length in X.
+    - apply All2_fold_length in X.
       destruct Δ2; cbn in *; [trivial|].
       exfalso. rewrite app_length in X; lia.
-    - apply context_relation_length in X as X'.
+    - apply All2_fold_length in X as X'.
       destruct Δ2 as [|c Δ2]; simpl in *; [exfalso; rewrite app_length in X'; lia|].
       dependent destruction X.
       + eapply IHΔ1; tas; cbn.
@@ -2306,7 +2306,7 @@ Section Inversions.
         1: now eapply red_step with M'.
         eapply PCUICConfluence.red_red_ctx; eauto.
         constructor; auto.
-        * eapply All2_local_env_red_refl.
+        * eapply All2_fold_red_refl.
         * red. auto.
       + eexists _, _; intuition eauto.
         now eapply red_step with M'.
@@ -2486,17 +2486,17 @@ Proof.
     eapply conv_subst_conv => //; eauto using subslet_untyped_subslet.
 Qed.
 
-Lemma context_relation_subst {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ Δ' s s' :
+Lemma All2_fold_subst {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ Δ' s s' :
   wf Σ.1 ->
   wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
   subslet Σ Γ s Γ0 ->
   subslet Σ Γ s' Γ1 ->
   All2 (conv Σ Γ) s s' ->
-  context_relation
+  All2_fold
   (fun Γ0 Γ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
   (Γ0 ,,, Δ)
   (Γ1 ,,, Δ') ->
-  context_relation
+  All2_fold
   (fun Γ0 Γ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
   (subst_context s 0 Δ)
   (subst_context s' 0 Δ').
@@ -2505,7 +2505,7 @@ Proof.
   assert (hlen: #|Γ0| = #|Γ1|).
   { rewrite -(subslet_length subss) -(subslet_length subss').
     now apply All2_length in eqsub. }
-  assert(clen := context_relation_length ctxr).
+  assert(clen := All2_fold_length ctxr).
   autorewrite with len in clen. rewrite hlen in clen.
   assert(#|Δ| = #|Δ'|) by lia.
   clear clen.
@@ -2564,11 +2564,11 @@ Proof.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
 Qed.
 
-Lemma context_relation_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
+Lemma All2_fold_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   wf Σ.1 ->
   wf_local Σ Γ -> wf_local Σ (subst_instance u Δ) ->
   R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
-  context_relation
+  All2_fold
   (fun Γ0 Γ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
   (subst_instance u Δ)
   (subst_instance u' Δ).
@@ -2603,7 +2603,7 @@ Proof.
 Qed.
 
 Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-  All2_local_env (on_decl (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
+  All2_fold (on_decls (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
 
 Lemma cumul_ctx_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   wf Σ.1 ->
@@ -2627,20 +2627,20 @@ Proof.
       apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
 Qed.
 
-Lemma context_relation_over_same {cf:checker_flags} Σ Γ Δ Δ' :
-  context_relation (fun Γ0 Γ'  => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ' ->
-  context_relation (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ').
+Lemma All2_fold_over_same {cf:checker_flags} Σ Γ Δ Δ' :
+  All2_fold (fun Γ0 Γ'  => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ' ->
+  All2_fold (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ').
 Proof.
   induction 1; simpl; try constructor; pcuic.
 Qed.
 
-Lemma context_relation_over_same_app {cf:checker_flags} Σ Γ Δ Δ' :
-  context_relation (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ') ->
-  context_relation (fun Γ0 Γ' => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ'.
+Lemma All2_fold_over_same_app {cf:checker_flags} Σ Γ Δ Δ' :
+  All2_fold (conv_decls Σ) (Γ ,,, Δ) (Γ ,,, Δ') ->
+  All2_fold (fun Γ0 Γ' => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ'.
 Proof.
-  move=> H. pose (context_relation_length H).
+  move=> H. pose (All2_fold_length H).
   autorewrite with len in e. assert(#|Δ| = #|Δ'|) by lia.
-  move/context_relation_app: H => H.
+  move/All2_fold_app: H => H.
   now specialize (H H0) as [_ H].
 Qed.
 
@@ -2704,7 +2704,7 @@ Qed.
 Lemma cumul_it_mkProd_or_LetIn {cf : checker_flags} (Σ : PCUICAst.global_env_ext)
   (Δ Γ Γ' : PCUICAst.context) (B B' : term) :
   wf Σ.1 ->
-  context_relation (fun Γ Γ' => conv_decls Σ (Δ ,,, Γ) (Δ  ,,, Γ')) Γ Γ' ->
+  All2_fold (fun Γ Γ' => conv_decls Σ (Δ ,,, Γ) (Δ  ,,, Γ')) Γ Γ' ->
   Σ ;;; Δ ,,, Γ |- B <= B' ->
   Σ ;;; Δ |- PCUICAst.it_mkProd_or_LetIn Γ B <= PCUICAst.it_mkProd_or_LetIn Γ' B'.
 Proof.
@@ -2715,21 +2715,21 @@ Proof.
   + depelim H. apply app_eq_nil in H; intuition discriminate.
   + depelim H. apply app_eq_nil in H; intuition discriminate.
   + assert (clen : #|Γ| = #|Γ'|).
-    { apply context_relation_length in H.
+    { apply All2_fold_length in H.
       autorewrite with len in H; simpl in H. lia. }
-    apply context_relation_app in H as [cd cctx] => //.
+    apply All2_fold_app in H as [cd cctx] => //.
     depelim cd; depelim c.
     - rewrite !it_mkProd_or_LetIn_app => //=.
       simpl. move=> HB. apply congr_cumul_prod => //.
       eapply IHΓ.
-      * unshelve eapply (context_relation_impl cctx).
+      * unshelve eapply (All2_fold_impl cctx).
         simpl. intros * X. rewrite !app_context_assoc in X.
         destruct X; constructor; auto.
       * now rewrite app_context_assoc in HB.
     - rewrite !it_mkProd_or_LetIn_app => //=.
       simpl. intros HB. apply cum_LetIn => //; auto.
       eapply IHΓ.
-      * unshelve eapply (context_relation_impl cctx).
+      * unshelve eapply (All2_fold_impl cctx).
         simpl. intros * X. rewrite !app_context_assoc in X.
         destruct X; constructor; auto.
       * now rewrite app_context_assoc in HB.
@@ -2898,7 +2898,7 @@ Proof.
     specialize (X0 wf p).
     rewrite subst_context_app in X0; autorewrite with len in X0.
     rewrite app_context_nil_l in X0.
-    now rewrite -(All2_local_env_length X).
+    now rewrite -(All2_fold_length X).
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
     depelim wf.
@@ -2913,7 +2913,7 @@ Proof.
     rewrite app_context_nil_l app_context_assoc in X1.
     specialize (X1 wf pt).
     rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
-    now rewrite -(All2_local_env_length X).
+    now rewrite -(All2_fold_length X).
 Qed.
 
 Lemma conv_terms_weaken {cf:checker_flags} Σ Γ Γ' args args' :
@@ -2967,7 +2967,7 @@ Proof.
     rewrite app_context_assoc in X0.
     specialize (X0 wf c).
     rewrite !subst_context_app app_context_assoc in X0; autorewrite with len in X0.
-    now rewrite -(context_relation_length X).
+    now rewrite -(All2_fold_length X).
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'. depelim wf.
     specialize (IHX wf Hs subs subs').
@@ -2977,12 +2977,12 @@ Proof.
       rewrite !app_context_assoc in X1.
       specialize (X1 wf c).
       rewrite !subst_context_app !app_context_assoc in X1; autorewrite with len in X1.
-      now rewrite -(context_relation_length X).
+      now rewrite -(All2_fold_length X).
     + epose proof (untyped_subst_cumul Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
       rewrite app_context_assoc in X0.
       specialize (X0 wf c0).
       rewrite !subst_context_app !app_context_assoc in X0; autorewrite with len in X0.
-      now rewrite -(context_relation_length X).
+      now rewrite -(All2_fold_length X).
 Qed.
 
 Lemma cumul_ctx_rel_nth_error {cf:checker_flags} Σ Γ Δ Δ' :
@@ -3038,7 +3038,7 @@ Proof.
     + depelim p. constructor; auto.
       rewrite -app_context_assoc.
       eapply weaken_cumul; eauto.
-      autorewrite with len; simpl; rewrite (context_relation_length X).
+      autorewrite with len; simpl; rewrite (All2_fold_length X).
       now autorewrite with len in wfd'.
   - rewrite /= closed_ctx_decl in wf.
     rewrite /= closed_ctx_decl in wf'.
@@ -3049,7 +3049,7 @@ Proof.
     + move/andb_and: wfd => /= [wfb wft].
       move/andb_and: wfd' => /= [wfb' wft'].
       autorewrite with len in *.
-      rewrite <- (context_relation_length X) in *.
+      rewrite <- (All2_fold_length X) in *.
       depelim p; constructor; auto.
       * rewrite -app_context_assoc.
         apply weaken_conv; autorewrite with len; auto with pcuic.

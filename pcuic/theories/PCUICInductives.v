@@ -221,7 +221,7 @@ Lemma on_minductive_wf_params_indices {cf : checker_flags} (Σ : global_env) mde
   wf_local (Σ, ind_universes mdecl) (ind_params mdecl ,,, ind_indices oib).
 Proof.
   intros.
-  eapply on_declared_minductive in H; auto.
+  eapply on_declsared_minductive in H; auto.
   pose proof (oib.(onArity)).
   rewrite oib.(ind_arity_eq) in X0.
   destruct X0 as [s Hs].
@@ -467,7 +467,7 @@ Definition projection_type' mdecl ind k ty :=
     (subst (extended_subst (ind_params mdecl) 0) (S k)
     (lift 1 k (subst indsubst (k + #|ind_params mdecl|) ty)))).
 
-Definition projection_decl_type mdecl ind k ty := 
+Definition projection_decls_type mdecl ind k ty := 
   let u := PCUICLookup.abstract_instance (PCUICEnvironment.ind_universes mdecl) in
   let indsubst := inds (inductive_mind ind) u (ind_bodies mdecl) in
   let projsubst := projs ind (ind_npars mdecl) k in
@@ -533,7 +533,7 @@ Proof.
   intros pdecl Hp. simpl.
   set(isdecl := (conj decli (conj Hp eq_refl)) :
       declared_projection Σ.1 p mdecl idecl pdecl).
-  destruct (on_declared_projection wfΣ isdecl) as [oni onp].
+  destruct (on_declsared_projection wfΣ isdecl) as [oni onp].
   set (declared_inductive_inv _ _ _ _) as oib' in onp.
   change oib' with oib in *. clear oib'.
   simpl in oib.
@@ -866,7 +866,7 @@ Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl i
         smash_context [] (ind_params mdecl)) pdecl.2.
 Proof.
   intros wfΣ declp.
-  destruct (on_declared_projection wfΣ declp) as [oni onp].
+  destruct (on_declsared_projection wfΣ declp) as [oni onp].
   specialize (declared_projections wfΣ (let (x, _) := declp in x)).
   set(oib := declared_inductive_inv _ _ _ _) in *.
   intros onprojs u.
@@ -903,7 +903,7 @@ Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {
   end.
 Proof.
   intros wfΣ declp.
-  destruct (on_declared_projection wfΣ declp) as [oni onp].
+  destruct (on_declsared_projection wfΣ declp) as [oni onp].
   specialize (declared_projections wfΣ (let (x, _) := declp in x)).
   set(oib := declared_inductive_inv _ _ _ _) in *.
   intros onprojs u.
@@ -1126,7 +1126,7 @@ Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idec
   wf_local Σ (projection_context mdecl idecl p.1.1 u).
 Proof.
   move=> wfΣ decli.
-  pose proof (on_declared_projection wfΣ decli) as [onmind onind].
+  pose proof (on_declsared_projection wfΣ decli) as [onmind onind].
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
   simpl in onind; destruct ind_cunivs as [|? []]; try contradiction.
   destruct onind as [[[_ onps] Hpe] onp].
@@ -1162,12 +1162,12 @@ Proof.
     noconf H2. clear IHtyping1 IHtyping3.
     specialize (IHtyping2 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
       split; auto.
-    destruct (on_declared_inductive wfΣ as decli) [onmind oib].
+    destruct (on_declsared_inductive wfΣ as decli) [onmind oib].
     eapply typing_spine_app; eauto.
   - invs H0. destruct (declared_inductive_inj d decli) as [-> ->].
     clear decli. split; auto.
     constructor; [|reflexivity].
-    destruct (on_declared_inductive wfΣ as d) [onmind oib].
+    destruct (on_declsared_inductive wfΣ as d) [onmind oib].
     pose proof (oib.(onArity)) as ar.
     eapply isType_weaken; eauto.
     eapply (isType_subst_instance_decl _ []); eauto.
@@ -1182,7 +1182,7 @@ Lemma isType_mkApps_Ind {cf:checker_flags} {Σ Γ ind u args} (wfΣ : wf Σ.1)
   wf_local Σ Γ ->
   isType Σ Γ (mkApps (tInd ind u) args) ->
   ∑ parsubst argsubst,
-    let oib := (on_declared_inductive wfΣ declm).2 in
+    let oib := (on_declsared_inductive wfΣ declm).2 in
     let parctx := (subst_instance u (ind_params mdecl)) in
     let argctx := (subst_context parsubst 0 (subst_instance u (oib.(ind_indices)))) in
     spine_subst Σ Γ (firstn (ind_npars mdecl) args) parsubst parctx *
@@ -1192,7 +1192,7 @@ Proof.
   move=> wfΓ isType.
   destruct isType as [s Hs].
   eapply invert_type_mkApps_ind in Hs as [tyargs cu]; eauto.
-  set (decli' := on_declared_inductive _ clearbody _). decli'.
+  set (decli' := on_declsared_inductive _ clearbody _). decli'.
   rename declm into decli.
   destruct decli' as [declm decli'].
   pose proof (decli'.(onArity)) as ar. 
@@ -1226,10 +1226,10 @@ Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p pdecl args :
   subslet Σ Γ (c :: List.rev args) (projection_context mdecl idecl p.1.1 u). 
 Proof.
   intros declp wfΣ Hc Ha.
-  destruct (on_declared_projection wfΣ declp).
+  destruct (on_declsared_projection wfΣ declp).
   destruct (isType_mkApps_Ind wfΣ (let (x, _) := declp in x) (typing_wf_local Hc) Ha) as 
     [parsubst [argsubst [[sppars spargs] cu]]].
-  unfold on_declared_inductive in simpl spargs. in spargs.
+  unfold on_declsared_inductive in simpl spargs. in spargs.
   unfold projection_context.
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
   simpl in y. destruct (ind_cunivs oib) as [|cs []]; try contradiction.

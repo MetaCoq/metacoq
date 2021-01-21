@@ -1663,10 +1663,10 @@ Proof.
   - simpl. constructor. all: eauto.
   * rewrite /inst_predicate.
     destruct X; destruct e as [? [? [ectx ?]]].
-    rewrite (context_relation_length ectx). red.
+    rewrite (All2_fold_length ectx). red.
     intuition auto; simpl; solve_all.
-    eapply context_relation_mapi.
-    eapply context_relation_impl_onctx; tea.
+    eapply All2_fold_mapi.
+    eapply All2_fold_impl_onctx; tea.
     solve_all. eapply compare_decl_map.
     eapply compare_decl_impl_ondecl; tea; solve_all.
   * induction X0 in a, brs' |- *.
@@ -1676,12 +1676,12 @@ Proof.
       constructor; eauto.
       split; eauto.
       ** solve_all.
-        eapply context_relation_mapi.
-        eapply context_relation_impl_onctx; tea.
+        eapply All2_fold_mapi.
+        eapply All2_fold_impl_onctx; tea.
         solve_all. eapply compare_decl_map.
         eapply compare_decl_impl_ondecl; tea; solve_all.
       ** simpl.
-        rewrite (context_relation_length a0).
+        rewrite (All2_fold_length a0).
         now eapply e1. 
   - simpl. constructor.
     apply All2_length in a as e. rewrite <- e.
@@ -1754,17 +1754,17 @@ Lemma inst_conv_ctx {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} :
 Proof.
   intros usubst H.
   rewrite /inst_context - !mapi_context_fold.
-  pose proof (context_relation_length H) as hlen.
+  pose proof (All2_fold_length H) as hlen.
   len in hlen. assert (#|Γ'| = #|Δ'|) by lia.
-  eapply context_relation_app_inv in H as [_ H] => //.
-  eapply context_relation_app; len => //; pcuic.
+  eapply All2_fold_app_inv in H as [_ H] => //.
+  eapply All2_fold_app; len => //; pcuic.
   { eapply conv_ctx_refl'. }
-  eapply context_relation_mapi.
-  eapply context_relation_impl_ind; tea => 
+  eapply All2_fold_mapi.
+  eapply All2_fold_impl_ind; tea => 
     /= Γ0 Δ0 d d' IH IH' cd.
   eapply inst_conv_decls in cd; tea; rewrite mapi_context_fold.
   * now eapply usubst_app.
-  * rewrite (context_relation_length IH).
+  * rewrite (All2_fold_length IH).
     now eapply usubst_app.
 Qed.
 
@@ -1775,17 +1775,17 @@ Lemma inst_cumul_ctx {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} :
 Proof.
   intros usubst H.
   rewrite /inst_context - !mapi_context_fold.
-  pose proof (context_relation_length H) as hlen.
+  pose proof (All2_fold_length H) as hlen.
   len in hlen. assert (#|Γ'| = #|Δ'|) by lia.
-  eapply context_relation_app_inv in H as [_ H] => //.
-  eapply context_relation_app; len => //; pcuic.
+  eapply All2_fold_app_inv in H as [_ H] => //.
+  eapply All2_fold_app; len => //; pcuic.
   { eapply cumul_ctx_refl'. }
-  eapply context_relation_mapi.
-  eapply context_relation_impl_ind; tea => 
+  eapply All2_fold_mapi.
+  eapply All2_fold_impl_ind; tea => 
     /= Γ0 Δ0 d d' IH IH' cd.
   eapply inst_cumul_decls in cd; tea; rewrite mapi_context_fold.
   * now eapply usubst_app.
-  * rewrite (context_relation_length IH).
+  * rewrite (All2_fold_length IH).
     now eapply usubst_app.
 Qed.
 

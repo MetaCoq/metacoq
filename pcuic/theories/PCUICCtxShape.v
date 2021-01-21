@@ -23,7 +23,7 @@ Definition same_shape (d d' : context_decl) :=
   end.
   
 Definition same_ctx_shape (Γ Γ' : context) :=
-  context_relation (fun _ _ => same_shape) Γ Γ'.
+  All2_fold (fun _ _ => same_shape) Γ Γ'.
   
 Hint Unfold same_ctx_shape : core.
 
@@ -57,7 +57,7 @@ Proof.
   unfold to_extended_list. apply to_extended_list_k_eq.
 Qed.
 
-Hint Constructors context_relation : core.
+Hint Constructors All2_fold : core.
 
 Lemma same_ctx_shape_refl Γ : same_ctx_shape Γ Γ.
 Proof. induction Γ. constructor; auto.

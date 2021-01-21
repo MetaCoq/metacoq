@@ -625,7 +625,7 @@ Admitted.
 (*   Some (trans_local indctx, trans_local pctx, ps, map (on_snd trans) btys). *)
 (* Proof. *)
 (*   intros wfp wfpty wfdecl wfargs wfΣ Hidecl. *)
-(*   pose proof (on_declared_inductive wfΣ as Hidecl) [onmind onind]. *)
+(*   pose proof (on_declsared_inductive wfΣ as Hidecl) [onmind onind]. *)
 (*   apply ST.onParams in onmind as Hparams. *)
 (*   (* Maybe have a lemma for this we do it all the time *) *)
 (*   assert (wc : Forall wf_decl (UnivSubst.subst_instance u (S.ind_params mdecl))). *)

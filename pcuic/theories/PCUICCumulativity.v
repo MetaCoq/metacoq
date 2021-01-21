@@ -87,8 +87,8 @@ End PCUICConversionPar.
 Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar.
 Include PCUICConversion.
 
-Notation conv_context Σ Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
-Notation cumul_context Σ Γ Γ' := (context_relation (cumul_decls Σ) Γ Γ').
+Notation conv_context Σ Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
+Notation cumul_context Σ Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 
@@ -374,21 +374,19 @@ Section ContextConversion.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
 
-  Notation conv_context Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
-  Notation cumul_context Γ Γ' := (context_relation (cumul_decls Σ) Γ Γ').
+  Notation conv_context Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
+  Notation cumul_context Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
 
-  Global Instance conv_ctx_refl : Reflexive (context_relation (conv_decls Σ)).
+  Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls Σ)).
   Proof.
-    intro Γ; induction Γ; try econstructor.
-    destruct a as [na [b|] ty]; econstructor; eauto;
-      constructor; pcuic.
+    intro Γ; induction Γ; try econstructor; auto.
+    destruct a as [na [b|] ty]; constructor; auto; pcuic.
   Qed.
 
-  Global Instance cumul_ctx_refl : Reflexive (context_relation (cumul_decls Σ)).
+  Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls Σ)).
   Proof.
-    intro Γ; induction Γ; try econstructor.
-    destruct a as [na [b|] ty]; econstructor; eauto;
-      constructor; pcuic; eapply cumul_refl'.
+    intro Γ; induction Γ; try econstructor; auto.
+    destruct a as [na [b|] ty]; econstructor; eauto; pcuic; eapply cumul_refl'.
   Qed.
 
   Definition conv_ctx_refl' Γ : conv_context Γ Γ

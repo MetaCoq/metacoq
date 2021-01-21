@@ -207,7 +207,7 @@ Proof.
     * eapply banon_eq_binder_annot; eauto.
     * simpl in *.
       eapply H1; eauto. apply o.
-  - destruct p as [? ?], p0 as [? [? ?]].
+  - destruct p as [? [? ?]].
     unfold nameless_decl in i, i0; rtoProp.
     f_equal.
     * eapply banon_eq_binder_annot; eauto.
@@ -442,7 +442,8 @@ Lemma eq_context_nl_IH Σ le Re Rle ctx ctx' :
     (map (map_decl_anon nl) ctx').
 Proof.
   intros aux H.
-  induction H; constructor; simpl; destruct p, le; intuition auto.
+  induction H; simpl; constructor; simpl; destruct p, le; simpl; 
+  intuition (constructor; auto).
 Defined.
 
 Lemma nl_eq_term_upto_univ :
@@ -494,8 +495,8 @@ Lemma eq_context_nl Σ le Re Rle ctx ctx' :
     (nlctx ctx) (nlctx ctx').
 Proof.
   intros H.
-  induction H; constructor; simpl; destruct p, le; intuition auto using
-    nl_eq_term_upto_univ.
+  induction H; constructor; simpl; destruct p, le; intuition 
+    (constructor; auto using nl_eq_term_upto_univ).
 Qed.
 
 Lemma nl_leq_term {cf:checker_flags} Σ:
@@ -562,8 +563,10 @@ Proof.
   induction ctx as [|[na [b|] ty] Γ] in ctx', Hctx |- *; 
   destruct ctx' as [|[na' [b'|] ty'] Δ]; simpl; intros H;
   depelim H; constructor; simpl in *; depelim Hctx; intuition eauto.
-  * eapply IHΓ; eauto.
-  * eapply IHΓ; eauto.
+  * depelim c; constructor; auto.
+  * depelim c.
+  * depelim c.
+  * depelim c; constructor; auto.
 Qed.
 
 Lemma eq_term_upto_univ_nl_inv :
@@ -610,6 +613,8 @@ Qed.
 Lemma binder_anonymize n : eq_binder_annot n (anonymize n).
 Proof. destruct n; reflexivity. Qed.
 Hint Resolve binder_anonymize : core.
+Hint Constructors compare_decls : core.
+Local Hint Unfold map_decl_anon : core.
 
 Lemma eq_term_upto_univ_tm_nl :
   forall Σ Re Rle napp u,
@@ -633,7 +638,8 @@ Proof.
       + clear -a0 hRe hRle. induction a0.
         { constructor; auto. }
         destruct x as [na [b|] ty]; simpl; constructor; auto; 
-          destruct p; simpl in *; intuition auto.
+          destruct p; simpl in *; intuition (simpl; auto);
+          constructor; auto.
     * induction l.
       + constructor.
       + simpl. depelim X0. destruct p.
@@ -642,7 +648,7 @@ Proof.
           clear -hRe hRle a0.
           induction a0; [constructor; auto|].
           destruct x as [na [b|] ty]; simpl; constructor; auto; 
-          destruct p; simpl in *; intuition auto.
+          destruct p; simpl in *; intuition auto; constructor; auto.
         ++ auto.
         ++ eapply IHl. assumption.
   - simpl. constructor. induction m.
@@ -1109,11 +1115,8 @@ Lemma nl_eq_decl {cf:checker_flags} :
     eq_decl le Σ φ d d' ->
     eq_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
-  intros le Σ φ d d'.
-  rewrite /eq_decl.
-  destruct d as [? [?|] ?], d' as [? [?|] ?].
-  all: cbn in *; auto.
-  all: destruct le; intuition auto using nl_eq_term, nl_leq_term.
+  intros le Σ φ d d' []; constructor; destruct le; 
+  intuition auto using nl_eq_term, nl_leq_term.
 Qed.
 
 Lemma nl_eq_decl' {cf:checker_flags} :
@@ -1121,11 +1124,8 @@ Lemma nl_eq_decl' {cf:checker_flags} :
     eq_decl le Σ φ d d' ->
     eq_decl le (nl_global_env Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
-  intros le Σ φ d d'.
-  rewrite /eq_decl.
-  destruct d as [? [?|] ?], d' as [? [?|] ?].
-  all: cbn in *; auto.
-  all: destruct le; intuition auto using nl_eq_term, nl_leq_term.
+  intros le Σ φ d d' []; constructor; destruct le;
+  intuition auto using nl_eq_term, nl_leq_term.
 Qed.
 
 Lemma nl_eq_context {cf:checker_flags} :

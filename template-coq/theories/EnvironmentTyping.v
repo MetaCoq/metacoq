@@ -145,52 +145,6 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
-  Section All2_local_env.
-
-  Definition on_decl (P : context -> context -> term -> term -> Type)
-             (Γ Γ' : context) (b : option (term * term)) (t t' : term) :=
-    match b with
-    | Some (b, b') => (P Γ Γ' b b' * P Γ Γ' t t')%type
-    | None => P Γ Γ' t t'
-    end.
-
-  Section All_local_2.
-    Context (P : forall (Γ Γ' : context), option (term * term) -> term -> term -> Type).
-
-    Inductive All2_local_env : context -> context -> Type :=
-    | localenv2_nil : All2_local_env [] []
-    | localenv2_cons_abs Γ Γ' na na' t t' :
-        All2_local_env Γ Γ' ->
-        eq_binder_annot na na' ->
-        P Γ Γ' None t t' ->
-        All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
-    | localenv2_cons_def Γ Γ' na na' b b' t t' :
-        All2_local_env Γ Γ' ->
-        eq_binder_annot na na' ->
-        P Γ Γ' (Some (b, b')) t t' ->
-        All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
-  End All_local_2.
-
-  Definition on_decl_over (P : context -> context -> term -> term -> Type) Γ Γ' :=
-    fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ').
-
-  Definition All2_local_env_over P Γ Γ' := All2_local_env (on_decl (on_decl_over P Γ Γ')).
-
-  Lemma All2_local_env_length {P l l'} : @All2_local_env P l l' -> #|l| = #|l'|.
-  Proof. induction 1; simpl; auto. Qed.
-
-
-  Lemma All2_local_env_impl {P Q : context -> context -> term -> term -> Type} {par par'} :
-    All2_local_env (on_decl P) par par' ->
-    (forall par par' x y, P par par' x y -> Q par par' x y) ->
-    All2_local_env (on_decl Q) par par'.
-  Proof.
-    intros H aux.
-    induction H; constructor. auto. red in p. assumption. apply aux, p.
-    apply IHAll2_local_env. assumption. red. split.
-    apply aux. apply p. apply aux. apply p.
-  Defined.
-
   Lemma All_local_env_fold P f Γ :
     All_local_env (fun Γ t T => P (fold_context f Γ) (f #|Γ| t) (option_map (f #|Γ|) T)) Γ <~>
     All_local_env P (fold_context f Γ).
@@ -209,19 +163,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Proof.
     induction 1; intros; simpl; econstructor; eauto.
   Qed.
-  Lemma All2_local_env_app_inv :
-    forall P (Γ Γ' Γl Γr : context),
-      All2_local_env (on_decl P) Γ Γl ->
-      All2_local_env (on_decl (on_decl_over P Γ Γl)) Γ' Γr ->
-      All2_local_env (on_decl P) (Γ ,,, Γ') (Γl ,,, Γr).
-  Proof.
-    induction 2; auto.
-    - simpl. constructor; auto.
-    - simpl. constructor; auto.
-  Qed.
-
-  End All2_local_env.
-
+  
   (** Well-formedness of local environments embeds a sorting for each variable *)
 
   Definition lift_typing (P : global_env_ext -> context -> term -> term -> Type) :
@@ -336,7 +278,7 @@ Module Conversion (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT 
   End ContextConversion.
 
   Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-    context_relation (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
+    All2_fold (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
 
 End Conversion.
 

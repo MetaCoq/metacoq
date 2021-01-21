@@ -22,6 +22,13 @@ Ltac pcuicfo_gen tac :=
 Tactic Notation "pcuicfo" := pcuicfo_gen auto.
 Tactic Notation "pcuicfo" tactic(tac) := pcuicfo_gen tac.
 
+(* This allows not relying on lemma names getting a length equality out of some type. *)
+Class HasLen (A : Type) (x y : nat) := len : A -> x = y.
+
+(** Note the use of a global reference to avoid capture. *)
+Notation length_of t := ltac:(let lemma := constr:(PCUICAst.len t) in exact lemma) (only parsing).
+
+
 (* Defined here since BasicAst does not have access to universe instances.
   Parameterized by term types as they are not yet defined. *)
 Record predicate {term} := mkpredicate {

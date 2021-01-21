@@ -511,7 +511,7 @@ Definition conv_decls_prop (Σ : global_env_ext) (Γ Γ' : context) (c d : conte
   | _, _ => False
   end.
 
-Notation conv_ctx_prop Σ := (context_relation (conv_decls_prop Σ)).
+Notation conv_ctx_prop Σ := (All2_fold (conv_decls_prop Σ)).
 
 Lemma conv_ctx_prop_refl Σ Γ :
   conv_ctx_prop Σ Γ Γ.
@@ -539,7 +539,7 @@ Proof.
       try solve [solve_all]].
   - econstructor. destruct (nth_error Γ i) eqn:eq; simpl in H => //.
     noconf H; simpl in H; noconf H.
-    eapply context_relation_nth in X; eauto.
+    eapply All2_fold_nth in X; eauto.
     destruct X as [d' [Hnth [ctxrel cp]]].
     red in cp. rewrite H in cp. rewrite Hnth /=.
     destruct (decl_body d'); subst => //.

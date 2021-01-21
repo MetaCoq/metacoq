@@ -9,28 +9,24 @@ Ltac pcuic :=
   try repeat red; cbn in *;
    try (solve [ intuition auto; eauto with pcuic || (try lia || congruence) ]).
 
-Lemma context_relation_nth_ass {P n Γ Γ' d} :
-  context_relation P Γ Γ' -> nth_error Γ n = Some d ->
+Lemma All2_fold_nth_ass {P n Γ Γ' d} :
+  All2_fold P Γ Γ' -> nth_error Γ n = Some d ->
   assumption_context Γ ->
   { d' & ((nth_error Γ' n = Some d') *
           let Γs := skipn (S n) Γ in
           let Γs' := skipn (S n) Γ' in
-          context_relation P Γs Γs' *
+          All2_fold P Γs Γs' *
           (d.(decl_body) = None) *
           P Γs Γs' d d')%type }.
 Proof.
   induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
   - depelim Hrel. intro ass. 
     simpl. eexists; intuition eauto.
-    eexists; intuition eauto.
-    depelim H.
+    now depelim ass.
   - intros ass. depelim Hrel.
     destruct (IHn _ _ _ Hrel H).
     now depelim ass.
     cbn -[skipn] in *.
-    eexists; intuition eauto.
-    destruct (IHn _ _ _ Hrel H).
-    now depelim ass.
     eexists; intuition eauto.
 Qed.
 
@@ -77,7 +73,7 @@ Proof.
 Qed.
 
 Lemma context_change_decl_types_red1 Γ Γ' s t :
-  context_relation (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
+  All2_fold (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros HT X0. induction X0 using red1_ind_all in Γ', HT |- *; eauto.
   all:pcuic.
@@ -103,26 +99,26 @@ Proof.
     eapply OnOne2_local_env_impl; tea.
     intros Δ x y.
     eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
-    eapply IH. eapply context_relation_app; auto.
-    eapply context_relation_refl.
+    eapply IH. eapply All2_fold_app; auto.
+    eapply All2_fold_refl.
     intros; reflexivity.
   - eapply PCUICReduction.red_case_p; eauto. eapply IHX0.
-    eapply context_relation_app; eauto.
-    now eapply context_relation_refl.
+    eapply All2_fold_app; eauto.
+    now eapply All2_fold_refl.
   - eapply PCUICReduction.red_case_c; eauto.
   - eapply PCUICReduction.red_case_brs; eauto.
     eapply OnOne2_All2; eauto. simpl.
     * unfold on_Trel; intros br br'. intuition eauto.
-      + eapply b0. eapply context_relation_app; auto.
-        now apply context_relation_refl.
+      + eapply b0. eapply All2_fold_app; auto.
+        now apply All2_fold_refl.
       + rewrite b. reflexivity.
       + rewrite b0; reflexivity.
       + eapply red_one_decl_red_ctx_rel.
         eapply OnOne2_local_env_impl; tea.
         intros Δ x y.
         eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
-        eapply IH. eapply context_relation_app; auto.
-        eapply context_relation_refl.
+        eapply IH. eapply All2_fold_app; auto.
+        eapply All2_fold_refl.
         intros; reflexivity.
     * intros br; unfold on_Trel. split; auto.
       reflexivity.
@@ -175,7 +171,7 @@ Proof.
 Qed.
 
 Lemma context_change_decl_types_red Γ Γ' s t :
-  context_relation (fun _ _ => change_decl_type) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
+  All2_fold (fun _ _ => change_decl_type) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
 Proof.
   intros. induction X0 using red_rect'; eauto.
   etransitivity. eapply IHX0.
@@ -185,12 +181,12 @@ End ContextChangeTypesReduction.
 
 Lemma fix_context_change_decl_types Γ mfix mfix' :
   #|mfix| = #|mfix'| ->
-  context_relation (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
+  All2_fold (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
 Proof.
   intros len.
-  apply context_relation_app.
+  apply All2_fold_app.
   - now rewrite !fix_context_length.
-  - apply context_relation_refl.
+  - apply All2_fold_refl.
     intros.
     destruct x.
     destruct decl_body; constructor;
@@ -201,7 +197,7 @@ Proof.
     + destruct mfix'; [|cbn in *; discriminate len].
       constructor.
     + destruct mfix'; cbn in *; [discriminate len|].
-      apply context_relation_app.
+      apply All2_fold_app.
       * now rewrite !List.rev_length, !mapi_rec_length.
       * constructor; [constructor|].
         constructor.

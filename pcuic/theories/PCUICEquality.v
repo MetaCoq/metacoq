@@ -6,7 +6,11 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 
 Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
+From Equations Require Import Equations.
 Set Equations With UIP.
+
+Instance All2_fold_len P Γ Δ : HasLen (All2_fold P Γ Δ) #|Γ| #|Δ| :=
+  All2_fold_length.
 
 Implicit Types (cf : checker_flags).
 
@@ -89,49 +93,67 @@ Proof.
   intros H x y xy. eapply Forall2_impl ; tea.
 Qed.
 
-Definition compare_decl (le : bool) (eq_term leq_term : term -> term -> Type) (d d' : context_decl) : Type :=
-  match d, d' with
-  | {| decl_name := na; decl_body := None; decl_type := T |},
-    {| decl_name := na'; decl_body := None; decl_type := T' |} =>
-    eq_binder_annot na na' × (if le then leq_term else eq_term) T T'
-  | {| decl_name := na; decl_body := Some b; decl_type := T |},
-    {| decl_name := na'; decl_body := Some b'; decl_type := T' |} =>
-    eq_binder_annot na na' × eq_term b b' × (if le then leq_term else eq_term) T T'
-  | _, _ => False
-  end.
+Section compare_decls.
+  Context {le : bool} {eq_term leq_term : term -> term -> Type}.
+  Inductive compare_decls  : context_decl -> context_decl -> Type :=
+  | compare_vass {na T na' T'} :
+    eq_binder_annot na na' ->
+    (if le then leq_term else eq_term) T T' ->
+    compare_decls (vass na T) (vass na' T')
+  | compare_vdef {na b T na' b' T'} :
+    eq_binder_annot na na' ->
+    eq_term b b' ->
+    (if le then leq_term else eq_term) T T' -> 
+    compare_decls (vdef na b T) (vdef na' b' T').
 
-Lemma compare_decl_impl le eq_term leq_term eq_term' leq_term' :
-  RelationClasses.subrelation eq_term eq_term' ->
-  RelationClasses.subrelation leq_term leq_term' ->
-  CRelationClasses.subrelation (compare_decl le eq_term leq_term)
-    (compare_decl le eq_term' leq_term').
+  Derive Signature NoConfusion for compare_decls.
+End compare_decls.
+Arguments compare_decls : clear implicits.
+
+Notation eq_context_gen le eq_term leq_term :=
+  (All2_fold (fun _ _ => compare_decls le eq_term leq_term)).
+
+Lemma compare_decls_impl le eq_term leq_term eq_term' leq_term' :
+  subrelation eq_term eq_term' ->
+  subrelation leq_term leq_term' ->
+  subrelation (compare_decls le eq_term leq_term)
+    (compare_decls le eq_term' leq_term').
 Proof.
-  intros he hle [na [b|] ty] [na' [b'|] ty']; rewrite /compare_decl /= //;
+  intros he hle x y []; constructor; auto;
     destruct le; intuition auto.
+Qed.
+
+Lemma eq_context_gen_impl le eq_term leq_term eq_term' leq_term' :
+  subrelation eq_term eq_term' ->
+  subrelation leq_term leq_term' ->
+  subrelation (eq_context_gen le eq_term leq_term)
+    (eq_context_gen le eq_term' leq_term').
+Proof.
+  intros he hle x y eq.
+  eapply All2_fold_impl; tea => /=.
+  intros; eapply compare_decls_impl; tea.
 Qed.
 
 Lemma compare_decl_impl_ondecl P le eq_term leq_term eq_term' leq_term' d d' :
   ondecl P d ->
   (forall x y, P x -> eq_term x y -> eq_term' x y) ->
   (forall x y, P x -> leq_term x y -> leq_term' x y) ->
-  compare_decl le eq_term leq_term d d' ->
-  compare_decl le eq_term' leq_term' d d'.
+  compare_decls le eq_term leq_term d d' ->
+  compare_decls le eq_term' leq_term' d d'.
 Proof.
-  intros ond he hle; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; rewrite /compare_decl /= //;
-    destruct ond;
-    destruct le; intuition eauto.
+  intros ond he hle cd; depelim cd; depelim ond;
+  destruct le; constructor => //; eauto.
 Qed.
 
 Lemma compare_decl_map le eq_term leq_term f g d d' :
-  compare_decl le (fun x y => eq_term (f x) (g y))
+  compare_decls le (fun x y => eq_term (f x) (g y))
     (fun x y => leq_term (f x) (g y)) d d' ->
-  compare_decl le eq_term leq_term (map_decl f d) (map_decl g d').
+  compare_decls le eq_term leq_term (map_decl f d) (map_decl g d').
 Proof.
-  rewrite /compare_decl; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl;
-    destruct le; intuition auto.
+  destruct le; intros h; depelim h; constructor; intuition auto.
 Qed.
 
-Definition bcompare_decl (le : bool) (eq_term leq_term : term -> term -> bool) (d d' : context_decl) : bool :=
+Definition bcompare_decls (le : bool) (eq_term leq_term : term -> term -> bool) (d d' : context_decl) : bool :=
   match d, d' with
   | {| decl_name := na; decl_body := None; decl_type := T |},
     {| decl_name := na'; decl_body := None; decl_type := T' |} =>
@@ -143,21 +165,35 @@ Definition bcompare_decl (le : bool) (eq_term leq_term : term -> term -> bool) (
   end.
   
 Definition eq_decl_gen (eq_term leq_term : term -> term -> Type) (d d' : context_decl) : Type :=
-  compare_decl false eq_term leq_term d d'.
+  compare_decls false eq_term leq_term d d'.
 
 Definition leq_decl_gen (eq_term leq_term : term -> term -> Type) (d d' : context_decl) : Type :=
-  compare_decl true eq_term leq_term d d'.
+  compare_decls true eq_term leq_term d d'.
   
-Definition eq_context_gen le (eq_term leq_term : term -> term -> Type) :=
-  context_relation (fun _ _ => compare_decl le eq_term leq_term).
-
 Instance compare_decl_refl le eq_term leq_term : 
   CRelationClasses.Reflexive eq_term -> 
   CRelationClasses.Reflexive leq_term -> 
-  CRelationClasses.Reflexive (compare_decl le eq_term leq_term).    
+  CRelationClasses.Reflexive (compare_decls le eq_term leq_term).    
 Proof.
   intros heq hle d.
-  destruct le; destruct d as [na [b|] ty]; simpl; intuition auto; try reflexivity.
+  destruct le; destruct d as [na [b|] ty]; constructor; auto; reflexivity.
+Qed.
+
+Instance compare_decl_sym le eq_term leq_term :
+  CRelationClasses.Symmetric eq_term -> 
+  CRelationClasses.Symmetric leq_term -> 
+  CRelationClasses.Symmetric (compare_decls le eq_term leq_term).    
+Proof.
+  intros heq hle d d' []; constructor; auto; destruct le; now symmetry.
+Qed.
+
+Instance compare_decl_trans le eq_term leq_term :
+  CRelationClasses.Transitive eq_term -> 
+  CRelationClasses.Transitive leq_term -> 
+  CRelationClasses.Transitive (compare_decls le eq_term leq_term).    
+Proof.
+  intros hle hre x y z h h'; depelim h; depelim h'; destruct le; constructor; auto;
+  etransitivity; eauto.
 Qed.
 
 Instance eq_context_refl le eq_term leq_term : 
@@ -166,35 +202,18 @@ Instance eq_context_refl le eq_term leq_term :
   CRelationClasses.Reflexive (eq_context_gen le eq_term leq_term).    
 Proof.
   intros heq hle x.
-  eapply context_relation_refl.
+  eapply All2_fold_refl.
   intros. reflexivity. 
 Qed.
 
-Instance compare_decl_sym le eq_term :
+Instance eq_context_sym le eq_term leq_term : 
   CRelationClasses.Symmetric eq_term -> 
-  CRelationClasses.Symmetric (compare_decl le eq_term eq_term).    
-Proof.
-  intros heq d d'.
-  destruct le; destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl; intuition auto; now symmetry.
-Qed.
-
-Instance eq_context_sym le eq_term : 
-  CRelationClasses.Symmetric eq_term -> 
-  CRelationClasses.Symmetric (eq_context_gen le eq_term eq_term).    
+  CRelationClasses.Symmetric leq_term -> 
+  CRelationClasses.Symmetric (eq_context_gen le eq_term leq_term).    
 Proof.
   intros heq hle x.
-  eapply context_relation_sym.
+  eapply All2_fold_sym.
   intros. now symmetry. 
-Qed.
-
-Instance compare_decl_trans le eq_term leq_term :
-  CRelationClasses.Transitive eq_term -> 
-  CRelationClasses.Transitive leq_term -> 
-  CRelationClasses.Transitive (compare_decl le eq_term leq_term).    
-Proof.
-  intros hle hre x y z.
-  destruct le; destruct x as [na [b|] ty], y as [na' [b'|] ty'], z as [? [?|] ?]; simpl in *; intuition auto;
-  etransitivity; eauto.
 Qed.
 
 Instance eq_context_trans le eq_term leq_term : 
@@ -203,7 +222,7 @@ Instance eq_context_trans le eq_term leq_term :
   CRelationClasses.Transitive (eq_context_gen le eq_term leq_term).    
 Proof.
   intros hr x y z.
-  eapply context_relation_trans; intros.
+  eapply All2_fold_trans; intros.
   now transitivity y0. 
 Qed.
 
@@ -381,13 +400,14 @@ Proof. intros tRe x y z. now eapply Forall2_trans. Qed.
 Lemma onctx_eq_ctx P ctx eq_term :
   onctx P ctx ->
   (forall x, P x -> eq_term x x) ->
-  context_relation (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx.
+  All2_fold (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx.
 Proof.
   intros onc HP.
   induction onc.
   - constructor; auto.
-  - destruct x as [na [b|] ty]; destruct p; simpl in *;
-    constructor; auto; simpl; intuition auto.
+  - constructor; auto; simpl.
+    destruct x as [na [b|] ty]; destruct p; simpl in *;
+    constructor; auto.
 Qed.
 
 Instance eq_predicate_refl Re Ru :
@@ -456,14 +476,12 @@ Qed.
 Lemma onctx_eq_ctx_sym P ctx ctx' eq_term :
   onctx P ctx ->
   (forall x, P x -> forall y, eq_term x y -> eq_term y x) ->
-  context_relation (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx' ->
-  context_relation (fun _ _ => eq_decl_gen eq_term eq_term) ctx' ctx.
+  All2_fold (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx' ->
+  All2_fold (fun _ _ => eq_decl_gen eq_term eq_term) ctx' ctx.
 Proof.
   intros onc HP H1.
   induction H1; depelim onc; constructor; intuition auto; simpl in *.
-  intuition auto. now symmetry.
-  destruct o; eauto.
-  destruct o; intuition auto. now symmetry.
+  red. depelim p; depelim o; constructor; auto; try now symmetry.
 Qed.
 
 Instance eq_term_upto_univ_sym Σ Re Rle napp :
@@ -544,15 +562,15 @@ Qed.
 Lemma onctx_eq_ctx_trans P ctx ctx' ctx'' eq_term :
   onctx P ctx ->
   (forall x, P x -> forall y z, eq_term x y -> eq_term y z -> eq_term x z) ->
-  context_relation (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx' ->
-  context_relation (fun _ _ => eq_decl_gen eq_term eq_term) ctx' ctx'' ->
-  context_relation (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx''.
+  All2_fold (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx' ->
+  All2_fold (fun _ _ => eq_decl_gen eq_term eq_term) ctx' ctx'' ->
+  All2_fold (fun _ _ => eq_decl_gen eq_term eq_term) ctx ctx''.
 Proof.
   intros onc HP H1; revert ctx''.
   induction H1; depelim onc; intros ctx'' H; depelim H; constructor; intuition auto; simpl in *.
-  intuition auto. now etransitivity. eauto.
-  destruct o; intuition eauto.
-  destruct o; intuition eauto. now etransitivity.
+  depelim o. depelim p0.
+  - depelim e0; constructor; [now etransitivity|eauto].
+  - depelim e1; constructor; [now etransitivity|eauto ..].
 Qed.
 
 Instance eq_predicate_trans Re Ru :
@@ -806,8 +824,8 @@ Lemma onctx_eq_ctx_impl P ctx ctx' eq_term eq_term' :
   eq_context_gen false eq_term' eq_term' ctx ctx'.
 Proof.
   intros onc HP H1.
-  induction H1; depelim onc; constructor; intuition auto; simpl in *;
-  destruct o; intuition auto.
+  induction H1; depelim onc; constructor; eauto; intuition auto; simpl in *.
+  destruct o; depelim p; constructor; auto.
 Qed.
 
 Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
@@ -898,6 +916,7 @@ Proof.
   now eapply leq_term_antisym.
 Qed.
 
+Hint Constructors compare_decls : pcuic.
 
 Local Ltac lih :=
   lazymatch goal with
@@ -914,18 +933,18 @@ Proof.
   all: dependent destruction e.
   all: try solve [cbn ; constructor ; try lih ; try assumption; solve_all].
   - cbn. destruct e as (? & ? & e & ?).
-    constructor; unfold eq_predicate in *; simpl; !!solve_all;
-      rewrite -?(context_relation_length e).
-    * apply context_relation_mapi.
-      eapply context_relation_impl_onctx; tea; simpl; eauto.
+    constructor; unfold eq_predicate in *; simpl; !!solve_all.
+    * apply All2_fold_mapi.
+      eapply All2_fold_impl_onctx; tea; simpl; eauto.
       unfold ondecl;
-      intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
-    * eapply hh0; eauto.
-    * eapply context_relation_mapi.
-      eapply context_relation_impl_onctx; tea; simpl; eauto.
+      intros Γ Γ' d d' IH []; constructor; intuition eauto.
+    * rewrite -?(All2_fold_length e).
+      eapply hh0; eauto.
+    * eapply All2_fold_mapi.
+      eapply All2_fold_impl_onctx; tea; simpl; eauto.
       unfold ondecl;
-      intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
-    * rewrite (context_relation_length a). now eapply hh4.
+      intros Γ Γ' d d' IH []; constructor; intuition pcuic.
+    * rewrite (All2_fold_length a). now eapply hh4.
   - cbn. constructor.
     pose proof (All2_length a).
     solve_all. rewrite H. eauto.
@@ -980,14 +999,14 @@ Proof.
   - cbn.
     destruct e as (? & ? & e & ?).
     constructor ; unfold eq_predicate; simpl; try sih ; solve_all.
-    * eapply context_relation_mapi.
-      eapply context_relation_impl_onctx; tea; simpl; eauto.
-      unfold ondecl; intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
-    * rewrite -(context_relation_length e). eapply e1; eauto.
-    * eapply context_relation_mapi.
-      eapply context_relation_impl_onctx; tea; simpl; eauto.
-      unfold ondecl; intros Γ Γ' [na [b|] ty] [na' [b'|] ty']; simpl; intuition eauto.
-    * rewrite (context_relation_length a). now eapply b0.
+    * eapply All2_fold_mapi.
+      eapply All2_fold_impl_onctx; tea; simpl; eauto.
+      unfold ondecl; intros Γ Γ' d d' IH []; constructor; simpl; intuition eauto.
+    * rewrite -(All2_fold_length e). eapply e1; eauto.
+    * eapply All2_fold_mapi.
+      eapply All2_fold_impl_onctx; tea; simpl; eauto.
+      unfold ondecl; intros Γ Γ' d d' IH []; simpl; constructor; intuition eauto.
+    * rewrite (All2_fold_length a). now eapply b0.
   - cbn. constructor ; try sih ; eauto.
     pose proof (All2_length a).
     solve_all. now rewrite H.
@@ -1112,13 +1131,13 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
     eqb indp indp' &&
     eqb_predicate_gen
       (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
-      (bcompare_decl false (eqb_term_upto_univ_napp Σ equ equ 0) 
+      (bcompare_decls false (eqb_term_upto_univ_napp Σ equ equ 0) 
         (eqb_term_upto_univ_napp Σ equ equ 0))
       (eqb_term_upto_univ_napp Σ equ equ 0) p p' &&
     eqb_term_upto_univ_napp Σ equ equ 0 c c' &&
     forallb2 (fun x y =>
       forallb2 
-        (bcompare_decl false (eqb_term_upto_univ_napp Σ equ equ 0) 
+        (bcompare_decls false (eqb_term_upto_univ_napp Σ equ equ 0) 
           (eqb_term_upto_univ_napp Σ equ equ 0))
         x.(bcontext) y.(bcontext) &&
       eqb_term_upto_univ_napp Σ equ equ 0 (bbody x) (bbody y)
@@ -1322,10 +1341,10 @@ Proof.
   - eqspec; [|discriminate]. constructor.
 Qed.*)
 
-Lemma forallb2_bcompare_decl_context_relation
+Lemma forallb2_bcompare_decl_All2_fold
   (P : term -> term -> bool) Γ Δ : 
-  forallb2 (bcompare_decl false P P) Γ Δ ->
-  context_relation (fun _ _ => bcompare_decl false P P) Γ Δ.
+  forallb2 (bcompare_decls false P P) Γ Δ ->
+  All2_fold (fun _ _ => bcompare_decls false P P) Γ Δ.
 Proof.
   induction Γ as [|[na [b|] ty] Γ] in Δ |- *; destruct Δ as [|[na' [b'|] ty'] Δ]; simpl => //; constructor; auto;
   now move/andb_and: H => [].
@@ -1347,33 +1366,35 @@ Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> 
       ctx ->
   reflectT 
     (eq_context_gen false (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx ctx')
-    (forallb2 (bcompare_decl false (eqb_term_upto_univ Σ equ equ)
+    (forallb2 (bcompare_decls false (eqb_term_upto_univ Σ equ equ)
       (eqb_term_upto_univ Σ equ equ)) ctx ctx').
 Proof.
   intros hRe hRle ctx ctx' onc.
   eapply equiv_reflectT.
   - intros hcc'.
-    eapply context_relation_forallb2, context_relation_impl_onctx; tea.
+    eapply All2_fold_forallb2, All2_fold_impl_onctx; tea.
     unfold ondecl; intuition auto.
-    destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //;
+    depelim X0; cbn in * => //;
     intuition auto.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (a equ Re 0 hRe ty') => //.
-      destruct (b equ Re 0 hRe bod') => //.
+      destruct (a equ Re 0 hRe T') => //.
     + destruct (eqb_annot_reflect na na') => //.
-      destruct (a equ Re 0 hRe ty') => //.
+      destruct (b0 equ Re 0 hRe b') => //.
+      destruct (a equ Re 0 hRe T') => //.
   - intros hcc'.
-    eapply forallb2_bcompare_decl_context_relation in hcc'; tea.
-    eapply context_relation_impl_onctx in onc; tea; simpl; intuition eauto.
+    eapply forallb2_bcompare_decl_All2_fold in hcc'; tea.
+    eapply All2_fold_impl_onctx in onc; tea; simpl; intuition eauto.
     destruct X0.
     move: H.
     destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //.
     + destruct (eqb_annot_reflect na na') => //.
       destruct (r equ Re 0 hRe ty') => //.
       destruct (o equ Re 0 hRe bod') => //.
+      now constructor.
       now rewrite andb_false_r.
     + destruct (eqb_annot_reflect na na') => //.
       destruct (r equ Re 0 hRe ty') => //.
+      now constructor.
 Qed.
 
 Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
@@ -1399,7 +1420,7 @@ Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t
      (eqb_term_upto_univ_napp Σ equ lequ napp t t')) p ->
   reflectT (eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p') 
     (eqb_predicate_gen (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
-      (bcompare_decl false (eqb_term_upto_univ_napp Σ equ equ 0) (eqb_term_upto_univ_napp Σ equ equ 0))
+      (bcompare_decls false (eqb_term_upto_univ_napp Σ equ equ 0) (eqb_term_upto_univ_napp Σ equ equ 0))
       (eqb_term_upto_univ_napp Σ equ equ 0) p p').
 Proof.
   intros.
@@ -1541,7 +1562,7 @@ Proof.
            pose proof (onbod equ Re 0 he bbody0) as hh. cbn in hh.
            destruct hh => /=.
            ++ cbn -[eqb eqb_binder_annots] in *. destruct (IHl X1 brs).
-              ** constructor ; try easy. inversion e3. subst.
+              ** constructor ; try easy. inversion e2. subst.
                  constructor; auto.
               ** constructor. intro bot. apply f. inversion bot. subst.
                  inversion X3. subst. constructor; auto.
@@ -1887,19 +1908,8 @@ Qed.
 
 (** ** Equality on contexts ** *)
 
-Inductive eq_context_upto Σ (Re Rle : Universe.t -> Universe.t -> Prop) : context -> context -> Type :=
-| eq_context_nil : eq_context_upto Σ Re Rle [] []
-| eq_context_vass na A Γ nb B Δ :
-    eq_binder_annot na nb ->
-    eq_term_upto_univ Σ Re Rle A B ->
-    eq_context_upto Σ Re Rle Γ Δ ->
-    eq_context_upto Σ Re Rle (Γ ,, vass na A) (Δ ,, vass nb B)
-| eq_context_vdef na u A Γ nb v B Δ :
-    eq_binder_annot na nb ->
-    eq_term_upto_univ Σ Re Re u v ->
-    eq_term_upto_univ Σ Re Rle A B ->
-    eq_context_upto Σ Re Rle Γ Δ ->
-    eq_context_upto Σ Re Rle (Γ ,, vdef na u A) (Δ ,, vdef nb v B).
+Notation eq_context_upto Σ Re Rle := 
+  (eq_context_gen true (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle)).
 
 Inductive rel_option {A B} (R : A -> B -> Type) : option A -> option B -> Type :=
 | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
@@ -1921,44 +1931,29 @@ Proof.
     destruct x as [na bo ty], y as [na' bo' ty'].
     simpl in h1, h2.
     destruct h2.
-    + constructor ; eauto.
-    + constructor ; eauto.
+    + constructor ; eauto. constructor; auto.
+    + constructor ; eauto. constructor; auto.
 Qed.
-
-Lemma eq_context_upto_refl Σ Re Rle :
+(*
+Instance eq_context_upto_refl Σ Re Rle :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
-  Reflexive (eq_context_upto Σ Re Rle).
-Proof.
-  intros hRe hRle Γ.
-  induction Γ as [| [na [bo |] ty] Γ ih].
-  - constructor.
-  - constructor ; eauto.
-    all: eapply eq_term_upto_univ_refl ; eauto.
-  - constructor ; eauto.
-    all: eapply eq_term_upto_univ_refl ; eauto.
-Qed.
+  Reflexive (eq_context_upto Σ Re Rle) := _.
 
-Lemma eq_context_upto_sym Σ Re Rle :
+Instance eq_context_upto_sym Σ Re Rle :
   RelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Rle ->
-  Symmetric (eq_context_upto Σ Re Rle).
-Proof.
-  intros hRe hRle Γ Δ.
-  induction 1; constructor; eauto using eq_term_upto_univ_sym.
-  all:try now symmetry.
-  all:eapply eq_term_upto_univ_sym; auto.
-Qed.
+  Symmetric (eq_context_upto Σ Re Rle) := _.
+*)
 
 Lemma eq_context_upto_cat Σ Re Rle Γ Δ Γ' Δ' :
   eq_context_upto Σ Re Rle Γ Γ' ->
   eq_context_upto Σ Re Rle Δ Δ' ->
   eq_context_upto Σ Re Rle (Γ ,,, Δ) (Γ' ,,, Δ').
 Proof.
-  intros h1 h2. induction h2 in Γ, Γ', h1 |- *.
-  - assumption.
-  - simpl. constructor ; eauto.
-  - simpl. constructor ; eauto.
+  intros.
+  eapply All2_fold_app; eauto.
+  apply (length_of X0).
 Qed.
 
 Lemma eq_context_upto_rev Σ Re Rle Γ Δ :
@@ -1967,8 +1962,6 @@ Lemma eq_context_upto_rev Σ Re Rle Γ Δ :
 Proof.
   induction 1.
   - constructor.
-  - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
-    constructor ; eauto. constructor.
   - rewrite 2!rev_cons. eapply eq_context_upto_cat ; eauto.
     constructor ; eauto. constructor.
 Qed.
@@ -1983,9 +1976,6 @@ Proof.
   - constructor.
   - simpl. eapply eq_context_upto_cat.
     + repeat constructor; assumption.
-    + assumption.
-  - simpl. eapply eq_context_upto_cat.
-    + repeat constructor. all: assumption.
     + assumption.
 Qed.
 
@@ -2008,23 +1998,22 @@ Proof.
   intros re u v n l l'.
   induction 1; intros Hl.
   - rewrite !subst_context_nil. constructor.
-  - rewrite !subst_context_snoc; constructor; auto.
-    simpl. rewrite (eq_context_upto_length X).
-    apply eq_term_upto_univ_substs; auto.
-  - rewrite !subst_context_snoc; constructor; auto;
-    simpl; rewrite (eq_context_upto_length X).
-    apply eq_term_upto_univ_substs; auto. reflexivity. 
-    apply eq_term_upto_univ_substs; auto.
+  - rewrite !subst_context_snoc; constructor; eauto.
+    depelim p; constructor; simpl; intuition auto;
+    rewrite -(length_of X);
+    apply eq_term_upto_univ_substs; auto. reflexivity.
 Qed.
+
+Hint Resolve All2_fold_nil : pcuic.
 
 Lemma eq_context_upto_smash_context Σ ctx ctx' x y :
   eq_context_upto Σ eq eq ctx ctx' -> eq_context_upto Σ eq eq x y -> 
   eq_context_upto Σ eq eq (smash_context ctx x) (smash_context ctx' y).
 Proof.
   induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
-    try split; auto; try constructor; auto.
+    try split; auto; try constructor; auto. depelim X0 => /=.
   - apply IHx; auto. apply eq_context_upto_cat; auto.
-    constructor; auto. constructor.
+    constructor; pcuic.
   - apply IHx; auto. eapply eq_context_upto_subst_context; eauto.
     typeclasses eauto.
 Qed.
@@ -2036,11 +2025,8 @@ Proof.
   induction 1 in n |- *.
   - rewrite nth_error_nil. constructor.
   - destruct n; simpl; auto. 
-    constructor. split; auto. constructor. now simpl.
-    constructor.
-  - destruct n; simpl; auto.
-    constructor. constructor; simpl; auto. split; auto.
-    constructor; auto.
+    constructor. depelim p; constructor; intuition auto;
+    now constructor.
 Qed.
 
 Lemma eq_context_impl :
@@ -2054,46 +2040,10 @@ Proof.
   induction h.
   - constructor.
   - constructor; auto. 
-    eapply eq_term_upto_univ_impl. 5:eauto. all: try eassumption.
-    now transitivity Re'.
-    auto.
-  - constructor; auto. 
-    all: eapply eq_term_upto_univ_impl. 5:eauto. 9:eauto. all: try eassumption. all:auto.
-    now transitivity Re'.
+    depelim p; constructor; auto.
+    all:eapply eq_term_upto_univ_impl. 5,10,15:tea. all:eauto.
+    all:now transitivity Re'.
 Qed.
-
-Section ContextUpTo.
-  Context (Σ : global_env).
-  Context (Re : Universe.t -> Universe.t -> Prop).
-  Context (ReR : RelationClasses.Reflexive Re).
-  Context (ReS : RelationClasses.Symmetric Re).
-  Context (ReT : RelationClasses.Transitive Re).
-  Context (Rle : Universe.t -> Universe.t -> Prop).
-  Context (RleR : RelationClasses.Reflexive Rle).
-  Context (RleS : RelationClasses.Symmetric Rle).
-  Context (RleT : RelationClasses.Transitive Rle).
-
-  Notation eq_ctx := (eq_context_upto Σ Re Rle).
-
-  Global Instance eq_ctx_refl : Reflexive eq_ctx.
-  Proof. now intros ?; apply eq_context_upto_refl. Qed.
-
-  Global Instance eq_ctx_sym : Symmetric eq_ctx.
-  Proof.
-    intros x y. now apply eq_context_upto_sym.
-  Qed.
-
-  Global Instance eq_ctx_trans : Transitive eq_ctx.
-  Proof.
-    intros Γ0 Γ1 Γ2 H. induction H in Γ2 |- *.
-    - intros H2; inversion H2; subst; constructor; auto.
-    - intros H2; inversion H2; subst; constructor; auto.
-      all:etransitivity; eauto.
-    - intros H2; inversion H2; subst; constructor; auto.
-      all: etransitivity; eauto.
-  Qed.
-
-End ContextUpTo.
 
 Definition compare_term `{checker_flags} (le : bool) Σ φ (t u : term) :=
   if le then leq_term Σ φ t u else eq_term Σ φ t u.
@@ -2113,7 +2063,7 @@ Definition eq_opt_term `{checker_flags} (le : bool) Σ φ (t u : option term) :=
   end.
 
 Definition eq_decl `{checker_flags} le Σ φ (d d' : context_decl) :=
-  compare_decl le (eq_term Σ φ) (leq_term Σ φ) d d'.
+  compare_decls le (eq_term Σ φ) (leq_term Σ φ) d d'.
 
 Definition eq_context `{checker_flags} le Σ φ (Γ Δ : context) :=
   eq_context_gen le (eq_term Σ φ) (leq_term Σ φ) Γ Δ.
@@ -2121,8 +2071,7 @@ Definition eq_context `{checker_flags} le Σ φ (Γ Δ : context) :=
 Lemma lift_eq_decl_gen `{checker_flags} le Σ ϕ n k d d' :
   eq_decl le Σ ϕ d d' -> eq_decl le Σ ϕ (lift_decl n k d) (lift_decl n k d').
 Proof.
-  destruct d, d', decl_body, decl_body0, le;
-    unfold compare_decl, map_decl; cbn; intuition auto using lift_compare_term, lift_eq_term, lift_leq_term.
+  intros []; destruct le; constructor; cbn; intuition auto using lift_compare_term, lift_eq_term, lift_leq_term.
 Qed.
 
 Lemma lift_eq_context `{checker_flags} le Σ φ l l' n k :
@@ -2130,11 +2079,10 @@ Lemma lift_eq_context `{checker_flags} le Σ φ l l' n k :
   eq_context le Σ φ (lift_context n k l) (lift_context n k l').
 Proof.
   unfold eq_context.
-  induction 1; rewrite -> ?lift_context_snoc0; constructor; auto;
-  eapply lift_eq_decl_gen in p; eauto; cbn -[compare_decl].
-  now rewrite (context_relation_length X).
-  rewrite (context_relation_length X).
-  eapply p.
+  induction 1; rewrite -> ?lift_context_snoc0. constructor.
+  constructor; auto. 
+  eapply lift_eq_decl_gen in p.
+  now rewrite (All2_fold_length X).
 Qed.
 
 Lemma eq_term_upto_univ_mkApps_inv Σ Re Rle u l u' l' :
@@ -2257,7 +2205,7 @@ Proof.
   all:try solve [now symmetry].
   all:eauto using R_global_instance_flip.
   - eapply All2_sym. solve_all.
-    * eapply eq_context_sym. tc. tas. 
+    * eapply eq_context_sym; try tc. tas. 
     * now eapply eq_term_upto_univ_sym.
   - eapply All2_sym. solve_all.
     now eapply eq_term_upto_univ_sym.

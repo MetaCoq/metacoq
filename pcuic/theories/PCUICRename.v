@@ -206,10 +206,10 @@ Proof.
   - simpl. constructor. all: eauto.
     * rewrite /rename_predicate.
       destruct X; destruct e as [? [? [ectx ?]]].
-      rewrite (context_relation_length ectx). red.
+      rewrite (All2_fold_length ectx). red.
       intuition auto; simpl; solve_all.
-      eapply context_relation_mapi.
-      eapply context_relation_impl_onctx; tea.
+      eapply All2_fold_mapi.
+      eapply All2_fold_impl_onctx; tea.
       solve_all. eapply compare_decl_map.
       eapply compare_decl_impl_ondecl; tea; solve_all.
     * induction X0 in a, brs' |- *.
@@ -219,12 +219,12 @@ Proof.
         constructor; eauto.
         split; eauto.
         ** solve_all.
-          eapply context_relation_mapi.
-          eapply context_relation_impl_onctx; tea.
+          eapply All2_fold_mapi.
+          eapply All2_fold_impl_onctx; tea.
           solve_all. eapply compare_decl_map.
           eapply compare_decl_impl_ondecl; tea; solve_all.
         ** simpl.
-          rewrite (context_relation_length a0).
+          rewrite (All2_fold_length a0).
           now eapply e1. 
   - simpl. constructor.
     apply All2_length in a as e. rewrite <- e.
@@ -1312,19 +1312,19 @@ Proof.
   now replace (#|Γ| - S n + 0) with (Nat.pred #|Γ| - n + 0) by lia.
 Qed.
 
-Lemma context_relation_impl_ind_onctx_k Q P P' Γ Δ :  
+Lemma All2_fold_impl_ind_onctx_k Q P P' Γ Δ :  
   onctx_k Q 0 Γ ->
   onctx_k Q 0 Δ ->
-  context_relation P Γ Δ ->
+  All2_fold P Γ Δ ->
   (forall Γ Δ d d', 
-    context_relation P Γ Δ ->
+    All2_fold P Γ Δ ->
     onctx_k Q 0 Γ ->
-    context_relation P' Γ Δ ->
+    All2_fold P' Γ Δ ->
     ondecl (Q #|Γ|) d ->
     ondecl (Q #|Δ|) d' ->
     P Γ Δ d d' ->
     P' Γ Δ d d') ->
-  context_relation P' Γ Δ.
+  All2_fold P' Γ Δ.
 Proof.
   intros qΓ qΔ cr Hcr.
   induction cr in qΓ, qΔ |- *; constructor; depelim qΓ; depelim qΔ; intuition eauto;
@@ -1352,25 +1352,25 @@ Lemma conv_ctx_renameP {Σ : global_env_ext} {P} {Γ Δ} {L R} f :
 Proof.
   intros wf uren onL onL' onΓ H.
   rewrite /rename_context - !mapi_context_fold.
-  pose proof (context_relation_length H) as hlen.
+  pose proof (All2_fold_length H) as hlen.
   len in hlen. assert (#|L| = #|R|) by lia.
-  eapply context_relation_app_inv in H as [_ H] => //.
-  eapply context_relation_app; len => //; pcuic.
+  eapply All2_fold_app_inv in H as [_ H] => //.
+  eapply All2_fold_app; len => //; pcuic.
   { eapply conv_ctx_refl'. }
   move/on_free_vars_ctx_onctx_k: onL => onL.
   move/on_free_vars_ctx_onctx_k: onL' => onR.
 
-  eapply context_relation_mapi.
-  eapply context_relation_impl_ind_onctx_k; tea => 
+  eapply All2_fold_mapi.
+  eapply All2_fold_impl_ind_onctx_k; tea => 
     /= L' R' d d' IH onL' IH' ond ond'.
   simpl.
   rewrite !mapi_context_fold -/(rename_context f L') -/(rename_context f R').
   eapply conv_decls_renameP; eauto.
   + now eapply urenaming_context.
-  + rewrite (context_relation_length IH).
+  + rewrite (All2_fold_length IH).
     now eapply urenaming_context.
   + now eapply ondecl_on_free_vars_decl.
-  + rewrite (context_relation_length IH'). 
+  + rewrite (All2_fold_length IH'). 
     now eapply ondecl_on_free_vars_decl.
   + eapply on_ctx_free_vars_extend => //.
     now move/on_free_vars_ctx_onctx_k: onL'.
@@ -1387,25 +1387,25 @@ Lemma cumul_ctx_renameP {Σ : global_env_ext} {P} {Γ Δ} {L R} f :
 Proof.
   intros wf uren onL onL' onΓ H.
   rewrite /rename_context - !mapi_context_fold.
-  pose proof (context_relation_length H) as hlen.
+  pose proof (All2_fold_length H) as hlen.
   len in hlen. assert (#|L| = #|R|) by lia.
-  eapply context_relation_app_inv in H as [_ H] => //.
-  eapply context_relation_app; len => //; pcuic.
+  eapply All2_fold_app_inv in H as [_ H] => //.
+  eapply All2_fold_app; len => //; pcuic.
   { eapply cumul_ctx_refl'. }
   move/on_free_vars_ctx_onctx_k: onL => onL.
   move/on_free_vars_ctx_onctx_k: onL' => onR.
 
-  eapply context_relation_mapi.
-  eapply context_relation_impl_ind_onctx_k; tea => 
+  eapply All2_fold_mapi.
+  eapply All2_fold_impl_ind_onctx_k; tea => 
     /= L' R' d d' IH onL' IH' ond ond'.
   simpl.
   rewrite !mapi_context_fold -/(rename_context f L') -/(rename_context f R').
   eapply cumul_decls_renameP; eauto.
   + now eapply urenaming_context.
-  + rewrite (context_relation_length IH).
+  + rewrite (All2_fold_length IH).
     now eapply urenaming_context.
   + now eapply ondecl_on_free_vars_decl.
-  + rewrite (context_relation_length IH'). 
+  + rewrite (All2_fold_length IH'). 
     now eapply ondecl_on_free_vars_decl.
   + eapply on_ctx_free_vars_extend => //.
     now move/on_free_vars_ctx_onctx_k: onL'.

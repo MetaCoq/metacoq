@@ -1306,17 +1306,17 @@ Section Lemmata.
       apply cumul_mkApps; auto.
   Qed.
 
-  Lemma whne_context_relation f rel Γ Γ' t :
+  Lemma whne_All2_fold f rel Γ Γ' t :
     (forall Γ Γ' c c', rel Γ Γ' c c' -> (decl_body c = None <-> decl_body c' = None)) ->
     whne f Σ Γ t ->
-    context_relation rel Γ Γ' ->
+    All2_fold rel Γ Γ' ->
     whne f Σ Γ' t.
   Proof.
     intros behaves wh conv.
     induction wh; eauto using whne.
     destruct nth_error eqn:nth; [|easy].
     cbn in *.
-    eapply context_relation_nth in nth; eauto.
+    eapply All2_fold_nth in nth; eauto.
     destruct nth as (?&eq&?&?).
     constructor.
     rewrite eq.
@@ -1327,16 +1327,16 @@ Section Lemmata.
     congruence.
   Qed.
 
-  Lemma whnf_context_relation f rel Γ Γ' t :
+  Lemma whnf_All2_fold f rel Γ Γ' t :
     (forall Γ Γ' c c', rel Γ Γ' c c' -> (decl_body c = None <-> decl_body c' = None)) ->
     whnf f Σ Γ t ->
-    context_relation rel Γ Γ' ->
+    All2_fold rel Γ Γ' ->
     whnf f Σ Γ' t.
   Proof.
     intros behaves wh conv.
     destruct wh; eauto using whnf.
     apply whnf_ne.
-    eapply whne_context_relation; eauto.
+    eapply whne_All2_fold; eauto.
   Qed.
 
   Lemma whne_conv_context f Γ Γ' t :
@@ -1344,7 +1344,7 @@ Section Lemmata.
     conv_context Σ Γ Γ' ->
     whne f Σ Γ' t.
   Proof.
-    apply whne_context_relation.
+    apply whne_All2_fold.
     intros ? ? ? ? r.
     now depelim r.
   Qed.
@@ -1354,7 +1354,7 @@ Section Lemmata.
     conv_context Σ Γ Γ' ->
     whnf f Σ Γ' t.
   Proof.
-    apply whnf_context_relation.
+    apply whnf_All2_fold.
     intros ? ? ? ? r.
     now depelim r.
   Qed.

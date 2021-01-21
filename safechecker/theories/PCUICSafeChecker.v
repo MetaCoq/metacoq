@@ -1532,8 +1532,8 @@ Section CheckEnv.
     cumul_ctx_rel Σ Γ Δ Δ'.
   Proof.
     intros H.
-    eapply context_relation_app in H as [cumΓ cumΔs]; auto.
-    eapply context_relation_length in H. len in H. lia.
+    eapply All2_fold_app in H as [cumΓ cumΔs]; auto.
+    eapply All2_fold_length in H. len in H. lia.
   Qed.
 
   Lemma eq_decl_eq_decl_upto (Σ : global_env_ext) x y : 

@@ -729,33 +729,94 @@ Module Environment (T : Term).
     now len.
   Qed.
 
-  Inductive context_relation {P : context -> context -> context_decl -> context_decl -> Type}
+  (** Lifting a relation to declarations, without alpha renaming. *)
+  Inductive All_decls (P : term -> term -> Type) : context_decl -> context_decl -> Type :=
+  | on_vass na t t' :
+    P t t' ->
+    All_decls P (vass na t) (vass na t')
+
+  | on_vdef na b t b' t' :
+    P b b' ->
+    P t t' ->
+    All_decls P (vdef na b t) (vdef na b' t').
+  Derive Signature NoConfusion for All_decls.
+
+  (** Allow alpha-renaming of binders *)
+  Inductive All_decls_alpha (P : term -> term -> Type) : context_decl -> context_decl -> Type :=
+  | on_vass_alpha na na' t t' :
+    eq_binder_annot na na' ->
+    P t t' ->
+    All_decls_alpha P (vass na t) (vass na' t')
+  
+  | on_vdef_alpha na na' b t b' t' :
+    eq_binder_annot na na' ->
+    P b b' ->
+    P t t' ->
+    All_decls_alpha P (vdef na b t) (vdef na' b' t').
+  Derive Signature NoConfusion for All_decls_alpha.
+  
+  Lemma All_decls_impl (P Q : term -> term -> Type) d d' : 
+    All_decls P d d' ->
+    (forall t t', P t t' -> Q t t') ->
+    All_decls Q d d'.
+  Proof.
+    intros ond H; destruct ond; constructor; auto.
+  Qed.
+
+  Lemma All_decls_alpha_impl (P Q : term -> term -> Type) d d' : 
+    All_decls_alpha P d d' ->
+    (forall t t', P t t' -> Q t t') ->
+    All_decls_alpha Q d d'.
+  Proof.
+    intros ond H; destruct ond; constructor; auto.
+  Qed.
+
+  Lemma All_decls_to_alpha (P : term -> term -> Type) d d' : 
+    All_decls P d d' ->
+    All_decls_alpha P d d'.
+  Proof.
+    intros []; constructor; auto; reflexivity.
+  Qed.
+  
+  Inductive All2_fold {P : context -> context -> context_decl -> context_decl -> Type}
             : forall (Γ Γ' : context), Type :=
-  | ctx_rel_nil : context_relation nil nil
-  | ctx_rel_vass {na na' T U Γ Γ'} :
-      context_relation Γ Γ' ->
-      P Γ Γ' (vass na T) (vass na' U) ->
-      context_relation (vass na T :: Γ) (vass na' U :: Γ')
-  | ctx_rel_def {na na' t T u U Γ Γ'} :
-      context_relation Γ Γ' ->
-      P Γ Γ' (vdef na t T) (vdef na' u U) ->
-      context_relation (vdef na t T :: Γ) (vdef na' u U :: Γ').
+  | All2_fold_nil : All2_fold nil nil
+  | All2_fold_cons {d d' Γ Γ'} : All2_fold Γ Γ' -> P Γ Γ' d d' -> All2_fold (d :: Γ) (d' :: Γ').
 
-  Derive Signature NoConfusion for context_relation.
-  Arguments context_relation P Γ Γ' : clear implicits.
+  Derive Signature NoConfusion for All2_fold.
+  Arguments All2_fold P Γ Γ' : clear implicits.
 
-  Lemma context_relation_length {P Γ Γ'} :
-    context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
+  Lemma All2_fold_length {P Γ Γ'} :
+    All2_fold P Γ Γ' -> #|Γ| = #|Γ'|.
   Proof.
     induction 1; cbn; congruence.
   Qed.
 
-  Lemma context_relation_impl {P Q Γ Γ'} :
-    context_relation P Γ Γ' -> (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
-    context_relation Q Γ Γ'.
+  Lemma All2_fold_impl {P Q Γ Γ'} :
+    All2_fold P Γ Γ' -> (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
+    All2_fold Q Γ Γ'.
   Proof.
     induction 1; constructor; auto.
   Qed.
+
+  Definition All_over {A} (P : context -> context -> A -> A -> Type) Γ Γ' :=
+    fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ').
+
+  Lemma All2_fold_app_inv :
+    forall P (Γ Γ' Γl Γr : context),
+      All2_fold P Γ Γl ->
+      All2_fold (All_over P Γ Γl) Γ' Γr ->
+      All2_fold P (Γ ,,, Γ') (Γl ,,, Γr).
+  Proof.
+    induction 2; auto.
+    - simpl. constructor; auto.
+  Qed.
+
+  Definition All2_fold_over P Γ Γ' := All2_fold (All_over P Γ Γ').
+
+  Notation on_decls P := (fun Γ Γ' => All_decls (P Γ Γ')).
+  Notation on_contexts P := (All2_fold (on_decls P)).
+  Notation on_contexts_over P Γ Γ' := (All2_fold (All_over (on_decls P) Γ Γ')).
 
 End Environment.
 

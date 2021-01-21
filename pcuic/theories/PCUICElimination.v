@@ -78,7 +78,7 @@ Proof.
   simpl in watiapp.
   eapply (isType_mkApps_Ind wfΣ H) in watiapp as [psub [asub [[spp spa] cuni]]]; eauto.
   2:eapply typing_wf_local; eauto.
-  destruct on_declared_inductive as oib] [oi in *. simpl in *.
+  destruct on_declsared_inductive as oib] [oi in *. simpl in *.
   eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in e0 as [parsubst [cs eq]].
   rewrite eq in t.
   eapply PCUICGeneration.type_mkApps. eauto.
@@ -422,7 +422,7 @@ Proof.
   assert (wfΣ : wf Σ) by apply HΣ.
   eapply inversion_mkApps in hc as [? [hc hsp]]; auto.
   eapply inversion_Construct in hc as [mdecl' [idecl' [cdecl' [wfΓ [declc [cu cum']]]]]]; auto.
-  destruct (on_declared_constructor _ declc) as [[oi oib] [cs [Hnth onc]]].
+  destruct (on_declsared_constructor _ declc) as [[oi oib] [cs [Hnth onc]]].
   set (onib := declared_inductive_inv _ _ _ _) in *.
   clearbody onib. clear oib.
   eapply typing_spine_strengthen in hsp; eauto.
@@ -517,7 +517,7 @@ Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) i
 Proof.
   intros cu HΣ H indk.
   assert (wfΣ : wf Σ) by apply HΣ.
-  destruct (PCUICWeakeningEnv.on_declared_inductive wfΣ as H) [[]]; eauto.
+  destruct (PCUICWeakeningEnv.on_declsared_inductive wfΣ as H) [[]]; eauto.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
@@ -560,7 +560,7 @@ Proof.
   pose (d' := d). destruct d' as [? _].
   eapply declared_inductive_inj in H as []; eauto. subst.
   pose proof (declared_projection_projs_nonempty X d).
-  pose proof (PCUICWeakeningEnv.on_declared_projection X d) as [oni onp].
+  pose proof (PCUICWeakeningEnv.on_declsared_projection X d) as [oni onp].
   simpl in onp. destruct ind_cunivs as [|? []]; try contradiction.
   destruct onp as (((? & ?) & ?) & ?).
   inv o. auto.
@@ -612,7 +612,7 @@ Proof.
   eapply inversion_mkApps in t1' as [A [tc _]]; auto.
   eapply inversion_Construct in tc as [mdecl [idecl [cdecl [_ [declc _]]]]]; auto. clear A.
   unshelve eapply PCUICInductiveInversion.Construct_Ind_ind_eq in t1; eauto.
-  destruct on_declared_constructor as [[onind oib] [cs [Hnth onc]]].
+  destruct on_declsared_constructor as [[onind oib] [cs [Hnth onc]]].
   destruct t1 as [[t1 ->] _]. simpl in e. rewrite <- e.
   destruct (declared_inductive_inj d (proj1 declc)); subst mdecl' idecl'.
   f_equal. clear Hnth.

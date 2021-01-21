@@ -416,7 +416,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max (wf_local_size _ typing_size _ a) 
-      (Nat.max d1 (Nat.max d2 (branches_size typing_size a0))))).
+      (Nat.max d1 (Nat.max d2 (branches_size typing_size a1))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
@@ -921,7 +921,7 @@ Proof.
         ++ eapply (X14 _ _ _ H0); simpl. lia.
         ++ clear Hdecls. simpl in Hwf, Htywf, X14.
           clear -Hwf Htywf X14. 
-          subst ptm predctx; induction a0.
+          subst ptm predctx; induction a1.
           ** constructor.
           ** destruct r0 as [[wfbctx convctx] [t t0]]. constructor.
               --- intros brctxty. 
@@ -935,7 +935,7 @@ Proof.
                   +++ simpl; auto with arith.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.
-              --- apply IHa0; auto. intros. apply (X14 _ _ _ Hty). simpl. lia.
+              --- apply IHa1; auto. intros. apply (X14 _ _ _ Hty). simpl. lia.
                   intros.
                   eapply (Hwf _ Hwf0). simpl. lia.
                   intros.

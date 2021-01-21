@@ -26,7 +26,7 @@ Proof. apply: (smash_context_subst []). Qed.
 
 Lemma conv_context_smash {cf:checker_flags} Σ Γ Δ Δ' : 
   assumption_context Δ ->
-  context_relation (fun Δ Δ' => conv_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
+  All2_fold (fun Δ Δ' => conv_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
   assumption_context Δ'.
 Proof.
   intros Hass Hconv.

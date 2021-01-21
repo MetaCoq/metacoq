@@ -742,9 +742,9 @@ Proof.
     + unfold test_branch_k. clear H8. solve_all.
       * rewrite closedn_ctx_app in a1.
         now move/andP: a1 => [].
-      * eapply context_relation_app_inv_l in b as [_ conv] => //.
+      * eapply All2_fold_app_inv_l in b as [_ conv] => //.
         len in H8.
-        now rewrite (context_relation_length conv).
+        now rewrite (All2_fold_length conv).
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
       rewrite closedn_ctx_app in H4.
@@ -1211,7 +1211,7 @@ Lemma declared_inductive_closed_params {cf:checker_flags} {Σ mdecl ind idecl} {
   closed_ctx mdecl.(ind_params).
 Proof.
   intros h.
-  pose proof (on_declared_inductive h) as [onmind _].
+  pose proof (on_declsared_inductive h) as [onmind _].
   eapply onParams in onmind.
   eapply closed_wf_local; eauto. simpl. auto.
 Qed.

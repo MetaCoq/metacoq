@@ -61,12 +61,12 @@ Section ContextReduction.
     eapply H; auto.
   Qed.
 
-  Lemma All2_local_env_over_red_refl {Γ Δ} :
-    All2_local_env (on_decl (fun (Δ _ : context) (t u : term) => red Σ (Γ ,,, Δ) t u)) Δ Δ.
+  Lemma All2_fold_over_red_refl {Γ Δ} :
+    All2_fold (on_decls (fun (Δ _ : context) (t u : term) => red Σ (Γ ,,, Δ) t u)) Δ Δ.
   Proof. induction Δ as [|[na [b|] ty]]; econstructor; try red; auto. Qed.
 
-  Lemma All2_local_env_red_refl {Δ} :
-    All2_local_env (on_decl (fun (Δ _ : context) (t u : term) => red Σ Δ t u)) Δ Δ.
+  Lemma All2_fold_red_refl {Δ} :
+    All2_fold (on_decls (fun (Δ _ : context) (t u : term) => red Σ Δ t u)) Δ Δ.
   Proof. induction Δ as [|[na [b|] ty]]; econstructor; try red; auto. Qed.
 
   Derive Signature for assumption_context.
@@ -97,8 +97,8 @@ Section ContextReduction.
       eapply nth_error_pred1_ctx_l in H as [body' [? ?]]; eauto.
       rewrite -(firstn_skipn (S i) Γ').
       assert (i < #|Γ'|). destruct (nth_error Γ' i) eqn:Heq; noconf e. eapply nth_error_Some_length in Heq. lia.
-      move: (All2_local_env_length H0) => Hlen.
-      specialize (X _ _ _ H1 e). forward X. eapply All2_local_env_app.
+      move: (All2_fold_length H0) => Hlen.
+      specialize (X _ _ _ H1 e). forward X. eapply All2_fold_app.
       instantiate (1 := firstn (S i) Γ').
       instantiate (1 := firstn (S i) Γ).
       rewrite [_ ,,, _](firstn_skipn (S i) _).
@@ -167,7 +167,7 @@ Section ContextReduction.
       intros.
       intuition auto.
       specialize (b0 (Γ' ,,, fix_context mfix0)). forward b0.
-      eapply All2_local_env_app_inv. apply H. apply All2_local_env_over_red_refl.
+      eapply All2_fold_app_inv. apply H. apply All2_fold_over_red_refl.
       forward b0. eapply red1_red_ctxP_ass. apply fix_context_assumption_context. auto.
       destruct b0 as [t [? ?]].
       refine (existT _ {| dbody := t |} _); simpl; eauto.
@@ -191,7 +191,7 @@ Section ContextReduction.
       intros.
       intuition auto.
       specialize (b0 (Γ' ,,, fix_context mfix0)). forward b0.
-      eapply All2_local_env_app_inv. apply H. apply All2_local_env_over_red_refl.
+      eapply All2_fold_app_inv. apply H. apply All2_fold_over_red_refl.
       forward b0. eapply red1_red_ctxP_ass. apply fix_context_assumption_context. auto.
       destruct b0 as [t [? ?]].
       refine (existT _ {| dbody := t |} _); simpl; eauto.
@@ -248,17 +248,17 @@ Section ContextConversion.
   Context (Σ : global_env_ext).
   Context {wfΣ : wf Σ}.
 
-  Notation conv_context Γ Γ' := (context_relation (conv_decls Σ) Γ Γ').
-  Notation cumul_context Γ Γ' := (context_relation (cumul_decls Σ) Γ Γ').
+  Notation conv_context Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
+  Notation cumul_context Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
 
-  Global Instance conv_ctx_refl : Reflexive (context_relation (conv_decls Σ)).
+  Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls Σ)).
   Proof.
     intro Γ; induction Γ; try econstructor.
     destruct a as [na [b|] ty]; econstructor; eauto;
       constructor; pcuic.
   Qed.
 
-  Global Instance cumul_ctx_refl : Reflexive (context_relation (cumul_decls Σ)).
+  Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls Σ)).
   Proof.
     intro Γ; induction Γ; try econstructor.
     destruct a as [na [b|] ty]; econstructor; eauto;
@@ -912,7 +912,7 @@ Proof.
   - auto.
 
   - pose proof heq_nth_error.
-    eapply (context_relation_nth_r X0) in H as [d' [Hnth [Hrel Hconv]]].
+    eapply (All2_fold_nth_r X0) in H as [d' [Hnth [Hrel Hconv]]].
     unshelve eapply nth_error_All_local_env_over in X. 3:eapply heq_nth_error.
     destruct X as [onctx ondecl].
     destruct lookup_wf_local_decl. red in ondecl.

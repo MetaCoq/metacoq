@@ -79,7 +79,7 @@ Lemma wf_local_rel_conv:
   forall Σ : global_env × universes_decl,
     wf Σ.1 ->
     forall Γ Γ' : context,
-      context_relation (conv_decls Σ) Γ Γ' ->
+      All2_fold (conv_decls Σ) Γ Γ' ->
       forall Γ0 : context, wf_local Σ Γ' -> wf_local_rel Σ Γ Γ0 -> wf_local_rel Σ Γ' Γ0.
 Proof.
   intros Σ wfΣ Γ Γ' X1 Γ0 ? w0. induction w0.
@@ -589,7 +589,7 @@ Proof.
   eapply PCUICValidity.inversion_mkApps in HT as (? & ? & ?); auto.
   eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?); auto.
   pose proof d as [decli ?]. pose proof decli as [-> ->].
-  destruct (on_declared_constructor wfΣ d).
+  destruct (on_declsared_constructor wfΣ d).
   destruct p as [onind oib].
   rewrite oib.(ind_arity_eq).
   rewrite !destArity_it_mkProd_or_LetIn /=.
@@ -620,7 +620,7 @@ Proof.
   eapply inversion_Construct in HT' as (? & ? & ? & ? & ? & ? & ?); auto.
   pose proof (declared_constructor_valid_ty _ _ _ _ _ _ _ _ wfΣ a d c).
   pose proof d as [decli ?].
-  destruct (on_declared_constructor wfΣ d).
+  destruct (on_declsared_constructor wfΣ d).
   destruct p as [onind oib].
   red.
   rewrite (proj1 (proj1 d)) (proj2 (proj1 d)).

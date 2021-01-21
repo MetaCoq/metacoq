@@ -176,7 +176,7 @@ Section fix_sigma.
     etransitivity; eauto.
     eapply PCUICContextRelation.context_change_decl_types_red; eauto.
     constructor; [|constructor].
-    eapply PCUICContextRelation.context_relation_refl.
+    eapply PCUICContextRelation.All2_fold_refl.
     reflexivity.
   Qed.
 
@@ -924,7 +924,7 @@ Proof.
   destruct (cst_body cb) eqn:cbe;
   destruct (E.cst_body cb') eqn:cbe'; auto.
   specialize (H3 _ eq_refl).
-  eapply on_declared_constant in H; auto.
+  eapply on_declsared_constant in H; auto.
   2:{ now inv wfΣ. }
   red in H. rewrite cbe in H. simpl in H.
   eapply (erases_weakeninv_env (Σ := (Σ, cst_universes cb))
@@ -994,7 +994,7 @@ Proof.
   eapply (erases_weakeninv_env (Σ  := (_, cst_universes cst)) (Σ' := ((kn', d) :: Σ, cst_universes cst))); eauto.
   constructor; eauto.
   exists [(kn', d)]; intuition eauto.
-  eapply on_declared_constant in declc; auto.
+  eapply on_declsared_constant in declc; auto.
   red in declc. rewrite bod in declc. eapply declc.
   noconf H.
   eapply erases_deps_cons; eauto.
@@ -1028,7 +1028,7 @@ Proof.
   eapply (erases_weakeninv_env (Σ  := (_, cst_universes cst)) (Σ' := ((kn', d) :: Σ, cst_universes cst))); eauto.
   constructor; eauto.
   exists [(kn', d)]; intuition eauto.
-  eapply on_declared_constant in declc; auto.
+  eapply on_declsared_constant in declc; auto.
   red in declc. rewrite bod in declc. eapply declc.
   noconf H.
   eapply erases_deps_weaken; eauto. constructor; eauto.
@@ -1073,7 +1073,7 @@ Lemma erases_mutual {Σ mdecl m} :
   erases_mutual_inductive_body m (erase_mutual_inductive_body m).
 Proof.
   destruct m; constructor; simpl; auto.
-  eapply on_declared_minductive in H; auto. simpl in H. clear X.
+  eapply on_declsared_minductive in H; auto. simpl in H. clear X.
   eapply onInductives in H; simpl in *.
   assert (Alli (fun i oib => match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies).
   { eapply Alli_impl; eauto.

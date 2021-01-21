@@ -79,30 +79,30 @@ Proof.
         -- rewrite smash_context_app /= .
           rewrite !app_context_assoc.
           assert (#|smash_context [] ctx| = #|ctx'|).
-          { apply context_relation_length in convctx.
+          { apply All2_fold_length in convctx.
             autorewrite with len in convctx |- *.
             simpl in convctx. simpl. lia. }
-          eapply context_relation_app_inv; auto.
-          apply context_relation_app in convctx; auto.
+          eapply All2_fold_app_inv; auto.
+          apply All2_fold_app in convctx; auto.
           constructor; pcuic.
-          eapply context_relation_app in convctx as [_ convctx].
-          unshelve eapply (context_relation_impl convctx).
+          eapply All2_fold_app in convctx as [_ convctx].
+          unshelve eapply (All2_fold_impl convctx).
           simpl; pcuicfo. destruct X. constructor; auto.
           eapply conv_conv_ctx; eauto.
-          eapply context_relation_app_inv. constructor; pcuic.
+          eapply All2_fold_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
-          apply context_relation_refl. intros.
+          apply All2_fold_refl. intros.
           destruct x as [na'' [b'|] ty']; constructor; reflexivity.
           constructor; pcuic. 
           eapply conv_conv_ctx; eauto.
-          eapply context_relation_app_inv. constructor; pcuic.
+          eapply All2_fold_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
-          apply context_relation_refl. intros.
+          apply All2_fold_refl. intros.
           destruct x as [na'' [b''|] ty']; constructor; reflexivity.
           eapply conv_conv_ctx; eauto.
-          eapply context_relation_app_inv. constructor; pcuic.
+          eapply All2_fold_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
-          apply context_relation_refl. intros.
+          apply All2_fold_refl. intros.
           destruct x as [? [?|] ?]; constructor; reflexivity.
           auto.
 Qed.
@@ -390,7 +390,7 @@ Proof.
   intros wfΣ isdecl u.
   unfold inds.
   pose proof (proj1 isdecl) as declm'. 
-  apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
+  apply PCUICWeakeningEnv.on_declsared_minductive in declm' as [oind oc]; auto.
   clear oc.
   assert (Alli (fun i x =>
    (Σ, ind_universes mdecl) ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : (ind_type x)) 0 (ind_bodies mdecl)).
@@ -433,7 +433,7 @@ Proof.
   unfold inds.
   destruct isdecl as [declm _].
   pose proof declm as declm'.
-  apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
+  apply PCUICWeakeningEnv.on_declsared_minductive in declm' as [oind oc]; auto.
   clear oc.
   assert (Alli (fun i x => Σ ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : subst_instance u (ind_type x)) 0 (ind_bodies mdecl)). 
   { apply forall_nth_error_Alli.
@@ -571,7 +571,7 @@ Lemma on_minductive_wf_params {cf : checker_flags} (Σ : global_env × universes
   wf_local Σ (subst_instance u (ind_params mdecl)).
 Proof.
   intros; eapply (wf_local_instantiate _ (InductiveDecl mdecl)); eauto.
-  eapply on_declared_minductive in H; auto.
+  eapply on_declsared_minductive in H; auto.
   now apply onParams in H.
 Qed.
 

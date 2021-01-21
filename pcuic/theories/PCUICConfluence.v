@@ -85,18 +85,18 @@ Proof.
   - exists (d :: IHo.π1). split; constructor; auto; apply IHo.π2.
 Qed.
 
-Lemma OnOne2_local_env_context_relation (P : context -> term -> term -> Type) 
+Lemma OnOne2_local_env_All2_fold (P : context -> term -> term -> Type) 
   (Q : context -> context -> context_decl -> context_decl -> Type)
   (l l' : context) :
   OnOne2_local_env (on_one_decl P) l l' ->
   (forall Γ x y, on_one_decl P Γ x y -> Q Γ Γ x y) ->
   (forall Γ Γ' d, OnOne2_local_env (on_one_decl P) Γ Γ' -> Q Γ Γ' d d) ->
   (forall Γ x, Q Γ Γ x x) ->
-  context_relation Q l l'.
+  All2_fold Q l l'.
 Proof.
   intros onc HP IHQ HQ. induction onc; simpl; try constructor; eauto.
-  now eapply context_relation_refl.
-  now eapply context_relation_refl.
+  now eapply All2_fold_refl.
+  now eapply All2_fold_refl.
   destruct d as [na [b|] ty]; constructor; auto.
 Qed.
 
@@ -209,7 +209,7 @@ Proof.
     * eapply case_red_pcontext; tea.
     * econstructor; eauto; try reflexivity.
       red; intuition; simpl; eauto. red.
-      eapply OnOne2_local_env_context_relation; tea => /= //; try reflexivity.
+      eapply OnOne2_local_env_All2_fold; tea => /= //; try reflexivity.
       + intros *. now eapply on_one_decl_compare_decl.
       + eapply All2_same; split; reflexivity.
   - specialize (IHh (Δ ,,, pcontext p)).
@@ -265,7 +265,7 @@ Proof.
       eapply OnOne2_All2; tea => /=; intuition eauto; try reflexivity.
       red.
       2:{ now rewrite b. }
-      eapply OnOne2_local_env_context_relation; tea => /= //; try reflexivity.
+      eapply OnOne2_local_env_All2_fold; tea => /= //; try reflexivity.
       intros *. now eapply on_one_decl_compare_decl.
 
   - destruct (IHh _ e) as [x [redl redr]].
@@ -540,7 +540,7 @@ Proof.
   induction Heq in k |- *; simpl; constructor; auto.
   constructor.
   rewrite (eq_context_gen_context_assumptions Heq).
-  len. rewrite (context_relation_length Heq).
+  len. rewrite (All2_fold_length Heq).
   eapply eq_term_upto_univ_substs; eauto. tc.
   eapply eq_term_upto_univ_lift, p.
 Qed.
@@ -714,7 +714,7 @@ Proof.
     dependent destruction h1.
     eapply All2_nth_error_Some in a as [t' [hnth [eqctx eqbod]]]; tea.
     have lenctxass := eq_context_gen_context_assumptions eqctx.
-    have lenctx := context_relation_length eqctx.
+    have lenctx := All2_fold_length eqctx.
     eexists. split.
     + constructor; tea. 
       epose proof (All2_length h2). rewrite !List.skipn_length in H0 |- *. 
@@ -1440,36 +1440,36 @@ Polymorphic Derive Signature for Relation.clos_refl_trans.
 Derive Signature for red1.
 
 Lemma local_env_telescope P Γ Γ' Δ Δ' :
-  All2_telescope (on_decl P) Γ Γ' Δ Δ' ->
-  All2_local_env_over P Γ Γ' (List.rev Δ) (List.rev Δ').
+  All2_telescope (on_decls P) Γ Γ' Δ Δ' ->
+  All2_fold_over P Γ Γ' (List.rev Δ) (List.rev Δ').
 Proof.
   induction 1. simpl. constructor.
-  - simpl. eapply All2_local_env_over_app. constructor. constructor. reflexivity.
+  - simpl. eapply All2_fold_over_app. constructor. constructor. reflexivity.
     simpl. apply p.
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
     constructor; auto. red in p0. red. red. red. red in p0.
     rewrite !app_context_assoc. cbn. apply p0.
-    constructor; auto. destruct p0. unfold on_decl_over in *. simpl.
+    constructor; auto. destruct p0. unfold on_decls_over in *. simpl.
     rewrite !app_context_assoc. cbn. intuition.
-  - simpl. eapply All2_local_env_over_app. constructor. 2:auto. constructor.
-    simpl. unfold on_decl_over, on_decl in *. destruct p. split; intuition auto.
+  - simpl. eapply All2_fold_over_app. constructor. 2:auto. constructor.
+    simpl. unfold on_decls_over, on_decls in *. destruct p. split; intuition auto.
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
     constructor; auto. red in p0. red. red. red. red in p0.
     rewrite !app_context_assoc. cbn. apply p0.
-    constructor; auto. destruct p0. unfold on_decl_over in *. simpl.
+    constructor; auto. destruct p0. unfold on_decls_over in *. simpl.
     rewrite !app_context_assoc. cbn. intuition.
 Qed.
 
 Lemma All_All2_telescopei_gen P (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
   (forall Δ Δ' x y,
-    All2_local_env_over P Γ Γ' Δ Δ' ->
+    All2_fold_over P Γ Γ' Δ Δ' ->
     P Γ Γ' x y ->
     P (Γ ,,, Δ) (Γ' ,,, Δ') (lift0 #|Δ| x) (lift0 #|Δ'| y)) ->
   All2 (on_Trel_eq (P Γ Γ') dtype dname) m m' ->
-  All2_local_env_over P Γ Γ' Δ Δ' ->
-  All2_telescope_n (on_decl P) (fun n : nat => lift0 n)
+  All2_fold_over P Γ Γ' Δ Δ' ->
+  All2_telescope_n (on_decls P) (fun n : nat => lift0 n)
                    (Γ ,,, Δ) (Γ' ,,, Δ') #|Δ|
     (map (fun def : def term => vass (dname def) (dtype def)) m)
     (map (fun def : def term => vass (dname def) (dtype def)) m').
@@ -1478,23 +1478,23 @@ Proof.
   induction 1 in Δ, Δ' |- *; cbn. constructor.
   intros. destruct r. rewrite e. constructor.
   red.
-  rewrite {2}(All2_local_env_length X0).
+  rewrite {2}(All2_fold_length X0).
   now eapply weakP.
   specialize (IHX (vass (dname y) (lift0 #|Δ| (dtype x)) :: Δ)
                   (vass (dname y) (lift0 #|Δ'| (dtype y)) :: Δ')).
   forward IHX.
   constructor; auto. now eapply weakP. simpl in IHX.
-  rewrite {2}(All2_local_env_length X0).
+  rewrite {2}(All2_fold_length X0).
   apply IHX.
 Qed.
 
 Lemma All_All2_telescopei P (Γ Γ' : context) (m m' : mfixpoint term) :
   (forall Δ Δ' x y,
-    All2_local_env_over P Γ Γ' Δ Δ' ->
+    All2_fold_over P Γ Γ' Δ Δ' ->
     P Γ Γ' x y ->
     P (Γ ,,, Δ) (Γ' ,,, Δ') (lift0 #|Δ| x) (lift0 #|Δ'| y)) ->
   All2 (on_Trel_eq (P Γ Γ') dtype dname) m m' ->
-  All2_telescope_n (on_decl P) (fun n => lift0 n)
+  All2_telescope_n (on_decls P) (fun n => lift0 n)
                    Γ Γ' 0
                    (map (fun def => vass (dname def) (dtype def)) m)
                    (map (fun def => vass (dname def) (dtype def)) m').
@@ -1503,13 +1503,13 @@ Proof.
   intros. specialize (X X0 X1). apply X; constructor.
 Qed.
 
-Lemma All2_All2_local_env_fix_context P (Γ Γ' : context) (m m' : mfixpoint term) :
+Lemma All2_All2_fold_fix_context P (Γ Γ' : context) (m m' : mfixpoint term) :
   (forall Δ Δ' x y,
-    All2_local_env_over P Γ Γ' Δ Δ' ->
+    All2_fold_over P Γ Γ' Δ Δ' ->
     P Γ Γ' x y ->
     P (Γ ,,, Δ) (Γ' ,,, Δ') (lift0 #|Δ| x) (lift0 #|Δ'| y)) ->
   All2 (on_Trel_eq (P Γ Γ') dtype dname) m m' ->
-  All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context m) (fix_context m').
+  All2_fold (on_decls (on_decls_over P Γ Γ')) (fix_context m) (fix_context m').
 Proof.
   intros Hweak a. unfold fix_context.
   eapply local_env_telescope.
@@ -1564,8 +1564,8 @@ Section RedPred.
       apply nth_error_assumption_context in H0 => //; rewrite H0 //.
       case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
       rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_local_env_app in X0 as [_ X0] => //.
-      pose proof (All2_local_env_length X0).
+      eapply All2_fold_app in X0 as [_ X0] => //.
+      pose proof (All2_fold_length X0).
       rewrite nth_error_app_ge. lia. now rewrite -H1 H0 /= e. }
     forward X1.
     red. intros x; split. eapply pred1_refl_gen; auto.
@@ -1583,7 +1583,7 @@ Section RedPred.
   Proof.
     intros Hlen X H H' X0.
     assert(lenΔ : #|Δ| = #|Δ'|). 
-    { eapply pred1_pred1_ctx in X. eapply All2_local_env_length in X.
+    { eapply pred1_pred1_ctx in X. eapply All2_fold_length in X.
       rewrite !app_context_length in X. lia. }
     pose proof (strong_substitutivity _ wfΣ _ _ (Γ ,,, Δ) (Γ' ,,, Δ) _ _ ids ids X).
     forward X1.
@@ -1601,8 +1601,8 @@ Section RedPred.
       apply nth_error_assumption_context in H0 => //; rewrite H0 //.
       case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
       rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_local_env_app in X0 as [_ X0] => //.
-      pose proof (All2_local_env_length X0).
+      eapply All2_fold_app in X0 as [_ X0] => //.
+      pose proof (All2_fold_length X0).
       rewrite nth_error_app_ge. lia. now rewrite lenΔ H0 /= e. }
     forward X1.
     red. intros x; split. eapply pred1_refl_gen; auto.
@@ -1613,8 +1613,8 @@ Section RedPred.
   Ltac noconf H := repeat (DepElim.noconf H; simpl NoConfusion in * ).
 
   Hint Extern 1 (eq_binder_annot _ _) => reflexivity : pcuic.
-  Hint Extern 2 (All2_local_env _ _ _) => apply PCUICEnvTyping.localenv2_cons_abs : pcuic.
-  Hint Extern 2 (All2_local_env _ _ _) => apply PCUICEnvTyping.localenv2_cons_def : pcuic.
+  Hint Extern 2 (All2_fold _ _ _) => apply PCUICEnvTyping.localenv2_cons_abs : pcuic.
+  Hint Extern 2 (All2_fold _ _ _) => apply PCUICEnvTyping.localenv2_cons_def : pcuic.
   Hint Resolve pred1_refl_gen : pcuic.
 
   Lemma OnOne2_local_env_pred1_ctx_over Γ Δ Δ' :
@@ -1626,17 +1626,17 @@ Section RedPred.
     - eapply pred1_pred1_ctx in p. pcuic.
     - eapply pred1_pred1_ctx in a0. pcuic.
     - eapply pred1_pred1_ctx in a. pcuic.
-    - unfold on_decl, on_decl_over; simpl; subst; intuition auto.
+    - unfold on_decls, on_decls_over; simpl; subst; intuition auto.
       eapply pred1_refl.
-    - unfold on_decl, on_decl_over; simpl; subst; intuition auto.
+    - unfold on_decls, on_decls_over; simpl; subst; intuition auto.
       eapply pred1_refl.
-    - eapply (All2_local_env_app_inv _ _ [d] _ [_]); pcuic.
+    - eapply (All2_fold_app_inv _ _ [d] _ [_]); pcuic.
       destruct d as [na [b|] ty]; constructor; pcuic.
-      unfold on_decl, on_decl_over; simpl; subst; intuition pcuic.
-      eapply pred1_refl_gen. eapply All2_local_env_app_inv; pcuic.
-      eapply pred1_refl_gen. eapply All2_local_env_app_inv; pcuic.
-      unfold on_decl, on_decl_over; simpl; subst; intuition pcuic.
-      eapply pred1_refl_gen. eapply All2_local_env_app_inv; pcuic.
+      unfold on_decls, on_decls_over; simpl; subst; intuition pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app_inv; pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app_inv; pcuic.
+      unfold on_decls, on_decls_over; simpl; subst; intuition pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app_inv; pcuic.
   Qed.
 
 
@@ -1649,7 +1649,7 @@ Section RedPred.
       red. simpl. now eapply OnOne2_local_env_pred1_ctx_over in X.
       eapply pred1_refl_gen.
       eapply OnOne2_local_env_pred1_ctx_over in X.
-      eapply All2_local_env_app_inv; pcuic.
+      eapply All2_fold_app_inv; pcuic.
     - constructor; pcuic.
       eapply OnOne2_All2...
       simpl. intros x y [[[? ?] ?]|?]; unfold on_Trel; intuition pcuic; rewrite -?e; auto.
@@ -1657,11 +1657,11 @@ Section RedPred.
       now eapply OnOne2_local_env_pred1_ctx_over in a.
       eapply OnOne2_local_env_pred1_ctx_over in a. rewrite b; pcuic.
       eapply pred1_refl_gen; eauto.
-      now apply All2_local_env_app_inv; pcuic.
+      now apply All2_fold_app_inv; pcuic.
     - constructor; pcuic.
       eapply OnOne2_All2...
     - constructor; pcuic.
-      + apply All2_All2_local_env_fix_context.
+      + apply All2_All2_fold_fix_context.
         now intros; eapply weakening_pred1_pred1.
         eapply OnOne2_All2...
         intros.
@@ -1670,8 +1670,8 @@ Section RedPred.
         unfold on_Trel; simpl; intros; intuition auto.
         noconf b; noconf H. rewrite H0. pcuic.
         apply pred1_refl_gen.
-        eapply All2_local_env_app_inv; pcuic.
-        apply All2_All2_local_env_fix_context.
+        eapply All2_fold_app_inv; pcuic.
+        apply All2_All2_fold_fix_context.
         now intros; eapply weakening_pred1_pred1.
         eapply OnOne2_All2...
         intros.
@@ -1681,8 +1681,8 @@ Section RedPred.
 
         pcuic.
         apply pred1_refl_gen; pcuic.
-        eapply All2_local_env_app_inv; pcuic.
-        apply All2_All2_local_env_fix_context.
+        eapply All2_fold_app_inv; pcuic.
+        apply All2_All2_fold_fix_context.
         now intros; eapply weakening_pred1_pred1.
         eapply OnOne2_All2...
         intros.
@@ -1690,7 +1690,7 @@ Section RedPred.
         simpl in *. intuition auto. congruence.
 
     - constructor; pcuic.
-      apply All2_All2_local_env_fix_context.
+      apply All2_All2_fold_fix_context.
       now intros; eapply weakening_pred1_pred1.
       + eapply OnOne2_All2...
         intros.
@@ -1719,7 +1719,7 @@ Section RedPred.
           rewrite -H. pcuic.
 
     - constructor; pcuic.
-      apply All2_All2_local_env_fix_context.
+      apply All2_All2_fold_fix_context.
       now intros; eapply weakening_pred1_pred1.
       + eapply OnOne2_All2...
         intros.
@@ -1732,8 +1732,8 @@ Section RedPred.
           rewrite -H0; pcuic.
           eapply pred1_ctx_pred1; pcuic.
           apply fix_context_assumption_context.
-          apply All2_local_env_over_app. pcuic.
-          apply All2_All2_local_env_fix_context.
+          apply All2_fold_over_app. pcuic.
+          apply All2_All2_fold_fix_context.
           now intros; eapply weakening_pred1_pred1.
           eapply OnOne2_All2...
           unfold on_Trel.
@@ -1742,15 +1742,15 @@ Section RedPred.
           simpl in *. intuition pcuic.
           eapply pred1_ctx_pred1; pcuic.
           apply fix_context_assumption_context.
-          apply All2_local_env_over_app. pcuic.
-          apply All2_All2_local_env_fix_context.
+          apply All2_fold_over_app. pcuic.
+          apply All2_All2_fold_fix_context.
           now intros; eapply weakening_pred1_pred1.
           eapply OnOne2_All2...
           unfold on_Trel.
           simpl in *. intuition pcuic. congruence.
 
     - constructor; pcuic.
-      apply All2_All2_local_env_fix_context.
+      apply All2_All2_fold_fix_context.
       now intros; eapply weakening_pred1_pred1.
       + eapply OnOne2_All2...
         unfold on_Trel.
@@ -1769,8 +1769,8 @@ Section RedPred.
           simpl in *. intuition pcuic.
           eapply pred1_ctx_pred1; pcuic.
           apply fix_context_assumption_context.
-          apply All2_local_env_over_app. pcuic.
-          apply All2_All2_local_env_fix_context.
+          apply All2_fold_over_app. pcuic.
+          apply All2_All2_fold_fix_context.
           now intros; eapply weakening_pred1_pred1.
           eapply OnOne2_All2...
           unfold on_Trel.
@@ -1786,11 +1786,11 @@ Section PredRed.
   Context (wfΣ : wf Σ).
 
   (* Lemma red_red_decls Γ Γ' Δ Δ' :
-    All2_local_env_over (fun (Γ _ : context) (t t0 : term) => red Σ Γ t t0) Γ Γ' Δ Δ' ->
-    context_relation (fun Δ Δ' : context => red_decls Σ (Γ,,, Δ) (Γ,,, Δ')) Δ Δ'.
+    All2_fold_over (fun (Γ _ : context) (t t0 : term) => red Σ Γ t t0) Γ Γ' Δ Δ' ->
+    All2_fold (fun Δ Δ' : context => red_decls Σ (Γ,,, Δ) (Γ,,, Δ')) Δ Δ'.
   Proof.
     induction 1; constructor; auto;
-    unfold on_decl, on_decl_over in *.
+    unfold on_decls, on_decls_over in *.
     constructor.
     simpl. *)
 
@@ -1798,12 +1798,12 @@ Section PredRed.
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> red Σ Γ M N.
   Proof.
     revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ _
-      (fun Γ Γ' => All2_local_env (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type);
-      (* (fun Γ Γ' Δ Δ' => All2_local_env_over (on_decl (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type); *)
+      (fun Γ Γ' => All2_fold (on_decls (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type);
+      (* (fun Γ Γ' Δ Δ' => All2_fold_over (on_decls (fun Γ Γ' M N => pred1 Σ Γ Γ' M N -> red Σ Γ M N)) Γ Γ')%type); *)
       intros; try reflexivity; pcuic.
-    eapply All2_local_env_impl; eauto.
+    eapply All2_fold_impl; eauto.
     - (* Contexts *)
-      unfold on_decl => Δ Δ' t T U Hlen.
+      unfold on_decls => Δ Δ' t T U Hlen.
       destruct t; auto.
       destruct p; auto. intuition.
       
@@ -1889,8 +1889,8 @@ Section PredRed.
     - eapply red_evar; auto. solve_all.
   Qed.
 
-  Lemma All2_local_env_mix P Q x y : All2_local_env P x y -> All2_local_env Q x y ->
-    All2_local_env (fun Γ Γ' d t T => 
+  Lemma All2_fold_mix P Q x y : All2_fold P x y -> All2_fold Q x y ->
+    All2_fold (fun Γ Γ' d t T => 
       (P Γ Γ' d t T) * (Q Γ Γ' d t T))%type x y.
   Proof.
     intros HP HQ; induction HP; depelim HQ; try (simpl in H; noconf H); 
@@ -1899,9 +1899,9 @@ Section PredRed.
 
   Lemma pred1_red_r_gen_fix_context Γ0 Γ'0 Δ Δ' mfix0 mfix1  : 
     pred1_ctx Σ (Γ'0 ,,, Δ) (Γ'0 ,,, Δ') ->
-    All2_local_env
-       (on_decl
-          (on_decl_over
+    All2_fold
+       (on_decls
+          (on_decls_over
              (fun (Γ Γ' : context) (t t0 : term) =>
                 forall Γ0 Γ'0 Δ Δ' : context,
                   Γ = Γ0 ,,, Δ
@@ -1910,21 +1910,21 @@ Section PredRed.
                       -> pred1 Σ (Γ'0 ,,, Δ) (Γ'0 ,,, Δ') t t0) 
              (Γ0 ,,, Δ) (Γ'0 ,,, Δ'))) (fix_context mfix0)
        (fix_context mfix1) ->
-    All2_local_env (on_decl (on_decl_over (pred1 Σ) (Γ'0 ,,, Δ) (Γ'0 ,,, Δ')))
+    All2_fold (on_decls (on_decls_over (pred1 Σ) (Γ'0 ,,, Δ) (Γ'0 ,,, Δ')))
       (fix_context mfix0) (fix_context mfix1).
   Proof.
     intros H.
     generalize (fix_context mfix0), (fix_context mfix1).
     induction 1; constructor; auto.
     red. red in p.
-    unfold on_decl_over in *.
+    unfold on_decls_over in *.
     rewrite - !app_context_assoc; eapply p; rewrite !app_context_assoc; try reflexivity.
-    eapply All2_local_env_app_inv; auto.
+    eapply All2_fold_app_inv; auto.
     destruct p; repeat red in o, o0 |- *; intuition auto; red.
     rewrite - !app_context_assoc; eapply o; rewrite !app_context_assoc; try reflexivity.
-    eapply All2_local_env_app_inv; auto.
+    eapply All2_fold_app_inv; auto.
     rewrite - !app_context_assoc; eapply o0; rewrite !app_context_assoc; try reflexivity.
-    eapply All2_local_env_app_inv; auto.
+    eapply All2_fold_app_inv; auto.
   Qed.
 
   Lemma pred1_red_r_gen Γ Γ' Δ Δ' : forall M N, pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') M N -> 
@@ -1939,7 +1939,7 @@ Section PredRed.
     revert Γ0 Γ'0 M N p.
     refine (@pred1_ind_all_ctx Σ _ 
       (fun Γ Γ' =>
-       All2_local_env (on_decl (fun Γ0 Γ'0 M N => 
+       All2_fold (on_decls (fun Γ0 Γ'0 M N => 
        forall Γ Γ' Δ Δ' : context,
        Γ0 = Γ ,,, Δ -> Γ'0 = Γ' ,,, Δ' ->
        pred1 Σ Γ0 Γ'0 M N ->
@@ -1948,7 +1948,7 @@ Section PredRed.
        _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
       intros; subst; try solve [econstructor; eauto].
 
-    - eapply (All2_local_env_impl _ _ _ _ X0). clear X0; intros.
+    - eapply (All2_fold_impl _ _ _ _ X0). clear X0; intros.
       red in X0 |- *.
       destruct t as [[t t']|].
       intuition subst. specialize (a Γ1 Γ'0 Δ0 Δ' eq_refl eq_refl). eauto.
@@ -1972,7 +1972,7 @@ Section PredRed.
       intuition auto. eapply b1;  eauto.
       rewrite - !app_context_assoc; eapply b; 
         rewrite !app_context_assoc; try reflexivity.
-        apply All2_local_env_app_inv; eauto.
+        apply All2_fold_app_inv; eauto.
         eapply pred1_red_r_gen_fix_context; eauto.
       solve_all.
       
@@ -1983,7 +1983,7 @@ Section PredRed.
       intuition auto. eapply b2; eauto.
       rewrite - !app_context_assoc; eapply b0; 
         rewrite !app_context_assoc; try reflexivity.
-        apply All2_local_env_app_inv; eauto.
+        apply All2_fold_app_inv; eauto.
         eapply pred1_red_r_gen_fix_context; eauto.
       solve_all.
       solve_all.
@@ -1996,7 +1996,7 @@ Section PredRed.
       intuition auto. eapply b1; eauto.
       rewrite - !app_context_assoc; eapply b; 
         rewrite !app_context_assoc; try reflexivity.
-        apply All2_local_env_app_inv; eauto.
+        apply All2_fold_app_inv; eauto.
         eapply pred1_red_r_gen_fix_context; eauto.
       solve_all.
 
@@ -2022,7 +2022,7 @@ Section PredRed.
       eapply a; eauto.
       rewrite - !app_context_assoc; eapply b; 
       rewrite !app_context_assoc; try reflexivity.
-      apply All2_local_env_app_inv; eauto.
+      apply All2_fold_app_inv; eauto.
       eapply pred1_red_r_gen_fix_context; eauto.
 
     - econstructor; eauto.
@@ -2031,7 +2031,7 @@ Section PredRed.
       eapply a; eauto.
       rewrite - !app_context_assoc; eapply b; 
       rewrite !app_context_assoc; try reflexivity.
-      apply All2_local_env_app_inv; eauto.
+      apply All2_fold_app_inv; eauto.
       eapply pred1_red_r_gen_fix_context; eauto.
 
     - econstructor; eauto.
@@ -2358,7 +2358,7 @@ Section RedConfluence.
                          (fun '(Γ, t) '(Δ, u) => (red1_ctx Γ Δ * (t = u)))%type.
 
   Definition red_ctx : relation context :=
-    All2_local_env (on_decl (fun Γ Δ t u => red Σ Γ t u)).
+    All2_fold (on_decls (fun Γ Δ t u => red Σ Γ t u)).
 
   Lemma red1_ctx_pred1_ctx Γ Γ' : red1_ctx Γ Γ' -> pred1_ctx Σ Γ Γ'.
   Proof.
@@ -2438,7 +2438,7 @@ Section RedConfluence.
     clear p H.
     transitivity (Γ ,, vass na' t').
     { constructor 2. repeat constructor; auto. simpl. reflexivity. }
-    induction IHAll2_local_env; try solve[repeat constructor; auto].
+    induction IHAll2_fold; try solve[repeat constructor; auto].
     etransitivity; eauto.
     transitivity (Γ ,, vdef na b t').
     - eapply clos_rt_OnOne2_local_env_ctx_incl, clos_rt_OnOne2_local_env_incl. constructor 2. red.
@@ -2446,10 +2446,10 @@ Section RedConfluence.
     - transitivity (Γ ,, vdef na b' t').
       eapply clos_rt_OnOne2_local_env_ctx_incl, clos_rt_OnOne2_local_env_incl.
       constructor 2. red. left; split; auto.
-      clear -e IHAll2_local_env.
+      clear -e IHAll2_fold.
       transitivity (Γ ,, vdef na' b' t').
       { constructor 2. repeat constructor; auto. simpl. reflexivity. }
-      induction IHAll2_local_env; try solve[repeat constructor; auto].
+      induction IHAll2_fold; try solve[repeat constructor; auto].
       etransitivity; eauto.
   Qed.
 

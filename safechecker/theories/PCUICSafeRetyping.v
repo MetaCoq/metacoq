@@ -449,7 +449,7 @@ Section TypeOf.
         eapply (isType_mkApps_Ind w decli) in X0 as [parsubst [argsubst [[sppars spargs] cu]]]; pcuic.
         pose proof (PCUICContexts.context_subst_length2 sppars).
         len in H.
-        set (oib := (on_declared_inductive w in decli).2) *.
+        set (oib := (on_declsared_inductive w in decli).2) *.
         eapply type_Cumul'. econstructor; eauto.
         assert (Σ ;;; Γ |- c : mkApps (tInd ind u) (firstn (ind_npars mdecl) args ++  skipn (ind_npars mdecl) l)).
         { eapply type_Cumul'. eauto.
@@ -458,7 +458,7 @@ Section TypeOf.
             eapply wf_arity_spine_typing_spine; eauto.
             constructor. 
             unshelve epose proof (on_inductive_inst _ _ _ _ _ _ w ltac:(pcuic) _ _ oib cu); eauto.
-            eapply on_declared_inductive; eauto.
+            eapply on_declsared_inductive; eauto.
             rewrite oib.(ind_arity_eq) -it_mkProd_or_LetIn_app subst_instance_it_mkProd_or_LetIn.
             eapply isType_weaken; eauto. pcuic.
             rewrite oib.(ind_arity_eq) subst_instance_it_mkProd_or_LetIn.
@@ -494,8 +494,8 @@ Section TypeOf.
         eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in bcp as [parsubst' [csubst ->]]; auto.
         pose proof (PCUICContexts.context_subst_fun sppars csubst). subst parsubst'.
         unshelve epose proof (isType_mkApps_Ind w decli _ vt) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
-        change (ind_indices (on_declared_inductive w with decli).2) (ind_indices oib) in spargs'.
-        subst oib; destruct on_declared_inductive as [onmind oib].
+        change (ind_indices (on_declsared_inductive w with decli).2) (ind_indices oib) in spargs'.
+        subst oib; destruct on_declsared_inductive as [onmind oib].
         rewrite onmind.(onNpars) in H.
         pose proof (firstn_length_le_inv _ _ H).
         pose proof (subslet_length spargs'). len in H1.
@@ -606,7 +606,7 @@ Section TypeOf.
         rewrite -(All2_length _ _ cl'') in Hargs'. rewrite Hargs' in Ru''.
         unshelve epose proof (projection_cumulative_indices w declp _ H1 H2 Ru'').
         { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ w (proj1 (proj1 declp))). }
-        eapply PCUICWeakeningEnv.on_declared_projection in declp; eauto.
+        eapply PCUICWeakeningEnv.on_declsared_projection in declp; eauto.
         eapply weaken_cumul in X0; eauto.
         eapply PCUICClosed.closed_wf_local; eauto.
         eapply (wf_projection_context _ (p:= (i, n, k))); pcuic.

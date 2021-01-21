@@ -724,7 +724,7 @@ Section Normalization.
     - eapply PCUICValidity.inversion_mkApps in Ht as (? & ? & ?); auto.
       eapply inversion_Ind in t as (? & ? & ? & decli & ? & ?); auto.
       eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-      pose proof (on_declared_inductive wfΣ as decli) [onind oib].
+      pose proof (on_declsared_inductive wfΣ as decli) [onind oib].
       rewrite oib.(ind_arity_eq) in t0.
       rewrite !subst_instance_it_mkProd_or_LetIn in t0.
       eapply typing_spine_arity_mkApps_Ind in t0; eauto.
@@ -884,7 +884,7 @@ Section WeakNormalization.
     eapply inversion_mkApps in typ as (?&?&?); auto.
     eapply inversion_Ind in t as (?&?&?&decl&?&?); auto.
     eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-    pose proof (PCUICWeakeningEnv.on_declared_inductive wfΣ as decl) [onind oib].
+    pose proof (PCUICWeakeningEnv.on_declsared_inductive wfΣ as decl) [onind oib].
     rewrite oib.(ind_arity_eq) in t0.
     rewrite !subst_instance_it_mkProd_or_LetIn in t0.
     eapply typing_spine_arity_mkApps_Ind in t0; eauto.

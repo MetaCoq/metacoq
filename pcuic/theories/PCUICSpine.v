@@ -545,7 +545,7 @@ Lemma spine_subst_conv {cf:checker_flags} Σ Γ inst insts Δ inst' insts' Δ' :
   wf Σ.1 ->
   spine_subst Σ Γ inst insts Δ ->
   spine_subst Σ Γ inst' insts' Δ' ->
-  context_relation (fun Δ Δ' => conv_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
+  All2_fold (fun Δ Δ' => conv_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
   All2 (conv Σ Γ) inst inst' -> All2 (conv Σ Γ) insts insts'.
 Proof.
 move=> wfΣ [_ wf cs sl] [_ _ cs' sl'] cv.

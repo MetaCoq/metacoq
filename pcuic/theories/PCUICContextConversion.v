@@ -60,7 +60,7 @@ Proof.
 Qed.
 
 Instance cumul_trans {cf:checker_flags} (Σ : global_env_ext) Γ :
-  wf Σ -> Transitive (cumul Σ Γ).
+  awf Σ -> Transitive (cumul Σ Γ).
 Proof.
   intros wfΣ t u v X X0.
   eapply cumul_alt in X as [v' [v'' [[redl redr] eq]]].

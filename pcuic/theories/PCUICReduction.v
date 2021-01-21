@@ -104,17 +104,27 @@ Definition set_pcontext (p : predicate term) (pctx' : context) : predicate term 
       pcontext := pctx';
       preturn := p.(preturn) |}.
 
+Definition set_pcontext_two {p x} x' : 
+  set_pcontext (set_pcontext p x') x = set_pcontext p x := 
+  eq_refl.
+      
 Definition set_preturn (p : predicate term) (pret' : term) : predicate term :=
   {| pparams := p.(pparams);
       puinst := p.(puinst);
       pcontext := p.(pcontext);
       preturn := pret' |}.
 
+Definition set_preturn_two {p} pret pret' : set_preturn (set_preturn p pret') pret = set_preturn p pret := 
+  eq_refl.
+
 Definition set_pparams (p : predicate term) (pars' : list term) : predicate term :=
   {| pparams := pars';
      puinst := p.(puinst);
      pcontext := p.(pcontext);
      preturn := p.(preturn) |}.
+
+Definition set_pparams_two {p pars} pars' : set_pparams (set_pparams p pars') pars = set_pparams p pars := 
+  eq_refl.
 
 Definition map_decl_na (f : aname -> aname) (g : term -> term) d :=
   {| decl_name := f (decl_name d);

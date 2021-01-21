@@ -3,6 +3,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
+     PCUICSigmaCalculus
      PCUICContextConversion PCUICWeakening PCUICUnivSubst PCUICUnivSubstitution
 .
 
@@ -402,8 +403,7 @@ Proof.
       * eapply cumul_red_ctx_inv. 1: auto. 1: eauto.
         constructor.
         -- eapply All2_fold_red_refl.
-        -- reflexivity.
-        -- red. now eapply red1_red.
+        -- constructor. constructor; auto.
     + destruct (IHcumul na na' _ _ _ _ wfΣ eq_refl) as [? [? ?]].
       splits; auto.
       eapply cumul_trans with N2; auto.
@@ -523,11 +523,10 @@ Section Inversions.
       do 2 eexists. repeat split; eauto with pcuic.
       + now transitivity x.
       + transitivity x0; auto.
-        eapply PCUICConfluence.red_red_ctx. 1: auto. 1: eauto.
+        eapply red_red_ctx_inv. 1: auto. 1: eauto.
         constructor.
         * eapply All2_fold_red_refl.
-        * reflexivity. 
-        * red. auto.
+        * constructor; auto.
   Qed.
 
   Lemma invert_cumul_prod_r Γ C na A B :
@@ -713,6 +712,8 @@ Section Inversions.
       + now constructor; apply leqvv'2.
   Qed.
 
+  Hint Constructors All_decls conv_decls cumul_decls : core.
+
   Lemma invert_red_letin Γ C na d ty b :
     red Σ.1 Γ (tLetIn na d ty b) C ->
     (∑ d' ty' b',
@@ -733,17 +734,15 @@ Section Inversions.
       - solve_discr.
       - left. do 3 eexists. repeat split; eauto with pcuic.
         * now transitivity r.
-        * eapply PCUICConfluence.red_red_ctx; eauto.
+        * eapply red_red_ctx_inv; eauto.
           simpl. constructor; auto using All2_fold_red_refl.
-          simpl. split; auto.
       - right; auto. transitivity (b {0 := r}); auto.
         eapply (red_red _ _ [vass na ty] []); eauto.
         constructor. constructor.
       - left. do 3 eexists. repeat split; eauto with pcuic.
         * now transitivity r.
-        * eapply PCUICConfluence.red_red_ctx; eauto.
+        * eapply red_red_ctx_inv; eauto.
           simpl. constructor; auto using All2_fold_red_refl.
-          simpl. split; auto.
       - right; auto.
       - left. do 3 eexists. repeat split; eauto with pcuic.
         now transitivity r.
@@ -877,7 +876,7 @@ Section Inversions.
     subst.
     dependent destruction e.
     eexists _,_. split ; eauto. split ; auto.
-    - now rewrite (All2_length _ _ ha).
+    - now rewrite (All2_length ha).
     - eapply All2_trans.
       * intros x y z h1 h2. eapply conv_trans ; eauto.
       * eapply All2_impl ; eauto.
@@ -901,7 +900,7 @@ Section Inversions.
     subst.
     dependent destruction e.
     eexists _,_. split ; eauto. split ; auto.
-    - rewrite (All2_length _ _ a); auto.
+    - rewrite (All2_length a); auto.
     - eapply All2_trans.
       * intros x y z h1 h2. eapply conv_trans ; eauto.
       * eapply All2_impl ; eauto.
@@ -956,7 +955,7 @@ Proof.
         specialize (IHctx (Γ ,, vass na' ty') l0 s s' H H0 Hcodom).
         clear IHctx'.
         intuition auto.
-        eapply All2_fold_app_inv.
+        eapply All2_fold_app.
         ** eapply (All2_fold_length a).
         ** constructor; [constructor|constructor; auto].
         ** unshelve eapply (All2_fold_impl a).
@@ -1224,13 +1223,12 @@ Section Inversions.
       split; constructor. 1: assumption.
       etransitivity. 1: apply red_conv, redB. 
       eapply conv_conv_ctx. 1,2 : eassumption.
-      apply ctx_rel_vass. 1: reflexivity.
-      now constructor.
+      constructor. 1: reflexivity. constructor; now symmetry.
     - intros [[eqann [eqA cumB]]%cumul_Prod_Prod_inv]. 2: assumption.
       split; auto; split; constructor. 1: assumption.
       eapply cumul_conv_ctx. 1,2: eassumption.
-      apply ctx_rel_vass. 1: reflexivity.
-      now constructor.  
+      constructor; [reflexivity|].
+      constructor; now symmetry.
   Qed.
   
   Lemma conv_cum_conv_ctx leq Γ Γ' T U :
@@ -1346,12 +1344,10 @@ Section Inversions.
   Proof.
     intros Γ [ind n] p brs u v h.
     induction h.
-    - constructor. constructor.
-      + eapply eq_term_refl.
-      + assumption.
+    - constructor. constructor; auto.
+      + reflexivity.
       + eapply All2_same.
-        intros. split ; eauto.
-        reflexivity.
+        intros. split ; reflexivity.
     - eapply cumul_red_l ; eauto.
       constructor. assumption.
     - eapply cumul_red_r ; eauto.
@@ -1410,13 +1406,54 @@ Section Inversions.
       now apply App_conv.
   Qed.
 
-  Lemma conv_Case_p :
-    forall Γ indn c brs u v,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- tCase indn u c brs = tCase indn v c brs.
+  Definition conv_predicate_gen Σ Γ p p' :=
+    All2 (conv Σ Γ) p.(pparams) p'.(pparams) ×
+    R_universe_instance (eq_universe Σ) (puinst p) (puinst p')
+    × conv_context Σ (pcontext p) (pcontext p')
+    × conv Σ (Γ ,,, pcontext p) (preturn p) (preturn p').
+
+  Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
   Proof.
-    intros Γ [ind n] c brs u v h.
-    induction h.
+    intros x. apply All2_same. intros. reflexivity.
+  Qed.
+
+  Lemma set_pparams_two : 
+    set_pparams
+
+  Lemma conv_Case_p :
+    forall Γ ci c brs p p',
+    conv_predicate_gen Σ Γ p p' ->
+    Σ ;;; Γ |- tCase ci p c brs = tCase ci p' c brs.
+  Proof.
+    intros Γ ci c brs p p' [cpars [cu [cctx cret]]].
+    set (pred := p).
+    destruct p, p'; simpl in *.
+    transitivity (tCase ci (set_pparams pred pparams0) c brs).
+    - clear -wfΣ cpars.
+      eapply All2_many_OnOne2 in cpars.
+      induction cpars.
+      * reflexivity.
+      * etransitivity; [tea|].
+        + eapply OnOne2_split in r as [? [? [? [? [conv [-> ->]]]]]].
+          clear -conv.
+          induction conv.
+          { do 2 constructor; try reflexivity.
+            2:apply All2_same; split; reflexivity.
+            red; intuition try reflexivity.
+            simpl. eapply All2_app; try reflexivity.
+            constructor; auto; reflexivity. }
+          { eapply conv_red_l; eauto.
+            change (set_pparams pred ())
+            eapply case_red_param.
+              econstructor. }
+
+  Admitted.
+(*         
+        eapply red_conv, red_case_pars.
+        + eapply conv_red_l.
+
+      simpl.
+
     - constructor. constructor.
       + assumption.
       + eapply eq_term_refl.
@@ -1426,7 +1463,7 @@ Section Inversions.
       constructor. assumption.
     - eapply conv_red_r ; eauto.
       constructor. assumption.
-  Qed.
+  Qed. *)
 
   Lemma conv_Case_c :
     forall Γ indn p brs u v,
@@ -1435,11 +1472,10 @@ Section Inversions.
   Proof.
     intros Γ [ind n] p brs u v h.
     induction h.
-    - constructor. constructor.
-      + eapply eq_term_refl.
-      + assumption.
+    - constructor. constructor; auto.
+      + reflexivity.
       + eapply All2_same.
-        intros. split ; eauto. reflexivity.
+        intros. split ; eauto; reflexivity.
     - eapply conv_red_l ; eauto.
       constructor. assumption.
     - eapply conv_red_r ; eauto.
@@ -1448,7 +1484,7 @@ Section Inversions.
 
   Lemma conv_Case_one_brs :
     forall Γ indn p c brs brs',
-      OnOne2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ->
+      OnOne2 (fun u v => u.(bcontext) = v.(bcontext) × Σ ;;; Γ |- u.(bbody) = v.(bbody)) brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p c brs'.
   Proof.
     intros Γ [ind n] p c brs brs' h.
@@ -2224,7 +2260,7 @@ Section Inversions.
       destruct IHX as [A2 [B2 [[-> ?] ?]]].
       + eexists _, _; intuition eauto.
         1: now eapply red_step with M'.
-        eapply PCUICConfluence.red_red_ctx; eauto.
+        eapply red_red_ctx_inv; eauto.
         constructor; auto.
         * eapply All2_fold_red_refl.
         * red. auto.

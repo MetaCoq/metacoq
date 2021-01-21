@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICCases PCUICSigmaCalculus
      PCUICUnivSubst PCUICContextSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
-     PCUICReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution
+     PCUICReduction PCUICContextRelation PCUICContextReduction PCUICWeakening PCUICCumulativity PCUICUnivSubstitution
      PCUICRename PCUICInst.
 
 Require Import ssreflect.
@@ -1366,9 +1366,33 @@ Proof.
   - eapply substitution_let_red; eauto.
   - etransitivity; eauto.
 Qed.
+ 
+Lemma red_red_onctx {cf:checker_flags} Σ Γ Δ Γ' s s' ctx :
+  untyped_subslet Γ s Δ ->
+  onctx
+    (fun b : term =>
+    forall Δ Γ'0 : context,
+    untyped_subslet Γ s Δ ->
+    red Σ (Γ,,, Γ'0) (subst s #|Γ'0| b) (subst s' #|Γ'0| b)) ctx ->
+  All2_fold
+  (fun (Γ0 Δ0 : context) (d d' : context_decl) =>
+    red_decls Σ (Γ,,, Γ',,, mapi_context (shiftf (subst s) #|Γ'|) Γ0)
+      (Γ,,, Γ',,, mapi_context (shiftf (subst s') #|Γ'|) Δ0)
+      (map_decl (shiftf (subst s) #|Γ'| #|Γ0|) d)
+      (map_decl (shiftf (subst s') #|Γ'| #|Γ0|) d')) ctx ctx.
+Proof.
+  intros hsubs.
+  induction 1; constructor; auto.
+  destruct p. destruct x as [na [b|] ty]; constructor; auto; simpl in *;
+  rewrite /shiftf.
+  - specialize (o _ (Γ' ,,, mapi_context (fun k' => subst s (k' + #|Γ'|)) l) hsubs).
+    len in o. now rewrite -app_context_assoc.
+  - specialize (r _ (Γ' ,,, mapi_context (fun k' => subst s (k' + #|Γ'|)) l) hsubs).
+    len in r. now rewrite -app_context_assoc.
+  - specialize (r _ (Γ' ,,, mapi_context (fun k' => subst s (k' + #|Γ'|)) l) hsubs).
+    len in r. now rewrite -app_context_assoc.
+Qed.
 
-(** Do we really need these untyped reduction lemmas? *)
-  
 Lemma red_red {cf:checker_flags} (Σ : global_env_ext) Γ Δ Γ' s s' b : wf Σ ->
   All2 (red Σ Γ) s s' ->
   untyped_subslet Γ s Δ ->
@@ -1381,7 +1405,8 @@ Proof.
                   |- context [tRel _] => idtac
                 | |- _ => cbn -[plus]
                 end; try easy;
-      rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
+      autorewrite with map; 
+      rewrite ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all].
 
   - unfold subst.
@@ -1403,24 +1428,31 @@ Proof.
   - apply red_letin; eauto.
     now eapply (X1 Δ (Γ' ,, _)).
   - apply red_app; eauto.
-  -
-Abort.
-(*
- etransitivity.
-    * eapply red_case; eauto.
-    unfold on_Trel in *; solve_all.
+  - eapply (red_case (p:=(map_predicate_k id (subst s) #|Γ'| p))); simpl; solve_all.
+    * specialize (r _ (Γ' ,,, subst_context s #|Γ'| (pcontext p)) Hsubs). len in r.
+      now rewrite mapi_context_fold -app_context_assoc.
+    * eapply red_ctx_rel_red_context_rel => //.
+      eapply All2_fold_mapi.
+      eapply red_red_onctx; tea.
+    * red. solve_all.
+      eapply All_All2; tea => /=. solve_all; unfold on_Trel; simpl.
+      + specialize (b0 _ (Γ' ,,, mapi_context (shiftf (subst s) #|Γ'|) (bcontext x)) Hsubs).
+        len in b0. now rewrite -app_context_assoc.
+      + eapply red_ctx_rel_red_context_rel => //.
+        eapply All2_fold_mapi.
+        eapply red_red_onctx; tea.
   - apply red_proj_c; eauto.
   - apply red_fix_congr; eauto.
-    solve_all.
+    solve_all. eapply All_All2; tea; simpl; solve_all.
     rewrite subst_fix_context.
     specialize (b0 _ (Γ' ,,, subst_context s #|Γ'| (fix_context m)) Hsubs).
     now rewrite app_context_length subst_context_length app_context_assoc fix_context_length in b0.
   - apply red_cofix_congr; eauto.
-    red in X. solve_all.
+    red in X. solve_all. eapply All_All2; tea; simpl; solve_all.
     rewrite subst_fix_context.
     specialize (b0 _ (Γ' ,,, subst_context s #|Γ'| (fix_context m)) Hsubs).
     now rewrite app_context_length subst_context_length app_context_assoc fix_context_length in b0.
-Qed.*)
+Qed.
 
 Lemma untyped_substitution_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
   wf Σ -> untyped_subslet Γ s Δ ->
@@ -1431,8 +1463,6 @@ Proof.
   - eapply substitution_untyped_let_red; eauto.
   - etransitivity; eauto.
 Qed.
-
-(** The cumulativity relation is substitutive, yay! *)
 
 Notation subst_predicate s := (map_predicate_k id (subst s)).
 
@@ -1569,6 +1599,8 @@ Proof.
     rewrite map_app /=; len. do 2 f_equal.
     now rewrite /map_branch_k /= mapi_context_fold Nat.add_assoc.
 Qed.
+
+(** The cumulativity relation is substitutive, yay! *)
 
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> untyped_subslet Γ s Γ' ->

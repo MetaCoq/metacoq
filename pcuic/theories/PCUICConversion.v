@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSubst PCUICTyping
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
      PCUICSigmaCalculus PCUICContextReduction
@@ -1406,7 +1406,7 @@ Section Inversions.
       now apply App_conv.
   Qed.
 
-  Definition conv_predicate_gen Σ Γ p p' :=
+  Definition conv_predicate Σ Γ p p' :=
     All2 (conv Σ Γ) p.(pparams) p'.(pparams) ×
     R_universe_instance (eq_universe Σ) (puinst p) (puinst p')
     × conv_context Σ (Γ ,,, pcontext p) (Γ ,,, pcontext p')
@@ -1482,7 +1482,7 @@ Section Inversions.
 
   Lemma conv_Case_p :
     forall Γ ci c brs p p',
-    conv_predicate_gen Σ Γ p p' ->
+    conv_predicate Σ Γ p p' ->
     Σ ;;; Γ |- tCase ci p c brs = tCase ci p' c brs.
   Proof.
     intros Γ ci c brs p p' [cpars [cu [cctx cret]]].
@@ -1513,15 +1513,29 @@ Section Inversions.
    transitivity (tCase ci (set_puinst (set_pparams pred pparams0) puinst0) c brs).
    { do 2 constructor; try reflexivity.
      2:apply All2_same; split; reflexivity.
-     red; intuition try reflexivity. }
-   transitivity (tCase ci (set_pcontext (set_puinst (set_pparams pred pparams0) puinst0) pcontext0) c brs).
+     red; intuition try reflexivity. }  
+   transitivity (tCase ci (set_preturn (set_puinst (set_pparams pred pparams0) puinst0) preturn0) c brs).
+    { clear -wfΣ cret.
+      rewrite /pred /set_puinst /set_pparams /set_pcontext /set_preturn; cbn.
+      induction cret.
+       - do 2 constructor; try reflexivity.
+         * red; intuition auto; try reflexivity.
+         * eapply All2_same; split; reflexivity.
+       - eapply conv_red_l.
+         * eapply case_red_return. simpl; tea.
+         * eapply IHcret.
+       - eapply conv_red_r; revgoals.
+         * eapply case_red_return; tea.
+         * eapply IHcret.
+    }
+   transitivity (tCase ci (set_pcontext (set_preturn (set_puinst (set_pparams pred pparams0) puinst0) preturn0) pcontext0) c brs).
    { clear -wfΣ cctx. rewrite /pred /set_puinst /set_pparams /set_pcontext; cbn.
      eapply conv_context_red_context in cctx as [Δ [Δ' [[redl redr] eqc]]] => //.
      transitivity (tCase ci {|
      pparams := pparams0;
      puinst := puinst0;
      pcontext := Δ;
-     preturn := preturn |} c brs).
+     preturn := preturn0 |} c brs).
      + eapply red_conv. now eapply red_case_pcontext_red_ctx_rel.
      + etransitivity.
        2:{ symmetry. eapply red_conv.
@@ -1529,41 +1543,9 @@ Section Inversions.
        rewrite /set_pcontext /=.
        do 2 constructor; try reflexivity.
        2:eapply All2_same; split; reflexivity.
-       red; intuition auto; simpl; try reflexivity.
-       eapply All2_
-       red in eqc.
-       unfold eq_context_gen. apply eqc.
-       
-
-
-
-       red. red in redl.
-
-       red.
-
-        red in redl. red.
-
-
-
-   }
-            
-
-(*         
-        eapply red_conv, red_case_pars.
-        + eapply conv_red_l.
-
-      simpl.
-
-    - constructor. constructor.
-      + assumption.
-      + eapply eq_term_refl.
-      + eapply All2_same.
-        intros. split ; eauto. reflexivity.
-    - eapply conv_red_l ; eauto.
-      constructor. assumption.
-    - eapply conv_red_r ; eauto.
-      constructor. assumption.
-  Qed. *)
+       red; intuition auto; simpl; try reflexivity. }
+    reflexivity.
+  Qed.
 
   Lemma conv_Case_c :
     forall Γ indn p brs u v,
@@ -1584,35 +1566,54 @@ Section Inversions.
 
   Lemma conv_Case_one_brs :
     forall Γ indn p c brs brs',
-      OnOne2 (fun u v => u.(bcontext) = v.(bcontext) × Σ ;;; Γ |- u.(bbody) = v.(bbody)) brs brs' ->
+      OnOne2 (fun u v => conv_context Σ (Γ ,,, u.(bcontext)) (Γ ,,, v.(bcontext)) × 
+        Σ ;;; (Γ ,,, u.(bcontext)) |- u.(bbody) = v.(bbody)) brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p c brs'.
   Proof.
-    intros Γ [ind n] p c brs brs' h.
+    intros Γ ci p c brs brs' h.
     apply OnOne2_split in h as [[m br] [[m' br'] [l1 [l2 [[? h] [? ?]]]]]].
     simpl in *. subst.
-    induction h.
-    - constructor. constructor.
-      + reflexivity.
-      + reflexivity.
-      + apply All2_app.
-        * apply All2_same. intros. intuition reflexivity.
-        * constructor.
-          -- simpl. intuition reflexivity.
-          -- apply All2_same. intros. intuition reflexivity.
-    - eapply conv_red_l ; eauto.
-      constructor. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
-    - eapply conv_red_r ; eauto.
-      constructor. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
+    eapply conv_context_red_context in a as [Δ [Δ' [[redl redr] eqc]]] => //.
+    transitivity (tCase ci p c (l1 ++ {| bcontext := m; bbody := br' |} :: l2)).
+    { induction h.
+      * do 2 constructor; eauto; try reflexivity.
+        eapply All2_app.
+        + eapply All2_same; split; reflexivity.
+        + constructor; cbn; try split; auto; try reflexivity.
+          eapply All2_same; split; reflexivity.
+      * eapply conv_red_l; eauto.
+        econstructor. eapply OnOne2_app. constructor; cbn; auto.
+      * eapply conv_red_r; eauto.
+        econstructor. eapply OnOne2_app. constructor; cbn; eauto. }
+    transitivity (tCase ci p c (l1 ++ {| bcontext := Δ; bbody := br' |} :: l2)).
+    - eapply red_conv. eapply red_case_one_brs.
+      eapply OnOne2_app. constructor; cbn.
+      right. split => //.
+    - etransitivity.
+      2:{ symmetry. eapply red_conv.
+          eapply red_case_one_brs; simpl; tea.
+          instantiate (1 := l1 ++ {| bcontext := Δ'; bbody := br' |} :: l2).
+          eapply OnOne2_app; constructor; cbn.
+          right; split => //. }
+      do 2 constructor; try reflexivity.
+      eapply All2_app.
+      * eapply All2_same; split; reflexivity.
+      * constructor; cbn.
+        + split => //; reflexivity.
+        + eapply All2_same; split; reflexivity.
   Qed.
+
+  Notation conv_brs Σ Γ :=
+    (All2 (fun u v => 
+      conv_context Σ (Γ ,,, bcontext u) (Γ ,,, bcontext v) × 
+      Σ ;;; (Γ ,,, bcontext u) |- bbody u = bbody v)).
 
   Lemma conv_Case_brs :
     forall Γ indn p c brs brs',
-      All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ->
+      conv_brs Σ Γ brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p c brs'.
   Proof.
-    intros Γ [ind n] p c brs brs' h.
+    intros Γ ci p c brs brs' h.
     apply All2_many_OnOne2 in h.
     induction h.
     - reflexivity.
@@ -1623,9 +1624,9 @@ Section Inversions.
 
   Lemma conv_Case :
     forall Γ indn p p' c c' brs brs',
-      Σ ;;; Γ |- p = p' ->
+      conv_predicate Σ Γ p p' ->
       Σ ;;; Γ |- c = c' ->
-      All2 (fun u v => u.1 = v.1 × Σ ;;; Γ |- u.2 = v.2) brs brs' ->
+      conv_brs Σ Γ brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p' c' brs'.
   Proof.
     intros Γ [ind n] p p' c c' brs brs' hp hc hbrs.
@@ -1743,8 +1744,8 @@ Section Inversions.
         - unfold fix_context_alt. eapply eq_context_upto_rev'.
           rewrite 2!mapi_app. cbn.
           eapply eq_context_upto_cat.
-          + constructor; auto.
-            * eapply eq_term_upto_univ_refl. all: auto.
+          + constructor; auto; revgoals.
+            * constructor; auto. eapply eq_term_upto_univ_refl. all: auto.
             * eapply eq_context_upto_refl; auto.
           + eapply eq_context_upto_refl; auto.
       }
@@ -1804,7 +1805,7 @@ Section Inversions.
             eapply conv_eq_context_upto. 2: eassumption.
             eapply eq_context_impl. 4: eassumption.
             all:tc.
-        + eapply eq_ctx_trans. 1-2:tc.
+        + etransitivity.
           * eassumption.
           * apply OnOne2_split in r
               as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [? [? ?]]] [? ?]]]]]].
@@ -1817,8 +1818,8 @@ Section Inversions.
             -- eapply eq_context_upto_rev'.
                rewrite 2!mapi_app. cbn.
                eapply eq_context_upto_cat.
-               ++ constructor; tas.
-                  ** eapply eq_term_upto_univ_refl. all: auto.
+               ++ constructor; tas; revgoals.
+                  ** constructor; tas. eapply eq_term_upto_univ_refl. all: auto.
                   ** eapply eq_context_upto_refl; auto.
                ++ eapply eq_context_upto_refl; auto.
     }
@@ -1981,9 +1982,8 @@ Section Inversions.
         - unfold fix_context_alt. eapply eq_context_upto_rev'.
           rewrite 2!mapi_app. cbn.
           eapply eq_context_upto_cat.
-          + constructor.
-            * assumption.
-            * eapply eq_term_upto_univ_refl. all: auto.
+          + constructor; revgoals.
+            * constructor; auto. reflexivity.
             * eapply eq_context_upto_refl; auto.
           + eapply eq_context_upto_refl; auto.
       }
@@ -2043,7 +2043,7 @@ Section Inversions.
             eapply conv_eq_context_upto. 2: eassumption.
             eapply eq_context_impl. 4: eassumption.
             all:tc.
-        + eapply eq_ctx_trans. 1-2:tc.
+        + etransitivity.
           * eassumption.
           * apply OnOne2_split in r
               as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [? []]] [? ?]]]]]].
@@ -2056,9 +2056,8 @@ Section Inversions.
             -- eapply eq_context_upto_rev'.
                rewrite 2!mapi_app. cbn.
                eapply eq_context_upto_cat.
-               ++ constructor.
-                  ** assumption.
-                  ** eapply eq_term_upto_univ_refl. all: auto.
+               ++ constructor; revgoals.
+                  ** constructor; eauto. reflexivity.
                   ** eapply eq_context_upto_refl; auto.
                ++ eapply eq_context_upto_refl; auto.
     }
@@ -2319,9 +2318,9 @@ Section Inversions.
       destruct Δ2 as [|c Δ2]; simpl in *; [rewrite app_length in X'; lia|].
       dependent destruction X.
       + eapply IHΔ1; tas; cbn.
-        inv c0. eapply conv_cum_Lambda; tea.
-      + eapply IHΔ1; tas; cbn.
-        inversion c0; subst; eapply conv_cum_LetIn; auto.
+        depelim c0.
+        * eapply conv_cum_Lambda; simpl; tea.
+        * eapply conv_cum_LetIn; simpl; tea.
   Qed.
 
   Lemma it_mkLambda_or_LetIn_conv Γ Δ1 Δ2 t1 t2 :
@@ -2336,14 +2335,12 @@ Section Inversions.
     - apply All2_fold_length in X as X'.
       destruct Δ2 as [|c Δ2]; simpl in *; [exfalso; rewrite app_length in X'; lia|].
       dependent destruction X.
-      + eapply IHΔ1; tas; cbn.
-        inv c0. etransitivity.
-        * eapply conv_Lambda_r; tea.
-        * now eapply conv_Lambda_l.
-      + eapply IHΔ1; tas; cbn.
-        etransitivity.
-        * eapply conv_LetIn_bo; tea.
-        * inv c0.
+      + eapply IHΔ1; tas; cbn. depelim c0.
+        * etransitivity.
+          { eapply conv_Lambda_r; tea. }
+          now eapply conv_Lambda_l.
+        * etransitivity.
+          { eapply conv_LetIn_bo; tea. }
           etransitivity.
           ++ eapply conv_LetIn_tm; tea.
           ++ eapply conv_LetIn_ty with (na := na'); tea. reflexivity.
@@ -2363,7 +2360,7 @@ Section Inversions.
         eapply red_red_ctx_inv; eauto.
         constructor; auto.
         * eapply All2_fold_red_refl.
-        * red. auto.
+        * constructor; auto.
       + eexists _, _; intuition eauto.
         now eapply red_step with M'.
   Qed.
@@ -2549,11 +2546,11 @@ Lemma All2_fold_subst {cf:checker_flags} {Σ} Γ Γ0 Γ1 Δ Δ' s s' :
   subslet Σ Γ s' Γ1 ->
   All2 (conv Σ Γ) s s' ->
   All2_fold
-  (fun Γ0 Γ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
+  (fun Γ0 Γ' : context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
   (Γ0 ,,, Δ)
   (Γ1 ,,, Δ') ->
   All2_fold
-  (fun Γ0 Γ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
+  (fun Γ0 Γ' : context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
   (subst_context s 0 Δ)
   (subst_context s' 0 Δ').
 Proof.
@@ -2625,13 +2622,13 @@ Lemma All2_fold_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   wf_local Σ Γ -> wf_local Σ (subst_instance u Δ) ->
   R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
   All2_fold
-  (fun Γ0 Γ' : PCUICAst.context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
+  (fun Γ0 Γ' => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
   (subst_instance u Δ)
   (subst_instance u' Δ).
 Proof.
   move=> wfΣ wf wf0 equ.
   assert (cl := closed_wf_local wfΣ wf0).
-  rewrite closedn_subst_instance in cl.
+  rewrite closedn_subst_instance_context in cl.
   induction Δ as [|d Δ] in cl, wf0 |- *.
   - constructor.
   - simpl.
@@ -2640,19 +2637,19 @@ Proof.
     destruct d as [na [b|] ty] => /=.
     * depelim wf0; simpl in *.
       simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
-      apply andb_and in cld as [clb clty].
+      apply andb_and in cld as [clb clty]. cbn.
       constructor; auto. constructor; [reflexivity|..].
       ** apply weaken_conv; auto; autorewrite with len.
-         1:now rewrite closedn_subst_instance.
+         1:now rewrite closedn_subst_instance_context.
          1-2:now rewrite closedn_subst_instance.
         constructor. red.
         apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
       ** constructor. red.
         apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
     * depelim wf0; simpl in *.
-      simpl in cld. unfold closed_decl in cld. simpl in cld. simpl.
+      simpl in cld. unfold closed_decl in cld. simpl in cld. simpl. cbn.
       constructor; auto. constructor; [reflexivity|..]. apply weaken_conv; auto.
-      1:now rewrite closedn_subst_instance.
+      1:now rewrite closedn_subst_instance_context.
       1-2:autorewrite with len; now rewrite closedn_subst_instance.
       constructor. red.
       apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
@@ -2696,7 +2693,7 @@ Lemma All2_fold_over_same_app {cf:checker_flags} Σ Γ Δ Δ' :
 Proof.
   move=> H. pose (All2_fold_length H).
   autorewrite with len in e. assert(#|Δ| = #|Δ'|) by lia.
-  move/All2_fold_app: H => H.
+  move/All2_fold_app_inv: H => H.
   now specialize (H H0) as [_ H].
 Qed.
 
@@ -2735,7 +2732,10 @@ Lemma R_global_instance_length Σ Req Rle ref napp i i' :
 Proof.
   unfold R_global_instance.
   destruct global_variance.
-  { induction i in l, i' |- *; destruct l, i'; simpl; auto; try easy. }
+  { induction i in l, i' |- *; destruct l, i'; simpl; auto; try lia; try easy.
+    * specialize (IHi i' []). simpl in IHi. intuition.
+    * intros []. intuition.
+    }
   { unfold R_universe_instance.
     intros H % Forall2_length. now rewrite !map_length in H. }
 Qed.
@@ -2749,7 +2749,7 @@ Qed.
 
 Lemma weakening_conv_gen :
   forall {cf : checker_flags} (Σ : global_env × universes_decl)
-    (Γ Γ' Γ'' : PCUICAst.context) (M N : term) k,
+    (Γ Γ' Γ'' : context) (M N : term) k,
   wf Σ.1 -> k = #|Γ''| ->
   Σ;;; Γ ,,, Γ' |- M = N ->
   Σ;;; Γ ,,, Γ'' ,,, lift_context k 0 Γ' |- lift k #|Γ'| M = lift k #|Γ'| N.
@@ -2757,12 +2757,12 @@ Proof.
   intros; subst k; now eapply weakening_conv.
 Qed.
 
-Lemma cumul_it_mkProd_or_LetIn {cf : checker_flags} (Σ : PCUICAst.global_env_ext)
-  (Δ Γ Γ' : PCUICAst.context) (B B' : term) :
+Lemma cumul_it_mkProd_or_LetIn {cf : checker_flags} (Σ : global_env_ext)
+  (Δ Γ Γ' : context) (B B' : term) :
   wf Σ.1 ->
   All2_fold (fun Γ Γ' => conv_decls Σ (Δ ,,, Γ) (Δ  ,,, Γ')) Γ Γ' ->
   Σ ;;; Δ ,,, Γ |- B <= B' ->
-  Σ ;;; Δ |- PCUICAst.it_mkProd_or_LetIn Γ B <= PCUICAst.it_mkProd_or_LetIn Γ' B'.
+  Σ ;;; Δ |- it_mkProd_or_LetIn Γ B <= it_mkProd_or_LetIn Γ' B'.
 Proof.
   move=> wfΣ; move: B B' Γ' Δ.
   induction Γ as [|d Γ] using rev_ind; move=> B B' Γ' Δ;
@@ -2773,7 +2773,7 @@ Proof.
   + assert (clen : #|Γ| = #|Γ'|).
     { apply All2_fold_length in H.
       autorewrite with len in H; simpl in H. lia. }
-    apply All2_fold_app in H as [cd cctx] => //.
+    apply All2_fold_app_inv in H as [cd cctx] => //.
     depelim cd; depelim c.
     - rewrite !it_mkProd_or_LetIn_app => //=.
       simpl. move=> HB. apply congr_cumul_prod => //.
@@ -2946,30 +2946,26 @@ Proof.
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
     depelim wf.
-    specialize (IHX wf Hs subs subs').
-    constructor; auto.
-    red. red in p. simpl.
-    epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
-    rewrite app_context_nil_l app_context_assoc in X0.
-    specialize (X0 wf p).
-    rewrite subst_context_app in X0; autorewrite with len in X0.
-    rewrite app_context_nil_l in X0.
-    now rewrite -(All2_fold_length X).
-  - rewrite !subst_context_snoc /=.
-    intros Hs subs subs'.
-    depelim wf.
-    specialize (IHX wf Hs subs subs').
-    constructor; auto.
-    red. red in p. simpl.
-    destruct p as [pb pt].
-    epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
-    rewrite app_context_nil_l app_context_assoc in X0.
-    specialize (X0 wf pb).
-    epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
-    rewrite app_context_nil_l app_context_assoc in X1.
-    specialize (X1 wf pt).
-    rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
-    now rewrite -(All2_fold_length X).
+    * specialize (IHX wf Hs subs subs').
+      constructor; auto.
+      depelim p; constructor; cbn.
+      epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
+      rewrite app_context_nil_l app_context_assoc in X0.
+      specialize (X0 wf c).
+      rewrite subst_context_app in X0; autorewrite with len in X0.
+      rewrite app_context_nil_l in X0.
+      now rewrite -(All2_fold_length X).
+    * specialize (IHX wf Hs subs subs').
+      constructor; auto.
+      depelim p; cbn.
+      epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
+      rewrite app_context_nil_l app_context_assoc in X0.
+      specialize (X0 wf c).
+      epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
+      rewrite app_context_nil_l app_context_assoc in X1.
+      specialize (X1 wf c0).
+      rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
+      now rewrite -(All2_fold_length X); constructor; auto.
 Qed.
 
 Lemma conv_terms_weaken {cf:checker_flags} Σ Γ Γ' args args' :
@@ -3016,19 +3012,17 @@ Proof.
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
     depelim wf.
-    specialize (IHX wf Hs subs subs').
-    depelim p.
-    constructor; auto. constructor; auto. simpl.
-    epose proof (untyped_subst_cumul Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
-    rewrite app_context_assoc in X0.
-    specialize (X0 wf c).
-    rewrite !subst_context_app app_context_assoc in X0; autorewrite with len in X0.
-    now rewrite -(All2_fold_length X).
-  - rewrite !subst_context_snoc /=.
-    intros Hs subs subs'. depelim wf.
-    specialize (IHX wf Hs subs subs').
-    depelim p.
-    constructor; auto. constructor; auto. 
+    * specialize (IHX wf Hs subs subs').
+      depelim p.
+      constructor; auto. constructor; auto. simpl.
+      epose proof (untyped_subst_cumul Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
+      rewrite app_context_assoc in X0.
+      specialize (X0 wf c).
+      rewrite !subst_context_app app_context_assoc in X0; autorewrite with len in X0.
+      now rewrite -(All2_fold_length X).
+    * specialize (IHX wf Hs subs subs').
+      depelim p.
+      constructor; auto. constructor; auto. 
     + epose proof (untyped_subst_conv Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
       rewrite !app_context_assoc in X1.
       specialize (X1 wf c).
@@ -3058,7 +3052,6 @@ Proof.
       forward IHX by now depelim H.
       destruct (IHX _ _ Hnth) as [decl' [Hnth' cum]].
       eexists; intuition eauto.
-  - move=> H; elimtype False; depelim H; simpl in H0; noconf H0.
 Qed.
 
 Require Import ssrbool.
@@ -3066,13 +3059,7 @@ Require Import ssrbool.
 Lemma closed_ctx_decl k d Γ : closedn_ctx k (d :: Γ) =
   closed_decl (k + #|Γ|) d && closedn_ctx k Γ.
 Proof.
-  unfold closedn_ctx at 1.
-  rewrite mapi_rev /= forallb_app {2}/id /= andb_true_r.
-  replace (#|Γ| - 0) with #|Γ| by lia.
-  rewrite andb_comm. f_equal.
-  unfold closedn_ctx.
-  rewrite mapi_rev (mapi_rec_add _ _ 1 0) /=.
-  f_equal.
+  now simpl; rewrite andb_comm Nat.add_comm.
 Qed.
 
 Lemma weaken_cumul_ctx {cf:checker_flags} Σ Γ Γ' Δ Δ' :
@@ -3085,40 +3072,26 @@ Lemma weaken_cumul_ctx {cf:checker_flags} Σ Γ Γ' Δ Δ' :
 Proof.
   intros wfΣ wf wf' wf''. induction 1.
   - simpl. constructor.
-  - rewrite /= closed_ctx_decl in wf.
-    rewrite /= closed_ctx_decl in wf'.
-    move/andb_and: wf => [wfd wf].
-    move/andb_and: wf' => [wfd' wf'].
+  - simpl in wf, wf'.
+    move/andb_and: wf => [wf wfd].
+    move/andb_and: wf' => [wf' wfd'].
     constructor; auto.
     + now eapply IHX.
-    + depelim p. constructor; auto.
-      rewrite -app_context_assoc.
-      eapply weaken_cumul; eauto.
-      autorewrite with len; simpl; rewrite (All2_fold_length X).
-      now autorewrite with len in wfd'.
-  - rewrite /= closed_ctx_decl in wf.
-    rewrite /= closed_ctx_decl in wf'.
-    move/andb_and: wf => [wfd wf].
-    move/andb_and: wf' => [wfd' wf'].
-    constructor; auto.
-    + now eapply IHX.
-    + move/andb_and: wfd => /= [wfb wft].
-      move/andb_and: wfd' => /= [wfb' wft'].
-      autorewrite with len in *.
-      rewrite <- (All2_fold_length X) in *.
-      depelim p; constructor; auto.
-      * rewrite -app_context_assoc.
-        apply weaken_conv; autorewrite with len; auto with pcuic.
-      * rewrite -app_context_assoc.
-        apply weaken_cumul; autorewrite with len; auto with pcuic.
+    + len in wfd; len in wfd'.
+      rewrite -(length_of X) in wfd'.
+      depelim p; constructor; auto;
+      rewrite -app_context_assoc;
+      (eapply weaken_cumul || eapply weaken_conv); eauto;
+      rewrite app_context_length; now move/andP: wfd => /=; move/andP: wfd' => /=.
 Qed.
 
-Lemma red_rel_all Σ Γ i body t :
+Lemma red_rel_all {cf:checker_flags} Σ Γ i body t :
   wf Σ ->
   option_map decl_body (nth_error Γ i) = Some (Some body) ->
   red Σ Γ t (lift 1 i (t {i := body})).
 Proof.
-  induction t using term_forall_list_ind in Γ, i |- *; intro H; cbn;
+  intros wfΣ.
+  induction t using PCUICInduction.term_forall_list_ind in Γ, i |- *; intro H; cbn;
     eauto using red_prod, red_abs, red_app, red_letin, red_proj_c.
   - case_eq (i <=? n); intro H0.
     + apply Nat.leb_le in H0.
@@ -3133,12 +3106,13 @@ Proof.
     + cbn. rewrite H0. auto.
   - eapply red_evar. repeat eapply All2_map_right.
     eapply All_All2; tea. intro; cbn; eauto.
-  - rewrite map_predicate_map_predicate.
+  - todo "case".
+    (*rewrite map_predicate_k_map_predicate_k.
     eapply red_case; eauto.
     * destruct X.
     
     repeat eapply All2_map_right.
-    eapply All_All2; tea. intro; cbn; eauto.
+    eapply All_All2; tea. intro; cbn; eauto.*)
   - eapply red_fix_congr. repeat eapply All2_map_right.
     eapply All_All2; tea. intros; cbn in *; rdest; eauto.
     rewrite map_length. eapply r0.

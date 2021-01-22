@@ -167,7 +167,7 @@ Lemma on_one_decl_compare_decl Σ Re Rle Γ x y :
   RelationClasses.Reflexive Rle ->
   on_one_decl
     (fun (_ : context) (y0 v' : term) => eq_term_upto_univ Σ Re Rle y0 v') Γ x y ->
-  compare_decls false (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle) x y.
+  compare_decls (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle) x y.
 Proof.
   intros heq hle.
   destruct x as [na [b|] ty], y as [na' [b'|] ty']; cbn; intuition (subst; auto);
@@ -582,16 +582,16 @@ Proof.
     + constructor; assumption.
 Qed.
 
-Lemma eq_context_gen_context_assumptions {le eq leq Γ Δ} :
-  eq_context_gen le eq leq Γ Δ ->
+Lemma eq_context_gen_context_assumptions {eq leq Γ Δ} :
+  eq_context_gen eq leq Γ Δ ->
   context_assumptions Γ = context_assumptions Δ.
 Proof.
   induction 1; simpl; auto;
-  destruct p, le => /= //; try lia.  
+  destruct p => /= //; try lia.  
 Qed.
 
-Lemma eq_context_extended_subst {Σ le Re Rle Γ Δ k} :
-  eq_context_gen le (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle) Γ Δ ->
+Lemma eq_context_extended_subst {Σ Re Rle Γ Δ k} :
+  eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle) Γ Δ ->
   All2 (eq_term_upto_univ Σ Re Re) (extended_subst Γ k) (extended_subst Δ k).
 Proof.
   intros Heq.
@@ -608,8 +608,8 @@ Proof.
 Qed.
 
 Lemma eq_context_gen_eq_context_upto Σ Re Rle Γ Γ' :
-  eq_context_gen false (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle) Γ Γ' ->
-  eq_context_upto Σ Re Re Γ Γ'.
+  eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Rle) Γ Γ' ->
+  eq_context_upto Σ Re Rle Γ Γ'.
 Proof.
   intros.
   eapply All2_fold_impl_len; tea.
@@ -624,7 +624,7 @@ Lemma red1_eq_context_upto_univ_l Σ Re Rle Γ ctx ctx' ctx'' :
   SubstUnivPreserving Re ->
   SubstUnivPreserving Rle ->
   RelationClasses.subrelation Re Rle ->
-  eq_context_gen false (eq_term_upto_univ Σ Re Re)
+  eq_context_gen (eq_term_upto_univ Σ Re Re)
    (eq_term_upto_univ Σ Re Re) ctx ctx' ->
   OnOne2_local_env (on_one_decl
     (fun (Γ' : context) (u v : term) =>
@@ -643,7 +643,7 @@ Lemma red1_eq_context_upto_univ_l Σ Re Rle Γ ctx ctx' ctx'' :
       × eq_term_upto_univ_napp Σ Re Rle napp v v')) ctx ctx'' ->
   ∑ pctx,
     red1_ctx_rel Σ Γ ctx' pctx *
-    eq_context_gen false (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx'' pctx.
+    eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx'' pctx.
 Proof.
   intros. 
   rename X into e, X0 into X.
@@ -651,7 +651,7 @@ Proof.
   - red in p. simpl in p.
     depelim e. depelim c.
     destruct p as [-> p].
-    eapply p in y as hh ; eauto.
+    eapply p in e1 as hh ; eauto.
     destruct hh as [? [? ?]].
     eapply red1_eq_context_upto_l in r; cycle -1.
     { eapply eq_context_upto_cat.
@@ -666,7 +666,7 @@ Proof.
   - depelim e.
     depelim c.
     destruct p as [-> [[p ->]|[p ->]]].
-    { eapply p in y as hh ; eauto.
+    { eapply p in e2 as hh ; eauto.
       destruct hh as [? [? ?]].
       eapply red1_eq_context_upto_l in r; cycle -1.
       { eapply eq_context_upto_cat.
@@ -961,7 +961,7 @@ Proof.
       assert (h : ∑ brs0,
                OnOne2 (fun br br' => on_Trel_eq (red1 Σ (Γ ,,, bcontext br)) bbody bcontext br br') brs' brs0 *
                All2 (fun x y =>
-                       eq_context_gen false (eq_term_upto_univ Σ Re Re) 
+                       eq_context_gen (eq_term_upto_univ Σ Re Re) 
                         (eq_term_upto_univ Σ Re Re) (bcontext x) (bcontext y) *
                        (eq_term_upto_univ Σ Re Re (bbody x) (bbody y))
                        )%type brs'0 brs0
@@ -997,7 +997,7 @@ Proof.
     + assert (h : ∑ brs0,
                OnOne2 (fun br br' => on_Trel_eq (red1_ctx_rel Σ Γ) bcontext bbody br br') brs' brs0 *
                All2 (fun x y =>
-                       eq_context_gen false (eq_term_upto_univ Σ Re Re) 
+                       eq_context_gen (eq_term_upto_univ Σ Re Re) 
                         (eq_term_upto_univ Σ Re Re) (bcontext x) (bcontext y) *
                        eq_term_upto_univ Σ Re Re (bbody x) (bbody y)
                        )%type brs'0 brs0
@@ -2349,7 +2349,7 @@ Section RedConfluence.
   | rt_ctx_decl_trans : forall y z, clos_refl_trans_ctx_decl R x y -> clos_refl_trans_ctx_decl R y z ->
                                clos_refl_trans_ctx_decl R x z.
 
-  Definition eq_context_upto_names := eq_context_gen false eq eq.
+  Definition eq_context_upto_names := eq_context_gen eq eq.
 
   Global Instance eq_context_upto_names_refl : Reflexive eq_context_upto_names := _.
   Global Instance eq_context_upto_names_sym : Symmetric eq_context_upto_names := _.

@@ -1299,6 +1299,6 @@ Proof.
 Qed.
 
 Module PCUICLookup := EnvironmentTyping.Lookup PCUICTerm PCUICEnvironment.
-Export PCUICLookup.
+Include PCUICLookup.
 
 Derive NoConfusion for global_decl.

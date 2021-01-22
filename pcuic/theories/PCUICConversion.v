@@ -413,7 +413,7 @@ Qed.
 Section Inversions.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-  Context (wfΣ : wf Σ).
+  Context {wfΣ : wf Σ}.
 
   Definition Is_conv_to_Arity Σ Γ T :=
     exists T', ∥ red Σ Γ T T' ∥ /\ isArity T'.

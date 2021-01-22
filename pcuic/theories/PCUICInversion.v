@@ -5,7 +5,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICLiftSubst PCUICUnivSu
 
 Require Import Equations.Prop.DepElim.
 
-
 Section Inversion.
 
   Context `{checker_flags}.
@@ -167,24 +166,45 @@ Section Inversion.
     intros Γ ind i u T h. invtac h.
   Qed.
 
+  Variant case_inversion_data Γ ci p c brs mdecl idecl indices :=
+   | case_inv ps (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl) :
+    mdecl.(ind_npars) = ci.(ci_npar) ->
+    let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+    wf_predicate mdecl idecl p ->
+    wf_local Σ (Γ ,,, p.(pcontext)) ->
+    conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
+    Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
+    is_allowed_elimination Σ ps idecl.(ind_kelim) ->
+    Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
+    isCoFinite mdecl.(ind_finite) = false ->
+    let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+    wf_branches idecl brs ->
+    All2i (fun i cdecl br =>
+      let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+      (wf_local Σ (Γ ,,, br.(bcontext)) ×
+        conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
+      ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
+      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps))) 
+      0 idecl.(ind_ctors) brs ->
+    case_inversion_data Γ ci p c brs mdecl idecl indices.
+
   Lemma inversion_Case :
     forall {Γ ci p c brs T},
       Σ ;;; Γ |- tCase ci p c brs : T ->
-      ∑ u args mdecl idecl ps pty btys,
-        declared_inductive Σ ind mdecl idecl ×
-        ind_npars mdecl = ci.(ind_npar) ×
-        let params := firstn ci.(ind_npar) args in
-        conv_context (case_predicate_context ind mdecl idecl p) p.(pcontext) ×
-        Σ ;;; Γ ,,, p.(pcontext) |- p : p.(preturn) ×
-        is_allowed_elimination Σ ps (ind_kelim idecl) ×
-        isCoFinite (ind_finite mdecl) = false ×
-        Σ;;; Γ |- c : mkApps (tInd ind u) args ×
-                     = Some btys ×
-        All2 (fun br bty => (br.1 = bty.1 × Σ ;;; Γ |- br.2 : bty.2)
-                           × isType Σ Γ bty.2) brs btys ×
-        Σ ;;; Γ |- mkApps p (skipn npar args ++ [c]) <= T.
+      ∑ mdecl idecl indices, 
+        let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+        let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+        case_inversion_data Γ ci p c brs mdecl idecl indices ×
+        Σ ;;; Γ |- mkApps ptm (indices ++ [c]) <= T.
   Proof.
-    intros Γ indnpar p c brs T h. invtac h.
+    intros Γ ci p c brs T h.
+    dependent induction h;
+    [ repeat insum; repeat intimes; try eapply case_inv ; 
+	    [ try first [ eassumption | reflexivity ].. | try eapply cumul_refl' ]
+    | repeat outsum; repeat outtimes; repeat insum; repeat intimes ; tea;
+      [ try first
+      [ eassumption | reflexivity ]..
+      | try eapply cumul_trans; eassumption ] ].
   Qed.
 
   Lemma inversion_Proj :

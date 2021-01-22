@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution PCUICWfUniverses
-     PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts.
+     PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.

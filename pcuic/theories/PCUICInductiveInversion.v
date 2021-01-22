@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICEquality PCUICConfluence PCUICParallelReductionConfluence
      PCUICContextConversion PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
-     PCUICParallelReduction PCUICCtxShape PCUICSpine PCUICInductives PCUICValidity.
+     PCUICParallelReduction PCUICSpine PCUICInductives PCUICValidity.
 
 From Equations Require Import Equations.
 Require Import Equations.Type.Relation_Properties.

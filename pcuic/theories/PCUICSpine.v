@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution
-     PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape PCUICContexts
+     PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
      PCUICArities.
 
 From Equations Require Import Equations.
@@ -319,7 +319,7 @@ Proof.
     -- rewrite app_length /= in len.
       rewrite it_mkProd_or_LetIn_app in Hsp.
       destruct x as [na [b|] ty]; simpl in *; rewrite /mkProd_or_LetIn /= in Hsp.
-      + rewrite PCUICCtxShape.context_assumptions_app /= Nat.add_0_r.
+      + rewrite context_assumptions_app /= Nat.add_0_r.
         eapply typing_spine_letin_inv in Hsp; auto.
         rewrite /subst1 subst_it_mkProd_or_LetIn /= in Hsp.
         specialize (IHn (subst_context [b] 0 l)).
@@ -350,7 +350,7 @@ Proof.
           repeat constructor.
           rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
           apply wf_local_app_l in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
-      + rewrite PCUICCtxShape.context_assumptions_app /=.
+      + rewrite context_assumptions_app /=.
         depelim Hsp. 
         now eapply cumul_Prod_Sort_inv in c.
         eapply cumul_Prod_inv in c as [conva cumulB].

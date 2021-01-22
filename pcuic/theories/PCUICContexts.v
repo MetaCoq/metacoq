@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSubstitution PCUICUnivSubstitution PCUICSigmaCalculus
-     PCUICWeakening PCUICGeneration PCUICUtils PCUICCtxShape.
+     PCUICWeakening PCUICGeneration PCUICUtils.
 
 
 From Equations Require Import Equations.
@@ -335,7 +335,7 @@ Proof.
 Qed.
 
 Lemma to_extended_list_length Γ : #|to_extended_list Γ| = context_assumptions Γ.
-Proof. now rewrite /to_extended_list PCUICCtxShape.to_extended_list_k_length. Qed.
+Proof. now rewrite /to_extended_list to_extended_list_k_length. Qed.
 Hint Rewrite to_extended_list_length : len.
 
 Lemma map_subst_app_to_extended_list_k s s' ctx k  :

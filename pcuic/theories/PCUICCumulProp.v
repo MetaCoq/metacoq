@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
-     PCUICCtxShape PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
+     PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
      PCUICEquality PCUICReduction.
 

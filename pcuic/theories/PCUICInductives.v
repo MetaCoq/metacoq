@@ -87,8 +87,6 @@ Qed.
 
 Import PCUICEnvironment.
 
-From MetaCoq.PCUIC Require Import PCUICCtxShape.
-
 Lemma branch_type_spec {cf:checker_flags} Σ ind mdecl idecl cdecl pars u p c nargs bty : 
   declared_inductive Σ ind mdecl idecl ->
   forall (omib : on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl),

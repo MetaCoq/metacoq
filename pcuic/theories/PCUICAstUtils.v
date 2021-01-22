@@ -276,6 +276,18 @@ Proof.
   case: x => [na [body|] ty'] /=; by rewrite IHctx' // /snoc -app_assoc.
 Qed.
 
+Lemma reln_length Γ Γ' n : #|reln Γ n Γ'| = #|Γ| + context_assumptions Γ'.
+Proof.
+  induction Γ' in n, Γ |- *; simpl; auto.
+  destruct a as [? [b|] ?]; simpl; auto.
+  rewrite Nat.add_1_r. simpl. rewrite IHΓ' => /= //.
+Qed.
+
+Lemma to_extended_list_k_length Γ n : #|to_extended_list_k Γ n| = context_assumptions Γ.
+Proof.
+  now rewrite /to_extended_list_k reln_length.
+Qed.
+
 Lemma reln_list_lift_above l p Γ :
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).

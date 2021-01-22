@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICEquality PCUICNameless
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
-     PCUICConversion PCUICContextConversion PCUICValidity PCUICCtxShape
+     PCUICConversion PCUICContextConversion PCUICValidity
      PCUICArities PCUICWeakeningEnv PCUICGeneration
      PCUICParallelReductionConfluence.
 

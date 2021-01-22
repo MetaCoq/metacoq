@@ -6,8 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
      PCUICAlpha PCUICEquality PCUICValidity PCUICParallelReductionConfluence
      PCUICConfluence PCUICContextConversion PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
-     PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion
-     PCUICCtxShape.
+     PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion.
 
 Require Import ssreflect.
 From Equations Require Import Equations.

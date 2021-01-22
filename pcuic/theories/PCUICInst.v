@@ -20,12 +20,12 @@ Implicit Types cf : checker_flags.
 Open Scope sigma_scope.
 
 Definition inst_context σ (Γ : context) : context :=
-  fold_context (fun i => inst (⇑^i σ)) Γ.
+  fold_context_k (fun i => inst (⇑^i σ)) Γ.
 
 Instance inst_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) inst_context.
 Proof.
   intros f g Hfg x y ->.
-  apply fold_context_ext => i t.
+  apply fold_context_k_ext => i t.
   now rewrite Hfg.
 Qed.
 
@@ -34,7 +34,7 @@ Definition inst_decl σ d := map_decl (inst σ) d.
 Definition inst_context_snoc0 s Γ d :
   inst_context s (d :: Γ) =
   inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
-Proof. unfold inst_context. now rewrite fold_context_snoc0. Qed.
+Proof. unfold inst_context. now rewrite fold_context_k_snoc0. Qed.
 Hint Rewrite inst_context_snoc0 : sigma.
 
 Lemma inst_context_snoc s Γ d : inst_context s (Γ ,, d) = inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
@@ -47,11 +47,11 @@ Lemma inst_context_alt s Γ :
   inst_context s Γ =
   mapi (fun k' d => map_decl (inst (⇑^(Nat.pred #|Γ| - k') s)) d) Γ.
 Proof.
-  unfold inst_context. apply fold_context_alt.
+  unfold inst_context. apply fold_context_k_alt.
 Qed.
 
 Lemma inst_context_length s Γ : #|inst_context s Γ| = #|Γ|.
-Proof. apply fold_context_length. Qed.
+Proof. apply fold_context_k_length. Qed.
 Hint Rewrite inst_context_length : sigma wf.
 
 Lemma inst_mkApps f l σ : (mkApps f l).[σ] = mkApps f.[σ] (map (inst σ) l).
@@ -125,7 +125,7 @@ Lemma mapi_context_eqP_onctx_k_spec {P : nat -> term -> Type} {k} {ctx} {f g : n
 Proof.
   move=> Ha Hfg.
   rewrite !mapi_context_fold.
-  rewrite !fold_context_alt.
+  rewrite !fold_context_k_alt.
   eapply Alli_mapi_spec; tea.
   move=> /= n x ond.
   eapply map_decl_eq_spec; tea.
@@ -251,7 +251,7 @@ Lemma inst_closedn_ctx f n Γ :
   inst_context (⇑^n f) Γ = Γ.
 Proof.
   rewrite test_context_k_eq.
-  apply alli_fold_context.
+  apply alli_fold_context_k.
   intros. rewrite -Upn_Upn Nat.add_comm.
   now rewrite [map_decl _ _]inst_decl_closed.
 Qed.
@@ -284,11 +284,11 @@ Proof.
   intros Σ Γ σ hΣ h.
   induction h.
   - reflexivity.
-  - unfold inst_context, snoc. rewrite fold_context_snoc0.
+  - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
     unfold map_decl. simpl. unfold vass. f_equal.
     destruct t0 as [s ht]. eapply typed_inst. all: eauto.
-  - unfold inst_context, snoc. rewrite fold_context_snoc0.
+  - unfold inst_context, snoc. rewrite fold_context_k_snoc0.
     unfold snoc. f_equal. all: auto.
     unfold map_decl. simpl. unfold vdef. f_equal.
     + f_equal. eapply typed_inst. all: eauto.
@@ -726,7 +726,7 @@ Proof.
   - len. len. 
     now rewrite -(wf_predicate_length_pcontext wfp).
   - rewrite forget_types_mapi_context. f_equal.
-    rewrite fold_context_snoc0 /= /snoc.
+    rewrite fold_context_k_snoc0 /= /snoc.
     f_equal.
     * rewrite /map_decl /=. f_equal.
       len. rewrite inst_mkApps /=. f_equal.
@@ -819,9 +819,9 @@ Lemma inst_closed_constructor_body mdecl cdecl f :
 Proof.
   rewrite /closed_constructor_body /inst_constructor_body /map_constructor_body.
   move/andP=> [] /andP [] clctx clind clty.
-  destruct cdecl; cbn -[fold_context] in *; f_equal.
+  destruct cdecl; cbn -[fold_context_k] in *; f_equal.
   + move: clctx. rewrite test_context_k_eq.
-    apply alli_fold_context => i d cldecl.
+    apply alli_fold_context_k => i d cldecl.
     rewrite inst_closed_decl //.
     red; rewrite -cldecl; lia_f_equal.
   + solve_all. rewrite up_Upn inst_closed //.
@@ -834,7 +834,7 @@ Lemma inst_cstr_args mdecl f cdecl :
   inst_context (up (#|mdecl.(ind_params)| + #|ind_bodies mdecl|) f) (cstr_args cdecl).
 Proof. 
   simpl. unfold inst_context.
-  apply fold_context_ext => i t.
+  apply fold_context_k_ext => i t.
   now rewrite !up_Upn !Upn_Upn.
 Qed.
 
@@ -914,10 +914,10 @@ Lemma inst_case_branch_context_gen ind mdecl f p bctx cdecl :
 Proof.
   intros clargs clpars. unfold case_branch_context, case_branch_context_gen.
   rewrite inst_cstr_args.
-  cbn -[fold_context].
+  cbn -[fold_context_k].
   intros hlen hlen'.
   rewrite map2_set_binder_name_fold //.
-  change (fold_context
+  change (fold_context_k
   (fun i : nat => inst (up i (up (ind_npars mdecl + #|ind_bodies mdecl|) f)))) with
     (inst_context (up (ind_npars mdecl + #|ind_bodies mdecl|) f)).
   rewrite inst_context_subst. f_equal.
@@ -1096,8 +1096,8 @@ Lemma inst_app_context f Γ Δ :
   inst_context f (Γ ,,, Δ) = 
   inst_context f Γ ,,, inst_context (up #|Γ| f) Δ.
 Proof.
-  rewrite /inst_context fold_context_app /app_context. f_equal.
-  apply fold_context_ext. intros i x. now rewrite up_Upn Nat.add_comm Upn_Upn.
+  rewrite /inst_context fold_context_k_app /app_context. f_equal.
+  apply fold_context_k_ext. intros i x. now rewrite up_Upn Nat.add_comm Upn_Upn.
 Qed.
 
 Lemma inst_smash_context f Γ Δ :
@@ -1111,7 +1111,7 @@ Proof.
   - f_equal. rewrite inst_app_context /map_decl /= /app_context.
     f_equal.
     * now rewrite up_Upn -Upn_Upn.
-    * rewrite /inst_context fold_context_tip /map_decl /=. do 2 f_equal.
+    * rewrite /inst_context fold_context_k_tip /map_decl /=. do 2 f_equal.
       now rewrite Upn_0.
 Qed.
 
@@ -1120,7 +1120,7 @@ Lemma nth_error_inst_context f Γ n :
   option_map (map_decl (inst (up (#|Γ| - S n) f))) (nth_error Γ n).
 Proof.
   induction Γ in n |- *; intros.
-  - simpl. unfold inst_context, fold_context; simpl; rewrite nth_error_nil. easy.
+  - simpl. unfold inst_context, fold_context_k; simpl; rewrite nth_error_nil. easy.
   - simpl. destruct n; rewrite inst_context_snoc.
     + simpl. rewrite up_Upn. lia_f_equal.
     + simpl. rewrite Nat.sub_succ -IHΓ; simpl in *; (lia || congruence).

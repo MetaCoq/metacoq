@@ -63,7 +63,7 @@ Proof.
 Qed.
 
 Definition rename_context f (Γ : context) : context :=
-  fold_context (fun i => rename (shiftn i f)) Γ.
+  fold_context_k (fun i => rename (shiftn i f)) Γ.
 
 Definition rename_decl f d := map_decl (rename f) d.
 
@@ -72,7 +72,7 @@ Lemma rename_context_length :
     #|rename_context σ Γ| = #|Γ|.
 Proof.
   intros σ Γ. unfold rename_context.
-  apply fold_context_length.
+  apply fold_context_k_length.
 Qed.
 Hint Rewrite rename_context_length : sigma wf.
 
@@ -82,7 +82,7 @@ Lemma rename_context_snoc0 :
     rename_context f Γ ,, rename_decl (shiftn #|Γ| f) d.
 Proof.
   intros f Γ d.
-  unfold rename_context. now rewrite fold_context_snoc0. 
+  unfold rename_context. now rewrite fold_context_k_snoc0. 
 Qed.
 Hint Rewrite rename_context_snoc0 : sigma.
 
@@ -96,7 +96,7 @@ Lemma rename_context_alt r Γ :
   rename_context r Γ =
   mapi (fun k' d => map_decl (rename (shiftn (Nat.pred #|Γ| - k') r)) d) Γ.
 Proof.
-  unfold rename_context. apply fold_context_alt.
+  unfold rename_context. apply fold_context_k_alt.
 Qed.
 
 Lemma rename_subst0 :
@@ -359,7 +359,7 @@ Lemma rename_closedn_ctx f n Γ :
   rename_context (shiftn n f) Γ = Γ.
 Proof.
   rewrite test_context_k_eq /rename_context.
-  apply alli_fold_context.
+  apply alli_fold_context_k.
   intros. rewrite shiftn_add.
   intros. apply rename_closed_decl.
   now rewrite Nat.add_comm.
@@ -632,11 +632,11 @@ Definition rename_constructor_body mdecl f c :=
 
 Lemma map2_set_binder_name_fold bctx f Γ :
   #|bctx| = #|Γ| ->
-  map2 set_binder_name bctx (fold_context f Γ) = 
-  fold_context f (map2 set_binder_name bctx Γ).
+  map2 set_binder_name bctx (fold_context_k f Γ) = 
+  fold_context_k f (map2 set_binder_name bctx Γ).
 Proof.
   intros hl.
-  rewrite !fold_context_alt mapi_map2 -{1}(map_id bctx).
+  rewrite !fold_context_k_alt mapi_map2 -{1}(map_id bctx).
   rewrite -mapi_cst_map map2_mapi.
   rewrite map2_length; len => //.
   eapply map2i_ext => i x y.
@@ -739,7 +739,7 @@ Qed.
 Instance rename_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) rename_context.
 Proof.
   intros f g Hfg x y ->.
-  apply fold_context_ext => i t.
+  apply fold_context_k_ext => i t.
   now rewrite Hfg.
 Qed.
 
@@ -747,7 +747,7 @@ Lemma rename_context_subst_instance f u Γ :
   rename_context f (subst_instance u Γ) = 
   subst_instance u (rename_context f Γ).
 Proof. unfold rename_context.
-  rewrite fold_context_map // [subst_instance _ _]map_fold_context.
+  rewrite fold_context_k_map // [subst_instance _ _]map_fold_context_k.
   now setoid_rewrite rename_subst_instance.
 Qed.
 
@@ -756,8 +756,8 @@ Lemma rename_context_subst_k f s k Γ :
   subst_context (map (rename f) s) k (rename_context (shiftn (k + #|s|) f) Γ).
 Proof.
   rewrite /rename_context /subst_context.
-  rewrite !fold_context_compose.
-  apply fold_context_ext => i t.
+  rewrite !fold_context_k_compose.
+  apply fold_context_k_ext => i t.
   rewrite shiftn_add.
   now rewrite rename_subst !shiftn_add Nat.add_assoc.
 Qed.
@@ -767,7 +767,7 @@ Lemma rename_cstr_args mdecl f cdecl :
   rename_context (shiftn (#|mdecl.(ind_params)| + #|ind_bodies mdecl|) f) (cstr_args cdecl).
 Proof. 
   simpl. unfold rename_context.
-  apply fold_context_ext => i t.
+  apply fold_context_k_ext => i t.
   now rewrite shiftn_add Nat.add_assoc.
 Qed.
 
@@ -781,10 +781,10 @@ Lemma rename_case_branch_context_gen ind mdecl f p bctx cdecl :
 Proof.
   intros clpars. unfold case_branch_context, case_branch_context_gen.
   rewrite rename_cstr_args.
-  cbn -[fold_context].
+  cbn -[fold_context_k].
   intros hlen hlen'.
   rewrite map2_set_binder_name_fold //.
-  change (fold_context
+  change (fold_context_k
   (fun i : nat => rename (shiftn i (shiftn (ind_npars mdecl + #|ind_bodies mdecl|) f)))) with
     (rename_context (shiftn (ind_npars mdecl + #|ind_bodies mdecl|) f)).
   rewrite rename_context_subst. f_equal.
@@ -861,7 +861,7 @@ Proof.
     now rewrite -(wf_predicate_length_pcontext wfp).
   - f_equal.
     { now rewrite forget_types_mapi_context. } 
-    rewrite fold_context_snoc0 /= /snoc.
+    rewrite fold_context_k_snoc0 /= /snoc.
     f_equal.
     * rewrite /map_decl /=. f_equal.
       len. rewrite rename_mkApps /=. f_equal.
@@ -886,9 +886,9 @@ Lemma rename_closed_constructor_body mdecl cdecl f :
 Proof.
   rewrite /closed_constructor_body /rename_constructor_body /map_constructor_body.
   move/andP=> [] /andP [] clctx clind clty.
-  destruct cdecl; cbn -[fold_context] in *; f_equal.
+  destruct cdecl; cbn -[fold_context_k] in *; f_equal.
   + move: clctx. rewrite test_context_k_eq.
-    apply alli_fold_context => i d cldecl.
+    apply alli_fold_context_k => i d cldecl.
     rewrite rename_closed_decl //.
     red; rewrite -cldecl; lia_f_equal.
   + solve_all. rewrite rename_closedn //.
@@ -1500,8 +1500,8 @@ Lemma rename_app_context f Γ Δ :
   rename_context f (Γ ,,, Δ) = 
   rename_context f Γ ,,, rename_context (shiftn #|Γ| f) Δ.
 Proof.
-  rewrite /rename_context fold_context_app /app_context. f_equal.
-  apply fold_context_ext. intros i x. now rewrite shiftn_add.
+  rewrite /rename_context fold_context_k_app /app_context. f_equal.
+  apply fold_context_k_ext. intros i x. now rewrite shiftn_add.
 Qed.
 
 Lemma rename_smash_context f Γ Δ :
@@ -1514,7 +1514,7 @@ Proof.
   - f_equal. rewrite rename_app_context /map_decl /= /app_context.
     f_equal.
     * now rewrite shiftn_add.
-    * rewrite /rename_context fold_context_tip /map_decl /=. do 2 f_equal.
+    * rewrite /rename_context fold_context_k_tip /map_decl /=. do 2 f_equal.
       now rewrite shiftn0.
 Qed.
 
@@ -1523,7 +1523,7 @@ Lemma nth_error_rename_context f Γ n :
   option_map (map_decl (rename (shiftn (#|Γ| - S n) f))) (nth_error Γ n).
 Proof.
   induction Γ in n |- *; intros.
-  - simpl. unfold rename_context, fold_context; simpl; rewrite nth_error_nil. easy.
+  - simpl. unfold rename_context, fold_context_k; simpl; rewrite nth_error_nil. easy.
   - simpl. destruct n; rewrite rename_context_snoc.
     + simpl. lia_f_equal.
     + simpl. rewrite IHΓ; simpl in *; (lia || congruence).

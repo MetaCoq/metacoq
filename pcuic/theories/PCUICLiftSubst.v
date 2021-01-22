@@ -426,7 +426,7 @@ Qed.
 
 Lemma lift0_context k Γ : lift_context 0 k Γ = Γ.
 Proof.
-  unfold lift_context, fold_context.
+  unfold lift_context, fold_context_k.
   rewrite rev_mapi. rewrite List.rev_involutive.
   unfold mapi. generalize 0 at 2. generalize #|List.rev Γ|.
   induction Γ; intros; simpl; trivial.
@@ -434,11 +434,11 @@ Proof.
 Qed.
 
 Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
-Proof. apply fold_context_length. Qed.
+Proof. apply fold_context_k_length. Qed.
 Hint Rewrite lift_context_length : lift len.
 
 Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
-Proof. unfold lift_context. now rewrite fold_context_snoc0. Qed.
+Proof. unfold lift_context. now rewrite fold_context_k_snoc0. Qed.
 Hint Rewrite lift_context_snoc0 : lift.
 
 Lemma lift_context_snoc n k Γ d : lift_context n k (Γ ,, d) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
@@ -451,13 +451,13 @@ Lemma lift_context_alt n k Γ :
   lift_context n k Γ =
   mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
 Proof.
-  unfold lift_context. apply fold_context_alt.
+  unfold lift_context. apply fold_context_k_alt.
 Qed.
 
 Lemma lift_context_app n k Γ Δ :
   lift_context n k (Γ ,,, Δ) = lift_context n k Γ ,,, lift_context n (#|Γ| + k) Δ.
 Proof.
-  unfold lift_context, fold_context, app_context.
+  unfold lift_context, fold_context_k, app_context.
   rewrite List.rev_app_distr.
   rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.
@@ -549,7 +549,7 @@ Lemma nth_error_lift_context_eq:
     option_map (lift_decl #|Γ''| (#|Γ'| - S v + k)) (nth_error Γ' v).
 Proof.
   induction Γ'; intros.
-  - simpl. unfold lift_context, fold_context; simpl. now rewrite nth_error_nil.
+  - simpl. unfold lift_context, fold_context_k; simpl. now rewrite nth_error_nil.
   - simpl. destruct v; rewrite lift_context_snoc0.
     + simpl. repeat f_equal; try lia.
     + simpl. apply IHΓ'; simpl in *; (lia || congruence).
@@ -567,7 +567,7 @@ Qed.
 
 Lemma subst0_context k Γ : subst_context [] k Γ = Γ.
 Proof.
-  unfold subst_context, fold_context.
+  unfold subst_context, fold_context_k.
   rewrite rev_mapi. rewrite List.rev_involutive.
   unfold mapi. generalize 0. generalize #|List.rev Γ|.
   induction Γ; intros; simpl; trivial.
@@ -583,7 +583,7 @@ Hint Rewrite subst_context_snoc : subst.
 Lemma subst_context_app s k Γ Δ :
   subst_context s k (Γ ,,, Δ) = subst_context s k Γ ,,, subst_context s (#|Γ| + k) Δ.
 Proof.
-  unfold subst_context, fold_context, app_context.
+  unfold subst_context, fold_context_k, app_context.
   rewrite List.rev_app_distr.
   rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
   apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal. lia.

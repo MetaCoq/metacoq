@@ -1325,13 +1325,13 @@ Proof.
   all: now rewrite nl_subst_instance.
 Qed.
 
-Lemma map_anon_fold_context g g' ctx : 
+Lemma map_anon_fold_context_k g g' ctx : 
   (forall i, nl ∘ g i =1 g' i ∘ nl) ->
-  map (map_decl_anon nl) (fold_context g ctx) = 
-  fold_context g' (map (map_decl_anon nl) ctx).
+  map (map_decl_anon nl) (fold_context_k g ctx) = 
+  fold_context_k g' (map (map_decl_anon nl) ctx).
 Proof.
   intros hg.
-  rewrite !fold_context_alt map_mapi mapi_map. 
+  rewrite !fold_context_k_alt map_mapi mapi_map. 
   apply mapi_ext => i d.
   rewrite /map_decl /map_decl_anon. len.
   f_equal.
@@ -1345,7 +1345,7 @@ Lemma nl_subst_context s k ctx :
   subst_context (map nl s) k (nlctx ctx).
 Proof.
   rewrite /nlctx /subst_context.
-  apply map_anon_fold_context. 
+  apply map_anon_fold_context_k. 
   intros i x. now rewrite nl_subst.
 Qed.
 
@@ -1354,7 +1354,7 @@ Lemma nl_lift_context n k ctx :
   lift_context n k (nlctx ctx).
 Proof.
   rewrite /nlctx /subst_context.
-  apply map_anon_fold_context. 
+  apply map_anon_fold_context_k. 
   intros i x. now rewrite nl_lift.
 Qed.
 

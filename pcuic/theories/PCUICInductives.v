@@ -621,7 +621,7 @@ Proof.
   rewrite [subst_context _ _ (_ ++ _)]subst_context_app.
   simpl. unfold app_context. simpl.
   unfold map_decl. simpl. rewrite lift_mkApps. simpl.
-  rewrite {3}/subst_context /fold_context /= /map_decl /= subst_mkApps /=.
+  rewrite {3}/subst_context /fold_context_k /= /map_decl /= subst_mkApps /=.
   rewrite /to_extended_list lift_to_extended_list_k.
   rewrite extended_subst_to_extended_list_k.
   fold (to_extended_list (smash_context [] (ind_params mdecl))).

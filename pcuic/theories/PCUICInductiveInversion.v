@@ -614,7 +614,7 @@ Proof.
   rewrite -IHΔ.
   destruct x; simpl.
   destruct decl_body; simpl in * => //.
-  unfold subst_context, fold_context; simpl.
+  unfold subst_context, fold_context_k; simpl.
   f_equal.
   unfold expand_lets_k, subst_context => /=. 
   unfold map_decl; simpl. unfold map_decl. simpl. f_equal.
@@ -3773,7 +3773,7 @@ Proof.
   simpl; split.
   2:{ 
     rewrite /lift_decl /map_decl; simpl. unfold subst_context at 5.
-    rewrite /fold_context /= /map_decl /=.
+    rewrite /fold_context_k /= /map_decl /=.
     constructor; auto. constructor; auto.
     red. simpl. rewrite lift_mkApps subst_mkApps /=.
     rewrite skipn_S skipn_0.
@@ -3855,7 +3855,7 @@ Proof.
       2:{ eapply X. }
       len in sppars.
       move: (spine_subst_subst_to_extended_list_k sppars).
-      rewrite to_extended_list_k_fold_context.
+      rewrite to_extended_list_k_fold_context_k.
       rewrite PCUICSubstitution.map_subst_instance_to_extended_list_k => ->.
       eapply All2_refl. intros; reflexivity.
     * epose proof (to_extended_list_map_lift _ 0 _). rewrite Nat.add_0_r in H0.
@@ -3863,7 +3863,7 @@ Proof.
       move: (context_subst_length spinst). len => hlen.
       rewrite <- H0.
       move: (spine_subst_subst_to_extended_list_k spinst).
-      rewrite !to_extended_list_k_fold_context PCUICSubstitution.map_subst_instance_to_extended_list_k.
+      rewrite !to_extended_list_k_fold_context_k PCUICSubstitution.map_subst_instance_to_extended_list_k.
       move=> ->.
       set (argctx := cstr_args cs) in *.
       change (skipn #|ind_indices oib| instsubst) with parsubst in spinst, X0 |- *.

@@ -369,7 +369,7 @@ Lemma mapi_context_compose f f' :
   mapi_context (f ∘i f').
 Proof.
   intros x.
-  now rewrite !mapi_context_fold fold_context_compose - !mapi_context_fold.
+  now rewrite !mapi_context_fold fold_context_k_compose - !mapi_context_fold.
 Qed.
 Hint Rewrite mapi_context_compose : map.
 
@@ -414,8 +414,8 @@ Proof.
     apply map_ext => x.
     specialize (Hff' x). simpl in Hff'.
     now setoid_rewrite shift0 in Hff'.
-  * rewrite !mapi_context_fold fold_context_compose.
-    apply fold_context_ext => i x. apply Hff'.
+  * rewrite !mapi_context_fold fold_context_k_compose.
+    apply fold_context_k_ext => i x. apply Hff'.
   * len. apply Hff'.
 Qed.
 
@@ -439,7 +439,7 @@ Proof.
   f_equal.
   * rewrite map_map.
     now rewrite Hf.
-  * rewrite !mapi_context_fold fold_context_map.
+  * rewrite !mapi_context_fold fold_context_k_map.
     rewrite - !mapi_context_fold.
     now rewrite Hf'.
   * len. apply Hf''.
@@ -467,7 +467,7 @@ Proof.
   f_equal.
   * rewrite map_map.
     now rewrite Hf.
-  * rewrite !mapi_context_fold fold_context_map.
+  * rewrite !mapi_context_fold fold_context_k_map.
     rewrite - !mapi_context_fold.
     now rewrite Hf'.
   * len. apply Hf''.
@@ -491,7 +491,7 @@ Proof.
   f_equal.
   * rewrite map_map.
     now rewrite Hf.
-  * rewrite !mapi_context_fold map_fold_context.
+  * rewrite !mapi_context_fold map_fold_context_k.
     setoid_rewrite Hf. now setoid_rewrite Hcom.
   * len. rewrite (Hf _ _).
     now setoid_rewrite Hcom.
@@ -519,8 +519,8 @@ Proof.
   intros Hfn.
   unfold map_branch_shift; destruct b; cbn.
   f_equal.
-  * rewrite !mapi_context_fold fold_context_compose.
-    apply fold_context_ext => i x. apply Hfn.
+  * rewrite !mapi_context_fold fold_context_k_compose.
+    apply fold_context_k_ext => i x. apply Hfn.
   * len. apply Hfn.
 Qed.
 
@@ -1744,7 +1744,7 @@ Definition expand_lets_k_ctx_decl Γ k Δ d :
 Proof. 
   rewrite /expand_lets_k_ctx lift_context_app subst_context_app /=; simpl.
   unfold app_context. simpl.
-  rewrite /subst_context /fold_context /=.
+  rewrite /subst_context /fold_context_k /=.
   f_equal. rewrite compose_map_decl. f_equal.
 Qed.
 
@@ -1950,13 +1950,13 @@ Proof.
     rewrite !mapi_length. now rewrite subst_app_decomp.
 Qed.
 
-Lemma fold_context_compose f g Γ :
-  fold_context f (fold_context g Γ) = fold_context (fun n x => f n (g n x)) Γ.
+Lemma fold_context_k_compose f g Γ :
+  fold_context_k f (fold_context_k g Γ) = fold_context_k (fun n x => f n (g n x)) Γ.
 Proof.
-  induction Γ; simpl; auto; rewrite !fold_context_snoc0.
+  induction Γ; simpl; auto; rewrite !fold_context_k_snoc0.
   simpl. rewrite IHΓ. f_equal.
   rewrite compose_map_decl.
-  now rewrite fold_context_length.
+  now rewrite fold_context_k_length.
 Qed.
 
 Lemma lift_renaming_0 k : ren (lift_renaming k 0) = ren (Nat.add k).
@@ -1994,8 +1994,8 @@ Proof.
     rewrite lift0_id.
     rewrite subst0_context.
     unfold subst_context, lift_context.
-    rewrite !fold_context_compose.
-    apply fold_context_ext. intros n x.
+    rewrite !fold_context_k_compose.
+    apply fold_context_k_ext. intros n x.
     rewrite Nat.add_0_r.
     autorewrite with sigma.
     apply inst_ext.
@@ -2014,11 +2014,11 @@ Proof.
     rewrite (IHΓ [_]). auto. rewrite !app_assoc. f_equal.
     rewrite app_nil_r. unfold map_decl. simpl. unfold app_context.
     simpl. rewrite lift_context_app subst_context_app /app_context. simpl.
-    unfold lift_context at 2. unfold subst_context at 2, fold_context. simpl.
+    unfold lift_context at 2. unfold subst_context at 2, fold_context_k. simpl.
     f_equal.
     unfold subst_context, lift_context.
-    rewrite !fold_context_compose.
-    apply fold_context_ext. intros n x.
+    rewrite !fold_context_k_compose.
+    apply fold_context_k_ext. intros n x.
     rewrite Nat.add_0_r.
 
     autorewrite with sigma.

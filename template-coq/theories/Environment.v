@@ -80,25 +80,25 @@ Module Environment (T : Term).
     option_map f (option_map decl_type x).
   Proof. destruct x; reflexivity. Qed.
 
-  Definition fold_context f (Γ : context) : context :=
+  Definition fold_context_k f (Γ : context) : context :=
     List.rev (mapi (fun k' decl => map_decl (f k') decl) (List.rev Γ)).
 
-  Arguments fold_context f Γ%list_scope.
+  Arguments fold_context_k f Γ%list_scope.
 
-  Lemma fold_context_alt f Γ :
-    fold_context f Γ =
+  Lemma fold_context_k_alt f Γ :
+    fold_context_k f Γ =
     mapi (fun k' d => map_decl (f (Nat.pred (length Γ) - k')) d) Γ.
   Proof.
-    unfold fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
+    unfold fold_context_k. rewrite rev_mapi. rewrite List.rev_involutive.
     apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
   Qed.
 
   Lemma mapi_context_fold f Γ :
-    mapi_context f Γ = fold_context f Γ.
+    mapi_context f Γ = fold_context_k f Γ.
   Proof.
     setoid_replace f with (fun k => f (k - 0)) using relation 
       (pointwise_relation nat (pointwise_relation term (@Logic.eq term)))%signature at 1.
-    rewrite fold_context_alt. unfold mapi.
+    rewrite fold_context_k_alt. unfold mapi.
     generalize 0.
     induction Γ as [|d Γ]; intros n; simpl; auto. f_equal.
     rewrite IHΓ. rewrite mapi_rec_Sk.
@@ -107,38 +107,38 @@ Module Environment (T : Term).
     intros k. now rewrite Nat.sub_0_r.
   Qed.
     
-  Lemma fold_context_tip f d : fold_context f [d] = [map_decl (f 0) d].
+  Lemma fold_context_k_tip f d : fold_context_k f [d] = [map_decl (f 0) d].
   Proof. reflexivity. Qed.
   
-  Lemma fold_context_length f Γ : length (fold_context f Γ) = length Γ.
+  Lemma fold_context_k_length f Γ : length (fold_context_k f Γ) = length Γ.
   Proof.
-    unfold fold_context. now rewrite !List.rev_length mapi_length List.rev_length.
+    unfold fold_context_k. now rewrite !List.rev_length mapi_length List.rev_length.
   Qed.
-  Hint Rewrite fold_context_length : len.
+  Hint Rewrite fold_context_k_length : len.
 
-  Lemma fold_context_snoc0 f Γ d :
-    fold_context f (d :: Γ) = fold_context f Γ ,, map_decl (f (length Γ)) d.
+  Lemma fold_context_k_snoc0 f Γ d :
+    fold_context_k f (d :: Γ) = fold_context_k f Γ ,, map_decl (f (length Γ)) d.
   Proof.
-    unfold fold_context.
+    unfold fold_context_k.
     rewrite !rev_mapi !rev_involutive. unfold mapi; rewrite mapi_rec_eqn.
     unfold snoc. f_equal. now rewrite Nat.sub_0_r List.rev_length.
     rewrite mapi_rec_Sk. simpl. apply mapi_rec_ext. intros.
     rewrite app_length !List.rev_length. simpl. f_equal. f_equal. lia.
   Qed.
 
-  Lemma fold_context_app f Γ Δ :
-    fold_context f (Δ ++ Γ)
-    = fold_context (fun k => f (length Γ + k)) Δ ++ fold_context f Γ.
+  Lemma fold_context_k_app f Γ Δ :
+    fold_context_k f (Δ ++ Γ)
+    = fold_context_k (fun k => f (length Γ + k)) Δ ++ fold_context_k f Γ.
   Proof.
-    unfold fold_context.
+    unfold fold_context_k.
     rewrite List.rev_app_distr.
     rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
     apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
   Qed.
     
-  Lemma fold_context_id x : fold_context (fun i x => x) x = x.
+  Lemma fold_context_k_id x : fold_context_k (fun i x => x) x = x.
   Proof.
-    rewrite fold_context_alt.
+    rewrite fold_context_k_alt.
     rewrite /mapi. generalize 0.
     induction x; simpl; auto.
     intros n.
@@ -146,36 +146,36 @@ Module Environment (T : Term).
     now rewrite map_decl_id.
   Qed.
 
-  Lemma fold_context_compose f g Γ : 
-    fold_context f (fold_context g Γ) = 
-    fold_context (fun i => f i ∘ g i) Γ.
+  Lemma fold_context_k_compose f g Γ : 
+    fold_context_k f (fold_context_k g Γ) = 
+    fold_context_k (fun i => f i ∘ g i) Γ.
   Proof.
-    rewrite !fold_context_alt mapi_mapi.
+    rewrite !fold_context_k_alt mapi_mapi.
     apply mapi_ext => i d.
     rewrite compose_map_decl. apply map_decl_ext => t.
     now len.
   Qed.
   
-  Lemma fold_context_ext f g Γ :
+  Lemma fold_context_k_ext f g Γ :
     f =2 g ->
-    fold_context f Γ = fold_context g Γ.
+    fold_context_k f Γ = fold_context_k g Γ.
   Proof.
     intros hfg.
-    induction Γ; simpl; auto; rewrite !fold_context_snoc0.
+    induction Γ; simpl; auto; rewrite !fold_context_k_snoc0.
     simpl. rewrite IHΓ. f_equal. apply map_decl_ext.
     intros. now apply hfg.
   Qed.
 
-  Instance fold_context_proper : Proper (pointwise_relation nat (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) fold_context.
+  Instance fold_context_k_proper : Proper (pointwise_relation nat (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) fold_context_k.
   Proof.
-    intros f g Hfg x y <-. now apply fold_context_ext.
+    intros f g Hfg x y <-. now apply fold_context_k_ext.
   Qed.
 
-  Lemma alli_fold_context_prop f g ctx : 
-    alli f 0 (fold_context g ctx) =
+  Lemma alli_fold_context_k_prop f g ctx : 
+    alli f 0 (fold_context_k g ctx) =
     alli (fun i x => f i (map_decl (g (Nat.pred #|ctx| - i)) x)) 0 ctx.
   Proof.
-    now rewrite fold_context_alt /mapi alli_mapi.
+    now rewrite fold_context_k_alt /mapi alli_mapi.
   Qed.
 
   Lemma test_decl_map_decl f g x : (@test_decl term) f (map_decl g x) = @test_decl term (f ∘ g) x.
@@ -188,13 +188,13 @@ Module Environment (T : Term).
   Definition lift_decl n k d := (map_decl (lift n k) d).
 
   Definition lift_context n k (Γ : context) : context :=
-    fold_context (fun k' => lift n (k' + k)) Γ.
+    fold_context_k (fun k' => lift n (k' + k)) Γ.
   
   Lemma lift_context_alt n k Γ :
     lift_context n k Γ =
     mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
   Proof.
-    unfold lift_context. apply fold_context_alt.
+    unfold lift_context. apply fold_context_k_alt.
   Qed.
 
   Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
@@ -202,7 +202,7 @@ Module Environment (T : Term).
   Hint Rewrite lift_context_length : len.
 
   Definition subst_context s k (Γ : context) : context :=
-    fold_context (fun k' => subst s (k' + k)) Γ.
+    fold_context_k (fun k' => subst s (k' + k)) Γ.
   
   Definition subst_decl s k (d : context_decl) := map_decl (subst s k) d.
   
@@ -217,13 +217,13 @@ Module Environment (T : Term).
     subst_context s k Γ =
     mapi (fun k' d => subst_decl s (Nat.pred #|Γ| - k' + k) d) Γ.
   Proof.
-    unfold subst_context, fold_context. rewrite rev_mapi. rewrite List.rev_involutive.
+    unfold subst_context, fold_context_k. rewrite rev_mapi. rewrite List.rev_involutive.
     apply mapi_ext. intros. f_equal. now rewrite List.rev_length.
   Qed.
   
   Lemma subst_context_snoc s k Γ d : subst_context s k (d :: Γ) = subst_context s k Γ ,, subst_decl s (#|Γ| + k) d.
   Proof.
-    now rewrite /subst_context fold_context_snoc0.
+    now rewrite /subst_context fold_context_k_snoc0.
   Qed.
   
   Definition subst_telescope s k (Γ : context) : context :=
@@ -337,7 +337,7 @@ Module Environment (T : Term).
 
   Definition map_constructor_body npars arities f c :=
     {| cstr_name := c.(cstr_name);
-       cstr_args := fold_context (fun x => f (x + npars + arities)) c.(cstr_args);
+       cstr_args := fold_context_k (fun x => f (x + npars + arities)) c.(cstr_args);
        cstr_indices := map (f (npars + arities + #|c.(cstr_args)|)) c.(cstr_indices);
         (* Note only after positivity checking we can ensure that the indices do not mention the 
            inductive type.. beware of lets! *)
@@ -361,7 +361,7 @@ Module Environment (T : Term).
     | Build_one_inductive_body ind_name ind_indices ind_sort 
         ind_type ind_kelim ind_ctors ind_projs ind_relevance =>
       Build_one_inductive_body
-         ind_name (fold_context (fun x => f (npars + x)) ind_indices) ind_sort
+         ind_name (fold_context_k (fun x => f (npars + x)) ind_indices) ind_sort
                   (f 0 ind_type) ind_kelim (map (map_constructor_body npars arities f) ind_ctors)
                   (map (on_snd (f (S npars))) ind_projs) ind_relevance
     end.
@@ -462,11 +462,11 @@ Module Environment (T : Term).
   Definition to_extended_list Γ := to_extended_list_k Γ 0.
 
   Lemma reln_fold f ctx n acc :
-    reln acc n (fold_context f ctx) = 
+    reln acc n (fold_context_k f ctx) = 
     reln acc n ctx.
   Proof.
     induction ctx as [|[na [b|] ty] ctx] in n, acc |- *; simpl; auto;
-      rewrite fold_context_snoc0 /=; apply IHctx.
+      rewrite fold_context_k_snoc0 /=; apply IHctx.
   Qed.
 
   Lemma reln_list_lift_above l p Γ :
@@ -573,7 +573,7 @@ Module Environment (T : Term).
     match m with
     | Build_mutual_inductive_body finite ind_npars ind_pars ind_bodies ind_universes ind_variance =>
       let arities := arities_context ind_bodies in
-      let pars := fold_context f ind_pars in
+      let pars := fold_context_k f ind_pars in
       Build_mutual_inductive_body finite ind_npars pars
                                   (map (map_one_inductive_body (context_assumptions pars) (length arities) f) ind_bodies)
                                   ind_universes ind_variance
@@ -590,7 +590,7 @@ Module Environment (T : Term).
 
   Lemma ind_pars_map f m :
     ind_params (map_mutual_inductive_body f m) =
-    fold_context f (ind_params m).
+    fold_context_k f (ind_params m).
   Proof. destruct m; simpl; reflexivity. Qed.
 
   Lemma ind_projs_map f npars_ass arities oib :
@@ -606,35 +606,35 @@ Module Environment (T : Term).
       else lookup_env tl kn
     end.
 
-  Lemma context_assumptions_fold Γ f : context_assumptions (fold_context f Γ) = context_assumptions Γ.
+  Lemma context_assumptions_fold Γ f : context_assumptions (fold_context_k f Γ) = context_assumptions Γ.
   Proof.
-    rewrite fold_context_alt.
+    rewrite fold_context_k_alt.
     unfold mapi. generalize 0 (Nat.pred #|Γ|).
     induction Γ as [|[na [body|] ty] tl]; cbn; intros; eauto.
   Qed.
   Hint Rewrite context_assumptions_fold : len.
 
-  Lemma nth_error_fold_context (f : nat -> term -> term):
+  Lemma nth_error_fold_context_k (f : nat -> term -> term):
     forall (Γ' Γ'' : context) (v : nat),
       v < length Γ' -> forall nth,
         nth_error Γ' v = Some nth ->
-        nth_error (fold_context f Γ') v = Some (map_decl (f (length Γ' - S v)) nth).
+        nth_error (fold_context_k f Γ') v = Some (map_decl (f (length Γ' - S v)) nth).
   Proof.
     induction Γ'; intros.
     - easy.
-    - simpl. destruct v; rewrite fold_context_snoc0.
+    - simpl. destruct v; rewrite fold_context_k_snoc0.
       + simpl. repeat f_equal; try lia. simpl in *. congruence.
       + simpl. apply IHΓ'; simpl in *; (lia || congruence).
   Qed.
 
-  Lemma nth_error_fold_context_eq:
+  Lemma nth_error_fold_context_k_eq:
     forall (Γ' : context) (v : nat) f,
-      nth_error (fold_context f Γ') v =
+      nth_error (fold_context_k f Γ') v =
       option_map (map_decl (f (length Γ' - S v))) (nth_error Γ' v).
   Proof.
     induction Γ'; intros.
-    - simpl. unfold fold_context, fold_context; simpl. now rewrite nth_error_nil.
-    - simpl. destruct v; rewrite fold_context_snoc0.
+    - simpl. unfold fold_context_k; simpl. now rewrite nth_error_nil.
+    - simpl. destruct v; rewrite fold_context_k_snoc0.
       + simpl. repeat f_equal; try lia.
       + simpl. apply IHΓ'; simpl in *; (lia || congruence).
   Qed.
@@ -642,23 +642,23 @@ Module Environment (T : Term).
   Lemma nth_error_ge {Γ Γ' v Γ''} f :
     length Γ' <= v ->
     nth_error (Γ' ++ Γ) v =
-    nth_error (fold_context (f 0) Γ' ++ Γ'' ++ Γ) (length Γ'' + v).
+    nth_error (fold_context_k (f 0) Γ' ++ Γ'' ++ Γ) (length Γ'' + v).
   Proof.
     intros Hv.
-    rewrite -> !nth_error_app_ge, ?fold_context_length. f_equal. lia.
-    rewrite fold_context_length. lia.
-    rewrite fold_context_length. lia. auto.
+    rewrite -> !nth_error_app_ge, ?fold_context_k_length. f_equal. lia.
+    rewrite fold_context_k_length. lia.
+    rewrite fold_context_k_length. lia. auto.
   Qed.
 
   Lemma nth_error_lt {Γ Γ' Γ'' v} (f : nat -> term -> term) :
     v < length Γ' ->
-    nth_error (fold_context f Γ' ++ Γ'' ++ Γ) v =
+    nth_error (fold_context_k f Γ' ++ Γ'' ++ Γ) v =
     option_map (map_decl (f (length Γ' - S v))) (nth_error (Γ' ++ Γ) v).
   Proof.
     simpl. intros Hv.
     rewrite -> !nth_error_app_lt.
-    rewrite nth_error_fold_context_eq.
-    do 2 f_equal. lia. now rewrite fold_context_length.
+    rewrite nth_error_fold_context_k_eq.
+    do 2 f_equal. lia. now rewrite fold_context_k_length.
   Qed.
 
   Lemma context_assumptions_length_bound Γ : context_assumptions Γ <= #|Γ|.
@@ -706,21 +706,21 @@ Module Environment (T : Term).
   Hint Rewrite context_assumptions_subst_instance
      context_assumptions_subst_context context_assumptions_lift_context : len.
 
-  Lemma fold_context_map f g Γ : 
-    fold_context f (map_context g Γ) = 
-    fold_context (fun k => f k ∘ g) Γ.
+  Lemma fold_context_k_map f g Γ : 
+    fold_context_k f (map_context g Γ) = 
+    fold_context_k (fun k => f k ∘ g) Γ.
   Proof.
-    rewrite !fold_context_alt mapi_map.
+    rewrite !fold_context_k_alt mapi_map.
     apply mapi_ext => n d //. len.
     now rewrite compose_map_decl.
   Qed.
   
-  Lemma fold_context_map_comm f g Γ : 
+  Lemma fold_context_k_map_comm f g Γ : 
     (forall i x, f i (g x) = g (f i x)) ->
-    fold_context f (map_context g Γ) = map_context g (fold_context f Γ).
+    fold_context_k f (map_context g Γ) = map_context g (fold_context_k f Γ).
   Proof.
     intros Hfg.
-    rewrite !fold_context_alt mapi_map.
+    rewrite !fold_context_k_alt mapi_map.
     rewrite /map_context map_mapi.
     apply mapi_ext => i x.
     rewrite !compose_map_decl.

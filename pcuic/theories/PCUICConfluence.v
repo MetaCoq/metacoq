@@ -3141,5 +3141,40 @@ End ConfluenceFacts.
 
 Arguments red_confluence {cf} {Σ} wfΣ {Γ t u v}.
 
-(** We can now derive transitivity of the conversion relation,
-    see [PCUICConversion.v] *)
+(** We can now derive transitivity of the conversion relation *)
+
+Instance conv_trans {cf:checker_flags} (Σ : global_env_ext) {Γ} :
+  wf Σ -> Transitive (conv Σ Γ).
+Proof.
+  intros wfΣ t u v X0 X1.
+  eapply conv_alt_red in X0 as [t' [u' [[tt' uu'] eq]]].
+  eapply conv_alt_red in X1 as [u'' [v' [[uu'' vv'] eq']]].
+  eapply conv_alt_red.
+  destruct (red_confluence wfΣ uu' uu'') as [u'nf [ul ur]].
+  eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
+  eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
+  exists tnf, unf.
+  intuition auto.
+  - now transitivity t'.
+  - now transitivity v'.
+  - now transitivity u'nf.
+Qed.
+
+Instance cumul_trans {cf:checker_flags} (Σ : global_env_ext) Γ :
+  wf Σ -> Transitive (cumul Σ Γ).
+Proof.
+  intros wfΣ t u v X X0.
+  eapply cumul_alt in X as [v' [v'' [[redl redr] eq]]].
+  eapply cumul_alt in X0 as [w [w' [[redl' redr'] eq']]].
+  destruct (red_confluence wfΣ redr redl') as [nf [nfl nfr]].
+  eapply cumul_alt.
+  eapply red_eq_term_upto_univ_r in eq. all:tc;eauto with pcuic.
+  destruct eq as [v'0 [red'0 eq2]].
+  eapply red_eq_term_upto_univ_l in eq';tc;eauto with pcuic.
+  destruct eq' as [v'1 [red'1 eq1]].
+  exists v'0, v'1.
+  split. 1: split.
+  - transitivity v' ; auto.
+  - transitivity w' ; auto.
+  - eapply leq_term_trans with nf; eauto.
+Qed.

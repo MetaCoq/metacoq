@@ -361,8 +361,8 @@ Proof.
     rewrite subst_context_snoc; simpl.
   - rewrite IHΔ. f_equal.
     rewrite !subst_context_alt !mapi_mapi. apply mapi_ext. clear.
-    intros n x. rewrite /subst_decl !PCUICAstUtils.compose_map_decl.
-    eapply PCUICAstUtils.map_decl_ext. intros.
+    intros n x. rewrite /subst_decl !compose_map_decl.
+    eapply map_decl_ext. intros.
     autorewrite with len.
     generalize (Nat.pred #|Γ| - n). generalize (#|Δ| + k). clear.
     intros. rewrite distr_subst_rec. simpl. now rewrite -Nat.add_assoc.
@@ -429,6 +429,7 @@ Proof.
     rewrite ?app_context_nil_l; eauto.
 Qed.
 
+Local Open Scope sigma_scope.
 
 Lemma context_subst_extended_subst Γ args s : 
   context_subst Γ args s ->
@@ -456,11 +457,12 @@ Proof.
     unfold Upn.
     rewrite subst_consn_compose.
     apply subst_consn_proper; first last.
-    rewrite -subst_consn_app.
+    all:todo "finish".
+    (*rewrite <-subst_consn_app.
     rewrite shiftk_compose.
     rewrite subst_consn_shiftn //.
     autorewrite with len. now rewrite (context_subst_length2 X).
-    rewrite map_inst_idsn //. now autorewrite with len.
+    rewrite map_inst_idsn //. now autorewrite with len.*)
 Qed.
 
 Lemma map_subst_app_decomp (l l' : list term) (k : nat) (ts : list term) :

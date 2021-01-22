@@ -212,7 +212,7 @@ Proof.
     (* eapply isArity_typing_spine_inv in t0; eauto. *)
     (* destruct t0 as (? & [] & ?). *)
     (* eapply PCUICCumulativity.red_cumul in X. *)
-    destruct (PCUICWeakeningEnv.on_declsared_constructor _ d) as [XX [s [XX1 Ht]]].
+    destruct (PCUICWeakeningEnv.on_declared_constructor _ d) as [XX [s [XX1 Ht]]].
     destruct x5 as [[? ?] ?]; cbn in *; subst.
     destruct Ht. unfold cstr_type in cstr_eq. simpl in cstr_eq. subst.
     change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in c2.

@@ -346,7 +346,7 @@ Admitted.
 (*   case_eq (instantiate_params (subst_instance u (ind_params mdecl)) (firstn npar args) (subst_instance u (ind_type idecl))) ; *)
 (*     try solve [ intro bot ; rewrite bot in h ; discriminate h ]. *)
 (*   intros ity eity. rewrite eity in h. *)
-(*   pose proof (on_declsared_inductive hΣ as hdecl) [onmind onind]. *)
+(*   pose proof (on_declared_inductive hΣ as hdecl) [onmind onind]. *)
 (*   apply onParams in onmind as Hparams. *)
 (*   assert (closedparams : closed_ctx (subst_instance u (ind_params mdecl))). *)
 (*   { rewrite closedn_subst_instance. *)

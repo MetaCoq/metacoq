@@ -1211,7 +1211,7 @@ Lemma declared_inductive_closed_params {cf:checker_flags} {Σ mdecl ind idecl} {
   closed_ctx mdecl.(ind_params).
 Proof.
   intros h.
-  pose proof (on_declsared_inductive h) as [onmind _].
+  pose proof (on_declared_inductive h) as [onmind _].
   eapply onParams in onmind.
   eapply closed_wf_local; eauto. simpl. auto.
 Qed.

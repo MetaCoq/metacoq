@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICCases PCUICPosition.
+  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils PCUICPosition.
 From MetaCoq.PCUIC Require Export PCUICReduction PCUICCumulativity.
+From MetaCoq.PCUIC Require Export PCUICCases.
 
 (* TODO: remove this export *)
 From MetaCoq Require Export LibHypsNaming.

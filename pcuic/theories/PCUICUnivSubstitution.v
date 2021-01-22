@@ -2604,7 +2604,7 @@ Section SubstIdentity.
     subst_instance_univ u (ind_sort idecl) = ind_sort idecl.
   Proof.
     intros wfΣ decli u.
-    pose proof (on_declsared_inductive decli) as [onmind oib].
+    pose proof (on_declared_inductive decli) as [onmind oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona.
     red in ona. destruct ona.
@@ -2626,7 +2626,7 @@ Section SubstIdentity.
     subst_instance u (ind_type idecl) = ind_type idecl.
   Proof.
     intros wfΣ decli u.
-    pose proof (on_declsared_inductive decli) as [_ oib].
+    pose proof (on_declared_inductive decli) as [_ oib].
     pose proof (onArity oib) as ona.
     rewrite (oib.(ind_arity_eq)) in ona |- *.
     red in ona. destruct ona.

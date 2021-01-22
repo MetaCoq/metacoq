@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config Universes utils BasicAst
      AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
-     PCUICCumulativity PCUICPosition PCUICEquality PCUICNameless
+     PCUICCumulativity PCUICPosition PCUICEquality PCUICSigmaCalculus PCUICNameless
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
@@ -82,25 +82,25 @@ Proof.
           { apply All2_fold_length in convctx.
             autorewrite with len in convctx |- *.
             simpl in convctx. simpl. lia. }
-          eapply All2_fold_app_inv; auto.
-          apply All2_fold_app in convctx; auto.
-          constructor; pcuic.
-          eapply All2_fold_app in convctx as [_ convctx].
+          eapply All2_fold_app; auto.
+          apply All2_fold_app_inv in convctx; auto.
+          constructor; pcuic. constructor; auto.
+          eapply All2_fold_app_inv in convctx as [_ convctx].
           unshelve eapply (All2_fold_impl convctx).
           simpl; pcuicfo. destruct X. constructor; auto.
           eapply conv_conv_ctx; eauto.
-          eapply All2_fold_app_inv. constructor; pcuic.
+          eapply All2_fold_app. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
           apply All2_fold_refl. intros.
           destruct x as [na'' [b'|] ty']; constructor; reflexivity.
           constructor; pcuic. 
           eapply conv_conv_ctx; eauto.
-          eapply All2_fold_app_inv. constructor; pcuic.
+          eapply All2_fold_app. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
           apply All2_fold_refl. intros.
           destruct x as [na'' [b''|] ty']; constructor; reflexivity.
           eapply conv_conv_ctx; eauto.
-          eapply All2_fold_app_inv. constructor; pcuic.
+          eapply All2_fold_app. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
           apply All2_fold_refl. intros.
           destruct x as [? [?|] ?]; constructor; reflexivity.
@@ -309,14 +309,13 @@ Lemma subslet_app_closed {cf:checker_flags} Σ Γ s s' Δ Δ' :
   closed_ctx Δ ->
   subslet Σ Γ (s ++ s') (Δ' ,,, Δ).
 Proof.
-  induction 1 in s', Δ'; simpl; auto; move=> sub';
-  rewrite closedn_ctx_snoc => /andb_and [clctx clt];
+  induction 1 in s', Δ'; simpl; auto; move=> sub' => /andb_and [clctx clt];
   try constructor; auto.
   - pose proof (subslet_length X). rewrite Nat.add_0_r in clt.
-    rewrite /closed_decl /= -H in clt.
+    rewrite /= -H in clt.
     rewrite subst_app_simpl /= (subst_closedn s') //.
   - pose proof (subslet_length X). rewrite Nat.add_0_r in clt.
-    rewrite /closed_decl /= -H in clt. move/andb_and: clt => [clt clT].
+    rewrite /= -H in clt. move/andb_and: clt => [clt clT].
     replace (subst0 s t) with (subst0 (s ++ s') t).
     + constructor; auto.
       rewrite !subst_app_simpl /= !(subst_closedn s') //.
@@ -362,24 +361,6 @@ Proof.
       now rewrite - !subst_app_simpl firstn_skipn in X.
 Qed.
 
-Lemma make_context_subst_skipn {Γ args s s'} :
-  make_context_subst Γ args s = Some s' ->
-  skipn #|Γ| s' = s.
-Proof.
-  induction Γ in args, s, s' |- *.
-  - destruct args; simpl; auto.
-    + now intros [= ->].
-    + now discriminate.
-  - destruct a as [na [b|] ty]; simpl.
-    + intros H.
-      specialize (IHΓ _ _ _ H).
-      now eapply skipn_n_Sn.
-    + destruct args; try discriminate.
-      intros Hsub.
-      specialize (IHΓ _ _ _ Hsub).
-      now eapply skipn_n_Sn.
-Qed.
-
 Lemma subslet_inds_gen {cf:checker_flags} Σ ind mdecl idecl :
   wf Σ ->
   declared_inductive Σ ind mdecl idecl ->
@@ -390,7 +371,7 @@ Proof.
   intros wfΣ isdecl u.
   unfold inds.
   pose proof (proj1 isdecl) as declm'. 
-  apply PCUICWeakeningEnv.on_declsared_minductive in declm' as [oind oc]; auto.
+  apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
   clear oc.
   assert (Alli (fun i x =>
    (Σ, ind_universes mdecl) ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : (ind_type x)) 0 (ind_bodies mdecl)).
@@ -420,6 +401,8 @@ Proof.
     rewrite Nat.add_0_r in t.
     rewrite subst_closedn; auto. 
     + eapply typecheck_closed in t as [? ?]; auto.
+      destruct p as [? ?].
+      now move/andb_and: i0=> [? ?].
 Qed.
 
 Lemma subslet_inds {cf:checker_flags} Σ ind u mdecl idecl :
@@ -431,13 +414,13 @@ Lemma subslet_inds {cf:checker_flags} Σ ind u mdecl idecl :
 Proof.
   intros wfΣ isdecl univs.
   unfold inds.
-  destruct isdecl as [declm _].
-  pose proof declm as declm'.
-  apply PCUICWeakeningEnv.on_declsared_minductive in declm' as [oind oc]; auto.
+  pose proof (proj1 isdecl) as declm.
+  apply PCUICWeakeningEnv.on_declared_minductive in declm as [oind oc]; auto.
   clear oc.
-  assert (Alli (fun i x => Σ ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : subst_instance u (ind_type x)) 0 (ind_bodies mdecl)). 
+  assert (Alli (fun i x => 
+    Σ ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : subst_instance u (ind_type x)) 0 (ind_bodies mdecl)). 
   { apply forall_nth_error_Alli.
-    econstructor; eauto. split; eauto. }
+    econstructor; eauto. split; eauto. simpl. eapply isdecl. }
   clear oind.
   revert X. clear onNpars.
   generalize (le_n #|ind_bodies mdecl|).
@@ -453,8 +436,8 @@ Proof.
   - eapply Alli_app in X as [oind Hx].
     depelim Hx. clear Hx.
     rewrite Nat.add_0_r in t.
-    rewrite subst_closedn; auto. 
-    + eapply typecheck_closed in t as [? ?]; auto.
+    rewrite subst_closedn; auto.
+    + now eapply type_closed in t.
 Qed.
 
 Lemma weaken_subslet {cf:checker_flags} Σ s Δ Γ :
@@ -571,7 +554,7 @@ Lemma on_minductive_wf_params {cf : checker_flags} (Σ : global_env × universes
   wf_local Σ (subst_instance u (ind_params mdecl)).
 Proof.
   intros; eapply (wf_local_instantiate _ (InductiveDecl mdecl)); eauto.
-  eapply on_declsared_minductive in H; auto.
+  eapply on_declared_minductive in H; auto.
   now apply onParams in H.
 Qed.
 
@@ -627,7 +610,7 @@ Lemma subst_telescope_subst_instance u s k Γ :
     (subst_instance u Γ) =
   subst_instance u (subst_telescope s k Γ).
 Proof.
-  rewrite /subst_telescope /subst_instance /map_context.
+  rewrite /subst_telescope /subst_instance /= /subst_instance_context /map_context.
   rewrite map_mapi mapi_map. apply mapi_ext.
   intros. rewrite !compose_map_decl; apply map_decl_ext => ?.
   now rewrite -subst_instance_subst.

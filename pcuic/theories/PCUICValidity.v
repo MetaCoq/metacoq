@@ -177,21 +177,21 @@ Section Validity.
         eapply isType_weakening; eauto.
         eapply (isType_subst_instance_decl (Γ:=[])); eauto. simpl.
         eapply weaken_env_prop_isType.
-      * have ond := on_declsared_constant _ _ _ wf H.
+      * have ond := on_declared_constant _ _ _ wf H.
         do 2 red in ond. simpl in ond.
         simpl in ond.
         eapply isType_weakening; eauto.
         eapply (isType_subst_instance_decl (Γ:=[])); eauto.
      
      - (* Inductive type *)
-      destruct (on_declsared_inductive wf isdecl); pcuic.
+      destruct (on_declared_inductive wf isdecl); pcuic.
       destruct isdecl.
       apply onArity in o0.
       eapply isType_weakening; eauto.
       eapply (isType_subst_instance_decl (Γ:=[])); eauto.
 
     - (* Constructor type *)
-      destruct (on_declsared_constructor wf isdecl) as [[oni oib] [cs [declc onc]]].
+      destruct (on_declared_constructor wf isdecl) as [[oni oib] [cs [declc onc]]].
       unfold type_of_constructor.
       have ctype := on_ctype onc.
       destruct ctype as [s' Hs].
@@ -206,7 +206,7 @@ Section Validity.
 
     - (* Case predicate application *)
       eapply (isType_mkApps_Ind wf isdecl) in X4 as [parsubst [argsubst Hind]]; auto.
-      destruct (on_declsared_inductive wf as isdecl) [onmind oib]. simpl in Hind.
+      destruct (on_declared_inductive wf as isdecl) [onmind oib]. simpl in Hind.
       destruct Hind as [[sparsubst sargsubst] cu].
       subst npar.
       eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in heq_build_case_predicate_type as

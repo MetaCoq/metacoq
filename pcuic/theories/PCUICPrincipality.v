@@ -315,7 +315,7 @@ Section Principality.
       rewrite e0 in redu'.
       unshelve epose proof (projection_cumulative_indices wfΣ d _ H H0 redu').
       { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 (proj1 d))). }
-      eapply PCUICWeakeningEnv.on_declsared_projection in d0; eauto.
+      eapply PCUICWeakeningEnv.on_declared_projection in d0; eauto.
       eapply weaken_cumul in X; eauto.
       eapply closed_wf_local; eauto.
       eapply (wf_projection_context _ (p:= (ind, k, pars))); pcuic.

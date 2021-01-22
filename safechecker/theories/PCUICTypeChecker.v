@@ -578,7 +578,7 @@ Section Typecheck.
     have [pctx' da] : (∑ pctx', destArity [] pty' =  Some (pctx', X0)).
     { symmetry in Heq_anonymous0.
       unshelve eapply (PCUICInductives.build_case_predicate_type_spec (Σ.1, ind_universes d)) in Heq_anonymous0 as [parsubst [_ ->]].
-      eauto. eapply (PCUICWeakeningEnv.on_declsared_inductive wfΣ) HH in as [? ?]. eauto.
+      eauto. eapply (PCUICWeakeningEnv.on_declared_inductive wfΣ) HH in as [? ?]. eauto.
       eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
     eapply PCUICInductiveInversion.build_branches_type_wt. 6:eapply typ_p. all:eauto.
   Defined.
@@ -646,7 +646,7 @@ Section Typecheck.
       pose proof (PCUICContexts.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
       pose proof (PCUICContexts.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
       autorewrite with len in H, H2.
-      destruct (PCUICWeakeningEnv.on_declsared_inductive HΣ X7) eqn:ond.
+      destruct (PCUICWeakeningEnv.on_declared_inductive HΣ X7) eqn:ond.
       rewrite -o.(onNpars) -H.
       forward (o0.(onProjections)).
       intros H'; rewrite H' nth_error_nil // in Heq_anonymous.

@@ -88,7 +88,7 @@ Proof.
   forward X by eapply type_Construct; eauto.
   simpl in X.
   unfold type_of_constructor in X |- *.
-  destruct (on_declsared_constructor _ declc); eauto.
+  destruct (on_declared_constructor _ declc); eauto.
 Qed.
 
 Lemma declared_inductive_valid_type {cf:checker_flags} Σ Γ mdecl idecl i u :
@@ -100,7 +100,7 @@ Lemma declared_inductive_valid_type {cf:checker_flags} Σ Γ mdecl idecl i u :
 Proof.
   move=> wfΣ wfΓ declc Hu.
   pose declc as declc'.
-  apply on_declsared_inductive in as declc' [onmind onind]; auto.
+  apply on_declared_inductive in as declc' [onmind onind]; auto.
   apply onArity in onind.
   destruct onind as [s Hs].
   epose proof (PCUICUnivSubstitution.typing_subst_instance_decl Σ) as s'.
@@ -1030,7 +1030,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
   forall {Γ n i args u i' args' u' mdecl idecl cdecl},
   Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
   forall (Hdecl : declared_constructor Σ.1 (i, n) mdecl idecl cdecl),
-  let '(onind, oib, existT cdecl (hnth, onc)) := on_declsared_constructor wfΣ Hdecl in
+  let '(onind, oib, existT cdecl (hnth, onc)) := on_declared_constructor wfΣ Hdecl in
   (i = i') * 
   (* Universe instances match *)
   R_ind_universes Σ i (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' *
@@ -1068,8 +1068,8 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
 
 Proof.
   intros Γ n i args u i' args' u' mdecl idecl cdecl h declc.
-  unfold on_declsared_constructor.
-  destruct (on_declsared_constructor _ declc). destruct s as [? [_ onc]].
+  unfold on_declared_constructor.
+  destruct (on_declared_constructor _ declc). destruct s as [? [_ onc]].
   unshelve epose proof (env_prop_typing _ _ validity _ _ _ _ _ h) as vi'; eauto using typing_wf_local.
   eapply inversion_mkApps in h; auto.
   destruct h as [T [hC hs]].
@@ -1081,11 +1081,11 @@ Proof.
   subst mdecl' idecl' cdecl'. clear isdecl.
   destruct p as [onmind onind]. clear onc.
   destruct declc as [decli declc].
-  remember (on_declsared_inductive wfΣ clear decli). onmind onind.
+  remember (on_declared_inductive wfΣ clear decli). onmind onind.
   destruct p.
   rename o into onmind. rename o0 into onind.
   destruct declared_constructor_inv as [cdecl [_ onc]].
-  simpl in onc. unfold on_declsared_inductive in Heqp.
+  simpl in onc. unfold on_declared_inductive in Heqp.
   injection Heqp. intros indeq _. 
   move: onc Heqp. rewrite -indeq.
   intros onc Heqp. clear Heqp. simpl in onc.
@@ -1111,7 +1111,7 @@ Proof.
   eapply mkApps_ind_typing_spine in hs as [isubst [[[Hisubst [Hargslen [Hi Hu]]] Hargs] Hs]]; auto.
   subst i'.
   eapply (isType_mkApps_Ind wfΣ decli) in vi' as (parsubst & argsubst & (spars & sargs) & cons) => //.
-  unfold on_declsared_inductive in simpl sargs. in sargs. rewrite -indeq in sargs. clear indeq.
+  unfold on_declared_inductive in simpl sargs. in sargs. rewrite -indeq in sargs. clear indeq.
   split=> //. split=> //.
   split; auto. split => //.
   now autorewrite with len in Hu.
@@ -1356,7 +1356,7 @@ Proof.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ ht0 declc); eauto.
-  destruct on_declsared_constructor as [cs [[onmind oib] [? ?]]].
+  destruct on_declared_constructor as [cs [[onmind oib] [? ?]]].
   simpl in *.
   intuition auto.
 Qed.
@@ -1373,7 +1373,7 @@ Proof.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc); eauto.
-  destruct on_declsared_constructor as [cs [[onmind oib] [? ?]]].
+  destruct on_declared_constructor as [cs [[onmind oib] [? ?]]].
   simpl in *.
   intuition auto.
 Qed.
@@ -1398,7 +1398,7 @@ Proof.
    (conj (let (x, _) := d in x) declc.p2) : declared_constructor Σ.1 (i, c) idecl  mdecl cdecl').
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ hc declc'); eauto.
   simpl in X.
-  destruct (on_declsared_projection wΣ d).
+  destruct (on_declared_projection wΣ d).
   set (oib := declared_inductive_inv _ _ _ _) in *.
   simpl in *. 
   set (foo := (All2_nth_error_Some _ _ _ _)) in X.
@@ -1721,7 +1721,7 @@ Proof.
       inductive_ind := Nat.pred #|ind_bodies mdecl| - (k - #|ctx|) |} i).
       { split; auto. simpl. rewrite -e nth_error_rev; lia_f_equal. }
       rewrite (declared_inductive_lookup_inductive H) //.
-      eapply on_declsared_inductive in as H [onmind onind] => //. simpl in *.
+      eapply on_declared_inductive in as H [onmind onind] => //. simpl in *.
       rewrite e0 /ind_realargs /PCUICTypingDef.destArity.
       rewrite !onind.(ind_arity_eq).
       rewrite !destArity_it_mkProd_or_LetIn /=; len; simpl.
@@ -2705,7 +2705,7 @@ Proof.
     (subst_instance u
       (smash_context [] (PCUICEnvironment.ind_params mdecl)))) as clspu.
   { rewrite subst_instance_smash. now eapply closedn_smash_context. }
-  eapply on_declsared_inductive in as decli' [onind _]; eauto.
+  eapply on_declared_inductive in as decli' [onind _]; eauto.
   assert (wf_local Σ
   (smash_context []
      (subst_instance u (PCUICEnvironment.ind_params mdecl)) ,,,
@@ -2833,7 +2833,7 @@ Proof.
   intros * decli oib onc onu cu cu' Ru Γ * spu spu' cpars *. move: Ru.
   unfold R_global_instance.
   pose proof decli as decli'.
-  eapply on_declsared_inductive in as decli' [onind _]; eauto.
+  eapply on_declared_inductive in as decli' [onind _]; eauto.
   assert (closed_ctx
     (subst_instance u
       (PCUICEnvironment.ind_params mdecl))) as clpu.
@@ -3154,7 +3154,7 @@ Lemma declared_projection_constructor {cf:checker_flags} {Σ : global_env_ext} (
   ∑ cdecl, declared_constructor Σ (p.1.1, 0) mdecl idecl cdecl.
 Proof.
   intros * declp.
-  set (onp := on_declsared_projection wfΣ declp).
+  set (onp := on_declared_projection wfΣ declp).
   set (oib := declared_inductive_inv _ _ _ _) in *.
   clearbody onp.
   destruct oib. simpl in *. destruct onp.
@@ -3286,11 +3286,11 @@ Lemma projection_cumulative_indices {cf:checker_flags} {Σ : global_env_ext} (wf
 Proof.
   intros * declp onudecl cu cu' Ru.
   epose proof (declared_projection_constructor wfΣ declp) as [cdecl declc].
-  destruct (on_declsared_constructor wfΣ declc) as [_ [sort onc]].
+  destruct (on_declared_constructor wfΣ declc) as [_ [sort onc]].
   destruct declc. simpl in d.
   pose proof (declared_inductive_unique d (let (x, _) := declp in x)). subst d.
   epose proof (declared_projection_type_and_eq wfΣ declp).
-  destruct (on_declsared_projection wfΣ declp).
+  destruct (on_declared_projection wfΣ declp).
   set (oib := declared_inductive_inv _ _ _ _) in *. simpl in X, y.
   destruct ind_cunivs as [|[] []] eqn:cseq => //.
   simpl in *. destruct y as [[[_ onps] onidx] onproj].
@@ -3321,7 +3321,7 @@ Proof.
     destruct X as [onctx _]. simpl in onctx.
     eapply (All2_fold_inst _ _ _ _ _ _ u u') in onctx; eauto.
     2:{ rewrite -eqv. 
-      destruct (on_declsared_projection wfΣ declp).
+      destruct (on_declared_projection wfΣ declp).
       now apply (onVariance o). }
     rewrite subst_instance_app in onctx.
     epose proof (positive_cstr_closed_args (proj1 declp) o oib onc cu). rewrite eqv in X; simpl in X.
@@ -3405,7 +3405,7 @@ Proof.
   split; auto.
   simpl. rewrite H.
   pose proof decli as decli'.
-  eapply on_declsared_inductive in as decli' [onmi oni]; auto.
+  eapply on_declared_inductive in as decli' [onmi oni]; auto.
   rewrite oni.(ind_arity_eq) in Hargs |- *.
   rewrite !destArity_it_mkProd_or_LetIn. simpl.
   rewrite app_context_nil_l.
@@ -3512,7 +3512,7 @@ Proof.
   rewrite instantiate_params_.
   destruct instantiate_params_subst as [[parsubst ty]|] eqn:ip => // => [= eqip].
   subst ipars.
-  pose proof (PCUICWeakeningEnv.on_declsared_inductive wfΣ as isdecl) [onind oib].
+  pose proof (PCUICWeakeningEnv.on_declared_inductive wfΣ as isdecl) [onind oib].
   rewrite oib.(ind_arity_eq) in ip.
   eapply PCUICSubstitution.instantiate_params_subst_make_context_subst in ip as 
     [ctx' [mparsubst dp]].
@@ -3621,7 +3621,7 @@ Proof.
   simpl.
   assert (declared_constructor Σ.1 (ind, n) mdecl idecl br).
   split; eauto.
-  destruct (on_declsared_constructor wfΣ H) as [[onind oib] [cs [nthc onc]]].
+  destruct (on_declared_constructor wfΣ H) as [[onind oib] [cs [nthc onc]]].
   clear oib. set (oib := declared_inductive_inv _ _ _ _) in *.
   eapply branch_type_spec in Hbr; eauto.
   unshelve eapply build_case_predicate_type_spec in bc. 2:eauto.

@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICSubstitution
+     PCUICClosed PCUICSubstitution PCUICContextSubst
      PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
      PCUICArities.
 
@@ -20,7 +20,7 @@ Require Import ssreflect.
 
 Derive Signature for ctx_inst.
   
-Notation ctx_inst Σ Γ i Δ := (ctx_inst (lift_typing typing) Σ Γ i Δ).
+Notation ctx_inst Σ Γ i Δ := (ctx_inst typing Σ Γ i Δ).
 
 Lemma typing_spine_eq {cf:checker_flags} Σ Γ ty s s' ty' :
   s = s' ->
@@ -92,11 +92,11 @@ Lemma untyped_subslet_eq_subst Γ s s' Δ :
   untyped_subslet Γ s' Δ.
 Proof. now intros H ->. Qed.
 
-Lemma context_subst_app_inv {ctx ctx' : list PCUICAst.context_decl} {args s : list term} :
+Lemma context_subst_app_inv {ctx ctx' : context} {args s : list term} :
   context_subst (subst_context (skipn #|ctx| s) 0 ctx)
-    (skipn (PCUICAst.context_assumptions ctx') args) 
+    (skipn (context_assumptions ctx') args) 
     (firstn #|ctx| s)
-  × context_subst ctx' (firstn (PCUICAst.context_assumptions ctx') args)	(skipn #|ctx| s) ->
+  × context_subst ctx' (firstn (context_assumptions ctx') args)	(skipn #|ctx| s) ->
   context_subst (ctx ++ ctx') args s.
 Proof.
   move=> [Hl Hr].
@@ -137,7 +137,6 @@ Proof.
       apply IHctx => //.
 Qed.
 
-
 Lemma ctx_inst_inst {cf:checker_flags} Σ ext u Γ i Δ  :
   wf_global_ext Σ.1 ext ->
   ctx_inst (Σ.1, ext) Γ i Δ ->
@@ -148,8 +147,7 @@ Lemma ctx_inst_inst {cf:checker_flags} Σ ext u Γ i Δ  :
 Proof.
   intros wfext ctxi cu.
   induction ctxi; simpl; constructor; auto.
-  * red in p |- *.
-    destruct Σ as [Σ univs].
+  * destruct Σ as [Σ univs].
     eapply (typing_subst_instance'' Σ); eauto. apply wfext.
     apply wfext.
   * rewrite (subst_telescope_subst_instance u [i]).
@@ -248,7 +246,7 @@ Proof.
   specialize (IHc _ c'). now subst. 
 Qed.
 
-Inductive arity_spine {cf : checker_flags} (Σ : PCUICAst.global_env_ext) (Γ : PCUICAst.context) : 
+Inductive arity_spine {cf : checker_flags} (Σ : global_env_ext) (Γ : context) : 
   term -> list term -> term -> Type :=
 | arity_spine_nil ty : arity_spine Σ Γ ty [] ty
 | arity_spine_conv ty ty' : isType Σ Γ ty' ->
@@ -391,6 +389,24 @@ Proof.
           apply wf_local_app_l in wfΓ'. depelim wfΓ'.
           rewrite !subst_empty. red in l0.
           eapply type_Cumul'; eauto. eapply conv_cumul. now symmetry.
+Qed.
+
+Lemma make_context_subst_skipn {Γ args s s'} :
+  make_context_subst Γ args s = Some s' ->
+  skipn #|Γ| s' = s.
+Proof.
+  induction Γ in args, s, s' |- *.
+  - destruct args; simpl; auto.
+    + now intros [= ->].
+    + now discriminate.
+  - destruct a as [na [b|] ty]; simpl.
+    + intros H.
+      specialize (IHΓ _ _ _ H).
+      now eapply skipn_n_Sn.
+    + destruct args; try discriminate.
+      intros Hsub.
+      specialize (IHΓ _ _ _ Hsub).
+      now eapply skipn_n_Sn.
 Qed.
 
 Lemma typing_spine_it_mkProd_or_LetIn_gen {cf:checker_flags} Σ Γ Δ Δ' T args s s' args' T' : 
@@ -548,20 +564,20 @@ Lemma spine_subst_conv {cf:checker_flags} Σ Γ inst insts Δ inst' insts' Δ' :
   All2_fold (fun Δ Δ' => conv_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ' ->
   All2 (conv Σ Γ) inst inst' -> All2 (conv Σ Γ) insts insts'.
 Proof.
-move=> wfΣ [_ wf cs sl] [_ _ cs' sl'] cv.
-move: inst insts cs wf sl inst' insts' cs' sl'.
-induction cv; intros; depelim cs ; depelim cs'.  
-- constructor; auto.    
-- eapply All2_app_inv in X as [[l1 l2] [[? ?] ?]].
-  depelim a2. depelim a2. apply app_inj_tail in e as [? ?]; subst.
-  depelim sl; depelim sl'; depelim wf.
-  specialize (IHcv _ _ cs wf sl _ _ cs' sl' a1).
-  constructor; auto.
-- depelim sl; depelim sl'; depelim wf.
-  specialize (IHcv _ _ cs wf sl _ _ cs' sl' X).
-  constructor; auto.
-  eapply (subst_conv _ _ _ []); eauto.
-  depelim p; pcuic.
+  move=> wfΣ [_ wf cs sl] [_ _ cs' sl'] cv.
+  move: inst insts cs wf sl inst' insts' cs' sl'.
+  induction cv; intros; depelim cs; depelim cs'.
+  1:constructor; auto.
+  all:depelim p.
+  - eapply All2_app_inv in X as [[l1 l2] [[? ?] ?]].
+    depelim a2. depelim a2. apply app_inj_tail in e0 as [? ?]; subst.
+    depelim sl; depelim sl'; depelim wf.
+    specialize (IHcv _ _ cs wf sl _ _ cs' sl' a1).
+    constructor; auto.
+  - depelim sl; depelim sl'; depelim wf.
+    specialize (IHcv _ _ cs wf sl _ _ cs' sl' X).
+    constructor; auto.
+    eapply (subst_conv _ _ _ []); eauto.
 Qed.
 
 Lemma spine_subst_subst {cf:checker_flags} Σ Γ Γ0 Γ' i s Δ sub : 
@@ -655,6 +671,14 @@ Proof.
   now rewrite app_context_assoc in wfcodom.
 Qed.
 
+Lemma subst_instance_nil {A} {ua : UnivSubst A} u (xs : list A) : 
+  subst_instance u [] = [].
+Proof. reflexivity. Qed.
+
+Lemma subst_instance_cons {A} {ua : UnivSubst A} u x xs : 
+  subst_instance u (x :: xs) = subst_instance u x :: subst_instance u xs.
+Proof. reflexivity. Qed.
+
 Lemma spine_subst_inst {cf:checker_flags} Σ ext u Γ i s Δ  :
   wf Σ.1 ->
   wf_global_ext Σ.1 ext ->
@@ -672,18 +696,18 @@ Proof.
   eapply wf_local_subst_instance; eauto.
   clear -cs cu wfext wfΣ.
   induction cs; simpl; rewrite ?map_app; try constructor; auto.
-  simpl.
-  rewrite -subst_instance_subst.
+  rewrite subst_instance_cons; simpl.
+  rewrite subst_instance_subst.
   constructor; auto.
 
   clear -subsl cu wfΣ wfext.
-  induction subsl; simpl; rewrite -?subst_instance_subst; constructor; auto.
+  induction subsl; simpl; rewrite ?subst_instance_subst; constructor; auto.
   * destruct Σ as [Σ univs].
-    rewrite subst_instance_subst.
+    rewrite -subst_instance_subst.
     eapply (typing_subst_instance'' Σ); simpl; auto.
     apply wfext. simpl in wfext. apply t0. 
     apply wfext. auto.
-  * rewrite !subst_instance_subst. simpl.
+  * rewrite - !subst_instance_subst. simpl.
     destruct Σ as [Σ univs].
     eapply (typing_subst_instance'' Σ); simpl; auto.
     apply wfext. simpl in wfext. apply t0. 
@@ -739,7 +763,7 @@ Proof.
   induction ctxinst in sub, subs |- *.
   - simpl; intros; constructor; auto.
   - intros. rewrite subst_telescope_cons; simpl; constructor.
-    * red in p |- *. simpl. eapply substitution; eauto.
+    * simpl. eapply substitution; eauto.
     * specialize (IHctxinst _ subs).
       now rewrite (subst_telescope_comm [i]).
   - intros. rewrite subst_telescope_cons; simpl; constructor.
@@ -755,7 +779,7 @@ Lemma ctx_inst_weaken {cf:checker_flags} Σ Γ i Δ Γ' :
 Proof.
   move=> wfΣ wfl subl.
   induction subl; constructor; auto.
-  red in p |- *. now eapply (weaken_ctx Γ').
+  now eapply (weaken_ctx Γ').
 Qed.
 
 Lemma make_context_subst_tele s s' Δ inst sub : 
@@ -806,12 +830,15 @@ Proof.
   apply mapi_rec_ext. intros. destruct x as [na [b|] ty]; simpl; f_equal; f_equal; lia.
 Qed.
   
+Hint Extern 0 => lia : lia.
+
 Lemma context_assumptions_subst_telescope s k Δ : context_assumptions (subst_telescope s k Δ) = 
   context_assumptions Δ.
 Proof.
   rewrite /subst_telescope /mapi. generalize 0. 
   induction Δ; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; auto.
+  destruct a as [na [b|] ty]; simpl; auto with lia.
+  intros. specialize (IHΔ (S n)). lia.
 Qed.
 
 Lemma subst_app_telescope s s' k Γ : 
@@ -1065,7 +1092,7 @@ Qed.
 Lemma subst_instance_rev u Γ :
   subst_instance u (List.rev Γ) = List.rev (subst_instance u Γ).
 Proof.
-  now rewrite /subst_instance /map_context List.map_rev.
+  now rewrite /subst_instance /subst_instance_context /= /map_context List.map_rev.
 Qed.
 
 Lemma subst_telescope_subst_context s k Γ :
@@ -1107,17 +1134,13 @@ Proof.
     now rewrite subst_app_simpl.
 Qed.
 
-Lemma closed_ctx_subst n k ctx : closedn_ctx k ctx = true -> subst_context n k ctx = ctx.
+Lemma closed_k_ctx_subst n k ctx : closedn_ctx k ctx = true -> subst_context n k ctx = ctx.
 Proof.
   induction ctx in n, k |- *; auto.
-  unfold closed_ctx, id.
-  rewrite mapi_app forallb_app List.rev_length /= Nat.add_0_r.
-  move/andb_and => /= [Hctx /andb_and [Ha _]].
+  simpl.
+  move/andb_and => /= [Hctx Hd].
   rewrite subst_context_snoc /snoc /= IHctx // subst_decl_closed //.
-  now apply: closed_decl_upwards.
 Qed.
-
-
 
 Fixpoint all_rels (Γ : context) (n : nat) (k : nat) :=
   match Γ with
@@ -1332,12 +1355,13 @@ Proof.
     eapply (IHt3 (Δ' ,, vdef n _ _)).
 
   * simpl; eapply red_app; auto.
-  * simpl; eapply red_case; auto.
+  * todo "case".
+     (* simpl; eapply red_case; auto.
     red in X0.
     do 2 eapply All2_map_right.
     eapply (All_All2 X0).
     simpl; intros.
-    split; auto.
+    split; auto. *)
 
   * simpl; eapply red_proj_c. auto.
 
@@ -1452,9 +1476,9 @@ Proof.
       exists x.
       change (tSort x) with  
         (subst0 (all_rels c (S #|l|) #|Δ|) (lift #|Δ| #|c| (tSort x))).
-      { eapply (substitution _ _ (lift_context #|Δ| 0 c) _ []); simpl; auto.
+      { eapply (substitution _ _ (lift_context #|Δ| 0 c) _ []); cbn; auto.
         change (tSort x) with (lift #|Δ| #|c| (tSort x)).
-        eapply (weakening_typing _ _ c); eauto. }
+        eapply (weakening_typing); eauto. }
       eapply conv_cumul. simpl.
       rewrite -{1}eql. simpl.
       rewrite !app_context_assoc.
@@ -1515,15 +1539,6 @@ Proof.
     eapply cumul_Sort_inv in c.
     transitivity (Universe.sort_of_product x x0); auto using leq_universe_product.
     auto.
-Qed.
-
-Lemma subst_instance_lift_context u n k Γ : 
-  subst_instance u (lift_context n k Γ) = lift_context n k (subst_instance u Γ).
-Proof.
-  rewrite /subst_instance /map_context !lift_context_alt.
-  rewrite map_mapi mapi_map. apply mapi_rec_ext.
-  intros. rewrite /lift_decl !compose_map_decl. apply map_decl_ext => ?.
-  rewrite map_length. now rewrite subst_instance_lift.
 Qed.
 
 Lemma subst_lift_above s n k x : k = #|s| -> subst0 s (lift0 (n + k) x) = lift0 n x.
@@ -1871,6 +1886,7 @@ Proof.
         assumption.
 Qed.
 
+From MetaCoq.PCUIC Require Import PCUICInst.
 
 Local Open Scope sigma.
 
@@ -1971,7 +1987,6 @@ Proof.
     autorewrite with len; rewrite ? (lift_extended_subst _ 1); f_equal; auto.
   - rewrite IHΓ.
     rewrite commut_lift_subst_rec. auto.
-    rewrite context_assumptions_fold.
     rewrite distr_subst. now autorewrite with len.
   - rewrite IHΓ. 
     rewrite !map_map_compose. apply map_ext.
@@ -2025,6 +2040,7 @@ Proof.
       rewrite  lift0_id /= subst_context_nil app_nil_r 
         lift0_context in subsl.
       rewrite -(smash_context_subst []) /= subst_context_nil in subsl.
+      rewrite subst_empty in subsl.
       apply (X (subst_context [b] 0 Γ0) ltac:(now autorewrite with len)
         (subst [b] #|Γ0| T) _ subsl).
       rewrite extended_subst_app /= in asp.
@@ -2034,9 +2050,8 @@ Proof.
       simpl in asp. autorewrite with len in asp.
       simpl in asp.
       autorewrite with len.
-      rewrite context_assumptions_fold.
       now rewrite -{1}(Nat.add_0_r #|Γ0|) distr_lift_subst_rec /= Nat.add_0_r.
-    * simpl in *. autorewrite with len in *. 
+    * simpl in *. autorewrite with len in asp. 
       simpl in asp.
       assert (len:=subslet_length subsl).
       autorewrite with len in len. simpl in len.
@@ -2061,7 +2076,6 @@ Proof.
       2:now autorewrite with len.
       simpl in asp.
       autorewrite with len.
-      rewrite context_assumptions_fold.
       rewrite -{1}(Nat.add_0_r #|Γ0|) distr_lift_subst_rec /= Nat.add_0_r.
       move: asp. rewrite subst_app_simpl /=; autorewrite with len.
       rewrite distr_subst. autorewrite with len.
@@ -2074,7 +2088,6 @@ Proof.
       rewrite (simpl_subst_k) //.
       now rewrite subst_extended_subst H.
 Qed.
-
 
 (** This shows that we can promote an argument spine for a given context to 
     a spine for a context whose types are higher in the cumulativity relation.
@@ -2103,7 +2116,8 @@ Proof.
     eapply (substitution_cumul _ _ _ []). eauto.
     eapply wf. assumption.
     now depelim p.
-  - elimtype False; inv ass.
+    elimtype False; depelim ass'.
+    elimtype False; inv ass.
 Qed.
 
 Lemma spine_subst_cumul {cf:checker_flags} Σ Δ args Γ Γ' : 
@@ -2121,7 +2135,7 @@ Proof.
     revert inst_ctx_subst0; generalize (List.rev args).
     intros l ctxs. 
     induction ctxs in ass, Γ', ass', a2 |- *; depelim a2; try (simpl in H; noconf H); try constructor; auto.
-    * eapply IHctxs. now depelim ass.
+    * depelim c. constructor. eapply IHctxs. now depelim ass.
       now depelim ass'. auto.
     * elimtype False; depelim ass.
   - eapply subslet_cumul. 6:eauto. all:eauto.

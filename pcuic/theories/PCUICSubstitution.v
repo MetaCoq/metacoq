@@ -364,7 +364,7 @@ Qed.
   subst_mutual_inductive_body n k decl = decl.
 Proof.
   intros wfΣ Hdecl.
-  pose proof (on_declsared_minductive wfΣ Hdecl). apply onNpars in X.
+  pose proof (on_declared_minductive wfΣ Hdecl). apply onNpars in X.
   apply (declared_inductive_closed (Σ:=(empty_ext Σ))) in Hdecl; auto.
   move: Hdecl.
   rewrite /closed_inductive_decl /lift_mutual_inductive_body.
@@ -1741,7 +1741,7 @@ Proof.
     rewrite !map_cst_type. eapply subst_declared_constant in H as ->; eauto.
 
   - eapply refine_type. econstructor; eauto.
-    eapply on_declsared_inductive in as isdecl [on_mind on_ind]; auto.
+    eapply on_declared_inductive in as isdecl [on_mind on_ind]; auto.
     apply onArity in on_ind as [[s' Hindty] _].
     apply typecheck_closed in Hindty as [_ Hindty]; eauto. symmetry.
     move/andb_and/proj1: Hindty. rewrite -(closedn_subst_instance _ _ u) => Hty.
@@ -1750,7 +1750,7 @@ Proof.
 
   - eapply refine_type. econstructor; eauto.
     symmetry.
-    apply on_declsared_constructor in isdecl as [_ onc]; auto.
+    apply on_declared_constructor in isdecl as [_ onc]; auto.
     eapply on_constructor_closed in onc as clty; auto.
     unfold type_of_constructor.
     apply subst_closedn; eauto. eapply closed_upwards; eauto. lia.
@@ -1780,7 +1780,7 @@ Proof.
     erewrite distr_subst_rec. simpl.
     rewrite map_rev. subst ty.
     f_equal.
-    apply on_declsared_projection in isdecl as [_ isdecl]; auto.
+    apply on_declared_projection in isdecl as [_ isdecl]; auto.
     eapply on_projection_closed in isdecl as clty; auto.
     symmetry. apply subst_closedn; eauto.
     rewrite List.rev_length H. eapply closed_upwards; eauto. lia.

@@ -420,7 +420,7 @@ Proof.
 Qed.
 
 Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
-Proof. unfold lift_context. now rewrite fold_context_snoc0. Qed.
+Proof. unfold lift_context. now rewrite fold_context_k_snoc0. Qed.
 Hint Rewrite lift_context_snoc0 : lift.
 
 Lemma lift_context_snoc n k Γ d : lift_context n k (Γ ,, d) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.

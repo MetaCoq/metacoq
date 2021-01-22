@@ -1836,7 +1836,7 @@ Qed.
 Lemma trans_lift_context n k Γ : lift_context n k (trans_local Γ) = 
   trans_local (LiftSubst.lift_context n k Γ).
 Proof.
-  rewrite /lift_context /LiftSubst.lift_context /fold_context /Ast.fold_context.
+  rewrite /lift_context /LiftSubst.lift_context /fold_context_k /Ast.fold_context_k.
   rewrite /trans_local map_rev map_mapi -List.map_rev mapi_map.
   f_equal. apply mapi_ext. intros ? [na [b|] ty]; simpl; rewrite /trans_decl /= /map_decl; simpl; 
   f_equal; now rewrite trans_lift.

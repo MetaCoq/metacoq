@@ -97,7 +97,7 @@ Proof.
       now autorewrite with len. }
   { unfold to_extended_list. 
     rewrite (spine_subst_subst_to_extended_list_k_gen spa).
-    unfold subst_context; rewrite to_extended_list_k_fold_context.
+    unfold subst_context; rewrite to_extended_list_k_fold_context_k.
     apply PCUICSubstitution.map_subst_instance_to_extended_list_k.
     subst npar.
     now rewrite firstn_skipn. }

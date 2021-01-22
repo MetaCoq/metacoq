@@ -310,21 +310,21 @@ Proof.
   unfold to_extended_list_k. now rewrite reln_app reln_acc.
 Qed.
 
-Lemma to_extended_list_k_fold_context f Γ k : 
-  to_extended_list_k (fold_context f Γ) k = to_extended_list_k Γ k.
+Lemma to_extended_list_k_fold_context_k f Γ k : 
+  to_extended_list_k (fold_context_k f Γ) k = to_extended_list_k Γ k.
 Proof.
   rewrite /to_extended_list_k.
   generalize (@nil term).
   induction Γ in k |- *.
   simpl; auto.
   intros.
-  rewrite fold_context_snoc0. simpl.
+  rewrite fold_context_k_snoc0. simpl.
   destruct a as [? [?|] ?] => /=; now rewrite IHΓ.  
 Qed.
 
 Lemma to_extended_list_k_lift_context c k n k' : 
   to_extended_list_k (lift_context n k c) k' = to_extended_list_k c k'. 
-Proof. now rewrite to_extended_list_k_fold_context. Qed.
+Proof. now rewrite to_extended_list_k_fold_context_k. Qed.
 
 Lemma reln_lift n k Γ : reln [] (n + k) Γ = map (lift0 n) (reln [] k Γ).
 Proof.
@@ -541,8 +541,8 @@ Qed.
 Hint Rewrite arities_context_length : len.
 
 Lemma assumption_context_fold f Γ :
-  assumption_context Γ -> assumption_context (fold_context f Γ).
+  assumption_context Γ -> assumption_context (fold_context_k f Γ).
 Proof. 
-  induction 1; simpl. constructor. rewrite fold_context_snoc0.
+  induction 1; simpl. constructor. rewrite fold_context_k_snoc0.
   now constructor.
 Qed.

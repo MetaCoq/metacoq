@@ -162,7 +162,7 @@ Lemma nth_error_subst_context (Γ' : context) s (v : nat) k :
     option_map (subst_decl s (#|Γ'| - S v + k)) (nth_error Γ' v).
 Proof.
   induction Γ' in v |- *; intros.
-  - simpl. unfold subst_context, fold_context; simpl; rewrite nth_error_nil. easy.
+  - simpl. unfold subst_context, fold_context_k; simpl; rewrite nth_error_nil. easy.
   - simpl. destruct v; rewrite subst_context_snoc.
     + simpl. repeat f_equal; try lia.
     + simpl. rewrite IHΓ'; simpl in *. lia_f_equal.
@@ -213,7 +213,7 @@ Proof.
   rewrite /map_branch_k /map_branch_shift; f_equal.
   * rewrite mapi_context_inst /shiftf. setoid_rewrite subst_inst'.
     rewrite mapi_context_fold.
-    eapply fold_context_ext => i t. now sigma.
+    eapply fold_context_k_ext => i t. now sigma.
   * simpl. rewrite subst_inst'. now sigma. 
 Qed.
 
@@ -309,7 +309,7 @@ Lemma subst_wf_local `{checker_flags} Σ Γ n k :
   subst_context n k Γ = Γ.
 Proof.
   intros wfΣ.
-  induction 1; auto; unfold subst_context, snoc; rewrite fold_context_snoc0;
+  induction 1; auto; unfold subst_context, snoc; rewrite fold_context_k_snoc0;
     auto; unfold snoc;
     f_equal; auto; unfold map_decl; simpl.
   - destruct t0 as [s Hs]. unfold vass. simpl. f_equal.
@@ -370,7 +370,7 @@ Proof.
   rewrite /closed_inductive_decl /lift_mutual_inductive_body.
   destruct decl; simpl.
   move/andb_and => [clpar clbodies]. f_equal.
-  - now rewrite [fold_context _ _]closed_ctx_subst.
+  - now rewrite [fold_context_k _ _]closed_ctx_subst.
   - eapply forallb_All in clbodies.
     eapply Alli_mapi_id.
     * eapply (All_Alli clbodies). intros; eauto.
@@ -945,7 +945,7 @@ Proof.
     rewrite subst_context_app. simpl.
     rewrite /app_context. f_equal.
     + lia_f_equal.
-    + rewrite /subst_context // /fold_context /= /map_decl /=.
+    + rewrite /subst_context // /fold_context_k /= /map_decl /=.
       lia_f_equal.
 Qed.
 

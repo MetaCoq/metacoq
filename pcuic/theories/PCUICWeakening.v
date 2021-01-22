@@ -171,7 +171,7 @@ Lemma rename_context_lift_context n k Γ :
   rename_context (lift_renaming n k) Γ = lift_context n k Γ.
 Proof.
   rewrite /rename_context /lift_context.
-  apply fold_context_ext => i t.
+  apply fold_context_k_ext => i t.
   now rewrite lift_rename shiftn_lift_renaming.
 Qed.
 
@@ -287,7 +287,7 @@ Proof.
     f_equal.
     rewrite lift_context_app. simpl.
     rewrite /app_context; lia_f_equal.
-    rewrite /lift_context // /fold_context /= /map_decl /=.
+    rewrite /lift_context // /fold_context_k /= /map_decl /=.
     now lia_f_equal.
 Qed.
 
@@ -509,16 +509,16 @@ Proof.
   rewrite mapi_length. reflexivity.
 Qed.
 
-Lemma map_decl_name_fold_context f ctx : 
-  map decl_name (fold_context f ctx) = map decl_name ctx.
+Lemma map_decl_name_fold_context_k f ctx : 
+  map decl_name (fold_context_k f ctx) = map decl_name ctx.
 Proof.
-  now rewrite fold_context_alt map_mapi /= mapi_cst_map.
+  now rewrite fold_context_k_alt map_mapi /= mapi_cst_map.
 Qed.
 
-Lemma forget_types_fold_context f ctx : 
-  forget_types (fold_context f ctx) = forget_types ctx.
+Lemma forget_types_fold_context_k f ctx : 
+  forget_types (fold_context_k f ctx) = forget_types ctx.
 Proof.
-  now rewrite /forget_types map_decl_name_fold_context.
+  now rewrite /forget_types map_decl_name_fold_context_k.
 Qed.
 
 Lemma lift_zipc :

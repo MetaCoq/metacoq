@@ -139,9 +139,9 @@ Proof.
     rewrite nth_error_app_lt; len => //.
     rewrite /rename_context.
     rewrite nth_error_lift_context_eq Nat.add_0_r.
-    rewrite /lift_context fold_context_compose option_map_two.
+    rewrite /lift_context fold_context_k_compose option_map_two.
     destruct (nth_error Δ i) eqn:hnth => //.
-    + rewrite (nth_error_fold_context _ _ _ _ _ _ hnth) /=; eauto.
+    + rewrite (nth_error_fold_context_k _ _ _ _ _ _ hnth) /=; eauto.
       f_equal. rewrite compose_map_decl. apply map_decl_ext => t.
       rewrite !lift_rename !rename_compose.
       eapply rename_ext => k.
@@ -184,9 +184,9 @@ Qed.
 Lemma strengthen_lift_ctx n k t : rename_context (strengthen k n) (lift_context n k t) = t.
 Proof.
   rewrite -rename_context_lift_context.
-  rewrite /rename_context fold_context_compose.
-  rewrite -{2}(fold_context_id t).
-  apply fold_context_ext => i x.
+  rewrite /rename_context fold_context_k_compose.
+  rewrite -{2}(fold_context_k_id t).
+  apply fold_context_k_ext => i x.
   rewrite rename_compose shiftn_compose.  
   setoid_rewrite strengthen_lift_renaming.
   now rewrite shiftn_id rename_ren_id.
@@ -495,7 +495,7 @@ Proof.
     + unfold on_ctx_free_vars.
       rewrite alli_app. apply/andP; split.
       - rewrite /lift_context.
-        rewrite alli_fold_context_prop.
+        rewrite alli_fold_context_k_prop.
         clear. eapply alli_Alli.
         eapply forall_nth_error_Alli.
         intros i x hnth. simpl.

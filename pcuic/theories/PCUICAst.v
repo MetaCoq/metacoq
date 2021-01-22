@@ -766,17 +766,17 @@ Proof.
   apply map_predicate_eq_spec; auto.
 Qed.
 
-Lemma map_fold_context f g ctx : map (map_decl f) (fold_context g ctx) = fold_context (fun i => f ∘ g i) ctx.
+Lemma map_fold_context_k f g ctx : map (map_decl f) (fold_context_k g ctx) = fold_context_k (fun i => f ∘ g i) ctx.
 Proof.
-  rewrite !fold_context_alt map_mapi. 
+  rewrite !fold_context_k_alt map_mapi. 
   apply mapi_ext => i d. now rewrite compose_map_decl.
 Qed.
-Hint Rewrite map_fold_context : map.
+Hint Rewrite map_fold_context_k : map.
  
 Lemma mapi_context_map (f : nat -> term -> term) g (ctx : context) :
   mapi_context f (map g ctx) = mapi (fun i => map_decl (f (Nat.pred #|ctx| - i)) ∘ g) ctx.
 Proof.
-  rewrite mapi_context_fold fold_context_alt mapi_map. now len.
+  rewrite mapi_context_fold fold_context_k_alt mapi_map. now len.
 Qed.
 Hint Rewrite mapi_context_map : map.
  
@@ -784,7 +784,7 @@ Lemma mapi_context_map_context (f : nat -> term -> term) g (ctx : context) :
   mapi_context f (map_context g ctx) = 
   mapi_context (fun i => f i ∘ g) ctx.
 Proof.
-  now rewrite !mapi_context_fold fold_context_map.
+  now rewrite !mapi_context_fold fold_context_k_map.
 Qed.
 Hint Rewrite mapi_context_map_context : map.
 
@@ -792,14 +792,14 @@ Lemma map_context_mapi_context (f : term -> term) (g : nat -> term -> term) (ctx
   map_context f (mapi_context g ctx) = 
   mapi_context (fun i => f ∘ g i) ctx.
 Proof.
-  rewrite !mapi_context_fold. now unfold map_context; rewrite map_fold_context.
+  rewrite !mapi_context_fold. now unfold map_context; rewrite map_fold_context_k.
 Qed.
 Hint Rewrite map_context_mapi_context : map.
 
 Lemma map_mapi_context {A} (f : context_decl -> A) (g : nat -> term -> term) (ctx : context) :
   map f (mapi_context g ctx) = mapi (fun i => f ∘ map_decl (g (Nat.pred #|ctx| - i))) ctx.
 Proof.
-  now rewrite mapi_context_fold fold_context_alt map_mapi.
+  now rewrite mapi_context_fold fold_context_k_alt map_mapi.
 Qed.
 Hint Rewrite @map_mapi_context : map.
 
@@ -818,7 +818,7 @@ Proof.
   unfold map_predicate, map_predicate_k. destruct p; cbn.
   f_equal.
   now rewrite map_map.
-  now rewrite !mapi_context_fold fold_context_compose shiftf0.
+  now rewrite !mapi_context_fold fold_context_k_compose shiftf0.
   now len.
 Qed.
 Hint Rewrite map_predicate_k_map_predicate_k : map.
@@ -833,7 +833,7 @@ Proof.
   unfold map_predicate, map_predicate_k. destruct p; cbn.
   f_equal.
   apply map_map.
-  rewrite !mapi_context_fold map_fold_context.
+  rewrite !mapi_context_fold map_fold_context_k.
   reflexivity.
 Qed.
 Hint Rewrite map_predicate_map_predicate_k : map.
@@ -850,7 +850,7 @@ Proof.
   * apply map_map.
   * rewrite !mapi_context_fold.
     fold (map_context f' pcontext0).
-    now rewrite fold_context_map.
+    now rewrite fold_context_k_map.
 Qed.
 Hint Rewrite map_predicate_k_map_predicate : map.
 
@@ -876,7 +876,7 @@ Proof.
   unfold map_branch, map_branch_k; destruct b; cbn. len.
   f_equal.
   rewrite !mapi_context_fold.
-  now rewrite !fold_context_compose shiftf0.
+  now rewrite !fold_context_k_compose shiftf0.
 Qed.
 Hint Rewrite map_branch_k_map_branch_k : map.
 
@@ -889,7 +889,7 @@ Lemma map_branch_map_branch_k
 Proof.
   unfold map_branch, map_branch_k; destruct b; cbn.
   f_equal.
-  now rewrite !mapi_context_fold map_fold_context.
+  now rewrite !mapi_context_fold map_fold_context_k.
 Qed.
 
 Hint Rewrite map_branch_map_branch_k : map.
@@ -903,7 +903,7 @@ Proof.
   unfold map_branch, map_branch_k; destruct b; cbn. len.
   f_equal.
   rewrite !mapi_context_fold.
-  now fold (map_context f' bcontext0); rewrite fold_context_map.
+  now fold (map_context f' bcontext0); rewrite fold_context_k_map.
 Qed.
 
 Hint Rewrite map_branch_k_map_branch : map.

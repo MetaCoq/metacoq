@@ -2985,14 +2985,12 @@ Section Rho.
     simpl in H. now apply H.
   Qed.
   
-  Notation fold_context_k := PCUICEnvironment.fold_context.
-
   Lemma All2_fold_fold_context P f g Γ Δ :
     All2_fold (fun Γ Δ T U => P (fold_context_k f Γ) (fold_context_k g Δ) 
       (map_decl (f #|Γ|) T) (map_decl (g #|Δ|) U)) Γ Δ ->
     All2_fold P (fold_context_k f Γ) (fold_context_k g Δ).
   Proof.
-    induction 1; rewrite ?fold_context_snoc0; constructor; auto.
+    induction 1; rewrite ?fold_context_k_snoc0; constructor; auto.
   Qed.
  
   Lemma All2_fold_fold_context_inv P f g Γ Δ :

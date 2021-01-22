@@ -1132,19 +1132,19 @@ Lemma subst_instance_cstr_args u cdecl :
   subst_instance u (cstr_args cdecl).
 Proof. reflexivity. Qed.
 
-Lemma map_fold_context f g Γ : 
-  map_context g (fold_context f Γ) = fold_context (fun i => g ∘ (f i)) Γ.
+Lemma map_fold_context_k f g Γ : 
+  map_context g (fold_context_k f Γ) = fold_context_k (fun i => g ∘ (f i)) Γ.
 Proof.
-  rewrite !fold_context_alt.
+  rewrite !fold_context_k_alt.
   rewrite /map_context map_mapi.
   apply mapi_ext => i x.
   now rewrite !compose_map_decl.
 Qed.
 
 Lemma fold_map_context f g Γ : 
-  fold_context f (map_context g Γ) = fold_context (fun i => f i ∘ g) Γ.
+  fold_context_k f (map_context g Γ) = fold_context_k (fun i => f i ∘ g) Γ.
 Proof.
-  rewrite !fold_context_alt.
+  rewrite !fold_context_k_alt.
   rewrite /map_context mapi_map.
   apply mapi_ext => i x. len.
   now rewrite !compose_map_decl.
@@ -1154,9 +1154,9 @@ Lemma subst_instance_subst_context u s k ctx :
   subst_instance u (subst_context s k ctx) = 
   subst_context (subst_instance u s) k (subst_instance u ctx).
 Proof.
-  rewrite /subst_instance /= /subst_instance /subst_instance_context map_fold_context.
+  rewrite /subst_instance /= /subst_instance /subst_instance_context map_fold_context_k.
   rewrite /subst_context fold_map_context.
-  apply fold_context_ext => i t.
+  apply fold_context_k_ext => i t.
   now rewrite -subst_instance_subst.
 Qed.
 
@@ -1164,9 +1164,9 @@ Lemma subst_instance_lift_context u n k ctx :
   subst_instance u (lift_context n k ctx) = 
   lift_context n k (subst_instance u ctx).
 Proof.
-  rewrite /subst_instance /= /subst_instance_context map_fold_context.
+  rewrite /subst_instance /= /subst_instance_context map_fold_context_k.
   rewrite /lift_context fold_map_context.
-  apply fold_context_ext => i t.
+  apply fold_context_k_ext => i t.
   now rewrite subst_instance_lift.
 Qed.
 
@@ -1193,7 +1193,7 @@ Lemma subst_instance_case_branch_context_gen ind mdecl u p bctx cdecl :
   case_branch_context ind mdecl (subst_instance u p) bctx cdecl.
 Proof.
   unfold case_branch_context, case_branch_context_gen.
-  cbn -[fold_context].
+  cbn -[fold_context_k].
   substu => /=; len.
   rewrite subst_instance_two_context.
   rewrite /expand_lets_ctx /expand_lets_k_ctx. len.

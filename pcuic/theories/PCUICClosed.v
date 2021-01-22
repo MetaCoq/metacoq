@@ -27,13 +27,13 @@ Proof.
   - move=> cty k' lek'; rewrite (@closed_upwards k) //.
 Qed.
 
-Lemma alli_fold_context (p : nat -> context_decl -> bool) ctx f : 
+Lemma alli_fold_context_k (p : nat -> context_decl -> bool) ctx f : 
   (forall i d, p i d -> map_decl (f i) d = d) ->
   alli p 0 (List.rev ctx) ->
-  fold_context f ctx = ctx.
+  fold_context_k f ctx = ctx.
 Proof.
   intros Hf.
-  rewrite /fold_context /mapi.
+  rewrite /fold_context_k /mapi.
   generalize 0.
   induction ctx using rev_ind; simpl; intros n; auto.
   rewrite List.rev_app_distr /=.

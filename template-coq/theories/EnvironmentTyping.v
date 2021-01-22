@@ -146,12 +146,12 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
   Lemma All_local_env_fold P f Γ :
-    All_local_env (fun Γ t T => P (fold_context f Γ) (f #|Γ| t) (option_map (f #|Γ|) T)) Γ <~>
-    All_local_env P (fold_context f Γ).
+    All_local_env (fun Γ t T => P (fold_context_k f Γ) (f #|Γ| t) (option_map (f #|Γ|) T)) Γ <~>
+    All_local_env P (fold_context_k f Γ).
   Proof.
     split.
-    - induction 1; simpl; try unfold snoc; rewrite ?fold_context_snoc0; try constructor; auto.
-    - induction Γ; simpl; try unfold snoc; rewrite ?fold_context_snoc0; intros H.
+    - induction 1; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; try constructor; auto.
+    - induction Γ; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; intros H.
       * constructor.
       * destruct a as [na [b|] ty]; depelim H; specialize (IHΓ H); constructor; simpl; auto.
   Qed.

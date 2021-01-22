@@ -7,8 +7,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
+     PCUICContextSubst
      PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICSubstitution PCUICUnivSubstitution PCUICSigmaCalculus
+     PCUICClosed PCUICSigmaCalculus PCUICSubstitution PCUICUnivSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils.
 
 
@@ -31,7 +32,7 @@ Lemma conv_context_smash {cf:checker_flags} Σ Γ Δ Δ' :
 Proof.
   intros Hass Hconv.
   induction Hass in Δ', Hconv |- *. depelim Hconv. constructor.
-  depelim Hconv; constructor; auto.
+  depelim Hconv. depelim c; constructor; auto.
 Qed.
 
 Lemma smash_context_assumption_context {Γ Δ} : 

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICUnivSubst
-     PCUICTyping PCUICCumulativity PCUICConversion.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICLiftSubst PCUICUnivSubst
+     PCUICTyping PCUICCumulativity PCUICConfluence PCUICConversion.
 
 Require Import Equations.Prop.DepElim.
 
@@ -168,20 +168,17 @@ Section Inversion.
   Qed.
 
   Lemma inversion_Case :
-    forall {Γ indnpar p c brs T},
-      Σ ;;; Γ |- tCase indnpar p c brs : T ->
+    forall {Γ ci p c brs T},
+      Σ ;;; Γ |- tCase ci p c brs : T ->
       ∑ u args mdecl idecl ps pty btys,
-        let ind := indnpar.1 in
-        let npar := indnpar.2 in
         declared_inductive Σ ind mdecl idecl ×
-        ind_npars mdecl = npar ×
-        let params := firstn npar args in
-        build_case_predicate_type ind mdecl idecl params u ps = Some pty ×
-        Σ ;;; Γ |- p : pty ×
+        ind_npars mdecl = ci.(ind_npar) ×
+        let params := firstn ci.(ind_npar) args in
+        conv_context (case_predicate_context ind mdecl idecl p) p.(pcontext) ×
+        Σ ;;; Γ ,,, p.(pcontext) |- p : p.(preturn) ×
         is_allowed_elimination Σ ps (ind_kelim idecl) ×
         isCoFinite (ind_finite mdecl) = false ×
         Σ;;; Γ |- c : mkApps (tInd ind u) args ×
-        map_option_out (build_branches_type ind mdecl idecl params u p)
                      = Some btys ×
         All2 (fun br bty => (br.1 = bty.1 × Σ ;;; Γ |- br.2 : bty.2)
                            × isType Σ Γ bty.2) brs btys ×

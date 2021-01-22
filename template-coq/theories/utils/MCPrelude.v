@@ -63,7 +63,7 @@ Qed.
 Ltac tas := try assumption.
 Ltac tea := try eassumption.
 Ltac trea := try reflexivity; try eassumption.
-Ltac tc := typeclasses eauto.
+Ltac tc := try typeclasses eauto.
 
 Create HintDb terms.
 

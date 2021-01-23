@@ -93,7 +93,7 @@ Definition isConstruct t :=
   | _ => false
   end.
 
-Definition isAssRel Γ x :=
+Definition isAssRel (Γ : context) x :=
   match x with
   | tRel i =>
     match option_map decl_body (nth_error Γ i) with
@@ -189,10 +189,12 @@ Section Wcbv.
       eval (tConst c u) (tConst c u)
 
   (** Case *)
-  | eval_iota ind pars discr c u args p brs res :
-      eval discr (mkApps (tConstruct ind c u) args) ->
-      eval (iota_red pars c args brs) res ->
-      eval (tCase (ind, pars) p discr brs) res
+  | eval_iota ci discr c u args p brs br res :
+      eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
+      nth_error brs c = Some br ->
+      #|skipn ci.(ci_npar) args| = context_assumptions br.(bcontext) ->
+      eval (iota_red ci.(ci_npar) args br) res ->
+      eval (tCase ci p discr brs) res
 
   (** Proj *)
   | eval_proj i pars arg discr args u a res :
@@ -468,7 +470,7 @@ Section Wcbv.
         rewrite isFixApp_mkApps => //.
         rewrite -mkApps_nested; simpl.
         rewrite orb_false_r.
-        destruct t; auto.
+        destruct t=> //.
     - destruct f; try discriminate.
       apply All_All2_refl in X0.
       now apply eval_stuck_fix.
@@ -486,28 +488,39 @@ Section Wcbv.
     apply declared_decl_closed in Hc => //. simpl in Hc. red in Hc.
     rewrite Hb in Hc. simpl in Hc. now move/andP: Hc.
   Qed.
-  Lemma closed_iota ind pars c u args brs : forallb (test_snd (closedn 0)) brs ->
+
+  Lemma closed_iota ind pars c u args brs br : 
+    forallb (test_branch_k closedn 0) brs ->
     closed (mkApps (tConstruct ind c u) args) ->
-    closed (iota_red pars c args brs).
+    #|skipn pars args| = context_assumptions (bcontext br) ->
+    nth_error brs c = Some br ->
+    closed (iota_red pars args br).
   Proof.
-    unfold iota_red => cbrs cargs.
-    eapply closedn_mkApps. solve_all.
-    rewrite nth_nth_error.
-    destruct (nth_error_spec brs c) as [br e|e].
-    eapply All_nth_error in e; eauto. simpl in e. apply e.
-    auto.
-    eapply closedn_mkApps_inv in cargs.
-    move/andP: cargs => [Hcons Hargs]. now rewrite forallb_skipn.
+    unfold iota_red => cbrs cargs hass e.
+    solve_all.
+    eapply All_nth_error in e; eauto. simpl in e.
+    rewrite closedn_mkApps in cargs.
+    move/andP: cargs => [Hcons Hargs].
+    eapply (closedn_subst _ 0 0).
+    now rewrite forallb_skipn //.
+    simpl. rewrite /expand_lets /expand_lets_k.
+    rewrite -(Nat.add_0_r #|skipn pars args|).
+    rewrite hass.
+    move/andP: e => [cltx clb].
+    eapply (closedn_subst _ _ 0).
+    eapply closedn_extended_subst => //.
+    rewrite extended_subst_length Nat.add_0_r /= Nat.add_comm.
+    eapply closedn_lift. now rewrite Nat.add_0_r in clb.
   Qed.
 
   Lemma closed_arg f args n a :  
     closed (mkApps f args) ->
     nth_error args n = Some a -> closed a.
   Proof.
-    move/closedn_mkApps_inv/andP => [cf cargs].
+    rewrite closedn_mkApps.
+    move/andP => [cf cargs].
     solve_all. eapply All_nth_error in cargs; eauto.
   Qed.
-
 
   Lemma closed_unfold_fix mfix idx narg fn : 
     closed (tFix mfix idx) ->
@@ -606,32 +619,35 @@ Section Wcbv.
     - eapply IHev3. unshelve eapply closed_beta. 3:eauto. exact na. simpl. eauto.
     - eapply IHev2. now rewrite closed_csubst.
     - apply IHev. eapply closed_def; eauto.
-    - eapply IHev2. eapply closed_iota in Hc''. eauto. eauto.
+    - eapply IHev2. eapply closed_iota in Hc''; tea.
+      eapply IHev1; assumption.
     - eapply IHev2; auto. specialize (IHev1 Hc).
-      eapply closedn_mkApps_inv in IHev1.
+      rewrite closedn_mkApps in IHev1.
       move/andP: IHev1 => [Hcons Hargs]. solve_all.
       eapply All_nth_error in Hargs; eauto.
     - eapply IHev3.
-      apply andb_true_iff.
+      apply/andP.
       split; [|easy].
       specialize (IHev1 Hc).
-      eapply closedn_mkApps_inv in IHev1.
-      apply andb_true_iff in IHev1.
-      eapply closedn_mkApps; [|easy].
+      rewrite closedn_mkApps in IHev1.
+      move/andP: IHev1 => [clfix clargs].
+      rewrite closedn_mkApps clargs andb_true_r.
       eapply closed_unfold_fix; [easy|].
       now rewrite closed_unfold_fix_cunfold_eq.
     - apply andb_true_iff.
       split; [|easy].
       solve_all.
-    - eapply IHev. move/closedn_mkApps_inv/andP: Hc' => [Hfix Hargs].
-      repeat (apply/andP; split; auto). eapply closedn_mkApps.
+    - eapply IHev. rewrite closedn_mkApps.
+      rewrite closedn_mkApps in Hc'. move/andP: Hc' => [Hfix Hargs].
+      repeat (apply/andP; split; auto). 
       rewrite -closed_unfold_cofix_cunfold_eq in e => //.
       eapply closed_unfold_cofix in e; eauto.
-      auto.
-    - eapply IHev. move/closedn_mkApps_inv/andP: Hc => [Hfix Hargs].
-      eapply closedn_mkApps; eauto.
+    - eapply IHev. rewrite closedn_mkApps in Hc *.
+      move/andP: Hc => [Hfix Hargs].
+      rewrite closedn_mkApps Hargs.
       rewrite -closed_unfold_cofix_cunfold_eq in e => //.
       eapply closed_unfold_cofix in e; eauto.
+      now rewrite e.
     - apply/andP; split; auto.
     Qed.
 
@@ -698,6 +714,17 @@ Section Wcbv.
     now induction p using le_ind_dep; intros q; depelim q.
   Qed.
 
+  Instance branch_UIP : UIP (branch term).
+  Proof.
+    eapply EqDec.eqdec_uip; tc.
+  Qed.
+
+  Instance option_UIP {A} (u : EqDec A) : UIP (option A).
+  Proof.
+    eapply EqDec.eqdec_uip; tc.
+    eqdec_proof.
+  Qed.
+
   Unset SsrRewrite.
   Lemma eval_unique_sig {t v v'} :
     forall (ev1 : eval t v) (ev2 : eval t v'),
@@ -734,7 +761,10 @@ Section Wcbv.
         noconf eq1.
         noconf eq2.
         noconf IHev1.
-        now specialize (IHev2 _ ev'2); noconf IHev2.
+        pose proof e1. rewrite e in H. noconf H.
+        specialize (IHev2 _ ev'2); noconf IHev2.
+        assert (e = e1) as -> by now apply uip.
+        now assert (e0 = e2) as -> by now apply uip.
       + apply eval_mkApps_tCoFix in ev1 as H.
         destruct H as (? & ?); solve_discr.
     - depelim ev'; try go.

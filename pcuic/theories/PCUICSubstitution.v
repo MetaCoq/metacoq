@@ -459,7 +459,7 @@ Proof.
   - eapply closed_upwards; eauto; try lia.
   - destruct pdecl; reflexivity.
 Qed.
-
+*)
 Lemma subst_destArity ctx t n k :
   match destArity ctx t with
   | Some (args, s) =>
@@ -474,7 +474,6 @@ Proof.
   - move: (IHt3 n k (ctx,, vdef n0 t1 t2)).
     now rewrite subst_context_snoc /= /subst_decl /map_decl /vass /=.
 Qed.
-*)
 
 Lemma decompose_prod_n_assum0 ctx t : decompose_prod_n_assum ctx 0 t = Some (ctx, t).
 Proof. destruct t; simpl; reflexivity. Qed.

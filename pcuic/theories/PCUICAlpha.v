@@ -2,74 +2,12 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
-     PCUICContextConversion PCUICValidity.
+     PCUICContextConversion PCUICValidity PCUICArities.
 
 (* Should now be subsumed by renaming proof. Unused anyway. *)     
-(*
+
 Section Alpha.
   Context {cf:checker_flags}.
-
-  Lemma build_branches_type_eq_term :
-    forall Σ p p' ind mdecl idecl pars u brtys,
-      eq_term_upto_univ Σ eq eq p p' ->
-      map_option_out
-        (build_branches_type ind mdecl idecl pars u p) =
-      Some brtys ->
-      ∑ brtys',
-        map_option_out
-          (build_branches_type ind mdecl idecl pars u p') =
-        Some brtys' ×
-        All2 (on_Trel_eq (eq_term_upto_univ Σ eq eq) snd fst) brtys brtys'.
-  Proof.
-    intros Σ p p' ind mdecl idecl pars u brtys e hb.
-    unfold build_branches_type in *.
-    destruct idecl as [ina ity ike ict ipr]. simpl in *.
-    unfold mapi in *. revert hb.
-    generalize 0 at 3 6.
-    intros n hb.
-    induction ict in brtys, n, hb |- *.
-    - cbn in *. eexists. split.
-      + eassumption.
-      + apply All2_same. intros [m t]. simpl. split ; now auto.
-    - cbn. cbn in hb.
-      lazymatch type of hb with
-      | match ?t with _ => _ end = _ =>
-        case_eq (t) ;
-          try (intro bot ; rewrite bot in hb ; discriminate hb)
-      end.
-      intros [m t] e'. rewrite e' in hb.
-      destruct a as [[na ta] ar].
-      lazymatch type of e' with
-      | match ?expr with _ => _ end = _ =>
-        case_eq (expr) ;
-          try (intro bot ; rewrite bot in e' ; discriminate e')
-      end.
-      intros ty ety. rewrite ety in e'.
-      case_eq (decompose_prod_assum [] ty). intros sign ccl edty.
-      rewrite edty in e'.
-      case_eq (chop (ind_npars mdecl) (snd (decompose_app ccl))).
-      intros paramrels args ech. rewrite ech in e'.
-      inversion e'. subst. clear e'.
-      lazymatch type of hb with
-      | match ?t with _ => _ end = _ =>
-        case_eq (t) ;
-          try (intro bot ; rewrite bot in hb ; discriminate hb)
-      end.
-      intros tl etl. rewrite etl in hb.
-      inversion hb. subst. clear hb.
-      edestruct IHict as [brtys' [eq' he]].
-      + eauto.
-      + eexists. rewrite eq'. split.
-        * reflexivity.
-        * constructor ; auto.
-          simpl. split ; auto.
-          eapply eq_term_upto_univ_it_mkProd_or_LetIn ; auto.
-          eapply eq_term_upto_univ_mkApps.
-          -- eapply eq_term_upto_univ_lift. 
-             eapply eq_term_eq_term_napp; eauto.
-              typeclasses eauto.
-          -- apply All2_same. intro. apply eq_term_upto_univ_refl ; auto.
-  Qed.
 
   (* TODO MOVE *)
   Lemma wf_local_nth_error_vass :
@@ -179,8 +117,8 @@ Section Alpha.
     induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
       try split; auto; try constructor; auto.
     - specialize (IHx2 (ctx,, vass na x1) (ctx',,vass na' a') b').
-      apply IHx2; auto. constructor; auto.
-    - apply IHx3; auto. constructor; auto. 
+      apply IHx2; auto. constructor; auto; constructor; auto.
+    - apply IHx3; auto. constructor; auto; constructor; auto. 
   Qed.
 
   Lemma destInd_spec t : 
@@ -272,7 +210,7 @@ Section Alpha.
                   forall v,
                     eq_term_upto_univ [] eq eq u v ->
                     Σ ;;; Γ |- v : A)
-              (fun Σ Γ wfΓ => wf_local Σ Γ)
+              (fun Σ Γ => wf_local Σ Γ)
     ).
     eapply typing_ind_env.
     all: intros Σ wfΣ Γ wfΓ.
@@ -304,9 +242,8 @@ Section Alpha.
              ++ apply conv_ctx_refl ; auto.
              ++ constructor. assumption. constructor.
                 eapply upto_names_impl_eq_term. assumption.
-      + eapply validity in hB as [? hB]; eauto.
-        econstructor; eauto. 
-        econstructor ; eauto with pcuic.
+      + eapply validity in hB as [? [? hB]]; eauto.
+        eapply isType_tProd; eauto. split; eauto with pcuic.
       + constructor.
         eapply eq_term_leq_term.
         apply eq_term_sym.
@@ -380,12 +317,11 @@ Section Alpha.
       { apply Universe.make_inj. }
       subst.
       econstructor ; eauto.
-    - intros ind u npar p c brs args mdecl idecl isdecl X X0 H pars ps pty
-             Hcpt X1 X2 H1 H2 X3 X4 btys Hbbt Hbrs v e; invs e.
+    - intros ind p c brs args ps mdecl idecl isdecl X X0 H cpc wfp wfpctx convpctx Hret IHret
+            wfcpc kelim Hc IHc iscof ptm wfbrs Hbrs v e; invs e.
       eapply type_Cumul'.
-      + eapply build_branches_type_eq_term in Hbbt; tea.
-        destruct Hbbt as [btys' [Hbbt1 Hbbt2]].
-        econstructor; tea; eauto.
+      + todo "case". 
+        (*econstructor; tea; eauto.
         unshelve eapply All2_trans'; [..|eassumption].
         * exact (fun br bty : nat × term =>
                    (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)
@@ -400,21 +336,13 @@ Section Alpha.
           2: apply All2_sym; tea.
           clear. intros x y z X; rdest; cbn in *; eauto. congruence.
           intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
-          eauto.
+          eauto. *)
 
       + eapply validity_term ; eauto.
-        instantiate (1 := tCase (ind, ind_npars mdecl) p c brs).
+        instantiate (1 := tCase ind p c brs).
         econstructor ; eauto.
-        solve_all. destruct b0 as [s [Hs IH]]; eauto.
-      + constructor.
-        eapply eq_term_leq_term.
-        apply eq_term_sym.
-        eapply eq_term_mkApps.
-        all: try (eapply upto_names_impl_eq_term ; assumption).
-        eapply All2_app.
-        * eapply All2_same. intro. eapply eq_term_refl.
-        * constructor ; eauto.
-          eapply upto_names_impl_eq_term. assumption.
+        solve_all.
+      + constructor. reflexivity.
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e; invs e.
       eapply type_Cumul'.
       + econstructor. all: try eassumption.
@@ -448,19 +376,19 @@ Section Alpha.
         change (fix_context mfix') with (fix_context_gen 0 mfix').
         eapply eq_context_upto_cat.
         * apply eq_context_upto_refl; typeclasses eauto.
-        * generalize 0.
+        * generalize 0 at 3 4.
           unfold fix_context_gen.
           eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; try constructor; simpl; intros n; auto.
-          destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
+          destruct r as [[s [Hs IH]] [[[eqty eqbod] eqrarg] eqann]].
           eapply eq_context_upto_cat.
-          + constructor; [assumption| |constructor].
+          + constructor; constructor; auto.
             eapply eq_term_upto_univ_empty_impl; eauto.
-            4:now eapply eq_term_upto_univ_lift. all:intros ? ? []; trivial.
+            4:now eapply eq_term_upto_univ_lift. all:tc.
           + apply IHX. }
       assert(#|fix_context mfix| = #|fix_context mfix'|).
-      { now rewrite !fix_context_length, (All2_length _ _ X). } 
+      { now rewrite !fix_context_length, (All2_length X). } 
       eapply type_Cumul'.
       + econstructor.
         * eapply (fix_guard_eq_term _ _ _ _ n); eauto.
@@ -479,15 +407,12 @@ Section Alpha.
           eapply context_conversion; eauto.
           eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
           exists s. rewrite <-H.
-          eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
+          eapply (weakening _ _ _ _ (tSort _)); eauto.
           apply cumul_refl. rewrite <- H.
           eapply eq_term_upto_univ_lift.
           eapply eq_term_upto_univ_empty_impl.
           4: intuition eauto.
-          all: intros ? ? [].
-          *** eapply eq_universe_refl.
-          *** eapply leq_universe_refl.
-          *** eapply leq_universe_refl.
+          all: intros ? ? []; reflexivity.
         * revert wffix.
           unfold wf_fixpoint.
           enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
@@ -516,20 +441,20 @@ Section Alpha.
       change (fix_context mfix') with (fix_context_gen 0 mfix').
       eapply eq_context_upto_cat.
       * apply eq_context_upto_refl; typeclasses eauto.
-      * generalize 0.
+      * generalize 0 at 3 4.
         unfold fix_context_gen.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; try constructor; simpl; intros n; auto.
         destruct r as [[s [Hs IH]] [[[eqty eqann] eqbod] eqrarg]].
         eapply eq_context_upto_cat.
-        + constructor; [assumption| |constructor].
+        + constructor; constructor; tas.
           eapply eq_term_upto_univ_empty_impl.
           4:now eapply eq_term_upto_univ_lift.
           all: intros ? ? []; reflexivity.
         + apply IHX. }
     assert(#|fix_context mfix| = #|fix_context mfix'|).
-    { now rewrite !fix_context_length, (All2_length _ _ X). } 
+    { now rewrite !fix_context_length, (All2_length X). } 
     eapply type_Cumul'.
     + econstructor.
       * eapply (cofix_guard_eq_term _ _ _ _ n) ; eauto.
@@ -548,7 +473,7 @@ Section Alpha.
         eapply context_conversion; eauto.
         eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
         exists s. rewrite <-H.
-        eapply (weakening _ _ _ _ (tSort _)); eauto. now eapply typing_wf_local in b.
+        eapply (weakening _ _ _ _ (tSort _)); eauto. 
         apply cumul_refl. rewrite <- H.
         eapply eq_term_upto_univ_lift.
         eapply eq_term_upto_univ_empty_impl.
@@ -584,7 +509,7 @@ Section Alpha.
   Lemma upto_names_eq_term_upto_univ Σ Re Rle napp t u
     : eq_term_upto_univ_napp Σ Re Rle napp t u ->
       forall t' u', t ≡ t' -> u ≡ u' ->
-               eq_term_upto_univ_napp Σ Re Rle napp t' u'.
+      eq_term_upto_univ_napp Σ Re Rle napp t' u'.
   Proof.
     revert napp t u Rle. fix aux 5.
     destruct 1; cbn; intros t'' u'' H' H0';
@@ -617,11 +542,13 @@ Section Alpha.
     - simpl. transitivity na'.
       transitivity na; auto.
       now symmetry. assumption.
-    - auto. revert brs'0 brs'1 X3 X6.
+    - todo "case" (* predicates*).
+    - todo "case" (* branches *).
+      (*auto. revert brs'0 brs'1 X2 X5.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
       + inv H1; inv H2. constructor; eauto.
-        destruct X3, X7, r. split; eauto. congruence.
+        destruct X3, X7, r. split; eauto. congruence.*)
     - revert mfix'0 mfix'1 X X0.
       induction a; simpl; intros args0 args'0 H1 H2.
       + inv H1; inv H2; constructor; eauto.
@@ -652,7 +579,7 @@ Section Alpha.
     intros; eapply upto_names_eq_term_upto_univ; eassumption.
   Qed.
 
-  Definition upto_names_decl := eq_decl_upto [] eq eq.
+  Definition upto_names_decl := eq_decl_upto_gen [] eq eq.
 
   Definition upto_names_ctx := eq_context_upto [] eq eq.
 
@@ -673,6 +600,7 @@ Section Alpha.
       eapply IHu2 in e; tea. destruct e as [ctx'' [e1 e2]].
       eexists; split. cbn. rewrite destArity_app, e1; reflexivity.
       apply eq_context_upto_cat; tas. constructor; tas. reflexivity.
+      constructor; auto.
     - intros X Y. rewrite destArity_app in X.
       case_eq (destArity [] u3); [|intro e; rewrite e in X; discriminate].
       intros [ctx' s'] e; rewrite e in X; cbn in X; inv X.
@@ -680,6 +608,7 @@ Section Alpha.
       eapply IHu3 in e; tea. destruct e as [ctx'' [e1 e2]].
       eexists; split. cbn. rewrite destArity_app, e1; reflexivity.
       apply eq_context_upto_cat; tas. constructor; tas. reflexivity.
+      constructor; auto.
   Qed.
 
 
@@ -694,11 +623,11 @@ Section Alpha.
   Proof.
     intro hΣ. induction 1 in Γ' |- *.
     - intro Y; inv Y; constructor.
-    - intro Y; inv Y. constructor. auto.
+    - intro Y; inv Y. inv X1. constructor. auto.
       destruct t0 as [s Ht]. exists s. eapply typing_alpha; tea.
       eapply context_conversion; tea. auto.
       now apply upto_names_conv_context.
-    - intro Y; inv Y. constructor; auto.
+    - intro Y; inv Y. inv X1. constructor; auto.
       + destruct t0 as [s Ht]. exists s. eapply typing_alpha; tea.
         eapply context_conversion; tea. auto.
         now apply upto_names_conv_context.
@@ -740,4 +669,3 @@ Section Alpha.
 End Alpha.
 
 Infix "≡Γ" := upto_names_ctx (at level 60).
-*)

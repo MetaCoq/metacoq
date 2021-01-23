@@ -6,6 +6,10 @@ From MetaCoq Require Import utils Ast AstUtils Environment Induction LiftSubst.
   Substitution of universe levels for universe level variables, used to
   implement universe polymorphism. *)
 
+Lemma subst_instance_cons {A} {ua : UnivSubst A} u x xs : 
+  subst_instance u (x :: xs) = subst_instance u x :: subst_instance u xs.
+Proof. reflexivity. Qed.
+
 Lemma subst_instance_lift u c n k :
   lift n k (subst_instance u c) = subst_instance u (lift n k c).
 Proof.

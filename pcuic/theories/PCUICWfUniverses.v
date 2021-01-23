@@ -2,10 +2,9 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICSigmaCalculus PCUICTyping PCUICWeakeningEnv PCUICWeakening PCUICInversion
+     PCUICLiftSubst PCUICSigmaCalculus PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
-     PCUICUnivSubst PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICUnivSubstitution PCUICConversion PCUICContexts.
+     PCUICUnivSubst PCUICWeakeningEnv PCUICUnivSubstitution.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
@@ -137,11 +136,6 @@ Section CheckerFlags.
   Proof.
     intros wfΣ Hs cu.
     apply (wf_universe_subst_instance_univ (Σ, univs) φ); auto.
-  Qed.
-
-  Lemma subst_instance_cons u x (xs : list Level.t) : subst_instance u (x :: xs) = subst_instance u x :: subst_instance u xs.
-  Proof.
-    rewrite /subst_instance /= //.
   Qed.
 
   Lemma subst_instance_empty u : 

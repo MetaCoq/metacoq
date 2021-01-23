@@ -1658,7 +1658,6 @@ Proof.
   intros. eapply eq_decl_subst_instance; eassumption.
 Qed.
 
-(*
 Lemma subst_instance_destArity Γ A u :
   destArity (subst_instance u Γ) (subst_instance u A)
   = match destArity Γ A with
@@ -1667,16 +1666,16 @@ Lemma subst_instance_destArity Γ A u :
     end.
 Proof.
   induction A in Γ |- *; simpl; try reflexivity.
-  - change (subst_instance u Γ,, vass na (subst_instance u A1))
+  - change (subst_instance u Γ,, vass na (subst_instance_constr u A1))
       with (subst_instance u (Γ ,, vass na A1)).
     now rewrite IHA2.
   - change (subst_instance u Γ ,,
-               vdef na (subst_instance u A1) (subst_instance u A2))
+               vdef na (subst_instance_constr u A1) (subst_instance_constr u A2))
       with (subst_instance u (Γ ,, vdef na A1 A2)).
     now rewrite IHA3.
 Qed.
 
-
+(*
 Lemma subst_instance_instantiate_params_subst u0 params pars s ty :
   option_map (on_pair (map (subst_instance u0)) (subst_instance u0))
              (instantiate_params_subst params pars s ty)

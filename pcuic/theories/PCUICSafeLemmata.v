@@ -94,6 +94,24 @@ Section Lemmata.
     eassumption.
   Qed.*)
 
+  Instance All2_eq_refl Σ Re : 
+    RelationClasses.Reflexive Re ->
+    CRelationClasses.Reflexive (All2 (eq_term_upto_univ Σ Re Re)).
+  Proof.
+    intros h x. apply All2_same. reflexivity.
+  Qed.
+
+  Instance All2_br_eq_refl Σ Re :
+    RelationClasses.Reflexive Re ->
+    CRelationClasses.Reflexive (All2
+      (fun x y : branch term =>
+        eq_context_upto Σ Re Re (bcontext x) (bcontext y) *
+        eq_term_upto_univ Σ Re Re (bbody x) (bbody y))).
+  Proof.
+    intros h x.
+    apply All2_same; split; reflexivity.
+  Qed.
+
   Lemma eq_term_upto_univ_zipc :
     forall Σ Re u v π,
       RelationClasses.Reflexive Re ->
@@ -150,30 +168,17 @@ Section Lemmata.
         * apply All2_same.
           intros. splits ; auto. all: apply eq_term_upto_univ_refl.
           all: assumption.
-    - simpl. apply IHπ. destruct indn as [i n].
-      constructor.
-      + assumption.
-      + apply eq_term_upto_univ_refl. all: assumption.
-      + eapply All2_same.
-        intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
-    - simpl. apply IHπ. destruct indn as [i n].
-      constructor.
-      + apply eq_term_upto_univ_refl. all: assumption.
-      + assumption.
-      + eapply All2_same.
-        intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
-    - simpl. apply IHπ. destruct indn as [i n].
-      constructor.
-      + apply eq_term_upto_univ_refl. all: assumption.
-      + apply eq_term_upto_univ_refl. all: assumption.
-      + apply All2_app.
-        * eapply All2_same.
-          intros. split ; auto. apply eq_term_upto_univ_refl. all: assumption.
-        * constructor.
-          -- simpl. intuition eauto.
-          -- eapply All2_same.
-             intros. split ; auto. apply eq_term_upto_univ_refl.
-             all: assumption.
+    - simpl. apply IHπ.
+      constructor; try reflexivity.
+      splits; simpl; try reflexivity.
+      eapply All2_app; [reflexivity|].
+      constructor; [tas|reflexivity].
+    - simpl. apply IHπ.
+      constructor; easy.
+    - simpl. apply IHπ.
+      constructor; try easy.
+      apply All2_app; try reflexivity.
+      constructor; easy.
   Qed.
 
   Lemma eq_term_zipc :

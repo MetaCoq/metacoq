@@ -831,7 +831,7 @@ Proof.
     ** eapply All2_map.
       eapply (All2_impl (P:=fun x y => red Σ.1 Γ x y)).
       2:{ intros x' y' hred. rewrite heq_length.
-          eapply PCUICContextReduction.weakening_red_0; auto. autorewrite with len.
+          eapply weakening_red_0; auto. autorewrite with len.
           pose proof (onNpars oi). simpl; lia. }
       elim: p.2. simpl. constructor.
       intros n Hn. constructor; auto.
@@ -1387,7 +1387,7 @@ Section SRContext.
       + inversion h1; subst. exists (vass na t').
         destruct p as [<- red].
         split; cbnr.
-        eapply (PCUICContextReduction.weakening_red_0 wfΣ _ [_]); tas; cbnr.
+        eapply (weakening_red_0 _ [_]); tas; cbnr.
         apply red1_red; tas.
       + exists decl. split; tas. apply refl_red.
     - destruct n.
@@ -1395,7 +1395,7 @@ Section SRContext.
         destruct p as [<- [[? []]|[? []]]].
         -- exists (vdef na b t').
            split; cbnr.
-           eapply (PCUICContextReduction.weakening_red_0 wfΣ _ [_]); tas; cbnr.
+           eapply (weakening_red_0 _ [_]); tas; cbnr.
            apply red1_red; tas.
         -- exists (vdef na b' t).
            split; cbnr.
@@ -1406,7 +1406,7 @@ Section SRContext.
         destruct IHh2 as [decl' [X1 X2]].
         exists decl'. split; tas.
         rewrite !(simpl_lift0 _ (S n)).
-        eapply (PCUICContextReduction.weakening_red_0 wfΣ _ [_]); tas; cbnr.
+        eapply (weakening_red_0 _ [_]); tas; cbnr.
   Qed.
 
   Lemma wf_local_isType_nth {Σ} {wfΣ : wf Σ} Γ n decl :
@@ -1677,7 +1677,7 @@ Proof.
     * etransitivity.
       2: apply weakening_red_0 with (Γ' := [_]) (N := tSort _);
         tea; reflexivity.
-      exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' eq_refl).
+      exact (red_rel_all _ (Γ ,, vdef na t A) 0 t A' HΣ' eq_refl).
   - destruct HH as [HA [Ht HB]].
     destruct HB as [sB HB].
     eexists. eapply type_reduction; tas.

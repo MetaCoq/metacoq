@@ -130,7 +130,7 @@ Proof.
 Qed.
 
 Lemma trans_lookup Σ cst :
-  Ast.lookup_env (trans_global_decls Σ) cst = option_map trans_global_decl (SE.lookup_env Σ cst).
+  Ast.Env.lookup_env (trans_global_decls Σ) cst = option_map trans_global_decl (SE.lookup_env Σ cst).
 Proof.
   cbn in *.
   induction Σ.
@@ -377,11 +377,11 @@ Proof.
     cbn.
     f_equal.
     remember 0 as k.
-    induction ind_bodies in k |- *.
+    induction ind_bodies0 in k |- *.
     + reflexivity.
     + cbn.
       f_equal.
-      apply IHind_bodies.
+      apply IHind_bodies0.
   - rewrite trans_subst_instance.
     f_equal.
 Qed.
@@ -704,7 +704,7 @@ Proof.
     
   - rewrite trans_subst_instance. econstructor.
     apply (trans_declared_constant _ c decl H).
-    destruct decl. now simpl in *; subst cst_body.
+    destruct decl. now simpl in *; subst cst_body0.
 
   - rewrite trans_mkApps; eauto with wf.
     simpl. constructor. now rewrite nth_error_map H.
@@ -743,7 +743,7 @@ Proof.
     now rewrite -trans_fix_context.
 Qed.
 
-Lemma context_assumptions_map ctx : Ast.context_assumptions (map trans_decl ctx) = SE.context_assumptions ctx.
+Lemma context_assumptions_map ctx : Ast.Env.context_assumptions (map trans_decl ctx) = SE.context_assumptions ctx.
 Proof.
   induction ctx as [|[na [b|] ty] ctx]; simpl; auto; lia.
 Qed.
@@ -1031,18 +1031,18 @@ Proof.
 Qed.
 
 Lemma trans_subst_context s k Γ : 
-  trans_local (SE.subst_context s k Γ) = T.subst_context (map trans s) k (trans_local Γ).
+  trans_local (SE.subst_context s k Γ) = T.Env.subst_context (map trans s) k (trans_local Γ).
 Proof.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
-  - rewrite SE.subst_context_snoc /=. rewrite [T.subst_context _ _ _ ]subst_context_snoc.
+  - rewrite SE.subst_context_snoc /=. rewrite [T.Env.subst_context _ _ _ ]subst_context_snoc.
     f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
     now rewrite !trans_subst map_length.
-  - rewrite SE.subst_context_snoc /=. rewrite [T.subst_context _ _ _ ]subst_context_snoc.
+  - rewrite SE.subst_context_snoc /=. rewrite [T.Env.subst_context _ _ _ ]subst_context_snoc.
     f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
     now rewrite !trans_subst map_length.
 Qed.
 
-Lemma trans_smash_context Γ Δ : trans_local (SE.smash_context Γ Δ) = T.smash_context (trans_local Γ) (trans_local Δ).
+Lemma trans_smash_context Γ Δ : trans_local (SE.smash_context Γ Δ) = T.Env.smash_context (trans_local Γ) (trans_local Δ).
 Proof.
   induction Δ in Γ |- *; simpl; auto.
   destruct a as [na [b|] ty] => /=.

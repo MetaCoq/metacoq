@@ -52,7 +52,7 @@ Proof.
   intros X X0.
   simpl in *. induction X0; constructor; auto.
   clear IHX0. destruct d; simpl.
-  - destruct c; simpl. destruct cst_body; simpl in *.
+  - destruct c; simpl. destruct cst_body0; simpl in *.
     red in o |- *. simpl in *. now eapply X.
     red in o |- *. simpl in *. now eapply X.
   - simpl in *.
@@ -488,7 +488,7 @@ Qed.
 
 Lemma on_global_wf_Forall_decls {cf:checker_flags} Σ :
   on_global_env
-    (fun _ : TemplateEnvironment.global_env_ext => wf_decl_pred) Σ ->
+    (fun _ : Env.global_env_ext => wf_decl_pred) Σ ->
   Forall_decls_typing
     (fun (_ : global_env_ext) (_ : context) (t T : term) =>
      Ast.wf t /\ Ast.wf T) Σ.
@@ -502,7 +502,7 @@ Lemma Forall_decls_on_global_wf {cf:checker_flags} Σ :
   Forall_decls_typing
     (fun (_ : global_env_ext) (_ : context) (t T : term) =>
      Ast.wf t /\ Ast.wf T) Σ ->
-  on_global_env (fun _ : TemplateEnvironment.global_env_ext => wf_decl_pred) Σ.
+  on_global_env (fun _ : Env.global_env_ext => wf_decl_pred) Σ.
  Proof.
   apply on_global_env_impl => Σ' Γ t []; simpl; unfold wf_decl_pred;
   intros; auto. destruct X0 as [s ?]; intuition auto.
@@ -562,7 +562,7 @@ Proof.
     unfold declared_constant in H.
     eapply lookup_on_global_env in H as [Σ' [onΣ' prf]]; eauto.
     destruct decl; simpl in *.
-    subst cst_body; simpl in *; compute in prf; intuition auto.
+    subst cst_body0; simpl in *; compute in prf; intuition auto.
   - apply wf_mkApps_inv in H0.
     eapply nth_error_forall in H0; eauto.
   - simpl in *. induction X; constructor; inv H; intuition auto.
@@ -816,7 +816,7 @@ Proof.
     apply wf_subst. wf. wf. now inv H.
   - split. wf. apply wf_subst_instance. wf.
     eapply lookup_on_global_env in X as [Σ' [wfΣ' prf]]; eauto.
-    red in prf. destruct decl; destruct cst_body; red in prf; simpl in *; wf.
+    red in prf. destruct decl; destruct cst_body0; red in prf; simpl in *; wf.
     destruct prf. apply a.
 
   - split. wf. apply wf_subst_instance.

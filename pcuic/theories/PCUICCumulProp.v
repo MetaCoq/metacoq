@@ -535,8 +535,7 @@ Lemma red1_upto_conv_ctx_prop Σ Γ Γ' t t' :
   red1 Σ.1 Γ' t t'.
 Proof.
   intros Hred; induction Hred using red1_ind_all in Γ' |- *; 
-    try solve [econstructor; eauto;
-      try solve [solve_all]].
+    try solve [econstructor; eauto; try solve [solve_all]].
   - econstructor. destruct (nth_error Γ i) eqn:eq; simpl in H => //.
     noconf H; simpl in H; noconf H.
     eapply All2_fold_nth in X; eauto.
@@ -545,7 +544,19 @@ Proof.
     destruct (decl_body d'); subst => //.
   - econstructor. eapply IHHred. constructor; simpl; auto => //.
   - econstructor. eapply IHHred. constructor; simpl => //.
-  - econstructor. eapply IHHred; constructor => //.
+  - econstructor.
+    eapply OnOne2_local_env_impl; tea => /=; intros ? d d'.
+    eapply on_one_decl_impl => Δ' x y IH. apply IH.
+    now apply conv_ctx_prop_app.
+  - intros h. constructor.
+    eapply IHHred. now apply conv_ctx_prop_app.
+  - intros h; constructor.
+    eapply OnOne2_impl; tea => /= br br'.
+    intros [[red IH]|[red IH]]; [left|right].
+    * split=> //. now eapply red, conv_ctx_prop_app.
+    * split=> //. eapply OnOne2_local_env_impl; tea => /=; intros ? d d'.
+      apply on_one_decl_impl => Δ' x y IH'; now apply IH', conv_ctx_prop_app.
+  - intros. constructor; eapply IHHred; constructor; simpl; auto => //.
   - intros. eapply fix_red_body. solve_all.
     eapply b0. now eapply conv_ctx_prop_app.
   - intros. eapply cofix_red_body. solve_all.
@@ -673,7 +684,7 @@ Proof.
 Qed.
   
 
-Lemma cumul_prop_subst_instance Σ univs u u' i : 
+Lemma cumul_prop_subst_instance_instance Σ univs u u' (i : Instance.t) : 
   wf Σ.1 ->
   consistent_instance_ext Σ univs u ->
   consistent_instance_ext Σ univs u' ->
@@ -686,6 +697,13 @@ Proof.
   eapply All2_map. eapply All2_refl.
   intros x. red.
   rewrite !is_prop_subst_instance_level /=. split; reflexivity.
+Qed.
+
+Lemma All2_fold_All2 (P : context_decl -> context_decl -> Type) Γ Δ : 
+  All2_fold (fun _ _ => P) Γ Δ <~>
+  All2 P Γ Δ.
+Proof.
+  split; induction 1; simpl; constructor; auto.
 Qed.
 
 Lemma cumul_prop_subst_instance Σ Γ univs u u' T : 
@@ -704,11 +722,25 @@ Proof.
   - constructor. eapply PCUICEquality.eq_term_upto_univ_impl in IHT1; eauto.
     all:try typeclasses eauto.
     apply IHT2.
-  - constructor. now eapply cumul_prop_subst_instance.
+  - constructor. now eapply cumul_prop_subst_instance_instance.
   - constructor. red. apply R_opt_variance_impl. intros x y; auto.
-    now eapply cumul_prop_subst_instance. 
+    now eapply cumul_prop_subst_instance_instance. 
   - constructor. red. apply R_opt_variance_impl. intros x y; auto.
-    now eapply cumul_prop_subst_instance. 
+    now eapply cumul_prop_subst_instance_instance.
+  - cbn. constructor. splits; simpl; solve_all.
+    eapply cumul_prop_subst_instance_instance; tea.
+    eapply All2_fold_map. eapply All2_fold_All2.
+    eapply All_All2; tea.
+    move=> [na [b|] ty]; rewrite /ondecl /map_decl /=.
+    * move=> [eqty eqb] /=; constructor; auto.
+    * move=> [eqty _] /=; constructor; auto.
+    * eapply eq_term_upto_univ_impl; tea. all:tc. reflexivity.
+    * eapply All2_map, All_All2; tea. solve_all.
+      simpl. eapply All2_fold_map, All2_fold_All2, All_All2; tea.
+      clear.
+      move=> [na [b|] ty]; rewrite /ondecl /map_decl /=.
+      + move=> [eqty eqb] /=; constructor; auto.
+      + move=> [eqty _] /=; constructor; auto.
 Qed.
 
 Lemma All_All_All2 {A} (P Q : A -> Prop) l l' : 
@@ -751,9 +783,9 @@ Proof.
   unfold arities_context.
   simpl. rewrite /arities_context rev_map_spec /=.
   rewrite map_app /= rev_app_distr /=. 
-  rewrite {1}/map_decl /= Nat.add_1_r /=.
+  rewrite /= Nat.add_1_r /=.
   constructor.
-   rewrite -rev_map_spec. apply IHl. lia.
+  rewrite -rev_map_spec. apply IHl. lia.
 Qed.
 
 Hint Resolve conv_ctx_prop_refl : core.
@@ -878,6 +910,7 @@ Proof.
   eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
 Qed.
 
+(** Well-typed terms in the leq_term relation live in the same sort hierarchy. *)
 Lemma typing_leq_term_prop (Σ : global_env_ext) Γ t t' T T' :
   wf Σ.1 ->
   Σ ;;; Γ |- t : T ->
@@ -895,7 +928,7 @@ Proof.
   Σ;;; Γ |- t' : T' ->
   forall n, leq_term_napp Σ n t' t ->
   Σ ;;; Γ |- T ~~ T')%type 
-  (fun Σ Γ wfΓ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
+  (fun Σ Γ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
 
   1-13:match goal with
   [ H : leq_term_napp _ _ _ _ |- _ ] => depelim H
@@ -998,17 +1031,22 @@ Proof.
     eapply untyped_subslet_inds. simpl.
     eapply cumul_prop_subst_instance => //; eauto.
 
-  - eapply inversion_Case in X6 as (u' & args' & mdecl' & idecl' & ps' & pty' & btys' & inv); auto.
-    intuition auto.
-    intuition auto.
-    eapply cumul_cumul_prop in b; eauto.
+  - eapply inversion_Case in X8 as (mdecl' & idecl' & indices' & data & cum); auto.
+    eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto. simpl.
-    specialize (X4 _ _ H4 a6 _ (eq_term_upto_univ_napp_leq X7_2)).
+    clear X7.
+    destruct data.
+    specialize (X6 _ _ H4 t0 _ (eq_term_upto_univ_napp_leq X9)).
     eapply cumul_prop_sym => //.
-    eapply cumul_prop_mkApps => //.
+    eapply cumul_prop_mkApps => //. rewrite /ptm /predctx.
+    todo "case".
     eapply All2_app. 2:(repeat constructor; auto using eq_term_eq_term_prop_impl).
-    eapply All2_skipn. eapply cumul_prop_mkApps_Ind_inv in X4 => //.
+    eapply cumul_prop_mkApps_Ind_inv in X6 => //.
+    eapply All2_app_inv in X6 as [[] [[? ?]]].
     eapply All2_symP => //. typeclasses eauto.
+    move: (All2_length a3). destruct e.
+    rewrite -(All2_length a5) => hpars.
+    eapply app_inj in e2 as [eql ->] => //.
     
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
     intuition auto.
@@ -1032,8 +1070,8 @@ Proof.
     epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ a wfΣ a0).
     eapply subslet_untyped_subslet. eapply X3, validity; eauto.
     destruct a.
-    eapply validity, (isType_mkApps_Ind wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
-    eapply validity, (isType_mkApps_Ind wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
+    eapply validity_term, (isType_mkApps_Ind wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
+    eapply validity_term, (isType_mkApps_Ind wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
     eapply cumul_prop_subst_instance; eauto.
 
   - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.

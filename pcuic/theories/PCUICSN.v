@@ -221,17 +221,15 @@ Section Alpha.
     intros Γ.
     induction Γ as [| [na [b|] A] Γ ih ].
     - constructor.
-    - simpl. constructor; simpl; try apply binder_anonymize.
-      + eapply eq_term_upto_univ_tm_nl.
+    - simpl. constructor; simpl; try apply binder_anonymize; tas.
+      + constructor; tas; auto. eapply eq_term_upto_univ_tm_nl.
         all: auto.
-      + simpl. eapply eq_term_upto_univ_tm_nl.
+        eapply eq_term_upto_univ_tm_nl.
         all: auto.
-      + assumption.
-    - simpl. constructor.
+    - simpl. constructor; auto. constructor.
       + apply binder_anonymize.
       + simpl. eapply eq_term_upto_univ_tm_nl.
         all: auto.
-      + assumption.
   Qed.
 
   Lemma cored_cored'_nl :

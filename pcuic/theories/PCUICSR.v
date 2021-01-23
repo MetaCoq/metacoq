@@ -10,6 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
 
 Require Import ssreflect.
 From Equations Require Import Equations.
+From Equations.Type Require Import Relation Relation_Properties.
 Require Import Equations.Prop.DepElim.
 Local Set SimplIsCbn.
 
@@ -1511,15 +1512,7 @@ Section SRContext.
         eapply subject_reduction_ctx; tea.
       + eapply subject_reduction_ctx; tea.
   Qed.
-(* 
-  Lemma eq_context_upto_names_upto_names Γ Δ :
-    eq_context_upto_names Γ Δ -> Γ ≡Γ Δ.
-  Proof.
-    induction 1; cbnr; try constructor; eauto.
-    destruct x as [? [] ?], y as [? [] ?]; cbn in *; subst; inversion e0; cbn.
-    all:constructor; cbnr; eauto.
-  Qed. *)
-  From Equations.Type Require Import Relation Relation_Properties.
+
   Lemma red_ctx_clos_rt_red1_ctx Σ : Relation_Properties.inclusion (red_ctx Σ)
       (clos_refl_trans (red1_ctx Σ)).
   Proof.
@@ -1549,7 +1542,15 @@ Section SRContext.
     intros h. red in h. apply red_ctx_clos_rt_red1_ctx in h.
     induction h; eauto using wf_local_red1.
   Qed.
-
+ 
+  Lemma eq_context_upto_names_upto_names Γ Δ :
+    eq_context_upto_names Γ Δ -> Γ ≡Γ Δ.
+  Proof.
+    induction 1; cbnr; try constructor; eauto.
+    depelim p; constructor; subst; auto.
+    all:cbnr; eauto.
+  Qed.
+  
   Lemma wf_local_subst1 {Σ} {wfΣ : wf Σ} Γ na b t Γ' :
       wf_local Σ (Γ ,,, [],, vdef na b t ,,, Γ') ->
       wf_local Σ (Γ ,,, subst_context [b] 0 Γ').

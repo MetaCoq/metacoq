@@ -3,17 +3,13 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR  PCUICInversion
-  PCUICUnivSubstitution PCUICElimination (* PCUICContextConversion *)
+  PCUICUnivSubstitution PCUICElimination PCUICSigmaCalculus (* PCUICContextConversion *)
   PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICConfluence
   PCUICInduction PCUICLiftSubst PCUICContexts PCUICGeneration PCUICSpine
   PCUICConversion PCUICValidity PCUICInductives  PCUICConversion
   PCUICInductiveInversion PCUICNormal PCUICSafeLemmata
   PCUICParallelReductionConfluence PCUICSN
   PCUICWcbvEval PCUICClosed PCUICReduction PCUICCSubst.
-
-
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
 
 Local Existing Instance config.extraction_checker_flags.
 
@@ -315,7 +311,8 @@ Section Spines.
   Proof.
     induction Δ in args, args' |- * using ctx_length_rev_ind.
     - simpl. destruct args' using rev_case => /= // sp hargs // /=; try lia.
-      depelim sp. eapply (f_equal (@length _)) in H; simpl in H; len in H. lia.
+      depelim sp. eapply (f_equal (@length _)) in H; simpl in H; len in H; simpl in H.
+      lia.
       eapply invert_cumul_prod_r in c as (? & ? & ? & ((? & ?) & ?) & ?); auto.
       eapply red_mkApps_tInd in r as (? & ? & ?); auto. solve_discr.
     - rewrite it_mkProd_or_LetIn_app /=; destruct d as [na [b|] ty].
@@ -348,10 +345,11 @@ Section Spines.
     intros ass. eapply assumption_context_app in ass as [ass _].
     destruct n.
     rewrite Nat.sub_0_r.
-    rewrite !firstn_all2; len; simpl; try lia.
+    rewrite !firstn_all2;
+     rewrite ?app_length ?app_context_length ?subst_context_length ?Nat.add_0_r /=; simpl; try lia.
     now rewrite subst_context_app.
     replace (#|Γ| + 1 - S n) with (#|Γ| - n) by lia.
-    rewrite /app_context !firstn_app; len;
+    rewrite /app_context !firstn_app ?subst_context_length /= Nat.sub_0_r.
     replace (#|Γ| - n - #|Γ|) with 0 by lia. simpl.
     rewrite Nat.add_succ_r !app_nil_r. apply H; now try lia.
   Qed.
@@ -776,13 +774,13 @@ Section WeakNormalization.
     - unfold value_head in H. destruct t => //.
       constructor; eapply whne_mkApps.
       cbn in H; destruct lookup_env eqn:eq => //.
-      destruct g => //. destruct c => //. destruct cst_body => //.
+      destruct g => //. destruct c => //. destruct cst_body0 => //.
       eapply whne_const; eauto.
     - destruct f => //. cbn in H.
       destruct cunfold_fix as [[rarg body]|] eqn:unf => //.
       pose proof cl as cl'.
       rewrite closedn_mkApps in cl'. move/andP: cl' => [clfix _].
-      rewrite -P.closed_unfold_fix_cunfold_eq in unf => //.
+      rewrite -PCUICWcbvEval.closed_unfold_fix_cunfold_eq in unf => //.
       rewrite /unfold_fix in unf.
       destruct nth_error eqn:nth => //. noconf unf.
       eapply whnf_fixapp. rewrite /unfold_fix nth.
@@ -945,7 +943,7 @@ Section WeakNormalization.
     eapply inversion_mkApps in typ as (?&?&?); auto.
     eapply inversion_Ind in t as (?&?&?&decl&?&?); auto.
     eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-    pose proof (PCUICWeakeningEnv.on_declared_inductive wfΣ as decl) [onind oib].
+    pose proof (on_declared_inductive decl) as [onind oib].
     rewrite oib.(ind_arity_eq) in t0.
     rewrite !subst_instance_it_mkProd_or_LetIn in t0.
     eapply typing_spine_arity_mkApps_Ind in t0; eauto.
@@ -1004,7 +1002,7 @@ Section WeakNormalization.
       clear wh_normal_empty_gen.
       now specialize (wh_neutral_empty_gen _ tyarg eq_refl).
     - move/andP: cl => [/andP[_ clc] _].
-      eapply inversion_Case in typed as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
+      eapply inversion_Case in typed as (? & ? & ? & [] & ?); tas.
       eapply wh_neutral_empty_gen; eauto.
     - eapply inversion_Proj in typed as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eapply wh_neutral_empty_gen; eauto.
@@ -1145,11 +1143,14 @@ Section WeakNormalization.
 
   - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
     apply inversion_Case in Ht; auto; destruct_sigma Ht.
+    destruct c0.
     specialize (IHHe1 _ t0).
-    assert (red Σ [] (tCase (ind, pars) p discr brs) (iota_red pars c args brs)).
+    assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) args br)).
     { redt _.
-      eapply red_case; eauto. eapply All2_refl; intros; eauto.
-      eapply red1_red; constructor. }
+      eapply red_case; eauto. reflexivity.
+      eapply All2_refl; intros; eauto. red.
+      eapply All2_refl; split; red; reflexivity.
+      eapply red1_red; constructor; tas. }
     specialize (X X0).
     redt _; eauto.
 
@@ -1206,7 +1207,8 @@ Section WeakNormalization.
 
   - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
     apply inversion_Case in Ht; auto; destruct_sigma Ht.
-    pose proof (subject_closed wfΣ t0) as H.
+    destruct c.
+    pose proof (subject_closed _ t0) as H.
     rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
     assert (red Σ [] (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)).
     { eapply red1_red. eapply red_cofix_case.

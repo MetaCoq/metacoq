@@ -123,9 +123,11 @@ Section fixed.
     whnf RedFlags.default Σ Γ (tCase p motive discr brs) ->
     whnf RedFlags.default Σ Γ (tCase p' motive' discr' brs') ->
     ∥ p = p' ×
-      Σ;;; Γ |- motive = motive' ×
+      conv_predicate Σ Γ motive motive' ×
       Σ;;; Γ |- discr = discr' ×
-      All2 (fun br br' => br.1 = br'.1 × Σ;;; Γ |- br.2 = br'.2) brs brs'∥.
+      All2 (fun br br' =>
+        conv_context Σ (Γ ,,, bcontext br) (Γ ,,, bcontext br') × 
+        Σ ;;; (Γ ,,, bcontext br) |- bbody br = bbody br') brs brs'∥.
   Proof.
     intros conv whl whr.
     depelim whl; solve_discr.
@@ -140,16 +142,19 @@ Section fixed.
     depelim eq.
     constructor.
     split; [easy|].
-    split; [apply conv_alt_red; now exists motive'0, motive'1|].
+    split; [todo "case"|].
+     (* apply conv_alt_red; now exists motive'0, motive'1|]. *)
     split; [apply conv_alt_red; now exists discr'0, discr'1|].
-    clear -a a0 a1.
-    induction a in brs, brs', brs'0, brs'1, a0, a1, a |- *;
-      depelim a0; depelim a1; [now constructor|].
+    clear -a0 a2 a3.
+    induction a0 in brs', brs'1, a2, a3 |- *;
+      depelim a2; depelim a3; [constructor|].
     constructor; eauto.
     destruct p, p0, r.
-    split; [congruence|].
-    apply conv_alt_red.
-    eauto.
+    split; [try congruence|].
+    + todo "case".
+    + apply conv_alt_red. exists (bbody y), (bbody y0).
+      splits; eauto. todo "case".
+
   Qed.
   
   Lemma conv_cum_tFix_inv leq Γ mfix idx mfix' idx' :
@@ -192,8 +197,8 @@ Section fixed.
     exists (dbody x), (dbody y).
     split; [|easy].
     split; [easy|].
-    eapply context_change_decl_types_red; eauto.
-    eapply fix_context_change_decl_types; eauto.
+    eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
+    eapply PCUICRedTypeIrrelevance.fix_context_pres_let_bodies; eauto.
   Qed.
   
   Lemma conv_cum_tCoFix_inv leq Γ mfix idx mfix' idx' :
@@ -233,8 +238,8 @@ Section fixed.
     exists (dbody x), (dbody y).
     split; [|easy].
     split; [easy|].
-    eapply context_change_decl_types_red; eauto.
-    eapply fix_context_change_decl_types; eauto.
+    eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
+    eapply PCUICRedTypeIrrelevance.fix_context_pres_let_bodies; eauto.
   Qed.
 
   Lemma conv_cum_tProj_inv leq Γ p c p' c' :

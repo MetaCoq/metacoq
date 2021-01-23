@@ -600,8 +600,9 @@ Ltac unf_term := unfold TemplateTerm.term in *; unfold TemplateTerm.tRel in *;
                  unfold TemplateTerm.closedn in *; unfold TemplateTerm.noccur_between in *;
                  unfold TemplateTerm.subst_instance_constr in *.
                  
-Module TemplateEnvironment := Environment TemplateTerm.
-Include TemplateEnvironment.
+Module Env := Environment TemplateTerm.
+Export Env.
+(* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
 
 Definition mkApp t u := Eval cbn in mkApps t [u].
 
@@ -750,4 +751,4 @@ Definition case_branches_types_gen ind idecl params puinst ptm : list (context *
   mapi (case_branch_type_gen ind params puinst ptm) idecl.(ind_ctors).
 
 Definition case_branches_types ind idecl p ptm : list (context * term) :=
-  mapi (case_branch_type_gen ind p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).     
+  mapi (case_branch_type_gen ind p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).

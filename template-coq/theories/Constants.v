@@ -191,21 +191,21 @@ Register MetaCoq.Template.Ast.Build_mutual_inductive_entry as metacoq.ast.Build_
 (* FIXME, now polymorphic *)
 Register MetaCoq.Template.BasicAst.context_decl as metacoq.ast.context_decl.
 Register MetaCoq.Template.BasicAst.mkdecl as metacoq.ast.mkdecl.
-Register MetaCoq.Template.Ast.context as metacoq.ast.context.
+Register MetaCoq.Template.Ast.Env.context as metacoq.ast.context.
 
-Register MetaCoq.Template.Ast.one_inductive_body as metacoq.ast.one_inductive_body.
-Register MetaCoq.Template.Ast.Build_one_inductive_body as metacoq.ast.Build_one_inductive_body.
-Register MetaCoq.Template.Ast.mutual_inductive_body as metacoq.ast.mutual_inductive_body.
-Register MetaCoq.Template.Ast.Build_mutual_inductive_body as metacoq.ast.Build_mutual_inductive_body.
-Register MetaCoq.Template.Ast.constant_body as metacoq.ast.constant_body.
-Register MetaCoq.Template.Ast.Build_constant_body as metacoq.ast.Build_constant_body.
+Register MetaCoq.Template.Ast.Env.one_inductive_body as metacoq.ast.one_inductive_body.
+Register MetaCoq.Template.Ast.Env.Build_one_inductive_body as metacoq.ast.Build_one_inductive_body.
+Register MetaCoq.Template.Ast.Env.mutual_inductive_body as metacoq.ast.mutual_inductive_body.
+Register MetaCoq.Template.Ast.Env.Build_mutual_inductive_body as metacoq.ast.Build_mutual_inductive_body.
+Register MetaCoq.Template.Ast.Env.constant_body as metacoq.ast.constant_body.
+Register MetaCoq.Template.Ast.Env.Build_constant_body as metacoq.ast.Build_constant_body.
 
-Register MetaCoq.Template.Ast.global_decl as metacoq.ast.global_decl.
-Register MetaCoq.Template.Ast.ConstantDecl as metacoq.ast.ConstantDecl.
-Register MetaCoq.Template.Ast.InductiveDecl as metacoq.ast.InductiveDecl.
-Register MetaCoq.Template.Ast.global_env as metacoq.ast.global_env.
-Register MetaCoq.Template.Ast.global_env_ext as metacoq.ast.global_env_ext.
-Register MetaCoq.Template.Ast.program as metacoq.ast.program.
+Register MetaCoq.Template.Ast.Env.global_decl as metacoq.ast.global_decl.
+Register MetaCoq.Template.Ast.Env.ConstantDecl as metacoq.ast.ConstantDecl.
+Register MetaCoq.Template.Ast.Env.InductiveDecl as metacoq.ast.InductiveDecl.
+Register MetaCoq.Template.Ast.Env.global_env as metacoq.ast.global_env.
+Register MetaCoq.Template.Ast.Env.global_env_ext as metacoq.ast.global_env_ext.
+Register MetaCoq.Template.Ast.Env.program as metacoq.ast.program.
 
 (* Template monad *)
 

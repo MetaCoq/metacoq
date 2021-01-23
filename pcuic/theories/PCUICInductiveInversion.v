@@ -499,7 +499,7 @@ Proof.
 Qed.
 
 Ltac len' := rewrite_strat (topdown (repeat (old_hints len))).
-Print Rewrite HintDb len.
+
 Tactic Notation "len'" "in" hyp(id) :=
   rewrite_strat (topdown (repeat (old_hints len))) in id.
 

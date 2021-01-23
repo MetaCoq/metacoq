@@ -27,7 +27,7 @@ Fixpoint isArity T :=
   | _ => False
   end.
 
-Module TemplateLookup := Lookup TemplateTerm TemplateEnvironment.
+Module TemplateLookup := Lookup TemplateTerm Env.
 Include TemplateLookup.
 
 (** Inductive substitution, to produce a constructors' type *)
@@ -609,15 +609,15 @@ Definition eq_context `{checker_flags} Σ φ (Γ Δ : context) :=
 
 (** ** Typing relation *)
 
-Module TemplateEnvTyping := EnvTyping TemplateTerm TemplateEnvironment.
+Module TemplateEnvTyping := EnvTyping TemplateTerm Env.
 Include TemplateEnvTyping.
 
-Module TemplateConversionPar <: ConversionParSig TemplateTerm TemplateEnvironment TemplateEnvTyping.
+Module TemplateConversionPar <: ConversionParSig TemplateTerm Env TemplateEnvTyping.
   Definition conv := @conv.
   Definition cumul := @cumul.
 End TemplateConversionPar.
 
-Module TemplateConversion := Conversion TemplateTerm TemplateEnvironment TemplateEnvTyping TemplateConversionPar.
+Module TemplateConversion := Conversion TemplateTerm Env TemplateEnvTyping TemplateConversionPar.
 Include TemplateConversion.  
 
 Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = Σ'' ++ Σ }.
@@ -950,7 +950,7 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
 
-Module TemplateTyping <: Typing TemplateTerm TemplateEnvironment TemplateEnvTyping
+Module TemplateTyping <: Typing TemplateTerm Env TemplateEnvTyping
   TemplateConversionPar TemplateConversion.
 
   Definition typing := @typing.
@@ -964,7 +964,7 @@ End TemplateTyping.
 Module TemplateDeclarationTyping :=
   DeclarationTyping
     TemplateTerm
-    TemplateEnvironment
+    Env
     TemplateEnvTyping
     TemplateConversionPar
     TemplateConversion
@@ -1334,7 +1334,7 @@ Proof.
   - simpl. simpl in *.
     destruct d.
     + destruct c; simpl in *.
-      destruct cst_body; simpl in *.
+      destruct cst_body0; simpl in *.
       simpl.
       intros. red in Xg. simpl in Xg.
       specialize (IH (existT _ (Σ, udecl) (existT _ X13 (existT _ _ (existT _ _ (existT _ _ Xg)))))).

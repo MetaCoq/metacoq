@@ -1,14 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses ProofIrrelevance ssreflect.
-From MetaCoq.Template Require Import config Universes utils BasicAst
-     AstUtils UnivSubst.
+From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
-     PCUICCumulativity PCUICPosition PCUICEquality PCUICSigmaCalculus PCUICNameless
+     PCUICCumulativity PCUICPosition PCUICEquality PCUICSigmaCalculus
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
-     PCUICParallelReductionConfluence PCUICWeakeningEnv
-     PCUICClosed PCUICSubstitution PCUICWfUniverses
+     PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICWfUniverses
      PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts.
 
 From Equations Require Import Equations.

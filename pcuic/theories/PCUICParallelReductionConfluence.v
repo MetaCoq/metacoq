@@ -3343,46 +3343,6 @@ Section Rho.
     induction 1; simpl; auto. depelim p => /=; now auto using f_equal.
   Qed.
   
-  Lemma context_assumptions_smash_context Δ Γ :
-  context_assumptions (smash_context Δ Γ) = 
-  context_assumptions Δ + context_assumptions Γ.
-Proof.
-  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto;
-  rewrite IHΓ.
-  - now rewrite context_assumptions_fold.
-  - rewrite context_assumptions_app /=. lia.
-Qed. 
-
-Lemma nth_error_ass_subst_context s k Γ : 
-  (forall n d, nth_error Γ n = Some d -> decl_body d = None) ->
-  forall n d, nth_error (subst_context s k Γ) n = Some d -> decl_body d = None.
-Proof.
-  induction Γ as [|[? [] ?] ?] in |- *; simpl; auto;
-  intros; destruct n; simpl in *; rewrite ?subst_context_snoc in H0; simpl in H0.
-  - noconf H0; simpl.
-    specialize (H 0 _ eq_refl). simpl in H; discriminate.
-  - specialize (H 0 _ eq_refl). simpl in H; discriminate.
-  - noconf H0; simpl. auto.
-  - eapply IHΓ. intros. now specialize (H (S n0) d0 H1).
-    eauto.
-Qed.
-
-Lemma nth_error_smash_context Γ Δ : 
-  (forall n d, nth_error Δ n = Some d -> decl_body d = None) ->
-  forall n d, nth_error (smash_context Δ Γ) n = Some d -> decl_body d = None.
-Proof.
-  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto.
-  - intros. eapply (IHΓ (subst_context [t] 0 Δ)).
-    apply nth_error_ass_subst_context. auto. eauto.
-  - intros. eapply IHΓ. 2:eauto.
-    intros.
-    pose proof (nth_error_Some_length H1). autorewrite with len in H2. simpl in H2.
-    destruct (eq_dec n0 #|Δ|). subst.
-    rewrite nth_error_app_ge in H1. lia. rewrite Nat.sub_diag /= in H1. noconf H1.
-    reflexivity.
-    rewrite nth_error_app_lt in H1; try lia. eauto.
-Qed.
-
   Lemma pred1_subst_consn {Δ Δ' Γ Γ' args0 args1} : 
     pred1_ctx Σ Γ' (rho_ctx Γ) ->
     #|args1| = #|args0| ->

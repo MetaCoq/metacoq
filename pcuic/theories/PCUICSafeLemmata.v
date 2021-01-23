@@ -494,28 +494,30 @@ Section Lemmata.
       eexists. eassumption.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      destruct indn.
       apply inversion_Case in h as hh ; auto.
-      destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
-                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
-      eexists. eassumption.
+      destruct hh as [mdecl [idecl [indices [data ?]]]].
+      destruct data. simpl in t1.
+      eapply validity_term in t1; tas.
+      clear -t1. 
+      todo "case".
+      (* eexists. eassumption. *)
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      destruct indn.
-      apply inversion_Case in h as hh ; auto.
-      destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
-                                 [? [? [? [? [? [? [ht0 [? ?]]]]]]]]]]]]]]].
-      eexists. eassumption.
+      apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
+      todo "case". (*eexists. eassumption.*) 
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
-      destruct indn.
-      apply inversion_Case in h as hh ; auto.
-      destruct hh as [uni [args [mdecl [idecl [ps [pty [btys
-                                 [? [? [? [? [? [? [ht0 [? [? ?]]]]]]]]]]]]]]]].
+      apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
+      todo "case".
+    - todo "case".
+      (*simpl. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct h as [B h].
+      apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
+
       apply All2_app_inv in a as [[? ?] [[? ?] ha]].
       inversion ha. subst.
       intuition eauto. simpl in *.
-      eexists. eassumption.
+      eexists. eassumption.*)
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
       apply inversion_Proj in h
@@ -603,9 +605,8 @@ Section Lemmata.
   Proof.
     intros Γ u v π h.
     eapply red_it_mkLambda_or_LetIn.
-    eapply red_context.
-    rewrite app_context_nil_l.
-    assumption.
+    eapply red_context_zip.
+    now rewrite app_context_nil_l.
   Qed.
 
   Lemma cumul_zippx :
@@ -1139,7 +1140,7 @@ Section Lemmata.
       apply andb_false_r.
     - simpl. rewrite let_free_context_app. simpl.
       rewrite ih. rewrite andb_true_r. reflexivity.
-  Qed.
+  Qed.  
 
   Fixpoint let_free_stack (π : stack) :=
     match π with
@@ -1151,9 +1152,12 @@ Section Lemmata.
     | CoFix f n args ρ => let_free_stack ρ
     | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ => let_free_stack ρ
     | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ => let_free_stack ρ
-    | Case_p indn c brs ρ => let_free_stack ρ
-    | Case indn p brs ρ => let_free_stack ρ
-    | Case_brs indn p c m brs1 brs2 ρ => let_free_stack ρ
+    | Case_pars ci ppars1 ppars2 puinst pctx pret c brs ρ => let_free_stack ρ
+    | Case_p ci ppars puinst pctx c brs ρ =>
+      let_free_context pctx && let_free_stack ρ
+    | Case ci p brs ρ => let_free_stack ρ
+    | Case_brs ci p c brctx brs1 brs2 ρ => 
+      let_free_context brctx && let_free_stack ρ
     | Proj p ρ => let_free_stack ρ
     | Prod_l na B ρ => let_free_stack ρ
     | Prod_r na A ρ => let_free_stack ρ
@@ -1195,6 +1199,10 @@ Section Lemmata.
       induction l in n |- *.
       + simpl. reflexivity.
       + simpl. apply IHl.
+    - simpl. rewrite let_free_context_app.
+      cbn in h. move/andP: h => [-> h]. now apply IHπ.
+    - simpl. rewrite let_free_context_app.
+      cbn in h. move/andP: h => [-> h]. now apply IHπ.
   Qed.
 
   Lemma cored_red_cored :
@@ -1278,7 +1286,7 @@ Section Lemmata.
       red Σ Γ (zipc t π) (zipc u π).
   Proof.
     intros Γ t u π h.
-    do 2 zip fold. eapply red_context. assumption.
+    do 2 zip fold. eapply red_context_zip. assumption.
   Qed.
 
   Lemma welltyped_zipc_zipp :
@@ -1365,12 +1373,12 @@ Section Lemmata.
   Qed.
 
   Lemma Case_Construct_ind_eq :
-    forall {Γ ind ind' npar pred i u brs args},
-      welltyped Σ Γ (tCase (ind, npar) pred (mkApps (tConstruct ind' i u) args) brs) ->
-      ind = ind'.
+    forall {Γ ci ind' pred i u brs args},
+      welltyped Σ Γ (tCase ci pred (mkApps (tConstruct ind' i u) args) brs) ->
+      ci.(ci_ind) = ind'.
   Proof.
     destruct hΣ as [wΣ].
-    intros Γ ind ind' npar pred i u brs args [A h].
+    intros Γ ci ind' pred i u brs args [A h].
     apply PCUICInductiveInversion.invert_Case_Construct in h; auto.
   Qed.
 

@@ -381,7 +381,7 @@ Proof.
   - reflexivity.
 Qed.
 
-Lemma weakening_red1 `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
+Lemma weakening_red1 `{cf:checker_flags} {Σ} Γ Γ' Γ'' M N :
   wf Σ ->
   red1 Σ (Γ ,,, Γ') M N ->
   red1 Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
@@ -393,7 +393,7 @@ Proof.
   - eapply on_free_vars_true. 
 Qed.
 
-Lemma weakening_red `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
+Lemma weakening_red `{cf:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ ->
   red Σ (Γ ,,, Γ') M N ->
   red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
@@ -403,6 +403,12 @@ Proof.
   - reflexivity.
   - etransitivity; eassumption.
 Qed.
+
+Lemma weakening_red_0 {cf} {Σ} {wfΣ : wf Σ} Γ Γ' M N n :
+  n = #|Γ'| ->
+  red Σ Γ M N ->
+  red Σ (Γ ,,, Γ') (lift0 n M) (lift0 n N).
+Proof. now move=> ->; apply (weakening_red Σ Γ [] Γ'). Qed.
 
 Fixpoint lift_stack n k π :=
   match π with

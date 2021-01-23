@@ -17,13 +17,7 @@ Section CtxReduction.
   Context {cf : checker_flags}.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
-
-  Lemma weakening_red_0 Γ Γ' M N n :
-    n = #|Γ'| ->
-    red Σ Γ M N ->
-    red Σ (Γ ,,, Γ') (lift0 n M) (lift0 n N).
-  Proof. now move=> ->; apply (weakening_red Σ Γ [] Γ'). Qed.
-
+  
   Lemma red_abs_alt Γ na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M) N N' ->
                                  red Σ Γ (tLambda na M N) (tLambda na M' N').
   Proof.

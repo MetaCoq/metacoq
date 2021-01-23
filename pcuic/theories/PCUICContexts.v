@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From Coq Require Import CRelationClasses ProofIrrelevance.
-From MetaCoq.Template Require Import config Universes utils BasicAst
-     AstUtils UnivSubst.
+From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICInversion PCUICCumulativity PCUICReduction
@@ -11,7 +10,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSigmaCalculus PCUICSubstitution PCUICUnivSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils.
-
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.

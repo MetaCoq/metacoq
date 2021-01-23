@@ -671,14 +671,6 @@ Proof.
   now rewrite app_context_assoc in wfcodom.
 Qed.
 
-Lemma subst_instance_nil {A} {ua : UnivSubst A} u (xs : list A) : 
-  subst_instance u [] = [].
-Proof. reflexivity. Qed.
-
-Lemma subst_instance_cons {A} {ua : UnivSubst A} u x xs : 
-  subst_instance u (x :: xs) = subst_instance u x :: subst_instance u xs.
-Proof. reflexivity. Qed.
-
 Lemma spine_subst_inst {cf:checker_flags} Σ ext u Γ i s Δ  :
   wf Σ.1 ->
   wf_global_ext Σ.1 ext ->

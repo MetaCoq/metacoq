@@ -5,6 +5,14 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Instance subst_instance_list A `{UnivSubst A} : UnivSubst (list A) :=
   fun u => List.map (subst_instance u).
 
+Lemma subst_instance_nil {A} {ua : UnivSubst A} u (xs : list A) : 
+  subst_instance u [] = [].
+Proof. reflexivity. Qed.
+
+Lemma subst_instance_cons {A} {ua : UnivSubst A} u x (xs : list A) : 
+  subst_instance u (x :: xs) = subst_instance u x :: subst_instance u xs.
+Proof. reflexivity. Qed.
+
 Lemma subst_instance_lift u c n k :
   subst_instance u (lift n k c) = lift n k (subst_instance u c).
 Proof.

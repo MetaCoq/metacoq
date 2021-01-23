@@ -4,6 +4,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
      PCUICContextConversion PCUICValidity.
 
+(* Should now be subsumed by renaming proof. Unused anyway. *)     
+(*
 Section Alpha.
   Context {cf:checker_flags}.
 
@@ -738,3 +740,4 @@ Section Alpha.
 End Alpha.
 
 Infix "≡Γ" := upto_names_ctx (at level 60).
+*)

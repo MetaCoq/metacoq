@@ -756,7 +756,7 @@ Section Wcbv.
       + specialize (IHev1 _ ev'1).
         noconf IHev1.
         exfalso.
-        rewrite isFixApp_mkApps in i by easy.
+        rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
     - depelim ev'; try go.
@@ -778,7 +778,7 @@ Section Wcbv.
       + specialize (IHev1 _ ev'1).
         noconf IHev1.
         exfalso.
-        rewrite isFixApp_mkApps in i by easy.
+        rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
     - depelim ev'; try go.
@@ -806,12 +806,12 @@ Section Wcbv.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         exfalso.
-        rewrite isFixApp_mkApps in i by easy.
+        rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         exfalso.
-        rewrite isFixApp_mkApps in i by easy.
+        rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
       + specialize (IHev1 _ ev'1); noconf IHev1.

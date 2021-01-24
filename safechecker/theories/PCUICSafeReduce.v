@@ -198,9 +198,6 @@ Section Reduce.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
 
-  Derive NoConfusion NoConfusionHom for option.
-  Derive NoConfusion NoConfusionHom for context_decl.
-
   Existing Instance Req_refl.
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.

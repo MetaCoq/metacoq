@@ -39,7 +39,7 @@ Section EqualityDec.
     eq_termp_napp pb Σ napp t u.
   Proof.
     pose proof hΣ'.
-    apply eqb_term_upto_univ_impl.
+    apply PCUICEquality.eqb_term_upto_univ_impl.
     - intros u1 u2.
       eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
       + sq. now eapply wf_ext_global_uctx_invariants.
@@ -172,7 +172,7 @@ Section EqualityDec.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.
-    eapply All2_fold_All2.
+    eapply PCUICContextRelation.All2_fold_All2.
     eapply All2_impl; try eassumption.
     cbn. apply eqb_decl_spec.
   Qed.

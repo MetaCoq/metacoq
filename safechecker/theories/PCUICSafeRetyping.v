@@ -82,7 +82,7 @@ Section TypeOf.
   Proof.
     intros H.
     destruct hΣ. destruct Hφ.
-    apply validity in H; auto. destruct H as [s tyT].
+    apply validity_term in H; auto. destruct H as [s tyT].
     econstructor; eauto.
   Qed.
 End TypeOf.
@@ -192,6 +192,15 @@ Section TypeOf.
     congruence.
   Qed.
 
+  Lemma case_inversion_data_cty {Γ ci p c brs mdecl idecl indices} :
+    case_inversion_data Σ Γ ci p c brs mdecl idecl indices ->
+    Σ ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices).
+  Proof.
+    now intros [].
+  Qed.
+
+  From MetaCoq.PCUIC Require Import PCUICContextConversion.
+
   Obligation Tactic := idtac.
 
   Equations? infer (Γ : context) (t : term) (wt : welltyped Σ Γ t) : principal_type Σ Γ t 
@@ -240,9 +249,10 @@ Section TypeOf.
           | ret None => ! };
       | ret (TypeError e) => ! };
 
-    infer Γ (tCase (ind, par) p c brs) wt with inspect (reduce_to_ind hΣ Γ (infer Γ c _) _) :=
+    infer Γ (tCase ci p c brs) wt with inspect (reduce_to_ind hΣ Γ (infer Γ c _) _) :=
       { | ret (Checked indargs) =>
-          ret (mkApps p (List.skipn par indargs.π2.π2.π1 ++ [c]));
+          let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
+          ret (mkApps ptm (List.skipn ci.(ci_npar) indargs.π2.π2.π1 ++ [c]));
         | ret (TypeError _) => ! };
 
     infer Γ (tProj (ind, n, k) c) wt with inspect (@lookup_ind_decl ind) :=
@@ -350,7 +360,7 @@ Section TypeOf.
         eapply cumul_red_l_inv; eauto.
         eapply cumul_Prod_Prod_inv in X as [_ [Ha _]]; auto.
         eapply type_Cumul'; eauto.
-        eapply validity in Htty; auto.
+        eapply validity_term in Htty; auto.
         eapply isType_tProd in Htty; pcuic.
         eapply conv_cumul. now symmetry.
       * intros T' (? & ? & ? & ? & ? & ?)%inversion_App; auto.
@@ -360,7 +370,7 @@ Section TypeOf.
         { eapply cumul_red_l_inv; eauto. }
         eapply cumul_Prod_Prod_inv in X as [eqann [Ha Hb]]; auto.
         eapply (substitution_cumul _ Γ [vass x2 x3] []); eauto.
-        eapply validity in t2; pcuic.
+        eapply validity_term in t2; pcuic.
         eapply isType_tProd in t2 as [_ ist]; auto.
         now eapply isType_wf_local in ist. pcuic.
         constructor. constructor.
@@ -421,124 +431,79 @@ Section TypeOf.
       now destruct declc'.
     
     - eapply inversion_Case in HT; auto.
-      destruct HT as (u & args & mdecl & idecl & ps & pty & btys & decli & indp & bcp & Hpty & lebs
-        & isco & Hc & Hbtys & all & cum).
+      destruct HT as (mdecl & idecl & indices & data & cum).
+      eapply case_inversion_data_cty in data.
       eexists; eauto.
-    - simpl. destruct inversion_Case as (u & args & mdecl & idecl & ps & pty & btys & decli & indp & bcp & Hpty & lebs
-        & isco & Hc & Hbtys & all & cum).
+    - cbn. 
+      destruct inversion_Case as (mdecl & idecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]]. simpl.
-      eapply validity in Hty.
+      eapply validity_term in Hty.
       eapply wat_welltyped; auto. sq; auto. auto.
     - simpl in *.
-      destruct inversion_Case as (u & args & mdecl & idecl & ps & pty & btys & decli & indp & bcp & Hpty & lebs
-        & isco & Hc & Hbtys & all & cum).
+      destruct inversion_Case as (mdecl & idecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]].
       simpl in wildcard. destruct reduce_to_ind => //.
       injection wildcard. intros ->. clear wildcard.
       destruct a as [i [u' [l [red]]]].
       simpl.
       eapply type_reduction in Hty; eauto.
+      have Hc := case_inversion_data_cty data.
       pose proof (Hp _ Hc).
-      assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ind u) args).
+      assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) (pparams p ++ indices)).
       { eapply cumul_red_l_inv; eauto. }
       eapply cumul_Ind_Ind_inv in X0 as [[eqi Ru] cl]; auto.
+      assert (conv_indices : All2 (fun x y : term => Σ;;; Γ |- x = y) (indices ++ [c])
+        (skipn (ci_npar ci) l ++ [c])).
+      { eapply All2_app. 2:repeat (constructor; auto).
+        eapply All2_skipn in cl. instantiate (1:=(ci_npar ci)) in cl.
+        symmetry in cl. rewrite skipn_all_app_eq in cl.
+        destruct data.
+        now rewrite (wf_predicate_length_pars w0).
+        exact cl. }
       sq; split; simpl.
-      * pose proof (Reflect.eqb_eq i ind eqi) as ->.
-        simpl in *. subst par.
-        pose proof (validity_term _ Hc).
-        eapply (isType_mkApps_Ind w decli) in X0 as [parsubst [argsubst [[sppars spargs] cu]]]; pcuic.
-        pose proof (PCUICContexts.context_subst_length2 sppars).
-        len in H.
-        set (oib := (on_declared_inductive w in decli).2) *.
-        eapply type_Cumul'. econstructor; eauto.
-        assert (Σ ;;; Γ |- c : mkApps (tInd ind u) (firstn (ind_npars mdecl) args ++  skipn (ind_npars mdecl) l)).
-        { eapply type_Cumul'. eauto.
-          + exists (subst_instance_univ u (ind_sort oib)).
-            eapply type_mkApps. econstructor; pcuic.
-            eapply wf_arity_spine_typing_spine; eauto.
-            constructor. 
-            unshelve epose proof (on_inductive_inst _ _ _ _ _ _ w ltac:(pcuic) _ _ oib cu); eauto.
-            eapply on_declared_inductive; eauto.
-            rewrite oib.(ind_arity_eq) -it_mkProd_or_LetIn_app subst_instance_it_mkProd_or_LetIn.
-            eapply isType_weaken; eauto. pcuic.
-            rewrite oib.(ind_arity_eq) subst_instance_it_mkProd_or_LetIn.
-            eapply arity_spine_it_mkProd_or_LetIn; eauto.
-            rewrite subst_instance_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn.
-            simpl. rewrite -(app_nil_r (skipn _ _)).
-            eapply arity_spine_it_mkProd_or_LetIn_smash; eauto.
-            2:{ simpl. constructor; auto. }
-            eapply validity_term in Hty; eauto.
-            unshelve epose proof (isType_mkApps_Ind w decli _ Hty) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
-            eapply (subslet_cumul _ _ _ (smash_context [] (subst_context parsubst' 0 
-              (subst_instance u' (ind_indices oib))))); pcuic.
-            eapply wf_local_smash_end; eauto. eapply spargs'.
-            eapply wf_local_smash_end; eauto. eapply spargs.  
-            eapply inductive_cumulative_indices; eauto.
-            destruct decli as [declm ?]. 
-            apply (weaken_lookup_on_global_env' _ _ _ w declm).
-            now eapply All2_firstn.
-            eapply spine_subst_smash in spargs'.
-            eapply spargs'. auto.
-
-          + transitivity (mkApps (tInd ind u) l).
-            constructor. eapply PCUICEquality.eq_term_upto_univ_napp_mkApps.
-            now rewrite Nat.add_0_r; constructor.
-            eapply All2_refl. intros. reflexivity. 
-            rewrite -{1}(firstn_skipn (ind_npars mdecl) l). eapply conv_cumul, mkApps_conv_args; auto.
-            eapply All2_app. now eapply All2_firstn. eapply All2_refl; eauto. }
-        exists ps.
-        eapply type_mkApps; eauto.
-        eapply wf_arity_spine_typing_spine; eauto.
-        split. now eapply validity in Hpty.
-        pose proof (validity_term w X0) as vt; auto.
-        eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in bcp as [parsubst' [csubst ->]]; auto.
-        pose proof (PCUICContexts.context_subst_fun sppars csubst). subst parsubst'.
-        unshelve epose proof (isType_mkApps_Ind w decli _ vt) as [parsubst' [argsubst' [[spars' spargs'] ?]]]; pcuic.
-        change (ind_indices (on_declared_inductive w with decli).2) (ind_indices oib) in spargs'.
-        subst oib; destruct on_declared_inductive as [onmind oib].
-        rewrite onmind.(onNpars) in H.
-        pose proof (firstn_length_le_inv _ _ H).
-        pose proof (subslet_length spargs'). len in H1.
-        rewrite skipn_all_app_eq in spargs'. now rewrite H.
-        rewrite (firstn_app_left _ 0) in spars'; try lia.
-        simpl in spars'. rewrite app_nil_r in spars'.
-        pose proof (PCUICContexts.context_subst_fun spars' csubst). subst parsubst'.
-        eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn; eauto.
-        + simpl.
-          econstructor. 2:constructor.
-          rewrite subst_mkApps /= map_app.
-          rewrite -H1.
-          rewrite map_map_compose map_subst_lift_id.
-          relativize (to_extended_list _).
-          erewrite (spine_subst_subst_to_extended_list_k spargs').
-          2:{ rewrite to_extended_list_k_subst. simpl. 
-              eapply PCUICSubstitution.map_subst_instance_to_extended_list_k. }
-          assumption.
-        + simpl.
-          eapply conv_cumul.
+      * pose proof (validity_term _ Hc).
+        destruct data.
+        econstructor. econstructor; eauto.
+        instantiate (1 := ps).
+        + assert (Σ ;;; Γ |- it_mkLambda_or_LetIn (pcontext p) (preturn p) : 
+          it_mkProd_or_LetIn (pcontext p) (tSort ps)).
+          eapply type_it_mkLambda_or_LetIn. eauto.
+          eapply context_conversion; tea. 
+          now eapply conv_context_sym.
+          eapply PCUICGeneration.type_mkApps; tea.
+          eapply wf_arity_spine_typing_spine; auto.
+          eapply validity_term in X1; auto.
+          split; pcuic.
+          todo "case".
+        + eapply conv_cumul.
           eapply mkApps_conv_args; auto.
-          eapply All2_app. 2:repeat (constructor; auto).
-          eapply All2_skipn. now symmetry in cl.
+          rewrite /ptm. eapply it_mkLambda_or_LetIn_conv; tea.
+          now eapply PCUICContextConversion.conv_context_sym.
+          reflexivity.
       * intros T'' Hc'.
-        eapply inversion_Case in Hc' as (u'' & args' & mdecl' & idecl' & ps' & pty'
-           & btys' & decli' & indp' & bcp' & Hpty' & lebs' & isco' & Hc' & Hbtys' & all' & cum'); auto.
+        eapply inversion_Case in Hc' as (mdecl' & idecl' & indices' & data' & cum'); auto.
         etransitivity. simpl in cum'. 2:eassumption.
         eapply conv_cumul, mkApps_conv_args; auto.
+        todo "case".
         eapply All2_app. 2:repeat (constructor; auto).
-        eapply All2_skipn.
-        specialize (Hp _ Hc').
-        assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ind u'') args').
+        have Hc' := (case_inversion_data_cty data'). specialize (Hp _ Hc').
+        assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) 
+          (pparams p ++ indices')).
         { eapply cumul_red_l_inv; eauto. }
         eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; auto.
+        eapply All2_skipn in cl'. instantiate (1 := ci_npar ci) in cl'.
+        rewrite skipn_all_app_eq // in cl'.
+        destruct data.
+        now rewrite (wf_predicate_length_pars w0).
       
     - simpl in wildcard1.
-      destruct inversion_Case as (u & args & mdecl & idecl & ps & pty & btys & decli & indp & bcp & Hpty & lebs
-        & isco & Hc & Hbtys & all & cum).
+      destruct inversion_Case as (mdecl & idecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]]. simpl.
-      destruct validity as [_ i]. simpl in wildcard1.
-      specialize (Hp _ Hc).
+      destruct validity_term as [Hi i]. simpl in wildcard1.
+      specialize (Hp _ (case_inversion_data_cty data)).
       eapply invert_cumul_ind_r in Hp as [ui' [l' [red [Ru ca]]]]; auto.
-      symmetry in wildcard1; eapply reduce_to_ind_complete in wildcard1 => //.
+      symmetry in wildcard1; 
+      eapply reduce_to_ind_complete in wildcard1 => //.
       eauto.
 
     - eapply inversion_Proj in HT as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
@@ -546,7 +511,7 @@ Section TypeOf.
       eexists; eauto.
     - simpl; destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
-      eapply validity in Hc'; auto.
+      eapply validity_term in Hc'; auto.
       eapply wat_welltyped; auto. sq; auto.
     - simpl in *. destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
@@ -566,7 +531,7 @@ Section TypeOf.
       pose proof (@Reflect.eqb_eq inductive _). apply H0 in eqi'. subst ind.
       destruct (declared_projection_inj declp H) as [_ [_ ->]].
       sq. split; auto.
-      * econstructor; eauto. now rewrite (All2_length _ _ cl').
+      * econstructor; eauto. now rewrite (All2_length cl').
       * intros.
         eapply inversion_Proj in X0 as (u'' & mdecl' & idecl' & pdecl'' & args' & 
             declp' & Hc''' & Hargs' & cum'); auto.
@@ -578,11 +543,11 @@ Section TypeOf.
         { eapply cumul_red_l_inv; eauto. }
         eapply cumul_Ind_Ind_inv in X0 as [[eqi'' Ru''] cl'']; auto.
         assert (consistent_instance_ext Σ (ind_universes mdecl) u').
-        { eapply validity in Hc'; eauto.
+        { eapply validity_term in Hc'; eauto.
           destruct Hc' as [s Hs].
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         assert (consistent_instance_ext Σ (ind_universes mdecl) u'').
-          { eapply validity in Hc'''; eauto.
+          { eapply validity_term in Hc'''; eauto.
             destruct Hc''' as [s Hs]; auto.
             eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         transitivity (subst0 (c :: List.rev l) (subst_instance u'' pdecl''.2)); cycle 1.
@@ -596,20 +561,20 @@ Section TypeOf.
         constructor; auto. now apply All2_rev.
         eapply PCUICWeakening.weaken_wf_local; eauto.
         eapply PCUICWeakening.weaken_wf_local; pcuic.
-        eapply (wf_projection_context _ (p:= (i, n, k))); pcuic.
+        eapply (wf_projection_context _ (p:= (i, n, k))); eauto.
         eapply (substitution_cumul _ Γ (projection_context mdecl idecl i u') []); auto.
+        cbn -[projection_context].
         eapply PCUICWeakening.weaken_wf_local; pcuic.
-        eapply PCUICWeakening.weaken_wf_local; pcuic.
-        eapply (wf_projection_context _ (p:=(i, n, k))); pcuic.
+        eapply (wf_projection_context _ (p:=(i, n, k))); eauto.
         eapply (projection_subslet _ _ _ _ _ _ (i, n, k)); eauto.
         simpl. eapply validity; eauto.
-        rewrite -(All2_length _ _ cl'') in Hargs'. rewrite Hargs' in Ru''.
+        rewrite -(All2_length cl'') in Hargs'. rewrite Hargs' in Ru''.
         unshelve epose proof (projection_cumulative_indices w declp _ H1 H2 Ru'').
         { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ w (proj1 (proj1 declp))). }
         eapply PCUICWeakeningEnv.on_declared_projection in declp; eauto.
         eapply weaken_cumul in X0; eauto.
         eapply PCUICClosed.closed_wf_local; eauto.
-        eapply (wf_projection_context _ (p:= (i, n, k))); pcuic.
+        eapply (wf_projection_context _ (p:= (i, n, k))); eauto.
         len. simpl. len. simpl.
         rewrite declp.(onNpars).
         rewrite PCUICClosed.closedn_subst_instance.

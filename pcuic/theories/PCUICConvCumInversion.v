@@ -146,12 +146,12 @@ Section fixed.
     clear -a0 a2 a3.
     induction a0 in brs', brs'1, a2, a3 |- *;
       depelim a2; depelim a3; [constructor|].
-    constructor; eauto.
     destruct p, p0, r.
-    split; [try congruence|].
+    constructor; eauto.
     + todo "case".
-    + apply conv_alt_red. exists (bbody y), (bbody y0).
-      splits; eauto. todo "case".
+    + todo "case".
+      (*apply conv_alt_red. exists (bbody y), (bbody y0).
+      splits; eauto. todo "case".*)
 
   Qed.
   

@@ -9,7 +9,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeLemmata PCUICSubstitution PCUICValidity
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
-     PCUICWeakeningEnv PCUICContexts.
+     PCUICWeakeningEnv PCUICContexts PCUICContextConversion.
+
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -191,15 +192,6 @@ Section TypeOf.
     red in declm. rewrite declm in e1. noconf e1.
     congruence.
   Qed.
-
-  Lemma case_inversion_data_cty {Γ ci p c brs mdecl idecl indices} :
-    case_inversion_data Σ Γ ci p c brs mdecl idecl indices ->
-    Σ ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices).
-  Proof.
-    now intros [].
-  Qed.
-
-  From MetaCoq.PCUIC Require Import PCUICContextConversion.
 
   Obligation Tactic := idtac.
 

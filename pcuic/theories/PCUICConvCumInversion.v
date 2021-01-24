@@ -125,9 +125,7 @@ Section fixed.
     ∥ p = p' ×
       conv_predicate Σ Γ motive motive' ×
       Σ;;; Γ |- discr = discr' ×
-      All2 (fun br br' =>
-        conv_context Σ (Γ ,,, bcontext br) (Γ ,,, bcontext br') × 
-        Σ ;;; (Γ ,,, bcontext br) |- bbody br = bbody br') brs brs'∥.
+      conv_brs Σ Γ brs brs'∥.
   Proof.
     intros conv whl whr.
     depelim whl; solve_discr.

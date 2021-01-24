@@ -1405,11 +1405,14 @@ Section Inversions.
     - simpl. apply IHcuv.
       now apply App_conv.
   Qed.
-
-  Definition conv_predicate Σ Γ p p' :=
+  
+  Definition conv_context_rel Γ Δ Δ' :=
+    All2_fold (fun Γ' _ => All_decls_alpha (fun x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
+  
+  Definition conv_predicate Γ p p' :=
     All2 (conv Σ Γ) p.(pparams) p'.(pparams) ×
     R_universe_instance (eq_universe Σ) (puinst p) (puinst p')
-    × conv_context Σ (Γ ,,, pcontext p) (Γ ,,, pcontext p')
+    × conv_context_rel Γ (pcontext p) (pcontext p')
     × conv Σ (Γ ,,, pcontext p) (preturn p) (preturn p').
 
   Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
@@ -1444,8 +1447,23 @@ Section Inversions.
       + apply h.
     - apply All2_fold_app_inv in h as [] => //.
       pose proof (length_of h). len in H. lia.
-  Qed.  
+  Qed.
   
+  Lemma conv_context_rel_app {Γ Δ Δ'} :
+    conv_context_rel Γ Δ Δ' <~> conv_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
+  Proof.
+    split; intros h.
+    + eapply All2_fold_app => //.
+      * now apply (length_of h).
+      * reflexivity.
+      * eapply All2_fold_impl; tea.
+        intros ???? []; constructor; auto.
+    + eapply All2_fold_app_inv in h as [].
+      2:{ move: (length_of h). len; lia. }
+      eapply All2_fold_impl; tea => /=.
+      intros ???? []; constructor; auto.
+  Qed.
+
   Lemma conv_context_red_context Γ Γ' Δ Δ' :
     conv_context Σ (Γ ,,, Δ) (Γ' ,,, Δ') ->
     #|Γ| = #|Γ'| ->
@@ -1482,7 +1500,7 @@ Section Inversions.
 
   Lemma conv_Case_p :
     forall Γ ci c brs p p',
-    conv_predicate Σ Γ p p' ->
+    conv_predicate Γ p p' ->
     Σ ;;; Γ |- tCase ci p c brs = tCase ci p' c brs.
   Proof.
     intros Γ ci c brs p p' [cpars [cu [cctx cret]]].
@@ -1530,6 +1548,7 @@ Section Inversions.
     }
    transitivity (tCase ci (set_pcontext (set_preturn (set_puinst (set_pparams pred pparams0) puinst0) preturn0) pcontext0) c brs).
    { clear -wfΣ cctx. rewrite /pred /set_puinst /set_pparams /set_pcontext; cbn.
+     apply conv_context_rel_app in cctx.
      eapply conv_context_red_context in cctx as [Δ [Δ' [[redl redr] eqc]]] => //.
      transitivity (tCase ci {|
      pparams := pparams0;
@@ -1603,14 +1622,14 @@ Section Inversions.
         + eapply All2_same; split; reflexivity.
   Qed.
 
-  Notation conv_brs Σ Γ :=
-    (All2 (fun u v => 
-      conv_context Σ (Γ ,,, bcontext u) (Γ ,,, bcontext v) × 
-      Σ ;;; (Γ ,,, bcontext u) |- bbody u = bbody v)).
+  Definition conv_brs Γ :=
+    All2 (fun u v =>
+      conv_context_rel Γ (bcontext u) (bcontext v) × 
+      Σ ;;; Γ ,,, bcontext u |- bbody u = bbody v).
 
   Lemma conv_Case_brs :
     forall Γ indn p c brs brs',
-      conv_brs Σ Γ brs brs' ->
+      conv_brs Γ brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p c brs'.
   Proof.
     intros Γ ci p c brs brs' h.
@@ -1619,14 +1638,16 @@ Section Inversions.
     - reflexivity.
     - etransitivity.
       + eassumption.
-      + apply conv_Case_one_brs. assumption.
+      + apply conv_Case_one_brs.
+        eapply OnOne2_impl; tea => /=.
+        now move=> ? ? []; move/conv_context_rel_app.
   Qed.
 
   Lemma conv_Case :
     forall Γ indn p p' c c' brs brs',
-      conv_predicate Σ Γ p p' ->
+      conv_predicate Γ p p' ->
       Σ ;;; Γ |- c = c' ->
-      conv_brs Σ Γ brs brs' ->
+      conv_brs Γ brs brs' ->
       Σ ;;; Γ |- tCase indn p c brs = tCase indn p' c' brs'.
   Proof.
     intros Γ [ind n] p p' c c' brs brs' hp hc hbrs.
@@ -2655,9 +2676,6 @@ Proof.
       apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
 Qed.
 
-Definition conv_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-  All2_fold (on_decls (fun Γ' _ x y => Σ ;;; Γ ,,, Γ' |- x = y)) Δ Δ'.
-
 Lemma cumul_ctx_subst_instance {cf:checker_flags} {Σ} Γ Δ u u' :
   wf Σ.1 ->
   wf_local Σ Γ ->
@@ -2935,11 +2953,11 @@ Qed.
 Lemma conv_ctx_subst {cf:checker_flags} Σ Γ Γ' Δ Δ' s s' :
   wf Σ.1 ->
   wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
-  conv_ctx_rel Σ (Γ ,,, Γ') Δ Δ' ->
+  conv_context_rel Σ (Γ ,,, Γ') Δ Δ' ->
   All2 (conv Σ []) s s' ->
   subslet Σ [] s Γ ->
   subslet Σ [] s' Γ ->
-  conv_ctx_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
+  conv_context_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
 Proof.
   intros wfΣ wf. induction 1.
   - simpl. constructor.
@@ -2948,7 +2966,7 @@ Proof.
     depelim wf.
     * specialize (IHX wf Hs subs subs').
       constructor; auto.
-      depelim p; constructor; cbn.
+      depelim p; constructor; cbn; auto.
       epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
       rewrite app_context_nil_l app_context_assoc in X0.
       specialize (X0 wf c).
@@ -3085,6 +3103,57 @@ Proof.
       rewrite app_context_length; now move/andP: wfd => /=; move/andP: wfd' => /=.
 Qed.
 
+Local Open Scope sigma_scope.
+From MetaCoq.PCUIC Require Import PCUICParallelReduction.
+
+(* Lemma clos_rt_image {A B} (R : A -> A -> Type) (f g : B -> A) x y: 
+  (forall x, R (f x) (g x)) ->
+  (forall x, R (f x) (g x)) ->
+  clos_refl_trans (fun x y => R (f x) (g y)) x y ->
+  clos_refl_trans R (f x) (g y).
+Proof.
+  intros Hf. induction 1; try solve [econstructor; eauto].
+  * econstructor 3. 2:tea.
+    econstructor 3; tea.
+    now rewrite -Hf.
+Qed. *)
+
+Lemma strong_substitutivity_clos_rt {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ s t} σ τ :
+  ctxmap Γ Δ σ ->
+  ctxmap Γ Δ τ ->
+  pred1_subst Σ Γ Δ Δ σ τ ->
+  clos_refl_trans (pred1 Σ Γ Γ) s t ->
+  clos_refl_trans (pred1 Σ Δ Δ) s.[σ] t.[τ].
+Proof.
+  intros ctxm ctxm' ps h.
+  induction h in σ, τ, ctxm, ctxm', ps |- *.
+  * constructor 1.
+    now eapply strong_substitutivity.
+  * eapply strong_substitutivity in ps; tea.
+    2:eapply pred1_refl.
+    constructor. apply ps.
+  * econstructor 3.
+    + eapply IHh1; tea.
+    + eapply IHh2; tea.
+      intros h.
+      split. 
+      - eapply pred1_refl.
+      - destruct option_map as [[]|] => //.
+Qed.
+(*
+Lemma red_strong_substitutivity {cf:checker_flags} {Σ} {wfΣ : wf Σ} Γ Δ s t σ τ :
+  red Σ Γ s t ->
+  ctxmap Γ Δ σ ->
+  ctxmap Γ Δ τ ->
+  (forall x, red Σ Γ (σ x) (τ x)) ->
+  red Σ Δ s.[σ] t.[τ].
+Proof.
+  intros r ctxm ctxm' IH.
+  eapply red_pred in r; eauto.
+  eapply (strong_substitutivity_clos_rt σ τ) in r; tea.
+  - eapply pred_red => //.
+  - intros x.
+*)
 Lemma red_rel_all {cf:checker_flags} Σ Γ i body t :
   wf Σ ->
   option_map decl_body (nth_error Γ i) = Some (Some body) ->

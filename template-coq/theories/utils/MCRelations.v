@@ -5,6 +5,10 @@ Require Import CRelationClasses.
 
 Infix "<~>" := iffT (at level 90).
 
+(** This allow to use implicit projections for move/ on "<~>" lemmas *)
+Hint View for move/ fst|2.
+Hint View for move/ snd|2.
+
 Notation "'precompose'" := (fun R f x y => R (f x) (f y)) (only parsing).
 
 Definition on_rel {A B} (R : A -> A -> Prop) (f : B -> A) : B -> B -> Prop :=

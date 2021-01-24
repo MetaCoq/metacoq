@@ -8,6 +8,13 @@ Ltac pcuic :=
   try repeat red; cbn in *;
    try (solve [ intuition auto; eauto with pcuic || (try lia || congruence) ]).
 
+Lemma All2_fold_All2 (P : context_decl -> context_decl -> Type) Γ Δ : 
+  All2_fold (fun _ _ => P) Γ Δ <~>
+  All2 P Γ Δ.
+Proof.
+  split; induction 1; simpl; constructor; auto.
+Qed.
+ 
 Lemma All2_fold_refl P : (forall Δ x, P Δ Δ x x) ->
   forall Δ, All2_fold P Δ Δ.
 Proof.

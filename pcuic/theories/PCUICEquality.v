@@ -1264,77 +1264,6 @@ Proof.
 Qed.
 
 (*Lemma eqb_context_reflect ctx ctx' : reflectT (eq_context_gen false (eq_term_up)) *)
-(*
-Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp :
-  RelationClasses.subrelation equ Re ->
-  RelationClasses.subrelation lequ Rle ->
-  subrelation (eqb_term_upto_univ_napp Σ equ lequ napp) (eq_term_upto_univ_napp Σ Re Rle napp).
-Proof.
-  intros he hle t t'.
-  induction t in t', lequ, Rle, hle, napp |- * using term_forall_list_ind.
-  all: destruct t'; try discriminate 1. all: cbn -[eqb].
-  - eqspec; [intros _|discriminate]. constructor.
-  - eqspec; [intros _|discriminate]. constructor.
-  - eqspec; [|discriminate]. constructor.
-    cbn in H. apply forallb2_All2 in H.
-    eapply All2_impl'; tea.
-    eapply All_impl; tea. simpl. eauto.
-  - constructor; eauto.
-  - intro. rtoProp. constructor; eauto.
-    now apply eqb_annot_spec.
-  - intro. rtoProp. constructor; eauto.
-    now apply eqb_annot_spec.
-  - intro. rtoProp. constructor; eauto.
-    now apply eqb_annot_spec.
-  - intro. rtoProp. constructor; eauto.
-  - unfold kername in *. eqspec; [|discriminate].
-    intro. rtoProp. constructor; eauto.
-    apply forallb2_Forall2 in H0.
-    eapply Forall2_impl; tea; eauto.
-  - unfold kername in *. eqspec; [|discriminate].
-    intro. rtoProp. constructor; eauto.
-    eapply compare_global_instance_impl; eauto.
-  - unfold kername in *. eqspec; [|discriminate].
-    eqspec; [|discriminate].
-    intro. simpl in H.
-    constructor. eapply compare_global_instance_impl; eauto.
-  - eqspec; [|discriminate]. simpl.
-    unfold eqb_predicate, eqb_predicate_gen. intro. rtoProp.
-    econstructor; eauto.
-    repeat split.
-    * apply forallb2_All2 in H. solve_all.
-    * apply forallb2_Forall2 in H4. eapply Forall2_impl; eauto.
-    * apply forallb2_Forall2 in H3. eapply Forall2_All2.
-      eapply Forall2_impl; eauto. simpl.
-      intros x y eqb. unfold eqb_binder_annot in eqb.
-      destruct Classes.eq_dec => //.
-    * destruct X. eapply e; eauto.
-    * apply forallb2_All2 in H0.
-      eapply All2_impl'; tea.
-      red in X. eapply All_impl; tea.
-      cbn -[eqb]. intros x X0' y ?. rtoProp.
-      apply eqb_annots_spec in H5.
-      split; eauto.
-      eapply Forall2_All2 in H5; eauto.
-  - eqspec; [|discriminate]. intro. constructor; eauto.
-  - eqspec; [|discriminate].
-    econstructor; eauto.
-    cbn -[eqb] in H; apply forallb2_All2 in H.
-    eapply All2_impl'; tea.
-    red in X. eapply All_impl; tea.
-    cbn -[eqb]. intros x X0 y. eqspec; [|rewrite andb_false_r; discriminate].
-    intro. rtoProp. split; tas. split;tas. split; eapply X0; tea.
-    now apply eqb_annot_spec.
-  - eqspec; [|discriminate].
-    econstructor; eauto.
-    cbn -[eqb] in H; apply forallb2_All2 in H.
-    eapply All2_impl'; tea.
-    red in X. eapply All_impl; tea.
-    cbn -[eqb]. intros x X0 y. eqspec; [|rewrite andb_false_r; discriminate].
-    intro. rtoProp. split; tas. split;tas. split; eapply X0; tea.
-    now apply eqb_annot_spec.
-  - eqspec; [|discriminate]. constructor.
-Qed.*)
 
 Lemma forallb2_bcompare_decl_All2_fold
   (P : term -> term -> bool) Γ Δ : 
@@ -1633,6 +1562,18 @@ Proof.
         -- constructor. intro bot. apply f.
            inversion bot. subst. inversion X0. subst. apply X2.
   - cbn - [eqb]. eqspecs. do 2 constructor.
+Qed.
+
+Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp :
+  RelationClasses.subrelation equ Re ->
+  RelationClasses.subrelation lequ Rle ->
+  RelationClasses.subrelation equ Rle ->
+  subrelation (eqb_term_upto_univ_napp Σ equ lequ napp) (eq_term_upto_univ_napp Σ Re Rle napp).
+Proof.
+  intros he hle heqle t t'.
+  case: (reflect_eq_term_upto_univ Σ equ lequ equ lequ) => //; eauto.
+  1-2:eapply reflectT_pred2.
+  intros. eapply eq_term_upto_univ_impl. 5:tea. all:eauto.
 Qed.
 
 Lemma compare_global_instance_refl :

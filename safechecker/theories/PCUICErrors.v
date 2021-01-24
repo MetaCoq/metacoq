@@ -33,16 +33,16 @@ Inductive ConversionError :=
 
 | CaseOnDifferentInd
     (Γ1 : context)
-    (ind : inductive) (par : nat) (p c : term) (brs : list (nat × term))
+    (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
     (Γ2 : context)
-    (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
+    (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
 
 | CaseBranchNumMismatch
-    (ind : inductive) (par : nat)
-    (Γ : context) (p c : term) (brs1 : list (nat × term))
-    (m : nat) (br : term) (brs2 : list (nat × term))
-    (Γ' : context) (p' c' : term) (brs1' : list (nat × term))
-    (m' : nat) (br' : term) (brs2' : list (nat × term))
+    (ci : case_info)
+    (Γ : context) (p : predicate term) (c : term) (brs1 : list (branch term))
+    (m : context) (br : term) (brs2 : list (branch term))
+    (Γ' : context) (p' : predicate term) (c' : term) (brs1' : list (branch term))
+    (m' : context) (br' : term) (brs2' : list (branch term))
 
 | DistinctStuckProj
     (Γ : context) (p : projection) (c : term)
@@ -136,7 +136,8 @@ Definition string_of_conv_pb (c : conv_pb) : string :=
   end.
 
 Definition print_term Σ Γ t :=
-  print_term Σ Γ true false t.
+  let ids := fresh_names Σ [] Γ in
+  print_term Σ ids true false t.
 
 Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with
@@ -164,23 +165,23 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       "\nand\n" ^ print_term Σ Γ2 (tProd na' A2 B2) ^
       "\ndomains are not convertible:\n" ^
       string_of_conv_error Σ e
-  | CaseOnDifferentInd Γ ind par p c brs Γ' ind' par' p' c' brs' =>
+  | CaseOnDifferentInd Γ ci p c brs Γ' ci' p' c' brs' =>
       "The two stuck pattern-matching\n" ^
-      print_term Σ Γ (tCase (ind, par) p c brs) ^
-      "\nand\n" ^ print_term Σ Γ' (tCase (ind', par') p' c' brs') ^
+      print_term Σ Γ (tCase ci p c brs) ^
+      "\nand\n" ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
       "\nare done on distinct inductive types."
   | CaseBranchNumMismatch
-      ind par Γ p c brs1 m br brs2 Γ' p' c' brs1' m' br' brs2' =>
+      ci Γ p c brs1 m br brs2 Γ' p' c' brs1' m' br' brs2' =>
       "The two stuck pattern-matching\n" ^
-      print_term Σ Γ (tCase (ind, par) p c (brs1 ++ (m,br) :: brs2)) ^
+      print_term Σ Γ (tCase ci p c (brs1 ++ {|bcontext:=m; bbody:=br|} :: brs2)) ^
       "\nand\n" ^
-      print_term Σ Γ' (tCase (ind, par) p' c' (brs1' ++ (m',br') :: brs2')) ^
+      print_term Σ Γ' (tCase ci p' c' (brs1' ++ {|bcontext:=m'; bbody:=br'|} :: brs2')) ^
       "\nhave a mistmatch in the branch number " ^ string_of_nat #|brs1| ^
       "\nthe number of parameters do not coincide\n" ^
-      print_term Σ Γ br ^
-      "\nhas " ^ string_of_nat m ^ " parameters while\n" ^
-      print_term Σ Γ br' ^
-      "\nhas " ^ string_of_nat m' ^ "."
+      print_term Σ (Γ ,,, m) br ^
+      "\nhas " ^ string_of_nat #|m| ^ " parameters while\n" ^
+      print_term Σ (Γ ,,, m') br' ^
+      "\nhas " ^ string_of_nat #|m'| ^ "."
   | DistinctStuckProj Γ p c Γ' p' c' =>
       "The two stuck projections\n" ^
       print_term Σ Γ (tProj p c) ^

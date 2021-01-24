@@ -292,7 +292,7 @@ Section Reduce.
   | red_view_App f a π : red_view (tApp f a) π
   | red_view_Lambda na A t a args : red_view (tLambda na A t) (App a args)
   | red_view_Fix mfix idx π : red_view (tFix mfix idx) π
-  | red_view_Case ind par p c brs π : red_view (tCase (ind, par) p c brs) π
+  | red_view_Case ci p c brs π : red_view (tCase ci p c brs) π
   | red_view_Proj p c π : red_view (tProj p c) π
   | red_view_other t π : red_discr t π -> red_view t π.
 
@@ -303,7 +303,7 @@ Section Reduce.
     red_viewc (tApp f a) π := red_view_App f a π ;
     red_viewc (tLambda na A t) (App a args) := red_view_Lambda na A t a args ;
     red_viewc (tFix mfix idx) π := red_view_Fix mfix idx π ;
-    red_viewc (tCase (ind, par) p c brs) π := red_view_Case ind par p c brs π ;
+    red_viewc (tCase ci p c brs) π := red_view_Case ci p c brs π ;
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
@@ -402,21 +402,23 @@ Section Reduce.
       | false := give (tFix mfix idx) π
       } ;
 
-    | red_view_Case ind par p c brs π with RedFlags.iota flags := {
-      | true with inspect (reduce c (Case (ind, par) p brs π) _) := {
+    | red_view_Case ci p c brs π with RedFlags.iota flags := {
+      | true with inspect (reduce c (Case ci p brs π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
           | @exist (args, ρ) prf' with cc_viewc t := {
-            | ccview_construct ind' c' _ := rec reduce (iota_red par c' args brs) π ;
+            | ccview_construct ind' c' _ with inspect (nth_error brs c') := {
+              | exist (Some br) eqbr := rec reduce (iota_red ci.(ci_npar) args br) π ;
+              | exist None bot := False_rect _ _ } ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
               | @exist (Some (narg, fn)) eq' :=
-                rec reduce (tCase (ind, par) p (mkApps fn args) brs) π ;
+                rec reduce (tCase ci p (mkApps fn args) brs) π ;
               | @exist None bot := False_rect _ _
               } ;
-            | ccview_other t ht := give (tCase (ind, par) p (mkApps t args) brs) π
+            | ccview_other t ht := give (tCase ci p (mkApps t args) brs) π
             }
           }
         } ;
-      | false := give (tCase (ind, par) p c brs) π
+      | false := give (tCase ci p c brs) π
       } ;
 
     | red_view_Proj (i, pars, narg) c π with RedFlags.iota flags := {
@@ -704,7 +706,8 @@ Section Reduce.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
-    eapply R_Req_R.
+    todo "case".
+    (*eapply R_Req_R.
     - econstructor. econstructor. eapply red1_context.
       eapply red_iota.
     - instantiate (4 := ind'). instantiate (2 := p).
@@ -755,9 +758,11 @@ Section Reduce.
             cbn in h.
             apply Case_Construct_ind_eq in h. all: eauto.
           } subst.
-          reflexivity.
+          reflexivity.*)
   Qed.
   Next Obligation.
+    todo "case".
+    (*
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
@@ -781,14 +786,15 @@ Section Reduce.
         rewrite zipc_appstack in H2. cbn in H2.
         cbn. rewrite H2.
         zip fold. eapply cored_context.
-        constructor. eapply red_cofix_case. eauto.
+        constructor. eapply red_cofix_case. eauto.*)
   Qed.
   Next Obligation.
-    destruct hΣ as [wΣ].
+    todo "case".
+    (*destruct hΣ as [wΣ].
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
-    assert (h' : welltyped Σ Γ (zip (tCase (ind, par) p (mkApps (tCoFix mfix idx) args) brs, π))).
+    assert (h' : welltyped Σ Γ (zip (tCase ci p (mkApps (tCoFix mfix idx) args) brs, π))).
     { dependent destruction r.
       - inversion e. subst.
         simpl in prf'. inversion prf'. subst.
@@ -805,8 +811,8 @@ Section Reduce.
           rewrite zipc_appstack in H2. cbn in H2.
           cbn. rewrite <- H2. assumption.
     }
-    replace (zip (tCase (ind, par) p (mkApps (tCoFix mfix idx) args) brs, π))
-      with (zip (tCoFix mfix idx, appstack args (Case (ind, par) p brs π)))
+    replace (zip (tCase ci p (mkApps (tCoFix mfix idx) args) brs, π))
+      with (zip (tCoFix mfix idx, appstack args (Case ci p brs π)))
       in h'.
     - destruct hΣ.
       apply welltyped_context in h' ; auto. simpl in h'.
@@ -815,10 +821,11 @@ Section Reduce.
       destruct h' as [decl [? [e [? [? ?]]]]].
       unfold unfold_cofix in bot.
       rewrite e in bot. discriminate.
-    - cbn. rewrite zipc_appstack. reflexivity.
+    - cbn. rewrite zipc_appstack. reflexivity.*)
   Qed.
   Next Obligation.
-    clear eq reduce h.
+    todo "case".
+    (*clear eq reduce h.
     destruct r.
     - inversion H. subst.
       clear H.
@@ -835,9 +842,12 @@ Section Reduce.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
         rewrite zipc_appstack in H2. cbn in H2.
         apply zipc_inj in H2. inversion H2. subst.
-        reflexivity.
+        reflexivity.*)
   Qed.
-
+  Next Obligation.
+    todo "case".
+  Qed.
+  
   (* tProj *)
   Next Obligation.
     right. unfold posR. cbn.
@@ -1251,7 +1261,7 @@ Section Reduce.
     - exfalso; eapply invert_fix_ind; eauto.
     - apply typing_cofix_coind in typ; auto.
       unfold is_true in typ.
-      unfold PCUICAst.fst_ctx in *.
+      unfold PCUICAst.PCUICEnvironment.fst_ctx in *.
       congruence.
     - now eapply inversion_Prim in typ.
   Qed.
@@ -1320,7 +1330,7 @@ Section Reduce.
       congruence.
   Qed.
 
-  Lemma whnf_case_arg_whne Γ hd args ind par p brs T :
+  Lemma whnf_case_arg_whne Γ hd args ci p brs T :
     wf Σ ->
     match hd with
     | tApp _ _
@@ -1329,20 +1339,20 @@ Section Reduce.
     | _ => True
     end ->
     whnf flags Σ Γ (mkApps hd args) ->
-    Σ;;; Γ |- tCase (ind, par) p (mkApps hd args) brs : T ->
+    Σ;;; Γ |- tCase ci p (mkApps hd args) brs : T ->
     whne flags Σ Γ (mkApps hd args).
   Proof.
     intros wf shape wh typ.
-    apply inversion_Case in typ as (?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?&?); auto.
+    apply inversion_Case in typ as (?&?&?&[]&?); auto.
     eapply whnf_non_ctor_finite_ind_typed; try eassumption.
     - unfold isConstruct_app.
       now rewrite decompose_app_mkApps; destruct hd.
-    - unfold isCoFinite in e1.
+    - unfold isCoFinite in e0.
       unfold check_recursivity_kind.
       cbn.
-      unfold declared_inductive, declared_minductive in d.
-      cbn in d.
-      rewrite (proj1 d).
+      unfold declared_inductive, declared_minductive in isdecl.
+      cbn in isdecl.
+      rewrite (proj1 isdecl).
       now destruct ind_finite.
   Qed.
 
@@ -1581,6 +1591,7 @@ Section Reduce.
       constructor.
       apply whnf_mkApps.
       now apply whne_case_noiota.
+    - todo "case".
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
@@ -1589,7 +1600,8 @@ Section Reduce.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
-    - match type of e with
+    - todo "case".
+      (*match type of e with
       | _ = reduce ?x ?y ?z =>
         specialize (haux x y z);
           destruct (reduce x y z)
@@ -1623,22 +1635,22 @@ Section Reduce.
         try rewrite stack_context_appstack in typ;
         try rewrite stack_context_appstack in haux;
         try rewrite stack_context_appstack in H;
-        cbn in *).
+        cbn in * ).
       rewrite app_nil_r in *.
       destruct hΣ, haux.
       constructor.
       apply whnf_mkApps, whne_case.
       eapply whnf_case_arg_whne; eauto.
       destruct H as (noapp&_).
-      now destruct t0.
-    - match goal with
+      now destruct t0.*)
+     (*match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
-      assumption.
+      assumption.*)
     - unfold zipp. case_eq (decompose_stack π6). intros.
       constructor. constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
     - match type of e with

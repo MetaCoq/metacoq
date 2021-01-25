@@ -24,7 +24,7 @@ Lemma term_forall_list_ind :
     (forall (i : inductive) (n : nat), P (tConstruct i n)) ->
     (forall (p : inductive * nat) (t : term),
         P t -> forall l : list (nat * term),
-            tCaseBrsProp P l -> P (tCase p t l)) ->
+        All (fun x => P x.2) l -> P (tCase p t l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)) ->

@@ -352,15 +352,15 @@ Lemma erases_deps_forall_ind Σ Σ'
   (Happ : forall hd arg : Extract.E.term,
         erases_deps Σ Σ' hd -> P hd -> erases_deps Σ Σ' arg -> P arg -> P (Extract.E.tApp hd arg))
   (Hconst : forall (kn : kername) (cb : PCUICAst.PCUICEnvironment.constant_body) (cb' : EAst.constant_body),
-      PCUICTyping.declared_constant Σ kn cb ->
+      PCUICAst.declared_constant Σ kn cb ->
       ETyping.declared_constant Σ' kn cb' ->
-      erases_constant_body (Σ, PCUICAst.cst_universes cb) cb cb' ->
+      erases_constant_body (Σ, cst_universes cb) cb cb' ->
       (forall body : Extract.E.term, Extract.E.cst_body cb' = Some body -> erases_deps Σ Σ' body) ->
       (forall body : Extract.E.term, Extract.E.cst_body cb' = Some body -> P body) ->
         P (Extract.E.tConst kn))
   (Hconstruct : forall (ind : inductive) (c : nat), P (Extract.E.tConstruct ind c))
   (Hcase : forall (p : inductive × nat) mdecl idecl mdecl' idecl' (discr : Extract.E.term) (brs : list (nat × Extract.E.term)),
-        PCUICTyping.declared_inductive Σ (fst p) mdecl idecl ->
+        PCUICAst.declared_inductive Σ (fst p) mdecl idecl ->
         ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' discr ->
@@ -369,7 +369,7 @@ Lemma erases_deps_forall_ind Σ Σ'
         Forall (fun br => P br.2) brs ->
         P (Extract.E.tCase p discr brs))
   (Hproj : forall (p : projection) mdecl idecl mdecl' idecl' (t : Extract.E.term),
-        PCUICTyping.declared_inductive Σ p.1.1 mdecl idecl ->
+        PCUICAst.declared_inductive Σ p.1.1 mdecl idecl ->
         ETyping.declared_inductive Σ' p.1.1 mdecl' idecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' t -> P t -> P (Extract.E.tProj p t))
@@ -429,7 +429,7 @@ Proof.
   induction er using erases_deps_forall_ind; try solve [now constructor].
   apply lookup_env_Some_fresh in H as not_fresh.
   econstructor.
-  - unfold PCUICTyping.declared_constant in *; cbn.
+  - unfold PCUICAst.declared_constant in *; cbn.
     unfold eq_kername.
     inversion wfΣ; subst.
     destruct kername_eq_dec as [<-|]; [congruence|].
@@ -439,10 +439,10 @@ Proof.
     destruct kername_eq_dec; [congruence|].
     eassumption.
   - unfold erases_constant_body in *.
-    destruct PCUICAst.cst_body eqn:body.
+    destruct PCUICAst.PCUICEnvironment.cst_body eqn:body.
     + destruct E.cst_body eqn:ebody; [|easy].
-      assert (PCUICTyping.declared_constant ((kn, decl) :: Σ) kn0 cb).
-      { unfold PCUICTyping.declared_constant.
+      assert (PCUICAst.declared_constant ((kn, decl) :: Σ) kn0 cb).
+      { unfold PCUICAst.declared_constant.
         cbn.
         unfold eq_kername.
         inversion wfΣ; subst.
@@ -498,13 +498,13 @@ Derive Signature for Forall2.
 
 Definition globals_erased_with_deps Σ Σ' :=
   (forall k cst,
-    PCUICTyping.declared_constant Σ k cst ->
+    PCUICAst.declared_constant Σ k cst ->
     exists cst',
       ETyping.declared_constant Σ' k cst' /\
       erases_constant_body (Σ, cst_universes cst) cst cst' /\
       (forall body, cst_body cst' = Some body -> erases_deps Σ Σ' body)) /\
   (forall k mdecl idecl,
-      PCUICTyping.declared_inductive Σ k mdecl idecl ->
+      PCUICAst.declared_inductive Σ k mdecl idecl ->
       exists mdecl' idecl',
         ETyping.declared_inductive Σ' k mdecl' idecl' /\
         erases_mutual_inductive_body mdecl mdecl').
@@ -530,7 +530,8 @@ Proof.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
     apply Σer in d as d'; destruct d' as (? & ? & ? & ?).
     now econstructor; eauto.
-  - apply inversion_Case in wt
+  - todo "case".
+  (*apply inversion_Case in wt
       as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
     destruct (proj2 Σer _ _ _ d) as (? & ? & ? & ?).
     econstructor; eauto.
@@ -545,7 +546,7 @@ Proof.
     depelim er.
     destruct p as ((? & ?) & ?).
     destruct p0.
-    now constructor; eauto. 
+    now constructor; eauto. *)
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj2 Σer _ _ _ (proj1 d)) as (? & ? & ? & ?).
@@ -604,7 +605,7 @@ Proof.
   - split.
     intros kn' cst' decl'.
     destruct (eq_dec kn kn') as [<-|].
-    + unfold PCUICTyping.declared_constant, ETyping.declared_constant in *; cbn in *.
+    + unfold PCUICAst.declared_constant, ETyping.declared_constant in *; cbn in *.
       rewrite eq_kername_refl in *.
       noconf decl'.
       depelim erg.
@@ -635,8 +636,8 @@ Proof.
         as (erdecl & ? & -> & erg')
           by now depelim erg; eexists _, _.
       apply IH in erg'; [|now inversion wf].
-      assert (decl_ext: PCUICTyping.declared_constant Σ kn' cst').
-      { unfold PCUICTyping.declared_constant in *; cbn in *.
+      assert (decl_ext: PCUICAst.declared_constant Σ kn' cst').
+      { unfold PCUICAst.declared_constant in *; cbn in *.
         unfold eq_kername in *.
         now destruct kername_eq_dec; [|congruence]. }
       specialize (proj1 erg' kn' cst' decl_ext) as (cst & decl'' & ? & ?).
@@ -672,13 +673,13 @@ Proof.
       red in decli.
       unfold declared_minductive in *.
       simpl. destruct kername_eq_dec; subst; auto.
-      unfold PCUICTyping.declared_minductive in decli.
+      unfold PCUICAst.declared_minductive in decli.
       simpl in decli. rewrite eq_kername_refl in decli. intuition discriminate.
     * inv wf.
       specialize (IH _ X erg).
       destruct decli as [decli ?]. 
       simpl in decli |- *.
-      unfold PCUICTyping.declared_minductive in decli.
+      unfold PCUICAst.declared_minductive in decli.
       simpl in decli.
       unfold eq_kername in decli |- *.
       destruct kername_eq_dec. subst. noconf decli.

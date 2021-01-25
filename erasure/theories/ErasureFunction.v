@@ -174,7 +174,7 @@ Section fix_sigma.
 
     constructor.
     etransitivity; eauto.
-    eapply PCUICContextRelation.context_change_decl_types_red; eauto.
+    eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
     constructor; [|constructor].
     eapply PCUICContextRelation.All2_fold_refl.
     reflexivity.
@@ -203,7 +203,7 @@ Local Ltac sq :=
   - it represents a proof: its sort is Prop.
 *)
 
-Program Definition is_erasable (Σ : PCUICAst.global_env_ext) (HΣ : ∥wf_ext Σ∥) (Γ : context) (t : PCUICAst.term) (Ht : welltyped Σ Γ t) :
+Program Definition is_erasable (Σ : global_env_ext) (HΣ : ∥wf_ext Σ∥) (Γ : context) (t : PCUICAst.term) (Ht : welltyped Σ Γ t) :
   ({∥isErasable Σ Γ t∥} + {∥(isErasable Σ Γ t -> False)∥}) :=
   let T := @type_of extraction_checker_flags Σ _ _ Γ t Ht in
   let b := is_arity Σ _ Γ _ T _ in
@@ -250,7 +250,7 @@ Next Obligation.
   unfold type_of in *.
   destruct infer as [x [[Htx Hp]]]. simpl.
   simpl in *.
-  eapply validity in Htx; auto.
+  eapply validity_term in Htx; auto.
   destruct Htx as [s Hs]. econstructor; eauto.
 Qed.
 Next Obligation.
@@ -312,7 +312,7 @@ Next Obligation.
   destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _)) as [? [[? ?]]].
   destruct (infer _ (is_erasable_obligation_1 _ _)) as [? [[? ?]]].
   simpl in *. 
-  eapply validity in t1; auto.
+  eapply validity_term in t1; auto.
   destruct t1 as [s Hs].
   red in Hs.
   specialize (c _ Hs).
@@ -339,30 +339,36 @@ Section Erase.
     | _ => try red; try reflexivity || discriminates
     end.
 
-  Lemma welltyped_brs Γ ind t1 t2 brs : welltyped Σ Γ (tCase ind t1 t2 brs) -> 
-    Forall (fun x => welltyped Σ Γ x.2) brs.
+  Lemma welltyped_brs Γ ci t1 t2 brs : welltyped Σ Γ (tCase ci t1 t2 brs) -> 
+    Forall (fun x => welltyped Σ (Γ ,,, bcontext x) (bbody x)) brs.
   Proof.
     intros [t Ht]. destruct HΣ.
-    eapply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
+    todo "case".
+    (* eapply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
     simpl in *. clear e2.
     induction a. constructor.
     intuition auto. constructor; auto.
-    eexists; eauto.
+    eexists; eauto. *)
   Qed.
   
   Section EraseMfix.
     Context (erase : forall (Γ : context) (t : term) (Ht : welltyped Σ Γ t), E.term).
 
     Definition erase_mfix Γ (defs : mfixpoint term) 
-    (H : forall d, In d defs -> welltyped Σ (Γ ,,, PCUICLiftSubst.fix_context defs) d.(dbody)) : EAst.mfixpoint E.term :=
-    let Γ' := (PCUICLiftSubst.fix_context defs ++ Γ)%list in
+    (H : forall d, In d defs -> welltyped Σ (Γ ,,, fix_context defs) d.(dbody)) : EAst.mfixpoint E.term :=
+    let Γ' := (fix_context defs ++ Γ)%list in
     map_InP (fun d wt => 
       let dbody' := erase Γ' d.(dbody) wt in
       ({| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |})) defs H.
 
-    Definition erase_brs Γ (brs : list (nat * term)) 
-      (H : forall d, In d brs -> welltyped Σ Γ d.2) : list (nat * E.term) :=
-      map_InP (fun br wt => let br' := erase Γ br.2 wt in (br.1, br')) brs H.
+    (** We should expand lets in bcontext here, after erasing.
+      We have access to general substitution still so it shoundn't be too hard.
+      Alternatively we erase to the "old" case representation for now
+    *)
+    Definition erase_brs Γ (brs : list (branch term)) 
+      (H : forall d, In d brs -> welltyped Σ (Γ ,,, bcontext d) (bbody d)) : list (nat * E.term) :=
+      map_InP (fun br wt => let br' := erase (Γ ,,, bcontext br) (bbody br) wt in 
+        (#|br.(bcontext)|, br')) brs H.
   
   End EraseMfix.
 
@@ -396,10 +402,10 @@ Section Erase.
         let f' := erase Γ f _ in
         let l' := erase Γ u _ in
         E.tApp f' l';
-      erase Γ (tCase ip p c brs) Ht _ with erase Γ c _ :=
+      erase Γ (tCase ci p c brs) Ht _ with erase Γ c _ :=
        { | c' :=
           let brs' := erase_brs erase Γ brs _ in
-          E.tCase ip c' brs' } ;
+          E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs' } ;
       erase Γ (tProj p c) Ht _ :=
         let c' := erase Γ c _ in
         E.tProj p c' ;
@@ -426,12 +432,15 @@ Section Erase.
       eexists; eauto.
     - eapply inversion_App in Ht as (? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
-    - eapply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
+    - eapply inversion_Case in Ht as (? & ? & ? & ? & ?); auto.
+      pose proof (case_inversion_data_cty c0).
       eexists; eauto.
-    - apply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
-      simpl in *. 
-      eapply All2_In in a as [(x' & (? & ?) & ?)]; eauto.
-      simpl in *. subst. eexists; eauto.
+    - apply inversion_Case in Ht as (? & ? & ? & ? & ?); auto.
+      destruct c0.
+      cbn in *. 
+      todo "case".
+       (* eapply All2i_In in a1 as [(x' & (? & ?) & ?)]; eauto.
+      simpl in *. subst. eexists; eauto. *)
     - clear wildcard12.
       eapply inversion_Proj in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
@@ -532,7 +541,7 @@ Proof.
        forall (wt : welltyped Σ Γ t)  (wfΣ' : ∥ wf_ext Σ ∥),
           Σ;;; Γ |- t ⇝ℇ erase Σ wfΣ' Γ t wt
          )
-         (fun Σ Γ wfΓ => wf_local Σ Γ)); intros; auto; clear Σ w; rename Σ0 into Σ.
+         (fun Σ Γ => wf_local Σ Γ)); intros; auto; clear Σ w; rename Σ0 into Σ.
 
   10:{ simpl erase.
     destruct is_erasable. simp erase. sq.
@@ -543,14 +552,16 @@ Proof.
     sq; constructor.
     eapply elim_restriction_works; eauto.
     intros isp. eapply isErasable_Proof in isp. eauto.
-    eapply H4.
+    eapply H3.
     unfold erase_brs. eapply All2_from_nth_error. now autorewrite with len.
-    intros. eapply All2_nth_error_Some in X3; eauto.
+    intros.
+    todo "case".
+    (* eapply All2_nth_error_Some in X3; eauto.
     destruct X3 as [t' [htnh eq]].
     eapply nth_error_map_InP in H8.
     destruct H8 as [a [Hnth [p' eq']]].
     subst. simpl. rewrite Hnth in H7. noconf H7.
-    intuition auto. }
+    intuition auto.*) }
 
   all:simpl erase; eauto.
 
@@ -626,7 +637,7 @@ Qed.
 
 Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
   (* Projection and constructor types are types, hence always erased *)
-  let ctors := map (A:=(ident * term) * nat) (fun '((x, y), z) => (x, z)) oib.(ind_ctors) in
+  let ctors := map (fun cdecl => (cdecl.(cstr_name), cdecl.(cstr_arity))) oib.(ind_ctors) in
   let projs := map (fun '(x, y) => x) oib.(ind_projs) in
   let is_propositional := 
     match destArity [] oib.(ind_type) with
@@ -765,14 +776,16 @@ Proof.
     eapply KernameSet.singleton_spec in hin; subst.
     destruct d as [[H' _] _]. red in H'. simpl in *.
     red. sq. rewrite H'. intuition eauto.
-  - apply inversion_Case in wt
+  - todo "case".
+    (* apply inversion_Case in wt
       as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
     destruct ind as [kn i']; simpl in *.
     eapply KernameSet.singleton_spec in H1; subst.
     destruct d as [d _]. red in d.
-    simpl in *. eexists; intuition eauto.
+    simpl in *. eexists; intuition eauto.*)
 
-  - apply inversion_Case in wt
+  - todo "case".
+  (* apply inversion_Case in wt
     as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
     eapply knset_in_fold_left in H1.
     destruct H1. eapply IHer; eauto.
@@ -786,7 +799,7 @@ Proof.
     destruct H0.
     destruct X1 as [br' [[T' HT] ?]].
     eauto.
-
+*)
   - eapply KernameSet.singleton_spec in H0; subst.
     apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
     destruct d as [[d _] _]. red in d. eexists; eauto.
@@ -843,7 +856,8 @@ Proof.
     now econstructor; eauto.
     destruct H as [mib [mib' [declm declm']]].
     red in declm, d. rewrite d in declm. noconf declm.
-  - apply inversion_Case in wt
+  - todo "case".
+   (* apply inversion_Case in wt
       as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
     destruct ind as [kn i']; simpl in *.
     apply includes_deps_fold in H2 as [? ?].
@@ -868,7 +882,7 @@ Proof.
     simpl. intuition auto. eexists ; eauto.
     ELiftSubst.solve_all. destruct a2 as [T' HT]. eauto.
     simpl.
-    destruct d. red in H7, declm. rewrite H7 in declm. now noconf declm.
+    destruct d. red in H7, declm. rewrite H7 in declm. now noconf declm. *)
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj1 d).
@@ -1059,9 +1073,9 @@ Proof.
   simpl in H. noconf H.
   set (obl :=(erase_constant_body_obligation_1 Σ wfΣ
   {|
-  PA.cst_type := name;
-  PA.cst_body := Some bod;
-  PA.cst_universes := univs |} onc bod eq_refl)). clearbody obl.
+  cst_type := name;
+  cst_body := Some bod;
+  cst_universes := univs |} onc bod eq_refl)). clearbody obl.
   destruct obl. sq.
   exists bod, A; intuition auto. simpl.
   eapply erases_erase. now simpl in H.
@@ -1075,17 +1089,18 @@ Proof.
   destruct m; constructor; simpl; auto.
   eapply on_declared_minductive in H; auto. simpl in H. clear X.
   eapply onInductives in H; simpl in *.
-  assert (Alli (fun i oib => match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies).
+  assert (Alli (fun i oib => 
+    match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies0).
   { eapply Alli_impl; eauto.
     simpl. intros n x []. simpl in *. rewrite ind_arity_eq.
     rewrite !destArity_it_mkProd_or_LetIn /= //. } clear H.
   induction X; constructor; auto.
   destruct hd; constructor; simpl; auto.
   clear.
-  induction ind_ctors; constructor; auto.
-  destruct a as [[? ?] ?]; constructor; auto.
+  induction ind_ctors0; constructor; auto.
+  cbn in *.
   intuition auto.
-  induction ind_projs; constructor; auto.
+  induction ind_projs0; constructor; auto.
   destruct a; auto.
   unfold isPropositionalArity.
   destruct destArity as [[? ?]|] eqn:da; auto.

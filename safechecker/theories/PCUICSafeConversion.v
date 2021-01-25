@@ -18,13 +18,6 @@ Set Default Goal Selector "!".
 
 Module PSR := PCUICSafeReduce.
 
-Lemma case_inversion_data_cty {cf:checker_flags} {Σ Γ ci p c brs mdecl idecl indices} :
-  case_inversion_data Σ Γ ci p c brs mdecl idecl indices ->
-  Σ ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices).
-Proof.
-  now intros [].
-Qed.
-
 Instance red_brs_refl Σ Γ: CRelationClasses.Reflexive (@red_brs Σ Γ).
 Proof.
   intros brs.

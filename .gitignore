@@ -418,3 +418,5 @@ erasure/src/pCUICTypeChecker.ml
 erasure/src/pCUICTypeChecker.mli
 erasure/src/pCUICPrimitive.ml
 erasure/src/pCUICPrimitive.mli
+erasure/src/pCUICCases.ml
+erasure/src/pCUICCases.mli

@@ -92,21 +92,21 @@ Proof.
 Qed.
 
 Lemma typing_spine_red :
-  forall (Σ : PCUICAst.global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (red Σ Γ) args args') (bla : wf Σ)
+  forall (Σ : global_env_ext) Γ (args args' : list PCUICAst.term) (X : All2 (red Σ Γ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ Γ x args x0) (c : Σ;;; Γ |- x0 <= T) (x1 : PCUICAst.term)
     (c0 : Σ;;; Γ |- x1 <= x), isType Σ Γ T -> typing_spine Σ Γ x1 args' T.
 Proof.
   intros Σ Γ args args' X wf T x x0 t0 c x1 c0 ?. revert args' X.
   dependent induction t0; intros.
-  - inv X. econstructor. eauto. eapply PCUICConversion.cumul_trans. assumption.
-    eauto. eapply PCUICConversion.cumul_trans. assumption. eauto. eauto.
+  - inv X. econstructor. eauto. eapply cumul_trans. assumption.
+    eauto. eapply cumul_trans. assumption. eauto. eauto.
   - inv X. econstructor.
     + eauto.
-    + eapply PCUICConversion.cumul_trans ; eauto.
+    + eapply cumul_trans ; eauto.
     + eapply subject_reduction; eauto.
     + eapply IHt0; eauto.
       eapply PCUICCumulativity.red_cumul_inv.
-      unfold PCUICLiftSubst.subst1.
+      unfold subst1.
       eapply (red_red Σ Γ [_] [] [_] [_]).
       eauto. econstructor. eauto. econstructor. econstructor. econstructor.
       Grab Existential Variables. all: repeat econstructor.
@@ -212,24 +212,24 @@ Proof.
     (* eapply isArity_typing_spine_inv in t0; eauto. *)
     (* destruct t0 as (? & [] & ?). *)
     (* eapply PCUICCumulativity.red_cumul in X. *)
-    destruct (PCUICWeakeningEnv.on_declared_constructor _ d) as [XX [s [XX1 Ht]]].
-    destruct x5 as [[? ?] ?]; cbn in *; subst.
-    destruct Ht. unfold cstr_type in cstr_eq. simpl in cstr_eq. subst.
+    destruct (PCUICWeakeningEnv.on_declared_constructor d) as [XX [s [XX1 Ht]]].
+    destruct x5 as []; cbn in *; subst.
+    destruct Ht; cbn in *. subst.
     change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in c2.
     change PCUICEnvironment.ind_params with ind_params in *.
     change PCUICEnvironment.to_extended_list_k with to_extended_list_k in *.
     rewrite <- it_mkProd_or_LetIn_app in c2.
     rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in c2.
     rewrite PCUICUnivSubst.subst_instance_mkApps in c2.
-    rewrite PCUICSubstitution.subst_it_mkProd_or_LetIn in c2.
+    rewrite subst_it_mkProd_or_LetIn in c2.
     rewrite subst_mkApps in c2.
     cbn in c2.
-    rewrite PCUICUnivSubst.subst_instance_length in c2.
+    rewrite subst_instance_length in c2.
     rewrite app_length in c2.
-    destruct (Nat.leb_spec (#|cstr_args s| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cstr_args s|)). 2:lia.
+    destruct (Nat.leb_spec (#|cstr_args0| + #|ind_params x3| + 0) (#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| + #|cstr_args0|)). 2:lia.
     clear H.
     assert ((#|ind_bodies x3| - S (inductive_ind ind) + #|ind_params x3| +
-                                                                         #|cstr_args s| - (#|cstr_args s| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
+    #|cstr_args0| - (#|cstr_args0| + #|ind_params x3| + 0)) < #|inds (inductive_mind ind) u (ind_bodies x3)|).
     { rewrite inds_length. lia. }
     eapply nth_error_Some in H.
     destruct (nth_error (inds _ _ _) _) eqn:Heq; try congruence.
@@ -304,10 +304,10 @@ Proof.
     eapply invert_cumul_arity_r_gen in c0; eauto.
     destruct c0. destruct H as [[r] isA].
     move: r; rewrite subst_it_mkProd_or_LetIn eqT; autorewrite with len.
-    rewrite expand_lets_mkApps subst_mkApps /=.
+    rewrite PCUICSigmaCalculus.expand_lets_mkApps subst_mkApps /=.
     move/red_it_mkProd_or_LetIn_mkApps_Ind => [ctx' [args' eq]].
     subst x4. now eapply it_mkProd_arity, isArity_mkApps in isA.
-    move: cum => [] Hx1; rewrite eqT expand_lets_mkApps subst_mkApps /= => cum.
+    move: cum => [] Hx1; rewrite eqT PCUICSigmaCalculus.expand_lets_mkApps subst_mkApps /= => cum.
     eapply invert_cumul_arity_r_gen in c0; eauto.
     destruct c0 as [? [[r] isA]].
     eapply red_mkApps_tInd in r as [args' [eq _]]; auto.
@@ -445,7 +445,7 @@ Proof.
     eapply PCUICCumulativity.red_cumul_inv in X.
 
     eapply invert_cumul_arity_l in H0 as (? & ? & ?).
-    2: eapply PCUICConversion.cumul_trans; eauto.
+    2: eapply cumul_trans; eauto.
     destruct H.
     eapply typing_spine_red in t1. 2:{ eapply All_All2_refl.
                                                   clear. induction L; eauto. }
@@ -590,7 +590,7 @@ Lemma nIs_conv_to_Arity_isWfArity_elim {Σ : global_env_ext} {Γ x} :
 Proof.
   intros nis [isTy [ctx [s da]]]. apply nis.
   red. exists (it_mkProd_or_LetIn ctx (tSort s)).
-  split. sq. apply PCUICArities.destArity_spec_Some in da.
+  split. sq. apply destArity_spec_Some in da.
   simpl in da. subst x.
   reflexivity.
   now eapply it_mkProd_isArity.

@@ -187,7 +187,7 @@ Ltac change_Sk :=
 
 
 Ltac solve_all :=
-  unfold tCaseBrsProp, tFixProp in *;
+  unfold tFixProp in *;
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto 4 with all.
@@ -220,7 +220,7 @@ Lemma lift0_p : forall M, lift0 0 M = M.
   apply lift0_id; easy.
 Qed.
 
-Hint Extern 10 => apply_spec : all.
+(* Hint Extern 10 => apply_spec : all. *)
 
 Hint Resolve -> on_snd_eq_spec : all.
 

@@ -310,11 +310,11 @@ Qed.
 Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tFix mfix1 n : T ->
-  (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
-  subslet Σ [] (fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+  (* wf_local Σ (fix_context mfix1) -> *)
+  subslet Σ [] (fix_subst mfix1) (fix_context mfix1).
 Proof.
   intro hΣ.
-  unfold fix_subst, PCUICLiftSubst.fix_context.
+  unfold fix_subst, fix_context.
   assert (exists L, mfix1 = mfix1 ++ L) by (exists []; now simpl_list). revert H.
   generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
@@ -357,10 +357,10 @@ Qed.
 Lemma subslet_cofix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tCoFix mfix1 n : T ->
-  subslet Σ [] (cofix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+  subslet Σ [] (cofix_subst mfix1) (fix_context mfix1).
 Proof.
   intro hΣ.
-  unfold cofix_subst, PCUICLiftSubst.fix_context.
+  unfold cofix_subst, fix_context.
   assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
   generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
@@ -378,19 +378,19 @@ Qed.
 
 (** ** Prelim on typing *)
 
-Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
+Inductive red_decls Σ Γ Γ' : forall (x y : context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
   eq_binder_annot na na' ->
-  red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
+  red_decls Σ Γ Γ' (vass na T) (vass na' T')
 
 | conv_vdef_type na na' b T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
   eq_binder_annot na na' ->
-  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
+  red_decls Σ Γ Γ' (vdef na b T) (vdef na' b T')
 
 | conv_vdef_body na na' b b' T : isType Σ Γ' T ->
   eq_binder_annot na na' ->
   Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
-  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
+  red_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T).
 
 Notation red_context Σ := (All2_fold (red_decls Σ)).
 

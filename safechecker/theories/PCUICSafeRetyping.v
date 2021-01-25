@@ -424,7 +424,7 @@ Section TypeOf.
     
     - eapply inversion_Case in HT; auto.
       destruct HT as (mdecl & idecl & indices & data & cum).
-      eapply case_inversion_data_cty in data.
+      eapply PCUICInversion.case_inversion_data_cty in data.
       eexists; eauto.
     - cbn. 
       destruct inversion_Case as (mdecl & idecl & indices & data & cum).

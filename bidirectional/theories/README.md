@@ -4,12 +4,12 @@
 
 | File                  | Description                                  |
 |-----------------------|----------------------------------------------|
-| [BDEnvironmentTyping] | Variant of EnvironmentTyping to accomodate for the distinction between checking and sorting |
-| [BDTyping]            | Main description of bidirectional typing, in a "paranoid" way, *ie.* one that does not rely on strong metatheoretic properties to imply undirected typing |
+| [BDEnvironmentTyping] | Variant of MetaCoq EnvironmentTyping to accommodate for the distinction between checking and sorting in the checking of the environment |
+| [BDTyping]            | Main description of bidirectional typing, inspired from MetaCoq's PCUICTyping |
 | [BDToPCUIC]           | Proof that bidirectional typing implies undirected typing |
-| [BDTypingInduction]   | Traces of older work, not worth looking at (the complete proof of the right induction principle is in [BDTyping]) |
+| [BDFromPCUIC]           | Proof that undirected typing implies bidirectional typing when there are no cumulative inductive types in the environment |
 
 [BDEnvironmentTyping]: BDEnvironmentTyping.v
 [BDTyping]: BDTyping.v
 [BDToPCUIC]: BDToPCUIC.v
-[BDTypingInduction]: BDTypingInduction.v
+[BDFromPCUIC]: BDTypingInduction.v

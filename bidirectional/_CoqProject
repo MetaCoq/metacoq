@@ -4,5 +4,6 @@
 -R theories MetaCoq.Bidirectional
 
 theories/BDEnvironmentTyping.v
-theories/BDMinimalTyping.v
-theories/BDMinimalToPCUIC.v
+theories/BDTyping.v
+theories/BDToPCUIC.v
+theories/BDFromPCUIC.v

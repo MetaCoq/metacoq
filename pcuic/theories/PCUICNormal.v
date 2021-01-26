@@ -4,8 +4,8 @@ From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICContextRelation
-     PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICInduction
-     PCUICRedTypeIrrelevance.
+     PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnv
+     PCUICInduction PCUICRedTypeIrrelevance.
 Require Import ssreflect.
 Set Asymmetric Patterns.
 
@@ -1161,9 +1161,9 @@ Proof.
     apply All2_same; auto.
 Qed.
 
-Instance whnf_red_trans Σ Γ : CRelationClasses.Transitive (whnf_red Σ Γ).
+Instance whnf_red_trans {cf:checker_flags} Σ Γ : wf Σ -> CRelationClasses.Transitive (whnf_red Σ Γ).
 Proof.
-  intros x y z xy yz.
+  intros wf x y z xy yz.
   revert z yz.
   induction xy; intros z yz; depelim yz; eauto using whnf_red.
   - constructor.
@@ -1183,13 +1183,23 @@ Proof.
     eapply context_pres_let_bodies_red; eauto.
     apply fix_context_pres_let_bodies.
     now apply All2_length in a.
-  - simpl.
-    todo "trans red".
-    (* econstructor. try solve [etransitivity; eauto].
-    eapply All2_trans; eauto.
-    intros ? ? ? (->&?) (->&?).
-    split; auto.
-    etransitivity; eauto. *)
+  - simpl in *.
+    constructor; try solve [etransitivity; eauto].
+    + eapply All2_trans; eauto.
+      typeclasses eauto.
+    + etransitivity; [eassumption|].
+      eapply red_red_ctx; eauto.
+      apply red_context_app_right; eauto.
+      * apply red_context_refl.
+      * apply red_ctx_rel_red_context_rel; eauto.
+    + eapply All2_trans; eauto.
+      clear -wf.
+      intros x y z (?&?) (?&?).
+      split; etransitivity; eauto.
+      eapply red_red_ctx; eauto.
+      eapply red_context_app_right; eauto.
+      * apply red_context_refl.
+      * eapply red_ctx_rel_red_context_rel; eauto.
   - constructor.
     etransitivity; eauto.
   - constructor; etransitivity; eauto.
@@ -1342,12 +1352,13 @@ Proof.
   - depelim r; solve_discr.
 Qed.
 
-Lemma whnf_red_inv Σ Γ t t' :
+Lemma whnf_red_inv {cf:checker_flags} Σ Γ t t' :
+  wf Σ ->
   whnf RedFlags.default Σ Γ t ->
   red Σ Γ t t' ->
   whnf_red Σ Γ t t'.
 Proof.
-  intros wh r.
+  intros wf wh r.
   induction r using red_rect_n1.
   - apply whnf_red_refl; auto.
   - eapply whnf_red1_inv in X.

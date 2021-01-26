@@ -2,6 +2,7 @@ From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.PCUIC Require Import PCUICContextConversion.
+From MetaCoq.PCUIC Require Import PCUICContextReduction.
 From MetaCoq.PCUIC Require Import PCUICConversion.
 From MetaCoq.PCUIC Require Import PCUICCumulativity.
 From MetaCoq.PCUIC Require Import PCUICCumulProp.
@@ -20,6 +21,7 @@ Set Default Goal Selector "!".
 Section fixed.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
+  Context (wfΣ : wf Σ).
   
   Definition isIndConstructApp (t : term) : bool :=
     match (decompose_app t).1 with
@@ -118,6 +120,27 @@ Section fixed.
       + now apply IHa1.
   Qed.
   
+  Lemma red_ctx_rel_par_conv Γ Γ0 Γ0' Γ1 Γ1' :
+    red_ctx_rel Σ Γ Γ0 Γ0' ->
+    red_ctx_rel Σ Γ Γ1 Γ1' ->
+    eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ0' Γ1' ->
+    conv_context_rel Σ Γ Γ0 Γ1.
+  Proof.
+    intros r0 r1 eq.
+    apply red_ctx_rel_red_context_rel, red_context_app_same_left in r0; auto.
+    apply red_ctx_rel_red_context_rel, red_context_app_same_left in r1; auto.
+    apply PCUICConfluence.red_ctx_red_context, red_ctx_conv_context in r0.
+    apply PCUICConfluence.red_ctx_red_context, red_ctx_conv_context in r1.
+    apply conv_context_rel_app.
+    eapply conv_context_trans; eauto.
+    eapply conv_context_sym; eauto.
+    eapply conv_context_trans; eauto.
+    eapply conv_context_sym; eauto.
+    eapply eq_context_upto_univ_conv_context; eauto.
+    apply All2_fold_app; pcuic.
+    reflexivity.
+  Qed.
+
   Lemma conv_cum_tCase_inv leq Γ p motive discr brs p' motive' discr' brs' :
     conv_cum leq Σ Γ (tCase p motive discr brs) (tCase p' motive' discr' brs') ->
     whnf RedFlags.default Σ Γ (tCase p motive discr brs) ->
@@ -139,20 +162,29 @@ Section fixed.
     depelim r2.
     depelim eq.
     constructor.
-    split; [easy|].
-    split; [todo "case"|].
-     (* apply conv_alt_red; now exists motive'0, motive'1|]. *)
-    split; [apply conv_alt_red; now exists discr'0, discr'1|].
-    clear -a0 a2 a3.
-    induction a0 in brs', brs'1, a2, a3 |- *;
-      depelim a2; depelim a3; [constructor|].
-    destruct p, p0, r.
-    constructor; eauto.
-    + todo "case".
-    + todo "case".
-      (*apply conv_alt_red. exists (bbody y), (bbody y0).
-      splits; eauto. todo "case".*)
-
+    red in e; cbn in e.
+    specialize e as (?&?&?&?).
+    splits; eauto.
+    - eapply conv_terms_alt; eauto.
+    - eapply red_ctx_rel_par_conv; eauto.
+    - eapply conv_red_conv; eauto.
+      + eapply conv_context_rel_app, red_ctx_rel_par_conv; eauto.
+      + constructor; auto.
+    - apply conv_alt_red; exists discr'0, discr'1; auto.
+    - rename a0 into brsa1.
+      rename a2 into brsa2.
+      rename a3 into brseq.
+      clear -wfΣ brsa1 brsa2 brseq.
+      induction brseq in brs, brs', brsa1, brsa2 |- *;
+        depelim brsa1; depelim brsa2; [constructor|].
+      destruct p, p0, r.
+      constructor.
+      2: { apply IHbrseq; auto. }
+      split.
+      + eapply red_ctx_rel_par_conv; eauto.
+      + eapply conv_red_conv; eauto.
+        * eapply conv_context_rel_app, red_ctx_rel_par_conv; eauto.
+        * constructor; auto.
   Qed.
   
   Lemma conv_cum_tFix_inv leq Γ mfix idx mfix' idx' :

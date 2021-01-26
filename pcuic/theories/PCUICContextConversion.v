@@ -338,6 +338,26 @@ Section ContextConversion.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
   Qed.
+  
+  Lemma red_ctx_conv_context Γ Γ' :
+    red_ctx Σ Γ Γ' ->
+    conv_context Γ Γ'.
+  Proof.
+    intros r.
+    induction r; constructor; auto.
+    depelim p; constructor; auto.
+    all: apply red_conv; auto.
+  Qed.
+  
+  Lemma red_ctx_cumul_context Γ Γ' :
+    red_ctx Σ Γ Γ' ->
+    cumul_context Γ Γ'.
+  Proof.
+    intros r.
+    induction r; constructor; auto.
+    depelim p; constructor; auto.
+    all: try apply red_cumul; try apply red_conv; auto.
+  Qed.
 
   Lemma cumul_red_ctx Γ Γ' T U :
     Σ ;;; Γ |- T <= U ->

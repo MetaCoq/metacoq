@@ -1148,7 +1148,8 @@ Section Inversions.
       econstructor. assumption.
   Qed.
 
-  Global Instance conv_cum_refl {leq Γ} :
+  #[global]
+  Instance conv_cum_refl {leq Γ} :
     RelationClasses.Reflexive (conv_cum leq Σ Γ).
   Proof.
     destruct leq; constructor; reflexivity.
@@ -1163,7 +1164,8 @@ Section Inversions.
       constructor. now eapply conv_cumul.
   Qed.
 
-  Global Instance conv_cum_trans {leq Γ} :
+  #[global]
+  Instance conv_cum_trans {leq Γ} :
     RelationClasses.Transitive (conv_cum leq Σ Γ).
   Proof.
     intros u v w h1 h2. destruct leq; cbn in *; sq; etransitivity; eassumption.
@@ -1186,6 +1188,40 @@ Section Inversions.
      + now eapply cumul_red_r.
    - reflexivity.
    - etransitivity; tea.
+  Qed.
+  
+  Lemma conv_red_conv Γ Γ' t tr t' t'r :
+    conv_context Σ Γ Γ' ->
+    red Σ Γ t tr ->
+    red Σ Γ' t' t'r ->
+    Σ ;;; Γ |- tr = t'r ->
+    Σ ;;; Γ |- t = t'.
+  Proof.
+    intros cc r r' ct.
+    eapply red_conv_conv; eauto.
+    eapply conv_conv_ctx; eauto.
+    2: apply conv_context_sym; eauto.
+    apply conv_sym.
+    eapply red_conv_conv; eauto.
+    apply conv_sym.
+    eapply conv_conv_ctx; eauto.
+  Qed.
+
+  Lemma conv_red_conv_inv Γ Γ' t tr t' t'r :
+    conv_context Σ Γ Γ' ->
+    red Σ Γ t tr ->
+    red Σ Γ' t' t'r ->
+    Σ ;;; Γ |- tr = t'r ->
+    Σ ;;; Γ |- t = t'.
+  Proof.
+    intros conv_ctx r1 r2 cc.
+    eapply red_conv_conv; eauto.
+    apply conv_sym.
+    eapply conv_conv_ctx; eauto.
+    2: apply conv_context_sym; eauto.
+    eapply red_conv_conv; eauto.
+    eapply conv_conv_ctx; eauto.
+    apply conv_sym; auto.
   Qed.
 
   Lemma conv_cum_Prod leq Γ na1 na2 A1 A2 B1 B2 :
@@ -1415,6 +1451,7 @@ Section Inversions.
     × conv_context_rel Γ (pcontext p) (pcontext p')
     × conv Σ (Γ ,,, pcontext p) (preturn p) (preturn p').
 
+  #[global]
   Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
   Proof.
     intros x. apply All2_same. intros. reflexivity.
@@ -1428,11 +1465,13 @@ Section Inversions.
   Definition set_preturn_two {p} pret pret' : set_preturn (set_preturn p pret') pret = set_preturn p pret := 
     eq_refl.
   
+  #[global]
   Instance red_decls_refl Γ Δ : Reflexive (red_decls Σ Γ Δ).
   Proof.
     intros x. apply red_decls_refl.
   Qed.
 
+  #[global]
   Instance red_ctx_refl : Reflexive (All2_fold (red_decls Σ)).
   Proof.
     intros x. eapply All2_fold_refl. intros. apply red_decls_refl.
@@ -3154,6 +3193,20 @@ Proof.
   - eapply pred_red => //.
   - intros x.
 *)
+
+Lemma map_branches_k_map_branches_k
+      (f : nat -> term -> term) k
+      (f' : nat -> term -> term) k'
+      (l : list (branch term)) :
+  map_branches_k f k (map_branches_k f' k' l) =
+  map (map_branch_k (fun (i : nat) (x : term) => f (i + k) (f' (i + k') x)) 0) l.
+Proof.
+  rewrite map_map.
+  eapply map_ext => b.
+  rewrite map_branch_k_map_branch_k.
+  auto.
+Qed.
+
 Lemma red_rel_all {cf:checker_flags} Σ Γ i body t :
   wf Σ ->
   option_map decl_body (nth_error Γ i) = Some (Some body) ->
@@ -3175,13 +3228,48 @@ Proof.
     + cbn. rewrite H0. auto.
   - eapply red_evar. repeat eapply All2_map_right.
     eapply All_All2; tea. intro; cbn; eauto.
-  - todo "case".
-    (*rewrite map_predicate_k_map_predicate_k.
-    eapply red_case; eauto.
-    * destruct X.
-    
-    repeat eapply All2_map_right.
-    eapply All_All2; tea. intro; cbn; eauto.*)
+  - destruct X as (IHparams&IHctx&IHret).
+    rewrite map_predicate_k_map_predicate_k.
+    assert (ctxapp: forall Γ',
+               option_map decl_body (nth_error (Γ,,, Γ') (#|Γ'| + i)) = Some (Some body)).
+    { unfold app_context.
+      intros.
+      rewrite nth_error_app2; [lia|].
+      rewrite minus_plus; auto. }
+    eapply red_case.
+    + rewrite Nat.add_0_r; eauto.
+    + apply red_ctx_rel_red_context_rel; auto.
+      clear -IHctx ctxapp.
+      induction IHctx; pcuic.
+      constructor; auto.
+      destruct p0 as (IHty&IHbody).
+      destruct x as [? [] ?]; unfold map_decl; cbn in *; constructor.
+      all: try rewrite Nat.add_0_r; eauto.
+      eapply IHbody.
+      rewrite Nat.add_0_r; eauto.
+    + induction IHparams; pcuic.
+    + apply IHt; auto.
+    + clear -wfΣ X0 ctxapp.
+      induction X0; pcuic.
+      constructor; auto.
+      destruct p as (IHctx&IHbody).
+      unfold on_Trel.
+      rewrite map_branch_k_map_branch_k.
+      split.
+      * eapply IHbody.
+        rewrite Nat.add_0_r.
+        eauto.
+      * unfold map_branch_k; cbn.
+        clear -wfΣ IHctx ctxapp.
+        eapply red_ctx_rel_red_context_rel; auto.
+        clear -IHctx ctxapp.
+        induction IHctx; pcuic.
+        constructor; auto.
+        destruct p as (IHty&IHbody).
+        destruct x0 as [? [] ?]; unfold map_decl; cbn in *; constructor.
+        all: try rewrite Nat.add_0_r; eauto.
+        eapply IHbody.
+        rewrite Nat.add_0_r; eauto.
   - eapply red_fix_congr. repeat eapply All2_map_right.
     eapply All_All2; tea. intros; cbn in *; rdest; eauto.
     rewrite map_length. eapply r0.

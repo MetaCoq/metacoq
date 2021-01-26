@@ -2358,7 +2358,7 @@ Section Conversion.
     apply conv_cum_mkApps_inv in cc as [(conv_fix&conv_args)]; auto.
     2: eapply whnf_conv_context; eauto.
     2: eapply conv_context_sym; eauto.
-    apply conv_cum_tFix_inv in conv_fix as [(<-&?)].
+    apply conv_cum_tFix_inv in conv_fix as [(<-&?)]; auto.
     constructor; split; [|split]; auto.
     eapply conv_terms_red_conv; eauto.
   Qed.
@@ -2376,8 +2376,9 @@ Section Conversion.
   Proof.
     intros [?] cc.
     rewrite !zipp_as_mkApps in cc.
+    destruct hΣ.
     apply conv_cum_mkApps_inv in cc as [(conv_cofix&conv_args)]; auto.
-    apply conv_cum_tCoFix_inv in conv_cofix as [(<-&?)].
+    apply conv_cum_tCoFix_inv in conv_cofix as [(<-&?)]; auto.
     constructor; split; [|split]; auto.
   Qed.
 
@@ -2657,6 +2658,7 @@ Section Conversion.
   Next Obligation.
     apply h; clear h.
     rewrite !zipp_as_mkApps in H.
+    destruct hΣ.
     apply conv_cum_mkApps_inv in H as [(?&?)]; eauto.
     - now constructor.
     - apply whnf_mkApps.

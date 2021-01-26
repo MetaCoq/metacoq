@@ -823,8 +823,7 @@ Section CheckEnv.
       eapply X. now len.
       rewrite -subst_context_subst_telescope.
       rewrite subst_telescope_subst_context in ctx.
-      rewrite (smash_context_subst []).
-      now rewrite lift0_context in ctx.
+      rewrite (smash_context_subst []); auto.
   Qed.
 
   Lemma typing_spine_it_mkProd_or_LetIn_inv {Σ : global_env_ext} (wfΣ : wf Σ) Γ Δ s args s' :

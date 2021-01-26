@@ -143,7 +143,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
         type_local_decl Γ (vdef na b t) ->
         All_local_env (Γ ,, vdef na b t).
 
-(*     Inductive All_local_env : context -> Type :=
+  (*Inductive All_local_env : context -> Type :=
     | localenv_nil :
         All_local_env []
 
@@ -191,7 +191,7 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
     Hint Resolve All_local_env_skipn : wf.
 
   Arguments localenv_nil {_}.
-(*   Arguments localenv_cons {_ _ _} _ _. *)
+  (*   Arguments localenv_cons {_ _ _} _ _. *)
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 

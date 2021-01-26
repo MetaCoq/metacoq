@@ -5,8 +5,8 @@ From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICPosition PCUICTyping.
-From MetaCoq.Bidirectional Require Import BDEnvironmentTyping.
+  PCUICCases PCUICPosition PCUICTyping.
+(* From MetaCoq.Bidirectional Require Import BDEnvironmentTyping. *)
 
 From MetaCoq Require Export LibHypsNaming.
 Require Import ssreflect.
@@ -14,19 +14,20 @@ Set Asymmetric Patterns.
 Require Import Equations.Type.Relation.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
-Import MonadNotation.
 
-Module BDLookup := Lookup PCUICTerm PCUICEnvironment.
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
+
+(* Module BDLookup := Lookup PCUICTerm PCUICEnvironment.
 Include BDLookup.
 
 Module BDEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
-Include BDEnvTyping.
+Include BDEnvTyping. *)
 
 Notation "Σ ;;; Γ |- t --> t'" := (red Σ Γ t t') (at level 50, Γ, t, t' at next level) : type_scope.
 Reserved Notation " Σ ;;; Γ |- t ▹ T " (at level 50, Γ, t, T at next level).
-Reserved Notation " Σ ;;; Γ |- t ▸□ u " (at level 50, Γ, t, u at next level).
-Reserved Notation " Σ ;;; Γ |- t ▸Π ( na , A , B ) " (at level 50, Γ, t, na, A, B at next level).
-Reserved Notation " Σ ;;; Γ |- t ▸{ ind } ( u , args )" (at level 50, Γ, t, ind, u, args at next level).
+Reserved Notation " Σ ;;; Γ |- t ▹□ u " (at level 50, Γ, t, u at next level).
+Reserved Notation " Σ ;;; Γ |- t ▹Π ( na , A , B ) " (at level 50, Γ, t, na, A, B at next level).
+Reserved Notation " Σ ;;; Γ |- t ▹{ ind } ( u , args )" (at level 50, Γ, t, ind, u, args at next level).
 Reserved Notation " Σ ;;; Γ |- t ◃ T " (at level 50, Γ, t, T at next level).
 
 
@@ -42,23 +43,23 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
     Σ ;;; Γ |- tSort s ▹ tSort (Universe.super s)
 
 | infer_Prod na A B s1 s2 :
-    Σ ;;; Γ |- A ▸□ s1 ->
-    Σ ;;; Γ ,, vass na A |- B ▸□ s2 ->
+    Σ ;;; Γ |- A ▹□ s1 ->
+    Σ ;;; Γ ,, vass na A |- B ▹□ s2 ->
     Σ ;;; Γ |- tProd na A B ▹ tSort (Universe.sort_of_product s1 s2)
 
 | infer_Lambda na A t s B :
-    Σ ;;; Γ |- A ▸□ s ->
+    Σ ;;; Γ |- A ▹□ s ->
     Σ ;;; Γ ,, vass na A |- t ▹ B ->
     Σ ;;; Γ |- tLambda na A t ▹ tProd na A B
 
 | infer_LetIn na b B t s A :
-    Σ ;;; Γ |- B ▸□ s ->
+    Σ ;;; Γ |- B ▹□ s ->
     Σ ;;; Γ |- b ◃ B ->
     Σ ;;; Γ ,, vdef na b B |- t ▹ A ->
     Σ ;;; Γ |- tLetIn na b B t ▹ tLetIn na b B A
 
 | infer_App t na A B u :
-    Σ ;;; Γ |- t ▸Π (na,A,B) ->
+    Σ ;;; Γ |- t ▹Π (na,A,B) ->
     Σ ;;; Γ |- u ◃ A ->
     Σ ;;; Γ |- tApp t u ▹ B{0 := u}
 
@@ -70,20 +71,20 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
 
 | infer_Ind ind u :
     All_local_env (lift_sorting checking infering_sort Σ) Γ ->
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
+    forall mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- tInd ind u ▹ subst_instance_constr u idecl.(ind_type)
 
 | infer_Construct ind i u :
     All_local_env (lift_sorting checking infering_sort Σ) Γ ->
-    forall mdecl idecl cdecl (isdecl : declared_constructor Σ.1 mdecl idecl (ind, i) cdecl),
+    forall mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- tConstruct ind i u ▹ type_of_constructor mdecl cdecl (ind, i) u
 
-| infer_Case (indnpar : inductive × nat) (u : Instance.t) (p c : term) (brs : list (nat × term)) (args : list term) :
+(* | infer_Case (indnpar : inductive × nat) (u : Instance.t) (p c : term) (brs : list (nat × term)) (args : list term) :
   let ind := indnpar.1 in
   let npar := indnpar.2 in
-   Σ ;;; Γ |- c ▸{ind} (u,args) ->
+   Σ ;;; Γ |- c ▹{ind} (u,args) ->
   forall mdecl idecl (isdecl : declared_inductive Σ.1 mdecl ind idecl),
   mdecl.(ind_npars) = npar ->
   isCoFinite mdecl.(ind_finite) = false ->
@@ -95,33 +96,55 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
   All2 (fun br bty =>
     (br.1 = bty.1) ×
-    (Σ ;;; Γ |- bty.2 ▸□ ps) ×
+    (Σ ;;; Γ |- bty.2 ▹□ ps) ×
     (Σ ;;; Γ |- br.2 ◃ bty.2))
     brs btys ->
-  Σ ;;; Γ |- tCase indnpar p c brs ▹ mkApps p (skipn npar args ++ [c])
+  Σ ;;; Γ |- tCase indnpar p c brs ▹ mkApps p (skipn npar args ++ [c]) *)
+
+| type_Case (ci : case_info) p c brs indices ps :
+  forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
+  mdecl.(ind_npars) = ci.(ci_npar) ->
+  let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+  wf_predicate mdecl idecl p ->
+  wf_local Σ (Γ ,,, p.(pcontext)) ->
+  conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
+  Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
+  is_allowed_elimination Σ ps idecl.(ind_kelim) ->
+  Σ ;;; Γ |- c ◃ mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
+  isCoFinite mdecl.(ind_finite) = false ->
+  let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+  wf_branches idecl brs ->
+  All2i (fun i cdecl br =>
+    let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+    (wf_local Σ (Γ ,,, br.(bcontext)) ×
+      conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
+    (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 ◃ tSort ps) ×
+    (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2))
+    0 idecl.(ind_ctors) brs ->
+  Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (indices ++ [c])
 
 | infer_Proj p c u :
-    forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 mdecl idecl p pdecl) (args : list term),
-    Σ ;;; Γ |- c ▸{fst (fst p)} (u,args) ->
+    forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) (args : list term),
+    Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
     #|args| = ind_npars mdecl ->
     let ty := snd pdecl in
     Σ ;;; Γ |- tProj p c ▹ subst0 (c :: List.rev args) (subst_instance_constr u ty)
 
 | infer_Fix (mfix : mfixpoint term) n decl :
-    fix_guard mfix ->
+    fix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_sorting checking infering_sort Σ) Γ ->
-    All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▸□ s}) mfix ->
+    All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▹□ s}) mfix ->
     All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype))
       × (isLambda d.(dbody) = true)) mfix ->
     wf_fixpoint Σ.1 mfix -> 
     Σ ;;; Γ |- tFix mfix n ▹ decl.(dtype)
 
 | infer_CoFix mfix n decl :
-    cofix_guard mfix ->
+    cofix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
     All_local_env (lift_sorting checking infering_sort Σ) Γ ->
-    All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▸□ s}) mfix ->
+    All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▹□ s}) mfix ->
     All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) mfix ->
     wf_cofixpoint Σ.1 mfix ->
     Σ ;;; Γ |- tCoFix mfix n ▹ decl.(dtype)
@@ -131,91 +154,86 @@ with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T --> tSort u ->
   wf_universe Σ u ->
-  Σ ;;; Γ |- t ▸□ u
+  Σ ;;; Γ |- t ▹□ u
 
 with infering_prod `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> aname -> term -> term -> Type :=
 | infer_prod_Prod t T na A B s:
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T --> tProd na A B ->
-  Σ ;;; Γ |- tProd na A B ▸□ s ->
-  Σ ;;; Γ |- t ▸Π (na,A,B)
+  Σ ;;; Γ |- tProd na A B ▹□ s ->
+  Σ ;;; Γ |- t ▹Π (na,A,B)
 
 with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : inductive -> term -> Instance.t -> list term -> Type :=
 | infer_ind_Ind ind t T u args s:
   Σ ;;; Γ |- t ▹ T ->
   Σ ;;; Γ |- T --> mkApps (tInd ind u) args ->
-  Σ ;;; Γ |- mkApps (tInd ind u) args ▸□ s ->
-  Σ ;;; Γ |- t ▸{ind} (u,args)
+  Σ ;;; Γ |- mkApps (tInd ind u) args ▹□ s ->
+  Σ ;;; Γ |- t ▹{ind} (u,args)
 
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | check_Cons t T T' s:
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ |- T' ▸□ s ->
+  Σ ;;; Γ |- T' ▹□ s ->
   Σ ;;; Γ |- T <= T' ->
   Σ ;;; Γ |- t ◃ T'
 
 where " Σ ;;; Γ |- t ▹ T " := (@infering _ Σ Γ t T) : type_scope
-and " Σ ;;; Γ |- t ▸□ u " := (@infering_sort _ Σ Γ t u) : type_scope
-and " Σ ;;; Γ |- t ▸Π ( na , A , B ) " := (@infering_prod _ Σ Γ t na A B) : type_scope
-and " Σ ;;; Γ |- t ▸{ ind } ( u , args ) " := (@infering_indu _ Σ Γ ind t u args) : type_scope
+and " Σ ;;; Γ |- t ▹□ u " := (@infering_sort _ Σ Γ t u) : type_scope
+and " Σ ;;; Γ |- t ▹Π ( na , A , B ) " := (@infering_prod _ Σ Γ t na A B) : type_scope
+and " Σ ;;; Γ |- t ▹{ ind } ( u , args ) " := (@infering_indu _ Σ Γ ind t u args) : type_scope
 and " Σ ;;; Γ |- t ◃ T " := (@checking _ Σ Γ t T) : type_scope.
 
-Notation wf_local Σ Γ := (All_local_env (lift_sorting checking infering_sort Σ) Γ).
+Notation wf_local_bd Σ Γ := (All_local_env (lift_sorting checking infering_sort Σ) Γ).
 
-(** ** Typechecking of global environments, using BDEnvironment to separte typing into checking and sorting *)
+Definition tybranches_bd {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
+   All2i
+  (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
+   let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
+   (wf_local_bd Σ (Γ ,,, br.(bcontext)) × 
+    conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
+   (Σ;;; Γ,,, brctxty.1 |- brctxty.2 ◃ tSort ps
+    × Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2)) n ctors brs.
 
-Module BDTypingDef <: Typing PCUICTerm PCUICEnvironment BDEnvTyping.
+Fixpoint wf_local_size_bd `{checker_flags} Σ
+  (sorting_size : forall Σ' Γ t s, Σ' ;;; Γ |- t ▹□ s -> size)
+  (checking_size : forall Σ' Γ t T, Σ' ;;; Γ |- t ◃ T -> size)
+  Γ (w : wf_local_bd Σ Γ) : size :=
+  match w with
+  | localenv_nil => 0
 
-  Definition ind_guard := ind_guard.
-  Definition checking `{checker_flags} := checking.
-  Definition sorting `{checker_flags} := infering_sort.
-  Definition wf_universe := @wf_universe.
-  Definition conv := @conv.
-  Definition cumul := @cumul.
-  Definition smash_context := smash_context.
-  Definition expand_lets := expand_lets.
-  Definition extended_subst := extended_subst.
-  Definition expand_lets_ctx := expand_lets_ctx.
-  Definition lift_context := lift_context.
-  Definition subst_context := subst_context.
-  Definition subst_telescope := subst_telescope.
-  Definition subst_instance_context := subst_instance_context.
-  Definition subst_instance_constr := subst_instance_constr.
-  Definition subst := subst.
-  Definition lift := lift.
-  Definition inds := inds. 
-  Definition noccur_between := noccur_between. 
-  Definition closedn := closedn.
-  Definition destArity := destArity [].
+  | localenv_cons_abs Γ na t wfΓ tty =>
+    sorting_size _ _ t _ (projT2 tty) + wf_local_size_bd Σ sorting_size checking_size _ wfΓ
 
-End BDTypingDef.
+  | localenv_cons_def Γ na b t wfΓ tty tty' =>
+    (sorting_size _ _ t _ (projT2 tty)) + (checking_size _ _ b t tty') + wf_local_size_bd  Σ sorting_size checking_size _ wfΓ
+  end.
 
-Module BDDeclarationTyping :=
-  DeclarationTyping
-    PCUICTerm
-    PCUICEnvironment
-    BDEnvTyping
-    BDTypingDef
-    BDLookup.
-Include BDDeclarationTyping.
+Definition branches_size_bd {cf} {Σ Γ ci mdecl idecl p ps ptm brs}
+   (sorting_size : forall Σ Γ t s, Σ ;;; Γ |- t ▹□ s -> size)
+   (checking_size : forall Σ Γ t T, Σ ;;; Γ |- t ◃ T -> size)
+  {n ctors}
+  (a : tybranches_bd Σ Γ ci mdecl idecl p ps ptm n ctors brs) : size :=
+  (all2i_size _ (fun i x y p => 
+    Nat.max (wf_local_size_bd _ sorting_size checking_size _ p.1.1)
+      (Nat.max (checking_size _ _ _ _ p.2.1) (checking_size _ _ _ _ p.2.2))) a).
 
 Fixpoint infering_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T) {struct d} : size
-with infering_sort_size `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▸□ u) {struct d} : size
-with infering_prod_size `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▸Π (na, A,B)) {struct d} : size
-with infering_indu_size `{checker_flags} {Σ Γ ind t ui args} (d : Σ ;;; Γ |- t ▸{ind} (ui,args)) {struct d} : size
+with infering_sort_size `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▹□ u) {struct d} : size
+with infering_prod_size `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▹Π (na, A,B)) {struct d} : size
+with infering_indu_size `{checker_flags} {Σ Γ ind t ui args} (d : Σ ;;; Γ |- t ▹{ind} (ui,args)) {struct d} : size
 with checking_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ◃ T) {struct d} : size.
 Proof.
   all: destruct d ;
-    repeat match goal with
+    repeat lazymatch goal with
           | H : infering _ _ _ _ |- _ => apply infering_size in H
           | H : infering_sort _ _ _ _ |- _ => apply infering_sort_size in H
           | H : infering_prod _ _ _ _ _ _ |- _ => apply infering_prod_size in H
           | H : infering_indu _ _ _ _ _ _ |- _ => apply infering_indu_size in H 
           | H : checking _ _ _ _ |- _ => apply checking_size in H
-          | H : wf_local _ _ |- _ => apply (wf_local_size _ (checking_size _) (infering_sort_size _)) in H
-          end ;
-    match goal with
-    | H : All2 _ _ _ |- _ => idtac
+          | H : wf_local_bd _ _ |- _ => apply (wf_local_size_bd _ (infering_sort_size _) (checking_size _)) in H
+    end;
+    lazymatch goal with
+    | H : All2i _ _ _ _ |- _ => idtac
     | H : All _ _ |- _ => idtac
     | H1 : size, H2 : size, H3 : size |- _ => exact (S (H1 + H2 + H3))
     | H1 : size, H2 : size |- _ => exact (S (H1 + H2))
@@ -238,11 +256,11 @@ Defined. *)
 
 Fixpoint infering_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T)
   : infering_size d > 0
-with infering_sort_size_pos `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▸□ u) {struct d}
+with infering_sort_size_pos `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▹□ u) {struct d}
   : infering_sort_size d > 0
-with infering_prod_size_pos `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▸Π (na,A,B)) {struct d}
+with infering_prod_size_pos `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▹Π (na,A,B)) {struct d}
   : infering_prod_size d > 0
-with infering_indu_size_pos `{checker_flags} {Σ Γ t ind ui args} (d : Σ ;;; Γ |- t ▸{ind} (ui,args)) {struct d}
+with infering_indu_size_pos `{checker_flags} {Σ Γ t ind ui args} (d : Σ ;;; Γ |- t ▹{ind} (ui,args)) {struct d}
   : infering_indu_size d > 0
 with checking_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ◃ T) {struct d}
   : checking_size d > 0.
@@ -286,11 +304,11 @@ Hint Resolve wf_local_app : wf.
 
 Fixpoint infering_wf_local `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T)
   : wf_local Σ Γ
-with infering_sort_wf_local `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▸□ u) {struct d}
+with infering_sort_wf_local `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▹□ u) {struct d}
   : wf_local Σ Γ
-with infering_prod_wf_local `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▸Π (na,A,B)) {struct d}
+with infering_prod_wf_local `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▹Π (na,A,B)) {struct d}
   : wf_local Σ Γ
-with infering_indu_wf_local `{checker_flags} {Σ Γ t ind ui args} (d : Σ ;;; Γ |- t ▸{ind} (ui,args)) {struct d}
+with infering_indu_wf_local `{checker_flags} {Σ Γ t ind ui args} (d : Σ ;;; Γ |- t ▹{ind} (ui,args)) {struct d}
   : wf_local Σ Γ
 with checking_wf_local `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ◃ T) {struct d}
   : wf_local Σ Γ.
@@ -318,9 +336,9 @@ Section TypingInduction.
     (forall Γ (wfΓ : wf_local Σ Γ), PΓ Σ Γ wfΓ) ×
     (forall Γ t T, Σ ;;; Γ |- t ◃ T -> Pcheck Σ Γ t T) ×
     (forall Γ t T, Σ ;;; Γ |- t ▹ T -> Pinfer Σ Γ t T) ×
-    (forall Γ t u, Σ ;;; Γ |- t ▸□ u -> Psort Σ Γ t u) ×
-    (forall Γ t na A B, Σ ;;; Γ |- t ▸Π (na,A,B) -> Pprod Σ Γ t na A B) ×
-    (forall Γ ind t u args, Σ ;;; Γ |- t ▸{ind} (u,args) -> Pind Σ Γ ind t u args).
+    (forall Γ t u, Σ ;;; Γ |- t ▹□ u -> Psort Σ Γ t u) ×
+    (forall Γ t na A B, Σ ;;; Γ |- t ▹Π (na,A,B) -> Pprod Σ Γ t na A B) ×
+    (forall Γ ind t u args, Σ ;;; Γ |- t ▹{ind} (u,args) -> Pind Σ Γ ind t u args).
 
   Derive Signature for All_local_env.
 
@@ -341,11 +359,11 @@ Section TypingInduction.
 
   Fixpoint infering_wf_local_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T)
     : wfl_size (infering_wf_local d) < infering_size d
-  with infering_sort_wf_local_size `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▸□ u) {struct d}
+  with infering_sort_wf_local_size `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▹□ u) {struct d}
     : wfl_size (infering_sort_wf_local d) < infering_sort_size d
-  with infering_prod_wf_local_size `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▸Π (na,A,B)) {struct d}
+  with infering_prod_wf_local_size `{checker_flags} {Σ Γ t na A B} (d : Σ ;;; Γ |- t ▹Π (na,A,B)) {struct d}
     : wfl_size (infering_prod_wf_local d) < infering_prod_size d
-  with infering_indu_wf_local_size `{checker_flags} {Σ Γ t ind ui args} (d : Σ ;;; Γ |- t ▸{ind} (ui,args)) {struct d}
+  with infering_indu_wf_local_size `{checker_flags} {Σ Γ t ind ui args} (d : Σ ;;; Γ |- t ▹{ind} (ui,args)) {struct d}
     : wfl_size (infering_indu_wf_local d) < infering_indu_size d
   with checking_wf_local_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ◃ T) {struct d}
   : wfl_size (checking_wf_local d) < checking_size d.
@@ -387,10 +405,10 @@ Section TypingInduction.
     | context_cons : forall (Γ : context) (wfΓ : wf_local Σ Γ), typing_sum Σ wfΣ
     | check_cons : forall (Γ : context) T t, Σ ;;; Γ |- t ◃ T -> typing_sum Σ wfΣ
     | inf_cons : forall (Γ : context) T t, Σ ;;; Γ |- t ▹ T -> typing_sum Σ wfΣ
-    | sort_cons : forall (Γ : context) t u, Σ ;;; Γ |- t ▸□ u -> typing_sum Σ wfΣ
-    | prod_cons : forall (Γ : context) t na A B, Σ ;;; Γ |- t ▸Π (na,A,B) -> typing_sum Σ wfΣ
+    | sort_cons : forall (Γ : context) t u, Σ ;;; Γ |- t ▹□ u -> typing_sum Σ wfΣ
+    | prod_cons : forall (Γ : context) t na A B, Σ ;;; Γ |- t ▹Π (na,A,B) -> typing_sum Σ wfΣ
     | ind_cons : forall (Γ : context) ind t u args,
-        Σ ;;; Γ |- t ▸{ind} (u,args) -> typing_sum Σ wfΣ.
+        Σ ;;; Γ |- t ▹{ind} (u,args) -> typing_sum Σ wfΣ.
 
   Definition typing_sum_size `{checker_flags} {Σ} {wfΣ : wf Σ.1} (d : typing_sum Σ wfΣ) :=
   match d with
@@ -465,16 +483,16 @@ Section TypingInduction.
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
       (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s1 s2 : Universe.t),
       PΓ Σ Γ wfΓ ->
-      Σ ;;; Γ |- t ▸□ s1 ->
+      Σ ;;; Γ |- t ▹□ s1 ->
       Psort Σ Γ t s1 ->
-      Σ ;;; Γ,, vass n t |- b ▸□ s2 ->
+      Σ ;;; Γ,, vass n t |- b ▹□ s2 ->
       Psort Σ (Γ,, vass n t) b s2 ->
       Pinfer Σ Γ (tProd n t b) (tSort (Universe.sort_of_product s1 s2))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
       (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (t b : term) (s : Universe.t) (bty : term),
       PΓ Σ Γ wfΓ ->
-      Σ ;;; Γ |- t ▸□ s ->
+      Σ ;;; Γ |- t ▹□ s ->
       Psort Σ Γ t s ->
       Σ ;;; Γ,, vass n t |- b ▹ bty -> Pinfer Σ (Γ,, vass n t) b bty ->
       Pinfer Σ Γ (tLambda n t b) (tProd n t bty)) ->
@@ -482,7 +500,7 @@ Section TypingInduction.
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
       (Γ : context) (wfΓ : wf_local Σ Γ) (n : aname) (b B t : term) (s : Universe.t) (A : term),
       PΓ Σ Γ wfΓ ->
-      Σ ;;; Γ |- B ▸□ s ->
+      Σ ;;; Γ |- B ▹□ s ->
       Psort Σ Γ B s ->
       Σ ;;; Γ |- b ◃ B ->
       Pcheck Σ Γ b B ->
@@ -492,7 +510,7 @@ Section TypingInduction.
     (forall Σ (wfΣ : wf Σ.1) (PΣ : Forall_decls_sorting Pcheck Psort Σ.1)
       (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u,
       PΓ Σ Γ wfΓ ->
-      Σ ;;; Γ |- t ▸Π (na, A, B) -> Pprod Σ Γ t na A B ->
+      Σ ;;; Γ |- t ▹Π (na, A, B) -> Pprod Σ Γ t na A B ->
       Σ ;;; Γ |- u ◃ A -> Pcheck Σ Γ u A ->
       Pinfer Σ Γ (tApp t u) (subst10 u B)) ->
 
@@ -530,7 +548,7 @@ Section TypingInduction.
       PΓ Σ Γ wfΓ ->
       Forall_decls_sorting Pcheck Psort Σ.1 ->
       isCoFinite mdecl.(ind_finite) = false ->
-      Σ ;;; Γ |- c ▸{ind} (u,args) ->
+      Σ ;;; Γ |- c ▹{ind} (u,args) ->
       Pind Σ Γ ind c u args ->
       ind_npars mdecl = npar ->
       let params := firstn npar args in
@@ -542,7 +560,7 @@ Section TypingInduction.
       forall btys,
       map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
       All2 (fun br bty => (br.1 = bty.1) ×
-                        (Σ ;;; Γ |- bty.2 ▸□ ps) × Psort Σ Γ bty.2 ps ×
+                        (Σ ;;; Γ |- bty.2 ▹□ ps) × Psort Σ Γ bty.2 ps ×
                         (Σ ;;; Γ |- br.2 ◃ bty.2) × Pcheck Σ Γ br.2 bty.2)
             brs btys ->
       Pinfer Σ Γ (tCase (ind,npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
@@ -553,7 +571,7 @@ Section TypingInduction.
       PΓ Σ Γ wfΓ ->
       Forall_decls_sorting Pcheck Psort Σ.1 ->
       declared_projection Σ.1 mdecl idecl p pdecl ->
-      Σ ;;; Γ |- c ▸{fst (fst p)} (u,args) ->
+      Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
       Pind Σ Γ (fst (fst p)) c u args ->
       #|args| = ind_npars mdecl ->
       let ty := snd pdecl in
@@ -564,7 +582,7 @@ Section TypingInduction.
       PΓ Σ Γ wfΓ ->
       fix_guard mfix ->
       nth_error mfix n = Some decl ->
-      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▸□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
+      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▹□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
       All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
                 (isLambda d.(dbody) = true) ×
                 Pcheck Σ (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
@@ -576,7 +594,7 @@ Section TypingInduction.
       PΓ Σ Γ wfΓ ->
       cofix_guard mfix ->
       nth_error mfix n = Some decl ->
-      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▸□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
+      All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▹□ s) × Psort Σ Γ d.(dtype) s}) mfix ->
       All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
                 Pcheck Σ (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
       wf_cofixpoint Σ.1 mfix ->
@@ -597,7 +615,7 @@ Section TypingInduction.
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
       Σ ;;; Γ |- T --> tProd na A B ->
-      Σ ;;; Γ |- tProd na A B ▸□ s ->
+      Σ ;;; Γ |- tProd na A B ▹□ s ->
       Psort Σ Γ (tProd na A B) s ->
       Pprod Σ Γ t na A B) ->
 
@@ -608,7 +626,7 @@ Section TypingInduction.
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
       Σ ;;; Γ |- T --> mkApps (tInd ind ui) args ->
-      Σ ;;; Γ |- mkApps (tInd ind ui) args ▸□ s ->
+      Σ ;;; Γ |- mkApps (tInd ind ui) args ▹□ s ->
       Psort Σ Γ (mkApps (tInd ind ui) args) s ->
       Pind Σ Γ ind t ui args) ->
 
@@ -617,7 +635,7 @@ Section TypingInduction.
       PΓ Σ Γ wfΓ ->
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Σ Γ t T ->
-      Σ ;;; Γ |- T' ▸□ s ->
+      Σ ;;; Γ |- T' ▹□ s ->
       Psort Σ Γ T' s ->
       Σ ;;; Γ |- T <= T' ->
       Pcheck Σ Γ t T') ->

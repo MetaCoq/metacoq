@@ -1,13 +1,14 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping.
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICSR PCUICContextConversion.
-From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDMinimalTyping BDMinimalToPCUIC.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICSR PCUICContextConversion PCUICWeakening PCUICWeakeningEnv.
+From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
-     
+
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
@@ -30,7 +31,7 @@ Proof.
   all: eassumption.
 Qed.
 
-Lemma conv_infer_prod `{checker_flags} (Σ : global_env_ext) (wfΣ : PT.wf Σ) Γ t n A B:
+Lemma conv_infer_prod `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ t n A B:
   (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ |- T' <= tProd n A B)) ->
   ∑ n' A' B', Σ ;;; Γ |- t ▸Π (n',A',B')
       × (Σ ;;; Γ |- A' = A) × (Σ ;;; Γ ,, vass n A |- B' <= B).
@@ -43,10 +44,10 @@ Proof.
   all: eassumption.
 Qed.
 
-Lemma conv_infer_ind `{checker_flags} (Σ : global_env_ext) (wfΣ : PT.wf Σ) Γ t ind ui args :
+Lemma conv_infer_ind `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ t ind ui args :
   (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ |- T' <= mkApps (tInd ind ui) args)) ->
   ∑ ui' args', Σ ;;; Γ |- t ▸{ind} (ui',args')
-      × (PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui)
+      × (R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui)
       × (All2 (fun a a' => Σ ;;; Γ |- a = a') args args').
 Proof.
   intros (?&?&Cumt).
@@ -59,16 +60,27 @@ Qed.
 
 Section PCUICToBD.
 
-Lemma typing_infering `{checker_flags} :
-        PT.env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T})
-         (fun Σ Γ _ => MT.wf_local Σ Γ).
+Definition non_cumul (Σ : global_env) :=
+  Forall (fun d => match d.2 with | InductiveDecl m => ind_variance m = None | _ => True end) Σ.
+
+Lemma build_case_predicate_conv : forall `{cf : checker_flags} Σ (wfΣ : wf Σ) Γ ind mdecl idecl params params' u u' ps pty,
+  declared_inductive Σ.1 mdecl ind idecl ->
+  conv_terms Σ Γ params params' -> R_universe_instance (eq_universe Σ) u u' ->
+  build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
+  {pty' & build_case_predicate_type ind mdecl idecl params' u' ps = Some pty' × Σ ;;; Γ |- pty = pty'}.
+Admitted.
+
+
+  Lemma typing_infering `{checker_flags} :
+        env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T})
+         (fun Σ Γ _ => wf_local_bd Σ Γ).
 Proof.
-  apply PT.typing_ind_env.
+  apply typing_ind_env.
 
   all: intros Σ wfΣ Γ wfΓ.
 
-  - intros MTwfΓ.
-    induction MTwfΓ.
+  - intros bdwfΓ.
+    induction bdwfΓ.
     all: constructor ; auto.
     + apply conv_infer_sort in p ; auto.
       destruct p as (?&?&?).
@@ -77,10 +89,10 @@ Proof.
     + apply conv_check in p ; auto.
       apply conv_infer_sort in p0 ; auto.
       destruct p0 as (?&?&?).
-      split.
       1: eexists.
       all: eassumption.
-  
+    + by apply conv_check in p.
+      
   - intros.
     eexists.
     split.
@@ -127,7 +139,7 @@ Proof.
     + apply cumul_LetIn_bo.
       eassumption.
 
-  - intros t na A B u ? ? Cumt ? (?&?&?).
+  - intros t na A B u ? ? ? ? ? Cumt ? (?&?&?).
     apply conv_infer_prod in Cumt ; auto.
     destruct Cumt as (?&?&?&?&?&?).
     eexists.
@@ -161,8 +173,49 @@ Proof.
     econstructor.
     all: eassumption.
     
-  - admit.
+  - intros ind u npar p c brs args mdecl idecl isdecl wfΣ' wfbΓ ? params ps pty pred ty_p Cump ? ? ? Cumc ? ? ty_br.
 
+    assert (∑ pctx, destArity [] pty =  Some (pctx, ps)) as [? ari].
+    { unshelve eapply (build_case_predicate_type_spec (Σ.1, ind_universes mdecl)) in pred as [parsubst [_ ->]].
+      1: eapply (on_declared_inductive) in isdecl as [? ?] ; eauto.
+      eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
+
+    assert (wf_universe Σ ps).
+    { eapply validity in ty_p; eauto.
+      apply isType_wf_universes in ty_p; auto.
+      apply destArity_spec_Some in ari.
+      cbn in ari.
+      subst pty.
+      rewrite wf_universes_it_mkProd_or_LetIn in ty_p.
+      move/andb_and: ty_p => [_ ty_p].
+      now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in ty_p.
+    }
+
+    apply conv_check in Cump.
+    apply conv_infer_ind in Cumc as (?&?&?&?&?) ; auto.
+    eexists.
+    split.
+    + econstructor.
+      * eassumption.
+      * eassumption.
+      * eassumption.
+      * eassumption.
+      * admit. (*build_case_predicate_type on convertible arguments*)
+      * eassumption.
+      * eassumption.
+      * eassumption.
+      * admit. (*build_brandches_type on convertible arguments*)
+      * clear -ty_br.
+        induction ty_br.
+        1:
+        admit. (*all branches are well-typed*)
+    + apply cumul_mkApps ; auto.
+      1: reflexivity.
+      apply All2_app.
+      2: constructor ; auto.
+      symmetry.
+      apply All2_skipn.
+      assumption.
 
   - intros ? c u mdecl idecl [] isdecl args ? ? ? Cumc ? ty.
     apply conv_infer_ind in Cumc as (ui'&args'&?&?&?) ; auto.
@@ -177,24 +230,24 @@ Proof.
       eassumption.
 
     + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args') by (apply infering_ind_typing in i0 ; auto).
-      assert (PT.consistent_instance_ext Σ (ind_universes mdecl) u).
+      assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
           apply validity_term in X1 as [] ; auto.
-          eapply PCUICInductives.invert_type_mkApps_ind ; eauto.
+          eapply invert_type_mkApps_ind ; eauto.
         }
-      assert (PT.consistent_instance_ext Σ (ind_universes mdecl) ui').
+      assert (consistent_instance_ext Σ (ind_universes mdecl) ui').
         { destruct isdecl.
           apply validity_term in X2 as [] ; auto.
-          eapply PCUICInductives.invert_type_mkApps_ind ; eauto.
+          eapply invert_type_mkApps_ind ; eauto.
         }
-      unshelve epose proof (PCUICInductives.wf_projection_context _ _ _ _) ; eauto.
+      unshelve epose proof (wf_projection_context _ _ _ _) ; eauto.
       change Γ with (Γ,,, subst_context (c :: List.rev args') 0 []).
       eapply subst_cumul.
       * assumption.
-      * eapply PCUICInductives.projection_subslet.
+      * eapply projection_subslet.
         4: eapply validity_term.
         all: eassumption.
-      * eapply PCUICInductives.projection_subslet.
+      * eapply projection_subslet.
         4: eapply validity_term.
         all: eassumption.
       * constructor.
@@ -202,19 +255,20 @@ Proof.
         apply All2_rev.
         symmetry.
         assumption.
-      * repeat apply PCUICWeakening.weaken_wf_local.
-        all: auto.
+      * apply wf_local_app.
+        2: by constructor.
+        by apply weaken_wf_local.
 
-      * change (Γ ,,, _ ,,, _) with (Γ,,, (PCUICInductives.projection_context mdecl idecl p.1.1 ui')).
+      * change (Γ ,,, _ ,,, _) with (Γ,,, (projection_context mdecl idecl p.1.1 ui')).
         apply weaken_cumul ; auto.
         --by eapply PCUICClosed.closed_wf_local ; eauto.
         --simpl. len. simpl.
-          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(PT.onNpars).
+          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(onNpars).
           rewrite PCUICClosed.closedn_subst_instance_constr.
           change t with (i,t).2.
           eapply PCUICClosed.declared_projection_closed ; eauto.
         --simpl. len. simpl.
-          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(PT.onNpars).
+          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(onNpars).
           rewrite PCUICClosed.closedn_subst_instance_constr.
           change t with (i,t).2.
           eapply PCUICClosed.declared_projection_closed ; eauto.
@@ -238,11 +292,11 @@ Proof.
       clearbody types.
       induction Allbodies.
       all: constructor ; auto.
-      destruct p as ((_&?)&p).
+      destruct p as (?&p).
       apply conv_check in p.
-      split ; auto.
+      auto.
   
-  - intros mfix n decl types ? ? ? Alltypes Allbodies.
+  - intros mfix n decl types ? ? ? Alltypes Allbodies wfmfix.
     eexists.
     split.
     2: reflexivity.

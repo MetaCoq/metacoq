@@ -10,9 +10,30 @@ Require Import Equations.Prop.DepElim.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+Lemma is_allowed_elimination_monotone `{checker_flags} Σ s1 s2 allowed :
+  leq_universe Σ s1 s2 -> is_allowed_elimination Σ s2 allowed -> is_allowed_elimination Σ s1 allowed.
+Proof.
+  intros le elim.
+  unfold is_allowed_elimination in elim |- *.
+  red in le.
+  destruct check_univs ; auto.
+  unfold is_allowed_elimination0 in elim |- *.
+  intros v satisf.
+  specialize (le v satisf).
+  specialize (elim v satisf).
+  destruct allowed ; auto.
+  all: destruct (⟦s1⟧_v)%u.
+  all: destruct (⟦s2⟧_v)%u.
+  all: auto.
+  all: red in le ; auto.
+  rewrite Z.sub_0_r in le.
+  apply Nat2Z.inj_le in le.
+  destruct le ; auto.
+Qed.
+
 Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
-  {s' & Σ ;;; Γ |- t ▸□ s' × leq_universe Σ s' s}.
+  {s' & Σ ;;; Γ |- t ▹□ s' × leq_universe Σ s' s}.
 Proof.
   intros (?&?&Cumt).
   apply cumul_Sort_r_inv in Cumt ; auto.
@@ -33,7 +54,7 @@ Qed.
 
 Lemma conv_infer_prod `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ t n A B:
   (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ |- T' <= tProd n A B)) ->
-  ∑ n' A' B', Σ ;;; Γ |- t ▸Π (n',A',B')
+  ∑ n' A' B', Σ ;;; Γ |- t ▹Π (n',A',B')
       × (Σ ;;; Γ |- A' = A) × (Σ ;;; Γ ,, vass n A |- B' <= B).
 Proof.
   intros (?&?&Cumt).
@@ -46,7 +67,7 @@ Qed.
 
 Lemma conv_infer_ind `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ t ind ui args :
   (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ |- T' <= mkApps (tInd ind ui) args)) ->
-  ∑ ui' args', Σ ;;; Γ |- t ▸{ind} (ui',args')
+  ∑ ui' args', Σ ;;; Γ |- t ▹{ind} (ui',args')
       × (R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui)
       × (All2 (fun a a' => Σ ;;; Γ |- a = a') args args').
 Proof.
@@ -60,20 +81,9 @@ Qed.
 
 Section PCUICToBD.
 
-Definition non_cumul (Σ : global_env) :=
-  Forall (fun d => match d.2 with | InductiveDecl m => ind_variance m = None | _ => True end) Σ.
-
-Lemma build_case_predicate_conv : forall `{cf : checker_flags} Σ (wfΣ : wf Σ) Γ ind mdecl idecl params params' u u' ps pty,
-  declared_inductive Σ.1 mdecl ind idecl ->
-  conv_terms Σ Γ params params' -> R_universe_instance (eq_universe Σ) u u' ->
-  build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
-  {pty' & build_case_predicate_type ind mdecl idecl params' u' ps = Some pty' × Σ ;;; Γ |- pty = pty'}.
-Admitted.
-
-
   Lemma typing_infering `{checker_flags} :
         env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T})
-         (fun Σ Γ _ => wf_local_bd Σ Γ).
+         (fun Σ Γ => wf_local_bd Σ Γ).
 Proof.
   apply typing_ind_env.
 
@@ -146,9 +156,9 @@ Proof.
     split.
     + econstructor ; eauto.
       econstructor ; eauto.
-      eapply cumul_trans ; eauto.
+      etransitivity ; eauto.
       apply conv_cumul.
-      by apply conv_sym.
+      by symmetry.
     + eapply substitution_cumul0.
       all: eassumption.
   
@@ -173,49 +183,63 @@ Proof.
     econstructor.
     all: eassumption.
     
-  - intros ind u npar p c brs args mdecl idecl isdecl wfΣ' wfbΓ ? params ps pty pred ty_p Cump ? ? ? Cumc ? ? ty_br.
-
-    assert (∑ pctx, destArity [] pty =  Some (pctx, ps)) as [? ari].
-    { unshelve eapply (build_case_predicate_type_spec (Σ.1, ind_universes mdecl)) in pred as [parsubst [_ ->]].
-      1: eapply (on_declared_inductive) in isdecl as [? ?] ; eauto.
-      eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
+  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar predctx wfpred ? ? ty_p Cump ? ? ty_c Cumc ? ? ? ty_br.
 
     assert (wf_universe Σ ps).
-    { eapply validity in ty_p; eauto.
+    { eapply validity_term in ty_p; eauto.
       apply isType_wf_universes in ty_p; auto.
-      apply destArity_spec_Some in ari.
-      cbn in ari.
-      subst pty.
-      rewrite wf_universes_it_mkProd_or_LetIn in ty_p.
-      move/andb_and: ty_p => [_ ty_p].
       now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in ty_p.
     }
 
-    apply conv_check in Cump.
+    apply conv_infer_sort in Cump as (?&?&?).
     apply conv_infer_ind in Cumc as (?&?&?&?&?) ; auto.
     eexists.
     split.
     + econstructor.
-      * eassumption.
-      * eassumption.
-      * eassumption.
-      * eassumption.
-      * admit. (*build_case_predicate_type on convertible arguments*)
-      * eassumption.
-      * eassumption.
-      * eassumption.
-      * admit. (*build_brandches_type on convertible arguments*)
-      * clear -ty_br.
-        induction ty_br.
-        1:
-        admit. (*all branches are well-typed*)
+      all: try eassumption.
+      * eapply is_allowed_elimination_monotone.
+        all: eassumption.
+      * apply cumul_mkApps_cum ; auto.
+        -- constructor.
+           replace #|x1| with #|pparams p ++ indices|.
+           1: assumption.
+           eapply All2_length.
+           eassumption.
+
+        -- rewrite -{1}(firstn_skipn (ci_npar ci) x1).
+           apply All2_app.
+           2: apply eq_terms_conv_terms ; reflexivity.
+           symmetry.
+           replace (pparams p) with (firstn (ci_npar ci) (pparams p ++ indices)).
+           1: by apply All2_firstn.
+           rewrite {2}(app_nil_end (pparams p)) -(firstn_O indices).
+           apply firstn_app_left.
+           rewrite <- epar.
+           destruct wfpred as [->].
+           by apply plus_n_O.
+
+      * eapply All2i_impl.
+        1: eassumption.
+        intros j cdecl br Hbr brctxty.
+        cbn in Hbr.
+        fold predctx in brctxty.
+        fold ptm in brctxty.
+        fold brctxty in Hbr.
+        destruct Hbr as ((?&?)&(?&?)&Cumbody&?&Cumty).
+        apply conv_check in Cumbody.
+        apply conv_check in Cumty.
+        repeat split ; auto.
+        admit. (*should use build_branches_type_wt, but it is not good enough…*)
+
     + apply cumul_mkApps ; auto.
       1: reflexivity.
       apply All2_app.
       2: constructor ; auto.
-      symmetry.
-      apply All2_skipn.
-      assumption.
+      replace indices with (skipn (ci_npar ci) (pparams p ++ indices)).
+      1: by apply All2_skipn ; symmetry.
+      apply skipn_all_app_eq.
+      rewrite <- epar.
+      by destruct wfpred as [->].
 
   - intros ? c u mdecl idecl [] isdecl args ? ? ? Cumc ? ty.
     apply conv_infer_ind in Cumc as (ui'&args'&?&?&?) ; auto.
@@ -257,19 +281,19 @@ Proof.
         assumption.
       * apply wf_local_app.
         2: by constructor.
-        by apply weaken_wf_local.
+        by apply PCUICWeakening.weaken_wf_local.
 
       * change (Γ ,,, _ ,,, _) with (Γ,,, (projection_context mdecl idecl p.1.1 ui')).
         apply weaken_cumul ; auto.
         --by eapply PCUICClosed.closed_wf_local ; eauto.
         --simpl. len. simpl.
-          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(onNpars).
-          rewrite PCUICClosed.closedn_subst_instance_constr.
+          rewrite (PCUICWeakeningEnv.on_declared_projection isdecl).1.(onNpars).
+          rewrite PCUICClosed.closedn_subst_instance.
           change t with (i,t).2.
           eapply PCUICClosed.declared_projection_closed ; eauto.
         --simpl. len. simpl.
-          rewrite (PCUICWeakeningEnv.on_declared_projection _ isdecl).1.(onNpars).
-          rewrite PCUICClosed.closedn_subst_instance_constr.
+          rewrite (PCUICWeakeningEnv.on_declared_projection isdecl).1.(onNpars).
+          rewrite PCUICClosed.closedn_subst_instance.
           change t with (i,t).2.
           eapply PCUICClosed.declared_projection_closed ; eauto.
         --eapply projection_cumulative_indices ; auto.
@@ -319,8 +343,7 @@ Proof.
     eexists.
     split.
     1: eassumption.
-    eapply cumul_trans ; eauto.
-
+    etransitivity ; eauto.
 Admitted.
 
 

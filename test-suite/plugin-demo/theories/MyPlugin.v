@@ -7,8 +7,8 @@ Import TemplateMonad.Extractable.
 From MetaCoq Require Import Template.BasicAst Template.AstUtils Ast.
 
 
-Let TemplateMonad := TM.
-Fixpoint mconcat (ls : list (TemplateMonad unit)) : TemplateMonad unit :=
+Notation TemplateMonad := TM.
+Fixpoint mconcat (ls : list (TemplateMonad unit)) : TM unit :=
   match ls with
   | nil => tmReturn tt
   | m :: ms => tmBind m (fun _ => mconcat ms)
@@ -133,7 +133,7 @@ Definition getFields (mi : mutual_inductive_body)
     match oib.(ind_ctors) with
     | ctor :: nil =>
       Some {| type := oib.(ind_name)
-            ; ctor := let '(x,_,_) := ctor in x
+            ; ctor := ctor.(cstr_name)
             ; fields := oib.(ind_projs)
            |}
     | _ => None

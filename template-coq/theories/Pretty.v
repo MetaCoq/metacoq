@@ -140,16 +140,19 @@ Section print_term.
   | tCast c k t => parens top (print_term Γ true c ^ ":"  ^ print_term Γ true t)
   | tProd na dom codom =>
     let na' := (fresh_name Γ na.(binder_name) (Some dom)) in
-    parens top
+    if (noccur_between 0 1 codom) then
+      parens top
+      (print_term Γ false dom ^ " → " ^ print_term (na' :: Γ) true codom)
+    else parens top
            ("∀ " ^ na' ^ " : " ^
                      print_term Γ true dom ^ ", " ^ print_term (na' :: Γ) true codom)
   | tLambda na dom body =>
     let na' := (fresh_name Γ na.(binder_name) (Some dom)) in
     parens top ("fun " ^ na' ^ " : " ^ print_term Γ true dom
-                                ^ " => " ^ print_term (na' :: Γ) true body)
+                                ^ " ⇒ " ^ print_term (na' :: Γ) true body)
   | tLetIn na def dom body =>
     let na' := (fresh_name Γ na.(binder_name) (Some dom)) in
-    parens top ("let" ^ na' ^ " : " ^ print_term Γ true dom ^
+    parens top ("let " ^ na' ^ " : " ^ print_term Γ true dom ^
                       " := " ^ print_term Γ true def ^ " in " ^ nl ^
                       print_term (na' :: Γ) true body)
   | tApp f l =>
@@ -192,7 +195,7 @@ Section print_term.
 
         let fix print_branch Γ names prbr {struct names} :=
             match names with
-            | [] => "=> " ^ prbr Γ
+            | [] => "⇒ " ^ prbr Γ
             | na :: l =>
               let na' := (fresh_name Γ na.(binder_name) None) in
                 na' ^ "  " ^ print_branch (na' :: Γ) l prbr
@@ -241,3 +244,70 @@ Section print_term.
   end.
 
 End print_term.
+
+
+Definition pr_context_decl (Σ : global_env_ext) Γ (c : context_decl) : ident * string :=
+  match c with
+  | {| decl_name := na; decl_type := ty; decl_body := None |} => 
+    let na' := (fresh_name Σ Γ na.(binder_name) (Some ty)) in
+    (na', ("(" ++ na' ++ " : " ++ print_term Σ Γ true ty ++ ")")%string)
+  | {| decl_name := na; decl_type := ty; decl_body := Some b |} =>
+    let na' := (fresh_name Σ Γ na.(binder_name) (Some ty)) in
+    (na', ("(" ++ na' ++ " : " ++ print_term Σ Γ true ty ++ " := " ++
+      print_term Σ Γ true b ++ ")")%string)
+  end.
+
+Fixpoint print_context Σ Γ Δ :=
+  match Δ with
+  | [] => (Γ, ""%string)
+  | d :: decls => 
+    let '(Γ, s) := print_context Σ Γ decls in
+    let '(na, s') := pr_context_decl Σ Γ d in
+    (na :: Γ, (s ++ s')%string)
+  end.
+
+Definition print_one_cstr Σ Γ (mib : mutual_inductive_body) (c : constructor_body) : string :=
+  let '(Γargs, s) := print_context Σ Γ c.(cstr_args) in
+  c.(cstr_name) ++ " : " ++ s ++ "_" ++ print_list (print_term Σ Γargs true) " " c.(cstr_indices).
+  
+Definition print_one_ind (short : bool) Σ Γ (mib : mutual_inductive_body) (oib : one_inductive_body) : string :=
+  let '(Γpars, spars) := print_context Σ Γ mib.(ind_params) in
+  let '(Γinds, sinds) := print_context Σ Γpars oib.(ind_indices) in
+  oib.(ind_name) ++ spars ++ sinds ++ print_term Σ Γinds true (tSort oib.(ind_sort)) ++ ":=" ++ nl ++
+  if short then "..."
+  else print_list (print_one_cstr Σ Γpars mib) nl oib.(ind_ctors).
+
+Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : string) := 
+  match prefix with 
+  | 0 => match Σ with [] => acc | _ => ("..." ++ nl ++ acc)%string end
+  | S n => 
+  match Σ with
+  | [] => acc
+  | (kn, InductiveDecl mib) :: Σ => 
+    let Σ' := (Σ, mib.(ind_universes)) in
+    let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
+    print_env_aux short n Σ
+      ("Inductive " ++ 
+       print_list (print_one_ind short Σ' names mib) nl mib.(ind_bodies) ++ "." 
+       ++ acc)%string
+  | (kn, ConstantDecl cb) :: Σ =>
+    let Σ' := (Σ, cb.(cst_universes)) in
+    print_env_aux short n Σ
+      ((match cb.(cst_body) with 
+        | Some _ => "Definition "
+        | None => "Axiom "
+      end) ++ string_of_kername kn ++ " : " ++ print_term Σ' nil true cb.(cst_type) ++
+      match cb.(cst_body) with
+      | Some b => 
+        if short then ("..." ++ nl)%string
+        else (" := " ++ nl ++ print_term Σ' nil true b ++ "." ++ nl)
+      | None => "."
+      end ++ acc)%string
+  end
+  end.
+
+Definition print_env (short : bool) (prefix : nat) Σ := print_env_aux short prefix Σ EmptyString.
+
+Definition print_program (short : bool) (prefix : nat) (p : program) : string := 
+  print_env short prefix (fst p) ++ nl ++
+  print_term (empty_ext (fst p)) nil true (snd p). 

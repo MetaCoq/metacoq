@@ -33,6 +33,8 @@ src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
+src/pCUICCases.mli
+src/pCUICCases.ml
 src/pCUICLiftSubst.ml
 src/pCUICLiftSubst.mli
 # src/eqDecInstances.ml

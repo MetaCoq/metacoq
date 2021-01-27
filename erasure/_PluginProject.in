@@ -35,6 +35,8 @@ src/pCUICPrimitive.mli
 src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
+src/pCUICCases.mli
+src/pCUICCases.ml
 src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
 src/pCUICLiftSubst.ml

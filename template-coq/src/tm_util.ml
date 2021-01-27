@@ -168,7 +168,13 @@ module CaseCompat =
 
   let contract_case env (ci, p, iv, c, br) =
     let (mib, mip) = lookup_mind_specif env ci.ci_ind in
-    let (arity, p) = Term.decompose_lam_n_decls (mip.mind_nrealdecls + 1) p in
+    let (arity, p) = 
+      Term.decompose_lam_n_decls (mip.mind_nrealdecls + 1) p 
+      (*with e -> (* Dynamically eta-expand the predicate *)
+        let ctx, ty = mip.mind_nf_lc.(i) in
+        let br = Term.appvectc br (Context.Rel.to_extended_vect mkRel 0 ctx) in
+        (ctx, br)*)
+    in
     let (u, pms) = match arity with
     | LocalAssum (_, ty) :: _ ->
       (* Last binder is the self binder for the term being eliminated *)
@@ -185,7 +191,20 @@ module CaseCompat =
     let p = (arity, p)
     in
     let map i br =
-      let (ctx, br) = Term.decompose_lam_n_decls mip.mind_consnrealdecls.(i) br in
+      let (ctx, br) = 
+        try Term.decompose_lam_n_decls mip.mind_consnrealdecls.(i) br 
+        with e -> (* Dynamically eta-expand the branch *)
+          let ctx, ty = mip.mind_nf_lc.(i) in
+          let ctx, _ = List.chop mip.mind_consnrealdecls.(i) ctx in
+          let br = Term.appvectc br (Context.Rel.to_extended_vect mkRel 0 ctx) in
+          let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
+          let paramsubst = Vars.subst_of_rel_context_instance paramdecl (Array.to_list pms) in
+          let ctx' = 
+            instantiate_context u (paramsubst @ ind_subst (fst ci.ci_ind) mib u)
+              (Array.of_list (List.map Context.Rel.Declaration.get_annot ctx))
+              ctx
+          in (ctx', br)
+      in
       (ctx, br)
     in
     (ci, u, pms, p, iv, c, Array.mapi map br)

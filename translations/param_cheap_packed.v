@@ -26,8 +26,9 @@ Fixpoint tsl_rec1 (n : nat) (t : term) {struct t} : term :=
   | tLambda x A t => tLambda x (tsl_rec1 n A) (tsl_rec1 (n+1) t)
   | tLetIn x a t u => tLetIn x (tsl_rec1 n a) (tsl_rec1 n t) (tsl_rec1 (n+1) u)
   | tApp t lu => tApp (tsl_rec1 n t) (List.map (tsl_rec1 n) lu)
-  | tCase ik t u br => tCase ik (tsl_rec1 n t) (tsl_rec1 n u)
-                            (List.map (fun x => (fst x, tsl_rec1 n (snd x))) br)
+  | tCase ik t u brs => tCase ik
+      (map_predicate_k id tsl_rec1 n t) (tsl_rec1 n u)
+      (map_branches_k tsl_rec1 n brs)
   | tProj p t => tProj p (tsl_rec1 n t)
   (* | tFix : mfixpoint term -> nat -> term *)
   (* | tCoFix : mfixpoint term -> nat -> term *)
@@ -121,8 +122,9 @@ Fixpoint replace t k u {struct u} :=
   | tCast c kind ty => tCast (replace t k c) kind (replace t k ty)
   | tLetIn na b ty b' => tLetIn na (replace t k b) (replace t k ty) (replace (lift0 1 t) (S k) b')
   | tCase ind p c brs =>
-    let brs' := List.map (on_snd (replace t k)) brs in
-    tCase ind (replace t k p) (replace t k c) brs'
+    let p' := map_predicate_k id (replace t) k p in
+    let brs' := map_branches_k (replace t) k brs in
+    tCase ind p' (replace t k c) brs'
   | tProj p c => tProj p (replace t k c)
   | tFix mfix idx =>
     let k' := List.length mfix + k in
@@ -171,6 +173,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
     intros i ind.
     refine (A <- _ ;; ctors <- _ ;;
             ret {| ind_name := tsl_ident ind.(ind_name);
+                   ind_sort := ind.(ind_sort);
+                   ind_indices := ind.(ind_indices); (* Not true, should change *)
                    ind_type := A;
                    ind_kelim := ind.(ind_kelim);
                    ind_ctors := ctors;
@@ -182,13 +186,18 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
               ret (try_reduce (fst (fst ΣE)) [] fuel (mkApp t2 i1))).
     + (* constructors *)
       refine (monad_map_i _ ind.(ind_ctors)).
-      intros k ((name, typ), nargs).
-      refine (t2 <- tsl2' typ ;;
+      intros k c.
+      refine (t2 <- tsl2' c.(cstr_type) ;;
               let t2 := fold_left_i (fun t i u => replace u i t) L t2 in
               let c1 := tsl_rec1 0 (tConstruct (mkInd kn i) k []) in
               match reduce_opt RedFlags.default (fst (fst ΣE)) [] (* for debugging but we could use try_reduce *)
                                fuel (mkApp t2 c1) with
-              | Some t' => ret (tsl_ident name, t', nargs)
+              | Some t' => ret 
+                {| cstr_name := tsl_ident c.(cstr_name);
+                   cstr_type := t';
+                   cstr_args := c.(cstr_args); (* Not used by denotation yet *)
+                   cstr_indices := c.(cstr_indices);
+                   cstr_arity := c.(cstr_arity) |}
               | None => raise TranslationNotHandeled
               end).
 

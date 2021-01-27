@@ -318,11 +318,10 @@ struct
     | Sorts.InSProp -> Lazy.force sfProp (* FIXME SProp *)
 
   let quote_context_decl na b t =
-    constr_mkApp (tmkdecl, [| na; quote_optionl tTerm b; t |])
+    constr_mkApp (tmkdecl, [| Lazy.force tTerm; na; quote_optionl tTerm b; t |])
 
   let quote_context ctx =
-    to_coq_listl tcontext_decl ctx
-
+    to_coq_list (constr_mkAppl (tcontext_decl, [| tTerm |])) ctx
   
   let mk_ctor_list ls =
     let ctors = List.map (fun (a,b,c,d,e) -> 

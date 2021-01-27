@@ -251,6 +251,7 @@ Section Reduce.
         constructor. reflexivity.
   Qed.
 
+
   (* Show Obligation Tactic. *)
   Ltac obTac :=
     (* program_simpl ; *)
@@ -406,7 +407,7 @@ Section Reduce.
       | true with inspect (reduce c (Case ci p brs π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
           | @exist (args, ρ) prf' with cc_viewc t := {
-            | ccview_construct ind' c' _ with inspect (nth_error brs c') := {
+            | ccview_construct ind' c' inst' with inspect (nth_error brs c') := {
               | exist (Some br) eqbr := rec reduce (iota_red ci.(ci_npar) args br) π ;
               | exist None bot := False_rect _ _ } ;
             | ccview_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
@@ -703,129 +704,88 @@ Section Reduce.
     eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
+    clear eq.
+    destruct hΣ.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
-    todo "case".
-    (*eapply R_Req_R.
-    - econstructor. econstructor. eapply red1_context.
-      eapply red_iota.
-    - instantiate (4 := ind'). instantiate (2 := p).
-      instantiate (1 := wildcard7).
-      destruct r.
-      + inversion e.
-        subst.
-        cbn in prf'. inversion prf'. subst. clear prf'.
-        cbn.
-        assert (ind = ind').
-        { clear - h flags hΣ.
-          apply welltyped_context in h ; auto.
-          simpl in h.
-          eapply Case_Construct_ind_eq with (args := []) ; eauto.
-        } subst.
-        reflexivity.
-      + clear eq. dependent destruction r.
-        * cbn in H.
-          symmetry in prf'.
-          pose proof (decompose_stack_eq _ _ _ prf'). subst.
-          rewrite zipc_appstack in H.
-          cbn in H.
-          right. econstructor.
-          lazymatch goal with
-          | h : cored _ _ ?t _ |- _ =>
-            assert (welltyped Σ Γ t) as h'
-          end.
-          { clear - h H flags hΣ.
-            eapply cored_welltyped ; try eassumption.
-          }
-          assert (ind = ind').
-          { clear - h' flags hΣ H.
-            zip fold in h'.
-            apply welltyped_context in h'. 2: assumption.
-            cbn in h'.
-            apply Case_Construct_ind_eq in h'. all: eauto.
-          } subst.
-          exact H.
-        * cbn in H0. inversion H0. subst. clear H0.
-          symmetry in prf'.
-          pose proof (decompose_stack_eq _ _ _ prf'). subst.
-          rewrite zipc_appstack in H2. cbn in H2.
-          apply zipc_inj in H2.
-          inversion H2. subst.
-          assert (ind = ind').
-          { clear - h flags H hΣ.
-            apply welltyped_context in h. 2: assumption.
-            cbn in h.
-            apply Case_Construct_ind_eq in h. all: eauto.
-          } subst.
-          reflexivity.*)
+    apply eq_sym, decompose_stack_eq in prf'; subst.
+    apply Req_red in r; cbn in r.
+    rewrite zipc_appstack in r.
+    cbn in r.
+    pose proof r as [r'].
+    eapply red_welltyped in r; eauto.
+    zip fold in r.
+    apply welltyped_context in r as (?&typ); auto; cbn in *.
+    apply PCUICInductiveInversion.invert_Case_Construct in typ as H; auto.
+    destruct H as (?&?&nth&?); subst.
+    rewrite nth in eqbr; noconf eqbr.
+    constructor.
+    eapply cored_red_cored; cycle 1.
+    - zip fold in r'; exact r'.
+    - constructor.
+      eapply red1_context.
+      eapply red_iota; eauto.
+      rewrite skipn_length; lia.
   Qed.
   Next Obligation.
-    todo "case".
-    (*
+    clear eq.
+    destruct hΣ.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
-    dependent destruction r.
-    - inversion e. subst.
-      left. eapply cored_context.
-      constructor.
-      simpl in prf'. inversion prf'. subst.
-      eapply red_cofix_case with (args := []). eauto.
-    - clear eq.
-      dependent destruction r.
-      + left.
-        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
-        cbn in H. rewrite zipc_appstack in H. cbn in H.
-        eapply cored_trans' ; try eassumption.
-        zip fold. eapply cored_context.
-        constructor. eapply red_cofix_case. eauto.
-      + left.
-        cbn in H0. destruct y'. inversion H0. subst. clear H0.
-        symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
-        rewrite zipc_appstack in H2. cbn in H2.
-        cbn. rewrite H2.
-        zip fold. eapply cored_context.
-        constructor. eapply red_cofix_case. eauto.*)
+    apply eq_sym, decompose_stack_eq in prf'; subst.
+    apply Req_red in r; cbn in r.
+    rewrite zipc_appstack in r.
+    cbn in r.
+    pose proof r as [r'].
+    eapply red_welltyped in r; eauto.
+    zip fold in r.
+    apply welltyped_context in r as (?&typ); auto; cbn in *.
+    apply PCUICInductiveInversion.invert_Case_Construct in typ as H; auto.
+    destruct H as (?&?&nth&?); subst.
+    rewrite nth in bot; congruence.
   Qed.
   Next Obligation.
-    todo "case".
-    (*destruct hΣ as [wΣ].
+    clear eq.
+    destruct hΣ.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
-    assert (h' : welltyped Σ Γ (zip (tCase ci p (mkApps (tCoFix mfix idx) args) brs, π))).
-    { dependent destruction r.
-      - inversion e. subst.
-        simpl in prf'. inversion prf'. subst.
-        assumption.
-      - clear eq. dependent destruction r.
-        + apply cored_red in H. destruct H as [r].
-          eapply red_welltyped ; eauto.
-          constructor.
-          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
-          cbn in r. rewrite zipc_appstack in r. cbn in r.
-          assumption.
-        + cbn in H0. destruct y'. inversion H0. subst. clear H0.
-          symmetry in prf'. apply decompose_stack_eq in prf'. subst.
-          rewrite zipc_appstack in H2. cbn in H2.
-          cbn. rewrite <- H2. assumption.
-    }
-    replace (zip (tCase ci p (mkApps (tCoFix mfix idx) args) brs, π))
-      with (zip (tCoFix mfix idx, appstack args (Case ci p brs π)))
-      in h'.
-    - destruct hΣ.
-      apply welltyped_context in h' ; auto. simpl in h'.
-      destruct h' as [T h'].
-      apply inversion_CoFix in h' ; auto.
-      destruct h' as [decl [? [e [? [? ?]]]]].
-      unfold unfold_cofix in bot.
-      rewrite e in bot. discriminate.
-    - cbn. rewrite zipc_appstack. reflexivity.*)
+    apply eq_sym, decompose_stack_eq in prf'; subst.
+    apply Req_red in r; cbn in r.
+    rewrite zipc_appstack in r.
+    cbn in r.
+    pose proof r as [r'].
+    eapply red_welltyped in r; eauto.
+    zip fold in r.
+    apply welltyped_context in r as (?&typ); auto; cbn in *.
+    constructor.
+    eapply cored_red_cored; cycle 1.
+    - zip fold in r'; exact r'.
+    - constructor.
+      eapply red1_context.
+      eapply red_cofix_case; eauto.
   Qed.
   Next Obligation.
-    todo "case".
-    (*clear eq reduce h.
+    clear eq.
+    destruct hΣ.
+    unfold Pr in p0. cbn in p0.
+    pose proof p0 as hh.
+    rewrite <- prf' in hh. cbn in hh. subst.
+    apply eq_sym, decompose_stack_eq in prf'; subst.
+    apply Req_red in r; cbn in r.
+    pose proof r as [r'].
+    eapply red_welltyped in r; eauto.
+    zip fold in r.
+    apply welltyped_context in r as (?&typ); auto; cbn in *.
+    apply inversion_CoFix in typ as (?&?&?&?&?&?&?); auto.
+    unfold unfold_cofix in bot.
+    rewrite e in bot.
+    congruence.
+  Qed.
+  Next Obligation.
+    clear eq reduce h.
     destruct r.
     - inversion H. subst.
       clear H.
@@ -842,10 +802,7 @@ Section Reduce.
         pose proof (decompose_stack_eq _ _ _ prf'). subst.
         rewrite zipc_appstack in H2. cbn in H2.
         apply zipc_inj in H2. inversion H2. subst.
-        reflexivity.*)
-  Qed.
-  Next Obligation.
-    todo "case".
+        reflexivity.
   Qed.
   
   (* tProj *)

@@ -200,6 +200,8 @@ Register MetaCoq.Template.BasicAst.context_decl as metacoq.ast.context_decl.
 Register MetaCoq.Template.BasicAst.mkdecl as metacoq.ast.mkdecl.
 Register MetaCoq.Template.Ast.Env.context as metacoq.ast.context.
 
+Register MetaCoq.Template.Ast.Env.constructor_body as metacoq.ast.constructor_body.
+Register MetaCoq.Template.Ast.Env.Build_constructor_body as metacoq.ast.Build_constructor_body.
 Register MetaCoq.Template.Ast.Env.one_inductive_body as metacoq.ast.one_inductive_body.
 Register MetaCoq.Template.Ast.Env.Build_one_inductive_body as metacoq.ast.Build_one_inductive_body.
 Register MetaCoq.Template.Ast.Env.mutual_inductive_body as metacoq.ast.mutual_inductive_body.

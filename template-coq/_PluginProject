@@ -13,6 +13,8 @@ gen-src/astUtils.ml
 gen-src/astUtils.mli
 gen-src/ast_denoter.ml
 gen-src/ast_quoter.ml
+gen-src/monad_utils.mli
+gen-src/monad_utils.ml
 gen-src/basicAst.ml
 gen-src/basicAst.mli
 gen-src/basics.ml

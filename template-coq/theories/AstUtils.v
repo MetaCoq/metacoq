@@ -264,31 +264,6 @@ Definition destInd (t : term) :=
 Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname := 
   map decl_name c.
 
-Set Universe Polymorphism.
-Section MonadOperations.
-  Context {T} {M : Monad T} {E} {ME : MonadExc E T}.
-  Context {A B C} (f : A -> B -> T C) (e : E).
-  Fixpoint monad_map2 (l : list A) (l' : list B) : T (list C) :=
-    match l, l' with
-    | nil, nil => ret nil
-    | x :: l, y :: l' => 
-      x' <- f x y ;;
-      xs' <- monad_map2 l l' ;;
-      ret (x' :: xs')
-    | _, _ => raise e
-    end.
-End MonadOperations.
-Unset Universe Polymorphism.
-
-Instance option_monad_exc : MonadExc unit option :=
-  {| raise T _ := None ;
-     catch T m f :=
-       match m with
-       | Some a => Some a
-       | None => f tt
-       end
-  |}.
-
 Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (brs : list (nat × term)) : option term :=
   '(mib, oib) <- lookup_inductive Σ ci.(ci_ind) ;;
   '(pctx, preturn) <- decompose_lam_n_assum [] (S #|oib.(ind_indices)|) p ;;

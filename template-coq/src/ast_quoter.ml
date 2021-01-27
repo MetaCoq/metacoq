@@ -2,6 +2,7 @@ open Names
 open Datatypes
 open BasicAst
 open Ast0
+open Ast0.Env
 open Tm_util
 
 module ExtractedASTBaseQuoter =
@@ -42,7 +43,7 @@ struct
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
 
-  type quoted_context_decl = context_decl
+  type quoted_context_decl = Ast0.term context_decl
   type quoted_context = context
   type quoted_one_inductive_body = one_inductive_body
   type quoted_mutual_inductive_body = mutual_inductive_body
@@ -268,20 +269,33 @@ struct
     let block = List.rev defs in
     Coq_tFix (block, a)
 
-  let mkCase (ind, npar, r) nargs p c brs =
-    let info = ((ind, npar), r) in
-    let branches = List.map2 (fun br nargs ->  (nargs, br)) brs nargs in
-    Coq_tCase (info,p,c,branches)
+  let mkCase (ind, npar, r) (univs, pars, pctx, pret) c brs =
+    let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in
+    let pred = { pparams = Array.to_list pars; 
+                 puinst = univs; 
+                 pcontext = Array.to_list pctx;
+                 preturn = pret } in
+    let branches = List.map (fun (bctx, br) -> { bcontext = Array.to_list bctx; bbody = br }) brs in
+    Coq_tCase (info,pred,c,branches)
+
   let mkProj p c = Coq_tProj (p,c)
 
 
   let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
-  let mk_one_inductive_body (id, ty, kel, ctr, proj, relevance) =
-    let ctr = List.map (fun (a, b, c) -> ((a, b), c)) ctr in
+  let mk_one_inductive_body (id, indices, sort, ty, kel, ctr, proj, relevance) =
+    let ctr = List.map (fun (name, args, indices, ty, arity) -> 
+      { cstr_name = name; 
+        cstr_args = args;
+        cstr_indices = indices;
+        cstr_type = ty;
+        cstr_arity = arity }) ctr in
     { ind_name = id; ind_type = ty;
-      ind_kelim = kel; ind_ctors = ctr;
+      ind_indices = indices;
+      ind_sort = sort;
+      ind_kelim = kel; 
+      ind_ctors = ctr;
       ind_projs = proj; ind_relevance = relevance }
 
   let mk_mutual_inductive_body finite npars params inds uctx variance =

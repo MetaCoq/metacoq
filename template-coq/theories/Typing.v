@@ -112,7 +112,7 @@ Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
 Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 
 Definition tDummy := tVar "".
-Definition dummy_branch : branch term := mkbranch [] tDummy.
+Definition dummy_branch : branch term := mk_branch [] tDummy.
 
 Definition iota_red npar c args brs :=
   subst (List.skipn npar args) 0 (bbody (List.nth c brs dummy_branch)).
@@ -308,14 +308,14 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 
 | case_red_pred_param ind params params' puinst pcontext preturn c brs :
     OnOne2 (red1 Σ Γ) params params' ->
-    red1 Σ Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
-             (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)
+    red1 Σ Γ (tCase ind (mk_predicate puinst params pcontext preturn) c brs)
+             (tCase ind (mk_predicate puinst params' pcontext preturn) c brs)
 
 | case_red_pred_return ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl)
                        params puinst pcontext preturn preturn' c brs :
     red1 Σ (Γ ,,, case_predicate_context ind.(ci_ind) mdecl idecl params puinst pcontext) preturn preturn' ->
-    red1 Σ Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
-             (tCase ind (mkpredicate params puinst pcontext preturn') c brs)
+    red1 Σ Γ (tCase ind (mk_predicate puinst params pcontext preturn) c brs)
+             (tCase ind (mk_predicate puinst params pcontext preturn') c brs)
     
 | case_red_discr ind p c c' brs : red1 Σ Γ c c' -> red1 Σ Γ (tCase ind p c brs) (tCase ind p c' brs)
 
@@ -409,16 +409,16 @@ Lemma red1_ind_all :
 
        (forall (Γ : context) (ind : case_info) params params' puinst pcontext preturn c brs,
            OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) params params' ->
-           P Γ (tCase ind (mkpredicate params puinst pcontext preturn) c brs)
-               (tCase ind (mkpredicate params' puinst pcontext preturn) c brs)) ->
+           P Γ (tCase ind (mk_predicate puinst params pcontext preturn) c brs)
+               (tCase ind (mk_predicate puinst params' pcontext preturn) c brs)) ->
 
        (forall (Γ : context) (ci : case_info)
                idecl mdecl (isdecl : declared_inductive Σ ci.(ci_ind) mdecl idecl)
                params puinst pcontext preturn preturn' c brs,
            red1 Σ (Γ ,,, case_predicate_context ci.(ci_ind) mdecl idecl params puinst pcontext) preturn preturn' ->
            P (Γ ,,, case_predicate_context ci.(ci_ind) mdecl idecl params puinst pcontext) preturn preturn' ->
-           P Γ (tCase ci (mkpredicate params puinst pcontext preturn) c brs)
-               (tCase ci (mkpredicate params puinst pcontext preturn') c brs)) ->
+           P Γ (tCase ci (mk_predicate puinst params pcontext preturn) c brs)
+               (tCase ci (mk_predicate puinst params pcontext preturn') c brs)) ->
        
        (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
         red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->

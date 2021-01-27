@@ -37,9 +37,9 @@ From MetaCoq.Template Require Export BasicAst.
 
 (* Defined here since BasicAst does not have access to universe instances.
   Parameterized by term types as they are not yet defined. *)
-Record predicate {term} := mkpredicate {
-  pparams : list term; (* The parameters *)
+Record predicate {term} := mk_predicate {
   puinst : Instance.t; (* The universe instance *)
+  pparams : list term; (* The parameters *)
   pcontext : list aname; (* Names of binders of indices and inductive application,
                           in same order as context (i.e. name of "inductive application"
                           binder is first). Types are obtained from inductive declaration.
@@ -47,7 +47,7 @@ Record predicate {term} := mkpredicate {
   preturn : term; (* The return type *) }.
 
 Arguments predicate : clear implicits.
-Arguments mkpredicate {_}.
+Arguments mk_predicate {_}.
 
 Derive NoConfusion for predicate.
 Global Instance predicate_eq_dec term :
@@ -163,7 +163,7 @@ Qed.
 Section Branch.
   Context {term : Type}.
   (* Parameterized by term types as they are not yet defined. *)
-  Record branch := mkbranch {
+  Record branch := mk_branch {
     bcontext : list aname; (* Names of binders of the branch, in "context" order.
                           Also used for lifting/substitution for the branch body. *)
     bbody : term; (* The branch body *) }.

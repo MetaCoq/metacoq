@@ -2,12 +2,12 @@
 
 ## Structure
 
-| File                  | Description                                  |
-|-----------------------|----------------------------------------------|
-| [BDEnvironmentTyping] | Variant of MetaCoq.Template.EnvironmentTyping, to accommodate for the distinction between checking and sorting in the checking of the environment |
-| [BDTyping]            | Main description of bidirectional typing, inspired from MetaCoq.PCUIC.PCUICTyping |
-| [BDToPCUIC]           | Proof that bidirectional typing implies undirected typing |
-| [BDFromPCUIC]           | Proof that undirected typing implies bidirectional typing when there are no cumulative inductive types in the environment |
+| File                    | Description                                  |
+|-------------------------|----------------------------------------------|
+| [BDEnvironmentTyping.v] | Variant of MetaCoq.Template.EnvironmentTyping, to accommodate for the distinction between checking and sorting in the checking of the environment |
+| [BDTyping.v]            | Main description of bidirectional typing, inspired from MetaCoq.PCUIC.PCUICTyping |
+| [BDToPCUIC.v]           | Proof that bidirectional typing implies undirected typing |
+| [BDFromPCUIC.v]         | Proof that undirected typing implies bidirectional typing when there are no cumulative inductive types in the environment |
 
 [BDEnvironmentTyping]: BDEnvironmentTyping.v
 [BDTyping]: BDTyping.v

@@ -160,6 +160,42 @@ Proof.
   apply map_predicate_eq_spec; auto.
 Qed.
 
+Notation shiftf f k := (fun k' => f (k' + k)).
+
+Section map_predicate_k.
+  Context {term : Type}.
+  Context (uf : Instance.t -> Instance.t).
+  Context (f : nat -> term -> term).
+
+  Definition map_predicate_k k (p : predicate term) :=
+    {| pparams := map (f k) p.(pparams);
+        puinst := uf p.(puinst);
+        pcontext := p.(pcontext);
+        preturn := f (#|p.(pcontext)| + k) p.(preturn) |}.
+
+  Lemma map_k_pparams k (p : predicate term) :
+    map (f k) (pparams p) = pparams (map_predicate_k k p).
+  Proof. reflexivity. Qed.
+
+  Lemma map_k_preturn k (p : predicate term) :
+    f (#|p.(pcontext)| + k) (preturn p) = preturn (map_predicate_k k p).
+  Proof. reflexivity. Qed.
+
+  Lemma map_k_pcontext k (p : predicate term) :
+    pcontext p = pcontext (map_predicate_k k p).
+  Proof. reflexivity. Qed.
+
+  Lemma map_k_puinst k (p : predicate term) :
+    uf (puinst p) = puinst (map_predicate_k k p).
+  Proof. reflexivity. Qed.
+  
+  Definition test_predicate_k (instp : Instance.t -> bool) 
+    (p : nat -> term -> bool) k (pred : predicate term) :=
+    instp pred.(puinst) && forallb (p k) pred.(pparams) && 
+    p (#|pred.(pcontext)| + k) pred.(preturn).
+
+End map_predicate_k.
+
 Section Branch.
   Context {term : Type}.
   (* Parameterized by term types as they are not yet defined. *)

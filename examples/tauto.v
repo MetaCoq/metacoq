@@ -559,7 +559,19 @@ Qed.
 Definition def_size (size : term -> nat) (x : def term) := size (dtype x) + size (dbody x).
 Definition mfixpoint_size (size : term -> nat) (l : mfixpoint term) :=
   list_size (def_size size) l.
+Definition decl_size (size : term -> nat) (x : context_decl) :=
+  size (decl_type x) + option_default size (decl_body x) 0.
 
+Definition context_size (size : term -> nat) (l : context) :=
+  list_size (decl_size size) l.
+  
+Definition branch_size (size : term -> nat) (br : branch term) := 
+  size br.(bbody).
+
+Definition predicate_size (size : term -> nat) (p : predicate term) := 
+  list_size size p.(pparams) + 
+  size p.(preturn).
+  
 Fixpoint tsize t : nat :=
   match t with
   | tRel i => 1
@@ -568,7 +580,7 @@ Fixpoint tsize t : nat :=
   | tApp u v => S (tsize u + list_size tsize v)
   | tProd na A B => S (tsize A + tsize B)
   | tLetIn na b t b' => S (tsize b + tsize t + tsize b')
-  | tCase ind p c brs => S (tsize p + tsize c + list_size (fun x => tsize (snd x)) brs)
+  | tCase ind p c brs => S (predicate_size tsize p + tsize c + list_size (branch_size tsize) brs)
   | tProj p c => S (tsize c)
   | tFix mfix idx => S (mfixpoint_size tsize mfix)
   | tCoFix mfix idx => S (mfixpoint_size tsize mfix)
@@ -640,10 +652,14 @@ Proof.
     induction H.
     + reflexivity.
     + simpl. eauto.
-  - rewrite IHt1, IHt2. f_equal. f_equal.
-    induction X.
-    + reflexivity.
-    + simpl. eauto.
+  - solve_all.
+    f_equal; auto. f_equal; eauto.
+    f_equal; eauto. unfold predicate_size.
+    f_equal; simpl; auto.
+    induction a; simpl; auto.
+    induction X0; simpl; auto.
+    f_equal; auto. f_equal; auto. 
+    unfold branch_size; simpl; auto. 
   - generalize (#|m| + k). intro p.
     induction X.
     + reflexivity.
@@ -717,10 +733,15 @@ Proof.
       * simpl. reflexivity.
     + clear - H3. destruct l. contradiction.
       discriminate.
-  - f_equal. rewrite IHt1, IHt2 by assumption. f_equal.
-    clear - X H5. induction X.
-    * reflexivity.
-    * inversion H5. subst. simpl. intuition eauto.
+  - f_equal.
+    f_equal; solve_all.
+    unfold predicate_size. simpl. f_equal; auto.
+    f_equal; auto. induction H3; simpl; auto.
+    destruct p. f_equal. f_equal; auto.
+    unfold branch_size.
+    clear h H4 H5.
+    induction H6; simpl; auto.
+    destruct p. f_equal; auto.
   - f_equal.
     generalize (#|m| + k). intro p.
     clear - X H0. induction X.
@@ -744,7 +765,6 @@ Local Ltac inst :=
   | h : forall k, _ <= tsize ?x |- context [ (subst _ ?k ?x) ] =>
     specialize (h k)
   end.
-
 
 Lemma tsize_downlift_le :
   forall t k,
@@ -773,15 +793,20 @@ Proof.
     }
     lia.
   - repeat inst.
+    
     assert (
-      list_size (fun x : nat × term => tsize x.2)
-                (map (on_snd (subst [tRel 0] k)) l)
-      <= list_size (fun x : nat × term => tsize x.2) l
+      list_size (branch_size tsize) (map_branches_k (subst [tRel 0]) k l)
+      <= list_size (branch_size tsize) l
     ).
-    { clear - X. induction X.
+    { unfold branch_size.
+      clear - X0. induction X0.
     - reflexivity.
     - simpl. inst. lia.
-  }
+     }
+    assert (predicate_size tsize (map_predicate id (subst [tRel 0] k) (subst [tRel 0] (#|pcontext t| + k)) t) <=
+      predicate_size tsize t).
+    { apply plus_le_compat; simpl; auto. 2:apply X. destruct X.
+      induction a; simpl; auto. apply le_n_S, plus_le_compat; simpl; auto. }
   lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
@@ -869,7 +894,7 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
       }} ;
     | tProd na A B =>
       af <- reify Σ Γ A ;;
-      bf <- reify Σ Γ (subst0 [tRel 0] B) ;;
+      bf <- reify Σ Γ (subst [tRel 0] 0 B) ;;
       ret (Imp af bf) ;
     | _ => None
     }

@@ -18,8 +18,8 @@ Fixpoint tsl_rec0 (n : nat) (o : nat) (t : term) {struct t} : term :=
   | tLambda na A t  => tLambda na (tsl_rec0 n o A) (tsl_rec0 (n+1) o t)
   | tLetIn na t A u => tLetIn na (tsl_rec0 n o t) (tsl_rec0 n o A) (tsl_rec0 (n+1) o u)
   | tApp t lu       => tApp (tsl_rec0 n o t) (map (tsl_rec0 n o) lu)
-  | tCase ik t u br => tCase ik (tsl_rec0 n o t) (tsl_rec0 n o u)
-                            (map (fun x => (fst x, tsl_rec0 n o (snd x))) br)
+  | tCase ik t u br => tCase ik (map_predicate_k id (fun k => tsl_rec0 n k) o t) (tsl_rec0 n o u)
+                            (map_branches_k (fun x => tsl_rec0 n x) o br)
   | tProj p t => tProj p (tsl_rec0 n o t)
   (* | tFix : mfixpoint term -> nat -> term *)
   (* | tCoFix : mfixpoint term -> nat -> term *)
@@ -114,17 +114,20 @@ Fixpoint tsl_rec1_app (app : list term) (E : tsl_table) (t : term) : term :=
     end
 
   | tCase ik t u brs as case =>
-    let brs' := List.map (on_snd (lift0 1)) brs in
-    let case1 := tCase ik (lift0 3 t) (tRel 2) brs' in
-    let case2 := tCase ik (lift0 3 t) (tRel 1) brs' in
-    match lookup_tsl_table E (IndRef (fst (fst ik))) with
-    | Some (tInd i _univ) =>
-      tCase ((i, (snd (fst ik)) * 3), snd ik)%nat
-            (tsl_rec1_app [tsl_rec0 0 2 case1; tsl_rec0 0 1 case2] E t)
-            (tsl_rec1 E u)
-            (map (on_snd (tsl_rec1 E)) brs)
-    | _ => debug "tCase" (match fst (fst ik) with mkInd s _ => string_of_kername s end)
-    end
+    case
+    (* todo "case", but probably already wrong before
+      let brs' := (map_branches_k (fun x => lift x 0) 1 brs) in
+    let case1 := tCase ik (map_predicate_k id (fun x => lift x 0) 3 t) (tRel 2) brs' in
+    let case2 := tCase ik (map_predicate_k id (fun x => lift x 0) 3 t) (tRel 1) brs' in
+       match lookup_tsl_table E (IndRef ik.(ci_ind)) with
+      | Some (tInd i _univ) =>
+        let ci' := {| ci_ind := i; ci_npar := 3 * ci.(ci_npar); ci_relevance := ci.(ci_relevance) |} in
+        tCase ci'
+              (tsl_rec1_app [tsl_rec0 0 2 case1; tsl_rec0 0 1 case2] E t)
+              (tsl_rec1 E u)
+              (map (on_snd (tsl_rec1 E)) brs)
+      | _ => debug "tCase" (match ik.(ci_ind) with mkInd s _ => string_of_kername s end)
+      end*)
 
   | tLetIn na t A u =>
     let t0 := tsl_rec0 0 2 t in
@@ -168,6 +171,8 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
   - refine (mapi _ mind.(ind_bodies)).
     intros i ind.
     refine {| ind_name := tsl_ident ind.(ind_name);
+              ind_indices := ind.(ind_indices);
+              ind_sort := ind.(ind_sort);
               ind_type := _;
               ind_kelim := ind.(ind_kelim);
               ind_ctors := _;
@@ -179,14 +184,19 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
               ar).
     + (* constructors *)
       refine (mapi _ ind.(ind_ctors)).
-      intros k ((name, typ), nargs).
-      refine (tsl_ident name, _, 3 * nargs)%nat.
+      intros k [name args indices type arity].
+      econstructor.
+      refine (tsl_ident name).
+      refine args.
+      refine indices.
       refine (subst_app _ [tConstruct (mkInd kn i) k []; tConstruct (mkInd kn i) k []]).
-      refine (fold_left_i (fun t0 i u => t0 {S i := u} {S i := u}) _ (tsl_rec1 E typ)).
+      refine (fold_left_i (fun t0 i u => t0 {S i := u} {S i := u}) _ (tsl_rec1 E type)).
       (* [I_0; ... I_(n-1)] *)
       
       refine (rev (mapi (fun i _ => tInd (mkInd kn i) [])
                               mind.(ind_bodies))).
+      refine (3 * arity)%nat.
+      
 Defined.
 
 Instance param : Translation :=

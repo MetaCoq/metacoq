@@ -5,6 +5,8 @@
 # Generated Code by `ls -1 *.ml *.mli` in `template-coq/gen-src` after having compiled `Extraction.v`
 gen-src/all_Forall.ml
 gen-src/all_Forall.mli
+gen-src/peanoNat.mli
+gen-src/peanoNat.ml
 gen-src/ascii.ml
 gen-src/ascii.mli
 gen-src/ast0.ml
@@ -128,8 +130,6 @@ gen-src/ordersLists.ml
 gen-src/ordersLists.mli
 gen-src/ordersTac.ml
 gen-src/ordersTac.mli
-gen-src/peanoNat.ml
-gen-src/peanoNat.mli
 gen-src/plugin_core.ml
 gen-src/plugin_core.mli
 gen-src/pretty.ml

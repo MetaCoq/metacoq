@@ -286,3 +286,44 @@ Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (
       ret {| bcontext := forget_types bctx; bbody := bbody |})
       tt oib.(ind_ctors) brs ;;
   ret (tCase ci p' c brs').
+
+Definition default_sort_family (u : Universe.t) : allowed_eliminations :=
+  if Universe.is_sprop u then IntoAny
+  else if Universe.is_prop u then IntoPropSProp
+  else IntoAny.
+
+Definition default_relevance (u : Universe.t) : relevance :=
+  if Universe.is_sprop u then Irrelevant
+  else Relevant.
+
+(** Convenience functions for building constructors and inductive declarations *)
+
+(** The [indrel] argument represents the de Bruijn associated to the inductive in the mutual block. 
+    index 0 represents the LAST inductive in the block. 
+    The [params] is the context of parameters of the whole inductive block.
+    The [args] context represents the argument types of the constructor (the last argument
+    of the constructor is the first item in this list, as contexts are represented as snoc lists). *)  
+Definition make_constructor_body (id : ident) (indrel : nat)
+  (params : context) (args : context) (index_terms : list term)
+  : constructor_body :=
+  {| cstr_name := id;
+     cstr_args := args;
+     cstr_indices := index_terms;
+     cstr_type := it_mkProd_or_LetIn (params ,,, args) 
+      (mkApps (tRel (#|args| + #|params| + indrel))
+        (to_extended_list_k params #|args| ++ index_terms));
+     cstr_arity := context_assumptions args |}.
+ 
+(** Makes a simple inductive body with no projections, and "standard" universe and elimination rules
+  derived from the universe (i.e. does not handle inductives with singleton elimination, or impredicate set
+  eliminations). *)
+Definition make_inductive_body (id : ident) (params : context) (indices : context)
+   (u : Universe.t) (ind_ctors : list constructor_body) : one_inductive_body :=
+  {| ind_name := id;
+     ind_indices := indices;
+     ind_sort := u;
+     ind_type := it_mkProd_or_LetIn (params ,,, indices) (tSort u);
+     ind_kelim := default_sort_family u;
+     ind_ctors := ind_ctors;
+     ind_projs := [];
+     ind_relevance := default_relevance u |}.

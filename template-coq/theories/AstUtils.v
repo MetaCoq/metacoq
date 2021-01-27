@@ -1,7 +1,7 @@
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils BasicAst Ast Environment.
+From MetaCoq.Template Require Import utils BasicAst Ast Environment monad_utils.
 Require Import ssreflect.
 Require Import ZArith.
 
@@ -193,6 +193,17 @@ Fixpoint decompose_prod_n_assum (Γ : context) n (t : term) : option (context * 
     end
   end.
 
+Fixpoint decompose_lam_n_assum (Γ : context) n (t : term) : option (context * term) :=
+  match n with
+  | 0 => Some (Γ, t)
+  | S n =>
+    match strip_outer_cast t with
+    | tLambda na A B => decompose_prod_n_assum (Γ ,, vass na A) n B
+    | tLetIn na b bty b' => decompose_prod_n_assum (Γ ,, vdef na b bty) n b'
+    | _ => None
+    end
+  end.
+
 Lemma decompose_prod_n_assum_it_mkProd ctx ctx' ty :
   decompose_prod_n_assum ctx #|ctx'| (it_mkProd_or_LetIn ctx' ty) = Some (ctx' ++ ctx, ty).
 Proof.
@@ -227,3 +238,76 @@ Definition isConstruct_app t :=
   | tConstruct _ _ _ => true
   | _ => false
   end.
+
+Definition lookup_minductive Σ mind :=
+  match lookup_env Σ mind with
+  | Some (InductiveDecl decl) => Some decl
+  | _ => None
+  end.
+
+Definition lookup_inductive Σ ind :=
+  match lookup_minductive Σ (inductive_mind ind) with
+  | Some mdecl => 
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
+    | Some idecl => Some (mdecl, idecl)
+    | None => None
+    end
+  | None => None
+  end.
+
+Definition destInd (t : term) :=
+  match t with
+  | tInd ind u => Some (ind, u)
+  | _ => None
+  end.
+
+Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname := 
+  map decl_name c.
+
+Set Universe Polymorphism.
+Section MonadOperations.
+  Context {T} {M : Monad T} {E} {ME : MonadExc E T}.
+  Context {A B C} (f : A -> B -> T C) (e : E).
+  Fixpoint monad_map2 (l : list A) (l' : list B) : T (list C) :=
+    match l, l' with
+    | nil, nil => ret nil
+    | x :: l, y :: l' => 
+      x' <- f x y ;;
+      xs' <- monad_map2 l l' ;;
+      ret (x' :: xs')
+    | _, _ => raise e
+    end.
+End MonadOperations.
+Unset Universe Polymorphism.
+
+Instance option_monad_exc : MonadExc unit option :=
+  {| raise T _ := None ;
+     catch T m f :=
+       match m with
+       | Some a => Some a
+       | None => f tt
+       end
+  |}.
+
+Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (brs : list (nat × term)) : option term :=
+  '(mib, oib) <- lookup_inductive Σ ci.(ci_ind) ;;
+  '(pctx, preturn) <- decompose_lam_n_assum [] (S #|oib.(ind_indices)|) p ;;
+  '(puinst, pparams, pctx) <-
+    match pctx with
+    | {| decl_name := na; decl_type := tind; decl_body := Datatypes.None |} :: indices => 
+      let (hd, args) := decompose_app tind in
+      match destInd hd with
+      | Datatypes.Some (ind, u) => ret (u, firstn mib.(ind_npars) args, forget_types indices)
+      | Datatypes.None => raise tt
+      end
+    | _ => raise tt 
+    end ;;
+  let p' := 
+    {| puinst := puinst; pparams := pparams; pcontext := pctx; preturn := preturn |}
+  in
+  brs' <-
+    monad_map2 (E:=unit) (ME:=option_monad_exc) (fun cdecl br => 
+      '(bctx, bbody) <- decompose_lam_n_assum [] #|cdecl.(cstr_args)| br.2 ;;
+      ret {| bcontext := forget_types bctx; bbody := bbody |})
+      tt oib.(ind_ctors) brs ;;
+  ret (tCase ci p' c brs').

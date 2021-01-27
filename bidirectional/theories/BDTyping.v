@@ -77,12 +77,13 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   Σ ;;; Γ |- tConstruct ind i u ▹ type_of_constructor mdecl cdecl (ind, i) u
 
-| infer_Case (ci : case_info) p c brs indices ps :
+| infer_Case (ci : case_info) p c brs ps :
   forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
   mdecl.(ind_npars) = ci.(ci_npar) ->
   let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
   wf_predicate mdecl idecl p ->
   wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
+  wf_local_bd Σ (Γ ,,, predctx) ->
   conv_context Σ (Γ ,,, p.(pcontext)) (Γ,,, predctx) ->
   Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
   is_allowed_elimination Σ ps (ind_kelim idecl) ->
@@ -94,12 +95,13 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   wf_branches idecl brs ->
   All2i (fun i cdecl br =>
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-    (wf_local_bd Σ (Γ ,,, br.(bcontext)) ×
-      conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
-    ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2) ×
-    (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 ◃ tSort ps)))
+    wf_local_bd Σ (Γ ,,, br.(bcontext)) ×
+    wf_local_bd Σ (Γ ,,, brctxty.1) ×
+    (conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
+    Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2 ×
+    Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 ◃ tSort ps)
     0 idecl.(ind_ctors) brs ->
-  Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (indices ++ [c])
+  Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (skipn ci.(ci_npar) args ++ [c])
 
 | infer_Proj p c u :
   forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) (args : list term),
@@ -157,22 +159,28 @@ and "'wf_local_bd' Σ Γ" := (All_local_env (lift_sorting checking infering_sort
 
 
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
-   All2i
+  All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
-   let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
-   (wf_local_bd Σ (Γ ,,, (bcontext br)) × 
-    conv_context Σ (Γ ,,, (bcontext br)) (Γ ,,, brctxty.1)) ×
-   (Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2
-    × Σ;;; Γ,,, brctxty.1 |- brctxty.2 ◃ tSort ps)) n ctors brs.
+    let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
+    wf_local_bd Σ (Γ ,,, (bcontext br)) ×
+    wf_local_bd Σ (Γ ,,, brctxty.1) × 
+    conv_context Σ (Γ ,,, (bcontext br)) (Γ ,,, brctxty.1) ×
+    Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2 ×
+    Σ;;; Γ,,, brctxty.1 |- brctxty.2 ◃ tSort ps)
+  n ctors brs.
 
 Definition branches_size {cf} {Σ Γ ci mdecl idecl p ps ptm brs}
    (checking_size : forall Σ Γ t T, Σ ;;; Γ |- t ◃ T -> size)
    (sorting_size : forall Σ Γ t s, Σ ;;; Γ |- t ▹□ s -> size)
   {n ctors}
   (a : tybranches Σ Γ ci mdecl idecl p ps ptm n ctors brs) : size :=
+
   (all2i_size _ (fun i x y p => 
-    Nat.max (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.1.1)
-      (Nat.max (checking_size _ _ _ _ p.2.1) (checking_size _ _ _ _ p.2.2))) a).
+    (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.1) +
+    (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.2.1) +
+    (checking_size _ _ _ _ p.2.2.2.1) +
+    (checking_size _ _ _ _ p.2.2.2.2))
+  a).
 
 Fixpoint infering_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T) {struct d} : size
 with infering_sort_size `{checker_flags} {Σ Γ t u} (d : Σ ;;; Γ |- t ▹□ u) {struct d} : size
@@ -197,7 +205,7 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | |- _ => exact 1
     end.
-    - exact (S (a + i + i1 + (branches_size (checking_size _) (infering_sort_size _) a1))).
+    - exact (S (a + a0 + i + i1 + (branches_size (checking_size _) (infering_sort_size _) a2))).
     - exact (S (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a) +
                (all_size _ (fun x p => checking_size _ _ _ _ _ p) a0)).
     - exact (S (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a) +
@@ -229,7 +237,7 @@ Arguments lexprod [A B].
 
 Section BidirectionalInduction.
 
-#[local] Notation wfl_size := (All_local_env_sorting_size _ _ (@checking_size _) (@infering_sort_size _) _ _).
+  #[local] Notation wfl_size := (All_local_env_sorting_size _ _ (@checking_size _) (@infering_sort_size _) _ _).
 
   Context `{cf : checker_flags}.
   Context (Σ : global_env_ext).
@@ -239,11 +247,11 @@ Section BidirectionalInduction.
   Context (Psort : context -> term -> Universe.t -> Type).
   Context (Pprod : context -> term -> aname -> term -> term -> Type).
   Context (Pind : context -> inductive -> term -> Instance.t -> list term -> Type).
-  Context (PΓ : forall Γ, wf_local_bd Σ Γ -> Type).
+  Context (PΓ : context -> Type).
 
 (* This is what we wish to prove with our mutual induction principle *)
   Definition env_prop_bd :=
-    (forall Γ wfΓ, PΓ Γ wfΓ) ×
+    (forall Γ , wf_local_bd Σ Γ -> PΓ Γ) ×
     (forall Γ t T, Σ ;;; Γ |- t ◃ T -> Pcheck Γ t T) ×
     (forall Γ t T, Σ ;;; Γ |- t ▹ T -> Pinfer Γ t T) ×
     (forall Γ t u, Σ ;;; Γ |- t ▹□ u -> Psort Γ t u) ×
@@ -274,7 +282,7 @@ Section BidirectionalInduction.
 
   Definition Ptyping_sum (d : typing_sum) :=
   match d with
-    | context_cons Γ wfΓ => PΓ Γ wfΓ
+    | context_cons Γ _ => PΓ Γ
     | check_cons Γ T t _ => Pcheck Γ t T
     | inf_cons Γ T t _ => Pinfer Γ t T
     | sort_cons Γ T u _ => Psort Γ T u
@@ -283,8 +291,8 @@ Section BidirectionalInduction.
   end.
 
   Ltac applyIH := match goal with
-    | IH : forall d', _ -> Ptyping_sum d' |- PΓ ?Γ ?wfΓ =>
-      unshelve eapply (IH (context_cons Γ wfΓ))
+    | IH : forall d', _ -> Ptyping_sum d' |- PΓ ?Γ =>
+      unshelve eapply (IH (context_cons Γ _))
     | IH : forall d', _ -> Ptyping_sum d' |- Pcheck ?Γ ?t ?T =>
       unshelve eapply (IH (check_cons Γ T t _))
     | IH : forall d', _ -> Ptyping_sum d' |- Pinfer ?Γ ?t ?T =>
@@ -297,11 +305,11 @@ Section BidirectionalInduction.
       unshelve eapply (IH (ind_cons Γ ind t u args _))
     end ;
     match goal with
-    | |- dlexprod _ _ _ _ => constructor ; simpl ; lia
+    | |- dlexprod _ _ _ _ => constructor ; cbn ; lia
     | |- dlexprod _ _ _ _ =>
-            constructor 2 ; simpl ; try lia
+            constructor 2 ; cbn ; try lia
     | _ => assumption
-    | _ => simpl ; lia
+    | _ => cbn ; lia
     | _ => idtac
     end.
 
@@ -310,11 +318,11 @@ Section BidirectionalInduction.
     let Pdecl_sort := fun Σ Γ wfΓ t u tyT => Psort Γ t u in
 
     (forall (Γ : context) (wfΓ : wf_local_bd Σ Γ), 
-      All_local_env_over_sorting checking infering_sort Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Γ wfΓ) ->
+      All_local_env_over_sorting checking infering_sort Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Γ) ->
 
     (forall (Γ : context) (n : nat) decl,
       nth_error Γ n = Some decl ->
-      Pinfer Γ (tRel n) (lift0 (S n) decl.(decl_type))) ->
+      Pinfer Γ (tRel n) (lift0 (S n) (decl_type decl))) ->
 
     (forall (Γ : context) (s : Universe.t),
       wf_universe Σ s->
@@ -352,51 +360,63 @@ Section BidirectionalInduction.
 
     (forall (Γ : context) (cst : kername) u (decl : constant_body),
       declared_constant Σ.1 cst decl ->
-      consistent_instance_ext Σ decl.(cst_universes) u ->
-      Pinfer Γ (tConst cst u) (subst_instance_constr u (cst_type decl))) ->
+      consistent_instance_ext Σ (cst_universes decl) u ->
+      Pinfer Γ (tConst cst u) (subst_instance u (cst_type decl))) ->
 
     (forall (Γ : context) (ind : inductive) u mdecl idecl,
-      declared_inductive Σ.1 mdecl ind idecl ->
-      consistent_instance_ext Σ mdecl.(ind_universes) u ->
-      Pinfer Γ (tInd ind u) (subst_instance_constr u (ind_type idecl))) ->
+      declared_inductive Σ.1 ind mdecl idecl ->
+      consistent_instance_ext Σ (ind_universes mdecl) u ->
+      Pinfer Γ (tInd ind u) (subst_instance u (ind_type idecl))) ->
 
     (forall (Γ : context) (ind : inductive) (i : nat) u
       mdecl idecl cdecl,
-      declared_constructor Σ.1 mdecl idecl (ind, i) cdecl ->
-      consistent_instance_ext Σ mdecl.(ind_universes) u ->
+      declared_constructor Σ.1 (ind, i) mdecl idecl cdecl ->
+      consistent_instance_ext Σ (ind_universes mdecl) u ->
       Pinfer Γ (tConstruct ind i u)
         (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
-    (forall (Γ : context) (ind : inductive) u (npar : nat)
-      (p c : term) (brs : list (nat * term)) (args : list term)
-      (mdecl : mutual_inductive_body) (idecl : one_inductive_body)
-      (isdecl : declared_inductive (fst Σ) mdecl ind idecl),
-      ind_npars mdecl = npar ->
+    (forall (Γ : context) (ci : case_info) p c brs ps mdecl idecl
+      (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
+      mdecl.(ind_npars) = ci.(ci_npar) ->
+      let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+      wf_predicate mdecl idecl p ->
+      wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
+      PΓ (Γ ,,, p.(pcontext)) ->
+      wf_local_bd Σ (Γ ,,, predctx) ->
+      PΓ (Γ ,,, predctx) ->
+      conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
+      Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
+      Psort (Γ ,,, predctx) p.(preturn) ps ->
+      is_allowed_elimination Σ ps idecl.(ind_kelim) ->
+      forall u args,
+      Σ ;;; Γ |- c ▹{ci} (u,args) ->
+      Pind Γ ci.(ci_ind) c u args ->
+      Σ ;;; Γ |- mkApps (tInd ci u) (firstn (ci_npar ci) args) <= mkApps (tInd ci (puinst p)) (pparams p) ->
       isCoFinite mdecl.(ind_finite) = false ->
-      Σ ;;; Γ |- c ▹{ind} (u,args) ->
-      Pind Γ ind c u args ->
-      let params := firstn npar args in
-      forall ps pty,
-      wf_universe Σ ps ->
-      build_case_predicate_type ind mdecl idecl params u ps = Some pty ->
-      Σ ;;; Γ |- p ◃ pty ->
-      Pcheck Γ p pty ->
-      is_allowed_elimination Σ ps (ind_kelim idecl) ->
-      forall btys,
-      map_option_out (build_branches_type ind mdecl idecl params u p) = Some btys ->
-      All2 (fun br bty => (br.1 = bty.1) ×
-                        (Σ ;;; Γ |- br.2 ◃ bty.2) × Pcheck Γ br.2 bty.2)
-            brs btys ->
-      Pinfer Γ (tCase (ind,npar) p c brs) (mkApps p (skipn npar args ++ [c]))) ->
+      let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+      wf_branches idecl brs ->
+      All2i (fun i cdecl br =>
+        let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+        wf_local_bd Σ (Γ ,,, br.(bcontext)) ×
+        PΓ (Γ ,,, br.(bcontext)) ×
+        wf_local_bd Σ (Γ ,,, brctxty.1) ×
+        PΓ (Γ ,,, brctxty.1) ×
+        conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1) ×
+        Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2 ×
+        Pcheck (Γ ,,, brctxty.1) br.(bbody) brctxty.2 ×
+        Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 ◃ tSort ps ×
+        Pcheck (Γ ,,, brctxty.1) brctxty.2 (tSort ps))
+        0 idecl.(ind_ctors) brs ->
+      Pinfer Γ (tCase ci p c brs) (mkApps ptm (skipn ci.(ci_npar) args ++ [c]))) ->
 
     (forall (Γ : context) (p : projection) (c : term) u
       mdecl idecl pdecl args,
-      declared_projection Σ.1 mdecl idecl p pdecl ->
+      declared_projection Σ.1 p mdecl idecl pdecl ->
       Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
       Pind Γ (fst (fst p)) c u args ->
       #|args| = ind_npars mdecl ->
       let ty := snd pdecl in
-      Pinfer Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance_constr u ty))) ->
+      Pinfer Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
 
     (forall (Γ : context) (mfix : mfixpoint term) (n : nat) decl,
       fix_guard Σ Γ mfix ->
@@ -405,7 +425,7 @@ Section BidirectionalInduction.
       All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
                 Pcheck (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
       wf_fixpoint Σ.1 mfix ->
-      Pinfer Γ (tFix mfix n) decl.(dtype)) ->
+      Pinfer Γ (tFix mfix n) (dtype decl)) ->
     
     (forall (Γ : context) (mfix : mfixpoint term) (n : nat) decl,
       cofix_guard Σ Γ mfix ->
@@ -414,7 +434,7 @@ Section BidirectionalInduction.
       All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
                 Pcheck (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
       wf_cofixpoint Σ.1 mfix ->
-      Pinfer Γ (tCoFix mfix n) decl.(dtype)) ->
+      Pinfer Γ (tCoFix mfix n) (dtype decl)) ->
 
     (forall (Γ : context) (t T : term) (u : Universe.t),
       Σ ;;; Γ |- t ▹ T ->
@@ -450,7 +470,7 @@ Section BidirectionalInduction.
     2:{
     enough (HP : forall x : typing_sum, Ptyping_sum x).
     - repeat split ; intros.
-      + exact (HP (context_cons Γ wfΓ)).
+      + exact (HP (context_cons Γ X)).
       + exact (HP (check_cons Γ T t X)).
       + exact (HP (inf_cons Γ T t X)).
       + exact (HP (sort_cons Γ t u X)).
@@ -464,14 +484,14 @@ Section BidirectionalInduction.
     destruct d ; simpl.
     3: destruct i.
     
-    - apply HΓ.
+    - eapply HΓ.
       dependent induction wfΓ.
       + constructor.
       + destruct t0 as (u & d).
         constructor.
         * apply IHwfΓ.
         intros ; apply IH.
-        simpl in *. lia.
+        cbn in H |- *. lia.
         
         * simpl. red.
           applyIH.
@@ -483,9 +503,9 @@ Section BidirectionalInduction.
         constructor.
         * apply IHwfΓ.
           intros ; apply IH.
-          simpl in *. pose proof (infering_sort_size_pos h). lia.
-        * red. applyIH. pose proof (infering_sort_size_pos h). simpl in *. lia.
-        * red. applyIH. pose proof (checking_size_pos t1). simpl in *. lia.
+          simpl in H |- *. pose proof (infering_sort_size_pos h). lia.
+        * red. applyIH. pose proof (infering_sort_size_pos h). simpl in H |- *. lia.
+        * red. applyIH. pose proof (checking_size_pos t1). simpl in H |- *. lia.
 
     - destruct c.
       unshelve (eapply HCheck ; eauto) ; auto.
@@ -518,20 +538,41 @@ Section BidirectionalInduction.
     - unshelve eapply HConstruct ; auto.
       all: applyIH.
 
-    - destruct indnpar as [ind' npar'] ; cbn in ind ; cbn in npar ; subst ind ; subst npar.
-      unshelve eapply HCase ; auto.
-      1-2: applyIH.
-      remember btys as b in e2.
-      clear Heqb.
+    - unshelve eapply HCase ; auto.
+      1-4: applyIH.
       cbn in IH.
-      induction a.
+      clear - IH a2.
+      induction a2 as [|j cdecl br cdecls brs].
       1: by constructor.
-      destruct r.
+      change (branches_size _ _ _) with
+      ((wfl_size r.1) + (wfl_size r.2.1) + (checking_size r.2.2.2.1) + (checking_size r.2.2.2.2) +
+        branches_size (@checking_size cf) (@infering_sort_size cf) a2) in IH.
+      rewrite -/predctx -/ptm in IH |- *.
+      set brctxty := case_branch_type ci mdecl idecl p br ptm j cdecl.
+      fold brctxty in IH, r.
+      destruct r as (?&?&?&?&?).
+      cbn -[branches_size] in IH.
       constructor.
-      + intuition eauto.
-        applyIH.
-      + apply IHa.
-        intros. apply IH. simpl in *. lia.
+      + repeat split.
+        all: try assumption.
+        * applyIH.
+        * applyIH.
+          cbn.
+          rewrite -/predctx -/ptm -/brctxty.
+          lia.
+        * applyIH.
+          cbn.
+          rewrite -/predctx -/ptm -/brctxty.
+          lia.
+        * applyIH.
+          cbn.
+          rewrite -/predctx -/ptm -/brctxty.
+          lia.
+      + apply IHa2.
+        rewrite -/predctx -/ptm -/brctxty in IH |- *.
+        intros.
+        apply IH.
+        lia.
     
     - unshelve eapply HProj ; auto.
       all: applyIH.

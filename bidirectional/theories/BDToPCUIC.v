@@ -29,7 +29,7 @@ Section BDToPCUICTyping.
   Let Pind Γ ind t u args :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
 
-  Let PΓ Γ (wfΓ : wf_local_bd Σ Γ) :=
+  Let PΓ Γ :=
     wf_local Σ Γ.
 
   Lemma wf_arities_context' :
@@ -256,7 +256,7 @@ Proof.
         all: constructor ; auto.
 Qed. *)
   
-Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind (@PΓ).
+Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
 Proof.
   apply bidir_ind_env.
 
@@ -292,7 +292,7 @@ Proof.
     eapply type_App' ; auto.
     apply X2 ; auto.
     specialize (X0 X3).
-    apply validity in X0.
+    apply validity_term in X0.
     2: done.
     destruct X0 as [? X0].
     apply inversion_Prod in X0.
@@ -307,34 +307,33 @@ Proof.
   - red ; intros ; econstructor ; eauto.
 
   - red ; intros ; econstructor ; eauto.
-    + apply X2 ; auto.
-      suff [] : @isWfArity cf Σ Γ pty by done.
-      eapply WfArity_build_case_predicate_type ; eauto.
-      * eapply validity.
-        all: by auto. 
-      * subst npar. assumption.
-    + subst npar.
-      
-      assert (isType Σ Γ pty).
-      { eapply WfArity_build_case_predicate_type; eauto.
-        by eapply validity_term ; auto.
+    + eapply type_Cumul.
+      * eauto.
+      * admit. (*the convertible inductive type is well-formed*)
+      * admit. (*the fully-applied inductives are in cumulativity*)
+
+    + remember (ind_ctors idecl) as ctors.
+      eapply All2i_impl.
+      1: eassumption.
+      intros.
+      cbn in X11.
+      fold brctxty in X11.
+      destruct X11 as (?&?&?&?&?&?&Hbody&?&Htype).
+
+      assert (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps).
+      { apply Htype.
+        1: auto.
+        eexists.
+        constructor.
+        1: auto.
+        eapply isType_Sort_inv ; auto.
+        apply validity_term in X5 ; eauto.
       }
-
-      assert (∑ pctx, destArity [] pty =  Some (pctx, ps)) as [].
-      { unshelve eapply (build_case_predicate_type_spec (Σ.1, ind_universes mdecl)) in H2 as [parsubst [_ ->]].
-        1: eapply (on_declared_inductive) in isdecl as [? ?] ; eauto.
-        eexists. rewrite !destArity_it_mkProd_or_LetIn; simpl. reflexivity. }
-
-      assert (All (fun bty => isType Σ Γ bty.2) btys).
-      { by eapply build_branches_type_wt ; eauto. }
-
-      clear H4. 
-      induction X3.
-      all: constructor ; auto.
-      all: inversion_clear X6.
-      2: auto.
-      destruct r as (? & ? & ?).
-      repeat split ; auto.
+      repeat split.
+      all: auto.
+      apply Hbody ; auto.
+      eexists.
+      eassumption.
 
   - red ; intros ; econstructor ; eauto.
 
@@ -443,7 +442,7 @@ Proof.
     econstructor.
     all:by eauto.
 
-Qed.
+Admitted.
 
 End BDToPCUICTyping.
 
@@ -464,7 +463,7 @@ Proof.
 Qed.
 
 Theorem infering_sort_typing `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
-  wf_local Σ Γ -> Σ ;;; Γ |- t ▸□ u -> Σ ;;; Γ |- t : tSort u.
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t : tSort u.
 Proof.
   intros wfΓ Ht. revert Ht wfΓ.
   apply bidirectional_to_PCUIC.
@@ -472,7 +471,7 @@ Proof.
 Qed.
 
 Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :
-  wf_local Σ Γ -> Σ ;;; Γ |- t ▸Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
 Proof.
   intros wfΓ Ht. revert Ht wfΓ.
   apply bidirectional_to_PCUIC.
@@ -480,7 +479,7 @@ Proof.
 Qed.
 
 Theorem infering_ind_typing `{checker_flags} (Σ : global_env_ext) Γ t ind u args (wfΣ : wf Σ) :
-wf_local Σ Γ -> Σ ;;; Γ |- t ▸{ind} (u,args) -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
+wf_local Σ Γ -> Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
 Proof.
   intros wfΓ Ht. revert Ht wfΓ.
   apply bidirectional_to_PCUIC.

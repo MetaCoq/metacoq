@@ -106,163 +106,12 @@ Proof.
     all: intuition.
 Qed.
 
-(* Lemma bd_wf : Forall_decls_sorting Pcheck Psort Σ -> PT.wf Σ.
-Proof.
-  intros wfΣ. induction wfΣ.
-  all: constructor.
-  - assumption.
-  - assumption.
-  - constructor ; intuition.
-  - destruct d as [[? [] ?]|].
-    + inversion o0 as [[u Hty] Hb].
-      apply Hb.
-      1: constructor.
-      exists u.
-      simpl.
-      eapply Hty.
-      constructor.
-    + inversion o0. eexists.
-      eauto.
-    + destruct o0.
-      have wf_arities : PT.wf_local (Σ,udecl) (arities_context (ind_bodies m)).
-      { apply wf_arities_context'.
-        1: assumption.
-        induction onInductives.
-        all: constructor ; auto.
-        destruct p.
-        destruct onArity as [? onArity].
-        eexists.
-        eapply onArity.
-        constructor. }
-      have wf_params : PT.wf_local (Σ,udecl) (ind_params m).
-      { clear - onParams.
-        induction onParams.
-        all: constructor.
-        all: auto.
-        1: by destruct t0 ; eexists ; eauto.
-        1: by destruct t0 as ((? & ?) & ?) ; eexists ; eauto.
-        destruct t0 as ((? & ?)&c).
-        apply c.
-        1: auto.
-        eexists. red. eauto. }
-      constructor ; auto.
-      
-      remember (ind_bodies m) as l in onInductives |- *.
-      clear - IHwfΣ onInductives wf_arities wf_params.
-      induction onInductives.
-      all: constructor ; auto.
-      destruct p.
-      unshelve econstructor.
-      * exact ind_indices.
-      * exact ind_sort.
-      * eapply map.
-        2: exact ind_cshapes.
-        intros [].
-        constructor ; auto.
-      * assumption.
-      * destruct onArity as [? onArity].
-        eexists.
-        eapply onArity.
-        constructor.
-      * apply All2_map_right.
-        eapply All2_impl.
-        1: exact onConstructors.
-        intros [[] ?] [] [] ; simpl in *.
-        have wf_args : PT.wf_local (Σ,udecl) (arities_context (ind_bodies m),,,(ind_params m),,, cshape_args).
-        { eapply PCUICContexts.type_local_ctx_wf_local.
-          1: by apply weaken_wf_local.
-          eapply type_local_ctx_impl ; eauto.
-          by apply weaken_wf_local. }
-        constructor ; auto ; simpl in *.
-        --destruct on_ctype as [? on_ctype].
-          eexists.
-          apply on_ctype.
-          1: eassumption.
-        --apply type_local_ctx_impl ; eauto.
-          apply weaken_wf_local.
-          all: auto.
-        --match goal with |- PT.ctx_inst _ _ ?ctx _ _ => remember ctx as Γ' end.
-          clear -on_cindices wf_args.
-          induction on_cindices.
-          all: constructor.
-          2-3: assumption.
-          apply l0 ; auto.
-          destruct l.
-          eexists. red. eauto.
-        --clear - on_ctype_positive.
-          cbn in on_ctype_positive |- *.
-          induction on_ctype_positive.
-          all: constructor ; auto.
-          clear - p. induction p.
-          ++constructor ; assumption.
-          ++econstructor 2 ; eauto.
-          ++constructor 3 ; auto.
-          ++constructor 4 ; auto.
-        --clear - on_ctype_variance.
-          intros v e.
-          specialize (on_ctype_variance v e).
-          unfold cstr_respects_variance in on_ctype_variance.
-          unfold PT.cstr_respects_variance.
-          destruct (variance_universes (PCUICEnvironment.ind_universes m)) ; simpl in * ; auto.
-          destruct p as [[]]. intuition.
-          induction a.
-          all: constructor ; auto.
-        
-      * intros projs ; specialize (onProjections projs).
-        clear - onProjections.
-        induction ind_cshapes.
-        1: auto.
-        simpl in *.
-        destruct ind_cshapes.
-        { destruct a. simpl in *.
-          destruct onProjections. constructor ; intuition. }
-        assumption.
-      * clear -ind_sorts wf_params.
-        cbn in *.
-        red in ind_sorts |- *.
-        destruct (universe_family ind_sort).
-        --induction ind_cshapes ; auto.
-        --induction ind_cshapes ; auto.
-          simpl in *.
-          destruct ind_cshapes ; auto.
-          simpl in *.
-          destruct a ; auto.
-        --destruct ind_sorts. split.
-          { apply Forall_map.
-            eapply Forall_impl. 1: eassumption.
-            intros [] ? ; assumption. }
-          destruct indices_matter ; auto.
-          apply type_local_ctx_impl.
-          all: auto.
-        --destruct ind_sorts. split.
-          { apply Forall_map.
-            eapply Forall_impl. 1: eassumption.
-            intros [] ? ; assumption. }
-          destruct indices_matter ; auto.
-          apply type_local_ctx_impl.
-          all: auto.
-      *  clear -onIndices.
-        intros v e. specialize (onIndices v e).
-        unfold ind_respects_variance in onIndices.
-        unfold PT.ind_respects_variance.
-        destruct (PCUICEnvironment.ind_universes m) ; simpl in * ; auto.
-        destruct cst.
-        replace (PT.level_var_instance 0 l) with (level_var_instance 0 l).
-        2:{ by induction l ; auto. }
-        match goal with |- context [PT.lift_instance ?len ?list] =>
-        replace (PT.lift_instance len list) with (lift_instance len list) end.
-        2:{ apply map_ext. intros []. all: reflexivity. }
-        induction onIndices.
-        all: constructor ; auto.
-Qed. *)
   
 Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
 Proof.
   apply bidir_ind_env.
 
   { intros. eapply bd_wf_local. eassumption. }
-
-(*   1-14: intros ; red ; econstructor ; eauto. *)
 
   - red ; intros ; econstructor ; eauto.
 
@@ -307,10 +156,8 @@ Proof.
   - red ; intros ; econstructor ; eauto.
 
   - red ; intros ; econstructor ; eauto.
-    + eapply type_Cumul.
-      * eauto.
-      * admit. (*the convertible inductive type is well-formed*)
-      * admit. (*the fully-applied inductives are in cumulativity*)
+    + eapply type_Cumul ; eauto.
+      admit. (*the convertible inductive type is well-formed*)
 
     + remember (ind_ctors idecl) as ctors.
       eapply All2i_impl.

@@ -89,7 +89,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   is_allowed_elimination Σ ps (ind_kelim idecl) ->
   forall u args,
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
-  Σ ;;; Γ |- mkApps (tInd ci u) (firstn ci.(ci_npar) args) <= mkApps (tInd ci (puinst p)) (pparams p) ->
+  Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
   isCoFinite mdecl.(ind_finite) = false ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
@@ -391,7 +391,7 @@ Section BidirectionalInduction.
       forall u args,
       Σ ;;; Γ |- c ▹{ci} (u,args) ->
       Pind Γ ci.(ci_ind) c u args ->
-      Σ ;;; Γ |- mkApps (tInd ci u) (firstn (ci_npar ci) args) <= mkApps (tInd ci (puinst p)) (pparams p) ->
+      Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
       isCoFinite mdecl.(ind_finite) = false ->
       let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       wf_branches idecl brs ->

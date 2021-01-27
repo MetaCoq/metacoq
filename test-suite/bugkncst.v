@@ -25,10 +25,8 @@ From MetaCoq.Template Require Import Pretty.
 (* Use template-coq to make a [program] from function defined above *)
 Time MetaCoq Quote Recursively Definition p_Plus1 := Plus1.
 
-Eval cbv in (print_program false 2 p_Plus1).
-Eval cbv in ("a" ++ nl ++ "b")%string.
-
-Eval lazy in (print_term (empty_ext (fst p_Plus1)) nil true (snd p_Plus1)).
+(* Eval cbv in (print_program false 1 p_Plus1).
+Eval lazy in (print_term (empty_ext (fst p_Plus1)) nil true (snd p_Plus1)). *)
 
 (** The program p_Plus1 is too big to read, so we define some
 *** diagnostic software **)

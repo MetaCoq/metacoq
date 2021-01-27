@@ -31,7 +31,7 @@ Notation length_of t := ltac:(let lemma := constr:(PCUICAst.len t) in exact lemm
 
 (* Defined here since BasicAst does not have access to universe instances.
   Parameterized by term types as they are not yet defined. *)
-Record predicate {term} := mkpredicate {
+Record predicate {term} := mk_predicate {
   pparams : list term; (* The parameters *)
   puinst : Instance.t; (* The universe instance *)
   pcontext : list (context_decl term); (* The predicate context, 
@@ -39,7 +39,7 @@ Record predicate {term} := mkpredicate {
   preturn : term; (* The return type *) }.
 Derive NoConfusion for predicate.
 Arguments predicate : clear implicits.
-Arguments mkpredicate {_}.
+Arguments mk_predicate {_}.
 
 Section map_predicate.
   Context {term term' : Type}.
@@ -114,7 +114,7 @@ End map_predicate_k.
 Section Branch.
   Context {term : Type}.
   (* Parameterized by term types as they are not yet defined. *)
-  Record branch := mkbranch {
+  Record branch := mk_branch {
     bcontext : list (context_decl term); 
     (* Context of binders of the branch, including lets. *)
     bbody : term; (* The branch body *) }.

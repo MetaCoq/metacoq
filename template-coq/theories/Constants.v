@@ -74,6 +74,8 @@ Register MetaCoq.Template.BasicAst.mkInd as metacoq.ast.mkInd.
 Register MetaCoq.Template.BasicAst.def as metacoq.ast.def.
 Register MetaCoq.Template.BasicAst.mkdef as metacoq.ast.mkdef.
 Register MetaCoq.Template.BasicAst.cast_kind as metacoq.ast.cast_kind.
+Register MetaCoq.Template.BasicAst.case_info as metacoq.ast.case_info.
+Register MetaCoq.Template.BasicAst.mk_case_info as metacoq.ast.mk_case_info.
 Register MetaCoq.Template.BasicAst.VmCast as metacoq.ast.VmCast.
 Register MetaCoq.Template.BasicAst.NativeCast as metacoq.ast.NativeCast.
 Register MetaCoq.Template.BasicAst.Cast as metacoq.ast.Cast.
@@ -149,6 +151,11 @@ Register MetaCoq.Template.common.uGraph.init_graph as metacoq.ast.graph.init.
 Register MetaCoq.Template.common.uGraph.gc_of_constraints as metacoq.ast.graph.add_global_constraints.
 
 (* Terms *)
+
+Register MetaCoq.Template.Ast.predicate as metacoq.ast.predicate.
+Register MetaCoq.Template.Ast.mk_predicate as metacoq.ast.mk_predicate.
+Register MetaCoq.Template.Ast.branch as metacoq.ast.branch.
+Register MetaCoq.Template.Ast.mk_branch as metacoq.ast.mk_branch.
 
 Register MetaCoq.Template.Ast.term as metacoq.ast.term.
 Register MetaCoq.Template.Ast.tRel as metacoq.ast.tRel.

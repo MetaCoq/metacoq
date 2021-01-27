@@ -41,6 +41,9 @@ let map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b list) : 'a * ('c list) 
   let evm, res = List.fold_left (fun (evm, l) b -> let evm, c = f evm b in evm, c :: l) (evm, []) l in
   evm, List.rev res
 
+let array_map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b array) : 'a * ('c array) =
+  CArray.fold_left_map (fun evm b -> let evm, c = f evm b in evm, c) evm l
+
 let fold_env_evm_right (f : 'a -> 'b -> 'c -> 'a * 'b * 'd) (env : 'a) (evm : 'b) (l : 'c list) : 'a * 'b * ('d list) =
   List.fold_right (fun b (env, evm, l) -> let env, evm, c = f env evm b in env, evm, c :: l) l (env, evm, [])
 
@@ -102,15 +105,29 @@ struct
         let i = D.unquote_inductive i in
         let evm, u = D.unquote_universe_instance evm u in
         evm, Constr.mkIndU (i, u)
-      | ACoq_tCase (((i, _), r), ty, d, brs) ->
-        let ind = D.unquote_inductive i in
-        let relevance = D.unquote_relevance r in 
-        let evm, ty = aux env evm ty in
-        let evm, d = aux env evm d in
-        let evm, brs = map_evm (aux env) evm (List.map snd brs) in
-        (* todo: reify better case_info *)
+      | ACoq_tCase (ci, p, c, brs) ->
+        let ind = D.unquote_inductive ci.aci_ind in
+        let relevance = D.unquote_relevance ci.aci_relevance in 
         let ci = Inductiveops.make_case_info (Global.env ()) ind relevance Constr.RegularStyle in
-        evm, Constr.mkCase (ci, ty, d, Array.of_list brs)
+        let evm, puinst = D.unquote_universe_instance evm p.auinst in
+        let evm, pars = map_evm (aux env) evm p.apars in
+        let pars = Array.of_list pars in
+        let napctx = CArray.map_of_list D.unquote_aname p.apcontext in
+        let pctx = CaseCompat.case_predicate_context env ci puinst pars napctx in 
+        let evm, pret = aux (Environ.push_rel_context pctx env) evm p.apreturn in
+        let evm, c = aux env evm c in
+        let brs = List.map (fun { abcontext = bctx; abbody = bbody } ->
+          let nabctx = CArray.map_of_list D.unquote_aname bctx in
+          (nabctx, bbody)) brs in
+        let brs = CaseCompat.case_branches_contexts env ci puinst pars (Array.of_list brs) in
+        let denote_br evm (nas, bctx, bbody) = 
+          let evm, bbody = aux (Environ.push_rel_context bctx env) evm bbody in
+          evm, (nas, bbody)
+        in
+        let evm, brs = array_map_evm denote_br evm brs in
+        (* todo: reify better case_info *)
+        let (ci, ty, iv, c, brs) = CaseCompat.expand_case env (ci, puinst, pars, (napctx, pret), None, c, brs) in
+        evm, Constr.mkCase (ci, ty, c, brs)
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                           List.map (fun p->p.rarg) lbd) in

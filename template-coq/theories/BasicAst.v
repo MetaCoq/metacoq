@@ -216,7 +216,7 @@ Inductive cast_kind : Set :=
 | RevertCast.
 Derive NoConfusion EqDec for cast_kind.
 
-Record case_info := { ci_ind : inductive; ci_npar : nat; ci_relevance : relevance }.
+Record case_info := mk_case_info { ci_ind : inductive; ci_npar : nat; ci_relevance : relevance }.
 Derive NoConfusion EqDec for case_info.
 
 Definition string_of_case_info ci := 

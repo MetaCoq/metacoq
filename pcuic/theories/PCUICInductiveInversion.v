@@ -1330,10 +1330,22 @@ Proof.
   reflexivity.
 Qed.
 
+Lemma conv_context_rel_context_assumptions {cf:checker_flags} P Γ Δ Δ' :
+  conv_context_rel P Γ Δ Δ' ->
+  context_assumptions Δ = context_assumptions Δ'.
+Proof.
+  induction 1; auto.
+  cbn.
+  depelim p; cbn; lia.
+Qed.
+
 Lemma invert_Case_Construct {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) 
   {Γ ci ind' pred i u brs args T} :
   Σ ;;; Γ |- tCase ci pred (mkApps (tConstruct ind' i u) args) brs : T ->
-  ci.(ci_ind) = ind'.
+  ci.(ci_ind) = ind' /\
+  exists br,
+    nth_error brs i = Some br /\
+    (#|args| = ci.(ci_npar) + context_assumptions br.(bcontext))%nat.
 Proof.
   destruct hΣ as [wΣ].
   intros h.
@@ -1347,6 +1359,30 @@ Proof.
   epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ t0 declc); eauto.
   simpl in *.
   intuition auto.
+  subst.
+  destruct declc as (decli&nthctor).
+  cbn in nthctor.
+  pose proof (declared_inductive_unique_sig isdecl decli) as H; noconf H.
+  eapply All2i_nth_error_l in nthctor as H; eauto.
+  destruct H as (br&nth&(?&cc)&?).
+  exists br.
+  split; auto.
+  apply conv_context_rel_app in cc.
+  cbn in cc.
+  unfold case_branch_type, case_branch_type_gen, case_branch_context_gen in cc.
+  cbn in cc.
+  apply conv_context_rel_context_assumptions in cc.
+  unfold expand_lets_ctx, expand_lets_k_ctx in cc.
+  repeat (rewrite ?context_assumptions_subst_context
+                  ?context_assumptions_lift_context
+                  ?context_assumptions_subst_instance in cc).
+  rewrite map2_set_binder_name_context_assumptions in cc; [|lia].
+  rewrite forget_types_length.
+  apply wf_branch_length.
+  eapply Forall2_All2 in w0.
+  eapply All2_nth_error_Some_r in nth; eauto.
+  destruct nth as (?&?&?).
+  congruence.
 Qed.
 
 Lemma Proj_Construct_ind_eq {cf:checker_flags} Σ (hΣ : ∥ wf Σ.1 ∥) {Γ i i' pars narg c u l T} :

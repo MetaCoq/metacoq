@@ -2626,3 +2626,31 @@ Proof.
   eapply (All2i_impl a). intros.
   now rewrite Nat.sub_0_r in X.
 Qed.
+
+Lemma All2i_nth_error_l {A B} (P : nat -> A -> B -> Type) l l' n x k : 
+  All2i P k l l' ->
+  nth_error l n = Some x ->
+  ∑ c, nth_error l' n = Some c × P (k + n)%nat x c.
+Proof.
+  induction 1 in n |- *.
+  * rewrite nth_error_nil => //.
+  * destruct n.
+    + simpl. intros [= <-].
+      eexists; split; eauto. now rewrite Nat.add_0_r.
+    + simpl. intros hnth. specialize (IHX _ hnth).
+      now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma All2i_nth_error_r {A B} (P : nat ->A -> B -> Type) l l' n x k : 
+  All2i P k l l' ->
+  nth_error l' n = Some x ->
+  ∑ c, nth_error l n = Some c × P (k + n)%nat c x.
+Proof.
+  induction 1 in n |- *.
+  * rewrite nth_error_nil => //.
+  * destruct n.
+    + simpl. intros [= <-].
+      eexists; split; eauto. now rewrite Nat.add_0_r.
+    + simpl. intros hnth. specialize (IHX _ hnth).
+      now rewrite Nat.add_succ_r.
+Qed.

@@ -611,49 +611,6 @@ Proof.
   - destruct a. destruct ?. all:inv H. eauto.
 Qed.
 
-Lemma All2i_nth_error_r {A B} (P : nat ->A -> B -> Type) l l' n x k : 
-  All2i P k l l' ->
-  nth_error l' n = Some x ->
-  ∑ c, nth_error l n = Some c × P (k + n)%nat c x.
-Proof.
-  induction 1 in n |- *.
-  * rewrite nth_error_nil => //.
-  * destruct n.
-    + simpl. intros [= <-].
-      eexists; split; eauto. now rewrite Nat.add_0_r.
-    + simpl. intros hnth. specialize (IHX _ hnth).
-      now rewrite Nat.add_succ_r.
-Qed.
-
-Lemma tCase_length_branch_inv `{cf : checker_flags} (Σ : global_env_ext) Γ ci p n u args brs br T :
-  wf Σ ->
-  Σ ;;; Γ |- tCase ci p (mkApps (tConstruct ci n u) args) brs : T ->
-  nth_error brs n = Some br ->
-  (#|args| = ci.(ci_npar) + context_assumptions br.(bcontext))%nat.
-Proof.
-  intros. 
-  eapply inversion_Case in X0 as (mdecl' & idecl' & indices & data & cum); auto.
-  destruct data; eauto.
-  subst.
-  pose proof t0 as t1'.
-  eapply inversion_mkApps in t1' as [A [tc _]]; auto.
-  eapply inversion_Construct in tc as [mdecl [idecl [cdecl [_ [declc _]]]]]; auto. clear A.
-  unshelve eapply PCUICInductiveInversion.Construct_Ind_ind_eq in t0; eauto.
-  destruct (on_declared_constructor declc) as [[onind oib] [cs [Hnth onc]]].
-  destruct t0 as [[t1 ->] _]. simpl in e. rewrite <- e.
-  destruct (declared_inductive_inj isdecl declc); subst mdecl' idecl'.
-  f_equal. clear Hnth. clear t1.
-  pose proof (wf_predicate_length_pars w).
-  eapply All2i_nth_error_r in a1; tea.
-  destruct a1 as [cdecl' [hctor wfbr]]; tea.
-  destruct (declared_constructor_inj declc (conj (proj1 declc) hctor)) as [_ [_ ?]].
-  subst cdecl'.
-  eapply Forall2_All2 in w0.
-  eapply All2_nth_error in w0; tea.
-  pose proof (wf_branch_length w0).
-  todo "case".
-Qed.
-
 Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.

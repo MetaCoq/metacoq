@@ -1379,7 +1379,7 @@ Section Lemmata.
   Proof.
     destruct hΣ as [wΣ].
     intros Γ ci ind' pred i u brs args [A h].
-    apply PCUICInductiveInversion.invert_Case_Construct in h; auto.
+    apply PCUICInductiveInversion.invert_Case_Construct in h; intuition auto.
   Qed.
 
   Lemma Proj_Construct_ind_eq :

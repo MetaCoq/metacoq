@@ -248,7 +248,7 @@ let denote_decl env evm d =
   let (h, args) = app_full d [] in
   if constr_equall h tmkdecl then
     match args with
-    | name :: body :: typ :: [] ->
+    | _ty :: name :: body :: typ :: [] ->
       let name = unquote_aname name in
       let evm, ty = denote_term env evm typ in
       let evm, decl = (match unquote_option body with

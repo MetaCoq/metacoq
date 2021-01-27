@@ -29,22 +29,15 @@ struct
 
   let unquote_case_info trm =
     let (h,args) = app_full trm [] in
-    if constr_equall h c_pair then
+    if constr_equall h mk_case_info then
       match args with
-        _ :: _ :: ind_nparam :: relevance :: [] ->
-         let (h1,args1) = app_full ind_nparam [] in
-         if constr_equall h1 c_pair then
-           (match args1 with
-           | _ :: _ :: ind :: nparam :: [] -> 
-            { aci_ind = ind;
-              aci_npar = nparam;
-              aci_relevance = relevance }
-           | _ -> bad_term_verb trm "unquote_case_info")
-         else not_supported_verb trm "unquote_case_info"
+      | ind :: nparam :: relevance :: [] ->
+        { aci_ind = ind;
+          aci_npar = nparam;
+          aci_relevance = relevance }
       | _ -> bad_term_verb trm "unquote_case_info"
     else
       not_supported_verb trm "unquote_case_info"
-
 
   let rec unquote_list trm =
     let (h,args) = app_full trm [] in
@@ -347,9 +340,15 @@ struct
     else
       not_supported_verb trm "unquote_global_reference"
 
-  let unquote_branch c = 
-    let bctx, bbody = unquote_pair c in
-    { abcontext = unquote_list bctx; abbody = bbody }
+  let unquote_branch trm = 
+    let (h, args) = app_full trm [] in
+    if constr_equall h tmk_branch then
+      match args with
+      | _ty :: bctx :: bbody :: [] ->
+      { abcontext = unquote_list bctx; abbody = bbody }
+      | _ -> bad_term_verb trm "unquote_branch"
+    else not_supported_verb trm "unquote_branch"
+
   let unquote_predicate trm = 
     let (h, args) = app_full trm [] in
     if constr_equall h tmk_predicate then

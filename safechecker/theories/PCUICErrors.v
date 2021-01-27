@@ -261,7 +261,7 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | NotConvertible G Γ t u => "Terms are not convertible:\n" ^
       print_term Σ Γ t ^ "\nand:\n" ^ print_term Σ Γ u ^
       "\nin universe graph:\n" ^ print_universes_graph G
-  | NotASort t => "Not a sort"
+  | NotASort t => "Not a sort: " ^ print_term Σ [] t
   | NotAProduct t t' => "Not a product"
   | NotAnArity t => print_term Σ [] t ^ " is not an arity"
   | NotAnInductive t => "Not an inductive"

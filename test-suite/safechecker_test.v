@@ -540,7 +540,22 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
                   (is_adjoint' f g issect isretr).
 
 
-MetaCoq SafeCheck @issect'.
+From MetaCoq.Template Require Import Loader Core TemplateMonad monad_utils Pretty.
+Import MonadNotation.
+Open Scope monad_scope.
+Require Import String.
+Open Scope string_scope.
+
+MetaCoq Quote Definition c := safechecker_test.concat.
+Definition concatkn : BasicAst.kername := 
+    Datatypes.pair (BasicAst.MPfile ("safechecker_test" :: nil)%list) ("concat").
+
+MetaCoq Run (tmEval (unfold concatkn)
+  (@safechecker_test.concat) >>=  tmQuote >>= tmPrint).
+  (* fun t => tmEval cbv (print_program false 1 t) >>= tmPrint). *)
+
+(* Bad, might be reification messing with the case representation ?*)
+MetaCoq SafeCheck @safechecker_test.concat. @issect'.
 
 MetaCoq SafeCheck @ap_pp.
 MetaCoq CoqCheck ap_pp.

@@ -1036,7 +1036,7 @@ Lemma iota_red_subst_instance pars args br u :
   = iota_red pars (map (subst_instance u) args) (map_branch (subst_instance u) br).
 Proof.
   unfold iota_red.
-  rewrite subst_instance_subst -map_skipn.
+  rewrite subst_instance_subst -map_skipn -map_rev.
   f_equal. now rewrite expand_lets_subst_instance.
 Qed.
 
@@ -1195,7 +1195,7 @@ Proof.
   unfold case_branch_context, case_branch_context_gen.
   cbn -[fold_context_k].
   substu => /=; len.
-  rewrite subst_instance_two_context.
+  rewrite [subst_instance _ _]map_rev subst_instance_two_context.
   rewrite /expand_lets_ctx /expand_lets_k_ctx. len.
   now rewrite subst_instance_two_context.
 Qed.
@@ -1273,7 +1273,8 @@ Proof.
     rewrite !map_app !map_map_compose; do 2 f_equal.
     * len. now setoid_rewrite subst_instance_lift.
     * now rewrite subst_instance_to_extended_list to_extended_list_subst_instance.
-  - substu. rewrite [map_context _ _]subst_instance_subst_context.
+  - substu. rewrite [map_context _ _]subst_instance_subst_context
+      [subst_instance _ _]map_rev.
     f_equal. substu. f_equal; rewrite subst_instance_two_context //.
 Qed.
 
@@ -1303,7 +1304,9 @@ Proof.
     now rewrite subst_instance_case_predicate_context.
   * rewrite map_app. f_equal.
     + rewrite !map_map_compose. apply map_ext => x.
-      substu. f_equal. rewrite /expand_lets_k. len.
+      substu.
+      rewrite [subst_instance u (List.rev _)]map_rev. f_equal.
+      rewrite /expand_lets_k. len.
       rewrite ?subst_instance_two ?subst_instance_two_context //.
     + simpl. f_equal.
       substu. rewrite map_app /= //.

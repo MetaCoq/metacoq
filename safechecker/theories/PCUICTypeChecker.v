@@ -58,7 +58,7 @@ Section Typecheck.
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
-      raise (NotCumulSmaller G Γ t u t' u' e)
+      raise (NotCumulSmaller false G Γ t u t' u' e)
       (* end *)
     end end.
   Next Obligation.
@@ -80,7 +80,7 @@ Section Typecheck.
       let t' := hnf Γ t ht in
       let u' := hnf Γ u hu in
       (* match leq_term (snd Σ) t' u' with true => ret _ | false => *)
-      raise (NotCumulSmaller G Γ t u t' u' e)
+      raise (NotCumulSmaller true G Γ t u t' u' e)
       (* end *)
     end end.
   Next Obligation.

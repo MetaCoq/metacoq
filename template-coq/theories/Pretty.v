@@ -145,7 +145,7 @@ Section print_term.
       (print_term Γ false dom ^ " → " ^ print_term (na' :: Γ) true codom)
     else parens top
            ("∀ " ^ na' ^ " : " ^
-                     print_term Γ true dom ^ ", " ^ print_term (na' :: Γ) true codom)
+                     print_term Γ false dom ^ ", " ^ print_term (na' :: Γ) true codom)
   | tLambda na dom body =>
     let na' := (fresh_name Γ na.(binder_name) (Some dom)) in
     parens top ("fun " ^ na' ^ " : " ^ print_term Γ true dom
@@ -245,7 +245,6 @@ Section print_term.
 
 End print_term.
 
-
 Definition pr_context_decl (Σ : global_env_ext) Γ (c : context_decl) : ident * string :=
   match c with
   | {| decl_name := na; decl_type := ty; decl_body := None |} => 
@@ -263,7 +262,10 @@ Fixpoint print_context Σ Γ Δ :=
   | d :: decls => 
     let '(Γ, s) := print_context Σ Γ decls in
     let '(na, s') := pr_context_decl Σ Γ d in
-    (na :: Γ, (s ++ s')%string)
+    match decls with
+    | [] => (na :: Γ, (s ++ s')%string)
+    | _ => (na :: Γ, (s ++ " " ++ s')%string)
+    end
   end.
 
 Definition print_one_cstr Σ Γ (mib : mutual_inductive_body) (c : constructor_body) : string :=
@@ -288,8 +290,8 @@ Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : st
     let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
     print_env_aux short n Σ
       ("Inductive " ++ 
-       print_list (print_one_ind short Σ' names mib) nl mib.(ind_bodies) ++ "." 
-       ++ acc)%string
+       print_list (print_one_ind short Σ' names mib) nl mib.(ind_bodies) ++ "." ++ 
+       nl ++ acc)%string
   | (kn, ConstantDecl cb) :: Σ =>
     let Σ' := (Σ, cb.(cst_universes)) in
     print_env_aux short n Σ

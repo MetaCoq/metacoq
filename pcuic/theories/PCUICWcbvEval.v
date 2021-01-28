@@ -468,8 +468,8 @@ Section Wcbv.
     rewrite closedn_mkApps in cargs.
     move/andP: cargs => [Hcons Hargs].
     eapply (closedn_subst _ 0 0).
-    now rewrite forallb_skipn //.
-    simpl. rewrite /expand_lets /expand_lets_k.
+    now rewrite forallb_rev forallb_skipn //.
+    simpl. rewrite List.rev_length /expand_lets /expand_lets_k.
     rewrite -(Nat.add_0_r #|skipn pars args|).
     rewrite hass.
     move/andP: e => [cltx clb].

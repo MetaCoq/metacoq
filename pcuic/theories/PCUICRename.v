@@ -787,7 +787,7 @@ Proof.
   change (fold_context_k
   (fun i : nat => rename (shiftn i (shiftn (ind_npars mdecl + #|ind_bodies mdecl|) f)))) with
     (rename_context (shiftn (ind_npars mdecl + #|ind_bodies mdecl|) f)).
-  rewrite rename_context_subst. f_equal.
+  rewrite rename_context_subst map_rev //. f_equal.
   unfold id.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
   simpl. len.
@@ -871,9 +871,9 @@ Proof.
         apply rename_shiftn.
       + now rewrite rename_to_extended_list.
     * rewrite -/(rename_context f _).
-      rewrite rename_context_subst rename_context_subst_instance.
+      rewrite rename_context_subst rename_context_subst_instance map_rev.
       f_equal. f_equal.
-      rewrite rename_closedn_ctx //.
+      rewrite List.rev_length rename_closedn_ctx //.
       pose proof (closedn_ctx_expand_lets (ind_params mdecl) (ind_indices idecl)
         (declared_inductive_closed_pars_indices _ decli)).
       rewrite (wf_predicate_length_pars wfp).
@@ -1002,8 +1002,8 @@ Lemma rename_iota_red :
 Proof.
   intros f pars args br hlen hlen'.
   unfold iota_red.
-  rewrite rename_subst0 map_skipn. f_equal.
-  rewrite /expand_lets /expand_lets_k.
+  rewrite rename_subst0 map_rev map_skipn. f_equal.
+  rewrite List.rev_length /expand_lets /expand_lets_k.
   rewrite rename_subst0. len.
   rewrite shiftn_add -hlen Nat.add_comm rename_shiftnk.
   rewrite hlen. rewrite rename_extended_subst.
@@ -1060,8 +1060,9 @@ Proof.
       rewrite /expand_lets /expand_lets_k.
       rewrite -rename_subst_instance. len.
       rewrite -shiftn_add -shiftn_add.
-      rewrite rename_subst. f_equal.
-      rewrite rename_subst. rewrite (wf_predicate_length_pars wfp).
+      rewrite rename_subst map_rev. f_equal.
+      rewrite List.rev_length rename_subst.
+      rewrite (wf_predicate_length_pars wfp).
       rewrite (declared_minductive_ind_npars decli).
       rewrite -{2}(context_assumptions_subst_instance (puinst p) (ind_params mdecl)).
       rewrite rename_closed_extended_subst. 

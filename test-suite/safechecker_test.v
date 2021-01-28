@@ -40,6 +40,21 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 Definition bignat := 10000.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.
+Require Import String.
+From MetaCoq.Template Require Import Loader Core TemplateMonad monad_utils Pretty.
+Import MonadNotation.
+Open Scope monad_scope.
+Require Import String.
+Open Scope string_scope.
+Definition topkn s : BasicAst.kername := 
+  (Datatypes.pair (BasicAst.MPfile ("safechecker_test" :: nil)%list) (s))%string.
+
+MetaCoq Quote Recursively Definition prodq := prod_rect.
+
+MetaCoq Run
+  (tmEval cbv ((*print_program false 2*) prodq) >>= tmPrint).
+
+MetaCoq SafeCheck prod_rect.
 
 Set Universe Polymorphism.
 
@@ -54,7 +69,7 @@ Arguments pair {_ _} _ _.
 
 Notation "x * y" := (prod x y) : type_scope.
 Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z): type_scope.
-
+MetaCoq SafeCheck @prod_rect.
 
 Section projections.
   Context {A : Type} {B : Type}.
@@ -137,7 +152,7 @@ Definition transport_eq {A : Type} (P : A -> Type) {x y : A} (p : x = y) (u : P 
 Notation "p # x" := (transport_eq _ p x) (right associativity, at level 65, only parsing).
 
 Definition concat {A : Type} {x y z : A} (p : x = y) (q : y = z) : x = z.
-  destruct p; exact q.
+  destruct p; exact q. Show Proof.
 Defined.
 
 Notation "p @ q" := (concat p q) (at level 20).
@@ -540,11 +555,6 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
                   (is_adjoint' f g issect isretr).
 
 
-From MetaCoq.Template Require Import Loader Core TemplateMonad monad_utils Pretty.
-Import MonadNotation.
-Open Scope monad_scope.
-Require Import String.
-Open Scope string_scope.
 
 MetaCoq Quote Definition c := safechecker_test.concat.
 Definition concatkn : BasicAst.kername := 

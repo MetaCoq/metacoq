@@ -195,8 +195,9 @@ module CaseCompat =
         try Term.decompose_lam_n_decls mip.mind_consnrealdecls.(i) br 
         with e -> (* Dynamically eta-expand the branch *)
           let ctx, ty = mip.mind_nf_lc.(i) in
-          let ctx, _ = List.chop mip.mind_consnrealdecls.(i) ctx in
-          let br = Term.appvectc br (Context.Rel.to_extended_vect mkRel 0 ctx) in
+          let nargs = mip.mind_consnrealdecls.(i) in
+          let ctx, _ = List.chop nargs ctx in
+          let br = Term.appvectc (Vars.lift nargs br) (Context.Rel.to_extended_vect mkRel 0 ctx) in
           let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
           let paramsubst = Vars.subst_of_rel_context_instance paramdecl (Array.to_list pms) in
           let ctx' = 

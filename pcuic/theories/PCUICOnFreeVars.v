@@ -1005,7 +1005,8 @@ Proof.
     rename h5 into hbrs.
     move: h4. rewrite on_free_vars_mkApps => /andP [] /= _ hargs.
     apply on_free_vars_subst.
-    { rewrite forallb_skipn //. }
+    { rewrite forallb_rev forallb_skipn //. }
+    len.
     rewrite H0.
     rewrite /expand_lets /expand_lets_k /=.
     eapply forallb_nth_error in hbrs.
@@ -1108,7 +1109,8 @@ Proof.
   - rewrite -/(on_free_vars_ctx P _).
     rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
     rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
-    apply on_free_vars_subst => //.
+    apply on_free_vars_subst.
+    { rewrite forallb_rev => //. }
     rewrite -on_free_vars_ctx_all_term.
     rewrite on_free_vars_subst_instance_context.
     rewrite (on_free_vars_ctx_all_term _ _ (Universe.type0)).
@@ -1149,6 +1151,7 @@ Proof.
   rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
   rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
   apply on_free_vars_subst => //.
+  { rewrite forallb_rev //. }
   rewrite -(expand_lets_it_mkProd_or_LetIn _ _ 0 (tSort _)).
   eapply on_free_vars_expand_lets_k; len.
   * rewrite (wf_predicate_length_pars wfp).

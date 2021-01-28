@@ -44,7 +44,7 @@ Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : conte
        decl_type := indty |}
   in
   let ictx := 
-    subst_context params 0
+    subst_context (List.rev params) 0
       (subst_instance puinst 
       (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
   in
@@ -68,7 +68,7 @@ Definition case_predicate_context ind mdecl idecl p : context :=
 Arguments case_predicate_context _ _ _ !_.
 
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
-  subst_context params 0
+  subst_context (List.rev params) 0
   (expand_lets_ctx (subst_instance puinst mdecl.(ind_params))
     (* We expand the lets in the context of parameters before
       substituting the actual parameters *)
@@ -93,7 +93,7 @@ Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params pu
   let brctx := case_branch_context_gen ind mdecl params puinst bctx cdecl in
   let upars := subst_instance puinst mdecl.(ind_params) in
   let indices :=
-    (map (subst params #|cdecl.(cstr_args)|)
+    (map (subst (List.rev params) #|cdecl.(cstr_args)|)
       (map (expand_lets_k upars #|cdecl.(cstr_args)|)
         (map (subst (inds (inductive_mind ind) puinst mdecl.(ind_bodies))
                     (#|mdecl.(ind_params)| + #|cdecl.(cstr_args)|))

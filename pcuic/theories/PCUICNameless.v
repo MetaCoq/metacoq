@@ -1400,7 +1400,7 @@ Lemma nl_case_branch_context ind mdecl p br cdecl :
     (nl_constructor_body cdecl).
 Proof.
   unfold case_branch_context, case_branch_context_gen. simpl.
-  rewrite nlctx_subst_context. f_equal.
+  rewrite nlctx_subst_context map_rev. f_equal.
   rewrite nl_expand_lets_ctx nlctx_subst_instance.
   f_equal.
   rewrite nl_subst_context nl_inds nlctx_subst_instance; len.
@@ -1426,7 +1426,7 @@ Proof.
   - rewrite nl_mkApps nl_lift; len. f_equal.
     rewrite !map_map_compose map_app /= !map_map_compose nl_mkApps.
     f_equal.
-    * apply map_ext => idx. rewrite nl_subst nl_expand_lets_k.
+    * apply map_ext => idx. rewrite nl_subst nl_expand_lets_k map_rev.
       now rewrite nlctx_subst_instance nl_subst nl_inds nl_subst_instance.
     * f_equal.
       simpl. f_equal.
@@ -1487,7 +1487,7 @@ Proof.
     destruct (nth_error Γ i). 2: discriminate.
     cbn in *. apply some_inj in H. rewrite H. reflexivity.
   - rewrite nl_mkApps. cbn.
-    rewrite map_skipn nl_extended_subst nl_lift.
+    rewrite map_rev map_skipn nl_extended_subst nl_lift.
     rewrite -(nl_context_assumptions (bcontext br)).
     change (nl (bbody br)) with (bbody (nl_branch nl br)).
     rewrite -(nlctx_length (bcontext br)).

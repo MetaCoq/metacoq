@@ -8,7 +8,7 @@ Local Open Scope string_scope.
 
 From MetaCoq.Template Require Import utils.
 
-Definition test (p : Ast.program) : string :=
+Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.
 
 MetaCoq Quote Recursively Definition zero := 0.

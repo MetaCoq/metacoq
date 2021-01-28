@@ -35,7 +35,7 @@ Definition tDummy := tVar String.EmptyString.
 Definition dummy_branch : branch term := mk_branch [] tDummy.
 
 Definition iota_red npar args br :=
-  subst (List.skipn npar args) 0 (expand_lets br.(bcontext) (bbody br)).
+  subst (List.rev (List.skipn npar args)) 0 (expand_lets br.(bcontext) (bbody br)).
 
 (** ** Reduction *)
 

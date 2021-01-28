@@ -1529,7 +1529,7 @@ Section Reduce.
         try rewrite stack_context_appstack in typ;
         try rewrite stack_context_appstack in haux;
         try rewrite stack_context_appstack in H;
-        cbn in *).
+        cbn in * ).
       destruct H as (noapp&_); cbn in *.
       rewrite app_nil_r in *.
       rewrite <- app_assoc in *.
@@ -1548,17 +1548,7 @@ Section Reduce.
       constructor.
       apply whnf_mkApps.
       now apply whne_case_noiota.
-    - todo "case".
-    - match goal with
-      | |- context [ reduce ?x ?y ?z ] =>
-        case_eq (reduce x y z) ;
-        specialize (haux x y z)
-      end.
-      intros [t' π'] [? [? [? ?]]] eq. cbn.
-      rewrite eq in haux. cbn in haux.
-      assumption.
-    - todo "case".
-      (*match type of e with
+    - match type of e with
       | _ = reduce ?x ?y ?z =>
         specialize (haux x y z);
           destruct (reduce x y z)
@@ -1599,15 +1589,23 @@ Section Reduce.
       apply whnf_mkApps, whne_case.
       eapply whnf_case_arg_whne; eauto.
       destruct H as (noapp&_).
-      now destruct t0.*)
-     (*match goal with
+      now destruct t0.
+    - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
       intros [t' π'] [? [? [? ?]]] eq. cbn.
       rewrite eq in haux. cbn in haux.
-      assumption.*)
+      assumption.
+    - match goal with
+      | |- context [ reduce ?x ?y ?z ] =>
+        case_eq (reduce x y z) ;
+        specialize (haux x y z)
+      end.
+      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      rewrite eq in haux. cbn in haux.
+      assumption.
     - unfold zipp. case_eq (decompose_stack π6). intros.
       constructor. constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
     - match type of e with
@@ -1644,7 +1642,7 @@ Section Reduce.
         try rewrite stack_context_appstack in typ;
         try rewrite stack_context_appstack in haux;
         try rewrite stack_context_appstack in H;
-        cbn in *).
+        cbn in * ).
       rewrite app_nil_r in *.
       destruct hΣ, haux.
       constructor. apply whnf_mkApps, whne_proj.

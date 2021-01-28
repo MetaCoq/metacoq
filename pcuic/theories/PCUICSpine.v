@@ -17,8 +17,6 @@ Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect.
 
 Derive Signature for ctx_inst.
-  
-Notation ctx_inst Σ Γ i Δ := (ctx_inst typing Σ Γ i Δ).
 
 Lemma typing_spine_eq {cf:checker_flags} Σ Γ ty s s' ty' :
   s = s' ->
@@ -931,7 +929,8 @@ Proof.
   eapply sp. simpl. reflexivity. *)
 Qed.
 
-Lemma ctx_inst_app {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} (c : ctx_inst Σ Γ args (Δ ++ Δ')) :
+Lemma ctx_inst_app {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} 
+  (c : ctx_inst Σ Γ args (Δ ++ Δ')) :
   ∑ (dom : ctx_inst Σ Γ (firstn (context_assumptions Δ) args) Δ),
     ctx_inst Σ Γ (skipn (context_assumptions Δ) args) (subst_telescope (ctx_inst_sub dom) 0 Δ').    
 Proof.

@@ -1349,6 +1349,16 @@ Proof.
   intros i x. now rewrite nl_subst.
 Qed.
 
+Lemma nl_subst_telescope s k ctx :
+  nlctx (subst_telescope s k ctx) = 
+  subst_telescope (map nl s) k (nlctx ctx).
+Proof.
+  rewrite /nlctx /subst_telescope.
+  rewrite map_mapi mapi_map. apply mapi_ext => i d.
+  rewrite /map_decl_anon /map_decl; destruct d as [na [b|] ty]; cbn; f_equal;
+    now rewrite nl_subst.
+Qed.
+
 Lemma nl_lift_context n k ctx :
   nlctx (lift_context n k ctx) = 
   lift_context n k (nlctx ctx).
@@ -1833,9 +1843,16 @@ Proof.
       eapply nl_conv_ctx; tea.
     + now rewrite -nl_case_predicate_context - !nlctx_app_context.
     + now apply nl_is_allowed_elimination.
-    + now rewrite nl_mkApps map_app in X6.
+    + revert X6. simpl.
+      rewrite -map_app -nlctx_app_context.
+      rewrite -nlctx_subst_instance.
+      rewrite -[List.rev (nlctx _)]map_rev.
+      clear. induction 1; simpl; constructor; eauto.
+      * now rewrite -(nl_subst_telescope [i] 0 Δ).
+      * now rewrite -(nl_subst_telescope [b] 0 Δ).
+    + now rewrite nl_mkApps map_app in X8.
     + now eapply nl_wf_branches.
-    + eapply All2i_map, (All2i_impl X7).
+    + eapply All2i_map, (All2i_impl X9).
       intros i cdecl br.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _) in *.
       intros ((wfctx & convctx) & (bbodyty & wfbctx) & IHbody & bty & IHbty).

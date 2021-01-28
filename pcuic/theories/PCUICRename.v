@@ -99,6 +99,17 @@ Proof.
   unfold rename_context. apply fold_context_k_alt.
 Qed.
 
+Definition rename_telescope r Γ :=
+  mapi (fun i => map_decl (rename (shiftn i r))) Γ.
+
+Lemma rename_context_telescope r Γ : List.rev (rename_context r Γ) = rename_telescope r (List.rev Γ).
+Proof.
+  rewrite !rename_context_alt /rename_telescope.
+  rewrite mapi_rev.
+  f_equal. apply mapi_ext => k' d.
+  apply map_decl_ext => t. lia_f_equal.
+Qed.
+
 Lemma rename_subst0 :
   forall f l t,
     rename f (subst0 l t) =
@@ -1593,6 +1604,41 @@ Proof.
   now rewrite hmap.
 Qed.
 
+Lemma rename_subst_telescope f s Γ : 
+  rename_telescope f (subst_telescope s 0 Γ) =
+  subst_telescope (map (rename f) s) 0
+    (rename_telescope (shiftn #|s| f) Γ).
+Proof.
+  rewrite /rename_telescope /subst_telescope.
+  rewrite !mapi_compose. apply mapi_ext => k' d.
+  rewrite !compose_map_decl; apply map_decl_ext => t'.
+  now rewrite Nat.add_0_r rename_subst.
+Qed.
+
+Lemma mapi_cons {A B} (f : nat -> A -> B) a l : 
+  mapi f (a :: l) = f 0 a :: mapi (fun x => f (S x)) l.
+Proof.
+  now rewrite /mapi /= mapi_rec_Sk.
+Qed.
+
+Instance rename_telescope_ext : Proper (`=1` ==> `=1`) rename_telescope.
+Proof.
+  intros f g Hfg Γ.
+  rewrite /rename_telescope. apply mapi_ext => n x.
+  now rewrite Hfg.
+Qed.
+
+Lemma rename_telescope_shiftn0 f Γ : rename_telescope (shiftn 0 f) Γ = rename_telescope f Γ.
+Proof. now sigma. Qed.
+
+Lemma rename_telescope_cons f d Γ : 
+  rename_telescope f (d :: Γ) = rename_decl f d :: rename_telescope (shiftn 1 f) Γ.
+Proof. 
+  rewrite /rename_telescope mapi_cons /rename_decl.
+  f_equal; sigma => //.
+  apply mapi_ext => i x. now rewrite shiftn_add Nat.add_1_r.
+Qed.
+
 (** For an unconditional renaming defined on all variables in the source context *)
 Lemma typing_rename_prop : env_prop
   (fun Σ Γ t A =>
@@ -1689,7 +1735,7 @@ Proof.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
     intros [_ IHΔ] ci_npar predctx wfp [wfpctx Hpctx] convctx Hpret 
       IHpret [wfpredctx IHpredctx] isallowed.
-    intros Hc IHc iscof ptm wfbrs Hbrs P Δ f Hf.
+    intros Hcxti IHctxi Hc IHc iscof ptm wfbrs Hbrs P Δ f Hf.
     simpl.
     rewrite rename_mkApps.
     rewrite map_app. simpl.
@@ -1729,6 +1775,22 @@ Proof.
            { len. now rewrite -shiftnP_add. }
            { reflexivity. }
           eapply urenaming_context. apply Hf.
+      + revert IHctxi.
+        rewrite /= /id -map_app.
+        rewrite -{2}[subst_instance _ _](rename_closedn_ctx f 0).
+        { pose proof (declared_inductive_closed_pars_indices _ isdecl).
+          now rewrite closedn_subst_instance_context. }
+        rewrite rename_context_telescope.
+        rewrite rename_telescope_shiftn0.
+        clear -P Δ f Hf.
+        induction 1.
+        { constructor; auto. }
+        { simpl. rewrite rename_telescope_cons.
+          constructor; cbn; eauto.
+          now rewrite rename_subst_telescope /= in IHIHctxi. }
+        { simpl. rewrite rename_telescope_cons.
+          constructor; cbn; eauto.
+          now rewrite rename_subst_telescope /= in IHIHctxi. }
       + simpl. unfold id.
         specialize (IHc _ _ _ Hf).
         now rewrite rename_mkApps map_app in IHc.

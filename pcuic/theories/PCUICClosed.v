@@ -733,7 +733,7 @@ Proof.
     rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
     rewrite app_context_length in clret.
     red in H8. eapply Forall2_All2 in H8.
-    eapply All2i_All2_mix_left in X3; eauto.
+    eapply All2i_All2_mix_left in X5; eauto.
     intuition auto. 
     + unfold test_predicate_k. simpl. rtoProp; eauto.
       rewrite (case_predicate_context_length H1) in clret; repeat split; tas.

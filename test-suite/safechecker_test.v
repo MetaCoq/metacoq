@@ -40,7 +40,8 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 Definition bignat := 10000.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.
-Require Import String.
+
+(*Require Import String.
 From MetaCoq.Template Require Import Loader Core TemplateMonad monad_utils Pretty.
 Import MonadNotation.
 Open Scope monad_scope.
@@ -52,10 +53,8 @@ Definition topkn s : BasicAst.kername :=
 MetaCoq Quote Recursively Definition prodq := prod_rect.
 
 MetaCoq Run
-  (tmEval cbv ((*print_program false 2*) prodq) >>= tmPrint).
-
-MetaCoq SafeCheck prod_rect.
-
+  (tmEval cbv (print_program false 2 prodq) >>= tmPrint).
+*)
 Set Universe Polymorphism.
 
 (* Basic notations *)
@@ -69,7 +68,6 @@ Arguments pair {_ _} _ _.
 
 Notation "x * y" := (prod x y) : type_scope.
 Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z): type_scope.
-MetaCoq SafeCheck @prod_rect.
 
 Section projections.
   Context {A : Type} {B : Type}.
@@ -555,17 +553,11 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
                   (is_adjoint' f g issect isretr).
 
 
-
-MetaCoq Quote Definition c := safechecker_test.concat.
-Definition concatkn : BasicAst.kername := 
-    Datatypes.pair (BasicAst.MPfile ("safechecker_test" :: nil)%list) ("concat").
-
-MetaCoq Run (tmEval (unfold concatkn)
-  (@safechecker_test.concat) >>=  tmQuote >>= tmPrint).
+(* MetaCoq Run (tmEval (unfold concatkn)
+  (@safechecker_test.concat) >>=  tmQuote >>= tmPrint). *)
   (* fun t => tmEval cbv (print_program false 1 t) >>= tmPrint). *)
 
-(* Bad, might be reification messing with the case representation ?*)
-MetaCoq SafeCheck @safechecker_test.concat. @issect'.
+MetaCoq SafeCheck @issect'.
 
 MetaCoq SafeCheck @ap_pp.
 MetaCoq CoqCheck ap_pp.

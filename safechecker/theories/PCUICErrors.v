@@ -138,7 +138,7 @@ Definition string_of_conv_pb (c : conv_pb) : string :=
 
 Definition print_term Σ Γ t :=
   let ids := fresh_names Σ [] Γ in
-  print_term Σ ids true false t.
+  print_term Σ true ids true false t.
 
 Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with

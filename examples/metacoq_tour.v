@@ -93,7 +93,7 @@ MetaCoq SafeCheck (fun x : nat => x + 1).
 (** Erasure *)
 
 (** Running erasure live in Coq *)
-Definition test (p : Ast.program) : string :=
+Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.
 
 MetaCoq Quote Recursively Definition zero := 0.

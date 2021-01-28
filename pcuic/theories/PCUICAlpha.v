@@ -1,10 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
-     PCUICContextConversion PCUICValidity PCUICArities.
+     PCUICConversion PCUICContextConversion PCUICValidity PCUICArities.
+From Equations Require Import Equations.
 
-(* Should now be subsumed by renaming proof. Unused anyway. *)     
+(* Alpha convertible terms and contexts have the same typings *)
 
 Section Alpha.
   Context {cf:checker_flags}.
@@ -63,7 +65,7 @@ Section Alpha.
       nth_error (Γ ,,, Δ) i = Some d.
   Proof.
     intros Γ Δ i d h.
-    rewrite nth_error_app_context_lt.
+    rewrite -> nth_error_app_context_lt.
     - assumption.
     - apply nth_error_Some_length in h. assumption.
   Qed.
@@ -198,6 +200,42 @@ Section Alpha.
     destruct X as [-> _]; auto.
   Qed.
 
+  Lemma conv_context_app {Σ : global_env_ext} {wfΣ : wf Σ} (Γ1 Γ2 Γ2' : context) :
+    conv_context_rel Σ Γ1 Γ2 Γ2' -> conv_context Σ (Γ1 ,,, Γ2) (Γ1 ,,, Γ2').
+  Proof.
+    intros wf.
+    eapply All2_fold_app. apply (length_of wf).
+    apply conv_ctx_refl.
+    eapply All2_fold_impl; tea. intros ???? []; constructor; auto.
+  Qed.
+
+  Lemma eq_context_upto_conv_context_rel {Σ : global_env_ext} {wfΣ : wf Σ} (Γ Δ Δ' : context) :
+    eq_context_upto [] eq eq Δ Δ' ->  
+    conv_context_rel Σ Γ Δ Δ'.
+  Proof.
+    intros eq.
+    eapply All2_fold_impl; tea.
+    intros ???? []; constructor; auto; now constructor; apply upto_names_impl_eq_term.
+  Qed.
+
+  Lemma case_predicate_context_equiv Σ ind mdecl idecl p p' : 
+    eq_predicate upto_names' eq p p' ->
+    eq_context_upto Σ eq eq 
+      (case_predicate_context ind mdecl idecl p)
+      (case_predicate_context ind mdecl idecl p').
+  Proof.
+    intros [eqpars [eqinst [eqctx eqret]]].
+    rewrite /case_predicate_context /case_predicate_context_gen.
+  Admitted.
+
+  Lemma R_universe_instance_eq {u u'} : R_universe_instance eq u u' -> u = u'.
+  Proof.
+    intros H.
+    apply Forall2_eq in H. apply map_inj in H ; revgoals.
+    { apply Universe.make_inj. }
+    subst. constructor ; auto.
+  Qed.
+
   Lemma typing_alpha :
     forall Σ Γ u v A,
       wf Σ.1 ->
@@ -210,11 +248,47 @@ Section Alpha.
                   forall v,
                     eq_term_upto_univ [] eq eq u v ->
                     Σ ;;; Γ |- v : A)
-              (fun Σ Γ => wf_local Σ Γ)
+              (fun Σ Γ => 
+                forall Γ' Δ Δ', 
+                  Γ = Γ' ,,, Δ ->
+                  eq_context_upto [] eq eq Δ Δ' ->
+                  wf_local Σ (Γ' ,,, Δ'))
     ).
     eapply typing_ind_env.
     all: intros Σ wfΣ Γ wfΓ.
-    - auto.
+    - induction 1.
+      * intros Γ' Δ Δ' eq H; destruct Δ; noconf eq; depelim H; constructor.
+      * intros Γ' Δ Δ' eq H; destruct Δ; noconf eq; depelim H.
+        + constructor; auto.
+        + depelim c. simpl; constructor; auto. eapply IHX; eauto.
+          destruct tu as [s Hs].
+          exists s. simpl in p.
+          eapply context_conversion.
+          { eapply p; eauto. }
+          { eapply IHX; eauto. }
+          now eapply conv_context_app, eq_context_upto_conv_context_rel.
+      * intros Γ' Δ Δ' eq H; destruct Δ; noconf eq; depelim H.
+        { constructor; auto. }
+        depelim c. simpl; constructor; auto. eapply IHX; eauto.
+        + destruct tu as [s Hs].
+          exists s. simpl in p.
+          eapply context_conversion.
+          { eapply p0; eauto. }
+          { eapply IHX; eauto. }
+          { now eapply conv_context_app, eq_context_upto_conv_context_rel. }
+        + red.
+          specialize (p0 _ e1).
+          specialize (p _ e0).
+          eapply context_conversion in p0; revgoals.
+          { eapply conv_context_app, eq_context_upto_conv_context_rel; tea. }
+          eauto.
+          eapply context_conversion in p; revgoals.
+          { eapply conv_context_app, eq_context_upto_conv_context_rel; tea. }
+          { eapply IHX; eauto. }
+          eapply type_Cumul'; eauto.
+          now exists tu.π1.
+          constructor. now eapply eq_term_leq_term, upto_names_impl_eq_term.     
+
     - intros n decl hnth ih v e; invs e.
       eapply type_Rel ; eassumption.
     - intros l ih hl v e; invs e.
@@ -303,25 +377,54 @@ Section Alpha.
         eapply upto_names_impl_eq_term.
         eapply eq_term_upto_univ_subst ; now auto.
     - intros cst u decl ? ? hdecl hcons v e; invs e.
-      apply Forall2_eq in H2. apply map_inj in H2 ; revgoals.
-      { apply Universe.make_inj. }
-      subst.
-      constructor ; auto.
+      eapply R_universe_instance_eq in H2. subst.
+      constructor; eauto.
     - intros ind u mdecl idecl isdecl ? ? hcons v e; invs e.
-      apply Forall2_eq in H2. apply map_inj in H2 ; revgoals.
-      { apply Universe.make_inj. }
-      subst.
+      eapply R_universe_instance_eq in H2. subst.
       econstructor ; eauto.
     - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e; invs e.
-      apply Forall2_eq in H4. apply map_inj in H4 ; revgoals.
-      { apply Universe.make_inj. }
-      subst.
+      eapply R_universe_instance_eq in H4. subst.
       econstructor ; eauto.
     - intros ind p c brs args ps mdecl idecl isdecl X X0 H cpc wfp wfpctx convpctx Hret IHret
             wfcpc kelim Hc IHc iscof ptm wfbrs Hbrs v e; invs e.
+      have eqp := X1.
+      destruct X1 as [eqpars [eqinst [eqctx eqret]]].
+      assert (wf_predicate mdecl idecl p').
+      { destruct wfp. split; auto.
+        { now rewrite <-(All2_length eqpars). }
+        eapply Forall2_All2 in H1. eapply All2_Forall2.
+        eapply All2_fold_All2 in eqctx. eapply All2_sym in eqctx.
+        eapply (All2_trans' (@eq_binder_annot name name)); tea.
+        2:{ eapply All2_map; tea. eapply All2_impl; tea.
+            simpl; intros. destruct X1; simpl; now symmetry. }              
+        simpl. intros x y [] []; etransitivity; tea. }
+      assert (conv_context Σ (Γ,,, cpc) (Γ,,, case_predicate_context ind mdecl idecl p')).
+      { eapply conv_context_app, eq_context_upto_conv_context_rel.
+        now eapply case_predicate_context_equiv. }
+      assert (conv_context Σ (Γ,,, pcontext p')
+        (Γ,,, case_predicate_context ind mdecl idecl p')).
+      { eapply (eq_context_upto_conv_context_rel Γ) in eqctx; tea.
+        eapply conv_context_trans; [tea| ..].
+        { eapply conv_context_sym. auto. eapply conv_context_app; tea. }
+        eapply conv_context_trans; tea. }
+      eapply R_universe_instance_eq in eqinst.
       eapply type_Cumul'.
-      + todo "case". 
-        (*econstructor; tea; eauto.
+      + econstructor; tea; eauto.
+        * eapply context_conversion; eauto.
+          eapply wfcpc; eauto. now eapply case_predicate_context_equiv.
+        * rewrite -eqinst.
+          eapply type_Cumul'.
+          eapply IHc; eauto.
+          eapply validity_term in Hc as [s Hs]; eauto.
+          red in Hs. exists s.
+          eapply inversion_mkApps in Hs as [indty [Hind Hsp]]; tea.
+          eapply PCUICGeneration.type_mkApps; eauto.
+          
+          
+
+
+
+          eapply IHc. eapply wfcpc.          
         unshelve eapply All2_trans'; [..|eassumption].
         * exact (fun br bty : nat × term =>
                    (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)

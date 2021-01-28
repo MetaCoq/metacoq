@@ -557,6 +557,8 @@ Proof.
   - econstructor; eauto 2 with extends.
     * eapply weakening_env_conv_ctx; eauto.
       now destruct Σ.
+    * revert X6. clear -Σ' wfΣ' extΣ.
+      induction 1; constructor; eauto.
     * close_Forall. intros; intuition eauto with extends.
       eapply weakening_env_conv_ctx; eauto.
       now destruct Σ.

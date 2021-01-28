@@ -1081,11 +1081,19 @@ Proof.
   apply subst_instance_lift.
 Qed.
 
-Lemma subst_instance_app u L1 L2 :
-  subst_instance u (L1,,,L2)
+Lemma subst_instance_app {A} {au : UnivSubst A} u (L1 L2 : list A) :
+  subst_instance u (L1 ++ L2)
+  = subst_instance u L1 ++ subst_instance u L2.
+Proof.
+  rewrite /subst_instance /= /subst_instance_list /=.
+  now rewrite map_app.
+Qed.
+
+Lemma subst_instance_app_ctx u (L1 L2 : context) :
+  subst_instance u (L1 ,,, L2)
   = subst_instance u L1 ,,, subst_instance u L2.
 Proof.
-  rewrite /subst_instance /= /subst_instance /subst_instance_context /map_context; now rewrite map_app.
+  rewrite /app_context. now apply subst_instance_app.
 Qed.
 
 Global Instance subst_instance_predicate : UnivSubst (predicate term)
@@ -1157,6 +1165,17 @@ Proof.
   rewrite /subst_instance /= /subst_instance /subst_instance_context map_fold_context_k.
   rewrite /subst_context fold_map_context.
   apply fold_context_k_ext => i t.
+  now rewrite -subst_instance_subst.
+Qed.
+
+Lemma subst_instance_subst_telescope u s k ctx :
+  subst_instance u (subst_telescope s k ctx) = 
+  subst_telescope (subst_instance u s) k (subst_instance u ctx).
+Proof.
+  rewrite /subst_instance /= /subst_instance /subst_instance_context /= /subst_telescope /=
+    /map_context map_mapi mapi_map.
+  apply mapi_ext => i t.
+  rewrite !compose_map_decl; apply map_decl_ext => t'.
   now rewrite -subst_instance_subst.
 Qed.
 
@@ -1987,7 +2006,7 @@ Proof.
 
   - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp wfp 
       wfpctx convpctx pty Hpty Hcpc kelim
-      Hc IHc notCoFinite wfbrs hbrs i univs wfext Hsub cu.
+      Hctxi IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext Hsub cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
     cbn.
     rewrite subst_instance_case_predicate_context.
@@ -1995,9 +2014,9 @@ Proof.
     change (map_predicate _ _ _ _) with (subst_instance i p).
     eapply type_Case with (p0:=subst_instance i p)
                           (ps:=subst_instance_univ i u); eauto with pcuic.
-    + now rewrite -subst_instance_app.
-    + rewrite - !subst_instance_app.
-      rewrite -subst_instance_case_predicate_context - !subst_instance_app.
+    + now rewrite -subst_instance_app_ctx.
+    + rewrite - !subst_instance_app_ctx.
+      rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.
       eapply conv_ctx_subst_instance; tea.
       destruct Hsub; aa.
     + clear -wfext Hsub cu Hpty.
@@ -2007,6 +2026,12 @@ Proof.
     + destruct Hsub.
       cbn in *.
       eapply is_allowed_elimination_subst_instance; aa.
+    + move: IHctxi. simpl.
+      rewrite -subst_instance_app.
+      rewrite -subst_instance_two_context.
+      rewrite -[List.rev (subst_instance i _)]map_rev.
+      clear -wfext Hsub cu. induction 1; cbn; constructor; simpl; eauto.
+      all:now rewrite -(subst_instance_subst_telescope i [_]).
     + eapply IHc in cu => //.
       now rewrite subst_instance_mkApps map_app in cu.
     + rewrite -{1}(map_id (ind_ctors idecl)).

@@ -1789,6 +1789,47 @@ Proof.
     now eapply usubst_app.
 Qed.
 
+Definition inst_telescope r Γ :=
+  mapi (fun i => map_decl (inst (up i r))) Γ.
+
+Lemma inst_subst_telescope f s Γ : 
+  inst_telescope f (subst_telescope s 0 Γ) =
+  subst_telescope (map (inst f) s) 0
+    (inst_telescope (⇑^#|s| f) Γ).
+Proof.
+  rewrite /inst_telescope /subst_telescope.
+  rewrite !mapi_compose. apply mapi_ext => k' d.
+  rewrite !compose_map_decl; apply map_decl_ext => t'.
+  rewrite Nat.add_0_r. rewrite !up_Upn.
+  now rewrite inst_subst.
+Qed.
+
+Instance inst_telescope_ext : Proper (`=1` ==> `=1`) inst_telescope.
+Proof.
+  intros f g Hfg Γ.
+  rewrite /inst_telescope. apply mapi_ext => n x.
+  now rewrite Hfg.
+Qed.
+
+Lemma inst_telescope_upn0 f Γ : inst_telescope (⇑^0 f) Γ = inst_telescope f Γ.
+Proof. now sigma. Qed.
+
+Lemma inst_telescope_cons f d Γ : 
+  inst_telescope f (d :: Γ) = inst_decl f d :: inst_telescope (⇑^1 f) Γ.
+Proof. 
+  rewrite /inst_telescope mapi_cons /inst_decl.
+  f_equal; sigma => //.
+  apply mapi_ext => i x. now rewrite -up_Upn up_up Nat.add_1_r.
+Qed.
+
+Lemma inst_context_telescope r Γ : List.rev (inst_context r Γ) = inst_telescope r (List.rev Γ).
+Proof.
+  rewrite !inst_context_alt /inst_telescope.
+  rewrite mapi_rev.
+  f_equal. apply mapi_ext => k' d.
+  apply map_decl_ext => t. sigma. lia_f_equal.
+Qed.
+
 Lemma type_inst : env_prop
   (fun Σ Γ t A =>
     forall Δ σ,
@@ -1872,7 +1913,7 @@ Proof.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
     intros IHΔ ci_npar predctx wfp Hpctx convctx Hpret 
       IHpret IHpredctx isallowed.
-    intros Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
+    intros Hctxi IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
     autorewrite with sigma. simpl.
     rewrite map_app. simpl.
     rewrite /ptm. rewrite inst_it_mkLambda_or_LetIn.
@@ -1897,6 +1938,22 @@ Proof.
            rewrite -inst_case_predicate_context //.
            eapply well_subst_app_up => //.
            eapply wf_local_app_inst; eauto. apply a0.
+      + revert IHctxi.
+        rewrite /= /id -map_app.
+        rewrite -{2}[subst_instance _ _](inst_closedn_ctx f 0).
+        { pose proof (declared_inductive_closed_pars_indices _ isdecl).
+          now rewrite closedn_subst_instance_context. }
+        rewrite inst_context_telescope.
+        rewrite inst_telescope_upn0.
+        clear -Δ f HΔ Hf.
+        induction 1.
+        { constructor; auto. }
+        { simpl. rewrite inst_telescope_cons.
+          constructor; cbn; eauto.
+          now rewrite inst_subst_telescope /= in IHIHctxi. }
+        { simpl. rewrite inst_telescope_cons.
+          constructor; cbn; eauto.
+          now rewrite inst_subst_telescope /= in IHIHctxi. }
       + simpl. unfold id.
         specialize (IHc _ _ HΔ Hf).
         now rewrite inst_mkApps map_app in IHc.

@@ -786,7 +786,7 @@ Proof.
           eapply eq_term_upto_univ_lift => //.
           eapply eq_term_upto_univ_leq; tea. lia. }
       eapply eq_context_extended_subst; tea. }
-      now eapply All2_skipn.
+      now eapply All2_rev, All2_skipn.
   - apply eq_term_upto_univ_napp_mkApps_l_inv in e as [? [? [[h1 h2] h3]]]. subst.
     dependent destruction h1.
     unfold unfold_fix in H.

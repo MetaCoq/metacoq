@@ -736,9 +736,9 @@ Proof.
         sigma. now rewrite shiftn_consn_idsn.
       + now rewrite inst_to_extended_list.
     * rewrite -/(inst_context f _).
-      rewrite inst_context_subst.
+      rewrite inst_context_subst map_rev.
       f_equal.
-      rewrite inst_closedn_ctx //.
+      rewrite List.rev_length inst_closedn_ctx //.
       pose proof (closedn_ctx_expand_lets (ind_params mdecl) (ind_indices idecl)
         (declared_inductive_closed_pars_indices _ decli)).
       rewrite (wf_predicate_length_pars wfp).
@@ -920,7 +920,7 @@ Proof.
   change (fold_context_k
   (fun i : nat => inst (up i (up (ind_npars mdecl + #|ind_bodies mdecl|) f)))) with
     (inst_context (up (ind_npars mdecl + #|ind_bodies mdecl|) f)).
-  rewrite inst_context_subst. f_equal.
+  rewrite inst_context_subst map_rev List.rev_length. f_equal.
   unfold id.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
   simpl. len.
@@ -1008,7 +1008,7 @@ Proof.
       rewrite !up_Upn.
       rewrite /expand_lets /expand_lets_k.
       rewrite -inst_subst_instance. len.
-      rewrite inst_subst. f_equal.
+      rewrite inst_subst map_rev List.rev_length. f_equal.
       rewrite inst_subst. rewrite (wf_predicate_length_pars wfp).
       rewrite (declared_minductive_ind_npars decli).
       rewrite -{2}(context_assumptions_subst_instance (puinst p) (ind_params mdecl)).
@@ -1231,8 +1231,8 @@ Lemma inst_iota_red :
 Proof.
   intros f pars args br hlen.
   unfold iota_red.
-  rewrite inst_subst0 map_skipn. f_equal.
-  rewrite /expand_lets /expand_lets_k.
+  rewrite inst_subst0 map_rev map_skipn. f_equal.
+  rewrite List.rev_length /expand_lets /expand_lets_k.
   rewrite !inst_subst0. len.
   rewrite -up_Upn. rewrite hlen inst_extended_subst.
   rewrite mapi_context_fold. setoid_rewrite up_Upn.

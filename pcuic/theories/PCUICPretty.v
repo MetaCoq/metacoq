@@ -110,14 +110,53 @@ Section print_term.
         end in
     aux Γ (MCList.rev Γ').
 
-  Definition print_defs (print_term : list ident -> bool -> bool -> term -> string)
-              Γ
-            (defs : mfixpoint term) :=
-    let ctx' := fix_context defs in
-    print_list (print_def (print_term Γ true false) (print_term (fresh_names Γ ctx') true false))
-          (nl ^ " with ") defs.
+  Section Aux.
+    Context (print_term : list ident -> bool -> bool -> term -> string).
+    Definition print_defs Γ (defs : mfixpoint term) :=
+      let ctx' := fix_context defs in
+      print_list (print_def (print_term Γ true false) (print_term (fresh_names Γ ctx') true false))
+            (nl ^ " with ") defs.
 
-  Fixpoint print_term (Γ : list ident) (top : bool) (inapp : bool) (t : term) {struct t} :=
+    Definition pr_context_decl Γ (c : context_decl) : ident * string :=
+      match c with
+      | {| decl_name := na; decl_type := ty; decl_body := None |} => 
+        let na' := (fresh_name Γ na.(binder_name) (Some ty)) in
+        (na', ("(" ++ na' ++ " : " ++ print_term Γ true false ty ++ ")")%string)
+      | {| decl_name := na; decl_type := ty; decl_body := Some b |} =>
+        let na' := (fresh_name Γ na.(binder_name) (Some ty)) in
+        (na', ("(" ++ na' ++ " : " ++ print_term Γ true false ty ++ " := " ++
+          print_term Γ true false b ++ ")")%string)
+      end.
+    
+    Fixpoint print_context_gen Γ Δ :=
+      match Δ with
+      | [] => (Γ, ""%string)
+      | d :: decls => 
+        let '(Γ, s) := print_context_gen Γ decls in
+        let '(na, s') := pr_context_decl Γ d in
+        match decls with
+        | [] => (na :: Γ, (s ++ s')%string)
+        | _ => (na :: Γ, (s ++ " " ++ s')%string)
+        end
+      end.
+          
+    Fixpoint print_context_names Γ Δ :=
+      match Δ with
+      | [] => (Γ, ""%string)
+      | d :: decls => 
+        let '(Γ, s) := print_context_names Γ decls in
+        let na := (fresh_name Γ d.(decl_name).(binder_name) (Some d.(decl_type))) in
+        match decls with
+        | [] => (na :: Γ, (s ++ na)%string)
+        | _ => (na :: Γ, (s ++ " " ++ na)%string)
+        end
+      end.
+
+  End Aux.
+          
+  Context (all : bool).
+
+  Fixpoint print_term (Γ : list ident) (top : bool)(inapp : bool) (t : term) {struct t} :=
   match t with
   | tRel n =>
     match nth_error Γ n with
@@ -173,17 +212,12 @@ Section print_term.
       let in_args := repeat "_" #|pparams p| ++ indices in
       let in_str := oib.(ind_name) ^ String.concat "" (map (fun a => " " ^ a) in_args) in
 
-      let fix print_branch Γ names prbr {struct names} :=
-          match names with
-          | [] => "=> " ^ prbr Γ
-          | na :: l =>
-            let na' := (fresh_name Γ na.(decl_name).(binder_name) None) in
-              na' ^ "  " ^ print_branch (na' :: Γ) l prbr
-          end
-      in
-
-      let brs := map (fun br => print_branch Γ (List.rev br.(bcontext)) 
-        (fun Γ => print_term Γ true false br.(bbody))) brs in
+      let brs := map (fun br => 
+          let (Γctx, pctx) := 
+            if all then print_context_gen print_term Γ br.(bcontext) 
+            else print_context_names Γ br.(bcontext)
+          in
+          pctx ^ " ⇒ " ^ print_term Γctx true false br.(bbody)) brs in
       let brs := combine brs oib.(ind_ctors) in
                             
       parens top ("match " ^ print_term Γ true false t ^
@@ -223,3 +257,53 @@ Section print_term.
   end.
 
 End print_term.
+
+Notation pr_term Σ Γ top := (print_term Σ true Γ top false).
+
+Notation print_context Σ := (print_context_gen Σ (print_term Σ true)).
+
+Definition print_one_cstr Σ Γ (mib : mutual_inductive_body) (c : constructor_body) : string :=
+  let '(Γargs, s) := print_context Σ Γ c.(cstr_args) in
+  c.(cstr_name) ++ " : " ++ s ++ "_" ++ print_list (pr_term Σ Γargs true) " " c.(cstr_indices).
+  
+Definition print_one_ind (short : bool) Σ Γ (mib : mutual_inductive_body) (oib : one_inductive_body) : string :=
+  let '(Γpars, spars) := print_context Σ Γ mib.(ind_params) in
+  let '(Γinds, sinds) := print_context Σ Γpars oib.(ind_indices) in
+  oib.(ind_name) ++ spars ++ sinds ++ pr_term Σ Γinds true (tSort oib.(ind_sort)) ++ ":=" ++ nl ++
+  if short then "..."
+  else print_list (print_one_cstr Σ Γpars mib) nl oib.(ind_ctors).
+
+Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : string) := 
+  match prefix with 
+  | 0 => match Σ with [] => acc | _ => ("..." ++ nl ++ acc)%string end
+  | S n => 
+  match Σ with
+  | [] => acc
+  | (kn, InductiveDecl mib) :: Σ => 
+    let Σ' := (Σ, mib.(ind_universes)) in
+    let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
+    print_env_aux short n Σ
+      ("Inductive " ++ 
+       print_list (print_one_ind short Σ' names mib) nl mib.(ind_bodies) ++ "." ++ 
+       nl ++ acc)%string
+  | (kn, ConstantDecl cb) :: Σ =>
+    let Σ' := (Σ, cb.(cst_universes)) in
+    print_env_aux short n Σ
+      ((match cb.(cst_body) with 
+        | Some _ => "Definition "
+        | None => "Axiom "
+      end) ++ string_of_kername kn ++ " : " ++ pr_term Σ' nil true cb.(cst_type) ++
+      match cb.(cst_body) with
+      | Some b => 
+        if short then ("..." ++ nl)%string
+        else (" := " ++ nl ++ pr_term Σ' nil true b ++ "." ++ nl)
+      | None => "."
+      end ++ acc)%string
+  end
+  end.
+
+Definition print_env (short : bool) (prefix : nat) Σ := print_env_aux short prefix Σ EmptyString.
+
+Definition print_program (short : bool) (prefix : nat) (p : program) : string := 
+  print_env short prefix (fst p) ++ nl ++
+  pr_term (empty_ext (fst p)) nil true (snd p). 

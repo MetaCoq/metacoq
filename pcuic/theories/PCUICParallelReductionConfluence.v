@@ -3424,9 +3424,9 @@ Section Rho.
       now eapply pred1_subst_ids.
   Qed.
 
-  Lemma ctxmap_smash_context Γ Δ n args :
-    #|args| - n = context_assumptions Δ ->
-    ctxmap (Γ,,, smash_context [] Δ) Γ (skipn n args ⋅n ids).
+  Lemma ctxmap_smash_context Γ Δ s :
+    #|s| = context_assumptions Δ ->
+    ctxmap (Γ,,, smash_context [] Δ) Γ (s ⋅n ids).
   Proof.
     red. intros hargs x d hnth'.
     destruct (decl_body d) eqn:db => /= //.
@@ -3436,13 +3436,13 @@ Section Rho.
       eapply nth_error_smash_context in hnths => //. congruence.
       intros ? ?; rewrite nth_error_nil => /= //.
     - intros x' hnth cass [= ->].
-      rewrite subst_consn_ge. rewrite List.skipn_length. lia.
+      rewrite subst_consn_ge. lia.
       unfold ids. eexists _, _. intuition eauto.
-      rewrite List.skipn_length hargs hnth /= db //.
+      rewrite hargs hnth /= db //.
       apply inst_ext => i.
       unfold shiftk, subst_compose; simpl.
-      rewrite subst_consn_ge. rewrite List.skipn_length. lia.
-      lia_f_equal. rewrite List.skipn_length. lia.
+      rewrite subst_consn_ge. lia.
+      lia_f_equal.
   Qed.
 
   Lemma context_assumptions_smash_context' acc Γ : 
@@ -3682,15 +3682,18 @@ Section Rho.
         eapply pred1_expand_lets => //. len.
         now pose proof (length_of predΓ').
       + eapply ctxmap_ext. sigma. reflexivity.
-        now eapply ctxmap_smash_context.
+        eapply ctxmap_smash_context. len.
+        rewrite List.skipn_length. lia.
       + eapply ctxmap_ext. sigma. reflexivity.
         eapply ctxmap_smash_context; len.
+        rewrite List.skipn_length.
         pose proof (All2_fold_context_assumptions predbod).
         len in H0. congruence.
       + eapply pred1_subst_ext.
         1-2:sigma; reflexivity.
         eapply All2_skipn in X1.
-        eapply pred1_subst_consn in X1 => //; rewrite !List.skipn_length; len; lia.
+        eapply All2_rev in X1.
+        eapply pred1_subst_consn in X1 => //; rewrite !List.rev_length !List.skipn_length; len; lia.
       + auto.
 
     - (* Fix reduction *)

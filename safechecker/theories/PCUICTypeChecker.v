@@ -847,7 +847,7 @@ Section Typecheck.
   Next Obligation.
     cbn in *; sq.
     eapply type_reduction in X1 ; try eassumption.
-    eapply validity_term in X1 ; try assumption. destruct X1 as [s HH].
+    eapply validity in X1 ; try assumption. destruct X1 as [s HH].
     eapply inversion_Prod in HH ; try assumption.
     destruct HH as [s1 [_ [HH _]]].
     eexists. eassumption.
@@ -878,7 +878,7 @@ Section Typecheck.
 
   (* tCase *)
   Obligation Tactic := intros; Program.Tactics.destruct_conjs; cbn in *; subst.
-  Next Obligation. sq. eapply validity_term in X as []; eauto.
+  Next Obligation. sq. eapply validity in X as []; eauto.
     eexists; eauto using validity_wf. Defined.
   Next Obligation. sq. now eapply wf_local_app. Defined.
   Next Obligation. sq. eapply wf_local_app; auto. todo "case". Defined.
@@ -952,7 +952,7 @@ Section Typecheck.
     destruct (eqb_spec (ind_npars d) par) as [e|e]; [|discriminate]; subst.
     assert (wfΣ : wf_ext Σ) by (split; auto).
     eapply type_reduction in X11; eauto.
-    have val:= validity_term wfΣ X11.
+    have val:= validity wfΣ X11.
     eapply type_Cumul' in typ_p; [| |eassumption].
     2:{ eapply PCUICInductiveInversion.WfArity_build_case_predicate_type; eauto.
         eapply validity in typ_p; eauto.
@@ -1015,7 +1015,7 @@ Section Typecheck.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
       eapply type_reduction; eassumption.
     - eapply type_reduction in X5; eauto.
-      eapply validity_term in X5; eauto.
+      eapply validity in X5; eauto.
       destruct (ssrbool.elimT (eqb_spec ind I)); auto.
       unshelve eapply (PCUICInductives.isType_mkApps_Ind _ X7 _) in X5 as [parsubst [argsubst [[sp sp'] cu]]]; eauto.
       pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).

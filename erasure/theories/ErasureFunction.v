@@ -250,7 +250,7 @@ Next Obligation.
   unfold type_of in *.
   destruct infer as [x [[Htx Hp]]]. simpl.
   simpl in *.
-  eapply validity_term in Htx; auto.
+  eapply validity in Htx; auto.
   destruct Htx as [s Hs]. econstructor; eauto.
 Qed.
 Next Obligation.
@@ -312,7 +312,7 @@ Next Obligation.
   destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _)) as [? [[? ?]]].
   destruct (infer _ (is_erasable_obligation_1 _ _)) as [? [[? ?]]].
   simpl in *. 
-  eapply validity_term in t1; auto.
+  eapply validity in t1; auto.
   destruct t1 as [s Hs].
   red in Hs.
   specialize (c _ Hs).
@@ -552,7 +552,7 @@ Proof.
     sq; constructor.
     eapply elim_restriction_works; eauto.
     intros isp. eapply isErasable_Proof in isp. eauto.
-    eapply H3.
+    eapply H4.
     unfold erase_brs. eapply All2_from_nth_error. now autorewrite with len.
     intros.
     todo "case".

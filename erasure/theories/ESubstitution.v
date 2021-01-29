@@ -91,9 +91,9 @@ Proof.
   all: try now (econstructor; eapply Is_type_extends; eauto).
   - econstructor.
     red.
-    destruct isdecl as [[? ?] ?]. red in H0.
-    red in H5. rewrite H0 in H5.
-    eapply extends_lookup in H0; eauto. now rewrite H0.
+    destruct isdecl as [[? ?] ?]. red in H. red in H4.
+    rewrite H in H4.
+    eapply extends_lookup in H; eauto. now rewrite H.
   - econstructor. all:eauto.
     all:todo "case".
     (*2:{ eauto. eapply All2_All_left in X3.

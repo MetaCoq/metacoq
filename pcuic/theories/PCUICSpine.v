@@ -672,6 +672,35 @@ Proof.
   now rewrite app_context_assoc in wfcodom.
 Qed.
 
+Lemma spine_subst_smash_app_inv {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ' δ δ'} :
+  #|δ| = context_assumptions Δ ->
+  spine_subst Σ Γ (δ ++ δ') (List.rev (δ ++ δ')) (smash_context [] (Δ ,,, Δ')) ->
+  spine_subst Σ Γ δ (List.rev δ) (smash_context [] Δ) × 
+  spine_subst Σ Γ δ' (List.rev δ')
+    (subst_context_let_expand (List.rev δ) Δ (smash_context [] Δ')).
+Proof.
+  intros hδ sp.
+  rewrite smash_context_app_expand in sp.
+  eapply spine_subst_app_inv in sp; eauto.
+  2:{ rewrite context_assumptions_smash_context /= //. }
+  rewrite expand_lets_ctx_length smash_context_length /= in sp.
+  destruct sp as [sppars spidx].
+  assert (lenidx : context_assumptions Δ' = #|δ'|).
+  { pose proof (PCUICContextSubst.context_subst_length2 spidx).
+    len in H. rewrite context_assumptions_smash_context in H. now len in H. }
+  assert (firstn (context_assumptions Δ')
+        (List.rev (δ ++ δ')) = List.rev δ').
+  { rewrite List.rev_app_distr.
+    now rewrite (firstn_app_left _ 0); 
+    rewrite /= ?app_nil_r // Nat.add_0_r List.rev_length. }
+  assert (skipn (context_assumptions Δ')
+    (List.rev (δ ++ δ')) = List.rev δ).
+  { rewrite List.rev_app_distr.
+    erewrite (skipn_all_app_eq) => //; rewrite List.rev_length //. }        
+  rewrite H H0 in spidx, sppars.
+  split => //.
+Qed.
+
 Lemma spine_subst_inst {cf:checker_flags} Σ ext u Γ i s Δ  :
   wf Σ.1 ->
   wf_global_ext Σ.1 ext ->

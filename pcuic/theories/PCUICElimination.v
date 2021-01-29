@@ -74,21 +74,21 @@ Proof.
   exists ps.
   intuition auto.
   econstructor; eauto.
-  assert (watiapp := env_prop_typing  _ _ validity _ _ _ _ _ t0).
+  assert (watiapp := env_prop_typing  _ _ validity_env _ _ _ _ _ t0).
   simpl in watiapp.
   eapply (isType_mkApps_Ind wfΣ H) in watiapp as [psub [asub [[spp spa] cuni]]]; eauto.
-  2:eapply typing_wf_local; eauto.
+  eapply typing_wf_local; eauto.
   destruct (on_declared_inductive H) as [mib oib].
   clear a1.
   (* eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in e0 as [parsubst [cs eq]].
   rewrite eq in t. *)
   assert (Σ ;;; Γ |- it_mkLambda_or_LetIn predctx (preturn p) : it_mkProd_or_LetIn predctx (tSort ps)).
   eapply type_it_mkLambda_or_LetIn. eauto.
-  eapply PCUICGeneration.type_mkApps; tea.
+  (* eapply PCUICGeneration.type_mkApps; tea.
   eapply wf_arity_spine_typing_spine; auto.
   split; auto.
-  now eapply validity_term in X; eauto.
-  todo "case".
+  now eapply validity_term in X; eauto. *)
+  all:todo "case".
   (* eapply arity_spine_it_mkProd_or_LetIn; eauto.
   pose proof (wf_predicate_length_pars w).
   rewrite skipn_all_app_eq in spa; auto.
@@ -109,8 +109,8 @@ Proof.
     apply PCUICSubstitution.map_subst_instance_to_extended_list_k.
     subst npar.
     now rewrite firstn_skipn. } *)
-  - rewrite H1; auto.
-  - rewrite H1 Bool.orb_true_r; auto.
+  (* - rewrite H1; auto. *)
+  (* - rewrite H1 Bool.orb_true_r; auto. *)
 Qed.
 
 Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sort cdecls :
@@ -683,8 +683,9 @@ Proof.
   intros [[HA HB]|[HB HA]] cum; split; auto;
   apply cumul_alt in cum as [v [v' [[redv redv'] leq]]].
   - eapply type_Cumul' with (tSort u'); eauto.
-    eapply isType_Sort; pcuic.
+    eapply PCUICArities.isType_Sort.
     now eapply PCUICWfUniverses.typing_wf_universe in HA.
+    pcuic.
     constructor. constructor.
     eapply subject_reduction in redv; eauto.
     eapply subject_reduction in redv'; eauto.
@@ -693,8 +694,9 @@ Proof.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_prop_sorted_r in leq; eauto.
     eapply type_Cumul' with (tSort u'); eauto.
-    eapply isType_Sort; pcuic. 
+    eapply PCUICArities.isType_Sort.
     now eapply PCUICWfUniverses.typing_wf_universe in HB.
+    pcuic.
     constructor. constructor. auto.
 Qed.
 
@@ -710,7 +712,7 @@ Proof.
   intros [[HA HB]|[HB HA]] cum; split; auto;
   apply cumul_alt in cum as [v [v' [[redv redv'] leq]]].
   - eapply type_Cumul' with (tSort u'); eauto.
-    eapply isType_Sort; pcuic.
+    eapply PCUICArities.isType_Sort; pcuic.
     now eapply PCUICWfUniverses.typing_wf_universe in HA.
     constructor. constructor.
     eapply subject_reduction in redv; eauto.
@@ -720,7 +722,7 @@ Proof.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_sprop_sorted_r in leq; eauto.
     eapply type_Cumul' with (tSort u'); eauto.
-    eapply isType_Sort; pcuic. 
+    eapply PCUICArities.isType_Sort; pcuic. 
     now eapply PCUICWfUniverses.typing_wf_universe in HB.
     constructor. constructor. auto.
 Qed.

@@ -35,7 +35,7 @@ Proof.
   - now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
 Qed.
 
-Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : context :=
+Definition pre_case_predicate_context_gen ind mdecl idecl params puinst : context :=
   let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
   let inddecl := 
     {| decl_name := 
@@ -47,8 +47,10 @@ Definition case_predicate_context_gen ind mdecl idecl params puinst pctx : conte
     subst_context (List.rev params) 0
       (subst_instance puinst 
       (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
-  in
-  map2 set_binder_name pctx (inddecl :: ictx).
+  in (inddecl :: ictx).
+
+Definition case_predicate_context_gen ind mdecl idecl params puinst pctx :=
+  map2 set_binder_name pctx (pre_case_predicate_context_gen ind mdecl idecl params puinst).
 
 (** This function allows to forget type annotations on a binding context. 
     Useful to relate the "compact" case representation in terms, with 

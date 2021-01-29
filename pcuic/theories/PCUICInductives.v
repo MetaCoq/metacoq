@@ -1590,3 +1590,140 @@ Proof.
       exists (ctx' ++ [vass na A']), args'.
       rewrite it_mkProd_or_LetIn_app /= //.
 Qed.
+
+
+(* We show that the derived predicate of a case is always well-typed, for *any*
+  instance of the parameters (not just the ones from a well-formed predicate). *)
+Lemma isType_case_predicate {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
+  {mdecl idecl} u params ps :
+  wf_local Σ Γ ->
+  declared_inductive Σ ci mdecl idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  wf_universe Σ ps ->
+  spine_subst Σ Γ params (List.rev params) 
+    (smash_context [] (subst_instance u (ind_params mdecl))) ->
+  isType Σ Γ 
+    (it_mkProd_or_LetIn 
+      (pre_case_predicate_context_gen ci mdecl idecl params u) 
+      (tSort ps)).
+Proof.
+  move=> wfΓ isdecl cu wfps sp.
+  rewrite /pre_case_predicate_context_gen.
+  set (iass := {| decl_name := _ |}).
+  rewrite subst_instance_expand_lets_ctx.
+  unshelve epose proof (on_inductive_inst isdecl _ _ _ cu); tea.
+  rewrite -/(subst_context_let_expand _ _ _).
+  rewrite subst_instance_app_ctx in X.
+  destruct X as [s Hs]. red in Hs.
+  eapply isType_it_mkProd_or_LetIn_app in Hs. 2:eapply sp.
+  rewrite subst_let_expand_it_mkProd_or_LetIn in Hs.
+  eapply type_it_mkProd_or_LetIn_inv in Hs as (idxs & inds & sortsidx & sortind & leq).
+  eexists (sort_of_products (subst_instance u (ind_sort idecl) :: idxs)
+    (Universe.super ps)); red.
+  set (idxctx := subst_context_let_expand _ _ _) in *.
+  have tyass : Σ ;;; Γ ,,, idxctx |- decl_type iass : 
+    tSort (subst_instance u (ind_sort idecl)).
+  { pose proof (on_inductive_sort_inst isdecl _ cu).
+    rewrite /iass /=.
+    have wfidxctx : wf_local Σ (Γ ,,, idxctx) by pcuic.
+    eapply pre_type_mkApps_arity. econstructor; tea. pcuic.
+    eapply on_inductive_isType; tea. pcuic.
+    pose proof (on_declared_inductive isdecl) as [onmind oib].
+    rewrite oib.(ind_arity_eq) subst_instance_it_mkProd_or_LetIn.
+    eapply arity_spine_it_mkProd_or_LetIn_smash; tea.
+    rewrite -[smash_context [] _](closed_ctx_lift #|idecl.(ind_indices)| 0).
+    { eapply closedn_smash_context.
+      rewrite closedn_subst_instance_context.
+      eapply (declared_inductive_closed_params isdecl). }
+    relativize #|ind_indices idecl|.
+    rewrite -map_rev. eapply subslet_lift; tea.
+    eapply sp. now rewrite /idxctx; len.
+    rewrite subst_instance_it_mkProd_or_LetIn subst_let_expand_it_mkProd_or_LetIn /=.
+    eapply arity_spine_it_mkProd_or_LetIn_Sort => //. reflexivity.
+    relativize (subst_context_let_expand (List.rev (map _ _)) _ _).
+    relativize (to_extended_list _).
+    eapply spine_subst_to_extended_list_k; tea.
+    rewrite [reln [] _ _]to_extended_list_subst_context_let_expand.
+    apply PCUICLiftSubst.map_subst_instance_to_extended_list_k.
+    rewrite subst_context_let_expand_length subst_instance_length.
+    rewrite /subst_context_let_expand.
+    rewrite distr_lift_subst_context map_rev. f_equal.
+    rewrite List.rev_length Nat.add_0_r.
+    rewrite PCUICClosed.closed_ctx_lift //.
+    pose proof (PCUICContextSubst.context_subst_length2 sp).
+    rewrite context_assumptions_smash_context /= in H0. len in H0.
+    rewrite H0.
+    relativize (context_assumptions _).
+    eapply closedn_ctx_expand_lets.
+    rewrite -subst_instance_app_ctx closedn_subst_instance_context.
+    eapply (declared_inductive_closed_pars_indices _ isdecl). now len. }  
+  eapply type_it_mkProd_or_LetIn_sorts; tea.
+  constructor => //.
+  constructor => //. simpl.
+  constructor => //.
+  now eapply sorts_local_ctx_wf_local; tea. red.
+  eexists; tea. 
+Qed.
+
+Lemma arity_spine_case_predicate {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
+  {mdecl idecl} {u params indices ps} {c} :
+  wf_local Σ Γ ->
+  declared_inductive Σ ci mdecl idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  wf_universe Σ ps ->
+  spine_subst Σ Γ params (List.rev params) 
+    (smash_context [] (subst_instance u (ind_params mdecl))) ->
+  spine_subst Σ Γ indices (List.rev indices) 
+    (subst_context_let_expand (List.rev params)
+        (subst_instance u (ind_params mdecl))
+        (smash_context [] (subst_instance u (ind_indices idecl)))) ->
+  Σ ;;; Γ |- c : mkApps (tInd ci u) (params ++ indices) ->
+  arity_spine Σ Γ
+    (it_mkProd_or_LetIn
+      (pre_case_predicate_context_gen ci mdecl idecl params u) 
+      (tSort ps)) 
+    (indices ++ [c]) (tSort ps).
+Proof.
+  move=> wfΓ isdecl cu wfps sppars spidx Hc.
+  rewrite /pre_case_predicate_context_gen.
+  simpl.
+  rewrite subst_instance_expand_lets_ctx.
+  eapply arity_spine_it_mkProd_or_LetIn_smash; tea.
+  rewrite (smash_context_subst []).
+  rewrite /subst_context_let_expand (expand_lets_smash_context _ []) 
+    expand_lets_k_ctx_nil /= in spidx.
+  apply spidx. rewrite subst_let_expand_tProd.
+  constructor.
+  2:econstructor.
+  set (ictx := subst_instance u _).
+  eapply meta_conv; tea.
+  rewrite subst_let_expand_mkApps subst_let_expand_tInd map_app.
+  f_equal. f_equal.
+  rewrite -{1}[params](map_id params).
+  rewrite map_map_compose; eapply map_ext => x.
+  setoid_rewrite subst_let_expand_lift_id; auto.
+  now rewrite /ictx; len.
+  rewrite /ictx /expand_lets_ctx /expand_lets_k_ctx; len.
+  pose proof (PCUICContextSubst.context_subst_length2 spidx).
+  rewrite /subst_context_let_expand in H. len in H.
+  now rewrite context_assumptions_smash_context /= in H; len in H.
+  (* Should be a lemma *)
+  rewrite -subst_context_map_subst_expand_lets.
+  rewrite /ictx; len.
+  pose proof (PCUICContextSubst.context_subst_length2 sppars).
+  now rewrite context_assumptions_smash_context /= in H; len in H.
+  rewrite /subst_let_expand /expand_lets /expand_lets_k.
+  rewrite -map_map_compose.
+  rewrite -{1}(spine_subst_subst_to_extended_list_k spidx).
+  f_equal.
+  rewrite to_extended_list_k_subst /expand_lets_ctx /expand_lets_k_ctx.
+  rewrite !to_extended_list_k_subst to_extended_list_k_lift_context.
+  rewrite -map_map_compose. simpl. len.
+  rewrite lift_to_extended_list_k.
+  set (ctx := subst_context _ _ _).
+  assert (to_extended_list_k (ind_indices idecl) 0 = to_extended_list_k ctx 0) as ->.
+  { rewrite /ctx to_extended_list_k_subst.
+    now rewrite PCUICLiftSubst.map_subst_instance_to_extended_list_k. }
+  rewrite extended_subst_to_extended_list_k /ctx.
+  now rewrite (smash_context_subst []) to_extended_list_k_subst.
+Qed.

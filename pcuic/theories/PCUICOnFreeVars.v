@@ -1100,7 +1100,8 @@ Lemma on_free_vars_case_predicate_context {cf} {Σ} {wfΣ : wf Σ} {P ci mdecl i
   on_free_vars_ctx P pctx.
 Proof.
   intros pctx decli wfp wfb havp.
-  rewrite /pctx /case_predicate_context /case_predicate_context_gen.
+  rewrite /pctx /case_predicate_context /case_predicate_context_gen
+    /pre_case_predicate_context_gen.
   set (ibinder := {| decl_name := _ |}).
   rewrite -on_free_vars_map2_cstr_args /=; len.
   { eapply (wf_predicate_length_pcontext wfp). }

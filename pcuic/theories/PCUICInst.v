@@ -726,7 +726,7 @@ Proof.
   - len. len. 
     now rewrite -(wf_predicate_length_pcontext wfp).
   - rewrite forget_types_mapi_context. f_equal.
-    rewrite fold_context_k_snoc0 /= /snoc.
+    rewrite /pre_case_predicate_context_gen fold_context_k_snoc0 /= /snoc.
     f_equal.
     * rewrite /map_decl /=. f_equal.
       len. rewrite inst_mkApps /=. f_equal.
@@ -1911,7 +1911,7 @@ Proof.
     eapply declared_constructor_closed_type in isdecl; eauto.
     rewrite inst_closed0; eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
-    intros IHΔ ci_npar predctx wfp Hpctx convctx Hpret 
+    intros IHΔ ci_npar predctx wfp cup Hpctx convctx Hpret 
       IHpret IHpredctx isallowed.
     intros Hctxi IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
     autorewrite with sigma. simpl.

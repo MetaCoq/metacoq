@@ -15,7 +15,20 @@ Require Import Equations.Type.Relation_Properties.
 
 Derive Signature for typing_spine.
 
+Implicit Types cf : checker_flags.
+
 Notation isWAT := (isWfArity typing).
+
+Lemma isType_Sort {cf:checker_flags} {Σ Γ s} :
+  wf_universe Σ s ->
+  wf_local Σ Γ ->
+  isType Σ Γ (tSort s).
+Proof.
+  intros wfs wfΓ.
+  eexists; econstructor; eauto.
+Qed.
+
+Hint Resolve @isType_Sort : pcuic.
 
 Lemma isArity_it_mkProd_or_LetIn Γ t : isArity t -> isArity (it_mkProd_or_LetIn Γ t).
 Proof.
@@ -265,6 +278,16 @@ Fixpoint sort_of_products us s :=
   | [] => s
   | u :: us => sort_of_products us (Universe.sort_of_product u s)
   end.
+
+Lemma leq_universe_sort_of_products_mon {cf} Σ u u' v v' : 
+  Forall2 (leq_universe Σ) u u' ->
+  leq_universe Σ v v' ->
+  leq_universe Σ (sort_of_products u v) (sort_of_products u' v').
+Proof.
+  intros hu; induction hu in v, v' |- *; simpl; auto with pcuic.
+  intros lev. eapply IHhu.
+  eapply leq_universe_product_mon => //.
+Qed.
 
 Lemma type_it_mkProd_or_LetIn_sorts {cf:checker_flags} Σ Γ Γ' us t s : 
   wf Σ.1 ->

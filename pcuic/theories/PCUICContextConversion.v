@@ -1141,22 +1141,25 @@ Proof.
     eapply forall_Γ'0; repeat (constructor; pcuic).
   - econstructor; pcuic.
     eapply forall_Γ'1; repeat (constructor; pcuic).
-  - econstructor; eauto. eapply context_cumulativity_wf_app; tea.
-    eapply context_cumulativity_app; tea.
-    eapply IHp0. rewrite /predctx.
-    eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
-    eapply context_cumulativity_wf_app; tea.
-    eapply All2i_impl; tea => i cdecl br. cbv beta.
-    set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
-    cbn. intros [[hbctx convbctx] [[bbody Hbody] [IH [brctxty' IHbrctxty]]]].
-    intuition eauto; solve_all.
-    eapply context_cumulativity_wf_app; tea.
-    eapply context_cumulativity_app; tea.
-    eapply IH. eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
-    eauto using context_cumulativity_app, context_cumulativity_wf_app.
-    eapply IHbrctxty.
-    eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
-    eapply context_cumulativity_wf_app; tea.
+  - econstructor; eauto.
+    * eapply context_cumulativity_wf_app; tea.
+    * eapply context_cumulativity_app; tea.
+    * eapply IHp0. rewrite /predctx.
+      eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+      eapply context_cumulativity_wf_app; tea.
+    * revert X6.
+      clear -Γ' X10 X11. induction 1; constructor; eauto.
+    * eapply All2i_impl; tea => i cdecl br. cbv beta.
+      set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
+      cbn. intros [[hbctx convbctx] [[bbody Hbody] [IH [brctxty' IHbrctxty]]]].
+      intuition eauto; solve_all.
+      eapply context_cumulativity_wf_app; tea.
+      eapply context_cumulativity_app; tea.
+      eapply IH. eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+      eauto using context_cumulativity_app, context_cumulativity_wf_app.
+      eapply IHbrctxty.
+      eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+      eapply context_cumulativity_wf_app; tea.
   - econstructor. eapply fix_guard_context_cumulativity; eauto.
     all:pcuic.
     eapply (All_impl X0).

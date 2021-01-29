@@ -16,7 +16,12 @@ Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
 Require Import ssreflect.
 
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
+
+
 Derive Signature for ctx_inst.
+
+Notation ctx_inst := (ctx_inst typing).
 
 Lemma typing_spine_eq {cf:checker_flags} Σ Γ ty s s' ty' :
   s = s' ->
@@ -680,7 +685,7 @@ Proof.
   intros wfΣ wfext [wfdom wfcodom cs subsl] cu.
   split.
   eapply wf_local_subst_instance; eauto.
-  rewrite -subst_instance_app.
+  rewrite -subst_instance_app_ctx.
   eapply wf_local_subst_instance; eauto.
   clear -cs cu wfext wfΣ.
   induction cs; simpl; rewrite ?map_app; try constructor; auto.
@@ -700,22 +705,6 @@ Proof.
     eapply (typing_subst_instance'' Σ); simpl; auto.
     apply wfext. simpl in wfext. apply t0. 
     apply wfext. auto.
-Qed.
-
-Lemma subslet_lift {cf:checker_flags} Σ (Γ Δ : context) s Δ' :
-  wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
-  subslet Σ Γ s Δ' ->
-  subslet Σ (Γ ,,, Δ) (map (lift0 #|Δ|) s) (lift_context #|Δ| 0 Δ').
-Proof.
-  move=> wfΣ wfl.
-  induction 1; rewrite ?lift_context_snoc /=; try constructor; auto.
-  simpl.
-  rewrite -(subslet_length X).
-  rewrite -distr_lift_subst. apply weakening; eauto.
-
-  rewrite -(subslet_length X).
-  rewrite distr_lift_subst. constructor; auto.
-  rewrite - !distr_lift_subst. apply weakening; eauto.
 Qed.
 
 Lemma spine_subst_weakening {cf:checker_flags} Σ Γ i s Δ Γ' : 
@@ -906,27 +895,17 @@ Proof.
       rewrite -H1. now rewrite firstn_skipn.
 Qed.
 
-Lemma isType_Sort {cf:checker_flags} {Σ Γ s} :
-  wf_universe Σ s ->
-  wf_local Σ Γ ->
-  isType Σ Γ (tSort s).
-Proof.
-  intros wfs wfΓ.
-  eexists; econstructor; eauto.
-Qed.
-
-Hint Resolve @isType_Sort : pcuic.
-
-Lemma arity_spine_it_mkProd_or_LetIn_Sort {cf:checker_flags} Σ Γ ctx s args inst : 
-  wf Σ.1 -> wf_universe Σ s ->
+Lemma arity_spine_it_mkProd_or_LetIn_Sort {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ ctx s s' args inst : 
+  wf_universe Σ s' ->
+  leq_universe Σ s s' ->
   spine_subst Σ Γ args inst ctx ->
-  arity_spine Σ Γ (it_mkProd_or_LetIn ctx (tSort s)) args (tSort s).
+  arity_spine Σ Γ (it_mkProd_or_LetIn ctx (tSort s)) args (tSort s').
 Proof.
-  intros wfΣ wfs sp. rewrite -(app_nil_r args).
+  intros wfs le sp. rewrite -(app_nil_r args).
   eapply arity_spine_it_mkProd_or_LetIn => //.
   eauto. constructor.
-  (* eapply isType_Sort; eauto.
-  eapply sp. simpl. reflexivity. *)
+  eapply isType_Sort; eauto.
+  eapply sp. simpl. constructor. now constructor.
 Qed.
 
 Lemma ctx_inst_app {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} 
@@ -1485,7 +1464,6 @@ Proof.
       apply X; auto.
 Qed.
 
-
 Lemma red_expand_let {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} Γ na b ty t :
   wf_local Σ (Γ ,,, [vdef na b ty])  ->
   red Σ.1 (Γ ,,, [vdef na b ty]) t (lift0 1 (subst1 b 0 t)).
@@ -1495,6 +1473,45 @@ Proof.
   simpl in X.
   rewrite subst_empty in X.
   now rewrite distr_lift_subst.
+Qed.
+
+Lemma type_it_mkProd_or_LetIn_inv {cf} {Σ : global_env_ext} {wfΣ : wf Σ}:
+ forall {Γ Δ t s},
+  Σ ;;; Γ |- it_mkProd_or_LetIn Δ t : tSort s ->
+  ∑ Δs ts, sorts_local_ctx (lift_typing typing) Σ Γ Δ Δs ×
+           Σ ;;; Γ ,,, Δ |- t : tSort ts ×
+           leq_universe Σ (sort_of_products Δs ts) s.
+Proof.
+  intros Γ Δ t s h. revert Γ t s h.
+  induction Δ; intros.
+  - exists [], s; splits. apply h. apply leq_universe_refl.
+  - destruct a as [na [b|] ty]; simpl in *;
+    rewrite /mkProd_or_LetIn /= in h.
+    * specialize (IHΔ _ _ _ h) as (Δs & ts & sorts & IHΔ & leq).
+      exists Δs, ts.
+      pose proof (PCUICWfUniverses.typing_wf_universe _ IHΔ) as wfts.
+      eapply inversion_LetIn in IHΔ as [s' [? [? [? [? ?]]]]]; auto.
+      splits; eauto.
+      eapply type_Cumul'. eapply t2. now pcuic.
+      eapply invert_cumul_letin_l in c; auto.
+      eapply invert_cumul_sort_r in c as [u' [redu' cumu']].
+      transitivity (tSort u'). 2:do 2 constructor; auto.
+      eapply cumul_alt.
+      exists (tSort u'), (tSort u'). repeat split; auto.
+      2:now constructor.
+      transitivity (lift0 1 (x {0 := b})).
+      eapply (red_expand_let _ _ _ _). pcuic.
+      change (tSort u') with (lift0 1 (tSort u')).
+      eapply (weakening_red _ (Γ ,,, Δ) [] [_]); auto.
+
+    * specialize (IHΔ _ _ _ h) as (Δs & ts & sorts & IHΔ & leq).
+      eapply inversion_Prod in IHΔ as [? [? [? [? ]]]]; tea.
+      exists (x :: Δs), x0. splits; tea.
+      eapply cumul_Sort_inv in c.
+      transitivity (sort_of_products Δs ts); auto using leq_universe_product.
+      simpl. eapply leq_universe_sort_of_products_mon. 
+      eapply Forall2_same. reflexivity.
+      exact: c.
 Qed.
 
 Lemma inversion_it_mkProd_or_LetIn {cf:checker_flags} Σ {wfΣ : wf Σ.1}:
@@ -1530,10 +1547,18 @@ Proof.
     auto.
 Qed.
 
-Lemma subst_lift_above s n k x : k = #|s| -> subst0 s (lift0 (n + k) x) = lift0 n x.
+Lemma isType_it_mkProd_or_LetIn_app {cf} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Δ Δ' args T s : 
+  Σ ;;; Γ |- it_mkProd_or_LetIn (Δ ,,, Δ') T : tSort s -> 
+  subslet Σ Γ args (smash_context [] Δ) ->
+  Σ ;;; Γ |- subst_let_expand args Δ (it_mkProd_or_LetIn Δ' T) : tSort s.
 Proof.
-  intros. rewrite Nat.add_comm. subst k. now rewrite simpl_subst.
+  intros Hs sub.
+  move: Hs. rewrite it_mkProd_or_LetIn_app.
+  move/inversion_it_mkProd_or_LetIn => Hs.
+  eapply typing_expand_lets in Hs.
+  eapply (PCUICSubstitution.substitution _ _ _ _ []) in Hs; tea.
 Qed.
+
 
 Lemma lift_to_extended_list_k n Γ : map (lift n #|Γ|) (to_extended_list_k Γ 0) = 
   to_extended_list_k Γ 0.
@@ -2011,10 +2036,11 @@ Qed.
 Lemma arity_spine_it_mkProd_or_LetIn_smash {cf:checker_flags} Σ Γ Δ T args args' T' : 
   wf Σ.1 ->
   subslet Σ Γ (List.rev args) (smash_context [] Δ) ->
-  arity_spine Σ Γ (subst0 (List.rev args) (subst0 (extended_subst Δ 0) (lift (context_assumptions Δ) #|Δ| T))) args' T' ->
+  arity_spine Σ Γ (subst_let_expand (List.rev args) Δ T) args' T' -> 
   arity_spine Σ Γ (it_mkProd_or_LetIn Δ T) (args ++ args') T'.
 Proof.
   intros wfΣ subsl asp.
+  rewrite /subst_let_expand /expand_lets /expand_lets_k in asp.
   move: Δ T args subsl asp.
   induction Δ using ctx_length_rev_ind => T args subsl asp.
   - simpl in subsl. simpl in asp. rewrite subst_empty lift0_id in asp. depelim subsl.
@@ -2128,4 +2154,16 @@ Proof.
       now depelim ass'. auto.
     * elimtype False; depelim ass.
   - eapply subslet_cumul. 6:eauto. all:eauto.
+Qed.
+
+Lemma pre_type_mkApps_arity {cf} {Σ : global_env_ext} {wfΣ : wf Σ} (Γ : context) 
+  (t : term) (u : list term) tty T :
+  Σ;;; Γ |- t : tty -> isType Σ Γ tty ->
+  arity_spine Σ Γ tty u T -> 
+  Σ;;; Γ |- mkApps t u : T.
+Proof.
+  intros Ht Hty Har.
+  eapply type_mkApps; tea.
+  eapply wf_arity_spine_typing_spine; tea.
+  constructor; tas.
 Qed.

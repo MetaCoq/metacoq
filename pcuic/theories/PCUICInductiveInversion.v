@@ -1506,29 +1506,6 @@ Proof.
   now rewrite context_assumptions_app.
 Qed.
 
-Lemma smash_context_app_expand Γ Δ Δ' : 
-  smash_context Γ (Δ ,,, Δ') =
-  smash_context [] Δ ,,, expand_lets_ctx Δ (smash_context Γ Δ').
-Proof.
-  rewrite smash_context_app smash_context_acc.
-  rewrite /expand_lets_k_ctx /app_context. f_equal.
-Qed.
-
-Lemma expand_lets_smash_context Γ Δ Δ' : 
-  expand_lets_ctx Γ (smash_context Δ Δ') = 
-  smash_context (expand_lets_k_ctx Γ #|Δ'| Δ) (expand_lets_ctx Γ Δ').
-Proof.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  rewrite -smash_context_lift -smash_context_subst /=; len.
-  lia_f_equal.
-Qed.
-
-Lemma expand_lets_k_ctx_nil Γ k : expand_lets_k_ctx Γ k [] = [].
-Proof. reflexivity. Qed.
-
-Lemma expand_lets_ctx_nil Γ : expand_lets_ctx Γ [] = [].
-Proof. reflexivity. Qed.
-Hint Rewrite expand_lets_k_ctx_nil expand_lets_ctx_nil : pcuic.
 
 Lemma positive_cstr_arg_subst_instance {mdecl Γ} {t} u :
   positive_cstr_arg mdecl Γ t ->

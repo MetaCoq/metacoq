@@ -350,7 +350,7 @@ Section CheckEnv.
     Next Obligation.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *.
       sq. split; auto. split; auto.
-      eapply PCUICValidity.validity_term in checkty; auto.
+      eapply PCUICValidity.validity in checkty; auto.
     Qed.
   
   Program Fixpoint infer_sorts_local_ctx (Σ : wf_env_ext) Γ Δ (wfΓ : ∥ wf_local Σ Γ ∥) : 
@@ -379,7 +379,7 @@ Section CheckEnv.
     Next Obligation.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *.
       sq. split; auto. split; auto.
-      eapply PCUICValidity.validity_term in checkty; auto.
+      eapply PCUICValidity.validity in checkty; auto.
     Qed.
 
   Definition cumul_decl Σ Γ (d d' : context_decl) : Type := cumul_decls Σ Γ Γ d d'.
@@ -1388,7 +1388,7 @@ Section CheckEnv.
     Next Obligation.
       destruct Σ as [Σ wfΣ G' wfG']; simpl in *.
       sq. constructor; auto.
-      eapply validity_term in wfty. apply wfty. auto.
+      eapply validity in wfty. apply wfty. 
     Qed.
     Next Obligation.
       destruct Σ as [Σ wfΣ G' wfG']; simpl in *.

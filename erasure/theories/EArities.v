@@ -199,9 +199,8 @@ Proof.
     revert c0 t0 i. generalize x at 1 3.
     intros x2 c0 t0 i.
     assert (HWF : isType Σ Γ x2).
-    { eapply PCUICValidity.validity.
-      - eauto.
-      - eapply type_mkApps. 2:eauto. eauto.
+    { eapply PCUICValidity.validity; tea.
+      eapply type_mkApps. 2:eauto. eauto.
     }
     eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?) ; auto. (* destruct x5. destruct p. cbn in *. *)
     assert (HL : #|ind_bodies x3| > 0).
@@ -291,8 +290,7 @@ Proof.
     intros x2 c0 t0 i.
     assert (HWF : isType Σ Γ x2).
     { eapply PCUICValidity.validity.
-      - eauto.
-      - eapply type_mkApps. 2:eauto. eauto.
+      eapply type_mkApps. 2:eauto. eauto.
     }
     eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?) ; auto.
     eapply invert_cumul_arity_r in c0; eauto.

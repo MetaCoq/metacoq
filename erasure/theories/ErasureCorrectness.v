@@ -483,9 +483,9 @@ Proof.
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Hty') as [C [Cty [Cty' Ht'']]].
   intros Ht'.
   exists ty', u; intuition auto.
-  eapply PCUICValidity.validity_term in Hty; eauto.
-  eapply PCUICValidity.validity_term in Hty'; eauto.
-  eapply PCUICValidity.validity_term in Ht''; eauto.
+  eapply PCUICValidity.validity in Hty; eauto.
+  eapply PCUICValidity.validity in Hty'; eauto.
+  eapply PCUICValidity.validity in Ht''; eauto.
   eapply cumul_prop1' in Cty; eauto.
   eapply cumul_propositional in Cty'; eauto.
 Qed.
@@ -497,8 +497,8 @@ Lemma Is_proof_app {Σ Γ t args ty} {wfΣ : wf_ext Σ} :
 Proof.
   intros [ty' [u [Hty [isp pu]]]] Htargs.
   eapply PCUICValidity.inversion_mkApps in Htargs as [A [Ht sp]].
-  pose proof (PCUICValidity.validity_term wfΣ Hty).  
-  pose proof (PCUICValidity.validity_term wfΣ Ht).  
+  pose proof (PCUICValidity.validity Hty).  
+  pose proof (PCUICValidity.validity Ht).  
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
   eapply PCUICSpine.typing_spine_strengthen in sp; eauto.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
@@ -603,7 +603,7 @@ Proof.
   eapply PCUICValidity.validity; eauto.
   destruct X as [cty ty].
   eapply type_Cumul'; eauto.
-  eapply PCUICSpine.isType_Sort; pcuic.
+  eapply isType_Sort; pcuic.
   destruct (ind_sort x0) => //.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in ty; eauto.
   epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ eq_refl wfΣ ty).

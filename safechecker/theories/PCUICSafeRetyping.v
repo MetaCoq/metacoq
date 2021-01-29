@@ -83,7 +83,7 @@ Section TypeOf.
   Proof.
     intros H.
     destruct hΣ. destruct Hφ.
-    apply validity_term in H; auto. destruct H as [s tyT].
+    apply validity in H; auto. destruct H as [s tyT].
     econstructor; eauto.
   Qed.
 End TypeOf.
@@ -335,7 +335,7 @@ Section TypeOf.
       destruct infer as [bty' [[Hbty pbty]]]; subst ty; simpl in *.
       apply wat_welltyped; auto.
       sq.
-      eapply validity_term; eauto.
+      eapply validity; eauto.
     - simpl in ty. destruct inversion_App as (? & ? & ? & ? & ? & ?).
       destruct infer as [bty' [[Hbty pbty]]]; subst ty; simpl in *.
       sq. exists x, x0, x1. now eapply pbty.
@@ -352,7 +352,7 @@ Section TypeOf.
         eapply cumul_red_l_inv; eauto.
         eapply cumul_Prod_Prod_inv in X as [_ [Ha _]]; auto.
         eapply type_Cumul'; eauto.
-        eapply validity_term in Htty; auto.
+        eapply validity in Htty; auto.
         eapply isType_tProd in Htty; pcuic.
         eapply conv_cumul. now symmetry.
       * intros T' (? & ? & ? & ? & ? & ?)%inversion_App; auto.
@@ -362,7 +362,7 @@ Section TypeOf.
         { eapply cumul_red_l_inv; eauto. }
         eapply cumul_Prod_Prod_inv in X as [eqann [Ha Hb]]; auto.
         eapply (substitution_cumul _ Γ [vass x2 x3] []); eauto.
-        eapply validity_term in t2; pcuic.
+        eapply validity in t2; pcuic.
         eapply isType_tProd in t2 as [_ ist]; auto.
         now eapply isType_wf_local in ist. pcuic.
         constructor. constructor.
@@ -429,8 +429,8 @@ Section TypeOf.
     - cbn. 
       destruct inversion_Case as (mdecl & idecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]]. simpl.
-      eapply validity_term in Hty.
-      eapply wat_welltyped; auto. sq; auto. auto.
+      eapply validity in Hty.
+      eapply wat_welltyped; auto. sq; auto.
     - simpl in *.
       destruct inversion_Case as (mdecl & idecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]].
@@ -441,6 +441,10 @@ Section TypeOf.
       eapply type_reduction in Hty; eauto.
       have Hc := case_inversion_data_cty data.
       pose proof (Hp _ Hc).
+      assert (consistent_instance_ext Σ (ind_universes mdecl) (puinst p)).
+      { eapply validity in Hc as [? Hc]; tea.
+        eapply invert_type_mkApps_ind in Hc as []; tea.
+        destruct data; eauto. }
       assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) (pparams p ++ indices)).
       { eapply cumul_red_l_inv; eauto. }
       eapply cumul_Ind_Ind_inv in X0 as [[eqi Ru] cl]; auto.
@@ -453,10 +457,13 @@ Section TypeOf.
         now rewrite (wf_predicate_length_pars w0).
         exact cl. }
       sq; split; simpl.
-      * pose proof (validity_term _ Hc).
+      * pose proof (validity Hc).
         destruct data.
-        econstructor. econstructor; eauto.
-        instantiate (1 := ps).
+        eapply type_Cumul. econstructor; eauto.
+        + eapply validity in Hc as [? Hc]; tea.
+          eapply invert_type_mkApps_ind in Hc as []; tea.
+          todo "case".
+        
         + assert (Σ ;;; Γ |- it_mkLambda_or_LetIn (pcontext p) (preturn p) : 
           it_mkProd_or_LetIn (pcontext p) (tSort ps)).
           eapply type_it_mkLambda_or_LetIn. eauto.
@@ -464,7 +471,7 @@ Section TypeOf.
           now eapply conv_context_sym.
           eapply PCUICGeneration.type_mkApps; tea.
           eapply wf_arity_spine_typing_spine; auto.
-          eapply validity_term in X1; auto.
+          eapply validity in X1; auto.
           split; pcuic.
           todo "case".
         + eapply conv_cumul.
@@ -491,7 +498,7 @@ Section TypeOf.
     - simpl in wildcard1.
       destruct inversion_Case as (mdecl & idecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]]. simpl.
-      destruct validity_term as [Hi i]. simpl in wildcard1.
+      destruct validity as [Hi i]. simpl in wildcard1.
       specialize (Hp _ (case_inversion_data_cty data)).
       eapply invert_cumul_ind_r in Hp as [ui' [l' [red [Ru ca]]]]; auto.
       symmetry in wildcard1; 
@@ -503,7 +510,7 @@ Section TypeOf.
       eexists; eauto.
     - simpl; destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
-      eapply validity_term in Hc'; auto.
+      eapply validity in Hc'; auto.
       eapply wat_welltyped; auto. sq; auto.
     - simpl in *. destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
@@ -535,11 +542,11 @@ Section TypeOf.
         { eapply cumul_red_l_inv; eauto. }
         eapply cumul_Ind_Ind_inv in X0 as [[eqi'' Ru''] cl'']; auto.
         assert (consistent_instance_ext Σ (ind_universes mdecl) u').
-        { eapply validity_term in Hc'; eauto.
+        { eapply validity in Hc'; eauto.
           destruct Hc' as [s Hs].
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         assert (consistent_instance_ext Σ (ind_universes mdecl) u'').
-          { eapply validity_term in Hc'''; eauto.
+          { eapply validity in Hc'''; eauto.
             destruct Hc''' as [s Hs]; auto.
             eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply declp. }
         transitivity (subst0 (c :: List.rev l) (subst_instance u'' pdecl''.2)); cycle 1.
@@ -615,7 +622,7 @@ Section TypeOf.
       
     - now eapply inversion_CoFix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.
 
-    - now eapply inversion_Prim in HT.
+    - now eapply inversion_Prim in HT. Unshelve. todo "case".
   Defined.
 
   Definition type_of Γ t wt : term := (infer Γ t wt).

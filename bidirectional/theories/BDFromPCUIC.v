@@ -31,6 +31,7 @@ Proof.
   destruct le ; auto.
 Qed.
 
+
 Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
   {s' & Σ ;;; Γ |- t ▹□ s' × leq_universe Σ s' s}.
@@ -229,7 +230,6 @@ Proof.
         apply conv_check in Cumbody.
         apply conv_check in Cumty.
         repeat split ; auto.
-        admit. (*should use build_branches_type_wt, but it is not good enough…*)
 
     + apply cumul_mkApps ; auto.
       1: reflexivity.
@@ -281,7 +281,7 @@ Proof.
         assumption.
       * apply wf_local_app.
         2: by constructor.
-        by apply PCUICWeakening.weaken_wf_local.
+        apply PCUICWeakening.weaken_wf_local ; eauto.
 
       * change (Γ ,,, _ ,,, _) with (Γ,,, (projection_context mdecl idecl p.1.1 ui')).
         apply weaken_cumul ; auto.
@@ -344,9 +344,9 @@ Proof.
     split.
     1: eassumption.
     etransitivity ; eauto.
-Admitted.
+Qed.
 
-
+End PCUICToBD.
 
 
 

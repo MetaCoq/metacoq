@@ -263,7 +263,21 @@ Section OnInductives.
     eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u) in ar.
     all:pcuic. eapply decli.
   Qed.
-
+  
+  Lemma on_inductive_isType Γ u :
+    wf_local Σ Γ ->
+    consistent_instance_ext Σ (ind_universes mdecl) u ->
+    isType Σ Γ (subst_instance u idecl.(ind_type)).
+  Proof.
+    move=> wfΓ cext.
+    destruct (on_declared_inductive decli) as [onmind oib].
+    pose proof (oib.(onArity)) as ar.
+    destruct ar as [s ar].
+    eapply isType_weaken => //.
+    eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u) in ar.
+    all:pcuic. eapply decli.
+  Qed.
+  
   Local Definition oi := (on_declared_inductive decli).1. 
   Local Definition oib := (on_declared_inductive decli).2. 
 

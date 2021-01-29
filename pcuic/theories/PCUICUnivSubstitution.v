@@ -1287,7 +1287,7 @@ Proof.
   rewrite {1}/subst_instance {1}/subst_instance_context /=.
   rewrite -map2_set_binder_name_map //. f_equal.
   { now rewrite forget_types_subst_instance. }
-  simpl. f_equal.
+  simpl. unfold pre_case_predicate_context_gen. f_equal.
   - rewrite /map_decl /=. f_equal. substu.
     rewrite !map_app !map_map_compose; do 2 f_equal.
     * len. now setoid_rewrite subst_instance_lift.
@@ -2004,7 +2004,7 @@ Proof.
       cbn. now rewrite IHn.
     + symmetry; apply subst_instance_two.
 
-  - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp wfp 
+  - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp wfp cup
       wfpctx convpctx pty Hpty Hcpc kelim
       Hctxi IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext Hsub cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
@@ -2014,6 +2014,7 @@ Proof.
     change (map_predicate _ _ _ _) with (subst_instance i p).
     eapply type_Case with (p0:=subst_instance i p)
                           (ps:=subst_instance_univ i u); eauto with pcuic.
+    + simpl. eapply consistent_ext_trans; tea.
     + now rewrite -subst_instance_app_ctx.
     + rewrite - !subst_instance_app_ctx.
       rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.
@@ -2574,15 +2575,15 @@ Section SubstIdentity.
         now eapply app_inj in H as [Hpars hΓ]; len.
 
     - solve_all.
-      rewrite subst_instance_app in H3.
-      now eapply app_inj in H3 as [Hpars hΓ]; len.
+      rewrite subst_instance_app in H4.
+      now eapply app_inj in H4 as [Hpars hΓ]; len.
 
     - rewrite subst_instance_mkApps. f_equal.
       * rewrite /ptm.
         rewrite subst_instance_it_mkLambda_or_LetIn.
-        rewrite subst_instance_app in H2.
-        eapply app_inj in H2 as []; [|now len].
-        rewrite H2. now f_equal.
+        rewrite subst_instance_app in H3.
+        eapply app_inj in H3 as []; [|now len].
+        rewrite H3. now f_equal.
       * rewrite map_app.
         rewrite subst_instance_mkApps /= /subst_instance /= in b0.
         eapply mkApps_nApp_inj in b0 as [Hi Hpars] => //.

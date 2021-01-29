@@ -292,7 +292,7 @@ Section Lemmata.
     ∥ Σ ;;; Γ |- t : T ∥ -> welltyped Σ Γ T.
   Proof.
     destruct hΣ as [wΣ]. intros [X].
-    intros. eapply validity_term in X; try assumption.
+    intros. eapply validity in X; try assumption.
     destruct X. now exists (tSort x).
   Defined.
 
@@ -497,7 +497,7 @@ Section Lemmata.
       apply inversion_Case in h as hh ; auto.
       destruct hh as [mdecl [idecl [indices [data ?]]]].
       destruct data. simpl in t1.
-      eapply validity_term in t1; tas.
+      eapply validity in t1; tas.
       clear -t1. 
       todo "case".
       (* eexists. eassumption. *)

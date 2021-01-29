@@ -230,7 +230,7 @@ Proof.
     eapply type_Cumul'. eapply type_Lambda; eauto.
     unshelve eapply (context_conversion _ typeb); pcuics.
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; pcuics.
-    now eapply validity_term in X0.
+    now eapply validity in X0.
     eapply cumul_red_r.
     apply cumul_refl'. constructor. apply Hu.
 
@@ -239,7 +239,7 @@ Proof.
     apply (substitution_let _ Γ n b b_ty b' b'_ty wf typeb').
     specialize (typing_wf_local typeb') as wfd.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
-    eapply (validity _ wf _ _ _ X0).
+    eapply (validity X0).
     eapply cumul_red_r.
     apply cumul_refl'. constructor.
 
@@ -248,7 +248,7 @@ Proof.
     econstructor; eauto.
     unshelve eapply (context_conversion _ typeb'); pcuics.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
-    eapply (validity _ wf _ _ _ X0).
+    eapply (validity X0).
     eapply cumul_red_r.
     apply cumul_refl'. now constructor.
 
@@ -262,7 +262,7 @@ Proof.
     constructor; pcuic.
     eapply type_Cumul'. eauto. all:pcuic.
     assert (Σ ;;; Γ |- tLetIn n b b_ty b' : tLetIn n b b_ty b'_ty). econstructor; eauto.
-    eapply (validity _ wf _ _ _ X).
+    eapply (validity X).
     eapply cumul_red_r.
     apply cumul_refl'. now constructor.
 
@@ -271,7 +271,7 @@ Proof.
     pose proof typet as typet'.
     eapply inversion_Lambda in typet' as [s1 [B' [Ht [Hb HU]]]]=>//.
     apply cumul_Prod_inv in HU as [[eqann eqA] leqB] => //.
-    destruct (validity _ wf _ _ _ typet) as [HΣ [HΓ i]].
+    pose proof (validity typet) as i.
     eapply isType_tProd in i as [Hdom Hcodom]; auto.
     eapply type_Cumul'; eauto.
     unshelve eapply (context_conversion _ Hb); pcuics.
@@ -283,7 +283,7 @@ Proof.
     epose (last_nonempty_eq H0). rewrite <- Hu in e1. rewrite <- e1.
     clear e1.
     specialize (inversion_mkApps wf typet) as [T' [appty spty]].
-    have vT' := (validity_term _ appty).
+    have vT' := (validity appty).
     eapply type_tFix_inv in appty as [T [arg [fn' [[[Hnth wffix] Hty]]]]]; auto.
     rewrite e in Hnth. noconf Hnth.
     eapply type_App; eauto.
@@ -680,7 +680,7 @@ Proof.
     rewrite Hnth in e. noconf e.
     eapply typing_spine_strengthen in t; eauto. clear c.
     eapply wf_cofixpoint_typing_spine in t; eauto.
-    2:eapply validity_term; eauto.
+    2:eapply validity; eauto.
     unfold check_recursivity_kind in t.
     rewrite isdecl.p1 in t.
     apply Reflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
@@ -733,14 +733,14 @@ Proof.
     * solve_all.
     * solve_all.
     * pose proof typec as typec'.
-      eapply (env_prop_typing _ _ validity) in typec' as wat; auto.
+      eapply (env_prop_typing _ _ validity_env) in typec' as wat; auto.
       unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
       destruct (on_declared_inductive isdecl) as [onind oib].
       destruct wat as [[spars sargs] cu].
-      clear X7. intuition auto. instantiate (1 := ps).
+      (* clear X7. intuition auto. instantiate (1 := ps).
       assert (wfps : wf_universe Σ ps).
       { now eapply PCUICWfUniverses.typing_wf_universe in IHp. }
-      move: IHp.
+      move: IHp. *)
       todo "case".
     (*
       pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
@@ -775,7 +775,7 @@ Proof.
       (subst_instance u pdecl.2)).
     { econstructor; eauto. }
 
-    pose proof (env_prop_typing _ _  validity _ _ _ _ _ typec).
+    pose proof (env_prop_typing _ _  validity_env _ _ _ _ _ typec).
     eapply inversion_mkApps in typec as [? [tcof tsp]]; auto.
     eapply type_tCoFix_inv in tcof as [d [[[Hnth wfcofix] Hbody] Hcum]]; auto.
     unfold unfold_cofix in e.
@@ -847,7 +847,7 @@ Proof.
       eapply X2.
 
   - (* Proj Constructor reduction *) 
-    pose proof (env_prop_typing _ _ validity _ _ _ _ _ typec).
+    pose proof (validity typec).
     simpl in typec.
     pose proof typec as typec'.
     eapply inversion_mkApps in typec as [A [tyc tyargs]]; auto.
@@ -1131,7 +1131,7 @@ Proof.
     repeat constructor. repeat constructor. constructor.
     now apply conv_sym, red_conv, red1_red. constructor.
     simpl. constructor. auto. red.
-    eapply validity_term in typec; auto.
+    eapply validity in typec; auto.
 
   - (* Fix congruence *)
     symmetry in H0; apply mkApps_Fix_spec in H0. simpl in H0. subst args.
@@ -1314,7 +1314,7 @@ Proof.
  
   - (* Conversion *)
     specialize (forall_u _ Hu).
-    eapply type_Cumul; eauto.
+    eapply type_Cumul; eauto. Unshelve. todo "case".
 Qed.
 
 Definition sr_stmt {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
@@ -1436,7 +1436,7 @@ Section SRContext.
     intros Ht Hr.
     eapply type_Cumul'. eassumption.
     2: now eapply cumul_red_l'.
-    destruct (validity_term wfΣ Ht) as [s HA]. 
+    destruct (validity Ht) as [s HA]. 
     exists s; eapply subject_reduction; eassumption.
   Defined.
 

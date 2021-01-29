@@ -316,7 +316,7 @@ Section Alpha.
              ++ apply conv_ctx_refl ; auto.
              ++ constructor. assumption. constructor.
                 eapply upto_names_impl_eq_term. assumption.
-      + eapply validity in hB as [? [? hB]]; eauto.
+      + eapply validity in hB;tea.
         eapply isType_tProd; eauto. split; eauto with pcuic.
       + constructor.
         eapply eq_term_leq_term.
@@ -353,7 +353,7 @@ Section Alpha.
                 now apply upto_names_impl_eq_term.
                 constructor.
                 now apply upto_names_impl_eq_term.
-      + eapply validity_term ; eauto.
+      + eapply validity ; eauto.
         econstructor ; eauto.
       + constructor.
         eapply eq_term_leq_term.
@@ -369,7 +369,7 @@ Section Alpha.
           all:typeclasses eauto.
         * eapply ihu. assumption.
         * eapply hty.
-      + eapply validity_term ; eauto.
+      + eapply validity ; eauto.
         econstructor ; eauto.
       + constructor.
         eapply eq_term_leq_term.
@@ -385,8 +385,9 @@ Section Alpha.
     - intros ind i u mdecl idecl cdecl isdecl ? ? ? v e; invs e.
       eapply R_universe_instance_eq in H4. subst.
       econstructor ; eauto.
-    - intros ind p c brs args ps mdecl idecl isdecl X X0 H cpc wfp wfpctx convpctx Hret IHret
-            wfcpc kelim Hc IHc iscof ptm wfbrs Hbrs v e; invs e.
+    - intros ind p c brs args ps mdecl idecl isdecl X X0 H cpc wfp 
+        cup wfpctx convpctx Hret IHret
+            wfcpc kelim Hctxi IHctxi Hc IHc iscof ptm wfbrs Hbrs v e; invs e.
       have eqp := X1.
       destruct X1 as [eqpars [eqinst [eqctx eqret]]].
       assert (wf_predicate mdecl idecl p').
@@ -410,23 +411,22 @@ Section Alpha.
       eapply R_universe_instance_eq in eqinst.
       eapply type_Cumul'.
       + econstructor; tea; eauto.
-        * eapply context_conversion; eauto.
+        * now rewrite -eqinst.
+        * simpl. eapply context_conversion; eauto.
           eapply wfcpc; eauto. now eapply case_predicate_context_equiv.
+        * instantiate (1 := args). todo "case".
         * rewrite -eqinst.
           eapply type_Cumul'.
           eapply IHc; eauto.
-          eapply validity_term in Hc as [s Hs]; eauto.
+          eapply validity in Hc as [s Hs]; eauto.
           red in Hs. exists s.
           eapply inversion_mkApps in Hs as [indty [Hind Hsp]]; tea.
-          eapply PCUICGeneration.type_mkApps; eauto.
-          
-          
-
-
-
-          eapply IHc. eapply wfcpc.          
-        unshelve eapply All2_trans'; [..|eassumption].
-        * exact (fun br bty : nat × term =>
+          eapply type_mkApps_arity; eauto.
+          all:todo "case".
+        * todo "case".
+        (* unshelve eapply All2_trans'; [..|eassumption]. *)
+        * todo "case".
+        (* exact (fun br bty : nat × term => 
                    (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)
                        × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))
                       × ∑ s, Σ;;; Γ |- bty.2 : tSort s ×
@@ -441,16 +441,18 @@ Section Alpha.
           intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
           eauto. *)
 
-      + eapply validity_term ; eauto.
+      + todo "case".
+      + todo "case".
+        (* eapply validity_term ; eauto.
         instantiate (1 := tCase ind p c brs).
         econstructor ; eauto.
         solve_all.
-      + constructor. reflexivity.
+      + constructor. reflexivity. *)
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e; invs e.
       eapply type_Cumul'.
       + econstructor. all: try eassumption.
         eapply ihc. assumption.
-      + eapply validity_term ; eauto.
+      + eapply validity ; eauto.
         econstructor ; eauto.
       + constructor.
         eapply eq_term_leq_term.
@@ -491,7 +493,7 @@ Section Alpha.
             4:now eapply eq_term_upto_univ_lift. all:tc.
           + apply IHX. }
       assert(#|fix_context mfix| = #|fix_context mfix'|).
-      { now rewrite !fix_context_length, (All2_length X). } 
+      { now rewrite !fix_context_length (All2_length X). } 
       eapply type_Cumul'.
       + econstructor.
         * eapply (fix_guard_eq_term _ _ _ _ n); eauto.
@@ -511,6 +513,7 @@ Section Alpha.
           eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
           exists s. rewrite <-H.
           eapply (weakening _ _ _ _ (tSort _)); eauto.
+          eapply hwf; eauto. reflexivity.
           apply cumul_refl. rewrite <- H.
           eapply eq_term_upto_univ_lift.
           eapply eq_term_upto_univ_empty_impl.
@@ -557,7 +560,7 @@ Section Alpha.
           all: intros ? ? []; reflexivity.
         + apply IHX. }
     assert(#|fix_context mfix| = #|fix_context mfix'|).
-    { now rewrite !fix_context_length, (All2_length X). } 
+    { now rewrite !fix_context_length (All2_length X). } 
     eapply type_Cumul'.
     + econstructor.
       * eapply (cofix_guard_eq_term _ _ _ _ n) ; eauto.
@@ -576,7 +579,8 @@ Section Alpha.
         eapply context_conversion; eauto.
         eapply (type_Cumul' (lift0 #|fix_context mfix| (dtype x))); auto.
         exists s. rewrite <-H.
-        eapply (weakening _ _ _ _ (tSort _)); eauto. 
+        eapply (weakening _ _ _ _ (tSort _)); eauto.
+        eapply hwf; eauto. reflexivity. 
         apply cumul_refl. rewrite <- H.
         eapply eq_term_upto_univ_lift.
         eapply eq_term_upto_univ_empty_impl.
@@ -701,7 +705,7 @@ Section Alpha.
       intros [ctx' s'] e; rewrite e in X; cbn in X; inv X.
       destruct v; inv Y.
       eapply IHu2 in e; tea. destruct e as [ctx'' [e1 e2]].
-      eexists; split. cbn. rewrite destArity_app, e1; reflexivity.
+      eexists; split. cbn. rewrite destArity_app e1; reflexivity.
       apply eq_context_upto_cat; tas. constructor; tas. reflexivity.
       constructor; auto.
     - intros X Y. rewrite destArity_app in X.
@@ -709,7 +713,7 @@ Section Alpha.
       intros [ctx' s'] e; rewrite e in X; cbn in X; inv X.
       destruct v; inv Y.
       eapply IHu3 in e; tea. destruct e as [ctx'' [e1 e2]].
-      eexists; split. cbn. rewrite destArity_app, e1; reflexivity.
+      eexists; split. cbn. rewrite destArity_app e1; reflexivity.
       apply eq_context_upto_cat; tas. constructor; tas. reflexivity.
       constructor; auto.
   Qed.

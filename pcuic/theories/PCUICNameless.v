@@ -1836,6 +1836,9 @@ Proof.
       rewrite nl_forget_types H0 /=.
       simpl. constructor => //.
       eapply Forall2_map; solve_all.
+    + simpl. tas.
+      unfold consistent_instance_ext.
+      rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
     + now rewrite -nlctx_app_context.
     + simpl.
       rewrite -nl_case_predicate_context.

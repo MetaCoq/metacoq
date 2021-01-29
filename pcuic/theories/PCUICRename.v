@@ -872,7 +872,7 @@ Proof.
     now rewrite -(wf_predicate_length_pcontext wfp).
   - f_equal.
     { now rewrite forget_types_mapi_context. } 
-    rewrite fold_context_k_snoc0 /= /snoc.
+    rewrite /pre_case_predicate_context_gen fold_context_k_snoc0 /= /snoc.
     f_equal.
     * rewrite /map_decl /=. f_equal.
       len. rewrite rename_mkApps /=. f_equal.
@@ -1733,7 +1733,7 @@ Proof.
     + rewrite rename_closed. 2: reflexivity.
       eapply declared_constructor_closed_type. all: eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
-    intros [_ IHΔ] ci_npar predctx wfp [wfpctx Hpctx] convctx Hpret 
+    intros [_ IHΔ] ci_npar predctx wfp cup [wfpctx Hpctx] convctx Hpret 
       IHpret [wfpredctx IHpredctx] isallowed.
     intros Hcxti IHctxi Hc IHc iscof ptm wfbrs Hbrs P Δ f Hf.
     simpl.

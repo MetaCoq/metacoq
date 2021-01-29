@@ -267,6 +267,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     mdecl.(ind_npars) = ci.(ci_npar) ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     wf_predicate mdecl idecl p ->
+    consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
     wf_local Σ (Γ ,,, p.(pcontext)) ->
     conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
@@ -429,7 +430,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max (wf_local_size _ typing_size _ a) 
-      (Nat.max (ctx_inst_size typing_size c0)
+      (Nat.max (ctx_inst_size typing_size c1)
         (Nat.max d1 (Nat.max d2 (branches_size typing_size a1)))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
@@ -691,6 +692,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         mdecl.(ind_npars) = ci.(ci_npar) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         wf_predicate mdecl idecl p ->
+        consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
         PΓ Σ (Γ ,,, p.(pcontext)) ->
         conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
@@ -936,13 +938,13 @@ Proof.
         ++ eapply (Hwf _ a); simpl; lia.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx; simpl; lia.
         ++ eapply (Htywf _ _ _ H). rewrite /predctx; simpl; lia.
-        ++ clear -c0 X14.
+        ++ clear -c1 X14.
           assert (forall (Γ' : context) (t T : term) (Hty : Σ;;; Γ' |- t : T),
-            typing_size Hty <= ctx_inst_size (@typing_size _) c0 ->
+            typing_size Hty <= ctx_inst_size (@typing_size _) c1 ->
             P Σ Γ' t T).
           { intros. eapply (X14 _ _ _ Hty). simpl. lia. }
-          clear -X c0.
-          revert c0 X.
+          clear -X c1.
+          revert c1 X.
           generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl))).
           generalize (pparams p ++ indices).
           intros l c ctxi IH; induction ctxi; constructor; eauto.
@@ -1149,6 +1151,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       mdecl.(ind_npars) = ci.(ci_npar) ->
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
       wf_predicate mdecl idecl p ->
+      consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
       PΓ Σ (Γ ,,, p.(pcontext)) ->
       conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
       forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
@@ -1226,6 +1229,7 @@ Ltac my_rename_hyp h th :=
   | (wf ?E) => fresh "wf" E
   | (wf (fst_ctx ?E)) => fresh "wf" E
   | (wf _) => fresh "wf"
+  | consistent_instance_ext _ _ ?cu => fresh "cu" cu
   | (typing _ _ ?t _) => fresh "type" t
   | (@cumul _ _ _ ?t _) => fresh "cumul" t
   | (conv _ _ ?t _) => fresh "conv" t

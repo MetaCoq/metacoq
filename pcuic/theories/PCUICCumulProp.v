@@ -1024,22 +1024,22 @@ Proof.
     eapply untyped_subslet_inds. simpl.
     eapply cumul_prop_subst_instance => //; eauto.
 
-  - eapply inversion_Case in X8 as (mdecl' & idecl' & indices' & data & cum); auto.
+  - eapply inversion_Case in X10 as (mdecl' & idecl' & indices' & data & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto. simpl.
-    clear X7.
+    clear X9.
     destruct data.
-    specialize (X6 _ _ H4 t0 _ (eq_term_upto_univ_napp_leq X9)).
+    todo "case".
+    (*specialize (X8 _ _ H4 t0 _ (eq_term_upto_univ_napp_leq X11)).
     eapply cumul_prop_sym => //.
     eapply cumul_prop_mkApps => //. rewrite /ptm /predctx.
-    todo "case".
     eapply All2_app. 2:(repeat constructor; auto using eq_term_eq_term_prop_impl).
     eapply cumul_prop_mkApps_Ind_inv in X6 => //.
     eapply All2_app_inv in X6 as [[] [[? ?]]].
     eapply All2_symP => //. typeclasses eauto.
     move: (All2_length a3). destruct e.
     rewrite -(All2_length a5) => hpars.
-    eapply app_inj in e2 as [eql ->] => //.
+    eapply app_inj in e2 as [eql ->] => //.*)
     
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
     intuition auto.
@@ -1063,8 +1063,8 @@ Proof.
     epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ a wfΣ a0).
     eapply subslet_untyped_subslet. eapply X3, validity; eauto.
     destruct a.
-    eapply validity_term, (isType_mkApps_Ind wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
-    eapply validity_term, (isType_mkApps_Ind wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
+    eapply validity, (isType_mkApps_Ind wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
+    eapply validity, (isType_mkApps_Ind wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
     eapply cumul_prop_subst_instance; eauto.
 
   - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.

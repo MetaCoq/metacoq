@@ -98,8 +98,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
     wf_local_bd Σ (Γ ,,, br.(bcontext)) ×
     wf_local_bd Σ (Γ ,,, brctxty.1) ×
     (conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
-    Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2 ×
-    Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 ◃ tSort ps)
+    Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2)
     0 idecl.(ind_ctors) brs ->
   Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (skipn ci.(ci_npar) args ++ [c])
 
@@ -158,28 +157,26 @@ and " Σ ;;; Γ |- t ◃ T " := (@checking _ Σ Γ t T) : type_scope
 and "'wf_local_bd' Σ Γ" := (All_local_env (lift_sorting checking infering_sort Σ) Γ).
 
 
-Definition tybranches {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
+Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
   All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
     let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
     wf_local_bd Σ (Γ ,,, (bcontext br)) ×
     wf_local_bd Σ (Γ ,,, brctxty.1) × 
     conv_context Σ (Γ ,,, (bcontext br)) (Γ ,,, brctxty.1) ×
-    Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2 ×
-    Σ;;; Γ,,, brctxty.1 |- brctxty.2 ◃ tSort ps)
+    Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2)
   n ctors brs.
 
-Definition branches_size {cf} {Σ Γ ci mdecl idecl p ps ptm brs}
+Definition branches_size {cf} {Σ Γ ci mdecl idecl p ptm brs}
    (checking_size : forall Σ Γ t T, Σ ;;; Γ |- t ◃ T -> size)
    (sorting_size : forall Σ Γ t s, Σ ;;; Γ |- t ▹□ s -> size)
   {n ctors}
-  (a : tybranches Σ Γ ci mdecl idecl p ps ptm n ctors brs) : size :=
+  (a : tybranches Σ Γ ci mdecl idecl p ptm n ctors brs) : size :=
 
   (all2i_size _ (fun i x y p => 
     (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.1) +
     (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.2.1) +
-    (checking_size _ _ _ _ p.2.2.2.1) +
-    (checking_size _ _ _ _ p.2.2.2.2))
+    (checking_size _ _ _ _ p.2.2.2))
   a).
 
 Fixpoint infering_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T) {struct d} : size
@@ -403,9 +400,7 @@ Section BidirectionalInduction.
         PΓ (Γ ,,, brctxty.1) ×
         conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1) ×
         Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2 ×
-        Pcheck (Γ ,,, brctxty.1) br.(bbody) brctxty.2 ×
-        Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 ◃ tSort ps ×
-        Pcheck (Γ ,,, brctxty.1) brctxty.2 (tSort ps))
+        Pcheck (Γ ,,, brctxty.1) br.(bbody) brctxty.2)
         0 idecl.(ind_ctors) brs ->
       Pinfer Γ (tCase ci p c brs) (mkApps ptm (skipn ci.(ci_npar) args ++ [c]))) ->
 
@@ -545,21 +540,17 @@ Section BidirectionalInduction.
       induction a2 as [|j cdecl br cdecls brs].
       1: by constructor.
       change (branches_size _ _ _) with
-      ((wfl_size r.1) + (wfl_size r.2.1) + (checking_size r.2.2.2.1) + (checking_size r.2.2.2.2) +
+      ((wfl_size r.1) + (wfl_size r.2.1) + (checking_size r.2.2.2) +
         branches_size (@checking_size cf) (@infering_sort_size cf) a2) in IH.
       rewrite -/predctx -/ptm in IH |- *.
       set brctxty := case_branch_type ci mdecl idecl p br ptm j cdecl.
       fold brctxty in IH, r.
-      destruct r as (?&?&?&?&?).
+      destruct r as (?&?&?&?).
       cbn -[branches_size] in IH.
       constructor.
       + repeat split.
         all: try assumption.
         * applyIH.
-        * applyIH.
-          cbn.
-          rewrite -/predctx -/ptm -/brctxty.
-          lia.
         * applyIH.
           cbn.
           rewrite -/predctx -/ptm -/brctxty.

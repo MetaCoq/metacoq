@@ -1,12 +1,24 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductiveInversion.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductiveInversion PCUICEquality.
 From MetaCoq.PCUIC Require Import PCUICWeakening PCUICClosed PCUICSubstitution PCUICPrincipality PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICSR PCUICWeakeningEnv PCUICContexts.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping.
+From MetaCoq.SafeChecker Require Import PCUICSafeRetyping.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+
+Lemma All2i_mix (A B : Type) (P Q : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
+  All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y) × (Q i x y)) n l l'.
+Proof.
+  intros AP.
+  dependent induction AP.
+  1: constructor.
+  intros AQ.
+  inversion_clear AQ.
+  constructor ; auto.
+Qed.
 
 Section BDToPCUICTyping.
 
@@ -155,33 +167,36 @@ Proof.
 
   - red ; intros ; econstructor ; eauto.
 
-  - red ; intros ; econstructor ; eauto.
-    + eapply type_Cumul ; eauto.
-      admit. (*the convertible inductive type is well-formed*)
+  - intros ; intro.
+  
+    assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [].
+    {
+      eapply cumul_Ind_Ind_inv in X8 as [[_ Ru] cl]; auto.
+      eapply validity_term in X7 as [] ; auto.
+      admit. (*well-formed type with the indices of the instance*)
+    }
+    econstructor ; eauto.
+    1: by eapply type_Cumul ; eauto.
 
-    + remember (ind_ctors idecl) as ctors.
       eapply All2i_impl.
-      1: eassumption.
-      intros.
-      cbn in X11.
-      fold brctxty in X11.
-      destruct X11 as (?&?&?&?&?&?&Hbody&?&Htype).
-
-      assert (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps).
-      { apply Htype.
-        1: auto.
-        eexists.
-        constructor.
-        1: auto.
-        eapply isType_Sort_inv ; auto.
-        apply validity_term in X5 ; eauto.
+      1:{ apply All2i_mix ; [eassumption|idtac].
+          eapply build_branches_type_wt ; eauto.
+          econstructor.
+          3: eassumption.
+          all: eauto.
       }
+      intros * Hprod ?.
+      fold predctx in brctxty.
+      fold ptm in brctxty.
+      cbv beta zeta in Hprod.
+      fold brctxty in Hprod.
+      destruct Hprod as ((?&?&?&?&?&?&Hbody)&?).
       repeat split.
       all: auto.
       apply Hbody ; auto.
       eexists.
       eassumption.
-
+      
   - red ; intros ; econstructor ; eauto.
 
   - red ; intros ; econstructor ; eauto.

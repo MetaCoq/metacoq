@@ -184,10 +184,10 @@ Proof.
     econstructor.
     all: eassumption.
     
-  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar predctx wfpred ? ? ty_p Cump ? ? ty_c Cumc ? ? ? ty_br.
+  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar predctx wfpred ? ? ? ty_p Cump ? ? ? ? ty_c Cumc ? ? ? ty_br.
 
     assert (wf_universe Σ ps).
-    { eapply validity_term in ty_p; eauto.
+    { apply validity in ty_p.
       apply isType_wf_universes in ty_p; auto.
       now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in ty_p.
     }
@@ -200,6 +200,7 @@ Proof.
       all: try eassumption.
       * eapply is_allowed_elimination_monotone.
         all: eassumption.
+      * admit.
       * apply cumul_mkApps_cum ; auto.
         -- constructor.
            replace #|x1| with #|pparams p ++ indices|.
@@ -256,7 +257,7 @@ Proof.
     + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args') by (apply infering_ind_typing in i0 ; auto).
       assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
-          apply validity_term in X1 as [] ; auto.
+          apply validity in X1 as [].
           eapply invert_type_mkApps_ind ; eauto.
         }
       assert (consistent_instance_ext Σ (ind_universes mdecl) ui').

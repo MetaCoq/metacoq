@@ -118,6 +118,42 @@ Proof.
     all: intuition.
 Qed.
 
+Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) Δ l : 
+ctx_inst (fun _ => Pcheck) Σ Γ l (List.rev Δ) -> wf_local Σ Δ -> ctx_inst typing Σ Γ l (List.rev Δ).
+Proof.
+  admit.
+
+  (* rewrite -{2}(rev_involutive Δ).
+  induction 1.
+  1: constructor.
+  + intros wfΔ.
+    assert (isType Σ [] t).
+    {
+      apply wf_local_app_inv in wfΔ as [].
+      inversion_clear a.
+      assumption.
+    }
+    assert (Σ ;;; Γ |- i : t).
+    {
+      apply t0 ; auto.
+      destruct X0 as [u ?].
+      exists u.
+      change Γ with (Γ,,, []).
+      by apply weaken_ctx.
+    }
+    constructor ; auto.
+    apply IHX.
+    rewrite -(rev_involutive Δ0) PCUICSpine.subst_telescope_subst_context List.rev_involutive.
+    replace (subst_context [i] 0 (List.rev Δ0)) with ([] ,,, (subst_context [i] 0 (List.rev Δ0)))
+      by apply app_context_nil_l.
+    eapply wf_local_subst1.
+    rewrite app_context_nil_l.
+    apply wf_local_app.
+    1: constructor ; eauto.
+    constructor. *)
+Admitted.
+
+
   
 Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
 Proof.
@@ -153,12 +189,9 @@ Proof.
     eapply type_App' ; auto.
     apply X2 ; auto.
     specialize (X0 X3).
-    apply validity_term in X0.
+    apply validity in X0 as [? X0].
+    apply inversion_Prod in X0 as (? & ? & ? & _).
     2: done.
-    destruct X0 as [? X0].
-    apply inversion_Prod in X0.
-    2: done.
-    destruct X0 as (? & ? & ? & _).
     eexists. eassumption.
 
   - red ; intros ; econstructor ; eauto.
@@ -168,34 +201,73 @@ Proof.
   - red ; intros ; econstructor ; eauto.
 
   - intros ; intro.
+
+    assert (cinst : ctx_inst typing Σ Γ (pparams p ++ skipn (ci_npar ci) args)
+            (List.rev (subst_instance (puinst p) (ind_params mdecl,,, ind_indices idecl)))).
+    { apply ctx_inst_impl ; auto.
+      apply (PCUICUnivSubstitution.wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
+      - by destruct isdecl.
+      - eapply on_minductive_wf_params_indices ; eauto.
+    }
   
     assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [].
     {
-      eapply cumul_Ind_Ind_inv in X8 as [[_ Ru] cl]; auto.
-      eapply validity_term in X7 as [] ; auto.
-      admit. (*well-formed type with the indices of the instance*)
+      eexists.
+      eapply type_mkApps_arity.
+      1: econstructor ; eauto.
+      erewrite PCUICDeclarationTyping.ind_arity_eq.
+      2: by eapply PCUICInductives.oib ; eauto.
+      rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
+      eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn ; auto.
+      - unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
+        1: admit.
+        apply PCUICWeakening.weaken_wf_local ; auto.
+        eapply PCUICArities.on_minductive_wf_params ; eauto.
+      - cbn.
+        rewrite subst_it_mkProd_or_LetIn.
+        cbn.
+        eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn_Sort.
+        1: by eapply on_inductive_sort_inst ; eauto.
+        1: reflexivity.
+      
+        rewrite PCUICSpine.subst_context_telescope.
+        unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
+        1: admit.
+        rewrite <- PCUICSpine.subst_context_telescope.
+        eapply substitution_wf_local ; auto.
+        * eapply PCUICSpine.inst_subslet.
+          apply PCUICSpine.ctx_inst_spine_subst ; auto.
+          apply PCUICWeakening.weaken_wf_local ; auto.
+          eapply wf_local_app_inv.
+          rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
+          eapply on_minductive_wf_params_indices_inst ; eauto.
+        * rewrite <- app_context_assoc.
+          apply PCUICWeakening.weaken_wf_local ; auto.
+          rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
+          eapply on_minductive_wf_params_indices_inst ; eauto.
     }
+
     econstructor ; eauto.
     1: by eapply type_Cumul ; eauto.
 
-      eapply All2i_impl.
-      1:{ apply All2i_mix ; [eassumption|idtac].
-          eapply build_branches_type_wt ; eauto.
-          econstructor.
-          3: eassumption.
-          all: eauto.
-      }
-      intros * Hprod ?.
-      fold predctx in brctxty.
-      fold ptm in brctxty.
-      cbv beta zeta in Hprod.
-      fold brctxty in Hprod.
-      destruct Hprod as ((?&?&?&?&?&?&Hbody)&?).
-      repeat split.
-      all: auto.
-      apply Hbody ; auto.
-      eexists.
-      eassumption.
+    eapply All2i_impl.
+    1:{ apply All2i_mix ; [eassumption|idtac].
+        eapply build_branches_type_wt ; eauto.
+        econstructor.
+        3: eassumption.
+        all: eauto.
+    }
+    intros * Hprod ?.
+    fold predctx in brctxty.
+    fold ptm in brctxty.
+    cbv beta zeta in Hprod.
+    fold brctxty in Hprod.
+    destruct Hprod as ((?&?&?&?&?&?&Hbody)&?).
+    repeat split.
+    all: auto.
+    apply Hbody ; auto.
+    eexists.
+    eassumption.
       
   - red ; intros ; econstructor ; eauto.
 
@@ -272,15 +344,15 @@ Proof.
     1: done.
     eapply isType_red.
     2: eassumption.
-    eapply validity_term.
-    all: auto.
+    eapply validity.
+    eauto.
   
   - red ; intros.
     have [] : (isType Σ Γ (tProd na A B)).
     { eapply isType_red.
       2: eassumption.
-      eapply validity_term.
-      all: auto.
+      eapply validity.
+      eauto.
     }
     econstructor.
     + by auto.
@@ -291,8 +363,8 @@ Proof.
     have [] : (isType Σ Γ (mkApps (tInd ind ui) args)).
     { eapply isType_red.
       2: eassumption.
-      eapply validity_term.
-      all: auto.
+      eapply validity.
+      eauto.
     }
 
     econstructor.

@@ -82,6 +82,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   mdecl.(ind_npars) = ci.(ci_npar) ->
   let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
   wf_predicate mdecl idecl p ->
+  consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
   wf_local_bd Σ (Γ ,,, predctx) ->
   conv_context Σ (Γ ,,, p.(pcontext)) (Γ,,, predctx) ->
@@ -89,6 +90,8 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   is_allowed_elimination Σ ps (ind_kelim idecl) ->
   forall u args,
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
+  ctx_inst checking Σ Γ (pparams p ++ (skipn (ci_npar ci) args))
+  (List.rev (subst_instance (puinst p) (ind_params mdecl,,, ind_indices idecl))) ->
   Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
   isCoFinite mdecl.(ind_finite) = false ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
@@ -202,7 +205,7 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | |- _ => exact 1
     end.
-    - exact (S (a + a0 + i + i1 + (branches_size (checking_size _) (infering_sort_size _) a2))).
+    - exact (S (a + a0 + i + i1 + (ctx_inst_size _ (checking_size _) c1) + (branches_size (checking_size _) (infering_sort_size _) a2))).
     - exact (S (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a) +
                (all_size _ (fun x p => checking_size _ _ _ _ _ p) a0)).
     - exact (S (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a) +
@@ -377,6 +380,7 @@ Section BidirectionalInduction.
       mdecl.(ind_npars) = ci.(ci_npar) ->
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
       wf_predicate mdecl idecl p ->
+      consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
       wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
       PΓ (Γ ,,, p.(pcontext)) ->
       wf_local_bd Σ (Γ ,,, predctx) ->
@@ -388,6 +392,10 @@ Section BidirectionalInduction.
       forall u args,
       Σ ;;; Γ |- c ▹{ci} (u,args) ->
       Pind Γ ci.(ci_ind) c u args ->
+      ctx_inst checking Σ Γ (p.(pparams) ++ skipn (ci_npar ci) args)
+          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
+      ctx_inst (fun _ => Pcheck) Σ Γ (p.(pparams) ++ skipn (ci_npar ci) args) 
+          (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
       Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
       isCoFinite mdecl.(ind_finite) = false ->
       let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
@@ -535,35 +543,53 @@ Section BidirectionalInduction.
 
     - unshelve eapply HCase ; auto.
       1-4: applyIH.
-      cbn in IH.
-      clear - IH a2.
-      induction a2 as [|j cdecl br cdecls brs].
-      1: by constructor.
-      change (branches_size _ _ _) with
-      ((wfl_size r.1) + (wfl_size r.2.1) + (checking_size r.2.2.2) +
-        branches_size (@checking_size cf) (@infering_sort_size cf) a2) in IH.
-      rewrite -/predctx -/ptm in IH |- *.
-      set brctxty := case_branch_type ci mdecl idecl p br ptm j cdecl.
-      fold brctxty in IH, r.
-      destruct r as (?&?&?&?).
-      cbn -[branches_size] in IH.
-      constructor.
-      + repeat split.
-        all: try assumption.
-        * applyIH.
-        * applyIH.
+      + cbn in IH.
+        clear - IH c1.
+        induction c1.
+        1: by constructor.
+        * constructor.
+          1: by applyIH.
+          apply IHc1.
+          intros.
+          apply IH.
           cbn.
-          rewrite -/predctx -/ptm -/brctxty.
           lia.
-        * applyIH.
+        * constructor.
+          apply IHc1.
+          intros.
+          apply IH.
           cbn.
-          rewrite -/predctx -/ptm -/brctxty.
+          lia. 
+
+      + cbn in IH.
+        clear - IH a2.
+        induction a2 as [|j cdecl br cdecls brs].
+        1: by constructor.
+        change (branches_size _ _ _) with
+        ((wfl_size r.1) + (wfl_size r.2.1) + (checking_size r.2.2.2) +
+          branches_size (@checking_size cf) (@infering_sort_size cf) a2) in IH.
+        rewrite -/predctx -/ptm in IH |- *.
+        set brctxty := case_branch_type ci mdecl idecl p br ptm j cdecl.
+        fold brctxty in IH, r.
+        destruct r as (?&?&?&?).
+        cbn -[branches_size] in IH.
+        constructor.
+        * repeat split.
+          all: try assumption.
+          --  applyIH.
+          --  applyIH.
+              cbn.
+              rewrite -/predctx -/ptm -/brctxty.
+              lia.
+          --  applyIH.
+              cbn.
+              rewrite -/predctx -/ptm -/brctxty.
+              lia.
+        * apply IHa2.
+          rewrite -/predctx -/ptm -/brctxty in IH |- *.
+          intros.
+          apply IH.
           lia.
-      + apply IHa2.
-        rewrite -/predctx -/ptm -/brctxty in IH |- *.
-        intros.
-        apply IH.
-        lia.
     
     - unshelve eapply HProj ; auto.
       all: applyIH.

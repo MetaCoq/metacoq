@@ -350,7 +350,8 @@ Definition branches_size {cf} {Σ Γ ci mdecl idecl p ps ptm brs}
       (Nat.max (typing_size _ _ _ _ p.2.2.1) (typing_size _ _ _ _ p.2.2.2))) a).
 
 Section CtxInstSize.
-  Context {cf} (typing_size : forall {Σ Γ t T}, Σ ;;; Γ |- t : T -> size).
+  Context {cf} (typing : global_env_ext -> context -> term -> term -> Type)
+  (typing_size : forall {Σ Γ t T}, typing Σ Γ t T -> size).
 
   Fixpoint ctx_inst_size {Σ Γ args Δ} (c : ctx_inst typing Σ Γ args Δ) : size :=
   match c with

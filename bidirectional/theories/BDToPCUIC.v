@@ -202,14 +202,26 @@ Proof.
 
   - intros ; intro.
 
-    assert (cinst : ctx_inst typing Σ Γ (pparams p ++ skipn (ci_npar ci) args)
-            (List.rev (subst_instance (puinst p) (ind_params mdecl,,, ind_indices idecl)))).
+    assert (cparams : ctx_inst typing Σ Γ (pparams p) (List.rev (subst_instance (puinst p) (ind_params mdecl)))).
     { apply ctx_inst_impl ; auto.
       apply (PCUICUnivSubstitution.wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
       - by destruct isdecl.
-      - eapply on_minductive_wf_params_indices ; eauto.
+      - eapply wf_local_app_inv.
+        eapply on_minductive_wf_params_indices ; eauto.
     }
-  
+
+    assert (cindices : ctx_inst typing Σ Γ (skipn (ci_npar ci) args) (subst_telescope (PCUICSpine.ctx_inst_sub cparams) 0
+       (List.rev (subst_instance (puinst p) (ind_indices idecl))))).
+    {
+      admit.
+    }
+
+    assert (cpar_ind :
+      ctx_inst typing Σ Γ (pparams p ++ skipn (ci_npar ci) args) (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl)))).
+    {
+      admit.
+    }
+
     assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [].
     {
       eexists.
@@ -220,7 +232,6 @@ Proof.
       rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
       eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn ; auto.
       - unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
-        1: admit.
         apply PCUICWeakening.weaken_wf_local ; auto.
         eapply PCUICArities.on_minductive_wf_params ; eauto.
       - cbn.
@@ -232,7 +243,13 @@ Proof.
       
         rewrite PCUICSpine.subst_context_telescope.
         unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
-        1: admit.
+        1:{
+          apply validity in X7  as [? ty_args]; auto.
+          eapply invert_type_mkApps_ind in ty_args as [] ; eauto.
+          rewrite rev_involutive.
+          assumption.
+        }
+
         rewrite <- PCUICSpine.subst_context_telescope.
         eapply substitution_wf_local ; auto.
         * eapply PCUICSpine.inst_subslet.

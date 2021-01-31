@@ -31,6 +31,36 @@ Proof.
   destruct le ; auto.
 Qed.
 
+Lemma ctx_inst_length_gen P Σ Γ args Δ :
+  ctx_inst P Σ Γ args Δ -> 
+  #|args| = context_assumptions Δ.
+Proof.
+  induction 1; simpl; auto.
+  rewrite /subst_telescope in IHX.
+  rewrite context_assumptions_mapi in IHX. congruence.
+  rewrite context_assumptions_mapi in IHX. congruence.
+Qed.
+
+Lemma ctx_inst_app_impl {P Q Σ Γ} {Δ : context} {Δ' args} (c : ctx_inst P Σ Γ args (Δ ++ Δ')) :
+  (forall Γ' t T, P Σ Γ' t T -> Q Σ Γ' t T) ->
+  ctx_inst Q Σ Γ (firstn (context_assumptions Δ) args) Δ.
+Proof.
+  revert args Δ' c.
+  induction Δ using PCUICInduction.ctx_length_ind; intros.
+  1: constructor.
+  depelim c; simpl.
+  - specialize (X (subst_telescope [i] 0 Γ0) ltac:(now rewrite /subst_telescope mapi_length)).
+    rewrite PCUICSpine.subst_telescope_app in c.
+    specialize (X _ _ c).
+    rewrite PCUICSpine.context_assumptions_subst_telescope in X.
+    constructor; auto.
+  - specialize (X (subst_telescope [b] 0 Γ0) ltac:(now rewrite /subst_telescope mapi_length)).
+    rewrite PCUICSpine.subst_telescope_app in c.
+    specialize (X _ _ c).
+    rewrite PCUICSpine.context_assumptions_subst_telescope in X.
+    constructor; auto.
+Qed.
+
 
 Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
@@ -200,7 +230,17 @@ Proof.
       all: try eassumption.
       * eapply is_allowed_elimination_monotone.
         all: eassumption.
-      * admit.
+      * rewrite PCUICUnivSubstitution.subst_instance_app_ctx rev_app_distr in X3.
+        replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
+        eapply ctx_inst_app_impl ; eauto.
+        1: apply conv_check.
+        rewrite PCUICSpine.context_assumptions_rev context_assumptions_subst_instance.
+        erewrite PCUICDeclarationTyping.onNpars.
+        2: eapply on_declared_minductive ; eauto.
+        rewrite (firstn_app_left _ 0).
+        1: by rewrite Nat.add_0_r ; destruct wfpred.
+        by apply app_nil_r.
+
       * apply cumul_mkApps_cum ; auto.
         -- constructor.
            replace #|x1| with #|pparams p ++ indices|.
@@ -262,7 +302,7 @@ Proof.
         }
       assert (consistent_instance_ext Σ (ind_universes mdecl) ui').
         { destruct isdecl.
-          apply validity_term in X2 as [] ; auto.
+          apply validity in X2 as [] ; auto.
           eapply invert_type_mkApps_ind ; eauto.
         }
       unshelve epose proof (wf_projection_context _ _ _ _) ; eauto.
@@ -270,10 +310,10 @@ Proof.
       eapply subst_cumul.
       * assumption.
       * eapply projection_subslet.
-        4: eapply validity_term.
+        4: eapply validity.
         all: eassumption.
       * eapply projection_subslet.
-        4: eapply validity_term.
+        4: eapply validity.
         all: eassumption.
       * constructor.
         1: reflexivity.

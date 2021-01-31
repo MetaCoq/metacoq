@@ -20,6 +20,83 @@ Proof.
   constructor ; auto.
 Qed.
 
+Lemma All_local_env_app_l P Γ Γ' : All_local_env P (Γ ,,, Γ') -> All_local_env P Γ.
+Proof.
+  induction Γ'.
+  1: auto.
+  cbn.
+  intros all.
+  inversion all ; auto.
+Qed.
+
+Lemma wf_local_rel_subst1 `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Δ Γ na b t Γ' :
+      wf_local_rel Σ Δ (Γ ,,, [],, vdef na b t ,,, Γ') ->
+      wf_local_rel Σ Δ (Γ ,,, subst_context [b] 0 Γ').
+Proof.
+  induction Γ' as [|d Γ']; [now inversion 1|].
+  change (d :: Γ') with (Γ' ,, d).
+  destruct d as [na' [bd|] ty]; rewrite !app_context_cons; intro HH.
+  - rewrite subst_context_snoc0. simpl.
+    inversion HH; subst; cbn in *. destruct X0 as [s X0].
+    change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
+    assert (subslet Σ (Δ ,,, Γ) [b] [vdef na b t]). {
+      pose proof (cons_let_def Σ (Δ ,,, Γ) [] [] na b t) as XX.
+      rewrite !subst_empty in XX. apply XX. constructor.
+      apply All_local_env_app_l in X. inversion X; subst; cbn in * ; assumption.
+    }
+    constructor; cbn; auto.
+    1: apply IHΓ' ; exact X.
+    1: exists s.
+    1: change (tSort s) with (subst [b] #|Γ'| (tSort s)).
+    all: rewrite app_context_assoc.
+    all: eapply substitution; tea.
+    1: rewrite !app_context_assoc in X0 ; assumption.
+    rewrite !app_context_assoc in X1 ; assumption.
+  - rewrite subst_context_snoc0. simpl.
+    inversion HH; subst; cbn in *. destruct X0 as [s X0].
+    change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
+    assert (subslet Σ (Δ ,,, Γ) [b] [vdef na b t]). {
+      pose proof (cons_let_def Σ (Δ ,,, Γ) [] [] na b t) as XX.
+      rewrite !subst_empty in XX. apply XX. constructor.
+      apply All_local_env_app_l in X. inversion X; subst; cbn in *; assumption. }
+    constructor; cbn; auto.
+    1: apply IHΓ' ; exact X.
+    exists s.
+    change (tSort s) with (subst [b] #|Γ'| (tSort s)).
+    rewrite app_context_assoc.
+    all: eapply substitution; tea.
+    rewrite !app_context_assoc in X0. eassumption.
+Qed.
+
+Lemma wf_rel_weak `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) Γ' :
+  wf_local Σ Γ' -> wf_local_rel Σ Γ Γ'.
+Proof.
+  induction Γ' as [|[? []] ?].
+  - by constructor.
+  - intros wfl. inversion_clear wfl.
+    constructor.
+    + apply IHΓ'. assumption.
+    + destruct X0.
+      eexists.
+      apply weaken_ctx ; eauto.
+    + apply weaken_ctx ; auto.
+  - intros wfl. inversion_clear wfl.
+    constructor.
+    + apply IHΓ'. assumption.
+    + destruct X0.
+      eexists.
+      apply weaken_ctx ; eauto.
+Qed.      
+
+Lemma wf_rel_def `{checker_flags} Σ Γ na i t Δ : wf_local_rel Σ (Γ ,, vass na t) Δ -> wf_local_rel Σ (Γ ,, vdef na i t) Δ.
+Proof.
+  intros.
+  eapply All_local_env_impl.
+  1: eassumption.
+  intros Γ' t' [] ty ; cbn in *.
+Admitted.
+
+
 Section BDToPCUICTyping.
 
   Context `{cf : checker_flags}.
@@ -43,35 +120,6 @@ Section BDToPCUICTyping.
 
   Let PΓ Γ :=
     wf_local Σ Γ.
-
-  Lemma wf_arities_context' :
-    forall (mdecl : mutual_inductive_body),
-      All (fun idecl => on_type (lift_typing typing) Σ [] (ind_type idecl)) (ind_bodies mdecl) ->
-      wf_local Σ (arities_context (ind_bodies mdecl)).
-  Proof.
-    intros mdecl Hdecl.
-    unfold arities_context.
-    revert Hdecl.
-    induction (ind_bodies mdecl) using rev_ind. 1: constructor.
-    intros Ha.
-    rewrite rev_map_app.
-    simpl.    
-    apply All_app in Ha as [Hl Hx].
-    inv Hx. clear X0.
-    destruct X as [s Hs].
-    specialize (IHl Hl).
-    econstructor; eauto.
-    fold (arities_context l) in *.
-    unshelve epose proof (weakening Σ [] (arities_context l) _ _ wfΣ _ Hs).
-    1: now rewrite app_context_nil_l.
-    simpl in X.
-    simpl.
-    eapply (env_prop_typing _ _ typecheck_closed) in Hs; eauto.
-    rewrite -> andb_and in Hs. destruct Hs as [Hs Ht].
-    simpl in Hs. apply (lift_closed #|arities_context l|) in Hs.
-    rewrite -> Hs, app_context_nil_l in X. simpl. exists s.
-    apply X.
-  Qed.
 
 Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
   All_local_env_over_sorting checking infering_sort 
@@ -118,42 +166,54 @@ Proof.
     all: intuition.
 Qed.
 
-Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) Δ l : 
-ctx_inst (fun _ => Pcheck) Σ Γ l (List.rev Δ) -> wf_local Σ Δ -> ctx_inst typing Σ Γ l (List.rev Δ).
-Proof.
-  admit.
 
-  (* rewrite -{2}(rev_involutive Δ).
-  induction 1.
-  1: constructor.
-  + intros wfΔ.
-    assert (isType Σ [] t).
+Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
+  forall args, ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst typing Σ Γ args Δ.
+Proof.
+  revert wfΔ.
+  induction Δ using PCUICInduction.ctx_length_ind.
+  1: intros _ ? d ; inversion_clear d ; constructor.
+  intros wfΔ args ctxi ; inversion ctxi.
+  - subst d.
+    subst.
+    assert (isType Σ Γ t).
     {
-      apply wf_local_app_inv in wfΔ as [].
-      inversion_clear a.
-      assumption.
-    }
-    assert (Σ ;;; Γ |- i : t).
-    {
-      apply t0 ; auto.
-      destruct X0 as [u ?].
-      exists u.
-      change Γ with (Γ,,, []).
-      by apply weaken_ctx.
+      eapply wf_local_rel_app_inv in wfΔ as [wfd _].
+      inversion_clear wfd.
+      eassumption.
     }
     constructor ; auto.
-    apply IHX.
-    rewrite -(rev_involutive Δ0) PCUICSpine.subst_telescope_subst_context List.rev_involutive.
-    replace (subst_context [i] 0 (List.rev Δ0)) with ([] ,,, (subst_context [i] 0 (List.rev Δ0)))
-      by apply app_context_nil_l.
-    eapply wf_local_subst1.
-    rewrite app_context_nil_l.
-    apply wf_local_app.
-    1: constructor ; eauto.
-    constructor. *)
-Admitted.
-
-
+    apply X ; auto.
+    1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
+    rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
+    rewrite <- app_nil_r.
+    eapply wf_local_rel_subst1.
+    cbn in wfΔ |- *.
+    eapply wf_local_rel_app.
+    + econstructor ; eauto.
+      1: destruct X2 ; eexists ; eauto.
+      eapply X0 ; auto.
+    + apply wf_local_rel_app_inv in wfΔ as [_ ?].
+      apply wf_rel_def.
+      eassumption.
+      
+  - subst d.
+    subst.
+    assert (isType Σ Γ t).
+    {
+      eapply wf_local_rel_app_inv in wfΔ as [wfd _].
+      inversion_clear wfd.
+      eassumption.
+    }
+    constructor ; auto.
+    apply X ; auto.
+    1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
+    rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
+    rewrite <- app_nil_r.
+    eapply wf_local_rel_subst1.
+    cbn in wfΔ |- *.
+    eassumption.
+Qed.
   
 Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
 Proof.
@@ -204,6 +264,9 @@ Proof.
 
     assert (cparams : ctx_inst typing Σ Γ (pparams p) (List.rev (subst_instance (puinst p) (ind_params mdecl)))).
     { apply ctx_inst_impl ; auto.
+      rewrite rev_involutive.
+      apply wf_rel_weak ; auto.
+      
       apply (PCUICUnivSubstitution.wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
       - by destruct isdecl.
       - eapply wf_local_app_inv.
@@ -213,6 +276,8 @@ Proof.
     assert (cindices : ctx_inst typing Σ Γ (skipn (ci_npar ci) args) (subst_telescope (PCUICSpine.ctx_inst_sub cparams) 0
        (List.rev (subst_instance (puinst p) (ind_indices idecl))))).
     {
+      apply validity in X7 as [? ty_args] ; auto.
+      eapply invert_type_mkApps_ind in ty_args as [ty_args _] ; eauto.
       admit.
     }
 

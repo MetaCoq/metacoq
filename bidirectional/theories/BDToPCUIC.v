@@ -88,13 +88,16 @@ Proof.
       apply weaken_ctx ; eauto.
 Qed.      
 
-Lemma wf_rel_def `{checker_flags} Σ Γ na i t Δ : wf_local_rel Σ (Γ ,, vass na t) Δ -> wf_local_rel Σ (Γ ,, vdef na i t) Δ.
+Lemma wf_local_local_rel `{checker_flags} Σ Γ Γ' : wf_local Σ (Γ ,,, Γ') -> wf_local_rel Σ Γ Γ'.
 Proof.
-  intros.
-  eapply All_local_env_impl.
-  1: eassumption.
-  intros Γ' t' [] ty ; cbn in *.
-Admitted.
+  induction Γ'.
+  1: constructor.
+  cbn.
+  intros wfΓ.
+  inversion_clear wfΓ.
+  all: constructor ; auto.
+  all: apply IHΓ' ; eassumption.
+Qed.
 
 
 Section BDToPCUICTyping.
@@ -121,390 +124,404 @@ Section BDToPCUICTyping.
   Let PΓ Γ :=
     wf_local Σ Γ.
 
-Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
-  All_local_env_over_sorting checking infering_sort 
-    (fun Σ Γ _ t T _ => Pcheck Γ t T)
-    (fun Σ Γ _ t u _ => Psort Γ t u) 
-    Σ Γ all ->
-  wf_local Σ Γ.
-Proof.
-  intros allo ; induction allo.
-  all: constructor.
-  1,3: assumption.
-  all: red.
-  - simpl in tu. eexists.
-    auto.
-  - destruct tu. eexists.
-    auto.
-  - destruct tu.
-    apply c ; auto.
-    eexists. red. auto.
-Qed.
+  Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
+    All_local_env_over_sorting checking infering_sort 
+      (fun Σ Γ _ t T _ => Pcheck Γ t T)
+      (fun Σ Γ _ t u _ => Psort Γ t u) 
+      Σ Γ all ->
+    wf_local Σ Γ.
+  Proof.
+    intros allo ; induction allo.
+    all: constructor.
+    1,3: assumption.
+    all: red.
+    - simpl in tu. eexists.
+      auto.
+    - destruct tu. eexists.
+      auto.
+    - destruct tu.
+      apply c ; auto.
+      eexists. red. auto.
+  Qed.
 
-Lemma type_local_ctx_impl Γ Δ u (wfΓ : wf_local Σ Γ):
-  type_local_ctx (lift_sorting (fun _ => Pcheck) (fun _ => Psort)) Σ Γ Δ u -> type_local_ctx (lift_typing typing) Σ Γ Δ u.
-Proof.
-  intros HΔ.
-  induction Δ as [|[? []]].
-  1: auto.
-  all: simpl.
-  1: destruct HΔ as (?&[]&?).
-  2: destruct HΔ.
-  all: have wfΓΔ : wf_local Σ (Γ ,,, Δ) by eapply type_local_ctx_wf_local ; eauto.
-  all: repeat split ; auto.
-  - eexists. eauto.
-  - apply l.
-    2: eexists ; eapply p.
-    all: eauto.
-  - apply l.
-    1: assumption.
-    eexists.
-    constructor ; auto.
-    clear - t.
+  Lemma type_local_ctx_impl Γ Δ u (wfΓ : wf_local Σ Γ):
+    type_local_ctx (lift_sorting (fun _ => Pcheck) (fun _ => Psort)) Σ Γ Δ u -> type_local_ctx (lift_typing typing) Σ Γ Δ u.
+  Proof.
+    intros HΔ.
     induction Δ as [|[? []]].
-    1: assumption.
-    all: intuition.
-Qed.
-
-
-Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
-  forall args, ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst typing Σ Γ args Δ.
-Proof.
-  revert wfΔ.
-  induction Δ using PCUICInduction.ctx_length_ind.
-  1: intros _ ? d ; inversion_clear d ; constructor.
-  intros wfΔ args ctxi ; inversion ctxi.
-  - subst d.
-    subst.
-    assert (isType Σ Γ t).
-    {
-      eapply wf_local_rel_app_inv in wfΔ as [wfd _].
-      inversion_clear wfd.
-      eassumption.
-    }
-    constructor ; auto.
-    apply X ; auto.
-    1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
-    rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
-    rewrite <- app_nil_r.
-    eapply wf_local_rel_subst1.
-    cbn in wfΔ |- *.
-    eapply wf_local_rel_app.
-    + econstructor ; eauto.
-      1: destruct X2 ; eexists ; eauto.
-      eapply X0 ; auto.
-    + apply wf_local_rel_app_inv in wfΔ as [_ ?].
-      apply wf_rel_def.
-      eassumption.
-      
-  - subst d.
-    subst.
-    assert (isType Σ Γ t).
-    {
-      eapply wf_local_rel_app_inv in wfΔ as [wfd _].
-      inversion_clear wfd.
-      eassumption.
-    }
-    constructor ; auto.
-    apply X ; auto.
-    1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
-    rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
-    rewrite <- app_nil_r.
-    eapply wf_local_rel_subst1.
-    cbn in wfΔ |- *.
-    eassumption.
-Qed.
-  
-Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
-Proof.
-  apply bidir_ind_env.
-
-  { intros. eapply bd_wf_local. eassumption. }
-
-  - red ; intros ; econstructor ; eauto.
-
-  - red ; intros ; econstructor ; eauto.
-
-  - red ; intros ; econstructor ; eauto.
-    apply X2.
-    constructor. 1: by auto.
-    eexists. eauto.
-
-  - red ; intros ; econstructor ; eauto.
-    apply X2.
-    constructor. 1: by auto.
-    eexists. eauto.
-  
-  - red ; intros ; econstructor ; eauto.
-    + apply X2 ; auto.
+    1: auto.
+    all: simpl.
+    1: destruct HΔ as (?&[]&?).
+    2: destruct HΔ.
+    all: have wfΓΔ : wf_local Σ (Γ ,,, Δ) by eapply type_local_ctx_wf_local ; eauto.
+    all: repeat split ; auto.
+    - eexists. eauto.
+    - apply l.
+      2: eexists ; eapply p.
+      all: eauto.
+    - apply l.
+      1: assumption.
       eexists.
-      red. eauto.
-  
-    + apply X4.
       constructor ; auto.
-      * eexists. eauto.
-      * apply X2 ; auto. eexists. red. eauto.
-  
-  - red ; intros.
-    eapply type_App' ; auto.
-    apply X2 ; auto.
-    specialize (X0 X3).
-    apply validity in X0 as [? X0].
-    apply inversion_Prod in X0 as (? & ? & ? & _).
-    2: done.
-    eexists. eassumption.
+      clear - t.
+      induction Δ as [|[? []]].
+      1: assumption.
+      all: intuition.
+  Qed.
 
-  - red ; intros ; econstructor ; eauto.
+  Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
+    forall args, ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst typing Σ Γ args Δ.
+  Proof.
+    revert wfΔ.
+    induction Δ using PCUICInduction.ctx_length_ind.
+    1: intros _ ? d ; inversion_clear d ; constructor.
+    intros wfΔ args ctxi ; inversion ctxi.
+    - subst d.
+      subst.
+      assert (isType Σ Γ t).
+      {
+        eapply wf_local_rel_app_inv in wfΔ as [wfd _].
+        inversion_clear wfd.
+        eassumption.
+      }
+      constructor ; auto.
+      apply X ; auto.
+      1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
+      rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
+      cbn in wfΔ.
+      apply wf_local_rel_app_inv in wfΔ as [].
+      apply wf_local_local_rel.
+      eapply substitution_wf_local ; eauto.
+      1: repeat constructor.
+      1: rewrite subst_empty ; eauto.
+      apply wf_local_app.
+      1: constructor ; eauto.
+      eassumption.
+    - subst d.
+      subst.
+      assert (isType Σ Γ t).
+      {
+        eapply wf_local_rel_app_inv in wfΔ as [wfd _].
+        inversion_clear wfd.
+        eassumption.
+      }
+      constructor ; auto.
+      apply X ; auto.
+      1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
+      rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
+      rewrite <- app_nil_r.
+      eapply wf_local_rel_subst1.
+      cbn in wfΔ |- *.
+      eassumption.
+  Qed.
+    
+  Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
+  Proof.
+    apply bidir_ind_env.
 
-  - red ; intros ; econstructor ; eauto.
+    { intros. eapply bd_wf_local. eassumption. }
 
-  - red ; intros ; econstructor ; eauto.
+    - red ; intros ; econstructor ; eauto.
 
-  - intros ; intro.
+    - red ; intros ; econstructor ; eauto.
 
-    assert (cparams : ctx_inst typing Σ Γ (pparams p) (List.rev (subst_instance (puinst p) (ind_params mdecl)))).
-    { apply ctx_inst_impl ; auto.
-      rewrite rev_involutive.
-      apply wf_rel_weak ; auto.
-      
-      apply (PCUICUnivSubstitution.wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
-      - by destruct isdecl.
-      - eapply wf_local_app_inv.
-        eapply on_minductive_wf_params_indices ; eauto.
-    }
+    - red ; intros ; econstructor ; eauto.
+      apply X2.
+      constructor. 1: by auto.
+      eexists. eauto.
 
-    assert (cindices : ctx_inst typing Σ Γ (skipn (ci_npar ci) args) (subst_telescope (PCUICSpine.ctx_inst_sub cparams) 0
-       (List.rev (subst_instance (puinst p) (ind_indices idecl))))).
-    {
-      apply validity in X7 as [? ty_args] ; auto.
-      eapply invert_type_mkApps_ind in ty_args as [ty_args _] ; eauto.
-      admit.
-    }
+    - red ; intros ; econstructor ; eauto.
+      apply X2.
+      constructor. 1: by auto.
+      eexists. eauto.
+    
+    - red ; intros ; econstructor ; eauto.
+      + apply X2 ; auto.
+        eexists.
+        red. eauto.
+    
+      + apply X4.
+        constructor ; auto.
+        * eexists. eauto.
+        * apply X2 ; auto. eexists. red. eauto.
+    
+    - red ; intros.
+      eapply type_App' ; auto.
+      apply X2 ; auto.
+      specialize (X0 X3).
+      apply validity in X0 as [? X0].
+      apply inversion_Prod in X0 as (? & ? & ? & _).
+      2: done.
+      eexists. eassumption.
 
-    assert (cpar_ind :
-      ctx_inst typing Σ Γ (pparams p ++ skipn (ci_npar ci) args) (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl)))).
-    {
-      admit.
-    }
+    - red ; intros ; econstructor ; eauto.
 
-    assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [].
-    {
-      eexists.
-      eapply type_mkApps_arity.
-      1: econstructor ; eauto.
-      erewrite PCUICDeclarationTyping.ind_arity_eq.
-      2: by eapply PCUICInductives.oib ; eauto.
-      rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
-      eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn ; auto.
-      - unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
-        apply PCUICWeakening.weaken_wf_local ; auto.
-        eapply PCUICArities.on_minductive_wf_params ; eauto.
-      - cbn.
-        rewrite subst_it_mkProd_or_LetIn.
-        cbn.
-        eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn_Sort.
-        1: by eapply on_inductive_sort_inst ; eauto.
-        1: reflexivity.
-      
-        rewrite PCUICSpine.subst_context_telescope.
-        unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
-        1:{
-          apply validity in X7  as [? ty_args]; auto.
-          eapply invert_type_mkApps_ind in ty_args as [] ; eauto.
-          rewrite rev_involutive.
-          assumption.
+    - red ; intros ; econstructor ; eauto.
+
+    - red ; intros ; econstructor ; eauto.
+
+    - intros ; intro.
+
+      assert (cparams : ctx_inst typing Σ Γ (pparams p) (List.rev (subst_instance (puinst p) (ind_params mdecl)))).
+      { apply ctx_inst_impl ; auto.
+        rewrite rev_involutive.
+        apply wf_rel_weak ; auto.
+        
+        apply (PCUICUnivSubstitution.wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
+        - by destruct isdecl.
+        - eapply wf_local_app_inv.
+          eapply on_minductive_wf_params_indices ; eauto.
+      }
+
+      assert (cindices : ctx_inst typing Σ Γ (skipn (ci_npar ci) args) (subst_telescope (PCUICSpine.ctx_inst_sub cparams) 0
+        (List.rev (subst_instance (puinst p) (ind_indices idecl))))).
+      {
+        apply validity in X7 as [? ty_args] ; auto.
+        eapply invert_type_mkApps_ind in ty_args as [ty_args ?] ; eauto.
+
+        erewrite ind_arity_eq in ty_args.
+        2: eapply PCUICInductives.oib ; eauto.
+        repeat rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in ty_args.
+        assert (ind_npars mdecl <= #|args|).
+        {
+          admit.
         }
+        rewrite -(firstn_skipn (ci_npar ci) args) in ty_args.
+        apply PCUICSpine.typing_spine_inv in ty_args as (?&(?&?)&?) ; auto.
+        2:{ rewrite firstn_length_le -H // context_assumptions_subst_instance.
+            symmetry.
+            eapply PCUICDeclarationTyping.onNpars.
+            eapply on_declared_inductive ; eauto.
+        }
+        2:{ repeat rewrite <- PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
+            erewrite <- ind_arity_eq.
+            2: eapply PCUICInductives.oib ; eauto.
+            eapply declared_inductive_valid_type ; eauto.
+        }
+      }        
 
-        rewrite <- PCUICSpine.subst_context_telescope.
-        eapply substitution_wf_local ; auto.
-        * eapply PCUICSpine.inst_subslet.
-          apply PCUICSpine.ctx_inst_spine_subst ; auto.
+      assert (cpar_ind :
+        ctx_inst typing Σ Γ (pparams p ++ skipn (ci_npar ci) args) (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl)))).
+      {
+        admit.
+      }
+
+      assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [].
+      {
+        eexists.
+        eapply type_mkApps_arity.
+        1: econstructor ; eauto.
+        erewrite PCUICDeclarationTyping.ind_arity_eq.
+        2: by eapply PCUICInductives.oib ; eauto.
+        rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
+        eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn ; auto.
+        - unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
           apply PCUICWeakening.weaken_wf_local ; auto.
-          eapply wf_local_app_inv.
-          rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
-          eapply on_minductive_wf_params_indices_inst ; eauto.
-        * rewrite <- app_context_assoc.
-          apply PCUICWeakening.weaken_wf_local ; auto.
-          rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
-          eapply on_minductive_wf_params_indices_inst ; eauto.
-    }
+          eapply PCUICArities.on_minductive_wf_params ; eauto.
+        - cbn.
+          rewrite subst_it_mkProd_or_LetIn.
+          cbn.
+          eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn_Sort.
+          1: by eapply on_inductive_sort_inst ; eauto.
+          1: reflexivity.
+        
+          rewrite PCUICSpine.subst_context_telescope.
+          unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
+          1:{
+            rewrite rev_involutive.
+            assumption.
+          }
 
-    econstructor ; eauto.
-    1: by eapply type_Cumul ; eauto.
+          rewrite <- PCUICSpine.subst_context_telescope.
+          eapply substitution_wf_local ; auto.
+          * eapply PCUICSpine.inst_subslet.
+            apply PCUICSpine.ctx_inst_spine_subst ; auto.
+            apply PCUICWeakening.weaken_wf_local ; auto.
+            eapply wf_local_app_inv.
+            rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
+            eapply on_minductive_wf_params_indices_inst ; eauto.
+          * rewrite <- app_context_assoc.
+            apply PCUICWeakening.weaken_wf_local ; auto.
+            rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
+            eapply on_minductive_wf_params_indices_inst ; eauto.
+      }
 
-    eapply All2i_impl.
-    1:{ apply All2i_mix ; [eassumption|idtac].
-        eapply build_branches_type_wt ; eauto.
-        econstructor.
-        3: eassumption.
-        all: eauto.
-    }
-    intros * Hprod ?.
-    fold predctx in brctxty.
-    fold ptm in brctxty.
-    cbv beta zeta in Hprod.
-    fold brctxty in Hprod.
-    destruct Hprod as ((?&?&?&?&?&?&Hbody)&?).
-    repeat split.
-    all: auto.
-    apply Hbody ; auto.
-    eexists.
-    eassumption.
-      
-  - red ; intros ; econstructor ; eauto.
+      econstructor ; eauto.
+      1: by eapply type_Cumul ; eauto.
 
-  - red ; intros ; econstructor ; eauto.
-
-    + clear H H0 H1 X0.
-      induction X.
-      all: constructor ; auto.
-      destruct p as (? & ? & ?).
+      eapply All2i_impl.
+      1:{ apply All2i_mix ; [eassumption|idtac].
+          eapply build_branches_type_wt ; eauto.
+          econstructor.
+          3: eassumption.
+          all: eauto.
+      }
+      intros * Hprod ?.
+      fold predctx in brctxty.
+      fold ptm in brctxty.
+      cbv beta zeta in Hprod.
+      fold brctxty in Hprod.
+      destruct Hprod as ((?&?&?&?&?&?&Hbody)&?).
+      repeat split.
+      all: auto.
+      apply Hbody ; auto.
       eexists.
-      apply p.
-      auto.
+      eassumption.
+        
+    - red ; intros ; econstructor ; eauto.
 
-    + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
-      { clear H H0 H1 X0.
+    - red ; intros ; econstructor ; eauto.
+
+      + clear H H0 H1 X0.
         induction X.
         all: constructor ; auto.
         destruct p as (? & ? & ?).
         eexists.
         apply p.
         auto.
-      }
-      have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf.
 
-      remember (fix_context mfix) as Γ'.
-      clear H H0 H1 HeqΓ'.
-      induction X0.
-      all: constructor ; auto.
-      2:{ inversion_clear X. apply IHX0 ; auto. inversion_clear Htypes. auto. }
-      destruct p.
-      apply p ; auto.
-      inversion_clear Htypes as [| ? ? [u]].
-      exists u.
-      change (tSort u) with (lift0 #|Γ'| (tSort u)).
-      apply weakening.
-      all: auto.
+      + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
+        { clear H H0 H1 X0.
+          induction X.
+          all: constructor ; auto.
+          destruct p as (? & ? & ?).
+          eexists.
+          apply p.
+          auto.
+        }
+        have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf.
 
-  - red ; intros ; econstructor ; eauto.
-    + clear H H0 H1 X0.
-      induction X.
-      all: constructor ; auto.
-      destruct p as (? & ? & ?).
-      eexists.
-      apply p.
-      auto.
+        remember (fix_context mfix) as Γ'.
+        clear H H0 H1 HeqΓ'.
+        induction X0.
+        all: constructor ; auto.
+        2:{ inversion_clear X. apply IHX0 ; auto. inversion_clear Htypes. auto. }
+        destruct p.
+        apply p ; auto.
+        inversion_clear Htypes as [| ? ? [u]].
+        exists u.
+        change (tSort u) with (lift0 #|Γ'| (tSort u)).
+        apply weakening.
+        all: auto.
 
-    + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
-      { clear H H0 H1 X0.
+    - red ; intros ; econstructor ; eauto.
+      + clear H H0 H1 X0.
         induction X.
         all: constructor ; auto.
         destruct p as (? & ? & ?).
         eexists.
         apply p.
         auto.
+
+      + have Htypes : All (fun d => isType Σ Γ (dtype d)) mfix.
+        { clear H H0 H1 X0.
+          induction X.
+          all: constructor ; auto.
+          destruct p as (? & ? & ?).
+          eexists.
+          apply p.
+          auto.
+        }
+        have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf ; auto.
+        remember (fix_context mfix) as Γ'.
+        clear H H0 H1 HeqΓ'.
+        induction X0.
+        all: constructor ; auto.
+        2:{ inversion_clear X. apply IHX0 ; auto. inversion_clear Htypes. auto. }
+        destruct p.
+        apply p ; auto.
+        inversion_clear Htypes as [| ? ? [u]].
+        exists u.
+        change (tSort u) with (lift0 #|Γ'| (tSort u)).
+        apply weakening.
+        all: auto.
+
+    - red ; intros ; econstructor ; eauto.
+      2: by apply red_cumul.
+      constructor ; auto.
+      eapply isType_Sort_inv.
+      1: done.
+      eapply isType_red.
+      2: eassumption.
+      eapply validity.
+      eauto.
+    
+    - red ; intros.
+      have [] : (isType Σ Γ (tProd na A B)).
+      { eapply isType_red.
+        2: eassumption.
+        eapply validity.
+        eauto.
       }
-      have wfΓ' : wf_local Σ (Γ,,,fix_context mfix) by apply All_mfix_wf ; auto.
-      remember (fix_context mfix) as Γ'.
-      clear H H0 H1 HeqΓ'.
-      induction X0.
-      all: constructor ; auto.
-      2:{ inversion_clear X. apply IHX0 ; auto. inversion_clear Htypes. auto. }
-      destruct p.
-      apply p ; auto.
-      inversion_clear Htypes as [| ? ? [u]].
-      exists u.
-      change (tSort u) with (lift0 #|Γ'| (tSort u)).
-      apply weakening.
-      all: auto.
+      econstructor.
+      + by auto.
+      + by eassumption.
+      + by apply red_cumul. 
+    
+    - red ; intros.
+      have [] : (isType Σ Γ (mkApps (tInd ind ui) args)).
+      { eapply isType_red.
+        2: eassumption.
+        eapply validity.
+        eauto.
+      }
 
-  - red ; intros ; econstructor ; eauto.
-    2: by apply red_cumul.
-    constructor ; auto.
-    eapply isType_Sort_inv.
-    1: done.
-    eapply isType_red.
-    2: eassumption.
-    eapply validity.
-    eauto.
-  
-  - red ; intros.
-    have [] : (isType Σ Γ (tProd na A B)).
-    { eapply isType_red.
-      2: eassumption.
-      eapply validity.
-      eauto.
-    }
-    econstructor.
-    + by auto.
-    + by eassumption.
-    + by apply red_cumul. 
-  
-  - red ; intros.
-    have [] : (isType Σ Γ (mkApps (tInd ind ui) args)).
-    { eapply isType_red.
-      2: eassumption.
-      eapply validity.
-      eauto.
-    }
+      econstructor.
+      + by auto.
+      + by eassumption.
+      + by apply red_cumul. 
 
-    econstructor.
-    + by auto.
-    + by eassumption.
-    + by apply red_cumul. 
+    - intros. red. intros ? [].
+      econstructor.
+      all:by eauto.
 
-  - intros. red. intros ? [].
-    econstructor.
-    all:by eauto.
+  Admitted.
 
-Admitted.
+  End BDToPCUICTyping.
 
-End BDToPCUICTyping.
+  Theorem infering_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
+    wf_local Σ Γ -> Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t : T.
+  Proof.
+    intros.
+    apply bidirectional_to_PCUIC.
+    all: assumption.
+  Qed.
 
-Theorem infering_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
-  wf_local Σ Γ -> Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t : T.
-Proof.
-  intros.
-  apply bidirectional_to_PCUIC.
-  all: assumption.
-Qed.
+  Theorem checking_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
+    wf_local Σ Γ -> isType Σ Γ T -> Σ ;;; Γ |- t ◃ T -> Σ ;;; Γ |- t : T.
+  Proof.
+    intros wfΓ HT Ht. revert wfΓ HT.
+    apply bidirectional_to_PCUIC.
+    all: assumption.
+  Qed.
 
-Theorem checking_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
-  wf_local Σ Γ -> isType Σ Γ T -> Σ ;;; Γ |- t ◃ T -> Σ ;;; Γ |- t : T.
-Proof.
-  intros wfΓ HT Ht. revert wfΓ HT.
-  apply bidirectional_to_PCUIC.
-  all: assumption.
-Qed.
+  Theorem infering_sort_typing `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
+    wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t : tSort u.
+  Proof.
+    intros wfΓ Ht. revert Ht wfΓ.
+    apply bidirectional_to_PCUIC.
+    assumption.
+  Qed.
 
-Theorem infering_sort_typing `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
-  wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t : tSort u.
-Proof.
-  intros wfΓ Ht. revert Ht wfΓ.
-  apply bidirectional_to_PCUIC.
-  assumption.
-Qed.
+  Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :
+    wf_local Σ Γ -> Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
+  Proof.
+    intros wfΓ Ht. revert Ht wfΓ.
+    apply bidirectional_to_PCUIC.
+    assumption.
+  Qed.
 
-Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :
-  wf_local Σ Γ -> Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
-Proof.
-  intros wfΓ Ht. revert Ht wfΓ.
-  apply bidirectional_to_PCUIC.
-  assumption.
-Qed.
+  Theorem infering_ind_typing `{checker_flags} (Σ : global_env_ext) Γ t ind u args (wfΣ : wf Σ) :
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
+  Proof.
+    intros wfΓ Ht. revert Ht wfΓ.
+    apply bidirectional_to_PCUIC.
+    assumption.
+  Qed.
 
-Theorem infering_ind_typing `{checker_flags} (Σ : global_env_ext) Γ t ind u args (wfΣ : wf Σ) :
-wf_local Σ Γ -> Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
-Proof.
-  intros wfΓ Ht. revert Ht wfΓ.
-  apply bidirectional_to_PCUIC.
-  assumption.
-Qed.
-
-Theorem wf_local_bd_typing `{checker_flags} (Σ : global_env_ext) Γ (wfΣ : wf Σ) :
-  wf_local_bd Σ Γ -> wf_local Σ Γ.
-Proof.
-  apply bidirectional_to_PCUIC.
-  assumption.
-Qed.
+  Theorem wf_local_bd_typing `{checker_flags} (Σ : global_env_ext) Γ (wfΣ : wf Σ) :
+    wf_local_bd Σ Γ -> wf_local Σ Γ.
+  Proof.
+    apply bidirectional_to_PCUIC.
+    assumption.
+  Qed.

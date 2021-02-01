@@ -1832,6 +1832,81 @@ Proof.
       * apply conv_cumul. now symmetry.
 Qed.
 
+Arguments ctx_inst_nil {typing} {Σ} {Γ}.
+Arguments PCUICTyping.ctx_inst_ass {typing} {Σ} {Γ} {na t i inst Δ}.
+Arguments PCUICTyping.ctx_inst_def {typing} {Σ} {Γ} {na b t inst Δ}.
+
+Lemma typing_spine_ctx_inst {cf : checker_flags} {Σ : global_env × universes_decl}
+  {Γ Δ : context} {T args args' T'} :
+  wf Σ.1 ->
+  #|args| = context_assumptions Δ ->
+  wf_local Σ Γ ->
+  isType Σ Γ (it_mkProd_or_LetIn Δ T) ->
+  typing_spine Σ Γ (it_mkProd_or_LetIn Δ T) (args ++ args') T' ->
+  ∑ argsi : ctx_inst Σ Γ args (List.rev Δ),
+    isType Σ Γ (subst0 (ctx_inst_sub argsi) T) * 
+    typing_spine Σ Γ (subst0 (ctx_inst_sub argsi) T) args' T'.
+Proof.
+  intros wfΣ len wfΓ.
+  revert args len T.
+  induction Δ as [|d Δ] using ctx_length_rev_ind; intros args. simpl.
+  destruct args; simpl; try discriminate.
+  - intros _ T sp; exists ctx_inst_nil; split; simpl; now rewrite subst_empty.
+  - rewrite context_assumptions_app => eq T wat sp.
+    assert (wfΓΔ := isType_it_mkProd_or_LetIn_wf_local _ _ (Δ ++ [d]) _ _ wat).
+    rewrite it_mkProd_or_LetIn_app in sp, wat.
+    destruct d as [? [b|] ?]; simpl in *.
+    + rewrite Nat.add_0_r in eq.
+      eapply typing_spine_letin_inv in sp => //.
+      rewrite /subst1 subst_it_mkProd_or_LetIn in sp.
+      specialize (X (subst_context [b] 0 Δ) ltac:(now autorewrite with len)).
+      specialize (X args ltac:(now rewrite context_assumptions_subst)).
+      rewrite Nat.add_0_r in sp.
+      eapply isType_tLetIn_red in wat as wat' => //.
+      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in wat'; auto.
+      destruct (X _ wat' sp) as [args_sub [[sps wat''] sp']].
+      clear wat'. red in wat''.
+      rewrite List.rev_app_distr /=.
+      revert args_sub wat'' sp'.
+      rewrite -subst_telescope_subst_context => args_sub wat'' sp'. 
+      exists (PCUICTyping.ctx_inst_def args_sub); simpl. 
+      rewrite subst_app_simpl /=.
+      rewrite ctx_inst_subst_length subst_telescope_length List.rev_length.
+      split => //.
+      now exists sps.
+    
+    + rewrite /mkProd_or_LetIn /= in sp, wat.
+      destruct args as [|a args]; simpl in eq; try lia.
+      specialize (X (subst_context [a] 0 Δ) ltac:(now autorewrite with len)).
+      specialize (X args ltac:(now rewrite context_assumptions_subst)).
+      eapply isType_tProd in wat as wat' => //.
+      destruct wat' as [wat' wat''] => //.
+      specialize (X (subst [a] #|Δ| T)).
+      depelim sp.
+      eapply cumul_Prod_inv in c as [[eqann conv] cum]; auto.
+      eapply (substitution_cumul0 _ _ _ _ _ _ a) in cum; auto.
+      eapply typing_spine_strengthen in sp; eauto.
+      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp; auto.
+      eapply type_Cumul' in t.
+      2:{ eauto. }
+      2:now eapply conv_cumul, symmetry.
+      forward X. {
+        pose proof wfΓΔ as wfΓΔ'.
+        rewrite app_context_assoc in wfΓΔ'. eapply All_local_env_app_inv in wfΓΔ' as [wfΓΔ' _].
+        eapply (isType_subst wfΣ wfΓΔ') in wat''; eauto.
+        2:{ repeat constructor. now rewrite subst_empty. }
+        now rewrite subst_it_mkProd_or_LetIn Nat.add_0_r in wat''. }
+      specialize (X sp).
+      destruct X as [args_sub [[sps wat'''] sp']].
+      rewrite List.rev_app_distr /=.
+      revert args_sub wat''' sp'.
+      rewrite -subst_telescope_subst_context => args_sub wat''' sp'. 
+      exists (PCUICTyping.ctx_inst_ass t args_sub); simpl.
+      rewrite subst_app_simpl /= ctx_inst_subst_length subst_telescope_length List.rev_length.
+      split => //.
+      now exists sps.
+Qed.
+
 Lemma typing_spine_app {cf:checker_flags} Σ Γ ty args na A B arg :
   wf Σ.1 ->
   typing_spine Σ Γ ty args (tProd na A B) ->

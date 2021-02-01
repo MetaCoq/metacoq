@@ -570,8 +570,7 @@ Proof.
   induction cv; intros; depelim cs; depelim cs'.
   1:constructor; auto.
   all:depelim p.
-  - eapply All2_app_inv in X as [[l1 l2] [[? ?] ?]].
-    depelim a2. depelim a2. apply app_inj_tail in e0 as [? ?]; subst.
+  - apply All2_app_r in X as (?&?).
     depelim sl; depelim sl'; depelim wf.
     specialize (IHcv _ _ cs wf sl _ _ cs' sl' a1).
     constructor; auto.

@@ -251,7 +251,7 @@ Section Principality.
       eapply conv_cumul, mkApps_conv_args; auto.
       eapply All2_app. 2:constructor; auto.
       rewrite -(firstn_skipn (ind_npars x) x0') in X3.
-      eapply All2_app_inv in X3 as [[? ?] [[eq convl] convr]].
+      eapply All2_app_inv_l in X3 as (?&?&eq&convl&convr).
       eapply PCUICUnivSubstitution.app_inj in eq as [<- <-] => //.
       rewrite -(All2_length convl).
       apply All2_length in a6. apply All2_length in X2. len in a6.

@@ -16,31 +16,6 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-(* TODO MOVE *)
-Lemma All2_app_inv_both :
-  forall A B (P : A -> B -> Type) l1 l2 r1 r2,
-    #|l1| = #|r1| ->
-    All2 P (l1 ++ l2) (r1 ++ r2) ->
-    All2 P l1 r1 × All2 P l2 r2.
-Proof.
-  intros A B P l1 l2 r1 r2 e h.
-  apply All2_app_inv in h as [[w1 w2] [[e1 h1] h2]].
-  assert (e2 : r1 = w1 × r2 = w2).
-  { apply All2_length in h1. rewrite h1 in e.
-    clear - e e1.
-    induction r1 in r2, w1, w2, e, e1 |- *.
-    - destruct w1. 2: discriminate.
-      intuition eauto.
-    - destruct w1. 1: discriminate.
-      simpl in e. apply Nat.succ_inj in e.
-      simpl in e1. inversion e1. subst.
-      eapply IHr1 in e. 2: eassumption.
-      intuition eauto. f_equal. assumption.
-  }
-  destruct e2 as [? ?]. subst.
-  intuition auto.
-Qed.
-
 Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
@@ -412,7 +387,7 @@ Section Lemmata.
       + eapply IHh.
       + econstructor. assumption.
   Qed.
-
+  
   Lemma welltyped_context :
     forall Γ t,
       welltyped Σ Γ (zip t) ->
@@ -497,27 +472,43 @@ Section Lemmata.
       apply inversion_Case in h as hh ; auto.
       destruct hh as [mdecl [idecl [indices [data ?]]]].
       destruct data. simpl in t1.
-      eapply validity in t1; tas.
-      clear -t1. 
-      todo "case".
-      (* eexists. eassumption. *)
+      eapply validity in t1 as (?&typ); tas.
+      apply inversion_mkApps in typ as (?&?&spine); auto.
+      clear -wΣ spine. 
+      depind spine.
+      + destruct pars1; cbn in *; congruence.
+      + destruct pars1; noconf H; eauto.
+        eexists; eauto.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
-      todo "case". (*eexists. eassumption.*) 
+      destruct data as [? ? ? ? ? wfpctx cc typ ? ? ? ? ? ?].
+      clear -wΣ wfpctx cc typ.
+      clearbody predctx.
+      cbn in *.
+      exists (tSort ps).
+      rewrite ->app_context_assoc in *.
+      eapply context_conversion; eauto.
+      apply conv_context_sym; auto.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
-      todo "case".
-    - todo "case".
-      (*simpl. cbn in h. cbn in IHπ. apply IHπ in h.
+      destruct data.
+      eexists; eauto.
+    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [B h].
       apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
-
-      apply All2_app_inv in a as [[? ?] [[? ?] ha]].
-      inversion ha. subst.
-      intuition eauto. simpl in *.
-      eexists. eassumption.*)
+      destruct data as [? ? ? ? ? ? ? ? ? ? ? ? ? typbrs].
+      apply All2i_app_inv_r in typbrs as (?&?&?&_&allbrs).
+      inversion_clear allbrs as [|ctor ? ? ? br ?].
+      clear -wΣ br.
+      clearbody predctx ptm.
+      cbn in *.
+      destruct br as ((wfbctx&cc)&typ&_).
+      eexists.
+      rewrite ->app_context_assoc in *.
+      eapply context_conversion; eauto.
+      apply conv_context_sym; auto.
     - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
       destruct h as [T' h].
       apply inversion_Proj in h

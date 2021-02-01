@@ -1684,14 +1684,56 @@ Proof.
     + eapply IHl. inversion h. assumption.
 Qed.
 
-Lemma All2_app_inv : forall (A B : Type) (R : A -> B -> Type),
-    forall l l1 l2, All2 R (l1 ++ l2) l -> { '(l1',l2') : _ & (l = l1' ++ l2')%list * (All2 R l1 l1') * (All2 R l2 l2')}%type.
+Lemma All2_length {A B} {P : A -> B -> Type} {l l'} : All2 P l l' -> #|l| = #|l'|.
+Proof. induction 1; simpl; auto. Qed.
+
+Lemma All2_app_inv_l : forall (A B : Type) (R : A -> B -> Type),
+    forall l1 l2 r,
+      All2 R (l1 ++ l2) r ->
+      ∑ r1 r2,
+        (r = r1 ++ r2)%list ×
+        All2 R l1 r1 ×
+        All2 R l2 r2.
 Proof.
-  intros. revert l2 l X. induction l1; intros; cbn in *.
-  - exists ([], l). eauto.
-  - inversion X. subst.
-    eapply IHl1 in X1 as ( [] & ? & ?). destruct p.  subst.
-    eexists (y :: l, l0). repeat split; eauto.
+  intros. revert l2 r X. induction l1; intros; cbn in *.
+  - exists [], r. eauto.
+  - depelim X.
+    apply IHl1 in X as (?&?&?&?&?).
+    subst.
+    eexists _, _.
+    split; [|split; eauto]; auto.
+Qed.
+
+Lemma All2_app_inv_r :
+  forall A B R l r1 r2,
+    @All2 A B R l (r1 ++ r2) ->
+    ∑ l1 l2,
+      (l = l1 ++ l2)%list ×
+      All2 R l1 r1 ×
+      All2 R l2 r2.
+Proof.
+  intros A B R l r1 r2 h.
+  induction r1 in l, r1, r2, h |- *.
+  - exists [], l; eauto.
+  - depelim h.
+    apply IHr1 in h as (?&?&?&?&?).
+    subst.
+    eexists _, _.
+    split; [|split; eauto]; auto.
+Qed.
+
+Lemma All2_app_inv :
+  forall A B (P : A -> B -> Type) l1 l2 r1 r2,
+    #|l1| = #|r1| ->
+    All2 P (l1 ++ l2) (r1 ++ r2) ->
+    All2 P l1 r1 × All2 P l2 r2.
+Proof.
+  intros A B P l1 l2 r1 r2 e h.
+  apply All2_app_inv_l in h as (w1&w2&e1&h1&h2).
+  apply app_inj_length_l in e1 as (->&->); auto.
+  apply All2_length in h1.
+  apply All2_length in h2.
+  congruence.
 Qed.
 
 Lemma All2_rect_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : list A) (l0 : list B), Type),
@@ -1702,7 +1744,7 @@ Lemma All2_rect_rev : forall (A B : Type) (R : A -> B -> Type) (P : forall (l : 
 Proof.
   intros. revert l0 a. induction l using rev_ind; cbn; intros.
   - inv a. eauto.
-  - eapply All2_app_inv in a as ([] & [[]]). subst.
+  - eapply All2_app_inv_l in a as (?&?&?&?&?). subst.
     inv a0. inv X2. eauto.
 Qed.
 
@@ -2117,27 +2159,6 @@ Proof.
   all: destruct n ; try econstructor ; eauto.
 Qed.
 
-
-Lemma All2_app_inv_r :
-  forall A B R l r1 r2,
-    @All2 A B R l (r1 ++ r2) ->
-    ∑ l1 l2,
-      (l = l1 ++ l2)%list ×
-      All2 R l1 r1 ×
-      All2 R l2 r2.
-Proof.
-  intros A B R l r1 r2 h.
-  exists (firstn #|r1| l), (skipn #|r1| l).
-  split ; [| split].
-  - rewrite firstn_skipn. reflexivity.
-  - apply All2_firstn with (n := #|r1|) in h.
-    rewrite firstn_app in h. rewrite firstn_all in h.
-    replace (#|r1| - #|r1|) with 0 in h by lia. cbn in h.
-    rewrite app_nil_r in h. assumption.
-  - apply All2_skipn with (n := #|r1|) in h.
-    rewrite skipn_all_app in h. assumption.
-Qed.
-
 Lemma All2_impl' {A B} {P Q : A -> B -> Type} {l : list A} {l' : list B}
   : All2 P l l' -> All (fun x => forall y, P x y -> Q x y) l -> All2 Q l l'.
 Proof.
@@ -2185,9 +2206,6 @@ Proof.
   intros Hall. revert n.
   induction Hall; destruct n; simpl; try congruence. auto.
 Qed.
-
-Lemma All2_length {A B} {P : A -> B -> Type} {l l'} : All2 P l l' -> #|l| = #|l'|.
-Proof. induction 1; simpl; auto. Qed.
 
 Lemma All2_same {A} {P : A -> A -> Type} l : (forall x, P x x) -> All2 P l l.
 Proof. induction l; constructor; auto. Qed.
@@ -2653,4 +2671,67 @@ Proof.
       eexists; split; eauto. now rewrite Nat.add_0_r.
     + simpl. intros hnth. specialize (IHX _ hnth).
       now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma All2i_app_inv_l {X Y} (R : nat -> X -> Y -> Type) n xs xs' l :
+  All2i R n (xs ++ xs') l ->
+  ∑ ys ys',
+  l = ys ++ ys' × All2i R n xs ys × All2i R (n + #|xs|) xs' ys'.
+Proof.
+  intros a.
+  induction xs in n, xs, xs', l, a |- *.
+  - cbn; rewrite Nat.add_0_r.
+    eexists _, _.
+    split; [|split; eauto; constructor].
+    auto.
+  - depelim a.
+    apply IHxs in a as (?&?&->&?&?).
+    cbn.
+    rewrite Nat.add_succ_r.
+    eexists _, _.
+    split; [|split; eauto; constructor; eauto].
+    auto.
+Qed.
+
+Lemma All2i_app_inv_r {X Y} (R : nat -> X -> Y -> Type) n l ys ys' :
+  All2i R n l (ys ++ ys') ->
+  ∑ xs xs',
+  l = xs ++ xs' × All2i R n xs ys × All2i R (n + #|xs|) xs' ys'.
+Proof.
+  intros a.
+  induction ys in n, l, ys', a |- *.
+  - exists [], l.
+    split; auto.
+    cbn; rewrite Nat.add_0_r.
+    split; eauto.
+    constructor.
+  - depelim a.
+    apply IHys in a as (?&?&->&?&?).
+    eexists (_ :: _), _.
+    split; [reflexivity|].
+    cbn; rewrite Nat.add_succ_r.
+    split; eauto.
+    constructor; auto.
+Qed.
+
+Lemma All2i_length {X Y} (R : nat -> X -> Y -> Type) n xs ys :
+  All2i R n xs ys ->
+  #|xs| = #|ys|.
+Proof.
+  intros a.
+  induction a; auto.
+  cbn; lia.
+Qed.
+
+Lemma All2i_app_inv {X Y} (R : nat -> X -> Y -> Type) n xs xs' ys ys' :
+  All2i R n (xs ++ xs') (ys ++ ys') ->
+  #|xs| = #|ys| ->
+                All2i R n xs ys × All2i R (n + #|xs|) xs' ys'.
+Proof.
+  intros a eq.
+  apply All2i_app_inv_l in a as (?&?&leq&?&?).
+  apply app_inj_length_l in leq as (?&?); subst; auto.
+  apply All2i_length in a.
+  apply All2i_length in a0.
+  congruence.
 Qed.

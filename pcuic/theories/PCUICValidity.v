@@ -198,7 +198,7 @@ Section Validity.
     - depelim hlen. simpl. reflexivity.
     - destruct nas as [|nas na] using rev_case => //;
       pose proof (All2_length hlen) as hlen';len in hlen'; simpl in hlen'; try lia.
-      eapply All2_app_inv in hlen as [[l1' l2'][[heq alnas] allna]].
+      eapply All2_app_inv_l in hlen as (l1'&l2'&heq&alnas&allna).
       depelim allna. depelim allna.
       rewrite map2_app => //; try lia.
       eapply app_inj_tail in heq as [<- <-].

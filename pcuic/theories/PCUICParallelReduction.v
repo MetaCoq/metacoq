@@ -160,28 +160,6 @@ Section All2_fold.
     eexists Γl, (Γr,, d'). simpl. intuition eauto. lia.
   Qed.
 
-  (* TODO move *)
-  Lemma app_inj_length_r {A} (l l' r r' : list A) :
-    app l r = app l' r' -> #|r| = #|r'| -> l = l' /\ r = r'.
-  Proof.
-    induction r in l, l', r' |- *. destruct r'; intros; simpl in *; intuition auto; try discriminate.
-    now rewrite !app_nil_r in H.
-    intros. destruct r'; try discriminate.
-    simpl in H.
-    change (l ++ a :: r) with (l ++ [a] ++ r) in H.
-    change (l' ++ a0 :: r') with (l' ++ [a0] ++ r') in H.
-    rewrite !app_assoc in H. destruct (IHr _ _ _ H). now noconf H0.
-    subst. now apply app_inj_tail in H1 as [-> ->].
-  Qed.
-
-  Lemma app_inj_length_l {A} (l l' r r' : list A) :
-    app l r = app l' r' -> #|l| = #|l'| -> l = l' /\ r = r'.
-  Proof.
-    induction l in r, r', l' |- *. destruct l'; intros; simpl in *; intuition auto; try discriminate.
-    intros. destruct l'; try discriminate. simpl in *. noconf H.
-    specialize (IHl _ _ _ H). forward IHl; intuition congruence.
-  Qed.
-
   Lemma All2_fold_app_ex:
     forall P (Γ Γ' Γ'' : context),
       on_contexts P (Γ ,,, Γ') Γ'' ->

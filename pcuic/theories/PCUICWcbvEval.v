@@ -871,11 +871,11 @@ Section Wcbv.
   Proof.
     revert l'. induction l using rev_ind; intros l' evf vf' evl.
     depelim evl. eapply evf.
-    eapply All2_app_inv in evl as [[? ?] [? ?]].
-    intuition auto. subst. depelim a. depelim a.
+    eapply All2_app_inv_l in evl as (?&?&?&?&?).
+    intuition auto. subst. depelim a0. depelim a0.
     rewrite - !mkApps_nested /=. eapply eval_app_cong; auto.
     rewrite isFixApp_mkApps. auto.
-    destruct l0 using rev_ind; simpl; [|rewrite - !mkApps_nested]; simpl in *; destruct f';
+    destruct x0 using rev_ind; simpl; [|rewrite - !mkApps_nested]; simpl in *; destruct f';
       try discriminate; try constructor.
   Qed.
   Arguments removelast : simpl nomatch.

@@ -1032,10 +1032,12 @@ Proof.
     todo "case".
     (*specialize (X8 _ _ H4 t0 _ (eq_term_upto_univ_napp_leq X11)).
     eapply cumul_prop_sym => //.
+    eapply cumul_prop_mkApps => //.
     eapply cumul_prop_mkApps => //. rewrite /ptm /predctx.
     eapply All2_app. 2:(repeat constructor; auto using eq_term_eq_term_prop_impl).
+    eapply All2_skipn. eapply cumul_prop_mkApps_Ind_inv in X4 => //.
     eapply cumul_prop_mkApps_Ind_inv in X6 => //.
-    eapply All2_app_inv in X6 as [[] [[? ?]]].
+    eapply All2_app_inv_l in X6 as (?&?&?&?&?).
     eapply All2_symP => //. typeclasses eauto.
     move: (All2_length a3). destruct e.
     rewrite -(All2_length a5) => hpars.

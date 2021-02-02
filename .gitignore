@@ -425,3 +425,5 @@ template-coq/gen-src/specFloat.ml.rej
 bidirectional/CoqMakefile
 
 bidirectional/CoqMakefile.conf
+
+bidirectional/.vscode/

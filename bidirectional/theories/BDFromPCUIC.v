@@ -1,8 +1,8 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping.
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICSR PCUICContextConversion PCUICWeakening PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICSR PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubstitution PCUICClosed.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
+(** The dependency on BDToPCUIC is minimal, it is only used in conjuction with validity to avoid having to prove well-formedness of inferred types simultaneously with bidirectional -> undirected *)
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -10,6 +10,7 @@ Require Import Equations.Prop.DepElim.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+(** Preliminary lemmata missing from MetaCoq *)
 Lemma is_allowed_elimination_monotone `{checker_flags} Σ s1 s2 allowed :
   leq_universe Σ s1 s2 -> is_allowed_elimination Σ s2 allowed -> is_allowed_elimination Σ s1 allowed.
 Proof.
@@ -31,36 +32,36 @@ Proof.
   destruct le ; auto.
 Qed.
 
-Lemma ctx_inst_length_gen P Σ Γ args Δ :
-  ctx_inst P Σ Γ args Δ -> 
-  #|args| = context_assumptions Δ.
-Proof.
-  induction 1; simpl; auto.
-  rewrite /subst_telescope in IHX.
-  rewrite context_assumptions_mapi in IHX. congruence.
-  rewrite context_assumptions_mapi in IHX. congruence.
-Qed.
-
-Lemma ctx_inst_app_impl {P Q Σ Γ} {Δ : context} {Δ' args} (c : ctx_inst P Σ Γ args (Δ ++ Δ')) :
+Lemma ctx_inst_app_impl {P Q Σ Γ} {Δ : context} {Δ' args} (c : PCUICTyping.ctx_inst P Σ Γ args (Δ ++ Δ')) :
   (forall Γ' t T, P Σ Γ' t T -> Q Σ Γ' t T) ->
-  ctx_inst Q Σ Γ (firstn (context_assumptions Δ) args) Δ.
+  PCUICTyping.ctx_inst Q Σ Γ (firstn (context_assumptions Δ) args) Δ.
 Proof.
   revert args Δ' c.
-  induction Δ using PCUICInduction.ctx_length_ind; intros.
+  induction Δ using ctx_length_ind; intros.
   1: constructor.
   depelim c; simpl.
   - specialize (X (subst_telescope [i] 0 Γ0) ltac:(now rewrite /subst_telescope mapi_length)).
-    rewrite PCUICSpine.subst_telescope_app in c.
+    rewrite subst_telescope_app in c.
     specialize (X _ _ c).
-    rewrite PCUICSpine.context_assumptions_subst_telescope in X.
+    rewrite context_assumptions_subst_telescope in X.
     constructor; auto.
   - specialize (X (subst_telescope [b] 0 Γ0) ltac:(now rewrite /subst_telescope mapi_length)).
-    rewrite PCUICSpine.subst_telescope_app in c.
+    rewrite subst_telescope_app in c.
     specialize (X _ _ c).
-    rewrite PCUICSpine.context_assumptions_subst_telescope in X.
+    rewrite context_assumptions_subst_telescope in X.
     constructor; auto.
 Qed.
 
+(** Lemmata to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
+
+Lemma conv_check `{checker_flags} (Σ : global_env_ext) Γ t T :
+  (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T) ->
+  Σ ;;; Γ |- t ◃ T.
+Proof.
+  intros (?&?&Cumt).
+  econstructor.
+  all: eassumption.
+Qed.
 
 Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
@@ -71,15 +72,6 @@ Proof.
   destruct Cumt as (?&?&?).
   eexists. split.
   1: econstructor.
-  all: eassumption.
-Qed.
-
-Lemma conv_check `{checker_flags} (Σ : global_env_ext) Γ t T :
-  (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T) ->
-  Σ ;;; Γ |- t ◃ T.
-Proof.
-  intros (?&?&Cumt).
-  econstructor.
   all: eassumption.
 Qed.
 
@@ -112,7 +104,9 @@ Qed.
 
 Section BDFromPCUIC.
 
-Lemma typing_infering `{checker_flags} :
+
+(** The big theorem*)
+Lemma bidirectional_from_pcuic `{checker_flags} :
       env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T})
         (fun Σ Γ => wf_local_bd Σ Γ).
 Proof.
@@ -219,7 +213,7 @@ Proof.
     assert (wf_universe Σ ps).
     { apply validity in ty_p.
       apply isType_wf_universes in ty_p; auto.
-      now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in ty_p.
+      now apply (ssrbool.elimT wf_universe_reflect) in ty_p.
     }
 
     apply conv_infer_sort in Cump as (?&?&?).
@@ -230,11 +224,11 @@ Proof.
       all: try eassumption.
       * eapply is_allowed_elimination_monotone.
         all: eassumption.
-      * rewrite PCUICUnivSubstitution.subst_instance_app_ctx rev_app_distr in X3.
+      * rewrite subst_instance_app_ctx rev_app_distr in X3.
         replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
         eapply ctx_inst_app_impl ; eauto.
         1: apply conv_check.
-        rewrite PCUICSpine.context_assumptions_rev context_assumptions_subst_instance.
+        rewrite context_assumptions_rev context_assumptions_subst_instance.
         erewrite PCUICDeclarationTyping.onNpars.
         2: eapply on_declared_minductive ; eauto.
         rewrite (firstn_app_left _ 0).
@@ -326,19 +320,19 @@ Proof.
 
       * change (Γ ,,, _ ,,, _) with (Γ,,, (projection_context mdecl idecl p.1.1 ui')).
         apply weaken_cumul ; auto.
-        --by eapply PCUICClosed.closed_wf_local ; eauto.
+        --by eapply closed_wf_local ; eauto.
         --simpl. len. simpl.
-          rewrite (PCUICWeakeningEnv.on_declared_projection isdecl).1.(onNpars).
-          rewrite PCUICClosed.closedn_subst_instance.
+          rewrite (on_declared_projection isdecl).1.(onNpars).
+          rewrite closedn_subst_instance.
           change t with (i,t).2.
-          eapply PCUICClosed.declared_projection_closed ; eauto.
+          eapply declared_projection_closed ; eauto.
         --simpl. len. simpl.
-          rewrite (PCUICWeakeningEnv.on_declared_projection isdecl).1.(onNpars).
-          rewrite PCUICClosed.closedn_subst_instance.
+          rewrite (on_declared_projection isdecl).1.(onNpars).
+          rewrite closedn_subst_instance.
           change t with (i,t).2.
-          eapply PCUICClosed.declared_projection_closed ; eauto.
+          eapply declared_projection_closed ; eauto.
         --eapply projection_cumulative_indices ; auto.
-          1: eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ _ (proj1 (proj1 isdecl))).
+          1: eapply (weaken_lookup_on_global_env' _ _ _ _ (proj1 (proj1 isdecl))).
           by rewrite <- H0.
 
   - intros mfix n decl types ? ? ? Alltypes Allbodies.
@@ -389,6 +383,11 @@ Qed.
 
 End BDFromPCUIC.
 
-
-
-
+(** The direct consequence on typing *)
+Lemma typing_infering `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
+  Σ ;;; Γ |- t : T -> {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T}.
+Proof.
+  intros ty.
+  apply bidirectional_from_pcuic.
+  all: assumption.
+Qed.

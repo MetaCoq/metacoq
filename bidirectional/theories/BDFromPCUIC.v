@@ -110,11 +110,11 @@ Proof.
   all:eassumption.
 Qed.
 
-Section PCUICToBD.
+Section BDFromPCUIC.
 
-  Lemma typing_infering `{checker_flags} :
-        env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T})
-         (fun Σ Γ => wf_local_bd Σ Γ).
+Lemma typing_infering `{checker_flags} :
+      env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T})
+        (fun Σ Γ => wf_local_bd Σ Γ).
 Proof.
   apply typing_ind_env.
 
@@ -387,7 +387,7 @@ Proof.
     etransitivity ; eauto.
 Qed.
 
-End PCUICToBD.
+End BDFromPCUIC.
 
 
 

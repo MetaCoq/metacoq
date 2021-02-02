@@ -814,19 +814,7 @@ Section WeakNormalization.
     intros ht; eapply invert_cumul_prod_r in ht as (? & ? & ? & ((? & ?) & ?) & ?); auto.
     eapply red_mkApps_tInd in r as (? & ? & ?); auto. solve_discr.
   Qed.
-
-  Lemma invert_cumul_ind_ind {Γ ind ind' u u' args args'} :
-    Σ ;;; Γ |- mkApps (tInd ind u) args <= mkApps (tInd ind' u') args' ->
-    (Reflect.eqb ind ind' * PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| u u' *
-      All2 (conv Σ Γ) args args').
-  Proof.
-    intros ht; eapply invert_cumul_ind_l in ht as (? & ? & ? & ? & ?); auto.
-    eapply red_mkApps_tInd in r as (? & ? & ?); auto. solve_discr.
-    noconf H. subst.
-    intuition auto. eapply eq_inductive_refl.
-    transitivity x1; auto. symmetry. now eapply red_terms_conv_terms.
-  Qed.
-
+  
   Lemma typing_cofix_coind {Γ mfix idx args ind u indargs} :
     Σ ;;; Γ |- mkApps (tCoFix mfix idx) args : mkApps (tInd ind u) indargs ->
     check_recursivity_kind Σ.1 (inductive_mind ind) CoFinite.

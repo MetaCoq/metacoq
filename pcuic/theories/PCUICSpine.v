@@ -18,7 +18,6 @@ Require Import ssreflect.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-
 Derive Signature for ctx_inst.
 
 Notation ctx_inst := (ctx_inst typing).
@@ -1044,17 +1043,16 @@ Proof.
   depelim c. exists i; constructor; auto.
 Qed.
 
-Lemma ctx_inst_spine_subst {cf:checker_flags} Σ Γ Δ args : 
-  wf Σ.1 -> wf_local Σ Γ -> 
+Lemma ctx_inst_spine_subst {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ args} : 
   wf_local Σ (Γ ,,, Δ) ->
   forall ci : ctx_inst Σ Γ args (List.rev Δ),
   spine_subst Σ Γ args (ctx_inst_sub ci) Δ.
 Proof.
-  move=> wfΣ wfΓ wfΔ ci.
+  move=> wfΔ ci.
   pose proof (ctx_inst_sub_spec ci) as msub.
   eapply make_context_subst_spec in msub.
   rewrite List.rev_involutive in msub.
-  split; auto.
+  split; pcuic. now eapply wf_local_app_inv in wfΔ as []. 
   move: ci msub.
   induction Δ in wfΔ, args |- *.
   simpl. intros ci. depelim ci. constructor.
@@ -2056,6 +2054,49 @@ Proof.
       depelim inst_ctx_subst0; apply IHinst_subslet0; auto.
 Qed.
 
+Lemma ctx_inst_sub_subst {cf : checker_flags} {Σ} {wfΣ : wf Σ}
+  {Γ Δ : context} {args} :
+  forall ci : ctx_inst Σ Γ args (List.rev Δ),
+  ctx_inst_sub ci = map (subst0 (List.rev args)) (extended_subst Δ 0).
+Proof.
+  intros ci.
+  pose proof (ctx_inst_sub_spec ci).
+  eapply make_context_subst_spec in H.
+  revert H. generalize (ctx_inst_sub ci). clear ci.
+  intros l cs.
+  apply context_subst_extended_subst in cs.
+  rewrite List.rev_involutive in cs.
+  rewrite cs. apply map_ext => t.
+  now rewrite subst0_inst.
+Qed.
+
+Lemma typing_spine_ctx_inst_smash {cf : checker_flags} {Σ} {wfΣ : wf Σ}
+  {Γ Δ : context} {T args args' T'} :
+  wf Σ.1 ->
+  #|args| = context_assumptions Δ ->
+  wf_local Σ Γ ->
+  isType Σ Γ (it_mkProd_or_LetIn Δ T) ->
+  typing_spine Σ Γ (it_mkProd_or_LetIn Δ T) (args ++ args') T' ->
+  spine_subst Σ Γ args (List.rev args) (smash_context [] Δ) ×
+  isType Σ Γ (subst_let_expand (List.rev args) Δ T) ×
+  typing_spine Σ Γ (subst_let_expand (List.rev args) Δ T) args' T'.
+Proof.
+  intros.
+  eapply typing_spine_ctx_inst in X2 as [argsi [isty sp]]; tea.
+  unshelve epose proof (ctx_inst_spine_subst _ argsi); pcuic.
+  now eapply isType_it_mkProd_or_LetIn_wf_local.
+  pose proof (spine_subst_smash _ X2).
+  intuition auto.
+  destruct X1 as [s Hs].
+  eapply (isType_it_mkProd_or_LetIn_app _ _ []) in Hs.
+  2:eapply X3. now exists s.
+  rewrite (ctx_inst_sub_subst argsi) in sp.
+  rewrite /subst_let_expand.
+  rewrite /expand_lets /expand_lets_k /=.
+  rewrite distr_subst. len.
+  rewrite simpl_subst_k. now len.
+  assumption.
+Qed.
 
 Lemma subst_rel0_lift_id n t : subst [tRel 0] n (lift 1 (S n) t) = t.
 Proof.

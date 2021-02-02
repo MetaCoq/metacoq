@@ -567,9 +567,7 @@ Proof.
   apply inversion_LetIn in H; tas. now destruct H as [s1 [A' [HA [Ht [HB H]]]]].
 Qed.
 
-Lemma on_minductive_wf_params {cf : checker_flags} (Σ : global_env × universes_decl)
-    mdecl (u : Instance.t) ind :
-   wf Σ.1 ->
+Lemma on_minductive_wf_params {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl} {u} :
   declared_minductive Σ.1 ind mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   wf_local Σ (subst_instance u (ind_params mdecl)).

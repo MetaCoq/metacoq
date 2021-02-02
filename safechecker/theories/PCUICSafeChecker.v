@@ -1408,6 +1408,7 @@ Section CheckEnv.
     now exists t.
   Qed.
 
+  (* Now in PCUIC *)
   Lemma type_smash {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ t T} : 
     Σ ;;; Γ ,,, Δ |- t : T ->
     Σ ;;; Γ ,,, smash_context [] Δ |- expand_lets Δ t : expand_lets Δ T.

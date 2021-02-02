@@ -338,7 +338,7 @@ Section Validity.
       assert (cu : consistent_instance_ext Σ (ind_universes mdecl) (puinst p)).
       { eapply (isType_mkApps_Ind wf isdecl) in X8 as [parsubst [argsubst Hind]]; 
         repeat intuition auto. } 
-      unshelve epose proof (ctx_inst_spine_subst Σ _ _ _ _ _ _ X5); tea.
+      unshelve epose proof (ctx_inst_spine_subst _ X5); tea.
       eapply weaken_wf_local; tea.
       now apply (on_minductive_wf_params_indices_inst isdecl _ cu).
       eapply spine_subst_smash in X7; tea.

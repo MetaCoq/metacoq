@@ -1,9 +1,8 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductiveInversion PCUICEquality.
-From MetaCoq.PCUIC Require Import PCUICWeakening PCUICClosed PCUICSubstitution PCUICPrincipality PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICSR PCUICWeakeningEnv PCUICContexts.
+From MetaCoq.PCUIC Require Import PCUICWeakening PCUICClosed PCUICSubstitution PCUICPrincipality PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICSR PCUICWeakeningEnv PCUICContexts PCUICSpine.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping.
-From MetaCoq.SafeChecker Require Import PCUICSafeRetyping.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -99,6 +98,78 @@ Proof.
   all: apply IHΓ' ; eassumption.
 Qed.
 
+Lemma ctx_inst_app_weak `{checker_flags} Σ (wfΣ : wf Σ.1) ind mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl)Γ (wfΓ : wf_local Σ Γ) params args u v:
+  isType Σ Γ (mkApps (tInd ind u) args) ->
+  consistent_instance_ext Σ (ind_universes mdecl) v ->
+   ctx_inst Σ Γ params (List.rev (subst_instance v (ind_params mdecl))) ->
+   Σ ;;; Γ |- mkApps (tInd ind u) args <= mkApps (tInd ind v) (params ++ skipn (ind_npars mdecl) args) ->
+  ctx_inst Σ Γ (params ++ skipn (ind_npars mdecl) args) (List.rev (subst_instance v (ind_params mdecl ,,, ind_indices idecl))).
+Proof.
+
+  intros [? ty_args] ? cparams cum.
+  eapply invert_type_mkApps_ind in ty_args as [ty_args ?] ; eauto.
+  erewrite ind_arity_eq in ty_args.
+  2: eapply PCUICInductives.oib ; eauto.
+
+  assert (#|args| = ind_npars mdecl + context_assumptions (ind_indices idecl)).
+  {
+    repeat rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in ty_args.
+    rewrite -it_mkProd_or_LetIn_app in ty_args.
+    apply arity_typing_spine in ty_args as ((eq&_)&_) ; auto.
+    2:{ apply PCUICWeakening.weaken_wf_local ; eauto.
+        rewrite -/app_context -PCUICUnivSubstitution.subst_instance_app.
+        eapply on_minductive_wf_params_indices_inst ; eauto.
+    }
+    rewrite context_assumptions_app !context_assumptions_subst_instance in eq.
+    erewrite declared_minductive_ind_npars.
+    2: eapply declared_inductive_minductive ; eauto.
+    lia.
+  }
+
+  assert (cindices : ctx_inst Σ Γ (skipn (ind_npars mdecl) args) (subst_telescope (ctx_inst_sub cparams) 0
+    (List.rev (subst_instance v (ind_indices idecl))))).
+  {
+    rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in ty_args.
+    erewrite <- (firstn_skipn _ args) in ty_args.
+    apply typing_spine_ctx_inst in ty_args as (cparargs&?&ty_indices) ; auto.
+    2:{ rewrite firstn_length_le.
+        2:{ rewrite context_assumptions_subst_instance.
+            symmetry.
+            eapply PCUICDeclarationTyping.onNpars.
+            eapply on_declared_inductive ; eauto.
+        }
+        lia.
+    }
+    2:{ rewrite <- PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
+        erewrite <- ind_arity_eq.
+        2: eapply PCUICInductives.oib ; eauto.
+        eapply declared_inductive_valid_type ; eauto.
+    }
+
+    assert (Σ;;; Γ |- subst0 (ctx_inst_sub cparams)
+    (subst_instance v
+       (it_mkProd_or_LetIn (ind_indices idecl) (tSort (ind_sort idecl)))) <=
+    subst0 (ctx_inst_sub cparargs)
+      (subst_instance u
+         (it_mkProd_or_LetIn (ind_indices idecl) (tSort (ind_sort idecl))))).
+    {
+      admit.
+    }
+
+    eapply typing_spine_strengthen in ty_indices ; eauto.
+
+    erewrite <- (app_nil_r (skipn _ args)) in ty_indices.
+    rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn in ty_indices.
+    eapply PCUICSpine.typing_spine_ctx_inst in ty_indices as (cindices&_&_) ; auto.
+    1: rewrite subst_telescope_subst_context ; eassumption.
+    1: rewrite List.skipn_length context_assumptions_subst_context context_assumptions_subst_instance ; lia.
+    erewrite <- subst_it_mkProd_or_LetIn.
+    admit.
+    }
+
+
+
+Admitted.
 
 Section BDToPCUICTyping.
 
@@ -170,7 +241,7 @@ Section BDToPCUICTyping.
   Qed.
 
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
-    forall args, ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst typing Σ Γ args Δ.
+    forall args, PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst Σ Γ args Δ.
   Proof.
     revert wfΔ.
     induction Δ using PCUICInduction.ctx_length_ind.
@@ -186,8 +257,8 @@ Section BDToPCUICTyping.
       }
       constructor ; auto.
       apply X ; auto.
-      1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
-      rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
+      1: by rewrite subst_telescope_length ; reflexivity.
+      rewrite -(rev_involutive Γ0) -subst_context_telescope.
       cbn in wfΔ.
       apply wf_local_rel_app_inv in wfΔ as [].
       apply wf_local_local_rel.
@@ -207,8 +278,8 @@ Section BDToPCUICTyping.
       }
       constructor ; auto.
       apply X ; auto.
-      1: by rewrite PCUICSpine.subst_telescope_length ; reflexivity.
-      rewrite -(rev_involutive Γ0) -PCUICSpine.subst_context_telescope.
+      1: by rewrite subst_telescope_length ; reflexivity.
+      rewrite -(rev_involutive Γ0) -subst_context_telescope.
       rewrite <- app_nil_r.
       eapply wf_local_rel_subst1.
       cbn in wfΔ |- *.
@@ -262,7 +333,7 @@ Section BDToPCUICTyping.
 
     - intros ; intro.
 
-      assert (cparams : ctx_inst typing Σ Γ (pparams p) (List.rev (subst_instance (puinst p) (ind_params mdecl)))).
+      assert (cparams : ctx_inst Σ Γ (pparams p) (List.rev (subst_instance (puinst p) (ind_params mdecl)))).
       { apply ctx_inst_impl ; auto.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
@@ -273,39 +344,16 @@ Section BDToPCUICTyping.
           eapply on_minductive_wf_params_indices ; eauto.
       }
 
-      assert (cindices : ctx_inst typing Σ Γ (skipn (ci_npar ci) args) (subst_telescope (PCUICSpine.ctx_inst_sub cparams) 0
-        (List.rev (subst_instance (puinst p) (ind_indices idecl))))).
+      assert (ctx_inst Σ Γ (pparams p ++ skipn (ci_npar ci) args)
+              (List.rev (subst_instance (puinst p) (ind_params mdecl,,, ind_indices idecl)))).
       {
-        apply validity in X7 as [? ty_args] ; auto.
-        eapply invert_type_mkApps_ind in ty_args as [ty_args ?] ; eauto.
-
-        erewrite ind_arity_eq in ty_args.
-        2: eapply PCUICInductives.oib ; eauto.
-        repeat rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in ty_args.
-        assert (ind_npars mdecl <= #|args|).
-        {
-          admit.
-        }
-        rewrite -(firstn_skipn (ci_npar ci) args) in ty_args.
-        apply PCUICSpine.typing_spine_inv in ty_args as (?&(?&?)&?) ; auto.
-        2:{ rewrite firstn_length_le -H // context_assumptions_subst_instance.
-            symmetry.
-            eapply PCUICDeclarationTyping.onNpars.
-            eapply on_declared_inductive ; eauto.
-        }
-        2:{ repeat rewrite <- PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
-            erewrite <- ind_arity_eq.
-            2: eapply PCUICInductives.oib ; eauto.
-            eapply declared_inductive_valid_type ; eauto.
-        }
-      }        
-
-      assert (cpar_ind :
-        ctx_inst typing Σ Γ (pparams p ++ skipn (ci_npar ci) args) (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl)))).
-      {
-        admit.
+        rewrite -H.
+        eapply ctx_inst_app_weak ; eauto.
+        1: eapply validity ; auto.
+        rewrite H.
+        assumption.
       }
-
+      
       assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [].
       {
         eexists.
@@ -313,37 +361,13 @@ Section BDToPCUICTyping.
         1: econstructor ; eauto.
         erewrite PCUICDeclarationTyping.ind_arity_eq.
         2: by eapply PCUICInductives.oib ; eauto.
-        rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
-        eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn ; auto.
-        - unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
+        rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn -it_mkProd_or_LetIn_app -PCUICUnivSubstitution.subst_instance_app - (app_nil_r (pparams p ++ skipn (ci_npar ci) args)).
+        eapply arity_spine_it_mkProd_or_LetIn ; auto.
+        - unshelve apply ctx_inst_spine_subst ; auto.
           apply PCUICWeakening.weaken_wf_local ; auto.
-          eapply PCUICArities.on_minductive_wf_params ; eauto.
+          eapply on_minductive_wf_params_indices_inst ; eauto.
         - cbn.
-          rewrite subst_it_mkProd_or_LetIn.
-          cbn.
-          eapply PCUICSpine.arity_spine_it_mkProd_or_LetIn_Sort.
-          1: by eapply on_inductive_sort_inst ; eauto.
-          1: reflexivity.
-        
-          rewrite PCUICSpine.subst_context_telescope.
-          unshelve apply PCUICSpine.ctx_inst_spine_subst ; auto.
-          1:{
-            rewrite rev_involutive.
-            assumption.
-          }
-
-          rewrite <- PCUICSpine.subst_context_telescope.
-          eapply substitution_wf_local ; auto.
-          * eapply PCUICSpine.inst_subslet.
-            apply PCUICSpine.ctx_inst_spine_subst ; auto.
-            apply PCUICWeakening.weaken_wf_local ; auto.
-            eapply wf_local_app_inv.
-            rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
-            eapply on_minductive_wf_params_indices_inst ; eauto.
-          * rewrite <- app_context_assoc.
-            apply PCUICWeakening.weaken_wf_local ; auto.
-            rewrite <- PCUICUnivSubstitution.subst_instance_app_ctx.
-            eapply on_minductive_wf_params_indices_inst ; eauto.
+          constructor.
       }
 
       econstructor ; eauto.
@@ -475,7 +499,7 @@ Section BDToPCUICTyping.
       econstructor.
       all:by eauto.
 
-  Admitted.
+  Qed.
 
   End BDToPCUICTyping.
 

@@ -1,12 +1,13 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductiveInversion PCUICEquality.
-From MetaCoq.PCUIC Require Import PCUICWeakening PCUICClosed PCUICSubstitution PCUICPrincipality PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICSR PCUICWeakeningEnv PCUICContexts PCUICSpine.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICPrincipality PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICSR PCUICWeakeningEnv PCUICContexts PCUICSpine.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+
+(** Various generic lemmatas missing from the MetaCoq library *)
 
 Lemma All2i_mix (A B : Type) (P Q : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
   All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y) × (Q i x y)) n l l'.
@@ -113,11 +114,11 @@ Proof.
 
   assert (#|args| = ind_npars mdecl + context_assumptions (ind_indices idecl)).
   {
-    repeat rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in ty_args.
+    repeat rewrite subst_instance_it_mkProd_or_LetIn in ty_args.
     rewrite -it_mkProd_or_LetIn_app in ty_args.
     apply arity_typing_spine in ty_args as ((eq&_)&_) ; auto.
     2:{ apply PCUICWeakening.weaken_wf_local ; eauto.
-        rewrite -/app_context -PCUICUnivSubstitution.subst_instance_app.
+        rewrite -/app_context -subst_instance_app.
         eapply on_minductive_wf_params_indices_inst ; eauto.
     }
     rewrite context_assumptions_app !context_assumptions_subst_instance in eq.
@@ -129,18 +130,18 @@ Proof.
   assert (cindices : ctx_inst Σ Γ (skipn (ind_npars mdecl) args) (subst_telescope (ctx_inst_sub cparams) 0
     (List.rev (subst_instance v (ind_indices idecl))))).
   {
-    rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn in ty_args.
+    rewrite subst_instance_it_mkProd_or_LetIn in ty_args.
     erewrite <- (firstn_skipn _ args) in ty_args.
     apply typing_spine_ctx_inst in ty_args as (cparargs&?&ty_indices) ; auto.
     2:{ rewrite firstn_length_le.
         2:{ rewrite context_assumptions_subst_instance.
             symmetry.
-            eapply PCUICDeclarationTyping.onNpars.
+            eapply onNpars.
             eapply on_declared_inductive ; eauto.
         }
         lia.
     }
-    2:{ rewrite <- PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn.
+    2:{ rewrite <- subst_instance_it_mkProd_or_LetIn.
         erewrite <- ind_arity_eq.
         2: eapply PCUICInductives.oib ; eauto.
         eapply declared_inductive_valid_type ; eauto.
@@ -159,8 +160,8 @@ Proof.
     eapply typing_spine_strengthen in ty_indices ; eauto.
 
     erewrite <- (app_nil_r (skipn _ args)) in ty_indices.
-    rewrite PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn in ty_indices.
-    eapply PCUICSpine.typing_spine_ctx_inst in ty_indices as (cindices&_&_) ; auto.
+    rewrite subst_instance_it_mkProd_or_LetIn subst_it_mkProd_or_LetIn in ty_indices.
+    eapply typing_spine_ctx_inst in ty_indices as (cindices&_&_) ; auto.
     1: rewrite subst_telescope_subst_context ; eassumption.
     1: rewrite List.skipn_length context_assumptions_subst_context context_assumptions_subst_instance ; lia.
     erewrite <- subst_it_mkProd_or_LetIn.
@@ -173,12 +174,13 @@ Admitted.
 
 Section BDToPCUICTyping.
 
+  (** We work in a fixed, well-formed global environment*)
+
   Context `{cf : checker_flags}.
   Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
-  Let Pcheck Γ t T :=
-    wf_local Σ Γ -> isType Σ Γ T -> Σ ;;; Γ |- t : T.
+  (** The predicates we wish to prove, note the extra well-formedness hypothesis depending on the modding of the judgement *)
 
   Let Pinfer Γ t T :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : T.
@@ -192,8 +194,13 @@ Section BDToPCUICTyping.
   Let Pind Γ ind t u args :=
     wf_local Σ Γ -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
 
+  Let Pcheck Γ t T :=
+    wf_local Σ Γ -> isType Σ Γ T -> Σ ;;; Γ |- t : T.
+
   Let PΓ Γ :=
     wf_local Σ Γ.
+
+  (** Preliminary lemmata to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
     All_local_env_over_sorting checking infering_sort 
@@ -215,36 +222,11 @@ Section BDToPCUICTyping.
       eexists. red. auto.
   Qed.
 
-  Lemma type_local_ctx_impl Γ Δ u (wfΓ : wf_local Σ Γ):
-    type_local_ctx (lift_sorting (fun _ => Pcheck) (fun _ => Psort)) Σ Γ Δ u -> type_local_ctx (lift_typing typing) Σ Γ Δ u.
-  Proof.
-    intros HΔ.
-    induction Δ as [|[? []]].
-    1: auto.
-    all: simpl.
-    1: destruct HΔ as (?&[]&?).
-    2: destruct HΔ.
-    all: have wfΓΔ : wf_local Σ (Γ ,,, Δ) by eapply type_local_ctx_wf_local ; eauto.
-    all: repeat split ; auto.
-    - eexists. eauto.
-    - apply l.
-      2: eexists ; eapply p.
-      all: eauto.
-    - apply l.
-      1: assumption.
-      eexists.
-      constructor ; auto.
-      clear - t.
-      induction Δ as [|[? []]].
-      1: assumption.
-      all: intuition.
-  Qed.
-
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
     forall args, PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ args Δ -> ctx_inst Σ Γ args Δ.
   Proof.
     revert wfΔ.
-    induction Δ using PCUICInduction.ctx_length_ind.
+    induction Δ using ctx_length_ind.
     1: intros _ ? d ; inversion_clear d ; constructor.
     intros wfΔ args ctxi ; inversion ctxi.
     - subst d.
@@ -286,7 +268,8 @@ Section BDToPCUICTyping.
       eassumption.
   Qed.
     
-  Theorem bidirectional_to_PCUIC : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
+  (** The big theorem, proven by mutual induction using the custom induction principle *)
+  Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
   Proof.
     apply bidir_ind_env.
 
@@ -338,7 +321,7 @@ Section BDToPCUICTyping.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
         
-        apply (PCUICUnivSubstitution.wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
+        apply (wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
         - by destruct isdecl.
         - eapply wf_local_app_inv.
           eapply on_minductive_wf_params_indices ; eauto.
@@ -361,7 +344,7 @@ Section BDToPCUICTyping.
         1: econstructor ; eauto.
         erewrite PCUICDeclarationTyping.ind_arity_eq.
         2: by eapply PCUICInductives.oib ; eauto.
-        rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn -it_mkProd_or_LetIn_app -PCUICUnivSubstitution.subst_instance_app - (app_nil_r (pparams p ++ skipn (ci_npar ci) args)).
+        rewrite !subst_instance_it_mkProd_or_LetIn -it_mkProd_or_LetIn_app -subst_instance_app - (app_nil_r (pparams p ++ skipn (ci_npar ci) args)).
         eapply arity_spine_it_mkProd_or_LetIn ; auto.
         - unshelve apply ctx_inst_spine_subst ; auto.
           apply PCUICWeakening.weaken_wf_local ; auto.
@@ -501,51 +484,53 @@ Section BDToPCUICTyping.
 
   Qed.
 
-  End BDToPCUICTyping.
+End BDToPCUICTyping.
 
-  Theorem infering_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
-    wf_local Σ Γ -> Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t : T.
-  Proof.
-    intros.
-    apply bidirectional_to_PCUIC.
-    all: assumption.
-  Qed.
+(** The user-facing theorems, directly following from the previous one *)
 
-  Theorem checking_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
-    wf_local Σ Γ -> isType Σ Γ T -> Σ ;;; Γ |- t ◃ T -> Σ ;;; Γ |- t : T.
-  Proof.
-    intros wfΓ HT Ht. revert wfΓ HT.
-    apply bidirectional_to_PCUIC.
-    all: assumption.
-  Qed.
+Theorem infering_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t : T.
+Proof.
+  intros.
+  apply bidirectional_to_pcuic.
+  all: assumption.
+Qed.
 
-  Theorem infering_sort_typing `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
-    wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t : tSort u.
-  Proof.
-    intros wfΓ Ht. revert Ht wfΓ.
-    apply bidirectional_to_PCUIC.
-    assumption.
-  Qed.
+Theorem checking_typing `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
+  wf_local Σ Γ -> isType Σ Γ T -> Σ ;;; Γ |- t ◃ T -> Σ ;;; Γ |- t : T.
+Proof.
+  intros wfΓ HT Ht. revert wfΓ HT.
+  apply bidirectional_to_pcuic.
+  all: assumption.
+Qed.
 
-  Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :
-    wf_local Σ Γ -> Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
-  Proof.
-    intros wfΓ Ht. revert Ht wfΓ.
-    apply bidirectional_to_PCUIC.
-    assumption.
-  Qed.
+Theorem infering_sort_typing `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t : tSort u.
+Proof.
+  intros wfΓ Ht. revert Ht wfΓ.
+  apply bidirectional_to_pcuic.
+  assumption.
+Qed.
 
-  Theorem infering_ind_typing `{checker_flags} (Σ : global_env_ext) Γ t ind u args (wfΣ : wf Σ) :
-  wf_local Σ Γ -> Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
-  Proof.
-    intros wfΓ Ht. revert Ht wfΓ.
-    apply bidirectional_to_PCUIC.
-    assumption.
-  Qed.
+Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
+Proof.
+  intros wfΓ Ht. revert Ht wfΓ.
+  apply bidirectional_to_pcuic.
+  assumption.
+Qed.
 
-  Theorem wf_local_bd_typing `{checker_flags} (Σ : global_env_ext) Γ (wfΣ : wf Σ) :
-    wf_local_bd Σ Γ -> wf_local Σ Γ.
-  Proof.
-    apply bidirectional_to_PCUIC.
-    assumption.
-  Qed.
+Theorem infering_ind_typing `{checker_flags} (Σ : global_env_ext) Γ t ind u args (wfΣ : wf Σ) :
+wf_local Σ Γ -> Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t : mkApps (tInd ind u) args.
+Proof.
+  intros wfΓ Ht. revert Ht wfΓ.
+  apply bidirectional_to_pcuic.
+  assumption.
+Qed.
+
+Theorem wf_local_bd_typing `{checker_flags} (Σ : global_env_ext) Γ (wfΣ : wf Σ) :
+  wf_local_bd Σ Γ -> wf_local Σ Γ.
+Proof.
+  apply bidirectional_to_pcuic.
+  assumption.
+Qed.

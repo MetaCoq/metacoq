@@ -432,3 +432,5 @@ erasure/src/pCUICExpandLets.mli
 bidirectional/CoqMakefile
 
 bidirectional/CoqMakefile.conf
+
+bidirectional/.vscode/

@@ -17,12 +17,6 @@ From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-(* Module BDLookup := Lookup PCUICTerm PCUICEnvironment.
-Include BDLookup.
-
-Module BDEnvTyping := EnvTyping PCUICTerm PCUICEnvironment.
-Include BDEnvTyping. *)
-
 
 Notation "Σ ;;; Γ |- t --> t'" := (red Σ Γ t t') (at level 50, Γ, t, t' at next level) : type_scope.
 Reserved Notation " Σ ;;; Γ |- t ▹ T " (at level 50, Γ, t, T at next level).
@@ -227,12 +221,6 @@ Proof.
   all: lia.
 Qed.
 
-(*Fixpoint globenv_size (Σ : global_env) : size :=
-  match Σ with
-  | [] => 1
-  | d :: Σ => S (globenv_size Σ)
-  end.*)
-
 Arguments lexprod [A B].
 
 Section BidirectionalInduction.
@@ -249,7 +237,7 @@ Section BidirectionalInduction.
   Context (Pind : context -> inductive -> term -> Instance.t -> list term -> Type).
   Context (PΓ : context -> Type).
 
-(* This is what we wish to prove with our mutual induction principle *)
+(** This is what we wish to prove mutually given the previous predicates *)
   Definition env_prop_bd :=
     (forall Γ , wf_local_bd Σ Γ -> PΓ Γ) ×
     (forall Γ t T, Σ ;;; Γ |- t ◃ T -> Pcheck Γ t T) ×
@@ -258,8 +246,8 @@ Section BidirectionalInduction.
     (forall Γ t na A B, Σ ;;; Γ |- t ▹Π (na,A,B) -> Pprod Γ t na A B) ×
     (forall Γ ind t u args, Σ ;;; Γ |- t ▹{ind} (u,args) -> Pind Γ ind t u args).
 
-  (** *** To prove the needed induction principle, we unite all possible typing judgments in a big sum type,
-          on which we define a suitable notion of size, wrt. which we perform well-founded induction
+  (** To prove the needed induction principle, we unite all possible typing judgments in a big sum type,
+      on which we define a suitable notion of size, wrt. which we perform well-founded induction
   *)
 
   Inductive typing_sum : Type :=
@@ -668,19 +656,3 @@ Section BidirectionalInduction.
 Qed.
 
 End BidirectionalInduction.
-
-
-Ltac my_rename_hyp h th :=
-  match th with
-  | (wf ?E) => fresh "wf" E
-  | (wf (fst_ctx ?E)) => fresh "wf" E
-  | (wf _) => fresh "wf"
-  | (checking _ _ ?t _) => fresh "check" t
-  | (conv _ _ ?t _) => fresh "conv" t
-  | (All_local_env (lift_typing (@checking _) _) ?G) => fresh "wf" G
-  | (All_local_env (lift_typing (@checking _) _) _) => fresh "wf"
-  | (All_local_env _ _ ?G) => fresh "H" G
-  | context [checking _ _ (_ ?t) _] => fresh "IH" t
-  end.
-
-Ltac rename_hyp h ht ::= my_rename_hyp h ht.

@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils BasicAst AstUtils
 From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping.
 From Equations Require Import Equations.
 
-
+(** Variation on lift_typing to enable a different predicate for checking a body and infering a sort when there is no body *)
 Definition lift_sorting
   (checking : global_env_ext -> context -> term -> term -> Type)
   (sorting : global_env_ext -> context -> term -> Universe.t -> Type) :
@@ -20,7 +20,7 @@ Section SortingEnv.
   Context (checking : global_env_ext -> context -> term -> term -> Type).
   Context (sorting : global_env_ext -> context -> term -> Universe.t -> Type).
 
-  (** Well-formedness of local environments embeds a sorting for each variable *)
+  (** Corresponding All_local_env_over predicate *)
 
   Section TypeLocalOver.
     Context (cproperty : forall (Σ : global_env_ext) (Γ : context),
@@ -55,7 +55,7 @@ Section SortingEnv.
   End TypeLocalOver.
   Derive Signature for All_local_env_over_sorting.
 
-  
+
   Section All_local_env_size.
     Context (csize : forall (Σ : global_env_ext) (Γ : context) (t T : term), checking Σ Γ t T -> size).
     Context (ssize : forall (Σ : global_env_ext) (Γ : context) (t : term) (u : Universe.t), sorting Σ Γ t u -> size).

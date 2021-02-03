@@ -1,11 +1,14 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubstitution PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICSR PCUICConfluence.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICUnivSubstitution PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICSR PCUICConfluence.
 From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
+Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
+
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Lemma eq_universe_sort_of_product `{checker_flags} Σ s1 s1' s2 s2' :
   eq_universe Σ s1 s1' -> eq_universe Σ s2 s2' ->
@@ -28,17 +31,62 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma conv_context_trans `{cf : checker_flags} Σ Γ Γ' Γ'' :
-  conv_context Σ Γ Γ' -> conv_context Σ Γ Γ'' -> conv_context Σ Γ' Γ''.
-Proof.
-Admitted.
-
 Lemma conv_Prod_inv `{cf:checker_flags} Σ Γ na na' A B A' B' :
   wf Σ.1 -> wf_local Σ Γ ->
   Σ ;;; Γ |- tProd na A B = tProd na' A' B' ->
-  eq_binder_annot na na' × Σ ;;; Γ |- A = A' × Σ ;;; Γ ,, vass na A |- B = B'.
+  eq_binder_annot na na' × Σ ;;; Γ |- A = A' × Σ ;;; Γ ,, vass na' A' |- B = B'.
 Proof.
-Admitted.
+  intros wfΣ wfΓ H; depind H.
+  - depelim e.
+    splits; auto.
+    all: now constructor.
+
+  - depelim r.
+    + solve_discr.
+    + specialize (IHconv _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto.
+      econstructor 2; eauto.
+    + specialize (IHconv _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto. apply conv_trans with N2.
+      * auto.
+      * eapply conv_conv_ctx; eauto.
+        -- econstructor 2. 1: reflexivity.
+           constructor ; auto.
+      * auto.
+
+  - depelim r.
+    + solve_discr.
+    + specialize (IHconv _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto.
+      * econstructor 3. 2:eauto. auto.
+      * eapply conv_conv_ctx in b0. 1: eauto. 1: auto.
+        constructor. 1: eapply conv_ctx_refl.
+        constructor; auto. eapply conv_sym; auto.
+    + specialize (IHconv _ _ _ _ _ _ wfΣ wfΓ eq_refl).
+      intuition auto. apply conv_trans with N2. 1-2: auto.
+      eapply conv_red_r; eauto.
+Qed.
+
+Lemma conv_alt `{cf : checker_flags} Σ Γ t u :
+  Σ ;;; Γ |- t = u <~> { v & { v' & red Σ Γ t v × red Σ Γ u v' × 
+  eq_term Σ (global_ext_constraints Σ) v v'} }.
+Proof.
+  split.
+  - induction 1.
+    + exists t, u. intuition auto.
+    + destruct IHX as (v' & v'' & redv & redv' & eqv).
+      exists v', v''. intuition auto. now eapply red_step.
+    + destruct IHX as (v' & v'' & redv & redv' & eqv).
+      exists v', v''. intuition auto. now eapply red_step.
+  - intros (v & v' & redv & redv' & Hleq).
+    apply clos_rt_rt1n in redv.
+    apply clos_rt_rt1n in redv'.
+    induction redv.
+    * induction redv'.
+    ** constructor; auto.
+    ** econstructor 3; eauto.
+    * econstructor 2; eauto.
+Qed.
 
 Lemma invert_conv_ind_ind `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}
   {Γ ind ind' u u' args args'} :
@@ -46,7 +94,32 @@ Lemma invert_conv_ind_ind `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf
   Reflect.eqb ind ind' ×
   PCUICEquality.R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef ind) #|args| u u' × All2 (conv Σ Γ) args args'.
 Proof.
-Admitted.
+  intros h.
+  eapply conv_alt in h as (v & v' & redv & redv' & eqvv').
+  eapply red_mkApps_tInd in redv as [l' [? ha]]; auto. subst.
+  eapply eq_term_upto_univ_mkApps_l_inv in eqvv' as (v & l'' & (e & ?) & ?).
+  subst.
+  dependent destruction e.
+  eapply red_mkApps_tInd in redv' as (?&eq&?); auto.
+  solve_discr. noconf H. subst.
+  repeat split.
+  - apply eq_inductive_refl.
+  - by rewrite (All2_length ha).
+  - etransitivity.
+    1:{ eapply All2_impl.
+        1: eassumption.
+        by apply red_conv.
+    }
+    etransitivity.
+    1:{ eapply All2_impl.
+        1: eassumption.
+        by constructor.
+    }
+    symmetry.
+    eapply All2_impl.
+    1: eassumption.
+    by apply red_conv.
+Qed.
 
 Lemma projection_convertible_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
   forall {mdecl idecl p pdecl u u' },
@@ -58,7 +131,9 @@ Lemma projection_convertible_indices {cf:checker_flags} {Σ : global_env_ext} (w
   Σ ;;; projection_context mdecl idecl p.1.1 u |- 
     subst_instance u pdecl.2 = subst_instance u' pdecl.2.
 Proof.
-Admitted.
+  todo "case".
+Qed.
+
 
 Section BDUnique.
 
@@ -72,9 +147,9 @@ Let Pinfer Γ t T :=
 Let Psort Γ t u :=
   wf_local Σ Γ -> forall u', Σ ;;; Γ |- t ▹□ u' -> eq_universe Σ u u'.
 
-Let Pprod Γ t na A B :=
+Let Pprod Γ t (na : aname) A B :=
   wf_local Σ Γ -> forall na' A' B', Σ ;;; Γ |- t ▹Π (na',A',B') ->
-  eq_binder_annot na na' × Σ ;;; Γ |- A = A' × Σ ;;; Γ ,, vass na A |- B = B'.
+  eq_binder_annot na na' × Σ ;;; Γ |- A = A' × Σ ;;; Γ ,, vass na' A' |- B = B'.
 
 Let Pind Γ ind t u args :=
   wf_local Σ Γ -> forall ind' u' args', Σ ;;; Γ |- t ▹{ind'} (u',args') ->
@@ -131,23 +206,16 @@ Proof.
       eexists.
       eassumption.
     }
-
-    assert (subslet Σ Γ [u] [vass na A0]).
+    assert (subslet Σ Γ [u] [vass na0 A0]).
     {
       constructor.
       1: constructor.
       rewrite subst_empty.
       apply checking_typing ; eauto.
     }
-
     eapply subst_conv ; eauto.
     + constructor ; auto.
     + apply X0 in X3 as (?&?&?); eauto.
-      eapply conv_conv_ctx ; eauto.
-      cbn.
-      constructor.
-      1: reflexivity.
-      constructor ; eauto.
   
   - replace decl0 with decl.
     1: reflexivity.
@@ -242,8 +310,8 @@ Proof.
     apply mkApps_conv_args ; auto.
     + unfold ptm, ptm0.
       apply it_mkLambda_or_LetIn_conv ; auto.
-      eapply conv_context_trans.
-      all: eassumption.
+      eapply conv_context_trans ; eauto.
+      apply conv_context_sym ; eauto.
 
     + apply All2_app.
       2: constructor ; auto.

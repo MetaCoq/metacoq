@@ -121,19 +121,6 @@ Proof.
     by apply red_conv.
 Qed.
 
-Lemma projection_convertible_indices {cf:checker_flags} {Σ : global_env_ext} (wfΣ : wf Σ.1) :
-  forall {mdecl idecl p pdecl u u' },
-  declared_projection Σ p mdecl idecl pdecl ->
-  on_udecl_prop Σ (ind_universes mdecl) ->
-  consistent_instance_ext Σ (ind_universes mdecl) u ->
-  consistent_instance_ext Σ (ind_universes mdecl) u' ->
-  R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef p.1.1) (ind_npars mdecl) u u' ->
-  Σ ;;; projection_context mdecl idecl p.1.1 u |- 
-    subst_instance u pdecl.2 = subst_instance u' pdecl.2.
-Proof.
-  todo "case".
-Qed.
-
 
 Section BDUnique.
 

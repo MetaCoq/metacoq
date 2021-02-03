@@ -700,48 +700,30 @@ Proof.
   rewrite closed_ctx_decl in cl. move/andb_and: cl => [cld clΓ].
   now rewrite IHΓ // Nat.add_1_r.
 Qed.
+From MetaCoq.PCUIC Require Import PCUICInst.
+
+(* Lemma Upn_rshiftk n s k : ⇑^n s ∘s shiftk k =1 shiftk k ∘s (idsn n ⋅n s).
+Proof.
+  intros i. rewrite Upn_eq; sigma.
+  destruct (leb_spec_Set (S i) n).
+  - rewrite subst_consn_lt'. len; try lia.
+    cbn.
+    rewrite /subst_fn nth_error_map /= idsn_lt /shiftk; len; try lia.
+    rewrite subst_consn_lt'; len; try lia.
+    simpl.
+  now destruct nth_error => /= //; len. 
+  reflexivity. *)
 
 Lemma closed_subst_map_lift s n k t :
   closedn (#|s| + k) t ->
   subst (map (lift0 n) s) k t = subst s (n + k) (lift n k t).
 Proof.
-  remember (#|s| + k) as n'.
-  intros cl; revert n' t cl k Heqn'.
-  eapply (term_closedn_list_ind (fun n' t => forall k, n' = #|s| + k -> 
-  subst (map (lift0  n) s) k t = subst s (n + k) (lift n k t)));
-  intros; simpl; f_equal; eauto.
-  - subst k.
-    simpl.
-    destruct (Nat.leb_spec k0 n0).
-    rewrite nth_error_map.
-    replace (n + n0 - (n + k0)) with (n0 - k0) by lia.
-    destruct nth_error eqn:eq => /= //.
-    destruct (Nat.leb_spec (n + k0) (n + n0)); try lia.
-    rewrite simpl_lift; try lia. lia_f_equal.
-    destruct (Nat.leb_spec (n + k0) (n + n0)); try lia.
-    len.
-    eapply nth_error_None in eq. lia.
-    destruct (Nat.leb_spec (n + k0) n0); try lia.
-    reflexivity.
-
-  - rewrite map_map_compose. solve_all.
-  - rewrite (H0 (S k0)). lia. lia_f_equal.
-  - rewrite (H0 (S k0)). lia. lia_f_equal.
-  - rewrite (H1 (S k0)). lia. lia_f_equal.
-  - todo "case".
-  - todo "case". (* red in X0. rewrite !map_map_compose. solve_all.*)
-  - rewrite map_map_compose. len'.
-    solve_all.
-    specialize (a _ H). specialize (b (#|fix_context m| + k0)).
-    forward b by lia. 
-    autorewrite with len in b.
-    rewrite  b. lia_f_equal.
-  - rewrite map_map_compose. len.
-    solve_all. 
-    specialize (a _ H). specialize (b (#|fix_context m| + k0)).
-    forward b by lia.
-    autorewrite with len in b.
-    rewrite b. lia_f_equal.
+  intros cl.
+  sigma.
+  eapply PCUICInst.inst_ext_closed; tea.
+  intros x Hx.
+  rewrite -Upn_Upn Nat.add_comm Upn_Upn Upn_compose shiftn_consn_idsn; sigma.
+  now rewrite !Upn_subst_consn_lt; len; try lia.
 Qed.
 
 Lemma subst_map_lift_lift_context (Γ : context) k s : 

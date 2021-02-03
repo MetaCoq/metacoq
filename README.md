@@ -66,7 +66,7 @@ to compile the files corresponding specifically to the article.
 [BDEnvironmentTyping]: ./bidirectional/theories/BDEnvironmentTyping.v
 [BDTyping]: ./bidirectional/theories/BDTyping.v
 [BDToPCUIC]: ./bidirectional/theories/BDToPCUIC.v
-[BDFromPCUIC]: ./bidirectional/theories/BDTypingInduction.v
+[BDFromPCUIC]: ./bidirectional/theories/BDFromPCUIC.v
 
 ## Assumptions
 

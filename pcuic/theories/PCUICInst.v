@@ -1039,14 +1039,6 @@ Proof.
        now rewrite /to_extended_list /to_extended_list_k reln_fold.
 Qed.
 
-Lemma subst_consn_lt' (l : list term) (i : nat) σ :
-  i < #|l| ->
-  (l ⋅n σ) i = subst_fn l i.
-Proof.
-  move/subst_consn_lt => [x [hnth] hl].
-  rewrite hl. unfold subst_fn. now rewrite hnth.
-Qed.
-
 Axiom fix_guard_inst : forall Σ Γ Δ mfix σ,
   Σ ;;; Γ ⊢ σ : Δ ->
   let mfix' := map (map_def (inst σ) (inst (up (List.length mfix) σ))) mfix in

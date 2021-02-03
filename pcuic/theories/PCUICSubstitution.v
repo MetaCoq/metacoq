@@ -1218,11 +1218,10 @@ Proof.
       rewrite /= hb /=. f_equal.
       rewrite subst_inst. rewrite Nat.add_0_r.
       rewrite rename_inst.
-      sigma. rewrite ren_lift_renaming. 
-      rewrite Upn_0.
-      rewrite -shiftn_consn_idsn.
-      rewrite -subst_compose_assoc -Upn_Upn.
-      now replace (S n + (#|Γ''| - S n)) with #|Γ''| by lia.
+      replace #|Γ''| with ((#|Γ''| - S n) + S n) at 2 by lia.
+      set (k := S n).
+      sigma. apply inst_ext.
+      rewrite -shiftn_Upn - !Upn_Upn. intros i; lia_f_equal.
   - move: hnth.
     case: (nth_error_app_context Γ Γ' _) => // x' hnth hn' [=] eq; subst x'.
     * elimtype False.
@@ -1242,17 +1241,17 @@ Proof.
       + rewrite nth_error_app_ge; len; try lia.
         rewrite -hnth. lia_f_equal.
       + rewrite -lift_renaming_0_rshift hb /=.
-        f_equal; sigma. rewrite ren_lift_renaming. sigma. 
-        apply inst_ext. rewrite -shiftk_shift.
-        rewrite - !subst_compose_assoc -shiftk_shift.
-        replace (S n) with ((S n - #|Γ''|) + #|Γ''|) by lia.
-        rewrite -shiftk_compose subst_compose_assoc shiftn_consn_idsn.
-        replace (S n - #|Γ''|) with (S (n - #|Γ''| - #|Γ'|) + #|Γ'|) by lia.
-        rewrite -shiftk_compose subst_compose_assoc -(subst_compose_assoc (↑^#|Γ'|)).
+        f_equal. rewrite rename_inst. rewrite lift_renaming_spec shiftn0 ren_shiftk.
+        apply inst_ext.
         apply subs_length in subs.
-        rewrite subst_consn_shiftn //. sigma.
-        rewrite -shiftk_shift. rewrite -shiftk_shift_l shiftk_compose.
-        now replace (n - #|Γ''| - #|Γ'| + S #|Γ''|) with (S (n - #|Γ'|)) by lia.
+        replace (S n) with ((S (n - #|Γ''|)) + #|Γ''|) by lia.
+        rewrite -shiftk_compose subst_compose_assoc.
+        rewrite shiftn_Upn -subst_compose_assoc.
+        replace (S (n - #|Γ''|)) with ((S (n - #|Γ''|) - #|Γ'|) + #|Γ'|) by lia.
+        rewrite -shiftk_compose !subst_compose_assoc.
+        rewrite -(subst_compose_assoc _ _ (↑^#|Γ''|)).
+        rewrite subst_consn_shiftn //.
+        rewrite !shiftk_compose. intros i; lia_f_equal.
 Qed.
 
 Lemma untyped_subslet_length {Γ s Δ} : untyped_subslet Γ s Δ -> #|s| = #|Δ|.
@@ -1275,25 +1274,24 @@ Proof.
       rewrite nth_error_subst_context /= hnth /=. split; eauto.
       rewrite /= hb /=. f_equal.
       rewrite subst_inst. rewrite Nat.add_0_r.
-      rewrite rename_inst.
-      sigma. rewrite ren_lift_renaming. 
-      rewrite Upn_0.
-      rewrite -shiftn_consn_idsn.
-      rewrite -subst_compose_assoc -Upn_Upn.
-      now replace (S n + (#|Γ'| - S n)) with #|Γ'| by lia.
+      rewrite rename_inst. rewrite ren_lift_renaming Upn_0.
+      replace #|Γ'| with ((#|Γ'| - S n) + S n) at 2 by lia.
+      set (k := S n).
+      sigma. apply inst_ext.
+      rewrite -shiftn_Upn - !Upn_Upn. intros i; lia_f_equal.
   - move: hnth.
     case: (nth_error_app_context Γ Δ _) => // x' hnth hn' [=] eq; subst x'.
     * right.
       pose proof (untyped_subslet_length subs).
       rewrite Upn_eq {1}/subst_consn nth_error_idsn_None; try lia.
-      len. rewrite subst_consn_compose subst_consn_lt'; len; try lia.
+      len. rewrite subst_consn_compose subst_consn_lt; len; try lia.
       rewrite /subst_fn nth_error_map. 
-      case: nth_error_spec; try lia. move=> x hs hns.
+      case: nth_error_spec; try lia. move=> x hs hns /=.
       epose proof (untyped_subslet_nth_error _ _ _ _ _ _ subs hnth hs).
       rewrite hb in X; rewrite X; cbn.
       rewrite subst_inst Upn_0 inst_assoc. apply inst_ext.
       rewrite skipn_subst. 2:lia.
-      sigma.
+      rewrite !subst_compose_assoc.
       rewrite subst_consn_compose. sigma. 
       rewrite -subst_compose_assoc -shiftk_shift -subst_compose_assoc.
       rewrite -shiftk_shift.
@@ -1308,11 +1306,11 @@ Proof.
       + rewrite nth_error_app_ge; len; try lia.
         rewrite -hnth. lia_f_equal.
       + rewrite -lift_renaming_0_rshift hb /=.
-        f_equal; sigma. rewrite ren_lift_renaming. sigma. 
+        f_equal; sigma.
         apply inst_ext. rewrite -shiftk_shift.
         rewrite - !subst_compose_assoc -shiftk_shift.
         replace (S n) with ((S n - #|Γ'|) + #|Γ'|) by lia.
-        rewrite -shiftk_compose subst_compose_assoc shiftn_consn_idsn.
+        rewrite -shiftk_compose subst_compose_assoc shiftn_Upn.
         replace (S n - #|Γ'|) with (S (n - #|Γ'| - #|s|) + #|s|) by lia.
         rewrite -shiftk_compose subst_compose_assoc -(subst_compose_assoc (↑^#|s|)).
         rewrite subst_consn_shiftn //. sigma.
@@ -1822,7 +1820,7 @@ Proof.
   * intros x decl.
     case: nth_error_app_context => //.
     { intros d hnth hn [= ->].
-      rewrite {1}Upn_eq subst_consn_lt'; len => //. rewrite /subst_fn.
+      rewrite {1}Upn_eq subst_consn_lt; len => //. rewrite /subst_fn.
       rewrite idsn_lt //.
       eapply meta_conv.
       - econstructor; auto.
@@ -1839,7 +1837,7 @@ Proof.
       * intros n hnth hx [= ->].
         rewrite {1}Upn_eq subst_consn_ge; len => //; try lia.
         rewrite subst_consn_compose.
-        rewrite subst_consn_lt'; len; try lia.
+        rewrite subst_consn_lt; len; try lia.
         unfold subst_fn. rewrite nth_error_map.
         destruct (subslet_nth_error hs hnth) as [t [hnths [hty hb]]].
         rewrite hnths /=. sigma in hty.

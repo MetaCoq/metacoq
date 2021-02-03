@@ -1875,7 +1875,7 @@ Section Rho.
         { sigma. eapply inst_ext.
           rewrite -ren_shiftn. sigma.
           rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
-          rewrite subst_consn_compose compose_ids_l. apply subst_consn_proper => //.
+          apply subst_consn_proper => //.
           rewrite map_fix_subst //.
           intros n. simp rho. simpl. simp rho.
           reflexivity.
@@ -2037,7 +2037,7 @@ Section Rho.
           apply inst_ext.
           rewrite -ren_shiftn. sigma.
           rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
-          rewrite subst_consn_compose compose_ids_l. apply subst_consn_proper => //.
+          apply subst_consn_proper => //.
           2:now autorewrite with len.
           rewrite map_cofix_subst' //. 
           intros n'; simp rho. simpl; f_equal. now simp rho.
@@ -2112,7 +2112,7 @@ Section Rho.
         apply inst_ext.
         rewrite -ren_shiftn. sigma.
         rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
-        rewrite subst_consn_compose compose_ids_l. apply subst_consn_proper => //.
+        apply subst_consn_proper => //.
         2:now autorewrite with len.
         rewrite map_cofix_subst' //. 
         rewrite !map_map_compose.
@@ -2570,13 +2570,13 @@ Section Rho.
     intros predΓ predΓ' fctx eqf redr redl.
     intros x.
     destruct (leb_spec_Set (S x) #|cofix_subst mfix1|).
-    destruct (subst_consn_lt l) as [? [Hb Hb']].
+    destruct (subst_consn_lt_spec l) as [? [Hb Hb']].
     rewrite Hb'.
     eapply nth_error_cofix_subst in Hb. subst.
     rewrite cofix_subst_length in l.
     rewrite -(All2_length eqf) in l.
     rewrite -(cofix_subst_length mfix0) in l.
-    destruct (subst_consn_lt l) as [b' [Hb0 Hb0']].
+    destruct (subst_consn_lt_spec l) as [b' [Hb0 Hb0']].
     rewrite rho_cofix_subst.
     pose proof (nth_error_map (rho (rho_ctx Γ)) x (cofix_subst mfix0)).
     rewrite Hb0 in H. simpl in H.
@@ -2645,13 +2645,13 @@ Section Rho.
     intros predΓ predΓ' fctx eqf redr redl.
     intros x.
     destruct (leb_spec_Set (S x) #|fix_subst mfix1|).
-    destruct (subst_consn_lt l) as [? [Hb Hb']].
+    destruct (subst_consn_lt_spec l) as [? [Hb Hb']].
     rewrite Hb'.
     eapply nth_error_fix_subst in Hb. subst.
     rewrite fix_subst_length in l.
     rewrite -(All2_length eqf) in l.
     rewrite -(fix_subst_length mfix0) in l.
-    destruct (subst_consn_lt l) as [b' [Hb0 Hb0']].
+    destruct (subst_consn_lt_spec l) as [b' [Hb0 Hb0']].
     rewrite rho_fix_subst.
     pose proof (nth_error_map (rho (rho_ctx Γ)) x (fix_subst mfix0)).
     rewrite Hb0 in H. simpl in H.
@@ -2932,7 +2932,7 @@ Section Rho.
     red. intros H x.
     destruct (leb_spec_Set (S x) #|idsn #|Δ0| |).
     unfold Upn.
-    specialize (subst_consn_lt l).
+    specialize (subst_consn_lt_spec l).
     intros [tx [Hdecl Heq]].
     rewrite !Heq. split. eapply pred1_refl_gen. auto.
     eapply All2_fold_over_app; auto. destruct (Hrel 0). pcuic.
@@ -3181,7 +3181,6 @@ Section Rho.
         rewrite map_fix_subst. simpl. intros. f_equal. apply map_ext. intros.
         apply map_def_eq_spec; auto. now sigma.
         rewrite Upn_comp ?map_length ?fix_subst_length //.
-        rewrite subst_consn_compose. now sigma.
       + solve_all.
 
     - (* CoFix Case *)
@@ -3207,7 +3206,6 @@ Section Rho.
         rewrite map_cofix_subst'. simpl. intros. f_equal. apply map_ext. intros.
         apply map_def_eq_spec; auto. now sigma.
         rewrite Upn_comp ?map_length ?cofix_subst_length //.
-        rewrite subst_consn_compose. now sigma.
       + solve_all. (* args *)
       + simpl. solve_all.
       + eauto.
@@ -3251,7 +3249,6 @@ Section Rho.
         rewrite map_cofix_subst'. simpl. intros. f_equal. apply map_ext. intros.
         apply map_def_eq_spec; auto. now sigma.
         rewrite Upn_comp ?map_length ?cofix_subst_length //.
-        rewrite subst_consn_compose. now sigma.
       + solve_all. (* args *)
 
     - simpl. rewrite inst_closed0.
@@ -3353,11 +3350,11 @@ Section Rho.
     intros Hpred hlen Hctx Ha.
     intros i.
     destruct (leb_spec_Set (S i) #|args1|).
-    pose proof (subst_consn_lt l) as [arg [hnth heq]].
+    pose proof (subst_consn_lt_spec l) as [arg [hnth heq]].
     rewrite heq.
     split.
     - eapply All2_nth_error_Some in Ha as [t' [hnth' pred]]; tea.
-      pose proof (subst_consn_lt (nth_error_Some_length hnth')) as [arg' [hnth'' ->]].
+      pose proof (subst_consn_lt_spec (nth_error_Some_length hnth')) as [arg' [hnth'' ->]].
       rewrite hnth' in hnth''. now noconf hnth''.
     - case: nth_error_appP => /= //.
       * intros x hnth'. len => hleni.
@@ -3718,7 +3715,7 @@ Section Rho.
       simpl. rewrite isc.
       eapply pred_mkApps.
       rewrite rho_ctx_app in Hreleq1.
-      rewrite !subst_inst. simpl_pred.
+      rewrite !subst_inst. eapply simpl_pred; [sigma; trea|sigma; trea|].
       rewrite /rho_fix_context -fold_fix_context_rho_ctx.
       eapply strong_substitutivity; eauto.
       * apply ctxmap_fix_subst.

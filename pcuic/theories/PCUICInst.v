@@ -98,8 +98,7 @@ Lemma inst_subst0 a b τ : (subst0 a b).[τ] = (subst0 (map (inst τ) a) b.[⇑^
 Proof.
   simpl. rewrite !subst_inst !Upn_0. sigma.
   apply inst_ext.
-  rewrite Upn_comp. 2:now len.
-  rewrite subst_consn_compose. now sigma.
+  rewrite Upn_comp //; now len.
 Qed.
 Hint Rewrite inst_subst0 : sigma.
 
@@ -211,12 +210,9 @@ Proof.
     + rewrite subst_consn_app.
       now apply IHn.
     + simpl.
-      destruct (@subst_consn_lt _ (l ++ [a]) #|l|) as [a' [hnth heq]].
-      * rewrite app_length. simpl; lia.
-      * rewrite heq. rewrite nth_error_app_ge in hnth; auto.
-        rewrite Nat.sub_diag in hnth. simpl in hnth. congruence.
+      rewrite subst_consn_lt /= ?List.app_length /= //; try lia.
+      now rewrite /subst_fn nth_error_app_ge /= // Nat.sub_diag /=.
 Qed.
-
 
 Lemma inst_decl_closed :
   forall σ k d,
@@ -377,8 +373,7 @@ Proof.
   rewrite mapi_mapi mapi_map. apply mapi_ext.
   intros. unfold map_decl, vass; simpl; f_equal.
   rewrite !lift0_inst.
-  autorewrite with sigma.
-  rewrite shiftn_consn_idsn. reflexivity.
+  now sigma.
 Qed.
 
 Lemma inst_fix_context:
@@ -494,7 +489,7 @@ Proof.
            noconf hdecl. f_equal.
            replace (S (S n)) with (S n + 1) by lia.
            rewrite -shiftk_compose subst_compose_assoc.
-           rewrite -Upn_1_Up (shiftn_consn_idsn 1) -subst_compose_assoc -inst_assoc -H.
+           rewrite -Upn_1_Up (shiftn_Upn 1) -subst_compose_assoc -inst_assoc -H.
            sigma. now rewrite ren_shift compose_ren.
       * right.
         unfold subst_compose at 1. rewrite e0.
@@ -538,7 +533,7 @@ Proof.
           noconf hdecl. f_equal.
           replace (S (S n)) with (S n + 1) by lia.
           rewrite -shiftk_compose subst_compose_assoc.
-          rewrite -Upn_1_Up (shiftn_consn_idsn 1) -subst_compose_assoc -inst_assoc -H.
+          rewrite -Upn_1_Up (shiftn_Upn 1) -subst_compose_assoc -inst_assoc -H.
           sigma. now rewrite ren_shift compose_ren.
       * right.
         unfold subst_compose at 1. rewrite e0.
@@ -733,7 +728,7 @@ Proof.
       rewrite !map_app !map_map_compose. f_equal.
       + solve_all.
         eapply All_refl => x.
-        sigma. now rewrite shiftn_consn_idsn.
+        now sigma.
       + now rewrite inst_to_extended_list.
     * rewrite -/(inst_context f _).
       rewrite inst_context_subst map_rev.
@@ -857,14 +852,10 @@ Lemma inst_lift :
   forall f n k t,
     inst (⇑^(n + k) f) (lift n k t) = lift n k (inst (⇑^k f) t).
 Proof.
-  intros f n k t.
-  rewrite !lift_rename.
-  autorewrite with sigma.
-  rewrite ren_lift_renaming.
+  intros f n k t. sigma.
   eapply inst_ext.
   rewrite -Upn_Upn Nat.add_comm Upn_Upn.
-  rewrite !Upn_compose.
-  apply Upn_ext. now rewrite shiftn_consn_idsn.
+  now rewrite !Upn_compose shiftn_Upn.
 Qed.
 
 Lemma inst_context_lift f n k Γ : 
@@ -1033,8 +1024,7 @@ Proof.
        rewrite map_map_compose.
        setoid_rewrite up_Upn. len.
        f_equal. 
-       { apply map_ext. intros. rewrite !lift0_inst; sigma.
-         now rewrite shiftn_consn_idsn. }
+       { apply map_ext. intros. now sigma. }
        rewrite inst_to_extended_list.
        now rewrite /to_extended_list /to_extended_list_k reln_fold.
 Qed.
@@ -1209,7 +1199,7 @@ Proof.
     rewrite !(lift_extended_subst _ 1).
     rewrite map_map_compose.
     setoid_rewrite up_Upn; setoid_rewrite lift0_inst; setoid_rewrite inst_assoc.
-    setoid_rewrite (Upn_Upn 1); setoid_rewrite shiftn_consn_idsn;
+    setoid_rewrite (Upn_Upn 1); setoid_rewrite shiftn_Upn;
     setoid_rewrite <- up_Upn; setoid_rewrite <-inst_assoc.
     setoid_rewrite <- lift0_inst.
     rewrite -map_map_compose. now f_equal.
@@ -1377,7 +1367,7 @@ Proof.
          noconf hdecl. f_equal.
          replace (S (S n)) with (S n + 1) by lia.
          rewrite -shiftk_compose subst_compose_assoc.
-         rewrite -Upn_1_Up (shiftn_consn_idsn 1) -subst_compose_assoc -inst_assoc -H.
+         rewrite -Upn_1_Up (shiftn_Upn 1) -subst_compose_assoc -inst_assoc -H.
          sigma. now rewrite ren_shift compose_ren.
     * right.
       unfold subst_compose at 1. rewrite e0.
@@ -1405,7 +1395,7 @@ Proof.
         noconf hdecl. f_equal.
         replace (S (S n)) with (S n + 1) by lia.
         rewrite -shiftk_compose subst_compose_assoc.
-        rewrite -Upn_1_Up (shiftn_consn_idsn 1) -subst_compose_assoc -inst_assoc -H.
+        rewrite -Upn_1_Up (shiftn_Upn 1) -subst_compose_assoc -inst_assoc -H.
         sigma. now rewrite ren_shift compose_ren.
     * right.
       unfold subst_compose at 1. rewrite e0.
@@ -1998,9 +1988,9 @@ Proof.
       rewrite /ty.
       eapply inst_ext_closed.
       intros x Hx.
-      rewrite subst_consn_lt'. all:repeat len; try lia.
+      rewrite subst_consn_lt /=; len; try lia.
       rewrite Upn_comp. 2:now repeat len.
-      rewrite subst_consn_lt'. all:repeat len; try lia.
+      rewrite subst_consn_lt /=; len; try lia.
       now rewrite map_rev.
   - intros Σ wfΣ Γ wfΓ mfix n decl types hguard hnth htypes hmfix ihmfix wffix Δ σ hΔ hσ.
     simpl. eapply meta_conv; [econstructor;eauto|].
@@ -2019,8 +2009,7 @@ Proof.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
         eapply wf_local_app_inst; eauto. apply a2.
-      + rewrite lift0_inst. sigma.
-        now rewrite shiftn_consn_idsn.
+      + rewrite lift0_inst. now sigma.
     * now apply inst_wf_fixpoint.
     * reflexivity.
 
@@ -2041,8 +2030,7 @@ Proof.
       + rewrite -(fix_context_length mfix).
         eapply well_subst_app_up => //.
         eapply wf_local_app_inst; eauto. apply a2.
-      + rewrite lift0_inst. sigma.
-        now rewrite shiftn_consn_idsn.
+      + rewrite lift0_inst. now sigma.
     * now apply inst_wf_cofixpoint.
     * reflexivity.
 

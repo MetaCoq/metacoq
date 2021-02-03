@@ -722,7 +722,7 @@ Proof.
   sigma.
   eapply PCUICInst.inst_ext_closed; tea.
   intros x Hx.
-  rewrite -Upn_Upn Nat.add_comm Upn_Upn Upn_compose shiftn_consn_idsn; sigma.
+  rewrite -Upn_Upn. Nat.add_comm Upn_Upn Upn_compose. shiftn_Upn; sigma.
   now rewrite !Upn_subst_consn_lt; len; try lia.
 Qed.
 

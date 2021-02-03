@@ -117,19 +117,8 @@ Lemma rename_subst0 :
 Proof.
   intros f l t.
   autorewrite with sigma.
-  eapply inst_ext. intro i.
-  unfold ren, subst_consn, shiftn, subst_compose. simpl.
-  rewrite nth_error_map.
-  destruct (nth_error l i) eqn: e1.
-  - eapply nth_error_Some_length in e1 as hl.
-    destruct (Nat.ltb_spec i #|l|). 2: lia.
-    rewrite e1. simpl.
-    autorewrite with sigma. reflexivity.
-  - simpl. apply nth_error_None in e1 as hl.
-    destruct (Nat.ltb_spec i #|l|). 1: lia.
-    rewrite (iffRL (nth_error_None _ _)). 1: lia.
-    simpl. rewrite map_length. unfold ids.
-    f_equal. lia.
+  eapply inst_ext.
+  now rewrite -ren_shiftn up_Upn Upn_comp; len.
 Qed.
 
 Lemma rename_subst10 :
@@ -179,7 +168,7 @@ Lemma map_vass_map_def g l r :
 Proof.
   rewrite mapi_mapi mapi_map. apply mapi_ext.
   intros. unfold map_decl, vass; simpl; f_equal.
-  now sigma.
+  sigma. rewrite -Upn_ren. now rewrite shiftn_Upn.
 Qed.
 
 Lemma rename_fix_context r :
@@ -303,9 +292,7 @@ Proof.
   - revert Hs.
     unfold Upn.
     elim (Nat.ltb_spec n k) => //; intros; simpl in *.
-    destruct (subst_consn_lt (l := idsn k) (i := n)) as [t [Heq Heq']].
-    + now rewrite idsn_length //.
-    + now rewrite idsn_lt in Heq.
+    now apply subst_idsn_consn_lt.
   - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
   - specialize (IHt2 σ (S k) H0). rewrite -{2}IHt2. now sigma.
   - specialize (IHt3 σ (S k) H0). rewrite -{2}IHt3. now sigma.
@@ -718,11 +705,10 @@ Proof.
   intros f n k t.
   rewrite !lift_rename.
   autorewrite with sigma.
-  rewrite - !compose_ren ren_lift_renaming.
-  eapply inst_ext.
-  rewrite - !ren_shiftn up_Upn. rewrite Nat.add_comm. sigma.
-  rewrite !Upn_compose.
-  apply Upn_ext. now rewrite shiftn_consn_idsn.
+  rewrite - !Upn_ren. sigma.
+  rewrite Upn_compose.
+  rewrite -Upn_Upn Nat.add_comm Upn_Upn Upn_compose.
+  now rewrite shiftn_Upn.
 Qed.
 
 Lemma rename_context_lift f n k Γ : 
@@ -1639,6 +1625,8 @@ Proof.
   apply mapi_ext => i x. now rewrite shiftn_add Nat.add_1_r.
 Qed.
 
+Hint Rewrite <- Upn_ren : sigma.
+
 (** For an unconditional renaming defined on all variables in the source context *)
 Lemma typing_rename_prop : env_prop
   (fun Σ Γ t A =>
@@ -1883,7 +1871,7 @@ Proof.
           { now rewrite app_context_length -shiftnP_add. }
           { reflexivity. }
           apply urenaming_context; auto. apply hf.
-        ++ len; now sigma.
+        ++ len. now sigma.
       * now eapply rename_wf_fixpoint.
     + reflexivity.
 

@@ -1540,12 +1540,12 @@ Proof.
     simpl; sigma. apply IHn. lia.
 Qed.
 
-Lemma shiftn_consn_idsn n σ : ↑^n ∘s ⇑^n σ =1 σ ∘s ↑^n.
+Lemma shiftn_Upn n σ : ↑^n ∘s ⇑^n σ =1 σ ∘s ↑^n.
 Proof.
   unfold Upn. rewrite subst_consn_shiftn; [reflexivity|].
   now rewrite idsn_length.
 Qed.
-(* Hint Rewrite shiftn_consn_idsn: sigma. *)
+Hint Rewrite shiftn_Upn: sigma.
 
 Lemma id_nth_spec {A} (l : list A) :
   l = Nat.recursion [] (fun x l' =>
@@ -1734,6 +1734,29 @@ Lemma shiftk_unfold i : (tRel i ⋅ ↑^(S i)) =1 ↑^i.
 Proof.
   intros x; unfold subst_cons, shiftk. destruct x; lia_f_equal.
 Qed.
+
+Lemma subst_cons_compose_r t σ' σ : σ ∘s (t ⋅ σ') =1 ((σ 0).[t ⋅ σ'] ⋅ (↑ ∘s σ) ∘s (t ⋅ σ')).
+Proof.
+  intros [|i].
+  - now sigma.
+  - simpl.
+    rewrite /subst_compose; sigma.
+    unfold shift. simpl. now rewrite /subst_compose /=.
+Qed.
+(* 
+Lemma subst_consn_compose_r l σ' σ : σ ∘s (l ⋅n σ') =1 map (inst (σ ∘s (subst_fn l))) l ⋅n (σ ∘s σ').
+Proof.
+  induction l; simpl.
+  - now sigma.
+  - rewrite subst_consn_subst_cons.
+    rewrite subst_cons_compose_r. sigma.
+
+    rewrite (subst_cons_compose_r a
+
+    unfold subst_compose; intros i. simpl.
+    rewrite subst_compo
+    rewrite IHl. now rewrite subst_consn_subst_cons.
+Qed. *)
 
 (** The central lemma to show that let expansion commutes with lifting and substitution *)
 Lemma subst_reli_lift_id i n t : i <= n ->
@@ -2128,7 +2151,7 @@ Qed.
 
 Lemma subst_shift_comm k n s : ⇑^k s ∘s ↑^n =1 ↑^n ∘s ⇑^(k+n) s.
 Proof.
-  now rewrite Nat.add_comm Upn_Upn shiftn_consn_idsn.
+  now rewrite Nat.add_comm Upn_Upn shiftn_Upn.
 Qed.
 
 Lemma Upn_subst_consn_ge (n i : nat) s (σ : nat -> term) :

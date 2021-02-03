@@ -13,7 +13,7 @@ For general documentation about MetaCoq, see [the corresponding readme](./METACO
 To compile the library, you need:
 
 - `Coq` version `8.11`.
-- `OCaml` (tested with `4.07.1`)
+- `OCaml` (tested with `4.07.1`).
 - [`Equations 1.2.3`](http://mattam82.github.io/Coq-Equations/).
 
 The recommended way to build a development environment for MetaCoq is
@@ -62,16 +62,18 @@ to compile the files corresponding specifically to the article.
 | [BDTyping]            | Definition of the bidirectional typing mutual inductive type, proof of a good induction principle |
 | [BDToPCUIC]           | Proof that bidirectional typing implies undirected typing |
 | [BDFromPCUIC]         | Proof that undirected typing implies bidirectional typing |
+| [BDUnique]            | Proof of the uniqueness of inferred types upto cumulativity, and principal types as corollary |
 
 [BDEnvironmentTyping]: ./bidirectional/theories/BDEnvironmentTyping.v
 [BDTyping]: ./bidirectional/theories/BDTyping.v
 [BDToPCUIC]: ./bidirectional/theories/BDToPCUIC.v
 [BDFromPCUIC]: ./bidirectional/theories/BDFromPCUIC.v
+[BDUnique]: ./bidirectional/theories/BDUnique.v
 
 ## Assumptions
 
-No assumptions remain in the 4 files mentioned above.
+No assumptions remain in the files mentioned above.
 
-However, the proof relies on the new structure for case nodes introduced very recently in Coq and MetaCoq. The MetaCoq files underlying the artefact are branched off pull-request [#547] of the MetaCoq GitHub repository, that introduces this change. The adaptation of the metatheory of MetaCoq to this new representation is ongoing in that PR, so some of the metatheoretical properties of PCUIC we rely on in [BDToPCUIC] and [BDFromPCUIC] are not yet fully proven – although they were prior to the modification.
+However, the proofs rely on the new structure for case nodes introduced very recently in Coq and MetaCoq. The MetaCoq files underlying the artefact are branched off pull-request [#547] of the MetaCoq GitHub repository, that introduces this change. The adaptation of the metatheory of MetaCoq to this new representation is ongoing in that PR, so some of the metatheoretical properties of PCUIC we rely on in [BDToPCUIC] and [BDFromPCUIC] are not yet fully proven – although they were prior to the modification.
 
 [#547]: https://github.com/MetaCoq/metacoq/pull/534

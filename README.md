@@ -44,7 +44,7 @@ Once in the right switch, you can install `Coq` and the `Equations` package usin
 
 Then use:
 
-    # make
+    # make pcuic
 
  to compile the MetaCoq project
 
@@ -72,6 +72,6 @@ to compile the files corresponding specifically to the article.
 
 No assumptions remain in the 4 files mentioned above.
 
-However, the proof relies on the new structure for case nodes introduced very recently in Coq and MetaCoq. The MetaCoq files underlying the artefact are branched off pull-request [#547] of the MetaCoq GitHub repository, that introduces this change. The adaptation of the metatheory of MetaCoq to this new representation is ongoing in that PR, so some of the metatheoretical properties of PCUIC we rely on in [BDToPCUIC] and [BDFromPCUIC] are not yet fully proven.
+However, the proof relies on the new structure for case nodes introduced very recently in Coq and MetaCoq. The MetaCoq files underlying the artefact are branched off pull-request [#547] of the MetaCoq GitHub repository, that introduces this change. The adaptation of the metatheory of MetaCoq to this new representation is ongoing in that PR, so some of the metatheoretical properties of PCUIC we rely on in [BDToPCUIC] and [BDFromPCUIC] are not yet fully proven – although they were prior to the modification.
 
 [#547]: https://github.com/MetaCoq/metacoq/pull/534

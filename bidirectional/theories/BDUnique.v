@@ -1,7 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICUnivSubstitution PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICSR PCUICConfluence.
-From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
+From MetaCoq.Bidirectional Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -341,6 +341,34 @@ Proof.
     }
     apply invert_conv_ind_ind ; auto.
 Qed.
+
+End BDUnique.
+
+Theorem uniqueness_inferred `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T T' :
+  Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t ▹ T' -> Σ ;;; Γ |- T = T'.
+Proof.
+  intros.
+  pose proof (bidirectional_unique Σ wfΣ) as (_ & _& ? & _).
+  eauto.
+Qed.
+
+Corollary principal_type `{checker_flags} Σ (wfΣ : wf Σ) Γ t T : Σ ;;; Γ |- t : T ->
+  ∑ T', (forall T'', Σ ;;; Γ |- t : T'' -> Σ ;;; Γ |- T' <= T'') × Σ ;;; Γ |- t : T'.
+Proof.
+  intros ty.
+  assert (wf_local Σ Γ) by (eapply typing_wf_local ; eauto).
+  apply typing_infering in ty as (S & infS & _); auto.
+  exists S.
+  repeat split.
+  2: by apply infering_typing.
+  intros T' ty.
+  apply typing_infering in ty as (S' & infS' & cum'); auto.
+  etransitivity ; eauto.
+  apply conv_cumul.
+  eapply uniqueness_inferred.
+  all: eauto.
+Qed.
+
 
 
 

@@ -3,7 +3,7 @@
 
 ## MetaCoq
 
-For general documentation about MetaCoq, see (the corresponding readme)[./METACOQ.md].
+For general documentation about MetaCoq, see [the corresponding readme](./METACOQ.md).
 
 
 ## Installing the artefact

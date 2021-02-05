@@ -11,6 +11,14 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+Inductive context_decl_choice :=
+| choose_decl_body
+| choose_decl_type.
+
+Derive NoConfusion NoConfusionHom EqDec for context_decl_choice.
+
+Definition context_choice := nat * context_decl_choice.
+
 (* A choice is a local position.
    We define positions in a non dependent way to make it more practical.
  *)
@@ -18,9 +26,11 @@ Inductive choice :=
 | app_l
 | app_r
 | case_par (n : nat)
-| case_p
+| case_pctx (c : context_choice)
+| case_preturn
 | case_c
-| case_brs (n : nat)
+| case_brsctx (n : nat) (c : context_choice)
+| case_brsbody (n : nat)
 | proj_c
 | fix_mfix_ty (n : nat)
 | fix_mfix_bd (n : nat)
@@ -41,6 +51,17 @@ Instance reflect_choice : ReflectEq choice :=
 
 Definition position := list choice.
 
+Definition context_choice_term (Γ : context) (c : context_choice) : option term :=
+  let '(decli, declc) := c in
+  match nth_error Γ decli with
+  | Some {| decl_body := body; decl_type := type |} =>
+    match declc with
+    | choose_decl_body => body
+    | choose_decl_type => Some type
+    end
+  | None => None
+  end.
+
 Fixpoint validpos t (p : position) {struct p} :=
   match p with
   | [] => true
@@ -53,9 +74,23 @@ Fixpoint validpos t (p : position) {struct p} :=
       | Some par =>  validpos par p
       | None => false
       end
-    | case_p, tCase ci pr c brs => validpos pr.(preturn) p
+    | case_pctx ctxc, tCase ci pr c brs =>
+      match context_choice_term pr.(pcontext) ctxc with
+      | Some t => validpos t p
+      | None => false
+      end
+    | case_preturn, tCase ci pr c brs => validpos pr.(preturn) p
     | case_c, tCase ci pr c brs => validpos c p
-    | case_brs n, tCase ci pr c brs =>
+    | case_brsctx n ctxc, tCase ci pr c brs =>
+        match nth_error brs n with
+        | Some br =>
+          match context_choice_term br.(bcontext) ctxc with
+          | Some t => validpos t p
+          | None => false
+          end
+        | None => false
+        end
+    | case_brsbody n, tCase ci pr c brs =>
         match nth_error brs n with
         | Some br => validpos br.(bbody) p
         | None => false
@@ -102,8 +137,8 @@ Definition dapp_l u v (p : pos u) : pos (tApp u v) :=
 Definition dapp_r u v (p : pos v) : pos (tApp u v) :=
   exist (app_r :: proj1_sig p) (proj2_sig p).
 
-Definition dcase_p ci pr c brs (p : pos pr.(preturn)) : pos (tCase ci pr c brs) :=
-  exist (case_p :: proj1_sig p) (proj2_sig p).
+Definition dcase_preturn ci pr c brs (p : pos pr.(preturn)) : pos (tCase ci pr c brs) :=
+  exist (case_preturn :: proj1_sig p) (proj2_sig p).
 
 Definition dcase_c ci pr c brs (p : pos c) : pos (tCase ci pr c brs) :=
   exist (case_c :: proj1_sig p) (proj2_sig p).
@@ -143,6 +178,28 @@ Definition dlet_ty na b B t (p : pos B) : pos (tLetIn na b B t) :=
 Definition dlet_in na b B t (p : pos t) : pos (tLetIn na b B t) :=
   exist (let_in :: proj1_sig p) (proj2_sig p).
 
+Lemma eq_context_upto_context_choice_term Σ Re Rle Γ Γ' c :
+  eq_context_upto Σ Re Rle Γ Γ' ->
+  rel_option (eq_term_upto_univ Σ Re (match c.2 with
+                                      | choose_decl_body => Re
+                                      | choose_decl_type => Rle
+                                      end) )
+             (context_choice_term Γ c)
+             (context_choice_term Γ' c).
+Proof.
+  intros eq.
+  destruct c as (n&c).
+  eapply eq_context_upto_nth_error with (ctx := Γ) (ctx' := Γ') (n := n) in eq.
+  depelim eq; cbn in *.
+  - rewrite H, H0.
+    destruct e as ((?&?)&?); cbn in *.
+    destruct a, b; cbn in *.
+    destruct c; auto.
+    constructor; auto.
+  - rewrite H, H0.
+    constructor.
+Qed.
+
 Lemma eq_term_upto_valid_pos :
   forall {Σ u v p Re Rle napp},
     validpos u p ->
@@ -166,14 +223,22 @@ Proof.
         intuition eauto.
       * simpl in *. eapply IHa0. all: eauto.
     + dependent destruction e. simpl in *.
+      destruct e as (_&_&e&_).
+      eapply eq_context_upto_context_choice_term with (c := c) in e.
+      depelim e; rewrite H, H0 in *; eauto.
+    + dependent destruction e. simpl in *.
       eapply ih; eauto. apply e.
-    + dependent destruction e. simpl in *. clear e.
-      destruct (nth_error brs n) as [[m br]|] eqn:e. 2: discriminate.
-      induction a in n, m, br, e, ih, vp |- *. 1: rewrite e. 1: assumption.
-      destruct n.
-      * simpl in *. apply some_inj in e. subst.
-        destruct y. simpl in *. intuition eauto.
-      * simpl in *. eapply IHa. all: eauto.
+    + dependent destruction e. simpl in *.
+      destruct nth_error eqn:nth; [|congruence].
+      eapply All2_nth_error_Some in a; eauto.
+      destruct a as (?&->&eq&_).
+      eapply eq_context_upto_context_choice_term with (c := c) in eq.
+      depelim eq; rewrite H, H0 in *; eauto.
+    + dependent destruction e. simpl in *.
+      destruct nth_error eqn:nth; [|congruence].
+      eapply All2_nth_error_Some in a; eauto.
+      destruct a as (?&->&_&eq).
+      eauto.
     + dependent destruction e. simpl in *.
       destruct (nth_error mfix n) as [[na ty bo ra]|] eqn:e. 2: discriminate.
       induction a in n, na, ty, bo, ra, e, ih, vp |- *.
@@ -332,9 +397,23 @@ Proof.
     - specialize (ih2 q). eapply ih2. all: assumption.
   }
   assert (
+    forall ci pr c brs ctxc t (p : pos t)
+      (e : context_choice_term pr.(pcontext) ctxc = Some t)
+      (vp : validpos (tCase ci pr c brs) (case_pctx ctxc :: proj1_sig p) = true),
+      Acc posR p ->
+      Acc posR (exist (case_pctx ctxc :: proj1_sig p) vp)) as Acc_case_pctx.
+  { intros ci pr c brs ctxc t p e vp h.
+    induction h as [p ih1 ih2] in e, vp |- *.
+    constructor. intros [q e2] h.
+    dependent destruction h.
+    simple refine (let q := exist p0 _ : pos t in _).
+    - simpl. cbn in e2. rewrite e in e2. assumption.
+    - specialize (ih2 q). eapply ih2. all: assumption.
+  }
+  assert (
     forall ci pr c brs p,
       Acc posR p ->
-      Acc posR (dcase_p ci pr c brs p)
+      Acc posR (dcase_preturn ci pr c brs p)
   ) as Acc_case_p.
   { intros ci pr c brs p h.
     induction h as [p ih1 ih2].
@@ -354,11 +433,27 @@ Proof.
     eapply (ih2 (exist p0 e)). assumption.
   }
   assert (
+    forall ci pr c brs n br ctxc t (p : pos t)
+      (brsnth : nth_error brs n = Some br)
+      (e : context_choice_term br.(bcontext) ctxc = Some t)
+      (vp : validpos (tCase ci pr c brs) (case_brsctx n ctxc :: proj1_sig p) = true),
+      Acc posR p ->
+      Acc posR (exist (case_brsctx n ctxc :: proj1_sig p) vp)
+  ) as Acc_case_brsctx.
+  { intros ci pr c brs n br ctxc t p brsnth e vp h.
+    induction h as [p ih1 ih2] in brsnth, e, vp |- *.
+    constructor. intros [q e2] h.
+    dependent destruction h.
+    simple refine (let q := exist p0 _ : pos t in _).
+    - simpl. cbn in e2. rewrite brsnth, e in e2. assumption.
+    - specialize (ih2 q). eapply ih2. all: assumption.
+  }
+  assert (
     forall n ci pr c brs br (p : pos br.(bbody))
       (e : nth_error brs n = Some br)
-      (e1 : validpos (tCase ci pr c brs) (case_brs n :: proj1_sig p) = true),
+      (e1 : validpos (tCase ci pr c brs) (case_brsbody n :: proj1_sig p) = true),
       Acc posR p ->
-      Acc posR (exist (case_brs n :: proj1_sig p) e1)
+      Acc posR (exist (case_brsbody n :: proj1_sig p) e1)
   ) as Acc_case_brs.
   { intros n ci pr c brs br p e e1 h.
     induction h as [p ih1 ih2] in e, e1 |- *.
@@ -514,10 +609,48 @@ Proof.
         unshelve eapply Acc_case_pars with (1 := e1) (p := exist p0 _).
         -- simpl. rewrite e1 in e'. assumption.
         -- eapply ihpar.
+      * simpl in e'.
+        case_eq (context_choice_term (pcontext p) c).
+        2:{ intro h. exfalso. rewrite h in e'. discriminate. }
+        intros t' choose.
+        assert (validpos t' p0 × forall (p : pos t'), Acc posR p) as (vp&IH).
+        { rewrite choose in e'.
+          split; auto.
+          unfold context_choice_term in choose.
+          destruct c.
+          destruct nth_error eqn:nth; [|discriminate].
+          eapply fst, All_nth_error in IHXpred; eauto.
+          destruct c0, IHXpred; cbn in *.
+          destruct c; subst; auto.
+          noconf choose.
+          auto. }
+        unshelve eapply Acc_case_pctx with (1 := choose) (p := exist p0 _); eauto.
       * eapply Acc_case_p with (p := exist p0 e').
         eapply IHXpred.
       * eapply Acc_case_c with (p := exist p0 e').
         eapply IHt.
+      * simpl in e'.
+        case_eq (nth_error l n).
+        2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
+        intros br nthbr.
+        case_eq (context_choice_term br.(bcontext) c).
+        2:{ intro h. exfalso. rewrite nthbr, h in e'. discriminate. }
+        intros t' choose.
+        assert (validpos t' p0 × forall (p : pos t'), Acc posR p) as (vp&IH).
+        { rewrite nthbr, choose in e'.
+          split; auto.
+          unfold context_choice_term in choose.
+          destruct c.
+          eapply All_nth_error in nthbr; eauto.
+          cbn in *.
+          destruct nthbr as (IH&_).
+          destruct nth_error eqn:nthctx; [|discriminate].
+          eapply All_nth_error in IH; eauto.
+          destruct c0, IH; cbn in *.
+          destruct c; subst; auto.
+          noconf choose.
+          auto. }
+        unshelve eapply Acc_case_brsctx with (1 := nthbr) (2 := choose) (p := exist p0 _); eauto.
       * simpl in e'.
         case_eq (nth_error l n).
         2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
@@ -536,10 +669,48 @@ Proof.
         unshelve eapply Acc_case_pars with (1 := e1) (p := exist q _).
         -- simpl. rewrite e1 in e. assumption.
         -- eapply ihpar.
+      * simpl in e.
+        case_eq (context_choice_term (pcontext p) c).
+        2:{ intro h. exfalso. rewrite h in e. discriminate. }
+        intros t' choose.
+        assert (validpos t' q × forall (p : pos t'), Acc posR p) as (vp&IH).
+        { rewrite choose in e.
+          split; auto.
+          unfold context_choice_term in choose.
+          destruct c.
+          destruct nth_error eqn:nth; [|discriminate].
+          eapply fst, All_nth_error in IHXpred; eauto.
+          destruct c0, IHXpred; cbn in *.
+          destruct c; subst; auto.
+          noconf choose.
+          auto. }
+        unshelve eapply Acc_case_pctx with (1 := choose) (p := exist q _); eauto.
       * eapply Acc_case_p with (p := exist q e).
         eapply IHXpred.
       * eapply Acc_case_c with (p := exist q e).
         eapply IHt.
+      * simpl in e.
+        case_eq (nth_error l n).
+        2:{ intro h. pose proof e as hh. rewrite h in hh. discriminate. }
+        intros br nthbr.
+        case_eq (context_choice_term br.(bcontext) c).
+        2:{ intro h. exfalso. rewrite nthbr, h in e. discriminate. }
+        intros t' choose.
+        assert (validpos t' q × forall (p : pos t'), Acc posR p) as (vp&IH).
+        { rewrite nthbr, choose in e.
+          split; auto.
+          unfold context_choice_term in choose.
+          destruct c.
+          eapply All_nth_error in nthbr; eauto.
+          cbn in *.
+          destruct nthbr as (IH&_).
+          destruct nth_error eqn:nthctx; [|discriminate].
+          eapply All_nth_error in IH; eauto.
+          destruct c0, IH; cbn in *.
+          destruct c; subst; auto.
+          noconf choose.
+          auto. }
+        unshelve eapply Acc_case_brsctx with (1 := nthbr) (2 := choose) (p := exist q _); eauto.
       * simpl in e.
         case_eq (nth_error l n).
         2:{ intro h. pose proof e as hh. rewrite h in hh. discriminate. }
@@ -657,9 +828,20 @@ Fixpoint atpos t (p : position) {struct p} : term :=
       | Some par => atpos par p
       | None => tRel 0
       end
-    | case_p, tCase ci pr c brs => atpos pr.(preturn) p
+    | case_pctx choice, tCase ci pr c brs =>
+      option_get
+        (tRel 0)
+        (t <- context_choice_term pr.(pcontext) choice;;
+         Some (atpos t p))
+    | case_preturn, tCase ci pr c brs => atpos pr.(preturn) p
     | case_c, tCase ci pr c brs => atpos c p
-    | case_brs n, tCase ci pr c brs =>
+    | case_brsctx n choice, tCase ci pr c brs =>
+      option_get
+        (tRel 0)
+        (br <- nth_error brs n;;
+         t <- context_choice_term br.(bcontext) choice;;
+         Some (atpos t p))
+    | case_brsbody n, tCase ci pr c brs =>
         match nth_error brs n with
         | Some br => atpos br.(bbody) p
         | None => tRel 0
@@ -713,7 +895,15 @@ Proof.
     + simpl. destruct nth_error as [?|] eqn:e.
       * apply IHp.
       * rewrite hh. reflexivity.
+    + simpl. destruct context_choice_term eqn:e.
+      * apply IHp.
+      * rewrite hh. reflexivity.
     + simpl. destruct nth_error as [br|] eqn:e.
+      * destruct context_choice_term.
+        -- apply IHp.
+        -- rewrite hh. reflexivity.
+      * rewrite hh. reflexivity.
+    + simpl. destruct nth_error.
       * apply IHp.
       * rewrite hh. reflexivity.
     + simpl. destruct nth_error as [[na ty bo ra]|] eqn:e.
@@ -743,8 +933,15 @@ Proof.
   - destruct t ; destruct a.
     all: try noconf hp.
     all: try (apply IHp ; assumption).
-    all: simpl in *; destruct nth_error as [|] eqn:e; [|discriminate];
-      apply IHp; assumption.
+    all: simpl in *;
+      repeat
+        match goal with
+        | [H: context[nth_error ?a ?b] |- _] =>
+          destruct (nth_error a b); [|discriminate]
+        | [H: context[context_choice_term ?a ?b] |- _] =>
+          destruct (context_choice_term a b); [|discriminate]
+        end;
+      auto.
 Qed.
 
 Lemma positionR_poscat :
@@ -769,11 +966,18 @@ Proof.
     all: try apply IHp.
     all: destruct q ; try reflexivity.
     all: try (destruct c ; reflexivity).
-    1:{ destruct nth_error as [|] eqn:e. 2: reflexivity.
-        simpl. rewrite app_nil_r. reflexivity. }
-    all:try 
-      (destruct nth_error as [?|] eqn:e; [|reflexivity]; simpl; rewrite app_nil_r; reflexivity).
-    all:destruct nth_error as [|] eqn:e; [apply IHp|destruct c;reflexivity]. 
+    all:
+      repeat
+        match goal with
+        | |- context[nth_error ?a ?b] =>
+          destruct (nth_error a b); auto
+        | |- context[context_choice_term ?a ?b] =>
+          destruct (context_choice_term a b); auto
+        end.
+    all: rewrite ?app_nil_r.
+    all: simpl; auto.
+    all: try solve [destruct c; auto]; try solve [destruct c0; auto].
+    all: rewrite <- IHp; auto.
 Qed.
 
 Lemma positionR_trans : Transitive positionR.
@@ -809,133 +1013,188 @@ Proof.
   - cbn. constructor. apply IHp. assumption.
 Qed.
 
-(* Stacks are the dual of positions.
-   They can be seen as terms with holes.
-   For case predicates and branches, they record the complete contexts of 
-   the return type or the branch, not only names + relevance as in the
-   concrete term syntax.
- *)
-Inductive stack : Type :=
-| Empty
-| App (t : term) (π : stack)
-| Fix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
-| Fix_mfix_ty (na : aname) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
-| Fix_mfix_bd (na : aname) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
-| CoFix (f : mfixpoint term) (n : nat) (args : list term) (π : stack)
-| CoFix_mfix_ty (na : aname) (bo : term) (ra : nat) (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
-| CoFix_mfix_bd (na : aname) (ty : term) (ra : nat)  (mfix1 mfix2 : mfixpoint term) (id : nat) (π : stack)
-| Case_pars (ci : case_info) (pars1 pars2 : list term) (puint : Instance.t) 
-  (pcontext : context) (preturn : term) (c : term) (brs : list (branch term)) (π : stack)
-| Case_p (ci : case_info) (pars : list term) (puinst : Instance.t)
-  (pcontext : context) (c : term) (brs : list (branch term)) (π : stack)
-| Case (ci : case_info) (p : predicate term) (brs : list (branch term)) (π : stack)
-| Case_brs (ci : case_info) (p : predicate term) (c : term) (bctx : context) (brs1 brs2 : list (branch term)) (π : stack)
-| Proj (p : projection) (π : stack)
-| Prod_l (na : aname) (B : term) (π : stack)
-| Prod_r (na : aname) (A : term) (π : stack)
-| Lambda_ty (na : aname) (b : term) (π : stack)
-| Lambda_tm (na : aname) (A : term) (π : stack)
-| LetIn_bd (na : aname) (B t : term) (π : stack)
-| LetIn_ty (na : aname) (b t : term) (π : stack)
-| LetIn_in (na : aname) (b B : term) (π : stack)
-| coApp (t : term) (π : stack).
+(* Hole in fixpoint definition *)
+Variant def_hole :=
+| def_hole_type (dname : aname) (dbody : term) (rarg : nat)
+| def_hole_body (dname : aname) (dtype : term) (rarg : nat).
 
-Notation "'ε'" := (Empty).
+Definition mfix_hole := mfixpoint term * def_hole * mfixpoint term.
 
-Derive NoConfusion for stack.
+(* Represents a context_decl with a hole in it *)
+Variant context_decl_hole : Type :=
+| decl_hole_type (na : aname) (body : option term)
+| decl_hole_body (na : aname) (type : term).
 
-Instance EqDec_def {A} : EqDec A -> EqDec (def A).
-Proof.
-  intros X x y. decide equality; apply eq_dec.
-Defined.
+(* Represents a context with a hole in it *)
+Definition context_hole := context * context_decl_hole * context.
 
-Instance EqDec_stack : EqDec stack.
-Proof.
-  intros x y. decide equality; apply eq_dec.
-Defined.
+Variant predicate_hole :=
+| pred_hole_params
+    (params1 params2 : list term)
+    (puinst : Instance.t)
+    (pcontext : context)
+    (preturn : term)
+| pred_hole_context
+    (pparams : list term)
+    (puinst : Instance.t)
+    (pcontext : context_hole)
+    (preturn : term)
+| pred_hole_return
+    (pparams : list term)
+    (puinst : Instance.t)
+    (pcontext : context).
+
+Variant branch_hole :=
+| branch_hole_context (bcontext : context_hole) (bbody : term)
+| branch_hole_body (bcontext : context).
+
+Definition branches_hole := list (branch term) * branch_hole * list (branch term).
+
+(* Represents a non-nested term with a hole in it *)
+Variant stack_entry : Type :=
+| App_l (v : term) (* Hole in head *)
+| App_r (u : term) (* Hole in arg *)
+| Fix_app (* Hole in last arg *)
+    (mfix : mfixpoint term) (idx : nat) (args : list term)
+| Fix (mfix : mfix_hole) (idx : nat)
+| CoFix_app (* Hole in last arg *)
+    (mfix : mfixpoint term) (idx : nat) (args : list term)
+| CoFix (mfix : mfix_hole) (idx : nat)
+| Case_pred (* Hole in predicate *)
+    (ci : case_info)
+    (p : predicate_hole)
+    (c : term)
+    (brs : list (branch term))
+| Case_discr (* Hole in scrutinee *)
+    (ci : case_info)
+    (p : predicate term)
+    (brs : list (branch term))
+| Case_branch (* Hole in branch *)
+    (ci : case_info)
+    (p : predicate term)
+    (c : term)
+    (brs : branches_hole)
+| Proj (* Hole in projectee *)
+    (p : projection)
+| Prod_l (na : aname) (B : term)
+| Prod_r (na : aname) (A : term)
+| Lambda_ty (na : aname) (b : term)
+| Lambda_bd (na : aname) (A : term)
+| LetIn_bd (na : aname) (B t : term)
+| LetIn_ty (na : aname) (b t : term)
+| LetIn_in (na : aname) (b B : term).
+
+Definition stack := list stack_entry.
+
+Derive NoConfusion for def_hole context_decl_hole predicate_hole branch_hole stack_entry.
+
+Instance EqDec_def_hole : EqDec def_hole.
+Proof. intros ? ?; decide equality; apply eq_dec. Defined.
+
+Instance EqDec_context_decl_hole : EqDec context_decl_hole.
+Proof. intros ? ?; decide equality; apply eq_dec. Defined.
+
+Instance EqDec_predicate_hole : EqDec predicate_hole.
+Proof. intros ? ?; decide equality; apply eq_dec. Defined.
+
+Instance EqDec_branch_hole : EqDec branch_hole.
+Proof. intros ? ?; decide equality; apply eq_dec. Defined.
+
+Instance EqDec_stack_entry : EqDec stack_entry.
+Proof. intros ? ?; decide equality; apply eq_dec. Defined.
 
 Instance reflect_stack : ReflectEq stack :=
   let h := EqDec_ReflectEq stack in _.
-(*
-Section WfStack.
-  Context (Σ : global_env).
 
-  Fixpoint wf_stack stack : Type :=
-    match stack return Type with
-    | ε => unit
-    | App _ π
-    | Fix _ _ _ π
-    | Fix_mfix_ty _ _ _ _ _ _ π
-    | Fix_mfix_bd _ _ _ _ _ _ π
-    | CoFix _ _ _ π
-    | CoFix_mfix_ty _ _ _ _ _ _ π
-    | CoFix_mfix_bd _ _ _ _ _ _ π => wf_stack π
-    | Case_pars ci _ _ _ _ _ _ _ π => (wf_stack π)
-    | Case_p ci ppars puinst pctx c brs π => 
-      (∑ mdecl idecl,
-        declared_inductive Σ (ci_ind ci) mdecl idecl * 
-        wf_predicate_gen mdecl idecl ppars (forget_types pctx) *
-        (pctx = case_predicate_context_gen (ci_ind ci) mdecl idecl ppars puinst 
-          (forget_types pctx))) *
-        wf_stack π
-    | Case ci _ _ π =>
-      (∑ mdecl idecl, declared_inductive Σ (ci_ind ci) mdecl idecl) * wf_stack π
-    | Case_brs ci pred c bctx brs1 brs2 π =>
-      (∑ mdecl idecl,
-        declared_inductive Σ (ci_ind ci) mdecl idecl *
-        wf_predicate mdecl idecl pred *
-        let brctxs := map bcontext brs1 ++ forget_types bctx :: map bcontext brs2 in
-        wf_branches_gen idecl.(ind_ctors) brctxs *
-        (nth_error (case_branches_contexts ci.(ci_ind) mdecl idecl pred brctxs) #|brs1| = Some bctx) * 
-        (#|idecl.(ind_ctors)| = #|brs1| + S #|brs2|)%nat) *
-        wf_stack π
-    | Proj _ π 
-    | Prod_l _ _ π
-    | Prod_r _ _ π
-    | Lambda_ty _ _ π
-    | Lambda_tm _ _ π
-    | LetIn_bd _ _ _ π
-    | LetIn_ty _ _ _ π
-    | LetIn_in _ _ _ π
-    | coApp _ π => wf_stack π
-      end.
-End WfStack.
-*)
-Fixpoint zipc t stack :=
-  match stack with
-  | ε => t
-  | App u π => zipc (tApp t u) π
-  | Fix f n args π => zipc (tApp (mkApps (tFix f n) args) t) π
-  | Fix_mfix_ty na bo ra mfix1 mfix2 idx π =>
-      zipc (tFix (mfix1 ++ mkdef _ na t bo ra :: mfix2) idx) π
-  | Fix_mfix_bd na ty ra mfix1 mfix2 idx π =>
-      zipc (tFix (mfix1 ++ mkdef _ na ty t ra :: mfix2) idx) π
-  | CoFix f n args π => zipc (tApp (mkApps (tCoFix f n) args) t) π
-  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π =>
-      zipc (tCoFix (mfix1 ++ mkdef _ na t bo ra :: mfix2) idx) π
-  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
-      zipc (tCoFix (mfix1 ++ mkdef _ na ty t ra :: mfix2) idx) π
-  | Case_pars ci pars1 pars2 puinst pctx pret c brs π =>
-      zipc (tCase ci {| pparams := pars1 ++ t :: pars2; puinst := puinst; pcontext := pctx; 
-                     preturn := pret |} c brs) π
-  | Case_p ci ppars puinst pctx c brs π => 
-    let p' := {| pparams := ppars; puinst := puinst; pcontext :=  pctx; preturn := t |} in
-    zipc (tCase ci p' c brs) π
-  | Case ci pred brs π => zipc (tCase ci pred t brs) π
-  | Case_brs ci pred c bctx brs1 brs2 π =>
-      zipc (tCase ci pred c (brs1 ++ {| bcontext := bctx; bbody := t |} :: brs2)) π
-  | Proj p π => zipc (tProj p t) π
-  | Prod_l na B π => zipc (tProd na t B) π
-  | Prod_r na A π => zipc (tProd na A t) π
-  | Lambda_ty na b π => zipc (tLambda na t b) π
-  | Lambda_tm na A π => zipc (tLambda na A t) π
-  | LetIn_bd na B u π => zipc (tLetIn na t B u) π
-  | LetIn_ty na b u π => zipc (tLetIn na b t u) π
-  | LetIn_in na b B π => zipc (tLetIn na b B t) π
-  | coApp u π => zipc (tApp u t) π
+Definition fill_mfix_hole '((mfix1, m, mfix2) : mfix_hole) (t : term) : mfixpoint term :=
+  let def :=
+      match m with
+      | def_hole_type dname dbody rarg => 
+        {| dname := dname;
+           dtype := t;
+           dbody := dbody;
+           rarg := rarg |}
+      | def_hole_body dname dtype rarg =>
+        {| dname := dname;
+           dtype := dtype;
+           dbody := t;
+           rarg := rarg |}
+      end in
+  mfix1 ++ (def :: mfix2).
+
+Definition fill_context_hole '((ctx1, decl, ctx2) : context_hole) (t : term) : context :=
+  let decl :=
+      match decl with
+      | decl_hole_type na body =>
+        {| decl_name := na; decl_body := body; decl_type := t |}
+      | decl_hole_body na type => {| decl_name := na; decl_body := Some t; decl_type := type |}
+      end in
+  ctx1 ,,, [decl] ,,, ctx2.
+
+Definition fill_predicate_hole (p : predicate_hole) (t : term) : predicate term :=
+  match p with
+  | pred_hole_params params1 params2 puinst pcontext preturn =>
+    {| pparams := params1 ++ (t :: params2);
+       puinst := puinst;
+       pcontext := pcontext;
+       preturn := preturn |}
+  | pred_hole_context pparams puinst pcontext preturn =>
+    {| pparams := pparams;
+       puinst := puinst;
+       pcontext := fill_context_hole pcontext t;
+       preturn := preturn |}
+  | pred_hole_return pparams puinst pcontext =>
+    {| pparams := pparams;
+       puinst := puinst;
+       pcontext := pcontext;
+       preturn := t |}
   end.
 
-Definition zip (t : term * stack) := zipc (fst t) (snd t).
+Definition fill_branches_hole '((brs1, br, brs2) : branches_hole) (t : term) : list (branch term) :=
+  let br :=
+      match br with
+      | branch_hole_context bcontext bbody =>
+        {| bcontext := fill_context_hole bcontext t; bbody := bbody |}
+      | branch_hole_body bcontext =>
+        {| bcontext := bcontext; bbody := t |}
+      end in
+  brs1 ++ (br :: brs2).
+
+Definition fill_hole (t : term) (se : stack_entry) : term :=
+  match se with
+  | App_l v => tApp t v
+  | App_r u => tApp u t
+  | Fix_app mfix idx args => tApp (mkApps (tFix mfix idx) args) t
+  | Fix mfix idx => tFix (fill_mfix_hole mfix t) idx
+  | CoFix_app mfix idx args => tApp (mkApps (tCoFix mfix idx) args) t
+  | CoFix mfix idx => tCoFix (fill_mfix_hole mfix t) idx
+  | Case_pred ci p c brs => tCase ci (fill_predicate_hole p t) c brs
+  | Case_discr ci p brs => tCase ci p t brs
+  | Case_branch ci p c brs => tCase ci p c (fill_branches_hole brs t)
+  | Proj p => tProj p t
+  | Prod_l na B => tProd na t B
+  | Prod_r na A => tProd na A t
+  | Lambda_ty na b => tLambda na t b
+  | Lambda_bd na A => tLambda na A t
+  | LetIn_bd na B u => tLetIn na t B u
+  | LetIn_ty na b u => tLetIn na b t u
+  | LetIn_in na b B => tLetIn na b B t
+  end.
+
+(* Not using fold_left here to get the right unfolding behavior *)
+Fixpoint zipc (t : term) (stack : stack) : term :=
+  match stack with
+  | [] => t
+  | se :: stack => zipc (fill_hole t se) stack
+  end.
+
+Definition zip (t : term * stack) : term := zipc (fst t) (snd t).
+
+(*
+Lemma zipc_cons t se π :
+  zipc t (se :: π) = zipc (fill_hole t se) π.
+Proof. reflexivity. Qed.
+*)
 
 Tactic Notation "zip" "fold" "in" hyp(h) :=
   lazymatch type of h with
@@ -953,18 +1212,15 @@ Tactic Notation "zip" "fold" :=
 
 (* TODO Tail-rec version *)
 (* Get the arguments out of a stack *)
-Fixpoint decompose_stack π :=
+Fixpoint decompose_stack (π : stack) : list term × stack :=
   match π with
-  | App u π => let '(l,π) := decompose_stack π in (u :: l, π)
+  | App_l u :: π => let '(l,π) := decompose_stack π in (u :: l, π)
   | _ => ([], π)
   end.
 
 (* TODO Tail-rec *)
-Fixpoint appstack l π :=
-  match l with
-  | u :: l => App u (appstack l π)
-  | [] => π
-  end.
+Definition appstack (l : list term) (π : stack) : stack :=
+  map App_l l ++ π.
 
 Lemma decompose_stack_eq :
   forall π l ρ,
@@ -973,25 +1229,25 @@ Lemma decompose_stack_eq :
 Proof.
   intros π l ρ eq.
   revert l ρ eq. induction π ; intros l ρ eq.
-  all: try solve [ cbn in eq ; inversion eq ; subst ; reflexivity ].
-  destruct l.
-  - cbn in eq. revert eq. case_eq (decompose_stack π).
-    intros. inversion eq.
-  - cbn in eq. revert eq. case_eq (decompose_stack π).
-    intros l0 s H0 eq. inversion eq. subst.
-    cbn. f_equal. eapply IHπ. assumption.
+  - noconf eq; auto.
+  - cbn in *.
+    destruct decompose_stack.
+    destruct a; noconf eq; cbn in *; auto.
+    f_equal.
+    eauto.
 Qed.
 
 Lemma decompose_stack_not_app :
   forall π l u ρ,
-    decompose_stack π = (l, App u ρ) -> False.
+    decompose_stack π = (l, App_l u :: ρ) -> False.
 Proof.
   intros π l u ρ eq.
   revert u l ρ eq. induction π ; intros u l ρ eq.
-  all: try solve [ cbn in eq ; inversion eq ].
-  cbn in eq. revert eq. case_eq (decompose_stack π).
-  intros l0 s H0 eq. inversion eq. subst.
-  eapply IHπ. eassumption.
+  - noconf eq.
+  - cbn in eq.
+    destruct decompose_stack.
+    destruct a; noconf eq; cbn in *; auto.
+    eauto.
 Qed.
 
 Lemma zipc_appstack :
@@ -1000,7 +1256,7 @@ Lemma zipc_appstack :
 Proof.
   intros t args ρ. revert t ρ. induction args ; intros t ρ.
   - cbn. reflexivity.
-  - cbn. rewrite IHargs. reflexivity.
+  - cbn. apply IHargs.
 Qed.
 
 Lemma decompose_stack_appstack :
@@ -1015,7 +1271,7 @@ Qed.
 
 Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
   match π with
-  | App u π =>
+  | App_l u :: π =>
     match n with
     | 0 => ret ([], u, π)
     | S n =>
@@ -1029,21 +1285,21 @@ Fixpoint decompose_stack_at π n : option (list term * term * stack) :=
 Lemma decompose_stack_at_eq :
   forall π n l u ρ,
     decompose_stack_at π n = Some (l,u,ρ) ->
-    π = appstack l (App u ρ).
+    π = appstack l (App_l u :: ρ).
 Proof.
   intros π n l u ρ h.
   induction π in n, l, u, ρ, h |- *.
-  all: try solve [ cbn in h ; discriminate ].
-  destruct n.
-  - cbn in h. inversion h. subst.
-    cbn. reflexivity.
-  - cbn in h. revert h.
-    case_eq (decompose_stack_at π n).
-    + intros [[l' v] ρ'] e1 e2.
-      inversion e2. subst. clear e2.
-      specialize IHπ with (1 := e1). subst.
-      cbn. reflexivity.
-    + intros H0 h. discriminate.
+  - noconf h.
+  - cbn in h.
+    destruct n as [|n].
+    + destruct a; noconf h; auto.
+    + specialize (IHπ n).
+      destruct decompose_stack_at.
+      * destruct p as ((?&?)&?).
+        destruct a; noconf h.
+        cbn.
+        f_equal; eauto.
+      * destruct a; noconf h.
 Qed.
 
 Lemma decompose_stack_at_length :
@@ -1053,16 +1309,17 @@ Lemma decompose_stack_at_length :
 Proof.
   intros π n l u ρ h.
   induction π in n, l, u, ρ, h |- *.
-  all: try solve [ cbn in h ; discriminate ].
-  destruct n.
-  - cbn in h. inversion h. reflexivity.
-  - cbn in h. revert h.
-    case_eq (decompose_stack_at π n).
-    + intros [[l' v] ρ'] e1 e2.
-      inversion e2. subst. clear e2.
-      specialize IHπ with (1 := e1). subst.
-      cbn. reflexivity.
-    + intros H0 h. discriminate.
+  - noconf h.
+  - cbn in h.
+    destruct n as [|n].
+    + destruct a; noconf h; auto.
+    + specialize (IHπ n).
+      destruct decompose_stack_at.
+      * destruct p as ((?&?)&?).
+        destruct a; noconf h.
+        cbn.
+        f_equal; eauto.
+      * destruct a; noconf h.
 Qed.
 
 (* TODO Find a better place for this. *)
@@ -1083,34 +1340,43 @@ Proof.
   intros i [na ty bo ra]. simpl. reflexivity.
 Qed.
 
-Fixpoint stack_context π : context :=
-  match π with
-  | ε => []
-  | App u π => stack_context π
-  | Fix f n args π => stack_context π
-  | Fix_mfix_ty na bo ra mfix1 mfix2 idx π => stack_context π
-  | Fix_mfix_bd na ty ra mfix1 mfix2 idx π =>
-      stack_context π ,,,
-      fix_context_alt (map def_sig mfix1 ++ (na,ty) :: map def_sig mfix2)
-  | CoFix f n args π => stack_context π
-  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx π => stack_context π
-  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx π =>
-      stack_context π ,,,
-      fix_context_alt (map def_sig mfix1 ++ (na,ty) :: map def_sig mfix2)
-  | Case_pars ci pars1 pars2 puint pctx pret c brs π => stack_context π
-  | Case_p ci pars puinst pctx c brs π => stack_context π ,,, pctx
-  | Case ci pred brs π => stack_context π
-  | Case_brs ci pred c bctx brs1 brs2 π => stack_context π ,,, bctx
-  | Proj p π => stack_context π
-  | Prod_l na B π => stack_context π
-  | Prod_r na A π => stack_context π ,, vass na A
-  | Lambda_ty na u π => stack_context π
-  | Lambda_tm na A π => stack_context π ,, vass na A
-  | LetIn_bd na B u π => stack_context π
-  | LetIn_ty na b u π => stack_context π
-  | LetIn_in na b B π => stack_context π ,, vdef na b B
-  | coApp u π => stack_context π
+Definition mfix_hole_context '((mfix1, def, mfix2) : mfix_hole) : context :=
+  match def with
+  | def_hole_type _ _ _ => []
+  | def_hole_body na ty _ =>
+    fix_context_alt (map def_sig mfix1 ++ (na, ty) :: map def_sig mfix2)
   end.
+
+Definition context_hole_context '((ctx1, decl, ctx2) : context_hole) : context :=
+  ctx1.
+
+Definition predicate_hole_context (p : predicate_hole) : context :=
+  match p with
+  | pred_hole_params _ _ _ _ _ => []
+  | pred_hole_context _ _ pcontext _ => context_hole_context pcontext
+  | pred_hole_return pparams puinst pcontext => pcontext
+  end.
+
+Definition branches_hole_context '((brs1, br, brs2) : branches_hole) : context :=
+  match br with
+  | branch_hole_context bcontext bbody => context_hole_context bcontext
+  | branch_hole_body bcontext => bcontext
+  end.
+
+Definition stack_entry_context (se : stack_entry) : context :=
+  match se with
+  | Fix mfix idx => mfix_hole_context mfix
+  | CoFix mfix idx => mfix_hole_context mfix
+  | Case_pred ci p c brs => predicate_hole_context p
+  | Case_branch ci p c brs => branches_hole_context brs
+  | Prod_r na A => [vass na A]
+  | Lambda_bd na A => [vass na A]
+  | LetIn_in na b B => [vdef na b B]
+  | _ => []
+  end.
+    
+Definition stack_context : stack -> context :=
+  flat_map stack_entry_context.
 
 Lemma stack_context_appstack :
   forall {π args},
@@ -1122,199 +1388,182 @@ Proof.
   - simpl. apply IHargs.
 Qed.
 
-Fixpoint stack_position π : position :=
-  match π with
-  | ε => []
-  | App u ρ => stack_position ρ ++ [ app_l ]
-  | Fix f n args ρ => stack_position ρ ++ [ app_r ]
-  | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-      stack_position ρ ++ [ fix_mfix_ty #|mfix1| ]
-  | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-      stack_position ρ ++ [ fix_mfix_bd #|mfix1| ]
-  | CoFix f n args ρ => stack_position ρ ++ [ app_r ]
-  | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-      stack_position ρ ++ [ cofix_mfix_ty #|mfix1| ]
-  | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-      stack_position ρ ++ [ cofix_mfix_bd #|mfix1| ]
-  | Case_pars ci pars1 pars2 puint pctx pret c brs ρ => stack_position ρ ++ [ case_par #|pars1| ]
-  | Case_p ci pars puinst pctx c brs ρ => stack_position ρ ++ [ case_p ]
-  | Case ci pred brs ρ => stack_position ρ ++ [ case_c ]
-  | Case_brs ci pred c bctx brs1 brs2 ρ => stack_position ρ ++ [ case_brs #|brs1| ]      
-  | Proj pr ρ => stack_position ρ ++ [ proj_c ]
-  | Prod_l na B ρ => stack_position ρ ++ [ prod_l ]
-  | Prod_r na A ρ => stack_position ρ ++ [ prod_r ]
-  | Lambda_ty na u ρ => stack_position ρ ++ [ lam_ty ]
-  | Lambda_tm na A ρ => stack_position ρ ++ [ lam_tm ]
-  | LetIn_bd na B u ρ => stack_position ρ ++ [ let_bd ]
-  | LetIn_ty na b u ρ => stack_position ρ ++ [ let_ty ]
-  | LetIn_in na b B ρ => stack_position ρ ++ [ let_in ]
-  | coApp u ρ => stack_position ρ ++ [ app_r ]
+Definition context_hole_choice '((ctx1, decl, ctx2) : context_hole) : context_choice :=
+  let decl :=
+      match decl with
+      | decl_hole_type _ _ => choose_decl_type
+      | decl_hole_body _ _ => choose_decl_body
+      end in
+  (#|ctx2|, decl).
+
+Definition stack_entry_choice (se : stack_entry) : choice :=
+  match se with
+  | App_l v => app_l
+  | App_r u => app_r
+  | Fix_app mfix idx args => app_r
+  | Fix (mfix1, def_hole_type _ _ _, _) idx => fix_mfix_ty #|mfix1|
+  | Fix (mfix1, def_hole_body _ _ _, _) idx => fix_mfix_bd #|mfix1|
+  | CoFix_app mfix idx args => app_r
+  | CoFix (mfix1, def_hole_type _ _ _, _) idx => cofix_mfix_ty #|mfix1|
+  | CoFix (mfix1, def_hole_body _ _ _, _) idx => cofix_mfix_bd #|mfix1|
+  | Case_pred ci (pred_hole_params pars1 _ _ _ _) c brs => case_par #|pars1|
+  | Case_pred ci (pred_hole_context _ _ ctx _) c brs => case_pctx (context_hole_choice ctx)
+  | Case_pred ci (pred_hole_return _ _ _) c brs => case_preturn
+  | Case_discr ci p brs => case_c
+  | Case_branch ci p c (brs1, branch_hole_context ctx _, brs2) =>
+    case_brsctx #|brs1| (context_hole_choice ctx)
+  | Case_branch ci p c (brs1, branch_hole_body _, brs2) => case_brsbody #|brs1|
+  | Proj p => proj_c
+  | Prod_l na B => prod_l
+  | Prod_r na A => prod_r
+  | Lambda_ty na b => lam_ty
+  | Lambda_bd na A => lam_tm
+  | LetIn_bd na B t => let_bd
+  | LetIn_ty na b t => let_ty
+  | LetIn_in na b B => let_in
   end.
+
+Definition stack_position : stack -> position :=
+  rev_map stack_entry_choice.
+
+Lemma stack_position_cons se π :
+  stack_position (se :: π) =
+  stack_position π ++ [stack_entry_choice se].
+Proof.
+  unfold stack_position.
+  rewrite rev_map_cons; auto.
+Qed.
 
 Lemma stack_position_atpos :
   forall t π, atpos (zipc t π) (stack_position π) = t.
 Proof.
-  intros t π. revert t. induction π ; intros u.
-  all: try solve [ cbn ; rewrite ?poscat_atpos, ?IHπ ; reflexivity ].
-  - cbn. rewrite poscat_atpos. rewrite IHπ.
-    cbn. rewrite nth_error_app_ge by lia.
-    replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-    reflexivity.
-  - cbn. rewrite poscat_atpos. rewrite IHπ.
-    cbn. rewrite nth_error_app_ge by lia.
-    replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-    reflexivity.
-  - cbn. rewrite poscat_atpos. rewrite IHπ.
-    cbn. rewrite nth_error_app_ge by lia.
-    replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-    reflexivity.
-  - cbn. rewrite poscat_atpos. rewrite IHπ.
-    cbn. rewrite nth_error_app_ge by lia.
-    replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-    reflexivity.
-  - cbn. rewrite poscat_atpos. rewrite IHπ.
-    cbn. rewrite nth_error_app_ge by lia.
-    replace (#|pars1| - #|pars1|) with 0 by lia. simpl.
-    reflexivity.
-  - cbn. rewrite poscat_atpos. rewrite IHπ.
-    cbn. rewrite nth_error_app_ge by lia.
-    replace (#|brs1| - #|brs1|) with 0 by lia. simpl.
-    reflexivity.
+  intros t π. revert t. induction π ; intros u; auto.
+  rewrite stack_position_cons.
+  cbn.
+  rewrite poscat_atpos.
+  rewrite IHπ.
+  destruct a; cbn; auto.
+  - destruct mfix as ((?&?)&?).
+    destruct d; cbn.
+    all: rewrite nth_error_snoc; auto.
+  - destruct mfix as ((?&?)&?).
+    destruct d; cbn.
+    all: rewrite nth_error_snoc; auto.
+  - destruct p; cbn; auto.
+    + rewrite nth_error_snoc; auto.
+    + destruct pcontext as ((?&[])&?); cbn.
+      all: rewrite nth_error_snoc; auto.
+  - destruct brs as ((?&[])&?); cbn.
+    all: rewrite nth_error_snoc; auto.
+    destruct bcontext as ((?&[])&?); cbn.
+    all: rewrite nth_error_snoc; auto.
 Qed.
 
 Lemma stack_position_valid :
   forall t π, validpos (zipc t π) (stack_position π).
 Proof.
-  intros t π. revert t. induction π ; intros u.
-  all: try solve [
-    cbn ; eapply poscat_valid ; [
-      eapply IHπ
-    | rewrite stack_position_atpos ; reflexivity
-    ]
-  ].
-  - reflexivity.
-  - cbn. eapply poscat_valid.
-    + eapply IHπ.
-    + rewrite stack_position_atpos.
-      cbn. rewrite nth_error_app_ge by lia.
-      replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-      reflexivity.
-  - cbn. eapply poscat_valid.
-    + eapply IHπ.
-    + rewrite stack_position_atpos.
-      cbn. rewrite nth_error_app_ge by lia.
-      replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-      reflexivity.
-  - cbn. eapply poscat_valid.
-    + eapply IHπ.
-    + rewrite stack_position_atpos.
-      cbn. rewrite nth_error_app_ge by lia.
-      replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-      reflexivity.
-  - cbn. eapply poscat_valid.
-    + eapply IHπ.
-    + rewrite stack_position_atpos.
-      cbn. rewrite nth_error_app_ge by lia.
-      replace (#|mfix1| - #|mfix1|) with 0 by lia. simpl.
-      reflexivity.
-  - cbn. eapply poscat_valid.
-    + eapply IHπ.
-    + rewrite stack_position_atpos.
-      cbn. rewrite nth_error_app_ge by lia.
-      replace (#|pars1| - #|pars1|) with 0 by lia. simpl.
-      reflexivity.
-  - cbn. eapply poscat_valid.
-    + eapply IHπ.
-    + rewrite stack_position_atpos.
-      cbn. rewrite nth_error_app_ge by lia.
-      replace (#|brs1| - #|brs1|) with 0 by lia. simpl.
-      reflexivity.
+  intros t π. revert t. induction π ; intros u; auto.
+  rewrite stack_position_cons.
+  cbn.
+  apply poscat_valid; eauto.
+  rewrite stack_position_atpos.
+  destruct a; cbn; auto.
+  - destruct mfix as ((?&?)&?), d.
+    all: rewrite nth_error_snoc; auto.
+  - destruct mfix as ((?&?)&?), d.
+    all: rewrite nth_error_snoc; auto.
+  - destruct p; cbn; auto.
+    + rewrite nth_error_snoc; auto.
+    + destruct pcontext as ((?&[])&?); cbn.
+      all: rewrite nth_error_snoc; auto.
+  - destruct brs as ((?&[])&?); cbn.
+    all: rewrite nth_error_snoc; auto.
+    destruct bcontext as ((?&[])&?); cbn.
+    all: rewrite nth_error_snoc; auto.
 Qed.
 
-Definition stack_pos t π : pos (zipc t π) :=
+Definition stack_pos (t : term) (π : stack) : pos (zipc t π) :=
   exist (stack_position π) (stack_position_valid t π).
 
-Fixpoint list_make {A} n x : list A :=
-  match n with
-  | 0 => []
-  | S n => x :: list_make n x
-  end.
-
-Lemma list_make_app_r :
-  forall A n (x : A),
-    x :: list_make n x = list_make n x ++ [x].
+(* TODO: Move *)
+Lemma map_const {X Y} (y : Y) (l : list X) :
+  map (fun _ => y) l = repeat y #|l|.
 Proof.
-  intros A n x. revert x.
-  induction n ; intro x.
-  - reflexivity.
-  - cbn. rewrite IHn. reflexivity.
+  induction l; cbn; auto.
+  f_equal; auto.
+Qed.
+
+Lemma repeat_snoc {A} (a : A) n :
+  repeat a (S n) = repeat a n ++ [a].
+Proof.
+  induction n; auto.
+  cbn.
+  f_equal; auto.
+Qed.
+
+Lemma rev_repeat {A} (a : A) n :
+  List.rev (repeat a n) = repeat a n.
+Proof.
+  induction n; auto.
+  rewrite repeat_snoc at 1.
+  rewrite rev_app_distr; cbn.
+  f_equal; auto.
 Qed.
 
 Lemma stack_position_appstack :
   forall args ρ,
     stack_position (appstack args ρ) =
-    stack_position ρ ++ list_make #|args| app_l.
+    stack_position ρ ++ repeat app_l #|args|.
 Proof.
-  intros args ρ. revert ρ.
-  induction args as [| u args ih ] ; intros ρ.
-  - cbn. rewrite app_nil_r. reflexivity.
-  - cbn. rewrite ih. rewrite <- app_assoc.
-    rewrite list_make_app_r. reflexivity.
+  intros args ρ.
+  unfold stack_position, appstack.
+  rewrite rev_map_app.
+  f_equal.
+  rewrite rev_map_spec, map_map.
+  cbn.
+  rewrite map_const, rev_repeat; auto.
 Qed.
 
 Section Stacks.
   Context (Σ : global_env_ext).
   Context `{checker_flags}.
+  
+  Lemma fill_context_hole_inj c t t' :
+    fill_context_hole c t = fill_context_hole c t' ->
+    t = t'.
+  Proof.
+    intros eq.
+    destruct c as ((?&[])&?); cbn in *.
+    all: apply app_inj_length_l in eq as (_&eq); noconf eq; auto.
+  Qed.
 
   Lemma zipc_inj :
     forall u v π, zipc u π = zipc v π -> u = v.
   Proof.
     intros u v π e. revert u v e.
-    induction π ; intros u v e.
-    all: try solve [ cbn in e ; apply IHπ in e ; inversion e ; reflexivity ].
-    - cbn in e. assumption.
-    - apply IHπ in e.
-      assert (em :
-        mfix1 ++ mkdef _ na u bo ra :: mfix2 =
-        mfix1 ++ mkdef _ na v bo ra :: mfix2
-      ).
-      { inversion e. reflexivity. }
-      apply app_inv_head in em. inversion em. reflexivity.
-    - apply IHπ in e.
-      assert (em :
-        mfix1 ++ mkdef _ na ty u ra :: mfix2 =
-        mfix1 ++ mkdef _ na ty v ra :: mfix2
-      ).
-      { inversion e. reflexivity. }
-      apply app_inv_head in em. inversion em. reflexivity.
-    - apply IHπ in e.
-      assert (em :
-        mfix1 ++ mkdef _ na u bo ra :: mfix2 =
-        mfix1 ++ mkdef _ na v bo ra :: mfix2
-      ).
-      { inversion e. reflexivity. }
-      apply app_inv_head in em. inversion em. reflexivity.
-    - apply IHπ in e.
-      assert (em :
-        mfix1 ++ mkdef _ na ty u ra :: mfix2 =
-        mfix1 ++ mkdef _ na ty v ra :: mfix2
-      ).
-      { inversion e. reflexivity. }
-      apply app_inv_head in em. inversion em. reflexivity.
-    - apply IHπ in e.
-      assert (eb : pars1 ++ u :: pars2 = pars1 ++ v :: pars2).
-      { inversion e. reflexivity. }
-      apply app_inv_head in eb. inversion eb. reflexivity.
-    - apply IHπ in e.
-      assert (eb : brs1 ++ {| bcontext := bctx; bbody := u |} :: brs2 =
-         brs1 ++ {| bcontext := bctx; bbody := v |} :: brs2).
-      { inversion e. reflexivity. }
-      apply app_inv_head in eb. inversion eb. reflexivity.
+    induction π ; intros u v e; auto.
+    cbn in e.
+    apply IHπ in e.
+    destruct a; cbn in e; noconf e; auto.
+    - destruct mfix as ((?&[])&?); cbn in *.
+      all: apply app_inj_length_l in H0 as (_&H0); auto.
+      all: noconf H0; auto.
+    - destruct mfix as ((?&[])&?); cbn in *.
+      all: apply app_inj_length_l in H0 as (_&H0); auto.
+      all: noconf H0; auto.
+    - destruct p; cbn in *; noconf H0; auto.
+      + apply app_inj_length_l in H0 as (_&H0); auto.
+        noconf H0; auto.
+      + apply fill_context_hole_inj in H0; auto.
+    - destruct brs as ((?&[])&?); cbn in *.
+      + apply app_inj_length_l in H0 as (_&H0); auto; noconf H0.
+        apply fill_context_hole_inj in H0; auto.
+      + apply app_inj_length_l in H0 as (_&H0); noconf H0; auto.
   Qed.
 
-  Definition isStackApp π :=
+  Definition isStackApp (π : stack) : bool :=
     match π with
-    | App _ _ => true
+    | App_l _ :: _ => true
     | _ => false
     end.
 
@@ -1381,7 +1630,7 @@ Section Stacks.
       assumption.
   Qed.
 
-  Definition xposition Γ π : position :=
+  Definition xposition (Γ : context) (π : stack) : position :=
     context_position Γ ++ stack_position π.
 
   Lemma xposition_atpos :
@@ -1413,7 +1662,7 @@ Section Stacks.
     eassumption.
   Qed.
 
-  Definition xpos Γ t π : pos (zipx Γ t π) :=
+  Definition xpos (Γ : context) (t : term) (π : stack) : pos (zipx Γ t π) :=
     exist (xposition Γ π) (xposition_valid Γ t π).
 
   Lemma positionR_stack_pos_xpos :
@@ -1426,48 +1675,18 @@ Section Stacks.
     eapply positionR_poscat. assumption.
   Qed.
 
-  Definition zipp t π :=
+  Definition zipp (t : term) (π : stack) : term :=
     let '(args, ρ) := decompose_stack π in
     mkApps t args.
 
-  (* Maybe a stack should be a list! *)
-  Fixpoint stack_cat (ρ θ : stack) : stack :=
-    match ρ with
-    | ε => θ
-    | App u ρ => App u (stack_cat ρ θ)
-    | Fix f n args ρ => Fix f n args (stack_cat ρ θ)
-    | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-        Fix_mfix_ty na bo ra mfix1 mfix2 idx (stack_cat ρ θ)
-    | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-        Fix_mfix_bd na ty ra mfix1 mfix2 idx (stack_cat ρ θ)
-    | CoFix f n args ρ => CoFix f n args (stack_cat ρ θ)
-    | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-        CoFix_mfix_ty na bo ra mfix1 mfix2 idx (stack_cat ρ θ)
-    | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-        CoFix_mfix_bd na ty ra mfix1 mfix2 idx (stack_cat ρ θ)
-    | Case_pars ci pars1 pars2 puinst pctx pret c brs ρ =>
-      Case_pars ci pars1 pars2 puinst pctx pret c brs (stack_cat ρ θ)
-    | Case_p ci pars puinst pctx c brs ρ => 
-      Case_p ci pars puinst pctx c brs (stack_cat ρ θ)
-    | Case ci p brs ρ => Case ci p brs (stack_cat ρ θ)
-    | Case_brs ci p c m brs1 brs2 ρ =>
-        Case_brs ci p c m brs1 brs2 (stack_cat ρ θ)
-    | Proj p ρ => Proj p (stack_cat ρ θ)
-    | Prod_l na B ρ => Prod_l na B (stack_cat ρ θ)
-    | Prod_r na A ρ => Prod_r na A (stack_cat ρ θ)
-    | Lambda_ty na u ρ => Lambda_ty na u (stack_cat ρ θ)
-    | Lambda_tm na A ρ => Lambda_tm na A (stack_cat ρ θ)
-    | LetIn_bd na B u ρ => LetIn_bd na B u (stack_cat ρ θ)
-    | LetIn_ty na b u ρ => LetIn_ty na b u (stack_cat ρ θ)
-    | LetIn_in na b B ρ => LetIn_in na b B (stack_cat ρ θ)
-    | coApp u ρ => coApp u (stack_cat ρ θ)
-    end.
+  Definition stack_cat (ρ θ : stack) : stack :=
+    ρ ++ θ.
 
   Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
 
   Lemma stack_cat_appstack :
     forall args ρ,
-      appstack args ε +++ ρ = appstack args ρ.
+      appstack args [] +++ ρ = appstack args ρ.
   Proof.
     intros args ρ.
     revert ρ. induction args ; intros ρ.
@@ -1477,7 +1696,7 @@ Section Stacks.
 
   Lemma stack_cat_nil_r :
     forall π,
-      π +++ ε = π.
+      π +++ [] = π.
   Proof.
     intro π.
     induction π.
@@ -1490,166 +1709,8 @@ Section Stacks.
     forall π ρ θ,
       (π +++ ρ) +++ θ = π +++ (ρ +++ θ).
   Proof.
-    intros π ρ θ.
-    induction π in ρ, θ |- *.
-    all: simpl.
-    all: rewrite ?IHπ.
-    all: reflexivity.
-  Qed.
-
-  Fixpoint rev_stack π :=
-    match π with
-    | ε => ε
-    | App u ρ => rev_stack ρ +++ App u ε
-    | Fix f n args ρ => rev_stack ρ +++ Fix f n args ε
-    | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-        rev_stack ρ +++ Fix_mfix_ty na bo ra mfix1 mfix2 idx ε
-    | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-        rev_stack ρ +++ Fix_mfix_bd na ty ra mfix1 mfix2 idx ε
-    | CoFix f n args ρ => rev_stack ρ +++ CoFix f n args ε
-    | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ =>
-        rev_stack ρ +++ CoFix_mfix_ty na bo ra mfix1 mfix2 idx ε
-    | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ =>
-        rev_stack ρ +++ CoFix_mfix_bd na ty ra mfix1 mfix2 idx ε
-    | Case_pars ci pars1 pars2 pinst pctx pret c brs ρ =>
-        rev_stack ρ +++ Case_pars ci pars1 pars2 pinst pctx pret c brs ε
-    | Case_p ci pars pinst pctx c brs ρ => 
-      rev_stack ρ +++ Case_p ci pars pinst pctx c brs ε
-    | Case ci p brs ρ => rev_stack ρ +++ Case ci p brs ε
-    | Case_brs ci p c m brs1 brs2 ρ =>
-        rev_stack ρ +++ Case_brs ci p c m brs1 brs2 ε
-    | Proj p ρ => rev_stack ρ +++ Proj p ε
-    | Prod_l na B ρ => rev_stack ρ +++ Prod_l na B ε
-    | Prod_r na A ρ => rev_stack ρ +++ Prod_r na A ε
-    | Lambda_ty na u ρ => rev_stack ρ +++ Lambda_ty na u ε
-    | Lambda_tm na A ρ => rev_stack ρ +++ Lambda_tm na A ε
-    | LetIn_bd na B u ρ => rev_stack ρ +++ LetIn_bd na B u ε
-    | LetIn_ty na b u ρ => rev_stack ρ +++ LetIn_ty na b u ε
-    | LetIn_in na b B ρ => rev_stack ρ +++ LetIn_in na b B ε
-    | coApp u ρ => rev_stack ρ +++ coApp u ε
-    end.
-
-  Lemma rev_stack_app :
-    forall π ρ,
-      rev_stack (π +++ ρ) = rev_stack ρ +++ rev_stack π.
-  Proof.
-    intros π ρ.
-    induction π in ρ |- *.
-    all: simpl.
-    1:{ rewrite stack_cat_nil_r. reflexivity. }
-    all: rewrite IHπ.
-    all: rewrite stack_cat_assoc.
-    all: reflexivity.
-  Qed.
-
-  Lemma rev_stack_invol :
-    forall π,
-      rev_stack (rev_stack π) = π.
-  Proof.
-    intro π.
-    induction π.
-    all: simpl.
-    1: reflexivity.
-    all: rewrite rev_stack_app.
-    all: rewrite IHπ.
-    all: reflexivity.
-  Qed.
-
-  (* Induction principle for stacks, in reverse order *)
-  Lemma stack_rev_rect :
-    forall (P : stack -> Type),
-      P ε ->
-      (forall t π,
-        P π ->
-        P (π +++ App t ε)
-      ) ->
-      (forall mfix idx args π,
-        P π ->
-        P (π +++ Fix mfix idx args ε)
-      ) ->
-      (forall na bo ra mfix1 mfix2 id π,
-        P π ->
-        P (π +++ Fix_mfix_ty na bo ra mfix1 mfix2 id ε)
-      ) ->
-      (forall na ty ra mfix1 mfix2 id π,
-        P π ->
-        P (π +++ Fix_mfix_bd na ty ra mfix1 mfix2 id ε)
-      ) ->
-      (forall mfix idx args π,
-        P π ->
-        P (π +++ CoFix mfix idx args ε)
-      ) ->
-      (forall na bo ra mfix1 mfix2 id π,
-        P π ->
-        P (π +++ CoFix_mfix_ty na bo ra mfix1 mfix2 id ε)
-      ) ->
-      (forall na ty ra mfix1 mfix2 id π,
-        P π ->
-        P (π +++ CoFix_mfix_bd na ty ra mfix1 mfix2 id ε)
-      ) ->
-      (forall ci pars1 pars2 pinst pctx pret c brs π,
-        P π ->
-        P (π +++ Case_pars ci pars1 pars2 pinst pctx pret c brs ε)
-      ) ->
-      (forall ci pars pinst pctx c brs π,
-        P π ->
-        P (π +++ Case_p ci pars pinst pctx c brs ε)
-      ) ->
-      (forall ci p brs π,
-        P π ->
-        P (π +++ Case ci p brs ε)
-      ) ->
-      (forall ci p c m brs1 brs2 π,
-        P π ->
-        P (π +++ Case_brs ci p c m brs1 brs2 ε)
-      ) ->
-      (forall p π,
-        P π ->
-        P (π +++ Proj p ε)
-      ) ->
-      (forall na B π,
-        P π ->
-        P (π +++ Prod_l na B ε)
-      ) ->
-      (forall na A π,
-        P π ->
-        P (π +++ Prod_r na A ε)
-      ) ->
-      (forall na b π,
-        P π ->
-        P (π +++ Lambda_ty na b ε)
-      ) ->
-      (forall na A π,
-        P π ->
-        P (π +++ Lambda_tm na A ε)
-      ) ->
-      (forall na B t π,
-        P π ->
-        P (π +++ LetIn_bd na B t ε)
-      ) ->
-      (forall na b t π,
-        P π ->
-        P (π +++ LetIn_ty na b t ε)
-      ) ->
-      (forall na b B π,
-        P π ->
-        P (π +++ LetIn_in na b B ε)
-      ) ->
-      (forall t π,
-        P π ->
-        P (π +++ coApp t ε)
-      ) ->
-      forall π, P π.
-  Proof.
-    intros P hε hApp hFix hFixty hFixbd hCoFix hCoFixty hCoFixbd hCasepars hCasep hCase
-      hCasebrs hProj hProdl hProdr hLamty hLamtm hLetbd hLetty hLetin hcoApp.
-    assert (h : forall π, P (rev_stack π)).
-    { intro π. induction π.
-      all: eauto.
-    }
-    intro π.
-    rewrite <- rev_stack_invol.
-    apply h.
+    symmetry.
+    apply app_assoc.
   Qed.
 
   Lemma decompose_stack_twice :
@@ -1674,12 +1735,13 @@ Section Stacks.
       zipc t (π +++ ρ) = zipc (zipc t π) ρ.
   Proof.
     intros t π ρ. revert t ρ.
-    induction π ; intros u ρ.
-    all: (simpl ; rewrite ?IHπ ; reflexivity).
+    induction π ; intros u ρ; auto.
+    simpl.
+    rewrite IHπ; auto.
   Qed.
 
   Lemma stack_cat_empty :
-    forall ρ, ρ +++ ε = ρ.
+    forall ρ, ρ +++ [] = ρ.
   Proof.
     intros ρ. induction ρ.
     all: (simpl ; rewrite ?IHρ ; reflexivity).
@@ -1690,29 +1752,20 @@ Section Stacks.
       stack_position (ρ +++ π) =
       stack_position π ++ stack_position ρ.
   Proof.
-    intros π ρ. revert π.
-    induction ρ ; intros π.
-    all: try (simpl ; rewrite IHρ ; rewrite app_assoc ; reflexivity).
-    simpl. rewrite app_nil_r. reflexivity.
+    intros π ρ. apply rev_map_app.
   Qed.
 
   Lemma stack_context_stack_cat :
     forall π ρ,
       stack_context (ρ +++ π) = stack_context π ,,, stack_context ρ.
   Proof.
-    intros π ρ. revert π. induction ρ ; intros π.
-    all: try (cbn ; rewrite ?IHρ ; reflexivity).
-    - cbn. rewrite IHρ. unfold ",,,".
-      rewrite app_assoc. reflexivity.
-    - cbn. rewrite IHρ. unfold ",,,".
-      rewrite app_assoc. reflexivity.
-    - cbn. rewrite IHρ. unfold ",,,".
-      rewrite app_assoc. reflexivity.
-    - cbn. rewrite IHρ. unfold ",,,".
-      rewrite app_assoc. reflexivity.
+    intros π ρ.
+    unfold stack_context.
+    rewrite !flat_map_concat_map.
+    rewrite map_app, concat_app; auto.
   Qed.
 
-  Definition zippx t π :=
+  Definition zippx (t : term) (π : stack) : term :=
     let '(args, ρ) := decompose_stack π in
     it_mkLambda_or_LetIn (stack_context ρ) (mkApps t args).
 

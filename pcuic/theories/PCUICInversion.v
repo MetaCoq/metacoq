@@ -171,6 +171,7 @@ Section Inversion.
     mdecl.(ind_npars) = ci.(ci_npar) ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     wf_predicate mdecl idecl p ->
+    consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
     wf_local Σ (Γ ,,, p.(pcontext)) ->
     conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->

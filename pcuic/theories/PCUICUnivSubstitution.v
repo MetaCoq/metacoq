@@ -1485,6 +1485,7 @@ Proof.
     Grab Existential Variables. all:repeat econstructor.
 Qed.
 
+(*
 Fixpoint subst_instance_stack l π :=
   match π with
   | ε => ε
@@ -1583,6 +1584,7 @@ Proof.
   - simpl. rewrite IHπ. cbn. f_equal. f_equal.
     rewrite map_app; cbn. f_equal.
 Qed.
+*)
 
 Lemma conv_subst_instance (Σ : global_env_ext) Γ u A B univs :
 valid_constraints (global_ext_constraints (Σ.1, univs))

@@ -235,19 +235,19 @@ Section Reduce.
       let C' := context C[ zip (t,π) ] in
       change C'
     end.
-
+  
   Lemma Req_red :
     forall Γ x y,
       Req Σ Γ y x ->
       ∥ red Σ Γ (zip x) (zip y) ∥.
   Proof.
-    intros Γ [t π] [t' π'] h. cbn.
+    intros Γ [t π] [t' π'] h; simpl.
     dependent destruction h.
     - repeat zip fold. rewrite H.
       constructor. reflexivity.
     - dependent destruction H.
       + eapply cored_red. assumption.
-      + cbn in H0. inversion H0.
+      + simpl in H0. inversion H0.
         constructor. reflexivity.
   Qed.
 
@@ -280,7 +280,7 @@ Section Reduce.
     red_discr (tLetIn _ _ _ _) _ := False ;
     red_discr (tConst _ _) _ := False ;
     red_discr (tApp _ _) _ := False ;
-    red_discr (tLambda _ _ _) (App _ _) := False ;
+    red_discr (tLambda _ _ _) (App_l _ :: _) := False ;
     red_discr (tFix _ _) _ := False ;
     red_discr (tCase _ _ _ _) _ := False ;
     red_discr (tProj _ _) _ := False ;
@@ -291,7 +291,7 @@ Section Reduce.
   | red_view_LetIn A b B c π : red_view (tLetIn A b B c) π
   | red_view_Const c u π : red_view (tConst c u) π
   | red_view_App f a π : red_view (tApp f a) π
-  | red_view_Lambda na A t a args : red_view (tLambda na A t) (App a args)
+  | red_view_Lambda na A t a args : red_view (tLambda na A t) (App_l a :: args)
   | red_view_Fix mfix idx π : red_view (tFix mfix idx) π
   | red_view_Case ci p c brs π : red_view (tCase ci p c brs) π
   | red_view_Proj p c π : red_view (tProj p c) π
@@ -302,7 +302,7 @@ Section Reduce.
     red_viewc (tLetIn A b B c) π := red_view_LetIn A b B c π ;
     red_viewc (tConst c u) π := red_view_Const c u π ;
     red_viewc (tApp f a) π := red_view_App f a π ;
-    red_viewc (tLambda na A t) (App a args) := red_view_Lambda na A t a args ;
+    red_viewc (tLambda na A t) (App_l a :: args) := red_view_Lambda na A t a args ;
     red_viewc (tFix mfix idx) π := red_view_Fix mfix idx π ;
     red_viewc (tCase ci p c brs) π := red_view_Case ci p c brs π ;
     red_viewc (tProj p c) π := red_view_Proj p c π ;
@@ -337,7 +337,7 @@ Section Reduce.
     cc0_viewc (tConstruct ind 0 ui) := cc0view_construct ind ui ;
     cc0_viewc (tCoFix mfix idx) := cc0view_cofix mfix idx ;
     cc0_viewc t := cc0view_other t _.
-
+  
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
             (h : welltyped Σ Γ (zip (t,π)))
             (reduce : forall t' π', R Σ Γ (t',π') (t,π) ->
@@ -374,25 +374,25 @@ Section Reduce.
       | _ := give (tConst c u) π
       } ;
 
-    | red_view_App f a π := rec reduce f (App a π) ;
+    | red_view_App f a π := rec reduce f (App_l a :: π) ;
 
     | red_view_Lambda na A t a args with inspect (RedFlags.beta flags) := {
       | @exist true eq1 := rec reduce (subst10 a t) args ;
-      | @exist false eq1 := give (tLambda na A t) (App a args)
+      | @exist false eq1 := give (tLambda na A t) (App_l a :: args)
       } ;
 
     | red_view_Fix mfix idx π with RedFlags.fix_ flags := {
       | true with inspect (unfold_fix mfix idx) := {
         | @exist (Some (narg, fn)) eq1 with inspect (decompose_stack_at π narg) := {
-          | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix mfix idx args ρ) _) := {
+          | @exist (Some (args, c, ρ)) eq2 with inspect (reduce c (Fix_app mfix idx args :: ρ) _) := {
             | @exist (@exist (t, ρ') prf) eq3 with construct_viewc t := {
               | view_construct ind n ui with inspect (decompose_stack ρ') := {
                 | @exist (l, θ) eq4 :=
-                  rec reduce fn (appstack args (App (mkApps (tConstruct ind n ui) l) ρ))
+                  rec reduce fn (appstack args (App_l (mkApps (tConstruct ind n ui) l) :: ρ))
                 } ;
               | view_other t ht with inspect (decompose_stack ρ') := {
                 | @exist (l, θ) eq4 :=
-                  give (tFix mfix idx) (appstack args (App (mkApps t l) ρ))
+                  give (tFix mfix idx) (appstack args (App_l (mkApps t l) :: ρ))
                 }
               }
             } ;
@@ -404,7 +404,7 @@ Section Reduce.
       } ;
 
     | red_view_Case ci p c brs π with RedFlags.iota flags := {
-      | true with inspect (reduce c (Case ci p brs π) _) := {
+      | true with inspect (reduce c (Case_discr ci p brs :: π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
           | @exist (args, ρ) prf' with cc_viewc t := {
             | ccview_construct ind' c' inst' with inspect (nth_error brs c') := {
@@ -423,7 +423,7 @@ Section Reduce.
       } ;
 
     | red_view_Proj (i, pars, narg) c π with RedFlags.iota flags := {
-      | true with inspect (reduce c (Proj (i, pars, narg) π) _) := {
+      | true with inspect (reduce c (Proj (i, pars, narg) :: π) _) := {
         | @exist (@exist (t,π') prf) eq with inspect (decompose_stack π') := {
           | @exist (args, ρ) prf' with cc0_viewc t := {
             | cc0view_construct ind' _
@@ -513,7 +513,8 @@ Section Reduce.
   (* tApp *)
   Next Obligation.
     right.
-    cbn. unfold posR. cbn.
+    simpl. unfold posR. simpl.
+    rewrite stack_position_cons.
     eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
@@ -545,7 +546,7 @@ Section Reduce.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2). subst.
     eapply R_positionR.
     - cbn. rewrite zipc_appstack. cbn. reflexivity.
-    - cbn. rewrite stack_position_appstack. cbn.
+    - simpl. rewrite !stack_position_appstack, !stack_position_cons. simpl.
       rewrite <- app_assoc.
       eapply positionR_poscat.
       constructor.
@@ -700,7 +701,8 @@ Section Reduce.
 
   (* tCase *)
   Next Obligation.
-    right. unfold posR. cbn.
+    right. unfold posR. simpl.
+    rewrite stack_position_cons.
     eapply positionR_poscat_nonil. discriminate.
   Qed.
   Next Obligation.
@@ -807,7 +809,8 @@ Section Reduce.
   
   (* tProj *)
   Next Obligation.
-    right. unfold posR. cbn.
+    right. unfold posR. simpl.
+    rewrite stack_position_cons.
     rewrite <- app_nil_r.
     eapply positionR_poscat.
     constructor.
@@ -892,7 +895,7 @@ Section Reduce.
           cbn. rewrite <- H2. assumption.
     }
     replace (zip (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args), π))
-      with (zip (tCoFix mfix idx, appstack args (Proj (i, pars, narg) π)))
+      with (zip (tCoFix mfix idx, appstack args (Proj (i, pars, narg) :: π)))
       in h'.
     - destruct hΣ.
       apply welltyped_context in h' ; auto. simpl in h'.
@@ -1069,7 +1072,7 @@ Section Reduce.
   Qed.
 
   Definition reduce_term Γ t (h : welltyped Σ Γ t) :=
-    zip (reduce_stack Γ t ε h).
+    zip (reduce_stack Γ t [] h).
 
   Theorem reduce_term_sound :
     forall Γ t h,
@@ -1077,7 +1080,7 @@ Section Reduce.
   Proof.
     intros Γ t h.
     unfold reduce_term.
-    refine (reduce_stack_sound _ _ ε _).
+    refine (reduce_stack_sound _ _ [] _).
   Qed.
 
   (* (* Potentially hard? Ok with SN? *) *)
@@ -1173,8 +1176,7 @@ Section Reduce.
     induction l in l, n |- *; cbn in *.
     - rewrite nth_error_nil.
       split; intros; try easy.
-      unfold decompose_stack_at.
-      destruct s; easy.
+      destruct s as [|[]]; cbn in *; easy.
     - destruct n; [easy|].
       cbn in *.
       split.
@@ -1670,7 +1672,7 @@ Section Reduce.
   Theorem reduce_term_complete Γ t h :
     ∥whnf flags Σ Γ (reduce_term Γ t h)∥.
   Proof.
-    pose proof (reduce_stack_whnf Γ t ε h) as H.
+    pose proof (reduce_stack_whnf Γ t [] h) as H.
     unfold reduce_term.
     unfold reduce_stack in *.
     destruct reduce_stack_full.
@@ -1784,7 +1786,7 @@ Section ReduceFns.
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
         | view_ind_tInd i u => ret (i; u; args; sq _);
-        | view_ind_other t _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t Empty h) := {
+        | view_ind_other t _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t [] h) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i u with inspect (decompose_stack π) := {
               | exist (l, _) eq_decomp => ret (i; u; l; _)
@@ -1798,17 +1800,17 @@ Section ReduceFns.
     - assert (X : mkApps (tInd i u) args = t); [|rewrite X; apply refl_red].
       etransitivity. 2: symmetry; eapply mkApps_decompose_app.
       now rewrite <- eq_decomp.
-    - pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ Empty h).
+    - pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ [] h).
       rewrite <- eq in H.
       cbn in *.
-      assert (π = appstack l ε) as ->.
+      assert (π = appstack l []) as ->.
       2: { now rewrite zipc_appstack in H. }
       unfold reduce_stack in eq.
       destruct reduce_stack_full as (?&_&stack_val&?).
       subst x.
       unfold Pr in stack_val.
       cbn in *.
-      assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
+      assert (decomp: decompose_stack π = ((decompose_stack π).1, [])).
       { rewrite stack_val.
         now destruct decompose_stack. }
       apply decompose_stack_eq in decomp as ->.
@@ -1823,7 +1825,7 @@ Section ReduceFns.
   Proof.
     funelim (reduce_to_ind Γ ty wat); try congruence.
     intros _ ind u args r.
-    pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t ε h) as wh.
+    pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t [] h) as wh.
     unfold reduce_stack in *.
     destruct reduce_stack_full as ((hd&π)&r'&stack_valid&(notapp&_)).
     destruct wh as [wh].
@@ -1832,9 +1834,9 @@ Section ReduceFns.
     cbn in *.
     destruct HΣ.
     eapply red_confluence in r as (?&r1&r2); [|eassumption|exact r'].
-    assert (exists args, π = appstack args ε) as (?&->).
+    assert (exists args, π = appstack args []) as (?&->).
     { exists ((decompose_stack π).1).
-      assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
+      assert (decomp: decompose_stack π = ((decompose_stack π).1, [])).
       { now rewrite stack_valid; destruct decompose_stack. }
       now apply decompose_stack_eq in decomp. }
 

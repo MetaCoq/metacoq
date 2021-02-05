@@ -1851,6 +1851,8 @@ Inductive rel_option {A B} (R : A -> B -> Type) : option A -> option B -> Type :
 | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
 | rel_none : rel_option R None None.
 
+Derive Signature NoConfusion for rel_option.
+
 Definition eq_decl_upto_gen Σ Re Rle d d' : Type :=
   eq_binder_annot d.(decl_name) d'.(decl_name) *
   rel_option (eq_term_upto_univ Σ Re Re) d.(decl_body) d'.(decl_body) *

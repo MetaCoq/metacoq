@@ -1507,6 +1507,7 @@ Qed.
 
 Notation subst_predicate s := (map_predicate_k id (subst s)).
 
+(*
 Fixpoint subst_stack s k π :=
   match π with
   | ε => ε
@@ -1640,6 +1641,7 @@ Proof.
     rewrite map_app /=; len. do 2 f_equal.
     now rewrite /map_branch_k /= mapi_context_fold Nat.add_assoc.
 Qed.
+*)
 
 (** The cumulativity relation is substitutive, yay! *)
 

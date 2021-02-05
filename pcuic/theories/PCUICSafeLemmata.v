@@ -87,6 +87,7 @@ Section Lemmata.
     apply All2_same; split; reflexivity.
   Qed.
 
+  (*
   Lemma eq_term_upto_univ_zipc :
     forall Σ Re u v π,
       RelationClasses.Reflexive Re ->
@@ -166,6 +167,7 @@ Section Lemmata.
     - intro. eapply eq_universe_refl.
     - assumption.
   Qed.
+*)
 
   Lemma eq_term_upto_univ_zipp :
     forall Σ Re u v π,
@@ -192,6 +194,7 @@ Section Lemmata.
     - assumption.
   Qed.
 
+  (*
   Lemma eq_term_upto_univ_zipx :
     forall Σ Re Γ u v π,
       RelationClasses.Reflexive Re ->
@@ -212,6 +215,7 @@ Section Lemmata.
     eapply eq_term_upto_univ_zipx ; auto.
     intro. eapply eq_universe_refl.
   Qed.
+*)
 
 
   (* red is the reflexive transitive closure of one-step reduction and thus
@@ -388,6 +392,20 @@ Section Lemmata.
       + econstructor. assumption.
   Qed.
   
+  Arguments zip /.
+
+  Lemma welltyped_fill_context_hole Γ π pcontext t :
+    wf_local Σ (Γ,,, stack_context π,,, fill_context_hole pcontext t) ->
+    welltyped Σ (Γ,,, stack_context π,,, context_hole_context pcontext) t.
+  Proof.
+    intros wfl.
+    destruct pcontext as ((?&h)&?); simpl in *.
+    apply wf_local_app_inv in wfl as (_&wf).
+    apply wf_local_rel_app_inv in wf as (wf&_).
+    destruct h; depelim wf; simpl in *.
+    all: destruct l; econstructor; eauto.
+  Qed.
+  
   Lemma welltyped_context :
     forall Γ t,
       welltyped Σ Γ (zip t) ->
@@ -397,160 +415,76 @@ Section Lemmata.
     intros Γ [t π] h. simpl.
     destruct h as [T h].
     induction π in Γ, t, T, h |- *.
-    - cbn. cbn in h. eexists. eassumption.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_App in h as hh ; auto.
-      destruct hh as [na [A' [B' [? [? ?]]]]].
-      eexists. eassumption.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_App in h as hh ; auto.
-      destruct hh as [na [A' [B' [? [? ?]]]]].
-      eexists. eassumption.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_Fix in h as hh. 2: assumption.
-      destruct hh as [decl [? [? [hw [? ?]]]]].
-      apply typing_wf_local in h.
-      clear -h hw wΣ.
-      eapply All_app in hw as [_ hw].
-      depelim hw. simpl in i.
-      destruct i as [s Hs]. eexists; eauto.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_Fix in h as hh. 2: assumption.
-      destruct hh as [decl [? [? [? [ha ?]]]]].
-      clear - ha wΣ.
-      apply All_app in ha as [_ ha].
-      inversion ha. subst.
-      intuition eauto. simpl in *.
-      match goal with
-      | hh : _ ;;; _ |- _ : _ |- _ => rename hh into h
-      end.
-      rewrite fix_context_length in h.
-      rewrite app_length in h. simpl in h.
-      rewrite fix_context_fix_context_alt in h.
-      rewrite map_app in h. simpl in h.
-      unfold def_sig at 2 in h. simpl in h.
-      rewrite <- app_context_assoc in h.
-      eexists. eassumption.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_App in h as hh ; auto.
-      destruct hh as [na [A' [B' [? [? ?]]]]].
-      eexists. eassumption.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_CoFix in h as hh. 2: assumption.
-      destruct hh as [decl [? [? [hw [? ?]]]]].
-      apply typing_wf_local in h.
-      clear -h hw wΣ.
-      eapply All_app in hw as [_ hw].
-      depelim hw. simpl in i.
-      destruct i as [s Hs]. eexists; eauto.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_CoFix in h as hh. 2: assumption.
-      destruct hh as [decl [? [? [? [ha ?]]]]].
-      clear - ha wΣ.
-      apply All_app in ha as [_ ha].
-      inversion ha. subst.
-      intuition eauto. simpl in *.
-      match goal with
-      | hh : _ ;;; _ |- _ : _ |- _ => rename hh into h
-      end.
-      rewrite fix_context_length in h.
-      rewrite app_length in h. simpl in h.
-      rewrite fix_context_fix_context_alt in h.
-      rewrite map_app in h. simpl in h.
-      unfold def_sig at 2 in h. simpl in h.
-      rewrite <- app_context_assoc in h.
-      eexists. eassumption.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_Case in h as hh ; auto.
-      destruct hh as [mdecl [idecl [indices [data ?]]]].
-      destruct data. simpl in t1.
-      eapply validity in t1 as (?&typ); tas.
-      apply inversion_mkApps in typ as (?&?&spine); auto.
-      clear -wΣ spine. 
-      depind spine.
-      + destruct pars1; cbn in *; congruence.
-      + destruct pars1; noconf H; eauto.
-        eexists; eauto.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
-      destruct data as [? ? ? ? ? wfpctx cc typ ? ? ? ? ? ?].
-      clear -wΣ wfpctx cc typ.
-      clearbody predctx.
-      cbn in *.
-      exists (tSort ps).
-      rewrite ->app_context_assoc in *.
-      eapply context_conversion; eauto.
-      apply conv_context_sym; auto.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
-      destruct data.
-      eexists; eauto.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_Case in h as [mdecl [idecl [indices [data hh]]]] ; auto.
-      destruct data as [? ? ? ? ? ? ? ? ? ? ? ? ? typbrs].
-      apply All2i_app_inv_r in typbrs as (?&?&?&_&allbrs).
-      inversion_clear allbrs as [|ctor ? ? ? br ?].
-      clear -wΣ br.
-      clearbody predctx ptm.
-      cbn in *.
-      destruct br as ((wfbctx&cc)&typ&_).
-      eexists.
-      rewrite ->app_context_assoc in *.
-      eapply context_conversion; eauto.
-      apply conv_context_sym; auto.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [T' h].
-      apply inversion_Proj in h
-        as [uni [mdecl [idecl [pdecl [args [? [? [? ?]]]]]]]] ; auto.
-      eexists. eassumption.
-    - simpl. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [T' h].
-      apply inversion_Prod in h as hh ; auto.
-      destruct hh as [s1 [s2 [? [? ?]]]].
-      eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [T' h].
-      apply inversion_Prod in h as hh ; auto.
-      destruct hh as [s1 [s2 [? [? ?]]]].
-      eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [T' h].
-      apply inversion_Lambda in h as hh ; auto.
-      destruct hh as [s1 [B [? [? ?]]]].
-      eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [T' h].
-      apply inversion_Lambda in h as hh ; auto.
-      destruct hh as [s1 [B [? [? ?]]]].
-      eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [U h].
-      apply inversion_LetIn in h as [s [A [? [? [? ?]]]]]. 2: auto.
-      eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [U h].
-      apply inversion_LetIn in h as [s [A [? [? [? ?]]]]]. 2: auto.
-      eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [U h].
-      apply inversion_LetIn in h as [s [A [? [? [? ?]]]]]. 2: auto.
-      eexists. eassumption.
-    - cbn. cbn in h. cbn in IHπ. apply IHπ in h.
-      destruct h as [B h].
-      apply inversion_App in h as hh ; auto.
-      destruct hh as [na [A' [B' [? [? ?]]]]].
-      eexists. eassumption.
+    1: { econstructor; eauto. }
+    destruct a; simpl in *.
+    all: apply IHπ in h as (?&typ).
+    all: try apply inversion_App in typ as (?&?&?&?&?&?); auto.
+    all: try apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
+    all: try apply inversion_Prod in typ as (?&?&?&?&?); auto.
+    all: try apply inversion_Lambda in typ as (?&?&?&?&?); auto.
+    all: try apply inversion_LetIn in typ as (?&?&?&?&?&?); auto.
+    all: try solve [econstructor; eauto].
+    - apply inversion_Fix in typ as (?&?&?&?&?&?&?); eauto.
+      destruct mfix as ((?&[])&?); simpl in *.
+      + eapply All_app in a as (_&a).
+        depelim a.
+        eauto using isType_welltyped.
+      + eapply All_app in a0 as (_&a0).
+        depelim a0.
+        rewrite fix_context_fix_context_alt in t0.
+        rewrite map_app in t0.
+        simpl in t0.
+        rewrite app_context_assoc.
+        econstructor; eauto.
+    - apply inversion_CoFix in typ as (?&?&?&?&?&?&?); eauto.
+      destruct mfix as ((?&[])&?); simpl in *.
+      + eapply All_app in a as (_&a).
+        depelim a.
+        eauto using isType_welltyped.
+      + eapply All_app in a0 as (_&a0).
+        depelim a0.
+        rewrite fix_context_fix_context_alt in t0.
+        rewrite map_app in t0.
+        simpl in t0.
+        rewrite app_context_assoc.
+        econstructor; eauto.
+    - apply inversion_Case in typ as (?&?&?&cd&?); auto.
+      rewrite app_context_assoc.
+      destruct p; cbn in *.
+      + destruct cd as [_ _ _ _ _ _ _ _ _ _ typ _ _ _ _].
+        apply validity in typ as (?&typ).
+        apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
+        clear -spine.
+        rewrite -app_assoc -app_comm_cons in spine.
+        revert spine; generalize (tSort x2); intros t' spine.
+        induction params1 in spine, x3, t' |- *; cbn in *.
+        * depelim spine.
+          econstructor; eauto.
+        * depelim spine; eauto.
+      + destruct cd as [_ _ _ _ _ _ wfcontext _ _ _ _ _ _ _ _]; simpl in *.
+        eauto using welltyped_fill_context_hole.
+      + destruct cd as [? _ _ ? _ _ wfl cc typ _ _ _ _ _ _]; simpl in *.
+        eapply conv_context_sym in cc; auto.
+        eapply context_conversion in typ; eauto.
+        econstructor; eauto.
+    - apply inversion_Case in typ as (?&?&?&cd&?); auto.
+      destruct cd.
+      econstructor; eauto.
+    - apply inversion_Case in typ as (?&?&?&cd&?); auto.
+      destruct cd as [? _ _ ? _ _ _ _ _ _ _ _ ? _ wfbrs].
+      destruct brs as ((?&?)&?).
+      simpl fill_branches_hole in wfbrs.
+      apply All2i_app_inv_r in wfbrs as (?&?&_&_&a).
+      inv a.
+      clear X0.
+      destruct X as ((wfl&cc)&typ&_).
+      unfold app_context.
+      rewrite -app_assoc.
+      destruct b; cbn in *.
+      + eapply welltyped_fill_context_hole; eauto.
+      + apply conv_context_sym in cc; auto.
+        eapply context_conversion in typ; eauto.
+        econstructor; eauto.
   Qed.
 
   Lemma cored_red :
@@ -606,13 +540,13 @@ Section Lemmata.
       Σ ;;; Γ |- zippx u ρ <= zippx v ρ.
   Proof.
     intros Γ u v ρ h.
-    induction ρ in u, v, h |- *.
+    induction ρ in u, v, h |- *; auto.
+    destruct a.
     all: try solve [
       unfold zippx ; simpl ;
       eapply cumul_it_mkLambda_or_LetIn ;
       assumption
     ].
-    - cbn. assumption.
     - unfold zippx. simpl.
       case_eq (decompose_stack ρ). intros l π e.
       unfold zippx in IHρ. rewrite e in IHρ.
@@ -702,13 +636,13 @@ Section Lemmata.
       Σ ;;; Γ |- zippx u ρ = zippx v ρ.
   Proof.
     intros Γ u v ρ h.
-    revert u v h. induction ρ ; intros u v h.
+    revert u v h. induction ρ ; intros u v h; auto.
+    destruct a.
     all: try solve [
       unfold zippx ; simpl ;
       eapply conv_alt_it_mkLambda_or_LetIn ;
       assumption
     ].
-    - cbn. assumption.
     - unfold zippx. simpl.
       case_eq (decompose_stack ρ). intros l π e.
       unfold zippx in IHρ. rewrite e in IHρ.
@@ -830,7 +764,7 @@ Section Lemmata.
   Lemma welltyped_zipc_stack_context Γ t π ρ args
     : decompose_stack π = (args, ρ)
       -> welltyped Σ Γ (zipc t π)
-      -> welltyped Σ (Γ ,,, stack_context π) (zipc t (appstack args ε)).
+      -> welltyped Σ (Γ ,,, stack_context π) (zipc t (appstack args [])).
   Proof.
     intros h h1.
     apply decompose_stack_eq in h. subst.
@@ -993,7 +927,9 @@ Section Lemmata.
       isStackApp ρ = false.
   Proof.
     intros π l ρ e.
-    destruct ρ. all: auto.
+    destruct ρ; auto.
+    destruct s.
+    all: auto.
     exfalso. eapply decompose_stack_not_app. eassumption.
   Qed.
   
@@ -1012,18 +948,19 @@ Section Lemmata.
     decompose_stack (π +++ π') =
     ((decompose_stack π).1 ++
      match (decompose_stack π).2 with
-     | ε => (decompose_stack π').1
+     | [] => (decompose_stack π').1
      | _ => []
      end,
      (decompose_stack π).2 +++
      match (decompose_stack π).2 with
-     | ε => (decompose_stack π').2
+     | [] => (decompose_stack π').2
      | _ => π'
      end).
   Proof.
     induction π in π' |- *; cbn in *; auto.
     - now destruct decompose_stack.
-    - rewrite !IHπ.
+    - destruct a; auto.
+      rewrite !IHπ.
       now destruct (decompose_stack π).
   Qed.
 
@@ -1037,7 +974,7 @@ Section Lemmata.
     destruct (decompose_stack π') eqn:decomp.
     cbn.
     destruct s; try now rewrite app_nil_r.
-    now destruct π; cbn in *; rewrite ?app_nil_r.
+    now destruct π as [|[] ?]; cbn in *; rewrite ?app_nil_r.
   Qed.
   
   Lemma zipp_appstack t args π :
@@ -1050,13 +987,13 @@ Section Lemmata.
   Qed.
 
   Lemma appstack_cons a args π :
-    appstack (a :: args) π = App a (appstack args π).
+    appstack (a :: args) π = App_l a :: appstack args π.
   Proof. reflexivity. Qed.
   
   Lemma fst_decompose_stack_nil π :
     isStackApp π = false ->
     (decompose_stack π).1 = [].
-  Proof. now destruct π. Qed.
+  Proof. now destruct π as [|[] ?]. Qed.
   
   Lemma zipp_as_mkApps t π :
     zipp t π = mkApps t (decompose_stack π).1.
@@ -1095,6 +1032,7 @@ Section Lemmata.
   Hint Resolve conv_refl : core.
 
 
+  (*
   (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
      However, when they are all lambdas they become injective for conversion.
      stack_contexts only produce lambdas so we can use this property on them.
@@ -1195,6 +1133,7 @@ Section Lemmata.
     - simpl. rewrite let_free_context_app.
       cbn in h. move/andP: h => [-> h]. now apply IHπ.
   Qed.
+*)
 
   Lemma cored_red_cored :
     forall Γ u v w,

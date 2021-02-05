@@ -70,10 +70,10 @@ Proof.
         try apply val_is_prop in v;
         intuition congruence. }
   intros Huf. apply H0.
+  (*
   red. exists (mkApps ptm (indices ++ [c])); intuition auto.
   exists ps.
   intuition auto.
-  econstructor; eauto.
   assert (watiapp := env_prop_typing  _ _ validity_env _ _ _ _ _ t0).
   simpl in watiapp.
   eapply (isType_mkApps_Ind wfΣ H) in watiapp as [psub [asub [[spp spa] cuni]]]; eauto.
@@ -83,7 +83,7 @@ Proof.
   (* eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in e0 as [parsubst [cs eq]].
   rewrite eq in t. *)
   assert (Σ ;;; Γ |- it_mkLambda_or_LetIn predctx (preturn p) : it_mkProd_or_LetIn predctx (tSort ps)).
-  eapply type_it_mkLambda_or_LetIn. eauto.
+  eapply type_it_mkLambda_or_LetIn. eauto.*)
   (* eapply PCUICGeneration.type_mkApps; tea.
   eapply wf_arity_spine_typing_spine; auto.
   split; auto.

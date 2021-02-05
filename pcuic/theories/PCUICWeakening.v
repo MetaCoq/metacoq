@@ -410,6 +410,7 @@ Lemma weakening_red_0 {cf} {Σ} {wfΣ : wf Σ} Γ Γ' M N n :
   red Σ (Γ ,,, Γ') (lift0 n M) (lift0 n N).
 Proof. now move=> ->; apply (weakening_red Σ Γ [] Γ'). Qed.
 
+(*
 Fixpoint lift_stack n k π :=
   match π with
   | ε => ε
@@ -503,6 +504,7 @@ Fixpoint lift_stack n k π :=
       let k' := #|stack_context π| + k in
       coApp (lift n k' u) (lift_stack n k π)
   end.
+*)
 
 (* TODO MOVE *)
 Lemma fix_context_alt_length :
@@ -527,6 +529,7 @@ Proof.
   now rewrite /forget_types map_decl_name_fold_context_k.
 Qed.
 
+(*
 Lemma lift_zipc :
   forall n k t π,
     let k' := #|stack_context π| + k in
@@ -568,6 +571,7 @@ Proof.
     rewrite map_app /=. f_equal. f_equal.
     rewrite /map_branch_k mapi_context_fold /=; len; now rewrite Nat.add_assoc.
 Qed.
+*)
 
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ.1 ->

@@ -2379,49 +2379,73 @@ Section Stacks.
   Context (Σ : global_env_ext).
   Context `{checker_flags}.
 
+  Lemma red1_fill_context_hole Γ π pcontext u v :
+    red1 Σ (Γ,,, stack_context π,,, context_hole_context pcontext) u v ->
+    OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ,,, stack_context π,,, Γ')))
+                     (fill_context_hole pcontext u)
+                     (fill_context_hole pcontext v).
+  Proof.
+    intros r.
+    destruct pcontext as ((?&[])&pre); cbn -[app_context] in *.
+    all: rewrite - !app_context_assoc.
+    - induction pre; cbn.
+      + destruct body; constructor; cbn; intuition auto.
+      + apply onone2_localenv_cons_tl; auto.
+    - induction pre; cbn.
+      + constructor; cbn; intuition auto.
+      + apply onone2_localenv_cons_tl; auto.
+  Qed.
+
   Lemma red1_context :
     forall Γ t u π,
       red1 Σ (Γ ,,, stack_context π) t u ->
       red1 Σ Γ (zip (t, π)) (zip (u, π)).
   Proof.
     intros Γ t u π h.
-    cbn. revert t u h.
-    induction π ; intros u v h.
-    all: try solve [ cbn ; apply IHπ ; constructor ; assumption ].
-    - cbn. assumption.
-    - cbn. apply IHπ; constructor.
-      apply OnOne2_app. constructor.
-      simpl. intuition eauto.
-    - cbn. apply IHπ. eapply fix_red_body.
-      apply OnOne2_app. constructor.
-      simpl in *.
-      rewrite fix_context_fix_context_alt.
-      rewrite map_app. cbn. unfold def_sig at 2. simpl.
-      rewrite app_context_assoc in h.
-      intuition eauto.
-    - cbn. apply IHπ. constructor.
-      apply OnOne2_app. constructor.
-      simpl. intuition eauto.
-    - cbn. apply IHπ. eapply cofix_red_body.
-      apply OnOne2_app. constructor.
-      simpl in *.
-      rewrite fix_context_fix_context_alt.
-      rewrite map_app. cbn. unfold def_sig at 2. simpl.
-      rewrite app_context_assoc in h.
-      intuition eauto.
-    - cbn.
-      apply IHπ. econstructor; tea.
-      apply OnOne2_app. constructor.
-      simpl. intuition eauto.
-    - eapply IHπ. simpl in h.
-      econstructor; simpl; eauto.
-      now rewrite app_context_assoc in h.
-    - cbn; apply IHπ.
-      econstructor; eauto.
-      eapply OnOne2_app.
-      constructor; try split; auto.
-      simpl in h.
-      now rewrite app_context_assoc in h.
+    unfold zip.
+    simpl. revert t u h.
+    induction π ; intros u v h; auto.
+    simpl in *.
+    destruct a.
+    all: apply IHπ; simpl; pcuic.
+    - destruct mfix as ((?&[])&?); cbn in *;
+        [apply fix_red_ty|apply fix_red_body].
+      all: apply OnOne2_app; constructor; cbn; auto.
+      intuition auto.
+      rewrite fix_context_fix_context_alt map_app.
+      unfold def_sig at 2.
+      cbn.
+      rewrite -app_context_assoc; auto.
+    - destruct mfix as ((?&[])&?); cbn in *;
+        [apply cofix_red_ty|apply cofix_red_body].
+      all: apply OnOne2_app; constructor; cbn; auto.
+      intuition auto.
+      rewrite fix_context_fix_context_alt map_app.
+      unfold def_sig at 2.
+      cbn.
+      rewrite -app_context_assoc; auto.
+    - destruct p; cbn in *.
+      + apply case_red_param; cbn.
+        apply OnOne2_app.
+        constructor; auto.
+      + apply case_red_pcontext; cbn.
+        apply red1_fill_context_hole; auto.
+        rewrite -app_context_assoc; auto.
+      + apply case_red_return; cbn.
+        rewrite -app_assoc in h; auto.
+    - destruct brs as ((?&[])&?); cbn in *.
+      + apply case_red_brs.
+        apply OnOne2_app.
+        constructor; cbn.
+        right.
+        intuition auto.
+        apply red1_fill_context_hole; auto.
+        rewrite -app_context_assoc; auto.
+      + apply case_red_brs.
+        apply OnOne2_app.
+        constructor; cbn.
+        left.
+        rewrite -app_assoc in h; auto.
   Qed.
 
   Corollary red_context_zip :

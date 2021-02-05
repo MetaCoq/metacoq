@@ -30,6 +30,17 @@ Inductive ConversionError :=
 | ProdNotConvertibleAnn
     (Γ1 : context) (na : aname) (A1 B1 : term)
     (Γ2 : context) (na' : aname) (A2 B2 : term)
+    
+| ContextNotConvertibleAnn
+    (Γ : context) (decl : context_decl)
+    (Γ' : context) (decl' : context_decl)
+| ContextNotConvertibleType
+    (Γ : context) (decl : context_decl)
+    (Γ' : context) (decl' : context_decl)
+| ContextNotConvertibleBody
+    (Γ : context) (decl : context_decl)
+    (Γ' : context) (decl' : context_decl)
+| ContextNotConvertibleLength
 
 | CaseOnDifferentInd
     (Γ1 : context)
@@ -37,12 +48,17 @@ Inductive ConversionError :=
     (Γ2 : context)
     (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
 
-| CaseBranchNumMismatch
-    (ci : case_info)
-    (Γ : context) (p : predicate term) (c : term) (brs1 : list (branch term))
-    (m : context) (br : term) (brs2 : list (branch term))
-    (Γ' : context) (p' : predicate term) (c' : term) (brs1' : list (branch term))
-    (m' : context) (br' : term) (brs2' : list (branch term))
+| CasePredParamsUnequalLength
+    (Γ1 : context)
+    (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
+    (Γ2 : context)
+    (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
+    
+| CasePredUnequalUniverseInstances
+    (Γ1 : context)
+    (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
+    (Γ2 : context)
+    (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
 
 | DistinctStuckProj
     (Γ : context) (p : projection) (c : term)
@@ -140,6 +156,15 @@ Definition print_term Σ Γ t :=
   let ids := fresh_names Σ [] Γ in
   print_term Σ true ids true false t.
 
+Definition print_context_decl Σ Γ (decl : context_decl) : string :=
+  fresh_name Σ [] (binder_name (decl_name decl)) (Some (decl_type decl))
+  ^ " : "
+  ^ print_term Σ Γ (decl_type decl)
+  ^ match decl_body decl with
+    | Some body => " := " ^ print_term Σ Γ body
+    | None => ""
+    end.
+
 Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with
   | NotFoundConstants c1 c2 =>
@@ -167,22 +192,40 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       nl ^ "domains are not convertible:" ^ nl ^
       string_of_conv_error Σ e
   | CaseOnDifferentInd Γ ci p c brs Γ' ci' p' c' brs' =>
-      "The two stuck pattern-matching" ^ nl ^
+      "The two stuck pattern-matches" ^ nl ^
       print_term Σ Γ (tCase ci p c brs) ^
       nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
       nl ^ "are done on distinct inductive types."
-  | CaseBranchNumMismatch
-      ci Γ p c brs1 m br brs2 Γ' p' c' brs1' m' br' brs2' =>
-      "The two stuck pattern-matching" ^ nl ^
-      print_term Σ Γ (tCase ci p c (brs1 ++ {|bcontext:=m; bbody:=br|} :: brs2)) ^
-      nl ^ "and" ^ nl ^
-      print_term Σ Γ' (tCase ci p' c' (brs1' ++ {|bcontext:=m'; bbody:=br'|} :: brs2')) ^
-      nl ^ "have a mistmatch in the branch number " ^ string_of_nat #|brs1| ^
-      nl ^ "the number of parameters do not coincide" ^ nl ^
-      print_term Σ (Γ ,,, m) br ^
-      nl ^ "has " ^ string_of_nat #|m| ^ " parameters while" ^ nl ^
-      print_term Σ (Γ ,,, m') br' ^
-      nl ^ "has " ^ string_of_nat #|m'| ^ "."
+  | CasePredParamsUnequalLength Γ ci p c brs Γ' ci' p' c' brs' =>
+      "The predicates of the two stuck pattern-matches" ^ nl ^
+      print_term Σ Γ (tCase ci p c brs) ^ 
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
+      nl ^ "have an unequal number of parameters."
+  | CasePredUnequalUniverseInstances Γ ci p c brs Γ' ci' p' c' brs' =>
+      "The predicates of the two stuck pattern-matches" ^ nl ^
+      print_term Σ Γ (tCase ci p c brs) ^ 
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
+      nl ^ "have unequal universe instances."
+  | ContextNotConvertibleAnn Γ decl Γ' decl' =>
+      "When comparing the declarations" ^ nl ^ 
+      print_context_decl Σ Γ decl ^ nl ^
+      "and" ^ nl ^
+      print_context_decl Σ Γ' decl' ^ nl ^
+      "the binder annotations are not equal"
+  | ContextNotConvertibleType Γ decl Γ' decl' =>
+      "When comparing the declarations" ^ nl ^ 
+      print_context_decl Σ Γ decl ^ nl ^
+      "and" ^ nl ^
+      print_context_decl Σ Γ' decl' ^ nl ^
+      "the types are not convertible"
+  | ContextNotConvertibleBody Γ decl Γ' decl' =>
+      "When comparing the declarations" ^ nl ^ 
+      print_context_decl Σ Γ decl ^ nl ^
+      "and" ^ nl ^
+      print_context_decl Σ Γ' decl' ^ nl ^
+      "the bodies are not convertible"
+  | ContextNotConvertibleLength => "The contexts have unequal length"
+      
   | DistinctStuckProj Γ p c Γ' p' c' =>
       "The two stuck projections" ^ nl ^
       print_term Σ Γ (tProj p c) ^

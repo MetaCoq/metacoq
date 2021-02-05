@@ -222,16 +222,16 @@ Section Principality.
       (* destruct (IHu _ _ t) as [? p].*)
       destruct (IHu _ _ t0) as [? p0].
       destruct (p0 _ t0).
-      eapply invert_cumul_ind_r in c as [u' [x0' [redr [redu ?]]]]; auto.
+      eapply invert_cumul_ind_r in c1 as [u' [x0' [redr [redu ?]]]]; auto.
       exists (mkApps ptm (skipn (ind_npars x) x0' ++ [u])); intros b hB; repeat split; auto.
       2:econstructor; eauto.
       eapply inversion_Case in hB=>//; auto.
       repeat outsum. repeat outtimes. cbn in *.
       repeat outtimes.
-      destruct c.
+      destruct c1.
       destruct (PCUICWeakeningEnv.declared_inductive_inj isdecl isdecl0) as [-> ->].
       destruct (p0 _ t3).
-      eapply invert_cumul_ind_r in c as [u'' [x9' [redr' [redu' ?]]]]; auto.
+      eapply invert_cumul_ind_r in c3 as [u'' [x9' [redr' [redu' ?]]]]; auto.
       assert (All2 (fun a a' => Σ ;;; Γ |- a = a') x0' x9').
       { destruct (red_confluence wfΣ redr redr').
         destruct p1.
@@ -247,7 +247,7 @@ Section Principality.
       clear redr redr' a1.
       assert (All2 (conv Σ Γ) x0' (pparams p ++ x5)).
       { transitivity x9'; tea. apply All2_symmetry; eauto. tc. }
-      etransitivity. 2:eapply c1.
+      etransitivity. 2:eapply c2.
       eapply conv_cumul, mkApps_conv_args; auto.
       eapply All2_app. 2:constructor; auto.
       rewrite -(firstn_skipn (ind_npars x) x0') in X3.

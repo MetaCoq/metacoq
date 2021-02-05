@@ -671,6 +671,7 @@ Proof.
   - intro. eapply eq_universe_refl.
 Qed.
 
+(*
 Fixpoint nlstack (π : stack) : stack :=
   match π with
   | ε => ε
@@ -752,6 +753,7 @@ Proof.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
   - simpl. rewrite IHρ. rewrite map_length. reflexivity.
 Qed.
+*)
 
 Lemma nl_decompose_prod_assum :
   forall Γ t,
@@ -856,6 +858,7 @@ Proof.
   reflexivity.
 Qed.
 
+(*
 Lemma xposition_nlstack :
   forall Γ π,
     xposition Γ (nlstack π) = xposition Γ π.
@@ -865,7 +868,9 @@ Proof.
   rewrite stack_position_nlstack.
   reflexivity.
 Qed.
+*)
 
+(*
 Lemma nl_zipc :
   forall t π,
     nl (zipc t π) = zipc (nl t) (nlstack π).
@@ -901,7 +906,7 @@ Proof.
   unfold zipx. rewrite nl_it_mkLambda_or_LetIn. f_equal.
   apply nl_zipc.
 Qed.
-
+*)
 
 Lemma global_ext_levels_nlg :
   forall Σ,
@@ -1039,6 +1044,7 @@ Proof.
   reflexivity.
 Qed.
 
+(*
 Lemma nlctx_stack_context :
   forall ρ,
     nlctx (stack_context ρ) = stack_context (nlstack ρ).
@@ -1058,6 +1064,7 @@ Proof.
   - simpl. rewrite nlctx_app_context. now rewrite IHρ.
   - simpl. rewrite nlctx_app_context. now rewrite IHρ.
 Qed.
+*)
 
 Lemma nl_subst :
   forall s k u,

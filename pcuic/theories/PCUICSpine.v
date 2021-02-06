@@ -2033,20 +2033,17 @@ Proof.
       eapply meta_conv. eauto.
       simpl.
       autorewrite with sigma.
-      apply inst_ext. rewrite ren_lift_renaming.
-      autorewrite with sigma.
+      apply inst_ext.
       unfold Upn. rewrite subst_consn_compose.
       autorewrite with sigma.
       apply subst_consn_proper.
-      2:{ rewrite -(subst_compose_assoc (↑^#|Δ|)).
-          rewrite subst_consn_shiftn.
+      2:{ rewrite subst_consn_shiftn.
           2:now autorewrite with len.
           autorewrite with sigma.
           rewrite subst_consn_shiftn //.
           rewrite List.rev_length.
           now apply context_subst_length2 in inst_ctx_subst0. }
       clear -inst_ctx_subst0.
-      rewrite subst_consn_compose.
       rewrite map_inst_idsn. now autorewrite with len.
       now apply context_subst_extended_subst.
     + simpl. rewrite smash_context_acc.
@@ -2098,29 +2095,15 @@ Proof.
   assumption.
 Qed.
 
+Lemma shift_subst_consn_tip t : ↑ ∘s ([t] ⋅n ids) =1 ids.
+Proof.
+  rewrite /subst_consn; intros [|i] => /= //.
+Qed.
+
 Lemma subst_rel0_lift_id n t : subst [tRel 0] n (lift 1 (S n) t) = t.
 Proof.
-  sigma. rewrite -{2}(subst_ids t).
-  apply inst_ext.
-  unfold Upn. sigma. unfold shiftk at 1 => /=.
-  rewrite Nat.add_0_r.
-  assert(idsn n ⋅n (tRel n ⋅ ↑^n) =1 idsn (S n) ⋅n ↑^n).
-  { pose proof (@subst_consn_app _ (idsn n) [(tRel 0).[↑^n]] (↑^n)).
-    simpl in H. rewrite -> (subst_consn_subst_cons (tRel 0).[↑^n] []) in H.
-    simpl in H. rewrite -> subst_consn_nil in H.
-    unfold shiftk at 3 in H. rewrite Nat.add_0_r in H.
-    rewrite -H. unfold shiftk at 1; now rewrite Nat.add_0_r. }
-  rewrite H. rewrite ren_shiftk. rewrite subst_consn_ids_ren.
-  unfold lift_renaming. rewrite compose_ren.
-  intros i. unfold ren, ids; simpl. f_equal.
-  elim: Nat.leb_spec => H'. unfold subst_consn.
-  elim: nth_error_spec => [i' e l|].
-  rewrite app_length ren_ids_length /= in l. lia.
-  rewrite app_length ren_ids_length /=. lia.
-  unfold subst_consn.
-  elim: nth_error_spec => [i' e l|].
-  rewrite (@ren_ids_lt (S n) i) in e. lia. congruence.
-  rewrite app_length ren_ids_length /=. lia.
+  rewrite subst_reli_lift_id; try lia.
+  now rewrite lift0_id.
 Qed.
 
 Lemma subst_context_lift_id Γ : subst_context [tRel 0] 0 (lift_context 1 1 Γ) = Γ.

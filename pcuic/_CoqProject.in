@@ -19,6 +19,7 @@ theories/PCUICPosition.v
 theories/PCUICNormal.v
 theories/PCUICNameless.v
 theories/PCUICEquality.v
+theories/PCUICEqualityDec.v
 theories/PCUICWeakeningEnv.v
 theories/PCUICClosed.v
 theories/PCUICOnFreeVars.v

@@ -447,22 +447,21 @@ Proof.
     rewrite subst_consn_subst_cons.
     now rewrite subst_cons_shift.
   - simpl.
-    f_equal; auto.
+    f_equal; auto. len.
     rewrite IHX.
     autorewrite with sigma.
-    apply inst_ext.
-    rewrite ren_lift_renaming. autorewrite with len.
+    apply inst_ext. len.
+    rewrite (Upn_eq _ (List.rev args ⋅n ids)).
     rewrite subst_consn_compose.
-    autorewrite with sigma.
-    unfold Upn.
-    rewrite subst_consn_compose.
-    apply subst_consn_proper; first last.
-    all:todo "finish".
-    (*rewrite <-subst_consn_app.
-    rewrite shiftk_compose.
-    rewrite subst_consn_shiftn //.
-    autorewrite with len. now rewrite (context_subst_length2 X).
-    rewrite map_inst_idsn //. now autorewrite with len.*)
+    rewrite PCUICInst.map_inst_idsn; len; try lia.
+    rewrite subst_compose_assoc.
+    rewrite -(context_subst_length2 X).
+    rewrite subst_consn_shiftn; len => //.
+    sigma. rewrite Upn_eq. sigma.
+    rewrite PCUICInst.map_inst_idsn; len; try lia.
+    rewrite -subst_compose_assoc shiftk_compose.
+    rewrite -subst_consn_app.
+    rewrite subst_consn_shiftn //. now len.
 Qed.
 
 Lemma map_subst_app_decomp (l l' : list term) (k : nat) (ts : list term) :

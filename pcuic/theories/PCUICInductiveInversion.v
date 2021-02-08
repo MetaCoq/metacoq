@@ -2182,7 +2182,7 @@ Proof.
   specialize (IHinst _ H). now rewrite Nat.add_succ_r.
 Qed.
 
-Lemma LSet_in_global_bounded {cf:checker_flags} {Σ l} k : 
+Lemma LSet_in_global_bounded {cf:checker_flags} {Σ : global_env} {l} k : 
   wf Σ -> LevelSet.In l (global_levels Σ) ->
   closedu_level k l.
 Proof.

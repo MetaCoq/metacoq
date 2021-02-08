@@ -1190,12 +1190,6 @@ Fixpoint zipc (t : term) (stack : stack) : term :=
 
 Definition zip (t : term * stack) : term := zipc (fst t) (snd t).
 
-(*
-Lemma zipc_cons t se π :
-  zipc t (se :: π) = zipc (fill_hole t se) π.
-Proof. reflexivity. Qed.
-*)
-
 Tactic Notation "zip" "fold" "in" hyp(h) :=
   lazymatch type of h with
   | context C[ zipc ?t ?π ] =>
@@ -1679,38 +1673,14 @@ Section Stacks.
     let '(args, ρ) := decompose_stack π in
     mkApps t args.
 
-  Definition stack_cat (ρ θ : stack) : stack :=
-    ρ ++ θ.
-
-  Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
-
   Lemma stack_cat_appstack :
     forall args ρ,
-      appstack args [] +++ ρ = appstack args ρ.
+      appstack args [] ++ ρ = appstack args ρ.
   Proof.
     intros args ρ.
     revert ρ. induction args ; intros ρ.
     - reflexivity.
     - simpl. rewrite IHargs. reflexivity.
-  Qed.
-
-  Lemma stack_cat_nil_r :
-    forall π,
-      π +++ [] = π.
-  Proof.
-    intro π.
-    induction π.
-    all: simpl.
-    all: rewrite ?IHπ.
-    all: reflexivity.
-  Qed.
-
-  Lemma stack_cat_assoc :
-    forall π ρ θ,
-      (π +++ ρ) +++ θ = π +++ (ρ +++ θ).
-  Proof.
-    symmetry.
-    apply app_assoc.
   Qed.
 
   Lemma decompose_stack_twice :
@@ -1732,7 +1702,7 @@ Section Stacks.
 
   Lemma zipc_stack_cat :
     forall t π ρ,
-      zipc t (π +++ ρ) = zipc (zipc t π) ρ.
+      zipc t (π ++ ρ) = zipc (zipc t π) ρ.
   Proof.
     intros t π ρ. revert t ρ.
     induction π ; intros u ρ; auto.
@@ -1740,16 +1710,9 @@ Section Stacks.
     rewrite IHπ; auto.
   Qed.
 
-  Lemma stack_cat_empty :
-    forall ρ, ρ +++ [] = ρ.
-  Proof.
-    intros ρ. induction ρ.
-    all: (simpl ; rewrite ?IHρ ; reflexivity).
-  Qed.
-
   Lemma stack_position_stack_cat :
     forall π ρ,
-      stack_position (ρ +++ π) =
+      stack_position (ρ ++ π) =
       stack_position π ++ stack_position ρ.
   Proof.
     intros π ρ. apply rev_map_app.
@@ -1757,7 +1720,7 @@ Section Stacks.
 
   Lemma stack_context_stack_cat :
     forall π ρ,
-      stack_context (ρ +++ π) = stack_context π ,,, stack_context ρ.
+      stack_context (ρ ++ π) = stack_context π ,,, stack_context ρ.
   Proof.
     intros π ρ.
     unfold stack_context.
@@ -1774,8 +1737,6 @@ Section Stacks.
   (*   it_mkLambda_or_LetIn (stack_context π) (zipp t π). *)
 
 End Stacks.
-
-Notation "ρ +++ θ" := (stack_cat ρ θ) (at level 20).
 
 (* Context closure *)
 Definition context_clos (R : term -> term -> Type) u v :=

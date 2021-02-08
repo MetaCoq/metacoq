@@ -20,55 +20,6 @@ Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
 
-  (*
-  Lemma eq_term_zipc_inv :
-    forall Σ φ u v π,
-      eq_term Σ φ (zipc u π) (zipc v π) ->
-      eq_term Σ φ u v.
-  Proof.
-    intros Σ φ u v π h.
-    induction π in u, v, h |- *.
-    all: try solve [
-             simpl in h ; try apply IHπ in h ;
-             cbn in h ; inversion h ; subst ; assumption
-           ].
-    - simpl in h. apply IHπ in h.
-      inversion h. subst.
-      match goal with
-      | h : All2 _ _ _ |- _ => rename h into a
-      end.
-      apply All2_app_inv_both in a. 2: reflexivity.
-      destruct a as [_ a]. inversion a. subst.
-      intuition eauto.
-    - simpl in h. apply IHπ in h.
-      inversion h. subst.
-      match goal with
-      | h : All2 _ _ _ |- _ => rename h into a
-      end.
-      apply All2_app_inv_both in a. 2: reflexivity.
-      destruct a as [_ a]. inversion a. subst.
-      intuition eauto.
-    - simpl in h. apply IHπ in h.
-      inversion h. subst.
-      match goal with
-      | h : All2 _ _ _ |- _ => rename h into a
-      end.
-      apply All2_app_inv_both in a. 2: reflexivity.
-      destruct a as [_ a]. inversion a. subst.
-      intuition eauto.
-  Qed.
-
-  Lemma eq_term_zipx_inv :
-    forall φ Γ u v π,
-      eq_term φ (zipx Γ u π) (zipx Γ v π) ->
-      eq_term φ u v.
-  Proof.
-    intros Σ Γ u v π h.
-    eapply eq_term_zipc_inv.
-    eapply eq_term_it_mkLambda_or_LetIn_inv.
-    eassumption.
-  Qed.*)
-
   Instance All2_eq_refl Σ Re : 
     RelationClasses.Reflexive Re ->
     CRelationClasses.Reflexive (All2 (eq_term_upto_univ Σ Re Re)).
@@ -87,137 +38,6 @@ Section Lemmata.
     apply All2_same; split; reflexivity.
   Qed.
 
-  (*
-  Lemma eq_term_upto_univ_zipc :
-    forall Σ Re u v π,
-      RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Σ Re Re u v ->
-      eq_term_upto_univ Σ Re Re (zipc u π) (zipc v π).
-  Proof.
-    intros Σ Re u v π he h.
-    induction π in u, v, h |- *.
-    all: try solve [
-               simpl ; try apply IHπ ;
-               cbn ; constructor ; try reflexivity; try apply eq_term_upto_univ_refl ; assumption
-             ].
-    - assumption.
-    - simpl. apply IHπ. constructor.
-      + eapply eq_term_eq_term_napp; auto. apply _.
-      + apply eq_term_upto_univ_refl; assumption.
-    - simpl. apply IHπ. constructor.
-      apply All2_app.
-      + apply All2_same.
-        intros. split ; auto. split; [split|]; auto. all: apply eq_term_upto_univ_refl.
-        all: assumption.
-      + constructor.
-        * simpl. intuition eauto. reflexivity.
-        * apply All2_same.
-          intros. split ; auto. splits. all: apply eq_term_upto_univ_refl.
-          all: assumption.
-    - simpl. apply IHπ. constructor.
-      apply All2_app.
-      + apply All2_same.
-        intros. split ; auto. splits. all: apply eq_term_upto_univ_refl.
-        all: assumption.
-      + constructor.
-        * simpl. intuition eauto. reflexivity.
-        * apply All2_same.
-          intros. split ; auto. splits. all: apply eq_term_upto_univ_refl.
-          all: assumption.
-    - simpl. apply IHπ. constructor.
-      apply All2_app.
-      + apply All2_same.
-        intros. split ; [split|]; auto. split. all: apply eq_term_upto_univ_refl.
-        all: assumption.
-      + constructor.
-        * simpl. intuition eauto. reflexivity.
-        * apply All2_same.
-          intros. splits ; auto. all: apply eq_term_upto_univ_refl.
-          all: assumption.
-    - simpl. apply IHπ. constructor.
-      apply All2_app.
-      + apply All2_same.
-        intros. splits ; auto. all: apply eq_term_upto_univ_refl.
-        all: assumption.
-      + constructor.
-        * simpl. intuition eauto. reflexivity.
-        * apply All2_same.
-          intros. splits ; auto. all: apply eq_term_upto_univ_refl.
-          all: assumption.
-    - simpl. apply IHπ.
-      constructor; try reflexivity.
-      splits; simpl; try reflexivity.
-      eapply All2_app; [reflexivity|].
-      constructor; [tas|reflexivity].
-    - simpl. apply IHπ.
-      constructor; easy.
-    - simpl. apply IHπ.
-      constructor; try easy.
-      apply All2_app; try reflexivity.
-      constructor; easy.
-  Qed.
-
-  Lemma eq_term_zipc :
-    forall (Σ : global_env_ext) u v π,
-      eq_term Σ (global_ext_constraints Σ) u v ->
-      eq_term Σ (global_ext_constraints Σ) (zipc u π) (zipc v π).
-  Proof.
-    intros Σ u v π h.
-    eapply eq_term_upto_univ_zipc.
-    - intro. eapply eq_universe_refl.
-    - assumption.
-  Qed.
-*)
-
-  Lemma eq_term_upto_univ_zipp :
-    forall Σ Re u v π,
-      RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Σ Re Re u v ->
-      eq_term_upto_univ Σ Re Re (zipp u π) (zipp v π).
-  Proof.
-    intros Σ Re u v π he h.
-    unfold zipp.
-    case_eq (decompose_stack π). intros l ρ e.
-    eapply eq_term_upto_univ_mkApps.
-    - apply eq_term_eq_term_napp; try assumption; apply _.
-    - apply All2_same. intro. reflexivity.
-  Qed.
-
-  Lemma eq_term_zipp :
-    forall (Σ : global_env_ext) u v π,
-      eq_term Σ (global_ext_constraints Σ) u v ->
-      eq_term Σ (global_ext_constraints Σ) (zipp u π) (zipp v π).
-  Proof.
-    intros Σ u v π h.
-    eapply eq_term_upto_univ_zipp.
-    - intro. eapply eq_universe_refl.
-    - assumption.
-  Qed.
-
-  (*
-  Lemma eq_term_upto_univ_zipx :
-    forall Σ Re Γ u v π,
-      RelationClasses.Reflexive Re ->
-      eq_term_upto_univ Σ Re Re u v ->
-      eq_term_upto_univ Σ Re Re (zipx Γ u π) (zipx Γ v π).
-  Proof.
-    intros Σ Re Γ u v π he h.
-    eapply eq_term_upto_univ_it_mkLambda_or_LetIn ; auto.
-    eapply eq_term_upto_univ_zipc ; auto.
-  Qed.
-
-  Lemma eq_term_zipx :
-    forall Σ φ Γ u v π,
-      eq_term Σ φ u v ->
-      eq_term Σ φ (zipx Γ u π) (zipx Γ v π).
-  Proof.
-    intros Σ Γ u v π h.
-    eapply eq_term_upto_univ_zipx ; auto.
-    intro. eapply eq_universe_refl.
-  Qed.
-*)
-
-
   (* red is the reflexive transitive closure of one-step reduction and thus
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
@@ -229,27 +49,6 @@ Section Lemmata.
   Derive Signature for cored.
 
   Hint Resolve eq_term_upto_univ_refl : core.
-
-  (* Lemma conv_context : *)
-  (*   forall Σ Γ u v ρ, *)
-  (*     wf Σ.1 -> *)
-  (*     Σ ;;; Γ ,,, stack_context ρ |- u = v -> *)
-  (*     Σ ;;; Γ |- zipc u ρ = zipc v ρ. *)
-  (* Proof. *)
-  (*   intros Σ Γ u v ρ hΣ h. *)
-  (*   induction ρ in u, v, h |- *. *)
-  (*   - assumption. *)
-  (*   - simpl. eapply IHρ. eapply conv_App_l ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_App_r ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_App_r ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_Case_c ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_Proj_c ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_Prod_l ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_Prod_r ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_Lambda_l ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_Lambda_r ; auto. *)
-  (*   - simpl. eapply IHρ. eapply conv_App_r ; auto. *)
-  (* Qed. *)
 
   Context (Σ : global_env_ext).
 
@@ -511,29 +310,6 @@ Section Lemmata.
       + eapply red1_context. assumption.
   Qed.
 
-  Lemma cored_zipx :
-    forall Γ u v π,
-      cored Σ (Γ ,,, stack_context π) u v ->
-      cored Σ [] (zipx Γ u π) (zipx Γ v π).
-  Proof.
-    intros Γ u v π h.
-    eapply cored_it_mkLambda_or_LetIn.
-    eapply cored_context.
-    rewrite app_context_nil_l.
-    assumption.
-  Qed.
-
-  Lemma red_zipx :
-    forall Γ u v π,
-      red Σ (Γ ,,, stack_context π) u v ->
-      red Σ [] (zipx Γ u π) (zipx Γ v π).
-  Proof.
-    intros Γ u v π h.
-    eapply red_it_mkLambda_or_LetIn.
-    eapply red_context_zip.
-    now rewrite app_context_nil_l.
-  Qed.
-
   Lemma cumul_zippx :
     forall Γ u v ρ,
       Σ ;;; (Γ ,,, stack_context ρ) |- u <= v ->
@@ -618,70 +394,6 @@ Section Lemmata.
     - assumption.
     - simpl.  eapply IHl. eapply cumul_App_l. assumption.
   Qed.
-
-  Lemma conv_cum_zipp' :
-    forall leq Γ u v π,
-      conv_cum leq Σ Γ u v ->
-      conv_cum leq Σ Γ (zipp u π) (zipp v π).
-  Proof.
-    intros leq Γ u v π h.
-    destruct leq.
-    - destruct h. constructor. eapply conv_zipp. assumption.
-    - destruct h. constructor. eapply cumul_zipp. assumption.
-  Qed.
-
-  Lemma conv_alt_zippx :
-    forall Γ u v ρ,
-      Σ ;;; (Γ ,,, stack_context ρ) |- u = v ->
-      Σ ;;; Γ |- zippx u ρ = zippx v ρ.
-  Proof.
-    intros Γ u v ρ h.
-    revert u v h. induction ρ ; intros u v h; auto.
-    destruct a.
-    all: try solve [
-      unfold zippx ; simpl ;
-      eapply conv_alt_it_mkLambda_or_LetIn ;
-      assumption
-    ].
-    - unfold zippx. simpl.
-      case_eq (decompose_stack ρ). intros l π e.
-      unfold zippx in IHρ. rewrite e in IHρ.
-      apply IHρ.
-      eapply conv_App_l. assumption.
-    - unfold zippx. simpl.
-      eapply conv_alt_it_mkLambda_or_LetIn. cbn.
-      eapply conv_Lambda_r.
-      assumption.
-    - unfold zippx. simpl.
-      eapply conv_alt_it_mkLambda_or_LetIn. cbn.
-      eapply conv_Lambda_r.
-      assumption.
-    - unfold zippx. simpl.
-      eapply conv_alt_it_mkLambda_or_LetIn. cbn.
-      eapply conv_LetIn_bo. assumption.
-  Qed.
-
-  Lemma conv_zippx :
-    forall Γ u v ρ,
-      Σ ;;; Γ ,,, stack_context ρ |- u = v ->
-      Σ ;;; Γ |- zippx u ρ = zippx v ρ.
-  Proof.
-    intros Γ u v ρ uv. eapply conv_alt_zippx ; assumption.
-  Qed.
-
-  Lemma conv_cum_zippx' :
-    forall Γ leq u v ρ,
-      conv_cum leq Σ (Γ ,,, stack_context ρ) u v ->
-      conv_cum leq Σ Γ (zippx u ρ) (zippx v ρ).
-  Proof.
-    intros Γ leq u v ρ h.
-    destruct leq.
-    - cbn in *. destruct h as [h]. constructor.
-      eapply conv_alt_zippx ; assumption.
-    - cbn in *. destruct h. constructor.
-      eapply cumul_zippx. assumption.
-  Qed.
-
 
   Derive Signature for Acc.
 
@@ -945,13 +657,13 @@ Section Lemmata.
   Qed.
   
   Lemma decompose_stack_stack_cat π π' :
-    decompose_stack (π +++ π') =
+    decompose_stack (π ++ π') =
     ((decompose_stack π).1 ++
      match (decompose_stack π).2 with
      | [] => (decompose_stack π').1
      | _ => []
      end,
-     (decompose_stack π).2 +++
+     (decompose_stack π).2 ++
      match (decompose_stack π).2 with
      | [] => (decompose_stack π').2
      | _ => π'
@@ -966,7 +678,7 @@ Section Lemmata.
 
   Lemma zipp_stack_cat π π' t :
     isStackApp π = false ->
-    zipp t (π' +++ π) = zipp t π'.
+    zipp t (π' ++ π) = zipp t π'.
   Proof.
     intros no_stack_app.
     unfold zipp.
@@ -986,10 +698,6 @@ Section Lemmata.
     now destruct decompose_stack.
   Qed.
 
-  Lemma appstack_cons a args π :
-    appstack (a :: args) π = App_l a :: appstack args π.
-  Proof. reflexivity. Qed.
-  
   Lemma fst_decompose_stack_nil π :
     isStackApp π = false ->
     (decompose_stack π).1 = [].
@@ -1030,110 +738,6 @@ Section Lemmata.
 
   Hint Resolve conv_refl conv_alt_red : core.
   Hint Resolve conv_refl : core.
-
-
-  (*
-  (* Let bindings are not injective, so it_mkLambda_or_LetIn is not either.
-     However, when they are all lambdas they become injective for conversion.
-     stack_contexts only produce lambdas so we can use this property on them.
-     It only applies to stacks manipulated by conversion/reduction which are
-     indeed let-free.
-   *)
-  Fixpoint let_free_context (Γ : context) :=
-    match Γ with
-    | [] => true
-    | {| decl_name := na ; decl_body := Some b ; decl_type := B |} :: Γ => false
-    | {| decl_name := na ; decl_body := None ; decl_type := B |} :: Γ =>
-      let_free_context Γ
-    end.
-
-  Lemma let_free_context_app :
-    forall Γ Δ,
-      let_free_context (Γ ,,, Δ) = let_free_context Δ && let_free_context Γ.
-  Proof.
-    intros Γ Δ.
-    induction Δ as [| [na [b|] B] Δ ih ] in Γ |- *.
-    - simpl. reflexivity.
-    - simpl. reflexivity.
-    - simpl. apply ih.
-  Qed.
-
-  Lemma let_free_context_rev :
-    forall Γ,
-      let_free_context (List.rev Γ) = let_free_context Γ.
-  Proof.
-    intros Γ.
-    induction Γ as [| [na [b|] B] Γ ih ].
-    - reflexivity.
-    - simpl. rewrite let_free_context_app. simpl.
-      apply andb_false_r.
-    - simpl. rewrite let_free_context_app. simpl.
-      rewrite ih. rewrite andb_true_r. reflexivity.
-  Qed.  
-
-  Fixpoint let_free_stack (π : stack) :=
-    match π with
-    | ε => true
-    | App u ρ => let_free_stack ρ
-    | Fix f n args ρ => let_free_stack ρ
-    | Fix_mfix_ty na bo ra mfix1 mfix2 idx ρ => let_free_stack ρ
-    | Fix_mfix_bd na ty ra mfix1 mfix2 idx ρ => let_free_stack ρ
-    | CoFix f n args ρ => let_free_stack ρ
-    | CoFix_mfix_ty na bo ra mfix1 mfix2 idx ρ => let_free_stack ρ
-    | CoFix_mfix_bd na ty ra mfix1 mfix2 idx ρ => let_free_stack ρ
-    | Case_pars ci ppars1 ppars2 puinst pctx pret c brs ρ => let_free_stack ρ
-    | Case_p ci ppars puinst pctx c brs ρ =>
-      let_free_context pctx && let_free_stack ρ
-    | Case ci p brs ρ => let_free_stack ρ
-    | Case_brs ci p c brctx brs1 brs2 ρ => 
-      let_free_context brctx && let_free_stack ρ
-    | Proj p ρ => let_free_stack ρ
-    | Prod_l na B ρ => let_free_stack ρ
-    | Prod_r na A ρ => let_free_stack ρ
-    | Lambda_ty na u ρ => let_free_stack ρ
-    | Lambda_tm na A ρ => let_free_stack ρ
-    | LetIn_bd na B u ρ => let_free_stack ρ
-    | LetIn_ty na b u ρ => let_free_stack ρ
-    | LetIn_in na b B ρ => false
-    | coApp u ρ => let_free_stack ρ
-    end.
-
-  Lemma let_free_stack_context :
-    forall π,
-      let_free_stack π ->
-      let_free_context (stack_context π).
-  Proof.
-    intros π h.
-    induction π.
-    all: try solve [ simpl ; rewrite ?IHπ // ].
-    - simpl. rewrite let_free_context_app.
-      rewrite IHπ => //. rewrite andb_true_r. rewrite let_free_context_rev.
-      match goal with
-      | |- context [ mapi ?f ?l ] =>
-        generalize l
-      end.
-      intro l. unfold mapi.
-      generalize 0 at 2. intro n.
-      induction l in n |- *.
-      + simpl. reflexivity.
-      + simpl. apply IHl.
-    - simpl. rewrite let_free_context_app.
-      rewrite IHπ => //. rewrite andb_true_r. rewrite let_free_context_rev.
-      match goal with
-      | |- context [ mapi ?f ?l ] =>
-        generalize l
-      end.
-      intro l. unfold mapi.
-      generalize 0 at 2. intro n.
-      induction l in n |- *.
-      + simpl. reflexivity.
-      + simpl. apply IHl.
-    - simpl. rewrite let_free_context_app.
-      cbn in h. move/andP: h => [-> h]. now apply IHπ.
-    - simpl. rewrite let_free_context_app.
-      cbn in h. move/andP: h => [-> h]. now apply IHπ.
-  Qed.
-*)
 
   Lemma cored_red_cored :
     forall Γ u v w,

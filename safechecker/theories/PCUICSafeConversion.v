@@ -525,7 +525,7 @@ Section Conversion.
     end.
 
   Lemma zipp_stack_cat_decompose_stack t π π' :
-    zipp t (π +++ (decompose_stack π').2) = zipp t π.
+    zipp t (π ++ (decompose_stack π').2) = zipp t π.
   Proof.
     rewrite zipp_stack_cat; auto.
     destruct decompose_stack eqn:decomp.
@@ -580,7 +580,7 @@ Section Conversion.
        match goal with
        | [H: context[decompose_stack (appstack ?l ?ρ)] |- _] =>
          (rewrite (decompose_stack_appstack l ρ) in H; cbn in H) || fail 2
-       | [H: context[stack_context (?π +++ ?π')] |- _] =>
+       | [H: context[stack_context (?π ++ ?π')] |- _] =>
          (rewrite (stack_context_stack_cat π' π) in H; cbn in H) || fail 2
        | [H: (decompose_stack ?π).2 = [], H': context[stack_context ?π] |- _] =>
          (rewrite <- (stack_context_decompose π), H in H'; cbn in H') || fail 2
@@ -588,11 +588,11 @@ Section Conversion.
          (rewrite (zipc_decompose_stack_empty t π H) in H'; cbn in H') || fail 2
        | [H: context[stack_context (decompose_stack ?π).2] |- _] =>
          (rewrite (stack_context_decompose π) in H; cbn in H) || fail 2
-       | [H: context[zipp ?t (?π +++ (decompose_stack ?π').2)] |- _] =>
+       | [H: context[zipp ?t (?π ++ (decompose_stack ?π').2)] |- _] =>
          (rewrite (zipp_stack_cat_decompose_stack t π π') in H; cbn in H) || fail 2
        | [H: context[zipc ?t (appstack ?args ?π)] |- _] =>
          (rewrite (@zipc_appstack t args π) in H; cbn in H) || fail 2
-       | [H: context[zipc ?t (?π +++ ?π')] |- _] =>
+       | [H: context[zipc ?t (?π ++ ?π')] |- _] =>
          (rewrite (zipc_stack_cat t π π') in H; cbn in H) || fail 2
        | [H: context[zip (mkApps ?t (decompose_stack ?π).1, decompose_stack ?π).2] |- _] =>
          unfold zip in H
@@ -606,7 +606,7 @@ Section Conversion.
 
        | [|- context[decompose_stack (appstack ?l ?ρ)]] =>
          (rewrite (decompose_stack_appstack l ρ); cbn) || fail 2
-       | [|- context[stack_context (?π +++ ?π')]] =>
+       | [|- context[stack_context (?π ++ ?π')]] =>
          (rewrite (stack_context_stack_cat π' π); cbn) || fail 2
        | [H: (decompose_stack ?π).2 = [] |- context[stack_context ?π]] =>
          (rewrite <- (stack_context_decompose π), H; cbn) || fail 2
@@ -614,11 +614,11 @@ Section Conversion.
          (rewrite (zipc_decompose_stack_empty t π H); cbn) || fail 2
        | [|- context[stack_context (decompose_stack ?π).2]] =>
          (rewrite (stack_context_decompose π); cbn) || fail 2
-       | [|- context[zipp ?t (?π +++ (decompose_stack ?π').2)]] =>
+       | [|- context[zipp ?t (?π ++ (decompose_stack ?π').2)]] =>
          (rewrite (zipp_stack_cat_decompose_stack t π π'); cbn) || fail 2
        | [|- context[zipc ?t (appstack ?args ?π)]] =>
          (rewrite (@zipc_appstack t args π); cbn) || fail 2
-       | [|- context[zipc ?t (?π +++ ?π')]] =>
+       | [|- context[zipc ?t (?π ++ ?π')]] =>
          (rewrite (zipc_stack_cat t π π'); cbn) || fail 2
        | [|- context[zip (mkApps ?t (decompose_stack ?π).1, decompose_stack ?π).2]] =>
          unfold zip
@@ -724,7 +724,7 @@ Section Conversion.
           with inspect (reduce_stack RedFlags.nodelta Σ hΣ
                                      (Γ ,,, stack_context π2)
                                      t2 (appstack args2 []) _) := {
-          | @exist (t2',π2') eq2 => isconv_prog leq t1' (π1' +++ ρ1) t2' (π2' +++ ρ2) aux
+          | @exist (t2',π2') eq2 => isconv_prog leq t1' (π1' ++ ρ1) t2' (π2' ++ ρ2) aux
           }
         }
       }
@@ -3016,7 +3016,7 @@ Section Conversion.
         | @exist (l', θ') eq2
           with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' []) _) := {
           | @exist (fn', ρ) eq3 :=
-            isconv_prog leq fn' (ρ +++ θ') (tFix mfix' idx') π2 aux
+            isconv_prog leq fn' (ρ ++ θ') (tFix mfix' idx') π2 aux
           }
         } ;
       | _ with inspect (unfold_one_fix Γ mfix' idx' π2 _) := {
@@ -3025,7 +3025,7 @@ Section Conversion.
           | @exist (l', θ') eq2
             with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' []) _) := {
             | @exist (fn', ρ) eq3 :=
-              isconv_prog leq (tFix mfix idx) π1 fn' (ρ +++ θ') aux
+              isconv_prog leq (tFix mfix idx) π1 fn' (ρ ++ θ') aux
             }
           } ;
         | _ with inspect (eqb idx idx') := {
@@ -4645,7 +4645,7 @@ Section Conversion.
       | @exist (l1, θ1) eq2
         with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context ρ1) rt1 (appstack l1 []) _) := {
         | @exist (rt1', θ1') eq3 :=
-          isconv_prog leq rt1' (θ1' +++ θ1) t2 π2 aux
+          isconv_prog leq rt1' (θ1' ++ θ1) t2 π2 aux
         }
       } ;
     | @exist None nored1 with inspect (reducible_head Γ t2 π2 h2) := {
@@ -4653,7 +4653,7 @@ Section Conversion.
         | @exist (l2, θ2) eq2
           with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context ρ2) rt2 (appstack l2 []) _) := {
           | @exist (rt2', θ2') eq3 :=
-            isconv_prog leq t1 π1 rt2' (θ2' +++ θ2) aux
+            isconv_prog leq t1 π1 rt2' (θ2' ++ θ2) aux
           }
         } ;
       | @exist None nored2 with inspect (eqb_termp_napp Σ G leq #|(decompose_stack π1).1| t1 t2) := {

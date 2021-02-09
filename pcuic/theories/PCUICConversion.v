@@ -266,7 +266,7 @@ Lemma conv_Prod_l_inv {cf:checker_flags} (Σ : global_env_ext) Γ na dom codom T
   wf Σ ->
   Σ ;;; Γ |- tProd na dom codom = T ->
   ∑ na' dom' codom', red Σ Γ T (tProd na' dom' codom') *
-                     (Σ ;;; Γ |- dom = dom') * (Σ ;;; Γ ,, vass na dom |- codom = codom').
+  (eq_binder_annot na na') *   (Σ ;;; Γ |- dom = dom') * (Σ ;;; Γ ,, vass na dom |- codom = codom').
 Proof.
   intros wfΣ H; depind H; auto.
   - inv e. exists na', a', b'; intuition eauto; constructor; auto.
@@ -981,37 +981,26 @@ Lemma cumul_Prod_inv {cf:checker_flags} Σ Γ na na' A B A' B' :
   Σ ;;; Γ |- tProd na A B <= tProd na' A' B' ->
    (eq_binder_annot na na' * (Σ ;;; Γ |- A = A') * (Σ ;;; Γ ,, vass na' A' |- B <= B'))%type.
 Proof.
-  intros wfΣ wfΓ H; depind H.
-  - depelim l.
-    splits; auto.
-    all: now constructor.
+  intros wfΣ wfΓ H.
+  now eapply cumul_Prod_Prod_inv in H.
+Qed.
 
-  - depelim r.
-    + solve_discr.
-    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
-      intuition auto.
-      econstructor 2; eauto.
-    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
-      intuition auto. apply cumul_trans with N2.
-      * auto.
-      * eapply cumul_conv_ctx; eauto.
-        -- econstructor 2. 1: eauto.
-           constructor. reflexivity.
-        -- constructor. 1: now apply conv_ctx_refl.
-           constructor; auto.
-      * auto.
-
-  - depelim r.
-    + solve_discr.
-    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
-      intuition auto.
-      * econstructor 3. 2:eauto. auto.
-      * eapply cumul_conv_ctx in b. 1: eauto. 1: auto.
-        constructor. 1: eapply conv_ctx_refl.
-        constructor; auto. eapply conv_sym; auto.
-    + specialize (IHcumul _ _ _ _ _ _ wfΣ wfΓ eq_refl).
-      intuition auto. apply cumul_trans with N2. 1-2: auto.
-      eapply cumul_red_r; eauto. reflexivity.
+(** Injectivity of products for conversion holds as well *)
+Lemma conv_Prod_inv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na na' A B A' B'} :
+  wf_local Σ Γ ->
+  Σ ;;; Γ |- tProd na A B = tProd na' A' B' ->
+   (eq_binder_annot na na' * (Σ ;;; Γ |- A = A') * (Σ ;;; Γ ,, vass na' A' |- B = B'))%type.
+Proof.
+  intros wfΓ H.
+  eapply conv_Prod_l_inv in H as [na'' [dom' [codom' [[[red eqann] eqd] eqcod]]]]; tea.
+  eapply invert_red_prod in red as [A'' [B'' [[eqp reddom] redcod]]]; tea.
+  noconf eqp. intuition auto.
+  - transitivity dom' => //. symmetry; now apply red_conv.
+  - transitivity codom' => //.
+    2:symmetry; now apply red_conv.
+    eapply conv_conv_ctx; tea. constructor; try reflexivity.
+    constructor; auto. transitivity dom' => //.
+    now symmetry; apply red_conv.
 Qed.
 
 Lemma tProd_it_mkProd_or_LetIn na A B ctx s :

@@ -1216,6 +1216,15 @@ Proof.
   eapply closed_wf_local; eauto. simpl. auto.
 Qed.
 
+Lemma declared_inductive_closed_params_inst {cf:checker_flags} {Σ mdecl ind idecl} {wfΣ : wf Σ} {u} :
+  declared_inductive Σ ind mdecl idecl ->
+  closed_ctx (subst_instance u mdecl.(ind_params)).
+Proof.
+  intros h.
+  rewrite closedn_subst_instance_context.
+  now apply (declared_inductive_closed_params h).
+Qed.
+
 Lemma declared_minductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind} :
   declared_minductive Σ ind mdecl ->
   ind_npars mdecl = context_assumptions mdecl.(ind_params).

@@ -215,33 +215,27 @@ Section Principality.
       rewrite H4 in H1. now noconf H1.
 
     - assert (wf Σ) by auto.
-      eapply inversion_Case in hA=>//.
-      repeat outsum. repeat outtimes. simpl in *.
-      repeat outtimes. destruct c.
-      subst.
-      (* destruct (IHu _ _ t) as [? p].*)
-      destruct (IHu _ _ t0) as [? p0].
-      destruct (p0 _ t0).
-      eapply invert_cumul_ind_r in c1 as [u' [x0' [redr [redu ?]]]]; auto.
-      exists (mkApps ptm (skipn (ind_npars x) x0' ++ [u])); intros b hB; repeat split; auto.
+      eapply inversion_Case in hA as (mdecl&idecl&isdecl&indices&[]&?); auto.
+      destruct (IHu _ _ scrut_ty) as [? p0].
+      destruct (p0 _ scrut_ty).
+      eapply invert_cumul_ind_r in c0 as [u' [x0' [redr [redu ?]]]]; auto.
+      todo "case".
+      (*exists (mkApps ptm (skipn (ind_npars mdecl) x0' ++ [u])); intros b hB; repeat split; auto.
       2:econstructor; eauto.
-      eapply inversion_Case in hB=>//; auto.
-      repeat outsum. repeat outtimes. cbn in *.
-      repeat outtimes.
-      destruct c1.
-      destruct (PCUICWeakeningEnv.declared_inductive_inj isdecl isdecl0) as [-> ->].
-      destruct (p0 _ t3).
-      eapply invert_cumul_ind_r in c3 as [u'' [x9' [redr' [redu' ?]]]]; auto.
+      eapply inversion_Case in hB as (mdecl'&idecl'&isdecl'&indices'&[]&?).
+      destruct (PCUICWeakeningEnv.declared_inductive_inj isdecl isdecl') as [-> ->].
+      destruct (p0 _ scrut_ty0).
+      eapply invert_cumul_ind_r in c1 as [u'' [x9' [redr' [redu' ?]]]]; auto.
       assert (All2 (fun a a' => Σ ;;; Γ |- a = a') x0' x9').
       { destruct (red_confluence wfΣ redr redr').
         destruct p1.
         eapply red_mkApps_tInd in r as [args' [? ?]]; auto.
         eapply red_mkApps_tInd in r0 as [args'' [? ?]]; auto.
         subst. solve_discr.
-        clear -wfΣ a4 a5 a6 a7 a8.
+        clear -wfΣ a a0 a1 a2.
         eapply All2_trans with args'; eauto. eapply conv_trans; eauto.
-        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a7; auto using red_conv.
-        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a8; auto using red_conv.
+        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a1; auto using red_conv.
+        eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a2; auto using red_conv.
         eapply All2_symmetry; eauto. eapply conv_sym.
       }
       clear redr redr' a1.
@@ -256,7 +250,7 @@ Section Principality.
       rewrite -(All2_length convl).
       apply All2_length in a6. apply All2_length in X2. len in a6.
       pose proof (All2_length a2). len in H. rewrite firstn_length_le.
-      all:todo "case".
+      all:todo "case".*)
 
     - destruct s as [[ind k] pars]; simpl in *.
       eapply inversion_Proj in hA=>//; auto.

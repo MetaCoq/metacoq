@@ -167,32 +167,36 @@ Section Inversion.
   Qed.
 
   Variant case_inversion_data Γ ci p c brs mdecl idecl indices :=
-   | case_inv ps (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl) :
-    mdecl.(ind_npars) = ci.(ci_npar) ->
-    let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-    wf_predicate mdecl idecl p ->
-    consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-    wf_local Σ (Γ ,,, p.(pcontext)) ->
-    conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
-    Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
-    is_allowed_elimination Σ ps idecl.(ind_kelim) ->
-    Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
-    isCoFinite mdecl.(ind_finite) = false ->
-    let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-    wf_branches idecl brs ->
-    All2i (fun i cdecl br =>
-      let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-      (wf_local Σ (Γ ,,, br.(bcontext)) ×
-        conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
-      ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
-      (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps))) 
-      0 idecl.(ind_ctors) brs ->
-    case_inversion_data Γ ci p c brs mdecl idecl indices.
+   | case_inv
+       (ps : Universe.t)
+       (eq_npars : mdecl.(ind_npars) = ci.(ci_npar))
+       (predctx := case_predicate_context ci.(ci_ind) mdecl idecl p)
+       (wf_pred : wf_predicate mdecl idecl p)
+       (cons : consistent_instance_ext Σ (ind_universes mdecl) p.(puinst))
+       (wf_pctx : wf_local Σ (Γ ,,, p.(pcontext)))
+       (conv_pctx : conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx))
+       (pret_ty : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps)
+       (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
+       (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
+                            (List.rev (subst_instance p.(puinst)
+                                                      (ind_params mdecl ,,, ind_indices idecl))))
+       (scrut_ty : Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices))
+       (not_cofinite : isCoFinite mdecl.(ind_finite) = false)
+       (ptm := it_mkLambda_or_LetIn predctx p.(preturn))
+       (wf_brs : wf_branches idecl brs)
+       (brs_ty :
+          All2i (fun i cdecl br =>
+                   let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+                   (wf_local Σ (Γ ,,, br.(bcontext)) ×
+                   conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
+                   ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
+                   (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)))
+                0 idecl.(ind_ctors) brs).
 
   Lemma inversion_Case :
     forall {Γ ci p c brs T},
       Σ ;;; Γ |- tCase ci p c brs : T ->
-      ∑ mdecl idecl indices, 
+      ∑ mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl) indices, 
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
         case_inversion_data Γ ci p c brs mdecl idecl indices ×
@@ -292,11 +296,3 @@ Section Inversion.
   Qed.
 
 End Inversion.
-
-Lemma case_inversion_data_cty {cf:checker_flags} {Σ Γ ci p c brs mdecl idecl indices} :
-  case_inversion_data Σ Γ ci p c brs mdecl idecl indices ->
-  Σ ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices).
-Proof.
-  now intros [].
-Qed.
-

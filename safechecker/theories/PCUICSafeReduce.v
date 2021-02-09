@@ -1302,11 +1302,11 @@ Section Reduce.
     whne flags Σ Γ (mkApps hd args).
   Proof.
     intros wf shape wh typ.
-    apply inversion_Case in typ as (?&?&?&[]&?); auto.
+    apply inversion_Case in typ as (?&?&isdecl&?&[]&?); auto.
     eapply whnf_non_ctor_finite_ind_typed; try eassumption.
     - unfold isConstruct_app.
       now rewrite decompose_app_mkApps; destruct hd.
-    - unfold isCoFinite in e0.
+    - unfold isCoFinite in not_cofinite.
       unfold check_recursivity_kind.
       cbn.
       unfold declared_inductive, declared_minductive in isdecl.

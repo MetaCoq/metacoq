@@ -247,33 +247,28 @@ Section Lemmata.
         simpl in t0.
         rewrite app_context_assoc.
         econstructor; eauto.
-    - apply inversion_Case in typ as (?&?&?&cd&?); auto.
+    - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       rewrite app_context_assoc.
       destruct p; cbn in *.
-      + destruct cd as [_ _ _ _ _ _ _ _ _ _ typ _ _ _ _].
-        apply validity in typ as (?&typ).
+      + apply validity in scrut_ty as (?&typ).
         apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
         clear -spine.
         rewrite -app_assoc -app_comm_cons in spine.
-        revert spine; generalize (tSort x2); intros t' spine.
-        induction params1 in spine, x3, t' |- *; cbn in *.
+        revert spine; generalize (tSort x3); intros t' spine.
+        induction params1 in spine, x4, t' |- *; cbn in *.
         * depelim spine.
           econstructor; eauto.
         * depelim spine; eauto.
-      + destruct cd as [_ _ _ _ _ _ wfcontext _ _ _ _ _ _ _ _]; simpl in *.
-        eauto using welltyped_fill_context_hole.
-      + destruct cd as [? _ _ ? _ _ wfl cc typ _ _ _ _ _ _]; simpl in *.
-        eapply conv_context_sym in cc; auto.
-        eapply context_conversion in typ; eauto.
+      + eauto using welltyped_fill_context_hole.
+      + eapply conv_context_sym in conv_pctx; auto.
+        eapply context_conversion in pret_ty; eauto.
         econstructor; eauto.
-    - apply inversion_Case in typ as (?&?&?&cd&?); auto.
-      destruct cd.
+    - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
-    - apply inversion_Case in typ as (?&?&?&cd&?); auto.
-      destruct cd as [? _ _ ? _ _ _ _ _ _ _ _ ? _ wfbrs].
+    - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       destruct brs as ((?&?)&?).
-      simpl fill_branches_hole in wfbrs.
-      apply All2i_app_inv_r in wfbrs as (?&?&_&_&a).
+      simpl fill_branches_hole in brs_ty.
+      apply All2i_app_inv_r in brs_ty as (?&?&_&_&a).
       inv a.
       clear X0.
       destruct X as ((wfl&cc)&typ&_).

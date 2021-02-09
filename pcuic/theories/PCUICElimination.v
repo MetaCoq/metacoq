@@ -55,15 +55,15 @@ Lemma elim_restriction_works_kelim1 {cf : checker_flags} {Σ : global_env_ext}
 Proof.
   intros cu wfΣ. intros.
   assert (HT := X).
-  eapply inversion_Case in X as [mdecl' [idecl' [indices [data cum]]]]; eauto.
+  eapply inversion_Case in X as [mdecl' [idecl' [isdecl' [indices [data cum]]]]]; eauto.
   destruct data.
-  eapply declared_inductive_inj in isdecl as []. 2:exact H. subst.
+  eapply declared_inductive_inj in isdecl' as []. 2:exact H. subst.
   enough (~ (Universe.is_prop ps \/ Universe.is_sprop ps)).
-  { clear -cu wfΣ i H1.
+  { clear -cu wfΣ allowed_elim H1.
     apply wf_ext_consistent in wfΣ as (val&sat).
     unfold is_allowed_elimination, is_allowed_elimination0 in *.
-    rewrite cu in i.
-    specialize (i _ sat).
+    rewrite cu in allowed_elim.
+    specialize (allowed_elim _ sat).
     destruct (ind_kelim idecl); auto;
       destruct ⟦ps⟧_val%u eqn:v; try easy;
         try apply val_is_sprop in v;

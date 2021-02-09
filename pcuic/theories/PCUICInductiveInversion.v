@@ -1348,12 +1348,12 @@ Proof.
   intros h.
   apply inversion_Case in h as ih ; auto.
   destruct ih
-    as [mdecl [idecl [indices [cinv cum]]]].
+    as [mdecl [idecl [isdecl [indices [cinv cum]]]]].
   destruct cinv.
-  pose proof t0 as typec.
+  pose proof scrut_ty as typec.
   eapply inversion_mkApps in typec as [A' [tyc tyargs]]; auto.
   eapply (inversion_Construct Σ wΣ) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
-  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ t0 declc); eauto.
+  epose proof (PCUICInductiveInversion.Construct_Ind_ind_eq _ scrut_ty declc); eauto.
   simpl in *.
   intuition auto.
   subst.
@@ -1376,7 +1376,7 @@ Proof.
   rewrite map2_set_binder_name_context_assumptions in cc; [|lia].
   rewrite forget_types_length.
   apply wf_branch_length.
-  eapply Forall2_All2 in w0.
+  eapply Forall2_All2 in wf_brs.
   eapply All2_nth_error_Some_r in nth; eauto.
   destruct nth as (?&?&?).
   congruence.

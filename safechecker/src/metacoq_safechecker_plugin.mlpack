@@ -5,7 +5,6 @@ Utils
 Ssrbool
 WGraph
 UGraph0
-EnvironmentTyping
 Typing0
 Reflect
 
@@ -18,8 +17,6 @@ PCUICAst
 PCUICCases
 PCUICAstUtils
 PCUICInduction
-PCUICUnivSubst
-PCUICLiftSubst
 PCUICReflect
 PCUICEquality
 PCUICTyping
@@ -30,7 +27,6 @@ PCUICNormal
 PCUICPosition
 PCUICPretty
 TemplateToPCUIC
-PCUICCumulativity
 PCUICUnivSubst
 
 PCUICErrors

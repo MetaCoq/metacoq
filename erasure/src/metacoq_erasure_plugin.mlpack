@@ -8,7 +8,6 @@ UGraph0
 OrderedTypeAlt
 Kernames
 
-Init
 Classes0
 Logic1
 Relation
@@ -17,8 +16,6 @@ PCUICPrimitive
 PCUICAst
 PCUICCases
 PCUICAstUtils
-PCUICUnivSubst
-PCUICLiftSubst
 EqDecInstances
 PCUICEquality
 PCUICTyping

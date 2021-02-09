@@ -33,8 +33,6 @@ gen-src/binPosDef.ml
 gen-src/binPosDef.mli
 gen-src/bool.ml
 gen-src/bool.mli
-gen-src/byte.ml
-gen-src/byte.mli
 gen-src/cRelationClasses.ml
 gen-src/cRelationClasses.mli
 gen-src/classes0.ml
@@ -45,8 +43,6 @@ gen-src/compare_dec.ml
 gen-src/compare_dec.mli
 gen-src/config0.ml
 gen-src/config0.mli
-gen-src/coreTactics.ml
-gen-src/coreTactics.mli
 gen-src/datatypes.ml
 gen-src/datatypes.mli
 gen-src/decimal.ml
@@ -54,10 +50,6 @@ gen-src/decimal.mli
 gen-src/decimalString.ml
 gen-src/decimalString.mli
 gen-src/denoter.ml
-gen-src/depElim.ml
-gen-src/depElim.mli
-gen-src/doubleType.ml
-gen-src/doubleType.mli
 gen-src/environment.ml
 gen-src/environment.mli
 gen-src/eqDec.ml
@@ -68,14 +60,10 @@ gen-src/equalities.ml
 gen-src/equalities.mli
 gen-src/extractable.ml
 gen-src/extractable.mli
-gen-src/floatClass.ml
-gen-src/floatClass.mli
 gen-src/floatOps.ml
 gen-src/floatOps.mli
 gen-src/induction.ml
 gen-src/induction.mli
-gen-src/init.ml
-gen-src/init.mli
 gen-src/int63.ml
 gen-src/int63.mli
 gen-src/liftSubst.ml
@@ -118,8 +106,6 @@ gen-src/mSetProperties.ml
 gen-src/mSetProperties.mli
 gen-src/nat0.ml
 gen-src/nat0.mli
-gen-src/noConfusion.ml
-gen-src/noConfusion.mli
 gen-src/orderedType0.ml
 gen-src/orderedType0.mli
 gen-src/orders.ml

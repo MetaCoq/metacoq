@@ -134,6 +134,44 @@ Proof.
     + constructor; auto. reflexivity.
 Qed.
 
+Lemma congr_conv_prod_l : forall `{checker_flags} Σ Γ na na' M1 M2 N1,
+  wf Σ.1 ->
+  eq_binder_annot na na' ->
+  Σ ;;; Γ |- M1 = N1 ->
+  Σ ;;; Γ |- (tProd na M1 M2) = (tProd na' N1 M2).
+Proof.
+  intros.
+  eapply conv_alt_red in X0 as (dom & dom' & (rdom & rdom') & eqdom).
+  eapply conv_alt_red.
+  exists (tProd na dom M2), (tProd na' dom' M2).
+  split; [split| auto].
+  - eapply red_prod; eauto.
+  - eapply red_prod; eauto.
+  - constructor; [assumption|apply eqdom|reflexivity].
+Qed.
+
+Lemma congr_conv_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
+  wf Σ.1 ->
+  eq_binder_annot na na' ->
+  Σ ;;; Γ |- M1 = N1 ->
+  Σ ;;; (Γ ,, vass na M1) |- M2 = N2 ->
+  Σ ;;; Γ |- (tProd na M1 M2) = (tProd na' N1 N2).
+Proof.
+  intros * wfΣ ? ?.
+  transitivity (tProd na' N1 M2).
+  - eapply congr_conv_prod_l; eauto.
+  - eapply (conv_conv_ctx _ _ (Γ ,, vass na' N1)) in X0.
+    2:{ constructor; [apply conv_ctx_refl|constructor; auto]. }
+    clear X.
+    eapply conv_alt_red in X0 as (codom & codom' & (rcodom & rcodom') & eqcodom).
+    eapply conv_alt_red.
+    exists (tProd na' N1 codom), (tProd na' N1 codom').
+    split; [split|].
+    + eapply red_prod; eauto.
+    + eapply red_prod; auto.
+    + constructor; auto. reflexivity.
+Qed.
+
 Lemma cumul_Sort_inv {cf:checker_flags} Σ Γ s s' :
   Σ ;;; Γ |- tSort s <= tSort s' ->
   leq_universe (global_ext_constraints Σ) s s'.
@@ -2464,6 +2502,24 @@ Section Inversions.
 
 End Inversions.
 
+Lemma conv_LetIn `{cf:checker_flags} Σ Γ na1 na2 t1 t2 A1 A2 u1 u2 :
+  wf Σ.1 ->
+  eq_binder_annot na1 na2 ->
+  Σ;;; Γ |- t1 = t2 ->
+  Σ;;; Γ |- A1 = A2 ->
+  conv Σ (Γ ,, vdef na1 t1 A1) u1 u2 ->
+  conv Σ Γ (tLetIn na1 t1 A1 u1) (tLetIn na2 t2 A2 u2).
+Proof.
+  intros wfΣ Hna X H H'.
+  eapply conv_trans => //.
+  + eapply conv_LetIn_bo. eassumption.
+  + etransitivity.
+    * eapply conv_LetIn_tm; tea.
+    * eapply conv_LetIn_ty with (na := na2).
+      ++ reflexivity.
+      ++ assumption.
+Qed.
+
 Lemma cum_LetIn `{cf:checker_flags} Σ Γ na1 na2 t1 t2 A1 A2 u1 u2 :
   wf Σ.1 ->
   eq_binder_annot na1 na2 ->
@@ -2801,6 +2857,40 @@ Lemma weakening_conv_gen :
   Σ;;; Γ ,,, Γ'' ,,, lift_context k 0 Γ' |- lift k #|Γ'| M = lift k #|Γ'| N.
 Proof.
   intros; subst k; now eapply weakening_conv.
+Qed.
+
+Lemma conv_it_mkProd_or_LetIn {cf : checker_flags} (Σ : global_env_ext)
+  (Δ Γ Γ' : context) (B B' : term) :
+  wf Σ.1 ->
+  All2_fold (fun Γ Γ' => conv_decls Σ (Δ ,,, Γ) (Δ  ,,, Γ')) Γ Γ' ->
+  Σ ;;; Δ ,,, Γ |- B = B' ->
+  Σ ;;; Δ |- it_mkProd_or_LetIn Γ B = it_mkProd_or_LetIn Γ' B'.
+Proof.
+  move=> wfΣ; move: B B' Γ' Δ.
+  induction Γ as [|d Γ] using rev_ind; move=> B B' Γ' Δ;
+  destruct Γ' as [|d' Γ'] using rev_ind; try clear IHΓ';
+    move=> H; try solve [simpl; auto].
+  + depelim H. apply app_eq_nil in H; intuition discriminate.
+  + depelim H. apply app_eq_nil in H; intuition discriminate.
+  + assert (clen : #|Γ| = #|Γ'|).
+    { apply All2_fold_length in H.
+      autorewrite with len in H; simpl in H. lia. }
+    apply All2_fold_app_inv in H as [cd cctx] => //.
+    depelim cd; depelim c.
+    - rewrite !it_mkProd_or_LetIn_app => //=.
+      simpl. move=> HB. apply congr_conv_prod => //.
+      eapply IHΓ.
+      * unshelve eapply (All2_fold_impl cctx).
+        simpl. intros * X. rewrite !app_context_assoc in X.
+        destruct X; constructor; auto.
+      * now rewrite app_context_assoc in HB.
+    - rewrite !it_mkProd_or_LetIn_app => //=.
+      simpl. intros HB. apply conv_LetIn => //; auto.
+      eapply IHΓ.
+      * unshelve eapply (All2_fold_impl cctx).
+        simpl. intros * X. rewrite !app_context_assoc in X.
+        destruct X; constructor; auto.
+      * now rewrite app_context_assoc in HB.
 Qed.
 
 Lemma cumul_it_mkProd_or_LetIn {cf : checker_flags} (Σ : global_env_ext)

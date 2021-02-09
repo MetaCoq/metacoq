@@ -2,8 +2,6 @@
 -Q src MetaCoq.Erasure
 -R theories MetaCoq.Erasure
 
-src/init.mli
-src/init.ml
 # src/classes0.mli
 # src/classes0.ml
 
@@ -37,18 +35,12 @@ src/pCUICCases.mli
 src/pCUICCases.ml
 src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
-src/pCUICLiftSubst.ml
-src/pCUICLiftSubst.mli
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
 src/pCUICReduction.ml
 src/pCUICReduction.mli
 src/pCUICTyping.ml
 src/pCUICTyping.mli
-src/pCUICUnivSubst.ml
-src/pCUICUnivSubst.mli
-# src/pCUICCumulativity.mli
-# src/pCUICCumulativity.ml
 src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli

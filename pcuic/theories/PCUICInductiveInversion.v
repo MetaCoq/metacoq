@@ -1922,7 +1922,7 @@ Proof.
   by [].
 Qed.
   
-Lemma red1_assumption_context_irrelevant Σ Γ Δ Γ' t t' : 
+(*Lemma red1_assumption_context_irrelevant Σ Γ Δ Γ' t t' : 
   red1 Σ (Γ ,,, Δ) t t' ->
   assumption_context Γ ->
   #|Γ| = #|Γ'| ->
@@ -1969,7 +1969,7 @@ Proof.
   intros r ass eqc.
   now eapply (red_assumption_context_app_irrelevant _ _ [] Γ').
 Qed.
-
+*)
 Lemma assumption_context_map f Γ :
   assumption_context Γ -> assumption_context (map_context f Γ).
 Proof.
@@ -4606,6 +4606,21 @@ Definition pre_case_branch_context (ind : inductive) (mdecl : mutual_inductive_b
         #|ind_params mdecl|
         (subst_instance puinst (cstr_args cdecl)))).
       
+Lemma All2_fold_context_k P (f g : nat -> term -> term) ctx ctx' : 
+  All2_fold (fun Γ Γ' d d' => P (map_decl (f #|Γ|) d) (map_decl (g #|Γ'|) d')) ctx ctx' ->
+  All2 P (fold_context_k f ctx) (fold_context_k g ctx'). 
+Proof.
+  induction 1. constructor.
+  rewrite !fold_context_k_snoc0. now constructor.
+Qed.
+     
+Lemma All2_sym {A B} (P : A -> B -> Type) (ctx : list A) (ctx' : list B) : 
+  All2 P ctx ctx' -> 
+  All2 (fun x y => P y x) ctx' ctx.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
 (* No need to worry about the name annotations in the proofs below, for all typing
   purposes we can work with the simpler context not involving the renaming *)
 Lemma pre_case_branch_context_eq ind mdecl params puinst bctx cdecl :
@@ -4613,8 +4628,29 @@ Lemma pre_case_branch_context_eq ind mdecl params puinst bctx cdecl :
   All2 (compare_decls eq eq)
     (pre_case_branch_context ind mdecl params puinst cdecl)
     (case_branch_context_gen ind mdecl params puinst bctx cdecl).
-Proof. Admitted.
-
+Proof.
+  unfold wf_branch_gen. intros wf%Forall2_All2.
+  rewrite /pre_case_branch_context /case_branch_context_gen.
+  eapply All2_fold_context_k.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx /subst_context.
+  eapply All2_fold_fold_context => /=.
+  eapply All2_fold_fold_context.
+  eapply All2_fold_fold_context.
+  eapply All2_fold_map.
+  eapply All2_fold_impl_ind.
+  instantiate (1 := fun _ _ d d' => compare_decls eq eq d' d).
+  eapply All2_fold_All2; tea.
+  eapply All2_sym.
+  eapply All2_map2_left_All3; tea.
+  induction wf; constructor; auto.
+  destruct x, y as [na [b|] ty]; constructor; auto.
+  intros ? ? d d'; cbn; rewrite !fold_context_k_length !map_context_length !Nat.add_0_r.
+  intros H _ []; constructor; simpl; auto. now symmetry.
+  rewrite (All2_fold_length H). subst; reflexivity.
+  now symmetry.
+  rewrite (All2_fold_length H); subst; reflexivity.
+  rewrite (All2_fold_length H); subst; reflexivity.
+Qed.
 
 Lemma pre_case_branch_context_length_args {ind mdecl params puinst cdecl} :
   #|pre_case_branch_context ind mdecl params puinst cdecl| = #|cstr_args cdecl|.

@@ -6,13 +6,13 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
      PCUICContextConversion PCUICConversion PCUICWfUniverses
-     PCUICGlobalEnv
+     PCUICGlobalEnv PCUICEqualityDec
      (* Used for support lemmas *)
      PCUICInductives PCUICWfUniverses
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
      PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv.
 
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICErrors PCUICEqualityDec
+From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICErrors
   PCUICSafeConversion PCUICWfReduction PCUICWfEnv PCUICTypeChecker.
 
 From Equations Require Import Equations.

@@ -6,8 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICEquality PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
      PCUICPrincipality PCUICContextConversion PCUICSN PCUICUtils PCUICWfUniverses
-     PCUICWeakening PCUICConvCumInversion.
-From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICErrors PCUICSafeReduce.
+     PCUICWeakening PCUICConvCumInversion PCUICEqualityDec.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.

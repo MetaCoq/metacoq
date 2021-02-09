@@ -1505,10 +1505,10 @@ Section Conversion.
     apply welltyped_context in wf; [|assumption].
     destruct hΣ.
     destruct wf as [ctyp typ].
-    apply inversion_Case in typ as (mdecl&idecl&?&[]&?); auto.
+    apply inversion_Case in typ as (mdecl&idecl&?&?&[]&?); auto.
     exists mdecl, idecl.
     split; [easy|].
-    now apply All2i_length in a1.
+    now apply All2i_length in brs_ty.
   Qed.
   
   Equations (noeqns) isconv_context_aux
@@ -2841,15 +2841,13 @@ Section Conversion.
     destruct hΣ.
     zip fold in h1.
     apply welltyped_context in h1 as (?&typ1); auto.
-    apply inversion_Case in typ1 as (?&?&?&cd1&?); auto.
-    destruct cd1 as [_ _ _ _ _ cons1 _ _ _ _ _ _ _ _ _].
+    apply inversion_Case in typ1 as (?&?&?&?&[]&?); auto.
     zip fold in h2.
     clear aux.
     apply welltyped_context in h2 as (?&typ2); auto.
-    apply inversion_Case in typ2 as (?&?&?&cd2&?); auto.
-    destruct cd2 as [_ _ _ _ _ cons2 _ _ _ _ _ _ _ _ _].
-    apply consistent_instance_ext_wf in cons1.
-    apply consistent_instance_ext_wf in cons2.
+    apply inversion_Case in typ2 as (?&?&?&?&[]&?); auto.
+    apply consistent_instance_ext_wf in cons.
+    apply consistent_instance_ext_wf in cons0.
     destruct H as [(?&?&?&?)].
     apply eqb_universe_instance_complete in r; auto.
     congruence.
@@ -3301,8 +3299,7 @@ Section Conversion.
     zip fold in h1. apply welltyped_context in h1 ; auto. simpl in h1.
     destruct h1 as [T h1].
     apply inversion_Case in h1 as hh ; auto.
-    destruct hh as [mdecl [idecl [indices [data cum]]]].
-    epose proof (case_inversion_data_cty data).
+    destruct hh as [mdecl [idecl [isdecl [indices [[] cum]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
@@ -3311,8 +3308,7 @@ Section Conversion.
     zip fold in h2. apply welltyped_context in h2 ; auto. simpl in h2.
     destruct h2 as [T h2].
     apply inversion_Case in h2 as hh ; auto.
-    destruct hh as [mdecl [idecl [indices [data cum]]]].
-    epose proof (case_inversion_data_cty data).
+    destruct hh as [mdecl [idecl [isdecl [indices [[] cum]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
@@ -4174,8 +4170,7 @@ Section Conversion.
     destruct hΣ as [wΣ].
     cbn. destruct h as [T h].
     apply inversion_Case in h ; auto.
-    destruct h as [mdecl [idecl [indices [data cum]]]].
-    epose proof (case_inversion_data_cty data).
+    destruct h as [mdecl [idecl [isdecl [indices [[] cum]]]]].
     eexists. eassumption.
   Qed.
   Next Obligation.
@@ -4195,11 +4190,10 @@ Section Conversion.
     simpl_reduce_stack.
     destruct h as (?&typ); auto.
     destruct hΣ.
-    apply inversion_Case in typ as [mdecl [idecl [indices [data cum]]]]; auto.
-    pose proof (case_inversion_data_cty data) as t0.
-    eapply PCUICSR.subject_reduction in t0; eauto.
-    apply PCUICValidity.inversion_mkApps in t0 as (?&?&?); auto.
-    apply inversion_CoFix in t as (?&?&?&?&?&?&?); auto.
+    apply inversion_Case in typ as [mdecl [idecl [isdecl [indices [[] cum]]]]]; auto.
+    eapply PCUICSR.subject_reduction in scrut_ty; eauto.
+    apply PCUICValidity.inversion_mkApps in scrut_ty as (?&typ&?); auto.
+    apply inversion_CoFix in typ as (?&?&?&?&?&?&?); auto.
     unfold unfold_cofix in eq2.
     rewrite e in eq2.
     congruence.

@@ -990,7 +990,7 @@ Section WeakNormalization.
       clear wh_normal_empty_gen.
       now specialize (wh_neutral_empty_gen _ tyarg eq_refl).
     - move/andP: cl => [/andP[_ clc] _].
-      eapply inversion_Case in typed as (? & ? & ? & [] & ?); tas.
+      eapply inversion_Case in typed as (? & ? & ? & ? & [] & ?); tas.
       eapply wh_neutral_empty_gen; eauto.
     - eapply inversion_Proj in typed as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eapply wh_neutral_empty_gen; eauto.
@@ -1132,7 +1132,7 @@ Section WeakNormalization.
   - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
     apply inversion_Case in Ht; auto; destruct_sigma Ht.
     destruct c0.
-    specialize (IHHe1 _ t0).
+    specialize (IHHe1 _ scrut_ty).
     assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) args br)).
     { redt _.
       eapply red_case; eauto. reflexivity.
@@ -1196,7 +1196,7 @@ Section WeakNormalization.
   - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
     apply inversion_Case in Ht; auto; destruct_sigma Ht.
     destruct c.
-    pose proof (subject_closed _ t0) as H.
+    pose proof (subject_closed _ scrut_ty) as H.
     rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
     assert (red Σ [] (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)).
     { eapply red1_red. eapply red_cofix_case.

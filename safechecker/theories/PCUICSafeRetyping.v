@@ -423,28 +423,23 @@ Section TypeOf.
       now destruct declc'.
     
     - eapply inversion_Case in HT; auto.
-      destruct HT as (mdecl & idecl & indices & data & cum).
-      eapply PCUICInversion.case_inversion_data_cty in data.
+      destruct HT as (mdecl & idecl & isdecl & indices & [] & cum).
       eexists; eauto.
     - cbn. 
-      destruct inversion_Case as (mdecl & idecl & indices & data & cum).
+      destruct inversion_Case as (mdecl & idecl & isdecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]]. simpl.
       eapply validity in Hty.
       eapply wat_welltyped; auto. sq; auto.
-    - simpl in *.
-      destruct inversion_Case as (mdecl & idecl & indices & data & cum).
+    - cbn -[reduce_to_ind] in *.
+      destruct inversion_Case as (mdecl & idecl & isdecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]].
-      simpl in wildcard. destruct reduce_to_ind => //.
+      destruct reduce_to_ind => //.
       injection wildcard. intros ->. clear wildcard.
       destruct a as [i [u' [l [red]]]].
-      simpl.
+      simpl in *.
       eapply type_reduction in Hty; eauto.
-      have Hc := case_inversion_data_cty data.
-      pose proof (Hp _ Hc).
-      assert (consistent_instance_ext Σ (ind_universes mdecl) (puinst p)).
-      { eapply validity in Hc as [? Hc]; tea.
-        eapply invert_type_mkApps_ind in Hc as []; tea.
-        destruct data; eauto. }
+      destruct data.
+      pose proof (Hp _ scrut_ty).
       assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) (pparams p ++ indices)).
       { eapply cumul_red_l_inv; eauto. }
       eapply cumul_Ind_Ind_inv in X0 as [[eqi Ru] cl]; auto.
@@ -453,16 +448,11 @@ Section TypeOf.
       { eapply All2_app. 2:repeat (constructor; auto).
         eapply All2_skipn in cl. instantiate (1:=(ci_npar ci)) in cl.
         symmetry in cl. rewrite skipn_all_app_eq in cl.
-        destruct data.
-        now rewrite (wf_predicate_length_pars w0).
+        now rewrite (wf_predicate_length_pars wf_pred).
         exact cl. }
       sq; split; simpl.
-      * pose proof (validity Hc).
-        destruct data.
+      * pose proof (validity scrut_ty).
         eapply type_Cumul. econstructor; eauto.
-        + eapply validity in Hc as [? Hc]; tea.
-          eapply invert_type_mkApps_ind in Hc as []; tea.
-          todo "case".
         
         + assert (Σ ;;; Γ |- it_mkLambda_or_LetIn (pcontext p) (preturn p) : 
           it_mkProd_or_LetIn (pcontext p) (tSort ps)).
@@ -480,26 +470,25 @@ Section TypeOf.
           now eapply PCUICContextConversion.conv_context_sym.
           reflexivity.
       * intros T'' Hc'.
-        eapply inversion_Case in Hc' as (mdecl' & idecl' & indices' & data' & cum'); auto.
+        eapply inversion_Case in Hc' as (mdecl' & idecl' & isdecl' & indices' & [] & cum'); auto.
         etransitivity. simpl in cum'. 2:eassumption.
         eapply conv_cumul, mkApps_conv_args; auto.
-        todo "case".
-        eapply All2_app. 2:repeat (constructor; auto).
-        have Hc' := (case_inversion_data_cty data'). specialize (Hp _ Hc').
-        assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) 
-          (pparams p ++ indices')).
-        { eapply cumul_red_l_inv; eauto. }
-        eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; auto.
-        eapply All2_skipn in cl'. instantiate (1 := ci_npar ci) in cl'.
-        rewrite skipn_all_app_eq // in cl'.
-        destruct data.
-        now rewrite (wf_predicate_length_pars w0).
+        -- apply it_mkLambda_or_LetIn_conv; auto.
+        -- eapply All2_app. 2:repeat (constructor; auto).
+           specialize (Hp _ scrut_ty0).
+           assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) 
+                                                             (pparams p ++ indices')).
+           { eapply cumul_red_l_inv; eauto. }
+           eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; auto.
+           eapply All2_skipn in cl'. instantiate (1 := ci_npar ci) in cl'.
+           rewrite skipn_all_app_eq // in cl'.
+           now rewrite (wf_predicate_length_pars wf_pred).
       
     - simpl in wildcard1.
-      destruct inversion_Case as (mdecl & idecl & indices & data & cum).
-      destruct infer as [cty [[Hty Hp]]]. simpl.
+      destruct inversion_Case as (mdecl & idecl & isdecl & indices & [] & cum).
+      destruct infer as [cty [[Hty Hp]]].
       destruct validity as [Hi i]. simpl in wildcard1.
-      specialize (Hp _ (case_inversion_data_cty data)).
+      specialize (Hp _ scrut_ty).
       eapply invert_cumul_ind_r in Hp as [ui' [l' [red [Ru ca]]]]; auto.
       symmetry in wildcard1; 
       eapply reduce_to_ind_complete in wildcard1 => //.

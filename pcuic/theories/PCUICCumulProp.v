@@ -1024,7 +1024,7 @@ Proof.
     eapply untyped_subslet_inds. simpl.
     eapply cumul_prop_subst_instance => //; eauto.
 
-  - eapply inversion_Case in X10 as (mdecl' & idecl' & indices' & data & cum); auto.
+  - eapply inversion_Case in X10 as (mdecl' & idecl' & isdecl' & indices' & data & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto. simpl.
     clear X9.

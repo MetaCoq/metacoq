@@ -186,6 +186,43 @@ Proof.
   pose proof (declared_inductive_inj H H1). intuition auto.
 Qed.
 
+Ltac hide H :=
+  match type of H with
+  | ?ty => change ty with (@hidebody _ ty) in H
+  end.
+
+Lemma All2i_nth_error {A B} {P : nat -> A -> B -> Type} {l l' n x c k} : 
+  All2i P k l l' ->
+  nth_error l n = Some x ->
+  nth_error l' n = Some c ->
+  P (k + n)%nat x c.
+Proof.
+  induction 1 in n |- *.
+  * rewrite !nth_error_nil => //.
+  * destruct n.
+    + simpl. intros [= <-] [= <-]. now rewrite Nat.add_0_r.
+    + simpl. intros hnth hnth'. specialize (IHX _ hnth hnth').
+      now rewrite Nat.add_succ_r.
+Qed.
+From MetaCoq.PCUIC Require Import PCUICSigmaCalculus.
+
+Lemma conv_context_smash_end {cf Σ} {wfΣ : wf Σ} (Γ Δ Δ' : context) : 
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  conv_context Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
+  conv_context Σ (Γ ,,, smash_context [] Δ) (Γ ,,, smash_context [] Δ').
+Proof.
+  intros wf wf' cv.
+  eapply conv_context_app.
+  apply conv_context_rel_app in cv.
+  eapply conv_ctx_rel_smash => //.
+Qed.
+
+Lemma case_branch_type_fst ci mdecl idecl p br ptm c cdecl :
+  (case_branch_type ci mdecl idecl p br ptm c cdecl).1 = 
+  (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl).
+Proof. reflexivity. Qed.
+
 Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ => wf_local Σ Γ × All_local_env (lift_typing SR_red1 Σ) Γ).
@@ -314,58 +351,100 @@ Proof.
 
   - (* iota reduction *)
     clear forall_u forall_u0 X X0.
+    hide X9.
     pose proof typec as typec''.
     unfold iota_red.
     pose proof typec as typec'.
     eapply inversion_mkApps in typec as [A [tyc tyargs]]; auto.
-    eapply (inversion_Construct Σ wf) in tyc as [mdecl' [idecl' [cdecl' [wfl [declc [Hu tyc]]]]]].
+    eapply (inversion_Construct Σ wf) in tyc as [mdecl' [idecl' [cdecl [wfl [declc [Hu tyc]]]]]].
+    eapply typing_spine_strengthen in tyargs; tea.
+    clear tyc.
     unshelve eapply Construct_Ind_ind_eq in typec'; eauto.
-    unfold on_declared_constructor in typec'.
-    destruct declc as [decli declc].
-    todo "case".
-    (*
-    destruct declared_constructor_inv as [cs [Hnth onc]].
-    simpl in typec'.
-    destruct (declared_inductive_inj isdecl decli) as []; subst mdecl' idecl'.
-    set(oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
-    eapply (build_branches_type_lookup _  Γ ind mdecl idecl cdecl' _ _ _ brs) in heq_map_option_out; eauto.
-    2:{ eapply All2_impl; eauto. simpl; intuition eauto. }
-    unshelve eapply build_case_predicate_type_spec in heq_build_case_predicate_type as 
-      [parsubst [csubst ptyeq]]. 2:exact oib. subst pty.
-    destruct heq_map_option_out as [nargs [br [brty [[[Hbr Hbrty] brbrty] brtys]]]].
-    unshelve eapply (branch_type_spec Σ.1) in brtys; eauto. 2:eapply on_declared_inductive; eauto.
-    destruct (nth_nth_error' (@eq_refl _ (nth c0 brs (0, tDummy)))) => //.
-    2:{ simpl in Hbr. rewrite Hbr in a. intuition discriminate. }
-    assert (H : ∑ t', nth_error btys c0 = Some t').
-    pose proof (All2_length _ _ X5). eapply nth_error_Some_length in e. rewrite H in e.
-    destruct (nth_error_spec btys c0). eexists; eauto. elimtype False; lia.
-    destruct H as [t' Ht'].
-    rewrite Hbr in e. noconf e. simpl in H. rewrite <- H. simpl.  
-    clear H.
-    destruct brtys as [-> brtys].
-    specialize (brtys  _ csubst).
-    simpl in brtys. subst brty.
-    eapply type_mkApps. eauto.
-    set argctx := cstr_args cs.
-    clear Hbr brbrty Hbrty X5 Ht'.
-    destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
-    destruct ci as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
-    pose proof (context_subst_fun csubst (iparsubst0.(inst_ctx_subst))). subst iparsubst.
-    unshelve epose proof (constructor_cumulative_indices wf isdecl oib onc _ Hu cu equ _ _ _ _ _ cparsubst0 iparsubst0 Hpars).
-    { eapply (weaken_lookup_on_global_env' _ _ _ wf (proj1 decli)). }
+    pose proof (declared_inductive_inj isdecl (proj1 declc)) as [-> ->].
+    destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci']]]]].
+    destruct ci' as ((([cparsubst0 iparsubst0] & idxsubst0) & subsidx) & [s [typectx [Hpars Hargs]]]).
+    pose proof (on_declared_constructor declc) as [[onind oib] [ctor_sorts [hnth onc]]].
+    (* pose proof (PCUICContextSubst.context_subst_fun csubst (iparsubst0.(inst_ctx_subst))). subst iparsubst. *)
+    unshelve epose proof (constructor_cumulative_indices wf declc _ Hu cu equ _ _ _ _ _ cparsubst0 iparsubst0 Hpars).
+    { eapply (weaken_lookup_on_global_env' _ _ _ wf (proj1 isdecl)). }
     set (argctxu1 := subst_context _ _ _) in X |- *.
     set (argctxu := subst_context _ _ _) in X |- *.
     simpl in X.
     set (pargctxu1 := subst_context cparsubst 0 argctxu1) in X |- *.
-    set (pargctxu := subst_context parsubst 0 argctxu) in X |- *.
+    set (pargctxu := subst_context iparsubst 0 argctxu) in X |- *.
     destruct X as [cumargs convidx]; eauto.
-    assert(wfparu : wf_local Σ (subst_instance u (ind_params mdecl))). 
+    assert(wfparu : wf_local Σ (subst_instance (puinst p) (ind_params mdecl))). 
     { eapply on_minductive_wf_params; eauto. }
     assert (wfps : wf_universe Σ ps).
-    { eapply validity in typep; auto. eapply PCUICWfUniverses.isType_wf_universes in typep.
-      rewrite PCUICWfUniverses.wf_universes_it_mkProd_or_LetIn in typep.
-      move/andb_and: typep => /= [_ /andb_and[_ typep]]. 
-      now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in typep. auto. }
+    { eapply validity in IHp; auto. eapply PCUICWfUniverses.isType_wf_universes in IHp; tea.
+      now apply (ssrbool.elimT PCUICWfUniverses.wf_universe_reflect) in IHp. }
+    unfold hidebody in X9.
+    eapply All2i_nth_error in X9; tea.
+    2:{ destruct declc. simpl in e1. exact e1. }
+    cbn in X9.
+    destruct X9 as [[[wfbrctx IHbrctx] convbrctx] [[bodty [wfcbc IHcbc]] [IHbody [cbty IHcbty]]]].
+    rename c0 into c.
+    rename u0 into u.
+    clear IHcbty IHbody IHbrctx IHcbc.
+    unfold case_branch_type, case_branch_type_gen at 1 in bodty. cbn [fst] in bodty.
+    move: bodty.
+    set (ptm := it_mkLambda_or_LetIn _ _).
+    intros hb.
+    eapply context_conversion in hb.
+    2:exact wfbrctx.
+    2:{ eapply conv_context_sym; tea. }
+    eapply typing_expand_lets in hb.
+    eapply context_conversion in hb.
+    3:{ eapply conv_context_smash_end; tea. }
+    2:{ eapply wf_local_smash_end; tea. }
+    eapply (PCUICSubstitution.substitution _ Γ _ _ []) in hb; tea.
+    rewrite -> case_branch_type_fst in *.
+    2:{ pose proof (spine_subst_smash _ idxsubst0).
+        rewrite case_branch_type_fst.
+        eapply spine_subst_cumul in X. eapply X. all:tea.
+        1-2:apply smash_context_assumption_context; pcuic.
+        eapply X.
+        apply wf_local_smash_end; tea.
+        move: cumargs.
+        rewrite /pargctxu /argctxu.
+        move: iparsubst0.
+        rewrite (firstn_app_left _ 0).
+        now rewrite (wf_predicate_length_pars H0).
+        intros iparsubst0.
+        clear X6. unshelve epose proof (ctx_inst_spine_subst _ X5).
+        eapply weaken_wf_local; tea. exact (on_minductive_wf_params_indices_inst isdecl _ cu).
+        rewrite /case_branch_context /case_branch_context_gen.
+        eapply spine_subst_smash in X0; tea.
+        rewrite subst_instance_app smash_context_app_expand in X0.
+        admit. }
+    cbn -[case_branch_type_gen] in hb.
+    eapply type_Cumul'.
+    rewrite subst_context_nil in hb.
+    rewrite -heq_ind_npars. exact hb.
+    admit.
+    cbn.
+    rewrite lift_mkApps !subst_mkApps.
+    eapply Forall2_All2, All2_nth_error in H4; tea.
+    2:eapply declc.
+    pose proof (wf_branch_length H4).
+    f_equal. rewrite simpl_lift; try lia.
+    rewrite subst_subst_lift //. rewrite extended_subst_length List.rev_length -H //. f_equal.
+    apply conv_context_rel_app in convbrctx.
+    now rewrite heq_ind_npars e0.
+    rewrite map_app /= !map_app. eapply conv_cumul.
+    eapply mkApps_conv_args; tea. reflexivity.
+    eapply All2_app.
+    * admit.
+    * rewrite lift_mkApps /= !subst_mkApps /=. constructor. 2:constructor.
+      (* Conversion of two fully applied constructors with different universes. *)
+      admit.
+    
+
+(*
+    rewrite (declared_minductive_ind_npars isdecl) in hb.
+    exact hb.
+
+
     eapply wf_arity_spine_typing_spine => //.
     split.
     { (* Predicate instantiation is well typed *) 
@@ -673,6 +752,7 @@ Proof.
         intros x y conv; now symmetry.
         eapply All2_refl. intros; reflexivity. }
       *)
+
   - (* Case congruence: on a cofix, impossible *)
     eapply inversion_mkApps in typec as [? [tcof ?]] =>  //.
     eapply type_tCoFix_inv in tcof as [d [[[Hnth wfcofix] ?] ?]] => //.

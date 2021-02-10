@@ -4243,6 +4243,18 @@ Proof.
     constructor; auto; repeat constructor; subst; simpl; auto;
     now rewrite (All2_length X).
 Qed.
+
+Lemma alpha_eq_subst_context s k Δ Δ' : 
+  All2 (compare_decls eq eq) Δ Δ' →
+  All2 (compare_decls eq eq) (subst_context s k Δ) (subst_context s k Δ').
+Proof.
+  induction 1.
+  * constructor.
+  * rewrite !subst_context_snoc; destruct x; depelim r; simpl; subst; auto;
+    constructor; auto; repeat constructor; subst; simpl; auto;
+    now rewrite (All2_length X).
+Qed.
+
 (* 
 Lemma idecl_binder_ind_binder {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind idecl mdecl p} :
   declared_inductive Σ ind mdecl idecl ->

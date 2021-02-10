@@ -3450,6 +3450,14 @@ Proof.
     now rewrite subst_telescope_app Nat.add_0_r.
 Qed.
 
+Lemma conv_ctx_rel_context_assumptions {cf} {Σ} {Γ} {Δ Δ'} : 
+  conv_context_rel Σ Γ Δ Δ' ->
+  context_assumptions Δ = context_assumptions Δ'.
+Proof.
+  induction 1; auto.
+  depelim p; simpl; auto. lia.
+Qed.
+
 Lemma cumul_ctx_rel_context_assumptions {cf} {Σ} {Γ} {Δ Δ'} : 
   cumul_ctx_rel Σ Γ Δ Δ' ->
   context_assumptions Δ = context_assumptions Δ'.
@@ -3496,6 +3504,17 @@ Proof.
   now eapply PCUICContexts.subslet_extended_subst.
 Qed.
 
+Lemma conv_context_app {cf:checker_flags} {Σ Γ Δ Δ'} :
+  conv_context_rel Σ Γ Δ Δ' ->
+  conv_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
+Proof.
+  intros HΔ.
+  eapply All2_fold_app.
+  * apply (length_of HΔ).
+  * reflexivity.
+  * eapply (All2_fold_impl HΔ). intros ???? []; constructor; auto.
+Qed.
+
 Lemma cumul_context_app {cf:checker_flags} {Σ Γ Δ Δ'} :
   cumul_ctx_rel Σ Γ Δ Δ' ->
   cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
@@ -3518,6 +3537,23 @@ Proof.
   now eapply (weakening_conv _ _ []).
 Qed.
 
+Lemma subslet_conv_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' Δ Δ'} {s} :
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  conv_context_rel Σ Γ Δ' Δ ->
+  subslet Σ (Γ ,,, Δ) s Γ' ->
+  subslet Σ (Γ ,,, Δ') s Γ'.
+Proof.
+  intros wfl wfr cumul.
+  induction 1; constructor; auto.
+  * eapply context_conversion; tea.
+    apply conv_context_sym; tea.
+    now eapply conv_context_app.
+  * eapply context_conversion; tea.
+    apply conv_context_sym; tea.
+    now eapply conv_context_app.
+Qed.
+
 Lemma subslet_cumul_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' Δ Δ'} {s} :
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
@@ -3531,6 +3567,60 @@ Proof.
     now eapply cumul_context_app.
   * eapply context_cumulativity; tea.
     now eapply cumul_context_app.
+Qed.
+
+Lemma conv_ctx_rel_conv_extended_subst {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} :
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  conv_context_rel Σ Γ Δ Δ' ->
+  conv_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
+  conv_context_rel Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+Proof.
+  intros wfl wfr cum.
+  induction cum in |- *; simpl; auto.
+  - split; constructor.
+  - depelim p; simpl;
+    depelim wfl; depelim wfr;
+    specialize (IHcum wfl wfr) as [conv cum'].
+    * split; try constructor; auto.
+      + rewrite smash_context_acc /=.
+        rewrite !(lift_extended_subst _ 1).
+        now eapply (conv_terms_lift (Δ := [_])).
+      + simpl; rewrite !(smash_context_acc _ [_]) /=;
+        constructor; auto.
+        constructor; simpl; auto.
+        eapply conv_expand_lets in c; tea.
+        etransitivity;tea. rewrite /expand_lets /expand_lets_k. simpl.
+        rewrite -(length_of cum).
+        rewrite -(conv_ctx_rel_context_assumptions cum).
+        move: (context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
+        change (Γ ,,, smash_context [] Γ0) with (Γ ,,, smash_context [] Γ0 ,,, []).
+        eapply (conv_subst_conv _ _ _ _ []); tea.
+        { eapply subslet_untyped_subslet. 
+          now eapply PCUICContexts.subslet_extended_subst. }
+        { eapply subslet_untyped_subslet.
+          eapply subslet_conv_ctx. 3:tea.
+          now eapply wf_local_smash_end.
+          now eapply wf_local_smash_end.
+          now eapply PCUICContexts.subslet_extended_subst. }
+    * split; auto.
+      constructor; auto.
+      len.
+      eapply conv_expand_lets in c; tea.
+      etransitivity; tea. 
+      rewrite /expand_lets /expand_lets_k. simpl.
+      rewrite -(length_of cum).
+      rewrite -(conv_ctx_rel_context_assumptions cum).
+      move: (context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
+      change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
+      eapply (conv_subst_conv _ _ _ _ []); tea.
+      { eapply subslet_untyped_subslet. 
+        now eapply PCUICContexts.subslet_extended_subst. }
+      { eapply subslet_untyped_subslet.
+        eapply subslet_conv_ctx. 3:tea.
+        now eapply wf_local_smash_end.
+        now eapply wf_local_smash_end.
+        now eapply PCUICContexts.subslet_extended_subst. }
 Qed.
 
 Lemma cumul_ctx_rel_conv_extended_subst {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} :
@@ -3588,6 +3678,15 @@ Proof.
         now eapply PCUICContexts.subslet_extended_subst. }
 Qed.
 
+Lemma conv_ctx_rel_smash {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} :
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  conv_context_rel Σ Γ Δ Δ' ->
+  conv_context_rel Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+Proof.
+  now intros; apply conv_ctx_rel_conv_extended_subst.
+Qed.
+
 Lemma cumul_ctx_rel_smash {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} :
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
@@ -3595,6 +3694,22 @@ Lemma cumul_ctx_rel_smash {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} :
   cumul_ctx_rel Σ Γ (smash_context [] Δ) (smash_context [] Δ').
 Proof.
   now intros; apply cumul_ctx_rel_conv_extended_subst.
+Qed.
+
+
+Lemma conv_terms_conv_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} {ts ts'} :
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  conv_context_rel Σ Γ Δ Δ' ->
+  conv_terms Σ (Γ ,,, Δ') ts ts' ->
+  conv_terms Σ (Γ ,,, Δ) ts ts'.
+Proof.
+  intros wfl wfr cum conv.
+  eapply (All2_impl conv).
+  intros x y xy.
+  eapply conv_conv_ctx; tea.
+  apply conv_context_sym; tea.
+  now eapply conv_context_app.
 Qed.
 
 Lemma conv_terms_cumul_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} {ts ts'} :
@@ -3609,6 +3724,35 @@ Proof.
   intros x y xy.
   eapply conv_cumul_ctx; tea.
   now eapply cumul_context_app.
+Qed.
+
+Lemma conv_expand_lets_conv_ctx {cf} {Σ} {wfΣ : wf Σ} {Γ} {Δ Δ'} {T T'} : 
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  Σ ;;; Γ ,,, Δ |- T = T' ->
+  conv_context_rel Σ Γ Δ Δ' ->
+  Σ ;;; Γ ,,, smash_context [] Δ |- expand_lets Δ T = expand_lets Δ' T'.
+Proof.
+  intros wfl wfr cum cumΓ.
+  rewrite /expand_lets /expand_lets_k.
+  rewrite -(length_of cumΓ).
+  rewrite -(conv_ctx_rel_context_assumptions cumΓ).
+  change (Γ ,,, smash_context [] Δ) with (Γ ,,, smash_context [] Δ ,,, []).
+  eapply (subst_conv _ _ _ []); tea.
+  3:{ eapply conv_ctx_rel_conv_extended_subst; tea. }
+  * eapply PCUICContexts.subslet_extended_subst; tea.
+  * eapply subslet_conv_ctx; cycle 2.
+    + eapply conv_ctx_rel_smash; tea.
+    + eapply PCUICContexts.subslet_extended_subst; tea.
+    + now eapply wf_local_smash_end.
+    + now eapply wf_local_smash_end.
+  * simpl.
+    rewrite -[context_assumptions _](smash_context_length [] Δ).
+    eapply weakening_wf_local; tea.
+    now apply wf_local_smash_end.
+  * simpl.
+    rewrite -[context_assumptions _](smash_context_length [] Δ).
+    now eapply weakening_conv.
 Qed.
 
 Lemma cumul_expand_lets_cumul_ctx {cf} {Σ} {wfΣ : wf Σ} {Γ} {Δ Δ'} {T T'} : 

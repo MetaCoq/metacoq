@@ -1752,17 +1752,19 @@ Proof.
         ++ pose proof (closed_ctx_on_free_vars P _ (closed_wf_local _ (typing_wf_local Hc))).
            rewrite -{2}(app_context_nil_l Γ).
            apply on_ctx_free_vars_extend => //.
-      + eapply IHpret.
-        rewrite -rename_case_predicate_context //.
+      + eapply IHpret => //.
+        rewrite /= mapi_context_fold -/(rename_context f _).
         split.
-        ++ apply All_local_env_app_inv in IHpredctx as [].
+        ++ apply All_local_env_app_inv in Hpctx as [].
           eapply wf_local_app_renaming; eauto. apply a0.
         ++ rewrite /predctx.
-           rewrite -(case_predicate_context_length (ci:=ci) wfp).
            eapply urenaming_ext.
            { len. now rewrite -shiftnP_add. }
            { reflexivity. }
           eapply urenaming_context. apply Hf.
+      + rewrite -rename_case_predicate_context //.
+        eapply All_local_env_app_inv in IHpredctx as [].
+        eapply wf_local_app_renaming; eauto. apply a0.
       + revert IHctxi.
         rewrite /= /id -map_app.
         rewrite -{2}[subst_instance _ _](rename_closedn_ctx f 0).
@@ -1816,22 +1818,22 @@ Proof.
             - pose proof (closed_ctx_on_free_vars P _ (closed_wf_local _ (typing_wf_local Hc))).
               rewrite -{2}(app_context_nil_l Γ).
               apply on_ctx_free_vars_extend => //. }
-        ++ eapply IHbod. 
+        ++ eapply IHbod => //. 
           split => //.
-          rewrite /brctx' /brctxty; cbn.
-          rewrite (wf_branch_length wfbr).
-          erewrite <- case_branch_type_length; eauto.
           eapply urenaming_ext.
           { now rewrite app_context_length -shiftnP_add. }
           { reflexivity. }
+          rewrite /= mapi_context_fold.
           eapply urenaming_context, Hf.
         ++ eapply IHbty. split=> //.
           rewrite /brctx'; cbn.
           rewrite (wf_branch_length wfbr).
-          erewrite <- case_branch_type_length; eauto.
           eapply urenaming_ext.
           { now rewrite app_context_length -shiftnP_add. }
           { reflexivity. }
+          rewrite mapi_context_fold.
+          rewrite -(wf_branch_length wfbr).
+          rewrite -/(rename_context f _).
           eapply urenaming_context, Hf.
     * rewrite /predctx case_predicate_context_length //.
   - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty

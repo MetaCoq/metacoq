@@ -1147,12 +1147,14 @@ Proof.
     * eapply IHp0. rewrite /predctx.
       eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
       eapply context_cumulativity_wf_app; tea.
+    * eapply context_cumulativity_wf_app; tea.
     * revert X6.
       clear -Γ' X10 X11. induction 1; constructor; eauto.
     * eapply All2i_impl; tea => i cdecl br. cbv beta.
       set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
       cbn. intros [[hbctx convbctx] [[bbody Hbody] [IH [brctxty' IHbrctxty]]]].
       intuition eauto; solve_all.
+      eapply context_cumulativity_wf_app; tea.
       eapply context_cumulativity_wf_app; tea.
       eapply context_cumulativity_app; tea.
       eapply IH. eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.

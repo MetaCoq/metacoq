@@ -218,11 +218,6 @@ Proof.
   eapply conv_ctx_rel_smash => //.
 Qed.
 
-Lemma case_branch_type_fst ci mdecl idecl p br ptm c cdecl :
-  (case_branch_type ci mdecl idecl p br ptm c cdecl).1 = 
-  (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl).
-Proof. reflexivity. Qed.
-
 Lemma expand_lets_eq Γ t : 
   expand_lets Γ t = 
   subst0 (extended_subst Γ 0) (lift (context_assumptions Γ) #|Γ| t).
@@ -534,6 +529,39 @@ Proof.
     constructor; cbn; auto. now symmetry.
 Qed.
 
+Lemma OnOne2_All2_All2 {A B : Type} {l1 l2 : list A} {l3 : list B} {R1  : A -> A -> Type} {R2 R3 : A -> B -> Type} :
+  OnOne2 R1 l1 l2 ->
+  All2 R2 l1 l3 ->
+  (forall x y, R2 x y -> R3 x y) ->
+  (forall x y z, R1 x y -> R2 x z -> R3 y z) ->
+  All2 R3 l2 l3.
+Proof.
+  intros o. induction o in l3 |- *.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf'  _ _ _ p r). constructor; auto.
+  eapply All2_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo _ H Hf).
+  constructor; auto.
+Qed.
+
+Lemma OnOne2_All2i_All2i {A B : Type} {l1 l2 : list A} {l3 : list B} {R1  : A -> A -> Type}
+  {R2 R3 : nat -> B -> A -> Type} {n} :
+  OnOne2 R1 l1 l2 ->
+  All2i R2 n l3 l1 ->
+  (forall n x y, R2 n x y -> R3 n x y) ->
+  (forall n x y z, R1 x y -> R2 n z x -> R3 n z y) ->
+  All2i R3 n l3 l2.
+Proof.
+  intros o. induction o in n, l3 |- *.
+  intros H; depelim H.
+  intros Hf Hf'. specialize (Hf' _  _ _ _ p r0). constructor; auto.
+  eapply All2i_impl; eauto.
+  intros H; depelim H.
+  intros Hf. specialize (IHo _ _ H Hf).
+  constructor; auto.
+Qed.
+
 Lemma conv_context_set_binder_name {cf} {Σ} {wfΣ : wf Σ} {Δ nas Γ Γ'} :
   All2 (fun na decl => eq_binder_annot na decl.(decl_name)) nas Γ -> 
   conv_context_rel Σ Δ Γ Γ' ->
@@ -566,6 +594,16 @@ Proof.
     destruct a as [na' [b''|] ty']; noconf H.
     constructor; auto. eapply IHΓ'; tea. constructor; auto.
     now transitivity x.
+Qed.
+
+Lemma OnOne2_local_env_forget_types P ctx ctx' : 
+  OnOne2_local_env (on_one_decl P) ctx ctx' ->
+  forget_types ctx = forget_types ctx'.
+Proof.
+  induction 1; simpl.
+  - depelim p; subst; auto.
+  - depelim p; subst; auto.
+  - f_equal; auto.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICContextReduction.
@@ -1092,7 +1130,10 @@ Proof.
     * admit.
     * admit.
     
-  - (* Case congruence on the predicate *) 
+  - (* Case congruence on the return clause context *) 
+    todo "case".
+  - (* Case congruence on the return clause type *) 
+    todo "case".
 
     (*eapply (type_Cumul _ _ _ (mkApps p' (skipn npar args ++ [c]))).
     eapply build_branches_type_red in heq_map_option_out as [brtys' [eqbrtys alleq]]; eauto.
@@ -1132,45 +1173,40 @@ Proof.
       move->. now rewrite firstn_skipn.
     * now eapply conv_cumul, conv_sym, red_conv, red_mkApps_f, red1_red.
 *)
-  - todo "case".
-  - todo "case".
   - (* Case congruence on discriminee *) 
-    eapply type_Cumul. eapply type_Case; eauto.
+    set (ptm := it_mkLambda_or_LetIn _ _).
+    destruct X1.
+    assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
+    { eapply validity. econstructor; eauto. apply (All2i_impl X9). intuition auto. }
+    eapply type_Cumul'. eapply type_Case; eauto.
     * solve_all.
-    * solve_all.
-    * pose proof typec as typec'.
-      eapply (env_prop_typing _ _ validity_env) in typec' as wat; auto.
-      unshelve eapply isType_mkApps_Ind in wat as [parsubst [argsubst wat]]; eauto.
-      destruct (on_declared_inductive isdecl) as [onind oib].
-      destruct wat as [[spars sargs] cu].
-      (* clear X7. intuition auto. instantiate (1 := ps).
-      assert (wfps : wf_universe Σ ps).
-      { now eapply PCUICWfUniverses.typing_wf_universe in IHp. }
-      move: IHp. *)
-      todo "case".
-    (*
-      pose proof (context_subst_fun cparsubst spars). subst parsubst'. clear cparsubst.
-      eapply type_mkApps. eauto.
-      eapply wf_arity_spine_typing_spine; eauto.
-      split. apply (env_prop_typing _ _ validity) in typep; eauto.
-      eapply arity_spine_it_mkProd_or_LetIn; eauto.
-      simpl. constructor; [ |constructor].
-      rewrite subst_mkApps. simpl.
-      rewrite map_app. rewrite map_map_compose.
-      rewrite map_subst_lift_id_eq. now rewrite (subslet_length sargs); autorewrite with len.
-      move: (spine_subst_subst_to_extended_list_k sargs).
-      rewrite to_extended_list_k_subst PCUICSubstitution.map_subst_instance_to_extended_list_k.
-      move->. now rewrite firstn_skipn.*)
+    * tas.
     * eapply conv_cumul, conv_sym, red_conv, red_mkApps; auto.
       eapply All2_app; [eapply All2_refl; reflexivity|now constructor].
     
   - (* Case congruence on branches *)
-    eapply type_Case; eauto. solve_all.
-    todo "case".
-    todo "case".
-    (* eapply (OnOne2_All2_All2 o X5).
-    intros [] []; simpl. intros.
-    intuition auto. destruct b as [s [Hs IH]]; eauto. subst.
+    destruct X1.
+    eapply type_Case; eauto.
+    * eapply Forall2_All2 in H4.
+      move: (All2_sym _ _ _ H4) => wfb.
+      red. eapply All2_Forall2.
+      apply All2_sym.
+      eapply (OnOne2_All2_All2 o wfb); auto.
+      intros [] []; simpl. intros.
+      destruct X1 as [[r1 eq]|[? ?]]. subst bcontext0. exact H.
+      red. red in H.
+      eapply OnOne2_local_env_forget_types in o0.
+      now rewrite -o0.
+    * eapply (OnOne2_All2i_All2i o X9).
+      intros n [] []; simpl. intros. intuition auto.
+      intros n [ctx b] [ctx' b'] cdecl; cbn.
+      intros [[red <-]|[red <-]];
+      intros [[[wfctx IHctx] convctx] [[Hb [wfcbc IHcbc]] [IHb [Hbty IHbty]]]];
+      intuition auto.
+      eapply context_conversion.
+      eapply IHb.
+      rewrite case_branch_type_fst.
+
     intros [] [] []; simpl. intros.
     intuition auto. subst.    
     reflexivity.

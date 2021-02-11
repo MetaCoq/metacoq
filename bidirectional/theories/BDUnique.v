@@ -279,7 +279,7 @@ Proof.
           eapply declared_projection_inductive ; eauto.
         -- apply X0 in X2 ; auto.
            rewrite -H0.
-           apply X2.        
+           apply X2.
 
   - rewrite H0 in H3.
     inversion_clear H3.

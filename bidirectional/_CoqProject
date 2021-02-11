@@ -8,3 +8,4 @@ theories/BDEnvironmentTyping.v
 theories/BDTyping.v
 theories/BDToPCUIC.v
 theories/BDFromPCUIC.v
+theories/BDUnique.v

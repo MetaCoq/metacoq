@@ -523,6 +523,53 @@ Proof.
   intros x y z. now apply conv_context_trans.
 Qed.
 
+Lemma conv_ctx_set_binder_name {cf} (Σ : global_env_ext) (Γ Δ : context) (nas : list aname) :
+  All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
+  conv_context_rel Σ Γ Δ (map2 set_binder_name nas Δ).
+Proof.
+  induction 1.
+  * constructor.
+  * destruct x, y as [na [b|] ty]; cbn; constructor; cbn; auto.
+    constructor; cbn; auto. now symmetry.
+    constructor; cbn; auto. now symmetry.
+Qed.
+
+Lemma conv_context_set_binder_name {cf} {Σ} {wfΣ : wf Σ} {Δ nas Γ Γ'} :
+  All2 (fun na decl => eq_binder_annot na decl.(decl_name)) nas Γ -> 
+  conv_context_rel Σ Δ Γ Γ' ->
+  conv_context_rel Σ Δ Γ (map2 set_binder_name nas Γ').
+Proof.
+  intros hlen h. induction h in nas, hlen |- *; case: nas hlen => //.
+  * constructor.
+  * move=> a l /= h. depelim h.
+  * move=> h'; depelim h'.
+  * move=> a l /= h'. depelim h'.
+    destruct p; cbn; constructor; try constructor; cbn; eauto; try reflexivity.
+    eapply IHh; eauto.
+    specialize (IHh _ h'). now symmetry.
+    eapply IHh; eauto.
+    now symmetry.
+Qed.
+
+Lemma conv_context_set_binder_name_inv {cf} {Σ} {wfΣ : wf Σ} {Δ nas Γ Γ'} :
+  All2 (fun na decl => eq_binder_annot na decl.(decl_name)) nas Γ' -> 
+  conv_context_rel Σ Δ Γ (map2 set_binder_name nas Γ') ->
+  conv_context_rel Σ Δ Γ Γ'.
+Proof.
+  intros hlen h. induction Γ' in nas, Γ, h, hlen |- *.
+  * case: nas h hlen => h; depelim h; try constructor.
+    move=> l h /= //.
+  * depelim hlen. depelim h. depelim a0.
+    destruct a => //; noconf H.
+    constructor; auto. eapply IHΓ'; tea. constructor; auto. simpl in e.
+    now transitivity x.
+    destruct a as [na' [b''|] ty']; noconf H.
+    constructor; auto. eapply IHΓ'; tea. constructor; auto.
+    now transitivity x.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICContextReduction.
+
 Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ => wf_local Σ Γ × All_local_env (lift_typing SR_red1 Σ) Γ).
@@ -988,9 +1035,65 @@ Proof.
     rewrite isdecl.p1 in t.
     apply Reflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
     discriminate.
-
+  
+  - (* Case congruence on a parameter *) 
+    destruct X1.
+    assert (isType Σ Γ (mkApps
+      (it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p)
+         (preturn p)) (indices ++ [c]))).
+    { eapply validity. econstructor; eauto.
+      eapply (All2i_impl X9); intuition auto. }
+    destruct p as []; unfold set_pparams in *; cbn in *.
+    eapply type_Cumul'; [econstructor; cbn; eauto|..]; tea.
+    * move: H0. rewrite /wf_predicate /wf_predicate_gen /=.
+      rewrite (OnOne2_length o). intuition auto.
+    * move: X2 => cv.
+      eapply conv_context_app.
+      eapply conv_context_set_binder_name.
+      eapply All2_map_left, All2_same. intros; reflexivity.
+      eapply conv_context_rel_app in cv.
+      eapply conv_context_set_binder_name_inv in cv.
+      2:{ destruct H0 as [_ wfnas].
+          eapply Forall2_All2 in wfnas.
+          move: wfnas. simpl.
+          intros wfa.
+          rewrite /pre_case_predicate_context_gen.
+          depelim wfa. rewrite H. constructor; auto.
+          now eapply All2_eq_binder_subst_context_inst. }
+      (* move: X6. *)
+      eapply conv_context_rel_app.
+      eapply conv_context_rel_app in cv.
+      etransitivity; tea.
+      eapply conv_context_rel_app.
+      rewrite /pre_case_predicate_context_gen.
+      constructor. clear X9.
+      match goal with
+      |- All2_fold _ ?X ?Y =>
+        change (conv_context_rel Σ Γ X Y)
+      end.
+      apply conv_context_rel_app.
+      eapply red_ctx_conv_context.
+      eapply red_ctx_red_context.
+      eapply red_context_app_same_left.
+      admit.
+      constructor; auto.
+      eapply mkApps_conv_args; tea. reflexivity.
+      eapply All2_app. eapply All2_map.
+      eapply OnOne2_All2; tea.
+      intros. eapply red_conv.
+      eapply weakening_red_0. now rewrite !lengths.
+      now eapply red1_red. reflexivity.
+      eapply All2_refl. reflexivity.
+    * admit.
+    * admit.
+    * eapply type_Cumul'; tea.
+      admit.
+      admit.
+    * admit.
+    * admit.
+    
   - (* Case congruence on the predicate *) 
-    todo "case".
+
     (*eapply (type_Cumul _ _ _ (mkApps p' (skipn npar args ++ [c]))).
     eapply build_branches_type_red in heq_map_option_out as [brtys' [eqbrtys alleq]]; eauto.
     eapply type_Case; eauto.

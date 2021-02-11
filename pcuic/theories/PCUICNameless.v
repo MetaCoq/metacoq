@@ -1707,7 +1707,8 @@ Proof.
       rewrite -nl_case_predicate_context.
       rewrite - !nlctx_app_context.
       eapply nl_conv_ctx; tea.
-    + now rewrite -nl_case_predicate_context - !nlctx_app_context.
+    + rewrite - !nlctx_app_context; exact X3.
+    + rewrite -nl_case_predicate_context -nlctx_app_context. exact X4.
     + now apply nl_is_allowed_elimination.
     + revert X6. simpl.
       rewrite -map_app -nlctx_app_context.
@@ -1728,6 +1729,7 @@ Proof.
       rewrite -/cbt. unfold map_pair. cbn.
       repeat split.
       * now rewrite -[_ ++ _]nlctx_app_context.
+      * now rewrite - ![_ ++ _]nlctx_app_context.
       * rewrite - ![_ ++ _]nlctx_app_context.
         now eapply nl_conv_ctx.
       * now rewrite nlctx_app_context in IHbody.

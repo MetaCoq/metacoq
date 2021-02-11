@@ -175,7 +175,8 @@ Section Inversion.
        (cons : consistent_instance_ext Σ (ind_universes mdecl) p.(puinst))
        (wf_pctx : wf_local Σ (Γ ,,, p.(pcontext)))
        (conv_pctx : conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx))
-       (pret_ty : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps)
+       (wf_brctx : wf_local Σ (Γ ,,, predctx))
+       (pret_ty : Σ ;;; Γ ,,, p.(pcontext) |- p.(preturn) : tSort ps)
        (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
        (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
                             (List.rev (subst_instance p.(puinst)
@@ -188,9 +189,10 @@ Section Inversion.
           All2i (fun i cdecl br =>
                    let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
                    (wf_local Σ (Γ ,,, br.(bcontext)) ×
+                   (wf_local Σ (Γ ,,, brctxty.1)) ×
                    conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
-                   ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
-                   (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)))
+                   ((Σ ;;; Γ ,,, br.(bcontext) |- br.(bbody) : brctxty.2) ×
+                   (Σ ;;; Γ ,,, br.(bcontext) |- brctxty.2 : tSort ps)))
                 0 idecl.(ind_ctors) brs).
 
   Lemma inversion_Case :

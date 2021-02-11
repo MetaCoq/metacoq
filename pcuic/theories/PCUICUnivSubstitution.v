@@ -1842,6 +1842,12 @@ Proof.
     + now apply not_var_global_levels in Hl.
 Qed.
 
+Lemma case_branch_type_fst ci mdecl idecl p br ptm c cdecl :
+  (case_branch_type ci mdecl idecl p br ptm c cdecl).1 = 
+  (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl).
+Proof. reflexivity. Qed.
+
+
 Lemma typing_subst_instance :
   env_prop (fun Σ Γ t T => forall u univs,
                 wf_ext_wk Σ ->
@@ -1923,8 +1929,11 @@ Proof.
       destruct Hsub; aa.
     + clear -wfext Hsub cu Hpty.
       specialize (Hpty i univs).
-      rewrite subst_instance_app in Hpty.
-      now rewrite subst_instance_case_predicate_context in Hpty.
+      now rewrite subst_instance_app in Hpty.
+    + clear -wfext Hsub cu Hcpc.
+      specialize (Hcpc i univs).
+      rewrite subst_instance_app in Hcpc.
+      now rewrite subst_instance_case_predicate_context in Hcpc.
     + destruct Hsub.
       cbn in *.
       eapply is_allowed_elimination_subst_instance; aa.
@@ -1939,30 +1948,28 @@ Proof.
     + rewrite -{1}(map_id (ind_ctors idecl)).
       eapply All2i_map. eapply All2i_impl; eauto. 
       cbn -[case_branch_type case_branch_context subst_instance].
-      intros k cdecl br [[hctx ihctx] [[hbod hcbctx] [ihbod [hbty ihbty]]]]. split; [split|split].
+      intros k cdecl br [[hctx ihctx] [[hbod hcbctx] [ihbod [hbty ihbty]]]].
+      repeat split.
       * rewrite -[_ ++ _](subst_instance_app).
         now apply hctx. 
+      * specialize (hcbctx i univs wfext Hsub cu).
+        rewrite subst_instance_app_ctx subst_instance_case_branch_context_gen in hcbctx.
+        now rewrite case_branch_type_fst forget_types_subst_instance.
       * rewrite -[_ ++ _](subst_instance_app).
         eapply (conv_ctx_subst_instance Σ i univs) in ihctx; tea.
         2:{ destruct Hsub; aa. }
+        rewrite case_branch_type_fst.
         rewrite !subst_instance_app subst_instance_case_branch_context_gen in ihctx.
-        rewrite {1}/case_branch_type.
-        rewrite forget_types_subst_instance. cbn -[subst_instance].
+        rewrite forget_types_subst_instance; cbn -[subst_instance].
         now rewrite subst_instance_app.
       * specialize (ihbod i univs wfext Hsub cu).
-        rewrite subst_instance_app subst_instance_case_branch_context_gen in ihbod.
-        rewrite {1}/case_branch_type.
-        rewrite forget_types_subst_instance.
-        cbn -[subst_instance].
-        rewrite subst_instance_case_branch_type. cbn -[subst_instance].
-        apply ihbod.
+        rewrite subst_instance_case_branch_type.
+        cbn. rewrite -[_ ++ _]subst_instance_app_ctx.        
+        eapply ihbod.
       * specialize (ihbty i univs wfext Hsub cu).
-        rewrite subst_instance_app subst_instance_case_branch_context_gen in ihbty.
-        rewrite {1}/case_branch_type.
-        rewrite forget_types_subst_instance.
-         cbn -[subst_instance].
-        rewrite subst_instance_case_branch_type. cbn -[subst_instance].
-        apply ihbty.
+        rewrite subst_instance_case_branch_type.
+        cbn. rewrite -[_ ++ _]subst_instance_app_ctx.        
+        eapply ihbty.
   - intros p c u mdecl idecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
     rewrite subst_instance_subst. cbn.
     rewrite !subst_instance_two.

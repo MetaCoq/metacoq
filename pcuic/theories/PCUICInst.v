@@ -1911,15 +1911,16 @@ Proof.
       + rewrite -inst_case_predicate_context //.
         simpl; rewrite mapi_context_inst.
         eapply inst_conv_ctx; tea. exact Hf.
-      + apply All_local_env_app_inv in IHpredctx as [].
+      + apply All_local_env_app_inv in Hpctx as [].
         eapply IHpret.
-        ++ rewrite -inst_case_predicate_context //.
+        ++ simpl; rewrite mapi_context_inst //.
            eapply wf_local_app_inst; eauto. apply a0.
-        ++ rewrite /predctx.
-           rewrite -{1}(case_predicate_context_length (ci:=ci) wfp).
-           rewrite -inst_case_predicate_context //.
+        ++ rewrite /= mapi_context_inst.
            eapply well_subst_app_up => //.
            eapply wf_local_app_inst; eauto. apply a0.
+      + apply All_local_env_app_inv in IHpredctx as [].
+        rewrite -inst_case_predicate_context //.  
+        eapply wf_local_app_inst; eauto. apply a0.
       + revert IHctxi.
         rewrite /= /id -map_app.
         rewrite -{2}[subst_instance _ _](inst_closedn_ctx f 0).
@@ -1964,13 +1965,14 @@ Proof.
           eapply inst_conv_ctx; tea. exact Hf.
         ++ eapply IHbod => //. 
           rewrite /brctx' /brctxty; cbn.
-          rewrite (wf_branch_length wfbr).
-          erewrite <- case_branch_type_length; eauto.
+          rewrite mapi_context_inst.
           eapply well_subst_app_up => //.
+          rewrite /= mapi_context_inst in X0.
+          apply X0.
         ++ eapply IHbty=> //.
           rewrite /brctx'; cbn.
-          rewrite (wf_branch_length wfbr).
-          erewrite <- case_branch_type_length; eauto.
+          rewrite mapi_context_inst.
+          rewrite /= mapi_context_inst in X0.
           eapply well_subst_app_up => //.
     * rewrite /predctx case_predicate_context_length //.
   - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty

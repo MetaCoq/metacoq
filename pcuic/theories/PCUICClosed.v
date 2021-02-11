@@ -735,21 +735,20 @@ Proof.
     red in H9. eapply Forall2_All2 in H9.
     eapply All2i_All2_mix_left in X5; eauto.
     intuition auto. 
-    + unfold test_predicate_k. simpl. rtoProp; eauto.
-      rewrite (case_predicate_context_length H1) in clret; repeat split; tas.
+    + unfold test_predicate_k. simpl. rtoProp; intuition eauto.
       rewrite closedn_ctx_app in H3.
       now move/andP: H3 => [].
     + unfold test_branch_k. clear H9. solve_all.
       * rewrite closedn_ctx_app in a1.
         now move/andP: a1 => [].
       * eapply All2_fold_app_inv_l in b as [_ conv] => //.
-        len in H9.
-        now rewrite (All2_fold_length conv).
+        now len in H9.
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
       rewrite closedn_ctx_app in H5.
       now move/andP: H5 => [].
-      now rewrite Nat.add_comm.
+      rewrite Nat.add_comm.
+      now move: (All2_fold_length X1); len => <-.
       rewrite forallb_app. simpl. now rewrite clc clinds.
 
   - intuition auto.

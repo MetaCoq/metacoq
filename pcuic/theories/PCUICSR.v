@@ -745,6 +745,17 @@ Proof.
   now eapply on_inductive_sort_inst.
 Qed.
 
+Lemma All2i_All2i_mix {A B} {P Q : nat -> A -> B -> Type}
+      {n} {l : list A} {l' : list B} :
+  All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y * Q i x y)%type) n l l'.
+Proof.
+  induction 2; simpl; intros; constructor.
+  inv X; intuition auto.
+  apply IHX0. inv X; intuition auto.
+Qed.
+
+Definition conj_impl {A B} : A -> (A -> B) -> A × B := fun x f => (x, f x).
+
 Lemma sr_red1 {cf:checker_flags} :
   env_prop SR_red1
       (fun Σ Γ => wf_local Σ Γ ×      
@@ -1247,11 +1258,11 @@ Proof.
     { eapply validity. econstructor; eauto.
       eapply (All2i_impl X9); intuition auto. }
     set (ptm := it_mkLambda_or_LetIn _ _) in *.
-    destruct p as []; unfold set_pparams in *; cbn -[ptm it_mkLambda_or_LetIn] in *.
+    cbn -[ptm it_mkLambda_or_LetIn] in *.
 
     have ctxi' : ctx_inst Σ Γ (params' ++ indices)
         (List.rev
-           (subst_instance puinst (ind_params mdecl,,, ind_indices idecl))).
+           (subst_instance p.(puinst) (ind_params mdecl,,, ind_indices idecl))).
     { eapply OnOne2_app_r in o.
       unshelve eapply (ctx_inst_merge' _ _ _ _ _ X6 X5). 2:tea.
       eapply (ctx_inst_spine_subst _ X5). } 
@@ -1264,27 +1275,29 @@ Proof.
     pose proof (declared_minductive_ind_npars isdecl).
     have lenidx : (#|List.rev indices| = (context_assumptions (ind_indices idecl))) by (len; lia).
     rewrite subst_instance_app smash_context_app_expand in X3.
-    eapply spine_subst_app_inv in X3 as [sppars spargs].
+    eapply spine_subst_app_inv in X3 as [sppars spargs]; tea. 2:len.
     len in sppars. len in spargs.
     rewrite List.rev_app_distr in sppars spargs.
     rewrite skipn_app - !lenidx !skipn_all /= Nat.sub_diag skipn_0 in sppars spargs.
     rewrite firstn_app firstn_all Nat.sub_diag /= app_nil_r in spargs.
     rewrite subst_instance_app List.rev_app_distr in X6. 
-    
+    have lenpars' := (OnOne2_length o).
     epose proof (ctx_inst_spine_subst _ ctxi');tea.
     pose proof (spine_codom_wf _ _ _ _ _ X3);tea.
     pose proof (spine_subst_smash _ X3); tea. all:tea.
     rewrite subst_instance_app smash_context_app_expand in X7.
-    eapply spine_subst_app_inv in X7 as [sppars' spargs'].
-    len in sppars'. len in spargs'.
+    eapply spine_subst_app_inv in X7 as [sppars' spargs']; tea.
+    2:len. len in sppars'. len in spargs'.
     rewrite List.rev_app_distr in sppars' spargs'.
     rewrite skipn_app - !lenidx !skipn_all /= Nat.sub_diag skipn_0 in sppars' spargs'.
     rewrite firstn_app firstn_all Nat.sub_diag /= app_nil_r in spargs'.
-
-    eapply type_Cumul'; [econstructor; cbn -[it_mkLambda_or_LetIn]; eauto|..]; tea.
-    * move: H0. rewrite /wf_predicate /wf_predicate_gen /=.
-      rewrite (OnOne2_length o). intuition auto.
-    * move: X2 => cv.
+    have wfp' : wf_predicate mdecl idecl (set_pparams p params').
+    { move: H0. rewrite /wf_predicate /wf_predicate_gen /=.
+      rewrite (OnOne2_length o). intuition auto. }
+    have convctx' :
+      conv_context Σ (p.(pcontext) ++ Γ)
+      (case_predicate_context ci mdecl idecl (set_pparams p params') ++ Γ).
+    { move: X2 => cv.
       eapply conv_context_app.
       eapply conv_context_set_binder_name.
       eapply All2_map_left, All2_same. intros; reflexivity.
@@ -1324,30 +1337,67 @@ Proof.
       intros. eapply red_conv.
       eapply weakening_red_0. now rewrite !lengths.
       now eapply red1_red. reflexivity.
-      eapply All2_refl. reflexivity.
-    * apply wf_set_binder_name.
-      (*eapply wf_pre_case_predicate_context_gen.*)
-      admit.
-      epose proof (isType_case_predicate puinst params' ps wfΓ isdecl H1).
-      forward X7. now eapply PCUICWfUniverses.typing_wf_universe in IHp.
-      specialize (X7 sppars').
-      eapply isType_it_mkProd_or_LetIn_inv in X7; tea.
-      now eapply isType_wf_local in X7.
-    * eapply type_Cumul'; tea.
-      eexists; eapply isType_mkApps_Ind; tea.
+      eapply All2_refl. reflexivity. }
+    have isty' : isType Σ Γ (mkApps (tInd ci (puinst p)) (params' ++ indices)).
+    { eexists; eapply isType_mkApps_Ind; tea. }
+    have wfcpc' : wf_local Σ (Γ ,,, case_predicate_context ci mdecl idecl (set_pparams p params')).
+    { eapply wf_case_predicate_context; tea. }
+    have typec' : Σ;;; Γ |- c : mkApps (tInd ci (puinst p)) (params' ++ indices).
+    { eapply type_Cumul'; tea.
       eapply conv_cumul. eapply mkApps_conv_args; pcuic.
       eapply All2_app. 2:eapply All2_refl; reflexivity.
-      eapply OnOne2_All2; tea. all:pcuic.
-    * eapply (All2i_impl X9); solve_all.
-      (* The branches contexts also depend on the parameters. *)
-      all:rewrite -/ptm. 1-2:rewrite case_branch_type_fst.
-      rewrite /case_branch_context /case_branch_context_gen /=.
-      (* Should refactor the proof in inductive inversion to make all of this follow. *)
+      eapply OnOne2_All2; tea. all:pcuic. }
+    eapply type_Cumul'; [econstructor; cbn -[it_mkLambda_or_LetIn]; eauto|..]; tea.
+    2:{ reflexivity. }      
+    (* The branches contexts also depend on the parameters. *)
+    epose proof (wf_case_branches_types (p:=set_pparams p params') c ps _ brs isdecl isty' wfp').
+    specialize (X7 IHp convctx' H4).
+    eapply All2i_All2_mix_left in X7; tea.
+    2:now eapply Forall2_All2 in H4.
+    eapply All2i_All2i_mix in X9; tea. clear X7.
+    eapply (All2i_impl X9); clear X9. intros cstr cdecl br. cbv zeta.
+    rewrite !case_branch_type_fst.
+    do 2 case. move=> wfbr. case => wfcbc' wfcbcty'.
+    case. case. case => wfbctx _ cvbrp.
+    move=> [] [] brty [] wfcbc IHcbc [] IHbody [] brtys IHbrtys.
+    eapply conj_impl.
+    solve_all.
+    * now eapply typing_wf_local in wfcbcty'.
+    * etransitivity; tea.
+      rewrite /case_branch_context /case_branch_context_gen.
+      eapply onone_red_cont_context_subst.
+      2:{ eapply subslet_untyped_subslet, sppars. }
+      2:{ eapply subslet_untyped_subslet, sppars'. }
+      2:{ cbn; tea. }
+      eapply wf_local_expand_lets => //.
+    * move=> [wfbrctx [wfcbc'' cv]]. split => //.
+      eapply type_Cumul'; tea.
+      + eexists; tea. red. eapply context_conversion; tea.
+        now symmetry.
+      + (* Preservation of case branch type *) 
+        eapply conv_cumul.
+        eapply conv_conv_ctx; tea.
+        2:{ symmetry. exact cv. }
+        eapply mkApps_conv_args; tea. reflexivity.
+        eapply All2_app. eapply All2_map.
+        eapply All2_map. eapply All2_refl.
+        intros x. eapply red_conv.
+        relativize #|cstr_args cdecl|.
+        eapply (red_red _ Γ _ _); tea. eapply All2_rev => //.
+        eapply OnOne2_All2; tea; intros; pcuic.
+        eapply subslet_untyped_subslet, sppars.
+        eapply (case_branch_context_length_args); tea.
+        constructor. eapply mkApps_conv_args; tea; try reflexivity.
+        eapply All2_app. eapply All2_map.
+        eapply OnOne2_All2; tea; intros; try reflexivity.
+        eapply red_conv.
+        eapply weakening_red_0. symmetry.
+        now eapply case_branch_context_length_args.
+        now eapply red1_red. eapply All2_refl. reflexivity.
+        constructor.
+      + eapply context_conversion; tea.
+        now symmetry.
 
-        all:admit.
-    * cbn -[it_mkLambda_or_LetIn]. rewrite /ptm.
-      reflexivity. 
-    
   - (* Case congruence on the return clause context *)
     destruct X1, X4 as [].
     set (ptm := it_mkLambda_or_LetIn _ _).
@@ -1527,7 +1577,7 @@ Proof.
     rewrite eq.
     eapply (substitution_untyped_red _ Γ
       (smash_context [] (subst_instance u (ind_params mdecl))) []). auto.
-    { unshelve eapply isType_mkApps_Ind in X1 as [parsubst [argsubst Hind]]; eauto.
+    { eapply PCUICInductives.isType_mkApps_Ind in X1 as [parsubst [argsubst Hind]]; eauto.
       2:eapply isdecl.
       simpl in Hind.
       destruct Hind as [[sppars spargs] cu].
@@ -1605,7 +1655,8 @@ Proof.
     rewrite nth_error_app_ge in e. rewrite H.
     pose proof (onNpars onmind).
     pose proof (proj2 (proj2 isdecl)). simpl in *. lia.
-    rewrite H in e. replace (ind_npars mdecl + narg - ind_npars mdecl) with narg in e by lia.
+    rewrite H in e. destruct (proj2 isdecl). simpl in H1. subst pars.
+    replace (ind_npars mdecl + narg - ind_npars mdecl) with narg in e by lia.
     epose proof (declared_constructor_valid_ty _ _ _ _ _ 0 cdecl _ wf wfΓ declc Hu) as Hty.
     unfold type_of_constructor in tyargs, Hty.
     rewrite onc.(cstr_eq) in tyargs, Hty.
@@ -1623,13 +1674,17 @@ Proof.
     eapply typing_spine_nth_error in sp; eauto.
     clear iswat.
     2:{ rewrite !context_assumptions_fold. rewrite subst_instance_assumptions.
-        clear iswat sp. eapply nth_error_Some_length in e. todo "case". }
+        clear iswat sp. eapply nth_error_Some_length in e.
+        rewrite List.skipn_length in e. lia. }
     destruct sp as [decl [Hnth Hu0]].
     simpl in on_projs. red in on_projs.
+    len in Hnth.
+    todo "case".
+    
+    (*rewrite nth_error_smash_context in Hnth.
+
     eapply type_Cumul'; eauto.
     { rewrite firstn_skipn.
-      todo "case".
-      (*
       eapply (isType_subst_instance_decl _ _ _ _ _ u wf isdecl.p1.p1) in projty; eauto.
       destruct projty as [s' Hs].
       exists s'. red in Hs.
@@ -1650,7 +1705,7 @@ Proof.
       eapply spine_subst_smash in iparsubst0; auto.
       rewrite subst_instance_smash /=.
       rewrite /to_extended_list (spine_subst_subst_to_extended_list_k iparsubst0).
-      assumption. *) }
+      assumption. }
     rewrite !context_assumptions_fold subst_instance_assumptions in Hnth.
     rewrite firstn_skipn.
     rewrite PCUICSigmaCalculus.smash_context_app PCUICSigmaCalculus.smash_context_acc in on_projs.
@@ -1683,7 +1738,7 @@ Proof.
     rewrite -(subst_instance_smash u1 _ []) in Hnth.    
     rewrite !nth_error_subst_context in Hnth.
     rewrite nth_error_map in Hnth.
-    todo "case".
+    todo "case".*)
     (*
     destruct projeq as [decl'' [[[Hdecl wfdecl] Hty1] Hty2]].
     rewrite Hdecl in on_projs, Hnth.
@@ -2037,7 +2092,7 @@ Proof.
  
   - (* Conversion *)
     specialize (forall_u _ Hu).
-    eapply type_Cumul; eauto. Unshelve. todo "case".
+    eapply type_Cumul; eauto. Unshelve. all:todo "case".
 Qed.
 
 Definition sr_stmt {cf:checker_flags} (Σ : global_env_ext) Γ t T :=
@@ -2292,7 +2347,7 @@ Section SRContext.
       constructor; cbn; auto.
       1: exists s. 1: unfold PCUICTerm.tSort.
       1: change (tSort s) with (subst [b] #|Γ'| (tSort s)).
-      all: eapply substitution; tea.
+      all: eapply PCUICSubstitution.substitution; tea.
     - rewrite subst_context_snoc0. simpl.
       inversion HH; subst; cbn in *. destruct X0 as [s X0].
       change (Γ,, vdef na b t ,,, Γ') with (Γ ,,, [vdef na b t] ,,, Γ') in *.
@@ -2303,7 +2358,7 @@ Section SRContext.
       constructor; cbn; auto. exists s.
       unfold PCUICTerm.tSort.
       change (tSort s) with (subst [b] #|Γ'| (tSort s)).
-      all: eapply substitution; tea.
+      all: eapply PCUICSubstitution.substitution; tea.
   Qed.
 
 

@@ -4985,6 +4985,11 @@ Proof.
   now eapply isType_wf_local in i.
 Qed.
 
+Definition case_branch_context_nopars ind mdecl puinst bctx cdecl :=
+	 (subst_context (inds (inductive_mind ind) puinst (ind_bodies mdecl))
+    #|ind_params mdecl|
+   (subst_instance puinst (map2 set_binder_name bctx (cstr_args cdecl)))).
+
 Lemma wf_case_branches_types {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
   {Γ mdecl idecl ci p} (pty : term) ps (args : list term) brs :
   declared_inductive Σ ci.(ci_ind) mdecl idecl ->
@@ -4996,6 +5001,8 @@ Lemma wf_case_branches_types {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : 
   conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
   wf_branches idecl brs ->
   All2i (fun i cdecl br => 
+    wf_local Σ (Γ ,,, subst_instance p.(puinst) (ind_params mdecl) ,,, 
+      case_branch_context_nopars ci mdecl p.(puinst) (forget_types br.(bcontext)) cdecl) ×
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
     Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) 
     0 (ind_ctors idecl) brs.
@@ -5022,7 +5029,7 @@ Proof.
   eapply All2_nth_error in wfbrs; tea.
   assert (declared_constructor Σ.1 (ci.(ci_ind), n) mdecl idecl cdecl).
   split; eauto.
-  intros brctxty.
+  set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
   destruct (on_declared_constructor H) as [[onind oib] [cs [nthc onc]]].
   simpl in *.
   subst brctxty.
@@ -5034,11 +5041,11 @@ Proof.
   { destruct onc. apply sorts_local_ctx_All_local_env in on_cargs => //.
     eapply weaken_wf_local => //. eapply (wf_arities_context' _ _ _ _ onind) => //.
     apply onind.(onParams). }
-
-  assert (wf_local Σ (Γ ,,, case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl)).
-  { rewrite /case_branch_context /case_branch_context_gen.
-    eapply substitution_wf_local; tea. eapply sppars.
-    eapply wf_local_expand_lets. rewrite -app_context_assoc.
+  assert (wfparscd : wf_local Σ
+  (Γ,,, subst_instance (puinst p) (ind_params mdecl),,,
+   case_branch_context_nopars ci mdecl (puinst p) (forget_types (bcontext br))
+     cdecl)). {
+    rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
     eapply wf_set_binder_name in wfargs.
     2:{ now eapply Forall2_All2 in wfbrs; tea. }
@@ -5051,7 +5058,13 @@ Proof.
     2:eapply subslet_inds; tea.
     rewrite app_context_nil_l subst_context_app in wfargs.
     rewrite closed_ctx_subst in wfargs => //.
+    rewrite /case_branch_context_nopars.
     now rewrite subst_instance_length Nat.add_0_r in wfargs. }
+  assert (wf_local Σ (Γ ,,, case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl)).
+  { rewrite /case_branch_context /case_branch_context_gen.
+    eapply substitution_wf_local; tea. eapply sppars.
+    eapply wf_local_expand_lets => //. }
+  split => //.
   assert (wfparsargs : wf_local Σ
     (Γ,,, subst_instance (puinst p) (ind_params mdecl),,,
       subst_context (inds (inductive_mind ci) (puinst p) (ind_bodies mdecl))

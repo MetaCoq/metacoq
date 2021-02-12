@@ -249,14 +249,15 @@ Section Validity.
 
   Theorem validity_env :
     env_prop (fun Σ Γ t T => isType Σ Γ T)
-      (fun Σ Γ => All_local_env 
+      (fun Σ Γ => wf_local Σ Γ × All_local_env 
         (fun Γ t T => match T with Some T => isType Σ Γ T | None => isType Σ Γ t end) Γ).
   Proof.
     apply typing_ind_env; intros; rename_all_hyps.
 
-    - induction X; constructor; auto.
+    - split => //. induction X; constructor; auto.
 
-    - have hd := (nth_error_All_local_env heq_nth_error X).
+    - destruct X as [_ X].
+      have hd := (nth_error_All_local_env heq_nth_error X).
       destruct decl as [na [b|] ty]; cbn -[skipn] in *.
       + eapply isType_lift; eauto.
         now apply nth_error_Some_length in heq_nth_error.
@@ -294,7 +295,7 @@ Section Validity.
       move: (typing_wf_universe wf Hu') => wfu'.
       eapply (substitution0 _ _ na _ _ _ (tSort u')); eauto.
       apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]; tas. intuition.
-      eapply (weakening_cumul Σ Γ [] [vass na A]) in b; pcuic.
+      eapply (weakening_cumul Σ Γ [] [vass na A]) in b0; pcuic.
       simpl in b.
       eapply type_Cumul; eauto.
       econstructor; eauto.
@@ -347,7 +348,11 @@ Section Validity.
       eapply type_mkApps; eauto.
       eapply type_it_mkLambda_or_LetIn; tea.
       eapply typing_spine_strengthen; tea.
-      2:{ rewrite /predctx /= /case_predicate_context /case_predicate_context_gen. 
+      2:{ etransitivity. eapply conv_cumul.
+          eapply PCUICContextRelation.All2_fold_app_inv in X2 as [].
+          eapply conv_it_mkProd_or_LetIn. tea. tea. reflexivity.
+          now rewrite (case_predicate_context_length H0).
+          rewrite /predctx /= /case_predicate_context /case_predicate_context_gen. 
           constructor.
           eapply PCUICEquality.eq_term_leq_term.
           eapply eq_term_set_binder_name.

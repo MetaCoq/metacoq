@@ -935,7 +935,31 @@ Proof.
   eapply sp. simpl. constructor. now constructor.
 Qed.
 
-Lemma ctx_inst_app {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} 
+Lemma ctx_inst_subst_length {cf:checker_flags} {Σ Γ} {Δ : context} {args} (c : ctx_inst Σ Γ args Δ) :
+  #|ctx_inst_sub c| = #|Δ|.
+Proof.
+  induction c; simpl; auto; try lia;
+  rewrite app_length IHc subst_telescope_length /=; lia.
+Qed.
+
+Lemma ctx_inst_app {cf} {Σ Γ} {Δ : context} {Δ' args args'} 
+  (dom : ctx_inst Σ Γ args Δ) :
+  ctx_inst Σ Γ args' (subst_telescope (ctx_inst_sub dom) 0 Δ') ->
+  ctx_inst Σ Γ (args ++ args') (Δ ++ Δ').
+Proof.
+  induction dom in args', Δ' |- *; simpl.
+  - now rewrite subst_telescope_empty.
+  - rewrite subst_app_telescope /= ctx_inst_subst_length /= subst_telescope_length Nat.add_0_r /=.
+    move/IHdom => IH.
+    constructor => //.
+    now rewrite subst_telescope_app Nat.add_0_r.
+  - rewrite subst_app_telescope /= ctx_inst_subst_length /= subst_telescope_length Nat.add_0_r /=.
+    move/IHdom => IH.
+    constructor => //.
+    now rewrite subst_telescope_app Nat.add_0_r.
+Qed.
+
+Lemma ctx_inst_app_inv {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} 
   (c : ctx_inst Σ Γ args (Δ ++ Δ')) :
   ∑ (dom : ctx_inst Σ Γ (firstn (context_assumptions Δ) args) Δ),
     ctx_inst Σ Γ (skipn (context_assumptions Δ) args) (subst_telescope (ctx_inst_sub dom) 0 Δ').    
@@ -980,18 +1004,11 @@ Proof.
   intros -> ->. induction c; depelim d; auto; simpl in *; now rewrite (IHc d).
 Qed.
 
-Lemma ctx_inst_subst_length {cf:checker_flags} {Σ Γ} {Δ : context} {args} (c : ctx_inst Σ Γ args Δ) :
-  #|ctx_inst_sub c| = #|Δ|.
-Proof.
-  induction c; simpl; auto; try lia;
-  rewrite app_length IHc subst_telescope_length /=; lia.
-Qed.
-
-Lemma ctx_inst_app_len {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} (c : ctx_inst Σ Γ args (Δ ++ Δ')) :
-  let (dom, codom) := ctx_inst_app c in
+Lemma ctx_inst_app_sub {cf:checker_flags} {Σ Γ} {Δ : context} {Δ' args} (c : ctx_inst Σ Γ args (Δ ++ Δ')) :
+  let (dom, codom) := ctx_inst_app_inv c in
   ctx_inst_sub c = ctx_inst_sub codom ++ ctx_inst_sub dom.
 Proof.
-  destruct (ctx_inst_app c).
+  destruct (ctx_inst_app_inv c).
   induction Δ using ctx_length_ind in Δ', c, x, args, c0 |- *. simpl in *. depelim x. simpl in *.
   rewrite app_nil_r; apply ctx_inst_sub_eq. now rewrite skipn_0.
   now rewrite subst_telescope_empty.
@@ -1057,8 +1074,8 @@ Proof.
   induction Δ in wfΔ, args |- *.
   simpl. intros ci. depelim ci. constructor.
   intros. simpl in ci.
-  pose proof (ctx_inst_app_len ci).
-  destruct (ctx_inst_app ci). rewrite H in msub |- *.
+  pose proof (ctx_inst_app_sub ci).
+  destruct (ctx_inst_app_inv ci). rewrite H in msub |- *.
   clear ci H.
   simpl in c.
   apply (@context_subst_app [a]) in msub.

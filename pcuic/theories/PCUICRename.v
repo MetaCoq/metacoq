@@ -1011,14 +1011,9 @@ Lemma rename_case_branch_type {Σ} {wfΣ : wf Σ} f (ci : case_info) mdecl idecl
   declared_inductive Σ ci mdecl idecl ->
   wf_predicate mdecl idecl p ->
   wf_branch cdecl br ->
-  let ptm := 
-    it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) 
-  in
+  let ptm := it_mkLambda_or_LetIn (pcontext p) (preturn p) in
   let p' := rename_predicate f p in
-  let ptm' :=
-    it_mkLambda_or_LetIn 
-      (case_predicate_context ci mdecl idecl p')
-      (preturn p') in
+  let ptm' := it_mkLambda_or_LetIn (pcontext p') (preturn p') in
   case_branch_type ci mdecl idecl
      (rename_predicate f p) 
      (map_branch_shift rename shiftn f br) 
@@ -1041,17 +1036,13 @@ Proof.
   * rewrite /ptm' /ptm !lift_it_mkLambda_or_LetIn !rename_it_mkLambda_or_LetIn.
     rewrite !lift_rename. f_equal.
     ++ rewrite /p'.
-        rewrite -rename_case_predicate_context //.
         epose proof (rename_context_lift f #|cstr_args cdecl| 0).
         rewrite Nat.add_0_r in H.
-        rewrite H. len. now rewrite shiftn0.
-    ++ rewrite /p'. rewrite Nat.add_0_r. simpl.
-      rewrite case_predicate_context_length //.
-      { now apply rename_wf_predicate. }
-      rewrite !case_predicate_context_length // Nat.add_0_r; len.
-      rewrite case_predicate_context_length //.
-      rewrite shiftn_add. rewrite - !lift_rename.
-      now rewrite Nat.add_comm rename_shiftnk.
+        rewrite H. len.
+        rewrite shiftn0 //.
+        rewrite mapi_context_fold //.
+    ++ rewrite /p'. rewrite Nat.add_0_r. simpl. len.
+      now rewrite - !lift_rename shiftn_add -rename_shiftnk Nat.add_comm.
   * rewrite /= rename_mkApps /=. f_equal.
     ++ rewrite !map_map_compose /id. apply map_ext => t.
       rewrite /expand_lets /expand_lets_k.
@@ -1730,8 +1721,9 @@ Proof.
     rewrite /ptm. rewrite rename_it_mkLambda_or_LetIn.
     relativize #|predctx|.
     * erewrite rename_predicate_preturn.
+      replace (rename_context f (pcontext p)) with (pcontext (rename_predicate f p)).
+      2:{ destruct p => //. simpl. rewrite mapi_context_fold //. }
       rewrite /predctx.
-      rewrite (rename_case_predicate_context isdecl wfp).
       eapply type_Case; eauto.
       + now eapply rename_wf_predicate.
       + simpl. rewrite mapi_context_fold.

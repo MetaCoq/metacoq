@@ -3,7 +3,7 @@ From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
-     PCUICConversion PCUICContextConversion PCUICValidity PCUICArities.
+     PCUICConversion PCUICContextConversion PCUICValidity PCUICArities PCUICSpine.
 From Equations Require Import Equations.
 
 (* Alpha convertible terms and contexts have the same typings *)
@@ -236,6 +236,55 @@ Section Alpha.
     subst. constructor ; auto.
   Qed.
 
+Lemma subst_context_subst_telescope s k Γ :
+subst_context s k (List.rev Γ) = List.rev (subst_telescope s k Γ).
+Proof.
+rewrite /subst_telescope subst_context_alt.
+rewrite rev_mapi. apply mapi_rec_ext.
+intros n [na [b|] ty] le le'; rewrite /= /subst_decl /map_decl /=; 
+rewrite List.rev_length Nat.add_0_r in le'; len; lia_f_equal.
+Qed.
+
+  Lemma ctx_inst_conv_context {Σ Γ} {Δ : context} {args Δ'} :
+    ctx_inst Σ Γ args Δ -> 
+    conv_context_rel Σ Γ (List.rev Δ) (List.rev Δ') ->
+    wf_local_rel Σ Γ (List.rev Δ') ->
+    ctx_inst Σ Γ args Δ'.
+  Proof.
+    intros h; induction h in Δ' |- *.
+    - intros h; depelim h. destruct Δ' => //. constructor. simpl in H.
+      apply (f_equal (@length _)) in H. simpl in H. len in H. simpl in H. lia. 
+    - intros h'.
+      destruct Δ'. simpl in h'.
+      eapply conv_context_rel_app in h'.
+      eapply All2_fold_length in h'. simpl in h'. len in h'. simpl in h'. lia.
+      simpl in h'. eapply All2_fold_app_inv in h' as []. depelim a. depelim a0.
+      simpl. move/All_local_env_app_inv => [wfd wfna]. depelim wfd.
+      constructor; eauto.
+      eapply type_Cumul'; tea. now eapply conv_cumul.
+      eapply IHh. rewrite - !subst_context_subst_telescope.
+      eapply conv_context_rel_app.
+      todo "case".
+  Admitted.
+
+
+  Lemma ctx_inst_eq_context {Σ Γ} {Δ : context} {args args'} :
+   PCUICTyping.ctx_inst
+         (fun (Σ : global_env_ext) (Γ : context) (u A : term) =>
+          forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Σ Γ args Δ ->  
+    ctx_inst Σ Γ args Δ -> 
+    All2 upto_names' args args' ->
+    (* eq_context_upto [] eq eq Δ Δ' -> *)
+    ctx_inst Σ Γ args' Δ.
+  Proof.
+    intros h; induction h in args' |- *.
+    - intros h h'; depelim h; depelim h'. constructor.
+    - intros h'; depelim h'. intros heq; depelim heq. constructor. eauto. eauto.
+      eapply ctx_inst_conv_context; tea. eapply IHh; eauto.
+      admit. admit.
+    - admit.
+  Admitted.
+
   Lemma typing_alpha :
     forall Σ Γ u v A,
       wf Σ.1 ->
@@ -402,26 +451,38 @@ Section Alpha.
       assert (conv_context Σ (Γ,,, cpc) (Γ,,, case_predicate_context ind mdecl idecl p')).
       { eapply conv_context_app, eq_context_upto_conv_context_rel.
         now eapply case_predicate_context_equiv. }
-      assert (conv_context Σ (Γ,,, pcontext p')
-        (Γ,,, case_predicate_context ind mdecl idecl p')).
+      assert (conv_context Σ (Γ,,, pcontext p) (Γ,,, pcontext p')).
       { eapply (eq_context_upto_conv_context_rel Γ) in eqctx; tea.
-        eapply conv_context_trans; [tea| ..].
-        { eapply conv_context_sym. auto. eapply conv_context_app; tea. }
-        eapply conv_context_trans; tea. }
+        now apply conv_context_app. }
       eapply R_universe_instance_eq in eqinst.
-      eapply type_Cumul'.
+      assert (isType Σ Γ (mkApps ptm (args ++ [c]))).
+      { eapply validity. econstructor; eauto. eapply wfpctx; eauto.
+        reflexivity. eapply wfcpc; eauto. reflexivity.
+        solve_all. eapply a0; eauto; reflexivity.
+        eapply b; eauto; reflexivity. }
+      eapply type_Cumul'; tea.
       + econstructor; tea; eauto.
         * now rewrite -eqinst.
-        * simpl. eapply context_conversion; eauto.
-          eapply wfcpc; eauto. now eapply case_predicate_context_equiv.
-        * instantiate (1 := args). todo "case".
+        * eapply conv_context_trans; tea.
+          eapply conv_context_trans; tea.
+          now eapply conv_context_sym.
+        * eapply context_conversion; eauto.
+        * eapply wfcpc. reflexivity.
+          rewrite /cpc.
+          now eapply case_predicate_context_equiv.
         * rewrite -eqinst.
-          eapply type_Cumul'.
+          move: IHctxi.
+          instantiate (1:=args).
+          intros ctxi.
+          destruct eqp.
+          eapply ctx_inst_eq_context; tea.
+          eapply All2_app => //. apply All2_refl => //. reflexivity.
+        * eapply type_Cumul'.
           eapply IHc; eauto.
           eapply validity in Hc as [s Hs]; eauto.
           red in Hs. exists s.
           eapply inversion_mkApps in Hs as [indty [Hind Hsp]]; tea.
-          eapply type_mkApps_arity; eauto.
+          (* eapply type_mkApps_arity; eauto. *)
           all:todo "case".
         * todo "case".
         (* unshelve eapply All2_trans'; [..|eassumption]. *)
@@ -442,12 +503,6 @@ Section Alpha.
           eauto. *)
 
       + todo "case".
-      + todo "case".
-        (* eapply validity_term ; eauto.
-        instantiate (1 := tCase ind p c brs).
-        econstructor ; eauto.
-        solve_all.
-      + constructor. reflexivity. *)
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e; invs e.
       eapply type_Cumul'.
       + econstructor. all: try eassumption.

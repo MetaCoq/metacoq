@@ -4059,8 +4059,7 @@ Proof.
   now symmetry. now symmetry.
 Qed.
 
-Lemma WfArity_build_case_predicate_type {cf:checker_flags} Σ
-      Γ ci args mdecl idecl p ps :
+Lemma WfArity_build_case_predicate_type {cf:checker_flags} {Σ Γ ci args mdecl idecl p ps} :
   wf Σ.1 ->
   declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
   isType Σ Γ (mkApps (tInd ci p.(puinst)) (pparams p ++ args)) ->
@@ -4970,23 +4969,40 @@ Proof.
 Qed.
 
 
-Lemma build_branches_type_wt {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
-  {Γ mdecl idecl ci p c} (pty : term) ps (args : list term) brs :
+Lemma wf_case_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}
+  {Γ mdecl idecl ci p } {args : list term} :
   declared_inductive Σ ci.(ci_ind) mdecl idecl ->
-  Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ args) ->
+  isType Σ Γ (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ args)) ->
   wf_predicate mdecl idecl p ->
   let predctx := case_predicate_context ci mdecl idecl p in
-  Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
-  is_allowed_elimination (global_ext_constraints Σ) ps (ind_kelim idecl) ->
-  let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+  wf_local Σ (Γ ,,, predctx).
+Proof.
+  intros isdecl Hc wfp predctx.
+  epose proof (WfArity_build_case_predicate_type wfΣ isdecl Hc 
+    (PCUICWfUniverses.wf_universe_type1 Σ) wfp).
+  destruct X.
+  eapply isType_it_mkProd_or_LetIn_inv in i; tea.
+  now eapply isType_wf_local in i.
+Qed.
+
+Lemma wf_case_branches_types {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
+  {Γ mdecl idecl ci p} (pty : term) ps (args : list term) brs :
+  declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+  isType Σ Γ (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ args)) ->
+  wf_predicate mdecl idecl p ->
+  let predctx := case_predicate_context ci mdecl idecl p in
+  Σ;;; Γ ,,, p.(pcontext) |- p.(preturn) : tSort ps ->
+  let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
+  conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
   wf_branches idecl brs ->
   All2i (fun i cdecl br => 
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
     Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) 
     0 (ind_ctors idecl) brs.
 Proof.
-  intros isdecl Hc wfp da bc Hp lebs wfbrs.
-  eapply validity in Hc.
+  intros isdecl Hc wfp bc Hp ptm conv wfbrs.
+  destruct (WfArity_build_case_predicate_type wfΣ isdecl Hc (PCUICWfUniverses.typing_wf_universe _ Hp) wfp) as [wfty _].
+  set wfcpc := wf_case_predicate_context isdecl Hc wfp. simpl in wfcpc. clearbody wfcpc.
   have clipars : closed_ctx (subst_instance (puinst p) (ind_params mdecl)).
   { rewrite closedn_subst_instance_context.
     eapply (declared_inductive_closed_params isdecl). }
@@ -5058,20 +5074,24 @@ Proof.
     eapply wf_local_expand_lets => //. }
   eapply type_mkApps.
   relativize #|cstr_args cdecl|.
-  eapply weakening; tea. rewrite /lebs.
-  eapply type_it_mkLambda_or_LetIn. eapply bc.
+  eapply weakening; tea. rewrite /ptm.
+  eapply type_Cumul'.
+  eapply type_it_mkLambda_or_LetIn. tea.
+  2:{ eapply cumul_it_mkProd_or_LetIn; tea.
+      eapply PCUICContextRelation.All2_fold_app_inv; tea. rewrite /bc.
+      now rewrite (case_predicate_context_length wfp). reflexivity. }
+  rewrite /bc //.
   rewrite -(wf_branch_length wfbrs).
   rewrite case_branch_context_length //.
   eapply wf_arity_spine_typing_spine; tea.
   split.
-  { apply isType_lift => //. rewrite app_length /=; lia.
-    rewrite skipn_all_app. eapply isType_it_mkProd_or_LetIn => //.
-    eapply validity in bc; tea. }
+  { apply isType_lift => //. rewrite app_length; lia.
+    rewrite skipn_all_app //. }
   rewrite lift_it_mkProd_or_LetIn /=.
   rewrite -(app_nil_r (_ ++ [_])).
   eapply arity_spine_it_mkProd_or_LetIn_smash => //.
   2:constructor.
-  rewrite /da.
+  rewrite /bc.
   eapply subslet_eq_context_alpha.
   { instantiate (1 := smash_context [] 
     (lift_context #|case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl| 0

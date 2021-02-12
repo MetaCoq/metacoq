@@ -3068,40 +3068,40 @@ Proof.
     eapply cumul_subst_conv => //; eauto using subslet_untyped_subslet.
 Qed.
 
-Lemma conv_ctx_subst {cf:checker_flags} Σ Γ Γ' Δ Δ' s s' :
-  wf Σ.1 ->
-  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
-  conv_context_rel Σ (Γ ,,, Γ') Δ Δ' ->
-  All2 (conv Σ []) s s' ->
-  subslet Σ [] s Γ ->
-  subslet Σ [] s' Γ ->
-  conv_context_rel Σ (subst_context s 0 Γ') (subst_context s #|Γ'| Δ) (subst_context s' #|Γ'| Δ').
+Lemma conv_ctx_subst {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'0 Γ'' Δ Δ' s s'} :
+  wf_local Σ (Γ ,,, Γ' ,,, Γ'' ,,, Δ) ->
+  conv_context_rel Σ (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->
+  All2 (conv Σ Γ) s s' ->
+  untyped_subslet Γ s Γ' ->
+  untyped_subslet Γ s' Γ'0 ->
+  conv_context_rel Σ (Γ ,,, subst_context s 0 Γ'') (subst_context s #|Γ''| Δ) (subst_context s' #|Γ''| Δ').
 Proof.
-  intros wfΣ wf. induction 1.
+  intros wf. induction 1.
   - simpl. constructor.
   - rewrite !subst_context_snoc /=.
     intros Hs subs subs'.
     depelim wf.
     * specialize (IHX wf Hs subs subs').
-      constructor; auto.
-      depelim p; constructor; cbn; auto.
-      epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
-      rewrite app_context_nil_l app_context_assoc in X0.
+      depelim p.
+      constructor; auto. constructor; auto. simpl.
+      epose proof (untyped_subst_conv Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs).
+      rewrite app_context_assoc in X0.
       specialize (X0 wf c).
-      rewrite subst_context_app in X0; autorewrite with len in X0.
-      rewrite app_context_nil_l in X0.
+      rewrite !subst_context_app app_context_assoc in X0; autorewrite with len in X0.
       now rewrite -(All2_fold_length X).
     * specialize (IHX wf Hs subs subs').
-      constructor; auto.
-      depelim p; cbn.
-      epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
-      rewrite app_context_nil_l app_context_assoc in X0.
-      specialize (X0 wf c).
-      epose proof (subst_conv [] Γ Γ (Γ' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
-      rewrite app_context_nil_l app_context_assoc in X1.
-      specialize (X1 wf c0).
-      rewrite !subst_context_app !app_context_nil_l in X0, X1; autorewrite with len in X0, X1.
-      now rewrite -(All2_fold_length X); constructor; auto.
+      depelim p.
+      constructor; auto. constructor; auto. 
+    + epose proof (untyped_subst_conv Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X1.
+      rewrite !app_context_assoc in X1.
+      specialize (X1 wf c).
+      rewrite !subst_context_app !app_context_assoc in X1; autorewrite with len in X1.
+      now rewrite -(All2_fold_length X).
+    + epose proof (untyped_subst_conv Γ Γ' Γ'0 (Γ'' ,,, Γ0) _ _ _ _ wfΣ subs subs' Hs) as X0.
+      rewrite app_context_assoc in X0.
+      specialize (X0 wf c0).
+      rewrite !subst_context_app !app_context_assoc in X0; autorewrite with len in X0.
+      now rewrite -(All2_fold_length X).
 Qed.
 
 Lemma conv_terms_weaken {cf:checker_flags} Σ Γ Γ' args args' :

@@ -1299,12 +1299,12 @@ Qed.
 
 Lemma subst_instance_case_branch_type {Σ} {wfΣ : wf Σ} u (ci : case_info) mdecl idecl p br i cdecl : 
   let ptm := 
-    it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) 
+    it_mkLambda_or_LetIn (pcontext p) (preturn p) 
   in
   let p' := subst_instance u p in
   let ptm' :=
     it_mkLambda_or_LetIn 
-      (case_predicate_context ci mdecl idecl p')
+      (pcontext p')
       (preturn p') in
   case_branch_type ci mdecl idecl
      (subst_instance u p) 
@@ -1319,19 +1319,17 @@ Proof.
   f_equal; substu.
   { now rewrite forget_types_subst_instance. }
   f_equal.
-  * rewrite /ptm' /ptm /p'; substu.
-    now rewrite subst_instance_case_predicate_context.
-  * rewrite map_app. f_equal.
-    + rewrite !map_map_compose. apply map_ext => x.
-      substu.
-      rewrite [subst_instance u (List.rev _)]map_rev. f_equal.
-      rewrite /expand_lets_k. len.
-      rewrite ?subst_instance_two ?subst_instance_two_context //.
-    + simpl. f_equal.
-      substu. rewrite map_app /= //.
-      rewrite subst_instance_to_extended_list to_extended_list_subst_instance.
-      do 2 f_equal.
-      rewrite !map_map_compose. now setoid_rewrite <-subst_instance_lift.
+  rewrite map_app. f_equal.
+  + rewrite !map_map_compose. apply map_ext => x.
+    substu.
+    rewrite [subst_instance u (List.rev _)]map_rev. f_equal.
+    rewrite /expand_lets_k. len.
+    rewrite ?subst_instance_two ?subst_instance_two_context //.
+  + simpl. f_equal.
+    substu. rewrite map_app /= //.
+    rewrite subst_instance_to_extended_list to_extended_list_subst_instance.
+    do 2 f_equal.
+    rewrite !map_map_compose. now setoid_rewrite <-subst_instance_lift.
 Qed.
 
 Lemma subst_instance_wf_predicate u mdecl idecl p :
@@ -1842,12 +1840,6 @@ Proof.
     + now apply not_var_global_levels in Hl.
 Qed.
 
-Lemma case_branch_type_fst ci mdecl idecl p br ptm c cdecl :
-  (case_branch_type ci mdecl idecl p br ptm c cdecl).1 = 
-  (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl).
-Proof. reflexivity. Qed.
-
-
 Lemma typing_subst_instance :
   env_prop (fun Σ Γ t T => forall u univs,
                 wf_ext_wk Σ ->
@@ -1916,8 +1908,8 @@ Proof.
       Hctxi IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext Hsub cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
     cbn.
-    rewrite subst_instance_case_predicate_context.
     change (subst_instance i (preturn p)) with (preturn (subst_instance i p)).
+    change (subst_instance i (pcontext p)) with (pcontext (subst_instance i p)).
     change (map_predicate _ _ _ _) with (subst_instance i p).
     eapply type_Case with (p0:=subst_instance i p)
                           (ps:=subst_instance_univ i u); eauto with pcuic.
@@ -2489,9 +2481,9 @@ Section SubstIdentity.
     - rewrite subst_instance_mkApps. f_equal.
       * rewrite /ptm.
         rewrite subst_instance_it_mkLambda_or_LetIn.
-        rewrite subst_instance_app in H3.
-        eapply app_inj in H3 as []; [|now len].
-        rewrite H3. now f_equal.
+        rewrite subst_instance_app in H.
+        eapply app_inj in H as []; [|now len].
+        rewrite H. now f_equal.
       * rewrite map_app.
         rewrite subst_instance_mkApps /= /subst_instance /= in b0.
         eapply mkApps_nApp_inj in b0 as [Hi Hpars] => //.

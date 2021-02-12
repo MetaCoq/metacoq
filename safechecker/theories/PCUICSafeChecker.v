@@ -793,15 +793,6 @@ Section CheckEnv.
       rewrite ctx_inst_subst_length in X. len in X. now len.
   Qed.
 
-  Lemma subst_context_subst_telescope s k Γ :
-    subst_context s k (List.rev Γ) = List.rev (subst_telescope s k Γ).
-  Proof.
-    rewrite /subst_telescope subst_context_alt.
-    rewrite rev_mapi. apply mapi_rec_ext.
-    intros n [na [b|] ty] le le'; rewrite /= /subst_decl /map_decl /=; 
-    rewrite List.rev_length Nat.add_0_r in le'; len; lia_f_equal.
-  Qed.
-
   Definition smash_telescope acc Γ := 
     List.rev (smash_context acc (List.rev Γ)).
 

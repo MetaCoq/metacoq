@@ -594,6 +594,17 @@ Proof.
   now apply well_subst_app.
 Qed.
 
+Lemma mapi_context_inst σ ctx :
+  mapi_context (fun k : nat => inst (up k σ)) ctx = 
+  inst_context σ ctx.
+Proof.
+  now rewrite mapi_context_fold; setoid_rewrite up_Upn.
+Qed.
+
+Lemma inst_predicate_pcontext f (p : predicate term) :
+  inst_context f (pcontext p) = pcontext (inst_predicate f p).
+Proof. now rewrite /inst_predicate /= mapi_context_inst. Qed.
+
 Lemma inst_predicate_preturn f p :
   inst (⇑^#|p.(pcontext)| f) (preturn p) =
   preturn (inst_predicate f p).
@@ -950,14 +961,9 @@ Lemma inst_case_branch_type {Σ} {wfΣ : wf Σ} f (ci : case_info) i mdecl idecl
   declared_constructor Σ (ci.(ci_ind), i) mdecl idecl cdecl ->
   wf_predicate mdecl idecl p ->
   wf_branch cdecl br ->
-  let ptm := 
-    it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) 
-  in
+  let ptm := it_mkLambda_or_LetIn (pcontext p) (preturn p) in
   let p' := inst_predicate f p in
-  let ptm' :=
-    it_mkLambda_or_LetIn
-      (case_predicate_context ci mdecl idecl p')
-      (preturn p') in
+  let ptm' := it_mkLambda_or_LetIn (pcontext p') (preturn p') in
   case_branch_type ci mdecl idecl
      (inst_predicate f p) 
      (inst_branch f br) 
@@ -980,17 +986,12 @@ Proof.
   f_equal.
   * rewrite /ptm' /ptm !lift_it_mkLambda_or_LetIn !inst_it_mkLambda_or_LetIn.
     rewrite !lift_rename. f_equal.
-    ++ rewrite /p'.
-      rewrite -(inst_case_predicate_context decli) //.
+    ++ rewrite /p'. len. rewrite mapi_context_inst.
       epose proof (inst_context_lift f #|cstr_args cdecl| 0).
       rewrite Nat.add_0_r in H.
-      rewrite H. len. now rewrite up_Upn Upn_0.
+      rewrite H. now rewrite up_Upn Upn_0.
     ++ rewrite /p'. rewrite Nat.add_0_r. simpl.
-      rewrite case_predicate_context_length //.
-      { now apply inst_wf_predicate. }
-      rewrite !case_predicate_context_length // Nat.add_0_r; len.
-      rewrite case_predicate_context_length //.
-      rewrite !up_Upn -Upn_Upn. rewrite - !lift_rename.
+      len. rewrite !up_Upn -Upn_Upn. rewrite - !lift_rename.
       now rewrite Nat.add_comm inst_lift.
   * rewrite /= inst_mkApps /=. f_equal.
     ++ rewrite !map_map_compose /id.
@@ -1480,13 +1481,6 @@ Proof.
   induction tl in bs, e |- *; destruct bs => //; try constructor; auto.
 Qed.
 
-Lemma mapi_context_inst σ ctx :
-  mapi_context (fun k : nat => inst (up k σ)) ctx = 
-  inst_context σ ctx.
-Proof.
-  now rewrite mapi_context_fold; setoid_rewrite up_Upn.
-Qed.
-
 Lemma red1_inst {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ u v σ} :
   usubst Γ σ Δ ->
   red1 Σ Γ u v ->
@@ -1902,7 +1896,7 @@ Proof.
     relativize #|predctx|.
     * erewrite inst_predicate_preturn.
       rewrite /predctx.
-      rewrite (inst_case_predicate_context isdecl wfp).
+      rewrite inst_predicate_pcontext.
       eapply type_Case; eauto.
       + now eapply inst_wf_predicate.
       + simpl. rewrite mapi_context_inst.

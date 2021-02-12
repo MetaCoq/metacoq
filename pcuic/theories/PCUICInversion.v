@@ -183,7 +183,7 @@ Section Inversion.
                                                       (ind_params mdecl ,,, ind_indices idecl))))
        (scrut_ty : Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices))
        (not_cofinite : isCoFinite mdecl.(ind_finite) = false)
-       (ptm := it_mkLambda_or_LetIn predctx p.(preturn))
+       (ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn))
        (wf_brs : wf_branches idecl brs)
        (brs_ty :
           All2i (fun i cdecl br =>
@@ -200,7 +200,7 @@ Section Inversion.
       Σ ;;; Γ |- tCase ci p c brs : T ->
       ∑ mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl) indices, 
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-        let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+        let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
         case_inversion_data Γ ci p c brs mdecl idecl indices ×
         Σ ;;; Γ |- mkApps ptm (indices ++ [c]) <= T.
   Proof.

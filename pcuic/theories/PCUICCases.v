@@ -106,7 +106,12 @@ Definition case_branch_type_gen ind mdecl (idecl : one_inductive_body) params pu
 Definition case_branch_type ind mdecl idecl p (b : branch term) ptm i cdecl : context * term :=
   case_branch_type_gen ind mdecl idecl p.(pparams) p.(puinst) (forget_types b.(bcontext)) ptm i cdecl.
 Arguments case_branch_type _ _ _ _ _ _ _ !_.
-  
+
+Lemma case_branch_type_fst ci mdecl idecl p br ptm c cdecl :
+  (case_branch_type ci mdecl idecl p br ptm c cdecl).1 = 
+  (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl).
+Proof. reflexivity. Qed.
+
 (* Definition case_branches_types_gen ind mdecl idecl params puinst ptm : list (context * term) :=
   mapi (case_branch_type_gen ind mdecl idecl params puinst ptm) idecl.(ind_ctors).
 

@@ -277,7 +277,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
-    let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+    let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
     wf_branches idecl brs ->
     All2i (fun i cdecl br =>
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
@@ -710,7 +710,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
-        let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+        let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
         wf_branches idecl brs ->
         All2i (fun i cdecl br =>
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
@@ -1171,7 +1171,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
       isCoFinite mdecl.(ind_finite) = false ->
-      let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+      let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
       wf_branches idecl brs ->
       All2i (fun i cdecl br =>
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in

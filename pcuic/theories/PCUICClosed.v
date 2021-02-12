@@ -745,10 +745,9 @@ Proof.
         now len in H9.
     + rewrite closedn_mkApps; auto.
       rewrite closedn_it_mkLambda_or_LetIn //.
-      rewrite closedn_ctx_app in H5.
-      now move/andP: H5 => [].
-      rewrite Nat.add_comm.
-      now move: (All2_fold_length X1); len => <-.
+      rewrite closedn_ctx_app in H3.
+      now move/andP: H3 => [].
+      now rewrite Nat.add_comm.
       rewrite forallb_app. simpl. now rewrite clc clinds.
 
   - intuition auto.

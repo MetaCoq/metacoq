@@ -1282,9 +1282,7 @@ Proof.
 Qed.
 
 Lemma nl_case_branch_type ci mdecl idecl p br i cdecl : 
-  let ptm :=
-    it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p)
-      (preturn p) in
+  let ptm := it_mkLambda_or_LetIn (pcontext p)  (preturn p) in
   case_branch_type ci (nl_mutual_inductive_body mdecl)
     (nl_one_inductive_body idecl) (nl_predicate nl p) 
     (nl_branch nl br)
@@ -1684,7 +1682,6 @@ Proof.
     + unfold consistent_instance_ext.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
   - rewrite nl_mkApps map_app nl_it_mkLambda_or_LetIn. cbn.
-    rewrite nl_case_predicate_context.
     eapply type_Case with  (mdecl0:=nl_mutual_inductive_body mdecl)
                            (idecl0:=nl_one_inductive_body idecl)
                            (p0:=nl_predicate nl p); tea.
@@ -1723,12 +1720,12 @@ Proof.
       intros i cdecl br.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _) in *.
       intros ((wfctx & convctx) & (bbodyty & wfbctx) & IHbody & bty & IHbty).
-      rewrite -nl_case_predicate_context.
       simpl preturn. rewrite -nl_it_mkLambda_or_LetIn.
+      cbn -[case_branch_type]. 
       rewrite nl_case_branch_type.
       rewrite -/cbt. unfold map_pair. cbn.
       repeat split.
-      * now rewrite -[_ ++ _]nlctx_app_context.
+      * cbn. now rewrite -[_ ++ _]nlctx_app_context.
       * now rewrite - ![_ ++ _]nlctx_app_context.
       * rewrite - ![_ ++ _]nlctx_app_context.
         now eapply nl_conv_ctx.

@@ -373,27 +373,6 @@ Proof.
   apply context_subst_subst_extended_subst. apply sp.
 Qed.
 
-Lemma cumul_ctx_rel_app {cf} {Σ Γ Δ Δ'} :
-  cumul_ctx_rel Σ Γ Δ Δ' <~> cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
-Proof.
-  split.
-  - intros; eapply PCUICContextRelation.All2_fold_app.
-    apply (length_of X). reflexivity. apply X.
-  - intros; eapply PCUICContextRelation.All2_fold_app_inv.
-    move: (length_of X); len; lia.
-    assumption.
-Qed.
-    
-Lemma cumul_ctx_rel_trans {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ' Δ''} :
-  cumul_ctx_rel Σ Γ Δ Δ' ->
-  cumul_ctx_rel Σ Γ Δ' Δ'' ->
-  cumul_ctx_rel Σ Γ Δ Δ''.
-Proof.
-  move/cumul_ctx_rel_app => h /cumul_ctx_rel_app h'.
-  apply cumul_ctx_rel_app.
-  now eapply cumul_context_trans; tea. 
-Qed.
-
 (** The crucial property on constructors of cumulative inductive types for type preservation: 
     we don't need to compare their instances when fully applied. *)
 Lemma R_global_instance_cstr_irrelevant {cf} {Σ} {wfΣ  : wf Σ} {ci c} {mdecl idecl cdecl u u'} :

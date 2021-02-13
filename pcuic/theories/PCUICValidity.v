@@ -200,7 +200,7 @@ Section Validity.
       pose proof (All2_length hlen) as hlen';len in hlen'; simpl in hlen'; try lia.
       eapply All2_app_inv_l in hlen as (l1'&l2'&heq&alnas&allna).
       depelim allna. depelim allna.
-      rewrite map2_app => //; try lia.
+      rewrite map2_app => /= //; try lia. unfold aname. lia.
       eapply app_inj_tail in heq as [<- <-].
       simpl.
       rewrite !it_mkProd_or_LetIn_app /=.

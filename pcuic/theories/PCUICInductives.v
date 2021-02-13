@@ -211,6 +211,15 @@ Proof.
   + rewrite List.rev_length. lia.
 Qed.
 
+
+Lemma declared_inductive_lookup_inductive {Σ ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl ->
+  lookup_inductive Σ ind = Some (mdecl, idecl).
+Proof.
+  rewrite /declared_inductive /lookup_inductive.
+  intros []. red in H. now rewrite /lookup_minductive H H0.
+Qed.
+
 Section OnInductives.
   Context {cf : checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl ind idecl}
     (decli : declared_inductive Σ ind mdecl idecl).
@@ -225,6 +234,15 @@ Section OnInductives.
     eapply it_mkProd_or_LetIn_wf_local in Hs. 
     now rewrite app_context_nil_l in Hs. now simpl.
   Qed.
+
+  Lemma declared_inductive_type :
+    ind_type idecl = it_mkProd_or_LetIn (ind_params mdecl ,,, ind_indices idecl) (tSort (ind_sort idecl)).
+  Proof.
+    eapply on_declared_inductive in decli as [onmind oib].
+    rewrite oib.(ind_arity_eq). 
+    now rewrite -it_mkProd_or_LetIn_app.
+  Qed.
+
 End OnInductives.
 
 Lemma isType_intro {cf:checker_flags} {Σ Γ T s} : Σ ;;; Γ |- T : tSort s -> isType Σ Γ T.
@@ -264,7 +282,7 @@ Section OnInductives.
     all:pcuic. eapply decli.
   Qed.
   
-  Lemma on_inductive_isType Γ u :
+  Lemma declared_inductive_valid_type Γ u :
     wf_local Σ Γ ->
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     isType Σ Γ (subst_instance u idecl.(ind_type)).
@@ -317,6 +335,27 @@ Section OnInductives.
     destruct nth_error eqn:Heq; try discriminate.
     destruct decli. rewrite H0 in Heq. noconf Heq.
     simpl. move=> [] <-. now simpl.
+  Qed.
+
+  Lemma isType_mkApps_Ind {Γ puinst args inst} :
+    consistent_instance_ext Σ (ind_universes mdecl) puinst ->
+    spine_subst Σ Γ args inst (subst_instance puinst (ind_params mdecl ,,, ind_indices idecl)) ->
+    Σ ;;; Γ |- mkApps (tInd ind puinst) args : tSort (subst_instance puinst (ind_sort idecl)).
+  Proof.
+    intros cu sp.
+    eapply PCUICGeneration.type_mkApps; tea.
+    econstructor; eauto. apply sp.
+    rewrite (declared_inductive_type decli).
+    rewrite subst_instance_it_mkProd_or_LetIn.
+    eapply wf_arity_spine_typing_spine; tea.
+    split.
+    rewrite -subst_instance_it_mkProd_or_LetIn.
+    rewrite -(declared_inductive_type decli).
+    eapply declared_inductive_valid_type; tea.
+    apply sp.
+    eapply arity_spine_it_mkProd_or_LetIn_Sort.
+    2:reflexivity. 2:exact sp.
+    now eapply on_inductive_sort_inst.
   Qed.
 End OnInductives.
 
@@ -1185,7 +1224,7 @@ Proof.
     eapply typing_spine_weaken_concl; pcuic.
 Qed.
 
-Lemma isType_mkApps_Ind {cf:checker_flags} {Σ Γ ind u args} (wfΣ : wf Σ.1)
+Lemma isType_mkApps_Ind_inv {cf:checker_flags} {Σ Γ ind u args} (wfΣ : wf Σ.1)
   {mdecl idecl} (declm : declared_inductive Σ.1 ind mdecl idecl) :
   wf_local Σ Γ ->
   isType Σ Γ (mkApps (tInd ind u) args) ->
@@ -1233,7 +1272,7 @@ Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p pdecl args :
 Proof.
   intros declp wfΣ Hc Ha.
   destruct (on_declared_projection declp).
-  destruct (isType_mkApps_Ind wfΣ (let (x, _) := declp in x) (typing_wf_local Hc) Ha) as 
+  destruct (isType_mkApps_Ind_inv wfΣ (let (x, _) := declp in x) (typing_wf_local Hc) Ha) as 
     [parsubst [argsubst [[sppars spargs] cu]]].
   unfold projection_context.
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
@@ -1615,7 +1654,7 @@ Proof.
     rewrite /iass /=.
     have wfidxctx : wf_local Σ (Γ ,,, idxctx) by pcuic.
     eapply pre_type_mkApps_arity. econstructor; tea. pcuic.
-    eapply on_inductive_isType; tea. pcuic.
+    eapply declared_inductive_valid_type; tea. pcuic.
     pose proof (on_declared_inductive isdecl) as [onmind oib].
     rewrite oib.(ind_arity_eq) subst_instance_it_mkProd_or_LetIn.
     eapply arity_spine_it_mkProd_or_LetIn_smash; tea.

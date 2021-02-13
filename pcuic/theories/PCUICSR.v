@@ -405,13 +405,6 @@ Proof.
   now apply pre_case_branch_context_eq.
 Qed.
 
-Lemma All2_map2_left_inv {A B C} (P : A -> B -> Type) (l : list C) (f : C -> A) l' : 
-  All2 P (map f l) l' -> All2 (fun x => P (f x)) l l'.
-Proof.
-  rewrite -{1}(map_id l').
-  intros. now eapply All2_map_inv in X.
-Qed.
-
 Lemma conv_refl' {cf} {Σ} {wfΣ : wf Σ} {Γ x y} : 
   x = y ->
   Σ ;;; Γ |- x = y.
@@ -700,28 +693,6 @@ Lemma ctx_inst_merge' {cf} {Σ} {wfΣ : wf Σ} Γ inst inst' Δ :
   ctx_inst Σ Γ inst' (List.rev Δ).
 Proof.
   intros. eapply ctx_inst_merge; try rewrite ?(List.rev_involutive Δ) //; tea.
-Qed.
-
-Lemma isType_mkApps_Ind {cf} {Σ} {wfΣ : wf Σ} {Γ puinst args inst ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl ->
-  consistent_instance_ext Σ (ind_universes mdecl) puinst ->
-  spine_subst Σ Γ args inst (subst_instance puinst (ind_params mdecl ,,, ind_indices idecl)) ->
-  Σ ;;; Γ |- mkApps (tInd ind puinst) args : tSort (subst_instance puinst (ind_sort idecl)).
-Proof.
-  intros decli cu sp.
-  eapply type_mkApps; tea.
-  econstructor; eauto. apply sp.
-  rewrite (declared_inductive_type decli).
-  rewrite subst_instance_it_mkProd_or_LetIn.
-  eapply wf_arity_spine_typing_spine; tea.
-  split.
-  rewrite -subst_instance_it_mkProd_or_LetIn.
-  rewrite -(declared_inductive_type decli).
-  eapply declared_inductive_valid_type; tea.
-  apply sp.
-  eapply arity_spine_it_mkProd_or_LetIn_Sort.
-  2:reflexivity. 2:exact sp.
-  now eapply on_inductive_sort_inst.
 Qed.
 
 Lemma All2i_All2i_mix {A B} {P Q : nat -> A -> B -> Type}

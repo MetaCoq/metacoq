@@ -3204,3 +3204,175 @@ Proof.
   - apply (fst ctx_inst_smash_acc) in X. now rewrite List.rev_involutive in X.
   - apply (snd ctx_inst_smash_acc). now rewrite List.rev_involutive.
 Qed.
+
+Lemma subst_context_subst_telescope s k Γ :
+  subst_context s k (List.rev Γ) = List.rev (subst_telescope s k Γ).
+Proof.
+  rewrite /subst_telescope subst_context_alt.
+  rewrite rev_mapi. apply mapi_rec_ext.
+  intros n [na [b|] ty] le le'; rewrite /= /subst_decl /map_decl /=; 
+  rewrite List.rev_length Nat.add_0_r in le'; len; lia_f_equal.
+Qed.
+
+Lemma cumul_ctx_rel_app {cf} {Σ Γ Δ Δ'} :
+  cumul_ctx_rel Σ Γ Δ Δ' <~> cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
+Proof.
+  split.
+  - intros; eapply PCUICContextRelation.All2_fold_app.
+    apply (length_of X). reflexivity. apply X.
+  - intros; eapply PCUICContextRelation.All2_fold_app_inv.
+    move: (length_of X); len; lia.
+    assumption.
+Qed.
+    
+Lemma cumul_ctx_rel_trans {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ' Δ''} :
+  cumul_ctx_rel Σ Γ Δ Δ' ->
+  cumul_ctx_rel Σ Γ Δ' Δ'' ->
+  cumul_ctx_rel Σ Γ Δ Δ''.
+Proof.
+  move/cumul_ctx_rel_app => h /cumul_ctx_rel_app h'.
+  apply cumul_ctx_rel_app.
+  now eapply cumul_context_trans; tea. 
+Qed.
+
+Lemma subslet_def {cf} {Σ : global_env_ext} {Γ Δ s na t T t'} : 
+  subslet Σ Γ s Δ ->
+  Σ;;; Γ |- subst0 s t : subst0 s T ->
+  t' = subst0 s t ->
+  subslet Σ Γ (t' :: s) (Δ ,, vdef na t T).
+Proof.
+  now intros sub Ht ->; constructor.
+Qed.
+
+Lemma subslet_ass_tip {cf} {Σ : global_env_ext} {Γ na t T} : 
+  Σ;;; Γ |- t : T ->
+  subslet Σ Γ [t] [vass na T].
+Proof.
+  intros; constructor. constructor.
+  all:now rewrite !subst_empty.
+Qed.
+
+Lemma subslet_def_tip {cf} {Σ : global_env_ext} {Γ na t T} : 
+  Σ;;; Γ |- t : T ->
+  subslet Σ Γ [t] [vdef na t T].
+Proof.
+  intros; apply subslet_def. constructor.
+  all:now rewrite !subst_empty.
+Qed.
+
+Lemma OnOne2_ctx_inst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {P} {Γ inst inst' Δ} :
+  (forall Γ Δ' Δ s s', wf_local Σ (Γ ,,, Δ' ,,, Δ) ->
+  subslet Σ Γ (List.rev s) Δ' ->
+  subslet Σ Γ (List.rev s') Δ' ->
+  OnOne2 (P Σ Γ) s s' ->
+  conv_context Σ (Γ ,,, subst_context (List.rev s) 0 Δ)
+    (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
+  wf_local Σ (Γ ,,, (List.rev Δ)) ->
+  PCUICTyping.ctx_inst
+    (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
+    forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+  ctx_inst Σ Γ inst Δ ->
+  OnOne2 (P Σ Γ) inst inst' ->
+  ctx_inst Σ Γ inst' Δ.
+Proof.
+  intros HP wf c.
+  induction c in inst', wf |- *; intros ctxi; depelim ctxi; intros o.
+  - depelim o.
+  - depelim o. constructor. apply t0. auto.
+    rewrite -(List.rev_involutive Δ).
+    rewrite subst_telescope_subst_context.
+    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf. 
+    eapply ctx_inst_cumul.
+    2:{ instantiate (1:=subst_context [i] 0 (List.rev Δ)).
+        rewrite -subst_telescope_subst_context List.rev_involutive. exact ctxi. }
+    eapply cumul_ctx_rel_app.
+    eapply conv_cumul_context.
+    eapply (HP _ _  _ [i] [hd']); tea.
+    repeat constructor. now rewrite subst_empty. repeat constructor.
+    now rewrite subst_empty. constructor. auto.
+    eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+    repeat (constructor; tea). rewrite subst_empty; tea.
+    eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+    repeat (constructor; tea). rewrite subst_empty; tea. now eapply t0.
+    constructor; auto. eapply IHc.
+    rewrite -subst_context_subst_telescope.
+    eapply substitution_wf_local; tea.
+    repeat (constructor; tea). rewrite subst_empty; tea.
+    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf.
+    exact wf. tas. tas.
+  - constructor. eapply IHc; eauto.
+    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf.
+    rewrite -subst_context_subst_telescope.
+    eapply substitution_wf_local; tea.
+    repeat (constructor; tea). eapply subslet_def_tip.
+    eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
+Qed.
+
+Lemma All2_ctx_inst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {P} {Γ inst inst' Δ} :
+  (forall Γ Δ' Δ s s', wf_local Σ (Γ ,,, Δ' ,,, Δ) ->
+  subslet Σ Γ (List.rev s) Δ' ->
+  subslet Σ Γ (List.rev s') Δ' ->
+  All2 (P Σ Γ) s s' ->
+  conv_context Σ (Γ ,,, subst_context (List.rev s) 0 Δ)
+    (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
+  wf_local Σ (Γ ,,, (List.rev Δ)) ->
+  PCUICTyping.ctx_inst
+    (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
+    forall u : term, P Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+  ctx_inst Σ Γ inst Δ ->
+  All2 (P Σ Γ) inst inst' ->
+  ctx_inst Σ Γ inst' Δ.
+Proof.
+  intros HP wf c.
+  induction c in inst', wf |- *; intros ctxi; depelim ctxi; intros o.
+  - depelim o. constructor.
+  - depelim o. constructor. apply t0. auto.
+    rewrite -(List.rev_involutive Δ).
+    rewrite subst_telescope_subst_context.
+    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf. 
+    eapply ctx_inst_cumul.
+    2:{ instantiate (1:=subst_context [i] 0 (List.rev Δ)).
+        rewrite -subst_telescope_subst_context List.rev_involutive. eapply IHc => //.
+        rewrite -subst_context_subst_telescope.
+        eapply substitution_wf_local; tea.
+        repeat (constructor; tea). rewrite subst_empty; tea. }
+    eapply cumul_ctx_rel_app.
+    eapply conv_cumul_context.
+    eapply (HP _ _  _ [i] [y]); tea.
+    repeat constructor. now rewrite subst_empty.
+    now apply subslet_ass_tip.
+    now repeat constructor.
+    * eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      now apply subslet_ass_tip.
+    * eapply wf_local_app_inv. eapply substitution_wf_local; tea.
+      now apply subslet_ass_tip.
+  - constructor. eapply IHc; eauto.
+    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf.
+    rewrite -subst_context_subst_telescope.
+    eapply substitution_wf_local; tea.
+    repeat (constructor; tea). eapply subslet_def_tip.
+    eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
+Qed.
+
+Lemma ctx_inst_eq_context {cf} {Σ : global_env_ext} {Γ} {wfΣ : wf Σ} {Δ : context} {args args'} :
+  wf_local Σ (Γ ,,, List.rev Δ) ->
+  PCUICTyping.ctx_inst
+        (fun (Σ : global_env_ext) (Γ : context) (u A : term) =>
+        forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Σ Γ args Δ ->  
+  ctx_inst Σ Γ args Δ -> 
+  All2 upto_names' args args' ->
+  ctx_inst Σ Γ args' Δ.
+Proof.
+  intros wf ctxi ctxi' a.
+  eapply All2_ctx_inst; tea.
+  2:exact ctxi. 2:auto.
+  cbn; clear -wfΣ; intros.
+  eapply conv_context_rel_app.
+  eapply (conv_ctx_subst (Γ'':=[])); tea.
+  eapply conv_context_rel_app; reflexivity.
+  eapply All2_rev.
+  eapply All2_impl; tea.
+  intros. constructor. now apply upto_names_impl_eq_term.
+  now eapply subslet_untyped_subslet.
+  now eapply subslet_untyped_subslet.    
+Qed. 

@@ -190,9 +190,10 @@ Section Validity.
 
   Notation liat := ltac:(lia) (only parsing).
 
-  Lemma eq_term_set_binder_name (Σ : global_env_ext) (Δ : context) T (nas : list aname) :
+  Lemma eq_binder_annots_eq_ctx (Σ : global_env_ext) (Δ : context) (nas : list aname) :
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
-    PCUICEquality.eq_term Σ Σ (it_mkProd_or_LetIn (map2 set_binder_name nas Δ) T) (it_mkProd_or_LetIn Δ T) .
+    PCUICEquality.eq_context_gen (PCUICEquality.eq_term Σ Σ) (PCUICEquality.eq_term Σ Σ) 
+      (map2 set_binder_name nas Δ) Δ.
   Proof.
     induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
     - depelim hlen. simpl. reflexivity.
@@ -202,12 +203,26 @@ Section Validity.
       depelim allna. depelim allna.
       rewrite map2_app => /= //; try lia. unfold aname. lia.
       eapply app_inj_tail in heq as [<- <-].
-      simpl.
-      rewrite !it_mkProd_or_LetIn_app /=.
+      simpl. eapply PCUICContextRelation.All2_fold_app; auto.
+      pose proof (All2_length alnas).
+      rewrite map2_length => //.
+      constructor. constructor.
       destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
       try reflexivity.
-      apply X => //.
-      now apply X.
+  Qed.
+  
+  Lemma eq_term_set_binder_name (Σ : global_env_ext) (Δ : context) T U (nas : list aname) :
+    All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
+    PCUICEquality.eq_term Σ Σ T U ->
+    PCUICEquality.eq_term Σ Σ (it_mkProd_or_LetIn (map2 set_binder_name nas Δ) T) (it_mkProd_or_LetIn Δ U) .
+  Proof.
+    intros a; unshelve eapply eq_binder_annots_eq_ctx in a; tea.
+    eapply All2_fold_All2 in a.
+    induction a in T, U |- *.
+    - auto.
+    - rewrite /= /mkProd_or_LetIn.
+      destruct r => /=; intros; eapply IHa;
+      constructor; auto. 
   Qed.
 
   Lemma All2_eq_binder_subst_context_inst l s k i Δ Γ : 
@@ -337,7 +352,7 @@ Section Validity.
 
     - (* Case predicate application *)
       assert (cu : consistent_instance_ext Σ (ind_universes mdecl) (puinst p)).
-      { eapply (isType_mkApps_Ind wf isdecl) in X8 as [parsubst [argsubst Hind]]; 
+      { eapply (isType_mkApps_Ind_inv wf isdecl) in X8 as [parsubst [argsubst Hind]]; 
         repeat intuition auto. } 
       unshelve epose proof (ctx_inst_spine_subst _ X5); tea.
       eapply weaken_wf_local; tea.
@@ -355,7 +370,7 @@ Section Validity.
           rewrite /predctx /= /case_predicate_context /case_predicate_context_gen. 
           constructor.
           eapply PCUICEquality.eq_term_leq_term.
-          eapply eq_term_set_binder_name.
+          eapply eq_term_set_binder_name. 2:reflexivity.
           now eapply wf_pre_case_predicate_context_gen. }
       rewrite /pre_case_predicate_context_gen.
       set (iass := {| decl_name := _ |}).
@@ -373,7 +388,7 @@ Section Validity.
       eapply declared_projection_type in isdecl'; eauto.
       subst ty.
       destruct isdecl' as [s Hs]. red in Hs.
-      unshelve eapply isType_mkApps_Ind in X2 as [parsubst [argsubst [[sppar sparg] cu]]]; eauto.
+      unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [[sppar sparg] cu]]]; eauto.
       2:eapply isdecl.p1.
       eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1) in Hs; eauto.
       simpl in Hs.

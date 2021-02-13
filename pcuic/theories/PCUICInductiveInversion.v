@@ -45,7 +45,7 @@ Definition ind_subst mdecl ind u := inds (inductive_mind ind) u (ind_bodies mdec
 Ltac pcuic := intuition eauto 5 with pcuic ||
   (try solve [repeat red; cbn in *; intuition auto; eauto 5 with pcuic || (try lia || congruence)]).
 
-(** Inversion principles on inductive/coinductives types following from validity. *)
+(** Inversion principle on constructor types following from validity. *)
 
 Lemma declared_constructor_valid_ty {cf:checker_flags} Σ Γ mdecl idecl i n cdecl u :
   wf Σ.1 ->
@@ -56,25 +56,6 @@ Lemma declared_constructor_valid_ty {cf:checker_flags} Σ Γ mdecl idecl i n cde
 Proof.
   move=> wfΣ wfΓ declc Hu.
   eapply validity. eapply type_Construct; eauto.
-Qed.
-
-Lemma declared_inductive_valid_type {cf:checker_flags} Σ Γ mdecl idecl i u :
-  wf Σ.1 ->
-  wf_local Σ Γ ->
-  declared_inductive Σ.1 i mdecl idecl ->
-  consistent_instance_ext Σ (ind_universes mdecl) u ->
-  isType Σ Γ (subst_instance u (ind_type idecl)).
-Proof.
-  move=> wfΣ wfΓ declc Hu.
-  pose declc as declc'.
-  destruct (on_declared_inductive declc') as [onmind onind]; auto.
-  apply onArity in onind.
-  destruct onind as [s Hs].
-  epose proof (PCUICUnivSubstitution.typing_subst_instance_decl Σ) as s'.
-  destruct declc.
-  specialize (s' [] _ _ _ _ u wfΣ d Hs Hu).
-  simpl in s'. eexists; eauto.
-  eapply (PCUICWeakening.weaken_ctx (Γ:=[]) Γ); eauto.
 Qed.
 
 Hint Resolve f_equal_nat : arith.
@@ -1106,23 +1087,6 @@ Proof.
     now rewrite closedn_subst_instance.
 Qed.
 
-
-Lemma declared_inductive_lookup_inductive {Σ ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl ->
-  lookup_inductive Σ ind = Some (mdecl, idecl).
-Proof.
-  rewrite /declared_inductive /lookup_inductive.
-  intros []. red in H. now rewrite /lookup_minductive H H0.
-Qed.
-
-Lemma declared_inductive_type {cf} {Σ} {wfΣ : wf Σ} {ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl ->
-  ind_type idecl = it_mkProd_or_LetIn (ind_params mdecl ,,, ind_indices idecl) (tSort (ind_sort idecl)).
-Proof.
-  move/on_declared_inductive => [onmind oib].
-  rewrite oib.(ind_arity_eq). 
-  now rewrite -it_mkProd_or_LetIn_app.
-Qed.
 
 Notation red_terms Σ Γ := (All2 (red Σ Γ)).
 
@@ -3140,21 +3104,38 @@ Proof.
     econstructor; eauto.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICAlpha.
-
 Lemma wf_set_binder_name {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {nas Δ} :
   All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, map2 set_binder_name nas Δ).
 Proof.
   intros ha wf.
-  eapply wf_local_alpha; tea.
-  eapply eq_context_upto_cat.
-  reflexivity.
-  induction ha; simpl; constructor; eauto.
-  depelim wf; eauto.
-  destruct y as [na [b|] ty]; simpl in *; constructor; auto; try reflexivity.
-  now symmetry. now symmetry.
+  apply wf_local_app_inv in wf as [].
+  eapply wf_local_app => //.
+  induction w in nas, ha |- *; depelim ha; cbn. constructor.
+  - constructor; eauto. apply IHw; auto.
+    destruct t0 as [s Hs]. exists s.
+    eapply context_conversion; tea.
+    eapply wf_local_app, IHw; eauto.
+    eapply eq_binder_annots_eq_ctx in ha.
+    eapply eq_context_upto_univ_conv_context.
+    eapply eq_context_upto_cat.
+    reflexivity. symmetry. apply ha.
+  - constructor; eauto. apply IHw; auto.
+    destruct t0 as [s Hs]. exists s.
+    eapply context_conversion; tea.
+    eapply wf_local_app, IHw; eauto.
+    eapply eq_binder_annots_eq_ctx in ha.
+    eapply eq_context_upto_univ_conv_context.
+    eapply eq_context_upto_cat.
+    reflexivity. symmetry. apply ha.
+    red. red in t1.
+    eapply context_conversion; tea.
+    eapply wf_local_app, IHw; eauto.
+    eapply eq_binder_annots_eq_ctx in ha.
+    eapply eq_context_upto_univ_conv_context.
+    eapply eq_context_upto_cat.
+    reflexivity. symmetry. apply ha.
 Qed.
 
 Lemma WfArity_build_case_predicate_type {cf:checker_flags} {Σ Γ ci args mdecl idecl p ps} :
@@ -3171,7 +3152,7 @@ Proof.
   2:{ eexists _, _. rewrite destArity_it_mkProd_or_LetIn. reflexivity. }
   rewrite /case_predicate_context /case_predicate_context_gen.
   have wfΓ := typing_wf_local X.π2.
-  eapply isType_mkApps_Ind in X; tea.
+  eapply isType_mkApps_Ind_inv in X; tea.
   destruct X as [parsubst [argsubst [[sppars spargs] cu]]].
   epose proof (isType_case_predicate (puinst p) (pparams p) ps wfΓ isdecl cu wfps).
   rewrite (firstn_app_left _ 0) /= ?app_nil_r in sppars.
@@ -3275,10 +3256,30 @@ Proof.
   * depelim c; subst; constructor; auto.
 Qed.
 
-Lemma equal_decls_alpha Γ Γ' : All2 (compare_decls eq eq) Γ Γ' -> Γ ≡Γ Γ'.
+Lemma eq_context_alpha_conv {cf} {Σ} {Γ Γ'} : 
+  All2 (compare_decls eq eq) Γ Γ' -> conv_context Σ Γ Γ'.
 Proof.
-  induction 1; constructor; auto. depelim r; constructor; subst; auto;
-  reflexivity.
+  intros a.
+  eapply eq_context_upto_empty_conv_context.
+  eapply All2_fold_All2.
+  eapply (All2_impl a).
+  intros ?? []; constructor; subst; auto; reflexivity.
+Qed.
+
+Lemma wf_local_alpha {cf} {Σ} {wfΣ : wf Σ} Γ Γ' : All2 (compare_decls eq eq) Γ Γ' -> 
+  wf_local Σ Γ ->
+  wf_local Σ Γ'.
+Proof.
+  induction 1; intros h; depelim h; try constructor; auto.
+  all:depelim r; constructor; subst; auto.
+  exists l0.π1. eapply context_conversion; eauto.
+  eapply l0.π2.
+  now apply eq_context_alpha_conv.
+  exists l0.π1. eapply context_conversion; eauto.
+  eapply l0.π2.
+  now apply eq_context_alpha_conv.
+  eapply context_conversion; eauto.
+  now apply eq_context_alpha_conv.
 Qed.
 
 Lemma subslet_eq_context_alpha_dom {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
@@ -3291,13 +3292,11 @@ Proof.
   * now apply IHsubs. 
   * eapply context_conversion; tea.
     eapply wf_local_alpha; tea. eapply typing_wf_local in t0. exact t0.
-    now eapply equal_decls_alpha.
-    now eapply upto_names_conv_context, equal_decls_alpha.
+    now eapply eq_context_alpha_conv.
   * now eapply IHsubs.
   * eapply context_conversion; tea.
     eapply wf_local_alpha; tea. eapply typing_wf_local in t0. exact t0.
-    now eapply equal_decls_alpha.
-    now eapply upto_names_conv_context, equal_decls_alpha.
+    now eapply eq_context_alpha_conv.
 Qed.
 
 Lemma alpha_eq_context_assumptions Δ Δ' : 
@@ -3639,15 +3638,6 @@ Lemma expand_lets_k_subst_comm Δ k s T :
 Proof.
   rewrite /expand_lets_k.
   now rewrite distr_lift_subst distr_subst Nat.add_assoc map_map_compose; len.
-Qed.
-
-Lemma subslet_def {cf Σ} {Γ Δ s na t T t'} : 
-  subslet Σ Γ s Δ ->
-  Σ;;; Γ |- subst0 s t : subst0 s T ->
-  t' = subst0 s t ->
-  subslet Σ Γ (t' :: s) (Δ ,, vdef na t T).
-Proof.
-  now intros sub Ht ->; constructor.
 Qed.
 
 Lemma subslet_smash_context {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Γ' Δ' s} :
@@ -4276,7 +4266,7 @@ Proof.
       rewrite Nat.add_comm; apply closedn_ctx_lift.
       pose proof (declared_inductive_closed_pars_indices _ isdecl).
       rewrite closedn_ctx_app in H0.
-      now move/andP: H0 => []. }
+      now move/andb_and: H0 => []. }
     exact sp. }
   constructor.
   - rewrite case_branch_context_length_args //.
@@ -4407,7 +4397,7 @@ Proof.
         rewrite (closed_ctx_subst _ _ (lift_context #|cstr_args cdecl| _ _)) in sp.
         rewrite Nat.add_comm; eapply closedn_ctx_lift => //.
         epose proof (declared_inductive_closed_pars_indices _ isdecl).
-        rewrite closedn_ctx_app in H0. move/andP: H0 => [].
+        rewrite closedn_ctx_app in H0. move/andb_and: H0 => [].
         now rewrite closedn_subst_instance_context.
         exact sp.
     * rewrite Nat.add_0_r.

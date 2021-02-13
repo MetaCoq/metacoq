@@ -3,7 +3,8 @@ From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
-     PCUICConversion PCUICContextConversion PCUICValidity PCUICArities PCUICSpine.
+     PCUICConversion PCUICContextConversion PCUICValidity PCUICArities PCUICSpine
+     PCUICInductives.
 From Equations Require Import Equations.
 
 (* Alpha convertible terms and contexts have the same typings *)
@@ -236,135 +237,13 @@ Section Alpha.
     subst. constructor ; auto.
   Qed.
 
-Lemma subst_context_subst_telescope s k Γ :
-subst_context s k (List.rev Γ) = List.rev (subst_telescope s k Γ).
+Lemma All2_map_left_inv {A B C} (P : A -> B -> Type) (l : list C) (f : C -> A) l' : 
+  All2 P (map f l) l' -> All2 (fun x => P (f x)) l l'.
 Proof.
-rewrite /subst_telescope subst_context_alt.
-rewrite rev_mapi. apply mapi_rec_ext.
-intros n [na [b|] ty] le le'; rewrite /= /subst_decl /map_decl /=; 
-rewrite List.rev_length Nat.add_0_r in le'; len; lia_f_equal.
+  rewrite -{1}(map_id l').
+  intros. now eapply All2_map_inv in X.
 Qed.
 
-Lemma cumul_ctx_rel_app {Σ Γ Δ Δ'} :
-  cumul_ctx_rel Σ Γ Δ Δ' <~> cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
-Proof.
-  split.
-  - intros; eapply PCUICContextRelation.All2_fold_app.
-    apply (length_of X). reflexivity. apply X.
-  - intros; eapply PCUICContextRelation.All2_fold_app_inv.
-    move: (length_of X); len; lia.
-    assumption.
-Qed.
-    
-Lemma cumul_ctx_rel_trans {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ' Δ''} :
-  cumul_ctx_rel Σ Γ Δ Δ' ->
-  cumul_ctx_rel Σ Γ Δ' Δ'' ->
-  cumul_ctx_rel Σ Γ Δ Δ''.
-Proof.
-  move/cumul_ctx_rel_app => h /cumul_ctx_rel_app h'.
-  apply cumul_ctx_rel_app.
-  now eapply cumul_context_trans; tea. 
-Qed.
-
-
-Lemma ctx_inst_merge {Σ : global_env_ext} {wfΣ : wf Σ} Γ inst inst' Δ :
-  wf_local Σ (Γ ,,, (List.rev Δ)) ->
-  PCUICTyping.ctx_inst
-    (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-    forall u : term, red1 Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
-  ctx_inst Σ Γ inst Δ ->
-  OnOne2 (red1 Σ Γ) inst inst' ->
-  ctx_inst Σ Γ inst' Δ.
-Proof.
-  intros wf c.
-  induction c in inst', wf |- *; intros ctxi; depelim ctxi; intros o.
-  - depelim o.
-  - depelim o. constructor. apply t0. auto.
-    rewrite -(List.rev_involutive Δ).
-    rewrite subst_telescope_subst_context.
-    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf. 
-    eapply ctx_inst_cumul.
-    2:{ instantiate (1:=subst_context [i] 0 (List.rev Δ)).
-        rewrite -subst_telescope_subst_context List.rev_involutive. exact ctxi. }
-    eapply cumul_ctx_rel_app.
-    eapply conv_cumul_context.
-    eapply (onone_red_cont_context_subst _ [i] [hd']); tea.
-    repeat constructor. repeat constructor. constructor. auto.
-    eapply wf_local_app_inv. eapply substitution_wf_local; tea.
-    repeat (constructor; tea). rewrite subst_empty; tea.
-    eapply wf_local_app_inv. eapply substitution_wf_local; tea.
-    repeat (constructor; tea). rewrite subst_empty; tea. now eapply t0.
-    constructor; auto. eapply IHc.
-    rewrite -subst_context_subst_telescope.
-    eapply substitution_wf_local; tea.
-    repeat (constructor; tea). rewrite subst_empty; tea.
-    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf.
-    exact wf. tas. tas.
-  - constructor. eapply IHc; eauto.
-    simpl in wf. rewrite - !/(app_context _ _) app_context_assoc in wf.
-    rewrite -subst_context_subst_telescope.
-    eapply substitution_wf_local; tea.
-    repeat (constructor; tea). eapply subslet_def. constructor.
-    all:rewrite !subst_empty //.
-    eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
-Qed.
-
-
-
-  Lemma ctx_inst_conv_context {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ : context} {args Δ'} :
-    ctx_inst Σ Γ args Δ -> 
-    conv_context_rel Σ Γ (List.rev Δ) (List.rev Δ') ->
-    wf_local_rel Σ Γ (List.rev Δ') ->
-    ctx_inst Σ Γ args Δ'.
-  Proof.
-    intros h; induction h in Δ' |- *.
-    - intros h; depelim h. destruct Δ' => //. constructor. simpl in H.
-      apply (f_equal (@length _)) in H. simpl in H. len in H. simpl in H. lia. 
-    - intros h'.
-      destruct Δ'. simpl in h'.
-      eapply conv_context_rel_app in h'.
-      eapply All2_fold_length in h'. simpl in h'. len in h'. simpl in h'. lia.
-      simpl in h'. eapply All2_fold_app_inv in h' as []. depelim a. depelim a0.
-      simpl. intros wfna.
-      destruct (All_local_env_app_inv _ _ _ wfna) as [wfd wfna']. depelim wfd.
-      constructor; eauto.
-      eapply type_Cumul'; tea. now eapply conv_cumul.
-      eapply IHh. rewrite - !subst_context_subst_telescope.
-      apply conv_context_rel_app. eapply conv_context_sym; tea.
-      apply conv_context_rel_app.
-      eapply (conv_ctx_subst (Γ'' := [])).
-      rewrite - !app_context_assoc.
-      rewrite app_context_nil_l.
-      eapply wf_local_app; tea. pcuic.
-      rewrite - !app_context_assoc /= //. 
-      apply conv_context_rel_app. eapply conv_context_sym; tea.
-      apply conv_context_rel_app => //.
-      all:admit.
-    - intros. eapply IHh.
-
-      
-      2:exact wfna. split. 2:exact wfna.
-      now depelim wfna.
-      todo "case".
-  Admitted.
-
-
-  Lemma ctx_inst_eq_context {Σ Γ} {Δ : context} {args args'} :
-   PCUICTyping.ctx_inst
-         (fun (Σ : global_env_ext) (Γ : context) (u A : term) =>
-          forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Σ Γ args Δ ->  
-    ctx_inst Σ Γ args Δ -> 
-    All2 upto_names' args args' ->
-    (* eq_context_upto [] eq eq Δ Δ' -> *)
-    ctx_inst Σ Γ args' Δ.
-  Proof.
-    intros h; induction h in args' |- *.
-    - intros h h'; depelim h; depelim h'. constructor.
-    - intros h'; depelim h'. intros heq; depelim heq. constructor. eauto. eauto.
-      eapply ctx_inst_conv_context; tea. eapply IHh; eauto.
-      admit. admit.
-    - admit.
-  Admitted.
 
   Lemma typing_alpha :
     forall Σ Γ u v A,
@@ -542,48 +421,69 @@ Qed.
         solve_all. eapply a0; eauto; reflexivity.
         eapply b; eauto; reflexivity. }
       eapply type_Cumul'; tea.
-      + econstructor; tea; eauto.
-        * now rewrite -eqinst.
-        * eapply conv_context_trans; tea.
+      + have cu' : consistent_instance_ext Σ (ind_universes mdecl) (puinst p').
+        { now rewrite -eqinst. }
+        have convctx' : conv_context Σ (Γ,,, pcontext p')
+          (Γ,,, case_predicate_context ind mdecl idecl p').
+        { eapply conv_context_trans; tea.
           eapply conv_context_trans; tea.
-          now eapply conv_context_sym.
-        * eapply context_conversion; eauto.
-        * eapply wfcpc. reflexivity.
+          now eapply conv_context_sym. }
+        have ty' : Σ;;; Γ,,, pcontext p' |- preturn p' : tSort ps.
+        { eapply context_conversion; eauto. }
+        have wfcpc' : wf_local Σ (Γ,,, case_predicate_context ind mdecl idecl p').
+        { eapply wfcpc. reflexivity.
           rewrite /cpc.
-          now eapply case_predicate_context_equiv.
-        * rewrite -eqinst.
-          move: IHctxi.
-          instantiate (1:=args).
-          intros ctxi.
+          now eapply case_predicate_context_equiv. }
+        have ctxinst' : ctx_inst Σ Γ (pparams p' ++ args)
+          (List.rev
+             (subst_instance (puinst p') (ind_params mdecl,,, ind_indices idecl))).
+        { rewrite -eqinst.
+          move: IHctxi => ctxi.
           destruct eqp.
           eapply ctx_inst_eq_context; tea.
-          eapply All2_app => //. apply All2_refl => //. reflexivity.
+          rewrite List.rev_involutive.
+          * eapply weaken_wf_local; tea.
+           eapply (on_minductive_wf_params_indices_inst isdecl _ cup).
+          * eapply All2_app => //. apply All2_refl => //. reflexivity. }
+        have wfbrs' : wf_branches idecl brs'.
+        { move/Forall2_All2: wfbrs => wf.
+          apply All2_Forall2. eapply All2_trans'; tea.
+          intros cdecl br br'.
+          intros [wfbr [eqbrctx eqbodies]].
+          rewrite /wf_branch.
+          red. do 2 red in wfbr.
+          eapply Forall2_All2 in wfbr. eapply All2_Forall2.
+          eapply All2_map_left.
+          eapply All2_fold_All2 in eqbrctx.
+          eapply All2_map_left_inv in wfbr.
+          eapply All2_trans'; tea.
+          2:{ eapply All2_symP; tea. tc. }
+          intros ??? [[] ?]; try constructor; simpl; auto; now transitivity na'. }
+        econstructor; tea; eauto.
         * eapply type_Cumul'.
           eapply IHc; eauto.
-          eapply validity in Hc as [s Hs]; eauto.
-          red in Hs. exists s.
-          eapply inversion_mkApps in Hs as [indty [Hind Hsp]]; tea.
-          (* eapply type_mkApps_arity; eauto. *)
-          all:todo "case".
-        * todo "case".
-        (* unshelve eapply All2_trans'; [..|eassumption]. *)
-        * todo "case".
-        (* exact (fun br bty : nat × term => 
-                   (((br.1 = bty.1 × Σ;;; Γ |- br.2 : bty.2)
-                       × (forall v : term, upto_names' br.2 v -> Σ;;; Γ |- v : bty.2))
-                      × ∑ s, Σ;;; Γ |- bty.2 : tSort s ×
-                        (forall v : term, upto_names' bty.2 v -> Σ;;; Γ |- v : tSort s))).
-        * clear. intros x y z X; rdest; cbn in *.
-          congruence. 2: eauto. econstructor; tea. 
-           eauto. constructor.
-          now eapply upto_names_impl_leq_term.
-        * eapply All2_trans'; [..|eassumption].
-          2: apply All2_sym; tea.
-          clear. intros x y z X; rdest; cbn in *; eauto. congruence.
-          intros v H. unshelve eapply (upto_names_trans _ _ _ _) in H; tea.
-          eauto. *)
+          eexists; eapply isType_mkApps_Ind; tea.
+          unshelve eapply (ctx_inst_spine_subst _ ctxinst').
+          eapply weaken_wf_local; tea.
+          now eapply (on_minductive_wf_params_indices_inst isdecl).
+          eapply conv_cumul. rewrite -eqinst.
+          eapply mkApps_conv_args; trea.
+          eapply All2_app.
+          2:{ eapply All2_refl; reflexivity. }
+          eapply (All2_impl eqpars).
+          intros. now constructor; eapply upto_names_impl_eq_term.
+        * eapply All2i_All2_mix_left in Hbrs; tea.
+          2:now eapply Forall2_All2 in wfbrs.
+          pose proof wf_case_branches_types
 
-      + todo "case".
+      + eapply conv_cumul, mkApps_conv_args; tea.
+        rewrite /ptm.
+        eapply it_mkLambda_or_LetIn_conv; tea.
+        now eapply conv_context_sym.
+        constructor. now eapply upto_names_impl_eq_term.
+        eapply All2_app. apply All2_refl; reflexivity.
+        constructor. constructor; now apply upto_names_impl_eq_term. constructor.
+
     - intros p c u mdecl idecl pdecl isdecl args X X0 hc ihc H ty v e; invs e.
       eapply type_Cumul'.
       + econstructor. all: try eassumption.
@@ -863,7 +763,7 @@ Qed.
 
   Lemma wf_local_alpha Σ Γ Γ' :
     wf Σ.1 -> wf_local Σ Γ -> Γ ≡Γ Γ' -> wf_local Σ Γ'.
-  Proof.
+  Proof.s
     intro hΣ. induction 1 in Γ' |- *.
     - intro Y; inv Y; constructor.
     - intro Y; inv Y. inv X1. constructor. auto.

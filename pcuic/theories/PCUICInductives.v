@@ -989,18 +989,6 @@ Proof.
   exists u. unfold PCUICTypingDef.typing in *.
   now eapply inversion_it_mkProd_or_LetIn in Hu.
 Qed.
-
-Lemma subst_lift1 x s : (subst0 (x :: s) ∘ lift0 1) =1 subst0 s.
-Proof.
-  intros t. erewrite <- subst_skipn'.
-  rewrite lift0_id. simpl. now rewrite skipn_S skipn_0.
-  lia. simpl. lia.
-Qed.
-
-Lemma map_subst_lift1 x s l : map (subst0 (x :: s) ∘ lift0 1) l = map (subst0 s) l.
-Proof.
-  apply map_ext. apply subst_lift1.
-Qed.
  
 Lemma context_subst_to_extended_list_k {cf:checker_flags} Σ Δ :
   wf Σ.1 ->
@@ -1384,7 +1372,7 @@ Proof.
   now rewrite !head_tapp.
 Qed.
 
-Hint Rewrite context_assumptions_app context_assumptions_subst : len.
+Hint Rewrite context_assumptions_app @context_assumptions_subst : len.
 
 Lemma red1_destInd (Σ : global_env_ext) Γ t t' ind u : 
   red1 Σ.1 Γ t t' -> destInd (head t) = Some (ind, u) -> 
@@ -1654,7 +1642,7 @@ Proof.
     rewrite context_assumptions_smash_context /= in H0. len in H0.
     rewrite H0.
     relativize (context_assumptions _).
-    eapply closedn_ctx_expand_lets.
+    eapply PCUICClosed.closedn_ctx_expand_lets; len.
     rewrite -subst_instance_app_ctx closedn_subst_instance_context.
     eapply (declared_inductive_closed_pars_indices _ isdecl). now len. }  
   eapply type_it_mkProd_or_LetIn_sorts; tea.
@@ -1705,8 +1693,7 @@ Proof.
   now rewrite /ictx; len.
   rewrite /ictx /expand_lets_ctx /expand_lets_k_ctx; len.
   pose proof (PCUICContextSubst.context_subst_length2 spidx).
-  rewrite /subst_context_let_expand in H. len in H.
-  now rewrite context_assumptions_smash_context /= in H; len in H.
+  rewrite /subst_context_let_expand in H. now len in H.
   (* Should be a lemma *)
   rewrite -subst_context_map_subst_expand_lets.
   rewrite /ictx; len.

@@ -2032,6 +2032,23 @@ Proof.
   now transitivity y.
 Qed.
 
+Lemma All2_trans' {A B C}
+      (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
+      (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
+  : All2 P l1 l2 -> All2 Q l2 l3 -> All2 R l1 l3.
+Proof.
+  induction 1 in l3 |- *.
+  - inversion 1; constructor.
+  - inversion 1; subst. constructor; eauto.
+Qed.
+
+Lemma All2_map_left_inv {A B C} (P : A -> B -> Type) (l : list C) (f : C -> A) l' : 
+  All2 P (map f l) l' -> All2 (fun x => P (f x)) l l'.
+Proof.
+  rewrite -{1}(map_id l').
+  intros. now eapply All2_map_inv in X.
+Qed.
+
 Lemma All2_nth :
   forall A B P l l' n (d : A) (d' : B),
     All2 P l l' ->
@@ -2734,4 +2751,17 @@ Proof.
   apply All2i_length in a.
   apply All2i_length in a0.
   congruence.
+Qed.
+
+Lemma All2i_All2_All2i_All2i {A B C n} {P : nat -> A -> B -> Type} {Q : B -> C -> Type} {R : nat -> A -> C -> Type}
+  {S : nat -> A -> C -> Type} {l l' l''} :
+  All2i P n l l' ->
+  All2 Q l' l'' ->
+  All2i R n l l'' ->
+  (forall n x y z, P n x y -> Q y z -> R n x z -> S n x z) ->
+  All2i S n l l''.
+Proof.
+  intros a b c H.
+  induction a in l'', b, c |- *; depelim b; depelim c; try constructor; auto.
+  eapply H; eauto.
 Qed.

@@ -1715,58 +1715,17 @@ Proof.
     rewrite Nat.add_0_r in H; auto.
 Qed.
 
-Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Σ Re Rle Γ :
-  RelationClasses.Reflexive Re ->
-  respectful (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle)
-             (it_mkLambda_or_LetIn Γ) (it_mkLambda_or_LetIn Γ).
+Lemma R_universe_instance_eq {u u'} : R_universe_instance eq u u' -> u = u'.
 Proof.
-  intros he u v h.
-  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
-  - assumption.
-  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
-    all: auto.
-  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
-    all: auto.
+  intros H.
+  apply Forall2_eq in H. apply map_inj in H ; revgoals.
+  { apply Universe.make_inj. }
+  subst. constructor ; auto.
 Qed.
 
-Lemma eq_term_it_mkLambda_or_LetIn {cf:checker_flags} Σ φ Γ :
-  respectful (eq_term Σ φ) (eq_term Σ φ)
-             (it_mkLambda_or_LetIn Γ) (it_mkLambda_or_LetIn Γ).
+Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
 Proof.
-  apply eq_term_upto_univ_it_mkLambda_or_LetIn; exact _.
-Qed.
-
-Lemma eq_term_upto_univ_it_mkProd_or_LetIn Σ Re Rle Γ :
-  RelationClasses.Reflexive Re ->
-  respectful (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle)
-             (it_mkProd_or_LetIn Γ) (it_mkProd_or_LetIn Γ).
-Proof.
-  intros he u v h.
-  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
-  - assumption.
-  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
-    all: auto.
-  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
-    all: auto.
-Qed.
-
-Lemma eq_term_it_mkProd_or_LetIn {cf:checker_flags} Σ φ Γ:
-  respectful (eq_term Σ φ) (eq_term Σ φ)
-             (it_mkProd_or_LetIn Γ) (it_mkProd_or_LetIn Γ).
-Proof.
-  eapply eq_term_upto_univ_it_mkProd_or_LetIn ; exact _.
-Qed.
-
-Lemma eq_term_it_mkLambda_or_LetIn_inv {cf:checker_flags} Σ φ Γ u v :
-    eq_term Σ φ (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
-    eq_term Σ  φ u v.
-Proof.
-  revert u v. induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
-  - assumption.
-  - simpl in h. cbn in h. apply ih in h. inversion h. subst.
-    assumption.
-  - simpl in h. cbn in h. apply ih in h. inversion h. subst.
-    assumption.
+  red. destruct check_univs => //.
 Qed.
 
 Lemma upto_eq_impl Σ Re Rle :
@@ -1982,6 +1941,71 @@ Proof.
     depelim p; constructor; auto.
     all:eapply eq_term_upto_univ_impl. 5,10,15:tea. all:eauto.
     all:now transitivity Re'.
+Qed.
+
+Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Σ Re Rle :
+    RelationClasses.Reflexive Re ->
+    Proper (eq_context_upto Σ Re Re ==> eq_term_upto_univ Σ Re Rle ==> eq_term_upto_univ Σ Re Rle) it_mkLambda_or_LetIn.
+Proof.
+  intros he Γ Δ eq u v h.
+  induction eq in u, v, h, he |- *.
+  - assumption.
+  - simpl. cbn. apply IHeq => //.
+    destruct p; cbn; constructor ; tas; try reflexivity.
+Qed.
+
+Lemma eq_term_upto_univ_it_mkLambda_or_LetIn_r Σ Re Rle Γ :
+  RelationClasses.Reflexive Re ->
+  respectful (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle)
+             (it_mkLambda_or_LetIn Γ) (it_mkLambda_or_LetIn Γ).
+Proof.
+  intros he u v h.
+  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+  - assumption.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+Qed.
+
+Lemma eq_term_it_mkLambda_or_LetIn {cf:checker_flags} Σ φ Γ :
+  respectful (eq_term Σ φ) (eq_term Σ φ)
+             (it_mkLambda_or_LetIn Γ) (it_mkLambda_or_LetIn Γ).
+Proof.
+  apply eq_term_upto_univ_it_mkLambda_or_LetIn_r; exact _.
+Qed.
+
+Lemma eq_term_upto_univ_it_mkProd_or_LetIn Σ Re Rle Γ :
+  RelationClasses.Reflexive Re ->
+  respectful (eq_term_upto_univ Σ Re Rle) (eq_term_upto_univ Σ Re Rle)
+             (it_mkProd_or_LetIn Γ) (it_mkProd_or_LetIn Γ).
+Proof.
+  intros he u v h.
+  induction Γ as [| [na [b|] A] Γ ih ] in u, v, h |- *.
+  - assumption.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+  - simpl. cbn. apply ih. constructor ; try apply eq_term_upto_univ_refl.
+    all: auto.
+Qed.
+
+Lemma eq_term_it_mkProd_or_LetIn {cf:checker_flags} Σ φ Γ:
+  respectful (eq_term Σ φ) (eq_term Σ φ)
+             (it_mkProd_or_LetIn Γ) (it_mkProd_or_LetIn Γ).
+Proof.
+  eapply eq_term_upto_univ_it_mkProd_or_LetIn ; exact _.
+Qed.
+
+Lemma eq_term_it_mkLambda_or_LetIn_inv {cf:checker_flags} Σ φ Γ u v :
+    eq_term Σ φ (it_mkLambda_or_LetIn Γ u) (it_mkLambda_or_LetIn Γ v) ->
+    eq_term Σ  φ u v.
+Proof.
+  revert u v. induction Γ as [| [na [b|] A] Γ ih ] ; intros u v h.
+  - assumption.
+  - simpl in h. cbn in h. apply ih in h. inversion h. subst.
+    assumption.
+  - simpl in h. cbn in h. apply ih in h. inversion h. subst.
+    assumption.
 Qed.
 
 Definition compare_term `{checker_flags} (le : bool) Σ φ (t u : term) :=

@@ -399,8 +399,7 @@ Lemma wf_pre_case_branch_context {cf} {Σ} {wfΣ : wf Σ} {Γ ci mdecl p} {br : 
 Proof.
   move=> wfbr wf.
   eapply wf_local_alpha; tea.
-  apply eq_context_upto_cat. reflexivity.
-  apply equal_decls_alpha.
+  eapply All2_app. 2:eapply All2_refl; reflexivity.
   eapply All2_symP. tc.
   now apply pre_case_branch_context_eq.
 Qed.
@@ -1086,7 +1085,7 @@ Proof.
           now rewrite closedn_subst_instance_context.
           eapply (declared_minductive_closed_inds isdecl).
           rewrite /= app_length subst_context_length !subst_instance_length.
-          eapply (PCUICInductiveInversion.closedn_expand_lets 0) in cl.
+          eapply (PCUICSpine.closedn_expand_lets 0) in cl.
           rewrite closedn_subst_instance.
           now rewrite /= app_length in cl. 
           rewrite /= !context_assumptions_app /= context_assumptions_subst_context //
@@ -1142,7 +1141,7 @@ Proof.
       erewrite expand_lets_subst_comm; rewrite !lengths.
       2:rewrite !lengths; lia.
       rewrite -context_assumptions_app.
-      move/(PCUICInductiveInversion.closedn_expand_lets 0) => /=; rewrite /= !lengths => clx.
+      move/(PCUICSpine.closedn_expand_lets 0) => /=; rewrite /= !lengths => clx.
       rewrite (subst_closedn indsub (_ + _)).
       relativize (_ + _). eapply (closedn_expand_lets 0).
       2-3:rewrite /= !lengths // closedn_subst_instance //.
@@ -1303,7 +1302,7 @@ Proof.
     eapply type_Cumul'; [econstructor; cbn -[it_mkLambda_or_LetIn]; eauto|..]; tea.
     2:{ reflexivity. }
     (* The branches contexts also depend on the parameters. *)
-    epose proof (wf_case_branches_types (p:=set_pparams p params') c ps _ brs isdecl isty' wfp').
+    epose proof (wf_case_branches_types (p:=set_pparams p params') ps _ brs isdecl isty' wfp').
     specialize (X7 IHp convctx' H4).
     eapply All2i_All2_mix_left in X7; tea.
     2:now eapply Forall2_All2 in H4.
@@ -1529,7 +1528,7 @@ Proof.
     rewrite eq.
     eapply (substitution_untyped_red _ Γ
       (smash_context [] (subst_instance u (ind_params mdecl))) []). auto.
-    { eapply PCUICInductives.isType_mkApps_Ind in X1 as [parsubst [argsubst Hind]]; eauto.
+    { eapply isType_mkApps_Ind_inv in X1 as [parsubst [argsubst Hind]]; eauto.
       2:eapply isdecl.
       simpl in Hind.
       destruct Hind as [[sppars spargs] cu].
@@ -2295,7 +2294,7 @@ Section SRContext.
         apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption.
       }
       constructor; cbn; auto.
-      1: exists s. 1: unfold PCUICTerm.tSort.
+      1: exists s.
       1: change (tSort s) with (subst [b] #|Γ'| (tSort s)).
       all: eapply PCUICSubstitution.substitution; tea.
     - rewrite subst_context_snoc0. simpl.
@@ -2306,7 +2305,6 @@ Section SRContext.
         rewrite !subst_empty in XX. apply XX. constructor.
         apply wf_local_app_l in X. inversion X; subst; cbn in *; assumption. }
       constructor; cbn; auto. exists s.
-      unfold PCUICTerm.tSort.
       change (tSort s) with (subst [b] #|Γ'| (tSort s)).
       all: eapply PCUICSubstitution.substitution; tea.
   Qed.

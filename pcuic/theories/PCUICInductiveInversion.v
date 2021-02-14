@@ -9,11 +9,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICSpine PCUICInductives PCUICValidity.
 
+Require Import Equations.Type.Relation_Properties.
+Require Import Equations.Prop.DepElim.     
 From Equations Require Import Equations.
 Derive Subterm for term.
-
-Require Import Equations.Type.Relation_Properties.
-Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
 Local Set SimplIsCbn.
@@ -471,7 +470,6 @@ Proof.
     depelim Hsp.
     eapply invert_cumul_ind_l in c as [i'' [args'' [? ?]]]; auto.
     eapply red_mkApps_tInd in r as [? [eq ?]]; auto. solve_discr.
-    noconf H. noconf H0.
     exists nil.
     intuition auto. clear i0.
     revert args' a. clear -b wfΣ wfΓ. induction b; intros args' H; depelim H; constructor.
@@ -666,7 +664,7 @@ Proof.
     red in onParams. now apply closed_wf_local in onParams. }
   eapply mkApps_ind_typing_spine in hs as [isubst [[[Hisubst [Hargslen [Hi Hu]]] Hargs] Hs]]; auto.
   subst i'.
-  eapply (isType_mkApps_Ind wfΣ decli) in vi' as (parsubst & argsubst & (spars & sargs) & cons) => //.
+  eapply (isType_mkApps_Ind_inv wfΣ decli) in vi' as (parsubst & argsubst & (spars & sargs) & cons) => //.
   split=> //. split=> //.
   split; auto. split => //.
   now len in Hu.
@@ -1065,7 +1063,6 @@ Proof.
   rewrite app_length (Nat.add_comm #|(cstr_args cdecl)|) Nat.add_assoc in subsrel. 
   rewrite {}subsrel in hpos.
   rewrite context_assumptions_app in hpos. depelim hpos; solve_discr.
-  noconf H1. noconf H2.
   eapply All_map_inv in a.
   eapply All_app in a as [ _ a].
   eapply All_map; eapply (All_impl a); clear; intros x; len.
@@ -2969,9 +2966,8 @@ Lemma invert_cumul_ind_ind {cf} {Σ} {wfΣ : wf Σ} {Γ ind ind' u u' args args'
 Proof.
   intros ht; eapply invert_cumul_ind_l in ht as (? & ? & ? & ? & ?); auto.
   eapply red_mkApps_tInd in r as (? & ? & ?); auto. solve_discr.
-  noconf H. subst.
   intuition auto. eapply eq_inductive_refl.
-  transitivity x1; auto. symmetry. now eapply red_terms_conv_terms.
+  transitivity x0; auto. symmetry. now eapply red_terms_conv_terms.
 Qed.
 
 Lemma ctx_inst_app_weak `{checker_flags} Σ (wfΣ : wf Σ.1) ind mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl)Γ (wfΓ : wf_local Σ Γ) params args u v:
@@ -4079,7 +4075,7 @@ Definition case_branch_context_nopars ind mdecl puinst bctx cdecl :=
    (subst_instance puinst (map2 set_binder_name bctx (cstr_args cdecl)))).
 
 Lemma wf_case_branches_types {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
-  {Γ mdecl idecl ci p} (pty : term) ps (args : list term) brs :
+  {Γ mdecl idecl ci p} ps (args : list term) brs :
   declared_inductive Σ ci.(ci_ind) mdecl idecl ->
   isType Σ Γ (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ args)) ->
   wf_predicate mdecl idecl p ->

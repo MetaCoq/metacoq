@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect.
+From Coq Require Import ssreflect CRelationClasses CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
@@ -7,13 +7,93 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICInductives PCUICInductiveInversion.
 From Equations Require Import Equations.
 
+
+(* TODO MOVE *)
+Lemma Forall2_eq :
+  forall A (l l' : list A),
+    Forall2 eq l l' ->
+    l = l'.
+Proof.
+  intros A l l' h.
+  induction h.
+  - reflexivity.
+  - f_equal. all: auto.
+Qed.
+
+Lemma All2_trans' {A B C}
+      (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
+      (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
+  : All2 P l1 l2 -> All2 Q l2 l3 -> All2 R l1 l3.
+Proof.
+  induction 1 in l3 |- *.
+  - inversion 1; constructor.
+  - inversion 1; subst. constructor; eauto.
+Qed.
+
+Lemma All2_map_left_inv {A B C} (P : A -> B -> Type) (l : list C) (f : C -> A) l' : 
+All2 P (map f l) l' -> All2 (fun x => P (f x)) l l'.
+Proof.
+  rewrite -{1}(map_id l').
+  intros. now eapply All2_map_inv in X.
+Qed.
+
+Lemma All2i_All2_All2i_All2i {A B C n} {P : nat -> A -> B -> Type} {Q : B -> C -> Type} {R : nat -> A -> C -> Type}
+  {S : nat -> A -> C -> Type} {l l' l''} :
+  All2i P n l l' ->
+  All2 Q l' l'' ->
+  All2i R n l l'' ->
+  (forall n x y z, P n x y -> Q y z -> R n x z -> S n x z) ->
+  All2i S n l l''.
+Proof.
+  intros a b c H.
+  induction a in l'', b, c |- *; depelim b; depelim c; try constructor; auto.
+  eapply H; eauto.
+Qed.
+
 (* Alpha convertible terms and contexts have the same typings *)
 
+Implicit Types cf : checker_flags.
+
+Notation "`≡α`" := upto_names.
 Infix "≡α" := upto_names (at level 60).
+Notation "`≡Γ`" := (eq_context_upto [] eq eq).
+Infix "≡Γ" := (eq_context_upto [] eq eq) (at level 20, no associativity).
 
-Definition upto_names_ctx := eq_context_upto [] eq eq.
+Lemma R_universe_instance_eq {u u'} : R_universe_instance eq u u' -> u = u'.
+Proof.
+  intros H.
+  apply Forall2_eq in H. apply map_inj in H ; revgoals.
+  { apply Universe.make_inj. }
+  subst. constructor ; auto.
+Qed.
 
-Infix "≡Γ" := upto_names_ctx (at level 60).
+Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
+Proof.
+  red. destruct check_univs => //.
+Qed.
+
+Instance upto_names_terms_refl : CRelationClasses.Reflexive (All2 `≡α`).
+Proof. intro; apply All2_refl; reflexivity. Qed.
+
+Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Σ Re Rle :
+    RelationClasses.Reflexive Re ->
+    Proper (eq_context_upto Σ Re Re ==> eq_term_upto_univ Σ Re Rle ==> eq_term_upto_univ Σ Re Rle) it_mkLambda_or_LetIn.
+Proof.
+  intros he Γ Δ eq u v h.
+  induction eq in u, v, h, he |- *.
+  - assumption.
+  - simpl. cbn. apply IHeq => //.
+    destruct p; cbn; constructor ; tas; try reflexivity.
+Qed.
+
+Lemma eq_context_upto_empty_impl {cf} {Σ : global_env_ext} ctx ctx' :
+  ctx ≡Γ ctx' ->
+  eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) ctx ctx'.
+Proof.
+  intros; eapply All2_fold_impl; tea.
+  intros ???? []; constructor; subst; auto;
+  eapply eq_term_upto_univ_empty_impl; tea; tc.
+Qed.
 
 Section Alpha.
   Context {cf:checker_flags}.
@@ -42,7 +122,6 @@ Section Alpha.
       destruct IHi as [s h].
       + inversion hΓ. all: auto.
       + exists s.
-        unfold PCUICTerm.tSort. (* TODO Why do I have to do this? *)
         change (tSort s) with (lift0 1 (lift0 (S i) (tSort s))).
         rewrite simpl_lift0.
         eapply PCUICWeakening.weakening with (Γ' := [ c ]).
@@ -77,18 +156,6 @@ Section Alpha.
     - apply nth_error_Some_length in h. assumption.
   Qed.
 
-  (* TODO MOVE *)
-  Lemma Forall2_eq :
-    forall A (l l' : list A),
-      Forall2 eq l l' ->
-      l = l'.
-  Proof.
-    intros A l l' h.
-    induction h.
-    - reflexivity.
-    - f_equal. all: auto.
-  Qed.
-
   Lemma decompose_app_upto {Σ Re Rle x y hd tl} : 
     eq_term_upto_univ Σ Re Rle x y ->
     decompose_app x = (hd, tl) ->
@@ -107,21 +174,11 @@ Section Alpha.
     inv eqh; simpl in *; try discriminate; auto.
   Qed.
 
-  Lemma All2_trans' {A B C}
-        (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
-        (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
-    : All2 P l1 l2 -> All2 Q l2 l3 -> All2 R l1 l3.
-  Proof.
-    induction 1 in l3 |- *.
-    - inversion 1; constructor.
-    - inversion 1; subst. constructor; eauto.
-  Qed.
-
   Lemma decompose_prod_assum_upto_names' ctx ctx' x y : 
-    eq_context_upto [] eq eq ctx ctx' -> upto_names' x y -> 
+    ctx ≡Γ ctx' -> upto_names' x y -> 
     let (ctx0, x0) := decompose_prod_assum ctx x in 
     let (ctx1, x1) := decompose_prod_assum ctx' y in
-    eq_context_upto [] eq eq ctx0 ctx1 * upto_names' x0 x1.
+    ctx0 ≡Γ ctx1 * upto_names' x0 x1.
   Proof.
     induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
       try split; auto; try constructor; auto.
@@ -183,7 +240,7 @@ Section Alpha.
 
   Lemma upto_names_check_cofix mfix mfix' :
     All2 (fun x y : def term =>
-     (upto_names' (dtype x) (dtype y) × upto_names' (dbody x) (dbody y))
+     (dtype x ≡α dtype y × dbody x ≡α dbody y)
      × rarg x = rarg y) mfix mfix' ->
    map check_one_cofix mfix = map check_one_cofix mfix'.
   Proof.
@@ -217,87 +274,97 @@ Section Alpha.
   Qed.
 
   Lemma eq_context_upto_conv_context_rel {Σ : global_env_ext} {wfΣ : wf Σ} (Γ Δ Δ' : context) :
-    eq_context_upto [] eq eq Δ Δ' ->  
+    Δ ≡Γ Δ' ->  
     conv_context_rel Σ Γ Δ Δ'.
   Proof.
     intros eq.
     eapply All2_fold_impl; tea.
     intros ???? []; constructor; auto; now constructor; apply upto_names_impl_eq_term.
   Qed.
-  Lemma R_universe_instance_eq {u u'} : R_universe_instance eq u u' -> u = u'.
+
+  Lemma eq_context_upto_map2_set_binder_name Σ pctx pctx' Γ Δ :
+    pctx ≡Γ pctx' ->
+    eq_context_upto Σ eq eq Γ Δ ->
+    eq_context_upto Σ eq eq
+      (map2 set_binder_name (forget_types pctx) Γ)
+      (map2 set_binder_name (forget_types pctx') Δ).
   Proof.
-    intros H.
-    apply Forall2_eq in H. apply map_inj in H ; revgoals.
-    { apply Universe.make_inj. }
-    subst. constructor ; auto.
+    intros eqp.
+    induction 1 in pctx, pctx', eqp |- *.
+    - induction eqp; cbn; constructor.
+    - depelim eqp. simpl. constructor.
+      simpl. constructor; auto.
+      destruct c, p; constructor; auto.
   Qed.
 
-  Lemma case_predicate_context_equiv Σ ind mdecl idecl p p' : 
+  Lemma eq_context_upto_lift_context Σ Re Rle :
+    RelationClasses.subrelation Re Rle ->
+    forall u v n k,
+      eq_context_upto Σ Re Rle u v ->
+      eq_context_upto Σ Re Rle (lift_context n k u) (lift_context n k v).
+  Proof.
+    intros re u v n k.
+    induction 1.
+    - constructor.
+    - rewrite !lift_context_snoc; constructor; eauto.
+      depelim p; constructor; simpl; intuition auto;
+      rewrite -(length_of X);
+      apply eq_term_upto_univ_lift; auto.
+  Qed.
+
+  Lemma eq_context_upto_subst_instance Σ :
+    forall u v i,
+    valid_constraints (global_ext_constraints Σ)
+                      (subst_instance_cstrs i Σ) ->
+    eq_context_upto Σ eq eq u v ->
+    eq_context_upto Σ eq eq (subst_instance i u) (subst_instance i v).
+  Proof.
+    intros u v i vc.
+    induction 1.
+    - constructor.
+    - rewrite !PCUICUnivSubst.subst_instance_cons. constructor; eauto.
+      depelim p; constructor; simpl; intuition auto.
+      eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
+      intros x y u v ? ? ->; reflexivity.
+      intros x y u v ? ? ->; reflexivity. exact vc.
+      assumption.
+      eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
+      intros x y u v ? ? ->; reflexivity.
+      intros x y u v ? ? ->; reflexivity. exact vc.
+      assumption.
+      eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
+      intros x y u v ? ? ->; reflexivity.
+      intros x y u v ? ? ->; reflexivity. exact vc.
+      assumption.
+  Qed.
+
+  Lemma case_predicate_context_equiv ind mdecl idecl p p' : 
     eq_predicate upto_names' eq p p' ->
-    eq_context_upto Σ eq eq 
+    eq_context_upto [] eq eq
       (case_predicate_context ind mdecl idecl p)
       (case_predicate_context ind mdecl idecl p').
   Proof.
     intros [eqpars [eqinst [eqctx eqret]]].
     rewrite /case_predicate_context /case_predicate_context_gen.
-  Admitted.
-
-  Lemma eq_context_upto_lift_context Σ Re Rle :
-  RelationClasses.subrelation Re Rle ->
-  forall u v n k,
-    eq_context_upto Σ Re Rle u v ->
-    eq_context_upto Σ Re Rle (lift_context n k u) (lift_context n k v).
-Proof.
-  intros re u v n k.
-  induction 1.
-  - constructor.
-  - rewrite !lift_context_snoc; constructor; eauto.
-    depelim p; constructor; simpl; intuition auto;
-    rewrite -(length_of X);
-    apply eq_term_upto_univ_lift; auto.
-Qed.
-(* 
-Lemma upto_names_subst_instance Σ u :
-  valid_constraints (global_ext_constraints Σ) (subst_instance_cstrs u Σ) ->
-  upto_names*)
-
-Lemma eq_context_upto_subst_instance Σ :
-  forall u v i,
-  valid_constraints (global_ext_constraints Σ)
-                    (subst_instance_cstrs i Σ) ->
-  eq_context_upto Σ eq eq u v ->
-  eq_context_upto Σ eq eq (subst_instance i u) (subst_instance i v).
-Proof.
-intros u v i vc.
-induction 1.
-- constructor.
-- rewrite !PCUICUnivSubst.subst_instance_cons. constructor; eauto.
-  depelim p; constructor; simpl; intuition auto.
-  eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
-  intros x y u v ? ? ->; reflexivity.
-  intros x y u v ? ? ->; reflexivity. exact vc.
-  assumption.
-  eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
-  intros x y u v ? ? ->; reflexivity.
-  intros x y u v ? ? ->; reflexivity. exact vc.
-  assumption.
-  eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
-  intros x y u v ? ? ->; reflexivity.
-  intros x y u v ? ? ->; reflexivity. exact vc.
-  assumption.
-Qed.
-
-Lemma valid_constraints_empty i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
-Proof.
-  red. destruct check_univs => //.
-Qed.
+    apply eq_context_upto_map2_set_binder_name => //.
+    rewrite /pre_case_predicate_context_gen.
+    eapply R_universe_instance_eq in eqinst. rewrite -eqinst.
+    constructor.
+    - apply eq_context_upto_subst_context; tea; tc.
+      reflexivity.
+      now apply All2_rev.
+    - constructor; simpl; try reflexivity.
+      eapply eq_term_upto_univ_mkApps. reflexivity.
+      apply All2_app; [|reflexivity].
+      eapply All2_map. eapply (All2_impl eqpars).
+      intros. now eapply eq_term_upto_univ_lift.
+  Qed.
 
   Lemma case_branch_context_equiv ind mdecl p p' bctx bctx' cdecl : 
     eq_predicate upto_names' eq p p' ->
-    eq_context_upto [] eq eq bctx bctx' ->
-    eq_context_upto [] eq eq 
-      (case_branch_context ind mdecl p (forget_types bctx) cdecl)
-      (case_branch_context ind mdecl p' (forget_types bctx') cdecl).
+    bctx ≡Γ bctx' ->
+    (case_branch_context ind mdecl p (forget_types bctx) cdecl) ≡Γ 
+    (case_branch_context ind mdecl p' (forget_types bctx') cdecl).
   Proof.
     intros [eqpars [eqinst [eqctx eqret]]] eqctx'.
     eapply R_universe_instance_eq in eqinst.
@@ -321,27 +388,6 @@ Qed.
       constructor; auto.
       destruct r, c as [na'' [b''|] ty']; constructor; auto; try reflexivity.
   Qed.
-
-  From Coq Require Import CRelationClasses CMorphisms.
-  Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Σ Re Rle :
-  RelationClasses.Reflexive Re ->
-  Proper (eq_context_upto Σ Re Re ==> eq_term_upto_univ Σ Re Rle ==> eq_term_upto_univ Σ Re Rle) it_mkLambda_or_LetIn.
-Proof.
-  intros he Γ Δ eq u v h.
-  induction eq in u, v, h, he |- *.
-  - assumption.
-  - simpl. cbn. apply IHeq => //.
-    destruct p; cbn; constructor ; tas; try reflexivity.
-Qed.
-
-Lemma eq_context_upto_empty_impl {Σ : global_env_ext} ctx ctx' :
-  eq_context_upto [] eq eq ctx ctx' ->
-  eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) ctx ctx'.
-Proof.
-  intros; eapply All2_fold_impl; tea.
-  intros ???? []; constructor; subst; auto;
-  eapply eq_term_upto_univ_empty_impl; tea; tc.
-Qed.
 
   Lemma case_branch_type_equiv (Σ : global_env_ext) ind mdecl idecl p p' br br' c cdecl : 
     eq_predicate upto_names' eq p p' ->
@@ -377,26 +423,6 @@ Qed.
         + eapply All2_map. eapply (All2_impl eqpars).
           intros. now eapply eq_term_upto_univ_lift.
         + eapply All2_refl. reflexivity.
-  Qed.
-
-Lemma All2_map_left_inv {A B C} (P : A -> B -> Type) (l : list C) (f : C -> A) l' : 
-  All2 P (map f l) l' -> All2 (fun x => P (f x)) l l'.
-Proof.
-  rewrite -{1}(map_id l').
-  intros. now eapply All2_map_inv in X.
-Qed.
-
-  Lemma All2i_All2_All2i_All2i {A B C n} {P : nat -> A -> B -> Type} {Q : B -> C -> Type} {R : nat -> A -> C -> Type}
-    {S : nat -> A -> C -> Type} {l l' l''} :
-    All2i P n l l' ->
-    All2 Q l' l'' ->
-    All2i R n l l'' ->
-    (forall n x y z, P n x y -> Q y z -> R n x z -> S n x z) ->
-    All2i S n l l''.
-  Proof.
-    intros a b c H.
-    induction a in l'', b, c |- *; depelim b; depelim c; try constructor; auto.
-    eapply H; eauto.
   Qed.
 
   Lemma typing_alpha :
@@ -840,14 +866,14 @@ Qed.
 
   Lemma eq_term_upto_univ_napp_0 n t t' :
     eq_term_upto_univ_napp [] eq eq n t t' ->
-    upto_names' t t'. 
+    t ≡α t'. 
   Proof.
     apply eq_term_upto_univ_empty_impl; typeclasses eauto.
   Qed.
 
   Lemma upto_names_eq_term_refl Σ Re n t t' :
     RelationClasses.Reflexive Re ->
-    upto_names' t t' ->
+    t ≡α t' ->
     eq_term_upto_univ_napp Σ Re Re n t t'.
   Proof.
     intros.
@@ -863,7 +889,7 @@ Qed.
     RelationClasses.Transitive Rle ->
     RelationClasses.subrelation Re Rle ->
     eq_term_upto_univ_napp Σ Re Rle napp t u ->
-    forall t' u', t ≡ t' -> u ≡ u' ->
+    forall t' u', t ≡α t' -> u ≡α u' ->
     eq_term_upto_univ_napp Σ Re Rle napp t' u'.
   Proof.
     intros.
@@ -877,22 +903,20 @@ Qed.
   Qed.
 
   Lemma upto_names_leq_term Σ φ t u t' u'
-    : t ≡ t' -> u ≡ u' -> leq_term Σ φ t u -> leq_term Σ φ t' u'.
+    : t ≡α t' -> u ≡α u' -> leq_term Σ φ t u -> leq_term Σ φ t' u'.
   Proof.
     intros; eapply upto_names_eq_term_upto_univ; try eassumption; tc.
   Qed.
 
   Lemma upto_names_eq_term Σ φ t u t' u'
-    : t ≡ t' -> u ≡ u' -> eq_term Σ φ t u -> eq_term Σ φ t' u'.
+    : t ≡α t' -> u ≡α u' -> eq_term Σ φ t u -> eq_term Σ φ t' u'.
   Proof.
     intros; eapply upto_names_eq_term_upto_univ; tea; tc.
   Qed.
 
-  Definition upto_names_decl := eq_decl_upto_gen [] eq eq.
-
   Lemma destArity_alpha Γ u v ctx s :
     destArity Γ u = Some (ctx, s) ->
-    u ≡ v ->
+    u ≡α v ->
     ∑ ctx', destArity Γ v = Some (ctx', s) × ctx ≡Γ ctx'.
   Proof.
     induction u in v, Γ, ctx, s |- *; cbn; try discriminate.
@@ -950,7 +974,7 @@ Qed.
   Lemma isType_alpha Σ Γ u v :
     wf Σ.1 ->
     isType Σ Γ u ->
-    u ≡ v ->
+    u ≡α v ->
     isType Σ Γ v.
   Proof.
     intros hΣ [s Hs] eq.
@@ -960,7 +984,7 @@ Qed.
   Lemma isWfArity_alpha Σ Γ u v :
     wf Σ.1 ->
     isWfArity Σ Γ u ->
-    u ≡ v ->
+    u ≡α v ->
     isWfArity Σ Γ v.
   Proof.
     intros hΣ [isTy [ctx [s X1]]] e.

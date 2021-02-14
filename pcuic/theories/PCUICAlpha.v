@@ -7,49 +7,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICInductives PCUICInductiveInversion.
 From Equations Require Import Equations.
 
-
-(* TODO MOVE *)
-Lemma Forall2_eq :
-  forall A (l l' : list A),
-    Forall2 eq l l' ->
-    l = l'.
-Proof.
-  intros A l l' h.
-  induction h.
-  - reflexivity.
-  - f_equal. all: auto.
-Qed.
-
-Lemma All2_trans' {A B C}
-      (P : A -> B -> Type) (Q : B -> C -> Type) (R : A -> C -> Type)
-      (H : forall x y z, P x y × Q y z -> R x z) {l1 l2 l3}
-  : All2 P l1 l2 -> All2 Q l2 l3 -> All2 R l1 l3.
-Proof.
-  induction 1 in l3 |- *.
-  - inversion 1; constructor.
-  - inversion 1; subst. constructor; eauto.
-Qed.
-
-Lemma All2_map_left_inv {A B C} (P : A -> B -> Type) (l : list C) (f : C -> A) l' : 
-All2 P (map f l) l' -> All2 (fun x => P (f x)) l l'.
-Proof.
-  rewrite -{1}(map_id l').
-  intros. now eapply All2_map_inv in X.
-Qed.
-
-Lemma All2i_All2_All2i_All2i {A B C n} {P : nat -> A -> B -> Type} {Q : B -> C -> Type} {R : nat -> A -> C -> Type}
-  {S : nat -> A -> C -> Type} {l l' l''} :
-  All2i P n l l' ->
-  All2 Q l' l'' ->
-  All2i R n l l'' ->
-  (forall n x y z, P n x y -> Q y z -> R n x z -> S n x z) ->
-  All2i S n l l''.
-Proof.
-  intros a b c H.
-  induction a in l'', b, c |- *; depelim b; depelim c; try constructor; auto.
-  eapply H; eauto.
-Qed.
-
 (* Alpha convertible terms and contexts have the same typings *)
 
 Implicit Types cf : checker_flags.
@@ -59,32 +16,8 @@ Infix "≡α" := upto_names (at level 60).
 Notation "`≡Γ`" := (eq_context_upto [] eq eq).
 Infix "≡Γ" := (eq_context_upto [] eq eq) (at level 20, no associativity).
 
-Lemma R_universe_instance_eq {u u'} : R_universe_instance eq u u' -> u = u'.
-Proof.
-  intros H.
-  apply Forall2_eq in H. apply map_inj in H ; revgoals.
-  { apply Universe.make_inj. }
-  subst. constructor ; auto.
-Qed.
-
-Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
-Proof.
-  red. destruct check_univs => //.
-Qed.
-
 Instance upto_names_terms_refl : CRelationClasses.Reflexive (All2 `≡α`).
 Proof. intro; apply All2_refl; reflexivity. Qed.
-
-Lemma eq_term_upto_univ_it_mkLambda_or_LetIn Σ Re Rle :
-    RelationClasses.Reflexive Re ->
-    Proper (eq_context_upto Σ Re Re ==> eq_term_upto_univ Σ Re Rle ==> eq_term_upto_univ Σ Re Rle) it_mkLambda_or_LetIn.
-Proof.
-  intros he Γ Δ eq u v h.
-  induction eq in u, v, h, he |- *.
-  - assumption.
-  - simpl. cbn. apply IHeq => //.
-    destruct p; cbn; constructor ; tas; try reflexivity.
-Qed.
 
 Lemma eq_context_upto_empty_impl {cf} {Σ : global_env_ext} ctx ctx' :
   ctx ≡Γ ctx' ->
@@ -654,7 +587,7 @@ Section Alpha.
           intros. now constructor; eapply upto_names_impl_eq_term.
         * eapply All2i_All2_mix_left in Hbrs; tea.
           2:now eapply Forall2_All2 in wfbrs.
-          epose proof (wf_case_branches_types (p:=p') c ps args brs' isdecl).
+          epose proof (wf_case_branches_types (p:=p') ps args brs' isdecl).
           forward X6.
           eexists; eapply isType_mkApps_Ind; tea.
           unshelve eapply (ctx_inst_spine_subst _ ctxinst').

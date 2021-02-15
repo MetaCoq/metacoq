@@ -1029,19 +1029,19 @@ Proof.
     eapply cumul_prop_trans; eauto. simpl.
     clear X9.
     destruct data.
-    todo "case".
-    (*specialize (X8 _ _ H4 t0 _ (eq_term_upto_univ_napp_leq X11)).
+    specialize (X8 _ _ H5 scrut_ty _ (eq_term_upto_univ_napp_leq X11)).
     eapply cumul_prop_sym => //.
+    destruct e as [eqpars [eqinst [eqpctx eqpret]]].
     eapply cumul_prop_mkApps => //.
-    eapply cumul_prop_mkApps => //. rewrite /ptm /predctx.
+    rewrite /ptm. 
+    eapply PCUICEquality.eq_term_upto_univ_it_mkLambda_or_LetIn => //. tc.
     eapply All2_app. 2:(repeat constructor; auto using eq_term_eq_term_prop_impl).
-    eapply All2_skipn. eapply cumul_prop_mkApps_Ind_inv in X4 => //.
-    eapply cumul_prop_mkApps_Ind_inv in X6 => //.
-    eapply All2_app_inv_l in X6 as (?&?&?&?&?).
+    eapply cumul_prop_mkApps_Ind_inv in X8 => //.
+    eapply All2_app_inv_l in X8 as (?&?&?&?&?).
     eapply All2_symP => //. typeclasses eauto.
-    move: (All2_length a3). destruct e.
-    rewrite -(All2_length a5) => hpars.
-    eapply app_inj in e2 as [eql ->] => //.*)
+    eapply app_inj in e as [eql ->] => //.
+    move: (All2_length eqpars).
+    move: (All2_length a0). lia.
     
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
     intuition auto.
@@ -1065,8 +1065,8 @@ Proof.
     epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ a wfΣ a0).
     eapply subslet_untyped_subslet. eapply X3, validity; eauto.
     destruct a.
-    eapply validity, (isType_mkApps_Ind wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
-    eapply validity, (isType_mkApps_Ind wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
+    eapply validity, (isType_mkApps_Ind_inv wfΣ H1) in X1 as [ps [argss [_ cu]]]; eauto.
+    eapply validity, (isType_mkApps_Ind_inv wfΣ H1) in a0 as [? [? [_ cu']]]; eauto.
     eapply cumul_prop_subst_instance; eauto.
 
   - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.

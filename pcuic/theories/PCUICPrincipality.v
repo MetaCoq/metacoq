@@ -219,10 +219,9 @@ Section Principality.
       destruct (IHu _ _ scrut_ty) as [? p0].
       destruct (p0 _ scrut_ty).
       eapply invert_cumul_ind_r in c0 as [u' [x0' [redr [redu ?]]]]; auto.
-      todo "case".
-      (*exists (mkApps ptm (skipn (ind_npars mdecl) x0' ++ [u])); intros b hB; repeat split; auto.
+      exists (mkApps ptm (indices ++ [u])); intros b hB; repeat split; auto.
       2:econstructor; eauto.
-      eapply inversion_Case in hB as (mdecl'&idecl'&isdecl'&indices'&[]&?).
+      eapply inversion_Case in hB as (mdecl'&idecl'&isdecl'&indices'&[]&?); tea. clear brs_ty0.
       destruct (PCUICWeakeningEnv.declared_inductive_inj isdecl isdecl') as [-> ->].
       destruct (p0 _ scrut_ty0).
       eapply invert_cumul_ind_r in c1 as [u'' [x9' [redr' [redu' ?]]]]; auto.
@@ -238,19 +237,14 @@ Section Principality.
         eapply (All2_impl (Q:=fun x y => Σ ;;; Γ |- x = y)) in a2; auto using red_conv.
         eapply All2_symmetry; eauto. eapply conv_sym.
       }
-      clear redr redr' a1.
-      assert (All2 (conv Σ Γ) x0' (pparams p ++ x5)).
-      { transitivity x9'; tea. apply All2_symmetry; eauto. tc. }
-      etransitivity. 2:eapply c2.
+      clear redr redr'.
+      etransitivity. 2:eapply c0.
       eapply conv_cumul, mkApps_conv_args; auto.
       eapply All2_app. 2:constructor; auto.
-      rewrite -(firstn_skipn (ind_npars x) x0') in X3.
-      eapply All2_app_inv_l in X3 as (?&?&eq&convl&convr).
-      eapply PCUICUnivSubstitution.app_inj in eq as [<- <-] => //.
-      rewrite -(All2_length convl).
-      apply All2_length in a6. apply All2_length in X2. len in a6.
-      pose proof (All2_length a2). len in H. rewrite firstn_length_le.
-      all:todo "case".*)
+      assert (All2 (conv Σ Γ) x0' (pparams p ++ indices')).
+      { transitivity x9'; tea. apply All2_symmetry; eauto. tc. }
+      pose proof (conv_terms_trans _ _ _ a X3).
+      eapply All2_app_inv in X4 as [] => //.
 
     - destruct s as [[ind k] pars]; simpl in *.
       eapply inversion_Proj in hA=>//; auto.
@@ -415,6 +409,16 @@ Lemma leq_term_empty_leq_term {cf:checker_flags} {Σ : global_env_ext} {x y} :
   leq_term Σ Σ x y.
 Proof.
   eapply eq_term_upto_univ_empty_impl; auto; typeclasses eauto.
+Qed.
+
+Lemma eq_context_empty_eq_context {cf:checker_flags} {Σ : global_env_ext} {x y} :
+  eq_context_upto [] (eq_universe Σ) (eq_universe Σ) x y ->
+  eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) x y.
+Proof.
+  intros.
+  eapply All2_fold_impl; tea.
+  intros ???? []; constructor; eauto using eq_term_empty_eq_term.
+  all:now apply eq_term_empty_eq_term.
 Qed.
 
 Notation eq_term_napp Σ n x y :=
@@ -582,29 +586,33 @@ Proof.
     * constructor. eapply PCUICEquality.subst_leq_term.
       eapply PCUICEquality.eq_term_leq_term.
       eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
-
-  - eapply inversion_Case in X8 as (mdecl' & idecl' & indices' & data & cum); auto.
-    destruct data. intuition auto.
-    all:todo "case".
-    (* pose proof (X2 _ _ a6 (eq_term_empty_leq_term X7_2)).
-    eapply eq_term_empty_eq_term in X7_1.
-    eapply eq_term_empty_eq_term in X7_2.
+      
+  - assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
+    { eapply validity. econstructor; eauto.
+      solve_all. }
+    eapply inversion_Case in X10 as (mdecl' & idecl' & decli' & indices' & data & cum); auto.
+    destruct (PCUICWeakeningEnv.declared_inductive_inj isdecl decli'). subst mdecl' idecl'.
+    destruct data.
+    unshelve epose proof (X8 _ _ _ scrut_ty (eq_term_empty_leq_term X11)); tea.
+    pose proof (eq_term_empty_eq_term X11).
+    destruct e as [eqpars [eqinst [eqpctx eqpret]]].
+    eapply eq_term_empty_eq_term in eqpret.
     eapply type_Cumul'.
-    econstructor; eauto.
-    eapply PCUICValidity.validity; eauto.
-    eapply (type_Case _ _ (ind, npar)). eapply isdecl.
-    all:eauto.
-    eapply (All2_impl X5); pcuicfo.
-    destruct b1 as [s [? ?]]. now exists s.
+    econstructor; eauto. tas. clear brs_ty.
     eapply conv_cumul.
     eapply mkApps_conv_args; pcuic.
-    eapply All2_app. simpl in *.
+    rewrite /ptm. constructor.
+    eapply PCUICEquality.eq_term_upto_univ_it_mkLambda_or_LetIn; tea. tc.
+    eapply eq_context_empty_eq_context; tea. 
+    eapply All2_app.
     2:constructor; pcuic.
-    eapply All2_skipn.
-    clear -onu wfΣ a6 X4 X6.
-    unshelve eapply (principal_type_ind a6 X4).
-    split; auto. *)
-    
+    specialize (X3 _ _ scrut_ty (eq_term_empty_leq_term X11)).
+    unshelve epose proof (principal_type_ind scrut_ty X3) as [_ indconv]; tea.
+    split; auto.
+    eapply All2_app_inv in indconv as [convpars convinds].
+    2:exact (All2_length eqpars).
+    exact convinds.
+        
   - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
     intuition auto.
     specialize (X3 _ _ a0 (eq_term_empty_leq_term X4)).
@@ -622,7 +630,7 @@ Proof.
     set (ctx' := PCUICInductives.projection_context mdecl' idecl' p.1.1 u).
     eapply (conv_subst_conv _ Γ ctx ctx' []); eauto.
     constructor. now constructor. 
-    eapply All2_rev. eapply All2_refl. intros; apply conv_refl'.
+    eapply All2_rev. eapply All2_refl. reflexivity.
     eapply subslet_untyped_subslet; eauto.
     eapply PCUICInductives.projection_subslet; eauto.
     eapply validity in X3; auto.
@@ -657,7 +665,7 @@ Proof.
     eapply All2_nth_error in a; eauto.
     destruct a as [[[eqty _] _] _].
     constructor. apply eq_term_empty_leq_term in eqty.
-    now eapply leq_term_empty_leq_term. Unshelve. all:todo "case".
+    now eapply leq_term_empty_leq_term.
 Qed.
 
 Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' : 

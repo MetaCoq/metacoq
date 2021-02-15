@@ -251,6 +251,7 @@ Section Lemmata.
       rewrite app_context_assoc.
       destruct p; cbn in *.
       + apply validity in scrut_ty as (?&typ).
+        clear brs_ty.
         apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
         clear -spine.
         rewrite -app_assoc -app_comm_cons in spine.
@@ -260,9 +261,7 @@ Section Lemmata.
           econstructor; eauto.
         * depelim spine; eauto.
       + eauto using welltyped_fill_context_hole.
-      + eapply conv_context_sym in conv_pctx; auto.
-        eapply context_conversion in pret_ty; eauto.
-        econstructor; eauto.
+      + now exists (tSort ps).
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
@@ -276,9 +275,7 @@ Section Lemmata.
       rewrite -app_assoc.
       destruct b; cbn in *.
       + eapply welltyped_fill_context_hole; eauto.
-      + apply conv_context_sym in cc; auto.
-        eapply context_conversion in typ; eauto.
-        econstructor; eauto.
+      + eexists; tea.
   Qed.
 
   Lemma cored_red :

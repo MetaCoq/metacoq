@@ -106,17 +106,6 @@ Section list_size.
   Qed.
 
 End list_size.
-Lemma size_mkApps f l : size (mkApps f l) = size f + list_size size l.
-Proof.
-  induction l in f |- *; simpl; try lia.
-  rewrite IHl. simpl. lia.
-Qed.
-
-Lemma list_size_app (l l' : list term) : list_size size (l ++ l') = list_size size l + list_size size l'.
-Proof.
-  induction l; simpl; auto.
-  rewrite IHl. lia.
-Qed.
 
 Lemma mfixpoint_size_In {mfix d} :
   In d mfix ->
@@ -761,15 +750,6 @@ Section Rho.
     f_equal; simp rho => //.
   Qed.
   Hint Rewrite @rho_predicate_map_predicate : rho.
-
-  Lemma nth_error_size {A} (f : A -> nat) {l : list A} {n x} : 
-    nth_error l n = Some x ->
-    f x < list_size f l. 
-  Proof.
-    induction l in n |- *; destruct n; simpl => //; auto.
-    - intros [= <-]. lia.
-    - intros hnth. specialize (IHl _ hnth). lia.
-  Qed.
 
   Definition inspect {A} (x : A) : { y : A | x = y } := exist x eq_refl.
 

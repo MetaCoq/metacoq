@@ -149,6 +149,44 @@ Proof.
   rewrite <- IHl. simpl. reflexivity.
 Qed.
 
+
+Lemma mkApps_tApp_inj fn args t u : 
+  ~~ isApp fn -> 
+  mkApps fn args = tApp t u ->
+  t = mkApps fn (removelast args) /\ u = last args t.
+Proof.
+  intros napp eqapp.
+  destruct args using rev_case => //.
+  simpl in eqapp. subst fn => //.
+  rewrite -mkApps_nested in eqapp. noconf eqapp.
+  now rewrite removelast_app // last_app // /= app_nil_r.
+Qed.
+
+Lemma removelast_length {A} (args : list A) : #|removelast args| = Nat.pred #|args|.
+Proof.
+  induction args => //. destruct args => //.
+  now rewrite (removelast_app [_]) // app_length IHargs /=.
+Qed.
+
+Lemma nth_error_removelast {A} {args : list A} {n arg} : 
+  nth_error (removelast args) n = Some arg ->
+  nth_error args n = Some arg.
+Proof.
+  intros h. rewrite nth_error_removelast //.
+  apply nth_error_Some_length in h.
+  now rewrite removelast_length in h.
+Qed.
+
+Lemma mkApps_discr f args t : 
+  args <> [] ->
+  mkApps f args = t ->
+  ~~ isApp t -> False.
+Proof.
+  intros.
+  destruct args using rev_case => //.
+  rewrite -mkApps_nested in H0. destruct t => //.
+Qed.
+
 Fixpoint decompose_prod (t : term) : (list aname) * (list term) * term :=
   match t with
   | tProd n A B => let (nAs, B) := decompose_prod B in
@@ -416,7 +454,6 @@ Proof.
   eapply decompose_app_rec_notApp. eassumption.
 Qed.
 
-
 Lemma decompose_app_rec_inv {t l' f l} :
   decompose_app_rec t l' = (f, l) ->
   mkApps t l' = mkApps f l.
@@ -517,6 +554,41 @@ Proof.
   - rewrite -> 2!isApp_false_nApp by assumption. reflexivity.
   - assumption.
 Qed.
+
+Definition head x := (decompose_app x).1.
+Definition arguments x := (decompose_app x).2.
+
+Lemma head_arguments x : mkApps (head x) (arguments x) = x.
+Proof.
+  unfold head, arguments, decompose_app.
+  remember (decompose_app_rec x []).
+  destruct p as [f l].
+  symmetry in Heqp.
+  eapply decompose_app_rec_inv in Heqp.
+  now simpl in *.
+Qed.
+
+Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
+Proof.
+  induction t in l |- *; simpl; auto. rewrite IHt1.
+  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+Qed.
+
+Lemma decompose_app_rec_head t l f : fst (decompose_app_rec t l) = f ->
+  negb (isApp f).
+Proof.
+  induction t; unfold isApp; simpl; try intros [= <-]; auto.
+  intros. apply IHt1. now rewrite !fst_decompose_app_rec.
+Qed.
+
+Lemma head_nApp x : negb (isApp (head x)).
+Proof.
+  unfold head.
+  eapply decompose_app_rec_head. reflexivity.
+Qed.
+
+Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
+Proof. rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
 
 Lemma mkApps_Fix_spec mfix idx args t : mkApps (tFix mfix idx) args = t ->
                                         match decompose_app t with

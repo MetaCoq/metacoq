@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool.
+From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool. 
 From MetaCoq.Template Require Import utils LibHypsNaming.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize.
 From Coq Require Import List.
@@ -249,7 +249,7 @@ Lemma term_forall_mkApps_ind :
     (forall (n : aname) (t : term), P t -> forall t0 : term, P t0 -> P (tLambda n t t0)) ->
     (forall (n : aname) (t : term),
         P t -> forall t0 : term, P t0 -> forall t1 : term, P t1 -> P (tLetIn n t t0 t1)) ->
-    (forall t : term, forall v, ~ isApp t -> P t -> All P v -> P (mkApps t v)) ->
+    (forall t : term, forall v, ~ isApp t -> P t -> v <> [] -> All P v -> P (mkApps t v)) ->
     (forall (s : kername) (u : list Level.t), P (tConst s u)) ->
     (forall (i : inductive) (u : list Level.t), P (tInd i u)) ->
     (forall (i : inductive) (n : nat) (u : list Level.t), P (tConstruct i n u)) ->
@@ -283,8 +283,12 @@ Proof.
     + eapply decompose_app_notApp in E. eauto.
     + eapply auxt. cbn. hnf. pose proof (decompose_app_size_tApp1 t1 t2). 
       rewrite E in H. hnf in *; cbn in *. lia.
+    + intros ->.
+      rewrite /decompose_app /= in E.
+      pose proof (decompose_app_rec_notApp _ _ _ _ E).
+      eapply decompose_app_rec_inv in E. simpl in *. subst t => //.
     + induction l using rev_rec in E, auxt, t1, t2, t |- *.
-      * econstructor.
+      * constructor.
       * eapply All_app_inv.
         2:{ 
         econstructor. eapply auxt. hnf; cbn.

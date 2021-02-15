@@ -399,7 +399,7 @@ Proof with eauto using sq with pcuic; try congruence.
          ++ destruct (nth_error_all E2 X Γ) as [_ []].
             ** left. destruct s. constructor. eauto.
             ** destruct (RedFlags.fix_ flags) eqn:?.
-               --- right. intros ?. depelim H0. depelim X0. all:help. clear IHv. 
+               --- right. intros ?. depelim H1. depelim X0. all:help. clear IHv. 
                    eapply whne_mkApps_inv in X0 as []...
                    destruct s as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
                    rewrite E1 in e0. inv e0.

@@ -1300,7 +1300,6 @@ Proof.
   now rewrite (spine_subst_subst_to_extended_list_k sppars).
 Qed.
 
-
 Lemma invert_red1_letin {cf:checker_flags} (Σ : global_env_ext) Γ C na d ty b :
   red1 Σ.1 Γ (tLetIn na d ty b) C ->
   (∑ d', (C = tLetIn na d' ty b) *
@@ -1334,41 +1333,6 @@ Proof.
     destruct (decompose_prod_assum [] t).
     now rewrite app_context_assoc.
 Qed.
-
-Definition head x := (decompose_app x).1.
-Definition arguments x := (decompose_app x).2.
-
-Lemma head_arguments x : mkApps (head x) (arguments x) = x.
-Proof.
-  unfold head, arguments, decompose_app.
-  remember (decompose_app_rec x []).
-  destruct p as [f l].
-  symmetry in Heqp.
-  eapply decompose_app_rec_inv in Heqp.
-  now simpl in *.
-Qed.
-
-Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
-Proof.
-  induction t in l |- *; simpl; auto. rewrite IHt1.
-  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
-Qed.
-
-Lemma decompose_app_rec_head t l f : fst (decompose_app_rec t l) = f ->
-  negb (isApp f).
-Proof.
-  induction t; unfold isApp; simpl; try intros [= <-]; auto.
-  intros. apply IHt1. now rewrite !fst_decompose_app_rec.
-Qed.
-
-Lemma head_nApp x : negb (isApp (head x)).
-Proof.
-  unfold head.
-  eapply decompose_app_rec_head. reflexivity.
-Qed.
-
-Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
-Proof. rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
 
 Lemma destInd_head_subst s k t f : destInd (head (subst s k t)) = Some f ->
   (destInd (head t) = Some f) +  

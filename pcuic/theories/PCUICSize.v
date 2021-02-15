@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst.
+From Coq Require Import ssreflect.
 
 Definition def_size (size : term -> nat) (x : def term)
   := size (dtype x) + size (dbody x).
@@ -36,3 +37,18 @@ Fixpoint size t : nat :=
   | tCoFix mfix idx => S (mfixpoint_size size mfix)
   | x => 1
   end.
+
+Lemma size_mkApps f l : size (mkApps f l) = size f + list_size size l.
+Proof.
+  induction l in f |- *; simpl; try lia.
+  rewrite IHl. simpl. lia.
+Qed.
+
+Lemma nth_error_size {A} (f : A -> nat) {l : list A} {n x} : 
+  nth_error l n = Some x ->
+  f x < list_size f l. 
+Proof.
+  induction l in n |- *; destruct n; simpl => //; auto.
+  - intros [= <-]. lia.
+  - intros hnth. specialize (IHl _ hnth). lia.
+Qed.

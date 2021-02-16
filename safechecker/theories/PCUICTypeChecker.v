@@ -1017,7 +1017,7 @@ Section Typecheck.
     - eapply type_reduction in X5; eauto.
       eapply validity in X5; eauto.
       destruct (ssrbool.elimT (eqb_spec ind I)); auto.
-      unshelve eapply (PCUICInductives.isType_mkApps_Ind _ X7 _) in X5 as [parsubst [argsubst [[sp sp'] cu]]]; eauto.
+      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ X7 _) in X5 as [parsubst [argsubst [[sp sp'] cu]]]; eauto.
       pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
       pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
       autorewrite with len in H, H2.

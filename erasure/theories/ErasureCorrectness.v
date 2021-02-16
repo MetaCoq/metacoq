@@ -406,7 +406,7 @@ Lemma is_construct_erases Σ Γ t t' :
 Proof.
   induction 1; cbn; try congruence.
   - unfold isConstruct_app in *. clear IHerases2.
-    cbn. rewrite PCUICInductives.fst_decompose_app_rec.
+    cbn. rewrite PCUICAstUtils.fst_decompose_app_rec.
     unfold EisConstruct_app in *.
     cbn. rewrite fst_decompose_app_rec. eassumption.
 Qed.
@@ -417,7 +417,7 @@ Lemma is_FixApp_erases Σ Γ t t' :
 Proof.
   induction 1; cbn; try congruence.
   - unfold isFixApp in *. clear IHerases2.
-    cbn. rewrite PCUICInductives.fst_decompose_app_rec.
+    cbn. rewrite PCUICAstUtils.fst_decompose_app_rec.
     unfold Ee.isFixApp in *.
     cbn. rewrite fst_decompose_app_rec. eassumption.
 Qed.

@@ -438,9 +438,7 @@ Section Erase.
       apply In_nth_error in H as (?&nth).
       eapply All2i_nth_error_r in nth; eauto.
       destruct nth as (?&?&(?&?)&?&?); cbn in *.
-      econstructor.
-      eapply PCUICContextConversion.context_conversion; eauto.
-      eapply PCUICContextConversion.conv_context_sym; eauto.
+      econstructor; tea.
     - clear wildcard12.
       eapply inversion_Proj in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.

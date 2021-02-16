@@ -770,29 +770,6 @@ Section CheckEnv.
     rewrite hnth. simpl. reflexivity.
   Qed.
 
-  Lemma ctx_inst_app {Σ : global_env_ext} (wfΣ : wf Σ) Γ args args' Δ Δ' :
-    forall dom : ctx_inst Σ Γ args Δ, 
-    ctx_inst Σ Γ args' (subst_telescope (ctx_inst_sub dom) 0 Δ') ->
-    ctx_inst Σ Γ (args ++ args') (Δ ++ Δ').
-  Proof.
-    induction Δ as [|[na [b|] ty] Δ] using PCUICInduction.ctx_length_ind in args, Δ' |- *; simpl; auto; len.
-    - intros ctx ctx'. depelim ctx; simpl in ctx'.
-      now rewrite subst_telescope_empty in ctx'.
-    - intros ctx ctx'. depelim ctx. simpl in *.
-      specialize (X (subst_telescope [b] 0 Δ) ltac:(now len) args).
-      len in X. 
-      rewrite subst_app_telescope in ctx'. len in ctx'.
-      specialize (X _ ctx ctx').
-      constructor. rewrite subst_telescope_app.
-      rewrite ctx_inst_subst_length in X. len in X. now len.
-    - intros ctx ctx'. depelim ctx. simpl in *.
-      specialize (X (subst_telescope [i] 0 Δ) ltac:(now len) inst).
-      rewrite subst_app_telescope in ctx'. len in ctx'.
-      specialize (X _ ctx ctx').
-      constructor; auto. rewrite subst_telescope_app.
-      rewrite ctx_inst_subst_length in X. len in X. now len.
-  Qed.
-
   Definition smash_telescope acc Γ := 
     List.rev (smash_context acc (List.rev Γ)).
 
@@ -801,20 +778,7 @@ Section CheckEnv.
     ctx_inst Σ Γ args Δ.
   Proof.
     rewrite /smash_telescope.
-    induction Δ as [|[na [b|] ty] Δ] using PCUICInduction.ctx_length_ind in args |- *; simpl; auto.
-    - rewrite smash_context_app smash_context_acc /= lift0_context lift0_id subst_empty subst_context_nil 
-        app_nil_r -smash_context_subst subst_context_nil.
-      rewrite subst_context_subst_telescope.
-      intros ctx. eapply X in ctx. 2:now len.
-      now constructor.
-    - rewrite smash_context_app smash_context_acc /=.
-      rewrite subst_context_lift_id //. rewrite List.rev_app_distr /=.
-      intros ctx. depelim ctx.
-      constructor; auto.
-      eapply X. now len.
-      rewrite -subst_context_subst_telescope.
-      rewrite subst_telescope_subst_context in ctx.
-      rewrite (smash_context_subst []); auto.
+    intros H. apply ctx_inst_smash in H. now rewrite List.rev_involutive in H.
   Qed.
 
   Lemma typing_spine_it_mkProd_or_LetIn_inv {Σ : global_env_ext} (wfΣ : wf Σ) Γ Δ s args s' :
@@ -880,7 +844,7 @@ Section CheckEnv.
     pose proof (red_expand_let Γ na b ty T).
     forward X. apply wf.
     epose proof (weakening_conv _ (Γ ,, decl) [] Δ).
-    simpl in X0. len in X0.
+    simpl in X0.
     eapply X0. eauto.
     symmetry. eapply red_conv. apply X.
     simpl.
@@ -1307,7 +1271,7 @@ Section CheckEnv.
     repeat (split; auto).
     - rewrite forallb_map /level_var_instance.
       rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
-      intros x Hx. apply In_Var_global_ext_poly. len. lia.
+      intros x Hx. apply In_Var_global_ext_poly. len.
     - destruct wfext as [onΣ onu]. simpl in *.
       destruct onu as [_ [_ [_ sat]]].
       do 2 red in sat.
@@ -1336,7 +1300,7 @@ Section CheckEnv.
       rewrite !subst_instance_level_lift //.
     - rewrite /level_var_instance.
       rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
-      intros x Hx. apply In_Var_global_ext_poly. len. lia.
+      intros x Hx. apply In_Var_global_ext_poly. len.
     - destruct wfext as [onΣ onu]. simpl in *.
       destruct onu as [_ [_ [_ sat]]].
       do 2 red in sat.

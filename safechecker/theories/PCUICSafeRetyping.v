@@ -457,8 +457,6 @@ Section TypeOf.
         + assert (Σ ;;; Γ |- it_mkLambda_or_LetIn (pcontext p) (preturn p) : 
           it_mkProd_or_LetIn (pcontext p) (tSort ps)).
           eapply type_it_mkLambda_or_LetIn. eauto.
-          eapply context_conversion; tea. 
-          now eapply conv_context_sym.
           eapply PCUICGeneration.type_mkApps; tea.
           eapply wf_arity_spine_typing_spine; auto.
           eapply validity in X1; auto.
@@ -466,25 +464,21 @@ Section TypeOf.
           todo "case".
         + eapply conv_cumul.
           eapply mkApps_conv_args; auto.
-          rewrite /ptm. eapply it_mkLambda_or_LetIn_conv; tea.
-          now eapply PCUICContextConversion.conv_context_sym.
-          reflexivity.
       * intros T'' Hc'.
         eapply inversion_Case in Hc' as (mdecl' & idecl' & isdecl' & indices' & [] & cum'); auto.
         etransitivity. simpl in cum'. 2:eassumption.
         eapply conv_cumul, mkApps_conv_args; auto.
-        -- apply it_mkLambda_or_LetIn_conv; auto.
-        -- eapply All2_app. 2:repeat (constructor; auto).
-           specialize (Hp _ scrut_ty0).
-           assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) 
+        eapply All2_app. 2:repeat (constructor; auto).
+        specialize (Hp _ scrut_ty0).
+        assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) 
                                                              (pparams p ++ indices')).
            { eapply cumul_red_l_inv; eauto. }
-           eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; auto.
-           eapply All2_skipn in cl'. instantiate (1 := ci_npar ci) in cl'.
-           rewrite skipn_all_app_eq // in cl'.
-           now rewrite (wf_predicate_length_pars wf_pred).
+        eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; auto.
+        eapply All2_skipn in cl'. instantiate (1 := ci_npar ci) in cl'.
+        rewrite skipn_all_app_eq // in cl'.
+        now rewrite (wf_predicate_length_pars wf_pred).
       
-    - simpl in wildcard1.
+    - cbn in wildcard1.
       destruct inversion_Case as (mdecl & idecl & isdecl & indices & [] & cum).
       destruct infer as [cty [[Hty Hp]]].
       destruct validity as [Hi i]. simpl in wildcard1.

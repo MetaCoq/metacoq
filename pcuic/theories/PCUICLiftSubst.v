@@ -451,7 +451,7 @@ Lemma lift_context_alt n k Γ :
   lift_context n k Γ =
   mapi (fun k' d => lift_decl n (Nat.pred #|Γ| - k' + k) d) Γ.
 Proof.
-  unfold lift_context. apply fold_context_k_alt.
+  unfold lift_context. apply: fold_context_k_alt.
 Qed.
 
 Lemma lift_context_app n k Γ Δ :

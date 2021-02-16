@@ -96,7 +96,7 @@ Lemma rename_context_alt r Γ :
   rename_context r Γ =
   mapi (fun k' d => map_decl (rename (shiftn (Nat.pred #|Γ| - k') r)) d) Γ.
 Proof.
-  unfold rename_context. apply fold_context_k_alt.
+  unfold rename_context. apply: fold_context_k_alt.
 Qed.
 
 Definition rename_telescope r Γ :=

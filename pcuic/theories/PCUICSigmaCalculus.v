@@ -2033,15 +2033,6 @@ Proof.
     rewrite !mapi_length. now rewrite subst_app_decomp.
 Qed.
 
-Lemma fold_context_k_compose f g Γ :
-  fold_context_k f (fold_context_k g Γ) = fold_context_k (fun n x => f n (g n x)) Γ.
-Proof.
-  induction Γ; simpl; auto; rewrite !fold_context_k_snoc0.
-  simpl. rewrite IHΓ. f_equal.
-  rewrite compose_map_decl.
-  now rewrite fold_context_k_length.
-Qed.
-
 Lemma smash_context_app Δ Γ Γ' :
   smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
 Proof.

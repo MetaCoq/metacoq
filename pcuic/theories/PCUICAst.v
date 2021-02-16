@@ -709,20 +709,6 @@ Proof.
 Qed.
 Hint Resolve map_context_id_spec_cond : all.
 
-Lemma map_context_map (f : term -> term) g (ctx : context) :
-  map_context f (map g ctx) = map (map_decl f ∘ g) ctx.
-Proof.
-  induction ctx; simpl; f_equal; auto.
-Qed.
-Hint Rewrite map_context_map : map.
-
-Lemma map_map_context {A} (f : context_decl -> A) (g : term -> term) (ctx : context) :
-  map f (map_context g ctx) = map (f ∘ map_decl g) ctx.
-Proof.
-  now rewrite /map_context map_map_compose.
-Qed.
-Hint Rewrite @map_map_context : map.
-
 Lemma map_predicate_id_spec {A} finst (f f' : A -> A) (p : predicate A) :
   finst (puinst p) = puinst p ->
   map f (pparams p) = pparams p ->
@@ -765,43 +751,6 @@ Proof.
   intros x y ->.
   apply map_predicate_eq_spec; auto.
 Qed.
-
-Lemma map_fold_context_k f g ctx : map (map_decl f) (fold_context_k g ctx) = fold_context_k (fun i => f ∘ g i) ctx.
-Proof.
-  rewrite !fold_context_k_alt map_mapi. 
-  apply mapi_ext => i d. now rewrite compose_map_decl.
-Qed.
-Hint Rewrite map_fold_context_k : map.
- 
-Lemma mapi_context_map (f : nat -> term -> term) g (ctx : context) :
-  mapi_context f (map g ctx) = mapi (fun i => map_decl (f (Nat.pred #|ctx| - i)) ∘ g) ctx.
-Proof.
-  rewrite mapi_context_fold fold_context_k_alt mapi_map. now len.
-Qed.
-Hint Rewrite mapi_context_map : map.
- 
-Lemma mapi_context_map_context (f : nat -> term -> term) g (ctx : context) :
-  mapi_context f (map_context g ctx) = 
-  mapi_context (fun i => f i ∘ g) ctx.
-Proof.
-  now rewrite !mapi_context_fold fold_context_k_map.
-Qed.
-Hint Rewrite mapi_context_map_context : map.
-
-Lemma map_context_mapi_context (f : term -> term) (g : nat -> term -> term) (ctx : context) :
-  map_context f (mapi_context g ctx) = 
-  mapi_context (fun i => f ∘ g i) ctx.
-Proof.
-  rewrite !mapi_context_fold. now unfold map_context; rewrite map_fold_context_k.
-Qed.
-Hint Rewrite map_context_mapi_context : map.
-
-Lemma map_mapi_context {A} (f : context_decl -> A) (g : nat -> term -> term) (ctx : context) :
-  map f (mapi_context g ctx) = mapi (fun i => f ∘ map_decl (g (Nat.pred #|ctx| - i))) ctx.
-Proof.
-  now rewrite mapi_context_fold fold_context_k_alt map_mapi.
-Qed.
-Hint Rewrite @map_mapi_context : map.
 
 Lemma shiftf0 {A B} (f : nat -> A -> B) : shiftf f 0 =2 f.
 Proof. intros x. unfold shiftf. now rewrite Nat.add_0_r. Qed.
@@ -963,12 +912,6 @@ Proof.
   intros x y ->.
   apply map_branch_eq_spec; auto.
   now rewrite eqf.
-Qed.
-
-Lemma map_context_id (ctx : context) : map_context id ctx = ctx.
-Proof.
-  unfold map_context.
-  now rewrite map_decl_id map_id.
 Qed.
 
 Lemma map_branch_id_spec (f : term -> term) (x : branch term) :

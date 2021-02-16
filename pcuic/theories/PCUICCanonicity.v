@@ -536,7 +536,7 @@ Section Spines.
         destruct isty as [s Hs].
         eapply inversion_it_mkProd_or_LetIn in Hs; eauto.
         now eapply typing_wf_local.
-      * len; simpl. eapply nth_error_None in hargs => //; len in hnth.
+      * len; simpl. eapply nth_error_None in hargs => //.
         eapply nth_error_None. lia.
       * eapply nth_error_None in hnth => //. len in hnth. lia.
     - eapply typing_spine_all_inv in sp => //.
@@ -1252,3 +1252,5 @@ Section WeakNormalization.
 
   End reducible.
 End WeakNormalization.
+
+Print Assumptions eval_ind_canonical.

@@ -3313,6 +3313,32 @@ Section Rho.
     - rewrite !pred_atom_inst; auto. eapply pred1_refl_gen; auto with pcuic.
   Qed.
 
+  (*
+  Instance All_decls_refl P : 
+  Reflexive P ->
+  Reflexive (All_decls P).
+Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
+
+  (*Lemma strong_substitutivity_fixed Γ Γ' Δ Δ' s t σ τ :
+    pred1 Σ Γ Γ' s t -> s = t -> Γ = Γ' ->
+    ctxmap Γ Δ σ ->
+    ctxmap Γ' Δ' τ ->
+    (forall x : nat, pred1 Σ Δ Δ' (σ x) (τ x)) ->
+    pred1 Σ Δ Δ' s.[σ] t.[τ].
+  Proof.
+    intros redst eq eqΓ.
+    revert Δ Δ' σ τ.
+    revert Γ Γ' s t redst eq eqΓ.
+    set (P' := fun Γ Γ' => Γ = Γ' -> pred1_ctx Σ Γ Γ').
+    set (Pover := fun Γ Γ' ctx ctx' =>
+      forall Δ Δ' σ τ,
+        Γ = Γ' ->
+        ctxmap Γ Δ σ ->
+        ctxmap Γ' Δ' τ ->
+        (forall x, pred1 Σ Δ Δ' (σ x) (τ x)) ->
+        pred1_ctx_over Σ Δ Δ' (inst_context σ ctx) (inst_context τ ctx')).*)
+
+
   Lemma All2_fold_context_assumptions {P Γ Δ} : 
     All2_fold (on_decls P) Γ Δ ->
     context_assumptions Γ = context_assumptions Δ.

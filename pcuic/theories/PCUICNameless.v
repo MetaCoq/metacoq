@@ -1064,15 +1064,21 @@ Proof.
   - now eapply nl_declared_inductive.
   - simpl. now rewrite nth_error_map H0.
 Qed.
+From MetaCoq.PCUIC Require Import PCUICUnivSubstitution.
 
-Lemma nl_case_predicate_context ind mdecl idecl p :
-  nlctx (case_predicate_context ind mdecl idecl p) =
-  case_predicate_context ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) 
-    (nl_predicate nl p).
+Lemma nl_to_extended_list:
+  forall indctx : list context_decl,
+    map nl (to_extended_list indctx) = to_extended_list (nlctx indctx).
 Proof.
-  unfold case_predicate_context, case_predicate_context_gen.
-  simpl.
-  + todo "ind_case_predicate_context".
+  intros indctx. unfold to_extended_list, to_extended_list_k.
+  change [] with (map nl []) at 2.
+  unf_term. generalize (@nil term), 0.
+  induction indctx.
+  - reflexivity.
+  - simpl. intros l n.
+    destruct a as [? [?|] ?].
+    all: cbn.
+    all: apply IHindctx.
 Qed.
 
 Lemma nlctx_subst_instance :
@@ -1127,7 +1133,6 @@ Proof.
     now rewrite nl_lift; len.
 Qed.
 
-
 Lemma nl_it_mkProd_or_LetIn :
   forall Γ A,
     nl (it_mkProd_or_LetIn Γ A) = it_mkProd_or_LetIn (nlctx Γ) (nl A).
@@ -1138,21 +1143,6 @@ Proof.
   - simpl. rewrite IHΓ. f_equal.
     destruct a as [? [?|] ?].
     all: reflexivity.
-Qed.
-
-Lemma nl_to_extended_list:
-  forall indctx : list context_decl,
-    map nl (to_extended_list indctx) = to_extended_list (nlctx indctx).
-Proof.
-  intros indctx. unfold to_extended_list, to_extended_list_k.
-  change [] with (map nl []) at 2.
-  unf_term. generalize (@nil term), 0.
-  induction indctx.
-  - reflexivity.
-  - simpl. intros l n.
-    destruct a as [? [?|] ?].
-    all: cbn.
-    all: apply IHindctx.
 Qed.
 
 Lemma nl_extended_subst Γ k :
@@ -1265,6 +1255,44 @@ Qed.
 Lemma nlctx_length Γ : #|nlctx Γ| = #|Γ|.
 Proof. now rewrite map_length. Qed.
 Hint Rewrite nlctx_length : len.
+
+Lemma map2_map_left {A B C D} (f : A -> B) (g : B -> C -> D) (l : list A) (l' : list C) :
+  map2 g (map f l) l' = map2 (fun x y => g (f x) y) l l'.
+Proof.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal; eauto.
+Qed.
+
+Lemma map2_ext {A B C} (f g : A -> B -> C) (l : list A) (l' : list B) :
+  (forall x y, f x y = g x y) ->  
+  map2 f l l' = map2 g l l'.
+Proof.
+  intros H.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal; eauto.
+Qed.
+
+Lemma nl_case_predicate_context ind mdecl idecl p :
+  nlctx (case_predicate_context ind mdecl idecl p) =
+  case_predicate_context ind (nl_mutual_inductive_body mdecl) (nl_one_inductive_body idecl) 
+    (nl_predicate nl p).
+Proof.
+  unfold case_predicate_context, case_predicate_context_gen.
+  simpl.
+  rewrite /nlctx /=.
+  simpl. rewrite /forget_types map_map_compose.
+  rewrite /pre_case_predicate_context_gen.
+  destruct (pcontext p); simpl; auto.
+  f_equal.
+  - rewrite /map_decl_anon /= /set_binder_name /=; f_equal.
+    rewrite nl_mkApps /=; f_equal; rewrite map_app map_map_compose.
+    rewrite nl_to_extended_list. f_equal.
+    rewrite map_map_compose. apply map_ext => t.
+    now rewrite nl_lift; len.
+  - rewrite -map_rev.
+    rewrite -nl_expand_lets_ctx -nlctx_subst_instance -nlctx_subst_context.
+    rewrite map_map2 map2_map.
+    rewrite map2_map_left.
+    apply map2_ext. intros [] []; reflexivity.
+Qed.
 
 Lemma nl_case_branch_context ind mdecl p br cdecl :
   nlctx (case_branch_context ind mdecl p br cdecl) =

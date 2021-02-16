@@ -1259,6 +1259,262 @@ Proof.
   now rewrite -IHc.
 Qed.
 
+(*Open Scope sigma_scope.
+From Equations.Type Require Import Relation.
+From MetaCoq.PCUIC Require Import PCUICInst PCUICRename PCUICOnFreeVars PCUICParallelReduction.
+
+Lemma red_inst {cf:checker_flags} {Σ} {wfΣ : wf Σ} Δ Γ σ t u :
+  usubst Γ σ Δ ->
+  red Σ Γ t u ->
+  red Σ Δ t.[σ] u.[σ].
+Proof.
+  intros us.
+  induction 1.
+  - now eapply red1_inst.
+  - reflexivity.
+  - etransitivity; tea.
+Qed.
+
+(* Lemma strong_substitutivity_clos_rt {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ s t} σ τ :
+  ctxmap Γ Δ σ ->
+  ctxmap Γ Δ τ ->
+  pred1_subst Σ Γ Δ Δ σ τ ->
+  clos_refl_trans (pred1 Σ Γ Γ) s t ->
+  clos_refl_trans (pred1 Σ Δ Δ) s.[σ] t.[τ].
+Proof.
+
+Lemma red_strong_substitutivity {cf:checker_flags} {Σ} {wfΣ : wf Σ} Γ Δ s t σ τ :
+  red Σ Γ s t ->
+  ctxmap Γ Δ σ ->
+  ctxmap Γ Δ τ ->
+  (forall x, red Σ Γ (σ x) (τ x)) ->
+  red Σ Δ s.[σ] t.[τ].
+Proof.
+  intros r ctxm ctxm' IH.
+  eapply red_pred in r; eauto.
+  eapply (strong_substitutivity_clos_rt σ τ) in r; tea.
+  - eapply pred_red => //.
+  - intros x. *)
+
+Lemma red_meta_conv Σ Γ t u t' u' : 
+  red Σ Γ t' u' -> t' = t -> u' = u ->
+  red Σ Γ t u.
+Proof. now intros r -> ->. Qed.
+
+Definition red_subst Σ Γ (σ σ' : nat -> term) :=
+  forall x, red Σ Γ (σ x) (σ' x).
+
+Lemma red_on_free_vars {cf} {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
+  on_free_vars P u ->
+  on_ctx_free_vars P Γ ->
+  red Σ Γ u v ->
+  on_free_vars P v.
+Proof.
+  intros on onΓ r.
+  induction r; auto.
+  now eapply red1_on_free_vars.
+Qed.
+
+Lemma red_rename {cf} :
+  forall P Σ Γ Δ u v f,
+    wf Σ ->
+    (*on_ctx_free_vars P Γ -> *)
+    urenaming P Δ Γ f ->
+    on_free_vars P u ->
+    red Σ Γ u v ->
+    red Σ Δ (rename f u) (rename f v).
+Proof.
+  intros.
+  induction X1.
+  - constructor. now eapply red1_rename.
+  - reflexivity.
+  - etransitivity. eapply IHX1_1; eauto.
+    eapply IHX1_2. eapply red_on_free_vars; eauto.
+    admit.
+Abort.
+
+Lemma usubst_up Γ d : usubst Γ ↑ (Γ ,, d).
+Proof.
+  intros x decl nth b hb.
+  unfold shift. left.
+  exists (S x), decl. splits; auto.
+  sigma. rewrite hb /=. f_equal.
+Qed.
+
+Lemma red_subst_up {cf} {Σ} {wfΣ : wf Σ} Γ (σ σ' : nat -> term) d :
+  red_subst Σ Γ σ σ' ->
+  red_subst Σ (Γ ,, d) (up 1 σ) (up 1 σ').
+Proof.
+  intros r x.
+  unfold up. destruct Nat.leb. 2:reflexivity.
+  eapply red_meta_conv. 2-3:sigma; reflexivity.
+  destruct d as [na [d|] ty].
+  eapply red_inst; tea.
+  2:eapply r. eapply usubst_up.
+  eapply red_inst; tea.
+  2:eapply r. eapply usubst_up.
+Qed.
+
+Lemma red_subst_upn {cf} {Σ} {wfΣ : wf Σ} Γ (σ σ' : nat -> term) Δ :
+  red_subst Σ Γ σ σ' ->
+  red_subst Σ (Γ ,,, Δ) (up #|Δ| σ) (up #|Δ| σ').
+Proof.
+  induction Δ; simpl.
+  intros r x. specialize (r x).
+  eapply red_meta_conv; sigma. 2-3:reflexivity. assumption.
+  intros r h. rewrite -(up_up 1) -(up_up 1 #|Δ|).
+  now eapply red_subst_up.
+Qed.
+ 
+Lemma red_red_onctx {cf:checker_flags} Σ {wfΣ : wf Σ} Δ σ σ' ctx :
+  red_subst Σ Δ σ σ' ->
+  onctx
+    (fun b : term =>
+    forall Δ σ σ',
+    red_subst Σ Δ σ σ' ->
+    red Σ Δ b.[σ] b.[σ']) ctx ->
+  All2_fold
+  (fun (Γ0 Δ0 : context) (d d' : context_decl) =>
+    red_decls Σ (Δ ,,, mapi_context (fun k => inst (up k σ)) Γ0)
+      (Δ ,,, mapi_context (fun k => inst (up k σ')) Δ0)
+      (map_decl (inst (up #|Γ0| σ)) d)
+      (map_decl (inst (up #|Γ0| σ')) d')) ctx ctx.
+Proof.
+  intros hsubs.
+  induction 1; constructor; auto.
+  destruct p. destruct x as [na [b|] ty]; constructor; auto; simpl in *;
+  rewrite /shiftf.
+  - eapply o. relativize #|l|.
+    now eapply red_subst_upn. rewrite mapi_context_length. len.
+  - eapply r. relativize #|l|.
+    now eapply red_subst_upn. rewrite mapi_context_length. len.
+  - eapply r. relativize #|l|.
+    now eapply red_subst_upn. rewrite mapi_context_length. len.
+Qed.
+
+Lemma red_red_inst {cf:checker_flags} (Σ : global_env_ext) Δ σ σ' b : wf Σ ->
+  (red_subst Σ Δ σ σ') ->
+  red Σ Δ b.[σ] b.[σ'].
+Proof.
+  intros wfΣ Hsubs.
+  revert Δ σ σ' Hsubs.
+  elim b using term_forall_list_ind;
+        intros; match goal with
+                  |- context [tRel _] => idtac
+                | |- _ => cbn -[plus]
+                end; try easy;
+      autorewrite with map; 
+      rewrite ?Nat.add_assoc;
+      try solve [f_equal; auto; solve_all].
+  
+  - apply red_evar. apply All2_map. solve_all.
+  - apply red_prod; eauto. eapply X0.
+    now eapply red_subst_up.
+
+  - apply red_abs; eauto using red_subst_up.
+
+  - apply red_letin; eauto using red_subst_up.
+  - apply red_app; eauto.
+  - eapply (red_case (p:=(inst_predicate σ p))); simpl; solve_all.
+    * rewrite mapi_context_inst. eapply r.
+      relativize #|pcontext p|.
+      now eapply red_subst_upn. now len.
+    * eapply PCUICContextReduction.red_ctx_rel_red_context_rel => //.
+      red.
+      eapply PCUICContextRelation.All2_fold_mapi.
+      eapply red_red_onctx; tea.
+    * red. solve_all.
+      eapply All_All2; tea => /=. solve_all; unfold on_Trel; simpl.
+      + eapply b0. relativize #|bcontext x|.
+        eapply red_subst_upn; tea.
+        now rewrite mapi_context_length.
+      + eapply PCUICContextReduction.red_ctx_rel_red_context_rel => //.
+        eapply PCUICContextRelation.All2_fold_mapi.
+        eapply red_red_onctx; tea.
+  - apply red_proj_c; eauto.
+  - apply red_fix_congr; eauto.
+    solve_all. eapply All_All2; tea; simpl; solve_all.
+    eapply b0. rewrite inst_fix_context_up.
+    relativize #|m|.
+    now eapply red_subst_upn. len.
+  - apply red_cofix_congr; eauto.
+    red in X. solve_all. eapply All_All2; tea; simpl; solve_all.
+    eapply b0.
+    rewrite inst_fix_context_up.
+    relativize #|m|.
+    now eapply red_subst_upn. len.
+Qed.
+Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
+  wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
+  red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)).
+Proof.
+  intros wfΣ wfΓ.
+  sigma. rewrite -{1}(subst_ids t).
+  eapply red_red_inst; tea.
+  intros x. rewrite {1}/ids.
+  unfold subst_compose.
+  rewrite /ren /lift_renaming.
+  destruct (leb_spec_Set #|Δ| x); simpl.
+  **simpl. unfold Upn. simpl. unfold subst_consn. rewrite nth_error_nil.
+    simpl. unfold subst_compose. simpl. rewrite Nat.sub_0_r.
+    destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (#|Δ| + x));
+    rewrite all_rels_length in l0 |- *. lia.
+    assert (#|Δ| + x - #|Δ| = x) as -> by lia.
+    reflexivity.
+  ** rewrite /subst_compose /ren /lift_renaming.
+    simpl. unfold Upn. simpl. unfold subst_consn. rewrite nth_error_nil.
+    simpl. unfold subst_compose. simpl. rewrite Nat.sub_0_r.
+    destruct (nth_error_spec (all_rels Δ 0 #|Δ|) x).
+    rewrite all_rels_length in l0 |- *; try lia.
+    eapply nth_error_all_rels_spec in e.
+    destruct e as [decl [Hnth Hdecl]].
+
+    destruct decl as [? [?|] ?]; simpl in Hdecl; subst x0.
+    assert (x = #|Δ| + (x - #|Δ|)). lia.
+    rewrite {1}H.
+    change (tRel  (#|Δ'| + (n - #|Δ'|))) with
+        (lift0 #|Δ'| (tRel (n - #|Δ'|))).
+    eapply (weakening_red _ _ []); auto.
+    simpl.
+    set (i := n - #|Δ'|) in *. clearbody i.
+    clear l Hle H.
+
+    etransitivi
+*)
+
+Lemma All2_fold_mapi_right P Γ Δ g : 
+  All2_fold (fun Γ Δ d d' =>
+    P Γ (mapi_context g Δ) d (map_decl (g #|Γ|) d')) Γ Δ 
+  -> All2_fold P Γ (mapi_context g Δ).
+Proof.
+  induction 1; simpl; constructor; intuition auto;
+  now rewrite <-(All2_fold_length X).
+Qed.
+
+Inductive All_fold {P : context -> context_decl -> Type}
+            : forall (Γ : context), Type :=
+  | All_fold_nil : All_fold nil
+  | All_fold_cons {d Γ} : All_fold Γ -> P Γ d -> All_fold (d :: Γ).
+Arguments All_fold : clear implicits.
+
+Lemma All2_fold_refl' P Γ : 
+  All_fold (fun Γ d => P Γ Γ d d) Γ <~>
+  All2_fold P Γ Γ.
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(All2_fold_length X).
+  - intros H; depind H; constructor; auto.
+Qed.
+
+Lemma onctx_All_fold P Q Γ : 
+  onctx P Γ ->
+  (forall Γ x, All_fold Q Γ -> ondecl P x -> Q Γ x) ->
+  All_fold Q Γ.
+Proof.
+  intros o H; induction o; constructor; auto.
+Qed.
+
 Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
   wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
   red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)).
@@ -1394,13 +1650,56 @@ Proof.
     eapply (IHt3 (Δ' ,, vdef n _ _)).
 
   * simpl; eapply red_app; auto.
-  * todo "case".
-     (* simpl; eapply red_case; auto.
-    red in X0.
-    do 2 eapply All2_map_right.
-    eapply (All_All2 X0).
-    simpl; intros.
-    split; auto. *)
+  * simpl. rewrite map_branches_k_map_branches_k.
+    relativize (subst_predicate _ _ _).
+    eapply red_case.
+    6:{ reflexivity. }
+    simpl. rewrite mapi_context_length.
+    destruct X0 as [? [? ?]].
+    specialize (r (Δ' ,,, pcontext p)). rewrite app_context_assoc in r. len in r.
+    relativize (#|pcontext p| + (_ + _)). eapply r. lia.
+    simpl. 
+    rewrite (mapi_context_compose _ _ _). solve_all.
+    eapply PCUICContextReduction.red_ctx_rel_red_context_rel => //.
+    eapply All2_fold_mapi_right.
+    eapply All2_fold_refl'. eapply onctx_All_fold; tea.
+    intros.
+    + destruct X2. destruct x as [na [b|] ty]; constructor; auto.
+      specialize (o (Δ' ,,, Γ0)). simpl in o.
+      rewrite app_context_assoc in o. rewrite /shiftf. len in o.
+      relativize (#|_| + (_ + _)). exact o. len.
+      specialize (r0 (Δ' ,,, Γ0)). simpl in r0.
+      rewrite app_context_assoc in r0. rewrite /shiftf. len in r0.
+      relativize (#|_| + (_ + _)). exact r0. len.
+      simpl in o.
+      specialize (r0 (Δ' ,,, Γ0)). simpl in r0.
+      rewrite app_context_assoc in r0. rewrite /shiftf. len in r0.
+      relativize (#|_| + (_ + _)). exact r0. len.
+    + simpl. rewrite map_map_compose; eapply All2_map_right.
+      solve_all.
+    + eapply IHt.
+    + clear -wfΣ X0 X1.
+      eapply All2_map_right, All_All2; tea.
+      rewrite /on_Trel /=.
+      unfold on_Trel in *; simpl; solve_all.
+      rewrite Nat.add_0_r.
+      specialize (b (Δ' ,,, bcontext x)). rewrite app_context_assoc in b. len in b.
+      relativize (#|_| + _ + _). exact b. len.
+      eapply PCUICContextReduction.red_ctx_rel_red_context_rel => //; tea.
+      eapply All2_fold_mapi_right.
+      eapply All2_fold_refl'. eapply onctx_All_fold; tea.
+      intros. rewrite /shiftf !Nat.add_0_r.
+      { destruct X0. destruct x0 as [na [bod|] ty]; constructor; auto.
+        specialize (o (Δ' ,,, Γ0)). simpl in o.
+        rewrite app_context_assoc in o. rewrite /shiftf. len in o.
+        relativize (#|_| + (_ + _)). exact o. len.
+        specialize (r0 (Δ' ,,, Γ0)). simpl in r0.
+        rewrite app_context_assoc in r0. rewrite /shiftf. len in r0.
+        relativize (#|_| + (_ + _)). exact r0. len.
+        simpl in o.
+        specialize (r0 (Δ' ,,, Γ0)). simpl in r0.
+        rewrite app_context_assoc in r0. rewrite /shiftf. len in r0.
+        relativize (#|_| + (_ + _)). exact r0. len. }
 
   * simpl; eapply red_proj_c. auto.
 

@@ -47,7 +47,7 @@ Lemma inst_context_alt s Γ :
   inst_context s Γ =
   mapi (fun k' d => map_decl (inst (⇑^(Nat.pred #|Γ| - k') s)) d) Γ.
 Proof.
-  unfold inst_context. apply fold_context_k_alt.
+  unfold inst_context. apply: fold_context_k_alt.
 Qed.
 
 Lemma inst_context_length s Γ : #|inst_context s Γ| = #|Γ|.

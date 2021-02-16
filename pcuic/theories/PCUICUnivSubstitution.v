@@ -1140,22 +1140,10 @@ Lemma subst_instance_cstr_args u cdecl :
   subst_instance u (cstr_args cdecl).
 Proof. reflexivity. Qed.
 
-Lemma map_fold_context_k f g Γ : 
-  map_context g (fold_context_k f Γ) = fold_context_k (fun i => g ∘ (f i)) Γ.
+Lemma map_fold_context_k {term term' term''} (f : term' -> term) (g : nat -> term'' -> term') (Γ : list (BasicAst.context_decl term'')) : 
+  map_context f (fold_context_k g Γ) = fold_context_k (fun i => f ∘ (g i)) Γ.
 Proof.
-  rewrite !fold_context_k_alt.
-  rewrite /map_context map_mapi.
-  apply mapi_ext => i x.
-  now rewrite !compose_map_decl.
-Qed.
-
-Lemma fold_map_context f g Γ : 
-  fold_context_k f (map_context g Γ) = fold_context_k (fun i => f i ∘ g) Γ.
-Proof.
-  rewrite !fold_context_k_alt.
-  rewrite /map_context mapi_map.
-  apply mapi_ext => i x. len.
-  now rewrite !compose_map_decl.
+  now rewrite /map_context map_fold_context_k.
 Qed.
 
 Lemma subst_instance_subst_context u s k ctx :
@@ -1163,7 +1151,7 @@ Lemma subst_instance_subst_context u s k ctx :
   subst_context (subst_instance u s) k (subst_instance u ctx).
 Proof.
   rewrite /subst_instance /= /subst_instance /subst_instance_context map_fold_context_k.
-  rewrite /subst_context fold_map_context.
+  rewrite /subst_context fold_context_k_map.
   apply fold_context_k_ext => i t.
   now rewrite -subst_instance_subst.
 Qed.
@@ -1184,7 +1172,7 @@ Lemma subst_instance_lift_context u n k ctx :
   lift_context n k (subst_instance u ctx).
 Proof.
   rewrite /subst_instance /= /subst_instance_context map_fold_context_k.
-  rewrite /lift_context fold_map_context.
+  rewrite /lift_context fold_context_k_map.
   apply fold_context_k_ext => i t.
   now rewrite subst_instance_lift.
 Qed.

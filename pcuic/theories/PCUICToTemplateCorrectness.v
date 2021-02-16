@@ -55,7 +55,13 @@ Proof.
     rewrite <- mapOne.
     rewrite <- TL.lift_mkApps.
     f_equal.
-  - f_equal; auto. red in X. todo "case". solve_list. todo "case".
+  - f_equal; auto. destruct X as [? [? ?]].
+    rewrite /T.map_predicate /id /PCUICAst.map_predicate /= /trans_predicate /=; f_equal;
+      autorewrite with map; solve_all.
+    idtac. rewrite /S.shiftf. map_context_mapi_context.
+
+
+    todo "case". solve_list. todo "case".
   - f_equal; auto; red in X; solve_list.
   - f_equal; auto; red in X; solve_list.
   - destruct p as [? []]; eauto.

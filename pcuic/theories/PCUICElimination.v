@@ -44,6 +44,8 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
+From MetaCoq.PCUIC Require Import PCUICInductiveInversion.
+
 Lemma elim_restriction_works_kelim1 {cf : checker_flags} {Σ : global_env_ext} 
   {Γ T ci p c brs mdecl idecl} :
   check_univs ->
@@ -70,47 +72,46 @@ Proof.
         try apply val_is_prop in v;
         intuition congruence. }
   intros Huf. apply H0.
-  (*
   red. exists (mkApps ptm (indices ++ [c])); intuition auto.
   exists ps.
-  intuition auto.
-  assert (watiapp := env_prop_typing  _ _ validity_env _ _ _ _ _ t0).
-  simpl in watiapp.
-  eapply (isType_mkApps_Ind wfΣ H) in watiapp as [psub [asub [[spp spa] cuni]]]; eauto.
-  eapply typing_wf_local; eauto.
-  destruct (on_declared_inductive H) as [mib oib].
-  clear a1.
-  (* eapply (build_case_predicate_type_spec _ _ _ _ _ _ _ _ oib) in e0 as [parsubst [cs eq]].
-  rewrite eq in t. *)
-  assert (Σ ;;; Γ |- it_mkLambda_or_LetIn predctx (preturn p) : it_mkProd_or_LetIn predctx (tSort ps)).
-  eapply type_it_mkLambda_or_LetIn. eauto.*)
-  (* eapply PCUICGeneration.type_mkApps; tea.
-  eapply wf_arity_spine_typing_spine; auto.
-  split; auto.
-  now eapply validity_term in X; eauto. *)
-  all:todo "case".
-  (* eapply arity_spine_it_mkProd_or_LetIn; eauto.
-  pose proof (wf_predicate_length_pars w).
-  rewrite skipn_all_app_eq in spa; auto.
-  rewrite /predctx.
-  rewrite /case_predicate_context /case_predicate_context_gen.
-  todo "case". simpl. todo "case". *)
-(*   
-  eapply spa.
-  simpl. constructor.
-  rewrite PCUICLiftSubst.subst_mkApps. simpl.
-  rewrite map_app map_map_compose.
-  rewrite PCUICLiftSubst.map_subst_lift_id_eq. 
-  { rewrite - (PCUICSubstitution.context_subst_length spa).
-      now autorewrite with len. }
-  { unfold to_extended_list. 
-    rewrite (spine_subst_subst_to_extended_list_k_gen spa).
-    unfold subst_context; rewrite to_extended_list_k_fold_context_k.
-    apply PCUICSubstitution.map_subst_instance_to_extended_list_k.
-    subst npar.
-    now rewrite firstn_skipn. } *)
-  (* - rewrite H1; auto. *)
-  (* - rewrite H1 Bool.orb_true_r; auto. *)
+  assert (Σ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])).
+  econstructor; eauto. split; auto.
+  split; auto. clear brs_ty.
+  eapply type_mkApps. rewrite /ptm.
+  eapply type_it_mkLambda_or_LetIn; tea.
+  assert (wf Σ) by apply wfΣ.
+  pose proof (PCUICInductiveInversion.isType_mkApps_Ind_smash H (validity scrut_ty)).
+  forward X1. apply (wf_predicate_length_pars wf_pred).
+  simpl in X1. destruct X1 as [sppars [spargs cu']].
+  assert (eqctx' : All2 (PCUICEquality.compare_decls eq eq)
+  (Γ,,, case_predicate_context' ci mdecl idecl p) 
+  (Γ,,, predctx)).
+  {
+    eapply All2_app. 2:eapply All2_refl; reflexivity.
+    eapply case_predicate_context_alpha.
+    destruct wf_pred. eapply Forall2_All2 in H2.
+    depelim H2. rewrite H3. constructor; auto. }
+  assert (conv_context Σ (Γ ,,, case_predicate_context' ci mdecl idecl p) (Γ ,,, pcontext p)).
+  { etransitivity.
+    2:{ symmetry. eassumption. }
+    eapply eq_context_alpha_conv => //. }
+  unshelve epose proof (arity_spine_case_predicate (ps:=ps) _ H cons _ sppars). 1-2:shelve. pcuic.
+  now eapply PCUICWfUniverses.typing_wf_universe in pret_ty.
+  rewrite -smash_context_subst_context_let_expand in X2.
+  specialize (X2 spargs scrut_ty).
+  eapply typing_spine_strengthen; tea.
+  2:{ eapply cumul_it_mkProd_or_LetIn; tea.
+      eapply PCUICContextRelation.All2_fold_app_inv. 2:symmetry; tea.
+      pose proof (All2_fold_length X1). len in H1. 
+      rewrite /case_predicate_context'; simpl; len.
+      reflexivity. }
+  eapply wf_arity_spine_typing_spine; tea.
+  split. eapply validity. eapply type_it_mkLambda_or_LetIn; tea.
+  eapply context_conversion; tea.
+  eapply wf_local_alpha; tea. now symmetry.
+  now symmetry.
+  exact X2.
+  destruct Huf as [Huf|Huf]; rewrite Huf // orb_true_r //.
 Qed.
 
 Lemma elim_sort_intype {cf:checker_flags} Σ mdecl ind idecl ind_indices ind_sort cdecls :

@@ -588,12 +588,6 @@ Proof.
   intuition congruence.
 Qed.
 
-(* Lemma length_of_btys {ind mdecl' idecl' args' u' p} :
-  #|build_branches_type ind mdecl' idecl' args' u' p| = #|ind_ctors idecl'|.
-Proof.
-  unfold build_branches_type. now rewrite mapi_length.
-Qed. *)
-
 Lemma length_map_option_out {A} l l' :
   @map_option_out A l = Some l' -> #|l| = #|l'|.
 Proof.
@@ -714,7 +708,6 @@ Proof.
   apply cumul_alt in cum as [v [v' [[redv redv'] leq]]].
   - eapply type_Cumul' with (tSort u'); eauto.
     eapply PCUICArities.isType_Sort; pcuic.
-    now eapply PCUICWfUniverses.typing_wf_universe in HA.
     constructor. constructor.
     eapply subject_reduction in redv; eauto.
     eapply subject_reduction in redv'; eauto.
@@ -724,139 +717,8 @@ Proof.
     eapply leq_term_sprop_sorted_r in leq; eauto.
     eapply type_Cumul' with (tSort u'); eauto.
     eapply PCUICArities.isType_Sort; pcuic. 
-    now eapply PCUICWfUniverses.typing_wf_universe in HB.
     constructor. constructor. auto.
 Qed.
-
-
-(*
-Lemma cumul_prop_r_is_type (Σ : global_env_ext) Γ A B u :
-  wf_ext Σ ->
-  Universe.is_prop u ->
-  isType Σ Γ A ->
-  Σ ;;; Γ |- B : tSort u ->
-  Σ ;;; Γ |- A <= B ->
-  isType Σ Γ A.
-Proof.
-  intros.
-  destruct X0; eauto.
-  destruct i as [ctx [s [Hd eq]]].
-  exists u.
-  apply PCUICArities.destArity_spec_Some in Hd.
-  simpl in Hd. subst A.
-  revert u H Γ eq B X1 X2. revert ctx. intros ctx.
-  change (list context_decl) with context in ctx.
-  induction ctx using ctx_length_rev_ind; simpl in *; intros.
-  - elimtype False.
-    eapply invert_cumul_sort_l in X2 as [u' [red leq]]; auto.
-    eapply subject_reduction in red; eauto.
-    eapply inversion_Sort in red as [l [wf [inl [eq' lt]]]]; auto.
-    subst u'.
-    eapply cumul_Sort_inv in lt.
-    now apply is_prop_gt in lt.
-  - rewrite app_context_assoc in eq.
-    pose proof eq as eq'.
-    eapply All_local_env_app_inv in eq' as [wfΓ wf']. depelim wfΓ;
-    rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
-    + eapply invert_cumul_prod_l in X2 as (na' & A & B' & (red & conv) & cum).
-      eapply subject_reduction in X1. 3:eassumption. all:auto.
-      eapply inversion_Prod in X1 as (s1 & s2 & tA & tB' & cum'); auto.
-      eapply cumul_Sort_inv in cum'.
-      specialize (X0 Γ ltac:(reflexivity) u H _ eq B').
-      forward X0.
-      eapply type_Cumul.
-      eapply context_conversion; eauto.
-      constructor; pcuic. constructor. now symmetry.
-      constructor; auto.
-      left. eexists _, _; simpl; intuition eauto. constructor; pcuic.
-      do 2 constructor. etransitivity; eauto.
-      eapply leq_universe_product.
-      specialize (X0 cum).
-      eapply type_Cumul.
-      econstructor; eauto. eapply l.π2.
-      left; eexists _, _; simpl; intuition auto.
-      do 2 constructor. now eapply impredicative_product.
-    + eapply invert_cumul_letin_l in X2; auto.
-      eapply type_Cumul.
-      econstructor; eauto. eapply l.π2.
-      instantiate (1 := (tSort u)).
-      eapply X0; auto.
-      eapply (PCUICWeakening.weakening _ _ [vdef na b t]) in X1. simpl in X1.
-      eapply X1. all:eauto.
-      constructor; auto.
-      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto.
-      simpl in X2. assert (wf Σ) by apply X.
-      etransitivity; eauto.
-      eapply red_cumul. apply PCUICSpine.red_expand_let.
-      constructor; pcuic.
-      left; eexists _, _; simpl; intuition eauto.
-      eapply red_cumul, PCUICReduction.red1_red.
-      constructor.
-Qed.
-
-Lemma cumul_prop_l_is_type (Σ : global_env_ext) Γ A B u :
-  wf_ext Σ ->
-  Universe.is_prop u ->
-  isWfArity_or_Type Σ Γ B ->
-  Σ ;;; Γ |- A : tSort u ->
-  Σ ;;; Γ |- A <= B ->
-  isType Σ Γ B.
-Proof.
-  intros.
-  destruct X0; eauto.
-  destruct i as [ctx [s [Hd eq]]].
-  exists u.
-  apply PCUICArities.destArity_spec_Some in Hd.
-  simpl in Hd. subst B.
-  revert u H Γ eq A X1 X2. revert ctx. intros ctx.
-  change (list context_decl) with context in ctx.
-  induction ctx using ctx_length_rev_ind; simpl in *; intros.
-  - elimtype False.
-    eapply invert_cumul_sort_r in X2 as [u' [red leq]]; auto.
-    eapply subject_reduction in red; eauto.
-    eapply inversion_Sort in red as [l [wf [inl [eq' lt]]]]; auto.
-    subst u'.
-    eapply cumul_Sort_inv in lt.
-    apply is_prop_gt in lt; auto.
-  - rewrite app_context_assoc in eq.
-    pose proof eq as eq'.
-    eapply All_local_env_app_inv in eq' as [wfΓ wf']. depelim wfΓ;
-    rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= in X2 |- *.
-    + eapply invert_cumul_prod_r in X2 as (na' & A' & B' & (red & conv) & cum).
-      eapply subject_reduction in X1. 3:eassumption. all:auto.
-      eapply inversion_Prod in X1 as (s1 & s2 & tA & tB' & cum'); auto.
-      eapply cumul_Sort_inv in cum'.
-      specialize (X0 Γ ltac:(reflexivity) u H _ eq B').
-      forward X0.
-      eapply type_Cumul.
-      eapply context_conversion; eauto.
-      constructor; pcuic. constructor. now symmetry.
-      constructor; auto.
-      left. eexists _, _; simpl; intuition eauto. constructor; pcuic.
-      do 2 constructor. etransitivity; eauto.
-      eapply leq_universe_product.
-      specialize (X0 cum).
-      eapply type_Cumul.
-      econstructor; eauto. eapply l.π2.
-      left; eexists _, _; simpl; intuition auto.
-      do 2 constructor. now eapply impredicative_product.
-    + eapply invert_cumul_letin_r in X2; auto.
-      eapply type_Cumul.
-      econstructor; eauto. eapply l.π2.
-      instantiate (1 := (tSort u)).
-      eapply X0; auto.
-      eapply (PCUICWeakening.weakening _ _ [vdef na b t]) in X1. simpl in X1.
-      eapply X1. all:eauto.
-      constructor; auto.
-      eapply (PCUICWeakening.weakening_cumul _ _ [] [vdef na b t]) in X2; auto.
-      simpl in X2. assert (wf Σ) by apply X.
-      etransitivity; eauto.
-      eapply conv_cumul, conv_sym, red_conv. apply PCUICSpine.red_expand_let.
-      constructor; pcuic.
-      left; eexists _, _; simpl; intuition eauto.
-      eapply red_cumul, PCUICReduction.red1_red.
-      constructor.
-Qed. *)
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :
   wf_ext Σ ->

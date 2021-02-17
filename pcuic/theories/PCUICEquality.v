@@ -929,16 +929,8 @@ Proof.
   all: try solve [cbn ; constructor ; try lih ; try assumption; solve_all].
   - cbn. destruct e as (? & ? & e & ?).
     constructor; unfold eq_predicate in *; simpl; !!solve_all.
-    * apply All2_fold_mapi.
-      eapply All2_fold_impl_onctx; tea; simpl; eauto.
-      unfold ondecl;
-      intros Γ Γ' d d' IH []; constructor; intuition eauto.
     * rewrite -?(All2_fold_length e).
       eapply hh0; eauto.
-    * eapply All2_fold_mapi.
-      eapply All2_fold_impl_onctx; tea; simpl; eauto.
-      unfold ondecl;
-      intros Γ Γ' d d' IH []; constructor; intuition pcuic.
     * rewrite (All2_fold_length a). now eapply hh4.
   - cbn. constructor.
     pose proof (All2_length a).
@@ -994,13 +986,7 @@ Proof.
   - cbn.
     destruct e as (? & ? & e & ?).
     constructor ; unfold eq_predicate; simpl; try sih ; solve_all.
-    * eapply All2_fold_mapi.
-      eapply All2_fold_impl_onctx; tea; simpl; eauto.
-      unfold ondecl; intros Γ Γ' d d' IH []; constructor; simpl; intuition eauto.
     * rewrite -(All2_fold_length e). eapply e1; eauto.
-    * eapply All2_fold_mapi.
-      eapply All2_fold_impl_onctx; tea; simpl; eauto.
-      unfold ondecl; intros Γ Γ' d d' IH []; simpl; constructor; intuition eauto.
     * rewrite (All2_fold_length a). now eapply b0.
   - cbn. constructor ; try sih ; eauto.
     pose proof (All2_length a).

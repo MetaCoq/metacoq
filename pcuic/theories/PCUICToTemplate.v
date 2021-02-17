@@ -41,8 +41,8 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tProd na A B => tProd na (trans A) (trans B)
   | PCUICAst.tLetIn na b t b' => tLetIn na (trans b) (trans t) (trans b')
   | PCUICAst.tCase ind p c brs =>
-    let p' := PCUICAst.map_predicate id trans trans p in
-    let brs' := List.map (PCUICAst.map_branch trans) brs in
+    let p' := PCUICAst.map_predicate id trans trans (map_context trans) p in
+    let brs' := List.map (PCUICAst.map_branch trans (map_context trans)) brs in
     tCase ind (trans_predicate p') (trans c) (map trans_branch brs')
   | PCUICAst.tProj p c => tProj p (trans c)
   | PCUICAst.tFix mfix idx =>

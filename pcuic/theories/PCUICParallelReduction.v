@@ -311,9 +311,7 @@ Section ParallelReduction.
       nth_error brs1 c = Some br -> 
       #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
       All2 (fun br br' => 
-        on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
-        on_Trel (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-         bbody br br') brs0 brs1 ->
+        on_Trel_eq (pred1 (Γ ,,, inst_branch_context p br) (Γ' ,,, inst_branch_context p br) bbody bcontext) br br') brs0 brs1 ->
       pred1 Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
             (iota_red ci.(ci_npar) args1 br)
 

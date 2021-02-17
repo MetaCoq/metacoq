@@ -2259,11 +2259,7 @@ Proof.
   dependent induction H.
   - intros arg Harg. simpl. econstructor; eauto.
     constructor. 2:reflexivity.
-    eapply isType_tProd in i as [watd wat].
-    eapply (isType_subst wfΣ (Δ:=[vass na A])); eauto.
-    constructor; auto. now apply typing_wf_local in Harg.
-    constructor. constructor. now rewrite subst_empty. auto.
-    now apply typing_wf_local in Harg.
+    now eapply isType_apply.
   - intros arg Harg.
     econstructor; eauto.
 Qed.
@@ -2310,12 +2306,12 @@ Proof.
         eapply isType_tProd in wat as [dom codom]; auto.
         now apply conv_cumul, conv_sym.
       * move=> Hnth Hn'.
-        pose proof  (isType_wf_local i).
+        pose proof (isType_wf_local i).
         eapply isType_tProd in wat as [dom' codom']; auto.
-        eapply cumul_Prod_inv in c as [conv cum]; auto.
+        eapply cumul_Prod_inv in c as [conv cum]; auto. simpl in codom'.
         unshelve eapply (isType_subst wfΣ (Δ:=[vass na ty]) _ [hd]) in codom'.
         constructor; auto.
-        2:{ repeat constructor. rewrite subst_empty.
+        2:{ eapply subslet_ass_tip.
             eapply type_Cumul'; eauto. now eapply conv_cumul, conv_sym. }
         specialize (X (subst_context [hd] 0 Γ0) ltac:(autorewrite with len; lia)).
         unshelve eapply (substitution_cumul0 _ _ _ _ _ _ hd) in cum; auto.
@@ -3532,31 +3528,6 @@ Proof.
   move/cumul_ctx_rel_app => h /cumul_ctx_rel_app h'.
   apply cumul_ctx_rel_app.
   now eapply cumul_context_trans; tea. 
-Qed.
-
-Lemma subslet_def {cf} {Σ : global_env_ext} {Γ Δ s na t T t'} : 
-  subslet Σ Γ s Δ ->
-  Σ;;; Γ |- subst0 s t : subst0 s T ->
-  t' = subst0 s t ->
-  subslet Σ Γ (t' :: s) (Δ ,, vdef na t T).
-Proof.
-  now intros sub Ht ->; constructor.
-Qed.
-
-Lemma subslet_ass_tip {cf} {Σ : global_env_ext} {Γ na t T} : 
-  Σ;;; Γ |- t : T ->
-  subslet Σ Γ [t] [vass na T].
-Proof.
-  intros; constructor. constructor.
-  all:now rewrite !subst_empty.
-Qed.
-
-Lemma subslet_def_tip {cf} {Σ : global_env_ext} {Γ na t T} : 
-  Σ;;; Γ |- t : T ->
-  subslet Σ Γ [t] [vdef na t T].
-Proof.
-  intros; apply subslet_def. constructor.
-  all:now rewrite !subst_empty.
 Qed.
 
 Lemma OnOne2_ctx_inst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {P} {Γ inst inst' Δ} :

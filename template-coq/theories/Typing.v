@@ -114,8 +114,8 @@ Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
 Definition tDummy := tVar "".
 Definition dummy_branch : branch term := mk_branch [] tDummy.
 
-Definition iota_red npar c args brs :=
-  subst (List.skipn npar args) 0 (bbody (List.nth c brs dummy_branch)).
+Definition iota_red npar args bctx br :=
+  subst (List.rev (List.skipn npar args)) 0 (expand_lets bctx br.(bbody)).
 
 (** For cases typing *)
 
@@ -266,9 +266,17 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tRel i) (lift0 (S i) body)
 
 (** Case *)
-| red_iota ci c u args p brs :
+| red_iota ci mdecl idecl cdecl c u args p brs br :
+    nth_error brs c = Some br ->
+    (* In the compact representation, reduction must fetch the 
+       global declaration of the constructor to gather the let-bindings 
+       in its argument context. Implementations can be more clever
+       in the common case where no let-binding appears to avoid this. *)
+    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+    let bctx := case_branch_context p cdecl in
+    #|skipn (ci_npar ci) args| = context_assumptions bctx ->
     red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
-         (iota_red ci.(ci_npar) c args brs)
+         (iota_red ci.(ci_npar) args bctx br)
 
 (** Fix unfolding, with guard *)
 | red_fix mfix idx args narg fn :
@@ -366,9 +374,14 @@ Lemma red1_ind_all :
        (forall (Γ : context) (i : nat) (body : term),
         option_map decl_body (nth_error Γ i) = Some (Some body) -> P Γ (tRel i) ((lift0 (S i)) body)) ->
 
-       (forall (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
-          (p : predicate term) (brs : list (branch term)),
-        P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) c args brs)) ->
+       (forall (Γ : context) (ci : case_info) mdecl idecl cdecl (c : nat) (u : Instance.t) (args : list term)
+          (p : predicate term) (brs : list (branch term)) br,
+          nth_error brs c = Some br ->
+          declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+          let bctx := case_branch_context p cdecl in
+          #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+          P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) 
+                (iota_red ci.(ci_npar) args bctx br)) ->
 
        (forall (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
         unfold_fix mfix idx = Some (narg, fn) ->
@@ -563,14 +576,13 @@ Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity:
 
-  Reduction to terms in the leq_term relation.
+  We use the usual characterization as the reflexive-transitive closure of 
+  the symmetric closure of reduction + cumulativity and alpha-equivalence.
 *)
 
-Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
-| cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
-| cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
-where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
+Definition cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : relation term := 
+  Equations.Type.Relation.clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
+Notation "Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u).
 
 (** *** Conversion
 
@@ -589,7 +601,7 @@ Lemma conv_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
 Defined.
 
 Lemma cumul_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t <= t.
-  intros. constructor. apply leq_term_refl.
+  intros. constructor 2.
 Defined.
 
 Hint Resolve conv_refl' cumul_refl' : typecheck.

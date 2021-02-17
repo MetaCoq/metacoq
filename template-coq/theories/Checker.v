@@ -236,7 +236,17 @@ Section Reduce.
     if RedFlags.iota flags then
       c' <- reduce_stack Γ n c [] ;;
       match c' with
-      | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red ci.(ci_npar) c args brs) stack
+      | (tConstruct ind c _, args) =>
+        match nth_error brs c with
+        | Some br => 
+          match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) c with
+          | Checked (mdecl, cdecl) => 
+            let bctx := case_branch_context p cdecl in  
+              reduce_stack Γ n (iota_red ci.(ci_npar) args bctx br) stack
+          | TypeError e => ret (t, stack)
+          end
+        | None => ret (tCase ci p (zip c') brs, stack)
+        end
       | _ => ret (tCase ci p (zip c') brs, stack)
       end
     else ret (t, stack)

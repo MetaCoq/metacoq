@@ -49,7 +49,7 @@ Section map_predicate_shift.
   Definition map_predicate_shift (p : predicate term) :=
     {| pparams := map (fn f) p.(pparams);
         puinst := finst p.(puinst);
-        pcontext := mapi_context (fun k => fn (shift k f)) p.(pcontext);
+        pcontext := p.(pcontext);
         preturn := fn (shift #|p.(pcontext)| f) p.(preturn) |}.
 
   Lemma map_shift_pparams (p : predicate term) :
@@ -61,7 +61,7 @@ Section map_predicate_shift.
   Proof. reflexivity. Qed.
 
   Lemma map_shift_pcontext (p : predicate term) :
-    mapi_context (fun k => fn (shift k f)) (pcontext p) =
+    (pcontext p) =
     pcontext (map_predicate_shift p).
   Proof. reflexivity. Qed.
 
@@ -78,7 +78,7 @@ Section map_branch_shift.
   Context (f : nat -> T).
 
   Definition map_branch_shift (b : branch term) :=
-  {| bcontext := mapi_context (fun k => fn (shift k f)) b.(bcontext);
+  {| bcontext := b.(bcontext);
       bbody := fn (shift #|b.(bcontext)| f) b.(bbody) |}.
 
   Lemma map_shift_bbody (b : branch term) :
@@ -86,7 +86,7 @@ Section map_branch_shift.
   Proof. reflexivity. Qed.
   
   Lemma map_shift_bcontext (b : branch term) :
-    mapi_context (fun k => fn (shift k f)) (bcontext b) = bcontext (map_branch_shift b).
+    (bcontext b) = bcontext (map_branch_shift b).
   Proof. reflexivity. Qed.
 End map_branch_shift.
 
@@ -173,7 +173,6 @@ Qed.
 Hint Resolve map_predicate_shift_id_spec : all.
 
 Lemma map_branch_shift_id_spec {T} {fn : (nat -> T) -> term -> term} {shift} {f : nat -> T} (x : branch term) :
-  mapi_context (fun k => fn (shift k f)) (bcontext x) = (bcontext x) ->  
   fn (shift #|x.(bcontext)| f) (bbody x) = bbody x ->
   map_branch_shift fn shift f x = x.
 Proof.
@@ -320,11 +319,9 @@ Proof.
     * solve_all.
       unfold map_predicate_k, rename_predicate; f_equal; eauto; solve_all.
       + unfold shiftf. now rewrite shiftn_lift_renaming.
-      + now rewrite shiftn_lift_renaming.
     * solve_all.
       unfold map_branch_k, map_branch_shift; f_equal; eauto; solve_all.
       + unfold shiftf. now rewrite shiftn_lift_renaming.
-      + now rewrite shiftn_lift_renaming.
   - f_equal; auto.
     red in X. solve_all.
     rewrite b. now rewrite shiftn_lift_renaming.
@@ -386,10 +383,8 @@ Proof.
 
   - rewrite /map_predicate_shift /= map_map.
     solve_all; len. rewrite e. f_equal; solve_all.
-    * rewrite H. apply rename_ext, shiftn_compose.
     * apply rename_ext, shiftn_compose. 
   - rewrite /map_branch_shift /=. f_equal; solve_all.
-    * rewrite H. apply rename_ext, shiftn_compose.
     * len. rewrite b. apply rename_ext, shiftn_compose.
 Qed.
 
@@ -414,8 +409,6 @@ Proof.
     apply map_ext => x.
     specialize (Hff' x). simpl in Hff'.
     now setoid_rewrite shift0 in Hff'.
-  * rewrite !mapi_context_fold fold_context_k_compose.
-    apply fold_context_k_ext => i x. apply Hff'.
   * len. apply Hff'.
 Qed.
 
@@ -432,16 +425,13 @@ Lemma map_predicate_shift_map_predicate
   mapi_context (fun (k : nat) (x : term) => fn (shift k f) (f' x)) p.(pcontext) =
   mapi_context (fun k : nat => fn (shift k (compose f f'))) p.(pcontext) ->
   fn (shift #|p.(pcontext)| f) (f' p.(preturn)) = fn (shift #|p.(pcontext)| (compose f f')) p.(preturn) ->
-  map_predicate_shift fn shift finst f (map_predicate finst' f' f' p) =
+  map_predicate_shift fn shift finst f (map_predicate finst' f' f' id p) =
   map_predicate_shift fn shift (finst ∘ finst') (compose f f') p.
 Proof.
   intros Hfn Hf Hf' Hf''. unfold map_predicate_shift; destruct p; cbn.
   f_equal.
   * rewrite map_map.
     now rewrite Hf.
-  * rewrite !mapi_context_fold fold_context_k_map.
-    rewrite - !mapi_context_fold.
-    now rewrite Hf'.
   * len. apply Hf''.
 Qed.
 
@@ -460,16 +450,13 @@ Lemma map_predicate_shift_map_predicate_gen
   mapi_context (fun (k : nat) (x : term) => fn (shift k f) (f' x)) p.(pcontext) =
   mapi_context (fun k : nat => fn' (shift' k (compose f f'))) p.(pcontext) ->
   fn (shift #|p.(pcontext)| f) (f' p.(preturn)) = fn' (shift' #|p.(pcontext)| (compose f f')) p.(preturn) ->
-  map_predicate_shift fn shift finst f (map_predicate finst' f' f' p) =
+  map_predicate_shift fn shift finst f (map_predicate finst' f' f' id p) =
   map_predicate_shift fn' shift' (finst ∘ finst') (compose f f') p.
 Proof.
   intros Hfn Hf Hf' Hf''. unfold map_predicate_shift; destruct p; cbn.
   f_equal.
   * rewrite map_map.
     now rewrite Hf.
-  * rewrite !mapi_context_fold fold_context_k_map.
-    rewrite - !mapi_context_fold.
-    now rewrite Hf'.
   * len. apply Hf''.
 Qed.
 
@@ -484,15 +471,13 @@ Lemma map_predicate_map_predicate_shift
   Proper (`=1` ==> `=1`) fn ->
   (forall f, f' ∘ fn f =1 fn (compose f' f)) ->
   (forall k, compose f' (shift k f) =1 shift k (compose f' f)) ->
-  map_predicate finst' f' f' (map_predicate_shift fn shift finst f p) =
+  map_predicate finst' f' f' id (map_predicate_shift fn shift finst f p) =
   map_predicate_shift fn shift (finst' ∘ finst) (compose f' f) p.
 Proof.
   intros Hfn Hf Hcom. unfold map_predicate_shift, map_predicate; destruct p; cbn.
   f_equal.
   * rewrite map_map.
     now rewrite Hf.
-  * rewrite !mapi_context_fold map_fold_context_k.
-    setoid_rewrite Hf. now setoid_rewrite Hcom.
   * len. rewrite (Hf _ _).
     now setoid_rewrite Hcom.
 Qed.
@@ -519,8 +504,6 @@ Proof.
   intros Hfn.
   unfold map_branch_shift; destruct b; cbn.
   f_equal.
-  * rewrite !mapi_context_fold fold_context_k_compose.
-    apply fold_context_k_ext => i x. apply Hfn.
   * len. apply Hfn.
 Qed.
 
@@ -771,7 +754,7 @@ Proof.
   - f_equal; auto. now rewrite shiftn_id.
   - f_equal; solve_all.
     * eapply map_predicate_shift_id_spec; solve_all; now rewrite shiftn_id.
-    * eapply map_branch_shift_id_spec; solve_all; now rewrite shiftn_id.
+    * now rewrite shiftn_id.
   - f_equal; auto. solve_all.
     now rewrite shiftn_id.
   - f_equal; auto. solve_all.
@@ -1221,11 +1204,9 @@ Proof.
     apply inst_ext. intros i. destruct i; auto.
   - f_equal; auto; solve_all; sigma.
     * unfold map_predicate_shift; simpl; f_equal; solve_all.
-      + now rewrite !up_Upn Upn_ren H0 -Upn_ren Upn_ren_l.
       + rewrite !up_Upn Upn_ren e -Upn_ren. len.
         now rewrite Upn_ren_l.
     * unfold map_branch_shift; simpl; f_equal; solve_all.
-      + now rewrite !up_Upn Upn_ren H0 -Upn_ren Upn_ren_l.
       + len. now rewrite !up_Upn Upn_ren b -Upn_ren Upn_ren_l.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
@@ -1325,11 +1306,9 @@ Proof.
     unfold subst_compose. simpl. now rewrite !rename_inst_assoc !compose_ren.
   - f_equal; auto; solve_all; sigma.
     * unfold map_predicate_shift; cbn; f_equal; solve_all.
-      + now rewrite !up_Upn Upn_ren H0 -Upn_ren Upn_ren_r.
       + now rewrite !up_Upn Upn_ren e; len; rewrite -Upn_ren Upn_ren_r.
     * sigma.
       unfold map_branch_shift; cbn; f_equal; solve_all.
-      + now rewrite !up_Upn Upn_ren H0 -Upn_ren Upn_ren_r.
       + now rewrite !up_Upn Upn_ren b; len; rewrite -Upn_ren Upn_ren_r.
   - f_equal; auto.
     red in X. rewrite map_map_compose. solve_all.
@@ -1405,11 +1384,9 @@ Proof.
     now rewrite H1 Up_Up_assoc.
   - f_equal; auto.
     * unfold map_predicate_shift; cbn; f_equal; solve_all.
-      + now rewrite H0 up_up_assoc.
       + len. now rewrite e up_up_assoc.
     * rewrite map_map_compose; solve_all.
       unfold map_branch_shift; cbn; f_equal; solve_all.
-      + now rewrite H0 up_up_assoc.
       + len. now rewrite b up_up_assoc.
   - f_equal; auto. sigma.
     rewrite map_map_compose; solve_all.
@@ -1488,11 +1465,9 @@ Proof.
   - f_equal; eauto.
     * unfold map_predicate_k, map_predicate_shift; destruct p; cbn in *; f_equal; solve_all.
       + now rewrite /shiftf up_up.
-      + simpl in e. now rewrite up_up.
     * solve_all.
       unfold map_branch_k, map_branch_shift; destruct x; cbn in *; f_equal; solve_all.
       + now rewrite /shiftf up_up.
-      + now rewrite b up_up.
   - f_equal; eauto; solve_all; auto. 
     rewrite b. apply inst_ext. intros t'; now rewrite (up_up #|m| k).
   - f_equal; eauto.
@@ -1654,15 +1629,11 @@ Proof.
       unfold map_predicate_shift, map_predicate.
       destruct p; cbn in *; simpl; f_equal.
       + solve_all.
-      + rewrite mapi_context_map_context [map _ _]map_context_mapi_context.
-        solve_all. now rewrite up_Upn -Upn_Upn.
       + solve_all. now rewrite up_Upn -Upn_Upn.
     * apply IHt.
     * solve_all.
       unfold map_branch_shift, map_branch.
       destruct x; cbn in *; simpl; f_equal.
-      + rewrite mapi_context_map_context.
-        solve_all. now rewrite up_Upn -Upn_Upn.
       + solve_all. now rewrite up_Upn -Upn_Upn.
   - f_equal.
     red in X.

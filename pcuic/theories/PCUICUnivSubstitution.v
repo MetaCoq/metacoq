@@ -268,14 +268,6 @@ Global Instance subst_instance_prod {A B} `(UnivSubst A) `(UnivSubst B)
 Global Instance subst_instance_nat : UnivSubst nat
   := fun _ n => n.
 
-Lemma subst_instance_instance_length (u1 : Instance.t) u2 :
-  #|subst_instance u2 u1| = #|u1|.
-Proof.
-  unfold subst_instance.
-  now rewrite map_length.
-Qed.
-Hint Rewrite subst_instance_instance_length : len.
-
 Lemma subst_instance_level_two u1 u2 l :
   subst_instance_level u1 (subst_instance_level u2 l)
   = subst_instance_level (subst_instance u1 u2) l.

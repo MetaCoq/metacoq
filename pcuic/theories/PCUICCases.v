@@ -35,40 +35,76 @@ Proof.
   - now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
 Qed.
 
-Definition pre_case_predicate_context_gen ind mdecl idecl params puinst : context :=
-  let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
+Definition ind_predicate_context ind mdecl idecl : context :=
+  let ictx := (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)) in
+  let indty := mkApps (tInd ind (abstract_instance mdecl.(ind_universes)))
+    (to_extended_list (smash_context [] mdecl.(ind_params) ,,, ictx)) in
   let inddecl := 
     {| decl_name := 
       {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
        decl_body := None;
        decl_type := indty |}
-  in
-  let ictx := 
-    subst_context (List.rev params) 0
-      (subst_instance puinst 
-      (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
   in (inddecl :: ictx).
+
+Definition inst_case_context params puinst (pctx : context) :=
+  subst_context (List.rev params) 0 (subst_instance puinst pctx).
+
+Lemma inst_case_context_length params puinst pctx :
+  #|inst_case_context params puinst pctx| = #|pctx|.
+Proof. rewrite /inst_case_context. now len. Qed.
+Hint Rewrite inst_case_context_length : len.
+
+Lemma inst_case_context_assumptions params puinst pctx :
+  context_assumptions (inst_case_context params puinst pctx) = 
+  context_assumptions pctx.
+Proof. rewrite /inst_case_context. now len. Qed.
+Hint Rewrite inst_case_context_assumptions : len.
+
+Definition inst_case_predicate_context (p : predicate term) :=
+  inst_case_context p.(pparams) p.(puinst) p.(pcontext).
+
+Lemma inst_case_predicate_context_length p :
+  #|inst_case_predicate_context p| = #|p.(pcontext)|.
+Proof. rewrite /inst_case_predicate_context. now len. Qed.
+
+Definition inst_case_branch_context (p : predicate term) (br : branch term) :=
+  inst_case_context p.(pparams) p.(puinst) br.(bcontext).
+
+Lemma inst_case_branch_context_length p br :
+  #|inst_case_branch_context p br| = #|br.(bcontext)|.
+Proof. rewrite /inst_case_branch_context. now len. Qed.
+
+Definition pre_case_predicate_context_gen ind mdecl idecl params puinst : context :=
+  inst_case_context params puinst (ind_predicate_context ind mdecl idecl).
 
 Definition case_predicate_context_gen ind mdecl idecl params puinst pctx :=
   map2 set_binder_name pctx (pre_case_predicate_context_gen ind mdecl idecl params puinst).
-
-(** This function allows to forget type annotations on a binding context. 
-    Useful to relate the "compact" case representation in terms, with 
-    its typing relation, where the context has types *)
-Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname := 
-  map (fun decl => decl.(decl_name)) c.
-
-Lemma forget_types_length {term} (ctx : list (BasicAst.context_decl term)) :
-  #|forget_types ctx| = #|ctx|.
-Proof.
-  now rewrite /forget_types map_length.
-Qed.
-Hint Rewrite @forget_types_length : len.
 
 Definition case_predicate_context ind mdecl idecl p : context :=
   case_predicate_context_gen ind mdecl idecl p.(pparams) p.(puinst) (forget_types p.(pcontext)).
 Arguments case_predicate_context _ _ _ !_.
 
+Definition cstr_branch_context ind mdecl cdecl : context :=
+  expand_lets_ctx mdecl.(ind_params)
+    (subst_context (inds (inductive_mind ind) (abstract_instance mdecl.(ind_universes))
+       mdecl.(ind_bodies)) #|mdecl.(ind_params)|
+      cdecl.(cstr_args)).
+
+Lemma cstr_branch_context_length ind mdecl cdecl :
+  #|cstr_branch_context ind mdecl cdecl| = #|cdecl.(cstr_args)|.
+Proof. rewrite /cstr_branch_context. now len. Qed.
+Hint Rewrite cstr_branch_context_length : len.
+    
+Definition pre_case_branch_context_gen ind mdecl cdecl params puinst : context :=
+  inst_case_context params puinst (cstr_branch_context ind mdecl cdecl).
+
+Definition case_branch_context_gen ind mdecl params puinst pctx cdecl :=
+  map2 set_binder_name pctx (pre_case_branch_context_gen ind mdecl cdecl params puinst).
+
+Definition case_branch_context ind mdecl p bctx cdecl : context :=
+  case_branch_context_gen ind mdecl p.(pparams) p.(puinst) bctx cdecl.
+Arguments case_branch_context _ _ _ !_.
+(* 
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
   subst_context (List.rev params) 0
   (expand_lets_ctx (subst_instance puinst mdecl.(ind_params))
@@ -80,7 +116,7 @@ Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context 
 
 Definition case_branch_context ind mdecl p bctx cdecl : context :=
   case_branch_context_gen ind mdecl p.(pparams) p.(puinst) bctx cdecl.
-Arguments case_branch_context _ _ _ _ !_.
+Arguments case_branch_context _ _ _ _ !_. *)
 
 Definition case_branches_contexts_gen ind mdecl idecl params puinst brs : list context :=
   map2 (case_branch_context_gen ind mdecl params puinst) brs idecl.(ind_ctors).
@@ -197,16 +233,18 @@ Proof.
   apply (forallb2P _ _ _ _ wf_branchP).
 Qed.
 
+Hint Rewrite expand_lets_ctx_length : len.
+
 Lemma case_predicate_context_length {ci mdecl idecl p} :
   wf_predicate mdecl idecl p ->
   #|case_predicate_context (ci_ind ci) mdecl idecl p| = #|p.(pcontext)|.
 Proof.
   intros hl.
-  unfold case_predicate_context, case_predicate_context_gen.
+  unfold case_predicate_context, case_predicate_context_gen, pre_case_predicate_context_gen.
   rewrite map2_length /= //.
   2:len => //.
   destruct hl.
-  rewrite (Forall2_length H0). now len.
+  rewrite (Forall2_length H0). len. now len.
 Qed.
 
 Lemma case_predicate_context_length_indices {ci mdecl idecl p} :
@@ -214,10 +252,12 @@ Lemma case_predicate_context_length_indices {ci mdecl idecl p} :
   #|case_predicate_context (ci_ind ci) mdecl idecl p| = S #|idecl.(ind_indices)|.
 Proof.
   intros hl.
-  unfold case_predicate_context, case_predicate_context_gen.
+  unfold case_predicate_context, case_predicate_context_gen, pre_case_predicate_context_gen.
   pose proof (Forall2_length (proj2 hl)). simpl in H.
   rewrite -H.
-  rewrite map2_length /= //; len. now len in H.
+  rewrite map2_length; len. all:len. 
+  - now len in H.
+  - now len in H.
 Qed.
 
 Lemma wf_predicate_length_pars {mdecl idecl p} :
@@ -245,10 +285,10 @@ Lemma case_branch_context_length {ind mdecl p br cdecl} :
   #|case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl| = #|br.(bcontext)|.
 Proof.
   intros hl.
-  unfold case_branch_context, case_branch_context_gen; len.
+  unfold case_branch_context, case_branch_context_gen, pre_case_branch_context_gen; len.
   rewrite map2_length //.
-  * red in hl.
-    now rewrite (Forall2_length hl).
+  * red in hl. red in hl.
+    rewrite (Forall2_length hl). now len.
   * now len.
 Qed.
 
@@ -257,9 +297,9 @@ Lemma case_branch_context_length_args {ind mdecl p br cdecl} :
   #|case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl| = #|cdecl.(cstr_args)|.
 Proof.
   intros hl.
-  unfold case_branch_context, case_branch_context_gen; len.
+  unfold case_branch_context, case_branch_context_gen, pre_case_branch_context_gen; len.
   apply Forall2_length in hl.
-  rewrite map2_length //.
+  rewrite map2_length //. rewrite hl. now len.
 Qed.
 
 Lemma case_branch_context_assumptions {ind mdecl p br cdecl} :
@@ -268,10 +308,12 @@ Lemma case_branch_context_assumptions {ind mdecl p br cdecl} :
   context_assumptions cdecl.(cstr_args).
 Proof.
   intros hl.
-  unfold case_branch_context, case_branch_context_gen; len.
+  unfold case_branch_context, case_branch_context_gen, pre_case_branch_context_gen; len.
   apply Forall2_length in hl.
   rewrite /expand_lets_ctx /expand_lets_k_ctx. len.
-  now rewrite map2_set_binder_name_context_assumptions.
+  rewrite map2_set_binder_name_context_assumptions. 
+  - now rewrite hl; len.
+  - len. rewrite /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx. now len.
 Qed.
 
 Lemma case_branches_contexts_length {ind mdecl idecl p pctx} :

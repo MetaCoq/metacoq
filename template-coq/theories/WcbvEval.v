@@ -141,9 +141,13 @@ Section Wcbv.
       eval (tConst c u) res
 
   (** Case *)
-  | eval_iota ci discr c u args p brs res :
+  | eval_iota ci mdecl idecl cdecl discr c u args p brs br res :
       eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
-      eval (iota_red ci.(ci_npar) c args brs) res ->
+      nth_error brs c = Some br ->
+      declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+      let bctx := case_branch_context p cdecl in
+      #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+      eval (iota_red ci.(ci_npar) args bctx br) res ->
       eval (tCase ci p discr brs) res
 
   (** Proj *)
@@ -219,13 +223,17 @@ Section Wcbv.
           forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
             eval (subst_instance u body) res -> P (subst_instance u body) res -> P (tConst c u) res) ->
-      (forall ci (discr : term) (c : nat) (u : Instance.t)
-              (args : list term) (p : predicate term) (brs : list (branch term)) (res : term),
+      (forall ci mdecl idecl cdecl (discr : term) (c : nat) (u : Instance.t)
+              (args : list term) (p : predicate term) (brs : list (branch term)) br (res : term),
           let ind := ci.(ci_ind) in
           let npar := ci.(ci_npar) in
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
-          eval (iota_red npar c args brs) res -> P (iota_red npar c args brs) res -> 
+          nth_error brs c = Some br ->
+          declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+          let bctx := case_branch_context p cdecl in
+          #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+          eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res -> 
           P (tCase ci p discr brs) res) ->
       (forall (indnpararg : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)
               (a res : term),

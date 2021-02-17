@@ -34,7 +34,8 @@ Notation length_of t := ltac:(let lemma := constr:(PCUICAst.len t) in exact lemm
 Record predicate {term} := mk_predicate {
   pparams : list term; (* The parameters *)
   puinst : Instance.t; (* The universe instance *)
-  pcontext : list (context_decl term); (* The predicate context, 
+  pcontext : list (context_decl term); 
+    (* The predicate context, 
     initially built from params and puinst *)
   preturn : term; (* The return type *) }.
 Derive NoConfusion for predicate.
@@ -45,11 +46,12 @@ Section map_predicate.
   Context {term term' : Type}.
   Context (uf : Instance.t -> Instance.t).
   Context (paramf preturnf : term -> term').
+  Context (pcontextf : list (context_decl term) -> list (context_decl term')).
   
   Definition map_predicate (p : predicate term) :=
     {| pparams := map paramf p.(pparams);
         puinst := uf p.(puinst);
-        pcontext := map_context paramf p.(pcontext);
+        pcontext := pcontextf p.(pcontext);
         preturn := preturnf p.(preturn) |}.
 
   Lemma map_pparams (p : predicate term) :
@@ -61,7 +63,7 @@ Section map_predicate.
   Proof. reflexivity. Qed.
 
   Lemma map_pcontext (p : predicate term) :
-    map_context paramf (pcontext p) = pcontext (map_predicate p).
+    pcontextf (pcontext p) = pcontext (map_predicate p).
   Proof. reflexivity. Qed.
 
   Lemma map_puinst (p : predicate term) :
@@ -80,7 +82,7 @@ Section map_predicate_k.
   Definition map_predicate_k k (p : predicate term) :=
     {| pparams := map (f k) p.(pparams);
         puinst := uf p.(puinst);
-        pcontext := mapi_context (shiftf f k) p.(pcontext);
+        pcontext := p.(pcontext);
         preturn := f (#|p.(pcontext)| + k) p.(preturn) |}.
 
   Lemma map_k_pparams k (p : predicate term) :
@@ -92,7 +94,7 @@ Section map_predicate_k.
   Proof. reflexivity. Qed.
 
   Lemma map_k_pcontext k (p : predicate term) :
-    mapi_context (shiftf f k) (pcontext p) = pcontext (map_predicate_k k p).
+    (pcontext p) = pcontext (map_predicate_k k p).
   Proof. reflexivity. Qed.
 
   Lemma map_k_puinst k (p : predicate term) :
@@ -107,7 +109,14 @@ Section map_predicate_k.
   Definition test_predicate_k (instp : Instance.t -> bool) 
     (p : nat -> term -> bool) k (pred : predicate term) :=
     instp pred.(puinst) && forallb (p k) pred.(pparams) && 
-    test_context_k p k pred.(pcontext) && p (#|pred.(pcontext)| + k) pred.(preturn).
+    test_context_k p #|pred.(pparams)| pred.(pcontext) &&
+    p (#|pred.(pcontext)| + k) pred.(preturn).
+
+  Definition test_predicate_ku (instp : nat -> Instance.t -> bool) 
+    (p : nat -> term -> bool) k (pred : predicate term) :=
+    instp k pred.(puinst) && forallb (p k) pred.(pparams) && 
+    test_context (p #|pred.(puinst)|) pred.(pcontext) &&
+    p k pred.(preturn).
 
 End map_predicate_k.
 
@@ -116,7 +125,10 @@ Section Branch.
   (* Parameterized by term types as they are not yet defined. *)
   Record branch := mk_branch {
     bcontext : list (context_decl term); 
-    (* Context of binders of the branch, including lets. *)
+    (* Context of binders of the branch, including lets. 
+       This context is open w.r.t. to an instance of the parameters of the inductive type only,
+       it is NOT subject to substitution/lifting
+      *)
     bbody : term; (* The branch body *) }.
   Derive NoConfusion for branch.
 
@@ -127,11 +139,11 @@ Section Branch.
   Definition pretty_string_of_branch (f : term -> string) (b : branch) :=
     String.concat " " (map (string_of_name ∘ binder_name ∘ decl_name) (bcontext b)) ^ " => " ^ f (bbody b).
   
-  Definition test_branch (p : term -> bool) (b : branch) :=
-    test_context p b.(bcontext) && p b.(bbody).
+  Definition test_branch (pctx : term -> bool) (p : term -> bool) (b : branch) :=
+    test_context pctx b.(bcontext) && p b.(bbody).
 
-  Definition test_branch_k (p : nat -> term -> bool) k (b : branch) :=
-    test_context_k p k b.(bcontext) && p (#|b.(bcontext)| + k) b.(bbody).
+  Definition test_branch_k (pred : predicate term) (p : nat -> term -> bool) k (b : branch) :=
+    test_context_k p #|pred.(pparams)| b.(bcontext) && p (#|b.(bcontext)| + k) b.(bbody).
 
 End Branch.  
 Arguments branch : clear implicits.
@@ -139,9 +151,10 @@ Arguments branch : clear implicits.
 Section map_branch.
   Context {term term' : Type}.
   Context (f : term -> term').
+  Context (g : list (BasicAst.context_decl term) -> list (BasicAst.context_decl term')).
 
   Definition map_branch (b : branch term) :=
-  {| bcontext := map_context f b.(bcontext);
+  {| bcontext := g b.(bcontext);
       bbody := f b.(bbody) |}.
 
   Lemma map_bbody (b : branch term) :
@@ -149,34 +162,34 @@ Section map_branch.
   Proof. reflexivity. Qed.
   
   Lemma map_bcontext (b : branch term) :
-    map_context f (bcontext b) = bcontext (map_branch b).
+    g (bcontext b) = bcontext (map_branch b).
   Proof. reflexivity. Qed.
 End map_branch.
 
-Definition map_branches {term B} (f : term -> B) l := List.map (map_branch f) l.
+Definition map_branches {term B} (f : term -> B) h l := List.map (map_branch f h) l.
 
 Section map_branch_k.
   Context {term term' : Type}.
   Context (f : nat -> term -> term').
-
+  Context (g : list (BasicAst.context_decl term) -> list (BasicAst.context_decl term')).
   Definition map_branch_k k (b : branch term) :=
-  {| bcontext := mapi_context (shiftf f k) b.(bcontext);
-      bbody := f (#|b.(bcontext)| + k) b.(bbody) |}.
+  {| bcontext := g b.(bcontext);
+     bbody := f (#|b.(bcontext)| + k) b.(bbody) |}.
 
   Lemma map_k_bbody k (b : branch term) :
     f (#|b.(bcontext)| + k) (bbody b) = bbody (map_branch_k k b).
   Proof. reflexivity. Qed.
   
   Lemma map_k_bcontext k (b : branch term) :
-    mapi_context (shiftf f k) (bcontext b) = bcontext (map_branch_k k b).
+    g (bcontext b) = bcontext (map_branch_k k b).
   Proof. reflexivity. Qed.
 End map_branch_k.
 
-Notation map_branches_k f k brs :=
-  (List.map (map_branch_k f k) brs).
+Notation map_branches_k f h k brs :=
+  (List.map (map_branch_k f h k) brs).
 
-Notation test_branches_k test k brs :=
-  (List.forallb (test_branch_k test k) brs).
+Notation test_branches_k p test k brs :=
+  (List.forallb (test_branch_k p test k) brs).
 
 Inductive term :=
 | tRel (n : nat)
@@ -301,7 +314,7 @@ Fixpoint lift n k t : term :=
   | tLetIn na b t b' => tLetIn na (lift n k b) (lift n k t) (lift n (S k) b')
   | tCase ind p c brs =>
     let p' := map_predicate_k id (lift n) k p in
-    let brs' := map_branches_k (lift n) k brs in
+    let brs' := map_branches_k (lift n) id k brs in
     tCase ind p' (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
@@ -336,7 +349,7 @@ Fixpoint subst s k u :=
   | tLetIn na b ty b' => tLetIn na (subst s k b) (subst s k ty) (subst s (S k) b')
   | tCase ind p c brs =>
     let p' := map_predicate_k id (subst s) k p in
-    let brs' := map_branches_k (subst s) k brs in
+    let brs' := map_branches_k (subst s) id k brs in
     tCase ind p' (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
   | tFix mfix idx =>
@@ -365,7 +378,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tLetIn na b t b' => closedn k b && closedn k t && closedn (S k) b'
   | tCase ind p c brs =>
     let p' := test_predicate_k (fun _ => true) closedn k p in
-    let brs' := test_branches_k closedn k brs in
+    let brs' := test_branches_k p closedn k brs in
     p' && closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>
@@ -388,7 +401,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tLetIn na b t b' => noccur_between k n b && noccur_between k n t && noccur_between (S k) n b'
   | tCase ind p c brs =>
     let p' := test_predicate_k (fun _ => true) (fun k' => noccur_between k' n) k p in
-    let brs' := test_branches_k (fun k => noccur_between k n) k brs in
+    let brs' := test_branches_k p (fun k => noccur_between k n) k brs in
     p' && noccur_between k n c && brs'
   | tProj p c => noccur_between k n c
   | tFix mfix idx =>
@@ -420,8 +433,8 @@ Instance subst_instance_constr : UnivSubst term :=
   | tLetIn na b ty b' => tLetIn na (subst_instance_constr u b) (subst_instance_constr u ty)
                                 (subst_instance_constr u b')
   | tCase ind p c brs =>
-    let p' := map_predicate (subst_instance_instance u) (subst_instance_constr u) (subst_instance_constr u) p in
-    let brs' := List.map (map_branch (subst_instance_constr u)) brs in
+    let p' := map_predicate (subst_instance_instance u) (subst_instance_constr u) (subst_instance_constr u) id p in
+    let brs' := List.map (map_branch (subst_instance_constr u) id) brs in
     tCase ind p' (subst_instance_constr u c) brs'
   | tProj p c => tProj p (subst_instance_constr u c)
   | tFix mfix idx =>
@@ -446,8 +459,8 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
   | tApp u v => closedu k u && closedu k v
   | tLetIn na b t b' => closedu k b && closedu k t && closedu k b'
   | tCase ind p c brs =>
-    let p' := test_predicate (closedu_instance k) (closedu k) p in
-    let brs' := forallb (test_branch (closedu k)) brs in
+    let p' := test_predicate_ku closedu_instance closedu k p in
+    let brs' := forallb (test_branch (closedu #|p.(puinst)|) (closedu k)) brs in
     p' && closedu k c && brs'
   | tProj p c => closedu k c
   | tFix mfix idx =>
@@ -573,23 +586,21 @@ Lemma map_predicate_map_predicate
       (finst finst' : Instance.t -> Instance.t)
       (f g : term' -> term'')
       (f' g' : term -> term')
+      (h : list (BasicAst.context_decl term') -> list (BasicAst.context_decl term''))
+      (h' : list (BasicAst.context_decl term) -> list (BasicAst.context_decl term'))
       (p : predicate term) :
-  map_predicate finst f g (map_predicate finst' f' g' p) =
-  map_predicate (finst ∘ finst') (f ∘ f') (g ∘ g') p.
+  map_predicate finst f g h (map_predicate finst' f' g' h' p) =
+  map_predicate (finst ∘ finst') (f ∘ f') (g ∘ g') (h ∘ h') p.
 Proof.
   unfold map_predicate. destruct p; cbn.
   f_equal.
   apply map_map.
-  rewrite map_map.
-  apply map_ext => x.
-  now rewrite compose_map_decl.
 Qed.
 
-Lemma map_predicate_id x : map_predicate (@id _) (@id term) (@id term) x = id x.
+Lemma map_predicate_id x : map_predicate (@id _) (@id term) (@id term) (@id _) x = id x.
 Proof.
   unfold map_predicate; destruct x; cbn; unfold id.
   f_equal. apply map_id.
-  now rewrite map_decl_id map_id.
 Qed.
 Hint Rewrite @map_predicate_id : map.
 
@@ -637,12 +648,12 @@ Definition tCasePredProp {term}
   Preturn p.(preturn).
 
 Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t) 
-  (f f' g g' : A -> B) (p : predicate A) :
+  (f f' g g' : A -> B) h h' (p : predicate A) :
   finst (puinst p) = finst' (puinst p) ->
   map f (pparams p) = map g (pparams p) ->
-  map_context f (pcontext p) = map_context g (pcontext p) ->
+  h =1 h' ->
   f' (preturn p) = g' (preturn p) ->
-  map_predicate finst f f' p = map_predicate finst' g g' p.
+  map_predicate finst f f' h p = map_predicate finst' g g' h' p.
 Proof.
   intros. unfold map_predicate; f_equal; auto.
 Qed.
@@ -652,7 +663,6 @@ Lemma map_predicate_k_eq_spec {A} (finst finst' : Instance.t -> Instance.t)
   (f g : nat -> A -> A) k k' (p : predicate A) :
   finst (puinst p) = finst' (puinst p) ->
   map (f k) (pparams p) = map (g k') (pparams p) ->
-  mapi_context (shiftf f k) (pcontext p) = mapi_context (shiftf g k') (pcontext p) ->
   shiftf f k #|pcontext p| (preturn p) = shiftf g k' #|pcontext p| (preturn p) ->
   map_predicate_k finst f k p = map_predicate_k finst' g k' p.
 Proof.
@@ -709,12 +719,12 @@ Proof.
 Qed.
 Hint Resolve map_context_id_spec_cond : all.
 
-Lemma map_predicate_id_spec {A} finst (f f' : A -> A) (p : predicate A) :
+Lemma map_predicate_id_spec {A} finst (f f' : A -> A) h (p : predicate A) :
   finst (puinst p) = puinst p ->
   map f (pparams p) = pparams p ->
-  map_context f (pcontext p) = pcontext p ->
+  h (pcontext p) = pcontext p ->
   f' (preturn p) = preturn p ->
-  map_predicate finst f f' p = p.
+  map_predicate finst f f' h p = p.
 Proof.
   unfold map_predicate.
   intros -> -> -> ->; destruct p; auto.
@@ -724,30 +734,28 @@ Hint Resolve map_predicate_id_spec : all.
 Lemma map_predicate_k_id_spec {A} finst (f : nat -> A -> A) k (p : predicate A) :
   finst (puinst p) = puinst p ->
   map (f k) (pparams p) = pparams p ->
-  mapi_context (shiftf f k) (pcontext p) = pcontext p ->
   shiftf f k #|p.(pcontext)| (preturn p) = preturn p ->
   map_predicate_k finst f k p = p.
 Proof.
   unfold map_predicate_k, shiftf.
-  intros -> -> -> ->; destruct p; auto.
+  intros -> -> ->; destruct p; auto.
 Qed.
 Hint Resolve map_predicate_k_id_spec : all.
 
 Instance map_predicate_proper {term} : 
-  Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
+  Proper (`=1` ==> `=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
 Proof.
   intros eqf0 eqf1 eqf.
-  intros eqf'0 eqf'1 eqf'.
+  intros eqf'0 eqf'1 eqf' h h' eqh'.
   intros x y ->.
   apply map_predicate_eq_spec; auto.
   now apply map_ext => x.
-  now rewrite eqf.
 Qed.
 
-Instance map_predicate_proper' {term} f : Proper (`=1` ==> Logic.eq ==> Logic.eq)
+Instance map_predicate_proper' {term} f : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)
   (@map_predicate term term id f).
 Proof.
-  intros eqf0 eqf1 eqf.
+  intros eqf0 eqf1 eqf h h' eqh'.
   intros x y ->.
   apply map_predicate_eq_spec; auto.
 Qed.
@@ -767,23 +775,20 @@ Proof.
   unfold map_predicate, map_predicate_k. destruct p; cbn.
   f_equal.
   now rewrite map_map.
-  now rewrite !mapi_context_fold fold_context_k_compose shiftf0.
   now len.
 Qed.
 Hint Rewrite map_predicate_k_map_predicate_k : map.
 
 Lemma map_predicate_map_predicate_k 
   (finst finst' : Instance.t -> Instance.t)
-  (f : term -> term) (f' : nat -> term -> term) 
+  (f : term -> term) (f' : nat -> term -> term)
   k (p : predicate term) :
-  map_predicate finst f f (map_predicate_k finst' f' k p) =
+  map_predicate finst f f id (map_predicate_k finst' f' k p) =
   map_predicate_k (finst ∘ finst') (fun k => f ∘ f' k) k p.
 Proof.
   unfold map_predicate, map_predicate_k. destruct p; cbn.
   f_equal.
   apply map_map.
-  rewrite !mapi_context_fold map_fold_context_k.
-  reflexivity.
 Qed.
 Hint Rewrite map_predicate_map_predicate_k : map.
 
@@ -791,15 +796,12 @@ Lemma map_predicate_k_map_predicate
   (finst finst' : Instance.t -> Instance.t)
   (f' : term -> term) (f : nat -> term -> term) 
   k (p : predicate term) :
-  map_predicate_k finst f k (map_predicate finst' f' f' p) =
+  map_predicate_k finst f k (map_predicate finst' f' f' id p) =
   map_predicate_k (finst ∘ finst') (fun k => (f k) ∘ f') k p.
 Proof.
   unfold map_predicate, map_predicate_k. destruct p; cbn.
   f_equal; len; auto.
   * apply map_map.
-  * rewrite !mapi_context_fold.
-    fold (map_context f' pcontext0).
-    now rewrite fold_context_k_map.
 Qed.
 Hint Rewrite map_predicate_k_map_predicate : map.
 
@@ -807,38 +809,44 @@ Lemma map_branch_map_branch
       {term term' term''}
       (f : term' -> term'')
       (f' : term -> term')
+      h h' 
       (b : branch term) :
-  map_branch f (map_branch f' b) =
-  map_branch (f ∘ f') b.
+  map_branch f h (map_branch f' h' b) =
+  map_branch (f ∘ f') (h ∘ h') b.
 Proof.
   unfold map_branch; destruct b; cbn.
   f_equal.
-  rewrite map_map.
-  now setoid_rewrite compose_map_decl.
 Qed.
 Hint Rewrite @map_branch_map_branch : map.
 
-Lemma map_branch_k_map_branch_k (f f' : nat -> term -> term) k k' (b : branch term) :
-  map_branch_k f k (map_branch_k f' k' b) =
-  map_branch_k (fun i => f (i + k) ∘ f' (i + k')) 0 b.
+Lemma map_branch_k_map_branch_k (f f' : nat -> term -> term) h h' k k' (b : branch term) :
+  #|h' b.(bcontext)| = #|b.(bcontext)| ->
+  map_branch_k f h k (map_branch_k f' h' k' b) =
+  map_branch_k (fun i => f (i + k) ∘ f' (i + k')) (h ∘ h') 0 b.
+Proof.
+  unfold map_branch, map_branch_k; destruct b; cbn. len.
+  intros ->.
+  f_equal.
+Qed.
+
+Lemma map_branch_k_map_branch_k_id (f f' : nat -> term -> term) k k' (b : branch term) :
+  map_branch_k f id k (map_branch_k f' id k' b) =
+  map_branch_k (fun i => f (i + k) ∘ f' (i + k')) id 0 b.
 Proof.
   unfold map_branch, map_branch_k; destruct b; cbn. len.
   f_equal.
-  rewrite !mapi_context_fold.
-  now rewrite !fold_context_k_compose shiftf0.
 Qed.
-Hint Rewrite map_branch_k_map_branch_k : map.
+Hint Rewrite map_branch_k_map_branch_k_id : map.
 
 Lemma map_branch_map_branch_k
       (f : term -> term)
       (f' : nat -> term -> term) k
       (b : branch term) :
-  map_branch f (map_branch_k f' k b) =
-  map_branch_k (fun k => f ∘ (f' k)) k b.
+  map_branch f id (map_branch_k f' id k b) =
+  map_branch_k (fun k => f ∘ (f' k)) id k b.
 Proof.
   unfold map_branch, map_branch_k; destruct b; cbn.
   f_equal.
-  now rewrite !mapi_context_fold map_fold_context_k.
 Qed.
 
 Hint Rewrite map_branch_map_branch_k : map.
@@ -846,21 +854,19 @@ Lemma map_branch_k_map_branch
       (f' : term -> term)
       (f : nat -> term -> term) k
       (b : branch term) :
-  map_branch_k f k (map_branch f' b) =
-  map_branch_k (fun k => f k ∘ f') k b.
+  map_branch_k f id k (map_branch f' id b) =
+  map_branch_k (fun k => f k ∘ f') id k b.
 Proof.
   unfold map_branch, map_branch_k; destruct b; cbn. len.
   f_equal.
-  rewrite !mapi_context_fold.
-  now fold (map_context f' bcontext0); rewrite fold_context_k_map.
 Qed.
 
 Hint Rewrite map_branch_k_map_branch : map.
 
-Lemma map_branch_id x : map_branch (@id term) x = id x.
+Lemma map_branch_id x : map_branch (@id term) id x = id x.
 Proof.
   unfold map_branch, id; destruct x; cbn.
-  f_equal. now rewrite map_decl_id map_id.
+  f_equal. 
 Qed.
 Hint Rewrite @map_branch_id : map.
 
@@ -887,48 +893,49 @@ Proof.
   eapply map_decl_eq_spec; eauto.
 Qed.
 
-Lemma map_branch_eq_spec {A B} (f g : A -> B) (x : branch A) :
-  map_context f (bcontext x) = map_context g (bcontext x) ->  
+Lemma map_branch_eq_spec {A B} (f g : A -> B) h h' (x : branch A) :
   f (bbody x) = g (bbody x) ->
-  map_branch f x = map_branch g x.
+  h =1 h' ->
+  map_branch f h x = map_branch g h' x.
 Proof.
   intros. unfold map_branch; f_equal; auto.
 Qed.
 Hint Resolve map_branch_eq_spec : all.
 
-Lemma map_branch_k_eq_spec {A B} (f g : nat -> A -> B) k k' (x : branch A) :
-  mapi_context (shiftf f k) (bcontext x) = mapi_context (shiftf g k') (bcontext x) ->  
+Lemma map_branch_k_eq_spec {A B} (f g : nat -> A -> B) h h' k k' (x : branch A) :
   shiftf f k #|x.(bcontext)| (bbody x) = shiftf g k' #|x.(bcontext)| (bbody x) ->
-  map_branch_k f k x = map_branch_k g k' x.
+  h =1 h' ->
+  map_branch_k f h k x = map_branch_k g h' k' x.
 Proof.
   intros. unfold map_branch_k; f_equal; auto.
 Qed.
 Hint Resolve map_branch_eq_spec : all.
 
-Instance map_branch_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) 
+Instance map_branch_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq) 
   (@map_branch term term).
 Proof.
-  intros eqf0 eqf1 eqf.
+  intros eqf0 eqf1 eqf h h' eqh'.
   intros x y ->.
   apply map_branch_eq_spec; auto.
-  now rewrite eqf.
 Qed.
 
+Lemma id_id {A} : @id A =1 id.
+Proof. now intros x. Qed.
+Hint Resolve @id_id : core.
+
 Lemma map_branch_id_spec (f : term -> term) (x : branch term) :
-  map_context f (bcontext x) = bcontext x ->
   f (bbody x) = (bbody x) ->
-  map_branch f x = x.
+  map_branch f id x = x.
 Proof.
-  intros. rewrite (map_branch_eq_spec _ id); auto.
-  now rewrite map_context_id.
+  intros. rewrite (map_branch_eq_spec _ id id id); auto.
   now rewrite map_branch_id.
 Qed.
 Hint Resolve map_branch_id_spec : all.
 
-Lemma map_branch_k_id_spec (f : nat -> term -> term) k (x : branch term) :
-  mapi_context (shiftf f k) (bcontext x) = bcontext x ->
+Lemma map_branch_k_id_spec (f : nat -> term -> term) h k (x : branch term) :
+  h (bcontext x) = bcontext x ->
   shiftf f k #|x.(bcontext)| (bbody x) = (bbody x) ->
-  map_branch_k f k x = x.
+  map_branch_k f h k x = x.
 Proof.
   intros. unfold map_branch_k.
   destruct x; simpl in *; f_equal; eauto.
@@ -939,9 +946,10 @@ Lemma map_branches_map_branches
       {term term' term''}
       (f : term' -> term'')
       (f' : term -> term')
+      h h'
       (l : list (branch term)) :
-  map (fun b => map_branch f (map_branch f' b)) l =
-  map (map_branch (f ∘ f')) l.
+  map (fun b => map_branch f h (map_branch f' h' b)) l =
+  map (map_branch (f ∘ f') (h ∘ h')) l.
 Proof.
   eapply map_ext => b. apply map_branch_map_branch.
 Qed.
@@ -956,25 +964,28 @@ Lemma map_branches_k_map_branches_k
       {term term' term''}
       (f : nat -> term' -> term'')
       (g : term -> term')
-      (f' : nat -> term -> term') k
+      (f' : nat -> term -> term') 
+      h h' k
       (l : list (branch term)) :
-  map (fun b => map_branch (f #|bcontext (map_branch g b)|) (map_branch (f' k) b)) l =
-  map (fun b => map_branch (f #|bcontext b|) (map_branch (f' k) b)) l.
+  (forall ctx, #|h' ctx| = #|ctx|) ->
+  map (fun b => map_branch (f #|bcontext (map_branch g h' b)|) h (map_branch (f' k) h' b)) l =
+  map (fun b => map_branch (f #|bcontext b|) h (map_branch (f' k) h' b)) l.
 Proof.
+  intros Hh.
   eapply map_ext => b. rewrite map_branch_map_branch.
   rewrite map_branch_map_branch.
-  now simpl; autorewrite with len.
+  simpl; autorewrite with len. now rewrite Hh.
 Qed.
 
-Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B} :
-  tCaseBrsProp P l -> (forall x, P x -> f x = g x) ->
-  map_branches f l = map_branches g l.
+Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B} 
+  {h h' : list (BasicAst.context_decl A) -> list (BasicAst.context_decl B)} :
+  tCaseBrsProp P l -> (forall x, P x -> f x = g x) -> h =1 h' ->
+  map_branches f h l = map_branches g h' l.
 Proof.
   intros. red in X.
   eapply All_map_eq. eapply All_impl; eauto. simpl; intros.
   destruct X0.
   apply map_branch_eq_spec; eauto.
-  eapply map_context_eq_spec; eauto.
 Qed.
 
 Lemma map_decl_eqP_spec {A B} {P : A -> Type} {p : A -> bool}
@@ -1109,18 +1120,27 @@ Proof.
   now setoid_rewrite Hfg.
 Qed.
 
-Instance test_branch_k_Proper : Proper (`=2` ==> Logic.eq ==> `=1`) (@test_branch_k term).
+Instance test_predicate_ku_Proper : Proper (`=2` ==> `=2` ==> Logic.eq ==> `=1`) (@test_predicate_ku term).
+Proof.
+  intros hi hi' eqhi f g Hfg k k' <- ctx.
+  unfold test_predicate_ku. rewrite eqhi.
+  now setoid_rewrite Hfg.
+Qed.
+
+Instance test_branch_k_Proper p : Proper (`=2` ==> Logic.eq ==> `=1`) (@test_branch_k term p).
 Proof.
   intros f g Hfg k k' <- ctx.
   unfold test_branch_k.
   now setoid_rewrite Hfg.
 Qed.
 
-Lemma case_brs_map_spec_cond {A B} {P : A -> Type} p {l} {f g : A -> B} :
+Lemma case_brs_map_spec_cond {A B} {P : A -> Type} pctx p {l} {f g : A -> B} {h h'}:
   tCaseBrsProp P l -> 
-  forallb (test_branch p) l ->
+  forallb (test_branch pctx p) l ->
   (forall x, P x -> p x -> f x = g x) ->
-  map_branches f l = map_branches g l.
+  (* (forall ctx, onctx P ctx -> test_context pctx ctx -> h ctx = h' ctx) -> *)
+  h =1 h' ->
+  map_branches f h l = map_branches g h' l.
 Proof.
   intros. red in X. 
   eapply forallb_All in H.
@@ -1128,36 +1148,37 @@ Proof.
   eapply All_prod in X; tea. clear H.
   eapply All_impl; eauto. simpl; intros br [[]%andb_and []].
   apply map_branch_eq_spec; eauto.
-  eapply map_context_eqP_spec; eauto.
+  (*eapply map_context_eqP_spec; eauto.*)
 Qed.
 
-Lemma case_brs_map_k_spec {A B} {P : A -> Type} {k l} {f g : nat -> A -> B} :
+Lemma case_brs_map_k_spec {A B} {P : A -> Type} {k l} {f g : nat -> A -> B} {h h'} :
   tCaseBrsProp P l ->
   (forall k x, P x -> f k x = g k x) ->
-  map_branches_k f k l = map_branches_k g k l.
+  h =1 h' ->
+  map_branches_k f h k l = map_branches_k g h' k l.
 Proof.
   intros. red in X.
   eapply All_map_eq. eapply All_impl; eauto. simpl; intros.
-  destruct X0 as [Hctx Hbod].
   apply map_branch_k_eq_spec; eauto.
-  apply (mapi_context_eqP_spec Hctx).
-  intros k' x' hx'. unfold shiftf. now apply H.
+  unfold shiftf. now apply H.
 Qed.
 
-Lemma case_brs_forallb_map_spec {A B} {P : A -> Type} {p : A -> bool}
-      {l} {f g : A -> B} :
+Lemma case_brs_forallb_map_spec {A B} {P : A -> Type} {pctx p : A -> bool}
+      {l} {f g : A -> B} {h h'} :
   tCaseBrsProp P l ->
-  forallb (test_branch p) l ->
+  forallb (test_branch pctx p) l ->
   (forall x, P x -> p x -> f x = g x) ->
-  map (map_branch f) l = map (map_branch g) l.
+  h =1 h' ->
+  map (map_branch f h) l = map (map_branch g h') l.
 Proof.
   intros.
   eapply All_map_eq. red in X. apply forallb_All in H.
   eapply All_impl. eapply All_prod. exact X. exact H. simpl.
-  intros [bctx bbod] [[Hbctx Hbr] [Hctx hb]%andb_and]. cbn in *.
+  intros [bctx bbod] [Hbr hb]. cbn in *.
   unfold map_branch; cbn. f_equal.
-  - eapply map_context_eqP_spec; eauto. 
-  - eapply H0; eauto.
+  - apply H1. 
+  - eapply H0; eauto. apply Hbr.
+    now move/andb_and: hb => [].
 Qed.
 
 Lemma test_context_map (p : term -> bool) f (ctx : context) :

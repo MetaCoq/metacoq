@@ -421,18 +421,6 @@ Proof.
   rewrite mapi_length. reflexivity.
 Qed.
 
-Lemma map_decl_name_fold_context_k {term term'} (f : nat -> term' -> term) ctx : 
-  map decl_name (fold_context_k f ctx) = map decl_name ctx.
-Proof.
-  now rewrite fold_context_k_alt map_mapi /= mapi_cst_map.
-Qed.
-
-Lemma forget_types_fold_context_k {term term'} (f : nat -> term' -> term) ctx : 
-  forget_types (fold_context_k f ctx) = forget_types ctx.
-Proof.
-  now rewrite /forget_types map_decl_name_fold_context_k.
-Qed.
-
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ.1 ->
   Σ ;;; Γ ,,, Γ' |- M <= N ->

@@ -526,6 +526,41 @@ Proof.
   now apply wf_subst_instance_context.
 Qed.
 
+
+Lemma wf_case_branch_context {cf:checker_flags} Σ ind mdecl idecl cdecl p :
+  on_global_env (fun Σ => wf_decl_pred) Σ ->
+  declared_constructor Σ ind mdecl idecl cdecl ->
+  Forall Ast.wf (pparams p) ->
+  Forall (fun ctor => Forall wf_decl (cstr_args ctor)) (ind_ctors idecl) ->
+  Forall wf_decl (case_branch_context p cdecl).
+Proof.
+  intros ong decli wfpars.
+  unfold case_branch_context.
+  intros Hforall. 
+  unfold case_branch_context_gen.
+  apply wf_subst_context; auto.
+  apply wf_subst_instance_context.
+  destruct decli.
+  now eapply nth_error_forall in Hforall; tea.
+Qed.
+
+Lemma declared_inductive_wf_ctors' {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl} :
+    forall (oib : on_ind_body (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
+    (inductive_mind ind) mdecl (inductive_ind ind) idecl),
+    Forall (fun cs => Forall wf_decl (cstr_args cs)) idecl.(ind_ctors).
+Proof.
+  intros oib.
+  pose proof (onConstructors oib) as h. unfold on_constructors in h.
+  induction h; constructor; auto.
+  destruct r.
+  clear -on_cargs.
+  revert on_cargs. revert y. generalize (cstr_args x).
+  induction c as [|[? [] ?] ?]; simpl;
+    destruct y; intuition auto;
+    constructor;
+    try red; simpl; intuition eauto.
+Qed.
+
 Lemma wf_red1 {cf:checker_flags} Σ Γ M N :
   on_global_env (fun Σ => wf_decl_pred) Σ ->
   List.Forall wf_decl Γ ->
@@ -547,10 +582,15 @@ Proof.
     eapply nth_error_forall in wfΓ; eauto. unfold wf_decl in *.
     apply some_inj in H; rewrite H in wfΓ; apply wfΓ.
   - unfold iota_red.
-    apply wf_mkApps_inv in H1.
-    apply wf_subst. now eapply Forall_skipn.
-    induction brs in c, H2 |- *; destruct c; simpl in *; try constructor.
-    inv H2; auto. inv H2; auto.
+    eapply wf_mkApps_inv in H4.
+    apply wf_subst. eapply rev_Forall. now eapply Forall_skipn.
+    rewrite /expand_lets /expand_lets_k.
+    apply wf_subst. apply wf_extended_subst. rewrite /bctx.
+    eapply wf_case_branch_context; tea.
+    eapply declared_inductive_wf_ctors.
+    now eapply on_global_wf_Forall_decls in wfΣ. apply H0.
+    eapply wf_lift.
+    now eapply nth_error_forall in H5; tea.
   - apply unfold_fix_wf in H; auto. eapply wf_mkApps; auto.
   - constructor; auto. apply wf_mkApps_napp in H2 as [Hcof Hargs]; auto.
     apply unfold_cofix_wf in H; auto.
@@ -666,23 +706,6 @@ Proof.
   induction (ind_params mdecl) as [|[? [] ?] ?]; simpl in oib; inv oib; constructor;
     try red in X0; try red in X1; try red; simpl; intuition auto.
   destruct X0; intuition auto.
-Qed.
-
-Lemma declared_inductive_wf_ctors' {cf:checker_flags} {Σ : global_env_ext} {ind mdecl idecl} :
-    forall (oib : on_ind_body (lift_typing (fun _ _ (t T : term) => Ast.wf t /\ Ast.wf T)) Σ
-    (inductive_mind ind) mdecl (inductive_ind ind) idecl),
-    Forall (fun cs => Forall wf_decl (cstr_args cs)) idecl.(ind_ctors).
-Proof.
-  intros oib.
-  pose proof (onConstructors oib) as h. unfold on_constructors in h.
-  induction h; constructor; auto.
-  destruct r.
-  clear -on_cargs.
-  revert on_cargs. revert y. generalize (cstr_args x).
-  induction c as [|[? [] ?] ?]; simpl;
-    destruct y; intuition auto;
-    constructor;
-    try red; simpl; intuition eauto.
 Qed.
 
 Lemma wf_smash_context Γ Δ : Forall wf_decl Γ -> Forall wf_decl Δ ->

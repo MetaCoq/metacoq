@@ -26,10 +26,8 @@ Inductive choice :=
 | app_l
 | app_r
 | case_par (n : nat)
-| case_pctx (c : context_choice)
 | case_preturn
 | case_c
-| case_brsctx (n : nat) (c : context_choice)
 | case_brsbody (n : nat)
 | proj_c
 | fix_mfix_ty (n : nat)
@@ -74,22 +72,8 @@ Fixpoint validpos t (p : position) {struct p} :=
       | Some par =>  validpos par p
       | None => false
       end
-    | case_pctx ctxc, tCase ci pr c brs =>
-      match context_choice_term pr.(pcontext) ctxc with
-      | Some t => validpos t p
-      | None => false
-      end
     | case_preturn, tCase ci pr c brs => validpos pr.(preturn) p
     | case_c, tCase ci pr c brs => validpos c p
-    | case_brsctx n ctxc, tCase ci pr c brs =>
-        match nth_error brs n with
-        | Some br =>
-          match context_choice_term br.(bcontext) ctxc with
-          | Some t => validpos t p
-          | None => false
-          end
-        | None => false
-        end
     | case_brsbody n, tCase ci pr c brs =>
         match nth_error brs n with
         | Some br => validpos br.(bbody) p
@@ -223,17 +207,7 @@ Proof.
         intuition eauto.
       * simpl in *. eapply IHa0. all: eauto.
     + dependent destruction e. simpl in *.
-      destruct e as (_&_&e&_).
-      eapply eq_context_upto_context_choice_term with (c := c) in e.
-      depelim e; rewrite H, H0 in *; eauto.
-    + dependent destruction e. simpl in *.
       eapply ih; eauto. apply e.
-    + dependent destruction e. simpl in *.
-      destruct nth_error eqn:nth; [|congruence].
-      eapply All2_nth_error_Some in a; eauto.
-      destruct a as (?&->&eq&_).
-      eapply eq_context_upto_context_choice_term with (c := c) in eq.
-      depelim eq; rewrite H, H0 in *; eauto.
     + dependent destruction e. simpl in *.
       destruct nth_error eqn:nth; [|congruence].
       eapply All2_nth_error_Some in a; eauto.
@@ -397,20 +371,6 @@ Proof.
     - specialize (ih2 q). eapply ih2. all: assumption.
   }
   assert (
-    forall ci pr c brs ctxc t (p : pos t)
-      (e : context_choice_term pr.(pcontext) ctxc = Some t)
-      (vp : validpos (tCase ci pr c brs) (case_pctx ctxc :: proj1_sig p) = true),
-      Acc posR p ->
-      Acc posR (exist (case_pctx ctxc :: proj1_sig p) vp)) as Acc_case_pctx.
-  { intros ci pr c brs ctxc t p e vp h.
-    induction h as [p ih1 ih2] in e, vp |- *.
-    constructor. intros [q e2] h.
-    dependent destruction h.
-    simple refine (let q := exist p0 _ : pos t in _).
-    - simpl. cbn in e2. rewrite e in e2. assumption.
-    - specialize (ih2 q). eapply ih2. all: assumption.
-  }
-  assert (
     forall ci pr c brs p,
       Acc posR p ->
       Acc posR (dcase_preturn ci pr c brs p)
@@ -431,22 +391,6 @@ Proof.
     constructor. intros [q e] h.
     dependent destruction h.
     eapply (ih2 (exist p0 e)). assumption.
-  }
-  assert (
-    forall ci pr c brs n br ctxc t (p : pos t)
-      (brsnth : nth_error brs n = Some br)
-      (e : context_choice_term br.(bcontext) ctxc = Some t)
-      (vp : validpos (tCase ci pr c brs) (case_brsctx n ctxc :: proj1_sig p) = true),
-      Acc posR p ->
-      Acc posR (exist (case_brsctx n ctxc :: proj1_sig p) vp)
-  ) as Acc_case_brsctx.
-  { intros ci pr c brs n br ctxc t p brsnth e vp h.
-    induction h as [p ih1 ih2] in brsnth, e, vp |- *.
-    constructor. intros [q e2] h.
-    dependent destruction h.
-    simple refine (let q := exist p0 _ : pos t in _).
-    - simpl. cbn in e2. rewrite brsnth, e in e2. assumption.
-    - specialize (ih2 q). eapply ih2. all: assumption.
   }
   assert (
     forall n ci pr c brs br (p : pos br.(bbody))
@@ -609,48 +553,10 @@ Proof.
         unshelve eapply Acc_case_pars with (1 := e1) (p := exist p0 _).
         -- simpl. rewrite e1 in e'. assumption.
         -- eapply ihpar.
-      * simpl in e'.
-        case_eq (context_choice_term (pcontext p) c).
-        2:{ intro h. exfalso. rewrite h in e'. discriminate. }
-        intros t' choose.
-        assert (validpos t' p0 × forall (p : pos t'), Acc posR p) as (vp&IH).
-        { rewrite choose in e'.
-          split; auto.
-          unfold context_choice_term in choose.
-          destruct c.
-          destruct nth_error eqn:nth; [|discriminate].
-          eapply fst, All_nth_error in IHXpred; eauto.
-          destruct c0, IHXpred; cbn in *.
-          destruct c; subst; auto.
-          noconf choose.
-          auto. }
-        unshelve eapply Acc_case_pctx with (1 := choose) (p := exist p0 _); eauto.
       * eapply Acc_case_p with (p := exist p0 e').
         eapply IHXpred.
       * eapply Acc_case_c with (p := exist p0 e').
         eapply IHt.
-      * simpl in e'.
-        case_eq (nth_error l n).
-        2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
-        intros br nthbr.
-        case_eq (context_choice_term br.(bcontext) c).
-        2:{ intro h. exfalso. rewrite nthbr, h in e'. discriminate. }
-        intros t' choose.
-        assert (validpos t' p0 × forall (p : pos t'), Acc posR p) as (vp&IH).
-        { rewrite nthbr, choose in e'.
-          split; auto.
-          unfold context_choice_term in choose.
-          destruct c.
-          eapply All_nth_error in nthbr; eauto.
-          cbn in *.
-          destruct nthbr as (IH&_).
-          destruct nth_error eqn:nthctx; [|discriminate].
-          eapply All_nth_error in IH; eauto.
-          destruct c0, IH; cbn in *.
-          destruct c; subst; auto.
-          noconf choose.
-          auto. }
-        unshelve eapply Acc_case_brsctx with (1 := nthbr) (2 := choose) (p := exist p0 _); eauto.
       * simpl in e'.
         case_eq (nth_error l n).
         2:{ intro h. pose proof e' as hh. rewrite h in hh. discriminate. }
@@ -669,48 +575,10 @@ Proof.
         unshelve eapply Acc_case_pars with (1 := e1) (p := exist q _).
         -- simpl. rewrite e1 in e. assumption.
         -- eapply ihpar.
-      * simpl in e.
-        case_eq (context_choice_term (pcontext p) c).
-        2:{ intro h. exfalso. rewrite h in e. discriminate. }
-        intros t' choose.
-        assert (validpos t' q × forall (p : pos t'), Acc posR p) as (vp&IH).
-        { rewrite choose in e.
-          split; auto.
-          unfold context_choice_term in choose.
-          destruct c.
-          destruct nth_error eqn:nth; [|discriminate].
-          eapply fst, All_nth_error in IHXpred; eauto.
-          destruct c0, IHXpred; cbn in *.
-          destruct c; subst; auto.
-          noconf choose.
-          auto. }
-        unshelve eapply Acc_case_pctx with (1 := choose) (p := exist q _); eauto.
       * eapply Acc_case_p with (p := exist q e).
         eapply IHXpred.
       * eapply Acc_case_c with (p := exist q e).
         eapply IHt.
-      * simpl in e.
-        case_eq (nth_error l n).
-        2:{ intro h. pose proof e as hh. rewrite h in hh. discriminate. }
-        intros br nthbr.
-        case_eq (context_choice_term br.(bcontext) c).
-        2:{ intro h. exfalso. rewrite nthbr, h in e. discriminate. }
-        intros t' choose.
-        assert (validpos t' q × forall (p : pos t'), Acc posR p) as (vp&IH).
-        { rewrite nthbr, choose in e.
-          split; auto.
-          unfold context_choice_term in choose.
-          destruct c.
-          eapply All_nth_error in nthbr; eauto.
-          cbn in *.
-          destruct nthbr as (IH&_).
-          destruct nth_error eqn:nthctx; [|discriminate].
-          eapply All_nth_error in IH; eauto.
-          destruct c0, IH; cbn in *.
-          destruct c; subst; auto.
-          noconf choose.
-          auto. }
-        unshelve eapply Acc_case_brsctx with (1 := nthbr) (2 := choose) (p := exist q _); eauto.
       * simpl in e.
         case_eq (nth_error l n).
         2:{ intro h. pose proof e as hh. rewrite h in hh. discriminate. }
@@ -828,19 +696,8 @@ Fixpoint atpos t (p : position) {struct p} : term :=
       | Some par => atpos par p
       | None => tRel 0
       end
-    | case_pctx choice, tCase ci pr c brs =>
-      option_get
-        (tRel 0)
-        (t <- context_choice_term pr.(pcontext) choice;;
-         Some (atpos t p))
     | case_preturn, tCase ci pr c brs => atpos pr.(preturn) p
     | case_c, tCase ci pr c brs => atpos c p
-    | case_brsctx n choice, tCase ci pr c brs =>
-      option_get
-        (tRel 0)
-        (br <- nth_error brs n;;
-         t <- context_choice_term br.(bcontext) choice;;
-         Some (atpos t p))
     | case_brsbody n, tCase ci pr c brs =>
         match nth_error brs n with
         | Some br => atpos br.(bbody) p
@@ -894,14 +751,6 @@ Proof.
     all: try apply IHp.
     + simpl. destruct nth_error as [?|] eqn:e.
       * apply IHp.
-      * rewrite hh. reflexivity.
-    + simpl. destruct context_choice_term eqn:e.
-      * apply IHp.
-      * rewrite hh. reflexivity.
-    + simpl. destruct nth_error as [br|] eqn:e.
-      * destruct context_choice_term.
-        -- apply IHp.
-        -- rewrite hh. reflexivity.
       * rewrite hh. reflexivity.
     + simpl. destruct nth_error.
       * apply IHp.
@@ -1034,18 +883,12 @@ Variant predicate_hole :=
     (puinst : Instance.t)
     (pcontext : context)
     (preturn : term)
-| pred_hole_context
-    (pparams : list term)
-    (puinst : Instance.t)
-    (pcontext : context_hole)
-    (preturn : term)
 | pred_hole_return
     (pparams : list term)
     (puinst : Instance.t)
     (pcontext : context).
 
 Variant branch_hole :=
-| branch_hole_context (bcontext : context_hole) (bbody : term)
 | branch_hole_body (bcontext : context).
 
 Definition branches_hole := list (branch term) * branch_hole * list (branch term).
@@ -1138,11 +981,6 @@ Definition fill_predicate_hole (p : predicate_hole) (t : term) : predicate term 
        puinst := puinst;
        pcontext := pcontext;
        preturn := preturn |}
-  | pred_hole_context pparams puinst pcontext preturn =>
-    {| pparams := pparams;
-       puinst := puinst;
-       pcontext := fill_context_hole pcontext t;
-       preturn := preturn |}
   | pred_hole_return pparams puinst pcontext =>
     {| pparams := pparams;
        puinst := puinst;
@@ -1153,8 +991,6 @@ Definition fill_predicate_hole (p : predicate_hole) (t : term) : predicate term 
 Definition fill_branches_hole '((brs1, br, brs2) : branches_hole) (t : term) : list (branch term) :=
   let br :=
       match br with
-      | branch_hole_context bcontext bbody =>
-        {| bcontext := fill_context_hole bcontext t; bbody := bbody |}
       | branch_hole_body bcontext =>
         {| bcontext := bcontext; bbody := t |}
       end in
@@ -1347,14 +1183,13 @@ Definition context_hole_context '((ctx1, decl, ctx2) : context_hole) : context :
 Definition predicate_hole_context (p : predicate_hole) : context :=
   match p with
   | pred_hole_params _ _ _ _ _ => []
-  | pred_hole_context _ _ pcontext _ => context_hole_context pcontext
-  | pred_hole_return pparams puinst pcontext => pcontext
+  | pred_hole_return pparams puinst pcontext => 
+    inst_case_context pparams puinst pcontext
   end.
 
-Definition branches_hole_context '((brs1, br, brs2) : branches_hole) : context :=
+Definition branches_hole_context p '((brs1, br, brs2) : branches_hole) : context :=
   match br with
-  | branch_hole_context bcontext bbody => context_hole_context bcontext
-  | branch_hole_body bcontext => bcontext
+  | branch_hole_body bcontext => inst_case_context p.(pparams) p.(puinst) bcontext
   end.
 
 Definition stack_entry_context (se : stack_entry) : context :=
@@ -1362,7 +1197,7 @@ Definition stack_entry_context (se : stack_entry) : context :=
   | Fix mfix idx => mfix_hole_context mfix
   | CoFix mfix idx => mfix_hole_context mfix
   | Case_pred ci p c brs => predicate_hole_context p
-  | Case_branch ci p c brs => branches_hole_context brs
+  | Case_branch ci p c brs => branches_hole_context p brs
   | Prod_r na A => [vass na A]
   | Lambda_bd na A => [vass na A]
   | LetIn_in na b B => [vdef na b B]
@@ -1401,11 +1236,8 @@ Definition stack_entry_choice (se : stack_entry) : choice :=
   | CoFix (mfix1, def_hole_type _ _ _, _) idx => cofix_mfix_ty #|mfix1|
   | CoFix (mfix1, def_hole_body _ _ _, _) idx => cofix_mfix_bd #|mfix1|
   | Case_pred ci (pred_hole_params pars1 _ _ _ _) c brs => case_par #|pars1|
-  | Case_pred ci (pred_hole_context _ _ ctx _) c brs => case_pctx (context_hole_choice ctx)
   | Case_pred ci (pred_hole_return _ _ _) c brs => case_preturn
   | Case_discr ci p brs => case_c
-  | Case_branch ci p c (brs1, branch_hole_context ctx _, brs2) =>
-    case_brsctx #|brs1| (context_hole_choice ctx)
   | Case_branch ci p c (brs1, branch_hole_body _, brs2) => case_brsbody #|brs1|
   | Proj p => proj_c
   | Prod_l na B => prod_l
@@ -1445,11 +1277,7 @@ Proof.
     all: rewrite nth_error_snoc; auto.
   - destruct p; cbn; auto.
     + rewrite nth_error_snoc; auto.
-    + destruct pcontext as ((?&[])&?); cbn.
-      all: rewrite nth_error_snoc; auto.
   - destruct brs as ((?&[])&?); cbn.
-    all: rewrite nth_error_snoc; auto.
-    destruct bcontext as ((?&[])&?); cbn.
     all: rewrite nth_error_snoc; auto.
 Qed.
 
@@ -1468,11 +1296,7 @@ Proof.
     all: rewrite nth_error_snoc; auto.
   - destruct p; cbn; auto.
     + rewrite nth_error_snoc; auto.
-    + destruct pcontext as ((?&[])&?); cbn.
-      all: rewrite nth_error_snoc; auto.
   - destruct brs as ((?&[])&?); cbn.
-    all: rewrite nth_error_snoc; auto.
-    destruct bcontext as ((?&[])&?); cbn.
     all: rewrite nth_error_snoc; auto.
 Qed.
 
@@ -1548,11 +1372,9 @@ Section Stacks.
     - destruct p; cbn in *; noconf H0; auto.
       + apply app_inj_length_l in H0 as (_&H0); auto.
         noconf H0; auto.
-      + apply fill_context_hole_inj in H0; auto.
     - destruct brs as ((?&[])&?); cbn in *.
       + apply app_inj_length_l in H0 as (_&H0); auto; noconf H0.
-        apply fill_context_hole_inj in H0; auto.
-      + apply app_inj_length_l in H0 as (_&H0); noconf H0; auto.
+        reflexivity.
   Qed.
 
   Definition isStackApp (π : stack) : bool :=

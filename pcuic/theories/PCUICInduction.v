@@ -328,7 +328,7 @@ Proof.
       destruct l; constructor. split; [|apply auxt; hnf; cbn; lia].
       + apply liftP_ctx_ind; intros. apply auxt; red; simpl; lia.
       + apply auxt'. intros. apply auxt.
-        hnf in *; cbn in *. lia. 
+      hnf in *; cbn in *. lia. 
   - eapply X12; [apply auxt; hnf; cbn; lia.. | ]. rename mfix into l.
     revert l auxt. unfold MR; cbn. fix auxt' 1.
     destruct l; constructor. split.
@@ -415,18 +415,13 @@ Proof.
   - destruct x. simpl. unfold branch_size; cbn.
     f_equal.
     symmetry.
-    apply list_size_mapi_context_hom => k' x.
-    apply decl_size_map_decl_hom, size_lift.
-    symmetry; apply size_lift.
+    apply size_lift.
   - f_equal. f_equal. f_equal.
     unfold predicate_size; cbn.
     2:apply size_lift.
     f_equal; [|apply size_lift].
     f_equal. cbn.
     apply list_size_map_hom. intros. symmetry; auto.
-    unfold context_size.
-    apply list_size_mapi_context_hom => k' x.
-    apply decl_size_map_decl_hom, size_lift.
   - unfold mfixpoint_size.
     f_equal.
     apply list_size_map_hom. intros.

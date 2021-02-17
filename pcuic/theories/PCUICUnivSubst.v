@@ -1,9 +1,18 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 
 Instance subst_instance_list A `{UnivSubst A} : UnivSubst (list A) :=
   fun u => List.map (subst_instance u).
+
+Lemma subst_instance_instance_length (u1 : Instance.t) u2 :
+  #|subst_instance u2 u1| = #|u1|.
+Proof.
+  unfold subst_instance.
+  now rewrite map_length.
+Qed.
+Hint Rewrite subst_instance_instance_length : len.
 
 Lemma subst_instance_nil {A} {ua : UnivSubst A} u (xs : list A) : 
   subst_instance u [] = [].
@@ -61,7 +70,8 @@ Proof.
   elim (Nat.leb k n); auto.
   rewrite nth_error_map.
   destruct (nth_error s (n - k)). simpl.
-  now rewrite subst_instance_lift. reflexivity.
+  now rewrite [subst_instance_constr _ _]subst_instance_lift.
+  reflexivity.
 Qed.
 
 Lemma map_subst_instance_to_extended_list_k u ctx k :
@@ -78,7 +88,7 @@ Proof.
   unfold subst_instance; cbn.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
     autorewrite with map;
-    try f_equal; eauto with substu; unfold test_predicate, test_branch, test_def in *;
+    try f_equal; eauto with substu; unfold test_predicate_ku, test_branch, test_def in *;
       try solve [f_equal; eauto; repeat (rtoProp; solve_all); eauto with substu].
 Qed.
 
@@ -88,8 +98,10 @@ Proof.
   induction t in |- * using term_forall_list_ind; simpl; auto; intros H';
     autorewrite with map;
     try f_equal; auto with substu;
-      unfold test_def, test_predicate, test_branch in *; simpl;
-      f_equal; eauto; repeat (rtoProp; solve_all); intuition auto with substu.
+      unfold test_def, test_predicate_ku, test_branch in *; simpl;
+      try solve [f_equal; eauto; repeat (rtoProp; solve_all); intuition auto with substu].
+  rewrite [#|subst_instance_instance _ _|]subst_instance_instance_length. solve_all.
+  eauto with substu.
 Qed.
 
 Lemma rev_subst_instance {u Γ} :
@@ -106,7 +118,7 @@ Proof.
   induction Γ as [|[?[]?] ?] in n |- *; simpl; auto.
   - autorewrite with len.
     f_equal; auto.
-    rewrite subst_instance_subst, <-IHΓ.
+    rewrite subst_instance_subst -IHΓ.
     rewrite <-subst_instance_lift; simpl.
     f_equal.
   - f_equal; auto.

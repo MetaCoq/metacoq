@@ -216,12 +216,20 @@ Inductive cast_kind : Set :=
 | RevertCast.
 Derive NoConfusion EqDec for cast_kind.
 
-Record case_info := mk_case_info { ci_ind : inductive; ci_npar : nat; ci_relevance : relevance }.
+Record case_info := mk_case_info { 
+  ci_ind : inductive; 
+  ci_npar : nat; 
+  (* Not implemented yet, as the representation in PCUIC doesn't need this cached information.
+     ci_cstr_nargs : list nat; (* The number of REAL arguments of each constructor (no params, no lets) *)
+     ci_cstr_ndecls : list nat; (* The number of arguments of each constructor (no params but lets included) *)   *)
+  ci_relevance : relevance }.
 Derive NoConfusion EqDec for case_info.
 
 Definition string_of_case_info ci := 
   "(" ^ string_of_inductive ci.(ci_ind) ^ "," ^
   string_of_nat ci.(ci_npar) ^ "," ^
+  (* string_of_list string_of_nat ci.(ci_cstr_nargs) ^ "," ^
+  string_of_list string_of_nat ci.(ci_cstr_ndecls) ^ "," ^ *)
   string_of_relevance ci.(ci_relevance) ^ ")".
 
 Inductive recursivity_kind :=
@@ -573,6 +581,13 @@ Section Contexts.
     rewrite mapi_app. rewrite <- List.rev_app_distr. f_equal. f_equal.
     apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
   Qed.
+
+  (** This function allows to forget type annotations on a binding context. 
+  Useful to relate the "compact" case representation in terms, with 
+  its typing relation, where the context has types *)
+  Definition forget_types (c : list (BasicAst.context_decl term)) : list aname := 
+    map decl_name c.
+  
 End Contexts.
 Hint Rewrite @fold_context_k_length : len.
 
@@ -704,12 +719,31 @@ Section Contexts.
     unfold map_context.
     now rewrite map_decl_id map_id.
   Qed.
+    
+  Lemma forget_types_length (ctx : list (BasicAst.context_decl term)) :
+    #|forget_types ctx| = #|ctx|.
+  Proof.
+    now rewrite /forget_types map_length.
+  Qed.
+
+  Lemma map_decl_name_fold_context_k (f : nat -> term' -> term) ctx : 
+    map decl_name (fold_context_k f ctx) = map decl_name ctx.
+  Proof.
+    now rewrite fold_context_k_alt map_mapi /= mapi_cst_map.
+  Qed.
+
+  Lemma forget_types_fold_context_k (f : nat -> term' -> term) ctx : 
+    forget_types (fold_context_k f ctx) = forget_types ctx.
+  Proof.
+    now rewrite /forget_types map_decl_name_fold_context_k.
+  Qed.
 
 End Contexts.
 
 Hint Rewrite @map_mapi_context
   @map_fold_context_k @mapi_context_map @map_context_map @map_map_context 
   @mapi_context_map_context @map_context_mapi_context : map.
+Hint Rewrite @forget_types_length : len.
 
 (** Primitive types models (axiom free) *)
 

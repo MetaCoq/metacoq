@@ -1278,10 +1278,10 @@ Proof.
     rewrite forallb_app in clty. move/andP: clty => [clpar clinds].
     rewrite app_context_length in clret.
     red in H8. eapply Forall2_All2 in H8.
-    eapply All2i_All2_mix_left in X7; eauto.
+    eapply All2i_All2_mix_left in X6; eauto.
     eapply declared_minductive_closed_ind in X0; tea. 2:exact isdecl.
     pose proof (closed_ind_closed_cstrs X0 isdecl).
-    eapply All2i_All_mix_left in X7; tea. clear X8.
+    eapply All2i_All_mix_left in X6; tea. clear X7.
     intuition auto. 
     + unfold test_predicate_k. simpl. rtoProp; intuition eauto.
       rewrite (closedn_ctx_alpha X1).

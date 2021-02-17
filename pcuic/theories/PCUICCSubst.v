@@ -27,7 +27,7 @@ Fixpoint csubst t k u :=
   | tProd na A B => tProd na (csubst t k A) (csubst t (S k) B)
   | tLetIn na b ty b' => tLetIn na (csubst t k b) (csubst t k ty) (csubst t (S k) b')
   | tCase ind p c brs =>
-    let brs' := List.map (fun br => map_branch_k (csubst t) k br) brs in
+    let brs' := List.map (fun br => map_branch_k (csubst t) id k br) brs in
     tCase ind (map_predicate_k id (csubst t) k p) 
       (csubst t k c) brs'
   | tProj p c => tProj p (csubst t k c)

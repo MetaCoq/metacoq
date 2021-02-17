@@ -3192,12 +3192,6 @@ Qed.
 
 Require Import ssrbool.
 
-Lemma closed_ctx_decl k d Γ : closedn_ctx k (d :: Γ) =
-  closed_decl (k + #|Γ|) d && closedn_ctx k Γ.
-Proof.
-  now simpl; rewrite andb_comm Nat.add_comm.
-Qed.
-
 Lemma weaken_cumul_ctx {cf:checker_flags} Σ Γ Γ' Δ Δ' :
   wf Σ.1 ->
   closed_ctx (Γ' ,,, Δ) ->

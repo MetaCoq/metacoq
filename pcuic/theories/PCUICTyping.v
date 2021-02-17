@@ -267,7 +267,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     mdecl.(ind_npars) = ci.(ci_npar) ->
     (* The predicate context is fixed, it is only used as a cache for information from the 
       global environment *)
-    p.(pcontext) = ind_predicate_context ci.(ci_ind) mdecl idecl ->
+    All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     wf_predicate mdecl idecl p ->
     consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
@@ -278,12 +278,12 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
       (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
-    let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
+    let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
     wf_branches idecl brs ->
     All2i (fun i cdecl br =>
       (* Also a cache, brctxty is built from br.(bcontext) by substituting in the 
         parameters and universe instance  *)
-      br.(bcontext) = cstr_branch_context ci mdecl cdecl ×
+      All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
       (wf_local Σ (Γ ,,, brctxty.1) ×
       ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
@@ -385,7 +385,7 @@ Definition isWfArity {cf:checker_flags} Σ (Γ : context) T :=
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
   All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
-   (bcontext br = cstr_branch_context ci mdecl cdecl) *
+   (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) *
    (let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
     wf_local Σ (Γ,,, brctxty.1)
     × Σ;;; Γ,,, brctxty.1 |- bbody br : brctxty.2
@@ -434,9 +434,9 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
-  - exact (S (Nat.max (wf_local_size _ typing_size _ a)
+  - exact (S (Nat.max (wf_local_size _ typing_size _ a0)
       (Nat.max (ctx_inst_size typing_size c1)
-        (Nat.max d1 (Nat.max d2 (branches_size typing_size a0)))))).
+        (Nat.max d1 (Nat.max d2 (branches_size typing_size a1)))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
@@ -695,7 +695,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
-        p.(pcontext) = ind_predicate_context ci.(ci_ind) mdecl idecl ->
+        All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         wf_predicate mdecl idecl p ->
         consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
@@ -712,10 +712,10 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
-        let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
+        let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
         wf_branches idecl brs ->
         All2i (fun i cdecl br =>
-          (br.(bcontext) = cstr_branch_context ci mdecl cdecl) ×
+          (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
           (PΓ Σ (Γ ,,, brctxty.1) ×
            (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
@@ -941,7 +941,7 @@ Proof.
        eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx. simpl. lia.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx; simpl; lia.
-        ++ eapply (Hwf _ a). rewrite /predctx; simpl. lia.
+        ++ eapply (Hwf _ a0). rewrite /predctx; simpl. lia.
         ++ clear -c1 X14.
           assert (forall (Γ' : context) (t T : term) (Hty : Σ;;; Γ' |- t : T),
             typing_size Hty <= ctx_inst_size (@typing_size _) c1 ->
@@ -959,7 +959,7 @@ Proof.
         ++ eapply (X14 _ _ _ H0); simpl. lia.
         ++ clear Hdecls. simpl in Hwf, Htywf, X14.
           clear -Hwf Htywf X14. 
-          subst ptm predctx; induction a0.
+          subst ptm predctx; induction a1.
           ** constructor.
           ** destruct r0 as [eq [wfcbc [t t0]]]. constructor.
               --- split; auto. intros brctxty. 
@@ -971,7 +971,7 @@ Proof.
                   +++ simpl; auto with arith.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.
-              --- apply IHa0; auto. intros. apply (X14 _ _ _ Hty). simpl. clear -H1; lia.
+              --- apply IHa1; auto. intros. apply (X14 _ _ _ Hty). simpl. clear -H1; lia.
                   intros.
                   eapply (Hwf _ Hwf0). simpl. clear -H1; lia.
                   intros.
@@ -1151,7 +1151,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       Forall_decls_typing P Σ.1 -> 
       PΓ Σ Γ ->
       mdecl.(ind_npars) = ci.(ci_npar) ->
-      p.(pcontext) = ind_predicate_context ci.(ci_ind) mdecl idecl ->
+      All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
       wf_predicate mdecl idecl p ->
       consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
@@ -1168,10 +1168,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
       Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
       P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
       isCoFinite mdecl.(ind_finite) = false ->
-      let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
+      let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       wf_branches idecl brs ->
       All2i (fun i cdecl br =>
-        (br.(bcontext) = cstr_branch_context ci mdecl cdecl) ×
+        (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
         (PΓ Σ (Γ ,,, brctxty.1) ×
           (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×

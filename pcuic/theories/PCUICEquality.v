@@ -224,7 +224,7 @@ Qed.
 Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   All2 eq_term p.(pparams) p'.(pparams) *
   (R_universe_instance Re p.(puinst) p'.(puinst) *
-  ((eq_context_gen eq_term eq_term p.(pcontext) p'.(pcontext)) *
+  ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
     eq_term p.(preturn) p'.(preturn))).
 
 (** ** Syntactic equality up-to universes
@@ -289,9 +289,7 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p' ->
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
-      eq_context_gen (eq_term_upto_univ_napp Σ Re Re 0) 
-        (eq_term_upto_univ_napp Σ Re Re 0)
-        (bcontext x) (bcontext y) *
+      eq_context_gen eq eq (bcontext x) (bcontext y) *
       eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
     ) brs brs' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
@@ -576,6 +574,7 @@ Proof.
   intros hre hru.
   intros p. unfold eq_predicate; intuition auto; try now etransitivity.
   eapply All2_trans; tea.
+  etransitivity; tea.
 Qed.
 
 Instance eq_term_upto_univ_trans Σ Re Rle napp :
@@ -617,6 +616,7 @@ Proof.
       eapply r; eauto. apply r.
     * etransitivity; eauto.
     * eapply onctx_eq_ctx_trans in hh; eauto.
+      intros ???? -> ->; eauto.
     * clear -H he a a0.
       induction a in a0, brs'0 |- *.
       + assumption.
@@ -624,6 +624,7 @@ Proof.
         destruct r as [[h1 h1'] [h2 h3]].
         split.
         eapply onctx_eq_ctx_trans in h1; eauto.
+        intros ???? -> ->;reflexivity.
         eapply h1'; eauto.
   - dependent destruction e2.
     econstructor.
@@ -845,8 +846,6 @@ Proof.
     eapply R_global_instance_impl. 5:eauto. all:eauto.
   - inversion 1; subst; constructor; unfold eq_predicate in *; eauto; solve_all.
     * eapply R_universe_instance_impl'; eauto.
-    * eapply onctx_eq_ctx_impl in a0; tea. eauto.
-    * eapply onctx_eq_ctx_impl in a4; tea. eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
@@ -877,8 +876,6 @@ Proof.
     eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
   - inversion 1; subst; constructor; unfold eq_predicate in *; solve_all.
     * eapply R_universe_instance_impl'; eauto.
-    * eapply onctx_eq_ctx_impl in a0; tea. eauto.
-    * eapply onctx_eq_ctx_impl in a4; tea. eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
@@ -1112,14 +1109,12 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
     eqb indp indp' &&
     eqb_predicate_gen
       (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
-      (bcompare_decls (eqb_term_upto_univ_napp Σ equ equ 0) 
-        (eqb_term_upto_univ_napp Σ equ equ 0))
+      (bcompare_decls eqb eqb)
       (eqb_term_upto_univ_napp Σ equ equ 0) p p' &&
     eqb_term_upto_univ_napp Σ equ equ 0 c c' &&
     forallb2 (fun x y =>
       forallb2 
-        (bcompare_decls (eqb_term_upto_univ_napp Σ equ equ 0) 
-          (eqb_term_upto_univ_napp Σ equ equ 0))
+        (bcompare_decls eqb eqb)
         x.(bcontext) y.(bcontext) &&
       eqb_term_upto_univ_napp Σ equ equ 0 (bbody x) (bbody y)
     ) brs brs'
@@ -1307,35 +1302,71 @@ Proof.
       now constructor.
 Qed.
 
+Definition eqb_univ_reflect : forall u u' : Universe.t, reflectT (u = u') (eqb u u').
+Proof.
+  intros u u'.
+  destruct (eqb_spec u u'); constructor; auto.
+Qed.
+
+Lemma eq_dec_to_bool_refl {A} {ea : Classes.EqDec A} (x : A) : 
+  eq_dec_to_bool x x.
+Proof.
+  unfold eq_dec_to_bool.
+  destruct (Classes.eq_dec x x).
+  constructor.
+  congruence.
+Qed.
+
+Lemma reflect_eq_ctx ctx ctx' : 
+  reflectT 
+    (eq_context_gen eq eq ctx ctx')
+    (forallb2 (bcompare_decls eqb eqb) ctx ctx').
+Proof.
+  eapply equiv_reflectT.
+  - intros hcc'.
+    eapply All2_fold_forallb2; tea.
+    unfold ondecl; intuition auto.
+    eapply All2_fold_impl; tea. intros.
+    destruct X; cbn. subst; auto.
+    destruct (eqb_annot_reflect na na') => /= //.
+    apply eq_dec_to_bool_refl.
+    subst.
+    destruct (eqb_annot_reflect na na') => /= //.
+    apply/andb_and; split; apply eq_dec_to_bool_refl.
+  - intros hcc'.
+    eapply forallb2_bcompare_decl_All2_fold in hcc'; tea.
+    eapply All2_fold_impl in hcc'; tea; simpl; intuition eauto.
+    move: H.
+    destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //.
+    + destruct (eqb_annot_reflect na na') => //.
+      unfold eq_dec_to_bool. repeat destruct eq_dec => //; subst; cbn; auto; constructor; auto.
+    + destruct (eqb_annot_reflect na na') => //.
+      unfold eq_dec_to_bool. repeat destruct eq_dec => //; subst; cbn; auto; constructor; auto.
+Qed.
+
 Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
   (forall u u', reflectT (Re u u') (equ u u')) ->
   (forall u u', reflectT (Rle u u') (lequ u u')) ->
   forall p p',
   tCasePredProp
   (fun t : term =>
-   forall (lequ : Universe.t -> Universe.t -> bool)
-     (Rle : Universe.t -> Universe.t -> Prop) 
-     (napp : nat),
+   forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
    (forall u u' : Universe.t, reflectT (Rle u u') (lequ u u')) ->
    forall t' : term,
-   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
-     (eqb_term_upto_univ_napp Σ equ lequ napp t t'))
+   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp Σ equ lequ napp t t'))
   (fun t : term =>
-   forall (lequ : Universe.t -> Universe.t -> bool)
-     (Rle : Universe.t -> Universe.t -> Prop) 
-     (napp : nat),
+   forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
    (forall u u' : Universe.t, reflectT (Rle u u') (lequ u u')) ->
    forall t' : term,
-   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
-     (eqb_term_upto_univ_napp Σ equ lequ napp t t')) p ->
+   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp Σ equ lequ napp t t')) p ->
   reflectT (eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p') 
     (eqb_predicate_gen (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
-      (bcompare_decls (eqb_term_upto_univ_napp Σ equ equ 0) (eqb_term_upto_univ_napp Σ equ equ 0))
+      (bcompare_decls eqb eqb)
       (eqb_term_upto_univ_napp Σ equ equ 0) p p').
 Proof.
   intros.
   solve_all. unfold eq_predicate, eqb_predicate, eqb_predicate_gen.
-  simpl; apply equiv_reflectT.
+  cbn -[eqb]; apply equiv_reflectT.
   - intros H; rtoProp.
     destruct H as [onpars [onuinst [pctx pret]]].
     intuition auto; rtoProp; intuition auto.
@@ -1343,7 +1374,7 @@ Proof.
     * red in onuinst. 
       eapply Forall2_forallb2, Forall2_impl; eauto.
       now move=> x y /X.
-    * destruct (reflect_eq_context_IH X X0 (pcontext p) (pcontext p') a0) => //.
+    * destruct (reflect_eq_ctx (pcontext p) (pcontext p')) => //.
     * ih. contradiction.
   - move/andb_and => [/andb_and [/andb_and [ppars pinst] pctx] pret].
     intuition auto.
@@ -1352,9 +1383,11 @@ Proof.
     * solve_all. red. apply All2_Forall2.
       eapply (All2_impl pinst); eauto.
       now move=> x y /X.
-    * now destruct (reflect_eq_context_IH X X0 (pcontext p) (pcontext p') a0).
+    * now destruct (reflect_eq_ctx (pcontext p) (pcontext p')).
     * now destruct (r _ _ 0 X (preturn p')).
 Qed.
+
+Arguments eqb : simpl never.
 
 Lemma reflect_eq_term_upto_univ Σ equ lequ (Re Rle : Universe.t -> Universe.t -> Prop) napp :
   (forall u u', reflectT (Re u u') (equ u u')) ->
@@ -1467,7 +1500,7 @@ Proof.
       * cbn - [eqb]. inversion X. subst.
         destruct a, b. cbn - [eqb eqb_binder_annots].
         destruct X0 as [onc onbod].
-        destruct (reflect_eq_context_IH he hle bcontext bcontext0 onc) => // /=.
+        destruct (reflect_eq_ctx bcontext bcontext0) => // /=.
         -- cbn - [eqb].
            pose proof (onbod equ Re 0 he bbody0) as hh. cbn in hh.
            destruct hh => /=.
@@ -1576,15 +1609,6 @@ Proof.
   destruct t; simpl; auto.
   rewrite /compare_universe_instance.
   rewrite forallb2_map; eapply forallb2_refl; intro; apply eqb_refl.
-Qed.
-
-Lemma eq_dec_to_bool_refl {A} {ea : Classes.EqDec A} (x : A) : 
-  eq_dec_to_bool x x.
-Proof.
-  unfold eq_dec_to_bool.
-  destruct (Classes.eq_dec x x).
-  constructor.
-  congruence.
 Qed.
 
 Lemma eqb_term_upto_univ_refl :

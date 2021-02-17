@@ -299,13 +299,9 @@ Proof.
     * destruct X2 as [? [? ?]].
       constructor; intuition auto; solve_all.
       + eauto using R_universe_instance_impl'.
-      + eapply All2_fold_impl_onctx; tea; simpl; unfold ondecl; intuition eauto.
-        depelim X0; constructor; eauto.
     * eapply All2_impl'; tea.
       eapply All_impl; eauto.
       cbn. intros x [? ?] y [? ?]. split; eauto.
-      eapply All2_fold_impl_onctx; tea; simpl; unfold ondecl; intuition eauto.
-      depelim X5; constructor; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
@@ -555,7 +551,7 @@ Proof.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
   - econstructor; eauto 2 with extends.
-    * revert X7. clear -Σ' wfΣ' extΣ.
+    * revert X6. clear -Σ' wfΣ' extΣ.
       induction 1; constructor; eauto with extends.
     * close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.

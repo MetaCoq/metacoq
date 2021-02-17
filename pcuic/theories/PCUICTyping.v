@@ -700,7 +700,6 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         wf_predicate mdecl idecl p ->
         consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
         wf_local Σ (Γ ,,, predctx) ->
-        Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) ->
@@ -1156,7 +1155,6 @@ Lemma typing_ind_env `{cf : checker_flags} :
       wf_predicate mdecl idecl p ->
       consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
       wf_local Σ (Γ ,,, predctx) ->
-      Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
       forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
       P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
       PΓ Σ (Γ ,,, predctx) ->

@@ -46,6 +46,11 @@ Definition ind_predicate_context ind mdecl idecl : context :=
        decl_type := indty |}
   in (inddecl :: ictx).
 
+Lemma ind_predicate_context_length ind mdecl idecl :
+  #|ind_predicate_context ind mdecl idecl| = S #|idecl.(ind_indices)|.
+Proof. now rewrite /ind_predicate_context /=; len. Qed.
+Hint Rewrite ind_predicate_context_length : len.
+
 Definition inst_case_context params puinst (pctx : context) :=
   subst_context (List.rev params) 0 (subst_instance puinst pctx).
 

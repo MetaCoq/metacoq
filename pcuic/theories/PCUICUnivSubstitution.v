@@ -1681,14 +1681,6 @@ Proof.
   f_equal.
 Qed.
 
-Lemma subst_instance_assumptions u ctx :
-  context_assumptions (subst_instance u ctx) = context_assumptions ctx.
-Proof.
-  induction ctx; cbnr.
-  destruct (decl_body a); cbn; now rewrite IHctx.
-Qed.
-Hint Rewrite subst_instance_assumptions : len.
-
 Lemma subst_instance_check_one_fix u mfix :
   map
         (fun x : def term =>

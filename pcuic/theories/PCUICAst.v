@@ -637,7 +637,7 @@ Qed.
 Definition tCasePredProp_k
             (P : nat -> term -> Type)
             k (p : predicate term) :=
-  All (P k) p.(pparams) × onctx_k P k p.(pcontext) ×
+  All (P k) p.(pparams) × onctx_k P #|p.(pparams)| p.(pcontext) ×
   P (#|p.(pcontext)| + k) p.(preturn).
 
 Definition tCasePredProp {term}
@@ -957,8 +957,8 @@ Qed.
 Definition tCaseBrsProp {A} (P : A -> Type) (l : list (branch A)) :=
   All (fun x => onctx P (bcontext x) × P (bbody x)) l.
 
-Definition tCaseBrsProp_k (P : nat -> term -> Type) k (l : list (branch term)) :=
-  All (fun x => onctx_k P k (bcontext x) × P (#|x.(bcontext)| + k) (bbody x)) l.
+Definition tCaseBrsProp_k (P : nat -> term -> Type) (p : predicate term) k (l : list (branch term)) :=
+  All (fun x => onctx_k P (#|p.(pparams)|) (bcontext x) × P (#|x.(bcontext)| + k) (bbody x)) l.
 
 Lemma map_branches_k_map_branches_k
       {term term' term''}

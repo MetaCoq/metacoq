@@ -555,8 +555,8 @@ Proof.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
   - econstructor; eauto 2 with extends.
-    * revert X6. clear -Σ' wfΣ' extΣ.
-      induction 1; constructor; eauto.
+    * revert X7. clear -Σ' wfΣ' extΣ.
+      induction 1; constructor; eauto with extends.
     * close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
     + eapply fix_guard_extends; eauto.

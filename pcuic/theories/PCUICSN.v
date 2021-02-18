@@ -214,7 +214,7 @@ Section Alpha.
       * constructor. eapply eq_term_upto_univ_trans. all: eauto.
   Qed.
 
-  Lemma eq_context_upto_nlctx :
+  (* Lemma eq_context_upto_nlctx :
     forall Γ,
       eq_context_upto Σ eq eq Γ (nlctx Γ).
   Proof.
@@ -251,7 +251,7 @@ Section Alpha.
     - intros ? ? ? r. apply Forall2_eq in r. apply map_inj in r.
       + subst. reflexivity.
       + apply Universe.make_inj.
-  Qed.
+  Qed. *)
 
   Lemma cored_cored' :
     forall Γ u v,

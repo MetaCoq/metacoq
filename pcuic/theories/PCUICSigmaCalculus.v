@@ -140,8 +140,6 @@ Lemma map_predicate_shift_eq_spec {T T'} fn fn' shift shift'
   finst finst' (f : nat -> T) (f' : nat -> T') (p : predicate term) :
   finst (puinst p) = finst' (puinst p) ->
   map (fn f) (pparams p) = map (fn' f') (pparams p) ->
-  mapi_context (fun k => fn (shift k f)) (pcontext p) = 
-  mapi_context (fun k => fn' (shift' k f')) (pcontext p) ->
   fn (shift #|pcontext p| f) (preturn p) = fn' (shift' #|pcontext p| f') (preturn p) ->
   map_predicate_shift fn shift finst f p = map_predicate_shift fn' shift' finst' f' p.
 Proof.
@@ -152,8 +150,6 @@ Hint Resolve map_predicate_shift_eq_spec : all.
 Lemma map_branch_shift_eq_spec {T T'} (fn : (nat -> T) -> term -> term) 
   (fn' : (nat -> T') -> term -> term)
   shift shift' (f : nat -> T) (g : nat -> T') (x : branch term) :
-  mapi_context (fun k => fn (shift k f)) (bcontext x) = 
-  mapi_context (fun k => fn' (shift' k g)) (bcontext x) ->  
   fn (shift #|x.(bcontext)| f) (bbody x) = fn' (shift' #|x.(bcontext)| g) (bbody x) ->
   map_branch_shift fn shift f x = map_branch_shift fn' shift' g x.
 Proof.
@@ -164,7 +160,6 @@ Hint Resolve map_branch_shift_eq_spec : all.
 Lemma map_predicate_shift_id_spec {T} {fn shift} {finst} {f : nat -> T} (p : predicate term) :
   finst (puinst p) = puinst p ->
   map (fn f) (pparams p) = (pparams p) ->
-  mapi_context (fun k => fn (shift k f)) (pcontext p) = (pcontext p) ->
   fn (shift #|pcontext p| f) (preturn p) = (preturn p) ->
   map_predicate_shift fn shift finst f p = p.
 Proof.
@@ -210,7 +205,6 @@ Proof.
   * apply Hfinst.
   * now rewrite Hfg.
   * now setoid_rewrite Hfg.
-  * apply Hfn. now setoid_rewrite Hfg.
 Qed.
 
 Instance rename_predicate_proper : Proper (`=1` ==> `=1`) rename_predicate.
@@ -227,7 +221,6 @@ Proof.
   intros Hfn Hshift f g Hfg x.
   apply map_branch_shift_eq_spec.
   * now setoid_rewrite Hfg.
-  * apply Hfn. now rewrite Hfg.
 Qed.
 
 Instance rename_branch_proper : Proper (`=1` ==> `=1`) rename_branch.
@@ -661,10 +654,8 @@ Proof.
   - f_equal; eauto. now rewrite H1 -ren_shiftn.
   - f_equal; eauto; solve_all.
     * eapply map_predicate_shift_eq_spec; solve_all.
-      + now rewrite H0 ren_shiftn.
-      + now rewrite e ren_shiftn.
+      now rewrite e ren_shiftn.
     * apply map_branch_shift_eq_spec; solve_all.
-      + now rewrite H0 -ren_shiftn.
       + now rewrite b -ren_shiftn.
   - f_equal; eauto. solve_all.
     now rewrite b ren_shiftn.

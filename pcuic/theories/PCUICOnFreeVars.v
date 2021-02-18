@@ -157,19 +157,21 @@ Proof.
   all:unfold test_def in *; rtoProp; now (eauto using shiftnP_impl with all).
 Qed.
 
-Lemma closedP_on_free_vars {n t} : closedn n t -> on_free_vars (closedP n xpredT) t.
+Lemma closedP_on_free_vars {n t} : closedn n t = on_free_vars (closedP n xpredT) t.
 Proof.
-  revert n t.
-  apply: term_closedn_list_ind; simpl => //; intros.
+  revert t n.
+  apply: term_forall_list_ind; simpl => //; intros.
   all:(rewrite ?shiftnP_closedP ?shiftnP_xpredT).
-  all:try (rtoProp; now rewrite ?IHt1 ?IHt2 ?IHt3).
+  all:try (rtoProp; now rewrite ?H ?H0 ?H1 ?andb_assoc).
   - rewrite /closedP /=. now nat_compare_specs.
   - solve_all.
-  - destruct X. rtoProp. intuition solve_all.
-    * case: (onctx_k_P reflectT_pred2) => //.
-    * red in X0. solve_all.
-      + case: (onctx_k_P reflectT_pred2) => //.
-      + now rewrite shiftnP_closedP shiftnP_xpredT.
+  - destruct X. rtoProp. rewrite /test_predicate_k /= !andb_assoc.
+    rewrite H /=. f_equal. 2:solve_all.
+    * f_equal. rewrite andb_comm andb_assoc. f_equal; solve_all.
+      rewrite andb_comm. f_equal; solve_all.
+    * rewrite /test_branch_k. f_equal; solve_all.
+      rewrite b0.
+      now rewrite shiftnP_closedP shiftnP_xpredT.
   - unfold test_def. solve_all.
     rewrite shiftnP_closedP shiftnP_xpredT.
     now len in b.
@@ -180,18 +182,22 @@ Qed.
 
 Lemma closedn_on_free_vars {P n t} : closedn n t -> on_free_vars (shiftnP n P) t.
 Proof.
-  move/closedP_on_free_vars.
+  rewrite closedP_on_free_vars.
   eapply on_free_vars_impl.
   intros i; rewrite /closedP /shiftnP /= //.
   nat_compare_specs => //.
 Qed.
 
 (** Any predicate is admissible as there are no free variables to consider *)
+Lemma closed_on_free_vars_none {t} : closed t = on_free_vars xpred0 t.
+Proof.
+  now rewrite closedP_on_free_vars /closedP /=.
+Qed.
+
 Lemma closed_on_free_vars {P t} : closed t -> on_free_vars P t.
 Proof.
-  move/closedP_on_free_vars.
-  eapply on_free_vars_impl.
-  intros i; rewrite /closedP /= //.
+  rewrite closedP_on_free_vars /closedP /=.
+  eapply on_free_vars_impl => //.
 Qed.
 
 Lemma on_free_vars_subst_instance {p u t} : on_free_vars p t = on_free_vars p (subst_instance u t).
@@ -243,43 +249,44 @@ Proof.
   now nat_compare_specs.
 Qed.
 
-Lemma closed_decl_on_free_vars {n d} : closed_decl n d -> on_free_vars_decl (closedP n xpredT) d.
+Lemma closed_decl_on_free_vars {n d} : closed_decl n d = on_free_vars_decl (closedP n xpredT) d.
 Proof.
   rewrite /on_free_vars_decl /test_decl.
-  move=> /andP [clb cld].
-  rewrite (closedP_on_free_vars cld) /=.
+  rewrite !closedP_on_free_vars /=.
   destruct (decl_body d) eqn:db => /= //.
-  now rewrite (closedP_on_free_vars clb).
+  now rewrite closedP_on_free_vars.
 Qed.
 
-Lemma closedn_ctx_on_free_vars {n ctx} : closedn_ctx n ctx ->
-  on_free_vars_ctx (closedP n xpredT) ctx.
+Lemma closedn_ctx_on_free_vars {n ctx} : closedn_ctx n ctx = on_free_vars_ctx (closedP n xpredT) ctx.
 Proof.
   rewrite /on_free_vars_ctx test_context_k_eq.
-  apply alli_impl => i x.
-  rewrite shiftnP_closedP Nat.add_comm shiftnP_xpredT.
-  eapply closed_decl_on_free_vars.
+  eapply alli_ext. intros i d.
+  rewrite shiftnP_closedP shiftnP_xpredT Nat.add_comm.
+  apply closed_decl_on_free_vars.
+Qed.
+
+Lemma closedP_shiftnP n P i : closedP n xpredT i -> shiftnP n P i.
+Proof.
+  rewrite /closedP /shiftnP.
+  nat_compare_specs => //.
 Qed.
 
 Lemma closedn_ctx_on_free_vars_shift {n ctx P} : 
   closedn_ctx n ctx ->
   on_free_vars_ctx (shiftnP n P) ctx.
 Proof.
-  move/closedn_ctx_on_free_vars.
+  rewrite closedn_ctx_on_free_vars.
   rewrite /on_free_vars_ctx.
   apply alli_impl => i x.
-  rewrite shiftnP_closedP shiftnP_add shiftnP_xpredT.
   eapply on_free_vars_decl_impl => //.
-  intros k.
-  rewrite /closedP /shiftnP.
-  now nat_compare_specs => //.
+  intros k. rewrite shiftnP_add shiftnP_closedP shiftnP_xpredT.
+  apply closedP_shiftnP.
 Qed.
 
 (** This uses absurdity elimination as [ctx] can't have any free variable *)
-Lemma closed_ctx_on_free_vars P ctx : closed_ctx ctx ->
-  on_free_vars_ctx P ctx.
+Lemma closed_ctx_on_free_vars P ctx : closed_ctx ctx -> on_free_vars_ctx P ctx.
 Proof.
-  move/closedn_ctx_on_free_vars => /=.
+  rewrite closedn_ctx_on_free_vars => /=.
   rewrite /closedP /=.
   eapply on_free_vars_ctx_impl => //.
 Qed.
@@ -1054,12 +1061,6 @@ Lemma on_free_vars_case_predicate_context {cf} {Σ} {wfΣ : wf Σ} {P ci mdecl i
        now repeat nat_compare_specs => /= //.
  Qed.
 *)
-
-Lemma closedP_shiftnP n P i : closedP n xpredT i -> shiftnP n P i.
-Proof.
-  rewrite /closedP /shiftnP.
-  nat_compare_specs => //.
-Qed.
 
 Lemma on_free_vars_ctx_inst_case_context P n pars puinst ctx :
   n = #|pars| ->

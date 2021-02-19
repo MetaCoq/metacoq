@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
      PCUICContextRelation PCUICReduction PCUICCases PCUICWeakening
-     PCUICTyping PCUICOnFreeVars PCUICRename PCUICInst.
+     PCUICTyping PCUICOnFreeVars PCUICRename PCUICInst PCUICSubstitution.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -17,25 +17,6 @@ Section CtxReduction.
   Context {cf : checker_flags}.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
-  
-  Lemma red_abs_alt Γ na M M' N N' : red Σ Γ M M' -> red Σ (Γ ,, vass na M) N N' ->
-                                 red Σ Γ (tLambda na M N) (tLambda na M' N').
-  Proof.
-    intros. eapply (transitivity (y := tLambda na M N')).
-    * now eapply (red_ctx_congr (tCtxLambda_r _ _ tCtxHole)).
-    * now eapply (red_ctx_congr (tCtxLambda_l _ tCtxHole _)).
-  Qed.
-
-  Lemma red_letin_alt Γ na d0 d1 t0 t1 b0 b1 :
-    red Σ Γ d0 d1 -> red Σ Γ t0 t1 -> red Σ (Γ ,, vdef na d0 t0) b0 b1 ->
-    red Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
-  Proof.
-    intros; eapply (transitivity (y := tLetIn na d0 t0 b1)).
-    * now eapply (red_ctx_congr (tCtxLetIn_r _ _ _ tCtxHole)).
-    * eapply (transitivity (y := tLetIn na d0 t1 b1)).
-      + now eapply (red_ctx_congr (tCtxLetIn_b _ _ tCtxHole _)).
-      + now apply (red_ctx_congr (tCtxLetIn_l _ tCtxHole _ _)).
-  Qed.
 
   Lemma red_prod_alt Γ na M M' N N' :
     red Σ Γ M M' -> red Σ (Γ ,, vass na M') N N' ->
@@ -80,7 +61,10 @@ Section CtxReduction.
     relativize #|ctx|.
     - erewrite on_ctx_free_vars_concat; rewrite onΓ /=; len.
       rewrite /inst_case_context.
-      rewrite /subst_context -mapi_context_fold -/(inst_context _ _).
+      rewrite inst_context_subst_context. -mapi_context_fold.
+      setoid_rewrite Nat.add_0_r.
+      setoid_rewrite inst_subst.
+      rewrite -/(inst_context _ _).
       rewrite on_free_vars_ctx
     rewrite on_ctx_free_vars_inst_case_context.
 

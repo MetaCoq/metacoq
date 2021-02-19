@@ -716,7 +716,7 @@ Proof.
        intros. now apply X.
 Qed.
 
-Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :
+Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {cst decl} :
   wf Σ ->
   lookup_env Σ cst = Some decl ->
   Forall_decls_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) => closedn #|Γ| t && closedn #|Γ| T) Σ ->
@@ -729,7 +729,6 @@ Proof.
   red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
   destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
-
 
 Lemma closedn_mapi_rec_ext (f g : nat -> context_decl -> context_decl) (l : context) n k' :
   closedn_ctx k' l ->
@@ -769,7 +768,7 @@ Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {mdecl
   closed_inductive_decl mdecl.
 Proof.
   intros wfΣ HΣ decl.
-  pose proof (declared_decl_closed wfΣ decl) as decl'.
+  pose proof (declared_decl_closed_ind wfΣ decl) as decl'.
   specialize (decl' HΣ). 
   red in decl'.
   unfold closed_inductive_decl.
@@ -1435,6 +1434,17 @@ Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ :
 Proof.
   intros wfΣ; induction 1; auto; constructor; auto.
   now eapply subject_closed in t0.
+Qed.
+
+Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :
+  wf Σ ->
+  lookup_env Σ cst = Some decl ->
+  on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true)
+                 (Σ, universes_decl_of_decl decl) cst decl.
+Proof.
+  intros.
+  apply declared_decl_closed_ind; eauto.
+  now eapply (env_prop_sigma _ _ typecheck_closed).
 Qed.
 
 Lemma declared_constant_closed_type {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {cst decl} :

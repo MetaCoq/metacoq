@@ -19,31 +19,6 @@ Implicit Types cf : checker_flags.
 
 Notation isWAT := (isWfArity typing).
 
-Lemma subslet_def {cf} {Σ : global_env_ext} {Γ Δ s na t T t'} : 
-  subslet Σ Γ s Δ ->
-  Σ;;; Γ |- subst0 s t : subst0 s T ->
-  t' = subst0 s t ->
-  subslet Σ Γ (t' :: s) (Δ ,, vdef na t T).
-Proof.
-  now intros sub Ht ->; constructor.
-Qed.
-
-Lemma subslet_ass_tip {cf} {Σ : global_env_ext} {Γ na t T} : 
-  Σ;;; Γ |- t : T ->
-  subslet Σ Γ [t] [vass na T].
-Proof.
-  intros; constructor. constructor.
-  all:now rewrite !subst_empty.
-Qed.
-
-Lemma subslet_def_tip {cf} {Σ : global_env_ext} {Γ na t T} : 
-  Σ;;; Γ |- t : T ->
-  subslet Σ Γ [t] [vdef na t T].
-Proof.
-  intros; apply subslet_def. constructor.
-  all:now rewrite !subst_empty.
-Qed.
-
 Lemma isType_Sort {cf:checker_flags} {Σ Γ s} :
   wf_universe Σ s ->
   wf_local Σ Γ ->
@@ -176,12 +151,6 @@ Lemma isType_subst_gen {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ) {
 Proof.
   intros sub [s' Hs].
   exists s'. eapply (substitution _ _ Δ s _ _ _ HΣ' sub Hs).
-Qed.
-
-Lemma isType_wf_local {cf:checker_flags} {Σ Γ T} : isType Σ Γ T -> wf_local Σ Γ.
-Proof.
-  move=> [s Hs].
-  now eapply typing_wf_local.
 Qed.
 
 Lemma isType_apply {cf} {Σ : global_env_ext} {wfΣ : wf Σ} Γ na A B t : 

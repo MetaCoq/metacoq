@@ -799,14 +799,6 @@ Proof.
   now rewrite rename_context_subst map_rev rename_context_subst_instance; len.
 Qed.
 
-Lemma test_context_k_closed_on_free_vars_ctx k ctx :
-  test_context_k (fun k => on_free_vars (closedP k xpredT)) k ctx =
-  on_free_vars_ctx (closedP k xpredT) ctx.
-Proof.
-  rewrite test_context_k_eq /on_free_vars_ctx.
-  now setoid_rewrite shiftnP_closedP; setoid_rewrite shiftnP_xpredT; setoid_rewrite Nat.add_comm at 1.
-Qed.
-
 Lemma rename_inst_case_context_wf f pars puinst ctx : 
   test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pars| ctx ->
   rename_context f (inst_case_context pars puinst ctx) =
@@ -817,7 +809,8 @@ Proof.
   now rewrite rename_closedn_ctx // closedn_ctx_on_free_vars.
 Qed.
 
-Lemma rename_cstr_branch_context f ind mdecl cdecl :
+Lemma rename_
+ch_context f ind mdecl cdecl :
   closed_ctx (ind_params mdecl) ->
   rename_context (shiftn (context_assumptions (ind_params mdecl)) f) (cstr_branch_context ind mdecl cdecl) =
   cstr_branch_context ind mdecl (rename_constructor_body mdecl f cdecl).

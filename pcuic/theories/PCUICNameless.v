@@ -1373,6 +1373,54 @@ Proof.
   apply nl_wf_branch.
 Qed.
 
+From MetaCoq.PCUIC Require Import PCUICClosed.
+
+Lemma closed_ctx_IH :
+  forall (l : list context_decl) (n : nat),
+  onctx_k (fun (k : nat) (t : term) => closedn k (nl t)) n l ->
+  closedn_ctx n (map (map_decl_anon nl) l).
+Proof.   
+  unfold onctx_k. intros l n.
+  solve_all.
+  induction l; simpl; auto. len.
+  intros. depelim X.
+  rewrite IHl.
+  * eapply (Alli_shiftn_inv 0 _ 1) in X.
+    eapply (Alli_impl _ X). intros ? [na [b|] ty]; rewrite /ondecl;
+    now replace (#|l| - (1 + n0) + n) with (Nat.pred #|l| - n0 + n) by lia.
+  * rewrite Nat.sub_0_r in o.
+    rewrite /ondecl in o. rewrite /test_decl.
+    destruct o. cbn.
+    rewrite i. destruct (decl_body a) => //. simpl in o.
+    simpl. now rewrite o.
+Qed.
+
+Lemma closed_nl n t : closedn n t -> closedn n (nl t).
+Proof.
+  revert n t.
+  eapply term_closedn_list_ind; simpl; intros; auto; solve_all.
+  - now nat_compare_specs.
+  - destruct X as [? [? ?]].
+    rewrite /test_predicate_k. solve_all.
+    simpl. now apply closed_ctx_IH.
+  - red in X0. solve_all. rewrite /test_branch_k. solve_all.
+    now apply closed_ctx_IH.
+  - rewrite /test_def; solve_all. simpl. now len in b.
+  - rewrite /test_def; solve_all. simpl. now len in b.
+Qed.
+
+Lemma closed_nlctx n t : closedn_ctx n t -> closedn_ctx n (nlctx t).
+Proof.
+  induction t in n |- *; simpl; auto.
+  move/andb_and=> [] clt cldd.
+  rewrite IHt //. len.
+  move/andb_and: cldd => [] clb clt'.
+  destruct a as [na [b|] ty]; cbn in *.
+  - rewrite /map_decl_anon /= // /test_decl /=.
+    rewrite !closed_nl //.
+  - rewrite closed_nl //.
+Qed.
+
 Lemma nl_red1 :
   forall Σ Γ M N,
     red1 Σ Γ M N ->

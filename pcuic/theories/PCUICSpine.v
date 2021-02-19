@@ -1507,14 +1507,6 @@ Proof.
   - intros H; depind H; constructor; auto.
 Qed.
 
-Lemma onctx_All_fold P Q Γ : 
-  onctx P Γ ->
-  (forall Γ x, All_fold Q Γ -> ondecl P x -> Q Γ x) ->
-  All_fold Q Γ.
-Proof.
-  intros o H; induction o; constructor; auto.
-Qed.
-
 Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
   wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
   red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)).

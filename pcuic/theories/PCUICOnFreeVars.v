@@ -1332,3 +1332,216 @@ Proof.
 Qed.
 
 Hint Resolve on_free_vars_vass on_free_vars_vdef : fvs.
+
+Inductive All_fold {P : context -> context_decl -> Type}
+            : forall (Γ : context), Type :=
+  | All_fold_nil : All_fold nil
+  | All_fold_cons {d Γ} : All_fold Γ -> P Γ d -> All_fold (d :: Γ).
+Arguments All_fold : clear implicits.
+
+Lemma onctx_All_fold P Q Γ : 
+  onctx P Γ ->
+  (forall Γ x, All_fold Q Γ -> ondecl P x -> Q Γ x) ->
+  All_fold Q Γ.
+Proof.
+  intros o H; induction o; constructor; auto.
+Qed.
+
+Lemma All_fold_impl (P Q : context -> context_decl -> Type) Γ : 
+  All_fold P Γ -> 
+  (forall Γ x, P Γ x -> Q Γ x) ->
+  All_fold Q Γ.
+Proof.
+  induction 1; simpl; intros => //; constructor; eauto.
+Qed.
+
+Lemma All_fold_app (P : context -> context_decl -> Type) Γ Δ : 
+  All_fold (fun Γ => P (Δ ,,, Γ)) Γ -> 
+  All_fold P Δ -> 
+  All_fold P (Γ ++ Δ).
+Proof.
+  induction 1; simpl; intros => //.
+  constructor; auto.
+Qed.
+
+Lemma Alli_All_fold (P : nat -> context_decl -> Type) n Γ : 
+  Alli P n Γ ->
+  All_fold (fun Γ d => P (n + #|Γ|) d) (List.rev Γ).
+Proof.
+  induction 1; simpl.
+  - constructor.
+  - eapply All_fold_app; simpl.
+    2:constructor; simpl; auto.
+    2:constructor. 2:now rewrite Nat.add_0_r.
+    eapply All_fold_impl; tea.
+    simpl; intros.
+    cbn. rewrite app_length /= Nat.add_1_r Nat.add_succ_r //.
+Qed.
+
+Lemma Alli_rev_All_fold (P : nat -> context_decl -> Type) n Γ : 
+  Alli P n (List.rev Γ) ->
+  All_fold (fun Γ d => P (n + #|Γ|) d) Γ.
+Proof.
+  move/Alli_All_fold.
+  now rewrite List.rev_involutive.
+Qed.
+
+
+Lemma All_fold_prod (P : context -> context_decl -> Type) Q Γ Δ :
+  #|Γ| = #|Δ| ->
+  All_fold P Γ ->
+  All_fold P Δ ->
+  (forall Δ Δ' x y, 
+    All_fold P Δ ->
+    All_fold P Δ' ->
+    All2_fold Q Δ Δ' -> P Δ x -> P Δ' y -> Q Δ Δ' x y) ->
+  All2_fold Q Γ Δ.
+Proof.
+  intros hlen ha hb H.
+  induction ha in Δ, hb, hlen |- *; depelim hb => //; constructor.
+  - noconf hlen. now eapply IHha.
+  - eauto.
+Qed.
+
+Lemma All2_fold_prod {P Q : context -> context -> context_decl -> context_decl -> Type} {Γ Δ} :
+  All2_fold P Γ Δ ->
+  All2_fold Q Γ Δ ->
+  All2_fold (fun Γ Δ x y => P Γ Δ x y × Q Γ Δ x y) Γ Δ.
+Proof.
+  induction 1; intros h; depelim h; constructor; auto.
+Qed.
+
+Lemma All2_fold_prod_inv {P Q : context -> context -> context_decl -> context_decl -> Type} {Γ Δ} :
+  All2_fold (fun Γ Δ x y => P Γ Δ x y × Q Γ Δ x y) Γ Δ ->
+  All2_fold P Γ Δ × All2_fold Q Γ Δ.
+Proof.
+  induction 1; split; constructor; intuition auto.
+Qed.
+
+Lemma test_context_k_closed_on_free_vars_ctx k ctx :
+  test_context_k (fun k => on_free_vars (closedP k xpredT)) k ctx =
+  on_free_vars_ctx (closedP k xpredT) ctx.
+Proof.
+  rewrite test_context_k_eq /on_free_vars_ctx.
+  now setoid_rewrite shiftnP_closedP; setoid_rewrite shiftnP_xpredT; setoid_rewrite Nat.add_comm at 1.
+Qed.
+
+
+Lemma term_on_free_vars_ind :
+  forall (P : (nat -> bool) -> term -> Type),
+    (forall (p : nat -> bool) (i : nat), p i -> P p (tRel i)) ->
+    (forall p (i : ident), P p (tVar i)) ->
+    (forall p (id : nat) (l : list term), 
+      All (on_free_vars p) l ->
+      All (P p) l ->    
+      P p (tEvar id l)) ->
+    (forall p s, P p (tSort s)) ->
+    (forall p (na : aname) (t : term) dom codom, 
+      on_free_vars p dom ->
+      P p dom ->
+      on_free_vars (shiftnP 1 p) codom ->
+      P (shiftnP 1 p) codom -> 
+      P p (tProd na dom codom)) ->
+    (forall p (na : aname) (ty : term) (body : term), 
+      on_free_vars p ty -> P p ty ->
+      on_free_vars (shiftnP 1 p) body -> P (shiftnP 1 p) body -> 
+      P p (tLambda na ty body)) ->
+    (forall p (na : aname) (def : term) (ty : term) body,
+      on_free_vars p def -> P p def -> 
+      on_free_vars p ty -> P p ty -> 
+      on_free_vars (shiftnP 1 p) body -> P (shiftnP 1 p) body -> 
+      P p (tLetIn na def ty body)) ->
+    (forall p (t u : term), 
+      on_free_vars p t -> P p t -> 
+      on_free_vars p u -> P p u -> P p (tApp t u)) ->
+    (forall p s (u : list Level.t), P p (tConst s u)) ->
+    (forall p (i : inductive) (u : list Level.t), P p (tInd i u)) ->
+    (forall p (i : inductive) (c : nat) (u : list Level.t), P p (tConstruct i c u)) ->
+    (forall p (ci : case_info) (pred : predicate term) discr brs,
+      All (on_free_vars p) pred.(pparams) ->
+      All (P p) pred.(pparams) ->
+      on_free_vars_ctx (closedP #|pred.(pparams)| xpredT) pred.(pcontext) ->
+      on_free_vars (shiftnP #|pred.(pcontext)| p) pred.(preturn) ->
+      P (shiftnP #|pred.(pcontext)| p) pred.(preturn) ->
+      on_free_vars p discr ->
+      P p discr -> 
+      All (fun br => 
+        on_free_vars_ctx (closedP #|pred.(pparams)| xpredT) br.(bcontext) ×
+        on_free_vars (shiftnP #|br.(bcontext)| p) br.(bbody) ×
+        P (shiftnP #|br.(bcontext)| p) br.(bbody)) brs ->
+      P p (tCase ci pred discr brs)) ->
+    (forall p (s : projection) (t : term), 
+      on_free_vars p t -> P p t -> P p (tProj s t)) ->
+    (forall p (m : mfixpoint term) (i : nat), 
+      tFixProp (on_free_vars p) (on_free_vars (shiftnP #|fix_context m| p)) m ->
+      tFixProp (P p) (P (shiftnP #|fix_context m| p)) m -> P p (tFix m i)) ->
+    (forall p (m : mfixpoint term) (i : nat), 
+      tFixProp (on_free_vars p) (on_free_vars (shiftnP #|fix_context m| p)) m ->
+      tFixProp (P p) (P (shiftnP #|fix_context m| p)) m -> P p (tCoFix m i)) ->
+    (forall p pr, P p (tPrim pr)) ->
+    forall p (t : term), on_free_vars p t -> P p t.
+Proof.
+  intros until t. revert p t.
+  fix auxt 2.
+  move auxt at top.
+  intros p t.
+  destruct t; intros clt;  match goal with
+                 H : _ |- _ => apply H
+              end; auto; simpl in clt; 
+            try move/andP: clt => [cl1 cl2]; 
+            try move/andP: cl2 => [cl2 cl3];
+            try move/andP: cl3 => [cl3 cl4];
+            try move/andP: cl4 => [cl4 cl5];
+            try solve[apply auxt; auto]; simpl in *;
+            try inv_on_free_vars; tas.
+
+  - solve_all.
+  - revert l clt.
+    fix auxl' 1.
+    destruct l; constructor; [|apply auxl'].
+    * apply auxt. simpl in clt. now move/andP: clt  => [clt cll].
+    * now move/andP: clt => [clt cll].
+  
+  - solve_all.
+  - revert cl1. generalize (pparams p0).
+    fix auxl' 1.
+    case => [|t' ts] /= //; cbn => /andP[] Ht' Hts; constructor; [apply auxt|apply auxl'] => //.
+  - now rewrite test_context_k_closed_on_free_vars_ctx in cl3.
+  - rename cl5 into cl. revert brs cl. clear -auxt.
+    fix auxl' 1.
+    destruct brs; [constructor|].
+    move=> /= /andP [/andP [clctx clb] cll].
+    constructor; tas.
+    * split => //.
+      + now rewrite test_context_k_closed_on_free_vars_ctx in clctx.
+      + split => //. now apply auxt.
+    * now apply auxl'.
+    
+  - red. len; solve_all;
+     now move/andP: H=> [].
+
+  - red.
+    rewrite fix_context_length.
+    revert clt.
+    generalize (#|mfix|).
+    revert mfix.
+    fix auxm 1. 
+    destruct mfix; [constructor|].
+    move=> n /= /andP[] /andP[] clb clty clmfix; constructor.
+    * split => //; apply auxt => //.
+    * now apply auxm.
+
+  - red. len; solve_all;
+    now move/andP: H=> [].
+
+  - red.
+    rewrite fix_context_length.
+    revert clt.
+    generalize (#|mfix|).
+    revert mfix.
+    fix auxm 1. 
+    destruct mfix; [constructor|].
+    move=> n /= /andP[] /andP[] clb clty clmfix; constructor.
+    * split => //; apply auxt => //.
+    * now apply auxm.
+Defined.

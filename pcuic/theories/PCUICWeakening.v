@@ -381,34 +381,57 @@ Proof.
   - reflexivity.
 Qed.
 
+
+
 Lemma weakening_red1 `{cf:checker_flags} {Σ} Γ Γ' Γ'' M N :
   wf Σ ->
+  on_free_vars xpredT M ->
   red1 Σ (Γ ,,, Γ') M N ->
   red1 Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
   intros wfΣ H.
   rewrite !lift_rename.
   eapply red1_rename; eauto.
-  - eapply weakening_renaming.
-  - eapply on_free_vars_true. 
+  eapply weakening_renaming.
 Qed.
 
-Lemma weakening_red `{cf:checker_flags} Σ Γ Γ' Γ'' M N :
-  wf Σ ->
+Lemma weakening_red `{cf:checker_flags} {Σ} {wfΣ : wf Σ} {P Γ Γ' Γ'' M N} :
+  on_ctx_free_vars P (Γ ,,, Γ') ->
+  on_free_vars P M ->
   red Σ (Γ ,,, Γ') M N ->
   red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
-  intros wfΣ; induction 1.
+  intros onctx onf; induction 1.
   - constructor. eapply weakening_red1; auto.
+    eapply on_free_vars_impl; tea. auto.
   - reflexivity.
-  - etransitivity; eassumption.
+  - etransitivity.
+    * eapply IHX1 => //.
+    * eapply IHX2. eapply red_on_free_vars; tea.
 Qed.
 
-Lemma weakening_red_0 {cf} {Σ} {wfΣ : wf Σ} Γ Γ' M N n :
+Lemma weakening_red' `{cf:checker_flags} {Σ} {wfΣ : wf Σ} {P Γ Γ' Γ'' M N} :
+  on_ctx_free_vars P (Γ ,,, Γ') ->
+  on_free_vars P M ->
+  red Σ (Γ ,,, Γ') M N ->
+  red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
+Proof.
+  intros onctx onf; induction 1.
+  - constructor. eapply weakening_red1; auto.
+    eapply on_free_vars_impl; tea. auto.
+  - reflexivity.
+  - etransitivity.
+    * eapply IHX1 => //.
+    * eapply IHX2. eapply red_on_free_vars; tea.
+Qed.
+
+Lemma weakening_red_0 {cf} {Σ} {wfΣ : wf Σ} {P Γ Γ' M N n} :
   n = #|Γ'| ->
+  on_ctx_free_vars P Γ ->
+  on_free_vars P M ->
   red Σ Γ M N ->
   red Σ (Γ ,,, Γ') (lift0 n M) (lift0 n N).
-Proof. now move=> ->; apply (weakening_red Σ Γ [] Γ'). Qed.
+Proof. move=> -> onctx ont; eapply (weakening_red (Γ':=[])); tea. Qed.
 
 (* TODO MOVE *)
 Lemma fix_context_alt_length :
@@ -421,17 +444,24 @@ Proof.
   rewrite mapi_length. reflexivity.
 Qed.
 
-Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
+Lemma weakening_cumul `{CF:checker_flags} {Σ Γ Γ' Γ'' M N} :
   wf Σ.1 ->
+  on_free_vars xpredT M ->
+  on_free_vars xpredT N ->
+  on_ctx_free_vars xpredT (Γ ,,, Γ') ->
   Σ ;;; Γ ,,, Γ' |- M <= N ->
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N.
 Proof.
-  intros wfΣ. induction 1.
+  intros wfΣ onM onN onctx. induction 1.
   - constructor. now apply lift_leq_term.
-  - eapply weakening_red1 in r; auto.
-    econstructor 2; eauto.
-  - eapply weakening_red1 in r; auto.
-    econstructor 3; eauto.
+  - econstructor 2; eauto.
+    * eapply weakening_red1 in r; auto. 1:exact r.
+    * eapply IHX; tas.
+      eapply red1_on_free_vars; [| |tea]; tea.
+  - econstructor 3; eauto.
+    * eapply IHX; tas.
+      eapply red1_on_free_vars; [| |tea]; tea.
+    * eapply weakening_red1 in r; auto. exact r.    
 Qed.
 
 Lemma destInd_lift n k t : destInd (lift n k t) = destInd t.
@@ -451,16 +481,53 @@ Proof. intros wfΣ ->; now apply weakening. Qed.
 Lemma weakening_conv `{cf:checker_flags} :
   forall Σ Γ Γ' Γ'' M N,
     wf Σ.1 ->
+    on_free_vars xpredT M ->
+    on_free_vars xpredT N ->
+    on_ctx_free_vars xpredT (Γ ,,, Γ') ->  
     Σ ;;; Γ ,,, Γ' |- M = N ->
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
 Proof.
-  intros Σ Γ Γ' Γ'' M N wfΣ. induction 1.
+  intros Σ Γ Γ' Γ'' M N wfΣ onM onN onctx. induction 1.
   - constructor.
     now apply lift_eq_term.
-  - eapply weakening_red1 in r ; auto.
-    econstructor 2 ; eauto.
-  - eapply weakening_red1 in r ; auto.
-    econstructor 3 ; eauto.
+  - econstructor 2.
+    * eapply weakening_red1 in r; auto. 1:exact r.
+    * eapply IHX; tas.
+      eapply red1_on_free_vars; [| |tea]; tea.
+  - econstructor 3.
+    * eapply IHX; tas.
+      eapply red1_on_free_vars; [| |tea]; tea.
+    * eapply weakening_red1 in r; auto. exact r.    
+Qed.
+
+Lemma isType_on_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 
+  isType Σ Γ T -> on_free_vars xpredT T.
+Proof.
+  intros [s Hs].
+  eapply subject_closed in Hs.
+  rewrite closedP_on_free_vars in Hs.
+  eapply on_free_vars_impl; tea => //.
+Qed.
+
+Lemma isType_on_ctx_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 
+  isType Σ Γ T -> on_ctx_free_vars xpredT Γ.
+Proof.
+  intros [s Hs].
+  eapply typing_wf_local in Hs.
+  eapply closed_wf_local in Hs; tea.
+  eapply (closed_ctx_on_free_vars xpredT) in Hs.
+  now eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
+Qed.
+
+Lemma weakening_conv_wt `{cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'' M N} :
+  isType Σ (Γ ,,, Γ') M -> isType Σ (Γ ,,, Γ') N ->
+  Σ ;;; Γ ,,, Γ' |- M = N ->
+  Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
+Proof.
+  intros onM onN.
+  eapply weakening_conv; tea.
+  1-2:now eapply isType_on_free_vars.
+  now eapply isType_on_ctx_free_vars in onM.
 Qed.
 
 Lemma weaken_ctx {cf:checker_flags} {Σ Γ t T} Δ :

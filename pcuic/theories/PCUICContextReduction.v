@@ -4,9 +4,9 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
      PCUICContextRelation PCUICReduction PCUICCases PCUICWeakening
-     PCUICTyping.
+     PCUICTyping PCUICOnFreeVars PCUICRename PCUICInst.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
 From Equations.Type Require Import Relation Relation_Properties.
 From Equations Require Import Equations.
@@ -67,14 +67,37 @@ Section CtxReduction.
     intros; apply red_decls_refl.
   Qed.
 
-  Lemma red1_red_ctx Γ Δ t u :
+
+  Lemma on_ctx_free_vars_inst_case_context P Γ pars puinst ctx : 
+    on_ctx_free_vars P Γ ->
+    forallb (on_free_vars P) pars ->
+    test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pars| ctx ->
+    on_ctx_free_vars (shiftnP #|ctx| P) (Γ ,,, inst_case_context pars puinst ctx).
+  Proof.
+    move=> onΓ onpars.
+    rewrite test_context_k_closed_on_free_vars_ctx -on_free_vars_ctx_on_ctx_free_vars.
+    intros onctx.
+    relativize #|ctx|.
+    - erewrite on_ctx_free_vars_concat; rewrite onΓ /=; len.
+      rewrite /inst_case_context.
+      rewrite /subst_context -mapi_context_fold -/(inst_context _ _).
+      rewrite on_free_vars_ctx
+    rewrite on_ctx_free_vars_inst_case_context.
+
+
+  Lemma red1_red_ctx P Γ Δ t u :
+    on_ctx_free_vars P Γ ->
+    on_ctx_free_vars P Δ ->
+    on_free_vars P t ->
     red1 Σ Γ t u ->
     red_context Σ Δ Γ ->
     red Σ Δ t u.
   Proof.
-    move=> r Hctx.
-    revert Δ Hctx.
-    induction r using red1_ind_all; intros Δ Hctx; try solve [eapply red_step; repeat (constructor; eauto)].
+    move=> onΓ onΔ ont r Hctx.
+    revert P onΓ ont  Δ onΔ Hctx.
+    induction r using red1_ind_all; intros P onΓ ont Δ onΔ Hctx;
+      try inv_on_free_vars;
+      try solve [eapply red_step; repeat (constructor; eauto)].
     - red in Hctx.
       destruct nth_error eqn:hnth => //; simpl in H; noconf H.
       eapply All2_fold_nth_r in Hctx; eauto.
@@ -85,29 +108,29 @@ Section CtxReduction.
       * constructor. rewrite e => //.
       * rewrite -(firstn_skipn (S i) Δ).
         eapply weakening_red_0; auto.
-        rewrite firstn_length_le //.
-        eapply nth_error_Some_length in e. lia.
+        + rewrite firstn_length_le //.
+          eapply nth_error_Some_length in e. lia.
+        + erewrite on_free_vars_ctx_on_ctx_free_vars. admit.
+        + admit.
     - repeat econstructor; eassumption.
     - repeat econstructor; eassumption.
     - repeat econstructor; eassumption.
     - repeat econstructor; eassumption.
     - eapply red_abs_alt; eauto.
-    - eapply red_abs_alt; eauto. apply (IHr (Δ ,, vass na N)).
-      constructor; auto. constructor; auto.
+    - eapply red_abs_alt; eauto. 
+      eapply (IHr (shiftnP 1 P) _ _ (Δ ,, vass na N)).
+      * now rewrite on_ctx_free_vars_snoc onΔ.
+      * repeat (constructor; auto).
     - eapply red_letin; eauto.
     - eapply red_letin; eauto.
     - eapply red_letin_alt; eauto.
-      eapply (IHr (Δ ,, vdef na b t)). constructor; eauto.
-      constructor; auto.
+      eapply (IHr (shiftnP 1 P) _ _ (Δ ,, vdef na b t)).
+      * rewrite on_ctx_free_vars_snoc onΔ /=; auto with fvs.
+      * repeat (constructor; auto).      
     - eapply red_case_pars; eauto; pcuic.
+      solve_all. eapply OnOne2_All_mix_left in X; tea.
       eapply OnOne2_All2; tea => /=; intuition eauto.
-    - eapply red_case_pcontext; eauto.
-      eapply OnOne2_local_env_impl; tea.
-      intros Δ' x y.
-      eapply on_one_decl_impl => Γ' t t' IH.
-      apply IH. 
-      now eapply red_context_app_same.
-    - eapply red_case_p. eapply IHr.
+    - eapply red_case_p. eapply IHr; tea.
       now apply red_context_app_same.
     - eapply red_case_c; eauto. 
     - eapply red_case_brs.

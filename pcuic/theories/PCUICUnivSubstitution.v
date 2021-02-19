@@ -1359,7 +1359,7 @@ Proof.
     reflexivity.
   - cbn. rewrite subst_instance_mkApps. cbn.
     rewrite iota_red_subst_instance.
-    change (bcontext br) with (bcontext (map_branch (subst_instance u) br)). 
+    change (bcontext br) with (bcotext (map_branch (subst_instance u) br)). 
     eapply red_iota; eauto with pcuic.
     * rewrite nth_error_map H //.
     * simpl. now len.

@@ -799,7 +799,6 @@ Proof.
   now rewrite rename_context_subst map_rev rename_context_subst_instance; len.
 Qed.
 
-
 Lemma test_context_k_closed_on_free_vars_ctx k ctx :
   test_context_k (fun k => on_free_vars (closedP k xpredT)) k ctx =
   on_free_vars_ctx (closedP k xpredT) ctx.
@@ -1222,6 +1221,35 @@ Proof using cf.
     * now len.
 Qed.
 
+Lemma red_on_free_vars {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
+  on_ctx_free_vars P Γ ->
+  on_free_vars P u ->
+  red Σ Γ u v ->
+  on_free_vars P v.
+Proof.
+  intros onΓ on r.
+  induction r; auto.
+  now eapply red1_on_free_vars.
+Qed.
+
+Lemma red_rename :
+  forall P Σ Γ Δ u v f,
+    wf Σ ->
+    urenaming P Δ Γ f ->
+    on_ctx_free_vars P Γ ->
+    on_free_vars P u ->
+    red Σ Γ u v ->
+    red Σ Δ (rename f u) (rename f v).
+Proof.
+  intros.
+  induction X1.
+  - constructor. now eapply red1_rename.
+  - reflexivity.
+  - etransitivity.
+    * eapply IHX1_1. eauto.
+    * eapply IHX1_2. eapply red_on_free_vars; eauto.
+Qed.
+
 Lemma conv_renameP :
   forall P Σ Γ Δ f A B,
     wf Σ.1 ->
@@ -1381,7 +1409,7 @@ Proof.
   + now eapply ondecl_on_free_vars_decl.
   + rewrite (All2_fold_length IH'). 
     now eapply ondecl_on_free_vars_decl.
-  + eapply on_ctx_free_vars_extend => //.
+  + rewrite on_ctx_free_vars_extend // onΓ.
     now move/on_free_vars_ctx_onctx_k: onL'.
 Qed.
 
@@ -1416,7 +1444,7 @@ Proof.
   + now eapply ondecl_on_free_vars_decl.
   + rewrite (All2_fold_length IH'). 
     now eapply ondecl_on_free_vars_decl.
-  + eapply on_ctx_free_vars_extend => //.
+  + rewrite on_ctx_free_vars_extend // onΓ.
     now move/on_free_vars_ctx_onctx_k: onL'.
 Qed.
 
@@ -1907,7 +1935,7 @@ Proof.
         now eapply closedn_on_free_vars in H.
       * pose proof (closed_ctx_on_free_vars P _ (closed_wf_local _ (typing_wf_local ht))).
         rewrite -{2}(app_context_nil_l Γ).
-        eapply on_ctx_free_vars_extend => //.
+        rewrite on_ctx_free_vars_extend //.
 Qed.
 
 Lemma typing_rename_P {P Σ Γ Δ f t A} {wfΣ : wf Σ.1} :

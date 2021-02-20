@@ -293,8 +293,11 @@ Section CheckerFlags.
       | tProd _ t u
       | tLambda _ t u => wf_universes t && wf_universes u
       | tCase _ p c brs => 
-        test_predicate (wf_universeb_instance Σ) wf_universes p && wf_universes c && 
-        forallb (test_branch wf_universes) brs
+        wf_universeb_instance Σ p.(puinst) &&
+        forallb wf_universes p.(pparams) &&
+        test_context (closedu #|p.(puinst)|) p.(pcontext) &&
+        wf_universes p.(preturn) && wf_universes c && 
+        forallb (test_branch (closedu #|p.(puinst)|) wf_universes) brs
       | tLetIn _ t t' u =>
         wf_universes t && wf_universes t' && wf_universes u
       | tProj _ t => wf_universes t
@@ -332,18 +335,11 @@ Qed.
       - destruct X as [? [? ?]]. solve_all.
         rewrite IHt.
         f_equal. f_equal.
-        unfold test_predicate => /=.
-        rewrite /id e. f_equal.
-        f_equal. f_equal. rewrite forallb_map. solve_all.
-        rewrite /shiftf.
-        rewrite test_context_mapi.
-        rewrite (test_context_k_ctx wf_universes (pcontext p) k).
-        eapply test_context_k_eqP_eq_spec; tea.
-        intros. solve_all. solve_all.
-        rewrite /test_branch. rewrite b. f_equal.
-        simpl. rewrite test_context_mapi.
-        rewrite (test_context_k_ctx wf_universes (bcontext x) k).
-        eapply test_context_k_eqP_eq_spec; tea. solve_all.
+        * unfold test_predicate => /=.
+          rewrite /id e. f_equal.
+          f_equal. f_equal. solve_all.
+        * solve_all.
+          rewrite /test_branch. rewrite b. f_equal.
       - rewrite forallb_map.
         eapply All_forallb; eauto. simpl; intros [].
         simpl. intros. cbn. now rewrite H.
@@ -367,16 +363,10 @@ Qed.
         rewrite IHt. f_equal. f_equal.
         unfold test_predicate => /=.
         rewrite /id e. f_equal.
-        f_equal. f_equal. rewrite forallb_map. solve_all.
+        f_equal. f_equal. solve_all.
         rewrite /shiftf.
-        rewrite test_context_mapi.
-        rewrite (test_context_k_ctx wf_universes (pcontext p) k).
-        eapply test_context_k_eqP_eq_spec; tea.
-        intros. solve_all. solve_all.
+        solve_all.
         rewrite /test_branch. rewrite b. f_equal.
-        simpl. rewrite test_context_mapi.
-        rewrite (test_context_k_ctx wf_universes (bcontext x) k).
-        eapply test_context_k_eqP_eq_spec; tea. solve_all.
       - rewrite forallb_map.
         eapply All_forallb; eauto. simpl; intros [].
         simpl. intros. cbn. now rewrite H.
@@ -429,20 +419,15 @@ Qed.
       destruct Σ; simpl in *.
       now move/wf_universe_instanceP: wft.
     
-    - move/andP: H1; rewrite /test_predicate.
-      move => [] /andP [] /andP [] wfu wfpars wfpctx wfpret.
-      cbn.
-      rewrite (i wfpret).
-      rtoProp. intuition auto.
-      apply/wf_universe_instanceP.
+    - cbn. apply/wf_universe_instanceP; auto.
       eapply wf_universe_subst_instance; eauto.
-      destruct Σ; simpl in *.
-      now move/wf_universe_instanceP: wfu.
-      solve_all. solve_all.
+      destruct Σ; simpl in *; auto.
+      now move/wf_universe_instanceP: H.
+    - now len.
     - rewrite /test_branch. rtoProp.
       move/andP: b => [] tctx wfu.
       split; auto. simpl.
-      solve_all.
+      solve_all. now len.
   Qed.
   
   Lemma weaken_wf_universe Σ Σ' t : wf Σ' -> extends Σ.1 Σ' ->
@@ -505,7 +490,6 @@ Qed.
   - apply /wf_universe_instanceP; apply weaken_wf_universe_instance; eauto.
     now apply /wf_universe_instanceP.
   - apply /andP; to_wfu; intuition eauto 4.
-    move/andP: H => [] /andP [] /andP [].
     rewrite /test_predicate. intros; rtoProp.
     destruct X as [? [? ?]].
     intuition auto; solve_all.
@@ -809,25 +793,17 @@ Qed.
       eapply global_context_set_sub_ext.
       now eapply consistent_instance_ext_wf.
     
-    - apply /andP. split.
-      solve_all. cbn in *.
-      destruct H0.
-      rewrite /test_predicate.
-      rewrite wf_universes_mkApps in H5.
-      move/andP: H5 => /= [] ->; rewrite forallb_app; move/andP => [] -> wfinds.
-      rewrite test_context_app in b0. move/andP: b0 => [] _ ->.
-      now rewrite H4.
-      rewrite /test_branch.
-      rewrite test_context_app in b2; move/andP: b2 => [] _ ->.
-      now rewrite H9.
-      rewrite wf_universes_mkApps; apply/andP; split; auto.
+    - rewrite wf_universes_mkApps in H5.
+      move/andP: H5 => /= [] wfu; rewrite forallb_app.
+      move/andP=> [] wfpars wfinds. rewrite wfu /= wfpars wf_universes_mkApps /= 
+        forallb_app wfinds /= H /= !andb_true_r.
+      apply /andP. split. apply/andP. split.
+      todo "case".
+      solve_all. todo "case". cbn in *.
       rewrite /ptm.
       rewrite wf_universes_it_mkLambda_or_LetIn H4.
-      destruct X1 as [_ X1]. rewrite /wf_ctx_universes.
-      now rewrite test_context_app in X1; move/andP: X1 => [] _ ->.
-      rewrite forallb_app /= H /= andb_true_r.
-      rewrite wf_universes_mkApps forallb_app in H5.
-      now to_prop.
+      destruct X3 as [_ wfpctx].
+      now rewrite test_context_app in wfpctx; move/andP: wfpctx => [] _ ->.
 
     - rewrite /subst1. rewrite wf_universes_subst.
       constructor => //. eapply All_rev.

@@ -4,8 +4,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICAstUtils PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnv PCUICInduction
-     PCUICRename PCUICInst
-     PCUICWeakening PCUICSubstitution.
+     PCUICRename PCUICInst PCUICOnFreeVars
+     PCUICContextRelation PCUICWeakening PCUICSubstitution.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -450,6 +450,8 @@ Section ParallelReduction.
   Ltac my_rename_hyp h th :=
     match th with
     | pred1_ctx _ _ ?G => fresh "pred" G
+    | nat -> bool => fresh "P"
+    | nat -> nat => fresh "f"
     | _ => PCUICWeakeningEnv.my_rename_hyp h th
     end.
 
@@ -503,7 +505,9 @@ Section ParallelReduction.
           Pctx Γ Γ' ->
           All2 (P' Γ Γ') args0 args1 ->
           All2 (P' Γ Γ') p0.(pparams) pparams1 ->
-          All2 (fun br br' => 
+          All2 (fun br br' =>
+            Pctxover Γ Γ' (inst_case_branch_context p0 br) 
+              (inst_case_context pparams1 p0.(puinst) br'.(bcontext)) ×
             on_Trel_eq 
               (P' (Γ ,,, inst_case_branch_context p0 br)
                   (Γ' ,,, inst_case_context pparams1 p0.(puinst) br'.(bcontext)))
@@ -904,6 +908,9 @@ Ltac pcuic := try repeat red; cbn in *; try solve [intuition auto; eauto with pc
 Ltac my_rename_hyp h th :=
   match th with
   | pred1_ctx _ _ ?G => fresh "pred" G
+  | nat -> bool => fresh "P"
+  | nat -> nat => fresh "f"
+  | urenaming _ _ _ ?f => fresh "u" f
   | _ => PCUICWeakeningEnv.my_rename_hyp h th
   end.
 
@@ -979,6 +986,381 @@ Section ParallelWeakening.
   Proof.
     intros []; constructor; auto.
   Qed.
+
+  Lemma All2_fold_context_k P (f g : nat -> term -> term) ctx ctx' : 
+  All2_fold (fun Γ Γ' d d' => P (map_decl (f #|Γ|) d) (map_decl (g #|Γ'|) d')) ctx ctx' ->
+  All2 P (fold_context_k f ctx) (fold_context_k g ctx'). 
+Proof.
+  induction 1. constructor.
+  rewrite !fold_context_k_snoc0. now constructor.
+Qed.
+     
+Lemma All2_sym {A B} (P : A -> B -> Type) (ctx : list A) (ctx' : list B) : 
+  All2 P ctx ctx' -> 
+  All2 (fun x y => P y x) ctx' ctx.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+  Lemma on_ctx_free_vars_snoc_ass P Γ na ty : 
+    on_ctx_free_vars P Γ ->
+    on_free_vars P ty ->
+    on_ctx_free_vars (PCUICOnFreeVars.shiftnP 1 P) (Γ ,, vass na ty).
+  Proof.
+    now rewrite on_ctx_free_vars_snoc => -> /=; rewrite /on_free_vars_decl /test_decl /=.
+  Qed.
+  
+  Lemma on_ctx_free_vars_snoc_def P Γ na def ty : 
+    on_ctx_free_vars P Γ ->
+    on_free_vars P ty ->
+    on_free_vars P def ->
+    on_ctx_free_vars (PCUICOnFreeVars.shiftnP 1 P) (Γ ,, vdef na def ty).
+  Proof.
+    now rewrite on_ctx_free_vars_snoc => -> /=; rewrite /on_free_vars_decl /test_decl /= => -> ->.
+  Qed.
+  Hint Resolve on_ctx_free_vars_snoc_def on_ctx_free_vars_snoc_ass : pcuic.
+  Hint Resolve urenaming_vass urenaming_vdef : pcuic.
+
+  Lemma All2_fold_fold_context_k P (f g : nat -> term -> term) ctx ctx' :
+    All2_fold (on_decls (fun Γ Γ' t t' => P (fold_context_k f Γ) (fold_context_k g Γ') 
+    (f #|Γ| t) (g #|Γ'| t'))) ctx ctx' ->
+    All2_fold (on_decls P) (fold_context_k f ctx) (fold_context_k g ctx').
+  Proof.
+    intros a. rewrite - !mapi_context_fold.
+    eapply All2_fold_mapi.
+    eapply (All2_fold_impl_ind a).
+    intros par par' x y H.
+    now rewrite !mapi_context_fold.
+  Qed.
+  
+  Lemma All2_fold_rename_context Σ Δ Δ' Γ Γ' f :
+    All2_fold
+      (fun Γ Γ' : context =>
+       All_decls
+         (fun t t' : term =>
+          on_decls_over (pred1 Σ) Δ Δ'
+            (fold_context_k (fun i : nat => rename (shiftn i f)) Γ)
+            (fold_context_k (fun i : nat => rename (shiftn i f)) Γ')
+            (rename (shiftn #|Γ| f) t) (rename (shiftn #|Γ'| f) t'))) Γ Γ' ->
+    pred1_ctx_over Σ Δ Δ' (rename_context f Γ) (rename_context f Γ').
+  Proof.
+    intros q.
+    now eapply All2_fold_fold_context_k.
+  Qed.
+
+  (* Lemma All2_fold_All_fold_mix_left P Q Γ Γ' :
+    All_fold P Γ ->
+    All2_fold Q Γ Γ' ->
+    All_
+  All_fold P Δ ->
+  (forall (Δ0 Δ' : context) (x y : context_decl),
+   All_fold P Δ0 ->
+   All_fold P Δ' -> All2_fold Q Δ0 Δ' -> P Δ0 x -> P Δ' y -> Q Δ0 Δ' x y) ->
+  All2_fold Q Γ Δ *)
+
+  Lemma All_decls_on_free_vars_impl P Q R d d' :
+    All_decls P d d' ->
+    on_free_vars_decl R d ->
+    (forall t t', on_free_vars R t -> P t t' -> Q t t') ->
+    All_decls Q d d'.
+  Proof.
+    move=> [] /=; constructor; auto.
+    eapply X; eauto with pcuic.
+    now move/andP: H => /= [].
+    now move/andP: H => /= [].
+  Qed.
+
+  Lemma on_ctx_free_vars_snocS P Γ d : 
+    on_ctx_free_vars (PCUICOnFreeVars.shiftnP (S #|Γ|) P) (d :: Γ) = 
+    on_ctx_free_vars (PCUICOnFreeVars.shiftnP #|Γ| P) Γ && on_free_vars_decl (PCUICOnFreeVars.shiftnP #|Γ| P) d.
+  Proof.
+    rewrite -(shiftnP_add 1).
+    now rewrite on_ctx_free_vars_snoc.
+  Qed.
+
+  Lemma pred1_rename {Σ} {wfΣ : wf Σ} {Γ Γ' u v P Δ Δ' f} :
+    pred1 Σ Γ Γ' u v ->
+    pred1_ctx Σ Δ Δ' ->
+    urenaming P Δ Γ f ->
+    urenaming P Δ' Γ' f ->
+    on_free_vars P u ->
+    on_ctx_free_vars P Γ ->
+    pred1 Σ Δ Δ' (rename f u) (rename f v).
+Proof using cf.
+  intros h.
+  revert Γ Γ' u v h P f Δ Δ'.
+
+  set (Pctx :=
+    fun (Γg Γ'g : context) =>
+    forall P f Δ Δ' Γ Γ' Γ0 Γ'0,
+      Γg = Γ ,,, Γ0 ->
+      Γ'g = Γ' ,,, Γ'0 ->
+      #|Γ| = #|Γ'| ->
+      pred1_ctx Σ Δ Δ' ->
+      urenaming P Δ Γ f ->
+      urenaming P Δ' Γ' f ->
+      on_ctx_free_vars (PCUICOnFreeVars.shiftnP #|Γ0| P) Γg ->
+      pred1_ctx Σ (Δ ,,, rename_context f Γ0) (Δ' ,,, rename_context f Γ'0)).
+
+  set (Pctxover :=
+  fun (Γ Γ' : context) (Δ Δ' : context) =>
+    forall P f Δ0 Δ'0, 
+    urenaming P Δ0 Γ f ->
+    urenaming P Δ'0 Γ' f ->
+    pred1_ctx Σ Δ0 Δ'0 ->
+    on_ctx_free_vars P Γ ->
+    on_free_vars_ctx P Δ ->
+    pred1_ctx_over Σ Δ0 Δ'0 (rename_context f Δ) (rename_context f Δ')).
+  (* All2_fold_over
+  (fun (Γ Γ' : context) (t t0 : term) =>
+   forall (P : nat -> bool) (f : nat -> nat) (Δ Δ' : context),
+    pred1_ctx Σ Δ Δ' ->
+ pred1 Σ Δ Δ' (rename f t) (rename f t0)) Γ Γ'
+  Δ Δ'). *)
+  
+
+  refine (pred1_ind_all_ctx Σ _ Pctx Pctxover _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx
+  Pctxover;
+  rename_all_hyps; try subst Γ Γ'; 
+  lazymatch goal with
+  | |- context [tCase _ _ _ _] => idtac
+  | |- _ => simplify_IH_hyps
+  end; cbn -[iota_red];
+  match goal with
+  |- context [iota_red _ _ _] => idtac
+  | |- _ => autorewrite with lift
+  end;
+  try specialize (forall_P P f Δ Δ' uf uf0);
+  try specialize (forall_P0 P f Δ Δ' uf uf0);
+  try specialize (forall_P1 P f Δ Δ' uf uf0);
+  try pose proof (All2_fold_length X0);
+  try specialize (X0 _ _ eq_refl _ _ eq_refl heq_length _ _ ltac:(eauto));
+  simpl; try solve [ econstructor; eauto; try apply All2_map;
+                  unfold All2_prop_eq, All2_prop, on_Trel, id in *; solve_all];
+  unfold All2_prop_eq, All2_prop, on_Trel, id in *.
+  all:try inv_on_free_vars.
+
+    
+  1:{ rename Γ into Γg. rename Γ' into Γg'.
+      intros P f Δ Δ' Γ Γ' Γ0 Γ'0 -> -> hlen predΔ uf uf' onctx.
+      len in H.
+      eapply All2_fold_app_inv in X0 as [] => //.
+      eapply All2_fold_app => //.
+      eapply All2_fold_fold_context_k.
+      rewrite on_ctx_free_vars_extend in onctx.
+      move/andP: onctx => [] onΓ.
+      move/alli_Alli/Alli_rev_All_fold => /= onΓ0.
+      clear H predΓ'.
+      induction a0; constructor; depelim onΓ0; auto.
+      specialize (IHa0 onΓ0).
+      rewrite - !/(rename_context _ _).
+      rewrite -(All2_fold_length IHa0).
+      eapply All_decls_on_free_vars_impl; tea.
+      cbn; intros. red. eapply X; tea.
+      - eapply All2_fold_app => //.
+        eapply All2_fold_fold_context_k => //.
+      - eapply urenaming_context; tea.
+      - rewrite (All2_fold_length IHa0). now eapply urenaming_context.
+      - eapply All_fold_on_free_vars_ctx in onΓ0.
+        now rewrite on_ctx_free_vars_concat onΓ /= on_free_vars_ctx_on_ctx_free_vars. }
+      
+  - intros P f Δ0 Δ'0 uf uf' p onΓ onΔ.
+    eapply All2_fold_fold_context_k.
+    induction X3.
+    * constructor; auto.
+    * move: onΔ.
+      rewrite -on_free_vars_ctx_on_ctx_free_vars on_ctx_free_vars_snocS => /andP[] onΓ0 ond.
+      rewrite on_free_vars_ctx_on_ctx_free_vars in onΓ0.
+      depelim X2.
+      do 2 forward IHX3 by auto.
+      constructor; auto.
+      eapply All_decls_on_free_vars_impl; tea.
+      intros t t' ont. unfold on_decls_over => IH.
+      rewrite -(All2_fold_length IHX3).
+      rewrite - !/(rename_context _ _).
+      eapply IH; tea; auto with pcuic.
+      + eapply All2_fold_app => //.
+        eapply All2_fold_fold_context_k => //.
+      + now eapply urenaming_context.
+      + rewrite (All2_fold_length IHX3). now eapply urenaming_context.
+      + now rewrite on_ctx_free_vars_concat onΓ on_free_vars_ctx_on_ctx_free_vars onΓ0.
+
+  - (* Beta *)
+    move/andP: a => [] onty onbody.
+    rewrite rename_subst10.
+    econstructor; eauto.
+    eapply (forall_P (PCUICOnFreeVars.shiftnP 1 P) (shiftn 1 f)); auto with pcuic.
+    repeat (constructor; eauto).
+
+  - (* Let *) 
+    rewrite rename_subst10.
+    econstructor; eauto.
+    eapply (forall_P1 (PCUICOnFreeVars.shiftnP 1 P) (shiftn 1 f)); eauto with pcuic.
+    repeat (constructor; eauto).
+  
+  - (* Rel *)
+    rewrite lift0_rename /rshiftk.
+    cbn in H0.
+    epose proof (nth_error_pred1_ctx _ _ predΓ' heq_option_map) as [bod [hbod predbod]].
+    destruct (nth_error Γ i) eqn:hnth => //. noconf hbod.
+    destruct (nth_error Γ' i) eqn:hnth' => //.
+    specialize (X0 P f Δ Δ' Γ Γ' [] [] eq_refl eq_refl (All2_fold_length predΓ') predΔ' uf uf0).
+    simpl in X0. forward X0. now rewrite shiftnP0.
+    unfold urenaming in uf, uf0.
+    specialize uf0 with (1 := H0) (2 := hnth') as [decl' [nthΔ' [eqba [reneq onb]]]].
+    specialize uf with (1 := H0) (2 := hnth) as [decl'' [nthΔ'' [eqba' [reneq' onb']]]].
+    cbn in heq_option_map. noconf heq_option_map.
+    rewrite H in onb. rewrite H2 in onb'; cbn in *.
+    destruct decl' as [? [?|] ?]; noconf onb; cbn in *.
+    destruct decl'' as [? [?|] ?]; noconf onb'; cbn in *.
+    rewrite rename_compose H3.
+    replace (rename (fun m => S (f i + m)) t) with (lift0 (S (f i)) t).
+    2:{ rewrite lift0_rename //. }
+    econstructor; eauto.
+    rewrite nthΔ' /= //.
+
+  - (* Iota reduction *)
+    rewrite rename_mkApps. simpl.
+    eapply forallb_All in p4.
+    eapply All2_All_mix_left in X3; tea.
+    rewrite rename_iota_red //.
+    * eapply All2_nth_error_Some_right in X3 as [br' [nthbr [? []]]]; tea.
+      move/andP: i => [] clbctx onfvs.
+      destruct p5.
+      rewrite -e.
+      rewrite test_context_k_closed_on_free_vars_ctx in clbctx.
+      now rewrite closedn_ctx_on_free_vars.      
+    * move: p3; rewrite on_free_vars_mkApps /= => /forallb_All Hargs.
+      eapply All2_All_mix_left in X1; tea.
+      econstructor; tea; try solve [solve_all].
+      + erewrite nth_error_map, heq_nth_error => //.
+      + simpl. now len.
+      + simpl. eapply All2_map; solve_all.
+      + eapply All2_map, (All2_impl X3). intuition auto.
+        simpl. rtoProp.
+        rewrite -b.
+        rewrite {2}/id.
+        rewrite /PCUICSigmaCalculus.rename_branch /inst_case_branch_context /= /id.
+        rewrite -rename_inst_case_context_wf //.
+        rewrite -rename_inst_case_context_wf //.
+        { now rewrite -(All2_length X2). }                  
+        eapply b0; tea.
+        { eapply All2_fold_app => //. rewrite -b in a0. eapply a0; tea.
+          eapply on_free_vars_ctx_inst_case_context; tea. reflexivity. }
+        { relativize #|bcontext x|; [apply: urenaming_context|] => //.
+          now rewrite inst_case_context_length. }
+        { rewrite -b. relativize #|bcontext x|; [apply: urenaming_context|] => //.
+          now rewrite inst_case_context_length. }
+        { relativize #|bcontext x|; [erewrite on_ctx_free_vars_concat, H2|].
+          2:{ now rewrite inst_case_context_length. }
+          rewrite /=.
+          rewrite on_free_vars_ctx_on_ctx_free_vars.
+          eapply on_free_vars_ctx_inst_case_context; trea. }
+
+  - (* Fixpoint unfolding *) 
+    rewrite 2!rename_mkApps. simpl.
+    rewrite on_free_vars_mkApps in H1.
+    move/andP: H1 => [] /= onf onargs. 
+    econstructor; tas.
+    3:eapply rename_unfold_fix; tea.
+    3:eapply is_constructor_rename; tea.
+    + rewrite !rename_fix_context.
+      eapply X2; tea.
+      eapply on_free_vars_fix_context; solve_all.
+    + red in X3 |- *. pose proof (All2_length X3).
+      eapply forallb_All in onf.
+      eapply All2_All_mix_left in X3; tea.
+      eapply All2_map => /=; rewrite /on_Trel /=.
+      rewrite !rename_fix_context.
+      eapply (All2_impl X3); solve_all.
+      unfold on_Trel in *; cbn; solve_all.
+      eapply b1; tea. now move/andP: a.
+      rewrite -H; eapply b0; tea.
+      * eapply All2_fold_app => //. eapply X2; tea.
+        eapply on_free_vars_fix_context. solve_all.
+      * relativize #|mfix0|; [eapply urenaming_context|]; tea; now len.
+      * len. relativize #|mfix0|; [eapply urenaming_context|]; tea; now len.
+      * len. now move/andP: a.
+      * rewrite on_ctx_free_vars_concat on_free_vars_ctx_on_ctx_free_vars H2.
+        eapply on_free_vars_fix_context; solve_all.
+    + solve_all.
+
+  - rewrite 2!rename_mkApps. simpl.
+    eapply pred_cofix_case; tea.
+    eapply red_cofix_case.
+    eapply rename_unfold_cofix. eassumption.
+  - rewrite 2!rename_mkApps. simpl.
+    eapply red_cofix_proj.
+    eapply rename_unfold_cofix. eassumption.
+  - rewrite rename_subst_instance.
+    econstructor.
+    + eassumption.
+    + rewrite rename_closed. 2: assumption.
+      eapply declared_constant_closed_body. all: eauto.
+  - rewrite rename_mkApps. simpl.
+    econstructor. rewrite nth_error_map. rewrite H. reflexivity.
+  - move/and4P: hav=> [hpars hret hc hbrs].
+    rewrite rename_predicate_set_pparams. econstructor.
+    simpl. eapply OnOne2_map. repeat toAll.
+    eapply OnOne2_All_mix_left in X; eauto. solve_all. red; eauto.
+  - move/and4P: hav=> [_ hret hpctx _].
+    rewrite rename_predicate_set_preturn.
+    eapply case_red_return; eauto.
+    simpl.
+    eapply IHh; eauto.
+    rewrite /inst_case_predicate_context. rewrite /= /id.
+    rewrite -rename_inst_case_context_wf //.
+    relativize #|pcontext p|; [apply urenaming_context; tea|].
+    now len.
+  - move/and5P: hav=> [_ _ _ _ hbrs].
+    eapply case_red_brs; eauto.
+    eapply OnOne2_map. toAll.
+    eapply OnOne2_All_mix_left in X; tea. clear hbrs.
+    solve_all.
+    simpl. red. split; auto. 
+    rewrite /inst_case_branch_context /=.
+    rewrite -b0 //.
+    eapply b1; tea.
+    rewrite -rename_inst_case_context_wf //.
+    relativize #|bcontext x|; [apply urenaming_context; tea|].
+    now len.
+  - eapply OnOne2_All_mix_left in X; eauto.
+    constructor.
+    eapply OnOne2_map. solve_all. red. eauto.
+  - eapply OnOne2_All_mix_left in X; eauto. 
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    generalize #|mfix0|. intro n.
+    constructor. eapply OnOne2_map. solve_all.
+    red. simpl. destruct x, y; simpl in *; noconf b0. split; auto.
+    rewrite /test_def /= in b. move/andP: b => [hty hbod].
+    eauto.
+  - eapply OnOne2_All_mix_left in X; eauto. 
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    eapply fix_red_body. eapply OnOne2_map. solve_all.
+    red. simpl. destruct x, y; simpl in *; noconf b0. split; auto.
+    rewrite /test_def /= in b. move/andP: b => [hty hbod].
+    eapply b1. 
+    * rewrite rename_fix_context. rewrite <- fix_context_length.
+      now eapply urenaming_context.
+    * now len.
+  - eapply OnOne2_All_mix_left in X; eauto. 
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    generalize #|mfix0|. intro n.
+    constructor. eapply OnOne2_map. solve_all.
+    red. simpl. destruct x, y; simpl in *; noconf b0. split; auto.
+    rewrite /test_def /= in b. move/andP: b => [hty hbod].
+    eauto.
+  - eapply OnOne2_All_mix_left in X; eauto. 
+    apply OnOne2_length in X as hl. rewrite <- hl. clear hl.
+    eapply cofix_red_body. eapply OnOne2_map. solve_all.
+    red. simpl. destruct x, y; simpl in *; noconf b0. split; auto.
+    rewrite /test_def /= in b. move/andP: b => [hty hbod].
+    eapply b1. 
+    * rewrite rename_fix_context. rewrite <- fix_context_length.
+      now eapply urenaming_context.
+    * now len.
+  Qed.
+
 
   Lemma weakening_pred1 Σ Γ Γ' Γ'' Δ Δ' Δ'' M N : wf Σ ->
     pred1 Σ (Γ ,,, Γ') (Δ ,,, Δ') M N ->
@@ -1192,8 +1574,8 @@ Section ParallelWeakening.
       * simpl.
         specialize (forall_Γ Γ0 
           (Γ'0 ,,, inst_case_context (pparams p0) (puinst p0) (pcontext p0))
-          ltac:(now erewrite app_context_assoc)).
-          Δ (Δ' ,,, pcontext p1)
+          ltac:(now erewrite app_context_assoc)
+          Δ (Δ' ,,, inst_case_context p1.(pparams) p1.(puinst) (pcontext p1))
           ltac:(now rewrite app_context_assoc) heq_length _ _ X9).
         rewrite !lift_context_app Nat.add_0_r !app_context_assoc in forall_Γ.
         len in forall_Γ.

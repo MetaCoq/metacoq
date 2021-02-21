@@ -437,7 +437,7 @@ Proof.
 Qed.
 
 Definition addnP n (p : nat -> bool) :=
-  fun i => p (i + n).
+  fun i => p (n + i).
 
 Instance addnP_proper n : Proper (`=1` ==> Logic.eq ==> Logic.eq) (addnP n).
 Proof.
@@ -455,7 +455,7 @@ Proof.
 Qed.
 
 Lemma addnP0 p : addnP 0 p =1 p.
-Proof. intros i; now rewrite /addnP Nat.add_0_r. Qed.
+Proof. reflexivity. Qed.
 
 Lemma addnP_shiftnP n P : addnP n (shiftnP n P) =1 P.
 Proof.
@@ -492,7 +492,7 @@ Proof.
   rewrite /on_ctx_free_vars.
   solve_all.
   eapply alli_Alli, Alli_nth_error in H; eauto.
-  rewrite /= {1}/addnP Nat.add_comm H0 /= in H.
+  rewrite /= {1}/addnP H0 /= in H.
   now rewrite Nat.add_comm -addnP_add.
 Qed.
 
@@ -515,7 +515,7 @@ Proof.
   rewrite /strengthenP /= /aboveP /addnP.
   unshelve eapply on_free_vars_impl.
   simpl. intros i'. nat_compare_specs => //.
-  now replace (i' - i + i) with i' by lia.
+  now replace (i + (i' - i)) with i' by lia.
 Qed.
 
 Lemma on_free_vars_lift0_above i p t :
@@ -878,12 +878,14 @@ Proof.
   eapply (on_free_vars_cofix_subst _ _ idx) => //.
 Qed.
 
+Lemma lenm_eq {n m} : n <= m -> n - m = 0.
+Proof. lia. Qed.
+
 Lemma addnP_shiftnP_comm n (P : nat -> bool) : P 0 -> addnP 1 (shiftnP n P) =1 shiftnP n (addnP 1 P).
 Proof.
   intros p0 i; rewrite /addnP /shiftnP /=.
   repeat nat_compare_specs => /= //. 
-  - assert (n = i + 1) as -> by lia.
-    now replace (i + 1 - (i + 1)) with 0 by lia.
+  - now rewrite (lenm_eq H0).
   - lia_f_equal.
 Qed.
 

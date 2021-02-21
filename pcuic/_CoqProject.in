@@ -6,6 +6,7 @@ theories/PCUICAst.v
 theories/PCUICSize.v
 theories/PCUICAstUtils.v
 theories/PCUICInduction.v
+theories/PCUICDepth.v
 theories/PCUICReflect.v
 theories/PCUICLiftSubst.v
 theories/PCUICUnivSubst.v

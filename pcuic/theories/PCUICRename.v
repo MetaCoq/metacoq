@@ -809,8 +809,7 @@ Proof.
   now rewrite rename_closedn_ctx // closedn_ctx_on_free_vars.
 Qed.
 
-Lemma rename_
-ch_context f ind mdecl cdecl :
+Lemma rename_cstr_branch_context f ind mdecl cdecl :
   closed_ctx (ind_params mdecl) ->
   rename_context (shiftn (context_assumptions (ind_params mdecl)) f) (cstr_branch_context ind mdecl cdecl) =
   cstr_branch_context ind mdecl (rename_constructor_body mdecl f cdecl).

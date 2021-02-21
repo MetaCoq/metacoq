@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect Program Lia BinPos Arith.Compare_dec Bool. 
 From MetaCoq.Template Require Import utils LibHypsNaming.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICSize.
 From Coq Require Import List.
 From Equations Require Import Equations.
 From Equations.Prop Require Import Subterm.
@@ -434,6 +434,35 @@ Proof.
     f_equal; symmetry; apply size_lift.
 Qed.
 
+Lemma size_subst s k t : ∑ n, size (subst s k t) = (size t + n * size s)%nat.
+Proof.
+  revert n k t.
+  fix size_lift 3.
+  destruct t; simpl; rewrite ?list_size_map_hom; try lia.
+  all:try now rewrite !size_lift.
+  all:try intros; auto.
+  - destruct x. simpl. unfold branch_size; cbn.
+    f_equal.
+    symmetry.
+    apply size_lift.
+  - f_equal. f_equal. f_equal.
+    unfold predicate_size; cbn.
+    2:apply size_lift.
+    f_equal; [|apply size_lift].
+    f_equal. cbn.
+    apply list_size_map_hom. intros. symmetry; auto.
+  - unfold mfixpoint_size.
+    f_equal.
+    apply list_size_map_hom. intros.
+    simpl. destruct x. simpl. unfold def_size. simpl.
+    f_equal; symmetry; apply size_lift.
+  - unfold mfixpoint_size.
+    f_equal.
+    apply list_size_map_hom. intros.
+    simpl. destruct x. simpl. unfold def_size. simpl.
+    f_equal; symmetry; apply size_lift.
+Qed.
+
 Definition on_local_decl (P : context -> term -> Type)
            (Γ : context) (t : term) (T : option term) :=
   match T with
@@ -454,10 +483,11 @@ Definition onctx_rel (P : context -> term -> Type) (Γ Δ : context) :=
 
 Definition CasePredProp (P : context -> term -> Type) Γ (p : predicate term) :=
   All (P Γ) p.(pparams) × onctx_rel P Γ (pcontext p) ×
-  P (Γ ,,, p.(pcontext)) p.(preturn).
+  P (Γ ,,, inst_case_context p.(pparams) p.(puinst) p.(pcontext)) p.(preturn).
 
-Definition CaseBrsProp P Γ (brs : list (branch term)) :=
-  All (fun x : branch term => onctx_rel P Γ (bcontext x) * P (Γ ,,, bcontext x) (bbody x)) brs.
+Definition CaseBrsProp p P Γ (brs : list (branch term)) :=
+  All (fun x : branch term => onctx_rel P Γ (bcontext x) * P (Γ ,,, inst_case_context p.(pparams) p.(puinst) 
+    x.(bcontext)) (bbody x)) brs.
 
 Lemma term_forall_ctx_list_ind :
   forall (P : context -> term -> Type),
@@ -476,7 +506,7 @@ Lemma term_forall_ctx_list_ind :
     (forall Γ (ci : case_info) (p : predicate term) (t : term) (brs : list (branch term)),
         CasePredProp P Γ p -> 
         P Γ t ->
-        CaseBrsProp P Γ brs ->
+        CaseBrsProp p P Γ brs ->
         P Γ (tCase ci p t brs)) ->
     (forall Γ (s : projection) (t : term), P Γ t -> P Γ (tProj s t)) ->
     (forall Γ (m : mfixpoint term) (n : nat),

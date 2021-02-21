@@ -305,15 +305,17 @@ Section ParallelReduction.
       pred1 Γ Γ' (tRel i) (tRel i)
 
   (** Case *)
-  | pred_iota ci c u args0 args1 p0 brs0 brs1 br :
+  | pred_iota ci c u args0 args1 p0 params' brs0 brs1 br :
       pred1_ctx Γ Γ' ->
       All2 (pred1 Γ Γ') args0 args1 ->
       nth_error brs1 c = Some br -> 
       #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
+      All2 (pred1 Γ Γ') p0.(pparams) params' ->
       All2 (fun br br' => 
-        on_Trel_eq (pred1 (Γ ,,, inst_branch_context p br) (Γ' ,,, inst_branch_context p br) bbody bcontext) br br') brs0 brs1 ->
-      pred1 Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
-            (iota_red ci.(ci_npar) args1 br)
+        on_Trel_eq (pred1 (Γ ,,, inst_case_branch_context p0 br) 
+          (Γ' ,,, inst_case_context params' (puinst p0) (bcontext br))) bbody bcontext br br') brs0 brs1 ->
+          pred1 Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
+            (iota_red ci.(ci_npar) p0 args1 br)
 
   (** Fix unfolding, with guard *)
   | pred_fix mfix0 mfix1 idx args0 args1 narg fn :
@@ -336,8 +338,9 @@ Section ParallelReduction.
       All2 (pred1 Γ Γ') args0 args1 ->
       All2 (pred1 Γ Γ') p0.(pparams) p1.(pparams) ->
       p0.(puinst) = p1.(puinst) ->
-      on_Trel (pred1_ctx_over Γ Γ') pcontext p0 p1 ->
-      pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
+      p0.(pcontext) = p1.(pcontext) ->
+      pred1 (Γ ,,, inst_case_context p0.(pparams) p0.(puinst) p0.(pcontext)) 
+        (Γ' ,,, inst_case_context p1.(pparams) p1.(puinst) p1.(pcontext)) p0.(preturn) p1.(preturn) ->
       All2 (fun br br' => 
         on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
         on_Trel (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
@@ -391,12 +394,18 @@ Section ParallelReduction.
       pred1_ctx Γ Γ' ->
       All2 (pred1 Γ Γ') p0.(pparams) p1.(pparams) ->
       p0.(puinst) = p1.(puinst) ->
+      p0.(pcontext) = p1.(pcontext) ->
+      pred1 (Γ ,,, inst_case_context p0.(pparams) p0.(puinst) p0.(pcontext)) 
+        (Γ' ,,, inst_case_context p1.(pparams) p1.(puinst) p1.(pcontext)) p0.(preturn) p1.(preturn) ->
+(* 
       on_Trel (pred1_ctx_over Γ Γ') pcontext p0 p1 ->
-      pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
+      pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) -> *)
       All2 (fun br br' => 
-        on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
+          on_Trel_eq (pred1 (Γ ,,, inst_case_branch_context p0 br)
+            (Γ' ,,, inst_case_branch_context p1 br')) bbody bcontext br br') brs0 brs1 ->
+      (* on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
         on_Trel (pred1 (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-           bbody br br') brs0 brs1 ->
+           bbody br br') brs0 brs1 -> *)
       pred1 Γ Γ' c0 c1 ->
       pred1 Γ Γ' (tCase ci p0 c0 brs0) (tCase ci p1 c1 brs1)
 
@@ -489,19 +498,20 @@ Section ParallelReduction.
           pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           P Γ Γ' (tRel i) (tRel i)) ->
-      (forall Γ Γ' ci c u args0 args1 p0 brs0 brs1 br,
+      (forall Γ Γ' ci c u args0 args1 p0 pparams1 brs0 brs1 br,
           pred1_ctx Γ Γ' ->
           Pctx Γ Γ' ->
           All2 (P' Γ Γ') args0 args1 ->
+          All2 (P' Γ Γ') p0.(pparams) pparams1 ->
           All2 (fun br br' => 
-            (on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
-             on_Trel (Pctxover Γ Γ') bcontext br br') × 
-            on_Trel (P' (Γ ,,, br.(bcontext)) (Γ' ,,, br'.(bcontext)))
-                bbody br br') brs0 brs1 ->
+            on_Trel_eq 
+              (P' (Γ ,,, inst_case_branch_context p0 br)
+                  (Γ' ,,, inst_case_context pparams1 p0.(puinst) br'.(bcontext)))
+              bbody bcontext br br') brs0 brs1 ->
           nth_error brs1 c = Some br -> 
           #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
           P Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
-                (iota_red ci.(ci_npar) args1 br)) ->
+                (iota_red ci.(ci_npar) p0 args1 br)) ->
 
       (forall (Γ Γ' : context) (mfix0 mfix1 : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn : term),
           pred1_ctx Γ Γ' ->
@@ -633,6 +643,8 @@ Section ParallelReduction.
           pred_atom t -> P Γ Γ' t t) ->
       forall (Γ Γ' : context) (t t0 : term), pred1 Γ Γ' t t0 -> P Γ Γ' t t0.
   Proof using Σ.
+  Admitted.
+  (*
     intros P Pctx Pctxover P' Hctx Hctxover. intros. 
     rename X20 into pr. revert Γ Γ' t t0 pr.
     fix aux 5. intros Γ Γ' t t'.
@@ -745,7 +757,7 @@ Section ParallelReduction.
     - eapply (Hctx _ _ a), (All2_fold_impl a aux).
     - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 (extendP aux Γ Γ')).
     - eapply (Hctx _ _ a), (All2_fold_impl a aux).
-  Defined.
+  Defined.*)
 
   Lemma pred1_pred1_ctx {Γ Δ t u} : pred1 Γ Δ t u -> pred1_ctx Γ Δ.
   Proof.
@@ -759,6 +771,24 @@ Section ParallelReduction.
   Qed.
 
   Lemma onctx_rel_pred1_refl Γ Δ : 
+    forall Γ', 
+    pred1_ctx Γ Γ' ->
+    onctx_rel
+    (fun (Γ : context) (t : term) =>
+      forall Γ' : context, pred1_ctx Γ Γ' -> pred1 Γ Γ' t t) Γ Δ ->
+    pred1_ctx_over Γ Γ' Δ Δ.
+  Proof.
+    intros Γ' pred onc.
+    induction onc; simpl; constructor; auto.
+    constructor.
+    red in t0 |- *. eapply t0.
+    apply All2_fold_app => //.
+    destruct t1.
+    constructor; red; [eapply p|eapply p0];
+    apply All2_fold_app => //.
+  Qed.
+
+  Lemma onctx_rel_pred1_refl' Γ Δ : 
     forall Γ', 
     pred1_ctx Γ Γ' ->
     onctx_rel
@@ -794,9 +824,10 @@ Section ParallelReduction.
     - constructor; eauto. eapply X1.
       constructor; try red; eauto with pcuic.
     - red in X, X1; econstructor; solve_all.
-      * apply onctx_rel_pred1_refl => //.
       * eapply b0.
         eapply All2_fold_app => //.
+        rewrite /inst_case_context.
+
         eapply onctx_rel_pred1_refl => //.
       * eapply All_All2; tea; solve_all.
         + apply onctx_rel_pred1_refl => //.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import RelationClasses CRelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICAstUtils PCUICSize PCUICCases
+From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICAstUtils PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnv PCUICInduction
      PCUICRename PCUICInst
@@ -536,10 +536,11 @@ Section ParallelReduction.
           All2 (P' Γ Γ') args0 args1 ->
           All2 (P' Γ Γ') p0.(pparams) p1.(pparams) ->
           p0.(puinst) = p1.(puinst) ->
-          on_Trel (pred1_ctx_over Γ Γ') pcontext p0 p1 ->
-          on_Trel (Pctxover Γ Γ') pcontext p0 p1 -> 
-          pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
-          P (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
+          p0.(pcontext) = p1.(pcontext) ->
+          pred1 (Γ ,,, inst_case_context p0.(pparams) p0.(puinst) p0.(pcontext)) 
+            (Γ' ,,, inst_case_context p1.(pparams) p1.(puinst) p1.(pcontext)) p0.(preturn) p1.(preturn) ->
+          P (Γ ,,, inst_case_context p0.(pparams) p0.(puinst) p0.(pcontext)) 
+            (Γ' ,,, inst_case_context p1.(pparams) p1.(puinst) p1.(pcontext)) p0.(preturn) p1.(preturn) ->
           All2 (fun br br' => 
             (on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
              on_Trel (Pctxover Γ Γ') bcontext br br') × 
@@ -598,10 +599,11 @@ Section ParallelReduction.
           Pctx Γ Γ' ->
           All2 (P' Γ Γ') p0.(pparams) p1.(pparams) ->
           p0.(puinst) = p1.(puinst) ->
-          on_Trel (pred1_ctx_over Γ Γ') pcontext p0 p1 ->
-          on_Trel (Pctxover Γ Γ') pcontext p0 p1 -> 
-          pred1 (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
-          P (Γ ,,, p0.(pcontext)) (Γ' ,,, p1.(pcontext)) p0.(preturn) p1.(preturn) ->
+          p0.(pcontext) = p1.(pcontext) ->
+          pred1 (Γ ,,, inst_case_context p0.(pparams) p0.(puinst) p0.(pcontext)) 
+            (Γ' ,,, inst_case_context p1.(pparams) p1.(puinst) p1.(pcontext)) p0.(preturn) p1.(preturn) ->
+          P (Γ ,,, inst_case_context p0.(pparams) p0.(puinst) p0.(pcontext)) 
+            (Γ' ,,, inst_case_context p1.(pparams) p1.(puinst) p1.(pcontext)) p0.(preturn) p1.(preturn) ->
           All2 (fun br br' => 
             (on_Trel (pred1_ctx_over Γ Γ') bcontext br br' ×
              on_Trel (Pctxover Γ Γ') bcontext br br') × 
@@ -812,7 +814,7 @@ Section ParallelReduction.
   Proof.
     revert Γ'.
     revert Γ t.
-    apply: term_forall_ctx_list_ind;
+    apply: PCUICDepth.term_forall_ctx_list_ind;
     intros;
       try solve [(apply pred_atom; reflexivity) || constructor; auto];
       try solve [try red in X; constructor; unfold All2_prop2_eq, All2_prop2, on_Trel in *; solve_all];
@@ -826,13 +828,10 @@ Section ParallelReduction.
     - red in X, X1; econstructor; solve_all.
       * eapply b0.
         eapply All2_fold_app => //.
-        rewrite /inst_case_context.
-
         eapply onctx_rel_pred1_refl => //.
       * eapply All_All2; tea; solve_all.
-        + apply onctx_rel_pred1_refl => //.
-        + eapply b.
-          now eapply All2_fold_app => //; eapply onctx_rel_pred1_refl.
+        eapply b.
+        now eapply All2_fold_app => //; eapply onctx_rel_pred1_refl.
     - constructor; auto.
       apply onctx_rel_pred1_refl => //.
       unfold All2_prop_eq, on_Trel in *.
@@ -949,18 +948,23 @@ Section ParallelWeakening.
   Lemma lift_rename' n k : lift n k =1 rename (lift_renaming n k).
   Proof. intros t; apply lift_rename. Qed.
 
-  Lemma lift_iota_red n k pars args br :
+  Lemma lift_iota_red n k pars p args br :
     #|skipn pars args| = context_assumptions br.(bcontext) ->
-    lift n k (iota_red pars args br) =
-    iota_red pars (List.map (lift n k) args) (map_branch_k (lift n) k br).
+    test_context_k closedn #|pparams p| (bcontext br) ->
+    lift n k (iota_red pars p args br) =
+    iota_red pars (map_predicate_k id (lift n) k p) (List.map (lift n k) args) (map_branch_k (lift n) id k br).
   Proof.
-    intros hctx. rewrite !lift_rename'. rewrite rename_iota_red //.
+    intros hctx hctx'. rewrite !lift_rename'. rewrite rename_iota_red //.
     f_equal; try setoid_rewrite <-lift_rename => //.
     unfold map_branch_k, rename_branch, map_branch_shift.
     f_equal.
-    * rewrite /shiftf. setoid_rewrite lift_rename'.
-      now setoid_rewrite shiftn_lift_renaming.
-    * simpl. now rewrite lift_rename' shiftn_lift_renaming.
+    * rewrite /shiftf /rename_predicate /map_predicate_k /= /id.
+      f_equal.
+      now setoid_rewrite lift_rename'.
+      setoid_rewrite shiftn_lift_renaming.
+      now rewrite lift_rename'.
+    * rewrite /rename_branch /PCUICSigmaCalculus.rename_branch /map_branch_k /= /id.
+      f_equal. now rewrite lift_rename' shiftn_lift_renaming.
   Qed.
 
   Lemma mapi_context_lift n k ctx :
@@ -1116,19 +1120,20 @@ Section ParallelWeakening.
       rewrite !app_context_length in H0.
       assert (#|Γ'0| = #|Δ'|) by lia.
       rewrite lift_mkApps /=.
-      rewrite lift_iota_red //.
-      specialize (X0 _ _ X3).
-      eapply (pred_iota _ _ _ _ _ _ _ _ _ _
-        (map_branches_k (lift #|Δ''|) #|Δ'| brs1)); solve_all.
+      rewrite lift_iota_red //. admit.
+      specialize (X0 _ _ X4).
+      rewrite -{2}H. rewrite -{1}H1.
+      eapply (pred_iota _ _ _ _ _ _ _ _ _ _ _
+        (map_branches_k (lift #|Δ''|) id #|Δ'| brs1)); solve_all.
       * now rewrite nth_error_map heq_nth_error.
       * now len.
-      * red. simpl.
-        specialize (b0 _ _ eq_refl _ _ eq_refl heq_length0 _ _ X3).
-        now rewrite !mapi_context_lift. 
-      * specialize (b1 Γ0 (Γ'0 ,,, bcontext x) ltac:(rewrite app_context_assoc //)).
-        specialize (b1 Δ (Δ' ,,, bcontext y) ltac:(rewrite app_context_assoc //) heq_length0 _ _ X3).
-        len in b1. red. simpl. rewrite !mapi_context_lift.
-        now rewrite !lift_context_app in b1; len in b1; rewrite !app_context_assoc in b1.
+      * cbn. eapply All2_map, (All2_impl X2); solve_all.
+      * specialize (b0 Γ0 (Γ'0 ,,, _) ltac:(rewrite app_context_assoc //)).
+        specialize (b0 Δ (Δ' ,,, _) ltac:(rewrite app_context_assoc //) heq_length0 _ _ X4).
+        len in b0. simpl.
+        admit.
+        (* rewrite 
+        now rewrite !lift_context_app in b1; len in b1; rewrite !app_context_assoc in b1. *)
       
     - assert(#|Γ''| = #|Δ''|) by pcuic.
       pose proof (All2_fold_length predΓ').
@@ -1171,12 +1176,12 @@ Section ParallelWeakening.
       * apply All2_map. clear X2 X6 X5 X4. simpl. red in X3.
         unfold on_Trel, id in *.
         solve_all. rename_all_hyps.
-        specialize (forall_Γ2 Γ0 (Γ'0 ,,, fix_context mfix0)
+        specialize (forall_Γ1 Γ0 (Γ'0 ,,, fix_context mfix0)
                               ltac:(now rewrite app_context_assoc)).
-        specialize (forall_Γ2 Δ (Δ' ,,, fix_context mfix1)
+        specialize (forall_Γ1 Δ (Δ' ,,, fix_context mfix1)
                               ltac:(now rewrite app_context_assoc) heq_length _ _ ltac:(eauto)).
         rewrite !lift_context_app !Nat.add_0_r !app_context_length !fix_context_length
-                !app_context_assoc in forall_Γ2.
+                !app_context_assoc in forall_Γ1.
         now rewrite !lift_fix_context.
       * unfold unfold_cofix. rewrite nth_error_map. rewrite Hnth. simpl.
         f_equal. f_equal.
@@ -1184,17 +1189,14 @@ Section ParallelWeakening.
         now rewrite (map_cofix_subst (fun k => lift #|Δ''| (k + #|Δ'|))).
       * eapply All2_map. solve_all.
       * eapply All2_map. solve_all.
-      * red. simpl. rewrite !mapi_context_lift /shiftf.
-        now eapply X7.
       * simpl.
-        rewrite !mapi_context_lift.
         specialize (forall_Γ Γ0 
-          (Γ'0 ,,, pcontext p0)
-          ltac:(now rewrite app_context_assoc) 
+          (Γ'0 ,,, inst_case_context (pparams p0) (puinst p0) (pcontext p0))
+          ltac:(now erewrite app_context_assoc)).
           Δ (Δ' ,,, pcontext p1)
-          ltac:(now rewrite app_context_assoc) heq_length _ _ X11).
+          ltac:(now rewrite app_context_assoc) heq_length _ _ X9).
         rewrite !lift_context_app Nat.add_0_r !app_context_assoc in forall_Γ.
-        now len in forall_Γ.
+        len in forall_Γ.
       * solve_all; red; cbn.
         + rewrite !mapi_context_lift.
           now eapply b0.

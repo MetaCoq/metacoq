@@ -434,35 +434,6 @@ Proof.
     f_equal; symmetry; apply size_lift.
 Qed.
 
-Lemma size_subst s k t : ∑ n, size (subst s k t) = (size t + n * size s)%nat.
-Proof.
-  revert n k t.
-  fix size_lift 3.
-  destruct t; simpl; rewrite ?list_size_map_hom; try lia.
-  all:try now rewrite !size_lift.
-  all:try intros; auto.
-  - destruct x. simpl. unfold branch_size; cbn.
-    f_equal.
-    symmetry.
-    apply size_lift.
-  - f_equal. f_equal. f_equal.
-    unfold predicate_size; cbn.
-    2:apply size_lift.
-    f_equal; [|apply size_lift].
-    f_equal. cbn.
-    apply list_size_map_hom. intros. symmetry; auto.
-  - unfold mfixpoint_size.
-    f_equal.
-    apply list_size_map_hom. intros.
-    simpl. destruct x. simpl. unfold def_size. simpl.
-    f_equal; symmetry; apply size_lift.
-  - unfold mfixpoint_size.
-    f_equal.
-    apply list_size_map_hom. intros.
-    simpl. destruct x. simpl. unfold def_size. simpl.
-    f_equal; symmetry; apply size_lift.
-Qed.
-
 Definition on_local_decl (P : context -> term -> Type)
            (Γ : context) (t : term) (T : option term) :=
   match T with

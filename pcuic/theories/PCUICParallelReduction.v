@@ -1078,6 +1078,24 @@ Qed.
     now rewrite on_ctx_free_vars_snoc.
   Qed.
 
+  Ltac inv_on_free_vars ::=
+    match goal with
+    | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
+      progress (cbn in H || rewrite on_free_vars_mkApps in H);
+      (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+        eapply forallb_All in H); intros
+    end.
+
+  Hint Resolve on_free_vars_fix_context : fvs.
+
+  (** This not only proves that parallel reduction has renaming, it also
+      ensures that it only looks at the variables actually used in the term/context.
+      This lemma can later be used to show weakening but also verify that 
+      strenghtening is admissible for parallel reduction: i.e. the case of
+      a renaming that is only defined on a subset of the variables of 
+      the context.
+  *)
+
   Lemma pred1_rename {Σ} {wfΣ : wf Σ} {Γ Γ' u v P Δ Δ' f} :
     pred1 Σ Γ Γ' u v ->
     pred1_ctx Σ Δ Δ' ->
@@ -1091,16 +1109,7 @@ Proof using cf.
   revert Γ Γ' u v h P f Δ Δ'.
 
   set (Pctx :=
-    fun (Γg Γ'g : context) =>
-    forall P f Δ Δ' Γ Γ' Γ0 Γ'0,
-      Γg = Γ ,,, Γ0 ->
-      Γ'g = Γ' ,,, Γ'0 ->
-      #|Γ| = #|Γ'| ->
-      pred1_ctx Σ Δ Δ' ->
-      urenaming P Δ Γ f ->
-      urenaming P Δ' Γ' f ->
-      on_ctx_free_vars (PCUICOnFreeVars.shiftnP #|Γ0| P) Γg ->
-      pred1_ctx Σ (Δ ,,, rename_context f Γ0) (Δ' ,,, rename_context f Γ'0)).
+    fun (Γ Γ' : context) => pred1_ctx Σ Γ Γ').
 
   set (Pctxover :=
   fun (Γ Γ' : context) (Δ Δ' : context) =>
@@ -1140,29 +1149,34 @@ Proof using cf.
   unfold All2_prop_eq, All2_prop, on_Trel, id in *.
   all:try inv_on_free_vars.
 
-    
-  1:{ rename Γ into Γg. rename Γ' into Γg'.
-      intros P f Δ Δ' Γ Γ' Γ0 Γ'0 -> -> hlen predΔ uf uf' onctx.
-      len in H.
-      eapply All2_fold_app_inv in X0 as [] => //.
-      eapply All2_fold_app => //.
-      eapply All2_fold_fold_context_k.
-      rewrite on_ctx_free_vars_extend in onctx.
-      move/andP: onctx => [] onΓ.
-      move/alli_Alli/Alli_rev_All_fold => /= onΓ0.
-      clear H predΓ'.
-      induction a0; constructor; depelim onΓ0; auto.
-      specialize (IHa0 onΓ0).
-      rewrite - !/(rename_context _ _).
-      rewrite -(All2_fold_length IHa0).
-      eapply All_decls_on_free_vars_impl; tea.
-      cbn; intros. red. eapply X; tea.
-      - eapply All2_fold_app => //.
-        eapply All2_fold_fold_context_k => //.
-      - eapply urenaming_context; tea.
-      - rewrite (All2_fold_length IHa0). now eapply urenaming_context.
-      - eapply All_fold_on_free_vars_ctx in onΓ0.
-        now rewrite on_ctx_free_vars_concat onΓ /= on_free_vars_ctx_on_ctx_free_vars. }
+  12:{
+    econstructor; eauto.
+    eapply forall_P0; eauto with pcuic.
+    repeat (econstructor; eauto).
+  }
+  15:{
+    econstructor; eauto.
+    rewrite !rename_fix_context. eapply X2; tea; eauto with fvs.
+    red in X3 |- *.
+    eapply All2_All_mix_left in X3; tea.
+    eapply All2_map.
+    rewrite /= !rename_fix_context /= /on_Trel /=.
+    rewrite /on_Trel /= in X3.
+    pose proof (All2_length X3).
+    eapply (All2_impl X3). intuition auto.
+    move/andP: a => [] clty cldef.
+    eapply b; tea.
+    rewrite -H2.
+    eapply b0; tea.
+    * eapply All2_fold_app => //. eapply X2; tea; eauto with fvs.
+    * relativize #|mfix0|; [eapply urenaming_context|]; tea; now len.
+    * len; relativize #|mfix0|; [eapply urenaming_context|]; tea; now len.
+    * move/andP: a => []. now len.
+    * rewrite on_ctx_free_vars_concat H0 /=.
+      rewrite on_free_vars_ctx_on_ctx_free_vars. now eapply on_free_vars_fix_context.
+  }
+
+  1:{ exact predΓ'. }
       
   - intros P f Δ0 Δ'0 uf uf' p onΓ onΔ.
     eapply All2_fold_fold_context_k.
@@ -1204,16 +1218,15 @@ Proof using cf.
     epose proof (nth_error_pred1_ctx _ _ predΓ' heq_option_map) as [bod [hbod predbod]].
     destruct (nth_error Γ i) eqn:hnth => //. noconf hbod.
     destruct (nth_error Γ' i) eqn:hnth' => //.
-    specialize (X0 P f Δ Δ' Γ Γ' [] [] eq_refl eq_refl (All2_fold_length predΓ') predΔ' uf uf0).
-    simpl in X0. forward X0. now rewrite shiftnP0.
+    simpl in X0.
     unfold urenaming in uf, uf0.
     specialize uf0 with (1 := H0) (2 := hnth') as [decl' [nthΔ' [eqba [reneq onb]]]].
     specialize uf with (1 := H0) (2 := hnth) as [decl'' [nthΔ'' [eqba' [reneq' onb']]]].
     cbn in heq_option_map. noconf heq_option_map.
-    rewrite H in onb. rewrite H2 in onb'; cbn in *.
+    rewrite H in onb. rewrite H3 in onb'; cbn in *.
     destruct decl' as [? [?|] ?]; noconf onb; cbn in *.
     destruct decl'' as [? [?|] ?]; noconf onb'; cbn in *.
-    rewrite rename_compose H3.
+    rewrite rename_compose H4.
     replace (rename (fun m => S (f i + m)) t) with (lift0 (S (f i)) t).
     2:{ rewrite lift0_rename //. }
     econstructor; eauto.
@@ -1258,9 +1271,7 @@ Proof using cf.
           eapply on_free_vars_ctx_inst_case_context; trea. }
 
   - (* Fixpoint unfolding *) 
-    rewrite 2!rename_mkApps. simpl.
-    rewrite on_free_vars_mkApps in H1.
-    move/andP: H1 => [] /= onf onargs. 
+    rewrite 2!rename_mkApps. simpl. inv_on_free_vars.
     econstructor; tas.
     3:eapply rename_unfold_fix; tea.
     3:eapply is_constructor_rename; tea.
@@ -1268,14 +1279,13 @@ Proof using cf.
       eapply X2; tea.
       eapply on_free_vars_fix_context; solve_all.
     + red in X3 |- *. pose proof (All2_length X3).
-      eapply forallb_All in onf.
       eapply All2_All_mix_left in X3; tea.
       eapply All2_map => /=; rewrite /on_Trel /=.
       rewrite !rename_fix_context.
       eapply (All2_impl X3); solve_all.
       unfold on_Trel in *; cbn; solve_all.
       eapply b1; tea. now move/andP: a.
-      rewrite -H; eapply b0; tea.
+      rewrite -H0; eapply b0; tea.
       * eapply All2_fold_app => //. eapply X2; tea.
         eapply on_free_vars_fix_context. solve_all.
       * relativize #|mfix0|; [eapply urenaming_context|]; tea; now len.

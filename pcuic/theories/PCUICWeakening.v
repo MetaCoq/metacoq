@@ -157,7 +157,7 @@ Variant shiftn_spec k f i : nat -> Type :=
 | shiftn_below : i < k -> shiftn_spec k f i i
 | shiftn_above : k <= i -> shiftn_spec k f i (k + f (i - k)).
 
-Lemma shiftnP k f i : shiftn_spec k f i (shiftn k f i).
+Lemma shiftn_P k f i : shiftn_spec k f i (shiftn k f i).
 Proof.
   rewrite /shiftn.
   destruct (Nat.ltb i k) eqn:ltb.

@@ -22,11 +22,6 @@ Local Set Keyed Unification.
 Ltac solve_discr := (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
   try discriminate.
 
-Lemma pred_atom_inst t σ : pred_atom t -> t.[σ] = t.
-Proof.
-  destruct t; simpl; intros; try discriminate; auto.
-Qed.
-
 Equations map_In {A B : Type} (l : list A) (f : forall (x : A), In x l -> B) : list B :=
 map_In nil _ := nil;
 map_In (cons x xs) f := cons (f x _) (map_In xs (fun x H => f x _)).
@@ -2891,21 +2886,6 @@ Section Rho.
   Qed.
   Hint Rewrite decompose_app_inst using auto : lift.
 
-  Lemma inst_is_constructor:
-    forall (args : list term) (narg : nat) s,
-      is_constructor narg args = true -> is_constructor narg (map (inst s) args) = true.
-  Proof.
-    intros args narg.
-    unfold is_constructor; intros.
-    rewrite nth_error_map. destruct nth_error; try discriminate. simpl. intros.
-    unfold isConstruct_app in *.
-    destruct (decompose_app t) eqn:Heq. eapply decompose_app_inst in Heq as ->.
-    destruct t0; try discriminate || reflexivity.
-    destruct t0; try discriminate || reflexivity.
-  Qed.
-  Hint Resolve inst_is_constructor : core.
-
-
 
   (*
   Instance All_decls_refl P : 
@@ -3108,11 +3088,6 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     now intros -> ->.
   Qed.
   
-  Lemma subst0_inst (s : list term) (t : term) :
-    subst0 s t = t.[s ⋅n ids].
-  Proof. now sigma. Qed.
-  Hint Rewrite subst0_inst : sigma.
-
   Lemma pred1_expand_lets Γ Γ' Δ Δ' b b' :
     pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') b b' ->
     #|Γ| = #|Γ'| ->

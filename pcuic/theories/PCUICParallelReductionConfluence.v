@@ -3,7 +3,7 @@ From Coq Require CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
      PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
-     PCUICReflect PCUICInduction PCUICClosed
+     PCUICReflect PCUICInduction PCUICClosed PCUICDepth
      PCUICRename PCUICInst PCUICParallelReduction PCUICWeakening.
 
 Require Import ssreflect ssrbool.
@@ -91,6 +91,20 @@ Section list_size.
   Qed.
 
 End list_size.
+
+Section list_depth.
+  Context {A : Type} (f : A -> nat).
+
+  Lemma In_list_depth:
+    forall x xs, In x xs -> f x < S (list_depth_gen f xs).
+  Proof.
+    intros. induction xs.
+    destruct H.
+    * destruct H. simpl; subst. lia.
+      specialize (IHxs H). simpl. lia.
+  Qed.
+
+End list_depth.
 
 Lemma mfixpoint_size_In {mfix d} :
   In d mfix ->
@@ -775,7 +789,7 @@ Section Rho.
               let p' := rho_predicate_wf rho Γ p _ in 
               let args' := map_terms rho Γ args _ in 
               let br' := map_br_wf rho Γ br _ in
-              iota_red ci.(ci_npar) args' br'
+              iota_red ci.(ci_npar) p' args' br'
             else 
               let p' := rho_predicate_wf rho Γ p _ in 
               let brs' := map_brs_wf rho Γ brs _ in

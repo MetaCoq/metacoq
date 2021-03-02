@@ -54,6 +54,12 @@ Section Translation.
 
   Ltac dest_lookup := 
     destruct lookup_inductive as [[mdecl idecl]|].
+    Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' : 
+    map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
+  Proof.
+    induction l in l' |- *; destruct l'; simpl; auto. f_equal.
+    apply IHl.
+  Qed.
   
 Lemma trans_lift n k t :
   trans (Template.Ast.lift n k t) = lift n k (trans t).
@@ -68,14 +74,20 @@ Proof.
     * f_equal; auto.
       unfold trans_predicate, map_predicate_k; cbn.
       f_equal; auto. solve_list.
-      todo "case".
-      todo "case".
-      todo "case".
+      + rewrite e. f_equal.
+        now rewrite map2_bias_left_length.
+      + rewrite !map_map_compose.
+        rewrite map_map2 !PCUICUnivSubstitution.map2_map_r.
+        clear -X0. cbn.
+        generalize (ind_ctors idecl).
+        induction X0; simpl; auto. destruct l; reflexivity.
+        intros l0; destruct l0; try reflexivity.
+        cbn. rewrite IHX0. f_equal.
+        rewrite /trans_branch /= p // /map_branch /map_branch_k /= /id. f_equal.
+        now rewrite map2_bias_left_length.
     * simpl. rewrite /id /map_predicate_k /=. f_equal; eauto.
       f_equal; auto. rewrite !map_map_compose. solve_all.
-      rewrite mapi_context_fold fold_context_k_alt mapi_map /map_decl /= /shiftf.
-      rewrite map_length /= mapi_cst_map //.
-      rewrite map_length e. f_equal.
+      rewrite e. now rewrite map_length.
   - f_equal; auto. maps. solve_all.
   - f_equal; auto; solve_all.
 Qed.
@@ -118,11 +130,20 @@ Proof.
 
   - destruct X; red in X0.
     dest_lookup; cbn; f_equal; auto; solve_list.
-    1-2:todo "case".
-    * unfold subst_predicate, id => /=.
+    unfold trans_predicate, map_predicate_k; cbn.
+    f_equal; auto. solve_list.
+    + rewrite e. f_equal.
+      now rewrite map2_bias_left_length.
+    + rewrite map_map2 !PCUICUnivSubstitution.map2_map_r.
+      clear -X0. cbn.
+      generalize (ind_ctors idecl).
+      induction X0; simpl; auto. destruct l; reflexivity.
+      intros l0; destruct l0; try reflexivity.
+      cbn. rewrite IHX0. f_equal.
+      rewrite /trans_branch /= p // /map_branch /map_branch_k /= /id. f_equal.
+      now rewrite map2_bias_left_length.
+    + unfold subst_predicate, id => /=.
       f_equal; auto; solve_all.
-      rewrite mapi_context_fold fold_context_k_alt mapi_map /= /shiftf /map_decl /=.
-      now rewrite mapi_cst_map.
   - f_equal; auto; solve_list.
   - f_equal; auto; solve_list.
 Qed.
@@ -144,7 +165,6 @@ Proof.
   dest_lookup; cbn; f_equal; auto; solve_list.
   1-2:todo "case".
   rewrite /map_predicate /= /id; f_equal; auto; try solve_list.
-  rewrite /map_context map_map_compose /map_decl //.
 Qed.
 
 Lemma trans_destArity ctx t :

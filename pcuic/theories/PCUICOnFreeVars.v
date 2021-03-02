@@ -9,8 +9,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInducti
 (* For the last proof only, about reduction, requiring closed global declarations. *)
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICWeakeningEnv.
 
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 Set Equations With UIP.
 
 (** * Preservation of free variables *)
@@ -1340,6 +1340,7 @@ Inductive All_fold {P : context -> context_decl -> Type}
   | All_fold_nil : All_fold nil
   | All_fold_cons {d Γ} : All_fold Γ -> P Γ d -> All_fold (d :: Γ).
 Arguments All_fold : clear implicits.
+Derive Signature NoConfusionHom for All_fold.
 
 Lemma onctx_All_fold P Q Γ : 
   onctx P Γ ->

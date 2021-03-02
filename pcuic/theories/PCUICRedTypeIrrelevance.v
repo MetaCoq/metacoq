@@ -103,26 +103,13 @@ Proof.
     rewrite /pres_let_bodies hbod in pres.
     now rewrite hnth' /= pres.
   - econstructor; eauto.
-    eapply OnOne2_local_env_impl; tea.
-    intros Δ x y.
-    eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
-    eapply IH. eapply All2_fold_app; auto.
+    eapply IHX0. eapply All2_fold_app; auto.
     eapply All2_fold_refl.
     intros; reflexivity.
-  - econstructor; eauto. eapply IHX0.
-    eapply All2_fold_app; eauto.
-    now eapply All2_fold_refl.
   - econstructor; eauto. solve_all.
-    * rewrite -b. left; intuition eauto.
-      eapply b0; eauto.
-      eapply All2_fold_app; eauto.
-      eapply All2_fold_refl; intros; reflexivity.
-    * right. split; auto.
-      eapply OnOne2_local_env_impl; tea.
-      intros Δ ? ?.
-      eapply on_one_decl_impl; intros Γ'' t t' IH; simpl.
-      eapply IH. eapply All2_fold_app; auto.
-      eapply pres_let_bodies_ctx_refl.
+    eapply b0; eauto.
+    eapply All2_fold_app; eauto.
+    eapply All2_fold_refl; intros; reflexivity.
   - eapply fix_red_body; eauto. solve_all.
     destruct x as [? ? ? ?], y as [? ? ? ?]. simpl in *. noconf b.
     eapply b0; eauto.

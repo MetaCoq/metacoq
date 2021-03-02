@@ -16,18 +16,45 @@ Definition uint63_to_model (i : Int63.int) : uint63_model :=
 Definition float64_to_model (f : PrimFloat.float) : float64_model :=
   exist _ (FloatOps.Prim2SF f) (FloatAxioms.Prim2SF_valid f).
 
+Section Map2Bias.
+  Context {A B C} (f : A -> B -> C) (default : B).
+  
+  Fixpoint map2_bias_left (l : list A) (l' : list B) : list C :=
+    match l, l' with
+    | [], [] => []
+    | a :: as_, b :: bs => (f a b) :: map2_bias_left as_ bs
+    | a :: as_, [] => (f a default) :: map2_bias_left as_ []
+    | _, _ => []
+    end.
+
+  Lemma map2_bias_left_length l l' : #|map2_bias_left l l'| = #|l|.
+  Proof.
+    induction l in l' |- *; destruct l'; simpl; auto.
+  Qed.
+
+  Lemma map2_map2_bias_left l l' : #|l| = #|l'| -> map2_bias_left l l' = map2 f l l'.
+  Proof.
+    induction l in l' |- *; destruct l'; simpl; auto.
+    - discriminate.
+    - intros [= hlen]. rewrite IHl; tas. reflexivity.
+  Qed.
+End Map2Bias.
+
 Section Trans.
   Context (Σ : global_env).
 
+  Definition dummy_decl : context_decl := 
+    vass {| binder_name := nAnon; binder_relevance := Relevant |} (tSort Universe.type0).
+
   Definition trans_predicate ind mdecl idecl pparams puinst pcontext preturn := 
-    let pctx := case_predicate_context_gen ind mdecl idecl pparams puinst pcontext in
+    let pctx := map2_bias_left set_binder_name dummy_decl pcontext (ind_predicate_context ind mdecl idecl) in
     {| pparams := pparams; 
        puinst := puinst;
        pcontext := pctx;
        preturn := preturn |}.
 
-  Definition trans_branch ind mdecl cdecl pparams puinst bcontext bbody :=
-    let bctx := case_branch_context_gen ind mdecl pparams puinst bcontext cdecl in
+  Definition trans_branch ind mdecl cdecl bcontext bbody :=
+    let bctx := map2_bias_left set_binder_name dummy_decl bcontext (cstr_branch_context ind mdecl cdecl) in
     {| bcontext := bctx; 
        bbody := bbody |}.
 
@@ -52,8 +79,7 @@ Section Trans.
     | Some (mdecl, idecl) => 
       let tp := trans_predicate ci.(ci_ind) mdecl idecl p'.(Ast.pparams) p'.(Ast.puinst) p'.(Ast.pcontext) p'.(Ast.preturn) in
       let tbrs := 
-        map2 (fun cdecl br => trans_branch ci.(ci_ind) mdecl cdecl 
-                  p'.(Ast.pparams) p'.(Ast.puinst) br.(Ast.bcontext) br.(Ast.bbody)) 
+        map2 (fun cdecl br => trans_branch ci.(ci_ind) mdecl cdecl br.(Ast.bcontext) br.(Ast.bbody)) 
                   idecl.(ind_ctors) brs' in
       tCase ci tp (trans c) tbrs
     | None => 

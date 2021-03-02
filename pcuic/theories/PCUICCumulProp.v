@@ -151,6 +151,7 @@ Proof.
 Qed.
 
 Definition eq_univ_prop (u v : Universe.t) :=
+  (* u.1 = v.1 *)
   (Universe.is_prop u <-> Universe.is_prop v) /\
   (Universe.is_sprop u <-> Universe.is_sprop v).
 

@@ -1726,7 +1726,7 @@ Section ParallelSubstitution.
     now rewrite mapi_context_fold.
   Qed.
 
-  Context {Σ : global_env_ext}.
+  Context {Σ : global_env}.
 
   Definition pred1_subst (P Q : nat -> bool) (Γ Γ' Δ Δ' : context) (σ τ : nat -> term) :=
     pred1_ctx Σ Δ Δ' × on_ctx_free_vars Q Δ ×

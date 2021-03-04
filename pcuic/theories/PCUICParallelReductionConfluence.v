@@ -2734,8 +2734,7 @@ Section Rho.
     pred1 Σ Γ Γ' t u ->
     forall P, 
       on_ctx_free_vars P Γ ->
-      on_free_vars P t ->
-      on_ctx_free_vars P Γ' && on_free_vars P u) ×
+      on_free_vars P t -> on_free_vars P u) ×
     (forall Γ Γ' Δ Δ',
       pred1_ctx Σ Γ Γ' ->
       pred1_ctx_over Σ Γ Γ' Δ Δ' ->
@@ -2779,7 +2778,7 @@ Section Rho.
         setoid_rewrite addnP_add in i.
         setoid_rewrite Nat.add_comm in i.
         setoid_rewrite Nat.add_succ_r in i.
-        now move/andP: (i HΓ Hd) => [].
+        eauto.
         specialize (i (addnP (S n) P)).
         specialize (i0 (addnP (S n) P)).
         move/andP: Hd => /= [onb ont].
@@ -2791,9 +2790,7 @@ Section Rho.
         setoid_rewrite addnP_add in i0.
         setoid_rewrite Nat.add_comm in i0.
         setoid_rewrite Nat.add_succ_r in i0.
-        move/andP: (i HΓ onb) => [] onΓ' ont'.
-        move/andP: (i0 HΓ ont) => [] _ onb'.
-        now apply on_free_vars_vdef. }
+        eauto with fvs. }
       now specialize (IHX0 P (S n) HΓ).
     
     - move: H0.
@@ -2823,7 +2820,7 @@ Section Rho.
           rewrite HΓ' /=.
           red. rewrite -HΓ. apply alli_ext => i d.
           rewrite addnP_add {1 4}/addnP !addnP_add. lia_f_equal.
-          now move/andP: (o Hd) => [].
+          eauto.
         - red in o, o0.
           specialize (o (addnP (S n) P)).
           specialize (o0 (addnP (S n) P)).
@@ -2841,9 +2838,7 @@ Section Rho.
           move/andP: Hd => /= [onb ont].
           specialize (o onext onb).
           specialize (o0 onext ont).
-          move/andP: o => [] onΓ' ont'.
-          move/andP: o0 => [] _ onb'.
-          now apply on_free_vars_vdef. }
+          eauto with fvs. }
       apply (IHX2 P (S n) HΓ').
       rewrite (alli_shiftn 1).
       red; rewrite -HΓ.
@@ -2886,10 +2881,28 @@ Section Rho.
       destruct c as [na [decl|] ty] => //. noconf H0.
       now move/andP: H.
 
-    - admit.
+    - move/and4P: H3 => [] hpars hret hctx /andP[] hargs hbrs.
+      rewrite /iota_red.
+      eapply on_free_vars_subst.
+      { rewrite forallb_rev forallb_skipn //.
+        inv_on_free_vars. solve_all; eauto with fvs. }
+      len.
+      eapply All2_nth_error_Some_right in X2 as [t' [hnth [? [[? ?] ?]]]]; tea.
+      eapply nth_error_forallb in hbrs; tea. cbn in hbrs.
+      move/andP: hbrs => [] hctx' hbody.
+      eapply on_free_vars_expand_lets_k. now len.
+      eapply on_free_vars_ctx_inst_case_context; trea; len; eauto with fvs.
+      solve_all.
+      rewrite -e. 
+      now rewrite -(All2_length X1). len. eapply i0.
+      rewrite on_ctx_free_vars_app; len; rewrite e addnP_shiftnP H2 andb_true_r.
+      relativize #|bcontext br|; [erewrite on_free_vars_ctx_on_ctx_free_vars|]; len; try congruence.
+      eapply on_free_vars_ctx_inst_case_context; trea; len.
+      now rewrite -e.
+
     - inv_on_free_vars. t.
       rewrite on_free_vars_mkApps.
-      specialize (H _ H3).
+      specialize (H _ H3). t.
       admit.
     - admit.
     - admit.
@@ -3217,16 +3230,13 @@ Section Rho.
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m' ->
     All2
-      (fun (x y : def term) => (pred1 Σ Γ'
-                                  (rho_ctx Γ)
-                                  (dtype x)
-                                  (rho (rho_ctx Γ) (dtype y))) * (dname x = dname y))%type m m' ->
-    All2_fold_over (pred1 Σ) Γ' (rho_ctx Γ) Δ (rho_ctx_over (rho_ctx Γ) Δ') ->
+      (fun (x y : def term) => (pred1 Σ Γ' Γ (dtype x) (rho Γ (dtype y))) * (dname x = dname y))%type m m' ->
+    All2_fold_over (pred1 Σ) Γ' Γ Δ (rho_ctx_over Γ Δ') ->
     All2_telescope_n (on_decls (pred1 Σ)) (fun n : nat => lift0 n)
-                    (Γ' ,,, Δ) (rho_ctx (Γ ,,, Δ'))
+                    (Γ' ,,, Δ) (Γ ,,, rho_ctx_over Γ Δ')
                     #|Δ|
   (map (fun def : def term => vass (dname def) (dtype def)) m)
-    (map (fun def : def term => vass (dname def) (rho (rho_ctx Γ) (dtype def))) m').
+    (map (fun def : def term => vass (dname def) (rho Γ (dtype def))) m').
   Proof.
     generalize #|m|. intros n Δlen onΓ' onm onm'.
     induction 1 in Δ, Δ', Δlen, onm, onm' |- *; cbn. constructor.
@@ -3234,39 +3244,35 @@ Section Rho.
     move: onm => /= /andP[] /andP [] onty onbody onl.
     move: onm' => /= /andP[] /andP [] onty' onbody' onl'.
     repeat constructor.
-    rewrite rho_ctx_app.
-    assert (#|Δ| = #|rho_ctx_over (rho_ctx Γ) Δ'|) by now rewrite rho_ctx_over_length.
+    assert (#|Δ| = #|rho_ctx_over Γ Δ'|) by now rewrite rho_ctx_over_length.
     rewrite {2}H.
     eapply weakening_pred1_pred1; eauto.
     specialize (IHX (vass (dname y) (lift0 #|Δ| (dtype x)) :: Δ)
                     (vass (dname y) (lift0 #|Δ'| (dtype y)) :: Δ')).
-    assert (#|Δ| = #|rho_ctx_over (rho_ctx Γ) Δ'|) by now rewrite rho_ctx_over_length.
+    assert (#|Δ| = #|rho_ctx_over Γ Δ'|) by now rewrite rho_ctx_over_length.
     rewrite {2}H.
     rewrite (rho_lift0 _ _ p) //.
     unfold snoc. forward IHX. simpl. lia.
     do 2 forward IHX by auto. cbn.
     forward IHX. constructor. apply X0. constructor. simpl.
     red.
-    assert (#|Δ'| = #|rho_ctx_over (rho_ctx Γ) Δ'|) by now rewrite rho_ctx_over_length.
+    assert (#|Δ'| = #|rho_ctx_over Γ Δ'|) by now rewrite rho_ctx_over_length.
     rewrite H0.
-    rewrite - (rho_lift0 (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ) Δ') p) //. simpl.
+    rewrite - (rho_lift0 Γ (rho_ctx_over Γ Δ') p) //. simpl.
     eapply weakening_pred1_pred1; eauto.
-    rewrite rho_ctx_app in IHX.
     simpl in IHX. rewrite -H. rewrite {2}Δlen.
-    rewrite rho_ctx_app. apply IHX.
+    apply IHX.
   Qed.
 
   Lemma All_All2_telescopei p (Γ Γ' : context) (m m' : mfixpoint term) :
     on_ctx_free_vars p Γ' ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m' ->
-    All2 (fun (x y : def term) => (pred1 Σ Γ' (rho_ctx Γ) (dtype x) (rho (rho_ctx Γ) (dtype y))) *
+    All2 (fun (x y : def term) => (pred1 Σ Γ' Γ (dtype x) (rho Γ (dtype y))) *
                               (dname x = dname y))%type m m' ->
-    All2_telescope_n (on_decls (pred1 Σ)) (fun n : nat => lift0 n)
-                     Γ' (rho_ctx Γ)
-                     0
-                     (map (fun def : def term => vass (dname def) (dtype def)) m)
-                     (map (fun def : def term => vass (dname def) (rho (rho_ctx Γ) (dtype def))) m').
+    All2_telescope_n (on_decls (pred1 Σ)) (fun n : nat => lift0 n) Γ' Γ 0
+      (map (fun def : def term => vass (dname def) (dtype def)) m)
+      (map (fun def : def term => vass (dname def) (rho Γ (dtype def))) m').
   Proof.
     specialize (All_All2_telescopei_gen p Γ Γ' [] [] m m'). simpl.
     intros. specialize (X eq_refl H H0 H1 X0). forward X. constructor.
@@ -3275,14 +3281,14 @@ Section Rho.
 
 
   Lemma rho_All_All2_fold_inv :
-  forall Γ Γ' : context, pred1_ctx Σ Γ' (rho_ctx Γ) -> forall Δ Δ' : context,
-      All2_fold (on_decls (on_decls_over (pred1 Σ) Γ' (rho_ctx Γ))) Δ
-                     (rho_ctx_over (rho_ctx Γ) Δ') ->
+  forall Γ Γ' : context, pred1_ctx Σ Γ' Γ -> forall Δ Δ' : context,
+      All2_fold (on_decls (on_decls_over (pred1 Σ) Γ' Γ)) Δ
+                     (rho_ctx_over Γ Δ') ->
       All2_fold
         (on_decls
            (fun (Δ Δ' : context) (t t' : term) => pred1 Σ (Γ' ,,, Δ)
-                                                    (rho_ctx (Γ ,,, Δ')) t
-                                                    (rho (rho_ctx (Γ ,,, Δ')) t'))) Δ Δ'.
+                                                    (Γ ,,, rho_ctx_over Γ Δ') t
+                                                    (rho (Γ ,,, rho_ctx_over Γ Δ') t'))) Δ Δ'.
 
   Proof.
     intros. induction Δ in Δ', X0 |- *; depelim X0; destruct Δ'; noconf H.
@@ -3297,14 +3303,13 @@ Section Rho.
     on_ctx_free_vars p Γ' ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m'| p))) m' ->
-    pred1_ctx Σ Γ' (rho_ctx Γ) ->
-    All2 (on_Trel_eq (pred1 Σ Γ' (rho_ctx Γ)) dtype dname) m
-         (map_fix rho (rho_ctx Γ)
-                  (fold_fix_context rho (rho_ctx Γ) [] m') m') ->
+    pred1_ctx Σ Γ' Γ ->
+    All2 (on_Trel_eq (pred1 Σ Γ' Γ) dtype dname) m
+         (map_fix rho Γ (fold_fix_context rho Γ [] m') m') ->
     All2_fold
-      (on_decls (on_decls_over (pred1 Σ) Γ' (rho_ctx Γ)))
+      (on_decls (on_decls_over (pred1 Σ) Γ' Γ))
       (fix_context m)
-      (fix_context (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] m') m')).
+      (fix_context (map_fix rho Γ (fold_fix_context rho Γ [] m') m')).
   Proof.
     intros onΓ' hm hm' HΓ a.
     rewrite - (fold_fix_context_rho_ctx p) // in a.
@@ -3319,7 +3324,7 @@ Section Rho.
                  (fun n decl => lift_decl n 0 decl)).
     rewrite mapi_map. simpl.
     rewrite - (mapi_mapi
-                 (fun n def => vass (dname def) (rho (rho_ctx Γ) (dtype def)))
+                 (fun n def => vass (dname def) (rho Γ (dtype def)))
                  (fun n decl => lift_decl n 0 decl)).
     eapply All2_telescope_mapi.
     rewrite !mapi_cst_map.
@@ -3839,7 +3844,41 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     end.
 
   Ltac rename_hyp h ht ::= my_rename_hyp h ht.
+  
+  Ltac inv_on_free_vars ::=
+    match goal with
+    | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
+      progress (cbn in H || rewrite on_free_vars_mkApps in H);
+      (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+        eapply forallb_All in H); intros
+    | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
+      move/andP: H => []; rewrite ?shiftnP_xpredT; intros
+    end.
+  
+  Lemma All2_fold_fold_context_right P f ctx ctx' :
+    All2_fold (fun Γ Γ' d d' => P Γ (fold_context_term f Γ') d (map_decl (f (fold_context_term f Γ')) d')) ctx ctx' ->
+    All2_fold P ctx (fold_context_term f ctx').
+  Proof.
+    induction 1; cbn; constructor; auto.
+  Qed.
 
+  Lemma All_decls_map_right P d f d' :
+    All_decls (fun t t' => P t (f t')) d d' ->
+    All_decls P d (map_decl f d').
+  Proof.
+    case; constructor => //.
+  Qed.
+
+  Lemma construct_cofix_discr_match {A} t cstr (cfix : mfixpoint term -> nat -> A) default :
+    construct_cofix_discr t = false ->
+    match t with
+    | tConstruct ind c _ => cstr ind c
+    | tCoFix mfix idx => cfix mfix idx
+    | _ => default
+    end = default.
+  Proof.
+    destruct t => //.
+  Qed.
 
   Theorem triangle_gen :
     (forall Γ Δ t u, pred1 Σ Γ Δ t u ->
@@ -4046,7 +4085,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
       * eapply Hreleq1. eapply All2_fold_app => //.
         eapply impl_forall_Γ'0; eauto with fvs.
       * rewrite -subst0_inst. eapply on_free_vars_subst.
-        eapply on_free_vars_fix_subst. cbn. solve_all.
+        eapply (on_free_vars_fix_subst _ _ idx). cbn. solve_all.
         eapply pred1_on_free_vars; tea; now rewrite shiftnP_xpredT.
       * rewrite -(rho_fix_subst xpredT). solve_all.
         eapply All2_prop2_eq_split in X3.
@@ -4118,25 +4157,44 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
         set (rhoΓ := rho_ctx Γ ,,, rho_ctx_over (rho_ctx Γ) (fix_context mfix0)) in * => //.
         solve_all.
         rewrite !subst_inst. eapply PCUICParallelReduction.simpl_pred; try now sigma.
+        assert (on_ctx_free_vars xpredT (Γ,,, fix_context mfix0)).
+        { rewrite on_ctx_free_vars_app addnP_xpredT H2 andb_true_r.
+          erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
+          now eapply on_free_vars_fix_context. }
+        assert (on_free_vars xpredT (dbody t')).
+        {eapply nth_error_all in a; tea.
+          move/andP: a => []. now rewrite shiftnP_xpredT. }
+        assert (forallb (test_def (on_free_vars xpredT) (on_free_vars (shiftnP #|mfix1| xpredT))) mfix1).
+        { eapply All2_prod in a1; tea. solve_all; eauto with fvs. inv_on_free_vars.
+          apply/andP; split; eauto with fvs. rewrite shiftnP_xpredT; eauto with fvs. }
         eapply strong_substitutivity; eauto; tea.
-        eapply p6; tea; eauto with fvs.
-        rewrite on_ctx_free_vars_app addnP_xpredT H2 andb_true_r.
-        erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
-        now eapply on_free_vars_fix_context. admit.
-        eapply All2_fold_app => //. eapply impl_forall_Γ'0; eauto with fvs. admit. admit. admit.
-        rewrite -(rho_cofix_subst xpredT) //. solve_all.
-        eapply pred_subst_rho_cofix; tea; auto. solve_all. eauto with fvs.
-        eapply impl_forall_Γ'0; eauto with fvs. admit.
-        eapply (All2_impl a1); solve_all. unfold on_Trel in *. solve_all.
-        eapply X0; eauto with fvs. admit.
-        solve_all. unfold on_Trel in *; solve_all.
-        eapply b1. admit. admit.
-        eapply All2_fold_app => //. eapply impl_forall_Γ'0; eauto with fvs. admit.
-        eapply All2_sym, All2_map_left, All2_impl; eauto. simpl. intuition eauto.
-        eapply X0 => //. admit.
-
+        + eapply p6; tea; eauto with fvs.
+          eapply All2_fold_app => //. eapply impl_forall_Γ'0; eauto with fvs.
+        + eauto with fvs.
+        + rewrite -subst0_inst. eapply on_free_vars_subst.
+          eapply (on_free_vars_cofix_subst _ _ idx); cbn; tea. len.
+          eapply pred1_on_free_vars; tea; rewrite shiftnP_xpredT //.
+        + rewrite -(rho_cofix_subst xpredT) //. solve_all.
+          eapply pred_subst_rho_cofix; tea; auto. solve_all. eauto with fvs.
+          eapply All2_All_mix_left in a1; tea.
+          eapply (All2_impl a1); solve_all. inv_on_free_vars.
+          solve_all. unfold on_Trel in *; solve_all.
+          solve_all. unfold on_Trel in *; solve_all. inv_on_free_vars.
+          eapply X3; eauto with fvs. now rewrite -> shiftnP_xpredT in b1.
+          eapply All2_fold_app => //.
+          eapply X0 => //.
+        + eapply forallb_All in b. eapply All2_All_mix_left in X4; tea.
+          eapply All2_sym, All2_map_left, All2_impl; eauto. simpl. intuition eauto.
+          
     - (* Proj-Cofix reduction *)
-      simpl.
+      simpl. cbn in H1; inv_on_free_vars. cbn in a.
+      assert (on_ctx_free_vars xpredT (Γ,,, fix_context mfix0)).
+      { rewrite on_ctx_free_vars_app addnP_xpredT H0 andb_true_r.
+        erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
+        eapply on_free_vars_fix_context; solve_all. }
+      assert (forallb (test_def (on_free_vars xpredT) (on_free_vars (shiftnP #|mfix1| xpredT))) mfix1).
+      { red in X3. solve_all; eauto with fvs. inv_on_free_vars. unfold on_Trel in *. solve_all.
+        apply/andP; split; eauto with fvs. rewrite shiftnP_xpredT; eauto with fvs. }
       destruct p as [[ind pars] arg].
       rewrite rho_app_proj.
       rewrite decompose_app_mkApps. auto.
@@ -4144,26 +4202,33 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
       destruct nth_error eqn:Heq; noconf heq_unfold_cofix.
       eapply All2_nth_error_Some_right in Heq; eauto.
       destruct Heq as [t' [Hnth Hrel]]. destruct Hrel as [[Hty Hrhoty] [[Hreleq0 Hreleq1] Heq]].
+      assert (on_free_vars xpredT (dbody t')).
+      { solve_all. eapply nth_error_all in a; tea.
+        move/andP: a => []. now rewrite shiftnP_xpredT. }
+      assert (on_free_vars xpredT (dtype t')).
+      { solve_all. eapply nth_error_all in a; tea.
+        now move/andP: a => []. }
+      assert (on_free_vars xpredT (dbody d)).
+      { eauto with fvs. }
       unfold map_fix. rewrite Hnth /=.
       econstructor. eapply pred_mkApps; eauto.
-      rewrite - (fold_fix_context_rho_ctx xpredT). solve_all.
-      all:admit.
-      (*sigma. eapply strong_substitutivity; eauto with pcuic.
-      eapply ctxmap_cofix_subst.
-      { intros x hnth. 
-        case: nth_error_appP => // decl hnth' hx; intros [= ->].
-        eapply nth_error_fix_context_ass in hnth'. rewrite hnth' => //.
-        len in hx.
-        destruct decl_body eqn:db => //.
-        rewrite subst_consn_ge. len. lia.
-        unfold ids. len. eexists _, _; intuition eauto.
-        len in hnth'. rewrite hnth' /= db //.
-        eapply inst_ext. intros i. unfold subst_compose, shiftn, shiftk.
-        simpl. rewrite subst_consn_ge. len. lia. len. lia_f_equal. }
-      rewrite -rho_cofix_subst.
-      red in X3. apply pred_subst_rho_cofix => //; solve_all.
-      red in a. red. intuition auto.
-      eapply All2_sym, All2_map_left, All2_impl; eauto; simpl; intuition eauto.*)
+      rewrite - (fold_fix_context_rho_ctx xpredT) //.
+      rewrite !subst0_inst. eapply strong_substitutivity; tea.
+      + eapply Hreleq1; eauto with fvs.
+        eapply All2_fold_app => //.
+        eapply impl_forall_Γ'0; eauto with fvs.
+      + rewrite -subst0_inst.
+        eapply on_free_vars_subst; eauto with fvs.
+        eapply (on_free_vars_cofix_subst _ _ idx); eauto with fvs.
+        rewrite shiftnP_xpredT //.
+      + rewrite -(rho_cofix_subst xpredT) //.  
+        red in X3. eapply (pred_subst_rho_cofix xpredT) => //; solve_all; unfold on_Trel in *; eauto with fvs.
+        inv_on_free_vars. solve_all. inv_on_free_vars. solve_all.
+        
+        eapply X0; eauto with fvs. now rewrite -> shiftnP_xpredT in b1.
+        eapply All2_fold_app => //. solve_all.
+      + eapply forallb_All in b;eapply All2_All_mix_left in X4; tea.
+        eapply All2_sym, All2_map_left; solve_all.
 
     - simpl; simp rho; simpl.
       simpl in X0. red in H. rewrite H /= heq_cst_body /=.
@@ -4173,59 +4238,63 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
       destruct (lookup_env Σ c) eqn:Heq; pcuic. destruct g; pcuic.
       destruct cst_body eqn:Heq'; pcuic.
       
-    - simpl in *. rewrite rho_app_proj.
+    - simpl in *. inv_on_free_vars. rewrite rho_app_proj.
       rewrite decompose_app_mkApps; auto.
       change eq_inductive with (@eqb inductive _).
       destruct (eqb_spec i i) => //.
       eapply All2_nth_error_Some_right in heq_nth_error as [t' [? ?]]; eauto.
       simpl in y. rewrite e0. simpl.
-      auto. eapply y => //. admit.
-
+      auto. eapply y => //. 
+      eapply nth_error_forallb in b; tea.
+    
     - simpl; simp rho. eapply pred_abs; auto.
       eapply impl_impl_forall_Γ'0; eauto with fvs.
       constructor; eauto with fvs. constructor; eauto with fvs.
 
     - (** Application *)
-      admit.
-      (*simp rho.
+      simp rho.
+      assert (onΓ' : on_ctx_free_vars xpredT Γ').
+      { pose proof (pred1_pred1_ctx _ predM0). eauto with fvs. }
       rename impl_impl_forall_Γ' into IHM1.
       rename impl_impl_forall_Γ'0 into IHN1.
+      intuition auto. specialize (X1 _ predΓ'0).
+      specialize (X _ predΓ'0).
       destruct view_lambda_fix_app. simp rho. simpl; simp rho.
       + (* Fix at head *)
-        destruct (rho_fix_elim Γ mfix i l).
+        inv_on_free_vars. cbn in a.
+        assert (onΓmfix : on_ctx_free_vars xpredT (Γ,,, fix_context mfix)).
+        { rewrite on_ctx_free_vars_app addnP_xpredT H andb_true_r.
+          erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
+          apply on_free_vars_fix_context. solve_all. }
+
+        destruct (rho_fix_elim Γ'0 mfix i l).
         * rewrite /unfold_fix {1}/map_fix nth_error_map e /=. 
           eapply (is_constructor_app_ge (rarg d) _ _) in i0 => //.
           rewrite -> i0.
           rewrite map_app - !mkApps_nested.
-          inv_on_free_vars. cbn in a.
           eapply (pred_mkApps _ _ _ _ _ [N1]) => //.
           rewrite - (fold_fix_context_rho_ctx xpredT) //.
           rewrite (rho_fix_subst xpredT) => //. subst fn.
           rewrite (fold_fix_context_rho_ctx xpredT) //.
-          forward IHM1; auto. forward IHM1; eauto with fvs.
-          rewrite on_free_vars_mkApps /= // a //.
-          specialize (IHM1 _ predΓ'0).
-          auto.
           repeat constructor; auto.
-          all:admit.
-        * simp rho in X0.
-          simpl in X0. simp rho in X0.
-          destruct (rho_fix_elim (rho_ctx Γ) mfix i (l ++ [a])).
+        * simp rho in X1.
+          simpl in X1. simp rho in X1.
+          destruct (rho_fix_elim Γ'0 mfix i (l ++ [a0])).
           (* Shorter application does not reduce *)
           ** (* Longer application reduces *)
             rewrite e in i0.
             rewrite /unfold_fix nth_error_map e /= i1.
             simpl.
-            destruct (pred1_mkApps_tFix_inv _ _ _ _ _ _ _ _ e i0 X) as
+            destruct (pred1_mkApps_tFix_inv _ _ _ _ _ _ _ _ e i0 predM0) as
               [mfix1 [args1 [[HM1 Hmfix] Hargs]]].
             subst M1.
             rewrite [tApp _ _](mkApps_nested _ _ [N1]).
             red in Hmfix.
             eapply All2_nth_error_Some in Hmfix; eauto.
             destruct Hmfix as [d' [Hd' [eqd' [pred' eqsd']]]].
-            eapply (pred1_mkApps_tFix_refl_inv _ _ _ mfix1) in X0; eauto.
-            2:{ noconf eqsd'. simpl in H; noconf H.
-                rewrite -H0.
+            eapply (pred1_mkApps_tFix_refl_inv _ _ _ mfix1) in X1; eauto.
+            2:{ noconf eqsd'.
+                rewrite -H1.
                 pose proof (All2_length Hargs).
                 unfold is_constructor in i1.
                 move: i1 i0.
@@ -4238,10 +4307,17 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
                 noconf hnth'. intros. rewrite i1 in i0 => //.
                 destruct (nth_error args1 (rarg d)) eqn:hnth'' => //.
                 eapply nth_error_Some_length in hnth''. lia. }
-            move: X0 => [redo redargs].
+            move: X1 => [redo redargs].
             rewrite map_app.
+            assert (forallb (test_def (on_free_vars xpredT) (on_free_vars (shiftnP #|mfix1| xpredT))) mfix1).
+            { eapply pred1_mkApps_tFix_refl_inv in predM0 as []; tea.
+              red in a1. eapply forallb_All in a.
+              eapply All2_All_mix_left in a1; tea. solve_all.
+              inv_on_free_vars. unfold on_Trel in *; apply /andP; split; eauto with fvs.
+              rewrite shiftnP_xpredT //. eapply pred1_on_free_vars; tea.
+              destruct (is_constructor (rarg d) l) => //. }
             eapply pred_fix; eauto with pcuic.
-            eapply pred1_rho_fix_context_2; auto with pcuic.
+            eapply pred1_rho_fix_context_2; eauto with pcuic fvs.
             red in redo.
             solve_all.
             unfold on_Trel in *. intuition auto. now noconf b0.
@@ -4257,7 +4333,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
             simpl. rewrite map_app.
             rewrite /unfold_fix nth_error_map.
             destruct nth_error eqn:hnth => /=.
-            destruct (is_constructor (rarg d) (l ++ [a])) => //.
+            destruct (is_constructor (rarg d) (l ++ [a0])) => //.
             rewrite -mkApps_nested.
             apply (pred_mkApps _ _ _ _ _ [N1] _). auto.
             repeat constructor; auto.
@@ -4266,20 +4342,21 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
             repeat constructor; auto.
 
       + (* Beta at top *)
-        rewrite rho_app_lambda' in X0.
-        destruct l. simpl in X.
-        depelim X. solve_discr.
-        simp rho in X4. 
-        depelim X4... econstructor; eauto.
-        discriminate.
+        rewrite rho_app_lambda' in X1. inv_on_free_vars.
+        destruct l. simpl in *.
+        depelim predM0; solve_discr.
+        simp rho in X1. 
+        depelim X1... econstructor; eauto.
         simpl. simp rho.
         rewrite map_app -mkApps_nested.
         constructor; eauto.
-      
+        
       + (* No head redex *)
-        simpl. constructor; auto.*)
+        simpl. constructor; auto.
 
-    - simpl; simp rho; simpl. eapply pred_zeta; eauto with fvs. admit.
+    - simpl; simp rho; simpl. eapply pred_zeta; eauto with fvs.
+      eapply impl_impl_forall_Γ'1; eauto with fvs.
+      do 2 (constructor; eauto with fvs).
       
     - (* Case reduction *)
       rewrite rho_app_case.
@@ -4291,10 +4368,42 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
        on_Trel_eq (pred1 Σ (Γ',,, inst_case_branch_context p1 br)
          (Γ'0,,, inst_case_branch_context (rho_predicate Γ'0 p0) br')) bbody bcontext br br') brs1 
         (map (rho_br Γ'0 (rho_predicate Γ'0 p0)) brs0).
-      { eapply All2_sym, All2_map_left; solve_all. eapply b0. admit. admit.
-        admit. }
-
+      { eapply All2_sym, All2_map_left; solve_all.
+        assert (on_ctx_free_vars xpredT (Γ,,, inst_case_branch_context p0 x)).
+        { rewrite on_ctx_free_vars_app addnP_xpredT H1 andb_true_r.
+          rewrite /inst_case_branch_context.
+          eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
+          eapply on_free_vars_ctx_inst_case_context; trea; solve_all. }
+        eapply b0 => //.
+        now rewrite -> shiftnP_xpredT in H0.
+        assert (bredctx :
+          pred1_ctx_over Σ Γ' Γ'0 (inst_case_branch_context p1 y)
+            (inst_case_branch_context (rho_predicate Γ'0 p0) x)).
+        { rewrite /inst_case_branch_context /=.
+          rewrite -heq_puinst -b.
+          eapply rho_inst_case_context; tea. solve_all.
+          rewrite test_context_k_closed_on_free_vars_ctx in H.
+          eapply on_free_vars_ctx_impl; tea; eauto. intros i.
+          rewrite /shiftnP /closedP. destruct Nat.ltb => //. solve_all. }
+        eapply All2_fold_app => //. }
+      have pred_pred_ctx : 
+        pred1_ctx_over Σ Γ' Γ'0 (PCUICCases.inst_case_predicate_context p1)
+            (PCUICCases.inst_case_predicate_context (rho_predicate Γ'0 p0)).
+      { rewrite /PCUICCases.inst_case_predicate_context /=.
+        rewrite -heq_pcontext -heq_puinst.
+        eapply rho_inst_case_context; tea. solve_all.
+        rewrite test_context_k_closed_on_free_vars_ctx in p3.
+        eapply on_free_vars_ctx_impl; tea; eauto. intros i.
+        rewrite /shiftnP /closedP. destruct Nat.ltb => //. }
+      assert (on_ctx_free_vars xpredT (Γ,,, inst_case_context (pparams p0) (puinst p0) (pcontext p0))).
+      { rewrite on_ctx_free_vars_app addnP_xpredT H1 andb_true_r.
+        eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
+        eapply on_free_vars_ctx_inst_case_context; trea; solve_all. }
       destruct (decompose_app c0) eqn:Heq. cbn -[eqb]. 
+      eapply All2_fold_app in pred_pred_ctx.
+      specialize (impl_impl_forall_Γ' H p2 _ pred_pred_ctx) as Hpret.
+      specialize (impl_forall_Γ'0 H _ predΓ'0) as Hpctx.
+      specialize (impl_impl_forall_Γ'0 H1 p4 _ predΓ'0) as Hc.
       destruct (construct_cofix_discr t) eqn:Heq'.
   
       destruct t; noconf Heq'.
@@ -4307,98 +4416,143 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
         destruct (nth_error brs0 n) eqn:hbr => //.
         case: eqb_spec => [eq|neq].
         eapply pred1_mkApps_tConstruct in predc0 as [args' [? ?]]; pcuic. subst c1.
-        intuition auto. specialize (X2 _ predΓ'0).
-        rewrite rho_app_construct in X2.
-        eapply pred1_mkApps_refl_tConstruct in X2.
+        intuition auto.
+        rewrite rho_app_construct in Hc.
+        eapply pred1_mkApps_refl_tConstruct in Hc.
         eapply PCUICParallelReduction.simpl_pred; revgoals. 3:reflexivity.
         econstructor. 1-2:tea.
         * erewrite nth_error_map, hbr. instantiate (1 := rho_br Γ'0 (rho_predicate Γ'0 p0) b).
           reflexivity.
         * now len.
         * solve_all.
-        * eapply All2_map_right, All2_sym. solve_all. admit. 
-          rewrite -b0 -heq_puinst.
-          eapply b1. admit. admit. admit.
+        * solve_all. eapply All2_fold_app_inv => //. rewrite -heq_puinst.
+          now eapply pred1_pred1_ctx in a0. apply (All2_fold_length predΓ'0).
+          now rewrite -heq_puinst b0.
         * rewrite /rho_iota_red /iota_red /= /set_pparams /= /inst_case_branch_context /=.
           rewrite heq_puinst. reflexivity.
-        * admit.
-        * admit.
-        * admit.
+        * econstructor; eauto. eapply All2_fold_app_inv => //.
+          apply (All2_fold_length predΓ'0). solve_all.
+          eapply pred1_pred1_ctx in a. eapply All2_fold_app_inv => //.
+          apply (All2_fold_length predΓ'0).
+          simp rho in Hc.
+        * econstructor; eauto. eapply All2_fold_app_inv => //.
+          apply (All2_fold_length predΓ'0). solve_all.
+          eapply pred1_pred1_ctx in a. eapply All2_fold_app_inv => //.
+          apply (All2_fold_length predΓ'0).
+          simp rho in Hc.
+        * econstructor; eauto. eapply All2_fold_app_inv => //.
+          apply (All2_fold_length predΓ'0). solve_all.
+          eapply pred1_pred1_ctx in a. eapply All2_fold_app_inv => //.
+          apply (All2_fold_length predΓ'0).
+          simp rho in Hc.
         
       + (* CoFix *)
         apply decompose_app_inv in Heq.
         subst c0. simpl. simp rho.
-        simpl. simp rho in X8.
-        eapply pred1_mkApps_tCoFix_inv in X7 as [mfix' [idx' [[? ?] ?]]].
+        assert (forallb (test_def (on_free_vars xpredT) (on_free_vars (shiftnP #|mfix| xpredT))) mfix).
+        { now inv_on_free_vars. }
+        assert (onΓmfix: on_ctx_free_vars xpredT (Γ,,, fix_context mfix)).
+        { rewrite on_ctx_free_vars_app addnP_xpredT H1 andb_true_r.
+          erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
+          apply on_free_vars_fix_context. solve_all. }
+        simpl.
+        simp rho in Hc.
+        eapply pred1_mkApps_tCoFix_inv in predc0 as [mfix' [idx' [[? ?] ?]]].
         subst c1.
-        simpl in X8. eapply pred1_mkApps_tCoFix_refl_inv in X8.
+        assert (forallb (test_def (on_free_vars xpredT) (on_free_vars (shiftnP #|mfix'| xpredT))) mfix').
+        { eapply forallb_All in H0. eapply All2_All_mix_left in a; tea. solve_all. inv_on_free_vars.
+          inv_on_free_vars. inv_on_free_vars.
+          apply/andP; split; eauto with fvs. rewrite shiftnP_xpredT; eauto with fvs. }
+        simpl in Hc. eapply pred1_mkApps_tCoFix_refl_inv in Hc.
         intuition.
         eapply All2_prop2_eq_split in a1. intuition.
         unfold unfold_cofix.
         assert (All2 (on_Trel eq dname) mfix'
-                    (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] mfix) mfix)).
+                    (map_fix rho Γ'0 (fold_fix_context rho Γ'0 [] mfix) mfix)).
         { eapply All2_impl; [eapply b0|]; pcuic. }
-        pose proof (All2_mix a1 X).
-        eapply pred1_rho_fix_context_2 in X7; pcuic.
-        rewrite - fold_fix_context_rho_ctx in X7.
-        rewrite fix_context_map_fix in X7.
+        pose proof (All2_mix a1 X0).
+        eapply pred1_rho_fix_context_2 in X7; eauto with fvs.
+        
+        rewrite - (fold_fix_context_rho_ctx xpredT) // in X7.
+        rewrite (fix_context_map_fix xpredT) // in X7.
         eapply rho_All_All2_fold_inv in X7; pcuic.
-        rewrite /rho_fix_context - fold_fix_context_rho_ctx in a1.
-
+        rewrite /rho_fix_context - (fold_fix_context_rho_ctx xpredT) // in a1.
+        
+        eapply All2_fold_app_inv in pred_pred_ctx as []. 2:eapply (All2_fold_length predΓ'0).
         destruct nth_error eqn:Heq. simpl.
         * (* CoFix unfolding *)
           pose proof Heq.
           eapply All2_nth_error_Some in Heq; eauto. destruct Heq; intuition auto.
+          eapply pred_cofix_case with 
+            (map_fix rho Γ'0 (rho_ctx_over Γ'0 (fix_context mfix)) mfix) (rarg d); pcuic.
 
-          eapply pred_cofix_case with (map_fix rho (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ)
-                                                                            (fix_context mfix)) mfix)
-                                      (rarg d); pcuic.
-
-          -- eapply All2_fold_pred_fix_ctx; eauto.
-              eapply All2_prop2_eq_split in a. intuition auto.
-              eapply All2_fold_sym.
-              pcuic.
+          -- rewrite (fix_context_map_fix xpredT) //.
+             eapply All2_fold_fold_context_right.
+             eapply PCUICEnvironment.All2_fold_impl; tea. solve_all.
+             eapply All_decls_map_right.
+             eapply All_decls_impl; tea. solve_all.
 
           -- eapply All2_mix; pcuic.
-              rewrite /rho_fix_context - fold_fix_context_rho_ctx in b1.
-              eapply All2_mix. eauto.
-              now rewrite /rho_fix_context - fold_fix_context_rho_ctx in b0.
+            rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) // in b1.
+            eapply All2_mix. eauto.
+            now rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) in b0.
           -- unfold unfold_cofix.
               rewrite nth_error_map.
-              rewrite H. simpl. f_equal. f_equal.
+              rewrite H3. simpl. f_equal. f_equal.
               unfold map_fix.
-              rewrite fold_fix_context_rho_ctx.
+              rewrite (fold_fix_context_rho_ctx xpredT) //.
               rewrite (map_cofix_subst _ (fun Γ Γ' => rho (Γ ,,,  Γ'))) //.
               intros. simp rho; simpl; simp rho. reflexivity.
+          -- eapply All2_mix; pcuic.
+             eapply All2_prod_inv in hbrs as [].
+             eapply (All2_impl a7); solve_all.
+             eapply All2_fold_app_inv => //.
+             now eapply pred1_pred1_ctx in X8.
+             apply (All2_fold_length predΓ'0).
           
         * eapply pred_case; simpl; eauto; solve_all.
+          eapply pred1_pred1_ctx in a4. eapply All2_fold_app_inv in a4 as [] => //.
+          now apply (All2_fold_length predΓ'0).
           eapply pred_mkApps. constructor. pcuic.
-          --- rewrite /rho_fix_context - fold_fix_context_rho_ctx.
-              eapply All2_fold_pred_fix_ctx.
-              eapply All2_prop2_eq_split in a. intuition auto.
-              eapply All2_fold_sym.
-              pcuic.
-
+          --- rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) //. solve_all.
+              rewrite (fix_context_map_fix xpredT) //. solve_all.
+              eapply All2_fold_fold_context_right.
+              eapply PCUICEnvironment.All2_fold_impl; tea. solve_all.
+              eapply All_decls_map_right.
+              eapply All_decls_impl; tea. solve_all.
+ 
           --- eapply All2_mix; pcuic.
-              rewrite /rho_fix_context - fold_fix_context_rho_ctx in b1.
-              now rewrite /rho_fix_context - fold_fix_context_rho_ctx.
+              eapply All2_prod_inv in a1 as [].
+              rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) //. solve_all.
               eapply All2_mix; pcuic.
           --- pcuic.
           
       + apply decompose_app_inv in Heq. subst c0.
-        destruct t; try discriminate; simpl; pcuic.
+        rewrite construct_cofix_discr_match //.
+        econstructor; cbn; tea; auto.
+        eapply All2_fold_app_inv => //. eapply (All2_fold_length predΓ'0).
+        solve_all.
+        eapply pred1_pred1_ctx in a.
+        eapply All2_fold_app_inv => //. apply (All2_fold_length predΓ'0).
+
+      + tas.
 
     - (* Proj *)
       simpl.
       destruct p as [[ind pars] arg].
       rewrite rho_app_proj.
+      specialize (impl_impl_forall_Γ' H H0 _ predΓ'0).
+      rename impl_impl_forall_Γ' into Hc.
+      assert (onΓ' : on_ctx_free_vars xpredT Γ').
+      { eapply pred1_pred1_ctx in predc; eauto with fvs. }
       destruct decompose_app eqn:Heq.
       destruct (view_construct0_cofix t).
       + apply decompose_app_inv in Heq.
-        subst c. simpl. simp rho in X0 |- *.
-        pose proof (pred1_pred1_ctx _ X0).
-        eapply pred1_mkApps_tConstruct in X as [args' [? ?]]; subst.
-        eapply pred1_mkApps_refl_tConstruct in X0.
+        subst c. simpl.
+        simp rho in Hc |- *.
+        pose proof (pred1_pred1_ctx _ Hc).
+        eapply pred1_mkApps_tConstruct in predc as [args' [? ?]]; subst.
+        eapply pred1_mkApps_refl_tConstruct in Hc.
         destruct nth_error eqn:Heq.
         change eq_inductive with (@eqb inductive _).
         destruct (eqb_spec ind ind0); subst.
@@ -4411,27 +4565,36 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
         constructor; auto.
         eapply pred_mkApps; auto.
         econstructor; eauto.
-
+        
       + apply decompose_app_inv in Heq.
         subst c. simpl.
-        simp rho in X0 |- *.
-        eapply pred1_mkApps_tCoFix_inv in X as [mfix' [idx' [[? ?] ?]]].
-        subst c'.
-        simpl in a.
-        pose proof X0.
-        eapply pred1_mkApps_tCoFix_refl_inv in X0.
-        destruct X0.
+        simp rho in Hc |- *.
+        eapply pred1_mkApps_tCoFix_inv in predc as [mfix' [idx' [[? ?] ?]]].
+        subst c'. simpl in a. pose proof Hc.
+        eapply pred1_mkApps_tCoFix_refl_inv in X.
+        destruct X.
         unfold unfold_cofix.
         eapply All2_prop2_eq_split in a1. intuition auto.
         assert (All2 (on_Trel eq dname) mfix'
-                    (map_fix rho (rho_ctx Γ) (fold_fix_context rho (rho_ctx Γ) [] mfix) mfix)).
+                    (map_fix rho Γ'0 (fold_fix_context rho Γ'0 [] mfix) mfix)).
         { eapply All2_impl; [eapply b|]; pcuic. }
-        pose proof (All2_mix a1 X0) as X2.
-        eapply pred1_rho_fix_context_2 in X2; pcuic.
-        rewrite - fold_fix_context_rho_ctx in X2.
-        rewrite fix_context_map_fix in X2.
+        cbn in H0; inv_on_free_vars; cbn in a3.
+        assert (onΓmfix: on_ctx_free_vars xpredT (Γ,,, fix_context mfix)).
+        { rewrite on_ctx_free_vars_app addnP_xpredT H andb_true_r.
+          erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
+          apply on_free_vars_fix_context. solve_all. }
+        simpl.
+        simp rho in Hc.
+        assert (forallb (test_def (on_free_vars xpredT) (on_free_vars (shiftnP #|mfix'| xpredT))) mfix').
+        { eapply forallb_All in a3.
+          eapply All2_All_mix_left in a; tea. solve_all. unfold on_Trel in *; inv_on_free_vars.
+          apply/andP; split; eauto with fvs. rewrite shiftnP_xpredT; eauto with fvs. }
+        pose proof (All2_mix a1 X) as X2.
+        eapply pred1_rho_fix_context_2 in X2; pcuic; tea.
+        rewrite -(fold_fix_context_rho_ctx xpredT) // in X2.
+        rewrite (fix_context_map_fix xpredT) // in X2.
         eapply rho_All_All2_fold_inv in X2; pcuic.
-        rewrite /rho_fix_context - fold_fix_context_rho_ctx in a1.
+        rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) // in a1.
         intuition auto.
         destruct nth_error eqn:Heq. simpl.
         (* Proj cofix *)
@@ -4439,26 +4602,24 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
           pose proof Heq.
           eapply All2_nth_error_Some in Heq; eauto. destruct Heq; intuition auto.
 
-          eapply pred_cofix_proj with (map_fix rho (rho_ctx Γ) (rho_ctx_over (rho_ctx Γ)
-                                                                            (fix_context mfix)) mfix)
-                                      (rarg d); pcuic.
+          eapply pred_cofix_proj with (map_fix rho Γ'0 (rho_ctx_over Γ'0 (fix_context mfix)) mfix) (rarg d); pcuic.
+          -- rewrite (fix_context_map_fix xpredT) //.
+             eapply All2_fold_fold_context_right.
+             eapply PCUICEnvironment.All2_fold_impl; tea. solve_all.
+             eapply All_decls_map_right.
+             eapply All_decls_impl; tea. solve_all.
 
-          --- eapply All2_fold_pred_fix_ctx; eauto.
-              eapply All2_prop2_eq_split in a. intuition auto.
-              eapply All2_fold_sym.
-              pcuic.
-
-          --- eapply All2_mix; pcuic.
-              rewrite /rho_fix_context - fold_fix_context_rho_ctx in b0.
-              eapply All2_mix. eauto.
-              now rewrite /rho_fix_context - fold_fix_context_rho_ctx in b.
-          --- unfold unfold_cofix.
-              rewrite nth_error_map.
-              rewrite H. simpl. f_equal. f_equal.
-              unfold map_fix.
-              rewrite fold_fix_context_rho_ctx. auto.
-              rewrite (map_cofix_subst _ (fun Γ Γ' => rho (Γ ,,,  Γ'))) //.
-              intros. simp rho; simpl; simp rho. reflexivity.
+          -- eapply All2_mix; pcuic.
+             rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) // in b0.
+             eapply All2_mix. eauto.
+             now rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) // in b.
+          -- unfold unfold_cofix.
+             rewrite nth_error_map.
+             rewrite H1. simpl. f_equal. f_equal.
+             unfold map_fix.
+             rewrite (fold_fix_context_rho_ctx xpredT) //. 
+             rewrite (map_cofix_subst _ (fun Γ Γ' => rho (Γ ,,,  Γ'))) //.
+             intros. simp rho; simpl; simp rho. reflexivity.
 
         * eapply pred_proj_congr; eauto.
 
@@ -4468,28 +4629,49 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
         econstructor; eauto.
 
     - simp rho; simpl; simp rho.
-      rewrite /rho_fix_context - fold_fix_context_rho_ctx.
+      cbn in X0. intuition auto.
+      assert (on_ctx_free_vars xpredT (Γ,,, fix_context mfix0)).
+      { rewrite on_ctx_free_vars_app addnP_xpredT H andb_true_r.
+        erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
+        apply on_free_vars_fix_context. solve_all. }
+      intuition auto. specialize (X0 _ predΓ'0).
+      rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) //; solve_all.
       constructor; eauto.
-      { now rewrite fix_context_map_fix. }
+      { rewrite (fix_context_map_fix xpredT) //; solve_all. }
       red. red in X3.
-      eapply All2_sym, All2_map_left, All2_impl; eauto.
-      simpl. unfold on_Trel; intuition pcuic.
-      rewrite rho_ctx_app in b. now rewrite fix_context_map_fix.
+      eapply All2_sym, All2_map_left.
+      eapply All2_All_mix_left in X3; tea; eapply All2_impl; tea. unfold on_Trel.
+      intros; cbn; intuition auto; inv_on_free_vars; eauto with fvs.
+      rewrite (fix_context_map_fix xpredT) //; solve_all.
+      eapply X4. now rewrite -> shiftnP_xpredT in b.
+      eapply All2_fold_app => //.
 
     - simp rho; simpl; simp rho.
-      rewrite - fold_fix_context_rho_ctx.
+      cbn in X0. intuition auto.
+      assert (on_ctx_free_vars xpredT (Γ,,, fix_context mfix0)).
+      { rewrite on_ctx_free_vars_app addnP_xpredT H andb_true_r.
+        erewrite on_free_vars_ctx_on_ctx_free_vars_xpredT => //.
+        apply on_free_vars_fix_context. solve_all. }
+      intuition auto. specialize (X0 _ predΓ'0).
+      rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) //; solve_all.
       constructor; eauto.
-      { now rewrite fix_context_map_fix. }
+      { rewrite (fix_context_map_fix xpredT) //; solve_all. }
       red. red in X3.
-      eapply All2_sym, All2_map_left, All2_impl; eauto.
-      simpl. unfold on_Trel; intuition pcuic.
-      rewrite rho_ctx_app in b. now rewrite fix_context_map_fix.
+      eapply All2_sym, All2_map_left.
+      eapply All2_All_mix_left in X3; tea; eapply All2_impl; tea. unfold on_Trel.
+      intros; cbn; intuition auto; inv_on_free_vars; eauto with fvs.
+      rewrite (fix_context_map_fix xpredT) //; solve_all.
+      eapply X4. now rewrite -> shiftnP_xpredT in b.
+      eapply All2_fold_app => //.
 
-    - simp rho; simpl; econstructor; eauto.
+    - simp rho; simpl; econstructor; eauto with fvs.
+      intuition auto. eapply impl_impl_forall_Γ'0; tea; eauto with fvs.
+      do 2 (constructor; eauto with fvs).
     - simpl in *. simp rho. constructor. eauto.
+      eapply All2_All_mix_left in X1; tea.
       eapply All2_sym, All2_map_left, All2_impl; tea => /=; intuition auto.
     - destruct t; noconf H; simpl; constructor; eauto.
-  Qed.*)
+  Qed.
 
   Corollary triangle {Γ Δ t u} :
     on_ctx_free_vars xpredT Γ ->

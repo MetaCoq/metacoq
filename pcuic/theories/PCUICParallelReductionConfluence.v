@@ -2728,7 +2728,17 @@ Section Rho.
       now eapply isConstruct_app_pred1.
       eapply IHX.
   Qed.
-
+  
+  Ltac inv_on_free_vars ::=
+    match goal with
+    | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
+      progress (cbn in H || rewrite on_free_vars_mkApps in H);
+      (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+        eapply forallb_All in H); intros
+    | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
+      move/andP: H => []; rewrite ?shiftnP_xpredT; intros
+    end.
+  
   Lemma pred1_on_free_vars_gen :
     (forall Γ Γ' t u,
     pred1 Σ Γ Γ' t u ->
@@ -2902,10 +2912,27 @@ Section Rho.
 
     - inv_on_free_vars. t.
       rewrite on_free_vars_mkApps.
-      specialize (H _ H3). t.
-      admit.
+      specialize (H _ H3). t. inv_on_free_vars.
+      2:solve_all.
+      move: H1.
+      rewrite /unfold_fix. destruct nth_error eqn:hnth => //.
+      intros [= <- <-].
+      assert (on_ctx_free_vars (shiftnP #|mfix0| P) (Γ,,, fix_context mfix0)).
+      { rewrite on_ctx_free_vars_app; len; rewrite addnP_shiftnP H3 andb_true_r.
+        relativize #|mfix0|; [erewrite on_free_vars_ctx_on_ctx_free_vars|]; len => //.
+        eapply on_free_vars_fix_context. solve_all. }
+      assert (forallb (test_def (on_free_vars P) (on_free_vars (shiftnP #|mfix1| P))) mfix1).
+      { solve_all. eapply All2_All_mix_left in X1; tea.
+        rewrite -(All2_length X1).
+        unfold on_Trel in *; solve_all.
+        inv_on_free_vars. apply /andP; split; eauto with fvs. }
+      eapply on_free_vars_subst.
+      eapply (on_free_vars_fix_subst _ _ idx). cbn => //.
+      len. eapply nth_error_forallb in H4; tea.
+      now move/andP: H4 => [].
+    
     - admit.
-    - admit.
+    - inv_on_free_vars. admit.
     - t. admit.
     - t. admit.
     - t; admit.
@@ -3844,16 +3871,6 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     end.
 
   Ltac rename_hyp h ht ::= my_rename_hyp h ht.
-  
-  Ltac inv_on_free_vars ::=
-    match goal with
-    | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-      progress (cbn in H || rewrite on_free_vars_mkApps in H);
-      (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
-        eapply forallb_All in H); intros
-    | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
-      move/andP: H => []; rewrite ?shiftnP_xpredT; intros
-    end.
   
   Lemma All2_fold_fold_context_right P f ctx ctx' :
     All2_fold (fun Γ Γ' d d' => P Γ (fold_context_term f Γ') d (map_decl (f (fold_context_term f Γ')) d')) ctx ctx' ->

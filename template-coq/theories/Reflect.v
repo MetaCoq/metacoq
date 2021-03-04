@@ -151,41 +151,6 @@ Next Obligation.
     constructor. subst. reflexivity.
 Defined.
 
-Definition eq_prop_level l1 l2 :=
-  match l1, l2 with
-  | PropLevel.lProp, PropLevel.lProp => true
-  | PropLevel.lSProp, PropLevel.lSProp => true
-  | _, _ => false
-  end.
-
-#[program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
-  eqb := eq_prop_level
-}.
-Next Obligation.
-  destruct x, y.
-  all: unfold eq_prop_level.
-  all: try solve [ constructor ; reflexivity ].
-  all: try solve [ constructor ; discriminate ].
-Defined.
-
-Definition eq_levels (l1 l2 : PropLevel.t + Level.t) :=
-  match l1, l2 with
-  | inl l, inl l' => eqb l l'
-  | inr l, inr l' => eqb l l'
-  | _, _ => false
-  end.
-
-#[program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
-  eqb := eq_levels
-}.
-Next Obligation.
-  destruct x, y.
-  cbn -[eqb]. destruct (eqb_spec t t0). subst. now constructor.
-  all:try (constructor; cong).
-  cbn -[eqb]. destruct (eqb_spec t t0). subst; now constructor.
-  constructor; cong.
-Defined.
-
 Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
   let '(a1, b1) := x in
   let '(a2, b2) := y in
@@ -336,13 +301,13 @@ Next Obligation.
 Defined.
 
 (* TODO: move *)
-Lemma eq_universe_iff (u v : Universe.t0) :
+Lemma eq_universe_iff (u v : UnivLevel.t) :
   u = v <-> u = v :> UnivExprSet.t.
 Proof.
   destruct u, v; cbn; split. now inversion 1.
   intros ->. f_equal. apply uip.
 Qed.
-Lemma eq_universe_iff' (u v : Universe.t0) :
+Lemma eq_universe_iff' (u v : UnivLevel.t) :
   u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
 Proof.
   etransitivity. apply eq_universe_iff.
@@ -351,24 +316,14 @@ Proof.
 Qed.
 
 (* move in Universes.v ?? *)
-Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
-Proof. intros e e'. repeat decide equality. Qed.
+(* Already defined in Universes.v; is the re-exporting useful ? *)
+Instance eq_dec_UnivExpr : EqDec UnivExpr.t := UnivExpr.eq_dec.
 
-Instance eq_dec_univ0 : EqDec Universe.t0.
-Proof.
-  intros u v.
-  assert (H : {UnivExprSet.elements u = UnivExprSet.elements v}
-              + {~ UnivExprSet.elements u = UnivExprSet.elements v}). {
-    repeat decide equality. }
-  destruct H as [H|H]; [left; now apply eq_universe_iff' in H|right].
-  intro X; apply H; now apply eq_universe_iff' in X.
-Defined.
+Instance eq_dec_univ_level : EqDec UnivLevel.t := UnivLevel.t_eqdec.
 
-Instance eq_dec_univ : EqDec Universe.t.
-Proof.
-  red. decide equality.
-  apply eq_dec_univ0.
-Defined.
+Instance eq_dec_sort_family : EqDec SortFamily.t := SortFamily.eq_dec.
+
+Instance eq_dec_univ : EqDec Universe.t := Universe.t_eqdec.
 
 Instance reflect_eq_univ : ReflectEq Universe.t := EqDec_ReflectEq _.
 

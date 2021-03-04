@@ -813,12 +813,8 @@ Definition wf_cofixpoint (Σ : global_env) mfix :=
   end.
 
 Definition wf_universe Σ s := 
-  match s with
-  | Universe.lProp 
-  | Universe.lSProp => True
-  | Universe.lType u => 
-    forall l, UnivExprSet.In l u -> LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ)
-  end.
+    forall l, UnivExprSet.In l (Universe.lvl s) -> 
+      Level.is_set (UnivExpr.get_level l) \/ LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ).
 
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
@@ -1048,15 +1044,18 @@ Hint Resolve typing_wf_local : wf.
 
 Lemma type_Prop `{checker_flags} Σ :
   Σ ;;; [] |- tSort Universe.lProp : tSort Universe.type1.
+Proof.
   change (  Σ ;;; [] |- tSort (Universe.lProp) : tSort Universe.type1);
-  constructor;auto. constructor. constructor.
+  constructor;first constructor.
+  move=> ? /=; rewrite UnivExprSetFact.singleton_iff=> <-; by left.
 Defined.
 
 Lemma type_Prop_wf `{checker_flags} Σ Γ :
   wf_local Σ Γ ->
   Σ ;;; Γ |- tSort Universe.lProp : tSort Universe.type1.
 Proof. 
-  constructor;auto. constructor.
+  constructor ;auto.
+  move=> ? /=; rewrite UnivExprSetFact.singleton_iff=> <-; by left.
 Defined.
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall Σ Γ (wfΓ : wf_local Σ Γ), Type):=

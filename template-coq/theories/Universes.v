@@ -22,6 +22,12 @@ Inductive universe_family :=
   | UGlobal (_ : string) (* name of a global sort *).
 Derive NoConfusion EqDec for universe_family.
 
+Definition is_impredicative (u : universe_family) :=
+  match u with
+  | UProp | USProp => true
+  | _ => false
+  end.
+
 (** A valuation is a universe level (nat) given for each universe variable
     (Level.t) and a sort family (universe_family) for each sort variables.
     It is >= for polymorphic universes and > 0 for monomorphic universes. *)
@@ -479,6 +485,8 @@ Module UnivLevel.
     := {| t_set := UnivExprSet.singleton e;
           t_ne := eq_refl |}.
 
+  Definition set := make' UnivExpr.set.
+
   Lemma not_Empty_is_empty s :
     ~ UnivExprSet.Empty s -> UnivExprSet.is_empty s = false.
   Proof.
@@ -656,6 +664,11 @@ Module UnivLevel.
     : val v (make' e) = val v e.
   Proof.
     reflexivity.
+  Qed.
+
+  Lemma val_set v : val v set = 0.
+  Proof. 
+    reflexivity. 
   Qed.
 End UnivLevel.
 
@@ -927,8 +940,9 @@ Qed.
 
 End Universe.
 
-(* Definition is_propositional u :=  *)
-(*   Universe.is_prop u || Universe.is_sprop u. *)
+(* To revisit once we add local sorts (will need to infer if a sort variable is propositional from the constraints) *)
+Definition is_propositional u :=  
+   Universe.is_prop u || Universe.is_sprop u.
 
 
 Declare Scope univ_scope.
@@ -1362,20 +1376,50 @@ Definition constraints_of_udecl u :=
   | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
   end.
 
+
+Definition lvl_le_n s n u u' :=
+  if is_impredicative s 
+  then (n = 0)%Z
+  else (Z.of_nat u <= Z.of_nat  u' - n)%Z.
+
 Definition univ_le_n {cf:checker_flags} n u u' :=
   match u.1 , u'.1 with
-  | UProp, UProp
-  | USProp, USProp => (n = 0)%Z
-  | UType, UType => (Z.of_nat u.2 <= Z.of_nat  u'.2 - n)%Z
-  | UGlobal s, UGlobal s' => s = s' /\ (Z.of_nat u.2 <= Z.of_nat  u'.2 - n)%Z
-  | UProp, UType =>
-    if prop_sub_type then True else False
-  | _, _ => False
+  | UProp, UType => prop_sub_type : Prop
+  | s, s' => s = s' /\ lvl_le_n s n u.2 u'.2
   end.
 
 Notation "x <_ n y" := (univ_le_n n x y) (at level 10, n ident) : univ_scope.
 Notation "x < y" := (univ_le_n 1 x y) : univ_scope.
 Notation "x <= y" := (univ_le_n 0 x y) : univ_scope.
+
+
+Inductive univ_le_n_view {cf:checker_flags} (n : Z) : 
+  universe_family -> nat -> universe_family -> nat -> Prop :=
+  | UleVPropType m p : prop_sub_type -> univ_le_n_view n UProp m UType p
+  | UleVEq s m p : lvl_le_n s n m p -> univ_le_n_view n s m s p.
+
+Derive Signature for univ_le_n_view.
+(* Doesn't work... *)
+(* Derive NoConfusion for univ_le_n_view. *)
+
+Lemma univ_le_n_equiv {cf:checker_flags} n u u' :
+  (u <_n u')%u <-> univ_le_n_view n u.1 u.2 u'.1 u'.2.
+Proof.
+  split; last move: u u'=> [??] [??] /= [|] [] * //.
+  move: u u'=> [[|||?]?][[|||?]?] ; unfold univ_le_n=> //=.
+  3: move=> h; by constructor.
+  all:move=> [h ?]; rewrite ?h ; constructor=> //.
+Qed.
+  
+(* Lemma univ_le_n_equiv {cf:checker_flags} n u u' :
+  (u <_n u')%u <-> 
+  ((prop_sub_type /\ u.1 = UProp /\ u'.1 = UType)
+  \/ (u.1 = u'.1 /\ lvl_le_n u.1 n u.2 u'.2)).
+Proof.
+  move: u u'=> [[|||?]?][[|||?]?] ; unfold univ_le_n=> //=.
+  all: (split; last move=> []); case: prop_sub_type=> -[] // ; auto.
+  all: move=> _ [] //.
+Qed. *)
 
 Ltac lle := unfold univ_le_n in *.
 Ltac lled := lle; match goal with
@@ -1398,7 +1442,7 @@ Section Univ.
 
   Global Instance lle_refl : Reflexive (univ_le_n 0).
   Proof.
-    move=> [[| | | ?]?]; cbn; last (split=> //); try lia.
+    move=> [[||| ?]?]; cbn; last (split=> //); try split=>//; lia.
   Qed.
 
   Lemma switch_minus (x y z : Z) : (x <= y - z <-> x + z <= y)%Z.
@@ -1407,9 +1451,10 @@ Section Univ.
 
   Global Instance le_n_trans n : Transitive (univ_le_n (Z.of_nat n)).
   Proof.
-    intros [[]?] [[]?] [[]?]; cbn; try lia;
-    try (destruct prop_sub_type; lia).
-   move=> [??] [??]; split;[etransitivity;eassumption|lia].
+    move=> [??][??][??] /univ_le_n_equiv/= [???|????] /univ_le_n_equiv/=.
+    all: move=> h; depelim h=> //.
+    all: apply univ_le_n_equiv; constructor=> /=.
+    unfold lvl_le_n in *. destruct (is_impredicative s); lia.
   Qed.
 
   Global Instance lle_trans : Transitive (univ_le_n 0).
@@ -1554,17 +1599,19 @@ Section Univ.
     eapply leq_universe0_trans ; eauto.
   Qed.
 
-  Lemma eq_leq_universe φ u u' :
+
+  (* Lemma eq_leq_universe φ u u' :
     eq_universe0 φ u u' <-> leq_universe0 φ u u' /\ leq_universe0 φ u' u.
   Proof.
     split.
     intro H; split; intros v Hv; specialize (H v Hv); now rewrite H.
     intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
     unfold univ_le_n in *.
-    move: (Universe.univ_val v u) (Universe.univ_val v u') H1 H2=> [[| | |?]?] [[| | |?]?]; cbn; try now auto.
+    move: (Universe.univ_val v u) (Universe.univ_val v u') H1 H2=> [[| | |?]?] [[| | |?]?]; cbn; try now auto.  
+    
     1,2: todo "Fix equality between levels of impredicative sorts".
     move=> [??] [??]; f_equal; first f_equal=>//; lia.
-  Qed.
+  Qed. *)
 
   (* Lemma leq_universe0_sup_l φ s1 s2 : *)
   (*   Universe.is_prop s1 = false -> Universe.is_sprop s1 = false ->  *)
@@ -1585,28 +1632,27 @@ Section Univ.
   (*   destruct (Universe.univ_val v s1); simpl; lia. *)
   (* Qed. *)
 
+  (* FixMe: do the same as the proof below *)
   Lemma leq_universe0_sup_l' φ (s1 s2 : UnivLevel.t) :
     leq_universe0 φ (Universe.lType s1) (Universe.lType (UnivLevel.sup s1 s2)).
   Proof.
-    intros v Hv. cbn. rewrite val_sup. lia.
+    intros v Hv. cbn. rewrite val_sup;split=> //; lia.
   Qed.
 
-  Lemma leq_universe0_sup_r' φ (s1 s2 : UnivLevel.t) :
-    leq_universe0 φ (Universe.lType s2) (Universe.lType (UnivLevel.sup s1 s2)).
+  Lemma leq_universe0_sup_r' φ sf (s1 s2 : UnivLevel.t) :
+    leq_universe0 φ (Universe.pair sf s2) (Universe.pair sf (UnivLevel.sup s1 s2)).
   Proof.
-    intros v Hv. cbn. rewrite val_sup. lia.
+    intros v Hv. move: sf=> [|||?|?]; cbn;
+    last (unfold univ_le_n; cbn; set z := valuation_sort _ _; case: z).
+    all: split=> //; rewrite val_sup; lia.
   Qed.
 
   Lemma leq_universe_product φ (s1 s2 : Universe.t)
     : leq_universe φ s2 (Universe.sort_of_product s1 s2).
   Proof.
     unfold leq_universe; destruct check_univs; [cbn|constructor].
-    unfold Universe.sort_of_product.
-    destruct s2; cbn; try apply leq_universe0_refl.
-    destruct s1;cbn;try apply leq_universe0_refl.
-    admit. (* apply leq_universe0_sup_r'.
-  Qed.*)
-  Admitted.
+    apply leq_universe0_sup_r'.
+  Qed.
   (* Rk: [leq_universe φ s1 (sort_of_product s1 s2)] does not hold due to
      impredicativity. *)
 
@@ -1685,11 +1731,11 @@ Section Univ.
   (** Elimination restriction *)
 
   (* Revisit *)
-  (* Definition is_allowed_elimination0
+  Definition is_allowed_elimination0
              φ (into : Universe.t) (allowed : allowed_eliminations) : Prop :=
     forall v,
       satisfies v φ ->
-      match allowed, niverse.univ_val val v into with
+      match allowed, ⟦into⟧_v%u.1 with
       | IntoSProp, USProp
       | IntoPropSProp, (UProp | USProp)
       | IntoSetPropSProp, (UProp | USProp | UType)
@@ -1699,7 +1745,7 @@ Section Univ.
   
   Definition is_allowed_elimination φ into allowed :=
     if check_univs then is_allowed_elimination0 φ into allowed else True.
-   *)
+   
   (* Is [a] a subset of [a']? *)
   Definition allowed_eliminations_subset (a a' : allowed_eliminations) : bool :=
     match a, a' with
@@ -1987,9 +2033,9 @@ Proof. destruct u; simpl; try congruence; auto. Qed. *)
 
 Lemma univ_prop_le_inv {cf:checker_flags} u : (Universe.uProp <= u)%u -> 
   (u.1 = UProp \/ (prop_sub_type /\ exists n, u = Universe.uType n)).
-Proof. destruct u as [[] m]; cbn; try congruence; auto.
-  destruct prop_sub_type; firstorder auto.
-  right; split; auto. exists m; auto.
+Proof.
+  move: u => [??] /univ_le_n_equiv /= h; depelim h; last by left.
+  right; split=> //; eexists; reflexivity.
 Qed.
 
 Ltac cong := intuition congruence.
@@ -2002,7 +2048,49 @@ Proof.
   destruct u, u'; simpl in *; auto. lia. lia.
 Qed. *)
 
-Lemma leq_universe_product_mon {cf: checker_flags} ϕ u u' v v' :
+
+Definition normalize (u : Universe.t) :=
+  let l := 
+    match Universe.sort u with
+    | SortFamily.sfSProp | SortFamily.sfProp => UnivLevel.set
+    | SortFamily.sfVar _ => UnivLevel.set
+      (* Universe.lvl u FixMe wrt to a set of constraints ϕ *)
+    | _ => Universe.lvl u
+    end
+  in
+  Universe.pair (Universe.sort u) l.
+
+Lemma normalize_leq_universe {cf: checker_flags} ϕ u :
+  leq_universe ϕ (normalize u) u.
+Proof.
+  unfold leq_universe in *; destruct check_univs=> //.
+  move=> vv Hv; case: u=> [[] ?] //; cbnr. 1,2:split=> //; lia.
+  unfold univ_le_n. unfold Universe.univ_val. cbn.
+  set z := valuation_sort _ _; case: z=> []; split=> //; lia.
+Qed.
+  
+
+Lemma leq_universe_product_down_mon {cf: checker_flags} ϕ u u' v v' :
+  leq_universe ϕ u u' ->
+  leq_universe ϕ v v' ->
+  leq_universe ϕ (Universe.sort_of_product (normalize u) v) (Universe.sort_of_product u' v').
+Proof.
+  unfold leq_universe in *; destruct check_univs=>//.
+  intros H1 H2 vv Hv.
+  move: {H1 H2} (H1 _ Hv) (H2 _ Hv) => /univ_le_n_equiv H1 /univ_le_n_equiv H2.
+  apply univ_le_n_equiv.
+  unfold Universe.sort_of_product, univ_le_n; cbn.
+  depelim H2; first (rewrite H0 H2 ; by constructor).
+  rewrite H0; constructor.
+  move: H ; unfold lvl_le_n.
+  set z := is_impredicative _ ; case: z => //.
+  depelim H1.
+  all: revert dependent u=> -[[]?] // ?; cbn in *.
+  all: rewrite !val_sup ?UnivLevel.val_set; try lia.
+Qed.  
+  
+
+(* Lemma leq_universe_product_mon {cf: checker_flags} ϕ u u' v v' :
   leq_universe ϕ u u' ->
   leq_universe ϕ v v' ->
   leq_universe ϕ (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
@@ -2035,14 +2123,15 @@ Proof.
     specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n' HH'].
     rewrite HH HH'. apply univ_val_max_mon; auto.
     now rewrite <- HH, <- HH'.
-Qed.
+Qed. *)
 
 Lemma impredicative_product {cf:checker_flags} {ϕ l u} :
   Universe.is_prop u ->
   leq_universe ϕ (Universe.sort_of_product l u) u.
 Proof.
   unfold Universe.sort_of_product.
-  intros ->. reflexivity.
+  case: u=> [[]?] //; cbn=> ?.
+  unfold leq_universe; case: check_univs=> //.
 Qed.
 
 Section UniverseLemmas.
@@ -2051,42 +2140,42 @@ Section UniverseLemmas.
   Ltac unfold_eq_universe
     := unfold eq_universe in *; destruct check_univs; [intros v Hv|trivial].
 
-  Lemma sup0_idem s : Universe.sup0 s s = s.
+  Lemma sup_idem s : UnivLevel.sup s s = s.
   Proof.
     apply eq_univ'; cbn.
     intro; rewrite !UnivExprSet.union_spec. intuition.
   Qed.
 
-  Lemma sup_idem s : Universe.sup s s = s.
+  (* Lemma sup_idem s : Universe.sup s s = s.
   Proof.
     destruct s;cbn;auto.
     apply f_equal.
     apply eq_univ'; cbn.
     intro; rewrite !UnivExprSet.union_spec. intuition.
-  Qed.
+  Qed. *)
 
   Lemma sort_of_product_idem s
     : Universe.sort_of_product s s = s.
   Proof.
     unfold Universe.sort_of_product.
     destruct (Universe.is_prop s), (Universe.is_sprop s); trea;cbn.
-    apply sup_idem.
+    all: case: s=> [??] /=; f_equal; apply sup_idem.
   Qed.
 
-  Lemma sup0_assoc s1 s2 s3 :
-    Universe.sup0 s1 (Universe.sup0 s2 s3) = Universe.sup0 (Universe.sup0 s1 s2) s3.
+  Lemma sup_assoc s1 s2 s3 :
+    UnivLevel.sup s1 (UnivLevel.sup s2 s3) = UnivLevel.sup (UnivLevel.sup s1 s2) s3.
   Proof.
     apply eq_univ'; cbn. symmetry; apply UnivExprSetProp.union_assoc.
   Qed.
 
-  Instance universe_sup_eq_universe φ :
-    Proper (eq_universe φ ==> eq_universe φ ==> eq_universe φ) Universe.sup.
+  (* Instance universe_sup_eq_universe φ :
+    Proper (eq_universe φ ==> eq_universe φ ==> eq_universe φ) UnivLevel.sup.
   Proof.
     intros s1 s1' H1 s2 s2' H2.
     unfold_eq_universe. specialize (H1 v Hv). specialize (H2 v Hv).
     rewrite !val_universe_sup.
     now rewrite H1 H2.
-  Qed.
+  Qed. *)
 
   Lemma sort_of_product_twice u s :
     Universe.sort_of_product u (Universe.sort_of_product u s)
@@ -2094,7 +2183,7 @@ Section UniverseLemmas.
   Proof.
     destruct u,s;auto.
     unfold Universe.sort_of_product;cbn.
-    now rewrite sup0_assoc sup0_idem.
+    now rewrite sup_assoc sup_idem.
   Qed.
 End UniverseLemmas.
 
@@ -2110,10 +2199,10 @@ Section no_prop_leq_type.
   Qed.
 
   Lemma spec_map_succ l x : 
-    UnivExprSet.In x (Universe.map UnivExpr.succ l) <-> 
+    UnivExprSet.In x (UnivLevel.map UnivExpr.succ l) <-> 
     exists x', UnivExprSet.In x' l /\ x = UnivExpr.succ x'.
   Proof.
-    rewrite Universe.map_spec. reflexivity.
+    rewrite UnivLevel.map_spec. reflexivity.
   Qed.
 
   Lemma val_succ v l : val v (UnivExpr.succ l) = val v l + 1.
@@ -2121,9 +2210,9 @@ Section no_prop_leq_type.
     destruct l as []; simpl. cbn. lia. 
   Qed.
 
-  Lemma val_map_succ v l : val v (Universe.map UnivExpr.succ l) = val v l + 1.
+  Lemma val_map_succ v l : val v (UnivLevel.map UnivExpr.succ l) = val v l + 1.
   Proof.
-    remember (Universe.map UnivExpr.succ l) eqn:eq.
+    remember (UnivLevel.map UnivExpr.succ l) eqn:eq.
     pose proof (spec_map_succ l). rewrite <- eq in H.
     clear eq.
     destruct (val_In_max l v) as [max [inmax eqv]]. rewrite <-eqv.
@@ -2139,15 +2228,14 @@ Section no_prop_leq_type.
   
   Lemma leq_universe_super u u' :
     leq_universe ϕ u u' ->
-    leq_universe ϕ (Universe.super u) (Universe.super u').
+    leq_universe ϕ (Universe.super (normalize u)) (Universe.super u').
   Proof.
     unfold leq_universe. destruct check_univs; [|trivial].
-    intros H v Hv. specialize (H v Hv). simpl in *.
-    destruct u as [| |], u' as  [| |]; lled; cbn -[Z.add] in *; try lia;
-    rewrite !val_map_succ; lia.
+    intros H v Hv; move:u u' {H} (H v Hv)=> [[|||?|?]?] [??]. 
+    all: cbn; try move=>[??] ; split=> //; rewrite !val_map_succ; lia.
   Qed.
 
-  Lemma leq_universe_props u1 u2 :
+  (* Lemma leq_universe_props u1 u2 :
     check_univs ->
     consistent ϕ ->
     leq_universe ϕ u1 u2 ->
@@ -2218,7 +2306,7 @@ Section no_prop_leq_type.
   Hint Resolve leq_universe_sprop_l leq_universe_sprop_r
        leq_universe_prop_r
        leq_universe_prop_no_prop_sub_type
-       : univ_lemmas.
+       : univ_lemmas. *)
   
   Lemma leq_prop_prop {l l'} :
     Universe.is_prop l -> Universe.is_prop l' ->
@@ -2226,7 +2314,8 @@ Section no_prop_leq_type.
   Proof.
     red. destruct check_univs; [|trivial].
     intros H1 H2 v Hv. eapply is_prop_val in H1; eapply is_prop_val in H2.
-    rewrite -> H1, H2. lled; lia.
+    apply univ_le_n_equiv.
+    rewrite -> H1, H2. constructor=> //=.
   Qed.
 
   Lemma leq_sprop_sprop {l l'} :
@@ -2235,10 +2324,11 @@ Section no_prop_leq_type.
   Proof.
     red. destruct check_univs; [|trivial].
     intros H1 H2 v Hv. eapply is_sprop_val in H1; eapply is_sprop_val in H2.
-    rewrite -> H1, H2. lled; lia.
+    apply univ_le_n_equiv.
+    rewrite -> H1, H2. by constructor.
   Qed.
   
-  Lemma leq_prop_is_prop_sprop {x s} :
+  (* Lemma leq_prop_is_prop_sprop {x s} :
     check_univs ->
     prop_sub_type = false ->
     consistent ϕ ->
@@ -2266,6 +2356,6 @@ Section no_prop_leq_type.
     intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
     eapply is_sprop_val with (v:=v) in H2. specialize (H1 _ Hv).
     rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
-  Qed.
+  Qed. *)
 
 End no_prop_leq_type.

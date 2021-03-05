@@ -1367,18 +1367,24 @@ Proof.
   constructor; auto.
 Qed.
 
-Lemma Alli_All_fold (P : nat -> context_decl -> Type) n Γ : 
-  Alli P n Γ ->
+Lemma Alli_All_fold {P : nat -> context_decl -> Type} {n Γ} : 
+  Alli P n Γ <~>
   All_fold (fun Γ d => P (n + #|Γ|) d) (List.rev Γ).
 Proof.
-  induction 1; simpl.
-  - constructor.
-  - eapply All_fold_app; simpl.
-    2:constructor; simpl; auto.
-    2:constructor. 2:now rewrite Nat.add_0_r.
-    eapply All_fold_impl; tea.
-    simpl; intros.
-    cbn. rewrite app_length /= Nat.add_1_r Nat.add_succ_r //.
+  split.
+  - induction 1; simpl.
+    + constructor.
+    + eapply All_fold_app; simpl.
+      2:constructor; simpl; auto.
+      2:constructor. 2:now rewrite Nat.add_0_r.
+      eapply All_fold_impl; tea.
+      simpl; intros.
+      cbn. rewrite app_length /= Nat.add_1_r Nat.add_succ_r //.
+  - induction Γ using rev_ind; simpl.
+    + constructor.
+    + rewrite List.rev_app_distr /=.
+      intros a; depelim a. eapply Alli_app_inv => //; eauto.
+      now constructor; [len in p|constructor].
 Qed.
 
 Lemma Alli_rev_All_fold (P : nat -> context_decl -> Type) n Γ : 
@@ -1389,6 +1395,13 @@ Proof.
   now rewrite List.rev_involutive.
 Qed.
 
+Lemma All_fold_Alli_rev (P : nat -> context_decl -> Type) n Γ : 
+  All_fold (fun Γ d => P (n + #|Γ|) d) Γ ->
+  Alli P n (List.rev Γ).
+Proof.
+  rewrite -{1}(List.rev_involutive Γ).
+  now move/Alli_All_fold.
+Qed.
 
 Lemma All_fold_prod (P : context -> context_decl -> Type) Q Γ Δ :
   #|Γ| = #|Δ| ->

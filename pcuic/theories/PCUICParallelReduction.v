@@ -2586,6 +2586,31 @@ Section ParallelSubstitution.
         + now destruct (IHps x eq_refl) as [? []].
   Qed.
 
+  Lemma pred1_subst_context {wfΣ : wf Σ} {Γ Δ Γ' Γ1 Δ1 Γ'1 s s'} :
+    psubst Σ Γ Γ1 s s' Δ Δ1 ->
+    #|Γ| = #|Γ1| -> #|Γ'| = #|Γ'1| ->
+    pred1_ctx_over Σ Γ Γ1 Δ Δ1 ->
+    on_ctx_free_vars xpredT Γ ->
+    on_free_vars_ctx xpredT Γ' ->
+    All (on_free_vars xpredT) s ->
+    pred1_ctx Σ (Γ ,,, Δ ,,, Γ') (Γ1 ,,, Δ1 ,,, Γ'1) ->
+    pred1_ctx Σ (Γ ,,, subst_context s 0 Γ') (Γ1 ,,, subst_context s' 0 Γ'1).
+  Proof.
+    intros Hs hl hl' hctx onΓ onΓ' ons hM.
+    rewrite !subst_context0_inst_context.
+    pose proof (All2_fold_length hctx).
+    eapply All2_fold_app_inv in hM as []; len; try lia.
+    eapply All2_fold_app_inv in a as []; len; try lia.
+    eapply All2_fold_app => //.
+    eapply (snd strong_substitutivity).
+    2:tea.
+    eapply All2_fold_app => //.
+    3:{ eapply psubst_pred1_subst => //. }
+    assumption.
+    rewrite -subst_context0_inst_context.
+    eapply on_free_vars_ctx_subst_context_xpredT => //. solve_all.
+  Qed.
+
   (** Parallel reduction is substitutive. *)
   Lemma substitution_let_pred1 {wfΣ : wf Σ} {Γ Δ Γ' Γ1 Δ1 Γ'1 s s' M N} :
     psubst Σ Γ Γ1 s s' Δ Δ1 ->
@@ -2594,26 +2619,16 @@ Section ParallelSubstitution.
     on_ctx_free_vars xpredT Γ ->
     All (on_free_vars xpredT) s ->
     on_free_vars_ctx xpredT Γ' ->
-    on_free_vars_ctx xpredT (subst_context s 0 Γ') ->
     on_free_vars (shiftnP #|Γ'1| xpredT) M ->
     pred1 Σ (Γ ,,, Δ ,,, Γ') (Γ1 ,,, Δ1 ,,, Γ'1) M N ->
     pred1 Σ (Γ ,,, subst_context s 0 Γ') (Γ1 ,,, subst_context s' 0 Γ'1) (subst s #|Γ'| M) (subst s' #|Γ'1| N).
   Proof.
-    intros Hs hl hl' hctx onΓ ons onΓ' onΓ'i onM hM.
+    intros Hs hl hl' hctx onΓ ons onΓ' onM hM.
     rewrite !subst_inst.
     assert (pred1_ctx Σ (Γ,,, inst_context (s ⋅n ids) Γ') (Γ1,,, inst_context (s' ⋅n ids) Γ'1)).
     { eapply pred1_pred1_ctx in hM.
-      pose proof (All2_fold_length hctx).
-      eapply All2_fold_app_inv in hM as []; len; try lia.
-      eapply All2_fold_app_inv in a as []; len; try lia.
-      eapply All2_fold_app => //.
-      eapply (snd strong_substitutivity).
-      2:tea.
-      eapply All2_fold_app => //.
-      3:{ eapply psubst_pred1_subst => //. }
-      assumption.
-      now rewrite subst_context0_inst_context in onΓ'i.
-    }
+      rewrite - !subst_context0_inst_context.
+      eapply pred1_subst_context; tea. }
     rewrite !subst_context0_inst_context.
     pose proof (pred1_pred1_ctx _ hM).
     pose proof (All2_fold_length hctx).
@@ -2622,6 +2637,7 @@ Section ParallelSubstitution.
     eapply All2_fold_app_inv in a as [].
     2:lia.
     eapply psubst_pred1_subst in Hs => //.
+    have onΓ'i := (on_free_vars_ctx_subst_context_xpredT s _ onΓ' (All_forallb _ _ ons)).
     rewrite subst_context0_inst_context in onΓ'i.
     pose proof (pred1_subst_Upn eq_refl onΓ' onΓ'i Hs a0).
     eapply All2_fold_app_inv in X as [] => //.
@@ -2662,7 +2678,6 @@ Section ParallelSubstitution.
     forward H => //.
     forward H. now constructor.
     do 2 forward H => //.
-    forward H. rewrite shiftnP0 //.
     apply (H redN).
   Qed.
 
@@ -2688,7 +2703,6 @@ Section ParallelSubstitution.
     forward H => //.
     forward H. now constructor.
     do 2 forward H => //.
-    forward H. rewrite shiftnP0 //.
     apply (H redN).
   Qed.
 

@@ -1631,6 +1631,8 @@ Proof.
   eapply All_All2_telescopei; eauto.
 Qed.
 
+From MetaCoq.PCUIC Require Import PCUICOnFreeVars PCUICInst.
+
 Section RedPred.
   Context {cf : checker_flags}.
   Context {Σ : global_env}.
@@ -1650,73 +1652,95 @@ Section RedPred.
       precisely not closed by arbitrary reductions in contexts with let-ins.
    *)
 
-  Lemma pred1_ctx_pred1 Γ Γ' Δ Δ' t u :
+  Lemma pred1_ctx_pred1 P Γ Γ' Δ Δ' t u :
     #|Γ| = #|Γ'| ->
+    on_free_vars (closedP #|Γ ,,, Δ| P) t ->
+    on_ctx_free_vars (closedP #|Γ ,,, Δ| P) (Γ ,,, Δ) ->
     pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ) t u ->
     assumption_context Δ ->
     pred1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ') ->
     pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') t u.
   Proof.
-    intros Hlen X H X0.
-    pose proof (strong_substitutivity _ wfΣ _ _ (Γ ,,, Δ) (Γ' ,,, Δ') _ _ ids ids X).
-    forward X1.
-    { red. intros.
-      destruct (leb_spec_Set (S x) #|Δ|).
-      rewrite nth_error_app_lt in H0. lia.
-      apply nth_error_assumption_context in H0 => //; rewrite H0 //.
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite H0. simpl. rewrite e. reflexivity. }
-    forward X1.
-    { red. intros.
-      destruct (leb_spec_Set (S x) #|Δ|).
-      rewrite nth_error_app_lt in H0. lia.
-      apply nth_error_assumption_context in H0 => //; rewrite H0 //.
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_fold_app_inv in X0 as [_ X0] => //.
-      pose proof (All2_fold_length X0).
-      rewrite nth_error_app_ge. lia. now rewrite -H1 H0 /= e. }
-    forward X1.
-    red. intros x; split. eapply pred1_refl_gen; auto.
-    destruct option_map as [[o|]|]; auto.
-    now rewrite !subst_ids in X1.
+    intros Hlen ont onctx X H X0.
+    epose proof (fst strong_substitutivity _ _ _ _ X _ _ (Γ ,,, Δ) (Γ' ,,, Δ') ids ids ont).
+    forward X1. now rewrite subst_ids.
+    rewrite !subst_ids in X1.
+    apply X1.
+    red. split => //. split => //.
+    intros x px. rewrite {1}/ids /=. split => //.
+    split => //. eapply pred1_refl_gen => //.
+    move=> [na [b|] ty] => /= //.
+    destruct (leb_spec_Set (S x) #|Δ|).
+    rewrite !nth_error_app_lt; try lia.
+    intros hnth; rewrite hnth. eexists; split => //.
+    apply nth_error_assumption_context in hnth => //.
+    rewrite !nth_error_app_ge //; try lia.
+    intros hnth.
+    pose proof (All2_fold_app_inv _ _ _ _ _ X0) as [predΓ _] => //.
+    pose proof (All2_fold_length X0). len in H0.
+    eapply nth_error_pred1_ctx_l in predΓ; tea.
+    2:erewrite hnth => //.
+    destruct predΓ as [body' [hnth' pred]].
+    exists body'; split=> //.
+    rewrite -lift0_inst /ids /=.
+    econstructor => //.
+    rewrite nth_error_app_ge. lia.
+    now replace #|Δ'| with #|Δ| by lia.
   Qed.
 
-  Lemma pred1_ctx_pred1_inv Γ Γ' Δ Δ' t u :
+  Lemma pred1_ctx_assumption_context Γ Γ' : 
+    pred1_ctx Σ Γ Γ' ->
+    assumption_context Γ -> assumption_context Γ'.
+  Proof.
+    induction 1; auto.
+    intros h; depelim h. depelim p; constructor; auto.
+  Qed.
+
+  Lemma pred1_ctx_over_assumption_context Γ Γ' Δ Δ' : 
+    pred1_ctx_over Σ Γ Γ' Δ Δ' ->
+    assumption_context Δ -> assumption_context Δ'.
+  Proof.
+    induction 1; auto.
+    intros h; depelim h. depelim p; constructor; auto.
+  Qed.
+
+  Lemma pred1_ctx_pred1_inv P Γ Γ' Δ Δ' t u :
     #|Γ| = #|Γ'| ->
+    on_free_vars (closedP #|Γ ,,, Δ| P) t ->
+    on_ctx_free_vars (closedP #|Γ ,,, Δ| P) (Γ ,,, Δ) ->
     pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ') t u ->
     assumption_context Δ ->
-    assumption_context Δ' ->
     pred1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ) ->
     pred1 Σ (Γ ,,, Δ) (Γ' ,,, Δ) t u.
   Proof.
-    intros Hlen X H H' X0.
+    intros Hlen ont onctx X H X0.
     assert(lenΔ : #|Δ| = #|Δ'|). 
     { eapply pred1_pred1_ctx in X. eapply All2_fold_length in X.
       rewrite !app_context_length in X. lia. }
-    pose proof (strong_substitutivity _ wfΣ _ _ (Γ ,,, Δ) (Γ' ,,, Δ) _ _ ids ids X).
-    forward X1.
-    { red. intros. simpl.
-      destruct (leb_spec_Set (S x) #|Δ|).
-      rewrite nth_error_app_lt in H0. lia.
-      apply nth_error_assumption_context in H0 => //; rewrite H0 //.
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite nth_error_app_ge in H0. lia. rewrite nth_error_app_ge. lia.
-      rewrite H0. simpl. rewrite e. reflexivity. }
-    forward X1.
-    { red. intros.
-      destruct (leb_spec_Set (S x) #|Δ|).
-      rewrite nth_error_app_lt in H0. lia.
-      apply nth_error_assumption_context in H0 => //; rewrite H0 //.
-      case e: (decl_body d) => [b|] //. eexists x, _; intuition eauto.
-      rewrite nth_error_app_ge in H0 |- *; try lia.
-      eapply All2_fold_app_inv in X0 as [_ X0] => //.
-      pose proof (All2_fold_length X0).
-      rewrite nth_error_app_ge. lia. now rewrite lenΔ H0 /= e. }
-    forward X1.
-    red. intros x; split. eapply pred1_refl_gen; auto.
-    destruct option_map as [[o|]|]; auto.
-    now rewrite !subst_ids in X1.
+    epose proof (fst strong_substitutivity _ _ _ _ X _ _ (Γ ,,, Δ) (Γ' ,,, Δ) ids ids ont).
+    forward X1. now rewrite subst_ids.
+    rewrite !subst_ids in X1.
+    apply X1.
+    red. split => //. split => //.
+    intros x px. rewrite {1}/ids /=. split => //.
+    split => //. eapply pred1_refl_gen => //.
+    move=> [na [b|] ty] => /= //.
+    destruct (leb_spec_Set (S x) #|Δ|).
+    rewrite !nth_error_app_lt; try lia.
+    intros hnth.
+    apply nth_error_assumption_context in hnth => //.
+    rewrite !nth_error_app_ge //; try lia.
+    intros hnth.
+    pose proof (All2_fold_app_inv _ _ _ _ _ X0) as [predΓ _] => //.
+    pose proof (All2_fold_length X0). len in H0.
+    eapply nth_error_pred1_ctx_l in predΓ; tea.
+    2:erewrite hnth => //.
+    destruct predΓ as [body' [hnth' pred]].
+    replace #|Δ'| with #|Δ| by lia. 
+    exists body'; split=> //.
+    rewrite -lift0_inst /ids /=.
+    econstructor => //.
+    rewrite nth_error_app_ge //. lia.
   Qed.
 
   Ltac noconf H := repeat (DepElim.noconf H; simpl NoConfusion in * ).
@@ -1751,13 +1775,47 @@ Section RedPred.
       eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
   Qed.
 
+  Lemma OnOne2_pars_pred1_ctx_over Γ params params' puinst pctx :
+    OnOne2 (Trel_conj (red1 Σ Γ) (pred1 Σ Γ Γ)) params params' ->
+    pred1_ctx_over Σ Γ Γ (inst_case_context params puinst pctx) (inst_case_context params' puinst pctx).
+  Proof.
+    induction 1.
+    - rewrite /inst_case_context /= !subst_context_decompo /=.
+      eapply pred1_ctx_over.
+    1-2:constructor; destruct p; subst; intuition eauto.
+    - eapply pred1_pred1_ctx in p. pcuic.
+    - now constructor.
+    - eapply pred1_pred1_ctx in a0. pcuic.
+    - eapply pred1_pred1_ctx in a. pcuic.
+    - constructor; unfold on_decls_over; simpl; subst; intuition auto.
+      eapply pred1_refl.
+    - constructor; unfold on_decls_over; simpl; subst; intuition auto.
+      eapply pred1_refl.
+    - eapply (All2_fold_app _ _ [d] _ [_]); pcuic.
+      destruct d as [na [b|] ty]; constructor; pcuic. 
+      constructor; unfold on_decls_over; simpl; subst; auto; intuition pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
+      unfold on_decls_over; simpl; subst; intuition pcuic.
+      constructor.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
+  Qed.
 
   Lemma red1_pred1 Γ : forall M N, red1 Σ Γ M N -> pred1 Σ Γ Γ M N.
   Proof with pcuic.
     induction 1 using red1_ind_all; intros; pcuic.
-    - constructor; pcuic.
+    all:try solve [econstructor; pcuic; 
+      (eapply All_All2_refl, All_refl || eapply OnOne2_All2 || idtac); eauto using pred1_refl, pred1_ctx_over_refl].
+    - econstructor; pcuic.
       eapply OnOne2_All2...
-    - constructor; pcuic.
+      admit.
+      eapply pred1_refl_gen.
+      eapply p
+      eapply All_All2_refl, All_refl. intros; apply pred1_refl.
+      eapply All_All2_refl, All_refl. intros; repeat split => //.
+      2:apply pred1_refl.
+      eapply pred1_ctx_over_refl.
+    - econstructor; pcuic.
       red. simpl. now eapply OnOne2_local_env_pred1_ctx_over in X.
       eapply pred1_refl_gen.
       eapply OnOne2_local_env_pred1_ctx_over in X.

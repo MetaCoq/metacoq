@@ -1442,6 +1442,50 @@ Proof.
   now setoid_rewrite shiftnP_closedP; setoid_rewrite shiftnP_xpredT; setoid_rewrite Nat.add_comm at 1.
 Qed.
 
+Lemma on_free_vars_ctx_subst_context P s ctx :
+  on_free_vars_ctx (shiftnP #|s| P) ctx ->
+  forallb (on_free_vars P) s -> 
+  on_free_vars_ctx P (subst_context s 0 ctx).
+Proof.
+  intros onctx ons.
+  rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
+  rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
+  eapply on_free_vars_subst => //.
+  rewrite -on_free_vars_ctx_all_term //.
+Qed.
+
+Lemma on_free_vars_ctx_smash P Γ acc : 
+  on_free_vars_ctx P Γ ->
+  on_free_vars_ctx (shiftnP #|Γ| P) acc ->
+  on_free_vars_ctx P (smash_context acc Γ).
+Proof.
+  induction Γ in P, acc |- *.
+  - cbn. now rewrite shiftnP0.
+  - destruct a as [na [b|] ty].
+    * rewrite /= on_free_vars_ctx_snoc /= => /andP[] onΓ.
+      rewrite /on_free_vars_decl /test_decl /= /= => /andP[] onb onty onacc.
+      eapply IHΓ => //.
+      eapply on_free_vars_ctx_subst_context => /= //.
+      + rewrite shiftnP_add //.
+      + now rewrite onb //.
+    * rewrite /= on_free_vars_ctx_snoc /= => /andP[] onΓ ont onacc.
+      eapply IHΓ => //.
+      rewrite -on_free_vars_ctx_on_ctx_free_vars /=; len.
+      rewrite shiftnP_add -Nat.add_assoc -(shiftnP_add).
+      rewrite on_ctx_free_vars_concat.
+      rewrite on_free_vars_ctx_on_ctx_free_vars onacc /=.
+      now rewrite /on_ctx_free_vars /= ont.
+Qed.
+  
+Lemma on_free_vars_ctx_subst_context_xpredT s ctx :
+  on_free_vars_ctx xpredT ctx ->
+  forallb (on_free_vars xpredT) s -> 
+  on_free_vars_ctx xpredT (subst_context s 0 ctx).
+Proof.
+  intros onctx ons.
+  apply on_free_vars_ctx_subst_context => //.
+  rewrite shiftnP_xpredT //.
+Qed.
 
 Lemma term_on_free_vars_ind :
   forall (P : (nat -> bool) -> term -> Type),

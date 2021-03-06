@@ -3717,7 +3717,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     now rewrite context_assumptions_smash_context.
   Qed.
 
-  Lemma All2_fold_over_smash_acc {Γ Γ' Δ Δ'} acc acc' :
+  (*Lemma All2_fold_over_smash_acc {Γ Γ' Δ Δ'} acc acc' :
     pred1_ctx_over Σ Γ Γ' Δ Δ' ->
     pred1_ctx_over Σ (Γ ,,, Δ) (Γ' ,,, Δ') acc acc' ->    
     pred1_ctx_over Σ Γ Γ' (smash_context acc Δ) (smash_context acc' Δ').
@@ -3759,7 +3759,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     intros h.
     eapply (All2_fold_over_smash_acc [] []) in h => //.
     constructor.
-  Qed.
+  Qed.*)
 
   Lemma pred1_ext Γ Γ' t t' u u' :
     t = t' -> u = u' -> pred1 Σ Γ Γ' t u -> pred1 Σ Γ Γ' t' u'.
@@ -3767,51 +3767,6 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     now intros -> ->.
   Qed.
   
-  Lemma on_free_vars_ctx_subst_context P s ctx :
-    on_free_vars_ctx (shiftnP #|s| P) ctx ->
-    forallb (on_free_vars P) s -> 
-    on_free_vars_ctx P (subst_context s 0 ctx).
-  Proof.
-    intros onctx ons.
-    rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
-    rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
-    eapply on_free_vars_subst => //.
-    rewrite -on_free_vars_ctx_all_term //.
-  Qed.
-  
-  Lemma on_free_vars_ctx_smash P Γ acc : 
-    on_free_vars_ctx P Γ ->
-    on_free_vars_ctx (shiftnP #|Γ| P) acc ->
-    on_free_vars_ctx P (smash_context acc Γ).
-  Proof.
-    induction Γ in P, acc |- *.
-    - cbn. now rewrite shiftnP0.
-    - destruct a as [na [b|] ty].
-      * rewrite /= on_free_vars_ctx_snoc /= => /andP[] onΓ.
-        rewrite /on_free_vars_decl /test_decl /= /= => /andP[] onb onty onacc.
-        eapply IHΓ => //.
-        eapply on_free_vars_ctx_subst_context => /= //.
-        rewrite shiftnP_add //.
-        now rewrite onb //.
-      * rewrite /= on_free_vars_ctx_snoc /= => /andP[] onΓ ont onacc.
-        eapply IHΓ => //.
-        rewrite -on_free_vars_ctx_on_ctx_free_vars /=; len.
-        rewrite shiftnP_add -Nat.add_assoc -(shiftnP_add).
-        rewrite on_ctx_free_vars_concat.
-        rewrite on_free_vars_ctx_on_ctx_free_vars onacc /=.
-        now rewrite /on_ctx_free_vars /= ont.
-  Qed.
-    
-  Lemma on_free_vars_ctx_subst_context_xpredT s ctx :
-    on_free_vars_ctx xpredT ctx ->
-    forallb (on_free_vars xpredT) s -> 
-    on_free_vars_ctx xpredT (subst_context s 0 ctx).
-  Proof.
-    intros onctx ons.
-    apply on_free_vars_ctx_subst_context => //.
-    rewrite shiftnP_xpredT //.
-  Qed.
-
   Lemma pred1_expand_lets (Γ Γ' Δ Δ' : context) b b' :
     on_ctx_free_vars xpredT Γ ->
     on_ctx_free_vars xpredT Δ ->
@@ -3868,10 +3823,6 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
         + constructor; auto.
         + eapply on_free_vars_ctx_smash => //.
           now rewrite -on_ctx_free_vars_xpredT.
-        + eapply on_free_vars_ctx_subst_context => /=.
-          2:rewrite onb0 //.
-          eapply on_free_vars_ctx_smash => //.
-          now rewrite shiftnP_xpredT -on_ctx_free_vars_xpredT. 
         + len. eapply on_free_vars_expand_lets_k => //.
           { now eapply All2_fold_context_assumptions in a2. }
           { rewrite -on_ctx_free_vars_xpredT //. }

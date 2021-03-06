@@ -870,7 +870,7 @@ Proof.
   intros φ φ' u HH t t'.
   specialize (he _ _ _ HH).
   specialize (hle _ _ _ HH).
-  clear HH.
+  clear HH. cbn in he.
   induction t in napp, t', Rle, hle |- * using term_forall_list_ind;
     inversion 1; subst; cbn; constructor;
       eauto using precompose_subst_instance__2, R_universe_instance_impl'.

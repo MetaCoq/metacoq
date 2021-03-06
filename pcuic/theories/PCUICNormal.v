@@ -5,7 +5,7 @@ From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICContextRelation
      PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnv
-     PCUICInduction PCUICRedTypeIrrelevance.
+     PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars.
 Require Import ssreflect.
 Set Asymmetric Patterns.
 
@@ -723,17 +723,11 @@ Lemma whne_red1_ind
           whne flags Σ Γ c ->
           OnOne2 (red1 Σ Γ) p.(pparams) params' ->
           P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
-
-      (Hcase_pcontext : forall i p c brs pcontext',
+      (Hcase_motive : forall i  p c brs p',
           whne flags Σ Γ c ->
-          OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ'))) p.(pcontext) pcontext' ->
-          P (tCase i p c brs) (tCase i (set_pcontext p pcontext') c brs))
-    
-      (Hcase_discr : forall i  p c brs p',
-          whne flags Σ Γ c ->
-          red1 Σ (Γ ,,, p.(pcontext)) p.(preturn) p' ->
+          red1 Σ (Γ ,,, inst_case_predicate_context p) p.(preturn) p' ->
           P (tCase i p c brs) (tCase i (set_preturn p p') c brs))
-      (Hcase_motive : forall i p c brs c',
+      (Hcase_discr : forall i p c brs c',
           whne flags Σ Γ c ->
           red1 Σ Γ c c' ->
           P c c' ->
@@ -741,10 +735,9 @@ Lemma whne_red1_ind
       (Hcase_branch : forall i p c brs brs',
           whne flags Σ Γ c ->          
           OnOne2 (fun br br' => 
-            let ctx := br.(bcontext) in
-            (on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br' +
-            on_Trel_eq (OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ'))))
-              bcontext bbody br br'))%type brs brs' ->
+            let ctx := inst_case_branch_context p br in
+            (on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br')%type)
+            brs brs' ->
           P (tCase i p c brs) (tCase i p c brs'))
       (Hcase_noiota : forall t' i p c brs,
           RedFlags.iota flags = false ->
@@ -978,18 +971,18 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tFix mfix idx) (tFix mfix' idx)
-| whnf_red_tCase ci motive motivepars motivectx motiveret discr discr' brs brs' :
+| whnf_red_tCase ci motive motivepars motiveret discr discr' brs brs' :
     All2 (red Σ Γ) motive.(pparams) motivepars ->
-    red_ctx_rel Σ Γ (pcontext motive) motivectx ->
-    red Σ (Γ ,,, motive.(pcontext)) motive.(preturn) motiveret ->
+
+    red Σ (Γ ,,, inst_case_predicate_context motive) motive.(preturn) motiveret ->
     red Σ Γ discr discr' ->
     All2 (fun br br' =>
-      red_ctx_rel Σ Γ br.(bcontext) br'.(bcontext) ×
-      red Σ (Γ ,,, br.(bcontext)) br.(bbody) br'.(bbody)) brs brs' ->
+      red Σ (Γ ,,, inst_case_branch_context motive br) br.(bbody) br'.(bbody) ×
+      bcontext br = bcontext br') brs brs' ->
     whnf_red Σ Γ (tCase ci motive discr brs) 
       (tCase ci {| pparams := motivepars; 
                   puinst := motive.(puinst);
-                  pcontext := motivectx;
+                  pcontext := motive.(pcontext);
                   preturn := motiveret |} discr' brs')
 | whnf_red_tProj p c c' :
     red Σ Γ c c' ->
@@ -1042,9 +1035,6 @@ Proof.
     intros ? ? (->&->&r1&r2).
     eauto.
   - eapply red_case; eauto.
-    eapply All2_impl; eauto.
-    cbn. intros ? ? (eq&?).
-    intuition eauto.
   - apply red_proj_c; auto.
   - apply red_prod; auto.
   - apply red_abs; auto.
@@ -1139,9 +1129,7 @@ Proof.
     apply All2_same; auto.
   - destruct p. econstructor; simpl; eauto.
     * eapply All2_same; auto.
-    * reflexivity.
     * eapply All2_same; intuition auto.
-      reflexivity.
 Qed.
 
 Lemma whnf_red_refl Σ Γ t :
@@ -1188,10 +1176,16 @@ Proof.
     + eapply All2_trans; eauto.
       typeclasses eauto.
     + etransitivity; [eassumption|].
-      eapply red_red_ctx; eauto.
+      eapply red_red_ctx; eauto; revgoals.
       apply red_context_app_right; eauto.
+      * admit.
       * apply red_context_refl.
-      * apply red_ctx_rel_red_context_rel; eauto.
+      * apply red_ctx_rel_red_context_rel; eauto. admit.
+        rewrite /inst_case_predicate_context /=. admit.
+      * admit.
+      * admit.
+      * admit.
+
     + eapply All2_trans; eauto.
       clear -wf.
       intros x y z (?&?) (?&?).

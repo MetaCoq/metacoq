@@ -3382,9 +3382,39 @@ Section Rho.
 
   Lemma All_All2_telescopei_gen p (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
     #|Δ| = #|Δ'| ->
+    on_ctx_free_vars p Γ ->
+    forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
+    All2 (fun (x y : def term) => (pred1 Σ Γ Γ' (dtype x) (dtype y)) * (dname x = dname y))%type m m' ->
+    pred1_ctx_over Σ Γ Γ' Δ Δ' ->
+    All2_telescope_n (on_decls (pred1 Σ)) (fun n : nat => lift0 n)
+                    (Γ ,,, Δ) (Γ' ,,, Δ')
+                    #|Δ|
+  (map (fun def : def term => vass (dname def) (dtype def)) m)
+    (map (fun def : def term => vass (dname def) (dtype def)) m').
+  Proof.
+    generalize #|m|. intros n Δlen onΓ' onm.
+    induction 1 in Δ, Δ', Δlen, onm |- *; cbn. constructor.
+    intros. destruct r. rewrite e.
+    move: onm => /= /andP[] /andP [] onty onbody onl.
+    repeat constructor.
+    rewrite {2}Δlen.
+    eapply weakening_pred1_pred1; eauto.
+    specialize (IHX (vass (dname y) (lift0 #|Δ| (dtype x)) :: Δ)
+                    (vass (dname y) (lift0 #|Δ'| (dtype y)) :: Δ')).
+    rewrite {2}Δlen.
+    unfold snoc. forward IHX. simpl. lia.
+    forward IHX by auto. cbn.
+    forward IHX. constructor. apply X0. constructor. simpl.
+    red.
+    eapply weakening_pred1_pred1; eauto.
+    simpl in IHX.
+    apply IHX.
+  Qed.
+
+  Lemma All_All2_telescopei_gen_rho p (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
+    #|Δ| = #|Δ'| ->
     on_ctx_free_vars p Γ' ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
-    forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m' ->
     All2
       (fun (x y : def term) => (pred1 Σ Γ' Γ (dtype x) (rho Γ (dtype y))) * (dname x = dname y))%type m m' ->
     All2_fold_over (pred1 Σ) Γ' Γ Δ (rho_ctx_over Γ Δ') ->
@@ -3394,47 +3424,41 @@ Section Rho.
   (map (fun def : def term => vass (dname def) (dtype def)) m)
     (map (fun def : def term => vass (dname def) (rho Γ (dtype def))) m').
   Proof.
-    generalize #|m|. intros n Δlen onΓ' onm onm'.
-    induction 1 in Δ, Δ', Δlen, onm, onm' |- *; cbn. constructor.
-    intros. destruct r. rewrite e.
-    move: onm => /= /andP[] /andP [] onty onbody onl.
-    move: onm' => /= /andP[] /andP [] onty' onbody' onl'.
-    repeat constructor.
-    assert (#|Δ| = #|rho_ctx_over Γ Δ'|) by now rewrite rho_ctx_over_length.
-    rewrite {2}H.
-    eapply weakening_pred1_pred1; eauto.
-    specialize (IHX (vass (dname y) (lift0 #|Δ| (dtype x)) :: Δ)
-                    (vass (dname y) (lift0 #|Δ'| (dtype y)) :: Δ')).
-    assert (#|Δ| = #|rho_ctx_over Γ Δ'|) by now rewrite rho_ctx_over_length.
-    rewrite {2}H.
-    rewrite (rho_lift0 _ _ p) //.
-    unfold snoc. forward IHX. simpl. lia.
-    do 2 forward IHX by auto. cbn.
-    forward IHX. constructor. apply X0. constructor. simpl.
-    red.
-    assert (#|Δ'| = #|rho_ctx_over Γ Δ'|) by now rewrite rho_ctx_over_length.
-    rewrite H0.
-    rewrite - (rho_lift0 Γ (rho_ctx_over Γ Δ') p) //. simpl.
-    eapply weakening_pred1_pred1; eauto.
-    simpl in IHX. rewrite -H. rewrite {2}Δlen.
-    apply IHX.
+    intros.
+    rewrite -(map_map_compose _ _ _ (fun def => map_def (rho Γ) (rho Γ) def) (fun def => vass (dname def) (dtype def))).
+    eapply All_All2_telescopei_gen; tea. now len.
+    eapply All2_map_right; solve_all.
+  Qed.
+    
+  Lemma All_All2_telescopei p (Γ Γ' : context) (m m' : mfixpoint term) :
+    on_ctx_free_vars p Γ ->
+    forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
+    All2 (fun (x y : def term) => (pred1 Σ Γ Γ' (dtype x) (dtype y)) *
+                              (dname x = dname y))%type m m' ->
+    All2_telescope_n (on_decls (pred1 Σ)) (fun n : nat => lift0 n) Γ Γ' 0
+      (map (fun def : def term => vass (dname def) (dtype def)) m)
+      (map (fun def : def term => vass (dname def) (dtype def)) m').
+  Proof.
+    specialize (All_All2_telescopei_gen p Γ Γ' [] [] m m'). simpl.
+    intros. specialize (X eq_refl H H0 X0). forward X. constructor.
+    apply X.
   Qed.
 
-  Lemma All_All2_telescopei p (Γ Γ' : context) (m m' : mfixpoint term) :
+  Lemma All_All2_telescopei_rho p (Γ Γ' : context) (m m' : mfixpoint term) :
     on_ctx_free_vars p Γ' ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
-    forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m' ->
     All2 (fun (x y : def term) => (pred1 Σ Γ' Γ (dtype x) (rho Γ (dtype y))) *
                               (dname x = dname y))%type m m' ->
     All2_telescope_n (on_decls (pred1 Σ)) (fun n : nat => lift0 n) Γ' Γ 0
       (map (fun def : def term => vass (dname def) (dtype def)) m)
       (map (fun def : def term => vass (dname def) (rho Γ (dtype def))) m').
   Proof.
-    specialize (All_All2_telescopei_gen p Γ Γ' [] [] m m'). simpl.
-    intros. specialize (X eq_refl H H0 H1 X0). forward X. constructor.
-    apply X.
+    intros onΓ' H0 X.
+    specialize (All_All2_telescopei_gen_rho p Γ Γ' [] [] m m').
+    intros. specialize (X0 eq_refl onΓ' H0 X).
+    forward X0. constructor.
+    apply X0.
   Qed.
-
 
   Lemma rho_All_All2_fold_inv :
   forall Γ Γ' : context, pred1_ctx Σ Γ' Γ -> forall Δ Δ' : context,
@@ -3455,10 +3479,27 @@ Section Rho.
       apply IHΔ; auto. constructor; auto.
   Qed.
 
+  Lemma pred1_fix_context p (Γ Γ' : context) (m m' : mfixpoint term) :
+    on_ctx_free_vars p Γ ->
+    forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
+    pred1_ctx Σ Γ Γ' ->
+    All2 (on_Trel_eq (pred1 Σ Γ Γ') dtype dname) m m' ->
+    pred1_ctx_over Σ Γ Γ' (fix_context m) (fix_context m').
+  Proof.
+    intros onΓ' hm HΓ a.
+    unfold fix_context. unfold map_fix.
+    eapply local_env_telescope.
+    rewrite -(mapi_map (fun n decl => lift_decl n 0 decl) m
+        (fun def => vass (dname def) (dtype def))).
+    rewrite -(mapi_map (fun n decl => lift_decl n 0 decl) m'
+        (fun def => vass (dname def) (dtype def))).
+    eapply All2_telescope_mapi.
+    eapply All_All2_telescopei; eauto.
+  Qed.
+  
   Lemma pred1_rho_fix_context_2 p (Γ Γ' : context) (m m' : mfixpoint term) :
     on_ctx_free_vars p Γ' ->
     forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m| p))) m ->
-    forallb (test_def (on_free_vars p) (on_free_vars (shiftnP #|m'| p))) m' ->
     pred1_ctx Σ Γ' Γ ->
     All2 (on_Trel_eq (pred1 Σ Γ' Γ) dtype dname) m
          (map_fix rho Γ (fold_fix_context rho Γ [] m') m') ->
@@ -3467,26 +3508,10 @@ Section Rho.
       (fix_context m)
       (fix_context (map_fix rho Γ (fold_fix_context rho Γ [] m') m')).
   Proof.
-    intros onΓ' hm hm' HΓ a.
-    rewrite - (fold_fix_context_rho_ctx p) // in a.
-    unfold map_fix in a.
-    eapply All2_map_right' in a.
-    rewrite - (fold_fix_context_rho_ctx p) //.
-    unfold fix_context. unfold map_fix.
-    eapply local_env_telescope.
-    cbn.
-    rewrite - (mapi_mapi
-                 (fun n def => vass (dname def) (dtype def))
-                 (fun n decl => lift_decl n 0 decl)).
-    rewrite mapi_map. simpl.
-    rewrite - (mapi_mapi
-                 (fun n def => vass (dname def) (rho Γ (dtype def)))
-                 (fun n decl => lift_decl n 0 decl)).
-    eapply All2_telescope_mapi.
-    rewrite !mapi_cst_map.
-    eapply All_All2_telescopei; eauto.
-    now rewrite (All2_length a).
+    intros onΓ' hm HΓ a.
+    eapply pred1_fix_context; tea.
   Qed.
+
   
   (* Lemma substitution_pred1 Γ Δ Γ' Δ' s s' N N' :
     psubst Σ Γ Γ' s s' Δ Δ' ->
@@ -3901,6 +3926,44 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     len. now rewrite IHn.
   Qed.
   Hint Rewrite context_assumptions_fake_params : len.
+  
+  Lemma pred1_ctx_over_inst_case_context Γ Γ'  pars pars' puinst pctx :
+    pred1_ctx Σ Γ Γ' ->
+    on_ctx_free_vars xpredT Γ ->
+    forallb (on_free_vars xpredT) pars ->
+    on_free_vars_ctx (shiftnP #|pars| xpredT) pctx ->
+    All2 (pred1 Σ Γ Γ') pars pars' ->
+    pred1_ctx_over Σ Γ Γ' 
+      (inst_case_context pars puinst pctx)
+      (inst_case_context pars' puinst pctx).
+  Proof.
+    intros pr onctx onpars onpctx a.
+    assert (clpars' : forallb (on_free_vars xpredT) (List.rev pars)).
+    { rewrite forallb_rev //. }
+    rewrite /inst_case_context.
+    rewrite !subst_context0_inst_context.
+    eapply strong_substitutivity with (P := xpredT) (Q := xpredT).
+    instantiate (1 := Γ' ,,, smash_context [] (fake_params #|pars|)).
+    instantiate (1 := Γ ,,, smash_context [] (fake_params #|pars|)).
+    eapply All2_fold_app => //.
+    now eapply pred1_ctx_over_refl_gen.
+    eapply pred1_ctx_over_refl_gen.
+    eapply All2_fold_app => //.
+    now eapply pred1_ctx_over_refl_gen.
+    rewrite on_free_vars_subst_instance_context; tea.
+    now rewrite -> shiftnP_xpredT in onpctx.
+    erewrite <- on_free_vars_ctx_on_ctx_free_vars.
+    erewrite shiftnP_xpredT => //.     
+    rewrite -subst_context0_inst_context.
+    eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
+    eapply on_free_vars_ctx_subst_context_xpredT => //.
+    rewrite on_free_vars_subst_instance_context //.
+    now rewrite -> shiftnP_xpredT in onpctx.
+    eapply pred1_subst_consn; tea; eauto with fvs.
+    - len. now rewrite (All2_length a).
+    - len. now rewrite (All2_length a).
+    - now eapply All2_rev.
+  Qed.
 
   Lemma rho_inst_case_context Γ Γ' rΓ pars pars' puinst pctx :
     pred1_ctx Σ Γ Γ' ->
@@ -3919,31 +3982,10 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
       (inst_case_context (map (rho rΓ) pars) puinst pctx).
   Proof.
     intros pr pr' onctx onpars onpctx a.
-    assert (clpars' : forallb (on_free_vars xpredT) (List.rev pars')).
-    { rewrite forallb_rev //. solve_all. eauto with fvs. }
-    rewrite /inst_case_context.
-    rewrite !subst_context0_inst_context.
-    eapply strong_substitutivity with (P := xpredT) (Q := xpredT).
-    instantiate (1 := rΓ ,,, smash_context [] (fake_params #|pars|)).
-    instantiate (1 := Γ' ,,, smash_context [] (fake_params #|pars|)).
-    eapply All2_fold_app => //.
-    now eapply pred1_ctx_over_refl_gen.
-    eapply pred1_ctx_over_refl_gen.
-    eapply All2_fold_app => //.
-    now eapply pred1_ctx_over_refl_gen.
-    rewrite on_free_vars_subst_instance_context; tea.
-    now rewrite -> shiftnP_xpredT in onpctx.
-    erewrite <- on_free_vars_ctx_on_ctx_free_vars.
-    erewrite shiftnP_xpredT => //.     
-    rewrite -subst_context0_inst_context.
-    eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
-    eapply on_free_vars_ctx_subst_context_xpredT => //.
-    rewrite on_free_vars_subst_instance_context //.
-    now rewrite -> shiftnP_xpredT in onpctx.
-    eapply pred1_subst_consn; tea; eauto with fvs.
-    - len. now rewrite (All2_length a).
-    - now len.
-    - eapply All2_rev, All2_map_right, All2_sym; solve_all.
+    eapply pred1_ctx_over_inst_case_context => //; eauto with fvs.
+    { solve_all; eauto with fvs. }
+    now rewrite -(All2_length a).
+    eapply All2_map_right, All2_sym; solve_all.
   Qed.
   
    Ltac my_rename_hyp h th :=

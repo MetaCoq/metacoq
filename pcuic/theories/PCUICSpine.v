@@ -1304,17 +1304,6 @@ Proof. now intros r -> ->. Qed.
 Definition red_subst Σ Γ (σ σ' : nat -> term) :=
   forall x, red Σ Γ (σ x) (σ' x).
 
-Lemma red_on_free_vars {cf} {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
-  on_free_vars P u ->
-  on_ctx_free_vars P Γ ->
-  red Σ Γ u v ->
-  on_free_vars P v.
-Proof.
-  intros on onΓ r.
-  induction r; auto.
-  now eapply red1_on_free_vars.
-Qed.
-
 Lemma red_rename {cf} :
   forall P Σ Γ Δ u v f,
     wf Σ ->

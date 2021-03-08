@@ -2742,15 +2742,32 @@ Proof.
   intros p; eapply pred1_red; tea => //; eauto with fvs.
 Qed.
 
-Lemma ws_pred1_diamond {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} 
-  {P} {Γ Δ Δ' : ws_context P} 
-  {t : ws_term (shiftnP #|Γ| P)} 
-  {u : ws_term (shiftnP #|Δ| P)}
-  {v : ws_term (shiftnP #|Δ'| P)} :
-  pred1 Σ Γ Δ t u -> 
-  pred1 Σ Γ Δ' t v -> 
-  pred1 Σ Δ (rho_ctx Σ Γ) u (rho Σ (rho_ctx Σ Γ) t) ×
-  pred1 Σ Δ' (rho_ctx Σ Γ) v (rho Σ (rho_ctx Σ Γ) t).
+#[program]
+Definition rho_ws_pair {cf:checker_flags} (Σ : global_env) {wfΣ : wf Σ} (p : ws_pair) : ws_pair :=
+  (rho_ctx Σ p; rho Σ (rho_ctx Σ p) p). 
+Next Obligation.
+  destruct p as [Γ t]. cbn.
+  pose proof (@triangle _ Σ wfΣ Γ Γ (tRel 0) (tRel 0)).
+  forward X. eauto with fvs.
+  forward X. trivial.
+  forward X. apply pred1_refl.
+  eapply pred1_pred1_ctx in X.
+  eapply pred1_on_free_vars_ctx; tea. eauto with fvs.
+Qed.
+Next Obligation.
+  destruct p as [Γ t]. cbn.
+  pose proof (@triangle _ Σ wfΣ Γ Γ t t).
+  forward X. eauto with fvs.
+  forward X. eauto with fvs.
+  rewrite fold_context_length.
+  eapply pred1_on_free_vars; tea. eapply X. pcuic.
+  all:eauto with fvs.
+  rewrite on_free_vars_ctx_on_ctx_free_vars; eauto with fvs.
+Qed.
+
+Lemma ws_pred1_diamond {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {t u v : ws_pair} :
+  ws_pred1 Σ t u -> ws_pred1 Σ t v ->
+  ws_pred1 Σ u (rho_ws_pair Σ t) × ws_pred1 Σ v (rho_ws_pair Σ t).
 Proof.
   intros p q.
   apply pred1_diamond; eauto with fvs.
@@ -2797,18 +2814,8 @@ Section RedConfluence.
 
   Lemma diamond_pred1_rel : diamond pred1_rel.
   Proof.
-    move=> [Γ t] [Δ u] [Δ' v] /= tu tv.
-    pose proof (pred1_pred1_ctx _ tu).
-    pose proof (pred1_pred1_ctx _ tv). cbn in X, X0.
-    unfold pred1_rel in *.
-    cbn in tu, tv. red. cbn.
-    destruct (ws_pred1_diamond (Γ := Γ) (Δ := Δ) (Δ' := Δ') tu tv) as [ut vt].
-    unshelve eexists ((exist (rho_ctx Σ Γ) _); exist (rho Σ (rho_ctx Σ Γ) t) _); cbn.
-    3:split; auto.
-    pose proof (pred1_pred1_ctx _ ut). eauto with fvs.
-    len.
-    rewrite {1}(All2_fold_length X).
-    eapply pred1_on_free_vars_on_free_vars_ctx; tea; eauto with fvs.
+    move=> t u v tu tv.
+    exists (rho_ws_pair Σ t). apply (ws_pred1_diamond tu tv).
   Qed.
 
   Lemma pred1_rel_confluent : confluent pred1_rel.
@@ -3064,6 +3071,22 @@ Section RedConfluence.
       now rewrite -(OnOne2_local_env_length X).
   Qed.
 
+  Lemma eq_context_upto_names_on_free_vars P Γ Δ : 
+    on_free_vars_ctx P Γ ->
+    eq_context_upto_names Γ Δ ->
+    on_free_vars_ctx P Δ.
+  Proof.
+    move/on_free_vars_ctx_All_fold => a eqctx.
+    apply on_free_vars_ctx_All_fold.
+    eapply All2_fold_All_fold_mix_left in eqctx; tea. cbn in eqctx.
+    induction eqctx.
+    - constructor; auto.
+    - depelim a. constructor; auto.
+      rewrite -(All2_fold_length eqctx).
+      destruct p as [onfvs cd].
+      depelim cd; subst; auto.
+  Qed.
+  
   Lemma clos_refl_trans_ctx_on_free_vars P Γ Δ : 
     on_free_vars_ctx P Γ ->
     clos_refl_trans_ctx (red1_ctx Σ) Γ Δ ->
@@ -3072,7 +3095,7 @@ Section RedConfluence.
     intros onp.
     induction 1 in onp |- *.
     - eapply red1_ctx_on_free_vars; tea.
-    - todo "case".
+    - now eapply eq_context_upto_names_on_free_vars.
     - eauto.
   Qed.
 
@@ -3266,22 +3289,26 @@ Qed.
     - constructor. right. right. destruct x, y; cbn in *; auto.
   Qed.
 
-  Lemma pred1_upto_names_gen {Γ Γ' Δ Δ' t u} : 
-    on_free_vars xpredT t ->
-    on_free_vars_ctx xpredT Γ' ->
+  Lemma pred1_upto_names_gen {P Γ Γ' Δ Δ' t u} : 
+    on_free_vars_ctx P Γ ->
+    on_free_vars (shiftnP #|Γ| P) t ->
     pred1 Σ Γ Δ t u ->
     eq_context_upto_names Γ Γ' ->
     eq_context_upto_names Δ Δ' ->
     pred1_ctx Σ Γ' Δ' ->
     pred1 Σ Γ' Δ' t u.
   Proof.
-    intros ont onΓ' pr eqctx eqctx' predctx.
-    epose proof (fst (@strong_substitutivity _ Σ wfΣ) Γ Δ t u pr xpredT xpredT Γ' Δ' ids ids).
-    forward X by tas.
-    forward X. now rewrite subst_ids.
+    intros onΓ ont pr eqctx eqctx' predctx.
+    epose proof (fst (@strong_substitutivity _ Σ wfΣ) Γ Δ t u pr (shiftnP #|Γ| P) (shiftnP #|Γ| P) Γ' Δ' ids ids).
+    forward X by eauto with fvs.
+    forward X. rewrite subst_ids; eauto with fvs.
     rewrite !subst_ids in X. apply X.
-    split => //. split => //. eauto with fvs.
-    intros x _. split. eauto with fvs. split.
+    split => //. split => //.
+    { rewrite (All2_fold_length eqctx).
+      rewrite on_free_vars_ctx_on_ctx_free_vars.
+      eapply eq_context_upto_names_on_free_vars in onΓ; tea. }
+    eauto with fvs.
+    move=> x /= h. split => //. split.
     eapply pred1_refl_gen => //.
     intros decl hnth. destruct decl_body eqn:db => //.
     eapply pred1_pred1_ctx in pr.
@@ -3296,59 +3323,74 @@ Qed.
     rewrite hnth'' //.
   Qed.
 
-  Lemma pred1_ctx_upto_names {Γ Γ' Δ} : 
+  Lemma pred1_ctx_upto_names {P Γ Γ' Δ} : 
+    on_free_vars_ctx P Γ ->
     pred1_ctx Σ Γ Δ ->
     eq_context_upto_names Γ Γ' ->
     ∑ Δ', pred1_ctx Σ Γ' Δ' × eq_context_upto_names Δ Δ'.
   Proof.
-    intros pr eqctx.
-    induction eqctx in Δ, pr |- *; depelim pr.
+    intros onfvs pr eqctx.
+    induction eqctx in Δ, pr, onfvs |- *; depelim pr.
     - exists []; split; auto; pcuic.
-    - depelim a.
-      * depelim p0. subst.
-        destruct (IHeqctx _ pr) as [Δ' [pred' eq']]. 
+    - move: onfvs; rewrite on_free_vars_ctx_snoc /on_free_vars_decl /test_decl /= => /andP[] /= onΓ ont.
+      depelim a.      
+      * depelim p0. cbn in ont. subst.
+        destruct (IHeqctx _ onΓ pr) as [Δ' [pred' eq']]. 
         exists (vass na' t' :: Δ').
         split. constructor. apply pred'. constructor.
-        eapply pred1_upto_names_gen; tea.
+        eapply pred1_upto_names_gen; tea. eauto with fvs.
         constructor => //. constructor => //.
-      * destruct (IHeqctx _ pr) as [Δ' [pred' eq']].
+      * destruct (IHeqctx _ onΓ pr) as [Δ' [pred' eq']].
         depelim p1; subst.
-        exists (vdef na' b' t' :: Δ').
+        exists (vdef na' b' t' :: Δ'). cbn in ont.
+        move/andP: ont => [] onb onT'.
         split. constructor. apply pred'. constructor.
-        eapply pred1_upto_names_gen; tea.
-        eapply pred1_upto_names_gen; tea.
+        eapply pred1_upto_names_gen; tea; eauto with fvs.
+        eapply pred1_upto_names_gen; tea; eauto with fvs.
         constructor => //. constructor => //.
   Qed.
 
-  Lemma pred1_upto_names {Γ Γ' Δ t u} : 
+  Lemma pred1_upto_names {P Γ Γ' Δ t u} : 
+    on_free_vars_ctx P Γ ->
+    on_free_vars (shiftnP #|Γ| P) t -> 
     pred1 Σ Γ Δ t u ->
     eq_context_upto_names Γ Γ' ->
     ∑ Δ', pred1 Σ Γ' Δ' t u × eq_context_upto_names Δ Δ'.
   Proof.
-    intros pr eqctx.
+    intros onΓ ont pr eqctx.
     pose proof (pred1_pred1_ctx _ pr).
-    destruct (pred1_ctx_upto_names X eqctx) as [Δ' [pred' eq']].
+    destruct (pred1_ctx_upto_names onΓ X eqctx) as [Δ' [pred' eq']].
     exists Δ'; split; auto.
     now eapply pred1_upto_names_gen.
   Qed.
+
+  #[program]
+  Definition ws_pair_eq_ctx (t : ws_pair) {Γ'} (H : eq_context_upto_names t Γ') : ws_pair :=
+    (Γ'; t.π2).
+    Next Obligation.
+      eapply eq_context_upto_names_on_free_vars; tea.
+      eauto with fvs.
+    Qed.
+    Next Obligation.
+      destruct t as [Γ [t ht]]; cbn. cbn in H.
+      now rewrite -(All2_fold_length H).
+    Qed.
 
   Lemma diamond_pred1_rel_alpha : diamond pred1_rel_alpha.
   Proof.
     move=> t u v tu tv.
     destruct tu as [tu|[tu eq]], tv as [tv|[tv eq']].
-    - destruct (pred1_diamond wfΣ tu tv).
-      eexists (rho_ctx Σ (fst t), rho Σ (rho_ctx Σ (fst t)) (snd t)).
-      split; left; auto.
-    - destruct t as [ctxt t], u as [ctxu u], v as [ctxv v]; cbn in *; subst v.
-      eapply pred1_upto_names in tu as [Δ' [pred eqctx]]; tea.
-      exists (Δ', u). unfold pred1_rel_alpha; cbn.
+    - destruct (ws_pred1_diamond tu tv). eexists; split; left; tea.
+    - destruct t as [ctxt [t ht]], v as [ctxv [v hv]]; cbn in *. subst v.
+      eapply pred1_upto_names in tu as [Δ' [pred eqctx]]; cbn; tea; eauto with fvs.
+      cbn in *. exists (ws_pair_eq_ctx u eqctx).
+      unfold pred1_rel_alpha; cbn.
       firstorder.
-    - destruct t as [ctxt t], u as [ctxu u], v as [ctxv v]; cbn in *; subst u.
+    - destruct t as [ctxt [t ht]], u as [ctxu [u hu]]; cbn in *; subst u.
       eapply pred1_upto_names in tv as [Δ' [pred eqctx]]; tea.
-      exists (Δ', v). unfold pred1_rel_alpha; cbn.
-      firstorder.
-    - destruct t as [ctxt t], u as [ctxu u], v as [ctxv v]; cbn in *; subst u v.
-      exists (ctxt, t). unfold pred1_rel_alpha; cbn.
+      exists (ws_pair_eq_ctx v eqctx). unfold pred1_rel_alpha; cbn.
+      firstorder. cbn. eauto with fvs.
+    - exists t. unfold pred1_rel_alpha; cbn.
       split. right; split; auto. now symmetry.
       right. split; auto. now symmetry.
   Qed.
@@ -3366,12 +3408,19 @@ Qed.
     - apply pred1_rel_alpha_red1_rel_alpha.
   Qed.
 
-  Lemma clos_refl_trans_out Γ x y :
-    clos_refl_trans (red1 Σ Γ) x y -> clos_refl_trans red1_rel (Γ, x) (Γ, y).
+  Lemma clos_refl_trans_out (Γ : closed_context) (x y : ws_term (shiftnP #|Γ| xpred0)) :
+    clos_refl_trans (red1 Σ Γ) x y -> clos_refl_trans red1_rel (Γ; x) (Γ; y).
   Proof.
-    induction 1. constructor. red. left. pcuicfo.
-    constructor 2.
-    econstructor 3; eauto.
+    destruct x as [x hx], y as [y hy]; cbn.
+    induction 1. 
+    - constructor. red. left. pcuicfo.
+    - destruct (uip hx hy).
+      constructor 2.
+    - econstructor 3. 
+      unshelve eapply IHX1. cbn.
+      eapply red_on_free_vars in X1; tea; eauto with fvs.
+      rewrite on_free_vars_ctx_on_ctx_free_vars; eauto with fvs. cbn.
+      eapply IHX2.
   Qed.
 
   Lemma clos_red_rel_out x y :
@@ -3381,9 +3430,10 @@ Qed.
     eapply clos_rt_monotone. clear x y.
     intros [Γ t] [Δ u] hred.
     destruct hred as [[ht eq]|[hctx eq]]. subst.
-    red. simpl. now eapply red1_pred1.
+    red. simpl. now eapply ws_red1_pred1.
     subst. red.
-    simpl.
+    simpl. destruct t as [t ht], u as [u hu].
+    cbn in eq. subst t.
     eapply pred1_refl_gen. now eapply red1_ctx_pred1_ctx.
   Qed.
 
@@ -3395,9 +3445,9 @@ Qed.
       destruct r. destruct p; subst.
       constructor. firstorder.
       destruct r. destruct p; subst.
-      constructor. firstorder.
+      constructor. firstorder auto.
       destruct p; subst.
-      constructor 2. simpl. auto. reflexivity.
+      constructor 2. simpl. auto. cbn. auto.
     - constructor 2; reflexivity.
     - econstructor 3; eauto.
   Qed.
@@ -3410,11 +3460,21 @@ Qed.
       destruct r. destruct p; subst.
       constructor. firstorder.
       destruct p. subst.
-      constructor. firstorder.
+      constructor. firstorder auto.
     - destruct x, y. simpl in *.
-      subst. constructor. firstorder.
+      subst. constructor. firstorder auto.
     - econstructor 3; eauto.
   Qed.
+
+  Definition transport_on_free_vars {n m : nat} {t} (p : on_free_vars (shiftnP n xpred0) t) (eq : n = m) : 
+    on_free_vars (shiftnP m xpred0) t.
+  Proof. now destruct eq. Defined.
+
+  Definition transport_ws_term {n m : nat} (t : ws_term (shiftnP n xpred0)) (eq : n = m) : ws_term (shiftnP m xpred0) :=
+      exist (proj1_sig t) (transport_on_free_vars (proj2_sig t) eq).
+
+  Definition move_ws_term {Γ Δ : closed_context} (t : ws_term (shiftnP #|Γ| xpred0)) (eq : #|Γ| = #|Δ|) : ws_pair :=
+    (Δ; transport_ws_term t eq).
 
   Lemma clos_red_rel_out_inv x y :
     clos_refl_trans pred1_rel x y ->
@@ -3425,10 +3485,17 @@ Qed.
     destruct x as [Γ t], y as [Δ u]; simpl in *.
     pose proof (pred1_pred1_ctx _ r).
     apply red1_rel_alpha_red1_rel_inv.
-    transitivity (Γ, u).
-    eapply clos_refl_trans_ctx_t_prod_r. intros. red. left. split; eauto.
-    now apply pred1_red in r.
-    eapply clos_refl_trans_ctx_t_prod_l. intros. red. right. split; eauto.
+    transitivity (move_ws_term u (symmetry (All2_fold_length X))); cbn.
+    unfold move_ws_term; cbn.
+    eapply (clos_refl_trans_ctx_t_prod_r Γ (fun x y => red1 Σ Γ x y)).
+    { intros. red. left. split; eauto. }
+    { apply pred1_red in r; tea; eauto with fvs.
+      now eapply red_ws_red; cbn. }
+    apply: (clos_refl_trans_ctx_t_prod_l (red1_ctx Σ)).
+    { intros. eapply clos_refl_trans_ctx_on_free_vars in X0; tea. }
+    { intros x y a. now eapply clos_refl_trans_ctx_length in a. }
+    { intros x y [b hb] [b' hb'] re. cbn. intros <-. red. right. split; auto. }
+    cbn. reflexivity.
     now apply red_ctx_clos_rt_red1_ctx, pred1_ctx_red_ctx.
     constructor 2.
     etransitivity; eauto.
@@ -3451,41 +3518,105 @@ Qed.
       intros ???? []; constructor; auto.
   Qed.
   
-  Global Instance red_ctx_trans : Transitive red_ctx.
+  Lemma red_context_trans {Γ Δ Δ' : context} :
+    on_ctx_free_vars (closedP #|Γ| xpredT) Γ ->
+    red_ctx Γ Δ -> red_ctx Δ Δ' -> red_ctx Γ Δ'.
   Proof.
-    move=> Γ Γ' Γ'' H1 H2.
-    unfold red_ctx in *. 
-    eapply All2_fold_trans; tea.
-    intros. transitivity y => //.
-    eapply All_decls_impl; tea.
-    intros t t' r.
-    eapply red_red_ctx; eauto.
-    now eapply red_ctx_red_context.
+    intros onΓ.
+    move/red_ctx_red_context => h /red_ctx_red_context h'.
+    apply red_ctx_red_context. eapply red_context_trans; tea.
+  Qed.
+  
+  Global Instance ws_red_ctx_refl : Reflexive ws_red_ctx.
+  Proof.
+    intros Γ. red. red. reflexivity.
   Qed.
 
-  Lemma clos_rt_red1_rel_red1 x y :
+  Global Instance ws_red_ctx_trans : Transitive ws_red_ctx.
+  Proof.
+    intros Γ Δ Δ'. apply red_context_trans. eauto with fvs.
+    destruct Γ as [Γ onΓ]. cbn -[on_ctx_free_vars].
+    now eapply on_free_vars_ctx_on_ctx_free_vars_closedP.
+  Qed.
+
+  Lemma ws_red_ctx_length {x y : closed_context} (r : ws_red_ctx x y) : #|x| = #|y|.
+  Proof.
+    now apply All2_fold_length in r.
+  Qed.
+
+  Lemma ws_red_red Γ t u :
+    ws_red Σ xpred0 Γ t u ->
+    red Σ Γ t u.
+  Proof.
+    rewrite /ws_red /red.
+    destruct t as [t ht], u as [u hu]; cbn.
+    intros H; depind H.
+    red in r. now constructor.
+    constructor 2.
+    destruct y as [y hy].
+    econstructor 3.
+    eapply IHclos_refl_trans1. f_equal. eauto.
+  Qed.
+
+  Lemma ws_red_red_ctx_aux {Γ Δ : closed_context} {t u : ws_term (shiftnP #|Γ| xpred0)} :
+    ws_red Σ xpred0 Γ t u ->
+    forall rctx : ws_red_ctx Δ Γ,
+    red Σ Δ (transport_ws_term t (symmetry (ws_red_ctx_length rctx))) (transport_ws_term u (symmetry (ws_red_ctx_length rctx))).
+  Proof.
+    intros.
+    epose proof (red_red_ctx _ (shiftnP #|Γ| xpred0) Γ Δ t u).
+    forward X0 by (rewrite on_free_vars_ctx_on_ctx_free_vars; eauto with fvs).
+    forward X0. rewrite -(All2_fold_length rctx) on_free_vars_ctx_on_ctx_free_vars; eauto with fvs.
+    forward X0; eauto with fvs.
+    forward X0. now eapply ws_red_red.
+    forward X0. now eapply red_ctx_red_context.
+    exact X0.
+  Qed.
+
+  Lemma ws_red_red_ctx {Γ Δ : closed_context} {t u : ws_term (shiftnP #|Γ| xpred0)} :
+    ws_red Σ xpred0 Γ t u ->
+    forall rctx : ws_red_ctx Δ Γ,
+    ws_red Σ xpred0 Δ (transport_ws_term t (symmetry (ws_red_ctx_length rctx))) (transport_ws_term u (symmetry (ws_red_ctx_length rctx))).
+  Proof.
+    intros.
+    pose proof (ws_red_red_ctx_aux X rctx).
+    now eapply red_ws_red.
+  Qed.
+
+  Lemma clos_rt_red1_rel_ws_red1 x y :
     clos_refl_trans red1_rel x y ->
-    red_ctx (fst x) (fst y) *
-    clos_refl_trans (red1 Σ (fst x)) (snd x) (snd y).
+    ∑ redctx : ws_red_ctx x.π1 y.π1,
+      clos_refl_trans (ws_red1 Σ xpred0 x.π1) x.π2 (transport_ws_term y.π2 (symmetry (ws_red_ctx_length redctx))).
   Proof.
     intros H.
     eapply clos_rt_rt1n_iff in H.
     induction H.
-    - split; reflexivity.
+    - unshelve eexists. red; red. reflexivity.
+      destruct x as [Γ [x h]]; cbn. unfold transport_ws_term; cbn.
+      pose proof (uip h (transport_on_free_vars h (symmetry (ws_red_ctx_length (reflexivity (proj1_sig Γ)))))).
+      rewrite {1}H.
+      constructor 2.
     - destruct x as [Γ t], y as [Δ u], z as [Δ' u']; simpl in *.
       destruct IHclos_refl_trans_1n.
       red in r. destruct r.
-      * destruct p. subst. split. auto.
+      * destruct p. subst. exists x.
         transitivity u; auto.
-      * destruct p. subst. split.
+      * destruct p. subst. 
         apply red1_ctx_pred1_ctx in r.
         apply pred1_ctx_red_ctx in r.
-        etransitivity; eauto.
+        exists (transitivity r x).
+        econstructor 3.
         eapply red_red_ctx; eauto.
         apply red1_ctx_pred1_ctx in r.
         apply pred1_ctx_red_ctx in r.
         now eapply red_ctx_red_context.
   Qed.
+  
+  Lemma clos_rt_red1_rel_red1 x y :
+    clos_refl_trans red1_rel x y ->
+    red_ctx x.π1 y.π1 *
+    clos_refl_trans (red1 Σ x.π1) x.π2 y.π2.
+  Proof.
 
   Lemma decl_body_eq_context_upto_names Γ Γ' n d :
     option_map decl_body (nth_error Γ n) = Some d ->

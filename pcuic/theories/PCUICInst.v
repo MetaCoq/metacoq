@@ -1753,11 +1753,11 @@ Proof.
   - eapply red_conv_conv.
     + eapply red1_inst; tea.
     + apply IHh; tea.
-      eapply (red1_on_free_vars onA); tea.
+      eapply red1_on_free_vars; tea.
   - eapply red_conv_conv_inv.
     + eapply red1_inst; tea.
     + eapply IHh; eauto.
-      eapply (red1_on_free_vars onB); tea.
+      eapply red1_on_free_vars; tea.
 Qed.
 
 Lemma inst_cumul {Σ : global_env_ext} {wfΣ : wf Σ} {P Γ Δ σ A B} :
@@ -1775,11 +1775,11 @@ Proof.
   - eapply red_cumul_cumul.
     + eapply red1_inst; tea.
     + apply IHh; tea.
-      eapply (red1_on_free_vars onA); tea.
+      eapply red1_on_free_vars; tea.
   - eapply red_cumul_cumul_inv.
     + eapply red1_inst; tea.
     + eapply IHh; eauto.
-      eapply (red1_on_free_vars onB); tea.
+      eapply red1_on_free_vars; tea.
 Qed.
 
 Ltac inv_on_free_vars_decl :=

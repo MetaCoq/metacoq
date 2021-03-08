@@ -1258,10 +1258,10 @@ Proof.
   - eapply conv_red_l.
     + eapply red1_rename. all: try eassumption.
     + apply IHh.
-      * eapply (red1_on_free_vars hA); tea.
+      * eapply red1_on_free_vars; tea.
       * auto.
   - eapply conv_red_r.
-    + eapply IHh; eauto. eapply (red1_on_free_vars hB); tea.
+    + eapply IHh; eauto. eapply (red1_on_free_vars); tea.
     + eapply red1_rename. all: try eassumption.
 Qed.
 
@@ -1281,10 +1281,10 @@ Proof.
   - eapply cumul_red_l.
     + eapply red1_rename. all: try eassumption.
     + apply IHh.
-      * eapply (red1_on_free_vars hA); tea.
+      * eapply red1_on_free_vars; tea.
       * auto.
   - eapply cumul_red_r.
-    + eapply IHh; eauto. eapply (red1_on_free_vars hB); tea.
+    + eapply IHh; eauto. eapply red1_on_free_vars; tea.
     + eapply red1_rename. all: try eassumption.
 Qed.
 

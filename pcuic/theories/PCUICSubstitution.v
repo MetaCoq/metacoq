@@ -1394,12 +1394,28 @@ Section CtxReduction.
   Qed.
 End CtxReduction.
 
-Record wt_cumul {cf} Σ (Γ : context) T U := 
-{ wt_cum_dom : isType Σ Γ T;
-  wt_cum_codom : isType Σ Γ U;
-  wt_cum_cum :> Σ ;;; Γ |- T <= U }.
-   
+Record wt_equality (le : bool) {cf} Σ (Γ : context) T U := 
+  { wt_equality_dom : isType Σ Γ T;
+    wt_equality_codom : isType Σ Γ U;
+    wt_equality_eq : if le then Σ ;;; Γ |- T <= U else Σ ;;; Γ |- T = U }.
+
+Arguments wt_equality_dom {le cf Σ Γ T U}.
+Arguments wt_equality_codom {le cf Σ Γ T U}.
+Arguments wt_equality_eq {le cf Σ Γ T U}.
+
+Definition wt_cumul {cf} := wt_equality true.
+Definition wt_conv {cf} := wt_equality false.
+
 Notation " Σ ;;; Γ |- t <= u ✓" := (wt_cumul Σ Γ t u) (at level 50, Γ, t, u at next level).
+Notation " Σ ;;; Γ |- t = u ✓" := (wt_conv Σ Γ t u) (at level 50, Γ, t, u at next level).
+
+Definition wt_cumul_cum {cf} {Σ Γ T U} : Σ ;;; Γ |- T <= U ✓ -> Σ ;;; Γ |- T <= U.
+Proof. apply wt_equality_eq. Defined.
+Coercion wt_cumul_cum : wt_cumul >-> cumul.
+
+Definition wt_conv_conv {cf} {Σ Γ T U} : Σ ;;; Γ |- T = U ✓ -> Σ ;;; Γ |- T = U.
+Proof. apply wt_equality_eq. Defined.
+Coercion wt_conv_conv : wt_conv >-> conv.
 
 Definition red1P P Σ Γ t v := 
   on_ctx_free_vars P Γ × on_free_vars P t × red1 Σ Γ t v.
@@ -1413,14 +1429,20 @@ Proof.
   eapply red1_on_free_vars; tea.
 Qed.
 
-Reserved Notation " Σ ;;; Γ |-[ P ] t <= u" (at level 50, Γ, t, u at next level,
-  format "Σ  ;;;  Γ  |-[ P ]  t  <=  u").
+Reserved Notation " Σ ;;; Γ |-[ P ] t <=[ le ] u" (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  |-[ P ]  t  <=[ le ]  u").
 
-Inductive cumulP {cf} (Σ : global_env_ext) (P : nat -> bool) (Γ : context) : term -> term -> Type :=
-| wt_cumul_refl t u : leq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |-[P] t <= u
-| wt_cumul_red_l t u v : red1P P Σ Γ t v -> Σ ;;; Γ |-[P] v <= u -> Σ ;;; Γ |-[P] t <= u
-| wt_cumul_red_r t u v : Σ ;;; Γ |-[P] t <= v -> red1P P Σ Γ u v -> Σ ;;; Γ |-[P] t <= u
-where " Σ ;;; Γ |-[ P ] t <= u " := (cumulP Σ P Γ t u) : type_scope.
+Inductive cumulP {cf} (le : bool) (Σ : global_env_ext) (P : nat -> bool) (Γ : context) : term -> term -> Type :=
+| wt_cumul_refl t u : compare_term le Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |-[P] t <=[le] u
+| wt_cumul_red_l t u v : red1P P Σ Γ t v -> Σ ;;; Γ |-[P] v <=[le] u -> Σ ;;; Γ |-[P] t <=[le] u
+| wt_cumul_red_r t u v : Σ ;;; Γ |-[P] t <=[le] v -> red1P P Σ Γ u v -> Σ ;;; Γ |-[P] t <=[le] u
+where " Σ ;;; Γ |-[ P ] t <=[ le ] u " := (cumulP le Σ P Γ t u) : type_scope.
+
+Notation " Σ ;;; Γ |-[ P ] t <= u " := (cumulP true Σ P Γ t u) (at level 50, Γ, t, u at next level,
+    format "Σ  ;;;  Γ  |-[ P ]  t  <=  u") : type_scope.
+
+Notation " Σ ;;; Γ |-[ P ] t = u " := (cumulP false Σ P Γ t u) (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  |-[ P ]  t  =  u") : type_scope.
 
 Lemma isType_wf_local {cf:checker_flags} {Σ Γ T} : isType Σ Γ T -> wf_local Σ Γ.
 Proof.
@@ -1449,23 +1471,34 @@ Section SubstitutionLemmas.
     now rewrite shiftnPF_closedPT.
   Qed.
 
-  Lemma wt_cumul_cumulP {Γ : context} {T U} : wt_cumul Σ Γ T U -> cumulP Σ (closedP #|Γ| xpredT) Γ T U.
+  Lemma wt_equality_equalityP {le} {Γ : context} {T U} : wt_equality le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
   Proof.
     move=> [] dom.
     move: (isType_wf_local dom) => /closed_wf_local clΓ.
     rewrite closed_ctx_on_ctx_free_vars in clΓ; tea.
     move/isType_closedPT: dom => clT.
     move/isType_closedPT => clU cum.
-    induction cum.
-    - constructor; auto.
-    - econstructor 2.
-      * econstructor; [|split]; tea.
-      * eapply IHcum => //.
-        now eapply red1_on_free_vars in r.
-    - econstructor 3.
-      * eapply IHcum => //.
-        now eapply red1_on_free_vars.
-      * econstructor; [|split]; tea.
+    destruct le.
+    { induction cum.
+      - constructor; auto.
+      - econstructor 2.
+        * econstructor; [|split]; tea.
+        * eapply IHcum => //.
+          now eapply red1_on_free_vars in r.
+      - econstructor 3.
+        * eapply IHcum => //.
+          now eapply red1_on_free_vars.
+        * econstructor; [|split]; tea. }
+    { induction cum.
+      - constructor; auto.
+        - econstructor 2.
+          * econstructor; [|split]; tea.
+          * eapply IHcum => //.
+            now eapply red1_on_free_vars in r.
+        - econstructor 3.
+          * eapply IHcum => //.
+            now eapply red1_on_free_vars.
+          * econstructor; [|split]; tea. }
   Qed.
   
   Lemma substitution_red1 {P Γ Γ' Γ'' s M N} :
@@ -1760,22 +1793,6 @@ Qed.
     simpl in X. now apply X.
   Qed.
 
-  Lemma substitution_cumul {Γ Γ' Γ'' s M N} :
-    subslet Σ Γ s Γ' ->
-    Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ✓ ->
-    Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
-  Proof.
-    move=> Hs /wt_cumul_cumulP; elim.
-    - constructor.
-      now apply subst_leq_term.
-    - move=> t u v red cum.
-      eapply red_cumul_cumul.
-      eapply substitution_let_red; tea; eauto with wf; apply red.
-    - move=> t u v red cum red'.
-      eapply red_cumul_cumul_inv; tea.
-      eapply substitution_let_red; tea; apply red'.
-  Qed.
-
   Lemma usubst_well_subst {Γ σ Δ} : 
     usubst Γ σ Δ ->
     (forall x decl, nth_error Γ x = Some decl -> 
@@ -1917,6 +1934,15 @@ Proof.
   now eapply typing_wf_local in Ht.
 Qed.
 
+Corollary isType_substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ T} :
+  subslet Σ Γ s Γ' ->
+  isType Σ (Γ ,,, Γ' ,,, Δ) T ->
+  isType Σ (Γ ,,, subst_context s 0 Δ) (subst s #|Δ| T).
+Proof.
+  intros Hs [s' Ht].
+  eapply substitution in Ht; tea. now eexists.
+Qed.
+
 Corollary substitution_wf_local {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
   subslet Σ Γ s Γ' ->
   wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
@@ -1949,3 +1975,41 @@ Proof.
   eapply (substitution (Γ':=[vdef n u U]) (Δ := [])); tea.
   now eapply subslet_def_tip.
 Qed.
+
+(** Substitution into a *well-typed* cumulativity/conversion derivation. *)
+
+Lemma substitution_equality {cf} {Σ} {wfΣ : wf Σ} {le Γ Γ' Γ'' s M N} :
+  subslet Σ Γ s Γ' ->
+  wt_equality le Σ (Γ ,,, Γ' ,,, Γ'') M N ->
+  wt_equality le Σ (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
+Proof.
+  move=> Hs wteq; split.
+  + eapply (isType_substitution Hs), wteq.
+  + eapply (isType_substitution Hs), wteq.
+  + move/wt_equality_equalityP: wteq; elim.
+    - intros t u. destruct le; simpl; constructor; [now apply subst_leq_term|now apply subst_eq_term].
+    - move=> t u v red cum.
+      destruct le.
+      * eapply red_cumul_cumul.
+        eapply substitution_let_red; tea; eauto with wf; apply red.
+      * eapply red_conv_conv.
+        eapply substitution_let_red; tea; eauto with wf; apply red.
+    - move=> t u v red cum red'.
+      destruct le.
+      * eapply red_cumul_cumul_inv; tea.
+        eapply substitution_let_red; tea; apply red'.
+      * eapply red_conv_conv_inv; tea.
+        eapply substitution_let_red; tea; apply red'.
+Qed.
+
+Lemma substitution_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' s M N} :
+  subslet Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ✓ ->
+  Σ ;;; Γ ,,, subst_context s 0 Γ'' |-  subst s #|Γ''| M <= subst s #|Γ''| N ✓.
+Proof. apply substitution_equality. Qed.
+
+Lemma substitution_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' s M N} :
+  subslet Σ Γ s Γ' ->
+  Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M = N ✓ ->
+  Σ ;;; Γ ,,, subst_context s 0 Γ'' |-  subst s #|Γ''| M = subst s #|Γ''| N ✓.
+Proof. apply substitution_equality. Qed.

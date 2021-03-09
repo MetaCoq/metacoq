@@ -1410,11 +1410,11 @@ Notation " Σ ;;; Γ |- t <= u ✓" := (wt_cumul Σ Γ t u) (at level 50, Γ, t,
 Notation " Σ ;;; Γ |- t = u ✓" := (wt_conv Σ Γ t u) (at level 50, Γ, t, u at next level).
 
 Definition wt_cumul_cum {cf} {Σ Γ T U} : Σ ;;; Γ |- T <= U ✓ -> Σ ;;; Γ |- T <= U.
-Proof. apply wt_equality_eq. Defined.
+Proof. intros H. apply (wt_equality_eq H). Defined.
 Coercion wt_cumul_cum : wt_cumul >-> cumul.
 
 Definition wt_conv_conv {cf} {Σ Γ T U} : Σ ;;; Γ |- T = U ✓ -> Σ ;;; Γ |- T = U.
-Proof. apply wt_equality_eq. Defined.
+Proof. intros H; apply (wt_equality_eq H). Defined.
 Coercion wt_conv_conv : wt_conv >-> conv.
 
 Definition red1P P Σ Γ t v := 

@@ -29,11 +29,11 @@ Hint Resolve conv_refl' : pcuic.
 Arguments skipn : simpl never.
 
 (* TODO move *)
-Lemma weakening_cumul0 `{CF:checker_flags} Σ Γ Γ'' M N n :
+(* Lemma weakening_cumul0 {cf:checker_flags} Σ Γ Γ'' M N n :
   wf Σ.1 -> n = #|Γ''| ->
   Σ ;;; Γ |- M <= N ->
   Σ ;;; Γ ,,, Γ'' |- lift0 n M <= lift0 n N.
-Proof. intros; subst; now apply (weakening_cumul _ _ []). Qed.
+Proof. intros; subst. apply (weakening_cumul (Γ':= [])); tea. Qed. *)
 
 Hint Constructors red1 : pcuic.
 Hint Resolve refl_red : pcuic.
@@ -101,16 +101,35 @@ Section ContextReduction.
     eapply All2_fold_refl. reflexivity.
   Qed.
   Hint Resolve red_ctx_app : pcuic.
+  Import PCUICOnFreeVars ssrbool.
+
+  Notation byfvs := (ltac:(eauto with fvs)) (only parsing).
+
+  Lemma red_ctx_on_free_vars P Γ Γ' :
+    red_ctx Σ Γ Γ' ->
+    on_free_vars_ctx P Γ ->
+    on_free_vars_ctx P Γ'.
+  Proof.
+    move=> /red_ctx_red_context r onΓ.
+    pose proof (All2_fold_length r).
+    move: r => /red_context_on_ctx_free_vars.
+    move: onΓ. now rewrite - !on_free_vars_ctx_on_ctx_free_vars -H.
+  Qed.
 
   Lemma red1_red_ctx_aux {Γ Γ' T U} :
     red1 Σ Γ T U ->
+    on_free_vars xpredT T ->
+    on_free_vars_ctx xpredT Γ ->
     @red_ctx Σ Γ Γ' ->
     red1_red_ctxP Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
   Proof.
-    intros r H. revert Γ' H.
-    simpl in *. induction r using red1_ind_all; intros; auto with pcuic;
-     try solve [eexists; t]; try destruct (IHr _ H) as [? [? ?]]; auto.
+    intros r onT onΓ H. revert onT onΓ Γ' H.
+    simpl in *. induction r using red1_ind_all; intros; auto with pcuic; 
+    repeat inv_on_free_vars_xpredT.
+    all:try solve [eexists; t].
+    all:try specialize (IHr ltac:(tea) ltac:(eauto with fvs)).
+    all:try destruct (IHr _ ltac:(tea) ltac:(tea)) as [? [? ?]]; auto.
 
     - pose proof H.
       eapply nth_error_pred1_ctx_l in H as [body' [? ?]]; eauto.
@@ -125,15 +144,39 @@ Section ContextReduction.
       now rewrite [_ ,,, _](firstn_skipn (S i) _).
       destruct X as [x' [bt b't]]. exists (lift0 (S i) x').
       split; eauto with pcuic.
-      etransitivity. eapply red1_red. constructor.
-      rewrite firstn_skipn. eauto.
-      eapply weakening_red_0; eauto. rewrite firstn_length_le //.
-      eapply weakening_red_0; eauto. rewrite firstn_length_le //.
+      * etransitivity. eapply red1_red. constructor.
+        rewrite firstn_skipn. eauto. cbn in *.
+        eapply red_ctx_on_free_vars in onΓ. 2:tea.
+        eapply weakening_red_0; eauto.
+        rewrite firstn_length_le //.
+        erewrite on_free_vars_ctx_on_ctx_free_vars.
+        rewrite -(firstn_skipn (S i) Γ') on_free_vars_ctx_app in onΓ.
+        now move/andP: onΓ => [].
+        destruct (nth_error Γ' i) eqn:hnth => //.
+        epose proof (nth_error_on_free_vars_ctx xpredT 0 Γ' i c).
+        forward H2. rewrite addnP0. eauto with fvs.
+        forward H2 by auto.
+        specialize (H2 hnth). noconf e.
+        move/andP: H3 => [] /=. rewrite H /=.
+        rewrite PCUICInst.addnP_xpredT shiftnP_xpredT //.
+      * epose proof (red_ctx_on_free_vars _ _ _ H0 onΓ).
+        eapply weakening_red_0; eauto.
+        rewrite firstn_length_le //.
+        erewrite on_free_vars_ctx_on_ctx_free_vars.
+        rewrite -(firstn_skipn (S i) Γ') on_free_vars_ctx_app in H2.
+        now move/andP: H2 => [].
+        destruct (nth_error Γ i) eqn:hnth => //.
+        epose proof (nth_error_on_free_vars_ctx xpredT 0 Γ i c).
+        forward H3. rewrite addnP0. eauto with fvs.
+        forward H3 by auto.
+        specialize (H3 hnth). noconf H1.
+        move/andP: H3 => [] /=. rewrite H /=.
+        eauto with fvs.
 
     - exists (tLambda na x N). split; apply red_abs; auto.
 
     - destruct (IHr (Γ' ,, vass na N)). constructor; pcuic. constructor; pcuic.
-      case => n b b' /= //. apply X.
+      case => ? ? /= //. apply X.
       exists (tLambda na N x). split; apply red_abs; u.
 
     - exists (tLetIn na x t b'). split; eapply red_letin; auto.
@@ -143,55 +186,46 @@ Section ContextReduction.
       case. move=> b0 b1 [] <- [] <- H'. exists b; auto.
       apply X.
       exists (tLetIn na b t x). split; eapply red_letin; auto.
-    - eapply (OnOne2_exist _ (red Σ Γ')) in X as [pars' [ol or]].
+    - solve_all. eapply OnOne2_All_mix_left in X; tea.
+      eapply (OnOne2_exist _ (red Σ Γ')) in X as [pars' [ol or]].
       exists (tCase ci (set_pparams p pars') c brs). u.
       apply red_case_pars. eapply OnOne2_All2; tea => /= //.
       change (set_pparams p pars') with (set_pparams (set_pparams p params') pars').
       apply red_case_pars => /=. eapply OnOne2_All2; tea => /= //.
       intros; u.
-    - eapply (OnOne2_local_env_exist' _ (fun Δ => red Σ (Γ' ,,, Δ)) (fun Δ => red Σ (Γ' ,,, Δ))) in X as [pars' [ol or]].
+    (* - eapply (OnOne2_local_env_exist' _ (fun Δ => red Σ (Γ' ,,, Δ)) (fun Δ => red Σ (Γ' ,,, Δ))) in X as [pars' [ol or]].
       exists (tCase ci (set_pcontext p pars') c brs). u.
       apply red_case_pcontext => //.
       change (set_pcontext p pars') with (set_pcontext (set_pcontext p pcontext') pars').
       apply red_case_pcontext => /= //.
       move=> /= Δ x y IH. apply (IH (Γ' ,,, Δ)).
       { eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity. }
-      { now apply red1_red_ctxP_app. }
-    - destruct (IHr (Γ' ,,, pcontext p)).
+      { now apply red1_red_ctxP_app. } *)
+    - destruct (IHr (Γ' ,,, inst_case_predicate_context p)).
       now eapply red_ctx_app => //.
       now eapply red1_red_ctxP_app.
-      destruct p0.
+      destruct p5.
       eexists. split. eapply red_case_p; tea.
       change (set_preturn p x) with (set_preturn (set_preturn p preturn') x).
       eapply red_case_p; tea.
     - exists (tCase ind p x brs). u; now apply red_case_c.
-    - eapply OnOne2_disj in X. destruct X as [X|X].
-      * eapply (OnOne2_exist _ 
-        (fun br br' => on_Trel_eq (red Σ (Γ' ,,, bcontext br)) bbody bcontext br br')) in X.
+    - solve_all. eapply OnOne2_All_mix_left in X; tea.
+      eapply (OnOne2_exist _ 
+        (fun br br' => on_Trel_eq (red Σ (Γ' ,,, inst_case_branch_context p br)) bbody bcontext br br')) in X.
         destruct X as [brs'' [? ?]].
         eexists. split; eapply red_case_one_brs; eauto;
         solve_all.
         intros. intuition eauto.
-        specialize (b0 (Γ' ,,, bcontext x)) as [body' [rl rr]].
-        + now eapply red_ctx_app => //.
-        + now eapply red1_red_ctxP_app.
+        inv_on_free_vars_xpredT.
+        specialize (b1 ltac:(eauto with fvs)).
+        forward b1. eapply on_free_vars_ctx_inst_case_context_xpredT; eauto with fvs. solve_all.
+        now rewrite test_context_k_closed_on_free_vars_ctx in a0.
+        specialize (b1 (Γ' ,,, inst_case_branch_context p y)) as [body' [rl rr]].
+        + rewrite /inst_case_branch_context -b0. now eapply red_ctx_app => //.
+        + rewrite /inst_case_branch_context -b0. now eapply red1_red_ctxP_app.
         + exists {| bcontext := bcontext x; bbody := body' |}; cbn; split; rewrite -?b;
           intuition eauto.
-      * eapply (OnOne2_exist _ 
-          (fun br br' => on_Trel_eq (red_ctx_rel Σ Γ') bcontext bbody br br')) in X.
-        destruct X as [brsr [redl redr]].
-        exists (tCase ci p c brsr). split.
-        eapply red_case_one_brs. eapply OnOne2_disj. right => //.
-        eapply red_case_one_brs. eapply OnOne2_disj. right => //.
-        u.
-        eapply (OnOne2_local_env_exist' _ (fun Δ => red Σ (Γ' ,,, Δ)) (fun Δ => red Σ (Γ' ,,, Δ))) in a as [pars' [ol or]].
-        exists {| bcontext := pars' ; bbody := bbody x |}; rewrite -b /=; intuition eauto.
-        eapply red_one_decl_red_ctx_rel => //.
-        eapply red_one_decl_red_ctx_rel => //.
-        intros. specialize (X1 (Γ' ,,, Γ0)).
-        apply X1.
-        now eapply red_ctx_app.
-        now eapply red1_red_ctxP_app.
+          rewrite /inst_case_branch_context b0 //.
     - exists (tProj p x). u; now eapply red_proj_c.
     - exists (tApp x M2). u; now eapply red_app.
     - exists (tApp M1 x). u; now eapply red_app.
@@ -199,75 +233,83 @@ Section ContextReduction.
     - specialize (IHr (Γ' ,, vass na M1)) as [? [? ?]].
       constructor; pcuic. constructor; auto. case => //.
       exists (tProd na M1 x). u; now eapply red_prod.
-    - eapply (OnOne2_exist _ (red Σ Γ')) in X.
+    - eapply OnOne2_All_mix_left in X; tea.
+      eapply (OnOne2_exist _ (red Σ Γ')) in X.
       destruct X as [rl [l0 l1]].
       eexists; split; eapply red_evar; eauto.
       eapply OnOne2_All2; eauto.
       eapply OnOne2_All2; eauto.
       simpl; intros.
       intuition eauto.
-    - eapply (OnOne2_exist _ (on_Trel_eq (red Σ Γ') dtype (fun x => (dname x, dbody x, rarg x)))) in X.
+    - eapply OnOne2_All_mix_left in X; tea.
+       eapply (OnOne2_exist _ (on_Trel_eq (red Σ Γ') dtype (fun x => (dname x, dbody x, rarg x)))) in X.
       destruct X as [mfix' [l r]].
       exists (tFix mfix' idx); split; eapply red_fix_ty.
       eapply OnOne2_All2; intuition eauto; intuition.
       eapply OnOne2_All2; intuition eauto; intuition.
-      intuition auto.
-      destruct (b0 _ H X0) as [d' [r0 r1]].
+      intuition auto. inv_on_free_vars_xpredT.
+      specialize (b1 a0 onΓ).
+      destruct (b1 _ H X0) as [d' [r0 r1]].
       refine (existT _ {| dtype := d' |} _); simpl; eauto.
     - assert (fix_context mfix0 = fix_context mfix1).
       { rewrite /fix_context /mapi. generalize 0 at 2 4.
         induction X. destruct p. simpl. intuition congruence.
         intros. specialize (IHX (S n)). simpl. congruence. }
+      eapply OnOne2_All_mix_left in X; tea.
       eapply (OnOne2_exist _ (on_Trel_eq (red Σ (Γ' ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))) in X.
       destruct X as [mfix' [l r]].
       exists (tFix mfix' idx); split; eapply red_fix_body.
       eapply OnOne2_All2; intuition eauto; intuition.
       eapply OnOne2_All2; intuition eauto; intuition. congruence.
       intros.
-      intuition auto.
-      specialize (b0 (Γ' ,,, fix_context mfix0)). forward b0.
+      intuition auto. inv_on_free_vars_xpredT.
+      specialize (b1 ltac:(eauto with fvs) ltac:(eauto with fvs) (Γ' ,,, fix_context mfix0)). forward b1.
       eapply All2_fold_app => //. apply All2_fold_over_red_refl.
-      forward b0. now eapply red1_red_ctxP_app.
-      destruct b0 as [t [? ?]].
+      forward b1. now eapply red1_red_ctxP_app.
+      destruct b1 as [t [? ?]].
       refine (existT _ {| dbody := t |} _); simpl; eauto.
-    - eapply (OnOne2_exist _ (on_Trel_eq (red Σ Γ') dtype (fun x => (dname x, dbody x, rarg x)))) in X.
+    - eapply OnOne2_All_mix_left in X; tea.
+      eapply (OnOne2_exist _ (on_Trel_eq (red Σ Γ') dtype (fun x => (dname x, dbody x, rarg x)))) in X.
       destruct X as [mfix' [l r]].
       exists (tCoFix mfix' idx); split; eapply red_cofix_ty.
       eapply OnOne2_All2; intuition eauto; intuition.
       eapply OnOne2_All2; intuition eauto; intuition.
-      intuition auto.
-      destruct (b0 _ H X0) as [d' [r0 r1]].
+      intuition auto. inv_on_free_vars_xpredT.
+      destruct (b1 byfvs byfvs _ H X0) as [d' [r0 r1]].
       refine (existT _ {| dtype := d' |} _); simpl; eauto.
     - assert (fix_context mfix0 = fix_context mfix1).
       { rewrite /fix_context /mapi. generalize 0 at 2 4.
         induction X. destruct p. simpl. intuition congruence.
         intros. specialize (IHX (S n)). simpl. congruence. }
+      eapply OnOne2_All_mix_left in X; tea.
       eapply (OnOne2_exist _ (on_Trel_eq (red Σ (Γ' ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))) in X.
       destruct X as [mfix' [l r]].
       exists (tCoFix mfix' idx); split; eapply red_cofix_body.
       eapply OnOne2_All2; intuition eauto; intuition.
       eapply OnOne2_All2; intuition eauto; intuition. congruence.
-      intros.
-      intuition auto.
-      specialize (b0 (Γ' ,,, fix_context mfix0)). forward b0.
+      intros. intuition auto. inv_on_free_vars_xpredT.
+      specialize (b1 byfvs byfvs (Γ' ,,, fix_context mfix0)). forward b1.
       eapply All2_fold_app => //. apply All2_fold_over_red_refl.
-      forward b0. eapply red1_red_ctxP_app => //.
-      destruct b0 as [t [? ?]].
+      forward b1. eapply red1_red_ctxP_app => //.
+      destruct b1 as [t [? ?]].
       refine (existT _ {| dbody := t |} _); simpl; eauto.
   Qed.
 
-  Lemma red_red_ctx' {Γ Γ' T U} :
+  Hint Resolve red_ctx_on_free_vars : fvs.
+
+  Lemma red_red_ctx' {Γ : closed_context} Γ' {T : open_term Γ} {U} :
     red Σ Γ T U ->
     @red_ctx Σ Γ Γ' ->
     red1_red_ctxP Γ Γ' ->
     ∑ t, red Σ Γ' T t * red Σ Γ' U t.
   Proof.
-    intros r rc rP. induction r.
-    - eapply red1_red_ctx_aux; eauto.
+    intros r rc rP. destruct T as [T hT]; cbn in *; induction r.
+    - eapply red1_red_ctx_aux; eauto with fvs.
     - exists x; split; auto.
-    - destruct IHr1 as [xl [redl redr]].
-      destruct IHr2 as [xr [redl' redr']].
-      destruct (red_confluence wfΣ redr redl').
+    - destruct IHr1 as [xl [redl redr]]; eauto with fvs.
+      destruct IHr2 as [xr [redl' redr']]; eauto with fvs.
+      assert (on_free_vars_ctx xpred0 Γ'). eapply red_ctx_on_free_vars; tea. eauto with fvs.
+      destruct (red_confluence (Γ := exist Γ' byfvs) (t := exist y byfvs) redr redl').
       destruct p.
       exists x0. split; [transitivity xl|transitivity xr]; auto.
   Qed.

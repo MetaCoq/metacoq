@@ -4092,7 +4092,7 @@ Section ConfluenceFacts.
     exists nf; intuition auto.
   Qed.
 
-  Notation byfvs := (_ ltac:(eauto with fvs)) .
+  Notation byfvs := (_ ltac:(eauto with fvs)) (only parsing).
   
   Lemma red_ws_red_left (Γ : closed_context) (x : ws_term (shiftnP #|Γ| xpred0)) y :
     red Σ Γ x y -> ∑ prf, ws_red Σ xpred0 Γ x (exist y prf).
@@ -4130,11 +4130,11 @@ Inductive ws_equality {cf : checker_flags} (le : bool) (Σ : global_env_ext) (Γ
 | ws_equality_red_r (t u v : open_term Γ) : Σ ;;; Γ |- t <=[le] v -> red1 Σ Γ u v -> Σ ;;; Γ |- t <=[le] u
 where " Σ ;;; Γ |- t <=[ le ] u " := (ws_equality le Σ Γ t u) : type_scope.
 
-Notation " Σ ;;; Γ |- t <= u " := (ws_equality true Σ Γ t u) (at level 50, Γ, t, u at next level,
-    format "Σ  ;;;  Γ  |-  t  <=  u") : type_scope.
+Notation " Σ ;;; Γ '|-ws' t <= u " := (ws_equality true Σ Γ t u) (at level 50, Γ, t, u at next level,
+    format "Σ  ;;;  Γ  |-ws  t  <=  u") : type_scope.
 
-Notation " Σ ;;; Γ |- t = u " := (ws_equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
-  format "Σ  ;;;  Γ  |-  t  =  u") : type_scope.
+Notation " Σ ;;; Γ |-ws t = u " := (ws_equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  |-ws  t  =  u") : type_scope.
 
 Lemma ws_equalityP_alt `{cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u} :
   Σ ;;; Γ |- t <=[le] u <~> 

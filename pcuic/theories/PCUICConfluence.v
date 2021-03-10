@@ -4208,6 +4208,31 @@ Section EqualityLemmas.
     now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
   Qed.
 
+  Lemma into_ws_equality {le} {Γ : context} {T U} : 
+    (if le then Σ;;; Γ |- T <= U else Σ;;; Γ |- T = U) ->
+    forall (i : on_free_vars (shiftnP #|Γ| xpred0) T) (i0 : on_free_vars (shiftnP #|Γ| xpred0) U)
+      (i1 : on_free_vars_ctx xpred0 Γ), Σ ;;; exist Γ i1 |- exist T i <=[le] exist U i0.
+  Proof.
+    destruct le.
+    { induction 1.
+      - constructor; auto.
+      - intros. unshelve econstructor 2.
+        exists v; cbn; eauto with fvs. now cbn. cbn.
+        apply IHX.
+      - econstructor 3.
+        * unshelve eapply IHX => /=; cbn; eauto with fvs.
+        * exact r. }
+    { induction 1.
+      - constructor; auto.
+        - unshelve econstructor 2.
+          * exists v; cbn; eauto with fvs.
+          * now cbn.
+          * apply IHX.
+        - econstructor 3.
+          * unshelve eapply IHX. cbn. eauto with fvs.
+          * exact r. }
+  Qed.
+
   (** From well-typed to simply well-scoped equality. *)
   Lemma wt_equality_ws_equality {le} {Γ : context} {T U} : 
     forall eq : wt_equality le Σ Γ T U,
@@ -4219,24 +4244,7 @@ Section EqualityLemmas.
     move=> [] dom codom equiv; cbn.
     generalize (wf_local_closed_context (isType_wf_local dom)).
     generalize (isType_open dom) (isType_open codom). clear -wfΣ equiv.
-    destruct le.
-    { induction equiv.
-      - constructor; auto.
-      - intros. unshelve econstructor 2.
-        exists v; cbn; eauto with fvs. now cbn. cbn.
-        apply IHequiv.
-      - econstructor 3.
-        * unshelve eapply IHequiv => /=; cbn; eauto with fvs.
-        * exact r. }
-    { induction equiv.
-      - constructor; auto.
-        - unshelve econstructor 2.
-          * exists v; cbn; eauto with fvs.
-          * now cbn.
-          * apply IHequiv.
-        - econstructor 3.
-          * unshelve eapply IHequiv. cbn. eauto with fvs.
-          * exact r. }
+    now apply into_ws_equality.
   Qed.
 
   Lemma wt_equality_trans le Γ :

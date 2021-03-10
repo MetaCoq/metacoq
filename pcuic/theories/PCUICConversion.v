@@ -32,19 +32,21 @@ Qed.
 
 Section EquivalenceConvCumulDefs.
 
-  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context).
-
-  Proposition conv_conv1 M N :
+  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
+  (** We need conv1 to be defined on closed terms *)
+  (*Proposition conv_conv1 (M N : open_term Γ) :
     conv1 Σ Γ M N <~> conv Σ Γ M N.
   Proof.
     split; intro H.
-    - induction H.
+    - destruct M as [M HM], N as [N HN].
+      cbn in H |- *.
+      induction H in HM, HN |- *.
       + destruct r as [[r|r]|r].
         * eapply red_conv; eauto.
         * now econstructor 3; tea.
         * now constructor.
       + reflexivity.
-      + etransitivity; tea.
+      + eapply ws_equality_trans. conv_trans. etransitivity; tea.
     - induction H.
       + constructor. now right.
       + etransitivity; tea.
@@ -71,11 +73,9 @@ Section EquivalenceConvCumulDefs.
         constructor. left. now left.
       + etransitivity; tea.
         constructor. left. now right.
-  Qed.
+  Qed.*)
 
 End EquivalenceConvCumulDefs.
-
-
 
 (* TODO MOVE *)
 Fixpoint isFixApp t : bool :=

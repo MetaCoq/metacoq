@@ -292,18 +292,12 @@ Proof.
   - intros ? T' ty_T'.
     inversion ty_T'.
     subst.
-    fold predctx1 in predctx2.
-    subst predctx2.
     apply mkApps_conv_args ; auto.
-    + unfold ptm, ptm0.
-      apply it_mkLambda_or_LetIn_conv ; auto.
-      eapply conv_context_trans ; eauto.
-      apply conv_context_sym ; eauto.
 
-    + apply All2_app.
-      2: constructor ; auto.
-      apply All2_skipn.
-      eapply X4 ; eauto.
+    apply All2_app.
+    2: constructor ; auto.
+    apply All2_skipn.
+    eapply X4 ; eauto.
 
   - inversion_clear X3.
     assert (conv_ty : Σ ;;; Γ |- tSort u = tSort u').

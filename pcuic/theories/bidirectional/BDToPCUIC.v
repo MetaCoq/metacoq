@@ -280,23 +280,28 @@ Section BDToPCUICTyping.
         - cbn.
           constructor.
       }
-
+      
       econstructor ; eauto.
-      1: by eapply type_Cumul ; eauto.
+      1: eapply type_Cumul ; eauto.
 
       eapply All2i_impl.
       1:{ apply All2i_mix ; [eassumption|idtac].
-          eapply build_branches_type_wt ; eauto.
+          eapply wf_case_branches_types ; eauto.
           econstructor.
-          3: eassumption.
-          all: eauto.
+          eauto.
       }
       intros * Hprod ?.
       fold predctx in brctxty.
       fold ptm in brctxty.
       cbv beta zeta in Hprod.
       fold brctxty in Hprod.
-      destruct Hprod as ((?&?&?&?&?&?&Hbody)&?).
+      destruct Hprod as ((?&?&?&?&?&?&Hbody)&?&?).
+      assert (Σ ;;; Γ ,,, bcontext y |- brctxty.2 : tSort ps).
+      { unfold brctxty.
+        eapply PCUICContextConversion.context_conversion ; eauto.
+        symmetry.
+        eassumption.
+      }
       repeat split.
       all: auto.
       apply Hbody ; auto.

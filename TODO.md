@@ -89,3 +89,9 @@ into β-redexes, hence it is only β-convertible and not a syntactical equality.
 
 - Deduce that we have weakening and substitution lemmas in Template from those of
   PCUIC.
+
+
+## Case representation change
+
+Change definition of conversion and cumulativity to enfore well-scoped contexts and 
+terms directly in the definition of conv/cumul.

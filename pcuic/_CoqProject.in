@@ -35,6 +35,7 @@ theories/PCUICParallelReduction.v
 theories/PCUICParallelReductionConfluence.v
 theories/PCUICConfluence.v
 theories/PCUICContextRelation.v
+theories/PCUICWellScopedCumulativity.v
 theories/PCUICContextConversion.v
 theories/PCUICConversion.v
 theories/PCUICConvCumInversion.v

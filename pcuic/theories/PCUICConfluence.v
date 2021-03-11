@@ -2814,6 +2814,9 @@ Proof.
   eapply pred1_on_free_vars; tea.
 Qed.
 
+Definition red_ctx Σ : relation context :=
+  All2_fold (on_decls (fun Γ Δ => red Σ Γ)).
+
 Section RedConfluence.
   Context {cf : checker_flags}.
   Context {Σ : global_env} (wfΣ : wf Σ).
@@ -2891,14 +2894,11 @@ Section RedConfluence.
     relation_disjunction (A:=ws_pair) (fun '(Γ; t) '(Δ; u) => (red1 Σ Γ t u * (Γ = Δ)))%type
                          (fun '(Γ; t) '(Δ; u) => (red1_ctx Σ Γ Δ * (t = u :> term)))%type.
 
-  Definition red_ctx : relation context :=
-    All2_fold (on_decls (fun Γ Δ => red Σ Γ)).
-
   Definition lift_ws (R : context -> context -> Type) : ws_context xpred0 -> ws_context xpred0 -> Type :=
     fun Γ Γ' => R Γ Γ'.
 
   Definition ws_red1_ctx := (lift_ws (OnOne2_local_env (on_one_decl (red1 Σ)))).
-  Definition ws_red_ctx := lift_ws red_ctx.
+  Definition ws_red_ctx := lift_ws (red_ctx Σ).
   Definition ws_pred1_ctx := (lift_ws (on_contexts (pred1 Σ))).
 
   Lemma red1_ctx_pred1_ctx {Γ Γ' : closed_context} : ws_red1_ctx Γ Γ' -> ws_pred1_ctx Γ Γ'.
@@ -2936,7 +2936,7 @@ Section RedConfluence.
 
   Definition red_rel_ctx : ws_pair -> ws_pair -> Type :=
     fun t u =>
-    (red Σ t.π1 t.π2 u.π2 * red_ctx t.π1 u.π1)%type.
+    (red Σ t.π1 t.π2 u.π2 * red_ctx Σ t.π1 u.π1)%type.
 
   Lemma pred1_red' M N : ws_pred1 Σ M N -> red_rel_ctx M N.
   Proof.
@@ -2946,7 +2946,7 @@ Section RedConfluence.
     now eapply pred1_ctx_red_ctx.
   Qed.
 
-  Global Instance red_ctx_refl : Reflexive red_ctx.
+  Global Instance red_ctx_refl : Reflexive (red_ctx Σ).
   Proof.
     move=> x. eapply All2_fold_refl; intros; apply All_decls_refl; auto.
   Qed.
@@ -2981,7 +2981,7 @@ Section RedConfluence.
     induction H; firstorder; try solve[econstructor; eauto].
   Qed.
   
-  Lemma red_ctx_clos_rt_red1_ctx : inclusion red_ctx (clos_refl_trans_ctx (red1_ctx Σ)).
+  Lemma red_ctx_clos_rt_red1_ctx : inclusion (red_ctx Σ) (clos_refl_trans_ctx (red1_ctx Σ)).
   Proof.
     intros x y H.
     induction H; try firstorder.
@@ -3522,7 +3522,7 @@ Section RedConfluence.
   
   Hint Transparent context : typeclass_instances.
 
-  Lemma red_ctx_red_context Γ Δ : red_ctx Γ Δ <~> red_context Σ Γ Δ.
+  Lemma red_ctx_red_context Γ Δ : red_ctx Σ Γ Δ <~> red_context Σ Γ Δ.
   Proof.
     split; intros.
     - red. eapply PCUICEnvironment.All2_fold_impl; tea.
@@ -3534,7 +3534,7 @@ Section RedConfluence.
   
   Lemma red_context_trans {Γ Δ Δ' : context} :
     on_ctx_free_vars (closedP #|Γ| xpredT) Γ ->
-    red_ctx Γ Δ -> red_ctx Δ Δ' -> red_ctx Γ Δ'.
+    red_ctx Σ Γ Δ -> red_ctx Σ Δ Δ' -> red_ctx Σ Γ Δ'.
   Proof.
     intros onΓ.
     move/red_ctx_red_context => h /red_ctx_red_context h'.
@@ -3635,7 +3635,7 @@ Section RedConfluence.
   
   Lemma clos_rt_red1_rel_red1 x y :
     clos_refl_trans red1_rel x y ->
-    red_ctx x.π1 y.π1 * clos_refl_trans (red1 Σ x.π1) x.π2 y.π2.
+    red_ctx Σ x.π1 y.π1 * clos_refl_trans (red1 Σ x.π1) x.π2 y.π2.
   Proof.
     move/clos_rt_red1_rel_ws_red1 => [redctx wsred].
     split => //.
@@ -3706,7 +3706,7 @@ Section RedConfluence.
   Lemma eq_context_upto_names_red_ctx Γ Δ Γ' Δ' :
     eq_context_upto_names Γ Γ' ->
     eq_context_upto_names Δ Δ' ->
-    red_ctx Γ Δ ->
+    red_ctx Σ Γ Δ ->
     red_ctx_alpha Γ' Δ'.
   Proof.
     intros.
@@ -4116,156 +4116,3 @@ Section ConfluenceFacts.
 End ConfluenceFacts.
 
 Arguments red_confluence {cf} {Σ} {wfΣ} {Γ t u v}.
-
-Import PCUICSubstitution.
-
-(** We can now derive transitivity of the conversion relation *)
-
-Reserved Notation " Σ ;;; Γ |- t <=[ le ] u" (at level 50, Γ, t, u at next level,
-  format "Σ  ;;;  Γ  |-  t  <=[ le ]  u").
-
-Inductive ws_equality {cf : checker_flags} (le : bool) (Σ : global_env_ext) (Γ : closed_context) : open_term Γ -> open_term Γ -> Type :=
-| ws_equality_refl (t u : open_term Γ) : compare_term le Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <=[le] u
-| ws_equality_red_l (t u v : open_term Γ) : red1 Σ Γ t v -> Σ ;;; Γ |- v <=[le] u -> Σ ;;; Γ |- t <=[le] u
-| ws_equality_red_r (t u v : open_term Γ) : Σ ;;; Γ |- t <=[le] v -> red1 Σ Γ u v -> Σ ;;; Γ |- t <=[le] u
-where " Σ ;;; Γ |- t <=[ le ] u " := (ws_equality le Σ Γ t u) : type_scope.
-
-Notation " Σ ;;; Γ '|-ws' t <= u " := (ws_equality true Σ Γ t u) (at level 50, Γ, t, u at next level,
-    format "Σ  ;;;  Γ  |-ws  t  <=  u") : type_scope.
-
-Notation " Σ ;;; Γ |-ws t = u " := (ws_equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
-  format "Σ  ;;;  Γ  |-ws  t  =  u") : type_scope.
-
-Lemma ws_equalityP_alt `{cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u} :
-  Σ ;;; Γ |- t <=[le] u <~> 
-  ∑ v v', red Σ Γ t v × red Σ Γ u v' × compare_term le Σ (global_ext_constraints Σ) v v'.
-Proof.
-  split.
-  - induction 1.
-    + exists t, u. intuition auto.
-    + destruct IHX as (v' & v'' & redv & redv' & leqv).
-      exists v', v''. intuition auto. eapply red_step; tea; apply r.
-    + destruct IHX as (v' & v'' & redv & redv' & leqv).
-      exists v', v''. intuition auto. now eapply red_step; tea; apply r.
-  - intros (v' & v'' & redv & redv' & leqv).
-    apply clos_rt_rt1n in redv.
-    apply clos_rt_rt1n in redv'.
-    destruct t as [t ht], u as [u hu]; cbn in *.
-    induction redv.
-    * induction redv'.
-    ** constructor. auto.
-    ** econstructor 3. unshelve eapply IHredv'. cbn. eauto with fvs. tea. eauto.
-    * econstructor 2. 2:unshelve eapply IHredv; cbn; eauto with fvs. apply r.
-Qed.
-
-Lemma ws_equality_forget {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  ws_equality le Σ Γ x y -> if le then cumul Σ Γ x y else conv Σ Γ x y.
-Proof.
-  induction 1.
-  - destruct le; simpl in *; constructor; auto.
-  - destruct le; econstructor 2; eauto.
-  - destruct le; econstructor 3; eauto.
-Qed.
-
-Instance ws_equality_trans {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} :
-  Transitive (ws_equality le Σ Γ).
-Proof.
-  move=> t u v /ws_equalityP_alt [t' [u' [tt' [uu' eq]]]] /ws_equalityP_alt [u'' [v' [uu'' [vv' eq']]]].
-  eapply ws_equalityP_alt.
-  destruct (red_confluence uu' uu'') as [u'nf [ul ur]].
-  destruct le; cbn in *.
-  { eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
-    eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
-    exists tnf, unf.
-    intuition auto.
-    - now transitivity t'.
-    - now transitivity v'.
-    - now transitivity u'nf. }
-  { eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
-    eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
-    exists tnf, unf.
-    intuition auto.
-    - now transitivity t'.
-    - now transitivity v'.
-    - now transitivity u'nf. }
-Qed.
-
-Arguments wt_equality_dom {le cf Σ Γ T U}.
-Arguments wt_equality_codom {le cf Σ Γ T U}.
-Arguments wt_equality_eq {le cf Σ Γ T U}.
-
-Section EqualityLemmas.
-  Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
-
-  Lemma isType_open {Γ T} : isType Σ Γ T -> on_free_vars (shiftnP #|Γ| xpred0) T.
-  Proof.
-    move/isType_closedPT. now rewrite closedP_shiftnP.
-  Qed.
-
-  Lemma wf_local_closed_context {Γ} : wf_local Σ Γ -> on_free_vars_ctx xpred0 Γ.
-  Proof.
-    move/PCUICClosed.closed_wf_local.
-    now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
-  Qed.
-
-  Lemma into_ws_equality {le} {Γ : context} {T U} : 
-    (if le then Σ;;; Γ |- T <= U else Σ;;; Γ |- T = U) ->
-    forall (i : on_free_vars (shiftnP #|Γ| xpred0) T) (i0 : on_free_vars (shiftnP #|Γ| xpred0) U)
-      (i1 : on_free_vars_ctx xpred0 Γ), Σ ;;; exist Γ i1 |- exist T i <=[le] exist U i0.
-  Proof.
-    destruct le.
-    { induction 1.
-      - constructor; auto.
-      - intros. unshelve econstructor 2.
-        exists v; cbn; eauto with fvs. now cbn. cbn.
-        apply IHX.
-      - econstructor 3.
-        * unshelve eapply IHX => /=; cbn; eauto with fvs.
-        * exact r. }
-    { induction 1.
-      - constructor; auto.
-        - unshelve econstructor 2.
-          * exists v; cbn; eauto with fvs.
-          * now cbn.
-          * apply IHX.
-        - econstructor 3.
-          * unshelve eapply IHX. cbn. eauto with fvs.
-          * exact r. }
-  Qed.
-
-  (** From well-typed to simply well-scoped equality. *)
-  Lemma wt_equality_ws_equality {le} {Γ : context} {T U} : 
-    forall eq : wt_equality le Σ Γ T U,
-    ws_equality le Σ 
-      (exist Γ (wf_local_closed_context (isType_wf_local eq.(wt_equality_dom))))
-      (exist T (isType_open eq.(wt_equality_dom))) 
-      (exist U (isType_open eq.(wt_equality_codom))).
-  Proof.
-    move=> [] dom codom equiv; cbn.
-    generalize (wf_local_closed_context (isType_wf_local dom)).
-    generalize (isType_open dom) (isType_open codom). clear -wfΣ equiv.
-    now apply into_ws_equality.
-  Qed.
-
-  Lemma wt_equality_trans le Γ :
-    Transitive (wt_equality le Σ Γ).
-  Proof.
-    intros x y z cum cum'.
-    have wscum := (wt_equality_ws_equality cum).
-    have wscum' := (wt_equality_ws_equality cum').
-    rewrite -(uip (isType_open (wt_equality_codom cum)) (isType_open (wt_equality_dom cum'))) in wscum'.
-    rewrite -(uip (wf_local_closed_context (isType_wf_local (wt_equality_dom cum)))
-       (wf_local_closed_context (isType_wf_local (wt_equality_dom cum')))) in wscum'.
-    generalize (transitivity wscum wscum'). clear wscum wscum'.
-    destruct cum, cum'; split=> //.
-    apply ws_equality_forget in X. now cbn in X.
-  Qed.
-
-  Global Instance conv_trans Γ : Transitive (wt_conv Σ Γ).
-  Proof. apply wt_equality_trans. Qed.
-  
-  Global Instance cumul_trans Γ : Transitive (wt_cumul Σ Γ).
-  Proof. apply wt_equality_trans. Qed.
-
-End EqualityLemmas.
-

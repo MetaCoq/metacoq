@@ -112,15 +112,15 @@ Proof.
   - constructor; [assumption|apply eqdom|reflexivity].
 Qed.
 
-Lemma congr_cumul_prod : forall `{checker_flags} Σ Γ na na' M1 M2 N1 N2,
+Lemma congr_cumul_prod : forall `{checker_flags} Σ {Γ : closed_context} na na' M1 M2 N1 N2,
   wf Σ.1 ->
   eq_binder_annot na na' ->
   Σ ;;; Γ |- M1 = N1 ->
   Σ ;;; (Γ ,, vass na M1) |- M2 <= N2 ->
   Σ ;;; Γ |- (tProd na M1 M2) <= (tProd na' N1 N2).
 Proof.
-  intros * wfΣ ? ?.
-  transitivity (tProd na' N1 M2).
+  intros * wfΣ ? ? ?.
+  etransitivity. (tProd na' N1 M2).
   - eapply congr_cumul_prod_l; eauto.
   - eapply (cumul_conv_ctx _ _ (Γ ,, vass na' N1)) in X0.
     2:{ constructor; [apply conv_ctx_refl|constructor; auto]. }

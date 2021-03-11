@@ -5,11 +5,11 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICReduction
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICConfluence
-     PCUICContextReduction PCUICOnFreeVars.
+     PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity.
 
 From MetaCoq.PCUIC Require Export PCUICContextRelation.
 
-From Coq Require Import CRelationClasses ssreflect.
+From Coq Require Import CRelationClasses ssreflect ssrbool.
 From Equations Require Import Equations.
 
 Arguments red_ctx : clear implicits.
@@ -30,29 +30,30 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 Hint Resolve conv_refl' : pcuic.
 Arguments skipn : simpl never.
 
-Ltac inv_on_free_vars :=
-  repeat match goal with
-  | [ H : is_true (on_free_vars_decl _ _) |- _ ] => progress cbn in H
-  | [ H : is_true (_ && _) |- _ ] => 
-    move/andP: H => []; intros
-  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
-    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
-      eapply forallb_All in H); intros
-  | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
-    move/andP: H => []; rewrite ?shiftnP_xpredT; intros
-  | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
-    rewrite -> test_context_k_closed_on_free_vars_ctx in H
-  end.
+Definition closed_red_ctx Σ Γ Γ' :=
+  All2_fold (fun Γ _ => All_decls (closed_red Σ Γ)) Γ Γ'.
 
-Notation byfvs := (ltac:(cbn; eauto with fvs)) (only parsing).
+Notation "Σ ⊢ Γ ⇝ Δ" := (closed_red_ctx Σ Γ Δ) (at level 50, Γ, Δ at next level,
+  format "Σ  ⊢  Γ  ⇝  Δ") : pcuic.
 
-(* TODO move *)
-(* Lemma weakening_cumul0 {cf:checker_flags} Σ Γ Γ'' M N n :
-  wf Σ.1 -> n = #|Γ''| ->
-  Σ ;;; Γ |- M <= N ->
-  Σ ;;; Γ ,,, Γ'' |- lift0 n M <= lift0 n N.
-Proof. intros; subst. apply (weakening_cumul (Γ':= [])); tea. Qed. *)
+Notation "Σ ⊢ Γ ≤[ le ] Δ" := (closed_context_equality le Σ Γ Δ) (at level 50, Γ, Δ at next level,
+  format "Σ  ⊢  Γ  ≤[ le ]  Δ") : pcuic.
+
+Notation "Σ ⊢ Γ = Δ" := (closed_conv_context Σ Γ Δ) (at level 50, Γ, Δ at next level,
+  format "Σ  ⊢  Γ  =  Δ") : pcuic.
+
+Notation "Σ ⊢ Γ ≤ Δ" := (closed_cumul_context Σ Γ Δ) (at level 50, Γ, Δ at next level,
+  format "Σ  ⊢  Γ  ≤  Δ") : pcuic.
+
+Lemma closed_red_ctx_red_ctx {Σ Γ Γ'} : 
+  Σ ⊢ Γ ⇝ Γ' -> red_ctx Σ Γ Γ'.
+Proof.
+  intros a; eapply PCUICEnvironment.All2_fold_impl; tea.
+  cbn; intros ?????.
+  eapply All_decls_impl; tea => t t'.
+  now move=> [].
+Qed.
+Coercion closed_red_ctx_red_ctx : closed_red_ctx >-> red_ctx.
 
 Hint Constructors red1 : pcuic.
 Hint Resolve refl_red : pcuic.
@@ -120,7 +121,6 @@ Section ContextReduction.
     eapply All2_fold_refl. reflexivity.
   Qed.
   Hint Resolve red_ctx_app : pcuic.
-  Import ssrbool.
 
   Lemma red_ctx_on_free_vars P Γ Γ' :
     red_ctx Σ Γ Γ' ->
@@ -363,11 +363,8 @@ Section ContextReduction.
   Proof.
     intros. eapply red_red_ctx', red_red_ctx_aux'; eauto.
   Qed.
-
+  
 End ContextReduction.
-
-
-Import ssrbool.
 
 Definition inj_closed (Γ : context) (o : on_free_vars_ctx xpred0 Γ) : closed_context :=
   exist Γ o.
@@ -390,6 +387,13 @@ Proof.
   intros r. now rewrite (All2_fold_length r).
 Qed.
 Hint Resolve red_ctx_on_free_vars_term : fvs.
+
+Instance closed_red_trans Σ Γ : Transitive (closed_red Σ Γ).
+Proof.
+  intros x y z.
+  induction 1. destruct 1. split; eauto with fvs.
+  now transitivity y.
+Qed.
 
 Section ContextConversion.
   Context {cf : checker_flags}.
@@ -426,44 +430,128 @@ Section ContextConversion.
     eapply red_eq_term_upto_univ_r in t'u''; try exact ur; try tc.
     destruct t'u'' as [t'' [t't'' t''unf]].
     exists t'', unf. intuition auto.
-  Qed.
-  
-  Lemma red_ctx_conv_context Γ Γ' :
-    red_ctx Σ Γ Γ' ->
-    conv_context Γ Γ'.
+    Qed.
+
+  Lemma red_ctx_context_equality {l Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> Σ ⊢ Γ ≤[l] Γ'.
   Proof.
-    intros r.
-    induction r; constructor; auto.
-    depelim p; constructor; auto.
-    all: apply red_conv; auto.
-  Qed.
-  
-  Lemma red_ctx_cumul_context Γ Γ' :
-    red_ctx Σ Γ Γ' ->
-    cumul_context Γ Γ'.
-  Proof.
-    intros r.
-    induction r; constructor; auto.
-    depelim p; constructor; auto.
-    all: try apply red_cumul; try apply red_conv; auto.
+    induction 1; constructor; auto.
+    depelim p; constructor; eauto with fvs pcuic; now eapply red_equality.
   Qed.
 
-  Lemma cumul_red_ctx {Γ : closed_context} Γ' {T U : open_term Γ} :
-    Σ ;;; Γ |- T <= U ->
-    red_ctx Σ Γ Γ' ->
-    Σ ;;; Γ' |- T <= U.
+  Lemma red_ctx_closed_left {Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> is_closed_context Γ.
   Proof.
-    intros H Hctx.
-    apply cumul_alt in H as [v [v' [[redl redr] leq]]].
-    destruct (red_red_ctx Σ wfΣ redl Hctx) as [lnf [redl0 redr0]].
-    apply cumul_alt.
-    eapply red_eq_term_upto_univ_l in leq; tea; try tc.
-    destruct leq as [? [? ?]].
-    destruct (red_red_ctx _ wfΣ redr Hctx) as [rnf [redl1 redr1]].
-    unshelve epose proof (red_confluence (Γ := inj_closed Γ' byfvs) (t := inj_open v' byfvs) r redr1) as [nf [redl' redr']].
-    edestruct (red_eq_term_upto_univ_r Σ (eq_universe_leq_universe _) e redl') as [lnf' [? ?]].
-    exists lnf', nf. intuition auto. now transitivity lnf.
-    now transitivity rnf.
+    induction 1; simpl; auto.
+    rewrite on_free_vars_ctx_snoc IHX /=.
+    destruct p; eauto with fvs.
+  Qed.
+
+  Lemma red_ctx_closed_right {Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> is_closed_context Γ'.
+  Proof.
+    induction 1; simpl; auto.
+    rewrite on_free_vars_ctx_snoc IHX /=.
+    destruct p; rewrite -(All2_fold_length X); cbn; eauto with fvs.
+    eapply closed_red_open_right in c.
+    eapply closed_red_open_right in c0.
+    eauto with fvs.
+  Qed.
+  Hint Resolve red_ctx_closed_left red_ctx_closed_right : fvs.
+
+  Lemma red_compare_term_l {le Γ} {u v u' : term} :
+    compare_term le Σ Σ u u' ->
+    red Σ Γ u v -> 
+    ∑ v' : term, red Σ Γ u' v' × compare_term le Σ Σ v v'.
+  Proof.
+    destruct le; cbn;
+    apply red_eq_term_upto_univ_l; tc.
+  Qed.
+
+  Lemma red_compare_term_r {le Γ} {u v u' : term} :
+    compare_term le Σ Σ u u' ->
+    red Σ Γ u' v -> 
+    ∑ v' : term, red Σ Γ u v' × compare_term le Σ Σ v' v.
+  Proof.
+    destruct le; cbn;
+    apply red_eq_term_upto_univ_r; tc.
+  Qed.
+
+  Lemma closed_red_compare_term_l {le Γ} {u v u' : term} :
+    is_open_term Γ u' ->
+    compare_term le Σ Σ u u' ->
+    Σ ;;; Γ ⊢ u ⇝ v -> 
+    ∑ v' : term, Σ ;;; Γ ⊢ u' ⇝ v' × compare_term le Σ Σ v v'.
+  Proof.
+    intros isop comp [clΓ clu red].
+    destruct (red_compare_term_l comp red) as [nf [r eq]].
+    exists nf; repeat (split; eauto with fvs). 
+  Qed.
+
+  Lemma closed_red_compare_term_r {le Γ} {u v u' : term} :
+    is_open_term Γ u ->
+    compare_term le Σ Σ u u' ->
+    Σ ;;; Γ ⊢ u' ⇝ v -> 
+    ∑ v' : term, Σ ;;; Γ ⊢ u ⇝ v' × compare_term le Σ Σ v' v.
+  Proof.
+    intros isop comp [clΓ clu red].
+    destruct (red_compare_term_r comp red) as [nf [r eq]].
+    exists nf; repeat (split; eauto with fvs). 
+  Qed.
+
+  Lemma closed_red_red_ctx {Γ Γ'} {T U} :
+    Σ ⊢ Γ ⇝ Γ' ->
+    Σ ;;; Γ ⊢ T ⇝ U ->
+    ∑ t, Σ ;;; Γ' ⊢ T ⇝ t × Σ ;;; Γ' ⊢ U ⇝ t.
+  Proof.
+    intros rctx [clΓ clT r].
+    assert (is_open_term Γ U) by eauto with fvs.
+    eapply (red_red_ctx Σ wfΣ (Γ := exist Γ clΓ) (T := exist T clT)) in r as [t [r r']].
+    2:exact rctx.
+    exists t. split. split; auto. eauto with fvs. 
+    rewrite -(length_of rctx); eauto with fvs.
+    split; eauto with fvs.
+    rewrite -(length_of rctx); eauto with fvs.
+  Qed.
+
+  Lemma equality_red {le} {Γ t u} :
+    Σ ;;; Γ ⊢ t ≤[le] u <~> 
+    ∑ v v', Σ ;;; Γ ⊢ t ⇝ v × Σ ;;; Γ ⊢ u ⇝ v' × 
+      compare_term le Σ (global_ext_constraints Σ) v v'.
+  Proof.    
+    split.
+    - move/equality_alt; intros (v & v' & cl & red & red' & leq).
+      move/and3P: cl => [] clΓ clt clu.
+      exists v, v'; repeat split; eauto with fvs.
+    - intros (v & v' & red & red' & leq).
+      apply equality_alt; exists v, v'.
+      repeat split; eauto with fvs.
+      apply/and3P; split; intuition eauto with fvs.
+  Qed.
+
+  Lemma closed_red_confluence {Γ} {t u v} :
+    Σ ;;; Γ ⊢ t ⇝ u -> Σ ;;; Γ ⊢ t ⇝ v ->
+    ∑ v', Σ ;;; Γ ⊢ u ⇝ v' × Σ ;;; Γ ⊢ v ⇝ v'.
+  Proof.
+    intros [clΓ clT r] [clΓ' clT' r'].
+    destruct (red_confluence (Γ := exist Γ clΓ) (t := exist t clT) r r') as [v' [redl redr]].
+    cbn in *. exists v'; repeat split; eauto with fvs.
+  Qed.
+  
+  Lemma equality_red_ctx {le} {Γ Γ'} {T U} :
+    Σ ⊢ Γ ⇝ Γ' ->
+    Σ ;;; Γ ⊢ T ≤[le] U ->
+    Σ ;;; Γ' ⊢ T ≤[le] U.
+  Proof.
+    intros Hctx H.
+    apply equality_red in H as (v & v' & redl & redr & leq).
+    destruct (closed_red_red_ctx Hctx redl) as [lnf [redl0 redr0]].
+    eapply equality_red.
+    eapply closed_red_compare_term_l in leq as [? [? ?]]. 3:exact redr0.
+    2:{ rewrite -(length_of Hctx). now eapply closed_red_open_right. }
+    destruct (closed_red_red_ctx Hctx redr) as [rnf [redl1 redr1]].
+    destruct (closed_red_confluence c redr1) as [nf [redl' redr']].
+    unshelve epose proof (closed_red_compare_term_r _ c0 redl') as [lnf' [? ?]]. exact byfvs.
+    exists lnf', nf. intuition eauto with fvs.
+    - now transitivity lnf.
+    - now transitivity rnf.
   Qed.
 
   Lemma red_red_ctx_inv {Γ Δ : closed_context} {t : open_term Γ} {u} :
@@ -474,41 +562,35 @@ Section ContextConversion.
     eapply PCUICContextReduction.red_red_ctx; tea; eauto with fvs.
   Qed.
 
-  Lemma cumul_red_ctx_inv {Γ Γ' : closed_context} {T U : open_term Γ} :
-    Σ ;;; Γ |- T <= U ->
-    @red_ctx Σ Γ' Γ ->
-    Σ ;;; Γ' |- T <= U.
+  Lemma red_red_ctx_inv' {Γ Δ : context} {t u} :
+    Σ ⊢ Δ ⇝ Γ -> 
+    Σ ;;; Γ ⊢ t ⇝ u -> 
+    Σ ;;; Δ ⊢ t ⇝ u.
+  Proof.
+    intros rc [onΓ ont r].
+    move: (red_ctx_closed_left rc) => onΔ.
+    eapply closed_red_ctx_red_ctx in rc.
+    eapply red_ctx_red_context in rc.
+    eapply PCUICContextReduction.red_red_ctx in r.
+    econstructor; tea. all:eauto with fvs.
+    all:try now rewrite (All2_fold_length rc).
+    all:eauto with fvs.
+    rewrite -(All2_fold_length rc); eauto with fvs.
+  Qed.
+
+  Lemma cumul_red_ctx_inv {le} {Γ Γ' : context} {T U : term} :
+    Σ ;;; Γ ⊢ T ≤[le] U ->
+    Σ ⊢ Γ' ⇝ Γ ->
+    Σ ;;; Γ' ⊢ T ≤[le] U.
   Proof.
     intros H Hctx.
-    apply cumul_alt in H as [v [v' [[redl redr] leq]]].
-    epose proof (red_red_ctx_inv redl Hctx).
-    epose proof (red_red_ctx_inv redr Hctx).
-    apply cumul_alt.
-    exists v, v'.
-    split. pcuic. auto.
+    apply equality_red in H as (v & v' & redl & redr & leq).
+    epose proof (red_red_ctx_inv' Hctx redl).
+    epose proof (red_red_ctx_inv' Hctx redr).
+    apply equality_red.
+    now exists v, v'.
   Qed.
-
-(* 
-  Lemma conv_red_ctx {Γ Γ' T U} :
-    Σ ;;; Γ |- T = U ->
-    @red_ctx Σ Γ Γ' ->
-    Σ ;;; Γ' |- T = U.
-  Proof.
-    intros H Hctx. apply cumul2_conv.
-    split; eapply cumul_red_ctx; eauto; eapply conv_cumul2 in H; eapply H.
-  Qed.
-
-  Lemma conv_red_ctx_inv {Γ Γ' T U} :
-    Σ ;;; Γ |- T = U ->
-    @red_ctx Σ Γ' Γ ->
-    Σ ;;; Γ' |- T = U.
-  Proof.
-    intros H Hctx. apply cumul2_conv.
-    split; eapply cumul_red_ctx_inv; eauto; eapply conv_cumul2 in H; eapply H.
-  Qed. *)
-
-  Arguments red_ctx : clear implicits.
-
+  
   Lemma red_eq_context_upto_l {R Re} {Γ Δ} {u} {v}
         `{RelationClasses.Reflexive _ R} `{RelationClasses.Transitive _ R} `{SubstUnivPreserving R}
         `{RelationClasses.Reflexive _ Re} `{RelationClasses.Transitive _ Re} `{SubstUnivPreserving Re}
@@ -558,6 +640,58 @@ Section ContextConversion.
       eapply eq_term_upto_univ_trans with v''; auto; tc.
   Qed.
 
+  Definition compare_context le Σ := 
+    eq_context_upto Σ (eq_universe Σ) (compare_universe le Σ).
+
+  Instance compare_universe_refl le : RelationClasses.Reflexive (compare_universe le Σ).
+  Proof.
+    destruct le; tc.
+  Qed.
+
+  Instance compare_universe_trans le : RelationClasses.Transitive (compare_universe le Σ).
+  Proof.
+    destruct le; tc.
+  Qed.
+
+  Instance compare_universe_substu le : SubstUnivPreserving (compare_universe le Σ).
+  Proof.
+    destruct le; tc.
+  Qed.
+
+  Instance compare_universe_subrel le : RelationClasses.subrelation (eq_universe Σ) (compare_universe le Σ).
+  Proof.
+    destruct le; tc.
+  Qed.
+
+  Instance compare_universe_preorder le : RelationClasses.PreOrder (compare_universe le Σ).
+  Proof.
+    destruct le; tc.
+  Qed.
+
+  Lemma closed_red_eq_context_upto_l {le Γ Δ} {u} {v} :
+    is_closed_context Δ ->
+    Σ ;;; Γ ⊢ u ⇝ v ->
+    compare_context le Σ Γ Δ ->
+    ∑ v', Σ ;;; Δ ⊢ u ⇝ v' × eq_term Σ Σ v v'.
+  Proof.
+    intros clΔ [onΓ onu r] c.
+    destruct (red_eq_context_upto_l r c) as [nf [red eq]].
+    exists nf. split; auto. split; eauto with fvs.
+    now rewrite -(All2_fold_length c).
+  Qed.
+
+  Lemma closed_red_eq_context_upto_r {le Γ Δ} {u} {v} :
+    is_closed_context Γ ->
+    Σ ;;; Δ ⊢ u ⇝ v ->
+    compare_context le Σ Γ Δ ->
+    ∑ v', Σ ;;; Γ ⊢ u ⇝ v' × eq_term Σ Σ v v'.
+  Proof.
+    intros clΔ [onΓ onu r] c.
+    destruct (red_eq_context_upto_r r c) as [nf [red eq]].
+    exists nf. split; auto. split; eauto with fvs.
+    now rewrite (All2_fold_length c).
+  Qed.
+
   Lemma cumul_trans_red_leqterm {Γ : closed_context} {t u v : open_term Γ} :
     Σ ;;; Γ |- t <= u -> Σ ;;; Γ |- u <= v ->
     ∑ l o r, red Σ Γ t l *
@@ -604,8 +738,8 @@ Section ContextConversion.
   Proof.
     intros eqctx cum.
     eapply conv_alt_red in cum as [nf [nf' [[redl redr] ?]]].
-    eapply (red_eq_context_upto_r (Re:=eq_universe _)) in redl; tea.
-    eapply (red_eq_context_upto_r (Re:=eq_universe _)) in redr; tea.
+    eapply (red_eq_context_upto_r (Re:=eq_universe _) (R:=leq_universe _)) in redl; tea.
+    eapply (red_eq_context_upto_r (Re:=eq_universe _) (R:=leq_universe _)) in redr; tea.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
     eapply conv_alt_red. exists v', v''; intuition auto.
@@ -625,8 +759,8 @@ Section ContextConversion.
   Proof.
     intros eqctx cum.
     eapply conv_alt_red in cum as [nf [nf' [[redl redr] ?]]].
-    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redl; tea.
-    eapply (red_eq_context_upto_l (Re:=eq_universe _)) in redr; tea.
+    eapply (red_eq_context_upto_l (Re:=eq_universe _) (R:=leq_universe _)) in redl; tea.
+    eapply (red_eq_context_upto_l (Re:=eq_universe _) (R:=leq_universe _)) in redr; tea.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
     eapply conv_alt_red. exists v', v''; intuition auto.
@@ -641,8 +775,8 @@ Section ContextConversion.
   Proof.
     intros eqctx cum.
     eapply cumul_alt in cum as [nf [nf' [[redl redr] ?]]].
-    eapply (red_eq_context_upto_r (Re:=eq_universe Σ)) in redl; tea.
-    eapply (red_eq_context_upto_r (Re:=eq_universe Σ)) in redr; tea.
+    eapply (red_eq_context_upto_r (Re:=eq_universe Σ) (R:=leq_universe _)) in redl; tea.
+    eapply (red_eq_context_upto_r (Re:=eq_universe Σ) (R:=leq_universe _)) in redr; tea.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
     eapply cumul_alt. exists v', v''; intuition auto.
@@ -652,6 +786,26 @@ Section ContextConversion.
     now apply eq_term_leq_term.
   Qed.
 
+  Lemma equality_leq_context_upto {le Γ Δ T U} :
+    eq_context_upto Σ (eq_universe Σ) (leq_universe Σ) Δ Γ ->
+    is_closed_context Δ ->
+    Σ ;;; Γ ⊢ T ≤[le] U ->
+    Σ ;;; Δ ⊢ T ≤[le] U.
+  Proof.
+    intros eqctx cl cum.
+    eapply equality_red in cum as [nf [nf' [redl [redr ?]]]].
+    eapply (closed_red_eq_context_upto_r (le:=true)) in redl; tea; eauto with fvs.
+    eapply (closed_red_eq_context_upto_r (le:=true)) in redr; tea; eauto with fvs.
+    destruct redl as [v' [redv' eqv']].
+    destruct redr as [v'' [redv'' eqv'']].
+    eapply equality_red. exists v', v''; intuition auto.
+    destruct le; cbn in *; transitivity nf.
+    apply eq_term_leq_term. now symmetry.
+    transitivity nf' => //.
+    now apply eq_term_leq_term. now symmetry.
+    transitivity nf'; auto.
+  Qed.
+
   Local Remark cumul_leq_context_upto_inv {Γ Δ T U} :
     eq_context_upto Σ (eq_universe Σ) (leq_universe Σ) Γ Δ ->
     Σ ;;; Γ |- T <= U ->
@@ -659,8 +813,8 @@ Section ContextConversion.
   Proof.
     intros eqctx cum.
     eapply cumul_alt in cum as [nf [nf' [[redl redr] ?]]].
-    eapply (red_eq_context_upto_l (Re:=eq_universe Σ) (Δ:=Δ)) in redl; tas.
-    eapply (red_eq_context_upto_l (Re:=eq_universe Σ) (Δ:=Δ)) in redr; tas.
+    eapply (red_eq_context_upto_l (Re:=eq_universe Σ) (R:=leq_universe Σ) (Δ:=Δ)) in redl; tas.
+    eapply (red_eq_context_upto_l (Re:=eq_universe Σ) (R:=leq_universe Σ) (Δ:=Δ)) in redr; tas.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
     eapply cumul_alt. exists v', v''; intuition auto.
@@ -699,6 +853,17 @@ Section ContextConversion.
     intros eqctx cum. symmetry in eqctx.
     apply eq_leq_context_upto in eqctx.
     eapply cumul_leq_context_upto; eauto.
+  Qed.
+
+  Lemma equality_eq_context_upto {le Γ Δ T U} :
+    is_closed_context Δ ->
+    eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ ->
+    Σ ;;; Γ ⊢ T ≤[le] U ->
+    Σ ;;; Δ ⊢ T ≤[le] U.
+  Proof.
+    intros cl eqctx cum. symmetry in eqctx.
+    apply eq_leq_context_upto in eqctx.
+    eapply equality_leq_context_upto; eauto.
   Qed.
 
   Lemma conv_alt_red_ctx {Γ : closed_context} {Γ'} {T U : open_term Γ} :
@@ -761,133 +926,175 @@ Section ContextConversion.
     split. pcuic. auto.
   Qed.
 
-  Lemma cumul_context_red_context {Γ Γ' : closed_context} :
-    cumul_context Γ Γ' ->
-    ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto Σ (eq_universe Σ) (leq_universe Σ) Δ Δ'.
+  Lemma equality_red_ctx_inv {le Γ Γ'} {T U} :
+    Σ ;;; Γ ⊢ T ≤[le] U ->
+    Σ ⊢ Γ' ⇝ Γ ->
+    Σ ;;; Γ' ⊢ T ≤[le] U.
   Proof.
-    intros Hctx.
-    destruct Γ as [Γ onΓ], Γ' as [Γ' onΓ']. cbn in *.
-    induction Hctx.
-    - exists [], []; intuition pcuic.
-    - move: onΓ onΓ'; rewrite !on_free_vars_ctx_snoc => /andP[] onΓ ond /andP[] onΓ' ond'.
-      destruct IHHctx as [Δ [Δ' [[? ?] ?]]]; eauto with fvs.
-      depelim p; inv_on_free_vars.
-      { set (Γcl := ⇑ Γ). change Γ with (proj1_sig Γcl) in r.
-        set (Γ'cl := ⇑ Γ'). change Γ' with (proj1_sig Γ'cl) in r0.
-        set (Δcl := ⇑ Δ). set (Δ'cl := ⇑ Δ').
-        set (Tcl := ⤊ T : open_term Γcl).
-        assert (on_free_vars (shiftnP #|Γ| xpred0) T').
-        now rewrite (All2_fold_length Hctx).
-        unshelve epose proof (cumul_alt_red_ctx (Γ := Γcl) (T:=Tcl) (U:= ⤊ T') c r).
-        eapply cumul_alt in X.
-        destruct X as [T'' [U' [[? ?] ?]]].
-        pose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ T) r1 r).
-        unshelve epose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ T') r2 r).
-        destruct (red_eq_context_upto_l r1 a). destruct p.
-        destruct (red_eq_context_upto_l r2 a). destruct p.
-        exists (Δ ,, vass na T''), (Δ' ,, vass na' x0).
-        split; [split|]; constructor; try constructor; auto.
-        + unshelve eapply (red_red_ctx_inv (Γ := Δ'cl) (Δ := Γ'cl) (t := inj_open T' _)); eauto.
-          cbn. rewrite -(All2_fold_length r0) /=; eauto.
-        + eapply eq_term_upto_univ_trans with U'; eauto; try tc.
-          now apply eq_term_leq_term. }
-      { set (Γcl := ⇑ Γ). change Γ with (proj1_sig Γcl) in r.
-        set (Γ'cl := ⇑ Γ'). change Γ' with (proj1_sig Γ'cl) in r0.
-        set (Δcl := ⇑ Δ). set (Δ'cl := ⇑ Δ').
-        move: ond ond' => /andP[] /= onb onT /andP[] /= onb' onT'.
-        set (Tcl := ⤊ T : open_term Γcl). 
-        assert (on_free_vars (shiftnP #|Γ| xpred0) T').
-        now rewrite (All2_fold_length Hctx).
-        unshelve epose proof (conv_alt_red_ctx (Γ := Γcl) (T := ⤊ b) (U := ⤊ b') c r).
-        now rewrite (All2_fold_length Hctx).
-        eapply conv_alt_red in X.
-        destruct X as [t' [u' [[? ?] ?]]].
-        pose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ b) r1 r).
-        unshelve epose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ b') r2 r).
-        rewrite -(All2_fold_length r) (All2_fold_length Hctx); cbn; eauto with fvs.
-        destruct (red_eq_context_upto_l r1 a) as [t'' [? ?]].
-        destruct (red_eq_context_upto_l r2 a) as [u'' [? ?]].
-        pose proof (cumul_alt_red_ctx  (Γ := Γcl) (T := ⤊ T) (U := ⤊ T') c0 r) as hTU.
-        eapply cumul_alt in hTU.
-        destruct hTU as [T'' [U' [[rT rU] eTU']]].
-        pose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ T) rT r).
-        pose proof (red_red_ctx_inv  (Δ:= Γcl) (Γ := ⇑ Δ) (t := ⤊ T') rU r).
-        destruct (red_eq_context_upto_l rT a) as [T''' [? ?]].
-        destruct (red_eq_context_upto_l rU a) as [U''' [? ?]].
-        exists (Δ ,, vdef na t' T''), (Δ' ,, vdef na' u'' U''').
-        split; [split|]. all: constructor ; auto.
-        * constructor; auto. 
-        * constructor.
-          -- apply (red_red_ctx_inv (Γ := Δ'cl) (Δ := Γ'cl) (t := inj_open b' byfvs)); eauto.
-          -- apply (red_red_ctx_inv (Γ := Δ'cl) (Δ := Γ'cl) (t := inj_open T' byfvs)); eauto.
-        * constructor; auto.
-          eapply eq_term_upto_univ_trans with u'; eauto; tc.
-          eapply eq_term_upto_univ_trans with U'; eauto; try tc.
-          now eapply eq_term_leq_term. }
+    intros H Hctx.
+    apply equality_red in H as [v [v' [redl [redr leq]]]].
+    epose proof (red_red_ctx_inv' Hctx redl). 
+    epose proof (red_red_ctx_inv' Hctx redr). 
+    apply equality_red.
+    now exists v, v'.
   Qed.
 
-  Lemma conv_context_red_context {Γ Γ' : closed_context} :
-    conv_context Γ Γ' ->
-    ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Δ Δ'.
+  Lemma red_decl_refl Γ d : 
+    is_closed_context Γ ->
+    ws_decl Γ d ->
+    All_decls (closed_red Σ Γ) d d.
+  Proof.
+    destruct d as [na [b|] ty] => [onΓ /andP[] /=|]; constructor.
+    all:split; eauto with fvs.
+  Qed.
+
+  Lemma context_equality_red {le} {Γ Γ' : context} :
+    closed_context_equality le Σ Γ Γ' ->
+    ∑ Δ Δ', Σ ⊢ Γ ⇝ Δ × Σ ⊢ Γ' ⇝ Δ' ×
+      eq_context_upto Σ (eq_universe Σ) (compare_universe le Σ) Δ Δ'.
   Proof.
     intros Hctx.
-    destruct Γ as [Γ onΓ], Γ' as [Γ' onΓ']. cbn in *.
     induction Hctx.
     - exists [], []; intuition pcuic.
-    - move: onΓ onΓ'; rewrite !on_free_vars_ctx_snoc => /andP[] onΓ ond /andP[] onΓ' ond'.
-      destruct IHHctx as [Δ [Δ' [[? ?] ?]]]; eauto with fvs.
-      depelim p; inv_on_free_vars.
-      { set (Γcl := ⇑ Γ). change Γ with (proj1_sig Γcl) in r.
-        set (Γ'cl := ⇑ Γ'). change Γ' with (proj1_sig Γ'cl) in r0.
-        set (Δcl := ⇑ Δ). set (Δ'cl := ⇑ Δ').
-        set (Tcl := ⤊ T : open_term Γcl).
-        assert (on_free_vars (shiftnP #|Γ| xpred0) T').
-        now rewrite (All2_fold_length Hctx).
-        unshelve epose proof (conv_alt_red_ctx (Γ := Γcl) (T:=Tcl) (U:= ⤊ T') c r).
-        eapply conv_alt_red in X.
-        destruct X as [T'' [U' [[? ?] ?]]].
-        pose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ T) r1 r).
-        unshelve epose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ T') r2 r).
-        destruct (red_eq_context_upto_l r1 a). destruct p.
-        destruct (red_eq_context_upto_l r2 a). destruct p.
-        exists (Δ ,, vass na T''), (Δ' ,, vass na' x0).
-        split; [split|]; constructor; try constructor; auto.
-        + unshelve eapply (red_red_ctx_inv (Γ := Δ'cl) (Δ := Γ'cl) (t := inj_open T' _)); eauto.
-          cbn. rewrite -(All2_fold_length r0) /=; eauto.
-        + eapply eq_term_upto_univ_trans with U'; eauto; try tc. }
-      { set (Γcl := ⇑ Γ). change Γ with (proj1_sig Γcl) in r.
-        set (Γ'cl := ⇑ Γ'). change Γ' with (proj1_sig Γ'cl) in r0.
-        set (Δcl := ⇑ Δ). set (Δ'cl := ⇑ Δ').
-        move: ond ond' => /andP[] /= onb onT /andP[] /= onb' onT'.
-        set (Tcl := ⤊ T : open_term Γcl). 
-        assert (on_free_vars (shiftnP #|Γ| xpred0) T').
-        now rewrite (All2_fold_length Hctx).
-        unshelve epose proof (conv_alt_red_ctx (Γ := Γcl) (T := ⤊ b) (U := ⤊ b') c r).
-        now rewrite (All2_fold_length Hctx).
-        eapply conv_alt_red in X.
-        destruct X as [t' [u' [[? ?] ?]]].
-        pose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ b) r1 r).
-        unshelve epose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ b') r2 r).
-        rewrite -(All2_fold_length r) (All2_fold_length Hctx); cbn; eauto with fvs.
-        destruct (red_eq_context_upto_l r1 a) as [t'' [? ?]].
-        destruct (red_eq_context_upto_l r2 a) as [u'' [? ?]].
-        pose proof (conv_alt_red_ctx  (Γ := Γcl) (T := ⤊ T) (U := ⤊ T') c0 r) as hTU.
-        eapply conv_alt_red in hTU.
-        destruct hTU as [T'' [U' [[rT rU] eTU']]].
-        pose proof (red_red_ctx_inv (Δ := Γcl) (Γ := ⇑ Δ) (t := ⤊ T) rT r).
-        pose proof (red_red_ctx_inv  (Δ:= Γcl) (Γ := ⇑ Δ) (t := ⤊ T') rU r).
-        destruct (red_eq_context_upto_l rT a) as [T''' [? ?]].
-        destruct (red_eq_context_upto_l rU a) as [U''' [? ?]].
-        exists (Δ ,, vdef na t' T''), (Δ' ,, vdef na' u'' U''').
-        split; [split|]. all: constructor ; auto.
-        * constructor; auto. 
-        * constructor.
-          -- apply (red_red_ctx_inv (Γ := Δ'cl) (Δ := Γ'cl) (t := inj_open b' byfvs)); eauto.
-          -- apply (red_red_ctx_inv (Γ := Δ'cl) (Δ := Γ'cl) (t := inj_open T' byfvs)); eauto.
-        * constructor; auto.
-          eapply eq_term_upto_univ_trans with u'; eauto; tc.
-          eapply eq_term_upto_univ_trans with U'; eauto; try tc. }
+    - destruct IHHctx as (Δ & Δ' & redl & redr & eq).
+      destruct p.
+      { apply (equality_red_ctx redl) in w.
+        eapply equality_red in w as (v & v' & tv & tv' & com).
+        destruct (closed_red_eq_context_upto_l (le:=le) (Δ := Δ') byfvs tv' eq) as [t'' [redt'' eq']].
+        exists (vass na v :: Δ), (vass na' t'' :: Δ').
+        intuition auto. constructor; auto. constructor; auto.
+        eapply red_red_ctx_inv'; tea.
+        constructor; auto. econstructor.
+        eapply red_red_ctx_inv'; tea.
+        constructor => //. constructor; auto.
+        destruct le; cbn in *.
+        * transitivity v' => //. now eapply eq_term_leq_term.
+        * transitivity v' => //. }
+      { apply (equality_red_ctx redl) in w.
+        eapply equality_red in w as (v & v' & tv & tv' & com).
+        destruct (closed_red_eq_context_upto_l (le:=le) (Δ := Δ') byfvs tv' eq) as [t'' [redt'' eq']].
+        apply (equality_red_ctx redl) in w0.
+        eapply equality_red in w0 as (v0 & v0' & tv0 & tv0' & com0).
+        destruct (closed_red_eq_context_upto_l (le:=le) (Δ := Δ') byfvs tv0' eq) as [t0'' [redt0'' eq0']].
+        exists (vdef na v v0 :: Δ), (vdef na' t'' t0'' :: Δ').
+        intuition auto. constructor; auto. constructor; auto.
+        1-2:eapply red_red_ctx_inv'; tea.
+        constructor; auto. econstructor; eapply red_red_ctx_inv'; tea.
+        constructor => //. constructor; auto.
+        cbn in *. transitivity v' => //.
+        destruct le; cbn in *.
+        * transitivity v0' => //. now eapply eq_term_leq_term.
+        * transitivity v0' => //. }
   Qed.
+
+  Lemma closed_conv_conv_ctx {le} {Γ Γ' : context} {d d' : context_decl} :
+    closed_conv_context Σ Γ Γ' ->
+    equality_open_decls le Σ Γ d d' ->
+    equality_open_decls le Σ Γ' d d'.
+  Proof.
+    intros cv eq.
+    eapply (into_equality_open_decls _ Γ'); eauto with fvs.
+    2,3:rewrite -(All2_fold_length cv); eauto with fvs.
+    induction eq; cbn.
+    - eapply equality_conv_c
+      destruct le; cbn in *; constructor => //.
+      apply (cumul_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+    - eapply ws_equality_forget in p.
+      destruct le; cbn in *; 
+      eapply ws_equality_forget in p0.
+      constructor => //.
+      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+      apply (cumul_conv_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
+      constructor => //.
+      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
+  Qed.
+
+  Lemma closed_cumul_conv_ctx {le} {Γ Γ' : closed_context} {d d' : open_decl Γ} :
+    forall cv : cumul_context Σ Γ' Γ,
+    equality_open_decls le Σ Γ d d' ->
+    equality_open_decls le Σ Γ' (move_open_decl d (symmetry (All2_fold_length cv)))
+                                (move_open_decl d' (symmetry (All2_fold_length cv))).
+  Proof.
+    intros cv eq.
+    destruct Γ' as [Γ' onΓ'].
+    eapply (into_equality_open_decls _ Γ').
+    induction eq; cbn.
+    - eapply ws_equality_forget in p.
+      destruct le; cbn in *; constructor => //.
+      apply (cumul_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+    - eapply ws_equality_forget in p.
+      destruct le; cbn in *; 
+      eapply ws_equality_forget in p0.
+      constructor => //.
+      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+      apply (cumul_cumul_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
+      constructor => //.
+      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
+      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
+  Qed.
+
+
+  #[global]
+  Instance conv_context_sym : Symmetric (fun Γ Γ' => closed_conv_context Σ Γ Γ').
+  Proof.
+    intros Γ Γ' conv.
+    eapply PCUICContextRelation.All2_fold_sym; tea.
+    clear Γ Γ' conv. intros Γ Γ' d d' H IH.
+    pose proof (closed_context_equality_forget H).
+    eapply (closed_conv_conv_ctx X (Γ := exist Γ clΓ) (Γ' := exist Γ' clΓ')) in eq.
+    eapply All_open_decls_alpha_irrel; tea. all:reflexivity.
+  Qed.
+
+  #[global]
+  Instance context_equality_trans le : Transitive (fun Γ Γ' => closed_context_equality le Σ Γ Γ').
+  Proof.
+    eapply All2_fold_trans.
+    intros.
+    destruct X2 as (clΓ & clΓ' & cld & cld' & eq).
+    destruct X3 as (clΓ'2 & clΓ'' & cld'2 & cld'' & eq').
+    exists clΓ, clΓ'', cld.
+    unshelve eexists.
+    rewrite (All2_fold_length X); exact cld''.
+    eapply equality_open_decls_trans; tea.
+    destruct le.
+    - move: (closed_context_equality_forget X) => /= cv.
+      eapply (closed_cumul_conv_ctx (Γ := exist Γ' clΓ'2) (Γ' := exist Γ clΓ) cv) in eq'.
+      eapply All_open_decls_alpha_irrel; tea. all:trea.
+    - pose proof (conv_context_sym _ _ X). cbn in X2.
+      move: (closed_context_equality_forget X2) => cv.
+      eapply (closed_conv_conv_ctx (Γ := exist Γ' clΓ'2) (Γ' := exist Γ clΓ) cv) in eq'.
+      eapply All_open_decls_alpha_irrel; tea. all:trea.
+  Qed.
+
+  #[global]
+  Instance conv_context_trans : Transitive (closed_conv_context Σ).
+  Proof. apply context_equality_trans. Qed.
+
+  #[global]
+  Instance cumul_context_trans : Transitive (closed_cumul_context Σ).
+  Proof. apply context_equality_trans. Qed.
+
+  #[global]
+  Instance ws_context_equality_trans le : Transitive (ws_context_equality le Σ).
+  Proof.
+    intros x y z H H'.
+    apply into_closed_context_equality in H.
+    apply into_closed_context_equality in H'.
+    apply from_closed_context_equality.
+    transitivity y; tea.
+  Qed.
+
+  #[global]
+  Instance ws_context_equality_sym: Symmetric (ws_conv_context Σ).
+  Proof.
+    move=> x y /into_closed_context_equality H.
+    apply from_closed_context_equality.
+    now symmetry.
+  Qed.
+
 
   Lemma conv_cumul_ctx {Γ Γ' : closed_context} {T U : open_term Γ} :
     Σ ;;; Γ |- T = U ->
@@ -983,591 +1190,7 @@ End ContextConversion.
 
 Hint Resolve isType_open wf_local_closed_context : fvs.
 
-Definition conv_cum {cf:checker_flags} le Σ Γ T T' :=
-  if le then Σ ;;; Γ |- T <= T' else Σ ;;; Γ |- T = T'.
 
-Notation ws_decl Γ d := (on_free_vars_decl (shiftnP #|Γ| xpred0) d).
-  
-Definition equality_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) d d' :=
-  (if le then cumul_decls else conv_decls) Σ Γ Γ' d d'.
-
-Definition open_decl (Γ : context) := { d : context_decl | ws_decl Γ d }.
-Definition open_decl_proj {Γ : context} (d : open_decl Γ) := proj1_sig d.
-Coercion open_decl_proj : open_decl >-> context_decl.
-
-Definition vass_open_decl {Γ : closed_context} (na : binder_annot name) (t : open_term Γ) : open_decl Γ :=
-  exist (vass na t) (proj2_sig t).
-
-Definition vdef_open_decl {Γ : closed_context} (na : binder_annot name) (b t : open_term Γ) : open_decl Γ :=
-  exist (vdef na b t) (introT andP (conj (proj2_sig b) (proj2_sig t))).
-  
-Inductive All_open_decls_alpha {Γ : closed_context} le (P : bool -> open_term Γ -> open_term Γ -> Type) :
-  open_decl Γ -> open_decl Γ -> Type :=
-| on_open_vass_alpha {na na' : binder_annot name} {t : open_term Γ} {t' : open_term Γ} :
-  eq_binder_annot na na' -> P le t t' -> 
-  All_open_decls_alpha le P (vass_open_decl na t) (vass_open_decl na' t')
-
-| on_open_vdef_alpha {na na' : binder_annot name} {b t : open_term Γ} {b' t' : open_term Γ} :
-  eq_binder_annot na na' ->
-  P false b b' ->
-  P le t t' ->
-  All_open_decls_alpha le P (vdef_open_decl na b t) (vdef_open_decl na' b' t').
-Derive Signature NoConfusion for All_open_decls_alpha.
-
-Lemma All_open_decls_alpha_irrel {Γ : closed_context} le (P : bool -> open_term Γ -> open_term Γ -> Type) 
-  {d d0 d' d'0 : open_decl Γ} :
-  All_open_decls_alpha le P d0 d'0 ->
-  d = d0 :> context_decl ->
-  d' = d'0 :> context_decl ->
-  All_open_decls_alpha le P d d'.
-Proof.
-  case => [na na' t t' eqna eqt|na na' b t b' t' eqna eqb eqt] /=.
-  - destruct d, d'; simpl in *; intros -> ->.
-    rewrite (uip i (proj2_sig t)).
-    rewrite (uip i0 (proj2_sig t')).
-    constructor; auto.
-  - destruct d, d'; simpl in *; intros -> ->.
-    rewrite (uip i (introT andP (conj (proj2_sig b) (proj2_sig t)))).
-    rewrite (uip i0 (introT andP (conj (proj2_sig b') (proj2_sig t')))).
-    constructor; auto.
-Qed.
-
-(* Arguments All_open_decls_alpha {Γ Γ'} _%function_scope.
-Arguments on_open_vass_alpha {Γ Γ'} _%function_scope.
-Arguments on_open_vdef_alpha {Γ Γ'} _%function_scope. *)
-  
-Definition equality_open_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext)
-  (Γ : closed_context) (d : open_decl Γ) (d' : open_decl Γ) :=
-  All_open_decls_alpha le (fun le => @ws_equality cf le Σ Γ) d d'.
-
-Definition ws_equality_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) : context_decl -> context_decl -> Type :=
-  fun d d' => 
-    #|Γ| = #|Γ'| × equality_decls le Σ Γ Γ' d d' ×
-    [&& on_free_vars_ctx xpred0 Γ, on_free_vars_ctx xpred0 Γ', ws_decl Γ d & ws_decl Γ' d'].
-
-(* Definition equality_open_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext) 
-  (Γ : closed_context) (d : open_decl Γ) (d' : open_decl Γ) :=
-  ∑ eq : #|Γ| = #|Γ'|, equality_open_decls le Σ Γ d (move_ws_term d'. *)
-    
-Notation is_open_term Γ t := (on_free_vars (shiftnP #|Γ| xpred0) t).
-Notation is_open_decl Γ t := (on_free_vars_decl (shiftnP #|Γ| xpred0) t).
-Notation is_closed_context Γ := (on_free_vars_ctx xpred0 Γ).
-
-Lemma into_equality_open_decls {cf : checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ}(Γ Γ' : context) d d' :
-  equality_decls le Σ Γ Γ' d d' -> 
-  forall (onΓ : on_free_vars_ctx xpred0 Γ)
-        (isd: is_open_decl Γ d)
-        (isd': is_open_decl Γ d'),
-  equality_open_decls le Σ (exist Γ onΓ) (exist d isd) (exist d' isd').
-Proof.
-  case: le; move=> [].
-  - intros; eapply All_open_decls_alpha_irrel.
-    econstructor 1. tea.
-    exact (into_ws_equality (le:=true) c isd isd' onΓ).
-    all:trea.
-  - intros; eapply All_open_decls_alpha_irrel.
-    econstructor 2. tea.
-    unshelve apply (into_ws_equality (le:=false) c); cbn.
-    now move/andP: isd. now move/andP: isd'.
-    unshelve apply (into_ws_equality (le:=true) c0); cbn.
-    now move/andP: isd. now move/andP: isd'.
-    all:trea.
-  - intros; eapply All_open_decls_alpha_irrel.
-    econstructor 1. tea.
-    unshelve apply (into_ws_equality (le:=false) c); cbn; tea.
-    all:trea.
-  - intros; eapply All_open_decls_alpha_irrel.
-    econstructor 2. tea.
-    unshelve apply (into_ws_equality (le:=false) c); cbn.
-    now move/andP: isd. now move/andP: isd'.
-    unshelve apply (into_ws_equality (le:=false) c0); cbn.
-    now move/andP: isd. now move/andP: isd'.
-    all:trea.
-Qed.
-
-Lemma into_ws_equality_open_decls {cf : checker_flags} (le : bool) {Σ : global_env_ext} {wfΣ : wf Σ} 
-  {Γ Γ' : context} {d d'} :
-  ws_equality_decls le Σ Γ Γ' d d' -> 
-  ∑ (onΓ : on_free_vars_ctx xpred0 Γ)
-        (isd: is_open_decl Γ d)
-        (isd': is_open_decl Γ d'),
-  equality_open_decls le Σ (exist Γ onΓ) (exist d isd) (exist d' isd').
-Proof.
-  rewrite /ws_equality_decls=> [] [] eqctx [] eqd /and4P [] onΓ onΓ' isd isd'.
-  exists onΓ, isd.
-  unshelve eexists. now rewrite eqctx. cbn.
-  eapply into_equality_open_decls; tea.
-Qed.
-
-Lemma equality_open_decls_forget {cf : checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
-  {Γ : closed_context} {Γ' : closed_context} {d d' : open_decl Γ} :
-  #|Γ| = #|Γ'| ->
-  equality_open_decls le Σ Γ d d' ->
-  ws_equality_decls le Σ Γ Γ' d d'. 
-Proof.
-  move=> hlen. rewrite /equality_open_decls /ws_equality_decls => a; split => //.
-  rewrite -hlen.
-  split.
-  2:{ apply/and4P; split; intuition eauto with fvs.
-      all:destruct a; cbn; eauto with fvs. }
-  destruct a. simpl. red.
-  eapply ws_equality_forget in w.
-  destruct le; constructor; auto.
-  eapply ws_equality_forget in w.
-  eapply ws_equality_forget in w0.
-  destruct le; constructor; auto.
-Qed.
-  
-Instance equality_open_decls_trans {cf : checker_flags} (le : bool) {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : closed_context} :
-  Transitive (equality_open_decls le Σ Γ).
-Proof.
-  intros d d' d''.
-  rewrite /equality_open_decls.
-  intros ond ond'; destruct ond; depelim ond'.
-  destruct t', t0. noconf e1. simpl in H. subst i; auto.
-  econstructor; now etransitivity.
-  destruct b', b0. noconf H.
-  destruct t', t0; noconf e1.
-  simpl in H0.
-  econstructor; etransitivity; tea.
-  now rewrite (uip i i0).
-  now rewrite (uip i1 i2).
-Qed.
-
-Instance ws_equality_decls_trans {cf : checker_flags} (le : bool) (Σ : global_env_ext) {wfΣ : wf Σ}
-  {Γ Γ'} : Transitive (ws_equality_decls le Σ Γ Γ').
-Proof.
-  intros Δ Δ' Δ''.
-  move=> a; move: a.1 => HΓ. move: a.2.2 => /and4P[] _ onΓ' _ _. move: a.
-  move/into_ws_equality_open_decls => [onΓ [isd [isde' eq]]].
-  move/into_ws_equality_open_decls => [onΓ'' [isd' [isde'' eq']]].
-  rewrite -(uip onΓ onΓ'') in eq'.
-  rewrite -(uip isde' isd') in eq'.
-  now generalize (transitivity eq eq') => /(equality_open_decls_forget (Γ := exist Γ onΓ) (Γ' := exist Γ' onΓ') HΓ).
-Qed.
-
-Lemma into_ws_equality_decls {cf : checker_flags} {le : bool} {Σ : global_env_ext}
-  {Γ Γ'} {d d' : context_decl} (c : equality_decls le Σ Γ Γ' d d') :
-  #|Γ| = #|Γ'| ->
-  on_free_vars_ctx xpred0 Γ ->
-  on_free_vars_ctx xpred0 Γ' ->
-  is_open_decl Γ d ->
-  is_open_decl Γ' d' ->
-  ws_equality_decls le Σ Γ Γ' d d'.
-Proof.
-  rewrite /ws_equality_decls => len onΓ onΓ' ond ond'. 
-  repeat split => //.
-  now rewrite onΓ onΓ' ond ond'.
-Qed.
-
-Lemma equality_decls_trans {cf : checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ}
-  {Γ Γ'} (d d' d'' : context_decl) (c : equality_decls le Σ Γ Γ' d d')
-  (c' : equality_decls le Σ Γ Γ' d' d'') : 
-  #|Γ| = #|Γ'| ->
-  on_free_vars_ctx xpred0 Γ ->
-  on_free_vars_ctx xpred0 Γ' ->
-  is_open_decl Γ d ->
-  is_open_decl Γ' d' ->
-  is_open_decl Γ' d'' ->
-  equality_decls le Σ Γ Γ' d d''.
-Proof.
-  move=> len onΓ onΓ' ond ond' ond''.
-  move: (into_ws_equality_decls c len onΓ onΓ' ond ond') => l.
-  rewrite -len in ond'.
-  move: (into_ws_equality_decls c' len onΓ onΓ' ond' ond'') => r.
-  apply (transitivity l r).
-Qed.
-
-Inductive wt_equality_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) : context_decl -> context_decl -> Type :=
-| wt_equality_vass {na na' : binder_annot name} {T T' : term} :
-    isType Σ Γ T -> isType Σ Γ' T' ->
-    conv_cum le Σ Γ T T' ->
-    eq_binder_annot na na' ->
-    wt_equality_decls le Σ Γ Γ' (vass na T) (vass na' T')
-| wt_equality_vdef {na na' : binder_annot name} {b b' T T'} :
-    eq_binder_annot na na' ->
-    isType Σ Γ T -> isType Σ Γ' T' ->
-    Σ ;;; Γ |- b : T -> Σ ;;; Γ' |- b' : T' ->
-    Σ ;;; Γ |- b = b' ->
-    conv_cum le Σ Γ T T' ->
-    wt_equality_decls le Σ Γ Γ' (vdef na b T) (vdef na' b' T').
-Derive Signature for wt_equality_decls.
-
-Definition ws_context_equality {cf:checker_flags} (le : bool) (Σ : global_env_ext) :=
-  All2_fold (ws_equality_decls le Σ).
-
-Notation ws_cumul_context Σ := (ws_context_equality true Σ).
-Notation ws_conv_context Σ := (ws_context_equality false Σ).
-    
-(* Slightly more convenient formulation on context equality that brings all the 
-  hypotheses using Σ and subset-types instead of boolean equality reasoning. *)
-Definition closed_context_equality {cf:checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) :=
-  All2_fold (fun Γ Γ' d d' => 
-    ∑ (clΓ : is_closed_context Γ) (clΓ' : is_closed_context Γ') 
-      (cld : is_open_decl Γ d) (cld' : is_open_decl Γ d'),
-      equality_open_decls le Σ (exist Γ clΓ) (exist d cld) (exist d' cld')) Γ Γ'.
-
-Notation closed_cumul_context Σ := (closed_context_equality true Σ).
-Notation closed_conv_context Σ := (closed_context_equality false Σ).
-
-Lemma ws_context_equality_closed_right {cf:checker_flags} {le : bool} {Σ : global_env_ext} {Γ Γ'}:
-  ws_context_equality le Σ Γ Γ' -> is_closed_context Γ'.
-Proof.
-  intros X. red in X.
-  induction X; auto.
-  destruct p as [? []].
-  rewrite on_free_vars_ctx_snoc IHX /=.
-  now move/and4P: i => [].
-Qed.
-
-Lemma ws_context_equality_closed_left {cf:checker_flags} {le : bool} {Σ : global_env_ext} {Γ Γ'}:
-  ws_context_equality le Σ Γ Γ' -> is_closed_context Γ.
-Proof.
-  intros X. red in X.
-  induction X; auto.
-  destruct p as [? []].
-  rewrite on_free_vars_ctx_snoc IHX /=.
-  now move/and4P: i => [].
-Qed.
-
-Lemma into_closed_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
-  {Γ Γ' : context} :
-  ws_context_equality le Σ Γ Γ' ->
-  closed_context_equality le Σ Γ Γ'.
-Proof.
-  rewrite /ws_context_equality /closed_context_equality.
-  intros a; eapply All2_fold_impl_ind; tea.
-  clear -wfΣ; intros Γ Δ d d' wseq IH hd.
-  destruct (into_ws_equality_open_decls le hd) as [clΓ [isd [isd' eq]]].
-  exists clΓ. exists (ws_context_equality_closed_right wseq).
-  now exists isd, isd'.
-Qed.
-
-Lemma from_closed_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
-  {Γ Γ' : context} :
-  closed_context_equality le Σ Γ Γ' ->
-  ws_context_equality le Σ Γ Γ'.
-Proof.
-  rewrite /ws_context_equality /closed_context_equality.
-  intros a; eapply All2_fold_impl_ind; tea.
-  clear -wfΣ; intros Γ Δ d d' wseq IH hd. cbn in hd.
-  destruct hd as [clΓ [clΔ [isd [isd' eq]]]].
-  rewrite /ws_equality_decls. split => //.
-  apply (All2_fold_length IH). split.
-  rewrite /equality_decls.
-  depelim eq. destruct le; constructor; auto; now apply ws_equality_forget in w.
-  apply ws_equality_forget in w. apply ws_equality_forget in w0.
-  destruct le; constructor; auto.
-  now rewrite clΓ clΔ isd /= -(All2_fold_length IH) isd'.
-Qed.
-
-
-
-Definition wt_context_equality {cf:checker_flags} (le : bool) (Σ : global_env_ext) :=
-  All2_fold (wt_equality_decls le Σ).
-
-Notation wt_cumul_context Σ := (wt_context_equality true Σ).
-Notation wt_conv_context Σ := (wt_context_equality false Σ).
-
-Section WtContextConversion.
-  Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
-
-  Definition wt_decl Γ d := 
-    match d with
-    | {| decl_body := None; decl_type := ty |} => isType Σ Γ ty
-    | {| decl_body := Some b; decl_type := ty |} => isType Σ Γ ty × Σ ;;; Γ |- b : ty
-    end.
-
-  Lemma wf_local_All_fold Γ : 
-    wf_local Σ Γ <~>
-    All_fold wt_decl Γ.
-  Proof.
-    split.
-    - induction 1; constructor; auto.
-      red in t0, t1. cbn. split; auto.
-    - induction 1; [constructor|].
-      destruct d as [na [b|] ty]; cbn in p; constructor; intuition auto.
-  Qed.
-
-  Lemma All2_fold_All_fold_mix {P Q l l'} : 
-    All2_fold P l l' ->
-    All_fold Q l ->
-    All_fold Q l' ->
-    All2_fold (fun Γ Γ' x y => Q Γ x × Q Γ' y × P Γ Γ' x y) l l'.
-  Proof.
-    induction 1; [constructor|] => l r; depelim l; depelim r; constructor; auto.
-  Qed.
-
-  Lemma All2_fold_All_fold_mix_inv {P Q l l'} : 
-    All2_fold (fun Γ Γ' x y => Q Γ x × Q Γ' y × P Γ Γ' x y) l l' ->
-    All2_fold P l l' × All_fold Q l × All_fold Q l'.
-  Proof.
-    induction 1; intuition (try constructor; auto).
-  Qed.
-
-  Lemma wt_context_equality_forget {le} {Γ Γ' : context} :
-    wt_context_equality le Σ Γ Γ' ->
-    wf_local Σ Γ × wf_local Σ Γ' ×
-    if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'.
-  Proof.
-    move=> wteq.
-    apply (PCUICEnvironment.All2_fold_impl (Q:=fun Γ Γ' d d' => wt_decl Γ d × wt_decl Γ' d' × 
-      (if le then cumul_decls Σ Γ Γ' d d' else conv_decls Σ Γ Γ' d d'))) in wteq.
-    2:{ intros ???? []; intuition (cbn; try constructor; auto).
-        all:cbn in *; destruct le; constructor; auto. }
-    eapply All2_fold_All_fold_mix_inv in wteq as [wteq [wfΓ wfΓ']].
-    eapply wf_local_All_fold in wfΓ. eapply wf_local_All_fold in wfΓ'.
-    intuition auto.
-    destruct le; auto.
-  Qed.
-
-  Lemma into_wt_context_equality {le} {Γ Γ' : context} {T U : term} :
-    wf_local Σ Γ -> wf_local Σ Γ' ->
-    (if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ') ->
-    wt_context_equality le Σ Γ Γ'.
-  Proof.
-    move=> /wf_local_All_fold wfΓ /wf_local_All_fold wfΓ'.
-    destruct le=> eq.
-    eapply All2_fold_All_fold_mix in eq; tea.
-    eapply PCUICEnvironment.All2_fold_impl; tea; clear => Γ Γ' d d' [wtd [wtd' cum]] /=.
-    destruct cum; cbn in wtd, wtd'; constructor; intuition auto.
-    eapply All2_fold_All_fold_mix in eq; tea.
-    eapply PCUICEnvironment.All2_fold_impl; tea; clear => Γ Γ' d d' [wtd [wtd' cum]] /=.
-    destruct cum; cbn in wtd, wtd'; constructor; intuition auto.
-  Qed.
-
-  Lemma wt_ws_context_equality {le} {Γ Γ' : context} {T U : term} :
-    wt_context_equality le Σ Γ Γ' ->
-    ws_context_equality le Σ Γ Γ'.
-  Proof.
-    intros a; eapply All2_fold_impl_ind; tea.
-    intros ???? wt ws []; 
-    pose proof (All2_fold_length wt);
-    constructor; auto. all:constructor; auto.
-    2,4:rtoProp; intuition eauto using PCUICSubstitution.isType_wf_local with fvs.
-    1,4:destruct le; constructor; auto.
-    rewrite /on_free_vars_decl /test_decl /=. rtoProp; intuition eauto with fvs.
-    eapply PCUICClosed.subject_closed in t.
-    now eapply closedn_on_free_vars.
-    rewrite /on_free_vars_decl /test_decl /=. rtoProp; intuition eauto with fvs.
-    eapply PCUICClosed.subject_closed in t0.
-    now eapply closedn_on_free_vars.
-  Qed.
-
-  Lemma ws_context_equality_split {le} {Γ Γ' : context} :
-    ws_context_equality le Σ Γ Γ' ->
-    on_free_vars_ctx xpred0 Γ × on_free_vars_ctx xpred0 Γ' ×
-    if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'.
-  Proof.
-    move=> wteq.
-    apply (PCUICEnvironment.All2_fold_impl (Q:=fun Γ Γ' d d' => ws_decl Γ d × ws_decl Γ' d' × 
-      (if le then cumul_decls Σ Γ Γ' d d' else conv_decls Σ Γ Γ' d d'))) in wteq.
-    2:{ intros ???? [? []].
-        move/and4P: i => [].
-        intuition (cbn; try constructor; auto).
-        cbn in *; destruct le; auto. }
-    eapply All2_fold_All_fold_mix_inv in wteq as [wteq [wfΓ wfΓ']].
-    apply on_free_vars_ctx_All_fold in wfΓ; apply on_free_vars_ctx_All_fold in wfΓ'.
-    intuition auto.
-    destruct le; auto.
-  Qed.
-
-  Lemma ws_context_equality_red_context {le} {Γ Γ'} :
-    ws_context_equality le Σ Γ Γ' ->
-    ∑ Δ Δ', red_ctx Σ Γ Δ * red_ctx Σ Γ' Δ' * eq_context_upto Σ (eq_universe Σ) (if le then leq_universe Σ else eq_universe Σ) Δ Δ'.
-  Proof.
-    move=> /ws_context_equality_split [wfΓ [wfΓ' Hctx]].
-    destruct le.
-    apply (cumul_context_red_context Σ (Γ := inj_closed Γ byfvs) (Γ' := inj_closed Γ' byfvs)) in Hctx.
-    now cbn in Hctx.
-    apply (conv_context_red_context Σ (Γ := inj_closed Γ byfvs) (Γ' := inj_closed Γ' byfvs)) in Hctx.
-    now cbn in Hctx.
-  Qed.
-
-  #[global]
-  Instance ws_equality_decls_sym Γ Γ' : Symmetric (ws_equality_decls false Σ Γ Γ').
-  Proof.
-    move=> x y [Hlen [[na na' T T' eqan cv|na na' b b' T T' eqna eqb eqT]]] /and4P[]; 
-      rewrite /ws_equality_decls => -> -> /= onx ony; intuition auto.
-    1,3:constructor; auto; now symmetry.
-    1,2:apply/andP; split; [rewrite ?Hlen //|rewrite -?Hlen //].
-  Qed.
-
-  Instance ws_equality_sym {Γ} : Symmetric (ws_equality false Σ Γ).
-  Proof.
-    move=> t u d.
-    induction d.
-    - constructor. cbn. now symmetry.
-    - econstructor 3; tea.
-    - econstructor 2; tea.
-  Qed.
-
-  #[global]
-  Instance equality_open_decls_sym Γ : Symmetric (equality_open_decls false Σ Γ).
-  Proof.
-    move=> x y [na na' T T' eqan cv|na na' b b' T T' eqna eqb eqT];
-    constructor; now symmetry.
-  Qed.
-
-  Notation " p # t " := (transport _ p t).
-  Notation " p #[ P ] t " := (transport P p t) (at level 30).
-
-  Definition move_open_decl {Γ Γ' : closed_context} (d : open_decl Γ) (p : #|Γ| = #|Γ'|) : open_decl Γ' :=
-    exist (proj1_sig d) (p #[fun n => on_free_vars_decl (shiftnP n xpred0) d] proj2_sig d).
-
-  Lemma closed_conv_conv_ctx {le} {Γ Γ' : closed_context} {d d' : open_decl Γ} :
-    forall cv : conv_context Σ Γ Γ',
-    equality_open_decls le Σ Γ d d' ->
-    equality_open_decls le Σ Γ' (move_open_decl d (All2_fold_length cv))
-                                (move_open_decl d' (All2_fold_length cv)).
-  Proof.
-    intros cv eq.
-    destruct Γ' as [Γ' onΓ'].
-    eapply (into_equality_open_decls _ Γ').
-    induction eq; cbn.
-    - eapply ws_equality_forget in p.
-      destruct le; cbn in *; constructor => //.
-      apply (cumul_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-    - eapply ws_equality_forget in p.
-      destruct le; cbn in *; 
-      eapply ws_equality_forget in p0.
-      constructor => //.
-      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-      apply (cumul_conv_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
-      constructor => //.
-      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-      apply (conv_conv_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
-  Qed.
-
-  Lemma closed_cumul_conv_ctx {le} {Γ Γ' : closed_context} {d d' : open_decl Γ} :
-    forall cv : cumul_context Σ Γ' Γ,
-    equality_open_decls le Σ Γ d d' ->
-    equality_open_decls le Σ Γ' (move_open_decl d (symmetry (All2_fold_length cv)))
-                                (move_open_decl d' (symmetry (All2_fold_length cv))).
-  Proof.
-    intros cv eq.
-    destruct Γ' as [Γ' onΓ'].
-    eapply (into_equality_open_decls _ Γ').
-    induction eq; cbn.
-    - eapply ws_equality_forget in p.
-      destruct le; cbn in *; constructor => //.
-      apply (cumul_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-    - eapply ws_equality_forget in p.
-      destruct le; cbn in *; 
-      eapply ws_equality_forget in p0.
-      constructor => //.
-      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-      apply (cumul_cumul_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
-      constructor => //.
-      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p cv).
-      apply (conv_cumul_ctx (Γ' := exist Γ' onΓ') Σ p0 cv).
-  Qed.
-
-  Lemma closed_context_equality_forget {le Γ Γ'} : 
-    closed_context_equality le Σ Γ Γ' ->
-    if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'.
-  Proof.
-    induction 1. destruct le; constructor.
-    destruct le. constructor; auto.
-    destruct p as [cl [cl' [cld [cld' eq]]]].
-    depelim eq; constructor; auto; try now eapply ws_equality_forget in w.
-    now eapply ws_equality_forget in w0.
-    destruct p as [cl [cl' [cld [cld' eq]]]].
-    depelim eq; constructor; auto; try now eapply ws_equality_forget in w.
-    constructor; auto; now apply ws_equality_forget in w.
-    constructor; auto; now apply ws_equality_forget in w; apply ws_equality_forget in w0.
-  Qed.
-    
-  Lemma All_fold_All2_fold {P Q Γ} : 
-    All_fold P Γ ->
-    (forall Γ d, All_fold P Γ -> All2_fold Q Γ Γ -> P Γ d -> Q Γ Γ d d) ->
-    All2_fold Q Γ Γ.
-  Proof.
-    intros a H; induction a; constructor; auto.
-  Qed.
-
-  Lemma closed_context_equality_refl le (Γ : closed_context) : closed_context_equality le Σ Γ Γ.
-  Proof.
-    destruct Γ as [Γ onΓ]. cbn.
-    move/on_free_vars_ctx_All_fold: onΓ => a.
-    eapply (All_fold_All2_fold a). clear -wfΣ.
-    move=> Γ d a IH ond.
-    move/on_free_vars_ctx_All_fold: a => clΓ.
-    exists clΓ, clΓ, ond, ond.
-    eapply (into_equality_open_decls _ Γ).
-    rewrite /equality_decls.
-    destruct le. reflexivity. reflexivity.
-  Qed.
-
-  Lemma ws_context_equality_refl le (Γ : closed_context) : ws_context_equality le Σ Γ Γ.
-  Proof.
-    apply from_closed_context_equality, closed_context_equality_refl.
-  Qed.
-
-  #[global]
-  Instance conv_context_sym : Symmetric (fun Γ Γ' => closed_conv_context Σ Γ Γ').
-  Proof.
-    intros Γ Γ' conv.
-    eapply All2_fold_sym; tea.
-    clear Γ Γ' conv. intros Γ Γ' d d' H IH [clΓ [clΓ' [opd [opd' eq]]]].
-    exists clΓ', clΓ.
-    unshelve eexists. rewrite -(All2_fold_length H); exact opd'.
-    unshelve eexists. rewrite -(All2_fold_length H); exact opd.
-    symmetry in eq. pose proof (closed_context_equality_forget H).
-    eapply (closed_conv_conv_ctx X (Γ := exist Γ clΓ) (Γ' := exist Γ' clΓ')) in eq.
-    eapply All_open_decls_alpha_irrel; tea. all:reflexivity.
-  Qed.
-
-  #[global]
-  Instance context_equality_trans le : Transitive (fun Γ Γ' => closed_context_equality le Σ Γ Γ').
-  Proof.
-    eapply All2_fold_trans.
-    intros.
-    destruct X2 as (clΓ & clΓ' & cld & cld' & eq).
-    destruct X3 as (clΓ'2 & clΓ'' & cld'2 & cld'' & eq').
-    exists clΓ, clΓ'', cld.
-    unshelve eexists.
-    rewrite (All2_fold_length X); exact cld''.
-    eapply equality_open_decls_trans; tea.
-    destruct le.
-    - move: (closed_context_equality_forget X) => /= cv.
-      eapply (closed_cumul_conv_ctx (Γ := exist Γ' clΓ'2) (Γ' := exist Γ clΓ) cv) in eq'.
-      eapply All_open_decls_alpha_irrel; tea. all:trea.
-    - pose proof (conv_context_sym _ _ X). cbn in X2.
-      move: (closed_context_equality_forget X2) => cv.
-      eapply (closed_conv_conv_ctx (Γ := exist Γ' clΓ'2) (Γ' := exist Γ clΓ) cv) in eq'.
-      eapply All_open_decls_alpha_irrel; tea. all:trea.
-  Qed.
-
-  #[global]
-  Instance conv_context_trans : Transitive (closed_conv_context Σ).
-  Proof. apply context_equality_trans. Qed.
-
-  #[global]
-  Instance cumul_context_trans : Transitive (closed_cumul_context Σ).
-  Proof. apply context_equality_trans. Qed.
-
-  #[global]
-  Instance ws_context_equality_trans le : Transitive (ws_context_equality le Σ).
-  Proof.
-    intros x y z H H'.
-    apply into_closed_context_equality in H.
-    apply into_closed_context_equality in H'.
-    apply from_closed_context_equality.
-    transitivity y; tea.
-  Qed.
-
-  #[global]
-  Instance ws_context_equality_sym: Symmetric (ws_conv_context Σ).
-  Proof.
-    move=> x y /into_closed_context_equality H.
-    apply from_closed_context_equality.
-    now symmetry.
-  Qed.
-
-End WtContextConversion.
 
 Hint Resolve conv_ctx_refl' cumul_ctx_refl' : pcuic.
 Hint Constructors conv_decls cumul_decls : pcuic.

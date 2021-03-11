@@ -44,16 +44,14 @@ Once in the right switch, you can install `Coq` and the `Equations` package usin
 
 Then use:
 
+    # make
+
+ to compile the MetaCoq project, or
+    
     # make pcuic
 
- to compile the MetaCoq project
-
-    # cd ./bidirectional
-    # coq_makefile -f _CoqProject -o CoqMakefile
-    # make -f CoqMakefile
-    
-to compile the files corresponding specifically to the article.
-
+ to compile only the part relevant for the ITP submission.
+ 
 ## Structure of the artefact
 
 | File                    | Description                                  |
@@ -64,16 +62,18 @@ to compile the files corresponding specifically to the article.
 | [BDFromPCUIC]         | Proof that undirected typing implies bidirectional typing |
 | [BDUnique]            | Proof of the uniqueness of inferred types upto cumulativity, and principal types as corollary |
 
-[BDEnvironmentTyping]: ./bidirectional/theories/BDEnvironmentTyping.v
-[BDTyping]: ./bidirectional/theories/BDTyping.v
-[BDToPCUIC]: ./bidirectional/theories/BDToPCUIC.v
-[BDFromPCUIC]: ./bidirectional/theories/BDFromPCUIC.v
-[BDUnique]: ./bidirectional/theories/BDUnique.v
+[BDEnvironmentTyping]: ./pcuic/theories/bidirectional/BDEnvironmentTyping.v
+[BDTyping]: ./pcuic/theories/bidirectional/BDTyping.v
+[BDToPCUIC]: ./pcuic/theories/bidirectional/BDToPCUIC.v
+[BDFromPCUIC]: ./pcuic/theories/bidirectional/BDFromPCUIC.v
+[BDUnique]: ./pcuic/theories/bidirectional/BDUnique.v
 
 ## Assumptions
 
 No assumptions remain in the files mentioned above.
 
 However, the proofs rely on the new structure for case nodes introduced very recently in Coq and MetaCoq. The MetaCoq files underlying the artefact are branched off pull-request [#547] of the MetaCoq GitHub repository, that introduces this change. The adaptation of the metatheory of MetaCoq to this new representation is ongoing in that PR, so some of the metatheoretical properties of PCUIC we rely on in [BDToPCUIC] and [BDFromPCUIC] are not yet fully proven – although they were prior to the modification.
+
+Finally, MetaCoq contains axioms pertaining to the normalization of PCUIC and the guard condition for (co)fixpoints, since normalization of the system cannot cannot be proven in Coq itself due to Gödel incompleteness.
 
 [#547]: https://github.com/MetaCoq/metacoq/pull/534

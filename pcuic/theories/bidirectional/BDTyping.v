@@ -78,9 +78,9 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   wf_predicate mdecl idecl p ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
+  Σ ;;; Γ ,,, p.(pcontext) |- p.(preturn) ▹□ ps ->
   wf_local_bd Σ (Γ ,,, predctx) ->
   conv_context Σ (Γ ,,, p.(pcontext)) (Γ,,, predctx) ->
-  Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
   is_allowed_elimination Σ ps (ind_kelim idecl) ->
   forall u args,
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
@@ -88,14 +88,14 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   (List.rev (subst_instance (puinst p) (ind_params mdecl))) ->
   Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
   isCoFinite mdecl.(ind_finite) = false ->
-  let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+  let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
   wf_branches idecl brs ->
   All2i (fun i cdecl br =>
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
     wf_local_bd Σ (Γ ,,, br.(bcontext)) ×
     wf_local_bd Σ (Γ ,,, brctxty.1) ×
     (conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
-    Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2)
+    Σ ;;; Γ ,,, br.(bcontext) |- br.(bbody) ◃ brctxty.2)
     0 idecl.(ind_ctors) brs ->
   Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (skipn ci.(ci_npar) args ++ [c])
 
@@ -161,7 +161,7 @@ Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
     wf_local_bd Σ (Γ ,,, (bcontext br)) ×
     wf_local_bd Σ (Γ ,,, brctxty.1) × 
     conv_context Σ (Γ ,,, (bcontext br)) (Γ ,,, brctxty.1) ×
-    Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2)
+    Σ;;; Γ,,, br.(bcontext) |- bbody br ◃ brctxty.2)
   n ctors brs.
 
 Definition branches_size {cf} {Σ Γ ci mdecl idecl p ptm brs}
@@ -371,11 +371,11 @@ Section BidirectionalInduction.
       consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
       wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
       PΓ (Γ ,,, p.(pcontext)) ->
+      Σ ;;; Γ ,,, p.(pcontext) |- p.(preturn) ▹□ ps ->
+      Psort (Γ ,,, p.(pcontext)) p.(preturn) ps ->
       wf_local_bd Σ (Γ ,,, predctx) ->
       PΓ (Γ ,,, predctx) ->
       conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
-      Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
-      Psort (Γ ,,, predctx) p.(preturn) ps ->
       is_allowed_elimination Σ ps idecl.(ind_kelim) ->
       forall u args,
       Σ ;;; Γ |- c ▹{ci} (u,args) ->
@@ -386,7 +386,7 @@ Section BidirectionalInduction.
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
       Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
       isCoFinite mdecl.(ind_finite) = false ->
-      let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+      let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
       wf_branches idecl brs ->
       All2i (fun i cdecl br =>
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
@@ -395,8 +395,8 @@ Section BidirectionalInduction.
         wf_local_bd Σ (Γ ,,, brctxty.1) ×
         PΓ (Γ ,,, brctxty.1) ×
         conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1) ×
-        Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2 ×
-        Pcheck (Γ ,,, brctxty.1) br.(bbody) brctxty.2)
+        Σ ;;; Γ ,,, br.(bcontext) |- br.(bbody) ◃ brctxty.2 ×
+        Pcheck (Γ ,,, br.(bcontext)) br.(bbody) brctxty.2)
         0 idecl.(ind_ctors) brs ->
       Pinfer Γ (tCase ci p c brs) (mkApps ptm (skipn ci.(ci_npar) args ++ [c]))) ->
 
@@ -556,25 +556,15 @@ Section BidirectionalInduction.
         change (branches_size _ _ _) with
         ((wfl_size r.1) + (wfl_size r.2.1) + (checking_size r.2.2.2) +
           branches_size (@checking_size cf) (@infering_sort_size cf) a2) in IH.
-        rewrite -/predctx -/ptm in IH |- *.
-        set brctxty := case_branch_type ci mdecl idecl p br ptm j cdecl.
-        fold brctxty in IH, r.
+        rewrite -/ptm in IH |- *.
         destruct r as (?&?&?&?).
         cbn -[branches_size] in IH.
         constructor.
         * repeat split.
           all: try assumption.
-          --  applyIH.
-          --  applyIH.
-              cbn.
-              rewrite -/predctx -/ptm -/brctxty.
-              lia.
-          --  applyIH.
-              cbn.
-              rewrite -/predctx -/ptm -/brctxty.
-              lia.
+          all: applyIH.
         * apply IHa2.
-          rewrite -/predctx -/ptm -/brctxty in IH |- *.
+          rewrite -/ptm in IH |- *.
           intros.
           apply IH.
           lia.

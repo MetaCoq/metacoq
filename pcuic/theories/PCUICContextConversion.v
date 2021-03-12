@@ -958,6 +958,14 @@ Section ContextConversion.
     now exists v, v'.
   Qed.
 
+  Lemma closed_red_refl Γ t : 
+    is_closed_context Γ ->
+    is_open_term Γ t ->
+    Σ ;;; Γ ⊢ t ⇝ t.
+  Proof.
+    now constructor.
+  Qed.
+  
   Lemma red_decl_refl Γ d : 
     is_closed_context Γ ->
     ws_decl Γ d ->
@@ -965,6 +973,14 @@ Section ContextConversion.
   Proof.
     destruct d as [na [b|] ty] => [onΓ /andP[] /=|]; constructor.
     all:split; eauto with fvs.
+  Qed.
+
+  Lemma closed_red_ctx_refl Γ : is_closed_context Γ -> Σ ⊢ Γ ⇝ Γ.
+  Proof.
+    move/on_free_vars_ctx_All_fold => a.
+    apply: All_fold_All2_fold; tea; clear => Γ d H IH; cbn.
+    apply red_decl_refl.
+    now apply on_free_vars_ctx_All_fold.
   Qed.
 
   Lemma context_equality_red {le} {Γ Γ' : context} :
@@ -1425,6 +1441,15 @@ Proof.
     destruct X1 as [wsd [wsd' cumd]].
     eapply into_equality_open_decls; cbn; tea.
     rewrite (All2_fold_length X0) //. }
+Qed.
+
+Lemma closed_context_equality_refl {cf} {Σ} {wfΣ : wf Σ} {le} {Γ : context} :
+  is_closed_context Γ -> Σ ⊢ Γ ≤[le] Γ.
+Proof.
+  move/on_free_vars_ctx_All_fold.
+  induction 1; constructor; auto.
+  eapply (into_equality_open_decls _ Γ); tea; eauto with fvs.
+  destruct le; cbn; reflexivity.
 Qed.
 
 Lemma closed_cumul_context_app_same {cf} {Σ} {wfΣ : wf Σ} {le} {Γ Γ' Δ : context} :

@@ -34,9 +34,9 @@ From Equations Require Import Equations.
 Reserved Notation " Σ ;;; Γ ⊢ t ≤[ le ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤[ le ]  u").
 
-Notation is_open_term Γ t := (on_free_vars (shiftnP #|Γ| xpred0) t).
-Notation is_open_decl Γ t := (on_free_vars_decl (shiftnP #|Γ| xpred0) t).
-Notation is_closed_context Γ := (on_free_vars_ctx xpred0 Γ).
+Notation is_open_term Γ := (on_free_vars (shiftnP #|Γ| xpred0)).
+Notation is_open_decl Γ := (on_free_vars_decl (shiftnP #|Γ| xpred0)).
+Notation is_closed_context := (on_free_vars_ctx xpred0).
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 

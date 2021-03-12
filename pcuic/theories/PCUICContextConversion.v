@@ -397,7 +397,7 @@ Qed.
 
 Section ContextConversion.
   Context {cf : checker_flags}.
-  Context (Σ : global_env_ext).
+  Context {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
 
   Notation conv_context := (All2_fold (conv_decls Σ)).
@@ -1449,7 +1449,7 @@ Proof.
   intros cum conv.
   pose proof (length_of conv). len in H.
   eapply All2_fold_app; eauto. lia. 
-  unshelve eapply (closed_context_equality_refl _ (exist Γ' byfvs)); cbn. eauto with fvs.
+  eapply closed_context_equality_refl; cbn; eauto with fvs.
   eapply All2_fold_app_inv in conv as []. 2:lia.
   eapply All2_fold_impl_ind; tea.
   intros. simpl in X1.
@@ -1696,7 +1696,7 @@ Proof.
   - econstructor; eauto.
     eapply wt_cum_equality in X4; tea.
     apply (wt_cum_context_equality true) in X5; tea.
-    eapply (equality_equality_ctx Σ X5) in X4.
+    eapply (equality_equality_ctx X5) in X4.
     now eapply ws_equality_forget in X4. 
 Qed.
 

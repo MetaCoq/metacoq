@@ -53,6 +53,7 @@ Inductive ws_equality {cf} (le : bool) (Σ : global_env_ext) (Γ : context) : te
   is_open_term Γ t -> is_open_term Γ u -> is_open_term Γ v ->
   Σ ;;; Γ ⊢ t ≤[le] v -> red1 Σ Γ u v -> Σ ;;; Γ ⊢ t ≤[le] u
 where " Σ ;;; Γ ⊢ t ≤[ le ] u " := (ws_equality le Σ Γ t u) : type_scope.
+Derive Signature NoConfusion for ws_equality.
 
 Notation " Σ ;;; Γ ⊢ t ≤ u " := (ws_equality true Σ Γ t u) (at level 50, Γ, t, u at next level,
     format "Σ  ;;;  Γ  ⊢  t  ≤  u") : type_scope.
@@ -97,9 +98,15 @@ Proof.
 Qed.
 Hint Resolve red_is_open_term : fvs.
 
-Lemma ws_equality_is_open_term {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} x y : 
+Lemma ws_equality_is_open_term {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
   ws_equality le Σ Γ x y ->
   is_closed_context Γ && is_open_term Γ x && is_open_term Γ y.
+Proof.
+  now induction 1; rewrite ?i ?i0 ?i1 ?i2.
+Qed.
+
+Lemma ws_equality_is_closed_context {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
+  ws_equality le Σ Γ x y -> is_closed_context Γ.
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
@@ -117,7 +124,7 @@ Proof.
   now induction 1; rewrite ?i ?i0 ?i1.
 Qed.
 
-Hint Resolve ws_equality_is_open_term_left ws_equality_is_open_term_right : fvs.
+Hint Resolve ws_equality_is_closed_context ws_equality_is_open_term_left ws_equality_is_open_term_right : fvs.
 
 Lemma equality_alt `{cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
   Σ ;;; Γ ⊢ t ≤[le] u <~> 
@@ -294,7 +301,7 @@ Section RedConv.
 
   Lemma red_conv {le Γ t u} : Σ ;;; Γ ⊢ t ⇝ u -> Σ ;;; Γ ⊢ t ≤[le] u.
   Proof.
-    move=> [clΓ [clT /clos_rt_rt1n_iff r]].
+    move=> [clΓ clT /clos_rt_rt1n_iff r].
     induction r.
     - now apply equality_refl.
     - econstructor 2. 5:tea. all:eauto with fvs. 
@@ -761,9 +768,9 @@ Section WtContextConversion.
     intros a H; induction a; constructor; auto.
   Qed.
 
-  Lemma closed_context_equality_refl le (Γ : closed_context) : closed_context_equality le Σ Γ Γ.
+  Lemma closed_context_equality_refl le Γ : is_closed_context Γ -> closed_context_equality le Σ Γ Γ.
   Proof.
-    destruct Γ as [Γ onΓ]. cbn.
+    move=> onΓ. cbn.
     move/on_free_vars_ctx_All_fold: onΓ => a.
     eapply (All_fold_All2_fold a). clear -wfΣ.
     move=> Γ d a IH ond.

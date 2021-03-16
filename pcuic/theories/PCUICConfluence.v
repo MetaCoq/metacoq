@@ -3925,9 +3925,9 @@ Arguments red1_ctx _ _ _ : clear implicits.
 
 Section ConfluenceFacts.
   Context {cf : checker_flags}.
-  Context (Σ : global_env) (wfΣ : wf Σ).
+  Context {Σ : global_env} {wfΣ : wf Σ}.
 
-  Lemma lift_to_ws_red (Γ : closed_context) (x : term) (p : on_free_vars (shiftnP #|Γ| xpred0) x) y : 
+  Lemma lift_to_ws_red {Γ : closed_context} {x : term} {p : on_free_vars (shiftnP #|Γ| xpred0) x} {y} : 
     red Σ Γ x y ->
     ∑ x' y' : open_term Γ,
       x = x' :> term × y = y' :> term × ws_red Σ xpred0 Γ x' y'.
@@ -3939,7 +3939,7 @@ Section ConfluenceFacts.
 
   Set Equations With UIP.
 
-  Lemma ws_pred_curry_red Γ Δ t u : ws_pred_curry Σ xpred0 Γ Δ t u -> red Σ Γ t u.
+  Lemma ws_pred_curry_red {Γ Δ t u} : ws_pred_curry Σ xpred0 Γ Δ t u -> red Σ Γ t u.
   Proof.
     intros ws. red in ws.
     induction ws. red in r.
@@ -3958,7 +3958,7 @@ Section ConfluenceFacts.
   Qed.
  *)
 
-  Lemma ws_pred_pred (Γ : closed_context) (t u : open_term Γ) : 
+  Lemma ws_pred_pred {Γ : closed_context} {t : open_term Γ} {u} : 
     ws_pred_curry Σ xpred0 Γ Γ t u ->
     clos_refl_trans (pred1 Σ Γ Γ) t u.
   Proof.
@@ -3969,19 +3969,18 @@ Section ConfluenceFacts.
     - econstructor 3; tea.
   Qed.
 
-  Lemma lift_to_pred (Γ : closed_context) (x : term) (p : on_free_vars (shiftnP #|Γ| xpred0) x) y : 
+  Lemma lift_to_pred {Γ : closed_context} {x : term} {p : on_free_vars (shiftnP #|Γ| xpred0) x} {y} : 
     red Σ Γ x y ->
     ∑ x' y' : open_term Γ,
       x = x' :> term × y = y' :> term × clos_refl_trans (pred1 Σ Γ Γ) x' y'.
   Proof.
-    move/(lift_to_ws_red _ _ p) => [x' [y' [eq [eq' pred]]]]. subst.
+    move/(lift_to_ws_red (p := p)) => [x' [y' [eq [eq' pred]]]]. subst.
     exists x', y'; repeat split => //.
     eapply red_pred' in pred. red in pred.
     now eapply ws_pred_pred in pred; cbn in *.
   Qed.
 
-  Lemma red_mkApps_tConstruct (Γ : closed_context)
-        ind pars k (args : list term) c :
+  Lemma red_mkApps_tConstruct {Γ : closed_context} {ind pars k} (args : list term) {c} :
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) args ->
     red Σ Γ (mkApps (tConstruct ind pars k) args) c ->
     ∑ args' : list term,
@@ -4003,7 +4002,7 @@ Section ConfluenceFacts.
       intros ? ? ?; eapply red_trans.
   Qed.
 
-  Lemma red_mkApps_tInd {Γ : closed_context} {ind u} (args : list term) c :
+  Lemma red_mkApps_tInd {Γ : closed_context} {ind u} {args : list term} {c} :
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) args ->        
     red Σ Γ (mkApps (tInd ind u) args) c ->
     ∑ args' : list term,
@@ -4025,7 +4024,7 @@ Section ConfluenceFacts.
       intros ? ? ?; eapply red_trans.
   Qed.
 
-  Lemma red_mkApps_tRel (Γ : closed_context) k b (args : list term) c :
+  Lemma red_mkApps_tRel {Γ : closed_context} {k b} {args : list term} {c} :
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) args ->        
     nth_error Γ k = Some b -> decl_body b = None ->
     red Σ Γ (mkApps (tRel k) args) c ->
@@ -4049,8 +4048,7 @@ Section ConfluenceFacts.
       intros ? ? ?; eapply red_trans.
   Qed.
 
-  Lemma red_mkApps_tConst_axiom (Γ : closed_context)
-        cst u (args : list term) cb c :
+  Lemma red_mkApps_tConst_axiom {Γ : closed_context} {cst u} {args : list term} {cb c} :
     declared_constant Σ cst cb -> cst_body cb = None ->
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) args ->        
     red Σ Γ (mkApps (tConst cst u) args) c ->
@@ -4094,7 +4092,7 @@ Section ConfluenceFacts.
 
   Notation byfvs := (_ ltac:(eauto with fvs)) (only parsing).
   
-  Lemma red_ws_red_left (Γ : closed_context) (x : ws_term (shiftnP #|Γ| xpred0)) y :
+  Lemma red_ws_red_left {Γ : closed_context} {x : ws_term (shiftnP #|Γ| xpred0)} {y} :
     red Σ Γ x y -> ∑ prf, ws_red Σ xpred0 Γ x (exist y prf).
   Proof.
     move=> r.

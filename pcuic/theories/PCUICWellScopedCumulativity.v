@@ -13,6 +13,30 @@ Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 From Equations Require Import Equations.
      
+
+Reserved Notation "[ × P1 & P2 ]" (at level 0).
+Reserved Notation "[ × P1 , P2 & P3 ]" (at level 0, format
+  "'[hv' [ × '['  P1 , '/'  P2 ']' '/ '  &  P3 ] ']'").
+Reserved Notation "[ × P1 , P2 , P3 & P4 ]" (at level 0, format
+  "'[hv' [ × '['  P1 , '/'  P2 , '/'  P3 ']' '/ '  &  P4 ] ']'").
+Reserved Notation "[ × P1 , P2 , P3 , P4 & P5 ]" (at level 0, format
+  "'[hv' [ × '['  P1 , '/'  P2 , '/'  P3 , '/'  P4 ']' '/ '  &  P5 ] ']'").
+Reserved Notation "[ × P1 , P2 , P3 , P4 , P5 & P6 ]" (at level 0, format
+  "'[hv' [ × '['  P1 , '/'  P2 , '/'  P3 , '/'  P4 , '/'  P5 ']' '/ '  &  P6 ] ']'").
+
+
+Variant and3 (P1 P2 P3 : Type) : Type := Times3 of P1 & P2 & P3.
+Variant and4 (P1 P2 P3 P4 : Type) : Type := Times4 of P1 & P2 & P3 & P4.
+Variant and5 (P1 P2 P3 P4 P5 : Type) : Type := Times5 of P1 & P2 & P3 & P4 & P5.
+Variant and6 (P1 P2 P3 P4 P5 P6 : Type) : Type := Times6 of P1 & P2 & P3 & P4 & P5 & P6.
+  
+Notation "[ × P1 & P2 ]" := (pair P1 P2) (only parsing) : type_scope.
+Notation "[ × P1 , P2 & P3 ]" := (and3 P1 P2 P3) : type_scope.
+Notation "[ × P1 , P2 , P3 & P4 ]" := (and4 P1 P2 P3 P4) : type_scope.
+Notation "[ × P1 , P2 , P3 , P4 & P5 ]" := (and5 P1 P2 P3 P4 P5) : type_scope.
+Notation "[ × P1 , P2 , P3 , P4 , P5 & P6 ]" := (and6 P1 P2 P3 P4 P5 P6) : type_scope.
+
+
 (* We show that conversion/cumulativity starting from well-typed terms is transitive.
   We first use typing to decorate the reductions/comparisons with invariants 
   showing that all the considered contexts/terms are well-scoped. In a second step
@@ -100,7 +124,7 @@ Hint Resolve red_is_open_term : fvs.
 
 Lemma ws_equality_is_open_term {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
   ws_equality le Σ Γ x y ->
-  is_closed_context Γ && is_open_term Γ x && is_open_term Γ y.
+  [&& is_closed_context Γ, is_open_term Γ x & is_open_term Γ y].
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
@@ -129,22 +153,20 @@ Hint Resolve ws_equality_is_closed_context ws_equality_is_open_term_left ws_equa
 Lemma equality_alt `{cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
   Σ ;;; Γ ⊢ t ≤[le] u <~> 
   ∑ v v',
-    [&& is_closed_context Γ, is_open_term Γ t & is_open_term Γ u] ×
-    red Σ Γ t v × red Σ Γ u v' × compare_term le Σ (global_ext_constraints Σ) v v'.
+    [× is_closed_context Γ, is_open_term Γ t, is_open_term Γ u,
+      red Σ Γ t v, red Σ Γ u v' & compare_term le Σ (global_ext_constraints Σ) v v'].
 Proof.
   split.
   - induction 1.
     + exists t, u. intuition auto. now rewrite i i0.
-    + destruct IHX as (v' & v'' & cl & redv & redv' & leqv).
-      move/and3P: cl => [] -> _ ->. rewrite i0 /=.
-      exists v', v''. intuition auto. now eapply red_step.
-    + destruct IHX as (v' & v'' & cl & redv & redv' & leqv).
-      exists v', v''. intuition auto. 2:now eapply red_step.
-      now move/and3P: cl => [] -> -> _.
-  - intros (v' & v'' & cl & redv & redv' & leqv).
+    + destruct IHX as (v' & v'' & [-> _ -> redv redv' leqv]).
+      rewrite i0 /=.
+      exists v', v''. split; auto. now eapply red_step.
+    + destruct IHX as (v' & v'' & [-> -> cl redv redv' leqv ]).
+      exists v', v''. split; auto. now eapply red_step.
+  - intros (v' & v'' & [clΓ clt clu redv redv' leqv]).
     apply clos_rt_rt1n in redv.
     apply clos_rt_rt1n in redv'.
-    move/and3P: cl => [] clΓ clt clu.
     induction redv in u, v'', redv', leqv, clt, clu |- *.
     * induction redv' in x, leqv, clt, clu |- *.
     ** constructor; auto.
@@ -164,22 +186,22 @@ Qed.
 Instance ws_equality_trans {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} :
   Transitive (ws_equality le Σ Γ).
 Proof.
-  move=> t u v /equality_alt [t' [u' [/and3P[clΓ clt clu] [tt' [uu' eq]]]]] 
-    /equality_alt[u'' [v' [/and3P[_ clu' clv] [uu'' [vv' eq']]]]].
+  move=> t u v /equality_alt [t' [u' [clΓ clt clu tt' uu' eq]]]
+    /equality_alt[u'' [v' [_ clu' clv uu'' vv' eq']]].
   eapply equality_alt.
   destruct (red_confluence (Γ := exist Γ clΓ) (t:=exist u clu) uu' uu'') as [u'nf [ul ur]].
   destruct le; cbn in *.
   { eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
     eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
     exists tnf, unf.
-    intuition auto; eauto with fvs.
+    split; auto; eauto with fvs.
     - now transitivity t'.
     - now transitivity v'.
     - now transitivity u'nf. }
   { eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
     eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
     exists tnf, unf.
-    intuition eauto with fvs.
+    split; eauto with fvs.
     - now transitivity t'.
     - now transitivity v'.
     - now transitivity u'nf. }
@@ -444,9 +466,9 @@ Qed.
 Lemma equality_open_decls_inv {cf} (le : bool) {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} {d d'} :
   equality_open_decls le Σ Γ d d' -> 
-  on_free_vars_ctx xpred0 Γ × is_open_decl Γ d × is_open_decl Γ d' × equality_decls le Σ Γ Γ' d d'.
+  [× on_free_vars_ctx xpred0 Γ, is_open_decl Γ d, is_open_decl Γ d' & equality_decls le Σ Γ Γ' d d'].
 Proof.
-  intros. intuition eauto with fvs.
+  intros. split; eauto with fvs.
   - destruct X; now destruct w.
   - now eapply equality_open_decls_equality_decls.
 Qed.
@@ -676,8 +698,8 @@ Section WtContextConversion.
 
   Lemma wt_context_equality_forget {le} {Γ Γ' : context} :
     wt_context_equality le Σ Γ Γ' ->
-    wf_local Σ Γ × wf_local Σ Γ' ×
-    if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'.
+    [× wf_local Σ Γ, wf_local Σ Γ' &
+      if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'].
   Proof.
     move=> wteq.
     apply (PCUICEnvironment.All2_fold_impl (Q:=fun Γ Γ' d d' => wt_decl Γ d × wt_decl Γ' d' × 
@@ -686,7 +708,7 @@ Section WtContextConversion.
         all:cbn in *; destruct le; constructor; auto. }
     eapply All2_fold_All_fold_mix_inv in wteq as [wteq [wfΓ wfΓ']].
     eapply wf_local_All_fold in wfΓ. eapply wf_local_All_fold in wfΓ'.
-    intuition auto.
+    split; auto.
     destruct le; auto.
   Qed.
 
@@ -733,11 +755,11 @@ Section WtContextConversion.
 
   Lemma closed_context_equality_inv {le} {Γ Γ' : context} :
     closed_context_equality le Σ Γ Γ' ->
-    on_free_vars_ctx xpred0 Γ × on_free_vars_ctx xpred0 Γ' ×
-    if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'.
+    [× on_free_vars_ctx xpred0 Γ, on_free_vars_ctx xpred0 Γ' &
+      if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'].
   Proof.
     move=> wteq.
-    do 2 (split; eauto with fvs).
+    split; eauto with fvs.
     destruct le. eapply PCUICEnvironment.All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
     all:try now eapply ws_equality_forget in p.
     all:try now eapply ws_equality_forget in p0.
@@ -757,7 +779,7 @@ Section WtContextConversion.
     closed_context_equality le Σ Γ Γ' ->
     if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'.
   Proof.
-    now move/closed_context_equality_inv.
+    now move/closed_context_equality_inv => [].
   Qed.
     
   Lemma All_fold_All2_fold {P Q Γ} : 

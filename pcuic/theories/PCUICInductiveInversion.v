@@ -2326,7 +2326,7 @@ Proof.
       rewrite -subst_instance_app_ctx.
       apply (on_minductive_wf_params_indices_inst decli _ cu). }
     2:{ eapply spine_subst_conv; eauto.
-      eapply All2_fold_subst_instance; eauto. apply spu.
+      eapply conv_context_rel_subst_instance; eauto. apply spu.
       eapply on_minductive_wf_params; eauto. }
     simpl.
     rewrite -(subst_instance_smash u _ []).
@@ -2619,7 +2619,7 @@ Proof.
         rewrite -(smash_context_subst []).
         eapply wf_local_smash_end => //. }
       2:{ eapply spine_subst_conv; eauto.
-          eapply All2_fold_subst_instance; eauto.
+          eapply conv_context_rel_subst_instance; eauto.
           eapply on_minductive_wf_params; eauto. }
       simpl.
       assert (subst_context (ind_subst mdecl c.1 u) 0 (subst_instance u (ind_params mdecl)) = 
@@ -2659,7 +2659,7 @@ Proof.
         rewrite /argctx.
         eapply wf_local_smash_end => //. }
       eapply spine_subst_conv; eauto.
-      eapply All2_fold_subst_instance; eauto.
+      eapply conv_context_rel_subst_instance; eauto.
       eapply on_minductive_wf_params; eauto.
       2:subst i; len; rewrite /argctx; len; reflexivity.
       rewrite /expand_lets /expand_lets_k.

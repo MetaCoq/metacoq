@@ -1798,7 +1798,7 @@ Section Rho.
     relativize #|ctx|.
     apply (shiftn_renaming _ _ (rho_ctx_over Γ _) r Hr). now len.
     eapply on_free_vars_subst_gen.
-    2:erewrite <- on_free_vars_subst_instance; tea.
+    2:erewrite on_free_vars_subst_instance; tea.
     rewrite /on_free_vars_terms.
     solve_all.
   Qed.
@@ -3017,7 +3017,7 @@ Section Rho.
       cbn in hnth. now len; inv_on_free_vars.
 
     - eapply declared_constant_closed_body in H0; tea.
-      rewrite -on_free_vars_subst_instance.
+      rewrite on_free_vars_subst_instance.
       now eapply closed_on_free_vars.
     - inv_on_free_vars.
       eapply (All2_apply P) in X1.

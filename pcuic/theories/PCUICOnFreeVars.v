@@ -200,7 +200,7 @@ Proof.
   eapply on_free_vars_impl => //.
 Qed.
 
-Lemma on_free_vars_subst_instance {p u t} : on_free_vars p t = on_free_vars p (subst_instance u t).
+Lemma on_free_vars_subst_instance {p u t} : on_free_vars p (subst_instance u t) = on_free_vars p t.
 Proof.
   rewrite /subst_instance /=. revert t p.
   apply: term_forall_list_ind; simpl => //; intros.
@@ -763,7 +763,7 @@ Proof.
   rewrite /subst_instance -map_rev alli_map.
   apply alli_ext => i d.
   symmetry. apply on_free_vars_decl_map.
-  intros. apply on_free_vars_subst_instance.
+  intros. now rewrite on_free_vars_subst_instance.
 Qed.
 
 Lemma on_free_vars_map2_cstr_args p bctx ctx :
@@ -1459,6 +1459,26 @@ Proof.
   rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
   eapply on_free_vars_subst => //.
   rewrite -on_free_vars_ctx_all_term //.
+Qed.
+
+Lemma on_free_vars_ctx_lift_context p k n ctx :
+  on_free_vars_ctx p ctx =
+  on_free_vars_ctx (strengthenP k n p) (lift_context n k ctx).
+Proof.
+  rewrite !(on_free_vars_ctx_all_term _ _ Universe.type0).
+  rewrite -(lift_it_mkProd_or_LetIn _ _ _ (tSort _)).
+  rewrite on_free_vars_lift => //.
+Qed.
+
+Lemma on_free_vars_ctx_lift_context0 p n ctx :
+  on_free_vars_ctx (addnP n p) ctx ->
+  on_free_vars_ctx p (lift_context n 0 ctx).
+Proof.
+  rewrite {1}(on_free_vars_ctx_lift_context _ 0 n) => h.
+  eapply on_free_vars_ctx_impl; tea.
+  rewrite /strengthenP /= /shiftnP /addnP => i.
+  repeat nat_compare_specs => // /=.
+  now replace (n + (i - n)) with i by lia.
 Qed.
 
 Lemma on_free_vars_ctx_smash P Γ acc : 

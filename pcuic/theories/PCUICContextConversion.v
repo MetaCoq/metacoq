@@ -370,12 +370,12 @@ Definition inj_closed (Γ : context) (o : on_free_vars_ctx xpred0 Γ) : closed_c
   exist Γ o.
 Arguments inj_closed Γ & o.
 
-Notation "⇑ Γ" := (inj_closed Γ byfvs) (at level 20).
+Notation "⇑ Γ" := (inj_closed Γ byfvs) (at level 20, only parsing).
 
 Definition inj_open {Γ : closed_context} (t : term) (o : on_free_vars (shiftnP #|Γ| xpred0) t) : open_term Γ :=
   exist t o.
 Arguments inj_open {Γ} & t o.
-Notation "⤊ t" := (inj_open t byfvs) (at level 20).
+Notation "⤊ t" := (inj_open t byfvs) (at level 20, only parsing).
 
 Hint Resolve red_ctx_on_free_vars : fvs.
 
@@ -546,13 +546,11 @@ Section ContextConversion.
       compare_term le Σ (global_ext_constraints Σ) v v'.
   Proof.    
     split.
-    - move/equality_alt; intros (v & v' & cl & red & red' & leq).
-      move/and3P: cl => [] clΓ clt clu.
+    - move/equality_alt; intros (v & v' & [clΓ clt clu red red' leq]).
       exists v, v'; repeat split; eauto with fvs.
     - intros (v & v' & red & red' & leq).
       apply equality_alt; exists v, v'.
       repeat split; eauto with fvs.
-      apply/and3P; split; intuition eauto with fvs.
   Qed.
 
   Lemma closed_red_confluence {Γ} {t u v} :

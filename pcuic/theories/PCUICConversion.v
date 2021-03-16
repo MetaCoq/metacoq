@@ -222,7 +222,7 @@ Section ConvCongruences.
 
   Lemma cumul_Sort_l_inv {Γ s T} le :
     Σ ;;; Γ ⊢ tSort s ≤[le] T ->
-    ∑ s', Σ ;;; Γ ⊢ T ⇝ tSort s' × leq_universe Σ s s'.
+    ∑ s', Σ ;;; Γ ⊢ T ⇝ tSort s' × compare_universe le Σ s s'.
   Proof.
     intros H. depind H.
     - destruct le; inversion c; eauto using into_closed_red.
@@ -235,7 +235,7 @@ Section ConvCongruences.
 
   Lemma cumul_Sort_r_inv {Γ s T} le :
     Σ ;;; Γ ⊢ T ≤[le] tSort s ->
-    ∑ s', Σ ;;; Γ ⊢ T ⇝ tSort s' × leq_universe Σ s' s.
+    ∑ s', Σ ;;; Γ ⊢ T ⇝ tSort s' × compare_universe le Σ s' s.
   Proof.
     intros H. depind H.
     - destruct le; inversion c; eauto using into_closed_red.
@@ -991,63 +991,131 @@ Section Inversions.
       exists l. inversion e. subst. auto.
   Qed.
 
+  Lemma invert_red_mkApps_tInd {Γ : context} {ind u} (args : list term) c :
+    Σ ;;; Γ ⊢ mkApps (tInd ind u) args ⇝ c ->
+    ∑ args' : list term,
+    (c = mkApps (tInd ind u) args') * (All2 (closed_red Σ Γ) args args').
+  Proof.
+    move=> [clΓ].
+    rewrite PCUICOnFreeVars.on_free_vars_mkApps => /= hargs r.
+    destruct (red_mkApps_tInd (Γ := exist Γ clΓ) hargs r) as [args' [eq red]].
+    exists args'; split => //.
+    solve_all; split; eauto with fvs.
+  Qed.
+
   (* TODO deprecate? #[deprecated(note="use red_mkApps_tInd")] *)
   Notation invert_red_ind := red_mkApps_tInd.
 
-  Lemma invert_cumul_ind_l :
-    forall Γ ind ui l T,
-      Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤ T ->
+  Lemma compare_term_mkApps_l_inv {le} {u : term} {l : list term} {t : term} :
+    compare_term le Σ Σ (mkApps u l) t ->
+    ∑ (u' : term) (l' : list term),
+      (eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe le Σ) #|l| u u' × 
+      All2 (eq_term Σ Σ) l l') × t = mkApps u' l'.
+  Proof.
+    destruct le => /=; apply eq_term_upto_univ_mkApps_l_inv.
+  Qed.
+
+  Lemma compare_term_mkApps_r_inv {le} {u : term} {l : list term} {t : term} :
+    compare_term le Σ Σ t (mkApps u l) ->
+    ∑ (u' : term) (l' : list term),
+      (eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe le Σ) #|l| u' u × 
+      All2 (eq_term Σ Σ) l' l) × t = mkApps u' l'.
+  Proof.
+    destruct le => /=; apply eq_term_upto_univ_mkApps_r_inv.
+  Qed.
+
+  Lemma invert_equality_ind_l {le Γ ind ui l T} :
+      Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] T ->
       ∑ ui' l',
         Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l') ×
-        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l| ui ui' ×
+        R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui' ×
         All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'.
   Proof.
-    intros Γ ind ui l T h.
-    eapply equality_red in h as [v [v' [redv [redv' leqvv']]]].
-    destruct redv as [onΓ onind redv].
-    eapply red_mkApps_tInd in redv. as [l' [? ha]]; auto. subst.
-    eapply eq_term_upto_univ_mkApps_l_inv in leqvv'
-      as [u [l'' [[e ?] ?]]].
-    subst.
-    dependent destruction e.
+    move/equality_red=> [v [v' [redv [redv' leqvv']]]].
+    eapply invert_red_mkApps_tInd in redv as [l' [? ha]]; auto. subst.
+    eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [[e ?] ?]]].
+    subst. depelim e.
     eexists _,_. split ; eauto. split ; auto.
     - now rewrite (All2_length ha).
     - eapply All2_trans.
-      * intros x y z h1 h2. eapply conv_trans ; eauto.
-      * eapply All2_impl ; eauto.
-      * eapply All2_impl ; eauto.
-        intros x y h. eapply conv_refl. assumption.
+      * intros x y z h1 h2. etransitivity; tea.
+      * eapply All2_impl ; eauto with pcuic.
+      * assert (forallb (is_open_term Γ) l'). { eapply All_forallb, All2_All_right; tea; eauto with fvs. }
+        assert (forallb (is_open_term Γ) l''). {
+          eapply closed_red_open_right in redv'.
+          now rewrite PCUICOnFreeVars.on_free_vars_mkApps /= in redv'. }
+        solve_all; eauto with fvs.
+        constructor; eauto with fvs.
   Qed.
 
-  Lemma invert_cumul_ind_r :
-    forall Γ ind ui l T,
-      Σ ;;; Γ ⊢ T ≤ mkApps (tInd ind ui) l ->
+  Lemma closed_red_terms_open_left {Γ l l'}: 
+    All2 (closed_red Σ Γ) l l' ->
+    All (is_open_term Γ) l.
+  Proof. solve_all; eauto with fvs. Qed.
+  
+  Lemma closed_red_terms_open_right {Γ l l'}: 
+    All2 (closed_red Σ Γ) l l' ->
+    All (is_open_term Γ) l'.
+  Proof. solve_all; eauto with fvs. Qed.
+
+  Lemma invert_equality_ind_r {le Γ ind ui l T} :
+      Σ ;;; Γ ⊢ T ≤[le] mkApps (tInd ind ui) l ->
       ∑ ui' l',
         Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l') ×
-        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l| ui' ui ×
-        All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'.
+        R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui' ui ×
+        All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l' l.
   Proof.
-    intros Γ ind ui l T h.
-    eapply cumul_alt in h as [v [v' [[redv redv'] leqvv']]].
-    eapply invert_red_ind in redv' as [l' [? ?]]; auto. subst.
-    eapply eq_term_upto_univ_mkApps_r_inv in leqvv'
-      as [u [l'' [[e ?] ?]]].
-    subst.
-    dependent destruction e.
+    move/equality_red=> [v [v' [redv [redv' leqvv']]]].
+    eapply invert_red_mkApps_tInd in redv' as [l' [? ha]]; auto. subst.
+    eapply compare_term_mkApps_r_inv in leqvv' as [u [l'' [[e ?] ?]]].
+    subst. depelim e.
     eexists _,_. split ; eauto. split ; auto.
-    - rewrite (All2_length a); auto.
+    - now rewrite (All2_length ha).
     - eapply All2_trans.
-      * intros x y z h1 h2. eapply conv_trans ; eauto.
-      * eapply All2_impl ; eauto.
-      * eapply All2_swap.
-        eapply All2_impl ; eauto.
-        intros x y h. eapply conv_sym; auto. now constructor.
+      * intros x y z h1 h2. etransitivity; tea.
+      * assert (forallb (is_open_term Γ) l'). { eapply All_forallb, (All2_All_right ha); tea; eauto with fvs. }
+        assert (forallb (is_open_term Γ) l''). {
+          eapply closed_red_open_right in redv.
+          now rewrite PCUICOnFreeVars.on_free_vars_mkApps /= in redv. }
+        solve_all; eauto with fvs.
+        constructor; eauto with fvs.
+      * eapply All2_impl. 
+        + eapply All2_sym; tea.
+        + cbn. eauto with pcuic.
+  Qed.
+
+  Lemma invert_equality_ind {le Γ ind ind' ui ui' l l'} :
+      Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] mkApps (tInd ind' ui') l' ->
+      ind = ind' ×
+      R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui ×
+      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'.
+  Proof.
+    move/equality_red=> [v [v' [redv [redv' leqvv']]]].
+    pose proof (clrel_ctx redv).
+    eapply invert_red_mkApps_tInd in redv as [l0 [? ha]]; auto. subst.
+    eapply invert_red_mkApps_tInd in redv' as [l1 [? ha']]; auto. subst.
+    eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [[e ?] ?]]].
+    depelim e; solve_discr.
+    noconf H0. noconf H1. intuition auto.
+    + apply R_global_instance_refl; tc.
+    + eapply All2_trans; tea; tc.
+      { eapply ws_equality_trans. }
+      { eapply (All2_impl ha); eauto with pcuic. }
+      pose proof (closed_red_terms_open_right ha).
+      pose proof (closed_red_terms_open_right ha').
+      eapply All2_trans with l1; tea; tc.
+      { eapply ws_equality_trans. }
+      { solve_all; eauto with fvs. constructor; eauto with fvs. }
+      eapply All2_symP; tc.
+      { eapply ws_equality_sym. }
+      solve_all; eauto with fvs pcuic.
+      eauto with pcuic.
   Qed.
 
 End Inversions.
 
 (* Unused... *)
-Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ ctx ctx' s s' :
+(*Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ ctx ctx' s s' :
   wf Σ ->
   assumption_context ctx ->
   assumption_context ctx' ->
@@ -1108,34 +1176,24 @@ Proof.
               **** eapply conv_context_app_same.
                 constructor; [apply conv_ctx_refl|constructor;auto];
                 now symmetry.
-Qed.
+Qed.*)
 
 (** Injectivity of products, the essential property of cumulativity needed for subject reduction. *)
-Lemma cumul_Prod_inv {cf:checker_flags} Σ Γ na na' A B A' B' :
-  wf Σ.1 -> wf_local Σ Γ ->
+Lemma cumul_Prod_inv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na na' A B A' B'} :
   Σ ;;; Γ ⊢ tProd na A B ≤ tProd na' A' B' ->
    (eq_binder_annot na na' × (Σ ;;; Γ ⊢ A = A') × (Σ ;;; Γ ,, vass na' A' ⊢ B ≤ B'))%type.
 Proof.
-  intros wfΓ H.
-  now eapply cumul_Prod_Prod_inv in H.
+  intros H.
+  now eapply equality_Prod_Prod_inv in H.
 Qed.
 
 (** Injectivity of products for conversion holds as well *)
 Lemma conv_Prod_inv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na na' A B A' B'} :
-  wf_local Σ Γ ->
   Σ ;;; Γ ⊢ tProd na A B = tProd na' A' B' ->
    (eq_binder_annot na na' × (Σ ;;; Γ ⊢ A = A') × (Σ ;;; Γ ,, vass na' A' ⊢ B = B'))%type.
 Proof.
-  intros wfΓ H.
-  eapply conv_Prod_l_inv in H as [na'' [dom' [codom' [[[red eqann] eqd] eqcod]]]]; tea.
-  eapply invert_red_prod in red as [A'' [B'' [[eqp reddom] redcod]]]; tea.
-  noconf eqp. intuition auto.
-  - transitivity dom' => //. symmetry; now apply red_conv.
-  - transitivity codom' => //.
-    2:symmetry; now apply red_conv.
-    eapply conv_conv_ctx; tea. constructor; try reflexivity.
-    constructor; auto. transitivity dom' => //.
-    now symmetry; apply red_conv.
+  intros H.
+  now eapply equality_Prod_Prod_inv in H.
 Qed.
 
 Lemma tProd_it_mkProd_or_LetIn na A B ctx s :
@@ -1154,149 +1212,84 @@ Proof.
 Qed.
 
 Section Inversions.
-  Context {cf : checker_flags}.
-  Context (Σ : global_env_ext) (wfΣ : wf Σ).
+  Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
-  Lemma cumul_App_r {Γ f u v} :
-    Σ ;;; Γ ⊢ u = v ->
-    Σ ;;; Γ ⊢ tApp f u ≤ tApp f v.
+  Lemma equality_App_l {le Γ f f' u} :
+    Σ ;;; Γ ⊢ f ≤[le] f' ->
+    is_open_term Γ u ->
+    Σ ;;; Γ ⊢ tApp f u ≤[le] tApp f' u.
   Proof.
-    intros h.
+    intros h onu.
     induction h.
-    - eapply cumul_refl. constructor.
-      + apply eq_term_upto_univ_refl; typeclasses eauto.
-      + assumption.
-    -  eapply cumul_red_l ; try eassumption.
-       econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
+    - constructor; cbn; eauto with fvs. cbn in c.
+      destruct le; constructor; eauto with fvs; try reflexivity.
+      + eapply leq_term_leq_term_napp; tc; tas.
+      + apply eq_term_eq_term_napp; tc; tas.
+    - eapply red_equality_left; tea.
+      econstructor; tea; cbn; eauto with fvs.
+      eapply red1_red. constructor; auto.
+    - eapply red_equality_right; tea.
+      econstructor; tea; cbn; eauto with fvs.
+      eapply red1_red. constructor; auto.
+  Qed.
+
+  Lemma equality_App_r {le Γ f u v} :
+    is_open_term Γ f ->
+    Σ ;;; Γ ⊢ u = v ->
+    Σ ;;; Γ ⊢ tApp f u ≤[le] tApp f v.
+  Proof.
+    intros onf h.
+    induction h.
+    - constructor; cbn; eauto with fvs. cbn in c.
+      destruct le; constructor; eauto with fvs; reflexivity.
+    - eapply red_equality_left; tea.
+      econstructor; tea; cbn; eauto with fvs.
+      eapply red1_red. constructor; auto.
+    - eapply red_equality_right; tea.
+      econstructor; tea; cbn; eauto with fvs.
+      eapply red1_red. constructor; auto.
   Qed.
   
-  Lemma cumul_mkApps Γ hd args hd' args' :
-    Σ;;; Γ ⊢ hd ≤ hd' ->
-    All2 (conv Σ Γ) args args' ->
-    Σ;;; Γ ⊢ mkApps hd args ≤ mkApps hd' args'.
+  Lemma equality_mkApps {le Γ hd args hd' args'} :
+    Σ;;; Γ ⊢ hd ≤[le] hd' ->
+    All2 (ws_equality false Σ Γ) args args' ->
+    Σ;;; Γ ⊢ mkApps hd args ≤[le] mkApps hd' args'.
   Proof.
     intros cum cum_args.
     revert hd hd' cum.
     induction cum_args; intros hd hd' cum; auto.
     cbn.
     apply IHcum_args.
-    eapply cumul_trans; auto.
-    - eapply cumul_App_l; eauto.
-    - eapply cumul_App_r; eauto.
+    etransitivity.
+    - eapply equality_App_l; tea; eauto with fvs.
+    - eapply equality_App_r; eauto with fvs.
   Qed.
+End Inversions.
 
-  Lemma conv_App_r {Γ f x y} :
-    Σ ;;; Γ ⊢ x = y ->
-    Σ ;;; Γ ⊢ tApp f x = tApp f y.
-  Proof.
-    intros h.
-    induction h.
-    - constructor. constructor.
-      + apply eq_term_upto_univ_refl; typeclasses eauto.
-      + assumption.
-    - eapply conv_red_l ; eauto.
-      econstructor. assumption.
-    - eapply conv_red_r ; eauto.
-      econstructor. assumption.
-  Qed.
+(*Section ConvCum.
+  Import PCUICCumulativity.
+  Context {cf : checker_flags}.
+  Context (Σ : global_env_ext) (wfΣ : wf Σ).
 
-  Lemma conv_Prod_l:
-    forall {Γ na na' A1 A2 B},
-      eq_binder_annot na na' ->
-      Σ ;;; Γ ⊢ A1 = A2 ->
-      Σ ;;; Γ ⊢ tProd na A1 B = tProd na' A2 B.
-  Proof.
-    intros Γ na na' eqna A1 A2 B h.
-    induction h.
-    - constructor. constructor.
-      + assumption.
-      + assumption.
-      + apply eq_term_refl.
-    - eapply conv_red_l ; eauto.
-      econstructor. assumption.
-    - eapply conv_red_r ; eauto.
-      econstructor. assumption.
-  Qed.
 
-  Lemma conv_Prod_r  :
-    forall {Γ na A B1 B2},
-      Σ ;;; Γ ,, vass na A ⊢ B1 = B2 ->
-      Σ ;;; Γ ⊢ tProd na A B1 = tProd na A B2.
-  Proof.
-    intros Γ na A B1 B2 h.
-    induction h.
-    - constructor. constructor.
-      + reflexivity.
-      + apply eq_term_refl.
-      + assumption.
-    - eapply conv_red_l ; eauto.
-      econstructor. assumption.
-    - eapply conv_red_r ; eauto.
-      econstructor. assumption.
-  Qed.
-
-  Lemma cumul_Prod_l:
-    forall {Γ na na' A1 A2 B},
-      eq_binder_annot na na' ->
-      Σ ;;; Γ ⊢ A1 = A2 ->
-      Σ ;;; Γ ⊢ tProd na A1 B ≤ tProd na' A2 B.
-  Proof.
-    intros Γ na na' eqna A1 A2 B h.
-    induction h.
-    - constructor. constructor.
-      + assumption.
-      + assumption.
-      + apply leq_term_refl.
-    - eapply cumul_red_l ; eauto.
-      econstructor. assumption.
-    - eapply cumul_red_r ; eauto.
-      econstructor. assumption.
-  Qed.
-
-  Lemma cumul_Prod_r :
-    forall {Γ na A B1 B2},
-      Σ ;;; Γ ,, vass na A ⊢ B1 ≤ B2 ->
-      Σ ;;; Γ ⊢ tProd na A B1 ≤ tProd na A B2.
-  Proof.
-    intros Γ na A B1 B2 h.
-    induction h.
-    - eapply cumul_refl. constructor.
-      + reflexivity. 
-      + apply eq_term_refl.
-      + assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
-  #[global]
-  Instance conv_cum_refl {leq Γ} :
-    RelationClasses.Reflexive (conv_cum leq Σ Γ).
-  Proof.
-    destruct leq; constructor; reflexivity.
-  Qed.
-
-  Lemma conv_conv_cum {leq Γ u v} :
-    ∥ Σ ;;; Γ ⊢ u = v ∥ -> conv_cum leq Σ Γ u v.
+  Lemma conv_sq_equality {leq Γ u v} :
+    ∥ Σ ;;; Γ |-u = v ∥ -> sq_equality leq Σ Γ u v.
   Proof.
     intros h; destruct leq.
-    - assumption.
+    - cbn. assumption.
     - destruct h. cbn.
       constructor. now eapply conv_cumul.
   Qed.
 
   #[global]
   Instance conv_cum_trans {leq Γ} :
-    RelationClasses.Transitive (conv_cum leq Σ Γ).
+    RelationClasses.Transitive (sq_equality leq Σ Γ).
   Proof.
-    intros u v w h1 h2. destruct leq; cbn in *; sq; etransitivity; eassumption.
+    intros u v w h1 h2. destruct leq; cbn in *; sq. etransitivity; eassumption.
   Qed.
 
   Lemma red_conv_cum_l {leq Γ u v} :
-    red (fst Σ) Γ u v -> conv_cum leq Σ Γ u v.
+    red (fst Σ) Γ u v -> sq_equality leq Σ Γ u v.
   Proof.
     destruct leq; constructor.
     + now eapply red_conv.
@@ -1304,7 +1297,7 @@ Section Inversions.
   Qed.
 
   Lemma red_conv_cum_r {leq Γ u v} :
-    red (fst Σ) Γ u v -> conv_cum leq Σ Γ v u.
+    red (fst Σ) Γ u v -> sq_equality leq Σ Γ v u.
   Proof.
    induction 1.
    - destruct leq; constructor.
@@ -1312,172 +1305,107 @@ Section Inversions.
      + now eapply cumul_red_r.
    - reflexivity.
    - etransitivity; tea.
-  Qed.
-  
+  Qed.*)
+
+Definition sq_equality {cf : checker_flags} le Σ Γ T U := ∥ Σ ;;; Γ ⊢ T ≤[le] U ∥.
+
+Section ConvRedConv.
+
+  Context {cf : checker_flags}.
+  Context {Σ : global_env_ext} {wfΣ : wf Σ}.
+
   Lemma conv_red_conv Γ Γ' t tr t' t'r :
-    conv_context Σ Γ Γ' ->
+    Σ ⊢ Γ = Γ' ->
     Σ ;;; Γ ⊢ t ⇝ tr ->
     Σ ;;; Γ' ⊢ t' ⇝ t'r ->
     Σ ;;; Γ ⊢ tr = t'r ->
     Σ ;;; Γ ⊢ t = t'.
   Proof.
     intros cc r r' ct.
-    eapply red_conv_conv; eauto.
-    eapply conv_conv_ctx; eauto.
-    2: apply conv_context_sym; eauto.
-    apply conv_sym.
-    eapply red_conv_conv; eauto.
-    apply conv_sym.
-    eapply conv_conv_ctx; eauto.
-  Qed.
-
-  Lemma conv_red_conv_inv Γ Γ' t tr t' t'r :
-    conv_context Σ Γ Γ' ->
-    Σ ;;; Γ ⊢ t ⇝ tr ->
-    Σ ;;; Γ' ⊢ t' ⇝ t'r ->
-    Σ ;;; Γ ⊢ tr = t'r ->
-    Σ ;;; Γ ⊢ t = t'.
-  Proof.
-    intros conv_ctx r1 r2 cc.
-    eapply red_conv_conv; eauto.
-    apply conv_sym.
-    eapply conv_conv_ctx; eauto.
-    2: apply conv_context_sym; eauto.
-    eapply red_conv_conv; eauto.
-    eapply conv_conv_ctx; eauto.
-    apply conv_sym; auto.
-  Qed.
-
-  Lemma conv_cum_Prod leq Γ na1 na2 A1 A2 B1 B2 :
-    eq_binder_annot na1 na2 ->
-    Σ ;;; Γ ⊢ A1 = A2 ->
-    conv_cum leq Σ (Γ,, vass na1 A1) B1 B2 ->
-    conv_cum leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2).
-  Proof.
-    intros hann h1 h2; destruct leq.
-    - simpl in *. destruct h2 as [h2]. constructor.
-      eapply conv_trans => //.
-      + eapply conv_Prod_r. eassumption.
-      + eapply conv_Prod_l; eassumption.
-    - simpl in *. destruct h2 as [h2]. constructor.
-      eapply cumul_trans.
-      + auto.
-      + eapply cumul_Prod_r. eassumption.
-      + eapply conv_cumul. eapply conv_Prod_l; assumption.
-  Qed.
-
-  Lemma Prod_conv_cum_inv : 
-    forall {Γ leq na1 na2 A1 A2 B1 B2},
-    conv_cum leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2) ->
-      eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ ⊢ A1 = A2 ∥ /\
-      conv_cum leq Σ (Γ,, vass na1 A1) B1 B2.
-  Proof.
-    intros *; destruct leq; simpl.
-    - intros [[na1' [A1' [B1' [[[Hred eqann] eqA] eqB]]]]%conv_Prod_r_inv]. 2: assumption.
-      apply invert_red_prod in Hred. 2: assumption.
-      destruct Hred as [? [? [[[= ? ?%eq_sym ?%eq_sym] redA] redB]]].
-      subst.
-      assert (Σ;;;Γ ⊢ A1 = A2) as HA by
-        (etransitivity; [apply red_conv, redA | assumption]).
-      split; auto.        
-      split; constructor. 1: assumption.
-      etransitivity. 1: apply red_conv, redB. 
-      eapply conv_conv_ctx. 1,2 : eassumption.
-      constructor. 1: reflexivity. constructor; now symmetry.
-    - intros [[eqann [eqA cumB]]%cumul_Prod_Prod_inv]. 2: assumption.
-      split; auto; split; constructor. 1: assumption.
-      eapply cumul_conv_ctx. 1,2: eassumption.
-      constructor; [reflexivity|].
-      constructor; now symmetry.
+    eapply red_equality_left; eauto.
+    eapply equality_equality_ctx in ct.
+    2:symmetry; tea.
+    eapply equality_equality_ctx; tea.
+    eapply red_equality_right; tea.
   Qed.
   
-  Lemma conv_cum_conv_ctx leq Γ Γ' T U :
-    conv_cum leq Σ Γ T U ->
-    conv_context Σ Γ Γ' ->
-    conv_cum leq Σ Γ' T U.
+  Lemma Prod_conv_cum_inv {Γ leq na1 na2 A1 A2 B1 B2} :
+    sq_equality leq Σ Γ (tProd na1 A1 B1) (tProd na2 A2 B2) ->
+      eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ ⊢ A1 = A2 ∥ /\
+      sq_equality leq Σ (Γ,, vass na1 A1) B1 B2.
   Proof.
-    destruct leq; cbn; intros; sq.
-    - eapply conv_conv_ctx; eassumption.
-    - eapply cumul_conv_ctx; eassumption.
+    intros [].
+    apply equality_Prod_Prod_inv in X; intuition auto; sq; auto.
+    eapply equality_equality_ctx in b0; tea.
+    instantiate (1:=false). constructor; auto.
+    - apply closed_context_equality_refl; eauto with fvs.
+    - constructor; auto.
+  Qed.
+  
+  Lemma conv_cum_conv_ctx leq le Γ Γ' T U :
+    sq_equality leq Σ Γ T U ->
+    Σ ⊢ Γ' ≤[le] Γ ->
+    sq_equality leq Σ Γ' T U.
+  Proof.
+    intros [] h.
+    now eapply equality_equality_ctx in X; tea.
   Qed.
   
   Lemma conv_cum_red leq Γ t1 t2 t1' t2' :
     Σ ;;; Γ ⊢ t1' ⇝ t1 ->
     Σ ;;; Γ ⊢ t2' ⇝ t2 ->
-    conv_cum leq Σ Γ t1 t2 ->
-    conv_cum leq Σ Γ t1' t2'.
+    sq_equality leq Σ Γ t1 t2 ->
+    sq_equality leq Σ Γ t1' t2'.
   Proof.
-    intros r1 r2 cc.
-    destruct leq; cbn in *.
-    - destruct cc.
-      constructor.
-      eapply red_conv_conv; eauto.
-      apply conv_sym.
-      eapply red_conv_conv; eauto.
-      apply conv_sym.
-      auto.
-    - destruct cc.
-      constructor.
-      eapply red_cumul_cumul; eauto.
-      eapply red_cumul_cumul_inv; eauto.
+    intros r1 r2 [cc]. sq.
+    eapply red_equality_left; tea.
+    eapply red_equality_right; tea.
   Qed.
 
   Lemma conv_cum_red_conv leq Γ Γ' t1 t2 t1' t2' :
-    conv_context Σ Γ Γ' ->
+    closed_conv_context Σ Γ Γ' ->
     Σ ;;; Γ ⊢ t1' ⇝ t1 ->
     Σ ;;; Γ' ⊢ t2' ⇝ t2 ->
-    conv_cum leq Σ Γ t1 t2 ->
-    conv_cum leq Σ Γ t1' t2'.
+    sq_equality leq Σ Γ t1 t2 ->
+    sq_equality leq Σ Γ t1' t2'.
   Proof.
-    intros conv_ctx r1 r2 cc.
-    eapply conv_cum_red; [now eauto|reflexivity|].
-    eapply conv_cum_conv_ctx; eauto.
-    2: apply conv_context_sym; eauto.
-    eapply conv_cum_red; [reflexivity|now eauto|].
-    eapply conv_cum_conv_ctx; eauto.
+    intros conv_ctx r1 r2 [cc]; sq.
+    eapply red_equality_left; tea.
+    eapply equality_equality_ctx in cc; tea. 2:symmetry; tea.
+    eapply equality_equality_ctx; tea.
+    eapply red_equality_right; tea.
   Qed.
 
   Lemma conv_cum_red_inv leq Γ t1 t2 t1' t2' :
     Σ ;;; Γ ⊢ t1 ⇝ t1' ->
     Σ ;;; Γ ⊢ t2 ⇝ t2' ->
-    conv_cum leq Σ Γ t1 t2 ->
-    conv_cum leq Σ Γ t1' t2'.
+    sq_equality leq Σ Γ t1 t2 ->
+    sq_equality leq Σ Γ t1' t2'.
   Proof.
-    intros r1 r2 cc.
-    destruct leq; cbn in *.
-    - destruct cc.
-      constructor.
-      eapply conv_red_l_inv; [eauto| |eauto].
-      apply conv_sym.
-      eapply conv_red_l_inv; [eauto| |eauto].
-      apply conv_sym.
-      auto.
-    - destruct cc.
-      constructor.
-      eapply cumul_red_l_inv; [eauto| |eauto].
-      eapply cumul_red_r_inv; [eauto| |eauto].
-      auto.
+    intros r1 r2 [cc]; sq.
+    transitivity t1.
+    - now eapply red_equality_inv.
+    - transitivity t2 => //.
+      now apply red_equality.
   Qed.
   
   Lemma conv_cum_red_conv_inv leq Γ Γ' t1 t2 t1' t2' :
-    conv_context Σ Γ Γ' ->
+    closed_conv_context Σ Γ Γ' ->
     Σ ;;; Γ ⊢ t1 ⇝ t1' ->
     Σ ;;; Γ' ⊢ t2 ⇝ t2' ->
-    conv_cum leq Σ Γ t1 t2 ->
-    conv_cum leq Σ Γ t1' t2'.
+    sq_equality leq Σ Γ t1 t2 ->
+    sq_equality leq Σ Γ t1' t2'.
   Proof.
-    intros conv_ctx r1 r2 cc.
-    eapply conv_cum_red_inv; [now eauto|reflexivity|].
-    eapply conv_cum_conv_ctx; eauto.
-    2: apply conv_context_sym; eauto.
-    eapply conv_cum_red_inv; [reflexivity|now eauto|].
-    eapply conv_cum_conv_ctx; eauto.
+    move=> conv_ctx r1 /(red_equality (le:=leq)) r2 [cc]; sq.
+    transitivity t1; [now apply red_equality_inv|].
+    transitivity t2 => //.
+    eapply equality_equality_ctx in r2; tea.
   Qed.
   
   Lemma conv_cum_red_iff leq Γ t1 t2 t1' t2' :
     Σ ;;; Γ ⊢ t1' ⇝ t1 ->
     Σ ;;; Γ ⊢ t2' ⇝ t2 ->
-    conv_cum leq Σ Γ t1 t2 <-> conv_cum leq Σ Γ t1' t2'.
+    sq_equality leq Σ Γ t1 t2 <-> sq_equality leq Σ Γ t1' t2'.
   Proof.
     intros r1 r2.
     split; intros cc.
@@ -1486,10 +1414,10 @@ Section Inversions.
   Qed.
 
   Lemma conv_cum_red_conv_iff leq Γ Γ' t1 t2 t1' t2' :
-    conv_context Σ Γ Γ' ->
+    closed_conv_context Σ Γ Γ' ->
     Σ ;;; Γ ⊢ t1' ⇝ t1 ->
     Σ ;;; Γ' ⊢ t2' ⇝ t2 ->
-    conv_cum leq Σ Γ t1 t2 <-> conv_cum leq Σ Γ t1' t2'.
+    sq_equality leq Σ Γ t1 t2 <-> sq_equality leq Σ Γ t1' t2'.
   Proof.
     intros conv_ctx r1 r2.
     split; intros cc.
@@ -1497,10 +1425,11 @@ Section Inversions.
     - eapply conv_cum_red_conv_inv; eauto.
   Qed.
 
-  Lemma cumul_Case_c :
-    forall Γ indn p brs u v,
-      Σ ;;; Γ ⊢ u = v ->
-      Σ ;;; Γ ⊢ tCase indn p u brs ≤ tCase indn p v brs.
+  Import PCUICOnFreeVars.
+
+  (* Lemma equality_Case {Γ indn p brs u v} :
+    Σ ;;; Γ ⊢ u = v ->
+    Σ ;;; Γ ⊢ tCase indn p u brs ≤ tCase indn p v brs.
   Proof.
     intros Γ [ind n] p brs u v h.
     induction h.
@@ -1512,36 +1441,22 @@ Section Inversions.
       constructor. assumption.
     - eapply cumul_red_r ; eauto.
       constructor. assumption.
-  Qed.
+  Qed. *)
 
-  Lemma cumul_Proj_c :
-    forall Γ p u v,
+  Lemma cumul_Proj_c {le Γ p u v} :
       Σ ;;; Γ ⊢ u = v ->
-      Σ ;;; Γ ⊢ tProj p u ≤ tProj p v.
+      Σ ;;; Γ ⊢ tProj p u ≤[le] tProj p v.
   Proof.
-    intros Γ p u v h.
+    intros h.
     induction h.
-    - eapply cumul_refl. constructor. assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
-  Lemma conv_App_l :
-    forall {Γ f g x},
-      Σ ;;; Γ ⊢ f = g ->
-      Σ ;;; Γ ⊢ tApp f x = tApp g x.
-  Proof.
-    intros Γ f g x h.
-    induction h.
-    - constructor. constructor.
-      + apply eq_term_eq_term_napp; auto. typeclasses eauto.
-      + apply eq_term_refl.
-    - eapply conv_red_l ; eauto.
-      econstructor. assumption.
-    - eapply conv_red_r ; eauto.
-      econstructor. assumption.
+    - eapply ws_equality_refl; eauto.
+      destruct le; constructor; assumption.
+    - transitivity (tProj p v) => //.
+      eapply red_equality. constructor; eauto with fvs.
+      econstructor. constructor. assumption.
+    - transitivity (tProj p v) => //.
+      eapply red_equality_inv. constructor; eauto with fvs.
+      econstructor. constructor. assumption.
   Qed.
 
   Lemma App_conv :
@@ -1551,8 +1466,8 @@ Section Inversions.
       Σ ;;; Γ ⊢ tApp t1 u1 = tApp t2 u2.
   Proof.
     intros. etransitivity.
-    - eapply conv_App_l. eassumption.
-    - apply conv_App_r. assumption.
+    - eapply equality_App_l; tea; eauto with fvs.
+    - apply equality_App_r; tea. eauto with fvs.
   Qed.
 
   Lemma mkApps_conv_args Γ f f' u v :
@@ -1560,26 +1475,26 @@ Section Inversions.
     All2 (fun x y => Σ ;;; Γ ⊢ x = y) u v ->
     Σ ;;; Γ ⊢ mkApps f u = mkApps f' v.
   Proof.
-    move=> convf cuv. induction cuv in f, f', convf ⊢ *.
-    - auto.
-    - simpl. apply IHcuv.
-      now apply App_conv.
+    move=> convf cuv.
+    eapply equality_mkApps; eauto.
   Qed.
-  
-  Definition conv_context_rel Γ Δ Δ' :=
-    All2_fold (fun Γ' _ => All_decls_alpha (fun x y => Σ ;;; Γ ,,, Γ' ⊢ x = y)) Δ Δ'.
+
+  Definition conv_context_rel le Γ Δ Δ' :=
+    is_closed_context Γ ×
+    All2_fold (fun Γ' _ => All_decls_alpha_le le (fun le x y => Σ ;;; Γ ,,, Γ' ⊢ x ≤[le] y)) Δ Δ'.
   
   Definition conv_predicate Γ p p' :=
-    All2 (conv Σ Γ) p.(pparams) p'.(pparams) ×
+    All2 (ws_equality false Σ Γ) p.(pparams) p'.(pparams) ×
     R_universe_instance (eq_universe Σ) (puinst p) (puinst p')
-    × conv_context_rel Γ (pcontext p) (pcontext p')
-    × conv Σ (Γ ,,, pcontext p) (preturn p) (preturn p').
+    × pcontext p = pcontext p'
+    × Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'.
 
   #[global]
   Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
   Proof.
     intros x. apply All2_same. intros. reflexivity.
   Qed.
+
   Definition set_puinst (p : predicate term) (puinst : Instance.t) : predicate term :=
     {| pparams := p.(pparams);
         puinst := puinst;
@@ -1588,41 +1503,32 @@ Section Inversions.
   
   Definition set_preturn_two {p} pret pret' : set_preturn (set_preturn p pret') pret = set_preturn p pret := 
     eq_refl.
-  
-  Lemma red_context_rel_app Γ Δ Δ' : 
-    red_context_rel Σ Γ Δ Δ' <~> red_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
-  Proof.
-    split; intros h.
-    - eapply All2_fold_app.
-      + apply (length_of h).
-      + reflexivity.
-      + apply h.
-    - apply All2_fold_app_inv in h as [] => //.
-      pose proof (length_of h). len in H. lia.
-  Qed.
-  
-  Lemma conv_context_rel_app {Γ Δ Δ'} :
-    conv_context_rel Γ Δ Δ' <~> conv_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
+
+  Lemma conv_context_rel_app {le Γ Δ Δ'} :
+    conv_context_rel le Γ Δ Δ' <~> closed_context_equality le Σ (Γ ,,, Δ) (Γ ,,, Δ').
   Proof.
     split; intros h.
     + eapply All2_fold_app => //.
-      * now apply (length_of h).
-      * reflexivity.
-      * eapply All2_fold_impl; tea.
+      * now apply (length_of (snd h)).
+      * destruct h. now apply closed_context_equality_refl.
+      * eapply All2_fold_impl; tea. 1:apply h.
         intros ???? []; constructor; auto.
     + eapply All2_fold_app_inv in h as [].
       2:{ move: (length_of h). len; lia. }
+      split.
+      { now apply closed_context_equality_closed_left in a. }
       eapply All2_fold_impl; tea => /=.
       intros ???? []; constructor; auto.
   Qed.
 
-  Lemma conv_context_red_context Γ Γ' Δ Δ' :
-    conv_context Σ (Γ ,,, Δ) (Γ' ,,, Δ') ->
+  (*Lemma conv_context_red_context Γ Γ' Δ Δ' :
+    closed_conv_context Σ (Γ ,,, Δ) (Γ' ,,, Δ') ->
     #|Γ| = #|Γ'| ->
     ∑ Δ1 Δ1', red_ctx_rel Σ Γ Δ Δ1 × red_ctx_rel Σ Γ' Δ' Δ1' × 
       eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Δ1 Δ1'.
   Proof.
     intros.
+    pose proof (closed_con)
     pose proof (length_of X). len in H0.
     eapply conv_context_red_context in X as [Δ1 [Δ1' [[redl redr] eq]]]; auto.
     exists (firstn #|Δ| Δ1), (firstn #|Δ'| Δ1').
@@ -1648,166 +1554,342 @@ Section Inversions.
       rewrite -(firstn_skipn #|Δ| Δ1) in eq.
       eapply All2_fold_app_inv in eq as [] => //.
       rewrite !firstn_length_le => //; try lia.
+  Qed.*)
+
+  Notation is_open_brs Γ p brs :=
+    (forallb (fun br : branch term =>
+      test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pparams p| (bcontext br) &&
+      on_free_vars (shiftnP #|bcontext br| (shiftnP #|Γ| xpred0)) (bbody br)) brs).
+
+  Notation is_open_predicate Γ p :=
+    ([&& forallb (is_open_term Γ) p.(pparams),
+    on_free_vars (shiftnP #|p.(pcontext)| (shiftnP #|Γ| xpred0)) p.(preturn) &
+    test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|p.(pparams)| p.(pcontext)]).
+
+  (* Lemma OnOne2_conv_open_left {le Γ x y} :
+    All2 (ws_equality le Σ Γ) x y ->
+    forallb (is_open_term Γ) x.
+  Proof.
+    induction 1; cbn. *)
+
+  Lemma All2_many_OnOne2_pres {A} (R : A -> A -> Type) (P : A -> Type) l l' :
+    All2 R l l' ->
+    (forall x y, R x y -> P x × P y) ->
+    rtrans_clos (fun x y => #|x| = #|y| × OnOne2 R x y × All P x × All P y) l l'.
+  Proof.
+    intros h H.
+    induction h.
+    - constructor.
+    - econstructor.
+      + split; revgoals.
+        * split.
+          { constructor; tea. }
+          pose proof (All2_impl h H).
+          eapply All2_prod_inv in X as [Hl Hl'].
+          eapply All2_All_left in Hl; eauto.
+          eapply All2_All_right in Hl'; eauto.
+          specialize (H _ _ r) as [].
+          constructor; constructor; auto.
+        * now cbn.
+      + pose proof (All2_impl h H).
+        eapply All2_prod_inv in X as [Hl Hl'].
+        eapply All2_All_left in Hl; eauto.
+        eapply All2_All_right in Hl'; eauto.
+        specialize (H _ _ r) as [].
+        clear -IHh Hl Hl' p p0. rename IHh into h.
+        induction h.
+        * constructor.
+        * destruct r as [hlen [onz [py pz]]].
+          econstructor.
+          -- split; revgoals. 1:split.
+            { econstructor 2; tea. }
+            { split; constructor; auto. }
+            now cbn.
+          -- now apply IHh.
   Qed.
 
-  Lemma conv_Case_p :
-    forall Γ ci c brs p p',
+  Lemma rtrans_clos_length {A} {l l' : list A} {P} :
+    rtrans_clos (fun x y : list A => #|x| = #|y| × P x y) l l' -> #|l| = #|l'|.
+  Proof.
+    induction 1; auto.
+    destruct r.
+    now transitivity #|y|.
+  Qed.
+  
+  Definition is_open_case (Γ : context) p c brs :=
+    [&& forallb (is_open_term Γ) p.(pparams),
+    on_free_vars (shiftnP #|p.(pcontext)| (shiftnP #|Γ| xpred0)) p.(preturn),
+    test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|p.(pparams)| p.(pcontext),
+    is_open_term Γ c & is_open_brs Γ p brs].
+
+  Lemma is_open_case_split {Γ p c brs} : is_open_case Γ p c brs =
+    [&& is_open_predicate Γ p, is_open_term Γ c & is_open_brs Γ p brs].
+  Proof.
+    rewrite /is_open_case. now repeat bool_congr.
+  Qed.
+
+  Lemma is_open_case_set_pparams Γ p c brs pars' :  
+    forallb (is_open_term Γ) pars' ->
+    #|pars'| = #|p.(pparams)| ->
+    is_open_case Γ p c brs ->
+    is_open_case Γ (set_pparams p pars') c brs.
+  Proof.
+    move=> onpars' Hlen.
+    move/and5P => [] onpars.
+    rewrite /is_open_case => ->.
+    rewrite -Hlen => -> -> -> /=.
+    rewrite andb_true_r //.
+  Qed.
+
+  Lemma is_open_case_set_preturn Γ p c brs pret' :  
+    is_open_term (Γ ,,, inst_case_predicate_context p) pret' ->
+    is_open_case Γ p c brs ->
+    is_open_case Γ (set_preturn p pret') c brs.
+  Proof.
+    move=> onpret' /and5P[] onpars onpret onpctx onc onbrs.
+    rewrite /is_open_case onc onbrs !andb_true_r onpctx /= onpars /= andb_true_r.
+    rewrite app_length inst_case_predicate_context_length in onpret'.
+    now rewrite shiftnP_add.
+  Qed.
+
+  Instance red_brs_refl p Γ : Reflexive (@red_brs Σ p Γ).
+  Proof. intros x. eapply All2_refl; split; reflexivity. Qed.
+
+  Instance red_terms_refl Γ : Reflexive (All2 (red Σ Γ)).
+  Proof. intros x; eapply All2_refl; reflexivity. Qed.
+  
+  Instance eqbrs_refl : Reflexive (All2 (fun x y : branch term =>
+      eq_context_gen eq eq (bcontext x) (bcontext y) *
+      eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (bbody x) (bbody y))).
+  Proof. intros brs; eapply All2_refl; split; reflexivity. Qed.
+
+
+  Lemma conv_Case_p {Γ ci c brs p p'} :
+    is_closed_context Γ ->
+    is_open_case Γ p c brs ->
+    is_open_predicate Γ p' ->
     conv_predicate Γ p p' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c brs.
   Proof.
-    intros Γ ci c brs p p' [cpars [cu [cctx cret]]].
-    set (pred := p).
-    destruct p, p'; simpl in *.
-    transitivity (tCase ci (set_pparams pred pparams0) c brs).
-    { clear -wfΣ cpars.
-      eapply All2_many_OnOne2 in cpars.
+    intros onΓ oncase onp' [cpars [cu [cctx cret]]].
+    assert (Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci (set_preturn p (preturn p')) c brs).
+    { eapply equality_red in cret as [v [v' [redl [redr eq]]]].
+      eapply equality_red.
+      exists (tCase ci (set_preturn p v) c brs).
+      exists (tCase ci (set_preturn p v') c brs).
+      repeat split; auto.
+      - cbn. eapply red_case; try reflexivity.
+         apply redl.
+      - apply is_open_case_set_preturn => //; eauto with fvs.
+      - rewrite -[set_preturn _ v'](set_preturn_two _ (preturn p')).
+        eapply red_case; try reflexivity.
+        cbn. apply redr.
+      - constructor; try reflexivity.
+        repeat split; try reflexivity.
+        cbn. apply eq. }
+    etransitivity; tea.
+    set (pret := set_preturn p (preturn p')).
+    assert (Σ ;;; Γ ⊢ tCase ci pret c brs = tCase ci (set_puinst pret (puinst p')) c brs).
+    { constructor. 1:eauto with fvs. 1:eauto with fvs.
+      { eapply ws_equality_is_open_term_right in X. apply X. }
+      econstructor; try reflexivity.
+      red; intuition try reflexivity. }
+    etransitivity; tea.
+    set (ppuinst := set_puinst pret (puinst p')) in *.
+    assert (Σ ;;; Γ ⊢ tCase ci ppuinst c brs = tCase ci (set_pparams ppuinst p'.(pparams)) c brs).
+    { apply ws_equality_is_open_term_right in X0.
+      clear -wfΣ cctx cpars onΓ X0.
+      eapply All2_many_OnOne2_pres in cpars.
+      2:{ intros x y conv. split.
+          1:eapply ws_equality_is_open_term_left; tea. eauto with fvs. }
+      clear cctx.
       induction cpars.
-      * reflexivity.
-      * etransitivity; [tea|].
-        + eapply OnOne2_split in r as [? [? [? [? [conv [-> ->]]]]]].
-          clear -conv.
-          induction conv.
-          { do 2 constructor; try reflexivity.
-            2:apply All2_same; split; reflexivity.
-            red; intuition try reflexivity.
-            simpl. eapply All2_app; try reflexivity.
-            constructor; auto; reflexivity. }
-          { eapply conv_red_l; eauto.
-            rewrite -[set_pparams _ (x1 ++ v :: _)](set_pparams_two (x1 ++ t :: x2)).
-            eapply case_red_param; simpl.
-            eapply OnOne2_app. now constructor. }
-          { eapply conv_red_r; eauto.
-            rewrite -[set_pparams _ (x1 ++ v :: _)](set_pparams_two (x1 ++ u :: x2)).
-            eapply case_red_param; simpl.
-            eapply OnOne2_app. now constructor. } }
-   transitivity (tCase ci (set_puinst (set_pparams pred pparams0) puinst0) c brs).
-   { do 2 constructor; try reflexivity.
-     2:apply All2_same; split; reflexivity.
-     red; intuition try reflexivity. }  
-   transitivity (tCase ci (set_preturn (set_puinst (set_pparams pred pparams0) puinst0) preturn0) c brs).
-    { clear -wfΣ cret.
-      rewrite /pred /set_puinst /set_pparams /set_pcontext /set_preturn; cbn.
-      induction cret.
-       - do 2 constructor; try reflexivity.
-         * red; intuition auto; try reflexivity.
-         * eapply All2_same; split; reflexivity.
-       - eapply conv_red_l.
-         * eapply case_red_return. simpl; tea.
-         * eapply IHcret.
-       - eapply conv_red_r; revgoals.
-         * eapply case_red_return; tea.
-         * eapply IHcret.
-    }
-   transitivity (tCase ci (set_pcontext (set_preturn (set_puinst (set_pparams pred pparams0) puinst0) preturn0) pcontext0) c brs).
-   { clear -wfΣ cctx. rewrite /pred /set_puinst /set_pparams /set_pcontext; cbn.
-     apply conv_context_rel_app in cctx.
-     eapply conv_context_red_context in cctx as [Δ [Δ' [[redl redr] eqc]]] => //.
-     transitivity (tCase ci {|
-     pparams := pparams0;
-     puinst := puinst0;
-     pcontext := Δ;
-     preturn := preturn0 |} c brs).
-     + eapply red_conv. now eapply red_case_pcontext_red_ctx_rel.
-     + etransitivity.
-       2:{ symmetry. eapply red_conv.
-           eapply red_case_pcontext_red_ctx_rel; simpl; tea. }
-       rewrite /set_pcontext /=.
-       do 2 constructor; try reflexivity.
-       2:eapply All2_same; split; reflexivity.
-       red; intuition auto; simpl; try reflexivity. }
-    reflexivity.
+      * eapply ws_equality_refl; tea.
+        destruct p; cbn. reflexivity.
+      * destruct r as [hlen [onr [axy az]]].
+        transitivity (tCase ci (set_pparams ppuinst y) c brs) => //.
+        eapply OnOne2_split in onr as [? [? [? [? [conv [-> ->]]]]]].
+        eapply equality_red in conv as [v [v' [redl [redr eq]]]].
+        apply equality_red.
+        exists (tCase ci (set_pparams ppuinst (x1 ++ v :: x2)) c brs).
+        exists (tCase ci (set_pparams ppuinst (x1 ++ v' :: x2)) c brs).
+        split.
+        { constructor; auto.
+          { eapply All_forallb in axy.
+            eapply is_open_case_set_pparams => //.
+            now apply rtrans_clos_length in cpars. }
+          rewrite -[set_pparams _ (x1 ++ v :: _)](set_pparams_two (x1 ++ x :: x2)).
+          eapply red_case; try reflexivity.
+          { cbn. eapply All2_app.
+            { eapply All2_refl. reflexivity. }
+            constructor; [apply redl|].
+            eapply All2_refl; reflexivity. } }
+        split.
+        { constructor; auto.
+          { eapply All_forallb in az.
+            eapply is_open_case_set_pparams => //.
+            apply rtrans_clos_length in cpars.
+            now rewrite !app_length /= in cpars *. }
+          rewrite -[set_pparams _ (x1 ++ v' :: _)](set_pparams_two (x1 ++ x0 :: x2)).
+          eapply red_case; try reflexivity.
+          { cbn. eapply All2_app; try reflexivity.
+            constructor; [apply redr|]; reflexivity. } }
+        cbn; constructor; try reflexivity.
+        repeat split; try reflexivity.
+        cbn. eapply All2_app; try reflexivity.
+        constructor => //; reflexivity. }
+    etransitivity; tea.
+    apply into_ws_equality; auto.
+    { destruct p'; cbn in *; unfold set_pparams, ppuinst, pret; cbn; subst pcontext; reflexivity. }
+    1:eauto with fvs.
+    cbn.
+    move/and3P: onp' => [] -> -> -> /=.
+    move/and5P: oncase => [] _ _ _ -> /=.
+    now rewrite (All2_length cpars).
   Qed.
-
+    
   Lemma conv_Case_c :
     forall Γ indn p brs u v,
+      is_open_predicate Γ p ->
+      is_open_brs Γ p brs ->
       Σ ;;; Γ ⊢ u = v ->
       Σ ;;; Γ ⊢ tCase indn p u brs = tCase indn p v brs.
   Proof.
-    intros Γ [ind n] p brs u v h.
+    intros Γ ci p brs u v onp onbrs h.
     induction h.
-    - constructor. constructor; auto.
-      + reflexivity.
-      + eapply All2_same.
-        intros. split ; eauto; reflexivity.
-    - eapply conv_red_l ; eauto.
-      constructor. assumption.
-    - eapply conv_red_r ; eauto.
-      constructor. assumption.
+    - constructor; auto with fvs.
+      + rewrite [is_open_term _ _]is_open_case_split onp onbrs !andb_true_r /= //.
+      + rewrite [is_open_term _ _]is_open_case_split onp onbrs !andb_true_r /= //.
+      + cbn. constructor; auto; try reflexivity.
+    - eapply red_equality_left ; eauto.
+      eapply into_closed_red; tea.
+      { constructor. constructor. assumption. }
+      rewrite [is_open_term _ _]is_open_case_split onp onbrs /= andb_true_r //.
+    - eapply red_equality_right; tea.
+      constructor; pcuic.
+      rewrite [is_open_term _ _]is_open_case_split onp onbrs /= andb_true_r //.
   Qed.
 
-  Lemma conv_Case_one_brs :
-    forall Γ indn p c brs brs',
-      OnOne2 (fun u v => conv_context Σ (Γ ,,, u.(bcontext)) (Γ ,,, v.(bcontext)) × 
-        Σ ;;; (Γ ,,, u.(bcontext)) ⊢ u.(bbody) = v.(bbody)) brs brs' ->
-      Σ ;;; Γ ⊢ tCase indn p c brs = tCase indn p c brs'.
+  Lemma conv_Case_one_brs {Γ indn p c brs brs'} :
+    is_closed_context Γ ->
+    is_open_predicate Γ p ->
+    is_open_term Γ c ->
+    is_open_brs Γ p brs ->
+    is_open_brs Γ p brs' ->
+    OnOne2 (fun u v => u.(bcontext) = v.(bcontext) × 
+      Σ ;;; (Γ ,,, inst_case_branch_context p u) ⊢ u.(bbody) = v.(bbody)) brs brs' ->
+    Σ ;;; Γ ⊢ tCase indn p c brs = tCase indn p c brs'.
   Proof.
-    intros Γ ci p c brs brs' h.
-    apply OnOne2_split in h as [[m br] [[m' br'] [l1 [l2 [[? h] [? ?]]]]]].
-    simpl in *. subst.
-    eapply conv_context_red_context in a as [Δ [Δ' [[redl redr] eqc]]] => //.
-    transitivity (tCase ci p c (l1 ++ {| bcontext := m; bbody := br' |} :: l2)).
-    { induction h.
-      * do 2 constructor; eauto; try reflexivity.
-        eapply All2_app.
-        + eapply All2_same; split; reflexivity.
-        + constructor; cbn; try split; auto; try reflexivity.
-          eapply All2_same; split; reflexivity.
-      * eapply conv_red_l; eauto.
-        econstructor. eapply OnOne2_app. constructor; cbn; auto.
-      * eapply conv_red_r; eauto.
-        econstructor. eapply OnOne2_app. constructor; cbn; eauto. }
-    transitivity (tCase ci p c (l1 ++ {| bcontext := Δ; bbody := br' |} :: l2)).
-    - eapply red_conv. eapply red_case_one_brs.
-      eapply OnOne2_app. constructor; cbn.
-      right. split => //.
-    - etransitivity.
-      2:{ symmetry. eapply red_conv.
-          eapply red_case_one_brs; simpl; tea.
-          instantiate (1 := l1 ++ {| bcontext := Δ'; bbody := br' |} :: l2).
-          eapply OnOne2_app; constructor; cbn.
-          right; split => //. }
-      do 2 constructor; try reflexivity.
-      eapply All2_app.
-      * eapply All2_same; split; reflexivity.
-      * constructor; cbn.
-        + split => //; reflexivity.
-        + eapply All2_same; split; reflexivity.
+    intros onΓ onp onc onbrs onbrs' h.
+    apply OnOne2_split in h as [[bctx br] [[m' br'] [l1 [l2 [[? h] [? ?]]]]]].
+    simpl in *. subst m' brs brs'.
+    induction h.
+    * constructor => //.
+      + rewrite [is_open_term _ _]is_open_case_split onp onc /=.
+        move: onbrs i0.
+        rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
+        now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
+      + rewrite [is_open_term _ _]is_open_case_split onp onc /=.
+        move: onbrs i1.
+        rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
+        now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
+      + constructor; try reflexivity.
+        eapply All2_app; try reflexivity.
+        constructor; try split; try reflexivity.
+        cbn. apply c0.
+    * eapply red_equality_left; tea.
+      2:{ eapply IHh => //. }
+      eapply into_closed_red; eauto.
+      { constructor. constructor.
+        eapply OnOne2_app. constructor; auto. }
+      rewrite [is_open_term _ _]is_open_case_split onp onc /=.
+      move: onbrs i0.
+      rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
+      now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
+    * eapply red_equality_right; tea.
+      2:{ eapply IHh => //.
+          move: onbrs i2.
+          rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
+          now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=. }
+      eapply into_closed_red; eauto => //.
+      { constructor. constructor.
+        eapply OnOne2_app. constructor; auto. }
+      rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
   Qed.
 
-  Definition conv_brs Γ :=
+  Definition conv_brs Γ p :=
     All2 (fun u v =>
-      conv_context_rel Γ (bcontext u) (bcontext v) × 
-      Σ ;;; Γ ,,, bcontext u ⊢ bbody u = bbody v).
+      bcontext u = bcontext v × 
+      Σ ;;; Γ ,,, inst_case_branch_context p u ⊢ bbody u = bbody v).
 
-  Lemma conv_Case_brs :
-    forall Γ indn p c brs brs',
-      conv_brs Γ brs brs' ->
-      Σ ;;; Γ ⊢ tCase indn p c brs = tCase indn p c brs'.
+  Lemma is_open_brs_OnOne2 Γ p x y : 
+    is_open_brs Γ p x ->
+    OnOne2 (fun u v : branch term =>
+      (bcontext u = bcontext v) *
+      (Σ ;;; Γ,,, inst_case_branch_context p u ⊢ bbody u = bbody v)) y x ->
+    is_open_brs Γ p y.
   Proof.
-    intros Γ ci p c brs brs' h.
-    apply All2_many_OnOne2 in h.
-    induction h.
-    - reflexivity.
-    - etransitivity.
-      + eassumption.
-      + apply conv_Case_one_brs.
-        eapply OnOne2_impl; tea => /=.
-        now move=> ? ? []; move/conv_context_rel_app.
+    intros op.
+    induction 1.
+    - cbn. destruct p0.
+      move: op => /=; rewrite e; move/andP =>[] /andP[] -> _ ->.
+      eapply ws_equality_is_open_term_left in w.
+      rewrite app_length inst_case_branch_context_length e in w.
+      now rewrite shiftnP_add andb_true_r.
+    - now move: op => /= /andP[] => ->.
   Qed.
 
-  Lemma conv_Case :
-    forall Γ indn p p' c c' brs brs',
-      conv_predicate Γ p p' ->
-      Σ ;;; Γ ⊢ c = c' ->
-      conv_brs Γ brs brs' ->
-      Σ ;;; Γ ⊢ tCase indn p c brs = tCase indn p' c' brs'.
+  Lemma conv_Case_brs {Γ ci p c brs brs'} :
+    is_closed_context Γ ->
+    is_open_predicate Γ p ->
+    is_open_term Γ c ->
+    is_open_brs Γ p brs ->
+    is_open_brs Γ p brs' ->
+    conv_brs Γ p brs brs' ->
+    Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p c brs'.
   Proof.
-    intros Γ [ind n] p p' c c' brs brs' hp hc hbrs.
+    intros onΓ onp onc onbrs onbrs' h.
+    eapply (All2_many_OnOne2_pres _ (fun br => 
+      is_open_term (Γ ,,, inst_case_branch_context p br) br.(bbody))) in h.
+    2:{ intros x y [eq cv].
+        split; [eapply ws_equality_is_open_term_left|eapply ws_equality_is_open_term_right]; tea.
+        now rewrite /inst_case_branch_context -eq. }
+    induction h.
+    - apply ws_equality_refl; tas.
+      1-2:rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
+      cbn; reflexivity.
+    - destruct r as [o [ony onz]].
+      etransitivity.
+      + apply IHh.
+        eapply is_open_brs_OnOne2; tea.
+      + apply conv_Case_one_brs; tea.
+        eapply is_open_brs_OnOne2; tea.
+  Qed.
+
+  Lemma conv_Case {Γ ci p p' c c' brs brs'} :
+    is_open_case Γ p c brs ->
+    is_open_case Γ p' c' brs' ->
+    conv_predicate Γ p p' ->
+    Σ ;;; Γ ⊢ c = c' ->
+    conv_brs Γ p brs brs' ->
+    Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c' brs'.
+  Proof.
+    intros onc0. generalize onc0. 
+    rewrite !is_open_case_split => /and3P[onp onc onbrs] /and3P[onp' onc' onbrs'].
+    move=> cvp cvc.
+    assert (clΓ := ws_equality_is_closed_context cvc).
     etransitivity.
-    - eapply conv_Case_p. eassumption.
-    - etransitivity.
-      + eapply conv_Case_c. eassumption.
-      + apply conv_Case_brs. all: assumption.
+    { eapply conv_Case_brs. 6:tea. all:tas.
+      destruct cvp as [onpars [oninst [onctx onr]]].
+      now rewrite (All2_length onpars). }
+    etransitivity.
+    { eapply conv_Case_c; tea.
+      destruct cvp as [onpars [oninst [onctx onr]]].
+      now rewrite (All2_length onpars). }
+    eapply conv_Case_p; tea.
+    destruct cvp as [onpars [oninst [onctx onr]]].
+    rewrite is_open_case_split onp onc' /=.
+    now rewrite (All2_length onpars).
   Qed.
 
   Lemma conv_Proj_c :
@@ -1818,167 +1900,240 @@ Section Inversions.
     intros Γ p u v h.
     induction h.
     - now repeat constructor.
-    - eapply conv_red_l ; try eassumption.
+    - eapply red_equality_left ; try eassumption.
+      constructor; eauto with fvs. constructor.
       econstructor. assumption.
-    - eapply conv_red_r ; try eassumption.
+    - eapply red_equality_right ; try eassumption.
+      constructor; eauto with fvs. constructor.
       econstructor. assumption.
   Qed.
 
-  Lemma conv_Fix_one_type :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      OnOne2 (fun u v =>
-        Σ ;;; Γ ⊢ dtype u = dtype v ×
-        dbody u = dbody v ×
-        (rarg u = rarg v) *
-        eq_binder_annot (dname u) (dname v)
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx.
+  Definition fix_or_cofix b mfix idx :=     
+    (if b then tFix else tCoFix) mfix idx.
+
+   Lemma eq_term_fix_or_cofix b mfix idx mfix' :
+     All2 (fun x y : def term =>
+       ((eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (dtype x) (dtype y)
+        × eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (dbody x) (dbody y)) × rarg x = rarg y) *
+      eq_binder_annot (dname x) (dname y)) mfix mfix' ->
+    eq_term Σ Σ (fix_or_cofix b mfix idx) (fix_or_cofix b mfix' idx).
   Proof.
-    intros Γ mfix mfix' idx wΣ h.
+    destruct b; constructor; auto.
+  Qed.
+
+  Notation is_open_def Γ n :=
+    (test_def (on_free_vars (shiftnP #|Γ| xpred0)) (on_free_vars (shiftnP n (shiftnP #|Γ| xpred0)))).
+
+  Notation is_open_mfix Γ mfix :=
+    (forallb (is_open_def Γ #|mfix|) mfix).
+
+  Lemma is_open_fix_or_cofix {b} {Γ : context} {mfix idx} : 
+    is_open_term Γ (fix_or_cofix b mfix idx) =
+    is_open_mfix Γ mfix.
+  Proof. by case: b. Qed.
+
+  Lemma conv_Fix_one_type {b Γ mfix mfix' idx} :
+    is_closed_context Γ ->
+    is_open_mfix Γ mfix ->
+    is_open_mfix Γ mfix' ->
+    OnOne2 (fun u v =>
+      Σ ;;; Γ ⊢ dtype u = dtype v ×
+      dbody u = dbody v ×
+      (rarg u = rarg v) *
+      eq_binder_annot (dname u) (dname v)
+    ) mfix mfix' ->
+    Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
+  Proof.
+    intros onΓ onmfix onmfix' h.
+    eapply into_ws_equality => //; rewrite ?is_open_fix_or_cofix //.
+    clear onmfix onmfix'.
     apply OnOne2_split in h
       as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[h [? ?]] [? ?]]]]]].
-    simpl in *. subst.
+    simpl in *. subst. destruct p as [eqra eqna]. subst.
     induction h.
-    - constructor. constructor.
+    - constructor; tea.
+      apply eq_term_fix_or_cofix.
       apply All2_app.
-      + apply All2_same. intros. intuition reflexivity.
-      + constructor.
-        * simpl. intuition reflexivity.
-        * apply All2_same. intros. intuition reflexivity.
-    - eapply conv_red_l ; eauto.
-      constructor. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
+      * apply All2_same. intros. intuition reflexivity.
+      * constructor.
+        { simpl. intuition reflexivity. }
+        apply All2_same. intros. intuition reflexivity.
+    - eapply conv_red_l; eauto.
+      destruct b; constructor; eapply OnOne2_app;
+      constructor; cbn; intuition eauto.
     - eapply conv_red_r ; eauto.
-      constructor. apply OnOne2_app. constructor. simpl.
+      destruct b; constructor; apply OnOne2_app; constructor; simpl;
       intuition eauto.
   Qed.
-
-  Lemma conv_Fix_types :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      All2 (fun u v =>
-        Σ ;;; Γ ⊢ dtype u = dtype v ×
-        dbody u = dbody v ×
-        (rarg u = rarg v) *
-        (eq_binder_annot (dname u) (dname v))
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx.
+  
+  Lemma conv_Fix_types {b Γ mfix mfix' idx} :
+    is_closed_context Γ ->
+    is_open_mfix Γ mfix ->
+    is_open_mfix Γ mfix' ->
+    All2 (fun u v =>
+      Σ ;;; Γ ⊢ dtype u = dtype v ×
+      dbody u = dbody v ×
+      (rarg u = rarg v) *
+      (eq_binder_annot (dname u) (dname v)))
+      mfix mfix' ->
+    Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
   Proof.
-    intros Γ mfix mfix' idx wΣ h.
-    apply All2_many_OnOne2 in h.
+    intros onΓ onm onm' h.
+    pose proof onm.
+    cbn in onm, onm'.
+    eapply forallb_All in onm.
+    eapply forallb_All in onm'.
+    eapply All2_All_mix_left in h; tea.
+    eapply All2_All_mix_right in h; tea.
+    eapply (All2_many_OnOne2_pres _ (is_open_def Γ #|mfix|)) in h.
+    2:{ intuition auto. now rewrite (All2_length h). }
     induction h.
-    - reflexivity.
+    - eapply ws_equality_refl => //.
+      1-2:rewrite is_open_fix_or_cofix //.
+      cbn; reflexivity.
     - etransitivity.
-      + eassumption.
-      + apply conv_Fix_one_type. all: assumption.
+      + eapply IHh.  
+      + destruct r as [hlen [onone [ay az]]].
+        eapply conv_Fix_one_type; tea; solve_all.
+        all:now rewrite -?hlen -(rtrans_clos_length h).
   Qed.
 
-  Lemma conv_Fix_one_body :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      OnOne2 (fun u v =>
-        dtype u = dtype v ×
-        Σ ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
-        (rarg u = rarg v) *
-        (eq_binder_annot (dname u) (dname v))
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx.
+  Lemma red_fix_or_cofix_body b (Γ : context) (mfix : mfixpoint term) (idx : nat) (mfix' : list (def term)) :
+    All2 (on_Trel_eq (red Σ (Γ,,, fix_context mfix)) dbody
+      (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix' ->
+    red Σ Γ (fix_or_cofix b mfix idx) (fix_or_cofix b mfix' idx).
   Proof.
-    intros Γ mfix mfix' idx wΣ h.
+    destruct b; apply red_fix_body || apply red_cofix_body.
+  Qed.
+  
+  Lemma conv_Fix_one_body {b Γ mfix mfix' idx} :
+    is_closed_context Γ ->
+    is_open_mfix Γ mfix ->
+    is_open_mfix Γ mfix' ->
+    OnOne2 (fun u v =>
+      dtype u = dtype v ×
+      Σ ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
+      (rarg u = rarg v) *
+      (eq_binder_annot (dname u) (dname v))
+    ) mfix mfix' ->
+    Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
+  Proof.
+    intros onΓ onmfix onmfix' h.
+    assert (All2 (compare_decls eq eq) (fix_context mfix) (fix_context mfix')).
+    { clear -h.
+      unfold fix_context, mapi.
+      generalize 0 at 2 4.
+      induction h; intros n.
+      + destruct p as [hty [_ [_ eqna]]].
+        cbn.
+        eapply All2_app; [eapply All2_refl; reflexivity|].
+        constructor; cbn; [|constructor].
+        constructor; auto. f_equal. auto.
+      + cbn.
+        eapply All2_app; eauto.
+        constructor; auto. constructor; auto. }
     apply OnOne2_split in h
       as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [h [? ?]]] [? ?]]]]]].
-    simpl in *. subst.
-    induction h.
-    - constructor. constructor.
-      apply All2_app.
-      + apply All2_same. intros. intuition reflexivity.
-      + constructor.
-        * simpl. intuition reflexivity.
-        * apply All2_same. intros. intuition reflexivity.
-    - eapply conv_red_l ; eauto.
-      eapply fix_red_body. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
-      rewrite fix_context_fix_context_alt in r.
-      rewrite map_app in r. simpl in r.
-      unfold def_sig at 2 in r. simpl in r.
-      rewrite fix_context_fix_context_alt.
-      rewrite map_app. simpl.
-      unfold def_sig at 2. simpl.
-      assumption.
-    - rewrite fix_context_fix_context_alt in r.
-      rewrite map_app in r. simpl in r.
-      unfold def_sig at 2 in r. simpl in r.
-      eapply red1_eq_context_upto_l in r as [v' [r e]].
-      7:{
-        instantiate (1 := Γ ,,, fix_context_alt (map def_sig l1 ++ (na', ty') :: map def_sig l2)).
-        eapply eq_context_upto_cat.
-        - instantiate (1 := eq). instantiate (1:=eq). eapply eq_context_upto_refl; auto.
-        - unfold fix_context_alt. eapply eq_context_upto_rev'.
-          rewrite 2!mapi_app. cbn.
-          eapply eq_context_upto_cat.
-          + constructor; auto; revgoals.
-            * constructor; auto. eapply eq_term_upto_univ_refl. all: auto.
-            * eapply eq_context_upto_refl; auto.
-          + eapply eq_context_upto_refl; auto.
-      }
-      all: auto.
-      2:{ intros ? ? ? e. apply eq_univ_make in e. subst. reflexivity. }
-      2:{ intros ? ? ? e. apply eq_univ_make in e. subst. reflexivity. }
-      2:tc.
-      etransitivity; tea.
-      eapply conv_red_r ; revgoals.
-      + eapply fix_red_body. apply OnOne2_app. constructor. simpl.
-        split.
-        * rewrite fix_context_fix_context_alt.
-          rewrite map_app. simpl.
-          unfold def_sig at 2. simpl.
-          instantiate (1 := mkdef _ na' ty' v' ra'). simpl.
-          exact r.
-        * simpl. reflexivity.
-      + constructor. constructor.
-        apply All2_app.
-        * apply All2_same. intros. intuition reflexivity.
-        * constructor.
-          -- simpl. intuition eauto.
-             ++ eapply eq_term_upto_univ_refl.
-                all: apply eq_universe_refl.
-             ++ eapply upto_eq_impl. 3: assumption.
-                all: apply eq_universe_refl.
-          -- apply All2_same. intros. intuition reflexivity.
+    simpl in *. subst ty' ra'.
+    eapply equality_red in h as [v [v' [hbo [hbo' hcomp]]]].
+    set (declv := {| dname := na; dtype := ty; dbody := v; rarg := ra |}).
+    set (declv' := {| dname := na'; dtype := ty; dbody := v'; rarg := ra |}).
+    eapply equality_red.
+    exists (fix_or_cofix b (l1 ++ declv :: l2) idx), (fix_or_cofix b (l1 ++ declv' :: l2) idx).
+    repeat split; auto; rewrite ?is_open_fix_or_cofix //.
+    { destruct b; [eapply red_fix_body | eapply red_cofix_body]; rewrite H;
+      eapply All2_app.
+      all:try eapply All2_refl; intuition auto.
+      all:constructor; [|eapply All2_refl; intuition auto].
+      all:cbn; intuition auto; rewrite -H //; tas.
+      - apply hbo.
+      - apply hbo. }
+    { eapply red_fix_or_cofix_body. rewrite H0.
+      eapply All2_app; try reflexivity.
+      { eapply All2_refl; intuition auto. }
+      constructor. 
+      - cbn. intuition auto.
+        rewrite -H0.
+        eapply red_eq_context_upto_names; tea.
+        2:exact hbo'.
+        eapply All2_fold_All2, All2_app; auto.
+        eapply All2_refl; reflexivity.
+      - eapply All2_refl. intros.
+        intuition auto. }
+    { cbn. apply eq_term_fix_or_cofix. eapply All2_app.
+      * eapply All2_refl; intuition auto; reflexivity.
+      * constructor; intuition auto; try reflexivity.
+        eapply All2_refl; intuition auto; reflexivity. }
   Qed.
 
-  Lemma conv_Fix_bodies :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      All2 (fun u v =>
+  Lemma is_open_fix_onone2 {Γ Δ mfix mfix'} : 
+    OnOne2
+      (fun u v : def term =>
+       (dtype u = dtype v) *
+       (Σ ;;; Γ,,, Δ ⊢ dbody u = dbody v
+        × rarg u = rarg v × eq_binder_annot (dname u) (dname v))) mfix' mfix ->
+    #|Δ| = #|mfix| ->
+    is_open_mfix Γ mfix ->
+    is_open_mfix Γ mfix'.
+  Proof.
+    cbn.
+    intros a hlen hmfix.
+    rewrite (OnOne2_length a).
+    eapply OnOne2_split in a as [? [? [? [? []]]]].
+    destruct a. subst.
+    red; rewrite -hmfix.
+    rewrite !forallb_app /=. bool_congr. f_equal.
+    destruct p. rewrite /test_def /on_free_vars_decl /test_decl /=.
+    rewrite e. f_equal.
+    destruct p. apply ws_equality_is_open_term in w.
+    move: w.
+    now rewrite !app_length hlen !app_length /= shiftnP_add => /andP[] /andP[] _ -> ->.
+  Qed.
+
+  Lemma conv_Fix_bodies {b Γ mfix mfix' idx} :
+    is_closed_context Γ ->
+    is_open_mfix Γ mfix ->
+    is_open_mfix Γ mfix' ->
+    All2 (fun u v =>
         dtype u = dtype v ×
         Σ ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
         (rarg u = rarg v) *
-        (eq_binder_annot (dname u) (dname v))
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx.
+        (eq_binder_annot (dname u) (dname v)))
+      mfix mfix' ->
+    Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
   Proof.
-    intros Γ mfix mfix' idx wΣ h.
+    intros onΓ onm onm' h.
     assert (thm :
-      Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx ×
+      Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx ×
+      #|mfix| = #|mfix'| ×
       eq_context_upto Σ eq eq (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')
     ).
-    { apply All2_many_OnOne2 in h.
+    { eapply (All2_many_OnOne2_pres _ (fun x => True)) in h.
+      2:intuition.
       induction h.
-      - split; reflexivity.
-      - destruct IHh.
+      - split; try reflexivity.
+        + eapply ws_equality_refl => //; rewrite ?is_open_fix_or_cofix //.
+          cbn; reflexivity.
+        + split; reflexivity.
+      - destruct r as [hl [r _]].
+        assert (is_open_mfix Γ y).
+        { eapply (is_open_fix_onone2) in r; intuition auto.
+          now rewrite fix_context_length -(OnOne2_length r) -(rtrans_clos_length h). }
+        destruct (IHh H) as [? []].
         split.
         + etransitivity.
           * eassumption.
-          * apply conv_Fix_one_body. 1: assumption.
+          * apply conv_Fix_one_body; tea; eauto with fvs.
             eapply OnOne2_impl. 1: eassumption.
             intros [na ty bo ra] [na' ty' bo' ra'] [? [hh ?]].
             simpl in *. intuition eauto.
-            eapply conv_eq_context_upto. 2: eassumption.
-            eapply eq_context_impl. 4: eassumption.
+            eapply equality_eq_context_upto. 3: eassumption.
+            1:eapply eq_context_impl. 4: eassumption.
             all:tc.
-        + etransitivity.
+            rewrite on_free_vars_ctx_app onΓ /=.
+            apply on_free_vars_fix_context. solve_all.
+        + split; [lia|].
+          etransitivity.
           * eassumption.
           * apply OnOne2_split in r
               as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [? [? ?]]] [? ?]]]]]].
@@ -1999,18 +2154,27 @@ Section Inversions.
     apply thm.
   Qed.
 
-  Lemma conv_Fix :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      All2 (fun u v =>
-        Σ;;; Γ ⊢ dtype u = dtype v ×
-        Σ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
-        (rarg u = rarg v) *
-        (eq_binder_annot (dname u) (dname v))
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx.
+  Lemma equality_fix_or_cofix {b Γ mfix mfix' idx} : 
+    is_closed_context Γ ->
+    All2 (fun u v =>
+      Σ;;; Γ ⊢ dtype u = dtype v ×
+      Σ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
+      (rarg u = rarg v) *
+      (eq_binder_annot (dname u) (dname v))) 
+      mfix mfix' ->
+    Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
   Proof.
-    intros Γ mfix mfix' idx wΣ h.
+    intros onΓ h.
+    assert (is_open_mfix Γ mfix /\ is_open_mfix Γ mfix') as [opl opr].
+    { cbn. rewrite -(All2_length h). solve_all.
+      - move: a a0 => /ws_equality_is_open_term/andP[]/andP[] _ onty onty'.
+        move/ws_equality_is_open_term => /andP[]/andP[] _.
+        rewrite !app_length !fix_context_length => onbody onbody'.
+        rewrite /test_def /= onty /= shiftnP_add //.
+      - move: a a0 => /ws_equality_is_open_term/andP[]/andP[] _ onty onty'.
+        move/ws_equality_is_open_term => /andP[]/andP[] _.
+        rewrite !app_length !fix_context_length => onbody onbody'.
+        rewrite /test_def /= onty' /= shiftnP_add //. }
     assert (h' : ∑ mfix'',
       All2 (fun u v =>
         Σ;;; Γ ⊢ dtype u = dtype v ×
@@ -2023,7 +2187,7 @@ Section Inversions.
         Σ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
         rarg u = rarg v ×
         (eq_binder_annot (dname u) (dname v))
-      ) mfix mfix''
+      ) mfix mfix'' 
     ).
     { set (P1 := fun u v => Σ ;;; Γ ⊢ u = v).
       set (P2 := fun u v => Σ ;;; Γ ,,, fix_context mfix ⊢ u = v).
@@ -2046,321 +2210,121 @@ Section Inversions.
             (eq_binder_annot (dname u) (dname v))
           ) mfix mfix''
       ).
-      clearbody P1 P2.
+      clearbody P1 P2. clear opl opr.
       induction h.
-      - exists []. split. all: constructor.
+      - exists []. repeat split. all: constructor.
       - destruct IHh as [l'' [h1 h2]].
-        eexists (mkdef _ (dname x) _ _ _ :: l''). split.
+        eexists (mkdef _ (dname x) _ _ _ :: l''). repeat split.
         + constructor. 2: assumption.
           simpl. intuition eauto.
         + constructor. 2: assumption.
-          intuition eauto.
+          intuition eauto.   
     }
     destruct h' as [mfix'' [h1 h2]].
+    assert (is_open_mfix Γ mfix'').
+    { cbn in opl. eapply forallb_All in opl.
+      eapply All2_All_mix_left in h2; tea.
+      cbn. rewrite -(All2_length h2). solve_all.
+      move: a => /andP[].
+      move: a2 => /ws_equality_is_open_term/andP[]/andP[] _.
+      rewrite !app_length !fix_context_length => onbody onbody'.
+      rewrite /test_def /= a1 => -> /= _.
+      rewrite shiftnP_add //. }
     etransitivity.
-    - eapply conv_Fix_bodies. all: eassumption.
+    - eapply conv_Fix_bodies. 4:tea. all:assumption.
     - eapply conv_Fix_types. all: assumption.
   Qed.
 
-  Lemma conv_CoFix_one_type :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      OnOne2 (fun u v =>
-        Σ ;;; Γ ⊢ dtype u = dtype v ×
-        dbody u = dbody v ×
-        rarg u = rarg v ×
-        eq_binder_annot (dname u) (dname v)
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tCoFix mfix idx = tCoFix mfix' idx.
-  Proof.
-    intros Γ mfix mfix' idx wΣ h.
-    apply OnOne2_split in h
-      as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[h [? ?]] [? ?]]]]]].
-    simpl in *. subst.
-    induction h.
-    - constructor. constructor.
-      apply All2_app.
-      + apply All2_same. intros. intuition reflexivity.
-      + constructor.
-        * simpl. intuition try reflexivity.
-        * apply All2_same. intros. intuition reflexivity.
-    - eapply conv_red_l ; eauto.
-      constructor. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
-    - eapply conv_red_r ; eauto.
-      constructor. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
-  Qed.
-
-  Lemma conv_CoFix_types :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      All2 (fun u v =>
-        Σ ;;; Γ ⊢ dtype u = dtype v ×
-        dbody u = dbody v ×
-        rarg u = rarg v ×
-        eq_binder_annot (dname u) (dname v)
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tCoFix mfix idx = tCoFix mfix' idx.
-  Proof.
-    intros Γ mfix mfix' idx wΣ h.
-    apply All2_many_OnOne2 in h.
-    induction h.
-    - reflexivity.
-    - etransitivity.
-      + eassumption.
-      + apply conv_CoFix_one_type. all: assumption.
-  Qed.
-
-  Lemma conv_CoFix_one_body :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      OnOne2 (fun u v =>
-        dtype u = dtype v ×
-        Σ ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
-        rarg u = rarg v ×
-        eq_binder_annot u.(dname) v.(dname)
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tCoFix mfix idx = tCoFix mfix' idx.
-  Proof.
-    intros Γ mfix mfix' idx wΣ h.
-    apply OnOne2_split in h
-      as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [h []]] [? ?]]]]]].
-    simpl in *. subst.
-    induction h.
-    - constructor. constructor.
-      apply All2_app.
-      + apply All2_same. intros. intuition reflexivity.
-      + constructor.
-        * simpl. intuition reflexivity.
-        * apply All2_same. intros. intuition reflexivity.
-    - eapply conv_red_l ; eauto.
-      eapply cofix_red_body. apply OnOne2_app. constructor. simpl.
-      intuition eauto.
-      rewrite fix_context_fix_context_alt in r.
-      rewrite map_app in r. simpl in r.
-      unfold def_sig at 2 in r. simpl in r.
-      rewrite fix_context_fix_context_alt.
-      rewrite map_app. simpl.
-      unfold def_sig at 2. simpl.
-      assumption.
-    - rewrite fix_context_fix_context_alt in r.
-      rewrite map_app in r. simpl in r.
-      unfold def_sig at 2 in r. simpl in r.
-      eapply red1_eq_context_upto_l in r as [v' [r e]].
-      7:{
-        instantiate (1 := Γ ,,, fix_context_alt (map def_sig l1 ++ (na', ty') :: map def_sig l2)).
-        eapply eq_context_upto_cat.
-        - instantiate (1 := eq). instantiate (1 := eq). eapply eq_context_upto_refl; auto.
-        - unfold fix_context_alt. eapply eq_context_upto_rev'.
-          rewrite 2!mapi_app. cbn.
-          eapply eq_context_upto_cat.
-          + constructor; revgoals.
-            * constructor; auto. reflexivity.
-            * eapply eq_context_upto_refl; auto.
-          + eapply eq_context_upto_refl; auto.
-      }
-      all: auto.
-      2:{ intros ? ? ? e. apply eq_univ_make in e. subst. reflexivity. }
-      2:{ intros ? ? ? e. apply eq_univ_make in e. subst. reflexivity. }
-      2:tc.
-      etransitivity; tea.
-      eapply conv_red_r ; revgoals.
-      + eapply cofix_red_body. apply OnOne2_app. constructor. simpl.
-        split.
-        * rewrite fix_context_fix_context_alt.
-          rewrite map_app. simpl.
-          unfold def_sig at 2. simpl.
-          instantiate (1 := mkdef _ na' ty' v' ra'). simpl.
-          exact r.
-        * simpl. reflexivity.
-      + constructor. constructor.
-        apply All2_app.
-        * apply All2_same. intros. intuition reflexivity.
-        * constructor.
-          -- simpl. intuition eauto.
-             ++ eapply eq_term_upto_univ_refl.
-                all: apply eq_universe_refl.
-             ++ eapply upto_eq_impl. 3: assumption.
-                all: apply eq_universe_refl.
-          -- apply All2_same. intros. intuition reflexivity.
-  Qed.
-
-  Lemma conv_CoFix_bodies :
-    forall Γ mfix mfix' idx,
-      wf Σ.1 ->
-      All2 (fun u v =>
-        dtype u = dtype v ×
-        Σ ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
-        rarg u = rarg v ×
-        eq_binder_annot u.(dname) v.(dname)
-      ) mfix mfix' ->
-      Σ ;;; Γ ⊢ tCoFix mfix idx = tCoFix mfix' idx.
-  Proof.
-    intros Γ mfix mfix' idx wΣ h.
-    assert (thm :
-      Σ ;;; Γ ⊢ tCoFix mfix idx = tCoFix mfix' idx ×
-      eq_context_upto Σ eq eq (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')
-    ).
-    { apply All2_many_OnOne2 in h.
-      induction h.
-      - split; reflexivity.
-      - destruct IHh.
-        split.
-        + etransitivity.
-          * eassumption.
-          * apply conv_CoFix_one_body. 1: assumption.
-            eapply OnOne2_impl. 1: eassumption.
-            intros [na ty bo ra] [na' ty' bo' ra'] [? [hh ?]].
-            simpl in *. intuition eauto.
-            eapply conv_eq_context_upto. 2: eassumption.
-            eapply eq_context_impl. 4: eassumption.
-            all:tc.
-        + etransitivity.
-          * eassumption.
-          * apply OnOne2_split in r
-              as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [? []]] [? ?]]]]]].
-            simpl in *. subst.
-            rewrite 2!fix_context_fix_context_alt.
-            rewrite 2!map_app. simpl.
-            unfold def_sig at 2 5. simpl.
-            eapply eq_context_upto_cat.
-            -- eapply eq_context_upto_refl; auto.
-            -- eapply eq_context_upto_rev'.
-               rewrite 2!mapi_app. cbn.
-               eapply eq_context_upto_cat.
-               ++ constructor; revgoals.
-                  ** constructor; eauto. reflexivity.
-                  ** eapply eq_context_upto_refl; auto.
-               ++ eapply eq_context_upto_refl; auto.
-    }
-    apply thm.
-  Qed.
-
-  Lemma conv_CoFix :
-  forall Γ mfix mfix' idx,
-    wf Σ.1 ->
+  Lemma conv_fix {Γ mfix mfix' idx} : 
+    is_closed_context Γ ->
     All2 (fun u v =>
       Σ;;; Γ ⊢ dtype u = dtype v ×
       Σ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
-      rarg u = rarg v ×
-      eq_binder_annot u.(dname) v.(dname)
-    ) mfix mfix' ->
+      (rarg u = rarg v) *
+      (eq_binder_annot (dname u) (dname v))) 
+      mfix mfix' ->
+    Σ ;;; Γ ⊢ tFix mfix idx = tFix mfix' idx.
+  Proof. eapply (equality_fix_or_cofix (b:=true)). Qed.
+
+  Lemma conv_cofix {Γ mfix mfix' idx} : 
+    is_closed_context Γ ->
+    All2 (fun u v =>
+      Σ;;; Γ ⊢ dtype u = dtype v ×
+      Σ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
+      (rarg u = rarg v) *
+      (eq_binder_annot (dname u) (dname v))) 
+      mfix mfix' ->
     Σ ;;; Γ ⊢ tCoFix mfix idx = tCoFix mfix' idx.
+  Proof. eapply (equality_fix_or_cofix (b:=false)). Qed.
+  
+  Lemma conv_Lambda_l {Γ na A b na' A'} :
+    eq_binder_annot na na' ->
+    is_open_term (Γ ,, vass na A) b ->
+    Σ ;;; Γ ⊢ A = A' ->
+    Σ ;;; Γ ⊢ tLambda na A b = tLambda na' A' b.
   Proof.
-    intros Γ mfix mfix' idx wΣ h.
-    assert (h' : ∑ mfix'',
-      All2 (fun u v =>
-        Σ;;; Γ ⊢ dtype u = dtype v ×
-        dbody u = dbody v ×
-        rarg u = rarg v ×
-        eq_binder_annot u.(dname) v.(dname)
-      ) mfix'' mfix' ×
-      All2 (fun u v =>
-        dtype u = dtype v ×
-        Σ;;; Γ ,,, fix_context mfix ⊢ dbody u = dbody v ×
-        rarg u = rarg v ×
-        eq_binder_annot u.(dname) v.(dname)
-      ) mfix mfix''
-    ).
-    { set (P1 := fun u v => Σ ;;; Γ ⊢ u = v).
-      set (P2 := fun u v => Σ ;;; Γ ,,, fix_context mfix ⊢ u = v).
-      change (
-        All2 (fun u v =>
-          P1 u.(dtype) v.(dtype) ×
-          P2 u.(dbody) v.(dbody) ×
-          rarg u = rarg v ×
-          eq_binder_annot u.(dname) v.(dname)
-        ) mfix mfix'
-      ) in h.
-      change (
-        ∑ mfix'',
-          All2 (fun u v =>
-            P1 u.(dtype) v.(dtype) × dbody u = dbody v × rarg u = rarg v ×
-            eq_binder_annot u.(dname) v.(dname)
-          ) mfix'' mfix' ×
-          All2 (fun u v =>
-            dtype u = dtype v × P2 u.(dbody) v.(dbody) × rarg u = rarg v ×
-            eq_binder_annot u.(dname) v.(dname)
-          ) mfix mfix''
-      ).
-      clearbody P1 P2.
-      induction h.
-      - exists []. split. all: constructor.
-      - destruct IHh as [l'' [h1 h2]].
-        eexists (mkdef _ (dname x) _ _ _ :: l''). split.
-        + constructor. 2: assumption.
-          simpl. intuition eauto.
-        + constructor. 2: assumption.
-          intuition eauto.
-    }
-    destruct h' as [mfix'' [h1 h2]].
-    etransitivity.
-    - eapply conv_CoFix_bodies. all: eassumption.
-    - eapply conv_CoFix_types. all: assumption.
+    intros hna hb h.
+    eapply into_ws_equality.
+    { clear -h hna; induction h.
+      - constructor. constructor; auto. reflexivity.
+      - eapply conv_red_l; tea; pcuic.
+      - eapply conv_red_r; tea; pcuic. }
+    { eauto with fvs. }
+    all:rewrite on_fvs_lambda; eauto with fvs.
   Qed.
 
-  Lemma conv_Lambda_l :
-    forall Γ na A b na' A',
-      eq_binder_annot na na' ->
-      Σ ;;; Γ ⊢ A = A' ->
-      Σ ;;; Γ ⊢ tLambda na A b = tLambda na' A' b.
+  Lemma conv_Lambda_r {le Γ na A b b'} : 
+    Σ ;;; Γ,, vass na A ⊢ b ≤[le] b' ->
+    Σ ;;; Γ ⊢ tLambda na A b ≤[le] tLambda na A b'.
   Proof.
-    intros Γ na A b na' A' hna h.
-    induction h.
-    - eapply conv_refl. now constructor.
-    - eapply conv_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply conv_red_r ; try eassumption.
-      econstructor. assumption.
+    intros h.
+    generalize (ws_equality_is_closed_context h).
+    rewrite on_free_vars_ctx_snoc /on_free_vars_decl /test_decl => /andP[] onΓ /= onA.
+    eapply into_ws_equality => //.
+    { induction h.
+      - destruct le; now repeat constructor.
+      - destruct le.
+        + eapply cumul_red_l ; try eassumption; try econstructor; assumption.
+        + eapply conv_red_l ; try eassumption. try econstructor; assumption.
+      - destruct le.
+        + eapply cumul_red_r ; pcuic.
+        + eapply conv_red_r ; pcuic. }
+    all:rewrite on_fvs_lambda onA /=; eauto with fvs.
+    - apply ws_equality_is_open_term_left in h => //.
+    - apply ws_equality_is_open_term_right in h => //.
   Qed.
-
-  Lemma conv_Lambda_r :
-    forall Γ na A b b',
-      Σ ;;; Γ,, vass na A ⊢ b = b' ->
-      Σ ;;; Γ ⊢ tLambda na A b = tLambda na A b'.
-  Proof.
-    intros Γ na A b b' h.
-    induction h.
-    - now repeat constructor.
-    - eapply conv_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply conv_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
-  Lemma cumul_LetIn_bo :
-    forall Γ na ty t u u',
-      Σ ;;; Γ ,, vdef na ty t ⊢ u ≤ u' ->
-      Σ ;;; Γ ⊢ tLetIn na ty t u ≤ tLetIn na ty t u'.
-  Proof.
-    intros Γ na ty t u u' h.
-    induction h.
-    - eapply cumul_refl. constructor.
-      all: try eapply eq_term_refl.
-      + reflexivity.
-      + assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
-  Qed.
-
+  
   Lemma cumul_Lambda_r :
     forall Γ na A b b',
       Σ ;;; Γ,, vass na A ⊢ b ≤ b' ->
       Σ ;;; Γ ⊢ tLambda na A b ≤ tLambda na A b'.
   Proof.
-    intros Γ na A b b' h.
-    induction h.
-    - eapply cumul_refl. constructor.
-      + reflexivity. 
-      + eapply eq_term_refl.
-      + assumption.
-    - eapply cumul_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply cumul_red_r ; try eassumption.
-      econstructor. assumption.
+    intros. now eapply (conv_Lambda_r (le:=true)).
+  Qed.
+
+  Lemma equality_LetIn_bo {le Γ na ty t u u'} :
+    Σ ;;; Γ ,, vdef na ty t ⊢ u ≤[le] u' ->
+    Σ ;;; Γ ⊢ tLetIn na ty t u ≤[le] tLetIn na ty t u'.
+  Proof.
+    intros h.
+    generalize (ws_equality_is_open_term h).
+    rewrite on_free_vars_ctx_snoc /= => /andP[]/andP[]/andP[] onΓ.
+    rewrite /on_free_vars_decl /test_decl => /andP[] /= onty ont onu onu'.
+    eapply into_ws_equality => //.
+    { clear -h. induction h.
+      - destruct le.
+        { eapply cumul_refl. constructor.
+          all: try eapply eq_term_refl; auto. }
+        { eapply conv_refl. constructor.
+          all: try eapply eq_term_refl; auto. }
+      - destruct le.
+        { eapply cumul_red_l; tea; pcuic. }
+        { eapply conv_red_l; tea; pcuic. }
+      - destruct le.
+        { eapply cumul_red_r ; pcuic. }
+        { eapply conv_red_r; pcuic. } }
+    { rewrite on_fvs_letin onty ont //. }
+    { rewrite on_fvs_letin onty ont //. }
   Qed.
 
   Lemma cumul_it_mkLambda_or_LetIn :
@@ -2372,9 +2336,17 @@ Section Inversions.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
     - assumption.
     - simpl. cbn. eapply ih.
-      eapply cumul_LetIn_bo. assumption.
+      eapply equality_LetIn_bo. assumption.
     - simpl. cbn. eapply ih.
-      eapply cumul_Lambda_r. assumption.
+      eapply conv_Lambda_r. assumption.
+  Qed.
+
+  Lemma ws_equality_refl' {Γ A} : 
+    is_closed_context Γ ->
+    is_open_term Γ A ->
+    Σ ;;; Γ ⊢ A = A.
+  Proof.
+    intros; apply ws_equality_refl => //; cbn; reflexivity.
   Qed.
 
   Lemma cumul_it_mkProd_or_LetIn_codom :
@@ -2383,60 +2355,86 @@ Section Inversions.
       Σ ;;; Δ ⊢ it_mkProd_or_LetIn Γ B ≤ it_mkProd_or_LetIn Γ B'.
   Proof.
     intros Δ Γ B B' h.
-    induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h ⊢ *.
+    induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h |- *.
     - assumption.
     - simpl. cbn. eapply ih.
-      eapply cumul_LetIn_bo. assumption.
+      eapply equality_LetIn_bo. assumption.
     - simpl. cbn. eapply ih.
-      eapply cumul_Prod_r. assumption.
+      eapply congr_prod; try reflexivity; tas.
+      move/ws_equality_is_closed_context: h.
+      rewrite /= on_free_vars_ctx_snoc /on_free_vars_decl /test_decl /= => /andP[] onΓΔ ont.
+      apply ws_equality_refl' => //.
   Qed.
 
   Lemma mkApps_conv_weak :
     forall Γ u1 u2 l,
+      forallb (is_open_term Γ) l -> 
       Σ ;;; Γ ⊢ u1 = u2 ->
       Σ ;;; Γ ⊢ mkApps u1 l = mkApps u2 l.
   Proof.
-    intros Γ u1 u2 l. induction l in u1, u2 ⊢ *; cbn. 1: trivial.
-    intros X. apply IHl. now apply conv_App_l.
+    intros Γ u1 u2 l.
+    induction l in u1, u2 |- *; cbn. 1: trivial.
+    move=> /andP[] ona onl.
+    intros X. apply IHl => //. apply equality_App_l => //.
+  Qed.
+
+  Lemma equality_Lambda {leq Γ na1 na2 A1 A2 t1 t2} :
+    eq_binder_annot na1 na2 ->
+    Σ ;;; Γ ⊢ A1 = A2 ->
+    Σ ;;; Γ ,, vass na1 A1 ⊢ t1 ≤[leq] t2 ->
+    Σ ;;; Γ ⊢ tLambda na1 A1 t1 ≤[leq] tLambda na2 A2 t2.
+  Proof.
+    intros eqna X.
+    etransitivity.
+    - eapply conv_Lambda_r; tea.
+    - destruct leq.
+      + eapply equality_eq_le, conv_Lambda_l => //. eauto with fvs.
+      + eapply conv_Lambda_l; tea; eauto with fvs.
   Qed.
 
   Lemma conv_cum_Lambda leq Γ na1 na2 A1 A2 t1 t2 :
-      eq_binder_annot na1 na2 ->
-      Σ ;;; Γ ⊢ A1 = A2 ->
-      conv_cum leq Σ (Γ ,, vass na1 A1) t1 t2 ->
-      conv_cum leq Σ Γ (tLambda na1 A1 t1) (tLambda na2 A2 t2).
+    eq_binder_annot na1 na2 ->
+    Σ ;;; Γ ⊢ A1 = A2 ->
+    sq_equality leq Σ (Γ ,, vass na1 A1) t1 t2 ->
+    sq_equality leq Σ Γ (tLambda na1 A1 t1) (tLambda na2 A2 t2).
   Proof.
-    intros eqna X H. destruct leq; cbn in *; sq.
-    - etransitivity.
-      + eapply conv_Lambda_r. eassumption.
-      + now eapply conv_Lambda_l.
-    - etransitivity.
-      + eapply cumul_Lambda_r. eassumption.
-      + eapply conv_cumul, conv_Lambda_l; tea.
+    intros eqna X []; sq. now apply equality_Lambda.
   Qed.
 
   Lemma conv_LetIn_tm Γ na na' ty t t' u :
-      eq_binder_annot na na' ->
-      Σ ;;; Γ ⊢ t = t' ->
-      Σ ;;; Γ ⊢ tLetIn na t ty u = tLetIn na' t' ty u.
+    eq_binder_annot na na' ->
+    is_open_term Γ ty ->
+    is_open_term (Γ ,, vdef na t ty) u ->
+    Σ ;;; Γ ⊢ t = t' ->
+    Σ ;;; Γ ⊢ tLetIn na t ty u = tLetIn na' t' ty u.
   Proof.
-    intros hna; induction 1.
-    - constructor 1. constructor; try reflexivity;
-      assumption.
-    - econstructor 2; tea. now constructor.
-    - econstructor 3; tea. now constructor.
+    intros hna onty onu ont.
+    eapply into_ws_equality.
+    { clear onu. induction ont.
+      - constructor 1. constructor; try reflexivity;
+        assumption.
+      - econstructor 2; tea. now constructor.
+      - econstructor 3; tea. now constructor. }
+    { eauto with fvs. }
+    all:rewrite on_fvs_letin onty; eauto with fvs.
   Qed.
 
-  Lemma conv_LetIn_ty Γ na na' ty ty' t u :
-      eq_binder_annot na na' ->
-      Σ ;;; Γ ⊢ ty = ty' ->
-      Σ ;;; Γ ⊢ tLetIn na t ty u = tLetIn na' t ty' u.
+  Lemma conv_LetIn_ty {Γ na na' ty ty' t u} :
+    eq_binder_annot na na' ->
+    is_open_term Γ t ->
+    is_open_term (Γ ,, vdef na t ty) u ->
+    Σ ;;; Γ ⊢ ty = ty' ->
+    Σ ;;; Γ ⊢ tLetIn na t ty u = tLetIn na' t ty' u.
   Proof.
-    intros hna. induction 1.
-    - constructor 1. constructor; try reflexivity;
-      assumption.
-    - econstructor 2; tea. now constructor.
-    - econstructor 3; tea. now constructor.
+    intros hna ont onu onty.
+    eapply into_ws_equality.
+    { clear onu. induction onty.
+      - constructor 1. constructor; try reflexivity;
+        assumption.
+      - econstructor 2; tea. now constructor.
+      - econstructor 3; tea. now constructor. }
+    { eauto with fvs. }
+    all:rewrite on_fvs_letin ont onu andb_true_r; eauto with fvs.
   Qed.
 
   Lemma conv_LetIn_bo :
@@ -2445,45 +2443,40 @@ Section Inversions.
       Σ ;;; Γ ⊢ tLetIn na ty t u = tLetIn na ty t u'.
   Proof.
     intros Γ na ty t u u' h.
-    induction h.
-    - now repeat constructor.
-    - eapply conv_red_l ; try eassumption.
-      econstructor. assumption.
-    - eapply conv_red_r ; try eassumption.
-      econstructor. assumption.
+    now eapply equality_LetIn_bo.
   Qed.
 
-  Lemma conv_cum_LetIn leq Γ na1 na2 t1 t2 A1 A2 u1 u2 :
-      eq_binder_annot na1 na2 ->
-      Σ;;; Γ ⊢ t1 = t2 ->
-      Σ;;; Γ ⊢ A1 = A2 ->
-      conv_cum leq Σ (Γ ,, vdef na1 t1 A1) u1 u2 ->
-      conv_cum leq Σ Γ (tLetIn na1 t1 A1 u1) (tLetIn na2 t2 A2 u2).
+  Lemma equality_eq_le_gen {le Γ T U} :
+    Σ ;;; Γ ⊢ T = U ->
+    Σ ;;; Γ ⊢ T ≤[le] U.
   Proof.
-    intros hna X H H'. destruct leq; cbn in *; sq.
-    - etransitivity.
-      + eapply conv_LetIn_bo. eassumption.
-      + etransitivity.
-        * eapply conv_LetIn_tm.
-          ++ eassumption.
-          ++ eassumption.
-        * eapply conv_LetIn_ty with (na := na2). 
-          ++ reflexivity.
-          ++ assumption. 
-    - etransitivity.
-      + eapply cumul_LetIn_bo. eassumption.
-      + etransitivity.
-        * eapply conv_cumul, conv_LetIn_tm; tea.
-        * eapply conv_cumul, conv_LetIn_ty with (na := na2); tea.
-          reflexivity.
+    destruct le => //.
+    eapply equality_eq_le.
   Qed.
 
-  Lemma it_mkLambda_or_LetIn_conv_cum leq Γ Δ1 Δ2 t1 t2 :
-      conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
-      conv_cum leq Σ (Γ ,,, Δ1) t1 t2 ->
-      conv_cum leq Σ Γ (it_mkLambda_or_LetIn Δ1 t1) (it_mkLambda_or_LetIn Δ2 t2).
+  Lemma equality_LetIn {leq Γ na1 na2 t1 t2 A1 A2 u1 u2} :
+    eq_binder_annot na1 na2 ->
+    Σ;;; Γ ⊢ t1 = t2 ->
+    Σ;;; Γ ⊢ A1 = A2 ->
+    Σ ;;; Γ ,, vdef na1 t1 A1 ⊢ u1 ≤[leq] u2 ->
+    Σ ;;; Γ ⊢ tLetIn na1 t1 A1 u1 ≤[leq] tLetIn na2 t2 A2 u2.
   Proof.
-    induction Δ1 in Δ2, t1, t2 ⊢ *; intros X Y.
+    intros hna ont ona onu.
+    etransitivity.
+    { eapply equality_LetIn_bo; tea. }
+    eapply equality_eq_le_gen.
+    etransitivity.
+    { eapply conv_LetIn_ty; tea; eauto with fvs. }
+    eapply conv_LetIn_tm; tea; eauto with fvs.
+    now move/ws_equality_is_open_term_right: onu.
+  Qed.
+
+  Lemma it_mkLambda_or_LetIn_conv_cum {leq Γ Δ1 Δ2 t1 t2} :
+    closed_conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
+    Σ ;;; (Γ ,,, Δ1) ⊢ t1 ≤[leq] t2 ->
+    Σ ;;; Γ ⊢ (it_mkLambda_or_LetIn Δ1 t1) ≤[leq] (it_mkLambda_or_LetIn Δ2 t2).
+  Proof.
+    induction Δ1 in Δ2, t1, t2 |- *; intros X Y.
     - apply All2_fold_length in X.
       destruct Δ2; cbn in *; [trivial|].
       rewrite app_length in X; lia.
@@ -2491,102 +2484,114 @@ Section Inversions.
       destruct Δ2 as [|c Δ2]; simpl in *; [rewrite app_length in X'; lia|].
       dependent destruction X.
       + eapply IHΔ1; tas; cbn.
-        depelim c0.
-        * eapply conv_cum_Lambda; simpl; tea.
-        * eapply conv_cum_LetIn; simpl; tea.
+        depelim e.
+        * eapply equality_Lambda; simpl; tea.
+        * eapply equality_LetIn; simpl; tea.
   Qed.
 
   Lemma it_mkLambda_or_LetIn_conv Γ Δ1 Δ2 t1 t2 :
-      conv_context Σ (Γ ,,, Δ1) (Γ ,,, Δ2) ->
-      Σ ;;; Γ ,,, Δ1 ⊢ t1 = t2 ->
-      Σ ;;; Γ ⊢ it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2.
+    Σ ⊢ Γ ,,, Δ1 = Γ ,,, Δ2 ->
+    Σ ;;; Γ ,,, Δ1 ⊢ t1 = t2 ->
+    Σ ;;; Γ ⊢ it_mkLambda_or_LetIn Δ1 t1 = it_mkLambda_or_LetIn Δ2 t2.
   Proof.
-    induction Δ1 in Δ2, t1, t2 ⊢ *; intros X Y.
+    induction Δ1 in Δ2, t1, t2 |- *; intros X Y.
     - apply All2_fold_length in X.
       destruct Δ2; cbn in *; [trivial|].
       exfalso. rewrite app_length in X; lia.
     - apply All2_fold_length in X as X'.
       destruct Δ2 as [|c Δ2]; simpl in *; [exfalso; rewrite app_length in X'; lia|].
       dependent destruction X.
-      + eapply IHΔ1; tas; cbn. depelim c0.
+      + eapply IHΔ1; tas; cbn.
+        assert (foo := ws_equality_is_open_term_right Y).
+        depelim e.
         * etransitivity.
           { eapply conv_Lambda_r; tea. }
-          now eapply conv_Lambda_l.
+          eapply conv_Lambda_l; tea.
         * etransitivity.
           { eapply conv_LetIn_bo; tea. }
           etransitivity.
-          ++ eapply conv_LetIn_tm; tea.
-          ++ eapply conv_LetIn_ty with (na := na'); tea. reflexivity.
+          ++ eapply conv_LetIn_tm; tea; cbn; eauto with fvs.
+          ++ eapply conv_LetIn_ty; tea; cbn; eauto with fvs.
   Qed.
 
   Lemma red_lambda_inv Γ na A1 b1 T :
     Σ ;;; Γ ⊢ (tLambda na A1 b1) ⇝ T ->
-    ∑ A2 b2, (T = tLambda na A2 b2) *
-             Σ ;;; Γ ⊢ A1 ⇝ A2 × Σ ;;; (Γ ,, vass na A1) ⊢ b1 ⇝ b2.
+    ∑ A2 b2, (T = tLambda na A2 b2) ×
+        Σ ;;; Γ ⊢ A1 ⇝ A2 × Σ ;;; (Γ ,, vass na A1) ⊢ b1 ⇝ b2.
   Proof.
-    intros. eapply clos_rt_rt1n_iff in X. depind X.
-    - eexists _, _; intuition eauto.
-    - depelim r; solve_discr; specialize (IHX _ _ _ _ eq_refl);
-      destruct IHX as [A2 [B2 [[-> ?] ?]]].
-      + eexists _, _; intuition eauto.
-        1: now eapply red_step with M'.
-        eapply red_red_ctx_inv; eauto.
+    intros [onΓ onl ont].
+    rewrite on_fvs_lambda in onl.
+    move: onl => /=/andP [] onA1 onb1.
+    eapply clos_rt_rt1n_iff in ont. depind ont.
+    - eexists _, _.
+      intuition eauto.
+      * eapply closed_red_refl; eauto with fvs.
+      * eapply closed_red_refl; eauto with fvs.
+    - depelim r; solve_discr; specialize (IHont _ _ _ _ onΓ eq_refl byfvs).
+      + forward IHont by tas.
+        destruct IHont as [A2 [B2 [-> [? ?]]]].
+        eexists _, _; intuition eauto.
+        1:{ split; tas. eapply red_step with M' => //. apply c. }
+        eapply red_red_ctx_inv'; eauto.
         constructor; auto.
-        * eapply All2_fold_red_refl.
+        * now eapply closed_red_ctx_refl.
         * constructor; auto.
-      + eexists _, _; intuition eauto.
-        now eapply red_step with M'.
+          split; tas; pcuic.
+      + forward IHont.
+        { eapply red1_on_free_vars; tea.
+          rewrite (@on_free_vars_ctx_on_ctx_free_vars _ (Γ ,, vass na A1)).
+          eauto with fvs. }
+          destruct IHont as [A2 [B2 [-> [? ?]]]].
+          eexists _, _; intuition eauto.
+          split; eauto with fvs. eapply red_step with M' => //.
+          apply c0.
+  Qed.
+
+  Lemma equality_Lambda_inv :
+    forall leq Γ na1 na2 A1 A2 b1 b2,
+      Σ ;;; Γ ⊢ tLambda na1 A1 b1 ≤[leq] tLambda na2 A2 b2 ->
+      eq_binder_annot na1 na2 × Σ ;;; Γ ⊢ A1 = A2 × Σ ;;; Γ ,, vass na1 A1 ⊢ b1 ≤[leq] b2.
+  Proof.
+    intros *.
+    move/equality_red; intros (v & v' & redv & redv' & eq).
+    eapply red_lambda_inv in redv as (A1' & b1' & -> & rA1 & rb1).
+    eapply red_lambda_inv in redv' as (v0 & v0' & redv0 & redv0' & eq0).
+    subst v'.
+    destruct leq; depelim eq.
+    { assert (Σ ;;; Γ ⊢ A1 = A2).
+      - eapply equality_red.
+        exists A1', v0; intuition auto.
+      - intuition auto. transitivity b1'; pcuic.
+        eapply equality_equality_ctx; revgoals.
+        { transitivity v0'; tea. 2:eapply red_equality_inv; tea.
+          constructor; tea. 1,3:eauto with fvs.
+          now generalize (closed_red_open_right rb1). }
+        constructor.
+        { eapply closed_context_equality_refl; eauto with fvs. }
+        constructor; eauto. }
+    { assert (Σ ;;; Γ ⊢ A1 = A2).
+      - eapply equality_red.
+        exists A1', v0; intuition auto.
+      - intuition auto. transitivity b1'; pcuic.
+        eapply equality_equality_ctx; revgoals.
+        { transitivity v0'; tea. 2:eapply red_equality_inv; tea.
+          constructor; tea. 1,3:eauto with fvs.
+          now generalize (closed_red_open_right rb1). }
+        constructor.
+        { eapply closed_context_equality_refl; eauto with fvs. }
+        constructor; eauto. }
   Qed.
 
   Lemma Lambda_conv_cum_inv :
     forall leq Γ na1 na2 A1 A2 b1 b2,
-      conv_cum leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
-      eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ ⊢ A1 = A2 ∥ /\ conv_cum leq Σ (Γ ,, vass na1 A1) b1 b2.
+      sq_equality leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
+      eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ ⊢ A1 = A2 ∥ /\ sq_equality leq Σ (Γ ,, vass na1 A1) b1 b2.
   Proof.
-    intros *.
-    destruct leq; simpl in *.
-    - destruct 1.
-      eapply conv_alt_red in X as [l [r [[redl redr] eq]]].
-      eapply red_lambda_inv in redl as [A1' [b1' [[-> ?] ?]]].
-      eapply red_lambda_inv in redr as [A2' [b2' [[-> ?] ?]]].
-      depelim eq. assert (Σ ;;; Γ ⊢ A1 = A2).
-      { eapply conv_trans with A1'; auto.
-        eapply conv_trans with A2'; auto.
-        - constructor. assumption.
-        - apply conv_sym; auto.
-      }
-      split; [|split]; tas. all:constructor; auto.
-      eapply conv_trans with b1'; auto.
-      eapply conv_trans with b2'; auto.
-      + constructor; auto.
-      + apply conv_sym; auto.
-        eapply conv_conv_ctx; eauto.
-        constructor; auto. 1: reflexivity.
-        constructor; now symmetry.
-    - destruct 1.
-      eapply cumul_alt in X as [l [r [[redl redr] eq]]].
-      eapply red_lambda_inv in redl as [A1' [b1' [[-> ?] ?]]].
-      eapply red_lambda_inv in redr as [A2' [b2' [[-> ?] ?]]].
-      depelim eq.
-      assert (Σ ;;; Γ ⊢ A1 = A2).
-      { eapply conv_trans with A1'; auto.
-        eapply conv_trans with A2'; auto.
-        - constructor. assumption.
-        - apply conv_sym; auto.
-      }
-      split; [|split]; tas. all:constructor; auto.
-      eapply red_cumul_cumul; tea.
-      eapply cumul_trans with b2'; auto.
-      + constructor; auto.
-      + eapply cumul_conv_ctx; tas.
-        * eapply red_cumul_cumul_inv; tea.
-          reflexivity.
-        * symmetry in X.
-          constructor. 1: reflexivity.
-          now constructor.
+    intros * []. eapply equality_Lambda_inv in X.
+    intuition auto. all:sq; auto.
   Qed.
 
-End Inversions.
+End ConvRedConv.
 
 Lemma conv_LetIn `{cf:checker_flags} Σ Γ na1 na2 t1 t2 A1 A2 u1 u2 :
   wf Σ.1 ->

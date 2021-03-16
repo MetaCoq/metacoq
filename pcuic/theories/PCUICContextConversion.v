@@ -395,6 +395,35 @@ Proof.
   now transitivity y.
 Qed.
 
+Definition compare_context {cf} le Σ := 
+  eq_context_upto Σ (eq_universe Σ) (compare_universe le Σ).
+
+Instance compare_universe_refl {cf} le Σ : RelationClasses.Reflexive (compare_universe le Σ).
+Proof.
+  destruct le; tc.
+Qed.
+
+Instance compare_universe_trans {cf} le Σ : RelationClasses.Transitive (compare_universe le Σ).
+Proof.
+  destruct le; tc.
+Qed.
+
+Instance compare_universe_substu {cf} le Σ : SubstUnivPreserving (compare_universe le Σ).
+Proof.
+  destruct le; tc.
+Qed.
+
+Instance compare_universe_subrel {cf} le Σ : RelationClasses.subrelation (eq_universe Σ) (compare_universe le Σ).
+Proof.
+  destruct le; tc.
+Qed.
+
+Instance compare_universe_preorder {cf} le Σ : RelationClasses.PreOrder (compare_universe le Σ).
+Proof.
+  destruct le; tc.
+Qed.
+
+
 Section ContextConversion.
   Context {cf : checker_flags}.
   Context {Σ : global_env_ext}.
@@ -638,34 +667,6 @@ Section ContextConversion.
       exists x0; split; eauto.
       transitivity v'; auto.
       eapply eq_term_upto_univ_trans with v''; auto; tc.
-  Qed.
-
-  Definition compare_context le Σ := 
-    eq_context_upto Σ (eq_universe Σ) (compare_universe le Σ).
-
-  Instance compare_universe_refl le : RelationClasses.Reflexive (compare_universe le Σ).
-  Proof.
-    destruct le; tc.
-  Qed.
-
-  Instance compare_universe_trans le : RelationClasses.Transitive (compare_universe le Σ).
-  Proof.
-    destruct le; tc.
-  Qed.
-
-  Instance compare_universe_substu le : SubstUnivPreserving (compare_universe le Σ).
-  Proof.
-    destruct le; tc.
-  Qed.
-
-  Instance compare_universe_subrel le : RelationClasses.subrelation (eq_universe Σ) (compare_universe le Σ).
-  Proof.
-    destruct le; tc.
-  Qed.
-
-  Instance compare_universe_preorder le : RelationClasses.PreOrder (compare_universe le Σ).
-  Proof.
-    destruct le; tc.
   Qed.
 
   Lemma closed_red_eq_context_upto_l {le Γ Δ} {u} {v} :

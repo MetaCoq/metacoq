@@ -379,7 +379,7 @@ Section ConvCongruences.
     - eapply substitution_untyped_red; tea; eauto with fvs.
   Qed. *)
 
-  Lemma closed_red_substitution {Γ Δ Γ' s M N} :
+  Lemma closed_red_untyped_substitution {Γ Δ Γ' s M N} :
     untyped_subslet Γ s Δ ->
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) s ->
     Σ ;;; Γ ,,, Δ ,,, Γ' ⊢ M ⇝ N ->
@@ -391,13 +391,13 @@ Section ConvCongruences.
     - eapply substitution_untyped_red; tea; eauto with fvs.
   Qed.
 
-  Lemma closed_red_substitution0 {Γ Δ s M N} :
+  Lemma closed_red_untyped_substitution0 {Γ Δ s M N} :
     untyped_subslet Γ s Δ ->
     forallb (on_free_vars (shiftnP #|Γ| xpred0)) s ->
     Σ ;;; Γ ,,, Δ ⊢ M ⇝ N ->
     Σ ;;; Γ ⊢ subst s 0 M ⇝ subst s 0 N.
   Proof.
-    intros Hs H. now apply (closed_red_substitution (Γ' := [])).
+    intros Hs H. now apply (closed_red_untyped_substitution (Γ' := [])).
   Qed.
 
   Lemma invert_red_letin {Γ C na d ty b} :
@@ -447,7 +447,7 @@ Section ConvCongruences.
         now transitivity r; eauto with pcuic fvs.
       - right; auto.
         transitivity (r {0 := d}); auto.
-        eapply (closed_red_substitution (Δ := [vdef na d ty]) (Γ' := [])); eauto.
+        eapply (closed_red_untyped_substitution (Δ := [vdef na d ty]) (Γ' := [])); eauto.
         * rewrite -{1}(subst_empty 0 d). constructor. constructor.
         * cbn. eauto with fvs.
         * split; eauto with fvs.
@@ -508,7 +508,7 @@ Section ConvCongruences.
       transitivity (b' {0 := d'}).
       * transitivity (b' {0 := d}).
         + eapply red_equality.
-          eapply (closed_red_substitution0 (Δ := [_])); tea; cbn; eauto with pcuic fvs.
+          eapply (closed_red_untyped_substitution0 (Δ := [_])); tea; cbn; eauto with pcuic fvs.
         + eapply red_equality.
           eapply (closed_red_red_subst0 (Δ := [_])); eauto with fvs pcuic.
       * apply red_equality_inv.
@@ -536,7 +536,7 @@ Section ConvCongruences.
       + symmetry.
         transitivity (b' {0 := d}).
         * eapply red_equality.
-          eapply (closed_red_substitution0 (Δ := [_])); tea; cbn; eauto with pcuic fvs.
+          eapply (closed_red_untyped_substitution0 (Δ := [_])); tea; cbn; eauto with pcuic fvs.
         * apply red_equality.
           eapply (closed_red_red_subst0 (Δ := [_])); eauto with fvs pcuic.
     - eapply equality_red. exists v, v'.
@@ -2593,78 +2593,69 @@ Section ConvRedConv.
 
 End ConvRedConv.
 
-Lemma conv_LetIn `{cf:checker_flags} Σ Γ na1 na2 t1 t2 A1 A2 u1 u2 :
-  wf Σ.1 ->
-  eq_binder_annot na1 na2 ->
-  Σ;;; Γ ⊢ t1 = t2 ->
-  Σ;;; Γ ⊢ A1 = A2 ->
-  conv Σ (Γ ,, vdef na1 t1 A1) u1 u2 ->
-  conv Σ Γ (tLetIn na1 t1 A1 u1) (tLetIn na2 t2 A2 u2).
-Proof.
-  intros Hna X H H'.
-  eapply conv_trans => //.
-  + eapply conv_LetIn_bo. eassumption.
-  + etransitivity.
-    * eapply conv_LetIn_tm; tea.
-    * eapply conv_LetIn_ty with (na := na2).
-      ++ reflexivity.
-      ++ assumption.
-Qed.
-
-Lemma cum_LetIn `{cf:checker_flags} Σ Γ na1 na2 t1 t2 A1 A2 u1 u2 :
-  wf Σ.1 ->
-  eq_binder_annot na1 na2 ->
-  Σ;;; Γ ⊢ t1 = t2 ->
-  Σ;;; Γ ⊢ A1 = A2 ->
-  cumul Σ (Γ ,, vdef na1 t1 A1) u1 u2 ->
-  cumul Σ Γ (tLetIn na1 t1 A1 u1) (tLetIn na2 t2 A2 u2).
-Proof.
-  intros Hna X H H'.
-  eapply cumul_trans => //.
-  + eapply cumul_LetIn_bo. eassumption.
-  + etransitivity.
-    * eapply conv_cumul. eapply conv_LetIn_tm; tea.
-    * eapply conv_cumul, conv_LetIn_ty with (na := na2).
-      ++ reflexivity.
-      ++ assumption.
-Qed.
-
-Lemma untyped_substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
+(* Lemma untyped_substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
   wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') ->
   untyped_subslet Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' ⊢ M = N ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' ⊢ subst s #|Γ''| M = subst s #|Γ''| N.
 Proof.
   intros wfΓ Hs. induction 1.
-  - constructor.
-    now apply subst_eq_term.
+  - cbn. now rewrite !subst_empty /= subst0_context.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
     eapply red_conv_conv; eauto.
   - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
     eapply red_conv_conv_inv; eauto.
+Qed. *)
+
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
+
+Import PCUICOnFreeVars.
+
+Lemma subslet_open {cf} {Σ} {wfΣ : wf Σ} {Γ s Γ'} : subslet Σ Γ s Γ' ->
+  forallb (is_open_term Γ) s.
+Proof.
+  induction 1; simpl; auto.
+  - apply subject_closed in t0.
+    rewrite (closedn_on_free_vars t0) //.
+  - eapply subject_closed in t0.
+    rewrite (closedn_on_free_vars t0) //.
+Qed.
+Hint Resolve subslet_open : fvs.
+
+Lemma closed_red_subst {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Γ' s M N} :
+  subslet Σ Γ s Δ ->
+  Σ ;;; Γ ,,, Δ ,,, Γ' ⊢ M ⇝ N ->
+  Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| M ⇝ subst s #|Γ'| N.
+Proof.
+  intros Hs H. split.
+  - eapply is_closed_subst_context; eauto with fvs pcuic.
+    eapply (subslet_length Hs).
+  - eapply is_open_term_subst; tea; eauto with fvs pcuic.
+    eapply (subslet_length Hs).
+  - eapply substitution_untyped_red; tea; eauto with fvs.
+    now eapply subslet_untyped_subslet.
 Qed.
 
-Lemma substitution_conv `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
-  wf Σ -> wf_local Σ (Γ ,,, Γ' ,,, Γ'') -> subslet Σ Γ s Γ' ->
+Lemma substitution_conv {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Γ' Γ'' s M N :
+  subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' ⊢ M = N ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' ⊢ subst s #|Γ''| M = subst s #|Γ''| N.
 Proof.
-  intros wfΓ Hs. induction 1.
-  - constructor.
+  intros Hs. induction 1.
+  - cbn. constructor; eauto with fvs.
+    { eapply is_closed_subst_context; tea; eauto with fvs.
+      now apply (subslet_length Hs). }
+    { eapply is_open_term_subst; tea; eauto with fvs.
+      now eapply (subslet_length Hs). }
+    { eapply is_open_term_subst; tea; eauto with fvs.
+      now apply (subslet_length Hs). }
     now apply subst_eq_term.
-  - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
-    eapply red_conv_conv; eauto.
-  - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
-    eapply red_conv_conv_inv; eauto.
-Qed.
-
-Lemma red_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Γ' s s' b : wf Σ ->
-  All2 (closed_red Σ Γ) s s' ->
-  untyped_subslet Γ s Δ ->
-  conv Σ (Γ ,,, Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
-Proof.
-  move=> wfΣ eqsub subs.
-  apply red_conv. now eapply red_red.
+  - eapply red_equality_left; tea.
+    eapply closed_red_subst; tea.
+    constructor; eauto.
+  - eapply red_equality_right; tea.
+    eapply closed_red_subst; tea.
+    constructor; eauto.
 Qed.
 
 Derive Signature for untyped_subslet.
@@ -2676,15 +2667,15 @@ Lemma conv_subst_conv {cf:checker_flags} (Σ : global_env_ext) Γ Δ Δ' Γ' s s
   conv Σ (Γ ,,, Γ') (subst s #|Γ'| b) (subst s' #|Γ'| b).
 Proof.
   move=> wfΣ eqsub subs subs'.
-  assert(∑ s0 s'0, All2 (closed_red Σ Γ) s s0 × All2 (closed_red Σ Γ) s' s'0 × All2 (eq_term Σ Σ) s0 s'0)
-    as [s0 [s'0 [[redl redr] eqs]]].
-  { clear subs'; induction eqsub in Δ, subs ⊢ *.
+  assert(∑ s0 s'0, All2 (red Σ Γ) s s0 × All2 (red Σ Γ) s' s'0 × All2 (eq_term Σ Σ) s0 s'0)
+    as [s0 [s'0 [redl [redr eqs]]]].
+  { clear subs'; induction eqsub in Δ, subs |- *.
     * depelim subs. exists [], []; split; auto.
     * depelim subs.
-    - specialize (IHeqsub _ subs) as [s0 [s'0 [[redl redr] eqs0]]].
+    - specialize (IHeqsub _ subs) as [s0 [s'0 [redl [redr eqs0]]]].
       eapply conv_alt_red in r as [v [v' [[redv redv'] eqvv']]].
       exists (v :: s0), (v' :: s'0). repeat split; constructor; auto.
-    - specialize (IHeqsub _ subs) as [s0 [s'0 [[redl redr] eqs0]]].
+    - specialize (IHeqsub _ subs) as [s0 [s'0 [redl [redr eqs0]]]].
       eapply conv_alt_red in r as [v [v' [[redv redv'] eqvv']]].
       exists (v :: s0), (v' :: s'0). repeat split; constructor; auto. }
   eapply conv_trans => //.

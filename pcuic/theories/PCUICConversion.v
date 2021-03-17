@@ -147,6 +147,7 @@ Hint Extern 4 => progress autorewrite with fvs : fvs.
 Hint Resolve closed_red_open_right : fvs.
 
 Ltac fvs := eauto 10 with fvs.
+Hint Resolve eq_universe_leq_universe : core.
 
 Section ConvCongruences.
   Context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
@@ -230,13 +231,6 @@ Section ConvCongruences.
       + eapply IHws_equality; reflexivity.
     - depelim r. solve_discr.
   Qed.
-
-  Lemma eq_universe_leq_universe u v : 
-    eq_universe Σ u v -> leq_universe Σ u v.
-  Proof.
-    now eapply eq_universe_leq_universe.
-  Qed.
-  Hint Resolve eq_universe_leq_universe : core.
 
   Lemma cumul_Sort_l_inv {Γ s T} le :
     Σ ;;; Γ ⊢ tSort s ≤[le] T ->
@@ -3472,8 +3466,6 @@ Section CumulSubst.
         eexists; intuition eauto.
   Qed. *)
 
-  Require Import ssrbool.
-
   Lemma weaken_cumul_ctx {le Γ Γ' Δ Δ'} :
     is_closed_context Γ ->
     context_equality_rel le Σ Γ' Δ Δ' ->
@@ -3494,7 +3486,7 @@ Section CumulSubst.
   Qed.
 
 Local Open Scope sigma_scope.
-From MetaCoq.PCUIC Require Import PCUICParallelReduction.
+(* From MetaCoq.PCUIC Require Import PCUICParallelReduction. *)
 
 (* Lemma clos_rt_image {A B} (R : A -> A -> Type) (f g : B -> A) x y: 
   (forall x, R (f x) (g x)) ->
@@ -3594,11 +3586,10 @@ Proof.
     + clear -wfΣ X0 ctxapp.
       induction X0; pcuic.
       constructor; auto.
-      destruct p0 as (IHctx&IHbody).
       unfold on_Trel.
       rewrite map_branch_k_map_branch_k => //.
       split.
-      * eapply IHbody.
+      * eapply b.
         rewrite Nat.add_0_r.
         eauto.
         rewrite nth_error_app_ge ?inst_case_branch_context_length; try lia.
@@ -3625,3 +3616,5 @@ Proof.
   intros cl clt h; split; auto.
   now apply red_rel_all.
 Qed.
+
+End CumulSubst.

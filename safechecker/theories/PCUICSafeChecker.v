@@ -520,7 +520,7 @@ Section CheckEnv.
   
   Program Fixpoint check_conv_args (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) l l'
     (wfl : wt_terms Σ Γ l) (wfl' : wt_terms Σ Γ l') :
-    typing_result (∥ conv_terms Σ Γ l l' ∥) :=
+    typing_result (∥ equality_terms Σ Γ l l' ∥) :=
     match l, l' with
     | [], [] => ret (sq All2_nil)
     | t :: l, t' :: l' => 
@@ -798,11 +798,11 @@ Section CheckEnv.
     induction Δ using PCUICInduction.ctx_length_rev_ind in s, s', args |- *; simpl;
       rewrite ?it_mkProd_or_LetIn_app;
     intros ass wf sp; depelim sp; try constructor.
-    * now eapply cumul_Sort_Prod_inv in c.
+    * now eapply equality_Sort_Prod_inv in c.
     * apply assumption_context_app in ass as [ass assd].  
       destruct d as [na [b|] ty]; unfold mkProd_or_LetIn in c; simpl in *.
       elimtype False; depelim assd.
-      eapply cumul_Prod_Sort_inv in c; auto.
+      eapply equality_Prod_Sort_inv in c; auto.
     * apply assumption_context_app in ass as [ass assd].  
       destruct d as [na' [b'|] ty']; unfold mkProd_or_LetIn in c; simpl in *.
       elimtype False; depelim assd.

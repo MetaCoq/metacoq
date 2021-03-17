@@ -341,7 +341,7 @@ Section Inversion.
       destruct hh as [s1 [A' [? [? [? ?]]]]].
       exists A'. split ; eauto.
       cbn. etransitivity; tea.
-      eapply cumul_it_mkProd_or_LetIn_codom.
+      eapply equality_it_mkProd_or_LetIn_codom.
       assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
@@ -349,7 +349,7 @@ Section Inversion.
       pose proof hh as [s1 [B' [? [? ?]]]].
       exists B'. split ; eauto.
       cbn. etransitivity; tea.
-      eapply cumul_it_mkProd_or_LetIn_codom.
+      eapply equality_it_mkProd_or_LetIn_codom.
       assumption.
   Qed.
 

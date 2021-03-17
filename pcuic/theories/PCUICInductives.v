@@ -1123,7 +1123,7 @@ Proof.
     eapply substitution_let in t1; auto.
     rewrite /subst1 subst_it_mkProd_or_LetIn /= in t1.
     specialize (X (subst_context [b] 0 Δ) ltac:(autorewrite with len; lia)).
-    eapply invert_cumul_letin_l in c; eauto.
+    eapply equality_LetIn_l_inv in c; eauto.
     eapply type_Cumul' in t1. 3:eauto.
     2:{ pcuic. eexists; econstructor; pcuic. }
     specialize (X _ _ t1).

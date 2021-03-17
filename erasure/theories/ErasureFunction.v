@@ -316,7 +316,7 @@ Next Obligation.
   destruct t1 as [s Hs].
   red in Hs.
   specialize (c _ Hs).
-  eapply invert_cumul_sort_r in c as [u' [redu' leq]].
+  eapply equality_Sort_r_inv in c as [u' [redu' leq]].
   now apply (H0 _ redu').
 Qed.
 

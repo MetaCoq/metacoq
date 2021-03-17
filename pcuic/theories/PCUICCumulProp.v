@@ -26,8 +26,8 @@ Lemma cumul_sort_confluence {Σ : global_env_ext} {wfΣ : wf Σ} {Γ A u v} :
           leq_universe (global_ext_constraints Σ) v' v).
 Proof.
   move=> H H'.
-  eapply invert_cumul_sort_r in H as [u'u ?].
-  eapply invert_cumul_sort_r in H' as [vu ?].
+  eapply equality_Sort_r_inv in H as [u'u ?].
+  eapply equality_Sort_r_inv in H' as [vu ?].
   destruct p, p0.
   destruct (red_confluence wfΣ r r0).
   destruct p.
@@ -61,7 +61,7 @@ Proof.
     eapply (All2_impl conv'). intros. now apply red_conv.
 Qed.
 
-Lemma invert_conv_letin_l_alt {Σ Γ C na d ty b} :
+Lemma equality_LetIn_l_inv_alt {Σ Γ C na d ty b} :
   wf Σ.1 -> wf_local Σ (Γ ,, vdef na d ty) ->
   Σ ;;; Γ |- tLetIn na d ty b = C ->
   Σ ;;; Γ,, vdef na d ty |- b = lift0 1 C.
@@ -70,7 +70,7 @@ Proof.
   epose proof (red_expand_let _ _ _ _ b wf).
   eapply conv_trans. auto. eapply red_conv, X. 
   eapply (PCUICWeakening.weakening_conv _ Γ [] [vdef _ _ _]); auto.
-  now eapply invert_conv_letin_l in Hlet.
+  now eapply equality_LetIn_l_inv in Hlet.
 Qed.
 
 Lemma is_prop_bottom {Σ Γ T s s'} :

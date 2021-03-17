@@ -661,7 +661,7 @@ Section Conversion.
       | Reduction
       | Term
       | Fallback => ConversionResult (conv_term leq Γ t π t' π')
-      | Args => ConversionResult (∥conv_terms Σ (Γ,,, stack_context π)
+      | Args => ConversionResult (∥equality_terms Σ (Γ,,, stack_context π)
                                    (decompose_stack π).1
                                    (decompose_stack π').1∥)
       end.
@@ -1670,9 +1670,9 @@ Section Conversion.
     (p' : predicate term) (c' : term) (brs1' brs2' : list (branch term))
     (π' : stack) (h' : wtp Γ (tCase ci p' c' (brs1' ++ brs2')) π')
     (hx : conv_stack_ctx Γ π π')
-    (h1 : ∥ conv_brs Σ (Γ ,,, stack_context π) brs1 brs1' ∥)
+    (h1 : ∥ equality_brs Σ (Γ ,,, stack_context π) brs1 brs1' ∥)
     (aux : Aux Term Γ (tCase ci p c (brs1 ++ brs2)) π (tCase ci p' c' (brs1' ++ brs2')) π' h')
-    : ConversionResult (∥ conv_brs Σ (Γ ,,, stack_context π) brs2 brs2' ∥)
+    : ConversionResult (∥ equality_brs Σ (Γ ,,, stack_context π) brs2 brs2' ∥)
     by struct brs2 :=
 
     isconv_branches Γ ci
@@ -1862,7 +1862,7 @@ Section Conversion.
     (hx : conv_stack_ctx Γ π π')
     (ei : ci = ci')
     (aux : Aux Term Γ (tCase ci p c brs) π (tCase ci' p' c' brs') π' h')
-    : ConversionResult (∥ conv_brs Σ (Γ ,,, stack_context π) brs brs' ∥) :=
+    : ConversionResult (∥ equality_brs Σ (Γ ,,, stack_context π) brs brs' ∥) :=
 
     isconv_branches' Γ ci p c brs π h ci' p' c' brs' π' h' hx eci aux :=
       isconv_branches Γ ci p c [] brs π _ p' c' [] brs' π' _ _ _ _.
@@ -1902,7 +1902,7 @@ Section Conversion.
     | CoIndFix => CoFixMfixMismatch
     end.
 
-  Equations isconv_fix_types (fk : fix_kind) (Γ : context)
+  Equations isequality_fix_types (fk : fix_kind) (Γ : context)
     (idx : nat)
     (mfix1 mfix2 : mfixpoint term) (π : stack)
     (h : wtp Γ (mFix fk (mfix1 ++ mfix2) idx) π)
@@ -1920,7 +1920,7 @@ Section Conversion.
       ) mfix2 mfix2' ∥)
     by struct mfix2 :=
 
-    isconv_fix_types
+    isequality_fix_types
       fk Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 aux
     with inspect (eqb u.(rarg) v.(rarg)) := {
     | @exist true eq1
@@ -1934,7 +1934,7 @@ Section Conversion.
              aux
       := {
       | Success h2 with
-          isconv_fix_types fk Γ idx
+          isequality_fix_types fk Γ idx
             (mfix1 ++ [u]) mfix2 π _
             (mfix1' ++ [v]) mfix2' π' _
             hx _ _
@@ -1956,12 +1956,12 @@ Section Conversion.
       )
     } ;
 
-    isconv_fix_types fk Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 aux := yes ;
+    isequality_fix_types fk Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 aux := yes ;
 
     (* TODO It might be more efficient to check the lengths first
        and then conclude this case is not possible.
     *)
-    isconv_fix_types fk Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 aux :=
+    isequality_fix_types fk Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 aux :=
       no (
         mFixMfixMismatch fk idx
           (Γ ,,, stack_context π) (mfix1 ++ mfix2)
@@ -2100,7 +2100,7 @@ Section Conversion.
     destruct fk. all: reflexivity.
   Qed.
 
-  Equations isconv_fix_bodies (fk : fix_kind) (Γ : context) (idx : nat)
+  Equations isequality_fix_bodies (fk : fix_kind) (Γ : context) (idx : nat)
     (mfix1 mfix2 : mfixpoint term) (π : stack)
     (h : wtp Γ (mFix fk (mfix1 ++ mfix2) idx) π)
     (mfix1' mfix2' : mfixpoint term) (π' : stack)
@@ -2115,7 +2115,7 @@ Section Conversion.
     : ConversionResult (∥ All2 (fun u v => Σ ;;; Γ ,,, stack_context π ,,, fix_context_alt (map def_sig mfix1 ++ map def_sig mfix2) |- u.(dbody) = v.(dbody)) mfix2 mfix2' ∥)
     by struct mfix2 :=
 
-  isconv_fix_bodies fk Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 ha aux
+  isequality_fix_bodies fk Γ idx mfix1 (u :: mfix2) π h mfix1' (v :: mfix2') π' h' hx h1 ha aux
   with isconv_red_raw Conv
         u.(dbody)
         (mFix_mfix fk (mfix1, def_hole_body u.(dname) u.(dtype) u.(rarg), mfix2) idx :: π)
@@ -2124,7 +2124,7 @@ Section Conversion.
         aux
   := {
   | Success h2
-    with isconv_fix_bodies fk Γ idx
+    with isequality_fix_bodies fk Γ idx
            (mfix1 ++ [u]) mfix2 π _
            (mfix1' ++ [v]) mfix2' π' _
            hx _ _ _
@@ -2135,9 +2135,9 @@ Section Conversion.
   | Error e h := no e
   } ;
 
-  isconv_fix_bodies fk Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 ha aux := yes ;
+  isequality_fix_bodies fk Γ idx mfix1 [] π h mfix1' [] π' h' hx h1 ha aux := yes ;
 
-  isconv_fix_bodies fk Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 ha aux :=
+  isequality_fix_bodies fk Γ idx mfix1 mfix2 π h mfix1' mfix2' π' h' hx h1 ha aux :=
     False_rect _ _.
 
   Next Obligation.
@@ -2330,7 +2330,7 @@ Section Conversion.
     all: rewrite app_context_assoc; apply X.
   Qed.  
 
-  Equations isconv_fix (fk : fix_kind) (Γ : context)
+  Equations isequality_Fix (fk : fix_kind) (Γ : context)
     (mfix : mfixpoint term) (idx : nat) (π : stack)
     (h : wtp Γ (mFix fk mfix idx) π)
     (mfix' : mfixpoint term) (idx' : nat) (π' : stack)
@@ -2344,16 +2344,16 @@ Section Conversion.
           (u.(rarg) = v.(rarg)) * eq_binder_annot u.(dname) v.(dname)
       ) mfix mfix' ∥) :=
 
-    isconv_fix fk Γ mfix idx π h mfix' idx' π' h' hx ei aux
+    isequality_Fix fk Γ mfix idx π h mfix' idx' π' h' hx ei aux
     with
-      isconv_fix_types fk Γ idx
+      isequality_fix_types fk Γ idx
         [] mfix π _
         [] mfix' π' _
         hx _ _
     := {
     | Success h1
       with
-        isconv_fix_bodies fk Γ idx
+        isequality_fix_bodies fk Γ idx
           [] mfix π _
           [] mfix' π' _
           hx _ _ _
@@ -2410,7 +2410,7 @@ Section Conversion.
     clear -typ_args.
     depelim typ_args.
     - easy.
-    - now apply cumul_Sort_Prod_inv in c.
+    - now apply equality_Sort_Prod_inv in c.
   Qed.
 
   Lemma welltyped_zipc_tProd_appstack_nil {Γ na A B l ρ} :
@@ -2465,8 +2465,8 @@ Section Conversion.
     ∥ci = ci' ×
      conv_predicate Σ (Γ,,, stack_context π) p p' ×
      Σ;;; Γ,,, stack_context π |- c = c' ×
-     conv_brs Σ (Γ,,, stack_context π) brs brs' ×
-     conv_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
+     equality_brs Σ (Γ,,, stack_context π) brs brs' ×
+     equality_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
   Proof.
     intros [] c_is_red%eq_sym c'_is_red%eq_sym isr1 isr2 cc.
     eapply reduced_case_discriminee_whne in c_is_red as wh1; eauto.
@@ -2475,9 +2475,9 @@ Section Conversion.
     rewrite !zipp_as_mkApps in cc.
     eapply whne_conv_context in wh2.
     2: eapply conv_context_sym; eauto.
-    apply conv_cum_mkApps_inv in cc as [(conv_case&conv_args)]; eauto using whnf_mkApps.
-    eapply conv_cum_tCase_inv in conv_case; eauto.
-    destruct conv_case as [(<-&?&?&?)].
+    apply conv_cum_mkApps_inv in cc as [(equality_Case&conv_args)]; eauto using whnf_mkApps.
+    eapply conv_cum_tCase_inv in equality_Case; eauto.
+    destruct equality_Case as [(<-&?&?&?)].
     constructor; intuition auto.
   Qed.
 
@@ -2513,7 +2513,7 @@ Section Conversion.
     conv_cum leq Σ (Γ,,, stack_context π) (zipp (tProj p c) π) (zipp (tProj p' c') π') ->
     ∥p = p' ×
      Σ;;; Γ,,, stack_context π |- c = c' ×
-     conv_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
+     equality_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
   Proof.
     intros [] c_is_red c'_is_red isr1 isr2 cc.
     eapply reduced_proj_body_whne in c_is_red as wh1; eauto.
@@ -2539,7 +2539,7 @@ Section Conversion.
              Σ;;; Γ,,, stack_context π |- dtype d = dtype d' ×
              Σ;;; Γ,,, stack_context π,,, fix_context mfix |- dbody d = dbody d')
           mfix mfix' ×
-     conv_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
+     equality_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
   Proof.
     intros [?] uf1 uf2 cc.
     rewrite !zipp_as_mkApps in cc.
@@ -2551,12 +2551,12 @@ Section Conversion.
     2: eassumption.
     2: apply red_mkApps; [reflexivity|exact a].
     2: apply red_mkApps; [reflexivity|exact a0].
-    apply conv_cum_mkApps_inv in cc as [(conv_fix&conv_args)]; auto.
+    apply conv_cum_mkApps_inv in cc as [(equality_Fix&conv_args)]; auto.
     2: eapply whnf_conv_context; eauto.
     2: eapply conv_context_sym; eauto.
-    apply conv_cum_tFix_inv in conv_fix as [(<-&?)]; auto.
+    apply conv_cum_tFix_inv in equality_Fix as [(<-&?)]; auto.
     constructor; split; [|split]; auto.
-    eapply conv_terms_red_conv; eauto.
+    eapply equality_terms_red_conv; eauto.
   Qed.
 
   Lemma inv_stuck_cofixes leq Γ mfix idx π mfix' idx' π' :
@@ -2568,13 +2568,13 @@ Section Conversion.
              Σ;;; Γ,,, stack_context π |- dtype d = dtype d' ×
              Σ;;; Γ,,, stack_context π,,, fix_context mfix |- dbody d = dbody d')
           mfix mfix' ×
-     conv_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
+     equality_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1∥.
   Proof.
     intros [?] cc.
     rewrite !zipp_as_mkApps in cc.
     destruct hΣ.
-    apply conv_cum_mkApps_inv in cc as [(conv_cofix&conv_args)]; auto.
-    apply conv_cum_tCoFix_inv in conv_cofix as [(<-&?)]; auto.
+    apply conv_cum_mkApps_inv in cc as [(equality_CoFix&conv_args)]; auto.
+    apply conv_cum_tCoFix_inv in equality_CoFix as [(<-&?)]; auto.
     constructor; split; [|split]; auto.
   Qed.
   
@@ -2592,7 +2592,7 @@ Section Conversion.
             (pre1 pre2 post1 post2 : list term)
             (eq1 : p1.(pparams) = pre1 ++ post1)
             (eq2 : p2.(pparams) = pre2 ++ post2) :
-    ConversionResult (∥conv_terms Σ (Γ,,, stack_context π1) post1 post2∥) :=
+    ConversionResult (∥equality_terms Σ (Γ,,, stack_context π1) post1 post2∥) :=
     isconv_predicate_params_aux
       Γ ci1 p1 c1 brs1 π1 h1 ci2 p2 c2 brs2 π2 h2
       hx aux pre1 pre2 [] [] eq1 eq2 => yes;
@@ -3027,7 +3027,7 @@ Section Conversion.
             }
           } ;
         | _ with inspect (eqb idx idx') := {
-          | @exist true eq4 with isconv_fix IndFix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+          | @exist true eq4 with isequality_Fix IndFix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
             | Success h1 with isconv_args_raw leq (tFix mfix idx) π1 (tFix mfix' idx') π2 aux := {
               | Success h2 := yes ;
               | Error e h := no e
@@ -3046,7 +3046,7 @@ Section Conversion.
 
     | prog_view_CoFix mfix idx mfix' idx'
       with inspect (eqb idx idx') := {
-      | @exist true eq4 with isconv_fix CoIndFix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
+      | @exist true eq4 with isequality_Fix CoIndFix Γ mfix idx π1 _ mfix' idx' π2 _ _ _ aux := {
         | Success h1 with isconv_args_raw leq (tCoFix mfix idx) π1 (tCoFix mfix' idx') π2 aux := {
           | Success h2 := yes ;
           | Error e h := no e
@@ -3336,7 +3336,7 @@ Section Conversion.
     constructor.
     change (eq_dec_to_bool ci ci') with (eqb ci ci') in eq5.
     destruct (eqb_spec ci ci'). 2: discriminate.
-    subst. eapply conv_Case. all: tas.
+    subst. eapply equality_Case. all: tas.
   Qed.
   Next Obligation.
     apply h; clear h.
@@ -3900,7 +3900,7 @@ Section Conversion.
     change (true = eqb idx idx') in eq4.
     destruct (eqb_spec idx idx'). 2: discriminate.
     subst.
-    eapply conv_Fix. all: assumption.
+    eapply equality_Fix. all: assumption.
   Qed.
   Next Obligation.
     apply h; clear h.
@@ -3940,7 +3940,7 @@ Section Conversion.
     change (true = eqb idx idx') in eq4.
     destruct (eqb_spec idx idx'). 2: discriminate.
     subst.
-    eapply conv_CoFix. all: assumption.
+    eapply equality_CoFix. all: assumption.
   Qed.
   Next Obligation.
     apply h; clear h.
@@ -3991,7 +3991,7 @@ Section Conversion.
             (hπ2 : isStackApp π2 = false)
             (hx : conv_stack_ctx Γ π1 π2)
             (aux : Aux' Γ t1 args1 l1 π1 t2 (appstack l2 π2) h2)
-    : ConversionResult (∥conv_terms Σ (Γ,,, stack_context π1) l1 l2∥) by struct l1 :=
+    : ConversionResult (∥equality_terms Σ (Γ,,, stack_context π1) l1 l2∥) by struct l1 :=
     _isconv_args' leq Γ t1 args1 (u1 :: l1) π1 h1 hπ1 t2 (u2 :: l2) π2 h2 hπ2 hx aux
     with aux u1 u2 args1 l1 (App_r t2 :: (appstack l2 π2)) _ _ _ _ Conv _ I I I := {
     | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ := {
@@ -4089,7 +4089,7 @@ Section Conversion.
            (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
            (hx : conv_stack_ctx Γ π1 π2)
            (aux : Aux Args Γ t1 π1 t2 π2 h2)
-    : ConversionResult (∥conv_terms Σ (Γ,,, stack_context π1)
+    : ConversionResult (∥equality_terms Σ (Γ,,, stack_context π1)
                          (decompose_stack π1).1
                          (decompose_stack π2).1∥) :=
     _isconv_args leq Γ t1 π1 h1 t2 π2 h2 hx aux with inspect (decompose_stack π1) := {
@@ -4850,7 +4850,7 @@ Section Conversion.
   Qed.
   Next Obligation.
     destruct h, hΣ.
-    apply conv_terms_alt in X as (argsr&argsr'&?&?&?).
+    apply equality_terms_alt in X as (argsr&argsr'&?&?&?).
     rewrite !zipp_as_mkApps.
     apply conv_cum_alt.
     constructor; eexists _, _.
@@ -4883,7 +4883,7 @@ Section Conversion.
     2: eapply whnf_conv_context; eauto.
     2: eapply conv_context_sym; eauto.
     constructor.
-    eapply conv_terms_red_conv; eauto.
+    eapply equality_terms_red_conv; eauto.
   Qed.
   Next Obligation.
     unfold eqb_termp_napp in noteq.

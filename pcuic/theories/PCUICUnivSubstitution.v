@@ -1439,7 +1439,7 @@ Proof.
     Grab Existential Variables. all:repeat econstructor.
 Qed.
 
-Lemma conv_subst_instance (Σ : global_env_ext) Γ u A B univs :
+Lemma subst_instance_equality (Σ : global_env_ext) Γ u A B univs :
 valid_constraints (global_ext_constraints (Σ.1, univs))
                   (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A = B ->
@@ -1474,7 +1474,7 @@ Lemma conv_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
     (subst_instance u d) (subst_instance u d').
 Proof.
   intros valid Hd; depelim Hd; constructor; tas;
-    eapply conv_subst_instance; tea.
+    eapply subst_instance_equality; tea.
 Qed.
 
 Lemma cumul_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
@@ -1485,7 +1485,7 @@ Lemma cumul_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
     (subst_instance u d) (subst_instance u d').
 Proof.
   intros valid Hd; depelim Hd; constructor; tas;
-    (eapply conv_subst_instance || eapply cumul_subst_instance); tea.
+    (eapply subst_instance_equality || eapply cumul_subst_instance); tea.
 Qed.
 
 Lemma conv_ctx_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs :
@@ -1498,7 +1498,7 @@ Proof.
   now eapply conv_decls_subst_instance.
 Qed.
 
-Lemma cumul_ctx_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs :
+Lemma subst_instance_context_equality_rel (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
   cumul_context Σ Γ Γ' ->
   cumul_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').

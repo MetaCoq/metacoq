@@ -85,7 +85,7 @@ Notation " Σ ;;; Γ ⊢ t ≤ u " := (ws_equality true Σ Γ t u) (at level 50,
 Notation " Σ ;;; Γ ⊢ t = u " := (ws_equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  =  u") : type_scope.
 
-Lemma ws_equality_refl' {le} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : ws_equality le Σ Γ t t.
+Lemma equality_refl {le} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : ws_equality le Σ Γ t t.
 Proof.
   constructor; eauto with fvs. destruct le; cbn; reflexivity.
 Qed.

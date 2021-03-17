@@ -370,64 +370,65 @@ Proof.
     rewrite subst_context_app. simpl.  unfold app_context. f_equal.
 Qed.
 
-Lemma wf_local_rel_smash_context_gen {cf:checker_flags} Σ Γ Δ Δ' :
-  wf Σ.1 ->
-  wf_local Σ (Δ' ,,, Γ) -> 
-  wf_local_rel Σ (Δ' ,,, Γ) Δ ->
-  wf_local_rel Σ Δ' (smash_context Δ Γ).
-Proof.
-  intros wfΣ.
-  induction Γ in Δ |- *; simpl; auto.
-  intros wfΓ wfΔ. depelim wfΓ; simpl.
-  - apply IHΓ; auto. eapply All_local_env_app. split; auto.
-    repeat constructor; auto.
-    eapply All_local_env_impl; eauto. simpl; intros.
-    unfold lift_typing in X |- *.
-    now rewrite app_context_assoc.
-  - apply IHΓ. auto. eapply All_local_env_subst; eauto. simpl; intros.
-    destruct T; unfold lift_typing in X |- *; simpl in *; pcuicfo auto.
-    rewrite Nat.add_0_r.
-    eapply (substitution _ (Δ' ,,, Γ) [vdef na b t] [b] Γ0) in X; eauto.
-    rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
-    destruct X as [s Hs]; exists s.
-    rewrite Nat.add_0_r.
-    eapply (substitution _ _ [vdef na b t] [b] Γ0) in Hs; eauto.
-    rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
-Qed.
+Section WfEnv.
+  Context {cf} {Σ} {wfΣ : wf Σ}.
 
-Lemma wf_local_rel_smash_context {cf:checker_flags} Σ Γ Δ :
-  wf Σ.1 ->
-  wf_local Σ (Δ ,,, Γ) -> 
-  wf_local_rel Σ Δ (smash_context [] Γ).
-Proof.
-  intros. eapply wf_local_rel_smash_context_gen; eauto. constructor.
-Qed.
+  Lemma wf_local_rel_smash_context_gen {Γ Δ Δ'} :
+    wf_local Σ (Δ' ,,, Γ) -> 
+    wf_local_rel Σ (Δ' ,,, Γ) Δ ->
+    wf_local_rel Σ Δ' (smash_context Δ Γ).
+  Proof.
+    induction Γ in Δ |- *; simpl; auto.
+    intros wfΓ wfΔ. depelim wfΓ; simpl.
+    - apply IHΓ; auto. eapply All_local_env_app. split; auto.
+      repeat constructor; auto.
+      eapply All_local_env_impl; eauto. simpl; intros.
+      unfold lift_typing in X |- *.
+      now rewrite app_context_assoc.
+    - apply IHΓ. auto. eapply All_local_env_subst; eauto. simpl; intros.
+      destruct T; unfold lift_typing in X |- *; simpl in *; pcuicfo auto.
+      rewrite Nat.add_0_r.
+      eapply (substitution (Γ':=[vdef na b t]) (s := [b])) in X; eauto.
+      rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
+      destruct X as [s Hs]; exists s.
+      rewrite Nat.add_0_r.
+      eapply (substitution (Γ':=[vdef na b t]) (s:=[b])) in Hs; eauto.
+      rewrite -{1}(subst_empty 0 b). repeat constructor. now rewrite !subst_empty.
+  Qed.
 
-Lemma wf_local_smash_end {cf:checker_flags} Σ Γ Δ : 
-  wf Σ.1 ->
-  wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
-Proof.
-  intros wfΣ  wf. 
-  apply All_local_env_app. split.
-  now apply All_local_env_app_inv in wf.
-  eapply wf_local_rel_smash_context; auto.
-Qed.
+  Lemma wf_local_rel_smash_context {Γ Δ} :
+    wf_local Σ (Δ ,,, Γ) -> 
+    wf_local_rel Σ Δ (smash_context [] Γ).
+  Proof.
+    intros. eapply wf_local_rel_smash_context_gen; eauto. constructor.
+  Qed.
 
-Lemma wf_local_rel_empty {cf:checker_flags} Σ Γ : wf_local_rel Σ [] Γ <~> wf_local Σ Γ.
-Proof.
-  split.
-  - intros h. eapply (All_local_env_impl _ _ _ h). pcuicfo.
-    red in X |- *. now rewrite app_context_nil_l in X.
-  - intros h. eapply (All_local_env_impl _ _ _ h). pcuicfo.
-    red in X |- *. now rewrite app_context_nil_l.
-Qed.
+  Lemma wf_local_smash_end Γ Δ : 
+    wf_local Σ (Γ ,,, Δ) -> wf_local Σ (Γ ,,, smash_context [] Δ).
+  Proof.
+    intros wf. 
+    apply All_local_env_app. split.
+    now apply All_local_env_app_inv in wf.
+    eapply wf_local_rel_smash_context; auto.
+  Qed.
 
-Lemma wf_local_smash_context {cf:checker_flags} Σ Γ :
-  wf Σ.1 -> wf_local Σ Γ -> wf_local Σ (smash_context [] Γ).
-Proof.
-  intros; apply wf_local_rel_empty. eapply (wf_local_rel_smash_context Σ Γ []); 
-    rewrite ?app_context_nil_l; eauto.
-Qed.
+  Lemma wf_local_rel_empty Γ : wf_local_rel Σ [] Γ <~> wf_local Σ Γ.
+  Proof.
+    split.
+    - intros h. eapply (All_local_env_impl _ _ _ h). pcuicfo.
+      red in X |- *. now rewrite app_context_nil_l in X.
+    - intros h. eapply (All_local_env_impl _ _ _ h). pcuicfo.
+      red in X |- *. now rewrite app_context_nil_l.
+  Qed.
+
+  Lemma wf_local_smash_context {Γ} :
+    wf_local Σ Γ -> wf_local Σ (smash_context [] Γ).
+  Proof.
+    intros; apply wf_local_rel_empty. eapply wf_local_rel_smash_context.
+      rewrite ?app_context_nil_l; eauto.
+  Qed.
+
+End WfEnv.
 
 Local Open Scope sigma_scope.
 
@@ -625,12 +626,12 @@ Proof.
   rewrite subst_lift_above. len. lia. now rewrite lift0_id.
 Qed.
 
-Lemma subslet_lift {cf:checker_flags} Σ (Γ Δ : context) s Δ' :
-  wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
+Lemma subslet_lift {cf} {Σ} {wfΣ : wf Σ} (Γ Δ : context) s Δ' :
+  wf_local Σ (Γ ,,, Δ) ->
   subslet Σ Γ s Δ' ->
   subslet Σ (Γ ,,, Δ) (map (lift0 #|Δ|) s) (lift_context #|Δ| 0 Δ').
 Proof.
-  move=> wfΣ wfl.
+  move=> wfl.
   induction 1; rewrite ?lift_context_snoc /=; try constructor; auto.
   simpl.
   rewrite -(subslet_length X).
@@ -658,7 +659,7 @@ Proof.
     eapply (weakening_typing (Γ'' := smash_context [] Δ)) in l0.
     len in l0. simpl in l0. simpl.
     2:{ eapply wf_local_smash_end; pcuic. }
-    eapply (PCUICSubstitution.substitution _ _ _ _ []) in l0; tea.
+    eapply (substitution (Δ := [])) in l0; tea.
   * rewrite smash_context_acc. simpl.
     rewrite /map_decl /= /map_decl /=. simpl.
     depelim wfΔ.
@@ -668,14 +669,14 @@ Proof.
     constructor.
     - rewrite (lift_extended_subst _ 1).
       rewrite -(lift_context_lift_context 1 _).
-      eapply (subslet_lift _ _ [_]); eauto.
+      eapply (subslet_lift _ [_]); eauto.
       constructor.
       { eapply wf_local_smash_end; pcuic. }
       red. exists s.
       eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Hs.
       len in Hs. simpl in Hs. simpl.
       2:{ eapply wf_local_smash_end; pcuic. }
-      eapply (PCUICSubstitution.substitution _ _ _ _ []) in Hs; tea.
+      eapply (substitution (Δ := [])) in Hs; tea.
     - eapply meta_conv.
       econstructor. constructor. apply wf_local_smash_end; auto.
       eapply wf_local_app; eauto.
@@ -683,7 +684,7 @@ Proof.
       eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Hs.
       len in Hs. simpl in Hs. simpl.
       2:{ eapply wf_local_smash_end; pcuic. }
-      eapply (PCUICSubstitution.substitution _ _ _ _ []) in Hs; tea.
+      eapply (substitution (Δ := [])) in Hs; tea.
       reflexivity.
       simpl. rewrite (lift_extended_subst _ 1).
       rewrite distr_lift_subst. f_equal. len.
@@ -700,7 +701,7 @@ Proof.
   eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Ht.
   len in Ht. simpl in Ht. simpl.
   2:{ eapply wf_local_smash_end; pcuic. }
-  eapply (PCUICSubstitution.substitution _ _ _ _ []) in Ht; tea.
+  eapply (substitution (Δ := [])) in Ht; tea.
   now eapply subslet_extended_subst.
 Qed.
 

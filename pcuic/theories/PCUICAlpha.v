@@ -580,7 +580,7 @@ Section Alpha.
           eapply weaken_wf_local; tea.
           now eapply (on_minductive_wf_params_indices_inst isdecl).
           eapply conv_cumul. rewrite -eqinst.
-          eapply mkApps_conv_args; trea.
+          eapply equality_mkApps; trea.
           eapply All2_app.
           2:{ eapply All2_refl; reflexivity. }
           eapply (All2_impl eqpars).
@@ -631,9 +631,9 @@ Section Alpha.
           { eapply context_conversion. exact brty'. assumption.
             now apply conv_context_sym. }
 
-      + eapply conv_cumul, mkApps_conv_args; tea.
+      + eapply conv_cumul, equality_mkApps; tea.
         rewrite /ptm.
-        eapply it_mkLambda_or_LetIn_conv; tea.
+        eapply equality_it_mkLambda_or_LetIn; tea.
         now eapply conv_context_sym.
         constructor. now eapply upto_names_impl_eq_term.
         eapply All2_app. apply All2_refl; reflexivity.

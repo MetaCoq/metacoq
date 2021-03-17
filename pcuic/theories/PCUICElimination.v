@@ -150,14 +150,14 @@ Proof.
   induction Δ using PCUICInduction.ctx_length_rev_ind in args |- *.
   - simpl. intros sp; depelim sp.
     now eapply cumul_Sort_inv in c.
-    now eapply cumul_Sort_Prod_inv in c.
+    now eapply equality_Sort_Prod_inv in c.
   - rewrite it_mkProd_or_LetIn_app; destruct d as [na [b|] ty]; simpl.
     * intros sp.
       specialize (H (subst_context [b] 0 Γ0) ltac:(now autorewrite with len)).
       eapply PCUICArities.typing_spine_letin_inv in sp; auto.
       rewrite /subst1 subst_it_mkProd_or_LetIn in sp. simpl in sp. eauto.
     * intros sp. depelim sp.
-      now eapply cumul_Prod_Sort_inv in c.
+      now eapply equality_Prod_Sort_inv in c.
       specialize (H (subst_context [hd] 0 Γ0) ltac:(now autorewrite with len) tl).
       apply H.
       eapply typing_spine_strengthen; eauto.
@@ -314,7 +314,7 @@ Proof.
       destruct args. split; [repeat constructor|].
       * simpl in sp. depelim sp.
         unfold mkProd_or_LetIn in c; simpl in c.
-        eapply cumul_Prod_l_inv in c as [na' [dom' [codom' [[[red eqann] conv] cum]]]]; auto.
+        eapply equality_Prod_l_inv in c as [na' [dom' [codom' [[[red eqann] conv] cum]]]]; auto.
         eapply subject_reduction in Ht; eauto.
         intros.
         pose proof (PCUICWfUniverses.typing_wf_universe wfΣ Ht).

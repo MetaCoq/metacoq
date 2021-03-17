@@ -128,7 +128,7 @@ Section TypeOf.
       unfold infer_as_sort_obligation_1.
       destruct ws as [[s' Hs']]. 
       specialize (Hp _ Hs') as s'cum.
-      eapply invert_cumul_sort_r in s'cum as [u' [redu' leq]].
+      eapply equality_Sort_r_inv in s'cum as [u' [redu' leq]].
       destruct reduce_to_sort => //.
       intros u wc [= <-].
       sq.
@@ -137,7 +137,7 @@ Section TypeOf.
       - intros ? typ.
         apply (cumul_Sort_inv _ Γ).
         specialize (Hp _ typ).
-        eapply cumul_red_l_inv; eauto.
+        eapply equality_red_l_inv; eauto.
     Qed.
     Next Obligation.
       simpl. intros.
@@ -146,7 +146,7 @@ Section TypeOf.
       destruct tx as (?&[(?&?)]).
       destruct wf as [(?&?)].
       apply c in t1.
-      eapply invert_cumul_sort_r in t1 as (?&r&_).
+      eapply equality_Sort_r_inv in t1 as (?&r&_).
       eauto.
     Qed.
   End SortOf.
@@ -349,7 +349,7 @@ Section TypeOf.
         eapply type_App'; eauto.
         specialize (pbty _ t0).
         assert (Σ ;;; Γ |- tProd na' A' B' <= tProd x x0 x1).
-        eapply cumul_red_l_inv; eauto.
+        eapply equality_red_l_inv; eauto.
         eapply cumul_Prod_Prod_inv in X as [_ [Ha _]]; auto.
         eapply type_Cumul'; eauto.
         eapply validity in Htty; auto.
@@ -359,7 +359,7 @@ Section TypeOf.
         specialize (pbty _ t2). simpl.
         etransitivity; [|eassumption].
         assert (Σ ;;; Γ |- tProd na' A' B' <= tProd x2 x3 x4).
-        { eapply cumul_red_l_inv; eauto. }
+        { eapply equality_red_l_inv; eauto. }
         eapply cumul_Prod_Prod_inv in X as [eqann [Ha Hb]]; auto.
         eapply (substitution_cumul _ Γ [vass x2 x3] []); eauto.
         eapply validity in t2; pcuic.
@@ -441,7 +441,7 @@ Section TypeOf.
       destruct data.
       pose proof (Hp _ scrut_ty).
       assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) (pparams p ++ indices)).
-      { eapply cumul_red_l_inv; eauto. }
+      { eapply equality_red_l_inv; eauto. }
       eapply cumul_Ind_Ind_inv in X0 as [[eqi Ru] cl]; auto.
       assert (conv_indices : All2 (fun x y : term => Σ;;; Γ |- x = y) (indices ++ [c])
         (skipn (ci_npar ci) l ++ [c])).
@@ -463,16 +463,16 @@ Section TypeOf.
           split; pcuic.
           todo "case".
         + eapply conv_cumul.
-          eapply mkApps_conv_args; auto.
+          eapply equality_mkApps; auto.
       * intros T'' Hc'.
         eapply inversion_Case in Hc' as (mdecl' & idecl' & isdecl' & indices' & [] & cum'); auto.
         etransitivity. simpl in cum'. 2:eassumption.
-        eapply conv_cumul, mkApps_conv_args; auto.
+        eapply conv_cumul, equality_mkApps; auto.
         eapply All2_app. 2:repeat (constructor; auto).
         specialize (Hp _ scrut_ty0).
         assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ci (puinst p)) 
                                                              (pparams p ++ indices')).
-           { eapply cumul_red_l_inv; eauto. }
+           { eapply equality_red_l_inv; eauto. }
         eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; auto.
         eapply All2_skipn in cl'. instantiate (1 := ci_npar ci) in cl'.
         rewrite skipn_all_app_eq // in cl'.
@@ -504,7 +504,7 @@ Section TypeOf.
       eapply type_reduction in Hc'; eauto.
       pose proof (Hc'' _ Hc).
       assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd ind u) args).
-      { eapply cumul_red_l_inv; eauto. }
+      { eapply equality_red_l_inv; eauto. }
       eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; eauto.
       destruct d as [decl [body decli]].
       pose proof (declared_inductive_inj (proj1 declp) decli) as [-> ->].
@@ -522,7 +522,7 @@ Section TypeOf.
         etransitivity; eauto.
         specialize (Hc'' _ Hc''').
         assert (Σ ;;; Γ |- mkApps (tInd i u') l <= mkApps (tInd i u'') args').
-        { eapply cumul_red_l_inv; eauto. }
+        { eapply equality_red_l_inv; eauto. }
         eapply cumul_Ind_Ind_inv in X0 as [[eqi'' Ru''] cl'']; auto.
         assert (consistent_instance_ext Σ (ind_universes mdecl) u').
         { eapply validity in Hc'; eauto.

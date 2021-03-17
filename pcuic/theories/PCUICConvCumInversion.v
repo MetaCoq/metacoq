@@ -86,7 +86,7 @@ Section fixed.
     isApp hd' = false ->
     whnf RedFlags.default Σ Γ (mkApps hd args) ->
     whnf RedFlags.default Σ Γ (mkApps hd' args') ->
-    ∥conv_cum_napp leq Γ #|args| hd hd' × conv_terms Σ Γ args args'∥.
+    ∥conv_cum_napp leq Γ #|args| hd hd' × equality_terms Σ Γ args args'∥.
   Proof.
     intros conv notapp notapp' wh wh'.
     apply conv_cum_alt in conv as [(?&?&(r1&r2)&e)].
@@ -148,7 +148,7 @@ Section fixed.
     ∥ p = p' ×
       conv_predicate Σ Γ motive motive' ×
       Σ;;; Γ |- discr = discr' ×
-      conv_brs Σ Γ brs brs'∥.
+      equality_brs Σ Γ brs brs'∥.
   Proof.
     intros conv whl whr.
     depelim whl; solve_discr.
@@ -165,7 +165,7 @@ Section fixed.
     red in e; cbn in e.
     specialize e as (?&?&?&?).
     splits; eauto.
-    - eapply conv_terms_alt; eauto.
+    - eapply equality_terms_alt; eauto.
     - eapply red_ctx_rel_par_conv; eauto.
     - eapply conv_red_conv; eauto.
       + eapply conv_context_rel_app, red_ctx_rel_par_conv; eauto.

@@ -335,14 +335,14 @@ Proof.
       ++ intuition auto.
          now eapply cumul_Sort_inv.
          exists []. split; try constructor; auto.
-      ++ now eapply cumul_Sort_Prod_inv in c.
+      ++ now eapply equality_Sort_Prod_inv in c.
     + rewrite app_length /= in len; elimtype False; lia.
   - intros len s inst s' Hsp.
     destruct Γ' using rev_ind; try clear IHΓ'.
     -- depelim Hsp. 1:intuition auto.
       --- now eapply cumul_Sort_inv.
       --- exists []; split; try constructor; auto.
-      --- now eapply cumul_Sort_Prod_inv in c.
+      --- now eapply equality_Sort_Prod_inv in c.
     -- rewrite app_length /= in len.
       rewrite it_mkProd_or_LetIn_app in Hsp.
       destruct x as [na [b|] ty]; simpl in *; rewrite /mkProd_or_LetIn /= in Hsp.
@@ -379,7 +379,7 @@ Proof.
           apply wf_local_app_l in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
       + rewrite context_assumptions_app /=.
         depelim Hsp. 
-        now eapply cumul_Prod_Sort_inv in c.
+        now eapply equality_Prod_Sort_inv in c.
         eapply cumul_Prod_inv in c as [conva cumulB].
         eapply (substitution_cumul0 _ _ _ _ _ _ hd) in cumulB; auto.
         rewrite /subst1 subst_it_mkProd_or_LetIn /= in cumulB.
@@ -1844,8 +1844,8 @@ Proof.
       eapply inversion_LetIn in IHΔ as [s' [? [? [? [? ?]]]]]; auto.
       splits; eauto.
       eapply type_Cumul'. eapply t2. now pcuic.
-      eapply invert_cumul_letin_l in c; auto.
-      eapply invert_cumul_sort_r in c as [u' [redu' cumu']].
+      eapply equality_LetIn_l_inv in c; auto.
+      eapply equality_Sort_r_inv in c as [u' [redu' cumu']].
       transitivity (tSort u'). 2:do 2 constructor; auto.
       eapply cumul_alt.
       exists (tSort u'), (tSort u'). repeat split; auto.
@@ -1878,8 +1878,8 @@ Proof.
     specialize (IHΔ _ _ _ h).
     eapply inversion_LetIn in IHΔ as [s' [? [? [? [? ?]]]]]; auto.
     eapply type_Cumul'. eapply t2. now pcuic.
-    eapply invert_cumul_letin_l in c; auto.
-    eapply invert_cumul_sort_r in c as [u' [redu' cumu']].
+    eapply equality_LetIn_l_inv in c; auto.
+    eapply equality_Sort_r_inv in c as [u' [redu' cumu']].
     transitivity (tSort u'). 2:do 2 constructor; auto.
     eapply cumul_alt.
     exists (tSort u'), (tSort u'). repeat split; auto.
@@ -2052,7 +2052,7 @@ Proof.
   intros wfΣ Hsp.
   depelim Hsp.
   econstructor. auto.
-  now eapply invert_cumul_letin_l in c.
+  now eapply equality_LetIn_l_inv in c.
   auto.
 Qed. *)
 
@@ -2959,9 +2959,9 @@ Proof.
   * apply HΔ.
 Qed.
 
-Lemma conv_terms_lift {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ args args'} :
-  conv_terms Σ Γ args args' ->
-  conv_terms Σ (Γ ,,, Δ) (map (lift0 #|Δ|) args) (map (lift0 #|Δ|) args').
+Lemma equality_terms_lift {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ args args'} :
+  equality_terms Σ Γ args args' ->
+  equality_terms Σ (Γ ,,, Δ) (map (lift0 #|Δ|) args) (map (lift0 #|Δ|) args').
 Proof.
   intros conv.
   eapply All2_map.
@@ -3006,7 +3006,7 @@ Lemma conv_ctx_rel_conv_extended_subst {cf:checker_flags} {Σ} {wfΣ : wf Σ} {�
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
   conv_context_rel Σ Γ Δ Δ' ->
-  conv_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
+  equality_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
   conv_context_rel Σ Γ (smash_context [] Δ) (smash_context [] Δ').
 Proof.
   intros wfl wfr cum.
@@ -3018,7 +3018,7 @@ Proof.
     * split; try constructor; auto.
       + rewrite smash_context_acc /=.
         rewrite !(lift_extended_subst _ 1).
-        now eapply (conv_terms_lift (Δ := [_])).
+        now eapply (equality_terms_lift (Δ := [_])).
       + simpl; rewrite !(smash_context_acc _ [_]) /=;
         constructor; auto.
         constructor; simpl; auto.
@@ -3060,7 +3060,7 @@ Lemma cumul_ctx_rel_conv_extended_subst {cf:checker_flags} {Σ} {wfΣ : wf Σ} {
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
   cumul_ctx_rel Σ Γ Δ Δ' ->
-  conv_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
+  equality_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
   cumul_ctx_rel Σ Γ (smash_context [] Δ) (smash_context [] Δ').
 Proof.
   intros wfl wfr cum.
@@ -3072,7 +3072,7 @@ Proof.
     * split; try constructor; auto.
       + rewrite smash_context_acc /=.
         rewrite !(lift_extended_subst _ 1).
-        now eapply (conv_terms_lift (Δ := [_])).
+        now eapply (equality_terms_lift (Δ := [_])).
       + simpl; rewrite !(smash_context_acc _ [_]) /=;
         constructor; auto.
         constructor; simpl; auto.
@@ -3130,12 +3130,12 @@ Proof.
 Qed.
 
 
-Lemma conv_terms_conv_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} {ts ts'} :
+Lemma equality_terms_conv_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} {ts ts'} :
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
   conv_context_rel Σ Γ Δ Δ' ->
-  conv_terms Σ (Γ ,,, Δ') ts ts' ->
-  conv_terms Σ (Γ ,,, Δ) ts ts'.
+  equality_terms Σ (Γ ,,, Δ') ts ts' ->
+  equality_terms Σ (Γ ,,, Δ) ts ts'.
 Proof.
   intros wfl wfr cum conv.
   eapply (All2_impl conv).
@@ -3145,12 +3145,12 @@ Proof.
   now eapply conv_context_app.
 Qed.
 
-Lemma conv_terms_cumul_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} {ts ts'} :
+Lemma equality_terms_cumul_ctx {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'} {ts ts'} :
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
   cumul_ctx_rel Σ Γ Δ Δ' ->
-  conv_terms Σ (Γ ,,, Δ') ts ts' ->
-  conv_terms Σ (Γ ,,, Δ) ts ts'.
+  equality_terms Σ (Γ ,,, Δ') ts ts' ->
+  equality_terms Σ (Γ ,,, Δ) ts ts'.
 Proof.
   intros wfl wfr cum conv.
   eapply (All2_impl conv).

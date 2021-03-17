@@ -1389,7 +1389,7 @@ Section Reduce.
           destruct h as [T h].
           apply inversion_App in h as (?&?&?&?&?); auto.
           apply inversion_Sort in t0 as (?&?&?); auto.
-          eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
+          eapply PCUICConversion.equality_Sort_Prod_inv; eauto.
       + unfold zipp.
         case_eq (decompose_stack π). intros l ρ e.
         apply decompose_stack_eq in e. subst.
@@ -1402,7 +1402,7 @@ Section Reduce.
           destruct h as [T h].
           apply inversion_App in h as (?&?&?&?&?); auto.
           apply inversion_Prod in t0 as (?&?&?&?&?); auto.
-          eapply PCUICConversion.cumul_Sort_Prod_inv; eauto.
+          eapply PCUICConversion.equality_Sort_Prod_inv; eauto.
       + exfalso.
         eapply welltyped_context in h as [s Hs]; tas.
         now eapply inversion_Prim in Hs.

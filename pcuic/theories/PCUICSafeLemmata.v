@@ -312,7 +312,7 @@ Section Lemmata.
     destruct a.
     all: try solve [
       unfold zippx ; simpl ;
-      eapply cumul_it_mkLambda_or_LetIn ;
+      eapply equality_it_mkLambda_or_LetIn ;
       assumption
     ].
     - unfold zippx. simpl.
@@ -321,15 +321,15 @@ Section Lemmata.
       apply IHρ.
       eapply cumul_App_l. assumption.
     - unfold zippx. simpl.
-      eapply cumul_it_mkLambda_or_LetIn. cbn.
-      eapply cumul_Lambda_r.
+      eapply equality_it_mkLambda_or_LetIn. cbn.
+      eapply equality_Lambda_r.
       assumption.
     - unfold zippx. simpl.
-      eapply cumul_it_mkLambda_or_LetIn. cbn.
-      eapply cumul_Lambda_r.
+      eapply equality_it_mkLambda_or_LetIn. cbn.
+      eapply equality_Lambda_r.
       assumption.
     - unfold zippx. simpl.
-      eapply cumul_it_mkLambda_or_LetIn. cbn.
+      eapply equality_it_mkLambda_or_LetIn. cbn.
       eapply cumul_LetIn_bo. assumption.
   Qed.
 
@@ -342,9 +342,9 @@ Section Lemmata.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
     - assumption.
     - simpl. cbn. eapply ih.
-      eapply conv_LetIn_bo. assumption.
+      eapply equality_LetIn_bo. assumption.
     - simpl. cbn. eapply ih.
-      eapply conv_Lambda_r. assumption.
+      eapply equality_Lambda_r. assumption.
   Qed.
 
   Lemma conv_alt_it_mkProd_or_LetIn :
@@ -356,7 +356,7 @@ Section Lemmata.
     induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h |- *.
     - assumption.
     - simpl. cbn. eapply ih.
-      eapply conv_LetIn_bo. assumption.
+      eapply equality_LetIn_bo. assumption.
     - simpl. cbn. eapply ih.
       eapply conv_Prod_r. assumption.
   Qed.
@@ -833,14 +833,14 @@ Section Lemmata.
   
   Lemma conv_cum_zipp leq Γ t t' π π' :
     conv_cum leq Σ Γ t t' ->
-    ∥conv_terms Σ Γ (decompose_stack π).1 (decompose_stack π').1∥ ->
+    ∥equality_terms Σ Γ (decompose_stack π).1 (decompose_stack π').1∥ ->
     conv_cum leq Σ Γ (zipp t π) (zipp t' π').
   Proof.
     intros conv conv_args.
     rewrite !zipp_as_mkApps.
     destruct leq; cbn in *.
     - sq.
-      apply mkApps_conv_args; auto.
+      apply equality_mkApps; auto.
     - sq.
       apply cumul_mkApps; auto.
   Qed.

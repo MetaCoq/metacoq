@@ -92,17 +92,17 @@ Section Principality.
       specialize (IHu1 _ _ t) as [dom Hdom].
       specialize (IHu2 _ _ t0) as [codom Hcodom].
       destruct (Hdom _ t).
-      eapply invert_cumul_sort_r in c0 as [domu [red leq]].
+      eapply equality_Sort_r_inv in c0 as [domu [red leq]].
       destruct (Hcodom _ t0).
-      eapply invert_cumul_sort_r in c0 as [codomu [cored coleq]].
+      eapply equality_Sort_r_inv in c0 as [codomu [cored coleq]].
       exists (tSort (Universe.sort_of_product domu codomu)).
       int inversion_Prod.
       repeat outsum; repeat outtimes.
       + eapply cumul_trans. 1: auto. 2:eapply c0.
         destruct (Hdom _ t3) as [le' u1'].
-        eapply invert_cumul_sort_r in le' as [u' [redu' leu']].
+        eapply equality_Sort_r_inv in le' as [u' [redu' leu']].
         destruct (Hcodom _ t4) as [le'' u2'].
-        eapply invert_cumul_sort_r in le'' as [u'' [redu'' leu'']].
+        eapply equality_Sort_r_inv in le'' as [u'' [redu'' leu'']].
         constructor. constructor.
         apply leq_universe_product_mon; auto.
         pose proof (red_confluence wfΣ red redu') as [v' [redl redr]].
@@ -239,11 +239,11 @@ Section Principality.
       }
       clear redr redr'.
       etransitivity. 2:eapply c0.
-      eapply conv_cumul, mkApps_conv_args; auto.
+      eapply conv_cumul, equality_mkApps; auto.
       eapply All2_app. 2:constructor; auto.
       assert (All2 (conv Σ Γ) x0' (pparams p ++ indices')).
       { transitivity x9'; tea. apply All2_symmetry; eauto. tc. }
-      pose proof (conv_terms_trans _ _ _ a X3).
+      pose proof (equality_terms_trans _ _ _ a X3).
       eapply All2_app_inv in X4 as [] => //.
 
     - destruct s as [[ind k] pars]; simpl in *.
@@ -282,7 +282,7 @@ Section Principality.
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
         transitivity (subst0 (u :: List.rev x0') (subst_instance x2 t3)); cycle 1.
       eapply conv_cumul.
-      assert (conv_terms Σ Γ x0' x7).
+      assert (equality_terms Σ Γ x0' x7).
       { transitivity x4. eapply (All2_impl conv); auto using red_conv.
         transitivity x0''. symmetry. eapply (All2_impl conv'); auto using red_conv.
         now symmetry. }
@@ -600,7 +600,7 @@ Proof.
     eapply type_Cumul'.
     econstructor; eauto. tas. clear brs_ty.
     eapply conv_cumul.
-    eapply mkApps_conv_args; pcuic.
+    eapply equality_mkApps; pcuic.
     rewrite /ptm. constructor.
     eapply PCUICEquality.eq_term_upto_univ_it_mkLambda_or_LetIn; tea. tc.
     eapply eq_context_empty_eq_context; tea. 

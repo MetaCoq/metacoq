@@ -78,7 +78,7 @@ Section Arities.
     intros [ar [red isA]]. sq.
     intros cum.
     have: Σ ;;; Γ |- ar <= T.
-    { transitivity C; eauto. now eapply cumul_red_l_inv; eauto. }
+    { transitivity C; eauto. now eapply equality_red_l_inv; eauto. }
     now eapply invert_cumul_arity_l.
   Qed.
 
@@ -88,7 +88,7 @@ Section Arities.
     intros [ar [red isA]]. sq.
     intros cum.
     have: Σ ;;; Γ |- T <= ar.
-    { transitivity C; eauto. now eapply cumul_red_r_inv; eauto. }
+    { transitivity C; eauto. now eapply equality_red_r_inv; eauto. }
     now eapply invert_cumul_arity_r.
   Qed.
   
@@ -707,11 +707,11 @@ Section Normalization.
     intros axfree Ht capp. destruct capp.
     - eapply neutral_empty in H; eauto.
     - eapply inversion_Sort in Ht as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?).
+      eapply equality_Sort_l_inv in c as (? & ? & ?).
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - eapply inversion_Prod in Ht as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?).
+      eapply equality_Sort_l_inv in c as (? & ? & ?).
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ?); auto.
@@ -862,7 +862,7 @@ Section WeakNormalization.
     Σ;;; Γ |- tSort s <= mkApps (tInd ind u) args -> False.
   Proof.
     intros cum.
-    apply PCUICConversion.invert_cumul_sort_l in cum as (?&?&?).
+    apply PCUICConversion.equality_Sort_l_inv in cum as (?&?&?).
     apply PCUICConfluence.red_mkApps_tInd in r as (?&?&?); auto.
     solve_discr.
   Qed.
@@ -999,11 +999,11 @@ Section WeakNormalization.
     depelim ne; simpl in *.
     - eauto using wh_neutral_empty.
     - eapply inversion_Sort in typed as (? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?); auto.
+      eapply equality_Sort_l_inv in c as (? & ? & ?); auto.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - eapply inversion_Prod in typed as (? & ? & ? & ? & ?); auto.
-      eapply invert_cumul_sort_l in c as (? & ? & ?); auto.
+      eapply equality_Sort_l_inv in c as (? & ? & ?); auto.
       eapply red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - eapply inversion_Lambda in typed as (? & ? & ? & ? & ?); auto.

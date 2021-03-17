@@ -994,7 +994,7 @@ Proof.
         subst_context (inds (inductive_mind ci) (puinst p) (ind_bodies mdecl))
           #|ind_params mdecl| (subst_instance (puinst p) (cstr_args cdecl))).
     { exact (on_constructor_wf_args declc cu). }
-    eapply mkApps_conv_args; tea. reflexivity.
+    eapply equality_mkApps; tea. reflexivity.
     rewrite (firstn_app_left _ 0) ?Nat.add_0_r // /= ?app_nil_r in iparsubst0.
     rewrite (firstn_app_left _ 0) ?Nat.add_0_r // /= ?app_nil_r in Hpars.
     rewrite (skipn_all_app_eq) // in subsidx.
@@ -1023,7 +1023,7 @@ Proof.
       move: convidx.
       change (fun x y => Σ ;;; Γ |- x = y) with (conv Σ Γ).
       intros cv convidx.
-      eapply (conv_terms_subst _ _ _ _ []) in cv.
+      eapply (equality_terms_subst _ _ _ _ []) in cv.
       4:{ exact (spine_subst_smash _ idxsubst0). }
       4:{ exact (spine_subst_smash _ idxsubst0). }
       all:tea. 2:{ eapply wf_local_smash_end; tea. eapply idxsubst0. }
@@ -1031,7 +1031,7 @@ Proof.
       rewrite subst_context_nil /= in cv. simpl in cv.
       rewrite skipn_all_app_eq // in convidx.
 
-      assert(conv_terms Σ Γ
+      assert(equality_terms Σ Γ
         (map
          (fun x : term =>
           subst0 (List.rev args)
@@ -1178,7 +1178,7 @@ Proof.
       rewrite map_id.
       transitivity (mkApps (tConstruct ci c (puinst p)) args).
       rewrite -(firstn_skipn (ind_npars mdecl) args).
-      eapply mkApps_conv_args; tea. reflexivity.
+      eapply equality_mkApps; tea. reflexivity.
       eapply All2_app. eapply All2_symP => //. intro; now symmetry.
       rewrite firstn_skipn. eapply All2_refl; reflexivity.
       rewrite firstn_skipn. constructor.
@@ -1283,7 +1283,7 @@ Proof.
       eapply wf_local_expand_lets. now rewrite subst_instance_app app_context_assoc in X4.
       tas. all:tea. all:len.
       constructor; auto.
-      eapply mkApps_conv_args; tea. reflexivity.
+      eapply equality_mkApps; tea. reflexivity.
       eapply All2_app. eapply All2_map.
       eapply OnOne2_All2; tea.
       intros. eapply red_conv.
@@ -1296,7 +1296,7 @@ Proof.
     { eapply wf_case_predicate_context; tea. }
     have typec' : Σ;;; Γ |- c : mkApps (tInd ci (puinst p)) (params' ++ indices).
     { eapply type_Cumul'; tea.
-      eapply conv_cumul. eapply mkApps_conv_args; pcuic.
+      eapply conv_cumul. eapply equality_mkApps; pcuic.
       eapply All2_app. 2:eapply All2_refl; reflexivity.
       eapply OnOne2_All2; tea. all:pcuic. }
     eapply type_Cumul'; [econstructor; cbn -[it_mkLambda_or_LetIn]; eauto|..]; tea.
@@ -1329,7 +1329,7 @@ Proof.
         eapply conv_cumul.
         eapply conv_conv_ctx; tea.
         2:{ symmetry. exact cv. }
-        eapply mkApps_conv_args; tea. reflexivity.
+        eapply equality_mkApps; tea. reflexivity.
         eapply All2_app. eapply All2_map.
         eapply All2_map. eapply All2_refl.
         intros x. eapply red_conv.
@@ -1338,7 +1338,7 @@ Proof.
         eapply OnOne2_All2; tea; intros; pcuic.
         eapply subslet_untyped_subslet, sppars.
         eapply (case_branch_context_length_args); tea.
-        constructor. eapply mkApps_conv_args; tea; try reflexivity.
+        constructor. eapply equality_mkApps; tea; try reflexivity.
         eapply All2_app. eapply All2_map.
         eapply OnOne2_All2; tea; intros; try reflexivity.
         eapply red_conv.
@@ -1390,17 +1390,17 @@ Proof.
         eapply type_Cumul; tea.
         rewrite /cbty /case_branch_type.
         eapply conv_cumul; cbn.
-        eapply mkApps_conv_args; tea.
+        eapply equality_mkApps; tea.
         2:{ eapply All2_refl. reflexivity. }
         relativize #|cstr_args x|.
         eapply (weakening_conv _ _ []); tea. 2:tas.
-        eapply it_mkLambda_or_LetIn_conv; tea. 2:reflexivity.
+        eapply equality_it_mkLambda_or_LetIn; tea. 2:reflexivity.
         now eapply red_one_decl_conv_context.
         apply (wf_branch_length a2).
       * eapply conv_cumul.
-        eapply mkApps_conv_args; tea.
+        eapply equality_mkApps; tea.
         2:{ eapply All2_refl; reflexivity. }
-        eapply it_mkLambda_or_LetIn_conv; tea. 2:reflexivity.
+        eapply equality_it_mkLambda_or_LetIn; tea. 2:reflexivity.
         simpl.
         eapply red_one_decl_conv_context in o.
         now symmetry.
@@ -1431,14 +1431,14 @@ Proof.
       rewrite /brty.
       rewrite /case_branch_type /case_branch_type_gen /=.
       eapply conv_cumul.
-      eapply mkApps_conv_args; tea.
+      eapply equality_mkApps; tea.
       2:{ eapply All2_refl. reflexivity. }
       relativize #|cstr_args x|.
       eapply (weakening_conv _ _ []); tea. 2:tas.
-      eapply it_mkLambda_or_LetIn_conv; tea. reflexivity.
+      eapply equality_it_mkLambda_or_LetIn; tea. reflexivity.
       eapply red_conv; tea. now eapply red1_red.
-    * eapply conv_cumul, mkApps_conv_args; tea; try reflexivity.
-      eapply it_mkLambda_or_LetIn_conv; tea. reflexivity.
+    * eapply conv_cumul, equality_mkApps; tea; try reflexivity.
+      eapply equality_it_mkLambda_or_LetIn; tea. reflexivity.
       eapply conv_conv_ctx; tea. symmetry.
       eapply red_conv => //. simpl. now eapply red1_red.
       reflexivity.
@@ -2395,7 +2395,7 @@ Proof.
   - destruct HH as [s H].
     apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
     repeat split; tas. 1: eexists; eassumption.
-    apply cumul_Sort_r_inv in H.
+    apply equality_Sort_r_inv in H.
     destruct H as [s' [H H']].
     exists s'. eapply type_reduction; tea.
     apply invert_red_letin in H; tas.

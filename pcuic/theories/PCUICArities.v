@@ -41,11 +41,13 @@ Qed.
 
 Inductive typing_spine {cf} Σ (Γ : context) : term -> list term -> term -> Type :=
 | type_spine_nil ty ty' :
+    isType Σ Γ ty ->
     isType Σ Γ ty' ->
     Σ ;;; Γ ⊢ ty ≤ ty' ->
     typing_spine Σ Γ ty [] ty'
 
 | type_spine_cons ty hd tl na A B B' :
+    isType Σ Γ ty ->
     isType Σ Γ (tProd na A B) ->
     Σ ;;; Γ ⊢ ty ≤ tProd na A B ->
     Σ ;;; Γ |- hd : A ->
@@ -55,13 +57,13 @@ Inductive typing_spine {cf} Σ (Γ : context) : term -> list term -> term -> Typ
 Derive Signature NoConfusion for typing_spine.
 
 
-Lemma subslet_inds_gen {cf} (Σ : global_env) ind mdecl idecl :
-  wf Σ -> declared_inductive Σ ind mdecl idecl ->
+Lemma subslet_inds_gen {cf} {Σ : global_env} {wfΣ : wf Σ} ind mdecl idecl :
+  declared_inductive Σ ind mdecl idecl ->
   let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
   subslet (Σ, ind_universes mdecl) [] (inds (inductive_mind ind) u (ind_bodies mdecl))
     (arities_context (ind_bodies mdecl)).
 Proof.
-  intros wfΣ isdecl u.
+  intros isdecl u.
   unfold inds.
   pose proof (proj1 isdecl) as declm'. 
   apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
@@ -309,19 +311,21 @@ Section WfEnv.
     intros Hsp.
     depelim Hsp.
     constructor; auto.
+    eapply isType_tLetIn_red in i; eauto with pcuic.
     now eapply equality_LetIn_l_inv in e.
     econstructor; eauto.
+    eapply isType_tLetIn_red in i; eauto with pcuic.
     now eapply equality_LetIn_l_inv in e.
   Qed.
 
   Lemma typing_spine_letin {Γ na b B T args S} : 
-    is_open_term Γ (tLetIn na b B T) ->
+    isType Σ Γ (tLetIn na b B T) ->
     typing_spine Σ Γ (T {0 := b}) args S ->
     typing_spine Σ Γ (tLetIn na b B T) args S.
   Proof.
     intros Hty Hsp.
     depelim Hsp.
-    constructor. auto.
+    constructor; auto.
     - etransitivity; tea. eapply into_equality.
       eapply red_cumul, red1_red, red_zeta. all:eauto with fvs.
     - econstructor; eauto.
@@ -363,6 +367,13 @@ Section WfEnv.
   Lemma typing_spine_WAT_concl {Γ T args S} : 
     typing_spine Σ Γ T args S ->
     isType Σ Γ S.
+  Proof.
+    induction 1; auto.
+  Qed.
+
+  Lemma typing_spine_isType_dom {Γ T args S} : 
+    typing_spine Σ Γ T args S ->
+    isType Σ Γ T.
   Proof.
     induction 1; auto.
   Qed.

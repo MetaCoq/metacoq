@@ -44,6 +44,18 @@ Qed.
 Section WfEnv.
   Context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
+  Lemma context_equality_vass {Γ Γ' na na' A A'} le : 
+    eq_binder_annot na na' ->
+    Σ ⊢ Γ ≤[le] Γ' ->
+    Σ ;;; Γ ⊢ A ≤[le] A' ->
+    Σ ⊢ Γ ,, vass na A ≤[le] Γ' ,, vass na' A'.
+  Proof.
+    repeat (constructor; auto).
+  Qed.
+
+  Lemma closed_context_equality_app : 
+    closed_context_equality
+
   Lemma invert_cumul_arity_l (Γ : context) (C : term) T :
     Σ;;; Γ ⊢ C ≤ T ->
     match destArity [] C with
@@ -82,17 +94,22 @@ Section WfEnv.
           exists T', ctx', s'. split; auto.
           rewrite smash_context_app. simpl.
           now rewrite -smash_context_subst_empty.
-        + eapply invert_y_prod_l in HT; auto. 
+        + eapply equality_Prod_l_inv in HT; auto. 
           rewrite -> app_length in Hlen.
           rewrite Nat.add_1_r in Hlen.
-          destruct HT as [na' [A' [B' [[redT convT] HT]]]].
+          destruct HT as [na' [A' [B' [redT convT HT]]]].
           specialize (IHn ctx ltac:(lia) (Γ ,, vass na' A') B').
-          forward IHn. eapply cumul_conv_ctx; eauto.
-          constructor; pcuic. clear IHctx.
-          destruct IHn as [T' [ctx' [s' [[[redT' destT] convctx] leq]]]].
-          exists (tProd na' A' T'), (ctx' ++ [vass na' A']), s'. intuition auto. 2:simpl.
+          forward IHn. eapply equality_equality_ctx; eauto.
+          { apply context_equality_vass; eauto. now symmetry.
+            eapply closed_context_equality_refl. eauto with fvs.
+            now symmetry. }
+          clear IHctx.
+          destruct IHn as [T' [ctx' [s' [redT' destT convctx leq]]]].
+          exists (tProd na' A' T'), (ctx' ++ [vass na' A']), s'. split; auto. 2:simpl.
           -- transitivity (tProd na' A' B'); auto.
-            eapply red_prod. reflexivity. apply redT'.
+            split.
+            3:eapply red_prod; [reflexivity|apply redT'].
+            all:eauto with fvs.
           -- now rewrite destArity_app destT.
           -- rewrite smash_context_app /= .
             rewrite !app_context_assoc.
@@ -100,9 +117,11 @@ Section WfEnv.
             { apply All2_fold_length in convctx.
               autorewrite with len in convctx |- *.
               simpl in convctx. simpl. lia. }
+            etransitivity; tea.
+            
             eapply All2_fold_app; auto.
             apply All2_fold_app_inv in convctx; auto.
-            constructor; pcuic. constructor; auto.
+            constructor; pcuic. split; auto.
             eapply All2_fold_app_inv in convctx as [_ convctx].
             unshelve eapply (All2_fold_impl convctx).
             simpl; pcuicfo. destruct X. constructor; auto.

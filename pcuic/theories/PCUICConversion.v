@@ -200,10 +200,10 @@ Section ConvCongruences.
     Σ ;;; Γ ⊢ (tProd na M1 M2) ≤[le] (tProd na' N1 M2).
   Proof.
     intros.
-    eapply equality_red in X as (dom & dom' & rdom & rdom' & eqdom); tea.
+    eapply equality_red in X as (dom & dom' & [rdom rdom' eqdom]); tea.
     eapply equality_red.
     exists (tProd na dom M2), (tProd na' dom' M2).
-    split; [|split]; auto.
+    split; auto.
     - eapply into_closed_red; [eapply red_prod|..]; eauto with fvs.
     - eapply into_closed_red; [eapply red_prod|..]; eauto with fvs.
     - destruct le; (constructor; [assumption|try apply eqdom|try reflexivity]).
@@ -221,10 +221,9 @@ Section ConvCongruences.
     - eapply (equality_equality_ctx (le':=false) (Γ' := Γ ,, vass na' N1)) in X0.
       2:{ constructor. 1:{ eapply closed_context_equality_refl; eauto with fvs. }
           constructor; auto. 1:now symmetry. now symmetry. }
-      eapply equality_red in X0 as (codom & codom' & rcodom & rcodom' & eqcodom).
+      eapply equality_red in X0 as (codom & codom' & [rcodom rcodom' eqcodom]).
       eapply equality_red.
-      exists (tProd na' N1 codom), (tProd na' N1 codom').
-      split; [|split].
+      exists (tProd na' N1 codom), (tProd na' N1 codom'). split=>//.
       + eapply into_closed_red; [eapply red_prod|..]; fvs.
       + eapply into_closed_red; [eapply red_prod|..]; fvs.
       + destruct le; (constructor; auto); reflexivity.
@@ -455,10 +454,8 @@ Section ConvCongruences.
   Lemma invert_red_letin {Γ C na d ty b} :
     Σ ;;; Γ ⊢ (tLetIn na d ty b) ⇝ C ->
     (∑ d' ty' b',
-    ((C = tLetIn na d' ty' b') ×
-      Σ ;;; Γ ⊢ d ⇝ d' ×
-      Σ ;;; Γ ⊢ ty ⇝ ty' ×
-      Σ ;;; (Γ ,, vdef na d ty) ⊢ b ⇝ b')) +
+    [× C = tLetIn na d' ty' b', Σ ;;; Γ ⊢ d ⇝ d', Σ ;;; Γ ⊢ ty ⇝ ty' &
+      Σ ;;; (Γ ,, vdef na d ty) ⊢ b ⇝ b']) +
     (Σ ;;; Γ ⊢ (subst10 d b) ⇝ C)%type.
   Proof.
     generalize_eq x (tLetIn na d ty b).
@@ -469,14 +466,13 @@ Section ConvCongruences.
     induction red; simplify_dep_elim.
     + autorewrite with fvs in clC; move/and3P: clC => [] ond onty onb.
       left; do 3 eexists. split; eauto with pcuic fvs.
-      repeat split; eauto with fvs.
     + assert (is_open_term Γ y) by eauto with fvs. intuition auto.
       autorewrite with fvs in clt; move/and3P: clt => [] ond onty onb.
       depelim r; try specialize (X0 _ _ _ _ eq_refl) as
-        [(? & ? & ? & ? & ? & ? & ?)|?].
+        [(? & ? & ? & [? ? ? ?])|?].
       - right. split; try apply clos_rt_rt1n_iff; eauto.
       - solve_discr.
-      - left. do 3 eexists. intuition eauto with pcuic.
+      - left. do 3 eexists; split; eauto with pcuic.
         * transitivity r; eauto with pcuic.
         * eapply red_red_ctx_inv'; eauto.
           simpl. constructor.
@@ -495,7 +491,6 @@ Section ConvCongruences.
           constructor; eauto with fvs pcuic.
       - right; auto.
       - left. do 3 eexists. split; tea.
-        split => //. split => //.
         now transitivity r; eauto with pcuic fvs.
       - right; auto.
         transitivity (r {0 := d}); auto.
@@ -509,9 +504,8 @@ Section ConvCongruences.
   Lemma invert_red_prod {Γ na dom codom T} :
     Σ ;;; Γ ⊢ tProd na dom codom ⇝ T ->
     ∑ dom' codom',
-      T = tProd na dom' codom' ×
-      Σ ;;; Γ ⊢ dom ⇝ dom' ×
-      Σ ;;; Γ ,, vass na dom ⊢ codom ⇝ codom'.
+      [× T = tProd na dom' codom', Σ ;;; Γ ⊢ dom ⇝ dom' &
+         Σ ;;; Γ ,, vass na dom ⊢ codom ⇝ codom'].
   Proof.
     generalize_eq x (tProd na dom codom).
     move=> e [clΓ clt] red.
@@ -527,14 +521,12 @@ Section ConvCongruences.
       * specialize (IHred _ _ _ eq_refl).
         destruct IHred as [dom' [codom' [-> [redl redr]]]].
         eexists _, _; split => //.
-        split.
         { transitivity N1; split; eauto with fvs. }
         { eapply red_red_ctx_inv'; tea. constructor; eauto with fvs.
           { now eapply closed_red_ctx_refl. }
           constructor; split; eauto with fvs. }
       * specialize (IHred _ _ _ eq_refl) as [dom' [codom' [-> [redl redr]]]].
         eexists _, _; split => //.
-        split => //.
         transitivity N2; split; eauto with fvs.
   Qed.
 
@@ -595,29 +587,27 @@ Section ConvCongruences.
 
   Lemma equality_Prod_l_inv {le Γ na dom codom T} :
     Σ ;;; Γ ⊢ tProd na dom codom ≤[le] T ->
-    ∑ na' dom' codom', Σ ;;; Γ ⊢ T ⇝ (tProd na' dom' codom') ×
-    (eq_binder_annot na na') × (Σ ;;; Γ ⊢ dom = dom') × (Σ ;;; Γ ,, vass na dom ⊢ codom ≤[le] codom').
+    ∑ na' dom' codom', 
+    [× Σ ;;; Γ ⊢ T ⇝ (tProd na' dom' codom'),
+      (eq_binder_annot na na'), Σ ;;; Γ ⊢ dom = dom' &
+      Σ ;;; Γ ,, vass na dom ⊢ codom ≤[le] codom'].
   Proof.
     intros H.
-    eapply equality_red in H as (v & v' & tv & tv' & eqp).
-    destruct (invert_red_prod tv) as (dom' & codom' & -> & reddom & redcod).
+    eapply equality_red in H as (v & v' & [tv tv' eqp]).
+    destruct (invert_red_prod tv) as (dom' & codom' & [-> reddom redcod]).
     destruct le.
     - depelim eqp.
+      generalize (closed_red_open_right tv').
+      rewrite on_fvs_prod => /andP[] // ona' onb'.
       exists na', a', b'; split => //.
-      split => //.
-      eapply closed_red_open_right in tv'.
-      move: tv'. rewrite on_fvs_prod => /andP[] // ona' onb'.
-      split.
       * transitivity dom'; pcuic.
         eapply ws_equality_refl; eauto with fvs.
       * transitivity codom'; pcuic.
         eapply ws_equality_refl; eauto with fvs.
     - depelim eqp.
+      generalize (closed_red_open_right tv').
+      rewrite on_fvs_prod => /andP[] // ona' onb'.
       exists na', a', b'; split => //.
-      split => //.
-      eapply closed_red_open_right in tv'.
-      move: tv'. rewrite on_fvs_prod => /andP[] // ona' onb'.
-      split.
       * transitivity dom'; pcuic.
         eapply ws_equality_refl; eauto with fvs.
       * transitivity codom'; pcuic.
@@ -626,48 +616,46 @@ Section ConvCongruences.
 
   Lemma equality_Prod_r_inv {le Γ na dom codom T} :
     Σ ;;; Γ ⊢ T ≤[le] tProd na dom codom ->
-    ∑ na' dom' codom', Σ ;;; Γ ⊢ T ⇝ (tProd na' dom' codom') ×
-    (eq_binder_annot na na') × (Σ ;;; Γ ⊢ dom' = dom) × (Σ ;;; Γ ,, vass na dom ⊢ codom' ≤[le] codom).
+    ∑ na' dom' codom', 
+    [× Σ ;;; Γ ⊢ T ⇝ (tProd na' dom' codom'),
+      eq_binder_annot na na', 
+      Σ ;;; Γ ⊢ dom' = dom & 
+      Σ ;;; Γ ,, vass na dom ⊢ codom' ≤[le] codom].
   Proof.
     intros H.
-    eapply equality_red in H as (v & v' & tv & tv' & eqp).
-    destruct (invert_red_prod tv') as (dom' & codom' & -> & reddom & redcod).
+    eapply equality_red in H as (v & v' & [tv tv' eqp]).
+    destruct (invert_red_prod tv') as (dom' & codom' & [-> reddom redcod]).
     destruct le.
     - depelim eqp.
+      generalize (closed_red_open_right tv).
+      rewrite on_fvs_prod => /andP[] // ona' onb'.
       exists na0, a, b; split => //.
-      split => //.
-      eapply closed_red_open_right in tv.
-      move: tv. rewrite on_fvs_prod => /andP[] // ona' onb'.
-      split.
       * transitivity dom'; pcuic.
         eapply ws_equality_refl; eauto with fvs.
       * transitivity codom'; pcuic.
         eapply ws_equality_refl; eauto with fvs.
     - depelim eqp.
+      generalize (closed_red_open_right tv).
+      rewrite on_fvs_prod => /andP[] // ona' onb'.
       exists na0, a, b; split => //.
-      split => //.
-      eapply closed_red_open_right in tv.
-      move: tv. rewrite on_fvs_prod => /andP[] // ona' onb'.
-      split.
       * transitivity dom'; pcuic.
         eapply ws_equality_refl; eauto with fvs.
       * transitivity codom'; pcuic.
         eapply ws_equality_refl; eauto with fvs.
   Qed.
-  
+      
   Ltac splits := repeat split.
 
   Lemma equality_Prod_Prod_inv {le Γ na na' dom dom' codom codom'} :
     Σ ;;; Γ ⊢ tProd na dom codom ≤[le] tProd na' dom' codom' ->
-    (eq_binder_annot na na') × (Σ ;;; Γ ⊢ dom = dom') × (Σ ;;; Γ ,, vass na' dom' ⊢ codom ≤[le] codom').
+    [× eq_binder_annot na na', Σ ;;; Γ ⊢ dom = dom' & Σ ;;; Γ ,, vass na' dom' ⊢ codom ≤[le] codom'].
   Proof.
     intros H.
-    eapply equality_red in H as (v & v' & tv & tv' & eqp).
-    destruct (invert_red_prod tv) as (dom0 & codom0 & -> & reddom0 & redcod0).
-    destruct (invert_red_prod tv') as (dom0' & codom0' & -> & reddom0' & redcod0').
+    eapply equality_red in H as (v & v' & [tv tv' eqp]).
+    destruct (invert_red_prod tv) as (dom0 & codom0 & [-> reddom0 redcod0]).
+    destruct (invert_red_prod tv') as (dom0' & codom0' & [-> reddom0' redcod0']).
     destruct le.
     - depelim eqp.
-      split => //.
       assert (Σ ;;; Γ ⊢ dom = dom').
       { transitivity dom0; pcuic.
         transitivity dom0'; pcuic.
@@ -681,7 +669,6 @@ Section ConvCongruences.
       constructor; eauto with fvs.
       cbn. eauto with fvs.
     - depelim eqp.
-      split => //.
       assert (Σ ;;; Γ ⊢ dom = dom').
       { transitivity dom0; pcuic.
         transitivity dom0'; pcuic.
@@ -1010,33 +997,33 @@ Section Inversions.
   Lemma compare_term_mkApps_l_inv {le} {u : term} {l : list term} {t : term} :
     compare_term le Σ Σ (mkApps u l) t ->
     ∑ (u' : term) (l' : list term),
-      (eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe le Σ) #|l| u u' × 
-      All2 (eq_term Σ Σ) l l') × t = mkApps u' l'.
+      [× eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe le Σ) #|l| u u',
+        All2 (eq_term Σ Σ) l l' & t = mkApps u' l'].
   Proof.
-    destruct le => /=; apply eq_term_upto_univ_mkApps_l_inv.
+    destruct le => /= => /eq_term_upto_univ_mkApps_l_inv; firstorder.
   Qed.
 
   Lemma compare_term_mkApps_r_inv {le} {u : term} {l : list term} {t : term} :
     compare_term le Σ Σ t (mkApps u l) ->
     ∑ (u' : term) (l' : list term),
-      (eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe le Σ) #|l| u' u × 
-      All2 (eq_term Σ Σ) l' l) × t = mkApps u' l'.
+      [× eq_term_upto_univ_napp Σ (eq_universe Σ) (compare_universe le Σ) #|l| u' u, 
+        All2 (eq_term Σ Σ) l' l & t = mkApps u' l'].
   Proof.
-    destruct le => /=; apply eq_term_upto_univ_mkApps_r_inv.
+    destruct le => /= => /eq_term_upto_univ_mkApps_r_inv; firstorder.
   Qed.
 
   Lemma equality_Ind_l_inv {le Γ ind ui l T} :
     Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] T ->
     ∑ ui' l',
-      Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l') ×
-      R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui' ×
-      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'.
+      [× Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l'),
+      R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui' &
+      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'].
   Proof.
-    move/equality_red=> [v [v' [redv [redv' leqvv']]]].
+    move/equality_red=> [v [v' [redv redv' leqvv']]].
     eapply invert_red_mkApps_tInd in redv as [l' [? ha]]; auto. subst.
-    eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [[e ?] ?]]].
+    eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [e ? ?]]].
     subst. depelim e.
-    eexists _,_. split ; eauto. split ; auto.
+    eexists _,_. split ; eauto.
     - now rewrite (All2_length ha).
     - eapply All2_trans.
       * intros x y z h1 h2. etransitivity; tea.
@@ -1062,15 +1049,15 @@ Section Inversions.
   Lemma equality_Ind_r_inv {le Γ ind ui l T} :
       Σ ;;; Γ ⊢ T ≤[le] mkApps (tInd ind ui) l ->
       ∑ ui' l',
-        Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l') ×
-        R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui' ui ×
-        All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l' l.
+        [× Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l'),
+          R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui' ui &
+        All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l' l].
   Proof.
-    move/equality_red=> [v [v' [redv [redv' leqvv']]]].
+    move/equality_red=> [v [v' [redv redv' leqvv']]].
     eapply invert_red_mkApps_tInd in redv' as [l' [? ha]]; auto. subst.
-    eapply compare_term_mkApps_r_inv in leqvv' as [u [l'' [[e ?] ?]]].
+    eapply compare_term_mkApps_r_inv in leqvv' as [u [l'' [e ? ?]]].
     subst. depelim e.
-    eexists _,_. split ; eauto. split ; auto.
+    eexists _,_. split ; eauto.
     - now rewrite (All2_length ha).
     - eapply All2_trans.
       * intros x y z h1 h2. etransitivity; tea.
@@ -1087,17 +1074,17 @@ Section Inversions.
 
   Lemma equality_Ind_inv {le Γ ind ind' ui ui' l l'} :
       Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] mkApps (tInd ind' ui') l' ->
-      ind = ind' ×
-      R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui ×
-      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'.
+      [× ind = ind',
+      R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui &
+      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'].
   Proof.
-    move/equality_red=> [v [v' [redv [redv' leqvv']]]].
+    move/equality_red=> [v [v' [redv redv' leqvv']]].
     pose proof (clrel_ctx redv).
     eapply invert_red_mkApps_tInd in redv as [l0 [? ha]]; auto. subst.
     eapply invert_red_mkApps_tInd in redv' as [l1 [? ha']]; auto. subst.
-    eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [[e ?] ?]]].
+    eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [e ? ?]]].
     depelim e; solve_discr.
-    noconf H0. noconf H1. intuition auto.
+    noconf H0. noconf H1. split => //.
     + apply R_global_instance_refl; tc.
     + eapply All2_trans; tea; tc.
       { eapply ws_equality_trans. }
@@ -1182,7 +1169,7 @@ Qed.*)
 (** Injectivity of products, the essential property of cumulativity needed for subject reduction. *)
 Lemma cumul_Prod_inv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na na' A B A' B'} :
   Σ ;;; Γ ⊢ tProd na A B ≤ tProd na' A' B' ->
-   (eq_binder_annot na na' × (Σ ;;; Γ ⊢ A = A') × (Σ ;;; Γ ,, vass na' A' ⊢ B ≤ B'))%type.
+  [× eq_binder_annot na na', Σ ;;; Γ ⊢ A = A' & Σ ;;; Γ ,, vass na' A' ⊢ B ≤ B']%type.
 Proof.
   intros H.
   now eapply equality_Prod_Prod_inv in H.
@@ -1191,7 +1178,7 @@ Qed.
 (** Injectivity of products for conversion holds as well *)
 Lemma conv_Prod_inv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na na' A B A' B'} :
   Σ ;;; Γ ⊢ tProd na A B = tProd na' A' B' ->
-   (eq_binder_annot na na' × (Σ ;;; Γ ⊢ A = A') × (Σ ;;; Γ ,, vass na' A' ⊢ B = B'))%type.
+  [× eq_binder_annot na na', Σ ;;; Γ ⊢ A = A' & (Σ ;;; Γ ,, vass na' A' ⊢ B = B')]%type.
 Proof.
   intros H.
   now eapply equality_Prod_Prod_inv in H.
@@ -1336,8 +1323,8 @@ Section ConvRedConv.
       sq_equality leq Σ (Γ,, vass na1 A1) B1 B2.
   Proof.
     intros [].
-    apply equality_Prod_Prod_inv in X; intuition auto; sq; auto.
-    eapply equality_equality_ctx in b0; tea.
+    apply equality_Prod_Prod_inv in X as []; intuition auto; sq; auto.
+    eapply equality_equality_ctx in w0; tea.
     instantiate (1:=false). constructor; auto.
     - apply closed_context_equality_refl; eauto with fvs.
     - constructor; auto.
@@ -1472,10 +1459,10 @@ Section ConvRedConv.
   Qed.
   
   Definition conv_predicate Γ p p' :=
-    equality_terms Σ Γ p.(pparams) p'.(pparams) ×
-    R_universe_instance (eq_universe Σ) (puinst p) (puinst p')
-    × pcontext p = pcontext p'
-    × Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'.
+    [× equality_terms Σ Γ p.(pparams) p'.(pparams),
+       R_universe_instance (eq_universe Σ) (puinst p) (puinst p'),
+      pcontext p = pcontext p' &
+      Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'].
 
   #[global]
   Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
@@ -1643,9 +1630,9 @@ Section ConvRedConv.
     conv_predicate Γ p p' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c brs.
   Proof.
-    intros onΓ oncase onp' [cpars [cu [cctx cret]]].
+    intros onΓ oncase onp' [cpars cu cctx cret].
     assert (Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci (set_preturn p (preturn p')) c brs).
-    { eapply equality_red in cret as [v [v' [redl [redr eq]]]].
+    { eapply equality_red in cret as [v [v' [redl redr eq]]].
       eapply equality_red.
       exists (tCase ci (set_preturn p v) c brs).
       exists (tCase ci (set_preturn p v') c brs).
@@ -1681,7 +1668,7 @@ Section ConvRedConv.
       * destruct r as [hlen [onr [axy az]]].
         transitivity (tCase ci (set_pparams ppuinst y) c brs) => //.
         eapply OnOne2_split in onr as [? [? [? [? [conv [-> ->]]]]]].
-        eapply equality_red in conv as [v [v' [redl [redr eq]]]].
+        eapply equality_red in conv as [v [v' [redl redr eq]]].
         apply equality_red.
         exists (tCase ci (set_pparams ppuinst (x1 ++ v :: x2)) c brs).
         exists (tCase ci (set_pparams ppuinst (x1 ++ v' :: x2)) c brs).
@@ -1696,7 +1683,6 @@ Section ConvRedConv.
             { eapply All2_refl. reflexivity. }
             constructor; [apply redl|].
             eapply All2_refl; reflexivity. } }
-        split.
         { constructor; auto.
           { eapply All_forallb in az.
             eapply is_open_case_set_pparams => //.
@@ -1852,14 +1838,14 @@ Section ConvRedConv.
     assert (clΓ := ws_equality_is_closed_context cvc).
     etransitivity.
     { eapply equality_Case_brs. 6:tea. all:tas.
-      destruct cvp as [onpars [oninst [onctx onr]]].
+      destruct cvp as [onpars oninst onctx onr].
       now rewrite (All2_length onpars). }
     etransitivity.
     { eapply equality_Case_c; tea.
-      destruct cvp as [onpars [oninst [onctx onr]]].
+      destruct cvp as [onpars oninst onctx onr].
       now rewrite (All2_length onpars). }
     eapply equality_Case_p; tea.
-    destruct cvp as [onpars [oninst [onctx onr]]].
+    destruct cvp as [onpars oninst onctx onr].
     rewrite is_open_case_split onp onc' /=.
     now rewrite (All2_length onpars).
   Qed.
@@ -1991,7 +1977,7 @@ Section ConvRedConv.
     apply OnOne2_split in h
       as [[na ty bo ra] [[na' ty' bo' ra'] [l1 [l2 [[? [h [? ?]]] [? ?]]]]]].
     simpl in *. subst ty' ra'.
-    eapply equality_red in h as [v [v' [hbo [hbo' hcomp]]]].
+    eapply equality_red in h as [v [v' [hbo hbo' hcomp]]].
     set (declv := {| dname := na; dtype := ty; dbody := v; rarg := ra |}).
     set (declv' := {| dname := na'; dtype := ty; dbody := v'; rarg := ra |}).
     eapply equality_red.
@@ -2419,22 +2405,20 @@ Section ConvRedConv.
 
   Lemma invert_red_lambda Γ na A1 b1 T :
     Σ ;;; Γ ⊢ (tLambda na A1 b1) ⇝ T ->
-    ∑ A2 b2, (T = tLambda na A2 b2) ×
-        Σ ;;; Γ ⊢ A1 ⇝ A2 × Σ ;;; (Γ ,, vass na A1) ⊢ b1 ⇝ b2.
+    ∑ A2 b2, [× T = tLambda na A2 b2,
+        Σ ;;; Γ ⊢ A1 ⇝ A2 & Σ ;;; (Γ ,, vass na A1) ⊢ b1 ⇝ b2].
   Proof.
     intros [onΓ onl ont].
     rewrite on_fvs_lambda in onl.
     move: onl => /=/andP [] onA1 onb1.
     eapply clos_rt_rt1n_iff in ont. depind ont.
-    - eexists _, _.
-      intuition eauto.
-      * eapply closed_red_refl; eauto with fvs.
-      * eapply closed_red_refl; eauto with fvs.
+    - eexists _, _. split => //. 
+      eapply closed_red_refl; eauto with fvs.
     - depelim r; solve_discr; specialize (IHont _ _ _ _ onΓ eq_refl byfvs).
       + forward IHont by tas.
         destruct IHont as [A2 [B2 [-> [? ?]]]].
-        eexists _, _; intuition eauto.
-        1:{ split; tas. eapply red_step with M' => //. apply c. }
+        eexists _, _; split => //.
+        1:{ split; tas. eapply red_step with M' => //. }
         eapply red_red_ctx_inv'; eauto.
         constructor; auto.
         * now eapply closed_red_ctx_refl.
@@ -2445,26 +2429,26 @@ Section ConvRedConv.
           rewrite (@on_free_vars_ctx_on_ctx_free_vars _ (Γ ,, vass na A1)).
           eauto with fvs. }
           destruct IHont as [A2 [B2 [-> [? ?]]]].
-          eexists _, _; intuition eauto.
+          eexists _, _; split => //.
           split; eauto with fvs. eapply red_step with M' => //.
-          apply c0.
+          apply c.
   Qed.
 
   Lemma equality_Lambda_inv :
     forall leq Γ na1 na2 A1 A2 b1 b2,
       Σ ;;; Γ ⊢ tLambda na1 A1 b1 ≤[leq] tLambda na2 A2 b2 ->
-      eq_binder_annot na1 na2 × Σ ;;; Γ ⊢ A1 = A2 × Σ ;;; Γ ,, vass na1 A1 ⊢ b1 ≤[leq] b2.
+      [× eq_binder_annot na1 na2, Σ ;;; Γ ⊢ A1 = A2 & Σ ;;; Γ ,, vass na1 A1 ⊢ b1 ≤[leq] b2].
   Proof.
     intros *.
-    move/equality_red; intros (v & v' & redv & redv' & eq).
-    eapply invert_red_lambda in redv as (A1' & b1' & -> & rA1 & rb1).
-    eapply invert_red_lambda in redv' as (v0 & v0' & redv0 & redv0' & eq0).
+    move/equality_red; intros (v & v' & [redv redv' eq]).
+    eapply invert_red_lambda in redv as (A1' & b1' & [-> rA1 rb1]).
+    eapply invert_red_lambda in redv' as (v0 & v0' & [redv0 redv0' eq0]).
     subst v'.
     destruct leq; depelim eq.
     { assert (Σ ;;; Γ ⊢ A1 = A2).
       - eapply equality_red.
-        exists A1', v0; intuition auto.
-      - intuition auto. transitivity b1'; pcuic.
+        exists A1', v0; split=>//.
+      - split => //. transitivity b1'; pcuic.
         eapply equality_equality_ctx; revgoals.
         { transitivity v0'; tea. 2:eapply red_equality_inv; tea.
           constructor; tea. 1,3:eauto with fvs.
@@ -2474,8 +2458,8 @@ Section ConvRedConv.
         constructor; eauto. }
     { assert (Σ ;;; Γ ⊢ A1 = A2).
       - eapply equality_red.
-        exists A1', v0; intuition auto.
-      - intuition auto. transitivity b1'; pcuic.
+        exists A1', v0; split; auto.
+      - split=>//. transitivity b1'; pcuic.
         eapply equality_equality_ctx; revgoals.
         { transitivity v0'; tea. 2:eapply red_equality_inv; tea.
           constructor; tea. 1,3:eauto with fvs.
@@ -2490,7 +2474,7 @@ Section ConvRedConv.
       sq_equality leq Σ Γ (tLambda na1 A1 b1) (tLambda na2 A2 b2) ->
       eq_binder_annot na1 na2 /\ ∥ Σ ;;; Γ ⊢ A1 = A2 ∥ /\ sq_equality leq Σ (Γ ,, vass na1 A1) b1 b2.
   Proof.
-    intros * []. eapply equality_Lambda_inv in X.
+    intros * []. eapply equality_Lambda_inv in X as [].
     intuition auto. all:sq; auto.
   Qed.
 
@@ -2568,17 +2552,17 @@ Section ConvSubst.
   Lemma equality_substs_red {Γ Δ s s'} : 
     All2 (ws_equality false Σ Γ) s s' ->
     untyped_subslet Γ s Δ ->
-    (∑ s0 s'0, All2 (closed_red Σ Γ) s s0 × All2 (closed_red Σ Γ) s' s'0 × All2 (eq_term Σ Σ) s0 s'0).
+    ∑ s0 s'0, [× All2 (closed_red Σ Γ) s s0, All2 (closed_red Σ Γ) s' s'0 & All2 (eq_term Σ Σ) s0 s'0].
   Proof.
     move=> eqsub subs.
     induction eqsub in Δ, subs |- *.
     * depelim subs. exists [], []; split; auto.
     * depelim subs.
-    - specialize (IHeqsub _ subs) as [s0 [s'0 [redl [redr eqs0]]]].
-      eapply equality_red in r as [v [v' [redv [redv' eqvv']]]].
+    - specialize (IHeqsub _ subs) as [s0 [s'0 [redl redr eqs0]]].
+      eapply equality_red in r as [v [v' [redv redv' eqvv']]].
       exists (v :: s0), (v' :: s'0). repeat split; constructor; auto.
-    - specialize (IHeqsub _ subs) as [s0 [s'0 [redl [redr eqs0]]]].
-      eapply equality_red in r as [v [v' [redv [redv' eqvv']]]].
+    - specialize (IHeqsub _ subs) as [s0 [s'0 [redl redr eqs0]]].
+      eapply equality_red in r as [v [v' [redv redv' eqvv']]].
       exists (v :: s0), (v' :: s'0). repeat split; constructor; auto.
   Qed.
 
@@ -2704,7 +2688,7 @@ Section ConvSubst.
     Σ ⊢ Γ ,,, subst_context s 0 Γ' = Γ ,,, subst_context s' 0 Γ'.
   Proof.
     move=> subs subs' eqsub cl cl'.
-    destruct (equality_substs_red eqsub subs) as (s0 & s'0 & rs' & rs'0 & eqs).
+    destruct (equality_substs_red eqsub subs) as (s0 & s'0 & [rs' rs'0 eqs]).
     transitivity (Γ ,,, subst_context s0 0 Γ').
     { eapply substitution_context_equality_red_subst; revgoals; tea. }
     symmetry. transitivity (Γ ,,, subst_context s'0 0 Γ').
@@ -2729,8 +2713,8 @@ Section ConvSubst.
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| b = subst s' #|Γ'| b.
   Proof.
     move=> eqsub cl cl' subs subs' clb.
-    assert(∑ s0 s'0, All2 (closed_red Σ Γ) s s0 × All2 (closed_red Σ Γ) s' s'0 × All2 (eq_term Σ Σ) s0 s'0)
-      as [s0 [s'0 [redl [redr eqs]]]].
+    assert(∑ s0 s'0, [× All2 (closed_red Σ Γ) s s0, All2 (closed_red Σ Γ) s' s'0 & All2 (eq_term Σ Σ) s0 s'0])
+      as [s0 [s'0 [redl redr eqs]]].
     { apply (equality_substs_red eqsub subs). }
     etransitivity.
     * apply red_conv. apply (closed_red_red_subst (Δ := Δ) (s' := s0)); tas.
@@ -3167,19 +3151,19 @@ Section ConvTerms.
   Lemma equality_terms_alt {Γ args args'} :
     equality_terms Σ Γ args args' <~>
     ∑ argsr argsr',
-      All2 (closed_red Σ Γ) args argsr ×
-      All2 (closed_red Σ Γ) args' argsr' ×
-      All2 (eq_term Σ Σ) argsr argsr'.
+      [× All2 (closed_red Σ Γ) args argsr,
+      All2 (closed_red Σ Γ) args' argsr' &
+      All2 (eq_term Σ Σ) argsr argsr'].
   Proof.
     split.
     - intros conv.
       induction conv.
       + exists [], []; eauto with pcuic.
-      + apply equality_red in r as (xr&yr&xred&yred&xy).
-        specialize IHconv as (argsr&argsr'&?&?&?).
+      + apply equality_red in r as (xr&yr&[xred yred xy]).
+        specialize IHconv as (argsr&argsr'&[]).
         exists (xr :: argsr), (yr :: argsr').
         eauto 7 with pcuic.
-    - intros (argsr&argsr'&r&r'&eqs).
+    - intros (argsr&argsr'& [r r' eqs]).
       induction eqs in args, args', r, r' |- *; depelim r; depelim r'; [constructor|].
       constructor; auto.
       apply equality_red; eauto.

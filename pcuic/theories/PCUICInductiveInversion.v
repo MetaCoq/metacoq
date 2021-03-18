@@ -4364,7 +4364,7 @@ Proof.
         2:{ len. now rewrite PCUICLiftSubst.map_subst_instance_to_extended_list_k. }
         2:{ now len. }
         rewrite subst_context_length subst_instance_length lift_it_mkProd_or_LetIn /=.
-        eapply typing_spine_it_mkProd_or_LetIn_close'; tea.
+        eapply typing_spine_it_mkProd_or_LetIn_close; tea.
         3:{ reflexivity. }
         2:{ eapply isType_it_mkProd_or_LetIn; tea.
             eapply isType_Sort.

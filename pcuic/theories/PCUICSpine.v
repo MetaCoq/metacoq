@@ -8,13 +8,14 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICContextSubst
+     PCUICWellScopedCumulativity
      PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
      PCUICArities.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
@@ -56,20 +57,6 @@ Lemma typing_spine_eq {cf:checker_flags} Σ Γ ty s s' ty' :
   typing_spine Σ Γ ty s ty' ->
   typing_spine Σ Γ ty s' ty'.
 Proof. now intros ->. Qed.
-
-Lemma typing_spine_strengthen {cf:checker_flags} Σ Γ T args U : 
-  wf Σ.1 ->
-  typing_spine Σ Γ T args U ->
-  forall T', Σ ;;; Γ |- T' <= T ->
-  typing_spine Σ Γ T' args U.
-Proof.
-  induction 2 in |- *; intros T' (*WAT*)redT.
-  - constructor. eauto. transitivity ty; auto.
-  - specialize (IHX0 (B {0 := hd})).
-    forward IHX0. { reflexivity. }
-    eapply type_spine_cons with na A B; auto.
-    etransitivity; eauto.
-Qed.
 
 Lemma subslet_app {cf:checker_flags} Σ Γ s s' Δ Δ' : 
   subslet Σ Γ s (subst_context s' 0 Δ) ->
@@ -185,67 +172,6 @@ Proof.
     apply IHctxi.
 Qed.
 
-Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Γ' Δ Δ' s ctxs : 
-  wf Σ.1 ->
-  wf_local Σ (Γ ,,, Δ ,,, Γ') ->
-  type_local_ctx (lift_typing typing) Σ (Γ ,,, Δ ,,, Γ') Δ' ctxs ->
-  subslet Σ Γ s Δ ->
-  type_local_ctx (lift_typing typing) Σ (Γ ,,, subst_context s 0 Γ') (subst_context s #|Γ'| Δ') ctxs.
-Proof.
-  induction Δ' in Γ' |- *; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; intuition auto.
-  + destruct a0; simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /=.
-    intuition auto.
-    - exists x; auto.
-      rewrite -app_context_assoc in t.
-      eapply substitution in t; eauto.
-      rewrite subst_context_app app_context_assoc in t.
-      simpl in t. rewrite Nat.add_0_r in t. 
-      now rewrite app_context_length in t.
-    - rewrite -app_context_assoc in b1.
-      eapply substitution in b1; eauto.
-      rewrite subst_context_app app_context_assoc Nat.add_0_r in b1.
-      now rewrite app_context_length in b1.
-  + rewrite subst_context_snoc /= /subst_decl /map_decl /=.
-      intuition auto.
-      rewrite -app_context_assoc in b.
-      eapply substitution in b; eauto.
-      rewrite subst_context_app app_context_assoc in b.
-      rewrite Nat.add_0_r in b. 
-      now rewrite app_context_length in b.
-Qed.
-
-Lemma subst_sorts_local_ctx {cf:checker_flags} Σ Γ Γ' Δ Δ' s ctxs : 
-  wf Σ.1 ->
-  wf_local Σ (Γ ,,, Δ ,,, Γ') ->
-  sorts_local_ctx (lift_typing typing) Σ (Γ ,,, Δ ,,, Γ') Δ' ctxs ->
-  subslet Σ Γ s Δ ->
-  sorts_local_ctx (lift_typing typing) Σ (Γ ,,, subst_context s 0 Γ') (subst_context s #|Γ'| Δ') ctxs.
-Proof.
-  induction Δ' in Γ', ctxs |- *; simpl; auto.
-  destruct a as [na [b|] ty]; simpl; intuition auto.
-  + destruct a0; simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /=.
-    intuition auto.
-    - exists x; auto.
-      rewrite -app_context_assoc in t.
-      eapply substitution in t; eauto.
-      rewrite subst_context_app app_context_assoc in t.
-      simpl in t. rewrite Nat.add_0_r in t. 
-      now rewrite app_context_length in t.
-    - rewrite -app_context_assoc in b1.
-      eapply substitution in b1; eauto.
-      rewrite subst_context_app app_context_assoc Nat.add_0_r in b1.
-      now rewrite app_context_length in b1.
-  + rewrite subst_context_snoc /= /subst_decl /map_decl /=.
-    destruct ctxs => //.
-    intuition auto.
-    rewrite -app_context_assoc in b.
-    eapply substitution in b; eauto.
-    rewrite subst_context_app app_context_assoc in b.
-    rewrite Nat.add_0_r in b. 
-    now rewrite app_context_length in b.
-Qed.
-
 Record spine_subst {cf:checker_flags} Σ Γ inst s Δ := mkSpineSubst {
   spine_dom_wf : wf_local Σ Γ;
   spine_codom_wf : wf_local Σ (Γ ,,, Δ);
@@ -275,151 +201,6 @@ Proof.
   specialize (IHc _ c'). now subst. 
 Qed.
 
-Inductive arity_spine {cf : checker_flags} (Σ : global_env_ext) (Γ : context) : 
-  term -> list term -> term -> Type :=
-| arity_spine_nil ty : arity_spine Σ Γ ty [] ty
-| arity_spine_conv ty ty' : isType Σ Γ ty' ->
-  Σ ;;; Γ |- ty <= ty' -> arity_spine Σ Γ ty [] ty'  
-| arity_spine_def : forall (tl : list term) 
-                      (na : aname) (A a B B' : term),                      
-                    arity_spine Σ Γ (B {0 := a}) tl B' ->
-                    arity_spine Σ Γ (tLetIn na a A B) tl B'
-| arity_spine_ass : forall (hd : term) (tl : list term) 
-                      (na : aname) (A B B' : term),
-                    Σ;;; Γ |- hd : A ->
-                    arity_spine Σ Γ (B {0 := hd}) tl B' ->
-                    arity_spine Σ Γ (tProd na A B) (hd :: tl) B'.
-
-Derive Signature for arity_spine.
-
-Record wf_arity_spine {cf:checker_flags} Σ Γ T args T' :=
-{ wf_arity_spine_wf : isType Σ Γ T;
-  wf_arity_spine_spine : arity_spine Σ Γ T args T' }.
-
-Lemma wf_arity_spine_typing_spine {cf:checker_flags} Σ Γ T args T' :
-  wf Σ.1 ->
-  wf_arity_spine Σ Γ T args T' ->
-  typing_spine Σ Γ T args T'.
-Proof.
-  intros wfΣ [wf sp].
-  have wfΓ := isType_wf_local wf.
-  induction sp; try constructor; auto. reflexivity.
-  eapply isType_tLetIn_red in wf; auto.
-  specialize (IHsp wf).
-  eapply typing_spine_strengthen; eauto.
-  apply red_cumul. apply red1_red. constructor.
-
-  econstructor; eauto. reflexivity. apply IHsp.
-  eapply isType_tProd in wf => //.
-  destruct wf as [wfA wfB].
-  unshelve eapply (@isType_subst _ _ wfΣ Γ [vass na A] _ _ [hd]) in wfB => //.
-  constructor; auto.
-  constructor. constructor. now rewrite subst_empty.
-Qed.
-
-Lemma arity_typing_spine {cf:checker_flags} Σ Γ Γ' s inst s' : 
-  wf Σ.1 ->
-  wf_local Σ (Γ ,,, Γ') ->
-  typing_spine Σ Γ (it_mkProd_or_LetIn Γ' (tSort s)) inst (tSort s') ->
-  (#|inst| = context_assumptions Γ') * leq_universe (global_ext_constraints Σ) s s' *
-  ∑ instsubst, spine_subst Σ Γ inst instsubst Γ'.
-Proof.
-  intros wfΣ wfΓ'; revert s inst s'.
-  assert (wf_local Σ Γ). now apply wf_local_app_l in wfΓ'. move X after wfΓ'.
-  rename X into wfΓ.
-  generalize (le_n #|Γ'|).
-  generalize (#|Γ'|) at 2.
-  induction n in Γ', wfΓ' |- *.
-  - destruct Γ' using rev_ind; try clear IHΓ'; simpl; intros len s inst s' Hsp.
-    + depelim Hsp.
-      ++ intuition auto.
-         now eapply cumul_Sort_inv.
-         exists []. split; try constructor; auto.
-      ++ now eapply equality_Sort_Prod_inv in c.
-    + rewrite app_length /= in len; elimtype False; lia.
-  - intros len s inst s' Hsp.
-    destruct Γ' using rev_ind; try clear IHΓ'.
-    -- depelim Hsp. 1:intuition auto.
-      --- now eapply cumul_Sort_inv.
-      --- exists []; split; try constructor; auto.
-      --- now eapply equality_Sort_Prod_inv in c.
-    -- rewrite app_length /= in len.
-      rewrite it_mkProd_or_LetIn_app in Hsp.
-      destruct x as [na [b|] ty]; simpl in *; rewrite /mkProd_or_LetIn /= in Hsp.
-      + rewrite context_assumptions_app /= Nat.add_0_r.
-        eapply typing_spine_letin_inv in Hsp; auto.
-        rewrite /subst1 subst_it_mkProd_or_LetIn /= in Hsp.
-        specialize (IHn (subst_context [b] 0 l)).
-        forward IHn. {
-          rewrite app_context_assoc in wfΓ'.
-          apply All_local_env_app_inv in wfΓ' as [wfb wfa].
-          depelim wfb.
-          eapply substitution_wf_local. eauto. 
-          epose proof (cons_let_def Σ Γ [] [] na b ty ltac:(constructor)).
-          rewrite !subst_empty in X. eapply X. auto.
-          eapply All_local_env_app; split.
-          constructor; auto. apply wfa. }
-        forward IHn by rewrite subst_context_length; lia.
-        specialize (IHn s inst s' Hsp). 
-        split. now rewrite context_assumptions_subst in IHn.
-        destruct IHn as [[instlen leq] [instsubst [wfdom wfcodom cs subi]]].
-        exists (instsubst ++ [subst0 [] b]).
-        split; auto.
-        * apply context_subst_app_inv. cbn.
-          rewrite !skipn_0 {1}subst_empty.
-          assert(#|l| <= n) by lia.
-          rewrite context_assumptions_subst in instlen.
-          pose proof (context_subst_length cs). rewrite subst_context_length in H0.
-          rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
-          split. now rewrite H0 skipn_all_app.
-          rewrite H0 skipn_all_app. repeat constructor.
-        * apply subslet_app. now rewrite subst_empty.
-          repeat constructor.
-          rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
-          apply wf_local_app_l in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
-      + rewrite context_assumptions_app /=.
-        depelim Hsp. 
-        now eapply equality_Prod_Sort_inv in c.
-        eapply cumul_Prod_inv in c as [conva cumulB].
-        eapply (substitution_cumul0 _ _ _ _ _ _ hd) in cumulB; auto.
-        rewrite /subst1 subst_it_mkProd_or_LetIn /= in cumulB.
-        specialize (IHn (subst_context [hd] 0 l)).
-        forward IHn. {
-          rewrite app_context_assoc in wfΓ'.
-          apply All_local_env_app_inv in wfΓ' as [wfb wfa]; eauto.
-          depelim wfb. 
-          eapply substitution_wf_local. auto. 
-          constructor. constructor. rewrite subst_empty.
-          eapply type_Cumul'. eapply t.
-          eapply l0.
-          eapply conv_cumul; auto. now symmetry. 
-          eapply All_local_env_app; eauto; split.
-          constructor; eauto. eapply isType_tProd in i; intuition eauto. }
-        forward IHn by rewrite subst_context_length; lia.
-        specialize (IHn s tl s'). 
-        rewrite context_assumptions_subst in IHn.
-        eapply typing_spine_strengthen in Hsp.
-        3:eapply cumulB. all:eauto.
-        simpl. specialize (IHn Hsp).
-        destruct IHn as [[instlen leq] [instsubst [wfdom wfcodom cs subi]]].
-        intuition auto. lia.
-        exists (instsubst ++ [hd]).
-        split; auto.
-        * apply context_subst_app_inv. cbn.
-          rewrite !skipn_S skipn_0.
-          assert(#|l| <= n) by lia.
-          pose proof (context_subst_length cs). rewrite subst_context_length in H0.
-          rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
-          split. now rewrite H0 skipn_all_app.
-          rewrite H0 skipn_all_app. apply (context_subst_ass _ []). constructor.
-        * apply subslet_app => //.
-          repeat constructor.
-          rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
-          apply wf_local_app_l in wfΓ'. depelim wfΓ'.
-          rewrite !subst_empty. red in l0.
-          eapply type_Cumul'; eauto. eapply conv_cumul. now symmetry.
-Qed.
-
 Lemma make_context_subst_skipn {Γ args s s'} :
   make_context_subst Γ args s = Some s' ->
   skipn #|Γ| s' = s.
@@ -438,8 +219,267 @@ Proof.
       now eapply skipn_n_Sn.
 Qed.
 
-Lemma typing_spine_it_mkProd_or_LetIn_gen {cf:checker_flags} Σ Γ Δ Δ' T args s s' args' T' : 
-  wf Σ.1 ->
+Inductive arity_spine {cf : checker_flags} (Σ : global_env_ext) (Γ : context) : 
+  term -> list term -> term -> Type :=
+| arity_spine_nil ty : arity_spine Σ Γ ty [] ty
+| arity_spine_conv ty ty' : isType Σ Γ ty' ->
+  Σ ;;; Γ ⊢ ty ≤ ty' -> arity_spine Σ Γ ty [] ty'  
+| arity_spine_def : forall (tl : list term) 
+                      (na : aname) (A a B B' : term),                      
+                    arity_spine Σ Γ (B {0 := a}) tl B' ->
+                    arity_spine Σ Γ (tLetIn na a A B) tl B'
+| arity_spine_ass : forall (hd : term) (tl : list term) 
+                      (na : aname) (A B B' : term),
+                    Σ;;; Γ |- hd : A ->
+                    arity_spine Σ Γ (B {0 := hd}) tl B' ->
+                    arity_spine Σ Γ (tProd na A B) (hd :: tl) B'.
+
+Derive Signature for arity_spine.
+
+Record wf_arity_spine {cf:checker_flags} Σ Γ T args T' :=
+{ wf_arity_spine_wf : isType Σ Γ T;
+  wf_arity_spine_spine : arity_spine Σ Γ T args T' }.
+
+Section WfEnv.
+  Context {cf} {Σ : global_env_ext} {wfΣ : wf Σ}.
+
+  Lemma typing_spine_strengthen {Γ T args U} : 
+    typing_spine Σ Γ T args U ->
+    forall T', Σ ;;; Γ ⊢ T' ≤ T ->
+    typing_spine Σ Γ T' args U.
+  Proof.
+    induction 1 in |- *; intros T' (*WAT*)redT.
+    - constructor. eauto. transitivity ty; auto.
+    - specialize (IHX (B {0 := hd})).
+      forward IHX by pcuic. 
+      eapply isType_apply in i; tea; pcuic.
+      eapply type_spine_cons with na A B; auto.
+      etransitivity; eauto.
+  Qed.
+
+  Lemma subst_type_local_ctx {Γ Γ' Δ Δ' s ctxs} : 
+    wf_local Σ (Γ ,,, Δ ,,, Γ') ->
+    type_local_ctx (lift_typing typing) Σ (Γ ,,, Δ ,,, Γ') Δ' ctxs ->
+    subslet Σ Γ s Δ ->
+    type_local_ctx (lift_typing typing) Σ (Γ ,,, subst_context s 0 Γ') (subst_context s #|Γ'| Δ') ctxs.
+  Proof.
+    induction Δ' in Γ' |- *; simpl; auto.
+    destruct a as [na [b|] ty]; simpl; intuition auto.
+    + destruct a0; simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /=.
+      intuition auto.
+      - exists x; auto.
+        rewrite -app_context_assoc in t.
+        eapply substitution in t; eauto.
+        rewrite subst_context_app app_context_assoc in t.
+        simpl in t. rewrite Nat.add_0_r in t. 
+        now rewrite app_context_length in t.
+      - rewrite -app_context_assoc in b1.
+        eapply substitution in b1; eauto.
+        rewrite subst_context_app app_context_assoc Nat.add_0_r in b1.
+        now rewrite app_context_length in b1.
+    + rewrite subst_context_snoc /= /subst_decl /map_decl /=.
+        intuition auto.
+        rewrite -app_context_assoc in b.
+        eapply substitution in b; eauto.
+        rewrite subst_context_app app_context_assoc in b.
+        rewrite Nat.add_0_r in b. 
+        now rewrite app_context_length in b.
+  Qed.
+
+  Lemma subst_sorts_local_ctx {Γ Γ' Δ Δ' s ctxs} : 
+    wf_local Σ (Γ ,,, Δ ,,, Γ') ->
+    sorts_local_ctx (lift_typing typing) Σ (Γ ,,, Δ ,,, Γ') Δ' ctxs ->
+    subslet Σ Γ s Δ ->
+    sorts_local_ctx (lift_typing typing) Σ (Γ ,,, subst_context s 0 Γ') (subst_context s #|Γ'| Δ') ctxs.
+  Proof.
+    induction Δ' in Γ', ctxs |- *; simpl; auto.
+    destruct a as [na [b|] ty]; simpl; intuition auto.
+    + destruct a0; simpl; rewrite subst_context_snoc /= /subst_decl /map_decl /=.
+      intuition auto.
+      - exists x; auto.
+        rewrite -app_context_assoc in t.
+        eapply substitution in t; eauto.
+        rewrite subst_context_app app_context_assoc in t.
+        simpl in t. rewrite Nat.add_0_r in t. 
+        now rewrite app_context_length in t.
+      - rewrite -app_context_assoc in b1.
+        eapply substitution in b1; eauto.
+        rewrite subst_context_app app_context_assoc Nat.add_0_r in b1.
+        now rewrite app_context_length in b1.
+    + rewrite subst_context_snoc /= /subst_decl /map_decl /=.
+      destruct ctxs => //.
+      intuition auto.
+      rewrite -app_context_assoc in b.
+      eapply substitution in b; eauto.
+      rewrite subst_context_app app_context_assoc in b.
+      rewrite Nat.add_0_r in b. 
+      now rewrite app_context_length in b.
+  Qed.
+
+  Lemma wf_arity_spine_typing_spine {Γ T args T'} :
+    wf_arity_spine Σ Γ T args T' ->
+    typing_spine Σ Γ T args T'.
+  Proof.
+    intros [wf sp].
+    have wfΓ := isType_wf_local wf.
+    induction sp; try constructor; auto; pcuic.
+    - eapply typing_spine_strengthen; eauto.
+      2:{ eapply into_equality. 
+          apply red_cumul. apply red1_red. constructor.
+          1-2:eauto with fvs.
+          eapply isType_tLetIn_red in wf; eauto with fvs. }
+      now eapply isType_tLetIn_red in wf.
+    - econstructor; eauto with pcuic.
+      apply IHsp. now eapply isType_apply in wf => //.
+  Qed.
+
+  Import PCUICConversion.
+
+  Lemma arity_typing_spine {Γ Γ' s inst s'} : 
+    wf_local Σ (Γ ,,, Γ') ->
+    typing_spine Σ Γ (it_mkProd_or_LetIn Γ' (tSort s)) inst (tSort s') ->
+    [× (#|inst| = context_assumptions Γ'), leq_universe (global_ext_constraints Σ) s s' &
+      ∑ instsubst, spine_subst Σ Γ inst instsubst Γ'].
+  Proof.
+    intros wfΓ'; revert s inst s'.
+    assert (wf_local Σ Γ). now apply wf_local_app_l in wfΓ'. move X after wfΓ'.
+    rename X into wfΓ.
+    generalize (le_n #|Γ'|).
+    generalize (#|Γ'|) at 2.
+    induction n in Γ', wfΓ' |- *.
+    - destruct Γ' using rev_ind; try clear IHΓ'; simpl; intros len s inst s' Hsp.
+      + depelim Hsp.
+        ++ split=>//.
+          now eapply equality_Sort_inv in e.
+          exists []. split; try constructor; auto.
+        ++ now eapply equality_Sort_Prod_inv in e.
+      + rewrite app_length /= in len; elimtype False; lia.
+    - intros len s inst s' Hsp.
+      destruct Γ' using rev_ind; try clear IHΓ'.
+      -- depelim Hsp. 1:split; auto.
+        --- now eapply equality_Sort_inv in e.
+        --- exists []; split; try constructor; auto.
+        --- now eapply equality_Sort_Prod_inv in e.
+      -- rewrite app_length /= in len.
+        rewrite it_mkProd_or_LetIn_app in Hsp.
+        destruct x as [na [b|] ty]; simpl in *; rewrite /mkProd_or_LetIn /= in Hsp.
+        + rewrite context_assumptions_app /= Nat.add_0_r.
+          eapply typing_spine_letin_inv in Hsp; auto.
+          rewrite /subst1 subst_it_mkProd_or_LetIn /= in Hsp.
+          specialize (IHn (subst_context [b] 0 l)).
+          forward IHn. {
+            rewrite app_context_assoc in wfΓ'.
+            apply All_local_env_app_inv in wfΓ' as [wfb wfa].
+            depelim wfb.
+            eapply substitution_wf_local. eauto. 
+            epose proof (cons_let_def Σ Γ [] [] na b ty ltac:(constructor)).
+            rewrite !subst_empty in X. eapply X. auto.
+            eapply All_local_env_app; split.
+            constructor; auto. apply wfa. }
+          forward IHn by rewrite subst_context_length; lia.
+          specialize (IHn s inst s' Hsp). 
+          rewrite context_assumptions_subst in IHn.
+          destruct IHn as [instlen leq [instsubst [wfdom wfcodom cs subi]]].
+          split => //.
+          exists (instsubst ++ [subst0 [] b]).
+          split; auto.
+          * apply context_subst_app_inv. cbn.
+            rewrite !skipn_0 {1}subst_empty.
+            assert(#|l| <= n) by lia.
+            pose proof (context_subst_length cs). rewrite subst_context_length in H0.
+            rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
+            split. now rewrite H0 skipn_all_app.
+            rewrite H0 skipn_all_app. repeat constructor.
+          * apply subslet_app. now rewrite subst_empty.
+            repeat constructor.
+            rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
+            apply wf_local_app_l in wfΓ'. depelim wfΓ'; now rewrite !subst_empty.
+        + rewrite context_assumptions_app /=.
+          depelim Hsp. 
+          now eapply equality_Prod_Sort_inv in e.
+          eapply equality_Prod_Prod_inv in e as [eqna conva cumulB].
+          eapply (PCUICConversion.substitution_equality (Γ' := [vass na0 A]) (Γ'':=[]) (s := [hd])) in cumulB; auto.
+          rewrite /subst1 subst_it_mkProd_or_LetIn /= in cumulB.
+          specialize (IHn (subst_context [hd] 0 l)).
+          forward IHn. {
+            rewrite app_context_assoc in wfΓ'.
+            apply All_local_env_app_inv in wfΓ' as [wfb wfa]; eauto.
+            depelim wfb. 
+            eapply substitution_wf_local. auto. 
+            constructor. constructor. rewrite subst_empty.
+            eapply type_equality. eapply t.
+            eapply l0.
+            eapply equality_eq_le; auto. now symmetry. 
+            eapply All_local_env_app; eauto; split.
+            constructor; eauto. eapply isType_tProd in i; intuition eauto. }
+          forward IHn by rewrite subst_context_length; lia.
+          specialize (IHn s tl s'). 
+          rewrite context_assumptions_subst in IHn.
+          eapply typing_spine_strengthen in Hsp.
+          2:eapply cumulB. all:pcuic.
+          specialize (IHn Hsp).
+          destruct IHn as [instlen leq [instsubst [wfdom wfcodom cs subi]]].
+          split=> //; try lia.
+          exists (instsubst ++ [hd]).
+          split; auto.
+          * apply context_subst_app_inv. cbn.
+            rewrite !skipn_S skipn_0.
+            assert(#|l| <= n) by lia.
+            pose proof (context_subst_length cs). rewrite subst_context_length in H0.
+            rewrite !(firstn_app_left _ 0). lia. simpl. rewrite !app_nil_r.
+            split. now rewrite H0 skipn_all_app.
+            rewrite H0 skipn_all_app. apply (context_subst_ass _ []). constructor.
+          * apply subslet_app => //.
+            repeat constructor.
+            rewrite app_context_assoc in wfΓ'. simpl in wfΓ'.
+            apply wf_local_app_l in wfΓ'. depelim wfΓ'.
+            rewrite !subst_empty. red in l0.
+            eapply type_equality; eauto. eapply equality_eq_le. now symmetry.
+  Qed.
+
+(*Lemma typing_spine_it_mkProd_or_LetIn_gen {Γ Δ : context} {T args s s' args' T'} : 
+  make_context_subst (List.rev Δ) args s' = Some s -> 
+  typing_spine Σ Γ (subst0 s T) args' T' ->
+  #|args| = context_assumptions Δ ->
+  subslet Σ Γ s Δ ->
+  isType Σ Γ (it_mkProd_or_LetIn Δ T) ->
+  typing_spine Σ Γ (it_mkProd_or_LetIn Δ T) (args ++ args') T'.
+Proof.
+  induction Δ using ctx_length_rev_ind in args, args', s, s', T |- *.
+  - cbn. destruct args => // => [= <-].
+    intros Hsp _ Hsub ist. cbn. depelim Hsub. rewrite subst_empty in Hsp. auto.
+  - intros Hsub Hsp Hargs subs.
+    rewrite context_assumptions_app in Hargs.
+    destruct d as [na [b|] ty]; simpl in *.
+    * rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= => Hty.
+      rewrite Nat.add_0_r in Hargs.
+      rewrite rev_app_distr in Hsub. simpl in Hsub.
+      specialize (X (subst_context [b] 0 Γ0) ltac:(len; lia) (subst [b] #|Γ0| T)). _ _ _ _ _ Hsub Hsp Hargs).
+      forward X.
+      now rewrite it_mkProd_or_LetIn_app /=.
+      eapply typing_spine_letin; auto.
+      pose proof (subslet_app_inv subs) as.
+      eapply isType_substitution_it_mkProd_or_LetIn
+      p
+      rewrite /subst1.
+      now rewrite -subst_app_simpl.
+    * rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+      rewrite rev_app_distr in Hsub. 
+      simpl in Hsub. destruct args; try discriminate.
+      simpl in Hargs. rewrite Nat.add_1_r in Hargs. noconf Hargs.
+      intros subs. rewrite app_context_assoc in subs.    
+      specialize (IHn Δ _ T args s _ ltac:(lia) Hsub Hsp H subs).
+      intros Har.
+      forward IHn. now rewrite it_mkProd_or_LetIn_app.
+      eapply subslet_app_inv in subs as [subsl subsr].
+      depelim subsl.
+      have Hskip := make_context_subst_skipn Hsub. 
+      rewrite List.rev_length in Hskip. rewrite Hskip in H0; noconf H0.
+      simpl; eapply typing_spine_prod; auto; first
+      now rewrite /subst1 -subst_app_simpl.
+      eapply isType_substitution_it_mkProd_or_LetIn in Har; eauto.
+Qed.*)
+Lemma typing_spine_it_mkProd_or_LetIn_gen {Γ Δ Δ' : context} {T args s s' args' T'} : 
   make_context_subst (List.rev Δ) args s' = Some s -> 
   typing_spine Σ Γ (subst0 s T) args' T' ->
   #|args| = context_assumptions Δ ->
@@ -447,7 +487,6 @@ Lemma typing_spine_it_mkProd_or_LetIn_gen {cf:checker_flags} Σ Γ Δ Δ' T args
   isType Σ Γ (it_mkProd_or_LetIn Δ' (it_mkProd_or_LetIn Δ T)) ->
   typing_spine Σ Γ (subst0 s' (it_mkProd_or_LetIn Δ T)) (args ++ args') T'.
 Proof.
-  intros wfΣ.
   generalize (le_n #|Δ|).
   generalize (#|Δ|) at 2.
   induction n in Δ, Δ', args, s, s', T |- *.
@@ -459,36 +498,40 @@ Proof.
   - destruct Δ using rev_ind.
     1:intros le Hsub Hsp; destruct args; simpl; try discriminate;
     simpl in Hsub; now depelim Hsub.
-  clear IHΔ.
-  rewrite app_length /=; intros Hlen Hsub Hsp Hargs.
-  rewrite context_assumptions_app in Hargs.
-  destruct x as [na [b|] ty]; simpl in *.
-  * rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
-    rewrite Nat.add_0_r in Hargs.
-    rewrite rev_app_distr in Hsub. simpl in Hsub.
-    intros subs. rewrite app_context_assoc in subs.
-    specialize (IHn Δ _ T args s _ ltac:(lia) Hsub Hsp Hargs subs).
-    intros Har. forward IHn.
-    rewrite it_mkProd_or_LetIn_app.
-    now simpl.
-    eapply typing_spine_letin; auto.
-    rewrite /subst1.
-    now rewrite -subst_app_simpl.
-  * rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
-    rewrite rev_app_distr in Hsub. 
-    simpl in Hsub. destruct args; try discriminate.
-    simpl in Hargs. rewrite Nat.add_1_r in Hargs. noconf Hargs.
-    intros subs. rewrite app_context_assoc in subs.    
-    specialize (IHn Δ _ T args s _ ltac:(lia) Hsub Hsp H subs).
-    intros Har.
-    forward IHn. now rewrite it_mkProd_or_LetIn_app.
-    eapply subslet_app_inv in subs as [subsl subsr].
-    depelim subsl.
-    have Hskip := make_context_subst_skipn Hsub. 
-    rewrite List.rev_length in Hskip. rewrite Hskip in H0; noconf H0.
-    simpl; eapply typing_spine_prod; auto; first
-    now rewrite /subst1 -subst_app_simpl.
-    eapply isType_substitution_it_mkProd_or_LetIn in Har; eauto.
+    clear IHΔ.
+    rewrite app_length /=; intros Hlen Hsub Hsp Hargs.
+    rewrite context_assumptions_app in Hargs.
+    destruct x as [na [b|] ty]; simpl in *.
+    * rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+      rewrite Nat.add_0_r in Hargs.
+      rewrite rev_app_distr in Hsub. simpl in Hsub.
+      intros subs. rewrite app_context_assoc in subs.
+      specialize (IHn l _ T args s _ ltac:(lia) Hsub Hsp Hargs subs).
+      intros Har. forward IHn.
+      rewrite it_mkProd_or_LetIn_app.
+      now simpl.
+      eapply typing_spine_letin; auto.
+      
+        pose proof (subslet_app_inv subs) as.
+        eapply isType_substitution_it_mkProd_or_LetIn
+        p
+      rewrite /subst1.
+      now rewrite -subst_app_simpl.
+    * rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
+      rewrite rev_app_distr in Hsub. 
+      simpl in Hsub. destruct args; try discriminate.
+      simpl in Hargs. rewrite Nat.add_1_r in Hargs. noconf Hargs.
+      intros subs. rewrite app_context_assoc in subs.    
+      specialize (IHn Δ _ T args s _ ltac:(lia) Hsub Hsp H subs).
+      intros Har.
+      forward IHn. now rewrite it_mkProd_or_LetIn_app.
+      eapply subslet_app_inv in subs as [subsl subsr].
+      depelim subsl.
+      have Hskip := make_context_subst_skipn Hsub. 
+      rewrite List.rev_length in Hskip. rewrite Hskip in H0; noconf H0.
+      simpl; eapply typing_spine_prod; auto; first
+      now rewrite /subst1 -subst_app_simpl.
+      eapply isType_substitution_it_mkProd_or_LetIn in Har; eauto.
 Qed.
 
 Lemma typing_spine_it_mkProd_or_LetIn {cf:checker_flags} Σ Γ Δ T args s args' T' : 
@@ -1858,7 +1901,7 @@ Proof.
     * specialize (IHΔ _ _ _ h) as (Δs & ts & sorts & IHΔ & leq).
       eapply inversion_Prod in IHΔ as [? [? [? [? ]]]]; tea.
       exists (x :: Δs), x0. splits; tea.
-      eapply cumul_Sort_inv in c.
+      eapply equality_Sort_inv in c.
       transitivity (sort_of_products Δs ts); auto using leq_universe_product.
       simpl. eapply leq_universe_sort_of_products_mon. 
       eapply Forall2_same. reflexivity.
@@ -1893,7 +1936,7 @@ Proof.
     eapply inversion_Prod in IHΔ as [? [? [? [? ]]]].
     eapply type_Cumul; eauto. econstructor; pcuic.
     do 2 constructor.
-    eapply cumul_Sort_inv in c.
+    eapply equality_Sort_inv in c.
     transitivity (Universe.sort_of_product x x0); auto using leq_universe_product.
     auto.
 Qed.
@@ -2119,7 +2162,7 @@ Proof.
       destruct wat' as [wat' wat''] => //.
       specialize (X (subst [a] #|Δ| T)).
       depelim sp.
-      eapply cumul_Prod_inv in c as [conv cum]; auto.
+      eapply equality_Prod_Prod_inv in c as [conv cum]; auto.
       eapply (substitution_cumul0 _ _ _ _ _ _ a) in cum; auto.
       eapply typing_spine_strengthen in sp; eauto.
       rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp; auto.
@@ -2206,7 +2249,7 @@ Proof.
       destruct wat' as [wat' wat''] => //.
       specialize (X (subst [a] #|Δ| T)).
       depelim sp.
-      eapply cumul_Prod_inv in c as [[eqann conv] cum]; auto.
+      eapply equality_Prod_Prod_inv in c as [[eqann conv] cum]; auto.
       eapply (substitution_cumul0 _ _ _ _ _ _ a) in cum; auto.
       eapply typing_spine_strengthen in sp; eauto.
       rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp; auto.
@@ -2282,14 +2325,14 @@ Proof.
         assert(context_assumptions Γ0 + 1 - 1 - context_assumptions Γ0 = 0) as -> by lia.
         split; auto. rewrite subst_empty.
         pose proof (isType_wf_local i).
-        eapply cumul_Prod_inv in c as [conv cum]; auto.
+        eapply equality_Prod_Prod_inv in c as [conv cum]; auto.
         eapply type_Cumul'; eauto.
         eapply isType_tProd in wat as [dom codom]; auto.
         now apply conv_cumul, conv_sym.
       * move=> Hnth Hn'.
         pose proof (isType_wf_local i).
         eapply isType_tProd in wat as [dom' codom']; auto.
-        eapply cumul_Prod_inv in c as [conv cum]; auto. simpl in codom'.
+        eapply equality_Prod_Prod_inv in c as [conv cum]; auto. simpl in codom'.
         unshelve eapply (isType_subst wfΣ (Δ:=[vass na ty]) _ [hd]) in codom'.
         constructor; auto.
         2:{ eapply subslet_ass_tip.

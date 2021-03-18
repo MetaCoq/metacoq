@@ -542,13 +542,13 @@ Section ContextConversion.
 
   Lemma equality_red {le} {Γ t u} :
     Σ ;;; Γ ⊢ t ≤[le] u <~> 
-    ∑ v v', Σ ;;; Γ ⊢ t ⇝ v × Σ ;;; Γ ⊢ u ⇝ v' × 
-      compare_term le Σ (global_ext_constraints Σ) v v'.
+    ∑ v v', [× Σ ;;; Γ ⊢ t ⇝ v, Σ ;;; Γ ⊢ u ⇝ v' &
+      compare_term le Σ (global_ext_constraints Σ) v v'].
   Proof.    
     split.
     - move/equality_alt; intros (v & v' & [clΓ clt clu red red' leq]).
       exists v, v'; repeat split; eauto with fvs.
-    - intros (v & v' & red & red' & leq).
+    - intros (v & v' & [red red' leq]).
       apply equality_alt; exists v, v'.
       repeat split; eauto with fvs.
   Qed.
@@ -568,7 +568,7 @@ Section ContextConversion.
     Σ ;;; Γ' ⊢ T ≤[le] U.
   Proof.
     intros Hctx H.
-    apply equality_red in H as (v & v' & redl & redr & leq).
+    apply equality_red in H as (v & v' & [redl redr leq]).
     destruct (closed_red_red_ctx Hctx redl) as [lnf [redl0 redr0]].
     eapply equality_red.
     eapply closed_red_compare_term_l in leq as [? [? ?]]. 3:exact redr0.
@@ -576,7 +576,7 @@ Section ContextConversion.
     destruct (closed_red_red_ctx Hctx redr) as [rnf [redl1 redr1]].
     destruct (closed_red_confluence c redr1) as [nf [redl' redr']].
     unshelve epose proof (closed_red_compare_term_r _ c0 redl') as [lnf' [? ?]]. exact byfvs.
-    exists lnf', nf. intuition eauto with fvs.
+    exists lnf', nf. split; eauto with fvs.
     - now transitivity lnf.
     - now transitivity rnf.
   Qed.
@@ -611,7 +611,7 @@ Section ContextConversion.
     Σ ;;; Γ' ⊢ T ≤[le] U.
   Proof.
     intros H Hctx.
-    apply equality_red in H as (v & v' & redl & redr & leq).
+    apply equality_red in H as (v & v' & [redl redr leq]).
     epose proof (red_red_ctx_inv' Hctx redl).
     epose proof (red_red_ctx_inv' Hctx redr).
     apply equality_red.
@@ -792,12 +792,12 @@ Section ContextConversion.
     Σ ;;; Δ ⊢ T ≤[le'] U.
   Proof.
     intros eqctx cl cum.
-    eapply equality_red in cum as [nf [nf' [redl [redr ?]]]].
+    eapply equality_red in cum as [nf [nf' [redl redr ?]]].
     eapply closed_red_eq_context_upto_r in redl; tea; eauto with fvs.
     eapply closed_red_eq_context_upto_r in redr; tea; eauto with fvs.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
-    eapply equality_red. exists v', v''; intuition auto.
+    eapply equality_red. exists v', v''; split; auto.
     destruct le'; cbn in *; transitivity nf.
     apply eq_term_leq_term. now symmetry.
     transitivity nf' => //.
@@ -812,12 +812,12 @@ Section ContextConversion.
     Σ ;;; Δ ⊢ T ≤[le'] U.
   Proof.
     intros eqctx cl cum.
-    eapply equality_red in cum as [nf [nf' [redl [redr ?]]]].
+    eapply equality_red in cum as [nf [nf' [redl redr ?]]].
     eapply closed_red_eq_context_upto_l in redl; tea; eauto with fvs.
     eapply closed_red_eq_context_upto_l in redr; tea; eauto with fvs.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
-    eapply equality_red. exists v', v''; intuition auto.
+    eapply equality_red. exists v', v''; split; auto.
     destruct le'; cbn in *; transitivity nf.
     apply eq_term_leq_term. now symmetry.
     transitivity nf' => //.
@@ -950,7 +950,7 @@ Section ContextConversion.
     Σ ;;; Γ' ⊢ T ≤[le] U.
   Proof.
     intros Hctx H.
-    apply equality_red in H as [v [v' [redl [redr leq]]]].
+    apply equality_red in H as [v [v' [redl redr leq]]].
     epose proof (red_red_ctx_inv' Hctx redl). 
     epose proof (red_red_ctx_inv' Hctx redr). 
     apply equality_red.
@@ -993,7 +993,7 @@ Section ContextConversion.
     - destruct IHHctx as (Δ & Δ' & redl & redr & eq).
       destruct p.
       { apply (equality_red_ctx redl) in w.
-        eapply equality_red in w as (v & v' & tv & tv' & com).
+        eapply equality_red in w as (v & v' & [tv tv' com]).
         destruct (closed_red_eq_context_upto_l (le:=le) (Δ := Δ') byfvs tv' eq) as [t'' [redt'' eq']].
         exists (vass na v :: Δ), (vass na' t'' :: Δ').
         intuition auto. constructor; auto. constructor; auto.
@@ -1005,10 +1005,10 @@ Section ContextConversion.
         * transitivity v' => //. now eapply eq_term_leq_term.
         * transitivity v' => //. }
       { apply (equality_red_ctx redl) in w.
-        eapply equality_red in w as (v & v' & tv & tv' & com).
+        eapply equality_red in w as (v & v' & [tv tv' com]).
         destruct (closed_red_eq_context_upto_l (le:=le) (Δ := Δ') byfvs tv' eq) as [t'' [redt'' eq']].
         apply (equality_red_ctx redl) in w0.
-        eapply equality_red in w0 as (v0 & v0' & tv0 & tv0' & com0).
+        eapply equality_red in w0 as (v0 & v0' & [tv0 tv0' com0]).
         destruct (closed_red_eq_context_upto_l (le:=le) (Δ := Δ') byfvs tv0' eq) as [t0'' [redt0'' eq0']].
         exists (vdef na v v0 :: Δ), (vdef na' t'' t0'' :: Δ').
         intuition auto. constructor; auto. constructor; auto.
@@ -1499,15 +1499,13 @@ Lemma split_closed_context {Γ : context} (n : nat) :
   is_closed_context Γ ->
   n <= #|Γ| ->
   ∑ (Δ : closed_context) (Δ' : open_context Δ), 
-    (Δ = skipn n Γ :> context) ×
-    (Δ' = firstn n Γ :> context) ×
-    (Γ = Δ ,,, Δ') ×
-    n = #|Δ'|.
+    [× Δ = skipn n Γ :> context, Δ' = firstn n Γ :> context,
+       Γ = Δ ,,, Δ' & n = #|Δ'|].
 Proof.
   rewrite -{1}(firstn_skipn n Γ).
   rewrite on_free_vars_ctx_app => /andP[] sk fi.
   exists (exist (skipn n Γ) sk).
-  exists (exist (firstn n Γ) fi). intuition auto.
+  exists (exist (firstn n Γ) fi). split; auto.
   cbn. now rewrite firstn_skipn. cbn.
   rewrite List.firstn_length. lia.
 Qed.
@@ -1625,7 +1623,7 @@ Proof.
         now rewrite /app_context firstn_skipn.
         assumption.
       * depelim Hconv; simpl in *.
-        destruct (split_closed_context (S n) (wf_local_closed_context X1)) as [Δ [Δ' [eqΔ [eqΔ' [-> hn]]]]].
+        destruct (split_closed_context (S n) (wf_local_closed_context X1)) as [Δ [Δ' [eqΔ eqΔ' -> hn]]].
         eapply nth_error_Some_length in Hnth. lia.
         rewrite -eqΔ in Hty, Hrel.
         rewrite -eqΔ in c0, c.
@@ -1648,7 +1646,7 @@ Proof.
         rewrite firstn_length_le. eapply nth_error_Some_length in Hnth. lia. auto.
         now rewrite /app_context firstn_skipn.
         assumption.
-      * destruct (split_closed_context (S n) (wf_local_closed_context X1)) as [Δ [Δ' [eqΔ [eqΔ' [-> hn]]]]].
+      * destruct (split_closed_context (S n) (wf_local_closed_context X1)) as [Δ [Δ' [eqΔ eqΔ' -> hn]]].
         eapply nth_error_Some_length in Hnth. lia.
         rewrite -eqΔ in ondecl, Hrel.
         rewrite -eqΔ in c.

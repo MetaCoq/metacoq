@@ -29,7 +29,9 @@ Variant and3 (P1 P2 P3 : Type) : Type := Times3 of P1 & P2 & P3.
 Variant and4 (P1 P2 P3 P4 : Type) : Type := Times4 of P1 & P2 & P3 & P4.
 Variant and5 (P1 P2 P3 P4 P5 : Type) : Type := Times5 of P1 & P2 & P3 & P4 & P5.
 Variant and6 (P1 P2 P3 P4 P5 P6 : Type) : Type := Times6 of P1 & P2 & P3 & P4 & P5 & P6.
-  
+
+Hint Constructors and3 and3 and5 and6 : core.
+
 Notation "[ × P1 & P2 ]" := (pair P1 P2) (only parsing) : type_scope.
 Notation "[ × P1 , P2 & P3 ]" := (and3 P1 P2 P3) : type_scope.
 Notation "[ × P1 , P2 , P3 & P4 ]" := (and4 P1 P2 P3 P4) : type_scope.
@@ -85,7 +87,7 @@ Notation " Σ ;;; Γ ⊢ t ≤ u " := (ws_equality true Σ Γ t u) (at level 50,
 Notation " Σ ;;; Γ ⊢ t = u " := (ws_equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  =  u") : type_scope.
 
-Lemma equality_refl {le} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : ws_equality le Σ Γ t t.
+Lemma ws_equality_refl' {le} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : ws_equality le Σ Γ t t.
 Proof.
   constructor; eauto with fvs. destruct le; cbn; reflexivity.
 Qed.
@@ -158,7 +160,7 @@ Lemma equality_alt `{cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf �
 Proof.
   split.
   - induction 1.
-    + exists t, u. intuition auto. now rewrite i i0.
+    + exists t, u. intuition auto.
     + destruct IHX as (v' & v'' & [-> _ -> redv redv' leqv]).
       rewrite i0 /=.
       exists v', v''. split; auto. now eapply red_step.

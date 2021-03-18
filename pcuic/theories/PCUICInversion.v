@@ -43,7 +43,7 @@ Section Inversion.
     Σ ;;; Γ |- T <= U ->
     Σ ;;; Γ ⊢ T ≤ U.
   Proof.
-    intros. eapply into_ws_equality; tea.
+    intros. eapply into_equality; tea.
     - eapply typing_wf_local in X; eauto with fvs.
     - eapply PCUICClosed.type_closed in X.
       eapply PCUICOnFreeVars.closedn_on_free_vars in X; tea.
@@ -59,11 +59,11 @@ Section Inversion.
   Qed.
   Hint Immediate typing_closed_ctx : fvs.
 
-  Lemma typing_ws_equality Γ t T : 
+  Lemma typing_equality Γ t T : 
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ⊢ T ≤ T.
   Proof.
-    intros ht. apply into_ws_equality; auto. reflexivity.
+    intros ht. apply into_equality; auto. reflexivity.
     eauto with fvs.
     eapply PCUICClosed.type_closed in ht.
     now rewrite -is_open_term_closed.
@@ -76,7 +76,7 @@ Section Inversion.
     dependent induction h ; [
       repeat insum ;
       repeat intimes ;
-      [ first [ eassumption | try reflexivity ] .. | try solve [eapply typing_ws_equality; econstructor; eauto] ]
+      [ first [ eassumption | try reflexivity ] .. | try solve [eapply typing_equality; econstructor; eauto] ]
     | repeat outsum ;
       repeat outtimes ;
       repeat insum ;
@@ -258,7 +258,7 @@ Section Inversion.
     intros Γ ci p c brs T h.
     dependent induction h.
     { repeat insum; repeat intimes; try eapply case_inv ; 
-	    [ try first [ eassumption | reflexivity ].. | try eapply typing_ws_equality; econstructor; eauto ]. }
+	    [ try first [ eassumption | reflexivity ].. | try eapply typing_equality; econstructor; eauto ]. }
     repeat outsum; repeat outtimes; repeat insum; repeat intimes ; tea;
       [ try first
       [ eassumption | reflexivity ]..
@@ -329,7 +329,7 @@ Section Inversion.
     intros Γ Δ t T h.
     induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
     - eexists. split ; eauto. cbn.
-      eapply into_ws_equality; [reflexivity|..].
+      eapply into_equality; [reflexivity|..].
       eauto with fvs.
       eapply type_closed in h.
       now eapply closedn_on_free_vars in h.

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CRelationClasses ProofIrrelevance ssreflect.
+From Coq Require Import CRelationClasses ProofIrrelevance ssreflect ssrbool.
 From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
@@ -8,13 +8,11 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICWfUniverses
      PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
-     PCUICWellScopedCumulativity.
+     PCUICWellScopedCumulativity PCUICConversion.
 
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
-
-Derive Signature for typing_spine.
+From Equations Require Import Equations.
 
 Implicit Types cf : checker_flags.
 
@@ -41,6 +39,22 @@ Proof.
   destruct x as [? [?|] ?]; simpl; auto.
 Qed.
 
+Inductive typing_spine {cf} Σ (Γ : context) : term -> list term -> term -> Type :=
+| type_spine_nil ty ty' :
+    isType Σ Γ ty' ->
+    Σ ;;; Γ ⊢ ty ≤ ty' ->
+    typing_spine Σ Γ ty [] ty'
+
+| type_spine_cons ty hd tl na A B B' :
+    isType Σ Γ (tProd na A B) ->
+    Σ ;;; Γ ⊢ ty ≤ tProd na A B ->
+    Σ ;;; Γ |- hd : A ->
+    typing_spine Σ Γ (subst10 hd B) tl B' ->
+    typing_spine Σ Γ ty (hd :: tl) B'.
+    
+Derive Signature NoConfusion for typing_spine.
+
+
 Section WfEnv.
   Context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
@@ -53,16 +67,25 @@ Section WfEnv.
     repeat (constructor; auto).
   Qed.
 
-  Lemma closed_context_equality_app : 
-    closed_context_equality
-
+  Lemma context_equality_app {le Γ Γ' Δ Δ'} : 
+    #|Δ| = #|Δ'| ->
+    Σ ⊢ Γ ,,, Δ ≤[le] Γ' ,,, Δ' <~>
+    Σ ⊢ Γ ≤[le] Γ' × context_equality_rel le Σ Γ Δ Δ'.
+  Proof.
+    move => hlen; split.
+    - move/All2_fold_app_inv. move/(_ hlen) => [] onΓ onΔ; split => //.
+      split; eauto with fvs.
+    - move=> [] onΓ [_ onΔ].
+      apply All2_fold_app; auto.
+  Qed.
+  Import PCUICOnFreeVars.
   Lemma invert_cumul_arity_l (Γ : context) (C : term) T :
     Σ;;; Γ ⊢ C ≤ T ->
     match destArity [] C with
     | Some (ctx, s) =>
       ∑ T' ctx' s',
         [× Σ ;;; Γ ⊢ T ⇝ T', (destArity [] T' = Some (ctx', s')),
-          closed_conv_context Σ (Γ ,,, smash_context [] ctx) (Γ ,,, ctx') &
+          context_equality false Σ (Γ ,,, smash_context [] ctx) (Γ ,,, ctx') &
           leq_universe (global_ext_constraints Σ) s s']
     | None => unit
     end.
@@ -77,11 +100,11 @@ Section WfEnv.
     - destruct ctx; simpl in Hlen; try lia.
       eapply equality_Sort_l_inv in HT as [u' [redT leqT]].
       exists (tSort u'), [], u'; split; auto.
-      cbn. eapply closed_context_equality_refl; eauto with fvs.
+      cbn. eapply context_equality_refl; eauto with fvs.
     - destruct ctx using rev_ind.
       * eapply equality_Sort_l_inv in HT as [u' [redT leqT]].
         exists (tSort u'), [], u'; split; auto; cbn.  
-        apply closed_context_equality_refl; eauto with fvs.
+        apply context_equality_refl; eauto with fvs.
       * rewrite it_mkProd_or_LetIn_app in HT; simpl in HT.
         destruct x as [na [b|] ty]; unfold mkProd_or_LetIn in HT; simpl in *.
         + eapply equality_LetIn_l_inv in HT; auto.
@@ -101,7 +124,7 @@ Section WfEnv.
           specialize (IHn ctx ltac:(lia) (Γ ,, vass na' A') B').
           forward IHn. eapply equality_equality_ctx; eauto.
           { apply context_equality_vass; eauto. now symmetry.
-            eapply closed_context_equality_refl. eauto with fvs.
+            eapply context_equality_refl. eauto with fvs.
             now symmetry. }
           clear IHctx.
           destruct IHn as [T' [ctx' [s' [redT' destT convctx leq]]]].
@@ -118,36 +141,20 @@ Section WfEnv.
               autorewrite with len in convctx |- *.
               simpl in convctx. simpl. lia. }
             etransitivity; tea.
-            
-            eapply All2_fold_app; auto.
-            apply All2_fold_app_inv in convctx; auto.
-            constructor; pcuic. split; auto.
-            eapply All2_fold_app_inv in convctx as [_ convctx].
-            unshelve eapply (All2_fold_impl convctx).
-            simpl; pcuicfo. destruct X. constructor; auto.
-            eapply conv_conv_ctx; eauto.
-            eapply All2_fold_app. constructor; pcuic.
-            constructor; pcuic. constructor; pcuic. now symmetry.
-            apply All2_fold_refl. intros.
-            destruct x as [na'' [b'|] ty']; constructor; reflexivity.
-            constructor; pcuic. 
-            eapply conv_conv_ctx; eauto.
-            eapply All2_fold_app. constructor; pcuic.
-            constructor; pcuic. constructor; pcuic. now symmetry.
-            apply All2_fold_refl. intros.
-            destruct x as [na'' [b''|] ty']; constructor; reflexivity.
-            eapply conv_conv_ctx; eauto.
-            eapply All2_fold_app. constructor; pcuic.
-            constructor; pcuic. constructor; pcuic. now symmetry.
-            apply All2_fold_refl. intros.
-            destruct x as [? [?|] ?]; constructor; reflexivity.
-            auto.
+            apply context_equality_app; auto.
+            split. apply context_equality_vass; auto.
+            apply context_equality_refl; eauto with fvs.
+            eapply context_equality_app; eauto.
+            eapply context_equality_refl; eauto with fvs.
+            eapply context_equality_closed_left in convctx.
+            move: convctx.
+            rewrite !on_free_vars_ctx_app. autorewrite with fvs.
+            move/andP => [] /andP[] -> /=; cbn; rewrite andb_true_r => onA' ->.
+            rewrite shiftnP0 andb_true_r; eauto with fvs.
   Qed.
 
-  Lemma isType_tProd {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
-        {Γ} {na A B}
-    : isType Σ Γ (tProd na A B)
-      <~> (isType Σ Γ A × isType Σ (Γ,, vass na A) B).
+  Lemma isType_tProd {Γ} {na A B} : 
+    isType Σ Γ (tProd na A B) <~> (isType Σ Γ A × isType Σ (Γ,, vass na A) B).
   Proof.
     split; intro HH.
     - destruct HH as [s H].
@@ -160,86 +167,141 @@ Section WfEnv.
       eexists. econstructor; eassumption.
   Defined.
 
-  Lemma isType_subst {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
-        {Γ Δ} (HΓ : wf_local Σ (Γ ,,, Δ)) {A} s :
-      subslet Σ Γ s Δ ->
-      isType Σ (Γ ,,, Δ) A -> 
-      isType Σ Γ (subst0 s A).
+  Lemma isType_subst {Γ Δ} (HΓ : wf_local Σ (Γ ,,, Δ)) {A} s :
+    subslet Σ Γ s Δ ->
+    isType Σ (Γ ,,, Δ) A -> 
+    isType Σ Γ (subst0 s A).
   Proof.
     intros sub [u Hu].
-    exists u. eapply (substitution _ _ Δ s [] _ _ HΣ' sub Hu).
+    exists u. now eapply (substitution (Δ := []) (T := tSort _)).
   Qed.
 
-  Lemma isType_subst_gen {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ) {Γ Δ Δ'} {A} s :
+  Lemma isType_subst_gen {Γ Δ Δ'} {A} s :
     subslet Σ Γ s Δ ->
     isType Σ (Γ ,,, Δ ,,, Δ') A -> 
     isType Σ (Γ ,,, subst_context s 0 Δ') (subst s #|Δ'| A).
   Proof.
     intros sub [s' Hs].
-    exists s'. eapply (substitution _ _ Δ s _ _ _ HΣ' sub Hs).
+    exists s'. now eapply (substitution (T:=tSort _)).
   Qed.
 
-  Lemma isType_apply {cf} {Σ : global_env_ext} {wfΣ : wf Σ} Γ na A B t : 
+  Lemma type_equality {Γ t} T {U} :
+    Σ ;;; Γ |- t : T ->
+    isType Σ Γ U ->
+    Σ ;;; Γ ⊢ T ≤ U ->
+    Σ ;;; Γ |- t : U.
+  Proof.
+    intros.
+    eapply type_Cumul; tea. apply X0.π2.
+    now eapply equality_forget in X1.
+  Qed.
+
+  Lemma isType_tLetIn_red {Γ} (HΓ : wf_local Σ Γ) {na t A B}
+    : isType Σ Γ (tLetIn na t A B) -> isType Σ Γ (B {0:=t}).
+  Proof.
+    intro HH.
+    destruct HH as [s H].
+    exists s.
+    assert (Hs := typing_wf_universe _ H).
+    apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
+    eapply type_equality with (A' {0 := t}). eapply substitution_let in HB; eauto.
+    * econstructor; eauto with pcuic. econstructor; eauto.
+    * eapply equality_Sort_r_inv in H as [s' [H H']].
+      transitivity (tSort s'); eauto.
+      eapply red_equality.
+      apply invert_red_letin in H as [H|H] => //.
+      destruct H as [d' [ty' [b' [reds ]]]].
+      discriminate.
+      repeat constructor; eauto with fvs.
+  Qed.
+
+  Lemma isType_tLetIn_dom {Γ} (HΓ : wf_local Σ Γ) {na t A B}
+    : isType Σ Γ (tLetIn na t A B) -> Σ ;;; Γ |- t : A.
+  Proof.
+    intro HH.
+    destruct HH as [s H].
+    apply inversion_LetIn in H; tas. now destruct H as [s1 [A' [HA [Ht [HB H]]]]].
+  Qed.
+
+  Hint Resolve subslet_ass_tip subslet_def_tip : pcuic.
+
+  Lemma wf_local_ass {Γ na A} : 
+    wf_local Σ Γ ->
+    isType Σ Γ A ->
+    wf_local Σ (Γ ,, vass na A).
+  Proof.
+    constructor; eauto with pcuic.
+  Qed.
+
+  Lemma wf_local_def {Γ na d ty} : 
+    wf_local Σ Γ ->
+    isType Σ Γ ty ->
+    Σ ;;; Γ |- d : ty ->
+    wf_local Σ (Γ ,, vdef na d ty).
+  Proof.
+    constructor; eauto with pcuic.
+  Qed.
+
+  Hint Resolve wf_local_ass wf_local_def : pcuic.
+  Hint Transparent snoc : pcuic.
+
+  Lemma isType_apply {Γ na A B t} : 
     isType Σ Γ (tProd na A B) ->
     Σ ;;; Γ |- t : A ->
     isType Σ Γ (B {0 := t}).
   Proof.
     move/isType_tProd => [hA hB] ht.
-    eapply (isType_subst _ (Δ:= [vass na A])); tea.
-    constructor; auto. pcuic.
-    now eapply subslet_ass_tip.
+    eapply (isType_subst (Δ:= [vass na A])); eauto with pcuic.
   Qed.
 
-  Lemma typing_spine_letin_inv {cf:checker_flags} {Σ Γ na b B T args S} : 
-    wf Σ.1 ->
+  Hint Resolve isType_wf_local : pcuic.
+  
+  Lemma typing_spine_letin_inv {Γ na b B T args S} : 
     typing_spine Σ Γ (tLetIn na b B T) args S ->
     typing_spine Σ Γ (T {0 := b}) args S.
   Proof.
-    intros wfΣ Hsp.
+    intros Hsp.
     depelim Hsp.
-    constructor. auto.
-    now eapply equality_LetIn_l_inv in c.
+    constructor; auto.
+    now eapply equality_LetIn_l_inv in w.
     econstructor; eauto.
-    now eapply equality_LetIn_l_inv in c.
+    now eapply equality_LetIn_l_inv in w.
   Qed.
 
-  Lemma typing_spine_letin {cf:checker_flags} {Σ Γ na b B T args S} : 
-    wf Σ.1 ->
+  (* Lemma typing_spine_letin {Γ na b B T args S} : 
     typing_spine Σ Γ (T {0 := b}) args S ->
     typing_spine Σ Γ (tLetIn na b B T) args S.
   Proof.
-    intros wfΣ Hsp.
+    intros Hsp.
     depelim Hsp.
     constructor. auto.
-    etransitivity. eapply red_cumul. eapply red1_red, red_zeta. auto.
+    eapply equality_red_r_inv; tea.
+    etransitivity. eapply red_equality. eapply red1_red, red_zeta. auto.
     econstructor; eauto.
     etransitivity. eapply red_cumul. eapply red1_red, red_zeta. auto.
-  Qed.
+  Qed. *)
 
-  Lemma typing_spine_weaken_concl {cf:checker_flags} {Σ Γ T args S S'} : 
-    wf Σ.1 ->
+  Lemma typing_spine_weaken_concl {Γ T args S S'} :
     typing_spine Σ Γ T args S ->
-    Σ ;;; Γ |- S <= S' ->
+    Σ ;;; Γ ⊢ S ≤ S' ->
     isType Σ Γ S' ->
     typing_spine Σ Γ T args S'.
   Proof.
-    intros wfΣ.  
     induction 1 in S' => cum.
-    constructor; auto. now transitivity ty'.
+    constructor; auto. transitivity ty'; auto.
     intros isType.
     econstructor; eauto.
   Qed.
 
-  Lemma typing_spine_prod {cf:checker_flags} {Σ Γ na b B T args S} : 
-    wf Σ.1 ->
+  Lemma typing_spine_prod {Γ na b B T args S} : 
     typing_spine Σ Γ (T {0 := b}) args S ->
     isType Σ Γ (tProd na B T) ->
     Σ ;;; Γ |- b : B ->
     typing_spine Σ Γ (tProd na B T) (b :: args) S.
   Proof.
-    intros wfΣ Hsp.
+    intros Hsp.
     depelim Hsp.
-    econstructor; eauto. reflexivity.
+    econstructor; eauto. apply type_equality_refl.
     constructor; auto with pcuic.
     intros Har. eapply isType_tProd in Har as [? ?]; eauto using typing_wf_local.
     intros Hb.
@@ -566,36 +628,6 @@ Section WfEnv.
       eapply leq_universe_product. auto.
       rewrite {2}Hl in IHn.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
-  Qed.
-
-  Lemma isType_tLetIn_red {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
-        {Γ} (HΓ : wf_local Σ Γ) {na t A B}
-    : isType Σ Γ (tLetIn na t A B) -> isType Σ Γ (B {0:=t}).
-  Proof.
-    intro HH.
-    destruct HH as [s H].
-    exists s.
-    assert (Hs := typing_wf_universe HΣ' H).
-    apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
-    eapply type_Cumul with (A' {0 := t}) _. eapply substitution_let in HB; eauto.
-    * econstructor; eauto with pcuic.
-    * eapply equality_Sort_r_inv in H.
-      destruct H as [s' [H H']].
-      eapply cumul_trans with (tSort s'); eauto.
-      eapply red_cumul.
-      apply invert_red_letin in H as [H|H] => //.
-      destruct H as [d' [ty' [b' [[[reds ?] ?] ?]]]].
-      discriminate.
-      now repeat constructor.
-  Qed.
-
-  Lemma isType_tLetIn_dom {cf:checker_flags} {Σ : global_env_ext} (HΣ' : wf Σ)
-        {Γ} (HΓ : wf_local Σ Γ) {na t A B}
-    : isType Σ Γ (tLetIn na t A B) -> Σ ;;; Γ |- t : A.
-  Proof.
-    intro HH.
-    destruct HH as [s H].
-    apply inversion_LetIn in H; tas. now destruct H as [s1 [A' [HA [Ht [HB H]]]]].
   Qed.
 
   Lemma on_minductive_wf_params {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl} {u} :

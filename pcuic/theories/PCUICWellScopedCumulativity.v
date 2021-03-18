@@ -66,33 +66,33 @@ Notation is_closed_context := (on_free_vars_ctx xpred0).
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Inductive ws_equality {cf} (le : bool) (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| ws_equality_refl (t u : term) : 
+Inductive equality {cf} (le : bool) (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+| equality_compare (t u : term) : 
   is_closed_context Γ -> is_open_term Γ t -> is_open_term Γ u ->
   compare_term le Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ ⊢ t ≤[le] u
-| ws_equality_red_l (t u v : term) :
+| equality_red_l (t u v : term) :
   is_closed_context Γ ->
   is_open_term Γ t -> is_open_term Γ u -> is_open_term Γ v ->
   red1 Σ Γ t v -> Σ ;;; Γ ⊢ v ≤[le] u -> Σ ;;; Γ ⊢ t ≤[le] u
-| ws_equality_red_r (t u v : term) :
+| equality_red_r (t u v : term) :
   is_closed_context Γ ->
   is_open_term Γ t -> is_open_term Γ u -> is_open_term Γ v ->
   Σ ;;; Γ ⊢ t ≤[le] v -> red1 Σ Γ u v -> Σ ;;; Γ ⊢ t ≤[le] u
-where " Σ ;;; Γ ⊢ t ≤[ le ] u " := (ws_equality le Σ Γ t u) : type_scope.
-Derive Signature NoConfusion for ws_equality.
+where " Σ ;;; Γ ⊢ t ≤[ le ] u " := (equality le Σ Γ t u) : type_scope.
+Derive Signature NoConfusion for equality.
 
-Notation " Σ ;;; Γ ⊢ t ≤ u " := (ws_equality true Σ Γ t u) (at level 50, Γ, t, u at next level,
+Notation " Σ ;;; Γ ⊢ t ≤ u " := (equality true Σ Γ t u) (at level 50, Γ, t, u at next level,
     format "Σ  ;;;  Γ  ⊢  t  ≤  u") : type_scope.
 
-Notation " Σ ;;; Γ ⊢ t = u " := (ws_equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
+Notation " Σ ;;; Γ ⊢ t = u " := (equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  =  u") : type_scope.
 
-Lemma ws_equality_refl' {le} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : ws_equality le Σ Γ t t.
+Lemma equality_refl' {le} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : equality le Σ Γ t t.
 Proof.
   constructor; eauto with fvs. destruct le; cbn; reflexivity.
 Qed.
 
-Instance ws_equality_sym {cf Σ Γ} : Symmetric (ws_equality false Σ Γ).
+Instance equality_sym {cf Σ Γ} : Symmetric (equality false Σ Γ).
 Proof.
   move=> x y; elim.
   - move=> t u clΓ clt clu eq.
@@ -124,33 +124,33 @@ Proof.
 Qed.
 Hint Resolve red_is_open_term : fvs.
 
-Lemma ws_equality_is_open_term {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
-  ws_equality le Σ Γ x y ->
+Lemma equality_is_open_term {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
+  equality le Σ Γ x y ->
   [&& is_closed_context Γ, is_open_term Γ x & is_open_term Γ y].
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
 
-Lemma ws_equality_is_closed_context {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
-  ws_equality le Σ Γ x y -> is_closed_context Γ.
+Lemma equality_is_closed_context {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
+  equality le Σ Γ x y -> is_closed_context Γ.
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
 
-Lemma ws_equality_is_open_term_left {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} 
+Lemma equality_is_open_term_left {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ : context} {x y} : 
-  ws_equality le Σ Γ x y -> is_open_term Γ x.
+  equality le Σ Γ x y -> is_open_term Γ x.
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1 ?i2.
 Qed.
 
-Lemma ws_equality_is_open_term_right {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
-  ws_equality le Σ Γ x y -> is_open_term Γ y.
+Lemma equality_is_open_term_right {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
+  equality le Σ Γ x y -> is_open_term Γ y.
 Proof.
   now induction 1; rewrite ?i ?i0 ?i1.
 Qed.
 
-Hint Resolve ws_equality_is_closed_context ws_equality_is_open_term_left ws_equality_is_open_term_right : fvs.
+Hint Resolve equality_is_closed_context equality_is_open_term_left equality_is_open_term_right : fvs.
 
 Lemma equality_alt `{cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
   Σ ;;; Γ ⊢ t ≤[le] u <~> 
@@ -176,8 +176,8 @@ Proof.
     * econstructor 2; revgoals. eapply IHredv; cbn; eauto with fvs. all:eauto with fvs.
 Qed.
 
-Lemma ws_equality_forget {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  ws_equality le Σ Γ x y -> if le then cumul Σ Γ x y else conv Σ Γ x y.
+Lemma equality_forget {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
+  equality le Σ Γ x y -> if le then cumul Σ Γ x y else conv Σ Γ x y.
 Proof.
   induction 1.
   - destruct le; simpl in *; constructor; auto.
@@ -185,8 +185,17 @@ Proof.
   - destruct le; econstructor 3; eauto.
 Qed.
 
-Instance ws_equality_trans {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} :
-  Transitive (ws_equality le Σ Γ).
+Lemma equality_forget_cumul {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
+  equality true Σ Γ x y -> cumul Σ Γ x y.
+Proof. apply (equality_forget (le:=true)). Qed.
+
+Lemma equality_forget_conv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
+  equality false Σ Γ x y -> conv Σ Γ x y.
+Proof. apply (equality_forget (le:=false)). Qed.
+Hint Resolve equality_forget_cumul equality_forget_conv : pcuic.
+
+Instance equality_trans {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} :
+  Transitive (equality le Σ Γ).
 Proof.
   move=> t u v /equality_alt [t' [u' [clΓ clt clu tt' uu' eq]]]
     /equality_alt[u'' [v' [_ clu' clv uu'' vv' eq']]].
@@ -227,7 +236,7 @@ Section EqualityLemmas.
     now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
   Qed.
 
-  Lemma into_ws_equality {le} {Γ : context} {T U} : 
+  Lemma into_equality {le} {Γ : context} {T U} : 
     (if le then Σ;;; Γ |- T <= U else Σ;;; Γ |- T = U) ->
     is_closed_context Γ -> is_open_term Γ T ->
     is_open_term Γ U ->
@@ -244,26 +253,33 @@ Section EqualityLemmas.
         - econstructor 3 with v; cbn; eauto with fvs. }
   Qed.
 
+  Lemma isType_equality_refl {le} Γ T : isType Σ Γ T -> Σ ;;; Γ ⊢ T ≤[le] T.
+  Proof. 
+    intros H.
+    pose proof (isType_wf_local H).
+    eapply (equality_refl' (exist Γ (wf_local_closed_context X)) (exist T (isType_open H))).
+  Qed.
+
   (** From well-typed to simply well-scoped equality. *)
-  Lemma wt_equality_ws_equality {le} {Γ : context} {T U} : 
+  Lemma wt_equality_equality {le} {Γ : context} {T U} : 
     wt_equality le Σ Γ T U ->
-    ws_equality le Σ Γ T U.
+    equality le Σ Γ T U.
   Proof.
     move=> [] dom codom equiv; cbn.
     generalize (wf_local_closed_context (isType_wf_local dom)).
     generalize (isType_open dom) (isType_open codom). clear -wfΣ equiv.
-    intros. apply into_ws_equality => //.
+    intros. apply into_equality => //.
   Qed.
 
   Lemma wt_equality_trans le Γ :
     Transitive (wt_equality le Σ Γ).
   Proof.
     intros x y z cum cum'.
-    have wscum := (wt_equality_ws_equality cum).
-    have wscum' := (wt_equality_ws_equality cum').
+    have wscum := (wt_equality_equality cum).
+    have wscum' := (wt_equality_equality cum').
     generalize (transitivity wscum wscum'). clear wscum wscum'.
     destruct cum, cum'; split=> //.
-    apply ws_equality_forget in X. now cbn in X.
+    apply equality_forget in X. now cbn in X.
   Qed.
 
   Global Instance conv_trans Γ : Transitive (wt_conv Σ Γ).
@@ -273,6 +289,8 @@ Section EqualityLemmas.
   Proof. apply wt_equality_trans. Qed.
 
 End EqualityLemmas.
+
+Hint Resolve isType_equality_refl : pcuic.
 
 Record closed_relation {R : context -> term -> term -> Type} {Γ T U} :=
   { clrel_ctx : is_closed_context Γ;
@@ -406,21 +424,22 @@ Definition vass_open_decl {Γ : closed_context} (na : binder_annot name) (t : op
   
 Inductive All_decls_alpha_le {le} {P : bool -> term -> term -> Type} :
   context_decl -> context_decl -> Type :=
-| all_decls_alpha_vass {na na' : binder_annot name} {t t' : term} :
-  eq_binder_annot na na' -> P le t t' -> 
+| all_decls_alpha_vass {na na' : binder_annot name} {t t' : term}
+  (eqna : eq_binder_annot na na')
+  (eqt : P le t t') :
   All_decls_alpha_le (vass na t) (vass na' t')
 
-| all_decls_alpha_vdef {na na' : binder_annot name} {b t b' t' : term} :
-  eq_binder_annot na na' ->
-  P false b b' ->
-  P le t t' ->
+| all_decls_alpha_vdef {na na' : binder_annot name} {b t b' t' : term}
+  (eqna : eq_binder_annot na na')
+  (eqb : P false b b')
+  (eqt : P le t t') :
   All_decls_alpha_le (vdef na b t) (vdef na' b' t').
 Derive Signature NoConfusion for All_decls_alpha_le.
 Arguments All_decls_alpha_le : clear implicits.
   
 Definition equality_open_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext)
   (Γ : context) (d : context_decl) (d' : context_decl) :=
-  All_decls_alpha_le le (fun le => @ws_equality cf le Σ Γ) d d'.
+  All_decls_alpha_le le (fun le => @equality cf le Σ Γ) d d'.
 
 Lemma equality_open_decls_wf_decl_left {cf} {le} {Σ} {wfΣ : wf Σ} {Γ d d'} :
   equality_open_decls le Σ Γ d d' -> ws_decl Γ d.
@@ -441,12 +460,10 @@ Lemma equality_open_decls_equality_decls {cf : checker_flags} (le : bool) {Σ : 
   equality_decls le Σ Γ Γ' d d'.
 Proof.
   intros. intuition eauto with fvs.
-  destruct X; destruct le; constructor; auto.
-  all:try now eapply ws_equality_forget in w.
-  all:try now eapply ws_equality_forget in w0.
+  destruct X; destruct le; constructor; pcuic.
 Qed.
 
-(* Definition ws_equality_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) : context_decl -> context_decl -> Type :=
+(* Definition equality_decls {cf : checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) : context_decl -> context_decl -> Type :=
   fun d d' => 
     #|Γ| = #|Γ'| × equality_decls le Σ Γ Γ' d d' ×
     [&& on_free_vars_ctx xpred0 Γ, on_free_vars_ctx xpred0 Γ', ws_decl Γ d & ws_decl Γ' d']. *)
@@ -462,7 +479,7 @@ Lemma into_equality_open_decls {cf : checker_flags} {le : bool} {Σ : global_env
 Proof.
   case: le; move=> eq clΓ clΓ' isd isd'; 
     destruct eq; cbn; constructor; auto; try inv_on_free_vars; eauto with fvs.
-  all:try apply: into_ws_equality; tea; eauto 3 with fvs.
+  all:try apply: into_equality; tea; eauto 3 with fvs.
 Qed.
  
 Lemma equality_open_decls_inv {cf} (le : bool) {Σ : global_env_ext} {wfΣ : wf Σ} 
@@ -471,7 +488,7 @@ Lemma equality_open_decls_inv {cf} (le : bool) {Σ : global_env_ext} {wfΣ : wf 
   [× on_free_vars_ctx xpred0 Γ, is_open_decl Γ d, is_open_decl Γ d' & equality_decls le Σ Γ Γ' d d'].
 Proof.
   intros. split; eauto with fvs.
-  - destruct X; now destruct w.
+  - destruct X; now destruct eqt.
   - now eapply equality_open_decls_equality_decls.
 Qed.
 (* 
@@ -480,19 +497,19 @@ Lemma equality_open_decls_forget {cf : checker_flags} {le : bool} {Σ : global_e
   equality_open_decls le Σ Γ d d' ->
   #|Γ| = #|Γ'| ->
   is_closed_context Γ' ->
-  ws_equality_decls le Σ Γ Γ' d d'. 
+  equality_decls le Σ Γ Γ' d d'. 
 Proof.
-  rewrite /equality_open_decls /ws_equality_decls => a hlen; split => //.
+  rewrite /equality_open_decls /equality_decls => a hlen; split => //.
   rewrite -hlen.
   split.
   2:{ destruct a; apply/and4P; split; intuition eauto with fvs.
       destruct w; auto.
       destruct w; auto. }
   destruct a. simpl. red.
-  eapply ws_equality_forget in w.
+  eapply equality_forget in w.
   destruct le; constructor; auto.
-  eapply ws_equality_forget in w.
-  eapply ws_equality_forget in w0.
+  eapply equality_forget in w.
+  eapply equality_forget in w0.
   destruct le; constructor; auto.
 Qed.
    *)
@@ -506,27 +523,27 @@ Proof.
   econstructor; etransitivity; tea.
 Qed.
 (* 
-Instance ws_equality_decls_trans {cf : checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ}
-  {Γ Γ'} : Transitive (ws_equality_decls le Σ Γ Γ').
+Instance equality_decls_trans {cf : checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ}
+  {Γ Γ'} : Transitive (equality_decls le Σ Γ Γ').
 Proof.
   intros Δ Δ' Δ''.
   move=> a; move: a.1 => HΓ. move: a.2.2 => /and4P[] _ onΓ' _ _. move: a.
-  move/into_ws_equality_open_decls => [onΓ [isd [isde' eq]]].
-  move/into_ws_equality_open_decls => [onΓ'' [isd' [isde'' eq']]].
+  move/into_equality_open_decls => [onΓ [isd [isde' eq]]].
+  move/into_equality_open_decls => [onΓ'' [isd' [isde'' eq']]].
   assert (eq'' := transitivity eq eq').
   eapply equality_open_decls_forget in eq''; tea.
 Qed. *)
 (* (* 
-Lemma into_ws_equality_decls {cf : checker_flags} {le : bool} {Σ : global_env_ext}
+Lemma into_equality_decls {cf : checker_flags} {le : bool} {Σ : global_env_ext}
   {Γ Γ'} {d d' : context_decl} (c : equality_decls le Σ Γ Γ' d d') :
   #|Γ| = #|Γ'| ->
   on_free_vars_ctx xpred0 Γ ->
   on_free_vars_ctx xpred0 Γ' ->
   is_open_decl Γ d ->
   is_open_decl Γ' d' ->
-  ws_equality_decls le Σ Γ Γ' d d'.
+  equality_decls le Σ Γ Γ' d d'.
 Proof.
-  rewrite /ws_equality_decls => len onΓ onΓ' ond ond'. 
+  rewrite /equality_decls => len onΓ onΓ' ond ond'. 
   repeat split => //.
   now rewrite onΓ onΓ' ond ond'.
 Qed. *)
@@ -543,9 +560,9 @@ Lemma equality_decls_trans {cf : checker_flags} {le : bool} {Σ : global_env_ext
   equality_decls le Σ Γ Γ' d d''.
 Proof.
   move=> len onΓ onΓ' ond ond' ond''.
-  move: (into_ws_equality_decls c len onΓ onΓ' ond ond') => l.
+  move: (into_equality_decls c len onΓ onΓ' ond ond') => l.
   rewrite -len in ond'.
-  move: (into_ws_equality_decls c' len onΓ onΓ' ond' ond'') => r.
+  move: (into_equality_decls c' len onΓ onΓ' ond' ond'') => r.
   apply (transitivity l r).
 Qed. *)
 
@@ -565,16 +582,14 @@ Inductive wt_equality_decls {cf : checker_flags} (le : bool) (Σ : global_env_ex
 Derive Signature for wt_equality_decls.
 
 (* Definition ws_context_equality {cf:checker_flags} (le : bool) (Σ : global_env_ext) :=
-  All2_fold (ws_equality_decls le Σ). *)
+  All2_fold (equality_decls le Σ). *)
 
 (* Notation ws_cumul_context Σ := (ws_context_equality true Σ).
 Notation ws_conv_context Σ := (ws_context_equality false Σ). *)
     
-Definition closed_context_equality {cf:checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) :=
+Definition context_equality {cf:checker_flags} (le : bool) (Σ : global_env_ext) (Γ Γ' : context) :=
   All2_fold (fun Γ Γ' => equality_open_decls le Σ Γ) Γ Γ'.
 
-Notation closed_cumul_context Σ := (closed_context_equality true Σ).
-Notation closed_conv_context Σ := (closed_context_equality false Σ).
 (* 
 Lemma ws_context_equality_closed_right {cf:checker_flags} {le : bool} {Σ : global_env_ext} {Γ Γ'}:
   ws_context_equality le Σ Γ Γ' -> is_closed_context Γ'.
@@ -596,8 +611,8 @@ Proof.
   now move/and4P: i => [].
 Qed. *)
 
-Lemma closed_context_equality_closed_right {cf:checker_flags} {le : bool} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
-  closed_context_equality le Σ Γ Γ' -> is_closed_context Γ'.
+Lemma context_equality_closed_right {cf:checker_flags} {le : bool} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
+  context_equality le Σ Γ Γ' -> is_closed_context Γ'.
 Proof.
   intros X. red in X.
   induction X; auto.
@@ -605,8 +620,8 @@ Proof.
   rewrite -(All2_fold_length X); eauto with fvs.
 Qed.
 
-Lemma closed_context_equality_closed_left {cf:checker_flags} {le : bool} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
-  closed_context_equality le Σ Γ Γ' -> is_closed_context Γ.
+Lemma context_equality_closed_left {cf:checker_flags} {le : bool} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
+  context_equality le Σ Γ Γ' -> is_closed_context Γ.
 Proof.
   intros X. red in X.
   induction X; auto.
@@ -614,39 +629,39 @@ Proof.
   eauto with fvs.
 Qed.
 
-Hint Resolve closed_context_equality_closed_left closed_context_equality_closed_right : fvs.
+Hint Resolve context_equality_closed_left context_equality_closed_right : fvs.
 
-(* Lemma into_closed_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
+(* Lemma into_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} :
   ws_context_equality le Σ Γ Γ' ->
-  closed_context_equality le Σ Γ Γ'.
+  context_equality le Σ Γ Γ'.
 Proof.
-  rewrite /ws_context_equality /closed_context_equality.
+  rewrite /ws_context_equality /context_equality.
   intros a. eapply PCUICContextRelation.All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd.
-  now destruct (into_ws_equality_open_decls le hd) as [clΓ [isd [isd' eq]]].
+  now destruct (into_equality_open_decls le hd) as [clΓ [isd [isd' eq]]].
 Qed.
 
-Lemma from_closed_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
+Lemma from_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} :
-  closed_context_equality le Σ Γ Γ' ->
+  context_equality le Σ Γ Γ' ->
   ws_context_equality le Σ Γ Γ'.
 Proof.
-  rewrite /ws_context_equality /closed_context_equality.
+  rewrite /ws_context_equality /context_equality.
   intros a; eapply PCUICContextRelation.All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd. cbn in hd.
   destruct hd.
-  rewrite /ws_equality_decls. split => //.
+  rewrite /equality_decls. split => //.
   apply (All2_fold_length IH). split.
   rewrite /equality_decls.
-  destruct le; constructor; auto; now apply ws_equality_forget in w.
+  destruct le; constructor; auto; now apply equality_forget in w.
   destruct w; cbn; rewrite -(All2_fold_length wseq); rtoProp; eauto with fvs.
   pose proof (All2_fold_length wseq).
-  destruct le; constructor; auto. now apply ws_equality_forget in w.
+  destruct le; constructor; auto. now apply equality_forget in w.
   destruct w; cbn; rewrite -(All2_fold_length wseq); rtoProp; eauto with fvs.
 
 
-  apply ws_equality_forget in w. apply ws_equality_forget in w0.
+  apply equality_forget in w. apply equality_forget in w0.
   destruct le; constructor; auto.
   now rewrite clΓ clΔ isd /= -(All2_fold_length IH) isd'.
 Qed. *)
@@ -731,7 +746,7 @@ Section WtContextConversion.
 
   Lemma wt_ws_context_equality {le} {Γ Γ' : context} {T U : term} :
     wt_context_equality le Σ Γ Γ' ->
-    closed_context_equality le Σ Γ Γ'.
+    context_equality le Σ Γ Γ'.
   Proof.
     intros a; eapply PCUICContextRelation.All2_fold_impl_ind; tea.
     intros ???? wt ws eq; 
@@ -755,19 +770,19 @@ Section WtContextConversion.
       rewrite (All2_fold_length ws) //; eauto with fvs.
   Qed.
 
-  Lemma closed_context_equality_inv {le} {Γ Γ' : context} :
-    closed_context_equality le Σ Γ Γ' ->
+  Lemma context_equality_inv {le} {Γ Γ' : context} :
+    context_equality le Σ Γ Γ' ->
     [× on_free_vars_ctx xpred0 Γ, on_free_vars_ctx xpred0 Γ' &
       if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'].
   Proof.
     move=> wteq.
     split; eauto with fvs.
     destruct le. eapply PCUICEnvironment.All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
-    all:try now eapply ws_equality_forget in p.
-    all:try now eapply ws_equality_forget in p0.
+    all:try now eapply equality_forget in p.
+    all:try now eapply equality_forget in p0.
     eapply PCUICEnvironment.All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
-    all:try now eapply ws_equality_forget in p.
-    all:try now eapply ws_equality_forget in p0.
+    all:try now eapply equality_forget in p.
+    all:try now eapply equality_forget in p0.
   Qed.
   
   #[global]
@@ -777,11 +792,11 @@ Section WtContextConversion.
     constructor; now symmetry.
   Qed.
 
-  Lemma closed_context_equality_forget {le Γ Γ'} : 
-    closed_context_equality le Σ Γ Γ' ->
+  Lemma context_equality_forget {le Γ Γ'} : 
+    context_equality le Σ Γ Γ' ->
     if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'.
   Proof.
-    now move/closed_context_equality_inv => [].
+    now move/context_equality_inv => [].
   Qed.
     
   Lemma All_fold_All2_fold {P Q Γ} : 
@@ -792,7 +807,7 @@ Section WtContextConversion.
     intros a H; induction a; constructor; auto.
   Qed.
 
-  Lemma closed_context_equality_refl le Γ : is_closed_context Γ -> closed_context_equality le Σ Γ Γ.
+  Lemma context_equality_refl le Γ : is_closed_context Γ -> context_equality le Σ Γ Γ.
   Proof.
     move=> onΓ. cbn.
     move/on_free_vars_ctx_All_fold: onΓ => a.

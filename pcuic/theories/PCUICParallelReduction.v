@@ -2516,15 +2516,6 @@ Section ParallelSubstitution.
     - rewrite !pred_atom_inst; auto. eapply pred1_refl_gen; auto with pcuic.
   Qed.
 
-  Lemma subst_context0_inst_context s Γ : 
-    subst_context s 0 Γ = inst_context (s ⋅n ids) Γ.
-  Proof.
-    now rewrite subst_context_inst_context Upn_0.
-  Qed.
-
-  Lemma subst0_inst (s : list term) (t : term) :
-    subst0 s t = t.[s ⋅n ids].
-  Proof. now sigma. Qed.
   Hint Rewrite subst0_inst : sigma.
 
   Lemma on_free_vars_all_subst P s : 

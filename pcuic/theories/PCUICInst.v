@@ -53,6 +53,21 @@ Lemma inst_context_length s Γ : #|inst_context s Γ| = #|Γ|.
 Proof. apply fold_context_k_length. Qed.
 Hint Rewrite inst_context_length : sigma wf.
 
+(** Substitution in contexts is just a particular kind of instantiation. *)
+
+Lemma subst_context_inst_context s k Γ :
+  subst_context s k Γ = inst_context (⇑^k (s ⋅n ids)) Γ. 
+Proof.
+  rewrite /subst_context.
+  now setoid_rewrite subst_inst'; setoid_rewrite Upn_Upn.
+Qed.
+
+Lemma subst_context0_inst_context s Γ : 
+  subst_context s 0 Γ = inst_context (s ⋅n ids) Γ.
+Proof.
+  now rewrite subst_context_inst_context Upn_0.
+Qed.
+
 Lemma inst_mkApps f l σ : (mkApps f l).[σ] = mkApps f.[σ] (map (inst σ) l).
 Proof.
   induction l in f |- *; simpl; auto. rewrite IHl.

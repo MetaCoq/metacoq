@@ -1476,10 +1476,19 @@ Proof.
   unfold Upn. now rewrite subst_fn_subst_consn.
 Qed.
 
+Lemma subst0_inst (s : list term) (t : term) :
+  subst0 s t = t.[s ⋅n ids].
+Proof. rewrite subst_inst. now sigma. Qed.
+
 (** Useful for point-free rewriting *)
 Corollary subst_inst' s k : subst s k =1 inst (⇑^k (subst_consn s ids)).
 Proof.
   intros t; apply subst_inst.
+Qed.
+
+Lemma map_subst_inst s k l : map (subst s k) l = map (inst (⇑^k (s ⋅n ids))) l.
+Proof.
+  now apply map_ext => ?; rewrite subst_inst.
 Qed.
 
 (** Simplify away [subst] to the σ-calculus [inst] primitive. *)

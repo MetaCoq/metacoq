@@ -3171,7 +3171,7 @@ Section ConvTerms.
       apply equality_red; eauto.
   Qed.
 
-  Lemma equality_terms_conv_ctx {Γ Γ' ts ts'} :
+  Lemma equality_terms_equality_ctx {Γ Γ' ts ts'} :
     context_equality false Σ Γ Γ' ->
     equality_terms Σ Γ ts ts' ->
     equality_terms Σ Γ' ts ts'.

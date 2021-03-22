@@ -12,9 +12,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
      PCUICArities.
 
-From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
+From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
@@ -2339,7 +2339,7 @@ Section WfEnv.
           assumption.
   Qed.
 
-  From MetaCoq.PCUIC Require Import PCUICInst.
+  Import PCUICInst.
 
   Local Open Scope sigma.
 
@@ -2400,7 +2400,7 @@ Section WfEnv.
     apply context_subst_extended_subst in cs.
     rewrite List.rev_involutive in cs.
     rewrite cs. apply map_ext => t.
-    now rewrite PCUICParallelReduction.subst0_inst.
+    now rewrite subst0_inst.
   Qed.
 
   Lemma typing_spine_ctx_inst_smash {Γ Δ : context} {T args args' T'} :
@@ -2520,17 +2520,17 @@ Section WfEnv.
         simpl in asp.
         autorewrite with len.
         now rewrite -{1}(Nat.add_0_r #|Γ0|) distr_lift_subst_rec /= Nat.add_0_r.
-      * simpl in *. autorewrite with len in asp. 
+      * simpl in *. len in asp. 
         simpl in asp.
         assert (len:=subslet_length subsl).
-        autorewrite with len in len. simpl in len.
+        len in len. simpl in len.
         rewrite Nat.add_1_r in len.
         rewrite smash_context_app smash_context_acc /= in subsl.
         rewrite subst_context_lift_id in subsl.
         eapply subslet_app_inv in subsl as [subsl subsr].
         destruct args; simpl in * => //. 
         noconf len.
-        autorewrite with len in subsl, subsr. simpl in *.
+        len in subsl; len in subsr. simpl in *.
         rewrite -H in subsl subsr. rewrite skipn_all_app_eq ?List.rev_length in subsl subsr => //.
         rewrite (firstn_app_left _ 0) ?firstn_0 ?app_nil_r ?List.rev_length in subsr => //.
         depelim subsl.
@@ -2636,9 +2636,6 @@ Section WfEnv.
     eapply wf_arity_spine_typing_spine.
     constructor; tas.
   Qed.
-
-  Require Import ssrbool.
-
 
   Lemma map_subst_extended_subst Γ k : 
     map (subst0 (List.rev (to_extended_list_k Γ k))) (extended_subst Γ 0) = 
@@ -2786,19 +2783,6 @@ Section WfEnv.
     rewrite closed_ctx_decl in cl. move/andb_and: cl => [cld clΓ].
     now rewrite IHΓ // Nat.add_1_r.
   Qed.
-  From MetaCoq.PCUIC Require Import PCUICInst.
-
-  (* Lemma Upn_rshiftk n s k : ⇑^n s ∘s shiftk k =1 shiftk k ∘s (idsn n ⋅n s).
-  Proof.
-    intros i. rewrite Upn_eq; sigma.
-    destruct (leb_spec_Set (S i) n).
-    - rewrite subst_consn_lt'. len; try lia.
-      cbn.
-      rewrite /subst_fn nth_error_map /= idsn_lt /shiftk; len; try lia.
-      rewrite subst_consn_lt'; len; try lia.
-      simpl.
-    now destruct nth_error => /= //; len. 
-    reflexivity. *)
 
   Lemma closed_subst_map_lift s n k t :
     closedn (#|s| + k) t ->

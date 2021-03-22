@@ -25,20 +25,6 @@ Hint Rewrite @app_context_length : wf.
 Generalizable Variables Σ Γ t T.
 
 Local Open Scope sigma_scope.
- 
-(** Substitution in contexts is just a particular kind of instantiation. *)
-
-Lemma subst_context_inst_context s k Γ :
-  subst_context s k Γ = inst_context (⇑^k (s ⋅n ids)) Γ. 
-Proof.
-  rewrite /subst_context.
-  now setoid_rewrite subst_inst'; setoid_rewrite Upn_Upn.
-Qed.
-
-Lemma map_subst_inst s k l : map (subst s k) l = map (inst (⇑^k (s ⋅n ids))) l.
-Proof.
-  now apply map_ext => ?; rewrite subst_inst.
-Qed.
 
 (** Well-typed substitution into a context with *no* let-ins *)
 
@@ -1978,7 +1964,7 @@ Qed.
 
 (** Substitution into a *well-typed* cumulativity/conversion derivation. *)
 
-Lemma substitution_equality {cf} {Σ} {wfΣ : wf Σ} {le Γ Γ' Γ'' s M N} :
+Lemma substitution_wt_equality {cf} {Σ} {wfΣ : wf Σ} {le Γ Γ' Γ'' s M N} :
   subslet Σ Γ s Γ' ->
   wt_equality le Σ (Γ ,,, Γ' ,,, Γ'') M N ->
   wt_equality le Σ (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
@@ -2006,10 +1992,10 @@ Lemma substitution_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' s M N} :
   subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ✓ ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |-  subst s #|Γ''| M <= subst s #|Γ''| N ✓.
-Proof. apply substitution_equality. Qed.
+Proof. apply substitution_wt_equality. Qed.
 
 Lemma substitution_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' s M N} :
   subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M = N ✓ ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |-  subst s #|Γ''| M = subst s #|Γ''| N ✓.
-Proof. apply substitution_equality. Qed.
+Proof. apply substitution_wt_equality. Qed.

@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyp
 (* We show that conversion/cumulativity starting from well-typed terms is transitive.
   We first use typing to decorate the reductions/comparisons with invariants 
   showing that all the considered contexts/terms are well-scoped. In a second step
-  we use confluence of one-step reduction on well-scoped terms [ws_red_confluence], which also 
+  we use confluence of reduction on well-scoped terms [ws_red_confluence], which also 
   commutes with alpha,universe-equivalence of contexts and terms [red1_eq_context_upto_l].
   We can drop the invariants on free variables at each step as reduction preserves free-variables,
   so we also have [red_confluence]: as long as the starting contexts and terms are well-scoped 

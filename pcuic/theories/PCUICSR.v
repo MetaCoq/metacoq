@@ -215,7 +215,7 @@ Proof.
   intros wf wf' cv.
   eapply conv_context_app.
   apply conv_context_rel_app in cv.
-  eapply conv_ctx_rel_smash => //.
+  eapply context_equality_rel_smash => //.
 Qed.
 
 Lemma expand_lets_eq Γ t : 
@@ -659,7 +659,7 @@ Proof.
     eapply ctx_inst_cumul.
     2:{ instantiate (1:=subst_context [i] 0 (List.rev Δ)).
         rewrite -subst_telescope_subst_context List.rev_involutive. exact ctxi. }
-    eapply cumul_ctx_rel_app.
+    eapply context_equality_rel_app.
     eapply conv_cumul_context.
     eapply (onone_red_cont_context_subst _ [i] [hd']); tea.
     repeat constructor. repeat constructor. constructor. auto.
@@ -949,8 +949,8 @@ Proof.
       eapply weaken_wf_local; tea. exact (on_minductive_wf_params_indices_inst isdecl _ cu).
       rewrite (spine_subst_inst_subst iparsubst0) /= app_nil_r.
       intros cum.
-      eapply cumul_ctx_rel_trans; tea.
-      apply cumul_ctx_rel_app. reflexivity. }
+      eapply context_equality_rel_trans; tea.
+      apply context_equality_rel_app. reflexivity. }
     eapply context_conversion in hb. 3:tea.
     2:{ eapply wf_local_smash_end; tea. }
     eapply (PCUICSubstitution.substitution _ Γ _ _ []) in hb. 
@@ -966,7 +966,7 @@ Proof.
     { eapply conv_cumul.
       eapply (substitution_conv _ _ _ []). 3:eapply spbrctx. all:tea.
       { eapply wf_local_smash_end => //. }
-      symmetry. eapply conv_expand_lets_conv_ctx; tea. reflexivity.
+      symmetry. eapply equality_expand_lets_equality_ctx; tea. reflexivity.
       eapply conv_context_rel_app. now symmetry. }
     cbn.
     rewrite lift_mkApps !subst_mkApps.

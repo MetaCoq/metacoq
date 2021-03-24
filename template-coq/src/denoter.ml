@@ -111,7 +111,7 @@ struct
          let ind' = D.unquote_inductive ind in
          let proj_npars = D.unquote_int npars in
          let proj_arg = D.unquote_int arg in
-         let l = (match List.nth (Recordops.lookup_projections ind') proj_arg with
+         let l = (match List.nth (Structures.Structure.find_projections ind') proj_arg with
                   | Some p -> Names.Constant.label p
                   | None -> failwith "tproj case of denote_term") in
          let p' = Names.Projection.make (Projection.Repr.make ind' ~proj_npars ~proj_arg l) false in

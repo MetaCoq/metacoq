@@ -534,23 +534,26 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | None => False (* Monomorphic inductives have no variance attached *)
       end.
 
+    (* Conclusion head: reference to the current inductive in the block *)
+    Definition cstr_concl_head mdecl i idecl cdecl :=
+      tRel (#|mdecl.(ind_bodies)| - S i + #|mdecl.(ind_params)| + #|cstr_args cdecl|).
+
+    (* Constructor conclusion shape: the inductives type applied to variables for
+       the (non-let) parameters 
+       followed by the indices *)
+    Definition cstr_concl mdecl i idecl cdecl :=
+      (mkApps (cstr_concl_head mdecl i idecl cdecl)
+        (to_extended_list_k mdecl.(ind_params) #|cstr_args cdecl|
+          ++ cstr_indices cdecl)).
+  
     Record on_constructor Σ mdecl i idecl ind_indices cdecl cunivs := {
       (* cdecl.1 fresh ?? *)
       cstr_args_length : context_assumptions (cstr_args cdecl) = cstr_arity cdecl;
-      
-      (* Real (non-let) arguments bound by the constructor *)
-      cstr_concl_head := tRel (#|mdecl.(ind_bodies)|
-      - S i
-      + #|mdecl.(ind_params)|
-      + #|cstr_args cdecl|);
-      (* Conclusion head: reference to the current inductive in the block *)
 
       cstr_eq : cstr_type cdecl =
-       it_mkProd_or_LetIn mdecl.(ind_params)
-                          (it_mkProd_or_LetIn (cstr_args cdecl)
-                              (mkApps cstr_concl_head
-                              (to_extended_list_k mdecl.(ind_params) #|cstr_args cdecl|
-                                ++ cstr_indices cdecl)));
+       it_mkProd_or_LetIn mdecl.(ind_params) 
+        (it_mkProd_or_LetIn (cstr_args cdecl) 
+          (cstr_concl mdecl i idecl cdecl));
       (* The type of the constructor canonically has this shape: parameters, real
         arguments ending with a reference to the inductive applied to the
         (non-lets) parameters and arguments *)

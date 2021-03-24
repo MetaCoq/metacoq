@@ -181,8 +181,7 @@ Proof.
   now rewrite (subst_to_extended_list_k _ _ pars).
 Qed. *)
 
-Lemma instantiate_inds {cf:checker_flags} Σ u mind mdecl :
-  wf Σ.1 ->
+Lemma instantiate_inds {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {u mind mdecl} :
   declared_minductive Σ.1 mind mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   subst_instance u
@@ -190,7 +189,7 @@ Lemma instantiate_inds {cf:checker_flags} Σ u mind mdecl :
         (ind_bodies mdecl)) = 
   inds mind u (ind_bodies mdecl).
 Proof.
-  intros wfΣ declm cu.
+  intros declm cu.
   rewrite subst_instance_inds.  
   f_equal. eapply subst_instance_id_mdecl; eauto.
 Qed.

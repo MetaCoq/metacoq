@@ -2511,6 +2511,20 @@ Section ConvSubst.
       rewrite (closedn_on_free_vars t0) //.
   Qed.
   Hint Resolve subslet_open : fvs.
+  
+  Lemma untyped_closed_red_subst {Γ Δ Γ' s M N} :
+    untyped_subslet Γ s Δ ->
+    forallb (is_open_term Γ) s ->
+    Σ ;;; Γ ,,, Δ ,,, Γ' ⊢ M ⇝ N ->
+    Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| M ⇝ subst s #|Γ'| N.
+  Proof.
+    intros Hs Hs' H. split.
+    - eapply is_closed_subst_context; eauto with fvs pcuic.
+      eapply (untyped_subslet_length Hs).
+    - eapply is_open_term_subst; tea; eauto with fvs pcuic.
+      eapply (untyped_subslet_length Hs).
+    - eapply substitution_untyped_red; tea; eauto with fvs.
+  Qed.
 
   Lemma closed_red_subst {Γ Δ Γ' s M N} :
     subslet Σ Γ s Δ ->
@@ -2524,6 +2538,30 @@ Section ConvSubst.
       eapply (subslet_length Hs).
     - eapply substitution_untyped_red; tea; eauto with fvs.
       now eapply subslet_untyped_subslet.
+  Qed.
+
+  Lemma untyped_substitution_equality {le Γ Γ' Γ'' s M N} :
+    untyped_subslet Γ s Γ' ->
+    forallb (is_open_term Γ) s ->
+    Σ ;;; Γ ,,, Γ' ,,, Γ'' ⊢ M ≤[le] N ->
+    Σ ;;; Γ ,,, subst_context s 0 Γ'' ⊢ subst s #|Γ''| M ≤[le] subst s #|Γ''| N.
+  Proof.
+    intros Hs Hs'. induction 1.
+    - cbn. constructor; eauto with fvs.
+      { eapply is_closed_subst_context; tea; eauto with fvs.
+        now apply (untyped_subslet_length Hs). }
+      { eapply is_open_term_subst; tea; eauto with fvs.
+        now eapply (untyped_subslet_length Hs). }
+      { eapply is_open_term_subst; tea; eauto with fvs.
+        now apply (untyped_subslet_length Hs). }
+      destruct le. 2:now apply subst_eq_term.
+      now apply subst_leq_term.
+    - eapply red_equality_left; tea.
+      eapply untyped_closed_red_subst; tea.
+      constructor; eauto.
+    - eapply red_equality_right; tea.
+      eapply untyped_closed_red_subst; tea.
+      constructor; eauto.
   Qed.
 
   Lemma substitution_equality {le Γ Γ' Γ'' s M N} :
@@ -3290,7 +3328,7 @@ Section CumulSubst.
     2:{ eapply substitution_equality; tea.
   Qed. *)
     
-  (* Lemma untyped_subst_cumul {Γ Γ0 Γ1 Δ s s' T U} :
+  Lemma untyped_subst_cumul {Γ Γ0 Γ1 Δ s s' T U} :
     untyped_subslet Γ s Γ0 ->
     untyped_subslet Γ s' Γ1 ->
     is_closed_context (Γ ,,, Γ1) ->

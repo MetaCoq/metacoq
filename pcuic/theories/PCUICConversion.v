@@ -2863,12 +2863,10 @@ Section ConvSubst.
 
   Lemma weaken_equality {le Γ t u} Δ :
     is_closed_context Δ ->
-    is_open_term Γ t -> 
-    is_open_term Γ u ->
     Σ ;;; Γ ⊢ t ≤[le] u ->
     Σ ;;; Δ ,,, Γ ⊢ t ≤[le] u.
   Proof.
-    move=> clΔ clt clu a.
+    move=> clΔ a.
     epose proof (weakening_equality (Γ := []) (Γ'' := Δ)).
     rewrite !app_context_nil_l in X.
     specialize (X a clΔ).

@@ -825,7 +825,7 @@ Proof.
             simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
         ++ pose proof Xg.(onConstructors) as Xg'.
             eapply All2_impl; eauto. intros.
-            destruct X0 as [cass chead tyeq onctyp oncargs oncind].
+            destruct X0 as [cass tyeq onctyp oncargs oncind].
             unshelve econstructor; eauto.
             destruct onctyp as [s Hs].
             simpl in Hs.

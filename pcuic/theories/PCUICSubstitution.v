@@ -562,13 +562,11 @@ Proof.
   - reflexivity.
 Qed.
 
-Lemma wf_arities_context' {cf:checker_flags}:
-  forall (Σ : global_env_ext) mind (mdecl : mutual_inductive_body),
-    wf Σ ->
-    on_inductive (lift_typing typing) Σ mind mdecl ->
-    wf_local Σ (arities_context (ind_bodies mdecl)).
+Lemma wf_arities_context' {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {mind mdecl} :
+  on_inductive (lift_typing typing) Σ mind mdecl ->
+  wf_local Σ (arities_context (ind_bodies mdecl)).
 Proof.
-  intros Σ mind mdecl wfΣ Hdecl.
+  intros Hdecl.
   apply onInductives in Hdecl.
   unfold arities_context.
   revert Hdecl.
@@ -591,22 +589,21 @@ Proof.
   apply X.
 Qed.
 
-Lemma wf_arities_context {cf:checker_flags} (Σ : global_env) mind mdecl : wf Σ ->
+Lemma wf_arities_context {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl} :
   declared_minductive Σ mind mdecl -> wf_local (Σ, ind_universes mdecl) (arities_context mdecl.(ind_bodies)).
 Proof.
-  intros wfΣ Hdecl.
+  intros Hdecl.
   eapply declared_minductive_inv in Hdecl. 2:apply weaken_env_prop_typing. all:eauto.
   eapply wf_arities_context'; eauto.
 Qed.
 
-Lemma on_constructor_closed {cf:checker_flags} {Σ : global_env} {mind mdecl u idecl indices cdecl cs} :
-  wf Σ ->
+Lemma on_constructor_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl u idecl indices cdecl cs} :
   on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))
                     (subst_instance u cdecl.(cstr_type))
   in closed cty.
 Proof.
-  intros wfΣ [? ? ? [s Hs] _ _ _ _].
+  intros [? ? [s Hs] _ _ _ _].
   pose proof (typing_wf_local Hs).
   destruct cdecl as [id cty car].
   apply subject_closed in Hs; eauto.

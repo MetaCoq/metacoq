@@ -2909,6 +2909,27 @@ Section WfEnv.
   context_equality_rel le Σ Γ Δ Δ' ->
   ctx_inst Σ Γ i (Li *)
 
+  Lemma equality_expand_lets_k {le} {Γ Δ Γ'} {T T'} : 
+    wf_local Σ (Γ ,,, Δ) ->
+    Σ ;;; Γ ,,, Δ ,,, Γ' ⊢ T ≤[le] T' ->
+    Σ ;;; Γ ,,, smash_context [] Δ ,,, expand_lets_ctx Δ Γ' ⊢ 
+      expand_lets_k Δ #|Γ'| T ≤[le] expand_lets_k Δ #|Γ'| T'.
+  Proof.
+    intros wf cum.
+    rewrite -app_context_assoc in cum.
+    eapply (weakening_equality (Γ'' := smash_context [] Δ)) in cum; tea.
+    rewrite /expand_lets /expand_lets_k.
+    rewrite lift_context_app in cum.
+    rewrite app_context_assoc in cum.
+    eapply substitution_equality in cum; tea.
+    len in cum; tea.
+    destruct (wf_local_app_inv wf).
+    simpl.
+    len.
+    now eapply PCUICContexts.subslet_extended_subst.
+    eapply wf_local_smash_end in wf. eauto with fvs.
+  Qed.
+
   Lemma equality_expand_lets {le} {Γ} {Δ} {T T'} : 
     wf_local Σ (Γ ,,, Δ) ->
     Σ ;;; Γ ,,, Δ ⊢ T ≤[le] T' ->

@@ -1266,7 +1266,7 @@ Proof.
       pose proof X0.(onConstructors) as XX.
       eapply All2_nth_error_Some in Hcdecl; eauto.
       destruct Hcdecl as [? [? ?]]. cbn in *.
-      destruct o as [? ? ? [s Hs] _]. rewrite -> andb_and in Hs.
+      destruct o as [? ? [s Hs] _]. rewrite -> andb_and in Hs.
       apply proj1 in Hs.
       rewrite arities_context_length in Hs.
       eauto using closed_upwards with arith.

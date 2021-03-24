@@ -326,7 +326,7 @@ Proof.
   eapply nth_error_alli in Hidecl; eauto. simpl in *.
   pose proof (onConstructors Hidecl) as h. unfold on_constructors in h.
   eapply All2_nth_error_Some in Hcdecl. 2: eassumption.
-  destruct Hcdecl as [cs [Hnth [? ? ? [? [? ?]] ?]]].
+  destruct Hcdecl as [cs [Hnth [? ? [? [? ?]] ?]]].
   assumption.
 Qed.
 

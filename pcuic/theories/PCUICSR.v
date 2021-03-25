@@ -281,14 +281,6 @@ Proof.
   intros; now eapply eq_context_alpha_reln.
 Qed.
 
-Lemma eq_binder_annots_eq nas Γ : 
-  All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Γ ->
-  All2 (compare_decls eq eq) (map2 set_binder_name nas Γ) Γ.
-Proof.
-  induction 1; simpl; constructor; auto.
-  destruct x, y as [na [b|] ty]; simpl; constructor; auto.
-Qed.
-
 Lemma to_extended_list_case_branch_context ci mdecl p brctx cdecl :
   All2 (fun x y => eq_binder_annot x y.(decl_name)) brctx (cstr_args cdecl) ->
   to_extended_list (case_branch_context ci mdecl p brctx cdecl) =

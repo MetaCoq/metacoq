@@ -1499,8 +1499,10 @@ Proof.
   (subst_instance u (ind_arities mdecl) ,,,
    subst_instance u (smash_context [] (ind_params mdecl) ,,, Γ))
   (subst_instance u t)).
-  { rewrite subst_instance_app_ctx app_context_assoc.
-    rewrite subst_instance_smash. admit. }
+  { rewrite -subst_instance_app_ctx.
+    destruct l as [s Hs]. exists s.
+    move: Hs. cbn. red.
+    now rewrite app_context_assoc. }
   depelim a.
   all:constructor.
   - eapply IHcpos. auto. now depelim ass. apply cv.
@@ -1518,7 +1520,7 @@ Proof.
     rewrite app_context_nil_l !subst_instance_app_ctx // app_context_assoc //.
   - elimtype False; now depelim ass.
   - elimtype False; now depelim ass.
-Admitted.
+Qed.
 
 Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'} 
   {ind mdecl idecl cdecl} :
@@ -2270,7 +2272,8 @@ Lemma is_closed_context_weaken Γ Δ :
   is_closed_context (Γ ,,, Δ).
 Proof.
   rewrite on_free_vars_ctx_app => -> /=.
-Admitted.
+  eapply on_free_vars_ctx_impl => //.
+Qed.
 
 Lemma inductive_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   forall {ind mdecl idecl u u' napp},
@@ -4009,75 +4012,37 @@ Proof.
   induction 1; constructor; auto.
 Qed.
 
-(* No need to worry about the name annotations in the proofs below, for all typing
-  purposes we can work with the simpler context not involving the renaming *)
-Lemma pre_case_branch_context_eq ind mdecl params puinst bctx cdecl :
-  wf_branch_gen cdecl bctx ->
-  All2 (compare_decls eq eq)
-    (pre_case_branch_context ind mdecl params puinst cdecl)
-    (case_branch_context_gen ind mdecl params puinst bctx cdecl).
+Lemma eq_binder_annots_eq nas Γ : 
+  All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Γ ->
+  All2 (compare_decls eq eq) (map2 set_binder_name nas Γ) Γ.
 Proof.
-  unfold wf_branch_gen. intros wf%Forall2_All2.
-  rewrite /pre_case_branch_context /case_branch_context_gen.
-  (*eapply All2_fold_context_k.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx /subst_context.
-  eapply All2_fold_fold_context => /=.
-  eapply All2_fold_fold_context.
-  eapply All2_fold_fold_context.
-  eapply All2_fold_map.
-  eapply All2_fold_impl_ind.
-  instantiate (1 := fun _ _ d d' => compare_decls eq eq d' d).
-  eapply All2_fold_All2; tea.
-  eapply All2_sym.
-  eapply All2_map2_left_All3; tea.
-  induction wf; constructor; auto.
-  destruct x, y as [na [b|] ty]; constructor; auto.
-  intros ? ? d d'; cbn; rewrite !fold_context_k_length !map_context_length !Nat.add_0_r.
-  intros H _ []; constructor; simpl; auto. now symmetry.
-  rewrite (All2_fold_length H). subst; reflexivity.
-  now symmetry.
-  rewrite (All2_fold_length H); subst; reflexivity.
-  rewrite (All2_fold_length H); subst; reflexivity.*)
-Admitted.
+  induction 1; simpl; constructor; auto.
+  destruct x, y as [na [b|] ty]; simpl; constructor; auto.
+Qed.
+
+(* Lemma All2_compare_decls_subst pars n Γ i :
+  All2 (compare_decls eq eq) (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i])
+  All2 (compare_decls eq eq) (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i]) *)
+Lemma alpha_eq_subst_instance Δ Δ' i : 
+  All2 (compare_decls eq eq) Δ Δ' →
+  All2 (compare_decls eq eq) Δ@[i] Δ'@[i].
+Proof.
+  induction 1.
+  * constructor.
+  * cbn. constructor; auto. destruct r; constructor; auto.
+    all:cbn; subst; reflexivity.
+Qed.
+
+Instance alpha_eq_trans : CRelationClasses.Transitive (All2 (compare_decls eq eq)).
+Proof.
+  intros x y z. apply All2_trans. tc.
+Qed.
 
 Lemma pre_case_branch_context_length_args {ind mdecl params puinst cdecl} :
   #|pre_case_branch_context ind mdecl params puinst cdecl| = #|cstr_args cdecl|.
 Proof.
   now rewrite /pre_case_branch_context; len.
 Qed.
-(*
-Lemma noccur_between_lift {n k T} : noccur_between k n T -> 
-  ∑ T', lift n k T' = T.
-Proof.
-  revert k n T.
-  eapply term_noccur_between_list_ind; intros.
-  - destruct (leb_spec_Set (S i) k).
-    exists (tRel i). simpl.
-    nat_compare_specs => //.
-    destruct (leb_spec_Set (k + n) i).
-    exists (tRel (i - n)). simpl.
-    nat_compare_specs => //. lia_f_equal.
-    elimtype False. destruct H. lia. lia.
-  - exists (tVar i); reflexivity.
-  - admit.
-  - exists (tSort s); reflexivity.
-  - destruct X, X0. exists (tProd na x x0).
-    simpl. now rewrite e e0.
-  - destruct X, X0. exists (tLambda na x x0).
-    simpl. now rewrite e e0.
-  - admit.
-  - destruct X, X0.
-    simpl; exists (tApp x x0).
-    now rewrite /= e e0.
-  - now exists (tConst s u).
-  - now exists (tInd i u).
-  - now exists (tConstruct i c u).
-  - admit.
-  - destruct X.
-    now exists (tProj s x); simpl; rewrite e.
-  - admit.
-  - admit.
-Admitted.*)
 
 Lemma isType_is_open_term {cf} {Σ} {wfΣ : wf Σ} Γ T : isType Σ Γ T -> is_open_term Γ T.
 Proof.
@@ -4314,10 +4279,72 @@ Proof.
   constructor; auto.
   destruct y as [na [b|] ty]; constructor; simpl; auto; reflexivity.
 Qed.
- 
+
+Lemma All2_eq_binder_subst_context (l : list (binder_annot name))  s k Γ :
+  All2 (fun x y => eq_binder_annot x y.(decl_name)) l Γ ->
+  All2 (fun x y => eq_binder_annot x y.(decl_name)) l (subst_context s k Γ).
+Proof.
+  induction 1; cbn; rewrite ?subst_context_snoc //; constructor; auto.
+Qed.
+
+Lemma All2_eq_binder_subst_instance (l : list (binder_annot name)) u (Γ : context) :
+  All2 (fun x y => eq_binder_annot x y.(decl_name)) l Γ ->
+  All2 (fun x y => eq_binder_annot x y.(decl_name)) l (subst_instance u Γ).
+Proof.
+  induction 1; cbn; rewrite ?subst_context_snoc //; constructor; auto.
+Qed.
+
+Instance alpha_eq_reflexive : CRelationClasses.Reflexive (All2 (compare_decls eq eq)).
+Proof.
+  intros x. eapply All2_refl; reflexivity.
+Qed.
+
+Lemma inst_case_predicate_context_eq {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
+  {mdecl idecl ci p} :
+  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  All2 (compare_decls eq eq)
+    (map2 set_binder_name (forget_types (pcontext p))
+      (inst_case_context (pparams p) (puinst p)
+          (ind_predicate_context ci mdecl idecl)))
+    (subst_context (List.rev (pparams p)) 0 (pcontext p)@[puinst p]).
+Proof.
+  intros a.
+  eapply All2_trans. tc.
+  { eapply eq_binder_annots_eq.
+    rewrite /inst_case_context.
+    apply All2_eq_binder_subst_context, All2_eq_binder_subst_instance.
+    eapply All2_map_left, All2_impl; tea. intros x y []; auto. }
+  { apply alpha_eq_subst_context, alpha_eq_subst_instance. 
+    now symmetry. }
+Qed.
+
+(* No need to worry about the name annotations in the proofs below, for all typing
+  purposes we can work with the simpler context not involving the renaming *)
+Lemma pre_case_branch_context_eq {cf}	{Σ} {wfΣ : wf Σ} {ind mdecl idecl params puinst bctx cdecl} :
+  declared_inductive Σ ind mdecl idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) puinst ->
+  wf_branch_gen cdecl bctx ->
+  All2 (compare_decls eq eq)
+    (pre_case_branch_context ind mdecl params puinst cdecl)
+    (case_branch_context_gen ind mdecl params puinst bctx cdecl).
+Proof.
+  intros decli cu.
+  unfold wf_branch_gen. intros wf%Forall2_All2.
+  rewrite /pre_case_branch_context /case_branch_context_gen.
+  symmetry. etransitivity.
+  eapply eq_binder_annots_eq.
+  rewrite /pre_case_branch_context_gen /inst_case_context /cstr_branch_context.
+  eapply All2_eq_binder_subst_context_inst.
+  now eapply All2_eq_binder_subst_context.
+  rewrite /pre_case_branch_context_gen /inst_case_context /cstr_branch_context.
+  eapply alpha_eq_subst_context. 
+  rewrite subst_instance_expand_lets_ctx subst_instance_subst_context.
+  now rewrite (instantiate_inds _ _ _ _ _ decli cu) //.
+Qed.
+
 Lemma wf_case_branches_types {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
-  {Γ mdecl idecl ci p} ps (args : list term) brs :
-  declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+  {Γ mdecl idecl} {ci : case_info} {p} ps (args : list term) brs :
+  declared_inductive Σ ci mdecl idecl ->
   isType Σ Γ (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ args)) ->
   wf_predicate mdecl idecl p ->
   let predctx := inst_case_predicate_context p in
@@ -4436,19 +4463,13 @@ Proof.
     (lift_context #|case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl| 0
       (case_predicate_context' ci mdecl idecl p))).
     apply alpha_eq_smash_context, alpha_eq_lift_context.
-    epose proof (wf_pre_case_predicate_context_gen wfp).
+    epose proof (wf_pre_case_predicate_context_gen (ci:=ci) wfp).
     rewrite /inst_case_predicate_context.
     eapply All2_trans. tc.
     eapply case_predicate_context_alpha; tea.
-    destruct wfp. apply Forall2_All2 in f. tea.
-    clear -conv.
-    depelim conv. rewrite H.
-    rewrite /case_predicate_context /case_predicate_context_gen.
-    rewrite /inst_case_context. rewrite -H.
-    rewrite /pre_case_predicate_context_gen.
-    admit. }
+    destruct wfp. apply Forall2_All2 in H1. tea.
+    now eapply inst_case_predicate_context_eq in conv. }
   rewrite map_map_compose.
-
   fold (subst_let_expand_k (List.rev (pparams p)) (subst_instance (puinst p) (ind_params mdecl)) #|cstr_args cdecl|).
   set (indices := map (subst (inds _ _ _) _) _).
   rewrite /case_predicate_context' lift_context_snoc.
@@ -4458,8 +4479,10 @@ Proof.
   rewrite expand_lets_ctx_tip; cbn.
   rewrite /lift_decl compose_map_decl; cbn.
   eapply (subslet_eq_context_alpha_dom (Γ:=  (Γ ,,, pre_case_branch_context ci.(ci_ind) mdecl p.(pparams) p.(puinst) cdecl))).
-  { eapply All2_app. apply pre_case_branch_context_eq. apply wfbrs.
-    apply All2_refl. intros; reflexivity. }
+  { eapply All2_app.
+    rewrite /case_branch_context //.
+    eapply (pre_case_branch_context_eq (ind:=ci) H cu wfbrs).
+    reflexivity. }
   pose proof (on_cindices onc).
   assert (spindices :
   spine_subst Σ
@@ -4681,5 +4704,6 @@ Proof.
         rewrite map_lift0. rewrite /indices.
         rewrite !map_map_compose.
         rewrite Nat.add_comm.
-        now rewrite /subst_let_expand_k. }      
+        now rewrite /subst_let_expand_k. }
+    }
 Qed.

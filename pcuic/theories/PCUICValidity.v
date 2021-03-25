@@ -195,8 +195,6 @@ Section Validity.
       rewrite map2_app => /= //; try lia. unfold aname. lia.
       eapply app_inj_tail in heq as [<- <-].
       simpl. eapply PCUICContextRelation.All2_fold_app; auto.
-      pose proof (All2_length alnas).
-      rewrite map2_length => //.
       constructor. constructor.
       destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
       try reflexivity.

@@ -370,12 +370,9 @@ Definition inj_closed (Γ : context) (o : on_free_vars_ctx xpred0 Γ) : closed_c
   exist Γ o.
 Arguments inj_closed Γ & o.
 
-Notation "⇑ Γ" := (inj_closed Γ byfvs) (at level 20, only parsing).
-
 Definition inj_open {Γ : closed_context} (t : term) (o : on_free_vars (shiftnP #|Γ| xpred0) t) : open_term Γ :=
   exist t o.
 Arguments inj_open {Γ} & t o.
-Notation "⤊ t" := (inj_open t byfvs) (at level 20, only parsing).
 
 Hint Resolve red_ctx_on_free_vars : fvs.
 
@@ -1472,7 +1469,7 @@ Lemma context_cumulativity_app {cf:checker_flags} {Σ : global_env_ext} {wfΣ : 
 Proof.
   intros cum conv.
   pose proof (length_of conv). len in H.
-  eapply All2_fold_app; eauto. lia. 
+  eapply All2_fold_app; eauto.
   eapply context_equality_refl; cbn; eauto with fvs.
   eapply All2_fold_app_inv in conv as []. 2:lia.
   eapply All2_fold_impl_ind; tea.

@@ -1858,11 +1858,7 @@ Lemma eq_context_upto_cat Σ Re Rle Γ Δ Γ' Δ' :
   eq_context_upto Σ Re Rle Γ Γ' ->
   eq_context_upto Σ Re Rle Δ Δ' ->
   eq_context_upto Σ Re Rle (Γ ,,, Δ) (Γ' ,,, Δ').
-Proof.
-  intros.
-  eapply All2_fold_app; eauto.
-  apply (length_of X0).
-Qed.
+Proof. intros. eapply All2_fold_app; eauto. Qed.
 
 Lemma eq_context_upto_rev Σ Re Rle Γ Δ :
   eq_context_upto Σ Re Rle Γ Δ ->

@@ -138,7 +138,6 @@ Lemma fix_context_pres_let_bodies Γ mfix mfix' :
 Proof.
   intros len.
   apply All2_fold_app.
-  - now rewrite !fix_context_length.
   - apply All2_fold_refl.
     intros.
     destruct x.
@@ -151,7 +150,6 @@ Proof.
       constructor.
     + destruct mfix'; cbn in *; [discriminate len|].
       apply All2_fold_app.
-      * now rewrite !List.rev_length !mapi_rec_length.
       * constructor; [constructor|].
         constructor.
       * apply IHmfix; lia.

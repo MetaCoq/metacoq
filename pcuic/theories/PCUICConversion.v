@@ -2950,7 +2950,6 @@ Lemma context_equality_rel_app {cf} {Σ} {wfΣ : wf Σ} {le Γ Δ Δ'} :
 Proof.
   split; intros h.
   + eapply All2_fold_app => //.
-    * now apply (length_of (snd h)).
     * destruct h. now apply context_equality_refl.
     * eapply All2_fold_impl; tea. 1:apply h.
       intros ???? []; constructor; auto.
@@ -3328,7 +3327,7 @@ Section CumulSubst.
     2:{ eapply substitution_equality; tea.
   Qed. *)
     
-  Lemma untyped_subst_cumul {Γ Γ0 Γ1 Δ s s' T U} :
+  (*Lemma untyped_subst_cumul {Γ Γ0 Γ1 Δ s s' T U} :
     untyped_subslet Γ s Γ0 ->
     untyped_subslet Γ s' Γ1 ->
     is_closed_context (Γ ,,, Γ1) ->

@@ -201,9 +201,8 @@ Section CtxReduction.
   Proof.
     intros r r'.
     eapply All2_fold_app => //.
-    * now rewrite (All2_fold_length r').
-    * eapply All2_fold_impl; tea => /= Γ0 Γ'0 d d'.
-      intros h; depelim h; constructor; auto.
+    eapply All2_fold_impl; tea => /= Γ0 Γ'0 d d'.
+    intros h; depelim h; constructor; auto.
   Qed.
 
   Lemma red_context_app_same_left {Γ Γ' Δ'} : 
@@ -212,8 +211,7 @@ Section CtxReduction.
   Proof.
     intros h.
     eapply All2_fold_app => //.
-    * now rewrite (All2_fold_length h).
-    * apply red_context_refl.
+    apply red_context_refl.
   Qed.
   
   Lemma on_ctx_free_vars_cons P d Γ : 

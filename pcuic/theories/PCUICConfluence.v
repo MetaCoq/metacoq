@@ -1576,31 +1576,30 @@ Derive Signature for red1.
 
 Lemma local_env_telescope P Γ Γ' Δ Δ' :
   All2_telescope (on_decls P) Γ Γ' Δ Δ' ->
-  All2_fold_over P Γ Γ' (List.rev Δ) (List.rev Δ').
+  on_contexts_over P Γ Γ' (List.rev Δ) (List.rev Δ').
 Proof.
   induction 1. simpl. constructor.
-  - depelim p. simpl. eapply All2_fold_over_app. repeat constructor => //.
+  - depelim p. simpl. eapply on_contexts_over_app. repeat constructor => //.
     simpl. 
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
     constructor; auto. depelim p0; constructor; auto;
-    unfold on_decls_over in *;
     now rewrite !app_context_assoc.
-  - simpl. eapply All2_fold_over_app. constructor. 2:auto. constructor.
-    simpl. unfold on_decls_over in *. depelim p.
+  - simpl. eapply on_contexts_over_app. constructor. 2:auto. constructor.
+    simpl. depelim p.
     revert IHX.
     generalize (List.rev Δ) (List.rev Δ'). induction 1. constructor.
-    constructor; auto. depelim p1; constructor; auto; unfold on_decls_over in *;
+    constructor; auto. depelim p1; constructor; auto; 
     now rewrite !app_context_assoc.
 Qed.
 
 Lemma All_All2_telescopei_gen P (Γ Γ' Δ Δ' : context) (m m' : mfixpoint term) :
   (forall Δ Δ' x y,
-    All2_fold_over P Γ Γ' Δ Δ' ->
+    on_contexts_over P Γ Γ' Δ Δ' ->
     P Γ Γ' x y ->
     P (Γ ,,, Δ) (Γ' ,,, Δ') (lift0 #|Δ| x) (lift0 #|Δ'| y)) ->
   All2 (on_Trel_eq (P Γ Γ') dtype dname) m m' ->
-  All2_fold_over P Γ Γ' Δ Δ' ->
+  on_contexts_over P Γ Γ' Δ Δ' ->
   All2_telescope_n (on_decls P) (fun n : nat => lift0 n)
                    (Γ ,,, Δ) (Γ' ,,, Δ') #|Δ|
     (map (fun def : def term => vass (dname def) (dtype def)) m)
@@ -1622,7 +1621,7 @@ Qed.
 
 Lemma All_All2_telescopei P (Γ Γ' : context) (m m' : mfixpoint term) :
   (forall Δ Δ' x y,
-    All2_fold_over P Γ Γ' Δ Δ' ->
+    on_contexts_over P Γ Γ' Δ Δ' ->
     P Γ Γ' x y ->
     P (Γ ,,, Δ) (Γ' ,,, Δ') (lift0 #|Δ| x) (lift0 #|Δ'| y)) ->
   All2 (on_Trel_eq (P Γ Γ') dtype dname) m m' ->
@@ -1637,7 +1636,7 @@ Qed.
 
 Lemma All2_All2_fold_fix_context P (Γ Γ' : context) (m m' : mfixpoint term) :
   (forall Δ Δ' x y,
-    All2_fold_over P Γ Γ' Δ Δ' ->
+    on_contexts_over P Γ Γ' Δ Δ' ->
     P Γ Γ' x y ->
     P (Γ ,,, Δ) (Γ' ,,, Δ') (lift0 #|Δ| x) (lift0 #|Δ'| y)) ->
   All2 (on_Trel_eq (P Γ Γ') dtype dname) m m' ->
@@ -1851,7 +1850,7 @@ Section RedPred.
     apply nth_error_assumption_context in hnth => //.
     rewrite !nth_error_app_ge //; try lia.
     intros hnth.
-    pose proof (All2_fold_app_inv _ _ _ _ _ X0) as [predΓ _] => //.
+    pose proof (on_contexts_app_inv _ _ _ _ _ X0) as [predΓ _] => //.
     pose proof (All2_fold_length X0). len in H0.
     eapply nth_error_pred1_ctx_l in predΓ; tea.
     2:erewrite hnth => //.
@@ -1890,7 +1889,7 @@ Section RedPred.
     intros Hlen ont onctx X H.
     assert(pred1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ)).
     { apply pred1_pred1_ctx in X.
-      apply All2_fold_app_inv in X as [] => //.
+      apply on_contexts_app_inv in X as [] => //.
       apply All2_fold_app => //. now apply pred1_ctx_over_refl_gen. }
     assert(lenΔ : #|Δ| = #|Δ'|). 
     { eapply pred1_pred1_ctx in X. eapply All2_fold_length in X.
@@ -1908,7 +1907,7 @@ Section RedPred.
     apply nth_error_assumption_context in hnth => //.
     rewrite !nth_error_app_ge //; try lia.
     intros hnth.
-    pose proof (All2_fold_app_inv _ _ _ _ _ X0) as [predΓ _] => //.
+    pose proof (on_contexts_app_inv _ _ _ _ _ X0) as [predΓ _] => //.
     pose proof (All2_fold_length X0). len in H0.
     eapply nth_error_pred1_ctx_l in predΓ; tea.
     2:erewrite hnth => //.
@@ -1926,7 +1925,6 @@ Section RedPred.
   Hint Resolve pred1_refl_gen : pcuic.
   Hint Extern 4 (All_decls _ _ _) => constructor : pcuic.
   Hint Extern 4 (All2_fold _ _ _) => constructor : pcuic.
-  Hint Unfold on_decls_over : pcuic.
 
   Lemma OnOne2_local_env_pred1_ctx_over Γ Δ Δ' :
      OnOne2_local_env (on_one_decl (fun Δ M N => pred1 Σ (Γ ,,, Δ) (Γ ,,, Δ) M N)) Δ Δ' ->
@@ -1938,16 +1936,16 @@ Section RedPred.
     - now constructor.
     - eapply pred1_pred1_ctx in a0. pcuic.
     - eapply pred1_pred1_ctx in a. pcuic.
-    - constructor; unfold on_decls_over; simpl; subst; intuition auto.
+    - constructor; simpl; subst; intuition auto.
       eapply pred1_refl.
-    - constructor; unfold on_decls_over; simpl; subst; intuition auto.
+    - constructor; simpl; subst; intuition auto.
       eapply pred1_refl.
-    - eapply (All2_fold_app _ _ [d] _ [_]); pcuic.
+    - eapply (All2_fold_app _ _ [d] [_]); pcuic.
       destruct d as [na [b|] ty]; constructor; pcuic. 
-      constructor; unfold on_decls_over; simpl; subst; auto; intuition pcuic.
+      constructor; simpl; subst; auto; intuition pcuic.
       eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
       eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
-      unfold on_decls_over; simpl; subst; intuition pcuic.
+      simpl; subst; intuition pcuic.
       constructor.
       eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
   Qed.
@@ -2081,15 +2079,6 @@ Section PredRed.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
-  (* Lemma red_red_decls Γ Γ' Δ Δ' :
-    All2_fold_over (fun (Γ _ : context) (t t0 : term) => red Σ Γ t t0) Γ Γ' Δ Δ' ->
-    All2_fold (fun Δ Δ' : context => red_decls Σ (Γ,,, Δ) (Γ,,, Δ')) Δ Δ'.
-  Proof.
-    induction 1; constructor; auto;
-    unfold on_decls, on_decls_over in *.
-    constructor.
-    simpl. *)
-
   Lemma on_free_vars_ctx_All_fold P Γ : 
     on_free_vars_ctx P Γ <~> All_fold (fun Γ => on_free_vars_decl (shiftnP #|Γ| P)) Γ.
   Proof.
@@ -2115,7 +2104,7 @@ Section PredRed.
     revert Γ Γ'. eapply (@pred1_ind_all_ctx Σ 
       (fun Γ Γ' M N => on_free_vars_ctx xpredT Γ -> on_free_vars xpredT M -> red Σ Γ M N)  
       (fun Γ Γ' => on_free_vars_ctx xpredT Γ -> All2_fold (on_decls (fun Γ Γ' M N => red Σ Γ M N)) Γ Γ')%type
-      (fun Γ Γ' Δ Δ' => on_free_vars_ctx xpredT (Γ ,,, Δ) -> All2_fold_over (fun Γ Γ' M N => red Σ Γ M N) Γ Γ' Δ Δ')%type);
+      (fun Γ Γ' Δ Δ' => on_free_vars_ctx xpredT (Γ ,,, Δ) -> on_contexts_over (fun Γ Γ' M N => red Σ Γ M N) Γ Γ' Δ Δ')%type);
       intros; try reflexivity; repeat inv_on_free_vars_xpredT; try solve [pcuic].
 
     - (* Contexts *)
@@ -2142,7 +2131,6 @@ Section PredRed.
       eapply All2_fold_All_left in a0.
       apply on_free_vars_ctx_All_fold in a0.
       eapply All_decls_on_free_vars_impl; tea.
-      unfold on_decls_over.
       cbn; intros ?? ont IH. 
       inv_on_free_vars_xpredT; eauto. eauto 6 with fvs.
 
@@ -2299,7 +2287,7 @@ Section PredRed.
     destruct (leb_spec_Set (S x) #|Δ|).
     - rewrite !nth_error_app_lt; try lia.
       intros hnth.
-      destruct (All2_fold_app_inv _ _ _ _ _ predctx) as []. lia.
+      destruct (on_contexts_app_inv _ _ _ _ _ predctx) as []. lia.
       eapply nth_error_pred1_ctx_l in a0; tea.
       2:erewrite hnth; rewrite /= //.
       destruct a0 as [body' [heq hpred]]. exists body'; split => //.
@@ -2308,7 +2296,7 @@ Section PredRed.
       rewrite nth_error_app_lt //; try lia.
     - rewrite !nth_error_app_ge //; try lia.
       intros hnth.
-      pose proof (All2_fold_app_inv _ _ _ _ _ (pred1_pred1_ctx _ pred)) as [predΓ _] => //.
+      pose proof (on_contexts_app_inv _ _ _ _ _ (pred1_pred1_ctx _ pred)) as [predΓ _] => //.
       eapply nth_error_pred1_ctx_l in predΓ; tea.
       2:erewrite hnth => //.
       destruct predΓ as [body' [hnth' pred']].
@@ -2345,7 +2333,7 @@ Section PredRed.
     destruct (leb_spec_Set (S x) #|Δ|).
     - rewrite !nth_error_app_lt; try lia.
       intros hnth.
-      destruct (All2_fold_app_inv _ _ _ _ _ predctx) as []. lia.
+      destruct (on_contexts_app_inv _ _ _ _ _ predctx) as []. lia.
       eapply nth_error_pred1_ctx_l in a0; tea.
       2:erewrite hnth; rewrite /= //.
       destruct a0 as [body' [heq hpred]]. exists body'; split => //.
@@ -2354,7 +2342,7 @@ Section PredRed.
       rewrite nth_error_app_lt //; try lia.
     - rewrite !nth_error_app_ge //; try lia.
       intros hnth.
-      pose proof (All2_fold_app_inv _ _ _ _ _ (pred1_pred1_ctx _ pred)) as [predΓ _] => //.
+      pose proof (on_contexts_app_inv _ _ _ _ _ (pred1_pred1_ctx _ pred)) as [predΓ _] => //.
       eapply nth_error_pred1_ctx_l in predΓ; tea.
       2:erewrite hnth => //.
       destruct predΓ as [body' [hnth' pred']].

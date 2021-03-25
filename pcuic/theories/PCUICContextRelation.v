@@ -81,14 +81,11 @@ Proof.
 Qed.
 
 Lemma All2_fold_app {P} Γ Γ' Δ Δ' :
-  #|Δ| = #|Δ'| ->
   All2_fold P Γ Γ' -> All2_fold (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ' ->
   All2_fold P (Γ ,,, Δ) (Γ' ,,, Δ').
 Proof.
-  intros H.
   induction 2; simpl; auto.
-  constructor. apply IHX0. simpl in H. lia.
-  apply p.
+  constructor; auto.
 Qed.
 
 Lemma All2_fold_impl_onctx P P' Γ Δ Q :  

@@ -871,8 +871,7 @@ Proof.
     rewrite -H0.
     apply (weakening_equality (Γ' := [])); eauto with fvs. }
 
-  apply All2_fold_app. len'; cbn.
-  now apply All2_length in a.
+  apply All2_fold_app.
   constructor => //. constructor.
   eapply (All2_fold_impl (P:= (fun Δ Δ' : context =>
   decl_equality Σ
@@ -2246,7 +2245,6 @@ Proof.
   eapply context_equality_rel_app.
   apply into_context_equality; eauto with fvs.
   apply All2_fold_app; auto.
-  now rewrite (All2_fold_length c).
   apply All2_fold_refl. reflexivity.
 Qed.
 (* 
@@ -2821,13 +2819,13 @@ Proof.
       rewrite /argctx /argctx'.
       eapply weaken_context_equality_rel. eauto with fvs.
       rewrite /ind_subst.
-      rewrite -(instantiate_inds _ _ _ _ _ declc cu).
-      rewrite -(instantiate_inds _ _ _ _ _ declc cu').
+      rewrite -(instantiate_inds declc cu).
+      rewrite -(instantiate_inds declc cu').
       rewrite - !subst_instance_subst_context.
       eapply subst_instance_context_equality_rel => //.
       eapply (on_minductive_wf_params declc cu).
       epose proof (on_constructor_inst_wf_args declc _ cu).
-      rewrite /ind_subst -(instantiate_inds _ _ _ _ _ declc cu) in X0.
+      rewrite /ind_subst -(instantiate_inds declc cu) in X0.
       eapply wf_local_closed_context in X0; tea.
       rewrite -subst_instance_subst_context in X0.
       now rewrite is_closed_context_subst_instance in X0. }
@@ -3112,9 +3110,9 @@ Proof.
   rewrite commut_lift_subst_rec => /lens.
   rewrite commut_lift_subst_rec => /lens.
   rewrite distr_subst projs_subst_above. lia.
-  rewrite (instantiate_inds _ u _ mdecl wfΣ (proj1 (proj1 declp)) cu).
+  rewrite (instantiate_inds declp cu).
   rewrite subst_instance_subst.
-  rewrite (instantiate_inds _ u' _ mdecl wfΣ (proj1 (proj1 declp)) cu').
+  rewrite (instantiate_inds declp cu').
   rewrite subst_instance_subst.
   rewrite ![subst_instance _ (projs _ _ _)]subst_instance_projs.
   rewrite distr_subst projs_subst_above. lia.
@@ -4339,7 +4337,7 @@ Proof.
   rewrite /pre_case_branch_context_gen /inst_case_context /cstr_branch_context.
   eapply alpha_eq_subst_context. 
   rewrite subst_instance_expand_lets_ctx subst_instance_subst_context.
-  now rewrite (instantiate_inds _ _ _ _ _ decli cu) //.
+  now rewrite (instantiate_inds decli cu) //.
 Qed.
 
 Lemma wf_case_branches_types {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
@@ -4418,7 +4416,7 @@ Proof.
     rewrite subst_instance_expand_lets_ctx.
     eapply wf_local_expand_lets => //.
     rewrite subst_instance_subst_context.
-    rewrite (instantiate_inds _ _ _ _ _ H cu) //. }
+    rewrite (instantiate_inds H cu) //. }
   split => //.
   assert (wfparsargs : wf_local Σ
     (Γ,,, subst_instance (puinst p) (ind_params mdecl),,,

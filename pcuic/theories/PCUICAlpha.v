@@ -1,10 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect CRelationClasses CMorphisms.
+From Coq Require Import ssreflect ssrbool CRelationClasses CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
      PCUICConversion PCUICContextConversion PCUICValidity PCUICArities PCUICSpine
-     PCUICInductives PCUICInductiveInversion.
+     PCUICInductives PCUICInductiveInversion PCUICOnFreeVars
+     PCUICWellScopedCumulativity.
 From Equations Require Import Equations.
 
 (* Alpha convertible terms and contexts have the same typings *)
@@ -197,22 +198,46 @@ Section Alpha.
     destruct X as [-> _]; auto.
   Qed.
 
-  Lemma conv_context_app {Σ : global_env_ext} {wfΣ : wf Σ} (Γ1 Γ2 Γ2' : context) :
-    conv_context_rel Σ Γ1 Γ2 Γ2' -> conv_context Σ (Γ1 ,,, Γ2) (Γ1 ,,, Γ2').
+  Import PCUICClosed PCUICOnFreeVars PCUICParallelReduction PCUICConfluence.
+
+  Lemma is_closed_context_app_left Γ Δ : 
+    is_closed_context (Γ ,,, Δ) ->
+    is_closed_context Γ.
   Proof.
-    intros wf.
-    eapply All2_fold_app. apply (length_of wf).
-    apply conv_ctx_refl.
-    eapply All2_fold_impl; tea. intros ???? []; constructor; auto.
+    rewrite on_free_vars_ctx_app => /andP[] //.
+  Qed.
+  Hint Resolve is_closed_context_app_left : fvs.
+
+  Lemma is_closed_context_app_right Γ Δ : 
+    is_closed_context (Γ ,,, Δ) ->
+    on_free_vars_ctx (shiftnP #|Γ| xpred0) Δ.
+  Proof.
+    rewrite on_free_vars_ctx_app => /andP[] //.
+  Qed.
+  Hint Resolve is_closed_context_app_right : fvs.
+  Hint Constructors All_fold : core.
+  
+  Lemma All_fold_app_inv (P : context -> context_decl -> Type) Γ Δ : 
+    All_fold P (Γ ++ Δ) -> 
+    All_fold P Δ × All_fold (fun Γ => P (Δ ,,, Γ)) Γ.
+  Proof.
+    induction Γ in Δ |- *; split; auto.
+    depelim X. specialize (IHΓ Δ). intuition auto.
+    depelim X. constructor; auto. specialize (IHΓ Δ); intuition auto.
   Qed.
 
-  Lemma eq_context_upto_conv_context_rel {Σ : global_env_ext} {wfΣ : wf Σ} (Γ Δ Δ' : context) :
+  Lemma eq_context_upto_conv_context_rel {Σ : global_env_ext} {wfΣ : wf Σ} {le} (Γ Δ Δ' : context) :
+    is_closed_context (Γ ,,, Δ) ->
     Δ ≡Γ Δ' ->  
-    conv_context_rel Σ Γ Δ Δ'.
+    context_equality_rel le Σ Γ Δ Δ'.
   Proof.
-    intros eq.
-    eapply All2_fold_impl; tea.
-    intros ???? []; constructor; auto; now constructor; apply upto_names_impl_eq_term.
+    intros cl eq.
+    split; eauto with fvs.
+    eapply on_free_vars_ctx_All_fold in cl.
+    eapply All_fold_app_inv in cl as [onΓ onΔ].
+    eapply All2_fold_All_fold_mix_left in eq; tea. cbn in eq.
+    eapply All2_fold_impl. tea.
+    intros ???? []; constructor; auto. apply upto_names_impl_eq_term.
   Qed.
 
   Lemma eq_context_upto_map2_set_binder_name Σ pctx pctx' Γ Δ :
@@ -321,6 +346,14 @@ Section Alpha.
       constructor; auto.
       destruct r, c as [na'' [b''|] ty']; constructor; auto; try reflexivity.
   Qed.
+  
+  Lemma eq_context_gen_upto ctx ctx' :
+    eq_context_gen eq eq ctx ctx' ->
+    eq_context_upto [] eq eq ctx ctx'.
+  Proof.
+    intros a; eapply All2_fold_impl; tea.
+    intros. destruct X; subst; constructor; auto; try reflexivity.
+  Qed.
 
   Lemma case_branch_type_equiv (Σ : global_env_ext) ind mdecl idecl p p' br br' c cdecl : 
     eq_predicate upto_names' eq p p' ->
@@ -340,7 +373,8 @@ Section Alpha.
       rewrite /ptm /ptm'.
       eapply eq_term_upto_univ_it_mkLambda_or_LetIn. tc.
       eapply eq_context_upto_empty_impl; tea.
-      eapply eq_term_upto_univ_empty_impl; tea; tc.
+      2:eapply eq_term_upto_univ_empty_impl; tea; tc.
+      apply PCUICNameless.eq_context_gen_upto.
     - eapply All2_app.
       * eapply All2_map, All2_refl.
         intros.

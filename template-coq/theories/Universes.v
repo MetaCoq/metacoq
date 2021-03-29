@@ -1598,8 +1598,15 @@ Qed.
 
 (** * Constraints on sort families *)
 
-Module SortConstraint := PairOrderedType SortFamily SortFamily.
-Module SortConstraintSet := MSetList.Make SortConstraint.
+
+
+Module SortConstraint.
+  Include PairOrderedType SortFamily SortFamily.
+  Definition eq_leibniz x y : eq x y -> x = y.
+    destruct x, y. cbn. intros [[=->][=->]]. reflexivity.
+  Qed.
+End SortConstraint.
+Module SortConstraintSet := MSetList.MakeWithLeibniz SortConstraint.
 Module SortConstraintSetFact := WFactsOn SortConstraint SortConstraintSet.
 Module SortConstraintSetProp := WPropertiesOn SortConstraint SortConstraintSet.
 

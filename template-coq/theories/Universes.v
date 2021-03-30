@@ -50,6 +50,41 @@ Inductive allowed_eliminations : Set :=
 | IntoAny.
 Derive NoConfusion EqDec for allowed_eliminations.
 
+Definition globally_eliminable (u1 u2 : universe_family) : bool :=
+  match u1, u2 with
+  | UType, _
+  | UProp, (UProp | USProp)
+  | USProp, USProp => true
+  | UGlobal s1, UGlobal s2 => (s1 =? s2)%string
+  | _, _ => false
+  end.
+
+Inductive global_sort_elimination : forall(u1 u2 : universe_family), Prop :=
+(* caveat there are 2 ways to derive that Type is eliminable into Type *)
+ | GSERefl u : global_sort_elimination u u
+ | GSETypeInitial u : global_sort_elimination UType u
+ | GSEPropSProp : global_sort_elimination UProp USProp
+ (* | GSEMedExn : global_sort_elimination (UGlobal "med") (UGlobal "exn") *)
+ .
+
+Lemma global_sort_eliminationP u1 u2 : reflect (global_sort_elimination u1 u2) (globally_eliminable u1 u2).
+Proof.
+  case: u1 u2=> [|||s1][|||s2] /=; last case: (eqb_spec s1 s2)=> [->|hs]; constructor; try constructor.
+  all:move=> h; depelim h.
+  apply hs; reflexivity.
+Qed.
+
+(* Goal forall u1 u2, globally_eliminable u1 u2 -> global_sort_elimination u1 u2.
+Proof.
+  (* f : A -> B
+    Goal : A -> ...
+  *)
+  (* move=> /f. *)
+  (* Goal : B -> ... *)
+  move=> u1 u2 /global_sort_eliminationP.
+  apply/global_sort_eliminationP. *)
+
+
 (** * Sorts *)
 
 
@@ -1748,64 +1783,48 @@ Ltac prop_non_prop :=
   end.
 
 (* TODO : Revisit once uGraph is updated for levels and we need to tod the same for sorts *)
-(* Section Univ.
+Section Univ.
   Context {cf:checker_flags}.
 
-  Global LevelInstance lle_refl : Reflexive (univ_le_n 0).
+  Global Instance ule_refl : Reflexive (univ_le_n 0).
   Proof.
-    move=> [[||| ?]?]; cbn; last (split=> //); try split=>//; lia.
+    move=> [[|||?]??]; cbn; last (split=> //); try split=>//;
+    unfold lvl_le_n ; lia.
   Qed.
 
-  Lemma switch_minus (x y z : Z) : (x <= y - z <-> x + z <= y)%Z.
-  Proof. split; lia. Qed.
-
-
-  Global LevelInstance le_n_trans n : Transitive (univ_le_n (Z.of_nat n)).
+  Global Instance ule_n_trans n : Transitive (univ_le_n (Z.of_nat n)).
   Proof.
     move=> [??][??][??] /univ_le_n_equiv/= [???|????] /univ_le_n_equiv/=.
     all: move=> h; depelim h=> //.
-    all: apply univ_le_n_equiv; constructor=> /=.
-    lle. destruct (is_impredicative s); lia.
+    apply univ_le_n_equiv; constructor=> /=.
+    unfold level_le_n in *; destruct (is_impredicative s)=> //.
+    etransitivity; eassumption.
   Qed.
 
-  Global LevelInstance lle_trans : Transitive (univ_le_n 0).
-  Proof. apply (le_n_trans 0). Qed.
+  Global Instance ule_trans : Transitive (univ_le_n 0).
+  Proof. apply (ule_n_trans 0). Qed.
 
-  Global LevelInstance llt_trans : Transitive (univ_le_n 1).
-  Proof. apply (le_n_trans 1). Qed.
+  Global Instance ult_trans : Transitive (univ_le_n 1).
+  Proof. apply (ule_n_trans 1). Qed.
 
-  (* Lemma llt_lt n m : (n < m)%u -> (n < m)%Z.
-  Proof. lled; lia. Qed.
+  Definition sort_satisfies0 (v : valuation) (sc : SortConstraint.t) : bool :=
+    globally_eliminable (SortFamily.sort_val v sc.1) (SortFamily.sort_val v sc.2).
 
-  Lemma lle_le n m : (n <= m)%u -> (n <= m)%Z.
-  Proof. lled; lia. Qed.
+  Definition sort_satisfies v : SortConstraintSet.t -> Prop :=
+    SortConstraintSet.For_all (sort_satisfies0 v).
 
-  Lemma lt_llt n m : prop_sub_type -> (n < m)%Z -> (n < m)%u.
-  Proof. unfold llt. now intros ->. Qed.
+  Definition sort_consistent ctrs := exists v, satisfies v ctrs.
 
-  Lemma le_lle n m : prop_sub_type -> (n <= m)%Z -> (n <= m)%u.
-  Proof. lled; [lia|discriminate]. Qed.
+  Definition eq_sort0 (φ : SortConstraintSet.t) s s' :=
+    forall v, sort_satisfies v φ -> SortFamily.sort_val v s = SortFamily.sort_val v s'.
 
-  Lemma lt_llt' n m : (0 <= n)%Z -> (n < m)%Z -> (n < m)%u.
-  Proof. lled; lia. Qed.
-
-  Lemma le_lle' n m : (0 <= n)%Z -> (n <= m)%Z -> (n <= m)%u.
-  Proof. lled; lia. Qed. *)
-
-
-  Inductive satisfies0 (v : valuation) : UnivConstraint.t -> Prop :=
-  | satisfies0_Lt (l l' : Level.t) (z : Z) : (Z.of_nat (val v l) <= Z.of_nat (val v l') - z)%Z
-                         -> satisfies0 v (l, ConstraintType.Le z, l')
-  | satisfies0_Eq (l l' : Level.t) : val v l = val v l'
-                         -> satisfies0 v (l, ConstraintType.Eq, l').
-
-  Definition satisfies v : LevelConstraintSet.t -> Prop :=
-    LevelConstraintSet.For_all (satisfies0 v).
-
-  Definition consistent ctrs := exists v, satisfies v ctrs.
-
-  Definition eq_universe0 (φ : LevelConstraintSet.t) u u' :=
-    forall v, satisfies v φ -> (Universe.univ_val v u = Universe.univ_val v u').
+  Definition leq_sort0 (φ : SortConstraintSet.t) s s' :=
+    forall v, sort_satisfies v φ -> global_sort_elimination (SortFamily.sort_val v s) (SortFamily.sort_val v s').
+  
+  Definition eq_universe0 φ u u' :=
+    eq_sort0 φ.1 (Universe.sort u) (Universe.sort u')
+    /\ (leq_sort0 φ.1 SortFamily.sfProp (Universe.sort u)
+     \/ eq_level0 φ.2 (Universe.lvl u) (Universe.lvl u')).
 
   Definition leq_universe_n n (φ : LevelConstraintSet.t) u u' :=
     forall v, satisfies v φ -> (univ_le_n n (Universe.univ_val v u) (Universe.univ_val v u'))%u.
@@ -1827,7 +1846,7 @@ Ltac prop_non_prop :=
 
   (* ctrs are "enforced" by φ *)
 
-  Definition valid_constraints0 φ ctrs
+  (* Definition valid_constraints0 φ ctrs
     := forall v, satisfies v φ -> satisfies v ctrs.
 
   Definition valid_constraints φ ctrs

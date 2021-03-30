@@ -1820,7 +1820,7 @@ Section Univ.
   Definition sort_satisfies v : SortConstraintSet.t -> Prop :=
     SortConstraintSet.For_all (sort_satisfies0 v).
 
-  Definition sort_consistent ctrs := exists v, satisfies v ctrs.
+  Definition sort_consistent ctrs := exists v, sort_satisfies v ctrs.
 
   Definition eq_sort0 (φ : SortConstraintSet.t) s s' :=
     forall v, sort_satisfies v φ -> SortFamily.sort_val v s = SortFamily.sort_val v s'.

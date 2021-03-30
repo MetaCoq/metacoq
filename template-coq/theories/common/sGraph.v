@@ -292,7 +292,7 @@ Section MakeGraph.
     destruct (H0 H) as [_ H2]. assumption.
   Qed.
 
-  Lemma make_graph_correct : forall constraint, sGraph.EdgeSet.In constraint.to_edge edges <->
+  Lemma make_graph_edges_caract : forall constraint, sGraph.EdgeSet.In constraint.to_edge edges <->
     (constraint.1 <> constraint.2) /\ 
     ((constraint.1 = SortFamily.sfType /\ SortFamilySet.In constraint.2 (constraints_to_set φ)) \/
      SortConstraintSet.In constraint φ).
@@ -343,7 +343,7 @@ Section MakeGraph.
   Proof.
     constructor.
     - intros e H. cbn in H. apply make_graph_edges_are_constaints in H as [c [[=->] H]].
-      cbn. apply make_graph_correct in H as [_ [[H H0]| H]].
+      cbn. apply make_graph_edges_caract in H as [_ [[H H0]| H]].
       + split; [|assumption]. apply constraints_to_set_correct. left. assumption.
       + split; apply constraints_to_set_correct; right; exists c.
         * split; [assumption|now left].
@@ -352,7 +352,7 @@ Section MakeGraph.
     - cbn. intros x H. constructor.
       + destruct (SortFamily.eq_dec SortFamily.sfType x) as [->|e].
         * exists (paths_refl make_graph x). constructor. cbn. reflexivity.
-        * destruct (make_graph_correct (SortFamily.sfType, x)).
+        * destruct (make_graph_edges_caract (SortFamily.sfType, x)).
           assert (EdgeSet.In (SortFamily.sfType, 1%Z, x) (sGraph.E make_graph));
           [apply H1; cbn; split; [assumption| left; split; [reflexivity|assumption]]|].
           exists (paths_step make_graph SortFamily.sfType x x (1%Z;H2) (paths_refl make_graph x)).

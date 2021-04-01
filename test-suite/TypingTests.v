@@ -113,7 +113,7 @@ Module Test5.
     | 0 => 1
     | S p => S (Plus1 p)
     end.
-  - intros. unfold id. abstract omega.
+  - intros. unfold id. abstract lia.
   Defined. *)
 
   (* Time Template Check Plus1. *)

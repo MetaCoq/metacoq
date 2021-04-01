@@ -1,6 +1,6 @@
 
 Require Import Recdef.
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Set Implicit Arguments.
 
 (** A function defined using measure or well-founded relation **)
@@ -9,7 +9,7 @@ Function Plus1 (n: nat) {measure id n} : nat :=
     | 0 => 1
     | S p => S (Plus1 p)
   end.
-- intros. unfold id. abstract omega.
+- intros. unfold id. abstract lia.
 Defined.
 
 Require Import Coq.Lists.List.

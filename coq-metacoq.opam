@@ -1,4 +1,4 @@
-opam-version: "2.0"
+opam-version: "2.0"              
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
 dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.11"
@@ -14,6 +14,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
           "Théo Winterhalter <theo.winterhalter@inria.fr>"
 ]
 license: "MIT"
+version: "dev"
 depends: [
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}

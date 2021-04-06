@@ -89,7 +89,7 @@ Definition elemb (n : nat) := existsb (fun m => Nat.eqb n m).
 Lemma Ppred_decrease n : (n<>1)%positive -> (nat_of_P (Pos.pred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
-  pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
+  pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; lia.
 Defined.
 
 Ltac Ppred_tac n :=
@@ -1064,8 +1064,8 @@ Proof.
  inversion H3; clear H3; subst.
  assert (Empty_set M.elt giv). rewrite H5. unfold Basics.flip. auto.
  inversion H3.
- omega.
- omega.
+ lia.
+ lia.
  clear - H.
  apply extensionality;  intro x.
  unfold Basics.flip at 1.
@@ -1487,7 +1487,7 @@ Definition is_unit_clause (cl : clause) :=
 Lemma Ppred_decrease n : (n<>1)%positive -> (nat_of_P (Pos.pred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
-pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
+pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; lia.
 Defined.
 
 (* begin show *)
@@ -2021,7 +2021,7 @@ Lemma Ppred_decrease n :
   (n<>1)%positive -> (nat_of_P (Pos.pred n)<nat_of_P n)%nat.
 Proof.
 intros; destruct (Psucc_pred n) as [Hpred | Hpred]; try contradiction;
-  pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; omega.
+  pattern n at 2; rewrite <- Hpred; rewrite nat_of_P_succ_morphism; lia.
 Qed.
 
 (** Top-level redundancy elimination *)

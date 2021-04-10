@@ -58,8 +58,9 @@ Class GuardChecker :=
       red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
       fix_guard Σ Γ mfix' ;
 
-  fix_guard_eq_term Σ Γ  mfix mfix' idx :
+  fix_guard_eq_term Σ Γ Δ mfix mfix' idx :
       fix_guard Σ Γ mfix ->
+      eq_context_upto [] eq eq Γ Δ ->
       upto_names (tFix mfix idx) (tFix mfix' idx) ->
       fix_guard Σ Γ mfix' ;
   
@@ -508,7 +509,7 @@ Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall 
     Forall_decls_typing P Σ.1 * 
     (PΓ Σ Γ * P Σ Γ t T).
 
-Lemma env_prop_typing `{checker_flags} P PΓ : env_prop P PΓ ->
+Lemma env_prop_typing `{checker_flags} {P PΓ} : env_prop P PΓ ->
   forall Σ (wfΣ : wf Σ.1) (Γ : context) (t T : term),
     Σ ;;; Γ |- t : T -> P Σ Γ t T.
 Proof. intros. now apply X. Qed.
@@ -518,7 +519,7 @@ Proof.
   repeat constructor; auto.
 Defined.
 
-Lemma env_prop_wf_local `{checker_flags} P PΓ : env_prop P PΓ ->
+Lemma env_prop_wf_local `{checker_flags} {P PΓ} : env_prop P PΓ ->
   forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ), PΓ Σ Γ.
 Proof. intros.
   pose (type_Prop_wf _ _ wfΓ).
@@ -529,7 +530,7 @@ Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort Universe.lProp : tSort 
   repeat constructor.
 Defined.
 
-Lemma env_prop_sigma `{checker_flags} P PΓ : env_prop P PΓ ->
+Lemma env_prop_sigma `{checker_flags} {P PΓ} : env_prop P PΓ ->
   forall (Σ : global_env) (wfΣ : wf Σ), Forall_decls_typing P Σ.
 Proof.
   intros. red in X. eapply (X (empty_ext Σ)).

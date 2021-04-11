@@ -1974,7 +1974,7 @@ Lemma typing_subst_instance_wf_local Σ φ Γ u univs :
   wf_local (Σ, φ) (subst_instance u Γ).
 Proof.
   intros X X0 X1.
-  eapply (env_prop_wf_local _ _ typing_subst_instance (Σ, univs)); tas. 1: apply X.
+  eapply (env_prop_wf_local typing_subst_instance (Σ, univs)); tas. 1: apply X.
 Qed.
 
 
@@ -2434,7 +2434,7 @@ Section SubstIdentity.
     let u := PCUICLookup.abstract_instance Σ.2 in
     subst_instance u t = t.
   Proof.
-    intros [wfΣ onu] H. eapply (env_prop_typing _ _ subst_abstract_instance_id) in H as [H H']; eauto.
+    intros [wfΣ onu] H. eapply (env_prop_typing subst_abstract_instance_id) in H as [H H']; eauto.
     split; auto.
   Qed.
 
@@ -2444,7 +2444,7 @@ Section SubstIdentity.
     let u := PCUICLookup.abstract_instance Σ.2 in
     subst_instance u Γ = Γ.
   Proof.
-    intros. eapply (env_prop_wf_local _ _ subst_abstract_instance_id) in X0; eauto.
+    intros. eapply (env_prop_wf_local subst_abstract_instance_id) in X0; eauto.
     apply X.
   Qed.
 

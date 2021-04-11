@@ -855,7 +855,7 @@ Lemma weaken_wf_local `{checker_flags} (Σ : global_env_ext) Σ' Γ :
 Proof.
   intros * Hext wfΣ' *.
   intros wfΓ.
-  eapply (env_prop_wf_local _ _ weakening_env); eauto.
+  eapply (env_prop_wf_local weakening_env); eauto.
   now eapply wf_extends.
 Qed.
 

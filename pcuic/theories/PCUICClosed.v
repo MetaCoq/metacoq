@@ -1346,7 +1346,7 @@ Lemma declared_minductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf
   closed_inductive_decl mdecl.
 Proof.
   eapply declared_minductive_closed_ind; tea.
-  now apply (env_prop_sigma _ _ typecheck_closed).
+  now apply (env_prop_sigma typecheck_closed).
 Qed.
 
 Lemma declared_inductive_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind idecl} : 
@@ -1366,7 +1366,7 @@ Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {mdecl ide
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
   intros; eapply declared_projection_closed_ind; eauto.
-  eapply (env_prop_sigma _ _ typecheck_closed); eauto.
+  eapply (env_prop_sigma typecheck_closed); eauto.
 Qed.
 
 Lemma declared_inductive_closed_pars_indices {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl mind idecl} : 
@@ -1407,7 +1407,7 @@ Lemma subject_closed {cf} {Σ} {wfΣ : wf Σ.1} {Γ t T} :
   Σ ;;; Γ |- t : T ->
   closedn #|Γ| t.
 Proof.
-  now move/(env_prop_typing _ _ typecheck_closed) => /andP [ct _].
+  now move/(env_prop_typing typecheck_closed) => /andP [ct _].
 Qed.
 
 Lemma type_closed {cf} {Σ} {wfΣ : wf Σ.1} {Γ t T} : 
@@ -1426,7 +1426,7 @@ Lemma closed_wf_local `{checker_flags} {Σ Γ} :
   closed_ctx Γ.
 Proof.
   intros wfΣ wfΓ.
-  apply (env_prop_wf_local _ _ typecheck_closed Σ wfΣ _ wfΓ).
+  apply (env_prop_wf_local typecheck_closed Σ wfΣ _ wfΓ).
 Qed.
 
 Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ : 
@@ -1444,7 +1444,7 @@ Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :
 Proof.
   intros.
   apply declared_decl_closed_ind; eauto.
-  now eapply (env_prop_sigma _ _ typecheck_closed).
+  now eapply (env_prop_sigma typecheck_closed).
 Qed.
 
 Lemma declared_constant_closed_type {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {cst decl} :

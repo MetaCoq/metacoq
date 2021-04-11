@@ -582,7 +582,7 @@ Proof.
   unshelve epose proof (weakening Σ [] (arities_context l) _ _ wfΣ _ Hs).
   1: now rewrite app_context_nil_l.
   simpl in X.
-  eapply (env_prop_typing _ _ typecheck_closed) in Hs; eauto.
+  eapply (env_prop_typing typecheck_closed) in Hs; eauto.
   rewrite -> andb_and in Hs. destruct Hs as [Hs Ht].
   simpl in Hs. apply (lift_closed #|arities_context l|) in Hs.
   rewrite -> Hs, app_context_nil_l in X. simpl. exists s.
@@ -1912,8 +1912,8 @@ Corollary substitution {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ t T} :
   Σ ;;; Γ ,,, subst_context s 0 Δ |- subst s #|Δ| t : subst s #|Δ| T.
 Proof.
   intros Hs Ht.
-  eapply (env_prop_typing _ _ substitution_prop); trea.
-  eapply (env_prop_wf_local _ _ substitution_prop); trea.
+  eapply (env_prop_typing substitution_prop); trea.
+  eapply (env_prop_wf_local substitution_prop); trea.
   now eapply typing_wf_local in Ht.
 Qed.
 
@@ -1932,7 +1932,7 @@ Corollary substitution_wf_local {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
   wf_local Σ (Γ ,,, subst_context s 0 Δ).
 Proof.
   intros Hs Ht.
-  eapply (env_prop_wf_local _ _ substitution_prop); trea.
+  eapply (env_prop_wf_local substitution_prop); trea.
 Qed.
 
 Lemma substitution0 {cf} {Σ} {wfΣ : wf Σ} {Γ n u U t T} :

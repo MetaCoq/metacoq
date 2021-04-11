@@ -870,7 +870,7 @@ Qed.
     Σ ;;; Γ |- t : T -> wf_universes Σ t && wf_universes Σ T.
   Proof.
     intros wfΣ Hty.
-    exact (env_prop_typing _ _ wf_types _ wfΣ _ _ _ Hty).
+    exact (env_prop_typing wf_types _ wfΣ _ _ _ Hty).
   Qed.
 
   Lemma typing_wf_universe {Σ : global_env_ext} {Γ t s} : 

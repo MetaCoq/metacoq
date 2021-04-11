@@ -181,7 +181,7 @@ Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ
   wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ').
 Proof.
   intros wfΓ' wfΓ''.
-  pose proof (env_prop_wf_local _ _ typing_rename_prop _ wfΣ _ wfΓ') as [_ X]. simpl in X.
+  pose proof (env_prop_wf_local typing_rename_prop _ wfΣ _ wfΓ') as [_ X]. simpl in X.
   eapply All_local_env_app_inv in X as [XΓ XΓ'].
   apply wf_local_app => //.
   rewrite /lift_context.

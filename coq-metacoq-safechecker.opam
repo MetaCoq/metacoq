@@ -21,6 +21,7 @@ build: [
 install: [
   [make "-C" "safechecker" "install"]
 ]
+version: "dev"
 depends: [
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}

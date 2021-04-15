@@ -17,6 +17,7 @@ build: [
 install: [
   [make "-C" "translations" "install"]
 ]
+version: "dev"
 depends: [
   "coq-metacoq-template" {= version}
   "coq-metacoq-checker" {= version}

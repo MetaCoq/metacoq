@@ -58,9 +58,8 @@ Class GuardChecker :=
       red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
       fix_guard Σ Γ mfix' ;
 
-  fix_guard_eq_term Σ Γ Δ mfix mfix' idx :
+  fix_guard_eq_term Σ Γ mfix mfix' idx :
       fix_guard Σ Γ mfix ->
-      eq_context_upto [] eq eq Γ Δ ->
       upto_names (tFix mfix idx) (tFix mfix' idx) ->
       fix_guard Σ Γ mfix' ;
   

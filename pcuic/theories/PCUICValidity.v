@@ -53,7 +53,7 @@ Section Validity.
     intros.
     destruct X1 as [s Hs].
     exists s.
-    eapply (env_prop_typing _ _ PCUICWeakeningEnv.weakening_env (Σ, φ)); auto.
+    eapply (env_prop_typing PCUICWeakeningEnv.weakening_env (Σ, φ)); auto.
     simpl; auto. now eapply wf_extends.
   Qed.
 

@@ -35,7 +35,172 @@ Module wGraphExt (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLeibniz
   
 End wGraphExt.
 *)
-Module Import sGraph := WeightedGraph SortFamily SortFamilySet.
+Module WeightedGraphExt (V: UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLeibniz with Module E := V).
+  Include WeightedGraph V VSet.
+
+  Section self_loops.
+    Definition is_not_self_loop edge : bool :=
+      if V.eq_dec edge..s edge..t then false else true.
+
+    Definition remove_self_loops edges : EdgeSet.t :=
+      EdgeSet.filter is_not_self_loop edges.
+
+    Lemma remove_self_loop_correct edges : forall e,
+      EdgeSet.In e (remove_self_loops edges) <-> EdgeSet.In e edges /\ e..s <> e..t.
+    Proof.
+      unfold remove_self_loops. intro e.
+      assert (EdgeSet.In e edges /\ e..s <> e..t <-> EdgeSet.In e edges /\ is_not_self_loop e).
+      + split; intros [H H0]; (split; [assumption|]);
+        unfold is_not_self_loop in *; destruct (VSetDecide.F.eq_dec e..s e..t); [destruct (H0 e0)|reflexivity| |assumption].
+        cbn in H0. inversion H0.
+      + rewrite H. apply EdgeSet.filter_spec.
+        intros [[]] [[]] ->. reflexivity.
+    Qed.
+
+    Definition no_self_loop G :=
+      (forall e, EdgeSet.In e (E G) -> e..s <> e..t).
+  End self_loops.
+
+  Section topological_sort.
+    Context (G:t).
+    Context {HI : invariants G}.
+
+    Fixpoint topological_sort00 fuel (s:VSet.t) l (x:V.t) : list V.t × VSet.t :=
+      match fuel with
+      | O => (l, s)
+      | S n =>
+        match VSet.mem x s with
+        | true => let (l', s') := (List.fold_left
+            (fun a u => (topological_sort00 n a.2 a.1 u))
+            (List.map (fun x => x.2) (succs G x)) (l,VSet.remove x s)) in
+            (x::l', s')
+        | false => (l, s)
+        end
+      end.
+
+    Lemma topological_sort00_truc l x fuel s:
+      VSet.Subset (topological_sort00 fuel s l x).2 s.
+    Proof.
+      revert s l x.
+      induction fuel.
+      + cbn. intros. apply VSetProp.subset_refl.
+      + cbn. intros s l x. case Hx: (VSet.mem x s); [|cbn; apply VSetProp.subset_refl].
+        set l2 := (map _ _).
+        assert (VSet.Subset (VSet.remove x s) s) as H;
+          [intros a H; now apply VSet.remove_spec in H as [H _]|].
+        generalize l (VSet.remove x s) H.
+        induction l2.
+        - cbn. easy.
+        - cbn. intros l' t Ht.
+          have H1:= IHfuel t l' a. move: H1.
+          set zebulon := topological_sort00 _ _ _ _.
+          destruct zebulon. cbn. move => H1. apply (IHl2 l0 t0).
+          etransitivity; eassumption.
+    Qed.
+
+    Definition topological_sort0 s := topological_sort00 (VSet.cardinal s) s.
+
+    Lemma topological_sort00_inc : forall m n s l x, m <= n -> VSet.cardinal s <= m ->
+      topological_sort00 n s l x = topological_sort0 s l x.
+    Proof.
+      induction m.
+      - intros n s l x H HH. unfold topological_sort0, topological_sort00.
+        inversion HH. rewrite H1. case n => //. apply VSetProp.cardinal_inv_1 in H1.
+        specialize (H1 x). apply VSetProp.FM.not_mem_iff in H1.
+        now rewrite H1.
+      - intros. unfold topological_sort0.
+        destruct n; [inversion H|].
+        remember (S m) as m0.
+        destruct H0; [|apply IHm; lia].
+        rewrite Heqm0.
+        cbn. case Hx: (VSet.mem x s0) => //.
+        set fa := fold_left _ _ _.
+        set fb := fold_left _ _ _.
+        enough (fa = fb) as H1; [now rewrite H1|].
+        unfold fa, fb. set l2 := map _ _.
+        apply VSetFact.mem_iff in Hx. apply VSetProp.remove_cardinal_1 in Hx.
+        assert (S (VSet.cardinal (VSet.remove x s0)) <= VSet.cardinal s0) as H1; [lia|].
+        generalize l (VSet.remove x s0) H1.
+        induction l2.
+        * reflexivity.
+        * simpl. intros l0 t0 Ht. rewrite IHm; [lia|lia|].
+          rewrite IHm; [reflexivity|lia|].
+          move: (topological_sort00_truc l0 a (VSet.cardinal t0) t0).
+          unfold topological_sort0.
+          set p := topological_sort00 _ _ _ _.
+          destruct p. cbn. intro H3.
+          apply IHl2. etransitivity; last eassumption. apply le_n_S.
+          now apply VSetProp.subset_cardinal.
+    Qed.
+
+    Lemma fold_left_ext {A B: Type} (f g : A -> B -> A) (P : A -> Prop)
+      (l : list B) : forall a, P a -> (forall a0 b, P a0 -> f a0 b = g a0 b) ->
+      (forall a0 b, P a0 -> P (f a0 b)) -> fold_left f l a = fold_left g l a.
+    Proof.
+    Admitted.
+
+    Lemma topological_sort0_eq s l x: topological_sort0 s l x =
+      match VSet.mem x s with
+      | true => let (l', s') := (List.fold_left
+          (fun a u => (topological_sort0 a.2 a.1 u))
+          (List.map (fun x => x.2) (succs G x)) (l, VSet.remove x s)) in
+          (x::l', s')
+      | false => (l, s)
+      end.
+    Proof.
+      unfold topological_sort0. set (fuel := VSet.cardinal s).
+      cut (VSet.cardinal s = fuel); [|reflexivity].
+      clearbody fuel. revert s x. induction fuel.
+      - intros s x H. apply VSetProp.cardinal_inv_1 in H.
+        specialize (H x). apply VSetProp.FM.not_mem_iff in H.
+        rewrite H. reflexivity.
+      - intros s x H. simpl.
+        case_eq (VSet.mem x s); [|reflexivity].
+        intro HH. rewrite<- (@VSetProp.remove_cardinal_1 s x) in H;
+        [|now apply VSetFact.mem_iff]. inversion H as [H1].
+        rewrite H1. Check fold_left.
+    Admitted.
+
+    Definition topological_sort := (topological_sort0 (V G) nil (s G)).1.
+
+    Lemma topological_sort0_set_eq {s s' x} :
+      VSet.Equal s s' -> topological_sort0 s x = topological_sort0 s' x.
+    Proof.
+      intro H. unfold topological_sort0. rewrite (VSetProp.Equal_cardinal H).
+      set (n := VSet.cardinal s').
+      clearbody n. revert s s' x H. induction n.
+      - reflexivity.
+      - unfold topological_sort00. intros s s' x H.
+        rewrite (VSet.eq_leibniz H). reflexivity.
+    Qed.
+
+    Lemma topological_sort0_in y: VSet.In y (V G) ->
+      In y (topological_sort).
+    Proof.
+      intro H. unfold topological_sort. rewrite topological_sort0_eq.
+      destruct HI as [edges_vertices [=->]%VSetFact.mem_iff source_paths].
+      specialize (source_paths y H) as [[x _]]. induction x.
+      - apply in_eq.
+      - apply in_cons. destruct e as [n e].
+        assert (In y (map (fun x1 : Z × V.t => x1.2) (succs G x))).
+        + apply<- (in_map_iff).
+          exists (n, y). split; [now cbn|].
+          apply<- (in_map_iff).
+          exists (x, n, y). split; [now cbn|].
+          apply filter_In.
+          split. apply EdgeSet.elements_spec1 in e.
+          apply InA_alt in e. destruct e as [y0 [H0 H1]].
+          now rewrite H0. cbn. destruct (VSetDecide.F.eq_dec x x); [now cbn|].
+          destruct V.eq_equiv as [refl _ _]. now specialize (V.eq_leibniz x x (refl x)) as H0.
+        + apply in_split in H0 as [l1 [l2 [=->]]]. rewrite fold_left_app.
+
+    Admitted.
+
+    Lemma topological_sort0_spec s x l l': topological_sort = l ++ x::l' ->
+      SortFamilySet.For_all (fun x' => is_eliminable constraints x x' -> In x' l') (sGraph.V local_graph).
+    Proof.
+  End topological_sort.
+End sGraph.
 
 Definition add_sorts : SortConstraint.t -> SortFamilySet.t -> SortFamilySet.t :=
   fun c s => SortFamilySet.add c.2 (SortFamilySet.add c.1 s).
@@ -253,27 +418,6 @@ Proof.
       right. apply H2. exists s. split; assumption.
 Qed.
 
-Definition is_not_self_loop edge : bool :=
-  if SortFamily.eq_dec edge..s edge..t then false else true.
-
-Definition remove_self_loops edges : EdgeSet.t :=
-  EdgeSet.filter is_not_self_loop edges.
-
-Lemma remove_self_loop_correct edges : forall e,
-  EdgeSet.In e (remove_self_loops edges) <-> EdgeSet.In e edges /\ e..s <> e..t.
-Proof.
-  unfold remove_self_loops. intro e.
-  assert (EdgeSet.In e edges /\ e..s <> e..t <-> EdgeSet.In e edges /\ is_not_self_loop e).
-  + split; intros [H H0]; (split; [assumption|]);
-    unfold is_not_self_loop in *; destruct (VSetDecide.F.eq_dec e..s e..t); [destruct (H0 e0)|reflexivity| |assumption].
-    cbn in H0. inversion H0.
-  + rewrite H. apply EdgeSet.filter_spec.
-    intros [[]] [[]] ->. reflexivity.
-Qed.
-
-Definition no_self_loop G :=
-  (forall e, sGraph.EdgeSet.In e (sGraph.E G) -> e..s <> e..t).
-
 Section MakeGraph.
   Variable φ : SortConstraintSet.t.
 
@@ -358,7 +502,6 @@ Section MakeGraph.
           exists (paths_step make_graph SortFamily.sfType x x (1%Z;H2) (paths_refl make_graph x)).
           constructor. cbn. lia.
   Qed.
-
 End MakeGraph.
 
 Section GlobalConstraints.
@@ -369,9 +512,28 @@ Section GlobalConstraints.
   Definition global_constraints : SortConstraintSet.t := 
     SortConstraintSet.add (SortFamily.sfType, SortFamily.sfProp)
     (SortConstraintSet.singleton (SortFamily.sfProp, SortFamily.sfSProp)).
-  
+
+  Lemma global_constraints_support: SortFamilySet.Equal (constraints_to_set global_constraints) global_sorts.
+  Proof.
+    unfold SortFamilySet.Equal. intro a.
+    rewrite constraints_to_set_correct.
+    unfold global_constraints, global_sorts.
+    repeat rewrite SortFamilySet.add_spec.
+    rewrite SortFamilySet.singleton_spec.
+    split.
+    - move=> [[=->]|[constraint [H H0]]]; [now left|].
+      apply SortConstraintSet.add_spec in H as [H|H].
+      + destruct H as [[=<-][=<-]]. destruct H0; [now left|right; now left].
+      + apply SortConstraintSet.singleton_spec in H.
+        destruct H as [[=<-][=<-]]. now right.
+    - intros [H|H]; [now left|]. right. exists (SortFamily.sfProp, SortFamily.sfSProp).
+      rewrite SortConstraintSet.add_spec; rewrite SortConstraintSet.singleton_spec. now split ; [right|cbn].
+  Qed.
+
   Definition add_global : SortConstraintSet.t -> SortConstraintSet.t := 
     fun c => SortConstraintSet.union c global_constraints.
+
+  Definition global_graph := make_graph global_constraints.
 End GlobalConstraints.
 
 Section Eliminability.
@@ -414,8 +576,44 @@ Section Eliminability.
     fun s => is_eliminable SortFamily.sfProp s.
 End Eliminability.
 
-Section GoodConstraints.
+Section Join.
+  Definition upper_bound (v:SortFamily.t) (S:SortFamilySet.t) :=
+    SortFamilySet.for_all (fun c => is_eliminable global_constraints c v) S.
 
+  Definition join : SortFamilySet.t -> option SortFamily.t.
+  Admitted.
+
+  Lemma join_bound (n:SortFamily.t) (S:SortFamilySet.t) : join S = Some n -> upper_bound n S.
+  Admitted.
+
+  Lemma join_univ_prop (n: SortFamily.t) (S:SortFamilySet.t):
+  join S = Some n -> forall v, (upper_bound v S -> is_eliminable global_constraints n v).
+  Admitted.
+
+  Lemma join_when_bound (n: SortFamily.t) (S:SortFamilySet.t):
+    upper_bound n S -> exists v, join S = Some v.
+  Admitted.
+End Join.
+
+Section GoodConstraints.
+  Variable (φ: SortConstraintSet.t).
+  Definition constraints := add_global φ.
+  Definition local_graph := make_graph constraints.
+
+  Definition respect_constraints s s':=
+    Bool.eqb (is_eliminable global_constraints s s') (is_eliminable constraints s s').
+
+  Definition global_local_agreement: bool := SortFamilySet.for_all
+    (fun s => SortFamilySet.for_all (fun s' => respect_constraints s s') global_sorts) global_sorts.
+
+
+  Fixpoint assign_variables (x:SortFamily.t) (ρ: valuation) (fuel: nat): option valuation :=
+    match fuel with
+      | O => None
+      | S n =>
+    end.
+
+  Definition constraints_correct
 End GoodConstraints.
 
 (* TODO décider de la comparabilité d'univers ? *)

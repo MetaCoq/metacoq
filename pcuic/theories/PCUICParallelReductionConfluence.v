@@ -2856,7 +2856,7 @@ Section Rho.
     all:try solve [t].
 
     - move: H; rewrite /on_ctx_free_vars.
-      generalize 0.
+      generalize 0. clear X.
       induction X0 in P |- *; simpl; auto.
       intros n.
       move/andP => [] Hd HΓ.

@@ -661,7 +661,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
 Proof.
   intros Γ n i args u i' args' u' mdecl idecl cdecl h declc.
   destruct (on_declared_constructor declc) as [[onmind onind] [? [_ onc]]].
-  unshelve epose proof (env_prop_typing _ _ validity_env _ _ _ _ _ h) as vi'; eauto using typing_wf_local.
+  pose proof (validity h) as vi'.
   eapply inversion_mkApps in h; auto.
   destruct h as [T [hC hs]].
   apply inversion_Construct in hC

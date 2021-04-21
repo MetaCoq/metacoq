@@ -1091,7 +1091,7 @@ Qed.
     u ≡' v ->
     Σ ;;; Γ |- v : A.
   Proof.
-    intros. eapply (env_prop_typing _ _ typing_alpha_prop); eauto. reflexivity.
+    intros. eapply (env_prop_typing typing_alpha_prop); eauto. reflexivity.
   Qed.
 
   Local Ltac inv H := inversion H; subst; clear H.
@@ -1175,7 +1175,7 @@ Qed.
   Lemma wf_local_alpha {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
     wf_local Σ Γ -> Γ ≡Γ Γ' -> wf_local Σ Γ'.
   Proof.
-    intros; eapply (env_prop_wf_local _ _ typing_alpha_prop); tea.
+    intros; eapply (env_prop_wf_local typing_alpha_prop); tea.
   Qed.
 
   Lemma isType_alpha {Σ} {wfΣ : wf Σ.1} Γ u v :

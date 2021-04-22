@@ -431,7 +431,7 @@ Section Reduce.
               | @exist None eqa := False_rect _ _
               } ;
             | cc0view_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
-              | @exist (Some (narg, fn)) eq' :=
+              | @exist (Some (_, fn)) eq' :=
                 rec reduce (tProj (i, pars, narg) (mkApps fn args)) π ;
               | @exist None bot := False_rect _ _
               } ;

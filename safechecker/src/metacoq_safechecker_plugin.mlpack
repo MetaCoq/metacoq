@@ -15,7 +15,6 @@ Relation
 Relation_Properties
 PCUICAst
 PCUICAstUtils
-PCUICInduction
 PCUICUnivSubst
 PCUICLiftSubst
 EqDecInstances

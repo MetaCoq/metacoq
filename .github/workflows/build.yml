@@ -12,14 +12,20 @@ jobs:
 
     steps:
 
-      # - name: Try to restore opam cache
-      #   id: opam-cache
-      #   uses: actions/cache@v2
-      #   with:
-      #     path: "~/.opam"
-      #     key: opam-${{github.base_ref}}-${{github.ref}} 
-      #     restore-keys: |
-      #       opam--refs/heads/${{github.base_ref}}
+      - name: Get current Coq head commit
+        id: get-commit
+        run: |
+          echo "::set-output name=hash::$(git ls-remote https://github.com/coq/coq refs/heads/master | cut -f 1)"
+        shell: bash
+
+      - name: Try to restore opam cache
+        id: opam-cache
+        uses: actions/cache@v2
+        with:
+          path: "~/.opam"
+          key: opam-${{github.base_ref}}-${{github.ref}}-${{steps.get-commit.outputs.hash}}
+          restore-keys: |
+            opam--refs/heads/${{github.base_ref}}-${{steps.get-commit.outputs.hash}}
 
       - name: Install OCaml
         uses: avsm/setup-ocaml@v1

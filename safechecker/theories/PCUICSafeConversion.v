@@ -4091,7 +4091,7 @@ Section Conversion.
           } ;
         | cc0view_cofix mfix idx with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (unfold_cofix mfix idx) := {
-            | @exist (Some (narg, fn)) eq2 :=
+            | @exist (Some (_, fn)) eq2 :=
               Some (tProj (i, pars, narg) (mkApps fn args)) ;
             | @exist None eq2 := False_rect _ _
             }

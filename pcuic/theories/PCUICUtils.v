@@ -3,7 +3,7 @@ From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 
-Require Import Equations.Equations Equations.Prop.DepElim.
+Require Import Equations.Prop.Equations Equations.Prop.DepElim.
 
 
 (* Dependent lexicographic order *)

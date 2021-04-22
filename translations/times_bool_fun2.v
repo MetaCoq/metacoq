@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils All.
+Unset Universe Checking.
 From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.
 
 Unset Strict Unquote Universe Mode.
-Unset Universe Checking.
 
 MetaCoq Run (TC <- ImplementExisting emptyTC "paths" ;;
                      TC <- ImplementExisting TC "idpath" ;;

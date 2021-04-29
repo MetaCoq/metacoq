@@ -91,7 +91,8 @@ cleanplugins:
 ci-local:
 	./configure.sh local
 	$(MAKE) all test-suite TIMED=pretty-timed
-
+	$(MAKE) clean
+	
 ci-opam:
 	# Use -v so that regular output is produced
 	opam install -v -y .

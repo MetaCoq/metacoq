@@ -38,10 +38,6 @@ jobs:
               opam exec -- ./configure.sh --enable-${{matrix.target}}
               opam exec -- make -j 2 ci-${{matrix.target}}
             endGroup
-          uninstall: |
-            startGroup "Clean project"
-              opam exec -- make clean
-            endGroup
 
       - name: Revert permissions
         # to avoid a warning at cleanup time

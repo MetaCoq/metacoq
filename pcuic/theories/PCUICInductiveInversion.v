@@ -2423,6 +2423,17 @@ Proof.
   eapply into_equality; tea.
 Qed.
 
+Lemma on_constructor_closed_indices {cf} {Σ} {wfΣ : wf Σ} : 
+  forall {i mdecl idecl cdecl},
+  declared_constructor Σ.1 i mdecl idecl cdecl ->
+  All (is_open_term (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, cstr_args cdecl)) (cstr_indices cdecl).
+Proof.
+  intros.
+  pose proof (on_declared_constructor H) as [[onmind oib] [cs [hnth onc]]].
+  pose proof (onc.(on_cindices)).
+  now eapply ctx_inst_open_terms in X.
+Qed.
+
 Lemma positive_cstr_closed_indices' {cf} {Σ} {wfΣ : wf Σ} : 
   forall {i mdecl idecl cdecl},
   declared_constructor Σ.1 i mdecl idecl cdecl ->
@@ -4716,10 +4727,16 @@ Lemma wf_case_branches_types' {cf : checker_flags}	{Σ : global_env_ext} {wfΣ :
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
   All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
-  All2i (fun i cdecl br => 
+  All2i (fun i cdecl br =>
+    let brctx' := map2 set_binder_name (forget_types (bcontext br))
+      (case_branch_context_nopars ci mdecl p.(puinst) cdecl)
+    in
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-    wf_local Σ (Γ ,,, brctxty.1) ×
-    Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) 
+    [× (* The branch context before substitution of parameters *)
+       wf_local Σ (Γ ,,, (ind_params mdecl)@[puinst p] ,,, brctx'), 
+       (* The branch context after substitution of parameters *)
+       wf_local Σ (Γ ,,, brctxty.1) &
+       Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps]) 
     0 (ind_ctors idecl) brs.
 Proof.
   intros isdecl Hc wfp bc Hp ptm wfbrs conv.
@@ -4784,22 +4801,10 @@ Proof.
     rewrite subst_instance_subst_context.
     rewrite (instantiate_inds H cu) //. }
   split => //.
-  assert (wfparsargs : wf_local Σ
-    (Γ,,, subst_instance (puinst p) (ind_params mdecl),,,
-      subst_context (inds (inductive_mind ci) (puinst p) (ind_bodies mdecl))
-        #|ind_params mdecl| (subst_instance (puinst p) (cstr_args cdecl)))). {
-    rewrite -app_context_assoc.
-    eapply weaken_wf_local; tea.
-    eapply (wf_local_instantiate _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
-    2:eapply isdecl.
-    rewrite !subst_instance_app in wfargs.
-    rewrite - !/(app_context _ _) in wfargs.
-    rewrite -(app_context_nil_l (_ ,,, _)) -app_context_assoc app_context_assoc in wfargs.
-    eapply substitution_wf_local in wfargs; tea.
-    2:eapply subslet_inds; tea.
-    rewrite app_context_nil_l subst_context_app in wfargs.
-    rewrite closed_ctx_subst in wfargs => //.
-    now rewrite subst_instance_length Nat.add_0_r in wfargs. }
+  { eapply wf_set_binder_name => //.
+    eapply All2_eq_binder_subst_context.
+    eapply All2_eq_binder_subst_instance.
+    now eapply Forall2_All2 in wfbrs. }
   assert (wfbrctx : wf_local Σ (Γ ,,, pre_case_branch_context ci mdecl p.(pparams) p.(puinst) cdecl)).
   { rewrite /case_branch_context /case_branch_context_gen.
     eapply substitution_wf_local; tea. eapply sppars.

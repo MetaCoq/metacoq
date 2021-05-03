@@ -4732,7 +4732,7 @@ Lemma wf_case_branches_types' {cf : checker_flags}	{Σ : global_env_ext} {wfΣ :
       (case_branch_context_nopars ci mdecl p.(puinst) cdecl)
     in
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-    [× (* The branch context before substitution of parameters *)
+    [× wf_branch cdecl br, (* The branch context before substitution of parameters *)
        wf_local Σ (Γ ,,, (ind_params mdecl)@[puinst p] ,,, brctx'), 
        (* The branch context after substitution of parameters *)
        wf_local Σ (Γ ,,, brctxty.1) &

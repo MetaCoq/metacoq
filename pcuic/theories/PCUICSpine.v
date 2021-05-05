@@ -1168,6 +1168,8 @@ Proof.
   now rewrite -IHc.
 Qed.
 
+Arguments Subterm.lexprod {A B}. 
+
 Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
   wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
   red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)).
@@ -1184,7 +1186,7 @@ Proof.
             red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t))
         | None => unit  end))).
   clear t Δ Γ wf. intros Γ' t.
-  Subterm.rec_wf_rel IH (Γ', t) (Subterm.lexprod _ _ (precompose lt (@length context_decl))
+  Subterm.rec_wf_rel IH (Γ', t) (Subterm.lexprod (precompose lt (@length context_decl))
      (precompose lt (fun x => match x with Some t => S (PCUICSize.size t) | None => 0 end))).
   simpl.
   rename pr1 into cf.

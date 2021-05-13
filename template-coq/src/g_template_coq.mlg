@@ -13,7 +13,7 @@ let ltac_lcall tac args =
   let (location, name) = Loc.tag (Names.Id.of_string tac)
     (* Loc.tag @@ Names.Id.of_string tac *)
   in
-  Tacexpr.TacArg(CAst.make ?loc:location (Tacexpr.TacCall
+  CAst.make ?loc:location (Tacexpr.TacArg(Tacexpr.TacCall
                               (CAst.make (Locus.ArgVar (CAst.make ?loc:location name),args))))
 
 open Tacexpr

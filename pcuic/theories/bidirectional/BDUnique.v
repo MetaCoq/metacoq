@@ -121,7 +121,6 @@ Proof.
     by apply red_conv.
 Qed.
 
-
 Section BDUnique.
 
 Context `{cf : checker_flags}.
@@ -222,7 +221,7 @@ Proof.
     all: eauto.
   
   - change Γ with (Γ ,,, subst_context (c :: List.rev args) 0 []).
-    unfold ty, ty0 in *.
+    subst ty ty0.
     replace mdecl0 with mdecl in * by (eapply declared_projection_inj ; eauto).
     replace idecl0 with idecl in * by (eapply declared_projection_inj ; eauto).
     replace pdecl0 with pdecl in * by (eapply declared_projection_inj ; eauto).
@@ -255,15 +254,13 @@ Proof.
       apply weaken_conv ; auto.
       * eapply closed_wf_local ; eauto.
         eapply wf_projection_context ; eauto.
-      * unfold ty.
-        rewrite /projection_context /= smash_context_length /= subst_instance_assumptions.
+      * rewrite /projection_context /= smash_context_length /= subst_instance_assumptions.
         erewrite onNpars.
         2: eapply PCUICInductives.oi ; eapply declared_projection_inductive ; eauto.
         rewrite closedn_subst_instance.
         eapply declared_projection_closed_type.
         eassumption.
-      * unfold ty0.
-        rewrite /projection_context /= smash_context_length /= subst_instance_assumptions.
+      * rewrite /projection_context /= smash_context_length /= subst_instance_assumptions.
         erewrite onNpars.
         2: eapply PCUICInductives.oi ; eapply declared_projection_inductive ; eauto.
         rewrite closedn_subst_instance.

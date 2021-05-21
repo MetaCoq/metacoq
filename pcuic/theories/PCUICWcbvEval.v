@@ -3,7 +3,8 @@ From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst 
-     PCUICSubstitution PCUICInversion PCUICSR.
+     PCUICSubstitution PCUICInversion.
+      (* PCUICSR. *)
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -172,13 +173,15 @@ Section Wcbv.
       eval (tConst c u) res
 
   (** Case *)
-  | eval_iota ci discr c u args p brs br res :
-      eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
-      nth_error brs c = Some br ->
-      #|skipn ci.(ci_npar) args| = context_assumptions br.(bcontext) ->
-      eval (iota_red ci.(ci_npar) args br) res ->
-      eval (tCase ci p discr brs) res
-
+  (* | eval_iota ci discr c mdecl idecl cdecl u args p brs br res :
+    eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
+    nth_error brs c = Some br ->
+    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+    let bctx := case_branch_context p cdecl in
+    #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+    eval (iota_red ci.(ci_npar) args bctx br) res ->
+    eval (tCase ci p discr brs) res
+ *)
   (** Proj *)
   | eval_proj i pars arg discr args u a res :
       eval discr (mkApps (tConstruct i 0 u) args) ->
@@ -455,7 +458,7 @@ Section Wcbv.
     rewrite Hb in Hc. simpl in Hc. now move/andP: Hc.
   Qed.
 
-  Lemma closed_iota ind pars c u args brs br : 
+  (* Lemma closed_iota ind pars c u args brs br : 
     forallb (test_branch_k closedn 0) brs ->
     closed (mkApps (tConstruct ind c u) args) ->
     #|skipn pars args| = context_assumptions (bcontext br) ->
@@ -477,7 +480,7 @@ Section Wcbv.
     eapply closedn_extended_subst => //.
     rewrite extended_subst_length Nat.add_0_r /= Nat.add_comm.
     eapply closedn_lift. now rewrite Nat.add_0_r in clb.
-  Qed.
+  Qed. *)
 
   Lemma closed_arg f args n a :  
     closed (mkApps f args) ->
@@ -585,12 +588,13 @@ Section Wcbv.
     - eapply IHev3. unshelve eapply closed_beta. 3:eauto. exact na. simpl. eauto.
     - eapply IHev2. now rewrite closed_csubst.
     - apply IHev. eapply closed_def; eauto.
-    - eapply IHev2. eapply closed_iota in Hc''; tea.
-      eapply IHev1; assumption.
-    - eapply IHev2; auto. specialize (IHev1 Hc).
+    - eapply IHev2. all:admit. 
+      (* apply closed_iota in Hc''; tea.
+      eapply IHev1; assumption. *)
+    (* - eapply IHev2; auto. specialize (IHev1 Hc).
       rewrite closedn_mkApps in IHev1.
       move/andP: IHev1 => [Hcons Hargs]. solve_all.
-      eapply All_nth_error in Hargs; eauto.
+      eapply All_nth_error in Hargs; eauto. *)
     - eapply IHev3.
       apply/andP.
       split; [|easy].
@@ -615,7 +619,7 @@ Section Wcbv.
       eapply closed_unfold_cofix in e; eauto.
       now rewrite e.
     - apply/andP; split; auto.
-    Qed.
+  Admitted.
 
   (* Lemma eval_tApp_tFix_inv mfix idx a v : *)
   (*   eval (tApp (tFix mfix idx) a) v -> *)
@@ -717,18 +721,20 @@ Section Wcbv.
       assert (isdecl0 = isdecl) as -> by now apply uip.
       now specialize (IHev _ ev'); noconf IHev.
     - depelim ev'; try go.
+      (* pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) as <-.
+      assert (isdecl0 = isdecl) as -> by now apply uip.
+      now assert (e0 = e) as -> by now apply uip. *)
+    (* - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
         apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
-        noconf eq1.
-        noconf eq2.
-        noconf IHev1.
+        noconf eq1. noconf eq2. noconf IHev1.
         pose proof e1. rewrite e in H. noconf H.
         specialize (IHev2 _ ev'2); noconf IHev2.
         assert (e = e1) as -> by now apply uip.
         now assert (e0 = e2) as -> by now apply uip.
       + apply eval_mkApps_tCoFix in ev1 as H.
-        destruct H as (? & ?); solve_discr.
+        destruct H as (? & ?); solve_discr. *)
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
@@ -781,7 +787,8 @@ Section Wcbv.
         rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
-    - depelim ev'; try go.
+    - admit.
+    (*- depelim ev'; try go.
       + apply eval_mkApps_tCoFix in ev'1 as H; destruct H; solve_discr.
       + apply mkApps_eq_inj in e' as H'; auto.
         destruct H' as (H' & <-).
@@ -791,9 +798,9 @@ Section Wcbv.
         assert (e' = eq_refl) as -> by now apply uip.
         assert (e0 = e) as -> by now apply uip.
         cbn in *; subst.
-        now specialize (IHev _ ev'); noconf IHev.
+        now specialize (IHev _ ev'); noconf IHev. *)
     - depelim ev'; try go.
-      + exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
+      + cbn in *. exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
       + apply mkApps_eq_inj in e1 as H'; auto.
         destruct H' as (H' & <-).
         noconf H'.
@@ -819,7 +826,7 @@ Section Wcbv.
         now assert (i0 = i) as -> by now apply uip.
     - depelim ev'; try go.
       now assert (i0 = i) as -> by now apply uip.
-  Qed.
+  Admitted.
   
   Lemma eval_deterministic {t v v'} :
     eval t v ->

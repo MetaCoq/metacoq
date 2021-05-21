@@ -418,7 +418,8 @@ Section Validity.
       eapply declared_projection_type in isdecl'; eauto.
       subst ty.
       destruct isdecl' as [s Hs]. red in Hs.
-      unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg cu]]]; eauto.
+      unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
+        lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
       eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1) in Hs; eauto.
       simpl in Hs.

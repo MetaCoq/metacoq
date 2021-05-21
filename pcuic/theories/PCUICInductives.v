@@ -391,7 +391,7 @@ Proof.
     rewrite IHarg /= //.
 Qed.
 
-Lemma subslet_projs {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
+Lemma untyped_subslet_projs {cf:checker_flags} (Σ : global_env_ext) i mdecl idecl :
   forall (wfΣ : wf Σ.1) 
   (Hdecl : declared_inductive Σ.1 i mdecl idecl),
   match ind_ctors idecl return Type with
@@ -1258,7 +1258,9 @@ Lemma isType_mkApps_Ind_inv {cf:checker_flags} {Σ Γ ind u args} (wfΣ : wf Σ.
     let parctx := (subst_instance u (ind_params mdecl)) in
     let argctx := (subst_context parsubst 0 (subst_instance u (idecl.(ind_indices)))) in
     [× spine_subst Σ Γ (firstn (ind_npars mdecl) args) parsubst parctx,
-      spine_subst Σ Γ (skipn (ind_npars mdecl) args) argsubst argctx &
+      spine_subst Σ Γ (skipn (ind_npars mdecl) args) argsubst argctx,
+      #|firstn (ind_npars mdecl) args| = ind_npars mdecl,
+      #|skipn (ind_npars mdecl) args| = context_assumptions idecl.(ind_indices) &
       consistent_instance_ext Σ (ind_universes mdecl) u].
 Proof.
   move=> wfΓ isType.
@@ -1273,7 +1275,7 @@ Proof.
   rewrite !subst_instance_it_mkProd_or_LetIn in tyargs.
   simpl in tyargs. rewrite -it_mkProd_or_LetIn_app in tyargs.
   eapply arity_typing_spine in tyargs as [argslen leqs [instsubst [wfdom wfcodom cs subs]]] => //.
-  apply context_subst_app in cs as [parsubst argsubst].
+  apply context_subst_app in cs as [argsubst parsubst].
   eexists _, _. move=> parctx argctx. 
   rewrite subst_instance_assumptions in argsubst, parsubst.
   rewrite declm.(onNpars) in argsubst, parsubst.
@@ -1284,6 +1286,57 @@ Proof.
   rewrite app_context_assoc in wfcodom. now apply All_local_env_app_inv in wfcodom as [? ?].
   simpl.
   eapply substitution_wf_local; eauto. now rewrite app_context_assoc in wfcodom.
+  rewrite !lengths in argslen.
+  move: (context_subst_length2 parsubst).
+  now rewrite !lengths (declared_minductive_ind_npars decli).
+  move: (context_subst_length2 argsubst).
+  now rewrite !lengths.
+Qed.
+
+Lemma isType_mkApps_Ind_inv' {cf:checker_flags} {Σ Γ ind u args} (wfΣ : wf Σ.1)
+  {mdecl idecl} (declm : declared_inductive Σ.1 ind mdecl idecl) :
+  wf_local Σ Γ ->
+  isType Σ Γ (mkApps (tInd ind u) args) ->
+  ∑ pars indices parsubst argsubst,
+    let parctx := (subst_instance u (ind_params mdecl)) in
+    let argctx := (subst_context parsubst 0 (subst_instance u (idecl.(ind_indices)))) in
+    [× args = pars ++ indices,
+      spine_subst Σ Γ pars parsubst parctx,
+      spine_subst Σ Γ indices argsubst argctx,
+      #|pars| = ind_npars mdecl,
+      #|indices| = context_assumptions idecl.(ind_indices) &
+      consistent_instance_ext Σ (ind_universes mdecl) u].
+Proof.
+  move=> wfΓ isType.
+  destruct isType as [s Hs].
+  eapply invert_type_mkApps_ind in Hs as [tyargs cu]; eauto.
+  set (decli' := on_declared_inductive declm).
+  rename declm into decli.
+  destruct decli' as [declm decli'].
+  pose proof (decli'.(onArity)) as ar. 
+  rewrite decli'.(ind_arity_eq) in tyargs, ar.
+  hnf in ar. destruct ar as [s' ar].
+  rewrite !subst_instance_it_mkProd_or_LetIn in tyargs.
+  simpl in tyargs. rewrite -it_mkProd_or_LetIn_app in tyargs.
+  eapply arity_typing_spine in tyargs as [argslen leqs [instsubst [wfdom wfcodom cs subs]]] => //.
+  apply context_subst_app in cs as [argsubst parsubst].
+  eexists (firstn (ind_npars mdecl) args), (skipn (ind_npars mdecl) args), _, _.
+  move=> parctx argctx. 
+  rewrite subst_instance_assumptions in argsubst, parsubst.
+  rewrite declm.(onNpars) in argsubst, parsubst.
+  eapply subslet_app_inv in subs as [subp suba].
+  rewrite subst_instance_length in subp, suba.
+  subst parctx argctx.
+  repeat split; eauto; rewrite ?subst_instance_length => //.
+  now rewrite firstn_skipn.
+  rewrite app_context_assoc in wfcodom. now apply All_local_env_app_inv in wfcodom as [? ?].
+  simpl.
+  eapply substitution_wf_local; eauto. now rewrite app_context_assoc in wfcodom.
+  rewrite !lengths in argslen.
+  move: (context_subst_length2 parsubst).
+  now rewrite !lengths (declared_minductive_ind_npars decli).
+  move: (context_subst_length2 argsubst).
+  now rewrite !lengths.
 Qed.
 
 Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p pdecl args :

@@ -884,12 +884,10 @@ Qed.
             eapply eq_context_upto_cat; auto. reflexivity.
             eapply eq_context_gen_upto. now symmetry. }
           do 2 forward a by auto.
-          eapply All2i_All2_mix_left in a; tea.
-          2:now eapply Forall2_All2 in wfbrs'. cbn in a.
           eapply (All2i_All2_All2i_All2i Hbrs X3 a).
           intros n cdecl br br' [wfbr [wfbrctx wfbrty]].
           destruct wfbrty as (IHbrctx & Hbbody & IHbbody & Hbty & IHbty).
-          intros [eqbctx eqbodies] [wfbr' [_ Hbr' Hbr'ty]].
+          intros [eqbctx eqbodies] [wfbr' wfcpars wfcbctx Hbr'ty].
           split; intuition auto.
           etransitivity. symmetry. eapply All2_fold_All2. exact eqbctx. assumption.
           eapply eq_context_gen_upto in eqbctx.

@@ -691,7 +691,7 @@ Proof.
     red in onParams. now apply closed_wf_local in onParams. }
   eapply mkApps_ind_typing_spine in hs as [isubst [Hisubst Hargslen Hi Hu Hargs Hs]]; auto.
   subst i'.
-  eapply (isType_mkApps_Ind_inv wfΣ decli) in vi' as (parsubst & argsubst & [spars sargs cons]) => //.
+  eapply (isType_mkApps_Ind_inv wfΣ decli) in vi' as (parsubst & argsubst & [spars sargs parlen argslen cons]) => //.
   split=> //. split=> //.
   split; auto. split => //.
   now len in Hu.
@@ -3341,7 +3341,7 @@ Proof.
   rewrite /case_predicate_context /case_predicate_context_gen.
   have wfΓ := typing_wf_local X.π2.
   eapply isType_mkApps_Ind_inv in X; tea.
-  destruct X as [parsubst [argsubst [sppars spargs cu]]].
+  destruct X as [parsubst [argsubst [sppars spargs parslen argslen cu]]].
   epose proof (isType_case_predicate (puinst p) (pparams p) ps wfΓ isdecl cu wfps).
   rewrite (firstn_app_left _ 0) /= ?app_nil_r in sppars.
   now rewrite (wf_predicate_length_pars wfp).

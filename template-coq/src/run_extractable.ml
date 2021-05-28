@@ -107,7 +107,7 @@ let to_mie (x : Ast0.mutual_inductive_entry) : Plugin_core.mutual_inductive_entr
 let get_constant_body b =
   let open Declarations in
   match b with
-  | Def b -> Some (Mod_subst.force_constr b)
+  | Def b -> Some b
   | Undef inline -> None
   | OpaqueDef pr -> 
     let opaquetab = Global.opaque_tables () in

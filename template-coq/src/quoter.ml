@@ -417,7 +417,7 @@ struct
       let body = match cd.const_body with
         | Undef _ -> None
         | Primitive _ -> CErrors.user_err Pp.(str "Primitives are unsupported by TemplateCoq")
-	      | Def cs -> Some (Mod_subst.force_constr cs)
+	      | Def cs -> Some cs
 	      | OpaqueDef lc ->
           if bypass then
           let c, univs = Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) lc in
@@ -519,7 +519,7 @@ since  [absrt_info] is a private type *)
     let body =
       match cd.const_body with
       | Undef _ -> None
-      | Def cs -> Some (quote_term env (Mod_subst.force_constr cs))
+      | Def cs -> Some (quote_term env cs)
       | OpaqueDef cs ->
         if bypass
         then Some (quote_term env (fst (Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) cs)))

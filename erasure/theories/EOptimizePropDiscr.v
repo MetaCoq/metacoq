@@ -106,7 +106,7 @@ Section optimize.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto; 
       try solve [f_equal; eauto; ELiftSubst.solve_all].
     
-    - destruct (k ?= n); auto.
+    - destruct (k ?= n)%nat; auto.
     - f_equal; eauto. rewrite !map_map_compose; eauto.
       solve_all.
     - destruct ETyping.is_propositional_ind as [[|]|] => /= //.

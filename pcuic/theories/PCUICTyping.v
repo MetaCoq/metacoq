@@ -385,9 +385,9 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
-  - exact (S (Nat.max (wf_local_size _ typing_size _ wf_pctx)
-      (Nat.max (ctx_inst_size typing_size ind_inst)
-        (Nat.max d2 (Nat.max d3 (branches_size typing_size brs_ty)))))).
+  - exact (S (Nat.max (wf_local_size _ typing_size _ a0)
+      (Nat.max (ctx_inst_size _ typing_size c1)
+        (Nat.max d1 (Nat.max d2 (branches_size typing_size a1)))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 

@@ -13,6 +13,7 @@ BinPosDef
 BinPos
 BinNat
 BinInt
+PrimInt63
 Int63
 Ascii
 String0

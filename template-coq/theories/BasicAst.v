@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
+
 From MetaCoq.Template Require Import utils.
 From Coq Require Import Floats.SpecFloat.
+From Equations Require Import Equations.
 
 (** ** Reification of names ** *)
 

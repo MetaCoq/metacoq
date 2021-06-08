@@ -1,7 +1,7 @@
 (************************************************************************)
 (*         *   The Coq Proof Assistant / The Coq Development Team       *)
-(*  v      *   INRIA, CNRS and contributors - Copyright 1999-2019       *)
-(* <O___,, *       (see CREDITS file for the list of authors)           *)
+(*  v      *         Copyright INRIA, CNRS and contributors             *)
+(* <O___,, * (see version control and CREDITS file for authors & dates) *)
 (*   \VV/  **************************************************************)
 (*    //   *    This file is distributed under the terms of the         *)
 (*         *     GNU Lesser General Public License Version 2.1          *)
@@ -10,47 +10,54 @@
 
 (** Extraction to OCaml of native 63-bit machine integers. *)
 
-From Coq Require Int63 Extraction.
+From Coq Require Uint63 Sint63 Extraction.
 
 (** Basic data types used by some primitive operators. *)
 
 Extract Inductive bool => bool [ true false ].
 Extract Inductive prod => "( * )" [ "" ].
-(* Extract Inductive comparison => int [ "0" "(-1)" "1" ]. *)
-Extract Inductive DoubleType.carry => "Uint63.carry" [ "Uint63.C0" "Uint63.C1" ].
+Extract Inductive comparison => int [ "0" "(-1)" "1" ].
+Extract Inductive DoubleType.carry => "MCUint63.carry" [ "MCUint63.C0" "MCUint63.C1" ].
 
 (** Primitive types and operators. *)
-Extract Constant Int63.int => "Uint63.t".
-Extraction Inline Int63.int.
+Extract Constant Uint63.int => "MCUint63.t".
+Extraction Inline Uint63.int.
 (* Otherwise, the name conflicts with the primitive OCaml type [int] *)
 
-Extract Constant Int63.lsl => "Uint63.l_sl".
-Extract Constant Int63.lsr => "Uint63.l_sr".
-Extract Constant Int63.land => "Uint63.l_and".
-Extract Constant Int63.lor => "Uint63.l_or".
-Extract Constant Int63.lxor => "Uint63.l_xor".
+Extract Constant Uint63.lsl => "MCUint63.l_sl".
+Extract Constant Uint63.lsr => "MCUint63.l_sr".
+Extract Constant Sint63.asr => "MCUint63.a_sr".
+Extract Constant Uint63.land => "MCUint63.l_and".
+Extract Constant Uint63.lor => "MCUint63.l_or".
+Extract Constant Uint63.lxor => "MCUint63.l_xor".
 
-Extract Constant Int63.add => "Uint63.add".
-Extract Constant Int63.sub => "Uint63.sub".
-Extract Constant Int63.mul => "Uint63.mul".
-Extract Constant Int63.mulc => "Uint63.mulc".
-Extract Constant Int63.div => "Uint63.div".
-Extract Constant Int63.mod => "Uint63.rem".
+Extract Constant Uint63.add => "MCUint63.add".
+Extract Constant Uint63.sub => "MCUint63.sub".
+Extract Constant Uint63.mul => "MCUint63.mul".
+Extract Constant Uint63.mulc => "MCUint63.mulc".
+Extract Constant Uint63.div => "MCUint63.div".
+Extract Constant Uint63.mod => "MCUint63.rem".
+Extract Constant Sint63.div => "MCUint63.divs".
+Extract Constant Sint63.rem => "MCUint63.rems".
 
-Extract Constant Int63.eqb => "Uint63.equal".
-Extract Constant Int63.ltb => "Uint63.lt".
-Extract Constant Int63.leb => "Uint63.le".
 
-Extract Constant Int63.addc => "Uint63.addc".
-Extract Constant Int63.addcarryc => "Uint63.addcarryc".
-Extract Constant Int63.subc => "Uint63.subc".
-Extract Constant Int63.subcarryc => "Uint63.subcarryc".
+Extract Constant Uint63.eqb => "MCUint63.equal".
+Extract Constant Uint63.ltb => "MCUint63.lt".
+Extract Constant Uint63.leb => "MCUint63.le".
+Extract Constant Sint63.ltb => "MCUint63.lts".
+Extract Constant Sint63.leb => "MCUint63.les".
 
-Extract Constant Int63.diveucl => "Uint63.diveucl".
-Extract Constant Int63.diveucl_21 => "Uint63.div21".
-Extract Constant Int63.addmuldiv => "Uint63.addmuldiv".
+Extract Constant Uint63.addc => "MCUint63.addc".
+Extract Constant Uint63.addcarryc => "MCUint63.addcarryc".
+Extract Constant Uint63.subc => "MCUint63.subc".
+Extract Constant Uint63.subcarryc => "MCUint63.subcarryc".
 
-Extract Constant Int63.compare => "fun _x _y -> failwith ""not yet implemented""".
+Extract Constant Uint63.diveucl => "MCUint63.diveucl".
+Extract Constant Uint63.diveucl_21 => "MCUint63.div21".
+Extract Constant Uint63.addmuldiv => "MCUint63.addmuldiv".
 
-Extract Constant Int63.head0 => "Uint63.head0".
-Extract Constant Int63.tail0 => "Uint63.tail0".
+Extract Constant Uint63.compare => "MCUint63.compare".
+Extract Constant Sint63.compare => "MCUint63.compares".
+
+Extract Constant Uint63.head0 => "MCUint63.head0".
+Extract Constant Uint63.tail0 => "MCUint63.tail0".

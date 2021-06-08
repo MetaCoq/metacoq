@@ -58,6 +58,10 @@ gen-src/hexadecimal.ml
 gen-src/hexadecimal.mli
 #gen-src/induction.ml
 #gen-src/induction.mli
+gen-src/mCUint63.mli
+gen-src/mCUint63.ml
+gen-src/primInt63.ml
+gen-src/primInt63.mli
 gen-src/int63.ml
 gen-src/int63.mli
 

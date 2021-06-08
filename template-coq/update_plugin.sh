@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-SED=`which gsed || which sed`
 TOCOPY="ast_denoter.ml ast_quoter.ml denoter.ml plugin_core.ml plugin_core.mli reification.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml"
 
 # Test is gen-src is older than src

@@ -2,6 +2,8 @@
 
 - `assumption_context` should be a boolean function.
 
+- remove duplication of eq_context / eq_context_upto  and eq_decl / eq_decl_upto
+
 - Rename `mkApps_nested` into `mkApps_app` (et inverser la direction de la
   règle)
 
@@ -27,12 +29,34 @@
 
 - Clean `Derive`s: always derive `Siganture`, `NoConf`, ... directly after the
   definition of the inductive. (To avoid doing it several times.)
+  (Mostly done)
+  
+- Finish the PCUICSigmaCalculus proofs.
 
-- Remove `Program` from everywhere.
+# Medium Projects
 
-
-
+- Change Template-PCUIC translations to translate casts to applications of 
+  identity functions (vm_cast, default_cast etc) to make the back and forth
+  the identity and derive weakening/substitution/etc.. from the PCUIC theorems.
+  Is that really better than identity functions?
 # Big projects
+
+- Refine the longest-simple-path algorithm on universes with the 
+  Bender & al algorithm used in Coq, extended with edges of negative weight.
+  Alternatively prove the spec for that algorithm. Refinement might be easier:
+  it amounts to show that the new algorithm calculates the longest simple
+  path between two universes. 
+
+- Verify parsing and printing of terms / votour
+
+- Primivite projections: we could be more relaxed on the elimination sort of the 
+  inductive. If it is e.g. InProp, then all projections to types in Prop should
+  be definable. Probably not very useful though because if the elimination is 
+  restricted then it means some Type is in the constructor and won't be projectable.
+  
+- Verify the substitution calculus of P.M Pédrot using skewed lists at
+  https://github.com/coq/coq/pull/13537 and try to use it to implement efficient explicit 
+  substitutions.
 
 ## Website
 
@@ -55,10 +79,3 @@ into β-redexes, hence it is only β-convertible and not a syntactical equality.
 
 - Deduce that we have weakening and substitution lemmas in Template from those of
   PCUIC.
-
-
-## Finish Safechecker correctness
-
-- `valid_btys`
-
-- `check_one_body`

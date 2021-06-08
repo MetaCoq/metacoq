@@ -6,6 +6,7 @@ Utils
 Ssrbool
 WGraph
 UGraph0
+EnvironmentTyping
 Typing0
 Reflect
 
@@ -13,11 +14,12 @@ Classes0
 Logic1
 Relation
 Relation_Properties
+PCUICPrimitive
 PCUICAst
 PCUICAstUtils
 PCUICUnivSubst
 PCUICLiftSubst
-EqDecInstances
+PCUICReflect
 PCUICEquality
 PCUICTyping
 PCUICInduction
@@ -28,10 +30,13 @@ PCUICPosition
 PCUICPretty
 TemplateToPCUIC
 PCUICCumulativity
-
 PCUICUnivSubst
+
+PCUICErrors
 PCUICSafeReduce
+PCUICEqualityDec
 PCUICSafeConversion
+PCUICTypeChecker
 PCUICSafeChecker
 SafeTemplateChecker
 

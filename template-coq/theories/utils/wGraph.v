@@ -267,10 +267,14 @@ End Nbar.
 
 Import Nbar.
 
-Require Import MSetDecide.
+Require Import MSetDecide MSetInterface.
 
-Module WeightedGraph (V : UsualOrderedType).
-  Module VSet := MSetList.Make V.
+Module Type UsualOrderedTypeWithLeibniz.
+  Include UsualOrderedType.
+  Parameter eq_leibniz : forall x y, eq x y -> x = y.
+End UsualOrderedTypeWithLeibniz.
+
+Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLeibniz with Module E := V).
   Module VSetFact := WFactsOn V VSet.
   Module VSetProp := WPropertiesOn V VSet.
   Module VSetDecide := WDecide (VSet).
@@ -331,11 +335,14 @@ Module WeightedGraph (V : UsualOrderedType).
                                           | Eq => true
                                           | _ => false
                                           end.
+
+    Definition eq_leibniz : forall x y, eq x y -> x = y := fun x y eq => eq.
     
   End Edge.
-  Module EdgeSet:= MSets.MSetList.Make Edge.
+  Module EdgeSet:= MSets.MSetList.MakeWithLeibniz Edge.
   Module EdgeSetFact := WFactsOn Edge EdgeSet.
   Module EdgeSetProp := WPropertiesOn Edge EdgeSet.
+  Module EdgeSetDecide := WDecide (EdgeSet).
 
   Definition t := (VSet.t * EdgeSet.t * V.t)%type.
 
@@ -484,12 +491,12 @@ Module WeightedGraph (V : UsualOrderedType).
     Next Obligation.
       split.
       - eapply VSetProp.Add_add.
-      - apply andP in Hp0 as [h1 h2].
+      - apply andb_andI in Hp0 as [h1 h2].
         apply negb_true_iff in h1. apply VSetFact.not_mem_iff in h1.
         assumption.
     Defined.
     Next Obligation.
-      apply andP in Hp0 as [? ?]. auto.
+      apply andb_andI in Hp0 as [? ?]. auto.
     Defined.
 
 
@@ -499,23 +506,6 @@ Module WeightedGraph (V : UsualOrderedType).
       revert q; induction p; intro q; cbn.
       reflexivity. specialize (IHp q); intuition.
     Qed.
-
-
-    (* Lemma DisjointAdd_add {s s' x y} (H : DisjointAdd x s s') (H' : x <> y) *)
-    (*   : DisjointAdd x (VSet.add y s) (VSet.add y s'). *)
-    (* Proof. *)
-    (*   repeat split. 2: intros [H0|H0]. *)
-    (*  - intro H0. apply VSet.add_spec in H0. *)
-    (*    destruct H0 as [H0|H0]. *)
-    (*    right; subst; apply VSet.add_spec; left; reflexivity. *)
-    (*    apply H in H0. destruct H0 as [H0|H0]; [left; assumption |right]. *)
-    (*    apply VSet.add_spec; right; assumption. *)
-    (*  - subst. apply VSet.add_spec; right. apply H; left; reflexivity. *)
-    (*  - apply VSet.add_spec in H0; apply VSet.add_spec; destruct H0 as [H0|H0]. *)
-    (*    left; assumption. right. apply H. right; assumption. *)
-    (*  - intro H0. apply VSet.add_spec in H0; destruct H0 as [H0|H0]. *)
-    (*    contradiction. now apply H. *)
-    (* Qed. *)
 
     Lemma DisjointAdd_add1 {s0 s1 s2 x y}
           (H1 : DisjointAdd x s0 s1) (H2 : DisjointAdd y s1 s2)
@@ -664,7 +654,8 @@ Module WeightedGraph (V : UsualOrderedType).
       : sweight (split p u Hu).1 + sweight (split p u Hu).2 = sweight p.
     Proof.
       induction p.
-      - destruct Hu as [Hu|Hu]. inversion Hu.
+      - destruct Hu as [Hu|Hu]. simpl in Hu.
+        now elimtype False; eapply VSetFact.empty_iff in Hu.
         destruct Hu; reflexivity.
       - simpl. destruct (V.eq_dec x u) as [X|X]; simpl.
         + destruct X; reflexivity.
@@ -780,7 +771,7 @@ Module WeightedGraph (V : UsualOrderedType).
       right; now apply VSetFact.add_2.
       left; assumption.
       apply VSet.add_spec in Hy; destruct Hy as [Hy|Hy].
-      left; subst; assumption.
+      left; red in Hy; subst; assumption.
       right; assumption.
     Qed.
 
@@ -952,7 +943,8 @@ Module WeightedGraph (V : UsualOrderedType).
               intuition. now symmetry in H2.
             * apply VSet.remove_spec. split.
               apply d. right; assumption.
-              intro H. apply proj2 in d. apply d. subst; assumption. }
+              intro H. apply proj2 in d. apply d.
+              red in H; subst; assumption. }
           rewrite (lsp0_VSet_Equal XX); reflexivity.
         + apply filter_In. split.
           apply InA_In_eq, EdgeSet.elements_spec1. exact e.π2.
@@ -2089,6 +2081,7 @@ Module WeightedGraph (V : UsualOrderedType).
       is_simple _ p -> ~~ VSet.mem y (nodes G p) -> is_simple _ (Paths_add_end p e).
     Proof.
       induction p; simpl; auto.
+      now rewrite andb_true_r.
       move/andP => [nmen iss].
       specialize (IHp e iss). intros Hm%negbe.
       rewrite andb_and. split; auto.
@@ -2152,7 +2145,7 @@ Module WeightedGraph (V : UsualOrderedType).
     Proof.
       intros [].
       intros i. rewrite VSet.remove_spec.
-      intuition auto. subst.
+      intuition auto. red in H2; subst.
       specialize (proj2 (H z) (or_intror H1)).
       rewrite VSet.remove_spec.
       intuition.

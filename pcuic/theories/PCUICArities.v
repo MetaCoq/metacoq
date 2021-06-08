@@ -86,8 +86,8 @@ Proof.
           apply context_relation_app in convctx; auto.
           constructor; pcuic.
           eapply context_relation_app in convctx as [_ convctx].
-          unshelve eapply (context_relation_impl _ convctx).
-          simpl; firstorder. destruct X. constructor; auto.
+          unshelve eapply (context_relation_impl convctx).
+          simpl; pcuicfo. destruct X. constructor; auto.
           eapply conv_conv_ctx; eauto.
           eapply context_relation_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
@@ -98,13 +98,7 @@ Proof.
           eapply context_relation_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
           apply context_relation_refl. intros.
-          destruct x as [na'' [b'|] ty']; constructor; reflexivity.
-          constructor; pcuic.
-          eapply conv_conv_ctx; eauto.
-          eapply context_relation_app_inv. constructor; pcuic.
-          constructor; pcuic. constructor; pcuic. now symmetry.
-          apply context_relation_refl. intros.
-          destruct x as [? [?|] ?]; constructor; reflexivity.
+          destruct x as [na'' [b''|] ty']; constructor; reflexivity.
           eapply conv_conv_ctx; eauto.
           eapply context_relation_app_inv. constructor; pcuic.
           constructor; pcuic. constructor; pcuic. now symmetry.
@@ -273,8 +267,34 @@ Proof.
     eapply (type_mkProd_or_LetIn _ _ {| decl_body := None |}) => /=; eauto.
     econstructor; eauto with pcuic.
     eapply typing_wf_local in Ht.
-    depelim Ht; eapply All_local_env_app in Ht; intuition auto.
+    depelim Ht; eapply All_local_env_app_inv in Ht; intuition auto.
     now rewrite sort_of_product_twice.
+Qed.
+
+Fixpoint sort_of_products us s :=
+  match us with
+  | [] => s
+  | u :: us => sort_of_products us (Universe.sort_of_product u s)
+  end.
+
+Lemma type_it_mkProd_or_LetIn_sorts {cf:checker_flags} Σ Γ Γ' us t s : 
+  wf Σ.1 ->
+  sorts_local_ctx (lift_typing typing) Σ Γ Γ' us ->
+  Σ ;;; Γ ,,, Γ' |- t : tSort s ->
+  Σ ;;; Γ |- it_mkProd_or_LetIn Γ' t : tSort (sort_of_products us s).
+Proof.
+  revert Γ us s t.
+  induction Γ'; simpl; auto; move=> Γ us s t wfΣ equ Ht.
+  - destruct us => //.
+  - destruct a as [na [b|] ty]; intuition auto.
+    * destruct a0 as [s' Hs].
+      eapply IHΓ'; eauto.
+      eapply (type_mkProd_or_LetIn _ _ {| decl_body := Some b |}); auto.
+      simpl. exact Hs.
+    * destruct us => //. destruct equ.
+      simpl.   
+      eapply IHΓ'; eauto.
+      apply (type_mkProd_or_LetIn _ _ {| decl_body := None |}) => /=; eauto.
 Qed.
 
 Lemma isType_wf_local {cf:checker_flags} {Σ Γ T} : isType Σ Γ T -> wf_local Σ Γ.
@@ -300,13 +320,13 @@ Lemma subslet_app_closed {cf:checker_flags} Σ Γ s s' Δ Δ' :
   subslet Σ Γ (s ++ s') (Δ' ,,, Δ).
 Proof.
   induction 1 in s', Δ'; simpl; auto; move=> sub';
-  rewrite closedn_ctx_snoc => /andP [clctx clt];
+  rewrite closedn_ctx_snoc => /andb_and [clctx clt];
   try constructor; auto.
   - pose proof (subslet_length X). rewrite Nat.add_0_r in clt.
     rewrite /closed_decl /= -H in clt.
     rewrite subst_app_simpl /= (subst_closedn s') //.
   - pose proof (subslet_length X). rewrite Nat.add_0_r in clt.
-    rewrite /closed_decl /= -H in clt. move/andP: clt => [clt clT].
+    rewrite /closed_decl /= -H in clt. move/andb_and: clt => [clt clT].
     replace (subst0 s t) with (subst0 (s ++ s') t).
     + constructor; auto.
       rewrite !subst_app_simpl /= !(subst_closedn s') //.
@@ -395,7 +415,7 @@ Proof.
     rewrite (subst_instance_ind_type_id Σ _ {| inductive_mind := inductive_mind ind; inductive_ind := i |}); eauto.
     destruct isdecl. split; eauto. reflexivity. }
   clear oind.
-  revert X. clear onNpars onGuard.
+  revert X. clear onNpars.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4 5.
   induction l using rev_ind; simpl; first constructor.
@@ -430,7 +450,7 @@ Proof.
   { apply forall_nth_error_Alli.
     econstructor; eauto. split; eauto. }
   clear oind.
-  revert X. clear onNpars onGuard.
+  revert X. clear onNpars.
   generalize (le_n #|ind_bodies mdecl|).
   generalize (ind_bodies mdecl) at 1 3 4 5.
   induction l using rev_ind; simpl; first constructor.
@@ -576,17 +596,17 @@ Proof.
   + rewrite it_mkProd_or_LetIn_app.
     destruct x as [na [b|] ty]; cbn; move=> H.
     * apply inversion_LetIn in H as (s1 & A & H0 & H1 & H2 & H3); auto.
-      eapply All_local_env_app_inv; split; pcuic.
-      eapply All_local_env_app_inv. split. repeat constructor. now exists s1.
+      eapply All_local_env_app; split; pcuic.
+      eapply All_local_env_app. split. repeat constructor. now exists s1.
       auto. apply IHΔ in H2.
-      eapply All_local_env_app in H2. intuition auto.
+      eapply All_local_env_app_inv in H2. intuition auto.
       eapply All_local_env_impl; eauto. simpl. intros.
       now rewrite app_context_assoc.
     * apply inversion_Prod in H as (s1 & A & H0 & H1 & H2); auto.
-      eapply All_local_env_app_inv; split; pcuic. 
-      eapply All_local_env_app_inv. split. repeat constructor. now exists s1.
+      eapply All_local_env_app; split; pcuic. 
+      eapply All_local_env_app. split. repeat constructor. now exists s1.
       apply IHΔ in H1.
-      eapply All_local_env_app in H1. intuition auto.
+      eapply All_local_env_app_inv in H1. intuition auto.
       eapply All_local_env_impl; eauto. simpl. intros.
       now rewrite app_context_assoc.
 Qed.

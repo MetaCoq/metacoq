@@ -1,5 +1,7 @@
 From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils BasicAst config.
+From Equations Require Import Equations.
+Require Import ssreflect.
 
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.
@@ -24,8 +26,18 @@ Inductive universes :=
   | UProp 
   | USProp
   | UType (i : nat).
+Derive NoConfusion EqDec for universes.
 
 Class Evaluable (A : Type) := val : valuation -> A -> nat.
+
+(** This inductive classifies which eliminations are allowed for inductive types
+  in various sorts. *)
+Inductive allowed_eliminations : Set :=
+| IntoSProp
+| IntoPropSProp
+| IntoSetPropSProp
+| IntoAny.
+Derive NoConfusion EqDec for allowed_eliminations.
 
 (** Levels are Set or Level or Var *)
 Module Level.
@@ -33,14 +45,9 @@ Module Level.
   | lSet
   | Level (_ : string)
   | Var (_ : nat) (* these are debruijn indices *).
+  Derive NoConfusion EqDec for t_.
 
   Definition t := t_.
-
-  Definition is_small (x : t) :=
-    match x with
-    | lSet => true
-    | _ => false
-    end.
 
   Definition is_set (x : t) :=
     match x with
@@ -153,6 +160,7 @@ Module LevelSet := MSetList.MakeWithLeibniz Level.
 Module LevelSetFact := WFactsOn Level LevelSet.
 Module LevelSetProp := WPropertiesOn Level LevelSet.
 Module LevelSetDecide := WDecide (LevelSet).
+Module LS := LevelSet.
 Ltac lsets := LevelSetDecide.fsetdec.
 
 Definition LevelSet_pair x y
@@ -173,12 +181,31 @@ Proof.
   apply orb_true_iff.
 Qed.
 
+Lemma LevelSet_In_fold_right_add x l :
+  In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
+Proof.
+  split.
+  - induction l; simpl => //.
+    intros [<-|H].
+    * eapply LevelSet.add_spec; left; auto.
+    * eapply LevelSet.add_spec; right; auto.
+  - induction l; simpl => //.
+    * now rewrite LevelSetFact.empty_iff.
+    * rewrite LevelSet.add_spec. intuition auto.
+Qed.
+
+Lemma LevelSet_union_empty s : LevelSet.union LevelSet.empty s = s.
+Proof.
+  apply LevelSet.eq_leibniz.
+  change LevelSet.eq with LevelSet.Equal.
+  intros x; rewrite LevelSet.union_spec. lsets.
+Qed.
 
 (* prop level is Prop or SProp *)
 Module PropLevel.
 
   Inductive t := lSProp | lProp.
-
+  Derive NoConfusion EqDec for t.
   (* Global Instance PropLevel_Evaluable : Evaluable t :=
     fun v l => match l with
               lSProp => -1
@@ -218,12 +245,6 @@ Module UnivExpr.
   Definition get_level (e : t) : Level.t := fst e.
 
   Definition get_noprop (e : UnivExpr.t) := Some (fst e).
-
-  Definition is_small (e : t) : bool :=
-    match e with
-    | (Level.lSet, 0%nat) => true
-    | _  => false
-    end.
 
   Definition is_level (e : t) : bool :=
     match e with
@@ -266,7 +287,7 @@ Module UnivExpr.
   Qed.
 
   Definition lt_compat : Proper (Logic.eq ==> Logic.eq ==> iff) lt.
-    intros x x' H1 y y' H2; now rewrite H1, H2.
+    intros x x' H1 y y' H2; now rewrite H1 H2.
   Qed.
 
   Definition compare (x y : t) : comparison :=
@@ -312,6 +333,16 @@ Module UnivExprSet := MSetList.MakeWithLeibniz UnivExpr.
 Module UnivExprSetFact := WFactsOn UnivExpr UnivExprSet.
 Module UnivExprSetProp := WPropertiesOn UnivExpr UnivExprSet.
 
+(* We have decidable equality w.r.t leibniz equality for sets of levels.
+  This means universes also have a decidable equality. *)
+Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t.
+Proof.
+  intros p p'.
+  destruct (UnivExprSet.eq_dec p p').
+  - now left; eapply UnivExprSet.eq_leibniz in e.
+  - right. intros ->. apply n. reflexivity.
+Qed.
+
 Module Universe.
   (** A universe is a list of universe expressions which is:
         - sorted
@@ -320,9 +351,20 @@ Module Universe.
   Record t0 := { t_set : UnivExprSet.t ;
                  t_ne  : UnivExprSet.is_empty t_set = false }.
 
+  Derive NoConfusion for t0.
+  
+  (** This needs a propositional UIP proof to show that [is_empty = false] is a set *)
+  Set Equations With UIP.
+  Instance t0_eqdec : EqDec t0.
+  Proof. eqdec_proof. Qed.
+
   Inductive t_ :=
     lProp | lSProp | lType (_ : t0).
+  Derive NoConfusion for t_.
 
+  Instance t_eqdec : EqDec t_.
+  Proof. eqdec_proof. Qed.
+  
   Definition t := t_.
 
   Coercion t_set : t0 >-> UnivExprSet.t.
@@ -413,12 +455,6 @@ Module Universe.
     match u with
     | lProp | lSProp => true
     | lType l => (UnivExprSet.cardinal l =? 1)%nat && is_levels u
-    end.
-
-  Definition is_small (u : t) : bool :=
-    match u with
-      | lProp | lSProp => true
-      | lType l => UnivExprSet.for_all UnivExpr.is_small l
     end.
 
   Definition is_sprop (u : t) : bool :=
@@ -1028,36 +1064,14 @@ Proof.
   intros;simpl in *;destruct x2;auto.
 Qed.
 
-(** Sort families *)
-
-Inductive sort_family : Set := InSProp | InProp | InSet | InType.
-
-(* Prop <= Set, Type but SProp </= Prop, Set, Type *)
-Definition leb_sort_family x y :=
-  match x, y with
-  | InProp, InSProp => false
-  | InProp, _ => true
-  | InSProp, InSProp => true
-  | InSProp, _ => false
-  | InSet, (InProp | InSProp) => false
-  | InSet, _ => true
-  | InType, (InProp | InSProp | InSet) => false
-  | InType, InType => true
-  end.
-
-(** Family of a universe [u]. *)
-Definition universe_family (u : Universe.t) :=
-  if Universe.is_prop u then InProp
-  else if Universe.is_sprop u then InSProp
-  else if Universe.is_small u then InSet
-  else InType.
-
 Module ConstraintType.
   Inductive t_ : Set := Le (z : Z) | Eq.
+  Derive NoConfusion EqDec for t_.
+  
   Definition t := t_.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
-
+  
   Definition Le0 := Le 0.
   Definition Lt := Le 1.
 
@@ -1102,6 +1116,7 @@ End ConstraintType.
 
 Module UnivConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
+  
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
 
@@ -1159,7 +1174,47 @@ End UnivConstraint.
 Module ConstraintSet := MSetList.MakeWithLeibniz UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
 Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
+Module CS := ConstraintSet.
 
+Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s = s.
+Proof.
+  apply ConstraintSet.eq_leibniz.
+  change ConstraintSet.eq with ConstraintSet.Equal.
+  intros x; rewrite ConstraintSet.union_spec. lsets.
+Qed.
+
+Lemma CS_For_all_union f cst cst' : ConstraintSet.For_all f (ConstraintSet.union cst cst') ->
+  ConstraintSet.For_all f cst.
+Proof.
+  unfold CS.For_all.
+  intros IH x inx. apply (IH x).
+  now eapply CS.union_spec; left.
+Qed.
+
+Lemma CS_For_all_add P x s : CS.For_all P (CS.add x s) -> P x /\ CS.For_all P s.
+Proof.
+  intros.
+  split.
+  * apply (H x), CS.add_spec; left => //.
+  * intros y iny. apply (H y), CS.add_spec; right => //.
+Qed.
+Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
+Proof.
+  intros s s' eqs.
+  unfold CS.For_all. split; intros IH x inxs; apply (IH x);
+  now apply eqs.
+Qed.
+
+(* Being built up from sorted lists without duplicates, constraint sets have 
+  decidable equality. This is however not used in the development. *)
+Set Equations With UIP.
+Remark ConstraintSet_EqDec : EqDec ConstraintSet.t.
+Proof.
+  intros p p'.
+  destruct (ConstraintSet.eq_dec p p').
+  - now left; eapply ConstraintSet.eq_leibniz in e.
+  - right. intros ->. apply n. reflexivity.
+Qed.
 
 (** {6 Universe instances} *)
 
@@ -1182,8 +1237,6 @@ Module Instance.
   Definition equal_upto (f : Level.t -> Level.t -> bool) (i j : t) :=
     forallb2 f i j.
 End Instance.
-
-
 
 Module UContext.
   Definition t := Instance.t × ConstraintSet.t.
@@ -1230,6 +1283,7 @@ Module Variance.
   | Irrelevant : t
   | Covariant : t
   | Invariant : t.
+  Derive NoConfusion EqDec for t.
 
   (* val check_subtype : t -> t -> bool *)
   (* val sup : t -> t -> t *)
@@ -1238,6 +1292,8 @@ End Variance.
 Inductive universes_decl : Type :=
 | Monomorphic_ctx (ctx : ContextSet.t)
 | Polymorphic_ctx (cst : AUContext.t).
+
+Derive NoConfusion for universes_decl.
 
 Definition monomorphic_udecl u :=
   match u with
@@ -1465,7 +1521,7 @@ Section Univ.
   Proof.
     intros H1 H2 v Hv.
     specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
-    rewrite val_universe_sup, Hzero. destruct (Universe.univ_val v s2); simpl; lia.
+    rewrite val_universe_sup Hzero. destruct (Universe.univ_val v s2); simpl; lia.
   Qed.
 
   Lemma leq_universe0_sup_r φ s1 s2 :
@@ -1474,7 +1530,7 @@ Section Univ.
   Proof.
     intros H1 H2 v Hv.
     specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
-    rewrite val_universe_sup, Hzero.
+    rewrite val_universe_sup Hzero.
     destruct (Universe.univ_val v s1); simpl; lia.
   Qed.
 
@@ -1571,8 +1627,34 @@ Section Univ.
 
   Hint Resolve eq_universe_leq_universe' leq_universe_refl' : core.
 
-End Univ.
+  (** Elimination restriction *)
 
+  Definition is_allowed_elimination0
+             φ (into : Universe.t) (allowed : allowed_eliminations) : Prop :=
+    forall v,
+      satisfies v φ ->
+      match allowed, Universe.univ_val v into with
+      | IntoSProp, USProp
+      | IntoPropSProp, (UProp | USProp)
+      | IntoSetPropSProp, (UProp | USProp | UType 0)
+      | IntoAny, _ => True
+      | _, _ => False
+      end.
+  
+  Definition is_allowed_elimination φ into allowed :=
+    if check_univs then is_allowed_elimination0 φ into allowed else True.
+  
+  (* Is [a] a subset of [a']? *)
+  Definition allowed_eliminations_subset (a a' : allowed_eliminations) : bool :=
+    match a, a' with
+    | IntoSProp, _
+    | IntoPropSProp, (IntoPropSProp | IntoSetPropSProp | IntoAny)
+    | IntoSetPropSProp, (IntoSetPropSProp | IntoAny)
+    | IntoAny, IntoAny => true
+    | _, _ => false
+    end.
+
+End Univ.
 
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : Universe.t. exact Universe.type0. Qed.
@@ -1679,8 +1761,9 @@ Section UniverseClosedSubst.
     intro e; split; intro He.
     - apply Universe.map_spec in He. destruct He as [e' [He' X]].
       rewrite closedu_subst_instance_level_expr in X.
-      now subst. apply UnivExprSet.for_all_spec in H; proper.
+      apply UnivExprSet.for_all_spec in H; proper.
       exact (H _ He').
+      now subst. 
     - apply Universe.map_spec. exists e; split; tas.
       symmetry; apply closedu_subst_instance_level_expr.
       apply UnivExprSet.for_all_spec in H; proper. now apply H.
@@ -1762,7 +1845,7 @@ Definition string_of_level (l : Level.t) : string :=
   end.
 
 Definition string_of_level_expr (e : UnivExpr.t) : string :=
-  let '(l, b) := e in string_of_level l ^ (if b then "+1" else "").
+  let '(l, n) := e in string_of_level l ^ (if n is 0 then "" else "+" ^ string_of_nat n).
 
 Definition string_of_sort (u : Universe.t) :=
   match u with
@@ -1777,6 +1860,7 @@ Definition string_of_universe_instance u :=
 Inductive universes_entry :=
 | Monomorphic_entry (ctx : ContextSet.t)
 | Polymorphic_entry (names : list name) (ctx : UContext.t).
+Derive NoConfusion for universes_entry.
 
 Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
   match u with
@@ -1861,8 +1945,8 @@ Proof.
   - destruct v;discriminate.
   - apply is_prop_val with (v:=vv) in e.
     specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n HH].
-    rewrite e, HH.
-    rewrite e, HH in H2. simpl in H2.
+    rewrite e HH.
+    rewrite e HH in H2. simpl in H2.
     simpl. destruct (Universe.univ_val vv u') eqn:eq; simpl; auto.
   - destruct v';discriminate.
   - apply is_prop_val with (v:=vv) in f.
@@ -1870,13 +1954,13 @@ Proof.
     rewrite f in H2. eapply univ_le_prop_inv in H2. cong.
   - apply is_sprop_val with (v:=vv) in e1.
     specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n HH].
-    rewrite HH, e1 in H2. now simpl in H2.
+    rewrite HH e1 in H2. now simpl in H2.
   - apply is_sprop_val with (v:=vv) in f1.
     specialize (is_prop_and_is_sprop_val_false _ e e1 vv) as [n HH].
     rewrite f1 in H2. apply univ_le_sprop_inv in H2; cong.
   - specialize (is_prop_and_is_sprop_val_false _ e e1 vv) as [n HH].
     specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n' HH'].
-    rewrite HH, HH'. apply univ_val_max_mon; auto.
+    rewrite HH HH'. apply univ_val_max_mon; auto.
     now rewrite <- HH, <- HH'.
 Qed.
 
@@ -1928,7 +2012,7 @@ Section UniverseLemmas.
     intros s1 s1' H1 s2 s2' H2.
     unfold_eq_universe. specialize (H1 v Hv). specialize (H2 v Hv).
     rewrite !val_universe_sup.
-    now rewrite H1, H2.
+    now rewrite H1 H2.
   Qed.
 
   Lemma sort_of_product_twice u s :
@@ -1937,7 +2021,7 @@ Section UniverseLemmas.
   Proof.
     destruct u,s;auto.
     unfold Universe.sort_of_product;cbn.
-    now rewrite sup0_assoc, sup0_idem.
+    now rewrite sup0_assoc sup0_idem.
   Qed.
 End UniverseLemmas.
 
@@ -2069,7 +2153,7 @@ Section no_prop_leq_type.
   Proof.
     red. destruct check_univs; [|trivial].
     intros H1 H2 v Hv. eapply is_prop_val in H1; eapply is_prop_val in H2.
-    rewrite H1, H2. lled; lia.
+    rewrite -> H1, H2. lled; lia.
   Qed.
 
   Lemma leq_sprop_sprop {l l'} :
@@ -2078,7 +2162,7 @@ Section no_prop_leq_type.
   Proof.
     red. destruct check_univs; [|trivial].
     intros H1 H2 v Hv. eapply is_sprop_val in H1; eapply is_sprop_val in H2.
-    rewrite H1, H2. lled; lia.
+    rewrite -> H1, H2. lled; lia.
   Qed.
   
   Lemma leq_prop_is_prop_sprop {x s} :
@@ -2096,7 +2180,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ (Universe.super l) l' -> Universe.is_prop l' -> False.
   Proof.
-    intros Hcf [v Hv] H1 H2. unfold leq_universe in *; rewrite Hcf in *.
+    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
     eapply is_prop_val with (v:=v) in H2. specialize (H1 _ Hv).
     rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
   Qed.
@@ -2106,7 +2190,7 @@ Section no_prop_leq_type.
     consistent ϕ ->
     leq_universe ϕ (Universe.super l) l' -> Universe.is_sprop l' -> False.
   Proof.
-    intros Hcf [v Hv] H1 H2. unfold leq_universe in *; rewrite Hcf in *.
+    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
     eapply is_sprop_val with (v:=v) in H2. specialize (H1 _ Hv).
     rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
   Qed.

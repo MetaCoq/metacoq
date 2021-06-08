@@ -1,7 +1,7 @@
 opam-version: "2.0"
 maintainer: "matthieu.sozeau@inria.fr"
 homepage: "https://metacoq.github.io/metacoq"
-dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.12"
+dev-repo: "git+https://github.com/MetaCoq/metacoq.git#coq-8.13"
 bug-reports: "https://github.com/MetaCoq/metacoq/issues"
 authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
           "Simon Boulier <simon.boulier@inria.fr>"
@@ -16,7 +16,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["sh" "./configure.sh"]
-  [make "-j%{jobs}%" "template-coq"]
+  [make "-j" "%{jobs}%" "template-coq"]
 ]
 install: [
   [make "-C" "template-coq" "install"]
@@ -24,8 +24,8 @@ install: [
 version: "dev"
 depends: [
   "ocaml" {>= "4.07.1"}
-  "coq" { = "dev" }
-  "coq-equations" { = "dev" }
+  "coq" {>= "8.13" & < "8.14~"}
+  "coq-equations" { >= "1.2.3" }
 ]
 synopsis: "A quoting and unquoting library for Coq in Coq"
 description: """

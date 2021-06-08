@@ -103,6 +103,7 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
   | tFix _ _ | tCoFix _ _ => todo "tsl"
   | tVar _ | tEvar _ _ => todo "tsl"
   | tLambda _ _ _ => tVar "impossible"
+  | tInt _ | tFloat _ => todo "impossible"
   end in
   match app with Some t' => mkApp t1 (t' {3 := tRel 1} {2 := tRel 0})
                | None => t1 end
@@ -314,9 +315,11 @@ Module Axioms.
     apply eqᵗ_eq in H.
     refine (_ @ H).
     rewrite !transport_forall_constant.
-    rewrite transport_compose.
+    epose proof (transport_compose (Bᵗ x xᵗ) (fun x0 => x0 x) (h A B f g X) (fᵗ x xᵗ)).
+    symmetry in X0.
+    destruct X0.
     eapply ap10. eapply ap.
-    rewrite ap_apply_lD.
+    (* rewrite ap_apply_lD. *)
   Abort.
 
   (* Definition Funext *)
@@ -403,6 +406,9 @@ Module Axioms.
     intros H A B []; exact (H A A 1).
   Defined.
 
+  (* The import of CRelationClasses breaks rewrite *)
+  Set Typeclasses Depth 4.
+
   Theorem Univalence'_provably_parametric : forall h : Univalence', Univalence'ᵗ h.
   Proof.
     unfold Univalence', Univalence'ᵗ.
@@ -417,7 +423,7 @@ Module Axioms.
     intros x xᵗ; cbn. eapply pathsᵗ_ok2.
     set (coh x). set (q1 x) in *. set (q2 x) in *.
     clearbody p p1 p0; clear; cbn in *.
-    set (g x) in *. clearbody a.
+    set (g x) in *. clearbody a. simpl.
     rewrite transport_pp.
     destruct p1. cbn in *.
     match goal with

@@ -1,2 +1,6 @@
 CAMLFLAGS+=-open Metacoq_template_plugin
 CAMLFLAGS+=-w -33 # Unused opens
+CAMLFLAGS+=-w -32 # Unused values
+CAMLFLAGS+=-w -34 # Unused types
+CAMLFLAGS+=-w -39 # Unused rec flags
+CAMLFLAGS+=-w -60 # Unused module in functor

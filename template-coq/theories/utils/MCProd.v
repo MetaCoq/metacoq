@@ -1,4 +1,7 @@
-From Coq Require Import Bool.
+From Coq Require Import Bool RelationClasses.
+Require Import ssreflect.
+
+Local Coercion is_true : bool >-> Sortclass.
 
 Declare Scope pair_scope.
 
@@ -46,11 +49,12 @@ Qed.
 Definition on_pi2 {A B C} (f : B -> B) (p : A * B * C) : A * B * C :=
   (fst (fst p), f (snd (fst p)), snd p).
 
-
-Lemma andb_and b b' : is_true (b && b') <-> is_true b /\ is_true b'.
+(** It would be tempting to import ssrbool here, however 
+  https://github.com/coq/coq/issues/13486 prevents this. *)  
+Lemma andb_and b b' : b && b' <-> b /\ b'.
 Proof. apply andb_true_iff. Qed.
 
-Lemma andP {b b'} : is_true (b && b') -> is_true b /\ is_true b'.
+Lemma andb_andI {b b'} : b && b' -> b /\ b'.
 Proof. apply andb_and. Qed.
 
 Definition fst_eq {A B} {x x' : A} {y y' : B}

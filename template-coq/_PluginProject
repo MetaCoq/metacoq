@@ -58,12 +58,12 @@ gen-src/hexadecimal.ml
 gen-src/hexadecimal.mli
 #gen-src/induction.ml
 #gen-src/induction.mli
-gen-src/mCUint63.mli
-gen-src/mCUint63.ml
+#gen-src/mCUint63.mli
+#gen-src/mCUint63.ml
 gen-src/primInt63.ml
 gen-src/primInt63.mli
-gen-src/int63.ml
-gen-src/int63.mli
+#gen-src/int63.ml
+#gen-src/int63.mli
 
 gen-src/sumbool.mli
 gen-src/sumbool.ml
@@ -77,8 +77,8 @@ gen-src/zpower.mli
 gen-src/zpower.ml
 gen-src/specFloat.mli
 gen-src/specFloat.ml
-gen-src/floatOps.mli
-gen-src/floatOps.ml
+#gen-src/floatOps.mli
+#gen-src/floatOps.ml
 # gen-src/float64.mli
 # gen-src/float64.ml
 gen-src/liftSubst.ml

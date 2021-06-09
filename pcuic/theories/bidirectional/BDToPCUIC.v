@@ -1,15 +1,16 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICSR PCUICWeakeningEnv PCUICContexts PCUICSpine.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine.
+(* From MetaCoq.PCUIC Require Import PCUICSR. *)
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 
 (** Various generic lemmatas missing from the MetaCoq library *)
 
-Lemma All2i_mix (A B : Type) (P Q : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
+Lemma All2i_prod (A B : Type) (P Q : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
   All2i P n l l' -> All2i Q n l l' -> All2i (fun i x y => (P i x y) × (Q i x y)) n l l'.
 Proof.
   intros AP.
@@ -99,6 +100,10 @@ Proof.
   all: apply IHΓ' ; eassumption.
 Qed.
 
+(*This is in SR, but SR is currently broken*)
+Lemma isType_red `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T U} :
+    isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
+Admitted.
 
 Section BDToPCUICTyping.
 
@@ -262,10 +267,22 @@ Section BDToPCUICTyping.
         eapply ctx_inst_app_weak ; eauto.
         1: eapply validity ; auto.
         rewrite H.
-        assumption.
+        apply PCUICWellScopedCumulativity.into_equality ; tea.
+        - by apply PCUICWellScopedCumulativity.wf_local_closed_context.
+        - eapply type_is_open_term ; eauto.
+        - rewrite PCUICOnFreeVars.on_free_vars_mkApps /= forallb_app.
+          apply /andP ; split.
+          + eapply All_forallb'.
+            1: eapply ctx_inst_closed ; tea.
+            intros.
+            by rewrite -PCUICConversion.is_open_term_closed.
+          + apply forallb_skipn.
+            eapply type_is_open_term in X5 ; eauto.
+            by rewrite PCUICOnFreeVars.on_free_vars_mkApps /= in X5. 
+          
       }
       
-      assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [].
+      assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
       {
         eexists.
         eapply type_mkApps_arity.
@@ -285,25 +302,17 @@ Section BDToPCUICTyping.
       1: eapply type_Cumul ; eauto.
 
       eapply All2i_impl.
-      1:{ apply All2i_mix ; [eassumption|idtac].
-          eapply wf_case_branches_types ; eauto.
+      1:{ apply All2i_prod ; [eassumption|idtac].
+          eapply wf_case_branches_types' ; eauto.
           econstructor.
           eauto.
       }
-      intros * Hprod ?.
+      intros * ((?&?&?&?&Hbody)&[]).
+      split ; tea.
+      intros brctxty.
       fold predctx in brctxty.
       fold ptm in brctxty.
-      cbv beta zeta in Hprod.
-      fold brctxty in Hprod.
-      destruct Hprod as ((?&?&?&?&?&?&Hbody)&?&?).
-      assert (Σ ;;; Γ ,,, bcontext y |- brctxty.2 : tSort ps).
-      { unfold brctxty.
-        eapply PCUICContextConversion.context_conversion ; eauto.
-        symmetry.
-        eassumption.
-      }
-      repeat split.
-      all: auto.
+      repeat split ; auto.
       apply Hbody ; auto.
       eexists.
       eassumption.

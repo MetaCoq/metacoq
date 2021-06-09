@@ -23,7 +23,6 @@ install: [
 ]
 version: "dev"
 depends: [
-  "coq" {>= "8.13" & < "8.14~"}
   "coq-metacoq-template" {= version}
   "coq-metacoq-pcuic" {= version}
 ]

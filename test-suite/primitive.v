@@ -1,8 +1,9 @@
 From Coq Require Import String.
 From MetaCoq.Template Require Import monad_utils All.
-From Coq.Numbers.Cyclic Require Import Int63.
+From Coq.Numbers.Cyclic Require Import PrimInt63 Sint63.
 
 Local Open Scope string_scope.
+Local Open Scope sint63_scope.
 Import MonadNotation.
 
 Definition bigint : Int63.int := 542985047%int63.
@@ -23,9 +24,9 @@ MetaCoq Run (eval_hnf bigint >>=
             tmLemma "foo'" (bigint + 1 = unq)%int63 >>= 
             fun x => tmPrint x)).
 
-From Coq Require Import Int63 PrimFloat.
+From Coq Require Import PrimFloat.
 
-Definition f := (of_int63 bigint / 3)%float.
+Definition f := (- (of_int63 bigint / 3))%float.
 Eval lazy in f.
 MetaCoq Run (tmEval lazy f >>= 
             (fun x => tmQuote (x + 1)%float) >>= 
@@ -34,4 +35,4 @@ MetaCoq Run (tmEval lazy f >>=
 MetaCoq Run (tmUnquoteTyped float (tFloat f) >>= 
   (fun x : float => tmPrint x >>= 
    fun _ => tmQuote x >>= tmMkDefinition "somefloat")).
-   Print somefloat.
+Print somefloat.

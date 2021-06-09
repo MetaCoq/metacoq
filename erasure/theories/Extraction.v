@@ -1,13 +1,17 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlFloats.
-From MetaCoq.Template Require Import MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).
+From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlFloats ExtrOCamlInt63.
+From MetaCoq.Template Require Import utils.
 
 (** * Extraction setup for the erasure phase of template-coq.
 
     Any extracted code planning to link with the plugin
     should use these same directives for consistency.
+
+    ExtrOCamlInt63 extracts comparison to int (-1, 0, 1), so one might need to adapt code accordingly.
 *)
 
+Extract Constant ascii_compare =>
+ "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)
@@ -16,7 +20,8 @@ Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(
 Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes Numeral.
+           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes Numeral
+           Uint63.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 

@@ -1,6 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICSR PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubstitution PCUICClosed.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubstitution PCUICClosed PCUICWellScopedCumulativity.
+(* From MetaCoq.PCUIC Require Import PCUICSR. *)
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
 (** The dependency on BDToPCUIC is minimal, it is only used in conjuction with validity to avoid having to prove well-formedness of inferred types simultaneously with bidirectional -> undirected *)
 
@@ -52,54 +53,68 @@ Proof.
     constructor; auto.
 Qed.
 
+Lemma conv_sym `{checker_flags} Σ Γ :
+  CRelationClasses.Symmetric (equality false Σ Γ).
+Proof.
+  intros t t' co.
+  induction co.
+  + constructor ; auto. by cbn ; symmetry.
+  + try solve [econstructor ; eauto].
+  + try solve [econstructor ; eauto].
+Qed.
+
 (** Lemmata to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
 
-Lemma conv_check `{checker_flags} (Σ : global_env_ext) Γ t T :
-  (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T) ->
+Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
+  (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T) ->
   Σ ;;; Γ |- t ◃ T.
 Proof.
-  intros (?&?&Cumt).
+  intros (?&?&?).
   econstructor.
-  all: eassumption.
+  1: eassumption.
+  by apply equality_forget_cumul.
 Qed.
 
-Lemma conv_infer_sort `{checker_flags} (Σ : global_env_ext) Γ t s :
-  (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= tSort s) ->
+Lemma conv_infer_sort `{checker_flags} Σ (wfΣ : wf Σ) Γ t s :
+  wf_local Σ Γ ->
+  Σ ;;; Γ |- t : tSort s ->
+  (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ tSort s) ->
   {s' & Σ ;;; Γ |- t ▹□ s' × leq_universe Σ s' s}.
 Proof.
-  intros (?&?&Cumt).
-  apply cumul_Sort_r_inv in Cumt ; auto.
-  destruct Cumt as (?&?&?).
-  eexists. split.
-  1: econstructor.
-  all: eassumption.
+  intros ? tyt (T'&?&Cumt).
+  apply equality_Sort_r_inv in Cumt as (?&?&?) ; auto.
+  eexists. split ; [idtac|eassumption].
+  econstructor ; [eassumption|..].
+  by apply closed_red_red.
 Qed.
 
-Lemma conv_infer_prod `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ t n A B:
-  (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ |- T' <= tProd n A B)) ->
+Lemma conv_infer_prod `{checker_flags} Σ (wfΣ : wf Σ) Γ t n A B :
+  wf_local Σ Γ ->
+  Σ ;;; Γ |- t : tProd n A B ->
+  (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ ⊢ T' ≤ tProd n A B)) ->
   ∑ n' A' B', Σ ;;; Γ |- t ▹Π (n',A',B')
-      × (Σ ;;; Γ |- A' = A) × (Σ ;;; Γ ,, vass n A |- B' <= B).
+      × (Σ ;;; Γ ⊢ A' = A) × (Σ ;;; Γ ,, vass n A ⊢ B' ≤ B).
 Proof.
-  intros (?&?&Cumt).
-  apply cumul_Prod_r_inv in Cumt ; auto.
-  destruct Cumt as (?&?&?&((?&?)&?)&?).
-  eexists. eexists. eexists. repeat split.
-  1: econstructor.
-  all: eassumption.
+  intros ? tyt (T'&?&Cumt).
+  apply equality_Prod_r_inv in Cumt as (?&?&?&[]) ; auto.
+  do 3 eexists. repeat split ; tea.
+  econstructor ; tea.
+  by eapply closed_red_red ; eauto.
 Qed.
 
-Lemma conv_infer_ind `{checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) Γ t ind ui args :
-  (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ |- T' <= mkApps (tInd ind ui) args)) ->
+Lemma conv_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
+  wf_local Σ Γ ->
+  Σ ;;; Γ |- t : mkApps (tInd ind ui) args ->
+  (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ ⊢ T' ≤ mkApps (tInd ind ui) args)) ->
   ∑ ui' args', Σ ;;; Γ |- t ▹{ind} (ui',args')
       × (R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui)
-      × (All2 (fun a a' => Σ ;;; Γ |- a = a') args args').
+      × equality_terms Σ Γ args' args.
 Proof.
-  intros (?&?&Cumt).
-  apply invert_cumul_ind_r in Cumt ; auto.
-  destruct Cumt as (?&?&?&?&?).
-  eexists. eexists. repeat split.
-  1: econstructor.
-  all:eassumption.
+  intros ? tyt (T'&?&Cumt).
+  apply equality_Ind_r_inv in Cumt as (?&?&[]) ; auto.
+  do 2 eexists. repeat split ; tea.
+  econstructor ; tea.
+  by eapply closed_red_red ; eauto.
 Qed.
 
 Section BDFromPCUIC.
@@ -107,7 +122,7 @@ Section BDFromPCUIC.
 
 (** The big theorem*)
 Lemma bidirectional_from_pcuic `{checker_flags} :
-      env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T})
+      env_prop (fun Σ Γ t T => {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T})
         (fun Σ Γ => wf_local_bd Σ Γ).
 Proof.
   apply typing_ind_env.
@@ -118,11 +133,13 @@ Proof.
     induction bdwfΓ.
     all: constructor ; auto.
     + apply conv_infer_sort in p ; auto.
+      2: by destruct tu.
       destruct p as (?&?&?).
       eexists.
       eassumption.
     + apply conv_check in p ; auto.
       apply conv_infer_sort in p0 ; auto.
+      2: by destruct tu.
       destruct p0 as (?&?&?).
       1: eexists.
       all: eassumption.
@@ -131,15 +148,16 @@ Proof.
   - intros.
     eexists.
     split.
-    2: by reflexivity.
+    2: by eapply typing_equality ; tea ; constructor.
     constructor.
     eassumption.
     
   - intros.
     eexists.
     split.
-    2: by reflexivity.
-    constructor. assumption.
+    2: by eapply typing_equality ; tea ; constructor.
+    constructor.
+    assumption.
 
   - intros n A B ? ? ? ? CumA ? CumB.
     apply conv_infer_sort in CumA ; auto.
@@ -149,10 +167,13 @@ Proof.
     eexists.
     split.
     + constructor ; eassumption.
-    + constructor.
+    + constructor ; cbn ; auto.
+      1: by apply wf_local_closed_context.
       constructor.
       apply leq_universe_product_mon.
       all: assumption.
+    + constructor ; [assumption|..].
+      eexists ; eassumption.  
 
   - intros n A t ? ? ? ? CumA ? (?&?&?).
     apply conv_infer_sort in CumA ; auto.
@@ -160,8 +181,9 @@ Proof.
     eexists.
     split.
     + econstructor. all: eassumption.
-    + apply congr_cumul_prod.
-      all: by auto.
+    + apply equality_Prod ; auto.
+      eapply isType_equality_refl.
+      by eexists ; eauto.
 
   - intros n t A u ? ? ? ? CumA ? Cumt ? (?&?&?).
     apply conv_infer_sort in CumA ; auto.
@@ -171,7 +193,7 @@ Proof.
     split.
     + econstructor.
       all: eassumption.
-    + apply cumul_LetIn_bo.
+    + apply equality_LetIn_bo.
       eassumption.
 
   - intros t na A B u ? ? ? ? ? Cumt ? (?&?&?).
@@ -181,53 +203,54 @@ Proof.
     split.
     + econstructor ; eauto.
       econstructor ; eauto.
+      apply equality_forget_cumul.
       etransitivity ; eauto.
-      apply conv_cumul.
+      eapply equality_le_le.
       by symmetry.
-    + eapply substitution_cumul0.
+    + eapply substitution_equality_vass.
       all: eassumption.
   
   - intros.
     eexists.
     split.
-    2: by reflexivity.
+    2: by eapply typing_equality ; tea ; constructor ; eauto.
     econstructor.
     all: eassumption.
     
   - intros.
     eexists.
     split.
-    2: by reflexivity.
+    2: by eapply typing_equality ; tea ; econstructor ; eauto.
     econstructor.
     all: eassumption.
     
   - intros.
     eexists.
     split.
-    2: reflexivity.
+    2: by eapply typing_equality ; tea ; econstructor ; eauto.
     econstructor.
     all: eassumption.
     
-  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar predctx wfpred ? ? ? ty_p Cump ? ? ? ? ty_c Cumc ? ? ? ty_br.
+  - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? _ Hinst ty_c Cumc ? ? ? ty_br.
 
-    assert (wf_universe Σ ps).
+    (* assert (wf_universe Σ ps).
     { apply validity in ty_p.
       apply isType_wf_universes in ty_p; auto.
       now apply (ssrbool.elimT wf_universe_reflect) in ty_p.
-    }
+    } *)
 
-    apply conv_infer_sort in Cump as (?&?&?).
+    apply conv_infer_sort in Cump as (?&?&?) ; auto.
     apply conv_infer_ind in Cumc as (?&?&?&?&?) ; auto.
     eexists.
     split.
     + econstructor.
-      all: try eassumption.
+      all: tea.
       * eapply is_allowed_elimination_monotone.
         all: eassumption.
-      * rewrite subst_instance_app_ctx rev_app_distr in X3.
+      * rewrite subst_instance_app_ctx rev_app_distr in Hinst.
         replace (pparams p) with (firstn (context_assumptions (List.rev (subst_instance (puinst p)(ind_params mdecl)))) (pparams p ++ indices)).
-        eapply ctx_inst_app_impl ; eauto.
-        1: apply conv_check.
+        eapply ctx_inst_app_impl ; tea.
+        1: intros ; by apply conv_check.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
         erewrite PCUICDeclarationTyping.onNpars.
         2: eapply on_declared_minductive ; eauto.
@@ -235,46 +258,64 @@ Proof.
         1: by rewrite Nat.add_0_r ; destruct wfpred.
         by apply app_nil_r.
 
-      * apply cumul_mkApps_cum ; auto.
+      * apply equality_forget_cumul.
+        apply equality_mkApps_eq ; auto.
+        
+        -- by apply wf_local_closed_context.
+           
         -- constructor.
            replace #|x1| with #|pparams p ++ indices|.
            1: assumption.
+           symmetry.
            eapply All2_length.
            eassumption.
 
         -- rewrite -{1}(firstn_skipn (ci_npar ci) x1).
            apply All2_app.
-           2: apply eq_terms_conv_terms ; reflexivity.
-           symmetry.
-           replace (pparams p) with (firstn (ci_npar ci) (pparams p ++ indices)).
-           1: by apply All2_firstn.
-           rewrite {2}(app_nil_end (pparams p)) -(firstn_O indices).
-           apply firstn_app_left.
-           rewrite <- epar.
-           destruct wfpred as [->].
-           by apply plus_n_O.
+           ++ replace (pparams p) with (firstn (ci_npar ci) (pparams p ++ indices)).
+              1: by apply All2_firstn.
+              rewrite {2}(app_nil_end (pparams p)) -(firstn_O indices).
+              apply firstn_app_left.
+              rewrite <- epar.
+              destruct wfpred as [->].
+              by apply plus_n_O.
+           ++ apply All2_skipn.
+              eapply All_All2.
+              1: eapply All2_All_left ; tea.
+              1: intros ; eapply equality_is_open_term_left ; tea.
+              cbn ; intros.
+              apply equality_refl ; auto.
+              by apply wf_local_closed_context.
 
       * eapply All2i_impl.
         1: eassumption.
-        intros j cdecl br Hbr brctxty.
-        cbn in Hbr.
+        intros j cdecl br (?&Hbr).
+        split ; [assumption|..].
+        intros brctxty.
         fold predctx in brctxty.
         fold ptm in brctxty.
         fold brctxty in Hbr.
-        destruct Hbr as ((?&?)&(?&?)&Cumbody&?&Cumty).
-        apply conv_check in Cumbody.
-        apply conv_check in Cumty.
-        repeat split ; auto.
+        destruct Hbr as (?&?&?Cumbody&?&?).
+        apply conv_check in Cumbody ; auto.
 
-    + apply cumul_mkApps ; auto.
-      1: reflexivity.
-      apply All2_app.
-      2: constructor ; auto.
-      replace indices with (skipn (ci_npar ci) (pparams p ++ indices)).
-      1: by apply All2_skipn ; symmetry.
-      apply skipn_all_app_eq.
-      rewrite <- epar.
-      by destruct wfpred as [->].
+    + apply equality_mkApps ; auto.
+      * apply equality_it_mkLambda_or_LetIn.
+        -- apply context_equality_refl.
+           unfold predctx.
+           eapply wf_local_closed_context, wf_case_predicate_context ; eauto.
+           eapply validity ; eassumption.
+        -- apply equality_refl.
+           1: eapply wf_local_closed_context, wf_case_predicate_context ; eauto.
+           1: eapply validity ; eassumption.
+           eapply subject_is_open_term ; tea.
+      * apply All2_app.
+        -- replace indices with (skipn (ci_npar ci) (pparams p ++ indices)).
+           2: by apply skipn_all_app_eq ; rewrite <- epar ; destruct wfpred as [->].
+           by apply All2_skipn.
+        -- constructor ; auto.
+           eapply equality_refl.
+           1: apply wf_local_closed_context ; tea.
+           eapply subject_is_open_term ; tea.
 
   - intros ? c u mdecl idecl [] isdecl args ? ? ? Cumc ? ty.
     apply conv_infer_ind in Cumc as (ui'&args'&?&?&?) ; auto.
@@ -284,7 +325,6 @@ Proof.
       1-2: eassumption.
       etransitivity.
       2: eassumption.
-      symmetry.
       eapply All2_length.
       eassumption.
 
@@ -301,8 +341,8 @@ Proof.
         }
       unshelve epose proof (wf_projection_context _ _ _ _) ; eauto.
       change Γ with (Γ,,, subst_context (c :: List.rev args') 0 []).
-      eapply subst_cumul.
-      * assumption.
+      change 0 with #|[] : context| at 2 3.
+      eapply substitution_equality_subst_conv.
       * eapply projection_subslet.
         4: eapply validity.
         all: eassumption.
@@ -310,82 +350,67 @@ Proof.
         4: eapply validity.
         all: eassumption.
       * constructor.
-        1: reflexivity.
-        apply All2_rev.
-        symmetry.
-        assumption.
-      * apply wf_local_app.
-        2: by constructor.
-        apply PCUICWeakening.weaken_wf_local ; eauto.
-
-      * change (Γ ,,, _ ,,, _) with (Γ,,, (projection_context mdecl idecl p.1.1 ui')).
-        apply weaken_cumul ; auto.
-        --by eapply closed_wf_local ; eauto.
-        --simpl. len. simpl.
-          rewrite (on_declared_projection isdecl).1.(onNpars).
-          rewrite closedn_subst_instance.
-          change t with (i,t).2.
-          eapply declared_projection_closed ; eauto.
-        --simpl. len. simpl.
-          rewrite (on_declared_projection isdecl).1.(onNpars).
-          rewrite closedn_subst_instance.
-          change t with (i,t).2.
-          eapply declared_projection_closed ; eauto.
-        --eapply projection_cumulative_indices ; auto.
-          1: eapply (weaken_lookup_on_global_env' _ _ _ _ (proj1 (proj1 isdecl))).
-          by rewrite <- H0.
+        2: by apply All2_rev.
+        eapply equality_refl ;
+          [apply wf_local_closed_context |eapply subject_is_open_term] ; tea.
+      * apply wf_local_closed_context.
+        apply PCUICWeakening.weaken_wf_local ; auto.
+        eapply wf_projection_context ; eauto.
+      * cbn -[projection_context].
+        apply weaken_equality ; auto.
+        1: apply wf_local_closed_context ; auto.
+        change t with (i,t).2.
+        eapply projection_cumulative_indices ; auto.
+        1: eapply (weaken_lookup_on_global_env' _ _ _ _ (proj1 (proj1 isdecl))).
+        by rewrite <- H0.
 
   - intros mfix n decl types ? ? ? Alltypes Allbodies.
     eexists.
     split.
-    2: reflexivity.
+    2:{
+      apply isType_equality_refl.
+      eapply nth_error_all in Alltypes as [? []] ; tea.
+      eexists ; tea.
+    }
     constructor ; eauto.
-    + clear -Alltypes.
-      induction Alltypes.
-      all: constructor ; auto.
-      destruct p as (?&_&p).
-      apply conv_infer_sort in p as (?&?&?).
-      eexists. eassumption.
-    + clear -Allbodies.
-      fold types.
-      clearbody types.
-      induction Allbodies.
-      all: constructor ; auto.
-      destruct p as (?&p).
-      apply conv_check in p.
-      auto.
+    + apply (All_impl Alltypes).
+      intros ? [? [? s]].
+      apply conv_infer_sort in s as [? []] ; auto.
+      eexists ; eauto.
+    + apply (All_impl Allbodies).
+      intros ? [? s].
+      by apply conv_check in s ; auto.
   
-  - intros mfix n decl types ? ? ? Alltypes Allbodies wfmfix.
+  - intros mfix n decl types ? ? ? Alltypes Allbodies.
     eexists.
     split.
-    2: reflexivity.
+    2:{
+      apply isType_equality_refl.
+      eapply nth_error_all in Alltypes as [? []] ; tea.
+      eexists ; tea.
+    }
     constructor ; eauto.
-    + clear -Alltypes.
-      induction Alltypes.
-      all: constructor ; auto.
-      destruct p as (?&_&p).
-      apply conv_infer_sort in p as (?&?&?).
-      eexists. eassumption.
-    + clear -Allbodies.
-      fold types.
-      clearbody types.
-      induction Allbodies.
-      all: constructor ; auto.
-      destruct p as (_&p).
-      by apply conv_check in p.
+    + apply (All_impl Alltypes).
+      intros ? [? [? s]].
+      apply conv_infer_sort in s as [? []] ; auto.
+      eexists ; eauto.
+    + apply (All_impl Allbodies).
+      intros ? [? s].
+      by apply conv_check in s ; auto.
   
   - intros ? ? ? ? ? ? (?&?&?) ? (?&?&?) ?.
     eexists.
     split.
     1: eassumption.
     etransitivity ; eauto.
+    eapply wt_cum_equality ; tea.
 Qed.
 
 End BDFromPCUIC.
 
 (** The direct consequence on typing *)
 Lemma typing_infering `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
-  Σ ;;; Γ |- t : T -> {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ |- T' <= T}.
+  Σ ;;; Γ |- t : T -> {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T}.
 Proof.
   intros ty.
   apply bidirectional_from_pcuic.

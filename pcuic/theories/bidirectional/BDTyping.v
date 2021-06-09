@@ -74,28 +74,26 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
 | infer_Case (ci : case_info) p c brs ps :
   forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
   mdecl.(ind_npars) = ci.(ci_npar) ->
+  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
   wf_predicate mdecl idecl p ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
-  wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
-  Σ ;;; Γ ,,, p.(pcontext) |- p.(preturn) ▹□ ps ->
   wf_local_bd Σ (Γ ,,, predctx) ->
-  conv_context Σ (Γ ,,, p.(pcontext)) (Γ,,, predctx) ->
+  Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
   is_allowed_elimination Σ ps (ind_kelim idecl) ->
   forall u args,
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
   ctx_inst checking Σ Γ (pparams p)
-  (List.rev (subst_instance (puinst p) (ind_params mdecl))) ->
+  (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
   Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
   isCoFinite mdecl.(ind_finite) = false ->
-  let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
+  let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
   All2i (fun i cdecl br =>
+    All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-    wf_local_bd Σ (Γ ,,, br.(bcontext)) ×
     wf_local_bd Σ (Γ ,,, brctxty.1) ×
-    (conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1)) ×
-    Σ ;;; Γ ,,, br.(bcontext) |- br.(bbody) ◃ brctxty.2)
+    Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2)
     0 idecl.(ind_ctors) brs ->
   Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (skipn ci.(ci_npar) args ++ [c])
 
@@ -157,11 +155,10 @@ and "'wf_local_bd' Σ Γ" := (All_local_env (lift_sorting checking infering_sort
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
   All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
+    (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
     let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
-    wf_local_bd Σ (Γ ,,, (bcontext br)) ×
     wf_local_bd Σ (Γ ,,, brctxty.1) × 
-    conv_context Σ (Γ ,,, (bcontext br)) (Γ ,,, brctxty.1) ×
-    Σ;;; Γ,,, br.(bcontext) |- bbody br ◃ brctxty.2)
+    Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2)
   n ctors brs.
 
 Definition branches_size {cf} {Σ Γ ci mdecl idecl p ptm brs}
@@ -170,12 +167,10 @@ Definition branches_size {cf} {Σ Γ ci mdecl idecl p ptm brs}
   {n ctors}
   (a : tybranches Σ Γ ci mdecl idecl p ptm n ctors brs) : size :=
 
-  (all2i_size _ (fun i x y p => 
-    Nat.max
-    (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.1) 
+  (all2i_size _ (fun i cdecl br p => 
     (Nat.max 
       (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.2.1)
-      (checking_size _ _ _ _ p.2.2.2)))
+      (checking_size _ _ _ _ p.2.2)))
   a).
 
 Fixpoint infering_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t ▹ T) {struct d} : size
@@ -201,7 +196,7 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | |- _ => exact 1
     end.
-    - exact (S (Nat.max a (Nat.max a0 (Nat.max i (Nat.max i1 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (infering_sort_size _) a2))))))).
+    - exact (S (Nat.max a0 (Nat.max i (Nat.max i1 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (infering_sort_size _) a1)))))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
                (all_size _ (fun x p => checking_size _ _ _ _ _ p) a0))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
@@ -368,16 +363,14 @@ Section BidirectionalInduction.
     (forall (Γ : context) (ci : case_info) p c brs ps mdecl idecl
       (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
       mdecl.(ind_npars) = ci.(ci_npar) ->
+      All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
       wf_predicate mdecl idecl p ->
       consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-      wf_local_bd Σ (Γ ,,, p.(pcontext)) ->
-      PΓ (Γ ,,, p.(pcontext)) ->
-      Σ ;;; Γ ,,, p.(pcontext) |- p.(preturn) ▹□ ps ->
-      Psort (Γ ,,, p.(pcontext)) p.(preturn) ps ->
       wf_local_bd Σ (Γ ,,, predctx) ->
       PΓ (Γ ,,, predctx) ->
-      conv_context Σ (Γ ,,, p.(pcontext)) (Γ ,,, predctx) ->
+      Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
+      Psort (Γ ,,, predctx) p.(preturn) ps ->
       is_allowed_elimination Σ ps idecl.(ind_kelim) ->
       forall u args,
       Σ ;;; Γ |- c ▹{ci} (u,args) ->
@@ -388,17 +381,15 @@ Section BidirectionalInduction.
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
       Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
       isCoFinite mdecl.(ind_finite) = false ->
-      let ptm := it_mkLambda_or_LetIn p.(pcontext) p.(preturn) in
+      let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       wf_branches idecl brs ->
       All2i (fun i cdecl br =>
+        All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-        wf_local_bd Σ (Γ ,,, br.(bcontext)) ×
-        PΓ (Γ ,,, br.(bcontext)) ×
         wf_local_bd Σ (Γ ,,, brctxty.1) ×
         PΓ (Γ ,,, brctxty.1) ×
-        conv_context Σ (Γ ,,, br.(bcontext)) (Γ ,,, brctxty.1) ×
-        Σ ;;; Γ ,,, br.(bcontext) |- br.(bbody) ◃ brctxty.2 ×
-        Pcheck (Γ ,,, br.(bcontext)) br.(bbody) brctxty.2)
+        Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2 ×
+        Pcheck (Γ ,,, brctxty.1) br.(bbody) brctxty.2)
         0 idecl.(ind_ctors) brs ->
       Pinfer Γ (tCase ci p c brs) (mkApps ptm (skipn ci.(ci_npar) args ++ [c]))) ->
 
@@ -532,7 +523,7 @@ Section BidirectionalInduction.
       all: applyIH.
 
     - unshelve eapply HCase ; auto.
-      1-4: applyIH.
+      1-3: by applyIH.
       + cbn in IH.
         clear - IH c1.
         induction c1.
@@ -552,15 +543,15 @@ Section BidirectionalInduction.
           lia. 
 
       + cbn in IH.
-        clear - IH a2.
-        induction a2 as [|j cdecl br cdecls brs].
+        clear - IH a1.
+        induction a1 as [|j cdecl br cdecls brs].
         1: by constructor.
-        destruct r as (?&?&?&?).
+        destruct r as (?&?&?).
         constructor.
         * repeat split.
           all: try assumption.
           all: applyIH.
-        * apply IHa2.
+        * apply IHa1.
           intros.
           apply IH.
           simpl.

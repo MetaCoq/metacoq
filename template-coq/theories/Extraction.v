@@ -108,7 +108,8 @@ Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst Numeral.
+           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst Numeral
+           Uint63.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 Print Uint63.to_Z.
@@ -126,7 +127,7 @@ Extraction Library ZArith_dec.
 Extraction Library Sumbool.
 Extraction Library Zbool.
 Extraction Library SpecFloat. *)
-(* Separate Extraction FloatOps.Prim2SF. *)
+Separate Extraction FloatOps.Prim2SF.
 
 Recursive Extraction Library Extractable.
 Extraction Library MCPrelude.

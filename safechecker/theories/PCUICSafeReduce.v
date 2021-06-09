@@ -1820,7 +1820,7 @@ Section ReduceFns.
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
         | view_ind_tInd i u => ret (i; u; args; sq _);
-        | view_ind_other t _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t Empty h) := {
+        | view_ind_other t' _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t Empty h) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i u with inspect (decompose_stack π) := {
               | exist (l, _) eq_decomp => ret (i; u; l; _)
@@ -1848,7 +1848,7 @@ Section ReduceFns.
       { rewrite stack_val.
         now destruct decompose_stack. }
       apply decompose_stack_eq in decomp as ->.
-      now rewrite <- eq_decomp0.
+      now rewrite <- eq_decomp.
   Qed.
 
   Lemma reduce_to_ind_complete Γ ty wat e :

@@ -19,10 +19,10 @@ PCUICAst
 PCUICAstUtils
 PCUICUnivSubst
 PCUICLiftSubst
+PCUICInduction
 PCUICReflect
 PCUICEquality
 PCUICTyping
-PCUICInduction
 PCUICWfUniverses
 PCUICReduction
 PCUICNormal

@@ -108,7 +108,8 @@ Section fixed.
       all: depelim e.
       all: depelim w0.
       all: apply All2_length in a.
-      all: constructor; constructor; rewrite a; auto.
+      all: try (constructor; constructor; rewrite a; auto).
+      all: destruct leq; cbn; repeat constructor.
     - clear -a1 a a0.
       induction a1 in args, args', x2, a, x3, a0, a1 |- *; depelim a; depelim a0; [now constructor|].
       constructor.

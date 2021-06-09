@@ -12,6 +12,7 @@ Set Asymmetric Patterns.
   Allows to get the right induction principle on lists of terms appearing
   in the term syntax (in evar, applications, branches of cases and (co-)fixpoints. *)
 
+Notation prim_ind P p := (P (tPrim p)).
 
 (** Custom induction principle on syntax, dealing with the various lists appearing in terms. *)
 
@@ -35,6 +36,7 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall p, prim_ind P p) ->
     forall t : term, P t.
 Proof.
   intros until t. revert t.
@@ -231,9 +233,11 @@ Lemma term_forall_mkApps_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
+    (forall i, prim_ind P i) ->
     forall t : term, P t.
 Proof.
   intros until t.
+  rename X14 into Pprim.
   assert (Acc (MR lt size) t) by eapply measure_wf, Wf_nat.lt_wf.
   induction H. rename X14 into auxt. clear H. rename x into t.
   move auxt at top.

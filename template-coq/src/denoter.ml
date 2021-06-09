@@ -10,8 +10,11 @@ sig
   val unquote_name : quoted_name -> Name.t
   val unquote_aname : quoted_aname -> Name.t Context.binder_annot
   val unquote_relevance : quoted_relevance -> Sorts.relevance
-  val unquote_int :  quoted_int -> int
+  val unquote_evar : Environ.env -> Evd.evar_map -> quoted_int -> Constr.t list -> Evd.evar_map * Constr.t
+  val unquote_int : quoted_int -> int
   val unquote_bool : quoted_bool -> bool
+  val unquote_int63 : quoted_int63 -> Uint63.t
+  val unquote_float64 : quoted_float64 -> Float64.t
   (* val unquote_sort : quoted_sort -> Sorts.t *)
   (* val unquote_sort_family : quoted_sort_family -> Sorts.family *)
   val unquote_cast_kind : quoted_cast_kind -> Constr.cast_kind
@@ -22,7 +25,9 @@ sig
   val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
   val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
-  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj) structure_of_term
+  val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
+    quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
+    quoted_int63, quoted_float64) structure_of_term
 
 end
 
@@ -36,6 +41,9 @@ let map_evm (f : 'a -> 'b -> 'a * 'c) (evm : 'a) (l : 'b list) : 'a * ('c list) 
   let evm, res = List.fold_left (fun (evm, l) b -> let evm, c = f evm b in evm, c :: l) (evm, []) l in
   evm, List.rev res
 
+let fold_env_evm_right (f : 'a -> 'b -> 'c -> 'a * 'b * 'd) (env : 'a) (evm : 'b) (l : 'c list) : 'a * 'b * ('d list) =
+  List.fold_right (fun b (env, evm, l) -> let env, evm, c = f env evm b in env, evm, c :: l) l (env, evm, [])
+
 module Denoter (D : BaseDenoter) =
 struct
 
@@ -45,28 +53,42 @@ struct
       ACoq_tApp (f, xs) -> app_full_abs f (xs @ acc)
     | _ -> (trm, acc)
 
-  let denote_term (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
-    let rec aux evm (trm: D.t) : _ * Constr.t =
+  let push_rec_types (lna,typarray) env =
+    let open Context.Rel.Declaration in
+    let ctxt = CArray.map2_i (fun i na t -> LocalAssum (na, Vars.lift i t)) lna typarray in
+    Array.fold_left (fun e assum -> Environ.push_rel assum e) env ctxt
+
+  let denote_term (env : Environ.env) (evm : Evd.evar_map) (trm: D.t) : Evd.evar_map * Constr.t =
+    let open Context.Rel.Declaration in
+    let rec aux env evm (trm: D.t) : _ * Constr.t =
       (*    debug (fun () -> Pp.(str "denote_term" ++ spc () ++ pr_constr trm)) ; *)
       match D.inspect_term trm with
       | ACoq_tRel x -> evm, Constr.mkRel (D.unquote_int x + 1)
       | ACoq_tVar x -> evm, Constr.mkVar (D.unquote_ident x)
+      | ACoq_tEvar (n, l) -> 
+        let evm, l' = map_evm (aux env) evm l in
+        D.unquote_evar env evm n l'
       | ACoq_tSort x -> let evm, u = D.unquote_universe evm x in evm, Constr.mkType u
-      | ACoq_tCast (t,c,ty) -> let evm, t = aux evm t in
-        let evm, ty = aux evm ty in
+      | ACoq_tCast (t,c,ty) -> let evm, t = aux env evm t in
+        let evm, ty = aux env evm ty in
         evm, Constr.mkCast (t, D.unquote_cast_kind c, ty)
-      | ACoq_tProd (n,t,b) -> let evm, t = aux evm t in
-        let evm, b = aux evm b in
-        evm, Constr.mkProd (D.unquote_aname n, t, b)
-      | ACoq_tLambda (n,t,b) -> let evm, t = aux evm t in
-        let evm, b = aux evm b in
-        evm, Constr.mkLambda (D.unquote_aname n, t, b)
-      | ACoq_tLetIn (n,e,t,b) -> let evm, e = aux evm e in
-        let evm, t = aux evm t in
-        let evm, b = aux evm b in
-        evm, Constr.mkLetIn (D.unquote_aname n, e, t, b)
-      | ACoq_tApp (f,xs) -> let evm, f = aux evm f in
-        let evm, xs = map_evm aux evm xs in
+      | ACoq_tProd (n,t,b) -> let evm, t = aux env evm t in
+        let n = D.unquote_aname n in
+        let evm, b = aux (Environ.push_rel (LocalAssum (n, t)) env) evm b in
+        evm, Constr.mkProd (n, t, b)
+      | ACoq_tLambda (n,t,b) ->
+        let n = D.unquote_aname n in
+        let evm, t = aux env evm t in
+        let evm, b = aux (Environ.push_rel (LocalAssum (n, t)) env) evm b in
+        evm, Constr.mkLambda (n, t, b)
+      | ACoq_tLetIn (n,e,t,b) -> 
+        let n = D.unquote_aname n in
+        let evm, e = aux env evm e in
+        let evm, t = aux env evm t in
+        let evm, b = aux (Environ.push_rel (LocalDef (n, e, t)) env) evm b in
+        evm, Constr.mkLetIn (n, e, t, b)
+      | ACoq_tApp (f,xs) -> let evm, f = aux env evm f in
+        let evm, xs = map_evm (aux env) evm xs in
         evm, Constr.mkApp (f, Array.of_list xs)
       | ACoq_tConst (s,u) ->
         let s = D.unquote_kn s in
@@ -83,28 +105,32 @@ struct
       | ACoq_tCase (((i, _), r), ty, d, brs) ->
         let ind = D.unquote_inductive i in
         let relevance = D.unquote_relevance r in 
-        let evm, ty = aux evm ty in
-        let evm, d = aux evm d in
-        let evm, brs = map_evm aux evm (List.map snd brs) in
+        let evm, ty = aux env evm ty in
+        let evm, d = aux env evm d in
+        let evm, brs = map_evm (aux env) evm (List.map snd brs) in
         (* todo: reify better case_info *)
         let ci = Inductiveops.make_case_info (Global.env ()) ind relevance Constr.RegularStyle in
         evm, Constr.mkCase (Inductive.contract_case (Global.env ()) (ci, ty, Constr.NoInvert, d, Array.of_list brs))
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                           List.map (fun p->p.rarg) lbd) in
-        let evm, types = map_evm aux evm types in
-        let evm, bodies = map_evm aux evm bodies in
+        let evm, types = map_evm (aux env) evm types in
         let (names,rargs) = (List.map D.unquote_aname names, List.map D.unquote_int rargs) in
         let la = Array.of_list in
-        evm, Constr.mkFix ((la rargs, D.unquote_int i), (la names, la types, la bodies))
+        let lnames = la names and ltypes = la types in
+        let env = push_rec_types (lnames, ltypes) env in
+        let evm, bodies = map_evm (aux env) evm bodies in
+        evm, Constr.mkFix ((la rargs, D.unquote_int i), (lnames, ltypes, la bodies))
       | ACoq_tCoFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                           List.map (fun p->p.rarg) lbd) in
-        let evm, types = map_evm aux evm types in
-        let evm, bodies = map_evm aux evm bodies in
+        let evm, types = map_evm (aux env) evm types in
         let (names,rargs) = (List.map D.unquote_aname names, List.map D.unquote_int rargs) in
         let la = Array.of_list in
-        evm, Constr.mkCoFix (D.unquote_int i, (la names, la types, la bodies))
+        let lnames = la names and ltypes = la types in
+        let env = push_rec_types (lnames, ltypes) env in
+        let evm, bodies = map_evm (aux env) evm bodies in
+        evm, Constr.mkCoFix (D.unquote_int i, (lnames, ltypes, la bodies))
 
       | ACoq_tProj (proj,t) ->
          let (ind, npars, arg) = D.unquote_proj proj in
@@ -115,19 +141,11 @@ struct
                   | Some p -> Names.Constant.label p
                   | None -> failwith "tproj case of denote_term") in
          let p' = Names.Projection.make (Projection.Repr.make ind' ~proj_npars ~proj_arg l) false in
-         let evm, t' = aux evm t in
+         let evm, t' = aux env evm t in
          evm, Constr.mkProj (p', t')
-      (* | _ ->  not_supported_verb trm "big_case"
-       *
-       * | ACoq_tProj (proj,t) ->
-       *   let (ind, _, narg) = D.unquote_proj proj in (\* todo: is narg the correct projection? *\)
-       *   let ind' = D.unquote_inductive ind in
-       *   let projs = Recordops.lookup_projections ind' in
-       *   let evm, t = aux evm t in
-       *   (match List.nth projs (D.unquote_int narg) with
-       *    | Some p -> evm, Constr.mkProj (Names.Projection.make p false, t)
-       *    | None -> (\*bad_term trm *\) ) *)
-      | _ -> failwith "big case of denote_term"
-    in aux evm trm
+      | ACoq_tInt x -> evm, Constr.mkInt (D.unquote_int63 x)
+      | ACoq_tFloat x -> evm, Constr.mkFloat (D.unquote_float64 x)
+
+    in aux env evm trm
 
 end

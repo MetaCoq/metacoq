@@ -236,6 +236,16 @@ Proof.
   destruct l; simpl in *; congruence.
 Qed.
 
+Lemma mapi_rec_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) k l :
+  mapi_rec g (mapi_rec f l k) k = mapi_rec (fun k x => g k (f k x)) l k.
+Proof.
+  induction l in k |- *; simpl; auto. now rewrite IHl.
+Qed.
+
+Lemma mapi_compose {A B C} (g : nat -> B -> C) (f : nat -> A -> B) l :
+  mapi g (mapi f l) = mapi (fun k x => g k (f k x)) l.
+Proof. apply mapi_rec_compose. Qed.
+
 Lemma map_ext {A B : Type} (f g : A -> B) (l : list A) :
   (forall x, f x = g x) ->
   map f l = map g l.
@@ -489,8 +499,6 @@ Proof.
     eapply IHl1 in H2 as []. split; congruence.
 Qed.
 
-Arguments skipn : simpl nomatch.
-
 Lemma skipn_all2 :
   forall {A n} (l : list A),
     #|l| <= n ->
@@ -611,6 +619,34 @@ Proof.
   - destruct l as [|hd' tl'].
     * rewrite skipn_nil. discriminate.
     * simpl. apply IHn.
+Qed.
+
+Fixpoint split_at_aux {A} (n : nat) (acc : list A) (l : list A) : list A * list A :=
+  match n with 
+  | 0 => (List.rev acc, l)
+  | S n' => 
+    match l with
+    | [] => (List.rev acc, [])
+    | hd :: l' => split_at_aux n' (hd :: acc) l'
+    end
+  end.
+
+Definition split_at {A} (n : nat) (l : list A) : list A * list A :=
+  split_at_aux n [] l.
+
+Lemma split_at_aux_firstn_skipn {A} n acc (l : list A) : split_at_aux n acc l = (List.rev acc ++ firstn n l, skipn n l).
+Proof.
+  induction n in acc, l |- *; destruct l; simpl; auto.
+  now rewrite app_nil_r.
+  now rewrite app_nil_r.
+  now rewrite app_nil_r.
+  rewrite IHn. simpl. 
+  now rewrite -app_assoc /=.
+Qed.
+
+Lemma split_at_firstn_skipn {A} n (l : list A) : split_at n l = (firstn n l, skipn n l).
+Proof.
+  now rewrite /split_at split_at_aux_firstn_skipn /= //.
 Qed.
 
 Lemma rev_app :
@@ -743,6 +779,15 @@ Proof.
   assert (#|l| - S i < #|l|) by lia.
   rewrite nth_error_app_lt. rewrite List.rev_length; auto.
   reflexivity.
+Qed.
+
+Lemma nth_error_rev_inv {A} (l : list A) i :
+  i < #|l| ->
+  nth_error (List.rev l) i = nth_error l (#|l| - S i).
+Proof.
+  intros Hi.
+  rewrite nth_error_rev ?List.rev_length; auto.
+  now rewrite List.rev_involutive.
 Qed.
 
 Lemma nth_error_snoc {A} (l : list A) (a : A) (l' : list A) i :
@@ -878,6 +923,97 @@ Proof.
   induction l using rev_ind; simpl; try congruence.
   rewrite rev_unit forallb_app. simpl. rewrite <- IHl.
   now rewrite andb_comm andb_true_r.
+Qed.
+
+Fixpoint unfold {A} (n : nat) (f : nat -> A) : list A :=
+  match n with
+  | 0 => []
+  | S n => unfold n f ++ [f n]
+  end.
+
+Lemma mapi_irrel_list {A B} (f : nat -> A) (l l' : list B) :
+  #|l| = #|l'| ->
+  mapi (fun i (x : B) => f i) l = mapi (fun i x => f i) l'.
+Proof.
+  induction l in f, l' |- *; destruct l' => //; simpl; auto.
+  intros [= eq]. unfold mapi. simpl. f_equal.
+  rewrite !mapi_rec_Sk.
+  now rewrite [mapi_rec _ _ _](IHl (fun x => (f (S x))) l').
+Qed.
+
+Lemma mapi_unfold {A B} (f : nat -> B) l : mapi (fun i (x : A) => f i) l = unfold #|l| f.
+Proof.
+  unfold mapi.
+  induction l in f |- *; simpl; auto.
+  rewrite mapi_rec_Sk.
+  rewrite -IHl. rewrite -(mapi_rec_Sk (fun i x => f i) l 0).
+  change [f #|l|] with (mapi_rec (fun i x => f i) [a] #|l|).
+  rewrite -(Nat.add_0_r #|l|). rewrite -mapi_rec_app.
+  change (f 0 :: _) with (mapi (fun i x => f i) (a :: l)).
+  apply mapi_irrel_list. simpl. rewrite app_length /=; lia.
+Qed.
+
+Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
+Proof.
+  induction m; simpl; rewrite ?app_length /=; auto. lia.
+Qed.
+
+Lemma nth_error_unfold {A} (f : nat -> A) m n : n < m <-> nth_error (unfold m f) n = Some (f n).
+Proof.
+  induction m in n |- *; split; intros Hn; try lia.
+  - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
+  - destruct (Classes.eq_dec n m); [subst|].
+    * simpl. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //.
+    * simpl. rewrite nth_error_app_lt ?unfold_length //; try lia.
+      apply IHm; lia.
+  - simpl in Hn. eapply nth_error_Some_length in Hn.
+    rewrite app_length /= unfold_length in Hn. lia.
+Qed.
+
+Lemma nth_error_unfold_inv {A} (f : nat -> A) m n t : nth_error (unfold m f) n = Some t -> t = (f n).
+Proof.
+  induction m in n |- *; intros Hn; try lia.
+  - simpl in Hn. rewrite nth_error_nil in Hn. discriminate.
+  - simpl in Hn.
+    pose proof (nth_error_Some_length Hn).
+    rewrite app_length /= unfold_length in H.
+    destruct (Classes.eq_dec n m); [subst|].
+    * simpl. revert Hn. rewrite nth_error_app_ge unfold_length // Nat.sub_diag /= //; congruence.
+    * simpl. revert Hn. rewrite nth_error_app_lt ?unfold_length //; try lia. auto.
+Qed.
+
+Lemma In_unfold_inj {A} (f : nat -> A) n i : 
+  (forall i j, f i = f j -> i = j) ->
+  In (f i) (unfold n f) -> i < n.
+Proof.
+  intros hf.
+  induction n; simpl => //.
+  intros H; apply in_app_or in H.
+  destruct H.
+  - specialize (IHn H). lia.
+  - simpl in H. destruct H; [apply hf in H|].
+    * subst. auto.
+    * destruct H.
+Qed.
+
+Lemma forallb_unfold {A} (f : A -> bool) (g : nat -> A) n : 
+  (forall x, x < n -> f (g x)) ->
+  forallb f (unfold n g).
+Proof.
+  intros fg.
+  induction n; simpl; auto.
+  rewrite forallb_app IHn //.
+  intros x lt; rewrite fg //. lia.
+  rewrite /= fg //.
+Qed.
+
+Lemma forallb_mapi {A B} (p : B -> bool) (f : nat -> B) l :
+  (forall i, i < #|l| -> p (f i)) ->
+  forallb p (mapi (fun i (x : A) => f i) l).
+Proof.
+  intros Hp. rewrite (mapi_unfold f).
+  induction #|l| in *; simpl; auto.
+  rewrite forallb_app. simpl. now rewrite Hp // !andb_true_r.
 Qed.
 
 Lemma fold_left_andb_forallb {A} P l x :

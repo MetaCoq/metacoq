@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils.
 
+From MetaCoq.Template Require Import utils.
+From Coq Require Import Floats.SpecFloat.
+From Equations Require Import Equations.
 
 (** ** Reification of names ** *)
 
@@ -28,6 +30,8 @@ From MetaCoq.Template Require Import utils.
     - constructor => [inductive * nat]
     - Projection.t => [projection]
     - GlobRef.t => global_reference
+
+    Finally, we define the models of primitive types (uint63 and floats64).
 *)
 
 Definition ident   := string. (* e.g. nat *)
@@ -36,6 +40,8 @@ Definition qualid  := string. (* e.g. Datatypes.nat *)
 (** Type of directory paths. Essentially a list of module identifiers. The
     order is reversed to improve sharing. E.g. A.B.C is ["C";"B";"A"] *)
 Definition dirpath := list ident.
+
+Instance dirpath_eqdec : Classes.EqDec dirpath := _.
 
 Definition string_of_dirpath : dirpath -> string
   := String.concat "." ∘ rev.
@@ -49,6 +55,7 @@ Inductive modpath :=
 | MPfile  (dp : dirpath)
 | MPbound (dp : dirpath) (id : ident) (i : nat)
 | MPdot   (mp : modpath) (id : ident).
+Derive NoConfusion EqDec for modpath.
 
 Fixpoint string_of_modpath (mp : modpath) : string :=
   match mp with
@@ -59,17 +66,19 @@ Fixpoint string_of_modpath (mp : modpath) : string :=
 
 (** The absolute names of objects seen by kernel *)
 Definition kername := modpath × ident.
+Instance kername_eqdec : Classes.EqDec kername := _.
 
 Definition string_of_kername (kn : kername) :=
   string_of_modpath kn.1 ^ "." ^ kn.2.
-
 
 (** Identifiers that are allowed to be anonymous (i.e. "_" in concrete syntax). *)
 Inductive name : Set :=
 | nAnon
 | nNamed (_ : ident).
+Derive NoConfusion EqDec for name.
 
 Inductive relevance : Set := Relevant | Irrelevant.
+Derive NoConfusion EqDec for relevance.
 
 (** Binders annotated with relevance *)
 Record binder_annot (A : Type) := mkBindAnn { binder_name : A; binder_relevance : relevance }.
@@ -77,6 +86,11 @@ Record binder_annot (A : Type) := mkBindAnn { binder_name : A; binder_relevance 
 Arguments mkBindAnn {_}.
 Arguments binder_name {_}.
 Arguments binder_relevance {_}.
+
+Derive NoConfusion for binder_annot.
+
+Instance eqdec_binder_annot (A : Type) (e : Classes.EqDec A) : Classes.EqDec (binder_annot A).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 Definition map_binder_annot {A B} (f : A -> B) (b : binder_annot A) : binder_annot B :=
   {| binder_name := f b.(binder_name); binder_relevance := b.(binder_relevance) |}.
@@ -86,6 +100,7 @@ Definition eq_binder_annot {A} (b b' : binder_annot A) : Prop :=
 
 (** Type of annotated names *)
 Definition aname := binder_annot name.
+Instance anqme_eqdec : Classes.EqDec aname := _.
 
 Definition string_of_name (na : name) :=
   match na with
@@ -104,6 +119,8 @@ Record inductive : Set := mkInd { inductive_mind : kername ;
                                   inductive_ind : nat }.
 Arguments mkInd _%string _%nat.
 
+Derive NoConfusion EqDec for inductive.
+
 Definition string_of_inductive (i : inductive) :=
   string_of_kername (inductive_mind i) ^ "," ^ string_of_nat (inductive_ind i).
 
@@ -116,6 +133,8 @@ Inductive global_reference :=
 | IndRef : inductive -> global_reference
 | ConstructRef : inductive -> nat -> global_reference.
 
+Derive NoConfusion EqDec for global_reference.
+
 
 Definition string_of_gref gr : string :=
   match gr with
@@ -127,21 +146,10 @@ Definition string_of_gref gr : string :=
     "Constructor " ^ string_of_kername s ^ " " ^ (string_of_nat n) ^ " " ^ (string_of_nat k)
   end.
 
-Definition kername_eq_dec (k k0 : kername) : {k = k0} + {k <> k0}.
-Proof.
-  repeat (decide equality; eauto with eq_dec).
-Defined.
-#[global]
+Definition kername_eq_dec (k k0 : kername) : {k = k0} + {k <> k0} := Classes.eq_dec k k0.
 Hint Resolve kername_eq_dec : eq_dec.
 
-Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'}.
-Proof.
-  decide equality; eauto with eq_dec.
-  destruct i, i0.
-  decide equality; eauto with eq_dec.
-  destruct i, i0.
-  decide equality; eauto with eq_dec.
-Defined.
+Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'} := Classes.eq_dec gr gr'.
 
 Definition ident_eq (x y : ident) :=
   match string_compare x y with
@@ -195,21 +203,29 @@ Proof.
   now rewrite eq_inductive_refl, !PeanoNat.Nat.eqb_refl.
 Qed.
 
-
-
 (** The kind of a cast *)
 Inductive cast_kind : Set :=
 | VmCast
 | NativeCast
 | Cast
 | RevertCast.
+Derive NoConfusion EqDec for cast_kind.
 
 Inductive recursivity_kind :=
   | Finite (* = inductive *)
   | CoFinite (* = coinductive *)
   | BiFinite (* = non-recursive, like in "Record" definitions *).
+Derive NoConfusion EqDec for recursivity_kind.
 
+(* The kind of a conversion problem *)
+Inductive conv_pb :=
+  | Conv
+  | Cumul.
+Derive NoConfusion EqDec for conv_pb.
 
+(* This opaque natural number is a hack to inform unquoting to generate
+  a fresh evar when encountering it. *)
+Definition fresh_evar_id : nat. exact 0. Qed.
 
 (* Parametrized by term because term is not yet defined *)
 Record def term := mkdef {
@@ -222,6 +238,10 @@ Arguments dname {term} _.
 Arguments dtype {term} _.
 Arguments dbody {term} _.
 Arguments rarg {term} _.
+
+Derive NoConfusion for def.
+Instance def_eq_dec {A} : Classes.EqDec A -> Classes.EqDec (def A).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 Definition string_of_def {A} (f : A -> string) (def : def A) :=
   "(" ^ string_of_name (binder_name (dname def))
@@ -247,7 +267,6 @@ Lemma map_dbody {A B} (f : A -> B) (g : A -> B) (d : def A) :
 Proof. destruct d; reflexivity. Qed.
 
 Definition mfixpoint term := list (def term).
-
 
 Definition test_def {A} (tyf bodyf : A -> bool) (d : def A) :=
   tyf d.(dtype) && bodyf d.(dbody).
@@ -368,3 +387,21 @@ Ltac close_All :=
   | H : All2 _ _ _ |- All _ _ =>
     (apply (All2_All_left H) || apply (All2_All_right H)); clear H; simpl
   end.
+
+(** Primitive types models (axiom free) *)
+
+(** Model of unsigned integers *)   
+Definition uint_size := 63.
+Definition uint_wB := (2 ^ (Z.of_nat uint_size))%Z.
+Definition uint63_model := { z : Z | ((0 <=? z) && (z <? uint_wB))%Z }.
+
+Definition string_of_uint63_model (i : uint63_model) := string_of_Z (proj1_sig i).
+
+(** Model of floats *)
+Definition prec := 53%Z.
+Definition emax := 1024%Z.
+(** We consider valid binary encordings of floats as our model *)
+Definition float64_model := sig (valid_binary prec emax).
+
+Definition string_of_float64_model (i : float64_model) := 
+  "<float>".

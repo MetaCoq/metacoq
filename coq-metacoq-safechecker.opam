@@ -16,7 +16,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["sh" "./configure.sh"]
-  [make "-j%{jobs}%" "-C" "safechecker"]
+  [make "-j" "%{jobs}%" "-C" "safechecker"]
 ]
 install: [
   [make "-C" "safechecker" "install"]
@@ -24,7 +24,6 @@ install: [
 version: "dev"
 depends: [
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}
 ]
 synopsis: "Implementation and verification of safe conversion and typechecking algorithms for Coq"

@@ -38,9 +38,9 @@ Section Generation.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-    eapply type_App.
+    destruct i as [s Hs].
+    eapply type_App; eauto.
     eapply type_Cumul; eauto.
-    eapply i.π2. eauto.
   Qed.
 
   Lemma type_it_mkLambda_or_LetIn :

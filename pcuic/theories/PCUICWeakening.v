@@ -118,8 +118,6 @@ Proof.
       * destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
 Qed.
 
-Ltac lia_f_equal := repeat (lia || f_equal).
-
 Lemma smash_context_lift Δ k n Γ :
   smash_context (lift_context n (k + #|Γ|) Δ) (lift_context n k Γ) =
   lift_context n k (smash_context Δ Γ).
@@ -274,7 +272,7 @@ Proof.
   move: Hdecl.
   rewrite /closed_inductive_decl /lift_mutual_inductive_body.
   destruct decl; simpl.
-  move/andP => [clpar clbodies]. f_equal.
+  move/andb_and => [clpar clbodies]. f_equal.
   - now rewrite [fold_context _ _]closed_ctx_lift.
   - eapply forallb_All in clbodies.
     eapply Alli_mapi_id.
@@ -282,7 +280,7 @@ Proof.
       intros. eapply H0.
     * simpl; intros.
       move: H0. rewrite /closed_inductive_body.
-      destruct x; simpl. move=> /andP[/andP [ci ct] cp].
+      destruct x; simpl. move=> /andb_and[/andb_and [ci ct] cp].
       f_equal.
       + rewrite lift_closed; eauto.
         eapply closed_upwards; eauto; lia.
@@ -293,7 +291,7 @@ Proof.
         eapply closed_upwards; eauto; lia.
       + simpl in X. rewrite -X in cp.
         eapply forallb_All in cp. eapply All_map_id; eauto.
-        eapply (All_impl cp); firstorder auto.
+        eapply (All_impl cp); intuition auto.
         destruct x; unfold on_snd; simpl; f_equal.
         apply lift_closed. rewrite context_assumptions_fold.
         eapply closed_upwards; eauto; lia.
@@ -475,7 +473,7 @@ Proof.
   1: move=> //.
   move=> n0.
   rewrite /closedn_ctx !rev_app_distr /id /=.
-  move/andP => [closedx Hctx].
+  move/andb_and => [closedx Hctx].
   rewrite lift_decl_closed.
   - rewrite (@closed_decl_upwards n0) //; try lia.
   - f_equal. now rewrite IHctx.
@@ -887,15 +885,6 @@ Proof.
   destruct t; simpl; try congruence.
 Qed.
 
-Lemma nth_error_rev_inv {A} (l : list A) i :
-  i < #|l| ->
-  nth_error (List.rev l) i = nth_error l (#|l| - S i).
-Proof.
-  intros Hi.
-  rewrite nth_error_rev; autorewrite with len; auto.
-  now rewrite List.rev_involutive.
-Qed.
-
 Lemma weakening_check_one_fix (Γ' Γ'' : context) mfix :
   map
        (fun x : def term =>
@@ -1066,16 +1055,14 @@ Proof.
       now specialize (Hs' _ _ _ wf eq_refl).
     * eapply All_map.
       eapply (All_impl X1); simpl.
-      intros x [[Hb Hlam] IH].
+      intros x [Hb IH].
       rewrite lift_fix_context.
       specialize (IH Γ (Γ' ,,,  (fix_context mfix)) Γ'' wf).
       rewrite app_context_assoc in IH. specialize (IH eq_refl).
-      split; auto.
-      + rewrite lift_context_app Nat.add_0_r app_context_assoc in IH.
-        rewrite app_context_length fix_context_length in IH.
-        rewrite lift_context_length fix_context_length.
-        rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
-      + now rewrite isLambda_lift.
+      rewrite lift_context_app Nat.add_0_r app_context_assoc in IH.
+      rewrite app_context_length fix_context_length in IH.
+      rewrite lift_context_length fix_context_length.
+      rewrite permute_lift; try lia. now rewrite (Nat.add_comm #|Γ'|).
     * red; rewrite <-H1. unfold wf_fixpoint.
       rewrite map_map_compose.
       now rewrite weakening_check_one_fix.
@@ -1187,7 +1174,7 @@ Proof.
   pose proof (closed_wf_local wfΣ (typing_wf_local ty)).
   specialize (X _ ty).
   eapply PCUICClosed.typecheck_closed in ty as [_ closed]; auto.
-  move/andP: closed => [ct cT].
+  move/andb_and: closed => [ct cT].
   rewrite !lift_closed // in X.
   now rewrite closed_ctx_lift in X.
 Qed.
@@ -1212,11 +1199,11 @@ Proof.
   generalize (@nil context_decl) as Δ.
   rewrite /fix_context_gen.
   intros Δ wfΔ.
-  eapply All_local_env_app_inv. split; auto.
+  eapply All_local_env_app. split; auto.
   induction a in Δ, wfΔ |- *; simpl; auto.
   + constructor.
   + simpl.
-    eapply All_local_env_app_inv. split; auto.
+    eapply All_local_env_app. split; auto.
     * repeat constructor.
       simpl.
       destruct p as [s Hs].

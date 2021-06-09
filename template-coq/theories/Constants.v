@@ -87,15 +87,17 @@ Register MetaCoq.Template.BasicAst.VarRef as metacoq.ast.VarRef.
 Register MetaCoq.Template.BasicAst.ConstRef as metacoq.ast.ConstRef.
 Register MetaCoq.Template.BasicAst.IndRef as metacoq.ast.IndRef.
 Register MetaCoq.Template.BasicAst.ConstructRef as metacoq.ast.ConstructRef.
+Register MetaCoq.Template.BasicAst.fresh_evar_id as metacoq.ast.fresh_evar_id.
 
 (* Universes *)
 
-Register MetaCoq.Template.Universes.sort_family as metacoq.ast.sort_family.
+Register MetaCoq.Template.Universes.allowed_eliminations as metacoq.ast.allowed_eliminations.
 Register MetaCoq.Template.Universes.fresh_level as metacoq.ast.fresh_level.
 Register MetaCoq.Template.Universes.fresh_universe as metacoq.ast.fresh_universe.
-Register MetaCoq.Template.Universes.InProp as metacoq.ast.InProp.
-Register MetaCoq.Template.Universes.InSet as metacoq.ast.InSet.
-Register MetaCoq.Template.Universes.InType as metacoq.ast.InType.
+Register MetaCoq.Template.Universes.IntoSProp as metacoq.ast.IntoSProp.
+Register MetaCoq.Template.Universes.IntoPropSProp as metacoq.ast.IntoPropSProp.
+Register MetaCoq.Template.Universes.IntoSetPropSProp as metacoq.ast.IntoSetPropSProp.
+Register MetaCoq.Template.Universes.IntoAny as metacoq.ast.IntoAny.
 (* We convert from simple constraints to ones in Z *)
 Register MetaCoq.Template.Universes.ConstraintType.Lt as metacoq.ast.constraints.Lt.
 Register MetaCoq.Template.Universes.ConstraintType.Le0 as metacoq.ast.constraints.Le0.
@@ -165,6 +167,8 @@ Register MetaCoq.Template.Ast.tCase as metacoq.ast.tCase.
 Register MetaCoq.Template.Ast.tProj as metacoq.ast.tProj.
 Register MetaCoq.Template.Ast.tFix as metacoq.ast.tFix.
 Register MetaCoq.Template.Ast.tCoFix as metacoq.ast.tCoFix.
+Register MetaCoq.Template.Ast.tInt as metacoq.ast.tInt.
+Register MetaCoq.Template.Ast.tFloat as metacoq.ast.tFloat.
 
 (* Local and global declarations *)
 Register MetaCoq.Template.Ast.parameter_entry as metacoq.ast.parameter_entry.

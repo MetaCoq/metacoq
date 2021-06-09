@@ -71,26 +71,6 @@ Definition isConstruct t :=
   | _ => false
   end.
 
-Definition isAssRel Γ x :=
-  match x with
-  | tRel i =>
-    match option_map decl_body (nth_error Γ i) with
-    | Some None => true
-    | _ => false
-    end
-  | _ => false
-  end.
-
-Definition isAxiom Σ x :=
-  match x with
-  | tConst c u =>
-    match lookup_env Σ c with
-    | Some (ConstantDecl {| cst_body := None |}) => true
-    | _ => false
-    end
-  | _ => false
-  end.
-
 Definition isStuckFix t args :=
   match t with
   | tFix mfix idx =>
@@ -128,26 +108,17 @@ Section Wcbv.
       eval (subst10 b0' b1) res ->
       eval (tLetIn na b0 t b1) res
 
-  (** Local variables: defined or undefined *)
+  (** Local variable with bodies *)
   | eval_rel_def i body res :
       option_map decl_body (nth_error Γ i) = Some (Some body) ->
       eval (lift0 (S i) body) res ->
       eval (tRel i) res
-
-  | eval_rel_undef i :
-      option_map decl_body (nth_error Γ i) = Some None ->
-      eval (tRel i) (tRel i)
 
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
       decl.(cst_body) = Some body ->
       eval (subst_instance_constr u body) res ->
       eval (tConst c u) res
-
-  (** Axiom *)
-  | eval_axiom c decl (isdecl : declared_constant Σ c decl) u :
-      decl.(cst_body) = None ->
-      eval (tConst c u) (tConst c u)
 
   (** Case *)
   | eval_iota ind pars r discr c u args p brs res :
@@ -223,14 +194,11 @@ Section Wcbv.
       (forall (i : nat) (body res : term),
           option_map decl_body (nth_error Γ i) = Some (Some body) ->
           eval ((lift0 (S i)) body) res -> P ((lift0 (S i)) body) res -> P (tRel i) res) ->
-      (forall i : nat, option_map decl_body (nth_error Γ i) = Some None -> P (tRel i) (tRel i)) ->
       (forall c (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
           forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
             eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
-      (forall c (decl : constant_body),
-          declared_constant Σ c decl -> forall u : Instance.t, cst_body decl = None -> P (tConst c u) (tConst c u)) ->
       (forall (ind : inductive) (pars : nat) r (discr : term) (c : nat) (u : Instance.t)
               (args : list term) (p : term) (brs : list (nat × term)) (res : term),
           eval discr (mkApps (tConstruct ind c u) args) ->
@@ -277,15 +245,13 @@ Section Wcbv.
           All2 eval a a' -> All2 P a a' -> P (tApp f a) (mkApps f' a')) ->
       (forall t : term, atom t -> P t t) -> forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbeta Hlet Hreldef Hrelvar Hcst Hax Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcong Hatom.
+    intros P Hbeta Hlet Hreldef Hcst Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcong Hatom.
     fix eval_evals_ind 3. destruct 1;
              try solve [match goal with [ H : _ |- _ ] =>
                              match type of H with
                                forall t t0, eval t t0 -> _ => fail 1
                              | _ => eapply H
                              end end; eauto].
-    - eapply Hrelvar, e.
-    - eapply Hax; [eapply isdecl|eapply e].
     - eapply Hfix; eauto.
       clear -a eval_evals_ind.
       revert args argsv a.
@@ -308,7 +274,7 @@ Section Wcbv.
    *)
 
   Definition value_head x :=
-    isConstruct x || isCoFix x || isAssRel Γ x || isAxiom Σ x.
+    isConstruct x || isCoFix x.
 
   (* Lemma value_head_atom x : value_head x -> atom x. *)
   (* Proof. destruct x; auto. Qed. *)
@@ -390,12 +356,6 @@ Section Wcbv.
   Proof.
     intros eve. induction eve using eval_evals_ind; simpl; intros; auto using value.
 
-    - eapply (value_app (tRel i) []). now rewrite /value_head /= H. constructor.
-    - eapply (value_app (tConst c u) []).
-      red in H.
-      rewrite /value_head /= H.
-      destruct decl as [? [b|] ?]; try discriminate.
-      constructor. constructor.
     - eapply value_stuck_fix.
       + apply All_app_inv.
         * now eapply value_mkApps_values.
@@ -433,17 +393,8 @@ Section Wcbv.
     eval t t.
   Proof.
     destruct t; intros vt nt; try discriminate.
-    * constructor.
-      unfold value_head in vt. simpl in vt. destruct option_map as [[o|]|] => //.
-    * unfold value_head in vt. simpl in vt.
-      destruct lookup_env eqn:Heq => //.
-      destruct g eqn:Heq' => //.
-      destruct c0 as [? [b|] ?] eqn:Heq'' => //. subst.
-      intros. eapply eval_axiom. red.
-      now rewrite Heq.
-      easy.
-    * now eapply eval_atom.
-    * now eapply eval_atom.
+    - now eapply eval_atom.
+    - now eapply eval_atom.
   Qed.
 
   Lemma value_final e : value e -> eval e e.
@@ -584,11 +535,10 @@ Section Wcbv.
     ∑ decl, declared_constant Σ c decl *
                  match cst_body decl with
                  | Some body => eval (subst_instance_constr u body) v
-                 | None => v = tConst c u
+                 | None => False
                  end.
   Proof.
     intros H; depind H; try solve_discr'; try now easy.
-    - exists decl. intuition auto. now rewrite e.
     - exists decl. intuition auto. now rewrite e.
     - symmetry in H1. eapply mkApps_nisApp in H1 => //; intuition subst; auto.
       depelim a.

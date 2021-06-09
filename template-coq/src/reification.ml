@@ -14,6 +14,9 @@ sig
   type quoted_kernel_name
   type quoted_inductive
   type quoted_proj
+  type quoted_int63
+  type quoted_float64
+
   type quoted_global_reference
 
   type quoted_sort_family

@@ -12,7 +12,7 @@ authors: ["Simon Boulier <simon.boulier@inria.fr>"
 license: "MIT"
 build: [
   ["sh" "./configure.sh"]
-  [make "-j%{jobs}%" "-C" "translations"]
+  [make "-j" "%{jobs}%" "-C" "translations"]
 ]
 install: [
   [make "-C" "translations" "install"]
@@ -20,7 +20,6 @@ install: [
 version: "dev"
 depends: [
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
 ]
 synopsis: "Translations built on top of MetaCoq"
 description: """

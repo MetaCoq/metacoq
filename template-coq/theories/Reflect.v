@@ -1,4 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
+(* For primitive integers and floats  *)
+From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Induction.
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -134,6 +136,29 @@ Defined.
 Instance reflect_nat : ReflectEq nat := {
   eqb_spec := Nat.eqb_spec
 }.
+
+#[program] 
+Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
+  { eqb := Numbers.Cyclic.Int63.Int63.eqb
+}.
+Next Obligation.
+  destruct (Int63.eqb x y) eqn:eq; constructor.
+  now apply (Numbers.Cyclic.Int63.Int63.eqb_spec x y) in eq.
+  now apply (Numbers.Cyclic.Int63.Int63.eqb_false_spec x y) in eq.
+Qed.
+ 
+Derive NoConfusion EqDec for SpecFloat.spec_float.
+
+Local Obligation Tactic := idtac.
+
+Print PrimFloat.
+#[program] 
+Instance reflect_prim_float : ReflectEq PrimFloat.float :=
+  { eqb x y := PrimFloat.eqb x y }.
+Next Obligation.
+  intros. cbn -[eqb].
+  intros. todo "admit".
+Defined.
 
 Definition eq_level l1 l2 :=
   match l1, l2 with
@@ -496,6 +521,10 @@ Proof.
         subst. inversion e1. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
+  - destruct (Int63.eqs i i0) ; nodec.
+    subst. left. reflexivity.
+  - destruct (eq_dec f f0) ; nodec.
+    subst. left. reflexivity.
 Defined.
 
 Instance reflect_term : ReflectEq term :=
@@ -624,18 +653,18 @@ Proof.
   unfold eqb_constant_body; finish_reflect.
 Defined.
 
-Definition eqb_sort_family x y :=
+Definition eqb_allowed_eliminations x y :=
   match x, y with
-  | InProp, InProp
-  | InSet, InSet
-  | InType, InType => true
-  | InSProp, InSProp => true
+  | IntoSProp, IntoSProp
+  | IntoPropSProp, IntoPropSProp
+  | IntoSetPropSProp, IntoSetPropSProp
+  | IntoAny, IntoAny => true
   | _, _ => false
   end.
 
-Instance reflect_sort_family : ReflectEq sort_family.
+Instance reflect_allowed_eliminations : ReflectEq allowed_eliminations.
 Proof.
-  refine {| eqb := eqb_sort_family |}.
+  refine {| eqb := eqb_allowed_eliminations |}.
   intros [] []; simpl; constructor; congruence.
 Defined.
 

@@ -11,6 +11,7 @@ template-coq: coq Makefile.template
 	$(MAKE) -f Makefile.template optfiles
 	cp src/template_coq.cm* build/
 	$(MAKE) -f Makefile.template
+	# rm gen-src/uint63.*
 
 # The extractable template plugin to run *extracted* template programs in OCaml
 # The sources of the plugin are built by the coq target, which calls the

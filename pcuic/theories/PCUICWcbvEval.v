@@ -93,26 +93,6 @@ Definition isConstruct t :=
   | _ => false
   end.
 
-Definition isAssRel Γ x :=
-  match x with
-  | tRel i =>
-    match option_map decl_body (nth_error Γ i) with
-    | Some None => true
-    | _ => false
-    end
-  | _ => false
-  end.
-
-Definition isAxiom Σ x :=
-  match x with
-  | tConst c u =>
-    match lookup_env Σ c with
-    | Some (ConstantDecl {| cst_body := None |}) => true
-    | _ => false
-    end
-  | _ => false
-  end.
-
 Definition substl defs body : term :=
   fold_left (fun bod term => csubst term 0 bod)
     defs body.
@@ -165,28 +145,11 @@ Section Wcbv.
       eval (csubst b0' 0 b1) res ->
       eval (tLetIn na b0 t b1) res
 
-  (**
-  (** Local variables: defined or undefined *)
-  | eval_rel_def i body res :
-      option_map decl_body (nth_error Γ i) = Some (Some body) ->
-      eval (lift0 (S i) body) res ->
-      eval (tRel i) res
-
-  | eval_rel_undef i :
-      option_map decl_body (nth_error Γ i) = Some None ->
-      eval (tRel i) (tRel i)
-  *)
-
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
       decl.(cst_body) = Some body ->
       eval (subst_instance_constr u body) res ->
       eval (tConst c u) res
-
-  (** Axiom *)
-  | eval_axiom c decl (isdecl : declared_constant Σ c decl) u :
-      decl.(cst_body) = None ->
-      eval (tConst c u) (tConst c u)
 
   (** Case *)
   | eval_iota ind pars discr c u args p brs res :
@@ -257,14 +220,13 @@ Section Wcbv.
    *)
 
   Definition value_head x :=
-    isInd x || isConstruct x || isCoFix x || isAxiom Σ x.
+    isInd x || isConstruct x || isCoFix x.
 
   (* Lemma value_head_atom x : value_head x -> atom x. *)
   (* Proof. destruct x; auto. Qed. *)
 
   Inductive value : term -> Type :=
   | value_atom t : atom t -> value t
-  (* | value_evar n l l' : Forall value l -> Forall value l' -> value (mkApps (tEvar n l) l') *)
   | value_app t l : value_head t -> All value l -> value (mkApps t l)
   | value_stuck_fix f args :
       All value args ->
@@ -274,8 +236,6 @@ Section Wcbv.
 
   Lemma value_values_ind : forall P : term -> Type,
       (forall t, atom t -> P t) ->
-      (* (forall n l l', Forall value l -> Forall P l -> Forall value l' -> Forall P l' -> *)
-      (*                 P (mkApps (tEvar n l) l')) -> *)
       (forall t l, value_head t -> All value l -> All P l -> P (mkApps t l)) ->
       (forall f args,
           All value args ->
@@ -335,11 +295,6 @@ Section Wcbv.
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
     induction 1; simpl; auto using value.
-    - eapply (value_app (tConst c u) []).
-      red in isdecl.
-      rewrite /value_head /= isdecl.
-      destruct decl as [? [b|] ?]; try discriminate.
-      constructor. constructor.
     - change (tApp ?h ?a) with (mkApps h [a]).
       rewrite mkApps_nested.
       apply value_mkApps_inv in IHX1; [|easy].
@@ -443,15 +398,6 @@ Section Wcbv.
       move/(_ H) => Ht.
       induction l using rev_ind. simpl.
       destruct t; try discriminate.
-      (* * constructor.
-        unfold value_head in H. simpl in H. destruct option_map as [[o|]|] => //. *)
-      * unfold value_head in H. simpl in H.
-        destruct lookup_env eqn:Heq => //.
-        destruct g eqn:Heq' => //.
-        destruct c as [? [b|] ?] eqn:Heq'' => //. subst.
-        eapply eval_axiom. red.
-        rewrite Heq. reflexivity.
-        easy.
       * now eapply eval_atom.
       * now eapply eval_atom.
       * now eapply eval_atom.
@@ -644,7 +590,7 @@ Section Wcbv.
   (*   intros H; depind H; try solve_discr. *)
   (*   - depelim H. *)
   (*   - depelim H. *)
-  (*   - eexists _, _; firstorder eauto. *)
+  (*   - eexists _, _; pcuicfo eauto. *)
   (*   - now depelim H. *)
   (*   - discriminate. *)
   (* Qed. *)
@@ -723,10 +669,6 @@ Section Wcbv.
       assert (e0 = e) as -> by now apply uip.
       assert (isdecl0 = isdecl) as -> by now apply uip.
       now specialize (IHev _ ev'); noconf IHev.
-    - depelim ev'; try go.
-      pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) as <-.
-      assert (isdecl0 = isdecl) as -> by now apply uip.
-      now assert (e0 = e) as -> by now apply uip.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
@@ -861,13 +803,10 @@ Section Wcbv.
     ∑ decl, declared_constant Σ c decl *
                  match cst_body decl with
                  | Some body => eval (subst_instance_constr u body) v
-                 | None => v = tConst c u
+                 | None => False
                  end.
   Proof.
     intros H; depelim H.
-    - exists decl.
-      split; [easy|].
-      now rewrite e.
     - exists decl.
       split; [easy|].
       now rewrite e.
@@ -902,8 +841,3 @@ End Wcbv.
 Arguments eval_unique_sig {_ _ _ _}.
 Arguments eval_deterministic {_ _ _ _}.
 Arguments eval_unique {_ _ _}.
-
-(** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
-
-Conjecture closed_typed_wcbeval : forall {cf : checker_flags} (Σ : global_env_ext) t T,
-    Σ ;;; [] |- t : T -> ∑ u, eval (fst Σ) t u.

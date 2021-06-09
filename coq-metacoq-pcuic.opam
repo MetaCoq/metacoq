@@ -16,7 +16,7 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["sh" "./configure.sh"]
-  [make "-j%{jobs}%" "-C" "pcuic"]
+  [make "-j" "%{jobs}%" "-C" "pcuic"]
 ]
 install: [
   [make "-C" "pcuic" "install"]
@@ -25,7 +25,6 @@ version: "dev"
 depends: [
   "coq-equations" {= "dev" }
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
 ]
 synopsis: "A type system equivalent to Coq's and its metatheory"
 description: """

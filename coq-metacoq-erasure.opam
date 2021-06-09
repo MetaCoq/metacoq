@@ -16,15 +16,15 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
 license: "MIT"
 build: [
   ["sh" "./configure.sh"]
-  [make "-j%{jobs}%" "-C" "erasure"]
+  [make "-j" "%{jobs}%" "-C" "erasure"]
 ]
 install: [
   [make "-C" "erasure" "install"]
 ]
 version: "dev"            
 depends: [
+  "coq" { = version }
   "coq-metacoq-template" {= version}
-  "coq-metacoq-checker" {= version}
   "coq-metacoq-pcuic" {= version}
   "coq-metacoq-safechecker" {= version}
 ]

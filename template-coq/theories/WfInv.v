@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config utils Ast AstUtils.
 
 Definition wf_Inv (t : term) :=
   match t with
-  | tRel _ | tVar _ | tSort _ => True
+  | tRel _ | tVar _ | tSort _ | tInt _ | tFloat _ => True
   | tEvar n l => Forall wf l
   | tCast t k t' => wf t /\ wf t'
   | tProd na t b => wf t /\ wf b
@@ -16,7 +16,7 @@ Definition wf_Inv (t : term) :=
   | tConst _ _ | tInd _ _ | tConstruct _ _ _ => True
   | tCase ci p c brs => wf p /\ wf c /\ Forall (wf ∘ snd) brs
   | tProj p t => wf t
-  | tFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody) /\ isLambda def.(dbody) = true) mfix
+  | tFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix
   | tCoFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix
   end.
 
@@ -60,7 +60,7 @@ Qed.
 
 Fixpoint wf_term (t : term) : bool :=
   match t with
-  | tRel _ | tVar _ => true
+  | tRel _ | tVar _ | tInt _ | tFloat _ => true
   | tEvar n l => forallb wf_term l
   | tSort u => true
   | tCast t k t' => wf_term t && wf_term t'

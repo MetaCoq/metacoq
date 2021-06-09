@@ -178,7 +178,7 @@ Section Inversion.
         let params := firstn npar args in
         build_case_predicate_type ind mdecl idecl params u ps = Some pty ×
         Σ ;;; Γ |- p : pty ×
-        leb_sort_family (universe_family ps) (ind_kelim idecl) ×
+        is_allowed_elimination Σ ps (ind_kelim idecl) ×
         isCoFinite (ind_finite mdecl) = false ×
         Σ;;; Γ |- c : mkApps (tInd ind u) args ×
         map_option_out (build_branches_type ind mdecl idecl params u p)
@@ -209,13 +209,11 @@ Section Inversion.
       Σ ;;; Γ |- tFix mfix n : T ->
       ∑ decl,
         let types := fix_context mfix in
-        fix_guard mfix ×
+        fix_guard Σ Γ mfix ×
         nth_error mfix n = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×
         All (fun d =>
-          Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d) ×
-          isLambda (dbody d) = true
-        ) mfix ×
+          Σ ;;; Γ ,,, types |- dbody d : (lift0 #|types|) (dtype d)) mfix ×
         wf_fixpoint Σ mfix ×
         Σ ;;; Γ |- dtype decl <= T.
   Proof.
@@ -226,7 +224,7 @@ Section Inversion.
     forall {Γ mfix idx T},
       Σ ;;; Γ |- tCoFix mfix idx : T ->
       ∑ decl,
-        cofix_guard mfix ×
+        cofix_guard Σ Γ mfix ×
         let types := fix_context mfix in
         nth_error mfix idx = Some decl ×
         All (fun d => isType Σ Γ (dtype d)) mfix ×
@@ -237,6 +235,14 @@ Section Inversion.
         Σ ;;; Γ |- decl.(dtype) <= T.
   Proof.
     intros Γ mfix idx T h. invtac h.
+  Qed.
+
+  (** At this stage we don't typecheck primitive values *)
+  Lemma inversion_Prim :
+    forall {Γ i T},
+      Σ ;;; Γ |- tPrim i : T -> False.
+  Proof.
+    intros Γ i T h. now depind h.
   Qed.
 
   Lemma inversion_it_mkLambda_or_LetIn :

@@ -3,12 +3,179 @@ From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICRename PCUICOnFreeVars PCUICClosed.
+  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICRename PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion.
 
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping.
 
 Require Import ssreflect ssrbool.
 Require Import Coq.Program.Equality.
+
+Lemma on_free_vars_ctx_tip P d : on_free_vars_ctx P [d] = on_free_vars_decl P d.
+Proof. cbn; rewrite andb_true_r // shiftnP0 //. Qed.
+
+Lemma on_free_vars_it_mkLambda_or_LetIn {P Δ t} : 
+  on_free_vars P (it_mkLambda_or_LetIn Δ t) = 
+    on_free_vars_ctx P Δ && on_free_vars (shiftnP #|Δ| P) t.
+Proof.
+  move: P. induction Δ using rev_ind => P.
+  - cbn. now rewrite shiftnP0.
+  - destruct x as [na [b|] ty]; rewrite it_mkLambda_or_LetIn_app /= /mkLambda_or_LetIn /=.
+    rewrite on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /= 
+      /on_free_vars_decl /test_decl /=. ring.
+    rewrite on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /= 
+     /on_free_vars_decl /test_decl /=. ring.
+Qed.
+
+Section OnFreeVars.
+
+  Context `{cf : checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
+
+  Let Pinfer Γ t T :=
+    forall P,
+    on_ctx_free_vars P Γ ->
+    on_free_vars P t ->
+    on_free_vars P T.
+
+  Let Psort (Γ : context) (t : term) (u : Universe.t) := True.
+
+  Let Pprod Γ t (na : aname) A B :=
+    forall P,
+    on_ctx_free_vars P Γ ->
+    on_free_vars P t ->
+    on_free_vars P A × on_free_vars (shiftnP 1 P) B.
+
+  Let Pind Γ (ind : inductive) t (u : Instance.t) args :=
+    forall P,
+    on_ctx_free_vars P Γ ->
+    on_free_vars P t ->
+    All (on_free_vars P) args.
+
+  Let Pcheck (Γ : context) (t : term) (T : term) := True.
+
+  Let PΓ (Γ : context) :=
+    True.
+
+  Theorem bidirectional_on_free_vars : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
+  Proof.
+    apply bidir_ind_env.
+
+    - constructor.
+
+    - intros. red.
+      intros P HΓ Hn. 
+      eapply alli_Alli, Alli_nth_error in HΓ ; tea.
+      apply on_free_vars_lift0.
+      by move: HΓ => /implyP /(_ Hn) /andP [].
+
+    - easy.
+    - easy.
+    - intros until bty.
+      move => _ _ _ Hbty ? ? /= /andP [] ? ?.
+      apply /andP ; split ; tea.
+      apply Hbty ; tea.
+      rewrite on_ctx_free_vars_snoc.
+      apply /andP ; split ; tea.
+
+    - intros until A.
+      move => _ _ _ _ _ Ht ? ? /= /andP [] ? /andP [] ? ?.
+      repeat (apply /andP ; split ; tea).
+      apply Ht ; tea.
+      rewrite on_ctx_free_vars_snoc.
+      repeat (apply /andP ; split ; tea).
+
+    - intros until u.
+      move => _ HAB _ _ ? ? /= /andP [] ? ?.
+      edestruct HAB ; tea.
+      apply on_free_vars_subst1 ; tea.
+
+    - intros.
+      intros ? ? ?.
+      eapply closed_on_free_vars.
+      rewrite closedn_subst_instance.
+      eapply declared_constant_closed_type ; tea.
+
+    - intros.
+      intros ? ? ?.
+      eapply closed_on_free_vars.
+      rewrite closedn_subst_instance.
+      eapply declared_inductive_closed_type ; tea.
+
+    - intros.
+      intros ? ? ?.
+      eapply closed_on_free_vars.
+      eapply declared_constructor_closed_type ; tea.
+
+    - intros.
+      move => ? ? /= /and5P [] ? ? Hctx ? ?.
+      rewrite on_free_vars_mkApps.
+      apply /andP ; split.
+      + rewrite on_free_vars_it_mkLambda_or_LetIn.
+        rewrite test_context_k_closed_on_free_vars_ctx -closedn_ctx_on_free_vars in Hctx.
+        apply /andP ; split.
+        2: by rewrite case_predicate_context_length.
+        rewrite /predctx /case_predicate_context /case_predicate_context_gen /pre_case_predicate_context_gen /inst_case_context.
+        erewrite <- on_free_vars_map2_cstr_args.
+        2: rewrite fold_context_k_length !map_length ; eapply All2_length ; tea.
+        apply on_free_vars_ctx_subst_context.
+        2: by rewrite forallb_rev.
+        rewrite on_free_vars_subst_instance_context List.rev_length.
+        apply closedn_ctx_on_free_vars_shift.
+        replace #|pparams p| with (context_assumptions (ind_params mdecl)).
+        1: eapply closed_ind_predicate_context ; tea ; eapply declared_minductive_closed ; eauto.
+        erewrite wf_predicate_length_pars ; tea.
+        eapply PCUICDeclarationTyping.onNpars, PCUICWeakeningEnv.on_declared_minductive ; eauto.
+
+      + rewrite forallb_app.
+        apply /andP ; split.
+        2: by rewrite /= andb_true_r.
+        apply All_forallb, All_skipn.
+        auto.
+    
+    - intros until args.
+      move => ? _ ? largs ? ? ? ?.
+      apply on_free_vars_subst.
+      + cbn ; apply /andP ; split ; auto.
+        rewrite forallb_rev.
+        apply All_forallb.
+        auto.
+      + eapply closedn_on_free_vars.
+        rewrite closedn_subst_instance /= List.rev_length largs.
+        eapply declared_projection_closed_type ; tea. 
+
+    - intros until decl.
+      move => ? ndec ? ? ? ? ? /= Hmfix.
+      eapply forallb_nth_error in Hmfix.
+      erewrite ndec in Hmfix.
+      cbn in Hmfix.
+      by move: Hmfix => /andP [].
+
+    - intros until decl.
+      move => ? ndec ? ? ? ? ? /= Hmfix.
+      eapply forallb_nth_error in Hmfix.
+      erewrite ndec in Hmfix.
+      cbn in Hmfix.
+      by move: Hmfix => /andP [].
+    
+    - easy.
+
+    - intros ? ? ? ? ? ? _ HT Hred.
+      intros ? HΓ Ht.
+      specialize (HT _ HΓ Ht).
+      eapply red_on_free_vars in Hred ; tea.
+      by move: Hred => /= /andP [].
+    - intros ? ? ? ? ? ? _ HT Hred.
+
+      intros ? HΓ Ht.
+      specialize (HT _ HΓ Ht).
+      eapply red_on_free_vars in Hred ; tea.
+      rewrite on_free_vars_mkApps in Hred.
+      by move: Hred => /= /forallb_All.
+
+    - easy.
+
+  Qed.
+
+
 
 Lemma All_sigT {A B : Type} (P : A -> B -> Type) l :
   All (fun x => ∑ y, P x y) l ->
@@ -355,11 +522,31 @@ Section BDStrengthening.
       1: eapply declared_constructor_closed_type ; tea.
       lia.
     
-    - admit.
+    - intros. red. intros. subst.
+      destruct t' ; cbn in H6 ; inversion H6 ; subst ; clear H6.
+      admit.
     
-    - admit.
-    
-    - admit.
+    - intros. red. intros. subst.
+      destruct t' ; cbn in H2 ; inversion H2 ; subst ; clear H2.
+      edestruct X0 as (?&?&?).
+      1-2: reflexivity.
+      subst.
+      rewrite map_length in H0.
+      eexists ; split.
+      2: econstructor ; eauto.
+      rewrite -map_rev -map_cons distr_lift_subst.
+      f_equal.
+      symmetry.
+      apply lift_closed.
+      rewrite closedn_subst_instance.
+      eapply closed_upwards.
+      1: eapply declared_projection_closed_type ; tea.
+      rewrite /= List.rev_length.
+      lia.
+
+    - intros. red. intros. subst.
+      destruct t' ; cbn in H3 ; inversion H3 ; subst ; clear H3.
+      admit.
     
     - admit.
     

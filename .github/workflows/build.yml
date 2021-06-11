@@ -12,7 +12,7 @@ jobs:
           - 'dev'
         ocaml_version:
           - '4.07-flambda'
-        target: [ local, opam ]
+        target: [ local-and-clean, opam ]
       fail-fast: true
 
     steps:

@@ -9,7 +9,7 @@ then
     echo "Updating gen-src from src"
     mkdir -p build
     echo "Copying from src to gen-src"
-    for x in ${TOCOPY}; do rm -f gen-src/$x; cp src/$x gen-src/$x; done
+    for x in ${TOCOPY}; do rm -f gen-src/$x; cp -a src/$x gen-src/$x; done
     echo "Renaming files to camelCase"
     (cd gen-src; ./to-lower.sh)
     rm -f gen-src/*.d gen-src/*.cm*

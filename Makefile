@@ -77,11 +77,11 @@ cleanplugins:
 	$(MAKE) -C safechecker cleanplugin
 	$(MAKE) -C erasure cleanplugin
 
-ci-local:
+ci-local-noclean:
 	./configure.sh local
 	$(MAKE) all test-suite TIMED=pretty-timed
 
-ci-local-and-clean: ci-local
+ci-local: ci-local-noclean
   $(MAKE) clean
 
 ci-opam:

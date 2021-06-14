@@ -5,6 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICPosition.
 From MetaCoq.PCUIC Require Export PCUICReduction PCUICCumulativity.
 
+Import MonadNotation.
+
 (* TODO: remove this export *)
 From MetaCoq Require Export LibHypsNaming.
 

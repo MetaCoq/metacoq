@@ -13,6 +13,8 @@ Set Warnings "+notation_overridden".
 
 Require Import PCUICToTemplate.
 
+Import MonadNotation.
+
 Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags where needed *)
 
 (* from Checker Generation to avoid dependencies *)

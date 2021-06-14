@@ -1,4 +1,5 @@
 From MetaCoq.Template Require Import utils All.
+Import MonadNotation.
 
 Goal True.
   let k x := pose (y := x) in

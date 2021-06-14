@@ -1,4 +1,5 @@
 From MetaCoq.Template Require Import utils All.
+Import MonadNotation.
 
 
 Module Type A.

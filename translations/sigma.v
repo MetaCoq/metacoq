@@ -2,6 +2,7 @@
 From MetaCoq.Template Require Import utils All.
 
 Local Set Primitive Projections.
+Import MonadNotation.
 
 #[universes(template)]
 Record sigma A B :=

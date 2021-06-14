@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils All.
 
+Import MonadNotation.
 
 (** This is just printing **)
 MetaCoq Test Quote (fun x : nat => x).

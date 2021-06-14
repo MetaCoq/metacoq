@@ -5,6 +5,8 @@ From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeCh
 From Equations Require Import Equations.
 Existing Instance default_checker_flags.
 
+Import MonadNotation.
+
 (* ********************************************************* *)
 (* In this file we define a small plugin which proves        *)
 (* the identity theorem for any sort using the safe checker. *)

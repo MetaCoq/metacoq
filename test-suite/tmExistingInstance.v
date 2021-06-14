@@ -1,4 +1,5 @@
 From MetaCoq.Template Require Import utils All.
+Import MonadNotation.
 
 MetaCoq Run (tmLocate1 "I" >>= tmDefinition "qI").
 

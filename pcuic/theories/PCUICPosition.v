@@ -4,6 +4,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICReflect PCUICEquality PCUICLiftSubst.
 
+Import MonadNotation.
+
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 

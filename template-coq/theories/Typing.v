@@ -5,6 +5,8 @@ From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasse
 From MetaCoq.Template Require Import config utils Ast AstUtils LiftSubst UnivSubst
      EnvironmentTyping Reflect TermEquality.
 
+Import MonadNotation.
+
 (** * Typing derivations
 
   Inductive relations for reduction, conversion and typing of CIC terms.

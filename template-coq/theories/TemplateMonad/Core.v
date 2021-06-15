@@ -2,6 +2,7 @@
 From MetaCoq.Template Require Import utils Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
+Import MCMonadNotation.
 
 (** * The Template Monad
 

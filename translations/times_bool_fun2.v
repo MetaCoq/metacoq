@@ -2,6 +2,7 @@
 From MetaCoq.Template Require Import utils All.
 Unset Universe Checking.
 From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.
+Import MCMonadNotation.
 
 Unset Strict Unquote Universe Mode.
 

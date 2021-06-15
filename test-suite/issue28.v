@@ -2,7 +2,7 @@ Require Import MetaCoq.Template.All.
 Require Export String List.
 Open Scope string.
 Import ListNotations.
-Import MonadNotation.
+Import MCMonadNotation.
 
 Inductive test (X : Type) := test_T : test X -> test X.
 

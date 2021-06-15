@@ -4,7 +4,7 @@ From Coq.Numbers.Cyclic Require Import PrimInt63 Sint63.
 
 Local Open Scope string_scope.
 Local Open Scope sint63_scope.
-Import MonadNotation.
+Import MCMonadNotation.
 
 Definition bigint : Int63.int := 542985047%int63.
 

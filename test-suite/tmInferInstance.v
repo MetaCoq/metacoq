@@ -1,7 +1,7 @@
 Require Import MetaCoq.Template.All.
 Require Export String List.
 
-Import MonadNotation.
+Import MCMonadNotation.
 
 Existing Class True.
 Existing Instance I.

@@ -2,6 +2,7 @@
 From MetaCoq.Template Require Import utils Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
+Import MCMonadNotation.
 
 (** * The Template Monad
 
@@ -63,6 +64,8 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 
 (** This allow to use notations of MonadNotation *)
 Instance TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
+Instance TemplateMonad_Monad : Monad TemplateMonad :=
+>>>>>>> 72811398 (Merge pull request #566 from yforster/no_export_MonadNotation)
   {| ret := @tmReturn ; bind := @tmBind |}.
 
 

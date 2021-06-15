@@ -7,6 +7,7 @@ From Coq Require Import String.
 Local Open Scope string_scope.
 
 From MetaCoq.Template Require Import utils.
+Import MCMonadNotation.
 
 Definition test (p : Ast.program) : string :=
   erase_and_print_template_program p.

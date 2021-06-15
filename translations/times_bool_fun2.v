@@ -1,6 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils All.
 From MetaCoq.Translations Require Import translation_utils times_bool_fun MiniHoTT.
+Import MCMonadNotation.
 
 Unset Strict Unquote Universe Mode.
 Unset Universe Checking.

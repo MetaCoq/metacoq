@@ -1,6 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils All.
 
+Import MCMonadNotation.
+
 (* **************************************************** *)
 (* In this file we define a small plugin which allow to *)
 (* add a constructor to an inductive without rewriting  *)

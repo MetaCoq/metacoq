@@ -30,5 +30,3 @@ Notation "A * B" := (prod A B) : type_scope2.
 Global Open Scope type_scope2.
 
 Global Open Scope metacoq_scope.
-
-Export MonadNotation.

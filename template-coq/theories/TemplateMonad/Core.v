@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import utils Ast AstUtils Common.
 
 Local Set Universe Polymorphism.
-Import MonadNotation.
+Import MCMonadNotation.
 
 (** * The Template Monad
 
@@ -62,7 +62,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmInferInstance : option reductionStrategy -> forall A : Type@{t}, TemplateMonad (option_instance A)
 .
 
-(** This allow to use notations of MonadNotation *)
+(** This allow to use notations of MCMonadNotation *)
 Instance TemplateMonad_Monad : Monad TemplateMonad :=
   {| ret := @tmReturn ; bind := @tmBind |}.
 

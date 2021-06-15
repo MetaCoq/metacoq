@@ -13,7 +13,7 @@ From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCor
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-Import MonadNotation.
+Import MCMonadNotation.
 
 From Equations Require Import Equations.
 Set Equations Transparent.

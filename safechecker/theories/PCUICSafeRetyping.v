@@ -13,7 +13,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
-Import monad_utils.MonadNotation.
+Import monad_utils.MCMonadNotation.
 
 Hint Constructors assumption_context : pcuic.
 

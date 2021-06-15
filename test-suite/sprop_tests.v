@@ -1,7 +1,7 @@
 Require Import String List.
 Require Import MetaCoq.Template.All.
 
-Import ListNotations MonadNotation.
+Import ListNotations MCMonadNotation.
 
 Open Scope string.
 

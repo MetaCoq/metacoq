@@ -1,7 +1,7 @@
 From Coq Require Import String List Nat.
 From MetaCoq.Template Require Import All.
 
-Import MonadNotation String ListNotations.
+Import MCMonadNotation String ListNotations.
 
 Definition foo : nat. exact 0. Qed.
 

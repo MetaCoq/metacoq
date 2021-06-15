@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSu
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.
 
-Import MonadNotation.
+Import MCMonadNotation.
 Existing Instance default_checker_flags.
 
 (* ********************************************************* *)

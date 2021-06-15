@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import utils All Checker.
 From MetaCoq.Translations Require Import translation_utils sigma.
 
-Import MonadNotation.
+Import MCMonadNotation.
 Local Existing Instance config.default_checker_flags.
 Local Existing Instance default_fuel.
 

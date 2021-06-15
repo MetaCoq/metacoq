@@ -21,7 +21,7 @@ Require Import ssreflect ssrbool.
 Local Set Keyed Unification.
 Set Equations Transparent.
 
-Import MonadNotation.
+Import MCMonadNotation.
 
 (** It otherwise tries [auto with *], very bad idea. *)
 Ltac Coq.Program.Tactics.program_solve_wf ::= 

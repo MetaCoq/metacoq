@@ -6,7 +6,7 @@ From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
 Import ConstraintType.
 
-Import MonadNotation.
+Import MCMonadNotation.
 
 Arguments Z.add : simpl nomatch.
 Arguments Nat.leb : simpl nomatch.

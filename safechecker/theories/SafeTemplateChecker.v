@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
 
-Import MonadNotation.
+Import MCMonadNotation.
 
 Program Definition infer_template_program {cf : checker_flags} (p : Ast.program) φ Hφ
   : EnvCheck (∑ A, ∥ (trans_global_decls p.1, φ) ;;; [] |- trans p.2 : A ∥) :=

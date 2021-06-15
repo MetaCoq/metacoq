@@ -21,7 +21,7 @@ Class MonadExc E (m : Type -> Type) : Type :=
 }.
 
 
-Module MonadNotation.
+Module MCMonadNotation.
   Declare Scope monad_scope.
   Delimit Scope monad_scope with monad.
 
@@ -42,9 +42,9 @@ Module MonadNotation.
 
   Notation "e1 ;; e2" := (_ <- e1%monad ;; e2%monad)%monad
     (at level 100, right associativity) : monad_scope.
-End MonadNotation.
+End MCMonadNotation.
 
-Import MonadNotation.
+Import MCMonadNotation.
 
 Instance option_monad : Monad option :=
   {| ret A a := Some a ;

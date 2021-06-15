@@ -207,6 +207,13 @@ Module SortFamily.
     | _ => false
     end.
 
+  Definition from_univ u : t :=
+    match u with
+    | UType => sfType
+    | UProp => sfProp
+    | USProp => sfSProp
+    | UGlobal s => sfGlobal s
+    end.
 
   Definition sort_val v (x : t) : universe_family :=
     match x with
@@ -220,6 +227,7 @@ Module SortFamily.
   Definition is_prop t := if t is sfProp then true else false.
   Definition is_sprop t := if t is sfSProp then true else false.
   Definition is_type t := if t is sfType then true else false.
+  Definition is_var t := if t is (sfVar _) then true else false.
 
   Lemma is_prop_prop : is_prop sfProp.
   Proof. trivial. Qed.
@@ -229,6 +237,20 @@ Module SortFamily.
 
   Lemma is_type_type : is_type sfType.
   Proof. trivial. Qed.
+
+  Lemma is_var_var {n} : is_var (sfVar n).
+  Proof. trivial. Qed.
+
+  Local Unset Program Cases.
+  Program Definition to_univ t : is_var t = false -> universe_family :=
+    match t with
+    | sfType => fun _ => UType
+    | sfProp => fun _ => UProp
+    | sfSProp => fun _ => USProp
+    | sfGlobal s => fun _ => UGlobal s
+    | sfVar n => fun _ => _
+    end.
+
 End SortFamily.
 
 
@@ -2092,8 +2114,8 @@ Section Univ.
     | IntoAny, IntoAny => true
     | _, _ => false
     end.
-
-End Univ. *)
+*)
+End Univ.
 
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : Universe.t. exact Universe.type0. Qed.

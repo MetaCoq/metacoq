@@ -25,6 +25,7 @@ Reserved Notation " Σ ;;; Γ |- t ▹Π ( na , A , B ) " (at level 50, Γ, t, n
 Reserved Notation " Σ ;;; Γ |- t ▹{ ind } ( u , args )" (at level 50, Γ, t, ind, u, args at next level).
 Reserved Notation " Σ ;;; Γ |- t ◃ T " (at level 50, Γ, t, T at next level).
 Reserved Notation "'wf_local_bd' Σ Γ " (at level 9, Σ, Γ at next level).
+Reserved Notation "'wf_local_bd_rel' Σ Γ Γ'" (at level 9, Σ, Γ, Γ' at next level).
 
 Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | infer_Rel n decl :
@@ -78,7 +79,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
   wf_predicate mdecl idecl p ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
-  wf_local_bd Σ (Γ ,,, predctx) ->
+  wf_local_bd_rel Σ Γ predctx ->
   Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
   is_allowed_elimination Σ ps (ind_kelim idecl) ->
   forall u args,
@@ -92,7 +93,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   All2i (fun i cdecl br =>
     All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-    wf_local_bd Σ (Γ ,,, brctxty.1) ×
+    wf_local_bd_rel Σ Γ brctxty.1 ×
     Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2)
     0 idecl.(ind_ctors) brs ->
   Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (skipn ci.(ci_npar) args ++ [c])
@@ -149,7 +150,8 @@ and " Σ ;;; Γ |- t ▹□ u " := (@infering_sort _ Σ Γ t u) : type_scope
 and " Σ ;;; Γ |- t ▹Π ( na , A , B ) " := (@infering_prod _ Σ Γ t na A B) : type_scope
 and " Σ ;;; Γ |- t ▹{ ind } ( u , args ) " := (@infering_indu _ Σ Γ ind t u args) : type_scope
 and " Σ ;;; Γ |- t ◃ T " := (@checking _ Σ Γ t T) : type_scope
-and "'wf_local_bd' Σ Γ" := (All_local_env (lift_sorting checking infering_sort Σ) Γ).
+and "'wf_local_bd' Σ Γ" := (All_local_env (lift_sorting checking infering_sort Σ) Γ)
+and "'wf_local_bd_rel' Σ Γ Γ'" := (All_local_rel (lift_sorting checking infering_sort Σ) Γ Γ').
 
 
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
@@ -157,7 +159,7 @@ Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
     (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
     let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
-    wf_local_bd Σ (Γ ,,, brctxty.1) × 
+    (wf_local_bd_rel Σ Γ brctxty.1) × 
     Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2)
   n ctors brs.
 
@@ -169,7 +171,7 @@ Definition branches_size {cf} {Σ Γ ci mdecl idecl p ptm brs}
 
   (all2i_size _ (fun i cdecl br p => 
     (Nat.max 
-      (All_local_env_sorting_size _ _ checking_size sorting_size _ _ p.2.1)
+      (All_local_rel_sorting_size _ _ checking_size sorting_size _ _ _ p.2.1)
       (checking_size _ _ _ _ p.2.2)))
   a).
 
@@ -187,6 +189,7 @@ Proof.
           | H : infering_indu _ _ _ _ _ _ |- _ => apply infering_indu_size in H 
           | H : checking _ _ _ _ |- _ => apply checking_size in H
           | H : wf_local_bd _ _ |- _ => apply (All_local_env_sorting_size _ _ (checking_size _) (infering_sort_size _) _ _) in H
+          | H : wf_local_bd_rel _ _ _ |- _ => apply (All_local_rel_sorting_size _ _ (checking_size _) (infering_sort_size _) _ _) in H
           end ;
     match goal with
     | H : All2i _ _ _ _ |- _ => idtac
@@ -223,6 +226,7 @@ Arguments lexprod [A B].
 Section BidirectionalInduction.
 
   #[local] Notation wfl_size := (All_local_env_sorting_size _ _ (@checking_size _) (@infering_sort_size _) _ _).
+  #[local] Notation wfl_size_rel := (All_local_rel_sorting_size _ _ (@checking_size _) (@infering_sort_size _) _ _ _).
 
   Context `{cf : checker_flags}.
   Context (Σ : global_env_ext).
@@ -233,10 +237,12 @@ Section BidirectionalInduction.
   Context (Pprod : context -> term -> aname -> term -> term -> Type).
   Context (Pind : context -> inductive -> term -> Instance.t -> list term -> Type).
   Context (PΓ : context -> Type).
+  Context (PΓ_rel : context -> context -> Type).
 
 (** This is what we wish to prove mutually given the previous predicates *)
   Definition env_prop_bd :=
     (forall Γ , wf_local_bd Σ Γ -> PΓ Γ) ×
+    (forall Γ Γ', wf_local_bd_rel Σ Γ Γ' -> PΓ_rel Γ Γ') ×
     (forall Γ t T, Σ ;;; Γ |- t ◃ T -> Pcheck Γ t T) ×
     (forall Γ t T, Σ ;;; Γ |- t ▹ T -> Pinfer Γ t T) ×
     (forall Γ t u, Σ ;;; Γ |- t ▹□ u -> Psort Γ t u) ×
@@ -249,6 +255,7 @@ Section BidirectionalInduction.
 
   Inductive typing_sum : Type :=
     | context_cons : forall (Γ : context) (wfΓ : wf_local_bd Σ Γ), typing_sum
+    | context_rel_cons : forall (Γ Γ' : context) (wfΓ' : wf_local_bd_rel Σ Γ Γ'), typing_sum
     | check_cons : forall (Γ : context) T t, Σ ;;; Γ |- t ◃ T -> typing_sum
     | inf_cons : forall (Γ : context) T t, Σ ;;; Γ |- t ▹ T -> typing_sum
     | sort_cons : forall (Γ : context) t u, Σ ;;; Γ |- t ▹□ u -> typing_sum
@@ -258,6 +265,7 @@ Section BidirectionalInduction.
   Definition typing_sum_size (d : typing_sum) :=
   match d with
     | context_cons Γ wfΓ => wfl_size wfΓ
+    | context_rel_cons _ _ wfΓ' => wfl_size_rel wfΓ'
     | check_cons _ _ _ d => (checking_size d)
     | inf_cons _ _ _ d => (infering_size d)
     | sort_cons _ _ _ d => (infering_sort_size d)
@@ -268,6 +276,7 @@ Section BidirectionalInduction.
   Definition Ptyping_sum (d : typing_sum) :=
   match d with
     | context_cons Γ _ => PΓ Γ
+    | context_rel_cons Γ Γ' _ => PΓ_rel Γ Γ'
     | check_cons Γ T t _ => Pcheck Γ t T
     | inf_cons Γ T t _ => Pinfer Γ t T
     | sort_cons Γ T u _ => Psort Γ T u
@@ -278,6 +287,8 @@ Section BidirectionalInduction.
   Ltac applyIH := match goal with
     | IH : forall d', _ -> Ptyping_sum d' |- PΓ ?Γ =>
       unshelve eapply (IH (context_cons Γ _))
+    | IH : forall d', _ -> Ptyping_sum d' |- PΓ_rel ?Γ ?Γ' =>
+      unshelve eapply (IH (context_rel_cons Γ Γ' _))
     | IH : forall d', _ -> Ptyping_sum d' |- Pcheck ?Γ ?t ?T =>
       unshelve eapply (IH (check_cons Γ T t _))
     | IH : forall d', _ -> Ptyping_sum d' |- Pinfer ?Γ ?t ?T =>
@@ -301,9 +312,14 @@ Section BidirectionalInduction.
   Lemma bidir_ind_env :
     let Pdecl_check := fun Σ Γ wfΓ t T tyT => Pcheck Γ t T in
     let Pdecl_sort := fun Σ Γ wfΓ t u tyT => Psort Γ t u in
+    let Pdecl_check_rel Γ := fun _ Δ _ t T _ => Pcheck (Γ,,,Δ) t T in
+    let Pdecl_sort_rel Γ := fun _ Δ _ t u _ => Psort (Γ,,,Δ) t u in
 
     (forall (Γ : context) (wfΓ : wf_local_bd Σ Γ), 
       All_local_env_over_sorting checking infering_sort Pdecl_check Pdecl_sort Σ Γ wfΓ -> PΓ Γ) ->
+
+    (forall (Γ Γ' : context) (wfΓ' : wf_local_bd_rel Σ Γ Γ'), 
+      All_local_env_over_sorting (fun Σ Δ => checking Σ (Γ,,,Δ)) (fun Σ Δ => infering_sort Σ (Γ,,,Δ)) (Pdecl_check_rel Γ) (Pdecl_sort_rel Γ) Σ Γ' wfΓ' -> PΓ_rel Γ Γ') ->
 
     (forall (Γ : context) (n : nat) decl,
       nth_error Γ n = Some decl ->
@@ -367,8 +383,8 @@ Section BidirectionalInduction.
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
       wf_predicate mdecl idecl p ->
       consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-      wf_local_bd Σ (Γ ,,, predctx) ->
-      PΓ (Γ ,,, predctx) ->
+      wf_local_bd_rel Σ Γ predctx ->
+      PΓ_rel Γ predctx ->
       Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
       Psort (Γ ,,, predctx) p.(preturn) ps ->
       is_allowed_elimination Σ ps idecl.(ind_kelim) ->
@@ -386,8 +402,8 @@ Section BidirectionalInduction.
       All2i (fun i cdecl br =>
         All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-        wf_local_bd Σ (Γ ,,, brctxty.1) ×
-        PΓ (Γ ,,, brctxty.1) ×
+        wf_local_bd_rel Σ Γ brctxty.1 ×
+        PΓ_rel Γ brctxty.1 ×
         Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2 ×
         Pcheck (Γ ,,, brctxty.1) br.(bbody) brctxty.2)
         0 idecl.(ind_ctors) brs ->
@@ -447,7 +463,7 @@ Section BidirectionalInduction.
       
     env_prop_bd.
   Proof.
-    intros Pdecl_check Pdecl_sort HΓ HRel HSort HProd HLambda HLetIn HApp HConst HInd HConstruct HCase
+    intros Pdecl_check Pdecl_sort Pdecl_check_rel Pdecl_sort_rel HΓ HΓRel HRel HSort HProd HLambda HLetIn HApp HConst HInd HConstruct HCase
       HProj HFix HCoFix HiSort HiProd HiInd HCheck ; unfold env_prop_bd.
       pose (@Fix_F typing_sum (precompose lt typing_sum_size) Ptyping_sum) as p.
     forward p.
@@ -455,6 +471,7 @@ Section BidirectionalInduction.
     enough (HP : forall x : typing_sum, Ptyping_sum x).
     - repeat split ; intros.
       + exact (HP (context_cons Γ X)).
+      + exact (HP (context_rel_cons Γ Γ' X)). 
       + exact (HP (check_cons Γ T t X)).
       + exact (HP (inf_cons Γ T t X)).
       + exact (HP (sort_cons Γ t u X)).
@@ -466,7 +483,7 @@ Section BidirectionalInduction.
     clear p.     
     intros d IH.
     destruct d ; simpl.
-    3: destruct i.
+    4: destruct i.
     
     - eapply HΓ.
       dependent induction wfΓ.
@@ -476,11 +493,10 @@ Section BidirectionalInduction.
         * apply IHwfΓ.
         intros ; apply IH.
         cbn in H |- *. lia.
-        
         * simpl. red.
           applyIH.
           simpl.
-          assert (0 < wfl_size wfΓ) by apply All_local_env_sorting_size_pos.
+          assert (0 < wfl_size wfΓ) by apply All_local_env_size_pos.
           simpl.
           lia.
       + destruct t0 as [u h].
@@ -490,6 +506,33 @@ Section BidirectionalInduction.
           simpl in H |- *. pose proof (infering_sort_size_pos h). lia.
         * red. applyIH. pose proof (infering_sort_size_pos h). simpl in H |- *. lia.
         * red. applyIH. pose proof (checking_size_pos t1). simpl in H |- *. lia.
+
+    - eapply HΓRel.
+      dependent induction wfΓ'.
+      + constructor.
+      + destruct t0 as (u & d).
+        constructor.
+        * apply IHwfΓ'.
+          intros ; apply IH.
+          cbn in H |- *.
+          fold (wfl_size_rel wfΓ').
+          lia.
+        * cbn. red.
+          applyIH.
+          cbn.
+          fold (wfl_size_rel wfΓ').
+          assert (0 < wfl_size_rel wfΓ') by apply All_local_env_size_pos.
+          lia.
+      + destruct t0 as [u h].
+        constructor.
+        * apply IHwfΓ'.
+          intros ; apply IH.
+          cbn in H |- *.
+          fold (wfl_size_rel wfΓ').
+          pose proof (infering_sort_size_pos h). lia.
+        * red. applyIH. pose proof (infering_sort_size_pos h). simpl in H |- *. lia.
+        * red. applyIH. pose proof (checking_size_pos t1). simpl in H |- *. lia.
+
 
     - destruct c.
       unshelve (eapply HCheck ; eauto) ; auto.
@@ -551,6 +594,9 @@ Section BidirectionalInduction.
         * repeat split.
           all: try assumption.
           all: applyIH.
+          cbn.
+          fold predctx ptm (wfl_size_rel a2).
+          lia.
         * apply IHa1.
           intros.
           apply IH.

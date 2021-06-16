@@ -133,6 +133,9 @@ Section BDToPCUICTyping.
   Let PΓ Γ :=
     wf_local Σ Γ.
 
+  Let PΓ_rel Γ Γ' :=
+    wf_local Σ Γ -> wf_local_rel Σ Γ Γ'.
+
   (** Preliminary lemmata to go from a bidirectional judgement to the corresponding undirected one *)
 
   Lemma bd_wf_local Γ (all: wf_local_bd Σ Γ) :
@@ -153,6 +156,33 @@ Section BDToPCUICTyping.
     - destruct tu.
       apply c ; auto.
       eexists. red. auto.
+  Qed.
+
+  Lemma bd_wf_local_rel Γ (wfΓ : wf_local Σ Γ) Γ' (all: wf_local_bd_rel Σ Γ Γ') :
+    All_local_env_over_sorting
+      (fun Σ Δ => checking Σ (Γ,,,Δ))
+      (fun Σ Δ => infering_sort Σ (Γ,,,Δ))
+      (fun Σ Δ _ t T _ => Pcheck (Γ,,,Δ) t T)
+      (fun Σ Δ _ t u _ => Psort (Γ,,,Δ) t u) 
+      Σ Γ' all ->
+    wf_local_rel Σ Γ Γ'.
+  Proof.
+    intros allo ; induction allo.
+    all: constructor.
+    1,3: assumption.
+    all: red.
+    - simpl in tu. eexists.
+      apply s.
+      by apply wf_local_app.
+    - destruct tu. eexists.
+      apply s.
+      by apply wf_local_app.
+    - destruct tu.
+      apply c.
+      1: by apply wf_local_app.
+      eexists. red.
+      apply s.
+      by apply wf_local_app.
   Qed.
 
   Lemma ctx_inst_impl Γ (wfΓ : wf_local Σ Γ) (Δ : context) (wfΔ : wf_local_rel Σ Γ (List.rev Δ)) : 
@@ -202,11 +232,13 @@ Section BDToPCUICTyping.
   Qed.
     
   (** The big theorem, proven by mutual induction using the custom induction principle *)
-  Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
+  Theorem bidirectional_to_pcuic : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
   Proof.
     apply bidir_ind_env.
 
-    { intros. eapply bd_wf_local. eassumption. }
+    - intros. eapply bd_wf_local. eassumption.
+
+    - intros. intro. eapply bd_wf_local_rel ; eassumption.
 
     - red ; intros ; econstructor ; eauto.
 
@@ -279,7 +311,6 @@ Section BDToPCUICTyping.
           + apply forallb_skipn.
             eapply type_is_open_term in X5 ; eauto.
             by rewrite PCUICOnFreeVars.on_free_vars_mkApps /= in X5. 
-          
       }
       
       assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
@@ -296,6 +327,12 @@ Section BDToPCUICTyping.
           eapply on_minductive_wf_params_indices_inst ; eauto.
         - cbn.
           constructor.
+      }
+
+      assert (wf_local Σ (Γ,,,case_predicate_context ci mdecl idecl p)).
+      {
+        eapply wf_case_predicate_context ; tea.
+        eexists ; tea.
       }
       
       econstructor ; eauto.

@@ -245,6 +245,7 @@ Proof.
     split.
     + econstructor.
       all: tea.
+      * by eapply All_local_app_rel.
       * eapply is_allowed_elimination_monotone.
         all: eassumption.
       * rewrite subst_instance_app_ctx rev_app_distr in Hinst.
@@ -297,6 +298,8 @@ Proof.
         fold brctxty in Hbr.
         destruct Hbr as (?&?&?Cumbody&?&?).
         apply conv_check in Cumbody ; auto.
+        split ; auto.
+        by apply All_local_app_rel.
 
     + apply equality_mkApps ; auto.
       * apply equality_it_mkLambda_or_LetIn.

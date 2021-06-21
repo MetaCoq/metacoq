@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import monad_utils All.
 From Coq.Numbers.Cyclic Require Import Int63.
 
 Local Open Scope string_scope.
-Import MonadNotation.
+Import MCMonadNotation.
 
 Definition bigint : Int63.int := 542985047%int63.
 

@@ -432,7 +432,7 @@ Section Reduce.
               | @exist None eqa := False_rect _ _
               } ;
             | cc0view_cofix mfix idx with inspect (unfold_cofix mfix idx) := {
-              | @exist (Some (narg, fn)) eq' :=
+              | @exist (Some (rarg, fn)) eq' :=
                 rec reduce (tProj (i, pars, narg) (mkApps fn args)) π ;
               | @exist None bot := False_rect _ _
               } ;
@@ -896,14 +896,14 @@ Section Reduce.
         cbn in H. rewrite zipc_appstack in H. cbn in H.
         eapply cored_trans' ; try eassumption.
         zip fold. eapply cored_context.
-        constructor. eapply red_cofix_proj. eauto.
+        constructor. eapply red_cofix_proj. eauto. 
       + left.
         cbn in H0. destruct y'. inversion H0. subst. clear H0.
         symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
         rewrite zipc_appstack in H2. cbn in H2.
         cbn. rewrite H2.
         zip fold. eapply cored_context.
-        constructor. eapply red_cofix_proj. eauto.
+        constructor. eapply red_cofix_proj. eauto. 
   Qed.
   Next Obligation.
     destruct hΣ as [wΣ].
@@ -1815,12 +1815,12 @@ Section ReduceFns.
     now cbn in n0.
   Qed.
 
-  Equations? reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
+  Equations reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
     : typing_result (∑ i u l, ∥ red (fst Σ) Γ t (mkApps (tInd i u) l) ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
         | view_ind_tInd i u => ret (i; u; args; sq _);
-        | view_ind_other t _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t Empty h) := {
+        | view_ind_other t' _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t Empty _) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i u with inspect (decompose_stack π) := {
               | exist (l, _) eq_decomp => ret (i; u; l; _)
@@ -1829,26 +1829,28 @@ Section ReduceFns.
             }
           }
         }
-      }.
-  Proof.
-    - assert (X : mkApps (tInd i u) args = t); [|rewrite X; apply refl_red].
-      etransitivity. 2: symmetry; eapply mkApps_decompose_app.
-      now rewrite <- eq_decomp.
-    - pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ Empty h).
-      rewrite <- eq in H.
-      cbn in *.
-      assert (π = appstack l ε) as ->.
-      2: { now rewrite zipc_appstack in H. }
-      unfold reduce_stack in eq.
-      destruct reduce_stack_full as (?&_&stack_val&?).
-      subst x.
-      unfold Pr in stack_val.
-      cbn in *.
-      assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
-      { rewrite stack_val.
-        now destruct decompose_stack. }
-      apply decompose_stack_eq in decomp as ->.
-      now rewrite <- eq_decomp0.
+    }.
+  Next Obligation.
+    assert (X : mkApps (tInd i u) args = t); [|rewrite X; apply refl_red].
+    etransitivity. 2: symmetry; eapply mkApps_decompose_app.
+    now rewrite <- eq_decomp.
+  Qed.
+  Next Obligation.
+    pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ Empty h).
+    rewrite <- eq in H.
+    cbn in *.
+    assert (π = appstack l ε) as ->.
+    2: { now rewrite zipc_appstack in H. }
+    unfold reduce_stack in eq.
+    destruct reduce_stack_full as (?&_&stack_val&?).
+    subst x.
+    unfold Pr in stack_val.
+    cbn in *.
+    assert (decomp: decompose_stack π = ((decompose_stack π).1, ε)).
+    { rewrite stack_val.
+      now destruct decompose_stack. }
+    apply decompose_stack_eq in decomp as ->.
+    now rewrite <- eq_decomp.
   Qed.
 
   Lemma reduce_to_ind_complete Γ ty wat e :

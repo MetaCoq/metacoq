@@ -10,6 +10,35 @@ From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromP
 Require Import ssreflect ssrbool.
 Require Import Coq.Program.Equality.
 
+Lemma addnP_strengthenP0 i P : addnP i (strengthenP 0 i P) =1 P.
+Proof.
+  intros ?.
+  rewrite /addnP /strengthenP.
+  repeat nat_compare_specs.
+  by rewrite minus_plus.
+Qed.
+
+Lemma on_ctx_free_vars_strengthenP P Γ Γ' Γ'':
+  on_ctx_free_vars P Γ ->
+  on_ctx_free_vars P Γ'' ->
+  on_ctx_free_vars (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ',,,lift_context #|Γ'| 0 Γ'').
+Proof.
+  intros hΓ hΓ''.
+  rewrite !PCUICInst.on_ctx_free_vars_app.
+  repeat (apply /andP ; split).
+  - admit.
+  - rewrite lift_context_length.
+    rewrite /on_ctx_free_vars.
+    apply alli_Alli.
+    eapply forall_nth_error_Alli.
+    intros i ? ?.
+    assert (i < #|Γ'|) by (apply nth_error_Some ; congruence).
+    rewrite /addnP /strengthenP /=.
+    by repeat nat_compare_specs.
+  - rewrite addnP_add lift_context_length.
+    
+Admitted.
+
 Lemma on_free_vars_ctx_tip P d : on_free_vars_ctx P [d] = on_free_vars_decl P d.
 Proof. cbn; rewrite andb_true_r // shiftnP0 //. Qed.
 
@@ -46,6 +75,101 @@ Proof.
   1: eapply closed_ind_predicate_context ; tea ; eapply declared_minductive_closed ; eauto.
   erewrite wf_predicate_length_pars ; tea.
   eapply PCUICDeclarationTyping.onNpars, PCUICWeakeningEnv.on_declared_minductive ; eauto.
+Qed.
+
+Definition unlift_renaming n k i := if i <? k then i else i - n.
+Definition unlift n k := rename (unlift_renaming n k).
+
+Lemma lift_unlift n k : (unlift_renaming n k) ∘ (lift_renaming n k) =1 ren_id.
+Proof.
+  intros i.
+  rewrite /unlift_renaming /lift_renaming /ren_id.
+  repeat nat_compare_specs.
+Qed.
+
+Corollary lift_unlift_term {n k} t : unlift n k (lift n k t) = t.
+Proof.
+  by rewrite lift_rename /unlift rename_compose lift_unlift rename_ren_id.
+Qed.
+
+Corollary lift_unlift_context {n k} Γ :
+  rename_context (unlift_renaming n k) (rename_context (lift_renaming n k) Γ) = Γ.
+Proof.
+  etransitivity.
+  2: by apply fold_context_k_id.
+  rewrite /rename_context fold_context_k_compose.
+  apply fold_context_k_proper => //.
+  intros ? ?.
+  etransitivity.
+  2: by apply rename_ren_id.
+  rewrite rename_compose.
+  apply rename_proper => //.
+  intros ?.
+  rewrite /shiftn /unlift_renaming /lift_renaming /ren_id.
+  repeat nat_compare_specs.
+Qed.
+
+Lemma urenaming_strengthen P Γ Γ' Γ'' :
+  urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ'') (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (unlift_renaming #|Γ'| #|Γ''|).
+Proof.
+  rewrite <- PCUICWeakening.rename_context_lift_context.
+  intros i decl' pi nthi.
+  rewrite /strengthenP in pi.
+  destruct (Nat.ltb_spec0 i #|Γ''|) as [iΓ''|iΓ''].
+  - rewrite nth_error_app_context_lt in nthi.
+    1: by rewrite fold_context_k_length.
+    rewrite nth_error_rename_context in nthi.
+    apply option_map_Some in nthi as [decl'' []].
+    subst.
+    eexists ; split ; [idtac|split ; [idtac|split]].
+    + rewrite /unlift_renaming.
+      move: (iΓ'') => /Nat.ltb_spec0 ->.
+      rewrite nth_error_app_context_lt //.
+      eassumption.
+    + reflexivity.
+    + rewrite /= rename_compose.
+      apply rename_proper ; auto.
+      intros x.
+      rewrite !rshiftk_S lift_renaming_spec -(shiftn_rshiftk _ _ _) !shiftn_add -lift_renaming_spec.
+      rewrite Nat.add_0_r le_plus_minus_r.
+      1: lia.
+      rewrite (lift_unlift _ _ _) /ren_id /unlift_renaming.
+      nat_compare_specs.
+    + cbn ; destruct (decl_body decl'') ; rewrite //=.
+      f_equal.
+      rewrite rename_compose.
+      apply rename_proper ; auto.
+      intros x.
+      change (S (i + _)) with
+        (rshiftk (S i) (shiftn (#|Γ''| - S i) (lift_renaming #|Γ'| 0) x)).
+      rewrite shiftn_lift_renaming lift_renaming_spec -(shiftn_rshiftk _ _ _) shiftn_add.
+      rewrite -lift_renaming_spec Nat.add_0_r le_plus_minus_r.
+      1: lia.
+      rewrite (lift_unlift _ _ _) /unlift_renaming.
+      nat_compare_specs.
+      reflexivity.
+
+  - rewrite -app_context_assoc /= in nthi.
+    destruct (Nat.ltb_spec0 i (#|Γ''| + #|Γ'|)) as [iΓ'|iΓ'] ; cbn in * ; [congruence|..].
+    apply Nat.nlt_ge in iΓ'.
+    rewrite nth_error_app_context_ge app_length /= rename_context_length // in nthi.
+    eexists ; repeat split.
+    + rewrite /unlift_renaming.
+      nat_compare_specs.
+      rewrite nth_error_app_context_ge ; [lia|..].
+      rewrite -nthi.
+      f_equal.
+      lia.
+    + apply rename_proper ; auto.
+      intros x.
+      rewrite /unlift_renaming.
+      repeat nat_compare_specs.
+    + destruct (decl_body decl') ; rewrite //=.
+      f_equal.
+      apply rename_proper ; auto.
+      intros x.
+      rewrite /unlift_renaming.
+      repeat nat_compare_specs.
 Qed.
 
 Section OnFreeVars.
@@ -229,186 +353,6 @@ Proof.
   - by apply infering_typing.
 Qed.
 
-Definition unlift_renaming n k i := if i <? k then i else if i <? k + n then 0 else i - n.
-Definition unlift n k := rename (unlift_renaming n k).
-
-Lemma lift_unlift n k : (unlift_renaming n k) ∘ (lift_renaming n k) =1 ren_id .
-Proof.
-  intros i.
-  rewrite /unlift_renaming /lift_renaming /ren_id.
-  repeat match goal with
-    | |- context [?x <? ?y] => destruct (Nat.ltb_spec0 x y) ; cbn
-    | |- context [?x <=? ?y] => destruct (Nat.leb_spec0 x y) ; cbn
-    | _ : context [?x <=? ?y] |- _ => destruct (Nat.leb_spec0 x y) ; cbn in *
-  end.
-  all: try congruence ; try lia.
-Qed.
-
-Corollary lift_unlift_term {n k} t : unlift n k (lift n k t) = t.
-Proof.
-  by rewrite lift_rename /unlift rename_compose lift_unlift rename_ren_id.
-Qed.
-
-(* Lemma shift_cond (P : nat -> bool) f f' :
-  (forall i, P i -> f i = f' i) ->
-  forall i n,
-  shiftnP n P i -> shiftn n f i = shiftn n f' i.
-Proof.
-  rewrite /shiftn /shiftnP.
-  intros H i n ?.
-  destruct (i <? n) ; cbn in * ; auto.
-  by rewrite H.
-Qed.
-
-Lemma cond_rename_ext (P : nat -> bool) f f' t:
-  (forall i, P i -> f i = f' i) ->
-  on_free_vars P t ->
-  rename f t = rename f' t.
-Proof.
-  intros H HP.
-  induction t using term_forall_list_ind in f, f', P, H, HP |- * ;
-  intros; cbn in |- *; try easy.
-  all: try solve [f_equal ; try rewrite H ; easy].
-  all: cbn in HP ;
-    repeat match goal with
-    | H : is_true (_ && _) |- _ => move: H => /andP [? ?]
-    | H : is_true (forallb _ _) |- _ => move: H => /forallb_All ?
-    end.
-  all: f_equal ; eauto.
-  - apply All_map_eq.
-    eapply All_mix in X ; tea.
-    eapply All_impl ; tea.
-    intros ? [] ; easy.
-  - eapply IHt2 ; eauto.
-    intros.
-    eapply shift_cond ; eauto.
-  - eapply IHt2 ; eauto.
-    intros.
-    eapply shift_cond ; eauto.
-  - eapply IHt3 ; eauto.
-    intros.
-    eapply shift_cond ; eauto.
-  - rewrite /rename_predicate.
-    destruct X as (IHpar&?&IHret).
-    f_equal.
-    + apply All_map_eq.
-      eapply All_mix in IHpar ; tea.
-      eapply All_impl ; tea.
-      intros ? [] ; easy.
-    + eapply IHret ; tea.
-      intros.
-      eapply shift_cond ; eauto.
-  - apply All_map_eq.
-    eapply All_mix in X0 ; tea.
-    eapply All_impl ; tea.
-    intros ? [i [? e]].
-    move: i => /andP [? ?].
-    rewrite /map_branch_shift.
-    f_equal.
-    eapply e ; tea.
-    intros.
-    eapply shift_cond ; eauto.
-  - apply All_map_eq.
-    eapply All_mix in X ; tea.
-    eapply All_impl ; tea.
-    intros ? [i [e e']].
-    move: i => /andP [? ?].
-    rewrite /map_def.
-    f_equal.
-    + eapply e ; eauto.
-    + eapply e' ; eauto.
-      intros. eapply shift_cond ; eauto.
-  - apply All_map_eq.
-    eapply All_mix in X ; tea.
-    eapply All_impl ; tea.
-    intros ? [i [e e']].
-    move: i => /andP [? ?].
-    rewrite /map_def.
-    f_equal.
-    + eapply e ; eauto.
-    + eapply e' ; eauto.
-      intros. eapply shift_cond ; eauto.
-Qed. *)
-
-Lemma urenaming_strengthen P Γ Δ decl :
-  urenaming (strengthenP #|Δ| 1 P) (Γ,,,Δ) (Γ ,, decl ,,, lift_context 1 0 Δ) (unlift_renaming 1 #|Δ|).
-Proof.
-  rewrite <- PCUICWeakening.rename_context_lift_context.
-  intros i decl' pi nthi.
-  rewrite /strengthenP in pi.
-  destruct (Nat.ltb_spec0 i #|Δ|) as [iΔ|iΔ].
-  - rewrite nth_error_app_context_lt in nthi.
-    1: by rewrite fold_context_k_length.
-    rewrite nth_error_rename_context in nthi.
-    apply option_map_Some in nthi as [decl'' []].
-    subst.
-    eexists ; split ; [idtac|split ; [idtac|split]].
-    + rewrite /unlift_renaming.
-      move: (iΔ) => /Nat.ltb_spec0 ->.
-      rewrite nth_error_app_context_lt //.
-      eassumption.
-    + reflexivity.
-    + rewrite /= rename_compose.
-      apply rename_proper ; auto.
-      intros x.
-      rewrite /rshiftk /shiftn /unlift_renaming /lift_renaming.
-      repeat match goal with
-        | |- context [?x <? ?y] => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | |- context [?x <=? ?y] => destruct (Nat.leb_spec0 x y) ; cbn in *
-        | _ : context [?x <? ?y] |- _ => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | _ : context [?x <=? ?y] |- _ => destruct (Nat.leb_spec0 x y) ; cbn in *
-      end.
-      all: try congruence ; try lia.
-    + cbn ; destruct (decl_body decl'') ; rewrite //=.
-      f_equal.
-      rewrite rename_compose.
-      apply rename_proper ; auto.
-      intros x.
-      rewrite /unlift_renaming /shiftn /lift_renaming.
-      repeat match goal with
-        | |- context [?x <? ?y] => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | |- context [?x <=? ?y] => destruct (Nat.leb_spec0 x y) ; cbn in *
-        | _ : context [?x <? ?y] |- _ => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | _ : context [?x <=? ?y] |- _ => destruct (Nat.leb_spec0 x y) ; cbn in *
-      end.
-      all: try congruence ; try lia.
-  - change (Γ ,, decl) with (Γ ,,, [decl]) in nthi.
-    rewrite -app_context_assoc /= in nthi.
-    destruct (Nat.ltb_spec0 i (#|Δ| + 1)) as [iΔ'|iΔ'] ; cbn in * ; [congruence|..].
-    apply Nat.nlt_ge in iΔ'.
-    rewrite nth_error_app_context_ge app_length /= rename_context_length // in nthi.
-    eexists ; repeat split.
-    + rewrite /unlift_renaming.
-      destruct (Nat.ltb_spec0 i #|Δ|) ; [lia|..].
-      destruct (Nat.ltb_spec0 i (#|Δ| + 1)) ; [lia|..].
-      rewrite nth_error_app_context_ge ; [lia|..].
-      rewrite -nthi.
-      f_equal.
-      lia.
-    + apply rename_proper ; auto.
-      intros x.
-      rewrite /unlift_renaming. 
-      repeat match goal with
-        | |- context [?x <? ?y] => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | |- context [?x <=? ?y] => destruct (Nat.leb_spec0 x y) ; cbn in *
-        | _ : context [?x <? ?y] |- _ => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | _ : context [?x <=? ?y] |- _ => destruct (Nat.leb_spec0 x y) ; cbn in *
-      end.
-      all: try congruence ; try lia.
-    + destruct (decl_body decl') ; rewrite //=.
-      f_equal.
-      apply rename_proper ; auto.
-      intros x.
-      rewrite /unlift_renaming.
-      repeat match goal with
-        | |- context [?x <? ?y] => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | |- context [?x <=? ?y] => destruct (Nat.leb_spec0 x y) ; cbn in *
-        | _ : context [?x <? ?y] |- _ => destruct (Nat.ltb_spec0 x y) ; cbn in *
-        | _ : context [?x <=? ?y] |- _ => destruct (Nat.leb_spec0 x y) ; cbn in *
-      end.
-      all: try congruence ; try lia.
-Qed.
-
 Axiom fix_guard_rename : forall P Σ Γ Δ mfix f,
   urenaming P Γ Δ f ->
   let mfix' := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
@@ -473,55 +417,6 @@ Let PΓ_rel Γ Γ' :=
   on_ctx_free_vars P Γ ->
   on_free_vars_ctx P Γ' ->
   wf_local_bd_rel Σ Δ (rename_context f Γ').
-
-(* Lemma wf_local_app_renaming P Γ Γ' Δ f:
-  on_ctx_free_vars P Γ ->
-  wf_local_bd Σ (Γ ,,, Δ) ->
-  PΓ (Γ ,,, Δ) ->
-  urenaming P Γ' Γ f ->
-  wf_local_bd Σ (Γ' ,,, rename_context f Δ).
-Proof.
-  intros hclo wfΓ hP u.
-  induction Δ in Γ, Γ', wfΓ, f, u, hP |- *.
-  - cbn in *.
-    red in hP.
-  
-  
-  - rewrite rename_context_snoc.
-    destruct a as [? [] ?] ; cbn in *.
-    + constructor ; cbn.
-      * eapply IHΔ ; tea.
-      * 
-
-  
-    rewrite rename_context_snoc /=.
-    constructor ; eauto.
-    eexists.
-    red in p.
-    eapply p ; eauto.
-    + eapply urenaming_context. 
-  
-    simpl. destruct t0 as [s Hs].
-    rewrite rename_context_snoc /=. constructor; auto.
-    red. simpl. exists s.
-    eapply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
-    split => //.
-    eapply urenaming_ext.
-    { len. now rewrite -shiftnP_add. }
-    { reflexivity. } now eapply urenaming_context.
-  - destruct t0 as [s Hs]. red in t1.
-    rewrite rename_context_snoc /=. constructor; auto.
-    * red. exists s.
-      apply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
-      split => //.
-      eapply urenaming_ext.
-      { len; now rewrite -shiftnP_add. }
-      { reflexivity. } now eapply urenaming_context.
-    * red. apply (t1 P). split => //.
-      eapply urenaming_ext. 
-      { len; now rewrite -shiftnP_add. }
-      { reflexivity. } now eapply urenaming_context.
-Qed. *)
 
 Theorem bidirectional_renaming : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
 Proof.
@@ -647,6 +542,12 @@ Proof.
       { pose proof (declared_inductive_closed_params isdecl).
         now rewrite closedn_subst_instance_context. }
       rewrite rename_context_telescope rename_telescope_shiftn0 /=.
+      assert (on_free_vars_ctx P (subst_instance (puinst p) (ind_params mdecl))).
+      { admit. }
+      clear -on_pars.
+      (* induction 1.
+      * constructor.
+      * constructor.   *)
       admit.
     + rewrite /= /id -map_skipn -map_app.
       eapply cumul_renameP in X8 ; tea.
@@ -789,408 +690,82 @@ Proof.
 
 Admitted.
 
+End BDRenaming.
 
-
-Lemma strengthenP_unlift (p : nat -> bool) n k t : 
-  on_free_vars (strengthenP k n p) t ->
-  ∑ t', t = lift n k t' × on_free_vars p t'.
+Lemma closedn_ctx_lift_inv n k k' Γ :
+  k <= k' -> closedn_ctx (k' + n) (lift_context n k Γ) ->
+  closedn_ctx k' Γ.
 Proof.
-  intros ofv.
-  remember (strengthenP k n p) as q eqn:Heqq.
-  assert (q =1 strengthenP k n p) by now subst.
-  clear Heqq.
-  revert n k p H.
-  pattern q, t.
-  revert ofv.
-  eapply term_on_free_vars_ind.
-  
-  - intros.
-    rewrite H0 /strengthenP in H.
-    destruct (Nat.ltb_spec0 i k).
-    1: exists (tRel i) ; split ; cbn ; [destruct (Nat.leb_spec0 k i) ; [lia|auto]|auto].
-    destruct (Nat.ltb_spec0 i (k + n)).
-    1: congruence.
-    exists (tRel (i - n)) ; split ; cbn.
-    2: auto.
-    destruct (Nat.leb_spec0 k (i - n)).
-    2: lia.
-    f_equal.
+  intros le.
+  induction Γ as [|d ?]; cbn; auto; rewrite lift_context_snoc !closedn_ctx_cons /=;
+    move/andP=> [clΓ cld]; rewrite IHΓ //;
+  autorewrite with len in cld.
+  move: cld; rewrite /test_decl /=.
+  replace (k' + n + #|Γ|) with (#|Γ| + k' + n) in * by lia.
+  move/andP=> [clb clt]; apply andb_and; split.
+  - destruct (decl_body d) => /= //. cbn in clb |- *.
+    eapply closedn_lift_inv in clb => //.
     lia.
-  
-  - intros. exists (tVar i) ; auto.
-  
-  - intros.
-    eapply All_impl in X0.
-    2: intros ? H1 ; apply H1 ; tea.
-    apply All_sigT in X0 as [l' a].
-    apply All2_prod_inv in a as [a a'].
-    apply All2_right in a'.
-    eexists (tEvar _ _) ; split.
-    + cbn ; f_equal.
-      eapply All2_eq, All2_map_right ; eauto.
-    + by apply All_forallb.
-
-  - intros ; eexists (tSort _) ; split ; eauto ; reflexivity.
-  
-  - intros.
-    edestruct X as [? []] ; eauto.
-    edestruct X0 as [? []] ; eauto.
-    { etransitivity.
-      2: by apply shiftnP_strengthenP.
-      rewrite H1 ; reflexivity.
-    }
-    subst.
-    eexists (tProd _ _ _) ; split.
-    all: cbn.
-    1: reflexivity.
-    by apply andb_true_iff ; split.
-
-  - intros.
-    edestruct X as [? []] ; eauto.
-    edestruct X0 as [? []] ; eauto.
-    { etransitivity.
-      2: by apply shiftnP_strengthenP.
-      rewrite H1 ; reflexivity.
-    }
-    subst.
-    eexists (tLambda _ _ _) ; split.
-    all: cbn.
-    1: reflexivity.
-    by apply andb_true_iff ; split.
-    
-  - intros.
-    edestruct X as [? []] ; eauto.
-    edestruct X0 as [? []] ; eauto.
-    edestruct X1 as [? []] ; eauto.
-    { etransitivity.
-      2: by apply shiftnP_strengthenP.
-      rewrite H2 ; reflexivity.
-    }
-    subst.
-    eexists (tLetIn _ _ _ _) ; split.
-    all: cbn.
-    1: reflexivity.
-    by repeat (apply andb_true_iff ; split).
-
-  - intros.
-    edestruct X as [? []] ; eauto.
-    edestruct X0 as [? []] ; eauto.
-    subst.
-    eexists (tApp _ _) ; split.
-    all: cbn.
-    1: reflexivity.
-    by apply andb_true_iff ; split.
-
-  - intros.
-    eexists (tConst _ _) ; split ; eauto.
-    reflexivity.
-
-  - intros.
-    eexists (tInd _ _) ; split ; eauto.
-    reflexivity.
-
-  - intros.
-    eexists (tConstruct _ _ _) ; split ; eauto.
-    reflexivity.
-
-  - intros.
-    admit.
-    
-  - intros.
-    edestruct X as [? []] ; eauto.
-    subst.
-    eexists (tProj _ _) ; split.
-    1: reflexivity.
-    auto.
-
-  - intros.
-    admit.
-    
-  - intros.
-    admit.
-    
-Admitted.
-
-Lemma strengthening_leq_term `{cf : checker_flags} (Σ : global_env_ext) (Γ' Γ'' : context) t u :
-  leq_term Σ Σ (lift #|Γ''| #|Γ'| t) (lift #|Γ''| #|Γ'| u) ->
-  leq_term Σ Σ t u.
-Proof.
-Admitted.
-
-Lemma strengthening_red `{cf : checker_flags} Σ (wfΣ : wf Σ) Γ Γ' Γ'' t u :
-  red Σ (Γ ,,, Γ'' ,,, (lift_context #|Γ''| 0 Γ')) (lift #|Γ''| #|Γ'| t) u ->
-  ∑ u', u = lift #|Γ''| #|Γ'| u' × red Σ (Γ ,,, Γ') t u'.
-Proof.
-Admitted.
-
-Lemma rename_context_lift_context n k Γ :
-  rename_context (lift_renaming n k) Γ = lift_context n k Γ.
-Proof.
-  rewrite /rename_context /lift_context.
-  apply fold_context_k_ext.
-  intros i.
-  rewrite shiftn_lift_renaming.
-  symmetry.
-  intro.
-  by apply lift_rename.
+  - eapply closedn_lift_inv in clt => //.
+    lia.
 Qed.
-
-Lemma unlift_mkApps t args n k u:
-  mkApps t args = lift n k u ->
-  ∑ t' args', t = lift n k t' × args = map (lift n k) args' × u = mkApps t' args'.
-Proof.
-  intros.
-  induction args in t, u, H |- *.
-  - cbn in *.
-    eexists ; exists [] ; by repeat split.
-  - cbn in *.
-    edestruct IHargs as (t'&?&e&?&?) ; tea.
-    destruct t' ; inversion e ; subst ; clear e. 
-    subst.
-    eexists ; eexists (_ :: _) ; repeat split.
-Qed.
-
-
-Section BDStrengthening.
-
-  (** We work in a fixed, well-formed global environment*)
-
-  Context `{cf : checker_flags}.
-  Context (Σ : global_env_ext).
-  Context (wfΣ : wf Σ).
-
-  Let Pinfer Γ t T :=
-    forall Δ Δ' Δ'' t',
-    Γ = Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ' ->
-    t = lift #|Δ''| #|Δ'| t' ->
-    ∑ T',
-    T = lift #|Δ''| #|Δ'| T' × Σ ;;; Δ ,,, Δ' |- t' ▹ T'.
-
-  Let Psort Γ t u :=
-    forall Δ Δ' Δ'' t',
-    Γ = Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ' ->
-    t = lift #|Δ''| #|Δ'| t' ->
-    Σ ;;; Δ ,,, Δ' |- t' ▹□ u.
-
-  Let Pprod Γ t na A B :=
-    forall Δ Δ' Δ'' t',
-    Γ = Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ' ->
-    t = lift #|Δ''| #|Δ'| t' ->
-    ∑ A' B',
-    A = lift #|Δ''| #|Δ'| A' × B = lift #|Δ''| (S #|Δ'|) B' × Σ ;;; Δ ,,, Δ' |- t' ▹Π (na,A',B').
-
-  Let Pind Γ ind t u args :=
-    forall Δ Δ' Δ'' t',
-    Γ = Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ' ->
-    t = lift #|Δ''| #|Δ'| t' ->
-    ∑ args',
-    args = map (lift #|Δ''| #|Δ'|) args' × Σ ;;; Δ ,,, Δ' |- t' ▹{ind} (u,args').
-
-  Let Pcheck Γ t T :=
-    forall Δ Δ' Δ'' t' T',
-    Γ = Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ' ->
-    t = lift #|Δ''| #|Δ'| t' ->
-    T = lift #|Δ''| #|Δ'| T' ->
-    Σ ;;; Δ ,,, Δ' |- t' ◃ T'.
   
-  Let PΓ (Γ : context) :=
-    forall Δ Δ' Δ'',
-    Γ = Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ' ->
-    wf_local_bd Σ (Δ ,,, Δ').
-
-  Theorem bidirectional_strengthening : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
-  Proof.
-    apply bidir_ind_env.
-
-    - intros. red. intros.
-      subst.
-      apply All_local_env_app ; split.
-      1: by clear X ; repeat apply All_local_env_app_inv in wfΓ as [wfΓ _].
-      induction Δ' as [|[? [] ?] ].
-      + constructor.
-      + rewrite -/(snoc Δ' _) lift_context_snoc Nat.add_0_r !app_context_cons in wfΓ, X.
-        inversion X ; subst.
-        constructor.
-        * eauto.
-        * eexists.
-          eauto.
-        * eapply X1 ; eauto.
-      + rewrite -/(snoc Δ' _) lift_context_snoc Nat.add_0_r !app_context_cons in wfΓ, X.
-        inversion X ; subst.
-        constructor ; eauto.
-        eexists ; eauto. 
-    
-    - intros. red. intros.
-      subst.
-      destruct t' ; cbn in H1 ; inversion H1 ; subst ; clear H1.
-      destruct (Nat.leb_spec0 #|Δ'| n0).
-      + rewrite /app_context /lift_context -nth_error_ge // in H.
-        eexists ; split.
-        2: constructor ; tea.
-        rewrite simpl_lift.
-        3: f_equal.
-        all: lia.
-      + rewrite /app_context /lift_context nth_error_app_context_lt in H.
-        1: by rewrite fold_context_k_length ; lia.
-        fold (lift_context #|Δ''| 0 Δ') in H.
-        rewrite -rename_context_lift_context in H.
-        rewrite nth_error_rename_context in H.
-        remember (nth_error Δ' n0) as decl'.
-        destruct decl' ; cbn in * ; inversion H ; subst ; clear H.
-        eexists ; split.
-        2:{
-          constructor.
-          rewrite nth_error_app_context_lt ; eauto.
-          lia.
-        }
-        cbn.
-        rewrite shiftn_lift_renaming Nat.add_0_r -lift_rename permute_lift.
-        2: f_equal.
-        all: lia.
-
-
-    - intros. red. intros. subst.
-      destruct t' ; cbn in H1 ; inversion H1 ; subst ; clear H1.
-      eexists ; split.
-      2: by constructor.
-      reflexivity.
-
-    - intros. red in X0, X2 |- *. intros. subst.
-      destruct t' ; cbn in H0 ; inversion H0 ; subst ; clear H0.
-      eexists ; split.
-      2:{ constructor ; eauto.
-        rewrite -app_context_cons.
-        eapply X2 ; eauto.
-        by rewrite -app_context_cons lift_context_snoc Nat.add_0_r.
-      }
-      by reflexivity.
-
-    - intros. red in X0, X2 |- *. intros. subst.
-      destruct t' ; cbn in H0 ; inversion H0 ; subst ; clear H0.
-      edestruct X2 as (?&?&?).
-      2: change (S #|Δ'|) with (#|Δ' ,, vass na t'1|) ; reflexivity.
-      1: rewrite -app_context_cons lift_context_snoc Nat.add_0_r ; reflexivity.
-      eexists ; split.
-      2: econstructor ; eauto.
-      cbn.
-      by f_equal.
-
-    - intros. red in X0, X2 |- *. intros. subst.
-      destruct t' ; cbn in H0 ; inversion H0 ; subst ; clear H0.
-      edestruct X4 as (?&?&?).
-      2: change (S #|Δ'|) with (#|Δ' ,, vdef na t'1 t'2|) ; reflexivity.
-      1: rewrite -app_context_cons lift_context_snoc Nat.add_0_r ; reflexivity.
-      eexists ; split.
-      2: econstructor ; eauto.
-      cbn.
-      by f_equal.
-    
-    - intros. red in X0, X2 |- *. intros. subst.
-      destruct t' ; cbn in H0 ; inversion H0 ; subst ; clear H0.
-      edestruct X0 as (?&?&?&?&?).
-      1-2: reflexivity.
-      eexists ; split.
-      2: econstructor ; eauto.
-      subst.
-      by rewrite distr_lift_subst10.
-      
-    - intros. red. intros. subst.
-      destruct t' ; cbn in H2 ; inversion H2 ; subst ; clear H2.
-      eexists ; split.
-      2: constructor ; tea.
-      erewrite <- (lift_closed _ _ (cst_type _)) at 1.
-      1: by eapply subst_instance_lift.
-      eapply closed_upwards.
-      1: eapply declared_constant_closed_type ; tea.
+Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Γ' Γ'' t T :
+  Σ ;;; Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'' |- lift #|Γ'| #|Γ''| t : T ->
+  ∑ T', Σ ;;; Γ ,,, Γ'' |- t : T'.
+Proof.
+  intros Hty.
+  assert (wfΓ : wf_local Σ Γ).
+    {
+    do 2 eapply wf_local_app_l.
+    eapply typing_wf_local.
+    eassumption.
+    }
+  generalize Hty.
+  intros Hinfer ; apply typing_infering in Hinfer as [T' [? _]] ; tea.
+  erewrite <- (lift_unlift_term t).
+  eexists.
+  eapply infering_typing ; tea.
+  - eapply wf_local_app ; tea.
+    eapply bidirectional_to_pcuic ; tea.
+    erewrite <- (lift_unlift_context Γ'' ).
+    rewrite PCUICWeakening.rename_context_lift_context.
+    eapply bidirectional_renaming ; tea.
+    + eapply All_local_app_rel, bidirectional_from_pcuic ; tea.
+    + eapply (urenaming_strengthen _ Γ Γ' []).
+    + change (Γ,,, Γ') with (Γ,,, Γ' ,,, []).
+      apply on_ctx_free_vars_strengthenP => //.
+      erewrite on_free_vars_ctx_on_ctx_free_vars.
+      eapply closed_ctx_on_free_vars, closed_wf_local ; tea.
+    + rewrite -on_free_vars_ctx_lift_context.
+      eapply closedn_ctx_on_free_vars_shift.
+      eapply typing_wf_local, closed_wf_local in Hty => //.
+      rewrite closedn_ctx_app in Hty.
+      move: Hty => /andP [] _ Hty.
+      rewrite app_length /= Nat.add_comm in Hty.
+      eapply closedn_ctx_lift_inv ; tea.
       lia.
-    
-    - intros. red. intros. subst.
-      destruct t' ; cbn in H2 ; inversion H2 ; subst ; clear H2.
-      eexists ; split.
-      2: econstructor ; tea.
-      erewrite <- (lift_closed _ _ (ind_type _)) at 1.
-      1: by eapply subst_instance_lift.
-      eapply closed_upwards.
-      1: eapply declared_inductive_closed_type ; tea.
-      lia.
-
-    - intros. red. intros. subst.
-      destruct t' ; cbn in H2 ; inversion H2 ; subst ; clear H2.
-      eexists ; split.
-      2: econstructor ; tea.
-      erewrite <- (lift_closed _ _ (type_of_constructor _ _ _ _)) at 1.
-      1: reflexivity.
-      eapply closed_upwards.
-      1: eapply declared_constructor_closed_type ; tea.
-      lia.
-    
-    - intros. red. intros. subst.
-      destruct t' ; cbn in H6 ; inversion H6 ; subst ; clear H6.
-      admit.
-    
-    - intros. red. intros. subst.
-      destruct t' ; cbn in H2 ; inversion H2 ; subst ; clear H2.
-      edestruct X0 as (?&?&?).
-      1-2: reflexivity.
-      subst.
-      rewrite map_length in H0.
-      eexists ; split.
-      2: econstructor ; eauto.
-      rewrite -map_rev -map_cons distr_lift_subst.
-      f_equal.
-      symmetry.
-      apply lift_closed.
-      rewrite closedn_subst_instance.
-      eapply closed_upwards.
-      1: eapply declared_projection_closed_type ; tea.
-      rewrite /= List.rev_length.
-      lia.
-
-    - intros. red. intros. subst.
-      destruct t' ; cbn in H3 ; inversion H3 ; subst ; clear H3.
-      admit.
-    
-    - admit.
-    
-    - intros. red in X0 |- *. intros. subst.
-      edestruct X0 as (?&?&?).
-      1-2: reflexivity.
-      subst.
-      apply strengthening_red in X1 as [u' []] ; auto.
-      destruct u' ; inversion e ; subst.
-      econstructor ; tea.
-
-    - intros. red in X0 |- *. intros. subst.
-      edestruct X0 as (?&?&?).
-      1-2: reflexivity.
-      subst.
-      apply strengthening_red in X1 as [u' []] ; auto.
-      destruct u' ; inversion e ; subst.
-      repeat eexists ; tea.
-
-    - intros. red in X0 |- *. intros. subst.
-      edestruct X0 as (?&?&?).
-      1-2: reflexivity.
-      subst.
-      apply strengthening_red in X1 as [u' []] ; auto.
-      apply unlift_mkApps in e as (?&?&?&?&?).
-      destruct x0 ; inversion e.
-      subst.
-      repeat eexists ; tea.
-
-    - intros. red in X0 |- *. intros. subst.
-      edestruct X0 as (?&?&?).
-      1-2: reflexivity.
-      subst.
-      econstructor ; tea.
-      apply cumul_alt.
-      apply cumul_alt in X1 as (?&?&(r&r')&?).
-      apply strengthening_red in r as (?&?&?).
-      apply strengthening_red in r' as (?&?&?).
-      all: tea.
-      subst.
-      do 2 eexists ; split.
-      1: split ; tea.
-      eapply strengthening_leq_term ; tea.
-
-  Admitted.
+  - eapply bidirectional_renaming ; tea.
+    + eapply urenaming_strengthen.
+    + eapply on_ctx_free_vars_strengthenP.
+      * erewrite on_free_vars_ctx_on_ctx_free_vars.
+        eapply closed_ctx_on_free_vars, closed_wf_local ; tea.
+      * erewrite shiftnP_add, Nat.add_comm, <- shiftnP_add.
+        erewrite on_free_vars_ctx_on_ctx_free_vars.
+        eapply closedn_ctx_on_free_vars_shift.
+        eapply (closedn_ctx_lift_inv #|Γ'| 0).
+        1: lia.
+        apply typing_wf_local, closed_wf_local in Hty => //.
+        rewrite closedn_ctx_app /= app_context_length Nat.add_comm in Hty.
+        move: Hty => /andP [] //.
+    + erewrite shiftnP_add, on_free_vars_lift.
+      apply closedn_on_free_vars.
+      eapply (closedn_lift_inv #|Γ'| #|Γ''|).
+      1: lia.
+      apply subject_closed in Hty.
+      rewrite !app_context_length lift_context_length in Hty.
+      by rewrite Nat.add_comm Nat.add_assoc Nat.add_comm.
+  
+  Unshelve.
+  all: exact xpredT.
+Qed.

@@ -669,23 +669,23 @@ Section Rho.
 
   Equations? rho (Γ : context) (t : term) : term by wf (size t) := 
   rho Γ (tApp t u) with view_lambda_fix_app t u := 
-    { | fix_lambda_app_lambda na T b [] u' := 
-        (rho (vass na (rho Γ T) :: Γ) b) {0 := rho Γ u'};
-      | fix_lambda_app_lambda na T b (a :: l) u' :=
+    { | fix_lambda_app_lambda na T b [] u := 
+        (rho (vass na (rho Γ T) :: Γ) b) {0 := rho Γ u};
+      | fix_lambda_app_lambda na T b (a :: l) u :=
         mkApps ((rho (vass na (rho Γ T) :: Γ) b) {0 := rho Γ a})
-          (map_terms rho Γ (l ++ [u']) _);
-      | fix_lambda_app_fix mfix idx l a :=
+          (map_terms rho Γ (l ++ [u]) _);
+      | fix_lambda_app_fix mfix idx l u :=
         let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
         let mfix' := map_fix_rho (t:=tFix mfix idx) (fun Γ x Hx => rho Γ x) Γ mfixctx mfix _ in
-        let args := map_terms rho Γ (l ++ [a]) _ in
+        let args := map_terms rho Γ (l ++ [u]) _ in
         match unfold_fix mfix' idx with 
         | Some (rarg, fn) =>
-          if is_constructor rarg (l ++ [a]) then
+          if is_constructor rarg (l ++ [u]) then
             mkApps fn args
           else mkApps (tFix mfix' idx) args
         | None => mkApps (tFix mfix' idx) args
         end ;
-      | fix_lambda_app_other t' u' nisfixlam := tApp (rho Γ t') (rho Γ u') } ; 
+      | fix_lambda_app_other t u nisfixlam := tApp (rho Γ t) (rho Γ u) } ; 
   rho Γ (tLetIn na d t b) => (subst10 (rho Γ d) (rho (vdef na (rho Γ d) (rho Γ t) :: Γ) b)); 
   rho Γ (tRel i) with option_map decl_body (nth_error Γ i) := { 
     | Some (Some body) => (lift0 (S i) body); 
@@ -716,7 +716,7 @@ Section Rho.
           tCase (ind, pars) p' (mkApps (subst0 (cofix_subst mfix') (dbody d)) args') brs'
         | None => tCase (ind, pars) p' (rho Γ x) brs'
         end; 
-    | construct_cofix_other t nconscof => 
+    | construct_cofix_other f nconscof => 
       let p' := rho Γ p in 
       let x' := rho Γ x in 
       let brs' := map_brs rho Γ brs _ in 
@@ -737,7 +737,7 @@ Section Rho.
       | Some d => tProj (i, pars, narg) (mkApps (subst0 (cofix_subst mfix') (dbody d)) args')
       | None =>  tProj (i, pars, narg) (rho Γ x)
       end;
-    | construct0_cofix_other t nconscof => tProj (i, pars, narg) (rho Γ x) } ;
+    | construct0_cofix_other f nconscof => tProj (i, pars, narg) (rho Γ x) } ;
   rho Γ (tConst c u) with lookup_env Σ c := { 
     | Some (ConstantDecl decl) with decl.(cst_body) := { 
       | Some body => subst_instance_constr u body; 

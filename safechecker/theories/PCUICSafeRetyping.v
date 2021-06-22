@@ -189,7 +189,7 @@ Section TypeOf.
     1-2:intros * _ her [mdecl [idecl [declm decli]]];
     red in declm; rewrite declm in e0; congruence.
     1-2:intros * _ _ => // => _ [mdecl [idecl [declm /= decli]]].
-    red in declm. rewrite declm in e1. noconf e1.
+    red in declm. rewrite declm in look. noconf look.
     congruence.
   Qed.
 
@@ -273,14 +273,14 @@ Section TypeOf.
 
     - sq. destruct (nth_error Γ n) eqn:hnth => //.
       eapply inversion_Rel in HT as (? & ? & ? & ?); auto.
-      rewrite e in hnth; noconf hnth. noconf wildcard0.
+      rewrite e0 in hnth; noconf hnth. noconf e.
       split; [now constructor|].
       intros T' Ht'.
       eapply inversion_Rel in Ht' as (? & ? & ? & ?); auto.
-      now rewrite e in e0; noconf e0.
+      now rewrite e0 in e; noconf e.
       
     - eapply inversion_Rel in HT as (? & ? & ? & ?); auto.
-      rewrite e in wildcard => //.
+      rewrite e0 in e => //.
      
     - depind HT. eapply IHHT1; eauto.
 
@@ -368,15 +368,15 @@ Section TypeOf.
         now rewrite subst_empty.
 
     - eapply inversion_Const in HT as [decl ?] => //.
-      intuition auto. rewrite a0 in wildcard. noconf wildcard.
+      intuition auto. rewrite a0 in e. noconf e.
       sq. split.
       * constructor; eauto.
       * intros T' [decl [wf [lookup [cu cum]]]]%inversion_Const; auto.
         red in lookup. congruence.
     - apply inversion_Const in HT as [decl [wf [lookup [cu cum]]]]; auto.
-      red in lookup. subst wildcard0. rewrite lookup in e. congruence.
+      red in lookup. subst wildcard. rewrite lookup in e. congruence.
     - apply inversion_Const in HT as [decl [wf [lookup [cu cum]]]]; auto.
-      red in lookup. subst wildcard0. rewrite lookup in e. congruence.
+      red in lookup. subst wildcard. rewrite lookup in e. congruence.
 
     - destruct decl as [decl [body decli]].
       eapply inversion_Ind in HT; auto.
@@ -391,7 +391,7 @@ Section TypeOf.
         now destruct (declared_inductive_inj decli decli'') as [-> ->].
     - eapply inversion_Ind in HT; auto.
       dependent elimination HT as [(mdecl; idecl; (wf'', (decli', (rest, cum))))].
-      move: wildcard0. destruct decli' as [look hnth].
+      move: e0. destruct decli' as [look hnth].
       move=> looki.
       eapply lookup_ind_decl_complete. now symmetry.
       exists mdecl, idecl. split; auto.
@@ -400,7 +400,7 @@ Section TypeOf.
       assert (declared_constructor Σ decl body (ind, k) cdecl) as declc.
       { red; intuition auto. }
       eapply inversion_Construct in HT; auto.
-      dependent elimination HT as [(mdecl; idecl; cdecl; (wf'', (declc', (rest, cum))))].
+      dependent elimination HT as [(mdecl; idecl; cdecl'; (wf'', (declc', (rest, cum))))].
       pose proof (declared_constructor_inj declc declc') as [-> [-> ->]].
       sq. split.
       * econstructor; eauto.
@@ -415,10 +415,10 @@ Section TypeOf.
       destruct d as [decl [body decli]].
       pose proof (declared_inductive_inj decli H0) as [-> ->]. simpl in *. congruence.
     
-    - symmetry in wildcard2.
+    - symmetry in e0.
       eapply inversion_Construct in HT; auto.
       dependent elimination HT as [(mdecl; idecl; cdecl; (wf'', (declc', (rest, cum))))].
-      eapply lookup_ind_decl_complete in wildcard2; eauto.
+      eapply lookup_ind_decl_complete in e0; eauto.
       now destruct declc'.
     
     - eapply inversion_Case in HT; auto.
@@ -434,8 +434,8 @@ Section TypeOf.
       destruct inversion_Case as (u & args & mdecl & idecl & ps & pty & btys & decli & indp & bcp & Hpty & lebs
         & isco & Hc & Hbtys & all & cum).
       destruct infer as [cty [[Hty Hp]]].
-      simpl in wildcard. destruct reduce_to_ind => //.
-      injection wildcard. intros ->. clear wildcard.
+      simpl in e. destruct reduce_to_ind => //.
+      injection e. intros ->. clear e.
       destruct a as [i [u' [l [red]]]].
       simpl.
       eapply type_reduction in Hty; eauto.
@@ -532,14 +532,14 @@ Section TypeOf.
         { eapply cumul_red_l_inv; eauto. }
         eapply cumul_Ind_Ind_inv in X0 as [[eqi' Ru'] cl']; auto.
       
-    - simpl in wildcard1.
+    - simpl in e.
       destruct inversion_Case as (u & args & mdecl & idecl & ps & pty & btys & decli & indp & bcp & Hpty & lebs
         & isco & Hc & Hbtys & all & cum).
       destruct infer as [cty [[Hty Hp]]]. simpl.
-      destruct validity as [_ i]. simpl in wildcard1.
+      destruct validity as [_ i]. simpl in e.
       specialize (Hp _ Hc).
       eapply invert_cumul_ind_r in Hp as [ui' [l' [red [Ru ca]]]]; auto.
-      symmetry in wildcard1; eapply reduce_to_ind_complete in wildcard1 => //.
+      symmetry in e; eapply reduce_to_ind_complete in e => //.
       eauto.
 
     - eapply inversion_Proj in HT as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
@@ -551,8 +551,8 @@ Section TypeOf.
       eapply wat_welltyped; auto. sq; auto.
     - simpl in *. destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
-      destruct reduce_to_ind => //. injection wildcard1. intros ->.
-      clear wildcard1.
+      destruct reduce_to_ind => //. injection e1. intros ->.
+      clear e1.
       destruct a as [i [u' [l [red]]]]. simpl.
       simpl in red.
       eapply type_reduction in Hc'; eauto.
@@ -622,9 +622,9 @@ Section TypeOf.
     - simpl in *.
       destruct inversion_Proj as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
-      symmetry in wildcard3.
-      pose proof (reduce_to_ind_complete _ _ _ _ _ wildcard3).
-      clear wildcard3; simpl. specialize (Hc'' _ Hc) as typ.
+      symmetry in e1.
+      pose proof (reduce_to_ind_complete _ _ _ _ _ e1).
+      clear e1; simpl. specialize (Hc'' _ Hc) as typ.
       eapply invert_cumul_ind_r in typ as [ui' [l' [red [Rgl Ra]]]]; auto.
       eauto.
 
@@ -635,8 +635,8 @@ Section TypeOf.
       simpl in *. intuition congruence.
 
     - eapply inversion_Proj in HT as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
-      symmetry in wildcard5.
-      eapply lookup_ind_decl_complete in wildcard5; auto.
+      symmetry in e0.
+      eapply lookup_ind_decl_complete in e0; auto.
       destruct declp. do 2 eexists; eauto.
     
     - eapply inversion_Fix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.

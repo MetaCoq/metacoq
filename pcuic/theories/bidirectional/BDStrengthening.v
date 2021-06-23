@@ -18,6 +18,23 @@ Proof.
   by rewrite minus_plus.
 Qed.
 
+Lemma Alli_impl_le {A P Q} {l : list A} {n} :
+  Alli P n l ->
+  (forall m x, m <= n + #|l| -> P m x -> Q m x) ->
+  Alli Q n l.
+Proof.
+  induction 1.
+  - intros _. constructor.
+  - intros H.
+    constructor.
+    + apply H => //.
+      1: lia.
+    + apply IHX.
+      intros.
+      apply H => //.
+      cbn. lia.
+Qed.
+
 Lemma on_ctx_free_vars_strengthenP P Γ Γ' Γ'':
   on_ctx_free_vars P Γ ->
   on_ctx_free_vars P Γ'' ->
@@ -26,7 +43,9 @@ Proof.
   intros hΓ hΓ''.
   rewrite !PCUICInst.on_ctx_free_vars_app.
   repeat (apply /andP ; split).
-  - admit.
+  - rewrite -PCUICWeakening.rename_context_lift_context.
+    admit.
+    (* context version of on_free_vars_lift *)
   - rewrite lift_context_length.
     rewrite /on_ctx_free_vars.
     apply alli_Alli.
@@ -77,6 +96,132 @@ Proof.
   eapply PCUICDeclarationTyping.onNpars, PCUICWeakeningEnv.on_declared_minductive ; eauto.
 Qed.
 
+Lemma on_free_vars_case_branch_context `{checker_flags} {Σ : global_env_ext } {wfΣ : wf Σ} {P ci mdecl idecl p br cdecl} :
+   let brctx := case_branch_context ci.1 mdecl p (forget_types (bcontext br)) cdecl in
+   declared_constructor Σ ci mdecl idecl cdecl ->
+   wf_predicate mdecl idecl p ->
+   wf_branch cdecl br ->
+   forallb (on_free_vars P) (pparams p) ->
+   on_free_vars_ctx P brctx.
+Proof.
+  intros brctx decli wfp wfb havp.
+  rewrite /brctx /case_branch_context /case_branch_context_gen /pre_case_branch_context_gen.
+  rewrite -on_free_vars_map2_cstr_args.
+  { len. by apply wf_branch_length. }
+  eapply on_free_vars_ctx_inst_case_context ; tea.
+  1: reflexivity.
+  rewrite test_context_k_closed_on_free_vars_ctx -closedn_ctx_on_free_vars.
+  erewrite wf_predicate_length_pars ; eauto.
+  erewrite <- onNpars.
+  2: eapply PCUICInductives.oi.
+  2: apply decli.
+  eapply PCUICInst.closedn_ctx_cstr_branch_context.
+  eassumption.
+ Qed.
+
+Lemma substP_shiftnP k n p :
+  substP k n p (shiftnP (k+n) p) =1 (shiftnP k p).
+Proof.
+  intros i; rewrite /shiftnP /substP /= /strengthenP /=.
+  do 2 nat_compare_specs.
+  1: reflexivity.
+  by rewrite /= (Nat.add_comm k n) Nat.sub_add_distr Nat.add_sub orb_diag.
+Qed.
+
+Lemma on_free_vars_subst (p : nat -> bool) k s t : 
+  forallb (on_free_vars p) s ->
+  on_free_vars (shiftnP (k + #|s|) p) t ->
+  on_free_vars (shiftnP k p) (subst s k t).
+Proof.
+  intros.
+  rewrite -substP_shiftnP.
+  by apply on_free_vars_subst_gen.
+Qed.
+
+Corollary on_free_vars_subst0 (p : nat -> bool) s t :
+  forallb (on_free_vars p) s ->
+  on_free_vars (shiftnP #|s| p) t ->
+  on_free_vars p (subst s 0 t).
+Proof.
+  intros.
+  rewrite -(shiftnP0 p).
+  by apply on_free_vars_subst.
+Qed.
+
+
+Lemma on_free_vars_case_branch_type `{checker_flags} {Σ : global_env_ext } {wfΣ : wf Σ} {P} {ci : case_info} {mdecl idecl p br i cdecl} :
+  let predctx := case_predicate_context ci mdecl idecl p in
+  let ptm := it_mkLambda_or_LetIn predctx (preturn p) in
+  let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
+  declared_constructor Σ (ci.(ci_ind),i) mdecl idecl cdecl ->
+  wf_predicate mdecl idecl p ->
+  All2 (compare_decls eq eq) (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+  wf_branch cdecl br ->
+  forallb (on_free_vars P) (pparams p) ->
+  on_free_vars (shiftnP #|pcontext p| P) (preturn p) ->
+  on_free_vars (shiftnP #|bcontext br| P) brctxty.2.
+Proof.
+  intros predctx ptm brctxty decli wfp allctx wfb havp havr.
+  rewrite /brctxty /case_branch_type /case_branch_type_gen /=.
+  rewrite on_free_vars_mkApps.
+  apply /andP ; split.
+  2: rewrite forallb_app ; apply /andP ; split.
+  - erewrite wf_branch_length by eassumption.
+    eapply on_free_vars_lift0.
+    rewrite addnP_shiftnP /ptm on_free_vars_it_mkLambda_or_LetIn.
+    apply /andP ; split.
+    + rewrite /predctx.
+      eapply on_free_vars_case_predicate_context.
+      all: tea.
+      apply decli.
+    + rewrite /predctx.
+      rewrite case_predicate_context_length.
+      all: eassumption.
+
+  - repeat rewrite !forallb_map.
+    epose proof (declared_constructor_closed_indices decli).
+    eapply forallb_impl ; tea.
+    intros.
+    rewrite (wf_branch_length wfb).
+    apply on_free_vars_subst.
+    1: by rewrite forallb_rev.
+    rewrite List.rev_length /expand_lets_k -shiftnP_add.
+    assert (#|pparams p| = (context_assumptions (subst_instance (puinst p) (ind_params mdecl)))) as ->.
+    { erewrite context_assumptions_subst_instance, onNpars, wf_predicate_length_pars ; eauto.
+      eapply PCUICInductives.oi ; eauto.
+    }
+    apply on_free_vars_subst.
+    + eapply foron_free_vars_extended_subst.
+      rewrite on_free_vars_subst_instance_context.
+      eapply closed_ctx_on_free_vars, declared_inductive_closed_params.
+      by eapply decli.
+    + rewrite extended_subst_length subst_instance_length context_assumptions_subst_instance.
+      rewrite shiftnP_add Nat.add_comm.
+      apply on_free_vars_lift_impl.
+      rewrite Nat.add_comm.
+      apply on_free_vars_subst.
+      1:{
+        eapply forallb_impl ; [|eapply closed_inds].
+        intros ; by apply closed_on_free_vars.
+      }
+      len.
+      rewrite on_free_vars_subst_instance.
+      apply closedn_on_free_vars.
+      by rewrite Nat.add_comm Nat.add_assoc.
+
+  - rewrite /= andb_true_r on_free_vars_mkApps.
+    apply /andP ; split => //.
+    rewrite forallb_app.
+    apply /andP ; split.
+    + rewrite forallb_map.
+      eapply forallb_impl ; tea.
+      intros.
+      by rewrite on_free_vars_lift0 // (wf_branch_length wfb) addnP_shiftnP.
+    + rewrite (wf_branch_length wfb).
+      by apply on_free_vars_to_extended_list.
+
+Qed.
+
 Definition unlift_renaming n k i := if i <? k then i else i - n.
 Definition unlift n k := rename (unlift_renaming n k).
 
@@ -107,69 +252,6 @@ Proof.
   intros ?.
   rewrite /shiftn /unlift_renaming /lift_renaming /ren_id.
   repeat nat_compare_specs.
-Qed.
-
-Lemma urenaming_strengthen P Γ Γ' Γ'' :
-  urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ'') (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (unlift_renaming #|Γ'| #|Γ''|).
-Proof.
-  rewrite <- PCUICWeakening.rename_context_lift_context.
-  intros i decl' pi nthi.
-  rewrite /strengthenP in pi.
-  destruct (Nat.ltb_spec0 i #|Γ''|) as [iΓ''|iΓ''].
-  - rewrite nth_error_app_context_lt in nthi.
-    1: by rewrite fold_context_k_length.
-    rewrite nth_error_rename_context in nthi.
-    apply option_map_Some in nthi as [decl'' []].
-    subst.
-    eexists ; split ; [idtac|split ; [idtac|split]].
-    + rewrite /unlift_renaming.
-      move: (iΓ'') => /Nat.ltb_spec0 ->.
-      rewrite nth_error_app_context_lt //.
-      eassumption.
-    + reflexivity.
-    + rewrite /= rename_compose.
-      apply rename_proper ; auto.
-      intros x.
-      rewrite !rshiftk_S lift_renaming_spec -(shiftn_rshiftk _ _ _) !shiftn_add -lift_renaming_spec.
-      rewrite Nat.add_0_r le_plus_minus_r.
-      1: lia.
-      rewrite (lift_unlift _ _ _) /ren_id /unlift_renaming.
-      nat_compare_specs.
-    + cbn ; destruct (decl_body decl'') ; rewrite //=.
-      f_equal.
-      rewrite rename_compose.
-      apply rename_proper ; auto.
-      intros x.
-      change (S (i + _)) with
-        (rshiftk (S i) (shiftn (#|Γ''| - S i) (lift_renaming #|Γ'| 0) x)).
-      rewrite shiftn_lift_renaming lift_renaming_spec -(shiftn_rshiftk _ _ _) shiftn_add.
-      rewrite -lift_renaming_spec Nat.add_0_r le_plus_minus_r.
-      1: lia.
-      rewrite (lift_unlift _ _ _) /unlift_renaming.
-      nat_compare_specs.
-      reflexivity.
-
-  - rewrite -app_context_assoc /= in nthi.
-    destruct (Nat.ltb_spec0 i (#|Γ''| + #|Γ'|)) as [iΓ'|iΓ'] ; cbn in * ; [congruence|..].
-    apply Nat.nlt_ge in iΓ'.
-    rewrite nth_error_app_context_ge app_length /= rename_context_length // in nthi.
-    eexists ; repeat split.
-    + rewrite /unlift_renaming.
-      nat_compare_specs.
-      rewrite nth_error_app_context_ge ; [lia|..].
-      rewrite -nthi.
-      f_equal.
-      lia.
-    + apply rename_proper ; auto.
-      intros x.
-      rewrite /unlift_renaming.
-      repeat nat_compare_specs.
-    + destruct (decl_body decl') ; rewrite //=.
-      f_equal.
-      apply rename_proper ; auto.
-      intros x.
-      rewrite /unlift_renaming.
-      repeat nat_compare_specs.
 Qed.
 
 Section OnFreeVars.
@@ -273,7 +355,7 @@ Section OnFreeVars.
     
     - intros until args.
       move => ? _ ? largs ? ? ? ?.
-      apply on_free_vars_subst.
+      apply on_free_vars_subst0.
       + cbn ; apply /andP ; split ; auto.
         rewrite forallb_rev.
         apply All_forallb.
@@ -418,6 +500,41 @@ Let PΓ_rel Γ Γ' :=
   on_free_vars_ctx P Γ' ->
   wf_local_bd_rel Σ Δ (rename_context f Γ').
 
+Lemma rename_telescope P f Γ Δ tel tys:
+  urenaming P Δ Γ f ->
+  on_ctx_free_vars P Γ ->
+  forallb (on_free_vars P) tys ->
+  on_free_vars_ctx P (List.rev tel) ->
+  PCUICTyping.ctx_inst (fun _ => Pcheck) Σ Γ tys tel ->
+  PCUICTyping.ctx_inst checking Σ Δ (map (rename f) tys) (rename_telescope f tel).
+Proof.
+  intros ur hΓ htys htel ins.
+  induction ins in Δ, ur, hΓ, htys, htel |- *.
+  - constructor.
+  - rewrite rename_telescope_cons /=.
+    move: htys => /= /andP [] ? ?.
+    rewrite /= on_free_vars_ctx_app on_free_vars_ctx_tip /= in htel.
+    move : htel => /andP [] ? ?.
+    constructor.
+    1: eauto.
+    rewrite -(rename_subst_telescope _ [_]).
+    apply IHins ; tea.
+    rewrite -subst_context_subst_telescope.
+    apply on_free_vars_ctx_subst_context.
+    1: assumption.
+    by rewrite /= andb_true_r.
+  - rewrite rename_telescope_cons /=.
+    rewrite /= on_free_vars_ctx_app on_free_vars_ctx_tip /= in htel.
+    move : htel => /andP [] /andP [] /= ? ? ?.
+    constructor.
+    rewrite -(rename_subst_telescope _ [_]).
+    apply IHins ; tea.
+    rewrite -subst_context_subst_telescope.
+    apply on_free_vars_ctx_subst_context.
+    1: assumption.
+    by rewrite /= andb_true_r.
+Qed.
+
 Theorem bidirectional_renaming : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
 Proof.
   apply bidir_ind_env.
@@ -537,18 +654,16 @@ Proof.
         apply /andP ; split ; tea.
         rewrite on_free_vars_ctx_on_ctx_free_vars.
         eapply on_free_vars_case_predicate_context ; tea.
-    + revert X7.
-      rewrite -{2}[subst_instance _ _](rename_closedn_ctx f 0).
+    + rewrite -[subst_instance _ _](rename_closedn_ctx f 0).
       { pose proof (declared_inductive_closed_params isdecl).
         now rewrite closedn_subst_instance_context. }
       rewrite rename_context_telescope rename_telescope_shiftn0 /=.
-      assert (on_free_vars_ctx P (subst_instance (puinst p) (ind_params mdecl))).
-      { admit. }
-      clear -on_pars.
-      (* induction 1.
-      * constructor.
-      * constructor.   *)
-      admit.
+      eapply rename_telescope ; tea.
+      rewrite rev_involutive.
+      rewrite on_free_vars_subst_instance_context.
+      eapply closed_ctx_on_free_vars, declared_inductive_closed_params.
+      eassumption.
+
     + rewrite /= /id -map_skipn -map_app.
       eapply cumul_renameP in X8 ; tea.
       * by rewrite !rename_mkApps /= in X8.
@@ -566,6 +681,7 @@ Proof.
       eapply All2i_map_right, (All2i_impl X9) => i cdecl br.
       set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
       move=> [Hnth [ [wfbr [eqbctx [wfbctx [IHbctx [Hbod IHbod]]]]] /andP [on_ctx on_bod] ]].
+      rewrite test_context_k_closed_on_free_vars_ctx in on_ctx.
       rewrite -(rename_closed_constructor_body mdecl cdecl f).
       { eapply (declared_constructor_closed (c:=(ci.(ci_ind),i))); eauto.
         split; eauto. }
@@ -586,11 +702,15 @@ Proof.
       1:rewrite (wf_predicate_length_pars H0).
       1:erewrite declared_minductive_ind_npars ; eauto.
       assert (on_free_vars_ctx P brctxty.1).
-      { rewrite test_context_k_closed_on_free_vars_ctx in on_ctx.        
-        admit. }
+      { rewrite case_branch_type_fst.
+        eapply (@on_free_vars_case_branch_context _ _ _ _ (ci.(ci_ind),i)).
+        all: tea.
+        split.
+        all: eassumption.
+      }
       set (brctx' := rename_context f _).
       split.
-      1:by eapply IHbctx ; eauto.
+      1: eapply IHbctx ; eauto.
       rewrite rename_case_branch_type //.
       eapply IHbod.
       * rewrite case_branch_type_fst /=.
@@ -606,7 +726,10 @@ Proof.
       * rewrite case_branch_type_length //.
         erewrite <- wf_branch_length ; eauto.
       * rewrite case_branch_context_length //.
-        admit.
+        eapply on_free_vars_case_branch_type.
+        all: tea.
+        split.
+        all: assumption.
   
   - intros. red. move => P Δ f hf hΓ /= ?.
     rewrite rename_subst0 /= rename_subst_instance map_rev List.rev_length.
@@ -688,7 +811,7 @@ Proof.
     4: eassumption.
     all: assumption.
 
-Admitted.
+Qed.
 
 End BDRenaming.
 
@@ -708,6 +831,69 @@ Proof.
     lia.
   - eapply closedn_lift_inv in clt => //.
     lia.
+Qed.
+
+Lemma urenaming_strengthen P Γ Γ' Γ'' :
+  urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ'') (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (unlift_renaming #|Γ'| #|Γ''|).
+Proof.
+  rewrite <- PCUICWeakening.rename_context_lift_context.
+  intros i decl' pi nthi.
+  rewrite /strengthenP in pi.
+  destruct (Nat.ltb_spec0 i #|Γ''|) as [iΓ''|iΓ''].
+  - rewrite nth_error_app_context_lt in nthi.
+    1: by rewrite fold_context_k_length.
+    rewrite nth_error_rename_context in nthi.
+    apply option_map_Some in nthi as [decl'' []].
+    subst.
+    eexists ; split ; [idtac|split ; [idtac|split]].
+    + rewrite /unlift_renaming.
+      move: (iΓ'') => /Nat.ltb_spec0 ->.
+      rewrite nth_error_app_context_lt //.
+      eassumption.
+    + reflexivity.
+    + rewrite /= rename_compose.
+      apply rename_proper ; auto.
+      intros x.
+      rewrite !rshiftk_S lift_renaming_spec -(shiftn_rshiftk _ _ _) !shiftn_add -lift_renaming_spec.
+      rewrite Nat.add_0_r le_plus_minus_r.
+      1: lia.
+      rewrite (lift_unlift _ _ _) /ren_id /unlift_renaming.
+      nat_compare_specs.
+    + cbn ; destruct (decl_body decl'') ; rewrite //=.
+      f_equal.
+      rewrite rename_compose.
+      apply rename_proper ; auto.
+      intros x.
+      change (S (i + _)) with
+        (rshiftk (S i) (shiftn (#|Γ''| - S i) (lift_renaming #|Γ'| 0) x)).
+      rewrite shiftn_lift_renaming lift_renaming_spec -(shiftn_rshiftk _ _ _) shiftn_add.
+      rewrite -lift_renaming_spec Nat.add_0_r le_plus_minus_r.
+      1: lia.
+      rewrite (lift_unlift _ _ _) /unlift_renaming.
+      nat_compare_specs.
+      reflexivity.
+
+  - rewrite -app_context_assoc /= in nthi.
+    destruct (Nat.ltb_spec0 i (#|Γ''| + #|Γ'|)) as [iΓ'|iΓ'] ; cbn in * ; [congruence|..].
+    apply Nat.nlt_ge in iΓ'.
+    rewrite nth_error_app_context_ge app_length /= rename_context_length // in nthi.
+    eexists ; repeat split.
+    + rewrite /unlift_renaming.
+      nat_compare_specs.
+      rewrite nth_error_app_context_ge ; [lia|..].
+      rewrite -nthi.
+      f_equal.
+      lia.
+    + apply rename_proper ; auto.
+      intros x.
+      rewrite /unlift_renaming.
+      repeat nat_compare_specs.
+    + destruct (decl_body decl') ; rewrite //=.
+      f_equal.
+      apply rename_proper ; auto.
+      intros x.
+      rewrite /unlift_renaming.
+      repeat nat_compare_specs.
 Qed.
   
 Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Γ' Γ'' t T :

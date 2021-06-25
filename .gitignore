@@ -418,3 +418,5 @@ erasure/src/pCUICTypeChecker.ml
 erasure/src/pCUICTypeChecker.mli
 erasure/src/pCUICPrimitive.ml
 erasure/src/pCUICPrimitive.mli
+test-suite/plugin-demo/Makefile.plugin
+template-coq/gen-src/cRelationClasses.mli.bak

@@ -1,6 +1,6 @@
 Require Import List Arith String.
 Require Import MetaCoq.Template.All.
-Import ListNotations MonadNotation.
+Import ListNotations MCMonadNotation.
 
 
 MetaCoq Run (x <- tmFreshName ("x" ++ "y")%string ;;

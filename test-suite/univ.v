@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import All.
 Require Import String List Arith.
-Import ListNotations MonadNotation.
+Import ListNotations MCMonadNotation.
 Open Scope string.
 
 Notation "'unfolded' d" :=
@@ -149,7 +149,7 @@ Polymorphic Inductive foo3@{i j k l} (A : Type@{i}) (B : Type@{j}) : Type@{k} :=
 MetaCoq Quote Recursively Definition qfoo3 := foo3.
 Compute qfoo3.
 
-Require Import MetaCoq.Template.monad_utils. Import MonadNotation.
+Require Import MetaCoq.Template.monad_utils. Import MCMonadNotation.
 Require Import MetaCoq.Template.TemplateMonad.Core.
 
 MetaCoq Run (tmQuoteInductive (cp "foo") >>= tmPrint).

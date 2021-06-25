@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils Checker All.
+Import MCMonadNotation.
 
 (* Should be in AstUtils probably *)
 Fixpoint subst_app (t : term) (us : list term) : term :=

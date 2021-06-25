@@ -1403,7 +1403,9 @@ Section Reduce.
       rewrite eq in haux. cbn in haux.
       assumption.
     - clear Heq.
-      revert discr.
+      match goal with 
+       [ H : red_discr _ _ |- _ ] => revert H
+      end.
       funelim (red_discr t π). all: intros [].
       all: try solve [ constructor ; constructor ].
       all: try solve [

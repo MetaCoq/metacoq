@@ -129,8 +129,8 @@ Section fix_sigma.
       | exist (Checked H) rsort => left _ ;
       | exist (TypeError _) rsort with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
         | exist (Checked (na; A; B; H)) rprod with is_arity (Γ,, vass na A) _ B _ :=
-          { | left H => left _;
-            | right H => right _ };
+          { | left isa => left _;
+            | right nisa => right _ };
         | exist (TypeError e) rprod => right _ } }
     }.
   Next Obligation.
@@ -154,21 +154,21 @@ Section fix_sigma.
     sq. repeat eexists. eassumption.
   Qed.
   Next Obligation.
-    destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq.
+    destruct isa as (? & ? & ?). eexists (tProd _ _ _). split; sq.
     etransitivity. eassumption. eapply PCUICReduction.red_prod. reflexivity.
     eassumption. now cbn.
   Qed.
   Next Obligation.
     clear rprod.
     destruct HΣ as [wΣ].
-    destruct H1 as (? & ? & ?). sq.
-    destruct H.
+    destruct H0 as (? & ? & ?). sq.
+    destruct nisa.
     edestruct (red_confluence wfΣ X0 X) as (? & ? & ?); eauto.
     eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
 
-    eapply invert_cumul_arity_l in H2. 2: eauto.
+    eapply invert_cumul_arity_l in H1. 2: eauto.
     2: eapply PCUICCumulativity.red_cumul. 2:eauto.
-    destruct H2 as (? & ? & ?). sq.
+    destruct H1 as (? & ? & ?). sq.
 
     eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
     exists x4; split; eauto.
@@ -433,7 +433,7 @@ Section Erase.
       simpl in *. 
       eapply All2_In in a as [(x' & (? & ?) & ?)]; eauto.
       simpl in *. subst. eexists; eauto.
-    - clear wildcard12.
+    - clear wildcard.
       eapply inversion_Proj in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
     - eapply inversion_Fix in Ht as (? & ? & ? & ? & ? & ?); auto.

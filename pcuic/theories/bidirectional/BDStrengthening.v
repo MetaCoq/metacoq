@@ -10,12 +10,66 @@ From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromP
 Require Import ssreflect ssrbool.
 Require Import Coq.Program.Equality.
 
-Lemma addnP_strengthenP0 i P : addnP i (strengthenP 0 i P) =1 P.
+Ltac case_inequalities :=
+  match goal with
+  | |- context [?x <=? ?y] =>
+    destruct (Nat.leb_spec x y)
+  | |- context [?x <? ?y] =>
+    destruct (Nat.ltb_spec x y)
+  end.
+
+Lemma shiftnP_shiftn P f i : (shiftnP i P) ∘ (shiftn i f) =1 shiftnP i (P ∘ f).
 Proof.
-  intros ?.
-  rewrite /addnP /strengthenP.
-  repeat nat_compare_specs.
+  intros k.
+  rewrite !/shiftnP /shiftn.
+  destruct (Nat.ltb_spec k i) => /=.
+  all: case_inequalities => //=.
+  1-2: lia.
   by rewrite minus_plus.
+Qed.
+
+Lemma on_free_vars_rename P f t :
+  on_free_vars P (rename f t) = on_free_vars (P ∘ f) t.
+Proof.
+  induction t in P, f |- * using term_forall_list_ind.
+
+  all: cbn => //.
+
+  - erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    all: eauto.
+  - by rewrite IHt1 IHt2 shiftnP_shiftn.
+  - by rewrite IHt1 IHt2 shiftnP_shiftn.
+  - by rewrite IHt1 IHt2 IHt3 shiftnP_shiftn.
+  - by rewrite IHt1 IHt2.
+  - destruct X as (IHpar&ctx&IHret).
+    f_equal.
+    1: erewrite forallb_map, All_forallb_eq_forallb ; tea ; eauto.
+    f_equal.
+    1: by rewrite IHret shiftnP_shiftn.
+    f_equal.
+    1: by rewrite map_length.
+    f_equal.
+    1: auto.
+    erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    1: reflexivity.
+    intros b [].
+    f_equal.
+    1: by rewrite map_length.
+    by rewrite /PCUICSigmaCalculus.rename_branch /= e shiftnP_shiftn.
+  - erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    1: reflexivity.
+    intros ? [? ebod].
+    rewrite /test_def /=.
+    f_equal.
+    1: auto.
+    by rewrite map_length ebod shiftnP_shiftn.
+  - erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    1: reflexivity.
+    intros ? [? ebod].
+    rewrite /test_def /=.
+    f_equal.
+    1: auto.
+    by rewrite map_length ebod shiftnP_shiftn.
 Qed.
 
 Lemma Alli_impl_le {A P Q} {l : list A} {n} :
@@ -35,17 +89,41 @@ Proof.
       cbn. lia.
 Qed.
 
-Lemma on_ctx_free_vars_strengthenP P Γ Γ' Γ'':
-  on_ctx_free_vars P Γ ->
-  on_ctx_free_vars P Γ'' ->
-  on_ctx_free_vars (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ',,,lift_context #|Γ'| 0 Γ'').
+Lemma addnP_strengthen_lift i k k' :
+  i <= k' ->
+  (addnP (S i) (strengthenP k' k xpredT)) ∘ (lift_renaming k (Nat.pred k' - i))
+    =1 xpredT.
+Proof.
+  intros l ?.
+  rewrite /addnP /strengthenP /lift_renaming.
+  destruct (Nat.leb_spec (Nat.pred k' - i) a) => //.
+  all: case_inequalities => //.
+  all: case_inequalities => //.
+  all: lia.
+Qed.
+
+
+Lemma on_ctx_free_vars_strengthenP Γ Γ' Γ'':
+  on_ctx_free_vars xpredT Γ ->
+  on_ctx_free_vars xpredT Γ'' ->
+  on_ctx_free_vars (strengthenP #|Γ''| #|Γ'| xpredT) (Γ,,,Γ',,,lift_context #|Γ'| 0 Γ'').
 Proof.
   intros hΓ hΓ''.
   rewrite !PCUICInst.on_ctx_free_vars_app.
   repeat (apply /andP ; split).
-  - rewrite -PCUICWeakening.rename_context_lift_context.
-    admit.
-    (* context version of on_free_vars_lift *)
+  - rewrite /on_ctx_free_vars /lift_context /=.
+    erewrite alli_fold_context_k_prop.
+    apply alli_Alli in hΓ''.
+    eapply alli_Alli, Alli_impl_le ; tea.
+    move => i [? [?|] ?] /= ?.
+    + rewrite /on_free_vars_decl /test_decl /= !PCUICInst.addnP_xpredT => /andP [? ?].
+      apply /implyP => _.
+      apply /andP ; split.
+      all: rewrite lift_rename on_free_vars_rename Nat.add_0_r addnP_strengthen_lift //.
+    + rewrite /on_free_vars_decl /test_decl /= !PCUICInst.addnP_xpredT => ?.
+      apply /implyP => _.
+      rewrite lift_rename on_free_vars_rename Nat.add_0_r addnP_strengthen_lift //.
+
   - rewrite lift_context_length.
     rewrite /on_ctx_free_vars.
     apply alli_Alli.
@@ -53,10 +131,18 @@ Proof.
     intros i ? ?.
     assert (i < #|Γ'|) by (apply nth_error_Some ; congruence).
     rewrite /addnP /strengthenP /=.
-    by repeat nat_compare_specs.
+    repeat case_inequalities => //=.
+    all: lia.
   - rewrite addnP_add lift_context_length.
-    
-Admitted.
+    erewrite on_ctx_free_vars_proper.
+    3: reflexivity.
+    1: eassumption.
+    intros ?.
+    rewrite /addnP /strengthenP.
+    case_inequalities => //.
+    case_inequalities => //.
+    lia.
+Qed.
 
 Lemma on_free_vars_ctx_tip P d : on_free_vars_ctx P [d] = on_free_vars_decl P d.
 Proof. cbn; rewrite andb_true_r // shiftnP0 //. Qed.
@@ -117,14 +203,14 @@ Proof.
   2: apply decli.
   eapply PCUICInst.closedn_ctx_cstr_branch_context.
   eassumption.
- Qed.
+Qed.
 
 Lemma substP_shiftnP k n p :
   substP k n p (shiftnP (k+n) p) =1 (shiftnP k p).
 Proof.
   intros i; rewrite /shiftnP /substP /= /strengthenP /=.
-  do 2 nat_compare_specs.
-  1: reflexivity.
+  do 2 case_inequalities => //=.
+  1-2: exfalso ; lia.
   by rewrite /= (Nat.add_comm k n) Nat.sub_add_distr Nat.add_sub orb_diag.
 Qed.
 
@@ -229,7 +315,8 @@ Lemma lift_unlift n k : (unlift_renaming n k) ∘ (lift_renaming n k) =1 ren_id.
 Proof.
   intros i.
   rewrite /unlift_renaming /lift_renaming /ren_id.
-  repeat nat_compare_specs.
+  repeat case_inequalities.
+  all: lia.
 Qed.
 
 Corollary lift_unlift_term {n k} t : unlift n k (lift n k t) = t.
@@ -250,8 +337,10 @@ Proof.
   rewrite rename_compose.
   apply rename_proper => //.
   intros ?.
+  rewrite shiftn_lift_renaming.
   rewrite /shiftn /unlift_renaming /lift_renaming /ren_id.
-  repeat nat_compare_specs.
+  repeat case_inequalities => //.
+  all: lia.
 Qed.
 
 Section OnFreeVars.
@@ -815,6 +904,21 @@ Qed.
 
 End BDRenaming.
 
+Theorem typing_renaming_cond_P `{checker_flags} {P f Σ Γ Δ t T} {wfΣ : wf Σ.1} :
+  PCUICRename.renaming P Σ Δ Γ f ->
+  on_ctx_free_vars P Γ ->
+  on_free_vars P t ->
+  Σ ;;; Γ |- t : T ->
+  ∑ T', Σ ;;; Δ |- rename f t : T'.
+Proof.
+  move => [ur wfΔ] fvΓ fvt tyt.
+  move: (tyt) => /typing_wf_local wfΓ.
+  move: (tyt) => /typing_infering [T' [inf cum]].
+  exists (rename f T').
+  apply infering_typing => //.
+  eapply bidirectional_renaming ; eassumption.
+Qed.
+
 Lemma closedn_ctx_lift_inv n k k' Γ :
   k <= k' -> closedn_ctx (k' + n) (lift_context n k Γ) ->
   closedn_ctx k' Γ.
@@ -858,7 +962,7 @@ Proof.
       rewrite Nat.add_0_r le_plus_minus_r.
       1: lia.
       rewrite (lift_unlift _ _ _) /ren_id /unlift_renaming.
-      nat_compare_specs.
+      by move: (iΓ'') => /Nat.ltb_spec0 ->.
     + cbn ; destruct (decl_body decl'') ; rewrite //=.
       f_equal.
       rewrite rename_compose.
@@ -869,17 +973,16 @@ Proof.
       rewrite shiftn_lift_renaming lift_renaming_spec -(shiftn_rshiftk _ _ _) shiftn_add.
       rewrite -lift_renaming_spec Nat.add_0_r le_plus_minus_r.
       1: lia.
-      rewrite (lift_unlift _ _ _) /unlift_renaming.
-      nat_compare_specs.
-      reflexivity.
-
+      rewrite (lift_unlift _ _ _) /ren_id /unlift_renaming.
+      by move: (iΓ'') => /Nat.ltb_spec0 ->.
   - rewrite -app_context_assoc /= in nthi.
     destruct (Nat.ltb_spec0 i (#|Γ''| + #|Γ'|)) as [iΓ'|iΓ'] ; cbn in * ; [congruence|..].
     apply Nat.nlt_ge in iΓ'.
     rewrite nth_error_app_context_ge app_length /= rename_context_length // in nthi.
     eexists ; repeat split.
     + rewrite /unlift_renaming.
-      nat_compare_specs.
+      case_inequalities.
+      1: lia.
       rewrite nth_error_app_context_ge ; [lia|..].
       rewrite -nthi.
       f_equal.
@@ -887,13 +990,19 @@ Proof.
     + apply rename_proper ; auto.
       intros x.
       rewrite /unlift_renaming.
-      repeat nat_compare_specs.
+      case_inequalities.
+      1: lia.
+      case_inequalities.
+      all: lia.
     + destruct (decl_body decl') ; rewrite //=.
       f_equal.
       apply rename_proper ; auto.
       intros x.
       rewrite /unlift_renaming.
-      repeat nat_compare_specs.
+      case_inequalities.
+      1: lia.
+      case_inequalities.
+      all: lia.
 Qed.
   
 Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ Γ' Γ'' t T :
@@ -901,57 +1010,49 @@ Lemma strengthening `{cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ
   ∑ T', Σ ;;; Γ ,,, Γ'' |- t : T'.
 Proof.
   intros Hty.
-  assert (wfΓ : wf_local Σ Γ).
-    {
-    do 2 eapply wf_local_app_l.
-    eapply typing_wf_local.
-    eassumption.
-    }
-  generalize Hty.
-  intros Hinfer ; apply typing_infering in Hinfer as [T' [? _]] ; tea.
-  erewrite <- (lift_unlift_term t).
-  eexists.
-  eapply infering_typing ; tea.
-  - eapply wf_local_app ; tea.
+  assert (wf_local Σ Γ) by
+    move: Hty => /typing_wf_local /wf_local_app_inv [] /wf_local_app_inv [] //.
+
+  assert (wfΓ'' : wf_local Σ (Γ ,,, Γ'')).
+  { apply wf_local_app => //.
+    erewrite <- (lift_unlift_context Γ'').
     eapply bidirectional_to_pcuic ; tea.
-    erewrite <- (lift_unlift_context Γ'' ).
     rewrite PCUICWeakening.rename_context_lift_context.
     eapply bidirectional_renaming ; tea.
-    + eapply All_local_app_rel, bidirectional_from_pcuic ; tea.
-    + eapply (urenaming_strengthen _ Γ Γ' []).
-    + change (Γ,,, Γ') with (Γ,,, Γ' ,,, []).
-      apply on_ctx_free_vars_strengthenP => //.
-      erewrite on_free_vars_ctx_on_ctx_free_vars.
-      eapply closed_ctx_on_free_vars, closed_wf_local ; tea.
-    + rewrite -on_free_vars_ctx_lift_context.
-      eapply closedn_ctx_on_free_vars_shift.
-      eapply typing_wf_local, closed_wf_local in Hty => //.
-      rewrite closedn_ctx_app in Hty.
-      move: Hty => /andP [] _ Hty.
-      rewrite app_length /= Nat.add_comm in Hty.
-      eapply closedn_ctx_lift_inv ; tea.
-      lia.
-  - eapply bidirectional_renaming ; tea.
-    + eapply urenaming_strengthen.
-    + eapply on_ctx_free_vars_strengthenP.
-      * erewrite on_free_vars_ctx_on_ctx_free_vars.
-        eapply closed_ctx_on_free_vars, closed_wf_local ; tea.
-      * erewrite shiftnP_add, Nat.add_comm, <- shiftnP_add.
-        erewrite on_free_vars_ctx_on_ctx_free_vars.
-        eapply closedn_ctx_on_free_vars_shift.
-        eapply (closedn_ctx_lift_inv #|Γ'| 0).
-        1: lia.
-        apply typing_wf_local, closed_wf_local in Hty => //.
-        rewrite closedn_ctx_app /= app_context_length Nat.add_comm in Hty.
-        move: Hty => /andP [] //.
-    + erewrite shiftnP_add, on_free_vars_lift.
-      apply closedn_on_free_vars.
-      eapply (closedn_lift_inv #|Γ'| #|Γ''|).
-      1: lia.
-      apply subject_closed in Hty.
-      rewrite !app_context_length lift_context_length in Hty.
-      by rewrite Nat.add_comm Nat.add_assoc Nat.add_comm.
-  
-  Unshelve.
-  all: exact xpredT.
+    - eapply All_local_app_rel, bidirectional_from_pcuic => //.
+      eapply type_Prop_wf.
+      apply typing_wf_local in Hty.
+      eassumption.
+    - eapply (urenaming_strengthen _ _ _ []).
+    - apply (on_ctx_free_vars_strengthenP _ _ []) => //.
+      eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
+      by apply PCUICWellScopedCumulativity.wf_local_closed_context.
+    - rewrite -on_free_vars_ctx_lift_context.
+      move: Hty => /typing_wf_local /closed_wf_local.
+      rewrite closedn_ctx_app => /andP [_] /=.
+      rewrite app_context_length Nat.add_comm => hΓ''.
+      apply closedn_ctx_lift_inv in hΓ''.
+      2: easy.
+      eapply (@closedn_ctx_on_free_vars_shift _ _ xpredT) in hΓ''.
+      rewrite <- shiftnP_xpredT.
+      eassumption.
+  }
+
+  erewrite <- (lift_unlift_term t).
+  eapply typing_renaming_cond_P.
+  4: eassumption.
+  - split => //.
+    apply urenaming_strengthen.
+  - move: wfΓ'' => /PCUICWellScopedCumulativity.wf_local_closed_context.
+    rewrite on_free_vars_ctx_app => /andP [? ?].
+    apply on_ctx_free_vars_strengthenP.
+    all: eapply on_free_vars_ctx_on_ctx_free_vars_xpredT ; eassumption.
+  - rewrite on_free_vars_lift -shiftnP_xpredT.
+    move: Hty => /subject_closed.
+    len.
+    rewrite -[X in _ + X]Nat.add_comm Nat.add_assoc => Ht.
+    eapply closedn_lift_inv in Ht.
+    2: lia.
+    eapply closedn_on_free_vars.
+    eassumption.
 Qed.

@@ -74,6 +74,7 @@ theories/bidirectional/BDTyping.v
 theories/bidirectional/BDToPCUIC.v
 theories/bidirectional/BDFromPCUIC.v
 theories/bidirectional/BDUnique.v
+theories/bidirectional/BDStrengthening.v
 
 # theories/All.v
 

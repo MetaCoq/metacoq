@@ -8,7 +8,14 @@ jobs:
 
     strategy:
       matrix:
-        target: [ local, opam ]
+        coq_version:
+          - '8.13'
+        ocaml_version:
+          - '4.07-flambda'
+          - '4.10-flambda'
+          - '4.11-flambda'
+        target: [ opam ]
+      fail-fast: true
 
     steps:
 

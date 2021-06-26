@@ -19,6 +19,11 @@ jobs:
 
     steps:
 
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
       - name: Docker-Coq-Action
         uses: coq-community/docker-coq-action@v1
         with:
@@ -42,11 +47,3 @@ jobs:
         # to avoid a warning at cleanup time
         if: ${{ always() }}
         run: sudo chown -R 1001:116 .  # <--
-        
-      - name: Installing dependencies
-        run: opam install . --deps-only --with-doc --with-test
-
-      - name: Configuring
-        run: opam exec -- ./configure.sh ${{matrix.target}}
-      - name: Compiling
-        run: opam exec -- make -j 2 ci-${{matrix.target}}

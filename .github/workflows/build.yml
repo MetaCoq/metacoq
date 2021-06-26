@@ -1,4 +1,4 @@
-gname: Test compilation
+name: MetaCoq CI
 
 on: [push, pull_request]
 

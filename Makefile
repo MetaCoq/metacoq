@@ -78,7 +78,6 @@ cleanplugins:
 	$(MAKE) -C erasure cleanplugin
 
 ci-local:
-	./configure.sh local
 	$(MAKE) all test-suite
 
 ci-opam:

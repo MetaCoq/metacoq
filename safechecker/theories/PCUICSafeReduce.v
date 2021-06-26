@@ -1814,7 +1814,7 @@ Section ReduceFns.
     now cbn in n0.
   Qed.
 
-  Equations reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
+  Equations? reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
     : typing_result (∑ i u l, ∥ red (fst Σ) Γ t (mkApps (tInd i u) l) ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {

@@ -167,16 +167,16 @@ Module WeightedGraphExt (V: UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithL
       apply filter_In. split.
       - apply EdgeSet.elements_spec1 in e as H1.
         apply InA_alt in H1 as [y0 [H1 H2]].
-        now rewrite H1.
+        by rewrite H1.
       - cbn. destruct V.eq_equiv as [refl _ _].
-        destruct (VSetDecide.F.eq_dec x x)=> //.
+        by destruct (VSetDecide.F.eq_dec x x).
     Qed.
 
     Definition pred (x : V.t) : list V.t := 
       let l := List.filter (fun e => V.eq_dec e..t x) (EdgeSet.elements (E G)) in
       List.map (fun e => e..s) l.
 
-    Lemma pred_spec x y : In y (pred x) -> Edges G y x.
+    Lemma pred_spec_1 x y : In y (pred x) -> Edges G y x.
     Proof.
       intros Hy. apply edges_elements. unfold pred in Hy. revert y Hy.
       induction (EdgeSet.elements (E G)) => //.
@@ -189,12 +189,36 @@ Module WeightedGraphExt (V: UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithL
       - cbn in H. destruct (IHl y H) as [n0 ?]. exists n0. by right.
     Qed.
 
+    Lemma pred_spec_2 x y : Edges G x y -> In x (pred y).
+    Proof.
+      intros [n e]. apply in_map_iff. exists (x, n, y). split => //.
+      apply filter_In. split.
+      - apply EdgeSet.elements_spec1 in e as H1.
+        apply InA_alt in H1 as [y0 [H1 H2]].
+        by rewrite H1.
+      - destruct V.eq_equiv as [refl _ _].
+        simpl. by destruct (VSetDecide.F.eq_dec y y).
+    Qed.
+
     Lemma inv_cardinal s x : VSet.In x s -> exists n, VSet.cardinal s = S n.
     Proof.
       intros [y [[=->] H%in_split]]%VSetFact.elements_1%InA_alt.
       destruct H as [l1 [l2 H]]. rewrite VSet.cardinal_spec H app_length.
       cbn. rewrite<- plus_n_Sm. by exists (#|l1| + #|l2|).
     Qed.
+
+  Lemma path_last_edge x y : x <> y -> Paths G x y ->
+    ∑ z, Paths G x z × Edges G z y.
+  Proof.
+    intros H p.
+    induction p => //.
+    destruct (V.eq_dec y z) as [<-|H0].
+    - exists x. split => //. apply paths_refl.
+    - destruct (IHp H0) as [x' [p' e']].
+      exists x'.
+      split => //.
+      apply (paths_step _ _ _ _ e p').
+  Qed.
 
   End Stuff.
 
@@ -547,6 +571,20 @@ Module WeightedGraphExt (V: UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithL
       apply config_init.
     Qed.
 
+    Lemma topological_sort_in_graph y : In y topological_sort ->
+      VSet.In y (V G).
+    Proof.
+      intro H. unfold topological_sort, topological_sort0 in H.
+      destruct (topological_sort00_spec 
+                  (VSet.cardinal (V G)) VSet.empty (V G) [] (s G)) as [H0 _] => //.
+      + apply config_init.
+      + destruct H0 as [tot _]. rewrite<- tot.
+        rewrite VSet.union_spec. right.
+        rewrite VSet.union_spec. right.
+        apply VSetProp.of_list_1. apply InA_alt.
+        by exists y.
+    Qed.
+
     Lemma topological_sort_spec x l l': topological_sort = l ++ x::l' ->
       forall y, Paths G x y -> In y (x::l').
     Proof.
@@ -641,6 +679,13 @@ Module WeightedGraphExt (V: UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithL
         rewrite VSetProp.empty_union_2 => //.
         apply VSet.empty_spec.
       * apply VSetProp.empty_inter_1. apply VSet.empty_spec.
+    Qed.
+
+    Lemma topological_sort_sorted : is_topo_sorted topological_sort.
+    Proof.
+      unfold topological_sort, topological_sort0.
+      destruct (topological_sort00_spec (VSet.cardinal (V G)) VSet.empty (V G) [] (s G)) as [?[? ?]] => //.
+      apply config_init.
     Qed.
 
   End topological_sort.
@@ -1020,6 +1065,13 @@ Section GlobalConstraints.
     | _, _ => false
     end.
 
+  Lemma global_elimination_correct u1 u2 :
+    global_elimination (SortFamily.from_univ u1) (SortFamily.from_univ u2) <->
+    globally_eliminable u1 u2.
+  Proof.
+    by destruct u1, u2.
+  Qed.
+
   Lemma global_elimination_trans y x z :
     global_elimination x y -> global_elimination y z ->
     global_elimination x z.
@@ -1225,6 +1277,42 @@ Section Join.
         * intros ? ?. apply H1. apply SortFamilySet.add_spec. by right.
         * by rewrite H4 in H5.
   Qed.
+
+  Lemma join_bin_in s1 s2 s VSet :
+    SortFamilySet.Subset global_sorts VSet ->
+    SortFamilySet.In s1 VSet ->
+    SortFamilySet.In s2 VSet ->
+    join_bin s1 s2 = Some s ->
+    SortFamilySet.In s VSet.
+  Proof.
+    intros H H0 H1 H2.
+    specialize (H s). unfold global_sorts in H.
+    revert H.
+    repeat rewrite SortFamilySet.add_spec.
+    rewrite SortFamilySet.singleton_spec.
+    intro H.
+    destruct s1, s2 => //; try injection H2 => <-; (try by apply H0); (try by apply H1).
+    simpl in H2. destruct (s0 =? s1)%string => //. by injection H2 => <-.
+  Qed.
+
+  Lemma join_in S : forall s VSet,
+    join S = Some s->
+    SortFamilySet.Subset global_sorts VSet ->
+    SortFamilySet.For_all (fun s => SortFamilySet.In s VSet) S ->
+    SortFamilySet.In s VSet.
+  Proof.
+    induction S using SortFamilySetProp.set_induction_bis.
+    - by apply SortFamilySet.eq_leibniz in H as ->.
+    - intros s VSet [=<-] H ?. apply H. apply SortFamilySet.add_spec.
+      by left.
+    - unfold join. rewrite SortFamilySetProp.fold_add => //; [|apply join_bin_trans].
+      fold (join S). intros s VSet H0 H1 H2. destruct (join S) as [s'|] eqn: H3 => //.
+      apply (join_bin_in x s') => //.
+      + apply H2. rewrite SortFamilySet.add_spec. by left.
+      + apply IHS => //. intros ? ?. apply H2.
+        rewrite SortFamilySet.add_spec. by right.
+  Qed.
+
 End Join.
 
 Section local_global.
@@ -1244,16 +1332,28 @@ Section local_global.
     + right. by apply H.
   Qed.
 
-  Lemma local_refines_global φ s1 s2 : is_eliminable global_constraints s1 s2 ->
+  Lemma local_refines_global φ s1 s2 : global_elimination s1 s2 ->
+    SortFamilySet.In s2 (sGraph.V (make_graph (add_global φ))) -> 
     is_eliminable (add_global φ) s1 s2.
   Proof.
-    intro H. apply is_eliminable_correct'. apply is_eliminable_correct' in H.
-    destruct H as [p]. constructor. induction p.
-    - apply paths_refl.
-    - apply: (paths_step _ _ y) => //.
-      destruct e as [n H]. exists n. unfold add_global. cbn in H|-*.
-      apply (make_graph_edges_inc global_constraints) => //.
-      apply SortConstraintSetProp.union_subset_2.
+    intros H H0. apply is_eliminable_correct'. constructor.
+    destruct s1,s2 => //; try apply paths_refl.
+    5: {apply eqb_eq in H. rewrite H. apply paths_refl. }
+    all: apply: paths_step; [|apply paths_refl].
+    all: exists 1%Z.
+    1: change (_, _,_) with (SortFamily.sfProp, SortFamily.sfSProp).to_edge.
+    2: change (_, _,_) with (SortFamily.sfType, SortFamily.sfProp).to_edge.
+    3: change (_, _,_) with (SortFamily.sfType, SortFamily.sfSProp).to_edge.
+    4: change (_, _,_) with (SortFamily.sfType, SortFamily.sfGlobal s).to_edge.
+    all: apply make_graph_edges_caract.
+    all: split => //.
+    2-4: by left.
+    right.
+    rewrite SortConstraintSet.union_spec.
+    right.
+    repeat rewrite SortConstraintSet.add_spec.
+    rewrite SortConstraintSet.singleton_spec.
+    by right.
   Qed.
 
   Lemma composition_local φ s : SortFamilySet.In s (constraints_to_set φ) ->
@@ -1266,12 +1366,15 @@ Section GoodConstraints.
   Variable (φ: SortConstraintSet.t).
   Definition constraints := add_global φ.
   Definition local_graph := make_graph constraints.
+  Definition non_var_sorts := SortFamilySet.filter 
+    (fun s => negb (SortFamily.is_var s)) (sGraph.V local_graph).
 
   Definition respect_constraints s s':=
-    Bool.eqb (is_eliminable global_constraints s s') (is_eliminable constraints s s').
+    (is_eliminable constraints s s') ==> (global_elimination s s').
 
   Definition global_local_agreement: bool := SortFamilySet.for_all
-    (fun s => SortFamilySet.for_all (fun s' => respect_constraints s s') global_sorts) global_sorts.
+    (fun s => SortFamilySet.for_all 
+      (fun s' => respect_constraints s s') non_var_sorts) non_var_sorts.
 
   Definition assignment : Set := list (nat × SortFamily.t).
   Definition replace_variables (ρ : assignment) (s : SortFamily.t) : SortFamily.t :=
@@ -1282,6 +1385,34 @@ Section GoodConstraints.
       end
     | _ => s
     end.
+
+  Definition correct_assignment (ρ:assignment) := 
+    forallb (fun p => negb (SortFamily.is_var p.2)) ρ.
+
+  Lemma correct_assignment_cons ρ n s : SortFamily.is_var s = false ->
+    correct_assignment ρ -> correct_assignment ((n, s)::ρ).
+  Proof.
+    intros ? ?. apply andb_true_intro. split => //. by apply negb_true_iff.
+  Qed.
+
+  Lemma replace_variables_not_variable ρ s : correct_assignment ρ ->
+    SortFamily.is_var (replace_variables ρ s) = false.
+  Proof.
+    destruct s => //. cbn. move=> /forallb_forall H.
+    destruct (find _) eqn: H0 => //. apply find_some in H0.
+    rewrite (surjective_pairing p). apply negb_true_iff. apply H.
+    by destruct H0.
+  Qed.
+
+  Lemma join_replace_not_variable ρ s s' : correct_assignment ρ ->
+    join (SortFamilySetProp.of_list
+      (map (replace_variables ρ) (pred local_graph s))) = Some s' ->
+    SortFamily.is_var s' = false.
+  Proof.
+    move=> H0 /join_outputs_global H. apply H.
+    move=> s0 /SortFamilySetProp.of_list_1 /InA_alt [y [-> /in_map_iff [x [<- _]]]].
+    by apply replace_variables_not_variable.
+  Qed.
 
   Definition to_univ' s : universe_family :=
     match s with
@@ -1301,6 +1432,11 @@ Section GoodConstraints.
     | None => UType
     | Some (m, s) => to_univ' s
     end.
+
+  Definition join_preds ρ s := join (SortFamilySetProp.of_list
+    (map (fun s => SortFamily.from_univ (SortFamily.sort_val
+        (Build_valuation (fun _ => xH) (fun _ => 0) (find_assignment ρ)) s))
+      (pred local_graph s))).
 
   Fixpoint assign_variables (ρ: assignment) (vertices: list SortFamily.t): option assignment :=
     match vertices with
@@ -1350,20 +1486,16 @@ Section GoodConstraints.
     simpl in H. by rewrite H0 in H.
   Qed.
 
+  (*
   Lemma assign_variables_variable n l ρ l' :
     assign_variables ρ (SortFamily.sfVar n :: l) = Some l' ->
     exists s, In (n, s) l' /\ SortFamily.is_var s = false.
   Proof.
     simpl. destruct (join _) as [s|] eqn: H => //.
-    intro H0. exists s. split; [|apply global_sorts_not_variables; apply: join_on_global; exact H].
+    intro H0. exists s. split; [|apply global_sorts_not_variables; apply: join_outputs_global; exact H].
     destruct (assign_variables_input ((n, s)::ρ) l l' H0) as [? ->].
     apply in_or_app. right. apply in_eq.
-  Qed.
-
-  Definition join_preds ρ s := join (SortFamilySetProp.of_list
-    (map (fun s => SortFamily.from_univ (SortFamily.sort_val
-        (Build_valuation (fun _ => xH) (fun _ => 0) (find_assignment ρ)) s))
-      (pred local_graph s))).
+  Qed.*)
 
   Lemma assign_variables_not_in l : forall l1 l2 n, ~ In (SortFamily.sfVar n) l ->
     assign_variables l1 l = Some (l2 ++ l1) ->
@@ -1385,14 +1517,15 @@ Section GoodConstraints.
   Qed.
 
   Lemma assign_variables_nodup l : forall ρ l' n s, NoDup l ->
+    correct_assignment l' ->
     assign_variables l' l = Some ρ ->
     In (n, s) ρ -> ~ InA (fun p q => p.1 = q.1) (n, s) l' ->
     SortFamily.from_univ (find_assignment ρ n) = s.
   Proof.
     induction l.
-    - intros ? ? ? ? ? [=<-] ? ?. exfalso. apply H2. apply InA_alt.
+    - intros ? ? ? ? ? ? [=<-] ? H2. exfalso. apply H2. apply InA_alt.
       by exists (n, s).
-    - intros ρ l' n s H H1 H2 H3. depelim H.
+    - intros ρ l' n s H Hl' H1 H2 H3. depelim H.
       destruct a as [| | | |n']; try by apply (IHl _ l').
       destruct (Nat.eq_dec n n') as [<-|H4].
       + simpl in H1. destruct (join _) as [s'|] eqn: H6 => //.
@@ -1405,8 +1538,7 @@ Section GoodConstraints.
             ++ exfalso. refine (assign_variables_not_in l _ _ _ H H1 u.2 _).
                apply InA_alt. exists u. split => //. by apply beq_nat_true in H5.
             ++ injection H2 => <-. rewrite<- H4. destruct s' => //.
-               apply join_on_global in H6. apply global_sorts_not_variables in H6.
-               cbn in H6. discriminate.
+               by apply join_replace_not_variable in H6.
             ++ exfalso. apply H3. apply InA_alt. exists u. split => //.
                by apply beq_nat_true in H5.
           -- specialize (find_none _ _ H4) => H5.
@@ -1415,10 +1547,43 @@ Section GoodConstraints.
              specialize (H5 H7). discriminate.
         * exfalso. apply H3. apply InA_alt. by exists (n, s).
       + simpl in H1. destruct (join _) as [s'|] eqn: H5 => //.
-        apply (IHl _ ((n', s')::l')) => //. intros [y [[=H7] H8]]%InA_alt.
+        apply (IHl _ ((n', s')::l')) => //.
+        1: {apply correct_assignment_cons => //.
+            apply (join_replace_not_variable _ _ _ Hl' H5). }
+        intros [y [[=H7] H8]]%InA_alt.
         destruct H8.
         * apply H4. rewrite<- H6 in H7. apply H7.
         * apply H3. apply InA_alt. by exists y.
+  Qed.
+
+  Lemma assign_variables_nodupA l ρ : NoDup l ->
+    assign_variables [] l = Some ρ ->
+    NoDupA (fun p q => p.1 = q.1) ρ.
+  Proof.
+    assert (NoDupA (fun p q => p.1 = q.1) [] (A := nat × SortFamily.t)) as H => //.
+    assert (correct_assignment []) as H0 => //.
+    assert (forall n s, In (SortFamily.sfVar n) l -> 
+            ~ InA (fun p q : nat × SortFamily.t => p.1 = q.1) (n, s) []) as H1.
+    1: {intros. by rewrite InA_nil. }
+    elim: l ρ [] H H0 H1.
+    - intros ? ? ? ? ? ? [=<-] => //.
+    - intros a l IHl ρ l' H H0 H1 H2 H4. depelim H2.
+      destruct a as [| | | |n].
+      1-4: apply (IHl _ l') => //; intros; apply H1; by apply in_cons.
+      simpl in H4. destruct (join _) as [s|] eqn: H5 => //.
+      apply (IHl _ ((n,s)::l')) => //.
+      + constructor => //. apply H1. apply in_eq.
+      + apply correct_assignment_cons => //.
+        apply: join_outputs_global; [|exact H5].
+        intros s0 H6. apply-> SortFamilySetProp.of_list_1 in H6.
+        apply InA_alt in H6 as [s' [<- H6]].
+        apply in_map_iff in H6 as [x [<- H6]].
+        by apply replace_variables_not_variable.
+      + intros n' s' H6 H7. destruct (Nat.eq_dec n n') as [->|H8].
+        * by apply H2.
+        * apply InA_cons in H7. destruct H7.
+          -- by apply H8.
+          -- apply: H1; [|exact H7]. by apply in_cons.
   Qed.
 
   Lemma correct_assignment_no_variables l : forall n ρ,
@@ -1429,13 +1594,14 @@ Section GoodConstraints.
     intros n ρ H0 H1.
     assert (forall n, SortFamily.from_univ (find_assignment [] n) = replace_variables [] (SortFamily.sfVar n)) as H => //.
     assert (forall (s:SortFamily.t), ~InA (fun p q => p.1 = q.1) (n, s) []) as H2; [intros; by rewrite InA_nil|].
-    elim: l [] n ρ H H0 H1 H2.
-    - intros l' n ρ Hd H H0 H1. simpl in H0. by injection H0 => <-.
-    - intros a l IHl l' n ρ H Hd H0 H1. depelim Hd. destruct a as [| | | |n0]; try by apply (IHl l').
+    assert (correct_assignment []) => //.
+    elim: l [] n ρ H H0 H1 H2 H3.
+    - intros l' n ρ Hd H H0 H1 H2. simpl in H0. by injection H0 => <-.
+    - intros a l IHl l' n ρ H Hd H0 H1 Hl'. depelim Hd. destruct a as [| | | |n0]; try by apply (IHl l').
       have H1' := H1. simpl in H1. destruct (join _ ) as [s|] eqn: H3 => //.
       destruct (Nat.eq_dec n n0) as [->|H4].
       + destruct (assign_variables_input _ _ _ H1) as [ρ2 H4].
-        rewrite (assign_variables_nodup _ _ _ _ s _ H1') => //.
+        rewrite (assign_variables_nodup _ _ _ _ s _ Hl' H1') => //.
         * by constructor.
         * rewrite H4. apply in_or_app. right. apply in_eq.
         * unfold replace_variables. destruct (find _ _) as [p|] eqn: H5.
@@ -1453,13 +1619,15 @@ Section GoodConstraints.
              ++ apply H6. rewrite H4. apply in_or_app. right. apply in_eq.
       + apply (IHl ((n0,s)::l')) => //.
         * intro n1. unfold find_assignment. cbn.
-          apply join_on_global in H3. apply global_sorts_not_variables in H3.
+          apply join_replace_not_variable in H3 => //.
           destruct (n0 =? n1).
           -- by destruct s.
           -- apply H.
         * intros s' H5. apply InA_alt in H5 as [y [H5 [H6|H6]]].
           -- rewrite<- H6 in H5. by apply H4.
           -- apply (H2 s'). apply InA_alt. by exists y.
+        * apply correct_assignment_cons => //.
+          apply (join_replace_not_variable _ _ _ Hl' H3).
   Qed.
 
 
@@ -1547,7 +1715,7 @@ Section GoodConstraints.
                   unfold ma, mb. apply map_ext. intros x H9.
                   destruct x as [| | | |n0] => //. cbn -[replace_variables].
                   assert (In (SortFamily.sfVar n0) (SortFamily.sfType::l0)).
-                  -- apply pred_spec in H9. rewrite app_comm_cons in H4.
+                  -- apply pred_spec_1 in H9. rewrite app_comm_cons in H4.
                      specialize (is_topo_sorted_pred local_graph _ H4 H0) as H10.
                      destruct (H10 (SortFamily.sfVar n0) (SortFamily.sfVar n')
                       (SortFamily.sfType :: l0) l) as [H11|H11] => //.
@@ -1563,7 +1731,7 @@ Section GoodConstraints.
                         apply (nodup_app_l _ _ H4). }
                      destruct (H1 n0 H10) as [s0 [H11 H12]].
                      rewrite<- (assign_variables_app _ _ _ _ H) in H2'.
-                     rewrite (assign_variables_nodup _ _ _ _ _ H4 H2' H12); [by rewrite InA_nil|].
+                     rewrite (assign_variables_nodup _ _ _ _ _ H4 _ H2' H12)=> // ; [by rewrite InA_nil|].
                      rewrite<- (app_nil_l l1) in H8. rewrite app_comm_cons in H8.
                      rewrite app_assoc in H8. rewrite H8 in H2'.
                      rewrite (assign_variables_app _ _ _ _ H) in H2'.
@@ -1573,7 +1741,7 @@ Section GoodConstraints.
                      apply in_app_or in H12 as [H12|H12].
                      1: {by exfalso; apply H17; apply InA_alt; exists (n0, s0). }
                      assert (NoDup (SortFamily.sfType :: l0)) as H18; [rewrite app_comm_cons in H4; apply: nodup_app_l; eassumption|].
-                     by rewrite (assign_variables_nodup _ _ _ _ _ H18 H H12); [by rewrite InA_nil|].
+                     by rewrite (assign_variables_nodup _ _ _ _ _ H18 _ H H12) => //; rewrite InA_nil.
                ** rewrite H8. apply in_or_app. right. apply in_eq.
           * rewrite<- app_assoc. rewrite app_comm_cons.
             by rewrite (assign_variables_app _ _ _ l1).
@@ -1582,16 +1750,259 @@ Section GoodConstraints.
             ++ by right.
   Qed.
 
+  Lemma assign_variables_inv l ρ n s :
+    assign_variables [] l = Some ρ ->
+    In (n, s) ρ ->
+    In (SortFamily.sfVar n) l.
+  Proof.
+    assert (~InA (fun p q => p.1 = q.1) (n, s) []);
+      [by rewrite InA_nil|].
+    move: [] H.
+    induction l.
+    - intros ? H [=<-] H1. exfalso. apply H. apply InA_alt. by exists (n, s).
+    - intros l' H H0 H1.
+      destruct a as [| | | |n']; try by (intros; apply in_cons; apply (IHl l')).
+      destruct (Nat.eq_dec n n') as [->|H2]; [apply in_eq|].
+      simpl in H0. destruct (join _) as [s'|] eqn: H3 => //.
+      apply in_cons.
+      apply (IHl ((n', s')::l')) => //.
+      intros [H4|H4]%InA_cons.
+      + by apply H2.
+      + by apply H.
+  Qed.
+
   Lemma assign_variables_output_universes {Ha : acyclic local_graph} n ρ :
     (assign_variables [] (topological_sort local_graph)) = Some ρ ->
     In (SortFamily.sfVar n) (topological_sort local_graph) ->
-    exists s, In (n, s) ρ /\ SortFamilySet.In s global_sorts.
+    exists s, In (n, s) ρ /\ SortFamily.is_var s = false.
   Proof.
     intros.
     destruct (assign_variables_eq ρ n (Ha := Ha)) as [s [H1 H2]] => //.
-    apply join_on_global in H1.
-    by exists s.
+    apply join_outputs_global in H1; [by exists s|].
+    move=> ? /SortFamilySetProp.of_list_1 /InA_alt [y [-> /in_map_iff [x [<- H3]]]].
+    destruct x => //. cbn. destruct (find_assignment _ _) => //.
   Qed.
+
+  Lemma NoDupA_alt {A : Type} {eqA : A -> A -> Prop} 
+    (eqA_equiv : Equivalence eqA) l : forall x y,
+    NoDupA eqA l -> In x l -> In y l -> eqA x y -> x = y.
+  Proof.
+    induction l => //.
+    intros x y H H1 H2 H3. depelim H.
+    destruct H1 as [H1|H1]; destruct H2 as [H2|H2].
+    - by rewrite<- H1.
+    - exfalso. apply H. apply InA_alt. rewrite H1. by exists y.
+    - exfalso. apply H. apply InA_alt. rewrite H2. destruct eqA_equiv as [_ Hsym _].
+      apply Hsym in H3. by exists x.
+    - by apply IHl.
+  Qed.
+
+  Lemma assign_variables_in ρ n s {Ha : acyclic local_graph} :
+    assign_variables [] (topological_sort local_graph) = Some ρ ->
+    In (n, s) ρ -> SortFamilySet.In s (sGraph.V local_graph).
+  Proof.
+    assert (forall s, In s (topological_sort local_graph) -> SortFamilySet.In s (sGraph.V local_graph)) as H;
+      [apply topological_sort_in_graph => //; apply make_graph_well_formed|].
+    assert (is_topo_sorted local_graph (topological_sort local_graph)) as H0;
+      [apply topological_sort_sorted => //; apply make_graph_well_formed|].
+    assert (forall n s, In (SortFamily.sfVar n) [] -> In (n, s) ρ ->
+            SortFamilySet.In s (sGraph.V local_graph)) as H2 => //.
+    assert (exists l, assign_variables [] [] = Some l) as [l0 H1];
+      [by exists []|].
+    assert (NoDup (topological_sort local_graph)) as H3; [apply topological_sort_nodup|].
+    rewrite<- (app_nil_l (topological_sort local_graph)) in H,H0,H3|-*.
+    elim: (topological_sort local_graph) ([]:list SortFamily.t) l0 H1 n s H3 H H0 H2.
+    + simpl. move=> l l0 Hl0 n s Hl H H0 H1 H2 H3. apply (H1 n s) => //.
+      rewrite app_nil_r in H2.
+      by apply (assign_variables_inv _ _ _ s H2).
+    + intros a l IHl l' l0 Hl0 n s Hl H H0 H1 H2 H3.
+      assert (l' ++ a :: l = (l' ++ [a]) ++ l) as H4;
+        [rewrite<- app_assoc; by rewrite<- app_comm_cons|].
+      rewrite H4 in H,H0,H2,Hl.
+      have H5 := assign_variables_app l' [a] [] l0 Hl0.
+      destruct a as [| | | |n'].
+      1-4: simpl in H5; apply (IHl _ _ H5 n s) => //; intros n0 ? H6 ?;
+        apply (H1 n0) => //; apply in_app_or in H6 as [H6|H6] => //;
+        simpl in H6; destruct H6 => //.
+      simpl in H5. destruct (join _) as [s'|] eqn: H6 => //.
+      2: {apply (assign_variables_app_progress _ l) in H5. by rewrite H5 in H2. }
+      apply (IHl _ _ H5 n s) => //.
+      intros n0 s0 [H7|H7]%in_app_or H8; [by apply (H1 n0)|].
+      destruct H7 as [[=<-]|H7] => //. have H7 := assign_variables_nodupA _ _ Hl H2.
+      have H9 := (NoDupA_alt _ _ _ _ H7).
+      rewrite (assign_variables_app _ _ _ _ H5) in H2.
+      destruct (assign_variables_input _ _ _ H2) as [l1 H10].
+      specialize (fun a b => H9 a (n', s') (n', s0) b H8 eq_refl).
+      injection H9.
+      * move=> <-. apply (join_in _ _ _ H6).
+        -- move=> x Hx. apply constraints_to_set_correct. unfold global_sorts in Hx.
+           move: Hx. repeat rewrite SortFamilySet.add_spec.
+           rewrite SortFamilySet.singleton_spec. intros [->|[->| ->]].
+           ++ by left.
+           ++ right. exists (SortFamily.sfProp, SortFamily.sfSProp).
+              split; [|by left]. apply SortConstraintSet.union_spec. right.
+              repeat (apply SortConstraintSet.add_spec; right).
+              by apply SortConstraintSet.singleton_spec.
+           ++ right. exists (SortFamily.sfProp, SortFamily.sfSProp).
+              split; [|by right]. apply SortConstraintSet.union_spec. right.
+              repeat (apply SortConstraintSet.add_spec; right).
+              by apply SortConstraintSet.singleton_spec.
+        -- move=> x /SortFamilySetProp.of_list_1 /InA_alt [? [<- /in_map_iff [y [H11 /pred_spec_1 H12]]]].
+           destruct (make_graph_well_formed constraints) as [He _ _].
+           destruct H12 as [e H12]. specialize (He _ H12) as [He _].
+           destruct y as [| | | |n0]; try (by rewrite<- H11).
+           cbn in H11. destruct (find _ _) as [p|] eqn: H13;
+             [|rewrite<- H11; apply constraints_to_set_correct; by left].
+           apply find_some in H13. apply (H1 p.1).
+           ++ apply (assign_variables_inv _ l0 _ p.2) => //. destruct H13.
+              by rewrite<- (surjective_pairing p).
+           ++ rewrite H10. apply in_or_app. right. apply in_cons.
+              rewrite<- H11. by destruct p, H13.
+      * easy.
+      * rewrite H10. apply in_or_app. right. apply in_eq.
+  Qed.
+
+  Definition ancestor_sorts n := (SortFamilySet.filter
+      (fun s => is_eliminable constraints s (SortFamily.sfVar n)) non_var_sorts).
+
+  Lemma join_preds_elim ρ n s :
+    acyclic local_graph ->
+    assign_variables [] (topological_sort local_graph) = Some ρ ->
+    In (SortFamily.sfVar n) (topological_sort local_graph) ->
+    join_preds ρ (SortFamily.sfVar n) = Some s ->
+    upper_bound s (ancestor_sorts n).
+  Proof.
+    intros Ha.
+    assert (is_topo_sorted local_graph (topological_sort local_graph)) as H; 
+      [apply topological_sort_sorted=> //;apply make_graph_well_formed|].
+    assert (forall s, SortFamilySet.In s (sGraph.V local_graph) -> In s (topological_sort local_graph)) as H0;
+      [intro s0;by apply topological_sort_constraints_reach|].
+    assert (exists l, assign_variables [] [] = Some l) as [l0 H2]; [by exists []|].
+    assert (forall n' s', In (SortFamily.sfVar n') [] -> join_preds ρ (SortFamily.sfVar n') = Some s' ->
+      upper_bound s' (ancestor_sorts n')) as H1 => //.
+    move: l0 H2 H H0 H1.
+    rewrite<- (app_nil_l (topological_sort local_graph)).
+    elim: (topological_sort local_graph) ([]: list SortFamily.t).
+    - intros ? ? ? ? ? ? ? []%in_app_or => //. easy.
+    - intros a l IHl l' l0 H H0 H1 H2 H3 H4 H5.
+      assert (l' ++ a :: l = (l' ++ [a]) ++ l) as H6;
+        [rewrite<- app_assoc; by rewrite<- app_comm_cons|].
+      have H7 := assign_variables_app l' [a] [] l0 H.
+      rewrite H6 in H0,H1,H3,H4.
+      destruct a as [| | |str|n'].
+      all: simpl in H7.
+      5: destruct (join _) as [s'|] eqn: H9 => //;
+        [|by rewrite assign_variables_app_progress in H3].
+      all: apply (IHl _ _ H7) => //.
+      all: intros n0 s0 [H8|[[=<-]|]]%in_app_or => //.
+      1-5: by apply H2.
+      move=> H8 x /SortFamilySet.filter_spec.
+      move=> [/SortFamilySet.filter_spec [H10 H11] /is_eliminable_correct' [H12]].
+      assert (x <> SortFamily.sfVar n') as H13;
+        [by intros ->|].
+      apply path_last_edge in H12 => //.
+
+  Lemma assign_variables_elim_gather ρ n : acyclic local_graph ->
+    global_local_agreement ->
+    assign_variables [] (topological_sort local_graph) = Some ρ ->
+    join_preds ρ (SortFamily.sfVar n) =  join (SortFamilySet.filter 
+      (fun s => is_eliminable constraints s (SortFamily.sfVar n)) non_var_sorts).
+  Proof.
+    intros Ha Hl Hρ. unfold join_preds.
+    set S1 := SortFamilySetProp.of_list _.
+    set S2 := SortFamilySet.filter _ _.
+    destruct (join S1) as [s1|] eqn: H; destruct (join S2) as [s2|] eqn: H0 => //.
+    - assert (upper_bound s1 S2); [|assert (upper_bound s2 S1)].
+      + intros x H1. apply SortFamilySet.filter_spec in H1 as [H1 H2]; [|by intros ? ? <-].
+        apply is_eliminable_correct' in H2 as [H2].
+        apply SortFamilySet.filter_spec in H1 as [H1 Hx]; [|by intros ? ? <-].
+        apply path_last_edge in H2 as [z [p e]]; [|by intros ->].
+        induction p.
+        * apply: join_bound; [|exact H|].
+          -- move=> ? /SortFamilySetProp.of_list_1 /InA_alt [? [<- /in_map_iff [x1 [<- ?]]]].
+             elim: (SortFamily.sort_val _ _) => //.
+          -- apply SortFamilySetProp.of_list_1. apply InA_alt.
+             exists x. split => //. apply in_map_iff. exists x.
+             split; [|by apply pred_spec_2]. by destruct x.
+        * destruct (make_graph_well_formed constraints) as [He _ _].
+          specialize (He _ e0.π2) as [_ Hy].
+          destruct (SortFamily.is_var y) eqn: H2.
+          -- destruct y as [| | | |n'] => //.
+             destruct (assign_variables_eq ρ n' (Ha := Ha)) as [s [H3 H4]] => //;
+              [by apply topological_sort_constraints_reach|].
+
+    enough (global_elimination (join S1) (join S2) /\ global_elimination (join S2) (join S1)).
+
+  Lemma assign_variables_elim_compat n tgt ρ :
+    assign_variables [] (topological_sort local_graph) = Some ρ ->
+    In (SortFamily.sfVar n) (topological_sort local_graph) ->
+    is_eliminable constraints (SortFamily.sfVar n) tgt ->
+    SortFamily.is_var tgt = false -> global_local_agreement ->
+    upper_bound tgt (SortFamilySetProp.of_list 
+      (map (replace_variables ρ) (pred local_graph (SortFamily.sfVar n)))).
+  Proof.
+    assert (forall n, In (SortFamily.sfVar n) [] -> upper_bound tgt
+      (SortFamilySetProp.of_list (map (replace_variables ρ)
+        (pred local_graph (SortFamily.sfVar n))))) as H => //.
+    have H1 := app_nil_l (topological_sort local_graph).
+    rewrite<- H1.
+    assert (exists l, assign_variables [] [] = Some l) as [l0 H3]; [by exists []|].
+    intros H4 H5 H6 Htgt Ha.
+    set top := topological_sort local_graph. fold top in H1. unfold top in H1 at 1.
+    elim: (topological_sort local_graph) ([]: list SortFamily.t) l0 H3 H1 n H H4 H5 H6.
+    - intros ? ?. rewrite app_nil_r. easy.
+    - intros a l IHl l' l0 H H0 n H1 H2 H3 H4 s H5.
+      assert (l' ++ a :: l = (l' ++ [a]) ++ l) as H6;
+        [rewrite<- app_assoc; by rewrite<- app_comm_cons|].
+      have H7 := assign_variables_app l' [a] [] l0 H.
+      rewrite H6 in H0,H2,H3.
+      destruct a as [| | | |n'].
+      5: simpl in H7.
+      5: destruct (join _) as [s'|] eqn: H9 => //;
+        [|by rewrite assign_variables_app_progress in H2].
+      all: apply: (IHl _ _ H7 _ n) => //.
+      all: intros n0 [H8|[[=<-]|]]%in_app_or => //.
+      1-5: by apply H1.
+      
+
+(*
+  Lemma assign_variables_elim_compat n ρ :
+    assign_variables [] (topological_sort local_graph) = Some ρ ->
+    In (SortFamily.sfVar n) (topological_sort local_graph) ->
+    is_eliminable constraints (SortFamily.from_univ (find_assignment ρ n)) (SortFamily.sfVar n).
+  Proof.
+    intros H H0.
+    assert (forall n, In (SortFamily.sfVar n) [] ->
+      is_eliminable constraints 
+        (SortFamily.from_univ (find_assignment ρ n)) 
+        (SortFamily.sfVar n)) as H1 => //.
+    have H2 := app_nil_l (topological_sort local_graph).
+    rewrite<- H2 in H,H0.
+    assert (exists l, assign_variables [] [] = Some l) as [l0 H3]; [by exists []|].
+    set top := topological_sort local_graph. fold top in H2. unfold top in H2 at 1.
+    elim: (topological_sort local_graph) ([]:list SortFamily.t) l0 H3 H n H0 H1 H2.
+    - intros ? ?. rewrite app_nil_r. easy.
+    - intros a l IHl l' l0 H H0 n H1 H2 H3.
+      assert (l' ++ a :: l = (l' ++ [a]) ++ l) as H4;
+        [rewrite<- app_assoc; by rewrite<- app_comm_cons|].
+      have H5 := assign_variables_app l' [a] [] l0 H.
+      destruct a as [| | | |n'].
+      1-4: rewrite H4 in H0,H1,H3.
+      1-4: apply (IHl _ _ H5) => //.
+      1-4: intros n0 [H6|[]]%in_app_or => //.
+      1-4: by apply H2.
+      apply in_app_or in H1 as [H1|H1];
+        [by apply H2|].
+      destruct H1 as [[=->]|H1].
+      + have H0' := (assign_variables_app _ (SortFamily.sfVar n::l) _ _ H).
+        rewrite H0 in H0'.
+        simpl in H0',H5. destruct (join _) as [s|] eqn: H6 => //.
+        destruct (assign_variables_input _ _ _ (eq_sym H0')) as [l1 H1].
+        rewrite (assign_variables_nodup _ ρ _ n s _ _ H0) => //.
+        * rewrite H3. apply topological_sort_nodup.
+        * rewrite H1. apply in_or_app. right. apply in_eq.
+        * by rewrite InA_nil.
+        * 
 
   Lemma assign_to_global ρ s : is_acyclic local_graph ->
     assign_variables [] (topological_sort local_graph) = Some ρ ->
@@ -1622,10 +2033,10 @@ Section GoodConstraints.
       + destruct s as [| | | |n] eqn: H6 => //.
         destruct (assign_variables_output_universes n ρ H H5
                   (Ha := Ha)) as [s' [H7 H8]].
-        rewrite (assign_variables_nodup _ _ _ _ s' _ H) => //.
+        rewrite (assign_variables_nodup _ _ _ _ s' _ _ H) => //.
         2: {intro H9. apply-> InA_nil. exact H9. }
         apply topological_sort_nodup.
-  Qed.
+  Qed.*)
 
   Definition constraints_correct : bool := is_acyclic local_graph &&
     global_local_agreement && isSome (assign_variables [] (topological_sort local_graph)).
@@ -1638,18 +2049,87 @@ Section GoodConstraints.
       destruct (assign_variables [] _) as [ρ|] eqn: H2 => //.
       exists (Build_valuation (fun _ => xH) (fun _ => O) (find_assignment ρ)).
       set (v := Build_valuation _ _ _).
-      intros c H3. apply global_graph_correct.
-      1-2: apply assign_to_global => //; apply constraints_to_set_correct;
-           right; exists c; split => //.
-      1: by left. 1: by right.
-      + 
-        apply SortFamilySet.for_all_spec in H0.
-        2: by intros ? ? ->.
-        specialize (H0 (SortFamily.from_univ (SortFamily.sort_val v c.1))).
-        assert (SortFamilySet.In (SortFamily.from_univ (SortFamily.sort_val v c.1)) global_sorts) as H4.
-        1: {apply assign_to_global => //.
-            apply constraints_to_set_correct. right. 
-            exists c. split => //. by left. }
+      intros c H3. apply global_elimination_correct.
+      apply SortFamilySet.for_all_spec in H0.
+      2: by intros ? ? ->.
+      destruct (make_graph_well_formed constraints) as [H4 _ _].
+      destruct (SortFamily.eq_dec c.1 c.2) as [->|Hneq].
+      1: {destruct c.2 => //; [apply eqb_refl|].
+          cbn. destruct (find_assignment _ _) => //. apply eqb_refl. }
+      destruct (H4 (c.to_edge)) as [H5 H6].
+      + apply make_graph_edges_caract. split => //. right.
+        rewrite SortConstraintSet.union_spec. by left.
+      + destruct c as [src tgt].
+        apply is_constraints_graph_acyclic_spec in H. 
+        destruct (SortFamily.is_var tgt) eqn: Hc.
+        * destruct tgt as [| | | |n] => //.
+          destruct (assign_variables_eq _ n H2 (Ha := H)) as [s [H7 H8]];
+            [by apply topological_sort_constraints_reach|].
+          rewrite (assign_variables_nodup _ _ _ _ _ _ _ H2 H8) => //;
+            [apply topological_sort_nodup|by rewrite InA_nil|].
+          apply: (join_bound); [|exact H7|].
+          -- move=> ? /SortFamilySetProp.of_list_1 /InA_alt [? [<- /in_map_iff [? [<- ?]]]].
+             by elim: (SortFamily.sort_val _ _).
+          -- apply SortFamilySetProp.of_list_1. apply InA_alt.
+             eexists (_). split; [exact eq_refl|].
+             apply in_map_iff. exists src. split => //.
+             apply pred_spec_2. exists 1%Z. 
+             change (_, _, _) with (src, SortFamily.sfVar n).to_edge.
+             apply make_graph_edges_caract. split => //. right.
+             apply SortConstraintSet.union_spec. by left.
+        * simpl. assert (SortFamily.from_univ (SortFamily.sort_val v tgt) = tgt) as ->; [by destruct tgt|].
+          destruct (SortFamily.is_var src) eqn: Hs.
+          -- destruct src as [| | | |n] => //.
+             destruct (assign_variables_eq _ n H2 (Ha := H)) as [s [H7 H8]];
+               [by apply topological_sort_constraints_reach|].
+             rewrite (assign_variables_nodup _ _ _ _ _ _ _ H2 H8) => //;
+               [apply topological_sort_nodup|by rewrite InA_nil|].
+             apply: join_univ_prop => //; [exact H7| |].
+             ++ move=> ? /SortFamilySetProp.of_list_1 /InA_alt [? [<- /in_map_iff [? [<- ?]]]].
+                by elim: (SortFamily.sort_val _ _).
+             ++ move=> s' /SortFamilySetProp.of_list_1 /InA_alt [? [<- /in_map_iff [x [<- H9]]]].
+                set s0 := SortFamily.from_univ _.
+                specialize (H0 s0). simpl in H0. 
+                revert H0. rewrite SortFamilySet.for_all_spec.
+                intro H0. specialize (fun a => H0 a tgt). simpl in H0.
+                rewrite (eqb_prop _ _ (H0 _ _)).
+                1-2: apply SortFamilySet.filter_spec; [by intros ? ? ->|].
+                2: split; [easy|by rewrite Hc].
+                ** split; [|unfold s0; by case: (SortFamily.sort_val _ _)].
+                   apply pred_spec_1 in H9 as [z e].
+                   destruct (make_graph_well_formed constraints) as [He _ _].
+                   destruct (He _ e) as [Hx _].
+                   unfold s0. destruct x as [| | | |n0] eqn: H9 => //; simpl; try by rewrite<- H9.
+                   destruct (assign_variables_eq ρ n0 (Ha := H)) as [s1 [H10 H11]] => //;
+                     [by apply topological_sort_constraints_reach|].
+                   rewrite (assign_variables_nodup _ _ _ _ _ _ _ H2 H11) => //;
+                     [apply topological_sort_nodup|by rewrite InA_nil|].
+                   apply (assign_variables_in _ _ _ H2 H11 (Ha := H)) => //.
+                ** apply local_refines_global => //.
+                   apply 
+        rewrite (eqb_prop (global_elimination _ _)
+            (is_eliminable constraints (SortFamily.from_univ (SortFamily.sort_val v src))
+                                       (SortFamily.from_univ (SortFamily.sort_val v tgt)))).
+          1: apply H0.
+          1-2: apply SortFamilySet.filter_spec; [by intros ? ? ->|].
+          1-2: split; [|by case: (SortFamily.sort_val _ _)].
+          1: destruct src eqn: H7 => //; simpl; try by rewrite<- H7.
+          2: destruct tgt eqn: H7 => //; simpl; try by rewrite<- H7.
+          1: destruct (assign_variables_eq ρ n (Ha := H)) as [s [H8 H9]] => //;
+              [apply topological_sort_constraints_reach => //|].
+          1: rewrite (assign_variables_nodup _ _ _ _ _ _ _ H2 H9) => //;
+              [apply topological_sort_nodup|by rewrite InA_nil|].
+          1: apply (assign_variables_in _ _ _ H2 H9 (Ha := H)).
+             About join_univ_prop.
+          -- assert (SortFamily.from_univ (SortFamily.sort_val v src) = src) as ->; [by destruct src|].
+             apply is_eliminable_correct'. constructor. apply (paths_step _ _ tgt); [|apply paths_refl].
+             exists 1%Z. change (_, _, _) with (src, tgt).to_edge.
+             apply make_graph_edges_caract. split => //. right.
+             apply SortConstraintSet.union_spec. by left.
+      + destruct (SortFamily.sort_val _ _) => //.
+      1: {apply assign_to_global => //.
+          apply constraints_to_set_correct. right. 
+          exists c. split => //. by left. }
         specialize (H0 H4). simpl in H0.
         apply SortFamilySet.for_all_spec in H0.
         2: by intros ? ? ->.

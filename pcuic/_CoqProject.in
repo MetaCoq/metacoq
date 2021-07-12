@@ -109,6 +109,7 @@ theories/Bidirectional/BDStrengthening.v
 
 theories/PCUICWeakeningEnv.v
 
+theories/PCUICPHOAS.v
 # theories/All.v
 
 # To do separate extraction of the files, not working currently

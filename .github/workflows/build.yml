@@ -14,7 +14,7 @@ jobs:
           - '4.07-flambda'
           - '4.10-flambda'
           - '4.11-flambda'
-        target: [ opam ]
+        target: [ opam, local ]
       fail-fast: true
 
     steps:

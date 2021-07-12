@@ -1466,9 +1466,9 @@ Qed.
 
 Definition upto_names := eq_term_upto_univ [] eq eq.
 
-Infix "≡" := upto_names (at level 60).
+Infix "≡" := upto_names (at level 70).
 
-Infix "≡'" := (eq_term_upto_univ [] eq eq) (at level 60).
+Infix "≡'" := (eq_term_upto_univ [] eq eq) (at level 70).
 Notation upto_names' := (eq_term_upto_univ [] eq eq).
 
 Instance upto_names_ref : Reflexive upto_names.

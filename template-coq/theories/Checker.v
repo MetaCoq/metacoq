@@ -623,7 +623,7 @@ Section Typecheck.
   Definition polymorphic_constraints u :=
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
+    | Polymorphic_ctx ctx => snd (snd (AUContext.repr ctx))
     end.
 
   Definition lookup_constant_type cst u :=

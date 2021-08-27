@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html class="alectryon-standalone"><head><title>Constants.v</title><meta charset="utf-8"><meta content="Alectryon" name="generator"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="alectryon.css" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/IBM-type/0.5.4/css/ibm-type.min.css" integrity="sha512-sky5cf9Ts6FY1kstGOBHSybfKqdHR41M0Ldb0BjNiv3ifltoQIsg0zIaQ+wwdwgQ0w9vKFW7Js50lxH9vqNSSw==" crossorigin="anonymous" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/5.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" /><script src="alectryon.js"></script><style type="text/css">pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight .c { color: #555753; font-style: italic } /* Comment */
+.highlight .err { color: #a40000; border: 1px solid #cc0000 } /* Error */
+.highlight .g { color: #000000 } /* Generic */
+.highlight .k { color: #8f5902 } /* Keyword */
+.highlight .l { color: #2e3436 } /* Literal */
+.highlight .n { color: #000000 } /* Name */
+.highlight .o { color: #000000 } /* Operator */
+.highlight .x { color: #2e3436 } /* Other */
+.highlight .p { color: #000000 } /* Punctuation */
+.highlight .ch { color: #555753; font-weight: bold; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #555753; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #3465a4; font-style: italic } /* Comment.Preproc */
+.highlight .cpf { color: #555753; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #555753; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #3465a4; font-weight: bold; font-style: italic } /* Comment.Special */
+.highlight .gd { color: #a40000 } /* Generic.Deleted */
+.highlight .ge { color: #000000; font-style: italic } /* Generic.Emph */
+.highlight .gr { color: #a40000 } /* Generic.Error */
+.highlight .gh { color: #a40000; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #4e9a06 } /* Generic.Inserted */
+.highlight .go { color: #000000; font-style: italic } /* Generic.Output */
+.highlight .gp { color: #8f5902 } /* Generic.Prompt */
+.highlight .gs { color: #000000; font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #000000; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #000000; font-style: italic } /* Generic.Traceback */
+.highlight .kc { color: #204a87; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #4e9a06; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #4e9a06; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #204a87 } /* Keyword.Pseudo */
+.highlight .kr { color: #8f5902 } /* Keyword.Reserved */
+.highlight .kt { color: #204a87 } /* Keyword.Type */
+.highlight .ld { color: #2e3436 } /* Literal.Date */
+.highlight .m { color: #2e3436 } /* Literal.Number */
+.highlight .s { color: #ad7fa8 } /* Literal.String */
+.highlight .na { color: #c4a000 } /* Name.Attribute */
+.highlight .nb { color: #75507b } /* Name.Builtin */
+.highlight .nc { color: #204a87 } /* Name.Class */
+.highlight .no { color: #ce5c00 } /* Name.Constant */
+.highlight .nd { color: #3465a4; font-weight: bold } /* Name.Decorator */
+.highlight .ni { color: #c4a000; text-decoration: underline } /* Name.Entity */
+.highlight .ne { color: #cc0000 } /* Name.Exception */
+.highlight .nf { color: #a40000 } /* Name.Function */
+.highlight .nl { color: #3465a4; font-weight: bold } /* Name.Label */
+.highlight .nn { color: #000000 } /* Name.Namespace */
+.highlight .nx { color: #000000 } /* Name.Other */
+.highlight .py { color: #000000 } /* Name.Property */
+.highlight .nt { color: #a40000 } /* Name.Tag */
+.highlight .nv { color: #ce5c00 } /* Name.Variable */
+.highlight .ow { color: #8f5902 } /* Operator.Word */
+.highlight .w { color: #d3d7cf; text-decoration: underline } /* Text.Whitespace */
+.highlight .mb { color: #2e3436 } /* Literal.Number.Bin */
+.highlight .mf { color: #2e3436 } /* Literal.Number.Float */
+.highlight .mh { color: #2e3436 } /* Literal.Number.Hex */
+.highlight .mi { color: #2e3436 } /* Literal.Number.Integer */
+.highlight .mo { color: #2e3436 } /* Literal.Number.Oct */
+.highlight .sa { color: #ad7fa8 } /* Literal.String.Affix */
+.highlight .sb { color: #ad7fa8 } /* Literal.String.Backtick */
+.highlight .sc { color: #ad7fa8; font-weight: bold } /* Literal.String.Char */
+.highlight .dl { color: #ad7fa8 } /* Literal.String.Delimiter */
+.highlight .sd { color: #ad7fa8 } /* Literal.String.Doc */
+.highlight .s2 { color: #ad7fa8 } /* Literal.String.Double */
+.highlight .se { color: #ad7fa8; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #ad7fa8; text-decoration: underline } /* Literal.String.Heredoc */
+.highlight .si { color: #ce5c00 } /* Literal.String.Interpol */
+.highlight .sx { color: #ad7fa8 } /* Literal.String.Other */
+.highlight .sr { color: #ad7fa8 } /* Literal.String.Regex */
+.highlight .s1 { color: #ad7fa8 } /* Literal.String.Single */
+.highlight .ss { color: #8f5902 } /* Literal.String.Symbol */
+.highlight .bp { color: #5c35cc } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #a40000 } /* Name.Function.Magic */
+.highlight .vc { color: #ce5c00 } /* Name.Variable.Class */
+.highlight .vg { color: #ce5c00; text-decoration: underline } /* Name.Variable.Global */
+.highlight .vi { color: #ce5c00 } /* Name.Variable.Instance */
+.highlight .vm { color: #ce5c00 } /* Name.Variable.Magic */
+.highlight .il { color: #2e3436 } /* Literal.Number.Integer.Long */</style></head><body><article class="alectryon-root alectryon-centered alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc"><div class="alectryon-banner">Built with <a href="https://github.com/cpitclaudel/alectryon/">Alectryon</a>, running Coq+SerAPI v8.11.0+0.11.1. Bubbles (<span class="alectryon-bubble"></span>) indicate interactive fragments: hover for details, tap to reveal contents. Use <kbd>Ctrl+↑</kbd> <kbd>Ctrl+↓</kbd> to navigate, <kbd>Ctrl+🖱️</kbd> to focus. On Mac, use <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>.</div><pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight"><span class="c">(* Distributed under the terms of the MIT license. *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">From</span> MetaCoq.Template <span class="kn">Require Import</span> BasicAst uGraph TemplateMonad
+     TemplateMonad.Extractable.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* Base types *)</span>
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Strings.String.string <span class="kr">as</span> metacoq.string.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Strings.String.EmptyString <span class="kr">as</span> metacoq.string.nil.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Strings.String.String <span class="kr">as</span> metacoq.string.cons.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Strings.Ascii.ascii <span class="kr">as</span> metacoq.ascii.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Strings.Ascii.Ascii <span class="kr">as</span> metacoq.ascii.<span class="nb">intro</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.nat <span class="kr">as</span> metacoq.nat.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.O <span class="kr">as</span> metacoq.nat.zero.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.S <span class="kr">as</span> metacoq.nat.succ.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.bool <span class="kr">as</span> metacoq.bool.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.true <span class="kr">as</span> metacoq.bool.true.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.false <span class="kr">as</span> metacoq.bool.false.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.option <span class="kr">as</span> metacoq.option.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.None <span class="kr">as</span> metacoq.option.none.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.Some <span class="kr">as</span> metacoq.option.some.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.my_None <span class="kr">as</span> metacoq.option_instance.none.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.my_Some <span class="kr">as</span> metacoq.option_instance.some.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.list <span class="kr">as</span> metacoq.list.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.nil <span class="kr">as</span> metacoq.list.nil.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.cons <span class="kr">as</span> metacoq.list.cons.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.prod <span class="kr">as</span> metacoq.prod.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.pair <span class="kr">as</span> metacoq.prod.<span class="nb">intro</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.sum <span class="kr">as</span> metacoq.sum.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.inl <span class="kr">as</span> metacoq.sum.inl.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.inr <span class="kr">as</span> metacoq.sum.inr.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.unit <span class="kr">as</span> metacoq.unit.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Datatypes.tt <span class="kr">as</span> metacoq.unit.<span class="nb">intro</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Specif.sigT <span class="kr">as</span> metacoq.sigma.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Init.Specif.existT <span class="kr">as</span> metacoq.sigma.<span class="nb">intro</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.existT_typed_term <span class="kr">as</span> metacoq.sigma.typed_term.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.positive <span class="kr">as</span> metacoq.pos.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.xI <span class="kr">as</span> metacoq.pos.xI.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.xO <span class="kr">as</span> metacoq.pos.xO.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.xH <span class="kr">as</span> metacoq.pos.xH.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.Z <span class="kr">as</span> metacoq.Z.type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.Zpos <span class="kr">as</span> metacoq.Z.pos.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.Zneg <span class="kr">as</span> metacoq.Z.neg.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> Coq.Numbers.BinNums.Z0 <span class="kr">as</span> metacoq.Z.zero.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* Ast *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.relevance <span class="kr">as</span> metacoq.ast.relevance.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.Relevant <span class="kr">as</span> metacoq.ast.Relevant.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.Irrelevant <span class="kr">as</span> metacoq.ast.Irrelevant.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.mkBindAnn <span class="kr">as</span> metacoq.ast.mkBindAnn.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.aname <span class="kr">as</span> metacoq.ast.aname.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.nAnon <span class="kr">as</span> metacoq.ast.nAnon.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.nNamed <span class="kr">as</span> metacoq.ast.nNamed.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.<span class="kn">ident</span> <span class="kr">as</span> metacoq.ast.<span class="kn">ident</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.kername <span class="kr">as</span> metacoq.ast.kername.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.modpath <span class="kr">as</span> metacoq.ast.modpath.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.MPfile <span class="kr">as</span> metacoq.ast.MPfile.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.MPbound <span class="kr">as</span> metacoq.ast.MPbound.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.MPdot <span class="kr">as</span> metacoq.ast.MPdot.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.name <span class="kr">as</span> metacoq.ast.name.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.inductive <span class="kr">as</span> metacoq.ast.inductive.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.mkInd <span class="kr">as</span> metacoq.ast.mkInd.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.def <span class="kr">as</span> metacoq.ast.def.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.mkdef <span class="kr">as</span> metacoq.ast.mkdef.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.cast_kind <span class="kr">as</span> metacoq.ast.cast_kind.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.case_info <span class="kr">as</span> metacoq.ast.case_info.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.mk_case_info <span class="kr">as</span> metacoq.ast.mk_case_info.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.VmCast <span class="kr">as</span> metacoq.ast.VmCast.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.NativeCast <span class="kr">as</span> metacoq.ast.NativeCast.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.Cast <span class="kr">as</span> metacoq.ast.Cast.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.RevertCast <span class="kr">as</span> metacoq.ast.RevertCast.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.recursivity_kind <span class="kr">as</span> metacoq.ast.recursivity_kind.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.Finite <span class="kr">as</span> metacoq.ast.Finite.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.CoFinite <span class="kr">as</span> metacoq.ast.CoFinite.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.BiFinite <span class="kr">as</span> metacoq.ast.BiFinite.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.global_reference <span class="kr">as</span> metacoq.ast.global_reference.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.VarRef <span class="kr">as</span> metacoq.ast.VarRef.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.ConstRef <span class="kr">as</span> metacoq.ast.ConstRef.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.IndRef <span class="kr">as</span> metacoq.ast.IndRef.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.ConstructRef <span class="kr">as</span> metacoq.ast.ConstructRef.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.fresh_evar_id <span class="kr">as</span> metacoq.ast.fresh_evar_id.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* Universes *)</span>
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.allowed_eliminations <span class="kr">as</span> metacoq.ast.allowed_eliminations.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.fresh_level <span class="kr">as</span> metacoq.ast.fresh_level.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.fresh_universe <span class="kr">as</span> metacoq.ast.fresh_universe.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.IntoSProp <span class="kr">as</span> metacoq.ast.IntoSProp.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.IntoPropSProp <span class="kr">as</span> metacoq.ast.IntoPropSProp.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.IntoSetPropSProp <span class="kr">as</span> metacoq.ast.IntoSetPropSProp.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.IntoAny <span class="kr">as</span> metacoq.ast.IntoAny.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight"><span class="c">(* We convert from simple constraints to ones in Z *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.ConstraintType.Lt <span class="kr">as</span> metacoq.ast.constraints.Lt.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.ConstraintType.Le0 <span class="kr">as</span> metacoq.ast.constraints.Le0.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.ConstraintType.Le <span class="kr">as</span> metacoq.ast.constraints.Le.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.ConstraintType.Eq <span class="kr">as</span> metacoq.ast.constraints.Eq.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.<span class="kn">Universe</span>.from_kernel_repr <span class="kr">as</span> metacoq.ast.universe.from_kernel_repr.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.<span class="kn">Universe</span>.of_levels <span class="kr">as</span> metacoq.ast.universe.of_levels.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.LevelSetProp.of_list <span class="kr">as</span> metacoq.ast.universe.of_list.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Level.t <span class="kr">as</span> metacoq.ast.level.t.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Level.Level <span class="kr">as</span> metacoq.ast.level.Level.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.PropLevel.t <span class="kr">as</span> metacoq.ast.level.prop_level_type.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.PropLevel.lProp <span class="kr">as</span> metacoq.ast.level.lprop.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.PropLevel.lSProp <span class="kr">as</span> metacoq.ast.level.lsprop.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Level.lSet <span class="kr">as</span> metacoq.ast.level.lSet.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Level.Var <span class="kr">as</span> metacoq.ast.level.Var.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight"><span class="c">(* FIXME*)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.<span class="kn">Universe</span>.lType <span class="kr">as</span> metacoq.ast.univexpr.npe.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.UnivExprSet.Mkt <span class="kr">as</span> metacoq.ast.univexprset.mkt.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.<span class="kn">Universe</span>.Build_t0 <span class="kr">as</span> metacoq.ast.universe.build0.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.<span class="kn">Universe</span>.lSProp <span class="kr">as</span> metacoq.ast.universe.lsprop.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.<span class="kn">Universe</span>.lProp <span class="kr">as</span> metacoq.ast.universe.lprop.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.<span class="kn">Universe</span>.lType <span class="kr">as</span> metacoq.ast.universe.lnpe.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Variance.t <span class="kr">as</span> metacoq.ast.variance.t.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Variance.Irrelevant <span class="kr">as</span> metacoq.ast.variance.Irrelevant.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Variance.Covariant <span class="kr">as</span> metacoq.ast.variance.Covariant.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Variance.Invariant <span class="kr">as</span> metacoq.ast.variance.Invariant.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.universes_decl <span class="kr">as</span> metacoq.ast.universes_decl.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Monomorphic_ctx <span class="kr">as</span> metacoq.ast.Monomorphic_ctx.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Polymorphic_ctx <span class="kr">as</span> metacoq.ast.Polymorphic_ctx.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.ConstraintSet.t_ <span class="kr">as</span> metacoq.ast.ConstraintSet.t_.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.ConstraintSet.empty <span class="kr">as</span> metacoq.ast.ConstraintSet.empty.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.ConstraintSet.add <span class="kr">as</span> metacoq.ast.ConstraintSet.add.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.UContext.t <span class="kr">as</span> metacoq.ast.UContext.t.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.UContext.make <span class="kr">as</span> metacoq.ast.UContext.make.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.AUContext.t <span class="kr">as</span> metacoq.ast.AUContext.t.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.AUContext.make <span class="kr">as</span> metacoq.ast.AUContext.make.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.LevelSet.t_ <span class="kr">as</span> metacoq.ast.LevelSet.t.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.UnivConstraint.make <span class="kr">as</span> metacoq.ast.make_univ_constraint.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.common.uGraph.init_graph <span class="kr">as</span> metacoq.ast.graph.init.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight"><span class="c">(* FIXME wrong! *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.common.uGraph.gc_of_constraints <span class="kr">as</span> metacoq.ast.graph.add_global_constraints.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* Terms *)</span>
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.predicate <span class="kr">as</span> metacoq.ast.predicate.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.mk_predicate <span class="kr">as</span> metacoq.ast.mk_predicate.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.branch <span class="kr">as</span> metacoq.ast.branch.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.mk_branch <span class="kr">as</span> metacoq.ast.mk_branch.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.term <span class="kr">as</span> metacoq.ast.term.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tRel <span class="kr">as</span> metacoq.ast.tRel.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tVar <span class="kr">as</span> metacoq.ast.tVar.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tEvar <span class="kr">as</span> metacoq.ast.tEvar.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tSort <span class="kr">as</span> metacoq.ast.tSort.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tCast <span class="kr">as</span> metacoq.ast.tCast.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tProd <span class="kr">as</span> metacoq.ast.tProd.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tLambda <span class="kr">as</span> metacoq.ast.tLambda.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tLetIn <span class="kr">as</span> metacoq.ast.tLetIn.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tApp <span class="kr">as</span> metacoq.ast.tApp.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tConst <span class="kr">as</span> metacoq.ast.tConst.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tInd <span class="kr">as</span> metacoq.ast.tInd.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tConstruct <span class="kr">as</span> metacoq.ast.tConstruct.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tCase <span class="kr">as</span> metacoq.ast.tCase.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tProj <span class="kr">as</span> metacoq.ast.tProj.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tFix <span class="kr">as</span> metacoq.ast.tFix.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tCoFix <span class="kr">as</span> metacoq.ast.tCoFix.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tInt <span class="kr">as</span> metacoq.ast.tInt.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.tFloat <span class="kr">as</span> metacoq.ast.tFloat.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* Local and global declarations *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.parameter_entry <span class="kr">as</span> metacoq.ast.parameter_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Build_parameter_entry <span class="kr">as</span> metacoq.ast.Build_parameter_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.definition_entry <span class="kr">as</span> metacoq.ast.definition_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Build_definition_entry <span class="kr">as</span> metacoq.ast.Build_definition_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Monomorphic_entry <span class="kr">as</span> metacoq.ast.Monomorphic_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Universes.Polymorphic_entry <span class="kr">as</span> metacoq.ast.Polymorphic_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.constant_entry <span class="kr">as</span> metacoq.ast.constant_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.ParameterEntry <span class="kr">as</span> metacoq.ast.ParameterEntry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.DefinitionEntry <span class="kr">as</span> metacoq.ast.DefinitionEntry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.one_inductive_entry <span class="kr">as</span> metacoq.ast.one_inductive_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Build_one_inductive_entry <span class="kr">as</span> metacoq.ast.Build_one_inductive_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.mutual_inductive_entry <span class="kr">as</span> metacoq.ast.mutual_inductive_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Build_mutual_inductive_entry <span class="kr">as</span> metacoq.ast.Build_mutual_inductive_entry.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* FIXME, now polymorphic *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.context_decl <span class="kr">as</span> metacoq.ast.context_decl.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.BasicAst.mkdecl <span class="kr">as</span> metacoq.ast.mkdecl.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.<span class="kp">context</span> <span class="kr">as</span> metacoq.ast.<span class="kp">context</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.constructor_body <span class="kr">as</span> metacoq.ast.constructor_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.Build_constructor_body <span class="kr">as</span> metacoq.ast.Build_constructor_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.one_inductive_body <span class="kr">as</span> metacoq.ast.one_inductive_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.Build_one_inductive_body <span class="kr">as</span> metacoq.ast.Build_one_inductive_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.mutual_inductive_body <span class="kr">as</span> metacoq.ast.mutual_inductive_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.Build_mutual_inductive_body <span class="kr">as</span> metacoq.ast.Build_mutual_inductive_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.constant_body <span class="kr">as</span> metacoq.ast.constant_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.Build_constant_body <span class="kr">as</span> metacoq.ast.Build_constant_body.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.global_decl <span class="kr">as</span> metacoq.ast.global_decl.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.ConstantDecl <span class="kr">as</span> metacoq.ast.ConstantDecl.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.InductiveDecl <span class="kr">as</span> metacoq.ast.InductiveDecl.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.global_env <span class="kr">as</span> metacoq.ast.global_env.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.global_env_ext <span class="kr">as</span> metacoq.ast.global_env_ext.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.Ast.Env.program <span class="kr">as</span> metacoq.ast.program.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* Template monad *)</span>
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.<span class="nb">cbv</span> <span class="kr">as</span> metacoq.template.<span class="nb">cbv</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.<span class="nb">cbn</span> <span class="kr">as</span> metacoq.template.<span class="nb">cbn</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.<span class="nb">hnf</span> <span class="kr">as</span> metacoq.template.<span class="nb">hnf</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.<span class="kp">all</span> <span class="kr">as</span> metacoq.template.<span class="kp">all</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.<span class="nb">lazy</span> <span class="kr">as</span> metacoq.template.<span class="nb">lazy</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Common.<span class="nb">unfold</span> <span class="kr">as</span> metacoq.template.<span class="nb">unfold</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* Prop *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmReturn <span class="kr">as</span> metacoq.templatemonad.prop.tmReturn.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmBind <span class="kr">as</span> metacoq.templatemonad.prop.tmBind.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmPrint <span class="kr">as</span> metacoq.templatemonad.prop.tmPrint.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmMsg <span class="kr">as</span> metacoq.templatemonad.prop.tmMsg.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmFail <span class="kr">as</span> metacoq.templatemonad.prop.tmFail.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmEval <span class="kr">as</span> metacoq.templatemonad.prop.tmEval.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmVariable <span class="kr">as</span> metacoq.templatemonad.prop.tmVariable.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmLemma <span class="kr">as</span> metacoq.templatemonad.prop.tmLemma.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmDefinitionRed_ <span class="kr">as</span> metacoq.templatemonad.prop.tmDefinitionRed_.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmAxiomRed <span class="kr">as</span> metacoq.templatemonad.prop.tmAxiomRed.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmMkDefinition <span class="kr">as</span> metacoq.templatemonad.prop.tmMkDefinition.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmMkInductive <span class="kr">as</span> metacoq.templatemonad.prop.tmMkInductive.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmFreshName <span class="kr">as</span> metacoq.templatemonad.prop.tmFreshName.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmLocate <span class="kr">as</span> metacoq.templatemonad.prop.tmLocate.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmCurrentModPath <span class="kr">as</span> metacoq.templatemonad.prop.tmCurrentModPath.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuote <span class="kr">as</span> metacoq.templatemonad.prop.tmQuote.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteRec <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteRec.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteRecTransp <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteRecTransp.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteInductive <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteInductive.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteConstant <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteConstant.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteUniverses <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteUniverses.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmUnquote <span class="kr">as</span> metacoq.templatemonad.prop.tmUnquote.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmUnquoteTyped <span class="kr">as</span> metacoq.templatemonad.prop.tmUnquoteTyped.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmInferInstance <span class="kr">as</span> metacoq.templatemonad.prop.tmInferInstance.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmExistingInstance <span class="kr">as</span> metacoq.templatemonad.prop.tmExistingInstance.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmTestQuote <span class="kr">as</span> metacoq.templatemonad.prop.tmTestQuote.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmTestUnquote <span class="kr">as</span> metacoq.templatemonad.prop.tmTestUnquote.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteDefinition <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteDefinition.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteDefinitionRed <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteDefinitionRed.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Core.tmQuoteRecDefinition <span class="kr">as</span> metacoq.templatemonad.prop.tmQuoteRecDefinition.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+<span class="c">(* Type *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmReturn <span class="kr">as</span> metacoq.templatemonad.type.tmReturn.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmBind <span class="kr">as</span> metacoq.templatemonad.type.tmBind.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmPrint <span class="kr">as</span> metacoq.templatemonad.type.tmPrint.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmMsg <span class="kr">as</span> metacoq.templatemonad.type.tmMsg.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmFail <span class="kr">as</span> metacoq.templatemonad.type.tmFail.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmEval <span class="kr">as</span> metacoq.templatemonad.type.tmEval.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmDefinition_ <span class="kr">as</span> metacoq.templatemonad.type.tmDefinition_.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmAxiom <span class="kr">as</span> metacoq.templatemonad.type.tmAxiom.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmLemma <span class="kr">as</span> metacoq.templatemonad.type.tmLemma.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmFreshName <span class="kr">as</span> metacoq.templatemonad.type.tmFreshName.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmLocate <span class="kr">as</span> metacoq.templatemonad.type.tmLocate.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmCurrentModPath <span class="kr">as</span> metacoq.templatemonad.type.tmCurrentModPath.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmQuoteInductive <span class="kr">as</span> metacoq.templatemonad.type.tmQuoteInductive.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmQuoteUniverses <span class="kr">as</span> metacoq.templatemonad.type.tmQuoteUniverses.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmQuoteConstant <span class="kr">as</span> metacoq.templatemonad.type.tmQuoteConstant.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmInductive <span class="kr">as</span> metacoq.templatemonad.type.tmInductive.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmInferInstance <span class="kr">as</span> metacoq.templatemonad.type.tmInferInstance.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Register</span> MetaCoq.Template.TemplateMonad.Extractable.tmExistingInstance <span class="kr">as</span> metacoq.templatemonad.type.tmExistingInstance.</span></span></span></pre></article></body></html>

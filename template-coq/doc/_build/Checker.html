@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html class="alectryon-standalone"><head><title>Checker.v</title><meta charset="utf-8"><meta content="Alectryon" name="generator"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="alectryon.css" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/IBM-type/0.5.4/css/ibm-type.min.css" integrity="sha512-sky5cf9Ts6FY1kstGOBHSybfKqdHR41M0Ldb0BjNiv3ifltoQIsg0zIaQ+wwdwgQ0w9vKFW7Js50lxH9vqNSSw==" crossorigin="anonymous" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/5.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" /><script src="alectryon.js"></script><style type="text/css">pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight .c { color: #555753; font-style: italic } /* Comment */
+.highlight .err { color: #a40000; border: 1px solid #cc0000 } /* Error */
+.highlight .g { color: #000000 } /* Generic */
+.highlight .k { color: #8f5902 } /* Keyword */
+.highlight .l { color: #2e3436 } /* Literal */
+.highlight .n { color: #000000 } /* Name */
+.highlight .o { color: #000000 } /* Operator */
+.highlight .x { color: #2e3436 } /* Other */
+.highlight .p { color: #000000 } /* Punctuation */
+.highlight .ch { color: #555753; font-weight: bold; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #555753; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #3465a4; font-style: italic } /* Comment.Preproc */
+.highlight .cpf { color: #555753; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #555753; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #3465a4; font-weight: bold; font-style: italic } /* Comment.Special */
+.highlight .gd { color: #a40000 } /* Generic.Deleted */
+.highlight .ge { color: #000000; font-style: italic } /* Generic.Emph */
+.highlight .gr { color: #a40000 } /* Generic.Error */
+.highlight .gh { color: #a40000; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #4e9a06 } /* Generic.Inserted */
+.highlight .go { color: #000000; font-style: italic } /* Generic.Output */
+.highlight .gp { color: #8f5902 } /* Generic.Prompt */
+.highlight .gs { color: #000000; font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #000000; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #000000; font-style: italic } /* Generic.Traceback */
+.highlight .kc { color: #204a87; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #4e9a06; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #4e9a06; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #204a87 } /* Keyword.Pseudo */
+.highlight .kr { color: #8f5902 } /* Keyword.Reserved */
+.highlight .kt { color: #204a87 } /* Keyword.Type */
+.highlight .ld { color: #2e3436 } /* Literal.Date */
+.highlight .m { color: #2e3436 } /* Literal.Number */
+.highlight .s { color: #ad7fa8 } /* Literal.String */
+.highlight .na { color: #c4a000 } /* Name.Attribute */
+.highlight .nb { color: #75507b } /* Name.Builtin */
+.highlight .nc { color: #204a87 } /* Name.Class */
+.highlight .no { color: #ce5c00 } /* Name.Constant */
+.highlight .nd { color: #3465a4; font-weight: bold } /* Name.Decorator */
+.highlight .ni { color: #c4a000; text-decoration: underline } /* Name.Entity */
+.highlight .ne { color: #cc0000 } /* Name.Exception */
+.highlight .nf { color: #a40000 } /* Name.Function */
+.highlight .nl { color: #3465a4; font-weight: bold } /* Name.Label */
+.highlight .nn { color: #000000 } /* Name.Namespace */
+.highlight .nx { color: #000000 } /* Name.Other */
+.highlight .py { color: #000000 } /* Name.Property */
+.highlight .nt { color: #a40000 } /* Name.Tag */
+.highlight .nv { color: #ce5c00 } /* Name.Variable */
+.highlight .ow { color: #8f5902 } /* Operator.Word */
+.highlight .w { color: #d3d7cf; text-decoration: underline } /* Text.Whitespace */
+.highlight .mb { color: #2e3436 } /* Literal.Number.Bin */
+.highlight .mf { color: #2e3436 } /* Literal.Number.Float */
+.highlight .mh { color: #2e3436 } /* Literal.Number.Hex */
+.highlight .mi { color: #2e3436 } /* Literal.Number.Integer */
+.highlight .mo { color: #2e3436 } /* Literal.Number.Oct */
+.highlight .sa { color: #ad7fa8 } /* Literal.String.Affix */
+.highlight .sb { color: #ad7fa8 } /* Literal.String.Backtick */
+.highlight .sc { color: #ad7fa8; font-weight: bold } /* Literal.String.Char */
+.highlight .dl { color: #ad7fa8 } /* Literal.String.Delimiter */
+.highlight .sd { color: #ad7fa8 } /* Literal.String.Doc */
+.highlight .s2 { color: #ad7fa8 } /* Literal.String.Double */
+.highlight .se { color: #ad7fa8; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #ad7fa8; text-decoration: underline } /* Literal.String.Heredoc */
+.highlight .si { color: #ce5c00 } /* Literal.String.Interpol */
+.highlight .sx { color: #ad7fa8 } /* Literal.String.Other */
+.highlight .sr { color: #ad7fa8 } /* Literal.String.Regex */
+.highlight .s1 { color: #ad7fa8 } /* Literal.String.Single */
+.highlight .ss { color: #8f5902 } /* Literal.String.Symbol */
+.highlight .bp { color: #5c35cc } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #a40000 } /* Name.Function.Magic */
+.highlight .vc { color: #ce5c00 } /* Name.Variable.Class */
+.highlight .vg { color: #ce5c00; text-decoration: underline } /* Name.Variable.Global */
+.highlight .vi { color: #ce5c00 } /* Name.Variable.Instance */
+.highlight .vm { color: #ce5c00 } /* Name.Variable.Magic */
+.highlight .il { color: #2e3436 } /* Literal.Number.Integer.Long */</style></head><body><article class="alectryon-root alectryon-centered alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc"><div class="alectryon-banner">Built with <a href="https://github.com/cpitclaudel/alectryon/">Alectryon</a>, running Coq+SerAPI v8.11.0+0.11.1. Bubbles (<span class="alectryon-bubble"></span>) indicate interactive fragments: hover for details, tap to reveal contents. Use <kbd>Ctrl+↑</kbd> <kbd>Ctrl+↓</kbd> to navigate, <kbd>Ctrl+🖱️</kbd> to focus. On Mac, use <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>.</div><pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight"><span class="c">(* Distributed under the terms of the MIT license. *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">From</span> MetaCoq.Template <span class="kn">Require Import</span> config Environment Ast AstUtils utils
+     LiftSubst UnivSubst uGraph Typing.</span></span></span></pre><div class="doc">
+<a name="lab1"></a><h1 class="section">Coq type-checker for kernel terms</h1>
+<div class="paragraph"> </div>
+
+  Implemets <span class="inlinecode"><span class="id" title="var">typecheck_program</span></span> which returns an error and
+  on success should guarantee that the term has the given type.
+  Currently uses fuel to implement reduction and is unverified.
+
+<div class="paragraph"> </div>
+
+  This file implements reduction with a stack machine <span class="inlinecode"><span class="id" title="var">reduce_stack</span></span>,
+  conversion/cumulativity with the first-order fast-path heuristic <span class="inlinecode"><span class="id" title="var">isconv</span></span>
+  that are used to type-check terms in reasonable time. 
+</div><pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Local Notation</span> <span class="s2">&quot; () &quot;</span> := Datatypes.unit : type_scope.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Local Notation</span> <span class="s2">&quot; () &quot;</span> := tt.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Module</span> <span class="nf">RedFlags</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Record</span> <span class="nf">t</span> := mk
+    { beta : bool;
+      iota : bool;
+      zeta : bool;
+      delta : bool;
+      fix_ : bool;
+      cofix_ : bool }.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">default</span> := mk true true true true true true.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">RedFlags</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Inductive</span> <span class="nf">type_error</span> :=
+| UnboundRel (n : nat)
+| UnboundVar (id : string)
+| UnboundMeta (m : nat)
+| UnboundEvar (ev : nat)
+| UndeclaredConstant (c : kername)
+| UndeclaredInductive (c : inductive)
+| UndeclaredConstructor (c : inductive) (i : nat)
+| NotConvertible (Γ : <span class="kp">context</span>) (t u t&#39; u&#39; : term)
+| NotASort (t : term)
+| NotAProduct (t t&#39; : term)
+| NotAnInductive (t : term)
+| IllFormedFix (m : mfixpoint term) (i : nat)
+| UnsatisfiedConstraints (c : ConstraintSet.t)
+| UnsatisfiableConstraints (c : ConstraintSet.t)
+| NotEnoughFuel (n : nat)
+| NotSupported (s : string).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">string_of_type_error</span> (<span class="nv">e</span> : type_error) : string :=
+  <span class="kr">match</span> e <span class="kr">with</span>
+  | UnboundRel n =&gt; <span class="s2">&quot;Unboound rel &quot;</span> ^ string_of_nat n
+  | UnboundVar id =&gt; <span class="s2">&quot;Unbound var &quot;</span> ^ id
+  | UnboundMeta m =&gt; <span class="s2">&quot;Unbound meta &quot;</span> ^ string_of_nat m
+  | UnboundEvar ev =&gt; <span class="s2">&quot;Unbound evar &quot;</span> ^ string_of_nat ev
+  | UndeclaredConstant c =&gt; <span class="s2">&quot;Undeclared constant &quot;</span> ^ string_of_kername c
+  | UndeclaredInductive c =&gt; <span class="s2">&quot;Undeclared inductive &quot;</span> ^ string_of_kername (inductive_mind c)
+  | UndeclaredConstructor c i =&gt; <span class="s2">&quot;Undeclared inductive &quot;</span> ^ string_of_kername (inductive_mind c)
+  | NotConvertible Γ t u t&#39; u&#39; =&gt; <span class="s2">&quot;Terms are not convertible: &quot;</span> ^
+      string_of_term t ^ <span class="s2">&quot; &quot;</span> ^ string_of_term u ^ <span class="s2">&quot; after reduction: &quot;</span> ^
+      string_of_term t&#39; ^ <span class="s2">&quot; &quot;</span> ^ string_of_term u&#39;
+  | NotASort t =&gt; <span class="s2">&quot;Not a sort&quot;</span>
+  | NotAProduct t t&#39; =&gt; <span class="s2">&quot;Not a product&quot;</span>
+  | NotAnInductive t =&gt; <span class="s2">&quot;Not an inductive&quot;</span>
+  | IllFormedFix m i =&gt; <span class="s2">&quot;Ill-formed recursive definition&quot;</span>
+  | UnsatisfiedConstraints c =&gt; <span class="s2">&quot;Unsatisfied constraints&quot;</span>
+  | UnsatisfiableConstraints c =&gt; <span class="s2">&quot;Unsatisfiable constraints&quot;</span>
+  | NotEnoughFuel n =&gt; <span class="s2">&quot;Not enough fuel&quot;</span>
+  | NotSupported s =&gt; s ^ <span class="s2">&quot; are not supported&quot;</span>
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Inductive</span> <span class="nf">typing_result</span> (<span class="nv">A</span> : <span class="kt">Type</span>) :=
+| Checked (a : A)
+| TypeError (t : type_error).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Global Arguments</span> Checked {A} a.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Global Arguments</span> TypeError {A} t.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Instance</span> <span class="nf">typing_monad</span> : Monad typing_result :=
+  {| ret A a := Checked a ;
+     bind A B m f :=
+       <span class="kr">match</span> m <span class="kr">with</span>
+       | Checked a =&gt; f a
+       | TypeError t =&gt; TypeError t
+       <span class="kr">end</span>
+  |}.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Instance</span> <span class="nf">monad_exc</span> : MonadExc type_error typing_result :=
+  { raise A e := TypeError e;
+    catch A m f :=
+      <span class="kr">match</span> m <span class="kr">with</span>
+      | Checked a =&gt; m
+      | TypeError t =&gt; f t
+      <span class="kr">end</span>
+  }.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Lookups</span>.</span></span><span class="alectryon-wsp"> 
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> (<span class="nv">Σ</span> : global_env).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">polymorphic_constraints</span> <span class="nv">u</span> :=
+    <span class="kr">match</span> u <span class="kr">with</span>
+    | Monomorphic_ctx _ =&gt; ConstraintSet.empty
+    | Polymorphic_ctx ctx =&gt; snd (AUContext.repr ctx)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_constant_type</span> <span class="nv">cst</span> <span class="nv">u</span> :=
+    <span class="kr">match</span> lookup_env Σ cst <span class="kr">with</span>
+    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =&gt;
+      ret (subst_instance u ty)
+    |  _ =&gt; raise (UndeclaredConstant cst)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_constant_type_cstrs</span> <span class="nv">cst</span> <span class="nv">u</span> :=
+    <span class="kr">match</span> lookup_env Σ cst <span class="kr">with</span>
+    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =&gt;
+      <span class="kr">let</span> <span class="nv">cstrs</span> := polymorphic_constraints uctx <span class="kr">in</span>
+      ret (subst_instance u ty, subst_instance_cstrs u cstrs)
+      |  _ =&gt; raise (UndeclaredConstant cst)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_ind_decl</span> <span class="nv">ind</span> <span class="nv">i</span> :=
+    <span class="kr">match</span> lookup_env Σ ind <span class="kr">with</span>
+    | Some (InductiveDecl mdecl) =&gt;
+      <span class="kr">match</span> nth_error mdecl.(ind_bodies) i <span class="kr">with</span>
+      | Some body =&gt; ret (mdecl, body)
+      | None =&gt; raise (UndeclaredInductive (mkInd ind i))
+      <span class="kr">end</span>
+    | _ =&gt; raise (UndeclaredInductive (mkInd ind i))
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_ind_type</span> <span class="nv">ind</span> <span class="nv">i</span> (<span class="nv">u</span> : list Level.t) :=
+    res &lt;- lookup_ind_decl ind i ;;
+    ret (subst_instance u (snd res).(ind_type)).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_ind_type_cstrs</span> <span class="nv">ind</span> <span class="nv">i</span> (<span class="nv">u</span> : list Level.t) :=
+    res &lt;- lookup_ind_decl ind i ;;
+    <span class="kr">let</span> &#39;(mib, body) := res <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">uctx</span> := mib.(ind_universes) <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">cstrs</span> := polymorphic_constraints uctx <span class="kr">in</span>
+    ret (subst_instance u body.(ind_type), subst_instance_cstrs u cstrs).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_constructor_decl</span> <span class="nv">ind</span> <span class="nv">i</span> <span class="nv">k</span> :=
+    res &lt;- lookup_ind_decl ind i;;
+    <span class="kr">let</span> &#39;(mib, body) := res <span class="kr">in</span>
+    <span class="kr">match</span> nth_error body.(ind_ctors) k <span class="kr">with</span>
+    | Some cdecl =&gt; ret (mib, cdecl)
+    | None =&gt; raise (UndeclaredConstructor (mkInd ind i) k)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_constructor_type</span> <span class="nv">ind</span> <span class="nv">i</span> <span class="nv">k</span> <span class="nv">u</span> :=
+    res &lt;- lookup_constructor_decl ind i k ;;
+    <span class="kr">let</span> &#39;(mib, cdecl) := res <span class="kr">in</span>
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance u cdecl.(cstr_type))).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_constructor_type_cstrs</span> <span class="nv">ind</span> <span class="nv">i</span> <span class="nv">k</span> <span class="nv">u</span> :=
+    res &lt;- lookup_constructor_decl ind i k ;;
+    <span class="kr">let</span> &#39;(mib, cdecl) := res <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">cstrs</span> := polymorphic_constraints mib.(ind_universes) <span class="kr">in</span>
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance u cdecl.(cstr_type)),
+        subst_instance_cstrs u cstrs).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">Lookups</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Reduce</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> (<span class="nv">flags</span> : RedFlags.t) (<span class="nv">Σ</span> : global_env).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">zip</span> (<span class="nv">t</span> : term * list term) := mkApps (fst t) (snd t).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">reduce_stack</span> (<span class="nv">Γ</span> : <span class="kp">context</span>) (<span class="nv">n</span> : nat) (<span class="nv">t</span> : term) (<span class="nv">stack</span> : list term)
+    : option (term * list term) :=
+  <span class="kr">match</span> n <span class="kr">with</span> <span class="mi">0</span> =&gt; None | S n =&gt;
+  <span class="kr">match</span> t <span class="kr">with</span>
+
+  | tRel c =&gt;
+    <span class="kr">if</span> RedFlags.zeta flags <span class="kr">then</span>
+      d &lt;- nth_error Γ c ;;
+      <span class="kr">match</span> d.(decl_body) <span class="kr">with</span>
+      | None =&gt; ret (t, stack)
+      | Some b =&gt; reduce_stack Γ n (lift0 (S c) b) stack
+      <span class="kr">end</span>
+    <span class="kr">else</span> ret (t, stack)
+
+  | tLetIn _ b _ c =&gt;
+    <span class="kr">if</span> RedFlags.zeta flags <span class="kr">then</span>
+      reduce_stack Γ n (subst10 b c) stack
+    <span class="kr">else</span> ret (t, stack)
+
+  | tConst c u =&gt;
+    <span class="kr">if</span> RedFlags.delta flags <span class="kr">then</span>
+      <span class="kr">match</span> lookup_env Σ c <span class="kr">with</span>
+      | Some (ConstantDecl {| cst_body := Some body |}) =&gt;
+        <span class="kr">let</span> <span class="nv">body&#39;</span> := subst_instance u body <span class="kr">in</span>
+        reduce_stack Γ n body&#39; stack
+      | _ =&gt; ret (t, stack)
+      <span class="kr">end</span>
+    <span class="kr">else</span> ret (t, stack)
+
+  | tApp f args =&gt; reduce_stack Γ n f (args ++ stack)
+
+  | tLambda na ty b =&gt;
+    <span class="kr">if</span> RedFlags.beta flags <span class="kr">then</span>
+      <span class="kr">match</span> stack <span class="kr">with</span>
+      | a :: args&#39; =&gt;
+        <span class="sd">(** CBN reduction: we do not reduce arguments before substitution *)</span>
+        <span class="c">(* a&#39; &lt;- reduce_stack Γ n a [] ;; *)</span>
+        reduce_stack Γ n (subst10 a b) args&#39;
+      | _ =&gt; ret (t, stack)
+               <span class="c">(*  b&#39; &lt;- reduce_stack (Γ ,, vass na ty) n b stack ;; *)</span>
+               <span class="c">(* ret (tLambda na ty (zip b&#39;), stack) *)</span>
+      <span class="kr">end</span>
+    <span class="kr">else</span> ret (t, stack)
+
+  | tFix mfix idx =&gt;
+    <span class="kr">if</span> RedFlags.fix_ flags <span class="kr">then</span>
+      nf &lt;- unfold_fix mfix idx ;;
+      <span class="kr">let</span> &#39;(narg, fn) := nf <span class="kr">in</span>
+      <span class="kr">match</span>  List.nth_error stack narg <span class="kr">with</span>
+      | Some c =&gt;
+        c&#39; &lt;- reduce_stack Γ n c [] ;;
+        <span class="kr">match</span> fst c&#39; <span class="kr">with</span>
+        | tConstruct _ _ _ =&gt; reduce_stack Γ n fn stack
+        | _ =&gt; ret (t, stack)
+        <span class="kr">end</span>
+      | _ =&gt; ret (t, stack)
+      <span class="kr">end</span>
+    <span class="kr">else</span> ret (t, stack)
+
+  | tProd _ _ _ =&gt; ret (t, stack)
+
+    <span class="c">(* b&#39; &lt;- reduce_stack Γ n b [] ;; *)</span>
+    <span class="c">(* t&#39; &lt;- reduce_stack (Γ ,, vass na (zip b&#39;)) n t [] ;; *)</span>
+    <span class="c">(* ret (tProd na (zip b&#39;) (zip t&#39;), stack) *)</span>
+
+  | tCast c _ _ =&gt; reduce_stack Γ n c stack
+
+  | tCase ci p c brs =&gt;
+    <span class="kr">if</span> RedFlags.iota flags <span class="kr">then</span>
+      c&#39; &lt;- reduce_stack Γ n c [] ;;
+      <span class="kr">match</span> c&#39; <span class="kr">with</span>
+      | (tConstruct ind c _, args) =&gt;
+        <span class="kr">match</span> nth_error brs c <span class="kr">with</span>
+        | Some br =&gt; 
+          <span class="kr">match</span> lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) c <span class="kr">with</span>
+          | Checked (mdecl, cdecl) =&gt; 
+            <span class="kr">let</span> <span class="nv">bctx</span> := case_branch_context p cdecl <span class="kr">in</span>  
+              reduce_stack Γ n (iota_red ci.(ci_npar) args bctx br) stack
+          | TypeError e =&gt; ret (t, stack)
+          <span class="kr">end</span>
+        | None =&gt; ret (tCase ci p (zip c&#39;) brs, stack)
+        <span class="kr">end</span>
+      | _ =&gt; ret (tCase ci p (zip c&#39;) brs, stack)
+      <span class="kr">end</span>
+    <span class="kr">else</span> ret (t, stack)
+
+  | _ =&gt; ret (t, stack)
+
+  <span class="kr">end</span>
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">reduce_stack_term</span> <span class="nv">Γ</span> <span class="nv">n</span> <span class="nv">c</span> :=
+    res &lt;- reduce_stack Γ n c [] ;;
+    ret (zip res).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">fix_decls</span> (<span class="nv">l</span> : mfixpoint term) :=
+    <span class="kr">let fix</span> <span class="nv">aux</span> <span class="nv">acc</span> <span class="nv">ds</span> :=
+        <span class="kr">match</span> ds <span class="kr">with</span>
+        | nil =&gt; acc
+        | d :: ds =&gt; aux (vass d.(dname) d.(dtype) :: acc) ds
+        <span class="kr">end</span>
+    <span class="kr">in</span> aux [] l.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">rebuild_case_predicate_ctx</span> <span class="nv">ind</span> (<span class="nv">p</span> : predicate term) : <span class="kp">context</span> :=
+    <span class="kr">match</span> lookup_ind_decl Σ (inductive_mind ind) (inductive_ind ind) <span class="kr">with</span>
+    | TypeError _ =&gt; []
+    | Checked (mib, oib) =&gt; 
+      case_predicate_context ind mib oib p.(pparams) p.(puinst) p.(pcontext)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">map_context_with_binders</span> (<span class="nv">f</span> : <span class="kp">context</span> -&gt; term -&gt; term) (<span class="nv">c</span> : <span class="kp">context</span>) <span class="nv">Γ</span> : <span class="kp">context</span> :=
+    fold_left (<span class="kr">fun</span> <span class="nv">acc</span> <span class="nv">decl</span> =&gt; map_decl (f (Γ ,,, acc)) decl :: acc) (List.rev c) [].</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">map_predicate_with_binders</span> (<span class="nv">f</span> : <span class="kp">context</span> -&gt; term -&gt; term) <span class="nv">Γ</span> <span class="nv">ind</span> (<span class="nv">p</span> : predicate term) :=
+    <span class="kr">let</span> <span class="nv">pctx</span> := rebuild_case_predicate_ctx ind p <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">Γparams</span> := map_context_with_binders f pctx Γ <span class="kr">in</span>
+    {| pparams := map (f Γ) p.(pparams);
+       puinst := p.(puinst);
+       pcontext := p.(pcontext);
+       preturn := f Γparams (preturn p) |}.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">  
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">rebuild_case_branch_ctx</span> <span class="nv">ind</span> <span class="nv">i</span> <span class="nv">p</span> :=
+    <span class="kr">match</span> lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) i <span class="kr">with</span>
+    | TypeError _ =&gt; []
+    | Checked (mib, cdecl) =&gt; case_branch_context p cdecl
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">map_case_branch_with_binders</span> <span class="nv">ind</span> <span class="nv">i</span> (<span class="nv">f</span> : <span class="kp">context</span> -&gt; term -&gt; term) <span class="nv">Γ</span> <span class="nv">p</span> <span class="nv">br</span> :=
+    <span class="kr">let</span> <span class="nv">ctx</span> := rebuild_case_branch_ctx ind i p <span class="kr">in</span>
+    map_branch (f (Γ ,,, ctx)) br.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">map_constr_with_binders</span> (<span class="nv">f</span> : <span class="kp">context</span> -&gt; term -&gt; term) <span class="nv">Γ</span> (<span class="nv">t</span> : term) : term :=
+    <span class="kr">match</span> t <span class="kr">with</span>
+    | tRel i =&gt; t
+    | tEvar ev args =&gt; tEvar ev (List.map (f Γ) args)
+    | tLambda na T M =&gt; tLambda na (f Γ T) (f Γ M)
+    | tApp u v =&gt; tApp (f Γ u) (List.map (f Γ) v)
+    | tProd na A B =&gt;
+      <span class="kr">let</span> <span class="nv">A&#39;</span> := f Γ A <span class="kr">in</span>
+      tProd na A&#39; (f (Γ ,, vass na A&#39;) B)
+    | tCast c kind t =&gt; tCast (f Γ c) kind (f Γ t)
+    | tLetIn na b t c =&gt;
+      <span class="kr">let</span> <span class="nv">b&#39;</span> := f Γ b <span class="kr">in</span>
+      <span class="kr">let</span> <span class="nv">t&#39;</span> := f Γ t <span class="kr">in</span>
+      tLetIn na b&#39; t&#39; (f (Γ ,, vdef na b&#39; t&#39;) c)
+    | tCase ci p c brs =&gt;
+      <span class="kr">let</span> <span class="nv">p&#39;</span> := map_predicate_with_binders f Γ ci.(ci_ind) p <span class="kr">in</span>
+      <span class="kr">let</span> <span class="nv">brs&#39;</span> := mapi (<span class="kr">fun</span> <span class="nv">i</span> <span class="nv">x</span> =&gt; map_case_branch_with_binders ci.(ci_ind) i f Γ p&#39; x) brs <span class="kr">in</span>
+      tCase ci p&#39; (f Γ c) brs&#39;
+    | tProj p c =&gt; tProj p (f Γ c)
+    | tFix mfix idx =&gt;
+      <span class="kr">let</span> <span class="nv">Γ&#39;</span> := fix_decls mfix ++ Γ <span class="kr">in</span>
+      <span class="kr">let</span> <span class="nv">mfix&#39;</span> := List.map (map_def (f Γ) (f Γ&#39;)) mfix <span class="kr">in</span>
+      tFix mfix&#39; idx
+    | tCoFix mfix k =&gt;
+      <span class="kr">let</span> <span class="nv">Γ&#39;</span> := fix_decls mfix ++ Γ <span class="kr">in</span>
+      <span class="kr">let</span> <span class="nv">mfix&#39;</span> := List.map (map_def (f Γ) (f Γ&#39;)) mfix <span class="kr">in</span>
+      tCoFix mfix&#39; k
+    | x =&gt; x
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">reduce_opt</span> <span class="nv">Γ</span> <span class="nv">n</span> <span class="nv">c</span> :=
+    <span class="kr">match</span> n <span class="kr">with</span>
+    | <span class="mi">0</span> =&gt; None
+    | S n =&gt;
+      <span class="kr">match</span> reduce_stack_term Γ n c <span class="kr">with</span>
+      | Some c&#39; =&gt;
+        Some (map_constr_with_binders
+                (<span class="kr">fun</span> <span class="nv">Γ</span> <span class="nv">t</span> =&gt; <span class="kr">match</span> reduce_opt Γ n t <span class="kr">with</span>
+                            | Some t =&gt; t
+                            | None =&gt; t <span class="kr">end</span>) Γ c&#39;)
+      | None =&gt; None
+      <span class="kr">end</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">Reduce</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">isConstruct</span> <span class="nv">c</span> :=
+  <span class="kr">match</span> c <span class="kr">with</span>
+  | tConstruct _ _ _ =&gt; true
+  | tApp (tConstruct _ _ _) _ =&gt; true
+  | _ =&gt; false
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">isCoFix</span> <span class="nv">c</span> :=
+  <span class="kr">match</span> c <span class="kr">with</span>
+  | tCoFix _ _ =&gt; true
+  | _ =&gt; false
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Inductive</span> <span class="nf">conv_pb</span> :=
+| Conv
+| Cumul.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">eq_case_info</span> (<span class="nv">ci</span> <span class="nv">ci&#39;</span> : case_info) :=
+  eq_inductive ci.(ci_ind) ci&#39;.(ci_ind) &amp;&amp; Nat.eqb ci.(ci_npar) ci&#39;.(ci_npar). <span class="c">(* FIXME relevance check *)</span></span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">eq_term</span> `{checker_flags} (φ : universes_graph) (t u : term) {<span class="kr">struct</span> t} :=
+  <span class="kr">match</span> t, u <span class="kr">with</span>
+  | tRel n, tRel n&#39; =&gt; Nat.eqb n n&#39;
+  | tEvar ev args, tEvar ev&#39; args&#39; =&gt; Nat.eqb ev ev&#39; &amp;&amp; forallb2 (eq_term φ) args args&#39;
+  | tVar id, tVar id&#39; =&gt; eq_string id id&#39;
+  | tSort s, tSort s&#39; =&gt; check_eqb_universe φ s s&#39;
+  | tCast f k T, tCast f&#39; k&#39; T&#39; =&gt; eq_term φ f f&#39; &amp;&amp; eq_term φ T T&#39;
+  | tApp f args, tApp f&#39; args&#39; =&gt; eq_term φ f f&#39; &amp;&amp; forallb2 (eq_term φ) args args&#39;
+  | tConst c u, tConst c&#39; u&#39; =&gt; eq_constant c c&#39; &amp;&amp; eqb_univ_instance φ u u&#39;
+  | tInd i u, tInd i&#39; u&#39; =&gt; eq_inductive i i&#39; &amp;&amp; eqb_univ_instance φ u u&#39;
+  | tConstruct i k u, tConstruct i&#39; k&#39; u&#39; =&gt; eq_inductive i i&#39; &amp;&amp; Nat.eqb k k&#39;
+                                                    &amp;&amp; eqb_univ_instance φ u u&#39;
+  | tLambda _ b t, tLambda _ b&#39; t&#39; =&gt; eq_term φ b b&#39; &amp;&amp; eq_term φ t t&#39;
+  | tProd _ b t, tProd _ b&#39; t&#39; =&gt; eq_term φ b b&#39; &amp;&amp; eq_term φ t t&#39;
+  | tLetIn _ b t c, tLetIn _ b&#39; t&#39; c&#39; =&gt; eq_term φ b b&#39; &amp;&amp; eq_term φ t t&#39; &amp;&amp; eq_term φ c c&#39;
+  | tCase ci p c brs,
+    tCase ci&#39; p&#39; c&#39; brs&#39; =&gt;
+    eq_case_info ci ci&#39; &amp;&amp;
+    eqb_predicate (eqb_univ_instance φ) (eq_term φ) p p&#39; &amp;&amp; eq_term φ c c&#39; &amp;&amp; forallb2 (<span class="kr">fun</span> <span class="nv">br</span> <span class="nv">br&#39;</span> =&gt; eq_term φ br.(bbody) br&#39;.(bbody)) brs brs&#39;
+  | tProj p c, tProj p&#39; c&#39; =&gt; eq_projection p p&#39; &amp;&amp; eq_term φ c c&#39;
+  | tFix mfix idx, tFix mfix&#39; idx&#39; =&gt;
+    forallb2 (<span class="kr">fun</span> <span class="nv">x</span> <span class="nv">y</span> =&gt;
+                eq_term φ x.(dtype) y.(dtype) &amp;&amp; eq_term φ x.(dbody) y.(dbody)) mfix mfix&#39; &amp;&amp;
+    Nat.eqb idx idx&#39;
+  | tCoFix mfix idx, tCoFix mfix&#39; idx&#39; =&gt;
+    forallb2 (<span class="kr">fun</span> <span class="nv">x</span> <span class="nv">y</span> =&gt;
+                eq_term φ x.(dtype) y.(dtype) &amp;&amp; eq_term φ x.(dbody) y.(dbody)) mfix mfix&#39; &amp;&amp;
+    Nat.eqb idx idx&#39;
+  | _, _ =&gt; false
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">leq_term</span> `{checker_flags} (φ : universes_graph) (t u : term) {<span class="kr">struct</span> t} :=
+  <span class="kr">match</span> t, u <span class="kr">with</span>
+  | tRel n, tRel n&#39; =&gt; Nat.eqb n n&#39;
+  | tEvar ev args, tEvar ev&#39; args&#39; =&gt; Nat.eqb ev ev&#39; &amp;&amp; forallb2 (eq_term φ) args args&#39;
+  | tVar id, tVar id&#39; =&gt; eq_string id id&#39;
+  | tSort s, tSort s&#39; =&gt; check_leqb_universe φ s s&#39;
+  | tApp f args, tApp f&#39; args&#39; =&gt; eq_term φ f f&#39; &amp;&amp; forallb2 (eq_term φ) args args&#39;
+  | tCast f k T, tCast f&#39; k&#39; T&#39; =&gt; eq_term φ f f&#39; &amp;&amp; eq_term φ T T&#39;
+  | tConst c u, tConst c&#39; u&#39; =&gt; eq_constant c c&#39; &amp;&amp; eqb_univ_instance φ u u&#39;
+  | tInd i u, tInd i&#39; u&#39; =&gt; eq_inductive i i&#39; &amp;&amp; eqb_univ_instance φ u u&#39;
+  | tConstruct i k u, tConstruct i&#39; k&#39; u&#39; =&gt; eq_inductive i i&#39; &amp;&amp; Nat.eqb k k&#39; &amp;&amp;
+                                                    eqb_univ_instance φ u u&#39;
+  | tLambda _ b t, tLambda _ b&#39; t&#39; =&gt; eq_term φ b b&#39; &amp;&amp; eq_term φ t t&#39;
+  | tProd _ b t, tProd _ b&#39; t&#39; =&gt; eq_term φ b b&#39; &amp;&amp; leq_term φ t t&#39;
+  | tLetIn _ b t c, tLetIn _ b&#39; t&#39; c&#39; =&gt; eq_term φ b b&#39; &amp;&amp; eq_term φ t t&#39; &amp;&amp; leq_term φ c c&#39;
+  | tCase ci p c brs, tCase ci&#39; p&#39; c&#39; brs&#39; =&gt;
+    eq_case_info ci ci&#39; &amp;&amp;
+    eqb_predicate (eqb_univ_instance φ) (eq_term φ) p p&#39; &amp;&amp; eq_term φ c c&#39; &amp;&amp; forallb2 (<span class="kr">fun</span> <span class="nv">br</span> <span class="nv">br&#39;</span> =&gt; eq_term φ br.(bbody) br&#39;.(bbody)) brs brs&#39;
+  | tProj p c, tProj p&#39; c&#39; =&gt; eq_projection p p&#39; &amp;&amp; eq_term φ c c&#39;
+  | tFix mfix idx, tFix mfix&#39; idx&#39; =&gt;
+    forallb2 (<span class="kr">fun</span> <span class="nv">x</span> <span class="nv">y</span> =&gt;
+                eq_term φ x.(dtype) y.(dtype) &amp;&amp; eq_term φ x.(dbody) y.(dbody)) mfix mfix&#39; &amp;&amp;
+    Nat.eqb idx idx&#39;
+  | tCoFix mfix idx, tCoFix mfix&#39; idx&#39; =&gt;
+    forallb2 (<span class="kr">fun</span> <span class="nv">x</span> <span class="nv">y</span> =&gt;
+                eq_term φ x.(dtype) y.(dtype) &amp;&amp; eq_term φ x.(dbody) y.(dbody)) mfix mfix&#39; &amp;&amp;
+    Nat.eqb idx idx&#39;
+  | _, _ =&gt; false
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Conversion</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> `{checker_flags} (flags : RedFlags.t).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> (<span class="nv">Σ</span> : global_env) (<span class="nv">G</span> : universes_graph).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">nodelta_flags</span> := RedFlags.mk true true true false true true.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">unfold_one_fix</span> <span class="nv">n</span> <span class="nv">Γ</span> <span class="nv">mfix</span> <span class="nv">idx</span> <span class="nv">l</span> :=
+    unf &lt;- unfold_fix mfix idx ;;
+    <span class="kr">let</span> &#39;(arg, fn) := unf <span class="kr">in</span>
+    c &lt;- nth_error l arg ;;
+    cred &lt;- reduce_stack RedFlags.default Σ Γ n c [] ;;
+    <span class="kr">let</span> &#39;(cred, _) := cred <span class="kr">in</span>
+    <span class="kr">if</span> negb (isConstruct cred) <span class="kr">then</span> None
+    <span class="kr">else</span> Some fn.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">unfold_one_case</span> <span class="nv">n</span> <span class="nv">Γ</span> <span class="nv">c</span> :=
+    cred &lt;- reduce_stack_term RedFlags.default Σ Γ n c ;;
+    <span class="kr">if</span> negb (isConstruct cred || isCoFix cred) <span class="kr">then</span> None
+    <span class="kr">else</span> Some cred.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">reducible_head</span> <span class="nv">n</span> <span class="nv">Γ</span> <span class="nv">c</span> <span class="nv">l</span> :=
+    <span class="kr">match</span> c <span class="kr">with</span>
+    | tFix mfix idx =&gt; unfold_one_fix n Γ mfix idx l
+    | tCase ind&#39; p&#39; c&#39; brs =&gt;
+      <span class="kr">match</span> unfold_one_case n Γ c&#39; <span class="kr">with</span>
+      | None =&gt; None
+      | Some c&#39; =&gt; Some (tCase ind&#39; p&#39; c&#39; brs)
+      <span class="kr">end</span>
+    | tProj p c =&gt;
+      <span class="kr">match</span> unfold_one_case n Γ c <span class="kr">with</span>
+      | None =&gt; None
+      | Some c&#39; =&gt; Some (tProj p c&#39;)
+      <span class="kr">end</span>
+    | tConst c _ =&gt; <span class="c">(* TODO Universes *)</span>
+      <span class="kr">match</span> lookup_env Σ c <span class="kr">with</span>
+      | Some (ConstantDecl {| cst_body := Some body |}) =&gt; Some body
+      | _ =&gt; None
+      <span class="kr">end</span>
+    | _ =&gt; None
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_env</span> <span class="nv">c</span> := lookup_env Σ c.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">opt_bool_to_bool</span> (<span class="nv">x</span> : option bool) : bool :=
+    <span class="kr">match</span> x <span class="kr">with</span>
+    | Some b =&gt; b
+    | None =&gt; false
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">isconv</span> (<span class="nv">n</span> : nat) (<span class="nv">leq</span> : conv_pb) (<span class="nv">Γ</span> : <span class="kp">context</span>)
+           (<span class="nv">t1</span> : term) (<span class="nv">l1</span> : list term) (<span class="nv">t2</span> : term) (<span class="nv">l2</span> : list term) {<span class="nv">struct</span> <span class="nv">n</span>} : option bool :=
+    <span class="kr">match</span> n <span class="kr">with</span> <span class="mi">0</span> =&gt; None | S n =&gt;
+    red1 &lt;- reduce_stack nodelta_flags Σ Γ n t1 l1 ;;
+    red2 &lt;- reduce_stack nodelta_flags Σ Γ n t2 l2 ;;
+    <span class="kr">let</span> &#39;(t1,l1) := red1 <span class="kr">in</span>
+    <span class="kr">let</span> &#39;(t2,l2) := red2 <span class="kr">in</span>
+    isconv_prog n leq Γ t1 l1 t2 l2
+    <span class="kr">end</span>
+  <span class="kr">with</span> isconv_prog (n : nat) (leq : conv_pb) (Γ : <span class="kp">context</span>)
+                   (t1 : term) (l1 : list term) (t2 : term) (l2 : list term)
+                   {<span class="kr">struct</span> n} : option bool :=
+    <span class="kr">match</span> n <span class="kr">with</span> <span class="mi">0</span> =&gt; None | S n =&gt;
+    <span class="kr">let</span> <span class="nv">isconv_stacks</span> <span class="nv">l1</span> <span class="nv">l2</span> :=
+        ret (forallb2 (<span class="kr">fun</span> <span class="nv">x</span> <span class="nv">y</span> =&gt; opt_bool_to_bool (isconv n Conv Γ x [] y [])) l1 l2)
+    <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">on_cond</span> (<span class="nv">b</span> : bool) := <span class="kr">if</span> b <span class="kr">then</span> isconv_stacks l1 l2 <span class="kr">else</span> ret false <span class="kr">in</span>
+    <span class="sd">(** Test equality at each step ?? *)</span>
+    <span class="c">(* if eq_term t1 t2 &amp;&amp; (match isconv_stacks l1 l2 with Some true =&gt; true | _ =&gt; false) *)</span>
+    <span class="c">(* then ret true else *)</span>
+    <span class="kr">let</span> <span class="nv">fallback</span> (<span class="nv">x</span> : unit) :=
+      <span class="kr">match</span> reducible_head n Γ t1 l1 <span class="kr">with</span>
+      | Some t1 =&gt;
+        redt &lt;- reduce_stack nodelta_flags Σ Γ n t1 l1 ;;
+        <span class="kr">let</span> &#39;(t1, l1) := redt <span class="kr">in</span>
+        isconv_prog n leq Γ t1 l1 t2 l2
+      | None =&gt;
+        <span class="kr">match</span> reducible_head n Γ t2 l2 <span class="kr">with</span>
+        | Some t2 =&gt;
+          redt &lt;- reduce_stack nodelta_flags Σ Γ n t2 l2 ;;
+          <span class="kr">let</span> &#39;(t2, l2) := redt <span class="kr">in</span>
+          isconv_prog n leq Γ t1 l1 t2 l2
+        | None =&gt;
+          on_cond (<span class="kr">match</span> leq <span class="kr">with</span>
+                   | Conv =&gt; eq_term G t1 t2
+                   | Cumul =&gt; leq_term G t1 t2 <span class="kr">end</span>)
+        <span class="kr">end</span>
+      <span class="kr">end</span>
+    <span class="kr">in</span>
+    <span class="kr">match</span> t1, t2 <span class="kr">with</span>
+    | tApp f args, tApp f&#39; args&#39; =&gt;
+      None <span class="c">(* Impossible *)</span>
+
+    | tCast t _ v, tCast u _ v&#39; =&gt; None <span class="c">(* Impossible *)</span>
+
+    | tConst c u, tConst c&#39; u&#39; =&gt; <span class="c">(* TODO Universes *)</span>
+      <span class="kr">if</span> eq_constant c c&#39; <span class="kr">then</span>
+        b &lt;- isconv_stacks l1 l2 ;;
+        <span class="kr">if</span> b <span class="kr">then</span> ret true <span class="c">(* FO optim *)</span>
+        <span class="kr">else</span>
+          <span class="kr">match</span> lookup_env c <span class="kr">with</span> <span class="c">(* Unfold both bodies at once *)</span>
+          | Some (ConstantDecl {| cst_body := Some body |}) =&gt;
+            isconv n leq Γ body l1 body l2
+          | _ =&gt; ret false
+          <span class="kr">end</span>
+      <span class="kr">else</span>
+        <span class="kr">match</span> lookup_env c&#39; <span class="kr">with</span>
+        | Some (ConstantDecl {| cst_body := Some body |}) =&gt;
+          isconv n leq Γ t1 l1 body l2
+        | _ =&gt;
+          <span class="kr">match</span> lookup_env c <span class="kr">with</span>
+          | Some (ConstantDecl {| cst_body := Some body |}) =&gt;
+            isconv n leq Γ body l1 t2 l2
+          | _ =&gt; ret false
+          <span class="kr">end</span>
+        <span class="kr">end</span>
+
+    | tLambda na b t, tLambda _ b&#39; t&#39; =&gt;
+      cnv &lt;- isconv n Conv Γ b [] b&#39; [] ;;
+      <span class="kr">if</span> (cnv : bool) <span class="kr">then</span>
+        isconv n Conv (Γ ,, vass na b) t [] t&#39; []
+      <span class="kr">else</span> ret false
+
+    | tProd na b t, tProd _ b&#39; t&#39; =&gt;
+      cnv &lt;- isconv n Conv Γ b [] b&#39; [] ;;
+      <span class="kr">if</span> (cnv : bool) <span class="kr">then</span>
+        isconv n leq (Γ ,, vass na b) t [] t&#39; []
+      <span class="kr">else</span> ret false
+
+    | tCase ci p c brs,
+      tCase ci&#39; p&#39; c&#39; brs&#39; =&gt; <span class="c">(* Hnf did not reduce, maybe delta needed in c *)</span>
+      <span class="kr">if</span> eq_case_info ci ci&#39; &amp;&amp; eqb_predicate (eqb_univ_instance G) (eq_term G) p p&#39; &amp;&amp; eq_term G c c&#39;
+      &amp;&amp; forallb2 (<span class="kr">fun</span> <span class="nv">br</span> <span class="nv">br&#39;</span> =&gt; eq_term G br.(bbody) br&#39;.(bbody)) brs brs&#39; <span class="kr">then</span>
+        ret true
+      <span class="kr">else</span>
+        cred &lt;- reduce_stack_term RedFlags.default Σ Γ n c ;;
+        c&#39;red &lt;- reduce_stack_term RedFlags.default Σ Γ n c&#39; ;;
+        <span class="kr">if</span> eq_term G cred c &amp;&amp; eq_term G c&#39;red c&#39; <span class="kr">then</span> ret true
+        <span class="kr">else</span>
+          isconv n leq Γ (tCase ci p cred brs) l1 (tCase ci&#39; p c&#39;red brs&#39;) l2
+
+    | tProj p c, tProj p&#39; c&#39; =&gt; on_cond (eq_projection p p&#39; &amp;&amp; eq_term G c c&#39;)
+
+    | tFix mfix idx, tFix mfix&#39; idx&#39; =&gt;
+      <span class="c">(* Hnf did not reduce, maybe delta needed *)</span>
+      <span class="kr">if</span> eq_term G t1 t2 &amp;&amp; opt_bool_to_bool (isconv_stacks l1 l2) <span class="kr">then</span> ret true
+      <span class="kr">else</span>
+        <span class="kr">match</span> unfold_one_fix n Γ mfix idx l1 <span class="kr">with</span>
+        | Some t1 =&gt;
+          redt &lt;- reduce_stack nodelta_flags Σ Γ n t1 l1 ;;
+          <span class="kr">let</span> &#39;(t1, l1) := redt <span class="kr">in</span>
+          isconv_prog n leq Γ t1 l1 t2 l2
+        | None =&gt;
+          <span class="kr">match</span> unfold_one_fix n Γ mfix&#39; idx&#39; l2 <span class="kr">with</span>
+          | Some t2 =&gt;
+            redt &lt;- reduce_stack nodelta_flags Σ Γ n t2 l2 ;;
+            <span class="kr">let</span> &#39;(t2, l2) := redt <span class="kr">in</span>
+            isconv_prog n leq Γ t1 l1 t2 l2
+          | None =&gt; ret false
+          <span class="kr">end</span>
+        <span class="kr">end</span>
+
+    | tCoFix mfix idx, tCoFix mfix&#39; idx&#39; =&gt;
+      on_cond (eq_term G t1 t2)
+
+    | _, _ =&gt; fallback ()
+    <span class="kr">end</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">Conversion</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">try_reduce</span> <span class="nv">Σ</span> <span class="nv">Γ</span> <span class="nv">n</span> <span class="nv">t</span> :=
+  <span class="kr">match</span> reduce_opt RedFlags.default Σ Γ n t <span class="kr">with</span>
+  | Some t&#39; =&gt; t&#39;
+  | None =&gt; t
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check_conv_gen</span> `{checker_flags} {F:Fuel} conv_pb Σ G Γ t u :=
+  <span class="kr">match</span> isconv Σ G fuel conv_pb Γ t [] u [] <span class="kr">with</span>
+  | Some b =&gt; <span class="kr">if</span> b <span class="kr">then</span> ret () <span class="kr">else</span> raise (NotConvertible Γ t u t u)
+  | None =&gt; raise (NotEnoughFuel fuel)
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check_conv_leq</span> `{checker_flags} {F:Fuel} := check_conv_gen Cumul.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check_conv</span> `{checker_flags} {F:Fuel} := check_conv_gen Conv.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">is_graph_of_global_env_ext</span> `{checker_flags} Σ G :=
+  is_graph_of_uctx G (global_ext_uctx Σ).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk0" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk0"><span class="highlight"><span class="kn">Lemma</span> <span class="nf">conv_spec</span> : <span class="kr">forall</span> `{checker_flags} {F:Fuel} Σ G Γ t u,
+    is_graph_of_global_env_ext Σ G -&gt;
+    Σ ;;; Γ |- t = u &lt;~&gt; check_conv (fst Σ) G Γ t u = Checked ().</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight"><span class="kr">forall</span> (<span class="nv">H</span> : checker_flags) (<span class="nv">F</span> : Fuel)
+  (<span class="nv">Σ</span> : global_env_ext) (<span class="nv">G</span> : wGraph.t) (<span class="nv">Γ</span> : <span class="kp">context</span>)
+  (<span class="nv">t</span> <span class="nv">u</span> : term),
+is_graph_of_global_env_ext Σ G -&gt;
+Σ;;; Γ |- t = u &lt;~&gt;
+check_conv Σ.<span class="mi">1</span> G Γ t u = Checked ()</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk1" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk1"><span class="highlight"><span class="kn">Proof</span>.</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight"><span class="kr">forall</span> (<span class="nv">H</span> : checker_flags) (<span class="nv">F</span> : Fuel)
+  (<span class="nv">Σ</span> : global_env_ext) (<span class="nv">G</span> : wGraph.t) (<span class="nv">Γ</span> : <span class="kp">context</span>)
+  (<span class="nv">t</span> <span class="nv">u</span> : term),
+is_graph_of_global_env_ext Σ G -&gt;
+Σ;;; Γ |- t = u &lt;~&gt;
+check_conv Σ.<span class="mi">1</span> G Γ t u = Checked ()</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk2" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk2"><span class="highlight"><span class="nb">intros</span>.</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><div class="goal-hyp"><span class="hyp-names">H</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">checker_flags</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">F</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">Fuel</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">Σ</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">global_env_ext</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">G</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">wGraph.t</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">Γ</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight"><span class="kp">context</span></span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">t, u</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">term</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">H0</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">is_graph_of_global_env_ext Σ G</span></span></span></span></div></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight">Σ;;; Γ |- t = u &lt;~&gt;
+check_conv Σ.<span class="mi">1</span> G Γ t u = Checked ()</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight">todo <span class="s2">&quot;Checker.conv_spec&quot;</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Defined</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk3" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk3"><span class="highlight"><span class="kn">Lemma</span> <span class="nf">cumul_spec</span> : <span class="kr">forall</span> `{checker_flags} {F:Fuel} Σ G Γ t u,
+    is_graph_of_global_env_ext Σ G -&gt;
+    Σ ;;; Γ |- t &lt;= u &lt;~&gt; check_conv_leq (fst Σ) G Γ t u = Checked ().</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight"><span class="kr">forall</span> (<span class="nv">H</span> : checker_flags) (<span class="nv">F</span> : Fuel)
+  (<span class="nv">Σ</span> : global_env_ext) (<span class="nv">G</span> : wGraph.t) (<span class="nv">Γ</span> : <span class="kp">context</span>)
+  (<span class="nv">t</span> <span class="nv">u</span> : term),
+is_graph_of_global_env_ext Σ G -&gt;
+Σ;;; Γ |- t &lt;= u &lt;~&gt;
+check_conv_leq Σ.<span class="mi">1</span> G Γ t u = Checked ()</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk4" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk4"><span class="highlight"><span class="kn">Proof</span>.</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight"><span class="kr">forall</span> (<span class="nv">H</span> : checker_flags) (<span class="nv">F</span> : Fuel)
+  (<span class="nv">Σ</span> : global_env_ext) (<span class="nv">G</span> : wGraph.t) (<span class="nv">Γ</span> : <span class="kp">context</span>)
+  (<span class="nv">t</span> <span class="nv">u</span> : term),
+is_graph_of_global_env_ext Σ G -&gt;
+Σ;;; Γ |- t &lt;= u &lt;~&gt;
+check_conv_leq Σ.<span class="mi">1</span> G Γ t u = Checked ()</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk5" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk5"><span class="highlight"><span class="nb">intros</span>.</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><div class="goal-hyp"><span class="hyp-names">H</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">checker_flags</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">F</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">Fuel</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">Σ</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">global_env_ext</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">G</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">wGraph.t</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">Γ</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight"><span class="kp">context</span></span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">t, u</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">term</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">H0</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">is_graph_of_global_env_ext Σ G</span></span></span></span></div></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight">Σ;;; Γ |- t &lt;= u &lt;~&gt;
+check_conv_leq Σ.<span class="mi">1</span> G Γ t u = Checked ()</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight">todo <span class="s2">&quot;Checker.cumul_spec&quot;</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Defined</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk6" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk6"><span class="highlight"><span class="kn">Lemma</span> <span class="nf">reduce_cumul</span> :
+  <span class="kr">forall</span> `{checker_flags} Σ Γ n t, Σ ;;; Γ |- try_reduce (fst Σ) Γ n t &lt;= t.</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight"><span class="kr">forall</span> (<span class="nv">H</span> : checker_flags) (<span class="nv">Σ</span> : global_env_ext)
+  (<span class="nv">Γ</span> : <span class="kp">context</span>) (<span class="nv">n</span> : nat) (<span class="nv">t</span> : term),
+Σ;;; Γ |- try_reduce Σ.<span class="mi">1</span> Γ n t &lt;= t</span></div></blockquote></div></div></small><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk7" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk7"><span class="highlight"><span class="kn">Proof</span>.</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight"><span class="kr">forall</span> (<span class="nv">H</span> : checker_flags) (<span class="nv">Σ</span> : global_env_ext)
+  (<span class="nv">Γ</span> : <span class="kp">context</span>) (<span class="nv">n</span> : nat) (<span class="nv">t</span> : term),
+Σ;;; Γ |- try_reduce Σ.<span class="mi">1</span> Γ n t &lt;= t</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><input class="alectryon-toggle" id="Checker-v-chk8" style="display: none" type="checkbox"><label class="alectryon-input" for="Checker-v-chk8"><span class="highlight"><span class="nb">intros</span>.</span></label><small class="alectryon-output"><div class="alectryon-output-sticky-wrapper"><div class="alectryon-goals"><blockquote class="alectryon-goal"><div class="goal-hyps"><div class="goal-hyp"><span class="hyp-names">H</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">checker_flags</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">Σ</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">global_env_ext</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">Γ</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight"><span class="kp">context</span></span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">n</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">nat</span></span></span></span></div><div class="goal-hyp"><span class="hyp-names">t</span><span><span class="hyp-type-block"><span class="hyp-punct">:</span><span class="hyp-type"><span class="highlight">term</span></span></span></span></div></div><span class="goal-separator"><hr></span><div class="goal-conclusion"><span class="highlight">Σ;;; Γ |- try_reduce Σ.<span class="mi">1</span> Γ n t &lt;= t</span></div></blockquote></div></div></small><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight">todo <span class="s2">&quot;Checker.reduce_cumul&quot;</span>.</span></span><span class="alectryon-wsp"> </span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Defined</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Typecheck</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> {<span class="nv">F</span> : Fuel}.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> (<span class="nv">Σ</span> : global_env).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">hnf_stack</span> <span class="nv">Γ</span> <span class="nv">t</span> :=
+    <span class="kr">match</span> reduce_stack RedFlags.default Σ Γ fuel t [] <span class="kr">with</span>
+    | Some t&#39; =&gt; ret t&#39;
+    | None =&gt; raise (NotEnoughFuel fuel)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">reduce</span> <span class="nv">Γ</span> <span class="nv">t</span> :=
+    <span class="kr">match</span> reduce_opt RedFlags.default Σ Γ fuel t <span class="kr">with</span>
+    | Some t&#39; =&gt; ret t&#39;
+    | None =&gt; raise (NotEnoughFuel fuel)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">reduce_to_sort</span> <span class="nv">Γ</span> (<span class="nv">t</span> : term) : typing_result <span class="kn">Universe</span>.t :=
+    <span class="kr">match</span> t <span class="kr">with</span>
+    | tSort s =&gt; ret s
+    | _ =&gt;
+      t&#39; &lt;- hnf_stack Γ t ;;
+      <span class="kr">match</span> t&#39; <span class="kr">with</span>
+      | (tSort s, []) =&gt; ret s
+      | _ =&gt; raise (NotASort t)
+      <span class="kr">end</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">reduce_to_prod</span> <span class="nv">Γ</span> (<span class="nv">t</span> : term) : typing_result (term * term) :=
+    <span class="kr">match</span> t <span class="kr">with</span>
+    | tProd _ a b =&gt; ret (a, b)
+    | _ =&gt;
+      t&#39; &lt;- hnf_stack Γ t ;;
+      <span class="kr">match</span> t&#39; <span class="kr">with</span>
+      | (tProd _ a b,[]) =&gt; ret (a, b)
+      | _ =&gt; raise (NotAProduct t (zip t&#39;))
+      <span class="kr">end</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">reduce_to_ind</span> <span class="nv">Γ</span> (<span class="nv">t</span> : term) :
+    typing_result (inductive * list Level.t * list term) :=
+    <span class="kr">match</span> decompose_app t <span class="kr">with</span>
+    | (tInd i u, l) =&gt; ret (i, u, l)
+    | _ =&gt; t&#39; &lt;- hnf_stack Γ t ;;
+           <span class="kr">match</span> t&#39; <span class="kr">with</span>
+           | (tInd i u, l) =&gt; ret (i, u, l)
+           | _ =&gt; raise (NotAnInductive t)
+           <span class="kr">end</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">Typecheck</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Typecheck</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> {<span class="nv">cf</span> : checker_flags} {<span class="nv">F</span> : Fuel}.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> (<span class="nv">Σ</span> : global_env) (<span class="nv">G</span> : universes_graph).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">convert_leq</span> <span class="nv">Γ</span> (<span class="nv">t</span> <span class="nv">u</span> : term) : typing_result unit :=
+    <span class="kr">if</span> eq_term G t u <span class="kr">then</span> ret ()
+    <span class="kr">else</span>
+      <span class="kr">match</span> isconv Σ G fuel Cumul Γ t [] u [] <span class="kr">with</span>
+      | Some b =&gt;
+        <span class="kr">if</span> b <span class="kr">then</span> ret ()
+        <span class="kr">else</span> raise (NotConvertible Γ t u t u)
+      | None =&gt; <span class="c">(* fallback *)</span>
+        t&#39; &lt;- reduce Σ Γ t ;;
+        u&#39; &lt;- reduce Σ Γ u ;;
+        <span class="kr">if</span> leq_term G t&#39; u&#39; <span class="kr">then</span> ret ()
+        <span class="kr">else</span> raise (NotConvertible Γ t u t&#39; u&#39;)
+      <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">InferAux</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Variable</span> (<span class="nv">infer</span> : <span class="kp">context</span> -&gt; term -&gt; typing_result term).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">infer_spine</span> (<span class="nv">Γ</span> : <span class="kp">context</span>) (<span class="nv">ty</span> : term) (<span class="nv">l</span> : list term)
+             {<span class="nv">struct</span> <span class="nv">l</span>} : typing_result term :=
+    <span class="kr">match</span> l <span class="kr">with</span>
+    | nil =&gt; ret ty
+    | cons x xs =&gt;
+       pi &lt;- reduce_to_prod Σ Γ ty ;;
+       <span class="kr">let</span> &#39;(a1, b1) := pi <span class="kr">in</span>
+       tx &lt;- infer Γ x ;;
+       convert_leq Γ tx a1 ;;
+       infer_spine Γ (subst10 x b1) xs
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">infer_type</span> <span class="nv">Γ</span> <span class="nv">t</span> :=
+      tx &lt;- infer Γ t ;;
+      reduce_to_sort Σ Γ tx.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">    </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">infer_cumul</span> <span class="nv">Γ</span> <span class="nv">t</span> <span class="nv">t&#39;</span> :=
+      tx &lt;- infer Γ t ;;
+      convert_leq Γ tx t&#39;.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">InferAux</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check_consistent_constraints</span> <span class="nv">cstrs</span> :=
+    <span class="kr">if</span> check_constraints G cstrs <span class="kr">then</span> ret tt
+    <span class="kr">else</span> raise (UnsatisfiedConstraints cstrs).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">infer</span> (<span class="nv">Γ</span> : <span class="kp">context</span>) (<span class="nv">t</span> : term) : typing_result term :=
+    <span class="kr">match</span> t <span class="kr">with</span>
+    | tRel n =&gt;
+      <span class="kr">match</span> nth_error Γ n <span class="kr">with</span>
+      | Some d =&gt; ret (lift0 (S n) d.(decl_type))
+      | None =&gt; raise (UnboundRel n)
+      <span class="kr">end</span>
+
+    | tVar n =&gt; raise (UnboundVar n)
+    | tEvar ev args =&gt; raise (UnboundEvar ev)
+
+    | tSort s =&gt; ret (tSort (<span class="kn">Universe</span>.super s))
+
+    | tCast c k t =&gt;
+      infer_type infer Γ t ;;
+      infer_cumul infer Γ c t ;;
+      ret t
+
+    | tProd n t b =&gt;
+      s1 &lt;- infer_type infer Γ t ;;
+      s2 &lt;- infer_type infer (Γ ,, vass n t) b ;;
+      ret (tSort (<span class="kn">Universe</span>.sort_of_product s1 s2))
+
+    | tLambda n t b =&gt;
+      infer_type infer Γ t ;;
+      t2 &lt;- infer (Γ ,, vass n t) b ;;
+      ret (tProd n t t2)
+
+    | tLetIn n b b_ty b&#39; =&gt;
+      infer_type infer Γ b_ty ;;
+       infer_cumul infer Γ b b_ty ;;
+       b&#39;_ty &lt;- infer (Γ ,, vdef n b b_ty) b&#39; ;;
+       ret (tLetIn n b b_ty b&#39;_ty)
+
+    | tApp t l =&gt;
+      t_ty &lt;- infer Γ t ;;
+      infer_spine infer Γ t_ty l
+
+    | tConst cst u =&gt;
+      tycstrs &lt;- lookup_constant_type_cstrs Σ cst u ;;
+      <span class="kr">let</span> &#39;(ty, cstrs) := tycstrs <span class="kr">in</span>
+      check_consistent_constraints cstrs;;
+      ret ty
+
+    | tInd (mkInd ind i) u =&gt;
+      tycstrs &lt;- lookup_ind_type_cstrs Σ ind i u;;
+      <span class="kr">let</span> &#39;(ty, cstrs) := tycstrs <span class="kr">in</span>
+      check_consistent_constraints cstrs;;
+      ret ty
+
+    | tConstruct (mkInd ind i) k u =&gt;
+      tycstrs &lt;- lookup_constructor_type_cstrs Σ ind i k u ;;
+      <span class="kr">let</span> &#39;(ty, cstrs) := tycstrs <span class="kr">in</span>
+      check_consistent_constraints cstrs;;
+      ret ty
+
+    | tCase ci p c brs =&gt;
+      ty &lt;- infer Γ c ;;
+      indargs &lt;- reduce_to_ind Σ Γ ty ;;
+      <span class="sd">(** TODO check branches *)</span>
+      <span class="kr">let</span> &#39;(ind, u, args) := indargs <span class="kr">in</span>
+      <span class="kr">if</span> eq_inductive ind ci.(ci_ind) <span class="kr">then</span>
+        <span class="kr">let</span> <span class="nv">pctx</span> := rebuild_case_predicate_ctx Σ ind p <span class="kr">in</span>
+        <span class="kr">let</span> <span class="nv">ptm</span> := it_mkLambda_or_LetIn pctx p.(preturn) <span class="kr">in</span>
+        ret (tApp ptm (List.skipn ci.(ci_npar) args ++ [c]))
+      <span class="kr">else</span>
+        <span class="kr">let</span> <span class="nv">ind1</span> := tInd ind u <span class="kr">in</span>
+        <span class="kr">let</span> <span class="nv">ind2</span> := tInd ci.(ci_ind) u <span class="kr">in</span>
+        raise (NotConvertible Γ ind1 ind2 ind1 ind2)
+
+    | tProj p c =&gt;
+      ty &lt;- infer Γ c ;;
+      indargs &lt;- reduce_to_ind Σ Γ ty ;;
+      <span class="c">(* FIXME *)</span>
+      ret ty
+
+    | tFix mfix n =&gt;
+      <span class="kr">match</span> nth_error mfix n <span class="kr">with</span>
+      | Some f =&gt; ret f.(dtype)
+      | None =&gt; raise (IllFormedFix mfix n)
+      <span class="kr">end</span>
+
+    | tCoFix mfix n =&gt;
+      <span class="kr">match</span> nth_error mfix n <span class="kr">with</span>
+      | Some f =&gt; ret f.(dtype)
+      | None =&gt; raise (IllFormedFix mfix n)
+      <span class="kr">end</span>
+
+    | tInt _ | tFloat _ =&gt; raise (NotSupported <span class="s2">&quot;primitive types&quot;</span>)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check</span> (<span class="nv">Γ</span> : <span class="kp">context</span>) (<span class="nv">t</span> : term) (<span class="nv">ty</span> : term) : typing_result unit :=
+    infer Γ ty ;;
+    infer_cumul infer Γ t ty ;;
+    ret ().</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">typechecking</span> (<span class="nv">Γ</span> : <span class="kp">context</span>) (<span class="nv">t</span> <span class="nv">ty</span> : term) :=
+    <span class="kr">match</span> check Γ t ty <span class="kr">with</span>
+    | Checked _ =&gt; true
+    | TypeError _ =&gt; false
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">Typecheck</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Arguments</span> bind _ _ _ _ ! _.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Open Scope</span> monad.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">default_fuel</span> : Fuel := Nat.pow <span class="mi">2</span> <span class="mi">14</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">fresh</span> <span class="nv">id</span> (<span class="nv">env</span> : global_env) : bool :=
+  <span class="kr">match</span> env <span class="kr">with</span>
+  | nil =&gt; true
+  | cons g env =&gt; negb (eq_constant g.<span class="mi">1</span> id) &amp;&amp; <span class="kp">fresh</span> id env
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">Checker</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> {<span class="nv">cf</span> : checker_flags} {<span class="nv">F</span> : Fuel}.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Inductive</span> <span class="nf">env_error</span> :=
+  | IllFormedDecl (e : string) (e : type_error)
+  | AlreadyDeclared (id : string).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Inductive</span> <span class="nf">EnvCheck</span> (<span class="nv">A</span> : <span class="kt">Type</span>) :=
+  | CorrectDecl (a : A)
+  | EnvError (e : env_error).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Global Arguments</span> EnvError {A} e.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Global Arguments</span> CorrectDecl {A} a.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Instance</span> <span class="nf">envcheck_monad</span> : Monad EnvCheck :=
+    {| ret A a := CorrectDecl a ;
+       bind A B m f :=
+         <span class="kr">match</span> m <span class="kr">with</span>
+         | CorrectDecl a =&gt; f a
+         | EnvError e =&gt; EnvError e
+         <span class="kr">end</span>
+    |}.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">wrap_error</span> {<span class="nv">A</span>} (<span class="nv">id</span> : string) (<span class="nv">check</span> : typing_result A) : EnvCheck A :=
+    <span class="kr">match</span> check <span class="kr">with</span>
+    | Checked a =&gt; CorrectDecl a
+    | TypeError e =&gt; EnvError (IllFormedDecl id e)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check_wf_type</span> <span class="nv">id</span> <span class="nv">Σ</span> <span class="nv">G</span> <span class="nv">t</span> :=
+    wrap_error id (infer_type Σ (infer Σ G) [] t) ;; ret ().</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check_wf_judgement</span> <span class="nv">id</span> <span class="nv">Σ</span> <span class="nv">G</span> <span class="nv">t</span> <span class="nv">ty</span> :=
+    wrap_error id (check Σ G [] t ty) ;; ret ().</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">infer_term</span> <span class="nv">Σ</span> <span class="nv">G</span> <span class="nv">t</span> :=
+    wrap_error <span class="s2">&quot;&quot;</span> (infer Σ G [] t).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">check_wf_decl</span> <span class="nv">Σ</span> <span class="nv">G</span> <span class="nv">kn</span> (<span class="nv">g</span> : global_decl) : EnvCheck () :=
+    <span class="kr">match</span> g <span class="kr">with</span>
+    | ConstantDecl cst =&gt;
+      <span class="kr">match</span> cst.(cst_body) <span class="kr">with</span>
+      | Some term =&gt; check_wf_judgement (string_of_kername kn) Σ G term cst.(cst_type)
+      | None =&gt; check_wf_type (string_of_kername kn) Σ G cst.(cst_type)
+      <span class="kr">end</span>
+    | InductiveDecl inds =&gt;
+      List.fold_left (<span class="kr">fun</span> <span class="nv">acc</span> <span class="nv">body</span> =&gt;
+                        acc ;; check_wf_type body.(ind_name) Σ G body.(ind_type))
+                     inds.(ind_bodies) (ret ())
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">check_fresh</span> <span class="nv">id</span> (<span class="nv">env</span> : global_env) : EnvCheck () :=
+    <span class="kr">match</span> env <span class="kr">with</span>
+    | [] =&gt; ret ()
+    | g :: env =&gt;
+      check_fresh id env;;
+      <span class="kr">if</span> eq_constant id g.<span class="mi">1</span> <span class="kr">then</span>
+        EnvError (AlreadyDeclared (string_of_kername id))
+      <span class="kr">else</span> ret ()
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">monomorphic_constraints</span> <span class="nv">u</span> :=
+    <span class="kr">match</span> u <span class="kr">with</span>
+    | Monomorphic_ctx ctx =&gt; snd ctx
+    | Polymorphic_ctx ctx =&gt; ConstraintSet.empty
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+  <span class="c">(* FIXME : universe polym declarations *)</span>
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">global_decl_univs</span> <span class="nv">d</span> :=
+    <span class="kr">match</span> d <span class="kr">with</span>
+    | ConstantDecl cb =&gt; monomorphic_constraints cb.(cst_universes)
+    | InductiveDecl mb =&gt; monomorphic_constraints mb.(ind_universes)
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">add_gc_constraints</span> <span class="nv">ctrs</span>  (<span class="nv">G</span> : universes_graph) : universes_graph
+    := (G.<span class="mi">1</span>.<span class="mi">1</span>,  GoodConstraintSet.<span class="nb">fold</span>
+                  (<span class="kr">fun</span> <span class="nv">ctr</span> =&gt; wGraph.EdgeSet.add (edge_of_constraint ctr)) ctrs G.<span class="mi">1</span>.<span class="mi">2</span>,
+        G.<span class="mi">2</span>).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">check_wf_env</span> (<span class="nv">g</span> : global_env)
+    : EnvCheck universes_graph :=
+    <span class="kr">match</span> g <span class="kr">with</span>
+    | [] =&gt; ret init_graph
+    | g :: env =&gt;
+      G &lt;- check_wf_env env ;;
+      <span class="kr">match</span> gc_of_constraints (global_decl_univs g.<span class="mi">2</span>) <span class="kr">with</span>
+      | None =&gt;
+        EnvError (IllFormedDecl (string_of_kername g.<span class="mi">1</span>)
+                             (UnsatisfiableConstraints (global_decl_univs g.<span class="mi">2</span>)))
+      | Some ctrs =&gt;
+        wrap_error <span class="s2">&quot;&quot;</span> (check_consistent_constraints G (global_decl_univs g.<span class="mi">2</span>)) ;;
+        <span class="kr">let</span> <span class="nv">G&#39;</span> := add_gc_constraints ctrs G <span class="kr">in</span>
+        check_wf_decl env G&#39; g.<span class="mi">1</span> g.<span class="mi">2</span> ;;
+        check_fresh g.<span class="mi">1</span> env ;;
+        ret G&#39;
+      <span class="kr">end</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">typecheck_program</span> (<span class="nv">p</span> : program) : EnvCheck term :=
+    <span class="kr">let</span> <span class="nv">Σ</span> := fst p <span class="kr">in</span>
+    G &lt;- check_wf_env Σ ;;
+    infer_term Σ G (snd p).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">Checker</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+<span class="c">(* for compatibility, will go away *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">infer&#39;</span> `{checker_flags} `{Fuel} (Σ : global_env_ext) Γ t
+  := <span class="kr">let</span> <span class="nv">uctx</span> := (global_ext_uctx Σ) <span class="kr">in</span>
+    <span class="kr">match</span> gc_of_uctx uctx <span class="kr">with</span>
+     | None =&gt; raise (UnsatisfiableConstraints uctx.<span class="mi">2</span>)
+     | Some uctx =&gt; infer (fst Σ) (make_graph uctx) Γ t
+     <span class="kr">end</span>.</span></span></span></pre></article></body></html>

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html class="alectryon-standalone"><head><title>Pretty.v</title><meta charset="utf-8"><meta content="Alectryon" name="generator"><meta name="viewport" content="width=device-width, initial-scale=1"><link href="alectryon.css" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/IBM-type/0.5.4/css/ibm-type.min.css" integrity="sha512-sky5cf9Ts6FY1kstGOBHSybfKqdHR41M0Ldb0BjNiv3ifltoQIsg0zIaQ+wwdwgQ0w9vKFW7Js50lxH9vqNSSw==" crossorigin="anonymous" /><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/firacode/5.2.0/fira_code.min.css" integrity="sha512-MbysAYimH1hH2xYzkkMHB6MqxBqfP0megxsCLknbYqHVwXTCg9IqHbk+ZP/vnhO8UEW6PaXAkKe2vQ+SWACxxA==" crossorigin="anonymous" /><script src="alectryon.js"></script><style type="text/css">pre { line-height: 125%; }
+td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
+td.linenos .special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 5px; padding-right: 5px; }
+.highlight .hll { background-color: #ffffcc }
+.highlight .c { color: #555753; font-style: italic } /* Comment */
+.highlight .err { color: #a40000; border: 1px solid #cc0000 } /* Error */
+.highlight .g { color: #000000 } /* Generic */
+.highlight .k { color: #8f5902 } /* Keyword */
+.highlight .l { color: #2e3436 } /* Literal */
+.highlight .n { color: #000000 } /* Name */
+.highlight .o { color: #000000 } /* Operator */
+.highlight .x { color: #2e3436 } /* Other */
+.highlight .p { color: #000000 } /* Punctuation */
+.highlight .ch { color: #555753; font-weight: bold; font-style: italic } /* Comment.Hashbang */
+.highlight .cm { color: #555753; font-style: italic } /* Comment.Multiline */
+.highlight .cp { color: #3465a4; font-style: italic } /* Comment.Preproc */
+.highlight .cpf { color: #555753; font-style: italic } /* Comment.PreprocFile */
+.highlight .c1 { color: #555753; font-style: italic } /* Comment.Single */
+.highlight .cs { color: #3465a4; font-weight: bold; font-style: italic } /* Comment.Special */
+.highlight .gd { color: #a40000 } /* Generic.Deleted */
+.highlight .ge { color: #000000; font-style: italic } /* Generic.Emph */
+.highlight .gr { color: #a40000 } /* Generic.Error */
+.highlight .gh { color: #a40000; font-weight: bold } /* Generic.Heading */
+.highlight .gi { color: #4e9a06 } /* Generic.Inserted */
+.highlight .go { color: #000000; font-style: italic } /* Generic.Output */
+.highlight .gp { color: #8f5902 } /* Generic.Prompt */
+.highlight .gs { color: #000000; font-weight: bold } /* Generic.Strong */
+.highlight .gu { color: #000000; font-weight: bold } /* Generic.Subheading */
+.highlight .gt { color: #000000; font-style: italic } /* Generic.Traceback */
+.highlight .kc { color: #204a87; font-weight: bold } /* Keyword.Constant */
+.highlight .kd { color: #4e9a06; font-weight: bold } /* Keyword.Declaration */
+.highlight .kn { color: #4e9a06; font-weight: bold } /* Keyword.Namespace */
+.highlight .kp { color: #204a87 } /* Keyword.Pseudo */
+.highlight .kr { color: #8f5902 } /* Keyword.Reserved */
+.highlight .kt { color: #204a87 } /* Keyword.Type */
+.highlight .ld { color: #2e3436 } /* Literal.Date */
+.highlight .m { color: #2e3436 } /* Literal.Number */
+.highlight .s { color: #ad7fa8 } /* Literal.String */
+.highlight .na { color: #c4a000 } /* Name.Attribute */
+.highlight .nb { color: #75507b } /* Name.Builtin */
+.highlight .nc { color: #204a87 } /* Name.Class */
+.highlight .no { color: #ce5c00 } /* Name.Constant */
+.highlight .nd { color: #3465a4; font-weight: bold } /* Name.Decorator */
+.highlight .ni { color: #c4a000; text-decoration: underline } /* Name.Entity */
+.highlight .ne { color: #cc0000 } /* Name.Exception */
+.highlight .nf { color: #a40000 } /* Name.Function */
+.highlight .nl { color: #3465a4; font-weight: bold } /* Name.Label */
+.highlight .nn { color: #000000 } /* Name.Namespace */
+.highlight .nx { color: #000000 } /* Name.Other */
+.highlight .py { color: #000000 } /* Name.Property */
+.highlight .nt { color: #a40000 } /* Name.Tag */
+.highlight .nv { color: #ce5c00 } /* Name.Variable */
+.highlight .ow { color: #8f5902 } /* Operator.Word */
+.highlight .w { color: #d3d7cf; text-decoration: underline } /* Text.Whitespace */
+.highlight .mb { color: #2e3436 } /* Literal.Number.Bin */
+.highlight .mf { color: #2e3436 } /* Literal.Number.Float */
+.highlight .mh { color: #2e3436 } /* Literal.Number.Hex */
+.highlight .mi { color: #2e3436 } /* Literal.Number.Integer */
+.highlight .mo { color: #2e3436 } /* Literal.Number.Oct */
+.highlight .sa { color: #ad7fa8 } /* Literal.String.Affix */
+.highlight .sb { color: #ad7fa8 } /* Literal.String.Backtick */
+.highlight .sc { color: #ad7fa8; font-weight: bold } /* Literal.String.Char */
+.highlight .dl { color: #ad7fa8 } /* Literal.String.Delimiter */
+.highlight .sd { color: #ad7fa8 } /* Literal.String.Doc */
+.highlight .s2 { color: #ad7fa8 } /* Literal.String.Double */
+.highlight .se { color: #ad7fa8; font-weight: bold } /* Literal.String.Escape */
+.highlight .sh { color: #ad7fa8; text-decoration: underline } /* Literal.String.Heredoc */
+.highlight .si { color: #ce5c00 } /* Literal.String.Interpol */
+.highlight .sx { color: #ad7fa8 } /* Literal.String.Other */
+.highlight .sr { color: #ad7fa8 } /* Literal.String.Regex */
+.highlight .s1 { color: #ad7fa8 } /* Literal.String.Single */
+.highlight .ss { color: #8f5902 } /* Literal.String.Symbol */
+.highlight .bp { color: #5c35cc } /* Name.Builtin.Pseudo */
+.highlight .fm { color: #a40000 } /* Name.Function.Magic */
+.highlight .vc { color: #ce5c00 } /* Name.Variable.Class */
+.highlight .vg { color: #ce5c00; text-decoration: underline } /* Name.Variable.Global */
+.highlight .vi { color: #ce5c00 } /* Name.Variable.Instance */
+.highlight .vm { color: #ce5c00 } /* Name.Variable.Magic */
+.highlight .il { color: #2e3436 } /* Literal.Number.Integer.Long */</style></head><body><article class="alectryon-root alectryon-centered alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc alectryon-coqdoc"><div class="alectryon-banner">Built with <a href="https://github.com/cpitclaudel/alectryon/">Alectryon</a>, running Coq+SerAPI v8.11.0+0.11.1. Bubbles (<span class="alectryon-bubble"></span>) indicate interactive fragments: hover for details, tap to reveal contents. Use <kbd>Ctrl+↑</kbd> <kbd>Ctrl+↓</kbd> to navigate, <kbd>Ctrl+🖱️</kbd> to focus. On Mac, use <kbd>⌘</kbd> instead of <kbd>Ctrl</kbd>.</div><pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-wsp"><span class="highlight"><span class="c">(* Distributed under the terms of the MIT license. *)</span>
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">From</span> MetaCoq <span class="kn">Require Import</span> utils Ast AstUtils Environment LiftSubst Universes.</span></span></span></pre><div class="doc">
+<a name="lab1"></a><h1 class="section">Pretty printing</h1>
+</div><pre class="alectryon-io"><!-- Generator: Alectryon --><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Section</span> <span class="nf">print_term</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Context</span> (<span class="nv">Σ</span> : global_env_ext).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">decompose_lam</span> (<span class="nv">t</span> : term) (<span class="nv">n</span> : nat) : (list aname) * (list term) * term :=
+    <span class="kr">match</span> n <span class="kr">with</span>
+    | <span class="mi">0</span> =&gt; ([], [], t)
+    | S n =&gt;
+      <span class="kr">match</span> t <span class="kr">with</span>
+      | tLambda na A B =&gt; <span class="kr">let</span> (<span class="nv">nAs</span>, B) := decompose_lam B n <span class="kr">in</span>
+                          <span class="kr">let</span> (<span class="nv">ns</span>, As) := nAs <span class="kr">in</span>
+                          (na :: ns, A :: <span class="kn">As</span>, B)
+      | _ =&gt; ([], [], t)
+      <span class="kr">end</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">is_fresh</span> (<span class="nv">Γ</span> : list ident) (<span class="nv">id</span> : ident) :=
+    List.forallb (<span class="kr">fun</span> <span class="nv">id&#39;</span> =&gt; negb (ident_eq id id&#39;)) Γ.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+  <span class="c">(* todo : duplicate in Environment ? *)</span>
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">lookup_env</span> (<span class="nv">Σ</span> : global_env) (<span class="nv">id</span> : kername) : option global_decl :=
+    <span class="kr">match</span> Σ <span class="kr">with</span>
+    | nil =&gt; None
+    | hd :: tl =&gt;
+      <span class="kr">if</span> eq_kername id hd.<span class="mi">1</span> <span class="kr">then</span> Some hd.<span class="mi">2</span>
+      <span class="kr">else</span> lookup_env tl id
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">lookup_ind_decl</span> <span class="nv">ind</span> <span class="nv">i</span> :=
+    <span class="kr">match</span> lookup_env Σ ind <span class="kr">with</span>
+    | Some (InductiveDecl {| ind_bodies := l; ind_universes := uctx |}) =&gt;
+      <span class="kr">match</span> nth_error l i <span class="kr">with</span>
+      | Some body =&gt; Some body
+      | None =&gt; None
+      <span class="kr">end</span>
+    | _ =&gt; None
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">name_from_term</span> (<span class="nv">t</span> : term) :=
+    <span class="kr">match</span> t <span class="kr">with</span>
+    | tRel _ | tVar _ | tEvar _ _ =&gt; <span class="s2">&quot;H&quot;</span>
+    | tSort s =&gt; <span class="s2">&quot;X&quot;</span>
+    | tProd na b t =&gt; <span class="s2">&quot;f&quot;</span>
+    | tLambda na b t =&gt; <span class="s2">&quot;f&quot;</span>
+    | tLetIn na b _ t&#39; =&gt; name_from_term t&#39;
+    | tApp f _ =&gt; name_from_term f
+    | tConst c u =&gt; <span class="s2">&quot;x&quot;</span>
+    | tInd (mkInd i k) u =&gt;
+      <span class="kr">match</span> lookup_ind_decl i k <span class="kr">with</span>
+      | Some body =&gt; substring <span class="mi">0</span> <span class="mi">1</span> (body.(ind_name))
+      | None =&gt; <span class="s2">&quot;X&quot;</span>
+      <span class="kr">end</span>
+    | tInt _ =&gt; <span class="s2">&quot;i&quot;</span>
+    | _ =&gt; <span class="s2">&quot;U&quot;</span>
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">fresh_id_from</span> <span class="nv">Γ</span> <span class="nv">n</span> <span class="nv">id</span> :=
+    <span class="kr">let fix</span> <span class="nv">aux</span> <span class="nv">i</span> :=
+      <span class="kr">match</span> i <span class="kr">with</span>
+      | <span class="mi">0</span> =&gt; id
+      | S i&#39; =&gt;
+        <span class="kr">let</span> <span class="nv">id&#39;</span> := id ^ string_of_nat (n - i) <span class="kr">in</span>
+        <span class="kr">if</span> is_fresh Γ id&#39; <span class="kr">then</span> id&#39;
+        <span class="kr">else</span> aux i&#39;
+      <span class="kr">end</span>
+    <span class="kr">in</span> aux n.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">fresh_name</span> (<span class="nv">Γ</span> : list ident) (<span class="nv">na</span> : name) (<span class="nv">t</span> : option term) : <span class="kn">ident</span> :=
+    <span class="kr">let</span> <span class="nv">id</span> := <span class="kr">match</span> na <span class="kr">with</span>
+              | nNamed id =&gt; id
+              | nAnon =&gt; 
+                <span class="kr">match</span> t <span class="kr">with</span> 
+                | Some t =&gt; name_from_term t
+                | None =&gt; <span class="s2">&quot;_&quot;</span>
+                <span class="kr">end</span>
+              <span class="kr">end</span>
+    <span class="kr">in</span>
+    <span class="kr">if</span> is_fresh Γ id <span class="kr">then</span> id
+    <span class="kr">else</span> fresh_id_from Γ <span class="mi">10</span> id.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">fix_context</span> (<span class="nv">m</span> : mfixpoint term) : <span class="kp">context</span> :=
+    List.rev (mapi (<span class="kr">fun</span> <span class="nv">i</span> <span class="nv">d</span> =&gt; vass d.(dname) (lift0 i d.(dtype))) m).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">  
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">rename_decl</span> (<span class="nv">na</span> : aname) (<span class="nv">decl</span> : context_decl) : context_decl :=
+    {| decl_name := na;
+       decl_type := decl_type decl;
+       decl_body := decl_body decl |}.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">  
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">build_return_context</span>
+             (<span class="nv">ind</span> : inductive)
+             (<span class="nv">oib</span> : one_inductive_body)
+             (<span class="nv">pred</span> : predicate term) : option <span class="kp">context</span> :=
+    <span class="c">(* Decompose the type. It will contain parameters too, but at the end, which is ok. *)</span>
+    <span class="kr">let</span> &#39;(Γ, _) := decompose_prod_assum [] (ind_type oib) <span class="kr">in</span>
+    <span class="c">(* We have to skip the first name since that&#39;s the name of the inductive binder. *)</span>
+    <span class="kr">let</span> <span class="nv">index_names</span> := tl (pcontext pred) <span class="kr">in</span>
+    <span class="kr">match</span> hd_error (pcontext pred) <span class="kr">with</span>
+    | Some ind_binder_name =&gt;
+      Some (
+          map (<span class="kr">fun</span> &#39;(na, decl) =&gt; rename_decl na decl)
+          (combine (tl (pcontext pred)) Γ)
+          ,,
+          vass ind_binder_name (mkApps (tInd ind (puinst pred)) (pparams pred)))
+    | None =&gt; None
+    <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">fresh_names</span> (<span class="nv">Γ</span> : list ident) (<span class="nv">Γ&#39;</span> : <span class="kp">context</span>) : list <span class="kn">ident</span> :=
+    <span class="kr">let fix</span> <span class="nv">aux</span> <span class="nv">Γids</span> <span class="nv">Γ</span> :=
+        <span class="kr">match</span> Γ <span class="kr">with</span>
+        | [] =&gt; Γids
+        | decl :: Γ =&gt; aux (fresh_name Γids (binder_name (decl_name decl))
+                                       (Some (decl_type decl)) :: Γids)
+                           Γ
+        <span class="kr">end</span> <span class="kr">in</span>
+    aux Γ (MCList.rev Γ&#39;).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">print_defs</span> (<span class="nv">print_term</span> : list ident -&gt; bool -&gt; term -&gt; string)
+             <span class="nv">Γ</span>
+             (<span class="nv">defs</span> : mfixpoint term) :=
+    <span class="kr">let</span> <span class="nv">ctx&#39;</span> := fix_context defs <span class="kr">in</span>
+    print_list (print_def (print_term Γ true) (print_term (fresh_names Γ ctx&#39;) true))
+               (nl ^ <span class="s2">&quot; with &quot;</span>) defs.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+  <span class="c">(* TODO: SPROP: we ignore relevance on printing, maybe add print config? *)</span>
+</span></span><span class="alectryon-wsp">  </span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">print_term</span> (<span class="nv">Γ</span> : list ident) (<span class="nv">top</span> : bool) (<span class="nv">t</span> : term) {<span class="nv">struct</span> <span class="nv">t</span>} :=
+  <span class="kr">match</span> t <span class="kr">with</span>
+  | tRel n =&gt;
+    <span class="kr">match</span> nth_error Γ n <span class="kr">with</span>
+    | Some id =&gt; id
+    | None =&gt; <span class="s2">&quot;UnboundRel(&quot;</span> ^ string_of_nat n ^ <span class="s2">&quot;)&quot;</span>
+    <span class="kr">end</span>
+  | tVar n =&gt; <span class="s2">&quot;Var(&quot;</span> ^ n ^ <span class="s2">&quot;)&quot;</span>
+  | tEvar ev args =&gt; <span class="s2">&quot;Evar(&quot;</span> ^ string_of_nat ev ^ <span class="s2">&quot;[]&quot;</span> <span class="c">(* TODO *)</span>  ^ <span class="s2">&quot;)&quot;</span>
+  | tSort s =&gt; string_of_sort s
+  | tCast c k t =&gt; parens top (print_term Γ true c ^ <span class="s2">&quot;:&quot;</span>  ^ print_term Γ true t)
+  | tProd na dom codom =&gt;
+    <span class="kr">let</span> <span class="nv">na&#39;</span> := (fresh_name Γ na.(binder_name) (Some dom)) <span class="kr">in</span>
+    <span class="kr">if</span> (noccur_between <span class="mi">0</span> <span class="mi">1</span> codom) <span class="kr">then</span>
+      parens top
+      (print_term Γ false dom ^ <span class="s2">&quot; → &quot;</span> ^ print_term (na&#39; :: Γ) true codom)
+    <span class="kr">else</span> parens top
+           (<span class="s2">&quot;∀ &quot;</span> ^ na&#39; ^ <span class="s2">&quot; : &quot;</span> ^
+                     print_term Γ false dom ^ <span class="s2">&quot;, &quot;</span> ^ print_term (na&#39; :: Γ) true codom)
+  | tLambda na dom body =&gt;
+    <span class="kr">let</span> <span class="nv">na&#39;</span> := (fresh_name Γ na.(binder_name) (Some dom)) <span class="kr">in</span>
+    parens top (<span class="s2">&quot;fun &quot;</span> ^ na&#39; ^ <span class="s2">&quot; : &quot;</span> ^ print_term Γ true dom
+                                ^ <span class="s2">&quot; ⇒ &quot;</span> ^ print_term (na&#39; :: Γ) true body)
+  | tLetIn na def dom body =&gt;
+    <span class="kr">let</span> <span class="nv">na&#39;</span> := (fresh_name Γ na.(binder_name) (Some dom)) <span class="kr">in</span>
+    parens top (<span class="s2">&quot;let &quot;</span> ^ na&#39; ^ <span class="s2">&quot; : &quot;</span> ^ print_term Γ true dom ^
+                      <span class="s2">&quot; := &quot;</span> ^ print_term Γ true def ^ <span class="s2">&quot; in &quot;</span> ^ nl ^
+                      print_term (na&#39; :: Γ) true body)
+  | tApp f l =&gt;
+    parens top (print_term Γ false f ^ <span class="s2">&quot; &quot;</span> ^ print_list (print_term Γ false) <span class="s2">&quot; &quot;</span> l)
+  | tConst c u =&gt; string_of_kername c ^ print_universe_instance u
+  | tInd (mkInd i k) u =&gt;
+    <span class="kr">match</span> lookup_ind_decl i k <span class="kr">with</span>
+    | Some oib =&gt; oib.(ind_name) ^ print_universe_instance u
+    | None =&gt;
+      <span class="s2">&quot;UnboundInd(&quot;</span> ^ string_of_inductive (mkInd i k) ^ <span class="s2">&quot;,&quot;</span> ^ string_of_universe_instance u ^ <span class="s2">&quot;)&quot;</span>
+    <span class="kr">end</span>
+  | tConstruct (mkInd i k <span class="kr">as</span> ind) l u =&gt;
+    <span class="kr">match</span> lookup_ind_decl i k <span class="kr">with</span>
+    | Some oib =&gt;
+      <span class="kr">match</span> nth_error oib.(ind_ctors) l <span class="kr">with</span>
+      | Some cb =&gt; cb.(cstr_name) ^ print_universe_instance u
+      | None =&gt;
+        <span class="s2">&quot;UnboundConstruct(&quot;</span> ^ string_of_inductive ind ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat l ^ <span class="s2">&quot;,&quot;</span>
+                            ^ string_of_universe_instance u ^ <span class="s2">&quot;)&quot;</span>
+      <span class="kr">end</span>
+    | None =&gt;
+      <span class="s2">&quot;UnboundConstruct(&quot;</span> ^ string_of_inductive ind ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat l ^ <span class="s2">&quot;,&quot;</span>
+                          ^ string_of_universe_instance u ^ <span class="s2">&quot;)&quot;</span>
+    <span class="kr">end</span>
+  | tCase {| ci_ind := mkInd mind i <span class="kr">as</span> ind; ci_npar := pars |} p t brs =&gt;
+    <span class="kr">match</span> lookup_ind_decl mind i <span class="kr">with</span>
+    | Some oib =&gt;
+      <span class="kr">match</span> build_return_context ind oib p <span class="kr">with</span>
+      | None =&gt;
+        <span class="s2">&quot;Case(&quot;</span> ^ string_of_inductive ind ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat i ^ <span class="s2">&quot;,&quot;</span> ^ string_of_term t ^ <span class="s2">&quot;,&quot;</span>
+                ^ string_of_predicate string_of_term p ^ <span class="s2">&quot;,&quot;</span> ^ 
+                string_of_list (pretty_string_of_branch string_of_term) brs ^ <span class="s2">&quot;)&quot;</span>
+
+      | Some Γret =&gt;
+        <span class="kr">let</span> <span class="nv">Γret</span> := fresh_names Γ Γret <span class="kr">in</span>
+        <span class="kr">let</span> <span class="nv">ret_binders</span> := firstn #|pcontext p| Γret <span class="kr">in</span>
+        <span class="kr">let</span> (<span class="nv">as_name</span>, indices) := (hd <span class="s2">&quot;_&quot;</span> ret_binders, MCList.rev (tail ret_binders)) <span class="kr">in</span>
+        <span class="kr">let</span> <span class="nv">in_args</span> := <span class="kp">repeat</span> <span class="s2">&quot;_&quot;</span> #|pparams p| ++ indices <span class="kr">in</span>
+        <span class="kr">let</span> <span class="nv">in_str</span> := oib.(ind_name) ^ String.concat <span class="s2">&quot;&quot;</span> (map (<span class="kr">fun</span> <span class="nv">a</span> =&gt; <span class="s2">&quot; &quot;</span> ^ a) in_args) <span class="kr">in</span>
+
+        <span class="kr">let fix</span> <span class="nv">print_branch</span> <span class="nv">Γ</span> <span class="nv">names</span> <span class="nv">prbr</span> {<span class="nv">struct</span> <span class="nv">names</span>} :=
+            <span class="kr">match</span> names <span class="kr">with</span>
+            | [] =&gt; <span class="s2">&quot;⇒ &quot;</span> ^ prbr Γ
+            | na :: l =&gt;
+              <span class="kr">let</span> <span class="nv">na&#39;</span> := (fresh_name Γ na.(binder_name) None) <span class="kr">in</span>
+                na&#39; ^ <span class="s2">&quot;  &quot;</span> ^ print_branch (na&#39; :: Γ) l prbr
+            <span class="kr">end</span>
+        <span class="kr">in</span>
+
+        <span class="kr">let</span> <span class="nv">brs</span> := map (<span class="kr">fun</span> <span class="nv">br</span> =&gt; print_branch Γ (List.rev br.(bcontext)) (<span class="kr">fun</span> <span class="nv">Γ</span> =&gt; print_term Γ true br.(bbody))) brs <span class="kr">in</span>
+        <span class="kr">let</span> <span class="nv">brs</span> := combine brs oib.(ind_ctors) <span class="kr">in</span>
+                              
+        parens top (<span class="s2">&quot;match &quot;</span> ^ print_term Γ true t ^
+                    <span class="s2">&quot; as &quot;</span> ^ as_name ^
+                    <span class="s2">&quot; in &quot;</span> ^ in_str ^
+                    <span class="s2">&quot; return &quot;</span> ^ print_term Γret true (preturn p) ^
+                    <span class="s2">&quot; with &quot;</span> ^ nl ^
+                    print_list (<span class="kr">fun</span> &#39;(b, cb) =&gt; cb.(cstr_name) ^ <span class="s2">&quot; &quot;</span> ^ b)
+                    (nl ^ <span class="s2">&quot; | &quot;</span>) brs ^ nl ^ <span class="s2">&quot;end&quot;</span> ^ nl)
+      <span class="kr">end</span>
+    | None =&gt;
+      <span class="s2">&quot;Case(&quot;</span> ^ string_of_inductive ind ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat i ^ <span class="s2">&quot;,&quot;</span> ^ string_of_term t ^ <span class="s2">&quot;,&quot;</span>
+              ^ string_of_predicate string_of_term p ^ <span class="s2">&quot;,&quot;</span> ^ 
+              string_of_list (pretty_string_of_branch string_of_term) brs ^ <span class="s2">&quot;)&quot;</span>
+    <span class="kr">end</span>
+  | tProj (mkInd mind i <span class="kr">as</span> ind, pars, k) c =&gt;
+    <span class="kr">match</span> lookup_ind_decl mind i <span class="kr">with</span>
+    | Some oib =&gt;
+      <span class="kr">match</span> nth_error oib.(ind_projs) k <span class="kr">with</span>
+      | Some (na, _) =&gt; print_term Γ false c ^ <span class="s2">&quot;.(&quot;</span> ^ na ^ <span class="s2">&quot;)&quot;</span>
+      | None =&gt;
+        <span class="s2">&quot;UnboundProj(&quot;</span> ^ string_of_inductive ind ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat i ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat k ^ <span class="s2">&quot;,&quot;</span>
+                       ^ print_term Γ true c ^ <span class="s2">&quot;)&quot;</span>
+      <span class="kr">end</span>
+    | None =&gt;
+      <span class="s2">&quot;UnboundProj(&quot;</span> ^ string_of_inductive ind ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat i ^ <span class="s2">&quot;,&quot;</span> ^ string_of_nat k ^ <span class="s2">&quot;,&quot;</span>
+                     ^ print_term Γ true c ^ <span class="s2">&quot;)&quot;</span>
+    <span class="kr">end</span>
+
+
+  | tFix l n =&gt;
+    parens top (<span class="s2">&quot;let fix &quot;</span> ^ print_defs print_term Γ l ^ nl ^
+                          <span class="s2">&quot; in &quot;</span> ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
+  | tCoFix l n =&gt;
+    parens top (<span class="s2">&quot;let cofix &quot;</span> ^ print_defs print_term Γ l ^ nl ^
+                              <span class="s2">&quot; in &quot;</span> ^ List.nth_default (string_of_nat n) (map (string_of_name ∘ binder_name ∘ dname) l) n)
+  | tInt i =&gt; <span class="s2">&quot;Int(&quot;</span> ^ string_of_prim_int i ^ <span class="s2">&quot;)&quot;</span>
+  | tFloat f =&gt; <span class="s2">&quot;Float(&quot;</span> ^ string_of_float f ^ <span class="s2">&quot;)&quot;</span>
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">End</span> <span class="nf">print_term</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">pr_context_decl</span> (<span class="nv">Σ</span> : global_env_ext) <span class="nv">Γ</span> (<span class="nv">c</span> : context_decl) : <span class="kn">ident</span> * string :=
+  <span class="kr">match</span> c <span class="kr">with</span>
+  | {| decl_name := na; decl_type := ty; decl_body := None |} =&gt; 
+    <span class="kr">let</span> <span class="nv">na&#39;</span> := (fresh_name Σ Γ na.(binder_name) (Some ty)) <span class="kr">in</span>
+    (na&#39;, (<span class="s2">&quot;(&quot;</span> ++ na&#39; ++ <span class="s2">&quot; : &quot;</span> ++ print_term Σ Γ true ty ++ <span class="s2">&quot;)&quot;</span>)%string)
+  | {| decl_name := na; decl_type := ty; decl_body := Some b |} =&gt;
+    <span class="kr">let</span> <span class="nv">na&#39;</span> := (fresh_name Σ Γ na.(binder_name) (Some ty)) <span class="kr">in</span>
+    (na&#39;, (<span class="s2">&quot;(&quot;</span> ++ na&#39; ++ <span class="s2">&quot; : &quot;</span> ++ print_term Σ Γ true ty ++ <span class="s2">&quot; := &quot;</span> ++
+      print_term Σ Γ true b ++ <span class="s2">&quot;)&quot;</span>)%string)
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">print_context</span> <span class="nv">Σ</span> <span class="nv">Γ</span> <span class="nv">Δ</span> :=
+  <span class="kr">match</span> Δ <span class="kr">with</span>
+  | [] =&gt; (Γ, <span class="s2">&quot;&quot;</span>%string)
+  | d :: decls =&gt; 
+    <span class="kr">let</span> &#39;(Γ, s) := print_context Σ Γ decls <span class="kr">in</span>
+    <span class="kr">let</span> &#39;(na, s&#39;) := pr_context_decl Σ Γ d <span class="kr">in</span>
+    <span class="kr">match</span> decls <span class="kr">with</span>
+    | [] =&gt; (na :: Γ, (s ++ s&#39;)%string)
+    | _ =&gt; (na :: Γ, (s ++ <span class="s2">&quot; &quot;</span> ++ s&#39;)%string)
+    <span class="kr">end</span>
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">print_one_cstr</span> <span class="nv">Σ</span> <span class="nv">Γ</span> (<span class="nv">mib</span> : mutual_inductive_body) (<span class="nv">c</span> : constructor_body) : string :=
+  <span class="kr">let</span> &#39;(Γargs, s) := print_context Σ Γ c.(cstr_args) <span class="kr">in</span>
+  c.(cstr_name) ++ <span class="s2">&quot; : &quot;</span> ++ s ++ <span class="s2">&quot;_&quot;</span> ++ print_list (print_term Σ Γargs true) <span class="s2">&quot; &quot;</span> c.(cstr_indices).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">  
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">print_one_ind</span> (<span class="nv">short</span> : bool) <span class="nv">Σ</span> <span class="nv">Γ</span> (<span class="nv">mib</span> : mutual_inductive_body) (<span class="nv">oib</span> : one_inductive_body) : string :=
+  <span class="kr">let</span> &#39;(Γpars, spars) := print_context Σ Γ mib.(ind_params) <span class="kr">in</span>
+  <span class="kr">let</span> &#39;(Γinds, sinds) := print_context Σ Γpars oib.(ind_indices) <span class="kr">in</span>
+  oib.(ind_name) ++ spars ++ sinds ++ print_term Σ Γinds true (tSort oib.(ind_sort)) ++ <span class="s2">&quot;:=&quot;</span> ++ nl ++
+  <span class="kr">if</span> short <span class="kr">then</span> <span class="s2">&quot;...&quot;</span>
+  <span class="kr">else</span> print_list (print_one_cstr Σ Γpars mib) nl oib.(ind_ctors).</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Fixpoint</span> <span class="nf">print_env_aux</span> (<span class="nv">short</span> : bool) (<span class="nv">prefix</span> : nat) (<span class="nv">Σ</span> : global_env) (<span class="nv">acc</span> : string) := 
+  <span class="kr">match</span> prefix <span class="kr">with</span> 
+  | <span class="mi">0</span> =&gt; <span class="kr">match</span> Σ <span class="kr">with</span> [] =&gt; acc | _ =&gt; (<span class="s2">&quot;...&quot;</span> ++ nl ++ acc)%string <span class="kr">end</span>
+  | S n =&gt; 
+  <span class="kr">match</span> Σ <span class="kr">with</span>
+  | [] =&gt; acc
+  | (kn, InductiveDecl mib) :: Σ =&gt; 
+    <span class="kr">let</span> <span class="nv">Σ&#39;</span> := (Σ, mib.(ind_universes)) <span class="kr">in</span>
+    <span class="kr">let</span> <span class="nv">names</span> := fresh_names Σ&#39; [] (arities_context mib.(ind_bodies)) <span class="kr">in</span>
+    print_env_aux short n Σ
+      (<span class="s2">&quot;Inductive &quot;</span> ++ 
+       print_list (print_one_ind short Σ&#39; names mib) nl mib.(ind_bodies) ++ <span class="s2">&quot;.&quot;</span> ++ 
+       nl ++ acc)%string
+  | (kn, ConstantDecl cb) :: Σ =&gt;
+    <span class="kr">let</span> <span class="nv">Σ&#39;</span> := (Σ, cb.(cst_universes)) <span class="kr">in</span>
+    print_env_aux short n Σ
+      ((<span class="kr">match</span> cb.(cst_body) <span class="kr">with</span> 
+        | Some _ =&gt; <span class="s2">&quot;Definition &quot;</span>
+        | None =&gt; <span class="s2">&quot;Axiom &quot;</span>
+      <span class="kr">end</span>) ++ string_of_kername kn ++ <span class="s2">&quot; : &quot;</span> ++ print_term Σ&#39; nil true cb.(cst_type) ++
+      <span class="kr">match</span> cb.(cst_body) <span class="kr">with</span>
+      | Some b =&gt; 
+        <span class="kr">if</span> short <span class="kr">then</span> (<span class="s2">&quot;...&quot;</span> ++ nl)%string
+        <span class="kr">else</span> (<span class="s2">&quot; := &quot;</span> ++ nl ++ print_term Σ&#39; nil true b ++ <span class="s2">&quot;.&quot;</span> ++ nl)
+      | None =&gt; <span class="s2">&quot;.&quot;</span>
+      <span class="kr">end</span> ++ acc)%string
+  <span class="kr">end</span>
+  <span class="kr">end</span>.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">print_env</span> (<span class="nv">short</span> : bool) (<span class="nv">prefix</span> : nat) <span class="nv">Σ</span> := print_env_aux short prefix Σ EmptyString.</span></span><span class="alectryon-wsp">
+</span></span><span class="alectryon-wsp"><span class="highlight">
+</span></span><span class="alectryon-sentence"><span class="alectryon-input"><span class="highlight"><span class="kn">Definition</span> <span class="nf">print_program</span> (<span class="nv">short</span> : bool) (<span class="nv">prefix</span> : nat) (<span class="nv">p</span> : program) : string := 
+  print_env short prefix (fst p) ++ nl ++
+  print_term (empty_ext (fst p)) nil true (snd p).</span></span><span class="alectryon-wsp"> </span></span></pre></article></body></html>

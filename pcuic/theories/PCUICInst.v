@@ -2059,6 +2059,7 @@ Proof.
       * apply hcum.
   }
 Admitted.
+(* todo type_inst *)
   (*- intros Σ wfΣ Γ wfΓ. auto.
     induction 1; constructor; firstorder auto.
   - intros Σ wfΣ Γ wfΓ n decl e X Δ σ hΔ hσ. simpl.

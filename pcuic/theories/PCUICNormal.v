@@ -1149,6 +1149,7 @@ Proof.
     apply All2_same; auto.
 Qed.
 
+(* TODO update to consider whnf_red on well-scoped terms only*)
 Instance whnf_red_trans {cf:checker_flags} Σ Γ : wf Σ -> CRelationClasses.Transitive (whnf_red Σ Γ).
 Proof.
   intros wf x y z xy yz.
@@ -1191,7 +1192,8 @@ Proof.
       intros x y z (?&?) (?&?).
       split; etransitivity; eauto.
       eapply red_red_ctx; eauto.
-      eapply red_context_app_right; eauto.
+Admitted.
+      (*eapply red_context_app_right; eauto.
       * apply red_context_refl.
       * eapply red_ctx_rel_red_context_rel; eauto.
   - constructor.
@@ -1219,7 +1221,7 @@ Proof.
     apply fix_context_pres_let_bodies.
     now apply All2_length in a.
 Qed.
-
+*)
 Lemma whne_red1_inv Σ Γ t t' :
   whne RedFlags.default Σ Γ t ->
   red1 Σ Γ t t' ->
@@ -1252,36 +1254,17 @@ Proof.
     + apply All2_same; auto.
   - constructor; auto.
     * eapply OnOne2_All2; eauto.
-    * reflexivity.
-    * eapply All2_same; intuition auto. reflexivity.
+    * eapply All2_same; intuition auto.
   - econstructor; auto. apply All2_same; auto.
-    eapply red_one_decl_red_ctx_rel. red.
-    eapply OnOne2_local_env_impl; tea.
-    intros Δ' x' y'.
-    eapply on_one_decl_impl => Γ' ? ? IH.
-    now constructor.
-    eapply All2_same; intuition auto. reflexivity.
-  - econstructor; auto.
-    * apply All2_same; auto.
-    * reflexivity.
-    * apply All2_same; intuition auto; reflexivity.
+    eapply All2_same; intuition auto.
   - destruct p; econstructor; eauto; simpl.
     * eapply All2_same; auto.
-    * reflexivity.
-    * eapply All2_same; intuition auto. reflexivity.
+    * eapply All2_same; intuition auto.
   - destruct p;  econstructor; eauto; simpl.
     * eapply All2_same; reflexivity.
-    * reflexivity.
     * eapply OnOne2_All2; eauto.
-      cbn. intros ? ? [[? [= <-]]|[? ?]];
+      cbn. intros ? ? [? <-].
       intuition eauto; try reflexivity.
-      + eapply red_one_decl_red_ctx_rel. red.
-        eapply OnOne2_local_env_impl; tea.
-        intros Δ' x' y'.
-        eapply on_one_decl_impl => Γ' ? ? IH.
-        now constructor.
-      + now rewrite -e.
-      + intuition auto. reflexivity.
 Qed.
 
 Lemma whnf_red1_inv Σ Γ t t' :

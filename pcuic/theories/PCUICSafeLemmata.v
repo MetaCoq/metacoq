@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICValidity
      PCUICArities PCUICWeakeningEnv PCUICGeneration
-     PCUICParallelReductionConfluence.
+     PCUICParallelReductionConfluence PCUICWellScopedCumulativity.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -63,6 +63,39 @@ Section Lemmata.
     intros []. now econstructor.
   Qed.
   Hint Resolve isType_welltyped : pcuic.
+  
+  (* Needs closedness of stacks *)
+  Lemma cumul_zippx :
+    forall {wfΣ : wf Σ} Γ u v ρ,
+      Σ ;;; (Γ ,,, stack_context ρ) ⊢ u ≤ v ->
+      Σ ;;; Γ ⊢ zippx u ρ ≤ zippx v ρ.
+  Proof.
+    intros wfΣ Γ u v ρ h.
+    induction ρ in u, v, h |- *; auto.
+    destruct a.
+    all: try solve [
+      unfold zippx ; simpl ;
+      eapply equality_it_mkLambda_or_LetIn_codom ;
+      assumption
+    ].
+    - unfold zippx. simpl.
+      case_eq (decompose_stack ρ). intros l π e.
+      unfold zippx in IHρ. rewrite e in IHρ.
+      apply IHρ.
+      eapply equality_App_l; tas.
+      todo "closed stacks".
+    - unfold zippx. simpl.
+      eapply equality_it_mkLambda_or_LetIn_codom. cbn.
+      eapply equality_Lambda_r.
+      assumption.
+    - unfold zippx. simpl.
+      eapply equality_it_mkLambda_or_LetIn_codom. cbn.
+      eapply equality_Lambda_r.
+      assumption.
+    - unfold zippx. simpl.
+      eapply equality_it_mkLambda_or_LetIn_codom. cbn.
+      eapply equality_LetIn_bo. assumption.
+  Qed.
 
   Context (hΣ : ∥ wf Σ ∥).
 
@@ -249,7 +282,7 @@ Section Lemmata.
         econstructor; eauto.
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       rewrite app_context_assoc.
-      destruct p; cbn in *.
+      destruct p. 
       + apply validity in scrut_ty as (?&typ).
         clear brs_ty.
         apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
@@ -260,8 +293,16 @@ Section Lemmata.
         * depelim spine.
           econstructor; eauto.
         * depelim spine; eauto.
-      + eauto using welltyped_fill_context_hole.
-      + now exists (tSort ps).
+      + cbn. exists (tSort ps). todo "new contexts".
+        (* cbn. move: pret_ty. cbn [fill_predicate_hole preturn].
+        move=> Ht.
+        cbn [fill_predicate_hole preturn] in predctx.
+        eapply context_conversion; tea.
+        * unfold predctx in Ht.
+          unfold inst_case_context.
+          admit.
+        * admit.*)
+          
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
@@ -270,12 +311,14 @@ Section Lemmata.
       apply All2i_app_inv_r in brs_ty as (?&?&_&_&a).
       inv a.
       clear X0.
-      destruct X as ((wfl&cc)&typ&_).
+      destruct X as (wfl&(cc&typ&_)).
       unfold app_context.
       rewrite -app_assoc.
       destruct b; cbn in *.
-      + eapply welltyped_fill_context_hole; eauto.
-      + eexists; tea.
+      + eexists. tea.
+        eapply context_conversion; tea.
+        all:todo "new holes". (* eapply welltyped_fill_context_hole; eauto. *)
+      
   Qed.
 
   Lemma cored_red :
@@ -302,41 +345,10 @@ Section Lemmata.
       + eapply red1_context. assumption.
   Qed.
 
-  Lemma cumul_zippx :
-    forall Γ u v ρ,
-      Σ ;;; (Γ ,,, stack_context ρ) |- u <= v ->
-      Σ ;;; Γ |- zippx u ρ <= zippx v ρ.
-  Proof.
-    intros Γ u v ρ h.
-    induction ρ in u, v, h |- *; auto.
-    destruct a.
-    all: try solve [
-      unfold zippx ; simpl ;
-      eapply equality_it_mkLambda_or_LetIn ;
-      assumption
-    ].
-    - unfold zippx. simpl.
-      case_eq (decompose_stack ρ). intros l π e.
-      unfold zippx in IHρ. rewrite e in IHρ.
-      apply IHρ.
-      eapply cumul_App_l. assumption.
-    - unfold zippx. simpl.
-      eapply equality_it_mkLambda_or_LetIn. cbn.
-      eapply equality_Lambda_r.
-      assumption.
-    - unfold zippx. simpl.
-      eapply equality_it_mkLambda_or_LetIn. cbn.
-      eapply equality_Lambda_r.
-      assumption.
-    - unfold zippx. simpl.
-      eapply equality_it_mkLambda_or_LetIn. cbn.
-      eapply cumul_LetIn_bo. assumption.
-  Qed.
-
   Lemma conv_alt_it_mkLambda_or_LetIn :
     forall Δ Γ u v,
-      Σ ;;; (Δ ,,, Γ) |- u = v ->
-      Σ ;;; Δ |- it_mkLambda_or_LetIn Γ u = it_mkLambda_or_LetIn Γ v.
+      Σ ;;; (Δ ,,, Γ) ⊢ u = v ->
+      Σ ;;; Δ ⊢ it_mkLambda_or_LetIn Γ u = it_mkLambda_or_LetIn Γ v.
   Proof.
     intros Δ Γ u v h. revert Δ u v h.
     induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.

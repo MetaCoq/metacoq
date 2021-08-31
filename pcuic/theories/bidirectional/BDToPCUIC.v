@@ -1,7 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine.
-(* From MetaCoq.PCUIC Require Import PCUICSR. *)
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine PCUICSR.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping.
 
 Require Import ssreflect ssrbool.
@@ -99,11 +98,6 @@ Proof.
   all: constructor ; auto.
   all: apply IHΓ' ; eassumption.
 Qed.
-
-(*This is in SR, but SR is currently broken*)
-Lemma isType_red `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T U} :
-    isType Σ Γ T -> red Σ Γ T U -> isType Σ Γ U.
-Admitted.
 
 Section BDToPCUICTyping.
 

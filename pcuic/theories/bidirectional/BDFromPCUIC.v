@@ -1,7 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubstitution PCUICClosed PCUICWellScopedCumulativity.
-(* From MetaCoq.PCUIC Require Import PCUICSR. *)
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubstitution PCUICClosed PCUICWellScopedCumulativity PCUICSR.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
 (** The dependency on BDToPCUIC is minimal, it is only used in conjuction with validity to avoid having to prove well-formedness of inferred types simultaneously with bidirectional -> undirected *)
 

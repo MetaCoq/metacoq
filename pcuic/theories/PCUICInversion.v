@@ -59,11 +59,11 @@ Section Inversion.
   Qed.
   Hint Immediate typing_closed_ctx : fvs.
 
-  Lemma typing_equality Γ t T : 
+  Lemma typing_equality le Γ t T : 
     Σ ;;; Γ |- t : T ->
-    Σ ;;; Γ ⊢ T ≤ T.
+    Σ ;;; Γ ⊢ T ≤[le] T.
   Proof.
-    intros ht. apply into_equality; auto. reflexivity.
+    intros ht. apply into_equality; auto. destruct le ; reflexivity.
     eauto with fvs.
     eapply PCUICClosedTyp.type_closed in ht.
     now rewrite -is_open_term_closed.

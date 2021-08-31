@@ -1217,6 +1217,95 @@ Proof.
   - simpl. apply IHargs.
 Qed.
 
+
+Require Import ssrbool PCUICClosed.
+
+Definition closedn_mfix_hole k '((mfix1, m, mfix2) : mfix_hole) : bool :=
+  let k' := (k + #|mfix1| + 1 + #|mfix2|) in
+  let def :=
+      match m with
+      | def_hole_type dname dbody rarg => 
+        closedn k' dbody
+      | def_hole_body dname dtype rarg =>
+        closedn k dtype
+      end in
+  [&& forallb (test_def (closedn k) (closedn k')) mfix1,
+      def & forallb (test_def (closedn k) (closedn k')) mfix2].
+
+Definition closedn_context_hole k '((ctx1, decl, ctx2) : context_hole) : bool :=
+  let decl :=
+      match decl with
+      | decl_hole_type na body => option_default (closedn (k + #|ctx1|)) body true
+      | decl_hole_body na type => closedn (k + #|ctx1|) type
+      end in
+  [&& closedn_ctx k ctx1, decl & closedn_ctx (k + S #|ctx1|) ctx2].
+
+Definition closedn_predicate_hole k (p : predicate_hole) : bool :=
+  match p with
+  | pred_hole_params params1 params2 puinst pcontext preturn =>
+    [&& forallb (closedn k) params1,
+        forallb (closedn k) params2,
+        closedn_ctx (#|params1| + S #|params2|) pcontext &
+        closedn (k + #|pcontext|) preturn]
+  | pred_hole_return pparams puinst pcontext =>
+    forallb (closedn k) pparams && closedn_ctx #|pparams| pcontext
+  end.
+
+Definition predicate_hole_pars (p : predicate_hole) : nat :=
+  match p with
+  | pred_hole_params params1 params2 puinst pcontext preturn =>
+    #|params1| + 1 + #|params2|
+  | pred_hole_return pparams puinst pcontext => #|pparams|
+  end.
+
+Definition closedn_branches_hole k (pred : predicate term) '((brs1, br, brs2) : branches_hole) : bool :=
+  let br :=
+      match br with
+      | branch_hole_body bcontext => closedn_ctx #|pparams pred| bcontext
+      end in
+  [&& test_branches_k pred closedn k brs1, br &
+      test_branches_k pred closedn k brs2].
+
+Definition test_branch_k_pars ppars (p : nat -> term -> bool) k (b : branch term) :=
+  test_context_k p ppars b.(bcontext) && p (#|b.(bcontext)| + k) b.(bbody).
+
+Notation test_branches_k_pars p test k brs :=
+  (List.forallb (test_branch_k_pars p test k) brs).
+
+Definition closedn_stack_entry k se :=
+  match se with
+  | App_l v => closedn k v
+  | App_r u => closedn k u
+  | Fix_app mfix idx args => closedn k (mkApps (tFix mfix idx) args)
+  | Fix mfix idx => closedn_mfix_hole k mfix
+  | CoFix_app mfix idx args => closedn k (mkApps (tCoFix mfix idx) args)
+  | CoFix mfix idx => closedn_mfix_hole k mfix
+  | Case_pred ci p c brs => 
+    [&& closedn_predicate_hole k p, closedn k c &
+        test_branches_k_pars (predicate_hole_pars p) closedn k brs]
+  | Case_discr ci p brs =>
+    test_predicate_k xpredT closedn k p && test_branches_k p closedn k brs
+  | Case_branch ci p c brs => 
+    [&& test_predicate_k xpredT closedn k p, closedn k c &
+        closedn_branches_hole k p brs]
+  | Proj p => true
+  | Prod_l na B => closedn (S k) B
+  | Prod_r na A => closedn k A
+  | Lambda_ty na b => closedn (S k) b
+  | Lambda_bd na A => closedn k A
+  | LetIn_bd na B u => closedn k B && closedn (S k) u
+  | LetIn_ty na b u => closedn k b && closedn (S k) u
+  | LetIn_in na b B => closedn k b && closedn k B
+  end.
+
+Fixpoint closedn_stack k π :=
+  match π with
+  | [] => true
+  | se :: π => 
+    closedn_stack_entry (k + #|stack_context π|) se &&
+    closedn_stack k π
+  end.
+
 Definition context_hole_choice '((ctx1, decl, ctx2) : context_hole) : context_choice :=
   let decl :=
       match decl with
@@ -1570,3 +1659,54 @@ Definition context_env_clos (R : context -> term -> term -> Type) Γ u v :=
   ∑ u' v' π,
     R (Γ ,,, stack_context π) u' v' ×
     (u = zipc u' π /\ v = zipc v' π).
+
+Require Import ssreflect.
+
+(* Lemma fill_mfix_hole_length mfix t : #|fill_mfix_hole mfix t| = #| *)
+
+(* Lemma closedn_fill_hole k mfix t : closedn k (fill_mfix_hole mfix t) = closedn (#|stack_entry_context se| + k) t && 
+  closedn_stack_entry k se.
+Proof.
+  destruct se; simpl => //; try bool_congr. *)
+
+Lemma closedn_fill_hole k t se : closedn k (fill_hole t se) = closedn (#|stack_entry_context se| + k) t && 
+  closedn_stack_entry k se.
+Proof.
+  destruct se; simpl => //; try bool_congr; try ring.
+  - destruct mfix as ((mfix1&[])&mfix2); cbn; len.
+    * rewrite -app_tip_assoc !forallb_app.
+      replace (k + #|mfix1| + 1 + #|mfix2|) with (#|mfix1| + S #|mfix2| + k) by lia.
+      rewrite !andb_assoc andb_true_r /=. ring.
+    * rewrite -app_tip_assoc !forallb_app.
+      replace (k + #|mfix1| + 1 + #|mfix2|) with (#|mfix1| + S #|mfix2| + k) by lia.
+      rewrite !andb_assoc andb_true_r /= map_length. ring.
+  - destruct mfix as ((mfix1&[])&mfix2); cbn; len.
+    * rewrite -app_tip_assoc !forallb_app.
+      replace (k + #|mfix1| + 1 + #|mfix2|) with (#|mfix1| + S #|mfix2| + k) by lia.
+      rewrite !andb_assoc andb_true_r /=. ring.
+    * rewrite -app_tip_assoc !forallb_app.
+      replace (k + #|mfix1| + 1 + #|mfix2|) with (#|mfix1| + S #|mfix2| + k) by lia.
+      rewrite !andb_assoc andb_true_r /= map_length. ring.
+  - destruct p; cbn.
+    * unfold test_predicate_k; cbn.
+      rewrite !forallb_app /=. len. ring_simplify. 
+      replace (k + #|pcontext|) with (#|pcontext| + k) by lia.
+      rewrite - !andb_assoc. repeat bool_congr.
+      apply forallb_ext. intros []; cbn.
+      unfold test_branch_k, test_branch_k_pars; cbn; len. 
+      now rewrite -Nat.add_assoc /=.
+    * unfold test_predicate_k; cbn; len.
+      rewrite - !andb_assoc. repeat bool_congr.
+  - destruct brs as [[brs []] brs']; cbn.
+    rewrite -app_tip_assoc !forallb_app; cbn.
+    len; ring_simplify; rewrite - !andb_assoc; repeat bool_congr.
+Qed.
+
+Lemma closedn_zip k t π : closedn k (zipc t π) = closedn_stack k π && closedn (#|stack_context π| + k) t.
+Proof.
+  induction π in k, t |- * => //.
+  simpl.
+  rewrite IHπ. bool_congr. len.
+  rewrite closedn_fill_hole. 
+  rewrite Nat.add_assoc (Nat.add_comm #|stack_context π| k). ring.
+Qed.

@@ -304,6 +304,22 @@ Section Lemmata.
     all: destruct l; econstructor; eauto.
   Qed.
 
+  Lemma compare_decls_conv Γ Γ' : 
+    All2 (compare_decls eq eq) Γ Γ' ->
+    conv_context Σ Γ Γ'.
+  Proof.
+    intros.
+    induction X; constructor; auto.
+    destruct r; constructor; subst; auto; reflexivity.
+  Qed.
+
+  Lemma compare_decls_eq_context Γ Γ' : 
+    All2 (compare_decls eq eq) Γ Γ' <~>
+    eq_context_gen eq eq Γ Γ'.
+  Proof.
+    split; induction 1; constructor; auto.
+  Qed.
+
   Require Import PCUICUnivSubstitution.
   Lemma welltyped_context :
     forall Γ t,
@@ -366,15 +382,18 @@ Section Lemmata.
         cbn [fill_predicate_hole preturn] in predctx.
         eapply context_conversion; tea.
         * unfold predctx in Ht.
+          eapply typing_wf_local in scrut_ty.
           eapply wf_inst_case_context; tea.
-          ** eapply typing_wf_local in Ht. now eapply wf_local_app_inv in Ht as [].
           ** cbn in ind_inst.
-              unshelve epose proof (ctx_inst_spine_subst _ ind_inst).
-              { admit. }
+             unshelve epose proof (ctx_inst_spine_subst _ ind_inst).
+             { eapply weaken_wf_local; tea.
+               eapply (on_minductive_wf_params_indices_inst x1); tas. }
               move: X. generalize (ctx_inst_sub ind_inst).
               intros l.
               rewrite subst_instance_app => X.
-              unshelve epose proof (spine_subst_app_inv _ X) as [sp _]. 1:admit.
+              unshelve epose proof (spine_subst_app_inv _ X) as [sp _].
+              { rewrite (wf_predicate_length_pars wf_pred). len.
+                eapply (PCUICClosed.declared_minductive_ind_npars x1). }
               now eapply spine_subst_smash in sp.
           ** cbn in conv_pctx.
              eapply wf_local_app_inv. eapply wf_local_alpha.
@@ -382,11 +401,18 @@ Section Lemmata.
                 eapply All2_app => //.
                 { eapply alpha_eq_subst_instance. now symmetry. }
                 reflexivity.
-              ++ 
-
-          unfold inst_case_context.
-          admit.
-        * admit.*)
+             ++ eapply wf_ind_predicate; tea.
+                
+        * rewrite /predctx.
+          cbn in conv_pctx.
+          rewrite /case_predicate_context /= /case_predicate_context_gen.
+          rewrite /pre_case_predicate_context_gen.
+          rewrite /inst_case_context.
+          apply compare_decls_conv.
+          eapply All2_app. 2:{ reflexivity. }
+          eapply compare_decls_eq_context. 
+          apply (PCUICAlpha.inst_case_predicate_context_eq (ind:=ci) wf_pred).
+          cbn. apply compare_decls_eq_context. now symmetry.
           
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
@@ -402,7 +428,7 @@ Section Lemmata.
       destruct b; cbn in *.
       + eexists. tea.
         eapply context_conversion; tea.
-        all:todo "new holes". (* eapply welltyped_fill_context_hole; eauto. *)
+              all:todo "new holes". (* eapply welltyped_fill_context_hole; eauto. *)
       
   Qed.
 

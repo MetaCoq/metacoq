@@ -3353,25 +3353,6 @@ Proof.
   now eapply isType_it_mkProd_or_LetIn_wf_local in X.
 Qed.
 
-
-Lemma isType_case_predicate {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
-  {mdecl idecl} u params :
-  wf_local Σ Γ ->
-  declared_inductive Σ ci mdecl idecl ->
-  consistent_instance_ext Σ (ind_universes mdecl) u ->
-  spine_subst Σ Γ params (List.rev params) (smash_context [] (subst_instance u (ind_params mdecl))) ->
-  wf_local Σ (Γ ,,, smash_context [] (ind_params mdecl)@[u] ,,, (ind_predicate_context ci mdecl idecl)@[u]).
-Proof.
-  move=> wfΓ isdecl cu sp.
-  rewrite /ind_predicate_context /=.
-  set (iass := {| decl_name := _ |}).
-  cbn.
-  rewrite [subst_instance_context _ _]subst_instance_expand_lets_ctx.
-  unshelve epose proof (on_inductive_inst isdecl _ _ _ cu); tea.
-  rewrite subst_instance_app_ctx in X.
-  eapply isType_it_mkProd_or_LetIn_inv in X.
-  eapply isType_wf_local in X.
-
 (*
 Lemma leb_elim_prop_sort shapes f n cs : 
   allowed_eliminations_subset f (elim_sort_prop_ind shapes) ->

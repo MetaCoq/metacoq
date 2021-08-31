@@ -2011,6 +2011,12 @@ Proof.
   * now eapply subslet_smash_context.
 Qed.
 
+Lemma subst_lift_subst s k t : subst s k (lift0 k t) = lift0 k (subst s 0 t).
+Proof.
+  replace k with (0 + k) by lia.
+  rewrite -commut_lift_subst_rec. lia. simpl. reflexivity.
+Qed.
+
 (* We show that the derived predicate of a case is always well-typed, for *any*
   instance of the parameters (not just the ones from a well-formed predicate). *)
 Lemma wf_ind_predicate {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
@@ -2040,6 +2046,7 @@ Proof.
       eapply weaken_wf_local => //. rewrite -subst_instance_app_ctx.
       eapply on_minductive_wf_params_indices_inst; tea.
     }
+    generalize wfidxctx. rewrite {1}/idxctx {1}app_context_assoc => wfidxctx'.
     rewrite subst_instance_mkApps /=; cbn.
     erewrite subst_instance_id_mdecl; tea.
     eapply pre_type_mkApps_arity. econstructor; tea.
@@ -2048,7 +2055,6 @@ Proof.
     rewrite oib.(ind_arity_eq) !subst_instance_it_mkProd_or_LetIn 
       subst_instance_to_extended_list subst_instance_app_ctx
       subst_instance_smash.
-    (* rewrite -it_mkProd_or_LetIn_app. *)
     rewrite /to_extended_list to_extended_list_k_app.
     rewrite Nat.add_0_r. len.
     eapply arity_spine_it_mkProd_or_LetIn_smash.
@@ -2062,11 +2068,10 @@ Proof.
       rewrite PCUICLiftSubst.lift_to_extended_list_k Nat.add_0_r.
       rewrite -map_rev.
       relativize #|ind_indices idecl|.
-      eapply subslet_lift; tea => //.
-      now rewrite -app_context_assoc. 2:len.
+      eapply subslet_lift; tea => //; len. 2:len.
       epose proof (spine_subst_to_extended_list_k (Γ := Γ) (Δ := smash_context [] (ind_params mdecl)@[u])); tea.
       forward X.
-      { apply wf_local_smash_end, weaken_wf_local => //. eapply on_minductive_wf_params; tea. eapply isdecl. }
+      { apply wf_local_smash_end, weaken_wf_local => //. eapply (on_minductive_wf_params isdecl); tea. }
       destruct X. len in inst_subslet.
       rewrite PCUICClosed.closed_ctx_lift in inst_subslet => //.
       apply closedn_smash_context.
@@ -2075,83 +2080,38 @@ Proof.
       rewrite all_rels_smash in inst_subslet.
       { apply smash_context_assumption_context. constructor. }
       apply inst_subslet.
-    - rewrite subst_let_expand_it_mkProd_or_LetIn /=.
+    - have clpars : closed_ctx (ind_params mdecl).
+      { apply (declared_inductive_closed_params isdecl). }
+      have clinds : closedn_ctx #|(ind_params mdecl)| (ind_indices idecl)@[u].
+      { epose proof (declared_inductive_closed_pars_indices isdecl).
+        len. rewrite closedn_subst_instance_context.
+        rewrite closedn_ctx_app in H0. now move/andP: H0. }
+      rewrite subst_let_expand_it_mkProd_or_LetIn /=. simpl.
       eapply arity_spine_it_mkProd_or_LetIn_Sort => //. reflexivity.
       rewrite /subst_context_let_expand.
-      rewrite -expand_lets_k_ctx_subst_id'. admit. admit.
+      relativize (subst_context _ _ _).
       rewrite /idxctx app_context_assoc.
-      relativize #|ind_indices idecl|.
-      relativize (to_extended_list_k _ _).
-      eapply spine_subst_expand_lets. 3:len.
-      rewrite -subst_context_map_subst_expand_lets. len.
-      rewrite map_subst_extended_subst.
-      
-
-      rewrite -expand_lets_ctx_o_lets.
-      2:{ rewrite /expand_lets_ctx.
-          rewrite subst_instance_expand_lets_ctx.
-          rewrite to_extended_list_k_expand_lets. }
-      rewrite -subst_context_map_subst_expand_lets. len.
-
-      relativize (subst_context_let_expand _ _ _).
-      rewrite /idxctx. rewrite app_context_assoc.
       rewrite subst_instance_expand_lets_ctx.
-      eapply spine_subst_to_extended_list_k.
-      now rewrite -app_context_assoc.
-      len.
-      rewrite /subst_context_let_expand.
-
-      rewrite /expand_lets_ctx.
-      rewrite /expand_lets_k_ctx. len.
-      rewrite lift_context_expand_lets_ctx.
-      rewrite PCUICLiftSubst.lift_to_extended_list_k. Nat.add_0_r.
-      rewrite subst_context_expand_lets_k
-
-
-      rewrite distr_lift_subst_context.
+      eapply spine_subst_to_extended_list_k => //; len.
+      rewrite distr_lift_subst_context PCUICClosed.closed_ctx_lift //.
+      rewrite PCUICClosed.closed_ctx_lift //; len. cbn. len.
       rewrite PCUICClosed.closed_ctx_lift //.
-      pose proof (PCUICContextSubst.context_subst_length2 sp).
-      rewrite context_assumptions_smash_context /= in H0. len in H0. len.
-      rewrite H0.
-      relativize (context_assumptions _).
-      eapply (PCUICClosed.closedn_ctx_expand_lets 0); len.
-      rewrite closedn_subst_instance_context.
-      apply (declared_inductive_closed_params isdecl).
-      2:len.
-      epose proof (declared_inductive_closed_pars_indices isdecl).
-      rewrite closedn_ctx_app in H1.
-      rewrite closedn_subst_instance_context.
-      move/andP: H1 => [] //.
-      f_equal. f_equal.
-      erewrite subst_to_extended_list_k => //.
-      rewrite /to_extended_list_k.
-
-      rewrite [reln [] _ _]to_extended_list_subst_context_let_expand.
-      apply PCUICLiftSubst.map_subst_instance_to_extended_list_k.
-      rewrite subst_context_let_expand_length subst_instance_length.
-      rewrite /subst_context_let_expand.
-      rewrite distr_lift_subst_context map_rev.
-      pose proof (PCUICContextSubst.context_subst_length2 sp).
-      rewrite context_assumptions_smash_context /= in H0. len in H0. len.
-      rewrite H0.
-      relativize (context_assumptions _).
-      eapply (PCUICClosed.closedn_ctx_expand_lets 0); len.
-    2:len.
-    epose proof (declared_inductive_closed_pars_indices isdecl).
-    rewrite closedn_ctx_app in H1.
-    rewrite closedn_subst_instance_context.
-    move/andP: H1 => [] //.
-    f_equal. f_equal.
-    erewrite subst_to_extended_list_k => //.
-    eapply make_context_subst_spec_inv. rewrite List.rev_involutive. cbn. apply sp. }
-  set (sdecl := subst_decl _ _ _).
-  rewrite -(it_mkProd_or_LetIn_app [sdecl]).
-  eapply type_it_mkProd_or_LetIn_sorts; tea.
+      rewrite subst_map_lift_lift_context; len => //.
+      rewrite -extended_subst_to_extended_list_k -map_rev.
+      replace #|ind_indices idecl| with (#|ind_indices idecl| + 0) by len.
+      rewrite PCUICLiftSubst.lift_to_extended_list_k Nat.add_0_r.
+      rewrite -map_rev map_map_compose.
+      setoid_rewrite subst_lift_subst.
+      rewrite -map_map_compose map_rev extended_subst_to_extended_list_k map_rev
+         -PCUICLiftSubst.lift_to_extended_list_k Nat.add_0_r
+         -subst_context_map_subst_expand_lets; len.
+      rewrite subst_extended_lift //; len. now rewrite closedn_subst_instance_context.
+      rewrite (lift_extended_subst _ #|ind_indices _|) subst_map_lift_lift_context; len.
+      reflexivity. }
   constructor => //.
-  constructor => //. simpl.
-  constructor => //.
-  now eapply sorts_local_ctx_wf_local; tea. red.
-  eexists; tea. 
+  2:{ eexists; tea. rewrite /idxctx app_context_assoc in tyass; tea. }
+  apply typing_wf_local in tyass.
+  rewrite /idxctx app_context_assoc in tyass => //.
 Qed.
 
 (* We show that the derived predicate of a case is always well-typed, for *any*
@@ -2211,8 +2171,7 @@ Proof.
     rewrite -(closed_ctx_lift #|ind_indices idecl| 0 (ind_params mdecl)@[u]).
     { rewrite closedn_subst_instance_context.
       eapply (declared_inductive_closed_params isdecl). }
-    rewrite (smash_context_lift []).
-    rewrite -map_rev.
+    rewrite (smash_context_lift []) -map_rev.
     relativize #|ind_indices idecl|.
     eapply subslet_lift; tea.
     apply sp. len.

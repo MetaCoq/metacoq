@@ -1,9 +1,9 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICUnivSubstitution PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICSR PCUICConfluence.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICUnivSubstitution PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICConfluence PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
@@ -31,10 +31,42 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma conv_Prod_inv `{cf:checker_flags} Σ Γ na na' A B A' B' :
+(* a version for cumulativity only is in PCUICInductiveInversion… *)
+Lemma projection_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} {le} :
+  forall {mdecl idecl p pdecl u u' },
+  declared_projection Σ p mdecl idecl pdecl ->
+  on_udecl_prop Σ (ind_universes mdecl) ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  consistent_instance_ext Σ (ind_universes mdecl) u' ->
+  R_global_instance Σ (eq_universe Σ) (if le then leq_universe Σ else eq_universe Σ) (IndRef p.1.1) (ind_npars mdecl) u u' ->
+  Σ ;;; projection_context mdecl idecl p.1.1 u ⊢
+    subst_instance u pdecl.2 ≤[le] subst_instance u' pdecl.2.
+Proof.
+  destruct le.
+  1:{
+    intros.
+    by apply PCUICInductiveInversion.projection_cumulative_indices.
+  }
+Admitted.
+
+Lemma equality_Prod_r `{checker_flags} {Σ} {wfΣ : wf Σ} {Γ na na' M1 M2 N2 le} :
+eq_binder_annot na na' ->
+is_open_term Γ M1 ->
+Σ ;;; (Γ ,, vass na M1) ⊢ M2 ≤[le] N2 ->
+Σ ;;; Γ ⊢ (tProd na M1 M2) ≤[le] (tProd na' M1 N2).
+Proof.
+intros.
+eapply equality_Prod ; auto.
+eapply equality_refl ; auto with fvs.
+apply equality_is_closed_context in X.
+rewrite PCUICOnFreeVars.on_free_vars_ctx_snoc in X.
+move: X => /andP [] //.
+Qed.
+
+(* Lemma conv_Prod_inv `{cf:checker_flags} Σ Γ na na' A B A' B' :
   wf Σ.1 -> wf_local Σ Γ ->
   Σ ;;; Γ |- tProd na A B = tProd na' A' B' ->
-  eq_binder_annot na na' × Σ ;;; Γ |- A = A' × Σ ;;; Γ ,, vass na' A' |- B = B'.
+  eq_binder_annot na na' × Σ ;;; Γ |- A = A' × Σ ;;; Γ ,, vass na A |- B = B'.
 Proof.
   intros wfΣ wfΓ H; depind H.
   - depelim e.
@@ -43,11 +75,17 @@ Proof.
 
   - depelim r.
     + solve_discr.
+    + specialize (IHconv _ _ _ _ _ _ wfΣ wfΓ eq_refl) as (?&?&?).
+      repeat split.
+      * easy.
+      * eapply red_conv_conv.
+        2: eassumption.
+        by constructor.
+      * 
     + specialize (IHconv _ _ _ _ _ _ wfΣ wfΓ eq_refl).
       intuition auto.
-      econstructor 2; eauto.
-    + specialize (IHconv _ _ _ _ _ _ wfΣ wfΓ eq_refl).
-      intuition auto. apply conv_trans with N2.
+      eapply red_conv_conv.
+      2: eassumption.
       * auto.
       * eapply conv_conv_ctx; eauto.
         -- econstructor 2. 1: reflexivity.
@@ -119,7 +157,7 @@ Proof.
     eapply All2_impl.
     1: eassumption.
     by apply red_conv.
-Qed.
+Qed. *)
 
 Section BDUnique.
 
@@ -128,26 +166,29 @@ Context (Σ : global_env_ext).
 Context (wfΣ : wf Σ).
 
 Let Pinfer Γ t T :=
-  wf_local Σ Γ -> forall T', Σ ;;; Γ |- t ▹ T' -> Σ ;;; Γ |- T = T'.
+  wf_local Σ Γ -> forall T', Σ ;;; Γ |- t ▹ T' -> Σ ;;; Γ ⊢ T = T'.
 
 Let Psort Γ t u :=
   wf_local Σ Γ -> forall u', Σ ;;; Γ |- t ▹□ u' -> eq_universe Σ u u'.
 
 Let Pprod Γ t (na : aname) A B :=
   wf_local Σ Γ -> forall na' A' B', Σ ;;; Γ |- t ▹Π (na',A',B') ->
-  eq_binder_annot na na' × Σ ;;; Γ |- A = A' × Σ ;;; Γ ,, vass na' A' |- B = B'.
+  [× eq_binder_annot na na', Σ ;;; Γ ⊢ A = A'
+      & Σ ;;; Γ,, vass na' A' ⊢ B = B'].
 
 Let Pind Γ ind t u args :=
   wf_local Σ Γ -> forall ind' u' args', Σ ;;; Γ |- t ▹{ind'} (u',args') ->
-  eqb ind ind' ×
-  R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef ind) #|args| u u' ×
-  conv_terms Σ Γ args args'.
+  [× ind = ind',
+      R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef ind) #|args| u u' &
+      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') args args'].
 
 Let Pcheck (Γ : context) (t T : term) := True.
 
 Let PΓ (Γ : context) := True.
 
-Theorem bidirectional_unique : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ.
+Let PΓ_rel (Γ Γ' : context) := True.
+
+Theorem bidirectional_unique : env_prop_bd Σ Pcheck Pinfer Psort Pprod Pind PΓ PΓ_rel.
 Proof.
 
   apply bidir_ind_env.
@@ -157,74 +198,76 @@ Proof.
   14-16: intros.
 
   - rewrite H in H0.
-    inversion_clear H0.
-    reflexivity.
+    inversion H0. subst. clear H0.
+    eapply typing_equality.
+    1: assumption.
+    by constructor.
 
-  - reflexivity.
+  - eapply typing_equality.
+    1: assumption.
+    by constructor.
 
   - apply H in X2 ; auto.
     apply H0 in X3.
     2:{ constructor ; auto. apply infering_sort_typing in X ; auto. eexists. eassumption. }
-    constructor. constructor.
-    apply eq_universe_sort_of_product.
-    all: auto.
+    apply into_equality.
+    3,4: reflexivity.
+    + constructor.
+      constructor. 
+      apply eq_universe_sort_of_product.
+      all: auto.
+    + by apply wf_local_closed_context.
 
-  - apply conv_Prod_r.
+
+  - apply equality_Prod_r => //.
+    1: by eapply subject_is_open_term, infering_sort_typing ; eauto.
     apply X1 in X4 ; auto.
     constructor ; auto.
     apply infering_sort_typing in X ; auto.
     eexists. eassumption.
 
-  - apply conv_LetIn_bo ; auto.
+  - apply equality_LetIn_bo ; auto.
     apply X2 in X6 ; auto.
     constructor ; auto.
     + apply infering_sort_typing in X ; auto. eexists. eassumption.
     + apply checking_typing ; auto. eexists. apply infering_sort_typing; eauto.
 
-  - change Γ with (Γ ,,, subst_context [u] 0 []).
-
-    assert (isType Σ Γ A0).
-    {
-      apply infering_prod_typing in X3 ; eauto.
-      apply validity in X3.
-      inversion X3.
-      apply inversion_Prod in X5 as (?&_&?&_); auto.
-      eexists.
-      eassumption.
-    }
-    assert (subslet Σ Γ [u] [vass na0 A0]).
-    {
+  - apply X0 in X3 as [] ; auto.
+    eapply substitution_equality_vass.
+    + eapply checking_typing ; auto.
+      2: eexact X1.
+      eapply isType_tProd, validity, infering_prod_typing ; eauto.
+    + eapply equality_equality_ctx.
+      2: eassumption.
       constructor.
-      1: constructor.
-      rewrite subst_empty.
-      apply checking_typing ; eauto.
+      1: by apply context_equality_refl, wf_local_closed_context.
+      constructor ; eauto.
+
+
+  - replace decl0 with decl by (eapply declared_constant_inj ; eassumption).
+    eapply typing_equality => //.
+    constructor ; eassumption.
+
+  - replace idecl0 with idecl by (eapply declared_inductive_inj ; eassumption).
+    eapply typing_equality => //.
+    econstructor ; eassumption.
+  
+  - replace cdecl0 with cdecl by (eapply declared_constructor_inj ; eassumption).
+    replace mdecl0 with mdecl by (eapply declared_constructor_inj ; eassumption).
+    eapply typing_equality => //.
+    econstructor ; eassumption.
+  
+  - move: (isdecl) => /declared_projection_inj /(_ H) [? [? ?]].
+    subst mdecl0 idecl0 pdecl0 ty ty0.
+    change Γ with (Γ ,,, subst_context (c :: List.rev args) 0 []).
+
+    assert (consistent_instance_ext Σ (ind_universes mdecl) u0).
+    {
+      apply infering_ind_typing in X2 ; auto.
+      apply validity in X2 as [] ; auto.
+      eapply invert_type_mkApps_ind ; eauto.
+      eapply declared_projection_inductive ; eauto.
     }
-    eapply subst_conv ; eauto.
-    + constructor ; auto.
-    + apply X0 in X3 as (?&?&?); eauto.
-  
-  - replace decl0 with decl.
-    1: reflexivity.
-    eapply declared_constant_inj.
-    all: eauto.
-  
-  - replace idecl0 with idecl.
-    1: reflexivity.
-    eapply declared_inductive_inj.
-    all: eauto.
-  
-  - replace cdecl0 with cdecl.
-    replace mdecl0 with mdecl.
-    1: reflexivity.
-    2: eapply declared_constructor_inj.
-    1: eapply declared_inductive_inj.
-    all: eauto.
-  
-  - change Γ with (Γ ,,, subst_context (c :: List.rev args) 0 []).
-    subst ty ty0.
-    replace mdecl0 with mdecl in * by (eapply declared_projection_inj ; eauto).
-    replace idecl0 with idecl in * by (eapply declared_projection_inj ; eauto).
-    replace pdecl0 with pdecl in * by (eapply declared_projection_inj ; eauto).
 
     assert (consistent_instance_ext Σ (ind_universes mdecl) u).
     {
@@ -234,7 +277,7 @@ Proof.
       eapply declared_projection_inductive ; eauto.
     }
 
-    eapply subst_conv ; eauto.
+    eapply @substitution_equality_subst_conv ; eauto.
 
     + eapply projection_subslet ; eauto.
       2: eapply validity.
@@ -243,108 +286,134 @@ Proof.
       2: eapply validity.
       all: eapply infering_ind_typing ; eauto.
     + constructor.
-      1: reflexivity.
-      apply X0 in X2 as (?&?&?) ; auto.
+      1:{
+        eapply equality_refl.
+        1: by apply wf_local_closed_context.
+        eapply subject_is_open_term, infering_ind_typing ; eauto.
+      }
       apply All2_rev.
-      assumption.
-    + repeat apply PCUICWeakening.weaken_wf_local ; auto.
+      eapply X0 ; eauto.
+    
+    + apply wf_local_closed_context.
+      repeat apply PCUICWeakening.weaken_wf_local ; auto.
       eapply wf_projection_context.
       all: eauto.
+
     + cbn -[projection_context].
-      apply weaken_conv ; auto.
-      * eapply closed_wf_local ; eauto.
-        eapply wf_projection_context ; eauto.
-      * rewrite /projection_context /= smash_context_length /= subst_instance_assumptions.
-        erewrite onNpars.
-        2: eapply PCUICInductives.oi ; eapply declared_projection_inductive ; eauto.
-        rewrite closedn_subst_instance.
-        eapply declared_projection_closed_type.
-        eassumption.
-      * rewrite /projection_context /= smash_context_length /= subst_instance_assumptions.
-        erewrite onNpars.
-        2: eapply PCUICInductives.oi ; eapply declared_projection_inductive ; eauto.
-        rewrite closedn_subst_instance.
-        eapply declared_projection_closed_type.
-        eassumption.
-      * apply projection_convertible_indices.
-        all: auto.
-        -- destruct H as [[]].
-           eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) ; eauto.
-        -- apply infering_ind_typing in X2 ; auto.
-          apply validity in X2 as [] ; auto.
-          eapply invert_type_mkApps_ind ; eauto.
-          eapply declared_projection_inductive ; eauto.
-        -- apply X0 in X2 ; auto.
-           rewrite -H0.
-           apply X2.
+      apply weaken_equality ; auto.
+      1: by apply wf_local_closed_context.
+      eapply projection_cumulative_indices => //.
+      * eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) ; auto.
+        apply H.
+      * rewrite -H0.
+        apply X0 in X2 ; auto.
+        apply X2.
 
   - rewrite H0 in H3.
-    inversion_clear H3.
-    reflexivity.
+    inversion H3 ; subst ; clear H3.
+    eapply typing_equality => //.
+    assert (All (fun d => isType Σ Γ (dtype d)) mfix).
+    { eapply All_impl.
+      1: exact X2.
+      intros ? [].
+      eexists.
+      eapply infering_sort_typing ; eauto.
+    }
+    econstructor ; eauto.
+    eapply All_impl.
+    1: eapply All_mix ; [exact X2 | exact X3].
+    intros ? [[s ] ].
+    apply checking_typing ; auto.
+    + apply All_mfix_wf ; auto.
+    + exists s.
+      change (tSort _) with (lift0 #|fix_context mfix| (tSort s)).
+      apply weakening ; auto.
+      1: by apply All_mfix_wf.
+      by apply infering_sort_typing.
     
   - rewrite H0 in H3.
-    inversion_clear H3.
-    reflexivity.
+    inversion H3 ; subst ; clear H3.
+    eapply typing_equality => //.
+    assert (All (fun d => isType Σ Γ (dtype d)) mfix).
+    { eapply All_impl.
+      1: exact X2.
+      intros ? [].
+      eexists.
+      eapply infering_sort_typing ; eauto.
+    }
+    eapply type_CoFix ; eauto.
+    eapply All_impl.
+    1: eapply All_mix ; [exact X2 | exact X3].
+    intros ? [[s ] ].
+    apply checking_typing ; auto.
+    + apply All_mfix_wf ; auto.
+    + exists s.
+      change (tSort _) with (lift0 #|fix_context mfix| (tSort s)).
+      apply weakening ; auto.
+      1: by apply All_mfix_wf.
+      by apply infering_sort_typing.
    
   - intros ? T' ty_T'.
     inversion ty_T'.
+    move: (isdecl) => /declared_inductive_inj /(_ isdecl0) [? ?].
     subst.
-    apply mkApps_conv_args ; auto.
-
-    apply All2_app.
-    2: constructor ; auto.
-    apply All2_skipn.
-    eapply X4 ; eauto.
-
-  - inversion_clear X3.
-    assert (conv_ty : Σ ;;; Γ |- tSort u = tSort u').
-    {
-      etransitivity.
-      1: symmetry ; apply red_conv ; eassumption.
-      etransitivity.
-      2: apply red_conv ; eassumption.
-      apply X0 ; auto.
-    }
-    depind conv_ty.
-    + now inversion e.
-    + depelim r. solve_discr.
-    + depelim r. solve_discr.
-   
-  - inversion_clear X3.
-    assert (conv_ty : Σ ;;; Γ |- tProd na A B = tProd na' A' B').
-    {
-      etransitivity.
-      1: symmetry ; apply red_conv ; eassumption.
-      etransitivity.
-      2: apply red_conv ; eassumption.
-      apply X0 ; auto.
-    }
-    apply conv_Prod_inv; auto.
+    apply equality_mkApps.
+    + apply equality_refl.
+      1: by apply wf_local_closed_context.
+      apply infering_typing, type_is_open_term in ty_T' ; auto.
+      move: ty_T'.
+      rewrite PCUICOnFreeVars.on_free_vars_mkApps.
+      move => /andP [] -> //.
+      
+    + apply All2_app.
+      * apply All2_skipn.
+        eapply X3 ; eauto.
+      * constructor ; auto.
+        apply equality_refl.
+        1: by apply wf_local_closed_context.
+        apply infering_typing, subject_is_open_term in ty_T' ; auto.
+        move: ty_T' => /= /andP [_ ] /andP [_ ] /andP [_ ] /andP [] //.
 
   - inversion_clear X3.
-    assert (conv_ty : Σ ;;; Γ |- mkApps (tInd ind ui) args = mkApps (tInd ind' u') args'). 
-    {
-      etransitivity.
-      1: symmetry ; apply red_conv ; eassumption.
-      etransitivity.
-      2: apply red_conv ; eassumption.
-      apply X0 ; auto.
-    }
-    apply invert_conv_ind_ind ; auto.
+    eapply (equality_Sort_inv false).
+    eapply equality_red_r_inv.
+    2: eassumption.
+    eapply equality_red_l_inv.
+    2: eassumption.
+    auto.
+
+  - inversion_clear X3.
+    eapply equality_Prod_Prod_inv.
+    eapply equality_red_r_inv.
+    2: eassumption.
+    eapply equality_red_l_inv.
+    2: eassumption.
+    auto.
+
+  - inversion_clear X3.
+    eapply (@equality_Ind_inv _ _ _ false).
+    eapply equality_red_r_inv.
+    2: eassumption.
+    eapply equality_red_l_inv.
+    2: eassumption.
+    auto.
 Qed.
 
 End BDUnique.
 
 Theorem uniqueness_inferred `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T T' :
-  Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t ▹ T' -> Σ ;;; Γ |- T = T'.
+  Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t ▹ T' -> Σ ;;; Γ ⊢ T = T'.
 Proof.
   intros.
-  pose proof (bidirectional_unique Σ wfΣ) as (_ & _& ? & _).
+  pose proof (bidirectional_unique Σ wfΣ) as bdu.
+  repeat destruct bdu as [? bdu].
   eauto.
 Qed.
 
-Corollary principal_type `{checker_flags} Σ (wfΣ : wf Σ) Γ t T : Σ ;;; Γ |- t : T ->
-  ∑ T', (forall T'', Σ ;;; Γ |- t : T'' -> Σ ;;; Γ |- T' <= T'') × Σ ;;; Γ |- t : T'.
+Corollary principal_type `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
+  Σ ;;; Γ |- t : T ->
+  ∑ T',
+    (forall T'', Σ ;;; Γ |- t : T'' -> Σ ;;; Γ ⊢ T' ≤ T'') × Σ ;;; Γ |- t : T'.
 Proof.
   intros ty.
   assert (wf_local Σ Γ) by (eapply typing_wf_local ; eauto).
@@ -355,7 +424,7 @@ Proof.
   intros T' ty.
   apply typing_infering in ty as (S' & infS' & cum'); auto.
   etransitivity ; eauto.
-  apply conv_cumul.
+  apply equality_eq_le.
   eapply uniqueness_inferred.
   all: eauto.
 Qed.

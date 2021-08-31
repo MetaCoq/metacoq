@@ -63,15 +63,16 @@ Section Lemmata.
     intros []. now econstructor.
   Qed.
   Hint Resolve isType_welltyped : pcuic.
+  Require Import PCUICOnFreeVars.
   
-  (* Needs closedness of stacks *)
-  Lemma cumul_zippx :
-    forall {wfΣ : wf Σ} Γ u v ρ,
-      Σ ;;; (Γ ,,, stack_context ρ) ⊢ u ≤ v ->
-      Σ ;;; Γ ⊢ zippx u ρ ≤ zippx v ρ.
+  Lemma equality_zippx :
+    forall {wfΣ : wf Σ} le Γ u v ρ,
+      closedn_stack #|Γ| ρ ->
+      Σ ;;; (Γ ,,, stack_context ρ) ⊢ u ≤[le] v ->
+      Σ ;;; Γ ⊢ zippx u ρ ≤[le] zippx v ρ.
   Proof.
-    intros wfΣ Γ u v ρ h.
-    induction ρ in u, v, h |- *; auto.
+    intros wfΣ le Γ u v ρ cl h.
+    induction ρ in u, v, cl, h |- *; auto.
     destruct a.
     all: try solve [
       unfold zippx ; simpl ;
@@ -81,9 +82,10 @@ Section Lemmata.
     - unfold zippx. simpl.
       case_eq (decompose_stack ρ). intros l π e.
       unfold zippx in IHρ. rewrite e in IHρ.
-      apply IHρ.
+      move: cl => /= /andP[] cl cl'. apply IHρ => //. 
       eapply equality_App_l; tas.
-      todo "closed stacks".
+      eapply closedn_on_free_vars; len. 
+      now rewrite Nat.add_comm.
     - unfold zippx. simpl.
       eapply equality_it_mkLambda_or_LetIn_codom. cbn.
       eapply equality_Lambda_r.
@@ -95,6 +97,48 @@ Section Lemmata.
     - unfold zippx. simpl.
       eapply equality_it_mkLambda_or_LetIn_codom. cbn.
       eapply equality_LetIn_bo. assumption.
+  Qed.
+
+  Lemma conv_alt_it_mkLambda_or_LetIn :
+    forall {wfΣ : wf Σ} Δ Γ u v,
+      Σ ;;; (Δ ,,, Γ) ⊢ u = v ->
+      Σ ;;; Δ ⊢ it_mkLambda_or_LetIn Γ u = it_mkLambda_or_LetIn Γ v.
+  Proof.
+    intros wfΣ Δ Γ u v h. revert Δ u v h.
+    induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
+    - assumption.
+    - simpl. cbn. eapply ih.
+      eapply equality_LetIn_bo. assumption.
+    - simpl. cbn. eapply ih.
+      eapply equality_Lambda_r. assumption.    
+  Qed.
+
+  Lemma snoc_app_context {Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
+  Proof.
+    reflexivity.
+  Qed.
+  Require Import PCUICOnFreeVars.
+
+  Lemma conv_alt_it_mkProd_or_LetIn :
+    forall {wfΣ : wf Σ} Δ Γ B B',
+      Σ ;;; (Δ ,,, Γ) ⊢ B = B' ->
+      Σ ;;; Δ ⊢ it_mkProd_or_LetIn Γ B = it_mkProd_or_LetIn Γ B'.
+  Proof.
+    intros wfΣ Δ Γ B B' h.
+    have cl : is_closed_context (Δ ,,, Γ).
+    { now apply equality_is_closed_context in h. }
+    induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h, cl |- *.
+    - assumption.
+    - simpl. cbn. eapply ih => //.
+      * eapply equality_LetIn_bo. assumption.
+      * rewrite snoc_app_context on_free_vars_ctx_app /= in cl.
+        now move/andP: cl.
+    - simpl. cbn. 
+      rewrite snoc_app_context on_free_vars_ctx_app /= in cl.
+      move/andP: cl => [cl cld]. cbn in cld.
+      rewrite andb_true_r in cld. setoid_rewrite shiftnP_add in cld.
+      eapply ih => //.
+      eapply equality_Prod; auto. apply equality_refl => //.
   Qed.
 
   Context (hΣ : ∥ wf Σ ∥).
@@ -345,48 +389,40 @@ Section Lemmata.
       + eapply red1_context. assumption.
   Qed.
 
-  Lemma conv_alt_it_mkLambda_or_LetIn :
-    forall Δ Γ u v,
-      Σ ;;; (Δ ,,, Γ) ⊢ u = v ->
-      Σ ;;; Δ ⊢ it_mkLambda_or_LetIn Γ u = it_mkLambda_or_LetIn Γ v.
+  Lemma decompose_stack_closed n ρ l s : 
+    closedn_stack n ρ -> decompose_stack ρ = (l, s) ->
+    forallb (closedn (n + #|stack_context ρ|)) l.
   Proof.
-    intros Δ Γ u v h. revert Δ u v h.
-    induction Γ as [| [na [b|] A] Γ ih ] ; intros Δ u v h.
-    - assumption.
-    - simpl. cbn. eapply ih.
-      eapply equality_LetIn_bo. assumption.
-    - simpl. cbn. eapply ih.
-      eapply equality_Lambda_r. assumption.
+    induction ρ in l, s |- *; cbn.
+    - now intros _ [= <- <-].
+    - move/andP=> [cla clρ].
+      destruct a ; [idtac|intros [= <- <-]..] => //.
+      destruct decompose_stack eqn:ds.
+      intros [= <- <-].
+      specialize (IHρ _ _ clρ eq_refl).
+      cbn in cla |- *.
+      now rewrite IHρ cla.
   Qed.
 
-  Lemma conv_alt_it_mkProd_or_LetIn :
-    forall Δ Γ B B',
-      Σ ;;; (Δ ,,, Γ) |- B = B' ->
-      Σ ;;; Δ |- it_mkProd_or_LetIn Γ B = it_mkProd_or_LetIn Γ B'.
-  Proof.
-    intros Δ Γ B B' h.
-    induction Γ as [| [na [b|] A] Γ ih ] in Δ, B, B', h |- *.
-    - assumption.
-    - simpl. cbn. eapply ih.
-      eapply equality_LetIn_bo. assumption.
-    - simpl. cbn. eapply ih.
-      eapply conv_Prod_r. assumption.
-  Qed.
-
-  Lemma conv_zipp :
+  (* Ill-scoped, if the stack has a context *)
+  (*Lemma conv_zipp :
     forall Γ u v ρ,
-      Σ ;;; Γ |- u = v ->
-      Σ ;;; Γ |- zipp u ρ = zipp v ρ.
+      closedn_stack #|Γ| ρ ->
+      Σ ;;; Γ ⊢ u = v ->
+      Σ ;;; Γ ⊢ zipp u ρ = zipp v ρ.
   Proof.
-    intros Γ u v ρ h.
+    intros Γ u v ρ cl h.
     unfold zipp.
-    destruct decompose_stack.
-    induction l in u, v, h |- *.
+    destruct decompose_stack eqn:da.
+    induction l in u, v, cl, h, da |- *.
     - assumption.
-    - simpl.  eapply IHl. eapply conv_App_l. assumption.
-  Qed.
+    - simpl. eapply IHl => //.
+      * eapply equality_App_l; tas.
+        eapply decompose_stack_closed in da; tea.
+        move: da => /= /andP[].
+  Qed.*)
 
-  Lemma cumul_zipp :
+  (* Lemma cumul_zipp :
     forall Γ u v π,
       Σ ;;; Γ |- u <= v ->
       Σ ;;; Γ |- zipp u π <= zipp v π.
@@ -397,7 +433,7 @@ Section Lemmata.
     induction l in u, v, h |- *.
     - assumption.
     - simpl.  eapply IHl. eapply cumul_App_l. assumption.
-  Qed.
+  Qed. *)
 
   Derive Signature for Acc.
 
@@ -601,25 +637,7 @@ Section Lemmata.
       apply inversion_App in hw' as ihw' ; auto.
       destruct ihw' as [na' [A' [B' [hP [? ?]]]]].
       apply inversion_Prod in hP as [s1 [s2 [? [? bot]]]] ; auto.
-      apply PCUICConversion.invert_cumul_prod_r in bot ; auto.
-      destruct bot as [? [? [? [[[r ?] ?] ?]]]].
-      exfalso. clear - r wΣ.
-      revert r. generalize (Universe.sort_of_product s1 s2). intro s. clear.
-      intro r. eapply Relation_Properties.clos_rt_rt1n in r.
-      dependent induction r.
-      assert (h : y = tSort s).
-      { clear - r. dependent destruction r.
-        assert (h : isSort (mkApps (tFix mfix idx) args)).
-        { rewrite <- H. constructor. }
-        apply isSortmkApps in h. subst. cbn in H.
-        discriminate.
-      }
-      subst.
-      dependent destruction r.
-      assert (h : isSort (mkApps (tFix mfix idx) args)).
-      { rewrite <- H. constructor. }
-      apply isSortmkApps in h. subst. cbn in H.
-      discriminate.
+      apply equality_Sort_Prod_inv in bot ; auto.
   Qed.
 
   Lemma mkApps_Prod_nil :
@@ -844,17 +862,14 @@ Section Lemmata.
   Qed.
   
   Lemma conv_cum_zipp leq Γ t t' π π' :
-    conv_cum leq Σ Γ t t' ->
+    Σ ;;; Γ ⊢ t ≤[leq] t' ->
     ∥equality_terms Σ Γ (decompose_stack π).1 (decompose_stack π').1∥ ->
-    conv_cum leq Σ Γ (zipp t π) (zipp t' π').
+    ∥Σ ;;; Γ ⊢ zipp t π ≤[leq] zipp t' π'∥.
   Proof.
     intros conv conv_args.
     rewrite !zipp_as_mkApps.
-    destruct leq; cbn in *.
-    - sq.
-      apply equality_mkApps; auto.
-    - sq.
-      apply cumul_mkApps; auto.
+    sq.
+    eapply equality_mkApps; auto.
   Qed.
 
   Lemma whne_All2_fold f rel Γ Γ' t :

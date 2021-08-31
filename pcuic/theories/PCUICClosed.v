@@ -10,10 +10,6 @@ From Equations Require Import Equations.
 
 (** * Lemmas about the [closedn] predicate *)
 
-Notation closed_decl n := (test_decl (closedn n)).
-Notation closedn_ctx := (test_context_k closedn).
-Notation closed_ctx := (closedn_ctx 0).
-
 Lemma subst_instance_assumptions u ctx :
   context_assumptions (subst_instance u ctx) = context_assumptions ctx.
 Proof.

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import RelationClasses.
+From Coq Require Import RelationClasses ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICInduction
      PCUICReflect PCUICEquality PCUICLiftSubst PCUICCases.
@@ -1216,9 +1216,6 @@ Proof.
   - reflexivity.
   - simpl. apply IHargs.
 Qed.
-
-
-Require Import ssrbool PCUICClosed.
 
 Definition closedn_mfix_hole k '((mfix1, m, mfix2) : mfix_hole) : bool :=
   let k' := (k + #|mfix1| + 1 + #|mfix2|) in

@@ -15,6 +15,28 @@ Set Equations With UIP.
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
+Require Import PCUICSpine PCUICInductives PCUICWeakening PCUICContexts PCUICInductiveInversion.
+
+Lemma wf_inst_case_context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
+  {mdecl idecl} {uinst params} ctx :
+  declared_inductive Σ ci mdecl idecl ->
+  wf_local Σ Γ ->
+  consistent_instance_ext Σ (ind_universes mdecl) uinst ->
+  spine_subst Σ Γ params (List.rev params) (smash_context [] (subst_instance uinst (ind_params mdecl))) ->
+  wf_local_rel Σ (Γ,,, smash_context [] (ind_params mdecl)@[uinst]) ctx@[uinst] ->
+  wf_local Σ (Γ ,,, inst_case_context params uinst ctx).
+Proof.
+  move=> isdecl wfΓ cu sp wfr.
+  rewrite /pre_case_predicate_context_gen /inst_case_context /ind_predicate_context /=.
+  eapply PCUICSubstitution.substitution_wf_local. 
+  * eapply sp.
+  * unshelve epose proof (on_minductive_wf_params_indices_inst isdecl _ cu).
+  rewrite PCUICUnivSubstitution.subst_instance_app_ctx in X.
+  eapply wf_local_app_inv in X as [].
+  eapply wf_local_app => //.
+  eapply wf_local_smash_end.
+  now eapply weaken_wf_local; tea.
+Qed.
 
 Section Lemmata.
   Context {cf : checker_flags}.
@@ -281,7 +303,8 @@ Section Lemmata.
     destruct h; depelim wf; simpl in *.
     all: destruct l; econstructor; eauto.
   Qed.
-  
+
+  Require Import PCUICUnivSubstitution.
   Lemma welltyped_context :
     forall Γ t,
       welltyped Σ Γ (zip t) ->
@@ -337,12 +360,30 @@ Section Lemmata.
         * depelim spine.
           econstructor; eauto.
         * depelim spine; eauto.
-      + cbn. exists (tSort ps). todo "new contexts".
-        (* cbn. move: pret_ty. cbn [fill_predicate_hole preturn].
+      + cbn. exists (tSort ps).
+        cbn. move: pret_ty. cbn [fill_predicate_hole preturn].
         move=> Ht.
         cbn [fill_predicate_hole preturn] in predctx.
         eapply context_conversion; tea.
         * unfold predctx in Ht.
+          eapply wf_inst_case_context; tea.
+          ** eapply typing_wf_local in Ht. now eapply wf_local_app_inv in Ht as [].
+          ** cbn in ind_inst.
+              unshelve epose proof (ctx_inst_spine_subst _ ind_inst).
+              { admit. }
+              move: X. generalize (ctx_inst_sub ind_inst).
+              intros l.
+              rewrite subst_instance_app => X.
+              unshelve epose proof (spine_subst_app_inv _ X) as [sp _]. 1:admit.
+              now eapply spine_subst_smash in sp.
+          ** cbn in conv_pctx.
+             eapply wf_local_app_inv. eapply wf_local_alpha.
+             ++ instantiate (1 := (Γ,,, stack_context π,,, smash_context [] (ind_params x)@[puinst],,, (ind_predicate_context ci x x0)@[puinst])).
+                eapply All2_app => //.
+                { eapply alpha_eq_subst_instance. now symmetry. }
+                reflexivity.
+              ++ 
+
           unfold inst_case_context.
           admit.
         * admit.*)

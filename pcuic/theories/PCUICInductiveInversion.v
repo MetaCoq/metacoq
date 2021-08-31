@@ -3353,6 +3353,25 @@ Proof.
   now eapply isType_it_mkProd_or_LetIn_wf_local in X.
 Qed.
 
+
+Lemma isType_case_predicate {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
+  {mdecl idecl} u params :
+  wf_local Σ Γ ->
+  declared_inductive Σ ci mdecl idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  spine_subst Σ Γ params (List.rev params) (smash_context [] (subst_instance u (ind_params mdecl))) ->
+  wf_local Σ (Γ ,,, smash_context [] (ind_params mdecl)@[u] ,,, (ind_predicate_context ci mdecl idecl)@[u]).
+Proof.
+  move=> wfΓ isdecl cu sp.
+  rewrite /ind_predicate_context /=.
+  set (iass := {| decl_name := _ |}).
+  cbn.
+  rewrite [subst_instance_context _ _]subst_instance_expand_lets_ctx.
+  unshelve epose proof (on_inductive_inst isdecl _ _ _ cu); tea.
+  rewrite subst_instance_app_ctx in X.
+  eapply isType_it_mkProd_or_LetIn_inv in X.
+  eapply isType_wf_local in X.
+
 (*
 Lemma leb_elim_prop_sort shapes f n cs : 
   allowed_eliminations_subset f (elim_sort_prop_ind shapes) ->
@@ -3527,16 +3546,6 @@ Proof. rewrite /expand_lets_ctx /expand_lets_k_ctx /expand_lets /expand_lets_k.
   now rewrite compose_map_decl.
 Qed.
 
-Definition subst_let_expand_k args Δ k T := 
-  (subst args k (expand_lets_k Δ k T)).
-
-Lemma map_subst_let_expand_k args Δ k l : 
-  map (subst args k) (map (expand_lets_k Δ k) l) =
-  map (subst_let_expand_k args Δ k) l.
-Proof.
-  now rewrite map_map_compose.
-Qed.
-
 Lemma isType_mkApps_Ind_smash {cf:checker_flags} {Σ Γ ind u params args} {wfΣ : wf Σ} {mdecl idecl} :
   declared_inductive Σ.1 ind mdecl idecl ->
   isType Σ Γ (mkApps (tInd ind u) (params ++ args)) ->
@@ -3572,322 +3581,6 @@ Proof.
   rewrite (smash_context_subst []).
   rewrite -(expand_lets_smash_context _ []).
   exact spargs.
-Qed.
-
-Lemma subst_let_expand_it_mkProd_or_LetIn s Γ Δ T : 
-  subst_let_expand s Γ (it_mkProd_or_LetIn Δ T) =
-  it_mkProd_or_LetIn (subst_context_let_expand s Γ Δ) (subst_let_expand_k s Γ #|Δ| T). 
-Proof.
-  rewrite /subst_let_expand /expand_lets.
-  rewrite expand_lets_it_mkProd_or_LetIn /= subst_it_mkProd_or_LetIn /=.
-  len. 
-Qed.
-
-Lemma subst_let_expand_k_mkApps s Γ k f args :
-  subst_let_expand_k s Γ k (mkApps f args) = 
-  mkApps (subst_let_expand_k s Γ k f) (map (subst_let_expand_k s Γ k) args).
-Proof.
-  rewrite /subst_let_expand_k.
-  now rewrite expand_lets_k_mkApps subst_mkApps map_map_compose.
-Qed.
-
-Lemma to_extended_list_k_map_lift:
-  forall (n k : nat) (c : context), 
-  to_extended_list_k c k = map (lift n (#|c| + k)) (to_extended_list_k c k).
-Proof.
-  intros n k c.
-  pose proof (to_extended_list_k_spec c k). unf_term.
-  symmetry. solve_all.
-  destruct H as [x' [-> Hx]]. simpl.
-  destruct (leb_spec_Set (#|c| + k) x').
-  - f_equal. lia.
-  - reflexivity.
-Qed.
-
-Lemma expand_lets_k_to_extended_list_k Γ k : 
-  map (expand_lets_k Γ k) (to_extended_list_k Γ k) = to_extended_list_k (smash_context [] Γ) k.
-Proof.
-  rewrite /expand_lets_k -map_map_compose.
-  rewrite -extended_subst_to_extended_list_k.
-  f_equal. now rewrite Nat.add_comm -to_extended_list_k_map_lift.
-Qed.
-
-Lemma map_subst_let_expand_k_to_extended_list_lift {cf} {Σ s Γ Δ k} :
-  spine_subst Σ Γ s (List.rev s) (smash_context [] Δ) ->
-  map (subst_let_expand_k (List.rev s) Δ k) (to_extended_list_k Δ k) = map (lift0 k) s.
-Proof.
-  intros sp.
-  eapply spine_subst_subst_to_extended_list_k in sp.
-  rewrite /subst_let_expand_k.
-  rewrite -map_map_compose.
-  rewrite expand_lets_k_to_extended_list_k.
-  rewrite -{2}(Nat.add_0_r k).
-  rewrite PCUICLiftSubst.lift_to_extended_list_k -{2}sp !map_map_compose.
-  apply map_ext. intros x.
-  now rewrite commut_lift_subst_rec.
-Qed.
-
-Lemma map_subst_let_expand_to_extended_list {cf} {Σ s Γ Δ} :
-  spine_subst Σ Γ s (List.rev s) (smash_context [] Δ) ->
-  map (subst_let_expand (List.rev s) Δ) (to_extended_list Δ) = s.
-Proof.
-  intros sp.
-  specialize (map_subst_let_expand_k_to_extended_list_lift (k:=0) sp).
-  now rewrite map_lift0.
-Qed.
-
-Lemma map_subst_let_expand_lift {s Γ k s'} :
-  #|s| = context_assumptions Γ -> k = #|Γ| ->
-  map (subst_let_expand s Γ) (map (lift0 k) s') = s'.
-Proof.
-  intros hs hlen.
-  rewrite /subst_let_expand map_map_compose.
-  rewrite -{2}(map_id s'). apply map_ext => t.
-  rewrite /expand_lets /expand_lets_k /=.
-  sigma. rewrite hlen.
-  rewrite -subst_compose_assoc.
-  rewrite shiftn_Upn. sigma.
-  rewrite subst_consn_shiftn. 2:now len.
-  now rewrite subst_consn_shiftn; sigma.
-Qed.
-
-Lemma subst_let_expand_k_0 s Γ :
-  subst_let_expand_k s Γ 0 =1 subst_let_expand s Γ.
-Proof. reflexivity. Qed.
-
-Lemma subst_let_expand_k_lift s Γ n k t : 
-  n = #|Γ| -> #|s| = context_assumptions Γ ->
-  subst_let_expand_k s Γ 0 (lift0 (n + k) t) = lift0 k t. 
-Proof.
-  intros.
-  rewrite -(simpl_lift _ _ _ _ 0); try lia.
-  rewrite subst_let_expand_k_0.
-  rewrite subst_let_expand_lift_id //.
-Qed.
-
-Lemma expand_lets_k_0 Γ t : expand_lets_k Γ 0 t = expand_lets Γ t.
-Proof. reflexivity. Qed.
-
-Lemma extended_subst_lift_context n (Γ : context) (k k' : nat) :
-  extended_subst (lift_context n k Γ) k' =
-  map (lift n (k + context_assumptions Γ + k')) (extended_subst Γ k').
-Proof.
-  pose proof (PCUICRename.rename_extended_subst).
-  rewrite -rename_context_lift_context.
-  rewrite lift_extended_subst -H.
-  rewrite (lift_extended_subst _ k').
-  rewrite !map_map_compose. apply map_ext => t.
-  rewrite shiftn_lift_renaming; sigma.
-  apply inst_ext.
-  rewrite - !Upn_Upn (Nat.add_comm _ k') !Upn_Upn shiftn_Upn - !Upn_Upn.
-  move=> i; lia_f_equal.
-Qed.
-
-Lemma subst_context_lift_context (n : nat) (Γ Δ : context) :
-  subst_context (extended_subst (lift_context n 0 Γ) 0) 0 (lift_context n (#|Γ| + context_assumptions Γ) Δ) =
-  lift_context n (context_assumptions Γ) (subst_context (extended_subst Γ 0) 0 Δ).
-Proof.
-  rewrite {1}extended_subst_lift_context /= Nat.add_0_r.
-  now rewrite distr_lift_subst_context; len.
-Qed.
-
-From MetaCoq.PCUIC Require Import PCUICRename.
-
-Lemma lift_context_lift_context n k k' Γ : 
-  lift_context n (k + k') (lift_context k' k Γ) = lift_context (n + k') k Γ.
-Proof.
-  rewrite - !rename_context_lift_context.
-  rewrite /PCUICRename.rename_context fold_context_k_compose.
-  apply fold_context_k_ext => i x.
-  rewrite !rename_inst !shiftn_lift_renaming !ren_lift_renaming.
-  sigma. apply inst_ext.
-  now rewrite Upn_compose Upn_compose shiftn_Upn shiftk_compose.
-Qed.
-
-Lemma lift_context_subst_context_let_expand n s Γ Δ : 
-  #|s| = context_assumptions Γ ->
-  lift_context n 0 (subst_context_let_expand s Γ Δ) =
-  subst_context_let_expand (map (lift0 n) s) (lift_context n 0 Γ) (lift_context n #|Γ| Δ).
-Proof.
-  intros hlen.
-  rewrite /subst_context_let_expand.
-  rewrite distr_lift_subst_context. f_equal.
-  rewrite Nat.add_0_r hlen.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx /=; autorewrite with len.
-  rewrite -lift_context_add Nat.add_comm lift_context_add.
-  rewrite -subst_context_lift_context.
-  rewrite -lift_context_add.
-  now rewrite lift_context_lift_context.
-Qed.
-
-Lemma smash_context_app_expand_acc Γ Δ : 
-  smash_context [] Γ ,,, expand_lets_ctx Γ Δ = 
-  smash_context Δ Γ.
-Proof.
-  rewrite (smash_context_acc Γ Δ). reflexivity.
-Qed.
-
-Lemma expand_lets_ctx_app Δ Γ Γ' : 
-  expand_lets_ctx Δ (Γ ,,, Γ') = expand_lets_ctx Δ Γ ,,, expand_lets_k_ctx Δ #|Γ| Γ'.
-Proof.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx lift_context_app subst_context_app; len => //.
-Qed.
-
-Lemma lift_context_subst Γ p s n k : 
-  context_subst Γ p s -> 
-  context_subst (lift_context n k Γ) (map (lift n k) p) (map (lift n k) s).
-Proof.
-  induction 1 in |- *; try constructor.
-  rewrite lift_context_snoc map_app /=; constructor; auto.
-  rewrite lift_context_snoc /= /lift_decl /map_decl /=.
-  rewrite (context_subst_length X).
-  rewrite distr_lift_subst.
-  now constructor.
-Qed.
-
-Lemma subst_context_subst Γ p s sub k : 
-  context_subst Γ p s -> 
-  context_subst (subst_context sub k Γ) (map (subst sub k) p) (map (subst sub k) s).
-Proof.
-  induction 1 in |- *; try constructor.
-  rewrite subst_context_snoc map_app /=; constructor; auto.
-  rewrite subst_context_snoc /= /subst_decl /map_decl /=.
-  rewrite (context_subst_length X).
-  rewrite distr_subst.
-  now constructor.
-Qed.
-
-Lemma typing_expand_lets_gen {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Γ' t T} : 
-  Σ ;;; Γ ,,, Δ ,,, Γ' |- t : T -> 
-  Σ ;;; Γ ,,, smash_context [] Δ ,,, expand_lets_ctx Δ Γ' |- 
-    expand_lets_k Δ #|Γ'| t : expand_lets_k Δ #|Γ'| T. 
-Proof.
-  intros Ht.
-  rewrite /expand_lets /expand_lets_k.
-  pose proof (typing_wf_local Ht).
-  rewrite -app_context_assoc in Ht.
-  eapply (weakening_typing (Γ'' := smash_context [] Δ)) in Ht.
-  len in Ht. simpl in Ht. simpl.
-  2:{ eapply wf_local_smash_end; pcuic. now apply wf_local_app_inv in X. }
-  rewrite lift_context_app app_context_assoc Nat.add_0_r in Ht.
-  eapply substitution in Ht; tea.
-  2:{ eapply PCUICContexts.subslet_extended_subst. now apply wf_local_app_inv in X. }
-  now len in Ht.
-Qed.
-
-Lemma wf_local_expand_lets {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Γ'} : 
-  wf_local Σ (Γ ,,, Δ ,,, Γ') ->
-  wf_local Σ (Γ ,,, smash_context [] Δ ,,, expand_lets_ctx Δ Γ').
-Proof.
-  intros hwf.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  destruct (wf_local_app_inv hwf) as [wfΓΔ _].
-  rewrite -app_context_assoc in hwf.
-  eapply (weakening_wf_local (Γ'' := smash_context [] Δ)) in hwf.
-  len in hwf. simpl in hwf. simpl.
-  2:{ eapply wf_local_smash_end; pcuic. }
-  rewrite lift_context_app app_context_assoc Nat.add_0_r in hwf.
-  eapply substitution_wf_local in hwf; tea.
-  now eapply PCUICContexts.subslet_extended_subst.
-Qed.
-
-Lemma expand_lets_k_subst_comm Δ k s T : 
-  expand_lets_k Δ k (subst0 s T) = 
-  subst0 (map (expand_lets_k Δ k) s) (expand_lets_k Δ (#|s| + k) T).
-Proof.
-  rewrite /expand_lets_k.
-  now rewrite distr_lift_subst distr_subst Nat.add_assoc map_map_compose; len.
-Qed.
-
-Lemma subslet_smash_context {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Γ' Δ' s} :
-  subslet Σ (Γ ,,, Δ ,,, Γ') s Δ' ->
-  subslet Σ (Γ ,,, smash_context [] Δ ,,, expand_lets_ctx Δ Γ')
-    (map (expand_lets_k Δ #|Γ'|) s) (expand_lets_k_ctx Δ #|Γ'| Δ').
-Proof.
-  induction 1.
-  * simpl. constructor.
-  * simpl. rewrite /expand_lets_k_ctx lift_context_snoc subst_context_snoc.
-    constructor. apply IHX. len.
-    rewrite Nat.add_assoc. fold (expand_lets_k Δ (#|Δ0| + #|Γ'|) T).
-    eapply typing_expand_lets_gen in t0.
-    rewrite expand_lets_k_subst_comm in t0.
-    now rewrite -(subslet_length X).
-  * simpl. rewrite /expand_lets_k_ctx lift_context_snoc subst_context_snoc.
-    len. rewrite /subst_decl /lift_decl /map_decl /=.
-    eapply subslet_def. apply IHX. len.
-    rewrite !Nat.add_assoc. 
-    fold (expand_lets_k Δ (#|Δ0| + #|Γ'|) t).
-    fold (expand_lets_k Δ (#|Δ0| + #|Γ'|) T).
-    eapply typing_expand_lets_gen in t0.
-    rewrite !expand_lets_k_subst_comm in t0.
-    now rewrite -(subslet_length X).
-    now rewrite expand_lets_k_subst_comm -(subslet_length X) Nat.add_assoc.
-Qed.
-
-Lemma spine_subst_expand_lets {cf Σ} {wfΣ : wf Σ} {Γ Δ Γ'} {inst s Δ'} : 
-  spine_subst Σ (Γ ,,, Δ ,,, Γ') inst s Δ' ->
-  spine_subst Σ (Γ ,,, smash_context [] Δ ,,, expand_lets_ctx Δ Γ') 
-    (map (expand_lets_k Δ #|Γ'|) inst) (map (expand_lets_k Δ #|Γ'|) s)
-    (expand_lets_k_ctx Δ #|Γ'| Δ').
-Proof.
-  intros [].
-  split.
-  * rewrite -app_context_assoc.
-    rewrite smash_context_app_expand_acc.
-    eapply wf_local_app_inv in spine_dom_wf as [wfΔ wfΓ'].
-    eapply wf_local_app. now apply wf_local_app_inv in wfΔ.
-    eapply wf_local_rel_smash_context_gen; tea.
-  * eapply wf_local_app_inv in spine_codom_wf as [wfΔ wfΓ'].
-    rewrite - !app_context_assoc -expand_lets_ctx_app.
-    apply wf_local_app_inv in wfΔ as [].
-    eapply wf_local_app. 
-    now apply wf_local_app_inv in a as [].
-    rewrite smash_context_app_expand_acc.
-    apply wf_local_rel_smash_context_gen; tea.
-    eapply wf_local_rel_app; tea.
-  * rewrite /expand_lets_k_ctx /expand_lets_k -map_map_compose -[map (fun t => _) s]map_map_compose.
-    eapply subst_context_subst.
-    now eapply lift_context_subst.
-  * now eapply subslet_smash_context.
-Qed.
-
-
-Lemma expand_lets_lift n k Γ t : 
-  expand_lets (lift_context n k Γ) (lift n (#|Γ| + k) t) =
-  lift n (k + context_assumptions Γ) (expand_lets Γ t).
-Proof.
-  rewrite /expand_lets /expand_lets_k /=.
-  rewrite extended_subst_lift_context Nat.add_0_r.
-  epose proof (distr_lift_subst_rec _ _ _ 0 (k + context_assumptions Γ)).
-  len. rewrite permute_lift. lia. rewrite !Nat.add_assoc /= in H.
-  relativize #|Γ|. erewrite <- H. 2:now len.
-  now len.
-Qed.
-
-Lemma expand_lets_ctx_lift n k' Γ Δ : 
-  k' = #|Γ| ->
-  expand_lets_ctx (lift_context n 0 Γ) (lift_context n k' Δ) =
-  lift_context n (context_assumptions Γ) (expand_lets_ctx Γ Δ).
-Proof.
-  intros ->.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx /=.
-  len.
-  rewrite distr_lift_subst_context. len.
-  rewrite -lift_context_add Nat.add_comm.
-  rewrite lift_context_lift_context.
-  now rewrite extended_subst_lift_context. 
-Qed.
-
-Lemma lift_context_expand_lets_ctx n Γ Δ : 
-  lift_context n 0 (expand_lets_ctx Γ Δ) =
-  expand_lets_k_ctx Γ n (lift_context n 0 Δ).
-Proof.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  rewrite lift_context_subst_context. f_equal.
-  rewrite - !rename_context_lift_context /rename_context !fold_context_k_compose.
-  apply fold_context_k_ext => i t.
-  rewrite !shiftn_lift_renaming; sigma.
-  apply inst_ext. now rewrite !Upn_compose shiftn_Upn.
 Qed.
 
 Lemma subst_let_expand_app s Γ s' Δ k :
@@ -3928,7 +3621,7 @@ Proof.
   intros hk hs t.
   rewrite /subst_let_expand /expand_lets.
   rewrite subst_app_decomp. f_equal.
-  rewrite !expand_lets_k_0.
+  rewrite !s_0.
   rewrite expand_lets_app. len.
 
   rewrite /subst_context_let_expand /subst_let_expand_k.

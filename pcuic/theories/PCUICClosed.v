@@ -1530,6 +1530,19 @@ Proof.
   now eapply forallb_All in cl.
 Qed.
 
+Lemma declared_constructor_closed_gen_type {cf:checker_flags}
+  {Σ mdecl idecl c cdecl} {wfΣ : wf Σ} :
+  declared_constructor Σ c mdecl idecl cdecl ->
+  closedn #|arities_context (ind_bodies mdecl)| cdecl.(cstr_type).
+Proof.
+  intros h.
+  unfold declared_constructor in h.
+  destruct c as [i ci]. simpl in h. destruct h as [hidecl hcdecl].
+  eapply declared_inductive_closed_constructors in hidecl as h.
+  eapply All_nth_error in h. 2: eassumption.
+  move/andP: h => [/andP [hargs hindices]] hty. now len.
+Qed.
+
 Lemma declared_constructor_closed_type {cf:checker_flags}
   {Σ mdecl idecl c cdecl u} {wfΣ : wf Σ} :
   declared_constructor Σ c mdecl idecl cdecl ->

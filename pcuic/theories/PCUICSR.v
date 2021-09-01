@@ -1086,7 +1086,6 @@ Ltac invert_mkApps_fix_eq :=
   end.
 
 Coercion closed_red1_red : closed_red1 >-> closed_red.
-Coercion red_cumul : red >-> cumul.
 
 Lemma wt_equality_refl {cf} {Σ} {wfΣ : wf Σ} {Γ t T} : Σ ;;; Γ |- t : T -> Σ ;;; Γ ⊢ t = t.
 Proof.
@@ -1394,7 +1393,7 @@ Proof.
   now destruct onprojs.
 Qed.
 
-Notation "!! t" := ltac:(refine t) (at level 200).
+Notation "!! t" := ltac:(refine t) (at level 200, only parsing).
 
 Lemma subslet_projs {cf:checker_flags} {Σ} {wfΣ : wf Σ} {i mdecl idecl args} :
   declared_inductive Σ.1 i mdecl idecl ->

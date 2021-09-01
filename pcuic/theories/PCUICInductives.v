@@ -181,6 +181,16 @@ Proof.
   now rewrite (subst_to_extended_list_k _ _ pars).
 Qed. *)
 
+Lemma wf_arities_context_inst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {mind mdecl u} :
+  declared_minductive Σ mind mdecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  wf_local Σ (arities_context mdecl.(ind_bodies))@[u].
+Proof.
+  intros decli cu.
+  eapply wf_local_instantiate; tea. cbn.
+  eapply wf_arities_context; tea.
+Qed.
+
 Lemma instantiate_inds {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {u mind mdecl} :
   declared_minductive Σ.1 mind mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->

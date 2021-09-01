@@ -686,6 +686,25 @@ Section ConvCongruences.
 
 End ConvCongruences.
 
+Notation red_terms Σ Γ := (All2 (closed_red Σ Γ)).
+
+Lemma red_terms_equality_terms {cf} {Σ} {wfΣ : wf Σ} {Γ u u'} : 
+  red_terms Σ Γ u u' -> equality_terms Σ Γ u u'.
+Proof.
+  move=> Hu; eapply All2_impl; eauto. intros.
+  now eapply red_equality.
+Qed.
+
+Lemma eq_terms_equality_terms {cf} {Σ} {wfΣ : wf Σ} Γ u u' : 
+  is_closed_context Γ ->
+  forallb (is_open_term Γ) u ->
+  forallb (is_open_term Γ) u' ->
+  All2 (eq_term Σ Σ) u u' -> equality_terms Σ Γ u u'.
+Proof.
+  move=> onΓ onu onu' Hu; solve_all.
+  intros. econstructor; eauto.
+Qed.
+
 Section Inversions.
   Context {cf : checker_flags}.
   Context {Σ : global_env_ext}.
@@ -984,7 +1003,7 @@ Section Inversions.
   Lemma invert_red_mkApps_tInd {Γ : context} {ind u} (args : list term) c :
     Σ ;;; Γ ⊢ mkApps (tInd ind u) args ⇝ c ->
     ∑ args' : list term,
-    (c = mkApps (tInd ind u) args') * (All2 (closed_red Σ Γ) args args').
+    [× c = mkApps (tInd ind u) args', is_closed_context Γ & All2 (closed_red Σ Γ) args args'].
   Proof.
     move=> [clΓ].
     rewrite PCUICOnFreeVars.on_free_vars_mkApps => /= hargs r.
@@ -1022,7 +1041,7 @@ Section Inversions.
       All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'].
   Proof.
     move/equality_red=> [v [v' [redv redv' leqvv']]].
-    eapply invert_red_mkApps_tInd in redv as [l' [? ha]]; auto. subst.
+    eapply invert_red_mkApps_tInd in redv as [l' [? ? ha]]; auto. subst.
     eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [e ? ?]]].
     subst. depelim e.
     eexists _,_. split ; eauto.
@@ -1047,16 +1066,32 @@ Section Inversions.
     All2 (closed_red Σ Γ) l l' ->
     All (is_open_term Γ) l'.
   Proof. solve_all; eauto with fvs. Qed.
+  Hint Resolve closed_red_terms_open_left closed_red_terms_open_right : fvs.
+
+  Lemma equality_terms_open_terms_left {Γ s s'} : 
+    equality_terms Σ Γ s s' ->
+    forallb (is_open_term Γ) s.
+  Proof.
+    solve_all; eauto with fvs.
+  Qed.
+
+  Lemma equality_terms_open_terms_right {Γ s s'} : 
+    equality_terms Σ Γ s s' ->
+    forallb (is_open_term Γ) s'.
+  Proof.
+    solve_all; eauto with fvs.
+  Qed.
+  Hint Resolve equality_terms_open_terms_left equality_terms_open_terms_right : fvs.
 
   Lemma equality_Ind_r_inv {le Γ ind ui l T} :
       Σ ;;; Γ ⊢ T ≤[le] mkApps (tInd ind ui) l ->
       ∑ ui' l',
         [× Σ ;;; Γ ⊢ T ⇝ (mkApps (tInd ind ui') l'),
           R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui' ui &
-        All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l' l].
+          equality_terms Σ Γ l' l].
   Proof.
     move/equality_red=> [v [v' [redv redv' leqvv']]].
-    eapply invert_red_mkApps_tInd in redv' as [l' [? ha]]; auto. subst.
+    eapply invert_red_mkApps_tInd in redv' as [l' [? ? ha]]; auto. subst.
     eapply compare_term_mkApps_r_inv in leqvv' as [u [l'' [e ? ?]]].
     subst. depelim e.
     eexists _,_. split ; eauto.
@@ -1077,32 +1112,27 @@ Section Inversions.
   Lemma equality_Ind_inv {le Γ ind ind' ui ui' l l'} :
       Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] mkApps (tInd ind' ui') l' ->
       [× ind = ind',
-      R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui &
-      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') l l'].
+         R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui,
+         is_closed_context Γ & equality_terms Σ Γ l l'].
   Proof.
     move/equality_red=> [v [v' [redv redv' leqvv']]].
     pose proof (clrel_ctx redv).
-    eapply invert_red_mkApps_tInd in redv as [l0 [? ha]]; auto. subst.
-    eapply invert_red_mkApps_tInd in redv' as [l1 [? ha']]; auto. subst.
+    eapply invert_red_mkApps_tInd in redv as [l0 [? ? ha]]; auto. subst.
+    eapply invert_red_mkApps_tInd in redv' as [l1 [? ? ha']]; auto. subst.
     eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [e ? ?]]].
     depelim e; solve_discr.
     noconf H0. noconf H1. split => //.
     + apply R_global_instance_refl; tc.
-    + eapply All2_trans; tea; tc.
-      { eapply equality_trans. }
-      { eapply (All2_impl ha); eauto with pcuic. }
-      pose proof (closed_red_terms_open_right ha).
-      pose proof (closed_red_terms_open_right ha').
-      eapply All2_trans with l1; tea; tc.
-      { eapply equality_trans. }
-      { solve_all; eauto with fvs. constructor; eauto with fvs. }
-      eapply All2_symP; tc.
-      { eapply equality_sym. }
-      solve_all; eauto with fvs pcuic.
-      eauto with pcuic.
+    + eapply red_terms_equality_terms in ha.
+      eapply red_terms_equality_terms in ha'.
+      eapply eq_terms_equality_terms in a; tea; fvs.
+      transitivity l0 => //. transitivity l1 => //. now symmetry.
   Qed.
 
 End Inversions.
+
+Hint Resolve closed_red_terms_open_left closed_red_terms_open_right : fvs.
+Hint Resolve equality_terms_open_terms_left equality_terms_open_terms_right : fvs.
 
 (* Unused... *)
 (*Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ ctx ctx' s s' :
@@ -3345,21 +3375,6 @@ Section CumulSubst.
       rewrite -(subst_context_length s 0 Δ).
       eapply cumul_subst_conv => //; eauto using subslet_untyped_subslet.
   Qed. *)
-
-  Lemma equality_terms_open_terms_left {Γ s s'} : 
-    equality_terms Σ Γ s s' ->
-    forallb (is_open_term Γ) s.
-  Proof.
-    solve_all; eauto with fvs.
-  Qed.
-
-  Lemma equality_terms_open_terms_right {Γ s s'} : 
-    equality_terms Σ Γ s s' ->
-    forallb (is_open_term Γ) s'.
-  Proof.
-    solve_all; eauto with fvs.
-  Qed.
-  Hint Resolve equality_terms_open_terms_left equality_terms_open_terms_right : fvs.
 
   Lemma substitution_context_equality_subst_conv {Γ Γ' Γ'0 Γ'' Δ Δ' s s' le} :
     context_equality_rel le Σ (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->

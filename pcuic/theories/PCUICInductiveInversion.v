@@ -1158,26 +1158,6 @@ Proof.
     now rewrite closedn_subst_instance.
 Qed.
 
-
-Notation red_terms Σ Γ := (All2 (closed_red Σ Γ)).
-
-Lemma red_terms_equality_terms {cf} {Σ} {wfΣ : wf Σ} {Γ u u'} : 
-  red_terms Σ Γ u u' -> equality_terms Σ Γ u u'.
-Proof.
-  move=> Hu; eapply All2_impl; eauto. intros.
-  now eapply red_equality.
-Qed.
-
-Lemma eq_terms_equality_terms {cf} {Σ} {wfΣ : wf Σ} Γ u u' : 
-  is_closed_context Γ ->
-  forallb (is_open_term Γ) u ->
-  forallb (is_open_term Γ) u' ->
-  All2 (eq_term Σ Σ) u u' -> equality_terms Σ Γ u u'.
-Proof.
-  move=> onΓ onu onu' Hu; solve_all.
-  intros. econstructor; eauto.
-Qed.
-
 Import ssrbool.
 
 Lemma invert_red_mkApps_tRel {cf} {Σ} {wfΣ : wf Σ} {Γ n d args t'} : 
@@ -3167,7 +3147,7 @@ Lemma invert_cumul_ind_ind {cf} {Σ} {wfΣ : wf Σ} {Γ ind ind' u u' args args'
     equality_terms Σ Γ args args').
 Proof.
   intros ht; eapply equality_Ind_l_inv in ht as (? & ? & [? ? ?]); auto.
-  eapply invert_red_mkApps_tInd in c as (? & ? & ?); auto. solve_discr.
+  eapply invert_red_mkApps_tInd in c as (? & [? ? ?]); auto. solve_discr.
   intuition auto. eapply eq_inductive_refl.
   transitivity x0; auto. symmetry. now eapply red_terms_equality_terms.
 Qed.

@@ -597,6 +597,16 @@ Proof.
   eapply wf_arities_context'; eauto.
 Qed.
 
+Lemma on_constructor_closed_arities {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl idecl indices cdecl cs} :
+  on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
+  closedn #|arities_context (ind_bodies mdecl)| cdecl.(cstr_type).
+Proof.
+  intros [? ? [s Hs] _ _ _ _].
+  pose proof (typing_wf_local Hs).
+  destruct cdecl as [id cty car].
+  apply subject_closed in Hs; eauto.
+Qed.
+
 Lemma on_constructor_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mind mdecl u idecl indices cdecl cs} :
   on_constructor (lift_typing typing) (Σ, ind_universes mdecl) mdecl (inductive_ind mind) indices idecl cdecl cs ->
   let cty := subst0 (inds (inductive_mind mind) u (ind_bodies mdecl))

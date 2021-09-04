@@ -732,11 +732,11 @@ Proof.
   all: eapply RelationClasses.antisymmetry; eauto.
 Qed.
 
-Instance leq_term_antisym {cf:checker_flags} Σ φ
+(* Instance leq_term_antisym {cf:checker_flags} Σ φ
   : Antisymmetric (eq_term Σ φ) (leq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_antisym; exact _.
-Qed.
+Qed. *)
 
 Lemma global_variance_napp_mon {Σ gr napp napp' v} : 
   napp <= napp' ->
@@ -900,13 +900,13 @@ Proof.
   eapply eq_term_upto_univ_leq; auto; exact _.
 Qed.
 
-Instance leq_term_partial_order {cf:checker_flags} Σ φ
+(* Instance leq_term_partial_order {cf:checker_flags} Σ φ
   : PartialOrder (eq_term Σ φ) (leq_term Σ φ).
 Proof.
   split. intros eqxy; split; now eapply eq_term_leq_term.
   intros [xy yx].
   now eapply leq_term_antisym.
-Qed.
+Qed. *)
 
 Hint Constructors compare_decls : pcuic.
 

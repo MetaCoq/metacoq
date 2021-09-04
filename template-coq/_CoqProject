@@ -49,14 +49,14 @@ theories/WcbvEval.v
 theories/Checker.v
 
 # The Template monad
-theories/TemplateMonad.v
-theories/TemplateMonad/Common.v
-theories/TemplateMonad/Core.v
-theories/TemplateMonad/Extractable.v
-theories/monad_utils.v
+# theories/TemplateMonad.v
+# theories/TemplateMonad/Common.v
+# theories/TemplateMonad/Core.v
+# theories/TemplateMonad/Extractable.v
+# theories/monad_utils.v
 
 # Bindings of Coq terms to the "metacoq.*" names
-theories/Constants.v
+# theories/Constants.v
 
 # Extract the extractable monad, built by _PluginProject
-theories/Extraction.v
+# theories/Extraction.v

@@ -825,12 +825,19 @@ Definition wf_cofixpoint (Σ : global_env) mfix :=
   end.
 
 Definition wf_universe Σ s := 
-  match s with
-  | Universe.lProp 
-  | Universe.lSProp => True
-  | Universe.lType u => 
-    forall l, UnivExprSet.In l u -> LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ)
-  end.
+    forall l, UnivExprSet.In l (Universe.lvl s) -> 
+      LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ).
+
+Lemma global_ext_levels_Set Σ : LevelSet.In Level.lSet (global_ext_levels Σ).
+Proof.
+  apply LevelSetProp.Dec.F.union_3, LevelSetProp.Dec.F.mem_2, global_levels_Set.
+Qed.
+
+(* FixMe: Adapt to local sorts *)
+Lemma wf_universe_Set Σ s : Universe.lvl s = UnivLevel.set -> wf_universe Σ s.
+Proof.
+  move: s=> [??] /= -> ? /UnivExprSetFact.singleton_iff <- /=; apply global_ext_levels_Set.
+Qed.
 
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
@@ -1060,15 +1067,15 @@ Hint Resolve typing_wf_local : wf.
 
 Lemma type_Prop `{checker_flags} Σ :
   Σ ;;; [] |- tSort Universe.lProp : tSort Universe.type1.
-  change (  Σ ;;; [] |- tSort (Universe.lProp) : tSort Universe.type1);
-  constructor;auto. constructor. constructor.
+Proof.
+  constructor;first constructor; by apply wf_universe_Set.
 Defined.
 
 Lemma type_Prop_wf `{checker_flags} Σ Γ :
   wf_local Σ Γ ->
   Σ ;;; Γ |- tSort Universe.lProp : tSort Universe.type1.
 Proof. 
-  constructor;auto. constructor.
+  constructor ;auto. by apply wf_universe_Set.
 Defined.
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall Σ Γ (wfΓ : wf_local Σ Γ), Type):=

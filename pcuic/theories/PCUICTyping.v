@@ -197,14 +197,9 @@ Definition wf_cofixpoint (Σ : global_env) mfix :=
   end.
 
 Definition wf_universe Σ s := 
-  match s with
-  | Universe.lProp 
-  | Universe.lSProp => True
-  | Universe.lType u => 
-    forall l, UnivExprSet.In l u -> LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ)
-  end.
+    forall l, UnivExprSet.In l (Universe.lvl s) -> Level.is_set (UnivExpr.get_level l) \/ LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ).
 
-Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
+    Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
@@ -514,8 +509,8 @@ Lemma env_prop_typing `{checker_flags} {P PΓ} : env_prop P PΓ ->
 Proof. intros. now apply X. Qed.
 
 Lemma type_Prop_wf `{checker_flags} Σ Γ : wf_local Σ Γ -> Σ ;;; Γ |- tSort Universe.lProp : tSort Universe.type1.
-Proof. 
-  repeat constructor; auto.
+Proof.
+  constructor=>// l; rewrite UnivExprSetFact.singleton_iff=> <-; by left.
 Defined.
 
 Lemma env_prop_wf_local `{checker_flags} {P PΓ} : env_prop P PΓ ->
@@ -526,7 +521,8 @@ Proof. intros.
 Qed.
 
 Lemma type_Prop `{checker_flags} Σ : Σ ;;; [] |- tSort Universe.lProp : tSort Universe.type1.
-  repeat constructor.
+  constructor; first constructor.
+  move=> l; rewrite UnivExprSetFact.singleton_iff=> <-; by left.
 Defined.
 
 Lemma env_prop_sigma `{checker_flags} {P PΓ} : env_prop P PΓ ->

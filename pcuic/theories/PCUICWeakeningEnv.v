@@ -521,11 +521,10 @@ Proof.
   destruct Σ as [Σ univ]; cbn.
   intros [Σ'' eq] wf.
   destruct u; simpl; auto.
-  intros Hl.
-  intros l inl; specialize (Hl l inl).
+  intros Hl l inl; move: {Hl} (Hl l inl)=> [] Hl ; first by left.
   cbn. rewrite eq /=.
   unfold global_ext_levels.
-  eapply LevelSet.union_spec; simpl.
+  right; eapply LevelSet.union_spec; simpl.
   apply LevelSet.union_spec in Hl as [Hl|Hl]; cbn in Hl.
   - simpl. simpl in Hl. now left.
   - right. rewrite global_levels_ext.

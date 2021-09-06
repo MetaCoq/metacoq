@@ -2014,8 +2014,14 @@ Proof.
     assumption.
 Qed.
 
+Definition leq_rel {cf} (le : bool) :=
+  if le then leq_universe else eq_universe.
+
+Definition compare_term_napp `{checker_flags} (le : bool) Σ φ napp (t u : term) :=
+  eq_term_upto_univ_napp Σ (eq_universe φ) (leq_rel le φ) napp t u.
+  
 Definition compare_term `{checker_flags} (le : bool) Σ φ (t u : term) :=
-  if le then leq_term Σ φ t u else eq_term Σ φ t u.
+  eq_term_upto_univ Σ (eq_universe φ) (leq_rel le φ) t u.
 
 Lemma lift_compare_term `{checker_flags} le Σ ϕ n k t t' :
   compare_term le Σ ϕ t t' -> compare_term le Σ ϕ (lift n k t) (lift n k t').

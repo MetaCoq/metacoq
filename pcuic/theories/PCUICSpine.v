@@ -662,7 +662,7 @@ Qed.*)
     - depelim sl; depelim sl'; depelim wf; depelim wf'.
       specialize (IHcv wf' _ _ cs wf sl _ _ cs' sl' X).
       constructor; auto.
-      eapply (substitution_equality_subst_conv (Δ := [])); eauto with fvs.
+      eapply (substitution_equality_subst_conv (Δ := [])); eauto using subslet_untyped_subslet with fvs.
   Qed.
 
   Lemma spine_subst_subst {Γ Γ0 Γ' i s Δ sub} : 
@@ -3038,8 +3038,8 @@ Section WfEnv.
           move: (context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
           change (Γ ,,, smash_context [] Γ0) with (Γ ,,, smash_context [] Γ0 ,,, []).
           eapply (substitution_equality_subst_conv (Δ := [])); tea.
-          { now eapply PCUICContexts.subslet_extended_subst. }
-          { eapply subslet_context_equality. 3:tea.
+          { now eapply subslet_untyped_subslet, PCUICContexts.subslet_extended_subst. }
+          { eapply subslet_untyped_subslet, subslet_context_equality. 3:tea.
             now eapply wf_local_smash_end.
             now eapply wf_local_smash_end.
             now eapply PCUICContexts.subslet_extended_subst. }
@@ -3070,8 +3070,8 @@ Section WfEnv.
         cbn. rewrite smash_context_acc /=.
         change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
         eapply (substitution_equality_subst_conv (Δ := [])); tea.
-        { now eapply PCUICContexts.subslet_extended_subst. }
-        { eapply subslet_context_equality. 3:tea.
+        { now eapply subslet_untyped_subslet, PCUICContexts.subslet_extended_subst. }
+        { eapply subslet_untyped_subslet, subslet_context_equality. 3:tea.
           now eapply wf_local_smash_end.
           now eapply wf_local_smash_end.
           now eapply PCUICContexts.subslet_extended_subst. }
@@ -3146,8 +3146,8 @@ Section WfEnv.
     change (Γ ,,, smash_context [] Δ) with (Γ ,,, smash_context [] Δ ,,, []).
     eapply (substitution_equality_subst_conv (Δ := [])); tea.
     3:{ eapply context_equality_rel_conv_extended_subst; tea. }
-    * eapply PCUICContexts.subslet_extended_subst; tea.
-    * eapply subslet_context_equality; cycle 2.
+    * eapply subslet_untyped_subslet, PCUICContexts.subslet_extended_subst; tea.
+    * eapply subslet_untyped_subslet, subslet_context_equality; cycle 2.
       + eapply context_equality_rel_smash; tea.
       + eapply PCUICContexts.subslet_extended_subst; tea.
       + now eapply wf_local_smash_end.

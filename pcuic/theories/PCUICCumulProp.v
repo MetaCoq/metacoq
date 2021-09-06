@@ -6,7 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
-     PCUICEquality PCUICReduction PCUICWellScopedCumulativity.
+     PCUICEquality PCUICReduction PCUICOnFreeVars PCUICWellScopedCumulativity
+     PCUICInductiveInversion.
 
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Equations.Prop.DepElim.
@@ -37,8 +38,6 @@ Proof.
   eapply invert_red_sort in r2. subst. noconf r2.
   exists u'u. split; auto. now apply red_conv.
 Qed.
-
-Require Import PCUICInductiveInversion.
 
 Lemma cumul_ind_confluence {Σ : global_env_ext} {wfΣ : wf Σ} {Γ A ind u v l l'} :
   Σ ;;; Γ ⊢ A ≤ mkApps (tInd ind u) l  ->
@@ -113,8 +112,7 @@ Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' ->
 Proof.
   move=> isp isp'.
   constructor => //. constructor. 
-  red. rewrite Hcf'.
-  red. intros. now rewrite (is_prop_val _ isp) (is_prop_val _ isp').
+  red. red. rewrite Hcf'. red. intros. now rewrite (is_prop_val _ isp) (is_prop_val _ isp').
 Qed.
 
 Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' -> 
@@ -123,7 +121,7 @@ Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' -
 Proof.
   move=> isp isp'.
   constructor => //. constructor. 
-  red. rewrite Hcf'.
+  do 2 red. rewrite Hcf'.
   red. intros. now rewrite (is_sprop_val _ isp) (is_sprop_val _ isp').
 Qed.
 
@@ -704,7 +702,7 @@ Proof.
   eapply cumul_prop_alt in r as (nf & nf' & [redl' redr' eq'']).
   exists (nf :: nfa), (nf' :: nfa'); intuition auto.
 Qed.
-Require Import PCUICOnFreeVars.
+
 Lemma is_closed_context_snoc_inv Γ d : is_closed_context (d :: Γ) ->
   is_closed_context Γ /\ closed_decl #|Γ| d.
 Proof.
@@ -922,11 +920,6 @@ Qed.
 
 Hint Resolve conv_ctx_prop_refl : core.
 
-Require Import PCUICOnFreeVars.
-
-Arguments on_free_vars_decl P !d /.
-Arguments test_decl term f !d /.
-
 Lemma closed_red_letin {Σ Γ na d0 d1 t0 t1 b0 b1} :
   Σ ;;; Γ ⊢ d0 ⇝ d1 -> 
   Σ ;;; Γ ⊢ t0 ⇝ t1 -> 
@@ -1021,6 +1014,7 @@ Proof.
       move/andP: redl => [] -> /= /andP[] cld clt.
       eapply PCUICAlpha.eq_term_upto_univ_napp_on_free_vars in cld; tea.
       eapply PCUICAlpha.eq_term_upto_univ_napp_on_free_vars in clt; tea.
+      rewrite /on_free_vars_decl /test_decl /=.
       now rewrite cld clt. }
   destruct redr as [v' [redv' eq''']].
   eexists (tLetIn na d t nf), (tLetIn na' d' t' v'); split.
@@ -1274,7 +1268,7 @@ Proof.
       eapply PCUICClosed.declared_constructor_closed_gen_type; tea. len. }
     rewrite on_free_vars_subst_instance_context in clars.
     etransitivity. 
-    eapply (@substitution_untyped_cumul_prop_equiv _ Γ (subst_instance u (arities_context mdecl.(ind_bodies)))); auto.
+    eapply (@substitution_untyped_cumul_prop_equiv _ Γ (subst_instance u (arities_context mdecl.(ind_bodies))) []); auto.
     * simpl.
       apply is_closed_context_weaken. fvs.
       now rewrite on_free_vars_subst_instance_context.

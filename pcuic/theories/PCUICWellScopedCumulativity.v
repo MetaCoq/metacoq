@@ -86,9 +86,25 @@ Notation " Σ ;;; Γ ⊢ t ≤ u " := (equality true Σ Γ t u) (at level 50, Γ
 Notation " Σ ;;; Γ ⊢ t = u " := (equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  =  u") : type_scope.
 
+Instance compare_term_refl {cf} le Σ : Reflexive (compare_term le Σ Σ).
+Proof.
+  intros t; destruct le; unfold compare_term; cbn; reflexivity.
+Qed.
+
+Instance compare_term_sym {cf} Σ : Symmetric (compare_term false Σ Σ).
+Proof.
+  now intros t u; unfold compare_term; cbn; symmetry.
+Qed.
+
+Instance compare_term_trans {cf} le Σ : Transitive (compare_term le Σ Σ).
+Proof.
+  intros t u v; unfold compare_term; cbn; intros.
+  destruct le; cbn in *; etransitivity; tea.
+Qed.
+
 Lemma equality_refl' {le} {cf} {Σ} (Γ : closed_context) (t : open_term Γ) : equality le Σ Γ t t.
 Proof.
-  constructor; eauto with fvs. destruct le; cbn; reflexivity.
+  constructor; eauto with fvs. reflexivity. 
 Qed.
 
 Instance equality_sym {cf Σ Γ} : Symmetric (equality false Σ Γ).

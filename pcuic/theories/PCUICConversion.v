@@ -1231,6 +1231,17 @@ Proof.
   rewrite destArity_it_mkProd_or_LetIn. simpl. now rewrite app_context_nil_l.
 Qed.
 
+Definition equality_brs {cf} Σ Γ p :=
+  All2 (fun u v =>
+    bcontext u = bcontext v ×
+    Σ ;;; Γ ,,, inst_case_branch_context p u ⊢ bbody u = bbody v).
+
+Definition conv_predicate {cf} Σ Γ p p' :=
+  [× equality_terms Σ Γ p.(pparams) p'.(pparams),
+      R_universe_instance (eq_universe Σ) (puinst p) (puinst p'),
+    pcontext p = pcontext p' &
+    Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'].
+
 Section Inversions.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
@@ -1490,12 +1501,6 @@ Section ConvRedConv.
     - apply equality_App_r; tea. eauto with fvs.
   Qed.
   
-  Definition conv_predicate Γ p p' :=
-    [× equality_terms Σ Γ p.(pparams) p'.(pparams),
-       R_universe_instance (eq_universe Σ) (puinst p) (puinst p'),
-      pcontext p = pcontext p' &
-      Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'].
-
   #[global]
   Instance all_eq_term_refl : Reflexive (All2 (eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ))).
   Proof.
@@ -1648,7 +1653,7 @@ Section ConvRedConv.
 
   Instance red_terms_refl Γ : Reflexive (All2 (red Σ Γ)).
   Proof. intros x; eapply All2_refl; reflexivity. Qed.
-  
+
   Instance eqbrs_refl : Reflexive (All2 (fun x y : branch term =>
       eq_context_gen eq eq (bcontext x) (bcontext y) *
       eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (bbody x) (bbody y))).
@@ -1659,7 +1664,7 @@ Section ConvRedConv.
     is_closed_context Γ ->
     is_open_case Γ p c brs ->
     is_open_predicate Γ p' ->
-    conv_predicate Γ p p' ->
+    conv_predicate Σ Γ p p' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c brs.
   Proof.
     intros onΓ oncase onp' [cpars cu cctx cret].
@@ -1807,11 +1812,6 @@ Section ConvRedConv.
       rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
   Qed.
 
-  Definition equality_brs Γ p :=
-    All2 (fun u v =>
-      bcontext u = bcontext v ×
-      Σ ;;; Γ ,,, inst_case_branch_context p u ⊢ bbody u = bbody v).
-
   Lemma is_open_brs_OnOne2 Γ p x y : 
     is_open_brs Γ p x ->
     OnOne2 (fun u v : branch term =>
@@ -1835,7 +1835,7 @@ Section ConvRedConv.
     is_open_term Γ c ->
     is_open_brs Γ p brs ->
     is_open_brs Γ p brs' ->
-    equality_brs Γ p brs brs' ->
+    equality_brs Σ Γ p brs brs' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p c brs'.
   Proof.
     intros onΓ onp onc onbrs onbrs' h.
@@ -1859,9 +1859,9 @@ Section ConvRedConv.
   Lemma equality_Case {Γ ci p p' c c' brs brs'} :
     is_open_case Γ p c brs ->
     is_open_case Γ p' c' brs' ->
-    conv_predicate Γ p p' ->
+    conv_predicate Σ Γ p p' ->
     Σ ;;; Γ ⊢ c = c' ->
-    equality_brs Γ p brs brs' ->
+    equality_brs Σ Γ p brs brs' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c' brs'.
   Proof.
     intros onc0. generalize onc0. 
@@ -2811,8 +2811,8 @@ Section ConvSubst.
   Qed.
 
   Lemma substitution_equality_subst_conv {le Γ Γ0 Γ1 Δ s s' T U} :
-    subslet Σ Γ s Γ0 ->
-    subslet Σ Γ s' Γ1 ->
+    untyped_subslet Γ s Γ0 ->
+    untyped_subslet Γ s' Γ1 ->
     equality_terms Σ Γ s s' ->
     is_closed_context (Γ ,,, Γ1) ->
     Σ;;; Γ ,,, Γ0 ,,, Δ ⊢ T ≤[le] U ->
@@ -2821,7 +2821,7 @@ Section ConvSubst.
     move=> subss subss' eqsub cl eqty.
     generalize (equality_is_open_term eqty) => /and3P[] clctx clT clU.
     assert (#|Γ0| = #|Γ1|).
-    { rewrite -(subslet_length subss) -(subslet_length subss').
+    { rewrite -(untyped_subslet_length subss) -(untyped_subslet_length subss').
       apply (All2_length eqsub). }
     assert (is_open_term (Γ ,,, Γ1 ,,, Δ) U).
     { move: clU. now rewrite !app_context_length H. }
@@ -2831,9 +2831,9 @@ Section ConvSubst.
     { rewrite on_free_vars_ctx_app cl /=.
       move: clctx. rewrite on_free_vars_ctx_app !app_context_length H => /andP[] //. }
     etransitivity.
-    * eapply substitution_equality; tea.
+    * eapply untyped_substitution_equality; tea. fvs.
     * eapply equality_eq_le_gen.
-      eapply (untyped_substitution_equality_subst_conv (Δ := Γ0) (Δ' := Γ1)); tea; eauto using subslet_untyped_subslet.
+      eapply (untyped_substitution_equality_subst_conv (Δ := Γ0) (Δ' := Γ1)); tea; eauto.
   Qed.
 
   (* 
@@ -3052,13 +3052,13 @@ Proof.
 Qed.
 
 Lemma subst_instance_context_equality_rel {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ u u' le} :
-  wf_local Σ Γ ->
   is_closed_context (Γ ,,, Δ) ->
   R_universe_instance (eq_universe Σ) u u' ->
   context_equality_rel le Σ Γ (subst_instance u Δ) (subst_instance u' Δ).
 Proof.
-  move=> wf equ.
+  move=> equ.
   split; eauto with fvs.
+  { rewrite on_free_vars_ctx_app in equ. now move/andP: equ. }
   induction Δ as [|d Δ].
   - constructor.
   - simpl.
@@ -3307,8 +3307,8 @@ Section ConvTerms.
 
   Lemma equality_terms_subst {Γ Γ' Γ'' Δ s s' args args'} :
     is_closed_context (Γ ,,, Γ'') ->
-    subslet Σ Γ s Γ' ->
-    subslet Σ Γ s' Γ'' ->
+    untyped_subslet Γ s Γ' ->
+    untyped_subslet Γ s' Γ'' ->
     equality_terms Σ Γ s s' ->
     equality_terms Σ (Γ ,,, Γ' ,,, Δ) args args' ->
     equality_terms Σ (Γ ,,, subst_context s 0 Δ) (map (subst s #|Δ|) args) (map (subst s' #|Δ|) args').
@@ -3330,8 +3330,8 @@ Section CumulSubst.
     is_closed_context (Γ ,,, Δ') ->
     is_open_term (Γ ,,, Δ ,,, Γ') b ->
     equality_terms Σ Γ s s' ->
-    subslet Σ Γ s Δ ->
-    subslet Σ Γ s' Δ' ->
+    untyped_subslet Γ s Δ ->
+    untyped_subslet Γ s' Δ' ->
     Σ ;;; Γ ,,, subst_context s 0 Γ' ⊢ subst s #|Γ'| b ≤[le] subst s' #|Γ'| b.
   Proof.
     move=> cl cl' clb eqsub subs subs'.
@@ -3379,15 +3379,15 @@ Section CumulSubst.
   Lemma substitution_context_equality_subst_conv {Γ Γ' Γ'0 Γ'' Δ Δ' s s' le} :
     context_equality_rel le Σ (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->
     equality_terms Σ Γ s s' ->
-    subslet Σ Γ s Γ' ->
-    subslet Σ Γ s' Γ'0 ->
+    untyped_subslet Γ s Γ' ->
+    untyped_subslet Γ s' Γ'0 ->
     is_closed_context (Γ ,,, Γ'0) ->
     context_equality_rel le Σ (Γ ,,, subst_context s 0 Γ'') (subst_context s #|Γ''| Δ) (subst_context s' #|Γ''| Δ').
   Proof.
     intros [cl cum] eqs hs hs' cl'.
     split.
     { eapply is_closed_subst_context; tea; eauto with fvs.
-      apply (subslet_length hs). }
+      apply (untyped_subslet_length hs). }
     eapply All2_fold_fold_context_k.
     eapply All2_fold_impl_ind; tea. clear cum.
     move=> Δ0 Δ'0 d d'; cbn => /All2_fold_length len _ ad.

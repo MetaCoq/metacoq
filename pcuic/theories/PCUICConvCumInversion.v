@@ -234,14 +234,6 @@ Section fixed.
     induction 1; constructor; auto.
   Qed.
 
-  Lemma closed_red_equality {Γ t u} : 
-    Σ ;;; Γ ⊢ t ⇝ u ->
-    Σ ;;; Γ ⊢ t = u.
-  Proof.
-    intros red. eapply equality_red_r_inv. 2:exact red.
-    eapply equality_refl; fvs.
-  Qed.
-
   Lemma untyped_subslet_ass {Γ s Δ} :
     assumption_context Δ ->
     #|s| = context_assumptions Δ ->
@@ -392,7 +384,7 @@ Section fixed.
             eapply PCUICParallelReductionConfluence.on_ctx_free_vars_inst_case_context; auto.
             now erewrite -> on_free_vars_ctx_on_ctx_free_vars. }
       eapply (equality_equality_ctx (Γ := Γ ,,, inst_case_predicate_context p') (le':=false)) => //.
-      symmetry. eapply closed_red_equality.
+      symmetry. eapply red_equality.
       eapply into_closed_red; eauto. 1:fvs.
       len. now setoid_rewrite shiftnP_add in p1.
     - apply equality_alt_closed; eauto.
@@ -419,7 +411,7 @@ Section fixed.
         now rewrite e e0. }
       rewrite e e0; split => //.
       transitivity (bbody x); tea.
-      { eapply closed_red_equality. rewrite /inst_case_branch_context. split; auto.
+      { eapply red_equality. rewrite /inst_case_branch_context. split; auto.
         1:now eapply context_equality_closed_left in eqctx.
         move/andP: fv' => []. now len; rewrite shiftnP_add. }
       transitivity (bbody y); tea.
@@ -435,7 +427,7 @@ Section fixed.
         now eapply context_equality_closed_right in eqctx. }
       symmetry.
       eapply equality_equality_ctx; tea.
-      eapply closed_red_equality. rewrite /inst_case_branch_context. split; auto.
+      eapply red_equality. rewrite /inst_case_branch_context. split; auto.
       1:now eapply context_equality_closed_right in eqctx.
       move/andP: fv => []. len. now rewrite shiftnP_add.
   Qed.

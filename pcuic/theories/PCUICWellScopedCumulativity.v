@@ -380,6 +380,7 @@ Section RedConv.
     econstructor 3. 5:eapply IHr. all:eauto with fvs.
   Qed.
 
+  (* synonym of red_conv *)
   Lemma red_equality {le Γ t u} :
     Σ ;;; Γ ⊢ t ⇝ u -> Σ ;;; Γ ⊢ t ≤[le] u.
   Proof.

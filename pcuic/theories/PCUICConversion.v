@@ -2617,6 +2617,16 @@ Section ConvSubst.
       constructor; eauto.
   Qed.
 
+  Lemma substitution0_equality {le Γ na T t M N} :
+    Σ ;;; Γ |- t : T ->
+    Σ ;;; Γ ,, vass na T ⊢ M ≤[le] N ->
+    Σ ;;; Γ ⊢ M{0 := t} ≤[le] N{0 := t}.
+  Proof.
+    intros.
+    eapply (substitution_equality (Γ' := [vass na T]) (Γ'' := [])); cbn; tea.
+    now eapply subslet_ass_tip.
+  Qed.
+
   Derive Signature for untyped_subslet.
 
   Lemma equality_substs_red {Γ Δ s s'} : 

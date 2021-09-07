@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICClosed
      PCUICContextConversion PCUICConversion PCUICInversion PCUICUnivSubst
      PCUICArities PCUICValidity PCUICInductives PCUICInductiveInversion 
-     PCUICSR PCUICCumulProp PCUICWfUniverses.
+     PCUICSR PCUICCumulProp PCUICWfUniverses PCUICWellScopedCumulativity.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
@@ -69,7 +69,7 @@ Section Principality.
   Hint Resolve wf_ext_wf : core.
 
   Theorem principal_type {Γ u A} : Σ ;;; Γ |- u : A ->
-    ∑ C, (forall B, Σ ;;; Γ |- u : B -> Σ ;;; Γ |- C <= B × Σ ;;; Γ |- u : C).
+    ∑ C, (forall B, Σ ;;; Γ |- u : B -> Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C).
   Proof.
     intros hA.
     induction u in Γ, A, hA |- * using term_forall_list_ind.
@@ -77,8 +77,7 @@ Section Principality.
       destruct iA as [decl [? [e ?]]].
       eexists; int inversion_Rel.
       destruct hB as [decl' [? [e' ?]]].
-      rewrite e' in e. inversion e. subst. clear e.
-      repeat insum. repeat intimes.
+      rewrite e' in e. noconf e.
       all: try eassumption.
     - apply inversion_Var in hA. destruct hA.
     - apply inversion_Evar in hA. destruct hA.
@@ -92,27 +91,27 @@ Section Principality.
       specialize (IHu1 _ _ t) as [dom Hdom].
       specialize (IHu2 _ _ t0) as [codom Hcodom].
       destruct (Hdom _ t).
-      eapply equality_Sort_r_inv in c0 as [domu [red leq]].
+      eapply equality_Sort_r_inv in e0 as [domu [red leq]].
       destruct (Hcodom _ t0).
-      eapply equality_Sort_r_inv in c0 as [codomu [cored coleq]].
+      eapply equality_Sort_r_inv in e0 as [codomu [cored coleq]].
       exists (tSort (Universe.sort_of_product domu codomu)).
       int inversion_Prod.
       repeat outsum; repeat outtimes.
-      + eapply cumul_trans. 1: auto. 2:eapply c0.
+      + etransitivity. 1: auto. 2:eapply e0.
         destruct (Hdom _ t3) as [le' u1'].
         eapply equality_Sort_r_inv in le' as [u' [redu' leu']].
         destruct (Hcodom _ t4) as [le'' u2'].
         eapply equality_Sort_r_inv in le'' as [u'' [redu'' leu'']].
-        constructor. constructor.
+        constructor => //. fvs. constructor.
         apply leq_universe_product_mon; auto.
-        pose proof (red_confluence wfΣ red redu') as [v' [redl redr]].
+        pose proof (closed_red_confluence red redu') as [v' [redl redr]].
         eapply invert_red_sort in redl.
         eapply invert_red_sort in redr. subst. now noconf redr.
-        pose proof (red_confluence wfΣ cored redu'') as [v' [redl redr]].
+        pose proof (closed_red_confluence cored redu'') as [v' [redl redr]].
         eapply invert_red_sort in redl.
         eapply invert_red_sort in redr. subst. now noconf redr.
-      + eapply type_reduction; eauto.
-      + eapply type_reduction; eauto.
+      + eapply type_reduction; eauto. eapply red.
+      + eapply type_reduction; eauto. eapply cored.
 
     - apply inversion_Lambda in hA => //; eauto.
       repeat outsum. repeat outtimes.
@@ -124,9 +123,10 @@ Section Principality.
       int inversion_Lambda.
       repeat outsum. repeat outtimes.
       etransitivity; eauto.
-      apply invert_cumul_prod_l in c2 as [na' [A' [B' [[redA u1eq] ?]]]] => //; auto.
+      apply equality_Prod_l_inv in e2 as [na' [A' [B' [redA u1eq ?]]]] => //; auto.
       destruct (p0 _ t4).
-      eapply congr_cumul_prod => //; auto.
+      eapply equality_Prod => //; auto.
+      transitivity A' => //. now symmetry.
 
     - eapply inversion_LetIn in hA as (s1 & bty & Hu2 & Hu1 & Hu3 & Hcum); auto.
       destruct (IHu1 _ _ Hu1) as [? p].
@@ -139,37 +139,48 @@ Section Principality.
       int inversion_LetIn.
       destruct hB as (s1' & bty' & Hu2' & Hu1' & Hu3' & Hcum'); eauto.
       etransitivity; eauto.
-      eapply cum_LetIn; eauto.
+      eapply equality_LetIn; eauto using wt_equality_refl.
       now specialize (p'' _ Hu3') as [? ?].
 
-      - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //; auto.
+    - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //; auto.
       destruct (IHu2 _ _ tyarg).
       destruct (IHu1 _ _ tydom).
       destruct (p _ tyarg). destruct (p0 _ tydom).
-      apply invert_cumul_prod_r in c0 as [? [A' [B' [[[redA eqann] u1eq] ?]]]] => //; auto.
+      apply equality_Prod_r_inv in e0 as [? [A' [B' [redA eqann u1eq ?]]]] => //; auto.
       exists (subst [u2] 0 B').
       intros ? hB.
       eapply inversion_App in hB as [na' [dom' [codom' [tydom' [tyarg' tycodom']]]]] => //; auto.
       destruct (p0 _ tydom').
       destruct (p _ tyarg').
-      apply invert_cumul_prod_r in c1 as [? [A'' [B'' [[[redA' eqann'] u1eq'] ?]]]] => //; auto.
-      destruct (red_confluence wfΣ redA redA') as [nfprod [redl redr]].
-      eapply invert_red_prod in redl as [? [? [[? ?] ?]]] => //. subst.
-      eapply invert_red_prod in redr as [? [? [[? ?] ?]]] => //. noconf e.
+      apply equality_Prod_r_inv in e1 as [? [A'' [B'' [redA' eqann' u1eq' ?]]]] => //; auto.
+      destruct (closed_red_confluence redA redA') as [nfprod [redl redr]].
+      eapply invert_red_prod in redl as [? [? [? ? ?]]] => //. subst.
+      eapply invert_red_prod in redr as [? [? [? ? ?]]] => //. noconf e3.
       all:auto.
-      assert(Σ ;;; Γ |- A' = A'').
-      { apply conv_trans with x3 => //; auto.
-        - apply conv_sym; auto. }
-      assert(Σ ;;; Γ ,, vass x1 A' |- B' = B'').
-      { apply conv_trans with x4 => //. auto.
-        - now eapply red_conv.
-        - apply conv_sym; auto.
-          eapply conv_conv_ctx; eauto.
-          constructor; auto. 1: eapply conv_ctx_refl.
-          constructor. reflexivity. now eapply conv_sym. }
+      assert(Σ ;;; Γ ⊢ A' = A'').
+      { transitivity x3 => //; eauto using red_equality.
+        symmetry. now apply red_equality. }
+      assert(Σ ;;; Γ ,, vass x1 A' ⊢ B' = B'').
+      { transitivity x4 => //.
+        - now eapply red_equality.
+        - symmetry. eapply (equality_equality_ctx (le:=false)); tea.
+          2:eapply red_equality; tea.
+          constructor; auto. eapply context_equality_refl. fvs.
+          constructor. reflexivity. now symmetry. }
       split.
       etransitivity; eauto.
-      eapply substitution_cumul0 => //. auto.
+      eapply (substitution0_equality (na:=na)) => //. tea.
+      have convctx : Σ ⊢ Γ ,, vass na x ≤ Γ ,, vass na' dom'.
+      { constructor. apply context_equality_refl. fvs. constructor => //. transitivity x1 => //. }
+      eapply (type_equality (le:=true)); tea. admit.
+      transitivity dom' => //. transitivity A''. apply equality_eq_le. now symmetry.
+      apply equality_eq_le. now symmetry.
+
+      
+      
+      eapply validity in ty
+      transitivity B''. apply equality_eq_le.
+      constructor. constructor.
       transitivity x4; eauto. now eapply red_cumul.
       transitivity B''.
       eapply cumul_conv_ctx; eauto. eapply red_cumul_inv; eauto.

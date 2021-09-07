@@ -1,17 +1,20 @@
-From Coq Require Import ssreflect.
+From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.PCUIC Require Import PCUICContextConversion.
 From MetaCoq.PCUIC Require Import PCUICContextReduction.
 From MetaCoq.PCUIC Require Import PCUICConversion.
-From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import PCUICCumulProp.
 From MetaCoq.PCUIC Require Import PCUICEquality.
 From MetaCoq.PCUIC Require Import PCUICLiftSubst.
 From MetaCoq.PCUIC Require Import PCUICNormal.
 From MetaCoq.PCUIC Require Import PCUICReduction.
 From MetaCoq.PCUIC Require Import PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICConfluence PCUICSubstitution PCUICClosed PCUICWeakeningEnv PCUICAlpha.
+From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
+From MetaCoq.PCUIC Require Import PCUICOnFreeVars.
+
 From MetaCoq.Template Require Import config.
 From MetaCoq.Template Require Import utils.
 
@@ -127,7 +130,6 @@ Section fixed.
     | tConstruct _ _ _ => ∥eq_termp_napp leq Σ napp t t'∥
     | _ => conv_cum leq Σ Γ t t'
     end.
-  Require Import PCUICOnFreeVars ssrbool.
 
   Lemma conv_cum_mkApps_inv leq Γ hd args hd' args' :
     conv_cum leq Σ Γ (mkApps hd args) (mkApps hd' args') ->
@@ -178,7 +180,6 @@ Section fixed.
       Unshelve.
   Qed.
   
-  Require Import PCUICConfluence.
   (** Might be better suited with [red_context] hyps ensuring closedness directly *)
   Lemma red_ctx_rel_par_conv Γ Γ0 Γ0' Γ1 Γ1' :
     is_closed_context (Γ ,,, Γ0) ->
@@ -241,8 +242,6 @@ Section fixed.
     eapply equality_refl; fvs.
   Qed.
 
-  Require Import PCUICSubstitution.
-  
   Lemma untyped_subslet_ass {Γ s Δ} :
     assumption_context Δ ->
     #|s| = context_assumptions Δ ->
@@ -255,9 +254,7 @@ Section fixed.
     - intros h [=]. constructor. apply IHΔ => //.
       now inv h.
   Qed.
-
-  Require Import PCUICClosed PCUICWeakeningEnv PCUICAlpha.
-
+  
   Lemma shiftnP_up n m : n <= m -> forall i, shiftnP n xpred0 i -> shiftnP m xpred0 i.
   Proof.
     intros lt i; rewrite /shiftnP !orb_false_r.
@@ -318,7 +315,7 @@ Section fixed.
           now move/(closed_ctx_on_free_vars (shiftnP #|Γ| xpred0)). }
         rewrite -(declared_minductive_ind_npars decli) -wfp'.
         eapply on_free_vars_ctx_impl; tea.
-        intros i. rewrite closedP_shiftnP.
+        intros i. rewrite PCUICConfluence.closedP_shiftnP.
         eapply shiftnP_up. lia.
     * now eapply All2_rev.
     * apply (untyped_subslet_ass asspars). now len.
@@ -334,7 +331,7 @@ Section fixed.
     whnf RedFlags.default Σ Γ (tCase ci' p' discr' brs') ->
     ∥ [× ci = ci',
       equality_predicate Σ Γ p p',
-      Σ;;; Γ |- discr = discr' &
+      Σ;;; Γ ⊢ discr = discr' &
       equality_brs Σ Γ p brs brs']∥.
   Proof.
     intros conv decli wfp wfp' whl whr.
@@ -398,7 +395,9 @@ Section fixed.
       symmetry. eapply closed_red_equality.
       eapply into_closed_red; eauto. 1:fvs.
       len. now setoid_rewrite shiftnP_add in p1.
-    - apply conv_alt_red; eauto.
+    - apply equality_alt_closed; eauto.
+      exists discr'0, discr'1. split; eauto.
+      all:eapply into_closed_red; eauto.
     - rename a0 into brsa1.
       rename a2 into brsa2.
       rename a3 into brseq.
@@ -444,18 +443,26 @@ Section fixed.
   Lemma conv_cum_tFix_inv leq Γ mfix idx mfix' idx' :
     conv_cum leq Σ Γ (tFix mfix idx) (tFix mfix' idx') ->
     ∥idx = idx' ×
-     All2 (fun d d' => rarg d = rarg d' × eq_binder_annot d.(dname) d'.(dname) ×
-                       Σ;;; Γ |- dtype d = dtype d' ×
-                       Σ;;; Γ,,, fix_context mfix |- dbody d = dbody d')
+     All2 (fun d d' => 
+      [× rarg d = rarg d',
+         eq_binder_annot d.(dname) d'.(dname),
+         Σ;;; Γ ⊢ dtype d = dtype d' &
+         Σ;;; Γ,,, fix_context mfix ⊢ dbody d = dbody d'])
           mfix mfix'∥.
   Proof.
     intros conv.
-    apply conv_cum_alt in conv as [(?&?&(r1&r2)&eq)].
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])].
     assert (forall defs i, whnf RedFlags.default Σ Γ (tFix defs i)).
     { intros defs i.
       apply whnf_fixapp with (v := []).
       destruct unfold_fix as [(?&?)|]; [|easy].
       now rewrite nth_error_nil. }
+    have clΓ := clrel_ctx r1.
+    have cll := clrel_src r1.
+    have clr := clrel_src r2.
+    assert (clx := closed_red_open_right r1).
+    assert (cly := closed_red_open_right r2).
+    apply clrel_rel in r1. apply clrel_rel in r2.
     eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
@@ -463,40 +470,61 @@ Section fixed.
     depelim eq.
     constructor.
     split; [easy|].
-    clear -a a0 a1.
+    cbn in cll, clr, clx, cly.
+    have clmfixctx : is_closed_context (Γ ,,, fix_context mfix).
+    { rewrite on_free_vars_ctx_app clΓ /=. apply on_free_vars_fix_context; solve_all. }
+    have clmfixctx' : is_closed_context (Γ ,,, fix_context mfix').
+    { rewrite on_free_vars_ctx_app clΓ /=. apply on_free_vars_fix_context; solve_all. }
+    solve_all.
+    move: clmfixctx clmfixctx'.
+    clear -wfΣ a a0 a1 clΓ.
     cut (#|mfix| = #|mfix'|);
       [|now apply All2_length in a; apply All2_length in a0; apply All2_length in a1].
     revert a a0 a1.
-    generalize mfix at 1 3 4.
-    generalize mfix' at 1 3.
+    generalize mfix at 1 2 4 5 6.
+    generalize mfix' at 1 2 4 5.
     intros ctx_fix ctx_fix'.
     intros all1 all2 all len_eq.
-    induction all in mfix, mfix', mfix'0, mfix'1, all1, all2, all |- *;
+    induction all in mfix, mfix', all1, all2, all |- *;
       depelim all1; depelim all2; [constructor|].
     constructor; [|now auto].
-    destruct r as ((?&?)&?), p as (?&?&?&?), p0 as (?&?&?&?).
-    split; [congruence|]. split; auto; try congruence.
-    split; [now apply conv_alt_red; exists (dtype x), (dtype y)|].
-    apply conv_alt_red.
-    exists (dbody x), (dbody y).
-    split; [|easy].
-    split; [easy|].
-    eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
-    eapply PCUICRedTypeIrrelevance.fix_context_pres_let_bodies; eauto.
+    destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
+    split; auto; try congruence.
+    - eapply equality_alt_closed; exists (dtype x), (dtype y). split; eauto.
+      all:eapply into_closed_red; eauto. 
+      { now move/andP: i1. }
+      { now move/andP: i2. }
+    - eapply equality_alt_closed.
+      exists (dbody x), (dbody y).
+      split; [| |easy].
+      all:eapply into_closed_red; auto.
+      * move/andP: i1 => []. now len; rewrite shiftnP_add.
+      * eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
+        eapply PCUICRedTypeIrrelevance.fix_context_pres_let_bodies; eauto.
+      * move/andP: i2 => []. len. now rewrite len_eq shiftnP_add.
   Qed.
-  
+
   Lemma conv_cum_tCoFix_inv leq Γ mfix idx mfix' idx' :
     conv_cum leq Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx') ->
     ∥idx = idx' ×
-     All2 (fun d d' => rarg d = rarg d' × eq_binder_annot d.(dname) d'.(dname) ×
-                       Σ;;; Γ |- dtype d = dtype d' ×
-                       Σ;;; Γ,,, fix_context mfix |- dbody d = dbody d')
+    All2 (fun d d' => 
+      [× rarg d = rarg d',
+        eq_binder_annot d.(dname) d'.(dname),
+        Σ;;; Γ ⊢ dtype d = dtype d' &
+        Σ;;; Γ,,, fix_context mfix ⊢ dbody d = dbody d'])
           mfix mfix'∥.
   Proof.
     intros conv.
-    apply conv_cum_alt in conv as [(?&?&(r1&r2)&eq)].
-    assert (forall defs i, whnf RedFlags.default Σ Γ (tCoFix defs i))
-      by (intros; apply whnf_cofixapp with (v := [])).
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])].
+    assert (forall defs i, whnf RedFlags.default Σ Γ (tCoFix defs i)).
+    { intros defs i.
+      apply whnf_cofixapp with (v := []). }
+    have clΓ := clrel_ctx r1.
+    have cll := clrel_src r1.
+    have clr := clrel_src r2.
+    assert (clx := closed_red_open_right r1).
+    assert (cly := closed_red_open_right r2).
+    apply clrel_rel in r1. apply clrel_rel in r2.
     eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
@@ -504,43 +532,62 @@ Section fixed.
     depelim eq.
     constructor.
     split; [easy|].
-    clear -a a0 a1.
+    cbn in cll, clr, clx, cly.
+    have clmfixctx : is_closed_context (Γ ,,, fix_context mfix).
+    { rewrite on_free_vars_ctx_app clΓ /=. apply on_free_vars_fix_context; solve_all. }
+    have clmfixctx' : is_closed_context (Γ ,,, fix_context mfix').
+    { rewrite on_free_vars_ctx_app clΓ /=. apply on_free_vars_fix_context; solve_all. }
+    solve_all.
+    move: clmfixctx clmfixctx'.
+    clear -wfΣ a a0 a1 clΓ.
     cut (#|mfix| = #|mfix'|);
       [|now apply All2_length in a; apply All2_length in a0; apply All2_length in a1].
     revert a a0 a1.
-    generalize mfix at 1 3 4.
-    generalize mfix' at 1 3.
+    generalize mfix at 1 2 4 5 6.
+    generalize mfix' at 1 2 4 5.
     intros ctx_fix ctx_fix'.
     intros all1 all2 all len_eq.
-    induction all in mfix, mfix', mfix'0, mfix'1, all1, all2, all |- *;
+    induction all in mfix, mfix', all1, all2, all |- *;
       depelim all1; depelim all2; [constructor|].
     constructor; [|now auto].
-    destruct r as ((?&?)&?), p as (?&?&?&?), p0 as (?&?&?&?).
-    split; [congruence|]. split; [congruence|].
-    split; [now apply conv_alt_red; exists (dtype x), (dtype y)|].
-    apply conv_alt_red.
-    exists (dbody x), (dbody y).
-    split; [|easy].
-    split; [easy|].
-    eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
-    eapply PCUICRedTypeIrrelevance.fix_context_pres_let_bodies; eauto.
+    destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
+    split; auto; try congruence.
+    - eapply equality_alt_closed; exists (dtype x), (dtype y). split; eauto.
+      all:eapply into_closed_red; eauto. 
+      { now move/andP: i1. }
+      { now move/andP: i2. }
+    - eapply equality_alt_closed.
+      exists (dbody x), (dbody y).
+      split; [| |easy].
+      all:eapply into_closed_red; auto.
+      * move/andP: i1 => []. now len; rewrite shiftnP_add.
+      * eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
+        eapply PCUICRedTypeIrrelevance.fix_context_pres_let_bodies; eauto.
+      * move/andP: i2 => []. len. now rewrite len_eq shiftnP_add.
   Qed.
 
   Lemma conv_cum_tProj_inv leq Γ p c p' c' :
     conv_cum leq Σ Γ (tProj p c) (tProj p' c') ->
     whnf RedFlags.default Σ Γ (tProj p c) ->
     whnf RedFlags.default Σ Γ (tProj p' c') ->
-    ∥ p = p' × Σ;;; Γ |- c = c' ∥.
+    ∥ p = p' × Σ;;; Γ ⊢ c = c' ∥.
   Proof.
     intros conv whl whr.
-    apply conv_cum_alt in conv as [(?&?&(r1&r2)&?)].
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 ?])].
+    have clΓ := clrel_ctx r1.
+    have cll := clrel_src r1.
+    have clr := clrel_src r2.
+    eapply clrel_rel in r1. apply clrel_rel in r2.
     eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
-    depelim e.
+    depelim c0.
     constructor.
     split; [easy|].
-    apply conv_alt_red; eauto.
+    apply equality_alt_closed; eauto.
+    exists c'0, c'1; split; eauto. 
+    all:eapply into_closed_red; eauto.
   Qed.
+  
 End fixed.

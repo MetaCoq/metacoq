@@ -1339,8 +1339,8 @@ Proof.
     1:trivial.
     rewrite -(app_context_nil_l (_ ,,, _)) app_context_assoc in cum.
     eapply equality_terms_subst in cum.
-    3:{ eapply (subslet_inds (u:=u)); eauto. }
-    3:{ eapply (subslet_inds (u:=u)); eauto. }
+    3:{ eapply subslet_untyped_subslet, (subslet_inds (u:=u)); eauto. }
+    3:{ eapply subslet_untyped_subslet, (subslet_inds (u:=u)); eauto. }
     2:{ rewrite app_context_nil_l; eauto with fvs.
         move: H. rewrite on_free_vars_ctx_app => /andP[] //. }
     2:{ pose proof (inds_is_open_terms ind mdecl u).
@@ -2343,8 +2343,8 @@ Proof.
     pose proof (spine_subst_smash spu') as sspu'.
     eapply (substitution_context_equality_subst_conv (Γ := Γ) (Γ'' := []) (s := List.rev pars) (s' := List.rev pars')) in args.
     2:{ eapply All2_rev => //. }
-    2:{ eapply sspu. }
-    2:{ eapply sspu'. }
+    2:{ eapply subslet_untyped_subslet, sspu. }
+    2:{ eapply subslet_untyped_subslet, sspu'. }
     2:{ eapply is_closed_context_smash_end => //. }
     move: args.
     rewrite subst_context_nil /= - !smash_context_subst /= subst_context_nil; len.
@@ -2364,8 +2364,8 @@ Proof.
   { rewrite /pindctx /pindctx' /indctx /indctx'.
     rewrite !(smash_context_subst []).
     eapply (substitution_context_equality_subst_conv (Γ'' := [])); eauto.
-    3:eapply spu.
-    3:eapply spu'.
+    3:eapply subslet_untyped_subslet, spu.
+    3:eapply subslet_untyped_subslet, spu'.
     2:{ eapply spine_subst_conv; eauto.
         eapply (weaken_context_equality_rel (Γ' := [])).
         eapply spine_dom_wf in spu. eauto with fvs.
@@ -2377,7 +2377,6 @@ Proof.
     rewrite -(subst_instance_smash u _ []).
     rewrite -(subst_instance_smash u' _ []).
     eapply subst_instance_context_equality_rel => //.
-    eapply spu.
     rewrite -app_context_assoc.
     rewrite is_closed_context_weaken //. 
     eapply spine_dom_wf in spu. eauto with fvs.
@@ -2589,8 +2588,8 @@ Proof.
       pose proof (spine_subst_smash spu) as sspu.
       pose proof (spine_subst_smash spu') as sspu'.
       eapply (substitution_context_equality_subst_conv (Γ := Γ) (Γ'' := []) (s := List.rev pars) (s' := List.rev pars')) in args.
-      3:{ rewrite subst_instance_smash. apply sspu. }
-      3:{ apply sspu'. }
+      3:{ rewrite subst_instance_smash. eapply subslet_untyped_subslet, sspu. }
+      3:{ eapply subslet_untyped_subslet, sspu'. }
       2:{ eapply All2_rev => //. }
       2:{ eapply spine_codom_wf in sspu'. eauto with fvs. }
       move: args.
@@ -2744,8 +2743,8 @@ Proof.
       rewrite -ispars.
       rewrite -(subst_instance_length u (ind_params mdecl)).
       eapply (substitution_context_equality_subst_conv (Γ := Γ)).
-      3:{ eapply (weaken_subslet (Γ' := [])); eauto. eapply subslet_inds; eauto. }
-      3:{ eapply PCUICArities.weaken_subslet; eauto; eapply subslet_inds; eauto. }
+      3:{ eapply subslet_untyped_subslet, (weaken_subslet (Γ' := [])); eauto. eapply subslet_inds; eauto. }
+      3:{ eapply subslet_untyped_subslet, PCUICArities.weaken_subslet; eauto; eapply subslet_inds; eauto. }
       3:{ simpl.
         rewrite !subst_instance_app_ctx in wfargs.
         apply is_closed_context_weaken => //.
@@ -2756,9 +2755,6 @@ Proof.
       2:now eapply conv_inds.
       rewrite - !(subst_instance_smash _ _ []).
       eapply subst_instance_context_equality_rel => //.
-      rewrite -app_context_assoc. eapply weaken_wf_local; eauto.
-      rewrite !subst_instance_app_ctx in wfargs.
-      now eapply All_local_env_app_inv in wfargs as [wfargs _].
       rewrite - !app_context_assoc. eapply is_closed_context_weaken; auto.
       rewrite !app_context_assoc. apply is_closed_context_smash_end.
       rewrite -(is_closed_context_subst_instance _ (cstr_args cdecl) u).
@@ -2814,7 +2810,6 @@ Proof.
       rewrite -(instantiate_inds declc cu').
       rewrite - !subst_instance_subst_context.
       eapply subst_instance_context_equality_rel => //.
-      eapply (on_minductive_wf_params declc cu).
       epose proof (on_constructor_inst_wf_args declc _ cu).
       rewrite /ind_subst -(instantiate_inds declc cu) in X0.
       eapply wf_local_closed_context in X0; tea.

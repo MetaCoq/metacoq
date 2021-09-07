@@ -2193,7 +2193,7 @@ Proof.
         rewrite -app_context_assoc; eapply weaken_wf_local; auto.
         rewrite subst_instance_subst_context.
         now rewrite subst_instance_inds (subst_instance_id_mdecl _ _ _ H1).
-        apply sppars. apply sppars'.
+        eapply subslet_untyped_subslet, sppars. eapply subslet_untyped_subslet, sppars'.
         eapply wf_local_closed_context.
         eapply wf_local_smash_end.
         apply weaken_wf_local => //. eapply on_minductive_wf_params; tea. eapply isdecl. }
@@ -2224,7 +2224,8 @@ Proof.
           rewrite -/(subst_context _ _ _).
           relativize #|cstr_args cdecl|.
           eapply equality_terms_subst.
-          2:eapply sppars'. 2:eapply sppars.
+          2:eapply subslet_untyped_subslet, sppars'.
+          2:eapply subslet_untyped_subslet, sppars.
           { eapply wf_local_closed_context, wf_local_smash_end, weaken_wf_local => //.
             eapply (on_minductive_wf_params isdecl) => //. }
           { apply All2_rev; symmetry. now apply red_terms_equality_terms. }

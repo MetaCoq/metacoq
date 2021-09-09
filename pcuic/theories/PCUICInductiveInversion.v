@@ -1287,12 +1287,13 @@ Proof.
   constructor; auto. exact p0.
 Qed. 
 
-Lemma inds_is_open_terms ind mdecl u :
-  forallb (is_open_term (@nil context_decl)) (inds (inductive_mind ind) u (ind_bodies mdecl)).
+Lemma inds_is_open_terms (Γ : context) ind mdecl u :
+  forallb (is_open_term Γ) (inds (inductive_mind ind) u (ind_bodies mdecl)).
 Proof.
-  red. rewrite -(@closed_inds ind mdecl u).
-  eapply forallb_ext. intros x.
-  rewrite -is_open_term_closed //.
+  move: (@closed_inds ind mdecl u).
+  eapply forallb_impl. intros x _.
+  rewrite -is_open_term_closed // => cl.
+  eapply closed_upwards; tea; auto. len.
 Qed.
 
 Lemma inds_nth_error ind u l n t :
@@ -1343,7 +1344,7 @@ Proof.
     3:{ eapply subslet_untyped_subslet, (subslet_inds (u:=u)); eauto. }
     2:{ rewrite app_context_nil_l; eauto with fvs.
         move: H. rewrite on_free_vars_ctx_app => /andP[] //. }
-    2:{ pose proof (inds_is_open_terms ind mdecl u).
+    2:{ pose proof (inds_is_open_terms [] ind mdecl u).
         solve_all. eapply All_All2; tea.
         cbn; intros. eapply equality_refl; eauto. }
     rewrite app_context_nil_l // in cum. len in cum.

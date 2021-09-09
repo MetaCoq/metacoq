@@ -1530,6 +1530,23 @@ Proof.
   now eapply forallb_All in cl.
 Qed.
 
+
+Lemma declared_minductive_closed_arities {cf:checker_flags}
+  {Σ ind mdecl} {wfΣ : wf Σ} :
+  declared_minductive Σ ind mdecl ->
+  closed_ctx (arities_context (ind_bodies mdecl)).
+Proof.
+  intros h.
+  eapply declared_minductive_closed in h.
+  move/andP: h => [] _ clbs.
+  induction (ind_bodies mdecl) => //.
+  rewrite /arities_context /= rev_map_spec /=.
+  move: clbs; simpl. move=> /andP[] cla clbs.
+  rewrite closedn_ctx_app /=. apply/andP; split; auto.
+  rewrite /test_decl /=. now move/andP: cla => [] /andP[] /andP[].
+  eapply closedn_ctx_upwards. rewrite -rev_map_spec. eapply IHl => //. lia.
+Qed.
+
 Lemma declared_constructor_closed_gen_type {cf:checker_flags}
   {Σ mdecl idecl c cdecl} {wfΣ : wf Σ} :
   declared_constructor Σ c mdecl idecl cdecl ->

@@ -920,60 +920,6 @@ Qed.
 
 Hint Resolve conv_ctx_prop_refl : core.
 
-Lemma closed_red_letin {Σ Γ na d0 d1 t0 t1 b0 b1} :
-  Σ ;;; Γ ⊢ d0 ⇝ d1 -> 
-  Σ ;;; Γ ⊢ t0 ⇝ t1 -> 
-  Σ ;;; Γ ,, vdef na d1 t1 ⊢ b0 ⇝ b1 ->
-  Σ ;;; Γ ⊢ tLetIn na d0 t0 b0 ⇝ tLetIn na d1 t1 b1.
-Proof.
-  intros.
-  eapply into_closed_red; fvs.
-  eapply (red_letin _ _ _ _ _ _ _ X X0 X1).
-Qed.
-
-Lemma on_free_vars_ctx_snoc_ass_inv P Γ na t :
-  on_free_vars_ctx P (Γ ,, vass na t) ->
-  on_free_vars_ctx P Γ /\ on_free_vars (shiftnP #|Γ| P) t.
-Proof.
-  rewrite on_free_vars_ctx_snoc => /andP[]; auto.
-Qed.
-
-Lemma on_free_vars_ctx_snoc_def_inv P Γ na b t :
-  on_free_vars_ctx P (Γ ,, vdef na b t) ->
-  [/\ on_free_vars_ctx P Γ,
-      on_free_vars (shiftnP #|Γ| P) b &
-      on_free_vars (shiftnP #|Γ| P) t].
-Proof.
-  rewrite on_free_vars_ctx_snoc => /andP[] onΓ /andP[] /=; split; auto.
-Qed.
-
-Lemma closed_red_letin_body {Σ Γ na d t b0 b1} :
-  Σ ;;; Γ ,, vdef na d t ⊢ b0 ⇝ b1 ->
-  Σ ;;; Γ ⊢ tLetIn na d t b0 ⇝ tLetIn na d t b1.
-Proof.
-  intros.
-  eapply closed_red_letin => //;
-  apply clrel_ctx, on_free_vars_ctx_snoc_def_inv in X as []; now apply closed_red_refl.
-Qed.
-
-Lemma closed_red_prod {Σ Γ na A B A' B'} :
-  Σ ;;; Γ ⊢ A ⇝ A' ->
-  Σ ;;; Γ ,, vass na A ⊢ B ⇝ B' ->
-  Σ ;;; Γ ⊢ tProd na A B ⇝ tProd na A' B'.
-Proof.
-  intros h1 h2.
-  eapply into_closed_red; fvs.
-  eapply red_prod; auto. apply h1. apply h2.
-Qed.
-
-Lemma closed_red_prod_codom {Σ Γ na A B B'} :
-  Σ ;;; Γ ,, vass na A ⊢ B ⇝ B' ->
-  Σ ;;; Γ ⊢ tProd na A B ⇝ tProd na A B'.
-Proof.
-  intros; apply closed_red_prod => //.
-  apply clrel_ctx, on_free_vars_ctx_snoc_ass_inv in X as []. now apply closed_red_refl.
-Qed.
-
 Lemma cumul_prop_tProd {Σ : global_env_ext} {Γ na t ty na' t' ty'} {wfΣ : wf_ext Σ} :
   eq_binder_annot na na' ->
   eq_term Σ.1 Σ t t' ->

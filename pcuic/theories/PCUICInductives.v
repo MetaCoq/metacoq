@@ -576,8 +576,7 @@ Lemma isType_it_mkProd_or_LetIn_subst {cf:checker_flags} {Σ : global_env_ext} {
   isType Σ Γ (subst0 inst T).
 Proof.
   intros isty sp.
-  eapply isType_subst. 2:exact sp.
-  now eapply isType_it_mkProd_or_LetIn_wf_local in isty.
+  eapply isType_subst. exact sp.
   now eapply isType_it_mkProd_or_LetIn_inv in isty.
 Qed.
 

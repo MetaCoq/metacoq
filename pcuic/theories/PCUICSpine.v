@@ -2310,8 +2310,7 @@ Section WfEnv.
           eapply equality_Prod_Prod_inv in e as [conv cum]; auto. simpl in codom'.
           assert (Σ ;;; Γ |- hd : ty).
           { eapply (type_equality (le:=false)); eauto. now symmetry. }
-          unshelve eapply (isType_subst (Δ:=[vass na ty]) _ [hd]) in codom'.
-          constructor; auto; pcuic.
+          unshelve eapply (isType_subst (Δ:=[vass na ty]) [hd]) in codom'.
           2:{ now eapply subslet_ass_tip. }
           specialize (X (subst_context [hd] 0 Γ0) ltac:(autorewrite with len; lia)).
           eapply substitution_equality_vass in e; tea.
@@ -2583,8 +2582,8 @@ Section WfEnv.
       2:{ elimtype False; inv ass'. }
       specialize (IHa wf wf' subsl).
       constructor; auto.
-      eapply type_equality; eauto.
-      eapply isType_subst; eauto.
+      eapply type_equality; eauto. depelim p.
+      eapply isType_subst. exact IHa. eauto.
       depelim p.
       eapply (PCUICConversion.substitution_equality (s:=s) (Γ' := Γ) (Γ'' := [])); eauto.
   Qed.

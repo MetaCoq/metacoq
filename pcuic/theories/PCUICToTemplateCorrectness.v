@@ -86,13 +86,11 @@ Proof.
   - f_equal; auto. destruct X as [? [? ?]].
     rewrite /T.map_predicate /id /PCUICAst.map_predicate /= /trans_predicate /=; f_equal;
       autorewrite with map; solve_all.
-    now rewrite forget_types_map_context mapi_context_fold forget_types_fold_context_k.
-    rewrite e. now rewrite forget_types_length map_context_length.
+    rewrite forget_types_map_context e. now rewrite forget_types_length.
     red in X0; solve_all.
     autorewrite with map. solve_all.
     rewrite /trans_branch /T.map_branch; cbn; f_equal.
-    autorewrite with map; solve_all. simpl.
-    now rewrite mapi_cst_map.
+    autorewrite with map; solve_all.
     rewrite b. now rewrite forget_types_length map_context_length. 
   - f_equal; auto; red in X; solve_list.
   - f_equal; auto; red in X; solve_list.
@@ -297,11 +295,9 @@ Proof.
     destruct X as [? [? ?]].
     f_equal; solve_all.
     * autorewrite with map. solve_all.
-    * now rewrite !forget_types_map_context mapi_context_fold forget_types_fold_context_k.
     * rewrite e. now rewrite map_length map_context_length.
     * red in X0; rewrite /trans_branch; autorewrite with map; solve_all.
       rewrite /T.map_branch /=. f_equal; auto.
-      now rewrite !forget_types_map_context mapi_context_fold forget_types_fold_context_k.
       rewrite b. now rewrite forget_types_length map_context_length.
   - f_equal.
     rewrite map_length.
@@ -358,10 +354,8 @@ Proof.
     + rewrite /trans_predicate /= /id /T.map_predicate /=.
       f_equal; solve_all.
       * autorewrite with map. solve_all.
-      * now rewrite !forget_types_map_context.
     + rewrite !map_map_compose /trans_branch; solve_all.
       rewrite /T.map_branch /=. f_equal; auto.
-      now rewrite !forget_types_map_context.
   - f_equal.
     unfold tFixProp in X.
     induction X;trivial.
@@ -755,6 +749,8 @@ Qed.
 Coercion isType_wt : isType >-> wt.
 
 From MetaCoq.PCUIC Require Import PCUICInversion PCUICInductiveInversion.
+From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
+
 Section wtsub.
   Context {cf} {Σ : PCUICEnvironment.global_env_ext} {wfΣ : PCUICTyping.wf Σ}.
   Import PCUICAst.
@@ -763,14 +759,17 @@ Section wtsub.
     match t with
     | tLambda na A B => wt Γ A × wt (Γ ,, vass na A) B
     | tProd na A B => wt Γ A × wt (Γ ,, vass na A) B
-    | tLetIn na b ty b' => wt Γ b × wt Γ ty × wt (Γ ,, vdef na b ty) b'
+    | tLetIn na b ty b' => [× wt Γ b, wt Γ ty & wt (Γ ,, vdef na b ty) b']
     | tApp f a => wt Γ f × wt Γ a
     | tCase ci p c brs => 
       All (wt Γ) p.(pparams) ×
-      wf_local_rel Σ Γ p.(pcontext) ×
-      wt (Γ ,,, p.(pcontext)) p.(preturn) ×
+      ∑ mdecl idecl, 
+      declared_inductive Σ ci mdecl idecl ×
+      wf_local_rel Σ (Γ ,,, smash_context [] (ind_params mdecl)@[p.(puinst)]) p.(pcontext) ×
+      wt (Γ ,,, PCUICCases.case_predicate_context ci mdecl idecl p) p.(preturn) ×
       wt Γ c ×
-      All (fun br => wf_local_rel Σ Γ br.(bcontext) × wt (Γ ,,, br.(bcontext)) br.(bbody)) brs
+      All2i (fun i cdecl br => wf_local_rel Σ (Γ ,,, smash_context [] (ind_params mdecl)@[p.(puinst)]) br.(bcontext) × 
+        wt (Γ ,,, PCUICCases.case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl) br.(bbody)) 0 idecl.(ind_ctors) brs
     | tProj p c => wt Γ c
     | tFix mfix idx | tCoFix mfix idx => 
       All (fun d => wt Γ d.(dtype) × wt (Γ ,,, fix_context mfix) d.(dbody)) mfix
@@ -799,17 +798,15 @@ Section wtsub.
       repeat split; eexists; eauto.
     - eapply inversion_App in h as (?&?&?&?&?&?); tea.
       split; eexists; eauto.
-    - eapply inversion_Case in h as (?&?&?&?&[]&?); tea.
-      intuition auto. 5:solve_all.
-      4:eexists; eauto.
-      eapply PCUICValidity.validity in scrut_ty.
-      eapply PCUICInductiveInversion.isType_mkApps_Ind_smash in scrut_ty as []; tea.
+    - eapply inversion_Case in h as (mdecl&idecl&decli&indices&[]&?); tea.
+      assert (tty := PCUICValidity.validity scrut_ty).
+      eapply PCUICInductiveInversion.isType_mkApps_Ind_smash in tty as []; tea.
+      2:eapply (wf_predicate_length_pars wf_pred).
+      split.
       eapply spine_subst_wt in s. now eapply All_rev_inv in s.
-      eapply (wf_predicate_length_pars wf_pred).
-      now eapply wf_local_app_inv.
-      eexists; tea.
-      now eapply wf_local_app_inv.
-      eexists; tea.
+      exists mdecl, idecl. intuition auto. todo "cases".
+      eexists; tea. eexists; tea.
+      solve_all. todo "cases". eexists; tea.
     - eapply inversion_Proj in h as (?&?&?&?&?&?&?&?&?); tea.
       eexists; eauto.
     - eapply inversion_Fix in h as (?&?&?&?&?&?&?); tea.
@@ -842,6 +839,8 @@ Proof.
   intros r. 
 Admitted.
 
+Require Import PCUICCases.
+
 Lemma trans_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) {wfΣ : PCUICTyping.wf Σ} Γ T U :
   red1 Σ Γ T U ->
   wt Σ Γ T ->
@@ -865,13 +864,13 @@ Proof.
 
   - destruct wt as [s Hs].
     eapply inversion_Case in Hs as [mdecl [idecl [decli [indices [[] ?]]]]].
-    epose proof (PCUICValidity.inversion_mkApps _ scrut_ty) as [? [hc hsp]]; tea.
+    epose proof (PCUICValidity.inversion_mkApps scrut_ty) as [? [hc hsp]]; tea.
     eapply inversion_Construct in hc as (mdecl'&idecl'&cdecl&wfΓ&declc&cu&tyc); tea.
     destruct (PCUICWeakeningEnv.declared_inductive_inj decli (proj1 declc)) as [-> ->].
     etransitivity.
     apply red1_conv.
     rewrite trans_mkApps /=.
-    eapply TT.red_iota; tea.
+    eapply TT.red_iota; tea; eauto. all:auto.
     * rewrite !nth_error_map H; reflexivity.
     * eapply trans_declared_constructor; tea.
     * rewrite -map_skipn map_length H0.
@@ -879,20 +878,23 @@ Proof.
       eapply All2_nth_error in wf_brs; tea.
       2:eapply declc.
       eapply All2i_nth_error_r in brs_ty; tea.
-      destruct brs_ty as [cdecl' [Hcdecl [[wf wf']]]].
+      destruct brs_ty as [cdecl' [Hcdecl [eq [wf wf']]]].
       rewrite (proj2 declc) in Hcdecl. noconf Hcdecl.
-      destruct wf'.
+      todo "cases".
+      (*destruct wf'. rewrite /PCUICAst.map_predicate /trans_predicate /=.
+      rewrite /Ast.case_branch_context /Ast.case_branch_context_gen /=.
+      rewrite context_assumptions_subst_context context_assumptions_subst_instance.
+      rewrite context_assumptions_map.
+
       eapply conv_context_rel_app in a0.
       eapply conv_context_rel_context_assumptions in a0. rewrite a0.
       rewrite case_branch_type_fst.
       rewrite case_branch_context_assumptions //.
-      rewrite /case_branch_context /case_branch_context_gen.
-      rewrite context_assumptions_subst_context context_assumptions_subst_instance.
-      now rewrite context_assumptions_map.
+      rewrite /case_branch_context /case_branch_context_gen.*)
+      
     * rewrite /iota_red trans_subst trans_expand_lets /TT.iota_red map_rev map_skipn.
       rewrite /trans_branch /=.
-      
-    admit.
+      admit.
     (*eapply Typing.red_iota.
     erewrite trans_iota_red; eauto. repeat constructor. *)
 
@@ -900,8 +902,8 @@ Proof.
     unfold is_constructor in H0.
     destruct nth_error eqn:hnth.
     pose proof (nth_error_Some_length hnth).
-    destruct args. simpl. elimtype False; depelim H1.
-    cbn -[mkApps].
+    destruct args. simpl. elimtype False; cbn in H1. lia.
+    cbn -[mkApps]. constructor. left.
     eapply TT.red_fix. 
     apply trans_unfold_fix; eauto.
     eapply (trans_is_constructor (t0 :: args)).
@@ -911,26 +913,34 @@ Proof.
   - rewrite trans_mkApps.
     rewrite !trans_mkApps; eauto with wf.
     apply trans_unfold_cofix in H; eauto with wf.
+    constructor. left.
     eapply TT.red_cofix_case; eauto.
 
   - rewrite !trans_mkApps.
     apply trans_unfold_cofix in H; eauto with wf.
-    eapply TT.red_cofix_proj; eauto.
+    constructor; left; eapply TT.red_cofix_proj; eauto.
     
   - rewrite trans_subst_instance. econstructor.
+    left. econstructor.
     apply (trans_declared_constant _ c decl H).
     destruct decl. now simpl in *; subst cst_body0.
 
   - rewrite trans_mkApps; eauto with wf.
-    simpl. constructor. now rewrite nth_error_map H.
+    simpl. constructor; left. constructor; now rewrite nth_error_map H.
 
+  - todo "case".
+  - todo "case".
+  - todo "case".
+  - todo "case".
   - todo "case".
   - todo "case".
   - todo "case".
   - todo "case".
   - todo "case".
   
-  - eapply (red1_mkApps_r _ _ _ [_] [_]); auto with wf.
+  - todo "move from red to conv".
+  (*
+  - constructor; left; constructor; auto. eapply (red1_mkApps_r _ _ _ [_] [_]); auto with wf.
 
   - constructor.
     eapply OnOne2_All_mix_left in X; tea.
@@ -958,7 +968,7 @@ Proof.
     red. destruct x, y; simpl in *. noconf b0.
     intuition auto.
     rewrite /trans_local map_app in X.
-    now rewrite -trans_fix_context.
+    now rewrite -trans_fix_context.*)    
 Admitted.
 
 Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
@@ -1049,22 +1059,23 @@ Section wtcumul.
   Qed.
 End wtcumul.
 
-Lemma trans_cumul {cf} Σ Γ T U :
+Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
   wt_cumul Σ Γ T U ->
   TT.cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   induction 1. constructor; auto.
-  eapply trans_leq_term in l.
+  eapply trans_leq_term in l. right.
   now rewrite -trans_global_ext_constraints.
   destruct w as [r ht hv].
-  apply trans_red1 in r; auto. econstructor 2; eauto.
+  apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
+(*  eapply ht. econstructor 2; eauto.
   destruct ht as [s Hs]. now exists (PCUICAst.tSort s).
   econstructor 3.
   apply IHX; auto.
   destruct w as [r hu hv]. 
   apply trans_red1 in r; auto.
-  destruct hu as [s Hs]; now exists (PCUICAst.tSort s).
-Qed.
+  destruct hu as [s Hs]; now exists (PCUICAst.tSort s).*)
+Admitted.
 
 (* Todo case *)
 (*Lemma trans_build_case_predicate_type ind mdecl idecl npar args u ps pty:
@@ -1553,31 +1564,35 @@ Section Typing_Spine_size.
 End Typing_Spine_size.
 
 (* We can weaken a spine by cumulativity, using the type_spine_nil  *)
-Lemma typing_spine_weaken_concl {cf:checker_flags} {Σ Γ T args S S'} : 
-  wf Σ.1 ->
+Lemma typing_spine_weaken_concl {cf:checker_flags} {Σ Γ T args S S'} {wfΣ : wf Σ.1} :
   typing_spine Σ Γ T args S ->
-  Σ ;;; Γ |- S <= S' ->
+  isType Σ Γ T ->
+  Σ ;;; Γ ⊢ S ≤ S' ->
   isType Σ Γ S' ->
   typing_spine Σ Γ T args S'.
 Proof.
-  intros wfΣ sp.
-  induction sp in S' => cum. constructor; auto. constructor; auto.
-  now transitivity ty'.
-  intros isType. econstructor. eauto. eauto. eauto.
-  eauto.
+  intros sp.
+  induction sp in S' => tyT cum.
+  * constructor; auto. now eapply equality_forget in cum.
+  * constructor; auto. eapply (into_equality (le:=true)) in c; fvs.
+    eapply (equality_forget (le:=true)). now transitivity ty'.
+  * intros isType. econstructor. eauto. eauto. eauto.
+    apply IHsp; auto. eapply PCUICArities.isType_apply; tea.
 Defined.
 
 (* The size includes the new [isType] hypothesis  *)
 Lemma typing_spine_weaken_concl_size {cf:checker_flags} {Σ Γ T args S S'} 
   (wf : wf Σ.1) 
   (sp  :typing_spine Σ Γ T args S)
-  (Hs : Σ ;;; Γ |- S <= S')
+  (tyT : isType Σ Γ T)
+  (Hs : Σ ;;; Γ ⊢ S ≤ S')
   (ist : isType Σ Γ S') :
-  typing_spine_size (typing_spine_weaken_concl wf sp Hs ist) <= 
+  typing_spine_size (typing_spine_weaken_concl sp tyT Hs ist) <= 
   max (typing_spine_size sp) (typing_size ist.π2).
 Proof.
   induction sp; simpl; auto. lia.
-  rewrite - !Nat.max_assoc. specialize (IHsp Hs). lia.
+  rewrite - !Nat.max_assoc. 
+  specialize (IHsp (PCUICArities.isType_apply i t) Hs). lia.
 Qed.
 
 Ltac sig := unshelve eexists.
@@ -1679,8 +1694,14 @@ Proof.
     destruct IHd1 as [fty [d' [? ?]]].
     exists fty, d'. split. lia.
     destruct s0 as [sp Hsp].
-    unshelve eexists. eapply typing_spine_weaken_concl; eauto. now exists s.
-    epose proof (typing_spine_weaken_concl_size wfΣ sp c (s; d2)). simpl in H0. lia.
+    unshelve eexists. eapply typing_spine_weaken_concl; eauto. exact (PCUICValidity.validity d').
+    exact (into_equality (le:=true) c (wf_local_closed_context (typing_wf_local d'))
+      (PCUICSpine.type_is_open_term d1) (PCUICSpine.subject_is_open_term d2)).
+    exact (s; d2).
+    epose proof (typing_spine_weaken_concl_size wfΣ sp (PCUICValidity.validity d')
+      (into_equality (le:=true) c (wf_local_closed_context (typing_wf_local d'))
+         (PCUICSpine.type_is_open_term d1) (PCUICSpine.subject_is_open_term d2)) (s; d2)).
+    simpl in H0. lia.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICValidity PCUICArities.
@@ -1692,7 +1713,7 @@ From MetaCoq.PCUIC Require Import PCUICValidity PCUICArities.
   We have two cases to consider at the "end" of the spine: either we have the same translation of the 
   PCUIC conclusion type, or there is exactly one cumulativity step to get to this type. *)
 Lemma make_typing_spine {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ fty l T} 
-  (sp : typing_spine Σ Γ fty l T) n 
+  (sp : PCUICToTemplateCorrectness.typing_spine Σ Γ fty l T) n 
   (IH : forall t' T' (Ht' : Σ ;;; Γ |- t' : T'), 
       typing_size Ht' <= n -> 
       TT.typing (trans_global Σ) (trans_local Γ) (trans t') (trans T')) :

@@ -1,13 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICTyping PCUICSubstitution PCUICEquality
+     PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICSubstitution PCUICEquality
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICClosed
      PCUICContextConversion PCUICConversion PCUICInversion PCUICUnivSubst
      PCUICArities PCUICValidity PCUICInductives PCUICInductiveInversion 
-     PCUICSR PCUICCumulProp PCUICWfUniverses PCUICWellScopedCumulativity.
+     PCUICSR PCUICCumulProp PCUICWfUniverses 
+     PCUICOnFreeVars PCUICWellScopedCumulativity.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
@@ -67,9 +68,7 @@ Section Principality.
 
   Ltac int inv := intros B hB; eapply inv in hB; auto; split; [|econstructor; eauto].
   Hint Resolve wf_ext_wf : core.
-
-  Require Import PCUICOnFreeVars PCUICWeakeningEnv.
-
+  
   Theorem principal_type {Γ u A} : Σ ;;; Γ |- u : A ->
     ∑ C, (forall B, Σ ;;; Γ |- u : B -> Σ ;;; Γ ⊢ C ≤ B × Σ ;;; Γ |- u : C).
   Proof.
@@ -434,8 +433,6 @@ Proof.
 Qed.
 
 Hint Resolve PCUICSpine.subject_is_open_term PCUICSpine.type_is_open_term : fvs.
-
-Require Import ssrbool.
 
 Lemma eq_context_upto_inst_case_context {cf : checker_flags} {Σ : global_env_ext} pars pars' puinst puinst' ctx :
   All2 (eq_term_upto_univ [] (eq_universe Σ) (eq_universe Σ)) pars pars' ->

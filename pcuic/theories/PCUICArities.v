@@ -212,12 +212,12 @@ Section WfEnv.
       eexists. econstructor; eassumption.
   Defined.
 
-  Lemma isType_subst {Γ Δ} (HΓ : wf_local Σ (Γ ,,, Δ)) {A} s :
+  Lemma isType_subst {Γ Δ A} s :
     subslet Σ Γ s Δ ->
     isType Σ (Γ ,,, Δ) A -> 
     isType Σ Γ (subst0 s A).
   Proof.
-    intros sub [u Hu].
+    intros sub [u Hu]. have wf := typing_wf_local Hu.
     exists u. now eapply (substitution (Δ := []) (T := tSort _)).
   Qed.
 

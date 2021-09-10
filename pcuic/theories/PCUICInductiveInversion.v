@@ -563,14 +563,10 @@ Proof.
       (it_mkProd_or_LetIn (subst_context [hd] 0 Γ')
           (mkApps (tInd ind i) (map (subst [hd] #|Γ'|) args))). {
         move: wat; rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= => wat.
-        eapply isType_tProd in wat; auto. destruct wat as [isty wat].
-        epose proof (isType_subst (Γ:=Γ) (Δ:=[vass na ty])).
-        forward X0. constructor; auto.
-        specialize (X0 (it_mkProd_or_LetIn Γ' (mkApps (tInd ind i) args)) [hd]).
-        forward X0. constructor. constructor. rewrite subst_empty; auto.
-        eapply isType_tProd in i0; auto. destruct i0. 
-        eapply type_equality; eauto. now eapply equality_eq_le; symmetry.
-        now rewrite /subst1 subst_it_mkProd_or_LetIn subst_mkApps Nat.add_0_r in X0. }
+        eapply isType_tProd in wat as [isty wat].
+        eapply (isType_subst (Δ := [_]) [hd]) in wat.
+        now rewrite subst_it_mkProd_or_LetIn Nat.add_0_r subst_mkApps in wat.
+        eapply subslet_ass_tip. eapply type_equality; tea. now symmetry. }
       rewrite subst_mkApps Nat.add_0_r in cumulB. simpl in *. 
       rewrite context_assumptions_subst in IH.
       eapply typing_spine_strengthen in Hsp.

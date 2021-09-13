@@ -22,6 +22,8 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
+
 Definition conv_cum {cf:checker_flags} leq Σ Γ u v :=
   ∥ Σ ;;; Γ ⊢ u ≤[conv_pb_dir leq] v ∥.
 
@@ -34,10 +36,136 @@ Proof.
   apply eq_term_upto_univ_leq; cbn; auto.
 Qed.
 
-Lemma conv_cum_alt {cf:checker_flags} {leq} {Σ : global_env_ext} {Γ t t'} {wfΣ : wf Σ} :
+(** Might be better suited with [red_context] hyps ensuring closedness directly *)
+Lemma red_ctx_rel_par_conv {cf Σ Γ Γ0 Γ0' Γ1 Γ1'} {wfΣ : wf Σ} :
+  is_closed_context (Γ ,,, Γ0) ->
+  is_closed_context (Γ ,,, Γ1) ->
+  red_ctx_rel Σ Γ Γ0 Γ0' ->
+  red_ctx_rel Σ Γ Γ1 Γ1' ->
+  eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ0' Γ1' ->
+  context_equality_rel false Σ Γ Γ0 Γ1.
+Proof.
+  intros clΓ0 clΓ1 r0 r1 eq.
+  apply red_ctx_rel_red_context_rel, red_context_app_same_left in r0; auto.
+  2:{ now eapply PCUICConfluence.on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
+  apply red_ctx_rel_red_context_rel, red_context_app_same_left in r1; auto.
+  2:{ now eapply PCUICConfluence.on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
+  eapply red_ctx_red_context in r0; eapply red_ctx_red_context in r1.
+  eapply PCUICSR.into_closed_red_ctx in r0 => //.
+  eapply PCUICSR.into_closed_red_ctx in r1 => //.
+  eapply (red_ctx_context_equality (l:=false)) in r0.
+  eapply (red_ctx_context_equality (l:=false)) in r1.
+  apply context_equality_rel_app. etransitivity; tea.
+  symmetry. etransitivity; tea.
+  eapply (eq_context_upto_cat _ _ _ Γ _ Γ) in eq. 2:reflexivity.
+  eapply (eq_context_upto_context_equality (le:=false)) in eq. 2-3:fvs.
+  now symmetry.
+Qed.
+
+Lemma into_red_terms {Σ Γ ts ts'} : 
+  All2 (red Σ Γ) ts ts' ->
+  is_closed_context Γ ->
+  forallb (is_open_term Γ) ts ->
+  red_terms Σ Γ ts ts'.
+Proof.
+  induction 1; [constructor|].
+  move=> /= clΓ /andP[clx cll]. constructor; eauto using into_closed_red.
+Qed.
+      
+Lemma alpha_eq_context_gen Γ Δ : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_gen eq eq Γ Δ.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma untyped_subslet_ass {Γ s Δ} :
+  assumption_context Δ ->
+  #|s| = context_assumptions Δ ->
+  untyped_subslet Γ s Δ.
+Proof.
+  induction Δ as [|[na [b|] ty] Δ] in s |- *; destruct s; simpl; try discriminate.
+  - constructor.
+  - intros h; elimtype False; inv h.
+  - intros h; elimtype False; inv h.
+  - intros h [=]. constructor. apply IHΔ => //.
+    now inv h.
+Qed.
+
+Lemma shiftnP_up n m : n <= m -> forall i, shiftnP n xpred0 i -> shiftnP m xpred0 i.
+Proof.
+  intros lt i; rewrite /shiftnP !orb_false_r.
+  move/Nat.ltb_lt => H; apply Nat.ltb_lt. lia.
+Qed.
+
+Lemma inst_case_context_equality {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ pars pars' puinst puinst' ctx ctx'} :
+  declared_inductive Σ ind mdecl idecl ->
+  #|pars| = ind_npars mdecl ->
+  #|pars'| = ind_npars mdecl ->
+  test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
+      #|pars| ctx ->
+  test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
+      #|pars'| ctx' ->
+  is_closed_context Γ ->
+  equality_terms Σ Γ pars pars' ->
+  R_universe_instance (eq_universe Σ) puinst puinst' ->
+  eq_context_gen eq eq ctx ctx' ->
+  Σ ⊢ Γ,,, inst_case_context pars puinst ctx = Γ,,, inst_case_context pars' puinst' ctx'.
+Proof.
+  intros decli wfp wfp' onp onp' clΓ eqpars eqinst eqctx.
+  rewrite /inst_case_context.
+  eapply context_equality_rel_app.
+  have clpars : is_closed_context (Γ,,, smash_context [] (ind_params mdecl)).
+  { rewrite on_free_vars_ctx_app clΓ /=.
+    apply on_free_vars_ctx_smash => //.
+    generalize (declared_inductive_closed_params decli).
+    now move/(closed_ctx_on_free_vars (shiftnP #|Γ| xpred0)). }
+  rewrite !test_context_k_closed_on_free_vars_ctx in onp onp'.
+  have lenpars : #|pars| = context_assumptions (ind_params mdecl).
+  { rewrite -(declared_minductive_ind_npars decli).
+    now rewrite wfp. }
+  have asspars : assumption_context (smash_context [] (ind_params mdecl)).
+  { eapply PCUICContexts.smash_context_assumption_context => //. constructor. }
+  have lenpars' : #|pars| = context_assumptions (smash_context [] (ind_params mdecl)).
+  { rewrite context_assumptions_smash_context /= //. }
+  eapply (substitution_context_equality_subst_conv (Γ'':=[]) 
+    (Γ' := smash_context [] mdecl.(ind_params))
+    (Γ'0 := smash_context [] mdecl.(ind_params))) => //.
+  * eapply (PCUICSpine.context_equality_rel_trans (Δ' := ctx'@[puinst])).
+    - eapply context_equality_rel_app.
+      eapply eq_context_upto_context_equality.
+      { rewrite on_free_vars_ctx_app clpars /=. len.
+        rewrite on_free_vars_subst_instance_context -lenpars.
+        eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
+      { rewrite on_free_vars_ctx_app clpars /=. len.
+        rewrite on_free_vars_subst_instance_context -lenpars.
+        eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
+      eapply eq_context_upto_cat; [reflexivity|].
+      eapply eq_context_upto_univ_subst_instance'; tc. 1:reflexivity.
+      assumption.
+    - cbn.
+      eapply subst_instance_context_equality_rel => //.
+      rewrite !on_free_vars_ctx_app clΓ /=. len.
+      apply /andP; split.
+      { apply on_free_vars_ctx_smash => //.
+        generalize (declared_inductive_closed_params decli).
+        now move/(closed_ctx_on_free_vars (shiftnP #|Γ| xpred0)). }
+      rewrite -(declared_minductive_ind_npars decli) -wfp'.
+      eapply on_free_vars_ctx_impl; tea.
+      intros i. rewrite PCUICConfluence.closedP_shiftnP.
+      eapply shiftnP_up. lia.
+  * now eapply All2_rev.
+  * apply (untyped_subslet_ass asspars). now len.
+  * apply (untyped_subslet_ass asspars). now len.
+Qed.
+
+Hint Resolve sq : core.
+
+Lemma conv_cum_alt {cf:checker_flags} {leq} {Σ : global_env_ext} {Γ t t'} (wfΣ : ∥ wf Σ ∥) :
   conv_cum leq Σ Γ t t' <->
   ∥∑ v v', [× Σ ;;; Γ ⊢ t ⇝ v, Σ ;;; Γ ⊢ t' ⇝ v' & eq_termp leq Σ v v']∥.
 Proof.
+  destruct wfΣ.
   assert (forall P Q, (P <~> Q) -> (∥P∥ <-> ∥Q∥)) by
       (intros P Q H; split; intros [p]; constructor; apply H in p; auto).
   destruct leq; cbn; apply H.
@@ -72,7 +200,7 @@ Coercion closed_red_red : closed_red >-> red.
 Section fixed.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-  Context (wfΣ : wf Σ).
+  Context (wfΣ : ∥ wf Σ ∥).
   
   Definition isIndConstructApp (t : term) : bool :=
     match (decompose_app t).1 with
@@ -140,7 +268,7 @@ Section fixed.
     ∥conv_cum_napp leq Γ #|args| hd hd' × equality_terms Σ Γ args args'∥.
   Proof.
     intros conv notapp notapp' wh wh'.
-    apply conv_cum_alt in conv as [(?&?&[r1 r2 e])].
+    eapply conv_cum_alt in conv as [(?&?&[r1 r2 e])]; auto.
     sq. 
     pose proof (whnf_red_inv _ _ _ _ _ wh r1) as w1.
     apply whnf_red_mkApps_l_inv in w1 as (?&?&->&?&?); auto.
@@ -158,15 +286,15 @@ Section fixed.
     - apply whnf_red_isIndConstructApp in w as ?.
       destruct hd.
       all: cbn.
-      1-9, 12-15: apply conv_cum_alt.
+      1-9, 12-15: apply conv_cum_alt; eauto.
       1-13: constructor.
       1-13: exists x1, x.
       1-13: split; eauto with pcuic.
       1-13: (eapply eq_term_upto_univ_napp_nonind; [exact e|try exact H1]).
       1-13: cbn in *; congruence.
-      all: depelim w.
+      all: depelim w; subst.
       all: depelim e.
-      all: depelim w0.
+      all: depelim w0; subst.
       all: apply All2_length in a.
       all: try (constructor; constructor; rewrite a; auto).
       all: destruct leq; cbn; repeat constructor => //.
@@ -177,141 +305,6 @@ Section fixed.
       + apply conv_alt_red.
         now exists x, y.
       + now apply IHa1.
-      Unshelve.
-  Qed.
-  
-  (** Might be better suited with [red_context] hyps ensuring closedness directly *)
-  Lemma red_ctx_rel_par_conv Γ Γ0 Γ0' Γ1 Γ1' :
-    is_closed_context (Γ ,,, Γ0) ->
-    is_closed_context (Γ ,,, Γ1) ->
-    red_ctx_rel Σ Γ Γ0 Γ0' ->
-    red_ctx_rel Σ Γ Γ1 Γ1' ->
-    eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ0' Γ1' ->
-    context_equality_rel false Σ Γ Γ0 Γ1.
-  Proof.
-    intros clΓ0 clΓ1 r0 r1 eq.
-    apply red_ctx_rel_red_context_rel, red_context_app_same_left in r0; auto.
-    2:{ now eapply PCUICConfluence.on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
-    apply red_ctx_rel_red_context_rel, red_context_app_same_left in r1; auto.
-    2:{ now eapply PCUICConfluence.on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
-    eapply red_ctx_red_context in r0; eapply red_ctx_red_context in r1.
-    eapply PCUICSR.into_closed_red_ctx in r0 => //.
-    eapply PCUICSR.into_closed_red_ctx in r1 => //.
-    eapply (red_ctx_context_equality (l:=false)) in r0.
-    eapply (red_ctx_context_equality (l:=false)) in r1.
-    apply context_equality_rel_app. etransitivity; tea.
-    symmetry. etransitivity; tea.
-    eapply (eq_context_upto_cat _ _ _ Γ _ Γ) in eq. 2:reflexivity.
-    eapply (eq_context_upto_context_equality (le:=false)) in eq. 2-3:fvs.
-    now symmetry.
-  Qed.
-
-  Lemma into_red_terms Γ ts ts' : 
-    All2 (red Σ Γ) ts ts' ->
-    is_closed_context Γ ->
-    forallb (is_open_term Γ) ts ->
-    red_terms Σ Γ ts ts'.
-  Proof.
-    induction 1; [constructor|].
-    move=> /= clΓ /andP[clx cll]. constructor; eauto using into_closed_red.
-  Qed.
-
-  Definition equality_predicate Σ Γ p p' :=
-  [× equality_terms Σ Γ p.(pparams) p'.(pparams),
-      R_universe_instance (eq_universe Σ) (puinst p) (puinst p'),
-      eq_context_gen eq eq (pcontext p) (pcontext p') &
-      Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'].
-  
-  Definition equality_brs Σ Γ p :=
-    All2 (fun br br' =>
-      eq_context_gen eq eq (bcontext br) (bcontext br') ×
-      Σ ;;; Γ ,,, inst_case_branch_context p br ⊢ bbody br = bbody br').
-      
-  Lemma alpha_eq_context_gen Γ Δ : 
-    All2 (compare_decls eq eq) Γ Δ ->
-    eq_context_gen eq eq Γ Δ.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
-  Lemma untyped_subslet_ass {Γ s Δ} :
-    assumption_context Δ ->
-    #|s| = context_assumptions Δ ->
-    untyped_subslet Γ s Δ.
-  Proof.
-    induction Δ as [|[na [b|] ty] Δ] in s |- *; destruct s; simpl; try discriminate.
-    - constructor.
-    - intros h; elimtype False; inv h.
-    - intros h; elimtype False; inv h.
-    - intros h [=]. constructor. apply IHΔ => //.
-      now inv h.
-  Qed.
-  
-  Lemma shiftnP_up n m : n <= m -> forall i, shiftnP n xpred0 i -> shiftnP m xpred0 i.
-  Proof.
-    intros lt i; rewrite /shiftnP !orb_false_r.
-    move/Nat.ltb_lt => H; apply Nat.ltb_lt. lia.
-  Qed.
-
-  Lemma inst_case_context_equality {ind mdecl idecl Γ pars pars' puinst puinst' ctx ctx'} :
-    declared_inductive Σ ind mdecl idecl ->
-    #|pars| = ind_npars mdecl ->
-    #|pars'| = ind_npars mdecl ->
-    test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
-        #|pars| ctx ->
-    test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
-        #|pars'| ctx' ->
-    is_closed_context Γ ->
-    equality_terms Σ Γ pars pars' ->
-    R_universe_instance (eq_universe Σ) puinst puinst' ->
-    eq_context_gen eq eq ctx ctx' ->
-    Σ ⊢ Γ,,, inst_case_context pars puinst ctx = Γ,,, inst_case_context pars' puinst' ctx'.
-  Proof.
-    intros decli wfp wfp' onp onp' clΓ eqpars eqinst eqctx.
-    rewrite /inst_case_context.
-    eapply context_equality_rel_app.
-    have clpars : is_closed_context (Γ,,, smash_context [] (ind_params mdecl)).
-    { rewrite on_free_vars_ctx_app clΓ /=.
-      apply on_free_vars_ctx_smash => //.
-      generalize (declared_inductive_closed_params decli).
-      now move/(closed_ctx_on_free_vars (shiftnP #|Γ| xpred0)). }
-    rewrite !test_context_k_closed_on_free_vars_ctx in onp onp'.
-    have lenpars : #|pars| = context_assumptions (ind_params mdecl).
-    { rewrite -(declared_minductive_ind_npars decli).
-      now rewrite wfp. }
-    have asspars : assumption_context (smash_context [] (ind_params mdecl)).
-    { eapply PCUICContexts.smash_context_assumption_context => //. constructor. }
-    have lenpars' : #|pars| = context_assumptions (smash_context [] (ind_params mdecl)).
-    { rewrite context_assumptions_smash_context /= //. }
-    eapply (substitution_context_equality_subst_conv (Γ'':=[]) 
-      (Γ' := smash_context [] mdecl.(ind_params))
-      (Γ'0 := smash_context [] mdecl.(ind_params))) => //.
-    * eapply (PCUICSpine.context_equality_rel_trans (Δ' := ctx'@[puinst])).
-      - eapply context_equality_rel_app.
-        eapply eq_context_upto_context_equality.
-        { rewrite on_free_vars_ctx_app clpars /=. len.
-          rewrite on_free_vars_subst_instance_context -lenpars.
-          eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
-        { rewrite on_free_vars_ctx_app clpars /=. len.
-          rewrite on_free_vars_subst_instance_context -lenpars.
-          eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
-        eapply eq_context_upto_cat; [reflexivity|].
-        eapply eq_context_upto_univ_subst_instance'; tc. 1:reflexivity.
-        assumption.
-      - cbn.
-        eapply subst_instance_context_equality_rel => //.
-        rewrite !on_free_vars_ctx_app clΓ /=. len.
-        apply /andP; split.
-        { apply on_free_vars_ctx_smash => //.
-          generalize (declared_inductive_closed_params decli).
-          now move/(closed_ctx_on_free_vars (shiftnP #|Γ| xpred0)). }
-        rewrite -(declared_minductive_ind_npars decli) -wfp'.
-        eapply on_free_vars_ctx_impl; tea.
-        intros i. rewrite PCUICConfluence.closedP_shiftnP.
-        eapply shiftnP_up. lia.
-    * now eapply All2_rev.
-    * apply (untyped_subslet_ass asspars). now len.
-    * apply (untyped_subslet_ass asspars). now len.
   Qed.
 
   Lemma conv_cum_tCase_inv leq Γ ci p discr brs ci' p' discr' brs' mdecl idecl :
@@ -331,7 +324,7 @@ Section fixed.
     depelim w; solve_discr; try discriminate.
     depelim whr; solve_discr.
     depelim w0; solve_discr; try discriminate.
-    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])].
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])]; auto.
     have clΓ : is_closed_context Γ by fvs.
     set(l := tCase ci _ _ _) in *.
     set(r := tCase ci' _ _ _) in *.
@@ -340,12 +333,12 @@ Section fixed.
     have clr : is_open_term Γ r.
     { now move/clrel_src: r2. }
     eapply closed_red_red in r1. eapply closed_red_red in r2.
+    sq.
     subst l r; eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
     depelim r2.
     depelim eq.
-    constructor.
     set (pl := {| pparams := motivepars |}) in *.
     set (pr := {| pparams := motivepars0 |}) in *.
     specialize e as (?&?&?&?).
@@ -443,7 +436,8 @@ Section fixed.
           mfix mfix'∥.
   Proof.
     intros conv.
-    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])].
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])]; auto.
+    sq.
     assert (forall defs i, whnf RedFlags.default Σ Γ (tFix defs i)).
     { intros defs i.
       apply whnf_fixapp with (v := []).
@@ -460,7 +454,6 @@ Section fixed.
     depelim r1.
     depelim r2.
     depelim eq.
-    constructor.
     split; [easy|].
     cbn in cll, clr, clx, cly.
     have clmfixctx : is_closed_context (Γ ,,, fix_context mfix).
@@ -478,7 +471,7 @@ Section fixed.
     intros ctx_fix ctx_fix'.
     intros all1 all2 all len_eq.
     induction all in mfix, mfix', all1, all2, all |- *;
-      depelim all1; depelim all2; [constructor|].
+      depelim all1; depelim all2; subst; [constructor|].
     constructor; [|now auto].
     destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
@@ -507,7 +500,7 @@ Section fixed.
           mfix mfix'∥.
   Proof.
     intros conv.
-    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])].
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 eq])]; auto. sq.
     assert (forall defs i, whnf RedFlags.default Σ Γ (tCoFix defs i)).
     { intros defs i.
       apply whnf_cofixapp with (v := []). }
@@ -522,7 +515,6 @@ Section fixed.
     depelim r1.
     depelim r2.
     depelim eq.
-    constructor.
     split; [easy|].
     cbn in cll, clr, clx, cly.
     have clmfixctx : is_closed_context (Γ ,,, fix_context mfix).
@@ -540,7 +532,7 @@ Section fixed.
     intros ctx_fix ctx_fix'.
     intros all1 all2 all len_eq.
     induction all in mfix, mfix', all1, all2, all |- *;
-      depelim all1; depelim all2; [constructor|].
+      depelim all1; depelim all2; subst; [constructor|].
     constructor; [|now auto].
     destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
@@ -565,7 +557,7 @@ Section fixed.
     ∥ p = p' × Σ;;; Γ ⊢ c = c' ∥.
   Proof.
     intros conv whl whr.
-    apply conv_cum_alt in conv as [(?&?&[r1 r2 ?])].
+    apply conv_cum_alt in conv as [(?&?&[r1 r2 ?])]; auto. sq.
     have clΓ := clrel_ctx r1.
     have cll := clrel_src r1.
     have clr := clrel_src r2.
@@ -575,7 +567,6 @@ Section fixed.
     depelim r1.
     depelim r2.
     depelim c0.
-    constructor.
     split; [easy|].
     apply equality_alt_closed; eauto.
     exists c'0, c'1; split; eauto. 

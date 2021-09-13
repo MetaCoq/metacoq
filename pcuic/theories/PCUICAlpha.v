@@ -505,19 +505,6 @@ Qed.
     try reflexivity.
   Qed.
 
-  Lemma eq_context_gen_subst_context :
-    forall u v n k,
-      eq_context_gen eq eq u v ->
-      eq_context_gen eq eq (subst_context n k u) (subst_context n k v).
-  Proof.
-    intros re u v n.
-    induction 1.
-    - constructor.
-    - rewrite !subst_context_snoc; constructor; eauto.
-      depelim p; constructor; simpl; intuition auto; subst;
-      rewrite -(length_of X); auto.
-  Qed.
-
   Import PCUICUnivSubstitution.
   Lemma inst_case_predicate_context_eq {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl p} :
     wf_predicate mdecl idecl p ->

@@ -54,7 +54,7 @@ Definition term_direct_subterm_context (t u : term) (p : term_direct_subterm t u
   | term_direct_subterm_4_1 na A B => [vass na A]
   | term_direct_subterm_5_1 na A t => [vass na A]
   | term_direct_subterm_6_1 na b B t => [vdef na b B]
-  | term_direct_subterm_11_2 ci p c brs => pcontext p
+  | term_direct_subterm_11_2 ci p c brs => inst_case_predicate_context p
   | _ => []
   end.
 

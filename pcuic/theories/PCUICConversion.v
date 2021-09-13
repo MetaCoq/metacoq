@@ -1277,16 +1277,16 @@ Proof.
   rewrite destArity_it_mkProd_or_LetIn. simpl. now rewrite app_context_nil_l.
 Qed.
 
-Definition equality_brs {cf} Σ Γ p :=
-  All2 (fun u v =>
-    bcontext u = bcontext v ×
-    Σ ;;; Γ ,,, inst_case_branch_context p u ⊢ bbody u = bbody v).
-
-Definition conv_predicate {cf} Σ Γ p p' :=
+Definition equality_predicate {cf} Σ Γ p p' :=
   [× equality_terms Σ Γ p.(pparams) p'.(pparams),
-      R_universe_instance (eq_universe Σ) (puinst p) (puinst p'),
-    pcontext p = pcontext p' &
-    Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'].
+     R_universe_instance (eq_universe Σ) (puinst p) (puinst p'),
+     eq_context_gen eq eq (pcontext p) (pcontext p') &
+     Σ ;;; Γ ,,, inst_case_predicate_context p ⊢ preturn p = preturn p'].
+  
+Definition equality_brs {cf} Σ Γ p :=
+  All2 (fun br br' =>
+    eq_context_gen eq eq (bcontext br) (bcontext br') ×
+    Σ ;;; Γ ,,, inst_case_branch_context p br ⊢ bbody br = bbody br').
 
 Section Inversions.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
@@ -1365,24 +1365,7 @@ End Inversions.
     intros u v w h1 h2. destruct leq; cbn in *; sq. etransitivity; eassumption.
   Qed.
 
-  Lemma red_conv_cum_l {leq Γ u v} :
-    red (fst Σ) Γ u v -> sq_equality leq Σ Γ u v.
-  Proof.
-    destruct leq; constructor.
-    + now eapply red_conv.
-    + now eapply red_cumul.
-  Qed.
-
-  Lemma red_conv_cum_r {leq Γ u v} :
-    red (fst Σ) Γ u v -> sq_equality leq Σ Γ v u.
-  Proof.
-   induction 1.
-   - destruct leq; constructor.
-     + now eapply conv_red_r.
-     + now eapply cumul_red_r.
-   - reflexivity.
-   - etransitivity; tea.
-  Qed.*)
+  *)
 
 Definition sq_equality {cf : checker_flags} le Σ Γ T U := ∥ Σ ;;; Γ ⊢ T ≤[le] U ∥.
 
@@ -1705,12 +1688,11 @@ Section ConvRedConv.
       eq_term_upto_univ Σ.1 (eq_universe Σ) (eq_universe Σ) (bbody x) (bbody y))).
   Proof. intros brs; eapply All2_refl; split; reflexivity. Qed.
 
-
   Lemma equality_Case_p {Γ ci c brs p p'} :
     is_closed_context Γ ->
     is_open_case Γ p c brs ->
     is_open_predicate Γ p' ->
-    conv_predicate Σ Γ p p' ->
+    equality_predicate Σ Γ p p' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c brs.
   Proof.
     intros onΓ oncase onp' [cpars cu cctx cret].
@@ -1781,7 +1763,8 @@ Section ConvRedConv.
         constructor => //; reflexivity. }
     etransitivity; tea.
     apply into_equality; auto.
-    { destruct p'; cbn in *; unfold set_pparams, ppuinst, pret; cbn; subst pcontext; reflexivity. }
+    { destruct p'; cbn in *; unfold set_pparams, ppuinst, pret; cbn.
+      repeat constructor; cbn; try reflexivity; tas. }
     1:eauto with fvs.
     cbn.
     move/and3P: onp' => [] -> -> -> /=.
@@ -1811,19 +1794,43 @@ Section ConvRedConv.
       rewrite [is_open_term _ _]is_open_case_split onp onbrs /= andb_true_r //.
   Qed.
 
+  Lemma eq_context_gen_subst_context :
+    forall u v n k,
+      eq_context_gen eq eq u v ->
+      eq_context_gen eq eq (subst_context n k u) (subst_context n k v).
+  Proof.
+    intros re u v n.
+    induction 1.
+    - constructor.
+    - rewrite !subst_context_snoc; constructor; eauto.
+      depelim p; constructor; simpl; intuition auto; subst;
+      rewrite -(length_of X); auto.
+  Qed.
+
+  Lemma eq_context_gen_inst_case_context {Γ Δ Δ' pars puinst} :
+    eq_context_gen eq eq Δ Δ' ->
+    eq_context_gen eq eq (Γ ,,, inst_case_context pars puinst Δ) (Γ ,,, inst_case_context pars puinst Δ').
+  Proof.
+    intros.
+    apply All2_fold_app; [reflexivity|].
+    rewrite /inst_case_context.
+    now eapply eq_context_gen_subst_context, eq_context_gen_eq_univ_subst_preserved.
+  Qed.
+
   Lemma equality_Case_one_brs {Γ indn p c brs brs'} :
     is_closed_context Γ ->
     is_open_predicate Γ p ->
     is_open_term Γ c ->
     is_open_brs Γ p brs ->
     is_open_brs Γ p brs' ->
-    OnOne2 (fun u v => u.(bcontext) = v.(bcontext) × 
+    OnOne2 (fun u v => 
+      eq_context_gen eq eq u.(bcontext) v.(bcontext) × 
       Σ ;;; (Γ ,,, inst_case_branch_context p u) ⊢ u.(bbody) = v.(bbody)) brs brs' ->
     Σ ;;; Γ ⊢ tCase indn p c brs = tCase indn p c brs'.
   Proof.
     intros onΓ onp onc onbrs onbrs' h.
     apply OnOne2_split in h as [[bctx br] [[m' br'] [l1 [l2 [[? h] [? ?]]]]]].
-    simpl in *. subst m' brs brs'.
+    simpl in *. subst brs brs'.
     induction h.
     * constructor => //.
       + rewrite [is_open_term _ _]is_open_case_split onp onc /=.
@@ -1831,13 +1838,12 @@ Section ConvRedConv.
         rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
         now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
       + rewrite [is_open_term _ _]is_open_case_split onp onc /=.
-        move: onbrs i1.
-        rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
-        now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
+        move: onbrs' i1.
+        rewrite !forallb_app => /andP[] -> /= /andP[] =>  /andP[] => -> /= _ ->.
+        now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /= -(All2_fold_length a).
       + constructor; try reflexivity.
         eapply All2_app; try reflexivity.
-        constructor; try split; try reflexivity.
-        cbn. apply c0.
+        constructor; try split; try reflexivity; cbn => //.
     * eapply red_equality_left; tea.
       2:{ eapply IHh => //. }
       eapply into_closed_red; eauto.
@@ -1849,29 +1855,37 @@ Section ConvRedConv.
       now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=.
     * eapply red_equality_right; tea.
       2:{ eapply IHh => //.
-          move: onbrs i2.
+          move: onbrs' i2.
           rewrite !forallb_app => /andP[] -> /= /andP[] => /andP[] => -> /= _ ->.
-          now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /=. }
+          now rewrite andb_true_r shiftnP_add app_length inst_case_branch_context_length /= (All2_fold_length a). }
       eapply into_closed_red; eauto => //.
       { constructor. constructor.
-        eapply OnOne2_app. constructor; auto. }
+        eapply OnOne2_app. constructor; auto. cbn. split; auto.
+        eapply red1_eq_context_upto_names; tea.
+        rewrite /inst_case_branch_context /=.
+        now eapply eq_context_gen_inst_case_context. }
       rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
   Qed.
+
 
   Lemma is_open_brs_OnOne2 Γ p x y : 
     is_open_brs Γ p x ->
     OnOne2 (fun u v : branch term =>
-      (bcontext u = bcontext v) *
+      eq_context_gen eq eq (bcontext u) (bcontext v) *
       (Σ ;;; Γ,,, inst_case_branch_context p u ⊢ bbody u = bbody v)) y x ->
     is_open_brs Γ p y.
   Proof.
     intros op.
     induction 1.
     - cbn. destruct p0 as [e e0].
-      move: op => /=; rewrite e; move/andP =>[] /andP[] -> _ ->.
-      eapply equality_is_open_term_left in e0.
-      rewrite app_length inst_case_branch_context_length e in e0.
-      now rewrite shiftnP_add andb_true_r.
+      move: op => /= /andP[] /andP[] cl clb ->.
+      rewrite andb_true_r /=. apply/andP; split.
+      2:{ eapply equality_is_open_term_left in e0.
+        rewrite app_length inst_case_branch_context_length in e0.
+        now rewrite shiftnP_add. }
+      rewrite !test_context_k_closed_on_free_vars_ctx in cl *.
+      eapply eq_context_upto_names_on_free_vars; tea.
+      now symmetry.
     - now move: op => /= /andP[] => ->.
   Qed.
 
@@ -1889,7 +1903,13 @@ Section ConvRedConv.
       is_open_term (Γ ,,, inst_case_branch_context p br) br.(bbody))) in h.
     2:{ intros x y [eq cv].
         split; [eapply equality_is_open_term_left|eapply equality_is_open_term_right]; tea.
-        now rewrite /inst_case_branch_context -eq. }
+        instantiate (1:=bbody x). instantiate (1 := false).
+        eapply equality_eq_context_upto; tea.
+        { eapply eq_context_gen_eq_context_upto; tc.
+          now eapply eq_context_gen_inst_case_context. }
+        eapply equality_is_closed_context in cv.
+        eapply eq_context_upto_names_on_free_vars; tea.
+        now eapply eq_context_gen_inst_case_context. }
     induction h.
     - apply equality_compare; tas.
       1-2:rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
@@ -1905,7 +1925,7 @@ Section ConvRedConv.
   Lemma equality_Case {Γ ci p p' c c' brs brs'} :
     is_open_case Γ p c brs ->
     is_open_case Γ p' c' brs' ->
-    conv_predicate Σ Γ p p' ->
+    equality_predicate Σ Γ p p' ->
     Σ ;;; Γ ⊢ c = c' ->
     equality_brs Σ Γ p brs brs' ->
     Σ ;;; Γ ⊢ tCase ci p c brs = tCase ci p' c' brs'.

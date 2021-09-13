@@ -989,14 +989,13 @@ Section Lemmata.
   Qed.
   
   Lemma conv_cum_zipp leq Γ t t' π π' :
-    Σ ;;; Γ ⊢ t ≤[leq] t' ->
+    ∥ Σ ;;; Γ ⊢ t ≤[leq] t' ∥ ->
     ∥equality_terms Σ Γ (decompose_stack π).1 (decompose_stack π').1∥ ->
     ∥Σ ;;; Γ ⊢ zipp t π ≤[leq] zipp t' π'∥.
   Proof.
     intros conv conv_args.
     rewrite !zipp_as_mkApps.
-    sq.
-    eapply equality_mkApps; auto.
+    sq; eapply equality_mkApps; auto.
   Qed.
 
   Lemma whne_All2_fold f rel Γ Γ' t :

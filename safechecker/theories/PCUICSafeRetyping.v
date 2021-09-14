@@ -699,6 +699,7 @@ Section TypeOf.
     computationally but the proof it is principal is squashed (in Prop).
     The [PCUICPrincipality.principal_type] proof gives an unsquashed version of the
     same theorem. *)
+    
   Theorem principal_types {Γ t} (wt : welltyped Σ Γ t) : 
     ∑ P, ∥ forall T, Σ ;;; Γ |- t : T -> (Σ ;;; Γ |- t : P) * (Σ ;;; Γ ⊢ P ≤ T) ∥.
   Proof.

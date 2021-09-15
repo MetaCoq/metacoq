@@ -3027,6 +3027,12 @@ Proof.
   eapply conv_cumul. now apply PCUICCumulativity.red_conv.
 Defined.
 
+Lemma type_reduction_closed {cf} {Σ} {wfΣ : wf Σ} {Γ t A B} : 
+  Σ ;;; Γ |- t : A -> Σ ;;; Γ ⊢ A ⇝ B -> Σ ;;; Γ |- t : B.
+Proof.
+  intros Ht Hr. eapply type_reduction; tea. exact Hr.
+Defined.
+
 Section SRContext.
   Context {cf:checker_flags}.
 

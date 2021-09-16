@@ -7,7 +7,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR  PCUICInversion
   PCUICUnivSubstitution PCUICElimination PCUICCanonicity
-  PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICSafeLemmata.
+  PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICSafeLemmata
+  PCUICWellScopedCumulativity.
 
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
@@ -344,7 +345,7 @@ Proof.
   revert f L X.
   inversion H; intros; try congruence; subst.
   - invs H4. right. repeat eexists; eauto.
-  - left. split; eauto. econstructor; eauto.
+  - left. split; eauto.
 Qed.
 
 Lemma erases_mkApps (Σ : global_env_ext) Γ f f' L L' :
@@ -490,6 +491,8 @@ Proof.
   eapply cumul_propositional in Cty'; eauto.
 Qed.
 
+Require Import PCUICValidity PCUICWellScopedCumulativity.
+
 Lemma Is_proof_app {Σ Γ t args ty} {wfΣ : wf_ext Σ} :
   Is_proof Σ Γ t -> 
   Σ ;;; Γ |- mkApps t args : ty ->
@@ -500,12 +503,13 @@ Proof.
   pose proof (PCUICValidity.validity Hty).  
   pose proof (PCUICValidity.validity Ht).  
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
-  eapply PCUICSpine.typing_spine_strengthen in sp; eauto.
+  eapply PCUICSpine.typing_spine_strengthen in sp. 3:tea.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
-  eapply cumul_prop1'; eauto.
-  eapply PCUICValidity.validity; eauto.
+  eapply cumul_prop1'. 5:tea. all:eauto.
+  eapply validity; eauto.
   exists ty, u'; split; auto.
-  eapply PCUICGeneration.type_mkApps. 2:eauto. auto. auto.
+  eapply PCUICSpine.type_mkApps; tea; eauto.
+  now eapply validity.
 Qed.
 
 
@@ -523,14 +527,13 @@ Proof.
   rewrite /unfold_cofix e => [=] harg hfn.
   subst fn.
   eapply PCUICSpine.typing_spine_strengthen in t0; eauto.
-  eapply PCUICGeneration.type_mkApps; eauto.
+  eapply PCUICSpine.type_mkApps; eauto.
   pose proof a0 as a0'.
   eapply nth_error_all in a0'; eauto. simpl in a0'.
-  eapply (substitution _ _ _ _ []) in a0'; eauto.
-  2:{ eapply subslet_cofix_subst; pcuic.
-      constructor; eauto. }
+  eapply (substitution (Δ := [])) in a0'; eauto.
+  2:{ eapply subslet_cofix_subst; pcuic. constructor; eauto. }
   rewrite PCUICLiftSubst.simpl_subst_k in a0'. now autorewrite with len.
-  eapply a0'.
+  eapply a0'. now eapply nth_error_all in a; tea.
 Qed.
 
 Transparent PCUICParallelReductionConfluence.construct_cofix_discr.
@@ -565,7 +568,10 @@ Proof.
   specialize (Hs _ _ d c) as [Hs _].
   specialize (Hs isp). subst s. move: isp.
   now destruct (ind_sort x1).
+  eapply validity. econstructor; tea.
 Qed.
+
+Require Import PCUICOnFreeVars.
 
 Lemma nisErasable_Propositional {Σ : global_env_ext} {Γ ind n u} : 
   wf_ext Σ ->
@@ -587,14 +593,14 @@ Proof.
   destruct (is_propositional (ind_sort x0)) eqn:isp; auto.
   elimtype False; eapply ise.
   red. eexists; intuition eauto. right.
-  unfold type_of_constructor in c0, X.
+  unfold type_of_constructor in e, X.
   destruct s as [indctors [nthcs onc]].
-  rewrite onc.(cstr_eq) in c0, X.
-  rewrite !subst_instance_it_mkProd_or_LetIn !PCUICLiftSubst.subst_it_mkProd_or_LetIn in c0, X.
-  len in c0; len in X.
-  rewrite subst_cstr_concl_head in c0, X. 
+  rewrite onc.(cstr_eq) in e, X.
+  rewrite !subst_instance_it_mkProd_or_LetIn !PCUICLiftSubst.subst_it_mkProd_or_LetIn in e, X.
+  len in e; len in X.
+  rewrite subst_cstr_concl_head in e, X. 
   destruct decli. eapply nth_error_Some_length in H1; eauto.
-  rewrite -it_mkProd_or_LetIn_app in c0, X.
+  rewrite -it_mkProd_or_LetIn_app in e, X.
   exists (subst_instance_univ u (ind_sort x0)).
   rewrite is_propositional_subst_instance => //.
   split; auto.
@@ -608,7 +614,7 @@ Proof.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in ty; eauto.
   epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ eq_refl wfΣ ty).
   forward H0 by constructor. eexists; eauto.
-  simpl. reflexivity.
+  simpl. now exists cty. eapply PCUICConversion.equality_eq_le_gen, PCUICSR.wt_equality_refl; eauto.
   destruct H0 as [_ sorts].
   specialize (sorts _ _ decli c) as [sorts sorts'].
   forward sorts' by constructor.
@@ -655,9 +661,10 @@ Proof.
       eapply inversion_Lambda in X0 as (? & ? & ? & ? & ?).
       assert (Σ ;;; [] |- a' : t). {
           eapply subject_reduction_eval; eauto.
-          eapply PCUICConversion.cumul_Prod_inv in c0 as [[? ?] ?].
-          econstructor. eassumption. eauto. eapply conv_sym in c0; eauto.
-          now eapply conv_cumul. auto. auto. }
+          eapply PCUICConversion.equality_Prod_Prod_inv in e0 as [? ? ?].
+          econstructor. eassumption. eauto. symmetry in e1.
+          eapply equality_forget in e1. 
+          now eapply conv_cumul. }
       assert (eqs := type_closed_subst b wfΣ X0).
       invs Hvf'.
       * assert (Σ;;; [] |- PCUICAst.subst1 a' 0 b ⇝ℇ ELiftSubst.subst1 vu' 0 t').
@@ -756,10 +763,13 @@ Proof.
     + exists EAst.tBox. split. econstructor.
       eapply Is_type_eval. 3: eassumption. eauto. eauto. eauto. constructor. econstructor. eauto.
 
-  - assert (Hty' := Hty).
+  - todo "case".
+    (*
+    assert (Hty' := Hty).
     assert (Σ |-p tCase ci p discr brs ▷ res) by eauto.
-    todo "case".
-    (*eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys 
+    assert (Σ |-p tCase ci p discr brs ▷ res) by eauto.
+    
+    eapply inversion_Case in Hty' as [u' [args' [mdecl [idecl [ps [pty [btys 
                                     [? [? [? [? [? [_ [? [ht0 [? ?]]]]]]]]]]]]]]]]; auto.
     assert (Σ ;;; [] |- mkApps (tConstruct ind c u) args :  mkApps (tInd ind u') args').
     eapply subject_reduction_eval; eauto.
@@ -939,7 +949,8 @@ Proof.
     + exists EAst.tBox. split. econstructor.
       eapply Is_type_eval; eauto. constructor. econstructor; eauto.*)
 
-  - pose (Hty' := Hty).
+  - todo "Proj".
+    (* pose (Hty' := Hty).
     eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?); [|easy].
     invs He.
 
@@ -1010,11 +1021,11 @@ Proof.
            eapply erases_deps_mkApps_inv in Hty_vc' as (? & ?).
            now eapply nth_error_forall in H1; eauto.
     + exists EAst.tBox. split. econstructor.
-      eapply Is_type_eval. 3: eassumption. all:eauto. constructor. econstructor. eauto.
+      eapply Is_type_eval. 3: eassumption. all:eauto. constructor. econstructor. eauto. *)
 
   - assert (Hty' := Hty).
     assert (Hunf := H).
-    assert (Hcon := H1).
+    assert (Hcon := H0).
     eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
     assert (Ht := t).
     eapply subject_reduction in t. 2:auto. 2:eapply wcbeval_red; eauto.
@@ -1023,14 +1034,14 @@ Proof.
     assert (Ht1 := t1).
     apply inversion_Fix in t1 as Hfix; auto.
     destruct Hfix as (? & ? & ? & ? & ? & ? & ?).
-    unfold cunfold_fix in e. rewrite e0 in e. invs e.
+    unfold cunfold_fix in e. rewrite e1 in e. invs e.
     depelim He; first last.
     
     + exists EAst.tBox. split; [|now constructor; constructor].
       econstructor.
       eapply Is_type_eval. 3:eapply X. eauto.
       eapply eval_fix; eauto.
-      rewrite /cunfold_fix e0 //. congruence.
+      rewrite /cunfold_fix e1 //. now rewrite H3.
     + depelim Hed.
       eapply IHeval1 in He1 as (er_stuck_v & er_stuck & [ev_stuck]); eauto.
       eapply IHeval2 in He2 as (er_argv & er_arg & [ev_arg]); eauto.
@@ -1055,13 +1066,13 @@ Proof.
           rewrite mkApps_nested. eapply value_final.
           eapply eval_to_value; eauto.
           eapply value_final, eval_to_value; eauto.
-          rewrite  /cunfold_fix e0 //. auto. auto.
-          rewrite H3; eauto. auto. }
+          rewrite /cunfold_fix e1 //. auto.
+          now rewrite H3. auto. }
 
       invs H2.
       * assert (Hmfix' := X).
         eapply All2_nth_error_Some in X as (? & ? & ?); eauto.
-        pose proof (closed_fix_substl_subst_eq (PCUICClosed.subject_closed _ t1) e0) as cls.
+        pose proof (closed_fix_substl_subst_eq (PCUICClosed.subject_closed t1) e1) as cls.
         destruct x3. cbn in *. subst.
 
         enough (Σ;;; [] ,,, subst_context (fix_subst mfix) 0 []
@@ -1079,7 +1090,7 @@ Proof.
            rewrite EAstUtils.mkApps_app in H2.
            cbn in *. simpl in H2.
           rewrite cls in H2.
-           eapply IHeval3 in H2 as (? & ? & [?]); cbn; eauto; cycle 1.
+          eapply IHeval3 in H2 as (? & ? & [?]); cbn; eauto; cycle 1.
            { eapply subject_reduction. eauto. exact Hty.
              etransitivity.
              eapply PCUICReduction.red_app. eapply wcbeval_red; eauto. 
@@ -1089,10 +1100,10 @@ Proof.
              eapply red_fix.
              rewrite closed_unfold_fix_cunfold_eq.
              now eapply PCUICClosed.subject_closed in t1.
-             rewrite /cunfold_fix e0 /= //.
+             rewrite /cunfold_fix e1 /= //.
              pose proof (eval_to_value _ _ _ e3) as vfix.
              eapply PCUICWcbvEval.stuck_fix_value_args in vfix; eauto.
-             2:{ rewrite /cunfold_fix e0 //. }
+             2:{ rewrite /cunfold_fix e1 //. }
              simpl in vfix. 
              subst. unfold is_constructor.
              rewrite nth_error_snoc. lia.
@@ -1100,7 +1111,7 @@ Proof.
              { rewrite -mkApps_nested. eapply PCUICValidity.type_App'; eauto.
                eapply subject_reduction_eval; eauto. }
              epose proof (fix_app_is_constructor Σ (args:=argsv ++ [av]) X).
-             rewrite /unfold_fix e0 in X0.
+             rewrite /unfold_fix e1 in X0.
              specialize (X0 eq_refl). simpl in X0.
              rewrite nth_error_snoc in X0. auto. apply X0.
              eapply value_axiom_free, eval_to_value; eauto.
@@ -1123,7 +1134,7 @@ Proof.
            ++ eauto.
            ++ eauto.
            ++ rewrite <- Ee.closed_unfold_fix_cunfold_eq.
-              { unfold ETyping.unfold_fix. rewrite e -e2.
+              { unfold ETyping.unfold_fix. rewrite e -e4.
                 now rewrite (Forall2_length H4). }
               eapply eval_closed in e3; eauto.
               clear -e3 Hmfix'.
@@ -1147,7 +1158,7 @@ Proof.
           ++ auto.
            
         -- cbn. destruct p. destruct p.
-           eapply (erases_subst Σ [] (fix_context mfix) [] dbody (fix_subst mfix)) in e3; cbn; eauto.
+           eapply (erases_subst Σ [] (fix_context mfix) [] dbody (fix_subst mfix)) in e5; cbn; eauto.
            ++ eapply subslet_fix_subst. now eapply wf_ext_wf. all: eassumption.
            ++ eapply nth_error_all in a1; eauto. cbn in a1.
               eapply a1.
@@ -1167,7 +1178,7 @@ Proof.
               rewrite -mkApps_nested.
               eapply eval_fix; eauto. 
               1-2:eapply value_final, eval_to_value; eauto.
-              rewrite /cunfold_fix e0 //. congruence.
+              rewrite /cunfold_fix e1 //. congruence.
            ++ constructor. eapply Ee.eval_box; [|now eauto].
               apply eval_to_mkApps_tBox_inv in ev_stuck as ?; subst.
               eauto.
@@ -1224,9 +1235,7 @@ Proof.
            constructor. eapply Ee.eval_fix_value.
            ++ eauto.
            ++ eauto.
-           ++ unfold Ee.cunfold_fix.
-              rewrite e0.
-              reflexivity.
+           ++ unfold Ee.cunfold_fix. now rewrite e1.
            ++ eapply Forall2_length in H5. noconf e. lia.
               
         -- exists E.tBox.
@@ -1345,7 +1354,7 @@ Proof.
     eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?); auto.
     set (t0' := t0).
     eapply PCUICValidity.inversion_mkApps in t0' as (? & ? & ?); eauto.
-    pose proof (PCUICClosed.subject_closed wfΣ t0) as clfix.
+    pose proof (PCUICClosed.subject_closed t0) as clfix.
     assert(clcof : PCUICAst.closedn 0 (tCoFix mfix idx)).
     { eapply PCUICClosed.subject_closed in t1; eauto. }
     eapply inversion_CoFix in t1; destruct_sigma t1; auto.
@@ -1374,7 +1383,7 @@ Proof.
         pose proof X as X0'. destruct X0' as [tyapp [u [Htyapp Hu]]].
         eapply Is_proof_ty; eauto.
         eapply unfold_cofix_type; eauto.
-        move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
+        move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
         intros e; eapply e. eauto. }
       { apply erases_deps_mkApps_inv in Hed as (_ & edargs).
         econstructor; eauto.
@@ -1394,7 +1403,7 @@ Proof.
         pose proof X as X'. eapply All2_nth_error_Some in X'; eauto.
         destruct X' as (t' & Hnth & dn & rargeq & er).
         assert (e' := e).
-        move: e'. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
+        move: e'. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
         intros [= <- Heq].
         eapply (erases_subst Σ [] (fix_context mfix) [] (dbody decl) (cofix_subst mfix) _ (ETyping.cofix_subst mfix')) in er; cbn; eauto.
         2:{ eapply subslet_cofix_subst; eauto. constructor; eauto. }
@@ -1430,8 +1439,8 @@ Proof.
           pose proof X as X'. destruct X' as [tyapp [u [Htyapp Hu]]].
           eapply Is_proof_ty; eauto.
           eapply (unfold_cofix_type _ _ _ []); eauto.
-          move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
-          intros e; eapply e. eauto. }
+          move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
+          intros e; eapply e. exact H4. }
       { econstructor; eauto.
         apply erases_deps_mkApps; [now constructor|now eauto]. }
         exists x4; split; [|constructor]; auto.
@@ -1442,9 +1451,10 @@ Proof.
       eapply Is_type_red. 3:eauto. auto.
       eapply PCUICReduction.red1_red.
       eapply PCUICReduction.red_cofix_proj.
-      move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e1.
+      move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e2.
       intros e; eapply e.
-      
+    * now eapply nth_error_all in a; tea.
+  
   - pose (Hty' := Hty).
     eapply inversion_App in Hty' as (? & ? & ? & ? & ? & ?); eauto.
     invs He.
@@ -1461,20 +1471,20 @@ Proof.
         eapply inversion_App in Hty as [na [A [B [Hf [Ha _]]]]]; eauto.
         eapply wcbeval_red; eauto.
       * exists (E.tApp x2 x3).
-        split. 2:{ constructor; eapply Ee.eval_app_cong; eauto.
-                   eapply ssrbool.negbT.
-                   repeat eapply orb_false_intro.
-                   - destruct x2; try reflexivity.
-                     invs H1. invs i.
-                   - destruct x2 eqn:Ex; try reflexivity.
-                     + cbn. invs H1. cbn in *.
-                       eapply ssrbool.negbTE, is_FixApp_erases.
-                       econstructor; eauto.
-                       now rewrite orb_false_r in i.
-                     + cbn in *.
-                       invs H1. invs i.
-                   - eauto. }
-        econstructor; eauto.
+        split; [econstructor; eauto|].
+        constructor; eapply Ee.eval_app_cong; eauto.
+        eapply ssrbool.negbT.
+        repeat eapply orb_false_intro.
+        -- destruct x2; try reflexivity.
+          invs H1. invs i.
+        -- destruct x2 eqn:Ex; try reflexivity.
+          ++ cbn. invs H1. cbn in *.
+            eapply ssrbool.negbTE, is_FixApp_erases.
+            econstructor; eauto.
+            now rewrite orb_false_r in i.
+          ++ cbn in *.
+            invs H1. invs i.
+        -- eauto.
     + exists EAst.tBox. split. 2: now constructor; econstructor.
       econstructor.
       eapply inversion_App in Hty as [na [A [B [Hf [Ha _]]]]]; auto.
@@ -1484,7 +1494,7 @@ Proof.
       eapply wcbeval_red; eauto.
       eapply PCUICClosed.subject_closed in Ha; auto.
       eapply wcbeval_red; eauto.
-      
+
   - destruct t; try easy.
     + invs He. eexists. split; eauto. now constructor; econstructor.
     + invs He. eexists. split; eauto. now constructor; econstructor.

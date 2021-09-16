@@ -6,7 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
      PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
+     PCUICValidity PCUICPrincipality PCUICElimination 
+     PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN.
      
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness.
@@ -138,46 +139,48 @@ Section fix_sigma.
   Next Obligation.
     clear rprod.
     destruct HT as []; sq.
-    eapply subject_reduction in X; eauto.
+    eapply subject_reduction_closed in X; eauto.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
-    econstructor. eauto. cbn. eauto. auto.
+    econstructor; eauto; cbn; eauto. auto.
   Qed.
   Next Obligation.
     clear rprod.
     sq. destruct HT as [].
-    eapply subject_reduction in X; eauto.
+    eapply subject_reduction_closed in X; eauto.
     eapply inversion_Prod in X as (? & ? & ? & ? & ?).
     eexists; eauto. auto.
   Qed.
   Next Obligation.
-    sq. repeat eexists. eassumption.
+    sq. repeat eexists. exact c.
   Qed.
   Next Obligation.
     destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq.
-    etransitivity. eassumption. eapply PCUICReduction.red_prod. reflexivity.
-    eassumption. now cbn.
+    etransitivity. exact c0. eapply closed_red_prod_codom; tea.
+    eassumption.
   Qed.
   Next Obligation.
     clear rprod.
     destruct HΣ as [wΣ].
     destruct H1 as (? & ? & ?). sq.
     destruct H.
-    edestruct (red_confluence wfΣ X0 X) as (? & ? & ?); eauto.
-    eapply invert_red_prod in r as (? & ? & [] & ?); eauto. subst.
+    edestruct (PCUICContextConversion.closed_red_confluence X0 X) as (? & ? & ?); eauto.
+    eapply invert_red_prod in c as (? & ? & []); eauto. subst.
 
-    eapply invert_cumul_arity_l in H2. 2: eauto.
-    2: eapply PCUICCumulativity.red_cumul. 2:eauto.
+    eapply invert_cumul_arity_l in H2.
+    2:eapply red_equality; tea.
     destruct H2 as (? & ? & ?). sq.
 
-    eapply invert_red_prod in X2 as (? & ? & [] & ?); eauto. subst. cbn in *.
+    eapply invert_red_prod in X2 as (? & ? & []); eauto. subst. cbn in *.
     exists x4; split; eauto.
 
     constructor.
     etransitivity; eauto.
-    eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; eauto.
-    constructor; [|constructor].
+    eapply into_closed_red.
+    eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; [|exact c3].
+    econstructor; [|econstructor].
     eapply PCUICContextRelation.All2_fold_refl.
-    reflexivity.
+    reflexivity. fvs.
+    now eapply clrel_src in c3.
   Qed.
 
   Next Obligation.
@@ -185,6 +188,8 @@ Section fix_sigma.
     pose proof (reduce_to_prod_complete HΣ _ (eq_sym rprod)).
     destruct HΣ.
     apply Is_conv_to_Arity_inv in H as [(?&?&?&[r])|(?&[r])]; eauto.
+    - eapply H1, r.
+    - eapply H0, r.
   Qed.
 
 End fix_sigma.
@@ -236,7 +241,7 @@ Next Obligation.
   unfold type_of in *.
   destruct infer as [x [[Htx Hp]]].
   destruct H as [T' [redT' isar]].
-  sq. econstructor. split. eapply type_reduction; eauto.
+  sq. econstructor. split. eapply type_reduction_closed; eauto.
   eauto.
 Qed.
 Next Obligation.
@@ -262,8 +267,7 @@ Next Obligation.
   destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _)).
   simpl. sq.
   destruct X. eapply validity in t0; auto.
-  eapply wat_welltyped; eauto. sq; auto.
-  now sq.
+  eapply wat_welltyped; eauto.
 Qed.
 Next Obligation.
   unfold type_of in *.
@@ -274,11 +278,11 @@ Next Obligation.
   destruct Ht.
   destruct a as [a reda].
   sq. red. exists x0 ; split; intuition eauto.
-  pose proof (red_confluence X2 r0 r) as [v' [redl redr]].
+  pose proof (PCUICContextConversion.closed_red_confluence c0 c) as [v' [redl redr]].
   eapply invert_red_sort in redl.
   eapply invert_red_sort in redr. subst. noconf redr.
   right. exists u; split; eauto.
-  eapply type_reduction; eauto using typing_wf_local.
+  eapply type_reduction_closed; eauto using typing_wf_local.
 Qed.
 Next Obligation.
   unfold type_of in *.
@@ -287,15 +291,15 @@ Next Obligation.
   destruct (infer _ (is_erasable_obligation_1 _ _)) as [? [[? ?]]].
   destruct a as [u' redu']. simpl in *.
   sq.
-  pose proof (red_confluence X r0 r) as [v' [redl redr]].
+  pose proof (PCUICContextConversion.closed_red_confluence c0 c) as [v' [redl redr]].
   eapply invert_red_sort in redl.
   eapply invert_red_sort in redr. subst. noconf redr.
   clear Heq_anonymous0.
   intros (? & ? & ?).
   destruct s as [ | (? & ? & ?)]; simpl in *.
   + destruct H. eapply arity_type_inv; eauto using typing_wf_local.
-  + pose proof (c0 _ t2).
-    eapply type_reduction in t0; eauto.
+  + pose proof (e0 _ t2).
+    eapply type_reduction_closed in t0; eauto.
     eapply cumul_prop1' in t3; eauto.
     eapply leq_term_propositional_sorted_l in t0; eauto.
     2:reflexivity.
@@ -315,8 +319,8 @@ Next Obligation.
   eapply validity in t1; auto.
   destruct t1 as [s Hs].
   red in Hs.
-  specialize (c _ Hs).
-  eapply equality_Sort_r_inv in c as [u' [redu' leq]].
+  specialize (e _ Hs).
+  eapply equality_Sort_r_inv in e as [u' [redu' leq]].
   now apply (H0 _ redu').
 Qed.
 
@@ -437,8 +441,9 @@ Section Erase.
     - apply inversion_Case in Ht as (? & ? & ? & ? & [] & ?); auto.
       apply In_nth_error in H as (?&nth).
       eapply All2i_nth_error_r in nth; eauto.
-      destruct nth as (?&?&(?&?)&?&?); cbn in *.
-      econstructor; tea.
+      destruct nth as (?&?&?&?&?&?); cbn in *.
+      todo "case".
+      
     - clear wildcard12.
       eapply inversion_Proj in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
@@ -916,7 +921,7 @@ Lemma erases_weakeninv_env {Σ Σ' : global_env_ext} {Γ t t' T} :
   erases Σ Γ t t' -> erases (Σ'.1, Σ.2) Γ t t'.
 Proof.
   intros wfΣ wfΣ' ext Hty.
-  apply (env_prop_typing _ _ ESubstitution.erases_extends _ wfΣ _ _ _ Hty _ wfΣ' ext).
+  apply (env_prop_typing ESubstitution.erases_extends _ wfΣ _ _ _ Hty _ wfΣ' ext).
 Qed.  
  
 Lemma erases_deps_weaken kn d Σ Σ' t : 
@@ -1117,7 +1122,7 @@ Proof.
     destruct a as [kn d].
     eapply KernameSet.subset_spec in sub.
     destruct (H i hin) as [[decl Hdecl]].
-    pose proof (eqb_spec i kn). simpl in H0.
+    pose proof (eqb_spec i kn). unfold eqb in H0; cbn in H0.
     revert Hdecl; elim: H0. intros -> [= <-].
     * destruct d as [|]; [left|right].
       exists c. split; auto.

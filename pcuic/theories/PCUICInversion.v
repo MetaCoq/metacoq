@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICLiftSubst PCUICUnivSu
      PCUICWellScopedCumulativity.
 
 Require Import Equations.Prop.DepElim.
-
+(* todo: make wf arguments implicit *)
 Section Inversion.
 
   Context `{checker_flags}.

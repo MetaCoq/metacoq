@@ -4,7 +4,7 @@ From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosed
      PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
-     PCUICContextConversion PCUICCanonicity.
+     PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICCanonicity.
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.
 
@@ -111,7 +111,7 @@ Qed.
 Definition well_typed Σ Γ t := ∑ T, Σ ;;; Γ |- t : T.
 
 Lemma typing_spine_wt args Σ x2 x3 :  wf Σ.1 ->
-  PCUICGeneration.typing_spine Σ [] x2 args x3 ->
+  typing_spine Σ [] x2 args x3 ->
   All (well_typed Σ []) args.
 Proof.
   intros wfΣ sp.
@@ -126,12 +126,14 @@ Proof.
   eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
 Qed.
 
+
+
 Lemma typing_spine_eval:
   forall (Σ : global_env_ext) (args args' : list PCUICAst.term) 
   (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
-    (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), isType Σ [] T -> typing_spine Σ [] x1 args' T.
+    (c : Σ;;; [] ⊢ x0 ≤ T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; [] ⊢ x1 ≤ x), isType Σ [] x1 -> isType Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
   eapply typing_spine_wt in t0; auto.

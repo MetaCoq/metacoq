@@ -216,9 +216,8 @@ Proof.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
 
     cbn in HT.
-    eapply inversion_Fix in HT as (? & ? & ? & ? & ? & ? & ?) ; auto. clear a0 c.
-
-
+    eapply inversion_Fix in HT as (? & ? & ? & ? & ? & ? & ?) ; auto.
+    clear a0 e.
     econstructor.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
@@ -249,7 +248,7 @@ Proof.
     2:{ apply All_local_env_app_inv in X2 as [X2 _]. eapply X2. }
 
     cbn in HT.
-    eapply inversion_CoFix in HT as (? & ? & ? & ? & ? & ? & ?) ; auto. clear a0 c.
+    eapply inversion_CoFix in HT as (? & ? & ? & ? & ? & ? & ?) ; auto. clear a0 e.
 
     econstructor.
     eapply All2_map.
@@ -312,8 +311,7 @@ Proof.
   - left. generalize (#|Δ|). intros n.
     induction T in n, i |- *; (try now inv i); cbn in *; eauto.
   - right. exists u. split; eauto.
-    pose proof (substitution Σ Γ Γ' s Δ).
-    eapply X2 in t; eauto.
+    eapply substitution in t; eauto.
 Qed.
 
 Lemma substlet_typable (Σ : global_env_ext) Γ s Γ' n t :
@@ -386,7 +384,7 @@ Proof.
       rewrite subst_context_snoc0 in *.
       eapply H0; eauto.
       cbn. econstructor. eauto.
-      cbn. exists s1. eapply substitution with (T := tSort s1); eauto.
+      cbn. exists s1. eapply (substitution (T := tSort s1)); eauto.
     + econstructor.
       eapply is_type_subst; eauto.
   - inv H2.
@@ -461,7 +459,7 @@ Proof.
         now rewrite subst_fix_context.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, All2_length.
-      * pose proof (substitution Σ Γ Γ' s (Δ ,,, fix_context mfix)).
+      * pose proof (@substitution _ Σ _ Γ Γ' s (Δ ,,, fix_context mfix)).
         rewrite app_context_assoc in *.
         eapply X1 in Hs; eauto.
         eapply typing_wf_local.  eassumption.
@@ -488,7 +486,7 @@ Proof.
         now rewrite subst_fix_context.
       * cbn. now rewrite app_context_length, fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, (All2_length _ _ X5).
-      * pose proof (substitution Σ Γ Γ' s (Δ ,,, fix_context mfix)).
+      * pose proof (@substitution _ Σ _ Γ Γ' s (Δ ,,, fix_context mfix)).
         rewrite app_context_assoc in *.
         eapply X1 in t; eauto.
         eapply typing_wf_local.  eassumption.

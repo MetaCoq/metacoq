@@ -10,7 +10,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      (* Used for support lemmas *)
      PCUICInductives PCUICWfUniverses
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
-     PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv.
+     PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv
+     PCUICOnFreeVars PCUICWellScopedCumulativity.
 
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICErrors
   PCUICSafeConversion PCUICWfReduction PCUICWfEnv PCUICTypeChecker.
@@ -385,7 +386,7 @@ Section CheckEnv.
   Definition cumul_decl Σ Γ (d d' : context_decl) : Type := cumul_decls Σ Γ Γ d d'.
 
   Program Definition wf_env_conv (Σ : wf_env_ext) (Γ : context) (t u : term) :
-    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ |- t = u ∥) :=
+    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ ⊢ t = u ∥) :=
     @convert _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
   Next Obligation.
     destruct Σ. sq. simpl. apply wf_env_ext_wf0.
@@ -395,7 +396,7 @@ Section CheckEnv.
   Qed.
 
   Program Definition wf_env_cumul (Σ : wf_env_ext) (Γ : context) (t u : term) :
-    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ |- t <= u ∥) :=
+    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ ⊢ t ≤ u ∥) :=
     @convert_leq _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
   Next Obligation.
     destruct Σ. sq. simpl. apply wf_env_ext_wf0.
@@ -404,8 +405,8 @@ Section CheckEnv.
     destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
   Qed.
 
-  Program Definition wf_env_check_cumul_decl (Σ : wf_env_ext) Γ d d' :=
-    @check_cumul_decl _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ d d'.
+  Program Definition wf_env_check_cumul_decl (Σ : wf_env_ext) le Γ d d' :=
+    @check_equality_decl _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ le Γ d d'.
   Next Obligation.
     destruct Σ; sq; simpl. apply wf_env_ext_wf0.
   Qed.
@@ -417,21 +418,10 @@ Section CheckEnv.
   Proof. apply wfΣ. Qed.
   Hint Resolve wf_ext_wf_p1 : pcuic.
 
-  Program Fixpoint wf_env_check_cumul_ctx (Σ : wf_env_ext) Γ Δ Δ' 
+  Program Fixpoint wf_env_check_equality_ctx le (Σ : wf_env_ext) Γ Δ Δ' 
     (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-    typing_result (∥ cumul_ctx_rel Σ Γ Δ Δ' ∥) :=
-    @check_cumul_ctx _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ Δ Δ' wfΔ wfΔ'.
-  Next Obligation.
-    destruct Σ as [? [?] ? ?]. sq; simpl. apply w.
-  Qed.
-  Next Obligation.
-    destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
-  Qed.
-  
-  Program Fixpoint wf_env_check_conv_ctx (Σ : wf_env_ext) Γ Δ Δ' 
-    (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-    typing_result (∥ conv_context_rel Σ Γ Δ Δ' ∥) :=
-    @check_conv_ctx _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ Δ Δ' wfΔ wfΔ'.
+    typing_result (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
+    @check_equality_ctx _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ le Γ Δ Δ' wfΔ wfΔ'.
   Next Obligation.
     destruct Σ as [? [?] ? ?]. sq; simpl. apply w.
   Qed.
@@ -651,14 +641,20 @@ Section CheckEnv.
          (check_eq_true (eqb params mdecl.(ind_params)) 
         (Msg "Constructor parameters do not match the parameters of the mutual declaration"));;
       let '(args, concl) := decompose_prod_assum [] concl in
-      eqargs <- wrap_error Σ cdecl.(cstr_name)
+      eqarglen <- wrap_error Σ cdecl.(cstr_name)
         (check_eq_true (eqb (context_assumptions args) cdecl.(cstr_arity))
           (Msg "Constructor arguments do not match the argument number of the declaration"));;
-      '(conclargs; Hargs) <- wrap_error Σ cdecl.(cstr_name) 
+      eqarglen <- wrap_error Σ cdecl.(cstr_name)
+        (check_eq_true (eqb args cdecl.(cstr_args))
+          (Msg "Constructor arguments do not match the arguments of the declaration"));;
+        '(conclargs; Hargs) <- wrap_error Σ cdecl.(cstr_name) 
         (decompose_cstr_concl mdecl ind args concl) ;;
       eqbpars <- wrap_error Σ cdecl.(cstr_name)
         (check_eq_true (eqb (firstn mdecl.(ind_npars) conclargs) (to_extended_list_k mdecl.(ind_params) #|args|))
           (Msg "Parameters in the conclusion of the constructor type do not match the inductive parameters")) ;;
+      eqbindices <- wrap_error Σ cdecl.(cstr_name)
+        (check_eq_true (eqb (skipn mdecl.(ind_npars) conclargs) cdecl.(cstr_indices))
+          (Msg "Indices in the conclusion of the constructor type do not match the indices of the declaration")) ;;
       '(cs; Hcs) <- wrap_error Σ cdecl.(cstr_name) 
         (infer_sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params)) args _) ;;
       ret (cs; _)
@@ -681,24 +677,22 @@ Section CheckEnv.
     Next Obligation.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *.
       sq. red; simpl.
-      intuition auto.
-      eexists; eauto. 
       rename Heq_anonymous1 into dt.
       rename Heq_anonymous2 into dc.
       symmetry in dt.
       eapply decompose_prod_n_assum_inv in dt; simpl in dt; subst.
       destruct (eqb_spec params (ind_params mdecl)) => //. subst params.
+      destruct (eqb_spec args (cstr_args cdecl)) => //. subst args.
+      eapply eqb_eq in eqarglen0.
+      eapply eqb_eq in eqbindices.
+      eapply eqb_eq in eqbpars.
+      intuition auto.
+      eexists; eauto. 
       symmetry in dc. eapply PCUICSubstitution.decompose_prod_assum_it_mkProd_or_LetIn in dc.
       simpl in dc. subst concl0.
-      rewrite it_mkProd_or_LetIn_app. do 3 f_equal.
-      f_equal. autorewrite with len.
-      all:todo "case".
-       (* lia.
-      rewrite -{1}(firstn_skipn (ind_npars mdecl) pat1). f_equal.
-      revert eqbpars. 
-      elim: (eqb_spec (firstn (ind_npars mdecl) pat1) _) => //.
-      revert eqargs.
-      elim: eqb_spec => //. *)
+      rewrite it_mkProd_or_LetIn_app.
+      rewrite dt. do 4 f_equal. len.
+      rewrite -(firstn_skipn (ind_npars mdecl) pat1); congruence.
     Qed.
 
   Fixpoint All_sigma {A B} {P : A -> B -> Type} {l : list A} (a : All (fun x => ∑ y : B, P x y) l) : 
@@ -781,13 +775,13 @@ Section CheckEnv.
     intros H. apply ctx_inst_smash in H. now rewrite List.rev_involutive in H.
   Qed.
 
-  Lemma typing_spine_it_mkProd_or_LetIn_inv {Σ : global_env_ext} (wfΣ : wf Σ) Γ Δ s args s' :
+  Lemma typing_spine_it_mkProd_or_LetIn_inv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ s args s'} :
     wf_local Σ (Γ ,,, Δ) ->
     typing_spine Σ Γ (it_mkProd_or_LetIn Δ (tSort s)) args (tSort s') ->
     ctx_inst Σ Γ args (List.rev Δ).
   Proof.
     intros wf sp.
-    pose proof (wf_local_smash_end _ _ _ wfΣ wf). clear wf.
+    pose proof (wf_local_smash_end _ _ wf). clear wf.
     eapply PCUICCanonicity.typing_spine_smash in sp; auto.
     unfold expand_lets, expand_lets_k in sp. simpl in sp.
     apply ctx_inst_smash; auto.
@@ -798,66 +792,80 @@ Section CheckEnv.
     induction Δ using PCUICInduction.ctx_length_rev_ind in s, s', args |- *; simpl;
       rewrite ?it_mkProd_or_LetIn_app;
     intros ass wf sp; depelim sp; try constructor.
-    * now eapply equality_Sort_Prod_inv in c.
+    * now eapply equality_Sort_Prod_inv in e.
     * apply assumption_context_app in ass as [ass assd].  
-      destruct d as [na [b|] ty]; unfold mkProd_or_LetIn in c; simpl in *.
+      destruct d as [na [b|] ty]; unfold mkProd_or_LetIn in e; simpl in *.
       elimtype False; depelim assd.
-      eapply equality_Prod_Sort_inv in c; auto.
+      eapply equality_Prod_Sort_inv in e; auto.
     * apply assumption_context_app in ass as [ass assd].  
-      destruct d as [na' [b'|] ty']; unfold mkProd_or_LetIn in c; simpl in *.
+      destruct d as [na' [b'|] ty']; unfold mkProd_or_LetIn in e; simpl in *.
       elimtype False; depelim assd.
-      eapply cumul_Prod_Prod_inv in c as [eqann [eqdom codom]]; auto.
+      eapply equality_Prod_Prod_inv in e as [eqann eqdom codom]; auto.
       rewrite List.rev_app_distr.
       constructor.
       eapply All_local_env_app_inv in wf as [wfΓ wfr].
       eapply All_local_env_app_inv in wfr as [wfd wfΓ0].
       depelim wfd. destruct l as [? Hs].
-      eapply type_Cumul'; pcuic. eapply conv_cumul. now symmetry.
-      rewrite subst_telescope_subst_context. eapply X. now len.
+      eapply type_equality; pcuic. eapply equality_eq_le. now symmetry.
+      rewrite subst_telescope_subst_context. cbn in *.
+      have tyhd : Σ ;;; Γ |- hd : ty'.
+      { eapply type_equality; tea.  eapply isType_tProd in i as [].
+        pcuic. eapply equality_eq_le. now symmetry. }
+      eapply X. now len.
       pcuic.
-      eapply substitution_wf_local; eauto.
-      2:rewrite app_context_assoc in wf; eapply wf.
-      repeat constructor. rewrite subst_empty.
-      eapply All_local_env_app_inv in wf as [wfΓ wfr].
-      eapply All_local_env_app_inv in wfr as [wfd wfΓ0].
-      depelim wfd. destruct l as [? Hs].
-      eapply type_Cumul'; pcuic. eapply conv_cumul. now symmetry.
+      eapply substitution_wf_local; eauto. eapply subslet_ass_tip; tea. 
+      rewrite app_context_assoc in wf; eapply wf.
       eapply typing_spine_strengthen; eauto.
-      eapply substitution_cumul0 in codom; eauto.
+      eapply isType_apply in i; tea.
+      now rewrite /subst1 subst_it_mkProd_or_LetIn in i.
+      eapply substitution0_equality in codom; eauto.
       now rewrite /subst1 subst_it_mkProd_or_LetIn in codom.
   Qed.
   
-  Lemma typing_spine_letin_inv' {Σ : global_env_ext} (wfΣ : wf Σ) Γ na b ty Δ T args T' :
+  Lemma lift_LetIn na b ty T n k : 
+    lift n k (tLetIn na b ty T) = 
+    tLetIn na (lift n k b) (lift n k ty) (lift n (S k) T).
+  Proof. reflexivity. Qed.
+
+  Lemma typing_spine_letin_inv' {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na b ty Δ T args T'} :
     let decl := {| decl_name := na; decl_body := Some b; decl_type := ty |} in
-    wf_local Σ (Γ ,, decl) ->
+    isType Σ (Γ ,, decl) T ->
     typing_spine Σ (Γ ,, decl ,,, Δ) (mkProd_or_LetIn (lift_decl (#|Δ| + 1) 0 decl) (lift (#|Δ| + 1) 1 T)) args T' ->
     typing_spine Σ (Γ ,, decl ,,, Δ) (lift #|Δ| 0 T) args T'.
   Proof.
-    intros decl wf.
+    intros decl  isty.
     cbn. intros sp.
+    pose proof (typing_spine_isType_dom sp) as isty'.
     eapply typing_spine_strengthen; eauto.
-    eapply conv_cumul.
+    eapply isType_lift; auto. len.  pcuic.
+    now rewrite skipn_all_app.
+    eapply equality_eq_le.
     etransitivity.
-    2:{ symmetry; eapply red_conv. repeat constructor. }
+    2:{ symmetry; eapply red_conv. repeat constructor.
+        * now eapply isType_wf_local, wf_local_closed_context in isty'.
+        * now eapply isType_is_open_term in isty'. }
+    epose proof (distr_lift_subst _ [b] (#|Δ|+1) 0). cbn in H.
+    rewrite /subst1. erewrite <- H.
     etransitivity.
     symmetry.
-    pose proof (red_expand_let Γ na b ty T).
-    forward X. apply wf.
-    epose proof (weakening_conv _ (Γ ,, decl) [] Δ).
+    epose proof (red_expand_let (isType_wf_local isty)).
+    epose proof (weakening_equality (le:=false) (Γ := Γ ,, decl) (Γ' := []) (Γ'' := Δ)).
     simpl in X0.
-    eapply X0. eauto.
-    symmetry. eapply red_conv. apply X.
-    simpl.
-    rewrite distr_lift_subst. simpl.
-    rewrite distr_lift_subst /=.
+    eapply X0.
+    symmetry. eapply red_conv. apply X. fvs. eapply isType_wf_local, wf_local_closed_context in isty'. fvs.
     rewrite simpl_lift. lia. lia.
-    rewrite simpl_lift. lia. lia. 
-    reflexivity.
+    eapply equality_refl. eapply isType_wf_local in isty'. fvs.
+    apply on_free_vars_lift0. rewrite /app_context /snoc; len.
+    replace (#|Δ| + S #|Γ|) with (S #|Δ| + #|Γ|). 2:lia. rewrite Nat.add_1_r.
+    rewrite -shiftnP_add addnP_shiftnP. eapply on_free_vars_subst.
+    eapply isType_wf_local in isty. depelim isty. red in l0. cbn.
+    rewrite andb_true_r. fvs.
+    eapply isType_is_open_term in isty. cbn. now rewrite shiftnP_add.
   Qed.
 
-  Lemma typing_spine_prod_inv {Σ : global_env_ext} (wfΣ : wf Σ) Γ na ty Δ T args T' :
+  Lemma typing_spine_prod_inv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ na ty Δ T args T'} :
     let decl := {| decl_name := na; decl_body := None; decl_type := ty |} in
-    wf_local Σ (Γ ,, decl) ->
+    isType Σ (Γ ,, decl) T ->
     typing_spine Σ (Γ ,, decl ,,, Δ) (mkProd_or_LetIn (lift_decl (#|Δ| + 1) 0 decl) (lift (#|Δ| + 1) 1 T)) 
       (tRel #|Δ| :: args) T' ->
     typing_spine Σ (Γ ,, decl ,,, Δ) (lift #|Δ| 0 T) args T'.
@@ -865,18 +873,27 @@ Section CheckEnv.
     intros decl wf.
     cbn. intros sp.
     depelim sp.
+    have istyl : isType Σ (Γ,, decl,,, Δ) (lift0 #|Δ| T).
+    { eapply isType_lift; tea. len. pcuic. now rewrite skipn_all_app. }
     eapply typing_spine_strengthen; eauto.
-    eapply cumul_Prod_Prod_inv in c as [eqann [eqdom eqcodom]]; auto.
-    eapply (substitution_cumul0 _ _ _ _ _ _ (tRel #|Δ|)) in eqcodom; auto.
+    eapply equality_Prod_Prod_inv in e as [eqann eqdom eqcodom]; auto.
+    eapply (substitution0_equality (t:=tRel #|Δ|)) in eqcodom; auto.
     etransitivity; eauto.
     rewrite /subst1.
     replace ([tRel #|Δ|]) with (map (lift #|Δ| 0) [tRel 0]). 2:simpl; lia_f_equal.
     rewrite -(simpl_lift T _ _ _ 1); try lia.
     change 1 with (0 + #|[tRel 0]| + 0) at 1.
     rewrite -distr_lift_subst_rec /= //.
-    now rewrite subst_rel0_lift_id.
+    rewrite subst_rel0_lift_id.
+    now eapply equality_eq_le, isType_equality_refl.
   Qed.
   
+  Lemma typing_spine_isType_codom {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T args U} :
+    typing_spine Σ Γ T args U -> isType Σ Γ U.
+  Proof.
+    induction 1; auto.
+  Qed.
+
   (** Non-trivial lemma: 
     this shows that instantiating a product/let-in type with the identity substitution on some 
     sub-context of the current context is the same as typechecking the remainder of the 
@@ -884,9 +901,8 @@ Section CheckEnv.
     This is a quite common operation in tactics. Making this work up-to unfolding of
     let-ins is the tricky part.
   *)
-  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv_gen {Σ : global_env_ext} (wfΣ : wf Σ) Γ Δ Δ' Δ'' s args s' :
-    wf_local Σ (Γ ,,, Δ) ->
-    closedn_ctx #|Γ| (Δ ,,, Δ'') ->
+  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv_gen {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ' Δ'' s args s'} :
+    wf_local Σ (Γ ,,, Δ ,,, Δ'') ->
     typing_spine Σ (Γ ,,, Δ ,,, Δ') (it_mkProd_or_LetIn (lift_context #|Δ ,,, Δ'| 0 (Δ ,,, Δ'')) (tSort s)) 
       (to_extended_list_k Δ #|Δ'| ++ args) (tSort s') ->
     typing_spine Σ (Γ ,,, Δ ,,, Δ') (it_mkProd_or_LetIn (lift_context #|Δ'| 0 Δ'') (tSort s)) 
@@ -894,21 +910,21 @@ Section CheckEnv.
   Proof.
     induction Δ using PCUICInduction.ctx_length_rev_ind in Γ, s, s', args, Δ' |- *; simpl;
       rewrite ?it_mkProd_or_LetIn_app;
-    intros wf cl sp.
-    * rewrite app_context_nil_l in cl. len in sp.
+    intros wf sp.
+    * len in sp.
       now rewrite app_context_nil_l in sp.
     * set (decl := d) in *.
+      assert (wf_universe Σ s).
+      { eapply typing_spine_isType_dom in sp.
+        eapply isType_it_mkProd_or_LetIn_inv in sp; auto.
+        destruct sp as [? Hs]. now eapply inversion_Sort in Hs as [? []]. }
       destruct d as [na [b|] ty]. simpl in sp; unfold mkProd_or_LetIn in sp; simpl in *.
       - len in sp.
         rewrite lift_context_app /= it_mkProd_or_LetIn_app lift_context_app it_mkProd_or_LetIn_app /= 
           -it_mkProd_or_LetIn_app in sp.
         replace (Γ,,, (Γ0 ++ [decl]),,, Δ') with (Γ,, decl,,, (Γ0,,, Δ')) in sp.
         2:rewrite !app_context_assoc //.
-        rewrite closedn_ctx_app in cl.
-        move/andP:cl; rewrite closedn_ctx_app => [[/andP [cld clΓ0]] clΔ''].
-        simpl in *. len in clΔ''.
-        unfold closedn_ctx in cld. simpl in cld.
-        epose proof (typing_spine_letin_inv' wfΣ Γ na b ty (Γ0 ,,, Δ') _ _ _).
+        epose proof (typing_spine_letin_inv' (Γ := Γ) (na:=na) (b:=b) (ty:=ty) (Δ := Γ0 ,,, Δ')).
         fold decl in X0.
         rewrite /lift_decl in X0. len in X0.
         rewrite Nat.add_assoc in sp.
@@ -920,23 +936,20 @@ Section CheckEnv.
         rewrite app_context_assoc.
         rewrite to_extended_list_k_app in sp. simpl in sp.
         specialize (X Γ0 ltac:(now len) (Γ ,, decl) Δ' s args s').
-        simpl in X. rewrite Nat.add_1_r in clΓ0 clΔ''. 
+        simpl in X.
         rewrite app_context_assoc in wf. specialize (X wf).
-        forward X. rewrite closedn_ctx_app clΓ0 /=. red. rewrite -clΔ''. simpl. lia_f_equal.
-        len in X. rewrite app_context_assoc in sp.
-        now specialize (X sp).
-        rewrite app_context_assoc in wf. now eapply All_local_env_app_inv in wf as [? ?].
+        forward X. rewrite app_context_assoc in sp. len.
+        exact X.
+        eapply isType_it_mkProd_or_LetIn; tea.
+        eapply isType_Sort => //.
+        now rewrite !app_context_assoc in wf *.
       - len in sp.
         rewrite lift_context_app /= it_mkProd_or_LetIn_app lift_context_app it_mkProd_or_LetIn_app /= 
           -it_mkProd_or_LetIn_app in sp.
         replace (Γ,,, (Γ0 ++ [decl]),,, Δ') with (Γ,, decl,,, (Γ0,,, Δ')) in sp.
         2:rewrite !app_context_assoc //.
-        rewrite closedn_ctx_app in cl.
-        move/andP:cl; rewrite closedn_ctx_app => [[/andP [cld clΓ0]] clΔ''].
-        simpl in *. len in clΔ''.
-        unfold closedn_ctx in cld. simpl in cld. 
         rewrite to_extended_list_k_app in sp. simpl in sp.
-        epose proof (typing_spine_prod_inv wfΣ Γ na ty (Γ0 ,,, Δ') _ _ _).
+        epose proof (typing_spine_prod_inv (na := na) (ty := ty) (Δ := Γ0 ,,, Δ')).
         fold decl in X0.
         rewrite /lift_decl in X0. len in X0.
         rewrite Nat.add_assoc in sp.
@@ -948,16 +961,17 @@ Section CheckEnv.
         rewrite lift_it_mkProd_or_LetIn in sp.
         rewrite app_context_assoc.
         specialize (X Γ0 ltac:(now len) (Γ ,, decl) Δ' s args s').
-        simpl in X. rewrite Nat.add_1_r in clΓ0 clΔ''. 
+        simpl in X.
         rewrite app_context_assoc in wf. specialize (X wf).
-        forward X. rewrite closedn_ctx_app clΓ0 /=. red. rewrite -clΔ'' /=. lia_f_equal.
         len in X. rewrite app_context_assoc in sp.
         now specialize (X sp).
-        rewrite app_context_assoc in wf. now eapply All_local_env_app_inv in wf as [? ?].
+        rewrite app_context_assoc in wf.
+        eapply isType_it_mkProd_or_LetIn; auto.
+        eapply isType_Sort; eauto. now rewrite app_context_assoc.
   Qed.
 
-  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv {Σ : global_env_ext} (wfΣ : wf Σ) Γ Δ Δ' Δ'' s args s' :
-    wf_local Σ (Γ ,,, Δ) ->
+  Lemma typing_spine_it_mkProd_or_LetIn_ext_list_inv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ' Δ'' s args s'} :
+    wf_local Σ (Γ ,,, Δ ,,, Δ'') ->
     closedn_ctx 0 (Δ ,,, Δ'') ->
     typing_spine Σ (Γ ,,, Δ ,,, Δ') (it_mkProd_or_LetIn (Δ ,,, Δ'') (tSort s)) 
       (to_extended_list_k Δ #|Δ'| ++ args) (tSort s') ->
@@ -966,7 +980,6 @@ Section CheckEnv.
   Proof.
     intros.
     eapply typing_spine_it_mkProd_or_LetIn_ext_list_inv_gen; eauto.
-    eapply closedn_ctx_upwards; eauto. lia.
     rewrite closed_ctx_lift //.
   Qed.
 
@@ -1463,7 +1476,7 @@ Section CheckEnv.
     { eapply nth_error_all in wfar; eauto. simpl in wfar.
       destruct heq as [s Hs]. rewrite Hs in wfar.
       eapply isType_it_mkProd_or_LetIn_wf_local in wfar.
-      now rewrite app_context_nil_l in wfar. auto. }
+      now rewrite app_context_nil_l in wfar. }
     red. rewrite eq in isTy.
     eapply isType_it_mkProd_or_LetIn_inv in isTy; auto.
     eapply isType_mkApps_inv in isTy as [fty [s [Hf Hsp]]]; auto.
@@ -1474,8 +1487,9 @@ Section CheckEnv.
     #|ind_params mdecl,,, cstr_args x|) with (#|ind_bodies mdecl| - S n) in Hnth by lia.
     pose proof (nth_error_Some_length hnth).
     rewrite nth_error_rev in hnth => //.
-    eapply nth_error_arities_context in hnth. rewrite Hnth in hnth.
-    noconf hnth; simpl in *. clear Hnth.
+    assert (H0 := nth_error_arities_context _ _ _ hnth).
+    rewrite Hnth in H0.
+    noconf H0; simpl in *.
     eapply PCUICSpine.typing_spine_strengthen in Hsp; eauto.
     clear cum.
     destruct heq as [inds eqind].
@@ -1484,7 +1498,7 @@ Section CheckEnv.
     rewrite closed_ctx_lift in Hs. eapply PCUICClosed.closed_wf_local; eauto.
     rewrite app_context_assoc in Hs wfctx.
     eapply typing_spine_it_mkProd_or_LetIn_ext_list_inv in Hs; auto.
-    2:{ eapply PCUICWeakening.weaken_wf_local; pcuic.
+    2:{ rewrite -app_context_assoc. eapply PCUICWeakening.weaken_wf_local; auto.
         now eapply wf_ind_types_wf_arities. }
     2:{ eapply PCUICClosed.closed_wf_local; eauto. }
     eapply typing_spine_it_mkProd_or_LetIn_inv in Hs => //. auto.
@@ -1492,6 +1506,12 @@ Section CheckEnv.
     rewrite -app_context_assoc.
     eapply PCUICWeakening.weaken_wf_local; eauto.
     now eapply wf_ind_types_wf_arities.
+    len.
+    rewrite nth_error_rev in hnth. len.
+    rewrite List.rev_involutive in hnth. len in hnth.
+    eapply nth_error_all in wfar; tea. cbn in wfar.
+    rewrite lift_closed; [now eapply isType_closed in wfar|].
+    now eapply isType_weaken.
   Qed.
 
   Program Definition check_cstr_variance (Σ : wf_env) mdecl (id : kername) indices
@@ -1613,16 +1633,12 @@ Section CheckEnv.
     eapply All2_impl; eauto. simpl.
     intros.
     destruct X as [[wtinds [wfvar posc]] [[[isTy eq]] eq']].
-    assert(wf_local (Σ0.(wf_env_env), ind_universes mdecl) (ind_params mdecl,,, indices)).
-    { eapply nth_error_all in wfar; eauto. simpl in wfar.
-      todo "case".   }
-      (* destruct isTy as [s' Hs]. rewrite Hs in wfar.
-      eapply isType_it_mkProd_or_LetIn_wf_local in wfar.
-      now rewrite app_context_nil_l in wfar. auto. } *)
     econstructor => //.
     rewrite eq.
     rewrite it_mkProd_or_LetIn_app. autorewrite with len. lia_f_equal.
-    todo "case".
+    rewrite /cstr_concl /=. f_equal. rewrite /cstr_concl_head.
+    lia_f_equal.
+    now destruct wtinds.
   Qed.
 
   Definition check_projections_type (Σ : wf_env_ext) (mind : kername) 
@@ -1672,7 +1688,8 @@ Section CheckEnv.
   Program Definition check_projections_cs (Σ : wf_env_ext) (mind : kername) (mdecl : mutual_inductive_body)
     (i : nat) (idecl : one_inductive_body) (indices : context) 
     (cdecl : constructor_body) (cs : constructor_univs) 
-    (oncs : ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices [cdecl] [cs] ∥) : 
+    (oncs : ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices [cdecl] [cs] ∥)
+    (onec : #|idecl.(ind_ctors)| = 1) : 
     typing_result (∥ on_projections mdecl mind i idecl indices cdecl ∥) :=
     check_indices <- check_eq_true (eqb [] indices) (Msg "Primitive records cannot have indices") ;;
     check_elim <- check_eq_true (eqb (ind_kelim idecl) IntoAny) (Msg "Primitive records must be eliminable to Type");;
@@ -1688,8 +1705,6 @@ Section CheckEnv.
       eapply eqb_eq in check_indices; subst indices.
       eapply eqb_eq in check_elim. eapply eqb_eq in check_length.
       constructor => //.
-      todo "case".
-      (* now rewrite H. *)
     Qed.
 
   Program Definition check_projections (Σ : wf_env_ext) (mind : kername) (mdecl : mutual_inductive_body)
@@ -1700,25 +1715,24 @@ Section CheckEnv.
     | [] => fun _ => ret _
     | _ => 
       match idecl.(ind_ctors) as x, cs return
+        x = idecl.(ind_ctors) ->
         ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices x cs ∥ -> 
           typing_result (∥ check_projections_type Σ mind mdecl i idecl indices ∥)
       with
-      | [ cdecl ], [ cs ] => fun oncs => 
-        ccs <- check_projections_cs Σ mind mdecl i idecl indices cdecl cs oncs ;; 
+      | [ cdecl ], [ cs ] => fun eq oncs => 
+        ccs <- check_projections_cs Σ mind mdecl i idecl indices cdecl cs oncs _ ;; 
         ret _
-      | _, _ => fun oncs => raise (Msg "Projections can only be declared for an inductive type with a single constructor")
-      end
+      | _, _ => fun eq oncs => raise (Msg "Projections can only be declared for an inductive type with a single constructor")
+      end eq_refl
     end.
   Next Obligation.
     rename Heq_anonymous into eqp. 
     sq. red. rewrite -eqp. congruence.
   Qed.
   Next Obligation.
-    sq. red. intros. auto.
-    todo "case".
-    (* destruct ind_ctors => //. *)
+    sq. red. intros. rewrite -eq //.
   Qed.
-
+  
   Definition checkb_constructors_smaller (G : universes_graph) (cs : list constructor_univs) (ind_sort : Universe.t) :=
     List.forallb (List.forallb (fun argsort => check_leqb_universe G argsort ind_sort)) cs.
 
@@ -1773,7 +1787,7 @@ Section CheckEnv.
         (Msg ("Incorrect inductive sort: The constructor arguments universes are not smaller than the declared inductive sort")) ;;
       match indices_matter with
       | true =>
-        (* FIXME this is wrong, we should use sorts_local_ctx as the indices might be 
+        (* FIXME this is a strict underapproximation, we should use sorts_local_ctx as the indices might be 
           in sorts which don't necessarily have a sup. *)
         tyloc <- check_type_local_ctx Σ params indices ind_sort wfparams ;;
         ret _
@@ -1782,25 +1796,18 @@ Section CheckEnv.
     end.
 
     Next Obligation.
-      unfold check_ind_sorts. simpl. 
-      now rewrite H.
-    Qed.
-    Next Obligation.
-      unfold check_ind_sorts. 
-      now rewrite H.
+      unfold check_ind_sorts. simpl.
+      pose proof (check_constructors_smallerP Σ cs u wfcs wfi).
+      rewrite -Heq_anonymous. sq. split => //.
+      destruct H0 => //.
     Qed.
     Next Obligation.
       unfold check_ind_sorts. simpl.
       pose proof (check_constructors_smallerP Σ cs u wfcs wfi).
       sq. split. destruct H0 => //.
-      destruct indices_matter; auto.
+      rewrite -Heq_anonymous; auto.
     Qed.
-    Next Obligation.
-      unfold check_ind_sorts; simpl.
-      pose proof (check_constructors_smallerP Σ cs u wfcs wfi).
-      sq. split. destruct H0 => //. now rewrite -Heq_anonymous.
-    Qed.
-
+    
   Lemma sorts_local_ctx_wf_sorts (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ s : 
     sorts_local_ctx (lift_typing typing) Σ Γ Δ s ->
     Forall (wf_universe Σ) s.
@@ -1888,10 +1895,16 @@ Section CheckEnv.
         | Some (ctx, s) => fun eq => ret ((ctx, s); _)
         | None => fun _ => raise (NotAnArity idecl.(ind_type))
         end eq_refl)) ;;
-      let '(_, params) := split_at (#|ctxinds.1| - #|mdecl.(ind_params)|) ctxinds.1 in
+      let '(indices, params) := split_at (#|ctxinds.1| - #|mdecl.(ind_params)|) ctxinds.1 in
+      eqsort <- wrap_error Σ id 
+        (check_eq_true (eqb ctxinds.2 idecl.(ind_sort)) 
+        (Msg "Inductive body sort does not match the sort of the inductive type"));;
       eqpars <- wrap_error Σ id 
         (check_eq_true (eqb params mdecl.(ind_params)) 
         (Msg "Inductive arity parameters do not match the parameters of the mutual declaration"));;
+      eqindices <- wrap_error Σ id 
+        (check_eq_true (eqb indices idecl.(ind_indices)) 
+        (Msg "Inductive arity indices do not match the indices of the mutual declaration"));;
       '(cs; oncstrs) <- (check_constructors Σ0 Σ mind mdecl pf wfars wfpars mdeclvar i idecl idecl.(ind_indices) hnth _) ;;
       onprojs <- wrap_error Σ ("Checking projections of " ^ id) 
        (check_projections Σ mind mdecl i idecl idecl.(ind_indices) cs oncstrs) ;;
@@ -1910,7 +1923,6 @@ Section CheckEnv.
            ind_cunivs := cs;
            onConstructors := oncstrs;
            onProjections := onprojs;
-           (* ind_sorts := onsorts;  *)
            onIndices := _ |})).
   Next Obligation. 
     symmetry in eq.
@@ -1922,17 +1934,15 @@ Section CheckEnv.
     sq. exists t0.
     destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
     rewrite split_at_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
-    rewrite {1}H.
-    todo "case".
-    (* now rewrite [_ ,,, _]firstn_skipn. *)
+    rewrite {1}H. apply eqb_eq in eqindices.
+    rewrite -eqindices. now rewrite /app_context firstn_skipn.
   Qed.
   
   Next Obligation.
     destruct Σ as [Σ wfΣ G wfG]; simpl in *.
     sq. red. simpl. red in X. solve_all.
     destruct X.
-    todo "case".
-     (* now eapply sorts_local_ctx_wf_sorts in on_cargs. *)
+    eapply sorts_local_ctx_wf_sorts, Forall_All in on_cargs; auto.
   Qed. 
 
   Next Obligation.
@@ -1940,7 +1950,7 @@ Section CheckEnv.
     eapply nth_error_all in wfars; eauto; simpl in wfars.
     destruct wfars as [s Hs]. red in Hs.
     clear X0; rewrite p in Hs.
-    eapply (* todo fix clash *) PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
+    eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
     now eapply inversion_Sort in Hs as [_ [wf _]].
   Qed. 
 
@@ -1952,29 +1962,21 @@ Section CheckEnv.
     clear onprojs onsorts X.
     red in wfars. eapply nth_error_all in wfars; eauto; simpl in wfars.
     destruct wfars as [s Hs].
-    destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
+    apply eqb_eq in eqpars; apply eqb_eq in eqindices; subst.
     red in Hs.
-    rewrite split_at_firstn_skipn in Heq_anonymous1. noconf Heq_anonymous1.
-    rewrite {1}H; autorewrite with len. 
-    todo "case".
-    (* rewrite [_ ,,, _]firstn_skipn.
+    rewrite split_at_firstn_skipn in Heq_anonymous1.
+    noconf Heq_anonymous1.
+    rewrite {1}H {1}H0 /app_context firstn_skipn.
     rewrite X0 in Hs.
     eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
-    eapply typing_wf_local in Hs. now rewrite app_context_nil_l in Hs.*)
+    eapply typing_wf_local in Hs. now rewrite app_context_nil_l in Hs.
   Qed.
 
   Next Obligation.
-    destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
-    sq.
-    eapply nth_error_all in wfars; eauto; simpl in wfars.
-    destruct wfars as [s Hs]. red in Hs.
-    rewrite split_at_firstn_skipn in Heq_anonymous1. noconf Heq_anonymous1.
-    rewrite p H; autorewrite with len. simpl.
-    todo "case".
-    (*rewrite List.skipn_length.
-    replace (#|l0| - (#|l0| - (#|l0| - #|ind_params mdecl|))) with (#|l0| - #|ind_params mdecl|) by lia.
-    rewrite -it_mkProd_or_LetIn_app.
-    rewrite /app_context firstn_skipn. reflexivity.*)
+    cbn in eqsort; apply eqb_eq in eqpars; apply eqb_eq in eqindices; apply eqb_eq in eqsort; subst.
+    rewrite split_at_firstn_skipn in Heq_anonymous1. cbn in *.
+    noconf Heq_anonymous1.
+    now rewrite {1}H {1}H0 /app_context -it_mkProd_or_LetIn_app firstn_skipn.
   Qed.
   
   Next Obligation.
@@ -1987,11 +1989,10 @@ Section CheckEnv.
   Next Obligation.
     destruct Σ as [Σ wfΣ G wfG]; simpl in *.
     subst Σ; simpl in *.
-    todo "case".
-     (* now apply onindices. *)
+    now apply eqb_eq in eqsort; subst.
   Qed.
   Next Obligation.
-    todo "case".
+    rewrite pf. now apply onindices.
   Qed.
 
   Program Definition check_wf_decl (Σ0 : wf_env) (Σ : global_env_ext)  HΣ HΣ' G HG

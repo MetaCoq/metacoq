@@ -71,7 +71,7 @@ Section Measure.
   Lemma cored_welltyped :
     forall {Γ u v},
       ∥ wf Σ ∥ -> welltyped Σ Γ u ->
-      cored (fst Σ) Γ v u ->
+      cored Σ Γ v u ->
       welltyped Σ Γ v.
   Proof.
     intros Γ u v HΣ h r.

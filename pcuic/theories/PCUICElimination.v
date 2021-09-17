@@ -48,30 +48,6 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
-
-Lemma alpha_eq_context_closed {Γ Δ} :
-  All2 (compare_decls eq eq) Γ Δ ->
-  is_closed_context Γ ->
-  is_closed_context Δ.
-Proof.
-  induction 1 => //.
-  rewrite !on_free_vars_ctx_snoc=> /andP[] clx cll.
-  apply /andP; split; auto.
-  destruct r; unfold ws_decl, test_decl in *; cbn in *; subst; auto; now rewrite -(All2_length X).
-Qed.
-
-Lemma alpha_eq_context_context_equality {cf Σ Γ Δ} {wfΣ : wf Σ} :
-  All2 (compare_decls eq eq) Γ Δ ->
-  is_closed_context Γ ->
-  Σ ⊢ Γ = Δ.
-Proof.
-  move=> eq cl.
-  assert (cl' := alpha_eq_context_closed eq cl).
-  eapply eq_context_upto_context_equality => //.
-  eapply All2_fold_All2. eapply All2_impl; tea.
-  intros x y []; constructor; subst; auto; try reflexivity.
-Qed.
-
 From MetaCoq.PCUIC Require Import PCUICArities.
 
 Lemma typing_spine_case_predicate {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}

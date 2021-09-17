@@ -464,32 +464,9 @@ Section Alpha.
         + eapply All2_refl. reflexivity.
   Qed.
 
-
-(* We show that the derived predicate of a case is always well-typed, for *any*
-  instance of the parameters (not just the ones from a well-formed predicate). *)
-Lemma wf_inst_case_context {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
-  {mdecl idecl} {uinst params} ctx :
-  declared_inductive Σ ci mdecl idecl ->
-  wf_local Σ Γ ->
-  consistent_instance_ext Σ (ind_universes mdecl) uinst ->
-  spine_subst Σ Γ params (List.rev params) (smash_context [] (subst_instance uinst (ind_params mdecl))) ->
-  wf_local_rel Σ (Γ,,, (ind_params mdecl)@[uinst]) ctx@[uinst] ->
-  wf_local Σ (Γ ,,, inst_case_context params uinst (expand_lets_ctx (ind_params mdecl) ctx)).
-Proof.
-  move=> isdecl wfΓ cu sp wfr.
-  rewrite /pre_case_predicate_context_gen /inst_case_context /ind_predicate_context /=.
-  eapply PCUICSubstitution.substitution_wf_local. eapply sp.
-  unshelve epose proof (on_minductive_wf_params_indices_inst isdecl _ cu).
-  rewrite PCUICUnivSubstitution.subst_instance_app_ctx in X.
-  eapply wf_local_app_inv in X as [].
-  rewrite subst_instance_expand_lets_ctx.
-  eapply wf_local_expand_lets.
-  eapply wf_local_app. now eapply weaken_wf_local; tea.
-  assumption.
-Qed.
   Lemma eq_binder_annots_eq_context_gen_ctx {Δ : context} {nas} :
-  All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
-  eq_context_gen eq eq (map2 set_binder_name nas Δ) Δ.
+    All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
+    eq_context_gen eq eq (map2 set_binder_name nas Δ) Δ.
   Proof.
   induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
   - depelim hlen. simpl. reflexivity.
@@ -874,7 +851,7 @@ Qed.
           eapply (All2i_All2_All2i_All2i Hbrs X3 a).
           intros n cdecl br br' [wfbr [wfbrctx wfbrty]].
           destruct wfbrty as (IHbrctx & Hbbody & IHbbody & Hbty & IHbty).
-          intros [eqbctx eqbodies] [wfbr' wfcpars wfcbctx Hbr'ty].
+          intros [eqbctx eqbodies] [wfbr' wfcpars wfcparsn wfcbctx Hbr'ty].
           split; intuition auto.
           etransitivity. symmetry. eapply All2_fold_All2. exact eqbctx. assumption.
           eapply eq_context_gen_upto in eqbctx.
@@ -885,7 +862,8 @@ Qed.
             eapply eq_context_upto_cat; auto. eapply Hbr'ty.
             constructor. eapply eq_term_leq_term.
             rewrite /ptm /cpc. eapply case_branch_type_equiv; auto.
-            now eapply case_predicate_context_equiv. } 
+            now eapply case_predicate_context_equiv. }
+
 
       + constructor. apply eq_term_leq_term.
         apply eq_term_mkApps; tea.

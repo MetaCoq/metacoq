@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils Kernames.
+From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
      PCUICReflect PCUICWeakeningEnv
      PCUICTyping PCUICInversion PCUICGeneration
@@ -23,6 +23,72 @@ Require Import ssreflect.
 
 Derive Signature for PCUICTyping.on_global_env.
 
+Implicit Types (cf : checker_flags).
+
+Notation alpha_eq := (All2 (PCUICEquality.compare_decls eq eq)).
+
+Lemma wf_local_rel_alpha_eq_end {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} : 
+  wf_local Σ Γ ->
+  alpha_eq Δ Δ' ->
+  wf_local_rel Σ Γ Δ -> wf_local_rel Σ Γ Δ'.
+Proof.
+  intros wfΓ eqctx wf.
+  apply wf_local_app_inv.
+  eapply wf_local_app in wf => //.
+  eapply PCUICInductiveInversion.wf_local_alpha; tea.
+  eapply All2_app => //. reflexivity.
+Qed.
+(* 
+Lemma wf_local_map2_set_binder_name {cf Σ} {wfΣ : wf Σ} {Γ nas Δ} : 
+  #|nas| = #|Δ| ->
+  wf_local Σ (Γ ,,, map2 set_binder_name nas Δ) <~> wf_local Σ (Γ ,,, Δ).
+Proof.
+  induction nas in Δ |- *; destruct Δ; cbn => //.
+  intros [=]. split; intros; try constructor; eauto.
+  - destruct c as [na [b|] ty]; cbn in *; depelim X. red in l, l0. cbn in *.
+    constructor; auto. apply IHnas; auto.
+    red.
+    destruct l as [s Hs].
+    exists s. eapply PCUICContextConversion.context_conversion; tea; eauto.
+    now eapply IHnas.
+    eapply eq_context_alpha_conv
+
+
+  intros wfΓ eqctx wf.
+  apply wf_local_app_inv.
+  eapply wf_local_app in wf => //.
+  eapply PCUICInductiveInversion.wf_local_alpha; tea.
+  eapply All2_app => //. reflexivity.
+Qed. *)
+
+Section OnInductives.
+  Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
+  
+  Lemma on_minductive_wf_params_weaken {ind mdecl Γ} {u} :
+    declared_minductive Σ.1 ind mdecl ->
+    consistent_instance_ext Σ (ind_universes mdecl) u ->
+    wf_local Σ Γ ->
+    wf_local Σ (Γ ,,, (ind_params mdecl)@[u]).
+  Proof.
+    intros.
+    eapply PCUICWeakening.weaken_wf_local; tea.
+    eapply PCUICArities.on_minductive_wf_params; tea.
+  Qed.
+  
+  Context {mdecl ind idecl}
+    (decli : declared_inductive Σ ind mdecl idecl).
+  
+  Lemma on_minductive_wf_params_indices_inst_weaken {Γ} (u : Instance.t) :
+    consistent_instance_ext Σ (ind_universes mdecl) u ->
+    wf_local Σ Γ ->
+    wf_local Σ (Γ ,,, (ind_params mdecl ,,, ind_indices idecl)@[u]).
+  Proof.
+    intros. eapply PCUICWeakening.weaken_wf_local; tea.
+    eapply PCUICInductives.on_minductive_wf_params_indices_inst; tea.
+  Qed.
+
+
+End OnInductives.
 (* To debug performance issues *)
 (* 
 Axiom time : forall {A}, string -> (unit -> A) -> A.
@@ -343,18 +409,29 @@ Section Erase.
     | _ => try red; try reflexivity || discriminates
     end.
 
-  Lemma welltyped_brs Γ ci t1 t2 brs : welltyped Σ Γ (tCase ci t1 t2 brs) -> 
-    Forall (fun x => welltyped Σ (Γ ,,, bcontext x) (bbody x)) brs.
+  Lemma welltyped_brs Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T -> 
+    ∥ All (fun br => welltyped Σ (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ∥.
   Proof.
-    intros [t Ht]. destruct HΣ.
-    todo "case".
-    (* eapply inversion_Case in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
-    simpl in *. clear e2.
-    induction a. constructor.
-    intuition auto. constructor; auto.
-    eexists; eauto. *)
+    intros Ht. destruct HΣ. constructor.
+    eapply inversion_Case in Ht as (mdecl & idecl & decli & indices & data & hty); auto.
+    destruct data.
+    eapply validity in scrut_ty.
+    eapply forall_nth_error_All => i br hnth.
+    eapply All2i_nth_error_r in brs_ty; tea.
+    destruct brs_ty as [cdecl [hnthc [eqctx [wfbctxty [tyb _]]]]].
+    have declc: declared_constructor Σ (ci, i) mdecl idecl cdecl.
+    { split; auto. }
+    have wfbr : wf_branch cdecl br.
+    { eapply Forall2_All2 in wf_brs. eapply All2_nth_error in wf_brs; tea. }
+    have wfΓ : wf_local Σ Γ.
+    { eapply typing_wf_local in pret_ty. now eapply All_local_env_app_inv in pret_ty as []. }
+    epose proof (wf_case_inst_case_context ps indices decli scrut_ty wf_pred pret_ty conv_pctx
+      _ _ _ declc wfbr eqctx) as [wfictx eqictx].
+    eexists.
+    eapply PCUICContextConversion.closed_context_conversion; tea.
+    now symmetry.
   Qed.
-  
+
   Section EraseMfix.
     Context (erase : forall (Γ : context) (t : term) (Ht : welltyped Σ Γ t), E.term).
 
@@ -369,9 +446,9 @@ Section Erase.
       We have access to general substitution still so it shoundn't be too hard.
       Alternatively we erase to the "old" case representation for now
     *)
-    Definition erase_brs Γ (brs : list (branch term)) 
-      (H : forall d, In d brs -> welltyped Σ (Γ ,,, bcontext d) (bbody d)) : list (nat * E.term) :=
-      map_InP (fun br wt => let br' := erase (Γ ,,, bcontext br) (bbody br) wt in 
+    Definition erase_brs p Γ (brs : list (branch term)) 
+      (H : forall d, In d brs -> welltyped Σ (Γ ,,, inst_case_branch_context p d) (bbody d)) : list (nat * E.term) :=
+      map_InP (fun br wt => let br' := erase (Γ ,,, inst_case_branch_context p br) (bbody br) wt in 
         (#|br.(bcontext)|, br')) brs H.
   
   End EraseMfix.
@@ -408,7 +485,7 @@ Section Erase.
         E.tApp f' l';
       erase Γ (tCase ci p c brs) Ht _ with erase Γ c _ :=
        { | c' :=
-          let brs' := erase_brs erase Γ brs _ in
+          let brs' := erase_brs erase p Γ brs _ in
           E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs' } ;
       erase Γ (tProj p c) Ht _ :=
         let c' := erase Γ c _ in
@@ -438,12 +515,9 @@ Section Erase.
       eexists; eauto.
     - eapply inversion_Case in Ht as (? & ? & ? & ? & [] & ?); auto.
       eexists; eauto.
-    - apply inversion_Case in Ht as (? & ? & ? & ? & [] & ?); auto.
+    - eapply welltyped_brs in Ht as [].
       apply In_nth_error in H as (?&nth).
-      eapply All2i_nth_error_r in nth; eauto.
-      destruct nth as (?&?&?&?&?&?); cbn in *.
-      todo "case".
-      
+      now eapply nth_error_all in X0; tea.
     - clear wildcard12.
       eapply inversion_Proj in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
@@ -661,7 +735,7 @@ Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_
   {| E.ind_npars := mib.(ind_npars);
      E.ind_bodies := bodies; |}.
 
-Program Fixpoint erase_global_decls (deps : KernameSet.t) Σ : ∥ wf Σ ∥ -> E.global_declarations := fun wfΣ =>
+Program Fixpoint erase_global_decls (deps : KernameSet.t) (Σ : global_env) : ∥ wf Σ ∥ -> E.global_declarations := fun wfΣ =>
   match Σ with
   | [] => []
   | (kn, ConstantDecl cb) :: Σ' =>
@@ -706,7 +780,7 @@ Defined.
 Program Definition erase_global deps Σ : ∥wf Σ∥ -> _:=
   fun wfΣ  => erase_global_decls deps Σ wfΣ.
 
-Definition global_erased_with_deps Σ Σ' kn :=
+Definition global_erased_with_deps (Σ : global_env) (Σ' : EAst.global_declarations) kn :=
   (exists cst, declared_constant Σ kn cst /\
    exists cst' : EAst.constant_body,
     ETyping.declared_constant Σ' kn cst' /\
@@ -717,12 +791,12 @@ Definition global_erased_with_deps Σ Σ' kn :=
     ETyping.declared_minductive Σ' kn mib' /\
     erases_mutual_inductive_body mib mib').
 
-Definition includes_deps Σ Σ' deps :=  
+Definition includes_deps (Σ : global_env) (Σ' : EAst.global_declarations) deps :=  
   forall kn, 
     KernameSet.In kn deps ->
     global_erased_with_deps Σ Σ' kn.
 
-Lemma includes_deps_union Σ Σ' deps deps' :
+Lemma includes_deps_union (Σ : global_env) (Σ' : EAst.global_declarations) deps deps' :
   includes_deps Σ Σ' (KernameSet.union deps deps') ->
   includes_deps Σ Σ' deps /\ includes_deps Σ Σ' deps'.
 Proof.
@@ -730,7 +804,7 @@ Proof.
   split; intros kn knin; eapply H; rewrite KernameSet.union_spec; eauto.
 Qed.
 
-Lemma includes_deps_fold {A} Σ Σ' brs deps (f : A -> EAst.term) :
+Lemma includes_deps_fold {A} (Σ : global_env) (Σ' : EAst.global_declarations) brs deps (f : A -> EAst.term) :
   includes_deps Σ Σ'
   (fold_left
     (fun (acc : KernameSet.t) (x : A) =>
@@ -751,11 +825,11 @@ Qed.
 Definition declared_kn Σ kn :=
   ∥ ∑ decl, lookup_env Σ kn = Some decl ∥.
 
-Lemma term_global_deps_spec {cf:checker_flags} {Σ Γ t et T} : 
+Lemma term_global_deps_spec {cf} {Σ : global_env_ext} {Γ t et T} : 
   wf Σ.1 ->
   Σ ;;; Γ |- t : T ->
   Σ;;; Γ |- t ⇝ℇ et ->
-  forall x, KernameSet.In x (term_global_deps et) -> declared_kn Σ.1 x.
+  forall x, KernameSet.In x (term_global_deps et) -> declared_kn Σ x.
 Proof.
   intros wf wt er.
   induction er in T, wt |- * using erases_forall_list_ind;
@@ -830,7 +904,7 @@ Proof.
     eapply Hdef; eauto.
 Qed.
 
-Lemma erase_global_erases_deps {Σ Σ' t et T} : 
+Lemma erase_global_erases_deps {Σ} {Σ' : EAst.global_declarations} {t et T} : 
   wf_ext Σ ->
   Σ;;; [] |- t : T ->
   Σ;;; [] |- t ⇝ℇ et ->
@@ -924,7 +998,7 @@ Proof.
   apply (env_prop_typing ESubstitution.erases_extends _ wfΣ _ _ _ Hty _ wfΣ' ext).
 Qed.  
  
-Lemma erases_deps_weaken kn d Σ Σ' t : 
+Lemma erases_deps_weaken kn d (Σ : global_env) (Σ' : EAst.global_declarations) t : 
   wf ((kn, d) :: Σ) ->
   erases_deps Σ Σ' t ->
   erases_deps ((kn, d) :: Σ) Σ' t.

@@ -18,7 +18,9 @@ Local Set Keyed Unification.
 Set Default Goal Selector "!".
 Require Import PCUICSpine PCUICInductives PCUICWeakening PCUICContexts PCUICInductiveInversion.
 
-Lemma wf_inst_case_context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
+
+Lemma wf_inst_case_context {cf Σ} {wfΣ : wf Σ} {Γ} {ci : case_info}
   {mdecl idecl} {uinst params} ctx :
   declared_inductive Σ ci mdecl idecl ->
   wf_local Σ Γ ->
@@ -37,6 +39,74 @@ Proof.
   eapply wf_local_app => //.
   eapply wf_local_smash_end.
   now eapply weaken_wf_local; tea.
+Qed.
+
+
+Lemma alpha_eq_context_closed {Γ Δ} :
+  All2 (compare_decls eq eq) Γ Δ ->
+  is_closed_context Γ ->
+  is_closed_context Δ.
+Proof.
+  induction 1 => //.
+  rewrite !on_free_vars_ctx_snoc=> /andP[] clx cll.
+  apply /andP; split; auto.
+  destruct r; unfold ws_decl, test_decl in *; cbn in *; subst; auto; now rewrite -(All2_length X).
+Qed.
+
+Lemma alpha_eq_context_context_equality {cf Σ Γ Δ} {wfΣ : wf Σ} :
+  All2 (compare_decls eq eq) Γ Δ ->
+  is_closed_context Γ ->
+  Σ ⊢ Γ = Δ.
+Proof.
+  move=> eq cl.
+  assert (cl' := alpha_eq_context_closed eq cl).
+  eapply eq_context_upto_context_equality => //.
+  eapply All2_fold_All2. eapply All2_impl; tea.
+  intros x y []; constructor; subst; auto; try reflexivity.
+Qed.
+
+Lemma wf_case_inst_case_context {cf Σ} {wfΣ : wf Σ}
+  {Γ mdecl idecl} {ci : case_info} {p} ps (args : list term) :
+  declared_inductive Σ ci mdecl idecl ->
+  isType Σ Γ (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ args)) ->
+  wf_predicate mdecl idecl p ->
+  let predctx := case_predicate_context ci mdecl idecl p in
+  Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
+  let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  forall i cdecl br, 
+    declared_constructor Σ (ci.(ci_ind), i) mdecl idecl cdecl ->
+    wf_branch cdecl br ->
+    All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
+    wf_local Σ (Γ ,,, inst_case_context (pparams p) (puinst p) br.(bcontext)) ×
+     Σ ⊢ Γ ,,, inst_case_context (pparams p) (puinst p) br.(bcontext) = 
+         Γ ,,, case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl.
+Proof.
+  intros isdecl Hc wfp bc Hp ptm wfpctx.
+  intros i cdecl br declc wfbr onctx.
+  destruct (wf_case_branch_type ps args isdecl Hc wfp Hp wfpctx _ _ _ declc wfbr) as []; auto.
+  have wfΓ : wf_local Σ Γ by pcuic.
+  eapply isType_mkApps_Ind_smash in Hc as [? []]; tea.
+  2:{ now rewrite (wf_predicate_length_pars wfp). }
+  have wfctx : wf_local Σ (Γ,,, inst_case_context (pparams p) (puinst p) (bcontext br)).
+  { eapply wf_inst_case_context; tea.
+    eapply wf_local_app_inv. eapply wf_local_alpha.
+    ++ instantiate (1 := (Γ ,,, smash_context [] (ind_params mdecl)@[puinst p],,, 
+          (cstr_branch_context ci mdecl cdecl)@[puinst p])).
+      eapply All2_app => //; [|reflexivity].
+      eapply alpha_eq_subst_instance. now symmetry.
+    ++ rewrite /cstr_branch_context.
+      rewrite subst_instance_expand_lets_ctx.
+      eapply wf_local_expand_lets.
+      rewrite /case_branch_context_nopars /= /case_branch_type /= in a.
+      rewrite subst_instance_subst_context subst_instance_inds.
+      now rewrite (subst_instance_id_mdecl _ _ _ c). }
+  split => //.
+  eapply alpha_eq_context_context_equality; [|fvs].
+  eapply All2_app; [|reflexivity].
+  etransitivity.
+  2:eapply pre_case_branch_context_eq; tea.
+  eapply inst_case_branch_context_eq; tea. exact isdecl.
 Qed.
 
 Section Lemmata.
@@ -65,7 +135,7 @@ Section Lemmata.
      can't be used as well order. We thus define the transitive closure,
      but we take the symmetric version.
    *)
-  Inductive cored Σ Γ: term -> term -> Prop :=
+  Inductive cored (Σ : global_env) Γ: term -> term -> Prop :=
   | cored1 : forall u v, red1 Σ Γ u v -> cored Σ Γ v u
   | cored_trans : forall u v w, cored Σ Γ v u -> red1 Σ Γ v w -> cored Σ Γ w u.
 
@@ -219,7 +289,7 @@ Section Lemmata.
   Lemma cored_welltyped :
     forall {Γ u v},
       welltyped Σ Γ u ->
-      cored (fst Σ) Γ v u ->
+      cored Σ Γ v u ->
       welltyped Σ Γ v.
   Proof.
     destruct hΣ as [wΣ]; clear hΣ.
@@ -422,7 +492,7 @@ Section Lemmata.
           
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
-    - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
+    - apply inversion_Case in typ as (mdecl&idecl&decli&args&[]&?); auto.
       destruct brs as ((?&?)&?).
       simpl fill_branches_hole in brs_ty.
       destruct b; cbn in *.
@@ -433,63 +503,19 @@ Section Lemmata.
       destruct p0 as (wfl&(cc&typ&r)). clear r.
       rewrite -app_assoc.
       eexists.
-      apply typing_wf_local in scrut_ty.
-      eapply context_conversion; tea.
-      * eapply wf_inst_case_context; tea.
-        ** unshelve epose proof (ctx_inst_spine_subst _ ind_inst).
-          { eapply weaken_wf_local; tea.
-            eapply (on_minductive_wf_params_indices_inst x1); tas. }
-          move: X. generalize (ctx_inst_sub ind_inst) => l'.
-          rewrite subst_instance_app => X.
-          unshelve epose proof (spine_subst_app_inv _ X) as [sp _].
-          { rewrite (wf_predicate_length_pars wf_pred). len.
-            eapply (PCUICClosed.declared_minductive_ind_npars x1). }
-          now eapply spine_subst_smash in sp.
-        ** eapply wf_local_app_inv. eapply wf_local_alpha.
-          ++ instantiate (1 := (Γ,,, stack_context π,,, smash_context [] (ind_params x)@[puinst p],,, 
-                (cstr_branch_context ci x x5)@[puinst p])).
-            eapply All2_app => //.
-            { eapply alpha_eq_subst_instance. now symmetry. }
-            reflexivity.
-          ++ eapply typing_wf_local in typ. simpl in typ.
-            rewrite /cstr_branch_context.
-            rewrite subst_instance_expand_lets_ctx.
-            eapply wf_local_expand_lets.
-            set (brs := l ++ {| bcontext := bcontext; bbody := t |} :: l0) in *.
-            unshelve epose proof (wf_case_branches_types' ps x2 brs x1 _ wf_pred pret_ty wf_brs conv_pctx).
-            { eexists; red. eapply type_mkApps. 1:{ econstructor; eauto. }
-              rewrite (declared_inductive_type x1).
-              eapply wf_arity_spine_typing_spine.
-              split. { rewrite -(declared_inductive_type x1). eapply (declared_inductive_valid_type x1); tas. }
-              rewrite subst_instance_it_mkProd_or_LetIn.
-              eapply arity_spine_it_mkProd_or_LetIn_Sort; tas.
-              { eapply (on_inductive_sort_inst x1); tea. }
-              { reflexivity. }
-              unshelve eapply (ctx_inst_spine_subst _ ind_inst).
-              eapply weaken_wf_local; tea. now eapply (on_minductive_wf_params_indices_inst x1). }
-            rewrite e0 in X.
-            assert (nth_error (x3 ++ x5 :: l1) #|x3| = Some x5).
-            { rewrite nth_error_app_ge // Nat.sub_diag //. }
-            eapply All2i_nth_error in X; tea.
-            2:{ rewrite a0 /brs nth_error_app_ge // Nat.sub_diag /= //. }
-            cbn in X. destruct X as [wfbr wfctx wfictx _].
-            rewrite /case_branch_context_nopars /= /case_branch_type /= in wfctx.
-            eapply wf_local_alpha; tea. eapply All2_app => //. 2:reflexivity.
-            rewrite subst_instance_subst_context subst_instance_inds.
-            rewrite (subst_instance_id_mdecl _ _ _ cons).
-            eapply eq_binder_annots_eq.
-            apply All2_eq_binder_subst_context, All2_eq_binder_subst_instance.
-            now eapply Forall2_All2.
-          * rewrite /case_branch_context_gen.
-            apply compare_decls_conv, All2_app => //. 2:reflexivity.
-            etransitivity; [eapply eq_binder_annots_eq|].
-            { eapply wf_pre_case_branch_context_gen; tea.
-              red in wf_brs. eapply Forall2_All2 in wf_brs. move: wf_brs.
-              rewrite e0. move/(All2_app_inv _ _ _ _ _ _ _ a0) => [] _ H.
-              now depelim H. }
-            symmetry. 
-            rewrite /pre_case_branch_context_gen.
-            now apply alpha_eq_inst_case_context.
+      pose proof (typing_wf_local scrut_ty).
+      eapply validity in scrut_ty.
+      have declc : declared_constructor Σ (ci, #|x|) mdecl idecl x1.
+      { split; auto. rewrite e0 /= nth_error_app_ge // Nat.sub_diag //. }
+      have wf_branch : wf_branch x1 {| bcontext := bcontext; bbody := t |}.
+      { eapply Forall2_All2 in wf_brs. eapply All2_nth_error with (n := #|x|) in wf_brs; tea.
+        * rewrite e0 /= nth_error_app_ge // Nat.sub_diag //.
+        * rewrite a0 /= nth_error_app_ge // Nat.sub_diag //. }
+      destruct (wf_case_inst_case_context ps args decli scrut_ty wf_pred pret_ty conv_pctx
+        _ _ _ declc wf_branch wfl).
+      cbn in *.
+      eapply closed_context_conversion; tea.
+      now symmetry.
   Qed.
 
   Lemma cored_red :
@@ -670,7 +696,7 @@ Section Lemmata.
     forall {Γ c u cty cb cu},
       Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
       = lookup_env Σ c ->
-      cored (fst Σ) Γ (subst_instance u cb) (tConst c u).
+      cored Σ Γ (subst_instance u cb) (tConst c u).
   Proof.
     intros Γ c u cty cb cu e.
     symmetry in e.

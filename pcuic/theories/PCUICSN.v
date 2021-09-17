@@ -14,11 +14,11 @@ Section Normalisation.
 
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-
+(* todo: missing wf_env hypothesis !*)
   Axiom normalisation :
     forall Γ t,
       welltyped Σ Γ t ->
-      Acc (cored (fst Σ) Γ) t.
+      Acc (cored Σ Γ) t.
 
   Lemma neq_mkApps u l : forall t, t <> tSort u -> mkApps t l <> tSort u.
   Proof.

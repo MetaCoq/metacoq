@@ -2164,7 +2164,7 @@ Proof.
       eapply (All2i_impl X9); clear X9.
       intros cstr cdecl br. cbv zeta.
       rewrite !case_branch_type_fst.
-      do 2 case. move=> hnth [] wfbr wfbrctx wfcbc' wfcbcty'.
+      do 2 case. move=> hnth [] wfbr wfbctxargs wfbrctx wfcbc' wfcbcty'.
       case => eqbctx. case. case => wfbctx _.
       move=> [] Hbody [] IHbody [] brty IHbrty.
       eapply conj_impl. solve_all. move=> cvcbc.
@@ -2303,7 +2303,7 @@ Proof.
         eapply subject_closed in a7. now apply closedn_on_free_vars.
         now eapply wf_local_closed_context.
         now apply closed_red1_it_mkLambda_or_LetIn. }
-      destruct a1 as [wfparctx wfcbc wfcbty].
+      destruct a1 as [wfparctx wfparctx' wfcbc wfcbty].
       split => //. split => //.
       eapply type_equality; tea.
       now exists ps.

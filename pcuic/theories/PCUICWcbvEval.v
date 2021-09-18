@@ -721,46 +721,31 @@ Section Wcbv.
       assert (isdecl0 = isdecl) as -> by now apply uip.
       now specialize (IHev _ ev'); noconf IHev.
     - depelim ev'; try go.
-      (* pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) as <-.
-      assert (isdecl0 = isdecl) as -> by now apply uip.
-      now assert (e0 = e) as -> by now apply uip. *)
-    (* - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
         apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
         noconf eq1. noconf eq2. noconf IHev1.
-        pose proof e1. rewrite e in H. noconf H.
+        pose proof e0. rewrite e in H. noconf H.
         specialize (IHev2 _ ev'2); noconf IHev2.
-        assert (e = e1) as -> by now apply uip.
-        now assert (e0 = e2) as -> by now apply uip.
+        now assert (e = e0) as -> by now apply uip.
       + apply eval_mkApps_tCoFix in ev1 as H.
-        destruct H as (? & ?); solve_discr. *)
-    - depelim ev'; try go.
-      + specialize (IHev1 _ ev'1).
-        pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
-        noconf H.
-        noconf IHev1.
-        assert (a0 = a) as -> by congruence.
-        assert (e0 = e) as -> by now apply uip.
-        now specialize (IHev2 _ ev'2); noconf IHev2.
-      + apply eval_mkApps_tCoFix in ev1 as H; destruct H; solve_discr.
+        destruct H as (? & ?); solve_discr.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
         noconf H.
         noconf IHev1.
         specialize (IHev2 _ ev'2); noconf IHev2.
-        assert (fn0 = fn) as -> by congruence.
+        pose proof e.
+        rewrite e0 in H. noconf H.
         assert (e0 = e) as -> by now apply uip.
-        now specialize (IHev3 _ ev'3); noconf IHev3.
+        specialize (IHev3 _ ev'3).
+        now noconf IHev3.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
-        noconf H.
-        exfalso; rewrite e0 in e.
-        noconf e.
-        lia.
-      + specialize (IHev1 _ ev'1).
-        noconf IHev1.
+        noconf H. noconf IHev1.
+        elimtype False. rewrite e in e0. noconf e0. lia.
+      + specialize (IHev1 _ ev'1). noconf IHev1.         
         exfalso.
         rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
@@ -787,18 +772,16 @@ Section Wcbv.
         rewrite isFixApp_mkApps in i; try easy.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
-    - admit.
-    (*- depelim ev'; try go.
-      + apply eval_mkApps_tCoFix in ev'1 as H; destruct H; solve_discr.
-      + apply mkApps_eq_inj in e' as H'; auto.
-        destruct H' as (H' & <-).
-        noconf H'.
-        assert (narg0 = narg) as -> by congruence.
-        assert (fn0 = fn) as -> by congruence.
-        assert (e' = eq_refl) as -> by now apply uip.
-        assert (e0 = e) as -> by now apply uip.
-        cbn in *; subst.
-        now specialize (IHev _ ev'); noconf IHev. *)
+    - depelim ev'; try go.
+      apply mkApps_eq_inj in e' as H'; auto.
+      destruct H' as (H' & <-).
+      noconf H'.
+      assert (narg0 = narg) as -> by congruence.
+      assert (fn0 = fn) as -> by congruence.
+      assert (e' = eq_refl) as -> by now apply uip.
+      assert (e0 = e) as -> by now apply uip.
+      cbn in *; subst.
+      now specialize (IHev _ ev'); noconf IHev.
     - depelim ev'; try go.
       + cbn in *. exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
       + apply mkApps_eq_inj in e1 as H'; auto.
@@ -826,7 +809,7 @@ Section Wcbv.
         now assert (i0 = i) as -> by now apply uip.
     - depelim ev'; try go.
       now assert (i0 = i) as -> by now apply uip.
-  Admitted.
+  Qed.
   
   Lemma eval_deterministic {t v v'} :
     eval t v ->

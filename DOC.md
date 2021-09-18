@@ -63,7 +63,17 @@ Quoting always produce fully qualified names. On the converse, unquoting allow t
 have only partially qualified names and rely on Coq to resolve them. The commands
 of the TemplateMonad also allow partially qualified names.
 
+## Hint databases
 
+The development uses three main hint databases:
+
+- The "len" databases which gathers all relevant length lemmas (mainly list length lemmas 
+  relevant to the operations). This database is large (> 100 lemmas) for a given theory
+  (PCUIC or Template-Coq) and it is advisable to not mix together both databases,
+  as autorewrite would become very slow.
+  BEWARE: If working in the PCUIC theory, do not require anything besides the BasicAst and utils modules from the Template-Coq module. 
+- The "pcuic" rewrite and auto database gathers lemmas helping solving side-conditions 
+  of typing judgements. 
 
 ## Options
 

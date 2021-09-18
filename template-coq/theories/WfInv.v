@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
-From MetaCoq.Template Require Import config utils Ast AstUtils.
+From MetaCoq.Template Require Import config utils Ast AstUtils Environment.
 
 (** * Inversion lemmas for the well-formedness judgement *)
 
@@ -15,7 +15,7 @@ Fixpoint wf_Inv (t : term) :=
   | tLetIn na t b b' => wf t /\ wf b /\ wf b'
   | tApp t u => isApp t = false /\ u <> nil /\ wf t /\ Forall wf u
   | tConst _ _ | tInd _ _ | tConstruct _ _ _ => True
-  | tCase ci p c brs => wf p /\ wf c /\ Forall (wf ∘ snd) brs
+  | tCase ci p c brs => Forall wf (pparams p) /\ wf (preturn p) /\ wf c /\ Forall (wf ∘ bbody) brs
   | tProj p t => wf t
   | tFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix
   | tCoFix mfix k => Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix
@@ -59,7 +59,7 @@ Proof.
   induction l; simpl; auto.
 Qed.
 
-Fixpoint wf_term (t : term) : bool :=
+(* Fixpoint wf_term (t : term) : bool :=
   match t with
   | tRel _ | tVar _ | tInt _ | tFloat _ => true
   | tEvar n l => forallb wf_term l
@@ -70,13 +70,14 @@ Fixpoint wf_term (t : term) : bool :=
   | tLetIn na t b b' => wf_term t && wf_term b && wf_term b'
   | tApp t u => ~~ isApp t && ~~ is_empty u && wf_term t && forallb wf_term u
   | tConst _ _ | tInd _ _ | tConstruct _ _ _ => true
-  | tCase ci p c brs => wf_term p && wf_term c && forallb (wf_term ∘ snd) brs
+  | tCase ci p c brs => forallb wf_term (pparams p) && wf_term (preturn p)
+                        && wf_term c && forallb (wf_term ∘ snd) brs
   | tProj p t => wf_term t
   | tFix mfix k =>
     forallb (fun def => wf_term def.(dtype) && wf_term def.(dbody) && isLambda def.(dbody)) mfix
   | tCoFix mfix k =>
     forallb (fun def => wf_term def.(dtype) && wf_term def.(dbody)) mfix
-  end.
+  end. *)
 
 Lemma mkApps_tApp f args :
   ~~ isApp f ->
@@ -86,7 +87,7 @@ Proof.
   intros.
   destruct args, f; try discriminate; auto.
 Qed.
-
+(* 
 Lemma decompose_app_inv' f l hd args : wf_term f ->
                                        decompose_app (mkApps f l) = (hd, args) ->
                                        ∑ n, ~~ isApp hd /\ l = skipn n args /\ f = mkApps hd (firstn n args).
@@ -107,9 +108,9 @@ Proof.
   rewrite decompose_app_mkApps in fl; auto. now apply negbT.
   inversion fl. subst; exists 0.
   split; auto. now eapply negbT.
-Qed.
+Qed. *)
 
-Lemma mkApps_elim t l : wf_term t ->
+(* Lemma mkApps_elim t l : wf_term t ->
                         let app' := decompose_app (mkApps t l) in
                         mkApps_spec app'.1 app'.2 t l (mkApps t l).
 Proof.
@@ -120,7 +121,7 @@ Proof.
   subst t.
   have H' := mkApps_intro hd args x. rewrite Hl'.
   rewrite mkApps_nested. now rewrite firstn_skipn.
-Qed.
+Qed. *)
 
 Lemma nApp_mkApps {t l} : ~~ isApp (mkApps t l) -> ~~ isApp t /\ l = [].
 Proof.

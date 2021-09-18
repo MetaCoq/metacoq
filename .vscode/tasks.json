@@ -7,10 +7,20 @@
             "label": "make",
             "type": "shell",
             "command": "make",
+            "problemMatcher": []
+        },
+        {
+            "label": "makevos",
+            "type": "shell",
+            "options": {
+              "cwd" : "pcuic",
+            },
+            "command": "opam exec -- make -f Makefile.pcuic vos",
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "problemMatcher": []
         }
     ]
 }

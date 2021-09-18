@@ -2,9 +2,10 @@ open Names
 open Constr
 open BasicAst
 open Ast0
+open Env
 open Tm_util
 
-module ExtractionDenoterr =
+module BaseExtractionDenoter =
 struct
   type t = Ast0.term
   type quoted_ident = char list
@@ -42,7 +43,7 @@ struct
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
 
-  type quoted_context_decl = context_decl
+  type quoted_context_decl = t context_decl
   type quoted_context = context
   type quoted_one_inductive_body = one_inductive_body
   type quoted_mutual_inductive_body = mutual_inductive_body
@@ -81,9 +82,26 @@ struct
       rarg=rarg x
     }
 
+  let unquote_predicate (x: 't Ast0.predicate) : ('t, quoted_aname, quoted_univ_instance) apredicate =
+    {
+      auinst = puinst x;
+      apars = pparams x;
+      apcontext = pcontext x;
+      apreturn = preturn x
+    }
+
+  let unquote_branch (x : 't Ast0.branch) : ('t, quoted_aname) abranch =
+    { abcontext = bcontext x;
+      abbody = bbody x }
+      
+  let unquote_case_info (x : BasicAst.case_info) : (quoted_int, quoted_inductive, quoted_relevance) acase_info =
+    { aci_ind = x.ci_ind;
+      aci_npar = x.ci_npar;
+      aci_relevance = x.ci_relevance }
+  
   let inspect_term (tt: t):(t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
     quoted_kernel_name, quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
-    quoted_int63, quoted_float64) structure_of_term=
+    quoted_int63, quoted_float64) structure_of_term =
     match tt with
     | Coq_tRel n -> ACoq_tRel n
     | Coq_tVar v -> ACoq_tVar v
@@ -97,7 +115,8 @@ struct
     | Coq_tConst (a,b) -> ACoq_tConst (a,b)
     | Coq_tInd (a,b) -> ACoq_tInd (a,b)
     | Coq_tConstruct (a,b,c) -> ACoq_tConstruct (a,b,c)
-    | Coq_tCase (a,b,c,d) -> ACoq_tCase (a,b,c,d)
+    | Coq_tCase (a,b,c,d) -> 
+      ACoq_tCase (unquote_case_info a,unquote_predicate b,c,List.map unquote_branch d)
     | Coq_tProj (a,b) -> ACoq_tProj (a,b)
     | Coq_tFix (a,b) -> ACoq_tFix (List.map unquote_def a,b)
     | Coq_tCoFix (a,b) -> ACoq_tCoFix (List.map unquote_def a,b)
@@ -214,8 +233,8 @@ struct
 
 end
 
-module  ExtractionDenoter = Denoter.Denoter(ExtractionDenoterr)
+module ExtractionDenoter = Denoter.Denoter(BaseExtractionDenoter)
 
 
-include ExtractionDenoterr
+include BaseExtractionDenoter
 include ExtractionDenoter

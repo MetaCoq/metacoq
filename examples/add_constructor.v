@@ -29,6 +29,25 @@ Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=
 (* [add_ctor] add a constructor to a [mutual_inductive_body]
  (that is a reified declaration of an inductive). *)
 
+Definition tsl_constructor_body (c : constructor_body) : constructor_body :=
+  {| cstr_name := tsl_ident c.(cstr_name);
+     cstr_args := cstr_args c;
+     cstr_indices := cstr_indices c;
+     cstr_type := cstr_type c;
+     cstr_arity := cstr_arity c |}.
+
+Definition remove_last_n {A} (l : list A) (n : nat) : list A :=
+  firstn (#|l| - n) l.
+
+Definition new_cstr mdecl (idc : ident) (ctor : term) : constructor_body :=
+  let '(args, concl) := decompose_prod_assum [] ctor in
+  let (hd, indices) := decompose_app concl in
+  {| cstr_name := idc;
+    cstr_args := remove_last_n args #|mdecl.(ind_params)|;
+    cstr_indices := skipn mdecl.(ind_npars) indices;
+    cstr_type := ctor;
+    cstr_arity := context_assumptions args |}.
+
 Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive) (idc : ident) (ctor : term)
   : mutual_inductive_body
   := let i0 := inductive_ind ind0 in
@@ -38,18 +57,20 @@ Polymorphic Definition add_ctor (mind : mutual_inductive_body) (ind0 : inductive
         ind_variance := mind.(ind_variance);
         ind_params := mind.(ind_params);
         ind_bodies := mapi (fun (i : nat) (ind : one_inductive_body) =>
-                         {| ind_name := tsl_ident ind.(ind_name) ;
-                            ind_type  := ind.(ind_type) ;
-                            ind_kelim := ind.(ind_kelim) ;
-                            ind_ctors := let ctors := map (fun '(id, t, k) => (tsl_ident id, t, k)) ind.(ind_ctors) in
-                                         if Nat.eqb i i0 then
-                                           let n := #|ind_bodies mind| in
-                                           let typ := try_remove_n_lambdas n ctor in
-                                           ctors ++ [(idc, typ, 0)]  (* fixme 0 *)
-                                         else ctors;
-                            ind_projs := ind.(ind_projs);
-                            ind_relevance := ind.(ind_relevance) |})
-                            mind.(ind_bodies) |}.
+          {| ind_name := tsl_ident ind.(ind_name) ;
+            ind_indices := ind.(ind_indices);
+            ind_sort := ind.(ind_sort);
+            ind_type  := ind.(ind_type) ;
+            ind_kelim := ind.(ind_kelim) ;
+            ind_ctors := let ctors := map tsl_constructor_body ind.(ind_ctors) in
+                          if Nat.eqb i i0 then
+                            let n := #|ind_bodies mind| in
+                            let typ := try_remove_n_lambdas n ctor in
+                            ctors ++ [new_cstr mind idc typ]
+                          else ctors;
+            ind_projs := ind.(ind_projs);
+            ind_relevance := ind.(ind_relevance) |})
+            mind.(ind_bodies) |}.
 
 
 (* [add_constructor] is a new command (in Template Coq style) *)
@@ -77,6 +98,7 @@ MetaCoq Run (
 (*   | false' : bool' *)
 (*   | foo : nat -> bool' -> bool -> bool' *)
 Definition test := bool'.
+Definition test' : nat -> bool' -> bool -> bool' := foo.
 
 (** Here is a useful usecase: add a case to a syntax. *)
 Inductive tm :=

@@ -162,6 +162,8 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath) (kn : kername)
                  let ctors' := List.split (mapi _ ind.(ind_ctors)) in
                  (_ :: fst ctors',
                   {| ind_name := tsl_ident ind.(ind_name);
+                     ind_sort := ind.(ind_sort);
+                     ind_indices := ind.(ind_indices);
                      ind_type := ind_type';
                      ind_kelim := ind.(ind_kelim);
                      ind_ctors := snd ctors';
@@ -174,11 +176,11 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath) (kn : kername)
     refine (List.fold_left _ L' (snd L)).
     exact (fun t decl => tProd decl.(decl_name) decl.(decl_type) t).
   + (* constructors *)
-    intros k ((name, typ), nargs).
+    intros k [name argctx indices typ nargs].
     simple refine (let ctor_type' := _ in
                    ((ConstructRef (mkInd kn i) k,
                      pouet (tConstruct (mkInd kn' i) k []) _),
-                    (tsl_ident name, ctor_type', nargs))).
+                    (Build_constructor_body (tsl_ident name) argctx indices ctor_type' nargs))).
     * refine (fold_left_i (fun t i _ => replace (proj1 (tRel i)) (tRel i) t)
                           mind.(ind_bodies) _).
       refine (let L := decompose_prod typ in _).

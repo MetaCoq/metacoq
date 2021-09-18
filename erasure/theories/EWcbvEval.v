@@ -498,7 +498,7 @@ Section Wcbv.
         rewrite isFixApp_mkApps => //.
         rewrite -mkApps_nested; simpl.
         rewrite orb_false_r.
-        destruct t; auto.
+        destruct t => //.
     - destruct f; try discriminate.
       apply All_All2_refl in X0.
       now apply eval_stuck_fix.

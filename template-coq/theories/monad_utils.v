@@ -54,6 +54,15 @@ Instance option_monad : Monad option :=
        | None => None
        end
   |}.
+  
+Instance option_monad_exc : MonadExc unit option :=
+{| raise T _ := None ;
+    catch T m f :=
+      match m with
+      | Some a => Some a
+      | None => f tt
+      end
+|}.
 
 Open Scope monad.
 
@@ -108,6 +117,19 @@ Section MonadOperations.
   Definition monad_map_i := @monad_map_i_aux 0.
 End MonadOperations.
 
+Section MonadOperations.
+  Context {T} {M : Monad T} {E} {ME : MonadExc E T}.
+  Context {A B C} (f : A -> B -> T C) (e : E).
+  Fixpoint monad_map2 (l : list A) (l' : list B) : T (list C) :=
+    match l, l' with
+    | nil, nil => ret nil
+    | x :: l, y :: l' => 
+      x' <- f x y ;;
+      xs' <- monad_map2 l l' ;;
+      ret (x' :: xs')
+    | _, _ => raise e
+    end.
+End MonadOperations.
 
 Definition monad_iter {T : Type -> Type} {M A} (f : A -> T unit) (l : list A) : T unit
   := @monad_fold_left T M _ _ (fun _ => f) l tt.

@@ -38,8 +38,19 @@
 - Change Template-PCUIC translations to translate casts to applications of 
   identity functions (vm_cast, default_cast etc) to make the back and forth
   the identity and derive weakening/substitution/etc.. from the PCUIC theorems.
-  Is that really better than identity functions?
+  Template -> PCUIC -> Template (in an environment extended with the identity functions)
+  becomes the identity, by translating back the cast function applications.
+  PCUIC -> Template -> PCUIC is also the identity, even by special casing on cast functions
+  
 # Big projects
+
+- Cleaner version of the system for writing term manipulation and prooofs about them. 
+  - Develop a cleaned-up syntax profiting from Coq's type system, e.g.:
+    - HOAS representation of binding or first-order well-scoped binding representation (using `fin` for example)
+    - Well-bounded global references?
+    - Using vectors and fin for fixpoint bodies lists and index (no ill-formed
+    fixpoints by construction)
+  - Develop a proof mode for MetaCoq typing, à la Iris proof mode 
 
 - Refine the longest-simple-path algorithm on universes with the 
   Bender & al algorithm used in Coq, extended with edges of negative weight.
@@ -49,14 +60,13 @@
 
 - Verify parsing and printing of terms / votour
 
-- Primivite projections: we could be more relaxed on the elimination sort of the 
+- Primitive projections: we could be more relaxed on the elimination sort of the 
   inductive. If it is e.g. InProp, then all projections to types in Prop should
   be definable. Probably not very useful though because if the elimination is 
   restricted then it means some Type is in the constructor and won't be projectable.
   
 - Verify the substitution calculus of P.M Pédrot using skewed lists at
-  https://github.com/coq/coq/pull/13537 and try to use it to implement efficient explicit 
-  substitutions.
+  https://github.com/coq/coq/pull/13537 and try to use it to implement efficient explicit substitutions.
 
 ## Website
 
@@ -79,3 +89,9 @@ into β-redexes, hence it is only β-convertible and not a syntactical equality.
 
 - Deduce that we have weakening and substitution lemmas in Template from those of
   PCUIC.
+
+
+## Case representation change
+
+Change definition of conversion and cumulativity to enfore well-scoped contexts and 
+terms directly in the definition of conv/cumul.

@@ -31,7 +31,6 @@ Cd "gen-src".
 From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
      LiftSubst UnivSubst Pretty.
 Import Init.Nat.
-Locate Nat.
 
 (* Floats *)
 (* Extraction Library Zeven.

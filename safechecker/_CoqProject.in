@@ -2,7 +2,6 @@
 
 theories/PCUICErrors.v
 theories/PCUICSafeReduce.v
-theories/PCUICEqualityDec.v
 theories/PCUICSafeConversion.v
 theories/PCUICWfReduction.v
 theories/PCUICWfEnv.v

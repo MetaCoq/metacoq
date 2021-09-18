@@ -39,7 +39,7 @@ Section EqualityDec.
     eq_termp_napp pb Σ napp t u.
   Proof.
     pose proof hΣ'.
-    apply eqb_term_upto_univ_impl.
+    apply PCUICEquality.eqb_term_upto_univ_impl.
     - intros u1 u2.
       eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
       + sq. now eapply wf_ext_global_uctx_invariants.
@@ -53,6 +53,20 @@ Section EqualityDec.
         * assumption.
       + eapply (check_leqb_universe_spec' G (global_ext_uctx Σ)).
         * sq; now eapply wf_ext_global_uctx_invariants.
+        * sq; now eapply global_ext_uctx_consistent.
+        * assumption.
+    - intros u1 u2.
+      destruct pb.
+      + eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
+        * sq. now eapply wf_ext_global_uctx_invariants.
+        * sq; now eapply global_ext_uctx_consistent.
+        * assumption.
+      + simpl.
+        intros cu.
+        eapply eq_universe_leq_universe.
+        revert cu.
+        eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
+        * sq. now eapply wf_ext_global_uctx_invariants.
         * sq; now eapply global_ext_uctx_consistent.
         * assumption.
   Qed.
@@ -86,15 +100,6 @@ Section EqualityDec.
     all: apply check_eqb_universe_refl.
   Qed.
 
-  Definition eqb_binder_annot {A} (b b' : binder_annot A) : bool :=
-    eqb b.(binder_relevance) b'.(binder_relevance).
-
-  Lemma eq_binder_annot_reflect {A} na na' : reflect (eq_binder_annot (A:=A) na na') (eqb_binder_annot na na').
-  Proof.
-    unfold eq_binder_annot, eqb_binder_annot.
-    destruct (eqb_spec na.(binder_relevance) na'.(binder_relevance)); constructor; auto.
-  Qed.
-
   Fixpoint eqb_ctx (Γ Δ : context) : bool :=
     match Γ, Δ with
     | [], [] => true
@@ -108,7 +113,7 @@ Section EqualityDec.
     end.
 
   Lemma eqb_binder_annot_spec {A} na na' : eqb_binder_annot (A:=A) na na' -> eq_binder_annot (A:=A) na na'.
-  Proof. apply (elimT (eq_binder_annot_reflect _ _)). Qed.
+  Proof. case: eqb_annot_reflect => //. Qed.
 
   Lemma eqb_ctx_spec :
     forall Γ Δ,
@@ -121,16 +126,14 @@ Section EqualityDec.
     all: try discriminate.
     - constructor.
     - simpl in h. apply andb_andI in h as [[[h1 h2]%andb_and h3]%andb_and h4].
-      constructor.
+      constructor; auto; constructor; auto.
       + now apply eqb_binder_annot_spec in h1.
       + eapply eqb_term_spec. assumption.
       + eapply eqb_term_spec. assumption.
-      + eapply ih. assumption.
     - simpl in h. apply andb_and in h as [[h1 h2]%andb_and h3].
-      constructor.
+      constructor; auto; constructor.
       + now apply eqb_binder_annot_spec.
       + eapply eqb_term_spec. assumption.
-      + eapply ih. assumption.
   Qed.
 
   Definition eqb_opt_term (t u : option term) :=
@@ -158,7 +161,8 @@ Section EqualityDec.
     intro H. rtoProp. apply eqb_opt_term_spec in H1.
     eapply eqb_term_spec in H0; tea.
     eapply eqb_binder_annot_spec in H.
-    repeat split; eauto.
+    destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl in * => //;
+    repeat constructor; eauto.
   Qed.
 
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
@@ -168,6 +172,7 @@ Section EqualityDec.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.
+    eapply PCUICContextRelation.All2_fold_All2.
     eapply All2_impl; try eassumption.
     cbn. apply eqb_decl_spec.
   Qed.

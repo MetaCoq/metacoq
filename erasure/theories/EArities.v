@@ -162,11 +162,6 @@ Proof.
   now eapply it_mkProd_red_Arity.
 Qed.
 
-Require Import PCUICSafeReduce.
-
-(* Lemma isArity_eq_ *)
-
-
 Lemma conv_to_arity_cumul {Σ : global_env_ext} {wfΣ : wf Σ} :
   forall (Γ : context) (C : term) T,
     Is_conv_to_Arity Σ Γ T ->
@@ -269,8 +264,6 @@ Proof.
 Qed.                      
 
 (* if a cofixpoint is a type or proof, it is a proof *)
-
-Require Import PCUICSafeChecker.
 
 Lemma tCoFix_no_Type (Σ : global_env_ext) Γ mfix idx x1 : wf Σ ->
   isErasable Σ Γ (mkApps (tCoFix mfix idx) x1) ->

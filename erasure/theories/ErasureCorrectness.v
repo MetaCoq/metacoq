@@ -8,8 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICWcbvEval PCUICSR  PCUICInversion
   PCUICUnivSubstitution PCUICElimination PCUICCanonicity
   PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICSafeLemmata
-  PCUICWellScopedCumulativity.
-
+  PCUICArities PCUICInductiveInversion
+  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICValidity.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
@@ -345,7 +345,7 @@ Proof.
   revert f L X.
   inversion H; intros; try congruence; subst.
   - invs H4. right. repeat eexists; eauto.
-  - left. split; eauto.
+  - left. split; eauto. now sq.
 Qed.
 
 Lemma erases_mkApps (Σ : global_env_ext) Γ f f' L L' :
@@ -491,8 +491,6 @@ Proof.
   eapply cumul_propositional in Cty'; eauto.
 Qed.
 
-Require Import PCUICValidity PCUICWellScopedCumulativity.
-
 Lemma Is_proof_app {Σ Γ t args ty} {wfΣ : wf_ext Σ} :
   Is_proof Σ Γ t -> 
   Σ ;;; Γ |- mkApps t args : ty ->
@@ -537,8 +535,7 @@ Proof.
 Qed.
 
 Transparent PCUICParallelReductionConfluence.construct_cofix_discr.
-Require Import EArities.
-From MetaCoq.PCUIC Require Import PCUICArities PCUICInductiveInversion.
+
 Lemma isErasable_Propositional {Σ : global_env_ext} {Γ ind n u args} : 
   wf_ext Σ ->
   isErasable Σ Γ (mkApps (tConstruct ind n u) args) -> isPropositional Σ ind true.
@@ -570,8 +567,6 @@ Proof.
   now destruct (ind_sort x1).
   eapply validity. econstructor; tea.
 Qed.
-
-Require Import PCUICOnFreeVars.
 
 Lemma nisErasable_Propositional {Σ : global_env_ext} {Γ ind n u} : 
   wf_ext Σ ->

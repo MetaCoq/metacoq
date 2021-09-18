@@ -888,12 +888,6 @@ Section CheckEnv.
     now eapply equality_eq_le, isType_equality_refl.
   Qed.
   
-  Lemma typing_spine_isType_codom {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T args U} :
-    typing_spine Σ Γ T args U -> isType Σ Γ U.
-  Proof.
-    induction 1; auto.
-  Qed.
-
   (** Non-trivial lemma: 
     this shows that instantiating a product/let-in type with the identity substitution on some 
     sub-context of the current context is the same as typechecking the remainder of the 

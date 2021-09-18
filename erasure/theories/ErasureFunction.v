@@ -333,7 +333,7 @@ Next Obligation.
   destruct (infer _ (is_erasable_obligation_7 _ _ _ _ _ _)).
   simpl. sq.
   destruct X. eapply validity in t0; auto.
-  eapply wat_welltyped; eauto.
+  eapply wat_welltyped; eauto. all:now sq.
 Qed.
 Next Obligation.
   unfold type_of in *.

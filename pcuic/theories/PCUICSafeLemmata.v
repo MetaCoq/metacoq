@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICConversion PCUICContextConversion PCUICValidity
      PCUICArities PCUICWeakeningEnv PCUICGeneration PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICWellScopedCumulativity
-     PCUICOnFreeVars.
+     PCUICOnFreeVars  PCUICSpine PCUICInductives PCUICWeakening PCUICContexts PCUICInductiveInversion.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -16,7 +16,6 @@ Set Equations With UIP.
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
-Require Import PCUICSpine PCUICInductives PCUICWeakening PCUICContexts PCUICInductiveInversion.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 

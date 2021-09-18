@@ -4,7 +4,9 @@ From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICWeakening PCUICUnivSubst PCUICTyping PCUICGeneration
-     PCUICConversion. (* Needs transitivity of cumulativity *)
+     PCUICConversion (* Needs transitivity of cumulativity *)
+     PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
+     PCUICCases PCUICWellScopedCumulativity PCUICSR.
 
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
@@ -12,7 +14,7 @@ From MetaCoq.Template Require Import config utils Ast TypingWf WfInv UnivSubst
 
 Set Warnings "+notation_overridden".
 
-Require Import PCUICToTemplate.
+From MetaCoq.PCUIC Require Import PCUICToTemplate.
 
 Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags where needed *)
 
@@ -748,9 +750,6 @@ Proof.
 Qed.
 Coercion isType_wt : isType >-> wt.
 
-From MetaCoq.PCUIC Require Import PCUICInversion PCUICInductiveInversion.
-From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
-
 Section wtsub.
   Context {cf} {Σ : PCUICEnvironment.global_env_ext} {wfΣ : PCUICTyping.wf Σ}.
   Import PCUICAst.
@@ -838,8 +837,6 @@ Lemma red1_conv {cf} (Σ : global_env_ext) Γ T U : TT.red1 Σ Γ T U -> TTconv 
 Proof.
   intros r. 
 Admitted.
-
-Require Import PCUICCases.
 
 Lemma trans_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) {wfΣ : PCUICTyping.wf Σ} Γ T U :
   red1 Σ Γ T U ->
@@ -1025,7 +1022,6 @@ Proof.
   eapply trans_eq_term_upto_univ ; eauto.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICSR.
 Section wtcumul.
   Import PCUICAst PCUICTyping PCUICEquality.
   Record wt_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) (Γ : PCUICEnvironment.context) T U := 
@@ -1728,8 +1724,6 @@ Proof.
          (PCUICSpine.type_is_open_term d1) (PCUICSpine.subject_is_open_term d2)) (s; d2)).
     simpl in H0. lia.
 Qed.
-
-From MetaCoq.PCUIC Require Import PCUICValidity PCUICArities.
 
 (** Finally, for each typing spine built above, assuming we can apply the induction hypothesis
   of the translation to any of the typing derivations in the spine, then we can produce a typing

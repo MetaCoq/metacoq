@@ -56,6 +56,11 @@ Inductive typing_spine {cf} Σ (Γ : context) : term -> list term -> term -> Typ
     
 Derive Signature NoConfusion for typing_spine.
 
+Lemma typing_spine_isType_codom {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T args U} :
+  typing_spine Σ Γ T args U -> isType Σ Γ U.
+Proof.
+  induction 1; auto.
+Qed.
 
 Lemma subslet_inds_gen {cf} {Σ : global_env} {wfΣ : wf Σ} ind mdecl idecl :
   declared_inductive Σ ind mdecl idecl ->

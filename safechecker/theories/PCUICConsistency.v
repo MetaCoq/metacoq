@@ -20,6 +20,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICUnivSubst.
 From MetaCoq.PCUIC Require Import PCUICValidity.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 
@@ -112,8 +113,6 @@ Proof.
 Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
-
-Require Import PCUICWellScopedCumulativity.
 
 Theorem pcuic_consistent {cf:checker_flags} Σ t :
   wf_ext Σ ->

@@ -1059,23 +1059,48 @@ Section wtcumul.
   Qed.
 End wtcumul.
 
+Lemma TTconv_cumul_sym {cf} Σ Γ T U : TTconv Σ Γ T U -> 
+  TT.cumul Σ Γ T U × TT.cumul Σ Γ U T.
+Proof.
+  unfold TTconv, TT.cumul.
+  induction 1.
+  - destruct r.
+    split; now repeat constructor.
+    split; constructor; right; try now eapply eq_term_leq_term.
+    apply eq_term_leq_term. admit. 
+  - split; reflexivity.
+  - intuition auto.
+Admitted.
+
+Lemma TTconv_cumul {cf} Σ Γ T U : TTconv Σ Γ T U -> 
+  TT.cumul Σ Γ T U.
+Proof.
+  intros; now apply TTconv_cumul_sym in X.
+Qed.
+
+Lemma TTconv_cumul_inv {cf} Σ Γ T U : TTconv Σ Γ T U -> 
+  TT.cumul Σ Γ U T.
+Proof.
+  intros; now apply TTconv_cumul_sym in X.
+Qed.
+
 Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
   wt_cumul Σ Γ T U ->
   TT.cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
-  induction 1. constructor; auto.
-  eapply trans_leq_term in l. right.
-  now rewrite -trans_global_ext_constraints.
-  destruct w as [r ht hv].
-  apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
-(*  eapply ht. econstructor 2; eauto.
-  destruct ht as [s Hs]. now exists (PCUICAst.tSort s).
-  econstructor 3.
-  apply IHX; auto.
-  destruct w as [r hu hv]. 
-  apply trans_red1 in r; auto.
-  destruct hu as [s Hs]; now exists (PCUICAst.tSort s).*)
-Admitted.
+  induction 1. 
+  - constructor; auto.
+    eapply trans_leq_term in l. right.
+    now rewrite -trans_global_ext_constraints.
+  - destruct w as [r ht hv].
+    apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
+    apply TTconv_cumul in r.
+    etransitivity; tea.
+  - destruct w as [r ht hv].
+    apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
+    eapply TTconv_cumul_inv in r.
+    etransitivity; tea.
+Qed.
 
 (* Todo case *)
 (*Lemma trans_build_case_predicate_type ind mdecl idecl npar args u ps pty:

@@ -85,19 +85,9 @@ Proof.
     eexists _,_. rewrite -> H, H0. intuition eauto.
 Qed.
 
-Lemma typing_spine_inv_app Σ x0 l x x1 :
-  PCUICGeneration.typing_spine Σ [] x0 (l ++ [x]) x1 -> { '(x2, x3) : _ & (PCUICGeneration.typing_spine Σ [] x0 l x2) * (Σ ;;; [] |- x : x3)}%type.
-Proof.
-  intros. depind X. destruct l; inv x.
-  destruct l; invs x.
-  + eexists (_, _). split. econstructor; eauto.  eauto.
-  + specialize (IHX _ _ eq_refl) as ([] & []).
-    eexists (_, _). split.  econstructor; eauto. eauto.
-Qed.
-
 Lemma typing_spine_inv args arg a Σ x2 x3 :
   nth_error args (arg) = Some a ->
-  PCUICGeneration.typing_spine Σ [] x2 args x3 ->
+  typing_spine Σ [] x2 args x3 ->
   {T & Σ;;; [] |- a : T}.
 Proof.
   intros. revert arg H.

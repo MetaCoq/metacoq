@@ -330,6 +330,7 @@ struct
       in
       let envind = push_rel_context (List.rev indtys) env in
       let ref_name = Q.quote_kn (MutInd.canonical t) in
+      let ntyps = Array.length mib.mind_packets in
       let (ls,acc) =
         List.fold_left (fun (ls,acc) oib ->
           let named_ctors =
@@ -344,6 +345,7 @@ struct
             List.fold_left (fun (ls,acc) (nm,ty,ar) ->
               debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                   bool !opt_hnf_ctor_types)) ;
+              let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
               let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
               let (ty,acc) = quote_term acc envind ty in
               ((Q.quote_ident nm, ty, Q.quote_int ar) :: ls, acc))

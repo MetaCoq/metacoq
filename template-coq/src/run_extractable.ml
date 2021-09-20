@@ -53,6 +53,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
          (Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name oib.mind_typename), ty))) mib.mind_packets)
   in
   let envind = Environ.push_rel_context (List.rev indtys) env in
+  let ntyps = Array.length mib.mind_packets in
   let (ls,acc) =
     List.fold_left (fun (ls,acc) oib ->
     let named_ctors =
@@ -67,6 +68,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->
           Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                       bool !Quoter.opt_hnf_ctor_types)) ;
+          let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
           let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
           ((quote_ident nm, ty, quote_int ar) :: ls, acc))

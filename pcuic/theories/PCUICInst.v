@@ -2042,25 +2042,8 @@ Lemma type_inst : env_prop
     Σ ;;; Δ |- t.[σ] : T.[σ]) Σ) Γ).
 Proof.
   apply typing_ind_env.
-  15:{
-     intros Σ wfΣ Γ wfΓ t A B X hwf ht iht hB ihB hcum Δ σ hΔ hσ.
-    eapply type_Cumul.
-    + eapply iht. all: auto.
-    + eapply ihB. all: auto.
-    + eapply inst_cumul => //. 
-      * exact hσ.
-      * eapply type_closed in ht.
-        now eapply closedn_on_free_vars.
-      * eapply subject_closed in hB.
-        now eapply closedn_on_free_vars.
-      * eapply closed_wf_local in wfΓ; tea.
-        rewrite closedn_ctx_on_free_vars in wfΓ.
-        now rewrite -on_free_vars_ctx_on_ctx_free_vars in wfΓ.
-      * apply hcum.
-  }
-Admitted.
-(* todo type_inst *)
-  (*- intros Σ wfΣ Γ wfΓ. auto.
+  
+  - intros Σ wfΣ Γ wfΓ. auto.
     induction 1; constructor; firstorder auto.
   - intros Σ wfΣ Γ wfΓ n decl e X Δ σ hΔ hσ. simpl.
     eapply hσ. assumption.
@@ -2125,7 +2108,7 @@ Admitted.
     eapply declared_constructor_closed_type in isdecl; eauto.
     rewrite inst_closed0; eauto.
   - intros Σ wfΣ Γ wfΓ ci p c brs indices ps mdecl idecl isdecl HΣ.
-    intros IHΔ ci_npar predctx wfp cup Hpctx convctx Hpret 
+    intros IHΔ ci_npar eqpctx predctx wfp cup Hpctx Hpret 
       IHpret IHpredctx isallowed.
     intros Hctxi IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ f HΔ Hf.
     autorewrite with sigma. simpl.
@@ -2134,29 +2117,27 @@ Admitted.
     relativize #|predctx|.
     * erewrite inst_predicate_preturn.
       rewrite /predctx.
-      rewrite inst_predicate_pcontext.
-      eapply type_Case; eauto.
+      rewrite inst_case_predicate_context //.
+      eapply type_Case; eauto; 
+       rewrite - ?inst_case_predicate_context //.
       + now eapply inst_wf_predicate.
-      + simpl. rewrite mapi_context_inst.
+      + simpl.
         apply All_local_env_app_inv in Hpctx as [].
-        eapply wf_local_app_inst; eauto. apply a0.
-      + rewrite -inst_case_predicate_context //.
-        simpl; rewrite mapi_context_inst.
-        eapply inst_conv_ctx; tea. exact Hf.
+        eapply wf_local_app_inst; eauto.
+        apply All_local_env_app_inv in IHpredctx as [].
+        apply a2.
       + apply All_local_env_app_inv in Hpctx as [].
+        apply All_local_env_app_inv in IHpredctx as [].
         eapply IHpret.
-        ++ simpl; rewrite mapi_context_inst //.
-           eapply wf_local_app_inst; eauto. apply a0.
-        ++ rewrite /= mapi_context_inst.
-           eapply well_subst_app_up => //.
-           eapply wf_local_app_inst; eauto. apply a0.
-      + apply All_local_env_app_inv in IHpredctx as [].
-        rewrite -inst_case_predicate_context //.  
-        eapply wf_local_app_inst; eauto. apply a0.
+        ++ eapply wf_local_app_inst; eauto.
+           apply a2.
+        ++ relativize #|pcontext p|; [eapply well_subst_app_up|] => //; rewrite /predctx; len.
+           2:{ rewrite case_predicate_context_length //. }
+           eapply wf_local_app_inst; eauto. apply a2.
       + revert IHctxi.
         rewrite /= /id -map_app.
         rewrite -{2}[subst_instance _ _](inst_closedn_ctx f 0).
-        { pose proof (declared_inductive_closed_pars_indices _ isdecl).
+        { pose proof (declared_inductive_closed_pars_indices isdecl).
           now rewrite closedn_subst_instance_context. }
         rewrite inst_context_telescope.
         rewrite inst_telescope_upn0.
@@ -2178,34 +2159,30 @@ Admitted.
         eapply All2i_nth_hyp in Hbrs.
         eapply All2i_map_right, (All2i_impl Hbrs) => i cdecl br.
         set (brctxty := case_branch_type _ _ _ _ _ _ _ _).
-        move=> [Hnth [wfbr [[Hbr Hconv] [[IHbr Hbrctxty] [IHbod [Hbty IHbty]]]]]].
+        move=> [Hnth [wfbr [Hconv [Hbrctx [Hbr [IHbr [Hbty IHbty]]]]]]].
+        split => //.
         rewrite -(inst_closed_constructor_body mdecl cdecl f).
         { eapply (declared_constructor_closed (c:=(ci.(ci_ind),i))); eauto.
           split; eauto. }
+        rewrite inst_case_predicate_context //.
         rewrite inst_case_branch_type //.
         rewrite -/brctxty. intros brctx'.
         assert (wf_local Σ (Δ,,, brctx'.1)).
         { rewrite /brctx'. cbn.
-          apply All_local_env_app_inv in Hbrctxty as [].
+          apply All_local_env_app_inv in Hbrctx as [].
           eapply wf_local_app_inst; tea. apply a0. }
-        assert (wf_local Σ (Δ,,, bcontext (inst_branch f br))).
-        { apply All_local_env_app_inv in Hbr as [].
-          cbn. rewrite mapi_context_inst.
-          eapply wf_local_app_inst; tea. apply a0. }
-        repeat split => //.
-        ++ cbn. rewrite mapi_context_inst.
-          eapply inst_conv_ctx; tea. exact Hf.
-        ++ eapply IHbod => //. 
+        split => //. split.
+        ++ eapply IHbr => //. 
           rewrite /brctx' /brctxty; cbn.
-          rewrite mapi_context_inst.
-          eapply well_subst_app_up => //.
-          rewrite /= mapi_context_inst in X0.
-          apply X0.
+          relativize #|bcontext br|.
+          { eapply well_subst_app_up => //. }
+          rewrite /case_branch_type /=.
+          rewrite case_branch_context_length //.
         ++ eapply IHbty=> //.
           rewrite /brctx'; cbn.
-          rewrite mapi_context_inst.
-          rewrite /= mapi_context_inst in X0.
-          eapply well_subst_app_up => //.
+          relativize #|bcontext br|.
+          { eapply well_subst_app_up => //. }
+          rewrite /brctxty /= case_branch_context_length //.
     * rewrite /predctx case_predicate_context_length //.
   - intros Σ wfΣ Γ wfΓ p c u mdecl idecl pdecl isdecl args X X0 hc ihc e ty
            Δ σ hΔ hσ.
@@ -2274,7 +2251,14 @@ Admitted.
     + eapply ihB. all: auto.
     + eapply inst_cumul => //. 
       * exact hσ.
+      * eapply type_closed in ht.
+        now eapply closedn_on_free_vars.
+      * eapply subject_closed in hB.
+        now eapply closedn_on_free_vars.
+      * eapply closed_wf_local in wfΓ; tea.
+        rewrite closedn_ctx_on_free_vars in wfΓ.
+        now rewrite -on_free_vars_ctx_on_ctx_free_vars in wfΓ.
       * apply hcum.
-Qed.*)
+Qed.
 
 End Sigma.

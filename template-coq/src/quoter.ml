@@ -149,15 +149,15 @@ struct
 
   let get_abstract_inductive_universes iu =
     match iu with
-    | Declarations.Monomorphic ctx -> Univ.UContext.empty
+    | Declarations.Monomorphic -> Univ.UContext.empty
     | Polymorphic ctx -> Univ.AUContext.repr ctx
 
   let quote_universes_entry = function
-    | Monomorphic_entry ctx -> Q.mkMonomorphic_entry (Q.quote_univ_contextset ctx)
+    | Monomorphic_entry -> Q.mkMonomorphic_entry (Q.quote_univ_contextset Univ.ContextSet.empty)
     | Polymorphic_entry ctx -> Q.mkPolymorphic_entry (Q.quote_univ_context ctx)
 
   let quote_universes_decl = function
-    | Monomorphic ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
+    | Monomorphic -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset Univ.ContextSet.empty)
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
@@ -541,7 +541,7 @@ since  [absrt_info] is a private type *)
     let (ty, body) = quote_constant_body_aux bypass env evm cd in
     let uctx = match cd.const_universes with
       | Polymorphic auctx -> Polymorphic_entry (Univ.AUContext.repr auctx)
-      | Monomorphic ctx -> Monomorphic_entry ctx
+      | Monomorphic -> Monomorphic_entry
     in
     let univs = quote_universes_entry uctx in
     match body with

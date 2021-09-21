@@ -304,9 +304,9 @@ struct
 
   let quote_inductive_universes uctx =
     match uctx with
-    | Entries.Monomorphic_entry uctx -> 
+    | Entries.Monomorphic_entry ->
       let f inst = Array.map (fun _ -> Anonymous) (Instance.to_array inst) in
-      let ctx = quote_univ_context (Univ.ContextSet.to_context f uctx) in
+      let ctx = quote_univ_context (Univ.ContextSet.to_context f Univ.ContextSet.empty) in
       constr_mkApp (cMonomorphic_entry, [| ctx |])
     | Entries.Polymorphic_entry uctx ->
       let ctx = quote_univ_context uctx in

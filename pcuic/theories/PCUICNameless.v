@@ -1599,62 +1599,57 @@ Proof.
 Qed.
 Hint Resolve @nl_cumul_ctx : nl.
 
-(*
-Lemma nl_instantiate_params :
-  forall params args ty,
-    option_map nl (instantiate_params params args ty) =
-    instantiate_params (nlctx params) (map nl args) (nl ty).
-Proof.
-  intros params args ty.
-  unfold instantiate_params.
-  assert (e :
-    option_map (fun '(s, ty0) => (map nl s, nl ty0))
-               (instantiate_params_subst (List.rev params) args [] ty)
-    = instantiate_params_subst (List.rev (nlctx params))
-                               (map nl args) [] (nl ty)
-  ).
-  { replace (List.rev (nlctx params)) with (nlctx (List.rev params))
-      by (unfold nlctx ; rewrite map_rev ; reflexivity).
-    change [] with (map nl []) at 2.
-    generalize (List.rev params), (@nil term). clear.
-    intros params l.
-    induction params in ty, args, l |- *.
-    - destruct args. all: reflexivity.
-    - simpl. destruct a as [? [?|] ?].
-      + simpl. destruct ty. all: try reflexivity.
-        simpl. rewrite IHparams. simpl.
-        rewrite nl_subst. reflexivity.
-      + destruct ty. all: try reflexivity.
-        destruct args.
-        * reflexivity.
-        * rewrite IHparams. reflexivity.
-  }
-  rewrite <- e.
-  destruct (instantiate_params_subst _ _ _) as [[? ?]|].
-  - simpl. f_equal. apply nl_subst.
-  - reflexivity.
-Qed.
-*)
-
 Lemma nl_check_one_fix d : check_one_fix d = check_one_fix (map_def_anon nl nl d).
 Proof.
   destruct d; simpl.
   rewrite (nl_decompose_prod_assum [] dtype).
   destruct decompose_prod_assum.
-Admitted.
+  rewrite -(nlctx_smash_context []) -map_rev nth_error_map.
+  destruct nth_error => //. cbn.
+  rewrite [decompose_app_rec _ _]nl_decompose_app.
+  destruct decompose_app => //.
+  destruct t0 => //.
+Qed.
 
 Lemma nl_wf_fixpoint Σ mfix :
   wf_fixpoint Σ.1 mfix = wf_fixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
 Proof.
   unfold wf_fixpoint.
-  destruct (map check_one_fix mfix) eqn:hmap.
-Admitted.
+  replace (map check_one_fix mfix) with (map check_one_fix (map (map_def_anon nl nl) mfix)) => //.
+  * destruct map_option_out => //. destruct l => //.
+    f_equal. rewrite /check_recursivity_kind.
+    epose proof (nl_lookup_env Σ.1).
+    destruct Σ; cbn in *. rewrite H.
+    destruct lookup_env => //. cbn.
+    destruct g0 => //.
+  * rewrite map_map_compose.
+    now setoid_rewrite <-nl_check_one_fix.
+Qed.
+
+Lemma nl_check_one_cofix d : check_one_cofix d = check_one_cofix (map_def_anon nl nl d).
+Proof.
+  destruct d; simpl.
+  rewrite (nl_decompose_prod_assum [] dtype).
+  destruct decompose_prod_assum.
+  rewrite nl_decompose_app.
+  destruct decompose_app => //.
+  destruct t0 => //.
+Qed.
 
 Lemma nl_wf_cofixpoint Σ mfix :
   wf_cofixpoint Σ.1 mfix = wf_cofixpoint (nlg Σ).1 (map (map_def_anon nl nl) mfix).
 Proof.
-  unfold wf_fixpoint.
-Admitted.
+  unfold wf_cofixpoint.  
+  replace (map check_one_cofix mfix) with (map check_one_cofix (map (map_def_anon nl nl) mfix)) => //.
+  * destruct map_option_out => //. destruct l => //.
+    f_equal. rewrite /check_recursivity_kind.
+    epose proof (nl_lookup_env Σ.1).
+    destruct Σ; cbn in *. rewrite H.
+    destruct lookup_env => //. cbn.
+    destruct g0 => //.
+  * rewrite map_map_compose.
+    now setoid_rewrite <- nl_check_one_cofix.
+Qed.
 
 Lemma nl_monomorphic_levels_decl g : monomorphic_levels_decl (nl_global_decl g) = monomorphic_levels_decl g.
 Proof.

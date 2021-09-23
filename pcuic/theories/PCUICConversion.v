@@ -2780,30 +2780,6 @@ Section ConvSubst.
     now rewrite -(Nat.add_0_r #|Γ|) subst_context_app.
   Qed.
 
-  (*Lemma conv_ctx_subst {Γ Γ' Γ'0 Γ'' Δ Δ' s s'} :
-    wf_local Σ (Γ ,,, Γ' ,,, Γ'' ,,, Δ) ->
-    context_equality_rel Σ false (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->
-    All2 (equality false Σ Γ) s s' ->
-    untyped_subslet Γ s Γ' ->
-    untyped_subslet Γ s' Γ'0 ->
-    context_equality_rel Σ false (Γ ,,, subst_context s 0 Γ'') (subst_context s #|Γ''| Δ) (subst_context s' #|Γ''| Δ').
-  Proof.
-    intros wf [cl H] Hs subs subs'.
-    split.
-    { eapply is_closed_subst_context; tea. 1:solve_all; eauto with fvs.
-      apply (untyped_subslet_length subs). }
-    rewrite !subst_context_inst_context.
-    rewrite /PCUICInst.inst_context.
-    eapply All2_fold_fold_context_k, All2_fold_impl_ind; tea; clear H.
-    cbn. intros Γ0 Δ0 d d' H IH Hd.
-    eapply All_decls_alpha_le_map, All_decls_alpha_le_impl; tea.
-    intros le x y; cbn.
-    rewrite - !/(inst_context _ _).
-    intros eq.
-
-
-  Admitted.*)
-
   Lemma eq_context_upto_context_equality {le Γ Γ'} : 
     is_closed_context Γ ->
     is_closed_context Γ' ->

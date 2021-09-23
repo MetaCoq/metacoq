@@ -588,13 +588,11 @@ Section Wcbv.
     - eapply IHev3. unshelve eapply closed_beta. 3:eauto. exact na. simpl. eauto.
     - eapply IHev2. now rewrite closed_csubst.
     - apply IHev. eapply closed_def; eauto.
-    - eapply IHev2. all:admit. 
-      (* apply closed_iota in Hc''; tea.
-      eapply IHev1; assumption. *)
-    (* - eapply IHev2; auto. specialize (IHev1 Hc).
+    - eapply IHev2.
+      specialize (IHev1 Hc).
       rewrite closedn_mkApps in IHev1.
       move/andP: IHev1 => [Hcons Hargs]. solve_all.
-      eapply All_nth_error in Hargs; eauto. *)
+      eapply All_nth_error in Hargs; eauto.
     - eapply IHev3.
       apply/andP.
       split; [|easy].
@@ -619,21 +617,8 @@ Section Wcbv.
       eapply closed_unfold_cofix in e; eauto.
       now rewrite e.
     - apply/andP; split; auto.
-  Admitted.
+  Qed.
 
-  (* Lemma eval_tApp_tFix_inv mfix idx a v : *)
-  (*   eval (tApp (tFix mfix idx) a) v -> *)
-  (*   (exists fn arg, *)
-  (*       (unfold_fix mfix idx = Some (arg, fn)) * *)
-  (*       (eval (tApp fn a) v)). *)
-  (* Proof. *)
-  (*   intros H; depind H; try solve_discr. *)
-  (*   - depelim H. *)
-  (*   - depelim H. *)
-  (*   - eexists _, _; pcuicfo eauto. *)
-  (*   - now depelim H. *)
-  (*   - discriminate. *)
-  (* Qed. *)
 
   (* TODO MOVE *)
   Lemma nApp_isApp_false :

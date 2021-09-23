@@ -639,7 +639,7 @@ Section Normalization.
     - admit.
     - admit.*)
     
-    Admitted.
+    Qed.
   End reducible.
 
   Lemma reducible' Γ t : sum (∑ t', red1 Σ Γ t t') (normal Σ Γ t).
@@ -674,7 +674,7 @@ Section Normalization.
     - admit.
     - admit.
     - admit.
-  Admitted. 
+  Qed.
 
   Lemma normalizer {Γ t ty} :
     Σ ;;; Γ |- t : ty ->
@@ -752,7 +752,7 @@ Section Normalization.
       now do 2 eapply isArity_it_mkProd_or_LetIn.
     - admit. (* wf of fixpoints *)
     - now rewrite /head /=. 
-  Admitted.
+  Qed.
 
   Lemma red_normal_constructor t i u args : 
     axiom_free Σ ->

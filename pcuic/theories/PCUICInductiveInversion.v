@@ -1606,7 +1606,7 @@ Proof.
   - eapply cofix_red_body. solve_all.
     specialize (b0 Γ0 (Δ ,,, fix_context mfix0) ltac:(rewrite app_context_assoc; reflexivity) _ H H0).
     now rewrite app_context_assoc in b0.*)
-Admitted.
+Qed.
 
 Lemma red_assumption_context_app_irrelevant Σ Γ Δ Γ' t t' : 
   red Σ (Γ ,,, Δ) t t' ->

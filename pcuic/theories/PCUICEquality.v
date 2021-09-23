@@ -2201,3 +2201,61 @@ Proof.
   eapply Forall2_eq. eapply Forall2_impl; tea.
   clear. intros [] [] H; now inversion H.
 Qed.
+
+(** Equality of binder annotations *)
+Notation eq_annots Γ Δ :=
+  (Forall2 (fun na decl => eq_binder_annot na (decl_name decl)) Γ Δ).
+
+Lemma eq_context_gen_binder_annot Γ Δ : 
+  eq_context_gen eq eq Γ Δ -> eq_annots (forget_types Γ) Δ.
+Proof.
+  induction 1; constructor; auto.
+  destruct p; auto.
+Qed.
+
+Lemma eq_annots_fold (Γ : list aname) (f : nat -> term -> term) (Δ : context) : 
+  eq_annots Γ (fold_context_k f Δ) <-> eq_annots Γ Δ.
+Proof.
+  induction Δ in Γ |- *.
+  - cbn; auto. reflexivity.
+  - rewrite fold_context_k_snoc0 /=.
+    destruct Γ; split; intros H; depelim H; constructor; auto;
+    now apply IHΔ.
+Qed.
+
+Lemma eq_annots_subst_context (Γ : list aname) s k (Δ : context) : 
+  eq_annots Γ (subst_context s k Δ) <-> eq_annots Γ Δ.
+Proof.
+  apply eq_annots_fold.
+Qed.
+
+Lemma eq_annots_lift_context (Γ : list aname) n k (Δ : context) : 
+  eq_annots Γ (lift_context n k Δ) <-> eq_annots Γ Δ.
+Proof.
+  apply eq_annots_fold.
+Qed.
+
+Instance Forall2_ext {A B} :
+  Proper (pointwise_relation A (pointwise_relation B iff) ==> eq ==> eq ==> iff) (@Forall2 A B).
+Proof.
+  intros f g Hfg ?? -> ?? ->.
+  split; intro; eapply Forall2_impl; tea; apply Hfg.
+Qed.
+
+Lemma eq_annots_subst_instance_ctx (Γ : list aname) u (Δ : context) : 
+  eq_annots Γ Δ@[u] <-> eq_annots Γ Δ.
+Proof.
+  etransitivity. eapply Forall2_map_right.
+  eapply Forall2_ext; auto.
+  intros x y; reflexivity.
+Qed.
+
+Lemma eq_annots_inst_case_context (Γ : list aname) pars puinst (ctx : context) :
+  eq_annots Γ ctx <->
+  eq_annots Γ (PCUICCases.inst_case_context pars puinst ctx).
+Proof.
+  etransitivity. symmetry; eapply (eq_annots_subst_instance_ctx _ puinst).
+  etransitivity.
+  symmetry; eapply (eq_annots_subst_context _ (List.rev pars) 0). 
+  reflexivity.
+Qed.

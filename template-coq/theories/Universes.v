@@ -1671,6 +1671,8 @@ Definition fresh_level : Level.t. exact Level.lSet. Qed.
 
 Class UnivSubst A := subst_instance : Instance.t -> A -> A.
 
+Notation "x @[ u ]" := (subst_instance u x) (at level 3, 
+  format "x @[ u ]").
 
 Instance subst_instance_level : UnivSubst Level.t :=
   fun u l => match l with
@@ -1870,8 +1872,12 @@ Definition polymorphic_instance uctx :=
   | Monomorphic_ctx c => Instance.empty
   | Polymorphic_ctx c => fst (AUContext.repr c)
   end.
-
-
+(* todo: duplicate of polymorphic_instance *)
+Definition abstract_instance decl :=
+  match decl with
+  | Monomorphic_ctx _ => Instance.empty
+  | Polymorphic_ctx auctx => UContext.instance (AUContext.repr auctx)
+  end.
 
 Definition print_universe_instance u :=
   match u with

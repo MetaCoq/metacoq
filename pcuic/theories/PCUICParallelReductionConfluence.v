@@ -3083,18 +3083,7 @@ Section Rho.
     eapply nth_error_forallb in hs; tea; cbn in *.
     eapply on_free_vars_impl; tea => //.
   Qed.
-
-  (*Lemma on_free_vars_cofix_subst_pred p mfix0 mfix1 : 
-    forallb (on_free_vars p) (cofix_subst mfix0) ->
-    forallb (on_free_vars p) (cofix_subst mfix1).
-  Proof.
-  Admitted.
-
-  Lemma on_free_vars_fix_subst_pred p mfix0 mfix1 : 
-    forallb (on_free_vars p) (fix_subst mfix0) ->
-    forallb (on_free_vars p) (fix_subst mfix1).
-  Proof.
-  Admitted.*)
+  
   Hint Resolve pred1_on_free_vars pred1_on_ctx_free_vars : fvs.
 
 
@@ -3737,50 +3726,6 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     rewrite -context_assumptions_smash_context''.
     now rewrite context_assumptions_smash_context.
   Qed.
-
-  (*Lemma on_contexts_over_smash_acc {Γ Γ' Δ Δ'} acc acc' :
-    pred1_ctx_over Σ Γ Γ' Δ Δ' ->
-    pred1_ctx_over Σ (Γ ,,, Δ) (Γ' ,,, Δ') acc acc' ->    
-    pred1_ctx_over Σ Γ Γ' (smash_context acc Δ) (smash_context acc' Δ').
-  Proof.
-    intros hΔ. revert acc acc'.
-    induction hΔ; simpl; auto.
-    intros acc acc' h.
-    depelim p => /=.
-    - eapply IHhΔ.
-      eapply All2_fold_app. repeat constructor; auto.
-      eapply All2_fold_impl; tea => Γ1 Δ T U; 
-      rewrite /on_decls_over => hlen;
-      rewrite !app_context_assoc; intuition auto.
-    - eapply IHhΔ.
-      rewrite /subst_context - !mapi_context_fold.
-      eapply All2_fold_mapi.
-      eapply All2_fold_impl_ind; tea.
-      intros par par' x y onpar; rewrite /on_decls_over /=.
-      rewrite !mapi_context_fold - !/(subst_context _ _ _).
-      intros pred. rewrite !Nat.add_0_r.
-      eapply (@substitution_let_pred1 _ Σ wfΣ (Γ ,,, Γ0) [vdef na b t] par
-        (Γ' ,,, Γ'0) [vdef na b' t'] par' [b] [b'] x y) => //; eauto with pcuic.
-      * rewrite -{1}(subst_empty 0 b) -{1}(subst_empty 0 b').
-        repeat constructor; pcuic. now rewrite !subst_empty.
-      * len. move: (length_of onpar).
-        move: (length_of (pred1_pred1_ctx _ pred)). len. simpl. len. lia.
-      * repeat constructor. pcuic. pcuic.
-      * admit.
-      * admit.
-      * admit.
-      * admit.
-      * admit.
-  Admitted.
-
-  Lemma pred1_ctx_over_smash Γ Γ' Δ Δ' :
-    pred1_ctx_over Σ Γ Γ' Δ Δ' ->
-    pred1_ctx_over Σ Γ Γ' (smash_context [] Δ) (smash_context [] Δ').
-  Proof.
-    intros h.
-    eapply (on_contexts_over_smash_acc [] []) in h => //.
-    constructor.
-  Qed.*)
 
   Lemma pred1_ext Γ Γ' t t' u u' :
     t = t' -> u = u' -> pred1 Σ Γ Γ' t u -> pred1 Σ Γ Γ' t' u'.

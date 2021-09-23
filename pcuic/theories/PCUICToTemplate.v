@@ -54,11 +54,7 @@ Fixpoint trans (t : PCUICAst.term) : Ast.term :=
   | PCUICAst.tPrim i => trans_prim i
   end.
 
-Definition trans_decl (d : PCUICAst.PCUICEnvironment.context_decl) :=
-  let 'mkdecl na b t := d in
-  {| decl_name := na;
-     decl_body := option_map trans b;
-     decl_type := trans t |}.
+Notation trans_decl := (map_decl trans).
 
 Definition trans_local Γ := List.map trans_decl Γ.
 

@@ -371,7 +371,7 @@ Section Lemmata.
     destruct h; depelim wf; simpl in *.
     all: destruct l; econstructor; eauto.
   Qed.
-
+  (* todo: rename alpha_eq *)
   Lemma compare_decls_conv Γ Γ' : 
     All2 (compare_decls eq eq) Γ Γ' ->
     conv_context Σ Γ Γ'.

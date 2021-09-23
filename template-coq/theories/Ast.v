@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import utils Environment.
 From MetaCoq.Template Require Export Universes.
 (* For primitive integers and floats  *)
 From Coq Require Int63 Floats.PrimFloat Floats.SpecFloat.
-From Coq Require Import Morphisms.
+From Coq Require Import ssreflect Morphisms.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -308,9 +308,7 @@ Lemma map_branches_k_map_branches_k
   map (fun b => map_branch (f #|bcontext (map_branch g b)|) (map_branch (f' k) b)) l =
   map (fun b => map_branch (f #|bcontext b|) (map_branch (f' k) b)) l.
 Proof.
-  eapply map_ext => b. rewrite map_branch_map_branch.
-  rewrite map_branch_map_branch.
-  now apply map_branch_eq_spec.
+  eapply map_ext => b. now rewrite map_branch_map_branch.
 Qed.
 
 Lemma case_brs_map_spec {A B} {P : A -> Type} {l} {f g : A -> B} :
@@ -746,6 +744,27 @@ Record mutual_inductive_entry := {
   (* Private flag for sealing an inductive definition in an enclosing
      module. Not handled by Template Coq yet. *) }.
 
+     (** Inductive substitution, to produce a constructors' type *)
+Definition inds ind u (l : list one_inductive_body) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tInd (mkInd ind n) u :: aux n
+      end
+  in aux (List.length l).
+
+Lemma inds_length ind u l : #|inds ind u l| = #|l|.
+Proof.
+  unfold inds. induction l; simpl; congruence.
+Qed.
+
+Lemma inds_spec ind u l :
+  inds ind u l = List.rev (mapi (fun i _ => tInd {| inductive_mind := ind; inductive_ind := i |} u) l).
+Proof.
+  unfold inds, mapi. induction l using rev_ind. simpl. reflexivity.
+  now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
+Qed.
+
 (** Helpers for "compact" case representation, reconstructing predicate and 
   branch contexts. *)
   
@@ -758,33 +777,44 @@ Definition case_predicate_context ind mdecl idecl params puinst pctx : context :
         decl_type := indty |}
   in
   let ictx := 
-    subst_context params 0
+    subst_context (List.rev params) 0
       (subst_instance puinst (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
   in
   map2 set_binder_name pctx (inddecl :: ictx).
 
-Definition case_branch_context_gen params puinst cdecl : context :=
-  subst_context params 0 (subst_instance puinst cdecl.(cstr_args)).
+Definition cstr_branch_context ind mdecl cdecl : context :=
+  expand_lets_ctx mdecl.(ind_params)
+    (subst_context (inds (inductive_mind ind) (abstract_instance mdecl.(ind_universes))
+        mdecl.(ind_bodies)) #|mdecl.(ind_params)|
+      cdecl.(cstr_args)).
 
-Definition case_branch_context p cdecl : context :=
-  case_branch_context_gen p.(pparams) p.(puinst) cdecl.
-  
-Definition case_branches_contexts_gen idecl params puinst : list context :=
-  map (case_branch_context_gen params puinst) idecl.(ind_ctors).
+Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
+  map2 set_binder_name bctx 
+    (subst_context (List.rev params) 0 (subst_instance puinst (cstr_branch_context ind mdecl cdecl))).
 
-Definition case_branches_contexts idecl p : list context :=
-  map (case_branch_context_gen p.(pparams) p.(puinst)) idecl.(ind_ctors).
-  
-Definition case_branch_type_gen ind params puinst ptm i cdecl : context * term :=
+Definition case_branch_context ind mdecl cdecl p (br : branch term) : context :=
+  case_branch_context_gen ind mdecl p.(pparams) p.(puinst) br.(bcontext) cdecl.
+
+Definition case_branches_contexts_gen ind mdecl idecl params puinst (brs : list (branch term)) : list context :=
+  map2 (fun br cdecl => case_branch_context_gen ind mdecl params puinst br.(bcontext) cdecl) brs idecl.(ind_ctors).
+
+Definition case_branches_contexts ind mdecl idecl p (brs : list (branch term)) : list context :=
+  map2 (fun br => case_branch_context_gen ind mdecl p.(pparams) p.(puinst) br.(bcontext)) brs idecl.(ind_ctors).
+
+Definition case_branch_type_gen ind mdecl params puinst ptm i cdecl (br : branch term) : context * term :=
   let cstr := tConstruct ind i puinst in
   let args := to_extended_list cdecl.(cstr_args) in
   let cstrapp := mkApps cstr (map (lift0 #|cdecl.(cstr_args)|) params ++ args) in
-  let brctx := subst_context params 0 (subst_instance puinst cdecl.(cstr_args)) in
-  let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (cdecl.(cstr_indices) ++ [cstrapp]) in
+  let brctx := case_branch_context_gen ind mdecl params puinst br.(bcontext) cdecl in
+  let upars := subst_instance puinst mdecl.(ind_params) in
+  let indices :=
+    (map (subst (List.rev params) #|cdecl.(cstr_args)|)
+      (map (expand_lets_k upars #|cdecl.(cstr_args)|)
+        (map (subst (inds (inductive_mind ind) puinst mdecl.(ind_bodies))
+                    (#|mdecl.(ind_params)| + #|cdecl.(cstr_args)|))
+          (map (subst_instance puinst) cdecl.(cstr_indices))))) in
+  let ty := mkApps (lift0 #|cdecl.(cstr_args)| ptm) (indices ++ [cstrapp]) in
   (brctx, ty).
 
-Definition case_branches_types_gen ind idecl params puinst ptm : list (context * term) :=
-  mapi (case_branch_type_gen ind params puinst ptm) idecl.(ind_ctors).
-
-Definition case_branches_types ind idecl p ptm : list (context * term) :=
-  mapi (case_branch_type_gen ind p.(pparams) p.(puinst) ptm) idecl.(ind_ctors).
+Definition case_branch_type ind mdecl p ptm i cdecl br : context * term :=
+  case_branch_type_gen ind mdecl p.(pparams) p.(puinst) ptm i cdecl br.

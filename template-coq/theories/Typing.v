@@ -30,27 +30,6 @@ Fixpoint isArity T :=
 Module TemplateLookup := Lookup TemplateTerm Env.
 Include TemplateLookup.
 
-(** Inductive substitution, to produce a constructors' type *)
-Definition inds ind u (l : list one_inductive_body) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tInd (mkInd ind n) u :: aux n
-      end
-  in aux (List.length l).
-
-Lemma inds_length ind u l : #|inds ind u l| = #|l|.
-Proof.
-  unfold inds. induction l; simpl; congruence.
-Qed.
-
-Lemma inds_spec ind u l :
-  inds ind u l = List.rev (mapi (fun i _ => tInd {| inductive_mind := ind; inductive_ind := i |} u) l).
-Proof.
-  unfold inds, mapi. induction l using rev_ind. simpl. reflexivity.
-  now rewrite app_length /= Nat.add_1_r IHl mapi_rec_app /= rev_app_distr /= Nat.add_0_r.
-Qed.
-
 Definition type_of_constructor mdecl cdecl (c : inductive * nat) (u : list Level.t) :=
   let mind := inductive_mind (fst c) in
   subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance u cdecl.(cstr_type)).
@@ -273,7 +252,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
        in its argument context. Implementations can be more clever
        in the common case where no let-binding appears to avoid this. *)
     declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
-    let bctx := case_branch_context p cdecl in
+    let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
     #|skipn (ci_npar ci) args| = context_assumptions bctx ->
     red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
          (iota_red ci.(ci_npar) args bctx br)
@@ -330,7 +309,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | case_red_brs ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl) p c brs brs' :
     OnOne2All (fun brctx br br' => 
       on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br') 
-      (case_branches_contexts idecl p) brs brs' ->
+      (case_branches_contexts ind.(ci_ind) mdecl idecl p brs) brs brs' ->
     red1 Σ Γ (tCase ind p c brs) (tCase ind p c brs')
 
 | proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
@@ -378,7 +357,7 @@ Lemma red1_ind_all :
           (p : predicate term) (brs : list (branch term)) br,
           nth_error brs c = Some br ->
           declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
-          let bctx := case_branch_context p cdecl in
+          let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
           #|skipn (ci_npar ci) args| = context_assumptions bctx ->
           P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) 
                 (iota_red ci.(ci_npar) args bctx br)) ->
@@ -439,7 +418,7 @@ Lemma red1_ind_all :
        (forall (Γ : context) ind mdecl idecl (isdecl : declared_inductive Σ ind.(ci_ind) mdecl idecl) p c brs brs',        
           OnOne2All (fun brctx br br' => 
             on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, brctx)) (P (Γ ,,, brctx))) bbody bcontext br br') 
-              (case_branches_contexts idecl p) brs brs' ->
+              (case_branches_contexts ind.(ci_ind) mdecl idecl p brs) brs brs' ->
           P Γ (tCase ind p c brs) (tCase ind p c brs')) ->
 
        (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' -> P Γ (tProj p c) (tProj p c')) ->
@@ -505,7 +484,9 @@ Proof.
       
   - eapply X16; eauto.
     revert brs brs' o.
-    generalize (case_branches_contexts idecl p).
+    intros brs.
+    generalize (case_branches_contexts (ci_ind ind) mdecl idecl p brs).
+    revert brs.
     fix auxl 4.
     intros i l l' Hl. destruct Hl.
     + constructor; intros.
@@ -893,20 +874,20 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Case (ci : case_info) p c brs indices ps :
     forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
     mdecl.(ind_npars) = ci.(ci_npar) ->
-    #|idecl.(ind_indices)| = #|p.(pcontext)| ->
-    context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
+    S #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+    context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) in
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ ps idecl.(ind_kelim) ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
     isCoFinite mdecl.(ind_finite) = false ->
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-    All2 (fun br brctxty =>
+    All2i (fun i cdecl br =>
+      let brctxty := case_branch_type ci.(ci_ind) mdecl p ptm i cdecl br in
       (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1) *
       (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) *
       (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps)) 
-      brs
-      (case_branches_types ci.(ci_ind) idecl p ptm) ->
+      0 idecl.(ind_ctors) brs ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
 | type_Proj p c u :
@@ -1004,10 +985,11 @@ Proof.
   fix typing_size 5.
   destruct 1 ;
     repeat match goal with
-           | H : typing _ _ _ _ |- _ => apply typing_size in H
+           | H : typing _ _ _ _ |- _ => apply typing_size in H           
            end;
     match goal with
     | H : All2 _ _ _ |- _ => idtac
+    | H : All2i _ _ _ _ |- _ => idtac
     | H : All_local_env _ _ |- _ => idtac
     | H : All _ _ |- _ => idtac
     | H : Alli _ _ _ |- _ => idtac
@@ -1025,7 +1007,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max d1 (Nat.max d2
-      (all2_size _ (fun x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a)))).
+      (all2i_size _ (fun _ x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a)))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
 Defined.
@@ -1245,8 +1227,8 @@ Lemma typing_ind_env `{cf : checker_flags} :
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ wfΓ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
-        #|idecl.(ind_indices)| = #|p.(pcontext)| ->
-        context_assumptions idecl.(ind_indices) = #|p.(pparams)| ->
+        S #|idecl.(ind_indices)| = #|p.(pcontext)| ->
+        context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p.(pparams) p.(puinst) p.(pcontext) in
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
@@ -1256,14 +1238,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ c (mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices)) ->
         isCoFinite mdecl.(ind_finite) = false ->
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-        All2 (fun br brctxty =>
+        All2i (fun i cdecl br =>
+          let brctxty := case_branch_type ci.(ci_ind) mdecl p ptm i cdecl br in
           Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) brctxty.1 *
           (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) * 
           P Σ (Γ ,,, brctxty.1) br.(bbody) brctxty.2 *
           (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps) *
           P Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)) 
-          brs
-          (case_branches_types ci.(ci_ind) idecl p ptm) ->
+          0 idecl.(ind_ctors) brs ->
         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
@@ -1492,17 +1474,20 @@ Proof.
     -- simpl in pΓ.
        eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
        ++ eapply (X14 _ _ _ H0); eauto. simpl; auto with arith. lia.
-       ++ simpl in X13. simpl in pΓ. eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
+       ++ simpl in X13. simpl in pΓ. auto. eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
        ++ simpl in *.
          eapply (X13 _ _ _ H); eauto. simpl. subst predctx. lia.
        ++ eapply (X14 _ _ _ H0); simpl. lia.
-       ++ clear X13. revert a X14. simpl. clear. intros.
+       ++ clear X13. revert a X14. clear. intros.
           subst ptm predctx.
+          Opaque case_branch_type.
+          simpl in X14.
+          Transparent case_branch_type.
           induction a; simpl in *.
           ** constructor.
-          ** destruct r as [[? ?] ?]. constructor.
+          ** destruct r0 as [[? ?] ?]. constructor.
               --- intuition eauto.
-                  +++ eapply (X14 _ _ _ t); eauto. simpl; auto with arith.
+                  +++ eapply (X14 _ _ _ t); eauto. clear -X14. simpl; auto with arith.
                       lia.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.

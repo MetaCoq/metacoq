@@ -42,12 +42,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
-  Definition abstract_instance decl :=
-    match decl with
-    | Monomorphic_ctx _ => Instance.empty
-    | Polymorphic_ctx auctx => UContext.instance (AUContext.repr auctx)
-    end.
-
   (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
 
   Definition global_levels (Σ : global_env) : LevelSet.t :=

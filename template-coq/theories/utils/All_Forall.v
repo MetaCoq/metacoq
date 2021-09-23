@@ -333,6 +333,13 @@ Proof.
   apply equiv_reflectT. apply All2_forallb2. apply forallb2_All2.
 Qed.
 
+Lemma All2_refl {A} {P : A -> A -> Type} l :
+  (forall x, P x x) ->
+  All2 P l l.
+Proof.
+  intros HP. induction l; constructor; auto.
+Qed.
+
 Lemma forallb2_app {A B} (p : A -> B -> bool) l l' q q' :
   is_true (forallb2 p l l' && forallb2 p q q')
   -> is_true (forallb2 p (l ++ q) (l' ++ q')).
@@ -341,15 +348,21 @@ Proof.
   move=> /andb_and[/andb_and[pa pl] pq]. now rewrite pa IHl // pl pq.
 Qed.
 
-Lemma All2_map {A B C D} (R : C -> D -> Type) (f : A -> C) (g : B -> D) l l' :
-  All2 (fun x y => R (f x) (g y)) l l' -> All2 R (map f l) (map g l').
-Proof. induction 1; simpl; constructor; try congruence. Qed.
-
-Lemma All2_map_inv {A B C D} (R : C -> D -> Type) (f : A -> C) (g : B -> D) l l' :
-  All2 R (map f l) (map g l') -> All2 (fun x y => R (f x) (g y)) l l'.
-Proof. induction l in l' |- *; destruct l'; simpl;
-         move=> H;inv H; try constructor; try congruence. eauto.
+Lemma All2_map_equiv {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l l'} :
+  All2 (fun x y => R (f x) (g y)) l l' <~> All2 R (map f l) (map g l').
+Proof.
+  split.
+  - induction 1; simpl; constructor; try congruence.
+  - induction l in l' |- *; destruct l'; intros H; depelim H; constructor; auto. 
 Qed.
+
+Lemma All2_map {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l l'} :
+  All2 (fun x y => R (f x) (g y)) l l' -> All2 R (map f l) (map g l').
+Proof. apply All2_map_equiv. Qed.
+
+Lemma All2_map_inv {A B C D} {R : C -> D -> Type} {f : A -> C} {g : B -> D} {l l'} :
+  All2 R (map f l) (map g l') -> All2 (fun x y => R (f x) (g y)) l l'.
+Proof. apply All2_map_equiv. Qed.
 
 (* Lemma All2_List_Forall_mix_left {A : Type} {P : A -> Prop} {Q : A -> A -> Prop} *)
 (*       {l l' : list A} : *)
@@ -506,6 +519,12 @@ Qed.
 Lemma All2_eq_eq {A} (l l' : list A) : l = l' -> All2 (fun x y => x = y) l l'.
 Proof.
   intros ->. induction l';  constructor; auto.
+Qed.
+
+Lemma All2_reflexivity {A} {P : A -> A -> Type} :
+  CRelationClasses.Reflexive P -> CRelationClasses.Reflexive (All2 P).
+Proof.
+  intros hp x. eapply All2_refl. intros; reflexivity.
 Qed.
 
 Lemma All2_symmetry {A} (R : A -> A -> Type) : 
@@ -2042,13 +2061,6 @@ Proof.
   - inversion 1; subst. constructor; eauto.
 Qed.
 
-Lemma All2_map_left_inv {A B C} (P : A -> B -> Type) (l : list C) (f : C -> A) l' : 
-  All2 P (map f l) l' -> All2 (fun x => P (f x)) l l'.
-Proof.
-  rewrite -{1}(map_id l').
-  intros. now eapply All2_map_inv in X.
-Qed.
-
 Lemma All2_nth :
   forall A B P l l' n (d : A) (d' : B),
     All2 P l l' ->
@@ -2113,13 +2125,26 @@ Proof.
   induction n; cbn; econstructor; eauto.
 Qed.
 
-Lemma All2_map_left {A B C} (P : A -> C -> Type) l l' (f : B -> A) :
-  All2 (fun x y => P (f x) y) l l' -> All2 P  (map f l) l'.
-Proof. intros. rewrite <- (map_id l'). eapply All2_map; eauto. Qed.
+Lemma All2_map_left_equiv {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
+  All2 (fun x y => P (f x) y) l l' <~> All2 P (map f l) l'.
+Proof. intros. rewrite -{2}(map_id l'). eapply All2_map_equiv; eauto. Qed.
 
-Lemma All2_map_right {A B C} (P : A -> C -> Type) l l' (f : B -> C) :
-  All2 (fun x y => P x (f y)) l l' -> All2 P  l (map f l').
-Proof. intros. rewrite <- (map_id l). eapply All2_map; eauto. Qed.
+Lemma All2_map_right_equiv {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
+  All2 (fun x y => P x (f y)) l l' <~> All2 P  l (map f l').
+Proof. intros. rewrite -{2}(map_id l). eapply All2_map_equiv; eauto. Qed.
+
+Lemma All2_map_left {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
+  All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
+Proof. apply All2_map_left_equiv. Qed.
+
+Lemma All2_map_right {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
+  All2 (fun x y => P x (f y)) l l' -> All2 P l (map f l').
+Proof. apply All2_map_right_equiv. Qed.
+
+Definition All2_map_left_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
+  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l' := (snd All2_map_left_equiv).
+Definition All2_map_right_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
+  All2 P l (map f l') -> All2 (fun x y => P x (f y)) l l' := (snd All2_map_right_equiv).
 
 Lemma Forall2_Forall_right {A B} {P : A -> B -> Prop} {Q : B -> Prop} {l l'} :
   Forall2 P l l' ->
@@ -2292,20 +2317,6 @@ Lemma All2_mix_inv {A} {P Q : A -> A -> Type} {l l'} :
   (All2 P l l' * All2 Q l l').
 Proof.
   induction 1; split; constructor; intuition eauto.
-Qed.
-
-Lemma All2_map_left' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
-  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
-Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
-
-Lemma All2_map_right' {A B} (P : A -> A -> Type) l l' (f : B -> A) :
-  All2 P l (map f l') ->  All2 (fun x y => P x (f y)) l l'.
-Proof.
-  induction l in l' |- *. intros. inversion X. destruct l'; try discriminate.
-  constructor.
-  destruct l'; intros H; inversion H; try discriminate.
-  subst.
-  specialize (IHl _ X0). constructor; auto.
 Qed.
 
 Lemma All_forallb_map_spec {A B : Type} {P : A -> Type} {p : A -> bool}

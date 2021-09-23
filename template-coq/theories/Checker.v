@@ -241,7 +241,7 @@ Section Reduce.
         | Some br => 
           match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) c with
           | Checked (mdecl, cdecl) => 
-            let bctx := case_branch_context p cdecl in  
+            let bctx := case_branch_context ind mdecl cdecl p br in  
               reduce_stack Γ n (iota_red ci.(ci_npar) args bctx br) stack
           | TypeError e => ret (t, stack)
           end
@@ -286,14 +286,14 @@ Section Reduce.
        pcontext := p.(pcontext);
        preturn := f Γparams (preturn p) |}.
   
-  Definition rebuild_case_branch_ctx ind i p :=
+  Definition rebuild_case_branch_ctx ind i p br :=
     match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) i with
     | TypeError _ => []
-    | Checked (mib, cdecl) => case_branch_context p cdecl
+    | Checked (mib, cdecl) => case_branch_context ind mib cdecl p br
     end.
 
   Definition map_case_branch_with_binders ind i (f : context -> term -> term) Γ p br :=
-    let ctx := rebuild_case_branch_ctx ind i p in
+    let ctx := rebuild_case_branch_ctx ind i p br in
     map_branch (f (Γ ,,, ctx)) br.
 
   Definition map_constr_with_binders (f : context -> term -> term) Γ (t : term) : term :=

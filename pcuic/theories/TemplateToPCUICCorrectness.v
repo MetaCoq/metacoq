@@ -233,10 +233,10 @@ Qed.
 Definition on_pair {A B C D} (f : A -> B) (g : C -> D) (x : A * C) :=
   (f (fst x), g (snd x)).
 
-Lemma trans_inds kn u bodies : map trans (ST.inds kn u bodies) = 
+Lemma trans_inds kn u bodies : map trans (Ast.inds kn u bodies) = 
   inds kn u (map (trans_one_ind_body Σ) bodies).
 Proof.
-  unfold inds, ST.inds. rewrite map_length.
+  unfold inds, Ast.inds. rewrite map_length.
   induction bodies. simpl. reflexivity. simpl; f_equal. auto.
 Qed.
 

@@ -415,8 +415,6 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 | case_red_brs ci p c brs brs' :    
     OnOne2 (fun br br' =>
       on_Trel_eq (red1 Σ (Γ ,,, inst_case_branch_context p br)) bbody bcontext br br')
-      (* + 
-      on_Trel_eq (OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ')))) bcontext bbody br br')  *)
       brs brs' ->
     red1 Σ Γ (tCase ci p c brs) (tCase ci p c brs')
 

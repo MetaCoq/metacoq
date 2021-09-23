@@ -659,26 +659,6 @@ Section Typecheck.
     destruct check_univs; auto.
   Qed.
 
-  Notation eq_annots Γ Δ :=
-    (Forall2 (fun na decl => eq_binder_annot na (decl_name decl)) Γ Δ).
-
-  Lemma eq_context_gen_binder_annot Γ Δ : 
-    eq_context_gen eq eq Γ Δ -> eq_annots (forget_types Γ) Δ.
-  Proof.
-    induction 1; constructor; auto.
-    destruct p; auto.
-  Qed.
-
-  Lemma eq_annots_fold (Γ : list aname) (f : nat -> term -> term) (Δ : context) : 
-    eq_annots Γ (fold_context_k f Δ) -> eq_annots Γ Δ.
-  Proof.
-    induction Δ in Γ |- *.
-    - cbn; auto.
-    - rewrite fold_context_k_snoc0 /=.
-      destruct Γ; intros H; depelim H.
-      constructor; auto.
-  Qed.
-
   Notation wt_brs Γ ci mdecl idecl p ps ptm ctors brs n := 
     (∥ All2i (fun i cdecl br =>
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in

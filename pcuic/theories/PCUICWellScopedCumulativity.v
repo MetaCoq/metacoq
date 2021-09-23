@@ -11,32 +11,6 @@ Require Import CRelationClasses CMorphisms.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 From Equations Require Import Equations.
-     
-
-Reserved Notation "[ × P1 & P2 ]" (at level 0).
-Reserved Notation "[ × P1 , P2 & P3 ]" (at level 0, format
-  "'[hv' [ × '['  P1 , '/'  P2 ']' '/ '  &  P3 ] ']'").
-Reserved Notation "[ × P1 , P2 , P3 & P4 ]" (at level 0, format
-  "'[hv' [ × '['  P1 , '/'  P2 , '/'  P3 ']' '/ '  &  P4 ] ']'").
-Reserved Notation "[ × P1 , P2 , P3 , P4 & P5 ]" (at level 0, format
-  "'[hv' [ × '['  P1 , '/'  P2 , '/'  P3 , '/'  P4 ']' '/ '  &  P5 ] ']'").
-Reserved Notation "[ × P1 , P2 , P3 , P4 , P5 & P6 ]" (at level 0, format
-  "'[hv' [ × '['  P1 , '/'  P2 , '/'  P3 , '/'  P4 , '/'  P5 ']' '/ '  &  P6 ] ']'").
-
-
-Variant and3 (P1 P2 P3 : Type) : Type := Times3 of P1 & P2 & P3.
-Variant and4 (P1 P2 P3 P4 : Type) : Type := Times4 of P1 & P2 & P3 & P4.
-Variant and5 (P1 P2 P3 P4 P5 : Type) : Type := Times5 of P1 & P2 & P3 & P4 & P5.
-Variant and6 (P1 P2 P3 P4 P5 P6 : Type) : Type := Times6 of P1 & P2 & P3 & P4 & P5 & P6.
-
-Hint Constructors and3 and3 and5 and6 : core.
-
-Notation "[ × P1 & P2 ]" := (pair P1 P2) (only parsing) : type_scope.
-Notation "[ × P1 , P2 & P3 ]" := (and3 P1 P2 P3) : type_scope.
-Notation "[ × P1 , P2 , P3 & P4 ]" := (and4 P1 P2 P3 P4) : type_scope.
-Notation "[ × P1 , P2 , P3 , P4 & P5 ]" := (and5 P1 P2 P3 P4 P5) : type_scope.
-Notation "[ × P1 , P2 , P3 , P4 , P5 & P6 ]" := (and6 P1 P2 P3 P4 P5 P6) : type_scope.
-
 
 (* We show that conversion/cumulativity starting from well-typed terms is transitive.
   We first use typing to decorate the reductions/comparisons with invariants 

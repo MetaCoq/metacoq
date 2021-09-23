@@ -195,7 +195,7 @@ Lemma instantiate_inds {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {u mind mdecl} :
   declared_minductive Σ.1 mind mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   subst_instance u
-     (inds mind (PCUICLookup.abstract_instance (PCUICEnvironment.ind_universes mdecl))
+     (inds mind (abstract_instance (PCUICEnvironment.ind_universes mdecl))
         (ind_bodies mdecl)) = 
   inds mind u (ind_bodies mdecl).
 Proof.
@@ -489,7 +489,7 @@ Qed.
 
 (* k is the projection number: 0 is the first argument *)
 Definition projection_type mdecl ind k ty := 
-  let u := PCUICLookup.abstract_instance (PCUICEnvironment.ind_universes mdecl) in
+  let u := abstract_instance (PCUICEnvironment.ind_universes mdecl) in
   let indsubst := inds (inductive_mind ind) u (ind_bodies mdecl) in
   let projsubst := projs ind (ind_npars mdecl) k in
   subst indsubst (S (ind_npars mdecl))
@@ -499,7 +499,7 @@ Definition projection_type mdecl ind k ty :=
           ty)))).
           
 Definition projection_type' mdecl ind k ty :=
-  let u := PCUICLookup.abstract_instance (PCUICEnvironment.ind_universes mdecl) in
+  let u := abstract_instance (PCUICEnvironment.ind_universes mdecl) in
   let indsubst := inds (inductive_mind ind) u (ind_bodies mdecl) in
   let projsubst := projs ind (ind_npars mdecl) k in
   (subst0 projsubst
@@ -507,14 +507,14 @@ Definition projection_type' mdecl ind k ty :=
     (lift 1 k (subst indsubst (k + #|ind_params mdecl|) ty)))).
 
 Definition projection_decls_type mdecl ind k ty := 
-  let u := PCUICLookup.abstract_instance (PCUICEnvironment.ind_universes mdecl) in
+  let u := abstract_instance (PCUICEnvironment.ind_universes mdecl) in
   let indsubst := inds (inductive_mind ind) u (ind_bodies mdecl) in
   let projsubst := projs ind (ind_npars mdecl) k in
   subst indsubst (S (ind_npars mdecl))
       (subst0 projsubst (lift 1 k ty)).
 
 Lemma on_projections_decl {cf:checker_flags} {mdecl ind idecl cs} :
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+  let u := abstract_instance (ind_universes mdecl) in
   on_projections mdecl (inductive_mind ind) (inductive_ind ind) idecl (idecl.(ind_indices)) cs ->
   Alli (fun i decl => 
     ∑ pdecl, 
@@ -583,7 +583,7 @@ Qed.
 (* Well, it's a smash_context mess! *)
 Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
   forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ ind mdecl idecl),
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+  let u := abstract_instance (ind_universes mdecl) in
   match ind_ctors idecl return Type with
   | [cs] => 
     on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
@@ -713,7 +713,7 @@ Proof.
   rewrite smash_context_app /= smash_context_acc.
 
   set(indsubst := (inds (inductive_mind ind) 
-    (PCUICLookup.abstract_instance (PCUICEnvironment.ind_universes mdecl))
+    (abstract_instance (PCUICEnvironment.ind_universes mdecl))
     (PCUICEnvironment.ind_bodies mdecl))) in *.
   set (projsubst :=  (projs {| inductive_mind := inductive_mind ind; 
       inductive_ind := inductive_ind ind |}
@@ -953,7 +953,7 @@ Qed.
 Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
   wf Σ.1 ->
   declared_projection Σ p mdecl idecl pdecl ->
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in    
+  let u := abstract_instance (ind_universes mdecl) in    
   isType (Σ.1, ind_universes mdecl)
     ((vass {| binder_name := nAnon; binder_relevance := idecl.(ind_relevance) |} (mkApps (tInd p.1.1 u) 
           (to_extended_list (smash_context [] (ind_params mdecl)))))::
@@ -977,7 +977,7 @@ Qed.
 
 Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
   forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ p mdecl idecl pdecl),
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+  let u := abstract_instance (ind_universes mdecl) in
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
   match ind_ctors idecl return Type with
   | [cs] => 

@@ -4,6 +4,7 @@ From MetaCoq.Template Require Import config utils Reflect Environment Ast AstUti
 
 Require Import ssreflect.
 From Equations.Prop Require Import DepElim.
+From Equations Require Import Equations.
 Set Equations With UIP.
 
 Definition R_universe_instance R :=
@@ -111,6 +112,54 @@ Proof.
   intros H x y xy. eapply Forall2_impl ; tea.
 Qed.
 
+Inductive compare_decls (eq_term leq_term : term -> term -> Type) : context_decl -> context_decl -> Type :=
+	| compare_vass na T na' T' : eq_binder_annot na na' ->
+    leq_term T T' -> 
+    compare_decls eq_term leq_term (vass na T) (vass na' T')
+  | compare_vdef na b T na' b' T' : eq_binder_annot na na' -> 
+    eq_term b b' -> leq_term T T' ->
+    compare_decls eq_term leq_term (vdef na b T) (vdef na' b' T').
+
+Derive Signature NoConfusion for compare_decls.
+
+Lemma alpha_eq_context_assumptions {Γ Δ} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  context_assumptions Γ = context_assumptions Δ.
+Proof.
+  induction 1 in |- *; cbn; auto.
+  destruct r; subst; cbn; auto.
+Qed.
+
+Lemma alpha_eq_extended_subst {Γ Δ k} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  extended_subst Γ k = extended_subst Δ k.
+Proof.
+  induction 1 in k |- *; cbn; auto.
+  destruct r; subst; cbn; f_equal; auto.
+  rewrite IHX. now rewrite (alpha_eq_context_assumptions X).
+Qed.
+
+Lemma expand_lets_eq {Γ Δ t} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  expand_lets Γ t = expand_lets Δ t.
+Proof.
+  intros. rewrite /expand_lets /expand_lets_k.
+  now rewrite (All2_length X) (alpha_eq_context_assumptions X) (alpha_eq_extended_subst X). 
+Qed.
+
+Lemma alpha_eq_subst_context {Γ Δ s k} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  All2 (compare_decls eq eq) (subst_context s k Γ) (subst_context s k Δ).
+Proof.
+  intros.
+  rewrite /subst_context. 
+  induction X.
+  - cbn; auto.
+  - rewrite !fold_context_k_snoc0. constructor; auto.
+    destruct r; subst; constructor; cbn; auto.
+    all:now rewrite (All2_length X).
+Qed.
+
 (** ** Syntactic equality up-to universes
   We don't look at printing annotations *)
 
@@ -173,9 +222,10 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     All2 (eq_term_upto_univ_napp Σ Re Re 0) p.(pparams) p'.(pparams) ->
     R_universe_instance Re p.(puinst) p'.(puinst) ->
     eq_term_upto_univ_napp Σ Re Re 0 p.(preturn) p'.(preturn) ->
+    All2 eq_binder_annot p.(pcontext) p'.(pcontext) ->
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
-      bcontext x = bcontext y ×
+      All2 (eq_binder_annot) (bcontext x) (bcontext y) *
       eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
     ) brs brs' ->
   eq_term_upto_univ_napp Σ Re Rle napp (tCase ind p c brs) (tCase ind p' c' brs')
@@ -249,8 +299,17 @@ Qed.
 
 Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
-
 Hint Resolve @eq_binder_annot_refl : core.
+
+Instance eq_binder_annots_refl {A} : CRelationClasses.Equivalence (All2 (@eq_binder_annot A A)).
+Proof.
+  split.
+  intros x. apply All2_reflexivity; tc. 
+  * intros l. reflexivity.
+  * intros l l' H. eapply All2_symmetry => //.
+  * intros l l' H. eapply All2_transitivity => //.
+    intros ? ? ? ? ?. now etransitivity. 
+Qed.
 
 Lemma eq_term_upto_univ_refl Σ Re Rle :
   RelationClasses.Reflexive Re ->
@@ -271,9 +330,7 @@ Proof.
   - destruct X as [Ppars Preturn]. eapply All_All2. 1:eassumption.
     intros; easy.
   - destruct X as [Ppars Preturn]. now apply Preturn.
-  - eapply All_All2. 1: eassumption.
-    simpl.
-    intros [? ?] x. repeat split ; auto.
+  - red in X0. eapply All_All2_refl. solve_all. reflexivity. 
   - eapply All_All2. 1: eassumption.
     intros x [? ?]. repeat split ; auto.
   - eapply All_All2. 1: eassumption.
@@ -334,7 +391,7 @@ Proof.
        end].
   - eapply R_global_instance_impl_same_napp; eauto.
   - eapply R_global_instance_impl_same_napp; eauto.
-  - induction a0; constructor; auto. intuition auto.
+  - induction a1; constructor; auto. intuition auto.
   - induction a; constructor; auto. intuition auto.
   - induction a; constructor; auto. intuition auto.
 Qed.
@@ -356,7 +413,7 @@ Proof.
   - clear X. induction a; constructor; eauto using eq_term_upto_univ_morphism0.
   - eapply R_global_instance_impl_same_napp; eauto.
   - eapply R_global_instance_impl_same_napp; eauto.
-  - clear X1 X2. induction a0; constructor; eauto using eq_term_upto_univ_morphism0.
+  - clear X1 X2. induction a1; constructor; eauto using eq_term_upto_univ_morphism0.
     destruct r0. split; eauto using eq_term_upto_univ_morphism0.
   - induction a; constructor; eauto using eq_term_upto_univ_morphism0.
     destruct r as [[[? ?] ?] ?].

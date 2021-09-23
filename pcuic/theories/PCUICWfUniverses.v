@@ -637,7 +637,7 @@ Qed.
   Qed.
 
   Lemma wf_abstract_instance Σ decl :
-    wf_universe_instance (Σ, decl) (PCUICLookup.abstract_instance decl).
+    wf_universe_instance (Σ, decl) (abstract_instance decl).
   Proof.
     destruct decl as [|[u cst]]=> /= //.
     red. constructor.

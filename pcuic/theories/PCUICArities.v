@@ -64,7 +64,7 @@ Qed.
 
 Lemma subslet_inds_gen {cf} {Σ : global_env} {wfΣ : wf Σ} ind mdecl idecl :
   declared_inductive Σ ind mdecl idecl ->
-  let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+  let u := abstract_instance (ind_universes mdecl) in
   subslet (Σ, ind_universes mdecl) [] (inds (inductive_mind ind) u (ind_bodies mdecl))
     (arities_context (ind_bodies mdecl)).
 Proof.

@@ -2115,7 +2115,7 @@ Section SubstIdentity.
 
   Lemma subst_instance_id_mdecl Σ u mdecl :
     consistent_instance_ext Σ (ind_universes mdecl) u ->
-    subst_instance u (PCUICLookup.abstract_instance (ind_universes mdecl)) = u.
+    subst_instance u (abstract_instance (ind_universes mdecl)) = u.
   Proof.
     intros cu.
     red in cu. red in cu.
@@ -2175,14 +2175,14 @@ Section SubstIdentity.
   Lemma consistent_instance_ext_abstract_instance Σ udecl :
     wf Σ ->
     wf_global_ext Σ udecl ->
-    consistent_instance_ext (Σ, udecl) udecl (PCUICLookup.abstract_instance udecl).
+    consistent_instance_ext (Σ, udecl) udecl (abstract_instance udecl).
   Proof.
     intros wfΣ wf_glob_ext.
     red. red.
     destruct udecl as [?|[univs cst]] eqn:indu.
     { simpl. reflexivity. }
     split; [|split].
-    - simpl PCUICLookup.abstract_instance.
+    - simpl abstract_instance.
       eapply forallb_mapi => //.
       intros i Hi. unfold global_ext_levels.
       apply LevelSet.mem_spec, LevelSet.union_spec. left.
@@ -2244,7 +2244,7 @@ Section SubstIdentity.
   Lemma consistent_instance_ext_subst_abs Σ decl u :
     wf_ext_wk Σ ->
     consistent_instance_ext Σ decl u ->
-    subst_instance (PCUICLookup.abstract_instance Σ.2) u = u.
+    subst_instance (abstract_instance Σ.2) u = u.
   Proof.
     intros [wfΣ onu] cu.
     destruct decl.
@@ -2269,7 +2269,7 @@ Section SubstIdentity.
   Lemma in_global_ext_subst_abs_level Σ l :
     wf_ext_wk Σ ->
     LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ) ->
-    subst_instance (PCUICLookup.abstract_instance Σ.2) l = l.
+    subst_instance (abstract_instance Σ.2) l = l.
   Proof.
     intros [wfΣ onu] cu.
     destruct l; auto.
@@ -2289,7 +2289,7 @@ Section SubstIdentity.
   Lemma consistent_instance_ext_subst_abs_univ Σ u :
     wf_ext_wk Σ ->
     wf_universe Σ u ->
-    subst_instance_univ (PCUICLookup.abstract_instance Σ.2) u = u.
+    subst_instance_univ (abstract_instance Σ.2) u = u.
   Proof.
     intros wf cu.
     destruct u; simpl; auto. f_equal.
@@ -2311,7 +2311,7 @@ Section SubstIdentity.
   Lemma consistent_instance_ext_subst_abs_inds Σ decl ind u bodies :
     wf_ext_wk Σ ->
     consistent_instance_ext Σ decl u ->
-    subst_instance (PCUICLookup.abstract_instance Σ.2) (inds ind u bodies) = 
+    subst_instance (abstract_instance Σ.2) (inds ind u bodies) = 
       (inds ind u bodies).
   Proof.
     intros wf cu.
@@ -2352,11 +2352,11 @@ Section SubstIdentity.
   Lemma subst_abstract_instance_id : 
     env_prop (fun Σ Γ t T =>
         wf_ext_wk Σ ->
-        let u := PCUICLookup.abstract_instance (snd Σ) in
+        let u := abstract_instance (snd Σ) in
         subst_instance u t = t × subst_instance u T = T)
         (fun Σ Γ =>
         wf_ext_wk Σ ->
-        let u := PCUICLookup.abstract_instance (snd Σ) in
+        let u := abstract_instance (snd Σ) in
         subst_instance u Γ = Γ).
   Proof.
     eapply typing_ind_env; intros; simpl in *; auto; try ((subst u || subst u0); split; [f_equal|]; intuition eauto).
@@ -2431,7 +2431,7 @@ Section SubstIdentity.
   Lemma typed_subst_abstract_instance Σ Γ t T :
     wf_ext_wk Σ ->
     Σ ;;; Γ |- t : T ->
-    let u := PCUICLookup.abstract_instance Σ.2 in
+    let u := abstract_instance Σ.2 in
     subst_instance u t = t.
   Proof.
     intros [wfΣ onu] H. eapply (env_prop_typing subst_abstract_instance_id) in H as [H H']; eauto.
@@ -2441,7 +2441,7 @@ Section SubstIdentity.
   Lemma subst_instance_id Σ Γ :
     wf_ext_wk Σ ->
     wf_local Σ Γ ->
-    let u := PCUICLookup.abstract_instance Σ.2 in
+    let u := abstract_instance Σ.2 in
     subst_instance u Γ = Γ.
   Proof.
     intros. eapply (env_prop_wf_local subst_abstract_instance_id) in X0; eauto.
@@ -2451,7 +2451,7 @@ Section SubstIdentity.
   Lemma subst_instance_ind_sort_id Σ mdecl ind idecl :
     wf Σ ->
     declared_inductive Σ ind mdecl idecl ->
-    let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+    let u := abstract_instance (ind_universes mdecl) in
     subst_instance_univ u (ind_sort idecl) = ind_sort idecl.
   Proof.
     intros wfΣ decli u.
@@ -2473,7 +2473,7 @@ Section SubstIdentity.
   Lemma subst_instance_ind_type_id Σ mdecl ind idecl :
     wf Σ ->
     declared_inductive Σ ind mdecl idecl ->
-    let u := PCUICLookup.abstract_instance (ind_universes mdecl) in
+    let u := abstract_instance (ind_universes mdecl) in
     subst_instance u (ind_type idecl) = ind_type idecl.
   Proof.
     intros wfΣ decli u.
@@ -2489,7 +2489,7 @@ Section SubstIdentity.
 
   Lemma isType_subst_instance_id Σ Γ T :
     wf_ext_wk Σ ->
-    let u := PCUICLookup.abstract_instance Σ.2 in
+    let u := abstract_instance Σ.2 in
     isType Σ Γ T -> subst_instance u T = T.
   Proof.
     intros wf_ext u isT.

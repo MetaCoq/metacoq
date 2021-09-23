@@ -38,14 +38,6 @@ Hint Resolve eq_universe_leq_universe' : pcuic.
 Derive Signature for conv cumul assumption_context.
 Derive Signature for clos_refl_trans_1n.
 
-(* todo move *)
-Lemma All2_refl {A} {P : A -> A -> Type} l :
-  (forall x, P x x) ->
-  All2 P l l.
-Proof.
-  intros HP. induction l; constructor; auto.
-Qed.
-
 Require Import CMorphisms.
 Notation equality_terms Σ Γ := (All2 (equality false Σ Γ)).
 Instance equality_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (equality_terms Σ Γ).
@@ -3021,9 +3013,6 @@ Section ConvSubst.
   Qed.
 
 End ConvSubst.
-
-Notation "x @[ u ]" := (subst_instance u x) (at level 2, 
-  format "x @[ u ]").
 
 Hint Rewrite @on_free_vars_subst_instance : fvs.
 Hint Rewrite @on_free_vars_subst_instance_context subst_instance_length : fvs.

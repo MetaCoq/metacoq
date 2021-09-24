@@ -12,17 +12,6 @@ Require Import ssreflect ssrbool.
 
 From MetaCoq.PCUIC Require Import PCUICInduction.
 
-Lemma consistent_instance_length {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {univs u} :
-  consistent_instance_ext Σ univs u ->
-  #|u| = #|abstract_instance univs|. 
-Proof.
-  rewrite /consistent_instance_ext /consistent_instance.
-  destruct univs; simpl; auto.
-  intros [_ [H _]].
-  destruct cst; simpl in *.
-  now rewrite H; len.
-Qed.
-
 Section CheckerFlags.
   Context {cf:checker_flags}.
 

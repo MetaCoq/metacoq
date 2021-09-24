@@ -151,6 +151,16 @@ Qed.
 Notation Tterm := Template.Ast.term.
 Notation Tcontext := Template.Ast.Env.context.
 
+Lemma All_map2 {A B C} P (l : list A) (l' : list B) (f g : A -> B -> C) : 
+  All P l' ->
+  (forall x y, P y -> f x y = g x y) ->
+  map2 f l l' = map2 g l l'. 
+Proof.
+  induction 1 in l |- * => Hfg /=; destruct l => //.
+  cbn. rewrite IHX //. f_equal.
+  now apply Hfg.
+Qed.
+
 Lemma trans_subst_instance u t : trans (subst_instance u t) = subst_instance u (trans t).
 Proof.
   rewrite /subst_instance /=.
@@ -163,8 +173,14 @@ Proof.
     repeat toAll; solve_list.
   destruct X; red in X0.
   dest_lookup; cbn; f_equal; auto; solve_list.
-  1-2:todo "case".
-  rewrite /map_predicate /= /id; f_equal; auto; try solve_list.
+  - rewrite /trans_predicate /= /map_predicate /=.
+    f_equal; solve_all.
+  - rewrite PCUICUnivSubstitution.map2_map_r. cbn.
+    rewrite map_map2 PCUICUnivSubstitution.map2_map_r.
+    eapply All_map2; tea; cbn => cdecl br.
+    rewrite /map_branch /trans_branch /= /id.
+    now intros; f_equal.
+  - rewrite /id /map_predicate /=. f_equal; solve_all.
 Qed.
 
 Lemma trans_destArity ctx t :
@@ -454,22 +470,36 @@ Qed.
 
 End Translation.
 
+(* Section Trans_Weakening.
+  Context {cf : checker_flags}.
+  Context {Σ : Ast.Env.global_env}.
+  Context {wfΣ : Typing.wf Σ}.
+  Notation Σ' := (trans_global_decls Σ).
 
-(*
+  Lemma trans_weaken t : 
+    Typing.extends Σ Σ' ->
+    trans Σ t = trans Σ' t.
 
-Section Trans_Global.
+
+ *)
+
+(*Section Trans_Global.
+  Context {cf : checker_flags}.
   Context (Σ : Ast.Env.global_env).
   Notation Σ' := (trans_global_decls Σ).
+  (* Context (wfΣ : Typing.wf Σ). *)
 
   Lemma forall_decls_declared_constant cst decl :
     ST.declared_constant Σ cst decl ->
-    declared_constant (trans_global_decls Σ) cst (trans_constant_body Σ' decl).
+    declared_constant Σ' cst (trans_constant_body Σ' decl).
   Proof.
     unfold declared_constant, ST.declared_constant.
     induction Σ => //; try discriminate.
     case: a => // /= k b.
     unfold eq_kername; destruct kername_eq_dec; subst; auto.
     - move => [=] ->. simpl. f_equal. f_equal.
+      unfold on_snd. cbn.
+
 
   Qed.
 

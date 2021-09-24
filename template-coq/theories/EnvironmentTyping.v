@@ -104,7 +104,18 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition consistent_instance_ext `{checker_flags} Σ :=
     consistent_instance (global_ext_levels Σ) (global_ext_constraints Σ).
-
+    
+  Lemma consistent_instance_length {cf : checker_flags} {Σ : global_env_ext} {univs u} :
+    consistent_instance_ext Σ univs u ->
+    #|u| = #|abstract_instance univs|. 
+  Proof.
+    unfold consistent_instance_ext, consistent_instance.
+    destruct univs; simpl; auto.
+    intros [_ [H _]].
+    destruct cst; simpl in *.
+    now rewrite H; len.
+  Qed.
+  
 End Lookup.
 
 Module Type LookupSig (T : Term) (E : EnvironmentSig T).

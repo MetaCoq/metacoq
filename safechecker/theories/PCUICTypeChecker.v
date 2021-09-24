@@ -764,7 +764,7 @@ Section Typecheck.
     rewrite /idecl_binder.
     destruct (forget_types (pcontext p)); depelim e; cbn in *.
     constructor. now cbn.
-    now do 2 eapply eq_annots_fold in e.
+    now do 2 eapply (proj1 (eq_annots_fold _ _ _)) in e.
   Qed.
 
   Lemma eq_context_gen_wf_branch ci mdecl cdecl br :
@@ -775,7 +775,7 @@ Section Typecheck.
     do 2 red. 
     eapply eq_context_gen_binder_annot in e.
     rewrite /cstr_branch_context in e.
-    now do 3 eapply eq_annots_fold in e.
+    now do 3 eapply (proj1 (eq_annots_fold _ _ _)) in e.
   Qed.
 
   (* Opaque check_inst. *)

@@ -1758,17 +1758,6 @@ Proof.
     intros i hi. simpl. now eapply Nat.ltb_lt.
 Qed.
 
-Lemma consistent_instance_length {cf} {Σ} {wfΣ : wf Σ} {univs u} :
-  consistent_instance_ext Σ univs u ->
-  #|u| = #|abstract_instance univs|. 
-Proof.
-  rewrite /consistent_instance_ext /consistent_instance.
-  destruct univs; simpl; auto.
-  intros [_ [H _]].
-  destruct cst; simpl in *.
-  now rewrite H; len.
-Qed.
-
 Lemma consistent_instance_poly_length {cf} {Σ} {wfΣ : wf Σ} {inst cstrs u} :
   consistent_instance_ext Σ (Polymorphic_ctx (inst, cstrs)) u ->
   #|u| = #|inst|. 

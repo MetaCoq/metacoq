@@ -12,6 +12,17 @@ Require Import ssreflect ssrbool.
 
 From MetaCoq.PCUIC Require Import PCUICInduction.
 
+Lemma consistent_instance_length {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {univs u} :
+  consistent_instance_ext Σ univs u ->
+  #|u| = #|abstract_instance univs|. 
+Proof.
+  rewrite /consistent_instance_ext /consistent_instance.
+  destruct univs; simpl; auto.
+  intros [_ [H _]].
+  destruct cst; simpl in *.
+  now rewrite H; len.
+Qed.
+
 Section CheckerFlags.
   Context {cf:checker_flags}.
 
@@ -817,49 +828,155 @@ Qed.
     apply closedu_subst_context.
     rewrite closedu_extended_subst // /= closedu_lift_context //.
   Qed.
-  
-  Lemma closed_ind_predicate_context Σ ind mdecl idecl : 
-    wf Σ ->
-    declared_inductive Σ ind mdecl idecl ->
-    test_context (closedu #|abstract_instance (ind_universes mdecl)|) (ind_predicate_context ind mdecl idecl).
-  Proof.
-    intros wfΣ decli.
-    rewrite /ind_predicate_context; cbn.
-    rewrite closedu_mkApps /=.
-    rewrite closedu_abstract_instance /=.
-    apply/andP; split.
-    * apply closedu_expand_lets_ctx.
-  Admitted.
-  
 
-  Lemma wf_universes_closedu (Σ : global_env) univs t :
-    wf Σ ->
+  Lemma closedu_smash_context_gen k Γ Δ :
+    closedu_ctx k Γ -> closedu_ctx k Δ ->
+    closedu_ctx k (smash_context Γ Δ). 
+  Proof.
+    induction Δ in Γ |- *; cbn; auto.
+    move=> clΓ /andP[] clΔ cla.
+    destruct a as [na [b|] ty] => //.
+    - apply IHΔ => //. apply closedu_subst_context => /= //.
+      now move/andP: cla => [] /= -> clty.
+    - apply IHΔ => //.
+      now rewrite test_context_app clΓ /= andb_true_r.
+  Qed.
+  
+  Lemma closedu_smash_context k Δ :
+    closedu_ctx k Δ ->
+    closedu_ctx k (smash_context [] Δ). 
+  Proof.
+    apply closedu_smash_context_gen => //.
+  Qed.
+  
+  Lemma wf_universe_level_closed {Σ : global_env} {wfΣ : wf Σ} univs u :
+    on_udecl_prop Σ univs ->
+    wf_universe_level (Σ, univs) u -> closedu_level #|polymorphic_instance univs| u.
+  Proof.
+    intros ond Ht; destruct u => //. 
+    cbn in Ht. unfold closedu_universe, closedu_universe_levels.
+    cbn. red in Ht.
+    eapply in_var_global_ext in Ht => //.
+    cbn in Ht.
+    destruct (udecl_prop_in_var_poly (Σ := (Σ, univs)) ond Ht) as [ctx eq].
+    cbn in eq. subst univs.
+    cbn in Ht. cbn. unfold AUContext.levels in Ht.
+    eapply (proj1 (LevelSetProp.of_list_1 _ _)) in Ht.
+    eapply InA_In_eq in Ht.
+    destruct ctx as [names cstrs].
+    unfold AUContext.repr in Ht |- *. cbn in *. len.
+    rewrite mapi_unfold in Ht. eapply In_unfold_var in Ht as [k []].
+    eapply Nat.leb_le. noconf H0. lia.
+  Qed.
+
+  Lemma wf_universe_closed {Σ : global_env} {wfΣ : wf Σ} univs u :
+    on_udecl_prop Σ univs ->
+    wf_universe (Σ, univs) u -> closedu #|polymorphic_instance univs| (tSort u).
+  Proof.
+    intros ond Ht; destruct u => //. 
+    cbn in Ht. unfold closedu_universe, closedu_universe_levels.
+    eapply UnivExprSet.for_all_spec.
+    intros x y ?; subst; auto.
+    intros i hi. specialize (Ht i hi).
+    unfold closedu_level_expr.
+    apply wf_universe_level_closed => //.
+  Qed.
+
+  Lemma wf_universe_instance_closed {Σ : global_env} {wfΣ : wf Σ} {univs u} :
+    on_udecl_prop Σ univs ->
+    wf_universe_instance (Σ, univs) u -> 
+    closedu_instance #|polymorphic_instance univs| u.
+  Proof.
+    intros ond Ht.
+    red in Ht. unfold closedu_instance. solve_all.
+    now eapply wf_universe_level_closed.
+  Qed.
+
+  Lemma wf_universes_closedu {Σ : global_env} {wfΣ : wf Σ} {univs t} :
     on_udecl_prop Σ univs ->
     wf_universes (Σ, univs) t -> closedu #|polymorphic_instance univs| t.
   Proof.
-    intros wfΣ ond. induction t using term_forall_list_ind; cbn => //; solve_all.
-    - destruct s => //. move: H.
-      move/wf_universe_reflect.
-      intros Ht.
-      cbn in Ht. unfold closedu_universe, closedu_universe_levels.
-      eapply UnivExprSet.for_all_spec.
-      intros x y ?; subst; auto.
-      intros i hi. specialize (Ht i hi).
-      unfold closedu_level_expr, closedu_level. destruct (UnivExpr.get_level i) => //.
-      eapply in_var_global_ext in Ht => //.
-      cbn in Ht.
-      destruct (udecl_prop_in_var_poly (Σ := (Σ, univs)) ond Ht) as [ctx eq].
-      cbn in eq. subst univs.
-      cbn in Ht. cbn. unfold AUContext.levels in Ht.
-      eapply (proj1 (LevelSetProp.of_list_1 _ _)) in Ht.
-      eapply InA_In_eq in Ht.
-      destruct ctx as [names cstrs].
-      unfold AUContext.repr in Ht |- *. cbn in *. len.
-      rewrite mapi_unfold in Ht. eapply In_unfold_var in Ht as [k []].
-      eapply Nat.leb_le. noconf H0. lia.
-    -
-  Admitted.
+    intros ond. induction t using term_forall_list_ind; cbn => //; solve_all.
+    - apply wf_universe_closed => //.
+      now move/wf_universe_reflect: H.
+    - eapply wf_universe_instance_closed => //.
+      now move/wf_universe_instanceP: H.
+    - eapply wf_universe_instance_closed => //.
+      now move/wf_universe_instanceP: H.
+    - eapply wf_universe_instance_closed => //.
+      now move/wf_universe_instanceP: H.
+    - unfold test_predicate_ku in *; solve_all.
+      eapply wf_universe_instance_closed => //.
+      now move/wf_universe_instanceP: H0.
+    - unfold test_branch in *; solve_all.
+    - unfold test_def in *; solve_all.
+    - unfold test_def in *; solve_all.
+  Qed.
 
+  Lemma wf_ctx_universes_closed {Σ} {wfΣ : wf Σ} {univs ctx} :
+    on_udecl_prop Σ univs ->
+    wf_ctx_universes (Σ, univs) ctx ->
+    closedu_ctx #|polymorphic_instance univs| ctx.
+  Proof.
+    intros ond. induction ctx => //.
+    rewrite /wf_ctx_universes /= => /andP[] wfa wfctx.
+    rewrite IHctx // /=.
+    unfold wf_decl_universes, test_decl in *.
+    destruct a as [na [b|] ty]; cbn in *.
+    move/andP: wfa => []. 
+    now do 2 move/(wf_universes_closedu ond) => ->.
+    now move/(wf_universes_closedu ond): wfa => ->.
+  Qed.
+
+
+  Lemma closedu_reln k Γ k' acc : 
+    closedu_ctx k Γ ->
+    forallb (closedu k) acc ->
+    forallb (closedu k) (reln acc k' Γ).
+  Proof.
+    induction Γ in acc, k' |- *; cbn; auto.
+    destruct a as [na [b|] ty] => /= //.
+    - unfold test_decl; move/andP=> [] clΓ /= cld. now eapply IHΓ.
+    - unfold test_decl; move/andP=> [] clΓ /= cld clacc; now apply IHΓ => //.
+  Qed.
+
+  Lemma closedu_to_extended_list_k k Γ k' : 
+    closedu_ctx k Γ ->
+    forallb (closedu k) (to_extended_list_k Γ k').
+  Proof.
+    intros clΓ. apply closedu_reln => //.
+  Qed.
+
+  Lemma closed_ind_predicate_context {Σ ind mdecl idecl} {wfΣ : wf Σ} :
+    declared_inductive Σ ind mdecl idecl ->
+    closedu_ctx #|polymorphic_instance (ind_universes mdecl)|
+        (ind_params mdecl) ->
+    closedu_ctx #|polymorphic_instance (ind_universes mdecl)|
+            (ind_indices idecl) ->
+    test_context (closedu #|abstract_instance (ind_universes mdecl)|) (ind_predicate_context ind mdecl idecl).
+  Proof.
+    intros decli.
+    rewrite /ind_predicate_context; cbn.
+    rewrite closedu_mkApps /=.
+    rewrite closedu_abstract_instance /= => clpars clinds.
+    apply/andP; split.
+    * apply closedu_expand_lets_ctx. now rewrite clpars clinds.
+    * apply closedu_to_extended_list_k.
+      rewrite test_context_app.
+      rewrite (closedu_smash_context _ _ clpars).
+      apply closedu_expand_lets_ctx => //.
+      now rewrite clpars.
+  Qed.
+
+  Lemma closedu_inds {Σ ind mdecl} {wfΣ : wf Σ} :
+    forallb (closedu #|abstract_instance (ind_universes mdecl)|)
+      (inds ind (abstract_instance (ind_universes mdecl)) (ind_bodies mdecl)).
+  Proof.
+    rewrite /inds.
+    induction #|ind_bodies mdecl|; cbn; auto.
+    rewrite IHn andb_true_r.
+    eapply closedu_abstract_instance.
+  Qed.
 
   Theorem wf_types :
     env_prop (fun Σ Γ t T => 
@@ -962,20 +1079,39 @@ Qed.
       rewrite ind_arity_eq in hty.
       rewrite !wf_universes_it_mkProd_or_LetIn in hty.
       move/and3P: hty => [] wfp wfindis wfisort.
-
-
-      unfold wf_ctx_universes in wfp.
-      
-  
-      apply /andP. split. apply/andP. split.
-
-
-      todo "case".
-      solve_all. todo "case". cbn in *.
-      rewrite /ptm.
-      rewrite wf_universes_it_mkLambda_or_LetIn H4.
-      destruct X3 as [_ wfpctx].
-      now rewrite test_context_app in wfpctx; move/andP: wfpctx => [] _ ->.
+      have ond : on_udecl_prop Σ (ind_universes mdecl).
+      { eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); auto.
+        eapply isdecl. }
+      eapply wf_ctx_universes_closed in wfp => //.
+      eapply wf_ctx_universes_closed in wfindis => //.
+      rewrite (consistent_instance_length H1).
+      erewrite closedu_compare_decls; tea.
+      rewrite closed_ind_predicate_context // /=.
+      unfold test_branch.
+      apply/andP; split.
+      * have wfbrctx : All (fun cdecl =>
+          closedu_ctx #|polymorphic_instance (ind_universes mdecl)| (cstr_args cdecl))
+          (ind_ctors idecl).
+        { clear -wf ond onConstructors.
+          red in onConstructors. solve_all. destruct X.
+          do 2 red in on_ctype. destruct on_ctype as [s Hs].
+          move/andP: Hs => [] wfty _.
+          rewrite cstr_eq in wfty.
+          rewrite !wf_universes_it_mkProd_or_LetIn in wfty.
+          move/and3P: wfty => [] _ clargs _.
+          apply wf_ctx_universes_closed in clargs => //. }
+        solve_all.
+        erewrite closedu_compare_decls; [|tea].
+        rewrite /cstr_branch_context.
+        eapply closedu_expand_lets_ctx.
+        rewrite wfp. eapply closedu_subst_context.
+        rewrite a1.
+        now rewrite closedu_inds.
+      * rewrite /ptm.
+        rewrite wf_universes_it_mkLambda_or_LetIn H4 andb_true_r.
+        rewrite /predctx.
+        destruct X3 as [_ hctx]. move: hctx.
+        now rewrite test_context_app => /andP[].
 
     - rewrite /subst1. rewrite wf_universes_subst.
       constructor => //. eapply All_rev.

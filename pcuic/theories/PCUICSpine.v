@@ -1,11 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import CRelationClasses ProofIrrelevance.
+From Coq Require Import Utf8 CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
      PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
      PCUICCumulativity PCUICPosition PCUICEquality
      PCUICInversion PCUICCumulativity PCUICReduction
+     PCUICCasesContexts
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICContextSubst
      PCUICWellScopedCumulativity
@@ -94,6 +95,61 @@ Proof.
   - eapply is_closed_context_lift; eauto with fvs.
   - eapply is_open_term_lift; eauto with fvs.
 Qed.
+
+Lemma subslet_eq_context_alpha {cf} {Σ Γ s Δ Δ'} :
+  All2 (compare_decls eq eq) Δ Δ' →
+  subslet Σ Γ s Δ → 
+  subslet Σ Γ s Δ'.
+Proof.
+  intros eq subs.
+  induction subs in Δ', eq |- *; depelim eq; try constructor.
+  * depelim c; constructor; auto. now subst.
+  * depelim c; subst; constructor; auto.
+Qed.
+
+Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
+  All2 (compare_decls eq eq) Γ Γ' -> conv_context Σ Γ Γ'.
+Proof.
+  intros a.
+  eapply eq_context_upto_empty_conv_context.
+  eapply All2_fold_All2.
+  eapply (All2_impl a).
+  intros ?? []; constructor; subst; auto; reflexivity.
+Qed.
+
+Lemma wf_local_alpha {cf} {Σ} {wfΣ : wf Σ} Γ Γ' : All2 (compare_decls eq eq) Γ Γ' -> 
+  wf_local Σ Γ ->
+  wf_local Σ Γ'.
+Proof.
+  induction 1; intros h; depelim h; try constructor; auto.
+  all:depelim r; constructor; subst; auto.
+  exists l0.π1. eapply context_conversion; eauto.
+  eapply l0.π2.
+  now apply eq_context_alpha_conv.
+  exists l0.π1. eapply context_conversion; eauto.
+  eapply l0.π2.
+  now apply eq_context_alpha_conv.
+  eapply context_conversion; eauto.
+  now apply eq_context_alpha_conv.
+Qed.
+
+Lemma subslet_eq_context_alpha_dom {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
+  All2 (compare_decls eq eq) Γ Γ' →
+  subslet Σ Γ s Δ → 
+  subslet Σ Γ' s Δ.
+Proof.
+  intros eq subs.
+  induction subs in Γ', eq |- *; try constructor.
+  * now apply IHsubs. 
+  * eapply context_conversion; tea.
+    eapply wf_local_alpha; tea. eapply typing_wf_local in t0. exact t0.
+    now eapply eq_context_alpha_conv.
+  * now eapply IHsubs.
+  * eapply context_conversion; tea.
+    eapply wf_local_alpha; tea. eapply typing_wf_local in t0. exact t0.
+    now eapply eq_context_alpha_conv.
+Qed.
+
 
 Lemma subslet_app {cf:checker_flags} Σ Γ s s' Δ Δ' : 
   subslet Σ Γ s (subst_context s' 0 Δ) ->

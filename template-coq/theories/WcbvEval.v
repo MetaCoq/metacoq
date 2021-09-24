@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils Environment Ast AstUtils Reflect LiftSubst MCList
-     UnivSubst WfInv Typing.
+     UnivSubst WfAst TypingWf Typing.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -105,7 +105,7 @@ Definition isStuckFix t args :=
 Lemma atom_mkApps f l : atom (mkApps f l) -> (l = []) /\ atom f.
 Proof.
   revert f; induction l using rev_ind. simpl. intuition auto.
-  simpl. intros. rewrite -mkApp_mkApps in H.
+  simpl. intros. rewrite -AstUtils.mkApp_mkApps in H.
   unfold mkApp in H. destruct (mkApps f l); discriminate.
 Qed.
 

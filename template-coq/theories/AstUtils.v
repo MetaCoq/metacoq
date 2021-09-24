@@ -2,7 +2,7 @@
 From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Ast Environment monad_utils.
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 Require Import ZArith.
 
 (** Raw term printing *)
@@ -69,12 +69,80 @@ Definition decompose_app (t : term) :=
   end.
 
 Lemma decompose_app_mkApps f l :
-  isApp f = false -> decompose_app (mkApps f l) = (f, l).
+  ~~ isApp f -> decompose_app (mkApps f l) = (f, l).
+Proof.
+  intros Hf. rewrite /decompose_app.
+  destruct l. simpl. destruct f; try discriminate; auto.
+  remember (mkApps f (t :: l)) eqn:Heq. simpl in Heq.
+  destruct f; simpl in *; subst; auto. discriminate.
+Qed.
+
+Lemma atom_decompose_app t : ~~ isApp t -> decompose_app t = (t, []).
+Proof. destruct t; simpl; congruence. Qed.
+
+Lemma mkApps_mkApp u a v : mkApps (mkApp u a) v = mkApps u (a :: v).
+Proof.
+  induction v. simpl.
+  destruct u; simpl; try reflexivity.
+  intros. simpl.
+  destruct u; simpl; try reflexivity.
+  now rewrite <- app_assoc.
+Qed.
+
+Lemma mkApps_eq_inj {t t' l l'} :
+  mkApps t l = mkApps t' l' ->
+  ~~ isApp t -> ~~ isApp t' -> t = t' /\ l = l'.
+Proof.
+  intros Happ Ht Ht'. eapply (f_equal decompose_app) in Happ.
+  rewrite !decompose_app_mkApps in Happ => //. intuition congruence.
+Qed.
+
+Inductive mkApps_spec : term -> list term -> term -> list term -> term -> Type :=
+| mkApps_intro f l n :
+    ~~ isApp f ->
+    mkApps_spec f l (mkApps f (firstn n l)) (skipn n l) (mkApps f l).
+
+Definition is_empty {A} (l : list A) :=
+  if l is nil then true else false.
+
+Lemma is_empty_app {A} (l l' : list A) : is_empty (l ++ l') = is_empty l && is_empty l'.
+Proof.
+  induction l; simpl; auto.
+Qed.
+
+Lemma mkApps_tApp f args :
+  ~~ isApp f ->
+  ~~ is_empty args ->
+  tApp f args = mkApps f args.
 Proof.
   intros.
-  destruct l; simpl;
-    destruct f; simpl; try (discriminate || reflexivity).
+  destruct args, f; try discriminate; auto.
 Qed.
+
+Lemma nApp_mkApps {t l} : ~~ isApp (mkApps t l) -> ~~ isApp t /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (isApp t) eqn:Heq. destruct t; try discriminate.
+  destruct t; try discriminate.
+Qed.
+
+Lemma mkApps_nisApp {t t' l} : mkApps t l = t' -> ~~ isApp t' -> t = t' /\ l = [].
+Proof.
+  intros <-. intros. eapply nApp_mkApps in H. intuition auto.
+  now subst.
+Qed.
+
+Ltac solve_discr' :=
+  match goal with
+    H : mkApps _ _ = mkApps ?f ?l |- _ =>
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  | H : ?t = mkApps ?f ?l |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  | H : mkApps ?f ?l = ?t |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  end.
 
 Lemma mkApps_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
 Proof.
@@ -327,3 +395,44 @@ Definition make_inductive_body (id : ident) (params : context) (indices : contex
      ind_ctors := ind_ctors;
      ind_projs := [];
      ind_relevance := default_relevance u |}.
+
+Ltac change_Sk :=
+  repeat match goal with
+    | |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+    | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
+  end.
+
+Hint Extern 10 => progress unfold map_branches_k : all.
+
+Definition tCaseBrsType {A} (P : A -> Type) (l : list (branch A)) :=
+  All (fun x => P (bbody x)) l.
+
+Definition tFixType {A} (P P' : A -> Type) (m : mfixpoint A) :=
+  All (fun x : def A => P x.(dtype) * P' x.(dbody))%type m.
+
+Ltac solve_all_one :=
+  try lazymatch goal with
+  | H: tCasePredProp _ _ _ |- _ => destruct H
+  end;
+  unfold tCaseBrsProp, tFixProp, tCaseBrsType, tFixType in *;
+  try apply map_predicate_eq_spec;
+  try apply map_predicate_id_spec;
+  repeat toAll; try All_map; try close_Forall;
+  change_Sk; auto with all;
+  intuition eauto 4 with all.
+
+Ltac solve_all := repeat (progress solve_all_one).
+Hint Extern 10 => rewrite !map_branch_map_branch : all.
+
+Ltac nth_leb_simpl :=
+  match goal with
+    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; simpl
+  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
+                                    try lia; intros; simpl
+  | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
+    (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||
+    (rewrite -> (nth_error_app_lt l l' n) in H by lia)
+  | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
+    replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
+  | _ => lia || congruence || solve [repeat (f_equal; try lia)]
+  end.

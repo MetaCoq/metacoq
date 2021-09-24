@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast AstUtils Environment Induction.
+From MetaCoq.Template Require Import utils Ast AstUtils Environment Induction WfAst.
 From Coq Require Import ssreflect.
 From Equations Require Import Equations.
 
@@ -88,41 +88,6 @@ Proof.
   reflexivity. intros. lia.
 Qed.
 
-Ltac change_Sk :=
-  repeat match goal with
-    | |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
-    | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
-  end.
-
-Hint Extern 10 => progress unfold map_branches_k : all.
-
-Ltac solve_all_one :=
-  try lazymatch goal with
-  | H: tCasePredProp _ _ _ |- _ => destruct H
-  end;
-  unfold tCaseBrsProp, tFixProp in *;
-  try apply map_predicate_eq_spec;
-  try apply map_predicate_id_spec;
-  repeat toAll; try All_map; try close_Forall;
-  change_Sk; auto with all;
-  intuition eauto 4 with all.
-
-Ltac solve_all := repeat (progress solve_all_one).
-Hint Extern 10 => rewrite !map_branch_map_branch : all.
-
-Ltac nth_leb_simpl :=
-  match goal with
-    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; simpl
-  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
-                                    try lia; intros; simpl
-  | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
-    (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||
-    (rewrite -> (nth_error_app_lt l l' n) in H by lia)
-  | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
-    replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
-  | _ => lia || congruence || solve [repeat (f_equal; try lia)]
-  end.
-
 Lemma lift0_id : forall M k, lift 0 k M = M.
 Proof.
   intros M.
@@ -194,11 +159,6 @@ Lemma permute_lift0 :
   rewrite permute_lift; easy.
 Qed.
 
-Lemma lift_isApp n k t : isApp t = false -> isApp (lift n k t) = false.
-Proof.
-  induction t; auto.
-Qed.
-
 Lemma map_non_nil {A B} (f : A -> B) l : l <> nil -> map f l <> nil.
 Proof.
   intros. intro.
@@ -212,13 +172,6 @@ Proof. destruct bod; simpl; try congruence. Qed.
 
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.
 
-Lemma wf_lift n k t : wf t -> wf (lift n k t).
-Proof.
-  intros wft; revert t wft k.
-  apply (term_wf_forall_list_ind (fun t => forall k, wf (lift n k t)));
-    intros; try constructor; simpl; auto; solve_all.
-Qed.
-
 Lemma mkApps_tApp t l :
   isApp t = false -> l <> nil -> mkApps t l = tApp t l.
 Proof.
@@ -228,13 +181,12 @@ Proof.
   simpl in H. discriminate.
 Qed.
 
-
 Lemma simpl_subst_rec :
-  forall M (H : wf M) N n p k,
+  forall Σ M (H : wf Σ M) N n p k,
     p <= n + k ->
     k <= p -> subst N p (lift (List.length N + n) k M) = lift n k M.
 Proof.
-  intros M wfM. induction wfM using term_wf_forall_list_ind;
+  intros Σ M wfM. induction wfM using term_wf_forall_list_ind;
     intros; simpl;
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length,
                  ?map_predicate_map_predicate;
@@ -246,9 +198,9 @@ Proof.
     f_equal; solve_all.
 Qed.
 
-Lemma simpl_subst :
-  forall N M (H : wf M) n p, p <= n -> subst N p (lift0 (length N + n) M) = lift0 n M.
-Proof.  intros. rewrite simpl_subst_rec; auto. now rewrite Nat.add_0_r. lia. Qed.
+Lemma simpl_subst Σ :
+  forall N M (H : wf Σ M) n p, p <= n -> subst N p (lift0 (length N + n) M) = lift0 n M.
+Proof.  intros. erewrite simpl_subst_rec; eauto. now rewrite Nat.add_0_r. lia. Qed.
 
 Lemma mkApps_tRel n a l : mkApps (tRel n) (a :: l) = tApp (tRel n) (a :: l).
 Proof.
@@ -340,8 +292,8 @@ Proof.
   apply subst_mkApps.
 Qed.
 
-Lemma distr_subst_rec :
-  forall M N (P : list term) (wfP : All wf P) n p,
+Lemma distr_subst_rec Σ :
+  forall M N (P : list term) (wfP : All (wf Σ) P) n p,
     subst P (p + n) (subst N p M) =
     subst (map (subst P n) N) p (subst P (p + length N + n) M).
 Proof.
@@ -369,7 +321,7 @@ Proof.
          +++ erewrite subst_rel_eq. 2:eauto. 2:lia.
              assert (p + length N + n0 = length (map (subst P n0) N) + (p + n0))
                by (rewrite map_length; lia).
-             rewrite H1. rewrite simpl_subst_rec; eauto; try lia.
+             rewrite H1. erewrite simpl_subst_rec; eauto; try lia.
              eapply nth_error_all in e; eauto.
          +++ rewrite !subst_rel_gt; rewrite ?map_length; try lia. f_equal; lia.
          +++ rewrite subst_rel_lt; try easy.
@@ -380,14 +332,14 @@ Proof.
     rewrite !map_map_compose. solve_all.
 Qed.
 
-Lemma distr_subst :
-  forall P (wfP : All Ast.wf P) N M k,
+Lemma distr_subst Σ :
+  forall P (wfP : All (wf Σ) P) N M k,
     subst P k (subst0 N M) = subst0 (map (subst P k) N) (subst P (length N + k) M).
 Proof.
   intros.
   pattern k at 1 3 in |- *.
   change k with (0 + k). hnf.
-  apply distr_subst_rec. auto.
+  eapply distr_subst_rec; eauto.
 Qed.
 
 Lemma lift_closed n k t : closedn k t -> lift n k t = t.
@@ -418,59 +370,7 @@ Proof.
     apply ltb_lt in H. lia.
 Qed.
 
-Lemma mkApps_mkApp u a v : mkApps (mkApp u a) v = mkApps u (a :: v).
-Proof.
-  induction v. simpl.
-  destruct u; simpl; try reflexivity.
-  intros. simpl.
-  destruct u; simpl; try reflexivity.
-  now rewrite <- app_assoc.
-Qed.
-
-Lemma wf_mkApp u a : wf u -> wf a -> wf (mkApp u a).
-Proof.
-  intros H H'.
-  inversion_clear H; try constructor; simpl; auto; try congruence; try constructor; auto.
-  intro. destruct u0; simpl in *; congruence. solve_all.
-  apply All_app_inv; auto.
-Qed.
-
-Lemma wf_mkApps u a : wf u -> List.Forall wf a -> wf (mkApps u a).
-Proof.
-  intros H H'.
-  induction a; simpl; auto.
-  inversion_clear H; try constructor; simpl; auto; try congruence; try constructor; auto.
-  intro. destruct u0; simpl in *; congruence.
-  solve_all. apply All_app_inv; auto.
-Qed.
-
-Lemma wf_subst ts k u : List.Forall wf ts -> wf u -> wf (subst ts k u).
-Proof.
-  intros wfts wfu.
-  induction wfu in k using term_wf_forall_list_ind; simpl; intros; try constructor; auto.
-
-  - unfold subst. destruct (leb_spec k n).
-    destruct nth_error eqn:Heq. apply (nth_error_forall Heq) in wfts.
-    apply wf_lift; auto. constructor. constructor.
-  - apply Forall_map. eapply Forall_impl; eauto.
-  - apply wf_mkApps; auto. apply Forall_map. eapply Forall_impl; eauto.
-  - destruct X. apply Forall_map. apply All_Forall. eapply All_impl; eauto.
-  - destruct X; cbn; auto.
-  - apply Forall_map. apply All_Forall. eapply All_impl; tea.
-    intros [] XX; cbn in *; apply XX.
-  - solve_all.
-  - apply Forall_map. eapply All_Forall, All_impl; eauto.
-    intros [] XX; cbn in *; split; apply XX.
-Qed.
-
-Lemma wf_subst1 t k u : wf t -> wf u -> wf (subst1 t k u).
-Proof.
-  intros wft wfu. apply wf_subst. constructor; auto. auto.
-Qed.
-
-Hint Resolve wf_mkApps wf_subst wf_subst1 wf_lift : wf.
-
-Lemma subst_empty k a : Ast.wf a -> subst [] k a = a.
+Lemma subst_empty Σ k a : wf Σ a -> subst [] k a = a.
 Proof.
   induction 1 in k |- * using term_wf_forall_list_ind; simpl; try congruence;
     try solve [f_equal; eauto; solve_all].
@@ -480,7 +380,7 @@ Proof.
     assert (n - k > 0) by lia.
     assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
     destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
-  - rewrite IHwf. rewrite mkApps_tApp; eauto with wf.
+  - rewrite IHX. rewrite mkApps_tApp; eauto with wf.
     f_equal; solve_all.
 Qed.
 
@@ -495,14 +395,15 @@ Proof.
   simpl. now rewrite <- Nat.add_assoc, (IHΓ (k + 1) k'), map_app.
 Qed.
 
-Lemma simpl_subst_k (N : list term) (M : term) :
-  Ast.wf M -> forall k p, p = #|N| -> subst N k (lift p k M) = M.
+Lemma simpl_subst_k Σ (N : list term) (M : term) :
+  wf Σ M -> forall k p, p = #|N| -> subst N k (lift p k M) = M.
 Proof.
   intros. subst p. rewrite <- (Nat.add_0_r #|N|).
-  rewrite -> simpl_subst_rec, lift0_id; auto. Qed.
+  erewrite simpl_subst_rec, lift0_id; eauto. 
+Qed.
 
-Lemma subst_app_decomp l l' k t :
-  Ast.wf t -> Forall Ast.wf l ->
+Lemma subst_app_decomp Σ l l' k t :
+  wf Σ t -> All (wf Σ) l ->
   subst (l ++ l') k t = subst l' k (subst (List.map (lift0 (length l')) l) k t).
 Proof.
   intros wft wfl.
@@ -517,12 +418,12 @@ Proof.
     injection e0; intros <-.
     rewrite -> permute_lift by auto.
     rewrite <- (Nat.add_0_r #|l'|).
-    rewrite -> simpl_subst_rec, lift0_id; auto with wf; try lia. apply wf_lift.
-    eapply nth_error_forall in e; eauto. solve_all.
+    erewrite -> simpl_subst_rec, lift0_id; auto with wf; try lia. apply wf_lift.
+    eapply nth_error_all in e; eauto. 
 Qed.
 
-Lemma subst_app_simpl l l' k t :
-  Ast.wf t -> Forall Ast.wf l -> Forall Ast.wf l' ->
+Lemma subst_app_simpl Σ l l' k t :
+  wf Σ t -> All (wf Σ) l -> All (wf Σ) l' ->
   subst (l ++ l') k t = subst l k (subst l' (k + length l) t).
 Proof.
   intros wft wfl wfl'.
@@ -533,7 +434,7 @@ Proof.
          eauto; solve_all; eauto).
 
   - repeat nth_leb_simpl.
-    rewrite -> Nat.add_comm, simpl_subst; eauto.
+    erewrite -> Nat.add_comm, simpl_subst; eauto.
     eapply nth_error_all in e; eauto.
 Qed.
 

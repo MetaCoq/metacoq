@@ -271,8 +271,7 @@ Section Reduce.
   Definition rebuild_case_predicate_ctx ind (p : predicate term) : context :=
     match lookup_ind_decl Σ (inductive_mind ind) (inductive_ind ind) with
     | TypeError _ => []
-    | Checked (mib, oib) => 
-      case_predicate_context ind mib oib p.(pparams) p.(puinst) p.(pcontext)
+    | Checked (mib, oib) => case_predicate_context ind mib oib p
     end.
 
   Definition map_context_with_binders (f : context -> term -> term) (c : context) Γ : context :=

@@ -104,10 +104,9 @@ Section Trans.
   end.
 
   Definition trans_decl (d : Ast.Env.context_decl) :=
-    let 'mkdecl na b t := d in
-    {| decl_name := na;
-      decl_body := option_map trans b;
-      decl_type := trans t |}.
+    {| decl_name := d.(decl_name);
+      decl_body := option_map trans d.(decl_body);
+      decl_type := trans d.(decl_type) |}.
 
   Definition trans_local Γ := List.map trans_decl Γ.
   

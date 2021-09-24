@@ -1320,8 +1320,7 @@ Lemma subst_instance_wf_branches cdecl u brs :
   wf_branches cdecl (map (map_branch (subst_instance u) id) brs).
 Proof.
   unfold wf_branches, wf_branches_gen.
-  intros h. solve_all. eapply Forall2_map_right.
-  eapply Forall2_impl; tea. eauto using subst_instance_wf_branch.
+  intros h. solve_all.
 Qed.
 Hint Resolve subst_instance_wf_predicate
   subst_instance_wf_branch subst_instance_wf_branches : pcuic.
@@ -1552,39 +1551,6 @@ Proof.
     now rewrite IHA3.
 Qed.
 
-(*
-Lemma subst_instance_instantiate_params_subst u0 params pars s ty :
-  option_map (on_pair (map (subst_instance u0)) (subst_instance u0))
-             (instantiate_params_subst params pars s ty)
-  = instantiate_params_subst (subst_instance u0 params)
-                             (map (subst_instance u0) pars)
-                             (map (subst_instance u0) s)
-                             (subst_instance u0 ty).
-Proof.
-  induction params in pars, s, ty |- *; cbn.
-  - destruct pars; cbnr.
-  - destruct ?; cbnr; destruct ?; cbnr.
-    + rewrite IHparams; cbn. repeat f_equal.
-      symmetry; apply subst_instance_subst.
-    + destruct ?; cbnr. now rewrite IHparams.
-Qed.
-
-Lemma subst_instance_instantiate_params u0 params pars ty :
-  option_map (subst_instance u0)
-             (instantiate_params params pars ty)
-  = instantiate_params (subst_instance u0 params)
-                       (map (subst_instance u0) pars)
-                       (subst_instance u0 ty).
-Proof.
-  unfold instantiate_params.
-  change (@nil term) with (map (subst_instance u0) []) at 2.
-  rewrite rev_subst_instance.
-  rewrite <- subst_instance_instantiate_params_subst.
-  destruct ?; cbnr. destruct p; cbn.
-  now rewrite subst_instance_subst.
-Qed.
-*)
-
 Lemma subst_instance_decompose_prod_assum u Γ t :
   subst_instance u (decompose_prod_assum Γ t)
   = decompose_prod_assum (subst_instance u Γ) (subst_instance u t).
@@ -1607,38 +1573,6 @@ Lemma subst_instance_decompose_app u t
 Proof.
   unfold decompose_app. now rewrite (subst_instance_decompose_app_rec u []).
 Qed.
-
-(* Lemma subst_instance_build_branches_type u0 ind mdecl idecl pars u p :
-  map (option_map (on_snd (subst_instance u0)))
-      (build_branches_type ind mdecl idecl pars u p)
-  = build_branches_type ind mdecl idecl (map (subst_instance u0) pars)
-                        (subst_instance u0 u) (subst_instance u0 p).
-Proof.
-  rewrite !build_branches_type_. rewrite map_mapi.
-  eapply mapi_ext.
-  intros n [[id t] k]; cbn.
-  rewrite <- subst_instance_two.
-  rewrite <- subst_instance_two.
-  rewrite <- subst_instance_inds.
-  rewrite subst_instance_subst.
-  rewrite <- subst_instance_instantiate_params.
-  rewrite !option_map_two. apply option_map_ext.
-  intros x. rewrite <- (subst_instance_decompose_prod_assum u0 [] x).
-  destruct (decompose_prod_assum [] x). simpl.
-  unfold decompose_app; rewrite <- (subst_instance_decompose_app_rec u0 [] t0).
-  destruct (decompose_app_rec t0 []); cbn.
-  unfold subst_instance, subst_instance_list.
-  case_eq (chop (ind_npars mdecl) l); intros l0 l1 H.
-  eapply chop_map in H; rewrite H; clear H.
-  unfold on_snd; cbn. f_equal.
-  rewrite subst_instance_it_mkProd_or_LetIn. f_equal.
-  rewrite subst_instance_mkApps; f_equal.
-  - rewrite subst_instance_length.
-    symmetry; apply subst_instance_lift.
-  - rewrite map_app; f_equal; cbn.
-    rewrite subst_instance_mkApps, map_app; cbn; repeat f_equal.
-    apply subst_instance_to_extended_list.
-Qed. *)
 
 Lemma subst_instance_smash u Γ Δ :
   subst_instance u (smash_context Δ Γ) =
@@ -2047,6 +1981,35 @@ Proof.
   - split; tas.
     eapply weaken_lookup_on_global_env'; tea.
   - eapply weaken_lookup_on_global_env''; tea.
+Qed.
+
+Lemma wf_local_instantiate_poly {Σ ctx Γ u} : 
+  wf_ext (Σ.1, Polymorphic_ctx ctx) ->
+  consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
+  wf_local (Σ.1, Polymorphic_ctx ctx) Γ -> 
+  wf_local Σ (subst_instance u Γ).
+Proof.
+  intros wfΣ Huniv wf.
+  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
+  - now simpl.
+  - eapply typing_subst_instance_ctx in ty;   
+    eauto using typing_wf_local. 
+    * apply wfΣ.
+    * destruct wfΣ. now eapply on_udecl_on_udecl_prop.
+Qed.
+
+Lemma wf_local_instantiate {Σ} {decl : global_decl} {Γ u c} : 
+  wf Σ.1 ->
+  lookup_env Σ.1 c = Some decl ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  wf_local (Σ.1, universes_decl_of_decl decl) Γ -> 
+  wf_local Σ (subst_instance u Γ).
+Proof.
+  intros wfΣ Hdecl Huniv wf.
+  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
+  - now simpl.
+  - eapply typing_subst_instance_decl in ty;   
+    eauto using typing_wf_local.
 Qed.
 
 Lemma isType_subst_instance_decl Σ Γ T c decl u :

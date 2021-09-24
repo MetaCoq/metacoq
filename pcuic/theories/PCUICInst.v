@@ -651,8 +651,7 @@ Lemma inst_wf_branches cdecl f brs :
   wf_branches cdecl (map (fun br => map_branch_shift inst up f br) brs).
 Proof.
   unfold wf_branches, wf_branches_gen.
-  intros h. solve_all. eapply Forall2_map_right.
-  eapply Forall2_impl; eauto using inst_wf_branch.
+  intros h. solve_all.
 Qed.
 
 Definition inst_constructor_body mdecl f c := 

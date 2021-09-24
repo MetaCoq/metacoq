@@ -12,6 +12,7 @@ theories/PCUICLiftSubst.v
 theories/PCUICUnivSubst.v
 theories/PCUICCases.v
 theories/PCUICContextSubst.v
+theories/PCUICCasesContexts.v
 theories/PCUICReduction.v
 theories/PCUICTyping.v
 theories/PCUICGlobalEnv.v

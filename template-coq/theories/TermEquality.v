@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
-From MetaCoq.Template Require Import config utils Reflect Environment Ast AstUtils Induction LiftSubst Reflect.
+From MetaCoq.Template Require Import config utils Reflect Environment Ast AstUtils Induction Reflect.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
@@ -542,9 +542,8 @@ Proof.
       apply All2_app. assumption.
       now constructor.
     + intro X; rewrite X in H0.
-      rewrite !mkApps_tApp; eauto.
-      intro; discriminate.
-      intro; discriminate.
+      eapply negbT in X. symmetry in H0; eapply negbT in H0.
+      rewrite - !mkApps_tApp //.
       constructor. simpl. now simpl in e.
       now constructor.
 Qed.

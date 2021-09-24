@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Environment.
+From MetaCoq.Template Require Import utils Environment EnvironmentTyping.
 From MetaCoq.Template Require Export Universes.
 (* For primitive integers and floats  *)
 From Coq Require Int63 Floats.PrimFloat Floats.SpecFloat.
@@ -638,6 +638,11 @@ Module Env := Environment TemplateTerm.
 Export Env.
 (* Do NOT `Include` this module, as this would sadly duplicate the rewrite database... *)
 
+Module TemplateLookup := EnvironmentTyping.Lookup TemplateTerm Env.
+Include TemplateLookup.
+
+Definition tDummy := tVar "".
+
 Definition mkApp t u := Eval cbn in mkApps t [u].
 
 Definition isApp t :=
@@ -651,34 +656,6 @@ Definition isLambda t :=
   | tLambda _ _ _ => true
   | _ => false
   end.
-
-(** Well-formed terms: invariants which are not ensured by the OCaml type system *)
-
-Inductive wf : term -> Prop :=
-| wf_tRel n : wf (tRel n)
-| wf_tVar id : wf (tVar id)
-| wf_tEvar n l : Forall wf l -> wf (tEvar n l)
-| wf_tSort u : wf (tSort u)
-| wf_tCast t k t' : wf t -> wf t' -> wf (tCast t k t')
-| wf_tProd na t b : wf t -> wf b -> wf (tProd na t b)
-| wf_tLambda na t b : wf t -> wf b -> wf (tLambda na t b)
-| wf_tLetIn na t b b' : wf t -> wf b -> wf b' -> wf (tLetIn na t b b')
-| wf_tApp t u : isApp t = false -> u <> nil -> wf t -> Forall wf u -> wf (tApp t u)
-| wf_tConst k u : wf (tConst k u)
-| wf_tInd i u : wf (tInd i u)
-| wf_tConstruct i k u : wf (tConstruct i k u)
-| wf_tCase ci p c brs :
-    Forall wf (pparams p) -> wf (preturn p) ->
-    wf c ->
-    Forall (wf ∘ bbody) brs ->
-    wf (tCase ci p c brs)
-| wf_tProj p t : wf t -> wf (tProj p t)
-| wf_tFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix ->
-                   wf (tFix mfix k)
-| wf_tCoFix mfix k : Forall (fun def => wf def.(dtype) /\ wf def.(dbody)) mfix -> wf (tCoFix mfix k)
-| wf_tInt i : wf (tInt i)
-| wf_tFloat f : wf (tFloat f).
-Derive Signature for wf.
 
 (** ** Entries
 
@@ -768,19 +745,28 @@ Qed.
 (** Helpers for "compact" case representation, reconstructing predicate and 
   branch contexts. *)
   
-Definition case_predicate_context ind mdecl idecl params puinst pctx : context :=
-  let indty := mkApps (tInd ind puinst) (map (lift0 #|idecl.(ind_indices)|) params ++ to_extended_list idecl.(ind_indices)) in
+Definition ind_predicate_context ind mdecl idecl : context :=
+  let ictx := (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)) in
+  let indty := mkApps (tInd ind (abstract_instance mdecl.(ind_universes)))
+    (to_extended_list (smash_context [] mdecl.(ind_params) ,,, ictx)) in
   let inddecl := 
     {| decl_name := 
       {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
         decl_body := None;
         decl_type := indty |}
-  in
-  let ictx := 
-    subst_context (List.rev params) 0
-      (subst_instance puinst (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)))
-  in
-  map2 set_binder_name pctx (inddecl :: ictx).
+  in (inddecl :: ictx).
+
+Definition inst_case_context params puinst (pctx : context) :=
+  subst_context (List.rev params) 0 (subst_instance puinst pctx).
+  
+Definition pre_case_predicate_context_gen ind mdecl idecl params puinst : context :=
+  inst_case_context params puinst (ind_predicate_context ind mdecl idecl).
+
+Definition case_predicate_context_gen ind mdecl idecl params puinst pctx :=
+  map2 set_binder_name pctx (pre_case_predicate_context_gen ind mdecl idecl params puinst).
+
+Definition case_predicate_context ind mdecl idecl p : context :=
+  case_predicate_context_gen ind mdecl idecl p.(pparams) p.(puinst) p.(pcontext).
 
 Definition cstr_branch_context ind mdecl cdecl : context :=
   expand_lets_ctx mdecl.(ind_params)
@@ -790,7 +776,7 @@ Definition cstr_branch_context ind mdecl cdecl : context :=
 
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
   map2 set_binder_name bctx 
-    (subst_context (List.rev params) 0 (subst_instance puinst (cstr_branch_context ind mdecl cdecl))).
+    (inst_case_context params puinst (cstr_branch_context ind mdecl cdecl)).
 
 Definition case_branch_context ind mdecl cdecl p (br : branch term) : context :=
   case_branch_context_gen ind mdecl p.(pparams) p.(puinst) br.(bcontext) cdecl.
@@ -818,3 +804,4 @@ Definition case_branch_type_gen ind mdecl params puinst ptm i cdecl (br : branch
 
 Definition case_branch_type ind mdecl p ptm i cdecl br : context * term :=
   case_branch_type_gen ind mdecl p.(pparams) p.(puinst) ptm i cdecl br.
+

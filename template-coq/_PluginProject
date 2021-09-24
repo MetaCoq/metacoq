@@ -9,6 +9,8 @@ gen-src/peanoNat.mli
 gen-src/peanoNat.ml
 gen-src/ascii.ml
 gen-src/ascii.mli
+gen-src/environmentTyping.mli
+gen-src/environmentTyping.ml
 gen-src/ast0.ml
 gen-src/ast0.mli
 gen-src/astUtils.ml

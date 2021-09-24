@@ -1002,3 +1002,9 @@ Proof.
              all: apply ConstraintSet.union_spec; now left.
           -- apply ConstraintSet.union_spec; now right.
 Qed.
+
+Lemma on_udecl_on_udecl_prop {cf:checker_flags} Σ ctx : 
+  on_udecl Σ (Polymorphic_ctx ctx) -> on_udecl_prop Σ (Polymorphic_ctx ctx).
+Proof.
+  intros [? [? [_ ?]]]. red. split; auto.
+Qed.

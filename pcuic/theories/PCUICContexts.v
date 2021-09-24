@@ -5,9 +5,8 @@ From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICConversion PCUICContextConversion
+     PCUICConversion PCUICContextConversion
      PCUICContextSubst
-     PCUICParallelReductionConfluence PCUICWeakeningEnv
      PCUICClosed PCUICSigmaCalculus PCUICSubstitution PCUICUnivSubstitution
      PCUICWeakening PCUICGeneration PCUICUtils.
 
@@ -19,6 +18,11 @@ Require Import ssreflect ssrbool.
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Hint Rewrite Nat.add_0_r : len.
+
+Lemma context_assumptions_expand_lets_ctx Γ Δ :
+  context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.
+Proof. now rewrite /expand_lets_ctx /expand_lets_k_ctx; len. Qed.
+Hint Rewrite context_assumptions_expand_lets_ctx : len.
 
 Lemma smash_context_subst_empty s n Γ : 
   smash_context [] (subst_context s n Γ) =
@@ -176,40 +180,6 @@ Proof.
   - destruct s; simpl; intuition eauto.
     eapply instantiate_minductive in b; eauto.
     now rewrite PCUICUnivSubstitution.subst_instance_app in b.
-Qed.
-
-Lemma on_udecl_on_udecl_prop {cf:checker_flags} Σ ctx : 
-  on_udecl Σ (Polymorphic_ctx ctx) -> on_udecl_prop Σ (Polymorphic_ctx ctx).
-Proof.
-  intros [? [? [_ ?]]]. red. split; auto.
-Qed.
-
-Lemma wf_local_instantiate_poly {cf:checker_flags} Σ ctx Γ u : 
-  wf_ext (Σ.1, Polymorphic_ctx ctx) ->
-  consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
-  wf_local (Σ.1, Polymorphic_ctx ctx) Γ -> 
-  wf_local Σ (subst_instance u Γ).
-Proof.
-  intros wfΣ Huniv wf.
-  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
-  - now simpl.
-  - eapply PCUICUnivSubstitution.typing_subst_instance_ctx in ty;   
-    eauto using typing_wf_local. apply wfΣ.
-    destruct wfΣ. now eapply on_udecl_on_udecl_prop.
-Qed.
-
-Lemma wf_local_instantiate {cf:checker_flags} Σ (decl : global_decl) Γ u c : 
-  wf Σ.1 ->
-  lookup_env Σ.1 c = Some decl ->
-  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
-  wf_local (Σ.1, universes_decl_of_decl decl) Γ -> 
-  wf_local Σ (subst_instance u Γ).
-Proof.
-  intros wfΣ Hdecl Huniv wf.
-  epose proof (type_Sort _ _ Universes.Universe.lProp wf) as ty. forward ty.
-  - now simpl.
-  - eapply PCUICUnivSubstitution.typing_subst_instance_decl in ty;   
-    eauto using typing_wf_local.
 Qed.
 
 Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs : 
@@ -547,8 +517,6 @@ Proof.
   now constructor.
 Qed.
 
-
-
 Lemma smash_context_app_expand Γ Δ Δ' : 
   smash_context Γ (Δ ,,, Δ') =
   smash_context [] Δ ,,, expand_lets_ctx Δ (smash_context Γ Δ').
@@ -719,8 +687,3 @@ Proof.
   rewrite /subst_context_let_expand /to_extended_list /expand_lets_ctx /expand_lets_k_ctx.
   now rewrite !to_extended_list_k_subst to_extended_list_k_lift_context.
 Qed.
-
-Lemma context_assumptions_expand_lets_ctx Γ Δ :
-  context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.
-Proof. now rewrite /expand_lets_ctx /expand_lets_k_ctx; len. Qed.
-Hint Rewrite context_assumptions_expand_lets_ctx : len.

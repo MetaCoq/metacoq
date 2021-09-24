@@ -968,8 +968,7 @@ Lemma rename_wf_branches cdecl f brs :
   wf_branches cdecl (map (rename_branch f) brs).
 Proof.
   unfold wf_branches, wf_branches_gen.
-  intros h. solve_all. eapply Forall2_map_right.
-  eapply Forall2_impl; eauto using rename_wf_branch.
+  intros h. solve_all.
 Qed.
 
 Lemma rename_compose f f' x : rename f (rename f' x) = rename (f ∘ f') x.

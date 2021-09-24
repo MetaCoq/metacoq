@@ -646,7 +646,7 @@ Section WfEnv.
     consistent_instance_ext Σ (ind_universes mdecl) u ->
     wf_local Σ (subst_instance u (ind_params mdecl)).
   Proof.
-    intros; eapply (wf_local_instantiate _ (InductiveDecl mdecl)); eauto.
+    intros. eapply (wf_local_instantiate (decl := InductiveDecl mdecl)); eauto.
     eapply on_declared_minductive in H; auto.
     now apply onParams in H.
   Qed.

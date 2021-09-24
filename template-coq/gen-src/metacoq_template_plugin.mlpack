@@ -57,6 +57,7 @@ Config0
 Universes0
 BasicAst
 Environment
+EnvironmentTyping
 Ast0
 AstUtils
 LiftSubst

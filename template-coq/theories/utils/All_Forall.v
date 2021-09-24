@@ -1301,6 +1301,43 @@ Proof.
     split; auto. exists (S ni). apply hni.
 Qed.
 
+Lemma All2_Forall2 {A B} {P : A -> B -> Prop} {l l'} :
+  All2 P l l' -> Forall2 P l l'.
+Proof.
+  induction 1; eauto.
+Qed.
+
+(* Bad! Uses template polymorphism. *)
+Lemma Forall2_All2 {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> All2 P l l'.
+Proof.
+  intros f; induction l in l', f |- *; destruct l'; try constructor; auto.
+  elimtype False. inv f.
+  elimtype False. inv f.
+  inv f; auto.
+  apply IHl. inv f; auto.
+Qed.
+
+Lemma All2_map_left_equiv {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
+  All2 (fun x y => P (f x) y) l l' <~> All2 P (map f l) l'.
+Proof. intros. rewrite -{2}(map_id l'). eapply All2_map_equiv; eauto. Qed.
+
+Lemma All2_map_right_equiv {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
+  All2 (fun x y => P x (f y)) l l' <~> All2 P  l (map f l').
+Proof. intros. rewrite -{2}(map_id l). eapply All2_map_equiv; eauto. Qed.
+
+Lemma All2_map_left {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
+  All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
+Proof. apply All2_map_left_equiv. Qed.
+
+Lemma All2_map_right {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
+  All2 (fun x y => P x (f y)) l l' -> All2 P l (map f l').
+Proof. apply All2_map_right_equiv. Qed.
+
+Definition All2_map_left_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
+  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l' := (snd All2_map_left_equiv).
+Definition All2_map_right_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
+  All2 P l (map f l') -> All2 (fun x y => P x (f y)) l l' := (snd All2_map_right_equiv).
+
 Ltac toAll :=
   match goal with
   | H : is_true (forallb _ _) |- _ => apply forallb_All in H
@@ -1310,6 +1347,10 @@ Ltac toAll :=
   | H : Forall _ ?x |- _ => apply Forall_All in H
 
   | |- Forall _ _ => apply All_Forall
+
+  | H : Forall2 _ _ _ |- _ => apply Forall2_All2 in H
+
+  | |- Forall2 _ _ _ => apply All2_Forall2
 
   | H : is_true (forallb2 _ _ _) |- _ => apply forallb2_All2 in H
 
@@ -1342,6 +1383,10 @@ Ltac toAll :=
   | |- All _ (List.rev _) => apply All_rev
 
   | |- All2 _ (map _ _) (map _ _) => apply All2_map
+
+  | |- All2 _ _ (map _ _) => apply All2_map_right
+
+  | |- All2 _ (map _ _) _ => apply All2_map_left
   end.
 
 Lemma All_map_eq {A B} {l} {f g : A -> B} :
@@ -1809,22 +1854,6 @@ Proof.
     eauto.
 Qed.
 
-Lemma All2_Forall2 {A B} {P : A -> B -> Prop} {l l'} :
-  All2 P l l' -> Forall2 P l l'.
-Proof.
-  induction 1; eauto.
-Qed.
-
-(* Bad! Uses template polymorphism. *)
-Lemma Forall2_All2 {A B} {P : A -> B -> Prop} l l' : Forall2 P l l' -> All2 P l l'.
-Proof.
-  intros f; induction l in l', f |- *; destruct l'; try constructor; auto.
-  elimtype False. inv f.
-  elimtype False. inv f.
-  inv f; auto.
-  apply IHl. inv f; auto.
-Qed.
-
 Lemma Forall2_nth_error_Some {A B} {P : A -> B -> Prop} {l l'} n t :
   Forall2 P l l' ->
   nth_error l n = Some t ->
@@ -2124,27 +2153,6 @@ Lemma All_repeat {A} {n P} x :
 Proof.
   induction n; cbn; econstructor; eauto.
 Qed.
-
-Lemma All2_map_left_equiv {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
-  All2 (fun x y => P (f x) y) l l' <~> All2 P (map f l) l'.
-Proof. intros. rewrite -{2}(map_id l'). eapply All2_map_equiv; eauto. Qed.
-
-Lemma All2_map_right_equiv {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
-  All2 (fun x y => P x (f y)) l l' <~> All2 P  l (map f l').
-Proof. intros. rewrite -{2}(map_id l). eapply All2_map_equiv; eauto. Qed.
-
-Lemma All2_map_left {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
-  All2 (fun x y => P (f x) y) l l' -> All2 P (map f l) l'.
-Proof. apply All2_map_left_equiv. Qed.
-
-Lemma All2_map_right {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
-  All2 (fun x y => P x (f y)) l l' -> All2 P l (map f l').
-Proof. apply All2_map_right_equiv. Qed.
-
-Definition All2_map_left_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> A} :
-  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l' := (snd All2_map_left_equiv).
-Definition All2_map_right_inv {A B C} {P : A -> C -> Type} {l l'} {f : B -> C} :
-  All2 P l (map f l') -> All2 (fun x y => P x (f y)) l l' := (snd All2_map_right_equiv).
 
 Lemma Forall2_Forall_right {A B} {P : A -> B -> Prop} {Q : B -> Prop} {l l'} :
   Forall2 P l l' ->

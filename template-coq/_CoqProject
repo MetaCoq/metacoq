@@ -35,11 +35,11 @@ theories/Reflect.v
 theories/ReflectAst.v
 theories/Kernames.v
 theories/Induction.v
+theories/EnvironmentTyping.v
+theories/WfAst.v
 theories/LiftSubst.v
 theories/UnivSubst.v
 theories/Pretty.v
-theories/EnvironmentTyping.v
-theories/WfInv.v
 theories/TermEquality.v
 theories/Typing.v
 theories/Reduction.v

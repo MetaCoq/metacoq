@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq Require Import utils Ast AstUtils Environment Induction LiftSubst.
+From MetaCoq Require Import utils Ast AstUtils Environment Induction.
 
 (** * Universe substitution
 

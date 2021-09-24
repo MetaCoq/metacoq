@@ -94,8 +94,8 @@ Proof.
     destruct isdecl as [[? ?] ?]. red in H. red in H4.
     rewrite H in H4.
     eapply extends_lookup in H; eauto. now rewrite H.
-  - econstructor. all:eauto.
-    all:todo "case".
+  - econstructor. all:eauto. all:todo "case".
+    
     (*2:{ eauto. eapply All2_All_left in X3.
         2:{ intros ? ? [[[? ?] ?] ?]. exact e0. }
         eapply All2_All_mix_left in X3; eauto.

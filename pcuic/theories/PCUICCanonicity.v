@@ -1162,7 +1162,8 @@ Section WeakNormalization.
       eapply IHHe. eapply subject_reduction; eauto.
       eapply red1_red. econstructor; eauto.
 
-    (* - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
+    - todo "case".
+      (*epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Case in Ht; auto. destruct_sigma Ht.
       destruct c0.
       specialize (IHHe1 _ scrut_ty).

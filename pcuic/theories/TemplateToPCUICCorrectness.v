@@ -470,7 +470,7 @@ Qed.
 
 End Translation.
 
-(* Section Trans_Weakening.
+(*Section Trans_Weakening.
   Context {cf : checker_flags}.
   Context {Σ : Ast.Env.global_env}.
   Context {wfΣ : Typing.wf Σ}.
@@ -478,12 +478,13 @@ End Translation.
 
   Lemma trans_weaken t : 
     Typing.extends Σ Σ' ->
+
     trans Σ t = trans Σ' t.
 
 
  *)
-
-(*Section Trans_Global.
+(*
+Section Trans_Global.
   Context {cf : checker_flags}.
   Context (Σ : Ast.Env.global_env).
   Notation Σ' := (trans_global_decls Σ).

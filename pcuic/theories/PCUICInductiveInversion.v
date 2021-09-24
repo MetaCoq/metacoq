@@ -3549,90 +3549,6 @@ Proof.
   now rewrite -Nat.add_comm -/(expand_lets_k Γ (context_assumptions Δ) (expand_lets Δ t)).
 Qed.
 
-(* 
-Lemma subst_let_expand_app s Γ s' Δ k :
-  k = #|Δ| ->
-  #|s| = context_assumptions Γ ->
-  subst_let_expand (s' ++ s) (Γ ,,, Δ) =
-
-
-  subst0 s ∘
-  subst0 (map (lift0 #|s|) s') ∘
-    (expand_lets (expand_lets_ctx Γ Δ) ∘ expand_lets_k Γ k) =1
-Proof.
-  intros hk hs t.
-  rewrite /subst_let_expand /expand_lets.
-  rewrite subst_app_decomp. f_equal.
-  rewrite !s_0.
-  rewrite expand_lets_app. len.
-
-  rewrite /subst_context_let_expand /subst_let_expand_k.
-  rewrite {1}/expand_lets_k.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx. len. subst k.
-  relativize #|Δ|.
-  erewrite expand_lets_subst_comm.
-  len. 2:now len.
-  rewrite expand_lets_lift.
-  now rewrite -Nat.add_comm -/(expand_lets_k Γ (context_assumptions Δ) (expand_lets Δ t)).
-Qed. *)
-
-(*Lemma arity_spine_to_extended_list {cf} {Σ} {wfΣ : wf Σ} {Γ Δ T} : 
-  wf_local_rel Σ Γ Δ ->
-  arity_spine Σ (Γ ,,, Δ) (it_mkProd_or_LetIn (lift_context #|Δ| 0 Δ) (lift #|Δ| #|Δ| T)) (to_extended_list Δ) 
-    (subst_let_expand (List.rev (to_extended_list Δ)) Δ T).
-Proof.
-  rewrite /subst_let_expand.
-  induction Δ using ctx_length_rev_ind in Γ , T |- *.
-  - rewrite ?expand_lets_nil /= lift0_id subst_empty; constructor.
-  - intros wf. rewrite lift_context_app /= it_mkProd_or_LetIn_app /mkProd_or_LetIn /=.
-    eapply wf_local_rel_app_inv in wf as [].
-    depelim w; simpl in *.
-    * destruct l as [s Hs].
-      rewrite ?expand_lets_vass [to_extended_list _]to_extended_list_k_app /= Nat.add_0_r.
-      constructor. eapply meta_conv. econstructor; eauto. eapply wf_local_app; tea; pcuic.
-      eapply wf_local_rel_app; tea. repeat constructor. red. now exists s.
-      rewrite nth_error_app_context_lt; len; try lia.
-      rewrite nth_error_app_context_ge; len; try lia.
-      rewrite Nat.sub_diag. reflexivity.
-      simpl. len. lia_f_equal.
-      rewrite app_context_assoc.
-      len. rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r /=. len.
-      replace [tRel #|Γ0|] with (map (lift0 #|Γ0|) [tRel 0]). 2:now simpl; rewrite Nat.add_0_r.
-      rewrite lift_context_add. rewrite -distr_lift_subst_context.
-      rewrite subst_context_lift_id /= Nat.add_0_r.
-      rewrite !Nat.add_1_r subst_reli_lift_id. lia.
-      rewrite subst_app_simpl. simpl. len.
-      eapply X => //.
-    * destruct l as [s Hs].
-      rewrite ?expand_lets_vdef [to_extended_list _]to_extended_list_k_app /=.
-      constructor.
-      rewrite app_context_assoc.
-      len. rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r /=. len.
-      specialize (X Γ0).
-      forward X by len; lia.
-      specialize (X (vdef na b t :: Γ)).
-      specialize (X T). forward X by tas.
-      rewrite -(distr_lift_subst_context (#|Γ0| + 1) 0 [_]).
-      rewrite lift_context_add.
-      rewrite lift_context_subst_context.
-
-
-
-      rewrite subst_context_lift_context_cancel
-      eapply wf_local_rel_subst.
-      replace [tRel #|Γ0|] with (map (lift0 #|Γ0|) [tRel 0]). 2:now simpl; rewrite Nat.add_0_r.
-      rewrite lift_context_add. rewrite -distr_lift_subst_context.
-      rewrite subst_context_lift_id /= Nat.add_0_r.
-      rewrite !Nat.add_1_r subst_reli_lift_id. lia.
-      eapply X => //.
-      rewrite expan
-
-    
-    constructor.
-    eapply 
-    
-*)
-
 Definition pre_case_branch_context (ind : inductive) (mdecl : mutual_inductive_body) 
   (params : list term) (puinst : Instance.t) (cdecl : constructor_body) :=
   subst_context (List.rev params) 0
@@ -3662,6 +3578,36 @@ Lemma eq_binder_annots_eq nas Γ :
 Proof.
   induction 1; simpl; constructor; auto.
   destruct x, y as [na [b|] ty]; simpl; constructor; auto.
+Qed.
+
+Lemma map2_set_binder_name_alpha_eq (nas : list aname) (Δ Δ' : PCUICEnvironment.context) :
+  All2 (fun x y => x = (decl_name y)) nas Δ' ->
+  All2 (compare_decls eq eq) Δ Δ' ->
+  (map2 set_binder_name nas Δ) = Δ'.
+Proof.
+  intros hl. induction 1 in nas, hl |- *; cbn; auto.
+  destruct nas; cbn; auto.
+  destruct nas; cbn; auto; depelim hl.
+  f_equal; auto. destruct r; subst; cbn; auto.
+Qed.
+Notation eq_names := (All2 (fun x y => x = (decl_name y))).
+
+Lemma eq_names_subst_context nas Γ s k : 
+  eq_names nas Γ ->
+  eq_names nas (subst_context s k Γ).
+Proof.
+  induction 1.
+  * rewrite subst_context_nil. constructor.
+  * rewrite subst_context_snoc. constructor; auto.
+Qed.
+
+Lemma eq_names_subst_instance nas Γ u : 
+  eq_names nas Γ ->
+  eq_names nas (subst_instance u Γ).
+Proof.
+  induction 1.
+  * constructor.
+  * rewrite /subst_instance /=. constructor; auto.
 Qed.
 
 (* Lemma All2_compare_decls_subst pars n Γ i :
@@ -3986,6 +3932,22 @@ Proof.
   now rewrite (instantiate_inds decli cu) //.
 Qed.
 
+Lemma inst_case_branch_context_eq {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ} 
+  {ind mdecl cdecl p br} : 
+  All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ind mdecl cdecl) ->
+  case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl = inst_case_branch_context p br.
+Proof.
+  intros.
+  rewrite /case_branch_context /case_branch_context_gen.
+  rewrite /inst_case_branch_context /inst_case_context.
+  eapply map2_set_binder_name_alpha_eq. 
+  eapply eq_names_subst_context, eq_names_subst_instance.
+  eapply All2_map_left. eapply All2_refl. reflexivity.
+  rewrite /pre_case_branch_context_gen /inst_case_context.
+  eapply alpha_eq_subst_context, alpha_eq_subst_instance.
+  now symmetry.
+Qed.
+
 Lemma wf_case_branch_type {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
   {Γ mdecl idecl} {ci : case_info} {p} ps (args : list term) :
   declared_inductive Σ ci mdecl idecl ->
@@ -4006,7 +3968,7 @@ Lemma wf_case_branch_type {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf 
        wf_local Σ (Γ ,,, (ind_params mdecl)@[puinst p] ,,, cstr_br_ctx), 
        wf_local Σ (Γ ,,, (ind_params mdecl)@[puinst p] ,,, brctx'),
        wf_local Σ (Γ ,,, brctxty.1) &
-        Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps].
+       Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps].
 Proof.
   intros isdecl Hc wfp bc Hp ptm wfpctx.
   destruct (WfArity_build_case_predicate_type wfΣ isdecl Hc (PCUICWfUniverses.typing_wf_universe _ Hp) wfp) as [wfty _].

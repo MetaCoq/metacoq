@@ -67,15 +67,15 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
         isPropositional Σ kn false ->
         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
-  | erases_tCase1 : forall (ci : case_info) (T : predicate term) (c : term)
-                      (brs : list (branch term)) (c' : E.term)
-                      (brs' : list (nat × E.term)),
-                    Informative Σ ci.(ci_ind) ->
-                    Σ;;; Γ |- c ⇝ℇ c' ->
-                    All2
-                      (fun (x : branch term) (x' : nat × E.term) =>
-                       Σ;;; Γ ,,, bcontext x |- bbody x ⇝ℇ snd x' × #|bcontext x| = fst x') brs brs' ->
-                    Σ;;; Γ |- tCase ci T c brs ⇝ℇ E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'
+  | erases_tCase1 (ci : case_info) (p : predicate term) (c : term)
+        (brs : list (branch term)) (c' : E.term)
+        (brs' : list (nat × E.term)) :
+        Informative Σ ci.(ci_ind) ->
+        Σ;;; Γ |- c ⇝ℇ c' ->
+        All2
+          (fun (x : branch term) (x' : nat × E.term) =>
+          Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ snd x' × #|bcontext x| = fst x') brs brs' ->
+        Σ;;; Γ |- tCase ci p c brs ⇝ℇ E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'
   | erases_tProj : forall (p : (inductive × nat) × nat) (c : term) (c' : E.term),
                    let ind := fst (fst p) in
                    Informative Σ ind ->
@@ -126,13 +126,13 @@ Lemma erases_forall_list_ind
       (Hconstruct : forall Γ kn k n,
           isPropositional Σ kn false ->
           P Γ (tConstruct kn k n) (E.tConstruct kn k))
-      (Hcase : forall Γ ci T c brs c' brs',
+      (Hcase : forall Γ ci p c brs c' brs',
           PCUICElimination.Informative Σ ci.(ci_ind) ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
-          All2 (fun x x' => Σ;;; Γ ,,, bcontext x |- bbody x ⇝ℇ x'.2 × #|bcontext x| = x'.1) brs brs' ->
-          Forall2 (fun br br' => P (Γ ,,, bcontext br) (bbody br) br'.2) brs brs' ->
-          P Γ (tCase ci T c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
+          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 × #|bcontext x| = x'.1) brs brs' ->
+          Forall2 (fun br br' => P (Γ ,,, inst_case_branch_context p br) (bbody br) br'.2) brs brs' ->
+          P Γ (tCase ci p c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
       (Hproj : forall Γ p c c',
           let ind := p.1.1 in
           PCUICElimination.Informative Σ ind ->

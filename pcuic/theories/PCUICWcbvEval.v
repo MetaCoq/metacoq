@@ -4,7 +4,6 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst 
      PCUICSubstitution PCUICInversion.
-      (* PCUICSR. *)
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -173,15 +172,14 @@ Section Wcbv.
       eval (tConst c u) res
 
   (** Case *)
-  (* | eval_iota ci discr c mdecl idecl cdecl u args p brs br res :
+  | eval_iota ci discr c mdecl idecl cdecl u args p brs br res :
     eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
     nth_error brs c = Some br ->
     declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
-    let bctx := case_branch_context p cdecl in
-    #|skipn (ci_npar ci) args| = context_assumptions bctx ->
-    eval (iota_red ci.(ci_npar) args bctx br) res ->
+    #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+    eval (iota_red ci.(ci_npar) p args br) res ->
     eval (tCase ci p discr brs) res
- *)
+ 
   (** Proj *)
   | eval_proj i pars arg discr args u a res :
       eval discr (mkApps (tConstruct i 0 u) args) ->
@@ -588,6 +586,7 @@ Section Wcbv.
     - eapply IHev3. unshelve eapply closed_beta. 3:eauto. exact na. simpl. eauto.
     - eapply IHev2. now rewrite closed_csubst.
     - apply IHev. eapply closed_def; eauto.
+    - todo "case".
     - eapply IHev2.
       specialize (IHev1 Hc).
       rewrite closedn_mkApps in IHev1.
@@ -705,6 +704,7 @@ Section Wcbv.
       assert (e0 = e) as -> by now apply uip.
       assert (isdecl0 = isdecl) as -> by now apply uip.
       now specialize (IHev _ ev'); noconf IHev.
+    - todo "case".
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
@@ -758,26 +758,27 @@ Section Wcbv.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
     - depelim ev'; try go.
-      apply mkApps_eq_inj in e' as H'; auto.
-      destruct H' as (H' & <-).
-      noconf H'.
-      assert (narg0 = narg) as -> by congruence.
-      assert (fn0 = fn) as -> by congruence.
-      assert (e' = eq_refl) as -> by now apply uip.
-      assert (e0 = e) as -> by now apply uip.
-      cbn in *; subst.
-      now specialize (IHev _ ev'); noconf IHev.
-    - depelim ev'; try go.
-      + cbn in *. exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-      + apply mkApps_eq_inj in e1 as H'; auto.
+      * todo "case".
+        * apply mkApps_eq_inj in e' as H'; auto.
         destruct H' as (H' & <-).
         noconf H'.
         assert (narg0 = narg) as -> by congruence.
         assert (fn0 = fn) as -> by congruence.
-        assert (e1 = eq_refl) as -> by now apply uip.
+        assert (e' = eq_refl) as -> by now apply uip.
         assert (e0 = e) as -> by now apply uip.
         cbn in *; subst.
         now specialize (IHev _ ev'); noconf IHev.
+      - depelim ev'; try go.
+        + cbn in *. exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
+        + apply mkApps_eq_inj in e1 as H'; auto.
+          destruct H' as (H' & <-).
+          noconf H'.
+          assert (narg0 = narg) as -> by congruence.
+          assert (fn0 = fn) as -> by congruence.
+          assert (e1 = eq_refl) as -> by now apply uip.
+          assert (e0 = e) as -> by now apply uip.
+          cbn in *; subst.
+          now specialize (IHev _ ev'); noconf IHev.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         exfalso.

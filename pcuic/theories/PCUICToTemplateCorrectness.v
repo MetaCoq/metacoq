@@ -795,10 +795,7 @@ Section wtsub.
           rewrite subst_instance_expand_lets_ctx PCUICUnivSubstitution.subst_instance_subst_context.
           rewrite PCUICUnivSubstitution.subst_instance_inds.
           erewrite PCUICUnivSubstitution.subst_instance_id_mdecl; tea. }
-        symmetry. etransitivity.
-        eapply All2_app; [|reflexivity]. eapply inst_case_branch_context_eq; tea.
-        apply decli.
-        eapply All2_app; [|reflexivity]. eapply pre_case_branch_context_eq; tea.
+        erewrite inst_case_branch_context_eq; tea. reflexivity.
         eexists; tea.
     - eapply inversion_Proj in h as (?&?&?&?&?&?&?&?&?); tea.
       eexists; eauto.
@@ -897,17 +894,6 @@ Proof.
   induction 1.
   * cbn; auto.
   * rewrite /subst_instance /=. constructor; auto.
-Qed.
-
-Lemma map2_set_binder_name_alpha_eq_pcuic (nas : list aname) (Δ Δ' : PCUICEnvironment.context) :
-  All2 (fun x y => x = (decl_name y)) nas Δ' ->
-  All2 (compare_decls eq eq) Δ Δ' ->
-  (map2 PCUICEnvironment.set_binder_name nas Δ) = Δ'.
-Proof.
-  intros hl. induction 1 in nas, hl |- *; cbn; auto.
-  destruct nas; cbn; auto.
-  destruct nas; cbn; auto; depelim hl.
-  f_equal; auto. destruct r; subst; cbn; auto.
 Qed.
 
 Lemma map2_set_binder_name_alpha_eq (nas : list aname) (Δ Δ' : context) :
@@ -2140,20 +2126,7 @@ Proof.
     f_equal.
     rewrite /case_branch_context.
     symmetry. 
-    apply map2_set_binder_name_alpha_eq_pcuic.
-    rewrite /inst_case_context. 
-    eapply eq_names_subst_context_pcuic.
-    apply eq_names_subst_instance_pcuic.
-    eapply All2_map_left, All2_refl; reflexivity.
-    symmetry. etransitivity. 
-    eapply inst_case_branch_context_eq; tea. eapply H.
-    etransitivity. eapply pre_case_branch_context_eq; tea.
-    rewrite /case_branch_context_gen.
-    eapply eq_binder_annots_eq.
-    rewrite /pre_case_branch_context_gen.
-    eapply Forall2_All2, (proj1 (eq_annots_inst_case_context _ _ _ _)).
-    eapply compare_decls_eq_context in X.
-    now eapply eq_context_gen_binder_annot in X.
+    erewrite <- inst_case_branch_context_eq => //.
   - rewrite trans_mkApps !lengths.
     rewrite trans_lift /ptm trans_it_mkLambda_or_LetIn. f_equal.
     rewrite !map_app (map_map_compose _ _ _ _ trans). f_equal.

@@ -87,25 +87,11 @@ Proof.
   have wfΓ : wf_local Σ Γ by pcuic.
   eapply isType_mkApps_Ind_smash in Hc as [? []]; tea.
   2:{ now rewrite (wf_predicate_length_pars wfp). }
-  have wfctx : wf_local Σ (Γ,,, inst_case_context (pparams p) (puinst p) (bcontext br)).
-  { eapply wf_inst_case_context; tea.
-    eapply wf_local_app_inv. eapply wf_local_alpha.
-    ++ instantiate (1 := (Γ ,,, smash_context [] (ind_params mdecl)@[puinst p],,, 
-          (cstr_branch_context ci mdecl cdecl)@[puinst p])).
-      eapply All2_app => //; [|reflexivity].
-      eapply alpha_eq_subst_instance. now symmetry.
-    ++ rewrite /cstr_branch_context.
-      rewrite subst_instance_expand_lets_ctx.
-      eapply wf_local_expand_lets.
-      rewrite /case_branch_context_nopars /= /case_branch_type /= in a.
-      rewrite subst_instance_subst_context subst_instance_inds.
-      now rewrite (subst_instance_id_mdecl _ _ _ c). }
+  have wfctx : wf_local Σ (Γ,,, inst_case_branch_context p br).
+  { erewrite <- inst_case_branch_context_eq; tea. apply a1. }
   split => //.
-  eapply alpha_eq_context_context_equality; [|fvs].
-  eapply All2_app; [|reflexivity].
-  etransitivity.
-  2:eapply pre_case_branch_context_eq; tea.
-  eapply inst_case_branch_context_eq; tea. exact isdecl.
+  rewrite inst_case_branch_context_eq //.
+  eapply context_equality_refl. fvs.
 Qed.
 
 Section Lemmata.

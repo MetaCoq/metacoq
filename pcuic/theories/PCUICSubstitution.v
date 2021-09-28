@@ -1127,50 +1127,6 @@ Proof.
   - apply IHX.
 Qed.
 
-(* Lemma red1_mkApp Σ Γ M1 N1 M2 : *)
-(*   red1 Σ Γ M1 N1 -> red1 Σ Γ (mkApp M1 M2) (mkApp N1 M2). *)
-(* Proof. *)
-(*   intros wfM1 H. *)
-(*   destruct (isApp M1) eqn:Heq. *)
-(*   destruct M1; try discriminate. simpl. *)
-(*   revert wfM1. inv H. simpl. intros. *)
-(*   rewrite mkApp_mkApps. constructor. *)
-
-(*   intros. inv wfM1. simpl. *)
-(*   econstructor; eauto. *)
-(*   clear -H1. *)
-(*   unfold is_constructor in *. *)
-(*   destruct (nth_error l narg) eqn:Heq. *)
-(*   eapply nth_error_app_left in Heq. now rewrite -> Heq. discriminate. *)
-
-(*   intros. rewrite mkApp_mkApps. now constructor. *)
-
-(*   intros. simpl. *)
-(*   constructor. clear -H0. induction H0; constructor; auto. *)
-
-(*   rewrite mkApp_tApp; auto. *)
-(*   now apply red1_tApp_mkApp. *)
-(* Qed. *)
-
-Lemma red1_mkApps_l Σ Γ M1 N1 M2 :
-  red1 Σ Γ M1 N1 -> red1 Σ Γ (mkApps M1 M2) (mkApps N1 M2).
-Proof.
-  induction M2 in M1, N1 |- *.
-  - simpl; auto.
-  - intros. specialize (IHM2 (tApp M1 a) (tApp N1 a)).
-    forward IHM2.
-    { constructor. auto. }
-    simpl. auto.
-Qed.
-
-Lemma red1_mkApps_r Σ Γ M1 M2 N2 :
-  OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
-Proof.
-  intros. induction X in M1 |- *.
-  - simpl. eapply red1_mkApps_l. constructor; auto.
-  - apply (IHX (tApp M1 hd)).
-Qed.
-
 Arguments iota_red : simpl never.
 
 (** Standard substitution lemma for a context with no lets. *)

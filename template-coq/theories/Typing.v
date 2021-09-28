@@ -489,13 +489,16 @@ Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity:
 
-  We use the usual characterization as the reflexive-transitive closure of 
-  the symmetric closure of reduction + cumulativity and alpha-equivalence.
+  Reduction to terms in the cumulativity relation. In PCUIC we show that 
+  this is equivalent to the reflexive-transitive closure or reduction + leq_term
+  on well-typed terms. 
 *)
 
-Definition cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : relation term := 
-  Equations.Type.Relation.clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
-Notation "Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u).
+Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+ | cumul_refl t u : leq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
+ | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
+ | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
+  where "Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u).
 
 (** *** Conversion
 
@@ -514,7 +517,7 @@ Lemma conv_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
 Defined.
 
 Lemma cumul_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t <= t.
-  intros. constructor 2.
+  intros. constructor. apply leq_term_refl.
 Defined.
 
 Hint Resolve conv_refl' cumul_refl' : typecheck.

@@ -1555,7 +1555,8 @@ Section Trans_Global.
 
     - simpl. wf_inv w. inv a0.
       rewrite trans_mkApps; auto.
-      rewrite trans_subst; auto. apply (red1_mkApps_l (empty_ext Σ')). constructor.
+      rewrite trans_subst; auto.
+      apply red1_mkApps_f. constructor.
 
     - rewrite trans_subst; eauto. repeat constructor.
 
@@ -1666,11 +1667,11 @@ Section Trans_Global.
 
     - rewrite !trans_mkApps; auto with wf.
       eapply wf_red1 in X; auto with wf.
-      eapply (PCUICSubstitution.red1_mkApps_l (empty_ext Σ')). auto.
+      eapply red1_mkApps_f; auto.
 
     - clear e w n. revert M1. induction X.
       simpl. intros. destruct p. specialize (r0 wfΓ).
-      apply (PCUICSubstitution.red1_mkApps_l (empty_ext Σ')).
+      apply red1_mkApps_f.
       apply app_red_r. apply r0. now depelim a.
       inv a. intros. specialize (IHX X1).
       eapply (IHX (Template.Ast.tApp M1 [hd])).
@@ -1789,21 +1790,16 @@ Lemma trans_cumul {cf} (Σ : Ast.Env.global_env_ext) Γ T U :
 Proof.
   intros wfΣ Σ' wfΣ'.
   induction 4.
-  - destruct r. destruct c.
-    eapply cumul_red_l. eapply trans_red1 => //. apply r. reflexivity.
-    eapply cumul_red_r. reflexivity. eapply trans_red1 => //.
-    constructor. 
+  - constructor. 
     eapply trans_leq_term in l; eauto.
     now rewrite global_ext_constraints_trans.
-  - reflexivity.
-  - etransitivity. pose proof r as H3. apply wf_red1 in H3; auto with wf.
-    apply trans_red1 in r; auto. econstructor 2; eauto with wf.
-  - econstructor 3.
-    apply IHX; auto. apply wf_red1 in r; auto with wf.
-    apply trans_red1 in r; auto.
+  - eapply cumul_red_l; tea. eapply trans_red1; tea. apply IHX2.
+    eapply wf_red1 in r; tea. now eapply typing_wf_sigma in wfΣ. auto.
+  - eapply cumul_red_r; tea. 2:eapply trans_red1; tea.
+    eapply IHX2. auto. eapply wf_red1 in r; tea. now eapply typing_wf_sigma; auto.
 Qed.
 
-Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm -> Tterm -> Type) :=
+Definition Tlift_typing (P : Ast.Env.global_env_ext -> Ast.Env.context -> Ast.term -> Ast.term -> Type) :=
   fun Σ Γ t T =>
     match T with
     | Some T => P Σ Γ t T
@@ -1813,15 +1809,17 @@ Definition Tlift_typing (P : Template.Ast.global_env_ext -> Tcontext -> Tterm ->
 Definition TTy_wf_local {cf : checker_flags} Σ Γ := ST.All_local_env (ST.lift_typing ST.typing Σ) Γ.
 
 Lemma trans_wf_local {cf}:
-  forall (Σ : Template.Ast.global_env_ext) (Γ : Tcontext) (wfΓ : TTy_wf_local Σ Γ),
+  forall (Σ : Ast.Env.global_env_ext) (Γ : Ast.Env.context) (wfΓ : TTy_wf_local Σ Γ),
     let P :=
-        (fun Σ0 (Γ0 : Tcontext) _ (t T : Tterm) _ =>
-           wf (trans_global Σ0).1 ->
-           trans_global Σ0;;; trans_local Γ0 |- trans t : trans T)
+        (fun Σ0 Γ0 _ (t T : Ast.term) _ =>
+           let Σ' := trans_global Σ0 in
+           wf Σ'.1 ->
+           trans_global Σ0;;; trans_local Σ' Γ0 |- trans Σ' t : trans Σ' T)
     in
-    wf (trans_global Σ).1 ->
+    let Σ' := trans_global Σ in
+    wf Σ'.1 ->
     ST.All_local_env_over ST.typing P Σ Γ wfΓ ->
-    wf_local (trans_global Σ) (trans_local Γ).
+    wf_local (trans_global Σ) (trans_local Σ' Γ).
 Proof.
   intros.
   induction X0.
@@ -1836,10 +1834,11 @@ Qed.
 Lemma trans_wf_local_env {cf} Σ Γ :
   ST.All_local_env
         (ST.lift_typing
-           (fun (Σ : Ast.global_env_ext) (Γ : Tcontext) (b ty : Tterm) =>
-              ST.typing Σ Γ b ty × trans_global Σ;;; trans_local Γ |- trans b : trans ty) Σ)
+           (fun (Σ : Ast.Env.global_env_ext) Γ (b ty : Ast.term) =>
+            let Σ' := trans_global Σ in
+              ST.typing Σ Γ b ty × trans_global Σ;;; trans_local Σ' Γ |- trans Σ' b : trans Σ' ty) Σ)
         Γ ->
-  wf_local (trans_global Σ) (trans_local Γ).
+  wf_local (trans_global Σ) (trans_local (trans_global Σ) Γ).
 Proof.
   intros.
   induction X.
@@ -1848,41 +1847,27 @@ Proof.
     + eapply IHX.
     + simpl. destruct t0. exists x. eapply p.
   - simpl. constructor; auto. red. destruct t0. exists x. intuition auto.
-    red. red in t1. destruct t1. eapply t2.
+    red in t1. destruct t1. cbn. eapply p.
+    red; red in t1. destruct t1. eapply t2.
 Qed.
-
-(*   eapply ST.on_global_decls_impl. 2:eapply wf. eauto. intros * ongl ont. destruct t. *)
-(*   red in ont. *)
-(*   eapply typing_wf; eauto. destruct ont. exists x; eapply typing_wf; intuition eauto. *)
-(* Qed. *)
 
 Hint Resolve trans_wf_local : trans.
 
 Axiom fix_guard_trans :
   forall Σ Γ mfix,
     ST.fix_guard Σ Γ mfix ->
-    fix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
+    let Σ' := trans_global Σ in
+    fix_guard Σ' (trans_local Σ' Γ) (map (map_def (trans Σ') (trans Σ')) mfix).
 
 Axiom cofix_guard_trans :
   forall Σ Γ mfix,
     ST.cofix_guard Σ Γ mfix ->
-    cofix_guard (trans_global Σ) (trans_local Γ) (map (map_def trans trans) mfix).
+    let Σ' := trans_global Σ in
+    cofix_guard Σ' (trans_local Σ' Γ) (map (map_def (trans Σ') (trans Σ')) mfix).
 
-Notation Swf_fix def := (WfAst.wf Σ (dtype def) /\ WfAst.wf Σ (dbody def)).
+Notation Swf_fix Σ def := (WfAst.wf Σ (dtype def) * WfAst.wf Σ (dbody def)).
 
-Lemma trans_subst_context s k Γ : 
-  trans_local (SL.subst_context s k Γ) = subst_context (map trans s) k (trans_local Γ).
-Proof.
-  induction Γ as [|[na [b|] ty] Γ]; simpl; auto.
-  - rewrite SL.subst_context_snoc /=. rewrite [subst_context _ _ _ ]subst_context_snoc.
-    f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
-    now rewrite !trans_subst map_length.
-  - rewrite SL.subst_context_snoc /=. rewrite [subst_context _ _ _ ]subst_context_snoc.
-    f_equal; auto. rewrite IHΓ /snoc /subst_decl /map_decl /=; f_equal.
-    now rewrite !trans_subst map_length.
-Qed.
-
-Lemma trans_decompose_app {t ind u l} : 
+(* Lemma trans_decompose_app {t ind u l} : 
   WfAst.wf Σ t ->
   AstUtils.decompose_app t = (Ast.tInd ind u, l) ->
   ∑ l', decompose_app (trans t) = (tInd ind u, l').
@@ -1901,29 +1886,30 @@ Proof.
   induction t in ctx, ctx', t' |- *; simpl; try intros [= -> <-]; auto.
   - intros H. now apply IHt2 in H.
   - intros H. now apply IHt3 in H.
-Qed.
+Qed. *)
 
-Lemma it_mkProd_or_LetIn_wf Γ t
-  : Ast.wf (Ast.it_mkProd_or_LetIn Γ t) <-> Forall wf_decl Γ /\ Ast.wf t .
+Lemma wf_it_mkProd_or_LetIn Σ Γ t
+  : WfAst.wf Σ (Ast.Env.it_mkProd_or_LetIn Γ t) <~> All (WfAst.wf_decl Σ) Γ * WfAst.wf Σ t.
 Proof.
   revert t. induction Γ.
   - intros t. simpl. split => //; try split => //; trivial. now intros [].
   - intros t.
-    destruct a as [na [b|] ty]; simpl in *. rewrite /Ast.mkProd_or_LetIn /=.
-    * rewrite IHΓ /=. split; intros [].
-      depelim H0. intuition constructor; auto. split; auto. 
-      depelim H. red in H. simpl in H. split; auto with wf. constructor; intuition auto.
-    * rewrite IHΓ /=. split; intros [].
-      depelim H0. simpl in H0_. split; [constructor|];auto.
+    destruct a as [na [b|] ty]; simpl in *. rewrite /Ast.Env.mkProd_or_LetIn /=.
+    * etransitivity. eapply IHΓ. split; intros [].
+      depelim w. intuition constructor; auto. split; auto. 
+      depelim a. red in w. simpl in w. split; auto with wf. constructor; intuition auto.
+    * etransitivity. eapply IHΓ => /=. split; intros [].
+      depelim w. simpl in w1. split; [constructor|];auto.
       split; simpl; auto.
-      depelim H. destruct H as [_ wfty]. simpl in wfty.
+      depelim a. destruct w as [_ wfty]. simpl in wfty.
       split; auto. constructor; simpl; auto.
 Qed.
 
-Lemma trans_check_one_fix mfix ind :
-  Swf_fix mfix ->
+Lemma trans_check_one_fix Σ mfix ind :
+  Swf_fix Σ mfix ->
   ST.check_one_fix mfix = Some ind ->
-  check_one_fix (map_def trans trans mfix) = Some ind.
+  let Σ' := trans_global_decls Σ in
+  check_one_fix (map_def (trans Σ') (trans Σ') mfix) = Some ind.
 Proof.
   unfold ST.check_one_fix, check_one_fix.
   case: mfix => [na ty arg rarg] /= [wfty wfarg].

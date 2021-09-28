@@ -1405,7 +1405,7 @@ Section ReductionCongruence.
       generalize (List.rev l) as l'; induction l'; simpl; auto.
       rewrite <- mkApps_nested. now rewrite <- IHl'.
     Qed.
-
+    
     Lemma red1_mkApps_f :
       forall t u l,
         red1 Σ Γ t u ->
@@ -1416,6 +1416,14 @@ Section ReductionCongruence.
       induction l ; intros t u h.
       - assumption.
       - cbn. apply IHl. constructor. assumption.
+    Qed.
+
+    Lemma red1_mkApps_r M1 M2 N2 :
+      OnOne2 (red1 Σ Γ) M2 N2 -> red1 Σ Γ (mkApps M1 M2) (mkApps M1 N2).
+    Proof.
+      intros. induction X in M1 |- *.
+      - simpl. eapply red1_mkApps_f. constructor; auto.
+      - apply (IHX (tApp M1 hd)).
     Qed.
 
     Corollary red_mkApps_f :

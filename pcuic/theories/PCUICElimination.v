@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICCasesContexts
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts

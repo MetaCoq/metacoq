@@ -2,14 +2,14 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
+     PCUICSubstitution PCUICCasesContexts PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICAlpha PCUICEquality PCUICValidity PCUICParallelReductionConfluence
      PCUICConfluence PCUICContextConversion PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICWellScopedCumulativity
      PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion.
 
-Require Import ssreflect ssrbool.
+Require Import ssreflect ssrbool Utf8.
 From Equations Require Import Equations.
 From Equations.Type Require Import Relation Relation_Properties.
 Require Import Equations.Prop.DepElim.
@@ -762,7 +762,7 @@ Lemma ctx_inst_merge {cf} {Σ} {wfΣ : wf Σ} Γ inst inst' Δ :
   wf_local Σ (Γ ,,, (List.rev Δ)) ->
   PCUICTyping.ctx_inst
     (fun (Σ : global_env_ext) (Γ : context) (t T : term) =>
-    forall u : term, closed_red1 Σ Γ t u → Σ;;; Γ |- u : T) Σ Γ inst Δ ->
+    forall u : term, closed_red1 Σ Γ t u -> Σ;;; Γ |- u : T) Σ Γ inst Δ ->
   ctx_inst Σ Γ inst Δ ->
   OnOne2 (closed_red1 Σ Γ) inst inst' ->
   ctx_inst Σ Γ inst' Δ.
@@ -1228,7 +1228,7 @@ Proof.
   len in clx. len.
   rewrite app_context_nil_l app_context_assoc.
   epose proof (on_constructor_wf_arities_pars_args H).
-  eapply (wf_local_instantiate _ (InductiveDecl mdecl)) in X0; tea.
+  eapply (wf_local_instantiate (decl:=InductiveDecl mdecl)) in X0; tea.
   rewrite !subst_instance_app_ctx in X0.
   now eapply wf_local_closed_context in X0. apply H.
   now eapply declared_inductive_wf_global_ext.

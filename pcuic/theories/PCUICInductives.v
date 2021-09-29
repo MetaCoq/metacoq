@@ -271,7 +271,7 @@ Section OnInductives.
     wf_local Σ (subst_instance u (ind_params mdecl ,,, ind_indices idecl)).
   Proof.
     intros.
-    eapply (wf_local_instantiate _ (InductiveDecl mdecl)); eauto. eapply decli.
+    eapply (wf_local_instantiate _ (proj1 decli)); eauto.
     now eapply on_minductive_wf_params_indices.
   Qed.
   

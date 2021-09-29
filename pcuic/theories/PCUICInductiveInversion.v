@@ -737,7 +737,7 @@ Proof.
     apply a.
   - exists (map (subst_instance_univ u') x). split.
     * move/onParams: onmind. rewrite /on_context.
-      pose proof (wf_local_instantiate Σ (InductiveDecl mdecl) (ind_params mdecl) u').
+      pose proof (@wf_local_instantiate _ Σ (InductiveDecl mdecl) (ind_params mdecl) u').
       move=> H'. eapply X in H'; eauto.
       2:destruct decli; eauto.
       clear -wfar wfpars wfΣ hΓ cons decli t cargs sargs H0 H' a spars a0.
@@ -3778,7 +3778,7 @@ Proof.
    case_branch_context_nopars ci mdecl (puinst p) cdecl)). {
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
-    eapply (wf_local_instantiate _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
+    eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
     2:eapply isdecl.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.
@@ -3810,7 +3810,7 @@ Proof.
         #|ind_params mdecl| (subst_instance (puinst p) (cstr_args cdecl)))). {
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
-    eapply (wf_local_instantiate _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
+    eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
     2:eapply isdecl.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.
@@ -4140,7 +4140,7 @@ Proof.
    case_branch_context_nopars ci mdecl (puinst p) cdecl)). {
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
-    eapply (wf_local_instantiate _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
+    eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
     2:eapply isdecl.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.
@@ -4168,7 +4168,7 @@ Proof.
         #|ind_params mdecl| (subst_instance (puinst p) (cstr_args cdecl)))). {
     rewrite -app_context_assoc.
     eapply weaken_wf_local; tea.
-    eapply (wf_local_instantiate _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
+    eapply (@wf_local_instantiate _ _ (InductiveDecl mdecl) _ p.(puinst)) in wfargs; tea.
     2:eapply isdecl.
     rewrite !subst_instance_app in wfargs.
     rewrite - !/(app_context _ _) in wfargs.

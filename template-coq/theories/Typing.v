@@ -811,6 +811,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     mdecl.(ind_npars) = ci.(ci_npar) ->
     wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
     context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
+    consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ ps idecl.(ind_kelim) ->
@@ -1165,6 +1166,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         mdecl.(ind_npars) = ci.(ci_npar) ->
         wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
         context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
+        consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->

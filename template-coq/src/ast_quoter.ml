@@ -117,7 +117,6 @@ struct
 
   let quote_cast_kind = function
     | Constr.DEFAULTcast -> Cast
-    | Constr.REVERTcast -> RevertCast
     | Constr.NATIVEcast -> NativeCast
     | Constr.VMcast -> VmCast
 

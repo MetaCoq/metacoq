@@ -122,7 +122,6 @@ struct
   let kVmCast = ast "VmCast"
   let kNative = ast "NativeCast"
   let kCast = ast "Cast"
-  let kRevertCast = ast "RevertCast"
   let lSProp = ast "universe.lsprop"
   let lProp = ast "universe.lprop"
   let lnpe = ast "universe.lnpe"

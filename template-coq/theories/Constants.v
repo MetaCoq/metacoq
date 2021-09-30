@@ -77,7 +77,6 @@ Register MetaCoq.Template.BasicAst.cast_kind as metacoq.ast.cast_kind.
 Register MetaCoq.Template.BasicAst.VmCast as metacoq.ast.VmCast.
 Register MetaCoq.Template.BasicAst.NativeCast as metacoq.ast.NativeCast.
 Register MetaCoq.Template.BasicAst.Cast as metacoq.ast.Cast.
-Register MetaCoq.Template.BasicAst.RevertCast as metacoq.ast.RevertCast.
 Register MetaCoq.Template.BasicAst.recursivity_kind as metacoq.ast.recursivity_kind.
 Register MetaCoq.Template.BasicAst.Finite as metacoq.ast.Finite.
 Register MetaCoq.Template.BasicAst.CoFinite as metacoq.ast.CoFinite.

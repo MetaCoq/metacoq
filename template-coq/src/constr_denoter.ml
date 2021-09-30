@@ -121,8 +121,6 @@ struct
       Constr.VMcast
     else if constr_equall trm kCast then
       Constr.DEFAULTcast
-    else if constr_equall trm kRevertCast then
-      Constr.REVERTcast
     else if constr_equall trm kNative then
       Constr.VMcast
     else

@@ -354,8 +354,7 @@ Definition eq_cast_kind (c c' : cast_kind) : bool :=
   match c, c' with
   | VmCast, VmCast
   | NativeCast, NativeCast
-  | Cast, Cast
-  | RevertCast, RevertCast => true
+  | Cast, Cast => true
   | _, _ => false
   end.
 

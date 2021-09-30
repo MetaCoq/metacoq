@@ -136,7 +136,6 @@ let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
   | VmCast -> Constr.VMcast
   | NativeCast -> Constr.VMcast
   | Cast -> Constr.DEFAULTcast
-  | RevertCast -> Constr.REVERTcast
 
   (* todo(gmm): determine what of these already exist. *)
 let rec to_constr_ev env (evm : Evd.evar_map) (t : Ast0.term) : Evd.evar_map * Constr.t =

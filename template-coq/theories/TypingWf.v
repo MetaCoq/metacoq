@@ -37,20 +37,21 @@ Proof.
         -- constructor.
 Qed.
 
-Lemma on_global_env_impl `{checker_flags} Σ P Q :
+Lemma on_global_decl_impl `{checker_flags} Σ P Q kn d :
   (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
-  on_global_env P Σ -> on_global_env Q Σ.
+  on_global_env P Σ.1 ->
+  on_global_decl P Σ kn d -> on_global_decl Q Σ kn d.
 Proof.
-  intros X X0.
-  simpl in *. induction X0; constructor; auto.
-  clear IHX0. destruct d; simpl.
+  intros X X0 o.
+  destruct d; simpl.
   - destruct c; simpl. destruct cst_body0; simpl in *.
     red in o |- *. simpl in *. now eapply X.
     red in o |- *. simpl in *. now eapply X.
   - simpl in *.
-    destruct o0 as [onI onP onNP].
+    destruct o as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
+
        refine {| ind_arity_eq := X1.(ind_arity_eq);
                  ind_cunivs := X1.(ind_cunivs) |}.
        --- apply onArity in X1. unfold on_type in *; simpl in *.
@@ -79,6 +80,16 @@ Proof.
     -- red in onP. red.
        eapply All_local_env_impl. eauto.
        intros. now apply X.
+Qed.
+
+Lemma on_global_env_impl `{checker_flags} Σ P Q :
+  (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+  on_global_env P Σ -> on_global_env Q Σ.
+Proof.
+  intros X X0.
+  simpl in *. induction X0; constructor; auto.
+  clear IHX0.
+  eapply on_global_decl_impl; tea.
 Qed.
 
 Lemma All_local_env_wf_decl_inv Σ (a : context_decl) (Γ : list context_decl)
@@ -742,7 +753,8 @@ Section WfRed.
     - apply wf_mkApps_inv in X.
       eapply nth_error_all in X; eauto.
     - simpl in *. econstructor; eauto. cbn.
-      induction X; constructor; inv X1; intuition auto.
+      now rewrite -(OnOne2_length X).
+      cbn. clear H0. induction X; constructor; inv X1; intuition auto.
     - econstructor; eauto; simpl in *.
       apply IHred1; eauto.
       apply All_app_inv => //.
@@ -811,6 +823,7 @@ Section WfRed.
     - destruct t; try reflexivity. discriminate.
     - destruct l; simpl in *; congruence.
     - eapply All2_map_right_inv in X5. econstructor; eauto; solve_all.
+      now rewrite map_length in H0.
   Qed.
 
   Lemma declared_projection_wf (p : projection)
@@ -1126,6 +1139,7 @@ Section TypingWf.
     try noconf H0;
       rewrite ?map_map_compose  ?compose_on_snd ?compose_map_def ?map_length;
         f_equal; solve_all; eauto.
+    - now noconf H1.
     - now noconf H1.
     - now noconf H1.
   Qed.

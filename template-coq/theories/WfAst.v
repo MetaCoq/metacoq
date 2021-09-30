@@ -41,6 +41,7 @@ Inductive wf {Σ} : term -> Type :=
 | wf_tCase ci p c brs mdecl idecl :
     declared_inductive Σ ci.(ci_ind) mdecl idecl ->
     wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+    #|pparams p| = context_assumptions (ind_params mdecl) ->
     All wf (pparams p) -> wf (preturn p) ->
     wf c ->
     All2 (fun cdecl br => 
@@ -74,6 +75,7 @@ Definition wf_Inv Σ (t : term) : Type :=
     ∑ mdecl idecl, 
     [× declared_inductive Σ ci.(ci_ind) mdecl idecl,
        wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl),
+       #|pparams p| = context_assumptions (ind_params mdecl),
        All (wf Σ) (pparams p),
        wf Σ (preturn p), 
        wf Σ c &
@@ -88,6 +90,7 @@ Definition wf_Inv Σ (t : term) : Type :=
 Lemma wf_inv {Σ t} (w : wf Σ t) : wf_Inv Σ t.
 Proof.
   induction w; simpl; eauto; intuition eauto; try constructor.
+  exists mdecl, idecl; split; auto.
 Defined.
 
 Lemma lift_to_list Σ (P : term -> Prop) : (forall t, wf Σ t -> P t) -> forall l, All (wf Σ) l -> Forall P l.
@@ -128,6 +131,7 @@ Lemma term_wf_forall_list_ind Σ :
       P (tConstruct i n u)) ->
     (forall (ci : case_info) (p : predicate term) mdecl idecl,
         declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+        #|pparams p| = context_assumptions (ind_params mdecl) ->
         wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
         tCasePredProp P P p -> forall t : term, P t -> forall l : list (branch term),
         All2 (fun cdecl br => 
@@ -212,7 +216,7 @@ Proof.
   intros wft; revert t wft k.
   apply (term_wf_forall_list_ind Σ (fun t => forall k, wf Σ (lift n k t)));
     intros; try cbn; econstructor; simpl; eauto; try solve [solve_all].
-    destruct l; cbn in *. auto. discriminate.
+    destruct l; cbn in *. auto. discriminate. now rewrite map_length.
 Qed.
 Require Import PeanoNat.
 Import Nat.
@@ -227,6 +231,7 @@ Proof.
     destruct nth_error eqn:Heq. apply (nth_error_all Heq) in wfts.
     apply wf_lift; auto. constructor. constructor.
   - apply wf_mkApps; auto. solve_all.
+  - now rewrite map_length.
 Qed.
 
 Lemma wf_subst1 Σ t k u : wf Σ t -> wf Σ u -> wf Σ (subst1 t k u).
@@ -281,6 +286,7 @@ Proof.
     destruct l; simpl in *; congruence.
     now apply All_map.
   - cbn; econstructor; eauto; simpl; solve_all.
+    now rewrite map_length.
 Qed.
 
 Lemma wf_nth Σ:

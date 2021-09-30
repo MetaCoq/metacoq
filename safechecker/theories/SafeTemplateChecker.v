@@ -89,7 +89,7 @@ End FoldMap.
 
 Definition fix_global_env_universes (Σ : Ast.Env.global_env) : Ast.Env.global_env :=
   let fix_decl '(kn, decl) declared :=
-    let '(declu, declcstrs) := Typing.monomorphic_udecl_decl decl in
+    let '(declu, declcstrs) := Ast.monomorphic_udecl_decl decl in
     let declared := LevelSet.union declu declared in
     let dangling := dangling_universes declared declcstrs in
     ((kn, update_universes (LevelSet.union declu dangling, declcstrs) decl), LevelSet.union declared dangling)

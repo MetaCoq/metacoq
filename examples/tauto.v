@@ -518,6 +518,8 @@ Inductive well_prop Σ Γ : term -> Type :=
 | well_prop_True : well_prop Σ Γ MTrue
 .
 
+
+
 (* TODO MOVE *)
 Lemma decompose_app_eq :
   forall t f args,
@@ -535,11 +537,11 @@ Proof.
   inversion e. subst. right. reflexivity.
 Qed.
 
-Lemma decompose_app_wf :
+Lemma decompose_app_wf Σ :
   forall t f args,
-    Ast.wf t ->
+    WfAst.wf Σ t ->
     decompose_app t = (f, args) ->
-    Ast.wf f /\ Forall Ast.wf args.
+    WfAst.wf Σ f * All (WfAst.wf Σ) args.
 Proof.
   intros t f args w e.
   induction t in f, args, w, e |- *.
@@ -699,31 +701,29 @@ Proof.
 Qed.
 
 Lemma tsize_downlift :
-  forall t k,
-    Ast.wf t ->
+  forall Σ t k,
+    WfAst.wf Σ t ->
     tsize (subst [tRel 0] k t) = tsize t.
 Proof.
-  intros t k h.
-  induction t using term_forall_list_ind in k, h |- *.
+  intros Σ t k h.
+  induction h using WfAst.term_wf_forall_list_ind in k |- *.
   { simpl. destruct (Nat.leb_spec k n).
     - destruct (n - k) as [|m].
       + simpl. reflexivity.
       + simpl. destruct m. all: reflexivity.
     - reflexivity.
   }
-  all: simpl.
-  all: inversion h ; subst.
+  all: simpl; auto.
   all: try solve [ eauto ].
-  - f_equal. clear h. induction H.
+  - f_equal. induction X.
     + reflexivity.
-    + simpl. inversion H1. subst. intuition eauto.
-  - rewrite IHt1, IHt2, IHt3 by assumption. reflexivity.
+    + simpl. specialize (p k). congruence.
   - rewrite mkApps_tApp; eauto.
-    + simpl. f_equal. rewrite IHt by assumption. f_equal.
-      clear - H H5. induction H.
+    + simpl. f_equal. rewrite IHh by assumption. f_equal.
+      clear - X0. induction X0.
       * reflexivity.
-      * inversion H5. subst. simpl. intuition eauto.
-    + clear - H2. destruct t.
+      * cbn. specialize (p k); congruence.
+    + clear - H. destruct t.
       all: simpl in *.
       all: try solve [ eauto ].
       destruct (Nat.leb_spec k n).
@@ -731,30 +731,29 @@ Proof.
         -- simpl. reflexivity.
         -- simpl. destruct m. all: eauto.
       * simpl. reflexivity.
-    + clear - H3. destruct l. contradiction.
+    + clear - H0. destruct l. contradiction.
       discriminate.
   - f_equal.
     f_equal; solve_all.
     unfold predicate_size. simpl. f_equal; auto.
-    f_equal; auto. induction H3; simpl; auto.
-    destruct p. f_equal. f_equal; auto.
+    f_equal; auto. induction a; simpl; auto.
     unfold branch_size.
-    clear h H4 H5.
-    induction H6; simpl; auto.
-    destruct p. f_equal; auto.
+    clear -X1.
+    induction X1; simpl; auto.
+    destruct r. f_equal; auto.
   - f_equal.
     generalize (#|m| + k). intro p.
-    clear - X H0. induction X.
+    clear - X. induction X.
     + reflexivity.
-    + inversion H0. subst.
+    + destruct p0. subst.
       unfold mfixpoint_size.
       unfold map_def. unfold def_size.
       simpl. f_equal. intuition eauto.
   - f_equal.
     generalize (#|m| + k). intro p.
-    clear - X H0. induction X.
+    clear - X. induction X.
     + reflexivity.
-    + inversion H0. subst.
+    + destruct p0. subst.
       unfold mfixpoint_size.
       unfold map_def. unfold def_size.
       simpl. f_equal. intuition eauto.
@@ -951,11 +950,11 @@ Admitted.
 Lemma well_prop_wf :
   forall Σ Γ P,
     well_prop Σ Γ P ->
-    Ast.wf P.
+    WfAst.wf Σ P.
 Proof.
   intros Σ Γ P h.
   induction h.
-  all: try solve [ constructor ; auto using wf_lift ].
+  all: try solve [ constructor ; auto using WfAst.wf_lift ].
   - constructor. all: try easy.
     constructor.
   - constructor. all: try easy.
@@ -980,7 +979,7 @@ Proof.
     exists (Imp fA fB). split.
     + simp reify.
       apply well_prop_wf in h2 as w2.
-      rewrite simpl_subst_k by auto.
+      rewrite (simpl_subst_k Σ) by auto.
       simp reify in r1. rewrite r1.
       simp reify in r2. rewrite r2.
       reflexivity.

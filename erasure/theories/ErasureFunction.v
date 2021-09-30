@@ -2,7 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
-     PCUICReflect PCUICWeakeningEnv
+     PCUICReflect PCUICWeakeningEnv PCUICCasesContexts
      PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
@@ -35,7 +35,7 @@ Proof.
   intros wfΓ eqctx wf.
   apply wf_local_app_inv.
   eapply wf_local_app in wf => //.
-  eapply PCUICInductiveInversion.wf_local_alpha; tea.
+  eapply PCUICSpine.wf_local_alpha; tea.
   eapply All2_app => //. reflexivity.
 Qed.
 (* 

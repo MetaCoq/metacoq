@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect ssrbool.
+From Coq Require Import ssreflect ssrbool Utf8.
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 

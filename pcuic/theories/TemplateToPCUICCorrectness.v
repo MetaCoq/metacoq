@@ -1147,14 +1147,6 @@ Section Trans_Global.
     now rewrite /map_decl /set_binder_name /=.
   Qed.
   
-  Lemma map2_ext {A B C} (f g : A -> B -> C) (l : list A) (l' : list B) :
-    (forall x y, f x y = g x y) ->  
-    map2 f l l' = map2 g l l'.
-  Proof.
-    intros H.
-    induction l in l' |- *; destruct l'; simpl; auto. f_equal; eauto.
-  Qed.
-  
   Lemma map2_trans l l' :
     map2
       (fun (x : aname) (y : BasicAst.context_decl Ast.term) =>

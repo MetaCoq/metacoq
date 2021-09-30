@@ -1054,6 +1054,8 @@ Proof.
     destruct X as [? []]. red in X0. econstructor; cbn; eauto; tea.
     eapply trans_declared_inductive in d; tea.
     eapply trans_ind_predicate_context_eq => //. now symmetry.
+    rewrite map_length. cbn. rewrite context_assumptions_map //. 
+    destruct w. now rewrite -(PCUICClosed.declared_minductive_ind_npars (proj1 d)).
     cbn. solve_all. eapply All2_map, All2_map_right. solve_all.
     eapply All2i_All2; tea. cbv beta.
     intros cdecl br [] []. destruct a2.
@@ -1138,31 +1140,6 @@ Proof.
   cbn. intros x y H. destruct y; apply H.
 Qed.
 
-Lemma trans_case_predicate_context ci mdecl idecl p :
- let p' := trans_predicate (PCUICAst.map_predicate id trans trans trans_local p) in  
- (case_predicate_context ci (trans_minductive_body mdecl) (trans_one_ind_body idecl) p') =
- trans_local (map2 PCUICEnvironment.set_binder_name (forget_types (PCUICAst.pcontext p)) 
-  (case_predicate_context' ci mdecl idecl p)).
-Proof.
-  rewrite /case_predicate_context /case_predicate_context' /ind_binder.
-  rewrite /trans_local map_map2.
-  setoid_rewrite trans_set_binder.
-  rewrite /case_predicate_context_gen.
-  rewrite map2_map_map. f_equal.
-  { cbn. rewrite map_map_compose. reflexivity. }
-  cbn [map]. f_equal.
-  rewrite /trans_decl /=. f_equal.
-  rewrite trans_mkApps; f_equal.
-  rewrite map_app !map_map_compose.
-  rewrite trans_to_extended_list.
-  rewrite /pre_case_predicate_context_gen /inst_case_context /ind_predicate_context /=.
-  (* rewrite subst_context_snoc.
-  f_equal.
-  setoid_rewrite trans_lift. now rewrite map_length.
-  rewrite -trans_expand_lets_ctx -trans_subst_instance_ctx.
-  now rewrite -map_rev -trans_subst_context. *)
-Admitted.
-
 Lemma trans_local_set_binder nas Γ : 
   trans_local (map2 PCUICEnvironment.set_binder_name nas Γ) =
   map2 set_binder_name nas (trans_local Γ).
@@ -1198,7 +1175,18 @@ Proof.
   apply IHX.
 Qed.
 
-Lemma trans_case_predicate_context' {cf} {Σ : PCUICEnvironment.global_env_ext}
+Lemma map2_trans l l' :
+  map2
+  (λ (x : aname) (y : PCUICEnvironment.context_decl),
+      trans_decl (PCUICEnvironment.set_binder_name x y)) l l' =
+  map2 (fun (x : aname) (y : PCUICEnvironment.context_decl) =>
+    Ast.Env.set_binder_name x (trans_decl y)) l l'.
+Proof.
+  eapply map2_ext.
+  intros x y. rewrite /trans_decl. now destruct y; cbn.
+Qed.
+
+Lemma trans_case_predicate_context {cf} {Σ : PCUICEnvironment.global_env_ext}
   {wfΣ : PCUICTyping.wf Σ} Γ ci mdecl idecl p : 
   S.declared_inductive Σ ci mdecl idecl ->
   S.consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p) → 
@@ -1212,14 +1200,16 @@ Lemma trans_case_predicate_context' {cf} {Σ : PCUICEnvironment.global_env_ext}
   (trans_local (PCUICCases.case_predicate_context ci mdecl idecl p)).
 Proof.
   intros.
-  rewrite trans_case_predicate_context.
-  eapply trans_local_set_binder_name_eq.
-  etransitivity.
-  eapply case_predicate_context_alpha; tea.
-  eapply Forall2_All2. now destruct H1.
-  rewrite /PCUICCases.case_predicate_context /case_predicate_context_gen.
-  eapply eq_binder_annots_eq.
-  now eapply wf_pre_case_predicate_context_gen.
+  rewrite /case_predicate_context /PCUICCases.case_predicate_context.
+  rewrite /case_predicate_context_gen /PCUICCases.case_predicate_context_gen.
+  rewrite /trans_local map_map2 map2_trans.
+  rewrite -PCUICUnivSubstitution.map2_map_r. f_equal.
+  rewrite /p' /=. now rewrite forget_types_map_context.
+  rewrite /pre_case_predicate_context_gen /inst_case_context.
+  rewrite /PCUICCases.pre_case_predicate_context_gen /PCUICCases.inst_case_context.
+  rewrite [map _ _]trans_subst_context map_rev. f_equal.
+  rewrite trans_subst_instance_ctx. 
+  now rewrite trans_ind_predicate_context.
 Qed.
 
 Lemma OnOne2All2i_OnOne2All {A B : Type} (l1 l2 : list A) (l3 : list B) 
@@ -1363,7 +1353,7 @@ Proof.
     rewrite [trans_local _]map_app.
     eapply All2_app; [|reflexivity].
     symmetry. etransitivity.
-    rewrite (trans_case_predicate_context' _ _ _ _ p d c0 s w).
+    rewrite (trans_case_predicate_context _ _ _ _ p d c0 s w).
     reflexivity.
     eapply alpha_eq_trans.
     eapply All2_fold_All2, PCUICAlpha.inst_case_predicate_context_eq => //.
@@ -2299,7 +2289,7 @@ Proof.
     rewrite /predctx.
     have hty := validity X7.
     eapply isType_mkApps_Ind_smash in hty as []; tea.
-    erewrite <- trans_case_predicate_context'; tea.
+    erewrite <- trans_case_predicate_context; tea.
     2:{ eapply (wf_predicate_length_pars H0). }
     eapply TT.type_Case; auto.
     + now apply trans_declared_inductive.
@@ -2310,12 +2300,12 @@ Proof.
     + cbn. rewrite /id.
       now apply trans_consistent_instance_ext.
     + cbn [Ast.pparams Ast.pcontext trans_predicate].
-      rewrite (trans_case_predicate_context' Γ); tea.
+      rewrite (trans_case_predicate_context Γ); tea.
       now rewrite -trans_local_app. 
     + rewrite <- trans_global_ext_constraints.
       eassumption.
     + now rewrite trans_mkApps map_app in X8.
-    + rewrite (trans_case_predicate_context' Γ); tea.
+    + rewrite (trans_case_predicate_context Γ); tea.
       eapply All2i_map. eapply All2i_map_right.
       eapply Forall2_All2 in H4.
       eapply All2i_All2_mix_left in X9; tea.

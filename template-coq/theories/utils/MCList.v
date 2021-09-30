@@ -59,6 +59,14 @@ Fixpoint map2 {A B C} (f : A -> B -> C) (l : list A) (l' : list B) : list C :=
   | hd :: tl, hd' :: tl' => f hd hd' :: map2 f tl tl'
   | _, _ => []
   end.
+  
+Lemma map2_ext {A B C} (f g : A -> B -> C) (l : list A) (l' : list B) :
+  (forall x y, f x y = g x y) ->  
+  map2 f l l' = map2 g l l'.
+Proof.
+  intros H.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal; eauto.
+Qed.
 
 Lemma nth_error_safe_nth {A} n (l : list A) (isdecl : n < Datatypes.length l) :
   nth_error l n = Some (safe_nth l (exist _ n isdecl)).

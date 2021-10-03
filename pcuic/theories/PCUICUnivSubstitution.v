@@ -1603,9 +1603,9 @@ Proof.
            X2 H1 X3 notCoFinite X4 btys H2 X5 u0 univs X6 HSub H4.
     rewrite subst_instance_constr_mkApps in *.
     rewrite map_app. cbn. rewrite map_skipn.
-    eapply type_Case with (u1:=subst_instance_instance u0 u)
-                          (ps0 :=subst_instance_univ u0 ps)
-                          (btys0:=map (on_snd (subst_instance_constr u0)) btys);
+    eapply @type_Case with (u:=subst_instance_instance u0 u)
+                           (ps :=subst_instance_univ u0 ps)
+                           (btys:=map (on_snd (subst_instance_constr u0)) btys);
       eauto.
     + clear -H0. rewrite firstn_map. unfold build_case_predicate_type. simpl.
       rewrite <- subst_instance_constr_two, <- subst_instance_context_two.

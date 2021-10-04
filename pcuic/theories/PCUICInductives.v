@@ -591,13 +591,21 @@ Proof.
   now eapply isType_it_mkProd_or_LetIn_inv in isty.
 Qed.
 
-Definition projection_context_gen mdecl idecl ind := 
+Definition projection_context_gen ind mdecl idecl := 
   let u := abstract_instance (ind_universes mdecl) in
   smash_context [] (ind_params mdecl),,
   vass ({| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |})
       (mkApps (tInd ind u) (to_extended_list (smash_context [] (ind_params mdecl)))).
 
-Definition projection_context mdecl idecl ind u := 
+Definition projection_arg_ctx ind mdecl cdecl p :=
+  let indsubst := inds (inductive_mind ind) (abstract_instance (ind_universes mdecl)) mdecl.(ind_bodies) in
+  subst_context (extended_subst (ind_params mdecl) 0) 1
+    (lift_context 1 0
+        (subst_context indsubst #|ind_params mdecl|
+          (skipn (context_assumptions (cstr_args cdecl) - p)
+              (smash_context [] (cstr_args cdecl))))).
+
+Definition projection_context ind mdecl idecl u := 
   smash_context [] (subst_instance u (ind_params mdecl)),,
   vass ({| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |})
       (mkApps (tInd ind u) (to_extended_list (smash_context [] (subst_instance u (ind_params mdecl))))).
@@ -702,7 +710,7 @@ Lemma wf_projection_context_gen {cf:checker_flags} {Σ : global_env_ext} {mdecl 
   declared_inductive Σ ind mdecl idecl ->
   on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
     idecl (ind_indices idecl) cdecl -> 
-  wf_local (Σ.1, ind_universes mdecl) (projection_context_gen mdecl idecl ind).
+  wf_local (Σ.1, ind_universes mdecl) (projection_context_gen ind mdecl idecl).
 Proof.
   intros wfΣ hdecl onps.
   pose proof (on_declared_inductive hdecl) as [onmib oib]; auto.
@@ -729,6 +737,78 @@ Proof.
   now cbn in *.
   eapply isType_weaken; auto.
   now rewrite (oib.(ind_arity_eq)) in X.
+Qed.
+
+Lemma subst_context_extended_subst_expand Γ Δ :
+  closedn_ctx #|Γ| Δ ->
+  subst_context (extended_subst Γ 0) 0 Δ = 
+  expand_lets_ctx Γ Δ.
+Proof.
+  intros.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  rewrite closed_ctx_lift //.
+Qed.
+
+Lemma declared_constructor_wf_pars_args 
+  {cf:checker_flags} {Σ : global_env_ext} {ind i mdecl idecl cdecl} {wfΣ : wf Σ.1} :
+  declared_constructor Σ (ind, i) mdecl idecl cdecl ->
+  wf_local (Σ.1, ind_universes mdecl) 
+    (ind_params mdecl ,,, subst_context
+    (inds (inductive_mind ind) (abstract_instance (ind_universes mdecl))
+       (ind_bodies mdecl)) #|ind_params mdecl| (cstr_args cdecl)).
+Proof.
+  intros onc.
+  epose proof (on_declared_constructor onc) as [[onmib oib] [cs []]].
+  eapply on_cargs in o.
+  eapply sorts_local_ctx_wf_local in o.
+  2:{ eapply weaken_wf_local => //.
+      now eapply wf_arities_context'.
+      now eapply onParams in onmib. }
+  rewrite -app_context_assoc -[_ ,,, _]app_context_nil_l app_context_assoc in o.
+  eapply (substitution_wf_local (Γ := [])) in o.
+  2:eapply subslet_inds_gen, onc.
+  rewrite app_context_nil_l in o.
+  rewrite subst_context_app in o.
+  rewrite closed_ctx_subst in o.
+  eapply declared_inductive_closed_params, onc.
+  now rewrite Nat.add_0_r in o.
+Qed.
+
+Lemma wf_projection_arg_ctx {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl cdecl} :
+  wf Σ.1 ->
+  declared_constructor Σ (ind, 0) mdecl idecl cdecl ->
+  on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
+    idecl (ind_indices idecl) cdecl -> 
+  forall k,
+  wf_local (Σ.1, ind_universes mdecl) 
+    (projection_context_gen ind mdecl idecl ,,, projection_arg_ctx ind mdecl cdecl k).
+Proof.
+  intros wfΣ decli onps k.
+  rewrite /projection_arg_ctx.
+  rewrite subst_context_lift_context_comm //.
+  rewrite /projection_context_gen.
+  eapply (weakening_wf_local (Γ'' := [_])).
+  2:eapply wf_projection_context_gen; tea. 2:apply decli.
+  rewrite - !skipn_subst_context.
+  eapply wf_local_app_skipn.
+  rewrite -(smash_context_subst []) /=.
+  rewrite -(smash_context_subst []) /=.
+  rewrite subst_context_nil.
+  rewrite subst_context_extended_subst_expand.
+  { eapply declared_constructor_wf_pars_args in decli.
+    eapply closed_wf_local in decli => //.
+    rewrite closedn_ctx_app in decli.
+    now move/andP: decli => []. }
+  rewrite -(expand_lets_smash_context _ []).
+  rewrite -smash_context_app_expand. eapply wf_local_smash_context.
+  destruct onps.
+  pose proof (on_declared_inductive decli) as [onmib oib]; auto.
+  have onpars := onParams onmib.
+  have oncstr := onConstructors oib.
+  destruct (ind_ctors idecl) as [|? []] eqn:hctors; try discriminate.
+  red in oncstr. depelim oncstr.
+  depelim oncstr.
+  now eapply declared_constructor_wf_pars_args.
 Qed.
 
 Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
@@ -767,14 +847,13 @@ Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} 
                × projection_type mdecl ind i0 (decl_type decl) = x.2)
               × projection_type mdecl ind i0 (decl_type decl) =
                 projection_type' mdecl ind i0 (decl_type decl))),
+  on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
+    idecl (ind_indices idecl) c -> 
   i <= context_assumptions (cstr_args c) ->
   context_assumptions (ind_params mdecl) = ind_npars mdecl ->
   #|ind_projs idecl| = context_assumptions (cstr_args c) ->
-  subslet (Σ.1, ind_universes mdecl)
-  (smash_context [] (ind_params mdecl),,
-   vass indb
-     (mkApps (tInd ind (abstract_instance (ind_universes mdecl)))
-        (to_extended_list (smash_context [] (ind_params mdecl)))))
+  wf_subslet (Σ.1, ind_universes mdecl)
+  (projection_context_gen ind mdecl idecl)
   (projs ind (ind_npars mdecl) i)
   (subst_context (extended_subst (ind_params mdecl) 0) 1
      (lift_context 1 0
@@ -783,6 +862,9 @@ Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} 
               (smash_context [] (cstr_args c)))))).
 Proof.
   intros.
+  split.
+  { eapply wf_projection_arg_ctx; tea. split => //.
+    now rewrite H. }
   induction i as [|i IHi].
   - rewrite Nat.sub_0_r.
     rewrite skipn_all2.
@@ -882,7 +964,7 @@ Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind i
     on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
       idecl (ind_indices idecl) cs -> 
     Alli (fun i pdecl => 
-    isType (Σ.1, ind_universes mdecl) (projection_context_gen mdecl idecl ind) pdecl.2 * 
+    isType (Σ.1, ind_universes mdecl) (projection_context_gen ind mdecl idecl) pdecl.2 * 
       ∑ decl, 
         (nth_error (smash_context [] (cstr_args cs)) 
           (context_assumptions (cstr_args cs) - S i) = Some decl) *
@@ -1163,8 +1245,8 @@ Lemma declared_projections_subslet {cf:checker_flags} {Σ : global_env_ext} {mde
   forall c, ind_ctors idecl = [c] ->
   on_projections mdecl (inductive_mind ind) (inductive_ind ind) idecl (ind_indices idecl) c -> 
   forall i, i <= context_assumptions (cstr_args c) ->
-  subslet (Σ.1, ind_universes mdecl)
-    (projection_context_gen mdecl idecl ind)
+  wf_subslet (Σ.1, ind_universes mdecl)
+    (projection_context_gen ind mdecl idecl)
     (projs ind (ind_npars mdecl) i)
     (subst_context (extended_subst (ind_params mdecl) 0) 1
       (lift_context 1 0
@@ -1346,7 +1428,7 @@ Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idec
   wf Σ.1 ->
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  wf_local Σ (projection_context mdecl idecl p.1.1 u).
+  wf_local Σ (projection_context p.1.1 mdecl idecl u).
 Proof.
   move=> wfΣ decli.
   pose proof (on_declared_projection decli) as [[onmind eqctr] onind].
@@ -1492,7 +1574,7 @@ Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p cdecl pdecl 
   wf Σ.1 ->
   Σ ;;; Γ |- c : mkApps (tInd p.1.1 u) args ->
   isType Σ Γ (mkApps (tInd p.1.1 u) args) ->
-  subslet Σ Γ (c :: List.rev args) (projection_context mdecl idecl p.1.1 u). 
+  subslet Σ Γ (c :: List.rev args) (projection_context p.1.1 mdecl idecl u). 
 Proof.
   intros declp wfΣ Hc Ha.
   destruct (on_declared_projection declp) as [[onind eqctr] y].

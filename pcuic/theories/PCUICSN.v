@@ -14,8 +14,10 @@ Section Normalisation.
 
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-(* todo: missing wf_env hypothesis !*)
+
+  (* todo: missing wf_env hypothesis !*)
   Axiom normalisation :
+    wf Σ ->
     forall Γ t,
       welltyped Σ Γ t ->
       Acc (cored Σ Γ) t.
@@ -136,6 +138,7 @@ Section Alpha.
     destruct hΣ.
     intros Γ u h.
     apply normalisation in h.
+    2: assumption.
     eapply Acc_cored_cored'.
     - eassumption.
     - apply eq_term_refl.

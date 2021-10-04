@@ -167,7 +167,7 @@ Section fix_sigma.
   Definition wf_hnf_subterm_rel : WellFounded hnf_subterm_rel.
   Proof.
     intros (Γ & s & H). sq'.
-    induction (normalisation Σ Γ s H) as [s _ IH].
+    induction (normalisation Σ _ Γ s H) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?) [(t' & r & ts & eqctx)].
@@ -239,7 +239,7 @@ Section fix_sigma.
   Definition wf_redp_subterm_rel : WellFounded redp_subterm_rel.
   Proof.
     intros (Γ & s & H). sq'.
-    induction (normalisation Σ Γ s H) as [s _ IH].
+    induction (normalisation Σ _ Γ s H) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?). intros [[[r eq]|[ts eqctx]]].

@@ -1018,6 +1018,200 @@ Proof.
   destruct d as [decli [nthp parseq]].
   simpl in *. rewrite parseq. lia.
 Qed.
+Notation "!! t" := ltac:(refine t) (at level 200, only parsing).
+
+Lemma isType_mkApps_Ind_smash {cf:checker_flags} {Σ Γ ind u params args} {wfΣ : wf Σ} {mdecl idecl} :
+  declared_inductive Σ.1 ind mdecl idecl ->
+  isType Σ Γ (mkApps (tInd ind u) (params ++ args)) ->
+  #|params| = ind_npars mdecl ->
+  let parctx := subst_instance u mdecl.(ind_params) in
+  let argctx := subst_instance u idecl.(ind_indices) in
+  spine_subst Σ Γ params (List.rev params) (smash_context [] parctx) ×
+  spine_subst Σ Γ args (List.rev args) (smash_context [] (subst_context_let_expand (List.rev params) parctx argctx)) ×
+  consistent_instance_ext Σ (ind_universes mdecl) u.
+Proof.
+  move=> isdecl isty hpars.
+  pose proof (isType_wf_local isty).
+  destruct isty as [s Hs].
+  eapply invert_type_mkApps_ind in Hs as [sp cu]; tea.
+  move=> parctx argctx.
+  erewrite ind_arity_eq in sp.
+  2: eapply PCUICInductives.oib ; eauto.
+  rewrite !subst_instance_it_mkProd_or_LetIn in sp.
+  rewrite -it_mkProd_or_LetIn_app /= in sp.
+  eapply arity_typing_spine in sp as [hle hs [insts sp]]; tea.
+  eapply spine_subst_smash in sp; tea.
+  rewrite smash_context_app_expand in sp.
+  rewrite List.rev_app_distr in sp.
+  pose proof (declared_minductive_ind_npars isdecl) as hnpars.
+  eapply spine_subst_app_inv in sp as [sppars spargs]; tea.
+  2:{ rewrite context_assumptions_smash_context /=. len. }
+  len in sppars. len in hle. len in spargs.
+  simpl in *.
+  assert (context_assumptions (ind_indices idecl) = #|List.rev args|) by (len; lia).
+  rewrite H skipn_all_app in sppars, spargs.
+  split => //. split => //.
+  rewrite -(Nat.add_0_r #|List.rev args|) firstn_app_2 firstn_0 // app_nil_r in spargs.
+  rewrite (smash_context_subst []).
+  rewrite -(expand_lets_smash_context _ []).
+  exact spargs.
+Qed.
+
+Lemma instantiate_subslet {cf Σ} {Γ s Δ} {c} {decl : global_decl} {u : Instance.t} {wfΣ : wf Σ.1} :
+  lookup_env Σ.1 c = Some decl ->
+	subslet (Σ.1, universes_decl_of_decl decl) Γ s Δ ->
+  consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
+  subslet Σ Γ@[u] s@[u] Δ@[u].
+Proof.
+  intros hl subs cu.
+  induction subs.
+  - constructor.
+  - cbn. constructor; auto.
+    cbn. rewrite -subst_instance_subst. eapply typing_subst_instance_decl; tea.
+  - cbn. rewrite subst_instance_subst. constructor; auto.
+    cbn. rewrite - !subst_instance_subst.
+    eapply typing_subst_instance_decl; tea.
+Qed.
+
+Lemma projection_context_gen_inst {cf} {Σ mdecl idecl ind u} :
+  declared_inductive Σ.1 ind mdecl idecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  (projection_context_gen mdecl idecl ind)@[u] = 
+  projection_context mdecl idecl ind u.
+Proof.
+  intros isdecl cu.
+  rewrite /projection_context /projection_context_gen.
+  rewrite /snoc /= -(subst_instance_smash _ _ []).
+  cbn. f_equal. rewrite /map_decl /= /vass /=.
+  f_equal. rewrite subst_instance_mkApps /=.
+  rewrite subst_instance_to_extended_list. f_equal.
+  cbn.
+  now rewrite [subst_instance_instance _ _](subst_instance_id_mdecl _ _ _ cu).
+Qed.
+
+Lemma substitution_subslet {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' Δ s s' Δ'} :
+  subslet Σ Γ s Δ ->
+  subslet Σ (Γ ,,, Δ ,,, Γ') s' Δ' ->
+  subslet Σ (Γ ,,, subst_context s 0 Γ') (map (subst s #|Γ'|) s') (subst_context s #|Γ'| Δ').
+Proof.
+  intros subl.
+  induction 1 in s, subl |- *.
+  * cbn. intros. constructor.
+  * cbn. rewrite subst_context_snoc. constructor; auto.
+    eapply substitution in t0; tea. 
+    cbn. rewrite -(subslet_length X).
+    now rewrite -distr_subst.
+  * cbn. rewrite subst_context_snoc.
+    eapply substitution in t0; tea.
+    specialize (IHX _ subl).
+    epose proof (cons_let_def _ _ _ _ _ _ _ IHX).
+    rewrite !distr_subst in t0.
+    specialize (X0 t0).
+    rewrite -(subslet_length X).
+    now rewrite -distr_subst in X0.
+Qed.
+
+Lemma subslet_projs {cf:checker_flags} {Σ} {wfΣ : wf Σ} {i mdecl idecl args} :
+  declared_inductive Σ.1 i mdecl idecl ->
+  match ind_ctors idecl return Type with
+  | [cs] => 
+    on_projections mdecl (inductive_mind i) (inductive_ind i) 
+     idecl (ind_indices idecl) cs -> 
+     forall Γ t u,
+     let indsubst := inds (inductive_mind i) u (ind_bodies mdecl) in
+     Σ;;; Γ |- t : mkApps (tInd i u) args ->
+     subslet Σ Γ
+      (projs_inst i (ind_npars mdecl) (context_assumptions (cstr_args cs)) t)
+      (smash_context []
+        (subst_context (inds (inductive_mind i) u (ind_bodies mdecl))
+           #|ind_params mdecl| (subst_instance u (cstr_args cs))))
+  | _ => True
+  end.
+Proof.
+  intros Hdecl.
+  destruct ind_ctors as [|cs []] eqn:Heq; trivial.
+  intros onp. simpl. intros Γ t u. 
+  rewrite (smash_context_subst []).
+  assert (#|PCUICEnvironment.ind_projs idecl| >=
+  PCUICEnvironment.context_assumptions (cstr_args cs)). 
+  { destruct onp. lia. }
+  intros Ht.
+  epose proof (declared_projections_subslet _ Hdecl cs Heq onp _ (Nat.le_refl _)).
+  have v := !!(validity Ht). eapply isType_mkApps_Ind_inv in v as [? [? []]]; tea; pcuic.
+  eapply (instantiate_subslet (decl:=InductiveDecl mdecl)) in X; tea. 2:apply Hdecl.
+  move: X. rewrite Nat.sub_diag skipn_0.
+  rewrite subst_instance_subst_context subst_instance_lift_context.
+  rewrite subst_context_lift_context_comm //.
+  rewrite (projection_context_gen_inst Hdecl) //.
+  rewrite /projection_context.
+  eapply spine_subst_smash in s.
+  intros Hs.
+  have wfΓ : wf_local Σ Γ by pcuic.
+  eapply weaken_subslet in Hs;tea.
+  2:{ pcuic. }
+  eapply substitution_subslet in Hs.
+
+
+  eapply 
+  
+  rewrite Heq in X.
+  specialize (X onp).
+  revert X.
+  induction (cstr_args cs) using PCUICInduction.ctx_length_ind.
+  { simpl. constructor. }
+  simpl. intros a.
+  destruct d as [na [b|] ty]. len.
+  - cbn. eapply X; auto.
+  - cbn. rewrite smash_context_acc /= {3}/map_decl /= {1}/map_decl /=.
+    rewrite subst_context_snoc /=.
+    rewrite /subst_decl {2}/map_decl /=.
+    simpl in H.
+    specialize (X Γ0 ltac:(reflexivity) ltac:(len)).
+    forward X.
+    eapply Alli_impl; tea. cbn => n [pid pty].
+    { intros [isty [decl [[[Hnth Hwf] e] e']]].
+      split; auto. exists decl. repeat split; auto.
+      rewrite smash_context_acc /= in Hnth.
+      assert (n < context_assumptions Γ0).
+      apply nth_error_Some_length in Hnth. cbn in Hnth; len in Hnth. admit.
+      assert (S (context_assumptions Γ0) - S n = S (context_assumptions Γ0 - S n)). lia.
+      now rewrite H1 /= in Hnth.
+      rewrite smash_context_acc -app_assoc in Hwf. now eapply wf_local_app_inv in Hwf. }
+    constructor; auto.
+    destruct (nth_error_Some (ind_projs idecl) (context_assumptions Γ0)).
+    forward H1. lia.
+    destruct nth_error eqn:heq. 2:congruence.
+    assert (Ht' := PCUICValidity.validity Ht). pose proof (isType_wf_local Ht').
+    eapply isType_mkApps_Ind_inv in Ht' as [parsubst [argsubst [sppars spargs npars ninds cu']]]; tea.
+    assert (declp : declared_projection Σ.1 (i, ind_npars mdecl, context_assumptions Γ0) mdecl idecl cs p).
+    { split. split. exact Hdecl. cbn. now rewrite Heq. split; eauto. }
+    eapply type_Cumul.
+    { econstructor; tea.
+      pose proof (PCUICContextSubst.context_subst_length2 sppars).
+      rewrite -[args](firstn_skipn (ind_npars mdecl)).
+      rewrite app_length npars ninds.
+      eapply on_projs_noidx in onp.
+      destruct (ind_indices idecl) => //. }
+    move: (declared_projection_type_and_eq wfΣ declp).
+    rewrite Heq. cbn; move=>[[_ isTy] [decl [[[hargs wfargs] eq] eq']]].
+    rewrite -/(expand_lets_k _ _ _).
+    eapply (isType_subst_instance_decl (decl := InductiveDecl mdecl)) in isTy; tea. 2:eapply Hdecl.
+    eapply (PCUICSubstitution.substitution (Δ := []) (T:=tSort _)).
+    eapply X. len. cbn.
+    destruct isTy.
+    unfold projection_type, projection_type' in *.
+    eapply nth_error_alli in a; tea.
+    len. cbn in a.
+    destruct a as [isTy [decl' [[hnth' ?] a]]].
+    destruct hnth' as [hnth' ?]. rewrite Nat.sub_diag in hnth'.
+    destruct (nth_error (smash_context _ _) 0) eqn:eqs => //. noconf hnth'.
+    rewrite smash_context_acc in eqs.
+    rewrite
+    cbn in eqs. noconf eqs. cbn in *.
+    destruct on_projs as [bn eqp]. cbn in eqp.
+    rewrite eqp subst_instance_subst instantiate_inds //. apply Hdecl. admit.
+
+Qed.*)
 
 Ltac unf_env := 
   change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn in *; 
@@ -3365,43 +3559,6 @@ Proof. rewrite /expand_lets_ctx /expand_lets_k_ctx /expand_lets /expand_lets_k.
   simpl. rewrite (lift_context_app _ _ [] [_]) /= (subst_context_app _ _ [] [_]) /=.
   f_equal.
   now rewrite compose_map_decl.
-Qed.
-
-Lemma isType_mkApps_Ind_smash {cf:checker_flags} {Σ Γ ind u params args} {wfΣ : wf Σ} {mdecl idecl} :
-  declared_inductive Σ.1 ind mdecl idecl ->
-  isType Σ Γ (mkApps (tInd ind u) (params ++ args)) ->
-  #|params| = ind_npars mdecl ->
-  let parctx := subst_instance u mdecl.(ind_params) in
-  let argctx := subst_instance u idecl.(ind_indices) in
-  spine_subst Σ Γ params (List.rev params) (smash_context [] parctx) ×
-  spine_subst Σ Γ args (List.rev args) (smash_context [] (subst_context_let_expand (List.rev params) parctx argctx)) ×
-  consistent_instance_ext Σ (ind_universes mdecl) u.
-Proof.
-  move=> isdecl isty hpars.
-  pose proof (isType_wf_local isty).
-  destruct isty as [s Hs].
-  eapply invert_type_mkApps_ind in Hs as [sp cu]; tea.
-  move=> parctx argctx.
-  erewrite ind_arity_eq in sp.
-  2: eapply PCUICInductives.oib ; eauto.
-  rewrite !subst_instance_it_mkProd_or_LetIn in sp.
-  rewrite -it_mkProd_or_LetIn_app /= in sp.
-  eapply arity_typing_spine in sp as [hle hs [insts sp]]; tea.
-  eapply spine_subst_smash in sp; tea.
-  rewrite smash_context_app_expand in sp.
-  rewrite List.rev_app_distr in sp.
-  pose proof (declared_minductive_ind_npars isdecl) as hnpars.
-  eapply spine_subst_app_inv in sp as [sppars spargs]; tea.
-  2:{ rewrite context_assumptions_smash_context /=. len. }
-  len in sppars. len in hle. len in spargs.
-  simpl in *.
-  assert (context_assumptions (ind_indices idecl) = #|List.rev args|) by (len; lia).
-  rewrite H skipn_all_app in sppars, spargs.
-  split => //. split => //.
-  rewrite -(Nat.add_0_r #|List.rev args|) firstn_app_2 firstn_0 // app_nil_r in spargs.
-  rewrite (smash_context_subst []).
-  rewrite -(expand_lets_smash_context _ []).
-  exact spargs.
 Qed.
 
 Lemma subst_let_expand_app s Γ s' Δ k :

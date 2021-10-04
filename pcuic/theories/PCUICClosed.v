@@ -578,9 +578,9 @@ Lemma weaken_env_prop_closed {cf:checker_flags} :
   closedn #|Γ| t && closedn #|Γ| T)).
 Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
 
-Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {mdecl idecl p pdecl} : 
+Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {mdecl idecl cdecl p pdecl} : 
   wf Σ ->
-  declared_projection Σ p mdecl idecl pdecl ->
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
   Forall_decls_typing
   (fun _ (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T) Σ ->
@@ -810,13 +810,13 @@ Proof.
     pose proof (onProjections oib).
     destruct (eq_dec (ind_projs x) []) as [->|eq]; try constructor.
     specialize (X eq). clear eq.
-    destruct (ind_ctors x) as [|? []]; try contradiction.
+    destruct (ind_ctors x) as [|cdecl []] eqn:hcdecl; try contradiction.
     apply on_projs in X.
     assert (Alli (fun i pdecl => declared_projection Σ 
-     (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) mdecl x pdecl)
+     (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) mdecl x cdecl pdecl)
       0 (ind_projs x)).
     { eapply forall_nth_error_Alli.
-      intros. split; auto. }
+      intros. split; auto. split; auto. cbn. now rewrite hcdecl. }
     eapply (Alli_All X0). intros.
     now eapply declared_projection_closed_ind in H.
 Qed.
@@ -1356,9 +1356,9 @@ Proof.
   now simpl in cli.
 Qed.
 
-Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl p pdecl} : 
+Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl p cdecl pdecl} : 
   wf Σ ->
-  declared_projection Σ p mdecl idecl pdecl ->
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
   intros; eapply declared_projection_closed_ind; eauto.
@@ -1606,8 +1606,8 @@ Proof.
 Qed.
 
 Lemma declared_projection_closed_type {cf:checker_flags} 
-  {Σ mdecl idecl p pdecl} {wfΣ : wf Σ} :
-  declared_projection Σ p mdecl idecl pdecl ->
+  {Σ mdecl idecl p cdecl pdecl} {wfΣ : wf Σ} :
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
   intros decl.

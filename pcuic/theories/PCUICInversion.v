@@ -268,8 +268,8 @@ Section Inversion.
   Lemma inversion_Proj :
     forall {Γ p c T},
       Σ ;;; Γ |- tProj p c : T ->
-      ∑ u mdecl idecl pdecl args,
-        declared_projection Σ p mdecl idecl pdecl ×
+      ∑ u mdecl idecl cdecl pdecl args,
+        declared_projection Σ p mdecl idecl cdecl pdecl ×
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
         #|args| = ind_npars mdecl ×
         let ty := snd pdecl in

@@ -1119,8 +1119,8 @@ Qed.
       move/andP: H1 => [/wf_universe_instanceP wfu wfargs].
 
       eapply (wf_universes_inst (ind_universes mdecl)); eauto.
-      exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
-      generalize (weaken_lookup_on_global_env'' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
+      exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 (proj1 isdecl)))).
+      generalize (weaken_lookup_on_global_env'' Σ.1 _ _ wf (proj1 (proj1 (proj1 isdecl)))).
       simpl. intros H'.
       eapply sub_context_set_trans; eauto.
       eapply global_context_set_sub_ext.

@@ -827,13 +827,13 @@ Section WfRed.
   Qed.
 
   Lemma declared_projection_wf (p : projection)
-          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (pdecl : ident * term) :
-      declared_projection Σ p mdecl idecl pdecl ->
+          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) cdecl (pdecl : ident * term) :
+      declared_projection Σ p mdecl idecl cdecl pdecl ->
       Forall_decls_typing (fun (Σ : global_env_ext) (_ : context) (t T : term) => WfAst.wf Σ t * WfAst.wf Σ T) Σ ->
       WfAst.wf Σ (snd pdecl).
   Proof.
     intros isdecl X.
-    destruct isdecl as [[Hmdecl Hidecl] Hpdecl].
+    destruct isdecl as [[[Hmdecl Hidecl] Hcdecl] Hpdecl].
     eapply Forall_decls_on_global_wf in X.
     destruct (lookup_on_global_env X Hmdecl) as [Σ' [wfΣ' [ext prf]]]; eauto.
     assert (wfpars := on_inductive_wf_params prf).
@@ -1017,25 +1017,6 @@ Section TypingWf.
     Σ ;;; Γ |- t : T -> WfAst.wf Σ.1 t * WfAst.wf Σ.1 T.
   Proof.
     intros. eapply typing_wf_gen in X; intuition eauto with wf.
-  Qed.
-  
-  Lemma declared_minductive_declared {Σ : global_env_ext} {mind} {mdecl} :
-    wf Σ.1 ->  
-    declared_minductive Σ mind mdecl ->
-    (Alli (fun i decl => declared_inductive Σ {| inductive_mind := mind; inductive_ind := i |} mdecl decl)
-      0 (ind_bodies mdecl)).
-  Proof.
-  intros; eapply forall_nth_error_Alli. intros; split; auto.
-  Qed.
-
-  Lemma declared_inductive_declared {Σ : global_env_ext}
-    {ind mdecl idecl} :
-    wf Σ.1 ->  
-    declared_inductive Σ ind mdecl idecl ->
-    (Alli (fun i decl => declared_constructor Σ (ind, i) mdecl idecl decl)  0 (ind_ctors idecl)) *
-    (Alli (fun i decl => declared_projection Σ ((ind, ind_npars mdecl), i) mdecl idecl decl) 0 (ind_projs idecl)).
-  Proof.
-  intros; split; eapply forall_nth_error_Alli; intros; split; auto.
   Qed.
 
   Lemma declared_minductive_wf {Σ : global_env} {mind mdecl} {wfΣ : wf Σ} :

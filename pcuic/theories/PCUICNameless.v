@@ -1805,13 +1805,15 @@ Proof.
     rewrite map_rev.
     eapply type_Proj with (mdecl0:=nl_mutual_inductive_body mdecl)
                           (idecl0:=nl_one_inductive_body idecl)
+                          (cdecl0:=nl_constructor_body cdecl)
                           (pdecl:=(pdecl1, nl pdecl2)).
-    + destruct isdecl as [[H1 H2] [H3 H4]]. repeat split.
+    + destruct isdecl as [[[H1 H2] H3] [H4 H5]]. repeat split.
       * eapply lookup_env_nlg in H1. eapply H1.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
             (map nl_one_inductive_body (ind_bodies mdecl)); [|now destruct mdecl].
         rewrite nth_error_map H2. reflexivity.
       * rewrite nth_error_map H3. reflexivity.
+      * rewrite nth_error_map H4. reflexivity.
       * assumption.
     + now rewrite nl_mkApps in X2.
     + now rewrite map_length.

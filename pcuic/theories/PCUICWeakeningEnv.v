@@ -212,12 +212,12 @@ Qed.
 Hint Resolve weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
-  forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
-    declared_projection Σ idecl ind mdecl decl ->
+  forall (H : checker_flags) (Σ : global_env) ind mdecl idecl cdecl pdecl,
+    declared_projection Σ idecl ind mdecl cdecl pdecl ->
     forall Σ' : global_env, wf Σ' -> extends Σ Σ' ->
-    declared_projection Σ' idecl ind mdecl decl.
+    declared_projection Σ' idecl ind mdecl cdecl pdecl.
 Proof.
-  intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
+  intros H Σ cst mdecl idecl cdecl pdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
 Hint Resolve weakening_env_declared_projection : extends.
@@ -729,14 +729,15 @@ Proof.
   eapply All2_nth_error_Some in Hcdecl; tea.
 Defined.
 
-Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
+Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl cdecl ref pdecl} :
   forall (HP : weaken_env_prop (lift_typing P))
   (wfΣ : wf Σ)
   (HΣ : Forall_decls_typing P Σ)
-  (Hdecl : declared_projection Σ ref mdecl idecl pdecl),
+  (Hdecl : declared_projection Σ ref mdecl idecl cdecl pdecl),
   match idecl.(ind_ctors) return Type with
   | [c] => 
-    let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x) in
+    let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in 
+      let (x, _) := x in x) in
     (match oib.(ind_cunivs) with
      | [cs] => sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args c) cs
      | _ => False
@@ -748,7 +749,7 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl ref pdecl} :
   end.
 Proof.
   intros.
-  destruct (declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in x)) in *.
+  destruct (declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in let (x, _) := x in x)) in *.
   destruct Hdecl as [Hidecl [Hcdecl Hnpar]]. simpl.
   forward onProjections.    
   { eapply nth_error_Some_length in Hcdecl.
@@ -811,13 +812,13 @@ Proof.
   rewrite H0 in H2. intuition congruence.
 Qed.
 
-Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' pdecl pdecl' p} :
-  declared_projection Σ p mdecl' idecl' pdecl ->
-  declared_projection Σ p mdecl idecl pdecl' ->
-  mdecl = mdecl' /\ idecl = idecl'  /\ pdecl = pdecl'.
+Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' pdecl pdecl' p} :
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
+  declared_projection Σ p mdecl' idecl' cdecl' pdecl' ->
+  mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl' /\ pdecl = pdecl'.
 Proof.
   intros [] []. 
-  destruct (declared_inductive_inj H H1); subst.
+  destruct (declared_constructor_inj H H1) as [? []]; subst.
   destruct H0, H2.
   rewrite H0 in H2. intuition congruence.
 Qed.
@@ -835,11 +836,11 @@ Lemma declared_constructor_inductive {Σ ind mdecl idecl cdecl} :
 Proof. now intros []. Qed.
 Coercion declared_constructor_inductive : declared_constructor >-> declared_inductive.
 
-Lemma declared_projection_inductive {Σ ind mdecl idecl cdecl} :
-  declared_projection Σ ind mdecl idecl cdecl ->
-  declared_inductive Σ ind.1.1 mdecl idecl.
+Lemma declared_projection_constructor {Σ ind mdecl idecl cdecl pdecl} :
+  declared_projection Σ ind mdecl idecl cdecl pdecl ->
+  declared_constructor Σ (ind.1.1, 0) mdecl idecl cdecl.
 Proof. now intros []. Qed.
-Coercion declared_projection_inductive : declared_projection >-> declared_inductive.
+Coercion declared_projection_constructor : declared_projection >-> declared_constructor.
 
 Lemma on_declared_constant `{checker_flags} {Σ cst decl} :
   wf Σ -> declared_constant Σ cst decl ->
@@ -900,26 +901,31 @@ Proof.
   - apply (declared_constructor_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Defined.
 
-Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl pdecl} {wfΣ : wf Σ} 
-  (Hdecl : declared_projection Σ ref mdecl idecl pdecl) :
+Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl cdecl pdecl} {wfΣ : wf Σ} 
+  (Hdecl : declared_projection Σ ref mdecl idecl cdecl pdecl) :
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
-  match idecl.(ind_ctors) return Type with
-  | [c] => 
-    let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
-    (match oib.(ind_cunivs) with
-     | [cs] => sorts_local_ctx (lift_typing typing) (Σ, ind_universes mdecl)
-       (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args c) cs
-     | _ => False
-    end) *
-    on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (idecl.(ind_indices)) c *
-    ((snd ref) < context_assumptions c.(cstr_args)) *
-    on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) c (snd ref) pdecl
-  | _ => False
-  end.
+  (idecl.(ind_ctors) = [cdecl]) *
+  let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in let (x, _) := x in x) in
+  (match oib.(ind_cunivs) with
+  | [cs] => sorts_local_ctx (lift_typing typing) (Σ, ind_universes mdecl)
+      (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args cdecl) cs
+    | _ => False
+  end) *
+  on_projections mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) idecl (idecl.(ind_indices)) cdecl *
+  ((snd ref) < context_assumptions cdecl.(cstr_args)) *
+  on_projection mdecl (inductive_mind ref.1.1) (inductive_ind ref.1.1) cdecl (snd ref) pdecl.
 Proof.
+  have hctors : idecl.(ind_ctors) = [cdecl].
+  { pose proof (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
+    move: X. destruct Hdecl. destruct d. cbn in *.
+    move: e. destruct (ind_ctors idecl) as [|? []] => //.
+    intros [= ->] => //. }
   split. 
-  - apply (on_declared_inductive Hdecl).
-  - apply (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
+  - split => //. 
+    apply (on_declared_inductive Hdecl).
+  - pose proof (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
+    destruct Hdecl. cbn in *. destruct d; cbn in *.
+    now rewrite hctors in X.
 Qed.
 
 Definition on_udecl_prop `{checker_flags} Σ (udecl : universes_decl)

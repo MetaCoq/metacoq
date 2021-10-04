@@ -22,9 +22,9 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     declared_inductive Σ (fst cstr) mdecl idecl /\
     List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
-  Definition declared_projection Σ (proj : projection) mdecl idecl pdecl
+  Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl
   : Prop :=
-    declared_inductive Σ (fst (fst proj)) mdecl idecl /\
+    declared_constructor Σ (fst (fst proj), 0) mdecl idecl cdecl /\
     List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
     mdecl.(ind_npars) = snd (fst proj).
 

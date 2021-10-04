@@ -22,7 +22,7 @@ Arguments Nat.sub : simpl never.
 
 Section Validity.
   Context `{cf : config.checker_flags}.
-                                                
+
   Lemma isType_weaken_full : weaken_env_prop_full (fun Σ Γ t T => isType Σ Γ T).
   Proof.
     red. intros.
@@ -421,7 +421,7 @@ Section Validity.
       unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.
-      eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1) in Hs; eauto.
+      eapply (typing_subst_instance_decl _ _ _ _ _ _ _ wf isdecl.p1.p1.p1) in Hs; eauto.
       simpl in Hs.
       exists (subst_instance_univ u s).
       unfold PCUICTypingDef.typing in *.

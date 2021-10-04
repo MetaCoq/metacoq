@@ -435,6 +435,7 @@ Proof.
     simpl in H. constructor. apply IHc. lia.
 Qed.
 
+
 Lemma skipn_projs n i npars k : 
   skipn n (projs i npars k) = projs i npars (k - n).
 Proof.
@@ -530,6 +531,16 @@ Proof.
     autorewrite with len in H. simpl in H; lia.
 Qed.
 
+Record wf_subslet {cf} Σ Γ s Δ :=
+  { wf_subslet_ctx : wf_local Σ (Γ ,,, Δ);
+    wf_subslet_subslet :> subslet Σ Γ s Δ }.
+
+Lemma wf_subslet_dom {cf} {Σ Γ s Δ} :
+  wf_subslet Σ Γ s Δ -> wf_local Σ Γ.
+Proof.
+  intros [wf _]. now eapply wf_local_app_inv in wf.
+Qed.
+
 Lemma subst_id s Γ t : 
   closedn #|s| t ->
   assumption_context Γ ->
@@ -580,7 +591,289 @@ Proof.
   now eapply isType_it_mkProd_or_LetIn_inv in isty.
 Qed.
 
-(* Well, it's a smash_context mess! *)
+Definition projection_context_gen mdecl idecl ind := 
+  let u := abstract_instance (ind_universes mdecl) in
+  smash_context [] (ind_params mdecl),,
+  vass ({| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |})
+      (mkApps (tInd ind u) (to_extended_list (smash_context [] (ind_params mdecl)))).
+
+Definition projection_context mdecl idecl ind u := 
+  smash_context [] (subst_instance u (ind_params mdecl)),,
+  vass ({| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |})
+      (mkApps (tInd ind u) (to_extended_list (smash_context [] (subst_instance u (ind_params mdecl))))).
+
+Lemma IHup {P : nat -> Type} i (H : forall i', i' < i -> P i') :
+  forall i', S i' < S i -> P i'.
+Proof.
+  intros. apply H. lia.
+Qed.
+
+Lemma typing_spine_refl {cf} {Σ} {wfΣ : wf Σ} {Γ T} :
+  isType Σ Γ T ->
+  typing_spine Σ Γ T [] T.
+Proof.
+  intros isty. constructor; auto.
+  eauto with pcuic.
+Qed.
+
+Lemma subslet_extended_subst {cf:checker_flags} Σ Δ :
+  wf Σ.1 ->
+  wf_local Σ Δ ->
+  subslet Σ (smash_context [] Δ) (extended_subst Δ 0) Δ.
+Proof.
+  move=> wfΣ wfΔ.
+  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto; depelim wfΔ.
+  * constructor.
+  * rewrite extended_subst_length. rewrite lift_closed.
+    red in l0. autorewrite with len. now eapply subject_closed in l0.
+    constructor. auto. specialize (IHΔ wfΔ).
+    red in l0.
+    eapply weaken_ctx in l0. 3:eapply wf_local_smash_context; eauto. 2:auto.
+    eapply (substitution (Δ := [])) in l0. eapply l0. all:auto.
+  * rewrite smash_context_acc. simpl.
+    rewrite /map_decl /= /map_decl /=. simpl.
+    destruct l as [s Hs].
+    rewrite lift_closed. now eapply subject_closed in Hs.    
+    rewrite (lift_extended_subst _ 1).
+    rewrite -{4}(closed_ctx_lift 1 0 Δ). now eapply closed_wf_local.
+    constructor.
+    { eapply (subslet_lift _ [_]); eauto.
+      constructor. eapply wf_local_smash_context; auto.
+      exists s.
+      eapply weaken_ctx in Hs. 3:eapply wf_local_smash_context; eauto. 2:auto.
+      eapply (substitution (Δ := [])) in Hs. eapply Hs. all:auto. }
+    { eapply refine_type.
+      econstructor.
+      rewrite smash_context_acc /=. constructor.
+      apply wf_local_smash_context; auto. cbn.
+      exists s. eapply weaken_ctx in Hs. 3:eapply wf_local_smash_context; eauto. 2:auto.
+      eapply (substitution (Δ := [])) in Hs. eapply Hs. all:auto.
+      reflexivity.
+      simpl.
+      rewrite distr_lift_subst. f_equal.
+      rewrite lift_closed //. autorewrite with len.
+      now apply subject_closed in Hs. }
+Qed.
+
+Lemma context_subst_to_extended_list_k {cf:checker_flags} Σ Δ :
+  wf Σ.1 ->
+  wf_local Σ Δ ->
+  context_subst Δ
+    (map (subst0 (extended_subst Δ 0)) (to_extended_list_k Δ 0))
+      (extended_subst Δ 0).
+Proof.
+  move=> wfΣ wfΔ.
+  generalize 0 at 1 4.
+  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
+  depelim wfΔ.
+  * intros n. rewrite extended_subst_length. rewrite lift_closed.
+    red in l0. autorewrite with len. now eapply subject_closed in l0.
+    rewrite (reln_lift 1 0).
+    rewrite map_map_compose map_subst_lift1.
+    autorewrite with len.
+    constructor. apply IHΔ; auto.
+  * intros n. rewrite reln_acc.
+    simpl.
+    rewrite reln_acc /= map_app app_nil_r.
+    rewrite (reln_lift 1 0).
+    rewrite map_map_compose map_subst_lift1.
+    simpl. constructor. now apply IHΔ.
+Qed.
+
+Lemma spine_subst_smash_inv {cf : checker_flags} {Σ : global_env_ext} (Δ : context) :
+  wf Σ.1 ->
+  wf_local Σ Δ ->
+  spine_subst Σ (smash_context [] Δ) 
+    (to_extended_list (smash_context [] Δ)) (extended_subst Δ 0) Δ.
+Proof.
+  move=> wfΣ wfΔ.
+  split; auto.
+  - eapply wf_local_smash_context; auto.
+  - eapply weaken_wf_local; auto. apply wf_local_smash_context; auto.
+  - remember #|Δ| as n.
+    rewrite /to_extended_list.
+    rewrite -extended_subst_to_extended_list_k.
+    eapply context_subst_to_extended_list_k; eauto.
+  - now apply subslet_extended_subst.
+Qed.
+
+Lemma wf_projection_context_gen {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl cdecl} :
+  wf Σ.1 ->
+  declared_inductive Σ ind mdecl idecl ->
+  on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
+    idecl (ind_indices idecl) cdecl -> 
+  wf_local (Σ.1, ind_universes mdecl) (projection_context_gen mdecl idecl ind).
+Proof.
+  intros wfΣ hdecl onps.
+  pose proof (on_declared_inductive hdecl) as [onmib oib]; auto.
+  have wfpars : wf_local (Σ.1, ind_universes mdecl) (ind_params mdecl).
+  { now apply onParams in onmib. }
+  have wfsmpars : wf_local (Σ.1, ind_universes mdecl) (smash_context [] (ind_params mdecl)).
+  { now apply wf_local_smash_context. } 
+  constructor => //.
+  red. exists (ind_sort idecl).
+  eapply type_mkApps. econstructor; eauto.
+  eapply consistent_instance_ext_abstract_instance; eauto with pcuic.
+  eapply declared_inductive_wf_global_ext; eauto with pcuic.
+  set (u := abstract_instance (ind_universes mdecl)).
+  assert (isType (Σ.1, ind_universes mdecl) [] (ind_type idecl)).
+  { pose proof (onArity oib). exact X. }
+  rewrite (subst_instance_ind_type_id _ _ _ _ _ hdecl).
+  rewrite (ind_arity_eq oib).
+  rewrite -(app_nil_r (to_extended_list _)).
+  eapply typing_spine_it_mkProd_or_LetIn'; auto.
+  eapply spine_subst_smash_inv; tea.
+  destruct onps. destruct (ind_indices idecl). cbn.
+  eapply typing_spine_refl. eapply isType_Sort; tea.
+  now eapply on_inductive_sort.
+  now cbn in *.
+  eapply isType_weaken; auto.
+  now rewrite (oib.(ind_arity_eq)) in X.
+Qed.
+
+Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
+  forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ ind mdecl idecl),
+  let u := abstract_instance (ind_universes mdecl) in
+  let indb:= {|
+          binder_name := nNamed (ind_name idecl);
+          binder_relevance := ind_relevance idecl |} in
+  forall c, ind_ctors idecl = [c] ->
+  Alli
+          (fun (i : nat) (_ : context_decl) =>
+          ∑ pdecl : ident × term,
+            nth_error (ind_projs idecl)
+              (context_assumptions (cstr_args c) - S i) = 
+            Some pdecl) 0 (smash_context [] (cstr_args c)) ->
+  forall i: nat,
+  let indsubst:= inds (inductive_mind ind)
+                (abstract_instance (ind_universes mdecl)) 
+                (ind_bodies mdecl) in
+  forall (IH: forall i0 : nat,
+       i0 < i ->
+       forall x : ident × term,
+       nth_error (ind_projs idecl) i0 = Some x ->
+      isType (Σ.1, ind_universes mdecl)
+           (smash_context [] (ind_params mdecl),,
+            vass indb
+              (mkApps (tInd ind (abstract_instance (ind_universes mdecl)))
+                 (to_extended_list (smash_context [] (ind_params mdecl))))) x.2
+         × (∑ decl : context_decl,
+              ((nth_error (smash_context [] (cstr_args c))
+                  (context_assumptions (cstr_args c) - S i0) = 
+                Some decl
+                × wf_local (Σ.1, ind_universes mdecl)
+                  (arities_context (ind_bodies mdecl),,, ind_params mdecl,,,
+                   smash_context [] (cstr_args c)))
+               × projection_type mdecl ind i0 (decl_type decl) = x.2)
+              × projection_type mdecl ind i0 (decl_type decl) =
+                projection_type' mdecl ind i0 (decl_type decl))),
+  i <= context_assumptions (cstr_args c) ->
+  context_assumptions (ind_params mdecl) = ind_npars mdecl ->
+  #|ind_projs idecl| = context_assumptions (cstr_args c) ->
+  subslet (Σ.1, ind_universes mdecl)
+  (smash_context [] (ind_params mdecl),,
+   vass indb
+     (mkApps (tInd ind (abstract_instance (ind_universes mdecl)))
+        (to_extended_list (smash_context [] (ind_params mdecl)))))
+  (projs ind (ind_npars mdecl) i)
+  (subst_context (extended_subst (ind_params mdecl) 0) 1
+     (lift_context 1 0
+        (subst_context indsubst #|ind_params mdecl|
+           (skipn (context_assumptions (cstr_args c) - i)
+              (smash_context [] (cstr_args c)))))).
+Proof.
+  intros.
+  induction i as [|i IHi].
+  - rewrite Nat.sub_0_r.
+    rewrite skipn_all2.
+    autorewrite with len; simpl; auto.
+    constructor.
+  - forward IHi.
+    intros. eapply IH. lia. auto.
+    forward IHi by lia. simpl in IHi.
+    destruct (skipn (context_assumptions (cstr_args c) - S i)
+      (smash_context [] (cstr_args c))) eqn:eqargs.
+    apply (f_equal (@length _)) in eqargs.
+    autorewrite with len in eqargs.
+    rewrite skipn_length in eqargs. autorewrite with len. simpl; lia.
+    autorewrite with len in eqargs. simpl in eqargs. lia.
+    rewrite subst_context_snoc lift_context_snoc subst_context_snoc.
+    simpl.
+    destruct c0 as [? [] ?].
+    * simpl in eqargs.
+      pose proof (@smash_context_assumption_context [] (cstr_args c)).
+      forward H3 by constructor.
+      eapply assumption_context_skipn in H3.
+      rewrite -> eqargs in H3. elimtype False; inv H3.
+    * apply skipn_eq_cons in eqargs as [Hnth eqargs].
+      constructor.
+      + replace (S (context_assumptions (cstr_args c) - (S i)))
+          with (context_assumptions (cstr_args c) - i) in eqargs by lia.
+        rewrite eqargs in IHi. cbn.
+        apply IHi.
+      + rewrite /lift_decl /=; len.
+        specialize (IH i).
+        forward IH by lia; len.
+        eapply (f_equal (@length _)) in eqargs.
+        rewrite skipn_length in eqargs.
+        autorewrite with len. simpl; lia.
+        autorewrite with len in eqargs. simpl in eqargs.
+        eapply nth_error_alli in X; eauto. simpl in X.
+        destruct X as [pdecl Hnth'].
+        replace ((context_assumptions (cstr_args c) - 
+          (S (context_assumptions (cstr_args c) - (S i)))))
+          with i in eqargs, Hnth' by lia. rewrite -eqargs.
+        rewrite /lift_decl /subst_decl. simpl; len.
+        erewrite (commut_lift_subst_rec _ _ 1 (i + #|ind_params mdecl|) i).
+        2:lia.
+        specialize (IH _ Hnth').
+        eapply meta_conv. econstructor.
+        split; eauto. split; eauto. simpl.
+        rewrite H //. split => //.
+        apply Hnth'.
+        eapply meta_conv. econstructor.
+        destruct IH as [[s isTy] _].
+        now eapply typing_wf_local in isTy.
+        simpl. reflexivity. simpl.
+        rewrite lift_mkApps. simpl. destruct ind; simpl.
+        reflexivity. autorewrite with len.
+        simpl. 
+        rewrite context_assumptions_smash_context /= //.
+        assert(subst_instance (abstract_instance (ind_universes mdecl)) pdecl.2 = pdecl.2) as ->.
+        { eapply (isType_subst_instance_id (Σ.1, ind_universes mdecl)); eauto with pcuic.
+          eapply declared_inductive_wf_ext_wk; eauto with pcuic. }
+        destruct IH as [isTy [decl [[[nthdecl _] eqpdecl] ptyeq]]].
+        move ptyeq at bottom. 
+        rewrite nthdecl in Hnth. noconf Hnth. simpl in ptyeq.
+        rewrite -eqpdecl. simpl.
+        rewrite ptyeq. unfold projection_type'.
+        fold indsubst. destruct ind as [mind ind]; simpl in *.
+        set (projsubst := projs {| inductive_mind := mind; inductive_ind := ind |} (ind_npars mdecl) i) in *.
+        rewrite -eqpdecl in isTy.
+        eapply isType_closed in isTy.
+        simpl in isTy. autorewrite with len in isTy. simpl in isTy.
+        rewrite ptyeq in isTy.
+        unfold projection_type' in isTy.
+        erewrite (commut_lift_subst_rec _ _ 1 (i + #|ind_params mdecl|) i) in isTy by lia.
+        erewrite (commut_lift_subst_rec _ _ 1 (i + #|ind_params mdecl|) i) by lia.
+        rewrite (subst_id _ (({|
+          decl_name := indb;
+          decl_body := None;
+          decl_type := mkApps
+                        (tInd
+                            {| inductive_mind := mind; inductive_ind := ind |}
+                            u)
+                        (to_extended_list
+                            (smash_context [] (ind_params mdecl))) |}
+          :: smash_context [] (ind_params mdecl)))).
+        ++ simpl. autorewrite with len.
+          rewrite context_assumptions_smash_context //.                            
+        ++ constructor. apply smash_context_assumption_context; constructor.
+        ++ unfold to_extended_list, to_extended_list_k.  simpl.
+          rewrite -reln_lift /= (reln_acc [_]) rev_app_distr /= //.
+        ++ now rewrite (Nat.add_1_r i).
+Qed.
+
 Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
   forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ ind mdecl idecl),
   let u := abstract_instance (ind_universes mdecl) in
@@ -589,11 +882,7 @@ Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind i
     on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
       idecl (ind_indices idecl) cs -> 
     Alli (fun i pdecl => 
-    isType (Σ.1, ind_universes mdecl)
-      ((vass {| binder_name := nAnon; binder_relevance := idecl.(ind_relevance) |}
-         (mkApps (tInd ind u) 
-            (to_extended_list (smash_context [] (ind_params mdecl)))))::
-          smash_context [] (ind_params mdecl)) pdecl.2 * 
+    isType (Σ.1, ind_universes mdecl) (projection_context_gen mdecl idecl ind) pdecl.2 * 
       ∑ decl, 
         (nth_error (smash_context [] (cstr_args cs)) 
           (context_assumptions (cstr_args cs) - S i) = Some decl) *
@@ -609,6 +898,7 @@ Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind i
 Proof.
   intros wfΣ decli u.
   set oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ decli.
+  unfold projection_context_gen.
   set indb := {| binder_name := _ |}.
   destruct (ind_ctors idecl) as [|? []] eqn:Heq; try contradiction; auto.
   intros onps.
@@ -618,11 +908,12 @@ Proof.
   rename pr1 into i. simpl; clear H0.
   set (p := ((ind, ind_npars mdecl), i)).
   intros pdecl Hp. simpl.
-  set(isdecl := (conj decli (conj Hp eq_refl)) :
-      declared_projection Σ.1 p mdecl idecl pdecl).
+  assert (hnth': nth_error (ind_ctors idecl) 0 = Some c) by 
+    (rewrite Heq //).
+  set(isdecl := (conj (conj decli hnth') (conj Hp eq_refl)) :
+      declared_projection Σ.1 p mdecl idecl c pdecl).
   destruct (on_declared_projection isdecl) as [oni onp].
   set (declared_inductive_inv _ _ _ _) as oib' in onp.
-  rewrite Heq in onp.
   change oib' with oib in *. clear oib'.
   simpl in onp.
   have onpars := onParams (declared_minductive_inv weaken_env_prop_typing wfΣ wfΣ decli.p1).
@@ -674,7 +965,8 @@ Proof.
   rewrite closed_ctx_lift in X.
   red in onpars. eapply closed_wf_local; [|eauto]. auto.
   assert(wf_local (Σ.1, ind_universes mdecl) (ind_params mdecl ,,
-      vass {| binder_name := nAnon; binder_relevance := idecl.(ind_relevance) |}  (mkApps (tInd ind u) (to_extended_list (ind_params mdecl))))).
+      vass {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |} 
+      (mkApps (tInd ind u) (to_extended_list (ind_params mdecl))))).
   { constructor. auto. red. exists (ind_sort idecl).
     eapply type_mkApps. econstructor; eauto.
     destruct isdecl as []; eauto. subst u.
@@ -760,8 +1052,24 @@ Proof.
     apply assumption_context_fold, smash_context_assumption_context. constructor. }
   rewrite H in onnth. 2:{ simpl in onnth; contradiction. }
   destruct onnth as [s Hs].
+  Ltac havefst H := 
+    match goal with
+    |- ?T × _ => have H : T; [|split => //]
+    end.
   eapply (substitution (Σ := (Σ.1, ind_universes mdecl)) (Γ := _ :: _) (Γ' := skipn _ _) (s := projsubst) (Δ := [])) 
     in Hs; auto.
+  2:{ subst projsubst.
+    rewrite (smash_context_lift []).
+    rewrite (smash_context_subst []).
+    rewrite -(firstn_skipn (S idx) (smash_context [] (cstr_args c))).
+    rewrite subst_context_app lift_context_app subst_context_app.
+    len.
+    rewrite skipn_all_app_eq.
+    len.
+    rewrite firstn_length_le; auto. rewrite smash_context_length.
+    simpl. lia. destruct ind; cbn in *.
+    replace (S idx) with (context_assumptions (cstr_args c) - i); try lia.
+    apply (declared_projections_subslet_ind wfΣ decli _ Heq onps i IH); tas. lia. }
   simpl in Hs.
   rewrite nth_error_subst_context in Heq'.
   autorewrite with len in Heq'. simpl in Heq'.
@@ -841,121 +1149,47 @@ Proof.
   rewrite H0. exists s; auto. red.
   rewrite -/indb in Hs.
   rewrite /projection_type' -/indb -/indsubst -/projsubst.
-  now rewrite Nat.add_1_r in Hs.
+  rewrite Nat.add_1_r in Hs. exact Hs.
   exists arg. intuition auto.
-
   apply wf_local_smash_end; auto.
-
-  unfold projsubst. clear Hs.
-  clear -wfΣ parslen onps projslen some_proj IH Hp2 decli.
-  rewrite (smash_context_lift []).
-  rewrite (smash_context_subst []).
-  rewrite -(firstn_skipn (S idx) (smash_context [] (cstr_args c))).
-  rewrite subst_context_app lift_context_app subst_context_app.
-  len.
-  rewrite skipn_all_app_eq.
-  len.
-  rewrite firstn_length_le; auto. rewrite smash_context_length.
-  simpl. lia.
-  induction i. subst idx.
-  - assert (S (context_assumptions (cstr_args c) - 1) =
-      (context_assumptions (cstr_args c))) as -> by lia.
-    rewrite skipn_all2.
-    autorewrite with len; simpl; auto.
-    constructor.
-  - forward IHi.
-    intros. eapply (IH i0). lia. auto. 
-    forward IHi by lia. simpl in IHi.
-    subst idx.
-    destruct (skipn (S (context_assumptions (cstr_args c) - S (S i))) 
-      (smash_context [] (cstr_args c))) eqn:eqargs.
-    apply (f_equal (@length _)) in eqargs.
-    autorewrite with len in eqargs.
-    rewrite skipn_length in eqargs. autorewrite with len. simpl; lia.
-    autorewrite with len in eqargs. simpl in eqargs. lia.
-    rewrite subst_context_snoc lift_context_snoc subst_context_snoc.
-    simpl.
-    destruct c0 as [? [] ?].
-    * simpl in eqargs.
-      pose proof (@smash_context_assumption_context [] (cstr_args c)).
-      forward H by constructor.
-      eapply assumption_context_skipn in H.
-      rewrite -> eqargs in H. elimtype False; inv H.
-    * apply skipn_eq_cons in eqargs as [Hnth eqargs].
-      constructor.
-      + replace (S (S (context_assumptions (cstr_args c) - S (S i)))) 
-          with (S (context_assumptions (cstr_args c) - S i)) in eqargs by lia.
-        rewrite eqargs in IHi. apply IHi.
-      + rewrite /lift_decl /=; len.
-        specialize (IH i ltac:(lia)); len.
-        eapply (f_equal (@length _)) in eqargs.
-        rewrite skipn_length in eqargs.
-        autorewrite with len. simpl; lia.
-        autorewrite with len in eqargs. simpl in eqargs.
-        eapply nth_error_alli in onps; eauto. simpl in onps.
-        destruct onps as [pdecl Hnth'].
-        replace ((context_assumptions (cstr_args c) - 
-          S (S (context_assumptions (cstr_args c) - S (S i)))))
-          with i in eqargs, Hnth' by lia. rewrite -eqargs.
-        rewrite /lift_decl /subst_decl. simpl; len.
-        epose proof (commut_lift_subst_rec _ _ 1 (i + #|ind_params mdecl|) i).
-        erewrite H. 2:lia. clear H.
-        specialize (IH _ Hnth').
-
-        eapply meta_conv. econstructor.
-        split; eauto. simpl.
-        eapply meta_conv. econstructor.
-        destruct IH as [[s isTy] _].
-        now eapply typing_wf_local in isTy.
-        simpl. reflexivity. simpl.
-        rewrite lift_mkApps. simpl. destruct ind; simpl.
-        reflexivity. autorewrite with len.
-        simpl. 
-        rewrite context_assumptions_smash_context /= //.
-        assert(subst_instance u pdecl.2 = pdecl.2) as ->.
-        { eapply (isType_subst_instance_id (Σ.1, ind_universes mdecl)); eauto with pcuic.
-          eapply declared_inductive_wf_ext_wk; eauto with pcuic. }
-        destruct IH as [isTy [decl [[[nthdecl _] eqpdecl] ptyeq]]].
-        move ptyeq at bottom. 
-        replace  (S (context_assumptions (cstr_args c) - S (S i))) with 
-          (context_assumptions (cstr_args c) - S i) in Hnth by lia.
-        rewrite nthdecl in Hnth. noconf Hnth. simpl in ptyeq.
-        rewrite -eqpdecl. simpl.
-        rewrite ptyeq. unfold projection_type'.
-        fold indsubst. destruct ind as [mind ind]; simpl in *.
-        set (projsubst := projs {| inductive_mind := mind; inductive_ind := ind |} (ind_npars mdecl) i) in *.
-        rewrite -eqpdecl in isTy.
-        eapply isType_closed in isTy.
-        simpl in isTy. autorewrite with len in isTy. simpl in isTy.
-        rewrite ptyeq in isTy.
-        unfold projection_type' in isTy.
-        epose proof (commut_lift_subst_rec _ _ 1 (i + #|ind_params mdecl|) i).
-        erewrite H in isTy by lia.
-        rewrite H; try lia.
-        rewrite (subst_id _ (({|
-          decl_name := indb;
-          decl_body := None;
-          decl_type := mkApps
-                        (tInd
-                            {| inductive_mind := mind; inductive_ind := ind |}
-                            u)
-                        (to_extended_list
-                            (smash_context [] (ind_params mdecl))) |}
-          :: smash_context [] (ind_params mdecl)))).
-        ++ simpl. autorewrite with len.
-          rewrite context_assumptions_smash_context //.                            
-        ++ constructor. apply smash_context_assumption_context; constructor.
-        ++ unfold to_extended_list, to_extended_list_k.  simpl.
-          rewrite -reln_lift /= (reln_acc [_]) rev_app_distr /= //.
-        ++ now rewrite (Nat.add_1_r i).
 Qed.
 
-Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
+Lemma declared_projections_subslet {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
+  forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ ind mdecl idecl),
+  let u := abstract_instance (ind_universes mdecl) in
+  let indsubst:= inds (inductive_mind ind)
+          (abstract_instance (ind_universes mdecl)) 
+          (ind_bodies mdecl) in
+  forall c, ind_ctors idecl = [c] ->
+  on_projections mdecl (inductive_mind ind) (inductive_ind ind) idecl (ind_indices idecl) c -> 
+  forall i, i <= context_assumptions (cstr_args c) ->
+  subslet (Σ.1, ind_universes mdecl)
+    (projection_context_gen mdecl idecl ind)
+    (projs ind (ind_npars mdecl) i)
+    (subst_context (extended_subst (ind_params mdecl) 0) 1
+      (lift_context 1 0
+          (subst_context indsubst #|ind_params mdecl|
+             (skipn (context_assumptions (cstr_args c) - i)
+                (smash_context [] (cstr_args c)))))).
+Proof.  
+  intros wfΣ decli u indsubst c hctors onps i hi.
+  eapply declared_projections_subslet_ind; tea.
+  now apply on_projections_decl in onps.
+  intros.
+  move: (declared_projections wfΣ decli).
+  rewrite hctors. intros IH. cbn in IH.
+  forward IH by tas. eapply nth_error_alli in IH; tea.
+  now cbn in IH.
+  now rewrite (declared_minductive_ind_npars decli).
+  eapply onps. 
+Qed.
+
+Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p cdecl pdecl} : 
   wf Σ.1 ->
-  declared_projection Σ p mdecl idecl pdecl ->
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
   let u := abstract_instance (ind_universes mdecl) in    
   isType (Σ.1, ind_universes mdecl)
-    ((vass {| binder_name := nAnon; binder_relevance := idecl.(ind_relevance) |} (mkApps (tInd p.1.1 u) 
+    ((vass {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |} (mkApps (tInd p.1.1 u) 
           (to_extended_list (smash_context [] (ind_params mdecl)))))::
         smash_context [] (ind_params mdecl)) pdecl.2.
 Proof.
@@ -966,37 +1200,35 @@ Proof.
   intros onprojs u.
   clearbody oib.
   simpl in *.
+  destruct oni.
   destruct (ind_ctors idecl) as [|? []] => //.
   destruct onp as [[[? ?] ?] ?].
   destruct (ind_cunivs oib) as [|? []] => //.
-  forward onprojs. intuition auto.
+  forward onprojs. noconf e. intuition auto.
   destruct declp as [decli [Hnth Hpars]].
   eapply nth_error_alli in onprojs; eauto.
   simpl in onprojs. intuition auto.
 Qed.
 
-Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p pdecl} : 
-  forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ p mdecl idecl pdecl),
+Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p cdecl pdecl} : 
+  forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ p mdecl idecl cdecl pdecl),
   let u := abstract_instance (ind_universes mdecl) in
   let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
-  match ind_ctors idecl return Type with
-  | [cs] => 
-    isType (Σ.1, ind_universes mdecl)
-      ((vass {| binder_name := nAnon; binder_relevance := idecl.(ind_relevance) |}
-       (mkApps (tInd p.1.1 u) 
-            (to_extended_list (smash_context [] (ind_params mdecl)))))::
-        smash_context [] (ind_params mdecl)) pdecl.2 *
-    ∑ decl, 
-    (nth_error (smash_context [] (cstr_args cs)) 
-      (context_assumptions (cstr_args cs) - S p.2) = Some decl) *
+  (ind_ctors idecl = [cdecl]) *
+  isType (Σ.1, ind_universes mdecl)
+    ((vass {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |}
+      (mkApps (tInd p.1.1 u) 
+          (to_extended_list (smash_context [] (ind_params mdecl)))))::
+      smash_context [] (ind_params mdecl)) pdecl.2 *
+  ∑ decl, 
+    (nth_error (smash_context [] (cstr_args cdecl)) 
+      (context_assumptions (cstr_args cdecl) - S p.2) = Some decl) *
     (wf_local (Σ.1, ind_universes mdecl) 
         (arities_context (ind_bodies mdecl) ,,, 
-          ind_params mdecl ,,, smash_context [] (cstr_args cs))) *
+          ind_params mdecl ,,, smash_context [] (cstr_args cdecl))) *
     (projection_type mdecl p.1.1 p.2 decl.(decl_type) = pdecl.2) *
     (projection_type mdecl p.1.1 p.2 decl.(decl_type) = 
-      projection_type' mdecl p.1.1 p.2 decl.(decl_type))%type
-| _ => False
-  end.
+      projection_type' mdecl p.1.1 p.2 decl.(decl_type))%type.
 Proof.
   intros wfΣ declp.
   destruct (on_declared_projection declp) as [oni onp].
@@ -1004,7 +1236,8 @@ Proof.
   set(oib := declared_inductive_inv _ _ _ _) in *.
   intros onprojs u.
   clearbody oib.
-  destruct (ind_ctors idecl) as [|? []] => //.
+  destruct oni.
+  destruct (ind_ctors idecl) as [|? []] => //. noconf e.
   destruct onp as [[[? ?] ?] ?].
   set (cu := ind_cunivs _) in y.
   destruct cu as [|? []] in y => //. simpl in *.
@@ -1013,12 +1246,6 @@ Proof.
   eapply nth_error_alli in onprojs; eauto.
   simpl in onprojs. intuition auto.
 Qed.
-
-Definition projection_context mdecl idecl ind u := 
-  smash_context [] (subst_instance u (ind_params mdecl)),,
-  vass ({| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |})
-      (mkApps (tInd ind u) (to_extended_list (smash_context [] 
-        (subst_instance u (ind_params mdecl))))).
 
 Lemma type_local_ctx_cum {cf:checker_flags} {Σ Γ Δ s s'} : 
   wf Σ.1 -> wf_universe Σ s' ->
@@ -1058,86 +1285,6 @@ Proof.
   eapply type_local_ctx_All_local_env; eauto.
 Qed.
 
-Lemma context_subst_to_extended_list_k {cf:checker_flags} Σ Δ :
-  wf Σ.1 ->
-  wf_local Σ Δ ->
-  context_subst Δ
-    (map (subst0 (extended_subst Δ 0)) (to_extended_list_k Δ 0))
-      (extended_subst Δ 0).
-Proof.
-  move=> wfΣ wfΔ.
-  generalize 0 at 1 4.
-  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
-  depelim wfΔ.
-  * intros n. rewrite extended_subst_length. rewrite lift_closed.
-    red in l0. autorewrite with len. now eapply subject_closed in l0.
-    rewrite (reln_lift 1 0).
-    rewrite map_map_compose map_subst_lift1.
-    autorewrite with len.
-    constructor. apply IHΔ; auto.
-  * intros n. rewrite reln_acc.
-    simpl.
-    rewrite reln_acc /= map_app app_nil_r.
-    rewrite (reln_lift 1 0).
-    rewrite map_map_compose map_subst_lift1.
-    simpl. constructor. now apply IHΔ.
-Qed.
-
-Lemma subslet_extended_subst {cf:checker_flags} Σ Δ :
-  wf Σ.1 ->
-  wf_local Σ Δ ->
-  subslet Σ (smash_context [] Δ) (extended_subst Δ 0) Δ.
-Proof.
-  move=> wfΣ wfΔ.
-  induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto; depelim wfΔ.
-  * constructor.
-  * rewrite extended_subst_length. rewrite lift_closed.
-    red in l0. autorewrite with len. now eapply subject_closed in l0.
-    constructor. auto. specialize (IHΔ wfΔ).
-    red in l0.
-    eapply weaken_ctx in l0. 3:eapply wf_local_smash_context; eauto. 2:auto.
-    eapply (substitution (Δ := [])) in l0. eapply l0. all:auto.
-  * rewrite smash_context_acc. simpl.
-    rewrite /map_decl /= /map_decl /=. simpl.
-    destruct l as [s Hs].
-    rewrite lift_closed. now eapply subject_closed in Hs.    
-    rewrite (lift_extended_subst _ 1).
-    rewrite -{4}(closed_ctx_lift 1 0 Δ). now eapply closed_wf_local.
-    constructor.
-    { eapply (subslet_lift _ [_]); eauto.
-      constructor. eapply wf_local_smash_context; auto.
-      exists s.
-      eapply weaken_ctx in Hs. 3:eapply wf_local_smash_context; eauto. 2:auto.
-      eapply (substitution (Δ := [])) in Hs. eapply Hs. all:auto. }
-    { eapply refine_type.
-      econstructor.
-      rewrite smash_context_acc /=. constructor.
-      apply wf_local_smash_context; auto. cbn.
-      exists s. eapply weaken_ctx in Hs. 3:eapply wf_local_smash_context; eauto. 2:auto.
-      eapply (substitution (Δ := [])) in Hs. eapply Hs. all:auto.
-      reflexivity.
-      simpl.
-      rewrite distr_lift_subst. f_equal.
-      rewrite lift_closed //. autorewrite with len.
-      now apply subject_closed in Hs. }
-Qed.
-
-Lemma spine_subst_smash_inv {cf : checker_flags} {Σ : global_env_ext} (Δ : context) :
-  wf Σ.1 ->
-  wf_local Σ Δ ->
-  spine_subst Σ (smash_context [] Δ) 
-    (to_extended_list (smash_context [] Δ)) (extended_subst Δ 0) Δ.
-Proof.
-  move=> wfΣ wfΔ.
-  split; auto.
-  - eapply wf_local_smash_context; auto.
-  - eapply weaken_wf_local; auto. apply wf_local_smash_context; auto.
-  - remember #|Δ| as n.
-    rewrite /to_extended_list.
-    rewrite -extended_subst_to_extended_list_k.
-    eapply context_subst_to_extended_list_k; eauto.
-  - now apply subslet_extended_subst.
-Qed.
 From MetaCoq.PCUIC Require Import PCUICInduction.
 
 Lemma isType_it_mkProd_or_LetIn_smash {cf:checker_flags} Σ Γ Δ s :
@@ -1195,16 +1342,16 @@ Proof.
   now eapply isType_wf_local.
 Qed.
 
-Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idecl p pdecl u} : 
+Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idecl p cdecl pdecl u} : 
   wf Σ.1 ->
-  declared_projection Σ p mdecl idecl pdecl ->
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   wf_local Σ (projection_context mdecl idecl p.1.1 u).
 Proof.
   move=> wfΣ decli.
-  pose proof (on_declared_projection decli) as [onmind onind].
+  pose proof (on_declared_projection decli) as [[onmind eqctr] onind].
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
-  simpl in onind; destruct ind_ctors as [|? []] => //.
+  simpl in onind; destruct ind_ctors as [|? []] => //. noconf eqctr.
   destruct onind as [[[_ onps] Hpe] onp].
   move=> cu.
   assert(wfparams : wf_local Σ (subst_instance u (ind_params mdecl))).
@@ -1214,7 +1361,7 @@ Proof.
   constructor; auto. red.
   exists (subst_instance_univ u (ind_sort idecl)).
   eapply type_mkApps. econstructor; eauto. eapply decli.p1.
-  rewrite (ind_arity_eq oib).
+  rewrite (ind_arity_eq oib0).
   pose proof (on_projs_noidx _ _ _ _ _ _ onps).
   destruct (ind_indices idecl) eqn:eqind; try discriminate.
   simpl.
@@ -1222,14 +1369,6 @@ Proof.
   pose proof (on_inductive_inst decli _ u localenv_nil).
   rewrite eqind in X. simpl in X.
   now rewrite subst_instance_it_mkProd_or_LetIn.
-Qed.
-
-Lemma typing_spine_refl {cf} {Σ} {wfΣ : wf Σ} {Γ T} :
-  isType Σ Γ T ->
-  typing_spine Σ Γ T [] T.
-Proof.
-  intros isty. constructor; auto.
-  eauto with pcuic.
 Qed.
 
 Lemma invert_type_mkApps_ind {cf:checker_flags} Σ Γ ind u args T mdecl idecl :
@@ -1348,24 +1487,24 @@ Proof.
   now rewrite !lengths.
 Qed.
 
-Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p pdecl args :
-  declared_projection Σ.1 p mdecl idecl pdecl ->
+Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p cdecl pdecl args :
+  declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
   wf Σ.1 ->
   Σ ;;; Γ |- c : mkApps (tInd p.1.1 u) args ->
   isType Σ Γ (mkApps (tInd p.1.1 u) args) ->
   subslet Σ Γ (c :: List.rev args) (projection_context mdecl idecl p.1.1 u). 
 Proof.
   intros declp wfΣ Hc Ha.
-  destruct (on_declared_projection declp).
+  destruct (on_declared_projection declp) as [[onind eqctr] y].
   destruct (isType_mkApps_Ind_inv wfΣ (let (x, _) := declp in x) (typing_wf_local Hc) Ha) as 
     [parsubst [argsubst [sppars spargs cu]]].
   unfold projection_context.
   set (oib := declared_inductive_inv _ _ _ _) in *. clearbody oib.
   simpl in y.
-  destruct (ind_ctors idecl) as [|ctors []]; try contradiction.
+  destruct (ind_ctors idecl) as [|ctors []] => //. noconf eqctr.
   destruct y as [[[_ onps] ?] ?].
   pose proof (on_projs_noidx _ _ _ _ _ _ onps).
-  pose proof (onNpars o).
+  pose proof (onNpars onind).
   pose proof (context_subst_length2 spargs).
   rewrite context_assumptions_fold in H1.
   autorewrite with len in H1.

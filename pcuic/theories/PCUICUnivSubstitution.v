@@ -1823,7 +1823,7 @@ Proof.
         cbn. eapply ihbod.
       * specialize (ihbty i univs wfext Hsub cu).
         cbn. eapply ihbty.
-  - intros p c u mdecl idecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
+  - intros p c u mdecl idecl cdecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
     rewrite subst_instance_subst. cbn.
     rewrite !subst_instance_two.
     rewrite {4}/subst_instance /subst_instance_list /=.

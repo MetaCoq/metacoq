@@ -292,8 +292,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
 | type_Proj p c u :
-    forall mdecl idecl pdecl,
-    declared_projection Σ.1 p mdecl idecl pdecl ->
+    forall mdecl idecl cdecl pdecl,
+    declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
     forall args,
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     #|args| = ind_npars mdecl ->
@@ -724,7 +724,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
-         mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) args,
+         mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
        Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
        P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
@@ -1179,7 +1179,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       P Σ Γ (tCase ci p c brs) (mkApps ptm (indices ++ [c]))) ->
       
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
-          mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) args,
+          mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
         Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->

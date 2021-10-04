@@ -345,10 +345,10 @@ Proof.
       change Γ with (Γ,,, subst_context (c :: List.rev args') 0 []).
       change 0 with #|[] : context| at 2 3.
       eapply substitution_equality_subst_conv.
-      * eapply projection_subslet.
+      * eapply subslet_untyped_subslet, projection_subslet.
         4: eapply validity.
         all: eassumption.
-      * eapply projection_subslet.
+      * eapply subslet_untyped_subslet, projection_subslet.
         4: eapply validity.
         all: eassumption.
       * constructor.

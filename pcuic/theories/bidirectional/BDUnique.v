@@ -83,7 +83,8 @@ Let Pprod Γ t (na : aname) A B :=
 Let Pind Γ ind t u args :=
   wf_local Σ Γ -> forall ind' u' args', Σ ;;; Γ |- t ▹{ind'} (u',args') ->
   [× ind = ind',
-      R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef ind) #|args| u u' &
+      R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef ind) #|args| u u',
+      is_closed_context Γ &
       All2 (fun a a' => Σ ;;; Γ ⊢ a = a') args args'].
 
 Let Pcheck (Γ : context) (t T : term) := True.
@@ -183,10 +184,10 @@ Proof.
 
     eapply @substitution_equality_subst_conv ; eauto.
 
-    + eapply projection_subslet ; eauto.
+    + eapply subslet_untyped_subslet, projection_subslet ; eauto.
       2: eapply validity.
       all: eapply infering_ind_typing ; eauto.
-    + eapply projection_subslet ; eauto.
+    + eapply subslet_untyped_subslet, projection_subslet ; eauto.
       2: eapply validity.
       all: eapply infering_ind_typing ; eauto.
     + constructor.

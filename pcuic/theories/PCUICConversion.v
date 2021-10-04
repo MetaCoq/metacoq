@@ -1150,7 +1150,7 @@ Section Inversions.
   Lemma equality_Ind_inv {le Γ ind ind' ui ui' l l'} :
       Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] mkApps (tInd ind' ui') l' ->
       [× ind = ind',
-         R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui,
+         R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui',
          is_closed_context Γ & equality_terms Σ Γ l l'].
   Proof.
     move/equality_red=> [v [v' [redv redv' leqvv']]].
@@ -1160,7 +1160,8 @@ Section Inversions.
     eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [e ? ?]]].
     depelim e; solve_discr.
     noconf H0. noconf H1. split => //.
-    + apply R_global_instance_refl; tc.
+    + erewrite All2_length.
+      all: eassumption.
     + eapply red_terms_equality_terms in ha.
       eapply red_terms_equality_terms in ha'.
       eapply eq_terms_equality_terms in a; tea; fvs.

@@ -788,7 +788,7 @@ Proof.
         2:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
         unfold on_constant_decl in isdecl'. rewrite e in isdecl'. red in isdecl'.
         unfold declared_constant in isdecl''.
-        now eapply typing_subst_instance_decl with (Σ0 := Σ) (Γ := []); eauto.
+        now eapply @typing_subst_instance_decl with (Σ := Σ) (Γ := []); eauto.
       * assert (isdecl'' := isdecl').
         eapply PCUICWeakeningEnv.declared_constant_inv in isdecl'; [| |now eauto|now apply wfΣ].
         unfold on_constant_decl in isdecl'. rewrite e in isdecl'. cbn in *.

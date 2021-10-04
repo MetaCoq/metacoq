@@ -1229,9 +1229,9 @@ Proof.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
   - destruct cdecl as [[id t] n]. cbn.
     rewrite nl_inds.
-    eapply type_Construct with (idecl0:=nl_one_inductive_body idecl)
-                               (mdecl0:=nl_mutual_inductive_body mdecl)
-                               (cdecl:=(id, nl t, n))
+    eapply @type_Construct with (idecl:=nl_one_inductive_body idecl)
+                                (mdecl:=nl_mutual_inductive_body mdecl)
+                                (cdecl:=(id, nl t, n))
     ; eauto using nlg_wf_local.
     + destruct isdecl as [[H1 H2] H3]. repeat split.
       * eapply lookup_env_nlg in H1. eapply H1.
@@ -1242,10 +1242,10 @@ Proof.
     + unfold consistent_instance_ext.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
   - rewrite nl_mkApps map_app map_skipn. cbn.
-    eapply type_Case with  (mdecl0:=nl_mutual_inductive_body mdecl)
-                           (idecl0:=nl_one_inductive_body idecl)
-                           (btys0:=map (on_snd nl) btys)
-                           (u0:=u)
+    eapply @type_Case with  (mdecl:=nl_mutual_inductive_body mdecl)
+                            (idecl:=nl_one_inductive_body idecl)
+                            (btys:=map (on_snd nl) btys)
+                            (u:=u)
     ; tea.
     + destruct isdecl as [HH1 HH2]. split.
       * eapply lookup_env_nlg in HH1. eapply HH1.
@@ -1323,9 +1323,9 @@ Proof.
       destruct s as [s [Hs IH]] ; exists s; eauto.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.
-    eapply type_Proj with (mdecl0:=nl_mutual_inductive_body mdecl)
-                          (idecl0:=nl_one_inductive_body idecl)
-                          (pdecl:=(pdecl1, nl pdecl2)).
+    eapply @type_Proj with (mdecl:=nl_mutual_inductive_body mdecl)
+                           (idecl:=nl_one_inductive_body idecl)
+                           (pdecl:=(pdecl1, nl pdecl2)).
     + destruct isdecl as [[H1 H2] [H3 H4]]. repeat split.
       * eapply lookup_env_nlg in H1. eapply H1.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with

@@ -624,7 +624,7 @@ Section Typecheck.
         eapply PCUICInductives.isType_it_mkProd_or_LetIn_inv in typ_p; eauto.
         apply isType_wf_universes in typ_p; auto.
         now exact (elimT wf_universe_reflect typ_p). }
-    eapply type_Case with (pty0:=pty'); tea.
+    eapply @type_Case with (pty:=pty'); tea.
     - reflexivity.
     - symmetry; eassumption.
     - destruct isCoFinite; auto.

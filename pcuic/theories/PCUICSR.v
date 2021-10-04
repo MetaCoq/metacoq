@@ -297,7 +297,7 @@ Proof.
     2-3: rewrite lift_subst_instance_constr lift_closed; cbnr; apply H'.
     eapply weakening; tea.
     now rewrite app_context_nil_l.
-    eapply typing_subst_instance_decl with (Γ0:=[]); tea.
+    eapply @typing_subst_instance_decl with (Γ:=[]); tea.
 
   - (* iota reduction *)
     subst npar.

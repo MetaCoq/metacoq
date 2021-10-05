@@ -112,9 +112,8 @@ let get_constant_body b =
   | Def b -> Some b
   | Undef inline -> None
   | OpaqueDef pr -> 
-    let opaquetab = Global.opaque_tables () in
-    let proof, _ = Opaqueproof.force_proof Library.indirect_accessor opaquetab pr in
-    let ctx = Opaqueproof.force_constraints Library.indirect_accessor opaquetab pr in (* FIXME delayed univs skipped *)
+    let proof, _ = Global.force_proof Library.indirect_accessor pr in
+    (* FIXME delayed univs skipped *)
     Some proof
   | Primitive _ -> failwith "Primitives not supported by TemplateCoq"
 

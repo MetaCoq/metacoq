@@ -794,14 +794,14 @@ Section Trans_Global.
     by rewrite nth_error_map Hnth.
   Qed.
 
-  Lemma forall_decls_declared_projection cst mdecl idecl decl :
-    Ast.declared_projection Σ cst mdecl idecl decl ->
+  Lemma forall_decls_declared_projection cst mdecl idecl cdecl pdecl :
+    Ast.declared_projection Σ cst mdecl idecl cdecl pdecl ->
     declared_projection (trans_global_decls Σ) cst (trans_minductive_body Σ' mdecl) (trans_one_ind_body Σ' idecl)
-                      ((fun '(x, y) => (x, trans Σ' y)) decl).
+      (trans_constructor_body Σ' cdecl)  ((fun '(x, y) => (x, trans Σ' y)) pdecl).
   Proof.
     unfold declared_constructor, Ast.declared_constructor.
     move=> [decl' [Hnth Hnpar]].
-    pose proof (forall_decls_declared_inductive _ _ _ decl'). split; auto.
+    pose proof (forall_decls_declared_constructor _ _ _ _ decl'). split; auto.
     by rewrite nth_error_map Hnth.
   Qed.
 End Trans_Global.
@@ -2410,14 +2410,14 @@ Proof.
       rewrite trans_local_app in IHty => //.
 
   - destruct pdecl as [arity ty']; simpl in *.
-    assert (wfproj := TypingWf.declared_projection_wf _ _ _ _ isdecl).
+    assert (wfproj := TypingWf.declared_projection_wf _ _ _ _ _ isdecl).
     simpl in wfproj.
     eapply forall_decls_declared_projection in isdecl => //.
     destruct (typing_wf _ wfΣ _ _ _ X1) as [wfc wfind].
     eapply WfAst.wf_mkApps_inv in wfind; auto.
     rewrite trans_subst; auto with wf. 
     simpl. rewrite map_rev. rewrite trans_subst_instance.
-    eapply (type_Proj _ _ _ _ _ _ _ (arity, trans Σ' ty)). eauto.
+    eapply (type_Proj _ _ _ _ _ _ _ _ (arity, trans Σ' ty)). eauto.
     rewrite trans_mkApps in X2; auto. rewrite map_length.
     destruct mdecl; auto.
 
@@ -2869,6 +2869,14 @@ Proof.
   induction 1; intros H; depelim H; constructor; intuition auto.
 Qed.
 
+Lemma trans_projs Σ kn n i mdecl  :
+  map (trans (trans_global_decls Σ)) 
+    (ST.projs {| inductive_mind := kn; inductive_ind := n |} (Ast.Env.ind_npars mdecl) i) =
+  projs {| inductive_mind := kn; inductive_ind := n |} (Ast.Env.ind_npars mdecl) i.
+Proof.
+  induction i; cbn; auto. f_equal; auto.
+Qed.
+
 Lemma trans_on_global_env `{checker_flags} Σ :
   (forall Σ Γ t T, Typing.wf Σ.1 -> 
     Typing.lift_typing Typing.typing Σ Γ t T ->
@@ -3025,7 +3033,21 @@ Proof.
               cbn.
               eapply trans_cstr_respects_variance => //.
         --- simpl; intros. have onp := oni.(ST.onProjections).
-            todo "projs".
+            destruct (Ast.Env.ind_projs idecl) => //.
+            forward onp. congruence.
+            destruct (Ast.Env.ind_ctors idecl) as [|? []] eqn:hctors => //.
+            cbn. destruct onp; split; auto.
+            cbn. now len. now len. len. rewrite on_projs_all.
+            now rewrite context_assumptions_map.
+            cbn. eapply Alli_map, Alli_impl; tea.
+            intros i [pname pdecl].
+            unfold ST.on_projection, on_projection. cbn -[inds].
+            rewrite context_assumptions_map.
+            rewrite -[trans_local _ _ ++ _]trans_local_app -(trans_smash_context _ []) nth_error_map.
+            rewrite /Ast.Env.app_context. destruct nth_error => // /=.
+            intros [-> ->]. cbn. split => //.
+            rewrite trans_subst trans_inds. f_equal.
+            rewrite trans_subst trans_lift. f_equal. now rewrite trans_projs.
         --- have inds := oni.(ST.ind_sorts).
             eapply trans_check_ind_sorts in inds; tea.
         --- have inds := oni.(ST.onIndices).

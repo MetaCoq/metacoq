@@ -172,13 +172,14 @@ Hint Constructors All_local_env All2_fold : pcuic.
 Ltac pcuics := try typeclasses eauto with pcuic.
 
 Lemma declared_projection_declared_constructor {cf}
-  {Σ} {wfΣ : wf Σ} {i pars narg mdecl mdecl' idecl idecl' pdecl cdecl} :
-  declared_projection Σ (i, pars, narg) mdecl idecl pdecl ->
-  declared_constructor Σ (i, 0) mdecl' idecl' cdecl -> 
-  mdecl = mdecl' /\ idecl = idecl'.
+  {Σ} {wfΣ : wf Σ} {i pars narg mdecl mdecl' idecl idecl' pdecl cdecl cdecl'} :
+  declared_projection Σ (i, pars, narg) mdecl idecl cdecl pdecl ->
+  declared_constructor Σ (i, 0) mdecl' idecl' cdecl' -> 
+  mdecl = mdecl' /\ idecl = idecl' /\ cdecl = cdecl'.
 Proof.
-  intros [] [].
-  pose proof (declared_inductive_inj H H1). intuition auto.
+  intros [[] ?] [].
+  pose proof (declared_inductive_inj H H2). intuition auto. subst.
+  rewrite H0 in H3. congruence.
 Qed.
 
 Ltac hide H :=
@@ -1374,13 +1375,12 @@ Proof.
   induction Γ as [|[? [] ?] ?]; intros; cbn; lia.
 Qed.
 
-Lemma declared_projection_indices {cf} {Σ} {wfΣ : wf Σ} {p mdecl idecl pdecl} : 
-  declared_projection Σ p mdecl idecl pdecl ->  
+Lemma declared_projection_indices {cf} {Σ} {wfΣ : wf Σ} {p mdecl idecl cdecl pdecl} : 
+  declared_projection Σ p mdecl idecl cdecl pdecl ->  
   #|ind_indices idecl| = 0.
 Proof.
   move=> isdecl.
-  case: (on_declared_projection isdecl) => onind.
-  destruct (ind_ctors idecl) as [|cdecl []] => /= //.
+  case: (on_declared_projection isdecl) => onind. cbn.
   destruct ind_cunivs as [] => /= // => [] [] [] [] //.
   destruct l as [] => //. intros sorts onprojs hp.
   now destruct onprojs.
@@ -2300,12 +2300,12 @@ Proof.
     + eapply conv_cumul.
       rewrite (subst_app_decomp [mkApps (subst0 (cofix_subst mfix) (dbody d)) args0]) (subst_app_decomp [mkApps (tCoFix mfix idx) args0]).
       eapply conv_sym, PCUICCumulativity.red_conv.
-      destruct (on_declared_projection isdecl) as [oi onp].
+      destruct (on_declared_projection isdecl) as [[oi hctors] onp].
       eassert (projsubs := subslet_projs (args := map (lift0 #|args|) args) isdecl).
       set (oib := declared_inductive_inv _ _ _ _) in *. simpl in onp, projsubs.
-      destruct (ind_ctors idecl) as [|? []] eqn:eqctors; try contradiction.
+      rewrite hctors in projsubs.
       destruct onp as [[[tyargctx onps] Hp2] onp].
-      destruct (ind_cunivs oib) as [|? []]; try contradiction.
+      destruct (ind_cunivs oib) as [|? []] eqn:hcunivs; try rewrite hcunivs // in tyargctx.
       specialize (projsubs onps).
       red in onp.
       destruct (nth_error (smash_context [] _) _) eqn:Heq; try contradiction.
@@ -2334,16 +2334,16 @@ Proof.
       rewrite projs_subst_above //. lia. simpl.
       rewrite !subst_projs_inst !projs_inst_lift.
       eapply (closed_red_red_subst0 (Γ := Γ ,,, smash_context [] (subst_instance u (ind_params mdecl)))
-        (Δ := skipn (context_assumptions (cstr_args c) - p.2)
-          (expand_lets_ctx (ind_params mdecl)@[u] (smash_context [] (subst_context (inds (inductive_mind p.1.1) u (ind_bodies mdecl)) 
-          #|ind_params mdecl| (subst_instance u (cstr_args c))))))); auto.
+        (Δ := skipn (context_assumptions (cstr_args cdecl) - p.2)
+          (expand_lets_ctx (ind_params mdecl)@[u] (smash_context [] 
+          (subst_context (inds (inductive_mind p.1.1) u (ind_bodies mdecl)) 
+          #|ind_params mdecl| (subst_instance u (cstr_args cdecl))))))); auto.
       ** eapply wf_local_closed_context.
          eapply wf_local_app_skipn.
          rewrite -app_context_assoc.
          rewrite -(smash_context_app_expand []). eapply wf_local_smash_end.
          eapply weaken_wf_local => //.
-         epose proof (on_constructor_inst_wf_args).
-
+         eapply (on_constructor_inst_wf_args isdecl) => //.
 
       ** eapply All2_map.
         eapply (All2_impl (P:=fun x y => Σ ;;; Γ ⊢ x ⇝ y)).
@@ -2362,7 +2362,7 @@ Proof.
         unfold unfold_cofix. rewrite Hnth. reflexivity.
       ** rewrite -projs_inst_lift.
         rewrite -subst_projs_inst.
-        have: (p.2 = context_assumptions (cstr_args c) - (context_assumptions (cstr_args c) - p.2)) by lia.
+        have: (p.2 = context_assumptions (cstr_args cdecl) - (context_assumptions (cstr_args cdecl) - p.2)) by lia.
         move=> {1}->. rewrite -skipn_projs map_skipn subst_projs_inst.
         eapply untyped_subslet_skipn. destruct p as [[[? ?] ?] ?]. simpl in *.
         rewrite /indsubst.

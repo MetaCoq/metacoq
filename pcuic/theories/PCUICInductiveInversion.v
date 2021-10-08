@@ -3128,7 +3128,7 @@ Proof.
   destruct ind_cunivs as [|? []] eqn:cseq => //.
   destruct onc as []. noconf e1.
   simpl in *. 
-  destruct s as [idecl' [[[idecl'nth _] pty] pty']].
+  destruct s as [idecl' [idecl'nth _ _ pty pty']].
   rewrite -pty.
   unfold R_global_instance in Ru.
   unfold global_variance, lookup_inductive, lookup_minductive in Ru.

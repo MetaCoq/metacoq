@@ -838,15 +838,18 @@ Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} 
               (mkApps (tInd ind (abstract_instance (ind_universes mdecl)))
                  (to_extended_list (smash_context [] (ind_params mdecl))))) x.2
          × (∑ decl : context_decl,
-              ((nth_error (smash_context [] (cstr_args c))
-                  (context_assumptions (cstr_args c) - S i0) = 
-                Some decl
-                × wf_local (Σ.1, ind_universes mdecl)
+              [× nth_error (smash_context [] (cstr_args c))
+                  (context_assumptions (cstr_args c) - S i0) = Some decl,
+                isType (Σ.1, ind_universes mdecl)
+                (arities_context (ind_bodies mdecl),,, ind_params mdecl,,,
+                 skipn (context_assumptions (cstr_args c) - i0)
+                   (smash_context [] (cstr_args c))) (decl_type decl),  
+                wf_local (Σ.1, ind_universes mdecl)
                   (arities_context (ind_bodies mdecl),,, ind_params mdecl,,,
-                   smash_context [] (cstr_args c)))
-               × projection_type mdecl ind i0 (decl_type decl) = x.2)
-              × projection_type mdecl ind i0 (decl_type decl) =
-                projection_type' mdecl ind i0 (decl_type decl))),
+                   smash_context [] (cstr_args c)),
+               projection_type mdecl ind i0 (decl_type decl) = x.2 &
+               projection_type mdecl ind i0 (decl_type decl) = 
+               projection_type' mdecl ind i0 (decl_type decl)])),
   on_projections mdecl (inductive_mind ind) (inductive_ind ind) 
     idecl (ind_indices idecl) c -> 
   i <= context_assumptions (cstr_args c) ->
@@ -924,7 +927,7 @@ Proof.
         assert(subst_instance (abstract_instance (ind_universes mdecl)) pdecl.2 = pdecl.2) as ->.
         { eapply (isType_subst_instance_id (Σ.1, ind_universes mdecl)); eauto with pcuic.
           eapply declared_inductive_wf_ext_wk; eauto with pcuic. }
-        destruct IH as [isTy [decl [[[nthdecl _] eqpdecl] ptyeq]]].
+        destruct IH as [isTy [decl [nthdecl _ _ eqpdecl ptyeq]]].
         move ptyeq at bottom. 
         rewrite nthdecl in Hnth. noconf Hnth. simpl in ptyeq.
         rewrite -eqpdecl. simpl.
@@ -956,6 +959,17 @@ Proof.
         ++ now rewrite (Nat.add_1_r i).
 Qed.
 
+Lemma wf_local_nth_isType {cf} {Σ} {Γ n d} :
+  wf_local Σ Γ ->
+  nth_error Γ n = Some d ->
+  isType Σ (skipn (S n) Γ) d.(decl_type).
+Proof.
+  intros Hwf hnth.
+  epose proof (nth_error_All_local_env (nth_error_Some_length hnth) Hwf).
+  rewrite hnth /= in X. unfold on_local_decl in X.
+  destruct decl_body => //. destruct X => //.
+Qed.
+
 Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
   forall (wfΣ : wf Σ.1) (Hdecl : declared_inductive Σ ind mdecl idecl),
   let u := abstract_instance (ind_universes mdecl) in
@@ -966,14 +980,18 @@ Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind i
     Alli (fun i pdecl => 
     isType (Σ.1, ind_universes mdecl) (projection_context_gen ind mdecl idecl) pdecl.2 * 
       ∑ decl, 
-        (nth_error (smash_context [] (cstr_args cs)) 
-          (context_assumptions (cstr_args cs) - S i) = Some decl) *
+        [× nth_error (smash_context [] (cstr_args cs)) 
+          (context_assumptions (cstr_args cs) - S i) = Some decl,
+        isType (Σ.1, ind_universes mdecl)
+         (arities_context (ind_bodies mdecl),,, ind_params mdecl,,,
+          skipn (context_assumptions (cstr_args cs) - i)
+            (smash_context [] (cstr_args cs))) (decl_type decl),
         wf_local (Σ.1, ind_universes mdecl) 
           (arities_context (ind_bodies mdecl) ,,, 
-            ind_params mdecl ,,, smash_context [] (cstr_args cs)) *
-        (projection_type mdecl ind i decl.(decl_type) = pdecl.2) *
+            ind_params mdecl ,,, smash_context [] (cstr_args cs)),
+        (projection_type mdecl ind i decl.(decl_type) = pdecl.2) &
         (projection_type mdecl ind i decl.(decl_type) = 
-            projection_type' mdecl ind  i decl.(decl_type)))%type
+            projection_type' mdecl ind  i decl.(decl_type))])%type
       0 (ind_projs idecl)
   | _ => True
   end.
@@ -1124,7 +1142,7 @@ Proof.
   autorewrite with len. lia.
   set (idx := context_assumptions (cstr_args c) - S i) in *.
   unshelve epose proof (nth_error_All_local_env (n:=idx) _ wfsargs).
-  autorewrite with len. simpl. lia. 
+  autorewrite with len. simpl. lia.
   rename X1 into onnth.
   destruct (nth_error (subst_context _ 1 _) idx) as [c2|] eqn:hidx.
   simpl in onnth. red in onnth. cbn in onnth.
@@ -1151,7 +1169,7 @@ Proof.
     rewrite firstn_length_le; auto. rewrite smash_context_length.
     simpl. lia. destruct ind; cbn in *.
     replace (S idx) with (context_assumptions (cstr_args c) - i); try lia.
-    apply (declared_projections_subslet_ind wfΣ decli _ Heq onps i IH); tas. lia. }
+    eapply (declared_projections_subslet_ind wfΣ decli _ Heq onps i IH); tas. lia. }
   simpl in Hs.
   rewrite nth_error_subst_context in Heq'.
   autorewrite with len in Heq'. simpl in Heq'.
@@ -1232,8 +1250,24 @@ Proof.
   rewrite -/indb in Hs.
   rewrite /projection_type' -/indb -/indsubst -/projsubst.
   rewrite Nat.add_1_r in Hs. exact Hs.
-  exists arg. intuition auto.
-  apply wf_local_smash_end; auto.
+  exists arg. split; auto.
+  2:{ apply wf_local_smash_end; auto. }
+  eapply wf_local_smash_end in wfargs.
+  eapply (wf_local_app_skipn (n:=context_assumptions (cstr_args c) - S i)) in wfargs.
+  epose proof (wf_local_nth_isType (d:=arg) (n:=0) wfargs).
+  rewrite skipn_app in X1.
+  rewrite skipn_length in X1. len.
+  rewrite nth_error_app_lt // in X1. rewrite skipn_length. len. len.
+  rewrite nth_error_skipn Nat.add_0_r nthidx in X1.
+  forward X1 by reflexivity.
+  len in X1. rewrite /idx in X1.
+  rewrite skipn_skipn in X1.
+  assert (context_assumptions (cstr_args c) - S i + 1 = 
+    context_assumptions (cstr_args c) - i) by lia.
+  rewrite H1 in X1.
+  rewrite [skipn _ (_ ,,, _)]skipn_0_eq in X1.
+  assert (context_assumptions (cstr_args c) > 0). lia. lia.
+  apply X1.
 Qed.
 
 Lemma declared_projections_subslet {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
@@ -1303,14 +1337,18 @@ Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {
           (to_extended_list (smash_context [] (ind_params mdecl)))))::
       smash_context [] (ind_params mdecl)) pdecl.2 *
   ∑ decl, 
-    (nth_error (smash_context [] (cstr_args cdecl)) 
-      (context_assumptions (cstr_args cdecl) - S p.2) = Some decl) *
-    (wf_local (Σ.1, ind_universes mdecl) 
+    [× nth_error (smash_context [] (cstr_args cdecl)) 
+      (context_assumptions (cstr_args cdecl) - S p.2) = Some decl,
+      isType (Σ.1, ind_universes mdecl)
+        (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,, 
+          skipn (context_assumptions (cstr_args cdecl) - p.2) 
+            (smash_context [] (cstr_args cdecl))) decl.(decl_type),
+      (wf_local (Σ.1, ind_universes mdecl) 
         (arities_context (ind_bodies mdecl) ,,, 
-          ind_params mdecl ,,, smash_context [] (cstr_args cdecl))) *
-    (projection_type mdecl p.1.1 p.2 decl.(decl_type) = pdecl.2) *
-    (projection_type mdecl p.1.1 p.2 decl.(decl_type) = 
-      projection_type' mdecl p.1.1 p.2 decl.(decl_type))%type.
+          ind_params mdecl ,,, smash_context [] (cstr_args cdecl))),
+      (projection_type mdecl p.1.1 p.2 decl.(decl_type) = pdecl.2) &
+      (projection_type mdecl p.1.1 p.2 decl.(decl_type) = 
+        projection_type' mdecl p.1.1 p.2 decl.(decl_type))%type].
 Proof.
   intros wfΣ declp.
   destruct (on_declared_projection declp) as [oni onp].

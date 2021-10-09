@@ -43,7 +43,7 @@ let check env evm (c, ustate) =
   in
   match check with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)
-  | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
+  | Coq_inr s -> CErrors.user_err (pr_char_list s)
 }
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY

@@ -168,7 +168,6 @@ struct
     match k with
       Constr.VMcast -> Lazy.force kVmCast
     | Constr.DEFAULTcast -> Lazy.force kCast
-    | Constr.REVERTcast -> Lazy.force kRevertCast
     | Constr.NATIVEcast -> Lazy.force kNative
 
   let string_of_level s =

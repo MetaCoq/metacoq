@@ -144,7 +144,6 @@ struct
     | VmCast -> VMcast
     | NativeCast -> NATIVEcast
     | Cast -> DEFAULTcast
-    | RevertCast -> REVERTcast
 
 
   let unquote_dirpath dp : DirPath.t =

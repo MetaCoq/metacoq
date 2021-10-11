@@ -453,14 +453,15 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma trans_declared_projection Σ p mdecl idecl pdecl :
-  S.declared_projection Σ.1 p mdecl idecl pdecl ->
-  T.declared_projection (trans_global Σ).1 p (trans_minductive_body mdecl) (trans_one_ind_body idecl) (on_snd trans pdecl).
+Lemma trans_declared_projection Σ p mdecl idecl cdecl pdecl :
+  S.declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
+  T.declared_projection (trans_global Σ).1 p (trans_minductive_body mdecl) (trans_one_ind_body idecl) 
+    (trans_constructor_body cdecl) (on_snd trans pdecl).
 Proof.
-  intros (?&?&?).
-  split;[|split].
-  - now apply trans_declared_inductive.
+  intros []. split; [|split].
+  - now apply trans_declared_constructor.
   - unfold on_snd.
+    destruct H0.
     destruct pdecl, p.
     cbn in *.
     change (Some (i, trans t)) with

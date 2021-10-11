@@ -126,7 +126,10 @@ Qed.
 
 Definition wf_global_decl {cf} (Σ : Ast.Env.global_env_ext) kn decl :=
   Typing.on_global_decl (fun Σ => WfAst.wf_decl_pred Σ.1) Σ kn decl.
-    
+
+(* Issue in equations: signatures cannot be found up-to arbitrary conversions. *)
+Hint Extern 4 (Signature (Typing.wf _) _ _) => exact (ST.on_global_env_Signature _ _ _) : typeclass_instances.
+
 Lemma trans_lookup_env {cf} Σ cst {wfΣ : Typing.wf Σ} :
   match Ast.Env.lookup_env Σ cst with
   | None => lookup_env (trans_global_decls Σ) cst = None

@@ -1269,21 +1269,21 @@ Proof.
     move: (All2_length a0). lia. fvs. now eapply subject_is_open_term in scrut_ty.
     now apply subject_is_open_term in X7.
     
-  - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & pdecl' & args' & inv); auto.
+  - eapply inversion_Proj in X3 as (u' & mdecl' & idecl' & cdecl' & pdecl' & args' & inv); auto.
     intuition auto.
     specialize (X2 _ _  H0 a0 _ (eq_term_upto_univ_napp_leq X4)).
     eapply eq_term_upto_univ_napp_leq in X4.
     eapply cumul_cumul_prop in b; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_mkApps_Ind_inv in X2 => //.
-    destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [<- [<- <-]].
+    destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [<- [<- [<- <-]]].
     subst ty. 
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity X1)) as [ps [argss [_ cu]]]; eauto.
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity a0)) as [? [? [_ cu']]]; eauto.
     epose proof (wf_projection_context _ _ isdecl c1).
     epose proof (wf_projection_context _ _ isdecl c2).
     transitivity (subst0 (c0 :: List.rev args') (subst_instance u pdecl'.2)).
-    eapply (@substitution_untyped_cumul_prop_cumul Σ Γ (projection_context mdecl idecl p.1.1 u)) => //.
+    eapply (@substitution_untyped_cumul_prop_cumul Σ Γ (projection_context p.1.1 mdecl' idecl' u)) => //.
     * cbn -[projection_context on_free_vars_ctx].
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X3.
     * cbn -[projection_context on_free_vars_ctx].
@@ -1292,17 +1292,17 @@ Proof.
       len. rewrite on_free_vars_subst_instance. simpl; len.
       rewrite (PCUICClosed.declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.
-    * epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ isdecl wfΣ X1 (validity X1)).
+    * epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ _ isdecl wfΣ X1 (validity X1)).
       now eapply subslet_untyped_subslet.
-    * epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)).
+    * epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)).
       now eapply subslet_untyped_subslet.
     * constructor => //. symmetry; constructor => //. fvs.
       { now eapply subject_is_open_term in a0. }
       { now eapply subject_is_open_term in X1. }
       { now eapply leq_term_eq_term_prop_impl. }
       { now eapply All2_rev. }
-    * eapply (@substitution_cumul_prop Σ Γ (projection_context mdecl idecl p.1.1 u') []) => //.
-      { apply (projection_subslet Σ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)). }
+    * eapply (@substitution_cumul_prop Σ Γ (projection_context p.1.1 mdecl' idecl' u') []) => //.
+      { apply (projection_subslet Σ _ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)). }
       eapply cumul_prop_subst_instance; eauto.
       cbn -[projection_context on_free_vars_ctx]; eapply is_closed_context_weaken => //. fvs.
       now eapply wf_local_closed_context.

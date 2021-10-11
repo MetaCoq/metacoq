@@ -1103,7 +1103,8 @@ Section WeakNormalization.
       It differs in two ways from standard reduction: 
       - using closed substitution operations applicable only on closed terms
       - it does not check that fixpoints that are applied to enough arguments 
-        have a constructor at their recursive argument as it is ensured by typing. *)
+        have a constructor at their recursive argument as it is ensured by typing
+        + canonicity. *)
 
   Lemma wcbeval_red t ty u :
     Σ ;;; [] |- t : ty ->
@@ -1162,19 +1163,19 @@ Section WeakNormalization.
       eapply IHHe. eapply subject_reduction; eauto.
       eapply red1_red. econstructor; eauto.
 
-    - todo "case".
-      (*epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
+    - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Case in Ht; auto. destruct_sigma Ht.
       destruct c0.
       specialize (IHHe1 _ scrut_ty).
-      assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) args br)).
+      assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) p args br)).
       { redt _.
-        eapply red_case; eauto. reflexivity.
+        eapply red_case; eauto. 
         eapply All2_refl; intros; eauto. red.
-        eapply All2_refl; split; red; reflexivity.
-        eapply red1_red; constructor; tas. }
+        eapply All2_refl; split; reflexivity.
+        eapply red1_red. destruct p => //. 
+        eapply red_iota; tea. }
       specialize (X X0).
-      redt _; eauto. *)
+      redt _; eauto.
 
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Proj in Ht; auto; destruct_sigma Ht.

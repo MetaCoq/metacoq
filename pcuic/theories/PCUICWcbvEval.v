@@ -456,14 +456,15 @@ Section Wcbv.
     rewrite Hb in Hc. simpl in Hc. now move/andP: Hc.
   Qed.
 
-  (* Lemma closed_iota ind pars c u args brs br : 
-    forallb (test_branch_k closedn 0) brs ->
+  Lemma closed_iota ci ind p c u args brs br : 
+    forallb (test_branch_k p closedn 0) brs ->
+    forallb (closedn 0) p.(pparams) ->
     closed (mkApps (tConstruct ind c u) args) ->
-    #|skipn pars args| = context_assumptions (bcontext br) ->
+    #|skipn (ci_npar ci) args| = context_assumptions (bcontext br) ->
     nth_error brs c = Some br ->
-    closed (iota_red pars args br).
+    closed (iota_red (ci_npar ci) p args br).
   Proof.
-    unfold iota_red => cbrs cargs hass e.
+    unfold iota_red => cbrs cpars cargs hass e.
     solve_all.
     eapply All_nth_error in e; eauto. simpl in e.
     rewrite closedn_mkApps in cargs.
@@ -471,14 +472,24 @@ Section Wcbv.
     eapply (closedn_subst _ 0 0).
     now rewrite forallb_rev forallb_skipn //.
     simpl. rewrite List.rev_length /expand_lets /expand_lets_k.
-    rewrite -(Nat.add_0_r #|skipn pars args|).
+    rewrite -(Nat.add_0_r #|skipn (ci_npar ci) args|).
     rewrite hass.
     move/andP: e => [cltx clb].
+    have hl : context_assumptions (inst_case_branch_context p br) = context_assumptions (bcontext br).
+    { rewrite /inst_case_branch_context. now len. }
     eapply (closedn_subst _ _ 0).
+    rewrite -hl.
     eapply closedn_extended_subst => //.
+    { rewrite /inst_case_branch_context /inst_case_context.
+      eapply (closedn_ctx_subst 0 0); cbn.
+      rewrite closedn_subst_instance_context. now len.
+      rewrite forallb_rev. solve_all. }
     rewrite extended_subst_length Nat.add_0_r /= Nat.add_comm.
-    eapply closedn_lift. now rewrite Nat.add_0_r in clb.
-  Qed. *)
+    rewrite -hl.
+    eapply closedn_lift.
+    rewrite inst_case_branch_context_length. 
+    now rewrite Nat.add_0_r in clb.
+  Qed.
 
   Lemma closed_arg f args n a :  
     closed (mkApps f args) ->
@@ -586,7 +597,10 @@ Section Wcbv.
     - eapply IHev3. unshelve eapply closed_beta. 3:eauto. exact na. simpl. eauto.
     - eapply IHev2. now rewrite closed_csubst.
     - apply IHev. eapply closed_def; eauto.
-    - todo "case".
+    - apply IHev2.
+      eapply closed_iota; tea.
+      move/andP: Hc => [] /andP [] //.
+      now eapply IHev1.
     - eapply IHev2.
       specialize (IHev1 Hc).
       rewrite closedn_mkApps in IHev1.
@@ -679,6 +693,27 @@ Section Wcbv.
     eqdec_proof.
   Qed.
 
+  Lemma declared_constructor_unique {ind mdecl idecl cdecl} (d d' : declared_constructor Σ ind mdecl idecl cdecl) : d = d'.
+  Proof.
+    destruct d, d'.
+    destruct d, d0.
+    assert (d0 = d) as -> by now apply uip.
+    assert (e1 = e2) as -> by now apply uip.
+    assert (e = e0) as -> by now apply uip.
+    reflexivity.
+  Qed.
+
+  Lemma declared_projection_unique {ind mdecl idecl cdecl pdecl}
+     (d d' : declared_projection Σ ind mdecl idecl cdecl pdecl) : d = d'.
+  Proof.
+    destruct d, d'.
+    rewrite (declared_constructor_unique d d0).
+    destruct a, a0.
+    assert (e = e1) as -> by now apply uip.
+    assert (e0 = e2) as -> by now apply uip.
+    reflexivity.
+  Qed.
+
   Unset SsrRewrite.
   Lemma eval_unique_sig {t v v'} :
     forall (ev1 : eval t v) (ev2 : eval t v'),
@@ -704,7 +739,20 @@ Section Wcbv.
       assert (e0 = e) as -> by now apply uip.
       assert (isdecl0 = isdecl) as -> by now apply uip.
       now specialize (IHev _ ev'); noconf IHev.
-    - todo "case".
+    - depelim ev'; try go.
+      + specialize (IHev1 _ ev'1).
+        apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
+        apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
+        noconf eq1. noconf eq2. noconf IHev1.
+        epose proof (PCUICWeakeningEnv.declared_constructor_inj d d0) as [-> [-> <-]].
+        pose proof e1. rewrite e in H. noconf H.
+        specialize (IHev2 _ ev'2). noconf IHev2.
+        assert (e = e1) as -> by now apply uip.
+        assert (e0 = e2) as -> by now apply uip.
+        assert (d = d0) as -> by apply declared_constructor_unique.
+        reflexivity.
+      + eapply eval_mkApps_tCoFix in ev1 as H.
+        destruct H as (? & ?). solve_discr.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
@@ -758,8 +806,9 @@ Section Wcbv.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
     - depelim ev'; try go.
-      * todo "case".
-        * apply mkApps_eq_inj in e' as H'; auto.
+      * eapply eval_mkApps_tCoFix in ev'1 as H.
+        destruct H as (? & ?). solve_discr.
+      * apply mkApps_eq_inj in e' as H'; auto.
         destruct H' as (H' & <-).
         noconf H'.
         assert (narg0 = narg) as -> by congruence.

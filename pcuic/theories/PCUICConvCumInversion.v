@@ -270,9 +270,9 @@ Section fixed.
     intros conv notapp notapp' wh wh'.
     eapply conv_cum_alt in conv as [(?&?&[r1 r2 e])]; auto.
     sq. 
-    pose proof (whnf_red_inv _ _ _ _ _ wh r1) as w1.
+    pose proof (whnf_red_inv _ _ _ _ wh r1) as w1.
     apply whnf_red_mkApps_l_inv in w1 as (?&?&->&?&?); auto.
-    pose proof (whnf_red_inv _ _ _ _ _ wh' r2) as w2.
+    pose proof (whnf_red_inv _ _ _ _ wh' r2) as w2.
     apply whnf_red_mkApps_l_inv in w2 as (?&?&->&?&?); auto.
     apply whnf_red_isApp in w as ?.
     apply whnf_red_isApp in w0 as ?.
@@ -332,7 +332,6 @@ Section fixed.
     { now move/clrel_src: r1. }
     have clr : is_open_term Γ r.
     { now move/clrel_src: r2. }
-    eapply closed_red_red in r1. eapply closed_red_red in r2.
     sq.
     subst l r; eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
@@ -448,7 +447,6 @@ Section fixed.
     have clr := clrel_src r2.
     assert (clx := closed_red_open_right r1).
     assert (cly := closed_red_open_right r2).
-    apply clrel_rel in r1. apply clrel_rel in r2.
     eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
@@ -509,7 +507,6 @@ Section fixed.
     have clr := clrel_src r2.
     assert (clx := closed_red_open_right r1).
     assert (cly := closed_red_open_right r2).
-    apply clrel_rel in r1. apply clrel_rel in r2.
     eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.
@@ -561,7 +558,6 @@ Section fixed.
     have clΓ := clrel_ctx r1.
     have cll := clrel_src r1.
     have clr := clrel_src r2.
-    eapply clrel_rel in r1. apply clrel_rel in r2.
     eapply whnf_red_inv in r1; eauto.
     eapply whnf_red_inv in r2; eauto.
     depelim r1.

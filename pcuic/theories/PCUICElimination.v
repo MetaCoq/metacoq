@@ -631,13 +631,13 @@ Proof.
   destruct (ind_kelim idecl); intuition congruence.
 Qed.
 
-Lemma declared_projection_projs_nonempty `{cf : checker_flags} {Σ : global_env_ext} { mind ind p a} :
+Lemma declared_projection_projs_nonempty `{cf : checker_flags} {Σ : global_env_ext} {p mdecl idecl cdecl pdecl} :
   wf Σ ->
-  declared_projection Σ p mind ind a ->
-  ind_projs ind <> [].
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
+  ind_projs idecl <> [].
 Proof.
   intros. destruct H. destruct H0.
-  destruct (ind_projs ind); try congruence. destruct p.
+  destruct (ind_projs idecl); try congruence. destruct p.
   cbn in *. destruct n; inv H0.
 Qed.
 
@@ -648,18 +648,15 @@ Lemma elim_restriction_works_proj_kelim1 `{cf : checker_flags} (Σ : global_env_
   (Is_proof Σ Γ (tProj p c) -> False) -> ind_kelim idecl = IntoAny.
 Proof.
   intros X H X0 H0.
-  destruct p. destruct p. cbn in *.
-  eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
+  eapply inversion_Proj in X0 as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
+  destruct (declared_inductive_inj H d) as [-> ->].
   destruct x2. cbn in *.
-  pose (d' := d). destruct d' as [? _].
-  eapply declared_inductive_inj in H as []; eauto. subst. simpl in *.
   pose proof (declared_projection_projs_nonempty X d).
   pose proof (PCUICWeakeningEnv.on_declared_projection d) as [_ onp].
-  simpl in onp.
-  destruct ind_ctors as [|? []]; try contradiction.
+  simpl in onp. subst.
   destruct ind_cunivs as [|? []]; try contradiction.
-  now destruct onp as (((? & ?) & ?) & ?).
-  all:destruct onp as (((? & ?) & ?) & ?); now inv o.
+  1,3:now destruct onp as (((? & ?) & ?) & ?).
+  destruct onp as (((? & ?) & ?) & ?). now inv o.
 Qed.
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :

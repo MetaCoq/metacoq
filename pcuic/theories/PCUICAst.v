@@ -390,6 +390,43 @@ Fixpoint closedn k (t : term) : bool :=
   | x => true
   end.
 
+Section fix_test.
+
+Variable test : term -> bool.
+
+Fixpoint test_context_nlict (bcontext : list (context_decl term)) :=
+  match bcontext with
+  | nil => true
+  | d :: bcontext => test_context_nlict bcontext &&
+                     test (decl_type d) && match decl_body d with Some _ => false | None => true end
+  end.
+
+End fix_test.
+
+Definition test_branch_nlict test b := 
+  test_context_nlict test (bcontext b) && test (bbody b).
+
+Definition test_branches_nlict test brs :=
+  forallb (test_branch_nlict test) brs.
+
+Fixpoint nlict (t : term) : bool :=
+  match t with
+  | tEvar ev args => List.forallb nlict args
+  | tLambda _ T M | tProd _ T M => nlict T && nlict M
+  | tApp u v => nlict u && nlict v
+  | tLetIn na b t b' => nlict b && nlict t && nlict b'
+  | tCase ind p c brs =>
+    let p' := test_predicate_k (fun _ => true) (fun _ => nlict) 0 p in
+    let brs' := test_branches_nlict nlict brs in
+    p' && nlict c && brs'
+  | tProj p c => nlict c
+  | tFix mfix idx =>
+    List.forallb (test_def nlict nlict) mfix
+  | tCoFix mfix idx =>
+    List.forallb (test_def nlict nlict) mfix
+  | x => true
+  end.
+
 Notation closed t := (closedn 0 t).
 Notation closed_decl n := (test_decl (closedn n)).
 Notation closedn_ctx := (test_context_k closedn).

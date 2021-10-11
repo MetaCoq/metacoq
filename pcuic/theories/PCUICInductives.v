@@ -774,6 +774,183 @@ Proof.
   now rewrite Nat.add_0_r in o.
 Qed.
 
+Lemma to_extended_list_k_map_lift:
+  forall (n k : nat) (c : context), 
+  to_extended_list_k c k = map (lift n (#|c| + k)) (to_extended_list_k c k).
+Proof.
+  intros n k c.
+  pose proof (to_extended_list_k_spec c k). unf_term.
+  symmetry. solve_all.
+  destruct H as [x' [-> Hx]]. simpl.
+  destruct (leb_spec_Set (#|c| + k) x').
+  - f_equal. lia.
+  - reflexivity.
+Qed.
+
+Lemma all_rels_smash Γ n k : 
+  assumption_context Γ ->
+  all_rels Γ n k = List.rev (to_extended_list_k Γ n).
+Proof.
+  induction 1 in n, k |- *; cbn; auto.
+  rewrite reln_acc rev_app_distr /=.
+  f_equal. rewrite IHassumption_context Nat.add_1_r //.
+Qed.
+
+Lemma to_extended_list_k_expand_lets Γ n Δ i : 
+  to_extended_list_k (expand_lets_k_ctx Γ n Δ) i = to_extended_list_k Δ i.
+Proof.
+  rewrite /expand_lets_k_ctx.
+  now rewrite to_extended_list_k_subst to_extended_list_k_lift_context.
+Qed.
+
+
+From MetaCoq.PCUIC Require Import PCUICRename.
+
+Lemma extended_subst_lift_context n (Γ : context) (k k' : nat) :
+  extended_subst (lift_context n k Γ) k' =
+  map (lift n (k + context_assumptions Γ + k')) (extended_subst Γ k').
+Proof.
+  pose proof (PCUICRename.rename_extended_subst).
+  rewrite -rename_context_lift_context.
+  rewrite lift_extended_subst -H.
+  rewrite (lift_extended_subst _ k').
+  rewrite !map_map_compose. apply map_ext => t.
+  rewrite shiftn_lift_renaming; sigma.
+  apply inst_ext.
+  rewrite - !Upn_Upn (Nat.add_comm _ k') !Upn_Upn shiftn_Upn - !Upn_Upn.
+  move=> i; lia_f_equal.
+Qed.
+
+Lemma subst_context_lift_context (n : nat) (Γ Δ : context) :
+  subst_context (extended_subst (lift_context n 0 Γ) 0) 0 (lift_context n (#|Γ| + context_assumptions Γ) Δ) =
+  lift_context n (context_assumptions Γ) (subst_context (extended_subst Γ 0) 0 Δ).
+Proof.
+  rewrite {1}extended_subst_lift_context /= Nat.add_0_r.
+  now rewrite distr_lift_subst_context; len.
+Qed.
+
+Lemma lift_context_lift_context n k k' Γ : 
+  lift_context n (k + k') (lift_context k' k Γ) = lift_context (n + k') k Γ.
+Proof.
+  rewrite - !rename_context_lift_context.
+  rewrite /PCUICRename.rename_context fold_context_k_compose.
+  apply fold_context_k_ext => i x.
+  rewrite !rename_inst !shiftn_lift_renaming !ren_lift_renaming.
+  sigma. apply inst_ext.
+  now rewrite Upn_compose Upn_compose shiftn_Upn shiftk_compose.
+Qed.
+
+Lemma lift_context_subst_context_let_expand n s Γ Δ : 
+  #|s| = context_assumptions Γ ->
+  lift_context n 0 (subst_context_let_expand s Γ Δ) =
+  subst_context_let_expand (map (lift0 n) s) (lift_context n 0 Γ) (lift_context n #|Γ| Δ).
+Proof.
+  intros hlen.
+  rewrite /subst_context_let_expand.
+  rewrite distr_lift_subst_context. f_equal.
+  rewrite Nat.add_0_r hlen.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx /=; autorewrite with len.
+  rewrite -lift_context_add Nat.add_comm lift_context_add.
+  rewrite -subst_context_lift_context.
+  rewrite -lift_context_add.
+  now rewrite lift_context_lift_context.
+Qed.
+
+
+Lemma expand_lets_lift n k Γ t : 
+  expand_lets (lift_context n k Γ) (lift n (#|Γ| + k) t) =
+  lift n (k + context_assumptions Γ) (expand_lets Γ t).
+Proof.
+  rewrite /expand_lets /expand_lets_k /=.
+  rewrite extended_subst_lift_context Nat.add_0_r.
+  epose proof (distr_lift_subst_rec _ _ _ 0 (k + context_assumptions Γ)).
+  len. rewrite permute_lift. lia. rewrite !Nat.add_assoc /= in H.
+  relativize #|Γ|. erewrite <- H. 2:now len.
+  now len.
+Qed.
+
+Lemma expand_lets_ctx_lift n k' Γ Δ : 
+  k' = #|Γ| ->
+  expand_lets_ctx (lift_context n 0 Γ) (lift_context n k' Δ) =
+  lift_context n (context_assumptions Γ) (expand_lets_ctx Γ Δ).
+Proof.
+  intros ->.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx /=.
+  len.
+  rewrite distr_lift_subst_context. len.
+  rewrite -lift_context_add Nat.add_comm.
+  rewrite lift_context_lift_context.
+  now rewrite extended_subst_lift_context. 
+Qed.
+
+Lemma lift_context_expand_lets_ctx n Γ Δ : 
+  lift_context n 0 (expand_lets_ctx Γ Δ) =
+  expand_lets_k_ctx Γ n (lift_context n 0 Δ).
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  rewrite lift_context_subst_context. f_equal.
+  rewrite - !rename_context_lift_context /rename_context !fold_context_k_compose.
+  apply fold_context_k_ext => i t.
+  rewrite !shiftn_lift_renaming; sigma.
+  apply inst_ext. now rewrite !Upn_compose shiftn_Upn.
+Qed.
+
+Lemma skipn_lift_context (m n : nat) (k : nat) (Γ : context) :
+  skipn m (lift_context n k Γ) = lift_context n k (skipn m Γ).
+Proof.
+  rewrite !lift_context_alt.
+  rewrite skipn_mapi_rec. rewrite mapi_rec_add /mapi.
+  apply mapi_rec_ext. intros.
+  f_equal. rewrite List.skipn_length. lia.
+Qed.
+
+Lemma skipn_subst_instance {n u Γ} : 
+  skipn n Γ@[u] = (skipn n Γ)@[u].
+Proof.
+  now rewrite /subst_instance /= /subst_instance_context /map_context map_skipn.
+Qed.
+
+Lemma skipn_expand_lets_ctx {n Γ Δ} : 
+  skipn n (expand_lets_ctx Γ Δ) = expand_lets_ctx Γ (skipn n Δ).
+Proof.
+  now rewrite /expand_lets_ctx /expand_lets_k_ctx skipn_subst_context skipn_lift_context.
+Qed.
+
+Lemma expand_lets_k_ctx_snoc Γ Δ k d : 
+  expand_lets_k_ctx Γ k (Δ ,, d) =
+  expand_lets_k_ctx Γ k Δ ,, map_decl (expand_lets_k Γ (#|Δ| + k)) d.
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx lift_context_snoc subst_context_snoc /=.
+  f_equal. len. rewrite /subst_decl /lift_decl compose_map_decl //.
+  rewrite Nat.add_assoc //.
+Qed.
+
+Lemma expand_lets_ctx_snoc Γ Δ d : 
+  expand_lets_ctx Γ (Δ ,, d) =
+  expand_lets_ctx Γ Δ ,, map_decl (expand_lets_k Γ #|Δ|) d.
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx lift_context_snoc subst_context_snoc /=.
+  f_equal. len. rewrite /subst_decl /lift_decl compose_map_decl //.
+Qed.
+
+Lemma expand_lets_ctx_tip Γ d : expand_lets_ctx Γ [d] = [map_decl (expand_lets Γ) d].
+Proof. rewrite /expand_lets_ctx /expand_lets_k_ctx /expand_lets /expand_lets_k.
+  simpl. rewrite (lift_context_app _ _ [] [_]) /= (subst_context_app _ _ [] [_]) /=.
+  f_equal.
+  now rewrite compose_map_decl.
+Qed.
+
+Lemma subst_context_lift_context_cancel s k n Γ :
+  n = #|s| ->
+  subst_context s k (lift_context n k Γ) = Γ.
+Proof.
+  intros ->.
+  induction Γ as [|[na [b|] ty] Γ']; auto;
+    rewrite !lift_context_snoc !subst_context_snoc /= /subst_decl /map_decl /snoc /=; simpl; f_equal;
+    auto; f_equal; len;
+    rewrite -(Nat.add_0_r #|s|) simpl_subst_rec /= // ?lift0_id //; lia.
+Qed.
+
 Lemma wf_projection_arg_ctx {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl cdecl} :
   wf Σ.1 ->
   declared_constructor Σ (ind, 0) mdecl idecl cdecl ->
@@ -968,6 +1145,12 @@ Proof.
   epose proof (nth_error_All_local_env (nth_error_Some_length hnth) Hwf).
   rewrite hnth /= in X. unfold on_local_decl in X.
   destruct decl_body => //. destruct X => //.
+Qed.
+
+Lemma map_expand_lets_to_extended_list_k Γ :
+  map (expand_lets Γ) (to_extended_list Γ) = to_extended_list (smash_context [] Γ).
+Proof.
+  rewrite -map_subst_extended_subst_lift_to_extended_list_k map_map_compose //.
 Qed.
 
 Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind idecl} : 
@@ -1950,125 +2133,6 @@ Proof.
   now eapply PCUICContexts.subslet_extended_subst.
 Qed.
 
-Lemma to_extended_list_k_map_lift:
-  forall (n k : nat) (c : context), 
-  to_extended_list_k c k = map (lift n (#|c| + k)) (to_extended_list_k c k).
-Proof.
-  intros n k c.
-  pose proof (to_extended_list_k_spec c k). unf_term.
-  symmetry. solve_all.
-  destruct H as [x' [-> Hx]]. simpl.
-  destruct (leb_spec_Set (#|c| + k) x').
-  - f_equal. lia.
-  - reflexivity.
-Qed.
-
-Lemma all_rels_smash Γ n k : 
-  assumption_context Γ ->
-  all_rels Γ n k = List.rev (to_extended_list_k Γ n).
-Proof.
-  induction 1 in n, k |- *; cbn; auto.
-  rewrite reln_acc rev_app_distr /=.
-  f_equal. rewrite IHassumption_context Nat.add_1_r //.
-Qed.
-
-Lemma to_extended_list_k_expand_lets Γ n Δ i : 
-  to_extended_list_k (expand_lets_k_ctx Γ n Δ) i = to_extended_list_k Δ i.
-Proof.
-  rewrite /expand_lets_k_ctx.
-  now rewrite to_extended_list_k_subst to_extended_list_k_lift_context.
-Qed.
-
-
-From MetaCoq.PCUIC Require Import PCUICRename.
-
-Lemma extended_subst_lift_context n (Γ : context) (k k' : nat) :
-  extended_subst (lift_context n k Γ) k' =
-  map (lift n (k + context_assumptions Γ + k')) (extended_subst Γ k').
-Proof.
-  pose proof (PCUICRename.rename_extended_subst).
-  rewrite -rename_context_lift_context.
-  rewrite lift_extended_subst -H.
-  rewrite (lift_extended_subst _ k').
-  rewrite !map_map_compose. apply map_ext => t.
-  rewrite shiftn_lift_renaming; sigma.
-  apply inst_ext.
-  rewrite - !Upn_Upn (Nat.add_comm _ k') !Upn_Upn shiftn_Upn - !Upn_Upn.
-  move=> i; lia_f_equal.
-Qed.
-
-Lemma subst_context_lift_context (n : nat) (Γ Δ : context) :
-  subst_context (extended_subst (lift_context n 0 Γ) 0) 0 (lift_context n (#|Γ| + context_assumptions Γ) Δ) =
-  lift_context n (context_assumptions Γ) (subst_context (extended_subst Γ 0) 0 Δ).
-Proof.
-  rewrite {1}extended_subst_lift_context /= Nat.add_0_r.
-  now rewrite distr_lift_subst_context; len.
-Qed.
-Lemma lift_context_lift_context n k k' Γ : 
-  lift_context n (k + k') (lift_context k' k Γ) = lift_context (n + k') k Γ.
-Proof.
-  rewrite - !rename_context_lift_context.
-  rewrite /PCUICRename.rename_context fold_context_k_compose.
-  apply fold_context_k_ext => i x.
-  rewrite !rename_inst !shiftn_lift_renaming !ren_lift_renaming.
-  sigma. apply inst_ext.
-  now rewrite Upn_compose Upn_compose shiftn_Upn shiftk_compose.
-Qed.
-
-Lemma lift_context_subst_context_let_expand n s Γ Δ : 
-  #|s| = context_assumptions Γ ->
-  lift_context n 0 (subst_context_let_expand s Γ Δ) =
-  subst_context_let_expand (map (lift0 n) s) (lift_context n 0 Γ) (lift_context n #|Γ| Δ).
-Proof.
-  intros hlen.
-  rewrite /subst_context_let_expand.
-  rewrite distr_lift_subst_context. f_equal.
-  rewrite Nat.add_0_r hlen.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx /=; autorewrite with len.
-  rewrite -lift_context_add Nat.add_comm lift_context_add.
-  rewrite -subst_context_lift_context.
-  rewrite -lift_context_add.
-  now rewrite lift_context_lift_context.
-Qed.
-
-
-Lemma expand_lets_lift n k Γ t : 
-  expand_lets (lift_context n k Γ) (lift n (#|Γ| + k) t) =
-  lift n (k + context_assumptions Γ) (expand_lets Γ t).
-Proof.
-  rewrite /expand_lets /expand_lets_k /=.
-  rewrite extended_subst_lift_context Nat.add_0_r.
-  epose proof (distr_lift_subst_rec _ _ _ 0 (k + context_assumptions Γ)).
-  len. rewrite permute_lift. lia. rewrite !Nat.add_assoc /= in H.
-  relativize #|Γ|. erewrite <- H. 2:now len.
-  now len.
-Qed.
-
-Lemma expand_lets_ctx_lift n k' Γ Δ : 
-  k' = #|Γ| ->
-  expand_lets_ctx (lift_context n 0 Γ) (lift_context n k' Δ) =
-  lift_context n (context_assumptions Γ) (expand_lets_ctx Γ Δ).
-Proof.
-  intros ->.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx /=.
-  len.
-  rewrite distr_lift_subst_context. len.
-  rewrite -lift_context_add Nat.add_comm.
-  rewrite lift_context_lift_context.
-  now rewrite extended_subst_lift_context. 
-Qed.
-
-Lemma lift_context_expand_lets_ctx n Γ Δ : 
-  lift_context n 0 (expand_lets_ctx Γ Δ) =
-  expand_lets_k_ctx Γ n (lift_context n 0 Δ).
-Proof.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  rewrite lift_context_subst_context. f_equal.
-  rewrite - !rename_context_lift_context /rename_context !fold_context_k_compose.
-  apply fold_context_k_ext => i t.
-  rewrite !shiftn_lift_renaming; sigma.
-  apply inst_ext. now rewrite !Upn_compose shiftn_Upn.
-Qed.
 
 Lemma typing_expand_lets_gen {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Γ' t T} : 
   Σ ;;; Γ ,,, Δ ,,, Γ' |- t : T -> 

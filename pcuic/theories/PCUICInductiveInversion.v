@@ -1151,16 +1151,6 @@ Proof.
   move/on_projs_noidx. destruct ind_indices; try discriminate; auto.
 Qed.
 
-Lemma subst_context_lift_context_cancel s k n Γ :
-  n = #|s| ->
-  subst_context s k (lift_context n k Γ) = Γ.
-Proof.
-  intros ->.
-  induction Γ as [|[na [b|] ty] Γ']; auto;
-    rewrite !lift_context_snoc !subst_context_snoc /= /subst_decl /map_decl /snoc /=; simpl; f_equal;
-    auto; f_equal; len;
-    rewrite -(Nat.add_0_r #|s|) simpl_subst_rec /= // ?lift0_id //; lia.
-Qed.
 
 Lemma subslet_projs {cf:checker_flags} {Σ} {wfΣ : wf Σ} {i mdecl idecl args} :
   declared_inductive Σ.1 i mdecl idecl ->
@@ -1638,14 +1628,6 @@ Lemma wt_cumul_ctx_rel_cons {cf:checker_flags} Σ Γ Δ Δ' na ty na' ty' :
 Proof.
   intros []; split; simpl; try constructor; auto.
   all:now depelim X0; auto; constructor.
-Qed.
-
-Lemma expand_lets_ctx_snoc Γ Δ d : 
-  expand_lets_ctx Γ (Δ ,, d) =
-  expand_lets_ctx Γ Δ ,, map_decl (expand_lets_k Γ #|Δ|) d.
-Proof.
-  rewrite /expand_lets_ctx /expand_lets_k_ctx lift_context_snoc subst_context_snoc /=.
-  f_equal. len. rewrite /subst_decl /lift_decl compose_map_decl //.
 Qed.
 
 Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
@@ -3089,15 +3071,6 @@ Proof.
     constructor. apply IHc. simpl in H. lia.
 Qed.
 
-Lemma skipn_lift_context (m n : nat) (k : nat) (Γ : context) :
-  skipn m (lift_context n k Γ) = lift_context n k (skipn m Γ).
-Proof.
-  rewrite !lift_context_alt.
-  rewrite skipn_mapi_rec. rewrite mapi_rec_add /mapi.
-  apply mapi_rec_ext. intros.
-  f_equal. rewrite List.skipn_length. lia.
-Qed.
-
 Lemma projs_inst_0 ind n k : projs_inst ind n k (tRel 0) = projs ind n k.
 Proof.
   induction k in n |- * => /= //.
@@ -3530,13 +3503,6 @@ Proof.
   move/declared_inductive_type.
   rewrite /idecl_binder => ->.
   rewrite /ind_binder. *)
-
-Lemma expand_lets_ctx_tip Γ d : expand_lets_ctx Γ [d] = [map_decl (expand_lets Γ) d].
-Proof. rewrite /expand_lets_ctx /expand_lets_k_ctx /expand_lets /expand_lets_k.
-  simpl. rewrite (lift_context_app _ _ [] [_]) /= (subst_context_app _ _ [] [_]) /=.
-  f_equal.
-  now rewrite compose_map_decl.
-Qed.
 
 Lemma subst_let_expand_app s Γ s' Δ k :
   k = #|Δ| ->

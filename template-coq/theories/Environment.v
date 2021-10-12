@@ -118,6 +118,16 @@ Module Environment (T : Term).
       end
     end.
 
+  Fixpoint is_assumption_context (Γ : context) :=
+    match Γ with
+    | [] => true
+    | d :: Γ => 
+      match d.(decl_body) with
+      | Some _ => false
+      | None => is_assumption_context Γ
+      end
+    end.
+
   (** Smashing a context produces an assumption context. *)
 
   Fixpoint smash_context (Γ Γ' : context) : context :=

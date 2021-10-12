@@ -2995,6 +2995,7 @@ Proof.
               move/WfAst.wf_mkApps_inv => wfindices.
               eapply positive_cstr_concl.
               rewrite map_length.
+<<<<<<< HEAD
               eapply All_map. solve_all. now eapply trans_closedn.
               move/WfAst.wf_inv => /= [[wfb wfty] wft].
               simpl; intros.
@@ -3035,6 +3036,7 @@ Proof.
               specialize (on_ctype_variance _ indv).
               cbn.
               eapply trans_cstr_respects_variance => //.
+            + todo "here?".
         --- simpl; intros. have onp := oni.(ST.onProjections).
             destruct (Ast.Env.ind_projs idecl) => //.
             forward onp. congruence.

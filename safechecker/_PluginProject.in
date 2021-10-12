@@ -18,9 +18,6 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/typing0.mli
-src/typing0.ml
-
 
 # From PCUIC
 src/pCUICPrimitive.mli

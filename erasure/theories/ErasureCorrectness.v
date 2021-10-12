@@ -795,13 +795,13 @@ Proof.
         eapply value_app_inv in X0. subst. eassumption.
       * rename H3 into Hinf.
         eapply Forall2_nth_error_Some in H4 as (? & ? & ?); eauto.
-        assert (Σ ;;; [] |- mkApps (tConstruct i 0 u) args : mkApps (tInd i x) x2).
+        assert (Σ ;;; [] |- mkApps (tConstruct i 0 u) args : mkApps (tInd i x) x3).
         eapply subject_reduction_eval; eauto.        
         eapply inversion_mkApps in X as (? & ? & ?); eauto.
-        eapply typing_spine_inv in t2 as []; eauto.
+        eapply typing_spine_inv in t1 as []; eauto.
         eapply IHeval2 in H3 as (? & ? & [?]); eauto.
         invs H2.
-        -- exists x8. split; eauto. constructor. econstructor. eauto.
+        -- exists x9. split; eauto. constructor. econstructor. eauto.
             now eapply isPropositional_propositional; eauto.
             rewrite <- nth_default_eq. unfold nth_default. now rewrite H1.
         -- exists EAst.tBox.
@@ -1340,7 +1340,7 @@ Proof.
       intros e; eapply e.
         
   - assert (Hty' := Hty).
-    eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?); auto.
+    eapply inversion_Proj in Hty' as (? & ? & ? & ? & [] & ? & ? & ? & ? & ?); auto.
     set (t0' := t0).
     eapply PCUICValidity.inversion_mkApps in t0' as (? & ? & ?); eauto.
     pose proof (PCUICClosed.subject_closed t0) as clfix.
@@ -1377,7 +1377,7 @@ Proof.
       { apply erases_deps_mkApps_inv in Hed as (_ & edargs).
         econstructor; eauto.
         apply erases_deps_mkApps; [now constructor|now eauto]. }
-      exists x7; split; [|constructor]; auto.
+      exists x8; split; [|constructor]; auto.
     * destruct H0 as (? & ? & ? & ? & ?).
       subst c'.
       pose proof (erases_closed _ [] _ _ clcof H1) as clfix'.
@@ -1432,7 +1432,7 @@ Proof.
           intros e; eapply e. exact H4. }
       { econstructor; eauto.
         apply erases_deps_mkApps; [now constructor|now eauto]. }
-        exists x4; split; [|constructor]; auto.
+        exists x5; split; [|constructor]; auto.
     * exists EAst.tBox; split; auto.
       2:repeat constructor.
       constructor.

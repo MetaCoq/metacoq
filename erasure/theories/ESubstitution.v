@@ -12,15 +12,6 @@ Module PA := PCUICAst.
 Module P := PCUICWcbvEval.
 Local Existing Instance config.extraction_checker_flags.
 
-Lemma All2_All_mix_left {A B} {P : A -> Type} {Q : A -> B -> Type}
-      {l : list A} {l'}:
-  All P l -> All2 Q l l' -> All2 (fun x y => (P x * Q x y)%type) l l'.
-Proof.
-  induction 2; simpl; intros; constructor.
-  inv X; intuition auto.
-  apply IHX0. inv X; intuition auto.
-Qed.
-
 (** ** Global Weakening  *)
 
 Lemma Is_type_extends (Σ : global_env_ext) Γ t :
@@ -57,7 +48,7 @@ Lemma Informative_extends:
     (mdecl : PCUICAst.PCUICEnvironment.mutual_inductive_body) (idecl : PCUICAst.PCUICEnvironment.one_inductive_body),
 
     PCUICAst.declared_inductive (fst Σ) ind mdecl idecl ->
-    forall (Σ' : global_env) (u0 : Instance.t),
+    forall (Σ' : global_env),
       wf Σ' ->
       extends Σ Σ' ->
       Informative Σ ind -> Informative (Σ', Σ.2) ind.
@@ -94,18 +85,20 @@ Proof.
     destruct isdecl as [[? ?] ?]. red in H. red in H4.
     rewrite H in H4.
     eapply extends_lookup in H; eauto. now rewrite H.
-  - econstructor. all:eauto. all:todo "case".
-    
-    (*2:{ eauto. eapply All2_All_left in X3.
+  - econstructor. all:eauto. 
+    eapply Informative_extends; eauto.
+    todo "cases".
+    (*eapply All2i_All2
+    eapply All2_impl; tea. cbn.
+    eapply All2_All_left in X3.
         2:{ intros ? ? [[[? ?] ?] ?]. exact e0. }
         eapply All2_All_mix_left in X3; eauto.
         eapply All2_impl. exact X3.
         intros. destruct H as [? []].
-        split; eauto. }
+        split; eauto. }*)
 
-    eapply Informative_extends; eauto.*)
   - econstructor. destruct isdecl. 2:eauto.
-    eapply Informative_extends; eauto.
+    eapply Informative_extends; eauto. exact H.
   - econstructor.
     eapply All2_All_mix_left in X1; eauto.
     eapply All2_impl. exact X1.

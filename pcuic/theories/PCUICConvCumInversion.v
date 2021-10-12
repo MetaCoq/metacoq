@@ -307,11 +307,12 @@ Section fixed.
       + now apply IHa1.
   Qed.
 
-  Lemma conv_cum_tCase_inv leq Γ ci p discr brs ci' p' discr' brs' mdecl idecl :
+  Lemma conv_cum_tCase_inv leq Γ ci p discr brs ci' p' discr' brs' mdecl idecl mdecl' idecl' :
     conv_cum leq Σ Γ (tCase ci p discr brs) (tCase ci' p' discr' brs') ->
     declared_inductive Σ ci mdecl idecl ->
+    declared_inductive Σ ci' mdecl' idecl' ->
     wf_predicate mdecl idecl p ->
-    wf_predicate mdecl idecl p' ->
+    wf_predicate mdecl' idecl' p' ->
     whnf RedFlags.default Σ Γ (tCase ci p discr brs) ->
     whnf RedFlags.default Σ Γ (tCase ci' p' discr' brs') ->
     ∥ [× ci = ci',
@@ -319,7 +320,7 @@ Section fixed.
       Σ;;; Γ ⊢ discr = discr' &
       equality_brs Σ Γ p brs brs']∥.
   Proof.
-    intros conv decli wfp wfp' whl whr.
+    intros conv decli decli' wfp wfp' whl whr.
     depelim whl; solve_discr.
     depelim w; solve_discr; try discriminate.
     depelim whr; solve_discr.
@@ -341,6 +342,7 @@ Section fixed.
     set (pl := {| pparams := motivepars |}) in *.
     set (pr := {| pparams := motivepars0 |}) in *.
     specialize e as (?&?&?&?).
+    destruct (declared_inductive_inj decli decli') as [-> ->].
     repeat inv_on_free_vars.
     have clred : red_terms Σ Γ (pparams p) motivepars.
     { eapply into_red_terms; tea. }

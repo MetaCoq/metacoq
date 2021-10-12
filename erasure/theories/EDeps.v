@@ -548,10 +548,10 @@ Proof.
     destruct p0.
     now constructor; eauto. *)
 
-  - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
-    destruct (proj2 Σer _ _ _ (proj1 d)) as (? & ? & ? & ?).
+  - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
+    destruct (proj2 Σer _ _ _ (proj1 (proj1 d))) as (? & ? & ? & ?).
     econstructor; eauto. eapply d.
-    destruct d as [[declm decli] _]. destruct H1. destruct H0.
+    destruct d as [[[declm decli] declc] _]. destruct H1. destruct H0.
     eapply Forall2_All2 in H1. eapply All2_nth_error in H1; eauto.
 
   - constructor.

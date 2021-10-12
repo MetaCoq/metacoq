@@ -663,11 +663,10 @@ Proof.
     eapply nisErasable_Propositional in f; auto.
     now exists A.
 
-  - constructor. clear E.
-    eapply inversion_Proj in t as (? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
-    eapply elim_restriction_works_proj; eauto.
-    destruct d; eauto. intros isp. eapply isErasable_Proof in isp. eauto.
-    eauto.
+  - constructor; auto. clear E.
+    eapply inversion_Proj in t as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?) ; auto.
+    eapply elim_restriction_works_proj; eauto. exact d.
+    intros isp. eapply isErasable_Proof in isp; eauto.
 
   - constructor.
     eapply All2_from_nth_error. now autorewrite with len.
@@ -878,8 +877,8 @@ Proof.
     eauto.
 *)
   - eapply KernameSet.singleton_spec in H0; subst.
-    apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
-    destruct d as [[d _] _]. red in d. eexists; eauto.
+    apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
+    destruct d as [[[d _] _] _]. red in d. eexists; eauto.
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
 
@@ -961,17 +960,17 @@ Proof.
     simpl.
     destruct d. red in H7, declm. rewrite H7 in declm. now noconf declm. *)
 
-  - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?); eauto.
+  - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj1 d).
     specialize (H0 (inductive_mind p.1.1)). forward H0.
     now rewrite KernameSet.singleton_spec. red in H0. destruct H0.
     elimtype False. destruct H0 as [cst [declc _]].
-    { red in declc. destruct d as [[d _] _]. red in d. rewrite d in declc. noconf declc. }
+    { red in declc. destruct d as [[[d _] _] _]. red in d. rewrite d in declc. noconf declc. }
     destruct H0 as [mib [mib' [declm [declm' em]]]].
     destruct d. destruct em.
     eapply Forall2_nth_error_left in H5 as (x' & ? & ?); eauto.
     econstructor; eauto. split; eauto.
-    destruct H0. red in H0, declm. rewrite H0 in declm. now noconf declm.
+    destruct H0 as [[? ?] ?]. red in H0, declm. rewrite H0 in declm. now noconf declm.
 
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.

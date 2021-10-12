@@ -2545,6 +2545,17 @@ Section Conversion.
     apply whnf_whne_nodelta_upgrade in eq; auto using sq.
   Qed.
   
+  Lemma welltyped_zipp_inv Γ t π : welltyped Σ Γ (zipp t π) -> welltyped Σ Γ t.
+  Proof.
+    sq.
+    induction π; cbn; auto.
+    unfold zipp.
+    destruct decompose_stack.
+    intros [s' Hs].
+    eapply PCUICValidity.inversion_mkApps in Hs as [? []].
+    now exists x.
+  Qed.
+
   Lemma inv_reduced_discriminees_case leq Γ π π' ci ci' p p' c c' brs brs' h h' :
     conv_stack_ctx Γ π π' ->
     true = eqb_term (reduce_term
@@ -2553,6 +2564,8 @@ Section Conversion.
     true = eqb_term (reduce_term
                        RedFlags.default
                        Σ hΣ (Γ,,, stack_context π') c' h') c' ->
+    welltyped Σ Γ (zipc (tCase ci p c brs) π) ->
+    welltyped Σ Γ (zipc (tCase ci' p' c' brs') π') ->
     isred_full Γ (tCase ci p c brs) π ->
     isred_full Γ (tCase ci' p' c' brs') π' ->
     conv_cum
@@ -2565,7 +2578,7 @@ Section Conversion.
      equality_brs Σ (Γ,,, stack_context π) p brs brs' &
      equality_terms Σ (Γ,,, stack_context π) (decompose_stack π).1 (decompose_stack π').1]∥.
   Proof.
-    intros [] c_is_red%eq_sym c'_is_red%eq_sym isr1 isr2 cc.
+    intros [] c_is_red%eq_sym c'_is_red%eq_sym wtc wtc' isr1 isr2 cc.
     eapply reduced_case_discriminee_whne in c_is_red as wh1; eauto.
     eapply reduced_case_discriminee_whne in c'_is_red as wh2; eauto.
     destruct hΣ, wh1 as [wh1], wh2 as [wh2].
@@ -2573,13 +2586,15 @@ Section Conversion.
     eapply whne_conv_context in wh2.
     2:{ symmetry in X. eapply context_equality_forget in X. exact X. }
     apply conv_cum_mkApps_inv in cc as [(equality_Case&conv_args)]; eauto using whnf_mkApps.
+    red in isr1.
+    eapply welltyped_zipc_zipp, welltyped_zipp_inv in wtc. 2:sq; auto.
+    eapply welltyped_zipc_zipp, welltyped_zipp_inv in wtc'. 2:sq; auto.
+    destruct wtc. eapply inversion_Case in X0 as [mdecl [idecl [isdecl [indices [[] ?]]]]]; tea.
+    destruct wtc'. eapply inversion_Case in X0 as [mdecl' [idecl' [isdecl' [indices' [[] ?]]]]]; tea.
     eapply conv_cum_tCase_inv in equality_Case; eauto.
-    - destruct equality_Case as [[<- ? ? ?]].
-      split; split; auto.
-    - admit.
-    - admit.
-    - admit.
-  Admitted.
+    destruct equality_Case as [[<- ? ? ?]].
+    split; split; auto.
+  Qed.
 
   Lemma reduced_proj_body_whne Γ π p c h :
     true = eqb_term (reduce_term

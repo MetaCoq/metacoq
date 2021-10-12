@@ -141,7 +141,7 @@ Section fix_sigma.
   Definition wf_reduction_aux : WellFounded term_rel.
   Proof.
     intros (Γ & s & H). sq'.
-    induction (normalisation Σ Γ s H) as [s _ IH].
+    induction (normalisation Σ _ Γ s H) as [s _ IH].
     induction (wf_cod' s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & B & ?) [(na & A & ? & ?)]. subst.

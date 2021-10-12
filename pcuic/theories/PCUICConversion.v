@@ -1160,8 +1160,7 @@ Section Inversions.
     eapply compare_term_mkApps_l_inv in leqvv' as [u [l'' [e ? ?]]].
     depelim e; solve_discr.
     noconf H0. noconf H1. split => //.
-    + erewrite All2_length.
-      all: eassumption.
+    + now rewrite (All2_length ha).
     + eapply red_terms_equality_terms in ha.
       eapply red_terms_equality_terms in ha'.
       eapply eq_terms_equality_terms in a; tea; fvs.

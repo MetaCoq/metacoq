@@ -33,18 +33,6 @@ Ltac Coq.Program.Tactics.program_solve_wf ::=
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Lemma spine_subst_smash_inv {cf Σ} {wfΣ : wf Σ} (Γ : context) (inst : list term) (Δ : context) s :
-  wf_local Σ (Γ ,,, Δ) ->
-  spine_subst Σ Γ inst s (smash_context [] Δ) ->
-  ∑ s', spine_subst Σ Γ inst s' Δ.
-Proof.
-  intros wf.
-  move/spine_subst_ctx_inst.
-  intros c. eapply ctx_inst_smash in c.
-  unshelve epose proof (ctx_inst_spine_subst _ c); auto.
-  now eexists.
-Qed.
-
 Lemma isType_mkApps_Ind_smash {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ puinst args} :
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) puinst ->

@@ -1766,7 +1766,7 @@ Section ReduceFns.
     eapply into_closed_red in r; fvs.
     eapply PCUICContextConversion.closed_red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_sort in r2 as ->.
-    destruct r1 as [clΓ cls r1]. eapply whnf_red_inv in r1; eauto.
+    eapply whnf_red_inv in r1; eauto.
     depelim r1.
     clear Heq.
     rewrite H in n0.
@@ -1802,7 +1802,6 @@ Section ReduceFns.
     eapply into_closed_red in r; eauto; fvs.
     eapply PCUICContextConversion.closed_red_confluence in r as (?&r1&r2); eauto.
     apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
-    eapply clrel_rel in r1.
     eapply whnf_red_inv in r1; auto.
     depelim r1.
     clear Heq.
@@ -1878,7 +1877,6 @@ Section ReduceFns.
     cbn in *.
     rewrite app_nil_r in wh.
     apply invert_red_mkApps_tInd in r2 as (?&[-> _ ?]); auto.
-    eapply clrel_rel in r1.
     eapply whnf_red_inv in r1; eauto.
     apply whnf_red_mkApps_inv in r1 as (?&?); auto.
     depelim w.
@@ -2014,12 +2012,12 @@ Section ReduceFns.
       apply Is_conv_to_Arity_inv in H as [(na&A&B&[r'])|(u&[r'])]; auto.
       + eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2); eauto.
         apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
-        eapply clrel_rel, whnf_red_inv in r1; eauto.
+        eapply whnf_red_inv in r1; eauto.
         depelim r1.
         rewrite H in notprod; auto.
       + eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2); eauto.
         apply invert_red_sort in r2 as ->.
-        eapply clrel_rel, whnf_red_inv in r1; eauto.
+        eapply whnf_red_inv in r1; eauto.
         depelim r1.
         rewrite H in notsort; cbn in *; auto.
   Qed. 

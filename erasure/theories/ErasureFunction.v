@@ -632,13 +632,17 @@ Proof.
     eapply H4.
     unfold erase_brs. eapply All2_from_nth_error. now autorewrite with len.
     intros.
-    todo "case".
-    (* eapply All2_nth_error_Some in X3; eauto.
-    destruct X3 as [t' [htnh eq]].
-    eapply nth_error_map_InP in H8.
-    destruct H8 as [a [Hnth [p' eq']]].
-    subst. simpl. rewrite Hnth in H7. noconf H7.
-    intuition auto.*) }
+    eapply All2i_nth_error_r in X7; eauto.
+    destruct X7 as [t' [htnh eq]].
+    eapply nth_error_map_InP in H9.
+    destruct H9 as [a [Hnth [p' eq']]].
+    subst. simpl. rewrite Hnth in H8. noconf H8.
+    intuition auto.
+    destruct b. cbn in *. intuition auto.
+    move: p'.
+    rewrite -(PCUICCasesContexts.inst_case_branch_context_eq a).
+    intros p'. specialize (a2 p' (sq w)).
+    apply a2. }
 
   all:simpl erase; eauto.
 
@@ -852,30 +856,27 @@ Proof.
     eapply KernameSet.singleton_spec in hin; subst.
     destruct d as [[H' _] _]. red in H'. simpl in *.
     red. sq. rewrite H'. intuition eauto.
-  - todo "case".
-    (* apply inversion_Case in wt
-      as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
-    destruct ind as [kn i']; simpl in *.
+  - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
+    destruct ci as [kn i']; simpl in *.
     eapply KernameSet.singleton_spec in H1; subst.
-    destruct d as [d _]. red in d.
-    simpl in *. eexists; intuition eauto.*)
+    destruct x1 as [d _]. red in d.
+    simpl in *. eexists; intuition eauto.
 
-  - todo "case".
-  (* apply inversion_Case in wt
-    as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
+  - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
     eapply knset_in_fold_left in H1.
     destruct H1. eapply IHer; eauto.
     destruct H1 as [br [inbr inkn]].
     eapply Forall2_All2 in H0.
-    assert (All (fun br => ∑ T, Σ ;;; Γ |- br.2 : T) brs).
-    eapply All2_All_left. eapply a.
+    assert (All (fun br => ∑ T, Σ ;;; Γ ,,, inst_case_branch_context p br |- br.(bbody) : T) brs).
+    eapply All2i_All_right. eapply brs_ty.
     simpl. intuition auto. eexists ; eauto.
+    now rewrite -(PCUICCasesContexts.inst_case_branch_context_eq a).
     eapply All2_All_mix_left in H0; eauto. simpl in H0.
     eapply All2_In_right in H0; eauto.
     destruct H0.
     destruct X1 as [br' [[T' HT] ?]].
     eauto.
-*)
+  
   - eapply KernameSet.singleton_spec in H0; subst.
     apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct d as [[[d _] _] _]. red in d. eexists; eauto.
@@ -932,34 +933,32 @@ Proof.
     now econstructor; eauto.
     destruct H as [mib [mib' [declm declm']]].
     red in declm, d. rewrite d in declm. noconf declm.
-  - todo "case".
-   (* apply inversion_Case in wt
-      as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
-    destruct ind as [kn i']; simpl in *.
+  - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
+    destruct ci as [[kn i'] ? ?]; simpl in *.
     apply includes_deps_fold in H2 as [? ?].
 
     specialize (H1 kn). forward H1.
     now rewrite KernameSet.singleton_spec. red in H1. destruct H1.
     elimtype False. destruct H1 as [cst [declc _]].
-    { red in declc. destruct d as [d _]. red in d. rewrite d in declc. noconf declc. }
+    { red in declc. destruct x1 as [d _]. red in d. rewrite d in declc. noconf declc. }
     destruct H1 as [mib [mib' [declm [declm' em]]]].
     destruct em.
-    pose proof d as [].
+    destruct x1 as [x1 hnth].
+    red in x1, declm. rewrite x1 in declm. noconf declm.
     eapply Forall2_nth_error_left in H1; eauto. destruct H1 as [? [? ?]].
-    eapply erases_deps_tCase; eauto.
-    split; eauto.
+    eapply erases_deps_tCase; eauto. 
+    split; eauto. split; eauto.
     destruct H1.
     eapply In_Forall in H3.
     eapply All_Forall. eapply Forall_All in H3.
     eapply Forall2_All2 in H0.
     eapply All2_All_mix_right in H0; eauto.
-    assert (All (fun br => ∑ T, Σ ;;; Γ |- br.2 : T) brs).
-    eapply All2_All_left. eapply a.
+    assert (All (fun br => ∑ T, Σ ;;; Γ ,,, inst_case_branch_context p br |- br.(bbody) : T) brs).
+    eapply All2i_All_right. eapply brs_ty.
     simpl. intuition auto. eexists ; eauto.
-    ELiftSubst.solve_all. destruct a2 as [T' HT]. eauto.
-    simpl.
-    destruct d. red in H7, declm. rewrite H7 in declm. now noconf declm. *)
-
+    now rewrite -(PCUICCasesContexts.inst_case_branch_context_eq a).
+    ELiftSubst.solve_all. destruct a0 as [T' HT]. eauto.
+    
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj1 d).
     specialize (H0 (inductive_mind p.1.1)). forward H0.

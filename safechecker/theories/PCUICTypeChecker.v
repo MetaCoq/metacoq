@@ -33,6 +33,19 @@ Ltac Coq.Program.Tactics.program_solve_wf ::=
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+Lemma spine_subst_smash_inv {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} 
+  {Γ inst Δ s} :
+  wf_local Σ (Γ ,,, Δ) ->
+  spine_subst Σ Γ inst s (smash_context [] Δ) ->
+  ∑ s', spine_subst Σ Γ inst s' Δ.
+Proof.
+  intros wf.
+  move/spine_subst_ctx_inst.
+  intros c. eapply ctx_inst_smash in c.
+  unshelve epose proof (ctx_inst_spine_subst _ c); auto.
+  now eexists.
+Qed.
+
 Lemma isType_mkApps_Ind_smash {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ puinst args} :
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) puinst ->
@@ -1130,7 +1143,7 @@ Section Typecheck.
       eapply (inductive_cumulative_indices X0); tea.
       eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl d)); tea. eapply X0.
   Qed.
-  Show Obligation Tactic.
+  
   Obligation Tactic := idtac.
   Next Obligation.
     intros. simpl in *. clearbody isty. subst filtered_var filtered_var0. subst.
@@ -1222,8 +1235,13 @@ Section Typecheck.
   (* tProj *)
   Next Obligation. simpl; eauto using validity_wf. Defined.
   Next Obligation.
-    simpl in *; sq; eapply type_Proj with (pdecl := (i, t0)).
-    - split. eassumption. split. symmetry; eassumption. cbn in *.
+    simpl in *; sq.
+    pose proof (on_declared_inductive X7) as [onmib oni].
+    eapply onProjections in oni.
+    destruct ind_ctors as [|? []] eqn:hctors => //.
+    eapply type_Proj with (pdecl := (i, t0)).
+    - split. split. eassumption. cbn. rewrite hctors. reflexivity.
+      split. symmetry; eassumption. cbn in *.
       now apply beq_nat_true.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
       eapply type_reduction_closed; eassumption.
@@ -1245,6 +1263,7 @@ Section Typecheck.
       simpl in H2.
       rewrite List.skipn_length in H2.
       rewrite List.firstn_length. lia.
+    - destruct ind_projs => //. rewrite nth_error_nil in Heq_anonymous; congruence.
   Defined.
 
   (* tFix *)

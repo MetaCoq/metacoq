@@ -4510,7 +4510,7 @@ Section Conversion.
     simpl_reduce_stack.
     destruct h as (?&typ); auto.
     destruct hΣ.
-    apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?); auto.
+    apply inversion_Proj in typ as (?&?&?&?&?&?&?&?&?&?); auto.
     eapply PCUICSR.subject_reduction in t. 2:eauto. 2:exact r.
     apply PCUICValidity.inversion_mkApps in t as (?&?&?); auto.
     apply inversion_CoFix in t as (?&?&?&?&?&?&?); auto.
@@ -5182,12 +5182,12 @@ Section Conversion.
          cbn in *.
          easy. }
     all: apply conv_cum_alt in conv_hds as [(?&?&[r1 r2 ?])]; auto.
-    all: eapply clrel_rel, whnf_red_inv in r1; auto.
+    all: eapply whnf_red_inv in r1; auto.
     all: inversion r1; subst; clear r1.
     all: inversion c; subst; clear c.
     all: apply whnf_mkApps_inv in wh2.
     all: eapply whnf_conv_context in wh2; [|symmetry in X0; eapply context_equality_forget in X0; exact X0].
-    all: eapply clrel_rel, whnf_red_inv in r2; auto.
+    all: eapply whnf_red_inv in r2; auto.
     all: inversion r2; subst; clear r2.
     all: inversion s2; subst; clear s2.
     all: destruct hdiscr.

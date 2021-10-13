@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program.
+From Coq Require Import Program ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
      PCUICReflect PCUICWeakeningEnv PCUICCasesContexts
@@ -1181,10 +1181,58 @@ Proof.
   destruct destArity as [[? ?]|] eqn:da; auto.
 Qed.
 
+Definition closed_decl (d : EAst.global_decl) := 
+  match d with
+  | EAst.ConstantDecl cb => 
+    option_default (ELiftSubst.closedn 0) (EAst.cst_body cb) true
+  | EAst.InductiveDecl _ => true
+  end.
+
+Definition closed_env (Σ : EAst.global_declarations) := 
+  forallb (test_snd closed_decl) Σ.
+
+Lemma lookup_env_closed {Σ kn decl} : closed_env Σ -> ETyping.lookup_env Σ kn = Some decl -> closed_decl decl.
+Proof.
+  induction Σ; cbn => //.
+  move/andP => [] cla cle.
+  destruct kername_eq_dec.
+  move=> [= <-]. apply cla.
+  now eapply IHΣ.
+Qed.
+
+Lemma All2_All2_mix {A B} {P Q : A -> B -> Type} l l' : 
+  All2 P l l' ->
+  All2 Q l l' ->
+  All2 (fun x y => P x y × Q x y) l l'.
+Proof.
+  induction 1; intros H; depelim H; constructor; auto.
+Qed.
+
+Lemma erases_closed Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' -> PCUICAst.closedn #|Γ| t -> ELiftSubst.closedn #|Γ| t'.
+Proof.
+  induction 1 using erases_forall_list_ind; cbn; auto; try solve [rtoProp; repeat solve_all].
+  - rtoProp. intros []. split; eauto. solve_all.
+    eapply Forall2_All2 in H1. eapply All2_All2_mix in X; tea.
+    eapply forallb_All in H3. eapply All2_All_mix_left in X; tea. clear H3.
+    clear H1.
+    solve_all. rewrite -b.
+    rewrite app_length inst_case_branch_context_length in a0.
+    eapply a0. now move/andP: a => [].
+  - unfold test_def in *. solve_all.
+    eapply All2_All2_mix in X; tea. solve_all.
+    len in b. rewrite - (All2_length X).
+    now eapply b.
+  - unfold test_def in *. solve_all.
+    eapply All2_All2_mix in X; tea. solve_all.
+    len in b. rewrite - (All2_length X).
+    now eapply b.
+Qed.
+
 Lemma erase_global_includes Σ deps deps' wfΣ :
   (forall d, KernameSet.In d deps' -> ∥ ∑ decl, lookup_env Σ d = Some decl ∥) ->
   KernameSet.subset deps' deps ->
-  includes_deps Σ (erase_global deps Σ wfΣ) deps'.
+  let Σ' := erase_global deps Σ wfΣ in
+  includes_deps Σ Σ' deps'.
 Proof.
   sq.
   induction Σ in deps, deps', w |- *; simpl; intros H.
@@ -1276,26 +1324,62 @@ Proof.
         intros ? hin'. eapply sub. eapply KernameSet.singleton_spec in hin'. now subst.
 Qed.
 
-Lemma erase_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' deps :
+Definition sq_wf_ext {Σ : global_env_ext} (wfΣ : ∥ wf_ext Σ ∥) : ∥ wf Σ.1 ∥.
+Proof.
+  sq. exact X.1.
+Qed.
+
+Lemma erase_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) t v Σ' t' deps :
   forall wt : welltyped Σ [] t,
-  erase Σ (sq wfΣ) [] t wt = t' ->
+  erase Σ wfΣ [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
-  erase_global deps Σ (sq (wfΣ.1)) = Σ' ->
+  erase_global deps Σ (sq_wf_ext wfΣ) = Σ' ->
   Σ |-p t ▷ v ->
   exists v', Σ;;; [] |- v ⇝ℇ v' /\ ∥ Σ' ⊢ t' ▷ v' ∥.
 Proof.
   intros wt.
-  generalize (sq wfΣ.1) as swfΣ.
-  intros swfΣ HΣ' Hsub Ht' ev.
-  pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
+  intros HΣ' Hsub Ht' ev.
+  pose proof (erases_erase (wfΣ := wfΣ) wt); eauto.
   rewrite HΣ' in H.
   destruct wt as [T wt].
-  unshelve epose proof (erase_global_erases_deps wfΣ wt H _); cycle 2.
-  eapply erases_correct; eauto.
+  destruct wfΣ as [wfΣ].
+  unshelve epose proof (erase_global_erases_deps (Σ' := Σ') wfΣ wt H _); cycle 2.
   intros.
   rewrite <- Ht'.
   eapply erase_global_includes.
   intros.
   eapply term_global_deps_spec in H; eauto.
   assumption.
+  eapply erases_correct; tea.
+Qed.
+
+Lemma erase_global_closed Σ deps wfΣ :
+  let Σ' := erase_global deps Σ wfΣ in
+  closed_env Σ'.
+Proof.
+  sq.
+  induction Σ in deps, w |- *; simpl; auto.
+  destruct a as [kn []]; destruct KernameSet.mem.
+  + cbn [closed_env forallb].
+    red in w; depelim w. 
+    rewrite [forallb _ _](IHΣ _ w) andb_true_r.
+    rewrite /test_snd /closed_decl /=.
+    set (er := erase_global_decls_obligation_1 _ _ _ _ _ _).
+    set (er' := erase_global_decls_obligation_2 _ _ _ _ _ _).
+    clearbody er er'.
+    destruct c as [ty [] univs]; cbn.
+    set (obl := erase_constant_body_obligation_1 _ _ _ _ _ _).
+    unfold erase_constant_body. cbn. clearbody obl.
+    cbn in o0. 2:auto.
+    unshelve epose proof (erases_erase (wfΣ := er) obl); eauto.
+    cbn in H.
+    eapply erases_closed in H => //.
+    cbn. destruct er. now eapply PCUICClosed.subject_closed in o0.
+  + set (er := erase_global_decls_obligation_4 _ _ _ _ _ _). 
+    clearbody er. destruct er.
+    eapply IHΣ.
+  + cbn [closed_env forallb].
+    rewrite {1}/test_snd {1}/closed_decl /=.
+    eapply IHΣ.
+  + eapply IHΣ.
 Qed.

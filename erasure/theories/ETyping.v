@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils Reflect.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect ECSubst.
 Require Import ssreflect.
 
 (** * Typing derivations
@@ -119,5 +119,5 @@ Qed.
 
 Definition tDummy := tVar ""%string.
 
-Definition iota_red npar c args brs :=
-  (mkApps (snd (List.nth c brs (0, tDummy))) (List.skipn npar args)).
+Definition iota_red npar args (br : nat * term) :=
+  substl (List.skipn npar args) br.2.

@@ -273,20 +273,18 @@ Proof.
   - depelim er.
     apply IHev2.
     unfold ETyping.iota_red.
-    apply erases_deps_mkApps.
-    + rewrite nth_nth_error.
-      destruct nth_error eqn:nth; [|now constructor].
-      eapply nth_error_forall in nth; [|now eauto].
-      assumption.
+    apply erases_deps_substl.
     + intuition auto.
       apply erases_deps_mkApps_inv in H3.
       now apply Forall_skipn.
+    + eapply nth_error_forall in e0; [|now eauto].
+      assumption.
   - depelim er.
     subst brs; cbn in *.
     depelim H2.
     cbn in *.
     apply IHev2.
-    apply erases_deps_mkApps; [easy|].
+    apply erases_deps_substl; [|easy].
     apply All_Forall, All_repeat.
     now constructor.
   - depelim er.
@@ -530,23 +528,23 @@ Proof.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
     apply Σer in d as d'; destruct d' as (? & ? & ? & ?).
     now econstructor; eauto.
-  - todo "case".
-  (*apply inversion_Case in wt
-      as (? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
-    destruct (proj2 Σer _ _ _ d) as (? & ? & ? & ?).
+  - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
+    destruct (proj2 Σer _ _ _ x1) as (? & ? & ? & ?).
     econstructor; eauto.
-    destruct H2. destruct d. destruct H1.
+    destruct H2. destruct x1. destruct H1.
     eapply Forall2_All2 in H2. eapply All2_nth_error in H2; eauto.
-    clear -wf a X H0 Σer.
-    revert brs' x5 a X H0 Σer.
-    induction brs; intros brs' x5 brtys typ er deps.
+    clear -wf brs_ty X H0 Σer.
+    subst predctx ptm.
+    clear X.
+    revert brs_ty brs' H0 Σer.
+    generalize (PCUICEnvironment.ind_ctors x0).
+    induction 1; intros er deps.
     { now depelim er. }
-    depelim brtys.
-    depelim typ.
-    depelim er.
-    destruct p as ((? & ?) & ?).
-    destruct p0.
-    now constructor; eauto. *)
+    depelim deps.
+    destruct r0 as (? & ? & ? & ?).
+    intros er.
+    constructor; eauto. eapply H; auto.
+    now rewrite <-(PCUICCasesContexts.inst_case_branch_context_eq a).
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj2 Σer _ _ _ (proj1 (proj1 d))) as (? & ? & ? & ?).

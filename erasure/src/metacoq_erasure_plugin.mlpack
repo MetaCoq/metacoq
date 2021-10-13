@@ -35,6 +35,7 @@ PCUICSafeRetyping
 EAst
 EAstUtils
 ELiftSubst
+ECSubst
 ETyping
 EPretty
 Extract

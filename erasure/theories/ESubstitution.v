@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Program.
+From Coq Require Import Program ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICWeakening PCUICSubstitution PCUICWeakeningEnv PCUICElimination.
@@ -71,6 +71,15 @@ Qed.
 
 Require Import ssrbool.
 
+Lemma All2i_All2_All2 {A B C} {P : nat -> A -> B -> Type} {Q R : B -> C -> Type} {n l l' l''} :
+  All2i P n l l' ->
+  All2 Q l' l'' ->
+  (forall n x y z, P n x y -> Q y z -> R y z) ->
+  All2 R l' l''.
+Proof.
+  induction 1 in l'' |- *; intros H; depelim H; constructor; eauto.
+Qed.
+
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
@@ -87,16 +96,12 @@ Proof.
     eapply extends_lookup in H; eauto. now rewrite H.
   - econstructor. all:eauto. 
     eapply Informative_extends; eauto.
-    todo "cases".
-    (*eapply All2i_All2
-    eapply All2_impl; tea. cbn.
-    eapply All2_All_left in X3.
-        2:{ intros ? ? [[[? ?] ?] ?]. exact e0. }
-        eapply All2_All_mix_left in X3; eauto.
-        eapply All2_impl. exact X3.
-        intros. destruct H as [? []].
-        split; eauto. }*)
-
+    eapply All2i_All2_All2; tea. cbv beta.
+    intros n cdecl br br'.
+    intros [? [? [? [? []]]]] []; split; auto.
+    rewrite <-(PCUICCasesContexts.inst_case_branch_context_eq a).
+    eapply e; tea.
+    now rewrite [_.1](PCUICCasesContexts.inst_case_branch_context_eq a).
   - econstructor. destruct isdecl. 2:eauto.
     eapply Informative_extends; eauto. exact H.
   - econstructor.
@@ -146,6 +151,49 @@ Qed.
 Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
 
+Lemma lift_inst_case_branch_context (Γ'' Γ' : context) p br : 
+  test_context_k
+  (fun k : nat =>
+   PCUICOnFreeVars.on_free_vars (PCUICOnFreeVars.closedP k xpredT))
+  #|pparams p| (bcontext br) ->
+  inst_case_branch_context (map_predicate_k id (lift #|Γ''|) #|Γ'| p)
+    (map_branch_k (lift #|Γ''|) id #|Γ'| br) = 
+    lift_context #|Γ''| #|Γ'| (inst_case_branch_context p br).
+Proof.
+  intros hctx.
+  rewrite /inst_case_branch_context /= /id.
+  rewrite -rename_context_lift_context.
+  rewrite PCUICRename.rename_inst_case_context_wf //.
+  f_equal. apply map_ext => x.
+  now setoid_rewrite <- PCUICSigmaCalculus.lift_rename.
+Qed.
+
+Lemma alpha_eq_on_free_vars P (Γ Δ : context) :
+  All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
+  PCUICOnFreeVars.on_free_vars_ctx P Γ ->
+  PCUICOnFreeVars.on_free_vars_ctx P Δ.
+Proof.
+  induction 1; cbn; auto.
+  rewrite !alli_app /= !andb_true_r.
+  move/andP => [] IH hx.
+  specialize (IHX IH).
+  unfold PCUICOnFreeVars.on_free_vars_ctx in IHX.
+  rewrite IHX /=.
+  len in hx. len. rewrite -(All2_length X).
+  destruct r; cbn in *; subst; auto.
+Qed.
+
+Lemma closed_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {ind i mdecl idecl cdecl} : 
+  wf Σ ->
+  PCUICAst.declared_constructor Σ (ind, i) mdecl idecl cdecl ->
+  closedn_ctx (context_assumptions mdecl.(ind_params)) (cstr_branch_context ind mdecl cdecl).
+Proof.
+  intros wfΣ decli.
+  eapply PCUICClosed.closed_cstr_branch_context; tea.
+  eapply PCUICClosed.declared_minductive_closed. eapply decli.
+  eapply PCUICClosed.declared_constructor_closed; tea.
+Qed.
+
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : context) (t T : term) t' :
     wf Σ ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
@@ -174,31 +222,50 @@ Proof.
   - econstructor.
     unfold app_context, snoc in *.
     pose proof (H0 Γ (vass n t :: Γ') Γ'').
-    rewrite lift_context_snoc0, <- plus_n_O in *.
+    rewrite lift_context_snoc0 - plus_n_O in H1.
     eapply H1; eauto. cbn. econstructor.
     eauto. cbn. exists s1. eapply (weakening_typing (T := tSort s1)); eauto.
     now apply All_local_env_app_inv in X2.
   - econstructor.
     + eapply H0; eauto.
     + pose proof (H1 Γ (vdef n b b_ty :: Γ') Γ'').
-      rewrite lift_context_snoc0, <- plus_n_O in *.
+      rewrite lift_context_snoc0 -plus_n_O in H2.
       eapply H2; eauto. cbn. econstructor.
       eauto. cbn. 2: cbn; eapply weakening_typing; eauto.
       eapply weakening_typing in X0; eauto.
       now apply All_local_env_app_inv in X3.
       now apply All_local_env_app_inv in X3.
-  - todo "case".
-    (* econstructor.
+  - econstructor.
     + eauto.
     + eapply H4; eauto.
-    + eapply All2_map.
-      eapply All2_All_left in X3.
-      2:{ idtac. intros ? ? [[[? ?] ?] [? [? ?]]]. exact e0. }
-      eapply All2_impl. eapply All2_All_mix_left.
-      eassumption. eassumption. intros.
-      destruct H. destruct p0.
-      cbn. destruct x, y; cbn in *; subst.
-      split; eauto.*)
+    + red in H6. 
+      eapply Forall2_All2 in H6.
+      eapply All2i_All2_mix_left in X7; tea.
+      clear H6.
+      eapply All2i_nth_hyp in X7.
+      eapply All2_map.
+      eapply All2i_All2_All2; tea; cbv beta.
+      intros n cdecl br br'.
+      intros [hnth [? [? [? [? [? []]]]]]] []. split => //.
+      rewrite lift_inst_case_branch_context //.
+      { rewrite PCUICOnFreeVars.test_context_k_closed_on_free_vars_ctx.
+        eapply alpha_eq_on_free_vars. symmetry; tea.
+        rewrite -PCUICOnFreeVars.closedn_ctx_on_free_vars.
+        relativize #|pparams p|. eapply closed_cstr_branch_context; tea. split; tea.
+        rewrite (wf_predicate_length_pars H0).
+        symmetry; apply (PCUICClosed.declared_minductive_ind_npars isdecl). }
+      rewrite -app_context_assoc -{1}(Nat.add_0_r #|Γ'|) -(lift_context_app _ 0).
+      assert (#|inst_case_branch_context p br| = #|bcontext br|).
+      { rewrite /inst_case_branch_context. now len. }
+      rewrite /map_branch_k /= -H6 -app_length.
+      rewrite -e2 -H6 -app_length.
+      rewrite -(PCUICCasesContexts.inst_case_branch_context_eq a).
+      eapply e.
+      eapply weakening_wf_local => //.
+      rewrite app_context_assoc //.
+      now eapply wf_local_app_inv in X8 as [].
+      rewrite app_context_assoc. reflexivity.
+      now rewrite [_.1](PCUICCasesContexts.inst_case_branch_context_eq a).
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_impl. eassumption. intros.
     destruct X4; cbn in *; pcuicfo.
@@ -218,17 +285,17 @@ Proof.
     intros [] []. simpl. intros [[Hs IH] [<- [<- IH']]].
     repeat split. unfold app_context in *.
     specialize (IH Γ (types ++ Γ') Γ'').
-    subst types. rewrite app_length, fix_context_length in IH.
+    subst types. rewrite app_length fix_context_length in IH.
     forward IH.
-    { rewrite lift_context_app, <- plus_n_O. unfold app_context.
+    { rewrite lift_context_app -plus_n_O. unfold app_context.
       eapply All_mfix_wf in a; auto.
       rewrite lift_fix_context in a.
       now rewrite <- !app_assoc. }
     forward IH by now rewrite app_assoc.
     rewrite lift_fix_context.
-    rewrite lift_context_app, <- plus_n_O in IH.
+    rewrite lift_context_app - plus_n_O in IH.
     unfold app_context in IH. rewrite <- !app_assoc in IH.
-    rewrite (All2_length X3) in *.
+    rewrite (All2_length X3) in IH |- *.
     apply IH. apply IH'.
 
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))).
@@ -250,17 +317,17 @@ Proof.
     intros [] []. simpl. intros [[Hs IH] [<- [<- IH']]].
     repeat split. unfold app_context in *.
     specialize (IH Γ (types ++ Γ') Γ'').
-    subst types. rewrite app_length, fix_context_length in IH.
+    subst types. rewrite app_length fix_context_length in IH.
     forward IH.
-    { rewrite lift_context_app, <- plus_n_O. unfold app_context.
+    { rewrite lift_context_app -plus_n_O. unfold app_context.
       eapply All_mfix_wf in a; auto.
       rewrite lift_fix_context in a.
       now rewrite <- !app_assoc. }
     forward IH by now rewrite app_assoc.
     rewrite lift_fix_context.
-    rewrite lift_context_app, <- plus_n_O in IH.
+    rewrite lift_context_app -plus_n_O in IH.
     unfold app_context in IH. rewrite <- !app_assoc in IH.
-    rewrite (All2_length X3) in *.
+    rewrite (All2_length X3) in IH |- *.
     apply IH. apply IH'.
 Qed.
 
@@ -374,7 +441,7 @@ Proof.
     + cbn. econstructor.
       specialize (H0 Γ Γ' (vass n t :: Δ) t'0 s).
       (* unfold app_context, snoc in *. *)
-      rewrite subst_context_snoc0 in *.
+      rewrite subst_context_snoc0 in H0.
       eapply H0; eauto.
       cbn. econstructor. eauto.
       cbn. exists s1. eapply (substitution (T := tSort s1)); eauto.
@@ -384,7 +451,7 @@ Proof.
     + cbn. econstructor.
       eauto.
       specialize (H1 Γ Γ' (vdef n b b_ty :: Δ) t2' s).
-      rewrite subst_context_snoc0 in *.
+      rewrite subst_context_snoc0 in H1.
       eapply H1; eauto.
       cbn. econstructor. eauto.
       cbn.
@@ -442,7 +509,7 @@ Proof.
       eapply nth_error_all in X1; eauto.
       destruct X1 as [Hs IH].
       specialize (IH Γ Γ' (Δ ,,, fix_context mfix)).
-      rewrite app_context_assoc in *.
+      rewrite app_context_assoc in IH |- *.
       eapply IH in e1; eauto.
 
       eapply erases_eq; eauto.
@@ -450,10 +517,10 @@ Proof.
         rewrite <- plus_n_O.
         rewrite app_context_assoc. f_equal.
         now rewrite subst_fix_context.
-      * cbn. now rewrite app_context_length, fix_context_length.
+      * cbn. now rewrite app_context_length fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, All2_length.
       * pose proof (@substitution _ Σ _ Γ Γ' s (Δ ,,, fix_context mfix)).
-        rewrite app_context_assoc in *.
+        rewrite app_context_assoc in X1.
         eapply X1 in Hs; eauto.
         eapply typing_wf_local.  eassumption.
     + econstructor.
@@ -469,7 +536,7 @@ Proof.
       eapply nth_error_all in X1; eauto.
       destruct X1.
       specialize (e2 Γ Γ' (Δ ,,, fix_context mfix)).
-      rewrite app_context_assoc in *.
+      rewrite app_context_assoc in e2.
       eapply e2 in e1; eauto.
 
       eapply erases_eq; eauto.
@@ -477,10 +544,10 @@ Proof.
         rewrite <- plus_n_O.
         rewrite app_context_assoc. f_equal.
         now rewrite subst_fix_context.
-      * cbn. now rewrite app_context_length, fix_context_length.
+      * cbn. now rewrite app_context_length fix_context_length.
       * cbn. now erewrite app_context_length, fix_context_length, (All2_length _ _ X5).
       * pose proof (@substitution _ Σ _ Γ Γ' s (Δ ,,, fix_context mfix)).
-        rewrite app_context_assoc in *.
+        rewrite app_context_assoc in X1.
         eapply X1 in t; eauto.
         eapply typing_wf_local.  eassumption.
     + econstructor.

@@ -90,6 +90,8 @@ src/eAstUtils.mli
 # src/eInduction.mli
 src/eLiftSubst.ml
 src/eLiftSubst.mli
+src/eCSubst.mli
+src/eCSubst.ml
 src/eTyping.ml
 src/eTyping.mli
 src/extract.mli

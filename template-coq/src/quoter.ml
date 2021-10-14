@@ -216,7 +216,7 @@ struct
 	    | Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
       | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
       | Constr.Evar (n,args) ->
-	      let (args',acc) = quote_terms quote_term acc env args in
+	      let (args',acc) = quote_terms quote_term acc env (Array.of_list args) in
          (Q.mkEvar (Q.quote_int (Evar.repr n)) args', acc)
       | Constr.Sort s -> (Q.mkSort (Q.quote_sort s), acc)
       | Constr.Cast (c,k,t) ->
@@ -329,7 +329,7 @@ struct
               (Array.to_list oib.mind_nf_lc)
               (Array.to_list oib.mind_consnrealargs)
           in
-          let indty = Inductive.type_of_inductive (snd env) ((mib,oib),inst) in
+          let indty = Inductive.type_of_inductive ((mib,oib),inst) in
           let indices, pars =
             let ctx = oib.mind_arity_ctxt in
             CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx

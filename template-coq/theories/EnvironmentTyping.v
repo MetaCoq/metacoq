@@ -670,7 +670,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       | _ => (* Squashed: at least 2 constructors *) IntoPropSProp
       end.
       
-    Definition elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
+    Definition elim_sort_sprop_ind (ind_ctors_sort : list constructor_univs) :=
       match ind_ctors_sort with
       | [] => (* Empty inductive strict proposition: *) IntoAny
       | _ => (* All other inductives in SProp are squashed *) IntoSProp

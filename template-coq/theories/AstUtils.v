@@ -223,7 +223,6 @@ apply (List.firstn decl.(ind_npars)) in types.
     intros [].
     refine {| mind_entry_typename := ind_name0;
               mind_entry_arity := remove_arity decl.(ind_npars) ind_type0;
-              mind_entry_template := false;
               mind_entry_consnames := _;
               mind_entry_lc := _;
             |}.
@@ -348,6 +347,8 @@ Definition destInd (t : term) :=
 
 Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname := 
   map decl_name c.
+
+Import MCMonadNotation.
 
 Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (brs : list (nat × term)) : option term :=
   '(mib, oib) <- lookup_inductive Σ ci.(ci_ind) ;;

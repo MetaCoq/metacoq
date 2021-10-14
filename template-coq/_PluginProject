@@ -62,6 +62,8 @@ gen-src/equalities.ml
 gen-src/equalities.mli
 gen-src/extractable.ml
 gen-src/extractable.mli
+gen-src/hexadecimal.ml
+gen-src/hexadecimal.mli
 gen-src/floatOps.ml
 gen-src/floatOps.mli
 gen-src/induction.ml

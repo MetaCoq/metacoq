@@ -209,7 +209,7 @@ Proof.
   induction t; auto.
 Qed.
 
-Hint Resolve lift_isApp : all.
+#[export] Hint Resolve lift_isApp : all.
 
 Lemma wf_lift Σ n k t : wf Σ t -> wf Σ (lift n k t).
 Proof.
@@ -239,7 +239,7 @@ Proof.
   intros wft wfu. apply wf_subst. constructor; auto. auto.
 Qed.
 
-Hint Resolve wf_mkApps wf_subst wf_subst1 wf_lift : wf.
+#[export] Hint Resolve wf_mkApps wf_subst wf_subst1 wf_lift : wf.
 
 
 Lemma wf_strip_outer_cast Σ t : WfAst.wf Σ t -> WfAst.wf Σ (strip_outer_cast t).
@@ -257,7 +257,7 @@ Proof.
     forward IHu.
     induction u; trivial. discriminate.
 Qed.
-Hint Resolve wf_mkApps_napp : wf.
+#[export] Hint Resolve wf_mkApps_napp : wf.
 
 Lemma wf_mkApps_inv Σ t u : WfAst.wf Σ (mkApps t u) -> All (WfAst.wf Σ) u.
 Proof.
@@ -271,8 +271,8 @@ Proof.
     intuition. inv H.
     now apply All_app in X0.
 Qed.
-Hint Resolve wf_mkApps_inv : wf.
-Hint Constructors WfAst.wf : wf.
+#[export] Hint Resolve wf_mkApps_inv : wf.
+#[export] Hint Constructors WfAst.wf : wf.
 
 Lemma isLambda_isApp t : isLambda t = true -> ~~ isApp t.
 Proof. destruct t; simpl; congruence. Qed.
@@ -294,4 +294,4 @@ Lemma wf_nth Σ:
 Proof.
   intros n args H. induction H in n; destruct n; simpl; try constructor; auto.
 Qed.
-Hint Resolve wf_nth : core.
+#[export] Hint Resolve wf_nth : core.

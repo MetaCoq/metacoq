@@ -845,7 +845,7 @@ Section Rho.
           tCase ci p' (mkApps (subst0 (cofix_subst mfix') (dbody d)) args') brs'
         | None => tCase ci p' (rho Γ x) brs'
         end; 
-    | construct_cofix_other t nconscof => 
+    | construct_cofix_other _ nconscof => 
       let p' := rho_predicate_wf rho Γ p _ in 
       let x' := rho Γ x in 
       let brs' := map_brs_wf rho Γ p' brs _ in 

@@ -2389,11 +2389,12 @@ Section ParallelSubstitution.
         rewrite !inst_inst_case_context_wf //.
         eapply on_free_vars_ctx_inst_case_context; tea; solve_all. }
       specialize (X2 Hrel).
-      econstructor; eauto with pcuic; unfold on_Trel; simpl; solve_all.
+      econstructor. eauto with pcuic. 2-3:eauto with pcuic. unfold on_Trel; simpl. solve_all.
       + rewrite /PCUICCases.inst_case_predicate_context.
         rewrite - !inst_inst_case_context_wf //.
         now rewrite -(All2_length X1) /= -H0.
-      + eapply X4; tea.
+      + unfold on_Trel; simpl; solve_all.
+        eapply X4; tea.
         rewrite - !inst_inst_case_context_wf //.
         now rewrite -(All2_length X1) /= -H0.
         rewrite -H0.
@@ -2406,14 +2407,14 @@ Section ParallelSubstitution.
         eapply on_contexts_app_inv => //. now rewrite /id.
         eapply (on_contexts_length X). 2:len; lia.
         now rewrite {2}H0.
-      + rewrite /inst_case_branch_context in a1 *.
+      + solve_all. rewrite /inst_case_branch_context in a1 *.
         rewrite - !inst_inst_case_context_wf //.
         now rewrite /= -(All2_length X1) -b0.
         eapply a1; tea.
         eapply on_free_vars_ctx_inst_case_context; tea; solve_all.
         rewrite !inst_inst_case_context_wf //.
         eapply on_free_vars_ctx_inst_case_context; tea; solve_all.
-      + eapply b; tea.
+        eapply b; tea.
         rewrite /inst_case_branch_context.
         rewrite - !inst_inst_case_context_wf //.
         now rewrite /= -(All2_length X1) -b0.        
@@ -2430,6 +2431,7 @@ Section ParallelSubstitution.
         rewrite !inst_inst_case_context_wf //.
         eapply on_free_vars_ctx_inst_case_context; tea; solve_all.
         now len. now len.
+      + eauto with pcuic.
 
     - (* Proj congruence *)
       sigma; pcuic.

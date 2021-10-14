@@ -1263,12 +1263,13 @@ Proof.
       epose proof (untyped_subslet_nth_error _ _ _ _ _ _ subs hnth hs).
       rewrite hb in X; rewrite X; cbn.
       rewrite subst_inst Upn_0 inst_assoc. apply inst_ext.
-      rewrite skipn_subst. 2:lia.
+      (rewrite skipn_subst; try by lia); [].
       rewrite !subst_compose_assoc.
       rewrite subst_consn_compose. sigma. 
       rewrite -subst_compose_assoc -shiftk_shift -subst_compose_assoc.
       rewrite -shiftk_shift.
-      rewrite (shift_subst_consn_ge (S n)). 2:len; lia. now len.
+      (rewrite (shift_subst_consn_ge (S n)); try by len; lia); [].
+      now len.
     * left; exists (n - #|s|), decl.
       pose proof (untyped_subslet_length subs).
       repeat split.

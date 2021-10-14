@@ -2210,7 +2210,7 @@ Proof.
       eapply inst_ext_closed.
       intros x Hx.
       rewrite subst_consn_lt /=; len; try lia.
-      rewrite Upn_comp. 2:now repeat len.
+      (rewrite Upn_comp; try now repeat len); [].
       rewrite subst_consn_lt /=; len; try lia.
       now rewrite map_rev.
   - intros Σ wfΣ Γ wfΓ mfix n decl types hguard hnth htypes hmfix ihmfix wffix Δ σ hΔ hσ.

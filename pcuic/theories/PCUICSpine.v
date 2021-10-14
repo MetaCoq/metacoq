@@ -2429,8 +2429,7 @@ Section WfEnv.
         unfold Upn. rewrite subst_consn_compose.
         autorewrite with sigma.
         apply subst_consn_proper.
-        2:{ rewrite subst_consn_shiftn.
-            2:now autorewrite with len.
+        2:{ (rewrite subst_consn_shiftn; try now autorewrite with len); [].
             autorewrite with sigma.
             rewrite subst_consn_shiftn //.
             rewrite List.rev_length.

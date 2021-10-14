@@ -2962,7 +2962,6 @@ Section RedConfluence.
   Qed.
 
   Hint Constructors clos_refl_trans_ctx : pcuic.
-  Hint Constructors eq_context_upto_names : pcuic.
   Hint Resolve eq_context_upto_names_refl : pcuic.  
   Set Firstorder Solver eauto with pcuic core typeclass_instances.
 
@@ -3398,11 +3397,11 @@ Section RedConfluence.
       eapply pred1_upto_names in tu as [Δ' [pred eqctx]]; cbn; tea; eauto with fvs.
       cbn in *. exists (ws_pair_eq_ctx u eqctx).
       unfold pred1_rel_alpha; cbn.
-      firstorder.
+      firstorder auto.
     - destruct t as [ctxt [t ht]], u as [ctxu [u hu]]; cbn in *; subst u.
       eapply pred1_upto_names in tv as [Δ' [pred eqctx]]; tea.
       exists (ws_pair_eq_ctx v eqctx). unfold pred1_rel_alpha; cbn.
-      firstorder. cbn. eauto with fvs.
+      firstorder auto. cbn. eauto with fvs.
     - exists t. unfold pred1_rel_alpha; cbn.
       split. right; split; auto. now symmetry.
       right. split; auto. now symmetry.

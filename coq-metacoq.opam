@@ -32,9 +32,9 @@ synopsis: "A meta-programming framework for Coq"
 description: """
 MetaCoq is a meta-programming framework for Coq.
 
-The meta-package includes the template-coq library, unverified checker for Coq,
-PCUIC development including a verified translation from Coq to PCUIC, 
-safe checker and erasure for PCUIC and example translations. 
+The meta-package includes the template-coq library,
+the PCUIC development including a verified equivalence between Coq and PCUIC, 
+a safe type checker and verified erasure for PCUIC and example translations. 
 
 See individual packages for more detailed descriptions.
 """

@@ -942,12 +942,18 @@ Proof.
        eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx. simpl. lia.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx; simpl; lia.
-        ++ eapply (Hwf _ a0). rewrite /predctx; simpl. lia.
+        ++ eapply (Hwf _ a0). rewrite /predctx; simpl.
+          change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
+          (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size cf).
+          lia.
         ++ clear -c1 X14.
           assert (forall (Γ' : context) (t T : term) (Hty : Σ;;; Γ' |- t : T),
             typing_size Hty <= ctx_inst_size (@typing_size _) c1 ->
             P Σ Γ' t T).
-          { intros. eapply (X14 _ _ _ Hty). simpl. lia. }
+          { intros. eapply (X14 _ _ _ Hty). simpl.
+            change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
+            (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size cf).
+            lia. }
           clear -X c1.
           revert c1 X.
           generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl))).
@@ -965,14 +971,18 @@ Proof.
           ** destruct r0 as [eq [wfcbc [t t0]]]. constructor.
               --- split; auto. intros brctxty. 
                   repeat split.
-                  +++ eapply (Hwf _ wfcbc); eauto. simpl. lia.
+                  +++ eapply (Hwf _ wfcbc); eauto. simpl.
+                    change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
+                      (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size cf).
+                    lia.
                   +++ exact t.
                   +++ unshelve eapply (X14 _ _ _ t _); eauto.
                       simpl. lia.
                   +++ simpl; auto with arith.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.
-              --- apply IHa1; auto. intros. apply (X14 _ _ _ Hty). simpl. clear -H1; lia.
+              --- apply IHa1; auto. intros. apply (X14 _ _ _ Hty).
+                  simpl. clear -H1; lia.
                   intros.
                   eapply (Hwf _ Hwf0). simpl. clear -H1; lia.
                   intros.

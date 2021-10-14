@@ -20,7 +20,7 @@ Lemma eval_box_apps {wfl : WcbvFlags}:
     eval Σ' e EAst.tBox -> eval Σ' (EAst.mkApps e x) EAst.tBox.
 Proof.
   intros Σ' e x H2. revert e H2; induction x using rev_ind; cbn; intros; eauto using eval; auto.
-  eapply All2_app_inv in X as ((l1' & l2') & (-> & H') & H2).
+  eapply All2_app_inv_l in X as (l1' & l2' & -> & H' & H2).
   depelim H2.
   specialize (IHx e _ H' H). simpl.
   rewrite mkApps_app. simpl. econstructor; eauto.

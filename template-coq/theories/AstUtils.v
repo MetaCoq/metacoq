@@ -1,8 +1,8 @@
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat.
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils BasicAst Ast.
-Require Import ssreflect.
+From MetaCoq.Template Require Import utils BasicAst Ast Environment monad_utils.
+Require Import ssreflect ssrbool.
 Require Import ZArith.
 
 (** Raw term printing *)
@@ -40,13 +40,11 @@ Fixpoint string_of_term (t : term) :=
   | tInd i u => "Ind(" ^ string_of_inductive i ^ "," ^ string_of_universe_instance u ^ ")"
   | tConstruct i n u => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ","
                                     ^ string_of_universe_instance u ^ ")"
-  | tCase (ind, i, r) t p brs =>
-    "Case(" ^ string_of_inductive ind ^ ","
-            ^ string_of_nat i ^ ","
-            ^ string_of_relevance r ^ ","
+  | tCase ci p t brs =>
+    "Case(" ^ string_of_case_info ci ^ ","
+            ^ string_of_predicate string_of_term p ^ ","
             ^ string_of_term t ^ ","
-            ^ string_of_term p ^ ","
-            ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
+            ^ string_of_list (string_of_branch string_of_term) brs ^ ")"
   | tProj (ind, i, k) c =>
     "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
             ^ string_of_term c ^ ")"
@@ -71,12 +69,80 @@ Definition decompose_app (t : term) :=
   end.
 
 Lemma decompose_app_mkApps f l :
-  isApp f = false -> decompose_app (mkApps f l) = (f, l).
+  ~~ isApp f -> decompose_app (mkApps f l) = (f, l).
+Proof.
+  intros Hf. rewrite /decompose_app.
+  destruct l. simpl. destruct f; try discriminate; auto.
+  remember (mkApps f (t :: l)) eqn:Heq. simpl in Heq.
+  destruct f; simpl in *; subst; auto. discriminate.
+Qed.
+
+Lemma atom_decompose_app t : ~~ isApp t -> decompose_app t = (t, []).
+Proof. destruct t; simpl; congruence. Qed.
+
+Lemma mkApps_mkApp u a v : mkApps (mkApp u a) v = mkApps u (a :: v).
+Proof.
+  induction v. simpl.
+  destruct u; simpl; try reflexivity.
+  intros. simpl.
+  destruct u; simpl; try reflexivity.
+  now rewrite <- app_assoc.
+Qed.
+
+Lemma mkApps_eq_inj {t t' l l'} :
+  mkApps t l = mkApps t' l' ->
+  ~~ isApp t -> ~~ isApp t' -> t = t' /\ l = l'.
+Proof.
+  intros Happ Ht Ht'. eapply (f_equal decompose_app) in Happ.
+  rewrite !decompose_app_mkApps in Happ => //. intuition congruence.
+Qed.
+
+Inductive mkApps_spec : term -> list term -> term -> list term -> term -> Type :=
+| mkApps_intro f l n :
+    ~~ isApp f ->
+    mkApps_spec f l (mkApps f (firstn n l)) (skipn n l) (mkApps f l).
+
+Definition is_empty {A} (l : list A) :=
+  if l is nil then true else false.
+
+Lemma is_empty_app {A} (l l' : list A) : is_empty (l ++ l') = is_empty l && is_empty l'.
+Proof.
+  induction l; simpl; auto.
+Qed.
+
+Lemma mkApps_tApp f args :
+  ~~ isApp f ->
+  ~~ is_empty args ->
+  tApp f args = mkApps f args.
 Proof.
   intros.
-  destruct l; simpl;
-    destruct f; simpl; try (discriminate || reflexivity).
+  destruct args, f; try discriminate; auto.
 Qed.
+
+Lemma nApp_mkApps {t l} : ~~ isApp (mkApps t l) -> ~~ isApp t /\ l = [].
+Proof.
+  induction l in t |- *; simpl; auto.
+  intros. destruct (isApp t) eqn:Heq. destruct t; try discriminate.
+  destruct t; try discriminate.
+Qed.
+
+Lemma mkApps_nisApp {t t' l} : mkApps t l = t' -> ~~ isApp t' -> t = t' /\ l = [].
+Proof.
+  intros <-. intros. eapply nApp_mkApps in H. intuition auto.
+  now subst.
+Qed.
+
+Ltac solve_discr' :=
+  match goal with
+    H : mkApps _ _ = mkApps ?f ?l |- _ =>
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  | H : ?t = mkApps ?f ?l |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  | H : mkApps ?f ?l = ?t |- _ =>
+    change t with (mkApps t []) in H ;
+    eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
+  end.
 
 Lemma mkApps_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
 Proof.
@@ -155,14 +221,14 @@ apply (List.firstn decl.(ind_npars)) in types.
   refine (map (fun '(x, ty) => vass x ty) (combine names types)).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].
-    refine {| mind_entry_typename := ind_name;
-              mind_entry_arity := remove_arity decl.(ind_npars) ind_type;
+    refine {| mind_entry_typename := ind_name0;
+              mind_entry_arity := remove_arity decl.(ind_npars) ind_type0;
+              mind_entry_template := false;
               mind_entry_consnames := _;
               mind_entry_lc := _;
             |}.
-    refine (List.map (fun x => fst (fst x)) ind_ctors).
-    refine (List.map (fun x => remove_arity decl.(ind_npars)
-                                                (snd (fst x))) ind_ctors).
+    refine (List.map (fun x => cstr_name x) ind_ctors0).
+    refine (List.map (fun x => remove_arity decl.(ind_npars) (cstr_type x)) ind_ctors0).
 Defined.
 
 Fixpoint strip_casts t :=
@@ -174,8 +240,9 @@ Fixpoint strip_casts t :=
   | tCast c kind t => strip_casts c
   | tLetIn na b t b' => tLetIn na (strip_casts b) (strip_casts t) (strip_casts b')
   | tCase ind p c brs =>
-    let brs' := List.map (on_snd (strip_casts)) brs in
-    tCase ind (strip_casts p) (strip_casts c) brs'
+    let p' := map_predicate id strip_casts strip_casts p in
+    let brs' := List.map (map_branch strip_casts) brs in    
+    tCase ind p' (strip_casts c) brs'
   | tProj p c => tProj p (strip_casts c)
   | tFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
@@ -206,6 +273,17 @@ Fixpoint decompose_prod_n_assum (Γ : context) n (t : term) : option (context * 
   | S n =>
     match strip_outer_cast t with
     | tProd na A B => decompose_prod_n_assum (Γ ,, vass na A) n B
+    | tLetIn na b bty b' => decompose_prod_n_assum (Γ ,, vdef na b bty) n b'
+    | _ => None
+    end
+  end.
+
+Fixpoint decompose_lam_n_assum (Γ : context) n (t : term) : option (context * term) :=
+  match n with
+  | 0 => Some (Γ, t)
+  | S n =>
+    match strip_outer_cast t with
+    | tLambda na A B => decompose_prod_n_assum (Γ ,, vass na A) n B
     | tLetIn na b bty b' => decompose_prod_n_assum (Γ ,, vdef na b bty) n b'
     | _ => None
     end
@@ -244,4 +322,134 @@ Definition isConstruct_app t :=
   match fst (decompose_app t) with
   | tConstruct _ _ _ => true
   | _ => false
+  end.
+
+Definition lookup_minductive Σ mind :=
+  match lookup_env Σ mind with
+  | Some (InductiveDecl decl) => Some decl
+  | _ => None
+  end.
+
+Definition lookup_inductive Σ ind :=
+  match lookup_minductive Σ (inductive_mind ind) with
+  | Some mdecl => 
+    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
+    | Some idecl => Some (mdecl, idecl)
+    | None => None
+    end
+  | None => None
+  end.
+
+Definition destInd (t : term) :=
+  match t with
+  | tInd ind u => Some (ind, u)
+  | _ => None
+  end.
+
+Definition forget_types {term} (c : list (BasicAst.context_decl term)) : list aname := 
+  map decl_name c.
+
+Definition mkCase_old (Σ : global_env) (ci : case_info) (p : term) (c : term) (brs : list (nat × term)) : option term :=
+  '(mib, oib) <- lookup_inductive Σ ci.(ci_ind) ;;
+  '(pctx, preturn) <- decompose_lam_n_assum [] (S #|oib.(ind_indices)|) p ;;
+  '(puinst, pparams, pctx) <-
+    match pctx with
+    | {| decl_name := na; decl_type := tind; decl_body := Datatypes.None |} :: indices => 
+      let (hd, args) := decompose_app tind in
+      match destInd hd with
+      | Datatypes.Some (ind, u) => ret (u, firstn mib.(ind_npars) args, forget_types indices)
+      | Datatypes.None => raise tt
+      end
+    | _ => raise tt 
+    end ;;
+  let p' := 
+    {| puinst := puinst; pparams := pparams; pcontext := pctx; preturn := preturn |}
+  in
+  brs' <-
+    monad_map2 (E:=unit) (ME:=option_monad_exc) (fun cdecl br => 
+      '(bctx, bbody) <- decompose_lam_n_assum [] #|cdecl.(cstr_args)| br.2 ;;
+      ret {| bcontext := forget_types bctx; bbody := bbody |})
+      tt oib.(ind_ctors) brs ;;
+  ret (tCase ci p' c brs').
+
+Definition default_sort_family (u : Universe.t) : allowed_eliminations :=
+  if Universe.is_sprop u then IntoAny
+  else if Universe.is_prop u then IntoPropSProp
+  else IntoAny.
+
+Definition default_relevance (u : Universe.t) : relevance :=
+  if Universe.is_sprop u then Irrelevant
+  else Relevant.
+
+(** Convenience functions for building constructors and inductive declarations *)
+
+(** The [indrel] argument represents the de Bruijn associated to the inductive in the mutual block. 
+    index 0 represents the LAST inductive in the block. 
+    The [params] is the context of parameters of the whole inductive block.
+    The [args] context represents the argument types of the constructor (the last argument
+    of the constructor is the first item in this list, as contexts are represented as snoc lists). *)  
+Definition make_constructor_body (id : ident) (indrel : nat)
+  (params : context) (args : context) (index_terms : list term)
+  : constructor_body :=
+  {| cstr_name := id;
+     cstr_args := args;
+     cstr_indices := index_terms;
+     cstr_type := it_mkProd_or_LetIn (params ,,, args) 
+      (mkApps (tRel (#|args| + #|params| + indrel))
+        (to_extended_list_k params #|args| ++ index_terms));
+     cstr_arity := context_assumptions args |}.
+ 
+(** Makes a simple inductive body with no projections, and "standard" universe and elimination rules
+  derived from the universe (i.e. does not handle inductives with singleton elimination, or impredicate set
+  eliminations). *)
+Definition make_inductive_body (id : ident) (params : context) (indices : context)
+   (u : Universe.t) (ind_ctors : list constructor_body) : one_inductive_body :=
+  {| ind_name := id;
+     ind_indices := indices;
+     ind_sort := u;
+     ind_type := it_mkProd_or_LetIn (params ,,, indices) (tSort u);
+     ind_kelim := default_sort_family u;
+     ind_ctors := ind_ctors;
+     ind_projs := [];
+     ind_relevance := default_relevance u |}.
+
+Ltac change_Sk :=
+  repeat match goal with
+    | |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+    | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
+  end.
+
+Hint Extern 10 => progress unfold map_branches_k : all.
+
+Definition tCaseBrsType {A} (P : A -> Type) (l : list (branch A)) :=
+  All (fun x => P (bbody x)) l.
+
+Definition tFixType {A} (P P' : A -> Type) (m : mfixpoint A) :=
+  All (fun x : def A => P x.(dtype) * P' x.(dbody))%type m.
+
+Ltac solve_all_one :=
+  try lazymatch goal with
+  | H: tCasePredProp _ _ _ |- _ => destruct H
+  end;
+  unfold tCaseBrsProp, tFixProp, tCaseBrsType, tFixType in *;
+  try apply map_predicate_eq_spec;
+  try apply map_predicate_id_spec;
+  repeat toAll; try All_map; try close_Forall;
+  change_Sk; auto with all;
+  intuition eauto 4 with all.
+
+Ltac solve_all := repeat (progress solve_all_one).
+Hint Extern 10 => rewrite !map_branch_map_branch : all.
+
+Ltac nth_leb_simpl :=
+  match goal with
+    |- context [leb ?k ?n] => elim (leb_spec_Set k n); try lia; simpl
+  | |- context [nth_error ?l ?n] => elim (nth_error_spec l n); rewrite -> ?app_length, ?map_length;
+                                    try lia; intros; simpl
+  | H : context[nth_error (?l ++ ?l') ?n] |- _ =>
+    (rewrite -> (nth_error_app_ge l l' n) in H by lia) ||
+    (rewrite -> (nth_error_app_lt l l' n) in H by lia)
+  | H : nth_error ?l ?n = Some _, H' : nth_error ?l ?n' = Some _ |- _ =>
+    replace n' with n in H' by lia; rewrite -> H in H'; injection H'; intros; subst
+  | _ => lia || congruence || solve [repeat (f_equal; try lia)]
   end.

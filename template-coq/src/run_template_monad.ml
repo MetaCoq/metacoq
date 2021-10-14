@@ -246,7 +246,7 @@ let denote_decl env evm d =
   let (h, args) = app_full d [] in
   if constr_equall h tmkdecl then
     match args with
-    | name :: body :: typ :: [] ->
+    | _ty :: name :: body :: typ :: [] ->
       let name = unquote_aname name in
       let evm, ty = denote_term env evm typ in
       let evm, decl = (match unquote_option body with
@@ -397,13 +397,14 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Environ.env * Evd.
     let qt = quote_term_rec bypass env trm in
     k (env, evm, qt)
   | TmQuoteInd (name, strict) ->
-       let kn = unquote_kn (reduce_all env evm name) in
-       let t = quote_mind_decl env (MutInd.make1 kn) in
-       let _, args = Constr.destApp t in
-       (match args with
-        | [|decl|] ->
-          k (env, evm, decl)
-        | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+    let kn = unquote_kn (reduce_all env evm name) in
+    let kn = MutInd.make1 kn in
+    let mib = Environ.lookup_mind kn env in
+      let t = quote_mind_decl env kn mib in
+      let _, args = Constr.destApp t in
+      (match args with
+      | [|decl|] -> k (env, evm, decl)
+      | _ -> bad_term_verb t "anomaly in quoting of inductive types")
   | TmQuoteConst (name, bypass, strict) ->
     let name = unquote_kn (reduce_all env evm name) in
     let bypass = unquote_bool (reduce_all env evm bypass) in

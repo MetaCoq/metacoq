@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 TOCOPY="ast_denoter.ml ast_quoter.ml denoter.ml plugin_core.ml plugin_core.mli reification.ml quoter.ml run_extractable.ml run_extractable.mli tm_util.ml"
 
-# Test is gen-src is older than src
-if [[ "gen-src" -ot "src" || ! -f "gen-src/denoter.ml" || ! -f "gen-src/metacoq_template_plugin.cmxs" ||
-  "gen-src/extractable.ml" -nt "gen-src/metacoq_template_plugin.cmxs" || "$1" = "force" ]]
+# Test if gen-src is older than src
+if [[ ! -f "gen-src/denoter.ml" ||
+  "theories/Extraction.vo" -nt "gen-src/denoter.ml" || "$1" = "force" ]]
 then
     echo "Updating gen-src from src"
     mkdir -p build

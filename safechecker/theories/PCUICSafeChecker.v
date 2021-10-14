@@ -1615,24 +1615,40 @@ Section CheckEnv.
     var <- monad_All_All (fun cs px => check_cstr_variance Σ0 mdecl id indices mdeclvar cs _ _)
       idecl.(ind_ctors) 
       (get_wt_indices wfar wfpars n idecl indices hnth heq Hcs) ;;
+    lets <- monad_All (P := fun x => if @lets_in_constructor_types _
+      then is_assumption_context (cstr_args x) 
+      else true)   
+     (fun cs => if @lets_in_constructor_types _
+      then (if is_assumption_context (cstr_args cs) then ret _ else EnvError Σ (IllFormedDecl "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true]."
+                                                                              (Msg "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true].")  ))
+      else ret _) idecl.(ind_ctors) ;;
     ret (cs; _).
       
   Next Obligation. now sq. Qed.
   Next Obligation. apply wf_env_ext_wf. Qed.
+  Next Obligation.
+    destruct lets_in_constructor_types.
+    + red. congruence.
+    + reflexivity.
+  Qed.
+  Next Obligation.
+    destruct lets_in_constructor_types; congruence.
+  Qed.
   Next Obligation.
     epose proof (get_wt_indices wfar wfpars _ _ _ hnth heq Hcs).
     destruct Σ as [Σ wfΣ G wfG]; simpl in *. clear X.
     subst Σ; simpl in *. unfold check_constructor_spec in Hcs; simpl in *. sq.
     solve_all.
     eapply All2_impl; eauto. simpl.
-    intros.
-    destruct X as [[wtinds [wfvar posc]] [[[isTy eq]] eq']].
+    intros. 
+    destruct X as [[lets [wtinds [wfvar posc]]] [[[isTy eq]] eq']].
     econstructor => //.
     rewrite eq.
     rewrite it_mkProd_or_LetIn_app. autorewrite with len. lia_f_equal.
     rewrite /cstr_concl /=. f_equal. rewrite /cstr_concl_head.
     lia_f_equal.
     now destruct wtinds.
+    destruct lets_in_constructor_types; eauto.
   Qed.
 
   Definition check_projections_type (Σ : wf_env_ext) (mind : kername) 

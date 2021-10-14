@@ -578,7 +578,10 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       on_ctype_variance : (* The constructor type respect the variance annotation 
         on polymorphic universes, if any. *)
         forall v, ind_variance mdecl = Some v -> 
-        cstr_respects_variance Σ mdecl v cdecl
+        cstr_respects_variance Σ mdecl v cdecl;
+
+      on_lets_in_type : if lets_in_constructor_types 
+                        then is_true (is_assumption_context (cstr_args cdecl)) else True
     }.
 
     Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cunivs}.

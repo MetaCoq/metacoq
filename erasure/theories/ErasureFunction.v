@@ -442,9 +442,8 @@ Section Erase.
       let dbody' := erase Γ' d.(dbody) wt in
       ({| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |})) defs H.
 
-    (** We should expand lets in bcontext here, after erasing.
-      We have access to general substitution still so it shoundn't be too hard.
-      Alternatively we erase to the "old" case representation for now
+    (** We assume that there are no lets in contexts, so nothing has to be expanded.
+        In particular, note that #|br.(bcontext)| = context_assumptions br.(bcontext) when no lets are present.
     *)
     Definition erase_brs p Γ (brs : list (branch term)) 
       (H : forall d, In d brs -> welltyped Σ (Γ ,,, inst_case_branch_context p d) (bbody d)) : list (nat * E.term) :=

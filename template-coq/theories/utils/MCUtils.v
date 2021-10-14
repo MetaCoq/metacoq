@@ -1,6 +1,7 @@
 From Coq Require Import Nat ZArith Bool.
 
 Require Export MCPrelude
+        MCReflect
         All_Forall
         MCArith
         MCCompare
@@ -184,10 +185,6 @@ Lemma uip_bool (b1 b2 : bool) (p q : b1 = b2) : p = q.
 Proof.
   destruct q. apply Eqdep_dec.UIP_refl_bool.
 Qed.
-
-Ltac tas := try assumption.
-Ltac tea := try eassumption.
-Ltac trea := try reflexivity; try eassumption.
 
 Axiom todo : String.string -> forall {A}, A.
 Ltac todo s := exact (todo s).

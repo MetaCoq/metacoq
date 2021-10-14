@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
-From MetaCoq.Template Require Import config utils Ast AstUtils Reflect LiftSubst MCList
-     UnivSubst WfInv Typing.
+From MetaCoq.Template Require Import config utils Environment Ast AstUtils Reflect LiftSubst MCList
+     UnivSubst WfAst TypingWf Typing.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -71,6 +71,26 @@ Definition isConstruct t :=
   | _ => false
   end.
 
+Definition isAssRel (Γ : context) x :=
+  match x with
+  | tRel i =>
+    match option_map decl_body (nth_error Γ i) with
+    | Some None => true
+    | _ => false
+    end
+  | _ => false
+  end.
+
+Definition isAxiom Σ x :=
+  match x with
+  | tConst c u =>
+    match lookup_env Σ c with
+    | Some (ConstantDecl {| cst_body := None |}) => true
+    | _ => false
+    end
+  | _ => false
+  end.
+
 Definition isStuckFix t args :=
   match t with
   | tFix mfix idx =>
@@ -85,7 +105,7 @@ Definition isStuckFix t args :=
 Lemma atom_mkApps f l : atom (mkApps f l) -> (l = []) /\ atom f.
 Proof.
   revert f; induction l using rev_ind. simpl. intuition auto.
-  simpl. intros. rewrite -mkApp_mkApps in H.
+  simpl. intros. rewrite -AstUtils.mkApp_mkApps in H.
   unfold mkApp in H. destruct (mkApps f l); discriminate.
 Qed.
 
@@ -117,21 +137,25 @@ Section Wcbv.
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
       decl.(cst_body) = Some body ->
-      eval (subst_instance_constr u body) res ->
+      eval (subst_instance u body) res ->
       eval (tConst c u) res
 
   (** Case *)
-  | eval_iota ind pars r discr c u args p brs res :
-      eval discr (mkApps (tConstruct ind c u) args) ->
-      eval (iota_red pars c args brs) res ->
-      eval (tCase ((ind, pars), r) p discr brs) res
+  | eval_iota ci mdecl idecl cdecl discr c u args p brs br res :
+      eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
+      nth_error brs c = Some br ->
+      declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+      let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
+      #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+      eval (iota_red ci.(ci_npar) args bctx br) res ->
+      eval (tCase ci p discr brs) res
 
   (** Proj *)
-  | eval_proj i pars arg discr args u a res :
-      eval discr (mkApps (tConstruct i 0 u) args) ->
-      nth_error args (pars + arg) = Some a ->
+  | eval_proj indnpararg discr args u a res :
+      eval discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
+      nth_error args (indnpararg.1.2 + indnpararg.2) = Some a ->
       eval a res ->
-      eval (tProj (i, pars, arg) discr) res
+      eval (tProj indnpararg discr) res
            
   (** Fix unfolding, with guard *)
   | eval_fix f mfix idx fixargsv args argsv narg fn res :
@@ -198,17 +222,26 @@ Section Wcbv.
           declared_constant Σ c decl ->
           forall (u : Instance.t) (res : term),
             cst_body decl = Some body ->
-            eval (subst_instance_constr u body) res -> P (subst_instance_constr u body) res -> P (tConst c u) res) ->
-      (forall (ind : inductive) (pars : nat) r (discr : term) (c : nat) (u : Instance.t)
-              (args : list term) (p : term) (brs : list (nat × term)) (res : term),
+            eval (subst_instance u body) res -> P (subst_instance u body) res -> P (tConst c u) res) ->
+      (forall ci mdecl idecl cdecl (discr : term) (c : nat) (u : Instance.t)
+              (args : list term) (p : predicate term) (brs : list (branch term)) br (res : term),
+          let ind := ci.(ci_ind) in
+          let npar := ci.(ci_npar) in
           eval discr (mkApps (tConstruct ind c u) args) ->
           P discr (mkApps (tConstruct ind c u) args) ->
-          eval (iota_red pars c args brs) res -> P (iota_red pars c args brs) res -> P (tCase ((ind, pars), r) p discr brs) res) ->
-      (forall (i : inductive) (pars arg : nat) (discr : term) (args : list term) (u : Instance.t)
+          nth_error brs c = Some br ->
+          declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+          let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
+          #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+          eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res -> 
+          P (tCase ci p discr brs) res) ->
+      (forall (indnpararg : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)
               (a res : term),
-          eval discr (mkApps (tConstruct i 0 u) args) ->
-          P discr (mkApps (tConstruct i 0 u) args) ->
-          nth_error args (pars + arg) = Some a -> eval a res -> P a res -> P (tProj (i, pars, arg) discr) res) ->
+          eval discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
+          P discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
+          nth_error args (indnpararg.1.2 + indnpararg.2) = Some a -> 
+          eval a res -> P a res ->
+          P (tProj indnpararg discr) res) ->
       (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
              (narg : nat) (fn res : term),
         eval f (mkApps (tFix mfix idx) fixargsv) ->
@@ -229,8 +262,9 @@ Section Wcbv.
           unfold_fix mfix idx = Some (narg, fn) ->
           ~~ is_constructor narg (fixargsv ++ argsv) ->
           P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
-      (forall (ip : (inductive × nat) × relevance) (mfix : mfixpoint term) (idx : nat) (p : term) (args : list term)
-              (narg : nat) (fn : term) (brs : list (nat × term)) (res : term),
+      (forall (ip : case_info) (mfix : mfixpoint term) (idx : nat) 
+        (p : predicate term) (args : list term)
+        (narg : nat) (fn : term) (brs : list (branch term)) (res : term),
           unfold_cofix mfix idx = Some (narg, fn) ->
           eval (tCase ip p (mkApps fn args) brs) res ->
           P (tCase ip p (mkApps fn args) brs) res -> P (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res) ->
@@ -534,7 +568,7 @@ Section Wcbv.
     eval (tConst c u) v ->
     ∑ decl, declared_constant Σ c decl *
                  match cst_body decl with
-                 | Some body => eval (subst_instance_constr u body) v
+                 | Some body => eval (subst_instance u body) v
                  | None => False
                  end.
   Proof.
@@ -739,7 +773,7 @@ Tactic Notation "redt" uconstr(y) := eapply (transitivity (R:=red _ _) (y:=y)).
 (*     eapply red1_red. econstructor. *)
 (*     auto. *)
 
-(*   - redt (subst_instance_constr u body); auto. *)
+(*   - redt (subst_instance u body); auto. *)
 (*     eapply red1_red. econstructor; eauto. *)
 
 (*   - redt (tCase (ind, pars) p _ brs). *)

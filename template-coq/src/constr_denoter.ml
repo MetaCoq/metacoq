@@ -29,19 +29,15 @@ struct
 
   let unquote_case_info trm =
     let (h,args) = app_full trm [] in
-    if constr_equall h c_pair then
+    if constr_equall h mk_case_info then
       match args with
-        _ :: _ :: ind_nparam :: relevance :: [] ->
-         let (h1,args1) = app_full ind_nparam [] in
-         if constr_equall h1 c_pair then
-           (match args1 with
-           | _ :: _ :: ind :: nparam :: [] ->  ((ind, nparam), relevance)
-           | _ -> bad_term_verb trm "unquote_case_info")
-         else not_supported_verb trm "unquote_case_info"
+      | ind :: nparam :: relevance :: [] ->
+        { aci_ind = ind;
+          aci_npar = nparam;
+          aci_relevance = relevance }
       | _ -> bad_term_verb trm "unquote_case_info"
     else
       not_supported_verb trm "unquote_case_info"
-
 
   let rec unquote_list trm =
     let (h,args) = app_full trm [] in
@@ -351,7 +347,26 @@ struct
     else
       not_supported_verb trm "unquote_global_reference"
 
+  let unquote_branch trm = 
+    let (h, args) = app_full trm [] in
+    if constr_equall h tmk_branch then
+      match args with
+      | _ty :: bctx :: bbody :: [] ->
+      { abcontext = unquote_list bctx; abbody = bbody }
+      | _ -> bad_term_verb trm "unquote_branch"
+    else not_supported_verb trm "unquote_branch"
 
+  let unquote_predicate trm = 
+    let (h, args) = app_full trm [] in
+    if constr_equall h tmk_predicate then
+      match args with
+      | _ty :: auinst :: apars :: apcontext :: apreturn :: [] -> 
+        let apars = unquote_list apars in
+        let apcontext = unquote_list apcontext in
+        { auinst; apars; apcontext; apreturn }
+      | _ -> bad_term_verb trm "unquote_predicate"
+    else not_supported_verb trm "unquote_predicate"
+  
   let inspect_term (t:Constr.t)
   : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, 
     quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
@@ -407,7 +422,8 @@ struct
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure: constructor case"))
     else if constr_equall h tCase then
       match args with
-        info::ty::d::brs::_ -> ACoq_tCase (unquote_case_info info, ty, d, List.map unquote_pair (unquote_list brs))
+        info::p::d::brs::_ -> ACoq_tCase (unquote_case_info info, unquote_predicate p, d,
+           List.map unquote_branch (unquote_list brs))
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if constr_equall h tFix then
       match args with

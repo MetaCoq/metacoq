@@ -40,10 +40,6 @@ Definition isFixApp t :=
   | _ => false
   end.
 
-Definition substl defs body : term :=
-  fold_left (fun bod term => csubst term 0 bod)
-    defs body.
-
 Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
   | Some d =>
@@ -106,10 +102,12 @@ Section Wcbv.
       eval (tLetIn na b0 b1) res
 
   (** Case *)
-  | eval_iota ind pars discr c args brs res :
+  | eval_iota ind pars discr c args brs br res :
       eval discr (mkApps (tConstruct ind c) args) ->
       is_propositional_ind Σ ind = Some false ->
-      eval (iota_red pars c args brs) res ->
+      nth_error brs c = Some br ->
+      #|skipn pars args| = br.1 ->
+      eval (iota_red pars args br) res ->
       eval (tCase (ind, pars) discr brs) res
 
   (** Singleton case on a proof *)
@@ -118,7 +116,7 @@ Section Wcbv.
       eval discr tBox ->
       is_propositional_ind Σ ind = Some true ->
       brs = [ (n,f) ] ->
-      eval (mkApps f (repeat tBox n)) res ->
+      eval (substl (repeat tBox n) f) res ->
       eval (tCase (ind, pars) discr brs) res
 
   (** Fix unfolding, with guard *)
@@ -498,7 +496,7 @@ Section Wcbv.
         rewrite isFixApp_mkApps => //.
         rewrite -mkApps_nested; simpl.
         rewrite orb_false_r.
-        destruct t; auto.
+        destruct t => //.
     - destruct f; try discriminate.
       apply All_All2_refl in X0.
       now apply eval_stuck_fix.
@@ -533,8 +531,11 @@ Section Wcbv.
         noconf eq1.
         noconf eq2.
         noconf IHev1.
-        rewrite (uip e e0).
-        now specialize (IHev2 _ ev'2); noconf IHev2.
+        pose proof e0. rewrite e3 in H. noconf H.
+        rewrite (uip e0 e3).
+        rewrite (uip e e2).
+        specialize (IHev2 _ ev'2); noconf IHev2.
+        now rewrite (uip e1 e4).
       + apply eval_mkApps_tCoFix in ev1 as H.
         destruct H as (? & ?); solve_discr.
     - depelim ev'; try go.

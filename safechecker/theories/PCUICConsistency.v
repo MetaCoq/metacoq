@@ -20,6 +20,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICUnivSubst.
 From MetaCoq.PCUIC Require Import PCUICValidity.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 
@@ -34,7 +35,7 @@ Fixpoint string_repeat c (n : nat) : string :=
 Lemma string_repeat_length c n :
   String.length (string_repeat c n) = n.
 Proof.
-  induction n; cbn; auto.
+  induction n; cbn; auto with arith.
 Qed.
 
 Definition max_name_length (Σ : global_env) : nat :=
@@ -72,7 +73,9 @@ Qed.
 Definition Prop_univ := Universe.of_levels (inl PropLevel.lProp).
 
 Definition False_oib : one_inductive_body :=
-  {| ind_name := "";
+  {| ind_name := "False";
+     ind_indices := [];
+     ind_sort := Prop_univ;
      ind_type := tSort Prop_univ;
      ind_kelim := IntoAny;
      ind_ctors := [];
@@ -102,7 +105,7 @@ Proof.
     destruct g; auto.
     destruct c; auto.
     apply axfree in find; cbn in *.
-    now destruct cst_body.
+    now destruct cst_body0.
   - destruct nth_error; auto.
     rewrite nth_nth_error.
     destruct nth_error eqn:nth; auto.
@@ -140,31 +143,28 @@ Proof.
     - hnf.
       constructor.
       + constructor.
-        * econstructor; cbn.
-          -- instantiate (2 := []); reflexivity.
+        * econstructor; cbn; auto.
           -- exists (Universe.super Prop_univ).
              constructor; auto.
              constructor.
           -- instantiate (1 := []).
              constructor.
-          --  intros.
-              congruence.
-          -- constructor.
-          -- intros ? [=].
+          -- now cbn.
+          -- intros; congruence.
         * constructor.
       + constructor.
       + reflexivity.
       + reflexivity.
     - destruct wfΣ; auto. }
-  eapply (env_prop_typing _ _ PCUICWeakeningEnv.weakening_env) in cons; auto.
+  eapply (env_prop_typing PCUICWeakeningEnv.weakening_env) in cons; auto.
   3: exists [(make_fresh_name Σ, InductiveDecl False_mib)]; reflexivity.
   2: now destruct wf'.
   
   set (Σ' := _ ++ _) in cons.
   set (False_ty := tInd (mkInd (make_fresh_name Σ) 0) []).
   assert (typ_false: (Σ', Σ.2);;; [] |- tApp t False_ty : False_ty).
-  { apply validity_term in cons as typ_prod; auto.
-    destruct typ_prod.
+  { apply validity in cons as typ_prod; auto.
+    destruct typ_prod. red in t0.
     eapply type_App with (B := tRel 0) (u := False_ty); eauto.
     eapply type_Ind with (u := []) (mdecl := False_mib) (idecl := False_oib); eauto.
     - hnf.
@@ -179,7 +179,7 @@ Proof.
   pose proof (iswelltyped _ _ _ _ typ_false) as wt.
   pose proof (@hnf_sound _ _ sqwf _ _ wt) as [r].
   pose proof (@hnf_complete _ _ sqwf _ _ wt) as [w].
-  eapply subject_reduction in typ_false; eauto.
+  eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.
     destruct decompose_app eqn:decomp.
@@ -189,10 +189,9 @@ Proof.
     apply inversion_mkApps in typ_false as H; auto.
     destruct H as (?&typ_ctor&_).
     apply inversion_Construct in typ_ctor as (?&?&?&?&?&?&?); auto.
-    unshelve eapply Construct_Ind_ind_eq with (args' := []) in typ_false.
-    5: eassumption.
-    1: eauto.
-    destruct on_declared_constructor.
+    eapply Construct_Ind_ind_eq with (args' := []) in typ_false; tea.
+    2: eauto.
+    destruct (on_declared_constructor d).
     destruct p.
     destruct s.
     destruct p.

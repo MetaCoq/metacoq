@@ -1672,6 +1672,8 @@ Definition fresh_level : Level.t. exact Level.lSet. Qed.
 
 Class UnivSubst A := subst_instance : Instance.t -> A -> A.
 
+Notation "x @[ u ]" := (subst_instance u x) (at level 3, 
+  format "x @[ u ]").
 
 Instance subst_instance_level : UnivSubst Level.t :=
   fun u l => match l with
@@ -1769,8 +1771,8 @@ Section UniverseClosedSubst.
       apply UnivExprSet.for_all_spec in H; proper. now apply H.
   Qed.
 
-  Lemma closedu_subst_instance_instance u t
-    : closedu_instance 0 t -> subst_instance_instance u t = t.
+  Lemma closedu_subst_instance u t
+    : closedu_instance 0 t -> subst_instance u t = t.
   Proof.
     intro H. apply forall_map_id_spec.
     apply Forall_forall; intros l Hl.
@@ -1782,7 +1784,7 @@ End UniverseClosedSubst.
 
 #[global]
 Hint Resolve closedu_subst_instance_level closedu_subst_instance_level_expr
-     closedu_subst_instance_univ closedu_subst_instance_instance : substu.
+     closedu_subst_instance_univ closedu_subst_instance : substu.
 
 (** Substitution of a universe-closed instance of the right size
     produces a universe-closed term. *)
@@ -1823,8 +1825,8 @@ Section SubstInstanceClosed.
     now apply H.
   Qed.
 
-  Lemma subst_instance_instance_closedu t :
-    closedu_instance #|u| t -> closedu_instance 0 (subst_instance_instance u t).
+  Lemma subst_instance_closedu t :
+    closedu_instance #|u| t -> closedu_instance 0 (subst_instance u t).
   Proof.
     intro H. etransitivity. eapply forallb_map.
     eapply forallb_impl; tea.
@@ -1834,7 +1836,7 @@ End SubstInstanceClosed.
 
 #[global]
 Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
-     subst_instance_univ_closedu subst_instance_instance_closedu : substu.
+     subst_instance_univ_closedu subst_instance_closedu : substu.
 
 
 Definition string_of_level (l : Level.t) : string :=
@@ -1873,8 +1875,12 @@ Definition polymorphic_instance uctx :=
   | Monomorphic_ctx c => Instance.empty
   | Polymorphic_ctx c => fst (AUContext.repr c)
   end.
-
-
+(* todo: duplicate of polymorphic_instance *)
+Definition abstract_instance decl :=
+  match decl with
+  | Monomorphic_ctx _ => Instance.empty
+  | Polymorphic_ctx auctx => UContext.instance (AUContext.repr auctx)
+  end.
 
 Definition print_universe_instance u :=
   match u with

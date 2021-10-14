@@ -3,9 +3,10 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICContextRelation
-     PCUICEquality PCUICLiftSubst PCUICTyping PCUICInduction.
-Require Import ssreflect.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICContextRelation
+     PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnv
+     PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars.
+Require Import ssreflect ssrbool.
 Set Asymmetric Patterns.
 
 (* Require Import Equations.Type.DepElim. *)
@@ -202,7 +203,7 @@ Defined.
 Lemma negb_is_true b :
  ~ is_true b -> is_true (negb b).
 Proof.
-  destruct b; pcuicfo.
+  destruct b; pcuicfo. congruence.
 Qed.
 #[global]
 Hint Resolve negb_is_true : core.
@@ -320,7 +321,7 @@ Set Firstorder Solver auto with core.
 Definition whnf_whne_dec flags Σ Γ t :
   ({∥whnf flags Σ Γ t∥} + {~∥whnf flags Σ  Γ t∥}) *
   ({∥whne flags Σ Γ t∥} + {~∥whne flags Σ Γ t∥}).
-Proof with eauto using sq with pcuic.
+Proof with eauto using sq with pcuic; try congruence.
   induction t using term_forall_mkApps_ind in Γ |- *; split...
   all: try now (right; intros [H]; depelim H;help).
   - destruct (RedFlags.zeta flags) eqn:Er.
@@ -403,7 +404,7 @@ Proof with eauto using sq with pcuic.
          ++ destruct (nth_error_all E2 X Γ) as [_ []].
             ** left. destruct s. constructor. eauto.
             ** destruct (RedFlags.fix_ flags) eqn:?.
-               --- right. intros ?. depelim H0. depelim X0. all:help. clear IHv. 
+               --- right. intros ?. depelim H1. depelim X0. all:help. clear IHv. 
                    eapply whne_mkApps_inv in X0 as []...
                    destruct s as (? & ? & ? & ? & ? & ? & ? & ? & ?). inv e.
                    rewrite E1 in e0. inv e0.
@@ -414,9 +415,7 @@ Proof with eauto using sq with pcuic.
                    apply n0; sq; auto.
                --- left. constructor. apply whne_mkApps. constructor. assumption.
          ++ right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
-            congruence.
       -- right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
-         congruence.
       * right. intros [[ | (mfix' & idx' & narg' & body' & a' & [=] & ? & ? & ?) ] % whne_mkApps_inv]; subst; cbn...
   - destruct (RedFlags.delta flags) eqn:Er...
     destruct (lookup_env Σ s) as [[] | ] eqn:E.
@@ -433,11 +432,11 @@ Proof with eauto using sq with pcuic.
   - left. constructor. eapply whnf_indapp with (v := []). 
   - left. constructor. eapply whnf_cstrapp with (v := []). 
   - destruct (RedFlags.iota flags) eqn:Eq...
-    destruct (IHt2 Γ) as [_ []].
+    destruct (IHt Γ) as [_ []].
     + left. destruct s...
     + right. intros [w]. depelim w. depelim w. all:help...
-  -  destruct (RedFlags.iota flags) eqn:Eq...
-     destruct (IHt2 Γ) as [_ []].
+  - destruct (RedFlags.iota flags) eqn:Eq...
+    destruct (IHt Γ) as [_ []].
     + left. destruct s...
     + right. intros [w]. depelim w. all:help...
   - destruct (RedFlags.iota flags) eqn:Eq...
@@ -517,7 +516,7 @@ Lemma red1_mkApps_tFix_inv Σ Γ mfix id v t' :
   red1 Σ Γ (mkApps (tFix mfix id) v) t' ->
   (∑ v', (t' = mkApps (tFix mfix id) v') * (OnOne2 (red1 Σ Γ) v v'))
   + (∑ mfix', (t' = mkApps (tFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x0 : def term => (dname x0, dbody x0, rarg x0))) mfix mfix'))
-  + (∑ mfix', (t' = mkApps (tFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
+  + (∑ mfix', (t' = mkApps (tFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
 Proof.
   intros not_ctor. revert t'. induction v using rev_ind; intros.
   - cbn in *. depelim X; help; eauto.
@@ -546,7 +545,7 @@ Lemma red1_mkApps_tCoFix_inv Σ Γ mfix id v t' :
   red1 Σ Γ (mkApps (tCoFix mfix id) v) t' ->
   (∑ v', (t' = mkApps (tCoFix mfix id) v') * (OnOne2 (red1 Σ Γ) v v'))
   + (∑ mfix', (t' = mkApps (tCoFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x0 : def term => (dname x0, dbody x0, rarg x0))) mfix mfix'))
-  + (∑ mfix', (t' = mkApps (tCoFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, PCUICLiftSubst.fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
+  + (∑ mfix', (t' = mkApps (tCoFix mfix' id) v) * (OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix)) dbody (fun x0 : def term => (dname x0, dtype x0, rarg x0))) mfix mfix')).
 Proof.
   revert t'. induction v using rev_ind; intros.
   - cbn in *. depelim X; help; eauto.
@@ -725,18 +724,25 @@ Lemma whne_red1_ind
                ((dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)))
             defs mfix1 ->
           P (tFix defs i) (tFix mfix1 i))
-      (Hcase_discr : forall i p c brs p',
+      (Hcase_params : forall i p c brs params',
           whne flags Σ Γ c ->
-          red1 Σ Γ p p' ->
-          P (tCase i p c brs) (tCase i p' c brs))
-      (Hcase_motive : forall i p c brs c',
+          OnOne2 (red1 Σ Γ) p.(pparams) params' ->
+          P (tCase i p c brs) (tCase i (set_pparams p params') c brs))
+      (Hcase_motive : forall i  p c brs p',
+          whne flags Σ Γ c ->
+          red1 Σ (Γ ,,, inst_case_predicate_context p) p.(preturn) p' ->
+          P (tCase i p c brs) (tCase i (set_preturn p p') c brs))
+      (Hcase_discr : forall i p c brs c',
           whne flags Σ Γ c ->
           red1 Σ Γ c c' ->
           P c c' ->
           P (tCase i p c brs) (tCase i p c' brs))
       (Hcase_branch : forall i p c brs brs',
-          whne flags Σ Γ c ->
-          OnOne2 (on_Trel_eq (red1 Σ Γ) snd fst) brs brs' ->
+          whne flags Σ Γ c ->          
+          OnOne2 (fun br br' => 
+            let ctx := inst_case_branch_context p br in
+            (on_Trel_eq (red1 Σ (Γ ,,, ctx)) bbody bcontext br br')%type)
+            brs brs' ->
           P (tCase i p c brs) (tCase i p c brs'))
       (Hcase_noiota : forall t' i p c brs,
           RedFlags.iota flags = false ->
@@ -971,11 +977,19 @@ Inductive whnf_red Σ Γ : term -> term -> Type :=
                       red Σ (Γ,,, fix_context mfix) (dbody d) (dbody d'))
          mfix mfix' ->
     whnf_red Σ Γ (tFix mfix idx) (tFix mfix' idx)
-| whnf_red_tCase p motive motive' discr discr' brs brs' :
-    red Σ Γ motive motive' ->
+| whnf_red_tCase ci motive motivepars motiveret discr discr' brs brs' :
+    All2 (red Σ Γ) motive.(pparams) motivepars ->
+
+    red Σ (Γ ,,, inst_case_predicate_context motive) motive.(preturn) motiveret ->
     red Σ Γ discr discr' ->
-    All2 (fun br br' => br.1 = br'.1 × red Σ Γ br.2 br'.2) brs brs' ->
-    whnf_red Σ Γ (tCase p motive discr brs) (tCase p motive' discr' brs')
+    All2 (fun br br' =>
+      red Σ (Γ ,,, inst_case_branch_context motive br) br.(bbody) br'.(bbody) ×
+      bcontext br = bcontext br') brs brs' ->
+    whnf_red Σ Γ (tCase ci motive discr brs) 
+      (tCase ci {| pparams := motivepars; 
+                  puinst := motive.(puinst);
+                  pcontext := motive.(pcontext);
+                  preturn := motiveret |} discr' brs')
 | whnf_red_tProj p c c' :
     red Σ Γ c c' ->
     whnf_red Σ Γ (tProj p c) (tProj p c')
@@ -1006,6 +1020,14 @@ Derive Signature for whnf_red.
 #[global]
 Hint Constructors whnf_red : pcuic.
 
+Lemma All3_impl {A B C} (P Q : A -> B -> C -> Type) {l l' l''} 
+  (a : All3 P l l' l'') : 
+  (forall x y z, P x y z -> Q x y z) ->
+  All3 Q l l' l''.
+Proof.
+  intros HPQ; induction a; constructor; auto.
+Qed.
+
 Lemma whnf_red_red Σ Γ t t' :
   whnf_red Σ Γ t t' ->
   red Σ Γ t t'.
@@ -1019,17 +1041,13 @@ Proof.
     cbn.
     intros ? ? (->&->&r1&r2).
     eauto.
-  - apply red_case; auto.
-    eapply All2_impl; eauto.
-    cbn.
-    intros ? ? (->&?).
-    eauto.
+  - eapply red_case; eauto.
   - apply red_proj_c; auto.
   - apply red_prod; auto.
   - apply red_abs; auto.
-    eapply context_change_decl_types_red; eauto.
+    eapply context_pres_let_bodies_red; eauto.
     constructor; [|constructor].
-    apply context_relation_refl.
+    apply All2_fold_refl.
     reflexivity.
   - apply red_cofix_congr.
     eapply All2_impl; eauto.
@@ -1114,10 +1132,13 @@ Lemma whnf_red_refl_whne Σ Γ t :
 Proof.
   intros wh.
   induction wh; cbn in *; try discriminate; eauto using whnf_red with pcuic.
-  apply whnf_red_mkApps; auto.
-  2: apply All2_same; auto.
-  constructor.
-  apply All2_same; auto.
+  - apply whnf_red_mkApps; auto.
+     2: apply All2_same; auto.
+    constructor.
+    apply All2_same; auto.
+  - destruct p. econstructor; simpl; eauto.
+    * eapply All2_same; auto.
+    * eapply All2_same; intuition auto.
 Qed.
 
 Lemma whnf_red_refl Σ Γ t :
@@ -1137,16 +1158,133 @@ Proof.
     apply All2_same; auto.
 Qed.
 
-Instance whnf_red_trans Σ Γ : CRelationClasses.Transitive (whnf_red Σ Γ).
+Ltac inv_on_free_vars :=
+  match goal with
+  | [ H : is_true (on_free_vars_decl _ _) |- _ ] => progress cbn in H
+  | [ H : is_true (on_free_vars_decl _ (vdef _ _ _)) |- _ ] => unfold on_free_vars_decl, test_decl in H
+  | [ H : is_true (_ && _) |- _ ] => 
+    move/andP: H => []; intros
+  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
+    progress (cbn in H || rewrite on_free_vars_mkApps in H);
+    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+      eapply forallb_All in H); intros
+  | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
+    move/andP: H => []; rewrite ?shiftnP_xpredT; intros
+  | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
+    rewrite -> test_context_k_closed_on_free_vars_ctx in H
+  end.
+
+Require Import PCUICWellScopedCumulativity PCUICOnFreeVars PCUICConfluence PCUICSR PCUICConversion PCUICSubstitution.
+
+Lemma red_ctx_rel_subst {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} P Γ Γ' s s' Δ : 
+  All2 (red Σ Γ) s s' ->
+  All (on_free_vars (shiftnP #|Γ| P)) s ->
+  untyped_subslet Γ s Γ' ->
+  on_free_vars_ctx P (Γ ,,, Γ' ,,, Δ) ->
+  red_context_rel Σ Γ (subst_context s 0 Δ) (subst_context s' 0 Δ).
 Proof.
-  intros x y z xy yz.
-  revert z yz.
-  induction xy; intros z yz; depelim yz; eauto using whnf_red.
+  intros Hs ons subs onctx.
+  induction Δ; cbn.
+  * rewrite !subst_context_nil. constructor.
+  * move: onctx => /=. rewrite on_free_vars_ctx_snoc => /andP[] onctx ona.
+    rewrite !subst_context_snoc !Nat.add_0_r. 
+    constructor; eauto.
+    now apply IHΔ. 
+    destruct a as [na [b|] ty]; constructor; cbn.
+    relativize #|Δ|. eapply red_red; tea. 4:auto.
+    erewrite on_free_vars_ctx_on_ctx_free_vars => //; tea.
+    unfold on_free_vars_decl, test_decl in onctx. cbn in onctx.
+    now move/andP: ona.
+    solve_all. rewrite !app_context_length Nat.add_assoc -shiftnP_add addnP_shiftnP //.
+    relativize #|Δ|. eapply red_red; tea. 4:auto.
+    erewrite on_free_vars_ctx_on_ctx_free_vars => //; tea.
+    unfold on_free_vars_decl, test_decl in onctx. cbn in onctx.
+    now move/andP: ona.
+    solve_all. rewrite !app_context_length Nat.add_assoc -shiftnP_add addnP_shiftnP //.
+    relativize #|Δ|. eapply red_red; tea. 4:auto.
+    erewrite on_free_vars_ctx_on_ctx_free_vars => //; tea.
+    unfold on_free_vars_decl, test_decl in onctx. cbn in onctx.
+    now move/andP: ona.
+    solve_all. rewrite !app_context_length Nat.add_assoc -shiftnP_add addnP_shiftnP //.
+Qed.
+
+Definition fake_params n : context := 
+    unfold n (fun x => {| decl_name := {| binder_name := nAnon; binder_relevance := Relevant |};
+                          decl_body := None;
+                          decl_type := tSort Universe.type0 |}).
+
+Lemma fake_params_length n : #|fake_params n| = n.
+Proof.
+  induction n; simpl; auto. cbn.
+  now rewrite app_length IHn /= Nat.add_1_r.
+Qed.
+
+Lemma params_subslet {cf:checker_flags} Γ pars :
+  untyped_subslet Γ pars (List.rev (fake_params #|pars|)).
+Proof.
+  induction pars; cbn. constructor.
+  rewrite List.rev_app_distr /=. constructor; auto.
+Qed.
+
+Lemma closed_fake_params n P :
+  on_free_vars_ctx P (List.rev (fake_params n)).
+Proof.
+  unfold on_free_vars_ctx. generalize 0. rewrite List.rev_involutive.
+  induction n; cbn => //.
+  intros n'.
+  rewrite alli_app IHn /= //.
+Qed.
+
+Lemma red_terms_on_free_vars {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ ts us}:
+  is_closed_context Γ ->
+  forallb (is_open_term Γ) ts ->
+  All2 (red Σ Γ) ts us ->
+  forallb (is_open_term Γ) us.
+Proof.
+  solve_all. eapply red_on_free_vars; tea.
+  now rewrite on_free_vars_ctx_on_ctx_free_vars.
+Qed.
+
+Definition br_fvs (Γ : context) (motive : predicate term) br :=
+  test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
+    #|pparams motive| (bcontext br) &&
+  on_free_vars (shiftnP #|bcontext br| (shiftnP #|Γ| xpred0)) (bbody br).
+
+Lemma br_fvs_pres {cf:checker_flags} {Σ} {wfΣ : wf Σ} Γ motive brs brs' :
+  is_closed_context Γ ->
+  forallb (is_open_term Γ) (pparams motive) ->
+  All (br_fvs Γ motive) brs ->
+  All2
+    (fun br br' : branch term =>
+    red Σ (Γ,,, inst_case_branch_context motive br) 
+       (bbody br) (bbody br') * (bcontext br = bcontext br')) brs brs' ->
+  All (br_fvs Γ motive) brs'.
+Proof.
+  intros clΓ clpars.
+  unfold br_fvs; solve_all.
+  now rewrite b0 in H.
+  rewrite -b0. eapply red_on_free_vars; tea.
+  rewrite shiftnP_add. relativize (#|_| + _); [erewrite on_free_vars_ctx_on_ctx_free_vars|].
+  2:len.
+  rewrite on_free_vars_ctx_app clΓ /=.
+  eapply on_free_vars_ctx_inst_case_context; trea. solve_all.
+Qed.
+
+Lemma whnf_red_trans {cf:checker_flags} Σ Γ x y z : wf Σ -> 
+  is_closed_context Γ ->
+  is_open_term Γ x ->
+  whnf_red Σ Γ x y ->
+  whnf_red Σ Γ y z ->
+  whnf_red Σ Γ x z.
+Proof.
+  intros wf onΓ onx xy yz.
+  revert onx z yz.
+  induction xy; intros onx z yz; depelim yz; repeat inv_on_free_vars; eauto using whnf_red.
   - constructor.
     eapply All2_trans; eauto.
     typeclasses eauto.
   - constructor; eauto.
-    all: etransitivity; eauto.
+    all: try etransitivity; eauto.
   - constructor.
     eapply All2_trans; eauto.
     1: { intros ? ? ? (->&->&?&?) (->&->&?&?).
@@ -1156,26 +1294,109 @@ Proof.
     cbn.
     intros ? ? (->&->&?&?).
     do 3 (split; auto).
-    eapply context_change_decl_types_red; eauto.
-    apply fix_context_change_decl_types.
+    eapply context_pres_let_bodies_red; eauto.
+    apply fix_context_pres_let_bodies.
     now apply All2_length in a.
-  - constructor; try solve [etransitivity; eauto].
-    eapply All2_trans; eauto.
-    intros ? ? ? (->&?) (->&?).
-    split; auto.
-    etransitivity; eauto.
+  - simpl in *.
+    constructor; try solve [etransitivity; eauto].
+    + eapply All2_trans; eauto.
+      typeclasses eauto.
+    + etransitivity; [eassumption|].
+      have clp: on_ctx_free_vars (closedP #|Γ,,, inst_case_predicate_context motive| xpredT)
+        (Γ,,, inst_case_predicate_context motive).
+      { rewrite closedP_shiftnP_eq on_free_vars_ctx_on_ctx_free_vars.
+        rewrite on_free_vars_ctx_app onΓ /=.  
+        eapply on_free_vars_ctx_inst_case_context => //.
+        rewrite test_context_k_closed_on_free_vars_ctx //. }
+      eapply red_red_ctx. 5:tea. all:eauto; revgoals.
+      apply red_context_app_right; eauto.
+      * apply red_context_refl.
+      * rewrite /inst_case_predicate_context /=.
+        rewrite /inst_case_context.
+        eapply (red_ctx_rel_subst (Σ := empty_ext Σ)).
+        eapply All2_rev => //.
+        eapply All_rev. solve_all.
+        instantiate (1 := List.rev (fake_params #|pparams motive|)).
+        rewrite -(List.rev_length (pparams motive)).
+        eapply params_subslet.
+        rewrite !on_free_vars_ctx_app onΓ /=. len.
+        rewrite fake_params_length on_free_vars_subst_instance_context.
+        rewrite closed_fake_params /=.
+        setoid_rewrite closedP_shiftnP_eq in p1.
+        eapply on_free_vars_ctx_impl; tea.
+        rewrite /shiftnP. intros i. rewrite !orb_false_r.
+        move/Nat.ltb_lt => ?. apply Nat.ltb_lt. lia.
+      * eapply red_on_free_vars; tea.
+        len. rewrite closedP_shiftnP_eq -shiftnP_add //.
+      * rewrite closedP_shiftnP_eq.
+        relativize #|Γ ,,, _|; [erewrite on_free_vars_ctx_on_ctx_free_vars|].
+        2:len.
+        rewrite on_free_vars_ctx_app onΓ /=.  
+        eapply on_free_vars_ctx_inst_case_context => //. cbn.
+        eapply red_terms_on_free_vars; tea.
+        rewrite test_context_k_closed_on_free_vars_ctx -(All2_length a) //. 
+
+    + eapply forallb_All in p3.
+      epose proof (br_fvs_pres _ _ _ _ onΓ p p3 a0).
+      eapply (All2_impl (P:=fun br br' => br_fvs Γ motive br × 
+        red Σ (Γ,,, inst_case_branch_context motive br) (bbody br) (bbody br') *
+            (bcontext br = bcontext br'))).
+      2:intuition.
+      eapply All2_trans with brs'. 
+      { clear -wf p.
+        intros br br' br''. intuition auto. 2:congruence.
+        etransitivity; tea. unfold inst_case_branch_context in *. now rewrite -b1 in a2. }
+      1:solve_all.
+      eapply All2_All_mix_left in a2; tea. eapply All2_impl; tea.
+      intros br br'; cbn. intuition auto.
+      unfold br_fvs in a3.
+      move/andP: a3 => [] fvbctx fvbr.
+      eapply red_red_ctx. 5:tea. all:eauto; revgoals.
+      apply red_context_app_right; eauto.
+      * rewrite closedP_shiftnP_eq on_free_vars_ctx_on_ctx_free_vars.
+        rewrite on_free_vars_ctx_app onΓ /=.  
+        eapply on_free_vars_ctx_inst_case_context => //.
+      * apply red_context_refl.
+      * rewrite /inst_case_branch_context /=.
+        rewrite /inst_case_context.
+        eapply (red_ctx_rel_subst (Σ := empty_ext Σ)).
+        eapply All2_rev => //.
+        eapply All_rev. solve_all.
+        instantiate (1 := List.rev (fake_params #|pparams motive|)).
+        rewrite -(List.rev_length (pparams motive)).
+        eapply params_subslet.
+        rewrite !on_free_vars_ctx_app onΓ /=. len.
+        rewrite fake_params_length on_free_vars_subst_instance_context.
+        rewrite closed_fake_params /=.
+        move: fvbctx.
+        rewrite test_context_k_closed_on_free_vars_ctx closedP_shiftnP_eq => H.
+        eapply on_free_vars_ctx_impl; tea.
+        rewrite /shiftnP. intros i. rewrite !orb_false_r.
+        move/Nat.ltb_lt => ?. apply Nat.ltb_lt. lia.
+      * rewrite shiftnP_add.
+        relativize (#|_| + _); [erewrite on_free_vars_ctx_on_ctx_free_vars|].
+        2:len.
+        rewrite on_free_vars_ctx_app onΓ /=.  
+        eapply on_free_vars_ctx_inst_case_context => //.
+      * rewrite shiftnP_add.
+        relativize (#|_| + _); [erewrite on_free_vars_ctx_on_ctx_free_vars|].
+        2:len.
+        rewrite on_free_vars_ctx_app onΓ /=.  
+        eapply on_free_vars_ctx_inst_case_context => //.
+        eapply red_terms_on_free_vars; tea.
+        now rewrite -(All2_length a).
   - constructor.
     etransitivity; eauto.
   - constructor; etransitivity; eauto.
-    eapply context_change_decl_types_red; eauto.
+    eapply context_pres_let_bodies_red; eauto.
     constructor; eauto; [|constructor].
-    apply context_relation_refl.
-    intros; reflexivity.
+    apply All2_fold_refl.
+    intros _ ?. reflexivity.
   - constructor; etransitivity; eauto.
-    eapply context_change_decl_types_red; eauto.
+    eapply context_pres_let_bodies_red; eauto.
     constructor; eauto; [|constructor].
-    apply context_relation_refl.
-    intros; reflexivity.
+    apply All2_fold_refl.
+    intros _ ?; reflexivity.
   - constructor.
     eapply All2_trans; eauto.
     1: { intros ? ? ? (->&->&?&?) (->&->&?&?).
@@ -1185,8 +1406,8 @@ Proof.
     cbn.
     intros ? ? (->&->&?&?).
     do 3 (split; auto).
-    eapply context_change_decl_types_red; eauto.
-    apply fix_context_change_decl_types.
+    eapply context_pres_let_bodies_red; eauto.
+    apply fix_context_pres_let_bodies.
     now apply All2_length in a.
 Qed.
 
@@ -1221,12 +1442,18 @@ Proof.
       auto.
     + apply All2_same; auto.
   - constructor; auto.
-    apply All2_same; auto.
-  - constructor; auto.
-    apply All2_same; auto.
-  - constructor; auto.
-    eapply OnOne2_All2; eauto.
-    intros ? ? (?&?); auto.
+    * eapply OnOne2_All2; eauto.
+    * eapply All2_same; intuition auto.
+  - econstructor; auto. apply All2_same; auto.
+    eapply All2_same; intuition auto.
+  - destruct p; econstructor; eauto; simpl.
+    * eapply All2_same; auto.
+    * eapply All2_same; intuition auto.
+  - destruct p;  econstructor; eauto; simpl.
+    * eapply All2_same; reflexivity.
+    * eapply OnOne2_All2; eauto.
+      cbn. intros ? ? [? <-].
+      intuition eauto; try reflexivity.
 Qed.
 
 Lemma whnf_red1_inv Σ Γ t t' :
@@ -1291,16 +1518,17 @@ Proof.
   - depelim r; solve_discr.
 Qed.
 
-Lemma whnf_red_inv Σ Γ t t' :
+Lemma whnf_red_inv {cf:checker_flags} {Σ : global_env_ext} Γ t t' :
+  wf Σ ->
   whnf RedFlags.default Σ Γ t ->
-  red Σ Γ t t' ->
+  Σ ;;; Γ ⊢ t ⇝ t' ->
   whnf_red Σ Γ t t'.
 Proof.
-  intros wh r.
+  intros wf wh [clΓ clt r].
   induction r using red_rect_n1.
   - apply whnf_red_refl; auto.
   - eapply whnf_red1_inv in X.
-    + etransitivity; eauto.
+    + eapply whnf_red_trans; tea.
     + eapply whnf_pres; eauto.
 Qed.
 

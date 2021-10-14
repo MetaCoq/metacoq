@@ -595,7 +595,7 @@ Section ConvCongruences.
       generalize (closed_red_open_right tv').
       rewrite on_fvs_prod => /andP[] // ona' onb'.
       exists na', a', b'; split => //.
-      * transitivity dom'; pcuic. eauto with pcuic fvs.
+      * transitivity dom'; pcuic.
         eapply equality_compare; eauto with fvs.
       * transitivity codom'; pcuic.
         eapply equality_compare; eauto with fvs.

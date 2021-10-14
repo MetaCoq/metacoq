@@ -464,7 +464,7 @@ Section ContextConversion.
   Lemma red_ctx_context_equality {l Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> Σ ⊢ Γ ≤[l] Γ'.
   Proof.
     induction 1; constructor; auto.
-    depelim p; constructor; eauto with fvs pcuic; now eapply red_equality.
+    depelim p; constructor; eauto with fvs; pcuic.
   Qed.
 
   Lemma red_ctx_closed_left {Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> is_closed_context Γ.

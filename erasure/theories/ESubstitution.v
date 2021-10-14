@@ -395,6 +395,27 @@ Proof.
   now subst.
 Qed.
 
+Lemma subst_case_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} ind (n : nat) mdecl idecl p br cdecl s k :
+  PCUICAst.declared_constructor Σ (ind, n) mdecl idecl cdecl -> 
+  wf_predicate mdecl idecl p -> 
+  All2 (PCUICEquality.compare_decls eq eq) (bcontext br)
+    (cstr_branch_context ind mdecl cdecl) ->
+  subst_context s k (case_branch_context ind mdecl p (forget_types (bcontext br)) cdecl) =
+  case_branch_context ind mdecl (map_predicate_k id (subst s) k p) (forget_types (bcontext br)) cdecl.
+Proof.
+  intros decl wfp a.
+  rewrite (PCUICCasesContexts.inst_case_branch_context_eq a).
+  rewrite subst_inst_case_context_wf.
+  rewrite PCUICOnFreeVars.test_context_k_closed_on_free_vars_ctx.
+  eapply alpha_eq_on_free_vars. symmetry; eassumption.
+  rewrite (wf_predicate_length_pars wfp).
+  rewrite (PCUICClosed.declared_minductive_ind_npars decl).
+  rewrite -PCUICOnFreeVars.closedn_ctx_on_free_vars.
+  eapply closed_cstr_branch_context; tea.
+  epose proof (PCUICCasesContexts.inst_case_branch_context_eq (p := subst_predicate s k p) a).
+  now rewrite H.
+Qed.
+
 Lemma erases_subst (Σ : global_env_ext) Γ Γ' Δ t s t' s' T :
   wf Σ ->
   subslet Σ Γ s Γ' ->
@@ -475,23 +496,55 @@ Proof.
     + cbn. econstructor; auto.
     + econstructor.
       eapply is_type_subst; eauto.
-  -todo "case".
-  (* depelim H6.
+  - depelim H7.
     + cbn. econstructor.
       * eauto.
       * eapply H4; eauto.
       * eapply All2_map.
         eapply All2_impl_In; eauto.
-        intros. destruct H10, x, y. cbn in *. subst. split; eauto.
-        eapply All2_All_left in X3.
-        2:{ intros ? ? [[[? ?] e1]]. exact e1. }
+        intros. destruct H11, x, y. cbn in e0. subst. split; eauto.
+        eapply In_nth_error in H9 as [].
+        move: H6. rewrite /wf_branches. 
+        move/Forall2_All2 => hbrs.
+        eapply All2_nth_error_Some_r in hbrs; tea.
+        set (br := {| bcontext := _ |}).
+        destruct hbrs as [cdecl [hnth wfbr]].
+        eapply All2i_nth_error_r in X7; eauto.
+        destruct X7 as [cdecl' [hnth' [eqctx [wfctx [? [? ?]]]]]].
+        rewrite hnth in hnth'. depelim hnth'.
+        move: e0. cbn -[inst_case_branch_context].
+        intros e0.
+        eapply typing_wf_local in t0.
+        cbn in t0. move: t0.
+        rewrite -/(app_context _ _).
+        rewrite -app_context_assoc.
+        move/(substitution_wf_local X9) => hwf.
+        specialize (e0 _ _ _ t _ hwf X9).
+        len in e0. cbn in e0.
+        have := PCUICCasesContexts.inst_case_branch_context_eq (p:=p) eqctx => H6.
+        rewrite /inst_case_branch_context /= in H6.
+        forward e0.
+        { move: e. cbn. rewrite /inst_case_branch_context /= -H6.
+          now rewrite app_context_assoc. }
+        forward e0.
+        { now rewrite app_context_assoc. }
+        forward e0 by tas.
+        have:= (PCUICCasesContexts.inst_case_branch_context_eq (p:= (map_predicate_k (fun x0 : Instance.t => x0) (subst s) #|Δ| p))eqctx).
+        cbn. rewrite /inst_case_branch_context /= => <-.
+        move: e0.
+        rewrite subst_context_app.
+        rewrite /map_branch_k /= /id.
+        rewrite /case_branch_context /case_branch_context_gen /=.
+        rewrite map2_length. len.
+        eapply Forall2_length in wfbr. now cbn in wfbr; len in wfbr.
+        rewrite map_length Nat.add_0_r.
+        rewrite -/(case_branch_context_gen ci mdecl (pparams p) (puinst p) (map decl_name bcontext) cdecl').
+        rewrite -/(case_branch_context ci mdecl p (forget_types bcontext) cdecl').
+        rewrite (subst_case_branch_context _ x _ idecl _ br) //.
+        rewrite app_context_assoc //.
+    + econstructor.
+      eapply is_type_subst; tea.
 
-        eapply In_nth_error in H8 as [].
-        eapply nth_error_all in X3; eauto.
-        eapply X3; eauto.*)
-
-    (* + econstructor.
-      eapply is_type_subst; eauto. *)
   - inv H1.
     + cbn. econstructor.
       * eauto.

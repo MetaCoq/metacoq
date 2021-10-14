@@ -165,7 +165,7 @@ Definition bcompare_decls (eq_term leq_term : term -> term -> bool) (d d' : cont
   | _, _ => false
   end.
 
-Instance compare_decl_refl eq_term leq_term : 
+Polymorphic Instance compare_decl_refl eq_term leq_term : 
   CRelationClasses.Reflexive eq_term -> 
   CRelationClasses.Reflexive leq_term -> 
   CRelationClasses.Reflexive (compare_decls eq_term leq_term).    
@@ -174,7 +174,7 @@ Proof.
   destruct d as [na [b|] ty]; constructor; auto; reflexivity.
 Qed.
 
-Instance compare_decl_sym eq_term leq_term :
+Polymorphic Instance compare_decl_sym eq_term leq_term :
   CRelationClasses.Symmetric eq_term -> 
   CRelationClasses.Symmetric leq_term -> 
   CRelationClasses.Symmetric (compare_decls eq_term leq_term).    
@@ -182,7 +182,7 @@ Proof.
   intros heq hle d d' []; constructor; auto; now symmetry.
 Qed.
 
-Instance compare_decl_trans eq_term leq_term :
+Polymorphic Instance compare_decl_trans eq_term leq_term :
   CRelationClasses.Transitive eq_term -> 
   CRelationClasses.Transitive leq_term -> 
   CRelationClasses.Transitive (compare_decls eq_term leq_term).    
@@ -191,7 +191,7 @@ Proof.
   etransitivity; eauto.
 Qed.
 
-Instance eq_context_refl eq_term leq_term : 
+Polymorphic Instance eq_context_refl eq_term leq_term : 
   CRelationClasses.Reflexive eq_term -> 
   CRelationClasses.Reflexive leq_term -> 
   CRelationClasses.Reflexive (eq_context_gen eq_term leq_term).    
@@ -201,7 +201,7 @@ Proof.
   intros. reflexivity. 
 Qed.
 
-Instance eq_context_sym eq_term leq_term : 
+Polymorphic Instance eq_context_sym eq_term leq_term : 
   CRelationClasses.Symmetric eq_term -> 
   CRelationClasses.Symmetric leq_term -> 
   CRelationClasses.Symmetric (eq_context_gen eq_term leq_term).    
@@ -211,7 +211,7 @@ Proof.
   intros. now symmetry. 
 Qed.
 
-Instance eq_context_trans eq_term leq_term : 
+Polymorphic Instance eq_context_trans eq_term leq_term : 
   CRelationClasses.Transitive eq_term -> 
   CRelationClasses.Transitive leq_term -> 
   CRelationClasses.Transitive (eq_context_gen eq_term leq_term).    
@@ -375,6 +375,7 @@ Qed.
 
 Lemma eq_binder_relevances_refl (x : list aname) : All2 (on_rel eq binder_relevance) x x.
 Proof. now eapply All_All2_refl, All_refl. Qed.
+#[global]
 Hint Resolve eq_binder_relevances_refl : core.
 
 Instance R_universe_instance_refl Re : RelationClasses.Reflexive Re -> 
@@ -404,7 +405,10 @@ Proof.
     constructor; auto.
 Qed.
 
-Instance eq_predicate_refl Re Ru :
+Polymorphic Instance creflexive_eq A : CRelationClasses.Reflexive (@eq A).
+Proof. intro x. constructor. Qed.
+
+Polymorphic Instance eq_predicate_refl Re Ru :
   CRelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Ru ->
   CRelationClasses.Reflexive (eq_predicate Re Ru).
@@ -414,7 +418,7 @@ Proof.
   eapply All2_same; reflexivity.
 Qed.
 
-Instance eq_term_upto_univ_refl Σ Re Rle napp :
+Polymorphic Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   Reflexive (eq_term_upto_univ_napp Σ Re Rle napp).
@@ -438,12 +442,12 @@ Proof.
   - eapply All_All2; eauto; simpl; intuition eauto.
 Qed.
 
-Instance eq_term_refl `{checker_flags} Σ φ : Reflexive (eq_term Σ φ).
+Polymorphic Instance eq_term_refl `{checker_flags} Σ φ : Reflexive (eq_term Σ φ).
 Proof.
   apply eq_term_upto_univ_refl. all: exact _.
 Qed.
 
-Instance leq_term_refl `{checker_flags} Σ φ : Reflexive (leq_term Σ φ).
+Polymorphic Instance leq_term_refl `{checker_flags} Σ φ : Reflexive (leq_term Σ φ).
 Proof.
   apply eq_term_upto_univ_refl; exact _.
 Qed.
@@ -478,7 +482,7 @@ Proof.
   depelim p; depelim o; constructor; auto; try now symmetry.
 Qed.
 
-Instance eq_term_upto_univ_sym Σ Re Rle napp :
+Polymorphic Instance eq_term_upto_univ_sym Σ Re Rle napp :
   RelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Rle ->
   Symmetric (eq_term_upto_univ_napp Σ Re Rle napp).
@@ -521,7 +525,7 @@ Proof.
     constructor; auto.
 Qed.
 
-Instance eq_predicate_sym Re Ru :
+Polymorphic Instance eq_predicate_sym Re Ru :
   CRelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Ru ->
   CRelationClasses.Symmetric (eq_predicate Re Ru).
@@ -567,7 +571,7 @@ Proof.
   - depelim c; constructor; [now etransitivity|eauto ..].
 Qed.
 
-Instance eq_predicate_trans Re Ru :
+Polymorphic Instance eq_predicate_trans Re Ru :
   CRelationClasses.Transitive Re ->
   RelationClasses.Transitive Ru ->
   CRelationClasses.Transitive (eq_predicate Re Ru).
@@ -578,7 +582,7 @@ Proof.
   etransitivity; tea.
 Qed.
 
-Instance eq_term_upto_univ_trans Σ Re Rle napp :
+Polymorphic Instance eq_term_upto_univ_trans Σ Re Rle napp :
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
   Transitive (eq_term_upto_univ_napp Σ Re Rle napp).
@@ -647,38 +651,38 @@ Proof.
       transitivity (rarg y); auto.
 Qed.
 
-Instance eq_term_trans {cf:checker_flags} Σ φ : Transitive (eq_term Σ φ).
+Polymorphic Instance eq_term_trans {cf:checker_flags} Σ φ : Transitive (eq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_trans. all: exact _.
 Qed.
 
-Instance leq_term_trans {cf:checker_flags} Σ φ : Transitive (leq_term Σ φ).
+Polymorphic Instance leq_term_trans {cf:checker_flags} Σ φ : Transitive (leq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_trans ; exact _.
 Qed.
 
-Instance eq_term_upto_univ_equiv Σ Re (hRe : RelationClasses.Equivalence Re)
+Polymorphic Instance eq_term_upto_univ_equiv Σ Re (hRe : RelationClasses.Equivalence Re)
   : Equivalence (eq_term_upto_univ Σ Re Re).
 Proof.
   constructor. all: exact _.
 Defined.
 
-Instance eq_context_equiv {cf} Σ φ : Equivalence (eq_context_gen (eq_term Σ φ) (eq_term Σ φ)).
+Polymorphic Instance eq_context_equiv {cf} Σ φ : Equivalence (eq_context_gen (eq_term Σ φ) (eq_term Σ φ)).
 Proof.
   constructor; try exact _.
 Qed.
 
-Instance leq_context_preord {cf} Σ φ : PreOrder (eq_context_gen (eq_term Σ φ) (leq_term Σ φ)).
+Polymorphic Instance leq_context_preord {cf} Σ φ : PreOrder (eq_context_gen (eq_term Σ φ) (leq_term Σ φ)).
 Proof.
   constructor; try exact _.
 Qed.
 
-Instance eq_term_equiv {cf:checker_flags} Σ φ : Equivalence (eq_term Σ φ) :=
+Polymorphic Instance eq_term_equiv {cf:checker_flags} Σ φ : Equivalence (eq_term Σ φ) :=
   {| Equivalence_Reflexive := eq_term_refl _ _;
      Equivalence_Symmetric := eq_term_sym _ _;
      Equivalence_Transitive := eq_term_trans _ _ |}.
 
-Instance leq_term_preorder {cf:checker_flags} Σ φ : PreOrder (leq_term Σ φ) :=
+Polymorphic Instance leq_term_preorder {cf:checker_flags} Σ φ : PreOrder (leq_term Σ φ) :=
   {| PreOrder_Reflexive := leq_term_refl _ _;
      PreOrder_Transitive := leq_term_trans _ _ |}.
 

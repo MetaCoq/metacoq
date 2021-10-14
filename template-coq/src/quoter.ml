@@ -261,8 +261,8 @@ struct
           let mib = Environ.lookup_mind (fst mind) (snd env) in
           add_inductive mind mib acc)
 
-      | Constr.Case (ci,typeInfo,discriminant,e) ->
-        let ci, u, pars, (predctx, pred), iv, discr, brs = CaseCompat.contract_case (snd env) (ci,typeInfo,None,discriminant,e) in
+      | Constr.Case (ci,typeInfo,inv,discriminant,e) ->
+        let ci, u, pars, (predctx, pred), iv, discr, brs = CaseCompat.contract_case (snd env) (ci,typeInfo,inv,discriminant,e) in
         let ind = Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical (fst ci.Constr.ci_ind)),
                                       Q.quote_int (snd ci.Constr.ci_ind)) in
         let npar = Q.quote_int ci.Constr.ci_npar in

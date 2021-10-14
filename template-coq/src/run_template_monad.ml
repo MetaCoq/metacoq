@@ -407,11 +407,11 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let kn = unquote_kn (reduce_all env evm name) in
     let kn = MutInd.make1 kn in
     let mib = Environ.lookup_mind kn env in
-      let t = quote_mind_decl env kn mib in
-      let _, args = Constr.destApp t in
-      (match args with
-      | [|decl|] -> k ~st (env, evm, decl)
-      | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+    let t = quote_mind_decl env kn mib in
+    let _, args = Constr.destApp t in
+    (match args with
+    | [|decl|] -> k ~st env evm decl
+    | _ -> bad_term_verb t "anomaly in quoting of inductive types")
   | TmQuoteConst (name, bypass, strict) ->
     let name = unquote_kn (reduce_all env evm name) in
     let bypass = unquote_bool (reduce_all env evm bypass) in

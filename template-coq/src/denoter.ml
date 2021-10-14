@@ -127,7 +127,7 @@ struct
         let evm, brs = array_map_evm denote_br evm brs in
         (* todo: reify better case_info *)
         let (ci, ty, iv, c, brs) = CaseCompat.expand_case env (ci, puinst, pars, (napctx, pret), None, c, brs) in
-        evm, Constr.mkCase (ci, ty, c, brs)
+        evm, Constr.mkCase (ci, ty, Constr.NoInvert, c, brs)
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,
                                           List.map (fun p->p.rarg) lbd) in

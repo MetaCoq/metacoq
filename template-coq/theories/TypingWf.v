@@ -927,7 +927,6 @@ Lemma cstr_branch_context_length ind mdecl cdecl :
   #|cstr_branch_context ind mdecl cdecl| = #|cdecl.(cstr_args)|.
 Proof. rewrite /cstr_branch_context. now len. Qed.
 
-#[global]
 Hint Rewrite cstr_branch_context_length : len.
 
 

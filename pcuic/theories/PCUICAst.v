@@ -697,7 +697,7 @@ Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t)
 Proof.
   intros. unfold map_predicate; f_equal; auto.
 Qed.
-Hint Resolve map_predicate_eq_spec : all.
+#[global] Hint Resolve map_predicate_eq_spec : all.
 
 Lemma map_predicate_k_eq_spec {A} (finst finst' : Instance.t -> Instance.t) 
   (f g : nat -> A -> A) k k' (p : predicate A) :
@@ -708,7 +708,7 @@ Lemma map_predicate_k_eq_spec {A} (finst finst' : Instance.t -> Instance.t)
 Proof.
   intros. unfold map_predicate_k; f_equal; auto.
 Qed.
-Hint Resolve map_predicate_k_eq_spec : all.
+#[global] Hint Resolve map_predicate_k_eq_spec : all.
 
 Lemma map_decl_id_spec P f d :
   ondecl P d ->
@@ -745,7 +745,7 @@ Proof.
   intros Hc Hf. induction Hc; simpl; auto.
   rewrite IHHc. f_equal; eapply map_decl_id_spec; eauto. 
 Qed.
-Hint Resolve map_context_id_spec : all.
+#[global] Hint Resolve map_context_id_spec : all.
 
 Lemma map_context_id_spec_cond P p f ctx :
   onctx P ctx ->
@@ -757,7 +757,7 @@ Proof.
   revert Hc'; simpl; intros [hx hl]%andb_and.
   rewrite IHHc; auto. f_equal. eapply map_decl_id_spec_cond; eauto. 
 Qed.
-Hint Resolve map_context_id_spec_cond : all.
+#[global] Hint Resolve map_context_id_spec_cond : all.
 
 Lemma map_predicate_id_spec {A} finst (f f' : A -> A) h (p : predicate A) :
   finst (puinst p) = puinst p ->
@@ -769,7 +769,7 @@ Proof.
   unfold map_predicate.
   intros -> -> -> ->; destruct p; auto.
 Qed.
-Hint Resolve map_predicate_id_spec : all.
+#[global] Hint Resolve map_predicate_id_spec : all.
 
 Lemma map_predicate_k_id_spec {A} finst (f : nat -> A -> A) k (p : predicate A) :
   finst (puinst p) = puinst p ->
@@ -780,7 +780,7 @@ Proof.
   unfold map_predicate_k, shiftf.
   intros -> -> ->; destruct p; auto.
 Qed.
-Hint Resolve map_predicate_k_id_spec : all.
+#[global] Hint Resolve map_predicate_k_id_spec : all.
 
 Instance map_predicate_proper {term} : 
   Proper (`=1` ==> `=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
@@ -940,7 +940,7 @@ Lemma map_branch_eq_spec {A B} (f g : A -> B) h h' (x : branch A) :
 Proof.
   intros. unfold map_branch; f_equal; auto.
 Qed.
-Hint Resolve map_branch_eq_spec : all.
+#[global] Hint Resolve map_branch_eq_spec : all.
 
 Lemma map_branch_k_eq_spec {A B} (f g : nat -> A -> B) h h' k k' (x : branch A) :
   shiftf f k #|x.(bcontext)| (bbody x) = shiftf g k' #|x.(bcontext)| (bbody x) ->
@@ -949,7 +949,7 @@ Lemma map_branch_k_eq_spec {A B} (f g : nat -> A -> B) h h' k k' (x : branch A) 
 Proof.
   intros. unfold map_branch_k; f_equal; auto.
 Qed.
-Hint Resolve map_branch_eq_spec : all.
+#[global] Hint Resolve map_branch_eq_spec : all.
 
 Instance map_branch_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq) 
   (@map_branch term term).
@@ -961,7 +961,7 @@ Qed.
 
 Lemma id_id {A} : @id A =1 id.
 Proof. now intros x. Qed.
-Hint Resolve @id_id : core.
+#[global] Hint Resolve @id_id : core.
 
 Lemma map_branch_id_spec (f : term -> term) (x : branch term) :
   f (bbody x) = (bbody x) ->
@@ -970,7 +970,7 @@ Proof.
   intros. rewrite (map_branch_eq_spec _ id id id); auto.
   now rewrite map_branch_id.
 Qed.
-Hint Resolve map_branch_id_spec : all.
+#[global] Hint Resolve map_branch_id_spec : all.
 
 Lemma map_branch_k_id_spec (f : nat -> term -> term) h k (x : branch term) :
   h (bcontext x) = bcontext x ->
@@ -980,7 +980,7 @@ Proof.
   intros. unfold map_branch_k.
   destruct x; simpl in *; f_equal; eauto.
 Qed.
-Hint Resolve map_branch_k_id_spec : all.
+#[global] Hint Resolve map_branch_k_id_spec : all.
 
 Lemma map_branches_map_branches
       {term term' term''}

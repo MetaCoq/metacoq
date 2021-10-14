@@ -145,7 +145,7 @@ Lemma map_predicate_shift_eq_spec {T T'} fn fn' shift shift'
 Proof.
   intros. unfold map_predicate_shift; f_equal; auto.
 Qed.
-Hint Resolve map_predicate_shift_eq_spec : all.
+#[global] Hint Resolve map_predicate_shift_eq_spec : all.
 
 Lemma map_branch_shift_eq_spec {T T'} (fn : (nat -> T) -> term -> term) 
   (fn' : (nat -> T') -> term -> term)
@@ -155,7 +155,7 @@ Lemma map_branch_shift_eq_spec {T T'} (fn : (nat -> T) -> term -> term)
 Proof.
   intros. unfold map_branch_shift; f_equal; auto.
 Qed.
-Hint Resolve map_branch_shift_eq_spec : all.
+#[global] Hint Resolve map_branch_shift_eq_spec : all.
 
 Lemma map_predicate_shift_id_spec {T} {fn shift} {finst} {f : nat -> T} (p : predicate term) :
   finst (puinst p) = puinst p ->
@@ -165,7 +165,7 @@ Lemma map_predicate_shift_id_spec {T} {fn shift} {finst} {f : nat -> T} (p : pre
 Proof.
   intros. unfold map_predicate_shift; destruct p; f_equal; auto.
 Qed.
-Hint Resolve map_predicate_shift_id_spec : all.
+#[global] Hint Resolve map_predicate_shift_id_spec : all.
 
 Lemma map_branch_shift_id_spec {T} {fn : (nat -> T) -> term -> term} {shift} {f : nat -> T} (x : branch term) :
   fn (shift #|x.(bcontext)| f) (bbody x) = bbody x ->
@@ -173,7 +173,7 @@ Lemma map_branch_shift_id_spec {T} {fn : (nat -> T) -> term -> term} {shift} {f 
 Proof.
   intros. unfold map_branch_shift; destruct x; simpl; f_equal; auto.
 Qed.
-Hint Resolve map_branch_shift_id_spec : all.
+#[global] Hint Resolve map_branch_shift_id_spec : all.
 
 Lemma rename_ext f f' : (f =1 f') -> (rename f =1 rename f').
 Proof.

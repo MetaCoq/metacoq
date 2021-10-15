@@ -418,7 +418,7 @@ Section CheckEnv.
     
   Lemma wf_ext_wf_p1 (Σ : global_env_ext) (wfΣ : wf_ext Σ) : wf Σ.1.
   Proof. apply wfΣ. Qed.
-  #[global]
+
   Hint Resolve wf_ext_wf_p1 : pcuic.
 
   Program Fixpoint wf_env_check_equality_ctx le (Σ : wf_env_ext) Γ Δ Δ' 

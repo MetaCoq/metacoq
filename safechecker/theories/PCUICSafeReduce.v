@@ -1572,7 +1572,7 @@ Section Reduce.
       constructor.
       apply whnf_mkApps.
       now apply whne_case_noiota.
-    - match type of e with
+    - match type of eq with
       | _ = reduce ?x ?y ?z =>
         specialize (haux x y z);
           destruct (reduce x y z)
@@ -1627,10 +1627,10 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π'] [? [? [? ?]]] eq. cbn.
-      rewrite eq in haux. cbn in haux.
+      intros [t' π''] [? [? [? ?]]] eq''. cbn.
+      rewrite eq'' in haux. cbn in haux.
       assumption.
-    - unfold zipp. case_eq (decompose_stack π6). intros.
+    - unfold zipp. case_eq (decompose_stack π). intros.
       constructor. constructor. eapply whne_mkApps. eapply whne_proj_noiota. assumption.
     - match type of eq with
       | _ = reduce ?x ?y ?z =>
@@ -1814,7 +1814,7 @@ Section ReduceFns.
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
         | view_ind_tInd i u => ret (i; u; args; _);
-        | view_ind_other t _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t [] h) := {
+        | view_ind_other thd _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t [] h) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i' u with inspect (decompose_stack π) := {
               | exist (l, _) eq_decomp' => ret (i'; u; l; _)
@@ -1854,7 +1854,7 @@ Section ReduceFns.
       False.
   Proof.
     funelim (reduce_to_ind Γ ty wat); try congruence.
-    intros _ ind u args r.
+    intros _ ind u args' r.
     pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t [] h) as wh.
     unfold reduce_stack in *.
     destruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)).
@@ -1866,10 +1866,10 @@ Section ReduceFns.
     eapply into_closed_red in r'; fvs.
     eapply into_closed_red in r; fvs.
     eapply PCUICContextConversion.closed_red_confluence in r as (?&r1&r2);[|exact r'].
-    assert (exists args, π = appstack args []) as (?&->).
-    { exists ((decompose_stack π).1).
-      assert (decomp: decompose_stack π = ((decompose_stack π).1, [])).
-      { now rewrite stack_valid; destruct decompose_stack. }
+    assert (exists args, π' = appstack args []) as (?&->).
+    { exists ((decompose_stack π').1).
+      assert (decomp: decompose_stack π' = ((decompose_stack π').1, [])).
+      { now rewrite stack_valid; destruct decompose_stack; cbn. }
       now apply decompose_stack_eq in decomp. }
     unfold zipp in wh.
     rewrite stack_context_appstack, decompose_stack_appstack in wh.

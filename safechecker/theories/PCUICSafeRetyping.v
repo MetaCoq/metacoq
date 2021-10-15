@@ -324,7 +324,7 @@ Section TypeOf.
       split; [now constructor|].
       intros T' Ht'.
       eapply inversion_Rel in Ht' as (? & ? & ? & ?); auto.
-      now rewrite e in e1; noconf e1.
+      now rewrite e in e0; noconf e0.
       
     - eapply inversion_Rel in HT as (? & ? & ? & ?); auto.
       rewrite e0 in e => //.
@@ -478,7 +478,7 @@ Section TypeOf.
       destruct inversion_Case as (mdecl & idecl & isdecl & indices & data & cum).
       destruct infer as [cty [[Hty Hp]]].
       destruct reduce_to_ind => //.
-      injection wildcard. intros ->. clear wildcard.
+      injection e. intros ->. clear e.
       destruct a as [i [u' [l [red]]]].
       simpl in *.
       eapply type_reduction in Hty. 2:exact red.
@@ -628,14 +628,14 @@ Section TypeOf.
         now rewrite (wf_predicate_length_pars wf_pred).
         eapply wt_equality_refl; tea.
       
-    - cbn in wildcard1.
+    - cbn in e.
       destruct inversion_Case as (mdecl & idecl & isdecl & indices & [] & cum).
       destruct infer as [cty [[Hty Hp]]].
-      destruct validity as [Hi i]. simpl in wildcard1.
+      destruct validity as [Hi i]. simpl in e.
       specialize (Hp _ scrut_ty).
       eapply equality_Ind_r_inv in Hp as [ui' [l' [red Ru ca]]]; auto.
-      symmetry in wildcard1; 
-      eapply reduce_to_ind_complete in wildcard1 => //.
+      symmetry in e; 
+      eapply reduce_to_ind_complete in e => //.
       exact red.
 
     - eapply inversion_Proj in HT as (u & mdecl & idecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
@@ -655,7 +655,7 @@ Section TypeOf.
       pose proof (Hc'' _ Hc).
       assert (Σ ;;; Γ ⊢ mkApps (tInd i u') l ≤ mkApps (tInd ind u) args).
       { eapply equality_red_l_inv; eauto. exact red. }
-      eapply equality_Ind_inv in X0 as [eqi' Ru' cl' e]; eauto.
+      eapply equality_Ind_inv in X0 as [eqi' Ru' cl' e']; eauto.
       destruct d as [decl [body decli]].
       pose proof (declared_inductive_inj (proj1 declp) decli) as [-> ->].
       assert (declared_projection Σ (ind, n, k) mdecl idecl cdecl pdecl).
@@ -664,7 +664,7 @@ Section TypeOf.
       destruct (declared_projection_inj declp H) as [_ [_ [_ ->]]].
       sq. split; auto.
       * econstructor; eauto. cbn. eapply type_reduction; tea. exact red.
-        now rewrite (All2_length e).
+        now rewrite (All2_length e').
       * intros.
         eapply inversion_Proj in X0 as (u'' & mdecl' & cdecl' & idecl' & pdecl'' & args' & 
             declp' & Hc''' & Hargs' & cum'); auto.
@@ -727,9 +727,9 @@ Section TypeOf.
     - simpl in *.
       destruct inversion_Proj as (u & mdecl & idecl & decl & pdecl' & args & declp & Hc & Hargs & cum); auto.
       destruct infer as [cty [[Hc' Hc'']]]. simpl.
-      symmetry in wildcard3.
-      pose proof (reduce_to_ind_complete _ _ _ _ _ wildcard3).
-      clear wildcard3; simpl. specialize (Hc'' _ Hc) as typ.
+      symmetry in e1.
+      pose proof (reduce_to_ind_complete _ _ _ _ _ e1).
+      clear e1; simpl. specialize (Hc'' _ Hc) as typ.
       eapply equality_Ind_r_inv in typ as [ui' [l' [red Rgl Ra]]]; auto.
       eapply H. exact red.
 
@@ -740,8 +740,8 @@ Section TypeOf.
       simpl in *. intuition congruence.
 
     - eapply inversion_Proj in HT as (u & mdecl & idecl & cdecl & pdecl' & args & declp & Hc & Hargs & cum); auto.
-      symmetry in wildcard5.
-      eapply lookup_ind_decl_complete in wildcard5; auto.
+      symmetry in e0.
+      eapply lookup_ind_decl_complete in e0; auto.
       destruct declp. do 2 eexists; eauto. exact H0.
     
     - eapply inversion_Fix in HT as [decl [fg [hnth [htys [hbods [wf cum]]]]]]; auto.

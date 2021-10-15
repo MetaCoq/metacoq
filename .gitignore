@@ -374,6 +374,7 @@ test-suite/vs.mli
 test-suite/vs.ml
 test-suite/myMain.mli
 test-suite/myMain.ml
+test-suite/plugin-demo/Makefile.plugin
 
 template-coq/Makefile.plugin-e
 template-coq/Makefile.template-e

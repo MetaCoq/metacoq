@@ -221,21 +221,21 @@ Section fix_sigma.
     sq. repeat eexists. exact c.
   Qed.
   Next Obligation.
-    destruct H as (? & ? & ?). eexists (tProd _ _ _). split; sq.
+    destruct isa as (? & ? & ?). eexists (tProd _ _ _). split; sq.
     etransitivity. exact c0. eapply closed_red_prod_codom; tea.
     eassumption.
   Qed.
   Next Obligation.
     clear rprod.
     destruct HΣ as [wΣ].
-    destruct H1 as (? & ? & ?). sq.
-    destruct H.
+    destruct H0 as (? & ? & ?). sq.
     edestruct (PCUICContextConversion.closed_red_confluence X0 X) as (? & ? & ?); eauto.
     eapply invert_red_prod in c as (? & ? & []); eauto. subst.
+    apply nisa.
 
-    eapply invert_cumul_arity_l in H2.
+    eapply invert_cumul_arity_l in H1.
     2:eapply red_equality; tea.
-    destruct H2 as (? & ? & ?). sq.
+    destruct H1 as (? & ? & ?). sq.
 
     eapply invert_red_prod in X2 as (? & ? & []); eauto. subst. cbn in *.
     exists x4; split; eauto.
@@ -518,7 +518,7 @@ Section Erase.
     - eapply welltyped_brs in Ht as [].
       apply In_nth_error in H as (?&nth).
       now eapply nth_error_all in X0; tea.
-    - clear wildcard12.
+    - clear wildcard.
       eapply inversion_Proj in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
     - eapply inversion_Fix in Ht as (? & ? & ? & ? & ? & ?); auto.

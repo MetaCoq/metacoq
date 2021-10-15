@@ -310,13 +310,6 @@ Section Typecheck.
       constructor; pcuics. now apply eqb_binder_annot_spec.
     Qed.
 
-    Lemma cumul_ctx_rel_close Γ Δ Δ' : 
-      cumul_ctx_rel Σ Γ Δ Δ' ->
-      cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ').
-    Proof.
-      induction 1; pcuic.
-    Qed.
-
     Lemma context_cumulativity_welltyped {le Γ Γ' t} : 
       welltyped Σ Γ t ->
       Σ ⊢ Γ' ≤[le] Γ ->

@@ -678,7 +678,6 @@ Proof.
   induction ctx as [|[na [b|] ty] ctx]; simpl; auto; lia.
 Qed.
 
-#[global]
 Hint Resolve Template.TypingWf.typing_wf : wf.
 
 Lemma mkApps_trans_wf U l : Template.WfAst.wf Σ (Template.Ast.tApp U l) -> exists U' V', trans (Template.Ast.tApp U l) = tApp U' V'.

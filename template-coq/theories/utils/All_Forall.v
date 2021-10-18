@@ -73,7 +73,7 @@ Proof.
   now rewrite IHl.
 Qed.
 
-Instance alli_proper {A} :
+#[global] Instance alli_proper {A} :
    Proper ((pointwise_relation nat (pointwise_relation A eq)) ==> eq ==> eq ==> eq) alli.
 Proof.
   intros f g fg.
@@ -236,7 +236,7 @@ Proof.
   now rewrite (hpq a) IHl.
 Qed.
 
-Instance forallb_proper {A} : Proper (`=1` ==> eq ==> eq) (@forallb A).
+#[global] Instance forallb_proper {A} : Proper (`=1` ==> eq ==> eq) (@forallb A).
 Proof.
   intros f g Hfg ? ? ->. now apply forallb_ext.
 Qed.

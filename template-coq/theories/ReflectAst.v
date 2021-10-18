@@ -44,7 +44,7 @@ Local Ltac term_dec_tac term_dec :=
          | x : cast_kind, y : cast_kind |- _ => fcase (eq_dec x y)
          end.
 
-Instance eq_predicate {term} `{EqDec term} : EqDec (predicate term).
+#[global] Instance eq_predicate {term} `{EqDec term} : EqDec (predicate term).
 Proof.
   intros [] [].
   fcase (eq_dec pparams pparams0).
@@ -55,7 +55,7 @@ Defined.
 
 Derive NoConfusion NoConfusionHom for term.
 
-Instance EqDec_term : EqDec term.
+#[global] Instance EqDec_term : EqDec term.
 Proof.
   intro x; induction x using term_forall_list_rect ; intro t ;
     destruct t ; try (right ; discriminate).
@@ -158,17 +158,17 @@ Proof.
     subst. left. reflexivity.
 Defined.
 
-Instance reflect_term : ReflectEq term :=
+#[global] Instance reflect_term : ReflectEq term :=
   let h := EqDec_ReflectEq term in _.
 
-Instance eqb_ctx : ReflectEq context := _.
+#[global] Instance eqb_ctx : ReflectEq context := _.
 
 Definition eqb_constant_body (x y : constant_body) :=
   let (tyx, bodyx, univx) := x in
   let (tyy, bodyy, univy) := y in
   eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
 
-Instance reflect_constant_body : ReflectEq constant_body.
+#[global] Instance reflect_constant_body : ReflectEq constant_body.
 Proof.
   refine {| eqb := eqb_constant_body |}.
   intros [] [].
@@ -182,7 +182,7 @@ Definition eqb_constructor_body (x y : constructor_body) :=
   x.(cstr_type) ==? y.(cstr_type) &&
   x.(cstr_arity) ==? y.(cstr_arity).
 
-Instance reflect_constructor_body : ReflectEq constructor_body.
+#[global] Instance reflect_constructor_body : ReflectEq constructor_body.
 Proof.
   refine {| eqb := eqb_constructor_body |}.
   intros [] [].
@@ -199,7 +199,7 @@ Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   x.(ind_projs) ==? y.(ind_projs) &&
   x.(ind_relevance) ==? y.(ind_relevance).
 
-Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
+#[global] Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.
   refine {| eqb := eqb_one_inductive_body |}.
   intros [] [].
@@ -211,7 +211,7 @@ Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
   let (f', n', p', b', u', v') := y in
   eqb f f' && eqb n n' && eqb b b' && eqb p p' && eqb u u' && eqb v v'.
 
-Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
+#[global] Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
 Proof.
   refine {| eqb := eqb_mutual_inductive_body |}.
   intros [] [].
@@ -225,7 +225,7 @@ Definition eqb_global_decl x y :=
   | _, _ => false
   end.
 
-Instance reflect_global_decl : ReflectEq global_decl.
+#[global] Instance reflect_global_decl : ReflectEq global_decl.
 Proof.
   refine {| eqb := eqb_global_decl |}.
   unfold eqb_global_decl.

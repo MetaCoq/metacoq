@@ -1,14 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 (** This defines relation operators in Type *)
 From Equations.Type Require Import Relation.
+From Equations Require Import Equations.
 From Coq Require Import ssreflect Wellfounded Relation_Operators CRelationClasses.
 From MetaCoq.Template Require Import config utils Ast AstUtils Environment 
     LiftSubst UnivSubst EnvironmentTyping Reflect ReflectAst TermEquality WfAst.
-From Equations Require Import Equations.
-
-Import MCMonadNotation.
-
-Import MCMonadNotation.
 
 Import MCMonadNotation.
 
@@ -618,7 +614,7 @@ Class GuardChecker :=
 
 (* AXIOM GUARD CONDITION *)
 Axiom guard_checking : GuardChecker.
-Existing Instance guard_checking.
+Global Existing Instance guard_checking.
 
 (*
 Definition build_branch_context ind mdecl (cty: term) p : option context :=
@@ -1240,7 +1236,7 @@ Proof.
   pose (@Fix_F ({ Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & 
                { t : term & { T : term & Σ ;;; Γ |- t : T }}}}})) as p0.
   specialize (p0 (lexprod (precompose lt (fun Σ => globenv_size (fst Σ)))
-                         (fun Σ => precompose lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 x)))))))) as p.
+        (fun Σ => precompose lt (fun x => typing_size (projT2 (projT2 (projT2 (projT2 x)))))))) as p.
   set(foo := existT _ Σ (existT _ wfΣ (existT _ Γ (existT _ t (existT _ _ H)))) : { Σ : _ & { wfΣ : wf Σ.1 & { Γ : context & { t : term & { T : term & Σ ;;; Γ |- t : T }}}}}).
   change Σ with (projT1 foo).
   change Γ with (projT1 (projT2 (projT2 foo))).

@@ -27,7 +27,7 @@ End Term.
 Module Environment (T : Term).
 
   Import T.
-  Existing Instance subst_instance_constr.
+  #[global] Existing Instance subst_instance_constr.
 
   (** ** Declarations *)
   Notation context_decl := (context_decl term).
@@ -62,7 +62,7 @@ Module Environment (T : Term).
 
   Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
   Proof. now rewrite /lift_context; len. Qed.
-  Hint Rewrite lift_context_length : len.
+  #[global] Hint Rewrite lift_context_length : len.
 
   Definition subst_context s k (Γ : context) : context :=
     fold_context_k (fun k' => subst s (k' + k)) Γ.
@@ -71,7 +71,7 @@ Module Environment (T : Term).
   
   Lemma subst_context_length s n Γ : #|subst_context s n Γ| = #|Γ|.
   Proof. now rewrite /subst_context; len. Qed.
-  Hint Rewrite subst_context_length : len.
+  #[global] Hint Rewrite subst_context_length : len.
 
   Lemma subst_context_nil s n : subst_context s n [] = [].
   Proof. reflexivity. Qed.
@@ -101,7 +101,7 @@ Module Environment (T : Term).
   Lemma subst_instance_length u (ctx : context)
     : #|subst_instance u ctx| = #|ctx|.
   Proof. unfold subst_instance, subst_instance_context, map_context. now rewrite map_length. Qed.
-  Hint Rewrite subst_instance_length : len.
+  #[global] Hint Rewrite subst_instance_length : len.
 
   Definition set_binder_name (na : aname) (x : context_decl) : context_decl :=
     {| decl_name := na;
@@ -143,7 +143,7 @@ Module Environment (T : Term).
     - now rewrite IHtl subst_context_length.
     - rewrite IHtl app_length. simpl. lia.
   Qed.
-  Hint Rewrite smash_context_length : len.
+  #[global] Hint Rewrite smash_context_length : len.
   
   (* Smashing a context Γ with Δ depending on it is the same as smashing Γ
     and substituting all references to Γ in Δ by the expansions of let bindings. *)
@@ -172,7 +172,7 @@ Module Environment (T : Term).
     induction Γ in n |- *; simpl; auto.
     now destruct a as [? [?|] ?] => /=; simpl; rewrite IHΓ.
   Qed.
-  Hint Rewrite extended_subst_length : len.
+  #[global] Hint Rewrite extended_subst_length : len.
   
   Definition expand_lets_k Γ k t := 
     (subst (extended_subst Γ 0) k (lift (context_assumptions Γ) (k + #|Γ|) t)).
@@ -186,11 +186,11 @@ Module Environment (T : Term).
 
   Lemma expand_lets_k_ctx_length Γ k Δ : #|expand_lets_k_ctx Γ k Δ| = #|Δ|.
   Proof. now rewrite /expand_lets_k_ctx; len. Qed.
-  Hint Rewrite expand_lets_k_ctx_length : len.
+  #[global] Hint Rewrite expand_lets_k_ctx_length : len.
 
   Lemma expand_lets_ctx_length Γ Δ : #|expand_lets_ctx Γ Δ| = #|Δ|.
   Proof. now rewrite /expand_lets_ctx; len. Qed.
-  Hint Rewrite expand_lets_ctx_length : len.
+  #[global] Hint Rewrite expand_lets_ctx_length : len.
   
   Definition fix_context (m : mfixpoint term) : context :=
     List.rev (mapi (fun i d => vass d.(dname) (lift i 0 d.(dtype))) m).
@@ -416,7 +416,7 @@ Module Environment (T : Term).
 
   Lemma arities_context_length l : #|arities_context l| = #|l|.
   Proof. unfold arities_context. now rewrite rev_map_length. Qed.
-  Hint Rewrite arities_context_length : len.
+  #[global] Hint Rewrite arities_context_length : len.
   
   Lemma app_context_nil_l Γ : [] ,,, Γ = Γ.
   Proof.
@@ -431,7 +431,7 @@ Module Environment (T : Term).
 
   Lemma app_context_length Γ Γ' : #|Γ ,,, Γ'| = #|Γ'| + #|Γ|.
   Proof. unfold app_context. now rewrite app_length. Qed.
-  Hint Rewrite app_context_length : len.
+  #[global] Hint Rewrite app_context_length : len.
 
   Lemma nth_error_app_context_ge v Γ Γ' :
     #|Γ'| <= v -> nth_error (Γ ,,, Γ') v = nth_error Γ (v - #|Γ'|).
@@ -485,7 +485,7 @@ Module Environment (T : Term).
     unfold mapi. generalize 0 (Nat.pred #|Γ|).
     induction Γ as [|[na [body|] ty] tl]; cbn; intros; eauto.
   Qed.
-  Hint Rewrite context_assumptions_fold : len.
+  #[global] Hint Rewrite context_assumptions_fold : len.
 
   Lemma nth_error_fold_context_k (f : nat -> term -> term):
     forall (Γ' Γ'' : context) (v : nat),
@@ -559,7 +559,7 @@ Module Environment (T : Term).
     destruct a as [? [b|] ?]; simpl; auto.
   Qed.
   
-  Hint Rewrite context_assumptions_map context_assumptions_mapi context_assumptions_app : len.
+  #[global] Hint Rewrite context_assumptions_map context_assumptions_mapi context_assumptions_app : len.
 
   Lemma context_assumptions_subst_instance u Γ : 
     context_assumptions (subst_instance u Γ) = 
@@ -576,7 +576,7 @@ Module Environment (T : Term).
     context_assumptions Γ. 
   Proof. apply context_assumptions_fold. Qed.
   
-  Hint Rewrite context_assumptions_subst_instance
+  #[global] Hint Rewrite context_assumptions_subst_instance
      context_assumptions_subst_context context_assumptions_lift_context : len.
 
   (** Lifting a relation to declarations, without alpha renaming. *)

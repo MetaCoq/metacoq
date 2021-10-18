@@ -113,7 +113,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
     destruct univs; simpl; auto.
     intros [_ [H _]].
     destruct cst; simpl in *.
-    now rewrite H; len.
+    now rewrite H; cbn; autorewrite with len.
   Qed.
   
 End Lookup.

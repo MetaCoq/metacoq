@@ -335,7 +335,7 @@ Module UnivExprSetProp := WPropertiesOn UnivExpr UnivExprSet.
 
 (* We have decidable equality w.r.t leibniz equality for sets of levels.
   This means universes also have a decidable equality. *)
-Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t.
+#[global] Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t.
 Proof.
   intros p p'.
   destruct (UnivExprSet.eq_dec p p').
@@ -355,14 +355,14 @@ Module Universe.
   
   (** This needs a propositional UIP proof to show that [is_empty = false] is a set *)
   Set Equations With UIP.
-  Instance t0_eqdec : EqDec t0.
+  #[global] Instance t0_eqdec : EqDec t0.
   Proof. eqdec_proof. Qed.
 
   Inductive t_ :=
     lProp | lSProp | lType (_ : t0).
   Derive NoConfusion for t_.
 
-  Instance t_eqdec : EqDec t_.
+  #[global] Instance t_eqdec : EqDec t_.
   Proof. eqdec_proof. Qed.
   
   Definition t := t_.
@@ -1198,7 +1198,8 @@ Proof.
   * apply (H x), CS.add_spec; left => //.
   * intros y iny. apply (H y), CS.add_spec; right => //.
 Qed.
-Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
+
+#[global] Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
 Proof.
   intros s s' eqs.
   unfold CS.For_all. split; intros IH x inxs; apply (IH x);
@@ -1677,20 +1678,20 @@ Class UnivSubst A := subst_instance : Instance.t -> A -> A.
 Notation "x @[ u ]" := (subst_instance u x) (at level 3, 
   format "x @[ u ]").
 
-Instance subst_instance_level : UnivSubst Level.t :=
+#[global] Instance subst_instance_level : UnivSubst Level.t :=
   fun u l => match l with
             Level.lSet | Level.Level _ => l
           | Level.Var n => List.nth n u Level.lSet
           end.
 
-Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
+#[global] Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
   fun u c => (subst_instance_level u c.1.1, c.1.2, subst_instance_level u c.2).
 
-Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
+#[global] Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
   fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance_cstr u c))
                                 ctrs ConstraintSet.empty.
 
-Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
+#[global] Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
   fun u e => match e with
           | (Level.lSet, _)
           | (Level.Level _, _) => e
@@ -1701,16 +1702,16 @@ Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
             end
           end.
 
-Instance subst_instance_univ0 : UnivSubst Universe.t0 :=
+#[global] Instance subst_instance_univ0 : UnivSubst Universe.t0 :=
   fun u => Universe.map (subst_instance_level_expr u).
 
-Instance subst_instance_univ : UnivSubst Universe.t :=
+#[global] Instance subst_instance_univ : UnivSubst Universe.t :=
   fun u e => match e with
           | Universe.lProp | Universe.lSProp => e
           | Universe.lType l => Universe.lType (subst_instance u l)
           end.
 
-Instance subst_instance_instance : UnivSubst Instance.t :=
+#[global] Instance subst_instance_instance : UnivSubst Instance.t :=
   fun u u' => List.map (subst_instance_level u) u'.
 
 (** Tests that the term is closed over [k] universe variables *)

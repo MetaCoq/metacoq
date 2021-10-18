@@ -623,7 +623,7 @@ Proof.
     now setoid_rewrite InA_In_eq.
 Qed.
 
-Instance add_cstrs_proper : Proper (GoodConstraintSet.Equal ==> Logic.eq ==> Logic.eq)%signature add_cstrs.
+#[global] Instance add_cstrs_proper : Proper (GoodConstraintSet.Equal ==> Logic.eq ==> Logic.eq)%signature add_cstrs.
 Proof.
   intros s s' eq x y ->.
   eapply wGraph.EdgeSet.eq_leibniz.
@@ -852,7 +852,7 @@ End MakeGraph.
 Existing Class gc_consistent.
 Existing Class global_gc_uctx_invariants.
 Existing Class global_uctx_invariants.
-Existing Instance gc_of_uctx_invariants.
+Global Existing Instance gc_of_uctx_invariants.
 
 (** ** Check of consistency ** *)
 

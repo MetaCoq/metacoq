@@ -37,24 +37,24 @@ Notation "`=2`" := (pointwise_relation _ (pointwise_relation _ Logic.eq)) (at le
 Infix "=2" := (pointwise_relation _ (pointwise_relation _ Logic.eq)) (at level 70).
 
 (** Higher-order lemma to simplify Proper proofs. *)
-Instance proper_ext_eq {A B} : Proper (`=1` ==> `=1` ==> iff) (@pointwise_relation A _ (@Logic.eq B)).
+#[global] Instance proper_ext_eq {A B} : Proper (`=1` ==> `=1` ==> iff) (@pointwise_relation A _ (@Logic.eq B)).
 Proof.
   intros f f' Hff' g g' Hgg'. split; intros.
   - intros x. now rewrite <- Hff', <- Hgg'.
   - intros x. now rewrite Hff', Hgg'.
 Qed.
 
-Instance id_proper_proxy {A} : ProperProxy (`=1`) (@id A).
+#[global] Instance id_proper_proxy {A} : ProperProxy (`=1`) (@id A).
 Proof.
   intros x; reflexivity.
 Qed.
 
-Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
+#[global] Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
 Proof.
   intros f g Hfg x y ->. now rewrite Hfg.
 Qed.
 
-Instance pointwise_subrelation2 {A B C} : subrelation (`=2`) (@Logic.eq A ==> @Logic.eq B ==> @Logic.eq C)%signature.
+#[global] Instance pointwise_subrelation2 {A B C} : subrelation (`=2`) (@Logic.eq A ==> @Logic.eq B ==> @Logic.eq C)%signature.
 Proof.
   intros f g Hfg x y -> ? ? ->. now rewrite Hfg.
 Qed.
@@ -72,7 +72,7 @@ Create HintDb terms.
 Ltac len := autorewrite with len; cbn.
 Tactic Notation "len" "in" hyp(cl) := autorewrite with len in cl.
 
-Hint Rewrite Nat.add_0_r : len.
+#[global] Hint Rewrite Nat.add_0_r : len.
 
 Ltac arith_congr := repeat (try lia; progress f_equal).
 Ltac lia_f_equal := repeat (lia || f_equal).

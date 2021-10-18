@@ -14,19 +14,19 @@ Definition conjP (p q : nat -> bool) (n : nat) : bool :=
 Definition implP (p q : nat -> bool) (n : nat) : bool :=
   p n ==> q n. *)
 
-Instance orP_Proper {A} : Proper (`=1` ==> `=1` ==> `=1`) (@predU A).
+#[global] Instance orP_Proper {A} : Proper (`=1` ==> `=1` ==> `=1`) (@predU A).
 Proof.
   intros f g Hfg f' g' Hfg' i; rewrite /predU /=.
   now rewrite Hfg Hfg'.
 Qed.
 
-Instance andP_Proper A : Proper (`=1` ==> `=1` ==> `=1`) (@predI A).
+#[global] Instance andP_Proper A : Proper (`=1` ==> `=1` ==> `=1`) (@predI A).
 Proof.
   intros f g Hfg f' g' Hfg' i; rewrite /predI /=.
   now rewrite Hfg Hfg'.
 Qed.
 
-Instance implP_Proper {A} : Proper (`=1` ==> `=1` ==> `=1`) (@predA A).
+#[global] Instance implP_Proper {A} : Proper (`=1` ==> `=1` ==> `=1`) (@predA A).
 Proof.
   intros f g Hfg f' g' Hfg' i; rewrite /predA /=.
   now rewrite Hfg Hfg'.

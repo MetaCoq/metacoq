@@ -4,6 +4,7 @@ From MetaCoq.Template Require Export Universes.
 (* For primitive integers and floats  *)
 From Coq Require Int63 Floats.PrimFloat Floats.SpecFloat.
 From Coq Require Import ssreflect Morphisms.
+From Equations Require Import Equations.
 
 (** * AST of Coq kernel terms and kernel data structures
 
@@ -116,7 +117,7 @@ Proof.
   f_equal.
   apply map_id.
 Qed.
-Hint Rewrite @map_predicate_id : map.
+#[global] Hint Rewrite @map_predicate_id : map.
 
 Definition tCasePredProp {term}
             (Pparams Preturn : term -> Type)
@@ -144,7 +145,7 @@ Proof.
 Qed.
 #[global] Hint Resolve map_predicate_id_spec : all.
 
-Instance map_predicate_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
+#[global] Instance map_predicate_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
 Proof.
   intros eqf0 eqf1 eqf.
   intros eqf'0 eqf'1 eqf'.
@@ -153,7 +154,7 @@ Proof.
   now apply map_ext => x.
 Qed.
 
-Instance map_predicate_proper' {term} f : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_predicate term term id f).
+#[global] Instance map_predicate_proper' {term} f : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_predicate term term id f).
 Proof.
   intros eqf0 eqf1 eqf.
   intros x y ->.
@@ -252,7 +253,7 @@ Proof.
   destruct x; cbv.
   f_equal.
 Qed.
-Hint Rewrite @map_branch_id : map.
+#[global] Hint Rewrite @map_branch_id : map.
 
 Lemma map_branch_eq_spec {A B} (f g : A -> B) (x : branch A) :
   f (bbody x) = g (bbody x) ->
@@ -262,7 +263,7 @@ Proof.
 Qed.
 #[global] Hint Resolve map_branch_eq_spec : all.
 
-Instance map_branch_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_branch term term).
+#[global] Instance map_branch_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_branch term term).
 Proof.
   intros eqf0 eqf1 eqf.
   intros x y ->.
@@ -524,7 +525,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k) (closedn k')) mfix
-  | x => true
+  | _ => true
   end.
 
 Notation closed t := (closedn 0 t).
@@ -549,10 +550,10 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
-  | x => true
+  | _ => true
   end.
 
-Instance subst_instance_constr : UnivSubst term :=
+#[global] Instance subst_instance_constr : UnivSubst term :=
   fix subst_instance_constr u c {struct c} : term :=
   match c with
   | tRel _ | tVar _  | tInt _ | tFloat _ => c
@@ -602,7 +603,7 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
     forallb (test_def (closedu k) (closedu k)) mfix
   | tCoFix mfix idx =>
     forallb (test_def (closedu k) (closedu k)) mfix
-  | x => true
+  | _ => true
   end.  
 
 Module TemplateTerm <: Term.

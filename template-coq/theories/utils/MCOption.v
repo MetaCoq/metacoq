@@ -67,7 +67,7 @@ Proof.
   intros []; cbn; congruence.
 Qed.
 
-Instance option_map_proper {A B} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@option_map A B).
+#[global] Instance option_map_proper {A B} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@option_map A B).
 Proof.
   intros f g Hfg x y <-. now apply option_map_ext.
 Qed.
@@ -149,13 +149,13 @@ Definition foroptb2 {A : Type} (p : A -> A -> bool) (o o': option A) : bool :=
   | _, _ => false
   end.
 
-Instance foroptb_proper A : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@foroptb A).
+#[global] Instance foroptb_proper A : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@foroptb A).
 Proof.
   intros f g Hfg x y ->; rewrite /foroptb.
   destruct y; simpl; rewrite // ?Hfg.
 Qed.
 
-Instance foroptb_proper_pointwise A : Proper (`=1` ==> `=1`) (@foroptb A).
+#[global] Instance foroptb_proper_pointwise A : Proper (`=1` ==> `=1`) (@foroptb A).
 Proof.
   intros f g Hfg y; rewrite /foroptb.
   destruct y; simpl; rewrite // ?Hfg.

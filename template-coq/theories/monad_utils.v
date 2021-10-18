@@ -46,7 +46,7 @@ End MCMonadNotation.
 
 Import MCMonadNotation.
 
-Instance option_monad : Monad option :=
+#[global] Instance option_monad : Monad option :=
   {| ret A a := Some a ;
      bind A B m f :=
        match m with
@@ -55,7 +55,7 @@ Instance option_monad : Monad option :=
        end
   |}.
   
-Instance option_monad_exc : MonadExc unit option :=
+#[global] Instance option_monad_exc : MonadExc unit option :=
 {| raise T _ := None ;
     catch T m f :=
       match m with

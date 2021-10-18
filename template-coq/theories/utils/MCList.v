@@ -8,11 +8,11 @@ Arguments skipn : simpl nomatch.
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
 
-Hint Rewrite map_length app_length List.rev_length : len.
+#[global] Hint Rewrite map_length app_length List.rev_length : len.
 
 Arguments nil {_}, _.
 
-Instance proper_map_ho {A B} : Proper ((pointwise_relation A Logic.eq) ==> Logic.eq ==> Logic.eq)
+#[global] Instance proper_map_ho {A B} : Proper ((pointwise_relation A Logic.eq) ==> Logic.eq ==> Logic.eq)
   (@map A B).
 Proof.
   intros f g Hfg x y ->. apply map_ext.
@@ -152,7 +152,7 @@ Proof.
   }
   intro l. apply h.
 Defined.
-Hint Rewrite @rev_length : len.
+#[global] Hint Rewrite @rev_length : len.
 
 Fact rev_map_length :
   forall {A B} {f : A -> B} {l : list A},
@@ -171,7 +171,7 @@ Proof.
   }
   intro l. apply h.
 Defined.
-Hint Rewrite @rev_map_length : len.
+#[global] Hint Rewrite @rev_map_length : len.
 
 Fact rev_map_app :
   forall {A B} {f : A -> B} {l1 l2},
@@ -353,7 +353,7 @@ Proof. induction l in n |- *; destruct n; simpl; try congruence. auto. Qed.
 
 Lemma nth_error_nil {A} n : nth_error (nil A) n = None.
 Proof. destruct n; auto. Qed.
-Hint Rewrite @nth_error_nil.
+#[global] Hint Rewrite @nth_error_nil.
 
 Fixpoint chop {A} (n : nat) (l : list A) :=
   match n with
@@ -494,12 +494,12 @@ Proof. unfold mapi at 1. rewrite mapi_rec_rev. now rewrite Nat.add_0_r. Qed.
 Lemma mapi_rec_length {A B} (f : nat -> A -> B) (l : list A) n :
   length (mapi_rec f l n) = length l.
 Proof. induction l in n |- *; simpl; try congruence. Qed.
-Hint Rewrite @mapi_rec_length : len.
+#[global] Hint Rewrite @mapi_rec_length : len.
 
 Lemma mapi_length {A B} (f : nat -> A -> B) (l : list A) :
   length (mapi f l) = length l.
 Proof. apply mapi_rec_length. Qed.
-Hint Rewrite @mapi_length : len.
+#[global] Hint Rewrite @mapi_length : len.
 
 Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
 Proof.
@@ -619,7 +619,7 @@ Lemma skipn_map_length {A B} n (f : A -> B) (l : list A) :
 Proof.
   now rewrite !List.skipn_length; len.
 Qed.
-Hint Rewrite @skipn_map_length : len.
+#[global] Hint Rewrite @skipn_map_length : len.
 
 Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
 Proof.
@@ -990,7 +990,7 @@ Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
 Proof.
   induction m; simpl; rewrite ?app_length /=; auto. lia.
 Qed.
-Hint Rewrite @unfold_length : len.
+#[global] Hint Rewrite @unfold_length : len.
 
 Lemma nth_error_unfold {A} (f : nat -> A) m n : n < m <-> nth_error (unfold m f) n = Some (f n).
 Proof.

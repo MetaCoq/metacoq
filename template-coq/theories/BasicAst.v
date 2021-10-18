@@ -2,6 +2,7 @@
 From Coq Require Import ssreflect Morphisms Setoid.
 From MetaCoq.Template Require Import utils.
 From Coq Require Floats.SpecFloat.
+From Equations Require Import Equations.
 
 (** ** Reification of names ** *)
 
@@ -40,7 +41,7 @@ Definition qualid  := string. (* e.g. Datatypes.nat *)
     order is reversed to improve sharing. E.g. A.B.C is ["C";"B";"A"] *)
 Definition dirpath := list ident.
 
-Instance dirpath_eqdec : Classes.EqDec dirpath := _.
+#[global] Instance dirpath_eqdec : Classes.EqDec dirpath := _.
 
 Definition string_of_dirpath : dirpath -> string
   := String.concat "." ∘ rev.
@@ -65,7 +66,7 @@ Fixpoint string_of_modpath (mp : modpath) : string :=
 
 (** The absolute names of objects seen by kernel *)
 Definition kername := modpath × ident.
-Instance kername_eqdec : Classes.EqDec kername := _.
+#[global] Instance kername_eqdec : Classes.EqDec kername := _.
 
 Definition string_of_kername (kn : kername) :=
   string_of_modpath kn.1 ^ "." ^ kn.2.
@@ -88,7 +89,7 @@ Arguments binder_relevance {_}.
 
 Derive NoConfusion for binder_annot.
 
-Instance eqdec_binder_annot (A : Type) (e : Classes.EqDec A) : Classes.EqDec (binder_annot A).
+#[global] Instance eqdec_binder_annot (A : Type) (e : Classes.EqDec A) : Classes.EqDec (binder_annot A).
 Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 Definition map_binder_annot {A B} (f : A -> B) (b : binder_annot A) : binder_annot B :=
@@ -99,7 +100,7 @@ Definition eq_binder_annot {A B} (b : binder_annot A) (b' : binder_annot B) : Pr
 
 (** Type of annotated names *)
 Definition aname := binder_annot name.
-Instance anqme_eqdec : Classes.EqDec aname := _.
+#[global] Instance anqme_eqdec : Classes.EqDec aname := _.
 
 Definition eqb_binder_annot {A} (b b' : binder_annot A) : bool :=
   match Classes.eq_dec b.(binder_relevance) b'.(binder_relevance) with
@@ -260,7 +261,7 @@ Arguments dbody {term} _.
 Arguments rarg {term} _.
 
 Derive NoConfusion for def.
-Instance def_eq_dec {A} : Classes.EqDec A -> Classes.EqDec (def A).
+#[global] Instance def_eq_dec {A} : Classes.EqDec A -> Classes.EqDec (def A).
 Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
 
 Definition string_of_def {A} (f : A -> string) (def : def A) :=
@@ -306,7 +307,7 @@ Proof. reflexivity. Qed.
 
 Lemma map_def_id {t} x : map_def (@id t) (@id t) x = id x.
 Proof. now destruct x. Qed.
-Hint Rewrite @map_def_id @map_id : map.
+#[global] Hint Rewrite @map_def_id @map_id : map.
 
 Lemma map_def_spec {A B} (P P' : A -> Type) (f f' g g' : A -> B) (x : def A) :
   P' x.(dbody) -> P x.(dtype) -> (forall x, P x -> f x = g x) ->
@@ -392,12 +393,12 @@ Proof.
   now rewrite (H t).
 Qed.
 
-Instance map_decl_proper {term term'} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_decl term term').
+#[global] Instance map_decl_proper {term term'} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_decl term term').
 Proof.
   intros f g Hfg x y ->. now apply map_decl_ext.
 Qed.
 
-Instance map_decl_pointwise {term term'} : Proper (`=1` ==> `=1`) (@map_decl term term').
+#[global] Instance map_decl_pointwise {term term'} : Proper (`=1` ==> `=1`) (@map_decl term term').
 Proof. intros f g Hfg x. rewrite /map_decl.
   destruct x => /=. f_equal.
   - now rewrite Hfg.
@@ -405,12 +406,12 @@ Proof. intros f g Hfg x. rewrite /map_decl.
 Qed.
 (*
 
-Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
+#[global] Instance pointwise_subrelation {A B} : subrelation (`=1`) (@Logic.eq A ==> @Logic.eq B)%signature.
 Proof.
   intros f g Hfg x y ->. now rewrite Hfg.
 Qed.
 
-Instance pointwise_subrelation_inv {A B} : subrelation (@Logic.eq A ==> @Logic.eq B)%signature  (`=1`).
+#[global] Instance pointwise_subrelation_inv {A B} : subrelation (@Logic.eq A ==> @Logic.eq B)%signature  (`=1`).
 Proof.
   intros f g Hfg x. now specialize (Hfg x x eq_refl).
 Qed.*)
@@ -418,7 +419,7 @@ Qed.*)
 Definition map_context {term term'} (f : term -> term') (c : list (context_decl term)) :=
   List.map (map_decl f) c.
 
-Instance map_context_proper {term term'} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_context term term').
+#[global] Instance map_context_proper {term term'} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_context term term').
 Proof.
   intros f g Hfg x y ->.
   now rewrite /map_context Hfg.
@@ -426,12 +427,12 @@ Qed.
 
 Lemma map_context_length {term term'} (f : term -> term') l : #|map_context f l| = #|l|.
 Proof. now unfold map_context; rewrite map_length. Qed.
-Hint Rewrite @map_context_length : len.
+#[global] Hint Rewrite @map_context_length : len.
 
 Definition test_decl {term} (f : term -> bool) (d : context_decl term) : bool :=
   option_default f d.(decl_body) true && f d.(decl_type).
 
-Instance test_decl_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@test_decl term).
+#[global] Instance test_decl_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@test_decl term).
 Proof. 
   intros f g Hfg [na [b|] ty] ? <- => /=; rewrite /test_decl /=;
   now rewrite Hfg.
@@ -451,7 +452,7 @@ Section ContextMap.
   end.
 End ContextMap.
 
-Instance mapi_context_proper {term term'} : Proper (`=2` ==> Logic.eq ==> Logic.eq) (@mapi_context term term').
+#[global] Instance mapi_context_proper {term term'} : Proper (`=2` ==> Logic.eq ==> Logic.eq) (@mapi_context term term').
 Proof.
   intros f g Hfg Γ ? <-.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto; f_equal; auto; now rewrite Hfg.
@@ -461,7 +462,7 @@ Lemma mapi_context_length {term} (f : nat -> term -> term) l : #|mapi_context f 
 Proof.
   induction l; simpl; auto.  
 Qed.
-Hint Rewrite @mapi_context_length : len.
+#[global] Hint Rewrite @mapi_context_length : len.
 
 Section ContextTest.
   Context {term : Type} (f : term -> bool).
@@ -473,7 +474,7 @@ Section ContextTest.
     end.
 End ContextTest.
 
-Instance test_context_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@test_context term).
+#[global] Instance test_context_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@test_context term).
 Proof. 
   intros f g Hfg Γ ? <-.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto; f_equal; auto; now rewrite Hfg.
@@ -489,7 +490,7 @@ Section ContextTestK.
     end.
 End ContextTestK.
 
-Instance test_context_k_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq ==> Logic.eq) (@test_context_k term).
+#[global] Instance test_context_k_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq ==> Logic.eq) (@test_context_k term).
 Proof. 
   intros f g Hfg k ? <- Γ ? <-.
   induction Γ as [|[na [b|] ty] Γ]; simpl; auto; f_equal; auto; now rewrite Hfg.
@@ -588,7 +589,7 @@ Section Contexts.
     map decl_name c.
   
 End Contexts.
-Hint Rewrite @fold_context_k_length : len.
+#[global] Hint Rewrite @fold_context_k_length : len.
 
 Section Contexts.
   Context {term term' term'' : Type}.
@@ -624,8 +625,7 @@ Section Contexts.
     intros. now apply hfg.
   Qed.
 
-  #[global] 
-  Instance fold_context_k_proper : Proper (pointwise_relation nat (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) 
+  #[global] Instance fold_context_k_proper : Proper (pointwise_relation nat (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) 
     (@fold_context_k term' term).
   Proof.
     intros f g Hfg x y <-. now apply fold_context_k_ext.
@@ -739,10 +739,10 @@ Section Contexts.
 
 End Contexts.
 
-Hint Rewrite @map_mapi_context
+#[global] Hint Rewrite @map_mapi_context
   @map_fold_context_k @mapi_context_map @map_context_map @map_map_context 
   @mapi_context_map_context @map_context_mapi_context : map.
-Hint Rewrite @forget_types_length : len.
+#[global] Hint Rewrite @forget_types_length : len.
 
 (** Primitive types models (axiom free) *)
 

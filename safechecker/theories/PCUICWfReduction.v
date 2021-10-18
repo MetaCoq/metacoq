@@ -179,6 +179,8 @@ Section fix_sigma.
         destruct (term_subterm_red1 X0) as [t'' [[redt' [tst' Htst']]]].
         eapply IH. econstructor. eauto. red.
         sq. exists t''. split; eauto. exists tst'. now rewrite Htst'.
+        Unshelve.
+        eapply red_welltyped; sq. 3:eapply red1_red; tea. all:eauto.
       * subst. eapply cored_redp in H2 as [].
         pose proof (term_subterm_redp X1) as [t'' [[redt' [tst' Htst']]]].
         rewrite -Htst' in X0.
@@ -189,7 +191,11 @@ Section fix_sigma.
         split.
         exists t'''. split; auto. exists tst''.
         now rewrite Htst'' Htst'.
-    + subst. eapply IH.
+        Unshelve.
+        eapply red_welltyped in H; eauto. all:sq; eauto.
+        eapply redp_red in redt'.
+        now transitivity t''.
+      + subst. eapply IH.
       * eapply red_neq_cored.
         eapply Relation_Properties.clos_rtn1_rt. exact r.
         intros ?. subst.
@@ -198,13 +204,9 @@ Section fix_sigma.
         eapply Acc_no_loop in X0. eauto.
         eapply @normalisation; eauto.
       * split. exists t'. split; eauto.
-    Grab Existential Variables.
+    Unshelve.
     - eapply red_welltyped; sq.
       3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
-    - eapply red_welltyped in H; eauto. all:sq; eauto.
-      eapply redp_red in redt'.
-      now transitivity t''.
-    - eapply red_welltyped; eauto; sq; eauto.
   Qed.
 
   Global Instance wf_hnf_subterm : WellFounded hnf_subterm_rel.
@@ -253,7 +255,7 @@ Section fix_sigma.
       destruct (term_subterm_redp X0) as [t'' [[redt' [tst' Htst']]]].
       eapply IH. eapply cored_redp. sq. eassumption. red.
       sq. right. exists tst'. now rewrite Htst'.
-    Grab Existential Variables.
+    Unshelve.
     - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
   Qed.
 

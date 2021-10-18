@@ -40,14 +40,14 @@ Lemma welltyped_is_closed_context {cf Σ} {wfΣ : wf Σ} {Γ t} :
 Proof.
   intros []. now eapply typing_wf_local in X; fvs.
 Qed.
-Hint Resolve welltyped_is_closed_context : fvs.
+#[global] Hint Immediate welltyped_is_closed_context : fvs.
 
 Lemma welltyped_is_open_term {cf Σ} {wfΣ : wf Σ} {Γ t} : 
   welltyped Σ Γ t -> is_open_term Γ t.
 Proof.
   intros []. now eapply PCUICSpine.subject_is_open_term in X.
 Qed.
-Hint Resolve welltyped_is_open_term : fvs.
+#[global] Hint Immediate welltyped_is_open_term : fvs.
 
 
 (* We assume normalisation of the reduction.

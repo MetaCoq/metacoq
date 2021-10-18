@@ -47,7 +47,7 @@ let rec goto n zip =
   | Some zip -> goto (n - 1) zip
 
 let is_instance l =
-  let check = function "Rewrite" -> true | _ -> false in
+  let check = function "Instance" | "Rewrite" -> true | _ -> false in
   List.exists check (String.split_on_char ' ' l)
 
 let rec match_instance n ((pre, suf) as zip) =

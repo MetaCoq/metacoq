@@ -724,7 +724,7 @@ Qed.
     destruct univs as [|[l csts]] => // /=.
     rewrite /UContext.instance /AUContext.repr.
     rewrite /closedu_instance forallb_mapi //.
-    intros i hi. len. now eapply Nat.ltb_lt.
+    intros i hi. cbn; len. now eapply Nat.ltb_lt.
   Qed.
 
   Notation closedu_ctx k := (test_context (closedu k)).

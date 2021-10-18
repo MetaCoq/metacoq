@@ -1736,9 +1736,9 @@ Proof.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
   - cbn.
     rewrite nl_inds.
-    eapply type_Construct with (idecl0:=nl_one_inductive_body idecl)
-                               (mdecl0:=nl_mutual_inductive_body mdecl)
-                               (cdecl0:=nl_constructor_body cdecl);
+    eapply type_Construct with (idecl:=nl_one_inductive_body idecl)
+                               (mdecl:=nl_mutual_inductive_body mdecl)
+                               (cdecl:=nl_constructor_body cdecl);
     eauto using nlg_wf_local.
     + destruct isdecl as [[H1 H2] H3]. repeat split.
       * eapply lookup_env_nlg in H1. eapply H1.
@@ -1749,9 +1749,9 @@ Proof.
     + unfold consistent_instance_ext.
       rewrite global_ext_levels_nlg global_ext_constraints_nlg; assumption.
   - rewrite nl_mkApps map_app nl_it_mkLambda_or_LetIn /predctx nl_case_predicate_context.
-    eapply type_Case with  (mdecl0:=nl_mutual_inductive_body mdecl)
-                           (idecl0:=nl_one_inductive_body idecl)
-                           (p0:=nl_predicate nl p); tea; rewrite - ?nl_case_predicate_context.
+    eapply type_Case with  (mdecl:=nl_mutual_inductive_body mdecl)
+                           (idecl:=nl_one_inductive_body idecl)
+                           (p:=nl_predicate nl p); tea; rewrite - ?nl_case_predicate_context.
     + destruct isdecl as [HH1 HH2]. split.
       * eapply lookup_env_nlg in HH1. eapply HH1.
       * replace (ind_bodies (nl_mutual_inductive_body mdecl)) with
@@ -1804,9 +1804,9 @@ Proof.
       * rewrite - ![_ ++ _]nlctx_app_context. eauto.
   - destruct pdecl as [pdecl1 pdecl2]; simpl.
     rewrite map_rev.
-    eapply type_Proj with (mdecl0:=nl_mutual_inductive_body mdecl)
-                          (idecl0:=nl_one_inductive_body idecl)
-                          (cdecl0:=nl_constructor_body cdecl)
+    eapply type_Proj with (mdecl:=nl_mutual_inductive_body mdecl)
+                          (idecl:=nl_one_inductive_body idecl)
+                          (cdecl:=nl_constructor_body cdecl)
                           (pdecl:=(pdecl1, nl pdecl2)).
     + destruct isdecl as [[[H1 H2] H3] [H4 H5]]. repeat split.
       * eapply lookup_env_nlg in H1. eapply H1.

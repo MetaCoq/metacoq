@@ -389,7 +389,7 @@ Qed.
 
 (** ** The correctness proof  *)
 
-Hint Constructors PCUICWcbvEval.eval erases : core.
+#[export] Hint Constructors PCUICWcbvEval.eval erases : core.
 
 Definition EisConstruct_app :=
   fun t => match (EAstUtils.decompose_app t).1 with

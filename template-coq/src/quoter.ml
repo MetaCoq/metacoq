@@ -92,11 +92,11 @@ sig
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
-  val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
+  val quote_univ_constraints : Univ.Constraints.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
   val quote_univ_contextset : Univ.ContextSet.t -> quoted_univ_contextset
   val quote_variance : Univ.Variance.t -> quoted_variance
-  val quote_abstract_univ_context : Univ.AUContext.t -> quoted_abstract_univ_context
+  val quote_abstract_univ_context : Univ.AbstractContext.t -> quoted_abstract_univ_context
 
   val mkMonomorphic_entry : quoted_univ_contextset -> quoted_universes_entry
   val mkPolymorphic_entry : quoted_univ_context -> quoted_universes_entry
@@ -165,7 +165,7 @@ struct
   let get_abstract_inductive_universes iu =
     match iu with
     | Declarations.Monomorphic -> Univ.UContext.empty
-    | Polymorphic ctx -> Univ.AUContext.repr ctx
+    | Polymorphic ctx -> Univ.AbstractContext.repr ctx
 
   let quote_universes_entry = function
     | Monomorphic_entry -> Q.mkMonomorphic_entry (Q.quote_univ_contextset Univ.ContextSet.empty)
@@ -267,17 +267,17 @@ struct
         let q_relevance = Q.quote_relevance ci.Constr.ci_relevance in
         let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env par in acc, qt) acc pars in 
         let qu = Q.quote_univ_instance u in
-        let pctx = CaseCompat.case_predicate_context env ci u pars predctx in 
+        let pctx = CaseCompat.case_predicate_context (snd env) ci u pars predctx in 
         let qpctx = quote_name_annots predctx in
         let (qpred,acc) = quote_term acc (push_rel_context pctx env) pred in
         let (qdiscr,acc) = quote_term acc env discr in
-        let cbrs = CaseCompat.case_branches_contexts env ci u pars brs in  
+        let cbrs = CaseCompat.case_branches_contexts (snd env) ci u pars brs in  
         let (branches,acc) =
-          CArray.fold_left (fun (bodies,acc) (brnas, brctx, bbody) brfctx narg ->
+          CArray.fold_left2 (fun (bodies,acc) (brnas, brctx, bbody) narg ->
             let (qbody,acc) = quote_term acc (push_rel_context brctx env) bbody in
             let qctx = quote_name_annots brnas in
               ((qctx, qbody) :: bodies, acc))
-          ([],acc) cbrs brs ci.Constr.ci_cstr_nargs in
+          ([],acc) cbrs ci.Constr.ci_cstr_nargs in
         (Q.mkCase (ind, npar, q_relevance) (qu, q_pars, qpctx, qpred) qdiscr (List.rev branches), acc)
 
       | Constr.Fix fp -> quote_fixpoint acc env fp
@@ -340,13 +340,13 @@ struct
           let indty, acc = quote_term acc env indty in
           let indsort = Q.quote_sort (inductive_sort oib) in
           let (reified_ctors,acc) =
-            List.fold_left (fun (ls,acc) (nm,ty,ar) ->
+            List.fold_left (fun (ls,acc) (nm,(ctx, ty),ar) ->
               debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                   bool !opt_hnf_ctor_types)) ;
+              let ty = Term.it_mkProd_or_LetIn ty ctx in
               let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
-              let ctx, concl = ty in
-              let ty = Term.it_mkProd_or_LetIn concl ctx in
-              let argctx, parsctx = 
+              let ctx, concl = Term.decompose_prod_assum ty in
+              let argctx, parsctx =
                 CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 
               in
               let envcstr = push_rel_context parsctx envind in
@@ -365,9 +365,9 @@ struct
           let projs, acc =
             match mib.Declarations.mind_record with
             | PrimRecord [|id, csts, relevance, ps|] ->  (* TODO handle mutual records *)
-                let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
+                let ctxwolet = Vars.smash_rel_context mib.mind_params_ctxt in
                 let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
-                                        Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
+                                        Context.Rel.instance Constr.mkRel 0 ctxwolet) in
                 let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
                 let envpars = push_rel_context (indbinder :: ctxwolet) env in
                 let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
@@ -437,10 +437,10 @@ struct
             let body = match cd.const_body with
               | Undef _ -> None
               | Primitive _ -> CErrors.user_err Pp.(str "Primitives are unsupported by TemplateCoq")
-              | Def cs -> Some (Mod_subst.force_constr cs)
+              | Def cs -> Some cs
               | OpaqueDef lc ->
                 if bypass then
-                  let c, univs = Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) lc in
+                  let c, univs = Global.force_proof Library.indirect_accessor lc in
                   let () = match univs with
                   | Opaqueproof.PrivateMonomorphic () -> ()
                   | Opaqueproof.PrivatePolymorphic (n, csts) -> if not (Univ.ContextSet.is_empty csts && Int.equal n 0) then 
@@ -549,7 +549,7 @@ since  [absrt_info] is a private type *)
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in
     let uctx = match cd.const_universes with
-      | Polymorphic auctx -> Polymorphic_entry (Univ.AUContext.repr auctx)
+      | Polymorphic auctx -> Polymorphic_entry (Univ.AbstractContext.repr auctx)
       | Monomorphic -> Monomorphic_entry
     in
     let univs = quote_universes_entry uctx in

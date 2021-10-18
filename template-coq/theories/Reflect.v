@@ -105,10 +105,8 @@ Defined.
   eqb_spec := Nat.eqb_spec
 }.
 
-#[program] 
-#[global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
-  { eqb := Numbers.Cyclic.Int63.Int63.eqb
-}.
+#[program,global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
+  { eqb := Numbers.Cyclic.Int63.Int63.eqb }.
 Next Obligation.
   destruct (Int63.eqb x y) eqn:eq; constructor.
   now apply (Numbers.Cyclic.Int63.Int63.eqb_spec x y) in eq.
@@ -119,14 +117,16 @@ Derive NoConfusion EqDec for SpecFloat.spec_float.
 
 Local Obligation Tactic := idtac.
 
-Print PrimFloat.
-#[program] 
-#[global] Instance reflect_prim_float : ReflectEq PrimFloat.float :=
-  { eqb x y := PrimFloat.eqb x y }.
+#[program,global] 
+Instance reflect_prim_float : ReflectEq PrimFloat.float :=
+  { eqb x y := eqb (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y) }.
 Next Obligation.
   intros. cbn -[eqb].
-  intros. todo "admit".
-Defined.
+  destruct (eqb_spec (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y)); constructor.
+  now apply FloatAxioms.Prim2SF_inj.
+  intros e; apply n. rewrite e.
+  reflexivity.
+Qed.
 
 Definition eq_level l1 l2 :=
   match l1, l2 with
@@ -136,7 +136,7 @@ Definition eq_level l1 l2 :=
   | _, _ => false
   end.
 
-#[global] #[program] Instance reflect_level : ReflectEq Level.t := {
+#[global, program] Instance reflect_level : ReflectEq Level.t := {
   eqb := eq_level
 }.
 Next Obligation.
@@ -157,7 +157,7 @@ Definition eq_prop_level l1 l2 :=
   | _, _ => false
   end.
 
-#[global] #[program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
+#[global, program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
   eqb := eq_prop_level
 }.
 Next Obligation.
@@ -174,7 +174,7 @@ Definition eq_levels (l1 l2 : PropLevel.t + Level.t) :=
   | _, _ => false
   end.
 
-#[global] #[program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
+#[global, program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
   eqb := eq_levels
 }.
 Next Obligation.
@@ -192,7 +192,7 @@ Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
   else false.
 
 Local Obligation Tactic := idtac.
-#[global] #[program] Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
+#[global, program] Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
   eqb := eq_prod eqb eqb
 }.
 Next Obligation.
@@ -216,7 +216,7 @@ Qed.
 Definition eq_bool b1 b2 : bool :=
   if b1 then b2 else negb b2.
 
-#[global] #[program] Instance reflect_bool : ReflectEq bool := {
+#[global, program] Instance reflect_bool : ReflectEq bool := {
   eqb := eq_bool
 }.
 Next Obligation.
@@ -234,7 +234,7 @@ Definition eq_name na nb :=
   | _, _ => false
   end.
 
-#[global] #[program] Instance reflect_name : ReflectEq name := {
+#[global, program] Instance reflect_name : ReflectEq name := {
   eqb := eq_name
 }.
 Next Obligation.
@@ -253,7 +253,7 @@ Definition eq_relevance r r' :=
   | _, _ => false
   end.
 
-#[global] #[program] Instance reflect_relevance : ReflectEq relevance := {
+#[global, program] Instance reflect_relevance : ReflectEq relevance := {
   eqb := eq_relevance
 }.
 Next Obligation.
@@ -268,7 +268,7 @@ Definition eq_aname (na nb : binder_annot name) :=
   eqb na.(binder_name) nb.(binder_name) &&
   eqb na.(binder_relevance) nb.(binder_relevance).
   
-#[global] #[program] Instance reflect_aname : ReflectEq aname := {
+#[global, program] Instance reflect_aname : ReflectEq aname := {
   eqb := eq_aname
 }.
 Next Obligation.
@@ -278,7 +278,7 @@ Next Obligation.
   constructor; destruct x, y; simpl in *; cong.
 Defined.
 
-#[global] #[program] Instance reflect_kername : ReflectEq kername := {
+#[global, program] Instance reflect_kername : ReflectEq kername := {
   eqb := eq_kername
 }.
 Next Obligation.
@@ -286,7 +286,7 @@ Next Obligation.
 Qed.
 
 
-#[global] #[program] Instance reflect_inductive : ReflectEq inductive := {
+#[global, program] Instance reflect_inductive : ReflectEq inductive := {
   eqb := eq_inductive
 }.
 Next Obligation.
@@ -304,7 +304,7 @@ Definition eq_def {A} `{ReflectEq A} (d1 d2 : def A) : bool :=
     eqb n1 n2 && eqb t1 t2 && eqb b1 b2 && eqb a1 a2
   end.
 
-#[global] #[program] Instance reflect_def : forall {A} `{ReflectEq A}, ReflectEq (def A) := {
+#[global, program] Instance reflect_def : forall {A} `{ReflectEq A}, ReflectEq (def A) := {
   eqb := eq_def
 }.
 Next Obligation.
@@ -326,7 +326,7 @@ Definition eq_cast_kind (c c' : cast_kind) : bool :=
   | _, _ => false
   end.
 
-#[global] #[program] Instance reflect_cast_kind : ReflectEq cast_kind :=
+#[global, program] Instance reflect_cast_kind : ReflectEq cast_kind :=
   { eqb := eq_cast_kind }.
 Next Obligation.
   induction x, y. all: cbn. all: nodec.
@@ -377,7 +377,7 @@ Definition eq_sig_true {A f} `{ReflectEq A} (x y : { z : A | f z = true }) : boo
   let '(exist y hy) := y in
   eqb x y.
 
-#[global] #[program] Instance reflect_sig_true {A f} `{ReflectEq A} : ReflectEq ({ z : A | f z = true }) := {
+#[global, program] Instance reflect_sig_true {A f} `{ReflectEq A} : ReflectEq ({ z : A | f z = true }) := {
   eqb := eq_sig_true
 }.
 Next Obligation.

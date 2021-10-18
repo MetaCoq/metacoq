@@ -288,7 +288,7 @@ Proof.
   - apply Forall2_same; eauto.
 Qed.
 
-Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
+#[global] Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
 Proof.
   split. 
   - red. reflexivity.
@@ -301,7 +301,7 @@ Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
 #[global] Hint Resolve eq_binder_annot_refl : core.
 
-Instance eq_binder_annots_refl {A} : CRelationClasses.Equivalence (All2 (@eq_binder_annot A A)).
+#[global] Instance eq_binder_annots_refl {A} : CRelationClasses.Equivalence (All2 (@eq_binder_annot A A)).
 Proof.
   split.
   intros x. apply All2_reflexivity; tc. 
@@ -363,8 +363,7 @@ Proof.
   apply IHt.
 Qed. *)
 
-
-Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
+#[global] Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
@@ -441,7 +440,7 @@ Proof.
     elim: Nat.leb_spec => //. lia.
 Qed.
 
-Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
+#[global] Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Re Rle' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -462,7 +461,7 @@ Proof.
   destruct t0; simpl; auto.
 Qed.
 
-Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
+#[global] Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->

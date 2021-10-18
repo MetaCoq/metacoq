@@ -92,10 +92,10 @@ Module Environment (T : Term).
   Definition subst_telescope s k (Γ : context) : context :=
     mapi (fun k' decl => map_decl (subst s (k' + k)) decl) Γ.
   
-  Instance subst_instance_decl : UnivSubst context_decl
+  Global Instance subst_instance_decl : UnivSubst context_decl
     := map_decl ∘ subst_instance.
   
-  Instance subst_instance_context : UnivSubst context
+  Global Instance subst_instance_context : UnivSubst context
     := map_context ∘ subst_instance.
 
   Lemma subst_instance_length u (ctx : context)

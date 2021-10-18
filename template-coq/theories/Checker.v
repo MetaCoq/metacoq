@@ -77,7 +77,7 @@ Inductive typing_result (A : Type) :=
 Global Arguments Checked {A} a.
 Global Arguments TypeError {A} t.
 
-Instance typing_monad : Monad typing_result :=
+Global Instance typing_monad : Monad typing_result :=
   {| ret A a := Checked a ;
      bind A B m f :=
        match m with
@@ -86,7 +86,7 @@ Instance typing_monad : Monad typing_result :=
        end
   |}.
 
-Instance monad_exc : MonadExc type_error typing_result :=
+Global Instance monad_exc : MonadExc type_error typing_result :=
   { raise A e := TypeError e;
     catch A m f :=
       match m with
@@ -101,7 +101,7 @@ Section Lookups.
   Definition polymorphic_constraints u :=
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
+    | Polymorphic_ctx ctx => (AUContext.repr ctx).2.2
     end.
 
   Definition lookup_constant_type cst u :=

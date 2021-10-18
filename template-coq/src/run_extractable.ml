@@ -104,7 +104,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
     let projs, acc =
       match mib.mind_record with
       | PrimRecord [|id, labels, rel, ps|] ->
-        let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
+        let ctxwolet = Vars.smash_rel_context mib.mind_params_ctxt in
         let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
                                   Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
         let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR(Names.Name id),indty) in

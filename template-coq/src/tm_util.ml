@@ -73,7 +73,6 @@ module CaseCompat =
   open Util
   open Univ
   open Declarations
-  open Inductive
 
   (** {6 Changes of representation of Case nodes} *)
 
@@ -102,7 +101,7 @@ module CaseCompat =
   let case_predicate_context_gen mip ci u paramsubst nas =
     let realdecls, _ = List.chop mip.mind_nrealdecls mip.mind_arity_ctxt in
     let self =
-      let args = Context.Rel.to_extended_vect mkRel 0 mip.mind_arity_ctxt in
+      let args = Context.Rel.instance mkRel 0 mip.mind_arity_ctxt in
       let inst = Instance.of_array (Array.init (Instance.length u) Level.var) in
       mkApp (mkIndU (ci.ci_ind, inst), args)
     in
@@ -113,7 +112,7 @@ module CaseCompat =
     let mib = Environ.lookup_mind (fst ci.ci_ind) env in
     let mip = mib.mind_packets.(snd ci.ci_ind) in
     let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
-    let paramsubst = Vars.subst_of_rel_context_instance paramdecl (Array.to_list params) in
+    let paramsubst = Vars.subst_of_rel_context_instance paramdecl params in
     case_predicate_context_gen mip ci u paramsubst nas
       
   let case_branches_contexts_gen mib ci u params brs =
@@ -121,9 +120,9 @@ module CaseCompat =
     (* Γ, indices, self : I@{u} params indices ⊢ p : Type *)
     let mip = mib.mind_packets.(snd ci.ci_ind) in
     let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
-    let paramsubst = Vars.subst_of_rel_context_instance paramdecl (Array.to_list params) in
+    let paramsubst = Vars.subst_of_rel_context_instance paramdecl params in
     (* Expand the branches *)
-    let subst = paramsubst @ ind_subst (fst ci.ci_ind) mib u in
+    let subst = paramsubst in
     let ebr =
       let build_one_branch i (nas, br) (ctx, _) =
         let ctx, _ = List.chop mip.mind_consnrealdecls.(i) ctx in
@@ -137,80 +136,6 @@ module CaseCompat =
   let case_branches_contexts env ci u pars brs =
     let mib = Environ.lookup_mind (fst ci.ci_ind) env in
     case_branches_contexts_gen mib ci u pars brs
-
-  let expand_case_specif mib (ci, u, params, p, iv, c, br) =
-    (* Γ ⊢ c : I@{u} params args *)
-    (* Γ, indices, self : I@{u} params indices ⊢ p : Type *)
-    let mip = mib.mind_packets.(snd ci.ci_ind) in
-    let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
-    let paramsubst = Vars.subst_of_rel_context_instance paramdecl (Array.to_list params) in
-    (* Expand the return clause *)
-    let ep =
-      let (nas, p) = p in
-      let realdecls = case_predicate_context_gen mip ci u paramsubst nas in
-      Term.it_mkLambda_or_LetIn p realdecls
-    in
-    (* Expand the branches *)
-    let subst = paramsubst @ ind_subst (fst ci.ci_ind) mib u in
-    let ebr =
-      let build_one_branch i (nas, br) (ctx, _) =
-        let ctx, _ = List.chop mip.mind_consnrealdecls.(i) ctx in
-        let ctx = instantiate_context u subst nas ctx in
-        Term.it_mkLambda_or_LetIn br ctx
-      in
-      Array.map2_i build_one_branch br mip.mind_nf_lc
-    in
-    (ci, ep, iv, c, ebr)
-
-  let expand_case env (ci, _, _, _, _, _, _ as case) =
-    let specif = Environ.lookup_mind (fst ci.ci_ind) env in
-    expand_case_specif specif case
-
-  let contract_case env (ci, p, iv, c, br) =
-    let (mib, mip) = lookup_mind_specif env ci.ci_ind in
-    let (arity, p) = 
-      Term.decompose_lam_n_decls (mip.mind_nrealdecls + 1) p 
-      (*with e -> (* Dynamically eta-expand the predicate *)
-        let ctx, ty = mip.mind_nf_lc.(i) in
-        let br = Term.appvectc br (Context.Rel.to_extended_vect mkRel 0 ctx) in
-        (ctx, br)*)
-    in
-    let (u, pms) = match arity with
-    | LocalAssum (_, ty) :: _ ->
-      (* Last binder is the self binder for the term being eliminated *)
-      let (ind, args) = decompose_appvect ty in
-      let (ind, u) = destInd ind in
-      let () = assert (Names.eq_ind ind ci.ci_ind) in
-      let pms = Array.sub args 0 mib.mind_nparams in
-      (* Unlift the parameters from under the index binders *)
-      let dummy = List.make mip.mind_nrealdecls mkProp in
-      let pms = Array.map (fun c -> Vars.substl dummy c) pms in
-      (u, pms)
-    | _ -> assert false
-    in
-    let p = (arity, p)
-    in
-    let map i br =
-      let (ctx, br) = 
-        try Term.decompose_lam_n_decls mip.mind_consnrealdecls.(i) br 
-        with e -> (* Dynamically eta-expand the branch *)
-          let ctx, ty = mip.mind_nf_lc.(i) in
-          let nargs = mip.mind_consnrealdecls.(i) in
-          let ctx, _ = List.chop nargs ctx in
-          let br = Term.appvectc (Vars.lift nargs br) (Context.Rel.to_extended_vect mkRel 0 ctx) in
-          let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
-          let paramsubst = Vars.subst_of_rel_context_instance paramdecl (Array.to_list pms) in
-          let ctx' = 
-            instantiate_context u (paramsubst @ ind_subst (fst ci.ci_ind) mib u)
-              (Array.of_list (List.map Context.Rel.Declaration.get_annot ctx))
-              ctx
-          in (ctx', br)
-      in
-      (ctx, br)
-    in
-    (ci, u, pms, p, iv, c, Array.mapi map br)
-      
-  let make_annots ctx = Array.of_list (List.rev_map get_annot ctx)
 end
 
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }

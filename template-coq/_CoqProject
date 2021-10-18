@@ -3,6 +3,7 @@
 
 # utils
 theories/utils/MCPrelude.v
+theories/utils/MCReflect.v
 theories/utils/All_Forall.v
 theories/utils/MCArith.v
 theories/utils/MCCompare.v
@@ -11,6 +12,7 @@ theories/utils/LibHypsNaming.v
 theories/utils/MCList.v
 theories/utils/MCOption.v
 theories/utils/MCProd.v
+theories/utils/MCPred.v
 theories/utils/MCRelations.v
 theories/utils/MCSquash.v
 theories/utils/MCString.v
@@ -30,13 +32,14 @@ theories/Environment.v
 theories/Ast.v
 theories/AstUtils.v
 theories/Reflect.v
+theories/ReflectAst.v
 theories/Kernames.v
 theories/Induction.v
+theories/EnvironmentTyping.v
+theories/WfAst.v
 theories/LiftSubst.v
 theories/UnivSubst.v
 theories/Pretty.v
-theories/EnvironmentTyping.v
-theories/WfInv.v
 theories/TermEquality.v
 theories/Typing.v
 theories/Reduction.v

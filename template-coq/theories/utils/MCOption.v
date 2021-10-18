@@ -1,5 +1,5 @@
-From Coq Require Import List ssreflect Arith.
-From MetaCoq Require Import MCPrelude MCList MCProd.
+From Coq Require Import List ssreflect Arith Morphisms.
+From MetaCoq Require Import MCPrelude MCList MCProd MCReflect.
 
 Definition option_get {A} (default : A) (x : option A) : A
   := match x with
@@ -67,6 +67,14 @@ Proof.
   intros []; cbn; congruence.
 Qed.
 
+Instance option_map_proper {A B} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@option_map A B).
+Proof.
+  intros f g Hfg x y <-. now apply option_map_ext.
+Qed.
+
+Lemma option_map_id {A} : option_map (@id A) =1 id.
+Proof. by intros []. Qed.
+
 Lemma nth_map_option_out {A B} (f : nat -> A -> option B) l l' i t : map_option_out (mapi f l) = Some l' ->
   nth_error l' i = Some t ->
   (∑ x, (nth_error l i = Some x) /\ (f i x = Some t)).
@@ -92,6 +100,22 @@ Proof.
   move=> [=] <-. by rewrite (IHl l0 eq_refl).
 Qed.
 
+Lemma map_option_out_impl {A B} (l : list A) (f g : A -> option B) x :
+  (forall x y, f x = Some y -> g x = Some y) ->
+  map_option_out (map f l) = Some x ->
+  map_option_out (map g l) = Some x.
+Proof.
+  intros Hfg.
+  induction l in x |- *; simpl; auto.
+  destruct (f a) eqn:fa.
+  - rewrite (Hfg _ _ fa).
+    move: IHl; destruct map_option_out.
+    * move=> H'. specialize (H' _ eq_refl).
+      rewrite H'. congruence.
+    * discriminate.
+  - discriminate.
+Qed.
+
 Lemma option_map_Some {A B} (f : A -> B) (o : option A) x : 
   option_map f o = Some x ->
   ∑ y, (o = Some y) /\ (x = f y).
@@ -99,6 +123,15 @@ Proof.
   destruct o => /= //.
   move=> [] <-. exists a; auto.
 Qed.
+
+Lemma reflect_option_default {A} {P : A -> Type} {p : A -> bool} : 
+  (forall x, reflectT (P x) (p x)) ->
+  forall x, reflectT (option_default P x unit) (option_default p x true).
+Proof.
+  intros Hp x.
+  destruct x => /= //. constructor. exact tt.
+Qed.
+
 
 (** Analogous to Forall, but for the [option] type *)
 (* Helpful for induction principles and predicates on [term] *)
@@ -115,3 +148,20 @@ Definition foroptb2 {A : Type} (p : A -> A -> bool) (o o': option A) : bool :=
   | None, None => true
   | _, _ => false
   end.
+
+Instance foroptb_proper A : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@foroptb A).
+Proof.
+  intros f g Hfg x y ->; rewrite /foroptb.
+  destruct y; simpl; rewrite // ?Hfg.
+Qed.
+
+Instance foroptb_proper_pointwise A : Proper (`=1` ==> `=1`) (@foroptb A).
+Proof.
+  intros f g Hfg y; rewrite /foroptb.
+  destruct y; simpl; rewrite // ?Hfg.
+Qed.
+
+Lemma foroptb_impl {A} (f g : A -> bool) x : (forall x, f x -> g x) -> foroptb f x -> foroptb g x.
+Proof.
+  move=> Hf; destruct x; simpl => //; apply Hf.
+Qed.

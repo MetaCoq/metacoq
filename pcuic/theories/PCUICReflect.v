@@ -8,6 +8,7 @@ From MetaCoq.Template Require Export Reflect.
 
 Open Scope pcuic.
 
+
 Local Ltac finish :=
   let h := fresh "h" in
   right ;
@@ -28,6 +29,7 @@ Local Ltac term_dec_tac term_dec :=
            fcase (eq_dec x y)
          | x : list Level.t, y : Instance.t |- _ =>
            fcase (eq_dec x y)
+         | x : list aname, y : list aname |- _ => fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
          | i : ident, i' : ident |- _ => fcase (string_dec i i')
          | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
@@ -38,12 +40,35 @@ Local Ltac term_dec_tac term_dec :=
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
          | x : inductive * nat, y : inductive * nat |- _ =>
            fcase (eq_dec x y)
-         | x : (inductive * nat) * relevance, y : (inductive * nat) * relevance |- _ =>
+         | x : case_info, y : case_info |- _ =>
            fcase (eq_dec x y)
          | x : projection, y : projection |- _ => fcase (eq_dec x y)
          end.
 
 Derive NoConfusion NoConfusionHom for term.
+
+Lemma eq_dec_ctx_IH ctx :
+  onctx (fun x : term => forall y : term, {x = y} + {x <> y}) ctx ->
+  forall ctx',
+    {ctx = ctx'} + {ctx <> ctx'}.
+Proof.
+  induction 1.
+  - intros []; [left; reflexivity|right; discriminate].
+  - intros []; [right; discriminate|].
+    destruct p as [pty pbod].
+    destruct x as [xna [xbod|] xty]; cbn in *.
+    destruct c as [cname [cbod|] cty]; cbn in *; nodec.
+    fcase (eq_dec xna cname).
+    destruct (pty cty) ; nodec.
+    destruct (pbod cbod); nodec.
+    destruct (IHX l0) ; nodec.
+    subst; left; reflexivity.
+    destruct c as [cname [cbod|] cty]; cbn in *; nodec.
+    fcase (eq_dec xna cname).
+    destruct (pty cty) ; nodec.
+    destruct (IHX l0) ; nodec.
+    subst; left; reflexivity.
+Qed.
 
 Instance EqDec_term : EqDec term.
 Proof.
@@ -72,19 +97,38 @@ Proof.
   - destruct (IHx1 t1) ; nodec.
     destruct (IHx2 t2) ; nodec.
     subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. revert brs. clear IHx1 IHx2.
-    induction X ; intro l0.
+  - destruct (IHx t) ; nodec. subst x. clear IHx.
+    destruct p, p0; subst; cbn.
+    term_dec_tac term_dec.
+    destruct X as (?&?&?).
+    destruct (s preturn0); cbn in * ; nodec.
+    subst.
+    assert ({pparams = pparams0} + {pparams <> pparams0}) as []; nodec.
+    { revert pparams0.
+      clear -a.
+      induction a.
+      - intros []; [left; reflexivity|right; discriminate].
+      - intros []; [right; discriminate|].
+        destruct (p t) ; nodec.
+        destruct (IHa l0) ; nodec.
+        subst; left; reflexivity. }
+    subst.
+    assert ({pcontext = pcontext0} + {pcontext <> pcontext0}) as []; nodec.
+    { revert pcontext0. now apply eq_dec_ctx_IH. }
+    subst pcontext.
+    revert brs. clear -X0.
+    induction X0 ; intro l0.
     + destruct l0.
       * left. reflexivity.
       * right. discriminate.
     + destruct l0.
       * right. discriminate.
-      * destruct (IHX l0) ; nodec.
-        destruct (p (snd p0)) ; nodec.
-        destruct (eq_dec (fst x) (fst p0)) ; nodec.
-        destruct x, p0.
+      * destruct (IHX0 l0) ; nodec.
+        destruct p as (hctx & hbod).
+        destruct (hbod (bbody b)) ; nodec.
+        assert ({bcontext x = bcontext b} + {bcontext x <> bcontext b}) as []; nodec.
+        { now apply eq_dec_ctx_IH. }
+        destruct x, b.
         left.
         cbn in *. subst. inversion e. reflexivity.
   - destruct (IHx t) ; nodec.
@@ -125,6 +169,20 @@ Defined.
 Instance reflect_pcuic_term : ReflectEq term :=
   let h := EqDec_ReflectEq term in _.
 
+Instance eqb_ctx : ReflectEq context := _.
+
+Instance eq_predicate : EqDec (predicate term).
+Proof.
+  intros [] [].
+  fcase (eq_dec pparams pparams0).
+  fcase (eq_dec puinst puinst0).
+  fcase (eq_dec pcontext pcontext0).
+  fcase (eq_dec preturn preturn0).
+Defined.
+
+Global Instance branch_eq_dec : EqDec (branch term).
+Proof. ltac:(Equations.Prop.Tactics.eqdec_proof). Qed.
+
 Definition eqb_context_decl (x y : context_decl) :=
   let (na, b, ty) := x in
   let (na', b', ty') := y in
@@ -154,16 +212,37 @@ Proof.
   unfold eqb_constant_body; finish_reflect.
 Defined.
 
+Local Infix "==?" := eqb (at level 20).
+
+Definition eqb_constructor_body (x y : constructor_body) :=
+  x.(cstr_name) ==? y.(cstr_name) &&
+  x.(cstr_args) ==? y.(cstr_args) &&
+  x.(cstr_indices) ==? y.(cstr_indices) &&
+  x.(cstr_type) ==? y.(cstr_type) &&
+  x.(cstr_arity) ==? y.(cstr_arity).
+
+Instance reflect_constructor_body : ReflectEq constructor_body.
+Proof.
+  refine {| eqb := eqb_constructor_body |}.
+  intros [] [].
+  unfold eqb_constructor_body; cbn -[eqb]. finish_reflect.
+Defined.
+  
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, t, k, c, p, r) := x in
-  let (n', t', k', c', p', r') := y in
-  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p' && eqb r r'.
+  x.(ind_name) ==? y.(ind_name) &&
+  x.(ind_indices) ==? y.(ind_indices) &&
+  x.(ind_sort) ==? y.(ind_sort) &&
+  x.(ind_type) ==? y.(ind_type) &&
+  x.(ind_kelim) ==? y.(ind_kelim) &&
+  x.(ind_ctors) ==? y.(ind_ctors) &&
+  x.(ind_projs) ==? y.(ind_projs) &&
+  x.(ind_relevance) ==? y.(ind_relevance).
 
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.
   refine {| eqb := eqb_one_inductive_body |}.
   intros [] [].
-  unfold eqb_one_inductive_body; finish_reflect.
+  unfold eqb_one_inductive_body; cbn -[eqb]; finish_reflect.
 Defined.
 
 Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=

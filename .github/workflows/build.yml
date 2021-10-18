@@ -12,8 +12,8 @@ jobs:
           - '8.13'
         ocaml_version:
           - '4.07-flambda'
-          - '4.10-flambda'
           - '4.11-flambda'
+          - '4.12-flambda'
         target: [ opam ]
       fail-fast: true
 

@@ -2,8 +2,6 @@
 -Q src MetaCoq.Erasure
 -R theories MetaCoq.Erasure
 
-src/init.mli
-src/init.ml
 # src/classes0.mli
 # src/classes0.ml
 
@@ -17,8 +15,6 @@ src/orderedTypeAlt.ml
 
 src/ssrbool.ml
 src/ssrbool.mli
-src/monad_utils.ml
-src/monad_utils.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
@@ -35,20 +31,16 @@ src/pCUICPrimitive.mli
 src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
+src/pCUICCases.mli
+src/pCUICCases.ml
 src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
-src/pCUICLiftSubst.ml
-src/pCUICLiftSubst.mli
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
 src/pCUICReduction.ml
 src/pCUICReduction.mli
 src/pCUICTyping.ml
 src/pCUICTyping.mli
-src/pCUICUnivSubst.ml
-src/pCUICUnivSubst.mli
-# src/pCUICCumulativity.mli
-# src/pCUICCumulativity.ml
 src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
@@ -98,6 +90,8 @@ src/eAstUtils.mli
 # src/eInduction.mli
 src/eLiftSubst.ml
 src/eLiftSubst.mli
+src/eCSubst.mli
+src/eCSubst.ml
 src/eTyping.ml
 src/eTyping.mli
 src/extract.mli

@@ -39,12 +39,12 @@ Inductive term_direct_subterm : term -> term -> Type :=
   term_direct_subterm v (tApp u v)
 | term_direct_subterm_7_2 : forall u v : term,
   term_direct_subterm u (tApp u v)
-| term_direct_subterm_11_1 : forall (indn : inductive × nat) 
-     (p c : term) (brs : list (nat × term)),
-   term_direct_subterm c (tCase indn p c brs)
-| term_direct_subterm_11_2 : forall (indn : inductive × nat) 
-  (p c : term) (brs : list (nat × term)),
-  term_direct_subterm p (tCase indn p c brs)
+| term_direct_subterm_11_1 : forall (ci : case_info)
+     (p : predicate term) (c : term) (brs : list (branch term)),
+   term_direct_subterm c (tCase ci p c brs)
+| term_direct_subterm_11_2 : forall (ci : case_info)
+  (p : predicate term) (c : term) (brs : list (branch term)),
+  term_direct_subterm p.(preturn) (tCase ci p c brs)
 | term_direct_subterm_12_1 : forall (p : projection) (c : term),
   term_direct_subterm c (tProj p c).
 Derive Signature for term_direct_subterm.
@@ -54,6 +54,7 @@ Definition term_direct_subterm_context (t u : term) (p : term_direct_subterm t u
   | term_direct_subterm_4_1 na A B => [vass na A]
   | term_direct_subterm_5_1 na A t => [vass na A]
   | term_direct_subterm_6_1 na b B t => [vdef na b B]
+  | term_direct_subterm_11_2 ci p c brs => inst_case_predicate_context p
   | _ => []
   end.
 
@@ -123,6 +124,8 @@ Section fix_sigma.
     split.
     eapply letin_red_ty; eauto. unshelve eexists. repeat constructor. reflexivity.
     split. eapply letin_red_def; eauto. unshelve eexists. repeat constructor. reflexivity.
+    split. eapply case_red_return; eauto. unshelve eexists. repeat constructor.
+    eapply (term_direct_subterm_11_2 ci (set_preturn p s')). simpl. reflexivity.
     - simpl. intros.
     rewrite app_context_assoc in X.
     specialize (IHts1 _ _ X) as [t' [[yt' [ts Hts]]]].
@@ -164,7 +167,7 @@ Section fix_sigma.
   Definition wf_hnf_subterm_rel : WellFounded hnf_subterm_rel.
   Proof.
     intros (Γ & s & H). sq'.
-    induction (normalisation Σ Γ s H) as [s _ IH].
+    induction (normalisation Σ _ Γ s H) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?) [(t' & r & ts & eqctx)].
@@ -176,6 +179,8 @@ Section fix_sigma.
         destruct (term_subterm_red1 X0) as [t'' [[redt' [tst' Htst']]]].
         eapply IH. econstructor. eauto. red.
         sq. exists t''. split; eauto. exists tst'. now rewrite Htst'.
+        Unshelve.
+        eapply red_welltyped; sq. 3:eapply red1_red; tea. all:eauto.
       * subst. eapply cored_redp in H2 as [].
         pose proof (term_subterm_redp X1) as [t'' [[redt' [tst' Htst']]]].
         rewrite -Htst' in X0.
@@ -186,7 +191,11 @@ Section fix_sigma.
         split.
         exists t'''. split; auto. exists tst''.
         now rewrite Htst'' Htst'.
-    + subst. eapply IH.
+        Unshelve.
+        eapply red_welltyped in H; eauto. all:sq; eauto.
+        eapply redp_red in redt'.
+        now transitivity t''.
+      + subst. eapply IH.
       * eapply red_neq_cored.
         eapply Relation_Properties.clos_rtn1_rt. exact r.
         intros ?. subst.
@@ -195,13 +204,9 @@ Section fix_sigma.
         eapply Acc_no_loop in X0. eauto.
         eapply @normalisation; eauto.
       * split. exists t'. split; eauto.
-    Grab Existential Variables.
+    Unshelve.
     - eapply red_welltyped; sq.
       3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
-    - eapply red_welltyped in H; eauto. all:sq; eauto.
-      eapply redp_red in redt'.
-      now transitivity t''.
-    - eapply red_welltyped; eauto; sq; eauto.
   Qed.
 
   Global Instance wf_hnf_subterm : WellFounded hnf_subterm_rel.
@@ -236,7 +241,7 @@ Section fix_sigma.
   Definition wf_redp_subterm_rel : WellFounded redp_subterm_rel.
   Proof.
     intros (Γ & s & H). sq'.
-    induction (normalisation Σ Γ s H) as [s _ IH].
+    induction (normalisation Σ _ Γ s H) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
     intros (Γ' & t2 & ?). intros [[[r eq]|[ts eqctx]]].
@@ -250,7 +255,7 @@ Section fix_sigma.
       destruct (term_subterm_redp X0) as [t'' [[redt' [tst' Htst']]]].
       eapply IH. eapply cored_redp. sq. eassumption. red.
       sq. right. exists tst'. now rewrite Htst'.
-    Grab Existential Variables.
+    Unshelve.
     - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
   Qed.
 

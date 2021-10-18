@@ -66,7 +66,6 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 Instance TemplateMonad_Monad@{t u} : Monad@{t u} TemplateMonad@{t u} :=
   {| ret := @tmReturn ; bind := @tmBind |}.
 
-
 Polymorphic Definition tmDefinitionRed
 : ident -> option reductionStrategy -> forall {A:Type}, A -> TemplateMonad A :=
   @tmDefinitionRed_ false.

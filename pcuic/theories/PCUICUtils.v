@@ -3,8 +3,8 @@ From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 
-Require Import Equations.Prop.Equations Equations.Prop.DepElim.
-
+From Equations.Prop Require Import DepElim.
+From Equations Require Import Equations.
 
 (* Dependent lexicographic order *)
 Inductive dlexprod {A} {B : A -> Type}

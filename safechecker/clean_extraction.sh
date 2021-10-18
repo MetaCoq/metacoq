@@ -22,12 +22,12 @@ then
     for i in *.ml*
       do
       newi=`echo $i | cut -b 1 | tr '[:upper:]' '[:lower:]'``echo $i | cut -b 2-`;
-      echo "Moving " $i "to" $newi;
+      # echo "Moving " $i "to" $newi;
       mv $i $newi;
     done
     cd ..
 
-    # Remove extracted modules already linked in template_coq_plugin, checker and pcuic.
+    # Remove extracted modules already linked in the template_coq plugin.
     echo "Removing:" $files
     rm -f $files
 else

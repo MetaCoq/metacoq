@@ -1,4 +1,4 @@
-name: Test compilation
+name: MetaCoq CI
 
 on: [push, pull_request]
 
@@ -12,7 +12,7 @@ jobs:
           - 'dev'
         ocaml_version:
           - '4.07-flambda'
-          - '4.10-flambda'
+          - '4.12-flambda'
         target: [ local, opam ]
       fail-fast: true
 

@@ -15,10 +15,12 @@ Section Normalisation.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
 
+  (* todo: missing wf_env hypothesis !*)
   Axiom normalisation :
+    wf Σ ->
     forall Γ t,
       welltyped Σ Γ t ->
-      Acc (cored (fst Σ) Γ) t.
+      Acc (cored Σ Γ) t.
 
   Lemma neq_mkApps u l : forall t, t <> tSort u -> mkApps t l <> tSort u.
   Proof.
@@ -136,6 +138,7 @@ Section Alpha.
     destruct hΣ.
     intros Γ u h.
     apply normalisation in h.
+    2: assumption.
     eapply Acc_cored_cored'.
     - eassumption.
     - apply eq_term_refl.
@@ -214,24 +217,22 @@ Section Alpha.
       * constructor. eapply eq_term_upto_univ_trans. all: eauto.
   Qed.
 
-  Lemma eq_context_upto_nlctx :
+  (* Lemma eq_context_upto_nlctx :
     forall Γ,
       eq_context_upto Σ eq eq Γ (nlctx Γ).
   Proof.
     intros Γ.
     induction Γ as [| [na [b|] A] Γ ih ].
     - constructor.
-    - simpl. constructor; simpl; try apply binder_anonymize.
-      + eapply eq_term_upto_univ_tm_nl.
+    - simpl. constructor; simpl; try apply binder_anonymize; tas.
+      + constructor; tas; auto. eapply eq_term_upto_univ_tm_nl.
         all: auto.
-      + simpl. eapply eq_term_upto_univ_tm_nl.
+        eapply eq_term_upto_univ_tm_nl.
         all: auto.
-      + assumption.
-    - simpl. constructor.
+    - simpl. constructor; auto. constructor.
       + apply binder_anonymize.
       + simpl. eapply eq_term_upto_univ_tm_nl.
         all: auto.
-      + assumption.
   Qed.
 
   Lemma cored_cored'_nl :
@@ -253,7 +254,7 @@ Section Alpha.
     - intros ? ? ? r. apply Forall2_eq in r. apply map_inj in r.
       + subst. reflexivity.
       + apply Universe.make_inj.
-  Qed.
+  Qed. *)
 
   Lemma cored_cored' :
     forall Γ u v,

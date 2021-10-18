@@ -1,6 +1,6 @@
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICTyping PCUICLiftSubst PCUICReduction.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst.
 
 From Coq Require Import CRelationClasses.
 
@@ -8,8 +8,15 @@ Ltac pcuic :=
   try repeat red; cbn in *;
    try (solve [ intuition auto; eauto with pcuic || (try lia || congruence) ]).
 
-Lemma context_relation_refl P : (forall Δ x, P Δ Δ x x) ->
-  forall Δ, context_relation P Δ Δ.
+Lemma All2_fold_All2 (P : context_decl -> context_decl -> Type) Γ Δ : 
+  All2_fold (fun _ _ => P) Γ Δ <~>
+  All2 P Γ Δ.
+Proof.
+  split; induction 1; simpl; constructor; auto.
+Qed.
+ 
+Lemma All2_fold_refl P : (forall Δ x, P Δ Δ x x) ->
+  forall Δ, All2_fold P Δ Δ.
 Proof.
   intros HP.
   induction Δ.
@@ -17,88 +24,34 @@ Proof.
    destruct a as [? [?|] ?]; constructor; auto.
 Qed.
 
-Lemma context_relation_nth {P n Γ Γ' d} :
-  context_relation P Γ Γ' -> nth_error Γ n = Some d ->
-  { d' & ((nth_error Γ' n = Some d') *
-          let Γs := skipn (S n) Γ in
-          let Γs' := skipn (S n) Γ' in
-          context_relation P Γs Γs' *
-          P Γs Γs' d d')%type }.
-Proof.
-  induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
-  - depelim Hrel.
-    simpl. eexists; intuition eauto.
-    eexists; intuition eauto.
-  - depelim Hrel.
-    destruct (IHn _ _ _ Hrel H).
-    cbn -[skipn] in *.
-    eexists; intuition eauto.
-    destruct (IHn _ _ _ Hrel H).
-    eexists; intuition eauto.
-Qed.
-
-Lemma context_relation_nth_ass {P n Γ Γ' d} :
-  context_relation P Γ Γ' -> nth_error Γ n = Some d ->
-  assumption_context Γ ->
-  { d' & ((nth_error Γ' n = Some d') *
-          let Γs := skipn (S n) Γ in
-          let Γs' := skipn (S n) Γ' in
-          context_relation P Γs Γs' *
-          (d.(decl_body) = None) *
-          P Γs Γs' d d')%type }.
-Proof.
-  induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
-  - depelim Hrel. intro ass. 
-    simpl. eexists; intuition eauto.
-    eexists; intuition eauto.
-    depelim H.
-  - intros ass. depelim Hrel.
-    destruct (IHn _ _ _ Hrel H).
-    now depelim ass.
-    cbn -[skipn] in *.
-    eexists; intuition eauto.
-    destruct (IHn _ _ _ Hrel H).
-    now depelim ass.
-    eexists; intuition eauto.
-Qed.
-
-Lemma context_relation_nth_r {P n Γ Γ' d'} :
-  context_relation P Γ Γ' -> nth_error Γ' n = Some d' ->
-  { d & ((nth_error Γ n = Some d) *
-          let Γs := skipn (S n) Γ in
-          let Γs' := skipn (S n) Γ' in
-          context_relation P Γs Γs' *
-          P Γs Γs' d d')%type }.
-Proof.
-  induction n in Γ, Γ', d' |- *; destruct Γ'; intros Hrel H; noconf H.
-  - depelim Hrel.
-    simpl. eexists; intuition eauto.
-    eexists; intuition eauto.
-  - depelim Hrel.
-    destruct (IHn _ _ _ Hrel H).
-    cbn -[skipn] in *.
-    eexists; intuition eauto.
-    destruct (IHn _ _ _ Hrel H).
-    eexists; intuition eauto.
-Qed.
-
-Lemma context_relation_trans P :
+Lemma All2_fold_trans P :
   (forall Γ Γ' Γ'' x y z,
-      context_relation P Γ Γ' ->
-      context_relation P Γ' Γ'' ->
-      context_relation P Γ Γ'' ->
+      All2_fold P Γ Γ' ->
+      All2_fold P Γ' Γ'' ->
+      All2_fold P Γ Γ'' ->
       P Γ Γ' x y -> P Γ' Γ'' y z -> P Γ Γ'' x z) ->
-  Transitive (context_relation P).
+  Transitive (All2_fold P).
 Proof.
   intros HP x y z H. induction H in z |- *; auto;
   intros H'; unfold context in *; depelim H';
     try constructor; eauto; hnf in H0; noconf H0; eauto.
 Qed.
 
-Lemma context_relation_app {P} Γ Γ' Δ Δ' :
+Lemma All2_fold_sym P :
+  (forall Γ Γ' x y,
+      All2_fold P Γ Γ' ->
+      All2_fold P Γ' Γ ->
+      P Γ Γ' x y -> P Γ' Γ y x) ->
+  Symmetric (All2_fold P).
+Proof.
+  intros HP x y H.
+  induction H; constructor; auto.
+Qed.
+
+Lemma All2_fold_app_inv {P} Γ Γ' Δ Δ' :
   #|Δ| = #|Δ'| ->
-  context_relation P (Γ ,,, Δ) (Γ' ,,, Δ') ->
-  context_relation P Γ Γ' * context_relation (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ'.
+  All2_fold P (Γ ,,, Δ) (Γ' ,,, Δ') ->
+  All2_fold P Γ Γ' * All2_fold (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ'.
 Proof.
   intros H.
   induction Δ in H, Δ', Γ, Γ' |- *;
@@ -110,168 +63,132 @@ Proof.
   constructor; auto.
 Qed.
 
-Lemma context_relation_app_inv {P} Γ Γ' Δ Δ' :
-  #|Δ| = #|Δ'| ->
-  context_relation P Γ Γ' -> context_relation (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ' ->
-  context_relation P (Γ ,,, Δ) (Γ' ,,, Δ').
+Lemma All2_fold_app_inv_l {P} Γ Γ' Δ Δ' :
+  #|Γ| = #|Γ'| ->
+  All2_fold P (Γ ,,, Δ) (Γ' ,,, Δ') ->
+  All2_fold P Γ Γ' * All2_fold (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ'.
 Proof.
   intros H.
-  induction 2; simpl; auto.
-  constructor. apply IHX0. simpl in H. lia.
-  apply p.
-  constructor. apply IHX0. simpl in H; lia.
-  apply p.
+  induction Δ in H, Δ', Γ, Γ' |- *;
+  destruct Δ'; try discriminate.
+  intuition auto. constructor.
+  intros H'; generalize (All2_fold_length H'). simpl. len. lia.
+  intros H'; generalize (All2_fold_length H'). simpl. len. lia.
+  intros H'. simpl in H.
+  specialize (IHΔ Γ Γ' Δ' ltac:(lia)).
+  depelim H'; specialize (IHΔ H'); intuition auto;
+  constructor; auto.
 Qed.
 
-Section ContextChangeTypesReduction.
-  Context {cf : checker_flags}.
-  Context (Σ : global_env).
-
-  Inductive change_decl_type : context_decl -> context_decl -> Type :=
-  | change_vass_type : forall (na na' : aname) (T T' : term),
-      change_decl_type (vass na T) (vass na' T')
-  | change_vdef_type : forall (na na' : aname) (b T T'  : term),
-      change_decl_type (vdef na b T) (vdef na' b T').
-  
-  Derive Signature for change_decl_type.
-  
-  Global Instance change_decl_type_refl : Reflexive change_decl_type.
-  Proof. intros [? [|]]; constructor; reflexivity. Qed.
-
-  Global Instance change_decl_type_sym : Symmetric change_decl_type.
-  Proof.
-    intros x y rel.
-    depelim rel; constructor; now symmetry.
-  Qed.
-
-  Global Instance change_decl_type_trans : Transitive change_decl_type.
-  Proof.
-    intros x y z xy yz.
-    depelim xy; depelim yz; constructor; now etransitivity.
-  Qed.
-  
-  Global Instance change_decl_type_equiv : Equivalence change_decl_type.
-  Proof. constructor; typeclasses eauto. Qed.
-
-  Lemma context_change_decl_types_red1 Γ Γ' s t :
-    context_relation (fun _ _ => change_decl_type) Γ Γ' -> red1 Σ Γ s t -> red Σ Γ' s t.
-  Proof.
-    intros HT X0. induction X0 using red1_ind_all in Γ', HT |- *; eauto.
-    all:pcuic.
-    - econstructor. econstructor.
-      rewrite <- H.
-      induction HT in i |- *; destruct i; eauto.
-      now inv p.
-    -
-      eapply PCUICReduction.red_abs. eapply IHX0; eauto.  eauto.
-    -
-      eapply PCUICReduction.red_abs. eauto. eapply IHX0. eauto.
-      eauto. econstructor. eauto. econstructor.
-    -
-      eapply PCUICReduction.red_letin. eapply IHX0; eauto.
-      all:eauto.
-    -
-      eapply PCUICReduction.red_letin; eauto.
-    -
-      eapply PCUICReduction.red_letin; eauto. eapply IHX0; eauto.
-      econstructor. eauto. econstructor.
-      
-    -     eapply PCUICReduction.red_case; eauto. clear.
-          eapply All_All2_refl. induction brs; eauto.
-    -     eapply PCUICReduction.red_case; eauto. clear.
-          eapply All_All2_refl. induction brs; eauto.
-    - destruct ind.
-      eapply red_case; eauto.
-      clear - X HT.
-      induction X.
-      + econstructor. destruct p. destruct p.
-        split; eauto.
-        eapply All_All2_refl.
-        induction tl; eauto.
-      + econstructor. now split.
-        eassumption.
-    -
-      eapply PCUICReduction.red_proj_c. eauto.
-    -
-      eapply PCUICReduction.red_app; eauto.
-    -     eapply PCUICReduction.red_app; eauto.
-    -
-      eapply PCUICReduction.red_prod; eauto.
-    -
-      eapply PCUICReduction.red_prod; eauto. eapply IHX0. eauto. eauto.
-      econstructor.
-      eauto. econstructor. 
-    - eapply PCUICReduction.red_evar; eauto.
-      induction X; eauto. econstructor. eapply p; eauto.
-      induction tl; eauto.
-    - eapply PCUICReduction.red_fix_one_ty.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-    - eapply PCUICReduction.red_fix_one_body.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-      eapply ih ; auto.
-      clear - HT.
-      induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
-      + auto.
-      + simpl. constructor ; eauto.
-        constructor. 
-      + simpl. constructor ; eauto.
-        constructor. 
-    - eapply PCUICReduction.red_cofix_one_ty.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-    - eapply PCUICReduction.red_cofix_one_body.
-      eapply OnOne2_impl ; eauto.
-      intros [? ? ? ?] [? ? ? ?] [[r ih] e]. simpl in *.
-      inversion e. subst. clear e.
-      split ; auto.
-      eapply ih ; auto.
-      clear - HT.
-      induction (fix_context mfix0) as [| [na [b|] ty] Δ ihΔ].
-      + auto.
-      + simpl. constructor ; eauto.
-        constructor. 
-      + simpl. constructor ; eauto.
-        constructor. 
-  Qed.
-
-  Lemma context_change_decl_types_red Γ Γ' s t :
-    context_relation (fun _ _ => change_decl_type) Γ Γ' -> red Σ Γ s t -> red Σ Γ' s t.
-  Proof.
-    intros. induction X0 using red_rect'; eauto.
-    etransitivity. eapply IHX0.
-    eapply context_change_decl_types_red1; eauto.
-  Qed.
-End ContextChangeTypesReduction.
-
-Lemma fix_context_change_decl_types Γ mfix mfix' :
-  #|mfix| = #|mfix'| ->
-  context_relation (fun _ _ => change_decl_type) (Γ,,, fix_context mfix) (Γ,,, fix_context mfix').
+Lemma All2_fold_app {P} Γ Γ' Δ Δ' :
+  All2_fold P Γ Γ' -> All2_fold (fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ')) Δ Δ' ->
+  All2_fold P (Γ ,,, Δ) (Γ' ,,, Δ').
 Proof.
-  intros len.
-  apply context_relation_app_inv.
-  - now rewrite !fix_context_length.
-  - apply context_relation_refl.
-    intros.
-    destruct x.
-    destruct decl_body; constructor;
-    reflexivity.
-  - unfold fix_context, mapi.
-    generalize 0 at 2 4.
-    induction mfix in mfix', len |- *; intros n.
-    + destruct mfix'; [|cbn in *; discriminate len].
-      constructor.
-    + destruct mfix'; cbn in *; [discriminate len|].
-      apply context_relation_app_inv.
-      * now rewrite !List.rev_length, !mapi_rec_length.
-      * constructor; [constructor|].
-        constructor.
-      * apply IHmfix; lia.
+  induction 2; simpl; auto.
+  constructor; auto.
+Qed.
+
+Lemma All2_fold_impl_onctx P P' Γ Δ Q :  
+  onctx Q Γ ->
+  All2_fold P Γ Δ ->
+  (forall Γ Δ d d', 
+    All2_fold P Γ Δ -> 
+    P Γ Δ d d' ->
+    ondecl Q d ->
+    P' Γ Δ d d') ->
+  All2_fold P' Γ Δ.
+Proof.
+  intros onc cr Hcr.
+  induction cr; depelim onc; constructor; intuition eauto.
+Qed.
+
+Lemma All2_fold_impl_ind P P' Γ Δ :  
+  All2_fold P Γ Δ ->
+  (forall Γ Δ d d', 
+    All2_fold P Γ Δ -> 
+    All2_fold P' Γ Δ ->
+    P Γ Δ d d' ->
+    P' Γ Δ d d') ->
+  All2_fold P' Γ Δ.
+Proof.
+  intros cr Hcr.
+  induction cr; constructor; intuition eauto.
+Qed.
+
+Lemma All2_fold_mapi P Γ Δ f g : 
+  All2_fold (fun Γ Δ d d' =>
+    P (mapi_context f Γ) (mapi_context g Δ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d')) Γ Δ 
+  <~> All2_fold P (mapi_context f Γ) (mapi_context g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(All2_fold_length X).
+  - induction Γ as [|d Γ] in Δ |- *; destruct Δ as [|d' Δ]; simpl; intros H;
+    depelim H; constructor; simpl in *; auto.
+    pose proof (All2_fold_length H). len in H0.
+    now rewrite <- H0 in p.
+Qed.
+
+Lemma All2_fold_map P Γ Δ f g : 
+  All2_fold (fun Γ Δ d d' =>
+    P (map_context f Γ) (map_context g Δ) (map_decl f d) (map_decl g d')) Γ Δ <~>
+  All2_fold P (map_context f Γ) (map_context g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(All2_fold_length X).
+  - induction Γ as [|d Γ] in Δ |- *; destruct Δ as [|d' Δ]; simpl; intros H;
+      depelim H; constructor; auto.
+Qed.
+
+Lemma All2_fold_cst_map P Γ Δ f g : 
+  All2_fold (fun _ _ d d' => P (f d) (g d')) Γ Δ <~>
+  All2_fold (fun _ _ => P) (map f Γ) (map g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(All2_fold_length X).
+  - induction Γ as [|d Γ] in Δ |- *; destruct Δ as [|d' Δ]; simpl; intros H;
+      depelim H; constructor; auto.
+Qed.
+
+Lemma All2_fold_forallb2 (P : context_decl -> context_decl -> bool) Γ Δ : 
+  All2_fold (fun _ _ => P) Γ Δ ->
+  forallb2 P Γ Δ.
+Proof.
+  induction 1; simpl; auto; now rewrite p, IHX.
+Qed.
+
+Lemma All2_fold_nth {P n Γ Γ' d} :
+  All2_fold P Γ Γ' -> nth_error Γ n = Some d ->
+  { d' & ((nth_error Γ' n = Some d') *
+          let Γs := skipn (S n) Γ in
+          let Γs' := skipn (S n) Γ' in
+          All2_fold P Γs Γs' *
+          P Γs Γs' d d')%type }.
+Proof.
+  induction n in Γ, Γ', d |- *; destruct Γ; intros Hrel H; noconf H.
+  - depelim Hrel.
+    simpl. eexists; intuition eauto.
+  - depelim Hrel.
+    destruct (IHn _ _ _ Hrel H).
+    cbn -[skipn] in *.
+    eexists; intuition eauto.
+Qed.
+
+Lemma All2_fold_nth_r {P n Γ Γ' d'} :
+  All2_fold P Γ Γ' -> nth_error Γ' n = Some d' ->
+  { d & ((nth_error Γ n = Some d) *
+        let Γs := skipn (S n) Γ in
+        let Γs' := skipn (S n) Γ' in
+        All2_fold P Γs Γs' *
+        P Γs Γs' d d')%type }.
+Proof.
+  induction n in Γ, Γ', d' |- *; destruct Γ'; intros Hrel H; noconf H.
+  - depelim Hrel.
+    simpl. eexists; intuition eauto.
+  - depelim Hrel.
+    destruct (IHn _ _ _ Hrel H).
+    cbn -[skipn] in *.
+    eexists; intuition eauto.
 Qed.

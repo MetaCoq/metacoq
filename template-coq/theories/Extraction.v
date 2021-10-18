@@ -108,8 +108,8 @@ Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst Number
-           Uint63.
+           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst Numeral
+           Number Uint63 (* ? *).
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 Print Uint63.to_Z.
@@ -120,6 +120,8 @@ From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
      LiftSubst UnivSubst Pretty.
 Import Init.Nat.
 
+(* Silence the warnings for specifications axioms of int63 *)
+Set Warnings "-extraction-logical-axiom".
 (* Floats *)
 (* Extraction Library Zeven.
 Extraction Library Zeven.

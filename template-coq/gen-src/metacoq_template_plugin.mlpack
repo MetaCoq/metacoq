@@ -37,11 +37,13 @@ EqDecInstances
 Logic1
 Relation
 MCPrelude
+MCReflect
 MCList
 MCRelations
 MCOption
 MCProd
 MCCompare
+Monad_utils
 Sumbool
 Zeven
 ZArith_dec
@@ -59,6 +61,7 @@ Config0
 Universes0
 BasicAst
 Environment
+EnvironmentTyping
 Ast0
 AstUtils
 LiftSubst

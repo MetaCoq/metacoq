@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils BasicAst AstUtils
-     Universes Environment.
-
+From MetaCoq.Template Require Import config utils BasicAst Universes Environment.
+From Equations Require Import Equations.
 
 Module Lookup (T : Term) (E : EnvironmentSig T).
 
@@ -15,17 +14,17 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition declared_minductive Σ mind decl :=
     lookup_env Σ mind = Some (InductiveDecl decl).
 
-  Definition declared_inductive Σ mdecl ind decl :=
+  Definition declared_inductive Σ ind mdecl decl :=
     declared_minductive Σ (inductive_mind ind) mdecl /\
     List.nth_error mdecl.(ind_bodies) (inductive_ind ind) = Some decl.
 
-  Definition declared_constructor Σ mdecl idecl cstr cdecl : Prop :=
-    declared_inductive Σ mdecl (fst cstr) idecl /\
+  Definition declared_constructor Σ cstr mdecl idecl cdecl : Prop :=
+    declared_inductive Σ (fst cstr) mdecl idecl /\
     List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
-  Definition declared_projection Σ mdecl idecl (proj : projection) pdecl
+  Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl
   : Prop :=
-    declared_inductive Σ mdecl (fst (fst proj)) idecl /\
+    declared_constructor Σ (fst (fst proj), 0) mdecl idecl cdecl /\
     List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
     mdecl.(ind_npars) = snd (fst proj).
 
@@ -42,12 +41,6 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
 
   Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
-
-  Definition abstract_instance decl :=
-    match decl with
-    | Monomorphic_ctx _ => Instance.empty
-    | Polymorphic_ctx auctx => UContext.instance (AUContext.repr auctx)
-    end.
 
   (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
 
@@ -111,7 +104,18 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition consistent_instance_ext `{checker_flags} Σ :=
     consistent_instance (global_ext_levels Σ) (global_ext_constraints Σ).
-
+    
+  Lemma consistent_instance_length {cf : checker_flags} {Σ : global_env_ext} {univs u} :
+    consistent_instance_ext Σ univs u ->
+    #|u| = #|abstract_instance univs|. 
+  Proof.
+    unfold consistent_instance_ext, consistent_instance.
+    destruct univs; simpl; auto.
+    intros [_ [H _]].
+    destruct cst; simpl in *.
+    now rewrite H; len.
+  Qed.
+  
 End Lookup.
 
 Module Type LookupSig (T : Term) (E : EnvironmentSig T).
@@ -139,100 +143,32 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
         typing Γ t None ->
         typing Γ b (Some t) ->
         All_local_env (Γ ,, vdef na b t).
-  Derive Signature for All_local_env.
+  Derive Signature NoConfusion for All_local_env.
   End TypeLocal.
 
   Arguments localenv_nil {_}.
   Arguments localenv_cons_def {_ _ _ _ _} _ _.
   Arguments localenv_cons_abs {_ _ _ _} _ _.
 
-  Inductive context_relation (P : context -> context -> context_decl -> context_decl -> Type)
-            : forall (Γ Γ' : context), Type :=
-  | ctx_rel_nil : context_relation P nil nil
-  | ctx_rel_vass na na' T U Γ Γ' :
-      context_relation P Γ Γ' ->
-      P Γ Γ' (vass na T) (vass na' U) ->
-      context_relation P (vass na T :: Γ) (vass na' U :: Γ')
-  | ctx_rel_def na na' t T u U Γ Γ' :
-      context_relation P Γ Γ' ->
-      P Γ Γ' (vdef na t T) (vdef na' u U) ->
-      context_relation P (vdef na t T :: Γ) (vdef na' u U :: Γ').
-
-  Derive Signature for context_relation.
-  Arguments context_relation P Γ Γ' : clear implicits.
-
-  Lemma context_relation_length {P Γ Γ'} :
-    context_relation P Γ Γ' -> #|Γ| = #|Γ'|.
+  Lemma All_local_env_fold P f Γ :
+    All_local_env (fun Γ t T => P (fold_context_k f Γ) (f #|Γ| t) (option_map (f #|Γ|) T)) Γ <~>
+    All_local_env P (fold_context_k f Γ).
   Proof.
-    induction 1; cbn; congruence.
+    split.
+    - induction 1; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; try constructor; auto.
+    - induction Γ; simpl; try unfold snoc; rewrite ?fold_context_k_snoc0; intros H.
+      * constructor.
+      * destruct a as [na [b|] ty]; depelim H; specialize (IHΓ H); constructor; simpl; auto.
   Qed.
 
-  Lemma context_relation_impl {P Q Γ Γ'} :
-    context_relation P Γ Γ' -> (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
-    context_relation Q Γ Γ'.
+  Lemma All_local_env_impl_ind {P Q : context -> term -> option term -> Type} {l} :
+    All_local_env P l ->
+    (forall Γ t T, All_local_env Q Γ -> P Γ t T -> Q Γ t T) ->
+    All_local_env Q l.
   Proof.
-    induction 1; constructor; auto.
+    induction 1; intros; simpl; econstructor; eauto.
   Qed.
-
-  Section All2_local_env.
-
-  Definition on_decl (P : context -> context -> term -> term -> Type)
-             (Γ Γ' : context) (b : option (term * term)) (t t' : term) :=
-    match b with
-    | Some (b, b') => (P Γ Γ' b b' * P Γ Γ' t t')%type
-    | None => P Γ Γ' t t'
-    end.
-
-  Section All_local_2.
-    Context (P : forall (Γ Γ' : context), option (term * term) -> term -> term -> Type).
-
-    Inductive All2_local_env : context -> context -> Type :=
-    | localenv2_nil : All2_local_env [] []
-    | localenv2_cons_abs Γ Γ' na na' t t' :
-        All2_local_env Γ Γ' ->
-        eq_binder_annot na na' ->
-        P Γ Γ' None t t' ->
-        All2_local_env (Γ ,, vass na t) (Γ' ,, vass na' t')
-    | localenv2_cons_def Γ Γ' na na' b b' t t' :
-        All2_local_env Γ Γ' ->
-        eq_binder_annot na na' ->
-        P Γ Γ' (Some (b, b')) t t' ->
-        All2_local_env (Γ ,, vdef na b t) (Γ' ,, vdef na' b' t').
-  End All_local_2.
-
-  Definition on_decl_over (P : context -> context -> term -> term -> Type) Γ Γ' :=
-    fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ').
-
-  Definition All2_local_env_over P Γ Γ' := All2_local_env (on_decl (on_decl_over P Γ Γ')).
-
-  Lemma All2_local_env_length {P l l'} : @All2_local_env P l l' -> #|l| = #|l'|.
-  Proof. induction 1; simpl; auto. Qed.
-
-
-  Lemma All2_local_env_impl {P Q : context -> context -> term -> term -> Type} {par par'} :
-    All2_local_env (on_decl P) par par' ->
-    (forall par par' x y, P par par' x y -> Q par par' x y) ->
-    All2_local_env (on_decl Q) par par'.
-  Proof.
-    intros H aux.
-    induction H; constructor. auto. red in p. assumption. apply aux, p.
-    apply IHAll2_local_env. assumption. red. split.
-    apply aux. apply p. apply aux. apply p.
-  Defined.
-
-  Lemma All2_local_env_app_inv :
-    forall P (Γ Γ' Γl Γr : context),
-      All2_local_env (on_decl P) Γ Γl ->
-      All2_local_env (on_decl (on_decl_over P Γ Γl)) Γ' Γr ->
-      All2_local_env (on_decl P) (Γ ,,, Γ') (Γl ,,, Γr).
-  Proof.
-    induction 2; auto.
-    - simpl. constructor; auto.
-    - simpl. constructor; auto.
-  Qed.
-
-  End All2_local_env.
-
+  
   (** Well-formedness of local environments embeds a sorting for each variable *)
 
   Definition lift_typing (P : global_env_ext -> context -> term -> term -> Type) :
@@ -277,6 +213,23 @@ Module EnvTyping (T : Term) (E : EnvironmentSig T).
           All_local_env_over Σ (Γ ,, vdef na b t)
                              (localenv_cons_def all tu tb).
   End TypeLocalOver.
+  Derive Signature for All_local_env_over.
+
+  Section TypeCtxInst.
+    Context (typing : forall (Σ : global_env_ext) (Γ : context), term -> term -> Type).
+
+    (* Γ |- s : Δ, where Δ is a telescope (reverse context) *)
+    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
+    | ctx_inst_nil : ctx_inst Σ Γ [] []
+    | ctx_inst_ass na t i inst Δ : 
+        typing Σ Γ i t ->
+        ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
+        ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
+    | ctx_inst_def na b t inst Δ :
+        ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
+        ctx_inst Σ Γ inst (vdef na b t :: Δ).
+    Derive Signature NoConfusion for ctx_inst.
+  End TypeCtxInst.
 
 End EnvTyping.
 
@@ -284,49 +237,17 @@ Module Type EnvTypingSig (T : Term) (E : EnvironmentSig T).
   Include EnvTyping T E.
 End EnvTypingSig.
 
-Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
+Module Type ConversionParSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Import T E ET.
 
   Parameter (conv : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
   Parameter (cumul : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
 
-  Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+End ConversionParSig.
 
-  Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
-
-  Notation " Σ ;;; Γ |- t : T " :=
-    (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
-
-  Parameter Inline smash_context : context -> context -> context.
-  Parameter Inline lift_context : nat -> nat -> context -> context.
-  Parameter Inline subst_context : list term -> nat ->  context -> context.
-  Parameter Inline expand_lets : context -> term -> term.
-  Parameter Inline expand_lets_ctx : context -> context -> context.
-  Parameter Inline subst_telescope : list term -> nat -> context -> context.
-  Parameter Inline subst_instance_context : Instance.t -> context -> context.
-  Parameter Inline subst_instance_constr : Instance.t -> term  -> term.
-  Parameter Inline lift : nat -> nat -> term -> term.
-  Parameter Inline subst : list term -> nat -> term -> term.
-  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
-  Parameter Inline extended_subst : context -> nat -> list term. (* Let expansion substitution *)
-  Parameter destArity : term -> option (context * Universe.t).
-
-  (* [noccur_between n k t] Checks that deBruijn indices between n and n+k do not appear in t (even under binders).  *)
-  Parameter Inline noccur_between : nat -> nat -> term -> bool.
-  Parameter Inline closedn : nat -> term -> bool.
-  
-  Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
-
-End Typing.
-
-Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
-  (ET : EnvTypingSig T E) (Ty : Typing T E ET) (L : LookupSig T E).
-
-  Import T E Ty L ET.
-
-  Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
-    { s : _ & Σ ;;; Γ |- t : tSort s }.
+Module Conversion (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
+  Import T E ET CT.
 
   Section ContextConversion.
     Context {cf : checker_flags}.
@@ -362,7 +283,45 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
   End ContextConversion.
 
   Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-    context_relation (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
+    All2_fold (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
+
+End Conversion.
+
+Module Type ConversionSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
+  Include Conversion T E ET CT.
+End ConversionSig.
+
+Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) 
+  (CS : ConversionParSig T E ET) (CT : ConversionSig T E ET CS).
+
+  Import T E ET CS CT.
+
+  Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+
+  Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
+
+  Notation " Σ ;;; Γ |- t : T " :=
+    (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
+
+  Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
+  Parameter destArity : term -> option (context * Universe.t).
+
+  Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
+
+End Typing.
+
+Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
+  (ET : EnvTypingSig T E) 
+  (CS : ConversionParSig T E ET)
+  (CT : ConversionSig T E ET CS) (Ty : Typing T E ET CS CT) 
+  (L : LookupSig T E).
+
+  Import T E Ty L ET CS CT.
+
+  Definition isType `{checker_flags} (Σ : global_env_ext) (Γ : context) (t : term) :=
+    { s : _ & Σ ;;; Γ |- t : tSort s }.
+
+
 
   (** *** Typing of inductive declarations *)
 
@@ -393,37 +352,10 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (sorts_local_ctx Σ Γ Δ us * (P Σ (Γ ,,, Δ) t None * P Σ (Γ ,,, Δ) b (Some t)))
       | _, _ => False
       end.
-  
-    (* Delta telescope *)
-    Inductive ctx_inst Σ (Γ : context) : list term -> context -> Type :=
-    | ctx_inst_nil : ctx_inst Σ Γ [] []
-    | ctx_inst_ass na t i inst Δ : 
-      P Σ Γ i (Some t) ->
-      ctx_inst Σ Γ inst (subst_telescope [i] 0 Δ) ->
-      ctx_inst Σ Γ (i :: inst) (vass na t :: Δ)
-    | ctx_inst_def na b t inst Δ :
-      ctx_inst Σ Γ inst (subst_telescope [b] 0 Δ) ->
-      ctx_inst Σ Γ inst (vdef na b t :: Δ).
 
-    Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : ident * term * nat).
+    Implicit Types (mdecl : mutual_inductive_body) (idecl : one_inductive_body) (cdecl : constructor_body).
 
     Definition on_type Σ Γ T := P Σ Γ T None.
-
-    Definition cdecl_type cdecl := cdecl.1.2.
-    Definition cdecl_args cdecl := cdecl.2.
-
-    (* A constructor shape is a decomposition of a constructor's type *)
-    Record constructor_shape :=
-      { cshape_args : context;
-        (* Arguments (with lets) *)
-
-        cshape_indices : list term;
-        (* Indices of the constructor, whose length should be the real arguments
-        length of the inductive *)
-
-        cshape_sorts : list Universe.t;
-        (* The sorts of the arguments context (without lets) *)
-      }.
 
     Open Scope type_scope.
 
@@ -587,9 +519,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        cumul_ctx_rel (Σ, univs) (subst_instance_context u (smash_context [] (ind_params mdecl)))
-          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
-          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+        cumul_ctx_rel (Σ, univs) (subst_instance u (smash_context [] (ind_params mdecl)))
+          (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+          (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
       | None => False
       end.
 
@@ -597,60 +529,66 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        cumul_ctx_rel (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)))
-          (subst_instance_context u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs))))
-          (subst_instance_context u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cshape_args cs)))) *
+        cumul_ctx_rel (Σ, univs) (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)))
+          (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
+          (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))) *
         All2 
-          (conv (Σ, univs) (subst_instance_context u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cshape_args cs))))
-          (map (subst_instance_constr u ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
-          (map (subst_instance_constr u' ∘ expand_lets (ind_params mdecl ,,, cshape_args cs)) (cshape_indices cs))
+          (conv (Σ, univs) (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cstr_args cs))))
+          (map (subst_instance u ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
+          (map (subst_instance u' ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
       | None => False (* Monomorphic inductives have no variance attached *)
       end.
 
-    Record on_constructor Σ mdecl i idecl ind_indices cdecl (cshape : constructor_shape) := {
-      (* cdecl.1 fresh ?? *)
-      cstr_args_length : context_assumptions (cshape_args cshape) = cdecl_args cdecl;
-      
-      (* Real (non-let) arguments bound by the constructor *)
-      cstr_concl_head := tRel (#|mdecl.(ind_bodies)|
-      - S i
-      + #|mdecl.(ind_params)|
-      + #|cshape_args cshape|);
-      (* Conclusion head: reference to the current inductive in the block *)
+    (* Conclusion head: reference to the current inductive in the block *)
+    Definition cstr_concl_head mdecl i idecl cdecl :=
+      tRel (#|mdecl.(ind_bodies)| - S i + #|mdecl.(ind_params)| + #|cstr_args cdecl|).
 
-      cstr_eq : cdecl_type cdecl =
-       it_mkProd_or_LetIn mdecl.(ind_params)
-                          (it_mkProd_or_LetIn (cshape_args cshape)
-                              (mkApps cstr_concl_head
-                              (to_extended_list_k mdecl.(ind_params) #|cshape_args cshape|
-                                ++ cshape_indices cshape)));
+    (* Constructor conclusion shape: the inductives type applied to variables for
+       the (non-let) parameters 
+       followed by the indices *)
+    Definition cstr_concl mdecl i idecl cdecl :=
+      (mkApps (cstr_concl_head mdecl i idecl cdecl)
+        (to_extended_list_k mdecl.(ind_params) #|cstr_args cdecl|
+          ++ cstr_indices cdecl)).
+  
+    Record on_constructor Σ mdecl i idecl ind_indices cdecl cunivs := {
+      (* cdecl.1 fresh ?? *)
+      cstr_args_length : context_assumptions (cstr_args cdecl) = cstr_arity cdecl;
+
+      cstr_eq : cstr_type cdecl =
+       it_mkProd_or_LetIn mdecl.(ind_params) 
+        (it_mkProd_or_LetIn (cstr_args cdecl) 
+          (cstr_concl mdecl i idecl cdecl));
       (* The type of the constructor canonically has this shape: parameters, real
         arguments ending with a reference to the inductive applied to the
         (non-lets) parameters and arguments *)
 
-      on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) (cdecl_type cdecl);
+      on_ctype : on_type Σ (arities_context mdecl.(ind_bodies)) (cstr_type cdecl);
       on_cargs :
         sorts_local_ctx Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params))
-                      cshape.(cshape_args) cshape.(cshape_sorts);
+                      cdecl.(cstr_args) cunivs;
       on_cindices : 
-        ctx_inst Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cshape.(cshape_args))
-                      cshape.(cshape_indices)
-                      (List.rev (lift_context #|cshape.(cshape_args)| 0 ind_indices));
+        ctx_inst (fun Σ Γ t T => P Σ Γ t (Some T)) Σ (arities_context mdecl.(ind_bodies) ,,, mdecl.(ind_params) ,,, cdecl.(cstr_args))
+                      cdecl.(cstr_indices)
+                      (List.rev (lift_context #|cdecl.(cstr_args)| 0 ind_indices));
 
       on_ctype_positive : (* The constructor type is positive *)
-        positive_cstr mdecl i [] (cdecl_type cdecl);
+        positive_cstr mdecl i [] (cstr_type cdecl);
 
       on_ctype_variance : (* The constructor type respect the variance annotation 
         on polymorphic universes, if any. *)
         forall v, ind_variance mdecl = Some v -> 
-        cstr_respects_variance Σ mdecl v cshape
+        cstr_respects_variance Σ mdecl v cdecl;
+
+      on_lets_in_type : if lets_in_constructor_types 
+                        then is_true (is_assumption_context (cstr_args cdecl)) else True
     }.
 
-    Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cshape}.
-    Arguments on_cargs {Σ mdecl i idecl ind_indices cdecl cshape}.
-    Arguments on_cindices {Σ mdecl i idecl ind_indices cdecl cshape}.
-    Arguments cstr_args_length {Σ mdecl i idecl ind_indices cdecl cshape}.
-    Arguments cstr_eq {Σ mdecl i idecl ind_indices cdecl cshape}.
+    Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cunivs}.
+    Arguments on_cargs {Σ mdecl i idecl ind_indices cdecl cunivs}.
+    Arguments on_cindices {Σ mdecl i idecl ind_indices cdecl cunivs}.
+    Arguments cstr_args_length {Σ mdecl i idecl ind_indices cdecl cunivs}.
+    Arguments cstr_eq {Σ mdecl i idecl ind_indices cdecl cunivs}.
 
     Definition on_constructors Σ mdecl i idecl ind_indices :=
       All2 (on_constructor Σ mdecl i idecl ind_indices).
@@ -678,9 +616,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Lemma projs_length ind npars k : #|projs ind npars k| = k.
     Proof. induction k; simpl; auto. Qed.
 
-    Definition on_projection mdecl mind i cshape (k : nat) (p : ident * term) :=
-      let Γ := smash_context [] (cshape.(cshape_args) ++ mdecl.(ind_params)) in
-      match nth_error Γ (context_assumptions cshape.(cshape_args) - S k) with
+    Definition on_projection mdecl mind i cdecl (k : nat) (p : ident * term) :=
+      let Γ := smash_context [] (cdecl.(cstr_args) ++ mdecl.(ind_params)) in
+      match nth_error Γ (context_assumptions cdecl.(cstr_args) - S k) with
       | None => False
       | Some decl => 
         let u := abstract_instance mdecl.(ind_universes) in
@@ -695,7 +633,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
                 (lift 1 k (decl_type decl))))
       end.
 
-    Record on_projections mdecl mind i idecl (ind_indices : context) cshape :=
+    Record on_projections mdecl mind i idecl (ind_indices : context) cdecl :=
       { on_projs_record : #|idecl.(ind_ctors)| = 1;
         (** The inductive must be a record *)
 
@@ -705,81 +643,82 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         on_projs_elim : idecl.(ind_kelim) = IntoAny;
         (** This ensures that all projections are definable *)
 
-        on_projs_all : #|idecl.(ind_projs)| = context_assumptions (cshape_args cshape);
+        on_projs_all : #|idecl.(ind_projs)| = context_assumptions (cstr_args cdecl);
         (** There are as many projections as (non-let) constructor arguments *)
 
-        on_projs : Alli (on_projection mdecl mind i cshape) 0 idecl.(ind_projs) }.
+        on_projs : Alli (on_projection mdecl mind i cdecl) 0 idecl.(ind_projs) }.
 
-    Definition check_constructors_smaller φ cshapes ind_sort :=
-      Forall (fun cs => 
-        Forall (fun argsort => leq_universe φ argsort ind_sort) cs.(cshape_sorts)) cshapes.
+    Definition check_constructors_smaller φ cunivss ind_sort :=
+      Forall (fun cunivs => 
+        Forall (fun argsort => leq_universe φ argsort ind_sort) cunivs) cunivss.
 
     (** This ensures that all sorts in kelim are lower
         or equal to the top elimination sort, if set.
         For inductives in Type we do not check [kelim] currently. *)
-    
-    Definition elim_sort_prop_ind (ind_ctors_sort : list constructor_shape) :=
+
+    Definition constructor_univs := list Universe.t.
+    (* The sorts of the arguments context (without lets) *)
+
+    Definition elim_sort_prop_ind (ind_ctors_sort : list constructor_univs) :=
       match ind_ctors_sort with
       | [] => (* Empty inductive proposition: *) IntoAny
       | [ s ] =>
-        if forallb Universes.is_propositional (cshape_sorts s) then
+        if forallb Universes.is_propositional s then
           IntoAny (* Singleton elimination *)
         else
           IntoPropSProp (* Squashed: some arguments are higher than Prop, restrict to Prop *)
       | _ => (* Squashed: at least 2 constructors *) IntoPropSProp
       end.
       
-    Definition elim_sort_sprop_ind (ind_ctors_sort : list constructor_shape) :=
+    Definition elim_sort_sprop_ind (ind_ctors_sort : list constructor_univs) :=
       match ind_ctors_sort with
       | [] => (* Empty inductive strict proposition: *) IntoAny
       | _ => (* All other inductives in SProp are squashed *) IntoSProp
       end.
 
     Definition check_ind_sorts (Σ : global_env_ext)
-              params kelim ind_indices cshapes ind_sort : Type :=
+              params kelim ind_indices cdecls ind_sort : Type :=
       if Universe.is_prop ind_sort then
         (** The inductive is declared in the impredicative sort Prop *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        allowed_eliminations_subset kelim (elim_sort_prop_ind cshapes)
+        allowed_eliminations_subset kelim (elim_sort_prop_ind cdecls)
       else if Universe.is_sprop ind_sort then
         (** The inductive is declared in the impredicative sort SProp *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        allowed_eliminations_subset kelim (elim_sort_sprop_ind cshapes)
+        allowed_eliminations_subset kelim (elim_sort_sprop_ind cdecls)
       else
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)
-        check_constructors_smaller Σ cshapes ind_sort
+        check_constructors_smaller Σ cdecls ind_sort
         × if indices_matter then
             type_local_ctx Σ params ind_indices ind_sort
           else True.
-
+      
     Record on_ind_body Σ mind mdecl i idecl :=
       { (** The type of the inductive must be an arity, sharing the same params
             as the rest of the block, and maybe having a context of indices. *)
-        ind_indices : context;
-        ind_sort : Universe.t;
         ind_arity_eq : idecl.(ind_type)
                       = it_mkProd_or_LetIn mdecl.(ind_params)
-                                (it_mkProd_or_LetIn ind_indices (tSort ind_sort));
+                                (it_mkProd_or_LetIn idecl.(ind_indices) (tSort idecl.(ind_sort)));
 
         (** It must be well-typed in the empty context. *)
         onArity : on_type Σ [] idecl.(ind_type);
 
-        (** The decompose shapes of each constructor *)
-        ind_cshapes : list constructor_shape;
+        (** The sorts of the arguments contexts of each constructor *)
+        ind_cunivs : list constructor_univs;
 
         (** Constructors are well-typed *)
         onConstructors :
-          on_constructors Σ mdecl i idecl ind_indices idecl.(ind_ctors) ind_cshapes;
+          on_constructors Σ mdecl i idecl idecl.(ind_indices) idecl.(ind_ctors) ind_cunivs;
 
         (** Projections, if any, are well-typed *)
         onProjections :
           idecl.(ind_projs) <> [] ->
-          match ind_cshapes return Type with
+          match idecl.(ind_ctors) return Type with
           | [ o ] =>
-            on_projections mdecl mind i idecl ind_indices o
+            on_projections mdecl mind i idecl idecl.(ind_indices) o
           | _ => False
           end;
 
@@ -788,12 +727,12 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
             are declared in [on_constructors]. *)
         ind_sorts :
           check_ind_sorts Σ mdecl.(ind_params) idecl.(ind_kelim)
-                          ind_indices ind_cshapes ind_sort;
+                          idecl.(ind_indices) ind_cunivs idecl.(ind_sort);
 
         onIndices : 
           (* The inductive type respect the variance annotation  on polymorphic universes, if any. *)
           forall v, ind_variance mdecl = Some v -> 
-          ind_respects_variance Σ mdecl v ind_indices
+          ind_respects_variance Σ mdecl v idecl.(ind_indices)
       }.
 
     Definition on_variance univs (variances : option (list Variance.t)) :=
@@ -873,24 +812,23 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         on_udecl Σ udecl ->
         on_global_decl (Σ, udecl) kn d ->
         on_global_env (Σ ,, (kn, d)).
+    Derive Signature for on_global_env.
 
     Definition on_global_env_ext `{checker_flags} (Σ : global_env_ext) :=
       on_global_env Σ.1 × on_udecl Σ.1 Σ.2.
 
   End GlobalMaps.
 
-  Arguments cstr_args_length {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments cstr_eq {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_ctype {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_cargs {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_cindices {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_ctype_positive {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
-  Arguments on_ctype_variance {_ P Σ mdecl i idecl ind_indices cdecl cshape}.
+  Arguments cstr_args_length {_ P Σ mdecl i idecl ind_indices cdecl cunivs}.
+  Arguments cstr_eq {_ P Σ mdecl i idecl ind_indices cdecl cunivs}.
+  Arguments on_ctype {_ P Σ mdecl i idecl ind_indices cdecl cunivs}.
+  Arguments on_cargs {_ P Σ mdecl i idecl ind_indices cdecl cunivs}.
+  Arguments on_cindices {_ P Σ mdecl i idecl ind_indices cdecl cunivs}.
+  Arguments on_ctype_positive {_ P Σ mdecl i idecl ind_indices cdecl cunivs}.
+  Arguments on_ctype_variance {_ P Σ mdecl i idecl ind_indices cdecl cunivs}.
 
-  Arguments ind_indices {_ P Σ mind mdecl i idecl}.
-  Arguments ind_sort {_ P Σ mind mdecl i idecl}.
   Arguments ind_arity_eq {_ P Σ mind mdecl i idecl}.
-  Arguments ind_cshapes {_ P Σ mind mdecl i idecl}.
+  Arguments ind_cunivs {_ P Σ mind mdecl i idecl}.
   Arguments onArity {_ P Σ mind mdecl i idecl}.
   Arguments onConstructors {_ P Σ mind mdecl i idecl}.
   Arguments onProjections {_ P Σ mind mdecl i idecl}.
@@ -1021,5 +959,68 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (fn _ _ t _ (projT2 tty) + fn _ _ b t tty' + wf_local_size _ wfΓ)%nat
       end.
   End wf_local_size.
+
+  Lemma lift_typing_impl P Q Σ Γ t T :
+    (forall Γ t T, P Σ Γ t T -> Q Σ Γ t T) ->
+    lift_typing P Σ Γ t T -> lift_typing Q Σ Γ t T.
+  Proof.
+    intros HPQ.
+    destruct T; simpl. 
+    * apply HPQ.
+    * intros [s Hs]; exists s. now apply HPQ.
+  Qed.
+
+  (** Functoriality of global environment typing derivations + folding of the well-formed 
+    environment assumption. *)
+  Lemma on_wf_global_env_impl `{checker_flags} {Σ : global_env} {wfΣ : on_global_env (lift_typing typing) Σ} P Q :
+    (forall Σ Γ t T, on_global_env (lift_typing typing) Σ.1 -> 
+        on_global_env P Σ.1 -> 
+        on_global_env Q Σ.1 ->
+        P Σ Γ t T -> Q Σ Γ t T) ->
+    on_global_env P Σ -> on_global_env Q Σ.
+  Proof.
+    intros X X0.
+    simpl in *. revert wfΣ. induction X0; constructor; eauto.
+    { depelim wfΣ. eauto. }
+    depelim wfΣ. specialize (IHX0 wfΣ).
+    assert (X' := fun Γ t T => X (Σ, udecl0) Γ t T wfΣ X0 IHX0); clear X.
+    rename X' into X.
+    clear IHX0. destruct d; simpl.
+    - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
+    - red in o. simpl in *.
+      destruct o0 as [onI onP onNP].
+      constructor; auto.
+      -- eapply Alli_impl; tea. intros.
+        refine {| ind_arity_eq := X1.(ind_arity_eq);
+                  ind_cunivs := X1.(ind_cunivs) |}.
+        --- apply onArity in X1. unfold on_type in *; simpl in *.
+            now eapply X.
+        --- pose proof X1.(onConstructors) as X11. red in X11.
+            eapply All2_impl; eauto.
+            simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
+            * apply X; eauto.
+            * clear -X0 X on_cargs0. revert on_cargs0.
+              generalize (cstr_args x0).
+              induction c in y |- *; destruct y; simpl; auto;
+                destruct a as [na [b|] ty]; simpl in *; auto;
+            split; intuition eauto.
+            * clear -X0 X on_cindices0.
+              revert on_cindices0.
+              generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+              generalize (cstr_indices x0).
+              induction 1; simpl; constructor; auto.
+        --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
+        --- destruct X1. simpl. unfold check_ind_sorts in *.
+            destruct Universe.is_prop; auto.
+            destruct Universe.is_sprop; auto.
+            split.
+            * apply ind_sorts0.
+            * destruct indices_matter; auto.
+              eapply type_local_ctx_impl; eauto.
+              eapply ind_sorts0.
+        --- eapply X1.(onIndices).
+      -- red in onP. red.
+        eapply All_local_env_impl; tea.
+  Qed.
 
 End DeclarationTyping.

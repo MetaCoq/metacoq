@@ -70,12 +70,25 @@ struct
 
   let mkInd i u = constr_mkApp (tInd, [| i ; u |])
 
-  let mkCase (ind, npar, r) nargs p c brs =
-    let info = pair (prodl tIndTy tnat) (Lazy.force tRelevance)
-                     (pairl tIndTy tnat ind npar) r in
-    let branches = List.map2 (fun br nargs ->  pairl tnat tTerm nargs br) brs nargs in
-    let tl = prodl tnat tTerm in
-    constr_mkApp (tCase, [| info ; p ; c ; to_coq_list tl branches |])
+
+
+  let mk_predicate (uinst, pars, pctx, pret) =
+    let pars = to_coq_listl tTerm (Array.to_list pars) in
+    let pctx = to_coq_listl taname (Array.to_list pctx) in
+    constr_mkApp (tmk_predicate, [| Lazy.force tTerm; uinst; pars; pctx; pret |])
+  let mk_branch (bctx, bbody) =
+    let bctx = to_coq_listl taname (Array.to_list bctx) in
+    constr_mkApp (tmk_branch, [| Lazy.force tTerm; bctx; bbody |])
+
+  let mk_case_info (ind, npar, relevance) =
+    constr_mkApp (mk_case_info, [| ind; npar; relevance |])
+
+  let mkCase ci p c brs =
+    let ci = mk_case_info ci in
+    let p = mk_predicate p in
+    let branches = List.map mk_branch brs in
+    let tl = constr_mkApp (tbranchTy, [| Lazy.force tTerm |]) in
+    constr_mkApp (tCase, [| ci ; p ; c ; to_coq_list tl branches |])
 
   let mkProj kn t =
     constr_mkApp (tProj, [| kn; t |])
@@ -327,20 +340,15 @@ struct
     | Sorts.InSProp -> Lazy.force sfProp (* FIXME SProp *)
 
   let quote_context_decl na b t =
-    constr_mkApp (tmkdecl, [| na; quote_optionl tTerm b; t |])
+    constr_mkApp (tmkdecl, [| Lazy.force tTerm; na; quote_optionl tTerm b; t |])
 
   let quote_context ctx =
-    to_coq_listl tcontext_decl ctx
-
-  let mk_ctor_list =
-    let ctor_list =
-      lazy (let ctor_info_typ = prod (prodl tident tTerm) (Lazy.force tnat) in
-      to_coq_list ctor_info_typ)
-    in
-    fun ls ->
-    let ctors = List.map (fun (a,b,c) -> pair (prodl tident tTerm) (Lazy.force tnat)
-				              (pairl tident tTerm a b) c) ls in
-    (Lazy.force ctor_list) ctors
+    to_coq_list (constr_mkAppl (tcontext_decl, [| tTerm |])) ctx
+  
+  let mk_ctor_list ls =
+    let ctors = List.map (fun (a,b,c,d,e) -> 
+      constr_mkApp (tBuild_constructor_body, [| a ; b ; to_coq_listl tTerm c ; d ; e |])) ls in
+    to_coq_listl tconstructor_body ctors
 
   let mk_proj_list d =
     to_coq_list (prodl tident tTerm)
@@ -369,10 +377,10 @@ struct
   let quote_proj ind pars args =
     pair (prodl tIndTy tnat) (Lazy.force tnat) (pairl tIndTy tnat ind pars) args
 
-  let mk_one_inductive_body (a, b, c, d, e, r) =
-    let d = mk_ctor_list d in
-    let e = mk_proj_list e in
-    constr_mkApp (tBuild_one_inductive_body, [| a; b; c; d; e ; r |])
+  let mk_one_inductive_body (na, indices, sort, ty, sf, ctors, projs, relevance) =
+    let ctors = mk_ctor_list ctors in
+    let projs = mk_proj_list projs in
+    constr_mkApp (tBuild_one_inductive_body, [| na; indices; sort; ty; sf; ctors; projs; relevance |])
 
   let to_coq_option ty f ind =
     match ind with

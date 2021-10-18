@@ -94,7 +94,7 @@ MetaCoq SafeCheck (fun x : nat => x + 1).
 (** Erasure *)
 
 (** Running erasure live in Coq *)
-Definition test (p : Ast.program) : string :=
+Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.
 
 MetaCoq Quote Recursively Definition zero := 0.
@@ -102,12 +102,14 @@ MetaCoq Quote Recursively Definition zero := 0.
 Definition zerocst := Eval lazy in test zero.
 Print zerocst.
 
-MetaCoq Quote Recursively Definition singleton_elim := 
+Definition singleton_elim := 
   ((fun (X : Set) (x : X) (e : x = x) =>
                   match e in eq _ x' return bool with
                   | eq_refl => true
                   end)).
-Eval lazy in (test singleton_elim). (* Optimized to remove match on Props *)
+
+MetaCoq Run (tmEval lazy singleton_elim >>= tmQuoteRec >>=
+  fun p => tmEval lazy (test p) >>= tmPrint). (* Optimized to remove match on Props *)
 
 MetaCoq Erase singleton_elim.
 

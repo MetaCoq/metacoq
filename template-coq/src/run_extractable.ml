@@ -43,7 +43,14 @@ let quote_rel_context env ctx =
   quote_context decls
 
 (* todo(gmm): this definition adapted from quoter.ml (the body of quote_minductive_type) *)
-let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body =
+let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_inductive_body) 
+  : Ast0.Env.mutual_inductive_body =
+  match quote_mind_decl env t mib with
+  | Ast0.Env.InductiveDecl mib -> mib
+  | Ast0.Env.ConstantDecl _ -> assert false
+
+(*
+let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_inductive_body) : Ast0.Env.mutual_inductive_body =
   let open Declarations in
   let uctx = get_abstract_inductive_universes mib.mind_universes in
   let inst = Univ.UContext.instance uctx in
@@ -64,14 +71,34 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
     in
     let indty = Inductive.type_of_inductive ((mib,oib),inst) in
     let indty = quote_term env indty in
+    let indices, pars =
+    let ctx = oib.mind_arity_ctxt in
+      CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx
+    in
+    let indices = quote_rel_context (push_rel_context pars env) indices in 
+    let indty = quote_term env indty in
+    let indsort = Q.quote_sort (inductive_sort oib) in      
     let (reified_ctors,acc) =
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->
           Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                       bool !Quoter.opt_hnf_ctor_types)) ;
           let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
+          let ctx, concl = ty in
+          let ty = Term.it_mkProd_or_LetIn concl ctx in
+          let argctx, parsctx = 
+            CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 
+          in
+          let envcstr = push_rel_context parsctx envind in
+          let qargctx = quote_rel_context envcstr argctx in
+          let qindices = 
+            let hd, args = Constr.decompose_appvect concl in
+            let pars, args = CArray.chop mib.mind_nparams args in
+            let envconcl = push_rel_context argctx envcstr in
+            List.map (quote_term envconcl) args
+          in           
           let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
-          ((quote_ident nm, ty, quote_int ar) :: ls, acc))
+          ((quote_ident nm, qargctx, Array.to_list qindices, ty, quote_int ar) :: ls, acc))
         ([],acc) named_ctors
     in
     let projs, acc =
@@ -92,7 +119,8 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
     in
     let relevance = quote_relevance oib.mind_relevance in
     let sf = quote_sort_family oib.mind_kelim in
-    (quote_ident oib.mind_typename, indty, sf, (List.rev reified_ctors), projs, relevance) :: ls, acc)
+    (quote_ident oib.mind_typename, indty, indsort, indices, sf, 
+    (List.rev reified_ctors), projs, relevance) :: ls, acc)
         ([],env) (Array.to_list mib.mind_packets)
   in
   let nparams = quote_int mib.mind_nparams in
@@ -101,7 +129,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
   let bodies = List.map mk_one_inductive_body (List.rev ls) in
   let finite = quote_mind_finiteness mib.mind_finite in
   let variance = Option.map (CArray.map_to_list quote_variance) mib.mind_variance in
-  mk_mutual_inductive_body finite nparams paramsctx bodies uctx variance
+  mk_mutual_inductive_body finite nparams paramsctx bodies uctx variance*)
 
 let to_mie (x : Ast0.mutual_inductive_entry) : Plugin_core.mutual_inductive_entry =
   failwith "to_mie"
@@ -118,10 +146,10 @@ let get_constant_body b =
   | Primitive _ -> failwith "Primitives not supported by TemplateCoq"
 
 (* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
-let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.constant_body =
+let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.Env.constant_body =
   let open Declarations in
   let {const_body = body; const_type = typ; const_universes = univs} = cd in
-  Ast0.({cst_type = quote_term env typ;
+  Ast0.Env.({cst_type = quote_term env typ;
          cst_body = Option.map (quote_term env) (get_constant_body body);
          cst_universes = quote_universes_decl univs})
 
@@ -148,10 +176,10 @@ let to_constr (t : Ast0.term) : Constr.t =
 let tmOfConstr (t : Constr.t) : Ast0.term tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (quote_term env t))
 
-let tmOfMib (ti : Names.MutInd.t) (t : Plugin_core.mutual_inductive_body) : Ast0.mutual_inductive_body tm =
+let tmOfMib (ti : Names.MutInd.t) (t : Plugin_core.mutual_inductive_body) : Ast0.Env.mutual_inductive_body tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_mib env ti t))
 
-let tmOfConstantBody (t : Plugin_core.constant_body) : Ast0.constant_body tm =
+let tmOfConstantBody (t : Plugin_core.constant_body) : Ast0.Env.constant_body tm =
   Plugin_core.with_env_evm (fun env _ -> tmReturn (of_constant_body env t))
 
 (*

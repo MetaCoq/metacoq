@@ -67,15 +67,15 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tConstruct : forall (kn : inductive) (k : nat) (n : Instance.t),
         isPropositional Σ kn false ->
         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
-  | erases_tCase1 : forall (ind : inductive) (npar : nat) (T c : term)
-                      (brs : list (nat × term)) (c' : E.term)
-                      (brs' : list (nat × E.term)),
-                    Informative Σ ind ->
-                    Σ;;; Γ |- c ⇝ℇ c' ->
-                    All2
-                      (fun (x : nat × term) (x' : nat × E.term) =>
-                       Σ;;; Γ |- snd x ⇝ℇ snd x' × fst x = fst x') brs brs' ->
-                    Σ;;; Γ |- tCase (ind, npar) T c brs ⇝ℇ E.tCase (ind, npar) c' brs'
+  | erases_tCase1 (ci : case_info) (p : predicate term) (c : term)
+        (brs : list (branch term)) (c' : E.term)
+        (brs' : list (nat × E.term)) :
+        Informative Σ ci.(ci_ind) ->
+        Σ;;; Γ |- c ⇝ℇ c' ->
+        All2
+          (fun (x : branch term) (x' : nat × E.term) =>
+          Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ snd x' × #|bcontext x| = fst x') brs brs' ->
+        Σ;;; Γ |- tCase ci p c brs ⇝ℇ E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'
   | erases_tProj : forall (p : (inductive × nat) × nat) (c : term) (c' : E.term),
                    let ind := fst (fst p) in
                    Informative Σ ind ->
@@ -85,7 +85,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                     (fun (d : def term) (d' : E.def E.term) =>
                      d.(dname).(binder_name) = E.dname d'
                      × rarg d = E.rarg d'
-                       × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
+                       × Σ;;; Γ ,,, fix_context mfix |-
                          dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                   Σ;;; Γ |- tFix mfix n ⇝ℇ E.tFix mfix' n
   | erases_tCoFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
@@ -93,7 +93,7 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
                       (fun (d : def term) (d' : E.def E.term) =>
                       d.(dname).(binder_name) = E.dname d'
                        × rarg d = E.rarg d'
-                         × Σ;;; Γ ,,, PCUICLiftSubst.fix_context mfix |-
+                         × Σ;;; Γ ,,, fix_context mfix |-
                            dbody d ⇝ℇ E.dbody d') mfix mfix' ->
                     Σ;;; Γ |- tCoFix mfix n ⇝ℇ E.tCoFix mfix' n
   | erases_box : forall t : term, isErasable Σ Γ t -> Σ;;; Γ |- t ⇝ℇ E.tBox where "Σ ;;; Γ |- s ⇝ℇ t" := (erases Σ Γ s t).
@@ -126,13 +126,13 @@ Lemma erases_forall_list_ind
       (Hconstruct : forall Γ kn k n,
           isPropositional Σ kn false ->
           P Γ (tConstruct kn k n) (E.tConstruct kn k))
-      (Hcase : forall Γ ind npar T c brs c' brs',
-          PCUICElimination.Informative Σ ind ->
+      (Hcase : forall Γ ci p c brs c' brs',
+          PCUICElimination.Informative Σ ci.(ci_ind) ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
-          All2 (fun x x' => Σ;;; Γ |- x.2 ⇝ℇ x'.2 × x.1 = x'.1) brs brs' ->
-          Forall2 (fun br br' => P Γ br.2 br'.2) brs brs' ->
-          P Γ (tCase (ind, npar) T c brs) (E.tCase (ind, npar) c' brs'))
+          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 × #|bcontext x| = x'.1) brs brs' ->
+          Forall2 (fun br br' => P (Γ ,,, inst_case_branch_context p br) (bbody br) br'.2) brs brs' ->
+          P Γ (tCase ci p c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
       (Hproj : forall Γ p c c',
           let ind := p.1.1 in
           PCUICElimination.Informative Σ ind ->
@@ -144,10 +144,10 @@ Lemma erases_forall_list_ind
             (fun d d' =>
                (dname d).(binder_name) = E.dname d' ×
                rarg d = E.rarg d' ×
-               Σ;;; app_context Γ (PCUICLiftSubst.fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
+               Σ;;; app_context Γ (fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
             mfix mfix' ->
           Forall2 (fun d d' =>
-                     P (app_context Γ (PCUICLiftSubst.fix_context mfix))
+                     P (app_context Γ (fix_context mfix))
                        (dbody d)
                        (EAst.dbody d') ) mfix mfix' ->
           P Γ (tFix mfix n) (E.tFix mfix' n))
@@ -156,10 +156,10 @@ Lemma erases_forall_list_ind
             (fun d d' =>
                (dname d).(binder_name) = E.dname d' ×
                rarg d = E.rarg d' ×
-               Σ;;; app_context Γ (PCUICLiftSubst.fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
+               Σ;;; app_context Γ (fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
             mfix mfix' ->
           Forall2 (fun d d' =>
-                     P (app_context Γ (PCUICLiftSubst.fix_context mfix))
+                     P (app_context Γ (fix_context mfix))
                        (dbody d)
                        (EAst.dbody d') ) mfix mfix' ->
           P Γ (tCoFix mfix n) (E.tCoFix mfix' n))
@@ -213,7 +213,7 @@ Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' 
   end.
 
 Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
-  Forall2 (fun '((i,t), n) '(i', n') => n = n' /\ i = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
+  Forall2 (fun cdecl '(i', n') => cdecl.(cstr_arity) = n' /\ cdecl.(cstr_name) = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
   Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
@@ -266,7 +266,7 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' arg ->
     erases_deps Σ Σ' (E.tApp hd arg)
 | erases_deps_tConst kn cb cb' :
-    PCUICTyping.declared_constant Σ kn cb ->
+    declared_constant Σ kn cb ->
     ETyping.declared_constant Σ' kn cb' ->
     erases_constant_body (Σ, cst_universes cb) cb cb' ->
     (forall body, E.cst_body cb' = Some body -> erases_deps Σ Σ' body) ->
@@ -274,15 +274,15 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
 | erases_deps_tConstruct ind c :
     erases_deps Σ Σ' (E.tConstruct ind c)
 | erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
-    PCUICTyping.declared_inductive Σ mdecl (fst p) idecl ->
-    ETyping.declared_inductive Σ' mdecl' (fst p) idecl' ->
+    declared_inductive Σ (fst p) mdecl idecl ->
+    ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' discr ->
     Forall (fun br => erases_deps Σ Σ' br.2) brs ->
     erases_deps Σ Σ' (E.tCase p discr brs)
 | erases_deps_tProj p mdecl idecl mdecl' idecl' t :
-    PCUICTyping.declared_inductive Σ mdecl p.1.1 idecl ->
-    ETyping.declared_inductive Σ' mdecl' p.1.1 idecl' ->
+    declared_inductive Σ p.1.1 mdecl idecl ->
+    ETyping.declared_inductive Σ' p.1.1 mdecl' idecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' t ->
     erases_deps Σ Σ' (E.tProj p t)

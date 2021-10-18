@@ -176,7 +176,7 @@ Proof.
   - now specialize (IHX _ _ H').
 Qed.
 
-Hint Constructors context_subst : core.
+#[global] Hint Constructors context_subst : core.
 
 Lemma context_subst_app {ctx ctx' args s} : 
   context_subst (ctx ++ ctx') args s -> 

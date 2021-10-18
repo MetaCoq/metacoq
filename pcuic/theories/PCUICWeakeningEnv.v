@@ -180,7 +180,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
-Hint Resolve weakening_env_declared_constant : extends.
+#[global] Hint Resolve weakening_env_declared_constant : extends.
 
 Lemma weakening_env_declared_minductive `{CF:checker_flags}:
   forall (Σ : global_env) ind decl,
@@ -190,7 +190,7 @@ Proof.
   intros Σ cst decl H0 Σ' X2 H2.
   eapply extends_lookup; eauto.
 Qed.
-Hint Resolve weakening_env_declared_minductive : extends.
+#[global] Hint Resolve weakening_env_declared_minductive : extends.
 
 Lemma weakening_env_declared_inductive:
   forall (H : checker_flags) (Σ : global_env) ind mdecl decl,
@@ -199,7 +199,7 @@ Lemma weakening_env_declared_inductive:
 Proof.
   intros H Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split; eauto with extends.
 Qed.
-Hint Resolve weakening_env_declared_inductive : extends.
+#[global] Hint Resolve weakening_env_declared_inductive : extends.
 
 Lemma weakening_env_declared_constructor :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl decl,
@@ -210,7 +210,7 @@ Proof.
   intros H Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
-Hint Resolve weakening_env_declared_constructor : extends.
+#[global] Hint Resolve weakening_env_declared_constructor : extends.
 
 Lemma weakening_env_declared_projection :
   forall (H : checker_flags) (Σ : global_env) ind mdecl idecl cdecl pdecl,
@@ -221,8 +221,7 @@ Proof.
   intros H Σ cst mdecl idecl cdecl pdecl [Hidecl Hcdecl] Σ' X2 H2.
   split; eauto with extends.
 Qed.
-Hint Resolve weakening_env_declared_projection : extends.
-
+#[global] Hint Resolve weakening_env_declared_projection : extends.
 
 Lemma extends_wf_local `{checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
@@ -406,7 +405,7 @@ Proof.
 Qed.
 
 #[global]
-Hint Resolve @weakening_env_conv_ctx : extends.
+Hint Resolve weakening_env_conv_ctx : extends.
 
 Lemma weakening_env_cumul_ctx {cf} {Σ Σ' φ Γ Δ} :
   wf Σ' ->
@@ -419,7 +418,7 @@ Proof.
   now eapply weakening_env_cumul_decls.
 Qed.
 #[global]
-Hint Resolve @weakening_env_cumul_ctx : extends.
+Hint Resolve weakening_env_cumul_ctx : extends.
 
 Lemma weakening_env_is_allowed_elimination `{CF:checker_flags} Σ Σ' φ u allowed :
   wf Σ' -> extends Σ Σ' ->

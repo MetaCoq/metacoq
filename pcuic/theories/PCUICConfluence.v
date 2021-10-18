@@ -1703,7 +1703,7 @@ Proof.
   now setoid_rewrite Nat.add_0_r.
 Qed.
 
-Hint Extern 4 (is_true (on_free_vars_ctx _ (_ ,,, _))) =>
+#[global] Hint Extern 4 (is_true (on_free_vars_ctx _ (_ ,,, _))) =>
   rewrite on_free_vars_ctx_app : fvs.
 
 Lemma on_free_vars_ctx_inst_case_context_xpredT (Γ : list context_decl) (pars : list term)
@@ -1766,24 +1766,24 @@ Ltac inv_on_free_vars_xpredT :=
     rewrite -> test_context_k_closed_on_free_vars_ctx in H
   end.
 
-Hint Extern 4 => progress (unfold PCUICCases.inst_case_predicate_context) : fvs.
-Hint Extern 4 => progress (unfold PCUICCases.inst_case_branch_context) : fvs.
-Hint Resolve on_free_vars_ctx_closed_xpredT : fvs.
-Hint Resolve on_ctx_free_vars_snoc_ass on_ctx_free_vars_snoc_def : fvs.
-Hint Resolve red1_on_free_vars red_on_free_vars : fvs.
-Hint Resolve pred1_on_free_vars pred1_on_ctx_free_vars : fvs.
-Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
-Hint Extern 3 (is_true (on_ctx_free_vars xpredT _)) =>
+#[global] Hint Extern 4 => progress (unfold PCUICCases.inst_case_predicate_context) : fvs.
+#[global] Hint Extern 4 => progress (unfold PCUICCases.inst_case_branch_context) : fvs.
+#[global] Hint Resolve on_free_vars_ctx_closed_xpredT : fvs.
+#[global] Hint Resolve on_ctx_free_vars_snoc_ass on_ctx_free_vars_snoc_def : fvs.
+#[global] Hint Resolve red1_on_free_vars red_on_free_vars : fvs.
+#[global] Hint Resolve pred1_on_free_vars pred1_on_ctx_free_vars : fvs.
+#[global] Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
+#[global] Hint Extern 3 (is_true (on_ctx_free_vars xpredT _)) =>
   rewrite on_ctx_free_vars_xpredT_snoc : fvs.
-Hint Extern 3 (is_true (on_free_vars_ctx (shiftnP _ xpredT) _)) =>
+#[global] Hint Extern 3 (is_true (on_free_vars_ctx (shiftnP _ xpredT) _)) =>
   rewrite shiftnP_xpredT : fvs.
-Hint Resolve on_ctx_free_vars_inst_case_context_xpredT : fvs.
-Hint Resolve on_ctx_free_vars_fix_context_xpredT : fvs.
-Hint Resolve on_free_vars_ctx_fix_context_xpredT : fvs.
-Hint Resolve on_free_vars_ctx_inst_case_context_xpredT : fvs.
-Hint Extern 3 (is_true (_ && _)) => apply/andP; idtac : fvs.
-Hint Extern 3 (is_true (on_free_vars (shiftnP _ xpredT) _)) => rewrite shiftnP_xpredT : fvs.
-Hint Extern 4 (is_true (on_ctx_free_vars (shiftnP _ xpred0) _)) => 
+#[global] Hint Resolve on_ctx_free_vars_inst_case_context_xpredT : fvs.
+#[global] Hint Resolve on_ctx_free_vars_fix_context_xpredT : fvs.
+#[global] Hint Resolve on_free_vars_ctx_fix_context_xpredT : fvs.
+#[global] Hint Resolve on_free_vars_ctx_inst_case_context_xpredT : fvs.
+#[global] Hint Extern 3 (is_true (_ && _)) => apply/andP; idtac : fvs.
+#[global] Hint Extern 3 (is_true (on_free_vars (shiftnP _ xpredT) _)) => rewrite shiftnP_xpredT : fvs.
+#[global] Hint Extern 4 (is_true (on_ctx_free_vars (shiftnP _ xpred0) _)) => 
   rewrite on_free_vars_ctx_on_ctx_free_vars : fvs.
 
 Lemma on_free_vars_ctx_snoc_ass P Γ na t :
@@ -1805,7 +1805,7 @@ Proof.
   rewrite on_free_vars_ctx_snoc onΓ /=; eauto with fvs.
 Qed.
 
-Hint Resolve on_free_vars_ctx_snoc_ass on_free_vars_ctx_snoc_def : fvs.
+#[global] Hint Resolve on_free_vars_ctx_snoc_ass on_free_vars_ctx_snoc_def : fvs.
 
 Section RedPred.
   Context {cf : checker_flags}.
@@ -2434,16 +2434,16 @@ Section PredRed.
 
 End PredRed.
 
-Hint Resolve on_free_vars_ctx_any_xpredT : fvs.
+#[global] Hint Resolve on_free_vars_ctx_any_xpredT : fvs.
 
-Hint Extern 4 (is_true (on_ctx_free_vars xpredT _)) =>
+#[global] Hint Extern 4 (is_true (on_ctx_free_vars xpredT _)) =>
   rewrite on_ctx_free_vars_xpredT : fvs.
 
 Lemma on_free_vars_any_xpredT P t : on_free_vars P t -> on_free_vars xpredT t.
 Proof.
   apply on_free_vars_impl => //.
 Qed.
-Hint Resolve on_free_vars_any_xpredT : fvs.
+#[global] Hint Resolve on_free_vars_any_xpredT : fvs.
 
 Generalizable Variables A B R S.
 

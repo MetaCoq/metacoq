@@ -1368,7 +1368,7 @@ Proof.
       * inversion H.
         rewrite nth_error_map E. cbn.
         destruct d. cbn in *. cbn in *; try congruence.
-        repeat f_equal.
+        f_equal. f_equal. 
         now rewrite subst_instance_subst fix_subst_instance_subst.
       * inversion H.
     + unfold is_constructor in *.
@@ -1378,12 +1378,12 @@ Proof.
   - cbn. rewrite !subst_instance_mkApps.
     unfold unfold_cofix in *. destruct (nth_error mfix idx) eqn:E.
     + inversion H.
-      econstructor. fold subst_instance.
+      econstructor. fold subst_instance_constr.
       unfold unfold_cofix.
       rewrite nth_error_map E. cbn.
       rewrite subst_instance_subst.
       now rewrite cofix_subst_instance_subst.
-    + econstructor. fold subst_instance.
+    + cbn.
       inversion H.
   - cbn. unfold unfold_cofix in *.
     destruct nth_error eqn:E; inversion H.
@@ -1435,7 +1435,6 @@ Proof.
     red. split; cbn; eauto.
     rewrite subst_instance_app in r0.
     now rewrite <- (fix_context_subst_instance u mfix0).
-    Grab Existential Variables. all:repeat econstructor.
 Qed.
 
 Lemma subst_instance_equality (Σ : global_env_ext) Γ u A B univs :

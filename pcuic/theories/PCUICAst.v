@@ -387,7 +387,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (closedn k) (closedn k')) mfix
-  | x => true
+  | _ => true
   end.
 
 Section fix_test.
@@ -424,7 +424,7 @@ Fixpoint nlict (t : term) : bool :=
     List.forallb (test_def nlict nlict) mfix
   | tCoFix mfix idx =>
     List.forallb (test_def nlict nlict) mfix
-  | x => true
+  | _ => true
   end.
 
 Notation closed t := (closedn 0 t).
@@ -450,7 +450,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   | tCoFix mfix idx =>
     let k' := List.length mfix + k in
     List.forallb (test_def (noccur_between k n) (noccur_between k' n)) mfix
-  | x => true
+  | _ => true
   end.
     
 (** * Universe substitution
@@ -507,7 +507,7 @@ Fixpoint closedu (k : nat) (t : term) : bool :=
     forallb (test_def (closedu k) (closedu k)) mfix
   | tCoFix mfix idx =>
     forallb (test_def (closedu k) (closedu k)) mfix
-  | x => true
+  | _ => true
   end.
 
 Module PCUICTerm <: Term.
@@ -961,7 +961,7 @@ Qed.
 
 Lemma id_id {A} : @id A =1 id.
 Proof. now intros x. Qed.
-#[global] Hint Resolve @id_id : core.
+#[global] Hint Resolve id_id : core.
 
 Lemma map_branch_id_spec (f : term -> term) (x : branch term) :
   f (bbody x) = (bbody x) ->

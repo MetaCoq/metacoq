@@ -1084,4 +1084,4 @@ Section Lemmata.
   
 End Lemmata.
 
-Hint Resolve isType_welltyped : pcuic.
+#[global] Hint Resolve isType_welltyped : pcuic.

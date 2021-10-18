@@ -606,7 +606,7 @@ Lemma binder_anonymize n : eq_binder_annot n (anonymize n).
 Proof. destruct n; reflexivity. Qed.
 #[global]
 Hint Resolve binder_anonymize : core.
-Hint Constructors compare_decls : core.
+#[global] Hint Constructors compare_decls : core.
 Local Hint Unfold map_decl_anon : core.
 (* 
 Lemma eq_term_upto_univ_tm_nl :
@@ -813,7 +813,7 @@ Proof.
   induction 1 in n |- *; simpl; trivial.
   intros Heq. rewrite Heq; f_equal; auto.
 Qed.
-Hint Resolve All_mapi_spec : all.
+#[global] Hint Resolve All_mapi_spec : all.
 
 Lemma nl_lift :
   forall n k t,
@@ -1588,7 +1588,7 @@ Proof.
   intros.
   induction X; simpl; constructor; eauto; simpl; now eapply nl_conv_decls in p.
 Qed.
-Hint Resolve @nl_conv_ctx : nl.
+#[global] Hint Resolve nl_conv_ctx : nl.
 
 Lemma nl_cumul_ctx {cf} {Σ Γ Δ} :
   cumul_context Σ Γ Δ ->
@@ -1598,7 +1598,7 @@ Proof.
   induction X; simpl; constructor; eauto; simpl; now 
     (eapply nl_conv_decls in p || eapply nl_cumul_decls in p).
 Qed.
-Hint Resolve @nl_cumul_ctx : nl.
+#[global] Hint Resolve nl_cumul_ctx : nl.
 
 Lemma nl_check_one_fix d : check_one_fix d = check_one_fix (map_def_anon nl nl d).
 Proof.

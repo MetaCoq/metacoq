@@ -74,7 +74,7 @@ Proof.
   all:now rewrite !subst_empty.
 Qed.
 
-Hint Resolve subslet_ass_tip subslet_def_tip : pcuic. 
+#[global] Hint Resolve subslet_ass_tip subslet_def_tip : pcuic. 
 
 Lemma subslet_nth_error {cf:checker_flags} {Σ Γ s Δ decl n} :
   subslet Σ Γ s Δ ->

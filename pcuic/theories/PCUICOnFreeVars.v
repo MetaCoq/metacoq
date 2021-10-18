@@ -299,7 +299,7 @@ Definition nocc_between k n t :=
 
 Definition noccur_shift p k := fun i => (i <? k) || p (i - k).
 
-Hint Resolve All_forallb_eq_forallb : all.
+#[global] Hint Resolve All_forallb_eq_forallb : all.
 
 Definition strengthenP k n (p : nat -> bool) := 
   fun i => if i <? k then p i else 
@@ -1266,7 +1266,7 @@ Proof.
   rewrite /on_free_vars_decl /= /test_decl /=. rtoProp; tauto.
 Qed.
 
-Hint Resolve on_free_vars_vass on_free_vars_vdef : fvs.
+#[global] Hint Resolve on_free_vars_vass on_free_vars_vdef : fvs.
 
 Inductive All_fold {P : context -> context_decl -> Type}
             : forall (Γ : context), Type :=

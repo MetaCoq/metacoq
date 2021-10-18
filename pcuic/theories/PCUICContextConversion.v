@@ -377,7 +377,7 @@ Definition inj_open {Γ : closed_context} (t : term) (o : on_free_vars (shiftnP 
   exist t o.
 Arguments inj_open {Γ} & t o.
 
-Hint Resolve red_ctx_on_free_vars : fvs.
+#[global] Hint Resolve red_ctx_on_free_vars : fvs.
 
 Lemma red_ctx_on_free_vars_term {Σ P Γ Γ' t} :
   red_ctx Σ Γ Γ' -> 
@@ -386,7 +386,7 @@ Lemma red_ctx_on_free_vars_term {Σ P Γ Γ' t} :
 Proof.
   intros r. now rewrite (All2_fold_length r).
 Qed.
-Hint Resolve red_ctx_on_free_vars_term : fvs.
+#[global] Hint Resolve red_ctx_on_free_vars_term : fvs.
 
 Instance closed_red_trans Σ Γ : Transitive (closed_red Σ Γ).
 Proof.
@@ -1226,7 +1226,7 @@ Section ContextConversion.
   
 End ContextConversion.
 
-Hint Resolve isType_open wf_local_closed_context : fvs.
+#[global] Hint Resolve isType_open wf_local_closed_context : fvs.
 
 #[global]
 Hint Resolve conv_ctx_refl' : pcuic.
@@ -1247,7 +1247,7 @@ Hint Resolve conv_ctx_refl' : pcuic.
 (*     constructor; auto. *)
 (* Qed. *)
 
-Hint Constructors conv_decls : pcuic.
+#[global] Hint Constructors conv_decls : pcuic.
 
 (* Hint Resolve conv_ctx_refl' cumul_ctx_refl' : pcuic. *)
 (* Hint Constructors conv_decls cumul_decls : pcuic. *)
@@ -1329,7 +1329,7 @@ Proof.
     constructor; reflexivity.
 Qed.
 
-Hint Extern 4 (eq_term_upto_univ _ _ _ _ _) => reflexivity : pcuic.
+#[global] Hint Extern 4 (eq_term_upto_univ _ _ _ _ _) => reflexivity : pcuic.
 
 Axiom fix_guard_context_cumulativity : forall {cf:checker_flags} Σ Γ Γ' mfix,
   cumul_context Σ Γ' Γ ->
@@ -1410,7 +1410,7 @@ Proof.
   now intros o ->.
 Qed.
 
-Hint Extern 4 (is_true (on_free_vars_decl (shiftnP _ xpred0) _)) =>
+#[global] Hint Extern 4 (is_true (on_free_vars_decl (shiftnP _ xpred0) _)) =>
   eapply on_free_vars_decl_eq; [eassumption|len; lia] : fvs.
 
 Lemma context_equality_false_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
@@ -1748,14 +1748,14 @@ Lemma closed_context_cumul_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} :
 Proof.
   now move/context_equality_forget.
 Qed.
-Hint Resolve closed_context_cumul_cumul : pcuic.
+#[global] Hint Resolve closed_context_cumul_cumul : pcuic.
 
 Lemma closed_context_conv_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
   Σ ⊢ Γ = Γ' -> conv_context Σ Γ Γ'.
 Proof.
   now move/context_equality_forget.
 Qed.
-Hint Resolve closed_context_conv_conv : pcuic.
+#[global] Hint Resolve closed_context_conv_conv : pcuic.
 
 Lemma closed_context_cumulativity {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ {le t T Γ'} :
   Σ ;;; Γ |- t : T ->
@@ -1782,7 +1782,7 @@ Proof.
   eapply context_cumulativity_prop; eauto.
 Qed.
 
-Hint Resolve wf_local_closed_context : fvs.
+#[global] Hint Resolve wf_local_closed_context : fvs.
 
 Lemma wf_conv_context_closed {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
   conv_context Σ Γ Γ' -> 

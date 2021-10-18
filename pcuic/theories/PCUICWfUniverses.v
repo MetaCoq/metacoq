@@ -1186,7 +1186,7 @@ Qed.
 End CheckerFlags.
 
 Arguments wf_universe_reflect {Σ u}.
-Hint Resolve @wf_universe_type1 @wf_universe_super @wf_universe_sup @wf_universe_product : pcuic.
+#[global] Hint Resolve wf_universe_type1 wf_universe_super wf_universe_sup wf_universe_product : pcuic.
 
 #[global]
 Hint Extern 4 (wf_universe _ ?u) => 

@@ -334,7 +334,7 @@ Record wf_arity_spine {cf:checker_flags} Σ Γ T args T' :=
 { wf_arity_spine_wf : isType Σ Γ T;
   wf_arity_spine_spine : arity_spine Σ Γ T args T' }.
 
-Hint Resolve isType_wf_local : pcuic.
+#[global] Hint Resolve isType_wf_local : pcuic.
 
 Lemma context_subst_subst Δ inst0 s Γ inst s'  :
   context_subst Δ inst0 s ->
@@ -1813,8 +1813,6 @@ Proof.
 - specialize (X (Γ ,,, Δ)  (Some t) wf). simpl in X.
   apply X. reflexivity.
 Qed.
-
-Hint Resolve isType_Sort : pcuic.
 
 Section WfEnv.
   Context {cf} {Σ} {wfΣ : wf Σ}.

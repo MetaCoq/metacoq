@@ -159,7 +159,7 @@ Proof.
   * apply (untyped_subslet_ass asspars). now len.
 Qed.
 
-Hint Resolve sq : core.
+#[global] Hint Resolve sq : core.
 
 Lemma conv_cum_alt {cf:checker_flags} {leq} {Σ : global_env_ext} {Γ t t'} (wfΣ : ∥ wf Σ ∥) :
   conv_cum leq Σ Γ t t' <->

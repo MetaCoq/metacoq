@@ -35,7 +35,7 @@ Fixpoint size t : nat :=
   | tProj p c => S (size c)
   | tFix mfix idx => S (mfixpoint_size size mfix)
   | tCoFix mfix idx => S (mfixpoint_size size mfix)
-  | x => 1
+  | _ => 1
   end.
 
 Lemma size_mkApps f l : size (mkApps f l) = size f + list_size size l.

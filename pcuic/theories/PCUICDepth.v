@@ -52,7 +52,7 @@ Fixpoint depth t : nat :=
   | tProj p c => S (depth c)
   | tFix mfix idx => S (mfixpoint_depth_gen depth mfix)
   | tCoFix mfix idx => S (mfixpoint_depth_gen depth mfix)
-  | x => 1
+  | _ => 1
   end.
 
 Notation context_depth := (context_depth_gen depth).

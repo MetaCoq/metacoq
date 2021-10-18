@@ -432,7 +432,7 @@ Proof.
   now rewrite global_variance_empty.
 Qed.
 
-Hint Resolve PCUICSpine.subject_is_open_term PCUICSpine.type_is_open_term : fvs.
+#[global] Hint Immediate PCUICSpine.subject_is_open_term PCUICSpine.type_is_open_term : fvs.
 
 Lemma eq_context_upto_inst_case_context {cf : checker_flags} {Σ : global_env_ext} pars pars' puinst puinst' ctx :
   All2 (eq_term_upto_univ [] (eq_universe Σ) (eq_universe Σ)) pars pars' ->

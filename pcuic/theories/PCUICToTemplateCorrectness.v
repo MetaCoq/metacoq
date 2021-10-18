@@ -1072,7 +1072,7 @@ Proof.
   - destruct p as [? []]; constructor.
 Qed.
 
-Hint Resolve trans_wf : wf.
+#[global] Hint Resolve trans_wf : wf.
 
 Lemma red1_alpha_eq Σ Γ Δ T U : 
   TT.red1 Σ Γ T U ->

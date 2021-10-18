@@ -26,11 +26,10 @@ Proof.
   intros wfs wfΓ.
   eexists; econstructor; eauto.
 Qed.
+#[global] Hint Resolve isType_Sort : pcuic.
 
 Definition wf_typing_spine {cf} {Σ Γ T args T'} :=
   isType Σ Γ T × typing_spine Σ Γ T args T'.
-
-Hint Resolve @isType_Sort : pcuic.
 
 Lemma isArity_it_mkProd_or_LetIn Γ t : isArity t -> isArity (it_mkProd_or_LetIn Γ t).
 Proof.
@@ -275,8 +274,6 @@ Section WfEnv.
     destruct HH as [s H].
     apply inversion_LetIn in H; tas. now destruct H as [s1 [A' [HA [Ht [HB H]]]]].
   Qed.
-
-  Hint Resolve subslet_ass_tip subslet_def_tip : pcuic.
 
   Lemma wf_local_ass {Γ na A} : 
     wf_local Σ Γ ->

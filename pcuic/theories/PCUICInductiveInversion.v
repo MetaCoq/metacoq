@@ -62,7 +62,7 @@ Proof.
   eapply validity. eapply type_Construct; eauto.
 Qed.
 
-Hint Resolve f_equal_nat : arith.
+#[global] Hint Resolve f_equal_nat : arith.
 
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
@@ -479,7 +479,7 @@ Definition R_ind_universes  {cf:checker_flags} (Σ : global_env_ext) ind n i i' 
 Lemma subst_empty_eq k : subst [] k =1 id.
 Proof. intros x; now rewrite subst_empty. Qed.
 
-Hint Constructors subslet : pcuic.
+#[global] Hint Constructors subslet : pcuic.
 
 Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
   inst ind' i' args args' : 
@@ -2549,8 +2549,8 @@ Proof.
     now rewrite -is_closed_ctx_closed. }
 Qed.
 
-Hint Resolve declared_inductive_minductive : core.
-Hint Resolve declared_constructor_inductive : core.
+#[global] Hint Resolve declared_inductive_minductive : core.
+#[global] Hint Resolve declared_constructor_inductive : core.
 
 Lemma into_equality_terms {cf} {Σ} {wfΣ : wf Σ} {Γ l l'} : 
   All2 (conv Σ Γ) l l' ->
@@ -3548,7 +3548,7 @@ Lemma isType_is_open_term {cf} {Σ} {wfΣ : wf Σ} Γ T : isType Σ Γ T -> is_o
 Proof.
   intros [s hs]. now apply subject_is_open_term in hs.
 Qed.
-Hint Resolve isType_is_open_term : pcuic.
+#[global] Hint Immediate isType_is_open_term : pcuic.
 
 Lemma arity_spine_to_extended_list {cf} {Σ} {wfΣ : wf Σ} {Γ Δ} T :
   wf_local Σ (Γ ,,, Δ) ->

@@ -495,7 +495,7 @@ Proof.
   induction Γ'. auto.
   simpl. intros H'; inv H'; eauto.
 Defined.
-Hint Resolve wf_local_app_l : wf.
+#[global] Hint Immediate wf_local_app_l : wf.
 
 Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
   Σ ;;; Γ |- t : T -> wf_local Σ Γ.

@@ -80,8 +80,8 @@ Ltac solve_all_one :=
   intuition eauto 4 with all.
 
 Ltac solve_all := repeat (progress solve_all_one).
-Hint Extern 10 => rewrite !map_branch_map_branch : all.
-Hint Extern 10 => rewrite !map_predicate_map_predicate : all.
+#[global] Hint Extern 10 => rewrite !map_branch_map_branch : all.
+#[global] Hint Extern 10 => rewrite !map_predicate_map_predicate : all.
   
 
 Lemma lookup_env_nil c s : lookup_env [] c = Some s -> False.
@@ -978,7 +978,7 @@ Equations view_sortc (t : term) : view_sort t :=
   view_sortc (tSort s) := view_sort_sort s;
   view_sortc t := view_sort_other t _.
 
-Fixpoint isProd t :=
+Definition isProd t :=
   match t with
   | tProd na A B => true
   | _ => false

@@ -165,14 +165,14 @@ Qed.
 
 Hint Rewrite is_open_term_closed is_closed_ctx_closed : fvs.
 
-Hint Resolve on_free_vars_shiftnP_S : fvs.
+#[global] Hint Resolve on_free_vars_shiftnP_S : fvs.
 Hint Rewrite @on_fvs_prod @on_fvs_lambda @on_fvs_letin : fvs.
 Hint Rewrite @on_free_vars_ctx_snoc : fvs.
-Hint Extern 4 => progress autorewrite with fvs : fvs.
-Hint Resolve closed_red_open_right : fvs.
+#[global] Hint Extern 4 => progress autorewrite with fvs : fvs.
+#[global] Hint Resolve closed_red_open_right : fvs.
 
 Ltac fvs := eauto 10 with fvs.
-Hint Resolve eq_universe_leq_universe : core.
+#[global] Hint Resolve eq_universe_leq_universe : core.
 
 Section ConvCongruences.
   Context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
@@ -1170,8 +1170,8 @@ Section Inversions.
 
 End Inversions.
 
-Hint Resolve closed_red_terms_open_left closed_red_terms_open_right : fvs.
-Hint Resolve equality_terms_open_terms_left equality_terms_open_terms_right : fvs.
+#[global] Hint Resolve closed_red_terms_open_left closed_red_terms_open_right : fvs.
+#[global] Hint Resolve equality_terms_open_terms_left equality_terms_open_terms_right : fvs.
 
 (* Unused... *)
 (*Lemma it_mkProd_or_LetIn_ass_inv {cf : checker_flags} (Σ : global_env_ext) Γ ctx ctx' s s' :

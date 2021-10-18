@@ -151,12 +151,12 @@ Proof.
   - simpl. now rewrite IHo.
 Qed.
 
-Hint Extern 0 (conv_decls _ _ _ _ _) => constructor : pcuic.
-Hint Extern 0 (cumul_decls _ _ _ _ _) => constructor : pcuic.
-Hint Extern 0 (conv_context _ _ _) => constructor : pcuic.
-Hint Extern 0 (cumul_context _ _ _) => constructor : pcuic.
+#[global] Hint Extern 0 (conv_decls _ _ _ _ _) => constructor : pcuic.
+#[global] Hint Extern 0 (cumul_decls _ _ _ _ _) => constructor : pcuic.
+#[global] Hint Extern 0 (conv_context _ _ _) => constructor : pcuic.
+#[global] Hint Extern 0 (cumul_context _ _ _) => constructor : pcuic.
 
-Hint Extern 4 (∑ s : Universe.t, typing _ _ ?T (tSort s)) => 
+#[global] Hint Extern 4 (∑ s : Universe.t, typing _ _ ?T (tSort s)) => 
   match goal with 
   | [ H : isType _ _ T |- _ ] => exact H
   end : pcuic.
@@ -164,11 +164,11 @@ Hint Extern 4 (∑ s : Universe.t, typing _ _ ?T (tSort s)) =>
 Ltac unfold_pcuic := 
   progress (unfold lift_typing, PCUICConversionPar.conv, PCUICConversionPar.cumul, PCUICTypingDef.typing,
   PCUICTypingDef.wf_universe in * ).
-Hint Extern 10 => unfold_pcuic : pcuic.
+#[global] Hint Extern 10 => unfold_pcuic : pcuic.
 
-Hint Resolve red_conv red1_red red_cumul : pcuic.
-Hint Transparent global_env_ext : pcuic.
-Hint Constructors All_local_env All2_fold : pcuic.
+#[global] Hint Resolve red_conv red1_red red_cumul : pcuic.
+#[global] Hint Transparent global_env_ext : pcuic.
+#[global] Hint Constructors All_local_env : pcuic.
 Ltac pcuics := try typeclasses eauto with pcuic.
 
 Lemma declared_projection_declared_constructor {cf}
@@ -847,7 +847,7 @@ Proof.
   now rewrite [shiftnP (S #|Γ|) _]shiftnP_S.
 Qed.
 
-Hint Resolve is_open_term_snoc : fvs.
+#[global] Hint Resolve is_open_term_snoc : fvs.
 
 Ltac forward_keep H :=
   match type of H with
@@ -1257,7 +1257,7 @@ Qed.
 
 Lemma All2_tip {A} {P} (t u : A) : P t u -> All2 P [t] [u].
 Proof. now repeat constructor. Qed.
-Hint Resolve All2_tip : core.
+#[global] Hint Resolve All2_tip : core.
 
 Lemma map2_set_binder_name_expand_lets nas Γ Δ :
   #|nas| = #|Δ| ->

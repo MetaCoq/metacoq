@@ -913,6 +913,7 @@ Proof.
   now eapply leq_term_antisym.
 Qed.
 
+#[global]
 Hint Constructors compare_decls : pcuic.
 
 Local Ltac lih :=
@@ -1913,6 +1914,7 @@ Proof.
     apply eq_term_upto_univ_substs; auto. reflexivity.
 Qed.
 
+#[global]
 Hint Resolve All2_fold_nil : pcuic.
 
 Lemma eq_context_upto_smash_context Σ ctx ctx' x y :

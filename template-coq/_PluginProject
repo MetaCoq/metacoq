@@ -110,8 +110,8 @@ gen-src/mSetProperties.ml
 gen-src/mSetProperties.mli
 gen-src/nat0.ml
 gen-src/nat0.mli
-gen-src/number.ml
-gen-src/number.mli
+gen-src/number0.ml
+gen-src/number0.mli
 gen-src/orderedType0.ml
 gen-src/orderedType0.mli
 gen-src/orders.ml

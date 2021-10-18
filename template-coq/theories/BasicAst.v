@@ -152,7 +152,7 @@ Definition string_of_gref gr : string :=
   end.
 
 Definition kername_eq_dec (k k0 : kername) : {k = k0} + {k <> k0} := Classes.eq_dec k k0.
-Hint Resolve kername_eq_dec : eq_dec.
+#[global] Hint Resolve kername_eq_dec : eq_dec.
 
 Definition gref_eq_dec (gr gr' : global_reference) : {gr = gr'} + {~ gr = gr'} := Classes.eq_dec gr gr'.
 
@@ -318,11 +318,11 @@ Proof.
   now rewrite !H // !H0.
 Qed.
 
-Hint Extern 10 (_ < _)%nat => lia : all.
-Hint Extern 10 (_ <= _)%nat => lia : all.
-Hint Extern 10 (@eq nat _ _) => lia : all.
-Hint Extern 0 (_ = _) => progress f_equal : all.
-Hint Unfold on_snd snd : all.
+#[global] Hint Extern 10 (_ < _)%nat => lia : all.
+#[global] Hint Extern 10 (_ <= _)%nat => lia : all.
+#[global] Hint Extern 10 (@eq nat _ _) => lia : all.
+#[global] Hint Extern 0 (_ = _) => progress f_equal : all.
+#[global] Hint Unfold on_snd snd : all.
 
 Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
   f (snd x) = snd x <->
@@ -330,8 +330,8 @@ Lemma on_snd_eq_id_spec {A B} (f : B -> B) (x : A * B) :
 Proof.
   destruct x; simpl; unfold on_snd; simpl. split; congruence.
 Qed.
-Hint Resolve -> on_snd_eq_id_spec : all.
-Hint Resolve -> on_snd_eq_spec : all.
+#[global] Hint Resolve -> on_snd_eq_id_spec : all.
+#[global] Hint Resolve -> on_snd_eq_spec : all.
 
 Lemma map_def_eq_spec {A B} (f f' g g' : A -> B) (x : def A) :
   f (dtype x) = g (dtype x) ->
@@ -340,7 +340,7 @@ Lemma map_def_eq_spec {A B} (f f' g g' : A -> B) (x : def A) :
 Proof.
   intros. unfold map_def; f_equal; auto.
 Qed.
-Hint Resolve map_def_eq_spec : all.
+#[global] Hint Resolve map_def_eq_spec : all.
 
 Lemma map_def_id_spec {A} (f f' : A -> A) (x : def A) :
   f (dtype x) = (dtype x) ->
@@ -349,7 +349,7 @@ Lemma map_def_id_spec {A} (f f' : A -> A) (x : def A) :
 Proof.
   intros. rewrite (map_def_eq_spec _ _ id id); auto. destruct x; auto.
 Qed.
-Hint Resolve map_def_id_spec : all.
+#[global] Hint Resolve map_def_id_spec : all.
 
 Lemma tfix_map_spec {A B} {P P' : A -> Type} {l} {f f' g g' : A -> B} :
   tFixProp P P' l -> (forall x, P x -> f x = g x) ->

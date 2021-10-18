@@ -131,7 +131,7 @@ Lemma map_predicate_eq_spec {A B} (finst finst' : Instance.t -> Instance.t) (f f
 Proof.
   intros. unfold map_predicate; f_equal; auto.
 Qed.
-Hint Resolve map_predicate_eq_spec : all.
+#[global] Hint Resolve map_predicate_eq_spec : all.
 
 Lemma map_predicate_id_spec {A} finst (f f' : A -> A) (p : predicate A) :
   finst (puinst p) = puinst p ->
@@ -142,7 +142,7 @@ Proof.
   unfold map_predicate.
   intros -> -> ->; destruct p; auto.
 Qed.
-Hint Resolve map_predicate_id_spec : all.
+#[global] Hint Resolve map_predicate_id_spec : all.
 
 Instance map_predicate_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
 Proof.
@@ -260,7 +260,7 @@ Lemma map_branch_eq_spec {A B} (f g : A -> B) (x : branch A) :
 Proof.
   intros. unfold map_branch; f_equal; auto.
 Qed.
-Hint Resolve map_branch_eq_spec : all.
+#[global] Hint Resolve map_branch_eq_spec : all.
 
 Instance map_branch_proper {term} : Proper (`=1` ==> Logic.eq ==> Logic.eq) (@map_branch term term).
 Proof.
@@ -275,7 +275,7 @@ Lemma map_branch_id_spec {A} (f : A -> A) (x : branch A) :
 Proof.
   intros. rewrite (map_branch_eq_spec _ id); auto. destruct x; auto.
 Qed.
-Hint Resolve map_branch_id_spec : all.
+#[global] Hint Resolve map_branch_id_spec : all.
 
 Lemma map_branches_map_branches
       {term term' term''}

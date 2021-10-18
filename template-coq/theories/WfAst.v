@@ -90,7 +90,6 @@ Definition wf_Inv Σ (t : term) : Type :=
 Lemma wf_inv {Σ t} (w : wf Σ t) : wf_Inv Σ t.
 Proof.
   induction w; simpl; eauto; intuition eauto; try constructor.
-  exists mdecl, idecl; split; auto.
 Defined.
 
 Lemma lift_to_list Σ (P : term -> Prop) : (forall t, wf Σ t -> P t) -> forall l, All (wf Σ) l -> Forall P l.

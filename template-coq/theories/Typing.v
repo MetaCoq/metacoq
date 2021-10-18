@@ -524,8 +524,6 @@ Lemma cumul_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t <= t.
   intros. constructor. apply leq_term_refl.
 Defined.
 
-Hint Resolve conv_refl' cumul_refl' : typecheck.
-
 Definition eq_opt_term `{checker_flags} Σ φ (t u : option term) :=
   match t, u with
   | Some t, Some u => eq_term Σ φ t u
@@ -979,7 +977,7 @@ Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
 Proof.
   induction 1; eauto.
 Defined.
-Hint Resolve typing_wf_local : wf.
+#[global] Hint Resolve typing_wf_local : wf.
 
 Lemma type_Prop `{checker_flags} Σ :
   Σ ;;; [] |- tSort Universe.lProp : tSort Universe.type1.
@@ -1022,7 +1020,7 @@ Proof.
   induction Γ'. auto.
   simpl. intros H'; inv H'; eauto.
 Defined.
-Hint Resolve wf_local_app_l : wf.
+#[global] Hint Immediate wf_local_app_l : wf.
 
 Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
@@ -1672,5 +1670,6 @@ Proof.
 Defined.
 
 Definition wf_ext_wf `{checker_flags} Σ : wf_ext Σ -> wf Σ.1 := fst.
+
 #[global]
 Hint Immediate wf_ext_wf : core.

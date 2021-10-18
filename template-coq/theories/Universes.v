@@ -701,7 +701,7 @@ Coercion Universe.t_set : Universe.t0 >-> UnivExprSet.t.
 Declare Scope univ_scope.
 Delimit Scope univ_scope with u.
 
-Notation "⟦ u ⟧_ v" := (Universe.univ_val v u) (at level 0, format "⟦ u ⟧_ v", v ident) : univ_scope.
+Notation "⟦ u ⟧_ v" := (Universe.univ_val v u) (at level 0, format "⟦ u ⟧_ v", v name) : univ_scope.
 
 Ltac u :=
  change LevelSet.elt with Level.t in *;
@@ -1326,7 +1326,7 @@ Definition univ_le_n {cf:checker_flags} n u u' :=
   | _, _ => False
   end.
 
-Notation "x <_ n y" := (univ_le_n n x y) (at level 10, n ident) : univ_scope.
+Notation "x <_ n y" := (univ_le_n n x y) (at level 10, n name) : univ_scope.
 Notation "x < y" := (univ_le_n 1 x y) : univ_scope.
 Notation "x <= y" := (univ_le_n 0 x y) : univ_scope.
 

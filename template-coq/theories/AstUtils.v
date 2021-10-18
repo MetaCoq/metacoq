@@ -280,8 +280,8 @@ Fixpoint decompose_lam_n_assum (Γ : context) n (t : term) : option (context * t
   | 0 => Some (Γ, t)
   | S n =>
     match strip_outer_cast t with
-    | tLambda na A B => decompose_prod_n_assum (Γ ,, vass na A) n B
-    | tLetIn na b bty b' => decompose_prod_n_assum (Γ ,, vdef na b bty) n b'
+    | tLambda na A B => decompose_lam_n_assum (Γ ,, vass na A) n B
+    | tLetIn na b bty b' => decompose_lam_n_assum (Γ ,, vdef na b bty) n b'
     | _ => None
     end
   end.
@@ -418,7 +418,8 @@ Ltac change_Sk :=
     | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
   end.
 
-Hint Extern 10 => progress unfold map_branches_k : all.
+#[global] Hint Extern 10 => progress unfold map_branches_k : all.
+#[global] Hint Extern 10 => rewrite !map_branch_map_branch : all.
 
 Definition tCaseBrsType {A} (P : A -> Type) (l : list (branch A)) :=
   All (fun x => P (bbody x)) l.
@@ -438,7 +439,6 @@ Ltac solve_all_one :=
   intuition eauto 4 with all.
 
 Ltac solve_all := repeat (progress solve_all_one).
-Hint Extern 10 => rewrite !map_branch_map_branch : all.
 
 Ltac nth_leb_simpl :=
   match goal with

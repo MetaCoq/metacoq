@@ -299,7 +299,7 @@ Qed.
 
 Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
-Hint Resolve @eq_binder_annot_refl : core.
+#[global] Hint Resolve eq_binder_annot_refl : core.
 
 Instance eq_binder_annots_refl {A} : CRelationClasses.Equivalence (All2 (@eq_binder_annot A A)).
 Proof.

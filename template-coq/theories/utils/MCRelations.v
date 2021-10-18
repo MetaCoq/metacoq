@@ -55,7 +55,7 @@ Qed.
 
 
 Arguments rt_step {A} {R} {x y}.
-Polymorphic Hint Resolve rt_refl rt_step : core.
+#[global] Polymorphic Hint Resolve rt_refl rt_step : core.
 
 
 Definition clos_rt_monotone {A} (R S : relation A) :

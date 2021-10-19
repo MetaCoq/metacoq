@@ -2,11 +2,9 @@
 From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
-Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
      PCUICWeakening PCUICSubstitution PCUICGeneration PCUICCasesContexts.
-Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.

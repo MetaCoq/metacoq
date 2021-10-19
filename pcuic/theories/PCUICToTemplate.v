@@ -1,12 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Int63 FloatOps FloatAxioms.
+From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases.
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils AstUtils BasicAst Ast.
 Set Warnings "+notation-overridden".
 
-Definition uint63_from_model (i : uint63_model) : Int63.int :=
-  Int63.of_Z (proj1_sig i).
+Definition uint63_from_model (i : uint63_model) : Uint63.int :=
+  Uint63.of_Z (proj1_sig i).
 
 Definition float64_from_model (f : float64_model) : PrimFloat.float :=
   FloatOps.SF2Prim (proj1_sig f).

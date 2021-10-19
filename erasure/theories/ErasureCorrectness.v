@@ -791,7 +791,7 @@ Proof.
   eapply inversion_Case in Hty' as (mdecl' & idecl' & di & indices & [] & c0); auto.
 
   rename ci into ind.
-  assert (mdecl' = mdecl /\ idecl' = idecl) as [-> ->] by admit.
+  assert (mdecl' = mdecl /\ idecl' = idecl) as [-> ->] by todo "inj lemma".
 
   assert (Σ ;;; [] |- mkApps (tConstruct ind c u) args :   mkApps (tInd ind (puinst p)) (pparams p ++ indices)).
   eapply subject_reduction_eval; eauto.
@@ -881,8 +881,8 @@ Proof.
       
     * subst. unfold iota_red in *.
       destruct (nth_error brs c) eqn:Hnth.
-      2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:admit.
-          eapply nth_error_Some_length in H6. cbn in H6. admit. (* lia *) }
+      2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:todo "todo".
+          eapply nth_error_Some_length in H6. cbn in H6. todo "todo". (* lia *) }
       invs e.
       (* rewrite <- nth_default_eq in *. unfold nth_default in *.
        rewrite -> Hnth in *. *)
@@ -908,7 +908,7 @@ Proof.
       eapply erases_deps_mkApps; [now eauto|].
       eapply erases_deps_eval in He_v'; [|now eauto].
       eapply erases_deps_mkApps_inv in He_v' as (? & ?).
-      apply Forall_skipn.
+      apply Forall_skipn.ad
       now eauto.
 
       invs H2.

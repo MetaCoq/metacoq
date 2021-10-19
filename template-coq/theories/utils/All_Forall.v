@@ -415,7 +415,7 @@ Lemma All2i_All_mix_right {A B} {P : B -> Type} {Q : nat -> A -> B -> Type}
       {n} {l : list A} {l' : list B} :
   All P l' -> All2i Q n l l' -> All2i (fun i x y => (Q i x y * P y)%type) n l l'.
 Proof.
-  induction 2; simpl; intros; construActor.
+  induction 2; simpl; intros; constructor.
   inv X; intuition auto.
   apply IHX0. inv X; intuition auto.
 Qed.

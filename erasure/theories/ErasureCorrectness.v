@@ -908,7 +908,7 @@ Proof.
       eapply erases_deps_mkApps; [now eauto|].
       eapply erases_deps_eval in He_v'; [|now eauto].
       eapply erases_deps_mkApps_inv in He_v' as (? & ?).
-      apply Forall_skipn.ad
+      apply Forall_skipn.
       now eauto.
 
       invs H2.

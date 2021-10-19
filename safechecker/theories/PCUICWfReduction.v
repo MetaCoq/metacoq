@@ -78,15 +78,18 @@ Defined.
 (** At least one step of reduction *)
 Definition redp Σ Γ t u := Relation.trans_clos (red1 Σ Γ) t u.
 
+#[global]
 Instance redp_trans Σ Γ : CRelationClasses.Transitive (redp Σ Γ).
 Proof. econstructor 2; eauto. Qed.
 
+#[global]
 Instance redp_red Σ Γ : CRelationClasses.subrelation (redp Σ Γ) (red Σ Γ).
 Proof. 
   intros x y.
   induction 1; solve [econstructor; eauto].
 Qed.
 
+#[global]
 Instance cored_transitive Σ Γ : RelationClasses.Transitive (cored Σ Γ).
 Proof.
   intros x y z.

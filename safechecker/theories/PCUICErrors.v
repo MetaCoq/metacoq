@@ -325,6 +325,7 @@ Inductive typing_result (A : Type) :=
 Global Arguments Checked {A} a.
 Global Arguments TypeError {A} t.
 
+#[global]
 Instance typing_monad : Monad typing_result :=
   {| ret A a := Checked a ;
      bind A B m f :=
@@ -334,6 +335,7 @@ Instance typing_monad : Monad typing_result :=
        end
   |}.
 
+#[global]
 Instance monad_exc : MonadExc type_error typing_result :=
   { raise A e := TypeError e;
     catch A m f :=

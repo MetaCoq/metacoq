@@ -21,12 +21,14 @@ Module PSR := PCUICSafeReduce.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+#[global]
 Instance red_brs_refl Σ p Γ: CRelationClasses.Reflexive (@red_brs Σ p Γ).
 Proof.
   intros brs.
   eapply All2_same; unfold on_Trel; split; reflexivity.
 Qed.
 
+#[global]
 Instance conv_cum_trans {cf leq} {Σ : global_env_ext} {Γ} : wf Σ -> RelationClasses.Transitive (@conv_cum cf leq Σ Γ).
 Proof.
   intros x y z; unfold conv_cum. intros; sq.

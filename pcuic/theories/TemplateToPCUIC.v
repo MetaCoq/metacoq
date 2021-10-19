@@ -1,17 +1,17 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Int63 FloatOps FloatAxioms.
+From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.Template Require Import config utils AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICCases.
 
 Lemma to_Z_bounded_bool (i : Int63.int) : 
-  ((0 <=? φ (i)%int63) && (φ (i)%int63 <? wB))%Z.
+  ((0 <=? Uint63.to_Z i) && (Uint63.to_Z i <? wB))%Z.
 Proof.
-  generalize (to_Z_bounded i).
+  generalize (Uint63.to_Z_bounded i).
   now intros [->%Z.leb_le ->%Z.ltb_lt].
 Qed.
 
 Definition uint63_to_model (i : Int63.int) : uint63_model :=
-  exist _ (Int63.to_Z i) (to_Z_bounded_bool i).
+  exist _ (Uint63.to_Z i) (to_Z_bounded_bool i).
 
 Definition float64_to_model (f : PrimFloat.float) : float64_model :=
   exist _ (FloatOps.Prim2SF f) (FloatAxioms.Prim2SF_valid f).

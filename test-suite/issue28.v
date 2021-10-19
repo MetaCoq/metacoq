@@ -1,4 +1,4 @@
-Require Import MetaCoq.Template.All.
+Require Import MetaCoq.Template.All MetaCoq.Template.Pretty.
 Require Export String List.
 Open Scope string.
 Import ListNotations.
@@ -24,14 +24,18 @@ Definition T :=
 tFix
   [mkdef term (nNamed "f") (tProd (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tInd (mkInd q_unit 0) []]) (tInd (mkInd q_unit 0) []))
      (tLambda (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tRel 0])
-        (tCase ((mkInd q_test 0, 1), Relevant)
-           (tLambda (nNamed "x") (tApp (tInd (mkInd q_test 0) []) [tInd (mkInd q_unit 0) []]) (tInd (mkInd q_unit 0) []))
+        (tCase {|ci_ind := mkInd q_test 0; ci_npar := 1; ci_relevance := Relevant |}
+          {| pparams := [tInd (mkInd q_unit 0) []]; puinst := []; 
+             pcontext := [nNamed "X"];
+             preturn := (tInd (mkInd q_unit 0) []) |}
            (tRel 0)
-           [(1, tLambda (nNamed "x0") (tApp (tInd (mkInd q_test 0) []) [tInd (mkInd q_unit 0) []]) (tApp (tRel 2) [tRel 0]))]))
+           [{| bcontext := [nNamed "x0"]; bbody := (tApp (tRel 2) [tRel 0]) |}]))
      0] 0.
+     
+(* MetaCoq Run (tmEval cbv (print_term (empty_ext []) [] true T) >>= tmPrint).   *)
 Fail MetaCoq Run (tmUnquote T >>= tmPrint).
 
-Fail Let bla := (existT_typed_term (test unit -> unit) (fix f (x : test f) : unit := match x with
+Fail Definition bla := (existT_typed_term (test unit -> unit) (fix f (x : test f) : unit := match x with
                                                                               | test_T _ x0 => f x0
                                                                               end)).
 Fail MetaCoq Run (tmUnquote T >>= tmDefinition "fails").

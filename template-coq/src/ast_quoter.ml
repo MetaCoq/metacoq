@@ -2,6 +2,7 @@ open Names
 open Datatypes
 open BasicAst
 open Ast0
+open Ast0.Env
 open Tm_util
 
 module ExtractedASTBaseQuoter =
@@ -42,7 +43,7 @@ struct
   type quoted_mind_finiteness = recursivity_kind
   type quoted_entry = (constant_entry, quoted_mind_entry) sum option
 
-  type quoted_context_decl = context_decl
+  type quoted_context_decl = Ast0.term context_decl
   type quoted_context = context
   type quoted_one_inductive_body = one_inductive_body
   type quoted_mutual_inductive_body = mutual_inductive_body
@@ -178,8 +179,8 @@ struct
        else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
-  let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
-    let l = constraints_ (Univ.Constraint.elements c) in
+  let quote_univ_constraints (c : Univ.Constraints.t) : quoted_univ_constraints =
+    let l = constraints_ (Univ.Constraints.elements c) in
     Universes0.ConstraintSet.(List.fold_right add l empty)
 
   let quote_variance (v : Univ.Variance.t) =
@@ -196,14 +197,14 @@ struct
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
     (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
-    let levels = List.map quote_nonprop_level (Univ.LSet.elements (Univ.ContextSet.levels uctx)) in
+    let levels = List.map quote_nonprop_level (Univ.Level.Set.elements (Univ.ContextSet.levels uctx)) in
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
   let quote_abstract_univ_context uctx =
-    let names = Univ.AUContext.names uctx in
+    let names = Univ.AbstractContext.names uctx in
     let levels = CArray.map_to_list quote_name names in
-    let constraints = Univ.UContext.constraints (Univ.AUContext.repr uctx) in
+    let constraints = Univ.UContext.constraints (Univ.AbstractContext.repr uctx) in
     (levels, quote_univ_constraints constraints)
 
   let quote_context_decl na b t =
@@ -268,20 +269,33 @@ struct
     let block = List.rev defs in
     Coq_tFix (block, a)
 
-  let mkCase (ind, npar, r) nargs p c brs =
-    let info = ((ind, npar), r) in
-    let branches = List.map2 (fun br nargs ->  (nargs, br)) brs nargs in
-    Coq_tCase (info,p,c,branches)
+  let mkCase (ind, npar, r) (univs, pars, pctx, pret) c brs =
+    let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in
+    let pred = { pparams = Array.to_list pars; 
+                 puinst = univs; 
+                 pcontext = Array.to_list pctx;
+                 preturn = pret } in
+    let branches = List.map (fun (bctx, br) -> { bcontext = Array.to_list bctx; bbody = br }) brs in
+    Coq_tCase (info,pred,c,branches)
+
   let mkProj p c = Coq_tProj (p,c)
 
 
   let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
-  let mk_one_inductive_body (id, ty, kel, ctr, proj, relevance) =
-    let ctr = List.map (fun (a, b, c) -> ((a, b), c)) ctr in
+  let mk_one_inductive_body (id, indices, sort, ty, kel, ctr, proj, relevance) =
+    let ctr = List.map (fun (name, args, indices, ty, arity) -> 
+      { cstr_name = name; 
+        cstr_args = args;
+        cstr_indices = indices;
+        cstr_type = ty;
+        cstr_arity = arity }) ctr in
     { ind_name = id; ind_type = ty;
-      ind_kelim = kel; ind_ctors = ctr;
+      ind_indices = indices;
+      ind_sort = sort;
+      ind_kelim = kel; 
+      ind_ctors = ctr;
       ind_projs = proj; ind_relevance = relevance }
 
   let mk_mutual_inductive_body finite npars params inds uctx variance =

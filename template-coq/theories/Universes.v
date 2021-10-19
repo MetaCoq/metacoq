@@ -335,7 +335,7 @@ Module UnivExprSetProp := WPropertiesOn UnivExpr UnivExprSet.
 
 (* We have decidable equality w.r.t leibniz equality for sets of levels.
   This means universes also have a decidable equality. *)
-Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t.
+#[global] Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t.
 Proof.
   intros p p'.
   destruct (UnivExprSet.eq_dec p p').
@@ -355,14 +355,14 @@ Module Universe.
   
   (** This needs a propositional UIP proof to show that [is_empty = false] is a set *)
   Set Equations With UIP.
-  Instance t0_eqdec : EqDec t0.
+  #[global] Instance t0_eqdec : EqDec t0.
   Proof. eqdec_proof. Qed.
 
   Inductive t_ :=
     lProp | lSProp | lType (_ : t0).
   Derive NoConfusion for t_.
 
-  Instance t_eqdec : EqDec t_.
+  #[global] Instance t_eqdec : EqDec t_.
   Proof. eqdec_proof. Qed.
   
   Definition t := t_.
@@ -701,7 +701,7 @@ Coercion Universe.t_set : Universe.t0 >-> UnivExprSet.t.
 Declare Scope univ_scope.
 Delimit Scope univ_scope with u.
 
-Notation "⟦ u ⟧_ v" := (Universe.univ_val v u) (at level 0, format "⟦ u ⟧_ v", v ident) : univ_scope.
+Notation "⟦ u ⟧_ v" := (Universe.univ_val v u) (at level 0, format "⟦ u ⟧_ v", v name) : univ_scope.
 
 Ltac u :=
  change LevelSet.elt with Level.t in *;
@@ -1198,7 +1198,8 @@ Proof.
   * apply (H x), CS.add_spec; left => //.
   * intros y iny. apply (H y), CS.add_spec; right => //.
 Qed.
-Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
+
+#[global] Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
 Proof.
   intros s s' eqs.
   unfold CS.For_all. split; intros IH x inxs; apply (IH x);
@@ -1328,7 +1329,7 @@ Definition univ_le_n {cf:checker_flags} n u u' :=
   | _, _ => False
   end.
 
-Notation "x <_ n y" := (univ_le_n n x y) (at level 10, n ident) : univ_scope.
+Notation "x <_ n y" := (univ_le_n n x y) (at level 10, n name) : univ_scope.
 Notation "x < y" := (univ_le_n 1 x y) : univ_scope.
 Notation "x <= y" := (univ_le_n 0 x y) : univ_scope.
 
@@ -1674,21 +1675,23 @@ Definition fresh_level : Level.t. exact Level.lSet. Qed.
 
 Class UnivSubst A := subst_instance : Instance.t -> A -> A.
 
+Notation "x @[ u ]" := (subst_instance u x) (at level 3, 
+  format "x @[ u ]").
 
-Instance subst_instance_level : UnivSubst Level.t :=
+#[global] Instance subst_instance_level : UnivSubst Level.t :=
   fun u l => match l with
             Level.lSet | Level.Level _ => l
           | Level.Var n => List.nth n u Level.lSet
           end.
 
-Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
+#[global] Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
   fun u c => (subst_instance_level u c.1.1, c.1.2, subst_instance_level u c.2).
 
-Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
+#[global] Instance subst_instance_cstrs : UnivSubst ConstraintSet.t :=
   fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance_cstr u c))
                                 ctrs ConstraintSet.empty.
 
-Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
+#[global] Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
   fun u e => match e with
           | (Level.lSet, _)
           | (Level.Level _, _) => e
@@ -1699,16 +1702,16 @@ Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
             end
           end.
 
-Instance subst_instance_univ0 : UnivSubst Universe.t0 :=
+#[global] Instance subst_instance_univ0 : UnivSubst Universe.t0 :=
   fun u => Universe.map (subst_instance_level_expr u).
 
-Instance subst_instance_univ : UnivSubst Universe.t :=
+#[global] Instance subst_instance_univ : UnivSubst Universe.t :=
   fun u e => match e with
           | Universe.lProp | Universe.lSProp => e
           | Universe.lType l => Universe.lType (subst_instance u l)
           end.
 
-Instance subst_instance_instance : UnivSubst Instance.t :=
+#[global] Instance subst_instance_instance : UnivSubst Instance.t :=
   fun u u' => List.map (subst_instance_level u) u'.
 
 (** Tests that the term is closed over [k] universe variables *)
@@ -1771,8 +1774,8 @@ Section UniverseClosedSubst.
       apply UnivExprSet.for_all_spec in H; proper. now apply H.
   Qed.
 
-  Lemma closedu_subst_instance_instance u t
-    : closedu_instance 0 t -> subst_instance_instance u t = t.
+  Lemma closedu_subst_instance u t
+    : closedu_instance 0 t -> subst_instance u t = t.
   Proof.
     intro H. apply forall_map_id_spec.
     apply Forall_forall; intros l Hl.
@@ -1784,7 +1787,7 @@ End UniverseClosedSubst.
 
 #[global]
 Hint Resolve closedu_subst_instance_level closedu_subst_instance_level_expr
-     closedu_subst_instance_univ closedu_subst_instance_instance : substu.
+     closedu_subst_instance_univ closedu_subst_instance : substu.
 
 (** Substitution of a universe-closed instance of the right size
     produces a universe-closed term. *)
@@ -1825,8 +1828,8 @@ Section SubstInstanceClosed.
     now apply H.
   Qed.
 
-  Lemma subst_instance_instance_closedu t :
-    closedu_instance #|u| t -> closedu_instance 0 (subst_instance_instance u t).
+  Lemma subst_instance_closedu t :
+    closedu_instance #|u| t -> closedu_instance 0 (subst_instance u t).
   Proof.
     intro H. etransitivity. eapply forallb_map.
     eapply forallb_impl; tea.
@@ -1836,7 +1839,7 @@ End SubstInstanceClosed.
 
 #[global]
 Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
-     subst_instance_univ_closedu subst_instance_instance_closedu : substu.
+     subst_instance_univ_closedu subst_instance_closedu : substu.
 
 
 Definition string_of_level (l : Level.t) : string :=
@@ -1875,8 +1878,12 @@ Definition polymorphic_instance uctx :=
   | Monomorphic_ctx c => Instance.empty
   | Polymorphic_ctx c => fst (snd (AUContext.repr c))
   end.
-
-
+(* todo: duplicate of polymorphic_instance *)
+Definition abstract_instance decl :=
+  match decl with
+  | Monomorphic_ctx _ => Instance.empty
+  | Polymorphic_ctx auctx => UContext.instance (AUContext.repr auctx)
+  end.
 
 Definition print_universe_instance u :=
   match u with

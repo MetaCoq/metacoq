@@ -30,19 +30,35 @@ Inductive ConversionError :=
 | ProdNotConvertibleAnn
     (Γ1 : context) (na : aname) (A1 B1 : term)
     (Γ2 : context) (na' : aname) (A2 B2 : term)
+    
+| ContextNotConvertibleAnn
+    (Γ : context) (decl : context_decl)
+    (Γ' : context) (decl' : context_decl)
+| ContextNotConvertibleType
+    (Γ : context) (decl : context_decl)
+    (Γ' : context) (decl' : context_decl)
+| ContextNotConvertibleBody
+    (Γ : context) (decl : context_decl)
+    (Γ' : context) (decl' : context_decl)
+| ContextNotConvertibleLength
 
 | CaseOnDifferentInd
     (Γ1 : context)
-    (ind : inductive) (par : nat) (p c : term) (brs : list (nat × term))
+    (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
     (Γ2 : context)
-    (ind' : inductive) (par' : nat) (p' c' : term) (brs' : list (nat × term))
+    (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
 
-| CaseBranchNumMismatch
-    (ind : inductive) (par : nat)
-    (Γ : context) (p c : term) (brs1 : list (nat × term))
-    (m : nat) (br : term) (brs2 : list (nat × term))
-    (Γ' : context) (p' c' : term) (brs1' : list (nat × term))
-    (m' : nat) (br' : term) (brs2' : list (nat × term))
+| CasePredParamsUnequalLength
+    (Γ1 : context)
+    (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
+    (Γ2 : context)
+    (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
+    
+| CasePredUnequalUniverseInstances
+    (Γ1 : context)
+    (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
+    (Γ2 : context)
+    (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
 
 | DistinctStuckProj
     (Γ : context) (p : projection) (c : term)
@@ -103,7 +119,8 @@ Inductive type_error :=
 | UndeclaredConstant (c : kername)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
-| NotCumulSmaller (G : universes_graph) (Γ : context) (t u t' u' : term) (e : ConversionError)
+| NotCumulSmaller (le : bool)
+  (G : universes_graph) (Γ : context) (t u t' u' : term) (e : ConversionError)
 | NotConvertible (G : universes_graph) (Γ : context) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
@@ -127,7 +144,7 @@ Definition print_universes_graph (G : universes_graph) :=
   let levels := LevelSet.elements G.1.1 in
   let edges := wGraph.EdgeSet.elements G.1.2 in
   string_of_list print_level levels
-  ^ "\n" ^ string_of_list print_edge edges.
+  ^ nl ^ string_of_list print_edge edges.
 
 Definition string_of_conv_pb (c : conv_pb) : string :=
   match c with
@@ -136,7 +153,17 @@ Definition string_of_conv_pb (c : conv_pb) : string :=
   end.
 
 Definition print_term Σ Γ t :=
-  print_term Σ Γ true false t.
+  let ids := fresh_names Σ [] Γ in
+  print_term Σ true ids true false t.
+
+Definition print_context_decl Σ Γ (decl : context_decl) : string :=
+  fresh_name Σ [] (binder_name (decl_name decl)) (Some (decl_type decl))
+  ^ " : "
+  ^ print_term Σ Γ (decl_type decl)
+  ^ match decl_body decl with
+    | Some body => " := " ^ print_term Σ Γ body
+    | None => ""
+    end.
 
 Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
   match e with
@@ -147,99 +174,117 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       "Constant " ^ string_of_kername c ^
       " common in both terms is not found in the environment."
   | LambdaNotConvertibleAnn Γ1 na A1 t1 Γ2 na' A2 t2 =>
-      "When comparing\n" ^ print_term Σ Γ1 (tLambda na A1 t1) ^
-      "\nand\n" ^ print_term Σ Γ2 (tLambda na' A2 t2) ^
-      "\nbinding annotations are not convertible\n"
+      "When comparing" ^ nl ^ print_term Σ Γ1 (tLambda na A1 t1) ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ2 (tLambda na' A2 t2) ^
+      nl ^ "binding annotations are not convertible" ^ nl
   | LambdaNotConvertibleTypes Γ1 na A1 t1 Γ2 na' A2 t2 e =>
-      "When comparing\n" ^ print_term Σ Γ1 (tLambda na A1 t1) ^
-      "\nand\n" ^ print_term Σ Γ2 (tLambda na' A2 t2) ^
-      "\ntypes are not convertible:\n" ^
+      "When comparing" ^ nl ^ print_term Σ Γ1 (tLambda na A1 t1) ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ2 (tLambda na' A2 t2) ^
+      nl ^ "types are not convertible:" ^ nl ^
       string_of_conv_error Σ e
   | ProdNotConvertibleAnn Γ1 na A1 B1 Γ2 na' A2 B2 =>
-      "When comparing\n" ^ print_term Σ Γ1 (tProd na A1 B1) ^
-      "\nand\n" ^ print_term Σ Γ2 (tProd na' A2 B2) ^
-      "\nbinding annotations are not convertible:\n"
+      "When comparing" ^ nl ^ print_term Σ Γ1 (tProd na A1 B1) ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ2 (tProd na' A2 B2) ^
+      nl ^ "binding annotations are not convertible:" ^ nl
   | ProdNotConvertibleDomains Γ1 na A1 B1 Γ2 na' A2 B2 e =>
-      "When comparing\n" ^ print_term Σ Γ1 (tProd na A1 B1) ^
-      "\nand\n" ^ print_term Σ Γ2 (tProd na' A2 B2) ^
-      "\ndomains are not convertible:\n" ^
+      "When comparing" ^ nl ^ print_term Σ Γ1 (tProd na A1 B1) ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ2 (tProd na' A2 B2) ^
+      nl ^ "domains are not convertible:" ^ nl ^
       string_of_conv_error Σ e
-  | CaseOnDifferentInd Γ ind par p c brs Γ' ind' par' p' c' brs' =>
-      "The two stuck pattern-matching\n" ^
-      print_term Σ Γ (tCase (ind, par) p c brs) ^
-      "\nand\n" ^ print_term Σ Γ' (tCase (ind', par') p' c' brs') ^
-      "\nare done on distinct inductive types."
-  | CaseBranchNumMismatch
-      ind par Γ p c brs1 m br brs2 Γ' p' c' brs1' m' br' brs2' =>
-      "The two stuck pattern-matching\n" ^
-      print_term Σ Γ (tCase (ind, par) p c (brs1 ++ (m,br) :: brs2)) ^
-      "\nand\n" ^
-      print_term Σ Γ' (tCase (ind, par) p' c' (brs1' ++ (m',br') :: brs2')) ^
-      "\nhave a mistmatch in the branch number " ^ string_of_nat #|brs1| ^
-      "\nthe number of parameters do not coincide\n" ^
-      print_term Σ Γ br ^
-      "\nhas " ^ string_of_nat m ^ " parameters while\n" ^
-      print_term Σ Γ br' ^
-      "\nhas " ^ string_of_nat m' ^ "."
+  | CaseOnDifferentInd Γ ci p c brs Γ' ci' p' c' brs' =>
+      "The two stuck pattern-matches" ^ nl ^
+      print_term Σ Γ (tCase ci p c brs) ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
+      nl ^ "are done on distinct inductive types."
+  | CasePredParamsUnequalLength Γ ci p c brs Γ' ci' p' c' brs' =>
+      "The predicates of the two stuck pattern-matches" ^ nl ^
+      print_term Σ Γ (tCase ci p c brs) ^ 
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
+      nl ^ "have an unequal number of parameters."
+  | CasePredUnequalUniverseInstances Γ ci p c brs Γ' ci' p' c' brs' =>
+      "The predicates of the two stuck pattern-matches" ^ nl ^
+      print_term Σ Γ (tCase ci p c brs) ^ 
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
+      nl ^ "have unequal universe instances."
+  | ContextNotConvertibleAnn Γ decl Γ' decl' =>
+      "When comparing the declarations" ^ nl ^ 
+      print_context_decl Σ Γ decl ^ nl ^
+      "and" ^ nl ^
+      print_context_decl Σ Γ' decl' ^ nl ^
+      "the binder annotations are not equal"
+  | ContextNotConvertibleType Γ decl Γ' decl' =>
+      "When comparing the declarations" ^ nl ^ 
+      print_context_decl Σ Γ decl ^ nl ^
+      "and" ^ nl ^
+      print_context_decl Σ Γ' decl' ^ nl ^
+      "the types are not convertible"
+  | ContextNotConvertibleBody Γ decl Γ' decl' =>
+      "When comparing the declarations" ^ nl ^ 
+      print_context_decl Σ Γ decl ^ nl ^
+      "and" ^ nl ^
+      print_context_decl Σ Γ' decl' ^ nl ^
+      "the bodies are not convertible"
+  | ContextNotConvertibleLength => "The contexts have unequal length"
+      
   | DistinctStuckProj Γ p c Γ' p' c' =>
-      "The two stuck projections\n" ^
+      "The two stuck projections" ^ nl ^
       print_term Σ Γ (tProj p c) ^
-      "\nand\n" ^
+      nl ^ "and" ^ nl ^
       print_term Σ Γ' (tProj p' c') ^
-      "\nare syntactically different."
+      nl ^ "are syntactically different."
   | CannotUnfoldFix Γ mfix idx Γ' mfix' idx' =>
-      "The two fixed-points\n" ^
+      "The two fixed-points" ^ nl ^
       print_term Σ Γ (tFix mfix idx) ^
-      "\nand\n" ^ print_term Σ Γ' (tFix mfix' idx') ^
-      "\ncorrespond to syntactically distinct terms that can't be unfolded."
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tFix mfix' idx') ^
+      nl ^ "correspond to syntactically distinct terms that can't be unfolded."
   | FixRargMismatch idx Γ u mfix1 mfix2 Γ' v mfix1' mfix2' =>
-      "The two fixed-points\n" ^
+      "The two fixed-points" ^ nl ^
       print_term Σ Γ (tFix (mfix1 ++ u :: mfix2) idx) ^
-      "\nand\n" ^ print_term Σ Γ' (tFix (mfix1' ++ v :: mfix2') idx) ^
-      "\nhave a mismatch in the function number " ^ string_of_nat #|mfix1| ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tFix (mfix1' ++ v :: mfix2') idx) ^
+      nl ^ "have a mismatch in the function number " ^ string_of_nat #|mfix1| ^
       ": arguments " ^ string_of_nat u.(rarg) ^
       " and " ^ string_of_nat v.(rarg) ^ "are different."
   | FixMfixMismatch idx Γ mfix Γ' mfix' =>
-      "The two fixed-points\n" ^
+      "The two fixed-points" ^ nl ^
       print_term Σ Γ (tFix mfix idx) ^
-      "\nand\n" ^
+      nl ^ "and" ^ nl ^
       print_term Σ Γ' (tFix mfix' idx) ^
-      "\nhave a different number of mutually defined functions."
+      nl ^ "have a different number of mutually defined functions."
   | DistinctCoFix Γ mfix idx Γ' mfix' idx' =>
-      "The two cofixed-points\n" ^
+      "The two cofixed-points" ^ nl ^
       print_term Σ Γ (tCoFix mfix idx) ^
-      "\nand\n" ^ print_term Σ Γ' (tCoFix mfix' idx') ^
-      "\ncorrespond to syntactically distinct terms."
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tCoFix mfix' idx') ^
+      nl ^ "correspond to syntactically distinct terms."
   | CoFixRargMismatch idx Γ u mfix1 mfix2 Γ' v mfix1' mfix2' =>
-      "The two co-fixed-points\n" ^
+      "The two co-fixed-points" ^ nl ^
       print_term Σ Γ (tCoFix (mfix1 ++ u :: mfix2) idx) ^
-      "\nand\n" ^ print_term Σ Γ' (tCoFix (mfix1' ++ v :: mfix2') idx) ^
-      "\nhave a mismatch in the function number " ^ string_of_nat #|mfix1| ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ' (tCoFix (mfix1' ++ v :: mfix2') idx) ^
+      nl ^ "have a mismatch in the function number " ^ string_of_nat #|mfix1| ^
       ": arguments " ^ string_of_nat u.(rarg) ^
       " and " ^ string_of_nat v.(rarg) ^ "are different."
   | CoFixMfixMismatch idx Γ mfix Γ' mfix' =>
-      "The two co-fixed-points\n" ^
+      "The two co-fixed-points" ^ nl ^
       print_term Σ Γ (tCoFix mfix idx) ^
-      "\nand\n" ^
+      nl ^ "and" ^ nl ^
       print_term Σ Γ' (tCoFix mfix' idx) ^
-      "\nhave a different number of mutually defined functions."
+      nl ^ "have a different number of mutually defined functions."
   | StackHeadError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
-      "TODO stackheaderror\n" ^
+      "TODO stackheaderror" ^ nl ^
       string_of_conv_error Σ e
   | StackTailError leq Γ1 t1 args1 u1 l1 Γ2 t2 u2 l2 e =>
-      "TODO stacktailerror\n" ^
+      "TODO stacktailerror" ^ nl ^
       string_of_conv_error Σ e
   | StackMismatch Γ1 t1 args1 l1 Γ2 t2 l2 =>
-      "Convertible terms\n" ^
+      "Convertible terms" ^ nl ^
       print_term Σ Γ1 t1 ^
-      "\nand\n" ^ print_term Σ Γ2 t2 ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ2 t2 ^
       "are convertible/convertible (TODO) but applied to a different number" ^
       " of arguments."
   | HeadMismatch leq Γ1 t1 Γ2 t2 =>
-      "Terms\n" ^
+      "Terms" ^ nl ^
       print_term Σ Γ1 t1 ^
-      "\nand\n" ^ print_term Σ Γ2 t2 ^
-      "\ndo not have the same head when comparing for " ^
+      nl ^ "and" ^ nl ^ print_term Σ Γ2 t2 ^
+      nl ^ "do not have the same head when comparing for " ^
       string_of_conv_pb leq
   end.
 
@@ -251,21 +296,26 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
   | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
-  | NotCumulSmaller G Γ t u t' u' e => "Terms are not <= for cumulativity:\n" ^
-      print_term Σ Γ t ^ "\nand:\n" ^ print_term Σ Γ u ^
-      "\nafter reduction:\n" ^
-      print_term Σ Γ t' ^ "\nand:\n" ^ print_term Σ Γ u' ^
-      "\nerror:\n" ^ string_of_conv_error Σ e ^
-      "\nin universe graph:\n" ^ print_universes_graph G
-  | NotConvertible G Γ t u => "Terms are not convertible:\n" ^
-      print_term Σ Γ t ^ "\nand:\n" ^ print_term Σ Γ u ^
-      "\nin universe graph:\n" ^ print_universes_graph G
-  | NotASort t => "Not a sort"
-  | NotAProduct t t' => "Not a product"
+  | NotCumulSmaller le G Γ t u t' u' e => "Types are not " ^
+      (if le then "<= for cumulativity:" ^ nl 
+       else "convertible:" ^ nl) ^
+      print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
+      nl ^ "after reduction:" ^ nl ^
+      print_term Σ Γ t' ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u' ^
+      nl ^ "error:" ^ nl ^ string_of_conv_error Σ e ^
+      nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^
+      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
+  | NotConvertible G Γ t u => "Terms are not convertible:" ^ nl ^
+      print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
+      nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^
+      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
+  | NotASort t => "Not a sort: " ^ print_term Σ [] t
+  | NotAProduct t t' => "Not a product" ^ print_term Σ [] t ^ nl ^
+    "(after reducing to " ^ print_term Σ [] t'
   | NotAnArity t => print_term Σ [] t ^ " is not an arity"
-  | NotAnInductive t => "Not an inductive"
+  | NotAnInductive t => "Not an inductive: " ^ print_term Σ [] t
   | IllFormedFix m i => "Ill-formed recursive definition"
-  | UnsatisfiedConstraints c => "Unsatisfied constraints"
+  | UnsatisfiedConstraints c => "Unsatisfied constraints" 
   | Msg s => "Msg: " ^ s
   end.
 
@@ -275,6 +325,7 @@ Inductive typing_result (A : Type) :=
 Global Arguments Checked {A} a.
 Global Arguments TypeError {A} t.
 
+#[global]
 Instance typing_monad : Monad typing_result :=
   {| ret A a := Checked a ;
      bind A B m f :=
@@ -284,6 +335,7 @@ Instance typing_monad : Monad typing_result :=
        end
   |}.
 
+#[global]
 Instance monad_exc : MonadExc type_error typing_result :=
   { raise A e := TypeError e;
     catch A m f :=

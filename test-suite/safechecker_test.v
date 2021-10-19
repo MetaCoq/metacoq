@@ -38,10 +38,26 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 
 (* Unset Universe Minimization ToSet. *)
 
-Definition bignat := 10000.
+From Coq Require Import Decimal.
+
+Definition bignat : nat := Nat.of_num_uint 10000%uint.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.
 
+(*Require Import String.
+From MetaCoq.Template Require Import Loader Core TemplateMonad monad_utils Pretty.
+Import MonadNotation.
+Open Scope monad_scope.
+Require Import String.
+Open Scope string_scope.
+Definition topkn s : BasicAst.kername := 
+  (Datatypes.pair (BasicAst.MPfile ("safechecker_test" :: nil)%list) (s))%string.
+
+MetaCoq Quote Recursively Definition prodq := prod_rect.
+
+MetaCoq Run
+  (tmEval cbv (print_program false 2 prodq) >>= tmPrint).
+*)
 Set Universe Polymorphism.
 
 (* Basic notations *)
@@ -53,9 +69,9 @@ Inductive prod (A B : Type) : Type :=  pair : A -> B -> prod A B.
 
 Arguments pair {_ _} _ _.
 
+Set Warnings "-notation-overridden".
 Notation "x * y" := (prod x y) : type_scope.
 Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z): type_scope.
-
 
 Section projections.
   Context {A : Type} {B : Type}.
@@ -138,7 +154,7 @@ Definition transport_eq {A : Type} (P : A -> Type) {x y : A} (p : x = y) (u : P 
 Notation "p # x" := (transport_eq _ p x) (right associativity, at level 65, only parsing).
 
 Definition concat {A : Type} {x y z : A} (p : x = y) (q : y = z) : x = z.
-  destruct p; exact q.
+  destruct p; exact q. Show Proof.
 Defined.
 
 Notation "p @ q" := (concat p q) (at level 20).
@@ -432,17 +448,21 @@ Defined.
 (* Equivalences *)
 
 Class IsEquiv {A : Type} {B : Type} (f : A -> B) := BuildIsEquiv {
-  e_inv :> B -> A ;
+  e_inv : B -> A ;
   e_sect : forall x, e_inv (f x) = x;
   e_retr : forall y, f (e_inv y) = y;
   e_adj : forall x : A, e_retr (f x) = ap f (e_sect x);
 }.
 
+Coercion e_inv : IsEquiv >-> Funclass.
+
 (** A class that includes all the data of an adjoint equivalence. *)
 Class Equiv A B := BuildEquiv {
-  e_fun :> A -> B ;
+  e_fun : A -> B ;
   e_isequiv :> IsEquiv e_fun
 }.
+
+Coercion e_fun : Equiv >-> Funclass.
 
 Notation "A ≃ B" := (Equiv A B) (at level 20).
 
@@ -454,8 +474,6 @@ Arguments e_adj {_ _} _ {_} _.
 Arguments e_isequiv {_ _ _}.
 
 Typeclasses Transparent e_fun e_inv.
-
-Coercion e_fun : Equiv >-> Funclass.
 
 Definition univalent_transport {A B : Type} {e: A ≃ B} : A -> B := e_fun e.
 
@@ -540,6 +558,10 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
 
+
+(* MetaCoq Run (tmEval (unfold concatkn)
+  (@safechecker_test.concat) >>=  tmQuote >>= tmPrint). *)
+  (* fun t => tmEval cbv (print_program false 1 t) >>= tmPrint). *)
 
 MetaCoq SafeCheck @issect'.
 

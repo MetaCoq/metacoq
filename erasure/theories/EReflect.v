@@ -36,6 +36,7 @@ Ltac nodec :=
 
 Derive NoConfusion NoConfusionHom for term.
 
+#[global]
 Instance EqDec_term : EqDec term.
 Proof.
   intro x; induction x using term_forall_list_ind ; intro t ;
@@ -103,12 +104,14 @@ Proof.
         subst. left. reflexivity.
 Defined.
 
+#[global]
 Instance ReflectEq_term : Reflect.ReflectEq _ :=
   @EqDec_ReflectEq _ EqDec_term.
 
 Definition eqb_constant_body (x y : constant_body) :=
   eqb (cst_body x) (cst_body y).
 
+#[global]
 Instance reflect_constant_body : ReflectEq constant_body.
 Proof.
   refine {| eqb := eqb_constant_body |}.
@@ -123,6 +126,7 @@ Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   let (n', i', k', c', p') := y in
   eqb n n' && eqb i i' && eqb k k' && eqb c c' && eqb p p'.
 
+#[global]
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.
   refine {| eqb := eqb_one_inductive_body |}.
@@ -135,6 +139,7 @@ Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
   let (n', b') := y in
   eqb n n' && eqb b b'.
 
+#[global]
 Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
 Proof.
   refine {| eqb := eqb_mutual_inductive_body |}.
@@ -149,6 +154,7 @@ Definition eqb_global_decl x y :=
   | _, _ => false
   end.
 
+#[global]
 Instance reflect_global_decl : ReflectEq global_decl.
 Proof.
   refine {| eqb := eqb_global_decl |}.

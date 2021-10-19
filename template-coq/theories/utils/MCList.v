@@ -7,7 +7,17 @@ Arguments firstn : simpl nomatch.
 Arguments skipn : simpl nomatch.
 
 Notation "#| l |" := (List.length l) (at level 0, l at level 99, format "#| l |").
+
+#[global] Hint Rewrite map_length app_length List.rev_length : len.
+
 Arguments nil {_}, _.
+
+#[global] Instance proper_map_ho {A B} : Proper ((pointwise_relation A Logic.eq) ==> Logic.eq ==> Logic.eq)
+  (@map A B).
+Proof.
+  intros f g Hfg x y ->. apply map_ext.
+  apply Hfg.
+Qed.
 
 Lemma app_tip_assoc {A} (l : list A) x l' : (l ++ [x]) ++ l' = l ++ (x :: l').
 Proof. now rewrite <- app_assoc. Qed.
@@ -44,6 +54,19 @@ Next Obligation.
   simpl in H. auto with arith.
 Defined.
 
+Fixpoint map2 {A B C} (f : A -> B -> C) (l : list A) (l' : list B) : list C :=
+  match l, l' with
+  | hd :: tl, hd' :: tl' => f hd hd' :: map2 f tl tl'
+  | _, _ => []
+  end.
+  
+Lemma map2_ext {A B C} (f g : A -> B -> C) (l : list A) (l' : list B) :
+  (forall x y, f x y = g x y) ->  
+  map2 f l l' = map2 g l l'.
+Proof.
+  intros H.
+  induction l in l' |- *; destruct l'; simpl; auto. f_equal; eauto.
+Qed.
 
 Lemma nth_error_safe_nth {A} n (l : list A) (isdecl : n < Datatypes.length l) :
   nth_error l n = Some (safe_nth l (exist _ n isdecl)).
@@ -129,6 +152,7 @@ Proof.
   }
   intro l. apply h.
 Defined.
+#[global] Hint Rewrite @rev_length : len.
 
 Fact rev_map_length :
   forall {A B} {f : A -> B} {l : list A},
@@ -147,6 +171,7 @@ Proof.
   }
   intro l. apply h.
 Defined.
+#[global] Hint Rewrite @rev_map_length : len.
 
 Fact rev_map_app :
   forall {A B} {f : A -> B} {l1 l2},
@@ -158,7 +183,6 @@ Proof.
   - simpl. rewrite !rev_map_cons. rewrite IHl1.
     rewrite app_assoc. reflexivity.
 Defined.
-
 
 Lemma map_map_compose :
   forall (A B C : Type) (f : A -> B) (g : B -> C) (l : list A),
@@ -329,7 +353,7 @@ Proof. induction l in n |- *; destruct n; simpl; try congruence. auto. Qed.
 
 Lemma nth_error_nil {A} n : nth_error (nil A) n = None.
 Proof. destruct n; auto. Qed.
-Hint Rewrite @nth_error_nil.
+#[global] Hint Rewrite @nth_error_nil.
 
 Fixpoint chop {A} (n : nat) (l : list A) :=
   match n with
@@ -470,10 +494,12 @@ Proof. unfold mapi at 1. rewrite mapi_rec_rev. now rewrite Nat.add_0_r. Qed.
 Lemma mapi_rec_length {A B} (f : nat -> A -> B) (l : list A) n :
   length (mapi_rec f l n) = length l.
 Proof. induction l in n |- *; simpl; try congruence. Qed.
+#[global] Hint Rewrite @mapi_rec_length : len.
 
 Lemma mapi_length {A B} (f : nat -> A -> B) (l : list A) :
   length (mapi f l) = length l.
 Proof. apply mapi_rec_length. Qed.
+#[global] Hint Rewrite @mapi_length : len.
 
 Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
 Proof.
@@ -587,6 +613,13 @@ Proof.
     * simpl. rewrite IHn.
       now rewrite Nat.add_succ_r.
 Qed.
+
+Lemma skipn_map_length {A B} n (f : A -> B) (l : list A) : 
+  #|skipn n (map f l)| = #|skipn n l|.
+Proof.
+  now rewrite !List.skipn_length; len.
+Qed.
+#[global] Hint Rewrite @skipn_map_length : len.
 
 Lemma firstn_ge {A} (l : list A) n : #|l| <= n -> firstn n l = l.
 Proof.
@@ -957,6 +990,7 @@ Lemma unfold_length {A} (f : nat -> A) m : #|unfold m f| = m.
 Proof.
   induction m; simpl; rewrite ?app_length /=; auto. lia.
 Qed.
+#[global] Hint Rewrite @unfold_length : len.
 
 Lemma nth_error_unfold {A} (f : nat -> A) m n : n < m <-> nth_error (unfold m f) n = Some (f n).
 Proof.
@@ -1074,3 +1108,59 @@ Proof.
   induction l in n |- *; simpl; auto with arith;
   destruct n; simpl; auto with arith. discriminate.
 Qed.
+
+Fixpoint map2i_rec {A B C} (f : nat -> A -> B -> C) i (l : list A) (l' : list B) : list C :=
+  match l, l' with
+  | hd :: tl, hd' :: tl' => f i hd hd' :: map2i_rec f (S i) tl tl'
+  | _, _ => []
+  end.
+Definition map2i {A B C} (f : nat -> A -> B -> C) := map2i_rec f 0.
+
+Lemma mapi_map2 {A B C D} (f : nat -> A -> B) (g : C -> D -> A) l l' : 
+  mapi f (map2 g l l') = map2i (fun i x y => f i (g x y)) l l'.
+Proof.
+  unfold mapi, map2i. generalize 0.
+  induction l in l' |- *; intros; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2_mapi {A A' B B' C} (f : nat -> A -> B) (f' : nat-> A' -> B') (g : B -> B' -> C) l l' : 
+  map2 g (mapi f l) (mapi f' l') = map2i (fun i x y => g (f i x) (f' i y)) l l'.
+Proof.
+  unfold mapi, map2i. generalize 0.
+  induction l in l' |- *; intros n; destruct l'; simpl; auto. f_equal.
+  apply IHl.
+Qed.
+
+Lemma map2i_ext {A B C} (f g : nat -> A -> B -> C) l l' :
+  (forall i x y, f i x y = g i x y) -> map2i f l l' = map2i g l l'.
+Proof.
+  intros Hfg.
+  unfold map2i.
+  generalize 0.
+  induction l in l' |- *; destruct l'; simpl; auto.
+  intros. f_equal; eauto.
+Qed.
+
+Lemma app_inj_length_r {A} (l l' r r' : list A) :
+  app l r = app l' r' -> #|r| = #|r'| -> l = l' /\ r = r'.
+Proof.
+  induction r in l, l', r' |- *. destruct r'; intros; simpl in *; intuition auto; try discriminate.
+  now rewrite !app_nil_r in H.
+  intros. destruct r'; try discriminate.
+  simpl in H.
+  change (l ++ a :: r) with (l ++ [a] ++ r) in H.
+  change (l' ++ a0 :: r') with (l' ++ [a0] ++ r') in H.
+  rewrite !app_assoc in H. destruct (IHr _ _ _ H). now injection H0.
+  subst. now apply app_inj_tail in H1 as [-> ->].
+Qed.
+
+Lemma app_inj_length_l {A} (l l' r r' : list A) :
+  app l r = app l' r' -> #|l| = #|l'| -> l = l' /\ r = r'.
+Proof.
+  induction l in r, r', l' |- *. destruct l'; intros; simpl in *; intuition auto; try discriminate.
+  intros. destruct l'; try discriminate. simpl in *. injection H as [= -> ?].
+  specialize (IHl _ _ _ H).
+  destruct IHl; intuition congruence.
+Qed.
+

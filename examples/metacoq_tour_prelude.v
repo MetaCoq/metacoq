@@ -5,7 +5,7 @@ From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeCh
 From Equations Require Import Equations.
 
 Import MCMonadNotation.
-Existing Instance default_checker_flags.
+Global Existing Instance default_checker_flags.
 
 (* ********************************************************* *)
 (* In this file we define a small plugin which proves        *)

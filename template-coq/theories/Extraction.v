@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Ast Reflect Induction. (*MC_ExtrOCamlInt63 (*b/c nameclash with `comparion` *).*)
+From MetaCoq.Template Require Import utils Ast Reflect Induction.
 From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOCamlFloats
     ExtrOCamlInt63.
 From Coq Require Extraction.
@@ -108,11 +108,10 @@ Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst Number
+           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality UnivSubst Number 
            Uint63.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
-Print Uint63.to_Z.
 
 Cd "gen-src".
 
@@ -120,6 +119,8 @@ From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
      LiftSubst UnivSubst Pretty.
 Import Init.Nat.
 
+(* Silence the warnings for specifications axioms of int63 *)
+Set Warnings "-extraction-logical-axiom".
 (* Floats *)
 (* Extraction Library Zeven.
 Extraction Library Zeven.

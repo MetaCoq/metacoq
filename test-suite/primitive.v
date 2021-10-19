@@ -26,7 +26,7 @@ MetaCoq Run (eval_hnf bigint >>=
 
 From Coq Require Import PrimFloat.
 
-Definition f := (- (of_int63 bigint / 3))%float.
+Definition f := (- (of_uint63 bigint / 3))%float.
 Eval lazy in f.
 MetaCoq Run (tmEval lazy f >>= 
             (fun x => tmQuote (x + 1)%float) >>= 

@@ -68,7 +68,7 @@ Fixpoint semGen A `{Propositional_Logic A} f (l:var->A) :=
   | Or a b => Por (semGen A a l) (semGen A b l)
   end.
 
-Instance Propositional_Logic_Prop : Propositional_Logic Prop :=
+Local Instance Propositional_Logic_Prop : Propositional_Logic Prop :=
   {| Pfalse := False; Ptrue := True; Pand := and; Por := or; Pimpl := fun A B => A -> B |}.
 
 Definition sem := semGen Prop.
@@ -519,6 +519,8 @@ Inductive well_prop Σ Γ : term -> Type :=
 | well_prop_True : well_prop Σ Γ MTrue
 .
 
+
+
 (* TODO MOVE *)
 Lemma decompose_app_eq :
   forall t f args,
@@ -536,11 +538,11 @@ Proof.
   inversion e. subst. right. reflexivity.
 Qed.
 
-Lemma decompose_app_wf :
+Lemma decompose_app_wf Σ :
   forall t f args,
-    Ast.wf t ->
+    WfAst.wf Σ t ->
     decompose_app t = (f, args) ->
-    Ast.wf f /\ Forall Ast.wf args.
+    WfAst.wf Σ f * All (WfAst.wf Σ) args.
 Proof.
   intros t f args w e.
   induction t in f, args, w, e |- *.
@@ -560,7 +562,19 @@ Qed.
 Definition def_size (size : term -> nat) (x : def term) := size (dtype x) + size (dbody x).
 Definition mfixpoint_size (size : term -> nat) (l : mfixpoint term) :=
   list_size (def_size size) l.
+Definition decl_size (size : term -> nat) (x : context_decl) :=
+  size (decl_type x) + option_default size (decl_body x) 0.
 
+Definition context_size (size : term -> nat) (l : context) :=
+  list_size (decl_size size) l.
+  
+Definition branch_size (size : term -> nat) (br : branch term) := 
+  size br.(bbody).
+
+Definition predicate_size (size : term -> nat) (p : predicate term) := 
+  list_size size p.(pparams) + 
+  size p.(preturn).
+  
 Fixpoint tsize t : nat :=
   match t with
   | tRel i => 1
@@ -569,7 +583,7 @@ Fixpoint tsize t : nat :=
   | tApp u v => S (tsize u + list_size tsize v)
   | tProd na A B => S (tsize A + tsize B)
   | tLetIn na b t b' => S (tsize b + tsize t + tsize b')
-  | tCase ind p c brs => S (tsize p + tsize c + list_size (fun x => tsize (snd x)) brs)
+  | tCase ind p c brs => S (predicate_size tsize p + tsize c + list_size (branch_size tsize) brs)
   | tProj p c => S (tsize c)
   | tFix mfix idx => S (mfixpoint_size tsize mfix)
   | tCoFix mfix idx => S (mfixpoint_size tsize mfix)
@@ -641,10 +655,14 @@ Proof.
     induction H.
     + reflexivity.
     + simpl. eauto.
-  - rewrite IHt1, IHt2. f_equal. f_equal.
-    induction X.
-    + reflexivity.
-    + simpl. eauto.
+  - solve_all.
+    f_equal; auto. f_equal; eauto.
+    f_equal; eauto. unfold predicate_size.
+    f_equal; simpl; auto.
+    induction a; simpl; auto.
+    induction X0; simpl; auto.
+    f_equal; auto. f_equal; auto. 
+    unfold branch_size; simpl; auto. 
   - generalize (#|m| + k). intro p.
     induction X.
     + reflexivity.
@@ -684,31 +702,29 @@ Proof.
 Qed.
 
 Lemma tsize_downlift :
-  forall t k,
-    Ast.wf t ->
+  forall Σ t k,
+    WfAst.wf Σ t ->
     tsize (subst [tRel 0] k t) = tsize t.
 Proof.
-  intros t k h.
-  induction t using term_forall_list_ind in k, h |- *.
+  intros Σ t k h.
+  induction h using WfAst.term_wf_forall_list_ind in k |- *.
   { simpl. destruct (Nat.leb_spec k n).
     - destruct (n - k) as [|m].
       + simpl. reflexivity.
       + simpl. destruct m. all: reflexivity.
     - reflexivity.
   }
-  all: simpl.
-  all: inversion h ; subst.
+  all: simpl; auto.
   all: try solve [ eauto ].
-  - f_equal. clear h. induction H.
+  - f_equal. induction X.
     + reflexivity.
-    + simpl. inversion H1. subst. intuition eauto.
-  - rewrite IHt1, IHt2, IHt3 by assumption. reflexivity.
+    + simpl. specialize (p k). congruence.
   - rewrite mkApps_tApp; eauto.
-    + simpl. f_equal. rewrite IHt by assumption. f_equal.
-      clear - H H5. induction H.
+    + simpl. f_equal. rewrite IHh by assumption. f_equal.
+      clear - X0. induction X0.
       * reflexivity.
-      * inversion H5. subst. simpl. intuition eauto.
-    + clear - H2. destruct t.
+      * cbn. specialize (p k); congruence.
+    + clear - H. destruct t.
       all: simpl in *.
       all: try solve [ eauto ].
       destruct (Nat.leb_spec k n).
@@ -716,25 +732,29 @@ Proof.
         -- simpl. reflexivity.
         -- simpl. destruct m. all: eauto.
       * simpl. reflexivity.
-    + clear - H3. destruct l. contradiction.
+    + clear - H0. destruct l. contradiction.
       discriminate.
-  - f_equal. rewrite IHt1, IHt2 by assumption. f_equal.
-    clear - X H5. induction X.
-    * reflexivity.
-    * inversion H5. subst. simpl. intuition eauto.
+  - f_equal.
+    f_equal; solve_all.
+    unfold predicate_size. simpl. f_equal; auto.
+    f_equal; auto. clear H0. induction a; simpl; auto.
+    unfold branch_size.
+    clear -X1.
+    induction X1; simpl; auto.
+    destruct r. f_equal; auto.
   - f_equal.
     generalize (#|m| + k). intro p.
-    clear - X H0. induction X.
+    clear - X. induction X.
     + reflexivity.
-    + inversion H0. subst.
+    + destruct p0. subst.
       unfold mfixpoint_size.
       unfold map_def. unfold def_size.
       simpl. f_equal. intuition eauto.
   - f_equal.
     generalize (#|m| + k). intro p.
-    clear - X H0. induction X.
+    clear - X. induction X.
     + reflexivity.
-    + inversion H0. subst.
+    + destruct p0. subst.
       unfold mfixpoint_size.
       unfold map_def. unfold def_size.
       simpl. f_equal. intuition eauto.
@@ -745,7 +765,6 @@ Local Ltac inst :=
   | h : forall k, _ <= tsize ?x |- context [ (subst _ ?k ?x) ] =>
     specialize (h k)
   end.
-
 
 Lemma tsize_downlift_le :
   forall t k,
@@ -774,15 +793,20 @@ Proof.
     }
     lia.
   - repeat inst.
+    
     assert (
-      list_size (fun x : nat × term => tsize x.2)
-                (map (on_snd (subst [tRel 0] k)) l)
-      <= list_size (fun x : nat × term => tsize x.2) l
+      list_size (branch_size tsize) (map_branches_k (subst [tRel 0]) k l)
+      <= list_size (branch_size tsize) l
     ).
-    { clear - X. induction X.
+    { unfold branch_size.
+      clear - X0. induction X0.
     - reflexivity.
     - simpl. inst. lia.
-  }
+     }
+    assert (predicate_size tsize (map_predicate id (subst [tRel 0] k) (subst [tRel 0] (#|pcontext t| + k)) t) <=
+      predicate_size tsize t).
+    { apply plus_le_compat; simpl; auto. 2:apply X. destruct X.
+      induction a; simpl; auto. apply le_n_S, plus_le_compat; simpl; auto. }
   lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
@@ -870,7 +894,7 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
       }} ;
     | tProd na A B =>
       af <- reify Σ Γ A ;;
-      bf <- reify Σ Γ (subst0 [tRel 0] B) ;;
+      bf <- reify Σ Γ (subst [tRel 0] 0 B) ;;
       ret (Imp af bf) ;
     | _ => None
     }
@@ -901,7 +925,7 @@ Next Obligation.
   simpl in h1. lia.
 Qed.
 
-Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
+Local Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
   {| Pfalse := MFalse; Ptrue := MTrue; Pand := fun P Q => mkApps Mand [P;Q];
      Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tImpl P Q |}.
 
@@ -927,11 +951,11 @@ Admitted.
 Lemma well_prop_wf :
   forall Σ Γ P,
     well_prop Σ Γ P ->
-    Ast.wf P.
+    WfAst.wf Σ P.
 Proof.
   intros Σ Γ P h.
   induction h.
-  all: try solve [ constructor ; auto using wf_lift ].
+  all: try solve [ constructor ; auto using WfAst.wf_lift ].
   - constructor. all: try easy.
     constructor.
   - constructor. all: try easy.
@@ -956,7 +980,7 @@ Proof.
     exists (Imp fA fB). split.
     + simp reify.
       apply well_prop_wf in h2 as w2.
-      rewrite simpl_subst_k by auto.
+      rewrite (simpl_subst_k Σ) by auto.
       simp reify in r1. rewrite r1.
       simp reify in r2. rewrite r2.
       reflexivity.

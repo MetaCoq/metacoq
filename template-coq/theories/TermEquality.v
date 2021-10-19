@@ -1,9 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CMorphisms.
-From MetaCoq.Template Require Import config utils Reflect Ast AstUtils Induction LiftSubst Reflect.
+From MetaCoq.Template Require Import config utils Reflect Environment Ast AstUtils Induction Reflect.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
+From Equations Require Import Equations.
 Set Equations With UIP.
 
 Definition R_universe_instance R :=
@@ -78,7 +79,7 @@ Definition global_variance Σ gr napp :=
   | ConstructRef ind k =>
     match lookup_constructor Σ ind k with
     | Some (mdecl, idecl, cdecl) =>
-      if (cdecl.2 + mdecl.(ind_npars))%nat <=? napp then
+      if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
         (** Fully applied constructors are always compared at the same supertype, 
           which implies that no universe equality needs to be checked here. *)
         Some []
@@ -109,6 +110,54 @@ Lemma R_universe_instance_impl' R R' :
   forall u u', R_universe_instance R u u' -> R_universe_instance R' u u'.
 Proof.
   intros H x y xy. eapply Forall2_impl ; tea.
+Qed.
+
+Inductive compare_decls (eq_term leq_term : term -> term -> Type) : context_decl -> context_decl -> Type :=
+	| compare_vass na T na' T' : eq_binder_annot na na' ->
+    leq_term T T' -> 
+    compare_decls eq_term leq_term (vass na T) (vass na' T')
+  | compare_vdef na b T na' b' T' : eq_binder_annot na na' -> 
+    eq_term b b' -> leq_term T T' ->
+    compare_decls eq_term leq_term (vdef na b T) (vdef na' b' T').
+
+Derive Signature NoConfusion for compare_decls.
+
+Lemma alpha_eq_context_assumptions {Γ Δ} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  context_assumptions Γ = context_assumptions Δ.
+Proof.
+  induction 1 in |- *; cbn; auto.
+  destruct r; subst; cbn; auto.
+Qed.
+
+Lemma alpha_eq_extended_subst {Γ Δ k} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  extended_subst Γ k = extended_subst Δ k.
+Proof.
+  induction 1 in k |- *; cbn; auto.
+  destruct r; subst; cbn; f_equal; auto.
+  rewrite IHX. now rewrite (alpha_eq_context_assumptions X).
+Qed.
+
+Lemma expand_lets_eq {Γ Δ t} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  expand_lets Γ t = expand_lets Δ t.
+Proof.
+  intros. rewrite /expand_lets /expand_lets_k.
+  now rewrite (All2_length X) (alpha_eq_context_assumptions X) (alpha_eq_extended_subst X). 
+Qed.
+
+Lemma alpha_eq_subst_context {Γ Δ s k} : 
+  All2 (compare_decls eq eq) Γ Δ ->
+  All2 (compare_decls eq eq) (subst_context s k Γ) (subst_context s k Δ).
+Proof.
+  intros.
+  rewrite /subst_context. 
+  induction X.
+  - cbn; auto.
+  - rewrite !fold_context_k_snoc0. constructor; auto.
+    destruct r; subst; constructor; cbn; auto.
+    all:now rewrite (All2_length X).
 Qed.
 
 (** ** Syntactic equality up-to universes
@@ -169,14 +218,17 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
     eq_term_upto_univ_napp Σ Re Rle 0 u u' ->
     eq_term_upto_univ_napp Σ Re Rle napp (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
-| eq_Case indn p p' c c' brs brs' :
-    eq_term_upto_univ_napp Σ Re Re 0 p p' ->
+| eq_Case ind p p' c c' brs brs' :
+    All2 (eq_term_upto_univ_napp Σ Re Re 0) p.(pparams) p'.(pparams) ->
+    R_universe_instance Re p.(puinst) p'.(puinst) ->
+    eq_term_upto_univ_napp Σ Re Re 0 p.(preturn) p'.(preturn) ->
+    All2 eq_binder_annot p.(pcontext) p'.(pcontext) ->
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
     All2 (fun x y =>
-      (fst x = fst y) *
-      eq_term_upto_univ_napp Σ Re Re 0 (snd x) (snd y)
+      All2 (eq_binder_annot) (bcontext x) (bcontext y) *
+      eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
     ) brs brs' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
+  eq_term_upto_univ_napp Σ Re Rle napp (tCase ind p c brs) (tCase ind p' c' brs')
 
 | eq_Proj p c c' :
     eq_term_upto_univ_napp Σ Re Re 0 c c' ->
@@ -236,7 +288,7 @@ Proof.
   - apply Forall2_same; eauto.
 Qed.
 
-Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A).
+#[global] Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
 Proof.
   split. 
   - red. reflexivity.
@@ -245,10 +297,19 @@ Proof.
     congruence.
 Qed. 
 
-Definition eq_binder_annot_refl {A} x : @eq_binder_annot A x x.
+Definition eq_binder_annot_refl {A} x : @eq_binder_annot A A x x.
 Proof. reflexivity. Qed.
+#[global] Hint Resolve eq_binder_annot_refl : core.
 
-Hint Resolve @eq_binder_annot_refl : core.
+#[global] Instance eq_binder_annots_refl {A} : CRelationClasses.Equivalence (All2 (@eq_binder_annot A A)).
+Proof.
+  split.
+  intros x. apply All2_reflexivity; tc. 
+  * intros l. reflexivity.
+  * intros l l' H. eapply All2_symmetry => //.
+  * intros l l' H. eapply All2_transitivity => //.
+    intros ? ? ? ? ?. now etransitivity. 
+Qed.
 
 Lemma eq_term_upto_univ_refl Σ Re Rle :
   RelationClasses.Reflexive Re ->
@@ -266,10 +327,11 @@ Proof.
     intros. easy.
   - now apply R_global_instance_refl.
   - now apply R_global_instance_refl.
-  - red in X. eapply All_All2. 1:eassumption.
+  - destruct X as [Ppars Preturn]. eapply All_All2. 1:eassumption.
     intros; easy.
+  - destruct X as [Ppars Preturn]. now apply Preturn.
+  - red in X0. eapply All_All2_refl. solve_all. reflexivity. 
   - eapply All_All2. 1: eassumption.
-    simpl.
     intros x [? ?]. repeat split ; auto.
   - eapply All_All2. 1: eassumption.
     intros x [? ?]. repeat split ; auto.
@@ -301,8 +363,7 @@ Proof.
   apply IHt.
 Qed. *)
 
-
-Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
+#[global] Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
@@ -329,7 +390,7 @@ Proof.
        end].
   - eapply R_global_instance_impl_same_napp; eauto.
   - eapply R_global_instance_impl_same_napp; eauto.
-  - induction a; constructor; auto. intuition auto.
+  - induction a1; constructor; auto. intuition auto.
   - induction a; constructor; auto. intuition auto.
   - induction a; constructor; auto. intuition auto.
 Qed.
@@ -351,8 +412,8 @@ Proof.
   - clear X. induction a; constructor; eauto using eq_term_upto_univ_morphism0.
   - eapply R_global_instance_impl_same_napp; eauto.
   - eapply R_global_instance_impl_same_napp; eauto.
-  - clear X1 X2. induction a; constructor; eauto using eq_term_upto_univ_morphism0.
-    destruct r. split; eauto using eq_term_upto_univ_morphism0.
+  - clear X1 X2. induction a1; constructor; eauto using eq_term_upto_univ_morphism0.
+    destruct r0. split; eauto using eq_term_upto_univ_morphism0.
   - induction a; constructor; eauto using eq_term_upto_univ_morphism0.
     destruct r as [[[? ?] ?] ?].
     repeat split; eauto using eq_term_upto_univ_morphism0.
@@ -379,7 +440,7 @@ Proof.
     elim: Nat.leb_spec => //. lia.
 Qed.
 
-Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
+#[global] Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Re Rle' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -400,7 +461,7 @@ Proof.
   destruct t0; simpl; auto.
 Qed.
 
-Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
+#[global] Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
@@ -421,10 +482,15 @@ Proof.
     eapply R_global_instance_impl. 5:eauto. all:auto.
   - inversion 1; subst; constructor.
     eapply R_global_instance_impl. 5:eauto. all:eauto.
-  - inversion 1; subst; constructor; eauto.
+  - destruct X as [IHpars IHret].
+    inversion 1; subst; constructor; eauto.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
-    cbn. intros x ? y [? ?]. split; eauto.
+    eapply R_universe_instance_impl; eauto.
+    eapply All2_impl'; eauto.
+    cbn.
+    eapply All_impl; eauto.
+    intros x ? y [? ?]. split; eauto.
   - inversion 1; subst; constructor.
     eapply All2_impl'; tea.
     eapply All_impl; eauto.
@@ -475,9 +541,8 @@ Proof.
       apply All2_app. assumption.
       now constructor.
     + intro X; rewrite X in H0.
-      rewrite !mkApps_tApp; eauto.
-      intro; discriminate.
-      intro; discriminate.
+      eapply negbT in X. symmetry in H0; eapply negbT in H0.
+      rewrite - !mkApps_tApp //.
       constructor. simpl. now simpl in e.
       now constructor.
 Qed.

@@ -6,7 +6,11 @@ Require Import ssreflect.
 From Equations Require Import Equations.
 Set Equations Transparent.
 
-Derive Signature for All All2.
+Lemma eqb_annot_reflect {A} na na' : reflect (@eq_binder_annot A A na na') (eqb_binder_annot na na').
+Proof.
+  unfold eqb_binder_annot, eq_binder_annot.
+  destruct Classes.eq_dec; constructor; auto.
+Qed.
 
 Definition string_of_aname (b : binder_annot name) :=
   string_of_name b.(binder_name).
@@ -28,9 +32,9 @@ Fixpoint string_of_term (t : term) :=
   | tInd i u => "Ind(" ^ string_of_inductive i ^ "," ^ string_of_universe_instance u ^ ")"
   | tConstruct i n u => "Construct(" ^ string_of_inductive i ^ "," ^ string_of_nat n ^ ","
                                     ^ string_of_universe_instance u ^ ")"
-  | tCase (ind, i) t p brs =>
-    "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
-            ^ string_of_term p ^ "," ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
+  | tCase ci p t brs =>
+    "Case(" ^ string_of_case_info ci ^ "," ^ string_of_term t ^ ","
+            ^ string_of_predicate string_of_term p ^ "," ^ string_of_list (string_of_branch string_of_term) brs ^ ")"
   | tProj (ind, i, k) c =>
     "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
             ^ string_of_term c ^ ")"
@@ -38,6 +42,47 @@ Fixpoint string_of_term (t : term) :=
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tPrim i => "Int(" ^ string_of_prim string_of_term i ^ ")"
   end.
+
+Ltac change_Sk :=
+  repeat match goal with
+    | |- context [S (?x + ?y)] => progress change (S (x + y)) with (S x + y)
+    | |- context [#|?l| + (?x + ?y)] => progress replace (#|l| + (x + y)) with ((#|l| + x) + y) by now rewrite Nat.add_assoc
+  end.
+
+Ltac solve_all_one :=
+  try lazymatch goal with
+  | H: tCasePredProp _ _ _ |- _ => destruct H as [? [? ?]]
+  end;
+  unfold tCaseBrsProp, tFixProp in *;
+  autorewrite with map;
+  rtoProp;
+  try (
+    apply map_predicate_eq_spec ||
+    apply map_predicate_k_eq_spec ||
+    apply map_predicate_id_spec ||
+    apply map_predicate_k_id_spec ||
+    apply map_branch_k_eq_spec ||
+    apply map_branch_k_id_spec ||
+    apply map_def_eq_spec ||
+    apply map_def_id_spec ||
+    apply map_branch_eq_spec ||
+    apply map_branch_id_spec ||
+    (eapply All_forallb_eq_forallb; [eassumption|]) ||
+    (eapply mapi_context_eqP_test_id_spec; [eassumption|eassumption|]) ||
+    (eapply mapi_context_eqP_spec; [eassumption|]) ||
+    (eapply mapi_context_eqP_id_spec; [eassumption|]) ||
+    (eapply onctx_test; [eassumption|eassumption|]) ||
+    (eapply test_context_k_eqP_id_spec; [eassumption|eassumption|]) ||
+    (eapply test_context_k_eqP_eq_spec; [eassumption|]) ||
+    (eapply map_context_eq_spec; [eassumption|]));
+  repeat toAll; try All_map; try close_Forall;
+  change_Sk; auto with all;
+  intuition eauto 4 with all.
+
+Ltac solve_all := repeat (progress solve_all_one).
+#[global] Hint Extern 10 => rewrite !map_branch_map_branch : all.
+#[global] Hint Extern 10 => rewrite !map_predicate_map_predicate : all.
+  
 
 Lemma lookup_env_nil c s : lookup_env [] c = Some s -> False.
 Proof.
@@ -104,6 +149,44 @@ Proof.
   rewrite <- IHl. simpl. reflexivity.
 Qed.
 
+
+Lemma mkApps_tApp_inj fn args t u : 
+  ~~ isApp fn -> 
+  mkApps fn args = tApp t u ->
+  t = mkApps fn (removelast args) /\ u = last args t.
+Proof.
+  intros napp eqapp.
+  destruct args using rev_case => //.
+  simpl in eqapp. subst fn => //.
+  rewrite -mkApps_nested in eqapp. noconf eqapp.
+  now rewrite removelast_app // last_app // /= app_nil_r.
+Qed.
+
+Lemma removelast_length {A} (args : list A) : #|removelast args| = Nat.pred #|args|.
+Proof.
+  induction args => //. destruct args => //.
+  now rewrite (removelast_app [_]) // app_length IHargs /=.
+Qed.
+
+Lemma nth_error_removelast {A} {args : list A} {n arg} : 
+  nth_error (removelast args) n = Some arg ->
+  nth_error args n = Some arg.
+Proof.
+  intros h. rewrite nth_error_removelast //.
+  apply nth_error_Some_length in h.
+  now rewrite removelast_length in h.
+Qed.
+
+Lemma mkApps_discr f args t : 
+  args <> [] ->
+  mkApps f args = t ->
+  ~~ isApp t -> False.
+Proof.
+  intros.
+  destruct args using rev_case => //.
+  rewrite -mkApps_nested in H0. destruct t => //.
+Qed.
+
 Fixpoint decompose_prod (t : term) : (list aname) * (list term) * term :=
   match t with
   | tProd n A B => let (nAs, B) := decompose_prod B in
@@ -150,15 +233,15 @@ Proof.
     exact (List.map LocalAssum types).
   - refine (List.map _ decl.(ind_bodies)).
     intros [].
-    refine {| mind_entry_typename := ind_name;
-              mind_entry_arity := remove_arity decl.(ind_npars) ind_type;
+    refine {| mind_entry_typename := ind_name0;
+              mind_entry_arity := remove_arity decl.(ind_npars) ind_type0;
               mind_entry_template := false;
               mind_entry_consnames := _;
               mind_entry_lc := _;
             |}.
-    refine (List.map (fun x => fst (fst x)) ind_ctors).
+    refine (List.map (fun x => cstr_name x) ind_ctors0).
     refine (List.map (fun x => remove_arity decl.(ind_npars)
-                                                (snd (fst x))) ind_ctors).
+                                                (cstr_type x)) ind_ctors0).
 Defined.
 
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
@@ -167,6 +250,21 @@ Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=
   | tLetIn na b bty b' => decompose_prod_assum (Γ ,, vdef na b bty) b'
   | _ => (Γ, t)
   end.
+  
+Lemma decompose_prod_assum_ctx ctx t : decompose_prod_assum ctx t =
+  let (ctx', t') := decompose_prod_assum [] t in
+  (ctx ,,, ctx', t').
+Proof.
+  induction t in ctx |- *; simpl; auto.
+  - simpl. rewrite IHt2.
+    rewrite (IHt2 ([] ,, vass _ _)).
+    destruct (decompose_prod_assum [] t2). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+  - simpl. rewrite IHt3.
+    rewrite (IHt3 ([] ,, vdef _ _ _)).
+    destruct (decompose_prod_assum [] t3). simpl.
+    unfold snoc. now rewrite app_context_assoc.
+Qed.
 
 Fixpoint decompose_prod_n_assum (Γ : context) n (t : term) : option (context * term) :=
   match n with
@@ -216,6 +314,18 @@ Proof.
   case: x => [na [body|] ty'] /=; by rewrite IHctx' // /snoc -app_assoc.
 Qed.
 
+Lemma reln_length Γ Γ' n : #|reln Γ n Γ'| = #|Γ| + context_assumptions Γ'.
+Proof.
+  induction Γ' in n, Γ |- *; simpl; auto.
+  destruct a as [? [b|] ?]; simpl; auto.
+  rewrite Nat.add_1_r. simpl. rewrite IHΓ' => /= //.
+Qed.
+
+Lemma to_extended_list_k_length Γ n : #|to_extended_list_k Γ n| = context_assumptions Γ.
+Proof.
+  now rewrite /to_extended_list_k reln_length.
+Qed.
+
 Lemma reln_list_lift_above l p Γ :
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
@@ -251,7 +361,7 @@ Proof.
   destruct H; eexists; intuition eauto.
 Qed.
 
-Fixpoint reln_alt p Γ :=
+Fixpoint reln_alt p (Γ : context) :=
   match Γ with
   | [] => []
   | {| decl_body := Some _ |} :: Γ => reln_alt (p + 1) Γ
@@ -280,42 +390,11 @@ Proof.
   now rewrite -app_assoc !app_nil_r Nat.add_1_r.
 Qed.
 
-Lemma context_assumptions_length_bound Γ : context_assumptions Γ <= #|Γ|.
-Proof.
-  induction Γ; simpl; auto. destruct a as [? [?|] ?]; simpl; auto.
-  lia.
-Qed.
-
-Lemma context_assumptions_map f Γ : context_assumptions (map_context f Γ) = context_assumptions Γ.
-Proof.
-  induction Γ as [|[? [?|] ?] ?]; simpl; auto.
-Qed.
-
-Lemma context_assumptions_mapi f Γ : context_assumptions (mapi (fun i => map_decl (f i)) Γ) = 
-  context_assumptions Γ.
-Proof.
-  rewrite /mapi; generalize 0.
-  induction Γ; simpl; intros; eauto.
-  destruct a as [? [b|] ?]; simpl; auto.
-Qed.
-
-Hint Rewrite context_assumptions_map context_assumptions_mapi : len.
-
-Lemma compose_map_decl f g x : map_decl f (map_decl g x) = map_decl (f ∘ g) x.
-Proof.
-  destruct x as [? [?|] ?]; reflexivity.
-Qed.
-
-Lemma map_decl_ext f g x : (forall x, f x = g x) -> map_decl f x = map_decl g x.
-Proof.
-  intros H; destruct x as [? [?|] ?]; rewrite /map_decl /=; f_equal; auto.
-  now rewrite (H t).
-Qed.
-
 Ltac merge_All :=
   unfold tFixProp, tCaseBrsProp in *;
   repeat toAll.
 
+#[global]
 Hint Rewrite @map_def_id @map_id : map.
 
 (* todo move *)
@@ -375,7 +454,6 @@ Proof.
   intros t u l e.
   eapply decompose_app_rec_notApp. eassumption.
 Qed.
-
 
 Lemma decompose_app_rec_inv {t l' f l} :
   decompose_app_rec t l' = (f, l) ->
@@ -477,6 +555,41 @@ Proof.
   - rewrite -> 2!isApp_false_nApp by assumption. reflexivity.
   - assumption.
 Qed.
+
+Definition head x := (decompose_app x).1.
+Definition arguments x := (decompose_app x).2.
+
+Lemma head_arguments x : mkApps (head x) (arguments x) = x.
+Proof.
+  unfold head, arguments, decompose_app.
+  remember (decompose_app_rec x []).
+  destruct p as [f l].
+  symmetry in Heqp.
+  eapply decompose_app_rec_inv in Heqp.
+  now simpl in *.
+Qed.
+
+Lemma fst_decompose_app_rec t l : fst (decompose_app_rec t l) = fst (decompose_app t).
+Proof.
+  induction t in l |- *; simpl; auto. rewrite IHt1.
+  unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
+Qed.
+
+Lemma decompose_app_rec_head t l f : fst (decompose_app_rec t l) = f ->
+  negb (isApp f).
+Proof.
+  induction t; unfold isApp; simpl; try intros [= <-]; auto.
+  intros. apply IHt1. now rewrite !fst_decompose_app_rec.
+Qed.
+
+Lemma head_nApp x : negb (isApp (head x)).
+Proof.
+  unfold head.
+  eapply decompose_app_rec_head. reflexivity.
+Qed.
+
+Lemma head_tapp t1 t2 : head (tApp t1 t2) = head t1.
+Proof. rewrite /head /decompose_app /= fst_decompose_app_rec //. Qed.
 
 Lemma mkApps_Fix_spec mfix idx args t : mkApps (tFix mfix idx) args = t ->
                                         match decompose_app t with
@@ -848,6 +961,7 @@ Lemma map_InP_length {A B : Type} {P : A -> Type} (f : forall x : A, P x -> B) (
 Proof.
   induction l; simpl; auto.
 Qed.
+#[global]
 Hint Rewrite @map_InP_length : len.
 
 (** Views *)
@@ -866,7 +980,7 @@ Equations view_sortc (t : term) : view_sort t :=
   view_sortc (tSort s) := view_sort_sort s;
   view_sortc t := view_sort_other t _.
 
-Fixpoint isProd t :=
+Definition isProd t :=
   match t with
   | tProd na A B => true
   | _ => false

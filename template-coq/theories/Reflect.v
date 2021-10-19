@@ -1,41 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat Floats.FloatAxioms.
-From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Induction.
+From MetaCoq.Template Require Import utils BasicAst Universes.
 Require Import ssreflect.
 From Equations Require Import Equations.
-
-(** * Notion of reflection for Type-based properties *)
-
-Inductive reflectT (A : Type) : bool -> Type :=
-| ReflectT : A -> reflectT A true
-| ReflectF : (A -> False) -> reflectT A false.
-
-Lemma reflectT_reflect (A : Prop) b : reflectT A b -> reflect A b.
-Proof.
-  destruct 1; now constructor.
-Qed.
-
-Lemma reflect_reflectT (A : Prop) b : reflect A b -> reflectT A b.
-Proof.
-  destruct 1; now constructor.
-Qed.
-
-Lemma equiv_reflectT P (b : bool) : (P -> b) -> (b -> P) -> reflectT P b.
-Proof.
-  intros. destruct b; constructor; auto.
-  intros p; specialize (H p). discriminate.
-Qed.
-
-Lemma reflectT_subrelation {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation R r.
-Proof.
-  intros. intros x y h. destruct (X x y); auto.
-Qed.
-
-Lemma reflectT_subrelation' {A} {R} {r : A -> A -> bool} : (forall x y, reflectT (R x y) (r x y)) -> CRelationClasses.subrelation r R.
-Proof.
-  intros. intros x y h. destruct (X x y); auto. discriminate.
-Qed.
 
 (* Some reflection / EqDec lemmata *)
 
@@ -50,7 +18,7 @@ Proof.
   discriminate.
 Qed.
 
-Instance ReflectEq_EqDec :
+#[global] Instance ReflectEq_EqDec :
   forall A, ReflectEq A -> EqDec A.
 Proof.
   intros A [eqb h] x y.
@@ -65,7 +33,7 @@ Definition eq_dec_to_bool {A} `{EqDec A} x y :=
   | right _ => false
   end.
 
-(* Not an instance to avoid loops? *)
+#[global] (* Not an instance to avoid loops? *)
 Lemma EqDec_ReflectEq : forall A `{EqDec A}, ReflectEq A.
 Proof.
   intros A h.
@@ -80,16 +48,16 @@ Ltac nodec :=
   let bot := fresh "bot" in
   try solve [ constructor ; intro bot ; inversion bot ; subst ; tauto ].
 
-Definition eq_option {A} `{ReflectEq A} (u v : option A) : bool :=
+Definition eq_option {A} (eqA : A -> A -> bool) (u v : option A) : bool :=
   match u, v with
-  | Some u, Some v => eqb u v
+  | Some u, Some v => eqA u v
   | None, None => true
   | _, _ => false
   end.
 
-Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A).
+#[global] Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A).
 Proof.
-  intros A RA. refine {| eqb := eq_option |}.
+  intros A RA. refine {| eqb := eq_option eqb |}.
   intros x y. destruct x, y.
   all: cbn.
   all: try solve [ constructor ; easy ].
@@ -106,7 +74,7 @@ Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
   | _, _ => false
   end.
 
-Instance reflect_list : forall {A}, ReflectEq A -> ReflectEq (list A).
+#[global] Instance reflect_list : forall {A}, ReflectEq A -> ReflectEq (list A).
 Proof.
   intros A RA. refine {| eqb := eq_list eqb |}.
   intro x. induction x ; intro y ; destruct y.
@@ -118,7 +86,7 @@ Proof.
     subst. constructor. reflexivity.
 Defined.
 
-Program Instance reflect_string : ReflectEq string := {
+#[global] Program Instance reflect_string : ReflectEq string := {
   eqb := eq_string
 }.
 Next Obligation.
@@ -133,14 +101,12 @@ Next Obligation.
     + constructor. assumption.
 Defined.
 
-Instance reflect_nat : ReflectEq nat := {
+#[global] Instance reflect_nat : ReflectEq nat := {
   eqb_spec := Nat.eqb_spec
 }.
 
-#[program] 
-Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
-  { eqb := Numbers.Cyclic.Int63.Int63.eqb
-}.
+#[program,global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
+  { eqb := Numbers.Cyclic.Int63.Int63.eqb }.
 Next Obligation.
   destruct (Int63.eqb x y) eqn:eq; constructor.
   now apply (Numbers.Cyclic.Int63.Int63.eqb_spec x y) in eq.
@@ -151,14 +117,16 @@ Derive NoConfusion EqDec for SpecFloat.spec_float.
 
 Local Obligation Tactic := idtac.
 
-Print PrimFloat.
-#[program] 
+#[program,global] 
 Instance reflect_prim_float : ReflectEq PrimFloat.float :=
-  { eqb x y := PrimFloat.eqb x y }.
+  { eqb x y := eqb (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y) }.
 Next Obligation.
   intros. cbn -[eqb].
-  intros. todo "admit".
-Defined.
+  destruct (eqb_spec (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y)); constructor.
+  now apply FloatAxioms.Prim2SF_inj.
+  intros e; apply n. rewrite e.
+  reflexivity.
+Qed.
 
 Definition eq_level l1 l2 :=
   match l1, l2 with
@@ -168,7 +136,7 @@ Definition eq_level l1 l2 :=
   | _, _ => false
   end.
 
-#[program] Instance reflect_level : ReflectEq Level.t := {
+#[global, program] Instance reflect_level : ReflectEq Level.t := {
   eqb := eq_level
 }.
 Next Obligation.
@@ -189,7 +157,7 @@ Definition eq_prop_level l1 l2 :=
   | _, _ => false
   end.
 
-#[program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
+#[global, program] Instance reflect_prop_level : ReflectEq PropLevel.t := {
   eqb := eq_prop_level
 }.
 Next Obligation.
@@ -206,7 +174,7 @@ Definition eq_levels (l1 l2 : PropLevel.t + Level.t) :=
   | _, _ => false
   end.
 
-#[program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
+#[global, program] Instance reflect_levels : ReflectEq (PropLevel.t + Level.t) := {
   eqb := eq_levels
 }.
 Next Obligation.
@@ -224,7 +192,7 @@ Definition eq_prod {A B} (eqA : A -> A -> bool) (eqB : B -> B -> bool) x y :=
   else false.
 
 Local Obligation Tactic := idtac.
-#[program] Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
+#[global, program] Instance reflect_prod : forall {A B}, ReflectEq A -> ReflectEq B -> ReflectEq (A * B) := {
   eqb := eq_prod eqb eqb
 }.
 Next Obligation.
@@ -248,7 +216,7 @@ Qed.
 Definition eq_bool b1 b2 : bool :=
   if b1 then b2 else negb b2.
 
-#[program] Instance reflect_bool : ReflectEq bool := {
+#[global, program] Instance reflect_bool : ReflectEq bool := {
   eqb := eq_bool
 }.
 Next Obligation.
@@ -266,7 +234,7 @@ Definition eq_name na nb :=
   | _, _ => false
   end.
 
-#[program] Instance reflect_name : ReflectEq name := {
+#[global, program] Instance reflect_name : ReflectEq name := {
   eqb := eq_name
 }.
 Next Obligation.
@@ -285,7 +253,7 @@ Definition eq_relevance r r' :=
   | _, _ => false
   end.
 
-#[program] Instance reflect_relevance : ReflectEq relevance := {
+#[global, program] Instance reflect_relevance : ReflectEq relevance := {
   eqb := eq_relevance
 }.
 Next Obligation.
@@ -299,8 +267,8 @@ Defined.
 Definition eq_aname (na nb : binder_annot name) :=
   eqb na.(binder_name) nb.(binder_name) &&
   eqb na.(binder_relevance) nb.(binder_relevance).
-
-#[program] Instance reflect_aname : ReflectEq aname := {
+  
+#[global, program] Instance reflect_aname : ReflectEq aname := {
   eqb := eq_aname
 }.
 Next Obligation.
@@ -310,7 +278,7 @@ Next Obligation.
   constructor; destruct x, y; simpl in *; cong.
 Defined.
 
-#[program] Instance reflect_kername : ReflectEq kername := {
+#[global, program] Instance reflect_kername : ReflectEq kername := {
   eqb := eq_kername
 }.
 Next Obligation.
@@ -318,7 +286,7 @@ Next Obligation.
 Qed.
 
 
-#[program] Instance reflect_inductive : ReflectEq inductive := {
+#[global, program] Instance reflect_inductive : ReflectEq inductive := {
   eqb := eq_inductive
 }.
 Next Obligation.
@@ -336,7 +304,7 @@ Definition eq_def {A} `{ReflectEq A} (d1 d2 : def A) : bool :=
     eqb n1 n2 && eqb t1 t2 && eqb b1 b2 && eqb a1 a2
   end.
 
-#[program] Instance reflect_def : forall {A} `{ReflectEq A}, ReflectEq (def A) := {
+#[global, program] Instance reflect_def : forall {A} `{ReflectEq A}, ReflectEq (def A) := {
   eqb := eq_def
 }.
 Next Obligation.
@@ -358,7 +326,7 @@ Definition eq_cast_kind (c c' : cast_kind) : bool :=
   | _, _ => false
   end.
 
-#[program] Instance reflect_cast_kind : ReflectEq cast_kind :=
+#[global, program] Instance reflect_cast_kind : ReflectEq cast_kind :=
   { eqb := eq_cast_kind }.
 Next Obligation.
   induction x, y. all: cbn. all: nodec.
@@ -381,10 +349,10 @@ Proof.
 Qed.
 
 (* move in Universes.v ?? *)
-Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
+#[global] Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
 Proof. intros e e'. repeat decide equality. Qed.
 
-Instance eq_dec_univ0 : EqDec Universe.t0.
+#[global] Instance eq_dec_univ0 : EqDec Universe.t0.
 Proof.
   intros u v.
   assert (H : {UnivExprSet.elements u = UnivExprSet.elements v}
@@ -394,147 +362,22 @@ Proof.
   intro X; apply H; now apply eq_universe_iff' in X.
 Defined.
 
-Instance eq_dec_univ : EqDec Universe.t.
+#[global] Instance eq_dec_univ : EqDec Universe.t.
 Proof.
   red. decide equality.
   apply eq_dec_univ0.
 Defined.
 
-Local Ltac finish :=
-  let h := fresh "h" in
-  right ;
-  match goal with
-  | e : ?t <> ?u |- _ =>
-    intro h ; apply e ; now inversion h
-  end.
+#[global] Instance reflect_eq_univ : ReflectEq Universe.t := EqDec_ReflectEq _.
 
-Local Ltac fcase c :=
-  let e := fresh "e" in
-  case c ; intro e ; [ subst ; try (left ; reflexivity) | finish ].
-
-Local Ltac term_dec_tac term_dec :=
-  repeat match goal with
-         | t : term, u : term |- _ => fcase (term_dec t u)
-         | u : Universe.t, u' : Universe.t |- _ => fcase (eq_dec u u')
-         | x : Instance.t, y : Instance.t |- _ =>
-           fcase (eq_dec x y)
-         | x : list Level.t, y : Instance.t |- _ =>
-           fcase (eq_dec x y)
-         | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
-         | i : string, i' : kername |- _ => fcase (string_dec i i')
-         | n : name, n' : name |- _ => fcase (eq_dec n n')
-         | n : aname, n' : aname |- _ => fcase (eq_dec n n')
-         | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
-         | x : inductive * nat, y : inductive * nat |- _ =>
-           fcase (eq_dec x y)
-         | x : (inductive * nat) * relevance, y : (inductive * nat) * relevance |- _ =>
-           fcase (eq_dec x y)
-         | x : projection, y : projection |- _ => fcase (eq_dec x y)
-         | x : cast_kind, y : cast_kind |- _ => fcase (eq_dec x y)
-         end.
-
-Derive NoConfusion NoConfusionHom for term.
-
-Instance EqDec_term : EqDec term.
-Proof.
-  intro x; induction x using term_forall_list_rect ; intro t ;
-    destruct t ; try (right ; discriminate).
-  all: term_dec_tac term_dec.
-  - induction X in args |- *.
-    + destruct args.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct args.
-      * right. discriminate.
-      * destruct (IHX args) ; nodec.
-        destruct (p t) ; nodec.
-        subst. left. inversion e. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    destruct (IHx3 t3) ; nodec.
-    subst. left. reflexivity.
-  - destruct (IHx t) ; nodec.
-    subst. induction X in args |- *.
-    + destruct args. all: nodec.
-      left. reflexivity.
-    + destruct args. all: nodec.
-      destruct (IHX args). all: nodec.
-      destruct (p t0). all: nodec.
-      subst. inversion e. subst.
-      left. reflexivity.
-  - destruct (IHx1 t1) ; nodec.
-    destruct (IHx2 t2) ; nodec.
-    subst. revert branches. clear IHx1 IHx2.
-    induction X ; intro l0.
-    + destruct l0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct l0.
-      * right. discriminate.
-      * destruct (IHX l0) ; nodec.
-        destruct (p (snd p0)) ; nodec.
-        destruct (eq_dec (fst x) (fst p0)) ; nodec.
-        destruct x, p0.
-        left.
-        cbn in *. subst. inversion e. reflexivity.
-  - destruct (IHx t) ; nodec.
-    left. subst. reflexivity.
-  - revert mfix. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-  - revert mfix. induction X ; intro m0.
-    + destruct m0.
-      * left. reflexivity.
-      * right. discriminate.
-    + destruct p as [p1 p2].
-      destruct m0.
-      * right. discriminate.
-      * destruct (p1 (dtype d)) ; nodec.
-        destruct (p2 (dbody d)) ; nodec.
-        destruct (IHX m0) ; nodec.
-        destruct x, d ; subst. cbn in *.
-        destruct (eq_dec dname dname0) ; nodec.
-        subst. inversion e1. subst.
-        destruct (eq_dec rarg rarg0) ; nodec.
-        subst. left. reflexivity.
-  - destruct (Int63.eqs i i0) ; nodec.
-    subst. left. reflexivity.
-  - destruct (eq_dec f f0) ; nodec.
-    subst. left. reflexivity.
-Defined.
-
-Instance reflect_term : ReflectEq term :=
-  let h := EqDec_ReflectEq term in _.
+#[global] Instance reflect_case_info : ReflectEq case_info := EqDec_ReflectEq case_info.
 
 Definition eq_sig_true {A f} `{ReflectEq A} (x y : { z : A | f z = true }) : bool :=
   let '(exist x hx) := x in
   let '(exist y hy) := y in
   eqb x y.
 
-#[program] Instance reflect_sig_true {A f} `{ReflectEq A} : ReflectEq ({ z : A | f z = true }) := {
+#[global, program] Instance reflect_sig_true {A f} `{ReflectEq A} : ReflectEq ({ z : A | f z = true }) := {
   eqb := eq_sig_true
 }.
 Next Obligation.
@@ -546,22 +389,22 @@ Defined.
 Derive NoConfusion NoConfusionHom for sig.
 Derive NoConfusion NoConfusionHom for prod.
 
-Definition eqb_context_decl (x y : context_decl) :=
+Definition eqb_context_decl {term : Type} (eqterm : term -> term -> bool) 
+  (x y : BasicAst.context_decl term) :=
   let (na, b, ty) := x in
   let (na', b', ty') := y in
-  eqb na na' && eqb b b' && eqb ty ty'.
+  eqb na na' && eq_option eqterm b b' && eqterm ty ty'.
 
-Instance eq_ctx : ReflectEq context_decl.
+#[global] Instance eq_decl_reflect {term} {Ht : ReflectEq term} : ReflectEq (BasicAst.context_decl term).
 Proof.
-  refine {| eqb := eqb_context_decl |}.
+  refine {| eqb := eqb_context_decl eqb |}.
   intros.
   destruct x as [na b ty], y as [na' b' ty']. cbn -[eqb].
+  change (eq_option eqb b b') with (eqb b b').
   destruct (eqb_spec na na'); subst;
     destruct (eqb_spec b b'); subst;
       destruct (eqb_spec ty ty'); subst; constructor; congruence.
 Qed.
-
-Instance eqb_ctx : ReflectEq context := _.
 
 Definition eqb_recursivity_kind r r' :=
   match r, r' with
@@ -571,7 +414,7 @@ Definition eqb_recursivity_kind r r' :=
   | _, _ => false
   end.
 
-Instance reflect_recursivity_kind : ReflectEq recursivity_kind.
+#[global] Instance reflect_recursivity_kind : ReflectEq recursivity_kind.
 Proof.
   refine {| eqb := eqb_recursivity_kind |}.
   destruct x, y; simpl; constructor; congruence.
@@ -584,7 +427,7 @@ Definition eqb_ConstraintType x y :=
   | _, _ => false
   end.
 
-Instance reflect_ConstraintType : ReflectEq ConstraintType.t.
+#[global] Instance reflect_ConstraintType : ReflectEq ConstraintType.t.
 Proof.
   refine {| eqb := eqb_ConstraintType |}.
   destruct x, y; simpl; try constructor; try congruence.
@@ -595,7 +438,7 @@ Defined.
 Definition eqb_ConstraintSet x y :=
   eqb (ConstraintSet.this x) (ConstraintSet.this y).
 
-Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
+#[global] Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
 Proof.
   refine {| eqb := eqb_ConstraintSet |}.
   intros [thisx okx] [thisy oky].
@@ -609,7 +452,7 @@ Defined.
 Definition eqb_LevelSet x y :=
   eqb (LevelSet.this x) (LevelSet.this y).
 
-Instance reflect_LevelSet : ReflectEq LevelSet.t.
+#[global] Instance reflect_LevelSet : ReflectEq LevelSet.t.
 Proof.
   refine {| eqb := eqb_LevelSet |}.
   intros [thisx okx] [thisy oky].
@@ -633,23 +476,12 @@ Ltac finish_reflect :=
     | |- context[eqb ?a ?b] => destruct (eqb_spec a b); [subst|constructor; congruence]
     end);
   constructor; trivial; congruence.
-Instance reflect_universes_decl : ReflectEq universes_decl.
+
+#[global] Instance reflect_universes_decl : ReflectEq universes_decl.
 Proof.
   refine {| eqb := eqb_universes_decl |}.
   unfold eqb_universes_decl.
   intros [] []; finish_reflect.
-Defined.
-
-Definition eqb_constant_body (x y : constant_body) :=
-  let (tyx, bodyx, univx) := x in
-  let (tyy, bodyy, univy) := y in
-  eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
-
-Instance reflect_constant_body : ReflectEq constant_body.
-Proof.
-  refine {| eqb := eqb_constant_body |}.
-  intros [] [].
-  unfold eqb_constant_body; finish_reflect.
 Defined.
 
 Definition eqb_allowed_eliminations x y :=
@@ -661,23 +493,13 @@ Definition eqb_allowed_eliminations x y :=
   | _, _ => false
   end.
 
-Instance reflect_allowed_eliminations : ReflectEq allowed_eliminations.
+#[global] Instance reflect_allowed_eliminations : ReflectEq allowed_eliminations.
 Proof.
   refine {| eqb := eqb_allowed_eliminations |}.
   intros [] []; simpl; constructor; congruence.
 Defined.
 
-Definition eqb_one_inductive_body (x y : one_inductive_body) :=
-  let (n, t, k, c, p, r) := x in
-  let (n', t', k', c', p', r') := y in
-  eqb n n' && eqb t t' && eqb k k' && eqb c c' && eqb p p' && eqb r r'.
-
-Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
-Proof.
-  refine {| eqb := eqb_one_inductive_body |}.
-  intros [] [].
-  unfold eqb_one_inductive_body; finish_reflect.
-Defined.
+Local Infix "==?" := eqb (at level 20).
 
 Definition eqb_Variance x y :=
   match x, y with
@@ -687,34 +509,8 @@ Definition eqb_Variance x y :=
   | _, _ => false
   end.
 
-Instance reflect_Variance : ReflectEq Variance.t.
+#[global] Instance reflect_Variance : ReflectEq Variance.t.
 Proof.
   refine {| eqb := eqb_Variance |}.
   intros [] []; constructor; congruence.
-Defined.
-
-Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
-  let (f, n, p, b, u, v) := x in
-  let (f', n', p', b', u', v') := y in
-  eqb f f' && eqb n n' && eqb b b' && eqb p p' && eqb u u' && eqb v v'.
-
-Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
-Proof.
-  refine {| eqb := eqb_mutual_inductive_body |}.
-  intros [] [].
-  unfold eqb_mutual_inductive_body; finish_reflect.
-Defined.
-
-Definition eqb_global_decl x y :=
-  match x, y with
-  | ConstantDecl cst, ConstantDecl cst' => eqb cst cst'
-  | InductiveDecl mib, InductiveDecl mib' => eqb mib mib'
-  | _, _ => false
-  end.
-
-Instance reflect_global_decl : ReflectEq global_decl.
-Proof.
-  refine {| eqb := eqb_global_decl |}.
-  unfold eqb_global_decl.
-  intros [] []; finish_reflect.
 Defined.

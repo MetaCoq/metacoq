@@ -2,12 +2,13 @@
 From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction.
 
-
 (** * Lifting and substitution for the AST
 
   Along with standard commutation lemmas.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
+
+Local Open Scope erasure.
 
 Fixpoint lift n k t : term :=
   match t with
@@ -17,7 +18,8 @@ Fixpoint lift n k t : term :=
   | tApp u v => tApp (lift n k u) (lift n k v)
   | tLetIn na b b' => tLetIn na (lift n k b) (lift n (S k) b')
   | tCase ind c brs =>
-    let brs' := List.map (on_snd (lift n k)) brs in
+    let brs' := List.map (fun br => 
+      (br.1, lift n (br.1 + k) br.2)) brs in
     tCase ind (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
@@ -55,7 +57,7 @@ Fixpoint subst s k u :=
   | tApp u v => tApp (subst s k u) (subst s k v)
   | tLetIn na b b' => tLetIn na (subst s k b) (subst s (S k) b')
   | tCase ind c brs =>
-    let brs' := List.map (on_snd (subst s k)) brs in
+    let brs' := List.map (fun br => (br.1, subst s (br.1 + k) br.2)) brs in
     tCase ind (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
   | tFix mfix idx =>
@@ -73,7 +75,7 @@ Fixpoint subst s k u :=
 Notation subst0 t := (subst t 0).
 Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
-Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
+Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity) : erasure.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with
@@ -83,7 +85,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tApp u v => closedn k u && closedn k v
   | tLetIn na b b' => closedn k b && closedn (S k) b'
   | tCase ind c brs =>
-    let brs' := List.forallb (test_snd (closedn k)) brs in
+    let brs' := List.forallb (fun br => closedn (br.1 + k) br.2) brs in
     closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>
@@ -195,7 +197,7 @@ Ltac change_Sk :=
 
 
 Ltac solve_all :=
-  unfold tCaseBrsProp, tFixProp in *;
+  unfold tFixProp in *;
   repeat toAll; try All_map; try close_Forall;
   change_Sk; auto with all;
   intuition eauto 4 with all.
@@ -221,15 +223,13 @@ Proof.
     try (f_equal; auto; solve_all).
 
   - now elim (leb k n).
+  - destruct x; cbn. now rewrite H0.
 Qed.
 
 Lemma lift0_p : forall M, lift0 0 M = M.
   intros; unfold lift in |- *.
   apply lift0_id; easy.
 Qed.
-
-#[global]
-Hint Extern 10 => apply_spec : all.
 
 #[global]
 Hint Resolve -> on_snd_eq_spec : all.
@@ -264,6 +264,9 @@ Proof.
     intros; simpl;
       rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length, ?Nat.add_assoc;
       try solve [f_equal; auto; solve_all]; repeat nth_leb_simpl.
+  f_equal; auto. solve_all.
+  f_equal. rewrite Nat.add_assoc.
+  rewrite H1; auto. lia.
 Qed.
 
 Lemma permute_lift0 :
@@ -330,6 +333,8 @@ Proof.
 
   - repeat nth_leb_simpl.
     rewrite -> simpl_lift by easy. f_equal; lia.
+  - f_equal; auto; solve_all.
+    rewrite Nat.add_assoc. f_equal. apply H1. lia.
 Qed.
 
 Lemma commut_lift_subst :
@@ -356,6 +361,9 @@ Proof.
     rewrite nth_error_map in e0. rewrite e in e0.
     revert e0. intros [= <-].
     now rewrite (permute_lift x n0 k p 0).
+  - f_equal; auto; solve_all.
+    f_equal. rewrite !Nat.add_assoc.
+    rewrite H0. f_equal.
 Qed.
 
 Lemma distr_lift_subst :
@@ -410,6 +418,8 @@ Proof.
     rewrite nth_error_map in e0. rewrite e in e0.
     simpl in e0. injection e0 as <-.
     rewrite commut_lift_subst_rec. arith_congr. lia.
+  - f_equal; auto; solve_all. f_equal.
+    now rewrite !Nat.add_assoc, H0.
 Qed.
 
 Lemma distr_subst :
@@ -431,6 +441,10 @@ Proof.
     simpl closed in *; try solve [simpl lift; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
   - rewrite lift_rel_lt; auto.
     revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
+  - cbn. f_equal; auto.
+    rtoProp; solve_all.
+    rtoProp; solve_all.
+    destruct x; f_equal; cbn in *. now apply a0.
 Qed.
 
 Lemma closed_upwards {k t} k' : closedn k t -> k' >= k -> closedn k' t.
@@ -455,6 +469,24 @@ Proof.
     assert (n - k > 0) by lia.
     assert (exists n', n - k = S n'). exists (pred (n - k)). lia.
     destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
+  - f_equal; eauto; solve_all. destruct x; cbn in *; eauto.
+    now rewrite H.
+Qed.
+
+Lemma subst_closed n k t : closedn k t -> subst n k t = t.
+Proof.
+  revert k.
+  elim t using term_forall_list_ind; intros; try easy;
+    rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
+    unfold test_def in *;
+    simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
+  - cbn. 
+    revert H. elim (Nat.ltb_spec n0 k); intros; try easy.
+    elim (Nat.leb_spec k n0); intros; try easy.
+  - cbn. f_equal; auto.
+    rtoProp; solve_all.
+    rtoProp; solve_all.
+    destruct x; f_equal; cbn in *. now apply a0.
 Qed.
 
 (* Lemma lift_to_extended_list_k Γ k : forall k', *)
@@ -501,6 +533,7 @@ Proof.
 
   - repeat nth_leb_simpl.
     rewrite -> Nat.add_comm, simpl_subst; eauto.
+  - f_equal. now rewrite H, Nat.add_assoc.
 Qed.
 
 Lemma isLambda_subst (s : list term) k (bod : term) :

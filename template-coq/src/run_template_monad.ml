@@ -119,10 +119,10 @@ let unquote_set trm =
   | _ -> not_supported_verb trm "unquote_set"
 
 
-let unquote_constraints evm c (* of type constraints *) : _ * Constraint.t =
+let unquote_constraints evm c (* of type constraints *) : _ * Constraints.t =
   let c = unquote_set c in
-  List.fold_left (fun (evm, set) c -> let evm, c = unquote_univ_constraint evm c in evm, Constraint.add c set)
-                 (evm, Constraint.empty) c
+  List.fold_left (fun (evm, set) c -> let evm, c = unquote_univ_constraint evm c in evm, Constraints.add c set)
+                 (evm, Constraints.empty) c
 
 
 let denote_variance trm (* of type Variance *) : Variance.t =
@@ -138,10 +138,10 @@ let denote_variance trm (* of type Variance *) : Variance.t =
   let evm, c = unquote_constraints evm c in
   evm, Univ.UContext.make (i, c) *)
 
-let unquote_levelset evm c (* of type LevelSet.t *) : _ * LSet.t =
+let unquote_levelset evm c (* of type Level.Set.t *) : _ * Level.Set.t =
   let c = unquote_set c in
-  List.fold_left (fun (evm, set) c -> let evm, c = unquote_level evm c in evm, LSet.add c set)
-                 (evm, LSet.empty) c
+  List.fold_left (fun (evm, set) c -> let evm, c = unquote_level evm c in evm, Level.Set.add c set)
+                 (evm, Level.Set.empty) c
 
 let denote_ucontextset evm trm (* of type ContextSet.t *) : _ * ContextSet.t =
   let i, c = unquote_pair trm in
@@ -163,7 +163,7 @@ let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
   let inst = Instance.of_array (Array.of_list vars) in
   evm, (UContext.make names (inst, c))
 
-let denote_aucontext evm trm (* of type AUContext.t *) : _ * AUContext.t =
+let denote_aucontext evm trm (* of type AbstractContext.t *) : _ * AbstractContext.t =
   let i, c = unquote_pair trm in
   let l = unquote_list i in
   let vars = List.mapi (fun i l -> Level.var i) l in
@@ -185,11 +185,11 @@ let _denote_variances evm trm : _ * Variance.t array option =
 (* todo : stick to Coq implem *)
 type universe_context_type =
   | Monomorphic_uctx of Univ.ContextSet.t
-  | Polymorphic_uctx of Univ.AUContext.t
+  | Polymorphic_uctx of Univ.AbstractContext.t
 
 let _to_entry_inductive_universes = function
   | Monomorphic_uctx ctx -> UState.Monomorphic_entry ctx
-  | Polymorphic_uctx ctx -> UState.Polymorphic_entry (AUContext.repr ctx)
+  | Polymorphic_uctx ctx -> UState.Polymorphic_entry (Univ.AbstractContext.repr ctx)
 
 let _denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
@@ -244,7 +244,7 @@ let denote_decl env evm d =
   let (h, args) = app_full d [] in
   if constr_equall h tmkdecl then
     match args with
-    | name :: body :: typ :: [] ->
+    | _ty :: name :: body :: typ :: [] ->
       let name = unquote_aname name in
       let evm, ty = denote_term env evm typ in
       let evm, decl = (match unquote_option body with
@@ -411,13 +411,14 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let qt = quote_term_rec bypass env trm in
     k ~st env evm qt
   | TmQuoteInd (name, strict) ->
-       let kn = unquote_kn (reduce_all env evm name) in
-       let t = quote_mind_decl env (MutInd.make1 kn) in
-       let _, args = Constr.destApp t in
-       (match args with
-        | [|decl|] ->
-          k ~st env evm decl
-        | _ -> bad_term_verb t "anomaly in quoting of inductive types")
+    let kn = unquote_kn (reduce_all env evm name) in
+    let kn = MutInd.make1 kn in
+    let mib = Environ.lookup_mind kn env in
+    let t = quote_mind_decl env kn mib in
+    let _, args = Constr.destApp t in
+    (match args with
+    | [|decl|] -> k ~st env evm decl
+    | _ -> bad_term_verb t "anomaly in quoting of inductive types")
   | TmQuoteConst (name, bypass, strict) ->
     let name = unquote_kn (reduce_all env evm name) in
     let bypass = unquote_bool (reduce_all env evm bypass) in

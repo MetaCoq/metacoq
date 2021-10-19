@@ -4,7 +4,7 @@ From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICLiftSubst PCUICClosed
      PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
-     PCUICContextConversion PCUICCanonicity.
+     PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICCanonicity.
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.
 
@@ -85,19 +85,9 @@ Proof.
     eexists _,_. rewrite -> H, H0. intuition eauto.
 Qed.
 
-Lemma typing_spine_inv_app Σ x0 l x x1 :
-  PCUICGeneration.typing_spine Σ [] x0 (l ++ [x]) x1 -> { '(x2, x3) : _ & (PCUICGeneration.typing_spine Σ [] x0 l x2) * (Σ ;;; [] |- x : x3)}%type.
-Proof.
-  intros. depind X. destruct l; inv x.
-  destruct l; invs x.
-  + eexists (_, _). split. econstructor; eauto.  eauto.
-  + specialize (IHX _ _ eq_refl) as ([] & []).
-    eexists (_, _). split.  econstructor; eauto. eauto.
-Qed.
-
 Lemma typing_spine_inv args arg a Σ x2 x3 :
   nth_error args (arg) = Some a ->
-  PCUICGeneration.typing_spine Σ [] x2 args x3 ->
+  typing_spine Σ [] x2 args x3 ->
   {T & Σ;;; [] |- a : T}.
 Proof.
   intros. revert arg H.
@@ -111,7 +101,7 @@ Qed.
 Definition well_typed Σ Γ t := ∑ T, Σ ;;; Γ |- t : T.
 
 Lemma typing_spine_wt args Σ x2 x3 :  wf Σ.1 ->
-  PCUICGeneration.typing_spine Σ [] x2 args x3 ->
+  typing_spine Σ [] x2 args x3 ->
   All (well_typed Σ []) args.
 Proof.
   intros wfΣ sp.
@@ -126,12 +116,14 @@ Proof.
   eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
 Qed.
 
+
+
 Lemma typing_spine_eval:
   forall (Σ : global_env_ext) (args args' : list PCUICAst.term) 
   (X : All2 (PCUICWcbvEval.eval Σ) args args') (bla : wf Σ)
     (T x x0 : PCUICAst.term) (t0 : typing_spine Σ [] x args x0) 
-    (c : Σ;;; [] |- x0 <= T) (x1 : PCUICAst.term)
-    (c0 : Σ;;; [] |- x1 <= x), isType Σ [] T -> typing_spine Σ [] x1 args' T.
+    (c : Σ;;; [] ⊢ x0 ≤ T) (x1 : PCUICAst.term)
+    (c0 : Σ;;; [] ⊢ x1 ≤ x), isType Σ [] x1 -> isType Σ [] T -> typing_spine Σ [] x1 args' T.
 Proof.
   intros. eapply typing_spine_red; eauto.
   eapply typing_spine_wt in t0; auto.
@@ -310,11 +302,11 @@ Qed.
 Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tFix mfix1 n : T ->
-  (* wf_local Σ (PCUICLiftSubst.fix_context mfix1) -> *)
-  subslet Σ [] (fix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+  (* wf_local Σ (fix_context mfix1) -> *)
+  subslet Σ [] (fix_subst mfix1) (fix_context mfix1).
 Proof.
   intro hΣ.
-  unfold fix_subst, PCUICLiftSubst.fix_context.
+  unfold fix_subst, fix_context.
   assert (exists L, mfix1 = mfix1 ++ L) by (exists []; now simpl_list). revert H.
   generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
@@ -357,10 +349,10 @@ Qed.
 Lemma subslet_cofix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tCoFix mfix1 n : T ->
-  subslet Σ [] (cofix_subst mfix1) (PCUICLiftSubst.fix_context mfix1).
+  subslet Σ [] (cofix_subst mfix1) (fix_context mfix1).
 Proof.
   intro hΣ.
-  unfold cofix_subst, PCUICLiftSubst.fix_context.
+  unfold cofix_subst, fix_context.
   assert (exists L, mfix1 = mfix1 ++ L)%list by (exists []; now simpl_list). revert H.
   generalize mfix1 at 2 5 6.  intros.
   induction mfix0 using rev_ind.
@@ -378,21 +370,21 @@ Qed.
 
 (** ** Prelim on typing *)
 
-Inductive red_decls Σ Γ Γ' : forall (x y : PCUICAst.context_decl), Type :=
+Inductive red_decls Σ Γ Γ' : forall (x y : context_decl), Type :=
 | conv_vass na na' T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
   eq_binder_annot na na' ->
-  red_decls Σ Γ Γ' (PCUICAst.vass na T) (PCUICAst.vass na' T')
+  red_decls Σ Γ Γ' (vass na T) (vass na' T')
 
 | conv_vdef_type na na' b T T' : isType Σ Γ' T' -> red Σ Γ T T' ->
   eq_binder_annot na na' ->
-  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b T')
+  red_decls Σ Γ Γ' (vdef na b T) (vdef na' b T')
 
 | conv_vdef_body na na' b b' T : isType Σ Γ' T ->
   eq_binder_annot na na' ->
   Σ ;;; Γ' |- b' : T -> red Σ Γ b b' ->
-  red_decls Σ Γ Γ' (PCUICAst.vdef na b T) (PCUICAst.vdef na' b' T).
+  red_decls Σ Γ Γ' (vdef na b T) (vdef na' b' T).
 
-Notation red_context Σ := (context_relation (red_decls Σ)).
+Notation red_context Σ := (All2_fold (red_decls Σ)).
 
 Lemma conv_context_app (Σ : global_env_ext) (Γ1 Γ2 Γ1' : context) :
   wf Σ ->

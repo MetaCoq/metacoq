@@ -64,10 +64,99 @@ let bad_term_verb trm rs =
                     ++ spc () ++ str " Error: " ++ str rs)
 
 
+module CaseCompat =
+  struct
+
+  open Constr
+  open Context.Rel.Declaration
+  open Vars
+  open Util
+  open Univ
+  open Declarations
+
+  (** {6 Changes of representation of Case nodes} *)
+
+  (** Provided:
+      - a universe instance [u]
+      - a term substitution [subst]
+      - name replacements [nas]
+      [instantiate_context u subst nas ctx] applies both [u] and [subst] to [ctx]
+      while replacing names using [nas] (order reversed)
+  *)
+  let instantiate_context u subst nas ctx =
+    let rec instantiate i ctx = match ctx with
+    | [] -> assert (Int.equal i (-1)); []
+    | LocalAssum (_, ty) :: ctx ->
+      let ctx = instantiate (pred i) ctx in
+      let ty = substnl subst i (subst_instance_constr u ty) in
+      LocalAssum (nas.(i), ty) :: ctx
+    | LocalDef (_, ty, bdy) :: ctx ->
+      let ctx = instantiate (pred i) ctx in
+      let ty = substnl subst i (subst_instance_constr u ty) in
+      let bdy = substnl subst i (subst_instance_constr u bdy) in
+      LocalDef (nas.(i), ty, bdy) :: ctx
+    in
+    instantiate (Array.length nas - 1) ctx
+
+  let case_predicate_context_gen mip ci u paramsubst nas =
+    let realdecls, _ = List.chop mip.mind_nrealdecls mip.mind_arity_ctxt in
+    let self =
+      let args = Context.Rel.instance mkRel 0 mip.mind_arity_ctxt in
+      let inst = Instance.of_array (Array.init (Instance.length u) Level.var) in
+      mkApp (mkIndU (ci.ci_ind, inst), args)
+    in
+    let realdecls = LocalAssum (Context.anonR, self) :: realdecls in
+    instantiate_context u paramsubst nas realdecls
+
+  let case_predicate_context env ci u params nas =
+    let mib = Environ.lookup_mind (fst ci.ci_ind) env in
+    let mip = mib.mind_packets.(snd ci.ci_ind) in
+    let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
+    let paramsubst = Vars.subst_of_rel_context_instance paramdecl params in
+    case_predicate_context_gen mip ci u paramsubst nas
+      
+  let case_branches_contexts_gen mib ci u params brs =
+    (* Γ ⊢ c : I@{u} params args *)
+    (* Γ, indices, self : I@{u} params indices ⊢ p : Type *)
+    let mip = mib.mind_packets.(snd ci.ci_ind) in
+    let paramdecl = Vars.subst_instance_context u mib.mind_params_ctxt in
+    let paramsubst = Vars.subst_of_rel_context_instance paramdecl params in
+    (* Expand the branches *)
+    let subst = paramsubst in
+    let ebr =
+      let build_one_branch i (nas, br) (ctx, _) =
+        let ctx, _ = List.chop mip.mind_consnrealdecls.(i) ctx in
+        let ctx = instantiate_context u subst nas ctx in
+        (nas, ctx, br)
+      in
+      Array.map2_i build_one_branch brs mip.mind_nf_lc
+    in 
+    ebr
+
+  let case_branches_contexts env ci u pars brs =
+    let mib = Environ.lookup_mind (fst ci.ci_ind) env in
+    case_branches_contexts_gen mib ci u pars brs
+end
+
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
 
 type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list
 
+type ('term, 'name, 'universe_instance) apredicate = 
+  { auinst : 'universe_instance; 
+    apars : 'term list;
+    apcontext : 'name list;
+    apreturn : 'term }
+
+type ('term, 'name) abranch =
+  { abcontext : 'name list;
+    abbody : 'term }
+
+type ('nat, 'inductive, 'relevance) acase_info =
+  { aci_ind : 'inductive;
+    aci_npar : 'nat;
+    aci_relevance : 'relevance }
+    
 type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive, 'relevance, 'universe_instance, 'projection, 'int63, 'float64) structure_of_term =
   | ACoq_tRel of 'nat
   | ACoq_tVar of 'ident
@@ -81,7 +170,9 @@ type ('term, 'nat, 'ident, 'name, 'quoted_sort, 'cast_kind, 'kername, 'inductive
   | ACoq_tConst of 'kername * 'universe_instance
   | ACoq_tInd of 'inductive * 'universe_instance
   | ACoq_tConstruct of 'inductive * 'nat * 'universe_instance
-  | ACoq_tCase of (('inductive * 'nat) * 'relevance) * 'term * 'term * ('nat * 'term) list
+  | ACoq_tCase of ('nat, 'inductive, 'relevance) acase_info * 
+    ('term, 'name, 'universe_instance) apredicate *
+    'term * ('term, 'name) abranch list
   | ACoq_tProj of 'projection * 'term
   | ACoq_tFix of ('term, 'name, 'nat) amfixpoint * 'nat
   | ACoq_tCoFix of ('term, 'name, 'nat) amfixpoint * 'nat

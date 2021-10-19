@@ -91,12 +91,12 @@ Module Nbar.
 
   Local Open Scope nbar_scope.
 
-  Instance le_refl : Reflexive le.
+  #[global] Instance le_refl : Reflexive le.
   Proof.
     intro x; destruct x; cbn; reflexivity.
   Defined.
 
-  Instance le_trans : Transitive le.
+  #[global] Instance le_trans : Transitive le.
   Proof.
     intros [x|] [y|] [z|]; cbn; intuition.
   Defined.

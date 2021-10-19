@@ -3,7 +3,8 @@ From MetaCoq.Template Require Import config Universes Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICLiftSubst.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.
-Existing Instance default_checker_flags.
+
+Local Existing Instance default_checker_flags.
 
 Import MCMonadNotation.
 

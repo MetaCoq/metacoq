@@ -17,8 +17,8 @@ Fixpoint tsl_rec0 (n : nat) (t : term) {struct t} : term :=
   | tLambda na A t => tLambda na (tsl_rec0 n A) (tsl_rec0 (n+1) t)
   | tLetIn na t A u => tLetIn na (tsl_rec0 n t) (tsl_rec0 n A) (tsl_rec0 (n+1) u)
   | tApp t lu => tApp (tsl_rec0 n t) (map (tsl_rec0 n) lu)
-  | tCase ik t u br => tCase ik (tsl_rec0 n t) (tsl_rec0 n u)
-                            (map (fun x => (fst x, tsl_rec0 n (snd x))) br)
+  | tCase ik t u br => tCase ik (map_predicate_k id tsl_rec0 n t) (tsl_rec0 n u)
+                            (map_branches_k tsl_rec0 n br)
   | tProj p t => tProj p (tsl_rec0 n t)
   (* | tFix : mfixpoint term -> nat -> term *)
   (* | tCoFix : mfixpoint term -> nat -> term *)
@@ -89,15 +89,17 @@ Fixpoint tsl_rec1_app (app : option term) (E : tsl_table) (t : term) : term :=
     | None => debug "tConstruct" (match i with mkInd s _ => string_of_kername s end)
     end
   | tCase ik t u brs as case =>
-    let brs' := List.map (on_snd (lift0 1)) brs in
-    let case1 := tCase ik (lift0 1 t) (tRel 0) brs' in
-    match lookup_tsl_table E (IndRef (fst (fst ik))) with
+    let t' := map_predicate_k id (fun x => lift x 0) 1 t in
+    let brs' := map_branches_k (fun x => lift x 0) 1 brs in
+    let case1 := tCase ik t' (tRel 0) brs' in
+    match lookup_tsl_table E (IndRef ik.(ci_ind)) with
     | Some (tInd i _univ) =>
-      tCase ((i, (snd (fst ik)) * 2), snd ik)%nat
-            (tsl_rec1_app (Some (tsl_rec0 0 case1)) E t)
+      let ci' := {| ci_ind := ik.(ci_ind); ci_npar := ik.(ci_npar) * 2; ci_relevance := ik.(ci_relevance) |} in
+      tCase ci'
+            (map_predicate_k id (fun k => tsl_rec1_app (Some (tsl_rec0 0 case1)) E) 0 t)
             (tsl_rec1 E u)
-            (map (on_snd (tsl_rec1 E)) brs)
-    | _ => debug "tCase" (match fst (fst ik) with mkInd s _ => string_of_kername s end)
+            (map_branches_k (fun k => tsl_rec1 E) 0 brs)
+    | _ => debug "tCase" (match ik.(ci_ind) with mkInd s _ => string_of_kername s end)
     end
   | tProj _ _ => todo "tsl"
   | tFix _ _ | tCoFix _ _ => todo "tsl"
@@ -130,6 +132,8 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
   - refine (mapi _ mind.(ind_bodies)).
     intros i ind.
     refine {| ind_name := tsl_ident ind.(ind_name);
+              ind_indices := ind.(ind_indices);
+              ind_sort := ind.(ind_sort);
               ind_type := _;
               ind_kelim := ind.(ind_kelim);
               ind_ctors := _;
@@ -141,10 +145,12 @@ Definition tsl_mind_body (E : tsl_table) (mp : modpath) (kn : kername)
               ar).
     + (* constructors *)
       refine (mapi _ ind.(ind_ctors)).
-      intros k ((name, typ), nargs).
-      refine (tsl_ident name, _, 2 * nargs)%nat.
+      intros k c.
+      refine {| cstr_name := tsl_ident c.(cstr_name); cstr_arity := 2 * c.(cstr_arity) |}%nat.
+      exact c.(cstr_args). (* wrong probably *)
+      exact c.(cstr_indices).
       refine (subst_app _ [tConstruct (mkInd kn i) k []]).
-      refine (fold_left_i (fun t0 i u  => t0 {S i := u}) _ (tsl_rec1 E typ)).
+      refine (fold_left_i (fun t0 i u  => t0 {S i := u}) _ (tsl_rec1 E c.(cstr_type))).
       (* [I_n-1; ... I_0] *)
       refine (rev (mapi (fun i _ => tInd (mkInd kn i) [])
                               mind.(ind_bodies))).
@@ -185,6 +191,8 @@ MetaCoq Run (TC <- Translate emptyTC "nat" ;;
 MetaCoq Run (TC <- Translate nat_TC "bool" ;;
                      tmDefinition "bool_TC" TC ).
 Import Init.Nat.
+(* todo "case" *)
+(*
 MetaCoq Run (Translate bool_TC "pred").
 
 
@@ -450,7 +458,7 @@ Module Axioms.
   Defined.
 End Axioms.
 
-
+*)
 
 
 

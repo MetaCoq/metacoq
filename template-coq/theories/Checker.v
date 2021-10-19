@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config Ast AstUtils utils
+From MetaCoq.Template Require Import config Environment Ast AstUtils utils
      LiftSubst UnivSubst uGraph Typing.
 Import MCMonadNotation.
 
@@ -30,6 +30,137 @@ Module RedFlags.
   Definition default := mk true true true true true true.
 End RedFlags.
 
+
+Inductive type_error :=
+| UnboundRel (n : nat)
+| UnboundVar (id : string)
+| UnboundMeta (m : nat)
+| UnboundEvar (ev : nat)
+| UndeclaredConstant (c : kername)
+| UndeclaredInductive (c : inductive)
+| UndeclaredConstructor (c : inductive) (i : nat)
+| NotConvertible (Γ : context) (t u t' u' : term)
+| NotASort (t : term)
+| NotAProduct (t t' : term)
+| NotAnInductive (t : term)
+| IllFormedFix (m : mfixpoint term) (i : nat)
+| UnsatisfiedConstraints (c : ConstraintSet.t)
+| UnsatisfiableConstraints (c : ConstraintSet.t)
+| NotEnoughFuel (n : nat)
+| NotSupported (s : string).
+
+Definition string_of_type_error (e : type_error) : string :=
+  match e with
+  | UnboundRel n => "Unboound rel " ^ string_of_nat n
+  | UnboundVar id => "Unbound var " ^ id
+  | UnboundMeta m => "Unbound meta " ^ string_of_nat m
+  | UnboundEvar ev => "Unbound evar " ^ string_of_nat ev
+  | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
+  | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
+  | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
+  | NotConvertible Γ t u t' u' => "Terms are not convertible: " ^
+      string_of_term t ^ " " ^ string_of_term u ^ " after reduction: " ^
+      string_of_term t' ^ " " ^ string_of_term u'
+  | NotASort t => "Not a sort"
+  | NotAProduct t t' => "Not a product"
+  | NotAnInductive t => "Not an inductive"
+  | IllFormedFix m i => "Ill-formed recursive definition"
+  | UnsatisfiedConstraints c => "Unsatisfied constraints"
+  | UnsatisfiableConstraints c => "Unsatisfiable constraints"
+  | NotEnoughFuel n => "Not enough fuel"
+  | NotSupported s => s ^ " are not supported"
+  end.
+
+Inductive typing_result (A : Type) :=
+| Checked (a : A)
+| TypeError (t : type_error).
+Global Arguments Checked {A} a.
+Global Arguments TypeError {A} t.
+
+Global Instance typing_monad : Monad typing_result :=
+  {| ret A a := Checked a ;
+     bind A B m f :=
+       match m with
+       | Checked a => f a
+       | TypeError t => TypeError t
+       end
+  |}.
+
+Global Instance monad_exc : MonadExc type_error typing_result :=
+  { raise A e := TypeError e;
+    catch A m f :=
+      match m with
+      | Checked a => m
+      | TypeError t => f t
+      end
+  }.
+
+Section Lookups. 
+  Context (Σ : global_env).
+
+  Definition polymorphic_constraints u :=
+    match u with
+    | Monomorphic_ctx _ => ConstraintSet.empty
+    | Polymorphic_ctx ctx => (AUContext.repr ctx).2.2
+    end.
+
+  Definition lookup_constant_type cst u :=
+    match lookup_env Σ cst with
+    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
+      ret (subst_instance u ty)
+    |  _ => raise (UndeclaredConstant cst)
+    end.
+
+  Definition lookup_constant_type_cstrs cst u :=
+    match lookup_env Σ cst with
+    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
+      let cstrs := polymorphic_constraints uctx in
+      ret (subst_instance u ty, subst_instance_cstrs u cstrs)
+      |  _ => raise (UndeclaredConstant cst)
+    end.
+
+  Definition lookup_ind_decl ind i :=
+    match lookup_env Σ ind with
+    | Some (InductiveDecl mdecl) =>
+      match nth_error mdecl.(ind_bodies) i with
+      | Some body => ret (mdecl, body)
+      | None => raise (UndeclaredInductive (mkInd ind i))
+      end
+    | _ => raise (UndeclaredInductive (mkInd ind i))
+    end.
+
+  Definition lookup_ind_type ind i (u : list Level.t) :=
+    res <- lookup_ind_decl ind i ;;
+    ret (subst_instance u (snd res).(ind_type)).
+
+  Definition lookup_ind_type_cstrs ind i (u : list Level.t) :=
+    res <- lookup_ind_decl ind i ;;
+    let '(mib, body) := res in
+    let uctx := mib.(ind_universes) in
+    let cstrs := polymorphic_constraints uctx in
+    ret (subst_instance u body.(ind_type), subst_instance_cstrs u cstrs).
+
+  Definition lookup_constructor_decl ind i k :=
+    res <- lookup_ind_decl ind i;;
+    let '(mib, body) := res in
+    match nth_error body.(ind_ctors) k with
+    | Some cdecl => ret (mib, cdecl)
+    | None => raise (UndeclaredConstructor (mkInd ind i) k)
+    end.
+
+  Definition lookup_constructor_type ind i k u :=
+    res <- lookup_constructor_decl ind i k ;;
+    let '(mib, cdecl) := res in
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance u cdecl.(cstr_type))).
+
+  Definition lookup_constructor_type_cstrs ind i k u :=
+    res <- lookup_constructor_decl ind i k ;;
+    let '(mib, cdecl) := res in
+    let cstrs := polymorphic_constraints mib.(ind_universes) in
+    ret (subst0 (inds ind u mib.(ind_bodies)) (subst_instance u cdecl.(cstr_type)),
+        subst_instance_cstrs u cstrs).
+End Lookups.
+
 Section Reduce.
   Context (flags : RedFlags.t) (Σ : global_env).
 
@@ -58,7 +189,7 @@ Section Reduce.
     if RedFlags.delta flags then
       match lookup_env Σ c with
       | Some (ConstantDecl {| cst_body := Some body |}) =>
-        let body' := subst_instance_constr u body in
+        let body' := subst_instance u body in
         reduce_stack Γ n body' stack
       | _ => ret (t, stack)
       end
@@ -102,12 +233,22 @@ Section Reduce.
 
   | tCast c _ _ => reduce_stack Γ n c stack
 
-  | tCase ((ind, par), relevance) p c brs =>
+  | tCase ci p c brs =>
     if RedFlags.iota flags then
       c' <- reduce_stack Γ n c [] ;;
       match c' with
-      | (tConstruct ind c _, args) => reduce_stack Γ n (iota_red par c args brs) stack
-      | _ => ret (tCase ((ind, par), relevance) p (zip c') brs, stack)
+      | (tConstruct ind c _, args) =>
+        match nth_error brs c with
+        | Some br => 
+          match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) c with
+          | Checked (mdecl, cdecl) => 
+            let bctx := case_branch_context ind mdecl cdecl p br in  
+              reduce_stack Γ n (iota_red ci.(ci_npar) args bctx br) stack
+          | TypeError e => ret (t, stack)
+          end
+        | None => ret (tCase ci p (zip c') brs, stack)
+        end
+      | _ => ret (tCase ci p (zip c') brs, stack)
       end
     else ret (t, stack)
 
@@ -128,6 +269,33 @@ Section Reduce.
         end
     in aux [] l.
 
+  Definition rebuild_case_predicate_ctx ind (p : predicate term) : context :=
+    match lookup_ind_decl Σ (inductive_mind ind) (inductive_ind ind) with
+    | TypeError _ => []
+    | Checked (mib, oib) => case_predicate_context ind mib oib p
+    end.
+
+  Definition map_context_with_binders (f : context -> term -> term) (c : context) Γ : context :=
+    fold_left (fun acc decl => map_decl (f (Γ ,,, acc)) decl :: acc) (List.rev c) [].
+
+  Definition map_predicate_with_binders (f : context -> term -> term) Γ ind (p : predicate term) :=
+    let pctx := rebuild_case_predicate_ctx ind p in
+    let Γparams := map_context_with_binders f pctx Γ in
+    {| pparams := map (f Γ) p.(pparams);
+       puinst := p.(puinst);
+       pcontext := p.(pcontext);
+       preturn := f Γparams (preturn p) |}.
+  
+  Definition rebuild_case_branch_ctx ind i p br :=
+    match lookup_constructor_decl Σ (inductive_mind ind) (inductive_ind ind) i with
+    | TypeError _ => []
+    | Checked (mib, cdecl) => case_branch_context ind mib cdecl p br
+    end.
+
+  Definition map_case_branch_with_binders ind i (f : context -> term -> term) Γ p br :=
+    let ctx := rebuild_case_branch_ctx ind i p br in
+    map_branch (f (Γ ,,, ctx)) br.
+
   Definition map_constr_with_binders (f : context -> term -> term) Γ (t : term) : term :=
     match t with
     | tRel i => t
@@ -142,9 +310,10 @@ Section Reduce.
       let b' := f Γ b in
       let t' := f Γ t in
       tLetIn na b' t' (f (Γ ,, vdef na b' t') c)
-    | tCase ind p c brs =>
-      let brs' := List.map (on_snd (f Γ)) brs in
-      tCase ind (f Γ p) (f Γ c) brs'
+    | tCase ci p c brs =>
+      let p' := map_predicate_with_binders f Γ ci.(ci_ind) p in
+      let brs' := mapi (fun i x => map_case_branch_with_binders ci.(ci_ind) i f Γ p' x) brs in
+      tCase ci p' (f Γ c) brs'
     | tProj p c => tProj p (f Γ c)
     | tFix mfix idx =>
       let Γ' := fix_decls mfix ++ Γ in
@@ -190,6 +359,9 @@ Inductive conv_pb :=
 | Conv
 | Cumul.
 
+Definition eq_case_info (ci ci' : case_info) :=
+  eq_inductive ci.(ci_ind) ci'.(ci_ind) && Nat.eqb ci.(ci_npar) ci'.(ci_npar). (* FIXME relevance check *)
+
 Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t} :=
   match t, u with
   | tRel n, tRel n' => Nat.eqb n n'
@@ -205,10 +377,10 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && eq_term φ c c'
-  | tCase ((ind, par), rel) p c brs,
-    tCase ((ind',par'), rel') p' c' brs' =>
-    eq_inductive ind ind' && Nat.eqb par par' &&
-    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tCase ci p c brs,
+    tCase ci' p' c' brs' =>
+    eq_case_info ci ci' &&
+    eqb_predicate (eqb_univ_instance φ) (eq_term φ) p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -237,10 +409,9 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   | tLambda _ b t, tLambda _ b' t' => eq_term φ b b' && eq_term φ t t'
   | tProd _ b t, tProd _ b' t' => eq_term φ b b' && leq_term φ t t'
   | tLetIn _ b t c, tLetIn _ b' t' c' => eq_term φ b b' && eq_term φ t t' && leq_term φ c c'
-  | tCase ((ind, par), rel) p c brs,
-    tCase ((ind',par'), rel') p' c' brs' =>
-    eq_inductive ind ind' && Nat.eqb par par' &&
-    eq_term φ p p' && eq_term φ c c' && forallb2 (fun '(a, b) '(a', b') => eq_term φ b b') brs brs'
+  | tCase ci p c brs, tCase ci' p' c' brs' =>
+    eq_case_info ci ci' &&
+    eqb_predicate (eqb_univ_instance φ) (eq_term φ) p p' && eq_term φ c c' && forallb2 (fun br br' => eq_term φ br.(bbody) br'.(bbody)) brs brs'
   | tProj p c, tProj p' c' => eq_projection p p' && eq_term φ c c'
   | tFix mfix idx, tFix mfix' idx' =>
     forallb2 (fun x y =>
@@ -383,17 +554,17 @@ Section Conversion.
         isconv n leq (Γ ,, vass na b) t [] t' []
       else ret false
 
-    | tCase (ind, par) p c brs,
-      tCase (ind',par') p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
-      if eq_term G p p' && eq_term G c c'
-      && forallb2 (fun '(a, b) '(a', b') => eq_term G b b') brs brs' then
+    | tCase ci p c brs,
+      tCase ci' p' c' brs' => (* Hnf did not reduce, maybe delta needed in c *)
+      if eq_case_info ci ci' && eqb_predicate (eqb_univ_instance G) (eq_term G) p p' && eq_term G c c'
+      && forallb2 (fun br br' => eq_term G br.(bbody) br'.(bbody)) brs brs' then
         ret true
       else
         cred <- reduce_stack_term RedFlags.default Σ Γ n c ;;
         c'red <- reduce_stack_term RedFlags.default Σ Γ n c' ;;
         if eq_term G cred c && eq_term G c'red c' then ret true
         else
-          isconv n leq Γ (tCase (ind, par) p cred brs) l1 (tCase (ind, par) p c'red brs') l2
+          isconv n leq Γ (tCase ci p cred brs) l1 (tCase ci' p c'red brs') l2
 
     | tProj p c, tProj p' c' => on_cond (eq_projection p p' && eq_term G c c')
 
@@ -429,71 +600,6 @@ Definition try_reduce Σ Γ n t :=
   | Some t' => t'
   | None => t
   end.
-
-
-Inductive type_error :=
-| UnboundRel (n : nat)
-| UnboundVar (id : string)
-| UnboundMeta (m : nat)
-| UnboundEvar (ev : nat)
-| UndeclaredConstant (c : kername)
-| UndeclaredInductive (c : inductive)
-| UndeclaredConstructor (c : inductive) (i : nat)
-| NotConvertible (Γ : context) (t u t' u' : term)
-| NotASort (t : term)
-| NotAProduct (t t' : term)
-| NotAnInductive (t : term)
-| IllFormedFix (m : mfixpoint term) (i : nat)
-| UnsatisfiedConstraints (c : ConstraintSet.t)
-| UnsatisfiableConstraints (c : ConstraintSet.t)
-| NotEnoughFuel (n : nat)
-| NotSupported (s : string).
-
-Definition string_of_type_error (e : type_error) : string :=
-  match e with
-  | UnboundRel n => "Unboound rel " ^ string_of_nat n
-  | UnboundVar id => "Unbound var " ^ id
-  | UnboundMeta m => "Unbound meta " ^ string_of_nat m
-  | UnboundEvar ev => "Unbound evar " ^ string_of_nat ev
-  | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
-  | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
-  | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
-  | NotConvertible Γ t u t' u' => "Terms are not convertible: " ^
-      string_of_term t ^ " " ^ string_of_term u ^ " after reduction: " ^
-      string_of_term t' ^ " " ^ string_of_term u'
-  | NotASort t => "Not a sort"
-  | NotAProduct t t' => "Not a product"
-  | NotAnInductive t => "Not an inductive"
-  | IllFormedFix m i => "Ill-formed recursive definition"
-  | UnsatisfiedConstraints c => "Unsatisfied constraints"
-  | UnsatisfiableConstraints c => "Unsatisfiable constraints"
-  | NotEnoughFuel n => "Not enough fuel"
-  | NotSupported s => s ^ " are not supported"
-  end.
-
-Inductive typing_result (A : Type) :=
-| Checked (a : A)
-| TypeError (t : type_error).
-Global Arguments Checked {A} a.
-Global Arguments TypeError {A} t.
-
-Instance typing_monad : Monad typing_result :=
-  {| ret A a := Checked a ;
-     bind A B m f :=
-       match m with
-       | Checked a => f a
-       | TypeError t => TypeError t
-       end
-  |}.
-
-Instance monad_exc : MonadExc type_error typing_result :=
-  { raise A e := TypeError e;
-    catch A m f :=
-      match m with
-      | Checked a => m
-      | TypeError t => f t
-      end
-  }.
 
 Definition check_conv_gen `{checker_flags} {F:Fuel} conv_pb Σ G Γ t u :=
   match isconv Σ G fuel conv_pb Γ t [] u [] with
@@ -620,66 +726,6 @@ Section Typecheck.
 
   End InferAux.
 
-  Definition polymorphic_constraints u :=
-    match u with
-    | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx => snd (snd (AUContext.repr ctx))
-    end.
-
-  Definition lookup_constant_type cst u :=
-    match lookup_env Σ cst with
-    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
-      ret (subst_instance_constr u ty)
-    |  _ => raise (UndeclaredConstant cst)
-    end.
-
-  Definition lookup_constant_type_cstrs cst u :=
-    match lookup_env Σ cst with
-    | Some (ConstantDecl {| cst_type := ty; cst_universes := uctx |}) =>
-      let cstrs := polymorphic_constraints uctx in
-      ret (subst_instance_constr u ty, subst_instance_cstrs u cstrs)
-      |  _ => raise (UndeclaredConstant cst)
-    end.
-
-  Definition lookup_ind_decl ind i :=
-    match lookup_env Σ ind with
-    | Some (InductiveDecl {| ind_bodies := l; ind_universes := uctx |}) =>
-      match nth_error l i with
-      | Some body => ret (l, uctx, body)
-      | None => raise (UndeclaredInductive (mkInd ind i))
-      end
-    | _ => raise (UndeclaredInductive (mkInd ind i))
-    end.
-
-  Definition lookup_ind_type ind i (u : list Level.t) :=
-    res <- lookup_ind_decl ind i ;;
-    ret (subst_instance_constr u (snd res).(ind_type)).
-
-  Definition lookup_ind_type_cstrs ind i (u : list Level.t) :=
-    res <- lookup_ind_decl ind i ;;
-    let '(l, uctx, body) := res in
-    let cstrs := polymorphic_constraints uctx in
-    ret (subst_instance_constr u body.(ind_type), subst_instance_cstrs u cstrs).
-
-  Definition lookup_constructor_decl ind i k :=
-    res <- lookup_ind_decl ind i;;
-    let '(l, uctx, body) := res in
-    match nth_error body.(ind_ctors) k with
-    | Some (_, ty, _) => ret (l, uctx, ty)
-    | None => raise (UndeclaredConstructor (mkInd ind i) k)
-    end.
-
-  Definition lookup_constructor_type ind i k u :=
-    res <- lookup_constructor_decl ind i k ;;
-    let '(l, uctx, ty) := res in
-    ret (subst0 (inds ind u l) (subst_instance_constr u ty)).
-
-  Definition lookup_constructor_type_cstrs ind i k u :=
-    res <- lookup_constructor_decl ind i k ;;
-    let '(l, uctx, ty) := res in
-    let cstrs := polymorphic_constraints uctx in
-    ret (subst0 (inds ind u l) (subst_instance_constr u ty),
-         subst_instance_cstrs u cstrs).
 
   Definition check_consistent_constraints cstrs :=
     if check_constraints G cstrs then ret tt
@@ -724,33 +770,35 @@ Section Typecheck.
       infer_spine infer Γ t_ty l
 
     | tConst cst u =>
-      tycstrs <- lookup_constant_type_cstrs cst u ;;
+      tycstrs <- lookup_constant_type_cstrs Σ cst u ;;
       let '(ty, cstrs) := tycstrs in
       check_consistent_constraints cstrs;;
       ret ty
 
     | tInd (mkInd ind i) u =>
-      tycstrs <- lookup_ind_type_cstrs ind i u;;
+      tycstrs <- lookup_ind_type_cstrs Σ ind i u;;
       let '(ty, cstrs) := tycstrs in
       check_consistent_constraints cstrs;;
       ret ty
 
     | tConstruct (mkInd ind i) k u =>
-      tycstrs <- lookup_constructor_type_cstrs ind i k u ;;
+      tycstrs <- lookup_constructor_type_cstrs Σ ind i k u ;;
       let '(ty, cstrs) := tycstrs in
       check_consistent_constraints cstrs;;
       ret ty
 
-    | tCase ((ind, par), rel) p c brs =>
+    | tCase ci p c brs =>
       ty <- infer Γ c ;;
       indargs <- reduce_to_ind Σ Γ ty ;;
       (** TODO check branches *)
-      let '(ind', u, args) := indargs in
-      if eq_inductive ind ind' then
-        ret (tApp p (List.skipn par args ++ [c]))
+      let '(ind, u, args) := indargs in
+      if eq_inductive ind ci.(ci_ind) then
+        let pctx := rebuild_case_predicate_ctx Σ ind p in
+        let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
+        ret (tApp ptm (List.skipn ci.(ci_npar) args ++ [c]))
       else
         let ind1 := tInd ind u in
-        let ind2 := tInd ind' u in
+        let ind2 := tInd ci.(ci_ind) u in
         raise (NotConvertible Γ ind1 ind2 ind1 ind2)
 
     | tProj p c =>

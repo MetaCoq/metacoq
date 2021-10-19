@@ -2,12 +2,13 @@
 From MetaCoq.Template Require Import utils.
 From MetaCoq.Erasure Require Import EAst EInduction.
 
-
 (** * Lifting and substitution for the AST
 
   Along with standard commutation lemmas.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
+
+Local Open Scope erasure.
 
 Fixpoint lift n k t : term :=
   match t with
@@ -74,7 +75,7 @@ Fixpoint subst s k u :=
 Notation subst0 t := (subst t 0).
 Definition subst1 t k u := subst [t] k u.
 Notation subst10 t := (subst1 t 0).
-Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity).
+Notation "M { j := N }" := (subst1 N j M) (at level 10, right associativity) : erasure.
 
 Fixpoint closedn k (t : term) : bool :=
   match t with

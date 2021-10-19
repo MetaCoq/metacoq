@@ -9,6 +9,7 @@ From MetaCoq.SafeChecker Require Import PCUICErrors.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction EPretty.
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr.
 
+#[global]
 Existing Instance extraction_checker_flags.
 
 (* This is the total erasure function + the optimization that removes all 

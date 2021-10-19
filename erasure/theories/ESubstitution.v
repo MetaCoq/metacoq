@@ -40,6 +40,7 @@ Proof.
 Qed.
 
 (* todo move *)
+#[global]
 Instance extends_refl : CRelationClasses.Reflexive extends.
 Proof. now exists []. Qed.
 

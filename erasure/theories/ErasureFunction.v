@@ -576,6 +576,7 @@ Lemma erase_erase_clause_1 {Σ} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped 
 Proof.
   destruct t; simpl; auto.
 Qed.
+#[global]
 Hint Rewrite @erase_erase_clause_1 : erase.
 
 Lemma erase_to_box {Σ : global_env_ext} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :

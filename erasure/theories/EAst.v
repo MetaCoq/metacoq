@@ -8,6 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICPrimitive.
   at lambda and let-ins, types of fix/cofixpoints), applications
   are in binary form and casts are removed.  *)
 
+Declare Scope erasure.
+Local Open Scope erasure.
 
 (* todo reuse the one of BasicASt *)
 Record def (term : Set) := { dname : name; dbody : term; rarg : nat }.
@@ -39,6 +41,8 @@ Inductive term : Set :=
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term
 | tPrim      : prim_val term -> term.
+
+Bind Scope erasure with term.
 
 Fixpoint mkApps t us :=
   match us with
@@ -150,6 +154,8 @@ Definition vdef x t := {| decl_name := x; decl_body := Some t |}.
 
 Definition context := list context_decl.
 
+Bind Scope erasure with context.
+
 (** Mapping over a declaration and context. *)
 
 Definition map_decl f (d : context_decl) :=
@@ -163,7 +169,7 @@ Definition map_context f c :=
 
 Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
-Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
+Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : erasure.
 
 (** *** Environments *)
 

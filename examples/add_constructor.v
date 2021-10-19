@@ -15,7 +15,7 @@ Import MCMonadNotation.
 
 Class TslIdent := { tsl_ident : ident -> ident }.
 
-Instance prime_tsl_ident : TslIdent
+Local Instance prime_tsl_ident : TslIdent
   := {| tsl_ident := fun id => id ^ "'" |}.
 
 Fixpoint try_remove_n_lambdas (n : nat) (t : term) {struct n} : term :=

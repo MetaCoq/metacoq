@@ -68,7 +68,7 @@ Fixpoint semGen A `{Propositional_Logic A} f (l:var->A) :=
   | Or a b => Por (semGen A a l) (semGen A b l)
   end.
 
-Instance Propositional_Logic_Prop : Propositional_Logic Prop :=
+Local Instance Propositional_Logic_Prop : Propositional_Logic Prop :=
   {| Pfalse := False; Ptrue := True; Pand := and; Por := or; Pimpl := fun A B => A -> B |}.
 
 Definition sem := semGen Prop.
@@ -925,7 +925,7 @@ Next Obligation.
   simpl in h1. lia.
 Qed.
 
-Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
+Local Instance Propositional_Logic_MetaCoq : Propositional_Logic term :=
   {| Pfalse := MFalse; Ptrue := MTrue; Pand := fun P Q => mkApps Mand [P;Q];
      Por := fun P Q => mkApps Mor [P;Q]; Pimpl := fun P Q => tImpl P Q |}.
 

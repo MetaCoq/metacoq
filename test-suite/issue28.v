@@ -35,7 +35,7 @@ tFix
 (* MetaCoq Run (tmEval cbv (print_term (empty_ext []) [] true T) >>= tmPrint).   *)
 Fail MetaCoq Run (tmUnquote T >>= tmPrint).
 
-Fail Let bla := (existT_typed_term (test unit -> unit) (fix f (x : test f) : unit := match x with
+Fail Definition bla := (existT_typed_term (test unit -> unit) (fix f (x : test f) : unit := match x with
                                                                               | test_T _ x0 => f x0
                                                                               end)).
 Fail MetaCoq Run (tmUnquote T >>= tmDefinition "fails").

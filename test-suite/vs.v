@@ -486,7 +486,7 @@ Proof.
   cbn. rewrite pure_atom_cmp_rfl. assumption.
 Qed.
 
-Hint Rewrite @comp_refl using solve[auto] : comp.
+Local Hint Rewrite @comp_refl using solve[auto] : comp.
 
 Ltac comp_tac :=
     progress (autorewrite with comp in *; auto)
@@ -1493,6 +1493,8 @@ Defined.
 (* begin show *)
 
 (** The Superpose main loop *)
+Set Warnings "-funind-cannot-define-graph".
+Set Warnings "-funind-cannot-build-inversion".
 
 Function main (n : positive) (units l : list clause) {measure nat_of_P n}
   : superposition_result * list clause * M.t*M.t :=
@@ -1680,7 +1682,7 @@ Fixpoint do_well4_5 (sc : list space_atom) : list (list pure_atom) :=
         let atms := map (fun a => normalize_atoms [Eqv x0 y; a]) l0 in
           atms ++ do_well4_5 sc'
       end
-  | _ as a :: sc' => do_well4_5 sc'
+  | _ as _ :: sc' => do_well4_5 sc'
   | nil => nil
   end.
 
@@ -1870,7 +1872,7 @@ Definition unfolding5NPR (sc1 sc2 : clause) : list clause :=
 
 (** Rule as given in NPR's paper, corrected variable uses *)
 
-Fixpoint unfolding5NPRALT' (sigma0 sigma1 sigma2 : list space_atom)
+Definition unfolding5NPRALT' (sigma0 sigma1 sigma2 : list space_atom)
   : list (pure_atom * list space_atom) :=
   match sigma2 with
   | Lseg (Var x' as x) (Var z' as z) :: sigma2' =>
@@ -2347,6 +2349,8 @@ Definition myMain :=
                         example1_myfail; example1_myfail;
                           example_ent; harder_ent;
                             harder_ent2; harder_ent3].
+
+Set Warnings "-extraction-opaque-accessed".
 Extraction "myMain" myMain.
 
 Definition ce_harder_ent := check_entailment harder_ent.

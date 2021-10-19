@@ -38,7 +38,9 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 
 (* Unset Universe Minimization ToSet. *)
 
-Definition bignat := 10000.
+From Coq Require Import Decimal.
+
+Definition bignat : nat := Nat.of_num_uint 10000%uint.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.
 
@@ -67,6 +69,7 @@ Inductive prod (A B : Type) : Type :=  pair : A -> B -> prod A B.
 
 Arguments pair {_ _} _ _.
 
+Set Warnings "-notation-overridden".
 Notation "x * y" := (prod x y) : type_scope.
 Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z): type_scope.
 
@@ -445,17 +448,21 @@ Defined.
 (* Equivalences *)
 
 Class IsEquiv {A : Type} {B : Type} (f : A -> B) := BuildIsEquiv {
-  e_inv :> B -> A ;
+  e_inv : B -> A ;
   e_sect : forall x, e_inv (f x) = x;
   e_retr : forall y, f (e_inv y) = y;
   e_adj : forall x : A, e_retr (f x) = ap f (e_sect x);
 }.
 
+Coercion e_inv : IsEquiv >-> Funclass.
+
 (** A class that includes all the data of an adjoint equivalence. *)
 Class Equiv A B := BuildEquiv {
-  e_fun :> A -> B ;
+  e_fun : A -> B ;
   e_isequiv :> IsEquiv e_fun
 }.
+
+Coercion e_fun : Equiv >-> Funclass.
 
 Notation "A ≃ B" := (Equiv A B) (at level 20).
 
@@ -467,8 +474,6 @@ Arguments e_adj {_ _} _ {_} _.
 Arguments e_isequiv {_ _ _}.
 
 Typeclasses Transparent e_fun e_inv.
-
-Coercion e_fun : Equiv >-> Funclass.
 
 Definition univalent_transport {A B : Type} {e: A ≃ B} : A -> B := e_fun e.
 

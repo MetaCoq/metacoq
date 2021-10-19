@@ -189,7 +189,7 @@ Section CheckEnv.
 
   Definition check_wf_type kn Σ HΣ HΣ' G HG t
     : EnvCheck (∑ u, ∥ Σ;;; [] |- t : tSort u ∥)
-    := wrap_error Σ (string_of_kername  kn) (@infer_type _ Σ HΣ (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
+    := wrap_error Σ (string_of_kername  kn) (@infer_type _ Σ HΣ HΣ' (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
 
   Definition check_wf_judgement kn Σ HΣ HΣ' G HG t ty
     : EnvCheck (∥ Σ;;; [] |- t : ty ∥)
@@ -409,7 +409,7 @@ Section CheckEnv.
   Definition infer_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
     (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : 
     typing_result (∑ s, ∥ Σ ;;; Γ |- t : tSort s ∥) := 
-    @infer_type cf Σ (let 'sq wfΣ := wfΣ in sq wfΣ.1) (@infer_wf_ext Σ wfΣ G HG) Γ wfΓ t.
+    @infer_type cf Σ (let 'sq wfΣ := wfΣ in sq wfΣ.1) (map_squash snd wfΣ) (@infer_wf_ext Σ wfΣ G HG) Γ wfΓ t.
 
   Definition infer_type_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : typing_result (∑ s, ∥ Σ ;;; Γ |- t : tSort s ∥) := 
     infer_type_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t.
@@ -1160,7 +1160,7 @@ Section CheckEnv.
 
   Section PositivityCheck.
     Context {Σ : global_env_ext}.
-    Context {wfΣ : ∥ wf Σ ∥}.
+    Context {wfΣ : ∥ wf_ext Σ ∥}.
 
     Obligation Tactic := Program.Tactics.program_simpl.
 
@@ -1261,7 +1261,7 @@ Section CheckEnv.
       Defined.
 
     (** We already assume that constructor types are of the form `it_mkProd_or_LetIn (params,,, args) concl` so
-        we don't need to recude further. *)
+        we don't need to reduce further. *)
     Program Fixpoint check_positive_cstr mdecl n Γ t (wt : welltyped Σ Γ t) Δ
       { measure (Γ; t; wt) (@redp_subterm_rel cf Σ) }
       : typing_result (∥ positive_cstr mdecl n Δ t ∥) :=
@@ -1656,7 +1656,7 @@ Section CheckEnv.
       wfpars (S n) idecl.(ind_ctors) ;;
     posc <- wrap_error Σ (string_of_kername id)
       (monad_All_All (fun x px => 
-        @check_positive_cstr Σ (wf_env_ext_sq_wf Σ) mdecl n 
+        @check_positive_cstr Σ (wf_env_ext_wf Σ) mdecl n 
           (arities_context mdecl.(ind_bodies)) (cstr_type x) _ [])
         idecl.(ind_ctors) (wt_cstrs (cs:=cs) Hcs)) ;;
     var <- monad_All_All (fun cs px => check_cstr_variance Σ0 mdecl id indices mdeclvar cs _ _)

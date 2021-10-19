@@ -168,7 +168,7 @@ Section optimize.
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).
   Proof.
     induction l using rev_ind; simpl; auto.
-    now rewrite -mkApps_nested /= IHl map_app /= -mkApps_nested /=.
+    now rewrite mkApps_app /= IHl map_app /= mkApps_app /=.
   Qed.
 
   Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
@@ -184,8 +184,8 @@ Section optimize.
   Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
   Proof.
     induction l using rev_ind; simpl; auto.
-    rewrite - mkApps_nested /= IHl.
-    now rewrite [EAst.tApp _ _](mkApps_nested _ _ [_]) map_app.
+    rewrite mkApps_app /= IHl.
+    now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
   Qed.
 
   Lemma csubst_closed t k x : closedn k x -> csubst t k x = x.
@@ -474,7 +474,7 @@ Lemma isLambda_mkApps f l : ~~ isLambda f -> ~~ EAst.isLambda (mkApps f l).
 Proof.
   induction l using rev_ind; simpl; auto => //.
   intros isf; specialize (IHl isf).
-  now rewrite -mkApps_nested.
+  now rewrite mkApps_app.
 Qed.
  
 Lemma isFixApp_mkApps f l : ~~ Ee.isFixApp f -> ~~ Ee.isFixApp (mkApps f l).
@@ -488,7 +488,7 @@ Lemma isBox_mkApps f l : ~~ isBox f -> ~~ isBox (mkApps f l).
 Proof.
   induction l using rev_ind; simpl; auto => //.
   intros isf; specialize (IHl isf).
-  now rewrite -mkApps_nested.
+  now rewrite mkApps_app.
 Qed.
 
 Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.

@@ -281,7 +281,7 @@ Section Wcbv.
   Proof.
     induction 1; simpl; auto using value.
     - change (tApp ?h ?a) with (mkApps h [a]).
-      rewrite mkApps_nested.
+      rewrite -mkApps_app.
       apply value_mkApps_inv in IHeval1; [|easy].
       destruct IHeval1 as [[(-> & _)|]|(stuck & vals)].
       + cbn in *.
@@ -303,9 +303,9 @@ Section Wcbv.
         simpl in *.
         apply (value_app f0 [a']). destruct f0; simpl in * |- *; try congruence.
         constructor; auto. constructor. constructor; auto.
-      * rewrite [tApp _ _](mkApps_nested _ (firstn n l) [a']).
+      * rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
         constructor 2; auto. eapply All_app_inv; auto.
-      * rewrite [tApp _ _](mkApps_nested _ (firstn n l) [a']).
+      * rewrite -[tApp _ _](mkApps_app _ (firstn n l) [a']).
         erewrite isFixApp_mkApps in i => //.
         destruct f0; simpl in *; try congruence.
         rewrite /isFixApp in i. simpl in i.
@@ -432,7 +432,7 @@ Section Wcbv.
     - destruct argsv as [|? ? _] using MCList.rev_ind;
         [apply All2_length in all; rewrite app_length in all; now cbn in *|].
       apply All2_app_r in all as (all & ev_a).
-      rewrite <- !mkApps_nested.
+      rewrite !mkApps_app.
       cbn in *.
       destruct (cunfold_fix mfix idx) as [(? & ?)|] eqn:cuf; [|easy].
       eapply eval_fix_value.
@@ -456,7 +456,7 @@ Section Wcbv.
     induction hv using value_values_ind; intros eq; subst.
     unfold atom in H. destruct argsv using rev_case => //.
     split; auto. simpl. simpl in H. rewrite H0 //.
-    rewrite -mkApps_nested /= in H. depelim H.
+    rewrite mkApps_app /= in H. depelim H.
     solve_discr => //.
     solve_discr.
   Qed.
@@ -483,7 +483,7 @@ Section Wcbv.
       destruct t; try discriminate.
       * repeat constructor.
       * repeat constructor.
-      * rewrite -mkApps_nested.
+      * rewrite mkApps_app.
         eapply All_app in X as [Hl Hx]. depelim Hx.
         eapply All_app in X0 as [Hl' Hx']. depelim Hx'.
         eapply All2_app_inv_r in H2 as [Hl'' [Hx'' [? [? ?]]]].
@@ -494,7 +494,7 @@ Section Wcbv.
         destruct l using rev_ind; auto.
         eapply value_head_nApp in H.
         rewrite isFixApp_mkApps => //.
-        rewrite -mkApps_nested; simpl.
+        rewrite mkApps_app; simpl.
         rewrite orb_false_r.
         destruct t => //.
     - destruct f; try discriminate.

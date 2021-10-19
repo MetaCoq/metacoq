@@ -927,8 +927,7 @@ Lemma cstr_branch_context_length ind mdecl cdecl :
   #|cstr_branch_context ind mdecl cdecl| = #|cdecl.(cstr_args)|.
 Proof. rewrite /cstr_branch_context. now len. Qed.
 
-Hint Rewrite cstr_branch_context_length : len.
-
+Global Hint Rewrite cstr_branch_context_length : len.
 
 (* Lemma case_branch_context_gen_length ind mdecl p puinst pctx :
   #|case_branch_context_gen ind mdecl p puinst pctx | = #|pctx|. *)
@@ -1168,7 +1167,7 @@ Section TypingWf.
     simpl in X.
     move/wf_inv: X => /= [[[isAppf Hargs] wff] wfargs].
     rewrite mkApps_tApp ?isAppf in H => //. destruct args => //.
-    rewrite mkApps_nested in H.
+    rewrite -mkApps_app in H.
     rewrite decompose_app_mkApps ?isAppf in H; auto. noconf H.
     exists #|args|; split; auto. now rewrite isAppf.
     rewrite skipn_all_app.
@@ -1209,7 +1208,7 @@ Section TypingWf.
     subst n args. rewrite (firstn_app_left _ 0) // /= app_nil_r in stripf. subst f.
     eapply wf_mkApps_napp in wf as [wff' wfl] => //.
     rewrite (strip_casts_mkApps_napp_wf Σ) //.
-    now rewrite mkApp_mkApps mkApps_nested map_app.
+    now rewrite mkApp_mkApps -mkApps_app map_app.
   Qed.
 
   Lemma strip_casts_mkApps_wf Σ f u : 

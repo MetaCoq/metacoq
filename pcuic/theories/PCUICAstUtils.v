@@ -143,10 +143,10 @@ Proof.
   destruct f; simpl in *; (discriminate || reflexivity).
 Qed.
 
-Lemma mkApps_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
+Lemma mkApps_app f l l' : mkApps f (l ++ l') = mkApps (mkApps f l) l'.
 Proof.
   induction l in f, l' |- *; destruct l'; simpl; rewrite ?app_nil_r; auto.
-  rewrite <- IHl. simpl. reflexivity.
+  rewrite IHl //.
 Qed.
 
 
@@ -158,7 +158,7 @@ Proof.
   intros napp eqapp.
   destruct args using rev_case => //.
   simpl in eqapp. subst fn => //.
-  rewrite -mkApps_nested in eqapp. noconf eqapp.
+  rewrite mkApps_app in eqapp. noconf eqapp.
   now rewrite removelast_app // last_app // /= app_nil_r.
 Qed.
 
@@ -184,7 +184,7 @@ Lemma mkApps_discr f args t :
 Proof.
   intros.
   destruct args using rev_case => //.
-  rewrite -mkApps_nested in H0. destruct t => //.
+  rewrite mkApps_app in H0. destruct t => //.
 Qed.
 
 Fixpoint decompose_prod (t : term) : (list aname) * (list term) * term :=
@@ -748,7 +748,7 @@ Proof.
   exists (S x); intuition auto. eapply (f_equal (skipn 1)) in H2.
   rewrite [l]H2. now rewrite skipn_skipn Nat.add_1_r.
   rewrite -Nat.add_1_r firstn_add H3 -H2.
-  now rewrite [tApp _ _](mkApps_nested hd _ [f2]).
+  now rewrite -[tApp _ _](mkApps_app hd _ [f2]).
   rewrite decompose_app_rec_eq; auto. now apply negbT.
   move=> [] H ->. subst f. exists 0. intuition auto.
   now apply negbT.
@@ -765,7 +765,7 @@ Proof.
   destruct H. simpl. destruct a as [isapp [Hl' Hl]].
   subst t.
   have H' := mkApps_intro hd args x. rewrite Hl'.
-  rewrite mkApps_nested. now rewrite firstn_skipn.
+  rewrite -mkApps_app. now rewrite firstn_skipn.
 Qed.
 
 Lemma mkApps_elim t l  :
@@ -878,7 +878,7 @@ Lemma mkApps_nonempty f l :
   l <> [] -> mkApps f l = tApp (mkApps f (removelast l)) (last l f).
 Proof.
   destruct l using rev_ind. intros; congruence.
-  intros. rewrite <- mkApps_nested. simpl. f_equal.
+  intros. rewrite mkApps_app. simpl. f_equal.
   rewrite removelast_app. congruence. simpl. now rewrite app_nil_r.
   rewrite last_app. congruence.
   reflexivity.

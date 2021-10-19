@@ -581,15 +581,14 @@ Lemma weaken_env_prop_closed {cf:checker_flags} :
   closedn #|Γ| t && closedn #|Γ| T)).
 Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
 
-Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {mdecl idecl cdecl p pdecl} : 
-  wf Σ ->
+Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl idecl cdecl p pdecl} : 
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   Forall_decls_typing
   (fun _ (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T) Σ ->
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.
-  intros wfΣ isdecl X0.
+  intros isdecl X0.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
   set (declared_inductive_inv _ wfΣ X0 _) as oib in *.
   clearbody oib.
@@ -715,8 +714,7 @@ Proof.
        intros. now apply X.
 Qed.
 
-Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {cst decl} :
-  wf Σ ->
+Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {wfΣ : wf Σ} {cst decl} :
   lookup_env Σ cst = Some decl ->
   Forall_decls_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) => closedn #|Γ| t && closedn #|Γ| T) Σ ->
   on_global_decl (fun Σ Γ b t => closedn #|Γ| b && option_default (closedn #|Γ|) t true)
@@ -724,9 +722,9 @@ Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {cst decl} :
 Proof.
   intros.
   eapply weaken_lookup_on_global_env; try red; eauto.
-  eapply on_global_env_impl; cycle 1. eapply X0.
+  eapply on_global_env_impl; cycle 1. tea.
   red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
-  destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
+  destruct X1 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
 
 Lemma closedn_mapi_rec_ext (f g : nat -> context_decl -> context_decl) (l : context) n k' :
@@ -758,16 +756,15 @@ Proof.
   induction 1; auto; rewrite closedn_ctx_cons IHX /=; now move/andP: t0 => [].
 Qed.
 
-Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {mdecl mind} : 
-  wf Σ ->
+Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl mind} : 
   Forall_decls_typing
   (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
    closedn #|Γ| t && closedn #|Γ| T) Σ ->
   declared_minductive Σ mind mdecl ->
   closed_inductive_decl mdecl.
 Proof.
-  intros wfΣ HΣ decl.
-  pose proof (declared_decl_closed_ind wfΣ decl) as decl'.
+  intros HΣ decl.
+  pose proof (declared_decl_closed_ind decl) as decl'.
   specialize (decl' HΣ). 
   red in decl'.
   unfold closed_inductive_decl.
@@ -1360,8 +1357,7 @@ Proof.
   now simpl in cli.
 Qed.
 
-Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {mdecl idecl p cdecl pdecl} : 
-  wf Σ ->
+Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl idecl p cdecl pdecl} : 
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   closedn (S (ind_npars mdecl)) pdecl.2.
 Proof.

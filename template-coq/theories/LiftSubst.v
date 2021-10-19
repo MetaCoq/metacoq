@@ -288,7 +288,7 @@ Lemma subst_mkApps u k t l :
   subst u k (mkApps t l) = mkApps (subst u k t) (map (subst u k) l).
 Proof.
   revert u k t; induction l; intros u k t; destruct t; try reflexivity.
-  intros. simpl mkApps at 1. simpl subst at 1 2. rewrite map_app. now rewrite mkApps_nested.
+  intros. simpl mkApps at 1. simpl subst at 1 2. rewrite map_app. now rewrite -mkApps_app.
 Qed.
 
 Lemma subst1_mkApps u k t l : subst1 u k (mkApps t l) = mkApps (subst1 u k t) (map (subst1 u k) l).

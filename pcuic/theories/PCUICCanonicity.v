@@ -65,7 +65,7 @@ Lemma closedn_mkApps k f args : closedn k (mkApps f args) = closedn k f && foral
 Proof.
   induction args using rev_ind; simpl => //.
   - now rewrite andb_true_r.
-  - now rewrite -mkApps_nested /= IHargs forallb_app andb_assoc /= andb_true_r.
+  - now rewrite mkApps_app /= IHargs forallb_app andb_assoc /= andb_true_r.
 Qed. 
 
 
@@ -94,7 +94,7 @@ Section Arities.
   Qed.
   
   Lemma isArity_ind ind i args : isArity (mkApps (tInd ind i) args) -> False.  
-  Proof. destruct args using rev_case; rewrite -? mkApps_nested; auto. Qed.
+  Proof. destruct args using rev_case; rewrite ?mkApps_app; auto. Qed.
 
   Lemma Is_conv_to_Arity_ind Γ ind i args : Is_conv_to_Arity Σ Γ (mkApps (tInd ind i) args) -> False.  
   Proof. 
@@ -122,7 +122,7 @@ Proof. intros. rewrite - (map_id l') in X. eapply All2_map_inv; eauto. Qed.
 Lemma head_mkApps t args : head (mkApps t args) = head t.
 Proof.
   induction args using rev_ind; simpl; auto.
-  now rewrite -mkApps_nested /= head_tapp.
+  now rewrite mkApps_app /= head_tapp.
 Qed.
 
 Section Spines.
@@ -618,21 +618,21 @@ Section Normalization.
     - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
         destruct (IHt2 Γ) as [[? ?]|]; [leftes|].
         destruct (PCUICParallelReductionConfluence.view_lambda_fix_app t1 t2).
-        * rewrite [tApp _ _](mkApps_nested _ _ [a]).
+        * rewrite [tApp _ _](mkApps_app _ _ [a]).
         destruct (unfold_fix mfix i) as [[rarg body]|] eqn:unf.
         destruct (is_constructor rarg (l ++ [a])) eqn:isc; [leftes|]; eauto.
         right => t' red; depelim red; solve_discr; eauto.
-        rewrite -mkApps_nested in H. noconf H. eauto. 
-        rewrite -mkApps_nested in H. noconf H. eauto.
+        rewrite mkApps_app in H. noconf H. eauto. 
+        rewrite mkApps_app in H. noconf H. eauto.
         eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
         eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
-        righte; try (rewrite -mkApps_nested in H; noconf H); eauto.
+        righte; try (rewrite mkApps_app in H; noconf H); eauto.
         eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
         eapply (f_equal (@length _)) in H1. rewrite /= app_length /= // in H1; lia.
         * admit.
         * righte. destruct args using rev_case; solve_discr; noconf H.
         rewrite H in i. eapply negb_False; eauto.
-        rewrite -mkApps_nested; eapply isFixLambda_app_mkApps' => //.
+        rewrite mkApps_app; eapply isFixLambda_app_mkApps' => //.
     - admit.
     - admit.
     - admit.
@@ -663,10 +663,10 @@ Section Normalization.
     - destruct (IHt1 Γ) as [[? ?]|]; [lefte|].
       destruct (IHt2 Γ) as [[? ?]|]; [leftes|].
       destruct (PCUICParallelReductionConfluence.view_lambda_fix_app t1 t2).
-      * rewrite [tApp _ _](mkApps_nested _ _ [a]).
+      * rewrite [tApp _ _](mkApps_app _ _ [a]).
         destruct (unfold_fix mfix i) as [[rarg body]|] eqn:unf.
         destruct (is_constructor rarg (l ++ [a])) eqn:isc; [leftes|]; eauto.
-        right; constructor. rewrite -mkApps_nested. constructor. admit. admit.  admit.
+        right; constructor. rewrite mkApps_app. constructor. admit. admit.  admit.
       * admit.
       * admit.
     - admit.
@@ -959,7 +959,7 @@ Section WeakNormalization.
   Proof.
     revert hd args.
     induction args' using MCList.rev_ind; intros hd args; cbn; auto.
-    rewrite -mkApps_nested /=.
+    rewrite mkApps_app /=.
     rewrite IHargs'.
     now rewrite map_app /= -app_assoc.
   Qed.
@@ -1196,14 +1196,14 @@ Section WeakNormalization.
       assert (red Σ [] (tApp f a) (tApp (mkApps fn argsv) av)).
       { redt _.
         eapply red_app; eauto.
-        rewrite ![tApp _ _](mkApps_nested _ _ [_]).
+        rewrite -![tApp _ _](mkApps_app _ _ [_]).
         eapply red1_red. 
         rewrite -closed_unfold_fix_cunfold_eq in e.
         { eapply subject_closed in Ht2; auto.
           rewrite closedn_mkApps in Ht2. now move/andP: Ht2 => [clf _]. }
         eapply red_fix; eauto.
         assert (Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : B {0 := av}).
-        { rewrite -mkApps_nested /=. eapply type_App'; eauto. }
+        { rewrite mkApps_app /=. eapply type_App'; eauto. }
         epose proof (fix_app_is_constructor X0 e); eauto.
         rewrite /is_constructor.
         destruct nth_error eqn:hnth => //.

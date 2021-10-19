@@ -1687,7 +1687,7 @@ Proof.
   intros wfΣ decli.
   intros H; dependent induction H; solve_discr.
   - destruct args using rev_case; solve_discr. noconf H2.
-    rewrite -PCUICAstUtils.mkApps_nested in H2. simpl in H2.
+    rewrite mkApps_app in H2. simpl in H2.
     noconf H2. clear IHtyping1 IHtyping3.
     specialize (IHtyping2 _ _ _ _ _ _ _ wfΣ decli eq_refl) as [IH cu];
       split; auto.

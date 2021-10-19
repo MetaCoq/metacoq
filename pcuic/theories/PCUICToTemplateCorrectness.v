@@ -2248,8 +2248,8 @@ Proof.
     assert (IHt := X3 _ _ d' hd').
     epose proof (make_typing_spine sp (typing_size Ht) X3 (validity d') hsp) as [T' [IH []]].
     * subst T'. rewrite (PCUICAstUtils.decompose_app_inv da).
-      rewrite trans_mkApps mkApp_mkApps AstUtils.mkApps_nested.
-      pose proof (AstUtils.mkApps_nested (trans t0) (map trans l) [trans u]).
+      rewrite trans_mkApps mkApp_mkApps -AstUtils.mkApps_app.
+      pose proof (AstUtils.mkApps_app (trans t0) (map trans l) [trans u]).
       apply decompose_app_notApp in da.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.
@@ -2259,8 +2259,8 @@ Proof.
       apply X5.
     * destruct p as [hcum _].
       rewrite (PCUICAstUtils.decompose_app_inv da).
-      rewrite trans_mkApps mkApp_mkApps AstUtils.mkApps_nested.
-      pose proof (AstUtils.mkApps_nested (trans t0) (map trans l) [trans u]).
+      rewrite trans_mkApps mkApp_mkApps -AstUtils.mkApps_app.
+      pose proof (AstUtils.mkApps_app (trans t0) (map trans l) [trans u]).
       apply decompose_app_notApp in da.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.

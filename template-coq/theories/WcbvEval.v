@@ -402,10 +402,10 @@ Section Wcbv.
       destruct t; simpl in * |- *; try congruence.
       eapply value_app; auto.
       eapply value_app; auto.
-      rewrite mkApps_nested.
+      rewrite -mkApps_app.
       eapply value_app. auto.
       eapply All_app_inv; auto.
-      rewrite mkApps_nested.
+      rewrite -mkApps_app.
       eapply value_stuck_fix.
       eapply All_app_inv; auto.
       rewrite isFixApp_mkApps in H1.
@@ -592,7 +592,7 @@ Section Wcbv.
   (*   intros H. *)
   (*   depind H; try solve_discr'. *)
   (*   - destruct (mkApps_elim f (a :: l0)). admit. *)
-  (*     rewrite [tApp _ _](mkApps_nested f (firstn n l1) (skipn n l1)) in x. *)
+  (*     rewrite [tApp _ _](mkApps_app f (firstn n l1) (skipn n l1)) in x. *)
   (*     solve_discr'. *)
   (*     specialize (IHeval1 _ _ _ eq_refl). *)
   (*     firstorder eauto. *)
@@ -605,13 +605,13 @@ Section Wcbv.
   (*     firstorder eauto. solve_discr. *)
   (*   - destruct (mkApps_elim f [a]). *)
   (*     replace (tApp (mkApps f (firstn n l0)) a) with (mkApps f (firstn n l0 ++ [a])) in x. *)
-  (*     2:now rewrite -mkApps_nested. *)
+  (*     2:now rewrite mkApps_app. *)
   (*     solve_discr'. *)
   (*     specialize (IHeval1 _ _ _ eq_refl). *)
   (*     firstorder eauto. subst. *)
   (*     exists (x ++ [a']). *)
   (*     split. eapply All2_app; auto. *)
-  (*     now rewrite -mkApps_nested. *)
+  (*     now rewrite mkApps_app. *)
   (*   - eapply atom_mkApps in i; intuition try easy. *)
   (*     subst. *)
   (*     exists []. intuition auto. *)
@@ -629,7 +629,7 @@ Section Wcbv.
   (*       specialize (IHtv3 _ tv'3). now subst. *)
   (*     * rewrite [args](app_removelast_last a) in x. *)
   (*       destruct args; discriminate. *)
-  (*       rewrite -mkApps_nested in x. simpl in x. injection x. intros. clear x. *)
+  (*       rewrite mkApps_app in x. simpl in x. injection x. intros. clear x. *)
   (*       subst. *)
   (*       admit. *)
   (* Admitted. *)

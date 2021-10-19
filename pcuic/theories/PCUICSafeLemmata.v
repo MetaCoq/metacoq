@@ -854,7 +854,7 @@ Section Lemmata.
   Proof.
     unfold zipp.
     rewrite decompose_stack_appstack.
-    rewrite <- mkApps_nested.
+    rewrite mkApps_app.
     now destruct decompose_stack.
   Qed.
 

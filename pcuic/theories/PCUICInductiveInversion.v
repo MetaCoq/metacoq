@@ -3125,7 +3125,7 @@ Proof.
     apply length_nil in on_projs_noidx. 
     rewrite on_projs_noidx in eq. simpl in *.
     rewrite p0.(onNpars) in eq. lia. }
-  epose proof (declared_projection_closed _ declp).
+  epose proof (declared_projection_closed declp).
   pose proof (wf_projection_context _ _ declp cu) as wfpctx.
   destruct (ind_variance mdecl) eqn:eqv; revgoals.
   { eapply into_equality; cycle 1.

@@ -1039,7 +1039,7 @@ Section Inversions.
     intros u v t l h e.
     induction l in u, v, t, e, h |- * using list_rect_rev.
     - cbn in e. subst. cbn in h. discriminate.
-    - rewrite <- mkApps_nested in e. cbn in e.
+    - rewrite mkApps_app in e. cbn in e.
       exists l. inversion e. subst. auto.
   Qed.
 

@@ -775,8 +775,8 @@ Proof.
         assert (isprop : is_propositional_ind Σ' i = Some true).
         { eapply isPropositional_propositional; eauto. eapply isErasable_Propositional; eauto. }
         split.
-        eapply Is_type_app in X as []; eauto. 2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
-        rewrite mkApps_nested in X.
+        eapply Is_type_app in X as []; eauto. 2:{ rewrite -mkApps_app. eapply subject_reduction_eval; eauto. }
+        rewrite -mkApps_app in X.
 
         eapply tConstruct_no_Type in X; eauto. eapply H3 in X as [? []]; eauto.
         2: now exists []; destruct Σ.
@@ -862,8 +862,8 @@ Proof.
         * subst.
   
           eapply Is_type_app in X1; auto. destruct X1.
-          2:{ rewrite mkApps_nested. eapply subject_reduction_eval; eauto. }
-          rewrite mkApps_nested in X1.
+          2:{ rewrite -mkApps_app. eapply subject_reduction_eval; eauto. }
+          rewrite -mkApps_app in X1.
   
           eapply tConstruct_no_Type in X1; auto.
           
@@ -1051,15 +1051,15 @@ Proof.
         2:{ eapply (eval_box_apps _ _ [_]); eauto. }
         destruct H2.
         eapply (Is_type_app _ _ _ (x5 ++ [av])) in X as []; eauto; first last.
-        - rewrite mkApps_nested app_assoc mkApps_snoc.
+        - rewrite -mkApps_app app_assoc mkApps_snoc.
           eapply PCUICValidity.type_App'; eauto.
           eapply subject_reduction; eauto.
           eapply wcbeval_red; eauto.
         - eapply erases_box.
           eapply Is_type_eval; auto. 2:eauto.
-          rewrite -mkApps_nested /=.
+          rewrite mkApps_app /=.
           eapply eval_fix.
-          rewrite mkApps_nested. eapply value_final.
+          rewrite -mkApps_app. eapply value_final.
           eapply eval_to_value; eauto.
           eapply value_final, eval_to_value; eauto.
           rewrite /cunfold_fix e1 //. auto.
@@ -1082,7 +1082,7 @@ Proof.
            { eapply Forall2_app.
              - exact H4.
              - eauto. }
-           rewrite <- mkApps_nested in H2.
+           rewrite mkApps_app in H2.
            rewrite EAstUtils.mkApps_app in H2.
            cbn in *. simpl in H2.
           rewrite cls in H2.
@@ -1104,7 +1104,7 @@ Proof.
              subst. unfold is_constructor.
              rewrite nth_error_snoc. lia.
              assert(Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : subst [av] 0 x1).
-             { rewrite -mkApps_nested. eapply PCUICValidity.type_App'; eauto.
+             { rewrite mkApps_app. eapply PCUICValidity.type_App'; eauto.
                eapply subject_reduction_eval; eauto. }
              epose proof (fix_app_is_constructor Σ (args:=argsv ++ [av]) X).
              rewrite /unfold_fix e1 in X0.
@@ -1171,7 +1171,7 @@ Proof.
            split.
            ++ econstructor.
               eapply Is_type_eval. 3:eauto. all:eauto.
-              rewrite -mkApps_nested.
+              rewrite mkApps_app.
               eapply eval_fix; eauto. 
               1-2:eapply value_final, eval_to_value; eauto.
               rewrite /cunfold_fix e1 //. congruence.
@@ -1266,7 +1266,7 @@ Proof.
       destruct H2.
       edestruct IHeval as (? & ? & [?]).
       { constructor; eauto.
-        rewrite -mkApps_nested.
+        rewrite mkApps_app.
         eapply erases_mkApps. instantiate(1:=EAst.tBox).
         constructor.
         eapply isErasable_Proof.
@@ -1366,7 +1366,7 @@ Proof.
       destruct H1.
       edestruct IHeval as (? & ? & [?]).
       { constructor; eauto.
-        rewrite -mkApps_nested.
+        rewrite mkApps_app.
         eapply erases_mkApps. instantiate(1:=EAst.tBox).
         constructor.
         eapply isErasable_Proof.

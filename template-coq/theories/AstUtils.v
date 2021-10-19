@@ -144,7 +144,7 @@ Ltac solve_discr' :=
     eapply mkApps_eq_inj in H as [? ?]; [|easy|easy]; subst; try intuition congruence
   end.
 
-Lemma mkApps_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
+Lemma mkApps_app f l l' : mkApps f (l ++ l') = mkApps (mkApps f l) l'.
 Proof.
   induction l; destruct f; destruct l'; simpl; rewrite ?app_nil_r; auto.
   f_equal. now rewrite <- app_assoc.
@@ -153,7 +153,7 @@ Qed.
 Lemma mkApp_mkApps f a l : mkApp (mkApps f l) a = mkApps f (l ++ [a]).
 Proof.
   destruct l. simpl. reflexivity.
-  rewrite <- mkApps_nested. reflexivity.
+  rewrite mkApps_app //.
 Qed.
 
 Lemma mkAppMkApps s t:

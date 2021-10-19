@@ -1406,7 +1406,7 @@ Section ReductionCongruence.
     Proof.
       rewrite -{2}(rev_involutive l).
       generalize (List.rev l) as l'; induction l'; simpl; auto.
-      rewrite <- mkApps_nested. now rewrite <- IHl'.
+      rewrite mkApps_app. now rewrite <- IHl'.
     Qed.
     
     Lemma red1_mkApps_f :

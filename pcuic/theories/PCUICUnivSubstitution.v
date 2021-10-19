@@ -159,6 +159,7 @@ Proof.
   - solve_all. reflexivity.
 Qed.
 
+#[global]
 Instance eq_universe_SubstUnivPreserving {cf:checker_flags} φ :
   SubstUnivPreserving (eq_universe φ).
 Proof.
@@ -196,6 +197,7 @@ Proof.
     now eexists; split; tea.
 Qed.
 
+#[global]
 Instance leq_universe_SubstUnivPreserving {cf:checker_flags} φ :
   SubstUnivPreserving (leq_universe φ).
 Proof.

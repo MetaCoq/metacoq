@@ -61,6 +61,7 @@ Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
 Proof.
   now apply_funelim (fold_context f Γ); intros; simpl; auto; f_equal.
 Qed.
+#[global]
 Hint Rewrite fold_context_length : len.
 
 Lemma fold_context_In_spec (f : context -> context_decl -> context_decl) (ctx : context) :
@@ -71,6 +72,7 @@ Proof.
   funelim (fold_context_In ctx g) => //; simpl; rewrite (H f0); trivial.
 Qed.
 
+#[global]
 Instance fold_context_Proper : Proper (`=2` ==> `=1`) fold_context.
 Proof.
   intros f f' Hff' x.
@@ -205,6 +207,7 @@ Proof.
   now noconf H.
 Qed.
 
+#[global]
 Hint Rewrite view_lambda_fix_app_fix_app view_lambda_fix_app_lambda_app : rho.
 
 Equations construct_cofix_discr (t : term) : bool :=

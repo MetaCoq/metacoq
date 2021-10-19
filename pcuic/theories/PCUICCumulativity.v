@@ -91,12 +91,14 @@ Include PCUICConversion.
 Notation conv_context Σ Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
 Notation cumul_context Σ Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
 
+#[global]
 Instance conv_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (conv_decls Σ Γ Γ').
 Proof.
   intros x. destruct x as [na [b|] ty]; constructor; auto.
   all:constructor; apply eq_term_refl.
 Qed.
 
+#[global]
 Instance cumul_decls_refl {cf:checker_flags} Σ Γ Γ' : Reflexive (cumul_decls Σ Γ Γ').
 Proof.
   intros x. destruct x as [na [b|] ty]; constructor; auto.
@@ -124,11 +126,13 @@ Proof.
     * econstructor 2; eauto.
 Qed.
 
+#[global]
 Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumul Σ Γ).
 Proof.
   intro; constructor. reflexivity.
 Qed.
 
+#[global]
 Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (conv Σ Γ).
 Proof.
   intro; constructor. reflexivity.
@@ -283,6 +287,7 @@ Proof.
   now econstructor 3; [eapply IHX|]; eauto.
 Qed.
 
+#[global]
 Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
   Symmetric (conv Σ Γ).
 Proof.

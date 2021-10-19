@@ -16,6 +16,7 @@ Proof.
   induction ctx; cbnr.
   destruct (decl_body a); cbn; now rewrite IHctx.
 Qed.
+#[global]
 Hint Rewrite subst_instance_assumptions : len.
 
 
@@ -109,6 +110,7 @@ Proof.
   rewrite IHctx. f_equal. rewrite test_decl_map_decl.
   len. now setoid_rewrite plus_minus'.
 Qed.
+#[global]
 Hint Rewrite test_context_k_mapi : map.
 
 Lemma test_context_k_map (p : nat -> term -> bool) k (f : term -> term) ctx :
@@ -119,6 +121,7 @@ Proof.
   rewrite IHctx. f_equal. rewrite test_decl_map_decl.
   now len.
 Qed.
+#[global]
 Hint Rewrite test_context_k_map : map.
 
 Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
@@ -176,7 +179,7 @@ Proof.
   - now rewrite IHu /= andb_assoc.
 Qed.
 
-Remove Hints absurd_eq_true trans_eq_bool f_equal2_nat f_equal_nat : core.
+#[global] Remove Hints absurd_eq_true trans_eq_bool f_equal2_nat f_equal_nat : core.
 
 Lemma closedn_subst_eq s k k' t :
   forallb (closedn k) s -> 
@@ -948,6 +951,7 @@ Proof.
     now move/andP: cl => [].
 Qed.
 
+#[global]
 Hint Rewrite to_extended_list_k_length : len.
 
 Lemma smash_context_subst Δ s n Γ : smash_context (subst_context s (n + #|Γ|) Δ) (subst_context s n Γ) =

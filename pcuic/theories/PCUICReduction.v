@@ -211,6 +211,7 @@ Section OnOne_local_2.
       OnOne2_local_env (Γ ,, d) (Γ' ,, d).
 End OnOne_local_2.
 
+#[global]
 Instance OnOne2_local_env_length {P ctx ctx'} : 
   HasLen (OnOne2_local_env P ctx ctx') #|ctx| #|ctx'|.
 Proof.

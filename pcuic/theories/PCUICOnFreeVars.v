@@ -25,6 +25,7 @@ Implicit Type (cf : checker_flags).
 Definition shiftnP k p i :=
   (i <? k) || p (i - k).
 
+#[global]
 Instance shiftnP_ext k : Proper (`=1` ==> `=1`) (shiftnP k).
 Proof. intros f g Hfg i. now rewrite /shiftnP Hfg. Qed. 
 
@@ -44,6 +45,7 @@ Qed.
 Definition closedP (n : nat) (P : nat -> bool) := 
   fun i => if i <? n then P i else false.
 
+#[global]
 Instance closedP_proper n : Proper (`=1` ==> `=1`) (closedP n).
 Proof. intros f g Hfg. intros i; rewrite /closedP. now rewrite Hfg. Qed.
 
@@ -101,9 +103,11 @@ Proof.
     eapply b; rewrite H //.
 Qed.
 
+#[global]
 Instance on_free_vars_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) on_free_vars.
 Proof. intros f g Hfg ? ? ->. now apply on_free_vars_ext. Qed.
 
+#[global]
 Instance on_free_vars_proper_pointwise : Proper (`=1` ==> `=1`) on_free_vars.
 Proof. intros f g Hfg x. now apply on_free_vars_ext. Qed.
 
@@ -114,6 +118,7 @@ Lemma test_context_k_ctx p k (ctx : context) : test_context_k (fun=> p) k ctx = 
 Proof.
   induction ctx; simpl; auto.
 Qed.
+#[global]
 Hint Rewrite test_context_k_ctx : map.
 
 (* (* (* Lemma on_free_vars_true t : on_free_vars xpredT t.
@@ -214,15 +219,18 @@ Qed.
 Definition on_free_vars_decl P d :=
   test_decl (on_free_vars P) d.
 
+#[global]
 Instance on_free_vars_decl_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) on_free_vars_decl.
 Proof. rewrite /on_free_vars_decl => f g Hfg x y <-. now rewrite Hfg. Qed.
 
+#[global]
 Instance on_free_vars_decl_proper_pointwise : Proper (`=1` ==> `=1`) on_free_vars_decl.
 Proof. rewrite /on_free_vars_decl => f g Hfg x. now rewrite Hfg. Qed.
 
 Definition on_free_vars_ctx P ctx :=
   alli (fun k => (on_free_vars_decl (shiftnP k P))) 0 (List.rev ctx).
 
+#[global]
 Instance on_free_vars_ctx_proper : Proper (`=1` ==> `=1`) on_free_vars_ctx.
 Proof.
   rewrite /on_free_vars_ctx => f g Hfg x.
@@ -306,6 +314,7 @@ Definition strengthenP k n (p : nat -> bool) :=
     if i <? k + n then false 
     else p (i - n).
 
+#[global]
 Instance strengthenP_proper n k : Proper (`=1` ==> `=1`) (strengthenP n k).
 Proof.
   intros f g Hfg i. rewrite /strengthenP. now rewrite (Hfg i) (Hfg (i - k)).
@@ -439,11 +448,13 @@ Qed.
 Definition addnP n (p : nat -> bool) :=
   fun i => p (n + i).
 
+#[global]
 Instance addnP_proper n : Proper (`=1` ==> Logic.eq ==> Logic.eq) (addnP n).
 Proof.
   intros i f g Hfg; now rewrite /addnP.
 Qed.
   
+#[global]
 Instance addnP_proper_pointwise : Proper (Logic.eq ==> `=1` ==> `=1`) addnP.
 Proof.
   intros i f g Hfg; now rewrite /addnP.
@@ -469,6 +480,7 @@ Proof. reflexivity. Qed.
 Definition on_ctx_free_vars P ctx :=
   alli (fun k d => P k ==> (on_free_vars_decl (addnP (S k) P) d)) 0 ctx.
 
+#[global]
 Instance on_ctx_free_vars_proper : Proper (`=1` ==> eq ==> eq) on_ctx_free_vars.
 Proof.
   rewrite /on_ctx_free_vars => f g Hfg x y <-.
@@ -476,6 +488,7 @@ Proof.
   now setoid_rewrite Hfg. 
 Qed.
 
+#[global]
 Instance on_ctx_free_vars_proper_pointwise : Proper (`=1` ==> `=1`) on_ctx_free_vars.
 Proof.
   rewrite /on_ctx_free_vars => f g Hfg x.
@@ -612,6 +625,7 @@ Definition predA {A} (p q : pred A) : simpl_pred A :=
 Definition eq_simpl_pred {A} (x y : simpl_pred A) := 
   `=1` x y.
   
+#[global]
 Instance implP_Proper {A} : Proper (`=1` ==> `=1` ==> eq_simpl_pred) (@predA A).
 Proof.
   intros f g Hfg f' g' Hfg' i; rewrite /predA /=.
@@ -635,18 +649,21 @@ Proof.
   repeat nat_compare_specs => //.
 Qed.
 
+#[global]
 Instance orP_Proper {A} : Proper (`=1` ==> `=1` ==> eq_simpl_pred) (@predU A).
 Proof.
   intros f g Hfg f' g' Hfg' i; rewrite /predU /=.
   now rewrite Hfg Hfg'.
 Qed.
 
+#[global]
 Instance andP_Proper A : Proper (`=1` ==> `=1` ==> eq_simpl_pred) (@predI A).
 Proof.
   intros f g Hfg f' g' Hfg' i; rewrite /predI /=.
   now rewrite Hfg Hfg'.
 Qed.
 
+#[global]
 Instance pred_of_simpl_proper {A} : Proper (eq_simpl_pred ==> `=1`) (@PredOfSimpl.coerce A).
 Proof.
   now move=> f g; rewrite /eq_simpl_pred => Hfg.
@@ -1243,6 +1260,7 @@ Proof.
   now rewrite on_ctx_free_vars_tip {1}/shiftnP /= addnP_shiftnP.
 Qed.
 
+#[global]
 Hint Rewrite @on_ctx_free_vars_snoc : fvs.
 
 Ltac inv_on_free_vars :=

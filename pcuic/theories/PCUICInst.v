@@ -21,6 +21,7 @@ Open Scope sigma_scope.
 Definition inst_context σ (Γ : context) : context :=
   fold_context_k (fun i => inst (⇑^i σ)) Γ.
 
+#[global]
 Instance inst_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) inst_context.
 Proof.
   intros f g Hfg x y ->.
@@ -34,12 +35,14 @@ Definition inst_context_snoc0 s Γ d :
   inst_context s (d :: Γ) =
   inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
 Proof. unfold inst_context. now rewrite fold_context_k_snoc0. Qed.
+#[global]
 Hint Rewrite inst_context_snoc0 : sigma.
 
 Lemma inst_context_snoc s Γ d : inst_context s (Γ ,, d) = inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
 Proof.
   unfold snoc. apply inst_context_snoc0.
 Qed.
+#[global]
 Hint Rewrite inst_context_snoc : sigma.
 
 Lemma inst_context_alt s Γ :
@@ -51,6 +54,7 @@ Qed.
 
 Lemma inst_context_length s Γ : #|inst_context s Γ| = #|Γ|.
 Proof. apply fold_context_k_length. Qed.
+#[global]
 Hint Rewrite inst_context_length : sigma wf.
 
 (** Substitution in contexts is just a particular kind of instantiation. *)
@@ -73,10 +77,12 @@ Proof.
   induction l in f |- *; simpl; auto. rewrite IHl.
   now autorewrite with sigma.
 Qed.
+#[global]
 Hint Rewrite inst_mkApps : sigma.
 
 Lemma lift0_inst n t : lift0 n t = t.[↑^n].
 Proof. by rewrite lift_rename rename_inst lift_renaming_0 -ren_shiftk. Qed.
+#[global]
 Hint Rewrite lift0_inst : sigma.
 
 Lemma rename_decl_inst_decl : forall f d, rename_decl f d = inst_decl (ren f) d.
@@ -88,6 +94,7 @@ Proof.
   f_equal.
 Qed.
 
+#[global]
 Hint Rewrite rename_decl_inst_decl : sigma.
 
 Lemma rename_context_inst_context :
@@ -106,6 +113,7 @@ Proof.
     + autorewrite with sigma.
       now rewrite -up_Upn ren_shiftn.
 Qed.
+#[global]
 Hint Rewrite rename_context_inst_context : sigma.
 
 Lemma inst_subst0 a b τ : (subst0 a b).[τ] = (subst0 (map (inst τ) a) b.[⇑^#|a| τ]).
@@ -114,12 +122,14 @@ Proof.
   apply inst_ext.
   rewrite Upn_comp //; now len.
 Qed.
+#[global]
 Hint Rewrite inst_subst0 : sigma.
 
 Lemma subst10_inst a b τ : b {0 := a}.[τ] = (b.[⇑ τ] {0 := a.[τ]}).
 Proof.
   unfold subst10. sigma. simpl. rewrite subst_consn_tip /= //.
 Qed.
+#[global]
 Hint Rewrite subst10_inst : sigma.
 
 Lemma inst_closed0 σ t : closedn 0 t -> t.[σ] = t.
@@ -945,6 +955,7 @@ Proof.
         now rewrite /to_extended_list /to_extended_list_k reln_fold.
 Qed.
 
+#[global]
 Instance map_def_ext {A B} : Proper (`=1` ==> `=1` ==> `=1`) (@map_def A B).
 Proof.
   intros f g Hfg f' g' Hfg' x.

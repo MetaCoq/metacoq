@@ -17,11 +17,13 @@ Require Import ssreflect ssrbool.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+#[global]
 Hint Rewrite Nat.add_0_r : len.
 
 Lemma context_assumptions_expand_lets_ctx Γ Δ :
   context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.
 Proof. now rewrite /expand_lets_ctx /expand_lets_k_ctx; len. Qed.
+#[global]
 Hint Rewrite context_assumptions_expand_lets_ctx : len.
 
 Lemma smash_context_subst_empty s n Γ : 
@@ -310,6 +312,7 @@ Qed.
 
 Lemma to_extended_list_length Γ : #|to_extended_list Γ| = context_assumptions Γ.
 Proof. now rewrite /to_extended_list to_extended_list_k_length. Qed.
+#[global]
 Hint Rewrite to_extended_list_length : len.
 
 Lemma map_subst_app_to_extended_list_k s s' ctx k  :
@@ -542,6 +545,7 @@ Proof. reflexivity. Qed.
 
 Lemma expand_lets_ctx_nil Γ : expand_lets_ctx Γ [] = [].
 Proof. reflexivity. Qed.
+#[global]
 Hint Rewrite expand_lets_k_ctx_nil expand_lets_ctx_nil : pcuic.  
 
 Definition subst_let_expand args Δ T := 
@@ -681,6 +685,7 @@ Lemma subst_context_let_expand_length s Γ Δ :
 Proof.
   now rewrite /subst_context_let_expand; len.
 Qed.
+#[global]
 Hint Rewrite subst_context_let_expand_length : len.
 
 Lemma to_extended_list_subst_context_let_expand s Γ Δ : 

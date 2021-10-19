@@ -12,6 +12,7 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+#[global]
 Hint Rewrite @app_context_length : wf.
 
 Generalizable Variables Σ Γ t T.

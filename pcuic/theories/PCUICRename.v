@@ -74,6 +74,7 @@ Proof.
   intros σ Γ. unfold rename_context.
   apply fold_context_k_length.
 Qed.
+#[global]
 Hint Rewrite rename_context_length : sigma wf.
 
 Lemma rename_context_snoc0 :
@@ -84,12 +85,14 @@ Proof.
   intros f Γ d.
   unfold rename_context. now rewrite fold_context_k_snoc0. 
 Qed.
+#[global]
 Hint Rewrite rename_context_snoc0 : sigma.
 
 Lemma rename_context_snoc r Γ d : rename_context r (Γ ,, d) = rename_context r Γ ,, map_decl (rename (shiftn #|Γ| r)) d.
 Proof.
   unfold snoc. apply rename_context_snoc0.
 Qed.
+#[global]
 Hint Rewrite rename_context_snoc : sigma.
 
 Lemma rename_context_alt r Γ :

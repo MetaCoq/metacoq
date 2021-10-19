@@ -394,6 +394,7 @@ Ltac merge_All :=
   unfold tFixProp, tCaseBrsProp in *;
   repeat toAll.
 
+#[global]
 Hint Rewrite @map_def_id @map_id : map.
 
 (* todo move *)
@@ -960,6 +961,7 @@ Lemma map_InP_length {A B : Type} {P : A -> Type} (f : forall x : A, P x -> B) (
 Proof.
   induction l; simpl; auto.
 Qed.
+#[global]
 Hint Rewrite @map_InP_length : len.
 
 (** Views *)

@@ -17,6 +17,7 @@ Infix "≡α" := upto_names (at level 60).
 Notation "`≡Γ`" := (eq_context_upto [] eq eq).
 Infix "≡Γ" := (eq_context_upto [] eq eq) (at level 20, no associativity).
 
+#[global]
 Instance upto_names_terms_refl : CRelationClasses.Reflexive (All2 `≡α`).
 Proof. intro; apply All2_refl; reflexivity. Qed.
 

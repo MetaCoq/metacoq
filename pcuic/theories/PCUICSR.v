@@ -25,8 +25,9 @@ Ltac pcuic := intuition eauto 3 with pcuic ||
 
 Arguments Nat.sub : simpl nomatch.
 Arguments Universe.sort_of_product : simpl nomatch.
-Hint Rewrite subst_instance_assumptions : len.
-Hint Rewrite projs_length : len.
+
+#[global]
+Hint Rewrite subst_instance_assumptions projs_length : len.
 
 (* Preservation of wf_*fixpoint *)  
 
@@ -461,6 +462,7 @@ Lemma context_assumptions_expand_lets_k_ctx {Γ k Δ} :
 Proof.
   now rewrite /expand_lets_k_ctx; len.
 Qed.
+#[global]
 Hint Rewrite @context_assumptions_expand_lets_k_ctx : len.
 
 Lemma closedn_expand_lets (k : nat) (Γ : context) (t : term) :
@@ -504,6 +506,7 @@ Proof.
   now simpl in wf; len in wf.
 Qed.
 
+#[global]
 Instance conv_context_refl {cf} Σ {wfΣ : wf Σ} : CRelationClasses.Reflexive (All2_fold (conv_decls Σ)).
 Proof.
   intros x. reflexivity.

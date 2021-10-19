@@ -208,6 +208,7 @@ Qed.
 Lemma trans_local_length Σ Γ : #|trans_local Σ Γ| = #|Γ|.
 Proof. now rewrite map_length. Qed.
 
+#[global]
 Hint Rewrite trans_local_length : len.
 
 Lemma trans_local_weakening {cf} Σ Σ' t : 

@@ -14,16 +14,19 @@ Local Set SimplIsCbn.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+#[global]
 Instance alpha_eq_reflexive : CRelationClasses.Reflexive (All2 (compare_decls eq eq)).
 Proof.
   intros x. eapply All2_refl; reflexivity.
 Qed.
 
+#[global]
 Instance alpha_eq_symmmetric : CRelationClasses.Symmetric (All2 (compare_decls eq eq)).
 Proof.
   intros x. eapply All2_symP. tc.
 Qed.
 
+#[global]
 Instance alpha_eq_trans : CRelationClasses.Transitive (All2 (compare_decls eq eq)).
 Proof.
   intros x y z. apply All2_trans. tc.

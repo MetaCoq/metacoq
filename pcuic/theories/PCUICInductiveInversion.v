@@ -24,6 +24,7 @@ Local Set SimplIsCbn.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+#[global]
 Hint Rewrite reln_length : len.
 
 Ltac substu := autorewrite with substu => /=.
@@ -1917,10 +1918,12 @@ End UniverseClosedSubst.
 
 Lemma level_var_instance_length n i : #|level_var_instance n i| = #|i|.
 Proof. rewrite /level_var_instance; len. Qed.
+#[global]
 Hint Rewrite level_var_instance_length : len.
 
 Lemma lift_instance_length n i : #|lift_instance n i| = #|i|.
 Proof. now rewrite /lift_instance; len. Qed.
+#[global]
 Hint Rewrite lift_instance_length : len.
 
 Lemma variance_universes_insts {mdecl l v i i'} :
@@ -2325,6 +2328,7 @@ Lemma map_map_subst_expand_lets (s : list term) (Γ : context) l k :
   map (subst (map (subst0 s) (extended_subst Γ 0)) k) l = map (subst s k ∘ expand_lets_k Γ k) l.
 Proof. move=> ca; apply map_ext => x; apply map_subst_expand_lets_k => //. Qed.
 
+#[global]
 Hint Rewrite closedn_subst_instance : pcuic.
 
 Lemma subst_conv_closed {le} {cf} {Σ} {wfΣ : wf Σ} {Γ Γ0 Γ1 Δ : context} {s s' : list term} {T U : term} :
@@ -2365,6 +2369,7 @@ Proof.
   rewrite subst_instance_lift. len; f_equal.
 Qed.
 
+#[global]
 Hint Rewrite subst_instance_expand_lets closedn_subst_instance : substu.
 
 Lemma subst_instance_expand_lets_ctx u Γ Δ :

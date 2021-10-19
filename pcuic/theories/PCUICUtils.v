@@ -84,6 +84,7 @@ Proof.
   apply hB.
 Qed.
 
+#[global]
 Instance dlexprod_trans A B RA RB :
     Transitive RA ->
     (forall x, Transitive (RB x)) ->
@@ -187,6 +188,7 @@ Proof.
   intros [a b]. eapply dlexprod_Acc. all: eauto.
 Qed.
 
+#[global]
 Instance WF_precompose {T M} (R : M -> M -> Prop) (m : T -> M) :
   WellFounded R -> WellFounded (precompose R m)
   := wf_precompose R m.

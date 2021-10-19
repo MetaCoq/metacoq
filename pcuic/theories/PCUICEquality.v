@@ -9,6 +9,7 @@ From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
 
+#[global]
 Instance All2_fold_len P Γ Δ : HasLen (All2_fold P Γ Δ) #|Γ| #|Δ| :=
   All2_fold_length.
 
@@ -165,6 +166,7 @@ Definition bcompare_decls (eq_term leq_term : term -> term -> bool) (d d' : cont
   | _, _ => false
   end.
 
+#[global]
 Polymorphic Instance compare_decl_refl eq_term leq_term : 
   CRelationClasses.Reflexive eq_term -> 
   CRelationClasses.Reflexive leq_term -> 
@@ -174,6 +176,7 @@ Proof.
   destruct d as [na [b|] ty]; constructor; auto; reflexivity.
 Qed.
 
+#[global]
 Polymorphic Instance compare_decl_sym eq_term leq_term :
   CRelationClasses.Symmetric eq_term -> 
   CRelationClasses.Symmetric leq_term -> 
@@ -182,6 +185,7 @@ Proof.
   intros heq hle d d' []; constructor; auto; now symmetry.
 Qed.
 
+#[global]
 Polymorphic Instance compare_decl_trans eq_term leq_term :
   CRelationClasses.Transitive eq_term -> 
   CRelationClasses.Transitive leq_term -> 
@@ -191,6 +195,7 @@ Proof.
   etransitivity; eauto.
 Qed.
 
+#[global]
 Polymorphic Instance eq_context_refl eq_term leq_term : 
   CRelationClasses.Reflexive eq_term -> 
   CRelationClasses.Reflexive leq_term -> 
@@ -201,6 +206,7 @@ Proof.
   intros. reflexivity. 
 Qed.
 
+#[global]
 Polymorphic Instance eq_context_sym eq_term leq_term : 
   CRelationClasses.Symmetric eq_term -> 
   CRelationClasses.Symmetric leq_term -> 
@@ -211,6 +217,7 @@ Proof.
   intros. now symmetry. 
 Qed.
 
+#[global]
 Polymorphic Instance eq_context_trans eq_term leq_term : 
   CRelationClasses.Transitive eq_term -> 
   CRelationClasses.Transitive leq_term -> 
@@ -345,6 +352,7 @@ Proof.
   - apply Forall2_same; eauto.
 Qed.
 
+#[global]
 Instance eq_binder_annot_equiv {A} : RelationClasses.Equivalence (@eq_binder_annot A A).
 Proof.
   split. 
@@ -361,9 +369,11 @@ Proof. reflexivity. Qed.
 Hint Resolve eq_binder_annot_refl : core.
 
 (* TODO MOVE *)
+#[global]
 Existing Instance All2_symP.
 
 (* TODO MOVE *)
+#[global]
 Instance Forall2_symP :
   forall A (P : A -> A -> Prop),
     RelationClasses.Symmetric P ->
@@ -378,16 +388,19 @@ Proof. now eapply All_All2_refl, All_refl. Qed.
 #[global]
 Hint Resolve eq_binder_relevances_refl : core.
 
+#[global]
 Instance R_universe_instance_refl Re : RelationClasses.Reflexive Re -> 
   RelationClasses.Reflexive (R_universe_instance Re).
 Proof. intros tRe x. eapply Forall2_map. 
   induction x; constructor; auto.
 Qed.
 
+#[global]
 Instance R_universe_instance_sym Re : RelationClasses.Symmetric Re -> 
   RelationClasses.Symmetric (R_universe_instance Re).
 Proof. intros tRe x y. now eapply Forall2_symP. Qed.
  
+#[global]
 Instance R_universe_instance_trans Re : RelationClasses.Transitive Re -> 
   RelationClasses.Transitive (R_universe_instance Re).
 Proof. intros tRe x y z. now eapply Forall2_trans. Qed.
@@ -405,9 +418,11 @@ Proof.
     constructor; auto.
 Qed.
 
+#[global]
 Polymorphic Instance creflexive_eq A : CRelationClasses.Reflexive (@eq A).
 Proof. intro x. constructor. Qed.
 
+#[global]
 Polymorphic Instance eq_predicate_refl Re Ru :
   CRelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Ru ->
@@ -418,6 +433,7 @@ Proof.
   eapply All2_same; reflexivity.
 Qed.
 
+#[global]
 Polymorphic Instance eq_term_upto_univ_refl Σ Re Rle napp :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
@@ -442,11 +458,13 @@ Proof.
   - eapply All_All2; eauto; simpl; intuition eauto.
 Qed.
 
+#[global]
 Polymorphic Instance eq_term_refl `{checker_flags} Σ φ : Reflexive (eq_term Σ φ).
 Proof.
   apply eq_term_upto_univ_refl. all: exact _.
 Qed.
 
+#[global]
 Polymorphic Instance leq_term_refl `{checker_flags} Σ φ : Reflexive (leq_term Σ φ).
 Proof.
   apply eq_term_upto_univ_refl; exact _.
@@ -482,6 +500,7 @@ Proof.
   depelim p; depelim o; constructor; auto; try now symmetry.
 Qed.
 
+#[global]
 Polymorphic Instance eq_term_upto_univ_sym Σ Re Rle napp :
   RelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Rle ->
@@ -525,6 +544,7 @@ Proof.
     constructor; auto.
 Qed.
 
+#[global]
 Polymorphic Instance eq_predicate_sym Re Ru :
   CRelationClasses.Symmetric Re ->
   RelationClasses.Symmetric Ru ->
@@ -534,11 +554,13 @@ Proof.
   intros p. unfold eq_predicate; intuition auto; try now symmetry.
 Qed.
 
+#[global]
 Instance eq_term_sym `{checker_flags} Σ φ : Symmetric (eq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_sym. all: exact _.
 Qed.
 
+#[global]
 Instance R_global_instance_trans Σ Re Rle gr napp :
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
@@ -571,6 +593,7 @@ Proof.
   - depelim c; constructor; [now etransitivity|eauto ..].
 Qed.
 
+#[global]
 Polymorphic Instance eq_predicate_trans Re Ru :
   CRelationClasses.Transitive Re ->
   RelationClasses.Transitive Ru ->
@@ -582,6 +605,7 @@ Proof.
   etransitivity; tea.
 Qed.
 
+#[global]
 Polymorphic Instance eq_term_upto_univ_trans Σ Re Rle napp :
   RelationClasses.Transitive Re ->
   RelationClasses.Transitive Rle ->
@@ -651,41 +675,49 @@ Proof.
       transitivity (rarg y); auto.
 Qed.
 
+#[global]
 Polymorphic Instance eq_term_trans {cf:checker_flags} Σ φ : Transitive (eq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_trans. all: exact _.
 Qed.
 
+#[global]
 Polymorphic Instance leq_term_trans {cf:checker_flags} Σ φ : Transitive (leq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_trans ; exact _.
 Qed.
 
+#[global]
 Polymorphic Instance eq_term_upto_univ_equiv Σ Re (hRe : RelationClasses.Equivalence Re)
   : Equivalence (eq_term_upto_univ Σ Re Re).
 Proof.
   constructor. all: exact _.
 Defined.
 
+#[global]
 Polymorphic Instance eq_context_equiv {cf} Σ φ : Equivalence (eq_context_gen (eq_term Σ φ) (eq_term Σ φ)).
 Proof.
   constructor; try exact _.
 Qed.
 
+#[global]
 Polymorphic Instance leq_context_preord {cf} Σ φ : PreOrder (eq_context_gen (eq_term Σ φ) (leq_term Σ φ)).
 Proof.
   constructor; try exact _.
 Qed.
 
+#[global]
 Polymorphic Instance eq_term_equiv {cf:checker_flags} Σ φ : Equivalence (eq_term Σ φ) :=
   {| Equivalence_Reflexive := eq_term_refl _ _;
      Equivalence_Symmetric := eq_term_sym _ _;
      Equivalence_Transitive := eq_term_trans _ _ |}.
 
+#[global]
 Polymorphic Instance leq_term_preorder {cf:checker_flags} Σ φ : PreOrder (leq_term Σ φ) :=
   {| PreOrder_Reflexive := leq_term_refl _ _;
      PreOrder_Transitive := leq_term_trans _ _ |}.
 
+#[global]
 Instance R_universe_instance_equiv R (hR : RelationClasses.Equivalence R)
   : RelationClasses.Equivalence (R_universe_instance R).
 Proof.
@@ -705,6 +737,7 @@ Proof.
   cbn; intros ? ? [? ?]. eapply H; assumption.
 Qed.
 
+#[global]
 Instance R_global_instance_equiv Σ R (hR : RelationClasses.Equivalence R) gr napp
   : RelationClasses.Equivalence (R_global_instance Σ R R gr napp).
 Proof.
@@ -714,6 +747,7 @@ Proof.
   - intros x y z xy yz. eapply R_global_instance_trans; eauto; typeclasses eauto.
 Qed.
 
+#[global]
 Instance R_global_instance_antisym Σ Re Rle (hRe : RelationClasses.Equivalence Re) gr napp :
   RelationClasses.Antisymmetric _ Re Rle ->
   RelationClasses.Antisymmetric _ (R_global_instance Σ Re Re gr napp) (R_global_instance Σ Re Rle gr napp).
@@ -737,6 +771,7 @@ Proof.
   all: eapply RelationClasses.antisymmetry; eauto.
 Qed.
 
+#[global]
 Instance leq_term_antisym {cf:checker_flags} Σ φ
   : Antisymmetric (eq_term Σ φ) (leq_term Σ φ).
 Proof.
@@ -760,6 +795,7 @@ Proof.
     elim: Nat.leb_spec => //. lia.
 Qed.
 
+#[global]
 Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -774,6 +810,7 @@ Proof.
   now eapply R_universe_instance_impl'.
 Qed.
 
+#[global]
 Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Re Rle' ->
@@ -802,6 +839,7 @@ Qed.
 
 (** Pure syntactic equality, without cumulative inductive types subtyping *)
 
+#[global]
 Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -829,6 +867,7 @@ Proof.
   destruct o; depelim p; constructor; auto.
 Qed.
 
+#[global]
 Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -861,6 +900,7 @@ Proof.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
 Qed.
 
+#[global]
 Instance eq_term_upto_univ_empty_impl Σ Re Re' Rle Rle' napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
@@ -891,6 +931,7 @@ Proof.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.    
 Qed.
 
+#[global]
 Instance eq_term_upto_univ_leq Σ Re Rle napp napp' :
   RelationClasses.subrelation Re Rle ->
   napp <= napp' ->
@@ -899,12 +940,14 @@ Proof.
   intros H. eapply eq_term_upto_univ_impl; exact _.
 Qed.
 
+#[global]
 Instance eq_term_leq_term {cf:checker_flags} Σ φ
   : subrelation (eq_term Σ φ) (leq_term Σ φ).
 Proof.
   eapply eq_term_upto_univ_leq; auto; exact _.
 Qed.
 
+#[global]
 Instance leq_term_partial_order {cf:checker_flags} Σ φ
   : PartialOrder (eq_term Σ φ) (leq_term Σ φ).
 Proof.
@@ -1762,16 +1805,19 @@ Infix "≡" := upto_names (at level 70).
 Infix "≡'" := (eq_term_upto_univ [] eq eq) (at level 70).
 Notation upto_names' := (eq_term_upto_univ [] eq eq).
 
+#[global]
 Instance upto_names_ref : Reflexive upto_names.
 Proof.
   eapply eq_term_upto_univ_refl; exact _.
 Qed.
 
+#[global]
 Instance upto_names_sym : Symmetric upto_names.
 Proof.
   eapply eq_term_upto_univ_sym; exact _.
 Qed.
 
+#[global]
 Instance upto_names_trans : Transitive upto_names.
 Proof.
   eapply eq_term_upto_univ_trans; exact _.
@@ -2242,6 +2288,7 @@ Proof.
   apply eq_annots_fold.
 Qed.
 
+#[global]
 Instance Forall2_ext {A B} :
   Proper (pointwise_relation A (pointwise_relation B iff) ==> eq ==> eq ==> iff) (@Forall2 A B).
 Proof.

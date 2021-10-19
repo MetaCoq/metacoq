@@ -456,6 +456,7 @@ Qed.
 Lemma projs_inst_length ind npars k x : #|projs_inst ind npars k x| = k.
 Proof. induction k; simpl; auto. lia. Qed.
 
+#[global]
 Hint Rewrite projs_inst_length : len.
 
 Lemma projs_inst_lift ind npars k x n : 
@@ -1904,6 +1905,7 @@ Proof.
   now rewrite !head_tapp.
 Qed.
 
+#[global]
 Hint Rewrite context_assumptions_app @context_assumptions_subst : len.
 
 Lemma red1_destInd (Σ : global_env_ext) Γ t t' ind u : 

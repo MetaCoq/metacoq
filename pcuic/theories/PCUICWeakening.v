@@ -98,8 +98,6 @@ Lemma All_local_env_eq P ctx ctx' :
   All_local_env P ctx'.
 Proof. now intros H ->. Qed.
 
-Hint Rewrite shiftn_rshiftk : sigma.
-
 Lemma weakening_renaming P Γ Γ' Γ'' :
   urenaming P (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
     (lift_renaming #|Γ''| #|Γ'|).
@@ -151,6 +149,7 @@ Proof.
     * constructor. eapply nth_error_None in hnth. lia.
 Qed.
 
+#[global]
 Hint Rewrite rename_context_length : len.
 
 Variant shiftn_spec k f i : nat -> Type :=
@@ -307,6 +306,7 @@ Proof.
   unfold decompose_app. destruct decompose_app_rec.
   now move=> Heq [= <- <-].
 Qed.
+#[global]
 Hint Rewrite decompose_app_lift using auto : lift.
 
 Lemma lift_is_constructor:
@@ -322,9 +322,8 @@ Proof.
 Qed.
 #[export] Hint Resolve lift_is_constructor : core.
 
-Hint Rewrite subst_instance_lift : lift.
-Hint Rewrite lift_mkApps : lift.
-Hint Rewrite distr_lift_subst distr_lift_subst10 : lift.
+#[global]
+Hint Rewrite subst_instance_lift lift_mkApps distr_lift_subst distr_lift_subst10 : lift.
 
 Lemma lift_declared_constant `{checker_flags} Σ cst decl n k :
   wf Σ ->
@@ -355,6 +354,7 @@ Proof.
   unfold lift_decl. now rewrite mapi_length fix_context_length.
 Qed.
 
+#[global]
 Hint Rewrite <- lift_fix_context : lift.
 
 Lemma lift_it_mkProd_or_LetIn n k ctx t :
@@ -367,6 +367,7 @@ Proof.
   pose (lift_context_snoc n k ctx a).
   now destruct a as [na [b|] ty].
 Qed.
+#[global]
 Hint Rewrite lift_it_mkProd_or_LetIn : lift.
 
 Lemma to_extended_list_map_lift:

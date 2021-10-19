@@ -149,6 +149,7 @@ Lemma simpl_lift_ext n k p i :
   lift p i ∘ lift n k =1 lift (p + n) k.
 Proof. intros ? ? ?; now apply simpl_lift. Qed.
 
+#[global]
 Hint Rewrite Nat.add_assoc : map.
 
 Lemma permute_lift :
@@ -430,16 +431,19 @@ Qed.
 
 Lemma lift_context_length n k Γ : #|lift_context n k Γ| = #|Γ|.
 Proof. apply fold_context_k_length. Qed.
+#[global]
 Hint Rewrite lift_context_length : lift len.
 
 Definition lift_context_snoc0 n k Γ d : lift_context n k (d :: Γ) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
 Proof. unfold lift_context. now rewrite fold_context_k_snoc0. Qed.
+#[global]
 Hint Rewrite lift_context_snoc0 : lift.
 
 Lemma lift_context_snoc n k Γ d : lift_context n k (Γ ,, d) = lift_context n k Γ ,, lift_decl n (#|Γ| + k) d.
 Proof.
   unfold snoc. apply lift_context_snoc0.
 Qed.
+#[global]
 Hint Rewrite lift_context_snoc : lift.
 
 Lemma lift_context_alt n k Γ :
@@ -550,7 +554,10 @@ Proof.
     + simpl. apply IHΓ'; simpl in *; (lia || congruence).
 Qed.
 
+#[global]
 Hint Rewrite subst_context_length : subst wf.
+
+#[global]
 Hint Rewrite subst_context_snoc : subst.
 
 Lemma subst_decl0 k d : map_decl (subst [] k) d = d.
@@ -573,6 +580,7 @@ Lemma subst_context_snoc0 s Γ d : subst_context s 0 (Γ ,, d) = subst_context s
 Proof.
   unfold snoc. now rewrite subst_context_snoc Nat.add_0_r.
 Qed.
+#[global]
 Hint Rewrite subst_context_snoc : subst.
 
 Lemma subst_context_app s k Γ Δ :
@@ -707,6 +715,7 @@ Qed.
 Lemma context_assumptions_subst s n Γ :
   context_assumptions (subst_context s n Γ) = context_assumptions Γ.
 Proof. apply context_assumptions_fold. Qed.
+#[global]
 Hint Rewrite context_assumptions_subst : pcuic.
 
 Lemma subst_app_context s s' Γ : subst_context (s ++ s') 0 Γ = subst_context s 0 (subst_context s' #|s| Γ).

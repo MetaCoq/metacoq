@@ -21,24 +21,31 @@ Require Import CRelationClasses CMorphisms.
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 
+#[global]
 Instance red_Refl Σ Γ : Reflexive (red Σ Γ) := refl_red Σ Γ.
+
+#[global]
 Instance red_Trans Σ Γ : Transitive (red Σ Γ) := red_trans Σ Γ.
 
+#[global]
 Instance All_decls_refl P : 
   Reflexive P ->
   Reflexive (All_decls P).
 Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed.
   
+#[global]
 Instance All_decls_sym P : 
   Symmetric P ->
   Symmetric (All_decls P).
 Proof. intros hP d d' []; constructor; now symmetry. Qed.
 
+#[global]
 Instance All_decls_trans P : 
   Transitive P ->
   Transitive (All_decls P).
 Proof. intros hP d d' d'' [] h; depelim h; constructor; now etransitivity. Qed.
 
+#[global]
 Instance All_decls_equivalence P : 
   Equivalence P ->
   Equivalence (All_decls P).
@@ -46,6 +53,7 @@ Proof.
   intros []; split; tc.
 Qed.
 
+#[global]
 Instance All_decls_preorder P : 
   PreOrder P ->
   PreOrder (All_decls P).
@@ -53,21 +61,25 @@ Proof.
   intros []; split; tc.
 Qed.
 
+#[global]
 Instance All_decls_alpha_refl P : 
   Reflexive P ->
   Reflexive (All_decls_alpha P).
 Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed.
   
+#[global]
 Instance All_decls_alpha_sym P : 
   Symmetric P ->
   Symmetric (All_decls_alpha P).
 Proof. intros hP d d' []; constructor; now symmetry. Qed.
 
+#[global]
 Instance All_decls_alpha_trans P : 
   Transitive P ->
   Transitive (All_decls_alpha P).
 Proof. intros hP d d' d'' [] h; depelim h; constructor; now etransitivity. Qed.
 
+#[global]
 Instance All_decls_alpha_equivalence P : 
   Equivalence P ->
   Equivalence (All_decls_alpha P).
@@ -2646,7 +2658,7 @@ Coercion ws_term_proj : ws_term >-> term.
 
 Definition ws_term_prop {P} (t : ws_term P) : on_free_vars P t := proj2_sig t.
 Coercion ws_term_prop : ws_term >-> is_true.
-Hint Resolve ws_term_prop : fvs.
+#[global] Hint Resolve ws_term_prop : fvs.
 
 (** The subset of closed terms: no free-variables allowed *)
 Notation closed_term := (ws_term xpred0).
@@ -2656,7 +2668,7 @@ Proof.
   destruct t as [t ont].
   eapply on_free_vars_impl; tea => //.
 Qed.
-Hint Resolve ws_term_xpredT : fvs.
+#[global] Hint Resolve ws_term_xpredT : fvs.
 
 (** A well-scoped context is a context obeying a free-variables predicate.
     Note ths use of `on_free_vars_ctx` rather than `on_ctx_free_vars: 
@@ -2675,7 +2687,7 @@ Coercion ws_context_proj' : ws_context >-> list.
 
 Definition ws_context_on_free_vars {P} (t : ws_context P) : on_free_vars_ctx P t := proj2_sig t.
 (* Coercion ws_context_on_free_vars : ws_context >-> is_true. *)
-Hint Resolve ws_context_on_free_vars : fvs.
+#[global] Hint Resolve ws_context_on_free_vars : fvs.
 
 Lemma ws_context_xpredT {P} {Γ : ws_context P} : on_ctx_free_vars xpredT (Γ).
 Proof.
@@ -2683,14 +2695,14 @@ Proof.
   rewrite on_ctx_free_vars_xpredT.
   eapply on_free_vars_ctx_impl; tea => //.
 Qed.
-Hint Resolve ws_context_xpredT : fvs.
+#[global] Hint Resolve ws_context_xpredT : fvs.
 
 Lemma ws_context_on_free_vars_xpredT {P} {Γ : ws_context P} : on_free_vars_ctx xpredT Γ.
 Proof.
   destruct Γ as [Γ onΓ].
   eapply on_free_vars_ctx_impl; tea => //.
 Qed.
-Hint Resolve ws_context_on_free_vars_xpredT : fvs.
+#[global] Hint Resolve ws_context_on_free_vars_xpredT : fvs.
 
 Definition ws_red1 Σ P (Γ : ws_context P) (t u : ws_term (shiftnP #|Γ| P)) := 
   red1 Σ Γ t u.
@@ -2788,7 +2800,7 @@ Proof.
   apply pred1_diamond; eauto with fvs.
 Qed.
 
-Hint Resolve pred1_on_free_vars_ctx : fvs.
+#[global] Hint Resolve pred1_on_free_vars_ctx : fvs.
 
 Lemma pred1_on_free_vars_on_free_vars_ctx {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} 
   {P} {Γ Γ' : context} {t u : term} :

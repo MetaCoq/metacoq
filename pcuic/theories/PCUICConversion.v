@@ -41,15 +41,18 @@ Derive Signature for clos_refl_trans_1n.
 
 Require Import CMorphisms.
 Notation equality_terms Σ Γ := (All2 (equality false Σ Γ)).
+#[global]
 Instance equality_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (equality_terms Σ Γ).
 Proof. intros x y -> x' y' -> f. exact f. Qed.
 
+#[global]
 Instance equality_terms_trans {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ : Transitive (equality_terms Σ Γ).
 Proof.
   intros x y z.
   eapply All2_trans; tc.
 Qed.
 
+#[global]
 Instance equality_terms_sym {cf} Σ {wfΣ : wf Σ} Γ : Symmetric (equality_terms Σ Γ).
 Proof.
   intros x y.
@@ -163,11 +166,12 @@ Proof.
   rewrite closedn_ctx_on_free_vars //.
 Qed.
 
+#[global]
 Hint Rewrite is_open_term_closed is_closed_ctx_closed : fvs.
 
 #[global] Hint Resolve on_free_vars_shiftnP_S : fvs.
-Hint Rewrite @on_fvs_prod @on_fvs_lambda @on_fvs_letin : fvs.
-Hint Rewrite @on_free_vars_ctx_snoc : fvs.
+#[global] Hint Rewrite @on_fvs_prod @on_fvs_lambda @on_fvs_letin : fvs.
+#[global] Hint Rewrite @on_free_vars_ctx_snoc : fvs.
 #[global] Hint Extern 4 => progress autorewrite with fvs : fvs.
 #[global] Hint Resolve closed_red_open_right : fvs.
 
@@ -509,7 +513,7 @@ Section ConvCongruences.
       rewrite on_fvs_prod => /andP[] ondom oncodom.
       exists dom, codom; repeat split; eauto with fvs.
     - move: clt; rewrite on_fvs_prod => /andP [] ondom oncodom.
-      forward IHred. { eauto with fvs. }
+      forward IHred. { eapply red1_on_free_vars; tea; eauto with fvs. }
       depelim r; solve_discr.
       * specialize (IHred _ _ _ eq_refl).
         destruct IHred as [dom' [codom' [-> [redl redr]]]].
@@ -2626,6 +2630,7 @@ Section ConvSubst.
     - eapply is_open_term_subst; tea; eauto with fvs pcuic.
       eapply (subslet_length Hs).
     - eapply substitution_untyped_red; tea; eauto with fvs.
+      2:eauto with fvs.
       now eapply subslet_untyped_subslet.
   Qed.
 
@@ -2991,8 +2996,8 @@ Section ConvSubst.
 
 End ConvSubst.
 
-Hint Rewrite @on_free_vars_subst_instance : fvs.
-Hint Rewrite @on_free_vars_subst_instance_context subst_instance_length : fvs.
+#[global] Hint Rewrite @on_free_vars_subst_instance : fvs.
+#[global] Hint Rewrite @on_free_vars_subst_instance_context subst_instance_length : fvs.
 
 Lemma subst_instance_equality {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs le :
   valid_constraints (global_ext_constraints (Σ.1, univs))
@@ -3083,6 +3088,7 @@ Lemma is_open_term_subst_instance Γ Δ t u u' :
 Proof.
   rewrite !app_context_length; len. eauto with fvs.
 Qed.
+#[global]
 Hint Rewrite is_closed_context_subst_instance is_open_term_subst_instance : fvs.
 
 Lemma eq_term_compare_term {cf} le Σ t u :

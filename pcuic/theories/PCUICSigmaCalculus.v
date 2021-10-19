@@ -23,6 +23,7 @@ Infix "∘i" := (fun (f g : nat -> term -> term) => fun i => f i ∘ g i) (at le
 Definition substitution := nat -> term.
 Bind Scope sigma_scope with substitution.
 
+#[global]
 Hint Rewrite Nat.add_0_r : sigma.
 
 Ltac nat_compare_specs :=
@@ -125,6 +126,7 @@ Proof.
   unfold shiftn. destruct Nat.ltb; congruence.
 Qed.
 
+#[global]
 Instance shiftn_proper : Proper (Logic.eq ==> `=1` ==> `=1`) shiftn.
 Proof.
   intros x y -> f g Hfg ?. now apply shiftn_ext.
@@ -189,9 +191,11 @@ Qed.
 
 Notation rename_branch := (map_branch_shift rename shiftn).
 
+#[global]
 Instance rename_proper : Proper (`=1` ==> Logic.eq ==> Logic.eq) rename.
 Proof. intros f f' Hff' t t' ->. now apply rename_ext. Qed.
 
+#[global]
 Instance rename_proper_pointwise : Proper (`=1` ==> pointwise_relation _ Logic.eq) rename.
 Proof. intros f f' Hff' t. now apply rename_ext. Qed.
 
@@ -207,6 +211,7 @@ Proof.
   * now setoid_rewrite Hfg.
 Qed.
 
+#[global]
 Instance rename_predicate_proper : Proper (`=1` ==> `=1`) rename_predicate.
 Proof.
   apply map_predicate_shift_proper; try tc.
@@ -223,6 +228,7 @@ Proof.
   * now setoid_rewrite Hfg.
 Qed.
 
+#[global]
 Instance rename_branch_proper : Proper (`=1` ==> `=1`) rename_branch.
 Proof.
   apply map_branch_shift_proper; tc.
@@ -256,10 +262,12 @@ Proof.
     rewrite Nat.add_assoc. f_equal. f_equal. lia.  
 Qed.
 
+#[global]
 Hint Rewrite shiftn0 : sigma.
 
 Definition rshiftk n := Nat.add n.
 
+#[global]
 Instance rshiftk_proper : Proper (Logic.eq ==> Logic.eq) rshiftk.
 Proof.
   now intros x y ->.
@@ -270,10 +278,12 @@ Proof.
   intros i. rewrite /shiftn /rshiftk /=. nat_compare_specs.
   now replace (n + i - n) with i by lia.
 Qed.
+#[global]
 Hint Rewrite shiftn_rshiftk : sigma.
 
 Lemma shiftn_1_S f x : shiftn 1 f (S x) = rshiftk 1 (f x).
 Proof. now rewrite /shiftn /= Nat.sub_0_r. Qed.
+#[global]
 Hint Rewrite shiftn_1_S : sigma.
 
 Definition lift_renaming n k :=
@@ -322,12 +332,14 @@ Proof.
     red in X. solve_all. 
     rewrite b. now rewrite shiftn_lift_renaming.
 Qed.
+#[global]
 Hint Rewrite @lift_rename : sigma.
 
 Lemma lift0_rename k : lift0 k =1 rename (rshiftk k).
 Proof.
   now intros t; rewrite lift_rename lift_renaming_0_rshift.
 Qed.
+#[global]
 Hint Rewrite lift0_rename : sigma.
 
 Definition up k (s : nat -> term) :=
@@ -361,6 +373,7 @@ Proof.
   intros x.
   now rewrite !mapi_context_fold fold_context_k_compose - !mapi_context_fold.
 Qed.
+#[global]
 Hint Rewrite mapi_context_compose : map.
 
 Lemma rename_compose f f' : rename f ∘ rename f' =1 rename (f ∘ f').
@@ -483,6 +496,7 @@ Proof.
   * apply shiftn0.
   * intros i x. now rewrite (rename_compose _ _ x) shiftn_compose.
 Qed.
+#[global]
 Hint Rewrite rename_predicate_rename_predicate : map.
 
 Lemma map_branch_shift_map_branch_shift {T} 
@@ -508,6 +522,7 @@ Proof.
   rewrite (map_branch_shift_map_branch_shift Basics.compose) //.
   intros i x. now rewrite (rename_compose _ _ x) shiftn_compose.
 Qed.
+#[global]
 Hint Rewrite rename_branch_rename_branch : map.
 
 Lemma rename_branches_rename_branches f f' :
@@ -517,6 +532,7 @@ Proof.
   intros br.
   now autorewrite with map.
 Qed.
+#[global]
 Hint Rewrite rename_branches_rename_branches : map.
 
 Lemma rename_shiftn :
@@ -587,6 +603,7 @@ Proof.
   f_equal. apply Hs.
 Qed.
 
+#[global]
 Instance up_proper : Proper (Logic.eq ==> `=1` ==> `=1`) up.
 Proof.
   intros k y <- f g. apply up_ext.
@@ -603,25 +620,30 @@ Proof.
     * apply map_branch_shift_eq_spec; solve_all; eauto using up_ext.
 Qed.
 
+#[global]
 Instance proper_inst : Proper (`=1` ==> Logic.eq ==> Logic.eq) inst.
 Proof.
   intros f f' Hff' t t' ->. now apply inst_ext.
 Qed.
 
+#[global]
 Instance proper_inst' : Proper (`=1` ==> `=1`) inst.
 Proof.
   intros f f' Hff' t. now apply inst_ext.
 Qed.
 
+#[global]
 Instance up_proper' k : Proper (`=1` ==> `=1`) (up k).
 Proof. reduce_goal. now apply up_ext. Qed.
 
+#[global]
 Instance inst_predicate_proper : Proper (`=1` ==> `=1`) inst_predicate.
 Proof.
   apply map_predicate_shift_proper; try tc.
   now intros x.
 Qed.
 
+#[global]
 Instance inst_branch_proper : Proper (`=1` ==> `=1`) inst_branch.
 Proof.
   apply map_branch_shift_proper; try tc.
@@ -630,6 +652,7 @@ Qed.
 Definition ren (f : nat -> nat) : nat -> term :=
   fun i => tRel (f i).
 
+#[global]
 Instance ren_ext : Morphisms.Proper (`=1` ==> `=1`)%signature ren.
 Proof.
   reduce_goal. unfold ren. now rewrite H.
@@ -663,6 +686,7 @@ Proof.
     now rewrite b ren_shiftn.
 Qed.
 
+#[global]
 Hint Rewrite @rename_inst : sigma.
 
 (** Show the σ-calculus equations.
@@ -681,6 +705,7 @@ Definition subst_cons (t : term) (f : nat -> term) :=
 
 Notation " t ⋅ s " := (subst_cons t s) (at level 70) : sigma_scope.
 
+#[global]
 Instance subst_cons_proper : Proper (Logic.eq ==> `=1` ==> `=1`) subst_cons.
 Proof. intros x y -> f f' Hff'. intros i. destruct i; simpl; trivial. Qed.
 
@@ -692,6 +717,7 @@ Definition subst_compose (σ τ : nat -> term) :=
 
 Infix "∘s" := subst_compose (at level 40) : sigma_scope.
 
+#[global]
 Instance subst_compose_proper : Proper (`=1` ==> `=1` ==> `=1`) subst_compose.
 Proof.
   intros f f' Hff' g g' Hgg'. intros x. unfold subst_compose.
@@ -701,6 +727,7 @@ Qed.
 Definition Up σ : substitution := tRel 0 ⋅ (σ ∘s ↑).
 Notation "⇑ s" := (Up s) (at level 20).
 
+#[global]
 Instance Up_ext : Proper (`=1` ==> `=1`) Up.
 Proof.
   unfold Up. reduce_goal. unfold subst_compose, subst_cons.
@@ -721,6 +748,7 @@ Proof.
 Qed.
 
 (** Simplify away [up 1] *)
+#[global]
 Hint Rewrite up_Up : sigma.
 
 Definition ids (x : nat) := tRel x.
@@ -757,6 +785,7 @@ Proof.
   now rewrite -ren_id_ids -rename_inst rename_ren_id.
 Qed.
 
+#[global]
 Hint Rewrite subst_ids : sigma.
 
 Lemma compose_ids_r σ : σ ∘s ids =1 σ.
@@ -767,6 +796,7 @@ Qed.
 Lemma compose_ids_l σ : ids ∘s σ =1 σ.
 Proof. reflexivity. Qed.
 
+#[global]
 Hint Rewrite compose_ids_r compose_ids_l : sigma.
 
 Definition shiftk (k : nat) (x : nat) := tRel (k + x).
@@ -791,6 +821,7 @@ Proof.
   intros i. unfold subst_consn. rewrite nth_error_nil.
   now rewrite Nat.sub_0_r.
 Qed.
+#[global]
 Hint Rewrite @subst_consn_nil : sigma.
 
 Lemma subst_consn_subst_cons t l σ : (t :: l) ⋅n σ =1 (t ⋅ subst_consn l σ).
@@ -800,14 +831,17 @@ Qed.
 
 Lemma subst_consn_tip t σ : [t] ⋅n σ =1 (t ⋅ σ).
 Proof. now rewrite subst_consn_subst_cons subst_consn_nil. Qed.
+#[global]
 Hint Rewrite @subst_consn_tip : sigma.
 
+#[global]
 Instance subst_consn_proper {A} : Proper (Logic.eq ==> `=1` ==> `=1`) (@subst_consn A).
 Proof.
   intros ? l -> f f' Hff' i.
   unfold subst_consn. destruct nth_error eqn:Heq; auto.
 Qed.
 
+#[global]
 Instance subst_consn_proper_ext {A} : Proper (Logic.eq ==> `=1` ==> Logic.eq ==> Logic.eq) (@subst_consn A).
 Proof.
   intros ? l -> f f' Hff' i i' <-.
@@ -827,6 +861,7 @@ Definition subst_cons_gen {A} (t : A) (f : nat -> A) :=
     | S n => f n
     end.
 
+#[global]
 Instance subst_cons_gen_proper {A} : Proper (Logic.eq ==> `=1` ==> `=1`) (@subst_cons_gen A).
 Proof. intros x y <- f g Hfg i. destruct i; simpl; auto. Qed.
 
@@ -890,12 +925,14 @@ Fixpoint ren_ids (n : nat) :=
 
 Lemma ren_ids_length n : #|ren_ids n| = n.
 Proof. induction n; simpl; auto. rewrite app_length IHn; simpl; lia. Qed.
+#[global]
 Hint Rewrite ren_ids_length : len.
 
 Lemma idsn_length n : #|idsn n| = n.
 Proof.
   induction n; simpl; auto. rewrite app_length IHn; simpl; lia.
 Qed.
+#[global]
 Hint Rewrite idsn_length : len.
 
 Lemma idsn_lt {n i} : i < n -> nth_error (idsn n) i = Some (tRel i).
@@ -977,6 +1014,7 @@ Qed.
 
 Lemma subst_cons_0 t σ : (tRel 0).[t ⋅ σ] = t. Proof. reflexivity. Qed.
 Lemma subst_cons_shift t σ : ↑ ∘s (t ⋅ σ) = σ. Proof. reflexivity. Qed.
+#[global]
 Hint Rewrite subst_cons_0 subst_cons_shift : sigma.
 
 Lemma shiftk_shift n : ↑^(S n) =1 ↑^n ∘s ↑. Proof. reflexivity. Qed.
@@ -994,11 +1032,13 @@ Proof.
   destruct i; simpl; reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite subst_subst_consn : sigma.
 
 Definition Upn n σ := idsn n ⋅n (σ ∘s ↑^n).
 Notation "⇑^ n σ" := (Upn n σ) (at level 30, n at level 2, format "⇑^ n  σ") : sigma_scope.
 
+#[global]
 Instance Upn_ext n : Proper (`=1` ==> `=1`) (Upn n).
 Proof.
   unfold Upn. reduce_goal. now rewrite H.
@@ -1016,6 +1056,7 @@ Proof.
   intros i. destruct i; auto.
   simpl. rewrite subst_consn_ge; simpl; auto with arith.
 Qed.
+#[global]
 Hint Rewrite Upn_1_Up : sigma.
 
 Lemma Upn_eq n σ : Upn n σ = idsn n ⋅n (σ ∘s ↑^n).
@@ -1084,6 +1125,7 @@ Proof.
   - simpl. rewrite IHl. reflexivity.
 Qed.
 
+#[global]
 Hint Rewrite @inst_app @inst_lam @inst_prod @inst_letin @inst_fix @inst_cofix
      @inst_mkApps : sigma.
 
@@ -1096,6 +1138,7 @@ Proof.
   intros i.
   destruct i; simpl; reflexivity.
 Qed.
+#[global]
 Hint Rewrite compose_ren : sigma.
 
 Lemma subst_cons_ren i f : (tRel i ⋅ ren f) =1 ren (subst_cons_gen i f).
@@ -1131,10 +1174,12 @@ Qed.
 
 Lemma ren_shiftk n : ren (Nat.add n) =1 ↑^n.
 Proof. reflexivity. Qed.
+#[global]
 Hint Rewrite ren_shiftk : sigma.
 
 Lemma ren_rshiftk k : ren (rshiftk k) =1 ↑^k.
 Proof. reflexivity. Qed.
+#[global]
 Hint Rewrite ren_rshiftk : sigma.
 
 Lemma map_inst_idsn σ n m : m <= n -> map (inst (⇑^n σ)) (idsn m) = idsn m.
@@ -1165,6 +1210,7 @@ Proof.
 Qed.
 
 (** Simplify away iterated up's *)
+#[global]
 Hint Rewrite @up_Upn : sigma.
 
 Lemma Upn_ren_l k f σ : ⇑^k ren f ∘s ⇑^k σ =1 ⇑^k (ren f ∘s σ).
@@ -1337,6 +1383,7 @@ Proof.
   now apply subst_compose_proper; auto.
 Qed.
 
+#[global]
 Hint Rewrite Up_Up_assoc : sigma.
 
 Lemma up_up_assoc:
@@ -1387,6 +1434,7 @@ Proof.
     now rewrite b up_up_assoc.
 Qed.
 
+#[global]
 Hint Rewrite inst_assoc : sigma.
 
 Lemma subst_compose_assoc s s' s'' : (s ∘s s') ∘s s'' =1 s ∘s (s' ∘s s'').
@@ -1395,11 +1443,13 @@ Proof.
   now rewrite inst_assoc.
 Qed.
 
+#[global]
 Hint Rewrite subst_compose_assoc : sigma.
 
 Lemma subst_cons_0_shift : (tRel 0 ⋅ ↑) =1 ids.
 Proof. intros i. destruct i; reflexivity. Qed.
 
+#[global]
 Hint Rewrite subst_cons_0_shift : sigma.
 
 Lemma subst_cons_0s_shifts σ : ((σ 0) ⋅ (↑ ∘s σ)) =1 σ.
@@ -1407,6 +1457,7 @@ Proof.
   intros i. destruct i; auto.
 Qed.
 
+#[global]
 Hint Rewrite subst_cons_0s_shifts : sigma.
 
 Lemma Upn_Up σ n : ⇑^(S n) σ =1 ⇑^n ⇑ σ.
@@ -1430,6 +1481,7 @@ Proof.
   * rewrite !Upn_0. now eapply Up_ext.
   * rewrite Upn_Up. rewrite IHn. eapply Up_ext. now rewrite Upn_Up.
 Qed.
+#[global]
 Hint Rewrite Upn_0 Upn_S : sigma.
 
 (* Print Rewrite HintDb sigma. *)
@@ -1492,9 +1544,12 @@ Proof.
 Qed.
 
 (** Simplify away [subst] to the σ-calculus [inst] primitive. *)
+#[global]
 Hint Rewrite @subst_inst : sigma.
+#[global]
 Hint Rewrite @subst_consn_nil : sigma.
 
+#[global]
 Hint Rewrite shiftk_shift_l shiftk_shift : sigma.
 (* Hint Rewrite Upn_eq : sigma. *)
 
@@ -1520,6 +1575,7 @@ Proof.
   unfold Upn. rewrite subst_consn_shiftn; [reflexivity|].
   now rewrite idsn_length.
 Qed.
+#[global]
 Hint Rewrite shiftn_Upn: sigma.
 
 Lemma id_nth_spec {A} (l : list A) :
@@ -1567,6 +1623,7 @@ Proof.
   setoid_rewrite <- up_Upn. rewrite -(@up_Upn k').
   symmetry; apply up_up.
 Qed.
+#[global]
 Hint Rewrite Upn_Upn : sigma.
 
 Lemma Upn_compose n σ σ' : ⇑^n σ ∘s ⇑^n σ' =1 ⇑^n (σ ∘s σ').
@@ -2142,4 +2199,5 @@ Proof.
     lia.
 Qed.
 
+#[global]
 Hint Rewrite ren_lift_renaming subst_consn_compose : sigma.

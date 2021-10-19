@@ -29,6 +29,7 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
  *)
 
+#[global]
 Hint Rewrite subst_instance_length 
   fix_context_length fix_subst_length cofix_subst_length : len.
 
@@ -126,6 +127,7 @@ Class GuardChecker :=
     cofix_guard Σ' Γ mfix }.
 
 Axiom guard_checking : GuardChecker.
+#[global]
 Existing Instance guard_checking.
   
 Definition destInd (t : term) :=
@@ -481,6 +483,7 @@ Hint Mode wf_ext + + : typeclass_intances.
 
 Lemma wf_ext_wf {cf:checker_flags} Σ : wf_ext Σ -> wf Σ.
 Proof. intro H; apply H. Qed.
+#[global]
 Existing Instance wf_ext_wf.
 Coercion wf_ext_wf : wf_ext >-> wf.
 #[global]

@@ -25,6 +25,7 @@ Lemma inds_length ind u l : #|inds ind u l| = #|l|.
 Proof.
   unfold inds. induction l; simpl; congruence.
 Qed.
+#[global]
 Hint Rewrite inds_length : len.
 
 Lemma inds_spec ind u l :
@@ -49,6 +50,7 @@ Definition ind_predicate_context ind mdecl idecl : context :=
 Lemma ind_predicate_context_length ind mdecl idecl :
   #|ind_predicate_context ind mdecl idecl| = S #|idecl.(ind_indices)|.
 Proof. now rewrite /ind_predicate_context /=; len. Qed.
+#[global]
 Hint Rewrite ind_predicate_context_length : len.
 
 Definition inst_case_context params puinst (pctx : context) :=
@@ -57,12 +59,14 @@ Definition inst_case_context params puinst (pctx : context) :=
 Lemma inst_case_context_length params puinst pctx :
   #|inst_case_context params puinst pctx| = #|pctx|.
 Proof. rewrite /inst_case_context. now len. Qed.
+#[global]
 Hint Rewrite inst_case_context_length : len.
 
 Lemma inst_case_context_assumptions params puinst pctx :
   context_assumptions (inst_case_context params puinst pctx) = 
   context_assumptions pctx.
 Proof. rewrite /inst_case_context. now len. Qed.
+#[global]
 Hint Rewrite inst_case_context_assumptions : len.
 
 Definition inst_case_predicate_context (p : predicate term) :=
@@ -98,6 +102,7 @@ Definition cstr_branch_context ind mdecl cdecl : context :=
 Lemma cstr_branch_context_length ind mdecl cdecl :
   #|cstr_branch_context ind mdecl cdecl| = #|cdecl.(cstr_args)|.
 Proof. rewrite /cstr_branch_context. now len. Qed.
+#[global]
 Hint Rewrite cstr_branch_context_length : len.
     
 Definition pre_case_branch_context_gen ind mdecl cdecl params puinst : context :=
@@ -238,6 +243,7 @@ Proof.
   apply (forallb2P _ _ _ _ wf_branchP).
 Qed.
 
+#[global]
 Hint Rewrite expand_lets_ctx_length : len.
 
 Lemma case_predicate_context_length {ci mdecl idecl p} :

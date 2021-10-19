@@ -1374,6 +1374,7 @@ Lemma subst_lift_lift s k t : subst0 (map (lift0 k) s) (lift k #|s| t) = lift0 k
 Proof.
   now rewrite (distr_lift_subst_rec _ _ _ 0 0).
 Qed.
+#[global]
 Hint Rewrite all_rels_length : len.
 
 Lemma all_rels_lift (Δ : context) n : all_rels Δ n (n + #|Δ|) = map (lift0 n) (all_rels Δ 0 #|Δ|).

@@ -388,6 +388,7 @@ Proof.
 Qed.
 #[global] Hint Resolve red_ctx_on_free_vars_term : fvs.
 
+#[global]
 Instance closed_red_trans Σ Γ : Transitive (closed_red Σ Γ).
 Proof.
   intros x y z.
@@ -398,26 +399,31 @@ Qed.
 Definition compare_context {cf} le Σ := 
   eq_context_upto Σ (eq_universe Σ) (compare_universe le Σ).
 
+#[global]
 Instance compare_universe_refl {cf} le Σ : RelationClasses.Reflexive (compare_universe le Σ).
 Proof.
   destruct le; tc.
 Qed.
 
+#[global]
 Instance compare_universe_trans {cf} le Σ : RelationClasses.Transitive (compare_universe le Σ).
 Proof.
   destruct le; tc.
 Qed.
 
+#[global]
 Instance compare_universe_substu {cf} le Σ : SubstUnivPreserving (compare_universe le Σ).
 Proof.
   destruct le; tc.
 Qed.
 
+#[global]
 Instance compare_universe_subrel {cf} le Σ : RelationClasses.subrelation (eq_universe Σ) (compare_universe le Σ).
 Proof.
   destruct le; tc.
 Qed.
 
+#[global]
 Instance compare_universe_preorder {cf} le Σ : RelationClasses.PreOrder (compare_universe le Σ).
 Proof.
   destruct le; tc.
@@ -1280,6 +1286,7 @@ Proof.
     now transitivity Rle. auto.
 Qed.
 
+#[global]
 Instance eq_subrel_eq_univ {cf:checker_flags} Σ : RelationClasses.subrelation eq (eq_universe Σ).
 Proof. intros x y []. reflexivity. Qed.
 

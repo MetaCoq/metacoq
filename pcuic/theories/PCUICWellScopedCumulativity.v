@@ -60,16 +60,19 @@ Notation " Σ ;;; Γ ⊢ t ≤ u " := (equality true Σ Γ t u) (at level 50, Γ
 Notation " Σ ;;; Γ ⊢ t = u " := (equality false Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  =  u") : type_scope.
 
+#[global]
 Instance compare_term_refl {cf} le Σ : Reflexive (compare_term le Σ Σ).
 Proof.
   intros t; destruct le; unfold compare_term; cbn; reflexivity.
 Qed.
 
+#[global]
 Instance compare_term_sym {cf} Σ : Symmetric (compare_term false Σ Σ).
 Proof.
   now intros t u; unfold compare_term; cbn; symmetry.
 Qed.
 
+#[global]
 Instance compare_term_trans {cf} le Σ : Transitive (compare_term le Σ Σ).
 Proof.
   intros t u v; unfold compare_term; cbn; intros.
@@ -81,6 +84,7 @@ Proof.
   constructor; eauto with fvs. reflexivity. 
 Qed.
 
+#[global]
 Instance equality_sym {cf Σ Γ} : Symmetric (equality false Σ Γ).
 Proof.
   move=> x y; elim.
@@ -101,7 +105,7 @@ Lemma red1_is_open_term {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ : context} 
 Proof.
   intros. eapply red1_on_free_vars; eauto with fvs.
 Qed.
-Hint Resolve red1_is_open_term : fvs.
+#[global] Hint Immediate red1_is_open_term : fvs.
 
 Lemma red_is_open_term {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ : context} x y : 
   red Σ Γ x y ->
@@ -111,7 +115,7 @@ Lemma red_is_open_term {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ : context} x
 Proof.
   intros. eapply red_on_free_vars; eauto with fvs.
 Qed.
-Hint Resolve red_is_open_term : fvs.
+#[global] Hint Immediate red_is_open_term : fvs.
 
 Lemma equality_is_open_term {cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {x y} : 
   equality le Σ Γ x y ->
@@ -139,7 +143,7 @@ Proof.
   now induction 1; rewrite ?i ?i0 ?i1.
 Qed.
 
-Hint Resolve equality_is_closed_context equality_is_open_term_left equality_is_open_term_right : fvs.
+#[global] Hint Resolve equality_is_closed_context equality_is_open_term_left equality_is_open_term_right : fvs.
 
 Lemma equality_alt `{cf : checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
   Σ ;;; Γ ⊢ t ≤[le] u <~> 
@@ -181,8 +185,9 @@ Proof. apply (equality_forget (le:=true)). Qed.
 Lemma equality_forget_conv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
   equality false Σ Γ x y -> conv Σ Γ x y.
 Proof. apply (equality_forget (le:=false)). Qed.
-Hint Resolve equality_forget_cumul equality_forget_conv : pcuic.
+#[global] Hint Resolve equality_forget_cumul equality_forget_conv : pcuic.
 
+#[global]
 Instance equality_trans {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} :
   Transitive (equality le Σ Γ).
 Proof.
@@ -279,7 +284,7 @@ Section EqualityLemmas.
 
 End EqualityLemmas.
 
-Hint Resolve isType_equality_refl : pcuic.
+#[global] Hint Immediate isType_equality_refl : pcuic.
 
 Record closed_relation {R : context -> term -> term -> Type} {Γ T U} :=
   { clrel_ctx : is_closed_context Γ;
@@ -287,11 +292,11 @@ Record closed_relation {R : context -> term -> term -> Type} {Γ T U} :=
     clrel_rel : R Γ T U }.
 Arguments closed_relation : clear implicits.
 
-Hint Resolve clrel_ctx clrel_src : fvs.
+#[global] Hint Immediate clrel_ctx clrel_src : fvs.
 
 Definition closed_red1 Σ := (closed_relation (red1 Σ)).
 Definition closed_red1_red1 {Σ Γ T U} (r : closed_red1 Σ Γ T U) := clrel_rel r.
-Hint Resolve closed_red1_red1 : fvs.
+#[global] Hint Resolve closed_red1_red1 : fvs.
 Coercion closed_red1_red1 : closed_red1 >-> red1.
 
 Lemma closed_red1_open_right {cf} {Σ Γ T U} {wfΣ : wf Σ} (r : closed_red1 Σ Γ T U) : is_open_term Γ U.
@@ -301,7 +306,7 @@ Qed.
 
 Definition closed_red Σ := (closed_relation (red Σ)).
 Definition closed_red_red {Σ Γ T U} (r : closed_red Σ Γ T U) := clrel_rel r.
-Hint Resolve closed_red_red : fvs.
+#[global] Hint Immediate closed_red_red : fvs.
 Coercion closed_red_red : closed_red >-> red.
 
 Lemma closed_red_open_right {cf} {Σ Γ T U} {wfΣ : wf Σ} (r : closed_red Σ Γ T U) : is_open_term Γ U.
@@ -325,7 +330,7 @@ Proof.
   move=> clΓ clt.
   constructor; cbn; eauto with fvs. destruct le; cbn; reflexivity.
 Qed.
-Hint Resolve equality_refl : pcuic.
+#[global] Hint Immediate equality_refl : pcuic.
 
 Section RedConv.
   Context {cf} {Σ} {wfΣ : wf Σ}.
@@ -335,7 +340,8 @@ Section RedConv.
     move=> [clΓ clT /clos_rt_rt1n_iff r].
     induction r.
     - now apply equality_refl.
-    - econstructor 2. 5:tea. all:eauto with fvs. 
+    - econstructor 2. 5:tea.
+      all:eauto with fvs.
   Qed.
 
   Lemma red_equality_left {le Γ} {t u v} :
@@ -371,7 +377,7 @@ Section RedConv.
   Qed.
 End RedConv.
 
-Hint Resolve red_conv red_equality red_equality_inv : pcuic.
+#[global] Hint Resolve red_conv red_equality red_equality_inv : pcuic.
 
 Set SimplIsCbn.
 
@@ -442,7 +448,7 @@ Lemma equality_open_decls_wf_decl_right {cf} {le} {Σ} {wfΣ : wf Σ} {Γ d d'} 
 Proof.
   intros []; cbn; eauto with fvs.
 Qed.
-Hint Resolve equality_open_decls_wf_decl_left equality_open_decls_wf_decl_right : fvs.
+#[global] Hint Immediate equality_open_decls_wf_decl_left equality_open_decls_wf_decl_right : fvs.
  
 Lemma equality_open_decls_equality_decls {cf : checker_flags} (le : bool) {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} {d d'} :
@@ -503,6 +509,7 @@ Proof.
   destruct le; constructor; auto.
 Qed.
    *)
+#[global]
 Instance equality_open_decls_trans {cf : checker_flags} (le : bool) {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} :
   Transitive (equality_open_decls le Σ Γ).
 Proof.
@@ -619,7 +626,7 @@ Proof.
   eauto with fvs.
 Qed.
 
-Hint Resolve context_equality_closed_left context_equality_closed_right : fvs.
+#[global] Hint Resolve context_equality_closed_left context_equality_closed_right : fvs.
 
 (* Lemma into_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} :

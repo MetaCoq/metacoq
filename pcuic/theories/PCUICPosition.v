@@ -50,6 +50,7 @@ Inductive choice :=
 
 Derive NoConfusion NoConfusionHom EqDec for choice.
 
+#[global]
 Instance reflect_choice : ReflectEq choice :=
   let h := EqDec_ReflectEq choice in _.
 
@@ -937,21 +938,27 @@ Definition stack := list stack_entry.
 
 Derive NoConfusion for def_hole context_decl_hole predicate_hole branch_hole stack_entry.
 
+#[global]
 Instance EqDec_def_hole : EqDec def_hole.
 Proof. intros ? ?; decide equality; apply eq_dec. Defined.
 
+#[global]
 Instance EqDec_context_decl_hole : EqDec context_decl_hole.
 Proof. intros ? ?; decide equality; apply eq_dec. Defined.
 
+#[global]
 Instance EqDec_predicate_hole : EqDec predicate_hole.
 Proof. intros ? ?; decide equality; apply eq_dec. Defined.
 
+#[global]
 Instance EqDec_branch_hole : EqDec branch_hole.
 Proof. intros ? ?; decide equality; apply eq_dec. Defined.
 
+#[global]
 Instance EqDec_stack_entry : EqDec stack_entry.
 Proof. intros ? ?; decide equality; apply eq_dec. Defined.
 
+#[global]
 Instance reflect_stack : ReflectEq stack :=
   let h := EqDec_ReflectEq stack in _.
 

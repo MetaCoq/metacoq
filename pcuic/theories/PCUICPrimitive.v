@@ -17,6 +17,7 @@ Record array_model (term : Type) :=
     array_default : term;
     array_value : list term }.
 Derive NoConfusion for array_model.
+#[global]
 Instance array_model_eqdec {term} (e : EqDec term) : EqDec (array_model term).
 Proof. eqdec_proof. Qed.
 
@@ -54,10 +55,12 @@ Proof.
   now destruct (uip p q).
 Qed.
 
+#[global]
 Instance reflect_eq_Z : ReflectEq Z := EqDec_ReflectEq _.
 
 Local Obligation Tactic := idtac.
 #[program]
+#[global]
 Instance reflect_eq_uint63 : ReflectEq uint63_model := 
   { eqb x y := eqb (proj1_sig x) (proj1_sig y) }.
 Next Obligation.
@@ -68,9 +71,11 @@ Next Obligation.
   intros neq; constructor => H'; apply neq; now subst x.
 Qed.
 
+#[global]
 Instance reflect_eq_spec_float : ReflectEq SpecFloat.spec_float := EqDec_ReflectEq _.
   
 #[program]
+#[global]
 Instance reflect_eq_float64 : ReflectEq float64_model := 
   { eqb x y := eqb (proj1_sig x) (proj1_sig y) }.
 Next Obligation.
@@ -84,12 +89,15 @@ Qed.
 (** Propositional UIP is needed below *)
 Set Equations With UIP.
 
+#[global]
 Instance prim_model_eqdec {term} (*e : EqDec term*) : forall p : prim_tag, EqDec (prim_model term p).
 Proof. eqdec_proof. Qed.
 
+#[global]
 Instance prim_tag_model_eqdec term : EqDec (prim_val term).
 Proof. eqdec_proof. Defined.
 
+#[global]
 Instance prim_val_reflect_eq term : ReflectEq (prim_val term) := EqDec_ReflectEq _.
 
 (** Printing *)

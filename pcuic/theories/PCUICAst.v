@@ -458,6 +458,7 @@ Fixpoint noccur_between k n (t : term) : bool :=
   Substitution of universe levels for universe level variables, used to
   implement universe polymorphism. *)
 
+#[global]
 Instance subst_instance_constr : UnivSubst term :=
   fix subst_instance_constr u c {struct c} : term :=
   match c with
@@ -549,6 +550,7 @@ Lemma context_assumptions_mapi_context f (ctx : context) :
 Proof. 
   now rewrite mapi_context_fold; len.
 Qed.
+#[global]
 Hint Rewrite context_assumptions_mapi_context : len.
 
 Module PCUICEnvTyping := EnvironmentTyping.EnvTyping PCUICTerm PCUICEnvironment.
@@ -618,7 +620,10 @@ Definition eqb_predicate (eqterm : term -> term -> bool) (p p' : predicate term)
 
 (* The [map] rewrite database gathers all the map composition rewrite lemmas
   on these types. *)
+#[global]
 Hint Rewrite map_map_compose @compose_map_def map_length : map.
+
+#[global]
 Hint Rewrite @forallb_map : map.
 
 Lemma map_predicate_map_predicate
@@ -642,6 +647,7 @@ Proof.
   unfold map_predicate; destruct x; cbn; unfold id.
   f_equal. apply map_id.
 Qed.
+#[global]
 Hint Rewrite @map_predicate_id : map.
 
 Definition ondecl {A} (P : A -> Type) (d : BasicAst.context_decl A) :=
@@ -782,6 +788,7 @@ Proof.
 Qed.
 #[global] Hint Resolve map_predicate_k_id_spec : all.
 
+#[global]
 Instance map_predicate_proper {term} : 
   Proper (`=1` ==> `=1` ==> `=1` ==> Logic.eq ==> Logic.eq)%signature (@map_predicate term term id).
 Proof.
@@ -792,6 +799,7 @@ Proof.
   now apply map_ext => x.
 Qed.
 
+#[global]
 Instance map_predicate_proper' {term} f : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq)
   (@map_predicate term term id f).
 Proof.
@@ -803,6 +811,7 @@ Qed.
 Lemma shiftf0 {A B} (f : nat -> A -> B) : shiftf f 0 =2 f.
 Proof. intros x. unfold shiftf. now rewrite Nat.add_0_r. Qed.
 
+#[global]
 Hint Rewrite @shiftf0 : map.
 
 Lemma map_predicate_k_map_predicate_k 
@@ -817,6 +826,7 @@ Proof.
   now rewrite map_map.
   now len.
 Qed.
+#[global]
 Hint Rewrite map_predicate_k_map_predicate_k : map.
 
 Lemma map_predicate_map_predicate_k 
@@ -830,6 +840,7 @@ Proof.
   f_equal.
   apply map_map.
 Qed.
+#[global]
 Hint Rewrite map_predicate_map_predicate_k : map.
 
 Lemma map_predicate_k_map_predicate
@@ -843,6 +854,7 @@ Proof.
   f_equal; len; auto.
   * apply map_map.
 Qed.
+#[global]
 Hint Rewrite map_predicate_k_map_predicate : map.
 
 Lemma map_branch_map_branch
@@ -857,6 +869,7 @@ Proof.
   unfold map_branch; destruct b; cbn.
   f_equal.
 Qed.
+#[global]
 Hint Rewrite @map_branch_map_branch : map.
 
 Lemma map_branch_k_map_branch_k (f f' : nat -> term -> term) h h' k k' (b : branch term) :
@@ -876,6 +889,7 @@ Proof.
   unfold map_branch, map_branch_k; destruct b; cbn. len.
   f_equal.
 Qed.
+#[global]
 Hint Rewrite map_branch_k_map_branch_k_id : map.
 
 Lemma map_branch_map_branch_k
@@ -889,6 +903,7 @@ Proof.
   f_equal.
 Qed.
 
+#[global]
 Hint Rewrite map_branch_map_branch_k : map.
 Lemma map_branch_k_map_branch
       (f' : term -> term)
@@ -901,6 +916,7 @@ Proof.
   f_equal.
 Qed.
 
+#[global]
 Hint Rewrite map_branch_k_map_branch : map.
 
 Lemma map_branch_id x : map_branch (@id term) id x = id x.
@@ -908,6 +924,7 @@ Proof.
   unfold map_branch, id; destruct x; cbn.
   f_equal. 
 Qed.
+#[global]
 Hint Rewrite @map_branch_id : map.
 
 Lemma map_decl_eq_spec {A B} {P : A -> Type} {d} {f g : A -> B} :
@@ -951,6 +968,7 @@ Proof.
 Qed.
 #[global] Hint Resolve map_branch_eq_spec : all.
 
+#[global]
 Instance map_branch_proper {term} : Proper (`=1` ==> `=1` ==> Logic.eq ==> Logic.eq) 
   (@map_branch term term).
 Proof.
@@ -1147,12 +1165,14 @@ Proof.
   len. now rewrite Nat.add_comm.
 Qed.
 
+#[global]
 Instance test_context_k_Proper : Proper (`=2` ==> Logic.eq ==> `=1`) (@test_context_k term).
 Proof.
   intros f g Hfg k k' <- ctx.
   now apply test_context_k_eq_spec.
 Qed.
 
+#[global]
 Instance test_predicate_k_Proper : Proper (`=1` ==> `=2` ==> Logic.eq ==> `=1`) (@test_predicate_k term).
 Proof.
   intros hi hi' eqhi f g Hfg k k' <- ctx.
@@ -1160,6 +1180,7 @@ Proof.
   now setoid_rewrite Hfg.
 Qed.
 
+#[global]
 Instance test_predicate_ku_Proper : Proper (`=2` ==> `=2` ==> Logic.eq ==> `=1`) (@test_predicate_ku term).
 Proof.
   intros hi hi' eqhi f g Hfg k k' <- ctx.
@@ -1167,6 +1188,7 @@ Proof.
   now setoid_rewrite Hfg.
 Qed.
 
+#[global]
 Instance test_branch_k_Proper p : Proper (`=2` ==> Logic.eq ==> `=1`) (@test_branch_k term p).
 Proof.
   intros f g Hfg k k' <- ctx.
@@ -1228,6 +1250,7 @@ Proof.
   rewrite IHctx. f_equal.
   now rewrite test_decl_map_decl.
 Qed.
+#[global]
 Hint Rewrite test_context_map : map.
 
 Lemma onctx_test P (p q : term -> bool) ctx : 

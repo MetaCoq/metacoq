@@ -70,6 +70,7 @@ Proof.
     subst; left; reflexivity.
 Qed.
 
+#[global]
 Instance EqDec_term : EqDec term.
 Proof.
   intro x; induction x using term_forall_list_ind ; intro t ;
@@ -166,11 +167,14 @@ Proof.
 Defined.
 
 (** Avoid name clash with template's reflect term, namespace handlining bug in extraction. *)
+#[global]
 Instance reflect_pcuic_term : ReflectEq term :=
   let h := EqDec_ReflectEq term in _.
 
+#[global]
 Instance eqb_ctx : ReflectEq context := _.
 
+#[global]
 Instance eq_predicate : EqDec (predicate term).
 Proof.
   intros [] [].
@@ -188,6 +192,7 @@ Definition eqb_context_decl (x y : context_decl) :=
   let (na', b', ty') := y in
   eqb na na' && eqb b b' && eqb ty ty'.
 
+#[global]
 Instance eq_ctx : ReflectEq context_decl.
 Proof.
   refine {| eqb := eqb_context_decl |}.
@@ -198,6 +203,7 @@ Proof.
       destruct (eqb_spec ty ty'); subst; constructor; congruence.
 Qed.
 
+#[global]
 Instance reflect_eq_context : ReflectEq context := _.
 
 Definition eqb_constant_body (x y : constant_body) :=
@@ -205,6 +211,7 @@ Definition eqb_constant_body (x y : constant_body) :=
   let (tyy, bodyy, univy) := y in
   eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
 
+#[global]
 Instance reflect_constant_body : ReflectEq constant_body.
 Proof.
   refine {| eqb := eqb_constant_body |}.
@@ -221,6 +228,7 @@ Definition eqb_constructor_body (x y : constructor_body) :=
   x.(cstr_type) ==? y.(cstr_type) &&
   x.(cstr_arity) ==? y.(cstr_arity).
 
+#[global]
 Instance reflect_constructor_body : ReflectEq constructor_body.
 Proof.
   refine {| eqb := eqb_constructor_body |}.
@@ -238,6 +246,7 @@ Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   x.(ind_projs) ==? y.(ind_projs) &&
   x.(ind_relevance) ==? y.(ind_relevance).
 
+#[global]
 Instance reflect_one_inductive_body : ReflectEq one_inductive_body.
 Proof.
   refine {| eqb := eqb_one_inductive_body |}.
@@ -250,6 +259,7 @@ Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
   let (f', n', p', b', u', v') := y in
   eqb f f' && eqb n n' && eqb b b' && eqb p p' && eqb u u' && eqb v v'.
 
+#[global]
 Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
 Proof.
   refine {| eqb := eqb_mutual_inductive_body |}.
@@ -264,6 +274,7 @@ Definition eqb_global_decl x y :=
   | _, _ => false
   end.
 
+#[global]
 Instance reflect_global_decl : ReflectEq global_decl.
 Proof.
   refine {| eqb := eqb_global_decl |}.

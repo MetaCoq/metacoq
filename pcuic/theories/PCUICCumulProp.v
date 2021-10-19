@@ -741,7 +741,7 @@ Lemma context_conversion_cumul_prop {Σ Γ Δ M N} {wfΣ : wf_ext Σ} :
   Σ ;;; Δ |- M ~~ N.
 Proof.
   induction 1; intros.
-  - constructor => //. fvs. now rewrite -(All2_fold_length X).
+  - constructor => //. eauto with fvs. now rewrite -(All2_fold_length X).
     now rewrite -(All2_fold_length X).
   - specialize (IHX X0). transitivity v => //.
     eapply red1_red in r.

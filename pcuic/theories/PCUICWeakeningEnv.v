@@ -277,6 +277,7 @@ Proof.
     * eauto using R_universe_instance_impl'.
 Qed.
 
+#[global]
 Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' napp :
   wf Σ' -> extends Σ Σ' ->
   RelationClasses.subrelation Re Re' ->

@@ -3,6 +3,7 @@ From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 
+#[global]
 Instance subst_instance_list A `{UnivSubst A} : UnivSubst (list A) :=
   fun u => List.map (subst_instance u).
 
@@ -12,6 +13,7 @@ Proof.
   unfold subst_instance.
   now rewrite map_length.
 Qed.
+#[global]
 Hint Rewrite subst_instance_instance_length : len.
 
 Lemma subst_instance_nil {A} {ua : UnivSubst A} u (xs : list A) : 

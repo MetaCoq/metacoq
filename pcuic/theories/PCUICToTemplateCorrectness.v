@@ -963,22 +963,26 @@ Proof.
   now do 2 rewrite !SE.context_assumptions_subst_context ?SE.context_assumptions_lift_context.
 Qed.
 
+#[global]
 Instance compare_decls_refl : Reflexive (TermEquality.compare_decls eq eq).
 Proof. 
   intros [na [b|] ty]; constructor; auto.
 Qed.
 
+#[global]
 Instance All2_compare_decls_refl : Reflexive (All2 (TermEquality.compare_decls eq eq)).
 Proof.
   intros x; apply All2_refl; reflexivity.
 Qed.
 
+#[global]
 Instance All2_compare_decls_sym : Symmetric (All2 (TermEquality.compare_decls eq eq)).
 Proof.
   intros x y. eapply All2_symP. clear.
   intros d d' []; subst; constructor; auto; now symmetry.
 Qed.
 
+#[global]
 Instance All2_compare_decls_trans : Transitive (All2 (TermEquality.compare_decls eq eq)).
 Proof.
   intros x y z. eapply All2_trans. clear.
@@ -1120,6 +1124,7 @@ Proof.
 Qed.
 
 Require Import Morphisms.
+#[global]
 Instance map2_Proper {A B C} : Morphisms.Proper (pointwise_relation A (pointwise_relation B (@eq C)) ==> eq ==> eq ==> eq) map2.
 Proof.
   intros f g Hfg ? ? -> ? ? ->.

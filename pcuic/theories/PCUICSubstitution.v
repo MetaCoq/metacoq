@@ -20,6 +20,7 @@ Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+#[global]
 Hint Rewrite @app_context_length : wf.
 
 Generalizable Variables Σ Γ t T.
@@ -299,6 +300,7 @@ Proof.
   unfold decompose_app. destruct decompose_app_rec.
   move=> Heq [= <- <-] Heq'. now rewrite Heq' (Heq Heq').
 Qed.
+#[global]
 Hint Rewrite decompose_app_subst using auto : lift.
 
 Lemma subst_is_constructor:
@@ -834,6 +836,7 @@ Qed.
 
 #[global]
 Hint Unfold subst1 : subst.
+#[global]
 Hint Rewrite subst_mkApps distr_subst: subst.
 
 Inductive untyped_subslet (Γ : context) : list term -> context -> Type :=
@@ -974,6 +977,7 @@ Proof.
     * now rewrite skipn_S.
 Qed.
 
+#[global]
 Hint Rewrite idsn_length : len.
 
 Lemma subst_fn_eq s s' x : s = s' -> subst_fn s x = subst_fn s' x.

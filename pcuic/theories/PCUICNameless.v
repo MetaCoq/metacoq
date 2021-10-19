@@ -1119,6 +1119,7 @@ Proof.
      rewrite ?nl_subst ?nl_lift ?nl_context_assumptions ?IHΓ; len => //.
 Qed.
 
+#[global]
 Hint Rewrite nl_context_assumptions : len.
 
 Lemma nl_expand_lets_k Γ k t : 
@@ -1221,6 +1222,7 @@ Qed.
 
 Lemma nlctx_length Γ : #|nlctx Γ| = #|Γ|.
 Proof. now rewrite map_length. Qed.
+#[global]
 Hint Rewrite nlctx_length : len.
 
 Lemma map2_map_left {A B C D} (f : A -> B) (g : B -> C -> D) (l : list A) (l' : list C) :

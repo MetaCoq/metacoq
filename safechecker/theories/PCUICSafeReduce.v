@@ -92,12 +92,12 @@ Section Measure.
   Proof.
     intros hΣ Γ u v h [r]. apply red_cored_or_eq in r.
     destruct r as [r|[]]; [|assumption].
-    eapply cored_welltyped; eassumption.
+    eapply cored_welltyped ; eauto.
   Qed.
 
   Corollary R_Acc_aux :
     forall Γ t p,
-      wf Σ -> welltyped Σ Γ t ->
+      wf_ext Σ -> welltyped Σ Γ t ->
       Acc (R_aux Γ) (t ; p).
   Proof.
     intros Γ t p HΣ h.
@@ -111,7 +111,7 @@ Section Measure.
 
   Corollary R_Acc :
     forall Γ t,
-      wf Σ -> welltyped Σ Γ (zip t) ->
+      wf_ext Σ -> welltyped Σ Γ (zip t) ->
       Acc (R Γ) t.
   Proof.
     intros Γ t HΣ h.
@@ -216,7 +216,8 @@ Section Reduce.
   Context (flags : RedFlags.t).
 
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥).
+  Context (heΣ : ∥ wf_ext Σ ∥).
+  Let hΣ := map_squash (wf_ext_wf _) heΣ.
 
   Existing Instance Req_refl.
 
@@ -1000,7 +1001,7 @@ Section Reduce.
               (R:=fun x y => R Σ Γ x y)
               (P:=fun x => welltyped Σ Γ (zip x)) (fun x y Px Hy => _) 1000 _).
     - simpl in *. eapply welltyped_R_pres; eauto.
-    - destruct hΣ. intros; eapply R_Acc; eassumption.
+    - destruct heΣ. intros; eapply R_Acc; eassumption.
   Defined.
 
   Definition reduce_stack Γ t π h :=
@@ -1717,7 +1718,7 @@ Section Reduce.
 End Reduce.
 
 Section ReduceFns.
-  Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥).
+  Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥).
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
@@ -1863,6 +1864,7 @@ Section ReduceFns.
     unfold Pr in stack_valid.
     cbn in *.
     destruct HΣ.
+    assert (wf Σ) by auto.
     eapply into_closed_red in r'; fvs.
     eapply into_closed_red in r; fvs.
     eapply PCUICContextConversion.closed_red_confluence in r as (?&r1&r2);[|exact r'].

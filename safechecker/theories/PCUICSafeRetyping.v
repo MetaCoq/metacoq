@@ -157,13 +157,18 @@ Section TypeOf.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
 
+  Local Definition heΣ : ∥ wf_ext Σ ∥.
+  Proof.
+    destruct hΣ, Hφ; now constructor.
+  Defined.
+
   Local Notation ret t := (exist t _).
 
   Section SortOf.
     Obligation Tactic := idtac.
     Program Definition infer_as_sort {Γ t} (wf : well_sorted Σ Γ t)
       (tx : principal_type Σ Γ t) : principal_sort Σ Γ t :=
-      match @reduce_to_sort cf Σ hΣ Γ tx _ with
+      match @reduce_to_sort cf Σ heΣ Γ tx _ with
       | Checked (u ; _) => u
       | TypeError e => !
       end.
@@ -187,7 +192,7 @@ Section TypeOf.
     Qed.
     Next Obligation.
       simpl. intros.
-      pose proof (reduce_to_sort_complete hΣ _ (eq_sym Heq_anonymous)).
+      pose proof (reduce_to_sort_complete heΣ _ (eq_sym Heq_anonymous)).
       clear Heq_anonymous.
       destruct tx as (?&[(?&?)]).
       destruct wf as [(?&?)].
@@ -201,7 +206,7 @@ Section TypeOf.
     (wf : welltyped Σ Γ T)
     (isprod : ∥ ∑ na A B, Σ ;;; Γ ⊢ T ≤ tProd na A B ∥) : 
     ∑ na' A' B', ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥ :=
-    match @reduce_to_prod cf Σ hΣ Γ T wf with
+    match @reduce_to_prod cf Σ heΣ Γ T wf with
     | Checked p => p
     | TypeError e => !
     end.
@@ -287,7 +292,7 @@ Section TypeOf.
           | ret None => ! };
       | ret (TypeError e) => ! };
 
-    infer Γ (tCase ci p c brs) wt with inspect (reduce_to_ind hΣ Γ (infer Γ c _) _) :=
+    infer Γ (tCase ci p c brs) wt with inspect (reduce_to_ind heΣ Γ (infer Γ c _) _) :=
       { | ret (Checked indargs) =>
           let ptm := it_mkLambda_or_LetIn (inst_case_predicate_context p) p.(preturn) in
           ret (mkApps ptm (List.skipn ci.(ci_npar) indargs.π2.π2.π1 ++ [c]));
@@ -295,7 +300,7 @@ Section TypeOf.
 
     infer Γ (tProj (ind, n, k) c) wt with inspect (@lookup_ind_decl ind) :=
       { | ret (Checked d) with inspect (nth_error d.π2.π1.(ind_projs) k) :=
-        { | ret (Some pdecl) with inspect (reduce_to_ind hΣ Γ (infer Γ c _) _) :=
+        { | ret (Some pdecl) with inspect (reduce_to_ind heΣ Γ (infer Γ c _) _) :=
           { | ret (Checked indargs) => 
               let ty := snd pdecl in
               ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty));

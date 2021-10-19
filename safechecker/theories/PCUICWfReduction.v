@@ -109,7 +109,7 @@ Qed.
 on (welltyped) terms and going under binders. *)
 Section fix_sigma.
   Context {cf : checker_flags}.
-  Context {Σ : global_env_ext} {HΣ : ∥wf Σ∥}.
+  Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   Lemma term_subterm_red1 {Γ s s' t} {ts : term_subterm s t} :
     red1 Σ (Γ ,,, term_subterm_context ts) s s' ->
@@ -226,7 +226,7 @@ End fix_sigma.
 
 Section fix_sigma.
   Context {cf : checker_flags}.
-  Context {Σ : global_env_ext} {HΣ : ∥wf Σ∥}.
+  Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   (* Reducing at least one step or taking a subterm is well-founded *)
   Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, welltyped Σ Γ t) :=

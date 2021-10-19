@@ -109,7 +109,11 @@ Hint Resolve wf_ext_wf : core.
 
 Section fix_sigma.
   Variable Σ : global_env_ext.
-  Variable HΣ : ∥wf Σ∥.
+  Variable HeΣ : ∥wf_ext Σ∥.
+  Local Definition HΣ : ∥ wf Σ ∥.
+  Proof.
+    exact (map_squash (wf_ext_wf _) HeΣ).
+  Qed.
 
   Definition term_rel : Relation_Definitions.relation (∑ Γ t, welltyped Σ Γ t) :=
     fun '(Γ2; B; H) '(Γ1; t1; H2) =>
@@ -119,13 +123,13 @@ Section fix_sigma.
 
   Lemma wf_cod : WellFounded cod.
   Proof.
-    clear HΣ.
+    clear HeΣ.
     sq. intros ?. induction a; econstructor; cbn in *; intros; try tauto; subst. eauto.
   Defined.
 
   Lemma wf_cod' : WellFounded (Relation_Operators.clos_trans _ cod).
   Proof.
-    clear HΣ.
+    clear HeΣ.
     eapply Subterm.WellFounded_trans_clos. exact wf_cod.
   Defined.
 
@@ -134,7 +138,7 @@ Section fix_sigma.
     induction 1. intros. eapply H0; eauto.
   Qed.
 
-  Ltac sq' := try (destruct HΣ; clear HΣ);
+  Ltac sq' := try (destruct HeΣ; clear HeΣ);
     repeat match goal with
           | H : ∥ _ ∥ |- _ => destruct H; try clear H
           end; try eapply sq.
@@ -183,7 +187,7 @@ Section fix_sigma.
   Opaque wf_reduction.
   Opaque Acc_intro_generator.
   Opaque Wf.Acc_intro_generator.
-  Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
+  Ltac sq := try (destruct HeΣ as [wfeΣ]; clear HeΣ);
     repeat match goal with
           | H : ∥ _ ∥ |- _ => destruct H
           end; try eapply sq.
@@ -192,16 +196,15 @@ Section fix_sigma.
     {Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}
     by wf ((Γ;T;HT) : (∑ Γ t, welltyped Σ Γ t)) term_rel :=
     {
-      is_arity Γ HΓ T HT with inspect (@reduce_to_sort _ Σ HΣ Γ T HT) => {
+      is_arity Γ HΓ T HT with inspect (@reduce_to_sort _ Σ HeΣ Γ T HT) => {
       | exist (Checked H) rsort => left _ ;
-      | exist (TypeError _) rsort with inspect (@reduce_to_prod _ Σ HΣ Γ T _) => {
+      | exist (TypeError _) rsort with inspect (@reduce_to_prod _ Σ HeΣ Γ T _) => {
         | exist (Checked (na; A; B; H)) rprod with is_arity (Γ,, vass na A) _ B _ :=
           { | left isa => left _;
             | right nisa => right _ };
         | exist (TypeError e) rprod => right _ } }
     }.
-  Next Obligation.
-    sq. econstructor. split. sq. eassumption. econstructor.
+  Next Obligation. econstructor. split. sq. eassumption. econstructor.
   Qed.
   Next Obligation.
     clear rprod.
@@ -251,8 +254,8 @@ Section fix_sigma.
   Qed.
 
   Next Obligation.
-    pose proof (reduce_to_sort_complete HΣ _ (eq_sym rsort)).
-    pose proof (reduce_to_prod_complete HΣ _ (eq_sym rprod)).
+    pose proof (reduce_to_sort_complete HeΣ _ (eq_sym rsort)).
+    pose proof (reduce_to_prod_complete HeΣ _ (eq_sym rprod)).
     destruct HΣ.
     apply Is_conv_to_Arity_inv in H as [(?&?&?&[r])|(?&[r])]; eauto.
     - eapply H1, r.
@@ -294,9 +297,6 @@ Next Obligation.
   sq. red in X. red in X. apply X.
 Qed.
 Next Obligation.
-  sq. apply X.
-Qed.
-Next Obligation.
   destruct Ht. sq. eauto using typing_wf_local.
 Qed.
 Next Obligation.
@@ -324,9 +324,6 @@ Next Obligation.
   simpl in *.
   eapply validity in Htx; auto.
   destruct Htx as [s Hs]. econstructor; eauto.
-Qed.
-Next Obligation.
-  sq. apply w.
 Qed.
 Next Obligation.
   sq.
@@ -376,7 +373,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   unfold type_of in *.
-  destruct HΣ.
+  sq.
   symmetry in Heq_anonymous.
   pose proof (reduce_to_sort_complete _ _ Heq_anonymous).
   clear Heq_anonymous.

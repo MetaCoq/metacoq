@@ -175,10 +175,10 @@ Proof.
       auto.
     - cbn.
       auto. }
-  assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.
+(*   assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.*)
   pose proof (iswelltyped _ _ _ _ typ_false) as wt.
-  pose proof (@hnf_sound _ _ sqwf _ _ wt) as [r].
-  pose proof (@hnf_complete _ _ sqwf _ _ wt) as [w].
+  pose proof (@hnf_sound _ _ (sq wf') _ _ wt) as [r].
+  pose proof (@hnf_complete _ _ (sq wf') _ _ wt) as [w].
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.

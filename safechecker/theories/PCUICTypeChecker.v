@@ -108,12 +108,12 @@ Section Typecheck.
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
 
-  Local Definition HΣ' : ∥ wf_ext Σ ∥.
+  Local Definition HeΣ : ∥ wf_ext Σ ∥.
   Proof.
     destruct HΣ, Hφ; now constructor.
   Defined.
 
-  Notation hnf := (hnf HΣ).
+  Notation hnf := (hnf HeΣ).
 
   Definition isconv Γ := isconv_term Σ HΣ Hφ G HG Γ Conv.
   Definition iscumul Γ := isconv_term Σ HΣ Hφ G HG Γ Cumul.
@@ -180,7 +180,7 @@ Section Typecheck.
     Program Definition infer_type Γ HΓ t
       : typing_result ({u : Universe.t & ∥ Σ ;;; Γ |- t : tSort u ∥}) :=
       tx <- infer Γ HΓ t ;;
-      u <- reduce_to_sort HΣ Γ tx.π1 _ ;;
+      u <- reduce_to_sort HeΣ Γ tx.π1 _ ;;
       ret (u.π1; _).
     Next Obligation.
       eapply validity_wf; eassumption.
@@ -211,7 +211,7 @@ Section Typecheck.
     Program Definition infer_scheme Γ HΓ t :
       typing_result (∑ ctx u, ∥ Σ ;;; Γ |- t : mkAssumArity ctx u ∥) :=
       '(T; p) <- infer Γ HΓ t;;
-      match reduce_to_arity HΣ Γ T _ with
+      match reduce_to_arity HeΣ Γ T _ with
       | inleft car => ret (conv_ar_context car; conv_ar_univ car; _)
       | inright _ => TypeError (NotAnArity T)
       end.
@@ -812,7 +812,7 @@ Section Typecheck.
 
     | tApp t u =>
       ty <- infer Γ HΓ t ;;
-      pi <- reduce_to_prod HΣ Γ ty.π1 _ ;;
+      pi <- reduce_to_prod HeΣ Γ ty.π1 _ ;;
       infer_cumul infer Γ HΓ u pi.π2.π1 _ ;;
       ret (subst10 u pi.π2.π2.π1; _)
 
@@ -842,7 +842,7 @@ Section Typecheck.
 
     | tCase ci p c brs =>
       cty <- infer Γ HΓ c ;;
-      I <- reduce_to_ind HΣ Γ cty.π1 _ ;;
+      I <- reduce_to_ind HeΣ Γ cty.π1 _ ;;
       let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
       check_eq_true (eqb ci.(ci_ind) ind')
                     (* bad case info *)
@@ -880,7 +880,7 @@ Section Typecheck.
       match nth_error d.π2.π1.(ind_projs) k with
       | Some pdecl =>
         c_ty <- infer Γ HΓ c ;;
-        I <- reduce_to_ind HΣ Γ c_ty.π1 _ ;;
+        I <- reduce_to_ind HeΣ Γ c_ty.π1 _ ;;
         let '(ind'; I') := I in let '(u; I'') := I' in let '(args; H) := I'' in
         check_eq_true (eqb ind ind')
                       (NotConvertible G Γ (tInd ind u) (tInd ind' u)) ;;
@@ -1324,7 +1324,7 @@ Section Typecheck.
   Program Definition check_isType Γ (HΓ : ∥ wf_local Σ Γ ∥) A
     : typing_result (∥ isType Σ Γ A ∥) :=
     s <- infer Γ HΓ A ;;
-    s' <- reduce_to_sort HΣ Γ s.π1 _ ;;
+    s' <- reduce_to_sort HeΣ Γ s.π1 _ ;;
     ret _.
   Next Obligation. now eapply validity_wf. Defined.
   Next Obligation. destruct X0. sq. eexists. eapply type_reduction_closed; tea. Defined.

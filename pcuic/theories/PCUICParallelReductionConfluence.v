@@ -153,18 +153,18 @@ Proof.
   destruct IHt1.
   pose proof (fix_lambda_app_fix mfix i (l ++ [t2]) a).
   change (tApp (mkApps (tFix mfix i) l) t2) with (mkApps (mkApps (tFix mfix i) l) [t2]).
-  now rewrite mkApps_nested.
+  now rewrite -mkApps_app.
   pose proof (fix_lambda_app_lambda na ty b (l ++ [t2]) a).
   change (tApp (mkApps (tLambda na ty b) l) t2) with (mkApps (mkApps (tLambda na ty b) l) [t2]).
-  now rewrite mkApps_nested.
+  now rewrite -mkApps_app.
   destruct t; try solve [apply fix_lambda_app_other; simpl; auto].
   apply (fix_lambda_app_fix mfix idx [] u).
 Defined.
 
-Lemma eq_pair_transport {A B} (x y : A) (t : B y) (eq : x = y) : 
-  (x; eq_rect_r (fun x => B x) t eq) = (y; t) :> ∑ x, B x. 
+Lemma eq_pair_transport {A B} (x y : A) (t : B y) (eq : y = x) : 
+  (x; eq_rect _ (fun x => B x) t _ eq) = (y; t) :> ∑ x, B x. 
 Proof.
-  destruct eq. unfold eq_rect_r. now simpl.
+  now destruct eq. 
 Qed.
 
 Lemma view_lambda_fix_app_fix_app_sigma mfix idx l a : 
@@ -172,7 +172,7 @@ Lemma view_lambda_fix_app_fix_app_sigma mfix idx l a :
   ((mkApps (tFix mfix idx) l); fix_lambda_app_fix mfix idx l a) :> ∑ t, fix_lambda_app_view t a.
 Proof.
   induction l using rev_ind; simpl; auto.
-  rewrite -{1 2}mkApps_nested.
+  rewrite {1 2}mkApps_app.
   simpl. dependent rewrite IHl.
   change (tApp (mkApps (tFix mfix idx) l) x) with (mkApps (mkApps (tFix mfix idx) l) [x]).
   now rewrite eq_pair_transport.
@@ -183,7 +183,7 @@ Lemma view_lambda_fix_app_lambda_app_sigma na ty b l a :
   ((mkApps (tLambda na ty b) l); fix_lambda_app_lambda na ty b l a) :> ∑ t, fix_lambda_app_view t a.
 Proof.
   induction l using rev_ind; simpl; auto.
-  rewrite -{1 2}mkApps_nested.
+  rewrite {1 2}mkApps_app.
   simpl. dependent rewrite IHl.
   change (tApp (mkApps (tLambda na ty b) l) x) with (mkApps (mkApps (tLambda na ty b) l) [x]).
   now rewrite eq_pair_transport.
@@ -376,13 +376,13 @@ Section Pred1_inversion.
   Proof with solve_discr.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X... exists []. intuition auto.
-    intros. rewrite <- mkApps_nested in X.
+    intros. rewrite mkApps_app in X.
     depelim X... 
     prepare_discr. apply mkApps_eq_decompose_app in H.
     rewrite !decompose_app_rec_mkApps in H. noconf H.
     destruct (IHargs _ X1) as [args' [-> Hargs']].
     exists (args' ++ [N1]).
-    rewrite <- mkApps_nested. intuition auto.
+    rewrite mkApps_app. intuition auto.
     eapply All2_app; auto.
   Qed.
 
@@ -402,13 +402,13 @@ Section Pred1_inversion.
   Proof with solve_discr.
     revert c. induction args using rev_ind; intros; simpl in *.
     depelim X... exists []. intuition auto.
-    intros. rewrite <- mkApps_nested in X.
+    intros. rewrite mkApps_app in X.
     depelim X... simpl in H; noconf H. solve_discr.
     prepare_discr. apply mkApps_eq_decompose_app in H.
     rewrite !decompose_app_rec_mkApps in H. noconf H.
     destruct (IHargs _ X1) as [args' [-> Hargs']].
     exists (args' ++ [N1]).
-    rewrite <- mkApps_nested. intuition auto.
+    rewrite mkApps_app. intuition auto.
     eapply All2_app; auto.
   Qed.
 
@@ -424,13 +424,13 @@ Section Pred1_inversion.
         eapply nth_error_pred1_ctx in a; eauto.
         destruct a as [body' [eqopt _]]. rewrite H /= H0 in eqopt. discriminate.
       * exists []; intuition auto.
-    - rewrite -mkApps_nested /= in X.
+    - rewrite mkApps_app /= in X.
       depelim X; try (simpl in H1; noconf H1); solve_discr.
       * prepare_discr. apply mkApps_eq_decompose_app in H1.
         rewrite !decompose_app_rec_mkApps in H1. noconf H1.
       * destruct (IHargs _ H H0 X1) as [args' [-> Hargs']].
         exists (args' ++ [N1]).
-        rewrite <- mkApps_nested. intuition auto.
+        rewrite mkApps_app. intuition auto.
         eapply All2_app; auto.
   Qed.
 
@@ -445,13 +445,13 @@ Section Pred1_inversion.
     - red in H, isdecl. rewrite isdecl in H; noconf H.
       congruence.
     - exists []. intuition auto.
-    - rewrite <- mkApps_nested in X.
+    - rewrite mkApps_app in X.
       depelim X...
       * prepare_discr. apply mkApps_eq_decompose_app in H1.
         rewrite !decompose_app_rec_mkApps in H1. noconf H1.
       * destruct (IHargs _ H H0 X1) as [args' [-> Hargs']].
         exists (args' ++ [N1]).
-        rewrite <- mkApps_nested. intuition auto.
+        rewrite mkApps_app. intuition auto.
         eapply All2_app; auto.
   Qed.
 
@@ -478,12 +478,12 @@ Section Pred1_inversion.
       rewrite ht' in e => //. noconf e. rewrite -eqrarg in e0.
       rewrite e0 in isc => //.
     - destruct args0 using rev_ind. noconf Heqfixt. clear IHargs0.
-      rewrite <- mkApps_nested in Heqfixt. noconf Heqfixt.
+      rewrite mkApps_app in Heqfixt. noconf Heqfixt.
       clear IHpred2. specialize (IHpred1 _ _ _ eq_refl).
       specialize (IHpred1 hnth). apply is_constructor_prefix in isc.
       specialize (IHpred1 isc).
       destruct IHpred1 as [? [? [[? ?] ?]]].
-      eexists _. eexists (_ ++ [N1]). rewrite <- mkApps_nested.
+      eexists _. eexists (_ ++ [N1]). rewrite mkApps_app.
       intuition eauto. simpl. subst M1. reflexivity.
       eapply All2_app; eauto.
     - exists mfix1, []. intuition auto.
@@ -515,9 +515,9 @@ Section Pred1_inversion.
       all:congruence. 
 
     - destruct args0 using rev_ind; noconf Heqfixt. clear IHargs0.
-      rewrite <- mkApps_nested in Heqfixt. noconf Heqfixt.
+      rewrite mkApps_app in Heqfixt. noconf Heqfixt.
       destruct args1 using rev_ind; noconf Heqfixt'. clear IHargs1.
-      rewrite <- mkApps_nested in Heqfixt'. noconf Heqfixt'.
+      rewrite mkApps_app in Heqfixt'. noconf Heqfixt'.
       clear IHpred2.
       assert (is_constructor (rarg d) args0 = false).
       { move: Hisc. rewrite /is_constructor.
@@ -549,11 +549,11 @@ Section Pred1_inversion.
     intros pred. remember (mkApps _ _) as fixt. revert mfix0 idx args0 Heqfixt.
     induction pred; intros; solve_discr.
     - destruct args0 using rev_ind. noconf Heqfixt. clear IHargs0.
-      rewrite <- mkApps_nested in Heqfixt. noconf Heqfixt.
+      rewrite mkApps_app in Heqfixt. noconf Heqfixt.
       clear IHpred2. specialize (IHpred1 _ _ _ eq_refl).
       destruct IHpred1 as [? [? [[-> ?] ?]]].
       eexists x, (x0 ++ [N1]). intuition auto.
-      now rewrite <- mkApps_nested.
+      now rewrite mkApps_app.
       eapply All2_app; eauto.
     - exists mfix1, []; intuition (simpl; auto).
     - subst t; solve_discr.
@@ -572,10 +572,10 @@ Section Pred1_inversion.
     revert mfix0 mfix1 idx args0 args1 Heqfixt Heqfixt'.
     induction pred; intros; symmetry in Heqfixt; solve_discr.
     - destruct args0 using rev_ind. noconf Heqfixt. clear IHargs0.
-      rewrite <- mkApps_nested in Heqfixt. noconf Heqfixt.
+      rewrite mkApps_app in Heqfixt. noconf Heqfixt.
       clear IHpred2.
       symmetry in Heqfixt'.
-      destruct args1 using rev_ind. discriminate. rewrite <- mkApps_nested in Heqfixt'.
+      destruct args1 using rev_ind. discriminate. rewrite mkApps_app in Heqfixt'.
       noconf Heqfixt'.
       destruct (IHpred1 _ _ _ _ _ eq_refl eq_refl) as [H H'].
       unfold All2_prop2_eq. split. apply H. apply All2_app; auto.
@@ -968,7 +968,7 @@ Section Rho.
   Lemma isFixLambda_app_mkApps t l : isFixLambda_app t -> isFixLambda_app (mkApps t l).
   Proof. 
     induction l using rev_ind; simpl; auto.
-    rewrite -mkApps_nested. 
+    rewrite mkApps_app. 
     intros isf. specialize (IHl isf).
     simpl. rewrite IHl. destruct (mkApps t l); auto.
   Qed.
@@ -996,12 +996,12 @@ Section Rho.
     destruct t; auto. simpl => //.
     intros isl. specialize (IHl isl).
     simpl in IHl.
-    now rewrite -mkApps_nested /=. 
+    now rewrite mkApps_app /=. 
   Qed.
 
   Ltac discr_mkApps H := 
     let Hf := fresh in let Hargs := fresh in
-    rewrite ?tApp_mkApps ?mkApps_nested in H;
+    rewrite ?tApp_mkApps -?mkApps_app in H;
       (eapply mkApps_nApp_inj in H as [Hf Hargs] ||
         eapply (mkApps_nApp_inj _ _ []) in H as [Hf Hargs] ||
         eapply (mkApps_nApp_inj _ _ _ []) in H as [Hf Hargs]);
@@ -1017,7 +1017,7 @@ Section Rho.
   Proof.
     induction l using rev_ind; autorewrite with rho.
     - simpl. reflexivity.
-    - simpl. rewrite -mkApps_nested. autorewrite with rho.
+    - simpl. rewrite mkApps_app. autorewrite with rho.
       change (mkApps (tApp (tLambda na ty b) a) l) with
         (mkApps (tLambda na ty b) (a :: l)).
       now simp rho.
@@ -1045,7 +1045,7 @@ Section Rho.
     end.
   Proof.
     destruct l using rev_case; autorewrite with rho; auto.
-    simpl. rewrite -mkApps_nested. simp rho.
+    simpl. rewrite mkApps_app. simp rho.
     destruct l; simpl; auto. now simp rho.
   Qed.
 
@@ -1054,11 +1054,11 @@ Section Rho.
     mkApps (tConstruct c u i) (map (rho Γ) l).
   Proof.
     induction l using rev_ind; autorewrite with rho; auto.
-    simpl. rewrite -mkApps_nested. simp rho.
+    simpl. rewrite mkApps_app. simp rho.
     unshelve erewrite view_lambda_fix_app_other. simpl.
     clear; induction l using rev_ind; simpl; auto. 
-    rewrite -mkApps_nested. simpl. apply IHl.
-    simp rho. rewrite IHl. now rewrite map_app -mkApps_nested.
+    rewrite mkApps_app. simpl. apply IHl.
+    simp rho. rewrite IHl. now rewrite map_app mkApps_app.
   Qed.
   Hint Rewrite rho_app_construct : rho.
 
@@ -1067,11 +1067,11 @@ Section Rho.
     mkApps (tCoFix (map_fix rho Γ (rho_fix_context Γ mfix) mfix) idx) (map (rho Γ) l).
   Proof.
     induction l using rev_ind; autorewrite with rho; auto.
-    simpl. now simp rho. rewrite -mkApps_nested. simp rho.
+    simpl. now simp rho. rewrite mkApps_app. simp rho.
     unshelve erewrite view_lambda_fix_app_other. simpl.
     clear; induction l using rev_ind; simpl; auto. 
-    rewrite -mkApps_nested. simpl. apply IHl.
-    simp rho. rewrite IHl. now rewrite map_app -mkApps_nested.
+    rewrite mkApps_app. simpl. apply IHl.
+    simp rho. rewrite IHl. now rewrite map_app mkApps_app.
   Qed.
 
   Hint Rewrite rho_app_cofix : rho.
@@ -1126,15 +1126,15 @@ Section Rho.
     - simpl. rewrite map_app /=.
       destruct nth_error as [d|] eqn:eqfix => //.
       destruct (is_constructor (rarg d) (args ++ [x])) eqn:isc; simp rho.
-      * rewrite -mkApps_nested /=.
+      * rewrite mkApps_app /=.
         autorewrite with rho.
         simpl. simp rho. rewrite /unfold_fix.
         rewrite /map_fix nth_error_map eqfix /= isc map_fix_subst ?map_app //.
         intros n; simp rho. simpl. f_equal; now simp rho.
-      * rewrite -mkApps_nested /=.
+      * rewrite mkApps_app /=.
         simp rho. simpl. simp rho.
         now rewrite /unfold_fix /map_fix nth_error_map eqfix /= isc map_app.
-      * rewrite -mkApps_nested /=. simp rho.
+      * rewrite mkApps_app /=. simp rho.
         simpl. simp rho.
         now  rewrite /unfold_fix /map_fix nth_error_map eqfix /= map_app.
   Qed.
@@ -2060,11 +2060,11 @@ Section Rho.
       + (* Lambda abstraction *)
         inv_on_free_vars. rename a0 into arg. rename b0 into body.
         pose proof (rho_app_lambda' Γ na ty body (l ++ [arg])).
-        simp rho in H2. rewrite -mkApps_nested in H2.
+        simp rho in H2. rewrite mkApps_app in H2.
         simpl in H2. simp rho in H2. rewrite {}H2.
         simpl. 
         rewrite rename_mkApps. simpl.
-        rewrite tApp_mkApps mkApps_nested.
+        rewrite tApp_mkApps -mkApps_app.
         rewrite -(map_app (rename r) _ [_]). 
         rewrite rho_app_lambda'.
         simpl.
@@ -4183,7 +4183,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
         * rewrite /unfold_fix {1}/map_fix nth_error_map e /=. 
           eapply (is_constructor_app_ge (rarg d) _ _) in i0 => //.
           rewrite -> i0.
-          rewrite map_app - !mkApps_nested.
+          rewrite map_app !mkApps_app.
           eapply (pred_mkApps _ _ _ _ _ [N1]) => //.
           rewrite - (fold_fix_context_rho_ctx xpredT) //.
           rewrite (rho_fix_subst xpredT) => //. subst fn.
@@ -4200,7 +4200,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
             destruct (pred1_mkApps_tFix_inv _ _ _ _ _ _ _ _ e i0 predM0) as
               [mfix1 [args1 [[HM1 Hmfix] Hargs]]].
             subst M1.
-            rewrite [tApp _ _](mkApps_nested _ _ [N1]).
+            rewrite -[tApp _ _](mkApps_app _ _ [N1]).
             red in Hmfix.
             eapply All2_nth_error_Some in Hmfix; eauto.
             destruct Hmfix as [d' [Hd' [eqd' [pred' eqsd']]]].
@@ -4246,10 +4246,10 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
             rewrite /unfold_fix nth_error_map.
             destruct nth_error eqn:hnth => /=.
             destruct (is_constructor (rarg d) (l ++ [a0])) => //.
-            rewrite -mkApps_nested.
+            rewrite mkApps_app.
             apply (pred_mkApps _ _ _ _ _ [N1] _). auto.
             repeat constructor; auto.
-            rewrite -mkApps_nested.
+            rewrite mkApps_app.
             apply (pred_mkApps _ _ _ _ _ [N1] _). auto.
             repeat constructor; auto.
 
@@ -4260,7 +4260,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
         simp rho in X1. 
         depelim X1... econstructor; eauto.
         simpl. simp rho.
-        rewrite map_app -mkApps_nested.
+        rewrite map_app mkApps_app.
         constructor; eauto.
         
       + (* No head redex *)

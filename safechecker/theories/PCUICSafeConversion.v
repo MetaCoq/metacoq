@@ -947,7 +947,7 @@ Section Conversion.
     rewrite <- eq3 in hd. cbn in hd.
     constructor.
     rewrite stack_context_appstack. simpl.
-    rewrite <- 2!mkApps_nested. cbn. eapply red_mkApps_f.
+    rewrite 2!mkApps_app. cbn. eapply red_mkApps_f.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite stack_context_appstack in r1.
     rewrite stack_context_appstack.
@@ -956,7 +956,7 @@ Section Conversion.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
-          by (rewrite <- mkApps_nested ; reflexivity)
+          by (rewrite mkApps_app ; reflexivity)
       end.
       eapply red_fix.
       + symmetry. eassumption.
@@ -996,7 +996,7 @@ Section Conversion.
     rewrite <- eq3 in r1. cbn in r1.
     rewrite <- eq3 in hd. cbn in hd.
     constructor. eapply red_it_mkLambda_or_LetIn.
-    rewrite <- 2!mkApps_nested. cbn. eapply red_mkApps_f.
+    rewrite 2!mkApps_app. cbn. eapply red_mkApps_f.
     pose proof (decompose_stack_eq _ _ _ e'). subst.
     rewrite stack_context_appstack in r1.
     eapply trans_red.
@@ -1004,7 +1004,7 @@ Section Conversion.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
-          by (rewrite <- mkApps_nested ; reflexivity)
+          by (rewrite mkApps_app ; reflexivity)
       end.
       eapply red_fix.
       + symmetry. eassumption.
@@ -1047,7 +1047,7 @@ Section Conversion.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
-          by (rewrite <- mkApps_nested ; reflexivity)
+          by (rewrite mkApps_app ; reflexivity)
       end.
       eapply red_fix.
       + symmetry. eassumption.
@@ -1089,7 +1089,7 @@ Section Conversion.
     - repeat lazymatch goal with
       | |- context [ tApp (mkApps ?t ?l) ?u ] =>
         replace (tApp (mkApps t l) u) with (mkApps t (l ++ [u]))
-          by (rewrite <- mkApps_nested ; reflexivity)
+          by (rewrite mkApps_app ; reflexivity)
       end.
       eapply red_fix.
       + symmetry. eassumption.
@@ -2518,10 +2518,10 @@ Section Conversion.
     apply welltyped_context in wh; [|easy].
     cbn in wh.
     destruct l as [|? ? _] using List.rev_ind; [easy|].
-    rewrite <- mkApps_nested in wh.
+    rewrite mkApps_app in wh.
     cbn in wh. destruct wh as (?&typ); auto.
     change (tApp ?h ?a) with (mkApps h [a]) in typ.
-    rewrite mkApps_nested in typ.
+    rewrite <-mkApps_app in typ.
     now apply invert_type_mkApps_tProd in typ.
   Qed.
 
@@ -4253,7 +4253,7 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
-    rewrite <- mkApps_nested. assumption.
+    rewrite mkApps_app. assumption.
   Defined.
   Next Obligation.
     simpl in H0. destruct H0 as [eq hp].
@@ -4261,7 +4261,7 @@ Section Conversion.
     eapply aux. all: auto.
     - cbn. lia.
     - instantiate (1 := h2'). simpl. split.
-      + rewrite <- mkApps_nested in eq. assumption.
+      + rewrite mkApps_app in eq. assumption.
       + subst x y.
         rewrite !stack_position_cons, !stack_position_appstack.
         rewrite <- !app_assoc. apply positionR_poscat.
@@ -4732,7 +4732,7 @@ Section Conversion.
     revert teq.
     induction X in args |- *; intros; solve_discr.
     destruct args as [|? ? _] using MCList.rev_ind; [easy|].
-    rewrite <- mkApps_nested in teq.
+    rewrite mkApps_app in teq.
     cbn in teq. noconf teq.
     eauto.
   Qed.

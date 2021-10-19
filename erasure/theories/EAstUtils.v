@@ -35,12 +35,6 @@ Proof.
   induction l in t, l' |- *; simpl; auto.
 Qed.
 
-Lemma mkApps_nested f l l' : mkApps (mkApps f l) l' = mkApps f (l ++ l').
-Proof.
-  induction l in f, l' |- *; destruct l'; simpl; rewrite ?app_nil_r; auto.
-  rewrite <- IHl. simpl. reflexivity.
-Qed.
-
 Lemma decompose_app_rec_inv {t l' f l} :
   decompose_app_rec t l' = (f, l) ->
   mkApps t l' = mkApps f l.

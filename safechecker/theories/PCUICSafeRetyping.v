@@ -706,7 +706,7 @@ Section TypeOf.
         simpl. eapply validity; eauto.
         constructor; auto. now eapply wt_equality_refl.
         now apply All2_rev.
-        pose proof (PCUICClosed.declared_projection_closed w declp').
+        pose proof (PCUICClosed.declared_projection_closed declp').
         eapply equality_refl => //.
         { eapply PCUICWeakeningEnv.on_declared_projection in declp; eauto.
           rewrite closedn_on_free_vars //.

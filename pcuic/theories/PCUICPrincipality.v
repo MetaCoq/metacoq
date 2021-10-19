@@ -689,7 +689,7 @@ Proof.
       + constructor. constructor; fvs.
         eapply All2_rev. eapply equality_terms_refl => //; fvs.
       + rewrite /ctx; eapply equality_refl => //.
-        epose proof (declared_projection_closed _ a).
+        epose proof (declared_projection_closed a).
         rewrite on_free_vars_subst_instance; len. len.
         rewrite -(declared_minductive_ind_npars a).
         eapply closedn_on_free_vars in H0.

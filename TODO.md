@@ -4,19 +4,9 @@
 
 - remove duplication of eq_context / eq_context_upto  and eq_decl / eq_decl_upto
 
-- Rename `mkApps_nested` into `mkApps_app` (et inverser la direction de la
-  règle)
-
 - Make `wf Σ` `wf_ext Σ` some typeclasses (as at the begining of PCUICCanonicity)
   et changer les : wf Σ -> en {wfΣ : wf Σ} partout, ce qui éviterait bien des
   conditions de bord triviales
-
-- Make complilation of Checker plugin working again
-
-- Remove PCUIC plugin target? And Extraction file?
-
-- Remove remaining warnings.
-  May needs `Set Warnings "-notation-overridden".`
 
 - Replace all `eauto with pcuic` by `pcuic` or somehing like this and make
   this tactic available everywhere.
@@ -30,8 +20,6 @@
 - Clean `Derive`s: always derive `Siganture`, `NoConf`, ... directly after the
   definition of the inductive. (To avoid doing it several times.)
   (Mostly done)
-  
-- Finish the PCUICSigmaCalculus proofs.
 
 # Medium Projects
 
@@ -79,8 +67,6 @@ Put a demo using JS-coq on the webiste
 
 ## Template <-> PCUIC
 
-- Finish the started proofs
-
 - Prove that:
    Γ |- t : A   iff   [Γ] |- [t] : [A]
 
@@ -89,9 +75,3 @@ into β-redexes, hence it is only β-convertible and not a syntactical equality.
 
 - Deduce that we have weakening and substitution lemmas in Template from those of
   PCUIC.
-
-
-## Case representation change
-
-Change definition of conversion and cumulativity to enfore well-scoped contexts and 
-terms directly in the definition of conv/cumul.

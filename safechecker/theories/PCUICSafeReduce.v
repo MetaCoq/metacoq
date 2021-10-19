@@ -1216,7 +1216,7 @@ Section Reduce.
     tApp (mkApps hd args) arg = mkApps hd (args ++ [arg]).
   Proof.
     change (tApp ?hd ?a) with (mkApps hd [a]).
-    now rewrite mkApps_nested.
+    now rewrite mkApps_app.
   Qed.
 
   Lemma whnf_non_ctor_finite_ind_typed Γ t ind u args :
@@ -1547,7 +1547,7 @@ Section Reduce.
       destruct (decompose_stack ρ) eqn:decomp.
       apply decompose_stack_eq in decomp as ->.
       cbn in *.
-      rewrite mkApps_nested in h.
+      rewrite <-mkApps_app in h.
       destruct h as (ty&typ).
       repeat (try rewrite stack_context_appstack;
         try rewrite stack_context_appstack in typ;

@@ -136,8 +136,8 @@ Proof.
   induction l using rev_ind; try constructor.
   eapply app_Forall; [|constructor].
   eapply Forall_impl; eauto; simpl; intros.
-  rewrite <- mkApps_nested; simpl. lia.
-  rewrite <- mkApps_nested; simpl. lia.
+  rewrite mkApps_app; simpl. lia.
+  rewrite mkApps_app; simpl. lia.
   constructor.
 Qed.
 
@@ -299,12 +299,12 @@ Proof.
            pose proof E as E'.
            eapply IHl.
            2:{ 
-           eapply decompose_app_inv in E. rewrite <- mkApps_nested in E.
+           eapply decompose_app_inv in E. rewrite mkApps_app in E.
            cbn in E. noconf E. rewrite -> H.
            rewrite -> decompose_app_mkApps. reflexivity.
            eapply decompose_app_notApp in E'.
            now rewrite E'. }
-           eapply decompose_app_inv in E. rewrite <- mkApps_nested in E.
+           eapply decompose_app_inv in E. rewrite mkApps_app in E.
            cbn in E. noconf E. 
            intros. eapply auxt.
            red. red in H0. cbn in *. lia.

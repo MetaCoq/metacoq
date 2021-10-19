@@ -1013,7 +1013,7 @@ Proof.
   intros H.
   destruct args' using rev_case. depelim H. solve_discr.
   apply app_eq_nil in H1 as [_ H]; discriminate.
-  rewrite - !mkApps_nested /= in H. depelim H.
+  rewrite !mkApps_app /= in H. depelim H.
   eapply All2_app => //.
   eapply IHargs; eauto. repeat constructor.
   red. apply H0.
@@ -1288,7 +1288,7 @@ Proof.
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X3.
     * cbn -[projection_context on_free_vars_ctx].
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X6.
-    * epose proof (PCUICClosed.declared_projection_closed _ a).
+    * epose proof (PCUICClosed.declared_projection_closed a).
       len. rewrite on_free_vars_subst_instance. simpl; len.
       rewrite (PCUICClosed.declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.
@@ -1306,7 +1306,7 @@ Proof.
       eapply cumul_prop_subst_instance; eauto.
       cbn -[projection_context on_free_vars_ctx]; eapply is_closed_context_weaken => //. fvs.
       now eapply wf_local_closed_context.
-      epose proof (PCUICClosed.declared_projection_closed _ a).
+      epose proof (PCUICClosed.declared_projection_closed a).
       simpl; len.
       rewrite (PCUICClosed.declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.

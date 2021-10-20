@@ -581,7 +581,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         cstr_respects_variance Σ mdecl v cdecl;
 
       on_lets_in_type : if lets_in_constructor_types 
-                        then is_true (is_assumption_context (cstr_args cdecl)) else True
+                        then True else is_true (is_assumption_context (cstr_args cdecl)) 
     }.
 
     Arguments on_ctype {Σ mdecl i idecl ind_indices cdecl cunivs}.

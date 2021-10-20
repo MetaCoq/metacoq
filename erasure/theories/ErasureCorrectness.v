@@ -915,7 +915,8 @@ Proof.
           eapply All_nth_error. 
           eapply expand_lets_erasure; eauto.
           2: instantiate (1 := 0); cbn; eassumption.
-          exact on_lets_in_type || todo "recompile".
+          pose proof (declared_constructor_inj d d1) as (? & ? & ?); subst.
+          exact on_lets_in_type.
         }
       invs e.
       eapply erases_subst0; eauto. rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
@@ -979,27 +980,33 @@ Proof.
           pattern br.
           eapply All_nth_error. 2: eauto.
           eapply expand_lets_erasure; eauto.
-          exact on_lets_in_type || todo "recompile".
+          cbn in on_lets_in_type.
+          pose proof (declared_constructor_inj d d1) as (? & ? & ?); subst.
+          exact on_lets_in_type.
         } 
       eapply erases_subst0; eauto.  
       all: try rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
 
 
       todo "subslet".
+
       eapply All2_rev. eapply All2_skipn. 
       eapply Forall2_All2 in H3. eapply All2_impl. exact H3. intros. eauto.
        }
       
       eapply nth_error_forall in H4; [|now eauto].
       eapply erases_deps_subst; eauto.
+      eapply All_rev.
       eapply erases_deps_eval in He_v'; [|now eauto].
       eapply erases_deps_mkApps_inv in He_v' as (? & ?).
-      now eapply All_rev, All_skipn, Forall_All.
+      now eapply All_skipn, Forall_All.
       
       invs H2.
       -- exists x4. split; eauto.
          constructor. econstructor. eauto. 2:eauto. 3:{ unfold ETyping.iota_red.
-         todo "erases_substl". }
+         rewrite ECSubst.substl_subst.
+         todo "closed".
+         todo "rev?". }
          now eapply isPropositional_propositional; eauto.
          rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length e0.
          eapply PCUICContexts.assumption_context_length.
@@ -1010,7 +1017,7 @@ Proof.
           unshelve edestruct X1 as (? & ? & ? & []); eauto.
 
           cbn in on_lets_in_type.
-          exact on_lets_in_type || todo "recompile".
+          todo "matthieu?".
       -- eapply Is_type_app in X1 as []; auto.
          2:{ eapply subject_reduction_eval. 2:eassumption. eauto. }
          assert (ispind : is_propositional_ind Σ' ind = Some true).
@@ -1044,12 +1051,13 @@ Proof.
             eapply All_nth_error. 
             eapply expand_lets_erasure; eauto.
             2: instantiate (1 := 0); cbn; eassumption.
-            exact on_lets_in_type || todo "recompile".
+            pose proof (declared_constructor_inj d d1) as (? & ? & ?); subst.
+            exact on_lets_in_type.
           }
         invs e.
         eapply erases_subst0; eauto. rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
-        todo "subslet".   
 
+        todo "subslet".   
 
         eapply All2_rev. cbn.
         rewrite -eq_npars.

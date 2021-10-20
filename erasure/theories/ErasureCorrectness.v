@@ -791,8 +791,9 @@ Proof.
   eapply inversion_Case in Hty' as (mdecl' & idecl' & di & indices & [] & c0); auto.
 
   rename ci into ind.
-  assert (mdecl' = mdecl /\ idecl' = idecl) as [-> ->] by todo "inj lemma".
-
+  pose proof d as d'. eapply declared_constructor_inductive in d'.
+  edestruct (declared_inductive_inj d' di); subst. clear d'.
+  
   assert (Σ ;;; [] |- mkApps (tConstruct ind c u) args :   mkApps (tInd ind (puinst p)) (pparams p ++ indices)).
   eapply subject_reduction_eval; eauto.
   eapply PCUICValidity.inversion_mkApps in X0 as (? & t1 & t2); eauto.
@@ -853,40 +854,24 @@ Proof.
       now eapply All_repeat. *) }
       
 
-      shelve.
-      
+      2:{      
       exists x3. split; eauto. constructor. eapply eval_iota_sing => //. 3:eauto.
       pose proof (Ee.eval_to_value _ _ _ He_v').
       eapply value_app_inv in X0. subst. eassumption.
       depelim H2.
       eapply isErasable_Propositional in X0; eauto.
       eapply isPropositional_propositional; eauto.
-      Unshelve.
+      }
+      
       depelim H4.
       cbn in H1.
       eapply erases_deps_substl. 2: eauto.
       eapply Forall_forall.
       intros ? -> % repeat_spec. econstructor.
 
-(* 
-      eapply wf_ext_wf in wfΣ.
-      eapply tCase_length_branch_inv in wfΣ.
-      2:{ eapply subject_reduction. eauto.
-          exact Hty.
-          eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
-      2: reflexivity.
-      
-      enough (#|skipn (ind_npars mdecl) (x0 ++ x1)| = narg) as <- by eauto.
-      rewrite skipn_length; lia. *)
-      
     * subst. unfold iota_red in *.
-      destruct (nth_error brs c) eqn:Hnth.
-      2:{ eapply nth_error_None in Hnth. erewrite All2_length in Hnth. 2:todo "todo".
-          eapply nth_error_Some_length in H6. cbn in H6. todo "todo". (* lia *) }
-      invs e.
-      (* rewrite <- nth_default_eq in *. unfold nth_default in *.
-       rewrite -> Hnth in *. *)
-
+      pose proof e as Hnth. 
+      
       destruct (All2_nth_error_Some _ _ X0 Hnth) as (? & ? & ? & ?).
       destruct (All2i_nth_error_r _ _ _ _ _ _ brs_ty Hnth) as (? & ? & ? & ? & ? & ?).
       cbn in *. subst.
@@ -908,7 +893,7 @@ Proof.
       eapply erases_deps_mkApps; [now eauto|].
       eapply erases_deps_eval in He_v'; [|now eauto].
       eapply erases_deps_mkApps_inv in He_v' as (? & ?).
-      apply Forall_skipn.ad
+      apply Forall_skipn.
       now eauto.
 
       invs H2.
@@ -916,8 +901,25 @@ Proof.
          constructor. econstructor. eauto. 2:eauto. 3:{ unfold ETyping.iota_red.
          todo "erases_subst0". }
          now eapply isPropositional_propositional; eauto.
-         todo "length, easy".
+         rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length e0.
+         eapply PCUICContexts.assumption_context_length.
 
+         Lemma is_assumption_context_spec Γ :
+           is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+          Proof.
+            induction Γ; cbn.
+            - split; econstructor.
+            - split; intros H.
+              + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
+              + invs H. cbn. now eapply IHΓ.
+          Qed.
+          eapply is_assumption_context_spec.
+          pose proof (@on_declared_constructor).
+          specialize X1 with (Hdecl := d) (H := config.extraction_checker_flags).
+          unshelve edestruct X1 as (? & ? & ? & []); eauto.
+
+          cbn in on_lets_in_type.
+          exact on_lets_in_type.  
       -- eapply Is_type_app in X1 as []; auto.
          2:{ eapply subject_reduction_eval. 2:eassumption. eauto. }
          assert (ispind : is_propositional_ind Σ' ind = Some true).
@@ -930,7 +932,7 @@ Proof.
          destruct l; cbn in *; try lia. destruct c as [ | []]; cbn in *; invs H6.
 
          (* destruct btys as [ | ? []]; cbn in *; try discriminate. *)
-         invs e4. destruct H11. destruct brs'; invs e.
+         invs e4. destruct H11. destruct brs'; invs e2.
          invs brs_ty. 
          destruct X2 as (? & ? & ? & ?). invs X3.
          invs Hnth. cbn in *. invs X0. invs X2. destruct x2.
@@ -1548,6 +1550,7 @@ Proof.
       * eexists. split; eauto. now constructor; econstructor.
       * eexists. split. 2: now constructor; econstructor.
         econstructor; eauto.
+  Unshelve. todo "nat". todo "nat".
 Qed.
 
 Print Assumptions erases_correct.

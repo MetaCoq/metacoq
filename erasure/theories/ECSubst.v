@@ -60,6 +60,22 @@ Proof.
     + now destruct (Nat.leb_spec k n); try lia.  
 Qed.
 
+Lemma closed_substl t k u : Forall closed s ->
+    substl s k u = subst s k u.
+Proof.
+  revert k; induction u using term_forall_list_ind; intros k Hs; 
+    simpl; try f_equal; eauto; solve_all.
+  - destruct (PeanoNat.Nat.compare_spec k n).
+    + subst k.
+      rewrite PeanoNat.Nat.leb_refl minus_diag /=.
+      now rewrite lift_closed.
+    + destruct (leb_spec_Set k n); try lia.
+      destruct (nth_error_spec [t] (n - k) ).
+      simpl in l0; lia.
+      now rewrite Nat.sub_1_r.
+    + now destruct (Nat.leb_spec k n); try lia.  
+Qed.
+
 (*
 Lemma closedn_subst s k k' t :
   forallb (closedn k) s -> closedn (k + k' + #|s|) t ->

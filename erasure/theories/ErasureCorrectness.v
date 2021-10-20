@@ -714,6 +714,17 @@ Proof.
   - econstructor; firstorder. eapply IHAll; firstorder. 
 Qed.
 
+
+Lemma rev_repeat {A : Type} (n : nat) (a : A) : 
+List.rev (repeat a n) = repeat a n.
+Proof.
+induction n.
+- reflexivity.
+- replace (S n) with (n + 1) at 2 by lia.
+ cbn [repeat]. cbn. rewrite  IHn.
+ now rewrite repeat_app. 
+Qed.
+
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
   wf_ext Σ ->
   Σ;;; [] |- t : T ->
@@ -932,8 +943,14 @@ Proof.
       eapply isPropositional_propositional; eauto.
       invs e. cbn in *.
       rewrite skipn_all_app in H8.
+      
+      rewrite ECSubst.substl_subst.
+      { eapply All_Forall, All_repeat. econstructor. }
+      rewrite rev_repeat in H8.
 
-      todo "erases_substl".
+      enough (#|bcontext| = #|x1|) as -> by eauto.
+
+      todo "length".
       }
 
       depelim H4.
@@ -1069,13 +1086,20 @@ Proof.
          
          cbn in *.
 
-         todo "erases_substl".
-(* 
+         rewrite ECSubst.substl_subst.
+         { eapply All_Forall, All_repeat. econstructor. }
 
+
+         rewrite rev_repeat in H13.
          
-(*          enough (#|skipn (ind_npars mdecl) args| = n) as <- by eauto.
- *)
+         enough (#|skipn (ind_npars mdecl) args| = n) as <- by eauto.
          eapply wf_ext_wf in wfΣ.
+
+        todo "length".
+
+         (* 
+
+         eapply invert_Case_Construct in ... 
          eapply tCase_length_branch_inv in wfΣ.
          2:{ eapply subject_reduction. eauto.
              exact Hty.

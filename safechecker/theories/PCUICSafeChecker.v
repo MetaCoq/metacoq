@@ -1619,20 +1619,19 @@ Section CheckEnv.
       idecl.(ind_ctors) 
       (get_wt_indices wfar wfpars n idecl indices hnth heq Hcs) ;;
     lets <- monad_All (P := fun x => if @lets_in_constructor_types _
-      then is_assumption_context (cstr_args x) 
-      else true)   
+      then true else is_assumption_context (cstr_args x))   
      (fun cs => if @lets_in_constructor_types _
-      then (if is_assumption_context (cstr_args cs) then ret _ else EnvError Σ (IllFormedDecl "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true]."
+      then ret _ else (if is_assumption_context (cstr_args cs) then ret _ else EnvError Σ (IllFormedDecl "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true]."
                                                                               (Msg "No lets in constructor types allowed, you need to set the checker flag lets_in_constructor_types to [true].")  ))
-      else ret _) idecl.(ind_ctors) ;;
+    ) idecl.(ind_ctors) ;;
     ret (cs; _).
       
   Next Obligation. now sq. Qed.
   Next Obligation. apply wf_env_ext_wf. Qed.
   Next Obligation.
     destruct lets_in_constructor_types.
-    + red. congruence.
     + reflexivity.
+    + red. congruence.
   Qed.
   Next Obligation.
     destruct lets_in_constructor_types; congruence.
@@ -1652,7 +1651,7 @@ Section CheckEnv.
     lia_f_equal.
     now destruct wtinds.
     destruct lets_in_constructor_types; eauto.
-  Qed.
+  Qed. 
 
   Definition check_projections_type (Σ : wf_env_ext) (mind : kername) 
     (mdecl : mutual_inductive_body) (i : nat) (idecl : one_inductive_body) 

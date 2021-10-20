@@ -691,10 +691,28 @@ Lemma erases_subst0 (Σ : global_env_ext) Γ t s t' s' T :
 wf Σ ->wf_local Σ Γ ->
 Σ ;;; Γ |- t : T ->
 Σ ;;; Γ |- t ⇝ℇ t' ->
-All2 (erases Σ Γ) s s' ->
+subslet Σ [] s Γ ->
+All2 (erases Σ []) s s' ->
 Σ ;;; [] |- (subst s 0 t) ⇝ℇ ELiftSubst.subst s' 0 t'.
 Proof.
-Admitted.
+  intros Hwf Hwfl Hty He Hall.
+  change (@nil (BasicAst.context_decl term)) with (subst_context s 0 [] ++ nil).
+  eapply erases_subst with (Γ' := Γ); eauto. 
+  - cbn. unfold app_context. rewrite app_nil_r. eassumption.
+  - cbn. unfold app_context. rewrite app_nil_r. eassumption.
+Qed.
+
+Lemma All_All2_flex {A B} (P : A -> Type) (Q : A -> B -> Type) l l' :
+All P l ->
+(forall x y, In y l' -> P x -> Q x y) ->
+length l' = length l ->
+All2 Q l l'.
+Proof.
+  intros H1 H2 Hl.
+  induction H1 in l', H2, Hl |- *; destruct l'; invs Hl.
+  - econstructor.
+  - econstructor; firstorder. eapply IHAll; firstorder. 
+Qed.
 
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
   wf_ext Σ ->
@@ -890,24 +908,19 @@ Proof.
         }
       invs e.
       eapply erases_subst0; eauto. rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
+      1:{ unfold app_context. cbn. rewrite app_nil_r. todo "subslet". }
+      rewrite eq_npars in X1.
+      revert X1.
       assert (ci_npar ind = length x0) as -> by todo "matthieu?".
-      rewrite skipn_all_app.
-      eapply All2_rev. cbn.
-      eapply Forall2_All2 in H3. eapply All2_impl. exact H3. intros.
-      rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
-      todo "fix def".
-     
-      (*
-      eapply erases_mkApps. eauto.
-      instantiate (1 := repeat EAst.tBox _).
-      eapply All2_Forall2.
-      eapply All2_impl.
-      eapply All2_All_mix_left. eassumption.
-      2:{ intros. destruct X0. assert (y = EAst.tBox). exact y0. subst. econstructor.
-          now eapply isErasable_Proof. }
-
-      eapply All2_right_triv. 2: now rewrite repeat_length.
-      now eapply All_repeat. *) }
+      intros X1.
+      (* eapply All2_rev. cbn.
+      eapply Forall2_All2 in H3. eapply All2_impl. exact H3. intros. eauto. *)
+        
+      eapply All2_rev. (*  rewrite <- eq_npars. *)
+      eapply All_All2_flex. exact X1.
+      intros ? ? ? % repeat_spec. subst. intros. econstructor. now eapply isErasable_Proof.
+      rewrite repeat_length. reflexivity.
+       }
       
 
       2:{      
@@ -918,17 +931,16 @@ Proof.
       eapply isErasable_Propositional in X0; eauto.
       eapply isPropositional_propositional; eauto.
       invs e. cbn in *.
+      rewrite skipn_all_app in H8.
 
       todo "erases_substl".
       }
 
-      
       depelim H4.
       cbn in H1.
       eapply erases_deps_subst. 2: eauto.
       eapply All_rev. eapply Forall_All.
-      eapply erases_deps_mkApps_inv.
-      eapply erases_deps_eval; eauto. 
+      eapply All_Forall, All_repeat. econstructor.
     * subst. unfold iota_red in *.
       
       destruct (All2_nth_error_Some _ _ X0 Hnth) as (? & ? & ? & ?).
@@ -953,11 +965,12 @@ Proof.
           exact on_lets_in_type || todo "recompile".
         } 
       eapply erases_subst0; eauto.  
-      rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
+      all: try rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
+
+
+      todo "subslet".
       eapply All2_rev. eapply All2_skipn. 
-      eapply Forall2_All2 in H3. eapply All2_impl. exact H3. intros.
-      rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
-      todo "fix def".
+      eapply Forall2_All2 in H3. eapply All2_impl. exact H3. intros. eauto.
        }
       
       eapply nth_error_forall in H4; [|now eauto].
@@ -1018,11 +1031,16 @@ Proof.
           }
         invs e.
         eapply erases_subst0; eauto. rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
+        todo "subslet".   
+
+
         eapply All2_rev. cbn.
-        eapply Forall2_All2 in H3. eapply All2_skipn. eapply All2_impl. exact H3. intros.
-        rewrite case_branch_type_fst PCUICCasesContexts.inst_case_branch_context_eq; eauto.
-        todo "fix def". 
-            
+        rewrite -eq_npars.
+        eapply All_All2_flex.
+        exact X1.
+        intros ? ? -> % repeat_spec.
+        intros. econstructor. eapply isErasable_Proof. eauto.
+        rewrite repeat_length. reflexivity.
         }
 
         (* 
@@ -1040,18 +1058,20 @@ Proof.
          
          depelim H4.
          eapply erases_deps_subst; eauto.
-         eapply erases_deps_eval in He_v'; [|now eauto].
-         eapply erases_deps_mkApps_inv in He_v' as (? & ?).
-         now eapply All_rev, All_skipn, Forall_All.
+         eapply All_rev, All_repeat.
+         econstructor.
 
          exists x0. split; eauto.
          constructor. eapply eval_iota_sing => //.
          pose proof (Ee.eval_to_value _ _ _ He_v').
          apply value_app_inv in X0; subst x1.
          apply He_v'.
+         
+         cbn in *.
 
          todo "erases_substl".
 (* 
+
          
 (*          enough (#|skipn (ind_npars mdecl) args| = n) as <- by eauto.
  *)

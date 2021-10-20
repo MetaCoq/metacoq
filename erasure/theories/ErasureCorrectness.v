@@ -923,7 +923,16 @@ Proof.
       1:{ unfold app_context. cbn. rewrite app_nil_r. todo "subslet". }
       rewrite eq_npars in X1.
       revert X1.
-      assert (ci_npar ind = length x0) as -> by todo "matthieu?".
+      assert (ci_npar ind = length x0) as ->.
+      { 
+        edestruct invert_Case_Construct as (? & ? & ? & ?).
+        { econstructor. eauto. }
+        { eapply subject_reduction. eauto. exact Hty.
+          eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
+          rewrite app_length in H9. cbn in *. invs H8. cbn in *.
+          rewrite <- e0 in H9.
+          todo "matthieu?".
+           }
       intros X1.
       (* eapply All2_rev. cbn.
       eapply Forall2_All2 in H3. eapply All2_impl. exact H3. intros. eauto. *)
@@ -951,7 +960,7 @@ Proof.
 
       enough (#|bcontext| = #|x1|) as -> by eauto.
 
-      todo "length".
+      todo "matthieu?".
       }
 
       depelim H4.
@@ -1103,19 +1112,14 @@ Proof.
          enough (#|skipn (ind_npars mdecl) args| = n) as <- by eauto.
          eapply wf_ext_wf in wfΣ.
 
-        todo "length".
+         edestruct invert_Case_Construct as (? & ? & ? & ?).
+         { econstructor. eauto. }
+         { eapply subject_reduction. eauto. exact Hty.
+           eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
 
-         (* 
+        rewrite eq_npars. rewrite e0. cbn in H15. invs H15. invs e5.
 
-         eapply invert_Case_Construct in ... 
-         eapply tCase_length_branch_inv in wfΣ.
-         2:{ eapply subject_reduction. eauto.
-             exact Hty.
-             eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
-         2: reflexivity.
-
-         enough (#|skipn (ind_npars mdecl) args| = n) as <- by eauto.
-         rewrite skipn_length; lia. *)
+        todo "context_assumptions lemma".
     + exists EAst.tBox. split. econstructor.
       eapply Is_type_eval; eauto. constructor. econstructor; eauto.
   - pose (Hty' := Hty).

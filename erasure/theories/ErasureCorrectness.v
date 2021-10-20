@@ -659,6 +659,16 @@ Proof.
   rewrite isP. congruence.
 Qed.
 
+Lemma is_assumption_context_spec Γ :
+is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+Proof.
+ induction Γ; cbn.
+ - split; econstructor.
+ - split; intros H.
+   + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
+   + invs H. cbn. now eapply IHΓ.
+Qed.
+
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
   wf_ext Σ ->
   Σ;;; [] |- t : T ->
@@ -904,22 +914,13 @@ Proof.
          rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length e0.
          eapply PCUICContexts.assumption_context_length.
 
-         Lemma is_assumption_context_spec Γ :
-           is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
-          Proof.
-            induction Γ; cbn.
-            - split; econstructor.
-            - split; intros H.
-              + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
-              + invs H. cbn. now eapply IHΓ.
-          Qed.
           eapply is_assumption_context_spec.
           pose proof (@on_declared_constructor).
           specialize X1 with (Hdecl := d) (H := config.extraction_checker_flags).
           unshelve edestruct X1 as (? & ? & ? & []); eauto.
 
           cbn in on_lets_in_type.
-          exact on_lets_in_type.  
+          exact on_lets_in_type. 
       -- eapply Is_type_app in X1 as []; auto.
          2:{ eapply subject_reduction_eval. 2:eassumption. eauto. }
          assert (ispind : is_propositional_ind Σ' ind = Some true).

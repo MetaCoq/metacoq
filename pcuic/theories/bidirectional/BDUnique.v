@@ -33,19 +33,20 @@ Qed.
 
 (* a version for cumulativity only is in PCUICInductiveInversion… *)
 Lemma projection_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} {le} :
-  forall {mdecl idecl p pdecl u u' },
-  declared_projection Σ p mdecl idecl pdecl ->
+  forall {mdecl idecl cdecl p pdecl u u' },
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
   on_udecl_prop Σ (ind_universes mdecl) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
   R_global_instance Σ (eq_universe Σ) (if le then leq_universe Σ else eq_universe Σ) (IndRef p.1.1) (ind_npars mdecl) u u' ->
-  Σ ;;; projection_context mdecl idecl p.1.1 u ⊢
+  Σ ;;; projection_context p.1.1 mdecl idecl u ⊢
     subst_instance u pdecl.2 ≤[le] subst_instance u' pdecl.2.
 Proof.
   destruct le.
   1:{
     intros.
-    by apply PCUICInductiveInversion.projection_cumulative_indices.
+    eapply PCUICInductiveInversion.projection_cumulative_indices.
+    all: eassumption.
   }
 Admitted.
 
@@ -162,7 +163,7 @@ Proof.
     eapply typing_equality => //.
     econstructor ; eassumption.
   
-  - move: (isdecl) => /declared_projection_inj /(_ H) [? [? ?]].
+  - move: (H1) => /declared_projection_inj /(_ H) [? [? [? ?]]].
     subst mdecl0 idecl0 pdecl0 ty ty0.
     change Γ with (Γ ,,, subst_context (c :: List.rev args) 0 []).
 
@@ -171,7 +172,7 @@ Proof.
       apply infering_ind_typing in X2 ; auto.
       apply validity in X2 as [] ; auto.
       eapply invert_type_mkApps_ind ; eauto.
-      eapply declared_projection_inductive ; eauto.
+      exact H1.
     }
 
     assert (consistent_instance_ext Σ (ind_universes mdecl) u).
@@ -179,10 +180,10 @@ Proof.
       apply infering_ind_typing in X ; auto.
       apply validity in X as [] ; auto.
       eapply invert_type_mkApps_ind ; eauto.
-      eapply declared_projection_inductive ; eauto.
+      exact H1.
     }
 
-    eapply @substitution_equality_subst_conv ; eauto.
+    eapply (PCUICConversion.substitution_equality_subst_conv (Δ := [])).
 
     + eapply subslet_untyped_subslet, projection_subslet ; eauto.
       2: eapply validity.
@@ -207,7 +208,7 @@ Proof.
     + cbn -[projection_context].
       apply weaken_equality ; auto.
       1: by apply wf_local_closed_context.
-      eapply projection_cumulative_indices => //.
+      eapply projection_cumulative_indices ; eauto.
       * eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) ; auto.
         apply H.
       * rewrite -H0.

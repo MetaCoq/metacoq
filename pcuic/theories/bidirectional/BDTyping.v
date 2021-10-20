@@ -99,7 +99,9 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (skipn ci.(ci_npar) args ++ [c])
 
 | infer_Proj p c u :
-  forall mdecl idecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl pdecl) (args : list term),
+  forall mdecl idecl cdecl pdecl, 
+  declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
+  forall args,
   Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
   #|args| = ind_npars mdecl ->
   let ty := snd pdecl in
@@ -410,8 +412,8 @@ Section BidirectionalInduction.
       Pinfer Γ (tCase ci p c brs) (mkApps ptm (skipn ci.(ci_npar) args ++ [c]))) ->
 
     (forall (Γ : context) (p : projection) (c : term) u
-      mdecl idecl pdecl args,
-      declared_projection Σ.1 p mdecl idecl pdecl ->
+      mdecl idecl cdecl pdecl args,
+      declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
       Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
       Pind Γ (fst (fst p)) c u args ->
       #|args| = ind_npars mdecl ->

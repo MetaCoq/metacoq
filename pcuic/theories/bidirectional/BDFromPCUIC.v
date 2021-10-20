@@ -319,7 +319,7 @@ Proof.
            1: apply wf_local_closed_context ; tea.
            eapply subject_is_open_term ; tea.
 
-  - intros ? c u mdecl idecl [] isdecl args ? ? ? Cumc ? ty.
+  - intros ? c u mdecl idecl cdecl [] isdecl args ? ? ? Cumc ? ty.
     apply conv_infer_ind in Cumc as (ui'&args'&?&?&?) ; auto.
     eexists.
     split.
@@ -344,7 +344,7 @@ Proof.
       unshelve epose proof (wf_projection_context _ _ _ _) ; eauto.
       change Γ with (Γ,,, subst_context (c :: List.rev args') 0 []).
       change 0 with #|[] : context| at 2 3.
-      eapply substitution_equality_subst_conv.
+      eapply PCUICConversion.substitution_equality_subst_conv.
       * eapply subslet_untyped_subslet, projection_subslet.
         4: eapply validity.
         all: eassumption.
@@ -362,9 +362,10 @@ Proof.
         apply weaken_equality ; auto.
         1: apply wf_local_closed_context ; auto.
         change t with (i,t).2.
-        eapply projection_cumulative_indices ; auto.
-        1: eapply (weaken_lookup_on_global_env' _ _ _ _ (proj1 (proj1 isdecl))).
-        by rewrite <- H0.
+        eapply projection_cumulative_indices ; eauto.
+        2: now easy.
+        eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) => //.
+        apply isdecl.
 
   - intros mfix n decl types ? ? ? Alltypes Allbodies.
     eexists.

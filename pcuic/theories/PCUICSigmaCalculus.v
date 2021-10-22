@@ -1572,7 +1572,7 @@ Qed.
 
 Lemma shiftn_Upn n σ : ↑^n ∘s ⇑^n σ =1 σ ∘s ↑^n.
 Proof.
-  unfold Upn. rewrite subst_consn_shiftn; [reflexivity|].
+  unfold Upn. rewrite subst_consn_shiftn //.
   now rewrite idsn_length.
 Qed.
 #[global]
@@ -2139,14 +2139,12 @@ Proof.
     autorewrite with sigma.
     rewrite subst_consn_compose.
     rewrite -shiftk_compose subst_compose_assoc.
-    rewrite subst_consn_shiftn.
-    2:now autorewrite with len.
+    (rewrite subst_consn_shiftn; try now autorewrite with len); [].
     autorewrite with sigma.
     rewrite -shiftk_shift.
     rewrite -shiftk_compose subst_compose_assoc.
-    rewrite subst_consn_shiftn.
-    2:now autorewrite with len.
-    now autorewrite with sigma.
+    (rewrite subst_consn_shiftn; try now autorewrite with sigma); [].
+    now autorewrite with len.
 Qed.
 
 Lemma shift_subst_consn_ge (n : nat) (l : list term) (σ : nat -> term) :

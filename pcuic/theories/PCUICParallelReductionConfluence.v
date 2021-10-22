@@ -2190,9 +2190,9 @@ Section Rho.
           rewrite -H1. sigma.
           apply inst_ext.
           rewrite -ren_shiftn. sigma.
-          rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
+          (rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //;
+            try now autorewrite with len); [].
           apply subst_consn_proper => //.
-          2:now autorewrite with len.
           rewrite map_cofix_subst' //. 
           intros n'; simp rho. simpl; f_equal. now simp rho.
           rewrite map_cofix_subst' //.
@@ -2266,9 +2266,9 @@ Section Rho.
         sigma. autorewrite with len.
         apply inst_ext.
         rewrite -ren_shiftn. sigma.
-        rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //.
+        (rewrite Upn_comp ?map_length ?fix_subst_length ?map_length //;
+          try now autorewrite with len); [].
         apply subst_consn_proper => //.
-        2:now autorewrite with len.
         rewrite map_cofix_subst' //. 
         intros n0. simpl. now rewrite up_Upn.
         rewrite !map_map_compose.
@@ -2931,7 +2931,8 @@ Section Rho.
   Proof.
     intros Hs. sigma.
     apply inst_ext.
-    rewrite shift_subst_consn_ge. 2:lia. now sigma.
+    (rewrite shift_subst_consn_ge; try by lia); [].
+    now sigma.
   Qed.
 
   Lemma pred_subst_rho_cofix (Γ Γ' rΓ : context) (mfix0 mfix1 : mfixpoint term) idx :

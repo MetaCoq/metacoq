@@ -2240,7 +2240,7 @@ Proof.
   sigma. rewrite hlen.
   rewrite -subst_compose_assoc.
   rewrite shiftn_Upn. sigma.
-  rewrite subst_consn_shiftn. 2:now len.
+  (rewrite subst_consn_shiftn; try now len); [].
   now rewrite subst_consn_shiftn; sigma.
 Qed.
 

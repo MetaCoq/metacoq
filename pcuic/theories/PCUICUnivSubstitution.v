@@ -748,10 +748,9 @@ Proof.
   apply satisfies_union; simpl; split.
   - destruct φ as [φ|[φ1 φ2]].
     + cbn. apply satisfies_subst_instance_ctr; tas.
-      rewrite equal_subst_instance_cstrs_mono; aa.
-      * intros c Hc; apply Hsub in Hc. now apply Hv in Hc.
-      * intros c Hc; eapply monomorphic_global_constraint_ext; tea.
-        apply CS.union_spec; now left.
+      (rewrite equal_subst_instance_cstrs_mono; aa; try by move=> ? /Hsub/Hv); [].
+      intros c Hc; eapply monomorphic_global_constraint_ext; tea.
+      apply CS.union_spec; now left.
     + destruct HH as [_ [_ H1]].
       unfold valid_constraints in H1; rewrite Hcf in H1.
       apply satisfies_subst_instance_ctr; aa.

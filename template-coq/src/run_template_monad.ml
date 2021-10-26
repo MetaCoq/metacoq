@@ -335,7 +335,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let env = Global.env () in
       (* Careful, universes in evm were modified for the declaration of def *)
       let evm = Evd.from_env env in
-      let evm, c = Evarutil.new_global evm n in
+      let evm, c = Evd.fresh_global (Global.env ()) evm n in
       k ~st env evm (EConstr.to_constr evm c)
   | TmDefinitionTerm (opaque, name, typ, body) ->
     if intactic
@@ -472,7 +472,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
          let make_typed_term typ term evm =
            match Lazy.force texistT_typed_term with
            | GlobRef.ConstructRef ctor ->
-              let (evm,c) = Evarutil.new_global evm (Lazy.force texistT_typed_term) in
+              let (evm,c) = Evd.fresh_global (Global.env ()) evm (Lazy.force texistT_typed_term) in
               let term = Constr.mkApp
                (EConstr.to_constr evm c, [|EConstr.to_constr evm typ; t'|]) in
              let evm, _ = Typing.type_of env evm (EConstr.of_constr term) in

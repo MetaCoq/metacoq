@@ -5,7 +5,7 @@ let contrib_name = "template-coq"
 let gen_constant_in_modules s =
   lazy (
     let tm_ref = Coqlib.lib_ref s in
-    UnivGen.constr_of_monomorphic_global tm_ref
+    UnivGen.constr_of_monomorphic_global (Global.env ()) tm_ref
   )
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 

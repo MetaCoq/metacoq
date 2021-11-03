@@ -1,19 +1,9 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.PCUIC Require Import PCUICAst.
-From MetaCoq.PCUIC Require Import PCUICAstUtils.
-From MetaCoq.PCUIC Require Import PCUICContextConversion.
-From MetaCoq.PCUIC Require Import PCUICContextReduction.
-From MetaCoq.PCUIC Require Import PCUICConversion.
-From MetaCoq.PCUIC Require Import PCUICCumulProp.
-From MetaCoq.PCUIC Require Import PCUICEquality.
-From MetaCoq.PCUIC Require Import PCUICLiftSubst.
-From MetaCoq.PCUIC Require Import PCUICNormal.
-From MetaCoq.PCUIC Require Import PCUICReduction.
-From MetaCoq.PCUIC Require Import PCUICTyping.
-From MetaCoq.PCUIC Require Import PCUICConfluence PCUICSubstitution PCUICClosed PCUICWeakeningEnv PCUICAlpha.
-From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
-From MetaCoq.PCUIC Require Import PCUICOnFreeVars.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICContextConversion PCUICContextReduction
+  PCUICConversion PCUICCumulProp PCUICEquality PCUICLiftSubst PCUICNormal PCUICReduction PCUICTyping 
+  PCUICGlobalEnv PCUICConfluence PCUICSubstitution PCUICClosed PCUICWeakeningEnv PCUICAlpha
+  PCUICWellScopedCumulativity PCUICOnFreeVars.
 
 From MetaCoq.Template Require Import config.
 From MetaCoq.Template Require Import utils.
@@ -47,9 +37,9 @@ Lemma red_ctx_rel_par_conv {cf Σ Γ Γ0 Γ0' Γ1 Γ1'} {wfΣ : wf Σ} :
 Proof.
   intros clΓ0 clΓ1 r0 r1 eq.
   apply red_ctx_rel_red_context_rel, red_context_app_same_left in r0; auto.
-  2:{ now eapply PCUICConfluence.on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
+  2:{ now eapply on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
   apply red_ctx_rel_red_context_rel, red_context_app_same_left in r1; auto.
-  2:{ now eapply PCUICConfluence.on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
+  2:{ now eapply on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
   eapply red_ctx_red_context in r0; eapply red_ctx_red_context in r1.
   eapply PCUICSR.into_closed_red_ctx in r0 => //.
   eapply PCUICSR.into_closed_red_ctx in r1 => //.
@@ -152,7 +142,7 @@ Proof.
         now move/(closed_ctx_on_free_vars (shiftnP #|Γ| xpred0)). }
       rewrite -(declared_minductive_ind_npars decli) -wfp'.
       eapply on_free_vars_ctx_impl; tea.
-      intros i. rewrite PCUICConfluence.closedP_shiftnP.
+      intros i. rewrite closedP_shiftnP.
       eapply shiftnP_up. lia.
   * now eapply All2_rev.
   * apply (untyped_subslet_ass asspars). now len.
@@ -375,7 +365,7 @@ Section fixed.
             { len. rewrite (All2_fold_length a5).
               now setoid_rewrite shiftnP_add in p1. }
             len. rewrite -shiftnP_add (All2_fold_length a5).
-            eapply PCUICParallelReductionConfluence.on_ctx_free_vars_inst_case_context; auto.
+            eapply on_ctx_free_vars_inst_case_context; auto.
             now erewrite -> on_free_vars_ctx_on_ctx_free_vars. }
       eapply (equality_equality_ctx (Γ := Γ ,,, inst_case_predicate_context p') (le':=false)) => //.
       symmetry. eapply red_equality.

@@ -6,7 +6,7 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICSafeLemmata PCUICSubstitution PCUICValidity
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICSafeLemmata PCUICSubstitution PCUICValidity
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
      PCUICWeakeningEnv PCUICContexts PCUICContextConversion PCUICOnFreeVars
@@ -504,14 +504,14 @@ Section TypeOf.
         eapply All2_fold_All2 in conv_pctx.
         unshelve epose proof (eq_context_upto_names_on_free_vars _ _ _ _ conv_pctx); [shelve|..].
         eapply on_free_vars_ind_predicate_context; tea.
-        now rewrite -PCUICConfluence.closedP_shiftnP. }
+        now rewrite -closedP_shiftnP. }
       have cli : is_closed_context (Γ ,,, inst_case_predicate_context p).
       { rewrite on_free_vars_ctx_app cl /=.
         eapply on_free_vars_ctx_inst_case_context; trea.
         rewrite test_context_k_closed_on_free_vars_ctx.
         rewrite (wf_predicate_length_pars wf_pred).
-        rewrite (PCUICClosed.declared_minductive_ind_npars isdecl).
-        now rewrite PCUICConfluence.closedP_shiftnP. }
+        rewrite (declared_minductive_ind_npars isdecl).
+        now rewrite closedP_shiftnP. }
       have eqctx : All2 (PCUICEquality.compare_decls eq eq) (Γ ,,, inst_case_predicate_context p) 
         (Γ ,,, case_predicate_context ci mdecl idecl p).
       { eapply All2_app. 2:reflexivity.
@@ -548,7 +548,7 @@ Section TypeOf.
           inst (ind_params mdecl,,, ind_indices idecl)@[puinst p].
         { eapply validity in Hty.
           rewrite -(firstn_skipn (ci_npar ci) l) in Hty.
-          have eqci := !! (PCUICClosed.declared_minductive_ind_npars isdecl).
+          have eqci := !! (declared_minductive_ind_npars isdecl).
           rewrite eq_npars in eqci.          
           eapply (isType_mkApps_Ind_smash isdecl) in Hty as [sppars' [spargs' cu'']].
           2:{ congruence. }
@@ -711,7 +711,7 @@ Section TypeOf.
         { eapply PCUICWeakeningEnv.on_declared_projection in declp; eauto.
           rewrite closedn_on_free_vars //.
           len. 
-          rewrite -(PCUICClosed.declared_minductive_ind_npars H) /=.
+          rewrite -(declared_minductive_ind_npars H) /=.
           rewrite PCUICClosed.closedn_subst_instance.
           eapply closed_upwards; tea. lia. }
         eapply (substitution_equality (Γ' := projection_context i mdecl idecl u') (Γ'' := [])); auto.

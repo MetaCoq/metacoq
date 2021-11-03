@@ -773,7 +773,7 @@ End Normalization.
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
 
 Section WeakNormalization.
-  Context {cf:checker_flags} (Σ : global_env_ext).
+  Context {cf:checker_flags} {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
   
   Section reducible.
@@ -1258,7 +1258,14 @@ Section WeakNormalization.
       now eapply red_app.
   Qed.
 
-  Lemma eval_ind_canonical t i u args : 
+  Theorem subject_reduction_eval {t u T} :
+    Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
+  Proof.
+    intros Hty Hred.
+    eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
+  Qed.
+
+  Lemma eval_ind_canonical {t i u args} : 
     Σ ;;; [] |- t : mkApps (tInd i u) args -> 
     forall t', eval Σ t t' ->
     construct_cofix_discr (head t').

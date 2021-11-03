@@ -111,7 +111,7 @@ Section All2_fold.
     induction H; constructor; auto. eapply All_decls_impl; tea. eauto.
   Qed.
 
-  Global Instance on_contexts_has_length P l l' : 
+  Global Instance on_contexts_has_length P (l l' : context) : 
     HasLen (All2_fold P l l') #|l| #|l'|.
   Proof. red. apply on_contexts_length. Qed.
   Hint Extern 20 (#|?X| = #|?Y|) =>
@@ -419,6 +419,8 @@ Section ParallelReduction.
 
   where "'pred1_ctx'" := (All2_fold (on_decls pred1))
   and "'pred1_ctx_over' Γ Γ'" := (All2_fold (on_decls (on_decls_over pred1 Γ Γ'))).
+
+  Derive Signature for pred1.
 
   Ltac my_rename_hyp h th :=
     match th with
@@ -1013,31 +1015,7 @@ Proof.
   induction 1. constructor.
   rewrite !fold_context_k_snoc0. now constructor.
 Qed.
-     
-Lemma All2_sym {A B} (P : A -> B -> Type) (ctx : list A) (ctx' : list B) : 
-  All2 P ctx ctx' -> 
-  All2 (fun x y => P y x) ctx' ctx.
-Proof.
-  induction 1; constructor; auto.
-Qed.
 
-  Lemma on_ctx_free_vars_snoc_ass P Γ na ty : 
-    on_ctx_free_vars P Γ ->
-    on_free_vars P ty ->
-    on_ctx_free_vars (PCUICOnFreeVars.shiftnP 1 P) (Γ ,, vass na ty).
-  Proof.
-    now rewrite on_ctx_free_vars_snoc => -> /=; rewrite /on_free_vars_decl /test_decl /=.
-  Qed.
-  
-  Lemma on_ctx_free_vars_snoc_def P Γ na def ty : 
-    on_ctx_free_vars P Γ ->
-    on_free_vars P ty ->
-    on_free_vars P def ->
-    on_ctx_free_vars (PCUICOnFreeVars.shiftnP 1 P) (Γ ,, vdef na def ty).
-  Proof.
-    now rewrite on_ctx_free_vars_snoc => -> /=; rewrite /on_free_vars_decl /test_decl /= => -> ->.
-  Qed.
-  Hint Resolve on_ctx_free_vars_snoc_def on_ctx_free_vars_snoc_ass : pcuic.
   Hint Resolve urenaming_vass urenaming_vdef : pcuic.
 
   Lemma on_contexts_fold_context_k P (f g : nat -> term -> term) ctx ctx' :
@@ -1067,14 +1045,6 @@ Qed.
     now eapply on_contexts_fold_context_k.
   Qed.
 
-  Lemma All2_fold_All_fold_mix_left P Q Γ Γ' :
-    All_fold P Γ ->
-    All2_fold Q Γ Γ' ->
-    All2_fold (fun Γ Γ' d d' => P Γ d × Q Γ Γ' d d') Γ Γ'.
-  Proof.
-    induction 1 in Γ' |- *; intros H; depelim H; constructor; auto.
-  Qed.
-
   Lemma All_decls_on_free_vars_impl P Q R d d' :
     All_decls P d d' ->
     on_free_vars_decl R d ->
@@ -1086,14 +1056,7 @@ Qed.
     now move/andP: H => /= [].
     now move/andP: H => /= [].
   Qed.
-
-  Lemma on_ctx_free_vars_snocS P Γ d : 
-    on_ctx_free_vars (PCUICOnFreeVars.shiftnP (S #|Γ|) P) (d :: Γ) = 
-    on_ctx_free_vars (PCUICOnFreeVars.shiftnP #|Γ| P) Γ && on_free_vars_decl (PCUICOnFreeVars.shiftnP #|Γ| P) d.
-  Proof.
-    rewrite -(shiftnP_add 1).
-    now rewrite on_ctx_free_vars_snoc.
-  Qed.
+  
 
   (** This not only proves that parallel reduction has renaming, it also
       ensures that it only looks at the variables actually used in the term/context.
@@ -1456,7 +1419,6 @@ Qed.
       eapply forall_P0; tea; eauto with fvs.
       repeat (constructor; eauto).
       1-2:now eapply urenaming_vass.
-      now eapply on_ctx_free_vars_snoc_ass.
     - econstructor; tea. solve_all.
     - destruct t => //; constructor; auto.
   Qed.
@@ -2019,13 +1981,6 @@ Section ParallelSubstitution.
     now move: H H0 => /andP[] /= ? ? /andP [] /= //.
   Qed.
   
-  Lemma All2_fold_All_fold_mix_left_inv P Q Γ Γ' :
-    All2_fold (fun Γ Γ' d d' => P Γ d × Q Γ Γ' d d') Γ Γ' ->
-    All_fold P Γ × All2_fold Q Γ Γ'.
-  Proof.
-    induction 1; split; constructor; intuition auto.
-  Qed.
-
   Lemma strong_substitutivity {wfΣ :
    wf Σ}:
     let Pover (Γ Γ' : context) (Δ Δ' : context) :=
@@ -2510,17 +2465,6 @@ Section ParallelSubstitution.
   Qed.
 
   Hint Rewrite subst0_inst : sigma.
-
-  Lemma on_free_vars_all_subst P s : 
-    All (on_free_vars P) s ->
-    forall x, on_free_vars xpredT ((s ⋅n ids) x).
-  Proof.
-    induction 1 => n; rewrite /subst_consn /subst_compose /=.
-    - rewrite nth_error_nil //.
-    - destruct n => /=.
-      eapply on_free_vars_impl; tea. auto.
-      apply IHX.
-  Qed.
 
   Lemma psubst_pred1_subst {wfΣ : wf Σ} {Γ Γ1 Δ Δ1 s s'} :
     on_ctx_free_vars xpredT Γ ->

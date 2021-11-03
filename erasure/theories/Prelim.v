@@ -16,75 +16,6 @@ Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 
-Lemma nth_error_app_inv X (x : X) n l1 l2 :
-  nth_error (l1 ++ l2) n = Some x -> (n < #|l1| /\ nth_error l1 n = Some x) \/ (n >= #|l1| /\ nth_error l2 (n - List.length l1) = Some x).
-Proof.
-  destruct (le_lt_dec #|l1| n).
-  - intros. rewrite nth_error_app2 in H; eauto.
-  - intros. rewrite nth_error_app1 in H; eauto.
-Qed.
-
-Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
-  monad_map f l1 = ret a1 -> All2 (fun a b => f a = ret b) l1 a1.
-Proof.
-  induction l1 in a1 |- *; cbn; intros.
-  - inv H. econstructor.
-  - revert H.
-    case_eq (f a). all: try discriminate. intros b eb.
-    simpl.
-    case_eq (monad_map f l1). all: try discriminate. intros l' el.
-    simpl. intro h. inv h.
-    econstructor ; eauto.
-Qed.
-
-Lemma monad_map_Forall2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
-  monad_map f l1 = Checked a1 -> Forall2 (fun a b => f a = Checked b) l1 a1.
-Proof.
-  intros. now eapply All2_Forall2, monad_map_All2.
-Qed.
-
-Lemma monad_map_length X Y (f : X -> typing_result Y) (l1  : list X) a :
-  monad_map f l1 = Checked a -> #|l1| = #|a|.
-Proof.
-  revert a; induction l1; cbn; intros.
-  - invs H. cbn. congruence.
-  - revert H.
-    case_eq (f a). all: try discriminate. intros x' ex.
-    simpl.
-    case_eq (monad_map f l1). all: try discriminate. intros l' el.
-    simpl. intro h. inv h.
-    simpl. f_equal. eauto.
-Qed.
-
-Lemma monad_map_app X Y (f : X -> typing_result Y) (l1 l2 : list X) a1 a2 :
-  monad_map f l1 = Checked a1 -> monad_map f l2 = Checked a2 -> monad_map f (l1 ++ l2) = Checked (a1 ++ a2).
-Proof.
-  revert a1. induction l1; intros.
-  - cbn in *. invs H. eauto.
-  - cbn in *.
-    revert H.
-    case_eq (f a). all: try discriminate. intros b eb.
-    simpl.
-    case_eq (monad_map f l1). all: try discriminate. intros l' el.
-    simpl. intro h. inv h.
-    rewrite (IHl1 _ el H0). simpl. reflexivity.
-Qed.
-
-Lemma monad_map_app_invs X Y (f : X -> typing_result Y) (l1 l2 : list X) a :
-  monad_map f (l1 ++ l2) = Checked a -> exists a1 a2, monad_map f l1 = Checked a1 /\ monad_map f l2 = Checked a2 /\ (a = a1 ++ a2).
-Proof.
-  intros. revert a H. induction l1; intros.
-  - cbn in *. eauto.
-  - cbn in *.
-    revert H.
-    case_eq (f a). all: try discriminate. intros b eb.
-    simpl.
-    case_eq (monad_map f (l1 ++ l2)). all: try discriminate. intros l' el.
-    simpl. intro h. inv h.
-    destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
-    eexists _,_. rewrite -> H, H0. intuition eauto.
-Qed.
-
 Lemma typing_spine_inv args arg a Σ x2 x3 :
   nth_error args (arg) = Some a ->
   typing_spine Σ [] x2 args x3 ->
@@ -108,15 +39,6 @@ Proof.
   dependent induction sp; constructor; auto.
   now exists A.
 Qed.
-
-Theorem subject_reduction_eval {Σ :global_env_ext} {t u T} {wfΣ : wf Σ} :
-  Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
-Proof.
-  intros Hty Hred.
-  eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
-Qed.
-
-
 
 Lemma typing_spine_eval:
   forall (Σ : global_env_ext) (args args' : list PCUICAst.term) 
@@ -150,85 +72,6 @@ Lemma mkAppBox_repeat n a :
   mkAppBox a n = EAst.mkApps a (repeat EAst.tBox n).
 Proof.
   revert a; induction n; cbn; firstorder congruence.
-Qed.
-
-(** ** Prelim stuff, should move *)
-
-Lemma All2_right_triv {A B} {l : list A} {l' : list B} P :
-  All P l' -> #|l| = #|l'| -> All2 (fun _ b => P b) l l'.
-Proof.
-  induction 1 in l |- *; cbn; intros; destruct l; cbn in * ;
-  try (exfalso ; lia) ; econstructor; eauto.
-Qed.
-
-Lemma All_repeat {A} {n P} x :
-  P x -> @All A P (repeat x n).
-Proof.
-  induction n; cbn; econstructor; eauto.
-Qed.
-
-Lemma Alli_impl {A} {P Q} (l : list A) {n} : Alli P n l -> (forall n x, P n x -> Q n x) -> Alli Q n l.
-Proof. induction 1; try constructor; intuition auto. Defined.
-
-
-Lemma All2_map_left {A B C} (P : A -> C -> Type) l l' (f : B -> A) :
-  All2 (fun x y => P (f x) y) l l' -> All2 P  (map f l) l'.
-Proof. intros. rewrite <- (map_id l'). eapply All2_map; eauto. Qed.
-
-Lemma All2_map_right {A B C} (P : A -> C -> Type) l l' (f : B -> C) :
-  All2 (fun x y => P x (f y)) l l' -> All2 P  l (map f l').
-Proof. intros. rewrite <- (map_id l). eapply All2_map; eauto. Qed.
-
-Lemma Forall2_Forall_right {A B} {P : A -> B -> Prop} {Q : B -> Prop} {l l'} :
-  Forall2 P l l' ->
-  (forall x y, P x y -> Q y) ->
-  Forall Q l'.
-Proof.
-  intros HF H. induction HF; constructor; eauto.
-Qed.
-
-Lemma All2_from_nth_error A B L1 L2 (P : A -> B -> Type) :
-  #|L1| = #|L2| ->
-                (forall n x1 x2, n < #|L1| -> nth_error L1 n = Some x1
-                                      -> nth_error L2 n = Some x2
-                                      -> P x1 x2) ->
-                All2 P L1 L2.
-Proof.
-  revert L2; induction L1; cbn; intros.
-  - destruct L2; inv H. econstructor.
-  - destruct L2; inv H. econstructor.
-    eapply (X 0); cbn; eauto. lia.
-    eapply IHL1. eauto.
-    intros. eapply (X (S n)); cbn; eauto. lia.
-Qed.
-
-Lemma All2_nth_error {A B} {P : A -> B -> Type} {l l'} n t t' :
-  All2 P l l' ->
-  nth_error l n = Some t ->
-  nth_error l' n = Some t' ->
-  P t t'.
-Proof.
-  intros Hall. revert n.
-  induction Hall; destruct n; simpl; try congruence.
-  eauto.
-Qed.
-
-Lemma All_In X (P : X -> Type) (l : list X) x : All P l -> In x l -> squash (P x).
-Proof.
-  induction 1; cbn; intros; destruct H.
-  - subst. econstructor. eauto.
-  - eauto.
-Qed.
-
-Lemma nth_error_skipn A l m n (a : A) :
-  nth_error l (m + n) = Some a ->
-  nth_error (skipn m l) n = Some a.
-Proof.
-  induction m in n, l |- *.
-  - cbn. destruct l; firstorder.
-  - cbn. destruct l.
-    + inversion 1.
-    + eapply IHm.
 Qed.
 
 Lemma decompose_app_rec_inv2 {t l' f l} :
@@ -265,14 +108,6 @@ Proof.
     rewrite !EAstUtils.decompose_app_mkApps in H; eauto. inv H.
 Qed.
 
-(** ** Prelim on eliminations  *)
-(* Lemma universe_family_is_prop_sort: *)
-(*   forall x6 : universe, universe_family x6 = InProp -> Extract.is_prop_sort x6. *)
-(* Proof. *)
-(*   intros x6 Eu. *)
-(* Admitted. *)
-
-
 (** ** Prelim on fixpoints *)
 
 Lemma fix_subst_nth mfix n :
@@ -302,7 +137,6 @@ Qed.
 Lemma subslet_fix_subst `{cf : checker_flags} Σ mfix1 T n :
   wf Σ.1 ->
   Σ ;;; [] |- tFix mfix1 n : T ->
-  (* wf_local Σ (fix_context mfix1) -> *)
   subslet Σ [] (fix_subst mfix1) (fix_context mfix1).
 Proof.
   intro hΣ.

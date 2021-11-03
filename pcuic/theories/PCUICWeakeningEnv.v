@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
-  PCUICTyping PCUICContextRelation.
+  PCUICTyping PCUICContextRelation PCUICGlobalEnv.
 From Equations Require Import Equations.
 
 Require Import ssreflect.
@@ -241,7 +241,6 @@ Qed.
 #[global]
 Hint Resolve extends_wf_local : extends.
 
-
 Lemma global_variance_sigma_mon {cf:checker_flags} {Σ Σ' gr napp v} : 
   wf Σ' -> extends Σ Σ' -> 
   global_variance Σ gr napp = Some v ->
@@ -313,26 +312,6 @@ Proof.
     eapply All_impl; eauto.
     cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
 Qed.
-
-(* Lemma extends_case_predicate_context {cf} Σ Σ' ci p pctx : 
-  extends Σ Σ' -> wf Σ' ->
-  declared_inductive 
-  case_predicate_context Σ ci p = case_predicate_context Σ' ci p.
-Proof.
-  intros [] ext.
-  econstructor; eauto with extends.
-Qed.
-Hint Resolve extends_case_predicate_context : extends. *)
- 
-(* Lemma extends_case_branches_contexts {cf} Σ Σ' ci p brsctx : 
-  case_branches_contexts Σ ci p brsctx ->
-  extends Σ Σ' -> wf Σ' ->
-  case_branches_contexts Σ' ci p brsctx.
-Proof.
-  intros [] ext.
-  econstructor; eauto with extends.
-Qed.
-Hint Resolve extends_case_branches_contexts : extends. *)
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :
   wf Σ' ->
@@ -795,63 +774,6 @@ Qed.
 
 #[global]
 Hint Unfold weaken_env_prop : pcuic.
-
-Lemma declared_constant_inj {Σ c} decl1 decl2 :
-  declared_constant Σ c decl1 -> declared_constant Σ c decl2 -> decl1 = decl2.
-Proof.
-  intros. unfold declared_constant in *. rewrite H in H0.
-  now inv H0.
-Qed.
-
-Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
-  declared_inductive Σ ind mdecl' idecl' ->
-  declared_inductive Σ ind mdecl idecl ->
-  mdecl = mdecl' /\ idecl = idecl'.
-Proof.
-  intros [] []. unfold declared_minductive in *.
-  rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
-Qed.
-
-Lemma declared_constructor_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
-  declared_constructor Σ c mdecl' idecl' cdecl ->
-  declared_constructor Σ c mdecl idecl cdecl' ->
-  mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
-Proof.
-  intros [] []. 
-  destruct (declared_inductive_inj H H1); subst.
-  rewrite H0 in H2. intuition congruence.
-Qed.
-
-Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' pdecl pdecl' p} :
-  declared_projection Σ p mdecl idecl cdecl pdecl ->
-  declared_projection Σ p mdecl' idecl' cdecl' pdecl' ->
-  mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl' /\ pdecl = pdecl'.
-Proof.
-  intros [] []. 
-  destruct (declared_constructor_inj H H1) as [? []]; subst.
-  destruct H0, H2.
-  rewrite H0 in H2. intuition congruence.
-Qed.
-
-Lemma declared_inductive_minductive {Σ ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
-Proof. now intros []. Qed.
-#[global]
-Hint Resolve declared_inductive_minductive : pcuic core.
-
-Coercion declared_inductive_minductive : declared_inductive >-> declared_minductive.
-
-Lemma declared_constructor_inductive {Σ ind mdecl idecl cdecl} :
-  declared_constructor Σ ind mdecl idecl cdecl ->
-  declared_inductive Σ ind.1 mdecl idecl.
-Proof. now intros []. Qed.
-Coercion declared_constructor_inductive : declared_constructor >-> declared_inductive.
-
-Lemma declared_projection_constructor {Σ ind mdecl idecl cdecl pdecl} :
-  declared_projection Σ ind mdecl idecl cdecl pdecl ->
-  declared_constructor Σ (ind.1.1, 0) mdecl idecl cdecl.
-Proof. now intros []. Qed.
-Coercion declared_projection_constructor : declared_projection >-> declared_constructor.
 
 Lemma on_declared_constant `{checker_flags} {Σ cst decl} :
   wf Σ -> declared_constant Σ cst decl ->

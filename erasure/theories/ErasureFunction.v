@@ -3,7 +3,7 @@ From Coq Require Import Program ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
      PCUICReflect PCUICWeakeningEnv PCUICCasesContexts
-     PCUICTyping PCUICInversion PCUICGeneration
+     PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination 
@@ -245,8 +245,7 @@ Section fix_sigma.
     eapply into_closed_red.
     eapply PCUICRedTypeIrrelevance.context_pres_let_bodies_red; [|exact c3].
     econstructor; [|econstructor].
-    eapply PCUICContextRelation.All2_fold_refl.
-    reflexivity. fvs.
+    eapply All2_fold_refl. intros ? ?; reflexivity. fvs.
     now eapply clrel_src in c3.
   Qed.
 
@@ -931,7 +930,7 @@ Proof.
     specialize (Σer kn).
     forward Σer. rewrite KernameSet.singleton_spec //.
     destruct Σer as [[c' [declc' (? & ? & ? & ?)]]|].
-    pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ d declc'). subst x.
+    pose proof (declared_constant_inj _ _ d declc'). subst x.
     now econstructor; eauto.
     destruct H as [mib [mib' [declm declm']]].
     red in declm, d. rewrite d in declm. noconf declm.
@@ -1200,14 +1199,6 @@ Proof.
   destruct kername_eq_dec.
   move=> [= <-]. apply cla.
   now eapply IHΣ.
-Qed.
-
-Lemma All2_All2_mix {A B} {P Q : A -> B -> Type} l l' : 
-  All2 P l l' ->
-  All2 Q l l' ->
-  All2 (fun x y => P x y × Q x y) l l'.
-Proof.
-  induction 1; intros H; depelim H; constructor; auto.
 Qed.
 
 Lemma erases_closed Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' -> PCUICAst.closedn #|Γ| t -> ELiftSubst.closedn #|Γ| t'.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICCasesContexts PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICAlpha PCUICEquality PCUICValidity PCUICParallelReductionConfluence
      PCUICConfluence PCUICContextConversion PCUICUnivSubstitution
@@ -2801,7 +2801,7 @@ Proof.
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length X2)).
     assert(convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
     { clear -wf wfΓ X X2 H2 fixl. 
-      eapply PCUICContextRelation.All2_fold_app => //.
+      eapply All2_fold_app => //.
       apply conv_ctx_refl. clear X.
       eapply All2_fold_impl.
       eapply (conv_decls_fix_context (Γ := Γ)) => //.
@@ -2913,9 +2913,8 @@ Proof.
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length X2)).
     assert(convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
     { clear -wf wfΓ X X2 H2 fixl. 
-      eapply PCUICContextRelation.All2_fold_app => //.
-      apply conv_ctx_refl. clear X.
-      eapply All2_fold_impl.
+      eapply All2_fold_app => //; trea.
+      clear X. eapply All2_fold_impl.
       eapply (conv_decls_fix_context (Γ := Γ)) => //.
       move: H2.
       assert (clΓ := wf_local_closed_context wfΓ).

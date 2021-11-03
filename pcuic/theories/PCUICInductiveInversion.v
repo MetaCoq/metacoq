@@ -2,14 +2,13 @@
 From Coq Require Import Utf8.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnv PCUICWeakening
      PCUICSigmaCalculus (* for smash_context lemmas, to move *)
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICEquality PCUICConfluence PCUICCasesContexts
-     PCUICContextConversion PCUICContextSubst PCUICUnivSubstitution
+     PCUICOnFreeVars PCUICContextConversion PCUICContextSubst PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
-     PCUICSpine PCUICInductives PCUICWellScopedCumulativity
-     PCUICValidity.
+     PCUICSpine PCUICInductives PCUICWellScopedCumulativity PCUICValidity.
 
 From MetaCoq.PCUIC Require Import PCUICParallelReductionConfluence.
 (* for nth_error lemma. should move *)
@@ -27,6 +26,8 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 #[global]
 Hint Rewrite reln_length : len.
 
+#[global] Hint Resolve f_equal_nat : arith.
+
 Ltac substu := autorewrite with substu => /=.
 
 Tactic Notation "substu" "in" hyp(id) :=
@@ -34,18 +35,6 @@ Tactic Notation "substu" "in" hyp(id) :=
 
 Lemma conv_eq_ctx {cf:checker_flags} Σ Γ Γ' T U : Σ ;;; Γ |- T = U -> Γ = Γ' -> Σ ;;; Γ' |- T = U.
 Proof. now intros H ->. Qed.
-
-(* TODO Move *)
-
-(* Lemma spine_subst_extended_subst {cf:checker_flags} {Σ Γ inst s Δ} : 
-  spine_subst Σ Γ inst s Δ ->
-  forall Γ', subst_context s 0 Γ' s = map (subst0 (List.rev inst)) (extended_subst Δ 0).
-Proof.
-  intros [_ _ sp _]. now apply context_subst_subst_extended_subst in sp.
-Qed.
- *)
-
-Definition ind_subst mdecl ind u := inds (inductive_mind ind) u (ind_bodies mdecl).
 
 Ltac pcuic := intuition eauto 5 with pcuic ||
   (try solve [repeat red; cbn in *; intuition auto; eauto 5 with pcuic || (try lia || congruence)]).
@@ -62,8 +51,6 @@ Proof.
   move=> wfΣ wfΓ declc Hu.
   eapply validity. eapply type_Construct; eauto.
 Qed.
-
-#[global] Hint Resolve f_equal_nat : arith.
 
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
@@ -473,15 +460,6 @@ Proof.
   eexists. eauto.
 Qed.
 
-Definition R_ind_universes  {cf:checker_flags} (Σ : global_env_ext) ind n i i' :=
-  R_global_instance Σ (eq_universe (global_ext_constraints Σ))
-    (leq_universe (global_ext_constraints Σ)) (IndRef ind) n i i'.
-
-Lemma subst_empty_eq k : subst [] k =1 id.
-Proof. intros x; now rewrite subst_empty. Qed.
-
-#[global] Hint Constructors subslet : pcuic.
-
 Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
   inst ind' i' args args' : 
   wf Σ.1 ->
@@ -803,51 +781,6 @@ Qed.
 
 Notation "⋆" := ltac:(solve [pcuic]) (only parsing).
 
-(*Lemma build_branches_type_red {cf:checker_flags} (p p' : term) (ind : inductive)
-	(mdecl : PCUICAst.mutual_inductive_body)
-    (idecl : PCUICAst.one_inductive_body) (pars : list term) 
-    (u : Instance.t) (brtys : list (nat × term)) Σ Γ :
-  wf Σ ->
-  red1 Σ Γ p p' ->
-  map_option_out (build_branches_type ind mdecl idecl pars u p) = Some brtys ->
-  ∑ brtys' : list (nat × term),
-    map_option_out (build_branches_type ind mdecl idecl pars u p') =
-    Some brtys' × All2 (on_Trel_eq (red1 Σ Γ) snd fst) brtys brtys'.
-Proof.
-  intros wfΣ redp.
-  unfold build_branches_type.
-  unfold mapi.
-  generalize 0 at 3 6.
-  induction (ind_ctors idecl) in brtys |- *. simpl.
-  intros _ [= <-]. exists []; split; auto.
-  simpl. intros n.
-  destruct a. destruct p0.
-  destruct (instantiate_params (subst_instance u (PCUICAst.ind_params mdecl))
-  pars
-  (subst0 (inds (inductive_mind ind) u (PCUICAst.ind_bodies mdecl))
-     (subst_instance u t))).
-  destruct decompose_prod_assum.
-  destruct chop.
-  destruct map_option_out eqn:Heq.
-  specialize (IHl _ _ Heq).
-  destruct IHl. intros [= <-].
-  exists ((n0,
-  PCUICAst.it_mkProd_or_LetIn c
-    (mkApps (lift0 #|c| p')
-       (l1 ++
-        [mkApps (tConstruct ind n u) (l0 ++ PCUICAst.to_extended_list c)]))) :: x).
-  destruct p0 as [l' r'].
-  rewrite {}l'.
-  split; auto.
-  constructor; auto. simpl. split; auto.
-  2:discriminate. clear Heq.
-  2:discriminate.
-  eapply red1_it_mkProd_or_LetIn.
-  eapply red1_mkApps_f.
-  eapply (weakening_red1 Σ Γ [] c) => //.
-Qed.
-*)
-
 Notation decl_equality Σ Γ := (All_decls_alpha_le false
   (fun (le : bool) (x0 y0 : term) => Σ ;;; Γ ⊢ x0 ≤[le] y0)).
 
@@ -880,7 +813,8 @@ Proof.
   eapply (IHa (vass _ _ :: Γ') (vass _ _ :: Γ'')).
   cbn; constructor => //. constructor; eauto.
   depelim X. eauto.
-  intros. now rewrite !app_context_assoc.
+  intros. red.
+  now rewrite ![_ ,,, _]app_context_assoc.
 Qed.
 
 Lemma conv_decls_fix_context {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ mfix mfix1} :
@@ -2390,25 +2324,8 @@ Proof.
   intros wf wf'.
   eapply context_equality_rel_app.
   apply into_context_equality; eauto with fvs.
-  apply All2_fold_app; auto.
-  apply All2_fold_refl. reflexivity.
+  apply All2_fold_app; auto. reflexivity.
 Qed.
-(* 
-Lemma into_context_equality_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
-  (c : conv_ctx_rel Σ Γ Δ Δ') : 
-  wf_local Σ (Γ ,,, Δ) ->
-  wf_local Σ (Γ ,,, Δ') ->
-  context_equality_rel false Σ Γ Δ Δ'.
-Proof.
-  intros wf wf'.
-  eapply context_equality_rel_app.
-  apply into_context_equality; eauto with fvs.
-  apply All2_fold_app; auto.
-  now rewrite (All2_fold_length c).
-  apply All2_fold_refl. reflexivity.
-Qed. *)
-
-Import PCUICOnFreeVars.
 
 Lemma is_closed_context_weaken Γ Δ : 
   is_closed_context Γ ->

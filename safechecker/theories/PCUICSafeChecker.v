@@ -474,7 +474,7 @@ Section CheckEnv.
     
   Program Fixpoint check_leq_context (le : bool) (Σ : wf_env_ext) Γ Δ : typing_result (∥ eq_context le Σ Σ Γ Δ ∥) :=
     match Γ, Δ with
-    | [], [] => ret (sq All2_fold_nil)
+    | [], [] => ret (sq (All2_fold_nil _))
     | decl :: Γ, decl' :: Δ => 
       cctx <- check_leq_context le Σ Γ Δ ;;
       cdecl <- check_eq_decl le Σ decl decl' ;;

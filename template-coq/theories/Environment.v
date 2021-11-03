@@ -627,42 +627,9 @@ Module Environment (T : Term).
   Proof.
     intros []; constructor; auto; reflexivity.
   Qed.
-  
-  Inductive All2_fold {P : context -> context -> context_decl -> context_decl -> Type}
-            : forall (Γ Γ' : context), Type :=
-  | All2_fold_nil : All2_fold nil nil
-  | All2_fold_cons {d d' Γ Γ'} : All2_fold Γ Γ' -> P Γ Γ' d d' -> All2_fold (d :: Γ) (d' :: Γ').
 
-  Derive Signature NoConfusion for All2_fold.
-  Arguments All2_fold P Γ Γ' : clear implicits.
-
-  Lemma All2_fold_length {P Γ Γ'} :
-    All2_fold P Γ Γ' -> #|Γ| = #|Γ'|.
-  Proof.
-    induction 1; cbn; congruence.
-  Qed.
-
-  Lemma All2_fold_impl {P Q Γ Γ'} :
-    All2_fold P Γ Γ' -> (forall Γ Γ' d d', P Γ Γ' d d' -> Q Γ Γ' d d') ->
-    All2_fold Q Γ Γ'.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
-  Definition All_over {A} (P : context -> context -> A -> A -> Type) Γ Γ' :=
-    fun Δ Δ' => P (Γ ,,, Δ) (Γ' ,,, Δ').
-
-  Lemma All2_fold_app_inv :
-    forall P (Γ Γ' Γl Γr : context),
-      All2_fold P Γ Γl ->
-      All2_fold (All_over P Γ Γl) Γ' Γr ->
-      All2_fold P (Γ ,,, Γ') (Γl ,,, Γr).
-  Proof.
-    induction 2; auto.
-    - simpl. constructor; auto.
-  Qed.
-
-  Definition All2_fold_over P Γ Γ' := All2_fold (All_over P Γ Γ').
+  Definition All2_fold_over (P : context -> context -> context_decl -> context_decl -> Type) Γ Γ' := 
+    All2_fold (All_over P Γ Γ').
 
   Notation on_decls P := (fun Γ Γ' => All_decls (P Γ Γ')).
   Notation on_contexts P := (All2_fold (on_decls P)).

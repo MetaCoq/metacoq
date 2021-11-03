@@ -3,7 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCumulativity
-  PCUICTyping PCUICClosed PCUICEquality PCUICWeakeningEnv
+  PCUICTyping PCUICGlobalEnv PCUICClosed PCUICEquality PCUICWeakeningEnv
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars.
 
 Require Import ssreflect ssrbool.
@@ -1813,10 +1813,7 @@ Proof.
         { simpl. rewrite -rename_cstr_branch_context //.
           1:eapply (declared_inductive_closed_params isdecl).
           rewrite rename_closedn_ctx //.
-          eapply closed_cstr_branch_context.
-          1:eapply (declared_minductive_closed isdecl).
-          eapply (declared_constructor_closed (c:=(ci.(ci_ind),i))). split; tea.
-        }
+          eapply closed_cstr_branch_context. split; tea. }
         cbn -[case_branch_type].
         rewrite case_branch_type_fst.
         rewrite -rename_case_branch_context_gen //.

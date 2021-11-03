@@ -87,7 +87,7 @@ Proof.
   intros []; split; tc.
 Qed.
 
-Lemma All2_fold_refl P : 
+Lemma All2_fold_refl {A} {P : list A -> list A -> A -> A -> Type} : 
   (forall Γ, Reflexive (P Γ Γ)) ->
   Reflexive (All2_fold P).
 Proof.
@@ -612,7 +612,7 @@ Lemma eq_context_gen_eq_context_upto Σ Re Rle Γ Γ' :
   eq_context_upto Σ Re Rle Γ Γ'.
 Proof.
   intros.
-  eapply PCUICEnvironment.All2_fold_impl; tea.
+  eapply All2_fold_impl; tea.
   cbn; intros ????. move => []; constructor; subst; auto; reflexivity.
 Qed.
 
@@ -711,7 +711,7 @@ Global Instance eq_context_upto_univ_subst_preserved {cf:checker_flags} Σ
 Proof.
   intros φ φ' u vc Γ Δ eqc.
   eapply All2_fold_map.
-  eapply PCUICEnvironment.All2_fold_impl; tea.
+  eapply All2_fold_impl; tea.
   cbn; intros.
   destruct X; constructor; cbn; auto; eapply eq_term_upto_univ_subst_preserved; tc; eauto.
 Qed.
@@ -722,7 +722,7 @@ Lemma eq_context_gen_eq_univ_subst_preserved u Γ Δ :
 Proof.
   intros onctx.
   eapply All2_fold_map.
-  eapply PCUICEnvironment.All2_fold_impl; tea.
+  eapply All2_fold_impl; tea.
   cbn; intros.
   destruct X; constructor; cbn; auto; now subst.
 Qed.
@@ -1703,21 +1703,6 @@ Proof.
   rewrite test_context_k_closed_on_free_vars_ctx //.
 Qed.
 
-
-Lemma on_free_vars_ctx_app P Γ Δ : 
-  on_free_vars_ctx P (Γ ,,, Δ) =
-  on_free_vars_ctx P Γ && on_free_vars_ctx (shiftnP #|Γ| P) Δ.
-Proof.
-  rewrite /on_free_vars_ctx List.rev_app_distr alli_app. f_equal.
-  rewrite List.rev_length alli_shift.
-  setoid_rewrite shiftnP_add.
-  setoid_rewrite Nat.add_comm at 1.
-  now setoid_rewrite Nat.add_0_r.
-Qed.
-
-#[global] Hint Extern 4 (is_true (on_free_vars_ctx _ (_ ,,, _))) =>
-  rewrite on_free_vars_ctx_app : fvs.
-
 Lemma on_free_vars_ctx_inst_case_context_xpredT (Γ : list context_decl) (pars : list term)
   (puinst : Instance.t) (pctx : list context_decl) :
   forallb (on_free_vars xpredT) pars ->
@@ -1777,14 +1762,12 @@ Ltac inv_on_free_vars_xpredT :=
   | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
     rewrite -> test_context_k_closed_on_free_vars_ctx in H
   end.
-
-#[global] Hint Extern 4 => progress (unfold PCUICCases.inst_case_predicate_context) : fvs.
-#[global] Hint Extern 4 => progress (unfold PCUICCases.inst_case_branch_context) : fvs.
 #[global] Hint Resolve on_free_vars_ctx_closed_xpredT : fvs.
-#[global] Hint Resolve on_ctx_free_vars_snoc_ass on_ctx_free_vars_snoc_def : fvs.
+
 #[global] Hint Resolve red1_on_free_vars red_on_free_vars : fvs.
 #[global] Hint Resolve pred1_on_free_vars pred1_on_ctx_free_vars : fvs.
-#[global] Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
+#[global] Hint Extern 4 => progress (unfold PCUICCases.inst_case_predicate_context) : fvs.
+#[global] Hint Extern 4 => progress (unfold PCUICCases.inst_case_branch_context) : fvs.
 #[global] Hint Extern 3 (is_true (on_ctx_free_vars xpredT _)) =>
   rewrite on_ctx_free_vars_xpredT_snoc : fvs.
 #[global] Hint Extern 3 (is_true (on_free_vars_ctx (shiftnP _ xpredT) _)) =>
@@ -1793,31 +1776,7 @@ Ltac inv_on_free_vars_xpredT :=
 #[global] Hint Resolve on_ctx_free_vars_fix_context_xpredT : fvs.
 #[global] Hint Resolve on_free_vars_ctx_fix_context_xpredT : fvs.
 #[global] Hint Resolve on_free_vars_ctx_inst_case_context_xpredT : fvs.
-#[global] Hint Extern 3 (is_true (_ && _)) => apply/andP; idtac : fvs.
 #[global] Hint Extern 3 (is_true (on_free_vars (shiftnP _ xpredT) _)) => rewrite shiftnP_xpredT : fvs.
-#[global] Hint Extern 4 (is_true (on_ctx_free_vars (shiftnP _ xpred0) _)) => 
-  rewrite on_free_vars_ctx_on_ctx_free_vars : fvs.
-
-Lemma on_free_vars_ctx_snoc_ass P Γ na t :
-  on_free_vars_ctx P Γ ->
-  on_free_vars (shiftnP #|Γ| P) t ->
-  on_free_vars_ctx P (Γ ,, vass na t).
-Proof.
-  intros onΓ ont.
-  rewrite on_free_vars_ctx_snoc onΓ /=; eauto with fvs.
-Qed.
-
-Lemma on_free_vars_ctx_snoc_def P Γ na b t :
-  on_free_vars_ctx P Γ ->
-  on_free_vars (shiftnP #|Γ| P) b ->
-  on_free_vars (shiftnP #|Γ| P) t ->
-  on_free_vars_ctx P (Γ ,, vdef na b t).
-Proof.
-  intros onΓ ont.
-  rewrite on_free_vars_ctx_snoc onΓ /=; eauto with fvs.
-Qed.
-
-#[global] Hint Resolve on_free_vars_ctx_snoc_ass on_free_vars_ctx_snoc_def : fvs.
 
 Section RedPred.
   Context {cf : checker_flags}.
@@ -1952,14 +1911,14 @@ Section RedPred.
       eapply pred1_refl.
     - constructor; simpl; subst; intuition auto.
       eapply pred1_refl.
-    - eapply (All2_fold_app _ _ [d] [_]); pcuic.
+    - eapply (All2_fold_app (Γ' := [d]) (Γr := [_])); pcuic.
       destruct d as [na [b|] ty]; constructor; pcuic. 
       constructor; simpl; subst; auto; intuition pcuic.
-      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
-      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic. apply IHX.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic. apply IHX.
       simpl; subst; intuition pcuic.
       constructor.
-      eapply pred1_refl_gen. eapply All2_fold_app; pcuic.
+      eapply pred1_refl_gen. eapply All2_fold_app; pcuic. apply IHX.
   Qed.
 
   Lemma prod_ind {A B} : A -> (A -> B) -> A × B.
@@ -2017,10 +1976,10 @@ Section RedPred.
       eapply OnOne2_All2; pcuic; simpl;
         unfold on_Trel; simpl; intros; intuition auto; noconf b0; try inv_on_free_vars_xpredT; eauto with fvs.
         rewrite H0. eapply pred1_refl_gen => //.
-        eapply All2_fold_app; pcuic. congruence.
+        eapply All2_fold_app; pcuic. apply X0. congruence.
         eapply pred1_refl.
         apply pred1_refl_gen => //.
-        eapply All2_fold_app; pcuic.
+        eapply All2_fold_app; pcuic. apply X0.
 
     - assert (fix_context mfix0 = fix_context mfix1).
       { clear -X.
@@ -2056,10 +2015,10 @@ Section RedPred.
       eapply OnOne2_All2; pcuic; simpl;
         unfold on_Trel; simpl; intros; intuition auto; noconf b0; try inv_on_free_vars_xpredT; eauto with fvs.
         rewrite H0. eapply pred1_refl_gen => //.
-        eapply All2_fold_app; pcuic. congruence.
+        eapply All2_fold_app; pcuic; tas. congruence.
         eapply pred1_refl.
         apply pred1_refl_gen => //.
-        eapply All2_fold_app; pcuic.
+        eapply All2_fold_app; pcuic; tas.
 
     - assert (fix_context mfix0 = fix_context mfix1).
       { clear -X.
@@ -2091,22 +2050,6 @@ Section PredRed.
   Context {Σ : global_env}.
   Context (wfΣ : wf Σ).
 
-  Lemma on_free_vars_ctx_All_fold P Γ : 
-    on_free_vars_ctx P Γ <~> All_fold (fun Γ => on_free_vars_decl (shiftnP #|Γ| P)) Γ.
-  Proof.
-    split.
-    - now move/alli_Alli/Alli_rev_All_fold.
-    - intros a. apply (All_fold_Alli_rev (fun k => on_free_vars_decl (shiftnP k P)) 0) in a.
-      now apply alli_Alli.
-  Qed.
-
-  Lemma All2_fold_All_left P Γ Γ' :
-    All2_fold (fun Γ _ d _ => P Γ d) Γ Γ' ->
-    All_fold P Γ.
-  Proof.
-    induction 1; constructor; auto.
-  Qed.
-
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
   Lemma pred1_red Γ Γ' : forall M N, pred1 Σ Γ Γ' M N -> 
     on_free_vars_ctx xpredT Γ ->
@@ -2122,7 +2065,7 @@ Section PredRed.
     - (* Contexts *)
       eapply on_free_vars_ctx_All_fold in H.
       eapply All2_fold_All_fold_mix_left in X0; tea.
-      eapply PCUICContextRelation.All2_fold_impl_ind. exact X0.
+      eapply All2_fold_impl_ind. exact X0.
       intros ???? IH IH' [].
       eapply All2_fold_prod_inv in IH as [].
       eapply All2_fold_All_left in a0.
@@ -2137,7 +2080,7 @@ Section PredRed.
       intuition auto.
       eapply on_free_vars_ctx_All_fold in onΔ.
       eapply All2_fold_All_fold_mix_left in X3; tea.
-      eapply PCUICContextRelation.All2_fold_impl_ind. exact X3.
+      eapply All2_fold_impl_ind. exact X3.
       intros ???? IH IH' [].
       eapply All2_fold_prod_inv in IH as [].
       eapply All2_fold_All_left in a0.
@@ -2269,14 +2212,6 @@ Section PredRed.
     - eapply red_evar; eauto with fvs. solve_all.
   Qed.
 
-  Lemma All2_fold_mix P Q x y : All2_fold P x y -> All2_fold Q x y ->
-    All2_fold (fun Γ Γ' t T => 
-      (P Γ Γ' t T) * (Q Γ Γ' t T))%type x y.
-  Proof.
-    intros HP HQ; induction HP; depelim HQ; try (simpl in H; noconf H); 
-      try (simpl in H0; noconf H0); constructor; intuition eauto.
-  Qed.
-
   Lemma pred1_red_r_gen P Γ Γ' Δ Δ' : forall M N,
     on_free_vars (closedP #|Γ ,,, Δ| P) M ->
     on_ctx_free_vars (closedP #|Γ ,,, Δ| P) (Γ' ,,, Δ) ->
@@ -2388,32 +2323,6 @@ Section PredRed.
     simpl. eapply pred1_ctx_refl.
   Qed.
 
-  Lemma on_free_vars_ctx_any_xpredT P Γ : 
-    on_free_vars_ctx P Γ -> on_free_vars_ctx xpredT Γ.
-  Proof.
-    intros. eapply on_free_vars_ctx_impl; tea => //.
-  Qed.
-
-  Lemma closedP_shiftnP (n : nat) : closedP n xpredT =1 shiftnP n xpred0.
-  Proof. 
-    rewrite /closedP /shiftnP => i.
-    destruct Nat.ltb => //.
-  Qed.
-
-  Lemma on_free_vars_ctx_on_ctx_free_vars_closedP Γ :
-    on_ctx_free_vars (closedP #|Γ| xpredT) Γ =
-    on_free_vars_ctx xpred0 Γ.
-  Proof.
-    rewrite closedP_shiftnP on_free_vars_ctx_on_ctx_free_vars //.
-  Qed.
-  
-  Lemma on_free_vars_ctx_on_ctx_free_vars_closedP_impl Γ :
-    on_free_vars_ctx xpred0 Γ ->
-    on_ctx_free_vars (closedP #|Γ| xpredT) Γ.
-  Proof.
-    now rewrite on_free_vars_ctx_on_ctx_free_vars_closedP.
-  Qed.
-
   Lemma pred1_red_r {P Γ Γ' M N} :
     pred1 Σ Γ Γ' M N -> 
     on_free_vars_ctx P Γ' ->
@@ -2427,23 +2336,7 @@ Section PredRed.
     eapply on_free_vars_ctx_impl; tea => //.
     eapply on_free_vars_impl; tea => //.
   Qed.
-
-  (*Lemma pred1_red_r' {P Γ Γ' M N} :
-    pred1 Σ Γ Γ' M N -> 
-    on_free_vars_ctx P Γ' ->
-    on_free_vars (closedP #|Γ| P) M ->
-    red Σ Γ' M N.
-  Proof.
-    intros p onctx onM.
-    pose proof (pred1_pred1_ctx _ p). eapply All2_fold_length in X.
-    eapply pred1_pred1_r in p; tea.
-    eapply pred1_red in p; tea.
-    eapply on_free_vars_ctx_impl; tea => //.
-    eapply on_free_vars_impl; tea => //.
-    rewrite X.
-    now eapply on_free_vars_ctx_on_ctx_free_vars_closedP.
-  Qed.*)
-
+  
 End PredRed.
 
 #[global] Hint Resolve on_free_vars_ctx_any_xpredT : fvs.
@@ -3529,10 +3422,10 @@ Section RedConfluence.
   Lemma red_ctx_red_context Γ Δ : red_ctx Σ Γ Δ <~> red_context Σ Γ Δ.
   Proof.
     split; intros.
-    - red. eapply PCUICEnvironment.All2_fold_impl; tea.
+    - red. eapply All2_fold_impl; tea.
       intros ???? []; constructor; auto.
     - red in X |- *.
-      eapply PCUICEnvironment.All2_fold_impl; tea.
+      eapply All2_fold_impl; tea.
       intros ???? []; constructor; auto.
   Qed.
   
@@ -3682,7 +3575,7 @@ Section RedConfluence.
   Proof.
     move=> Hctx.
     eapply context_pres_let_bodies_red1.
-    eapply PCUICEnvironment.All2_fold_impl; tea => /= _ _ ? ? [] /=;
+    eapply All2_fold_impl; tea => /= _ _ ? ? [] /=;
     rewrite /pres_let_bodies /= //; intros; congruence.
   Qed.
 

@@ -182,6 +182,7 @@ struct
       Constr.VMcast -> Lazy.force kVmCast
     | Constr.DEFAULTcast -> Lazy.force kCast
     | Constr.NATIVEcast -> Lazy.force kNative
+    | Constr.REVERTcast -> Lazy.force kRevertCast
 
   let string_of_level s =
     to_string (Univ.Level.to_string s)

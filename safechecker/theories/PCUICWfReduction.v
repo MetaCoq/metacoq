@@ -210,10 +210,6 @@ Section fix_sigma.
     Unshelve.
     - eapply red_welltyped; sq.
       3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
-    - eapply red_welltyped in H; eauto. all:sq; eauto.
-      eapply redp_red in redt'.
-      now transitivity t''.
-    - eapply red_welltyped; eauto; sq; eauto.
   Qed.
 
   Global Instance wf_hnf_subterm : WellFounded hnf_subterm_rel.

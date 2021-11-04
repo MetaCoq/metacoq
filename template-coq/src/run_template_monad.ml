@@ -119,10 +119,10 @@ let unquote_set trm =
   | _ -> not_supported_verb trm "unquote_set"
 
 
-let unquote_constraints evm c (* of type constraints *) : _ * Constraints.t =
+let unquote_constraints evm c (* of type constraints *) : _ * Univ.Constraint.t =
   let c = unquote_set c in
-  List.fold_left (fun (evm, set) c -> let evm, c = unquote_univ_constraint evm c in evm, Constraints.add c set)
-                 (evm, Constraints.empty) c
+  List.fold_left (fun (evm, set) c -> let evm, c = unquote_univ_constraint evm c in evm, Univ.Constraint.add c set)
+                 (evm, Univ.Constraint.empty) c
 
 
 let denote_variance trm (* of type Variance *) : Variance.t =
@@ -138,10 +138,10 @@ let denote_variance trm (* of type Variance *) : Variance.t =
   let evm, c = unquote_constraints evm c in
   evm, Univ.UContext.make (i, c) *)
 
-let unquote_levelset evm c (* of type Level.Set.t *) : _ * Level.Set.t =
+let unquote_levelset evm c (* of type Level.Set.t *) : _ * Univ.LSet.t =
   let c = unquote_set c in
-  List.fold_left (fun (evm, set) c -> let evm, c = unquote_level evm c in evm, Level.Set.add c set)
-                 (evm, Level.Set.empty) c
+  List.fold_left (fun (evm, set) c -> let evm, c = unquote_level evm c in evm, Univ.LSet.add c set)
+                 (evm, Univ.LSet.empty) c
 
 let denote_ucontextset evm trm (* of type ContextSet.t *) : _ * ContextSet.t =
   let i, c = unquote_pair trm in
@@ -161,7 +161,7 @@ let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
   let evm, c = unquote_constraints evm c in
   evm, (UContext.make (vars, c))
 
-let denote_aucontext evm trm (* of type AbstractContext.t *) : _ * AbstractContext.t =
+let denote_aucontext evm trm (* of type AbstractContext.t *) : _ * AUContext.t =
   let i, c = unquote_pair trm in
   let l = unquote_list i in
   let vars = List.mapi (fun i l -> Level.var i) l in
@@ -183,7 +183,7 @@ let _denote_variances evm trm : _ * Variance.t array option =
 (* todo : stick to Coq implem *)
 type universe_context_type =
   | Monomorphic_uctx of Univ.ContextSet.t
-  | Polymorphic_uctx of Univ.AbstractContext.t
+  | Polymorphic_uctx of Univ.AUContext.t
 
 let _to_entry_inductive_universes = function
   | Monomorphic_uctx ctx -> Monomorphic_entry ctx

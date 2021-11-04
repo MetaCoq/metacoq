@@ -92,11 +92,11 @@ sig
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
-  val quote_univ_constraints : Univ.Constraints.t -> quoted_univ_constraints
+  val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
   val quote_univ_contextset : Univ.ContextSet.t -> quoted_univ_contextset
   val quote_variance : Univ.Variance.t -> quoted_variance
-  val quote_abstract_univ_context : Univ.AbstractContext.t -> quoted_abstract_univ_context
+  val quote_abstract_univ_context : Univ.AUContext.t -> quoted_abstract_univ_context
 
   val mkMonomorphic_entry : quoted_univ_contextset -> quoted_universes_entry
   val mkPolymorphic_entry : quoted_name list -> quoted_univ_context -> quoted_universes_entry
@@ -268,11 +268,12 @@ struct
         let q_relevance = Q.quote_relevance ci.Constr.ci_relevance in
         let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env par in acc, qt) acc pars in 
         let qu = Q.quote_univ_instance u in
-        let pctx = CaseCompat.case_predicate_context (snd env) ci u pars predctx in 
+        let parsl =  Array.to_list pars in
+        let pctx = CaseCompat.case_predicate_context (snd env) ci u parsl predctx in 
         let qpctx = quote_name_annots predctx in
         let (qpred,acc) = quote_term acc (push_rel_context pctx env) pred in
         let (qdiscr,acc) = quote_term acc env discr in
-        let cbrs = CaseCompat.case_branches_contexts (snd env) ci u pars brs in  
+        let cbrs = CaseCompat.case_branches_contexts (snd env) ci u parsl brs in  
         let (branches,acc) =
           CArray.fold_left2 (fun (bodies,acc) (brnas, brctx, bbody) narg ->
             let (qbody,acc) = quote_term acc (push_rel_context brctx env) bbody in
@@ -364,9 +365,9 @@ struct
           let projs, acc =
             match mib.Declarations.mind_record with
             | PrimRecord [|id, csts, relevance, ps|] ->  (* TODO handle mutual records *)
-                let ctxwolet = Vars.smash_rel_context mib.mind_params_ctxt in
+                let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
                 let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
-                                        Context.Rel.instance Constr.mkRel 0 ctxwolet) in
+                                        Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
                 let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
                 let envpars = push_rel_context (indbinder :: ctxwolet) env in
                 let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->

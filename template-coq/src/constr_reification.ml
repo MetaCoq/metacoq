@@ -52,7 +52,7 @@ struct
   let resolve (tm : string) : Constr.t Lazy.t =
     lazy (
       let tm_ref = Coqlib.lib_ref tm in
-      UnivGen.constr_of_monomorphic_global (Global.env ()) tm_ref
+      UnivGen.constr_of_monomorphic_global tm_ref
     )
     (* gen_constant_in_modules contrib_name [path] tm *)
 

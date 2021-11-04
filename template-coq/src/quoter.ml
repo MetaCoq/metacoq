@@ -440,7 +440,7 @@ struct
               | Def cs -> Some cs
               | OpaqueDef lc ->
                 if bypass then
-                  let c, univs = Global.force_proof Library.indirect_accessor lc in
+                  let c, univs = Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) lc in
                   let () = match univs with
                   | Opaqueproof.PrivateMonomorphic () -> ()
                   | Opaqueproof.PrivatePolymorphic (n, csts) -> if not (Univ.ContextSet.is_empty csts && Int.equal n 0) then 
@@ -536,7 +536,7 @@ since  [absrt_info] is a private type *)
       | Def cs -> Some (quote_term env cs)
       | OpaqueDef cs ->
         if bypass
-        then Some (quote_term env (fst (Global.force_proof Library.indirect_accessor cs)))
+        then Some (quote_term env (fst (Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) cs)))
         else None
       | Primitive _ -> failwith "Primitive types not supported by TemplateCoq"
     in

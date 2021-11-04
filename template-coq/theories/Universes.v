@@ -1240,18 +1240,16 @@ Module Instance.
 End Instance.
 
 Module UContext.
-  Definition t := list name × (Instance.t × ConstraintSet.t).
+  Definition t := Instance.t × ConstraintSet.t.
 
-  Definition make' : Instance.t -> ConstraintSet.t -> Instance.t × ConstraintSet.t := pair.
+  Definition make : Instance.t -> ConstraintSet.t -> t := pair.
 
-  Definition make (ids : list name) (inst_ctrs : Instance.t × ConstraintSet.t) : t := (ids, inst_ctrs).
+  Definition empty : t := (Instance.empty, ConstraintSet.empty).
 
-  Definition empty : t := (nil, (Instance.empty, ConstraintSet.empty)).
+  Definition instance : t -> Instance.t := fst.
+  Definition constraints : t -> ConstraintSet.t := snd.
 
-  Definition instance : t -> Instance.t := fun x => fst (snd x).
-  Definition constraints : t -> ConstraintSet.t := fun x => snd (snd x).
-
-  Definition dest : t -> list name × (Instance.t * ConstraintSet.t) := fun x => x.
+  Definition dest : t -> Instance.t * ConstraintSet.t := fun x => x.
 End UContext.
 
 Module AUContext.
@@ -1260,10 +1258,10 @@ Module AUContext.
   Definition make (ids : list name) (ctrs : ConstraintSet.t) : t := (ids, ctrs).
   Definition repr (x : t) : UContext.t :=
     let (u, cst) := x in
-    (u, (mapi (fun i _ => Level.Var i) u, cst)).
+    (mapi (fun i _ => Level.Var i) u, cst).
 
   Definition levels (uctx : t) : LevelSet.t :=
-    LevelSetProp.of_list (fst (snd (repr uctx))).
+    LevelSetProp.of_list (fst (repr uctx)).
 End AUContext.
 
 Module ContextSet.
@@ -1316,7 +1314,7 @@ Definition levels_of_udecl u :=
 Definition constraints_of_udecl u :=
   match u with
   | Monomorphic_ctx ctx => snd ctx
-  | Polymorphic_ctx ctx => snd (snd (AUContext.repr ctx))
+  | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
   end.
 
 Definition univ_le_n {cf:checker_flags} n u u' := 
@@ -1864,19 +1862,19 @@ Definition string_of_universe_instance u :=
 
 Inductive universes_entry :=
 | Monomorphic_entry (ctx : ContextSet.t)
-| Polymorphic_entry (ctx : UContext.t).
+| Polymorphic_entry (names : list name) (ctx : UContext.t).
 Derive NoConfusion for universes_entry.
 
 Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
   match u with
-  | Polymorphic_ctx ctx => Polymorphic_entry (Universes.AUContext.repr ctx)
+  | Polymorphic_ctx ctx => Polymorphic_entry (fst ctx) (Universes.AUContext.repr ctx)
   | Monomorphic_ctx ctx => Monomorphic_entry ctx
   end.
 
 Definition polymorphic_instance uctx :=
   match uctx with
   | Monomorphic_ctx c => Instance.empty
-  | Polymorphic_ctx c => fst (snd (AUContext.repr c))
+  | Polymorphic_ctx c => fst (AUContext.repr c)
   end.
 (* todo: duplicate of polymorphic_instance *)
 Definition abstract_instance decl :=

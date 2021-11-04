@@ -155,13 +155,11 @@ let denote_names evm trm : _ * Name.t array =
 
 let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
   let l, c = unquote_pair trm in
-  let evm, names = denote_names evm l in
-  let l, c = unquote_pair c in
   let l = unquote_list l in
   let evm, vars = map_evm unquote_level evm l in
+  let vars = Instance.of_array (Array.of_list vars) in
   let evm, c = unquote_constraints evm c in
-  let inst = Instance.of_array (Array.of_list vars) in
-  evm, (UContext.make names (inst, c))
+  evm, (UContext.make (vars, c))
 
 let denote_aucontext evm trm (* of type AbstractContext.t *) : _ * AbstractContext.t =
   let i, c = unquote_pair trm in
@@ -169,7 +167,7 @@ let denote_aucontext evm trm (* of type AbstractContext.t *) : _ * AbstractConte
   let vars = List.mapi (fun i l -> Level.var i) l in
   let vars = Instance.of_array (Array.of_list vars) in
   let evm, c = unquote_constraints evm c in
-  evm, snd (abstract_universes (UContext.make (CArray.map_of_list unquote_name l) (vars, c)))
+  evm, snd (abstract_universes (CArray.map_of_list unquote_name l) (UContext.make (vars, c)))
 
 
 let denote_variance evm trm (* of type Variance.t list *) : _ * Variance.t array =
@@ -189,7 +187,7 @@ type universe_context_type =
 
 let _to_entry_inductive_universes = function
   | Monomorphic_uctx ctx -> Monomorphic_entry ctx
-  | Polymorphic_uctx ctx -> Polymorphic_entry (AUContext.repr ctx)
+  | Polymorphic_uctx ctx -> Polymorphic_entry (AUContext.names ctx, AUContext.repr ctx)
 
 let _denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
@@ -210,11 +208,15 @@ let denote_universes_entry evm trm (* of type universes_entry *) : _ * Entries.u
   | ctx :: [] -> if constr_equall h cMonomorphic_entry then
                    let evm, ctx = denote_ucontextset evm ctx in
                    evm, Monomorphic_entry ctx
-                 else if constr_equall h cPolymorphic_entry then
-                   let evm, ctx = denote_ucontext evm ctx in
-                   evm, Polymorphic_entry ctx
                  else
                    not_supported_verb trm "denote_universes_entry"
+  | names :: ctx :: [] ->
+     if constr_equall h cPolymorphic_entry then
+       let evm, names = denote_names evm names in
+       let evm, ctx = denote_ucontext evm ctx in
+        evm, Polymorphic_entry (names, ctx)
+     else
+      not_supported_verb trm "denote_universes_entry"
   | _ -> bad_term_verb trm "denote_universes_entry"
 
 

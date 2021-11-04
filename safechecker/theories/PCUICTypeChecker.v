@@ -562,8 +562,8 @@ Section Typecheck.
     := match uctx with
        | Monomorphic_ctx _ =>
          check_eq_nat #|u| 0 (Msg "monomorphic instance should be of length 0")
-       | Polymorphic_ctx (inst, cstrs)  =>
-         let '(_, (inst, cstrs)) := AUContext.repr (inst, cstrs)  in
+       | Polymorphic_ctx (inst, cstrs) =>
+         let '(inst, cstrs) := AUContext.repr (inst, cstrs) in
          check_eq_true (forallb (fun l => LevelSet.mem l (uGraph.wGraph.V G)) u)
                        (Msg "undeclared level in instance") ;;
          X <- check_eq_nat #|u| #|inst|

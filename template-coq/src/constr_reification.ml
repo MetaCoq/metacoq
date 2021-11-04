@@ -189,7 +189,6 @@ struct
   let cMonomorphic_ctx = ast "Monomorphic_ctx"
   let cPolymorphic_ctx = ast "Polymorphic_ctx"
   let tUContext = ast "UContext.t"
-  let tUContextmake' = ast "UContext.make'"
   let tAUContext = ast "AUContext.t"
   let tUContextmake = ast "UContext.make"
   let tAUContextmake = ast "AUContext.make"

@@ -139,7 +139,6 @@ Register MetaCoq.Template.Universes.ConstraintSet.add as metacoq.ast.ConstraintS
 
 Register MetaCoq.Template.Universes.UContext.t as metacoq.ast.UContext.t.
 Register MetaCoq.Template.Universes.UContext.make as metacoq.ast.UContext.make.
-Register MetaCoq.Template.Universes.UContext.make' as metacoq.ast.UContext.make'.
 Register MetaCoq.Template.Universes.AUContext.t as metacoq.ast.AUContext.t.
 Register MetaCoq.Template.Universes.AUContext.make as metacoq.ast.AUContext.make.
 

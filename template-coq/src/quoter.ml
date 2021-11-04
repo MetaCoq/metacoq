@@ -99,7 +99,7 @@ sig
   val quote_abstract_univ_context : Univ.AbstractContext.t -> quoted_abstract_univ_context
 
   val mkMonomorphic_entry : quoted_univ_contextset -> quoted_universes_entry
-  val mkPolymorphic_entry : quoted_univ_context -> quoted_universes_entry
+  val mkPolymorphic_entry : quoted_name list -> quoted_univ_context -> quoted_universes_entry
 
   val mkMonomorphic_ctx : quoted_univ_contextset -> quoted_universes_decl
   val mkPolymorphic_ctx : quoted_abstract_univ_context -> quoted_universes_decl
@@ -169,7 +169,8 @@ struct
 
   let quote_universes_entry = function
     | Monomorphic_entry ctx -> Q.mkMonomorphic_entry (Q.quote_univ_contextset ctx)
-    | Polymorphic_entry ctx -> Q.mkPolymorphic_entry (Q.quote_univ_context ctx)
+    | Polymorphic_entry (names, ctx) ->
+      Q.mkPolymorphic_entry (CArray.map_to_list Q.quote_name names) (Q.quote_univ_context ctx)
 
   let quote_universes_decl = function
     | Monomorphic ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
@@ -547,7 +548,8 @@ since  [absrt_info] is a private type *)
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in
     let uctx = match cd.const_universes with
-      | Polymorphic auctx -> Polymorphic_entry (Univ.AUContext.repr auctx)
+      | Polymorphic auctx ->
+        Polymorphic_entry (Univ.AUContext.names auctx, Univ.AUContext.repr auctx)
       | Monomorphic ctx -> Monomorphic_entry ctx
     in
     let univs = quote_universes_entry uctx in

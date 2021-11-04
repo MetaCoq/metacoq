@@ -190,10 +190,9 @@ struct
     | Univ.Variance.Invariant -> Universes0.Variance.Invariant
 
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
-    let names = CArray.map_to_list quote_name (Univ.UContext.names uctx)  in
     let levels = Univ.UContext.instance uctx  in
     let constraints = Univ.UContext.constraints uctx in
-    (names, (quote_univ_instance levels, quote_univ_constraints constraints))
+    (quote_univ_instance levels, quote_univ_constraints constraints)
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
     (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
@@ -387,7 +386,7 @@ struct
        let k = (quote_int (k - 1)) in
        ConstructRef (quote_inductive (kn,n), k)
 
-  let mkPolymorphic_entry c = Universes0.Polymorphic_entry c
+  let mkPolymorphic_entry names c = Universes0.Polymorphic_entry (names, c)
   let mkMonomorphic_entry c = Universes0.Monomorphic_entry c
 
 end

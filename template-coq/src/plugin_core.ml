@@ -229,7 +229,7 @@ let tmInductive (mi : mutual_inductive_entry) : unit tm =
 let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =
   fun ~st env evd success _fail ->
     let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
-    Classes.existing_instance Hints.Local q None;
+    Classes.existing_instance Goptions.OptGlobal q None;
     success ~st env evd ()
 
 let tmInferInstance (typ : term) : term option tm =

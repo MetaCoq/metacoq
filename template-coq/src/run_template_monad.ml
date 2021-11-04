@@ -491,7 +491,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let gr = reduce_all env evm gr in
     let gr = unquote_global_reference gr in
     let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
-    Classes.existing_instance Hints.SuperGlobal q None;
+    Classes.existing_instance Goptions.OptGlobal q None;
     k ~st env evm (Lazy.force unit_tt)
   | TmInferInstance (s, typ) ->
     begin

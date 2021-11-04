@@ -8,7 +8,7 @@ type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.redu
 type global_reference = Names.GlobRef.t (* Template.Ast.global_reference *)
 type term = Constr.t  (* Template.Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
-type constant_body = Declarations.constant_body
+type constant_body = Opaqueproof.opaque Declarations.constant_body
 type constant_entry = Entries.constant_entry (* Template.Ast.constant_entry *)
 type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
 

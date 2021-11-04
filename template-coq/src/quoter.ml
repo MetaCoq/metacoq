@@ -527,7 +527,7 @@ since  [absrt_info] is a private type *)
     let variance = Option.map (CArray.map_to_list Q.quote_variance) t.mind_entry_variance in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx, variance) *)
 
-  let quote_constant_body_aux bypass env evm (cd : constant_body) =
+  let quote_constant_body_aux bypass env evm (cd : Opaqueproof.opaque constant_body) =
     let ty = quote_term env cd.const_type in
     let body =
       match cd.const_body with

@@ -96,13 +96,12 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   fun ~st env evm success _fail ->
     let open Entries in
-    let univs, ubinders = Evd.univ_entry ~poly evm in
     let param =
       let entry = { parameter_entry_secctx = None;
                     parameter_entry_type = typ;
-                    parameter_entry_universes = univs;
+                    parameter_entry_universes = Evd.univ_entry ~poly evm;
                     parameter_entry_inline_code = None }
-       in Declare.ParameterEntry (entry, ubinders)
+       in Declare.ParameterEntry entry
     in
     let n =
       Declare.declare_constant ~name:nm

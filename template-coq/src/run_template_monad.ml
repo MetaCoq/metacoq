@@ -311,8 +311,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let name = unquote_ident (reduce_all env evm name) in
       let kind = Decls.IsAssumption Decls.Definitional in
       (* FIXME: better handling of evm *)
-      let empty_mono_univ_entry = Monomorphic_entry Univ.ContextSet.empty, UnivNames.empty_binders in
-      Declare.declare_variable ~name ~kind ~typ ~impl:Glob_term.Explicit ~univs:empty_mono_univ_entry;
+      Declare.declare_variable ~name ~kind ~typ ~impl:Glob_term.Explicit;
       let env = Global.env () in
       k ~st env evm (Lazy.force unit_tt)
   | TmDefinition (opaque,name,s,typ,body) ->
@@ -360,12 +359,12 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     else
       let name = unquote_ident (reduce_all env evm name) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
-      let univs, ubinders = Evd.univ_entry ~poly evm in
+      let univs = Evd.univ_entry ~poly evm in
       let entry = { parameter_entry_secctx = None;
                     parameter_entry_type = typ;
                     parameter_entry_universes = univs;
                     parameter_entry_inline_code = None } in
-      let param = Declare.ParameterEntry (entry, ubinders) in
+      let param = Declare.ParameterEntry entry in
       let n = Declare.declare_constant ~name ~kind:Decls.(IsDefinition Definition) param in
       let env = Global.env () in
       k ~st env evm (Constr.mkConst n)

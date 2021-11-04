@@ -95,10 +95,14 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
 
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   fun ~st env evm success _fail ->
-    let univs = Evd.univ_entry ~poly evm in
+    let open Entries in
+    let univs, ubinders = Evd.univ_entry ~poly evm in
     let param =
-      let entry = Declare.parameter_entry ~univs typ in
-      Declare.ParameterEntry entry
+      let entry = { parameter_entry_secctx = None;
+                    parameter_entry_type = typ;
+                    parameter_entry_universes = univs;
+                    parameter_entry_inline_code = None }
+       in Declare.ParameterEntry (entry, ubinders)
     in
     let n =
       Declare.declare_constant ~name:nm
@@ -220,7 +224,7 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : Declarations.constant_body 
 
 let tmInductive (mi : mutual_inductive_entry) : unit tm =
   fun ~st env evd success _fail ->
-    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) []) ;
+    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
     success ~st (Global.env ()) evd ()
 
 let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =

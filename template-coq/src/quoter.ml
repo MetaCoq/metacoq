@@ -164,15 +164,15 @@ struct
 
   let get_abstract_inductive_universes iu =
     match iu with
-    | Declarations.Monomorphic -> Univ.UContext.empty
-    | Polymorphic ctx -> Univ.AbstractContext.repr ctx
+    | Declarations.Monomorphic ctx -> Univ.UContext.empty
+    | Polymorphic ctx -> Univ.AUContext.repr ctx
 
   let quote_universes_entry = function
-    | Monomorphic_entry -> Q.mkMonomorphic_entry (Q.quote_univ_contextset Univ.ContextSet.empty)
+    | Monomorphic_entry ctx -> Q.mkMonomorphic_entry (Q.quote_univ_contextset ctx)
     | Polymorphic_entry ctx -> Q.mkPolymorphic_entry (Q.quote_univ_context ctx)
 
   let quote_universes_decl = function
-    | Monomorphic -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset Univ.ContextSet.empty)
+    | Monomorphic ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
@@ -549,8 +549,8 @@ since  [absrt_info] is a private type *)
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in
     let uctx = match cd.const_universes with
-      | Polymorphic auctx -> Polymorphic_entry (Univ.AbstractContext.repr auctx)
-      | Monomorphic -> Monomorphic_entry
+      | Polymorphic auctx -> Polymorphic_entry (Univ.AUContext.repr auctx)
+      | Monomorphic ctx -> Monomorphic_entry ctx
     in
     let univs = quote_universes_entry uctx in
     match body with

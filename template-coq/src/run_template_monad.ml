@@ -188,8 +188,8 @@ type universe_context_type =
   | Polymorphic_uctx of Univ.AbstractContext.t
 
 let _to_entry_inductive_universes = function
-  | Monomorphic_uctx ctx -> UState.Monomorphic_entry ctx
-  | Polymorphic_uctx ctx -> UState.Polymorphic_entry (Univ.AbstractContext.repr ctx)
+  | Monomorphic_uctx ctx -> Monomorphic_entry ctx
+  | Polymorphic_uctx ctx -> Polymorphic_entry (AUContext.repr ctx)
 
 let _denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
@@ -204,15 +204,15 @@ let _denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_c
                    not_supported_verb trm "denote_universes_decl"
   | _ -> bad_term_verb trm "denote_universes_decl"
 
-let denote_universes_entry evm trm (* of type universes_entry *) : _ * UState.universes_entry =
+let denote_universes_entry evm trm (* of type universes_entry *) : _ * Entries.universes_entry =
   let (h, args) = app_full trm [] in
   match args with
   | ctx :: [] -> if constr_equall h cMonomorphic_entry then
                    let evm, ctx = denote_ucontextset evm ctx in
-                   evm, UState.Monomorphic_entry ctx
+                   evm, Monomorphic_entry ctx
                  else if constr_equall h cPolymorphic_entry then
                    let evm, ctx = denote_ucontext evm ctx in
-                   evm, UState.Polymorphic_entry ctx
+                   evm, Polymorphic_entry ctx
                  else
                    not_supported_verb trm "denote_universes_entry"
   | _ -> bad_term_verb trm "denote_universes_entry"
@@ -258,7 +258,7 @@ let denote_decl env evm d =
 let denote_context env evm ctx =
   fold_env_evm_right denote_decl env evm (unquote_list ctx)
   
-let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry *) : _ * _ * Entries.mutual_inductive_entry =
+let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry *) : _ * Entries.mutual_inductive_entry =
   let (h,args) = app_full trm [] in
   if constr_equall h tBuild_mutual_inductive_entry then
     match args with
@@ -274,17 +274,12 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
            variance
        in
        let priv = unquote_map_option unquote_bool priv in
-       let ctx, univs = match univs with
-       | UState.Monomorphic_entry ctx ->
-          if template then Univ.ContextSet.empty, Entries.Template_ind_entry ctx
-          else ctx, Entries.Monomorphic_ind_entry
-       | UState.Polymorphic_entry uctx -> Univ.ContextSet.empty, Entries.Polymorphic_ind_entry uctx
-       in
-       evm, ctx, { mind_entry_record = record;
+       evm, { mind_entry_record = record;
               mind_entry_finite = finite;
               mind_entry_params = params;
               mind_entry_inds = inds;
               mind_entry_universes = univs;
+              mind_entry_template = template;
               mind_entry_variance = variance;
               mind_entry_private = priv }
     | _ -> bad_term_verb trm "unquote_mutual_inductive_entry"
@@ -294,10 +289,8 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
-  let evm, ctx, mind = unquote_mutual_inductive_entry env evm mind in
-  let () = DeclareUctx.declare_universe_context ~poly:false ctx in
-  let univs = (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) in
-  ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind univs [])
+  let evm, mind = unquote_mutual_inductive_entry env evm mind in
+  ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
 
 let not_in_tactic s =
   CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
@@ -318,7 +311,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let name = unquote_ident (reduce_all env evm name) in
       let kind = Decls.IsAssumption Decls.Definitional in
       (* FIXME: better handling of evm *)
-      let empty_mono_univ_entry = UState.Monomorphic_entry Univ.ContextSet.empty, UnivNames.empty_binders in
+      let empty_mono_univ_entry = Monomorphic_entry Univ.ContextSet.empty, UnivNames.empty_binders in
       Declare.declare_variable ~name ~kind ~typ ~impl:Glob_term.Explicit ~univs:empty_mono_univ_entry;
       let env = Global.env () in
       k ~st env evm (Lazy.force unit_tt)
@@ -367,9 +360,12 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     else
       let name = unquote_ident (reduce_all env evm name) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
-      let univs = Evd.univ_entry ~poly evm in
-      let entry = Declare.parameter_entry ~univs typ in
-      let param = Declare.ParameterEntry entry in
+      let univs, ubinders = Evd.univ_entry ~poly evm in
+      let entry = { parameter_entry_secctx = None;
+                    parameter_entry_type = typ;
+                    parameter_entry_universes = univs;
+                    parameter_entry_inline_code = None } in
+      let param = Declare.ParameterEntry (entry, ubinders) in
       let n = Declare.declare_constant ~name ~kind:Decls.(IsDefinition Definition) param in
       let env = Global.env () in
       k ~st env evm (Constr.mkConst n)

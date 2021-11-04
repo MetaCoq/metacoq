@@ -360,11 +360,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
       let name = unquote_ident (reduce_all env evm name) in
       let evm, typ = (match unquote_option s with Some s -> let red = unquote_reduction_strategy env evm s in Plugin_core.reduce env evm red typ | None -> evm, typ) in
       let univs = Evd.univ_entry ~poly evm in
-      let entry = { parameter_entry_secctx = None;
-                    parameter_entry_type = typ;
-                    parameter_entry_universes = univs;
-                    parameter_entry_inline_code = None } in
-      let param = Declare.ParameterEntry entry in
+      let param = Declare.ParameterEntry (None, (typ, univs), None) in
       let n = Declare.declare_constant ~name ~kind:Decls.(IsDefinition Definition) param in
       let env = Global.env () in
       k ~st env evm (Constr.mkConst n)

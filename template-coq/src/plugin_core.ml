@@ -95,13 +95,9 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
 
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   fun ~st env evm success _fail ->
-    let open Entries in
     let param =
-      let entry = { parameter_entry_secctx = None;
-                    parameter_entry_type = typ;
-                    parameter_entry_universes = Evd.univ_entry ~poly evm;
-                    parameter_entry_inline_code = None }
-       in Declare.ParameterEntry entry
+      let entry = Evd.univ_entry ~poly evm
+       in Declare.ParameterEntry (None, (typ, entry), None)
     in
     let n =
       Declare.declare_constant ~name:nm
@@ -194,10 +190,8 @@ let _constant_entry_of_cb (cb : Declarations.constant_body) =
     const_entry_opaque = opaque;
     const_entry_inline_code = cb.const_inline_code }
   in
-  let parameter inline = { parameter_entry_secctx = secctx;
-    parameter_entry_type = cb.const_type;
-    parameter_entry_universes = universes_entry_of_decl cb.const_universes;
-    parameter_entry_inline_code = inline }
+  let parameter inline =
+    (secctx, (cb.const_type, universes_entry_of_decl cb.const_universes), inline)
   in
   match cb.const_body with
   | Def b -> DefinitionEntry (with_body_opaque (Mod_subst.force_constr b) false)

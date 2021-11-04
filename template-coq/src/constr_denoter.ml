@@ -171,7 +171,7 @@ struct
         try
           let evm = Evd.add_global_univ evm l in
           if !strict_unquote_universe_mode then
-            CErrors.user_err (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
+            CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
           else (Feedback.msg_info (str"Fresh universe " ++ Univ.Level.pr l ++ str" was added to the context.");
                 evm, l)
         with
@@ -184,13 +184,13 @@ struct
         let univ = Nametab.locate_universe (Libnames.qualid_of_string s) in
         evm, Univ.Level.make univ
       with Not_found ->
-        CErrors.user_err (str ("Level "^s^" is not a declared level."))
+        CErrors.user_err ~hdr:"unquote_level" (str ("Level "^s^" is not a declared level."))
 
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
     if constr_equall h lfresh_level then
       if !strict_unquote_universe_mode then
-        CErrors.user_err (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
+        CErrors.user_err ~hdr:"unquote_level" (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
       else
         let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
         Feedback.msg_info (str"Fresh level " ++ Univ.Level.pr l ++ str" was added to the context.");
@@ -225,7 +225,7 @@ struct
     let (h,args) = app_full trm [] in
     if constr_equall h lfresh_universe then
       if !strict_unquote_universe_mode then
-        CErrors.user_err (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
+        CErrors.user_err ~hdr:"unquote_universe" (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
       else
         let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
         Feedback.msg_info (str"Fresh universe " ++ Univ.Universe.pr u ++ str" was added to the context.");

@@ -322,7 +322,6 @@ struct
       in
       let envind = push_rel_context (List.rev indtys) env in
       let ref_name = Q.quote_kn (MutInd.canonical t) in
-      let ntyps = Array.length mib.mind_packets in
       let (ls,acc) =
         List.fold_left (fun (ls,acc) oib ->
           let named_ctors =
@@ -344,7 +343,6 @@ struct
               debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                   bool !opt_hnf_ctor_types)) ;
               let ty = Term.it_mkProd_or_LetIn ty ctx in
-              let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
               let ctx, concl = Term.decompose_prod_assum ty in
               let argctx, parsctx =
                 CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 

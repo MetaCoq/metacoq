@@ -60,7 +60,6 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
          (Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name oib.mind_typename), ty))) mib.mind_packets)
   in
   let envind = Environ.push_rel_context (List.rev indtys) env in
-  let ntyps = Array.length mib.mind_packets in
   let (ls,acc) =
     List.fold_left (fun (ls,acc) oib ->
     let named_ctors =
@@ -82,20 +81,6 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->
           Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                       bool !Quoter.opt_hnf_ctor_types)) ;
-          let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
-          let ctx, concl = ty in
-          let ty = Term.it_mkProd_or_LetIn concl ctx in
-          let argctx, parsctx = 
-            CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 
-          in
-          let envcstr = push_rel_context parsctx envind in
-          let qargctx = quote_rel_context envcstr argctx in
-          let qindices = 
-            let hd, args = Constr.decompose_appvect concl in
-            let pars, args = CArray.chop mib.mind_nparams args in
-            let envconcl = push_rel_context argctx envcstr in
-            List.map (quote_term envconcl) args
-          in           
           let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
           ((quote_ident nm, qargctx, Array.to_list qindices, ty, quote_int ar) :: ls, acc))

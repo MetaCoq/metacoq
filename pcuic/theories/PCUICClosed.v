@@ -3,7 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICTyping 
-     PCUICWeakeningEnv PCUICSigmaCalculus.
+     PCUICGlobalEnv PCUICWeakeningEnv PCUICSigmaCalculus.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -1162,7 +1162,7 @@ Proof.
   - simpl. eauto.
 Qed.
 
-Lemma closed_cstr_branch_context {cf : checker_flags} {Σ} {wfΣ : wf Σ} {c mdecl cdecl} : 
+Lemma closed_cstr_branch_context_gen {cf : checker_flags} {Σ} {wfΣ : wf Σ} {c mdecl cdecl} : 
   closed_inductive_decl mdecl ->
   closed_constructor_body mdecl cdecl ->
   closedn_ctx (context_assumptions mdecl.(ind_params)) (cstr_branch_context c mdecl cdecl).
@@ -1174,18 +1174,6 @@ Proof.
   eapply (closedn_ctx_expand_lets 0) => // /=.
   eapply closedn_ctx_subst. len. now rewrite Nat.add_comm.
   eapply closed_inds.
-Qed.
-
-Lemma declared_minductive_ind_npars {cf:checker_flags} {Σ} {wfΣ : wf Σ} {mdecl ind} :
-  declared_minductive Σ ind mdecl ->
-  ind_npars mdecl = context_assumptions mdecl.(ind_params).
-Proof.
-  intros h.
-  unfold declared_minductive in h.
-  eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
-  red in decl'. destruct decl' as [h ? ? ?].
-  now rewrite onNpars.
 Qed.
 
 Lemma closed_ind_closed_cstrs {Σ ind mdecl idecl} : 
@@ -1290,7 +1278,7 @@ Proof.
       { now rewrite ind_predicate_context_length. }
     + clear H8. solve_all. unfold test_branch_k. clear H6. solve_all.
       * rewrite (closedn_ctx_alpha a1).
-        eapply closed_cstr_branch_context in X0; tea.
+        eapply closed_cstr_branch_context_gen in X0; tea.
         rewrite (wf_predicate_length_pars H1).
         now rewrite (declared_minductive_ind_npars isdecl).
       * rewrite (All2_length a1).
@@ -1603,6 +1591,25 @@ Proof.
   eapply declared_inductive_closed_constructors in hidecl as h.
   eapply All_nth_error in h. 2: eassumption.
   now move/andP: h => [/andP [hargs hindices]] hty.
+Qed.
+
+Lemma closed_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind i mdecl idecl cdecl} : 
+  declared_constructor Σ (ind, i) mdecl idecl cdecl ->
+  closedn_ctx (context_assumptions mdecl.(ind_params)) (cstr_branch_context ind mdecl cdecl).
+Proof.
+  intros decli.
+  eapply closed_cstr_branch_context_gen; tea.
+  eapply declared_minductive_closed. eapply decli.
+  eapply declared_constructor_closed; tea.
+Qed.
+
+Lemma closed_cstr_branch_context_npars {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind i mdecl idecl cdecl} : 
+  declared_constructor Σ (ind, i) mdecl idecl cdecl ->
+  closedn_ctx (ind_npars mdecl) (cstr_branch_context ind mdecl cdecl).
+Proof.
+  intros declc.
+  rewrite (declared_minductive_ind_npars declc).
+  now apply (closed_cstr_branch_context declc).
 Qed.
 
 Lemma declared_projection_closed_type {cf:checker_flags} 

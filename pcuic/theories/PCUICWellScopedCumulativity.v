@@ -694,29 +694,13 @@ Section WtContextConversion.
       destruct d as [na [b|] ty]; cbn in p; constructor; intuition auto.
   Qed.
 
-  Lemma All2_fold_All_fold_mix {P Q l l'} : 
-    All2_fold P l l' ->
-    All_fold Q l ->
-    All_fold Q l' ->
-    All2_fold (fun Γ Γ' x y => Q Γ x × Q Γ' y × P Γ Γ' x y) l l'.
-  Proof.
-    induction 1; [constructor|] => l r; depelim l; depelim r; constructor; auto.
-  Qed.
-
-  Lemma All2_fold_All_fold_mix_inv {P Q l l'} : 
-    All2_fold (fun Γ Γ' x y => Q Γ x × Q Γ' y × P Γ Γ' x y) l l' ->
-    All2_fold P l l' × All_fold Q l × All_fold Q l'.
-  Proof.
-    induction 1; intuition (try constructor; auto).
-  Qed.
-
   Lemma wt_context_equality_forget {le} {Γ Γ' : context} :
     wt_context_equality le Σ Γ Γ' ->
     [× wf_local Σ Γ, wf_local Σ Γ' &
       if le then cumul_context Σ Γ Γ' else conv_context Σ Γ Γ'].
   Proof.
     move=> wteq.
-    apply (PCUICEnvironment.All2_fold_impl (Q:=fun Γ Γ' d d' => wt_decl Γ d × wt_decl Γ' d' × 
+    apply (All2_fold_impl (Q:=fun Γ Γ' d d' => wt_decl Γ d × wt_decl Γ' d' × 
       (if le then cumul_decls Σ Γ Γ' d d' else conv_decls Σ Γ Γ' d d'))) in wteq.
     2:{ intros ???? []; intuition (cbn; try constructor; auto).
         all:cbn in *; destruct le; constructor; auto. }
@@ -734,10 +718,10 @@ Section WtContextConversion.
     move=> /wf_local_All_fold wfΓ /wf_local_All_fold wfΓ'.
     destruct le=> eq.
     eapply All2_fold_All_fold_mix in eq; tea.
-    eapply PCUICEnvironment.All2_fold_impl; tea; clear => Γ Γ' d d' [wtd [wtd' cum]] /=.
+    eapply All2_fold_impl; tea; clear => Γ Γ' d d' [wtd [wtd' cum]] /=.
     destruct cum; cbn in wtd, wtd'; constructor; intuition auto.
     eapply All2_fold_All_fold_mix in eq; tea.
-    eapply PCUICEnvironment.All2_fold_impl; tea; clear => Γ Γ' d d' [wtd [wtd' cum]] /=.
+    eapply All2_fold_impl; tea; clear => Γ Γ' d d' [wtd [wtd' cum]] /=.
     destruct cum; cbn in wtd, wtd'; constructor; intuition auto.
   Qed.
 
@@ -745,7 +729,7 @@ Section WtContextConversion.
     wt_context_equality le Σ Γ Γ' ->
     context_equality le Σ Γ Γ'.
   Proof.
-    intros a; eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+    intros a; eapply All2_fold_impl_ind; tea.
     intros ???? wt ws eq; 
     pose proof (All2_fold_length wt).
     destruct eq.
@@ -774,10 +758,10 @@ Section WtContextConversion.
   Proof.
     move=> wteq.
     split; eauto with fvs.
-    destruct le. eapply PCUICEnvironment.All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
+    destruct le. eapply All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
     all:try now eapply equality_forget in p.
     all:try now eapply equality_forget in p0.
-    eapply PCUICEnvironment.All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
+    eapply All2_fold_impl; tea; move=> ???? []; constructor; eauto with pcuic.
     all:try now eapply equality_forget in p.
     all:try now eapply equality_forget in p0.
   Qed.
@@ -795,20 +779,12 @@ Section WtContextConversion.
   Proof.
     now move/context_equality_inv => [].
   Qed.
-    
-  Lemma All_fold_All2_fold {P Q Γ} : 
-    All_fold P Γ ->
-    (forall Γ d, All_fold P Γ -> All2_fold Q Γ Γ -> P Γ d -> Q Γ Γ d d) ->
-    All2_fold Q Γ Γ.
-  Proof.
-    intros a H; induction a; constructor; auto.
-  Qed.
-
+  
   Lemma context_equality_refl le Γ : is_closed_context Γ -> context_equality le Σ Γ Γ.
   Proof.
     move=> onΓ. cbn.
     move/on_free_vars_ctx_All_fold: onΓ => a.
-    eapply (All_fold_All2_fold a). clear -wfΣ.
+    eapply (All_fold_All2_fold_impl a). clear -wfΣ.
     move=> Γ d a IH ond.
     move/on_free_vars_ctx_All_fold: a => clΓ.
     eapply (into_equality_open_decls _ Γ).

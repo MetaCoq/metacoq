@@ -217,15 +217,6 @@ Section Alpha.
   Qed.
   Hint Resolve is_closed_context_app_right : fvs.
   Hint Constructors All_fold : core.
-  
-  Lemma All_fold_app_inv (P : context -> context_decl -> Type) Γ Δ : 
-    All_fold P (Γ ++ Δ) -> 
-    All_fold P Δ × All_fold (fun Γ => P (Δ ,,, Γ)) Γ.
-  Proof.
-    induction Γ in Δ |- *; split; auto.
-    depelim X. specialize (IHΓ Δ). intuition auto.
-    depelim X. constructor; auto. specialize (IHΓ Δ); intuition auto.
-  Qed.
 
   Lemma on_free_vars_ctx_All_fold_over P Γ Δ : 
     on_free_vars_ctx (shiftnP #|Γ| P) Δ <~> 
@@ -237,7 +228,7 @@ Section Alpha.
       intros Γ' x; now rewrite shiftnP_add app_length.
     - intros a'.
       apply alli_Alli.
-      eapply (All_fold_impl _ (fun Δ d => on_free_vars_decl (shiftnP #|Δ| (shiftnP #|Γ| P)) d)) in a'.
+      eapply (All_fold_impl (fun Δ d => on_free_vars_decl (shiftnP #|Δ| (shiftnP #|Γ| P)) d)) in a'.
       now apply (All_fold_Alli_rev (fun k => on_free_vars_decl (shiftnP k (shiftnP #|Γ| P))) 0) in a'.
       intros.
       now rewrite shiftnP_add -app_length.
@@ -268,21 +259,6 @@ Section Alpha.
     - rewrite -(All2_length a). solve_all.
       apply/andP; split; eauto.
       len in b2. eapply b2. eauto.
-  Qed.
-
-  Lemma All2_fold_All_fold_mix_right P Q Γ Γ' :
-    All_fold P Γ' ->
-    All2_fold Q Γ Γ' ->
-    All2_fold (fun Γ Γ' d d' => P Γ' d' × Q Γ Γ' d d') Γ Γ'.
-  Proof.
-    induction 1 in Γ |- *; intros H; depelim H; constructor; auto.
-  Qed.
-  
-  Lemma All2_fold_All_right P Γ Γ' :
-    All2_fold (fun _ Γ _ d => P Γ d) Γ Γ' ->
-    All_fold P Γ'.
-  Proof.
-    induction 1; constructor; auto.
   Qed.
 
   Lemma All_decls_alpha_le_ws_decl {le P} {Γ : context} {d d'} : 
@@ -477,7 +453,7 @@ Section Alpha.
     depelim allna. depelim allna.
     rewrite map2_app => /= //; try lia. unfold aname. lia.
     eapply app_inj_tail in heq as [<- <-].
-    simpl. eapply PCUICContextRelation.All2_fold_app; auto.
+    simpl. eapply All2_fold_app; auto.
     constructor. constructor.
     destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
     try reflexivity.
@@ -754,11 +730,6 @@ Section Alpha.
       have wfcpc' := wfcpc (Δ ,,, case_predicate_context ind mdecl idecl p').
       forward wfcpc'. { eapply eq_context_upto_cat; auto.
       apply (case_predicate_context_equiv eqp). }
-      (* assert (Σ ⊢ Γ,,, cpc = ,,, case_predicate_context ind mdecl idecl p').
-      { eapply context_equality_rel_app, eq_context_upto_conv_context_rel.
-        3:now eapply case_predicate_context_equiv. eauto with fvs.
-        eapply eq_context_gen_upto in eqctx.
-        now eapply wf_local_closed_context in wfcpc'. } *)
       eapply R_universe_instance_eq in eqinst.
       assert (isType Σ Δ (mkApps ptm (args ++ [c]))).
       { eapply isType_eq_context_conversion. eapply validity. econstructor; eauto.

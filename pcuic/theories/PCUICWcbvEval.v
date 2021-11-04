@@ -2,7 +2,7 @@
 From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICReduction PCUICClosed PCUICCSubst 
+     PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst 
      PCUICSubstitution PCUICInversion.
 
 Require Import ssreflect ssrbool.
@@ -734,7 +734,7 @@ Section Wcbv.
     - depelim ev'; go.
     - depelim ev'; go.
     - depelim ev'; try go.
-      pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ isdecl isdecl0) as <-.
+      pose proof (declared_constant_inj _ _ isdecl isdecl0) as <-.
       assert (body0 = body) as -> by congruence.
       assert (e0 = e) as -> by now apply uip.
       assert (isdecl0 = isdecl) as -> by now apply uip.
@@ -744,7 +744,7 @@ Section Wcbv.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
         apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
         noconf eq1. noconf eq2. noconf IHev1.
-        epose proof (PCUICWeakeningEnv.declared_constructor_inj d d0) as [-> [-> <-]].
+        epose proof (declared_constructor_inj d d0) as [-> [-> <-]].
         pose proof e1. rewrite e in H. noconf H.
         specialize (IHev2 _ ev'2). noconf IHev2.
         assert (e = e1) as -> by now apply uip.
@@ -902,13 +902,6 @@ Section Wcbv.
     rewrite isFixApp_mkApps. auto.
     destruct x0 using rev_ind; simpl; [|rewrite !mkApps_app]; simpl in *; destruct f';
       try discriminate; try constructor.
-  Qed.
-  Arguments removelast : simpl nomatch.
-  Lemma removelast_length {A} (l : list A) : 0 < #|l| -> #|removelast l| < #|l|.
-  Proof.
-    induction l; cbn -[removelast]; auto. intros.
-    destruct l. auto.
-    forward IHl. simpl; lia. cbn -[removelast] in *. simpl removelast. simpl. lia.
   Qed.
 
 End Wcbv.

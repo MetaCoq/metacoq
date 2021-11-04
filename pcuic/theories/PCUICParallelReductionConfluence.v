@@ -13,25 +13,12 @@ From Equations Require Import Equations.
 Add Search Blacklist "pred1_rect".
 Add Search Blacklist "_equation_".
 
-Derive Signature for pred1 All2_fold.
-
 Local Open Scope sigma_scope.
 
 Local Set Keyed Unification.
 
 Ltac solve_discr := (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
   try discriminate.
-
-Equations map_In {A B : Type} (l : list A) (f : forall (x : A), In x l -> B) : list B :=
-map_In nil _ := nil;
-map_In (cons x xs) f := cons (f x _) (map_In xs (fun x H => f x _)).
-
-Lemma map_In_spec {A B : Type} (f : A -> B) (l : list A) :
-  map_In l (fun (x : A) (_ : In x l) => f x) = List.map f l.
-Proof.
-  remember (fun (x : A) (_ : In x l) => f x) as g.
-  funelim (map_In l g) => //; simpl; rewrite (H f0); trivial.
-Qed.
 
 Equations mapi_context_In (ctx : context) (f : nat -> forall (x : context_decl), In x ctx -> context_decl) : context :=
 mapi_context_In nil _ := nil;
@@ -2524,13 +2511,6 @@ Section Rho.
     eapply All2_sym; solve_all.
   Qed.
 
-   Lemma All2_fold_sym P Γ Γ' Δ Δ' :
-    All2_fold (on_decls (on_decls_over (fun Γ Γ' t t' => P Γ' Γ t' t) Γ' Γ)) Δ' Δ ->
-    All2_fold (on_decls (on_decls_over P Γ Γ')) Δ Δ'.
-  Proof.
-    induction 1; constructor; eauto. now depelim p; constructor.
-  Qed.
-
   Lemma isConstruct_app_pred1 {Γ Δ a b} : pred1 Σ Γ Δ a b -> isConstruct_app a -> isConstruct_app b.
   Proof.
     move=> pr; rewrite /isConstruct_app.
@@ -2561,33 +2541,6 @@ Section Rho.
     | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
       move/andP: H => []; rewrite ?shiftnP_xpredT; intros
     end.
-   
-  Lemma on_ctx_free_vars_inst_case_context P Γ pars puinst pctx :
-    forallb (on_free_vars P) pars ->
-    test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pars| pctx ->
-    on_ctx_free_vars P Γ ->
-    on_ctx_free_vars (shiftnP #|pctx| P) (Γ ,,, inst_case_context pars puinst pctx).
-  Proof.
-    intros.
-    relativize #|pctx|; [erewrite on_ctx_free_vars_concat|].
-    rewrite H1 /=.
-    rewrite on_free_vars_ctx_on_ctx_free_vars.
-    eapply on_free_vars_ctx_inst_case_context; trea. now len.
-  Qed.
-  Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
-
-  Lemma on_ctx_free_vars_fix_context P Γ mfix :
-    All (fun x : def term => test_def (on_free_vars P) (on_free_vars (shiftnP #|mfix| P)) x) mfix ->
-    on_ctx_free_vars P Γ ->
-    on_ctx_free_vars (shiftnP #|mfix| P) (Γ ,,, fix_context mfix).
-  Proof.
-    intros.
-    relativize #|mfix|; [erewrite on_ctx_free_vars_concat|].
-    rewrite H /=.
-    rewrite on_free_vars_ctx_on_ctx_free_vars.
-    eapply on_free_vars_fix_context => //. now len.
-  Qed.
-  Hint Resolve on_ctx_free_vars_fix_context : fvs.
 
   Lemma pred1_on_free_vars_mfix_ind Γ Γ' P mfix0 mfix1 : 
     on_ctx_free_vars P Γ ->
@@ -2606,42 +2559,6 @@ Section Rho.
     solve_all.
     inv_on_free_vars. destruct a0. apply/andP; split; eauto with fvs.
   Qed.
-
-  Lemma All2_apply {A B C} {D : A -> B -> C -> Type} {l : list B} {l' : list C} :
-    forall (a : A), 
-      All2 (fun x y => forall a : A, D a x y) l l' ->
-      All2 (fun x y => D a x y) l l'.
-  Proof.
-    intros a all. eapply (All2_impl all); auto.
-  Qed. 
-
-  Lemma All2_apply_arrow {A B C} {D : B -> C -> Type} {l : list B} {l' : list C} :
-    A -> All2 (fun x y => A -> D x y) l l' ->
-    All2 (fun x y => D x y) l l'.
-  Proof.
-    intros a all. eapply (All2_impl all); auto.
-  Qed. 
-
-  Lemma All2_apply_dep_arrow {B C} {A} {D : B -> C -> Type} {l : list B} {l' : list C} :
-    All A l ->
-    All2 (fun x y => A x -> D x y) l l' ->
-    All2 D l l'.
-  Proof.
-    intros a all.
-    eapply All2_All_mix_left in all; tea.
-    eapply (All2_impl all); intuition auto.
-  Qed. 
-
-  Lemma All2_apply_dep_All {B C} {A} {D : C -> Type} {l : list B} {l' : list C} :
-    All A l ->
-    All2 (fun x y => A x -> D y) l l' ->
-    All D l'.
-  Proof.
-    intros a all.
-    eapply All2_All_mix_left in all; tea.
-    eapply All2_impl in all. 2:{ intros x y [ha hd]. exact (hd ha). }
-    eapply All2_All_right; tea. auto.
-  Qed. 
 
   Hint Resolve on_ctx_free_vars_snoc_ass on_ctx_free_vars_snoc_def : fvs.
 
@@ -3354,15 +3271,6 @@ Section Rho.
     intros ? ? ? ? []; constructor; auto.
   Qed. *)
 
-  Lemma All2_fold_impl_len P Q Γ Δ :
-    All2_fold P Γ Δ ->
-    (forall Γ Δ T U, #|Γ| = #|Δ| -> P Γ Δ T U -> Q Γ Δ T U) ->
-    All2_fold Q Γ Δ.
-  Proof.
-    intros H HP. pose proof (All2_fold_length H).
-    induction H; constructor; simpl; eauto.
-  Qed.
-
   Lemma decompose_app_rec_inst s t l :
     let (f, a) := decompose_app_rec t l in
     inst s f = f ->
@@ -3385,34 +3293,7 @@ Section Rho.
   Qed.
   Hint Rewrite decompose_app_inst using auto : lift.
 
-
-  (*
-  Instance All_decls_refl P : 
-  Reflexive P ->
-  Reflexive (All_decls P).
-Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
-
-  (*Lemma strong_substitutivity_fixed Γ Γ' Δ Δ' s t σ τ :
-    pred1 Σ Γ Γ' s t -> s = t -> Γ = Γ' ->
-    ctxmap Γ Δ σ ->
-    ctxmap Γ' Δ' τ ->
-    (forall x : nat, pred1 Σ Δ Δ' (σ x) (τ x)) ->
-    pred1 Σ Δ Δ' s.[σ] t.[τ].
-  Proof.
-    intros redst eq eqΓ.
-    revert Δ Δ' σ τ.
-    revert Γ Γ' s t redst eq eqΓ.
-    set (P' := fun Γ Γ' => Γ = Γ' -> pred1_ctx Σ Γ Γ').
-    set (Pover := fun Γ Γ' ctx ctx' =>
-      forall Δ Δ' σ τ,
-        Γ = Γ' ->
-        ctxmap Γ Δ σ ->
-        ctxmap Γ' Δ' τ ->
-        (forall x, pred1 Σ Δ Δ' (σ x) (τ x)) ->
-        pred1_ctx_over Σ Δ Δ' (inst_context σ ctx) (inst_context τ ctx')).*)
-
-
-  Lemma All2_fold_context_assumptions {P Γ Δ} : 
+  Lemma All2_fold_context_assumptions {P} {Γ Δ} : 
     All2_fold (on_decls P) Γ Δ ->
     context_assumptions Γ = context_assumptions Δ.
   Proof.
@@ -3624,13 +3505,6 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
   Proof.
     induction ctx; simpl; auto. 
     now rewrite -IHctx map_decl_id.
-  Qed.
-
-  Lemma All2_fold_sym' P (Γ Δ : context) : 
-    All2_fold P Γ Δ ->
-    All2_fold (fun Δ Γ t' t => P Γ Δ t t') Δ Γ.
-  Proof.
-    induction 1; constructor; auto; now symmetry.
   Qed.
 
   Lemma All_decls_on_free_vars_map_impl_inv P Q R f d d' :
@@ -4406,7 +4280,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
 
           -- rewrite (fix_context_map_fix xpredT) //.
              eapply All2_fold_fold_context_right.
-             eapply PCUICEnvironment.All2_fold_impl; tea. solve_all.
+             eapply All2_fold_impl; tea. solve_all.
              eapply All_decls_map_right.
              eapply All_decls_impl; tea. solve_all.
 
@@ -4436,7 +4310,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
           --- rewrite /rho_fix_context -(fold_fix_context_rho_ctx xpredT) //. solve_all.
               rewrite (fix_context_map_fix xpredT) //. solve_all.
               eapply All2_fold_fold_context_right.
-              eapply PCUICEnvironment.All2_fold_impl; tea. solve_all.
+              eapply All2_fold_impl; tea. solve_all.
               eapply All_decls_map_right.
               eapply All_decls_impl; tea. solve_all.
  
@@ -4524,7 +4398,7 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
           eapply pred_cofix_proj with (map_fix rho Γ'0 (rho_ctx_over Γ'0 (fix_context mfix)) mfix) (rarg d); pcuic.
           -- rewrite (fix_context_map_fix xpredT) //.
              eapply All2_fold_fold_context_right.
-             eapply PCUICEnvironment.All2_fold_impl; tea. solve_all.
+             eapply All2_fold_impl; tea. solve_all.
              eapply All_decls_map_right.
              eapply All_decls_impl; tea. solve_all.
 

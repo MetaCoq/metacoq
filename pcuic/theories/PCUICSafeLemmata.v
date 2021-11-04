@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICCasesContexts PCUICEquality PCUICNameless
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICValidity
@@ -454,7 +454,7 @@ Section Lemmata.
               rewrite subst_instance_app => X.
               unshelve epose proof (spine_subst_app_inv _ X) as [sp _].
               { rewrite (wf_predicate_length_pars wf_pred). len.
-                eapply (PCUICClosed.declared_minductive_ind_npars x1). }
+                eapply (declared_minductive_ind_npars x1). }
               now eapply spine_subst_smash in sp.
           ** cbn in conv_pctx.
              eapply wf_local_app_inv. eapply wf_local_alpha.

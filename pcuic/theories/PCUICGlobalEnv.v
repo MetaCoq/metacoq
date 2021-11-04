@@ -4,6 +4,84 @@ From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICTyping.
 
+(** Injectivity of declared_*, inversion lemmas on declared global references and 
+    universe consistency of the global environment.
+*)
+
+Lemma declared_constant_inj {Σ c} decl1 decl2 :
+  declared_constant Σ c decl1 -> declared_constant Σ c decl2 -> decl1 = decl2.
+Proof.
+  intros. unfold declared_constant in *. rewrite H in H0.
+  now inv H0.
+Qed.
+
+Lemma declared_inductive_inj {Σ mdecl mdecl' ind idecl idecl'} :
+  declared_inductive Σ ind mdecl' idecl' ->
+  declared_inductive Σ ind mdecl idecl ->
+  mdecl = mdecl' /\ idecl = idecl'.
+Proof.
+  intros [] []. unfold declared_minductive in *.
+  rewrite H in H1. inversion H1. subst. rewrite H2 in H0. inversion H0. eauto.
+Qed.
+
+Lemma declared_constructor_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' c} :
+  declared_constructor Σ c mdecl' idecl' cdecl ->
+  declared_constructor Σ c mdecl idecl cdecl' ->
+  mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl'.
+Proof.
+  intros [] []. 
+  destruct (declared_inductive_inj H H1); subst.
+  rewrite H0 in H2. intuition congruence.
+Qed.
+
+Lemma declared_projection_inj {Σ mdecl mdecl' idecl idecl' cdecl cdecl' pdecl pdecl' p} :
+  declared_projection Σ p mdecl idecl cdecl pdecl ->
+  declared_projection Σ p mdecl' idecl' cdecl' pdecl' ->
+  mdecl = mdecl' /\ idecl = idecl'  /\ cdecl = cdecl' /\ pdecl = pdecl'.
+Proof.
+  intros [] []. 
+  destruct (declared_constructor_inj H H1) as [? []]; subst.
+  destruct H0, H2.
+  rewrite H0 in H2. intuition congruence.
+Qed.
+
+Lemma declared_inductive_minductive {Σ ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl -> declared_minductive Σ (inductive_mind ind) mdecl.
+Proof. now intros []. Qed.
+#[global]
+Hint Resolve declared_inductive_minductive : pcuic core.
+
+Coercion declared_inductive_minductive : declared_inductive >-> declared_minductive.
+
+Lemma declared_constructor_inductive {Σ ind mdecl idecl cdecl} :
+  declared_constructor Σ ind mdecl idecl cdecl ->
+  declared_inductive Σ ind.1 mdecl idecl.
+Proof. now intros []. Qed.
+Coercion declared_constructor_inductive : declared_constructor >-> declared_inductive.
+
+Lemma declared_projection_constructor {Σ ind mdecl idecl cdecl pdecl} :
+  declared_projection Σ ind mdecl idecl cdecl pdecl ->
+  declared_constructor Σ (ind.1.1, 0) mdecl idecl cdecl.
+Proof. now intros []. Qed.
+Coercion declared_projection_constructor : declared_projection >-> declared_constructor.
+
+Section DeclaredInv.
+  Context {cf:checker_flags} {Σ} {wfΣ : wf Σ}.
+
+  Lemma declared_minductive_ind_npars  {mdecl ind} :
+    declared_minductive Σ ind mdecl ->
+    ind_npars mdecl = context_assumptions mdecl.(ind_params).
+  Proof.
+    intros h.
+    unfold declared_minductive in h.
+    eapply lookup_on_global_env in h. 2: eauto.
+    destruct h as [Σ' [wfΣ' decl']].
+    red in decl'. destruct decl' as [h ? ? ?].
+    now rewrite onNpars.
+  Qed.
+
+End DeclaredInv.
+
 Definition wf_global_uctx_invariants {cf:checker_flags} Σ :
   wf Σ ->
   global_uctx_invariants (global_uctx Σ).

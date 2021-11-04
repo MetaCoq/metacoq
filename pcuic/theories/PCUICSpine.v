@@ -62,7 +62,7 @@ Lemma typing_spine_eq {cf:checker_flags} Σ Γ ty s s' ty' :
 Proof. now intros ->. Qed.
 
 
-Lemma All2_fold_mapi_right P Γ Δ g : 
+Lemma All2_fold_mapi_right P (Γ Δ : context) g : 
   All2_fold (fun Γ Δ d d' =>
     P Γ (mapi_context g Δ) d (map_decl (g #|Γ|) d')) Γ Δ 
   -> All2_fold P Γ (mapi_context g Δ).
@@ -72,16 +72,6 @@ Proof.
 Qed.
 
 Import PCUICOnFreeVars.
-
-Lemma All_fold_All2_fold P Γ : 
-  All_fold (fun Γ d => P Γ Γ d d) Γ <~>
-  All2_fold P Γ Γ.
-Proof.
-  split.
-  - induction 1; simpl; constructor; intuition auto;
-    now rewrite <-(All2_fold_length X).
-  - intros H; depind H; constructor; auto.
-Qed.
 
 Lemma weakening_closed_red {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' M N} :
   Σ ;;; Γ ,,, Γ' ⊢ M ⇝ N ->

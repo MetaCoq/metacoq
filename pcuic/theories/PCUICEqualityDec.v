@@ -172,7 +172,7 @@ Section EqualityDec.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.
-    eapply PCUICContextRelation.All2_fold_All2.
+    eapply All2_fold_All2.
     eapply All2_impl; try eassumption.
     cbn. apply eqb_decl_spec.
   Qed.

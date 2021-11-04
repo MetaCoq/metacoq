@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICTyping PCUICWeakeningEnv PCUICSubstitution PCUICEquality
+     PCUICLiftSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnv PCUICSubstitution PCUICEquality
      PCUICReduction PCUICCumulativity PCUICConfluence PCUICClosed
      PCUICContextConversion PCUICConversion PCUICInversion PCUICUnivSubst
      PCUICArities PCUICValidity PCUICInductives PCUICInductiveInversion 
@@ -189,7 +189,7 @@ Section Principality.
       repeat outtimes.
       eexists; int inversion_Const.
       destruct hB as [decl' [wf [declc' [cu cum]]]].
-      now rewrite -(PCUICWeakeningEnv.declared_constant_inj _ _ d declc') in cum.
+      now rewrite -(declared_constant_inj _ _ d declc') in cum.
       
     - eapply inversion_Ind in hA as [mdecl [idecl [? [Hdecl ?]]]] => //; auto.
       repeat outtimes.
@@ -220,7 +220,7 @@ Section Principality.
       exists (mkApps ptm (indices ++ [u])); intros b hB; repeat split; auto.
       2:econstructor; eauto.
       eapply inversion_Case in hB as (mdecl'&idecl'&isdecl'&indices'&[]&?); tea. clear brs_ty0.
-      destruct (PCUICWeakeningEnv.declared_inductive_inj isdecl isdecl') as [-> ->].
+      destruct (declared_inductive_inj isdecl isdecl') as [-> ->].
       destruct (p0 _ scrut_ty0).
       eapply equality_Ind_r_inv in e1 as [u'' [x9' [redr' redu' ?]]]; auto.
       assert (equality_terms Σ Γ x0' x9').
@@ -254,7 +254,7 @@ Section Principality.
       eapply inversion_Proj in hB=>//; auto.
       repeat outsum. repeat outtimes.
       simpl in *.
-      destruct (PCUICWeakeningEnv.declared_projection_inj d d0) as [-> [-> [-> [= -> ->]]]].
+      destruct (declared_projection_inj d d0) as [-> [-> [-> [= -> ->]]]].
       destruct (HP _ t2).
       eapply equality_Ind_r_inv in e3 as [u'' [x0'' [redr' redu' ?]]]; auto.
       split; cycle 1.
@@ -565,7 +565,7 @@ Proof.
     eapply validity; eauto.
     econstructor; eauto.
     eapply conv_cumul. constructor.
-    pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ H declc); subst decl'.
+    pose proof (declared_constant_inj _ _ H declc); subst decl'.
     eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
 
   - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
@@ -576,7 +576,7 @@ Proof.
 
     eapply conv_cumul.
     constructor.
-    pose proof (PCUICWeakeningEnv.declared_inductive_inj isdecl declc) as [-> ->].
+    pose proof (declared_inductive_inj isdecl declc) as [-> ->].
     eapply PCUICUnivSubstitution.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
@@ -584,7 +584,7 @@ Proof.
     econstructor; eauto.
     eapply validity; eauto.
     econstructor; eauto.
-    pose proof (PCUICWeakeningEnv.declared_constructor_inj isdecl declc) as [-> [-> ->]].
+    pose proof (declared_constructor_inj isdecl declc) as [-> [-> ->]].
     unfold type_of_constructor.
     transitivity (subst0 (inds (inductive_mind ind) u (ind_bodies mdecl))
     (subst_instance u0 cdecl'.(cstr_type))).
@@ -623,7 +623,7 @@ Proof.
     { eapply validity. econstructor; eauto.
       solve_all. }
     eapply inversion_Case in X10 as (mdecl' & idecl' & decli' & indices' & data & cum); auto.
-    destruct (PCUICWeakeningEnv.declared_inductive_inj isdecl decli'). subst mdecl' idecl'.
+    destruct (declared_inductive_inj isdecl decli'). subst mdecl' idecl'.
     destruct data.
     unshelve epose proof (X8 _ _ _ scrut_ty (eq_term_empty_leq_term X11)); tea.
     pose proof (eq_term_empty_eq_term X11).
@@ -665,7 +665,7 @@ Proof.
     * eapply PCUICValidity.validity; eauto.
       eapply type_Proj; eauto.
     * rewrite /ty.
-      destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [-> [-> [-> ->]]].
+      destruct (declared_projection_inj a isdecl) as [-> [-> [-> ->]]].
       set (ctx := PCUICInductives.projection_context p.1.1 mdecl idecl u).
       have clctx : is_closed_context (Γ,,, ctx).
       { rewrite /ctx.

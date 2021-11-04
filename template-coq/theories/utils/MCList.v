@@ -1,5 +1,8 @@
+From Equations Require Import Equations.
 From Coq Require Import Bool Arith Lia SetoidList.
 From MetaCoq Require Import MCPrelude MCRelations.
+
+Set Equations Transparent.
 
 Export ListNotations.
 
@@ -798,6 +801,15 @@ Proof.
   simpl. rewrite IHl; auto with arith.
 Qed.
 
+Lemma nth_error_app_inv X (x : X) n l1 l2 :
+  nth_error (l1 ++ l2) n = Some x -> (n < #|l1| /\ nth_error l1 n = Some x) \/ (n >= #|l1| /\ nth_error l2 (n - List.length l1) = Some x).
+Proof.
+  destruct (le_lt_dec #|l1| n).
+  - intros. rewrite nth_error_app2 in H; eauto.
+  - intros. rewrite nth_error_app1 in H; eauto.
+Qed.
+
+
 Lemma nth_error_rev {A} (l : list A) i : i < #|l| ->
   nth_error l i = nth_error (List.rev l) (#|l| - S i).
 Proof.
@@ -1164,3 +1176,13 @@ Proof.
   destruct IHl; intuition congruence.
 Qed.
 
+Equations map_In {A B : Type} (l : list A) (f : forall (x : A), In x l -> B) : list B :=
+map_In nil _ := nil;
+map_In (cons x xs) f := cons (f x _) (map_In xs (fun x H => f x _)).
+
+Lemma map_In_spec {A B : Type} (f : A -> B) (l : list A) :
+  map_In l (fun (x : A) (_ : In x l) => f x) = List.map f l.
+Proof.
+  remember (fun (x : A) (_ : In x l) => f x) as g.
+  funelim (map_In l g) => //; simpl; rewrite (H f0); trivial.
+Qed.

@@ -21,6 +21,8 @@ Definition inds ind u (l : list one_inductive_body) :=
       end
   in aux (List.length l).
 
+Definition ind_subst mdecl ind u := inds (inductive_mind ind) u (ind_bodies mdecl).
+
 Lemma inds_length ind u l : #|inds ind u l| = #|l|.
 Proof.
   unfold inds. induction l; simpl; congruence.

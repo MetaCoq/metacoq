@@ -50,6 +50,8 @@ Inductive subslet {cf:checker_flags} Σ (Γ : context) : list term -> context ->
     Σ ;;; Γ |- subst0 s t : subst0 s T ->
     subslet Σ Γ (subst0 s t :: s) (Δ ,, vdef na t T).
 
+#[global] Hint Constructors subslet : pcuic.
+
 Lemma subslet_def {cf} {Σ : global_env_ext} {Γ Δ s na t T t'} : 
   subslet Σ Γ s Δ ->
   Σ;;; Γ |- subst0 s t : subst0 s T ->

@@ -10,7 +10,7 @@ From Equations Require Import Equations.
 Set Equations With UIP.
 
 #[global]
-Instance All2_fold_len P Γ Δ : HasLen (All2_fold P Γ Δ) #|Γ| #|Δ| :=
+Instance All2_fold_len {A} P (Γ Δ : list A) : HasLen (All2_fold P Γ Δ) #|Γ| #|Δ| :=
   All2_fold_length.
 
 Implicit Types (cf : checker_flags).
@@ -79,6 +79,10 @@ Definition R_opt_variance Re Rle v :=
 
 Definition R_global_instance Σ Re Rle gr napp :=
   R_opt_variance Re Rle (global_variance Σ gr napp).
+
+Definition R_ind_universes {cf:checker_flags} (Σ : global_env_ext) ind n i i' :=
+  R_global_instance Σ (eq_universe (global_ext_constraints Σ))
+    (leq_universe (global_ext_constraints Σ)) (IndRef ind) n i i'.  
 
 Lemma R_universe_instance_impl R R' :
   RelationClasses.subrelation R R' ->

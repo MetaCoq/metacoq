@@ -3,9 +3,9 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities EDeps.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst PCUICAstUtils
   PCUICWeakening PCUICSubstitution PCUICArities
-  PCUICWcbvEval PCUICSR  PCUICInversion
+  PCUICWcbvEval PCUICSR PCUICInversion
   PCUICUnivSubstitution PCUICElimination PCUICCanonicity
   PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICSafeLemmata
   PCUICArities PCUICInductiveInversion
@@ -786,7 +786,7 @@ Proof.
         econstructor.
         eapply Is_type_eval; eauto.
         eapply nth_error_all.
-        erewrite Prelim.nth_error_skipn. reflexivity. eassumption.
+        erewrite nth_error_skipn. eassumption.
         eapply All_impl. assert (pars = ind_npars x0). now rewrite H7.
         subst.
         eassumption.
@@ -820,7 +820,7 @@ Proof.
             econstructor.
             eapply Is_type_eval; eauto.
             eapply nth_error_all.
-            erewrite Prelim.nth_error_skipn. reflexivity. eassumption.
+            erewrite nth_error_skipn. eassumption.
             eapply All_impl. assert (pars = ind_npars x0). now rewrite H7. subst.
             eassumption.
             eapply isErasable_Proof. eauto.
@@ -1106,7 +1106,7 @@ Proof.
              assert(Σ ;;; [] |- mkApps (tFix mfix idx) (argsv ++ [av]) : subst [av] 0 x1).
              { rewrite mkApps_app. eapply PCUICValidity.type_App'; eauto.
                eapply subject_reduction_eval; eauto. }
-             epose proof (fix_app_is_constructor Σ (args:=argsv ++ [av]) X).
+             epose proof (fix_app_is_constructor (args:=argsv ++ [av]) X).
              rewrite /unfold_fix e1 in X0.
              specialize (X0 eq_refl). simpl in X0.
              rewrite nth_error_snoc in X0. auto. apply X0.
@@ -1188,7 +1188,7 @@ Proof.
     destruct Hty' as (? & ? & ? & ? & ? & ?).
 
     eapply subject_reduction in t as typ_stuck_fix; [|eauto|]; first last.
-    { eapply wcbeval_red. 3:eauto. all:eauto. }
+    { eapply wcbeval_red; eauto. }
 
     eapply erases_App in He as He'; [|eauto].
     destruct He' as [(-> & [])|(? & ? & -> & ? & ?)].
@@ -1198,12 +1198,12 @@ Proof.
       eapply Is_type_red.
       * eauto.
       * eapply PCUICReduction.red_app.
-        -- eapply wcbeval_red; [eauto| |eauto]. eauto.
-        -- eapply wcbeval_red; [eauto| |eauto]. eauto.
+        -- eapply wcbeval_red; revgoals; eauto.
+        -- eapply wcbeval_red; revgoals; eauto.
       * eauto.
     + depelim Hed.
       eapply subject_reduction in t0 as typ_arg; [|eauto|]; first last.
-      { eapply wcbeval_red; [eauto| |eauto]. eauto. }
+      { eapply wcbeval_red; revgoals; eauto. }
 
       eapply IHeval1 in H1 as (? & ? & [?]); [|now eauto|now eauto].
       eapply IHeval2 in H2 as (? & ? & [?]); [|now eauto|now eauto].

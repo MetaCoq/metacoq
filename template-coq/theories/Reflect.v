@@ -323,6 +323,7 @@ Definition eq_cast_kind (c c' : cast_kind) : bool :=
   | VmCast, VmCast
   | NativeCast, NativeCast
   | Cast, Cast => true
+  | RevertCast, RevertCast => true
   | _, _ => false
   end.
 

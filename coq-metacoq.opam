@@ -14,7 +14,6 @@ authors: ["Abhishek Anand <aa755@cs.cornell.edu>"
           "Théo Winterhalter <theo.winterhalter@inria.fr>"
 ]
 license: "MIT"
-version: "dev"
 depends: [
   "coq-metacoq-template" {= version}
   "coq-metacoq-pcuic" {= version}

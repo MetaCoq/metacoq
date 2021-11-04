@@ -21,7 +21,6 @@ build: [
 install: [
   [make "-C" "pcuic" "install"]
 ]
-version: "dev"
 depends: [
   "coq-equations" { >= "1.3" }
   "coq-metacoq-template" {= version}

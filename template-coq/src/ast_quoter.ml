@@ -120,7 +120,7 @@ struct
     | Constr.DEFAULTcast -> Cast
     | Constr.NATIVEcast -> NativeCast
     | Constr.VMcast -> VmCast
-
+    | Constr.REVERTcast -> RevertCast
 
   let quote_dirpath (dp : DirPath.t) : BasicAst.dirpath =
     let l = DirPath.repr dp in

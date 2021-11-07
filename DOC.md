@@ -117,4 +117,4 @@ The file `README.md` in https://github.com/MetaCoq/metacoq.github.io is supposed
 That's why we can't use relative links and have to use absolute ones.
 E.g. [INSTALL.md](https://github.com/MetaCoq/metacoq/tree/coq-8.11/INSTALL.md) and not [INSTALL.md](INSTALL.md).
 
-Thus, when switching to a new default branch, we have to search and replace by the old branch by the new one.
+Thus, when switching to a new default branch, we have to search and replace the old branch with the new one.

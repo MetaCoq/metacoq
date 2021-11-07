@@ -1,4 +1,4 @@
-# Documentation for MetaCoq users and developpers
+# Documentation for MetaCoq users and developers
 
 ## Branches and compatibility
 

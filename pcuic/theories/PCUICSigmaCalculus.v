@@ -1871,7 +1871,28 @@ Proof.
   - depelim H. now eapply IHΓ.
 Qed.
 
-Lemma expand_lets_assumption_context Γ Δ :
+Lemma expand_lets_assumption_context Γ t : 
+  assumption_context Γ ->
+  expand_lets Γ t = t.
+Proof.
+  induction Γ using rev_ind.
+  - rewrite /expand_lets /expand_lets_k /=. intros _.
+    rewrite lift0_id subst_empty //.
+  - intros ass. eapply assumption_context_app in ass as [assl assx]. 
+    depelim assx.
+    rewrite /expand_lets /expand_lets_k; len; simpl.
+    rewrite extended_subst_app /=. 
+    rewrite subst_app_simpl /=; len.
+    rewrite subst_context_lift_id // lift0_context.
+    rewrite (context_assumptions_context assl). simpl.
+    rewrite !Nat.add_1_r subst_reli_lift_id //.
+    rewrite /expand_lets_ctx /expand_lets_k_ctx in IHΓ.
+    specialize (IHΓ assl). 
+    rewrite /expand_lets /expand_lets_k in IHΓ.
+    now rewrite (context_assumptions_context assl) in IHΓ.
+Qed.
+
+Lemma expand_lets_ctx_assumption_context Γ Δ :
   assumption_context Γ -> expand_lets_ctx Γ Δ = Δ.
 Proof.
   induction Γ using rev_ind.

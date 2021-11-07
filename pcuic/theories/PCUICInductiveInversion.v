@@ -629,6 +629,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
   (i = i') * 
   (* Universe instances match *)
   R_ind_universes Σ i (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' *
+  consistent_instance_ext Σ (ind_universes mdecl) u *    
   consistent_instance_ext Σ (ind_universes mdecl) u' *    
   (#|args| = (ind_npars mdecl + context_assumptions cdecl.(cstr_args))%nat) *
   ∑ parsubst argsubst parsubst' argsubst',
@@ -2417,7 +2418,6 @@ Qed.
 Lemma inductive_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   forall {ind mdecl idecl u u' napp},
   declared_inductive Σ ind mdecl idecl ->
-  on_udecl_prop Σ (ind_universes mdecl) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
   R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
@@ -2433,7 +2433,9 @@ Lemma inductive_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
 Proof.
   intros * decli.
   destruct (on_declared_inductive decli) as [onmind oib].
-  intros onu cu cu' Ru Γ * spu spu' cpars *. move: Ru.
+  intros cu cu' Ru Γ * spu spu' cpars *. move: Ru.
+  assert (onu : on_udecl_prop Σ (ind_universes mdecl)).
+  { eapply (weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 decli)). }
   unfold R_global_instance.
   pose proof decli as decli'.
   assert (closed_ctx
@@ -2648,7 +2650,6 @@ Qed.
 Lemma constructor_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   forall {c mdecl idecl cdecl u u' napp},
   declared_constructor Σ c mdecl idecl cdecl ->
-  on_udecl_prop Σ (ind_universes mdecl) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
   R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef c.1) napp u u' ->
@@ -2673,7 +2674,9 @@ Lemma constructor_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
 Proof.
   intros * declc.
   destruct (on_declared_constructor declc) as [[onmind oib] [cs [hnth onc]]].
-  intros onu cu cu' Ru Γ * spu spu' cpars *. move: Ru.
+  intros cu cu' Ru Γ * spu spu' cpars *. move: Ru.
+  assert (onu : on_udecl_prop Σ (ind_universes mdecl)).
+  { eapply (weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 (proj1 declc))). }  
   have clΓ : is_closed_context Γ.
   { apply spine_dom_wf in spu; eauto with fvs. }
   unfold R_global_instance.
@@ -3327,8 +3330,7 @@ Proof.
     2:{ apply ctx_inst_length in cparams.
         rewrite context_assumptions_rev in cparams. len in cparams.
         rewrite List.firstn_length. lia. }
-    unshelve epose proof (inductive_cumulative_indices isdecl _ c H0 Ruv Γ).
-    { eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) _ (proj1 isdecl)). }
+    unshelve epose proof (inductive_cumulative_indices isdecl c H0 Ruv Γ).
     specialize (X (firstn (ind_npars mdecl) args) params).
     unshelve epose proof (ctx_inst_spine_subst _ cparams); tea.
     { eapply weaken_wf_local; tea. eapply (on_minductive_wf_params isdecl); tea. }

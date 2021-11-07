@@ -276,7 +276,7 @@ Proof.
     apply erases_deps_substl.
     + intuition auto.
       apply erases_deps_mkApps_inv in H3.
-      now apply Forall_skipn.
+      now apply Forall_rev, Forall_skipn.
     + eapply nth_error_forall in e0; [|now eauto].
       assumption.
   - depelim er.

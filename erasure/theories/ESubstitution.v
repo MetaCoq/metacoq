@@ -567,12 +567,3 @@ Proof.
 Qed.
 
 
-Lemma erases_subst0 (Σ : global_env_ext) Γ Γ' t s t' s' T :
-  wf Σ ->
-  wf_local Σ Γ ->
-  Σ ;;; Γ |- t : T ->
-  Σ ;;; Γ' |- t ⇝ℇ t' ->
-  All2 (erases Σ Γ) s s' ->
-  Σ ;;; [] |- (subst s 0 t) ⇝ℇ ELiftSubst.subst s' 0 t'.
-Proof.
-Admitted.

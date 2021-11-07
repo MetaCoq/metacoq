@@ -120,4 +120,4 @@ Qed.
 Definition tDummy := tVar ""%string.
 
 Definition iota_red npar args (br : nat * term) :=
-  substl (List.skipn npar args) br.2.
+  substl (List.rev (List.skipn npar args)) br.2.

@@ -214,7 +214,7 @@ Section Spines.
         rewrite it_mkProd_or_LetIn_app /=.
         eapply red_prod. reflexivity.
         rewrite expand_lets_smash_context /= expand_lets_k_ctx_nil.
-        rewrite expand_lets_assumption_context. repeat constructor.
+        rewrite expand_lets_ctx_assumption_context. repeat constructor.
         now eapply X.
   Qed.
 

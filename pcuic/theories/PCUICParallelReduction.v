@@ -10,6 +10,8 @@ From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICAstUtils PCUICDepth P
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
+Set Default Proof Using "Type*".
+
 Local Set Keyed Unification.
 
 Ltac simplify_IH_hyps := 
@@ -762,7 +764,7 @@ Section ParallelReduction.
   Defined.
 
   Lemma pred1_pred1_ctx {Γ Δ t u} : pred1 Γ Δ t u -> pred1_ctx Γ Δ.
-  Proof.
+  Proof using.
     intros H; revert Γ Δ t u H.
     refine (fst (pred1_ind_all_ctx _ (fun Γ Γ' => pred1_ctx Γ Γ')
       (fun Γ Γ' Δ Δ' => True)
@@ -779,7 +781,7 @@ Section ParallelReduction.
     (fun (Γ : context) (t : term) =>
       forall Γ' : context, pred1_ctx Γ Γ' -> pred1 Γ Γ' t t) Γ Δ ->
     pred1_ctx_over Γ Γ' Δ Δ.
-  Proof.
+  Proof using.
     intros Γ' pred onc.
     induction onc; simpl; constructor; auto.
     constructor.
@@ -797,7 +799,7 @@ Section ParallelReduction.
     (fun (Γ : context) (t : term) =>
       forall Γ' : context, pred1_ctx Γ Γ' -> pred1 Γ Γ' t t) Γ Δ ->
     pred1_ctx_over Γ Γ' Δ Δ.
-  Proof.
+  Proof using.
     intros Γ' pred onc.
     induction onc; simpl; constructor; auto.
     constructor.
@@ -811,7 +813,7 @@ Section ParallelReduction.
   Hint Constructors All_decls : pcuic.
 
   Lemma pred1_refl_gen Γ Γ' t : pred1_ctx Γ Γ' -> pred1 Γ Γ' t t.
-  Proof.
+  Proof using.
     revert Γ'.
     revert Γ t.
     apply: PCUICDepth.term_forall_ctx_list_ind;
@@ -851,7 +853,7 @@ Section ParallelReduction.
   Qed.
 
   Lemma pred1_ctx_refl Γ : pred1_ctx Γ Γ.
-  Proof.
+  Proof using.
     induction Γ. constructor.
     destruct a as [na [b|] ty]; constructor; try red; simpl; auto with pcuic;
     constructor; now apply pred1_refl_gen.
@@ -859,10 +861,10 @@ Section ParallelReduction.
   Hint Resolve pred1_ctx_refl : pcuic.
 
   Lemma pred1_refl Γ t : pred1 Γ Γ t t.
-  Proof. apply pred1_refl_gen, pred1_ctx_refl. Qed.
+  Proof using Type*. apply pred1_refl_gen, pred1_ctx_refl. Qed.
 
   Lemma pred1_ctx_over_refl Γ Δ : All2_fold (on_decls (on_decls_over pred1 Γ Γ)) Δ Δ.
-  Proof.
+  Proof using.
     induction Δ as [|[na [b|] ty] Δ]; constructor; auto.
     all:constructor; apply pred1_refl.
   Qed.

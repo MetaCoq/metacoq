@@ -135,10 +135,10 @@ Proof.
     - eapply context_equality_rel_app.
       eapply eq_context_upto_context_equality.
       { rewrite on_free_vars_ctx_app clpars /=. len.
-        rewrite on_free_vars_subst_instance_context -lenpars.
+        rewrite on_free_vars_ctx_subst_instance -lenpars.
         eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
       { rewrite on_free_vars_ctx_app clpars /=. len.
-        rewrite on_free_vars_subst_instance_context -lenpars.
+        rewrite on_free_vars_ctx_subst_instance -lenpars.
         eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
       eapply eq_context_upto_cat; [reflexivity|].
       eapply eq_context_upto_univ_subst_instance'; tc. 1:reflexivity.

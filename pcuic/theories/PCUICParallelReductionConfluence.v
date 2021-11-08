@@ -3714,14 +3714,14 @@ Proof. intros hP d; destruct d as [na [b|] ty]; constructor; auto. Qed. *)
     eapply pred1_ctx_over_refl_gen.
     eapply All2_fold_app => //.
     now eapply pred1_ctx_over_refl_gen.
-    rewrite on_free_vars_subst_instance_context; tea.
+    rewrite on_free_vars_ctx_subst_instance; tea.
     now rewrite -> shiftnP_xpredT in onpctx.
     erewrite <- on_free_vars_ctx_on_ctx_free_vars.
     erewrite shiftnP_xpredT => //.     
     rewrite -subst_context0_inst_context.
     eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
     eapply on_free_vars_ctx_subst_context_xpredT => //.
-    rewrite on_free_vars_subst_instance_context //.
+    rewrite on_free_vars_ctx_subst_instance //.
     now rewrite -> shiftnP_xpredT in onpctx.
     eapply pred1_subst_consn; tea; eauto with fvs.
     - len. now rewrite (All2_length a).

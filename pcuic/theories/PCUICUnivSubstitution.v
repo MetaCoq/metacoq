@@ -1251,6 +1251,19 @@ Proof.
     + intros l n; cbn. now rewrite IHbb.
 Qed.
 
+Lemma subst_instance_expand_lets u Γ t :
+  subst_instance u (expand_lets Γ t) = 
+  expand_lets (subst_instance u Γ) (subst_instance u t).
+Proof.
+  rewrite /expand_lets /expand_lets_k.
+  rewrite subst_instance_subst.
+  rewrite subst_instance_extended_subst.
+  f_equal.
+  rewrite subst_instance_lift. len; f_equal.
+Qed.
+
+Hint Rewrite subst_instance_expand_lets closedn_subst_instance : substu.
+
 Lemma subst_instance_expand_lets_ctx u Γ Δ :
   subst_instance u (expand_lets_ctx Γ Δ) = 
   (expand_lets_ctx (subst_instance u Γ) (subst_instance u Δ)).

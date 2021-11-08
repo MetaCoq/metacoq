@@ -756,7 +756,7 @@ Proof.
   now rewrite /foroptb /= (Hi t).
 Qed.
 
-Lemma on_free_vars_subst_instance_context P u Γ :
+Lemma on_free_vars_ctx_subst_instance P u Γ :
   on_free_vars_ctx P (subst_instance u Γ) = on_free_vars_ctx P Γ.
 Proof.
   rewrite /on_free_vars_ctx.
@@ -1009,7 +1009,7 @@ Lemma on_free_vars_case_predicate_context {cf} {Σ} {wfΣ : wf Σ} {P ci mdecl i
      apply on_free_vars_subst.
      { rewrite forallb_rev => //. }
      rewrite -on_free_vars_ctx_all_term.
-     rewrite on_free_vars_subst_instance_context.
+     rewrite on_free_vars_ctx_subst_instance.
      rewrite (on_free_vars_ctx_all_term _ _ (Universe.type0)).
      rewrite -(expand_lets_it_mkProd_or_LetIn _ _ 0 (tSort _)).
      eapply on_free_vars_expand_lets_k; len.
@@ -1061,7 +1061,7 @@ Lemma on_free_vars_case_predicate_context {cf} {Σ} {wfΣ : wf Σ} {P ci mdecl i
      + eapply (on_free_vars_subst_gen _ P).
        { eapply on_free_vars_terms_inds. }
        rewrite -on_free_vars_ctx_all_term.
-       rewrite on_free_vars_subst_instance_context.
+       rewrite on_free_vars_ctx_subst_instance.
        rewrite -on_free_vars_map2_cstr_args.
        { len. apply (wf_branch_length wfb). }
        instantiate (1 := closedP (#|mdecl.(ind_bodies)| + #|mdecl.(ind_params)|) xpredT).
@@ -1088,7 +1088,7 @@ Proof.
   apply on_free_vars_subst => //.
   { rewrite forallb_rev //. }
   rewrite -on_free_vars_ctx_all_term.
-  rewrite on_free_vars_subst_instance_context.
+  rewrite on_free_vars_ctx_subst_instance.
   len. subst n.
   rewrite /on_free_vars_ctx.
   setoid_rewrite shiftnP_add.

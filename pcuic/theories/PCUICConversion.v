@@ -2992,7 +2992,7 @@ Section ConvSubst.
 End ConvSubst.
 
 Hint Rewrite @on_free_vars_subst_instance : fvs.
-Hint Rewrite @on_free_vars_subst_instance_context subst_instance_length : fvs.
+Hint Rewrite @on_free_vars_ctx_subst_instance subst_instance_length : fvs.
 
 Lemma subst_instance_equality {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs le :
   valid_constraints (global_ext_constraints (Σ.1, univs))

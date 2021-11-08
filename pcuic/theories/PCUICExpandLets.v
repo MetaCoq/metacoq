@@ -9,7 +9,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICTyping.
 
 Definition trans_branch p (br : branch term) :=
   {| bcontext := smash_context [] br.(bcontext); 
-     bbody := expand_lets (subst_context (List.rev p.(pparams)) 0 br.(bcontext)) br.(bbody) |}.
+     bbody := 
+      expand_lets 
+        (subst_context (List.rev p.(pparams)) 0 br.(bcontext)@[p.(puinst)]) 
+        br.(bbody) |}.
 
 Fixpoint trans (t : term) : term :=
   match t with

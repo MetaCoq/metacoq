@@ -613,6 +613,35 @@ Proof.
   rewrite - !distr_lift_subst. apply weakening; eauto.
 Qed.
 
+Lemma untyped_subslet_lift (Γ Δ : context) s Δ' :
+  untyped_subslet Γ s Δ' ->
+  untyped_subslet (Γ ,,, Δ) (map (lift0 #|Δ|) s) (lift_context #|Δ| 0 Δ').
+Proof.
+  induction 1; rewrite ?lift_context_snoc /=; try constructor; auto.
+  simpl.
+  rewrite -(untyped_subslet_length X).
+  rewrite distr_lift_subst. constructor; auto.
+Qed.
+
+Lemma untyped_subslet_extended_subst Γ Δ :
+  untyped_subslet (Γ ,,, smash_context [] Δ)
+    (extended_subst Δ 0) 
+    (lift_context (context_assumptions Δ) 0 Δ).
+Proof.
+  induction Δ as [|[na [d|] ?] ?]; simpl; try constructor.
+  * rewrite lift_context_snoc /lift_decl /= /map_decl /=.
+    len. 
+    constructor => //.
+  * rewrite smash_context_acc. simpl.
+    rewrite /map_decl /= /map_decl /=. simpl.
+    rewrite lift_context_snoc /lift_decl /= /map_decl /=.
+    constructor.
+    rewrite (lift_extended_subst _ 1).
+    rewrite -(lift_context_lift_context 1 _).
+    eapply (untyped_subslet_lift _ [_]); eauto.
+Qed.
+    
+
 Lemma subslet_extended_subst {cf} {Σ} {wfΣ : wf Σ} Γ Δ :
   wf_local Σ (Γ ,,, Δ) ->
   subslet Σ (Γ ,,, smash_context [] Δ)

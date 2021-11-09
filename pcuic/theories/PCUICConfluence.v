@@ -1890,7 +1890,7 @@ Section RedPred.
     assert(pred1_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ)).
     { apply pred1_pred1_ctx in X.
       apply on_contexts_app_inv in X as [] => //.
-      apply All2_fold_app => //. now apply pred1_ctx_over_refl_gen. }
+      apply All2_fold_app => //. now eapply pred1_ctx_over_refl_gen. }
     assert(lenΔ : #|Δ| = #|Δ'|). 
     { eapply pred1_pred1_ctx in X. eapply All2_fold_length in X.
       rewrite !app_context_length in X. lia. }

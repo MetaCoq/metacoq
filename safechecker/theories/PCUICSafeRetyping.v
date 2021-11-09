@@ -141,17 +141,6 @@ Proof.
   eapply inversion_LetIn in HT as (? & ? & ? & ? & ? & ?); auto; split; [split|]; try econstructor; eauto.
 Qed.
 
-Lemma on_free_vars_ind_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl → 
-  on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT) 
-    (ind_predicate_context ind mdecl idecl).
-Proof.
-  intros decli.
-  rewrite <- closedn_ctx_on_free_vars.
-  eapply PCUICClosed.closed_ind_predicate_context; tea.
-  eapply (PCUICClosed.declared_minductive_closed decli).
-Qed.
-
 Section TypeOf.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).

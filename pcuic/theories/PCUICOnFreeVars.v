@@ -1375,18 +1375,39 @@ Proof.
   now setoid_rewrite shiftnP_closedP; setoid_rewrite shiftnP_xpredT; setoid_rewrite Nat.add_comm at 1.
 Qed.
 
-Lemma on_free_vars_ctx_subst_context P s ctx :
+Lemma substP_shiftnP_gen k n p : 
+  substP k n p (shiftnP (k + n) p) =1 shiftnP k p.
+Proof.
+  intros i; rewrite /shiftnP /substP /= /strengthenP /=.
+  repeat nat_compare_specs.
+  - cbn.
+    assert (i + n - (k + n) = i - k) by lia.
+    rewrite H1. now rewrite orb_diag.
+Qed.
+
+Lemma on_free_vars_ctx_subst_context P s k ctx :
+  on_free_vars_ctx (shiftnP (k + #|s|) P) ctx ->
+  forallb (on_free_vars P) s -> 
+  on_free_vars_ctx (shiftnP k P) (subst_context s k ctx).
+Proof.
+  intros onctx ons.
+  rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
+  rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
+  eapply on_free_vars_impl; revgoals.
+  - eapply on_free_vars_subst_gen => //; tea. 
+    rewrite -on_free_vars_ctx_all_term //. exact onctx.
+  - intros i. rewrite substP_shiftnP_gen //.
+Qed.
+
+Lemma on_free_vars_ctx_subst_context0 P s ctx :
   on_free_vars_ctx (shiftnP #|s| P) ctx ->
   forallb (on_free_vars P) s -> 
   on_free_vars_ctx P (subst_context s 0 ctx).
 Proof.
   intros onctx ons.
-  rewrite (on_free_vars_ctx_all_term _ _ Universe.type0).
-  rewrite -(subst_it_mkProd_or_LetIn _ _ _ (tSort _)).
-  eapply on_free_vars_subst => //.
-  rewrite -on_free_vars_ctx_all_term //.
+  rewrite -(shiftnP0 P). eapply on_free_vars_ctx_subst_context => /= //.
 Qed.
-
+  
 Lemma on_free_vars_ctx_lift_context p k n ctx :
   on_free_vars_ctx p ctx =
   on_free_vars_ctx (strengthenP k n p) (lift_context n k ctx).
@@ -1418,7 +1439,7 @@ Proof.
     * rewrite /= on_free_vars_ctx_snoc /= => /andP[] onΓ.
       rewrite /on_free_vars_decl /test_decl /= /= => /andP[] onb onty onacc.
       eapply IHΓ => //.
-      eapply on_free_vars_ctx_subst_context => /= //.
+      eapply on_free_vars_ctx_subst_context0 => /= //.
       + rewrite shiftnP_add //.
       + now rewrite onb //.
     * rewrite /= on_free_vars_ctx_snoc /= => /andP[] onΓ ont onacc.
@@ -1436,7 +1457,7 @@ Lemma on_free_vars_ctx_subst_context_xpredT s ctx :
   on_free_vars_ctx xpredT (subst_context s 0 ctx).
 Proof.
   intros onctx ons.
-  apply on_free_vars_ctx_subst_context => //.
+  apply on_free_vars_ctx_subst_context0 => //.
   rewrite shiftnP_xpredT //.
 Qed.
 

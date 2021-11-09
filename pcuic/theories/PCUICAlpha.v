@@ -259,8 +259,10 @@ Section Alpha.
       rewrite test_context_k_closed_on_free_vars_ctx.
       eapply eq_context_upto_names_on_free_vars; tea.
       rewrite test_context_k_closed_on_free_vars_ctx.
+      destruct a.
       eapply eq_context_upto_names_on_free_vars; tea.
-      rewrite -(All2_fold_length a). now eapply b.
+      destruct a as [hctx ihctx hb ihb].
+      rewrite -(All2_fold_length a2). now eapply ihb.
     - rewrite -(All2_length a). solve_all.
       apply/andP; split; eauto.
       len in b2. eapply b2. eauto.

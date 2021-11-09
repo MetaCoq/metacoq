@@ -2897,11 +2897,11 @@ Proof.
     change (Typing.wf Σ) in X0.
     have wfdecl := on_global_decl_wf (Σ := (Σ, udecl)) X0 o0.
     destruct d; simpl in *.
-    * destruct c; simpl. destruct cst_body0; simpl in *.
+    * destruct c as [cst_typ [] cst_univs]; simpl in *.
       red in o |- *. simpl in *. 
-      apply (X (Σ, cst_universes0) [] t (Some cst_type0)); auto.
+      apply (X (Σ, cst_univs) [] t (Some cst_typ)); auto.
       red in o0 |- *. simpl in *.
-      now apply (X (Σ, cst_universes0) [] cst_type0 None).
+      now apply (X (Σ, cst_univs) [] cst_typ None).
     * destruct o0 as [onI onP onNP].
       constructor; auto.
       -- have wfpars := on_global_inductive_wf_params wfdecl.
@@ -3025,8 +3025,8 @@ Proof.
               eapply trans_cstr_respects_variance => //.
             + destruct lets_in_constructor_types.
               ++ red in on_lets_in_type. red. rewrite <- on_lets_in_type.
-                 destruct x. clear. cbn.
-                 induction cstr_args0.
+                 destruct x as [? cstr_args]. clear. cbn.
+                 induction cstr_args.
                  +++ reflexivity.
                  +++ cbn. destruct (decl_body a); cbn; eauto.
               ++ eauto.

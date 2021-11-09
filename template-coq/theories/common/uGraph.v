@@ -1087,9 +1087,9 @@ Section CheckLeq.
       -> gc_leq_universe_n n uctx.2 (Universe.lType (Universe.make' e1)) u.
   Proof.
     unfold leqb_expr_univ_n, gc_leq_universe_n; cbn.
-    intros H v Hv. destruct u; try discriminate;cbn in *.
+    intros H v Hv. destruct u as [| |u];try discriminate;cbn in *.
     rewrite val_fold_right.
-    destruct (Universe.exprs t0) as [e u'] eqn:Ht0;cbn in *.
+    destruct (Universe.exprs u) as [e u'] eqn:Ht0;cbn in *.
     rewrite <- !fold_left_rev_right in H; cbn in *.
     induction (List.rev u'); cbn in *.
     - apply leqb_expr_n_spec0; tas.
@@ -1468,14 +1468,14 @@ Section CheckLeq.
   Proof.
     split; [apply leqb_expr_univ_n_spec0|].
     unfold leqb_expr_univ_n; intro HH.
-    destruct u.
+    destruct u as [| |u].
     - (*contradiction *)
       cbn in *. destruct HC as [v Hv];specialize (HH v Hv); cbn in HH.
       auto.
     - (*contradiction *)
       cbn in *. destruct HC as [v Hv];specialize (HH v Hv); cbn in HH.
       destruct lt; simpl in *; lled;lia.
-    - case_eq (Universe.exprs t0). intros e u' ee.
+    - case_eq (Universe.exprs u). intros e u' ee.
       assert (Hu': gc_expr_declared e /\ Forall gc_expr_declared u'). {
       split. apply Hu. apply Universe.In_exprs. left. now rewrite ee.
       apply Forall_forall. intros e' He'. apply Hu.
@@ -1545,7 +1545,7 @@ Section CheckLeq.
   Proof.
     unfold leqb_universe_n, gc_leq_universe_n.
     move/orP: (trichotomy u1) => [/orP [issp1|isp1]|diff];
-    destruct u1 eqn:Hu1;cbn;intros H v Hv; try discriminate.
+    destruct u1 as [| |u1l] eqn:Hu1;cbn;intros H v Hv; try discriminate.
     - move/orP: (trichotomy u2) => [/orP [issp|isp]|].
       * rewrite issp /= andb_true_r in H.
         apply is_sprop_val with (v:=v) in issp; rewrite issp; cbn.
@@ -1570,7 +1570,7 @@ Section CheckLeq.
         eapply val_is_sprop in vu2. now rewrite vu2 in issp.
         now rewrite H.
     - unfold val, Universe.Evaluable'.
-      destruct (Universe.exprs t0) as [e1 u1'] eqn:Hu1'.
+      destruct (Universe.exprs u1l) as [e1 u1'] eqn:Hu1'.
       subst u1.
       rewrite <- fold_left_rev_right in *; cbn in *.
       induction (List.rev u1'); cbn in *.
@@ -1699,7 +1699,7 @@ Section CheckLeq.
         (Hu2  : levels_declared u2)
     : check_eqb_universe u1 u2 <-> gc_eq_universe uctx.2 u1 u2.
   Proof.
-    destruct u1, u2; simpl; rewrite ?check_eqb_universe_exprs_spec; auto; cbn; unfold check_eqb_universe; 
+    destruct u1 as [| |u1], u2 as [| |u2]; simpl; rewrite ?check_eqb_universe_exprs_spec; auto; cbn; unfold check_eqb_universe;
     repeat rewrite ?orb_true_r ?orb_false_r ?andb_true_r ?andb_false_r; cbn.
     9:reflexivity.
     all:unfold gc_eq_universe; destruct check_univs eqn:cu; cbn; try split; auto; try discriminate.
@@ -1707,9 +1707,9 @@ Section CheckLeq.
     all:try solve [intros Hgc; destruct HC as [v Hv]; specialize (Hgc v Hv); simpl in Hgc; try discriminate].
     rewrite !andb_true_r in v.
     intros Hgc.
-    destruct (Universe.exprs t0).
+    destruct (Universe.exprs u2).
     now rewrite fold_left_false andb_false_r in v.
-    destruct (Universe.exprs t0).
+    destruct (Universe.exprs u1).
     now rewrite fold_left_false /= in v.
   Qed.
 
@@ -2129,7 +2129,7 @@ Section AddLevelsCstrs.
   Proof.
     unfold gc_of_constraints.
     rewrite ConstraintSet.fold_spec.
-    destruct fold_left eqn:eq.
+    destruct fold_left as [t|] eqn:eq.
     - constructor.
       + intros.
         setoid_rewrite ConstraintSetFact.elements_iff; setoid_rewrite InA_In_eq at 2.
@@ -2139,7 +2139,7 @@ Section AddLevelsCstrs.
         2:gcsets.
         revert eq.
         generalize (GCS.empty).
-        induction (ConstraintSet.elements s) in t0 |- *; simpl in *.
+        induction (ConstraintSet.elements s) in t |- *; simpl in *.
         intros ? [= ->]. firstorder auto.
         intros t' Ht'.
         pose proof (add_gc_of_constraint_spec a t').
@@ -2161,7 +2161,7 @@ Section AddLevelsCstrs.
         setoid_rewrite ConstraintSetFact.elements_iff; setoid_rewrite InA_In_eq at 1.
         revert eq.
         generalize (GCS.empty).
-        induction (ConstraintSet.elements s) in t0 |- *; simpl in *.
+        induction (ConstraintSet.elements s) in t |- *; simpl in *.
         intros ? [= ->]. firstorder auto.
         intros t' Ht'.
         pose proof (add_gc_of_constraint_spec a t').

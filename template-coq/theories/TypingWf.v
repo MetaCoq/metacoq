@@ -44,7 +44,7 @@ Lemma on_global_decl_impl `{checker_flags} Σ P Q kn d :
 Proof.
   intros X X0 o.
   destruct d; simpl.
-  - destruct c; simpl. destruct cst_body0; simpl in *.
+  - destruct c as [? cst_body ?]; simpl. destruct cst_body; simpl in *.
     red in o |- *. simpl in *. now eapply X.
     red in o |- *. simpl in *. now eapply X.
   - simpl in *.
@@ -755,8 +755,8 @@ Section WfRed.
     - apply wf_subst_instance.
       unfold declared_constant in H.
       eapply lookup_on_global_env in H as [Σ' [onΣ' [ext prf]]]; eauto.
-      destruct decl; simpl in *.
-      subst cst_body0; simpl in *; unfold on_constant_decl in prf; cbn in prf.
+      destruct decl as [? cst_body ?]; simpl in *.
+      subst cst_body; simpl in *; unfold on_constant_decl in prf; cbn in prf.
       unfold wf_decl_pred in prf. intuition eauto using wf_extends.
     - apply wf_mkApps_inv in X.
       eapply nth_error_all in X; eauto.
@@ -962,7 +962,7 @@ Section TypingWf.
       apply wf_subst. now destruct p0. destruct p. now inv w.
     - split. wf. apply wf_subst_instance. wf.
       destruct (lookup_on_global_env X H) as [Σ' [wfΣ' [ext prf]]]; eauto.
-      red in prf. destruct decl; destruct cst_body0; red in prf; simpl in *; wf.
+      red in prf. destruct decl as [? [] ?]; red in prf; simpl in *; wf.
       destruct prf. wf.
 
     - split. wf. apply wf_subst_instance.

@@ -1162,21 +1162,21 @@ Lemma erases_mutual {Σ mdecl m} :
   declared_minductive Σ mdecl m ->
   erases_mutual_inductive_body m (erase_mutual_inductive_body m).
 Proof.
-  destruct m; constructor; simpl; auto.
+  destruct m as [??? ind_bodies ??]; constructor; simpl; auto.
   eapply on_declared_minductive in H; auto. simpl in H. clear X.
   eapply onInductives in H; simpl in *.
   assert (Alli (fun i oib => 
-    match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies0).
+    match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies).
   { eapply Alli_impl; eauto.
     simpl. intros n x []. simpl in *. rewrite ind_arity_eq.
     rewrite !destArity_it_mkProd_or_LetIn /= //. } clear H.
   induction X; constructor; auto.
-  destruct hd; constructor; simpl; auto.
+  destruct hd as [????? ind_ctors ind_projs ?]; constructor; simpl; auto.
   clear.
-  induction ind_ctors0; constructor; auto.
+  induction ind_ctors; constructor; auto.
   cbn in *.
   intuition auto.
-  induction ind_projs0; constructor; auto.
+  induction ind_projs; constructor; auto.
   destruct a; auto.
   unfold isPropositionalArity.
   destruct destArity as [[? ?]|] eqn:da; auto.

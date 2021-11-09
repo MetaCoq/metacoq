@@ -2106,8 +2106,8 @@ Section CheckEnv.
     assert (eq: monomorphic_constraints_decl g
                 = constraints_of_udecl (universes_decl_of_decl g)). {
       destruct g.
-      destruct c, cst_universes0; try discriminate; reflexivity.
-      destruct m, ind_universes0; try discriminate; reflexivity. }
+      destruct c as [?? []]; try discriminate; reflexivity.
+      destruct m as [???? [] ?]; try discriminate; reflexivity. }
     rewrite eq; clear eq. 
     case_eq (gc_of_constraints (global_constraints Σ));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
@@ -2117,8 +2117,8 @@ Section CheckEnv.
     subst G. unfold global_ext_levels; simpl.
     assert (eq: monomorphic_levels_decl g
                 = levels_of_udecl (universes_decl_of_decl g)). {
-      destruct g. destruct c, cst_universes0; try discriminate; reflexivity.
-      destruct m, ind_universes0; try discriminate; reflexivity. }
+      destruct g. destruct c as [?? []]; try discriminate; reflexivity.
+      destruct m as [???? [] ?]; try discriminate; reflexivity. }
     rewrite eq. simpl. rewrite add_uctx_make_graph.
     apply graph_eq; try reflexivity.
     simpl. now rewrite H1.
@@ -2128,12 +2128,12 @@ Section CheckEnv.
     split; sq. 2: constructor; tas.
     unfold global_uctx; simpl.
     assert (eq1: monomorphic_levels_decl g = LevelSet.empty). {
-      destruct g. destruct c, cst_universes0; try discriminate; reflexivity.
-      destruct m, ind_universes0; try discriminate; reflexivity. }
+      destruct g. destruct c as [?? []]; try discriminate; reflexivity.
+      destruct m as [???? [] ?]; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
     assert (eq1: monomorphic_constraints_decl g = ConstraintSet.empty). {
-      destruct g. destruct c, cst_universes0; try discriminate; reflexivity.
-      destruct m, ind_universes0; try discriminate; reflexivity. }
+      destruct g. destruct c as [?? []]; try discriminate; reflexivity.
+      destruct m as [???? [] ?]; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
     now rewrite LevelSet_union_empty CS_union_empty.
   Qed.

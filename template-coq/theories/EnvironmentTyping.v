@@ -986,7 +986,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     assert (X' := fun Γ t T => X (Σ, udecl0) Γ t T wfΣ X0 IHX0); clear X.
     rename X' into X.
     clear IHX0. destruct d; simpl.
-    - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
+    - destruct c as [?[]]; simpl in *; now eapply X.
     - red in o. simpl in *.
       destruct o0 as [onI onP onNP].
       constructor; auto.

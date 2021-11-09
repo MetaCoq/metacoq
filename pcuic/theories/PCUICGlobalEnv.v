@@ -98,28 +98,24 @@ Proof.
        -- inversion HΣ; subst.
           destruct H2 as [HH1 [HH HH3]].
           subst udecl. destruct d as [decl|decl]; simpl in *.
-          ++ destruct decl; simpl in *.
-             destruct cst_universes0 ; [
-               eapply (HH (l, ct, l') Hctr)
+          ++ destruct decl as [?? []]; simpl in *;
+             [ eapply (HH (l, ct, l') Hctr)
              | apply ConstraintSetFact.empty_iff in Hctr ; contradiction
              ].
-          ++ destruct decl. simpl in *.
-             destruct ind_universes0 ; [
-               eapply (HH (l, ct, l') Hctr)
+          ++ destruct decl as [???? [] ?]; simpl in *;
+             [ eapply (HH (l, ct, l') Hctr)
              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
              ].
        -- inversion HΣ. subst.
           destruct H2 as [HH1 [HH HH3]].
           subst udecl. destruct d as [decl|decl].
           all: simpl in *.
-          ++ destruct decl. simpl in *.
-             destruct cst_universes0 ; [
-               eapply (HH (l, ct, l') Hctr)
+          ++ destruct decl as [?? []]; simpl in *;
+             [ eapply (HH (l, ct, l') Hctr)
              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
              ].
-          ++ destruct decl. simpl in *.
-             destruct ind_universes0; [
-               eapply (HH (l, ct, l') Hctr)
+          ++ destruct decl as [???? [] ?]; simpl in *;
+             [ eapply (HH (l, ct, l') Hctr)
              | apply ConstraintSetFact.empty_iff in Hctr; contradiction
              ].
      * inversion HΣ. subst.
@@ -157,9 +153,9 @@ Proof.
     apply ConstraintSet.union_spec in Hc. destruct Hc.
     apply ConstraintSet.union_spec; simpl.
     + left. destruct d.
-      destruct c, cst_universes0. assumption.
+      destruct c as [?? []]. assumption.
       apply ConstraintSetFact.empty_iff in H; contradiction.
-      destruct m, ind_universes0. assumption.
+      destruct m as [???? [] ?]. assumption.
       apply ConstraintSetFact.empty_iff in H; contradiction.
     + apply ConstraintSet.union_spec; simpl.
       now right.

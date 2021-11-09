@@ -816,8 +816,7 @@ Proof.
       apply IH'; auto.
     * simpl. simpl in *.
       destruct d; simpl.
-      + destruct c; simpl in *.
-        destruct cst_body0; simpl in *.
+      + destruct c as [? [] ?]; simpl in *.
         simpl.
         red in Xg; simpl in Xg. intros. red. simpl.
         specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Xg)))))).

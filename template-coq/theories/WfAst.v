@@ -252,6 +252,7 @@ Proof.
   induction u in t |- *; simpl.
   - intuition.
   - intros Happ H; destruct t; try solve [inv H; intuition auto].
+    try rename t into t0. (* compat: variable is t0 before coq 8.15 but t after *)
     specialize (IHu (tApp t0 (u ++ [a]))).
     forward IHu.
     induction u; trivial. discriminate.
@@ -263,6 +264,7 @@ Proof.
   induction u in t |- *; simpl.
   - intuition.
   - intros H; destruct t; try solve [inv H; intuition auto].
+    try rename t into t0. (* compat: variable is t0 before coq 8.15 but t after *)
     specialize (IHu (tApp t0 (args ++ [a]))).
     forward IHu.
     induction u; trivial.
@@ -281,7 +283,9 @@ Lemma wf_subst_instance Σ u c :
   wf Σ c -> wf Σ (subst_instance u c).
 Proof.
   induction 1 using term_wf_forall_list_ind; simpl; try solve [ cbn; constructor; auto using All_map; solve_all ].
-  - cbn. constructor; auto. destruct t0; simpl in *; try congruence.
+  - cbn. constructor; auto.
+    try rename t into t0. (* compat: variable is t0 before coq 8.15 but t after *)
+    destruct t0; simpl in *; try congruence.
     destruct l; simpl in *; congruence.
     now apply All_map.
   - cbn; econstructor; eauto; simpl; solve_all.

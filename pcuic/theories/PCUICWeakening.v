@@ -331,10 +331,10 @@ Lemma lift_declared_constant `{checker_flags} Σ cst decl n k :
   decl = map_constant_body (lift n k) decl.
 Proof.
   intros wf declc.
-  rewrite /map_constant_body; destruct decl; simpl; f_equal; rewrite ?lift_rename.
+  rewrite /map_constant_body; destruct decl as [? cst_body ?]; simpl; f_equal; rewrite ?lift_rename.
   - eapply declared_constant_closed_type in declc; eauto.
     now rewrite rename_closed.
-  - destruct cst_body0 eqn:cb => /= //.
+  - destruct cst_body eqn:cb => /= //.
     f_equal.
     eapply declared_constant_closed_body in declc; simpl; eauto.
     now rewrite lift_rename rename_closed.

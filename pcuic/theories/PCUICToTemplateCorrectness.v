@@ -426,15 +426,15 @@ Proof.
     rewrite inds_spec.
     rewrite map_rev.
     rewrite map_mapi.
-    destruct mdecl.
+    destruct mdecl as [? ? ? ind_bodies].
     cbn.
     f_equal.
     remember 0 as k.
-    induction ind_bodies0 in k |- *.
+    induction ind_bodies in k |- *.
     + reflexivity.
     + cbn.
       f_equal.
-      apply IHind_bodies0.
+      apply IHind_bodies.
   - rewrite trans_subst_instance.
     f_equal.
 Qed.
@@ -1332,7 +1332,7 @@ Proof.
     
   - rewrite trans_subst_instance. econstructor.
     apply (trans_declared_constant _ c decl H).
-    destruct decl. now simpl in *; subst cst_body0.
+    destruct decl as [? cst_body ?]; now simpl in *; subst cst_body.
 
   - rewrite trans_mkApps; eauto with wf.
     simpl. constructor; now rewrite nth_error_map H.

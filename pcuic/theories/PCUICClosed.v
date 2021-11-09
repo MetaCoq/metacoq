@@ -677,7 +677,7 @@ Proof.
   intros X X0.
   simpl in *. induction X0; constructor; auto.
   clear IHX0. destruct d; simpl.
-  - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
+  - destruct c as [? [] ?]; simpl in *; now eapply X.
   - red in o. simpl in *.
     destruct o0 as [onI onP onNP].
     constructor; auto.
@@ -1227,7 +1227,7 @@ Proof.
   - rewrite closedn_subst_instance.
     eapply lookup_on_global_env in X0; eauto.
     destruct X0 as [Σ' [HΣ' IH]].
-    repeat red in IH. destruct decl, cst_body0. simpl in *.
+    repeat red in IH. destruct decl as [? [] ?]. simpl in *.
     rewrite -> andb_and in IH. intuition auto.
     eauto using closed_upwards with arith.
     simpl in *.

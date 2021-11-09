@@ -103,9 +103,8 @@ Proof.
   induction t; intros axfree_args all_true; cbn; auto.
   - destruct lookup_env eqn:find; auto.
     destruct g; auto.
-    destruct c; auto.
-    apply axfree in find; cbn in *.
-    now destruct cst_body0.
+    destruct c as [? [] ?]; auto.
+    now apply axfree in find; cbn in *.
   - destruct nth_error; auto.
     rewrite nth_nth_error.
     destruct nth_error eqn:nth; auto.

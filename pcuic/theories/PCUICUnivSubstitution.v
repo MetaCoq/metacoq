@@ -240,8 +240,6 @@ Proof.
     exists e0; split; auto.
 Qed.
 
-Section CheckerFlags.
-
 Global Instance subst_instance_def {A} `(UnivSubst A) : UnivSubst (def A)
   := fun u => map_def (subst_instance u) (subst_instance u).
 
@@ -433,9 +431,7 @@ Proof.
   apply sup_subst_instance_univ0.
 Qed.
 
-Context {cf : checker_flags}.
-
-Lemma consistent_instance_declared lvs φ uctx u :
+Lemma consistent_instance_declared {cf: checker_flags} lvs φ uctx u :
   consistent_instance lvs φ uctx u -> 
   forallb (fun l => LS.mem l lvs) u.
 Proof.
@@ -504,7 +500,7 @@ Qed.
 
 (** global constraints are monomorphic *)
 
-Lemma not_var_global_levels Σ (hΣ : wf Σ) :
+Lemma not_var_global_levels {cf : checker_flags} {Σ} (hΣ : wf Σ) :
   LS.For_all (negb ∘ Level.is_var) (global_levels Σ).
 Proof.
   induction hΣ as [|Σ kn d hΣ IH HH univs Hu Hd].
@@ -520,11 +516,11 @@ Proof.
     all: now intros x y [].
 Qed.
 
-Definition wf_ext_wk (Σ : global_env_ext)
+Definition wf_ext_wk  {cf : checker_flags} (Σ : global_env_ext)
   := wf Σ.1 × on_udecl_prop Σ.1 Σ.2.
 
 
-Lemma not_var_global_ext_levels Σ φ (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) :
+Lemma not_var_global_ext_levels {cf : checker_flags} Σ φ (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) :
   LS.For_all (negb ∘ Level.is_var)
                    (global_ext_levels (Σ, Monomorphic_ctx φ)).
 Proof.
@@ -535,7 +531,7 @@ Proof.
   - eapply not_var_global_levels; eassumption.
 Qed.
 
-Lemma levels_global_constraint Σ (hΣ : wf Σ) c :
+Lemma levels_global_constraint {cf : checker_flags} Σ (hΣ : wf Σ) c :
   CS.In c (global_constraints Σ)
   -> LS.In c.1.1 (global_levels Σ)
     /\ LS.In c.2 (global_levels Σ).
@@ -553,7 +549,7 @@ Proof.
     + split; apply LS.union_spec; now right.
 Qed.
 
-Lemma levels_global_ext_constraint Σ φ (hΣ : wf_ext_wk (Σ, φ)) c :
+Lemma levels_global_ext_constraint {cf : checker_flags} Σ φ (hΣ : wf_ext_wk (Σ, φ)) c :
   CS.In c (global_ext_constraints (Σ, φ))
   -> LS.In c.1.1 (global_ext_levels (Σ, φ))
     /\ LS.In c.2 (global_ext_levels (Σ, φ)).
@@ -569,7 +565,7 @@ Qed.
 Definition is_monomorphic_cstr (c : UnivConstraint.t)
   := negb (Level.is_var c.1.1) && negb (Level.is_var c.2).
 
-Lemma monomorphic_global_constraint Σ (hΣ : wf Σ) c :
+Lemma monomorphic_global_constraint {cf : checker_flags} Σ (hΣ : wf Σ) c :
   CS.In c (global_constraints Σ)
   -> is_monomorphic_cstr c.
 Proof.
@@ -579,7 +575,7 @@ Proof.
   - now apply not_var_global_levels in H2.
 Qed.
 
-Lemma monomorphic_global_constraint_ext Σ φ
+Lemma monomorphic_global_constraint_ext {cf : checker_flags} Σ φ
       (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) c :
   CS.In c (global_ext_constraints (Σ, Monomorphic_ctx φ))
   -> is_monomorphic_cstr c.
@@ -590,7 +586,7 @@ Proof.
   - now apply not_var_global_ext_levels in H2.
 Qed.
 
-Hint Resolve monomorphic_global_constraint monomorphic_global_constraint_ext
+#[global] Hint Resolve monomorphic_global_constraint monomorphic_global_constraint_ext
   : univ_subst.
 
 Lemma subst_instance_monom_cstr inst c :
@@ -650,7 +646,7 @@ Proof.
   split; (etransitivity; [eapply H | eapply H0]).
 Qed.
 
-Lemma consistent_ext_trans_polymorphic_case_aux {Σ φ1 φ2 φ' udecl inst inst'} :
+Lemma consistent_ext_trans_polymorphic_case_aux {cf : checker_flags} {Σ φ1 φ2 φ' udecl inst inst'} :
   wf_ext_wk (Σ, Polymorphic_ctx (φ1, φ2)) ->
   valid_constraints0 (global_ext_constraints (Σ, Polymorphic_ctx (φ1, φ2)))
                      (subst_instance_cstrs inst udecl) ->
@@ -670,7 +666,7 @@ Proof.
     apply satisfies_union in Hv. apply Hv.
 Qed.
 
-Lemma consistent_ext_trans_polymorphic_cases Σ φ φ' udecl inst inst' :
+Lemma consistent_ext_trans_polymorphic_cases {cf : checker_flags} Σ φ φ' udecl inst inst' :
   wf_ext_wk (Σ, φ) ->
   sub_context_set (monomorphic_udecl φ) (global_ext_context_set (Σ, φ')) ->
   consistent_instance_ext (Σ, φ) (Polymorphic_ctx udecl) inst ->
@@ -716,7 +712,7 @@ Proof.
       eapply consistent_ext_trans_polymorphic_case_aux; try eassumption.
 Qed.
 
-Lemma consistent_ext_trans Σ φ φ' udecl inst inst' :
+Lemma consistent_ext_trans {cf : checker_flags} Σ φ φ' udecl inst inst' :
   wf_ext_wk (Σ, φ) ->
   sub_context_set (monomorphic_udecl φ) (global_ext_context_set (Σ, φ')) ->
   consistent_instance_ext (Σ, φ) udecl inst ->
@@ -732,7 +728,7 @@ Qed.
 
 Hint Resolve consistent_ext_trans : univ_subst.
 
-Lemma consistent_instance_valid_constraints Σ φ u univs :
+Lemma consistent_instance_valid_constraints {cf : checker_flags} Σ φ u univs :
   wf_ext_wk (Σ, φ) ->
   CS.Subset (monomorphic_constraints φ)
                        (global_ext_constraints (Σ, univs)) ->
@@ -760,14 +756,14 @@ Qed.
 
 Hint Resolve consistent_instance_valid_constraints : univ_subst.
 
-Class SubstUnivPreserved {A} `{UnivSubst A} (R : ConstraintSet.t -> crelation A)
+Class SubstUnivPreserved {cf : checker_flags} {A} `{UnivSubst A} (R : ConstraintSet.t -> crelation A)
   := Build_SubstUnivPreserved :
        forall φ φ' (u : Instance.t),
          valid_constraints φ' (subst_instance_cstrs u φ) ->
          subrelation (R φ)
                      (precompose (R φ') (subst_instance u)).
 
-Lemma satisfies_subst_instance φ φ' u :
+Lemma satisfies_subst_instance {cf : checker_flags} φ φ' u :
   check_univs = true ->
   valid_constraints φ' (subst_instance_cstrs u φ) ->
   forall v, satisfies v φ' ->
@@ -778,7 +774,7 @@ Proof.
   apply satisfies_subst_instance_ctr; aa.
 Qed.
 
-Global Instance leq_universe_subst_instance : SubstUnivPreserved leq_universe.
+Global Instance leq_universe_subst_instance {cf : checker_flags} : SubstUnivPreserved leq_universe.
 Proof.
   intros φ φ' u HH t t' Htt'.
   unfold leq_universe in *; case_eq check_univs;
@@ -789,7 +785,7 @@ Proof.
   eapply satisfies_subst_instance; tea.
 Qed.
 
-Global Instance eq_universe_subst_instance : SubstUnivPreserved eq_universe.
+Global Instance eq_universe_subst_instance {cf : checker_flags} : SubstUnivPreserved eq_universe.
 Proof.
   intros φ φ' u HH t t' Htt'.
   unfold eq_universe in *; case_eq check_univs;
@@ -862,7 +858,7 @@ Definition precompose_subst_instance_global__1 Σ Re Rle gr napp u i i'
 Definition precompose_subst_instance_global__2 Σ Re Rle gr napp u i i'
   := snd (precompose_subst_instance_global Σ Re Rle gr napp u i i').
 
-Global Instance eq_term_upto_univ_subst_preserved Σ
+Global Instance eq_term_upto_univ_subst_preserved {cf : checker_flags} Σ
   (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop) napp
   {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
   : SubstUnivPreserved (fun φ => eq_term_upto_univ_napp Σ (Re φ) (Rle φ) napp).
@@ -888,13 +884,13 @@ Proof.
       eapply R_universe_instance_impl; eauto.
 Qed.
 
-Lemma leq_term_subst_instance Σ : SubstUnivPreserved (leq_term Σ).
+Lemma leq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (leq_term Σ).
 Proof. exact _. Qed.
 
-Lemma eq_term_subst_instance Σ : SubstUnivPreserved (eq_term Σ).
+Lemma eq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (eq_term Σ).
 Proof. exact _. Qed.
 
-Lemma compare_term_subst_instance le Σ : SubstUnivPreserved (compare_term le Σ).
+Lemma compare_term_subst_instance {cf : checker_flags} le Σ : SubstUnivPreserved (compare_term le Σ).
 Proof. destruct le; simpl; unfold compare_term. 
   - apply leq_term_subst_instance.
   - apply eq_term_subst_instance.
@@ -937,7 +933,7 @@ Proof.
       now destruct nth_error. 
 Qed.
 
-Lemma LevelIn_subst_instance Σ l u univs :
+Lemma LevelIn_subst_instance {cf : checker_flags} Σ l u univs :
   LS.In l (global_ext_levels Σ) ->
   LS.Subset (monomorphic_levels Σ.2) (global_ext_levels (Σ.1, univs)) ->
   consistent_instance_ext (Σ.1, univs) Σ.2 u ->
@@ -1278,7 +1274,7 @@ Proof.
   now rewrite /forget_types map_map_compose /=.
 Qed.
 
-Lemma subst_instance_case_branch_type {Σ} {wfΣ : wf Σ} u (ci : case_info) mdecl idecl p predctx br i cdecl : 
+Lemma subst_instance_case_branch_type {cf : checker_flags} {Σ} {wfΣ : wf Σ} u (ci : case_info) mdecl idecl p predctx br i cdecl : 
   let ptm := 
     it_mkLambda_or_LetIn predctx (preturn p) 
   in
@@ -1450,7 +1446,7 @@ Proof.
     now rewrite <- (fix_context_subst_instance u mfix0).
 Qed.
 
-Lemma subst_instance_equality (Σ : global_env_ext) Γ u A B univs :
+Lemma subst_instance_equality {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs :
 valid_constraints (global_ext_constraints (Σ.1, univs))
                   (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A = B ->
@@ -1463,7 +1459,7 @@ Proof.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
 Qed.
 
-Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
+Lemma cumul_subst_instance {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs :
   valid_constraints (global_ext_constraints (Σ.1, univs))
                     (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A <= B ->
@@ -1477,7 +1473,7 @@ Proof.
   - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
 Qed.
 
-Lemma conv_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
+Lemma conv_decls_subst_instance {cf : checker_flags} (Σ : global_env_ext) {Γ Γ'} u univs d d' :
   valid_constraints (global_ext_constraints (Σ.1, univs))
     (subst_instance_cstrs u Σ) ->
   conv_decls Σ Γ Γ' d d' ->
@@ -1488,7 +1484,7 @@ Proof.
     eapply subst_instance_equality; tea.
 Qed.
 
-Lemma cumul_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
+Lemma cumul_decls_subst_instance {cf : checker_flags} (Σ : global_env_ext) {Γ Γ'} u univs d d' :
   valid_constraints (global_ext_constraints (Σ.1, univs))
     (subst_instance_cstrs u Σ) ->
   cumul_decls Σ Γ Γ' d d' ->
@@ -1499,7 +1495,7 @@ Proof.
     (eapply subst_instance_equality || eapply cumul_subst_instance); tea.
 Qed.
 
-Lemma conv_ctx_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs :
+Lemma conv_ctx_subst_instance {cf : checker_flags} (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
   conv_context Σ Γ Γ' ->
   conv_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
@@ -1509,7 +1505,7 @@ Proof.
   now eapply conv_decls_subst_instance.
 Qed.
 
-Lemma subst_instance_context_equality_rel (Σ : global_env_ext) {Γ Γ'} u univs :
+Lemma subst_instance_context_equality_rel {cf : checker_flags} (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
   cumul_context Σ Γ Γ' ->
   cumul_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').
@@ -1519,7 +1515,7 @@ Proof.
   now eapply cumul_decls_subst_instance.
 Qed.
 
-Lemma is_allowed_elimination_subst_instance (Σ : global_env_ext) univs inst u al :
+Lemma is_allowed_elimination_subst_instance {cf : checker_flags} (Σ : global_env_ext) univs inst u al :
   valid_constraints (global_ext_constraints (Σ.1, univs))
                     (subst_instance_cstrs inst Σ) ->
   is_allowed_elimination Σ u al ->
@@ -1534,13 +1530,13 @@ Proof.
   rewrite subst_instance_univ_val'; auto.
 Qed.
 
-Global Instance eq_decl_subst_instance le Σ : SubstUnivPreserved (eq_decl le Σ).
+Global Instance eq_decl_subst_instance {cf : checker_flags} le Σ : SubstUnivPreserved (eq_decl le Σ).
 Proof.
   intros φ1 φ2 u HH ? ? [] => /=; destruct le; constructor; auto;
    (eapply eq_term_subst_instance || eapply leq_term_subst_instance); tea.
 Qed.
 
-Global Instance eq_context_subst_instance le Σ : SubstUnivPreserved (eq_context le Σ).
+Global Instance eq_context_subst_instance {cf : checker_flags} le Σ : SubstUnivPreserved (eq_context le Σ).
 Proof.
   intros φ φ' u HH Γ Γ' X. eapply All2_fold_map, All2_fold_impl; tea.
   intros. eapply eq_decl_subst_instance; eassumption.
@@ -1649,7 +1645,7 @@ Proof.
   destruct destInd as [[i u']|]; simpl; auto.
 Qed.
 
-Lemma All_local_env_over_subst_instance Σ Γ (wfΓ : wf_local Σ Γ) :
+Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_local Σ Γ) :
   All_local_env_over typing
                      (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) t T (_ : Σ0;;; Γ0 |- t : T) =>
        forall u univs, wf_ext_wk Σ0 ->
@@ -1670,9 +1666,9 @@ Proof.
   all: destruct tu; eexists; cbn in *; eauto.
 Qed.
 
-Hint Resolve All_local_env_over_subst_instance : univ_subst.
+#[global] Hint Resolve All_local_env_over_subst_instance : univ_subst.
 
-Lemma in_var_global_ext n Σ :
+Lemma in_var_global_ext {cf : checker_flags} n Σ :
   wf Σ.1 ->
   LevelSet.In (Level.Var n) (global_ext_levels Σ) -> 
   LevelSet.In (Level.Var n) (levels_of_udecl Σ.2).
@@ -1685,7 +1681,7 @@ Proof.
   now simpl in wfΣ.
 Qed.
 
-Lemma wf_universe_subst_instance (Σ : global_env_ext) univs u l :
+Lemma wf_universe_subst_instance {cf : checker_flags} (Σ : global_env_ext) univs u l :
    wf Σ ->
    wf_universe Σ l ->
    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
@@ -1734,7 +1730,7 @@ Proof.
     + now apply not_var_global_levels in Hl.
 Qed.
 
-Lemma typing_subst_instance :
+Lemma typing_subst_instance {cf : checker_flags} :
   env_prop (fun Σ Γ t T => forall u univs,
                 wf_ext_wk Σ ->
                 sub_context_set (monomorphic_udecl Σ.2)
@@ -1900,7 +1896,7 @@ Proof.
     + destruct HSub. eapply cumul_subst_instance; aa.
 Qed.
 
-Lemma typing_subst_instance' Σ φ Γ t T u univs :
+Lemma typing_subst_instance' {cf : checker_flags} Σ φ Γ t T u univs :
   wf_ext_wk (Σ, univs) ->
   (Σ, univs) ;;; Γ |- t : T ->
   sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
@@ -1912,7 +1908,7 @@ Proof.
   eapply (typing_subst_instance (Σ, univs)); tas. apply X.
 Qed.
 
-Lemma typing_subst_instance_wf_local Σ φ Γ u univs :
+Lemma typing_subst_instance_wf_local {cf : checker_flags} Σ φ Γ u univs :
   wf_ext_wk (Σ, univs) ->
   wf_local (Σ, univs) Γ ->
   sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
@@ -1936,7 +1932,7 @@ Proof.
 Qed.
 
 
-Lemma weaken_lookup_on_global_env'' Σ c decl :
+Lemma weaken_lookup_on_global_env'' {cf : checker_flags} Σ c decl :
   wf Σ ->
   lookup_env Σ c = Some decl ->
   sub_context_set (monomorphic_udecl (universes_decl_of_decl decl))
@@ -1951,7 +1947,7 @@ Proof.
 Qed.
 
 
-Lemma typing_subst_instance'' Σ φ Γ t T u univs :
+Lemma typing_subst_instance'' {cf : checker_flags} Σ φ Γ t T u univs :
   wf_ext_wk (Σ, univs) ->
   (Σ, univs) ;;; Γ |- t : T ->
   sub_context_set (monomorphic_udecl univs) (global_context_set Σ) ->
@@ -1964,7 +1960,7 @@ Proof.
   etransitivity; tea. apply global_context_set_sub_ext.
 Qed.
 
-Lemma typing_subst_instance_ctx (Σ : global_env_ext) Γ t T ctx u :
+Lemma typing_subst_instance_ctx {cf : checker_flags} (Σ : global_env_ext) Γ t T ctx u :
   wf Σ.1 ->
   on_udecl_prop Σ (Polymorphic_ctx ctx) ->
   (Σ.1, Polymorphic_ctx ctx) ;;; Γ |- t : T ->
@@ -1980,7 +1976,7 @@ Proof.
     * intros x hx. now eapply CS.empty_spec in hx. 
 Qed.
 
-Lemma typing_subst_instance_decl Σ Γ t T c decl u :
+Lemma typing_subst_instance_decl  {cf : checker_flags}Σ Γ t T c decl u :
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->
   (Σ.1, universes_decl_of_decl decl) ;;; Γ |- t : T ->
@@ -1995,7 +1991,7 @@ Proof.
   - eapply weaken_lookup_on_global_env''; tea.
 Qed.
 
-Lemma wf_local_instantiate_poly {Σ ctx Γ u} : 
+Lemma wf_local_instantiate_poly {cf : checker_flags} {Σ ctx Γ u} : 
   wf_ext (Σ.1, Polymorphic_ctx ctx) ->
   consistent_instance_ext Σ (Polymorphic_ctx ctx) u ->
   wf_local (Σ.1, Polymorphic_ctx ctx) Γ -> 
@@ -2010,7 +2006,7 @@ Proof.
     * destruct wfΣ. now eapply on_udecl_on_udecl_prop.
 Qed.
 
-Lemma wf_local_instantiate {Σ} {decl : global_decl} {Γ u c} : 
+Lemma wf_local_instantiate {cf : checker_flags} {Σ} {decl : global_decl} {Γ u c} : 
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->
   consistent_instance_ext Σ (universes_decl_of_decl decl) u ->
@@ -2024,7 +2020,7 @@ Proof.
     eauto using typing_wf_local.
 Qed.
 
-Lemma isType_subst_instance_decl Σ Γ T c decl u :
+Lemma isType_subst_instance_decl {cf : checker_flags} Σ Γ T c decl u :
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->
   isType (Σ.1, universes_decl_of_decl decl) Γ T ->
@@ -2036,10 +2032,10 @@ Proof.
   now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
 Qed.
 
-Definition wf_global_ext Σ ext :=
+Definition wf_global_ext {cf : checker_flags} Σ ext :=
   (wf_ext_wk (Σ, ext) * sub_context_set (monomorphic_udecl ext) (global_context_set Σ))%type.
 
-Lemma wf_local_subst_instance Σ Γ ext u :
+Lemma wf_local_subst_instance {cf : checker_flags} Σ Γ ext u :
   wf_global_ext Σ.1 ext ->
   consistent_instance_ext Σ ext u ->
   wf_local (Σ.1, ext) Γ ->
@@ -2055,7 +2051,7 @@ Proof.
     eapply typing_subst_instance'' in t1; eauto; apply X.
 Qed.
 
-Lemma wf_local_subst_instance_decl Σ Γ c decl u :
+Lemma wf_local_subst_instance_decl {cf : checker_flags} Σ Γ c decl u :
   wf Σ.1 ->
   lookup_env Σ.1 c = Some decl ->
   wf_local (Σ.1, universes_decl_of_decl decl) Γ ->
@@ -2071,8 +2067,6 @@ Proof.
   - hnf in t1 |- *.
     eapply typing_subst_instance_decl in t1; eauto.
 Qed.
-
-End CheckerFlags.
 
 Require Import Morphisms.
 Require Import ssreflect.

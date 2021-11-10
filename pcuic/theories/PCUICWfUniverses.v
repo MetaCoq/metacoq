@@ -160,7 +160,7 @@ Section CheckerFlags.
     apply LS.union_spec in H as [H|H]; simpl in H.
     epose proof (@udecl_prop_in_var_poly _ (Σ, _) _ uprop H) as [ctx' eq].
     discriminate.
-    now pose proof (not_var_global_levels _ wf _ H).
+    now pose proof (not_var_global_levels wf _ H).
   Qed.
 
   Lemma wf_universe_level_sub Σ ctx univs u :

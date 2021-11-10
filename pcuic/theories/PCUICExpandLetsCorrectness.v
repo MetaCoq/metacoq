@@ -2635,8 +2635,6 @@ Theorem pcuic_expand_lets {cf} (Σ : SE.global_env_ext) Γ t T :
 Proof.
   intros X X0.
   revert Σ X Γ t T X0.
-  (** We use an induction principle allowing to apply induction to any subderivation of 
-    functions in applications. *)
   apply (typing_ind_env (fun Σ Γ t T =>
     wf (trans_global Σ) ->
     TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)

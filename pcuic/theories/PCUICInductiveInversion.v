@@ -2,7 +2,7 @@
 From Coq Require Import Utf8.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
+     PCUICLiftSubst PCUICUnivSubst PCUICUnivSubstitution PCUICTyping PCUICWeakeningEnv PCUICWeakening
      PCUICSigmaCalculus (* for smash_context lemmas, to move *)
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICEquality PCUICConfluence PCUICCasesContexts
@@ -2835,7 +2835,7 @@ Proof.
         now rewrite -context_assumptions_app in clx *. }
       { len. simpl. autorewrite with pcuic.
         now rewrite -context_assumptions_app in clx *. }
-      len in cxy; substu in cxy.
+      len in cxy. autorewrite with substu in cxy.
       rewrite -context_assumptions_app in cxy.
       rewrite -{1}(subst_instance_assumptions u (_ ++ _)) in cxy.
       rewrite -{1}(subst_instance_assumptions u' (_ ++ _)) in cxy.

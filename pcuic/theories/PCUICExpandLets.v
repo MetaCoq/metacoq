@@ -50,7 +50,7 @@ Definition trans_cstr_concl_head mdecl i (args : context) :=
 
 Definition trans_cstr_concl mdecl i args indices :=
   (mkApps (trans_cstr_concl_head mdecl i args)
-    (to_extended_list_k mdecl.(ind_params) #|args| ++ indices)).
+    (to_extended_list_k (trans_local mdecl.(ind_params)) #|args| ++ indices)).
 
 Definition trans_constructor_body i (mdecl : mutual_inductive_body) (d : PCUICEnvironment.constructor_body) :=
   let args' := trans_local d.(cstr_args) in
@@ -60,7 +60,7 @@ Definition trans_constructor_body i (mdecl : mutual_inductive_body) (d : PCUICEn
      cstr_args := args;
      cstr_indices := indices;
      cstr_type := 
-      it_mkProd_or_LetIn mdecl.(ind_params) 
+      it_mkProd_or_LetIn (trans_local mdecl.(ind_params))
         (it_mkProd_or_LetIn args
           (trans_cstr_concl mdecl i args indices));
      cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.

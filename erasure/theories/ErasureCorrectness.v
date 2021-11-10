@@ -1009,8 +1009,8 @@ Proof.
     eapply erases_mkApps_inv in Hv' as [(? & ? & ? & ? & [] & ? & ? & ?) | (? & ? & ? & ? & ?)]; eauto.
     * subst.
       eapply Is_type_app in X1; auto. destruct X1.
-      2:{ rewrite mkApps_nested; tea. }
-      rewrite mkApps_nested in X1.
+      2:{ rewrite -mkApps_app; tea. }
+      rewrite -mkApps_app in X1.
 
       eapply tConstruct_no_Type in X1; auto.
       

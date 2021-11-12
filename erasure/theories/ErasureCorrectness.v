@@ -3,13 +3,18 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import ELiftSubst ETyping EWcbvEval Extract Prelim
      ESubstitution EInversion EArities EDeps.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
+  PCUICAstUtils PCUICConversion PCUICSigmaCalculus
   PCUICWeakening PCUICSubstitution PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion
+  PCUICClosed PCUICLiftSubst
   PCUICUnivSubstitution PCUICElimination PCUICCanonicity
   PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICSafeLemmata
   PCUICArities PCUICInductiveInversion
-  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICValidity.
+  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICValidity
+  PCUICContexts PCUICEquality PCUICSpine
+  PCUICInductives.
+
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.
 
@@ -671,8 +676,6 @@ Proof.
    + invs H. cbn. now eapply IHΓ.
 Qed.
 
-Require Import PCUICClosed PCUICLiftSubst.
-
 Lemma assumption_context_map2_binders nas Γ :
   assumption_context Γ ->
   assumption_context (map2 set_binder_name nas Γ).
@@ -772,9 +775,6 @@ Proof.
     cbn [repeat]. cbn. rewrite  IHn.
     now rewrite repeat_app. 
 Qed.
- 
-Require Import PCUICLiftSubst PCUICContexts PCUICEquality PCUICSpine PCUICConversion
-  PCUICSigmaCalculus PCUICInductives PCUICClosed.
 
 Lemma smash_assumption_context Γ Δ : assumption_context Γ ->
   smash_context Δ Γ = Γ ,,, Δ.

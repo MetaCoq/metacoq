@@ -315,8 +315,8 @@ Section optimize.
     intros cl.
     unfold ETyping.iota_red.
     rewrite optimize_substl //.
-    rewrite forallb_skipn //.
-    now rewrite map_skipn.
+    rewrite forallb_rev forallb_skipn //.
+    now rewrite map_rev map_skipn.
   Qed.
   
   Lemma optimize_fix_subst mfix : ETyping.fix_subst (map (map_def optimize) mfix) = map optimize (ETyping.fix_subst mfix).
@@ -629,8 +629,10 @@ Proof.
   - specialize (IHev1 Hc).
     move: IHev1; rewrite closedn_mkApps => /andP[] _ clargs.
     apply IHev2. rewrite /iota_red.
-    eapply closed_substl. now rewrite forallb_skipn.
-    rewrite e1. now eapply nth_error_forallb in e0; tea.
+    eapply closed_substl. now rewrite forallb_rev forallb_skipn.
+    len.
+    rewrite e1. eapply nth_error_forallb in Hc'; tea.
+    now rewrite Nat.add_0_r in Hc'.
   - subst brs. cbn in Hc'. rewrite andb_true_r in Hc'.
     eapply IHev2. eapply closed_substl.
     eapply All_forallb, All_repeat => //.
@@ -677,8 +679,8 @@ Proof.
   intros clargs hnth hskip clbr.
   rewrite /iota_red.
   eapply closed_substl => //.
-  now rewrite forallb_skipn.
-  now rewrite hskip Nat.add_0_r.
+  now rewrite forallb_rev forallb_skipn. len.
+  now rewrite hskip.
 Qed.
 
 Lemma optimize_correct Σ t v :

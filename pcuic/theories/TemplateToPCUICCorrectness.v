@@ -3024,12 +3024,12 @@ Proof.
               cbn.
               eapply trans_cstr_respects_variance => //.
             + destruct lets_in_constructor_types.
+              ++ eauto.
               ++ red in on_lets_in_type. red. rewrite <- on_lets_in_type.
                  destruct x. clear. cbn.
                  induction cstr_args0.
                  +++ reflexivity.
                  +++ cbn. destruct (decl_body a); cbn; eauto.
-              ++ eauto.
         --- simpl; intros. have onp := oni.(ST.onProjections).
             destruct (Ast.Env.ind_projs idecl) => //.
             forward onp. congruence.

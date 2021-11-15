@@ -1492,15 +1492,223 @@ Proof.
   - now eapply typing_spine_wt. 
 Qed.
 
-Lemma red_expand_lets_ctx (Σ : global_env) Γ Δ s s' Δ' t :
-  All2 (red Σ Γ) s s' ->
-  red Σ (Γ ,,, subst_context s 0 (smash_context [] Δ))
-    (expand_lets (subst_context s 0 Δ') t) 
-    (expand_lets (subst_context s' 0 Δ') t).
+Lemma red_expand_lets {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ t t' :
+  wf_local Σ (Γ ,,, Δ) ->
+  Σ ;;; Γ ,,, Δ ⊢ t ⇝ t' ->
+  Σ ;;; Γ ,,, smash_context [] Δ ⊢ expand_lets Δ t ⇝ expand_lets Δ t'.
 Proof.
-  intros reds.
+  intros wf reds.
+  rewrite /expand_lets /expand_lets_k. cbn.
+  eapply (closed_red_subst (Γ := _ ,,, _) (Γ' := [])).
+  eapply subslet_extended_subst; tea.
+  relativize #|Δ|. relativize (context_assumptions Δ).
+  eapply weakening_closed_red; tea. all:try now len. 2:reflexivity.
+  eapply is_closed_context_smash_end; fvs.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICConfluence PCUICNormal.
+
+Lemma red_context_rel_assumptions {cf} {Σ : global_env_ext} {Γ Δ Δ'} :
+  red_context_rel Σ Γ Δ Δ' -> context_assumptions Δ = context_assumptions Δ'.
+Proof.
+  induction 1; cbn; auto. destruct p; cbn; auto. lia.
+Qed.
+
+Lemma equality_expand_lets {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {le} {Δ} {T T'} : 
+  Σ ;;; Γ ,,, Δ ⊢ T ≤[le] T' ->
+  Σ ;;; Γ ,,, smash_context [] Δ ⊢ expand_lets Δ T ≤[le] expand_lets Δ T'.
+Proof.
+  intros cum.
+  pose proof (equality_is_closed_context cum).
+  eapply (weakening_equality (Γ'' := smash_context [] Δ)) in cum; tea.
+  rewrite /expand_lets /expand_lets_k.
+  eapply (PCUICConversion.untyped_substitution_equality (Γ'' := [])) in cum; tea. len in cum; tea.
+  simpl.
+  len.
+  now eapply PCUICContexts.untyped_subslet_extended_subst.
+  len. cbn. rewrite -shiftnP_add.
+  rewrite foron_free_vars_extended_subst //.
+  now move: H; rewrite on_free_vars_ctx_app => /andP[].
+  now eapply is_closed_context_smash_end.
+Qed.
+
+Lemma red_terms_lift {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ ts us} : 
+  is_closed_context (Γ ,,, Δ) ->
+  red_terms Σ Γ ts us ->
+  red_terms Σ (Γ ,,, Δ) (map (lift0 #|Δ|) ts) (map (lift0 #|Δ|) us).
+Proof.
+  intros r. solve_all.
+  eapply (weakening_closed_red (Γ' := [])) => //.
+Qed.
+
+Lemma onfvs_app Γ Δ : is_closed_context (Γ ,,, Δ) -> 
+  is_closed_context Γ /\ on_free_vars_ctx (shiftnP #|Γ| xpred0) Δ.
+Proof.
+  now rewrite on_free_vars_ctx_app => /andP.
+Qed.
+
+Lemma red_context_rel_conv_extended_subst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {le} {Γ Δ Δ'} :
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  red_context_rel Σ Γ Δ Δ' ->
+  red_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
+  context_equality_rel le Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+Proof.
+  intros wfl wfr cum.
+  assert (is_closed_context (Γ ,,, smash_context [] Δ)).
+  { eapply wf_local_smash_end in wfl. eauto with fvs. }
+  induction cum in |- *; simpl; auto.
+  - split; constructor => //. constructor.
+  - depelim p; simpl;
+    depelim wfl; depelim wfr;
+    specialize (IHcum wfl wfr) as [conv cum'];
+    try assert (is_closed_context (Γ,,, smash_context [] Γ0)) by
+      (rewrite /= smash_context_acc /= on_free_vars_ctx_snoc in H; now move/andP: H) => //.
+    all:auto.
+    * split; try constructor; auto.
+      + eapply into_closed_red => //. cbn. len. now cbn.
+      + rewrite !(lift_extended_subst _ 1).
+        move: H.
+        rewrite /= ![smash_context [_] _]smash_context_acc /= /map_decl /= => ha.
+        eapply (red_terms_lift (Δ := [_])) => //.
+      + now move/onfvs_app: H.
+      + move: H; simpl; rewrite /= !(smash_context_acc _ [_]) /=;
+        constructor; auto.
+        apply cum'. rewrite /map_decl /=.
+        constructor; auto.
+        eapply into_closed_red in r; fvs.
+        eapply red_equality in r.
+        eapply equality_expand_lets in r; tea.
+        etransitivity;tea. rewrite /expand_lets /expand_lets_k. simpl.
+        rewrite -(length_of cum).
+        rewrite -(red_context_rel_assumptions cum).
+        move: (PCUICSubstitution.context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
+        change (Γ ,,, smash_context [] Γ0) with (Γ ,,, smash_context [] Γ0 ,,, []).
+        eapply (substitution_equality_subst_conv (Δ := [])); tea.
+        { now eapply PCUICContexts.subslet_extended_subst. }
+        { split. 2:eapply subslet_context_equality. 4:tea.
+          4:now eapply PCUICContexts.subslet_extended_subst.
+          2-3:now eapply wf_local_smash_end.
+          rewrite -(red_context_rel_assumptions cum).
+          relativize (context_assumptions Γ0).
+          eapply weakening_wf_local. 3:now len. all:eauto.
+          now eapply wf_local_smash_end. }
+        now eapply red_terms_equality_terms in conv.
+        eapply equality_refl.
+        relativize (context_assumptions Γ0).
+        eapply is_closed_context_lift; tea; eauto with fvs. now len.
+        rewrite -[context_assumptions Γ0](smash_context_length []).
+        rewrite PCUICSubstitution.context_assumptions_smash_context /=.
+        rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
+        relativize #|Γ0|.
+        eapply is_open_term_lift.
+        destruct l0 as [s Hs]. eapply subject_closed in Hs.
+        rewrite is_open_term_closed in Hs. move: Hs.
+        now rewrite !app_length -(All2_fold_length cum). reflexivity.
+    * split; auto.
+      constructor; auto.
+      len.
+      eapply into_closed_red in r; fvs. 2:{ cbn in l0. now eapply subject_is_open_term in l0. }
+      eapply red_expand_lets in r; tea.
+      etransitivity; tea. rewrite subst_context_nil.
+      rewrite /expand_lets /expand_lets_k. simpl.
+      rewrite -(length_of cum).
+      rewrite -(red_context_rel_assumptions cum).
+      move: (PCUICSubstitution.context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
+      change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
+      cbn. rewrite smash_context_acc /=.
+      change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
+      eapply (closed_red_red_subst (Γ := _ ,,, _) (Γ' := [])); tea.
+      2:{ eapply PCUICContexts.untyped_subslet_extended_subst. }
+      { eapply wf_local_closed_context. cbn.
+        relativize (context_assumptions Γ0). eapply weakening_wf_local. pcuic.
+        now eapply wf_local_smash_end. now len. }
+    { red in l0. 
+      rewrite PCUICSubstitution.context_assumptions_smash_context /=.
+      rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
+      relativize #|Γ0|.
+      eapply is_open_term_lift.
+      eapply subject_is_open_term in l2.
+      len. len in l2. now rewrite (All2_fold_length cum). reflexivity. }
+Qed.
+
+(*Lemma red_expand_lets' {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ Δ' t :
+  red_ctx_rel Σ Γ Δ Δ' ->
+  red Σ (Γ ,,, smash_context [] Δ) (expand_lets Δ t) (expand_lets Δ' t).
+Proof.
+  intros redΔ.
+  rewrite /expand_lets /expand_lets_k. cbn.
+  eapply PCUICContextReduction.red_ctx_rel_red_context_rel in redΔ.
+  rewrite -(All2_fold_length redΔ).
+  assert (context_assumptions Δ = context_assumptions Δ'). admit.
+  rewrite H.
+  eapply (PCUICSubstitution.red_red (Γ := _ ,,, _) (Δ := lift_context (context_assumptions Δ) 0 Δ) (Γ' := []) (P:=shiftnP (#|Γ| + context_assumptions Δ + #|Δ|) xpred0)).
+  admit. admit. admit. cbn. len. 
+  admit. admit. auto. auto. admit.
+  
+Admitted.*)
+From MetaCoq.PCUIC Require Import PCUICSubstitution.
+
+(* Lemma sublet_red {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' s s'} :
+  wf_local Σ (Γ ,,, Γ') ->
+  subslet Σ Γ s Γ' ->
+  All2 (red Σ Γ) s s' ->
+  subslet Σ Γ s' Γ'.
+Proof.
+  intros wf subs.
+  induction subs in s', wf |- *; intros reds; depelim reds; intros; try constructor.
+  eapply IHsubs => //. now depelim wf.
+  depelim wf.
+  specialize (IHsubs l'). forward IHsubs by auto.
+  specialize (IHsubs reds).
+  eapply subject_reduction; tea.
+  eapply type_equality; tea.
+   destruct l as [s' Hs]. eapply (substitution (Δ := [])) in Hs; tea.
+  now exists s'.
+  eapply (substitution_equality_subst_conv (Δ := [])); tea.
+  split; tea. eapply red_terms_equality_terms.
+  2:eapply equality_refl; fvs. 
+  eapply subslet_open_terms in subs.
+  eapply subslet_open_terms in IHsubs.
+  solve_all. eapply into_closed_red; tea. now eapply typing_wf_local, wf_local_closed_context in t0.
+  eapply subslet_def_tip. *)
+
+Lemma red_expand_lets_ctx {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'' Δ s s' t} :
+  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
+  wf_local Σ (Γ ,,, Γ'' ,,, Δ) ->
+  PCUICSubstitution.subslet Σ Γ s Γ' ->
+  PCUICSubstitution.subslet Σ Γ s' Γ'' ->
+  All2 (red Σ Γ) s s' ->
+  is_open_term (Γ ,,, subst_context s 0 Δ) t ->
+  Σ ;;; Γ ,,, subst_context s 0 (smash_context [] Δ) ⊢
+    (expand_lets (subst_context s 0 Δ) t) ⇝
+    (expand_lets (subst_context s' 0 Δ) t).
+Proof.
+  intros wf subs reds ont.
+  rewrite -smash_context_subst /= subst_context_nil.
+  etransitivity.
+  eapply red_expand_lets; tea. eapply PCUICSubstitution.substitution_wf_local; tea.
+  eapply into_closed_red. reflexivity.
+  eapply wf_local_closed_context. eapply PCUICSubstitution.substitution_wf_local; tea. tea.
   rewrite /expand_lets /expand_lets_k. len. cbn.
-Admitted.
+  eapply (closed_red_red_subst (Γ := _ ,,, _) (Γ' := [])); tea.
+  3:{ eapply untyped_subslet_extended_subst. }
+  eapply wf_local_closed_context. 
+  relativize (context_assumptions _). eapply weakening_wf_local.
+  eapply PCUICSubstitution.substitution_wf_local; tea.
+  eapply wf_local_smash_end. 
+  eapply PCUICSubstitution.substitution_wf_local; tea. now len.
+  eapply (red_context_rel_conv_extended_subst (le:=false)).
+  eapply PCUICSubstitution.substitution_wf_local; tea.
+  eapply PCUICSubstitution.substitution_wf_local; tea.
+  eapply red_ctx_rel_subst; tea.
+  eapply subslet_open_terms in reds; solve_all.
+  now eapply subslet_untyped_subslet in reds. fvs.
+  rewrite context_assumptions_subst.
+  rewrite -[context_assumptions Δ](smash_context_length []).
+  relativize #|smash_context [] _|. relativize #|Δ|.
+  eapply is_open_term_lift. 2-3:now len. apply H.
+Qed.
 
 Require Import PCUICSubstitution.
 
@@ -1513,38 +1721,6 @@ Proof.
   rewrite -(untyped_subslet_length X).
   rewrite distr_lift_subst. constructor; auto.
 Qed.
-
-Lemma untyped_subslet_extended_subst Γ Δ :
-  untyped_subslet (Γ ,,, smash_context [] Δ)
-    (extended_subst Δ 0) 
-    (lift_context (context_assumptions Δ) 0 Δ).
-Proof.
-  induction Δ as [|[na [d|] ?] ?]; simpl; try constructor.
-  * rewrite lift_context_snoc /lift_decl /= /map_decl /=.
-    len. 
-    constructor => //.
-  * rewrite smash_context_acc. simpl.
-    rewrite /map_decl /= /map_decl /=. simpl.
-    rewrite lift_context_snoc /lift_decl /= /map_decl /=.
-    constructor.
-    rewrite (lift_extended_subst _ 1).
-    rewrite -(PCUICWeakening.lift_context_lift_context 1 _).
-    eapply (untyped_subslet_lift _ [_]); eauto.
-Qed.
-    
-Lemma red_expand_lets {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ t t' :
-  red Σ (Γ ,,, Δ) t t' ->
-  red Σ (Γ ,,, smash_context [] Δ) (expand_lets Δ t) (expand_lets Δ t').
-Proof.
-  intros reds.
-  rewrite /expand_lets /expand_lets_k. cbn.
-  eapply (untyped_substitution_red (P := shiftnP #|Γ| xpred0)  (Γ := _ ,,, _)  (Γ' := [])).
-  eapply untyped_subslet_extended_subst; tea.
-  admit. admit.
-  relativize #|Δ|. relativize (context_assumptions Δ).
-  eapply weakening_red; tea. all:try now len. 3:reflexivity.
-  admit. admit.
-Admitted.
 
 Lemma OnOne2_All2i_All2 {A B} {P : A -> A -> Type} {Q R} {n} {l l' : list A} {l'' : list B} : 
   OnOne2 P l l' ->
@@ -1565,9 +1741,33 @@ Qed.
 
 Require Import PCUICUnivSubstitution.
 
+Lemma OnOne2_All_OneOne2 {A} {P : A -> A -> Type} {Q R} l l' : 
+  OnOne2 P l l' ->
+  All Q l ->
+  (forall x y, Q x -> P x y -> R x y) ->
+  OnOne2 R l l'.
+Proof.
+  induction 1; intros H; depelim H; intros IH; constructor; eauto.
+Qed.
+
+Lemma All2i_map_right_inv {A B C} {P : nat -> A -> B -> Type} {f : C -> B} n (l : list A) l' : 
+  All2i P n l (map f l') ->
+  All2i (fun n x y => P n x (f y)) n l l'.
+Proof.
+  induction l' in n, l |- *; cbn; intros h; depelim h; constructor; auto.
+Qed.
+
+Lemma All2i_map_left_inv {A B C} {P : nat -> A -> B -> Type} {f : C -> A} n l l' : 
+  All2i P n (map f l) l' ->
+  All2i (fun n x y => P n (f x) y) n l l'.
+Proof.
+  induction l in n, l' |- *; cbn; intros h; depelim h; constructor; auto.
+Qed.
+
 Lemma trans_red1 {cf} (Σ : global_env_ext) {wfΣ : wf Σ} {wfΣ' : wf (trans_global_decls Σ.1)} Γ T U :
   red1 Σ Γ T U ->
   wt Σ Γ T ->
+  wt (trans_global Σ) (trans_local Γ) (trans T) ->
   red (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   induction 1 using red1_ind_all; simpl in *; intros wt;
@@ -1658,7 +1858,7 @@ Proof.
     destruct nth_error eqn:hnth.
     pose proof (nth_error_Some_length hnth).
     destruct args. simpl. elimtype False; cbn in H1. lia.
-    cbn -[mkApps].
+    cbn -[mkApps]. intros _.
     eapply red1_red, red_fix.
     apply (trans_unfold_fix (shiftnP #|Γ| xpred0)); eauto.
     now eapply wt_on_free_vars in wtf.
@@ -1666,7 +1866,7 @@ Proof.
     now rewrite /is_constructor hnth.
     discriminate.
     
-  - rewrite trans_mkApps.
+  - intros _. rewrite trans_mkApps.
     rewrite !trans_mkApps; eauto with wf.
     eapply wt_inv in wt. cbn in wt.
     destruct wt as [wtpars [idecl [cdecl []]]].
@@ -1679,38 +1879,59 @@ Proof.
     eapply wt_inv in wt. cbn in wt.
     eapply wt_mkApps_inv in wt as [].  
     apply (trans_unfold_cofix (shiftnP #|Γ| xpred0)) in H; eauto with wf.
-    eapply red1_red, red_cofix_proj; eauto.
+    intros _. eapply red1_red, red_cofix_proj; eauto.
     now eapply wt_on_free_vars in w.
     
-  - rewrite trans_subst_instance. eapply red1_red; econstructor.
+  - intros _. rewrite trans_subst_instance. eapply red1_red; econstructor.
     apply (trans_declared_constant _ c decl H).
     destruct decl. now simpl in *; subst cst_body0.
 
-  - rewrite trans_mkApps; eauto with wf.
+  - intros _. rewrite trans_mkApps; eauto with wf.
     simpl. eapply red1_red; constructor; now rewrite nth_error_map H.
   
-  - eapply red_abs; eauto.
-  - eapply red_abs; eauto.
-  - destruct wt as []; eapply red_letin; eauto.
-  - destruct wt as []; eapply red_letin; eauto.
-  - destruct wt as []; eapply red_letin; eauto.
+  - intros H; eapply wt_inv in H as []. eapply red_abs; eauto.
+  - move/wt_inv => [] H H';eapply red_abs; eauto.
+  - move/wt_inv => [] H H' H''. destruct wt as []; eapply red_letin; eauto.
+  - move/wt_inv => [] H H' H'';  destruct wt as []; eapply red_letin; eauto.
+  - move/wt_inv => [] H H' H''. destruct wt as []; eapply red_letin; eauto.
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
+    move/wt_inv => [hpars' [mdecl' [idecl' h']]].
     eapply OnOne2_All_mix_left in X; tea.
     relativize (map_predicate id _ _ _ (set_pparams _ _)).
     eapply red_case. 5:reflexivity. all:try reflexivity.
     cbn. 
     eapply OnOne2_All2. eapply OnOne2_map.
     2:intros x y h; exact h. 2:reflexivity.
-    eapply OnOne2_impl; tea. cbv beta.
-    intros x y [[r IH] wt]. specialize (IH wt).
-    red. exact IH.
+    eapply All_map_inv in hpars'.
+    eapply OnOne2_All_OneOne2; tea. cbv beta.
+    intros x y wtt [[r IH] wt]. specialize (IH wt wtt).
+    red. apply IH.
     rewrite /trans_branch. cbn.
     eapply All2_map. cbn. eapply All2_map, All_All2_refl.
-    eapply All2i_All_right; tea. cbv beta.
-    intros _ cdecl br [wfbr eqbctx wfbctx eqinst wtb].
+    destruct h' as [decli cu' _ _ _ sp _ _ hbrs'].
+    pose proof (trans_declared_inductive _ _ _ _ d).
+    destruct (declared_inductive_inj H decli). subst mdecl' idecl'.
+    do 2 eapply All2i_map_right_inv in hbrs'. eapply All2i_map_left_inv in hbrs'.
+    eapply All2i_All2i_mix in a0; tea. clear hbrs'.
+    eapply All2i_All_right; tea. cbv beta. clear a0.
+    intros _ cdecl br [[wftbr eqtbctx wftbctx wfteqinst wfttb] [wfbr eqbctx wfbctx eqinst wtb]].
     split => //. cbn [bcontext map_branch]. rewrite /id.
     rewrite [map (map_decl _) _](subst_instance_smash _ _ []) /=.
-    eapply (red_expand_lets_ctx (trans_global_decls Σ.1)).
+    (* rewrite -map_rev /map_context.
+    rewrite -trans_subst_instance_ctx.
+    rewrite -(trans_subst_context (shiftnP #|Γ| xpred0) (shiftnP #|Γ| xpred0)). admit. admit.
+    rewrite -map_rev /map_context.
+    rewrite -(trans_subst_context (shiftnP #|Γ| xpred0) (shiftnP #|Γ| xpred0)). admit. admit.
+     *)
+    eapply (red_expand_lets_ctx (Σ := trans_global Σ) 
+      (Γ' := (trans_local (ind_params mdecl))@[puinst p])).
+    * cbn in wftbctx.
+      eapply wf_local_app => //.
+      eapply weaken_wf_local; tea.
+      2:{ now eapply (on_minductive_wf_params (Σ := trans_global Σ) H). }
+      eapply sp.
+      move: wftbctx.
+
     eapply All2_rev. eapply All2_map, OnOne2_All2; tea; cbv beta.
     intros x y [[red IH] wt]. now apply IH.
     intros; reflexivity.
@@ -1811,7 +2032,7 @@ Proof.
     rewrite -(trans_fix_context (shiftnP #|Γ| xpred0) _ idx) //.
     now rewrite trans_local_app in X0. cbn; congruence. 
     intros. repeat split; reflexivity.
-Qed.
+Qed. *)
 
 Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
   R_global_instance Σ Re Rle gref napp u u' ->
@@ -1994,6 +2215,8 @@ End wtcumul.
 Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
   wf (trans_global_decls Σ.1) ->
   wt_cumul Σ Γ T U ->
+  wt (trans_global Σ) (trans_local Γ) (trans T) ->
+  wt (trans_global Σ) (trans_local Γ) (trans U) ->
   cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ'; induction 1. 
@@ -2001,11 +2224,18 @@ Proof.
     eapply trans_leq_term in l.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
+    intros wtt wtu.
     apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
-    eapply red_cumul_cumul; tea.
+    intros. 
+    eapply red_cumul_cumul; tea. eapply IHX => //.
+    destruct wtt as [s Hs]. exists s.
+    eapply subject_reduction; tea.
   - destruct w as [r ht hv].
+    intros wtt wtu.
     apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
     eapply red_cumul_cumul_inv; tea.
+    eapply IHX => //.
+    destruct wtu as [s Hs]; exists s; eapply subject_reduction; tea.
 Qed.
 
 Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing TT.typing Σ) Γ.
@@ -2790,7 +3020,10 @@ Proof.
       2:now exists s.
       eapply into_equality.
       eapply (trans_cumul (Σ := Σ)); eauto.
-      fvs. specialize (X1 X5). now eapply type_is_open_term in X1.
+      fvs. specialize (X1 X5).
+      eapply validity in X1. exact X1. now exists (tSort s).
+      specialize (X1 X5). fvs.
+      now eapply type_is_open_term in X1.
       specialize (X3 X5). now eapply subject_is_open_term in X3.
 Admitted.
 

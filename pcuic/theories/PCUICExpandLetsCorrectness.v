@@ -1767,13 +1767,24 @@ Qed.
 
 Require Import PCUICUnivSubstitution.
 
-Lemma OnOne2_All_OneOne2 {A} {P : A -> A -> Type} {Q R} l l' : 
+Lemma OnOne2_All_OnOne2 {A} {P : A -> A -> Type} {Q R} l l' : 
   OnOne2 P l l' ->
   All Q l ->
   (forall x y, Q x -> P x y -> R x y) ->
   OnOne2 R l l'.
 Proof.
   induction 1; intros H; depelim H; intros IH; constructor; eauto.
+Qed.
+
+Lemma OnOne2_All_All2 {A} {P : A -> A -> Type} {Q R} l l' : 
+  OnOne2 P l l' ->
+  All Q l ->
+  (forall x y, Q x -> P x y -> R x y) ->
+  (forall x, Q x -> R x x) ->
+  All2 R l l'.
+Proof.
+  induction 1; intros H; depelim H; intros IH; constructor; eauto.
+  clear -H X; solve_all.
 Qed.
 
 Lemma All2i_map_right_inv {A B C} {P : nat -> A -> B -> Type} {f : C -> B} n (l : list A) l' : 
@@ -1790,10 +1801,60 @@ Proof.
   induction l in n, l' |- *; cbn; intros h; depelim h; constructor; auto.
 Qed.
 
+Lemma trans_is_closed_context Γ : is_closed_context Γ -> is_closed_context (map_context trans Γ).
+Proof.
+  move=> cl; eapply on_free_vars_ctx_impl; [|eapply (on_free_vars_ctx_trans 0)].
+  intros i. rewrite /closedP; now cbn.
+  now rewrite closedP_shiftnP shiftnP0.
+Qed.
+
+Lemma on_free_vars_ind_params {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {P ind mdecl idecl u} : 
+  declared_inductive Σ ind mdecl idecl ->
+  on_free_vars_ctx P (ind_params mdecl)@[u].
+Proof.
+  intros decl.
+  eapply on_free_vars_ctx_impl; [|eapply closedn_ctx_on_free_vars]; revgoals.
+  rewrite closedn_subst_instance_context.
+  eapply (declared_inductive_closed_params decl).
+  intros i; rewrite shiftnP0 //.
+Qed.
+
+Lemma shiftnP_mon n n' i : n <= n' -> shiftnP n xpred0 i -> shiftnP n' xpred0 i.
+Proof.
+  rewrite /shiftnP.
+  repeat nat_compare_specs; cbn; auto.
+Qed.
+
+Lemma is_closed_context_cstr_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ ind mdecl idecl cdecl u} : 
+  declared_constructor Σ ind mdecl idecl cdecl ->
+  is_closed_context Γ ->
+  is_closed_context (Γ ,,, (smash_context [] (ind_params mdecl))@[u] ,,, (cstr_branch_context ind.1 mdecl cdecl)@[u]).
+Proof.
+  intros declc clΓ.
+  rewrite -app_context_assoc on_free_vars_ctx_app clΓ /=.
+  rewrite on_free_vars_ctx_app.
+  apply/andP; split.
+  rewrite subst_instance_smash.
+  eapply on_free_vars_ctx_smash => //. apply (on_free_vars_ind_params declc).
+  len. cbn. 
+  rewrite on_free_vars_ctx_subst_instance.
+  eapply on_free_vars_ctx_impl; [|eapply (on_free_vars_ctx_cstr_branch_context declc)].
+  intros i. rewrite shiftnP_add. eapply shiftnP_mon.
+  move: (context_assumptions_bound (ind_params mdecl)). lia.
+Qed.
+
+Lemma untyped_subslet_length Γ s s' Δ : 
+  untyped_subslet Γ s Δ -> #|s| = #|s'| -> assumption_context Δ -> untyped_subslet Γ s' Δ.
+Proof.
+  induction 1 in s' |- *; cbn; destruct s' => /= //. constructor.
+  intros [=]. constructor ; auto. eapply IHX; auto. now depelim H.
+  intros. elimtype False; depelim H0. 
+Qed.
+
 Lemma trans_red1 {cf} (Σ : global_env_ext) {wfΣ : wf Σ} {wfΣ' : wf (trans_global_decls Σ.1)} Γ T U :
   red1 Σ Γ T U ->
   wt Σ Γ T ->
-  wt (trans_global Σ) (trans_local Γ) (trans T) ->
+  (* wt (trans_global Σ) (trans_local Γ) (trans T) -> *)
   red (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   induction 1 using red1_ind_all; simpl in *; intros wt;
@@ -1884,7 +1945,7 @@ Proof.
     destruct nth_error eqn:hnth.
     pose proof (nth_error_Some_length hnth).
     destruct args. simpl. elimtype False; cbn in H1. lia.
-    cbn -[mkApps]. intros _.
+    cbn -[mkApps]. 
     eapply red1_red, red_fix.
     apply (trans_unfold_fix (shiftnP #|Γ| xpred0)); eauto.
     now eapply wt_on_free_vars in wtf.
@@ -1892,7 +1953,7 @@ Proof.
     now rewrite /is_constructor hnth.
     discriminate.
     
-  - intros _. rewrite trans_mkApps.
+  - rewrite trans_mkApps.
     rewrite !trans_mkApps; eauto with wf.
     eapply wt_inv in wt. cbn in wt.
     destruct wt as [wtpars [idecl [cdecl []]]].
@@ -1905,42 +1966,43 @@ Proof.
     eapply wt_inv in wt. cbn in wt.
     eapply wt_mkApps_inv in wt as [].  
     apply (trans_unfold_cofix (shiftnP #|Γ| xpred0)) in H; eauto with wf.
-    intros _. eapply red1_red, red_cofix_proj; eauto.
+    eapply red1_red, red_cofix_proj; eauto.
     now eapply wt_on_free_vars in w.
     
-  - intros _. rewrite trans_subst_instance. eapply red1_red; econstructor.
+  - rewrite trans_subst_instance. eapply red1_red; econstructor.
     apply (trans_declared_constant _ c decl H).
     destruct decl. now simpl in *; subst cst_body0.
 
-  - intros _. rewrite trans_mkApps; eauto with wf.
+  - rewrite trans_mkApps; eauto with wf.
     simpl. eapply red1_red; constructor; now rewrite nth_error_map H.
   
-  - intros H; eapply wt_inv in H as []. eapply red_abs; eauto.
-  - move/wt_inv => [] H H';eapply red_abs; eauto.
-  - move/wt_inv => [] H H' H''. destruct wt as []; eapply red_letin; eauto.
-  - move/wt_inv => [] H H' H'';  destruct wt as []; eapply red_letin; eauto.
-  - move/wt_inv => [] H H' H''. destruct wt as []; eapply red_letin; eauto.
+  - eapply red_abs; eauto.
+  - eapply red_abs; eauto.
+  - destruct wt as []; eapply red_letin; eauto.
+  - destruct wt as []; eapply red_letin; eauto.
+  - destruct wt as []; eapply red_letin; eauto.
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
-    move/wt_inv => [hpars' [mdecl' [idecl' h']]].
+    (* move/wt_inv => [hpars' [mdecl' [idecl' h']]]. *)
     eapply OnOne2_All_mix_left in X; tea.
     relativize (map_predicate id _ _ _ (set_pparams _ _)).
     eapply red_case. 5:reflexivity. all:try reflexivity.
     cbn. 
     eapply OnOne2_All2. eapply OnOne2_map.
     2:intros x y h; exact h. 2:reflexivity.
-    eapply All_map_inv in hpars'.
-    eapply OnOne2_All_OneOne2; tea. cbv beta.
-    intros x y wtt [[r IH] wt]. specialize (IH wt wtt).
+    (* eapply All_map_inv in hpars'. *)
+    eapply OnOne2_All_OnOne2; tea. cbv beta.
+    intros x y wtt [[r IH] wt]. specialize (IH wt).
     red. apply IH.
     rewrite /trans_branch. cbn.
     eapply All2_map. cbn. eapply All2_map, All_All2_refl.
-    destruct h' as [decli cu' _ _ _ sp _ _ hbrs'].
+    (* destruct h' as [decli cu' _ _ _ sp _ _ hbrs'].
     pose proof (trans_declared_inductive _ _ _ _ d).
     destruct (declared_inductive_inj H decli). subst mdecl' idecl'.
     do 2 eapply All2i_map_right_inv in hbrs'. eapply All2i_map_left_inv in hbrs'.
-    eapply All2i_All2i_mix in a0; tea. clear hbrs'.
+    eapply All2i_All2i_mix in a0; tea. clear hbrs'. *)
+    eapply All2i_nth_hyp in a0.
     eapply All2i_All_right; tea. cbv beta. clear a0.
-    intros _ cdecl br [[wftbr eqtbctx wftbctx wfteqinst wfttb] [wfbr eqbctx wfbctx eqinst wtb]].
+    intros ctor cdecl br [hnth [wfbr eqbctx wfbctx eqinst wtb]].
     split => //. cbn [bcontext map_branch]. rewrite /id.
     rewrite [map (map_decl _) _](subst_instance_smash _ _ []) /=.
     (* rewrite -map_rev /map_context.
@@ -1950,8 +2012,73 @@ Proof.
     rewrite -(trans_subst_context (shiftnP #|Γ| xpred0) (shiftnP #|Γ| xpred0)). admit. admit.
      *)
     eapply (red_expand_lets_ctx (Σ := trans_global Σ) 
-      (Γ' := (trans_local (ind_params mdecl))@[puinst p])).
-    * cbn in wftbctx.
+      (Γ' := (trans_local (smash_context [] (ind_params mdecl))@[puinst p]))
+      (Γ'' := (trans_local (smash_context [] (ind_params mdecl))@[puinst p]))).
+    * eapply alpha_eq_on_free_vars_ctx.
+      eapply All2_app; [|reflexivity].
+      eapply alpha_eq_subst_instance.
+      eapply alpha_eq_trans. symmetry. exact eqbctx.
+      rewrite - !trans_subst_instance_ctx -!trans_local_app.
+      rewrite -[_ ++ _]trans_local_app.
+      eapply trans_is_closed_context.
+      have declc : declared_constructor Σ (ci, ctor) mdecl idecl cdecl.
+      { split; tea. }
+      eapply (is_closed_context_cstr_branch_context declc).
+      destruct w2 as [? ? % typing_closed_ctx]; eauto.
+    * eapply alpha_eq_on_free_vars_ctx.
+      eapply All2_app; [|reflexivity].
+      eapply alpha_eq_subst_instance.
+      eapply alpha_eq_trans. symmetry. exact eqbctx.
+      rewrite - !trans_subst_instance_ctx -!trans_local_app.
+      rewrite -[_ ++ _]trans_local_app.
+      eapply trans_is_closed_context.
+      have declc : declared_constructor Σ (ci, ctor) mdecl idecl cdecl.
+      { split; tea. }
+      eapply (is_closed_context_cstr_branch_context declc).
+      destruct w2 as [? ? % typing_closed_ctx]; eauto.
+    * rewrite -map_rev. admit.
+      (* cbn in sp. move/inst_subslet: sp.
+      rewrite subst_instance_smash /=.
+      rewrite (trans_smash_context xpred0) //.
+      eapply (on_free_vars_ind_params d).
+      rewrite !trans_subst_instance_ctx => subs.
+      eapply subslet_untyped_subslet; tea.*)
+    * admit. (*eapply untyped_subslet_length. admit.  cbn in sp. move/inst_subslet: sp.
+      rewrite subst_instance_smash /=.
+      rewrite (trans_smash_context xpred0) //.
+      eapply (on_free_vars_ind_params d).
+      rewrite !trans_subst_instance_ctx => subs.
+      eapply subslet_untyped_subslet; tea.
+      admit. *)
+    * eapply All2_rev. eapply All2_map.
+      eapply OnOne2_All_All2; tea; cbv beta.
+      intros x y wtx [[r Hr] wt].
+      specialize (Hr wt).
+      destruct wtx. eapply into_closed_red => //.
+      eapply typing_closed_ctx in t; tea.
+      now eapply trans_is_closed_context.
+      eapply trans_on_free_vars. len.
+      now eapply subject_is_open_term in t.
+      intros x []. eapply into_closed_red. reflexivity.
+      eapply typing_closed_ctx in t. now eapply trans_is_closed_context. auto.
+      eapply subject_is_open_term in t. eapply trans_on_free_vars. now len.
+    * len. destruct wtb. cbn in t.
+      eapply subject_is_open_term in t.
+      len in t. rewrite (case_branch_context_length wfbr) in t.
+      now eapply trans_on_free_vars.
+  - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
+    eapply red_case_p. cbn. 
+    symmetry in a. rewrite (inst_case_predicate_context_eq a) in w1.
+    specialize (IHX w1).
+    rewrite -trans_subst_context.    
+
+
+      rewrite on_free_vars_ctx_app. apply/andP; split.
+      eapply closed_ctx_is_closed_context, (declared_inductive_closed_params d). pcuic. eapply declared_inductive_closed_params eapply on_free_vars_ctx_cstr_branch_context
+
+      on_free_vars_ctx_cstr_branch_context
+      rewrite on_free_vars_ctx_app. len. apply/andP; split.
+
       eapply wf_local_app => //.
       eapply weaken_wf_local; tea.
       2:{ now eapply (on_minductive_wf_params (Σ := trans_global Σ) H). }

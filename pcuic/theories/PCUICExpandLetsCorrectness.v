@@ -5,7 +5,7 @@ Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
-     PCUICSigmaCalculus PCUICClosed
+     PCUICSigmaCalculus PCUICClosed PCUICContexts PCUICSubstitution
      PCUICWeakening PCUICUnivSubst PCUICGlobalEnv PCUICTyping PCUICGeneration
      PCUICConversion PCUICOnFreeVars PCUICInductives
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
@@ -1493,14 +1493,15 @@ Proof.
 Qed.
 
 Lemma red_expand_lets {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ t t' :
-  wf_local Σ (Γ ,,, Δ) ->
   Σ ;;; Γ ,,, Δ ⊢ t ⇝ t' ->
   Σ ;;; Γ ,,, smash_context [] Δ ⊢ expand_lets Δ t ⇝ expand_lets Δ t'.
 Proof.
-  intros wf reds.
+  intros reds.
   rewrite /expand_lets /expand_lets_k. cbn.
-  eapply (closed_red_subst (Γ := _ ,,, _) (Γ' := [])).
-  eapply subslet_extended_subst; tea.
+  eapply (untyped_closed_red_subst (Γ := _ ,,, _) (Γ' := [])).
+  eapply untyped_subslet_extended_subst; tea.
+  len => /=. rewrite -shiftnP_add. rewrite foron_free_vars_extended_subst //.
+  now move/PCUICAlpha.is_closed_context_app_right: (clrel_ctx reds).
   relativize #|Δ|. relativize (context_assumptions Δ).
   eapply weakening_closed_red; tea. all:try now len. 2:reflexivity.
   eapply is_closed_context_smash_end; fvs.
@@ -1547,20 +1548,40 @@ Proof.
   now rewrite on_free_vars_ctx_app => /andP.
 Qed.
 
-Lemma red_context_rel_conv_extended_subst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {le} {Γ Δ Δ'} :
-  wf_local Σ (Γ ,,, Δ) ->
-  wf_local Σ (Γ ,,, Δ') ->
+Lemma untyped_subslet_context_equality {cf} {Γ Γ' Δ Δ'} {s} :
+  untyped_subslet (Γ ,,, Δ) s Γ' ->
+  untyped_subslet (Γ ,,, Δ') s Γ'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+  
+Lemma weakening_is_closed_context Γ Δ : 
+  is_closed_context (Γ ,,, Δ) ->
+  is_closed_context (Γ ,,, smash_context [] Δ ,,, lift_context (context_assumptions Δ) 0 Δ).
+Proof.
+  move=> cl. rewrite on_free_vars_ctx_app.
+  apply/andP; split.
+  now eapply is_closed_context_smash_end.
+  eapply on_free_vars_ctx_lift_context0.
+  len => /=. rewrite -shiftnP_add addnP_shiftnP.
+  now move/PCUICAlpha.is_closed_context_app_right: cl.
+Qed.
+
+Lemma red_context_rel_conv_extended_subst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} :
+  is_closed_context (Γ ,,, Δ) ->
+  is_closed_context (Γ ,,, Δ') ->
   red_context_rel Σ Γ Δ Δ' ->
   red_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
-  context_equality_rel le Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+  context_equality_rel false Σ Γ (smash_context [] Δ) (smash_context [] Δ').
 Proof.
   intros wfl wfr cum.
   assert (is_closed_context (Γ ,,, smash_context [] Δ)).
-  { eapply wf_local_smash_end in wfl. eauto with fvs. }
+  { eapply is_closed_context_smash_end in wfl. eauto with fvs. }
   induction cum in |- *; simpl; auto.
   - split; constructor => //. constructor.
-  - depelim p; simpl;
-    depelim wfl; depelim wfr;
+  - depelim p; simpl.
+    move: wfl => /= /on_free_vars_ctx_snoc_ass_inv [] wfl clT.
+    move: wfr => /= /on_free_vars_ctx_snoc_ass_inv [] wfr clT';
     specialize (IHcum wfl wfr) as [conv cum'];
     try assert (is_closed_context (Γ,,, smash_context [] Γ0)) by
       (rewrite /= smash_context_acc /= on_free_vars_ctx_snoc in H; now move/andP: H) => //.
@@ -1584,31 +1605,29 @@ Proof.
         rewrite -(red_context_rel_assumptions cum).
         move: (PCUICSubstitution.context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
         change (Γ ,,, smash_context [] Γ0) with (Γ ,,, smash_context [] Γ0 ,,, []).
-        eapply (substitution_equality_subst_conv (Δ := [])); tea.
-        { now eapply PCUICContexts.subslet_extended_subst. }
-        { split. 2:eapply subslet_context_equality. 4:tea.
-          4:now eapply PCUICContexts.subslet_extended_subst.
-          2-3:now eapply wf_local_smash_end.
-          rewrite -(red_context_rel_assumptions cum).
-          relativize (context_assumptions Γ0).
-          eapply weakening_wf_local. 3:now len. all:eauto.
-          now eapply wf_local_smash_end. }
+        eapply (untyped_substitution_equality_subst_conv (Γ' := [])); tea.
         now eapply red_terms_equality_terms in conv.
-        eapply equality_refl.
-        relativize (context_assumptions Γ0).
-        eapply is_closed_context_lift; tea; eauto with fvs. now len.
-        rewrite -[context_assumptions Γ0](smash_context_length []).
+        3:eapply PCUICContexts.untyped_subslet_extended_subst.
+        3:{ eapply untyped_subslet_context_equality.
+            now eapply untyped_subslet_extended_subst. }
+        now eapply weakening_is_closed_context.
+        cbn -[is_closed_context]. rewrite on_free_vars_ctx_app.
+        apply/andP; split. now apply is_closed_context_smash_end.
+        len => /=. rewrite -shiftnP_add. eapply on_free_vars_ctx_lift_context0.
+        rewrite (red_context_rel_assumptions cum) addnP_shiftnP.
+        now move/PCUICAlpha.is_closed_context_app_right: wfr.
         rewrite PCUICSubstitution.context_assumptions_smash_context /=.
         rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
         relativize #|Γ0|.
         eapply is_open_term_lift.
-        destruct l0 as [s Hs]. eapply subject_closed in Hs.
-        rewrite is_open_term_closed in Hs. move: Hs.
-        now rewrite !app_length -(All2_fold_length cum). reflexivity.
-    * split; auto.
+        len. rewrite (All2_fold_length cum). now len in clT'. reflexivity.
+    * move: wfl => /= /on_free_vars_ctx_snoc_def_inv => [] [] clΓ0 clb clT.
+      move: wfr => /= /on_free_vars_ctx_snoc_def_inv => [] [] clΓ0' clb' clT'.
+      specialize (IHcum clΓ0 clΓ0' ltac:(auto)) as [].
+      split; auto.
       constructor; auto.
       len.
-      eapply into_closed_red in r; fvs. 2:{ cbn in l0. now eapply subject_is_open_term in l0. }
+      eapply into_closed_red in r; fvs.
       eapply red_expand_lets in r; tea.
       etransitivity; tea. rewrite subst_context_nil.
       rewrite /expand_lets /expand_lets_k. simpl.
@@ -1620,16 +1639,12 @@ Proof.
       change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
       eapply (closed_red_red_subst (Γ := _ ,,, _) (Γ' := [])); tea.
       2:{ eapply PCUICContexts.untyped_subslet_extended_subst. }
-      { eapply wf_local_closed_context. cbn.
-        relativize (context_assumptions Γ0). eapply weakening_wf_local. pcuic.
-        now eapply wf_local_smash_end. now len. }
-    { red in l0. 
+      { now eapply weakening_is_closed_context. }
       rewrite PCUICSubstitution.context_assumptions_smash_context /=.
       rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
       relativize #|Γ0|.
-      eapply is_open_term_lift.
-      eapply subject_is_open_term in l2.
-      len. len in l2. now rewrite (All2_fold_length cum). reflexivity. }
+      eapply is_open_term_lift. 
+      len. rewrite (All2_fold_length cum). now len in clb'. reflexivity.
 Qed.
 
 (*Lemma red_expand_lets' {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ Δ' t :
@@ -1673,41 +1688,52 @@ Proof.
   solve_all. eapply into_closed_red; tea. now eapply typing_wf_local, wf_local_closed_context in t0.
   eapply subslet_def_tip. *)
 
+Lemma is_closed_context_subst Γ Γ' s Δ :
+  is_closed_context (Γ ,,, Γ' ,,, Δ) ->
+  forallb (is_open_term Γ) s ->
+  #|s| = #|Γ'| ->
+  is_closed_context (Γ ,,, subst_context s 0 Δ).
+Proof.
+  intros clΓ cls slen.
+  rewrite on_free_vars_ctx_app.
+  rewrite  -app_context_assoc on_free_vars_ctx_app in clΓ.
+  move/andP: clΓ => [] -> /=; rewrite on_free_vars_ctx_app => /andP[] o o'.
+  apply on_free_vars_ctx_subst_context0 => //. now rewrite slen.
+Qed.
+
 Lemma red_expand_lets_ctx {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'' Δ s s' t} :
-  wf_local Σ (Γ ,,, Γ' ,,, Δ) ->
-  wf_local Σ (Γ ,,, Γ'' ,,, Δ) ->
-  PCUICSubstitution.subslet Σ Γ s Γ' ->
-  PCUICSubstitution.subslet Σ Γ s' Γ'' ->
-  All2 (red Σ Γ) s s' ->
+  is_closed_context (Γ ,,, Γ' ,,, Δ) ->
+  is_closed_context (Γ ,,, Γ'' ,,, Δ) ->
+  untyped_subslet Γ s Γ' ->
+  untyped_subslet Γ s' Γ'' ->
+  All2 (closed_red Σ Γ) s s' ->
   is_open_term (Γ ,,, subst_context s 0 Δ) t ->
   Σ ;;; Γ ,,, subst_context s 0 (smash_context [] Δ) ⊢
     (expand_lets (subst_context s 0 Δ) t) ⇝
     (expand_lets (subst_context s' 0 Δ) t).
 Proof.
-  intros wf subs reds ont.
+  intros wf wf' subs subs' reds ont.
   rewrite -smash_context_subst /= subst_context_nil.
+  have cls : is_closed_context (Γ,,, subst_context s 0 Δ).
+  { eapply is_closed_context_subst; tea. eapply closed_red_terms_open_left in reds. solve_all.
+    now rewrite -(untyped_subslet_length subs') (All2_length reds). }
+  have cls' : is_closed_context (Γ,,, subst_context s' 0 Δ).
+  { eapply is_closed_context_subst; tea. eapply closed_red_terms_open_right in reds. solve_all. 
+    now rewrite -(untyped_subslet_length subs'). }
   etransitivity.
-  eapply red_expand_lets; tea. eapply PCUICSubstitution.substitution_wf_local; tea.
-  eapply into_closed_red. reflexivity.
-  eapply wf_local_closed_context. eapply PCUICSubstitution.substitution_wf_local; tea. tea.
+  eapply red_expand_lets; tea.
+  eapply into_closed_red; tea. reflexivity.
   rewrite /expand_lets /expand_lets_k. len. cbn.
   eapply (closed_red_red_subst (Γ := _ ,,, _) (Γ' := [])); tea.
   3:{ eapply untyped_subslet_extended_subst. }
-  eapply wf_local_closed_context. 
-  relativize (context_assumptions _). eapply weakening_wf_local.
-  eapply PCUICSubstitution.substitution_wf_local; tea.
-  eapply wf_local_smash_end. 
-  eapply PCUICSubstitution.substitution_wf_local; tea. now len.
-  eapply (red_context_rel_conv_extended_subst (le:=false)).
-  eapply PCUICSubstitution.substitution_wf_local; tea.
-  eapply PCUICSubstitution.substitution_wf_local; tea.
-  eapply red_ctx_rel_subst; tea.
-  eapply subslet_open_terms in reds; solve_all.
-  now eapply subslet_untyped_subslet in reds. fvs.
+  eapply weakening_is_closed_context => //.
+  eapply (red_context_rel_conv_extended_subst) => //.
+  eapply red_ctx_rel_subst; tea. solve_all. apply X.
+  solve_all. apply X.
   rewrite context_assumptions_subst.
   rewrite -[context_assumptions Δ](smash_context_length []).
   relativize #|smash_context [] _|. relativize #|Δ|.
-  eapply is_open_term_lift. 2-3:now len. apply H.
+  eapply is_open_term_lift. 2-3:now len. apply ont.
 Qed.
 
 Require Import PCUICSubstitution.

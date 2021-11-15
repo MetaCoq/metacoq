@@ -79,7 +79,7 @@ Proof.
   unshelve epose proof (spine_subst_smash_inv _ sppars') as [parsubst' sppars3].
   eapply PCUICWeakening.weaken_wf_local; tea. apply sppars.
   eapply (on_minductive_wf_params isdecl cu').
-  epose proof (inductive_cumulative_indices isdecl up cu cu' hR Γ pars pars' _ _ sppars2 sppars3 eq).
+  epose proof (inductive_cumulative_indices isdecl cu cu' hR Γ pars pars' _ _ sppars2 sppars3 eq).
   intros.
   cbn in X.
   rewrite (spine_subst_inst_subst sppars2) in X.

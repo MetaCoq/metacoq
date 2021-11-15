@@ -195,7 +195,7 @@ Proof.
     destruct p.
     destruct s.
     destruct p.
-    destruct typ_false as ((((->&_)&_)&_)&_).
+    destruct typ_false as (((((->&_)&_)&_)&_)&_).
     clear -d.
     destruct d as ((?&?)&?).
     cbn in *.

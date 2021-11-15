@@ -3,8 +3,8 @@ From Coq Require Import ssreflect ssrbool Utf8 CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
-     PCUICWeakening PCUICUnivSubst PCUICTyping PCUICGeneration
-     PCUICConversion (* Needs transitivity of cumulativity *)
+     PCUICWeakening PCUICUnivSubst PCUICTyping PCUICGlobalEnv 
+     PCUICGeneration PCUICConversion (* Needs transitivity of cumulativity *)
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
      PCUICSafeLemmata PCUICInductives PCUICInductiveInversion.
@@ -1062,7 +1062,7 @@ Proof.
     eapply trans_declared_inductive in d; tea.
     eapply trans_ind_predicate_context_eq => //. now symmetry.
     rewrite map_length. cbn. rewrite context_assumptions_map //. 
-    destruct w. now rewrite -(PCUICClosed.declared_minductive_ind_npars (proj1 d)).
+    destruct w. now rewrite -(declared_minductive_ind_npars (proj1 d)).
     cbn. solve_all. eapply All2_map, All2_map_right. solve_all.
     eapply All2i_All2; tea. cbv beta.
     intros cdecl br [] []. destruct a2.
@@ -1282,7 +1282,7 @@ Proof.
     eapply inversion_Case in Hs as [mdecl [idecl [decli [indices [[] ?]]]]].
     epose proof (PCUICValidity.inversion_mkApps scrut_ty) as [? [hc hsp]]; tea.
     eapply inversion_Construct in hc as (mdecl'&idecl'&cdecl&wfΓ&declc&cu&tyc); tea.
-    destruct (PCUICWeakeningEnv.declared_inductive_inj decli (proj1 declc)) as [-> ->]. 2:auto.
+    destruct (declared_inductive_inj decli (proj1 declc)) as [-> ->]. 2:auto.
     rewrite trans_mkApps /=.
     relativize (trans (iota_red _ _ _ _)).
     eapply TT.red_iota; tea; eauto. all:auto.

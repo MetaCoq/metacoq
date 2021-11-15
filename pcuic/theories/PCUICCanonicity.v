@@ -214,7 +214,7 @@ Section Spines.
         rewrite it_mkProd_or_LetIn_app /=.
         eapply red_prod. reflexivity.
         rewrite expand_lets_smash_context /= expand_lets_k_ctx_nil.
-        rewrite expand_lets_assumption_context. repeat constructor.
+        rewrite expand_lets_ctx_assumption_context. repeat constructor.
         now eapply X.
   Qed.
 
@@ -773,7 +773,7 @@ End Normalization.
 Tactic Notation "redt" uconstr(y) := eapply (CRelationClasses.transitivity (R:=red _ _) (y:=y)).
 
 Section WeakNormalization.
-  Context {cf:checker_flags} (Σ : global_env_ext).
+  Context {cf:checker_flags} {Σ : global_env_ext}.
   Context {wfΣ : wf Σ}.
   
   Section reducible.
@@ -1258,7 +1258,14 @@ Section WeakNormalization.
       now eapply red_app.
   Qed.
 
-  Lemma eval_ind_canonical t i u args : 
+  Theorem subject_reduction_eval {t u T} :
+    Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
+  Proof.
+    intros Hty Hred.
+    eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
+  Qed.
+
+  Lemma eval_ind_canonical {t i u args} : 
     Σ ;;; [] |- t : mkApps (tInd i u) args -> 
     forall t', eval Σ t t' ->
     construct_cofix_discr (head t').

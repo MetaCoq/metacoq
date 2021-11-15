@@ -1136,7 +1136,6 @@ Section Typecheck.
       rewrite - !smash_context_subst /= !subst_context_nil.
       unshelve eapply compare_global_instance_sound in H3; pcuic.
       eapply (inductive_cumulative_indices X0); tea.
-      eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl d)); tea. eapply X0.
   Qed.
   
   Obligation Tactic := idtac.

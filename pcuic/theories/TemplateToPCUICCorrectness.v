@@ -3,7 +3,7 @@ From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
+     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
      PCUICWeakening PCUICSubstitution PCUICGeneration PCUICCasesContexts.
 
 From Equations.Prop Require Import DepElim.
@@ -956,7 +956,7 @@ Section Trans_Global.
       destruct lookup_inductive as [[mdecl idecl]|] eqn:hl => //.
       2:{ eapply lookup_inductive_None in hl. elim hl. eauto. }
       apply lookup_inductive_declared in hl.
-      destruct (PCUICWeakeningEnv.declared_inductive_inj decli hl). subst.
+      destruct (PCUICGlobalEnv.declared_inductive_inj decli hl). subst.
       destruct X.
       constructor. all: try solve [
         match goal with
@@ -2353,7 +2353,7 @@ Proof.
       eapply eq_binder_annots_eq.
       now eapply trans_ind_predicate_context.
     + cbn. split. cbn.
-      { epose proof (PCUICClosed.declared_minductive_ind_npars (proj1 H4)).
+      { epose proof (declared_minductive_ind_npars (proj1 H4)).
         cbn in H4. len. rewrite -H0.
         now rewrite context_assumptions_map in H5. }
       cbn. rewrite map2_map2_bias_left.
@@ -2541,18 +2541,6 @@ Proof.
   eapply PCUICClosed.declared_minductive_closed. eapply decli.
 Qed.
 
-
-Lemma closed_cstr_branch_context {cf} {Σ ind i mdecl idecl cdecl} : 
-  wf Σ ->
-  declared_constructor Σ (ind, i) mdecl idecl cdecl ->
-  closedn_ctx (context_assumptions mdecl.(ind_params)) (cstr_branch_context ind mdecl cdecl).
-Proof.
-  intros wfΣ decli.
-  eapply PCUICClosed.closed_cstr_branch_context; tea.
-  eapply PCUICClosed.declared_minductive_closed. eapply decli.
-  eapply PCUICClosed.declared_constructor_closed; tea.
-Qed.
-
 Lemma All2_All_map2 {A B C} {P : A -> Type} (f : B -> C -> A) l l' : 
   All2 (fun x y => P (f x y)) l l' ->
   All P (map2 f l l').
@@ -2606,8 +2594,8 @@ Proof.
       { eapply PCUICInst.closed_ctx_args; len.
         rewrite H0.
         relativize (Ast.Env.context_assumptions _).
-        eapply (closed_cstr_branch_context (i:=c)); tea.
-        split; tea. now rewrite nth_error_map hnth.
+        eapply (PCUICClosed.closed_cstr_branch_context (Σ := trans_global (Ast.Env.empty_ext Σ)) (i:=c)); cbn; tea.
+        split; cbn; tea. now rewrite nth_error_map hnth.
         cbn. now rewrite context_assumptions_map. }
       rewrite map2_length; len. eauto.
   - unfold test_def; red in X. solve_all.
@@ -3036,12 +3024,12 @@ Proof.
               cbn.
               eapply trans_cstr_respects_variance => //.
             + destruct lets_in_constructor_types.
+              ++ eauto.
               ++ red in on_lets_in_type. red. rewrite <- on_lets_in_type.
                  destruct x. clear. cbn.
                  induction cstr_args0.
                  +++ reflexivity.
                  +++ cbn. destruct (decl_body a); cbn; eauto.
-              ++ eauto.
         --- simpl; intros. have onp := oni.(ST.onProjections).
             destruct (Ast.Env.ind_projs idecl) => //.
             forward onp. congruence.

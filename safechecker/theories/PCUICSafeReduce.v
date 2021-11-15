@@ -1749,7 +1749,7 @@ Section ReduceFns.
       }.
   Proof.
     * destruct h as [? hs]. sq.
-      eapply (wt_closed_red_refl _ hs).
+      eapply (wt_closed_red_refl hs).
     * pose proof (hnf_sound (h:=h)).
       now rewrite eq.
   Qed.
@@ -1829,7 +1829,7 @@ Section ReduceFns.
       assert (X : mkApps (tInd i u) args = t).
       { etransitivity. 2: symmetry; eapply mkApps_decompose_app.
         now rewrite <- eq_decomp. }
-      rewrite X. sq; eapply (wt_closed_red_refl _ h).
+      rewrite X. sq; eapply (wt_closed_red_refl h).
     - pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ [] h).
       rewrite <- eq in H.
       cbn in *.

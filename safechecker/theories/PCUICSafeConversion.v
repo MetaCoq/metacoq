@@ -1546,7 +1546,7 @@ Section Conversion.
     clear aux.
     apply welltyped_zipc_tConst_inv in h1 as (cst1&decl1&cons1).
     apply welltyped_zipc_tConst_inv in h2 as (cst2&decl2&cons2).
-    eapply PCUICWeakeningEnv.declared_constant_inj in decl1; eauto; subst.
+    eapply declared_constant_inj in decl1; eauto; subst.
     apply consistent_instance_ext_wf in cons1.
     apply consistent_instance_ext_wf in cons2.
     eapply eqb_universe_instance_complete in r; auto.
@@ -1753,7 +1753,7 @@ Section Conversion.
     destruct hp as []. 
     eapply inversion_Case in hcase as [mdecl [idecl [decli [indices [hcase _]]]]]; auto.
     eapply inversion_Case in hcase' as [mdecl' [idecl' [decli' [indices' [hcase' _]]]]]; auto.
-    destruct (PCUICWeakeningEnv.declared_inductive_inj decli decli'). subst mdecl' idecl'.
+    destruct (declared_inductive_inj decli decli'). subst mdecl' idecl'.
     constructor.
     assert (clm' : test_context_k (fun k : nat => on_free_vars (closedP k (fun _ : nat => true)))
       #|pparams p'| br'.(bcontext)).
@@ -1773,7 +1773,7 @@ Section Conversion.
         split; auto. rewrite e0; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICClosed.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     destruct hcase.
@@ -1803,7 +1803,7 @@ Section Conversion.
         split; auto. rewrite e0; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICClosed.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
   Qed.
 
   Equations isconv_branches (Γ : context)
@@ -1885,7 +1885,7 @@ Section Conversion.
       * eapply hp.
       * eapply hp.
     - unfold app_context. rewrite <- app_assoc. eapply context_equality_app_same; auto.
-      rewrite PCUICConfluence.on_free_vars_ctx_app.
+      rewrite on_free_vars_ctx_app.
       apply andb_true_iff. split; auto. 1:now apply context_equality_closed_left in hx.
       eapply on_free_vars_ctx_inst_case_context; trea.
       destruct hp.
@@ -2844,7 +2844,7 @@ Section Conversion.
     eapply PCUICValidity.inversion_mkApps in h' as [A' [hcase' _]].
     eapply inversion_Case in hcase as [mdecl [idecl [decli [indices [hcase _]]]]]; auto.
     eapply inversion_Case in hcase' as [mdecl' [idecl' [decli' [indices' [hcase' _]]]]]; auto.
-    destruct (PCUICWeakeningEnv.declared_inductive_inj decli decli'). subst mdecl' idecl'.
+    destruct (declared_inductive_inj decli decli'). subst mdecl' idecl'.
     constructor.
     assert (clp : test_context_k (fun k : nat => on_free_vars (closedP k (fun _ : nat => true)))
       #|pparams p| p.(pcontext)).
@@ -2858,7 +2858,7 @@ Section Conversion.
       { eapply (closed_ind_predicate_context); tea.
         eapply declared_minductive_closed; tea. exact decli'. }
       rewrite (wf_predicate_length_pars wf_pred).
-      now rewrite (PCUICClosed.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
     }
     rewrite test_context_k_closed_on_free_vars_ctx.
     exists mdecl, idecl.
@@ -2878,7 +2878,7 @@ Section Conversion.
       { eapply (closed_ind_predicate_context); tea.
         eapply declared_minductive_closed; tea. exact decli'. }
       rewrite (wf_predicate_length_pars wf_pred0).
-      now rewrite (PCUICClosed.declared_minductive_ind_npars decli).
+      now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
   Qed.
 
   Definition isconv_predicate_params
@@ -2964,7 +2964,7 @@ Section Conversion.
     etransitivity.
     * eapply (inst_case_context_equality d e e0 i i0); tea. fvs.
     * eapply context_equality_app_same. 2:eapply hx.
-      rewrite PCUICConfluence.on_free_vars_ctx_app.
+      rewrite on_free_vars_ctx_app.
       apply andb_true_iff. split; auto. 
       1:now eapply context_equality_closed_left in hx.
       eapply on_free_vars_ctx_inst_case_context; trea.

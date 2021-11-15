@@ -194,7 +194,7 @@ Section Validity.
       depelim allna. depelim allna.
       rewrite map2_app => /= //; try lia. unfold aname. lia.
       eapply app_inj_tail in heq as [<- <-].
-      simpl. eapply PCUICContextRelation.All2_fold_app; auto.
+      simpl. eapply All2_fold_app; auto.
       constructor. constructor.
       destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
       try reflexivity.

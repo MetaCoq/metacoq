@@ -343,6 +343,9 @@ Proof.
     destruct H2. rewrite H2. simpl. now rewrite Nat.sub_0_r.
 Qed.
 
+Lemma subst_empty_eq k : subst [] k =1 id.
+Proof. intros x; now rewrite subst_empty. Qed.
+
 Lemma lift_to_extended_list_k Γ k : forall k',
     to_extended_list_k Γ (k' + k) = map (lift0 k') (to_extended_list_k Γ k).
 Proof.

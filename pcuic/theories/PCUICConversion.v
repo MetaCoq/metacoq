@@ -157,7 +157,7 @@ Lemma is_open_term_closed (Γ : context) t :
 Proof.
   rewrite closedP_on_free_vars.
   eapply on_free_vars_ext.
-  now rewrite PCUICConfluence.closedP_shiftnP.
+  now rewrite closedP_shiftnP.
 Qed.
 
 Lemma is_closed_ctx_closed (Γ : context) :
@@ -2717,7 +2717,7 @@ Section ConvSubst.
   Proof.
     intros a. rewrite - !mapi_context_fold.
     eapply All2_fold_mapi.
-    eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+    eapply All2_fold_impl_ind; tea.
     intros par par' x y H IH; cbn.
     rewrite !mapi_context_fold.
     now rewrite -(length_of H).
@@ -2885,42 +2885,6 @@ Section ConvSubst.
     * eapply equality_eq_le_gen.
       eapply (untyped_substitution_equality_subst_conv (Δ := Γ0) (Δ' := Γ1)); tea; eauto.
   Qed.
-
-  (* 
-  Lemma All2_fold_subst {Γ Γ0 Γ1 Δ Δ' s s'} :
-    wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
-    subslet Σ Γ s Γ0 ->
-    subslet Σ Γ s' Γ1 ->
-    All2 (conv Σ Γ) s s' ->
-    All2_fold
-    (fun Γ0 Γ' : context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
-    (Γ0 ,,, Δ)
-    (Γ1 ,,, Δ') ->
-    All2_fold
-    (fun Γ0 Γ' : context => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ'))
-    (subst_context s 0 Δ)
-    (subst_context s' 0 Δ').
-  Proof.
-    move=> wfl subss subss' eqsub ctxr.
-    assert (hlen: #|Γ0| = #|Γ1|).
-    { rewrite -(subslet_length subss) -(subslet_length subss').
-      now apply All2_length in eqsub. }
-    assert(clen := All2_fold_length ctxr).
-    autorewrite with len in clen. rewrite hlen in clen.
-    assert(#|Δ| = #|Δ'|) by lia.
-    clear clen.
-    move: Δ' wfl ctxr H.
-    induction Δ as [|d Δ]; intros * wfl ctxr len0; destruct Δ' as [|d' Δ']; simpl in len0; try lia.
-    - constructor.
-    - rewrite !subst_context_snoc. specialize (IHΔ Δ'). depelim wfl; specialize (IHΔ wfl);
-      depelim ctxr; depelim c; noconf len0; simpl.
-      * constructor; auto. constructor; tas. simpl.
-        ** rewrite !Nat.add_0_r -H. red.
-          eapply subst_conv; eauto. now rewrite -app_context_assoc.
-      * constructor; auto. constructor; tas; simpl;
-        rewrite !Nat.add_0_r -H;
-        eapply subst_conv; eauto; now rewrite -app_context_assoc.
-  Qed. *)
 
   Lemma equality_elim {le} {Γ} {x y} :
     equality le Σ Γ x y ->
@@ -3129,28 +3093,6 @@ Proof.
         eapply eq_term_upto_univ_subst_instance; try typeclasses eauto; auto.
         all:eauto with fvs.
 Qed.
-
-(*Lemma subst_instance_cumul_ctx_rel {cf:checker_flags} {Σ} Γ Δ u u' :
-  wf Σ.1 ->
-  wf_local Σ Γ ->
-  R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
-  cumul_ctx_rel Σ Γ (subst_instance u Δ) (subst_instance u' Δ).
-Proof.
-  move=> wfΣ wf equ.
-  induction Δ as [|d Δ].
-  - constructor.
-  - simpl.
-    destruct d as [na [b|] ty] => /=.
-    * constructor; eauto. simpl. constructor. 
-      + reflexivity.
-      + constructor.
-        eapply eq_term_upto_univ_subst_instance; try typeclasses eauto; auto.
-      + constructor. eapply eq_term_leq_term.
-        eapply eq_term_upto_univ_subst_instance; try typeclasses eauto; auto.
-    * constructor; auto.
-      constructor; auto. simpl. constructor.
-      apply eq_term_upto_univ_subst_instance; try typeclasses eauto. auto.
-Qed. *)
 
 Lemma All2_fold_over_same {cf:checker_flags} Σ Γ Δ Δ' :
   All2_fold (fun Γ0 Γ'  => conv_decls Σ (Γ ,,, Γ0) (Γ ,,, Γ')) Δ Δ' ->
@@ -3387,42 +3329,6 @@ Section CumulSubst.
     eapply substitution_equality_subst_conv; tea; eauto with pcuic.
   Qed.
 
-  (* Lemma subst_cumul {le Γ Γ0 Γ1 Δ s s' T U} :
-    untyped_subslet Γ s Γ0 ->
-    untyped_subslet Γ s' Γ1 ->
-    is_closed_context (Γ ,,, Γ1) ->
-    equality_terms Σ Γ s s' ->
-    wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
-    Σ;;; Γ ,,, Γ0 ,,, Δ ⊢ T ≤[le] U ->
-    Σ;;; Γ ,,, subst_context s 0 Δ ⊢ subst s #|Δ| T ≤[le] subst s' #|Δ| U.
-  Proof.
-    move=> subss subss' cl eqsub wfctx eqty.
-    etransitivity.
-    { eapply equality_eq_le_gen.
-      eapply untyped_substitution_equality_subst_conv; tea => //. all:eauto with fvs.
-      admit. }
-    eapply equality_equality_ctx.
-    2:{ eapply substitution_equality; tea.
-  Qed. *)
-    
-  (*Lemma untyped_subst_cumul {Γ Γ0 Γ1 Δ s s' T U} :
-    untyped_subslet Γ s Γ0 ->
-    untyped_subslet Γ s' Γ1 ->
-    is_closed_context (Γ ,,, Γ1) ->
-    All2 (conv Σ Γ) s s' ->
-    wf_local Σ (Γ ,,, Γ0 ,,, Δ) ->
-    Σ;;; Γ ,,, Γ0 ,,, Δ ⊢ T ≤[le] U ->
-    Σ;;; Γ ,,, subst_context s 0 Δ ⊢ subst s #|Δ| T ≤[le] subst s' #|Δ| U.
-  Proof.
-    move=> wfΣ subss subss' eqsub wfctx eqty.
-    eapply cumul_trans => //.
-    * eapply substitution_untyped_cumul => //.
-    ** eauto.
-    ** eapply eqty.
-    * clear eqty.
-      rewrite -(subst_context_length s 0 Δ).
-      eapply cumul_subst_conv => //; eauto using subslet_untyped_subslet.
-  Qed. *)
 
   Lemma substitution_context_equality_subst_conv {Γ Γ' Γ'0 Γ'' Δ Δ' s s' le} :
     context_equality_rel le Σ (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->
@@ -3450,25 +3356,6 @@ Section CumulSubst.
     len. now rewrite len.
   Qed. 
 
-  (* Lemma cumul_ctx_rel_nth_error {le Γ Δ Δ'} :
-    context_equality_rel le Σ Γ Δ Δ' ->
-    assumption_context Δ ->
-    forall n decl, nth_error Δ n = Some decl ->
-    ∑ decl', (nth_error Δ' n = Some decl') × (Σ ;;; Γ ,,, skipn (S n) Δ |- decl_type decl ≤ decl_type decl').
-  Proof.
-    induction 1.
-    - move=> n decl /= //. now rewrite nth_error_nil.
-    - move=> H [|n'] decl /= //.
-      + rewrite /nth_error /= => [= <-].
-        eexists; intuition eauto.
-        rewrite skipn_S skipn_0. simpl.
-        now depelim p.
-      + rewrite /= => Hnth.
-        forward IHX by now depelim H.
-        destruct (IHX _ _ Hnth) as [decl' [Hnth' cum]].
-        eexists; intuition eauto.
-  Qed. *)
-
   Lemma weaken_context_equality_rel {le Γ Γ' Δ Δ'} :
     is_closed_context Γ ->
     context_equality_rel le Σ Γ' Δ Δ' ->
@@ -3489,56 +3376,6 @@ Section CumulSubst.
   Qed.
 
 Local Open Scope sigma_scope.
-(* From MetaCoq.PCUIC Require Import PCUICParallelReduction. *)
-
-(* Lemma clos_rt_image {A B} (R : A -> A -> Type) (f g : B -> A) x y: 
-  (forall x, R (f x) (g x)) ->
-  (forall x, R (f x) (g x)) ->
-  clos_refl_trans (fun x y => R (f x) (g y)) x y ->
-  clos_refl_trans R (f x) (g y).
-Proof.
-  intros Hf. induction 1; try solve [econstructor; eauto].
-  * econstructor 3. 2:tea.
-    econstructor 3; tea.
-    now rewrite -Hf.
-Qed. *)
-
-(*Lemma strong_substitutivity_clos_rt {P Q Γ Δ s t} σ τ :
-  pred1_subst (Σ := Σ) P Q Γ Γ Δ Δ σ τ ->
-  on_free_vars P s ->
-  on_free_vars Q s.[σ] ->
-  clos_refl_trans (pred1 Σ Γ Γ) s t ->
-  clos_refl_trans (pred1 Σ Δ Δ) s.[σ] t.[τ].
-Proof.
-  intros ps ons ons' h.
-  induction h in σ, τ, ps, ons, ons' |- *.
-  * constructor 1.
-    now eapply strong_substitutivity.
-  * eapply strong_substitutivity in ps; tea.
-    2:{ eapply pred1_ctx_refl. }
-    constructor. apply ps.
-  * econstructor 3.
-    + eapply IHh1; tea.
-    + eapply IHh2; tea.
-      intros h.
-      split. 
-      - eapply pred1_refl.
-      - destruct option_map as [[]|] => //.
-Qed.*)
-(*
-Lemma red_strong_substitutivity {cf:checker_flags} {Σ} {wfΣ : wf Σ} Γ Δ s t σ τ :
-  Σ ;;; Γ ⊢ s ⇝ t ->
-  ctxmap Γ Δ σ ->
-  ctxmap Γ Δ τ ->
-  (forall x, Σ ;;; Γ ⊢ (σ x) (τ x)) ⇝ ->
-  Σ ;;; Δ ⊢ s.[σ] ⇝ t.[τ].
-Proof.
-  intros r ctxm ctxm' IH.
-  eapply red_pred in r; eauto.
-  eapply (strong_substitutivity_clos_rt σ τ) in r; tea.
-  - eapply pred_red => //.
-  - intros x.
-*)
 
 Lemma map_branches_k_map_branches_k
       (f : nat -> term -> term) k

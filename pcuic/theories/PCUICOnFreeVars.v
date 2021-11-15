@@ -273,9 +273,16 @@ Proof.
   apply closed_decl_on_free_vars.
 Qed.
 
-Lemma closedP_shiftnP n P i : closedP n xpredT i -> shiftnP n P i.
+Lemma closedP_shiftnP (n : nat) : closedP n xpredT =1 shiftnP n xpred0.
+Proof. 
+  rewrite /closedP /shiftnP => i.
+  destruct Nat.ltb => //.
+Qed.
+
+Lemma closedP_shiftnP_impl n P i : closedP n xpredT i -> shiftnP n P i.
 Proof.
-  rewrite /closedP /shiftnP.
+  rewrite closedP_shiftnP.
+  rewrite /shiftnP.
   nat_compare_specs => //.
 Qed.
 
@@ -288,7 +295,7 @@ Proof.
   apply alli_impl => i x.
   eapply on_free_vars_decl_impl => //.
   intros k. rewrite shiftnP_add shiftnP_closedP shiftnP_xpredT.
-  apply closedP_shiftnP.
+  apply closedP_shiftnP_impl.
 Qed.
 
 (** This uses absurdity elimination as [ctx] can't have any free variable *)
@@ -1115,7 +1122,7 @@ Proof.
   eapply test_decl_impl; tea.
   intros. eapply on_free_vars_impl; tea.
   intros k. rewrite Nat.add_comm.
-  apply closedP_shiftnP.
+  apply closedP_shiftnP_impl.
 Qed.
  
 (** This shows preservation by reduction of closed/noccur_between predicates 
@@ -1286,103 +1293,12 @@ Qed.
 
 #[global] Hint Resolve on_free_vars_vass on_free_vars_vdef : fvs.
 
-Inductive All_fold {P : context -> context_decl -> Type}
-            : forall (Γ : context), Type :=
-  | All_fold_nil : All_fold nil
-  | All_fold_cons {d Γ} : All_fold Γ -> P Γ d -> All_fold (d :: Γ).
-Arguments All_fold : clear implicits.
-Derive Signature NoConfusionHom for All_fold.
-
-Lemma onctx_All_fold P Q Γ : 
+Lemma onctx_All_fold P Q (Γ : context) : 
   onctx P Γ ->
   (forall Γ x, All_fold Q Γ -> ondecl P x -> Q Γ x) ->
   All_fold Q Γ.
 Proof.
   intros o H; induction o; constructor; auto.
-Qed.
-
-Lemma All_fold_impl (P Q : context -> context_decl -> Type) Γ : 
-  All_fold P Γ -> 
-  (forall Γ x, P Γ x -> Q Γ x) ->
-  All_fold Q Γ.
-Proof.
-  induction 1; simpl; intros => //; constructor; eauto.
-Qed.
-
-Lemma All_fold_app (P : context -> context_decl -> Type) Γ Δ : 
-  All_fold (fun Γ => P (Δ ,,, Γ)) Γ -> 
-  All_fold P Δ -> 
-  All_fold P (Γ ++ Δ).
-Proof.
-  induction 1; simpl; intros => //.
-  constructor; auto.
-Qed.
-
-Lemma Alli_All_fold {P : nat -> context_decl -> Type} {n Γ} : 
-  Alli P n Γ <~>
-  All_fold (fun Γ d => P (n + #|Γ|) d) (List.rev Γ).
-Proof.
-  split.
-  - induction 1; simpl.
-    + constructor.
-    + eapply All_fold_app; simpl.
-      2:constructor; simpl; auto.
-      2:constructor. 2:now rewrite Nat.add_0_r.
-      eapply All_fold_impl; tea.
-      simpl; intros.
-      cbn. rewrite app_length /= Nat.add_1_r Nat.add_succ_r //.
-  - induction Γ using rev_ind; simpl.
-    + constructor.
-    + rewrite List.rev_app_distr /=.
-      intros a; depelim a. eapply Alli_app_inv => //; eauto.
-      now constructor; [len in p|constructor].
-Qed.
-
-Lemma Alli_rev_All_fold (P : nat -> context_decl -> Type) n Γ : 
-  Alli P n (List.rev Γ) ->
-  All_fold (fun Γ d => P (n + #|Γ|) d) Γ.
-Proof.
-  move/Alli_All_fold.
-  now rewrite List.rev_involutive.
-Qed.
-
-Lemma All_fold_Alli_rev (P : nat -> context_decl -> Type) n Γ : 
-  All_fold (fun Γ d => P (n + #|Γ|) d) Γ ->
-  Alli P n (List.rev Γ).
-Proof.
-  rewrite -{1}(List.rev_involutive Γ).
-  now move/Alli_All_fold.
-Qed.
-
-Lemma All_fold_prod (P : context -> context_decl -> Type) Q Γ Δ :
-  #|Γ| = #|Δ| ->
-  All_fold P Γ ->
-  All_fold P Δ ->
-  (forall Δ Δ' x y, 
-    All_fold P Δ ->
-    All_fold P Δ' ->
-    All2_fold Q Δ Δ' -> P Δ x -> P Δ' y -> Q Δ Δ' x y) ->
-  All2_fold Q Γ Δ.
-Proof.
-  intros hlen ha hb H.
-  induction ha in Δ, hb, hlen |- *; depelim hb => //; constructor.
-  - noconf hlen. now eapply IHha.
-  - eauto.
-Qed.
-
-Lemma All2_fold_prod {P Q : context -> context -> context_decl -> context_decl -> Type} {Γ Δ} :
-  All2_fold P Γ Δ ->
-  All2_fold Q Γ Δ ->
-  All2_fold (fun Γ Δ x y => P Γ Δ x y × Q Γ Δ x y) Γ Δ.
-Proof.
-  induction 1; intros h; depelim h; constructor; auto.
-Qed.
-
-Lemma All2_fold_prod_inv {P Q : context -> context -> context_decl -> context_decl -> Type} {Γ Δ} :
-  All2_fold (fun Γ Δ x y => P Γ Δ x y × Q Γ Δ x y) Γ Δ ->
-  All2_fold P Γ Δ × All2_fold Q Γ Δ.
-Proof.
-  induction 1; split; constructor; intuition auto.
 Qed.
 
 Lemma test_context_k_closed_on_free_vars_ctx k ctx :
@@ -1576,3 +1492,150 @@ Proof.
     * split => //; apply auxt => //.
     * now apply auxm.
 Defined.
+
+Lemma alpha_eq_on_free_vars P (Γ Δ : context) :
+  All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
+  on_free_vars_ctx P Γ -> on_free_vars_ctx P Δ.
+Proof.
+  induction 1; cbn; auto.
+  rewrite !alli_app /= !andb_true_r.
+  move/andP => [] IH hx.
+  specialize (IHX IH).
+  unfold PCUICOnFreeVars.on_free_vars_ctx in IHX.
+  rewrite IHX /=.
+  len in hx. len. rewrite -(All2_length X).
+  destruct r; cbn in *; subst; auto.
+Qed.
+
+Lemma on_free_vars_ctx_All_fold P Γ : 
+  on_free_vars_ctx P Γ <~> All_fold (fun Γ => on_free_vars_decl (shiftnP #|Γ| P)) Γ.
+Proof.
+  split.
+  - now move/alli_Alli/Alli_rev_All_fold.
+  - intros a. apply (All_fold_Alli_rev (fun k => on_free_vars_decl (shiftnP k P)) 0) in a.
+    now apply alli_Alli.
+Qed.
+
+Lemma on_free_vars_ctx_any_xpredT P Γ : 
+  on_free_vars_ctx P Γ -> on_free_vars_ctx xpredT Γ.
+Proof.
+  intros. eapply on_free_vars_ctx_impl; tea => //.
+Qed.
+
+Lemma on_free_vars_ctx_on_ctx_free_vars_closedP Γ :
+  on_ctx_free_vars (closedP #|Γ| xpredT) Γ =
+  on_free_vars_ctx xpred0 Γ.
+Proof.
+  rewrite closedP_shiftnP on_free_vars_ctx_on_ctx_free_vars //.
+Qed.
+
+Lemma on_free_vars_ctx_on_ctx_free_vars_closedP_impl Γ :
+  on_free_vars_ctx xpred0 Γ ->
+  on_ctx_free_vars (closedP #|Γ| xpredT) Γ.
+Proof.
+  now rewrite on_free_vars_ctx_on_ctx_free_vars_closedP.
+Qed.
+
+Lemma on_free_vars_ctx_app P Γ Δ : 
+  on_free_vars_ctx P (Γ ,,, Δ) =
+  on_free_vars_ctx P Γ && on_free_vars_ctx (shiftnP #|Γ| P) Δ.
+Proof.
+  rewrite /on_free_vars_ctx List.rev_app_distr alli_app. f_equal.
+  rewrite List.rev_length alli_shift.
+  setoid_rewrite shiftnP_add.
+  setoid_rewrite Nat.add_comm at 1.
+  now setoid_rewrite Nat.add_0_r.
+Qed.
+
+#[global] Hint Extern 4 (is_true (on_free_vars_ctx _ (_ ,,, _))) =>
+  rewrite on_free_vars_ctx_app : fvs.
+
+Lemma on_ctx_free_vars_snoc_ass P Γ na ty : 
+  on_ctx_free_vars P Γ ->
+  on_free_vars P ty ->
+  on_ctx_free_vars (PCUICOnFreeVars.shiftnP 1 P) (Γ ,, vass na ty).
+Proof.
+  now rewrite on_ctx_free_vars_snoc => -> /=; rewrite /on_free_vars_decl /test_decl /=.
+Qed.
+
+Lemma on_ctx_free_vars_snoc_def P Γ na def ty : 
+  on_ctx_free_vars P Γ ->
+  on_free_vars P ty ->
+  on_free_vars P def ->
+  on_ctx_free_vars (PCUICOnFreeVars.shiftnP 1 P) (Γ ,, vdef na def ty).
+Proof.
+  now rewrite on_ctx_free_vars_snoc => -> /=; rewrite /on_free_vars_decl /test_decl /= => -> ->.
+Qed.
+#[global] Hint Resolve on_ctx_free_vars_snoc_def on_ctx_free_vars_snoc_ass : pcuic.
+
+Lemma on_ctx_free_vars_snocS P Γ d : 
+  on_ctx_free_vars (PCUICOnFreeVars.shiftnP (S #|Γ|) P) (d :: Γ) = 
+  on_ctx_free_vars (PCUICOnFreeVars.shiftnP #|Γ| P) Γ && on_free_vars_decl (PCUICOnFreeVars.shiftnP #|Γ| P) d.
+Proof.
+  rewrite -(shiftnP_add 1).
+  now rewrite on_ctx_free_vars_snoc.
+Qed.
+
+Lemma on_ctx_free_vars_inst_case_context P Γ pars puinst pctx :
+  forallb (on_free_vars P) pars ->
+  test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pars| pctx ->
+  on_ctx_free_vars P Γ ->
+  on_ctx_free_vars (shiftnP #|pctx| P) (Γ ,,, inst_case_context pars puinst pctx).
+Proof.
+  intros.
+  relativize #|pctx|; [erewrite on_ctx_free_vars_concat|]; try now len.
+  rewrite H1 /=.
+  rewrite on_free_vars_ctx_on_ctx_free_vars.
+  eapply on_free_vars_ctx_inst_case_context; trea.
+Qed.
+#[global] Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
+
+Lemma on_ctx_free_vars_fix_context P Γ mfix :
+  All (fun x : def term => test_def (on_free_vars P) (on_free_vars (shiftnP #|mfix| P)) x) mfix ->
+  on_ctx_free_vars P Γ ->
+  on_ctx_free_vars (shiftnP #|mfix| P) (Γ ,,, fix_context mfix).
+Proof.
+  intros.
+  relativize #|mfix|; [erewrite on_ctx_free_vars_concat|].
+  - rewrite H /=.
+    rewrite on_free_vars_ctx_on_ctx_free_vars.
+    eapply on_free_vars_fix_context => //.
+  - now len.
+Qed.
+#[global] Hint Resolve on_ctx_free_vars_fix_context : fvs.
+#[global] Hint Resolve on_ctx_free_vars_snoc_ass on_ctx_free_vars_snoc_def : fvs.
+#[global] Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
+#[global] Hint Extern 3 (is_true (_ && _)) => apply/andP; idtac : fvs.
+#[global] Hint Extern 4 (is_true (on_ctx_free_vars (shiftnP _ xpred0) _)) => 
+  rewrite on_free_vars_ctx_on_ctx_free_vars : fvs.
+
+Lemma on_free_vars_ctx_snoc_ass P Γ na t :
+  on_free_vars_ctx P Γ ->
+  on_free_vars (shiftnP #|Γ| P) t ->
+  on_free_vars_ctx P (Γ ,, vass na t).
+Proof.
+  intros onΓ ont.
+  rewrite on_free_vars_ctx_snoc onΓ /=; eauto with fvs.
+Qed.
+
+Lemma on_free_vars_ctx_snoc_def P Γ na b t :
+  on_free_vars_ctx P Γ ->
+  on_free_vars (shiftnP #|Γ| P) b ->
+  on_free_vars (shiftnP #|Γ| P) t ->
+  on_free_vars_ctx P (Γ ,, vdef na b t).
+Proof.
+  intros onΓ ont.
+  rewrite on_free_vars_ctx_snoc onΓ /=; eauto with fvs.
+Qed.
+
+#[global] Hint Resolve on_free_vars_ctx_snoc_ass on_free_vars_ctx_snoc_def : fvs.
+  
+Lemma on_free_vars_all_subst P s : 
+  All (on_free_vars P) s ->
+  forall x, on_free_vars xpredT ((s ⋅n ids) x).
+Proof.
+  induction 1 => n; rewrite /subst_consn /subst_compose /=.
+  - rewrite nth_error_nil //.
+  - destruct n => /=; eauto.
+    now eapply on_free_vars_impl; tea.
+Qed.

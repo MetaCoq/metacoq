@@ -49,7 +49,7 @@ Notation "Σ ⊢ Γ ≤ Δ" := (context_equality true Σ Γ Δ) (at level 50, Γ
 Lemma closed_red_ctx_red_ctx {Σ Γ Γ'} : 
   Σ ⊢ Γ ⇝ Γ' -> red_ctx Σ Γ Γ'.
 Proof.
-  intros a; eapply PCUICEnvironment.All2_fold_impl; tea.
+  intros a; eapply All2_fold_impl; tea.
   cbn; intros ?????.
   eapply All_decls_impl; tea => t t'.
   now move=> [].
@@ -121,7 +121,7 @@ Section ContextReduction.
     red_ctx Σ Γ Γ' -> red_ctx Σ (Γ ,,, Δ) (Γ' ,,, Δ).
   Proof.
     intros h; eapply All2_fold_app => //.
-    eapply All2_fold_refl. reflexivity.
+    eapply All2_fold_refl. intros Δ' ?. reflexivity.
   Qed.
   Hint Resolve red_ctx_app : pcuic.
 
@@ -160,8 +160,7 @@ Section ContextReduction.
       instantiate (1 := firstn (S i) Γ').
       instantiate (1 := firstn (S i) Γ).
       rewrite !firstn_length. lia.
-      rewrite [_ ,,, _](firstn_skipn (S i) _).
-      now rewrite [_ ,,, _](firstn_skipn (S i) _).
+      now rewrite !(firstn_skipn (S i) _).
       destruct X as [x' [bt b't]]. exists (lift0 (S i) x').
       split; eauto with pcuic.
       * etransitivity. eapply red1_red. constructor.
@@ -213,14 +212,6 @@ Section ContextReduction.
       change (set_pparams p pars') with (set_pparams (set_pparams p params') pars').
       apply red_case_pars => /=. eapply OnOne2_All2; tea => /= //.
       intros; u.
-    (* - eapply (OnOne2_local_env_exist' _ (fun Δ => red Σ (Γ' ,,, Δ)) (fun Δ => red Σ (Γ' ,,, Δ))) in X as [pars' [ol or]].
-      exists (tCase ci (set_pcontext p pars') c brs). u.
-      apply red_case_pcontext => //.
-      change (set_pcontext p pars') with (set_pcontext (set_pcontext p pcontext') pars').
-      apply red_case_pcontext => /= //.
-      move=> /= Δ x y IH. apply (IH (Γ' ,,, Δ)).
-      { eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity. }
-      { now apply red1_red_ctxP_app. } *)
     - destruct (IHr (Γ' ,,, inst_case_predicate_context p)).
       now eapply red_ctx_app => //.
       now eapply red1_red_ctxP_app.
@@ -983,7 +974,7 @@ Section ContextConversion.
   Lemma closed_red_ctx_refl Γ : is_closed_context Γ -> Σ ⊢ Γ ⇝ Γ.
   Proof.
     move/on_free_vars_ctx_All_fold => a.
-    apply: All_fold_All2_fold; tea; clear => Γ d H IH; cbn.
+    apply: All_fold_All2_fold_impl; tea; clear => Γ d H IH; cbn.
     apply red_decl_refl.
     now apply on_free_vars_ctx_All_fold.
   Qed.
@@ -1047,7 +1038,7 @@ Section ContextConversion.
   Instance conv_context_sym : Symmetric (context_equality false Σ).
   Proof.
     intros Γ Γ' conv.
-    eapply PCUICContextRelation.All2_fold_sym; tea.
+    eapply All2_fold_sym; tea.
     clear Γ Γ' conv. intros Γ Γ' d d' H IH []; constructor; auto.
     now symmetry.
     eapply equality_equality_ctx; tea. now symmetry.
@@ -1078,99 +1069,8 @@ Section ContextConversion.
   Qed.
   Hint Resolve conv_cumul_context : pcuic.
 
-  
-  (*Lemma conv_cumul_ctx {Γ Γ' : closed_context} {T U : open_term Γ} :
-    Σ ;;; Γ |- T = U ->
-    cumul_context Γ' Γ ->
-    Σ ;;; Γ' |- T = U.
-  Proof.
-    intros H Hctx.
-    destruct T as [T hT], U as [U hU].
-    apply cumul_context_red_context in Hctx => //.
-    destruct Hctx as [Δ [Δ' [[l r] elr]]].
-    have r' := conv_alt_red_ctx H r.
-    have r'' := conv_leq_context_upto elr r'. cbn in *.
-    unshelve epose proof (conv_alt_red_ctx_inv (Γ := inj_closed Δ byfvs) (T:=inj_open T byfvs) (U:=inj_open U byfvs) r'' l);
-    eauto with fvs.
-    all:rewrite (All2_fold_length elr) -(All2_fold_length r); eauto with fvs.
-  Qed.
-  
-  Lemma conv_conv_ctx {Γ Γ' : closed_context} {T U : open_term Γ} :
-    Σ ;;; Γ |- T = U ->
-    conv_context Γ Γ' ->
-    Σ ;;; Γ' |- T = U.
-  Proof.
-    intros H Hctx.
-    apply conv_context_red_context in Hctx => //.
-    destruct Hctx as [Δ [Δ' [[l r] elr]]].
-    have r' := conv_alt_red_ctx H l.
-    have r'' := conv_eq_context_upto elr r'. cbn in *.
-    unshelve epose proof 
-      (conv_alt_red_ctx_inv (Γ := inj_closed Δ' byfvs) (T:=inj_open T byfvs) (U:=inj_open U byfvs) r'' r);
-      eauto with fvs.
-    all:rewrite -(All2_fold_length elr) -(All2_fold_length l); eauto with fvs.
-  Qed.
-
-  Lemma cumul_conv_ctx {Γ Γ' : closed_context} {T U : open_term Γ} :
-    Σ ;;; Γ |- T <= U ->
-    conv_context Γ Γ' ->
-    Σ ;;; Γ' |- T <= U.
-  Proof.
-    intros H Hctx.
-    apply conv_context_red_context in Hctx => //.
-    destruct Hctx as [Δ [Δ' [[l r] elr]]].
-    have r' := cumul_alt_red_ctx H l.
-    have r'' := cumul_eq_context_upto elr r'. cbn in *.
-    unshelve epose proof 
-      (cumul_alt_red_ctx_inv (Γ := inj_closed Δ' byfvs) (T:=inj_open T byfvs) (U:=inj_open U byfvs) r'' r);
-      eauto with fvs.
-    all:rewrite -(All2_fold_length elr) -(All2_fold_length l); eauto with fvs.
-  Qed.*)
-
-  (*Lemma conv_cumul_context {Γ Δ} : 
-    conv_context Γ Δ -> cumul_context Γ Δ.
-  Proof.
-    induction 1; constructor; auto;
-    depelim p; constructor; auto; now apply conv_cumul.
-  Qed.
-  Hint Resolve conv_cumul_context : pcuic.
-
-  Lemma cumul_cumul_ctx {Γ Γ' : closed_context} {T U : open_term Γ} :
-    Σ ;;; Γ |- T <= U ->
-    cumul_context Γ' Γ ->
-    Σ ;;; Γ' |- T <= U.
-  Proof.
-    intros H Hctx.
-    apply cumul_context_red_context in Hctx => //.
-    destruct Hctx as [Δ [Δ' [[l r] elr]]].
-    have r' := cumul_alt_red_ctx H r.
-    have r'' := cumul_leq_context_upto elr r'. cbn in *.
-    unshelve epose proof 
-      (cumul_alt_red_ctx_inv (Γ := inj_closed Δ byfvs) (T:=inj_open T byfvs) (U:=inj_open U byfvs) r'' l);
-      eauto with fvs.
-    all:rewrite (All2_fold_length elr) -(All2_fold_length r); eauto with fvs.
-  Qed.
-
-  (** Again, this is only the case because conversion is untyped. We require
-      nothing on Γ or Γ'. *)
-  Local Remark cumul_cumul_ctx_inv {Γ Γ' : closed_context} {T U : open_term Γ} :
-    Σ ;;; Γ |- T <= U ->
-    cumul_context Γ Γ' ->
-    Σ ;;; Γ' |- T <= U.
-  Proof.
-    intros H Hctx. 
-    apply cumul_context_red_context in Hctx => //.
-    destruct Hctx as [Δ [Δ' [[l r] elr]]].
-    have r' := cumul_alt_red_ctx H l.
-    have r'' := cumul_leq_context_upto_inv elr r'. cbn in *.
-    unshelve epose proof 
-      (cumul_alt_red_ctx_inv (Γ := inj_closed Δ' byfvs) (T:=inj_open T byfvs) (U:=inj_open U byfvs) r'' r);
-      eauto with fvs.
-    all:rewrite -(All2_fold_length elr) -(All2_fold_length l); eauto with fvs.
-  Qed.*)
-
-  (** Again, this is only the case because conversion is not relying on types of variables,
-      and bodies of let-ins are always convertible *)
+  (** This is provable as conversion is not relying on types of variables,
+      and bodies of let-ins are convertible even for context cumulativity. *)
 
   Local Remark equality_equality_ctx_inv {le le'} {Γ Γ'} {T U} :
     Σ ⊢ Γ ≤[le'] Γ' ->
@@ -1187,22 +1087,6 @@ Section ContextConversion.
     - eapply (equality_red_ctx l) in H.
       eapply (equality_compare_context_inv (le:=false) elr) in H => //. eauto with fvs.
   Qed.
-
-  (* Local Remark cumul_cumul_ctx_inv {Γ Γ' : closed_context} {T U : open_term Γ} :
-    Σ ;;; Γ |- T <= U ->
-    cumul_context Γ Γ' ->
-    Σ ;;; Γ' |- T <= U.
-  Proof.
-    intros H Hctx. 
-    apply cumul_context_red_context in Hctx => //.
-    destruct Hctx as [Δ [Δ' [[l r] elr]]].
-    have r' := cumul_alt_red_ctx H l.
-    have r'' := cumul_leq_context_upto_inv elr r'. cbn in *.
-    unshelve epose proof 
-      (cumul_alt_red_ctx_inv (Γ := inj_closed Δ' byfvs) (T:=inj_open T byfvs) (U:=inj_open U byfvs) r'' r);
-      eauto with fvs.
-    all:rewrite -(All2_fold_length elr) -(All2_fold_length l); eauto with fvs.
-  Qed. *)
 
   Lemma equality_open_decls_equality_ctx {le le'} {Γ Γ'} {d d'} :
     Σ ⊢ Γ' ≤[le'] Γ ->
@@ -1233,30 +1117,8 @@ Section ContextConversion.
 End ContextConversion.
 
 #[global] Hint Resolve isType_open wf_local_closed_context : fvs.
-
-#[global]
-Hint Resolve conv_ctx_refl' : pcuic.
-
-(* Lemma wf_local_conv_ctx {cf:checker_flags} Σ Γ Δ (wfΓ : wf_local Σ Γ) : wf Σ -> *)
-(*   All_local_env_over typing *)
-(*     (fun (Σ : global_env_ext) (Γ : context) wfΓ (t T : term) Ht => *)
-(*        forall Γ' : context, conv_context Σ Γ Γ' -> Σ;;; Γ' |- t : T) Σ Γ wfΓ -> *)
-(*   conv_context Σ Γ Δ -> wf_local Σ Δ. *)
-(* Proof. *)
-(*   intros wfΣ wfredctx. revert Δ. *)
-(*   induction wfredctx; intros Δ wfred; unfold vass, vdef in *; depelim wfred. *)
-(*   - constructor; eauto. *)
-(*   - simpl. constructor. auto. red. depelim c. apply i. *)
-(*   - simpl. depelim c. constructor; auto; hnf. *)
-(*     eapply type_Cumul; eauto. eapply cumul_conv_ctx; eauto. *)
-(*     eapply conv_alt_conv in c; auto. apply c. *)
-(*     constructor; auto. *)
-(* Qed. *)
-
+#[global] Hint Resolve conv_ctx_refl' : pcuic.
 #[global] Hint Constructors conv_decls : pcuic.
-
-(* Hint Resolve conv_ctx_refl' cumul_ctx_refl' : pcuic. *)
-(* Hint Constructors conv_decls cumul_decls : pcuic. *)
 
 Lemma eq_context_upto_conv_context {cf:checker_flags} (Σ : global_env_ext) Re :
   RelationClasses.subrelation Re (eq_universe Σ) ->
@@ -1618,6 +1480,18 @@ Proof.
   now eapply into_context_equality.
 Qed.
 
+Lemma All2_conv_over_refl {cf} {Σ} {Γ Γ' Δ} : 
+  All2_fold (All_over (conv_decls Σ) Γ Γ') Δ Δ.
+Proof.
+  eapply All2_fold_refl. intros ? ?; reflexivity.
+Qed.
+
+Lemma All2_cumul_over_refl {cf} {Σ} {Γ Γ' Δ} : 
+  All2_fold (All_over (cumul_decls Σ) Γ Γ') Δ Δ.
+Proof.
+  eapply All2_fold_refl. intros ? ?; reflexivity.
+Qed.
+
 Lemma context_cumulativity_prop {cf:checker_flags} :
   env_prop
     (fun Σ Γ t T =>
@@ -1701,7 +1575,8 @@ Proof.
   - econstructor; eauto.
     * eapply context_cumulativity_wf_app; tea.
     * eapply IHp0. rewrite /predctx.
-      eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+      eapply All2_fold_app => //.
+      eapply All2_fold_refl. intros ? ?; reflexivity.
       eapply context_cumulativity_wf_app; tea.
     * revert X6.
       clear -Γ' X10 X11. induction 1; constructor; eauto.
@@ -1710,10 +1585,10 @@ Proof.
       move=> [] hbctx [] ihbctxty [] hbody [] IHbody [] hbty IHbty.
       intuition eauto; solve_all.
       eapply context_cumulativity_wf_app; tea.
-      eapply IHbody. eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+      eapply IHbody. eapply All2_fold_app => //. apply All2_cumul_over_refl.
       eauto using context_cumulativity_app, context_cumulativity_wf_app.
       eapply IHbty.
-      eapply All2_fold_app => //. eapply All2_fold_refl; reflexivity.
+      eapply All2_fold_app => //. apply All2_cumul_over_refl.
       eapply context_cumulativity_wf_app; tea.
   - econstructor. eapply fix_guard_context_cumulativity; eauto.
     all:pcuic.

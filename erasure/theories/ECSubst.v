@@ -60,6 +60,19 @@ Proof.
     + now destruct (Nat.leb_spec k n); try lia.  
 Qed.
 
+Lemma substl_subst s u : Forall (fun x => closed x) s ->
+substl s u = subst s 0 u.
+Proof.
+  unfold substl.
+  induction s in u |- *; cbn; intros H.
+  - now rewrite subst_empty.
+  - invs H. rewrite IHs; try eassumption.
+    rewrite closed_subst; try eassumption.
+    change (a :: s) with ([a] ++ s).
+    rewrite subst_app_decomp. cbn.
+    repeat f_equal. rewrite lift_closed; eauto. 
+Qed.
+
 (*
 Lemma closedn_subst s k k' t :
   forallb (closedn k) s -> closedn (k + k' + #|s|) t ->

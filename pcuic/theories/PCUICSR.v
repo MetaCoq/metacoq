@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnv PCUICWeakening
      PCUICSubstitution PCUICCasesContexts PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICAlpha PCUICEquality PCUICValidity PCUICParallelReductionConfluence
      PCUICConfluence PCUICContextConversion PCUICUnivSubstitution
@@ -1706,12 +1706,11 @@ Proof.
     2:{ eapply validity. econstructor; tea. }
     unshelve eapply Construct_Ind_ind_eq in typec'; eauto.
     pose proof (declared_inductive_inj isdecl (proj1 declc)) as [-> ->].
-    destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci']]]]].
+    destruct typec' as [[[[[_ equ] cu] cu'] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci']]]]].
     destruct ci' as [cparsubst0 iparsubst0 idxsubst0 subsidx [s [typectx [Hpars Hargs]]]].
     pose proof (on_declared_constructor declc) as [[onind oib] [ctor_sorts [hnth onc]]].
     (* pose proof (PCUICContextSubst.context_subst_fun csubst (iparsubst0.(inst_ctx_subst))). subst iparsubst. *)
-    unshelve epose proof (constructor_cumulative_indices declc _ Hu cu equ _ _ _ _ _ cparsubst0 iparsubst0 Hpars).
-    { eapply (weaken_lookup_on_global_env' _ _ _ wf (proj1 isdecl)). }
+    unshelve epose proof (constructor_cumulative_indices declc Hu cu' equ _ _ _ _ _ cparsubst0 iparsubst0 Hpars).
     set (argctxu1 := subst_context _ _ _) in X |- *.
     set (argctxu := subst_context _ _ _) in X |- *.
     simpl in X.
@@ -1793,7 +1792,7 @@ Proof.
       now rewrite (wf_predicate_length_pars H0).
       intros iparsubst0.
       clear X6. unshelve epose proof (ctx_inst_spine_subst _ X5).
-      eapply weaken_wf_local; tea. exact (on_minductive_wf_params_indices_inst isdecl _ cu).
+      eapply weaken_wf_local; tea. exact (on_minductive_wf_params_indices_inst isdecl _ cu').
       rewrite (spine_subst_inst_subst iparsubst0) /= app_nil_r.
       intros cum.
       eapply context_equality_rel_trans; tea.
@@ -1852,7 +1851,7 @@ Proof.
       (subst_instance (puinst p) (ind_params mdecl),,,
         subst_context (inds (inductive_mind ci) (puinst p) (ind_bodies mdecl))
           #|ind_params mdecl| (subst_instance (puinst p) (cstr_args cdecl))).
-    { exact (on_constructor_wf_args declc cu). }
+    { exact (on_constructor_wf_args declc cu'). }
     eapply equality_mkApps; tea. 
     { eapply wt_equality_refl. eapply type_it_mkLambda_or_LetIn; tea. }
     rewrite (firstn_app_left _ 0) ?Nat.add_0_r // /= ?app_nil_r in iparsubst0.
@@ -2515,7 +2514,7 @@ Proof.
     move: (proj2 declc).
     destruct ind_ctors as [|? []] => //. intros [= ->].
     destruct X2 as [[_ projty] projeq].
-    destruct typec' as [[[[_ equ] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
+    destruct typec' as [[[[[_ equ] _] cu] eqargs] [cparsubst [cargsubst [iparsubst [iidxsubst ci]]]]].
     destruct ci as [cparsubst0 iparsubst0 idxsubst0 subsidx [s [typectx [Hpars Hargs]]]].
     destruct ind_cunivs as [|? ?] => //; noconf Hnth.
     specialize (projsubsl onProjs).
@@ -2585,8 +2584,7 @@ Proof.
     epose proof (nth_error_lift_context_eq _ (smash_context [] (ind_params mdecl))) as dnth.
     autorewrite with len in dnth. simpl in dnth.
     erewrite -> dnth in on_projs. clear dnth.
-    unshelve epose proof (constructor_cumulative_indices declc _ Hu cu equ _ _ _ _ _ spargs iparsubst0 Hpars).
-    { eapply (weaken_lookup_on_global_env' _ _ _ wf (proj1 (proj1 declc))). }
+    unshelve epose proof (constructor_cumulative_indices declc Hu cu equ _ _ _ _ _ spargs iparsubst0 Hpars).
     move: X2.
     set (argsu1 := subst_instance u0 (cstr_args cdecl)) in *.
     set (argsu := subst_instance u (cstr_args cdecl)) in *.
@@ -2801,7 +2799,7 @@ Proof.
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length X2)).
     assert(convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
     { clear -wf wfΓ X X2 H2 fixl. 
-      eapply PCUICContextRelation.All2_fold_app => //.
+      eapply All2_fold_app => //.
       apply conv_ctx_refl. clear X.
       eapply All2_fold_impl.
       eapply (conv_decls_fix_context (Γ := Γ)) => //.
@@ -2913,9 +2911,8 @@ Proof.
     assert(fixl :#|fix_context mfix| = #|fix_context mfix1|) by now (rewrite !fix_context_length; apply (OnOne2_length X2)).
     assert(convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix1)).
     { clear -wf wfΓ X X2 H2 fixl. 
-      eapply PCUICContextRelation.All2_fold_app => //.
-      apply conv_ctx_refl. clear X.
-      eapply All2_fold_impl.
+      eapply All2_fold_app => //; trea.
+      clear X. eapply All2_fold_impl.
       eapply (conv_decls_fix_context (Γ := Γ)) => //.
       move: H2.
       assert (clΓ := wf_local_closed_context wfΓ).

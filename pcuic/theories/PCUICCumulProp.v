@@ -2,7 +2,8 @@
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
+     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine
+     PCUICGlobalEnv PCUICWeakeningEnv
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
@@ -1189,13 +1190,13 @@ Proof.
   - eapply inversion_Const in X1 as [decl' [wf [declc [cu cum]]]]; auto.
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
-    pose proof (PCUICWeakeningEnv.declared_constant_inj _ _ H declc); subst decl'.
+    pose proof (declared_constant_inj _ _ H declc); subst decl'.
     eapply cumul_prop_subst_instance; eauto. fvs.
     destruct (cumul_prop_is_open cum) as []. 
     now rewrite on_free_vars_subst_instance in i0.
 
   - eapply inversion_Ind in X1 as [decl' [idecl' [wf [declc [cu cum]]]]]; auto.
-    pose proof (PCUICWeakeningEnv.declared_inductive_inj isdecl declc) as [-> ->].
+    pose proof (declared_inductive_inj isdecl declc) as [-> ->].
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_subst_instance; tea. fvs.
@@ -1203,7 +1204,7 @@ Proof.
     now rewrite on_free_vars_subst_instance in i0.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
-    pose proof (PCUICWeakeningEnv.declared_constructor_inj isdecl declc) as [-> [-> ->]].
+    pose proof (declared_constructor_inj isdecl declc) as [-> [-> ->]].
     eapply cumul_cumul_prop in cum; eauto.
     eapply cumul_prop_trans; eauto.
     unfold type_of_constructor.
@@ -1276,7 +1277,7 @@ Proof.
     eapply cumul_cumul_prop in b; eauto.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_mkApps_Ind_inv in X2 => //.
-    destruct (PCUICWeakeningEnv.declared_projection_inj a isdecl) as [<- [<- [<- <-]]].
+    destruct (declared_projection_inj a isdecl) as [<- [<- [<- <-]]].
     subst ty. 
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity X1)) as [ps [argss [_ cu]]]; eauto.
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity a0)) as [? [? [_ cu']]]; eauto.
@@ -1290,7 +1291,7 @@ Proof.
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X6.
     * epose proof (PCUICClosed.declared_projection_closed a).
       len. rewrite on_free_vars_subst_instance. simpl; len.
-      rewrite (PCUICClosed.declared_minductive_ind_npars a) in H1.
+      rewrite (declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.
     * epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ _ isdecl wfΣ X1 (validity X1)).
       now eapply subslet_untyped_subslet.
@@ -1308,7 +1309,7 @@ Proof.
       now eapply wf_local_closed_context.
       epose proof (PCUICClosed.declared_projection_closed a).
       simpl; len.
-      rewrite (PCUICClosed.declared_minductive_ind_npars a) in H1.
+      rewrite (declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.
 
   - eapply inversion_Fix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wffix & cum); auto.

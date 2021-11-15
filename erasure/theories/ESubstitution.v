@@ -2,7 +2,8 @@
 From Coq Require Import Program ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
-     PCUICWeakening PCUICSubstitution PCUICWeakeningEnv PCUICElimination.
+     PCUICGlobalEnv PCUICWeakening PCUICSubstitution 
+     PCUICWeakeningEnv PCUICOnFreeVars PCUICElimination.
 From MetaCoq.Erasure Require Import ETyping Extract Prelim.
 
 
@@ -72,15 +73,6 @@ Qed.
 
 Require Import ssrbool.
 
-Lemma All2i_All2_All2 {A B C} {P : nat -> A -> B -> Type} {Q R : B -> C -> Type} {n l l' l''} :
-  All2i P n l l' ->
-  All2 Q l' l'' ->
-  (forall n x y z, P n x y -> Q y z -> R y z) ->
-  All2 R l' l''.
-Proof.
-  induction 1 in l'' |- *; intros H; depelim H; constructor; eauto.
-Qed.
-
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
@@ -149,13 +141,9 @@ Proof.
   intros. now subst.
 Qed.
 
-Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (compose P f) l.
-Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
-
 Lemma lift_inst_case_branch_context (Γ'' Γ' : context) p br : 
   test_context_k
-  (fun k : nat =>
-   PCUICOnFreeVars.on_free_vars (PCUICOnFreeVars.closedP k xpredT))
+  (fun k : nat => on_free_vars (closedP k xpredT))
   #|pparams p| (bcontext br) ->
   inst_case_branch_context (map_predicate_k id (lift #|Γ''|) #|Γ'| p)
     (map_branch_k (lift #|Γ''|) id #|Γ'| br) = 
@@ -167,32 +155,6 @@ Proof.
   rewrite PCUICRename.rename_inst_case_context_wf //.
   f_equal. apply map_ext => x.
   now setoid_rewrite <- PCUICSigmaCalculus.lift_rename.
-Qed.
-
-Lemma alpha_eq_on_free_vars P (Γ Δ : context) :
-  All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
-  PCUICOnFreeVars.on_free_vars_ctx P Γ ->
-  PCUICOnFreeVars.on_free_vars_ctx P Δ.
-Proof.
-  induction 1; cbn; auto.
-  rewrite !alli_app /= !andb_true_r.
-  move/andP => [] IH hx.
-  specialize (IHX IH).
-  unfold PCUICOnFreeVars.on_free_vars_ctx in IHX.
-  rewrite IHX /=.
-  len in hx. len. rewrite -(All2_length X).
-  destruct r; cbn in *; subst; auto.
-Qed.
-
-Lemma closed_cstr_branch_context {cf : checker_flags} {Σ : global_env_ext} {ind i mdecl idecl cdecl} : 
-  wf Σ ->
-  PCUICAst.declared_constructor Σ (ind, i) mdecl idecl cdecl ->
-  closedn_ctx (context_assumptions mdecl.(ind_params)) (cstr_branch_context ind mdecl cdecl).
-Proof.
-  intros wfΣ decli.
-  eapply PCUICClosed.closed_cstr_branch_context; tea.
-  eapply PCUICClosed.declared_minductive_closed. eapply decli.
-  eapply PCUICClosed.declared_constructor_closed; tea.
 Qed.
 
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : context) (t T : term) t' :
@@ -248,13 +210,11 @@ Proof.
       eapply All2i_All2_All2; tea; cbv beta.
       intros n cdecl br br'.
       intros [hnth [? [? [? [? [? []]]]]]] []. split => //.
-      rewrite lift_inst_case_branch_context //.
-      { rewrite PCUICOnFreeVars.test_context_k_closed_on_free_vars_ctx.
-        eapply alpha_eq_on_free_vars. symmetry; tea.
-        rewrite -PCUICOnFreeVars.closedn_ctx_on_free_vars.
-        relativize #|pparams p|. eapply closed_cstr_branch_context; tea. split; tea.
+      rewrite lift_inst_case_branch_context //.      { rewrite test_context_k_closed_on_free_vars_ctx.
+        eapply alpha_eq_on_free_vars. symmetry; tea.        rewrite -closedn_ctx_on_free_vars.
         rewrite (wf_predicate_length_pars H0).
-        symmetry; apply (PCUICClosed.declared_minductive_ind_npars isdecl). }
+        rewrite (declared_minductive_ind_npars isdecl).
+        eapply PCUICClosed.closed_cstr_branch_context; tea. split; tea. }
       rewrite -app_context_assoc -{1}(Nat.add_0_r #|Γ'|) -(lift_context_app _ 0).
       assert (#|inst_case_branch_context p br| = #|bcontext br|).
       { rewrite /inst_case_branch_context. now len. }
@@ -344,18 +304,6 @@ Proof.
   eapply (erases_weakening' Σ Γ [] Γ'); cbn; eauto.
 Qed.
 
-Lemma All2_nth_error_None {A B} {P : A -> B -> Type} {l l'} n :
-  All2 P l l' ->
-  nth_error l n = None ->
-  nth_error l' n = None.
-Proof.
-  intros Hall. revert n.
-  induction Hall; destruct n; simpl; try congruence. auto.
-Qed.
-
-Lemma All2_length {A B} {P : A -> B -> Type} l l' : All2 P l l' -> #|l| = #|l'|.
-Proof. induction 1; simpl; auto. lia. Qed.
-
 Derive Signature for subslet.
 
 Lemma is_type_subst (Σ : global_env_ext) Γ Γ' Δ a s :
@@ -406,13 +354,11 @@ Lemma subst_case_branch_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ
 Proof.
   intros decl wfp a.
   rewrite (PCUICCasesContexts.inst_case_branch_context_eq a).
-  rewrite subst_inst_case_context_wf.
-  rewrite PCUICOnFreeVars.test_context_k_closed_on_free_vars_ctx.
+  rewrite subst_inst_case_context_wf.  rewrite test_context_k_closed_on_free_vars_ctx.
   eapply alpha_eq_on_free_vars. symmetry; eassumption.
   rewrite (wf_predicate_length_pars wfp).
-  rewrite (PCUICClosed.declared_minductive_ind_npars decl).
-  rewrite -PCUICOnFreeVars.closedn_ctx_on_free_vars.
-  eapply closed_cstr_branch_context; tea.
+  rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decl).  rewrite -closedn_ctx_on_free_vars.
+  eapply PCUICClosed.closed_cstr_branch_context; tea.
   epose proof (PCUICCasesContexts.inst_case_branch_context_eq (p := subst_predicate s k p) a).
   now rewrite H.
 Qed.
@@ -599,7 +545,7 @@ Proof.
         rewrite app_context_assoc. f_equal.
         now rewrite subst_fix_context.
       * cbn. now rewrite app_context_length fix_context_length.
-      * cbn. now erewrite app_context_length, fix_context_length, (All2_length _ _ X5).
+      * cbn. now erewrite app_context_length, fix_context_length, (All2_length X5).
       * pose proof (@substitution _ Σ _ Γ Γ' s (Δ ,,, fix_context mfix)).
         rewrite app_context_assoc in X1.
         eapply X1 in t; eauto.
@@ -608,3 +554,16 @@ Proof.
       eapply is_type_subst; eauto.
   - eapply H; eauto.
 Qed.
+
+
+Lemma is_assumption_context_spec Γ :
+is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+Proof.
+ induction Γ; cbn.
+ - split; econstructor.
+ - split; intros H.
+   + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
+   + invs H. cbn. now eapply IHΓ.
+Qed.
+
+

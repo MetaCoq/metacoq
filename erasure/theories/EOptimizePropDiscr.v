@@ -679,8 +679,8 @@ Proof.
   intros clargs hnth hskip clbr.
   rewrite /iota_red.
   eapply closed_substl => //.
-  now rewrite forallb_rev forallb_skipn. len.
-  now rewrite hskip.
+  now rewrite forallb_rev forallb_skipn.
+  now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
 
 Lemma optimize_correct Σ t v :

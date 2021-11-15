@@ -782,7 +782,7 @@ Section wtsub.
           specialize (X a1) as [].
           eapply wf_local_expand_lets in a5.
           rewrite /PCUICCases.cstr_branch_context.
-          rewrite subst_instance_expand_lets_ctx PCUICUnivSubstitution.subst_instance_subst_context.
+          rewrite PCUICUnivSubstitution.subst_instance_expand_lets_ctx PCUICUnivSubstitution.subst_instance_subst_context.
           rewrite PCUICUnivSubstitution.subst_instance_inds.
           erewrite PCUICUnivSubstitution.subst_instance_id_mdecl; tea. }
         erewrite PCUICCasesContexts.inst_case_branch_context_eq; tea. reflexivity.

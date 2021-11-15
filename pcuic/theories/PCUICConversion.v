@@ -335,7 +335,7 @@ Section ConvCongruences.
   Proof.
     rewrite !on_free_vars_ctx_app.
     move/andP => [] /andP[] -> /= onΔ onΓ' ons Hs.
-    apply on_free_vars_ctx_subst_context.
+    apply on_free_vars_ctx_subst_context0.
     * rewrite shiftnP_add Hs. now len in onΓ'.
     * eapply All_forallb. solve_all; eauto with fvs.
   Qed.

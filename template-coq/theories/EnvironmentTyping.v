@@ -540,14 +540,14 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       end.
 
     (* Conclusion head: reference to the current inductive in the block *)
-    Definition cstr_concl_head mdecl i idecl cdecl :=
+    Definition cstr_concl_head mdecl i cdecl :=
       tRel (#|mdecl.(ind_bodies)| - S i + #|mdecl.(ind_params)| + #|cstr_args cdecl|).
 
     (* Constructor conclusion shape: the inductives type applied to variables for
        the (non-let) parameters 
        followed by the indices *)
-    Definition cstr_concl mdecl i idecl cdecl :=
-      (mkApps (cstr_concl_head mdecl i idecl cdecl)
+    Definition cstr_concl mdecl i cdecl :=
+      (mkApps (cstr_concl_head mdecl i cdecl)
         (to_extended_list_k mdecl.(ind_params) #|cstr_args cdecl|
           ++ cstr_indices cdecl)).
   
@@ -558,7 +558,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       cstr_eq : cstr_type cdecl =
        it_mkProd_or_LetIn mdecl.(ind_params) 
         (it_mkProd_or_LetIn (cstr_args cdecl) 
-          (cstr_concl mdecl i idecl cdecl));
+          (cstr_concl mdecl i cdecl));
       (* The type of the constructor canonically has this shape: parameters, real
         arguments ending with a reference to the inductive applied to the
         (non-lets) parameters and arguments *)

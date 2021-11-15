@@ -590,7 +590,7 @@ Proof.
     (subst_instance u0 cdecl'.(cstr_type))).
     * have clctx : is_closed_context (Γ ,,, (arities_context (ind_bodies mdecl))@[u0]).
       { rewrite on_free_vars_ctx_app. apply /andP ; split => //. fvs.
-        erewrite PCUICOnFreeVars.on_free_vars_subst_instance_context.
+        erewrite PCUICOnFreeVars.on_free_vars_ctx_subst_instance.
         pose proof (declared_minductive_closed_arities declc).
         now eapply closed_ctx_on_free_vars in H0. }
       eapply (substitution_equality_subst_conv (Δ := [])); eauto.

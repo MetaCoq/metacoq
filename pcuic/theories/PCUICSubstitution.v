@@ -1647,7 +1647,7 @@ Qed.
         rewrite -inst_inst_case_context_wf //.
         { rewrite test_context_k_closed_on_free_vars_ctx //. }
         rewrite -subst_context_inst_context -app_context_assoc -(subst_context_app' _ 0).
-        relativize (_ + _); [eapply X1|]; tea; auto; len; solve_all.
+        relativize (_ + _); [eapply X2|]; tea; auto; len; solve_all.
         { rewrite !app_context_assoc. 
           relativize #|pcontext pred|; [erewrite on_ctx_free_vars_extend|]; len => //.
           rewrite onΓ => /=.
@@ -1655,17 +1655,17 @@ Qed.
           { erewrite test_context_k_closed_on_free_vars_ctx; tea. }
           { solve_all. } }
         { len. rewrite Nat.add_comm -addnP_add Nat.add_comm -addnP_add addnP_shiftnP addnP_add Nat.add_comm //. }
-      * eapply X2; eauto; solve_all.
+      * eapply X3; eauto; solve_all.
       * red. solve_all.
         eapply All_All2; tea => /=. solve_all; unfold on_Trel; simpl.
         + rewrite /inst_case_branch_context /= map_subst_inst -inst_inst_case_context_wf //.
-          { rewrite test_context_k_closed_on_free_vars_ctx //. }
+          { rewrite test_context_k_closed_on_free_vars_ctx //. apply X. }
           rewrite -subst_context_inst_context -app_context_assoc -(subst_context_app' _ 0).
-          relativize (_ + _); [eapply b0|]; tea; auto; len; solve_all.
+          relativize (_ + _); [eapply X|]; tea; auto; len; solve_all.
           { rewrite !app_context_assoc. 
             relativize #|bcontext x|; [erewrite on_ctx_free_vars_extend|]; len => //.
             rewrite onΓ => /=. eapply on_free_vars_ctx_inst_case_context; trea; solve_all.
-            erewrite test_context_k_closed_on_free_vars_ctx; tea. }
+            erewrite test_context_k_closed_on_free_vars_ctx; tea. apply X. }
         { len. rewrite Nat.add_comm -addnP_add Nat.add_comm -addnP_add addnP_shiftnP addnP_add Nat.add_comm //. }
     - apply red_proj_c; eauto.
     - apply red_fix_congr; eauto.

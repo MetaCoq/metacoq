@@ -1213,12 +1213,12 @@ Proof.
     have clty : is_open_term (Γ,,, arities_context (ind_bodies mdecl)) (cstr_type cdecl').
     { eapply closedn_on_free_vars, closed_upwards.
       eapply PCUICClosed.declared_constructor_closed_gen_type; tea. len. }
-    rewrite on_free_vars_subst_instance_context in clars.
+    rewrite on_free_vars_ctx_subst_instance in clars.
     etransitivity. 
     eapply (@substitution_untyped_cumul_prop_equiv _ Γ (subst_instance u (arities_context mdecl.(ind_bodies))) []); auto.
     * simpl.
       apply is_closed_context_weaken. fvs.
-      now rewrite on_free_vars_subst_instance_context.
+      now rewrite on_free_vars_ctx_subst_instance.
     * eapply on_free_vars_terms_inds.
     * eapply on_free_vars_terms_inds.
     * simpl.

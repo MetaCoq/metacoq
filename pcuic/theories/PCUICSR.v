@@ -320,11 +320,11 @@ Proof.
   intros hlen.
   rewrite /to_extended_list /case_branch_context /case_branch_context_gen.
   rewrite /pre_case_branch_context_gen /inst_case_context /cstr_branch_context.
-  (rewrite to_extended_list_set_binder_name;
-    try by
-     rewrite to_extended_list_k_subst /expand_lets_ctx /expand_lets_k_ctx; substu;
-     rewrite PCUICLiftSubst.map_subst_instance_to_extended_list_k to_extended_list_k_subst
-       to_extended_list_k_lift_context to_extended_list_k_subst); [].
+  rewrite to_extended_list_set_binder_name //; try by
+  rewrite to_extended_list_k_subst /expand_lets_ctx /expand_lets_k_ctx; substu;
+  rewrite to_extended_list_k_subst
+    to_extended_list_k_lift_context to_extended_list_k_subst 
+    PCUICLiftSubst.map_subst_instance_to_extended_list_k //.
   induction hlen; cbn. constructor.
   rewrite subst_context_snoc /= expand_lets_ctx_snoc subst_context_snoc.
   constructor. now cbn. apply IHhlen.

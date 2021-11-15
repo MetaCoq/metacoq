@@ -335,7 +335,7 @@ Section ConvCongruences.
   Proof.
     rewrite !on_free_vars_ctx_app.
     move/andP => [] /andP[] -> /= onΔ onΓ' ons Hs.
-    apply on_free_vars_ctx_subst_context.
+    apply on_free_vars_ctx_subst_context0.
     * rewrite shiftnP_add Hs. now len in onΓ'.
     * eapply All_forallb. solve_all; eauto with fvs.
   Qed.
@@ -2961,7 +2961,7 @@ Section ConvSubst.
 End ConvSubst.
 
 #[global] Hint Rewrite @on_free_vars_subst_instance : fvs.
-#[global] Hint Rewrite @on_free_vars_subst_instance_context subst_instance_length : fvs.
+#[global] Hint Rewrite @on_free_vars_ctx_subst_instance subst_instance_length : fvs.
 
 Lemma subst_instance_equality {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs le :
   valid_constraints (global_ext_constraints (Σ.1, univs))

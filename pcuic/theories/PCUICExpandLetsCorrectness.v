@@ -6,7 +6,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
      PCUICSigmaCalculus PCUICClosed
-     PCUICWeakening PCUICUnivSubst PCUICTyping PCUICGeneration
+     PCUICWeakening PCUICUnivSubst PCUICGlobalEnv PCUICTyping PCUICGeneration
      PCUICConversion PCUICOnFreeVars PCUICInductives
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
@@ -84,7 +84,7 @@ Proof.
   now rewrite /forget_types map_map_context.
 Qed.
 
-Lemma All_fold_map_context (P : context -> context_decl -> Type) f ctx :
+Lemma All_fold_map_context (P : context -> context_decl -> Type) (f : term -> term) ctx :
   All_fold P (map_context f ctx) <~> All_fold (fun Γ d => P (map_context f Γ) (map_decl f d)) ctx.
 Proof.
   induction ctx.
@@ -112,7 +112,7 @@ Lemma All_fold_closed_on_free_vars_ctx n ctx :
   on_free_vars_ctx (closedP n xpredT) (map_context trans ctx).
 Proof.
   intros af.
-  eapply PCUICConfluence.on_free_vars_ctx_All_fold.
+  eapply on_free_vars_ctx_All_fold.
   eapply All_fold_map_context, All_fold_impl; tea => ctx' d; cbn.
   now intros; eapply on_decl_trans_on_free_vars_decl.
 Qed.
@@ -152,7 +152,7 @@ Proof.
       eapply on_free_vars_ctx_subst_context0.
       rewrite !plengths.
       eapply All_fold_closed_on_free_vars_ctx in ihctx.
-      rewrite -> PCUICConfluence.closedP_shiftnP in ihctx.
+      rewrite -> closedP_shiftnP in ihctx.
       rewrite /id. rewrite on_free_vars_ctx_subst_instance.
       eapply on_free_vars_ctx_impl; tea.
       { unfold shiftnP. intros i. rewrite orb_false_r.
@@ -167,7 +167,7 @@ Lemma on_free_vars_ctx_trans k ctx :
   on_free_vars_ctx (closedP k xpredT) ctx ->
   on_free_vars_ctx (closedP k xpredT) (map_context trans ctx).
 Proof.
-  intros H; apply PCUICConfluence.on_free_vars_ctx_All_fold in H. 
+  intros H; apply on_free_vars_ctx_All_fold in H. 
   eapply All_fold_closed_on_free_vars_ctx.
   eapply All_fold_impl; tea; cbn.
   intros ? ? h.
@@ -415,7 +415,7 @@ Proof.
   intros onfvs; revert p t onfvs k.
   apply: term_on_free_vars_ind; intros; cbn.
   all: cbn;try congruence.
-  - destruct leb;trivial.
+  - destruct Nat.leb;trivial.
     rewrite nth_error_map.
     destruct nth_error eqn:hnth;cbn.
     2:now rewrite map_length.
@@ -803,7 +803,7 @@ Proof.
   rewrite (trans_subst_context (shiftnP (S #|Δ|) p) (shiftnP #|Δ| p)) //.
   move/andP: ona => [] /= -> //; cbn; auto.
   rewrite (IHΔ p) //. 
-  rewrite PCUICConfluence.on_free_vars_ctx_app /=.
+  rewrite on_free_vars_ctx_app /=.
   cbn. rewrite shiftnP0. move/andP: ona => [] _ ->.
   now rewrite shiftnP_add. f_equal. rewrite trans_local_app //.
 Qed.
@@ -1342,7 +1342,7 @@ Qed.
 Lemma closed_ctx_is_closed_context Γ :
   closed_ctx Γ -> is_closed_context Γ.
 Proof.
-  now rewrite closedn_ctx_on_free_vars PCUICConfluence.closedP_shiftnP shiftnP0.
+  now rewrite closedn_ctx_on_free_vars closedP_shiftnP shiftnP0.
 Qed.
 #[local] Hint Resolve closed_ctx_is_closed_context : pcuic.
 #[local] Hint Resolve declared_inductive_closed_params : pcuic.
@@ -1350,7 +1350,7 @@ Qed.
 Lemma closedn_ctx_on_free_vars n (Δ : context) :
   closedn_ctx n Δ -> on_free_vars_ctx (shiftnP n xpred0) Δ.
 Proof.
-  rewrite closedn_ctx_on_free_vars PCUICConfluence.closedP_shiftnP //.
+  rewrite closedn_ctx_on_free_vars closedP_shiftnP //.
 Qed.
 
 #[local] Hint Resolve closedn_ctx_on_free_vars : pcuic.
@@ -1388,7 +1388,7 @@ Proof.
   rewrite /PCUICCases.pre_case_predicate_context_gen /PCUICCases.inst_case_context.
   rewrite [map _ _](trans_subst_context (shiftnP (context_assumptions mdecl.(ind_params)) xpred0)
     (shiftnP #|Γ| xpred0)).
-  rewrite -PCUICConfluence.closedP_shiftnP on_free_vars_ctx_subst_instance.
+  rewrite -closedP_shiftnP on_free_vars_ctx_subst_instance.
   eapply (on_free_vars_ind_predicate_context H).
   now eapply inst_subslet, subslet_open in X.
   rewrite map_rev. f_equal.
@@ -1597,7 +1597,7 @@ Proof.
     eapply inversion_Case in Hs as [mdecl [idecl [decli [indices [[] ?]]]]].
     epose proof (PCUICValidity.inversion_mkApps scrut_ty) as [? [hc hsp]]; tea.
     eapply inversion_Construct in hc as (mdecl'&idecl'&cdecl&wfΓ&declc&cu&tyc); tea.
-    destruct (PCUICWeakeningEnv.declared_inductive_inj decli (proj1 declc)) as [-> ->]. 2:auto.
+    destruct (declared_inductive_inj decli (proj1 declc)) as [-> ->]. 2:auto.
     rewrite trans_mkApps /=.
     have lenskip : #|skipn (ci_npar ci) (map trans args)| =
       context_assumptions (cstr_args cdecl).
@@ -1618,7 +1618,7 @@ Proof.
       have oninst : on_free_vars_ctx (shiftnP #|Γ| xpred0) (inst_case_branch_context p br).
       { rewrite -(PCUICCasesContexts.inst_case_branch_context_eq bctxeq).
         eapply typing_wf_local in hbody. eapply wf_local_closed_context in hbody.
-        rewrite -> PCUICConfluence.on_free_vars_ctx_app in hbody.
+        rewrite -> on_free_vars_ctx_app in hbody.
         move/andP: hbody => [] //. }
       have onb : on_free_vars (shiftnP #|inst_case_branch_context p br| (shiftnP #|Γ| xpred0)) (bbody br).
       { rewrite -(PCUICCasesContexts.inst_case_branch_context_eq bctxeq).   
@@ -1760,7 +1760,7 @@ Proof.
     rewrite (trans_subst_context (shiftnP #|pparams p| xpred0) (shiftnP #|Γ| xpred0)) // in ih.
     { rewrite on_free_vars_ctx_subst_instance //.
       move/andP: onfvs. rewrite test_context_k_closed_on_free_vars_ctx.
-      now rewrite PCUICConfluence.closedP_shiftnP. }
+      now rewrite closedP_shiftnP. }
     { rewrite [on_free_vars_terms _ _]forallb_rev. solve_all. }
     rewrite map_rev in ih.
     now rewrite trans_subst_instance_ctx in ih.
@@ -1877,7 +1877,7 @@ Proof.
   rewrite (All2_fold_length X). repeat constructor; cbn; auto.
   rewrite (eq_context_gen_extended_subst X).
   now rewrite (PCUICConfluence.eq_context_gen_context_assumptions X).
-  eapply PCUICContextRelation.All2_fold_app => //.
+  eapply All2_fold_app => //.
   constructor.
 Qed.
 
@@ -2244,9 +2244,9 @@ Proof.
   move: P. induction Δ using rev_ind => P.
   - cbn. now rewrite shiftnP0.
   - destruct x as [na [b|] ty]; rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
-    rewrite PCUICConfluence.on_free_vars_ctx_app /= IHΔ !plengths /= shiftnP_add on_free_vars_ctx_tip /= 
+    rewrite on_free_vars_ctx_app /= IHΔ !plengths /= shiftnP_add on_free_vars_ctx_tip /= 
       /on_free_vars_decl /test_decl /=. ring.
-    rewrite PCUICConfluence.on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /= 
+    rewrite on_free_vars_ctx_app /= IHΔ !lengths /= shiftnP_add on_free_vars_ctx_tip /= 
      /on_free_vars_decl /test_decl /=. ring.
 Qed.
 
@@ -2534,7 +2534,7 @@ Proof.
    trans_local (ind_params mdecl)@[u]).
   { pose proof (trans_declared_constructor _ _ _ _ _ oncstr).
     epose proof (declared_inductive_closed_params (Σ := trans_global Σ) H).
-    rewrite PCUICConfluence.on_free_vars_ctx_app !on_free_vars_ctx_subst_instance.
+    rewrite on_free_vars_ctx_app !on_free_vars_ctx_subst_instance.
     len.
     rewrite closedn_ctx_on_free_vars.
     rewrite trans_subst_instance_ctx.
@@ -2547,7 +2547,7 @@ Proof.
     ((arities_context (mapi (trans_one_ind_body mdecl) (ind_bodies mdecl)))@[u],,,
     map trans_decl (ind_params mdecl)@[u])
     (it_mkProd_or_LetIn (map trans_decl (cstr_args cdecl)@[u])
-      (trans (cstr_concl mdecl (inductive_ind (ind, i).1) idecl cdecl)@[u])).
+      (trans (cstr_concl mdecl (inductive_ind (ind, i).1) cdecl)@[u])).
   { admit. }
   eapply equality_it_mkProd_or_LetIn.
   { eapply context_equality_rel_app.
@@ -2556,7 +2556,7 @@ Proof.
   etransitivity.
   eapply equality_it_mkProd_or_LetIn_smash => //.
   have <-: (expand_lets (map trans_decl (cstr_args cdecl)@[u])
-    (trans (cstr_concl mdecl (inductive_ind (ind, i).1) idecl cdecl)@[u])) =
+    (trans (cstr_concl mdecl (inductive_ind (ind, i).1) cdecl)@[u])) =
     (trans_cstr_concl mdecl (inductive_ind ind)
     (smash_context [] (trans_local (cstr_args cdecl)))
     (map (expand_lets (trans_local (cstr_args cdecl)))

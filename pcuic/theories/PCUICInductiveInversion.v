@@ -1553,20 +1553,6 @@ Proof.
       eapply closed_upwards; eauto; lia.
 Qed.
 
-Definition wt_cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
-  (cumul_ctx_rel Σ Γ Δ Δ' * wf_local Σ (Γ ,,, Δ))%type.
-
-Lemma wt_cumul_ctx_rel_cons {cf:checker_flags} Σ Γ Δ Δ' na ty na' ty' :
-  wt_cumul_ctx_rel Σ Γ Δ Δ' -> 
-  Σ ;;; (Γ ,,, Δ) |- ty <= ty' -> 
-  eq_binder_annot na na' ->
-  wf_local Σ (Γ ,,, Δ ,, vass na ty) ->
-  wt_cumul_ctx_rel Σ Γ (vass na ty :: Δ) (vass na' ty' :: Δ').
-Proof.
-  intros []; split; simpl; try constructor; auto.
-  all:now depelim X0; auto; constructor.
-Qed.
-
 Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
    {i ind mdecl idecl cdecl ind_indices cs} :
   declared_inductive Σ ind mdecl idecl ->
@@ -1865,22 +1851,22 @@ Hint Rewrite lift_instance_length : len.
 Lemma variance_universes_insts {mdecl l v i i'} :
   on_variance (ind_universes mdecl) (Some l) ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
-  (constraints_of_udecl v = match ind_universes mdecl with
-  | Monomorphic_ctx (_, cstrs) => cstrs
+  match ind_universes mdecl with
+  | Monomorphic_ctx (_, cstrs) => False
   | Polymorphic_ctx (inst, cstrs) => 
-    ConstraintSet.union (ConstraintSet.union cstrs (lift_constraints #|i| cstrs)) (variance_cstrs l i i')
-  end) /\
+    let cstrs := ConstraintSet.union (ConstraintSet.union cstrs (lift_constraints #|i| cstrs)) (variance_cstrs l i i')
+    in v = Polymorphic_ctx (inst ++ inst, cstrs)
+  end /\
   #|i| = #|i'| /\ #|l| = #|i| /\
   i' = abstract_instance (ind_universes mdecl) /\
   closedu_instance #|i'| i' /\ i = lift_instance #|i'| i'.
 Proof.
   unfold variance_universes.
-  destruct (ind_universes mdecl); simpl.
-  - intros H; noconf H; split; eauto.
-  - destruct cst as [inst cstrs]. simpl; len. intros Hll.
-    intros H; noconf H. len. simpl. intuition auto.
-    rewrite /closedu_instance /level_var_instance forallb_mapi //.
-    intros i hi. simpl. now eapply Nat.ltb_lt.
+  destruct (ind_universes mdecl); simpl => //.
+  destruct cst as [inst cstrs]. simpl; len. intros Hll.
+  intros H; noconf H. len. simpl. intuition auto.
+  rewrite /closedu_instance /level_var_instance forallb_mapi //.
+  intros i hi. simpl. now eapply Nat.ltb_lt.
 Qed.
 
 Lemma consistent_instance_poly_length {cf} {Σ} {wfΣ : wf Σ} {inst cstrs u} :
@@ -2135,9 +2121,9 @@ Proof.
   2:{ rewrite -satisfies_subst_instance_ctr //.
       rewrite equal_subst_instance_cstrs_mono //.
       red; apply monomorphic_global_constraint; auto. }
-  rewrite cstrs.
   destruct (ind_universes mdecl) as [[inst cstrs']|[inst cstrs']].
   { simpl in vari => //. }
+  cbn in cstrs. subst v; cbn.
   rewrite !satisfies_union. len.
   len in lenl.
   intuition auto.

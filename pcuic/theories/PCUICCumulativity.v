@@ -8,50 +8,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 Set Default Goal Selector "!".
 
-(** * Definition of cumulativity and conversion relations
+(** * Definition of cumulativity and conversion relations *)
 
-The "natural" definition of conversion is given by [conv0]. It is the reflexive
-symmetric transitive closure of beta redution + equality modulo universes.
-It turns out to be equivalent to [conv1]: only beta reduction needs to be symmetrized.
-Cumulativity is defined in the same style ([cumul1]), not symmetrizing [leq_term] because
-it is oriented.
-
-Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
-[conv] which are defined as "reducing to a common term". It turns out to be equivalent
-to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v.
-*)
-
-Section ConvCumulDefs.
-  Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).
-
-  Definition conv0 : relation term
-    := clos_refl_sym_trans (relation_disjunction (closed_red1 Σ Γ) (eq_term Σ Σ)).
-
-  Definition conv1 : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (closed_red1 Σ Γ)) (eq_term Σ Σ)).
-
-  Lemma conv0_conv1 M N :
-    conv0 M N <~> conv1 M N.
-  Proof.
-    split; intro H.
-    - induction H.
-      + constructor. now destruct r; [left; left|right].
-      + reflexivity.
-      + now apply clos_rt_trans_Symmetric.
-      + etransitivity; eassumption.
-    - induction H.
-      + destruct r as [[]|].
-        * now constructor; left.
-        * now symmetry; constructor; left.
-        * now constructor; right.
-      + reflexivity.
-      + etransitivity; eassumption.
-  Defined.
-
-  Definition cumul1 : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
-
-End ConvCumulDefs.
 
 (* todo mode typing notation *)
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).

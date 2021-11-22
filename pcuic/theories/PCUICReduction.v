@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICInduction (*PCUICEquality *)
+     PCUICLiftSubst PCUICUnivSubst PCUICInduction 
      PCUICContextRelation PCUICCases.
 
 Require Import ssreflect.
@@ -34,47 +34,7 @@ Qed.
 Definition tDummy := tVar String.EmptyString.
 Definition dummy_branch : branch term := mk_branch [] tDummy.
 
-Definition iota_red npar p args br :=
-  subst (List.rev (List.skipn npar args)) 0 
-    (expand_lets (inst_case_branch_context p br) (bbody br)).
-
 (** ** Reduction *)
-
-(** *** Helper functions for reduction *)
-
-Definition fix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition cofix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tCoFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition is_constructor n ts :=
-  match List.nth_error ts n with
-  | Some a => isConstruct_app a
-  | None => false
-  end.
 
 Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
 Proof.

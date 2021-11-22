@@ -934,7 +934,7 @@ Proof.
   - eapply clrel_ctx in redl. 
     move: redl; rewrite on_free_vars_ctx_snoc /= => /andP[]; rewrite /on_free_vars_decl /test_decl /= => onΓ ont.
     have clt' : is_open_term Γ t'.
-    eapply PCUICAlpha.eq_term_upto_univ_napp_on_free_vars in eq; tea.
+    eapply PCUICConfluence.eq_term_upto_univ_napp_on_free_vars in eq; tea.
     eapply closed_red_prod; auto.
     now eapply closed_red_refl.
     eapply closed_red_upto_conv_ctx_prop; eauto.
@@ -959,8 +959,8 @@ Proof.
   eapply (closed_red_eq_context_upto_l (le:=false)) in redr; eauto.
   2:{ eapply clrel_ctx in redl. rewrite !on_free_vars_ctx_snoc in redl |- *.
       move/andP: redl => [] -> /= /andP[] cld clt.
-      eapply PCUICAlpha.eq_term_upto_univ_napp_on_free_vars in cld; tea.
-      eapply PCUICAlpha.eq_term_upto_univ_napp_on_free_vars in clt; tea.
+      eapply PCUICConfluence.eq_term_upto_univ_napp_on_free_vars in cld; tea.
+      eapply PCUICConfluence.eq_term_upto_univ_napp_on_free_vars in clt; tea.
       rewrite /on_free_vars_decl /test_decl /=.
       now rewrite cld clt. }
   destruct redr as [v' [redv' eq''']].

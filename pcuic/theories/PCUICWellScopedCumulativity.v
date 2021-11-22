@@ -320,6 +320,12 @@ From Equations.Type Require Import Relation_Properties.
 Notation "Σ ;;; Γ ⊢ t ⇝ u" := (closed_red Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ⇝  u").
 
+Lemma closed_red1_red {Σ Γ t t'} : closed_red1 Σ Γ t t' -> Σ ;;; Γ ⊢ t ⇝ t'.
+Proof.
+  intros []. split => //.
+  now eapply red1_red.
+Qed.
+
 Lemma biimpl_introT {T} {U} : Logic.BiImpl T U -> T -> U.
 Proof. intros [] => //. Qed.
 
@@ -814,11 +820,14 @@ Section ConvCumulDefs.
   Definition conv0 : relation term
     := clos_refl_sym_trans (relation_disjunction (closed_red1 Σ Γ) (eq_term Σ Σ)).
 
-  Definition conv1 : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (closed_red1 Σ Γ)) (eq_term Σ Σ)).
+  Definition genconv1 le : relation term
+    := clos_refl_trans (relation_disjunction (clos_sym (closed_red1 Σ Γ)) (compare_term le Σ.1 (global_ext_constraints Σ))).
+
+  Definition conv1 : relation term := genconv1 false.
+  Definition cumul1 : relation term := genconv1 true.
 
   Lemma conv0_conv1 M N :
-    conv0 M N <~> conv1 M N.
+    conv0  M N <~> conv1 M N.
   Proof.
     split; intro H.
     - induction H.
@@ -835,7 +844,23 @@ Section ConvCumulDefs.
       + etransitivity; eassumption.
   Defined.
 
-  Definition cumul1 : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
-
 End ConvCumulDefs.
+
+Lemma eq_term_on_free_vars {cf Re Rle napp} {P : nat -> bool} {Σ u v} {wfΣ : wf Σ} :
+  eq_term_upto_univ_napp Σ Re Rle napp u v ->
+  on_free_vars P u ->
+  on_free_vars P v.
+Admitted.
+
+Lemma genconv1_is_open_term  {cf:checker_flags} {le} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) x y : 
+  genconv1 Σ Γ le x y ->
+  is_closed_context Γ ->
+    is_open_term Γ x ->
+    is_open_term Γ y.
+Proof.
+  induction 1; intros; eauto.
+  - destruct r as [[r|r]|r].
+    + eauto with fvs. 
+    + eauto with fvs. 
+    + eapply eq_term_on_free_vars; eauto.
+Defined.

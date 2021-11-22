@@ -766,11 +766,6 @@ Proof.
   intros. now eapply red_conv, red1_red. reflexivity.
   all:tea. 
 Qed. *)
-Lemma closed_red1_red {Σ Γ t t'} : closed_red1 Σ Γ t t' -> Σ ;;; Γ ⊢ t ⇝ t'.
-Proof.
-  intros []. split => //.
-  now eapply red1_red.
-Qed.
 
 Lemma ctx_inst_merge {cf} {Σ} {wfΣ : wf Σ} Γ inst inst' Δ :
   wf_local Σ (Γ ,,, (List.rev Δ)) ->

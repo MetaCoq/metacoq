@@ -62,41 +62,28 @@ Qed.
 Section EquivalenceConvCumulDefs.
 
   Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
-  (** We need conv1 to be defined on closed terms *)
-
-  Proposition conv_conv1 (M N : open_term Γ) :
-    conv1 Σ Γ M N <~> conv Σ Γ M N.
+  
+  Proposition genconv_genconv1 {le} (M N : open_term Γ) :
+    genconv1 Σ Γ le M N <~> Σ ;;; Γ ⊢ M ≤[le] N.
   Proof.
     split; intro H.
     - destruct M as [M HM], N as [N HN].
       cbn in H |- *.
       induction H in HM, HN |- *.
       + destruct r as [[r|r]|r].
-        * eapply red_conv; eauto. 
-        * now econstructor 3; tea.
-        * now constructor.
-      + reflexivity.
-      + eapply equality_trans. conv_trans. etransitivity; tea.
-    - induction H.
-      + constructor. now right.
-      + etransitivity; tea.
-        constructor. left. now left.
-      + etransitivity; tea.
-        constructor. left. now right.
-  Qed.
-
-
-  Proposition cumul_cumul1 M N :
-    cumul1 Σ Γ M N <~> cumul Σ Γ M N.
-  Proof.
-    split; intro H.
-    - induction H.
-      + destruct r as [[r|r]|r].
-        * eapply red_cumul; eauto.
-        * now econstructor 3; tea.
-        * now constructor.
-      + reflexivity.
-      + etransitivity; tea.
+        * eapply red_conv. apply closed_red1_red. eauto. 
+        * eapply red_equality_right.
+          ** apply closed_red1_red. apply r.
+          ** refine (equality_refl' Γ (exist x _)). destruct r. eapply red1_is_open_term; eauto.
+        * destruct Γ; econstructor 1; eauto.
+      + exact (equality_refl' Γ (exist x HM)).
+      + etransitivity. 
+        ** apply IHclos_refl_trans1.
+           *** destruct Γ; eauto.
+           *** eapply genconv1_is_open_term; destruct Γ; eauto. 
+        ** apply IHclos_refl_trans2.
+           *** eapply genconv1_is_open_term; destruct Γ; eauto. 
+           *** destruct Γ; eauto.
     - induction H.
       + constructor. now right.
       + etransitivity; tea.

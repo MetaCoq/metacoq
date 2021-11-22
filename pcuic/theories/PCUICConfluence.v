@@ -3816,6 +3816,56 @@ Section RedConfluence.
 
 End RedConfluence.
 
+(** Currently provable, but not if we add eta / sprop *)
+Lemma eq_term_upto_univ_napp_on_free_vars {cf:checker_flags} {Σ : global_env} {P eq leq napp} {t u} :
+    eq_term_upto_univ_napp Σ eq leq napp t u ->
+    on_free_vars P t ->
+    on_free_vars P u.
+Proof.
+  (* intros eqt ont. revert P t ont u eq leq napp eqt.
+  apply: term_on_free_vars_ind; intros; depelim eqt.
+  all:simpl; auto.
+  all:try solve [solve_all].
+  - destruct e as [? [? [? ?]]].
+    rewrite -(All2_fold_length a1).
+    rewrite -(All2_length a0).
+    solve_all.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    rewrite -(All2_fold_length a). now eapply b.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+Qed. *)
+
+  intros eqt ont. revert P t ont u eq leq napp eqt.
+  apply: term_on_free_vars_ind; intros; depelim eqt.
+  all:simpl; auto.
+  all:try solve [solve_all].
+  - destruct e as [? [? [? ?]]].
+    rewrite -(All2_fold_length a1).
+    rewrite -(All2_length a0).
+    solve_all.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    destruct a.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    destruct a as [hctx ihctx hb ihb].
+    rewrite -(All2_fold_length a2). now eapply ihb.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+Qed.
+
 Arguments red1_ctx _ _ _ : clear implicits.
 
 Section ConfluenceFacts.

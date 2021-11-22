@@ -59,6 +59,20 @@ Proof.
   eapply All2_symP; tc.
 Qed.
 
+
+Lemma genconv1_is_open_term  {cf:checker_flags} {le} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) x y : 
+  genconv1 Σ Γ le x y ->
+  is_closed_context Γ ->
+    is_open_term Γ x ->
+    is_open_term Γ y.
+Proof.
+  induction 1; intros; eauto.
+  - destruct r as [[r|r]|r].
+    + eauto with fvs. 
+    + eauto with fvs. 
+    + eapply eq_term_upto_univ_napp_on_free_vars; eauto.
+Defined.
+
 Section EquivalenceConvCumulDefs.
 
   Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).

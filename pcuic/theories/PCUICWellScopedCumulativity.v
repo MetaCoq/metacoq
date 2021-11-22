@@ -845,22 +845,3 @@ Section ConvCumulDefs.
   Defined.
 
 End ConvCumulDefs.
-
-Lemma eq_term_on_free_vars {cf Re Rle napp} {P : nat -> bool} {Σ u v} {wfΣ : wf Σ} :
-  eq_term_upto_univ_napp Σ Re Rle napp u v ->
-  on_free_vars P u ->
-  on_free_vars P v.
-Admitted.
-
-Lemma genconv1_is_open_term  {cf:checker_flags} {le} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) x y : 
-  genconv1 Σ Γ le x y ->
-  is_closed_context Γ ->
-    is_open_term Γ x ->
-    is_open_term Γ y.
-Proof.
-  induction 1; intros; eauto.
-  - destruct r as [[r|r]|r].
-    + eauto with fvs. 
-    + eauto with fvs. 
-    + eapply eq_term_on_free_vars; eauto.
-Defined.

@@ -92,7 +92,7 @@ Section Alpha.
     - apply nth_error_Some_length in h. assumption.
   Qed.
 
-  Lemma decompose_app_upto {Σ Re Rle x y hd tl} : 
+  Lemma decompose_app_upto {Σ Re Rle x y hd tl} :
     eq_term_upto_univ Σ Re Rle x y ->
     decompose_app x = (hd, tl) ->
     ∑ hd' tl', (y = mkApps hd' tl') *
@@ -110,20 +110,20 @@ Section Alpha.
     inv eqh; simpl in *; try discriminate; auto.
   Qed.
 
-  Lemma decompose_prod_assum_upto_names' ctx ctx' x y : 
-    ctx ≡Γ ctx' -> upto_names' x y -> 
-    let (ctx0, x0) := decompose_prod_assum ctx x in 
+  Lemma decompose_prod_assum_upto_names' ctx ctx' x y :
+    ctx ≡Γ ctx' -> upto_names' x y ->
+    let (ctx0, x0) := decompose_prod_assum ctx x in
     let (ctx1, x1) := decompose_prod_assum ctx' y in
     ctx0 ≡Γ ctx1 * upto_names' x0 x1.
   Proof.
-    induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl; 
+    induction x in ctx, ctx', y |- *; intros eqctx eqt; inv eqt; simpl;
       try split; auto; try constructor; auto.
     - specialize (IHx2 (ctx,, vass na x1) (ctx',,vass na' a') b').
       apply IHx2; auto. constructor; auto; constructor; auto.
-    - apply IHx3; auto. constructor; auto; constructor; auto. 
+    - apply IHx3; auto. constructor; auto; constructor; auto.
   Qed.
 
-  Lemma destInd_spec t : 
+  Lemma destInd_spec t :
     match destInd t with
     | Some (ind, u) => t = tInd ind u
     | None => forall ind u, t <> tInd ind u
@@ -132,7 +132,7 @@ Section Alpha.
     destruct t; congruence.
   Qed.
 
-  Lemma upto_names_destInd Re Rle t u : 
+  Lemma upto_names_destInd Re Rle t u :
     eq_term_upto_univ [] Re Rle t u ->
     rel_option (fun '(ind, u) '(ind', u') => (ind = ind') * R_universe_instance Re u u')%type (destInd t) (destInd u).
   Proof.
@@ -202,7 +202,7 @@ Section Alpha.
 
   Import PCUICClosed PCUICOnFreeVars PCUICParallelReduction PCUICConfluence.
 
-  Lemma is_closed_context_app_left Γ Δ : 
+  Lemma is_closed_context_app_left Γ Δ :
     is_closed_context (Γ ,,, Δ) ->
     is_closed_context Γ.
   Proof.
@@ -210,7 +210,7 @@ Section Alpha.
   Qed.
   Hint Resolve is_closed_context_app_left : fvs.
 
-  Lemma is_closed_context_app_right Γ Δ : 
+  Lemma is_closed_context_app_right Γ Δ :
     is_closed_context (Γ ,,, Δ) ->
     on_free_vars_ctx (shiftnP #|Γ| xpred0) Δ.
   Proof.
@@ -219,8 +219,8 @@ Section Alpha.
   Hint Resolve is_closed_context_app_right : fvs.
   Hint Constructors All_fold : core.
 
-  Lemma on_free_vars_ctx_All_fold_over P Γ Δ : 
-    on_free_vars_ctx (shiftnP #|Γ| P) Δ <~> 
+  Lemma on_free_vars_ctx_All_fold_over P Γ Δ :
+    on_free_vars_ctx (shiftnP #|Γ| P) Δ <~>
     All_fold (fun Δ => on_free_vars_decl (shiftnP #|Γ ,,, Δ| P)) Δ.
   Proof.
     split.
@@ -234,37 +234,23 @@ Section Alpha.
       intros.
       now rewrite shiftnP_add -app_length.
   Qed.
-  
-  (** Currently provable, but not if we add eta / sprop *)
-  Lemma eq_term_upto_univ_napp_on_free_vars {Σ : global_env} {P eq leq napp} {t u} :
-    eq_term_upto_univ_napp Σ eq leq napp t u ->
-    on_free_vars P t ->
-    on_free_vars P u.
+
+  Lemma All2_fold_All_fold_mix_right P Q Γ Γ' :
+    All_fold P Γ' ->
+    All2_fold Q Γ Γ' ->
+    All2_fold (fun Γ Γ' d d' => P Γ' d' × Q Γ Γ' d d') Γ Γ'.
   Proof.
-    intros eqt ont. revert P t ont u eq leq napp eqt.
-    apply: term_on_free_vars_ind; intros; depelim eqt.
-    all:simpl; auto.
-    all:try solve [solve_all].
-    - destruct e as [? [? [? ?]]].
-      rewrite -(All2_fold_length a1).
-      rewrite -(All2_length a0).
-      solve_all.
-      rewrite test_context_k_closed_on_free_vars_ctx.
-      eapply eq_context_upto_names_on_free_vars; tea.
-      rewrite test_context_k_closed_on_free_vars_ctx.
-      destruct a.
-      eapply eq_context_upto_names_on_free_vars; tea.
-      destruct a as [hctx ihctx hb ihb].
-      rewrite -(All2_fold_length a2). now eapply ihb.
-    - rewrite -(All2_length a). solve_all.
-      apply/andP; split; eauto.
-      len in b2. eapply b2. eauto.
-    - rewrite -(All2_length a). solve_all.
-      apply/andP; split; eauto.
-      len in b2. eapply b2. eauto.
+    induction 1 in Γ |- *; intros H; depelim H; constructor; auto.
   Qed.
 
-  Lemma All_decls_alpha_le_ws_decl {le P} {Γ : context} {d d'} : 
+  Lemma All2_fold_All_right P Γ Γ' :
+    All2_fold (fun _ Γ _ d => P Γ d) Γ Γ' ->
+    All_fold P Γ'.
+  Proof.
+    induction 1; constructor; auto.
+  Qed.
+
+  Lemma All_decls_alpha_le_ws_decl {le P} {Γ : context} {d d'} :
     (forall le t t', is_open_term Γ t -> is_open_term Γ t' -> upto_names' t t' -> P le t t') ->
     compare_decls upto_names' upto_names' d d' ->
     ws_decl Γ d ->
@@ -279,7 +265,7 @@ Section Alpha.
   Lemma eq_context_upto_conv_context_rel {Σ : global_env_ext} {wfΣ : wf Σ} {le} (Γ Δ Δ' : context) :
     is_closed_context (Γ ,,, Δ) ->
     is_closed_context (Γ ,,, Δ') ->
-    Δ ≡Γ Δ' ->  
+    Δ ≡Γ Δ' ->
     context_equality_rel le Σ Γ Δ Δ'.
   Proof.
     intros cl cl' eq.
@@ -307,7 +293,7 @@ Section Alpha.
     eapply All_decls_alpha_le_ws_decl; tea.
     intros. apply equality_compare => //. now apply eq_term_compare_term, upto_names_impl_eq_term.
     rewrite app_length (All2_fold_length IH') -app_length //.
-    
+
   Qed.
 
   Lemma eq_context_upto_map2_set_binder_name Σ pctx pctx' Γ Δ :
@@ -365,7 +351,7 @@ Section Alpha.
       intros x y u v ? ? ->; reflexivity. exact vc.
       assumption.
   Qed.
-  
+
   Lemma eq_context_gen_upto ctx ctx' :
     eq_context_gen eq eq ctx ctx' ->
     eq_context_upto [] eq eq ctx ctx'.
@@ -374,7 +360,7 @@ Section Alpha.
     intros. destruct X; subst; constructor; auto; try reflexivity.
   Qed.
 
-  Lemma case_predicate_context_equiv {ind mdecl idecl p p'} : 
+  Lemma case_predicate_context_equiv {ind mdecl idecl p p'} :
     eq_predicate upto_names' eq p p' ->
     eq_context_upto [] eq eq
       (case_predicate_context ind mdecl idecl p)
@@ -391,23 +377,23 @@ Section Alpha.
     now apply All2_rev.
   Qed.
 
-  Lemma case_branch_context_equiv {ind mdecl p p' bctx bctx' cdecl} : 
+  Lemma case_branch_context_equiv {ind mdecl p p' bctx bctx' cdecl} :
     eq_predicate upto_names' eq p p' ->
     bctx ≡Γ bctx' ->
-    (case_branch_context ind mdecl p (forget_types bctx) cdecl) ≡Γ 
+    (case_branch_context ind mdecl p (forget_types bctx) cdecl) ≡Γ
     (case_branch_context ind mdecl p' (forget_types bctx') cdecl).
   Proof.
     intros [eqpars [eqinst [eqctx eqret]]] eqctx'.
     eapply R_universe_instance_eq in eqinst.
     rewrite /case_branch_context /case_branch_context_gen -eqinst.
     apply eq_context_upto_map2_set_binder_name => //.
-    rewrite /pre_case_branch_context_gen. 
+    rewrite /pre_case_branch_context_gen.
     apply eq_context_upto_subst_context; tea; tc.
     reflexivity.
     now apply All2_rev.
   Qed.
 
-  Lemma case_branch_type_equiv (Σ : global_env_ext) {ind mdecl idecl p p' br br' ctx ctx' c cdecl} : 
+  Lemma case_branch_type_equiv (Σ : global_env_ext) {ind mdecl idecl p p' br br' ctx ctx' c cdecl} :
     eq_predicate upto_names' eq p p' ->
     bcontext br ≡Γ bcontext br' ->
     ctx ≡Γ ctx' ->
@@ -496,7 +482,7 @@ Section Alpha.
     induction 1; constructor; eauto.
   Qed.
 
-  Lemma wf_local_eq_context_upto_names {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} : 
+  Lemma wf_local_eq_context_upto_names {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} :
     wf_local Σ (Γ,,, Δ) ->
     eq_context_gen eq eq Δ' Δ ->
     wf_local Σ (Γ ,,, Δ').
@@ -545,11 +531,11 @@ Section Alpha.
       (it_mkLambda_or_LetIn ctx ret) n cdecl).2 ≡'
     (case_branch_type ind mdecl idecl p br
       (it_mkLambda_or_LetIn ctx' ret) n cdecl).2.
-  Proof. 
+  Proof.
     intros eq.
     rewrite /case_branch_type /=.
     rewrite /case_branch_context_gen /=. cbn.
-    eapply eq_term_upto_univ_mkApps. 
+    eapply eq_term_upto_univ_mkApps.
     2:{ eapply All2_refl. reflexivity. }
     len. eapply eq_term_upto_univ_lift.
     eapply eq_term_upto_univ_impl; revgoals.
@@ -557,7 +543,7 @@ Section Alpha.
     2:reflexivity. 2:lia. all:tc.
   Qed.
 
-  Lemma eq_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {t T} : 
+  Lemma eq_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {t T} :
     Σ ;;; Γ |- t : T ->
     Γ ≡Γ Δ ->
     wf_local Σ Δ ->
@@ -579,7 +565,7 @@ Section Alpha.
     eapply eq_context_upto_empty_conv_context.
   Qed.
 
-  Lemma isType_eq_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T} : 
+  Lemma isType_eq_context_conversion {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {T} :
     isType Σ Γ T ->
     Γ ≡Γ Δ ->
     wf_local Σ Δ ->
@@ -610,7 +596,7 @@ Section Alpha.
         eapply type_Cumul'; tea. now exists tu.π1.
         constructor. eapply eq_term_leq_term.
         now eapply upto_names_impl_eq_term.
-      
+
     - intros n decl hnth ih Δ v e eqctx; invs e.
       assert (isType Σ Γ (lift0 (S n) (decl_type decl))).
       { eapply validity. econstructor; eauto. }
@@ -699,7 +685,7 @@ Section Alpha.
         * eapply iht; trea.
           eapply eq_term_upto_univ_empty_impl in X; eauto.
           all:typeclasses eauto.
-        * eapply ihu; trea. 
+        * eapply ihu; trea.
         * eapply ihty. reflexivity. auto.
       + destruct X1 as [s' Hs]. exists s'. eapply eq_context_conversion; tea. eauto.
       + constructor.
@@ -716,7 +702,7 @@ Section Alpha.
     - intros ind i u mdecl idecl cdecl isdecl ? ? ? Δ v e e'; invs e.
       eapply R_universe_instance_eq in H4. subst.
       econstructor ; eauto.
-    - intros ind p c brs args ps mdecl idecl isdecl X X0 H Hpctx cpc wfp 
+    - intros ind p c brs args ps mdecl idecl isdecl X X0 H Hpctx cpc wfp
         cup wfpctx Hret IHret
             wfcpc kelim Hctxi IHctxi Hc IHc iscof ptm wfbrs Hbrs Δ v e e'; invs e.
       have eqp := X1.
@@ -865,7 +851,7 @@ Section Alpha.
         * constructor ; auto.
           eapply All2_same.
           intro. eapply eq_term_upto_univ_refl ; auto.
-    
+
     - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix Δ v e e'; invs e.
       eapply All2_nth_error_Some in hnth as hnth' ; eauto.
       destruct hnth' as [decl' [hnth' hh]].
@@ -880,7 +866,7 @@ Section Alpha.
       assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
       { eapply eq_context_upto_univ_conv_context.
         eapply (eq_context_impl _ eq). intros x y eqx. subst. reflexivity.
-        1-2:typeclasses eauto. 
+        1-2:typeclasses eauto.
         change (fix_context mfix) with (fix_context_gen 0 mfix).
         change (fix_context mfix') with (fix_context_gen 0 mfix').
         eapply eq_context_upto_cat.
@@ -938,7 +924,7 @@ Section Alpha.
         + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
         + apply cumul_refl. eapply eq_term_leq_term, upto_names_impl_eq_term.
           now symmetry.
-  
+
   - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix Δ v e e'; invs e.
     eapply All2_nth_error_Some in hnth as hnth' ; eauto.
     destruct hnth' as [decl' [hnth' hh]].
@@ -953,7 +939,7 @@ Section Alpha.
     assert (convctx : conv_context Σ (Γ ,,, fix_context mfix) (Γ ,,, fix_context mfix')).
     { eapply eq_context_upto_univ_conv_context.
       eapply (eq_context_impl _ eq). intros x y eqx. subst. reflexivity.
-      1-2:typeclasses eauto. 
+      1-2:typeclasses eauto.
       change (fix_context mfix) with (fix_context_gen 0 mfix).
       change (fix_context mfix') with (fix_context_gen 0 mfix').
       eapply eq_context_upto_cat.
@@ -1036,7 +1022,7 @@ Section Alpha.
 
   Lemma eq_term_upto_univ_napp_0 n t t' :
     eq_term_upto_univ_napp [] eq eq n t t' ->
-    t ≡α t'. 
+    t ≡α t'.
   Proof.
     apply eq_term_upto_univ_empty_impl; typeclasses eauto.
   Qed.
@@ -1051,11 +1037,11 @@ Section Alpha.
     all:intros x y ->; reflexivity.
   Qed.
 
-  Lemma upto_names_eq_term_upto_univ Σ Re Rle napp t u : 
-    RelationClasses.Reflexive Re -> 
+  Lemma upto_names_eq_term_upto_univ Σ Re Rle napp t u :
+    RelationClasses.Reflexive Re ->
     RelationClasses.Reflexive Rle ->
     RelationClasses.Symmetric Re ->
-    RelationClasses.Transitive Re -> 
+    RelationClasses.Transitive Re ->
     RelationClasses.Transitive Rle ->
     RelationClasses.subrelation Re Rle ->
     eq_term_upto_univ_napp Σ Re Rle napp t u ->
@@ -1124,7 +1110,7 @@ Section Alpha.
     intros [s Hs] eq.
     exists s; eapply typing_alpha; eauto.
   Qed.
-  
+
   Lemma isType_alpha_ctx {Σ} {wfΣ : wf Σ.1} {Γ Δ u v} :
     isType Σ Γ u ->
     Γ ≡Γ Δ ->

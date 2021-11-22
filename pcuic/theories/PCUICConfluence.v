@@ -1665,7 +1665,7 @@ Proof.
   eapply All_All2_telescopei; eauto.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICOnFreeVars PCUICInst.
+From MetaCoq.PCUIC Require Import PCUICOnFreeVars PCUICInstDef PCUICInstProp.
 
 Import ssrbool.
 
@@ -2042,8 +2042,6 @@ Section RedPred.
   Qed.
 
 End RedPred.
-
-Import ssrbool.
 
 Section PredRed.
   Context {cf : checker_flags}.

@@ -5,7 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
      PCUICConversion PCUICContextConversion PCUICValidity PCUICArities PCUICSpine
      PCUICInductives PCUICInductiveInversion PCUICOnFreeVars
-     PCUICWellScopedCumulativity.
+     PCUICWellScopedCumulativity PCUICGuardCondition.
+
 From Equations Require Import Equations.
 
 (* Alpha convertible terms and contexts have the same typings *)

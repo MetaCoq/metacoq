@@ -1215,7 +1215,7 @@ Section Trans_Global.
      (fun (x : aname) (y : context_decl) =>
       set_binder_name x (map_decl (subst_instance (Ast.puinst p)) y))).
     rewrite -PCUICUnivSubstitution.map2_map_r.
-    rewrite -[fold_context_k _ _]PCUICRename.map2_set_binder_name_fold; len.
+    rewrite -[fold_context_k _ _]PCUICRenameProp.map2_set_binder_name_fold; len.
     rewrite /trans_local map_map2 map2_trans.
     rewrite -PCUICUnivSubstitution.map2_map_r. f_equal.
     rewrite [map _ _]trans_subst_context map_rev.
@@ -2508,7 +2508,7 @@ Proof.
   now rewrite trans_subst.
 Qed.
 
-Require Import PCUICInst.
+Require Import PCUICInstDef PCUICInstProp.
 Require Import ssrbool.
 (* Lemma closed_ctx_map2_set_binder_name (n : nat) (bctx : list aname) (ctx : list context_decl) :
   closedn_ctx n ctx -> closedn_ctx n (map2_bias_left set_binder_name dummy_decl bctx ctx).
@@ -2570,7 +2570,7 @@ Proof.
     * len.
       rewrite map2_map2_bias_left.
       rewrite PCUICCases.ind_predicate_context_length. cbn. len.
-      eapply PCUICInst.closed_ctx_args.
+      eapply PCUICInstProp.closed_ctx_args.
       rewrite PCUICCases.ind_predicate_context_length. cbn. len.
       rewrite H0.
       relativize (Ast.Env.context_assumptions _).
@@ -2591,7 +2591,7 @@ Proof.
       unfold trans_branch. cbn -[cstr_branch_context].
       rewrite map2_map2_bias_left. len.
       apply/andP; split.
-      { eapply PCUICInst.closed_ctx_args; len.
+      { eapply PCUICInstProp.closed_ctx_args; len.
         rewrite H0.
         relativize (Ast.Env.context_assumptions _).
         eapply (PCUICClosed.closed_cstr_branch_context (Σ := trans_global (Ast.Env.empty_ext Σ)) (i:=c)); cbn; tea.

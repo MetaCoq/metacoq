@@ -52,79 +52,14 @@ Definition extends (Σ Σ' : global_env) :=
 
 Include PCUICEnvTyping.
 
-(* AXIOM GUARD CONDITION *)
+(* AXIOM Postulate existence of a guard condition checker *)
 
 Class GuardChecker := 
 { (* Structural recursion check *)
   fix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
   (* Guarded by destructors check *)
   cofix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
-
-  fix_guard_red1 Σ Γ mfix mfix' idx :
-      fix_guard Σ Γ mfix ->
-      red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
-      fix_guard Σ Γ mfix' ;
-
-  fix_guard_eq_term Σ Γ mfix mfix' idx :
-      fix_guard Σ Γ mfix ->
-      upto_names (tFix mfix idx) (tFix mfix' idx) ->
-      fix_guard Σ Γ mfix' ;
-  
-  fix_guard_lift Σ Γ Γ' Γ'' mfix :
-    let k' := (#|mfix| + #|Γ'|)%nat in
-    let mfix' := map (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| k')) mfix in
-    fix_guard Σ (Γ ,,, Γ') mfix ->
-    fix_guard Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') mfix' ;
-
-  fix_guard_subst Σ Γ Γ' Δ mfix s k :
-    let k' := (#|mfix| + k)%nat in
-    let mfix' := map (map_def (subst s k) (subst s k')) mfix in
-    fix_guard Σ (Γ ,,, Γ' ,,, Δ) mfix ->
-    fix_guard Σ (Γ ,,, subst_context s 0 Δ) mfix' ;
-
-  fix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
-    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-    fix_guard Σ Γ mfix ->
-    fix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
-                    mfix) ;
-
-  fix_guard_extends Σ Γ mfix Σ' : 
-    fix_guard Σ Γ mfix ->
-    extends Σ.1 Σ' ->
-    fix_guard Σ' Γ mfix ;
-
-  cofix_guard_red1 Σ Γ mfix mfix' idx :
-    cofix_guard Σ Γ mfix ->
-    red1 Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx) ->
-    cofix_guard Σ Γ mfix' ;
-
-  cofix_guard_eq_term Σ Γ mfix mfix' idx :
-    cofix_guard Σ Γ mfix ->
-    upto_names (tCoFix mfix idx) (tCoFix mfix' idx) ->
-    cofix_guard Σ Γ mfix' ;
-
-  cofix_guard_lift Σ Γ Γ' Γ'' mfix :
-    let k' := (#|mfix| + #|Γ'|)%nat in
-    let mfix' := map (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| k')) mfix in
-    cofix_guard Σ (Γ ,,, Γ') mfix ->
-    cofix_guard Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') mfix' ;
-
-  cofix_guard_subst Σ Γ Γ' Δ mfix s k :
-    let k' := (#|mfix| + k)%nat in
-    let mfix' := map (map_def (subst s k) (subst s k')) mfix in
-    cofix_guard Σ (Γ ,,, Γ' ,,, Δ) mfix ->
-    cofix_guard Σ (Γ ,,, subst_context s 0 Δ) mfix' ;
-
-  cofix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
-    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-    cofix_guard Σ Γ mfix ->
-    cofix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
-                    mfix) ;
-  
-  cofix_guard_extends Σ Γ mfix Σ' : 
-    cofix_guard Σ Γ mfix ->
-    extends Σ.1 Σ' ->
-    cofix_guard Σ' Γ mfix }.
+}.
 
 Axiom guard_checking : GuardChecker.
 #[global]
@@ -333,6 +268,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 
 where " Σ ;;; Γ |- t : T " := (typing Σ Γ t T)
 and "'wf_local' Σ Γ " := (All_local_env (lift_typing typing Σ) Γ).
+
+
 
 Lemma meta_conv {cf} {Σ Γ t A B} :
     Σ ;;; Γ |- t : A ->

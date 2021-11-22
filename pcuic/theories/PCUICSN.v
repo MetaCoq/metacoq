@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping PCUICSafeLemmata PCUICValidity PCUICNameless
+     PCUICTyping PCUICSafeLemmata PCUICValidity
      PCUICEquality PCUICConfluence PCUICUnivSubstitution.
 
 Require Import Equations.Prop.DepElim.

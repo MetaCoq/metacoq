@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICCases PCUICSigmaCalculus
      PCUICUnivSubst PCUICContextSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
      PCUICReduction PCUICContextRelation PCUICWeakening PCUICCumulativity PCUICUnivSubstitution
-     PCUICRename PCUICInst PCUICOnFreeVars.
+     PCUICRenameDef PCUICRenameProp PCUICInstDef PCUICInstProp PCUICOnFreeVars.
 
 Require Import ssreflect.
 From Equations Require Import Equations.

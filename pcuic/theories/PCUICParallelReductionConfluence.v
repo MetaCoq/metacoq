@@ -4,7 +4,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
      PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
      PCUICReflect PCUICInduction PCUICClosed PCUICDepth PCUICOnFreeVars
-     PCUICRename PCUICInst PCUICParallelReduction PCUICWeakening.
+     PCUICRenameDef PCUICRenameProp PCUICInstDef PCUICInstProp
+     PCUICParallelReduction PCUICWeakening.
 
 Require Import ssreflect ssrbool.
 Require Import Morphisms CRelationClasses.

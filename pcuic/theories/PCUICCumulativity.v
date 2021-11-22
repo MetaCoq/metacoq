@@ -17,7 +17,7 @@ Cumulativity is defined in the same style ([cumul1]), not symmetrizing [leq_term
 it is oriented.
 
 Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
-[conv] which are defined as "reducing to a common term". It tunrs out to be equivalent
+[conv] which are defined as "reducing to a common term". It turns out to be equivalent
 to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v.
 *)
 
@@ -25,10 +25,10 @@ Section ConvCumulDefs.
   Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).
 
   Definition conv0 : relation term
-    := clos_refl_sym_trans (relation_disjunction (red1 Σ Γ) (eq_term Σ Σ)).
+    := clos_refl_sym_trans (relation_disjunction (closed_red1 Σ Γ) (eq_term Σ Σ)).
 
   Definition conv1 : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (eq_term Σ Σ)).
+    := clos_refl_trans (relation_disjunction (clos_sym (closed_red1 Σ Γ)) (eq_term Σ Σ)).
 
   Lemma conv0_conv1 M N :
     conv0 M N <~> conv1 M N.

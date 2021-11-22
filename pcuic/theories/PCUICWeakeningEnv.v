@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
-  PCUICTyping PCUICContextRelation PCUICGlobalEnv.
+  PCUICTyping PCUICGuardCondition PCUICContextRelation.
 From Equations Require Import Equations.
 
 Require Import ssreflect.
@@ -241,8 +241,8 @@ Qed.
 #[global]
 Hint Resolve extends_wf_local : extends.
 
-Lemma global_variance_sigma_mon {cf:checker_flags} {Σ Σ' gr napp v} : 
-  wf Σ' -> extends Σ Σ' -> 
+Lemma global_variance_sigma_mon {cf:checker_flags} {Σ Σ' gr napp v} :
+  wf Σ' -> extends Σ Σ' ->
   global_variance Σ gr napp = Some v ->
   global_variance Σ' gr napp = Some v.
 Proof.
@@ -282,7 +282,7 @@ Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' 
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  CRelationClasses.subrelation (eq_term_upto_univ_napp Σ Re Rle napp) 
+  CRelationClasses.subrelation (eq_term_upto_univ_napp Σ Re Rle napp)
     (eq_term_upto_univ_napp Σ' Re' Rle' napp).
 Proof.
   intros wfΣ ext he hele hle t t'.
@@ -445,7 +445,7 @@ Qed.
 #[global]
 Hint Resolve weakening_env_consistent_instance : extends.
 
-Lemma extends_check_recursivity_kind {cf:checker_flags} Σ ind k Σ' : extends Σ Σ' -> wf Σ' -> 
+Lemma extends_check_recursivity_kind {cf:checker_flags} Σ ind k Σ' : extends Σ Σ' -> wf Σ' ->
   check_recursivity_kind Σ ind k -> check_recursivity_kind Σ' ind k.
 Proof.
   intros ext wfΣ'.
@@ -475,7 +475,7 @@ Proof.
   now apply extends_check_recursivity_kind.
 Qed.
 
-Lemma global_levels_Set Σ : 
+Lemma global_levels_Set Σ :
   LevelSet.In Level.lSet (global_levels Σ).
 Proof.
   unfold global_levels.
@@ -484,7 +484,7 @@ Proof.
   - apply LevelSet.union_spec. right; auto.
 Qed.
 
-Lemma global_levels_set Σ : 
+Lemma global_levels_set Σ :
   LevelSet.Equal (LevelSet.union (LevelSet.singleton Level.lSet) (global_levels Σ))
   (global_levels Σ).
 Proof.
@@ -493,7 +493,7 @@ Proof.
   apply global_levels_Set.
 Qed.
 
-Lemma global_levels_ext {Σ Σ'} : 
+Lemma global_levels_ext {Σ Σ'} :
   LevelSet.Equal (global_levels (Σ ++ Σ')) (LevelSet.union (global_levels Σ) (global_levels Σ')).
 Proof.
   unfold global_levels at 1.
@@ -728,8 +728,8 @@ Lemma declared_projection_inv `{checker_flags} {Σ P mdecl idecl cdecl ref pdecl
   (HΣ : Forall_decls_typing P Σ)
   (Hdecl : declared_projection Σ ref mdecl idecl cdecl pdecl),
   match idecl.(ind_ctors) return Type with
-  | [c] => 
-    let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in 
+  | [c] =>
+    let oib := declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in
       let (x, _) := x in x) in
     (match oib.(ind_cunivs) with
      | [cs] => sorts_local_ctx (lift_typing P) (Σ, ind_universes mdecl) (arities_context (ind_bodies mdecl) ,,, ind_params mdecl) (cstr_args c) cs
@@ -744,7 +744,7 @@ Proof.
   intros.
   destruct (declared_inductive_inv HP wfΣ HΣ (let (x, _) := Hdecl in let (x, _) := x in x)) in *.
   destruct Hdecl as [Hidecl [Hcdecl Hnpar]]. simpl.
-  forward onProjections.    
+  forward onProjections.
   { eapply nth_error_Some_length in Hcdecl.
     destruct (ind_projs idecl); simpl in *; try lia. congruence. }
   destruct (ind_ctors idecl) as [|? []]; try contradiction.
@@ -756,7 +756,7 @@ Proof.
     inv onConstructors. now eapply on_cargs in o.
   - destruct onProjections. eapply nth_error_Some_length in Hcdecl. lia.
   - destruct onProjections.
-    eapply nth_error_alli in Hcdecl; eauto. 
+    eapply nth_error_alli in Hcdecl; eauto.
     eapply Hcdecl.
 Qed.
 
@@ -840,7 +840,7 @@ Proof.
   - apply (declared_constructor_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
 Defined.
 
-Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl cdecl pdecl} {wfΣ : wf Σ} 
+Lemma on_declared_projection `{checker_flags} {Σ ref mdecl idecl cdecl pdecl} {wfΣ : wf Σ}
   (Hdecl : declared_projection Σ ref mdecl idecl cdecl pdecl) :
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind (fst (fst ref))) mdecl *
   (idecl.(ind_ctors) = [cdecl]) *
@@ -859,8 +859,8 @@ Proof.
     move: X. destruct Hdecl. destruct d. cbn in *.
     move: e. destruct (ind_ctors idecl) as [|? []] => //.
     intros [= ->] => //. }
-  split. 
-  - split => //. 
+  split.
+  - split => //.
     apply (on_declared_inductive Hdecl).
   - pose proof (declared_projection_inv weaken_env_prop_typing wfΣ wfΣ Hdecl).
     destruct Hdecl. cbn in *. destruct d; cbn in *.
@@ -948,7 +948,7 @@ Proof.
           -- apply ConstraintSet.union_spec; now right.
 Qed.
 
-Lemma on_udecl_on_udecl_prop {cf:checker_flags} Σ ctx : 
+Lemma on_udecl_on_udecl_prop {cf:checker_flags} Σ ctx :
   on_udecl Σ (Polymorphic_ctx ctx) -> on_udecl_prop Σ (Polymorphic_ctx ctx).
 Proof.
   intros [? [? [_ ?]]]. red. split; auto.

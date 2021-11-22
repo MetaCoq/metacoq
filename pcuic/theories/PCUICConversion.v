@@ -63,7 +63,8 @@ Section EquivalenceConvCumulDefs.
 
   Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
   (** We need conv1 to be defined on closed terms *)
-  (*Proposition conv_conv1 (M N : open_term Γ) :
+
+  Proposition conv_conv1 (M N : open_term Γ) :
     conv1 Σ Γ M N <~> conv Σ Γ M N.
   Proof.
     split; intro H.
@@ -71,7 +72,7 @@ Section EquivalenceConvCumulDefs.
       cbn in H |- *.
       induction H in HM, HN |- *.
       + destruct r as [[r|r]|r].
-        * eapply red_conv; eauto.
+        * eapply red_conv; eauto. 
         * now econstructor 3; tea.
         * now constructor.
       + reflexivity.
@@ -102,7 +103,7 @@ Section EquivalenceConvCumulDefs.
         constructor. left. now left.
       + etransitivity; tea.
         constructor. left. now right.
-  Qed.*)
+  Qed.
 
 End EquivalenceConvCumulDefs.
 
@@ -2723,7 +2724,7 @@ Section ConvSubst.
     now rewrite -(length_of H).
   Qed.
 
-  Import PCUICInst.
+  Import PCUICInstDef PCUICInstProp.
 
   Lemma All_decls_alpha_le_impl le P Q d d' : 
     All_decls_alpha_le le P d d' ->

@@ -1128,7 +1128,7 @@ Require Import Morphisms.
 Instance map2_Proper {A B C} : Morphisms.Proper (pointwise_relation A (pointwise_relation B (@eq C)) ==> eq ==> eq ==> eq) map2.
 Proof.
   intros f g Hfg ? ? -> ? ? ->.
-  eapply PCUICNameless.map2_ext, Hfg.
+  eapply PCUICNamelessProp.map2_ext, Hfg.
 Qed.
 
 Lemma map2_set_binder_name_eq nas Δ Δ' :

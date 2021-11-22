@@ -430,12 +430,12 @@ Proof.
     apply inst_ext. len.
     rewrite (Upn_eq _ (List.rev args ⋅n ids)).
     rewrite subst_consn_compose.
-    rewrite PCUICInst.map_inst_idsn; len; try lia.
+    rewrite PCUICInstProp.map_inst_idsn; len; try lia.
     rewrite subst_compose_assoc.
     rewrite -(context_subst_length2 X).
     rewrite subst_consn_shiftn; len => //.
     sigma. rewrite Upn_eq. sigma.
-    rewrite PCUICInst.map_inst_idsn; len; try lia.
+    rewrite PCUICInstProp.map_inst_idsn; len; try lia.
     rewrite -subst_compose_assoc shiftk_compose.
     rewrite -subst_consn_app.
     rewrite subst_consn_shiftn //. now len.

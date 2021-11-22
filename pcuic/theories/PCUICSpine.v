@@ -1395,7 +1395,7 @@ Qed.
 
 (*Open Scope sigma_scope.
 From Equations.Type Require Import Relation.
-From MetaCoq.PCUIC Require Import PCUICInst PCUICRename PCUICOnFreeVars PCUICParallelReduction.
+From MetaCoq.PCUIC Require Import PCUICInstDef PCUICInstProp PCUICRenameDef PCUICRenameProp PCUICOnFreeVars PCUICParallelReduction.
 
 Lemma red_inst {le} Δ Γ σ t u :
   usubst Γ σ Δ ->
@@ -2384,7 +2384,7 @@ Section WfEnv.
           assumption.
   Qed.
 
-  Import PCUICInst.
+  Import PCUICInstDef PCUICInstProp.
 
   Local Open Scope sigma.
 
@@ -2834,7 +2834,7 @@ Section WfEnv.
   Proof.
     intros cl.
     sigma.
-    eapply PCUICInst.inst_ext_closed; tea.
+    eapply PCUICInstProp.inst_ext_closed; tea.
     intros x Hx.
     rewrite -Upn_Upn Nat.add_comm Upn_Upn Upn_compose shiftn_Upn; sigma.
     now rewrite !Upn_subst_consn_lt; len; try lia.

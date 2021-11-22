@@ -5,7 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICReduction
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
      PCUICParallelReductionConfluence PCUICConfluence
-     PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity.
+     PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity
+     PCUICGuardCondition.
 
 From MetaCoq.PCUIC Require Export PCUICContextRelation.
 
@@ -177,7 +178,7 @@ Section ContextReduction.
         forward H2 by auto.
         specialize (H2 hnth). noconf e.
         move/andP: H3 => [] /=. rewrite H /=.
-        rewrite PCUICInst.addnP_xpredT shiftnP_xpredT //.
+        rewrite PCUICInstProp.addnP_xpredT shiftnP_xpredT //.
       * epose proof (red_ctx_on_free_vars _ _ _ H0 onΓ).
         eapply weakening_red_0; eauto.
         rewrite firstn_length_le //.
@@ -1199,16 +1200,6 @@ Proof.
 Qed.
 
 #[global] Hint Extern 4 (eq_term_upto_univ _ _ _ _ _) => reflexivity : pcuic.
-
-Axiom fix_guard_context_cumulativity : forall {cf:checker_flags} Σ Γ Γ' mfix,
-  cumul_context Σ Γ' Γ ->
-  fix_guard Σ Γ mfix ->
-  fix_guard Σ Γ' mfix.
-
-Axiom cofix_guard_context_cumulativity : forall {cf:checker_flags} Σ Γ Γ' mfix,
-  cumul_context Σ Γ' Γ ->
-  cofix_guard Σ Γ mfix ->
-  cofix_guard Σ Γ' mfix.
 
 (* Definition on_decl (P : context -> term -> term -> Type)
              (Γ : context) (t : term) (t' : option term) :=

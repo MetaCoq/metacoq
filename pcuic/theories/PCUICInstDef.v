@@ -1,0 +1,101 @@
+(* Distributed under the terms of the MIT license. *)
+From Coq Require Import Morphisms.
+From MetaCoq.Template Require Import config utils.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
+  PCUICLiftSubst PCUICUnivSubst PCUICContextRelation 
+  PCUICTyping PCUICEquality
+  PCUICSigmaCalculus PCUICRenameDef.
+
+Require Import ssreflect ssrbool.
+From Equations Require Import Equations.
+Require Import Equations.Prop.DepElim.
+Set Equations With UIP.
+Set Keyed Unification.
+Set Default Goal Selector "!".
+Implicit Types cf : checker_flags.
+
+(** * Type preservation for σ-calculus instantiation *)
+
+Open Scope sigma_scope.
+
+Definition inst_context σ (Γ : context) : context :=
+  fold_context_k (fun i => inst (⇑^i σ)) Γ.
+
+Instance inst_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) inst_context.
+Proof.
+  intros f g Hfg x y ->.
+  apply fold_context_k_ext => i t.
+  now rewrite Hfg.
+Qed.
+
+Definition inst_decl σ d := map_decl (inst σ) d.
+
+Definition inst_context_snoc0 s Γ d :
+  inst_context s (d :: Γ) =
+  inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
+Proof. unfold inst_context. now rewrite fold_context_k_snoc0. Qed.
+Hint Rewrite inst_context_snoc0 : sigma.
+
+Definition inst_mutual_inductive_body σ m :=
+  map_mutual_inductive_body (fun i => inst (⇑^i σ)) m.
+
+
+(* Well-typedness of a substitution *)
+
+Definition well_subst {cf} Σ (Γ : context) σ (Δ : context) :=
+  forall x decl,
+    nth_error Γ x = Some decl ->
+    Σ ;;; Δ |- σ x : ((lift0 (S x)) (decl_type decl)).[ σ ] ×
+    (forall b,
+        decl.(decl_body) = Some b ->
+        (∑ x' decl', σ x = tRel x' ×
+          nth_error Δ x' = Some decl' ×
+          (* Γ_x', x := b : ty -> Δ_x', x' := b.[↑^S x ∘s σ]. 
+             Δ |- ↑^(S x) ∘s σ : Γ_x
+            *)
+          option_map (rename (rshiftk (S x'))) decl'.(decl_body) = Some (b.[↑^(S x) ∘s σ])) +
+        (σ x = b.[↑^(S x) ∘s σ])).
+
+Notation "Σ ;;; Δ ⊢ σ : Γ" :=
+  (well_subst Σ Γ σ Δ) (at level 50, Δ, σ, Γ at next level).
+
+
+(* Untyped substitution for untyped reduction / cumulativity *)
+Definition usubst (Γ : context) σ (Δ : context) :=
+  forall x decl,
+    nth_error Γ x = Some decl ->
+    (forall b,
+        decl.(decl_body) = Some b ->
+        (∑ x' decl', σ x = tRel x' ×
+          nth_error Δ x' = Some decl' ×
+          (** This is let-preservation *)
+          option_map (rename (rshiftk (S x'))) decl'.(decl_body) = Some (b.[↑^(S x) ∘s σ])) +
+        (* This allows to expand a let-binding everywhere *)
+        (σ x = b.[↑^(S x) ∘s σ])).
+
+Definition well_subst_usubst {cf} Σ Γ σ Δ :
+  Σ ;;; Δ ⊢ σ : Γ ->
+  usubst Γ σ Δ.
+Proof.
+  intros hσ x decl hnth b hb.
+  specialize (hσ x decl hnth) as [_ h].
+  now apply h.
+Qed.
+
+Coercion well_subst_usubst : well_subst >-> usubst.
+
+Definition inst_constructor_body mdecl f c := 
+  map_constructor_body #|mdecl.(ind_params)| #|mdecl.(ind_bodies)|
+   (fun k => inst  (up k f)) c.
+
+Definition rigid_head t :=
+  match t with
+  | tVar _
+  | tSort _
+  | tConst _ _
+  | tInd _ _
+  | tConstruct _ _ _ => true
+  | _ => false
+  end.
+
+

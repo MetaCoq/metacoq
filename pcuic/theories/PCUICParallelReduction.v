@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICAstUtils PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnv PCUICInduction
-     PCUICRename PCUICInst PCUICOnFreeVars
+     PCUICRenameDef PCUICRenameProp PCUICInstDef PCUICInstProp PCUICOnFreeVars
      PCUICContextRelation PCUICWeakening PCUICSubstitution.
 
 Require Import ssreflect ssrbool.

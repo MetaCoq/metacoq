@@ -280,12 +280,17 @@ Module Conversion (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT 
         cumul_decls Γ Γ' (vdef na b T) (vdef na' b' T').
   
     Derive Signature NoConfusion for cumul_decls.
+
+    Notation conv_context := (All2_fold (conv_decls Σ)).
+    Notation cumul_context := (All2_fold (cumul_decls Σ)).
+
   End ContextConversion.
 
   Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
     All2_fold (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
-
+ 
 End Conversion.
+
 
 Module Type ConversionSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
   Include Conversion T E ET CT.

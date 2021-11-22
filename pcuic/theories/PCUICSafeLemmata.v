@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICConfluence
-     PCUICCumulativity PCUICSR PCUICPosition PCUICCasesContexts PCUICEquality PCUICNameless
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
+     PCUICCumulativity PCUICSR PCUICPosition PCUICCasesContexts PCUICEquality PCUICNamelessDef PCUICNamelessProp
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICValidity
      PCUICArities PCUICWeakeningEnv PCUICGeneration PCUICUnivSubstitution
@@ -30,7 +30,7 @@ Lemma wf_inst_case_context {cf Σ} {wfΣ : wf Σ} {Γ} {ci : case_info}
 Proof.
   move=> isdecl wfΓ cu sp wfr.
   rewrite /pre_case_predicate_context_gen /inst_case_context /ind_predicate_context /=.
-  eapply PCUICSubstitution.substitution_wf_local. 
+  eapply PCUICSubstitution.substitution_wf_local.
   * eapply sp.
   * unshelve epose proof (on_minductive_wf_params_indices_inst isdecl _ cu).
   rewrite PCUICUnivSubstitution.subst_instance_app_ctx in X.
@@ -73,12 +73,12 @@ Lemma wf_case_inst_case_context {cf Σ} {wfΣ : wf Σ}
   Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
-  forall i cdecl br, 
+  forall i cdecl br,
     declared_constructor Σ (ci.(ci_ind), i) mdecl idecl cdecl ->
     wf_branch cdecl br ->
     All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
     wf_local Σ (Γ ,,, inst_case_context (pparams p) (puinst p) br.(bcontext)) ×
-     Σ ⊢ Γ ,,, inst_case_context (pparams p) (puinst p) br.(bcontext) = 
+     Σ ⊢ Γ ,,, inst_case_context (pparams p) (puinst p) br.(bcontext) =
          Γ ,,, case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl.
 Proof.
   intros isdecl Hc wfp bc Hp ptm wfpctx.
@@ -98,7 +98,7 @@ Section Lemmata.
   Context {cf : checker_flags}.
   Context (flags : RedFlags.t).
 
-  Instance All2_eq_refl Σ Re : 
+  Instance All2_eq_refl Σ Re :
     RelationClasses.Reflexive Re ->
     CRelationClasses.Reflexive (All2 (eq_term_upto_univ Σ Re Re)).
   Proof.
@@ -141,7 +141,7 @@ Section Lemmata.
     intros []. now econstructor.
   Qed.
   Hint Resolve isType_welltyped : pcuic.
-  
+
   Lemma equality_zippx :
     forall {wfΣ : wf Σ} le Γ u v ρ,
       closedn_stack #|Γ| ρ ->
@@ -159,9 +159,9 @@ Section Lemmata.
     - unfold zippx. simpl.
       case_eq (decompose_stack ρ). intros l π e.
       unfold zippx in IHρ. rewrite e in IHρ.
-      move: cl => /= /andP[] cl cl'. apply IHρ => //. 
+      move: cl => /= /andP[] cl cl'. apply IHρ => //.
       eapply equality_App_l; tas.
-      eapply closedn_on_free_vars; len. 
+      eapply closedn_on_free_vars; len.
       now rewrite Nat.add_comm.
     - unfold zippx. simpl.
       eapply equality_it_mkLambda_or_LetIn_codom. cbn.
@@ -187,14 +187,14 @@ Section Lemmata.
     - simpl. cbn. eapply ih.
       eapply equality_LetIn_bo. assumption.
     - simpl. cbn. eapply ih.
-      eapply equality_Lambda_r. assumption.    
+      eapply equality_Lambda_r. assumption.
   Qed.
 
   Lemma snoc_app_context {Γ Δ d} : (Γ ,,, (d :: Δ)) =  (Γ ,,, Δ) ,,, [d].
   Proof.
     reflexivity.
   Qed.
-  
+
   Lemma conv_alt_it_mkProd_or_LetIn :
     forall {wfΣ : wf Σ} Δ Γ B B',
       Σ ;;; (Δ ,,, Γ) ⊢ B = B' ->
@@ -209,7 +209,7 @@ Section Lemmata.
       * eapply equality_LetIn_bo. assumption.
       * rewrite snoc_app_context on_free_vars_ctx_app /= in cl.
         now move/andP: cl.
-    - simpl. cbn. 
+    - simpl. cbn.
       rewrite snoc_app_context on_free_vars_ctx_app /= in cl.
       move/andP: cl => [cl cld]. cbn in cld.
       rewrite andb_true_r in cld. setoid_rewrite shiftnP_add in cld.
@@ -343,7 +343,7 @@ Section Lemmata.
       + eapply IHh.
       + econstructor. assumption.
   Qed.
-  
+
   Arguments zip /.
 
   Lemma welltyped_fill_context_hole Γ π pcontext t :
@@ -358,7 +358,7 @@ Section Lemmata.
     all: destruct l; econstructor; eauto.
   Qed.
   (* todo: rename alpha_eq *)
-  Lemma compare_decls_conv Γ Γ' : 
+  Lemma compare_decls_conv Γ Γ' :
     All2 (compare_decls eq eq) Γ Γ' ->
     conv_context Σ Γ Γ'.
   Proof.
@@ -367,14 +367,14 @@ Section Lemmata.
     destruct r; constructor; subst; auto; reflexivity.
   Qed.
 
-  Lemma compare_decls_eq_context Γ Γ' : 
+  Lemma compare_decls_eq_context Γ Γ' :
     All2 (compare_decls eq eq) Γ Γ' <~>
     eq_context_gen eq eq Γ Γ'.
   Proof.
     split; induction 1; constructor; auto.
   Qed.
 
-  Lemma alpha_eq_inst_case_context Γ Δ pars puinst : 
+  Lemma alpha_eq_inst_case_context Γ Δ pars puinst :
     All2 (compare_decls eq eq) Γ Δ ->
     All2 (compare_decls eq eq) (inst_case_context pars puinst Γ) (inst_case_context pars puinst Δ).
   Proof.
@@ -426,7 +426,7 @@ Section Lemmata.
         econstructor; eauto.
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       rewrite app_context_assoc.
-      destruct p. 
+      destruct p.
       + apply validity in scrut_ty as (?&typ).
         clear brs_ty.
         apply inversion_mkApps in typ as (?&_&spine); auto; simpl in *.
@@ -463,7 +463,7 @@ Section Lemmata.
                 { eapply alpha_eq_subst_instance. now symmetry. }
                 reflexivity.
              ++ eapply wf_ind_predicate; tea.
-                
+
         * rewrite /predctx.
           cbn in conv_pctx.
           rewrite /case_predicate_context /= /case_predicate_context_gen.
@@ -471,10 +471,10 @@ Section Lemmata.
           rewrite /inst_case_context.
           apply compare_decls_conv.
           eapply All2_app. 2:{ reflexivity. }
-          eapply compare_decls_eq_context. 
+          eapply compare_decls_eq_context.
           apply (PCUICAlpha.inst_case_predicate_context_eq (ind:=ci) wf_pred).
           cbn. apply compare_decls_eq_context. now symmetry.
-          
+
     - apply inversion_Case in typ as (?&?&?&?&[]&?); auto.
       econstructor; eauto.
     - apply inversion_Case in typ as (mdecl&idecl&decli&args&[]&?); auto.
@@ -527,7 +527,7 @@ Section Lemmata.
       + eapply red1_context. assumption.
   Qed.
 
-  Lemma decompose_stack_closed n ρ l s : 
+  Lemma decompose_stack_closed n ρ l s :
     closedn_stack n ρ -> decompose_stack ρ = (l, s) ->
     forallb (closedn (n + #|stack_context ρ|)) l.
   Proof.
@@ -804,7 +804,7 @@ Section Lemmata.
     all: auto.
     exfalso. eapply decompose_stack_not_app. eassumption.
   Qed.
-  
+
   (* TODO MOVE *)
   Lemma stack_context_decompose :
     forall π,
@@ -815,7 +815,7 @@ Section Lemmata.
     cbn. pose proof (decompose_stack_eq _ _ _ e). subst.
     rewrite stack_context_appstack. reflexivity.
   Qed.
-  
+
   Lemma decompose_stack_stack_cat π π' :
     decompose_stack (π ++ π') =
     ((decompose_stack π).1 ++
@@ -848,7 +848,7 @@ Section Lemmata.
     destruct s; try now rewrite app_nil_r.
     now destruct π as [|[] ?]; cbn in *; rewrite ?app_nil_r.
   Qed.
-  
+
   Lemma zipp_appstack t args π :
     zipp t (appstack args π) = zipp (mkApps t args) π.
   Proof.
@@ -862,14 +862,14 @@ Section Lemmata.
     isStackApp π = false ->
     (decompose_stack π).1 = [].
   Proof. now destruct π as [|[] ?]. Qed.
-  
+
   Lemma zipp_as_mkApps t π :
     zipp t π = mkApps t (decompose_stack π).1.
   Proof.
     unfold zipp.
     now destruct decompose_stack.
   Qed.
-  
+
   Lemma zipp_noStackApp t π :
     isStackApp π = false ->
     zipp t π = t.
@@ -877,7 +877,7 @@ Section Lemmata.
     intros.
     now rewrite zipp_as_mkApps fst_decompose_stack_nil.
   Qed.
-  
+
   Lemma it_mkLambda_or_LetIn_inj :
     forall Γ u v,
       it_mkLambda_or_LetIn Γ u =
@@ -998,7 +998,7 @@ Section Lemmata.
     rewrite stack_context_appstack.
     assumption.
   Qed.
-  
+
   Lemma conv_cum_zipp leq Γ t t' π π' :
     ∥ Σ ;;; Γ ⊢ t ≤[leq] t' ∥ ->
     ∥equality_terms Σ Γ (decompose_stack π).1 (decompose_stack π').1∥ ->
@@ -1081,7 +1081,7 @@ Section Lemmata.
     intros Γ i i' pars narg c u l [T h].
     now apply PCUICInductiveInversion.invert_Proj_Construct in h.
   Qed.
-  
+
 End Lemmata.
 
 #[global] Hint Resolve isType_welltyped : pcuic.

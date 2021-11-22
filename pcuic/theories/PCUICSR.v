@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils
      PCUICAlpha PCUICEquality PCUICValidity PCUICParallelReductionConfluence
      PCUICConfluence PCUICContextConversion PCUICUnivSubstitution
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
-     PCUICWellScopedCumulativity
+     PCUICWellScopedCumulativity PCUICGuardCondition
      PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion.
 
 Require Import ssreflect ssrbool Utf8.
@@ -1270,8 +1270,8 @@ Lemma map2_set_binder_name_expand_lets nas Γ Δ :
 Proof.
   move=> hlen.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  rewrite PCUICRename.map2_set_binder_name_fold ?lengths //.
-  rewrite PCUICRename.map2_set_binder_name_fold ?lengths //.
+  rewrite PCUICRenameProp.map2_set_binder_name_fold ?lengths //.
+  rewrite PCUICRenameProp.map2_set_binder_name_fold ?lengths //.
 Qed.
 
 Lemma closed_red1_eq_context_upto_names {Σ Γ Γ'} {t u} : 
@@ -2241,7 +2241,7 @@ Proof.
         eapply All2_app.
         - rewrite /case_branch_context /case_branch_context_gen /pre_case_branch_context
           /pre_case_branch_context_gen /inst_case_context. cbn.
-          symmetry. rewrite /subst_context PCUICRename.map2_set_binder_name_fold ?lengths.
+          symmetry. rewrite /subst_context PCUICRenameProp.map2_set_binder_name_fold ?lengths.
           now apply wf_branch_length.
           rewrite -/(subst_context _ _ _).
           relativize #|cstr_args cdecl|.

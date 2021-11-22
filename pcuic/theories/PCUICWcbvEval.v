@@ -570,7 +570,7 @@ Section Wcbv.
     move=> Ha; dependent elimination Ha as [All_cons ca cf].
     simpl in *.
     rewrite -IHcofix_subst => //.
-    rewrite (subst_app_decomp [x]). simpl.
+    rewrite (subst_app_decomp [_]). simpl.
     f_equal. rewrite lift_closed // closed_subst //.
   Qed.
 

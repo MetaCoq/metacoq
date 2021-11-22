@@ -2,7 +2,8 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
-     PCUICCumulativity PCUICSR PCUICPosition PCUICCasesContexts PCUICEquality PCUICNamelessDef PCUICNamelessProp
+     PCUICCumulativity PCUICSR PCUICPosition PCUICCasesContexts PCUICEquality
+     PCUICGlobalEnv PCUICNamelessDef PCUICNamelessProp
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
      PCUICConversion PCUICContextConversion PCUICValidity
      PCUICArities PCUICWeakeningEnv PCUICGeneration PCUICUnivSubstitution

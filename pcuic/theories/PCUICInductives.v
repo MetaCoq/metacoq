@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICEquality PCUICConfluence PCUICParallelReductionConfluence
      PCUICContextConversion PCUICUnivSubstitution
-     PCUICConversion PCUICInversion PCUICContexts PCUICArities
+     PCUICConversion PCUICGlobalEnv PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICWfUniverses PCUICSpine.
 
 Require Import ssreflect ssrbool.

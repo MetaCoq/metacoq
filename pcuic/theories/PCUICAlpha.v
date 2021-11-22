@@ -235,17 +235,17 @@ Section Alpha.
       now rewrite shiftnP_add -app_length.
   Qed.
 
-  Lemma All2_fold_All_fold_mix_right P Q Γ Γ' :
+  Lemma All2_fold_All_fold_mix_right A P Q Γ Γ' :
     All_fold P Γ' ->
-    All2_fold Q Γ Γ' ->
+    @All2_fold A Q Γ Γ' ->
     All2_fold (fun Γ Γ' d d' => P Γ' d' × Q Γ Γ' d d') Γ Γ'.
   Proof.
     induction 1 in Γ |- *; intros H; depelim H; constructor; auto.
   Qed.
 
-  Lemma All2_fold_All_right P Γ Γ' :
+  Lemma All2_fold_All_right A P Γ Γ' :
     All2_fold (fun _ Γ _ d => P Γ d) Γ Γ' ->
-    All_fold P Γ'.
+    @All_fold A P Γ'.
   Proof.
     induction 1; constructor; auto.
   Qed.

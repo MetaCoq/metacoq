@@ -4367,11 +4367,14 @@ Lemma on_udecl_prop_spec `{checker_flags} Σ (udecl : universes_decl) :
       end.
 Proof. reflexivity. Qed.
 
-Lemma levels_of_udecl_app l l' : fold_right LevelSet.add LevelSet.empty (l ++ l') = 
-  LevelSet.union (fold_right LevelSet.add LevelSet.empty l) 
-    (fold_right LevelSet.add LevelSet.empty l').
+Notation levels_of_list := LevelSetProp.of_list.
+
+Lemma levels_of_list_app l l' : 
+  levels_of_list (l ++ l') = 
+  LevelSet.union (levels_of_list l) 
+    (levels_of_list l').
 Proof.
-  rewrite fold_right_app.
+  rewrite /LevelSetProp.of_list fold_right_app.
   induction l; cbn.
   now rewrite LevelSet_union_empty.
   apply LevelSet.eq_leibniz. red.
@@ -4383,6 +4386,327 @@ From Coq Require Import MSetDecide.
 Module ConstraintSetDecide := WDecide (ConstraintSet).
 Ltac csets := ConstraintSetDecide.fsetdec.
 
+Definition aulevels inst cstrs : 
+  AUContext.levels (inst, cstrs) = 
+  LevelSetProp.of_list (unfold #|inst| Level.Var).
+Proof.
+  cbn.
+  now rewrite mapi_unfold.
+Qed.
+
+#[global] Instance unfold_proper {A} : Proper (eq ==> `=1` ==> eq) (@unfold A).
+Proof.
+  intros x y -> f g eqfg.
+  induction y; cbn; auto. f_equal; auto. f_equal. apply eqfg.
+Qed.
+
+(* sLemma unfold_add {A} n k (f : nat -> A) : skipn k (unfold (k + n) f) = unfold k (fun x => f (x + n)). *)
+
+Lemma unfold_add {A} n k (f : nat -> A) : unfold (n + k) f = unfold k f ++ unfold n (fun x => f (x + k)).
+Proof.
+  induction n in k |- *.
+  cbn. now rewrite app_nil_r.
+  cbn. rewrite IHn. now rewrite app_assoc.
+Qed.
+
+
+Definition unfold_levels_app n k : 
+  LevelSetProp.of_list (unfold (n + k) Level.Var) = 
+  LevelSet.union (LevelSetProp.of_list (unfold k Level.Var))
+    (LevelSetProp.of_list (unfold n (fun i => Level.Var (k + i)))).
+Proof.
+  rewrite unfold_add levels_of_list_app //.
+  now setoid_rewrite Nat.add_comm at 1.
+Qed.
+
+Lemma levels_of_list_spec l ls : 
+  LevelSet.In l (levels_of_list ls) <-> In l ls.
+Proof.
+  now rewrite LevelSetProp.of_list_1 InA_In_eq.
+Qed.
+
+Lemma In_unfold k l n : 
+  In l (unfold n (λ i : nat, Level.Var (k + i))) <-> ∃ k' : nat, l = Level.Var k' ∧ k <= k' < k + n.
+Proof.
+  induction n; cbn => //. firstorder. lia.
+  split. intros [] % in_app_or => //.
+  eapply IHn in H as [k' [eq lt]]. subst l; exists k'. intuition lia.
+  destruct H as []; subst => //.
+  exists (k + n). intuition lia.
+  intros [k' [-> lt]].
+  apply/in_or_app.
+  destruct (eq_dec k' (k + n)). subst k'.
+  right => //. cbn; auto.
+  left. eapply IHn. exists k'; intuition lia.
+Qed.
+
+Lemma In_levels_of_list k l n : 
+  LevelSet.In l (levels_of_list (unfold n (fun i => Level.Var (k + i)))) <->
+  exists k', l = Level.Var k' /\ k <= k' < k + n. 
+Proof.
+  rewrite LevelSetProp.of_list_1 InA_In_eq. now apply In_unfold.
+Qed.
+
+Lemma In_lift_level k l n : LevelSet.In l (levels_of_list (unfold n (λ i : nat, Level.Var i))) <->
+  LevelSet.In (lift_level k l) (levels_of_list (unfold n (λ i : nat, Level.Var (k + i)))).
+Proof.
+  split.
+  - move/(In_levels_of_list 0) => [k' [-> l'lt]].
+    eapply In_levels_of_list. exists (k + k'); cbn; intuition lia.
+  - move/(In_levels_of_list k) => [k' [eq l'lt]].
+    eapply (In_levels_of_list 0).
+    destruct l; noconf eq. exists n0; cbn; intuition lia.
+Qed.
+
+Lemma not_var_lift l k s : 
+  LS.For_all (λ x : LS.elt, ~~ Level.is_var x) s ->
+  LevelSet.In l s ->
+  LevelSet.In (lift_level k l) s.
+Proof.
+  intros.
+  specialize (H _ H0). cbn in H.
+  destruct l; cbn => //.
+Qed.
+
+Lemma declared_constraints_levels_lift s n k cstrs : 
+  LS.For_all (λ x : LS.elt, (negb ∘ Level.is_var) x) s ->
+  declared_constraints_levels
+    (LevelSet.union (levels_of_list (unfold n (λ i : nat, Level.Var i))) s) cstrs ->
+  declared_constraints_levels
+    (LevelSet.union (levels_of_list (unfold n (λ i : nat, Level.Var (k + i)))) s)
+    (lift_constraints k cstrs).
+Proof.
+  rewrite /declared_constraints_levels.
+  intros hs ha [[l d] r] inx.
+  eapply In_lift_constraints in inx as [c' [eq incs]].
+  specialize (ha _ incs). destruct c' as [[l' d'] r']; cbn in eq; noconf eq.
+  destruct ha as [inl' inr'].
+  apply LevelSetFact.union_1 in inl'. apply LevelSetFact.union_1 in inr'.
+  split.
+  - apply LevelSet.union_spec.
+    destruct inl'.
+    + left. now apply In_lift_level.
+    + right. apply not_var_lift => //.
+  - apply LevelSet.union_spec.
+    destruct inr'.
+    + left. now apply In_lift_level.
+    + right. apply not_var_lift => //.
+Qed.
+
+Definition levels_of_cstr (c : ConstraintSet.elt) :=
+  let '(l, d, r) := c in
+  LevelSet.add l (LevelSet.add r LevelSet.empty).
+
+Definition levels_of_cstrs cstrs := 
+  ConstraintSet.fold (fun c acc => LevelSet.union (levels_of_cstr c) acc) cstrs.
+
+Lemma levels_of_cstrs_acc l cstrs acc :
+  LevelSet.In l acc \/ LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <->
+  LevelSet.In l (levels_of_cstrs cstrs acc).
+Proof.
+  rewrite /levels_of_cstrs.
+  rewrite !ConstraintSet.fold_spec.
+  induction (ConstraintSet.elements cstrs) in acc |- * => /=.
+  split. intros []; auto. inversion H. firstorder.
+  split.
+  intros []. apply IHl0. left. now eapply LevelSetFact.union_3.
+  apply IHl0 in H as []. apply IHl0. left.
+  eapply LevelSet.union_spec. left. 
+  eapply LevelSet.union_spec in H. destruct H => //. inversion H.
+  apply IHl0. right => //.
+  intros. apply IHl0 in H as [].
+  eapply LevelSet.union_spec in H. destruct H => //.
+  right. apply IHl0. left. apply LevelSet.union_spec. now left.
+  now left. right.
+  eapply IHl0. now right.
+Qed.
+
+Lemma levels_of_cstrs_spec l cstrs : 
+  LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <-> 
+  exists d r, ConstraintSet.In (l, d, r) cstrs \/ ConstraintSet.In (r, d, l) cstrs.
+Proof.
+  rewrite -levels_of_cstrs_acc.
+  split.
+  - intros []. inversion H.
+    move: H.
+    rewrite /levels_of_cstrs.
+    eapply ConstraintSetProp.fold_rec.
+    + intros s' em inl. inversion inl.
+    + intros x a s' s'' inx ninx na.
+      intros.
+      destruct x as [[l' d] r].
+      eapply LevelSet.union_spec in H0 as [].
+      eapply LevelSet.add_spec in H0 as []; subst.
+      exists d, r. left. now apply na.
+      eapply LevelSet.add_spec in H0 as []; subst.
+      exists d, l'. right; now apply na. inversion H0.
+      specialize (H H0) as [d' [r' h]].
+      exists d', r'. red in na.
+      destruct h. destruct (na (l, d', r')).
+      firstorder. firstorder.
+  
+  - intros [d [r [indr|indr]]].
+    rewrite /levels_of_cstrs. right.
+    move: indr; eapply ConstraintSetProp.fold_rec.
+    intros. now specialize (H _ indr).
+    intros x a s' s'' inx inx' add inih ihih'.
+    eapply LevelSet.union_spec.
+    eapply add in ihih' as []; subst. left.
+    eapply LevelSet.add_spec. now left. firstorder.
+    right.
+    rewrite /levels_of_cstrs.
+    move: indr; eapply ConstraintSetProp.fold_rec.
+    intros. now specialize (H _ indr).
+    intros x a s' s'' inx inx' add inih ihih'.
+    eapply LevelSet.union_spec.
+    eapply add in ihih' as []; subst. left.
+    eapply LevelSet.add_spec. right. eapply LevelSet.add_spec; now left. firstorder.
+Qed.
+
+Lemma declared_constraints_levels_in levels cstrs : 
+  LevelSet.Subset (levels_of_cstrs cstrs LevelSet.empty) levels ->
+  declared_constraints_levels levels cstrs.
+Proof.
+  rewrite /declared_constraints_levels.
+  intros sub [[l d] r] inx. red in sub.
+  split. apply (sub l). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
+  apply (sub r). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
+Qed.
+
+Lemma In_variance_cstrs l d r v i i' : 
+  ConstraintSet.In (l, d, r) (variance_cstrs v i i') ->
+    (In l i \/ In l i') /\ (In r i \/ In r i').
+Proof.
+  induction v in i, i' |- *; destruct i, i'; intros; try solve [inversion H].
+  cbn in H.
+  destruct a. apply IHv in H. cbn. firstorder auto.
+  eapply ConstraintSet.add_spec in H as []. noconf H. cbn; firstorder.
+  eapply IHv in H; firstorder.
+  eapply ConstraintSet.add_spec in H as []. noconf H. cbn; firstorder.
+  eapply IHv in H; firstorder.
+Qed.
+
+Lemma In_lift l n k : In l (map (lift_level k) (unfold n Level.Var)) <->
+  In l (unfold n (fun i => Level.Var (k + i))).
+Proof.
+  induction n; cbn; auto. firstorder.
+  firstorder.
+  move: H1; rewrite map_app. 
+  intros [] % in_app_or.
+  apply/in_or_app. firstorder.
+  apply/in_or_app. firstorder.
+  move: H1; intros [] % in_app_or.
+  rewrite map_app. apply/in_or_app. firstorder.
+  rewrite map_app. apply/in_or_app. firstorder.
+Qed.
+
+Lemma wf_variance_universes {cf} {Σ} m v univs' u u' :
+  wf Σ ->
+  variance_universes (ind_universes m) v = Some (univs', u, u') ->
+  wf_global_ext Σ univs'.
+Proof.
+  intros wfΣ vu. split => //. cbn. red. split => //.
+  cbn. 
+  destruct (variance_universes_insts _ vu) as [cstrseq [leni [leni' [-> [? ->]]]]]; tea.
+  destruct (ind_universes m) as [[]|[inst cstrs]] => //. cbn in cstrseq.
+  subst univs'. 
+  { cbn.
+    rewrite on_udecl_prop_spec.
+    cbn [levels_of_udecl]. rewrite !mapi_unfold.
+    cbn -[levels_of_list].
+    cbn -[levels_of_udecl levels_of_list]. len.
+    split => //. eapply declared_constraints_levels_union.
+    eapply declared_constraints_levels_union.
+    { cbn. rewrite mapi_unfold. rewrite -/(LevelSetProp.of_list _).
+      len; rewrite unfold_levels_app.
+      rewrite aulevels. eapply LevelSetProp.union_subset_1. }
+    { cbn. rewrite mapi_unfold. rewrite -/(LevelSetProp.of_list _).
+      len; rewrite unfold_levels_app.
+      eapply declared_constraints_levels_subset; tea; revgoals.
+      eapply LevelSetProp.union_subset_4.
+      eapply LevelSetProp.union_subset_2.
+      eapply declared_constraints_levels_lift.
+      now eapply not_var_global_levels.
+      cbn in H3. now rewrite mapi_unfold in H3. }
+    cbn [levels_of_udecl]. rewrite !mapi_unfold.
+    rewrite !aulevels. len; rewrite unfold_levels_app.
+    eapply declared_constraints_levels_in.
+    intros x hin.
+    eapply LevelSet.union_spec. left.
+    eapply levels_of_cstrs_spec in hin.
+    destruct hin as [d [r [hin|hin]]].
+    { eapply In_variance_cstrs in hin.
+      eapply LevelSet.union_spec.
+      rewrite (In_lift_level #|inst|).
+      rewrite !levels_of_list_spec.
+      { clear -hin. rewrite !In_lift in hin.
+        rewrite !(In_unfold 0) in hin.
+        rewrite !In_unfold in hin.
+        rewrite !In_unfold. firstorder eauto; subst; try intuition lia.
+        left; eexists; firstorder eauto; try lia.
+        left; eexists; firstorder eauto; try lia. } }
+    { eapply In_variance_cstrs in hin.
+      eapply LevelSet.union_spec.
+      rewrite (In_lift_level #|inst|).
+      rewrite !levels_of_list_spec.
+      { clear -hin. rewrite !In_lift in hin.
+        rewrite !(In_unfold 0) in hin.
+        rewrite !In_unfold in hin.
+        rewrite !In_unfold. firstorder eauto; subst; try intuition lia.
+        left; eexists; firstorder eauto; try lia.
+        left; eexists; firstorder eauto; try lia. } } }
+
+
+  red. red.
+  destruct udecl as [?|[univs cst]] eqn:indu.
+  { simpl. reflexivity. }
+  split; [|split].
+  - simpl abstract_instance.
+    eapply forallb_mapi => //.
+    intros i Hi. unfold global_ext_levels.
+    apply LevelSet.mem_spec, LevelSet.union_spec. left.
+    unfold levels_of_udecl. simpl.
+    rewrite (mapi_unfold Level.Var).
+    eapply LevelSet_In_fold_right_add.
+    induction #|univs| in i, Hi |- *; try lia.
+    simpl. eapply in_or_app. destruct (eq_dec i n).
+    * subst. right; simpl; auto.
+    * left; apply IHn; lia.
+  - now rewrite mapi_length.
+  - simpl. rewrite (mapi_unfold Level.Var).
+    assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.Var) cst) cst).
+    { unfold CS.Equal; intros a.
+      unfold subst_instance_cstrs.
+      red in wf_glob_ext. destruct wf_glob_ext as [[_ [wfext _]] _].
+      unfold on_udecl_prop in wfext.
+      simpl constraints_of_udecl in wfext.
+      simpl levels_of_udecl in wfext.
+      rewrite (mapi_unfold Level.Var) in wfext.
+      clear indu.
+      simpl fst in wfext.
+      revert wfext.
+      eapply ConstraintSetProp.fold_rec_weak; auto.
+      2:reflexivity.
+      * intros s s' a' eqs H.
+        intros Hf.
+        rewrite <- eqs in Hf. rewrite -eqs; auto.
+      * intros x a0 s nin equiv.
+        intros cadd.
+        eapply CS_For_all_add in cadd as [cadd Ps].
+        specialize (equiv Ps). clear Ps.
+        destruct x as [[l c] r]. destruct cadd as [inl inr].
+        unfold subst_instance_cstr. simpl.
+        eapply subst_instance_level_abs in inl; auto.
+        eapply subst_instance_level_abs in inr; auto.
+        rewrite inl inr.
+        rewrite !CS.add_spec.
+        intuition auto. }
+    unfold valid_constraints. destruct check_univs; auto.
+    unfold valid_constraints0. simpl.
+    unfold satisfies.
+    intros v. rewrite H.
+    eapply CS_For_all_union.
+Qed.
 
 Lemma variance_universes_insts {cf} {Σ} {wfΣ : wf Σ} {mdecl l v i i'} :
   on_variance (ind_universes mdecl) (Some l) ->
@@ -4405,15 +4729,52 @@ Proof.
     subst v. cbn -[levels_of_udecl]. len.
     eapply declared_constraints_levels_union.
     eapply declared_constraints_levels_union.
-    cbn. cbn in H3.
-    eapply declared_constraints_levels_subset; tea.
-    eapply LevelSetProp.union_subset_4.
-    rewrite mapi_app. rewrite levels_of_udecl_app.
-    eapply LevelSetProp.union_subset_1.
-    admit. admit. }
+    { cbn. rewrite mapi_unfold. rewrite -/(LevelSetProp.of_list _).
+      eapply declared_constraints_levels_subset; tea.
+      eapply LevelSetProp.union_subset_4.
+      len; rewrite unfold_levels_app.
+      rewrite aulevels. eapply LevelSetProp.union_subset_1. }
+    { cbn. rewrite mapi_unfold. rewrite -/(LevelSetProp.of_list _).
+      len; rewrite unfold_levels_app.
+      eapply declared_constraints_levels_subset; tea; revgoals.
+      eapply LevelSetProp.union_subset_4.
+      eapply LevelSetProp.union_subset_2.
+      eapply declared_constraints_levels_lift.
+      now eapply not_var_global_levels.
+      cbn in H3. now rewrite mapi_unfold in H3. }
+    cbn [levels_of_udecl]. rewrite !mapi_unfold.
+    rewrite !aulevels. len; rewrite unfold_levels_app.
+    eapply declared_constraints_levels_in.
+    intros x hin.
+    eapply LevelSet.union_spec. left.
+    eapply levels_of_cstrs_spec in hin.
+    destruct hin as [d [r [hin|hin]]].
+    { eapply In_variance_cstrs in hin.
+      eapply LevelSet.union_spec.
+      rewrite (In_lift_level #|inst|).
+      rewrite !levels_of_list_spec.
+      { clear -hin. rewrite !In_lift in hin.
+        rewrite !(In_unfold 0) in hin.
+        rewrite !In_unfold in hin.
+        rewrite !In_unfold. firstorder eauto; subst; try intuition lia.
+        left; eexists; firstorder eauto; try lia.
+        left; eexists; firstorder eauto; try lia. } }
+    { eapply In_variance_cstrs in hin.
+      eapply LevelSet.union_spec.
+      rewrite (In_lift_level #|inst|).
+      rewrite !levels_of_list_spec.
+      { clear -hin. rewrite !In_lift in hin.
+        rewrite !(In_unfold 0) in hin.
+        rewrite !In_unfold in hin.
+        rewrite !In_unfold. firstorder eauto; subst; try intuition lia.
+        left; eexists; firstorder eauto; try lia.
+        left; eexists; firstorder eauto; try lia. } } }
   cbn in cstrseq; subst v => /= //.
   split; cbn. lsets. csets. split.
-  { repeat split. 2:now len.
+  { repeat split. 2:now len. admit.
+    red in H0. red in H0. cbn in leni. len in leni.
+
+
     admit. admit. }
   { admit. }
 Admitted.

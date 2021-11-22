@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
-  PCUICTyping PCUICGuardCondition PCUICContextRelation.
+  PCUICTyping PCUICGuardCondition PCUICContextRelation PCUICGlobalEnv.
 From Equations Require Import Equations.
 
 Require Import ssreflect.

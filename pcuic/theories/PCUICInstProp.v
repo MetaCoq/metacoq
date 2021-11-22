@@ -3,8 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation
-  PCUICTyping PCUICEquality
-  PCUICTyping PCUICClosed PCUICEquality PCUICWeakeningEnv
+  PCUICTyping PCUICEquality PCUICGlobalEnv PCUICClosed PCUICEquality PCUICWeakeningEnv
   PCUICSigmaCalculus PCUICRenameDef PCUICRenameProp PCUICWeakening PCUICInstDef
   PCUICGuardCondition.
 

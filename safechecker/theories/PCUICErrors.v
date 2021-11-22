@@ -321,12 +321,12 @@ Definition string_of_type_error Σ (e : type_error) : string :=
 
 Inductive typing_result (A : Type) :=
 | Checked (a : A)
-| TypeError (t : type_error).
+| TypeError (t : type_error) (a : A -> False).
 Global Arguments Checked {A} a.
-Global Arguments TypeError {A} t.
+Global Arguments TypeError {A} t a.
 
 #[global]
-Instance typing_monad : Monad typing_result :=
+(* Instance typing_monad : Monad typing_result :=
   {| ret A a := Checked a ;
      bind A B m f :=
        match m with
@@ -343,7 +343,7 @@ Instance monad_exc : MonadExc type_error typing_result :=
       | Checked a => m
       | TypeError t => f t
       end
-  }.
+  }. *)
 
 Inductive env_error :=
 | IllFormedDecl (e : string) (e : type_error)
@@ -377,7 +377,7 @@ Global Instance envcheck_monad_exc
 Definition wrap_error {A} Σ (id : string) (check : typing_result A) : EnvCheck A :=
   match check with
   | Checked a => CorrectDecl a
-  | TypeError e => EnvError Σ (IllFormedDecl id e)
+  | TypeError e a => EnvError Σ (IllFormedDecl id e)
   end.
 
 Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :

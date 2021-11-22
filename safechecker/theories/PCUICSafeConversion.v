@@ -703,15 +703,15 @@ Section Conversion.
          (mkpack Γ s t1 π1 t2 π2 h2) ->
        Ret s' Γ t1' π1' t2' π2'.
 
-  Notation yes := (Success _) (only parsing).
-  Notation no := (fun e => Error e _) (only parsing).
+  Local Notation yes := (Success _) (only parsing).
+  Local Notation no := (fun e => Error e _) (only parsing).
 
   (* TODO NOTE
      repack could also take another argument of type
      ConversionError -> ConversionError
      to keep a full error trace (we currently only do it partially).
   *)
-  Notation repack e :=
+  Local Notation repack e :=
     (match e with Success h => Success _ | Error er h => Error er _ end)
     (only parsing).
 

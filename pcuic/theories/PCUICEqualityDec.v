@@ -1000,32 +1000,3 @@ Section EqualityDec.
   Qed.
 
 End EqualityDec.
-
-(*sanity check *)
-Lemma typing_eq_term `{checker_flags}
-  Σ (wfΣ : wf_ext Σ)
-  G Γ t u T U :
-  is_graph_of_uctx G (global_ext_uctx Σ) ->
-  Σ ;;; Γ |- t : T ->
-  Σ ;;; Γ |- u : U ->
-  reflectT (eq_term Σ Σ t u) (eqb_term Σ G t u).
-Proof.
-  intros.
-  eapply reflect_eq_term_upto_univ.
-  - intros.
-    eapply eq_universeP.
-    + now sq.
-    + sq. now apply wfΣ.
-    + assumption.
-    + now apply/wf_universe_reflect.
-    + now apply/wf_universe_reflect.
-  - intros.
-    eapply eq_universeP.
-    + now sq.
-    + sq. now apply wfΣ.
-    + assumption.
-    + now apply/wf_universe_reflect.
-    + now apply/wf_universe_reflect.
-  - now move: X => /typing_wf_universes /andP [].
-  - now move: X0 => /typing_wf_universes /andP [].
-Abort.

@@ -189,7 +189,7 @@ Section CheckEnv.
 
   Definition check_wf_type kn Σ HΣ HΣ' G HG t
     : EnvCheck (∑ u, ∥ Σ;;; [] |- t : tSort u ∥)
-    := wrap_error Σ (string_of_kername  kn) (@infer_type _ Σ HΣ HΣ' (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
+    := wrap_error Σ (string_of_kername kn) (@infer_type _ Σ HΣ HΣ' (@infer _ Σ HΣ HΣ' G HG) [] sq_wfl_nil t).
 
   Definition check_wf_judgement kn Σ HΣ HΣ' G HG t ty
     : EnvCheck (∥ Σ;;; [] |- t : ty ∥)
@@ -513,19 +513,9 @@ Section CheckEnv.
 
   Definition cumul_decl Σ Γ (d d' : context_decl) : Type := cumul_decls Σ Γ Γ d d'.
 
-  Program Definition wf_env_conv (Σ : wf_env_ext) (Γ : context) (t u : term) :
-    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ ⊢ t = u ∥) :=
-    @convert _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
-  Next Obligation.
-    destruct Σ. sq. simpl. apply wf_env_ext_wf0.
-  Qed.
-  Next Obligation.
-    destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
-  Qed.
-
-  Program Definition wf_env_cumul (Σ : wf_env_ext) (Γ : context) (t u : term) :
-    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ ⊢ t ≤ u ∥) :=
-    @convert_leq _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ Γ t u.
+  Program Definition wf_env_conv (Σ : wf_env_ext) (le : conv_pb) (Γ : context) (t u : term) :
+    welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ ⊢ t ≤[le] u ∥) :=
+    @convert _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ le Γ t u.
   Next Obligation.
     destruct Σ. sq. simpl. apply wf_env_ext_wf0.
   Qed.
@@ -547,7 +537,7 @@ Section CheckEnv.
 
   Hint Resolve wf_ext_wf_p1 : pcuic.
 
-  Program Fixpoint wf_env_check_equality_ctx le (Σ : wf_env_ext) Γ Δ Δ' 
+  Program Fixpoint wf_env_check_equality_ctx (le : conv_pb) (Σ : wf_env_ext) Γ Δ Δ' 
     (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
     typing_result (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
     @check_equality_ctx _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ le Γ Δ Δ' wfΔ wfΔ'.
@@ -643,7 +633,7 @@ Section CheckEnv.
     match l, l' with
     | [], [] => ret (sq All2_nil)
     | t :: l, t' :: l' => 
-      checkt <- wf_env_conv Σ Γ t t' _ _ ;;
+      checkt <- wf_env_conv Σ Conv Γ t t' _ _ ;;
       checkts <- check_conv_args Σ Γ wfΓ l l' _ _ ;;
       ret _
     | _, _ => raise (Msg "While checking convertibility of arguments: lists have not the same length")

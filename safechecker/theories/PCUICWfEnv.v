@@ -47,7 +47,7 @@ Section GraphSpec.
   Qed.
 
   Lemma is_graph_of_uctx_levels (l : Level.t) :
-    LevelSet.mem l (uGraph.wGraph.V G) ->
+    LevelSet.mem l (uGraph.wGraph.V G) <->
     LevelSet.mem l (global_ext_levels Σ).
   Proof.
     unfold is_graph_of_uctx in HG.
@@ -56,7 +56,7 @@ Section GraphSpec.
     unfold gc_of_uctx in XX; simpl in XX.
     destruct (gc_of_constraints Σ); [|discriminate].
     inversion XX; subst. generalize (global_ext_levels Σ); intros lvs; cbn.
-    clear. intro H. apply LevelSet.mem_spec. now apply LevelSet.mem_spec in H.
+    reflexivity.
   Qed.
 
 End GraphSpec.

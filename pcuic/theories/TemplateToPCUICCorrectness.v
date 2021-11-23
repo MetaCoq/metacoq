@@ -2896,7 +2896,7 @@ Proof.
   - simpl.
     change (Typing.wf Σ) in X0.
     have wfdecl := on_global_decl_wf (Σ := (Σ, udecl)) X0 o0.
-    destruct d; simpl in *.
+    destruct d eqn:eqd; simpl in *.
     * destruct c; simpl. destruct cst_body0; simpl in *.
       red in o |- *. simpl in *. 
       apply (X (Σ, cst_universes0) [] t (Some cst_type0)); auto.
@@ -3055,6 +3055,17 @@ Proof.
           epose proof (Typing.env_prop_wf_local template_to_pcuic (Σ, Ast.Env.ind_universes m) X0 _ onP).
           cbv beta in X1. apply X1 => //.
       -- cbn. rewrite context_assumptions_map //.
+      -- cbn.
+        move: onVariance; rewrite /Typing.on_variance /on_variance.
+        destruct (Ast.Env.ind_universes m) eqn:equniv => //.
+        destruct (Ast.Env.ind_variance m) => //.
+        intros [univs' [i [i' []]]]; exists univs', i, i'; split => //.
+        rewrite -equniv.
+        eapply (trans_consistent_instance_ext (Σ, univs') (Ast.Env.InductiveDecl m)).
+        now cbn; rewrite equniv.
+        rewrite -equniv.
+        eapply (trans_consistent_instance_ext (Σ, univs') (Ast.Env.InductiveDecl m)).
+        now cbn; rewrite equniv.
 Qed.
 
 Lemma template_to_pcuic_env {cf} Σ : Template.Typing.wf Σ -> wf (trans_global_decls Σ).

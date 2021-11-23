@@ -366,7 +366,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     (*   - declared levels are fresh *)
     (*   - all levels used in constraints are declared *)
     (*   - level used in monomorphic contexts are only monomorphic *)
-    Definition on_udecl `{checker_flags} Σ (udecl : universes_decl)
+    Definition on_udecl Σ (udecl : universes_decl)
       := let levels := levels_of_udecl udecl in
         let global_levels := global_levels Σ in
         let all_levels := LevelSet.union levels global_levels in
@@ -765,7 +765,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         | Some v => 
           ∑ univs' i i', 
             [× (variance_universes univs v = Some (univs', i, i')),
-              on_udecl Σ univs',
               consistent_instance_ext (Σ, univs') univs i,
               consistent_instance_ext (Σ, univs') univs i' &
               List.length v = #|UContext.instance (AUContext.repr auctx)|]

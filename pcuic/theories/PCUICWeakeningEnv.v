@@ -638,10 +638,8 @@ Proof.
     rewrite /on_variance. destruct ind_universes => //.
     destruct ind_variance => //.
     intros [univs' [i [i' []]]]. exists univs', i, i'. split => //.
-    2-3:eapply weakening_env_consistent_instance; tea.
-    split.
-    all:admit.  
-Admitted.
+    all:eapply weakening_env_consistent_instance; tea.
+Qed.
 
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :
   weaken_env_prop P ->

@@ -1848,25 +1848,33 @@ Proof. now rewrite /lift_instance; len. Qed.
 #[global]
 Hint Rewrite lift_instance_length : len.
 
-Lemma variance_universes_insts {mdecl l v i i'} :
-  on_variance (ind_universes mdecl) (Some l) ->
-  variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
-  match ind_universes mdecl with
-  | Monomorphic_ctx (_, cstrs) => False
-  | Polymorphic_ctx (inst, cstrs) => 
-    let cstrs := ConstraintSet.union (ConstraintSet.union cstrs (lift_constraints #|i| cstrs)) (variance_cstrs l i i')
-    in v = Polymorphic_ctx (inst ++ inst, cstrs)
-  end /\
-  #|i| = #|i'| /\ #|l| = #|i| /\
-  i' = abstract_instance (ind_universes mdecl) /\
-  closedu_instance #|i'| i' /\ i = lift_instance #|i'| i'.
+Lemma variance_universes_insts {cf} {Σ mdecl l} :
+  on_variance Σ (ind_universes mdecl) (Some l) ->
+  ∑ v i i',
+  [× variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i'),
+    match ind_universes mdecl with
+    | Monomorphic_ctx (_, cstrs) => False
+    | Polymorphic_ctx (inst, cstrs) => 
+      let cstrs := ConstraintSet.union (ConstraintSet.union cstrs (lift_constraints #|i| cstrs)) (variance_cstrs l i i')
+      in v = Polymorphic_ctx (inst ++ inst, cstrs)
+    end,
+    consistent_instance_ext (Σ.1, v) (ind_universes mdecl) i,
+    consistent_instance_ext (Σ.1, v) (ind_universes mdecl) i',
+    #|i| = #|i'|, #|l| = #|i|,
+    i' = abstract_instance (ind_universes mdecl),
+    closedu_instance #|i'| i' &
+    i = lift_instance #|i'| i'].
 Proof.
   unfold variance_universes.
   destruct (ind_universes mdecl); simpl => //.
-  destruct cst as [inst cstrs]. simpl; len. intros Hll.
-  intros H; noconf H. len. simpl. intuition auto.
+  destruct cst as [inst cstrs].
+  intros [univs' [i [i' []]]].
+  noconf e.
+  do 3 eexists; split. trea. all:eauto. 1-3:len.
+  len in e0. len.
   rewrite /closedu_instance /level_var_instance forallb_mapi //.
   intros i hi. simpl. now eapply Nat.ltb_lt.
+  now len.
 Qed.
 
 Lemma consistent_instance_poly_length {cf} {Σ} {wfΣ : wf Σ} {inst cstrs u} :
@@ -2078,7 +2086,7 @@ Qed.
 
 Lemma equality_inst_variance {cf} {le} {Σ} {wfΣ : wf Σ} {mdecl l v i i' u u' Γ} : 
   on_udecl_prop Σ (ind_universes mdecl) ->
-  on_variance (ind_universes mdecl) (Some l) ->
+  on_variance Σ (ind_universes mdecl) (Some l) ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
@@ -2090,7 +2098,8 @@ Proof.
   intros onu onv vari cu cu' Ru t t'.
   intros cum.
   destruct Σ as [Σ univs].
-  pose proof (variance_universes_insts onv vari) as (cstrs & leni & lenl & eqi' & ci' & eqi).
+  pose proof (variance_universes_insts onv) as (v' & ui & ui' & [hv cstrs cui cui' len0 len1 eqi']).
+  rewrite vari in hv; noconf hv.
   subst i.
   pose proof (consistent_instance_length cu).
   pose proof (consistent_instance_length cu').
@@ -2125,7 +2134,7 @@ Proof.
   { simpl in vari => //. }
   cbn in cstrs. subst v; cbn.
   rewrite !satisfies_union. len.
-  len in lenl.
+  len in len1.
   intuition auto.
   - rewrite -satisfies_subst_instance_ctr //.
     assert(ConstraintSet.Equal (subst_instance_cstrs u' cstrs')
@@ -2145,7 +2154,7 @@ Proof.
     rewrite subst_instance_variance_cstrs //.
     rewrite -H0 subsu subsu'.
     assert (#|u| = #|u'|) as lenu by lia.
-    assert (#|l| = #|u|) as lenlu. now rewrite lenl H.
+    assert (#|l| = #|u|) as lenlu. now rewrite len1 H.
     clear -checku Ru sat lenu lenlu.
     induction l in u, u', Ru, lenu, lenlu |- *. simpl in *. destruct u, u';
     intro; rewrite ConstraintSetFact.empty_iff //.
@@ -2164,7 +2173,7 @@ Qed.
 
 Lemma All2_fold_inst {cf} {le} {Σ} {wfΣ : wf Σ} mdecl l v i i' u u' Γ' Γ : 
   on_udecl_prop Σ (ind_universes mdecl) ->
-  on_variance (ind_universes mdecl) (Some l) ->
+  on_variance Σ (ind_universes mdecl) (Some l) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->

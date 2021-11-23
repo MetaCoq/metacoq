@@ -67,6 +67,7 @@ theories/PCUICSafeLemmata.v
 
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
+theories/TemplateToPCUICWcbvEval.v
 theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v

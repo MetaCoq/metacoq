@@ -5325,4 +5325,4 @@ Proof.
   now eapply trans_wf.
 Qed.
 
-Print Assumptions expand_lets_sound.
+(* Print Assumptions expand_lets_sound. *)

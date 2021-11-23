@@ -1882,7 +1882,16 @@ Proof.
   now eapply on_minductive_wf_params.
 Qed.
 
-Lemma trans_red1 {cf} (Σ : global_env_ext) {wfΣ : wf Σ} {wfΣ' : wf (trans_global_decls Σ.1)} Γ T U :
+Definition cf' cf := 
+  {| check_univs := cf.(check_univs);
+     prop_sub_type := cf.(prop_sub_type); 
+     indices_matter := cf.(indices_matter); 
+     lets_in_constructor_types := false |}.
+
+Notation wf_trans Σ := (@wf (cf' _) (trans_global_decls Σ.1)).
+Notation wf_ext_trans Σ := (@wf_ext (cf' _) (trans_global Σ)).
+
+Lemma trans_red1 {cf} (Σ : global_env_ext) {wfΣ : wf Σ} {wfΣ' : wf_trans Σ} Γ T U :
   red1 Σ Γ T U ->
   wt Σ Γ T ->
   red (trans_global Σ) (trans_local Γ) (trans T) (trans U).
@@ -2028,10 +2037,10 @@ Proof.
     intros ctor cdecl br [hnth [wfbr eqbctx wfbctx eqinst wtb]].
     split => //. cbn [bcontext map_branch]. rewrite /id.
     rewrite [map (map_decl _) _](subst_instance_smash _ _ []) /=.
-    eapply (red_expand_lets_ctx (Σ := trans_global Σ) 
+    eapply (red_expand_lets_ctx (cf := cf' cf) (Σ := trans_global Σ) 
       (Γ' := (trans_local (smash_context [] (ind_params mdecl))@[puinst p]))
       (Γ'' := (trans_local (smash_context [] (ind_params mdecl))@[puinst p]))).
-    * eapply alpha_eq_on_free_vars_ctx.
+    *  eapply alpha_eq_on_free_vars_ctx.
       eapply All2_app; [|reflexivity].
       eapply alpha_eq_subst_instance.
       eapply alpha_eq_trans. symmetry. exact eqbctx.
@@ -2102,7 +2111,7 @@ Proof.
     set (p' := map_predicate id trans _ _ p).
     rewrite -(inst_case_predicate_context_eq (p:=p') a).
     rewrite (trans_case_predicate_context d c0 s w).
-    now rewrite -trans_local_app.  
+    now rewrite -trans_local_app.
 
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
     eapply red_case_c; eauto.
@@ -2125,7 +2134,7 @@ Proof.
     rewrite [map (map_decl _) _](subst_instance_smash _ _ []).
     rewrite -(smash_context_subst []) /=. len. rewrite subst_context_nil /id.
     rewrite -eqctx.
-    eapply (red_expand_lets (trans_global Σ)). cbn.
+    eapply (red_expand_lets (cf := cf' cf) (trans_global Σ)). cbn.
     rewrite /inst_case_branch_context in ih.
     rewrite /inst_case_context in ih.
     rewrite (trans_subst_context (shiftnP #|pparams p| xpred0) (shiftnP #|Γ| xpred0)) // in ih.
@@ -2149,7 +2158,7 @@ Proof.
     { eapply trans_on_free_vars.
       move/andP: onfvs => [] onctx onb. len.
       now rewrite -shiftnP_add. }
-        
+
   - eapply red_proj_c; eauto.
   - eapply red_app; eauto.
   - eapply red_app; eauto.
@@ -2338,7 +2347,7 @@ Qed.
 
 Lemma trans_compare_term {cf} {Σ : global_env} {le ϕ T U} :
   compare_term le Σ ϕ T U ->
-  compare_term le (trans_global_decls Σ) ϕ (trans T) (trans U).
+  compare_term (H:=cf' cf) le (trans_global_decls Σ) ϕ (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ ; eauto; tc.
   destruct le; tc.
@@ -2347,9 +2356,9 @@ Qed.
 
 Lemma trans_leq_term {cf} {Σ : global_env} ϕ T U :
   PCUICEquality.leq_term Σ ϕ T U ->
-  leq_term (trans_global_decls Σ) ϕ (trans T) (trans U).
+  @leq_term (cf' cf) (trans_global_decls Σ) ϕ (trans T) (trans U).
 Proof.
-  eapply trans_eq_term_upto_univ ; eauto; tc.
+  eapply trans_eq_term_upto_univ; eauto; tc.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICContextConversion.
@@ -2444,9 +2453,9 @@ Section wtcumul.
 End wtcumul.
 
 Lemma trans_conv {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
-  wf (trans_global_decls Σ.1) ->
+  wf_trans Σ ->
   wt_conv Σ Γ T U ->
-  conv (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+  conv (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
@@ -2462,9 +2471,9 @@ Proof.
 Qed.
 
 Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
-  wf (trans_global_decls Σ.1) ->
+  wf_trans Σ ->
   wt_cumul Σ Γ T U ->
-  cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+  cumul (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
@@ -2479,13 +2488,13 @@ Proof.
     eapply red_cumul_cumul_inv; tea.
 Qed.
 
-Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing TT.typing Σ) Γ.
+Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing (TT.typing (H:=cf' cf)) Σ) Γ.
 
 Lemma trans_wf_local' {cf} :
   forall (Σ : SE.global_env_ext) Γ (wfΓ : wf_local Σ Γ),
     let P :=
         (fun Σ0 Γ0 _ (t T : PCUICAst.term) _ =>
-           TT.typing (trans_global Σ0) (trans_local Γ0) (trans t) (trans T))
+           TT.typing (H:=cf' cf) (trans_global Σ0) (trans_local Γ0) (trans t) (trans T))
     in
     ST.All_local_env_over ST.typing P Σ Γ wfΓ ->
     TTwf_local (trans_global Σ) (trans_local Γ).
@@ -2503,10 +2512,11 @@ Lemma trans_wf_local_env {cf} Σ Γ :
   ST.All_local_env
         (ST.lift_typing
            (fun (Σ : SE.global_env_ext) Γ b ty =>
-              wf (trans_global Σ) ->
-              ST.typing Σ Γ b ty × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
+              wf_trans Σ ->
+              ST.typing Σ Γ b ty × 
+              TT.typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
         Γ ->
-  wf (trans_global Σ) ->
+  wf_trans Σ ->
   TTwf_local (trans_global Σ) (trans_local Γ).
 Proof.
   intros.
@@ -2550,7 +2560,7 @@ Lemma trans_mfix_All {cf} Σ Γ mfix idx :
       (fun (Σ : SE.global_env_ext)
           (Γ : SE.context) (b ty : PCUICAst.term) =>
         ST.typing Σ Γ b ty
-        × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
+        × TT.typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
     (SE.app_context Γ (SE.fix_context mfix)) ->
   TTwf_local (trans_global Σ)
     (trans_local Γ ,,, fix_context (map (map_def trans trans) mfix)).
@@ -2576,38 +2586,6 @@ Proof.
     assumption.  
 Qed.
 
-Lemma All_over_All {cf} Σ Γ wfΓ :
-  ST.All_local_env_over ST.typing
-    (fun (Σ : SE.global_env_ext) (Γ : SE.context)
-      (_ : wf_local Σ Γ) (t T : PCUICAst.term)
-      (_ : ST.typing Σ Γ t T) =>
-      wf (trans_global Σ) ->
-    TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)) Σ Γ wfΓ ->
-  ST.All_local_env
-    (ST.lift_typing
-      (fun (Σ0 : SE.global_env_ext) (Γ0 : SE.context)
-          (b ty : PCUICAst.term) =>
-          wf (trans_global Σ) ->
-
-        ST.typing Σ0 Γ0 b ty
-        × TT.typing (trans_global Σ0) (trans_local Γ0) (trans b) (trans ty)) Σ) Γ.
-Proof.
-  intros H.
-  induction H;cbn.
-  - constructor.
-  - constructor.
-    + apply IHAll_local_env_over.
-    + cbn in *.
-      destruct tu.
-      eexists;split;auto; assumption.
-  - constructor.
-    + apply IHAll_local_env_over.
-    + cbn in *.
-      destruct tu.
-      eexists;split;auto;eassumption.
-    + cbn in *.
-      split;auto;eassumption.
-Qed.
 
 Lemma trans_decompose_prod_assum :
   forall Γ t,
@@ -3233,16 +3211,16 @@ Proof.
       nat_compare_specs => /= //.
 Qed.
 
-Lemma trans_type_of_constructor {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {wfΣ' : wf (trans_global Σ)} {mdecl idecl cdecl ind i u} :
+Lemma trans_type_of_constructor {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {wfΣ' : wf_trans Σ} {mdecl idecl cdecl ind i u} :
   declared_constructor Σ (ind, i) mdecl idecl cdecl ->
   consistent_instance_ext (trans_global Σ)
     (ind_universes (trans_minductive_body mdecl)) u ->
-  trans_global Σ ;;; [] ⊢ trans (ST.type_of_constructor mdecl cdecl (ind, i) u) =
-  TT.type_of_constructor 
+  equality (cf := cf' cf) false (trans_global Σ) [] (trans (ST.type_of_constructor mdecl cdecl (ind, i) u))
+  (TT.type_of_constructor 
     (trans_minductive_body mdecl) 
     (trans_constructor_body (inductive_ind ind) mdecl cdecl)
     (ind,i)
-    u.
+    u).
 Proof.
   intros oncstr onu.
   unfold ST.type_of_constructor.
@@ -3264,7 +3242,7 @@ Proof.
   ((arities_context (mapi (trans_one_ind_body mdecl) (ind_bodies mdecl)))@[u],,,
    trans_local (ind_params mdecl)@[u]).
   { pose proof (trans_declared_constructor _ _ _ _ _ oncstr).
-    epose proof (declared_inductive_closed_params (Σ := trans_global Σ) H).
+    epose proof (declared_inductive_closed_params (cf := cf' cf) (Σ := trans_global Σ) H).
     rewrite on_free_vars_ctx_app !on_free_vars_ctx_subst_instance.
     len.
     rewrite closedn_ctx_on_free_vars.
@@ -3272,7 +3250,7 @@ Proof.
     rewrite closedn_subst_instance_context.
     eapply closedn_ctx_upwards; tea. lia.
     rewrite andb_true_r. apply closed_ctx_on_free_vars.
-    epose proof (declared_minductive_closed_arities (proj1 (proj1 H))).
+    unshelve epose proof (declared_minductive_closed_arities (cf := cf' cf) (Σ := trans_global Σ) (proj1 (proj1 H))).
     apply H1. }
   epose proof (declared_constructor_closed oncstr).
   rewrite /closed_constructor_body in H.
@@ -3388,8 +3366,8 @@ Qed.
 Lemma weaken_prop {cf} : weaken_env_prop
   (lift_typing
    (λ (Σ : global_env_ext) (Γ : context) (t T : term),
-      wf (trans_global Σ)
-      → trans_global Σ;;; trans_local Γ |- trans t : trans T)).
+      wf_trans Σ →
+      typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T))).
 Proof.
   intros Σ Σ' u wf ext Γ t T.
   unfold lift_typing. destruct T.
@@ -3537,23 +3515,55 @@ Proof.
   rewrite /inds. len. reflexivity.
 Qed.
   
+Lemma All_over_All {cf} Σ Γ wfΓ :
+  ST.All_local_env_over ST.typing
+    (fun (Σ : SE.global_env_ext) (Γ : SE.context)
+      (_ : wf_local Σ Γ) (t T : PCUICAst.term)
+      (_ : ST.typing Σ Γ t T) =>
+      wf_trans Σ ->
+    TT.typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T)) Σ Γ wfΓ ->
+  ST.All_local_env
+    (ST.lift_typing
+      (fun (Σ0 : SE.global_env_ext) (Γ0 : SE.context)
+          (b ty : PCUICAst.term) =>
+          wf_trans Σ ->
+        ST.typing Σ0 Γ0 b ty
+        × TT.typing (H:=cf' cf) (trans_global Σ0) (trans_local Γ0) (trans b) (trans ty)) Σ) Γ.
+Proof.
+  intros H.
+  induction H;cbn.
+  - constructor.
+  - constructor.
+    + apply IHAll_local_env_over.
+    + cbn in *.
+      destruct tu.
+      eexists;split;auto;try assumption.
+  - constructor.
+    + apply IHAll_local_env_over.
+    + cbn in *.
+      destruct tu.
+      eexists;split;auto;eassumption.
+    + cbn in *.
+      split;auto;eassumption.
+Qed.
+
 Theorem pcuic_expand_lets {cf} (Σ : SE.global_env_ext) Γ t T :
   wf Σ ->
   typing Σ Γ t T ->
-  wf (trans_global Σ) -> 
-  typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
+  wf_trans Σ -> 
+  typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T).
 Proof.
   intros X X0.
   revert Σ X Γ t T X0.
   apply (typing_ind_env (fun Σ Γ t T =>
-    wf (trans_global Σ) ->
-    TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
+    wf_trans Σ ->
+    TT.typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T)
   )%type
     (fun Σ Γ => 
-    wf (trans_global Σ) ->
-    TT.All_local_env (TT.lift_typing TT.typing (trans_global Σ)) (trans_local Γ))
+    wf_trans Σ ->
+    TT.All_local_env (TT.lift_typing (TT.typing (H:=cf' cf)) (trans_global Σ)) (trans_local Γ))
   );intros.
-  - now eapply trans_wf_local_env => //; eapply All_over_All.
+  - eapply trans_wf_local_env => //. now eapply All_over_All.
   - rewrite (trans_lift _ (shiftnP #|skipn (S n) Γ| xpred0)).
     eapply closed_wf_local in wfΓ; tea.
     eapply closedn_ctx_decl in wfΓ; tea.
@@ -3861,7 +3871,8 @@ Proof.
       2:now exists s.
       eapply into_equality.
       eapply (trans_cumul (Σ := Σ)); eauto.
-      fvs. specialize (X1 X5).
+      eapply (trans_on_free_vars_ctx 0). now eapply wf_local_closed_context in wfΓ.
+      specialize (X1 X5).
       now eapply type_is_open_term in X1.
       now eapply subject_is_open_term in X3.
 Qed.
@@ -3978,10 +3989,11 @@ Proof.
 Qed.
 
 Lemma trans_ctx_inst_expand_lets {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {s} :
-  wf (trans_global Σ) ->
+  wf_trans Σ ->
   wf_local Σ (Γ ,,, List.rev Δ) ->
   PCUICTyping.ctx_inst (λ (Σ : global_env_ext) (Γ : context) (t T : term), Σ;;; Γ |- t : T) Σ Γ s Δ ->
-  PCUICTyping.ctx_inst (λ (Σ : global_env_ext) (Γ : context) (t T : term), Σ;;; Γ |- t : T) (trans_global Σ)
+  PCUICTyping.ctx_inst (λ (Σ : global_env_ext) (Γ : context) (t T : term), 
+    typing (H:=cf' cf) Σ Γ t T) (trans_global Σ)
     (trans_local Γ) (map trans s) (trans_local Δ).
 Proof.
   intros wf wfctx i.
@@ -4544,11 +4556,11 @@ Proof.
 Qed.
 
 Lemma trans_cumul_ctx_rel {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} :
-  wf (trans_global Σ) ->
+  wf_trans Σ ->
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ ,,, Δ') ->
   PCUICConversion.cumul_ctx_rel Σ Γ Δ Δ' ->
-  PCUICConversion.cumul_ctx_rel (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+  PCUICConversion.cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
 Proof.
   intros wf' wfl wfr.
   induction 1; cbn; constructor; auto.
@@ -4561,7 +4573,7 @@ Proof.
       eapply All2_fold_app. reflexivity. apply X. }
   - rewrite -trans_local_app. eapply (trans_conv (Σ := Σ)) => //.
     depelim wfl; depelim wfr. red in l, l0.
-    eapply conv_decorate; tea.
+    eapply conv_decorate; tea. auto.
     now exists T. 
     { red in l2. exists T'. eapply context_cumulativity; tea.
       eapply All2_fold_app. reflexivity. apply X. }
@@ -4675,12 +4687,12 @@ Proof.
 Qed.
 
 Lemma trans_cumul' {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ Γ' T U} {wfΣ : PCUICTyping.wf Σ} :
-  wf (trans_global_decls Σ.1) ->
+  wf_trans Σ ->
   wt_cumul_hetero Σ Γ Γ' T U ->
   #|Γ| = #|Γ'| ->
   assumption_context Γ ->
   assumption_context Γ' ->  
-  cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+  cumul (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
@@ -4701,12 +4713,12 @@ Proof.
 Qed.
 
 Lemma trans_conv' {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ Γ' T U} {wfΣ : PCUICTyping.wf Σ} :
-  wf (trans_global_decls Σ.1) ->
+  wf_trans Σ ->
   wt_conv_hetero Σ Γ Γ' T U ->
   #|Γ| = #|Γ'| ->
   assumption_context Γ ->
   assumption_context Γ' ->  
-  conv (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+  conv (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
@@ -4727,14 +4739,14 @@ Proof.
 Qed.
 
 Lemma trans_cumul_ctx_rel' {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ'} :
-  wf (trans_global Σ) ->
+  wf_trans Σ ->
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ (Γ' ,,, Δ') ->
   #|Γ| = #|Γ'| ->
   assumption_context (Γ ,,, Δ) ->
   assumption_context (Γ' ,,, Δ') ->
   PCUICConversion.cumul_ctx_rel Σ Γ Δ Δ' ->
-  PCUICConversion.cumul_ctx_rel (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+  PCUICConversion.cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
 Proof.
   intros wf' wfl wfr eqlen ass ass'.
   induction 1; cbn; constructor; auto.
@@ -4775,9 +4787,9 @@ Proof.
 Qed.
 
 Lemma trans_type_local_ctx {cf} {Σ Γ Δ s} : 
-  wf Σ -> wf (trans_global_decls Σ) ->
+  wf Σ -> wf_trans Σ ->
   type_local_ctx (PCUICEnvTyping.lift_typing typing) Σ Γ Δ s ->
-  type_local_ctx (PCUICEnvTyping.lift_typing typing) (trans_global Σ) (trans_local Γ) (trans_local Δ) s.
+  type_local_ctx (PCUICEnvTyping.lift_typing (typing (H:=cf' cf))) (trans_global Σ) (trans_local Γ) (trans_local Δ) s.
 Proof.
   intros wf wf'.
   induction Δ; cbn.
@@ -4792,9 +4804,9 @@ Proof.
 Qed.
 
 Lemma trans_on_context {cf} {Σ Γ} : 
-  wf Σ -> wf (trans_global_decls Σ) ->
+  wf Σ -> wf_trans Σ ->
   on_context (PCUICEnvTyping.lift_typing typing) Σ Γ ->
-  on_context (PCUICEnvTyping.lift_typing typing) (trans_global Σ) (trans_local Γ).
+  on_context (PCUICEnvTyping.lift_typing (typing (H:=cf' cf))) (trans_global Σ) (trans_local Γ).
 Proof.
   intros wf wf'.
   induction 1; cbn; constructor; auto.
@@ -4914,8 +4926,9 @@ Proof.
   induction k; cbn; auto.
 Qed.
 
-Lemma trans_wf {cf} {Σ : global_env_ext} : wf Σ -> wf (trans_global_decls Σ).
+Lemma trans_wf {cf} {Σ : global_env_ext} : wf Σ -> wf_trans Σ.
 Proof.
+  rewrite /PCUICEnvironment.fst_ctx.
   induction 1 as [|Σ0 kn d X IHX f udecl onu ond]. constructor.
   have onud : on_udecl (map (on_snd trans_global_decl) Σ0)
       (PCUICLookup.universes_decl_of_decl (trans_global_decl d)).
@@ -5189,9 +5202,7 @@ Proof.
             rewrite -smash_context_app.
             now rewrite !expand_lets_expand_lets. }
         }
-        { destruct lets_in_constructor_types => //.
-          cbn. rewrite is_assumption_context_spec.
-          pcuic. }
+        { cbn. rewrite is_assumption_context_spec. pcuic. }
       }
     { have parsfvs: on_free_vars_ctx xpred0 (ind_params m).
       { red in onParams. now eapply wf_local_closed_context in onParams. }
@@ -5317,9 +5328,11 @@ Proof.
     all:now eapply (trans_consistent_instance_ext (Σ0, univs')).  
 Qed.
 
+(** From a typing derivation in pcuic we build one where there are no lets 
+  in constructor types, and branches of cases are appropriately substituted. *)
 Theorem expand_lets_sound {cf} {Σ : global_env_ext} {Γ t T} {wfΣ : wf Σ} :
   typing Σ Γ t T ->
-  typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
+  typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T).
 Proof.
   intros ht; eapply pcuic_expand_lets; tea.
   now eapply trans_wf.

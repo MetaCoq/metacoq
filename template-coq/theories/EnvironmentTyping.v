@@ -359,6 +359,27 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Open Scope type_scope.
 
+    Definition satisfiable_udecl `{checker_flags} Σ φ
+      := consistent (global_ext_constraints (Σ, φ)).
+
+    (* Check that: *)
+    (*   - declared levels are fresh *)
+    (*   - all levels used in constraints are declared *)
+    (*   - level used in monomorphic contexts are only monomorphic *)
+    Definition on_udecl Σ (udecl : universes_decl)
+      := let levels := levels_of_udecl udecl in
+        let global_levels := global_levels Σ in
+        let all_levels := LevelSet.union levels global_levels in
+        LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels
+        /\ ConstraintSet.For_all (fun '(l1,_,l2) => LevelSet.In l1 all_levels
+                                                /\ LevelSet.In l2 all_levels)
+                                (constraints_of_udecl udecl)
+        /\ match udecl with
+          | Monomorphic_ctx ctx =>  LevelSet.for_all (negb ∘ Level.is_var) ctx.1
+          | _ => True
+          end
+        /\ satisfiable_udecl Σ udecl.
+
     (** Positivity checking of the inductive, ensuring that the inductive itself 
       can only appear at the right of an arrow in each argument's types. *)
     (*
@@ -540,14 +561,14 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       end.
 
     (* Conclusion head: reference to the current inductive in the block *)
-    Definition cstr_concl_head mdecl i idecl cdecl :=
+    Definition cstr_concl_head mdecl i cdecl :=
       tRel (#|mdecl.(ind_bodies)| - S i + #|mdecl.(ind_params)| + #|cstr_args cdecl|).
 
     (* Constructor conclusion shape: the inductives type applied to variables for
        the (non-let) parameters 
        followed by the indices *)
-    Definition cstr_concl mdecl i idecl cdecl :=
-      (mkApps (cstr_concl_head mdecl i idecl cdecl)
+    Definition cstr_concl mdecl i cdecl :=
+      (mkApps (cstr_concl_head mdecl i cdecl)
         (to_extended_list_k mdecl.(ind_params) #|cstr_args cdecl|
           ++ cstr_indices cdecl)).
   
@@ -558,7 +579,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       cstr_eq : cstr_type cdecl =
        it_mkProd_or_LetIn mdecl.(ind_params) 
         (it_mkProd_or_LetIn (cstr_args cdecl) 
-          (cstr_concl mdecl i idecl cdecl));
+          (cstr_concl mdecl i cdecl));
       (* The type of the constructor canonically has this shape: parameters, real
         arguments ending with a reference to the inductive applied to the
         (non-lets) parameters and arguments *)
@@ -730,18 +751,23 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
                           idecl.(ind_indices) ind_cunivs idecl.(ind_sort);
 
         onIndices : 
-          (* The inductive type respect the variance annotation  on polymorphic universes, if any. *)
+          (* The inductive type respect the variance annotation on polymorphic universes, if any. *)
           forall v, ind_variance mdecl = Some v -> 
           ind_respects_variance Σ mdecl v idecl.(ind_indices)
       }.
 
-    Definition on_variance univs (variances : option (list Variance.t)) :=
-      match univs with
+    Definition on_variance Σ univs (variances : option (list Variance.t)) :=
+      match univs return Type with
       | Monomorphic_ctx _ => variances = None
       | Polymorphic_ctx auctx => 
         match variances with
-        | None => True
-        | Some v => List.length v = #|UContext.instance (AUContext.repr auctx)|
+        | None => unit
+        | Some v => 
+          ∑ univs' i i', 
+            [× (variance_universes univs v = Some (univs', i, i')),
+              consistent_instance_ext (Σ, univs') univs i,
+              consistent_instance_ext (Σ, univs') univs i' &
+              List.length v = #|UContext.instance (AUContext.repr auctx)|]
         end
       end.
     
@@ -754,7 +780,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
             the size annotation counts assumptions only (no let-ins). *)
         onParams : on_context Σ mdecl.(ind_params);
         onNpars : context_assumptions mdecl.(ind_params) = mdecl.(ind_npars);
-        onVariance : on_variance mdecl.(ind_universes) mdecl.(ind_variance);
+        (** We check that the variance annotations are well-formed: i.e. they
+          form a valid universe context. *)
+        onVariance : on_variance Σ mdecl.(ind_universes) mdecl.(ind_variance);
       }.
 
     (** *** Typing of constant declarations *)
@@ -780,28 +808,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition fresh_global (s : kername) : global_env -> Prop :=
       Forall (fun g => g.1 <> s).
-
-    Definition satisfiable_udecl `{checker_flags} Σ φ
-      := consistent (global_ext_constraints (Σ, φ)).
-
-    (* Check that: *)
-    (*   - declared levels are fresh *)
-    (*   - all levels used in constraints are declared *)
-    (*   - level used in monomorphic contexts are only monomorphic *)
-    Definition on_udecl `{checker_flags} Σ (udecl : universes_decl)
-      := let levels := levels_of_udecl udecl in
-        let global_levels := global_levels Σ in
-        let all_levels := LevelSet.union levels global_levels in
-        LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels
-        /\ ConstraintSet.For_all (fun '(l1,_,l2) => LevelSet.In l1 all_levels
-                                                /\ LevelSet.In l2 all_levels)
-                                (constraints_of_udecl udecl)
-        /\ match udecl with
-          | Monomorphic_ctx ctx =>  LevelSet.for_all (negb ∘ Level.is_var) ctx.1
-          | _ => True
-          end
-        /\ satisfiable_udecl Σ udecl.
-
 
     Inductive on_global_env `{checker_flags} : global_env -> Type :=
     | globenv_nil : on_global_env []

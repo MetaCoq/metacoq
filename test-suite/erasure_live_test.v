@@ -9,6 +9,9 @@ Local Open Scope string_scope.
 From MetaCoq.Template Require Import utils.
 Import MCMonadNotation.
 
+(* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
+#[local] Existing Instance extraction_checker_flags.
+
 Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.
 
@@ -323,11 +326,8 @@ Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
 
 From MetaCoq.Erasure Require Import Loader.
 MetaCoq Erase provedCopyx.
-(* 2m purely in the bytecode VM *)
-(* Time Definition P_provedCopyxvm := Eval native_compute in (test p_provedCopyx).
-(* Anomaly: compilation failure *)
- *)
-
+(* 0.2s purely in the bytecode VM *)
+(*Time Definition P_provedCopyxvm' := Eval vm_compute in (test p_provedCopyx). *)
 (* Goal
   let env := (env P_provedCopyx) in
   let main := (main P_provedCopyx) in

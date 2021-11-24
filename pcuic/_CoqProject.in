@@ -67,8 +67,11 @@ theories/PCUICSafeLemmata.v
 
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
+theories/TemplateToPCUICWcbvEval.v
 theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
+theories/PCUICExpandLets.v
+theories/PCUICExpandLetsCorrectness.v
 # theories/All.v
 
 # To do separate extraction of the files, not working currently

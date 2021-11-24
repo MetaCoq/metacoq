@@ -47,6 +47,8 @@ Defined.
 
 Import EOptimizePropDiscr.
 
+(** The full correctness lemma of erasure from Template programs do λ-box *)
+
 Lemma erase_template_program_correctness (wfl := EWcbvEval.default_wcbv_flags) {p : Ast.Env.program}
   (Σ := Ast.Env.empty_ext p.1)
   {wfΣ : ∥ Typing.wf_ext Σ ∥}
@@ -54,7 +56,8 @@ Lemma erase_template_program_correctness (wfl := EWcbvEval.default_wcbv_flags) {
   erase_template_program p wfΣ wt = (Σ', t') ->
   forall v, WcbvEval.eval p.1 [] p.2 v ->
   exists Σ'' v',
-    (trans_global Σ) ;;; [] |- (trans (trans_global Σ) v) ⇝ℇ v' /\ 
+    PCUICExpandLets.trans_global (trans_global Σ) ;;; [] |- 
+      PCUICExpandLets.trans (trans (trans_global Σ) v) ⇝ℇ v' /\ 
     ∥ EWcbvEval.eval (wfl := EWcbvEval.opt_wcbv_flags) Σ' t' (optimize Σ'' v') ∥.
 Proof.
   unfold erase_template_program.
@@ -76,8 +79,15 @@ Proof.
   forward H. eapply Kernames.KernameSet.subset_spec. reflexivity.
   specialize (H eq_refl).
   destruct wt, wfΣ.
+  have wfmid : wf (trans_global (Ast.Env.empty_ext p.1)).1.
+  { now eapply template_to_pcuic_env. }
   forward H.
-  { eapply PCUICExpandLetsCorrectness.expand_lets_sound. unshelve eapply trans_wcbvEval; eauto. exact extraction_checker_flags.
+  { eapply PCUICExpandLetsCorrectness.trans_wcbveval.
+    { destruct s as [T HT].
+      eapply (PCUICClosed.subject_closed (Γ := [])).
+      unshelve apply (template_to_pcuic_typing (Ast.Env.empty_ext p.1) [] _ T);simpl; eauto.
+      eapply w. }    
+    unshelve eapply trans_wcbvEval; eauto. exact extraction_checker_flags.
     apply w.
     destruct s as [T HT].
     clear -w HT. now eapply TypingWf.typing_wf in HT. }  
@@ -90,9 +100,10 @@ Proof.
   eapply (erases_closed _ []).
   2:eapply erases_erase.
   destruct s as [T HT].
-  clear -w wftΣ HT; eapply (template_to_pcuic_typing _ []) in HT; eauto.
+  clear -w wftΣ HT; unshelve eapply (template_to_pcuic_typing _ []) in HT; eauto.
   unshelve eapply PCUICClosed.subject_closed in HT.
-  now eapply template_to_pcuic_env_ext. eauto.
+  now eapply template_to_pcuic_env_ext. simpl in HT.
+  now eapply PCUICExpandLetsCorrectness.trans_closedn.
 Qed.
 
 Local Open Scope string_scope.

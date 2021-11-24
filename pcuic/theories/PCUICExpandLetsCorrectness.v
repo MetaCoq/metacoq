@@ -1984,9 +1984,9 @@ Proof.
 Qed.
 
 Definition cf' cf := 
-  {| check_univs := cf.(check_univs);
-     prop_sub_type := cf.(prop_sub_type); 
-     indices_matter := cf.(indices_matter); 
+  {| check_univs := cf.(@check_univs);
+     prop_sub_type := cf.(@prop_sub_type); 
+     indices_matter := cf.(@indices_matter); 
      lets_in_constructor_types := false |}.
 
 Notation wf_trans Σ := (@wf (cf' _) (trans_global_decls Σ.1)).
@@ -5660,4 +5660,3 @@ Proof.
   - move=> clt. eapply eval_atom.
     destruct t => //.
 Qed.
-

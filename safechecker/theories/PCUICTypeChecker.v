@@ -92,7 +92,7 @@ Proof.
   now eapply spine_subst_smash in sp.
 Qed.
 
-Lemma compare_global_instance_sound {cf Σ} {wfΣ : wf_ext Σ} gr napp 
+Lemma compare_global_instance_sound {cf Σ} (wfΣ : wf_ext Σ) gr napp 
   (Hφ : on_udecl Σ.1 Σ.2)
   (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) :
   subrelation (compare_global_instance Σ (check_eqb_universe G) (check_leqb_universe G) gr napp) 
@@ -219,18 +219,12 @@ Section Typecheck.
     Next Obligation.
       sq.
       econstructor ; tea.
-      now apply closed_red_red.
     Defined.
     Next Obligation.
       sq.
       eapply p.
-      (*todo: missing lemma?*)
-      inversion X0 ; subst.
-      eapply uniqueness_inferred in X1 ; tea.
-      eapply into_closed_red in X3 ; fvs.
-      eapply red_equality_inv,equality_trans,equality_Sort_l_inv in X3 as [? [? _]]; tea.
-      eexists.
-      sq ; eassumption.
+      eapply infering_sort_infering in X0 as [u []]; tea.
+      eexists. sq. eassumption.
     Qed.
     Next Obligation.
       sq.
@@ -246,19 +240,13 @@ Section Typecheck.
         ret _. 
     Next Obligation.
       sq.
-      eapply infering_sort_typing in X ; tea.
-      now eexists.
+      now eapply infering_sort_isType.
     Defined.
     Next Obligation.
       sq.
       apply p.
-      destruct H as [? H].
-      apply typing_infering in H as [? [i cum]] ; tea.
-      apply equality_Sort_r_inv in cum as [u [c ]].
-      exists u.
-      sq.
-      econstructor ; tea.
-      exact c.
+      eapply isType_infering_sort in H as [u ?].
+      now exists u.
     Qed.
 
     Equations bdcheck Γ (HΓ : ∥wf_local Σ Γ ∥) t A (hA : ∥ isType Σ Γ A ∥)
@@ -274,20 +262,13 @@ Section Typecheck.
     Next Obligation. destruct hA; now apply wat_welltyped. Qed.
     Next Obligation.
       sq.
-      econstructor ; tea.
-      now apply equality_forget_cumul in s.
+      now econstructor.
     Qed.
     Next Obligation.
       sq.
       apply p.
       sq.
-      inversion H ; subst.
-      destruct hA.
-      etransitivity.
-      - apply equality_eq_le.
-        eapply uniqueness_inferred ; tea.
-      - eapply into_ws_cumul ; tea.
-        now apply infering_typing.
+      now eapply infering_checking.
     Qed.
     Next Obligation.
       sq.
@@ -320,28 +301,6 @@ Section Typecheck.
      repeat constructor.
     Qed. *)
 
-    (*todo move*)
-    Lemma typing_checking (wfΣ : wf Σ) Γ t A :
-      Σ ;;; Γ |- t : A ->
-      Σ ;;; Γ |- t ◃ A.
-    Proof.
-      intros ty.
-      apply typing_infering in ty as [A' [inf cum]] ; tea.
-      econstructor ; tea.
-      now eapply equality_forget_cumul.
-    Qed.
-
-    Lemma isType_infering_sort (wfΣ : wf Σ) Γ t :
-      isType Σ Γ t ->
-      ∑ u, Σ ;;; Γ |- t ▹□ u.
-    Proof.
-      intros [u ty].
-      eapply typing_infering in ty as [A' [inf cum]] ; tea.
-      eapply equality_Sort_r_inv in cum as [u' [red _]].
-      eexists u'.
-      econstructor ; tea.
-      eapply into_closed_red ; fvs.
-    Qed.
 
     Equations check_context Γ : typing_result (∥ wf_local Σ Γ ∥)
     := 
@@ -443,7 +402,6 @@ Section Typecheck.
       sq. apply p. sq.
       now inversion H.
     Qed.
-    
 
     Equations check_equality_decl (le : conv_pb) Γ d d'
       (wtd : wt_decl Σ Γ d) (wtd' : wt_decl Σ Γ d')
@@ -729,9 +687,9 @@ Section Typecheck.
     Next Obligation.
       sq.
       constructor ; tea.
-      eapply checking_typing ; tea.
-      apply wf_local_rel_app_inv in wfΔ as [wt _].
-      now depelim wt.
+      apply checking_typing ; tea.
+      eapply All_local_env_app_l in wfΔ.
+      now inversion wfΔ ; subst.
     Qed.
     Next Obligation.
       sq. apply p. sq.
@@ -739,7 +697,7 @@ Section Typecheck.
     Qed.
     Next Obligation.
       sq. apply p. sq.
-      apply typing_checking ; tea.
+      apply typing_checking.
       now depelim H.
     Qed.
     
@@ -864,40 +822,35 @@ Section Typecheck.
   (* Obligation Tactic := Program.Tactics.program_simplify ; eauto 2. *)
   
   Equations check_is_allowed_elimination
-    (c : check_univs)
     (u : Universe.t) (wfu : wf_universe Σ u)
     (al : allowed_eliminations) :
     typing_result (is_allowed_elimination Σ u al) :=
-  check_is_allowed_elimination c u wfu IntoSProp
+
+  check_is_allowed_elimination u wfu IntoSProp
     with inspect (Universe.is_sprop u) := {
       | @exist true e := ret _ ;
       | @exist false _ := raise (Msg "Cannot eliminate over this sort")
     } ;
-  check_is_allowed_elimination c u wfu IntoPropSProp
+  check_is_allowed_elimination u wfu IntoPropSProp
     with inspect (is_propositional u) := {
       | @exist true _ := ret _ ;
       | @exist false _ := raise (Msg "Cannot eliminate over this sort")
     };
-  check_is_allowed_elimination c u wfu IntoSetPropSProp 
+  check_is_allowed_elimination u wfu IntoSetPropSProp 
     with inspect (is_propositional u || check_eqb_universe G u Universe.type0) := {
       | @exist true _ := ret _ ;
       | @exist false _ := raise (Msg "Cannot eliminate over this sort")
     } ;
-  check_is_allowed_elimination c u wfu IntoAny := ret _.
+  check_is_allowed_elimination u wfu IntoAny := ret _.
   Next Obligation.
-    rewrite /is_allowed_elimination /is_allowed_elimination0 c.
+    rewrite /is_allowed_elimination /is_allowed_elimination0.
+    destruct check_univs ; auto.
     intros val sat.
     symmetry in e.
     apply is_sprop_val with (v := val) in e.
     now rewrite e.
   Qed.
   Next Obligation.
-    sq.
-    rewrite /is_allowed_elimination /is_allowed_elimination0 c in H.
-    assert (∑ v : valuation, satisfies v Σ) as [v ?] by admit.
-    specialize (H v s).
-    destruct u ; cbn in *.
-    all: congruence.
   Admitted.
   Next Obligation.
     unfold is_allowed_elimination, is_allowed_elimination0.
@@ -911,11 +864,6 @@ Section Typecheck.
       + discriminate.
   Qed.
   Next Obligation.
-    rewrite /is_allowed_elimination /is_allowed_elimination0 c in H.
-    assert (∑ v : valuation, satisfies v Σ) as [v ?] by admit.
-    specialize (H v s).
-    destruct u ; cbn in *.
-    all: congruence.
   Admitted.
   Next Obligation.
     unfold is_allowed_elimination, is_allowed_elimination0.
@@ -938,19 +886,6 @@ Section Typecheck.
           now apply global_ext_uctx_consistent.
   Qed.
   Next Obligation.
-    unshelve epose proof (eq_universeP _ _ _ _ _ u Universe.type0 _ _) ; tea.
-    1: admit.
-    symmetry in e0.
-    move: e0 => /orb_false_elim [] nprop nty0.
-    rewrite nty0 in X.
-    inversion X.
-    rewrite /is_allowed_elimination /is_allowed_elimination0 c in H.
-    assert (∑ v : valuation, satisfies v Σ) as [v ?] by admit.
-    specialize (H v s).
-    destruct u ; cbn in *.
-    all: try congruence.
-    assert (ev : val v t <> 0) by admit.
-    now destruct (val v t).
   Admitted.    
   Next Obligation.
     unfold is_allowed_elimination, is_allowed_elimination0.
@@ -1039,7 +974,8 @@ Section Typecheck.
     Defined.
     Next Obligation.
       eapply branch_helper in i; tea.
-      sq. destruct i as [? []].
+      sq. 
+      destruct i as [? []].
       exists ps.
       apply checking_typing ; tea.
       eapply isType_Sort ; tea.
@@ -1283,17 +1219,16 @@ Section Typecheck.
     let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     check_wfpctx_conv <- check_alpha_equality_ctx p.(pcontext) (ind_predicate_context ci mdecl idecl) ;;
     let isty : ∥ isType Σ Γ (mkApps (tInd ci p.(puinst)) (p.(pparams) ++ indices)) ∥ := _ in
-    retty <- infer_type infer (Γ ,,, pctx) _ p.(preturn) ;;
-    let '(ps; typ_pret) := retty in
-    check_is_allowed_elimination ps (ind_kelim idecl);;
+    let wfp : ∥ wf_predicate mdecl idecl p ∥ := _ in
+    ps <- infer_type infer (Γ ,,, pctx) _ p.(preturn) ;;
+    check_is_allowed_elimination ps.π1 _ (ind_kelim idecl);;
     let ptm := it_mkLambda_or_LetIn pctx p.(preturn) in
-    let wfp : wf_predicate mdecl idecl p := _ in
-    check_brs <- check_branches infer Γ HΓ ps ci mdecl idecl p indices isdecl isty
-      wfp _ _ 0 idecl.(ind_ctors) brs _ ;;
+    check_brs <- check_branches infer Γ HΓ ps.π1 ci mdecl idecl p indices isdecl isty
+      _ _ _ 0 idecl.(ind_ctors) brs _ ;;
       ret (mkApps ptm (indices ++ [c]); _) ;
 
   infer Γ HΓ (tProj (ind, n, k) c) with lookup_ind_decl ind := {
-    | TypeError t := TypeError t ;
+    | TypeError e p := raise e ;
     | Checked (mdecl;(idecl;decl))
       with inspect (nth_error idecl.(ind_projs) k) := {
         | exist None _ := raise (Msg "projection not found") ;
@@ -1331,64 +1266,142 @@ Section Typecheck.
       ret (dtype decl; _)
     } ;
 
-  infer Γ HΓ (tPrim _) := raise (Msg "Primitive types are not supported");
-
-  infer Γ HΓ _ := raise (Msg "").
-
+  infer Γ HΓ (tPrim _) := raise (Msg "Primitive types are not supported").
 
   (* tRel *)
   Next Obligation. intros; sq; now econstructor. Defined.
+  Next Obligation. intros; sq; now inversion X0. Qed.
+  (* tVar *)
+  Next Obligation. intros; sq; now inversion X0. Qed.
+  (*tEvar *)
+  Next Obligation. intros; sq; now inversion X0. Qed.
   (* tSort *)
   Next Obligation.
-    eapply (elimT wf_universe_reflect) in i.
+    symmetry in e.
+    eapply (elimT wf_universe_reflect) in e.
     sq; econstructor; tas.
   Defined.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    move: H0 e0 => /wf_universe_reflect -> //.
+  Qed.
   (* tProd *)
   Next Obligation.
     (* intros Γ HΓ t na A B Heq_t [s ?];  *)
-      sq; econstructor; cbn; easy. Defined.
+    sq; econstructor ; tea.
+    now eapply infering_sort_isType.
+  Defined.
   Next Obligation.
     (* intros Γ HΓ t na A B Heq_t [s1 ?] [s2 ?]; *)
     sq; econstructor; eassumption.
   Defined.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now eexists.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now eexists.
+  Qed.
   (* tLambda *)
   Next Obligation.
     (* intros Γ HΓ t0 na A t Heq_t [s ?]; *)
-      sq; econstructor; cbn; easy.
+      sq; econstructor; tea.
+      now eapply infering_sort_isType.
   Defined.
   Next Obligation.
     (* intros Γ HΓ t0 na A t Heq_t [s ?] [B ?]; *)
       sq; econstructor; eassumption.
   Defined.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now eexists.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now eexists.
+  Qed.
   (* tLetIn *)
   Next Obligation.
     (* intros Γ HΓ t n b b_ty b' Heq_t [? ?]; *)
-      sq. econstructor; eauto.
+      sq. econstructor ; eapply infering_sort_typing ; eassumption.
   Defined.
   Next Obligation.
     (* intros Γ HΓ t n b b_ty b' Heq_t [? ?] H0; *)
-    sq; econstructor; cbn; eauto.
+    sq.
+    econstructor ; tea.
+    2: apply checking_typing ; tea.
+    all: now eapply infering_sort_isType.
   Defined.
   Next Obligation.
     (* intros Γ HΓ t n b b_ty b' Heq_t [? ?] H0 [? ?]; *)
     sq; econstructor; eassumption.
   Defined.
-
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now eexists.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now eexists.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now eexists.
+  Qed.
   (* tApp *)
-  Next Obligation. simpl; eauto using validity_wf. Qed.
+  Next Obligation.
+    eapply validity_wf ; tea.
+    sq.
+    now apply infering_typing.
+  Qed.
   Next Obligation.
     cbn in *; sq.
-    eapply type_reduction_closed in X1 ; try eassumption.
-    eapply validity in X1 ; try assumption. destruct X1 as [s HH].
+    eapply infering_typing, type_reduction_closed, validity in X2.
+    2-4: tea.
+    destruct X2 as [s HH].
     eapply inversion_Prod in HH ; try assumption.
     destruct HH as [s1 [_ [HH _]]].
     eexists. eassumption.
   Defined.
   Next Obligation.
-    cbn in *; sq; eapply type_App'.
-    2: eassumption.
-    eapply type_reduction_closed; eassumption.
+    sq.
+    econstructor ; tea.
+    now econstructor.
   Defined.
+  Next Obligation.
+    sq. apply p. sq.
+    inversion X0 ; subst.
+    eapply infering_prod_infering in X5 as (na'&A'&B'&[]); tea.
+    inversion X6 ; tea ; subst.
+    econstructor ; tea.
+    etransitivity ; tea.
+    eapply equality_eq_le.
+    etransitivity ; tea.
+    eapply equality_Prod_Prod_inv.
+    etransitivity.
+    1: symmetry.
+    all: now eapply red_equality.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    eapply infering_prod_infering in X2 as (na'&A'&B'&[]) ; tea.
+    now do 3 eexists.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now inversion X1.
+  Qed.
 
   (* tConst *)
   Next Obligation.
@@ -1396,29 +1409,81 @@ Section Typecheck.
     symmetry in HH.
     etransitivity. eassumption. reflexivity.
   Defined.
+  Next Obligation.
+    sq. apply p.
+    now inversion X0.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    rewrite isdecl in e0.
+    congruence.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    rewrite isdecl in e0.
+    congruence.
+  Qed.
 
   (* tInd *)
   Next Obligation.
     sq; econstructor; eassumption.
   Defined.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    epose proof (H := declared_inductive_unique_sig isdecl X2).
+    now injection H.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    now do 2 eexists.
+  Qed.
 
   (* tConstruct *)
   Next Obligation.
     sq; econstructor; tea. split ; tea.
     now symmetry.
   Defined.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    epose proof (H := declared_inductive_unique_sig isdecl decl).
+    now injection H.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    epose proof (H := declared_inductive_unique_sig isdecl decl).
+    injection H.
+    intros ; subst.
+    destruct isdecl.
+    cbn in *.
+    congruence.
+  Qed.
+  Next Obligation.
+    sq. apply p.
+    inversion X0 ; subst.
+    do 2 eexists.
+    exact isdecl.
+  Qed.
 
   (* tCase *)
-  Next Obligation. sq. cbn. eapply validity in X as []; eauto.
+  Next Obligation.
+    sq.
+    eapply infering_typing, validity in X as []; eauto.
     eexists; eauto using validity_wf.
   Defined.
-  Next Obligation. cbn in *.
+  Next Obligation.
     rewrite List.rev_involutive.
-    sq. eapply weaken_wf_local => //.
-    rewrite subst_instance_smash; eapply wf_local_smash_context.
+    sq.
+    eapply wf_rel_weak ; tea.
+    rewrite subst_instance_smash ; eapply wf_local_smash_context.
     now eapply on_minductive_wf_params.
   Qed.
-  Next Obligation. 
+  Next Obligation.
     eapply assumption_context_rev.
     apply assumption_context_subst_instance, smash_context_assumption_context; constructor.
   Qed.
@@ -1428,8 +1493,8 @@ Section Typecheck.
     apply eqb_eq in i. subst I.
     apply eqb_eq in i0.
     rewrite chop_firstn_skipn -i0 /=.
-    eapply type_reduction_closed in X3 ; tea.
-    eapply validity in X3.
+    eapply type_reduction_closed, validity in X3.
+    2: now eapply infering_typing.
     eapply isType_mkApps_Ind_inv in X3 as [pars' [args' []]]; eauto.
     eapply spine_subst_wt_terms in s.
     eapply All_impl; tea. intros ? []; auto. now exists x0.
@@ -1441,12 +1506,13 @@ Section Typecheck.
   Qed.
     
   Next Obligation.
+    (*todo: factor*)
     sq.
     apply eqb_eq in i. subst I.
     eapply eqb_eq in i0.
     rewrite chop_firstn_skipn -i0 /=.
-    eapply type_reduction_closed in X3; tea.
-    eapply validity in X3.
+    eapply type_reduction_closed, validity in X3.
+    2: now eapply infering_typing.
     eapply isType_mkApps_Ind_inv in X3 as [pars [argsub []]]; eauto.
     rewrite subst_instance_smash /= in wt_params.
     eapply ctx_inst_smash in wt_params.
@@ -1494,7 +1560,7 @@ Section Typecheck.
       rewrite -(subst_context_smash_context _ _ []).
       rewrite -(spine_subst_inst_subst X3).
       rewrite - !smash_context_subst /= !subst_context_nil.
-      unshelve eapply compare_global_instance_sound in i2; pcuic.
+      eapply compare_global_instance_sound in i2; pcuic.
       eapply (inductive_cumulative_indices X0); tea.
   Qed.
   
@@ -1509,44 +1575,42 @@ Section Typecheck.
     sq.
     apply eqb_eq in i. subst ind'.
     eapply eqb_eq in i0.
-    eapply type_reduction_closed in cty; tea.
-    eapply validity in cty.
-    eapply isType_mkApps_Ind_inv in cty as [pars [argsub []]] ; eauto.
-    eapply wf_case_predicate_context; tea.
-    eapply eq_context_gen_wf_predicate; eauto.
-    rewrite -(All2_length eq_params).
-    subst params chop_args.
-    now rewrite chop_firstn_skipn /= -e i0.
-  Qed.
-
-  Next Obligation.
-    intros. simpl in *. clearbody isty.
-    destruct cty as [A cty]. cbn in *.
-    subst ind' u args mdecl idecl isdecl.
-    destruct I as [ind' [u [args []]]].
-    destruct d as [mdecl [idecl isdecl]].
-    cbn in *.
-    sq.
-    apply eqb_eq in i. subst ind'.
-    eapply eqb_eq in i0.
-    eapply type_reduction_closed in cty; tea.
-    eapply validity in cty.
-    eapply isType_mkApps_Ind_inv in cty as [pars [argsub []]] ; eauto.
     eapply eq_context_gen_wf_predicate; tea.
     rewrite -(All2_length eq_params).
     subst params chop_args.
-    now rewrite chop_firstn_skipn /= -e i0.
+    eapply infering_typing, type_reduction_closed, validity,
+      isType_mkApps_Ind_inv in cty as [pars [argsub []]]; tea.
+    now rewrite chop_firstn_skipn /=.
+  Qed.  
+
+  Next Obligation.
+    intros.
+    sq.
+    now eapply wf_case_predicate_context.
   Qed.
-    
+
   Next Obligation.
     intros. simpl in *.
     clearbody isty wfp.
+    destruct ps as [u' pty] ; cbn.
+    sq.
+    eapply isType_Sort_inv, validity, infering_sort_typing.
+    3: eapply wf_case_predicate_context.
+    all: eassumption.
+  Qed.
+    
+  Next Obligation.
+    intros. now sq.
+  Qed.
+
+  Next Obligation.
+    intros. cbn in *.
+    destruct ps ; cbn in *.
     now sq.
   Qed.
 
   Next Obligation.
-    intros. simpl in *.
-    clearbody isty wfp.
+    intros. cbn in *.
     sq.
     now eapply All2_fold_All2 in check_wfpctx_conv.
   Qed.
@@ -1559,49 +1623,73 @@ Section Typecheck.
   Qed.
 
   Next Obligation.
-    intros; cbn in *. clearbody isty wfp.
-    destruct cty as [A cty]. cbn in *.
+    intros; clearbody isty wfp.
+    destruct cty as [A cty].
     subst ind' u args mdecl idecl isdecl.
     destruct I as [ind' [u [args []]]].
     destruct d as [mdecl [idecl isdecl]].
-    sq.
+    destruct ps as [ps ?].
     cbn in *.
+    sq.
     apply eqb_eq in i. subst ind'.
     eapply eqb_eq in i0.
     eapply eqb_eq in i1.
-    econstructor; eauto; pcuic.
-    - now eapply All2_fold_All2 in check_wfpctx_conv.
-    - eapply isType_mkApps_Ind_smash_inv in isty as [sp cu']; tea.
-      eapply spine_subst_ctx_inst in sp.
-      now eapply ctx_inst_smash.
-    - eapply type_reduction_closed in cty. 2:tea.
-      eapply type_equality; tea.
-      eapply equality_mkApps_eq => //. fvs. constructor => //.
-      unshelve eapply compare_global_instance_sound in i2; tea; pcuic.
-      subst params indices chop_args.
-      rewrite chop_firstn_skipn in isty, eq_params |- *.
-      rewrite -{1}(firstn_skipn (ci_npar ci) args).
-      eapply All2_app => //.
-      eapply validity in cty.
-      eapply isType_mkApps_Ind_smash_inv in cty as []; tea.
-      eapply spine_subst_wt_terms in s.
-      eapply All2_app_inv. 2:erewrite !firstn_skipn. reflexivity.
-      now eapply wt_terms_equality.
-    - now eapply All2_fold_All2 in check_wfpctx_conv.
-    - eapply isType_mkApps_Ind_smash_inv in isty as [sp cu']; tea.
-      eapply spine_subst_ctx_inst in sp.
-      now eapply ctx_inst_smash.
-    - now eapply negb_true_iff in check_coind.
-    - red. eapply All2_Forall2.
+    rewrite /indices /chop_args chop_firstn_skipn /=.
+    assert (wf_branches idecl brs).
+    {
+      red. eapply All2_Forall2.
       clear - check_brs.
-      induction check_brs; constructor; auto. sq.
+      induction check_brs; constructor; auto.
       destruct r0. 
       solve_all.
       eapply eq_context_gen_wf_branch.
       now eapply All2_fold_All2.
-    - eapply All2i_impl; tea.
-      cbn; intros; intuition auto. pcuic.
+    }
+    econstructor ; tea.
+    - now eapply All2_fold_All2 in check_wfpctx_conv.
+    - now eapply wf_local_rel_wf_local_bd, wf_local_app_inv, wf_case_predicate_context.
+    - now econstructor.
+    - eapply ctx_inst_bd_typing ; tea.
+      eapply ctx_inst_smash.
+      now rewrite subst_instance_smash /= in wt_params.
+    - eapply equality_forget_cumul, equality_mkApps_eq.
+      1-3: fvs.
+      + constructor.
+        eapply compare_global_instance_sound ; tea.
+        pcuic.
+      + have ea : args = (params ++ skipn (ci_npar ci) args) by
+          rewrite -{1}(firstn_skipn (ci_npar ci) args) /params /chop_args chop_firstn_skipn //.
+        rewrite {1}ea.
+        eapply All2_app ; tea.
+        eapply wt_terms_equality.
+        eapply infering_typing, validity in cty ; tea.
+        eapply isType_red in cty.
+        2: exact c0.
+        eapply isType_mkApps_Ind_smash_inv in cty as [s' _]; tea.
+        eapply spine_subst_wt_terms in s'.
+        rewrite ea in s'.
+        now eapply All_app.
+    - now eapply negbTE.
+    - eapply All2i_impl.
+      1: eapply All2i_prod.
+      1: eassumption.
+      1:{
+        eapply wf_case_branches_types' ; tea.
+        - apply infering_sort_typing ; tea.
+          now eapply wf_case_predicate_context.
+        - now eapply All2_fold_All2.
+      }
+      cbn ; intros ? ? ? [? []] ; intuition auto.
+      now eapply wf_local_rel_wf_local_bd, wf_local_app_inv.
   Qed.
+  Next Obligation.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    apply p0. sq.
+  Admitted.
+  Next Obligation.
+
 
   Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
 

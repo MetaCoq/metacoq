@@ -635,7 +635,7 @@ Proof.
         [left|right]; aa.
 Qed.
 
-Hint Unfold CS.For_all : univ_subst.
+#[global] Hint Unfold CS.For_all : univ_subst.
 
 Definition sub_context_set (φ φ' : ContextSet.t)
   := LS.Subset φ.1 φ'.1 /\ CS.Subset φ.2 φ'.2.
@@ -982,7 +982,7 @@ Proof.
     setoid_rewrite subst_instance_lift.
     now rewrite -map_map_compose IHΓ.
 Qed.
-Hint Rewrite subst_instance_extended_subst : substu.
+#[global] Hint Rewrite subst_instance_extended_subst : substu.
 
 Lemma expand_lets_subst_instance u Γ t :
   subst_instance u (expand_lets Γ t) =
@@ -992,7 +992,7 @@ Proof.
   rewrite subst_instance_subst subst_instance_lift.
   now rewrite subst_instance_extended_subst /=; len.
 Qed.
-Hint Rewrite expand_lets_subst_instance : substu.
+#[global] Hint Rewrite expand_lets_subst_instance : substu.
 
 Global Instance subst_instance_predicate : UnivSubst (predicate term)
   := fun u => map_predicate (subst_instance u) (subst_instance u) (subst_instance u) id.
@@ -1139,7 +1139,7 @@ Proof.
   f_equal. apply IHn.
 Qed.
 
-Hint Rewrite subst_instance_subst_context subst_instance_lift_context
+#[global] Hint Rewrite subst_instance_subst_context subst_instance_lift_context
   subst_instance_lift subst_instance_mkApps
   subst_instance_subst
   subst_instance_it_mkProd_or_LetIn
@@ -1259,7 +1259,7 @@ Proof.
   rewrite subst_instance_lift. len; f_equal.
 Qed.
 
-Hint Rewrite subst_instance_expand_lets closedn_subst_instance : substu.
+#[global] Hint Rewrite subst_instance_expand_lets closedn_subst_instance : substu.
 
 Lemma subst_instance_expand_lets_ctx u Γ Δ :
   subst_instance u (expand_lets_ctx Γ Δ) = 
@@ -1267,7 +1267,7 @@ Lemma subst_instance_expand_lets_ctx u Γ Δ :
 Proof.
   now rewrite /expand_lets_ctx /expand_lets_k_ctx; substu; len.
 Qed.
-Hint Rewrite subst_instance_expand_lets_ctx : substu.
+#[global] Hint Rewrite subst_instance_expand_lets_ctx : substu.
 
 Lemma forget_types_subst_instance l ctx :
   forget_types (subst_instance l ctx) = forget_types ctx.

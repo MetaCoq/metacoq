@@ -469,7 +469,7 @@ Proof.
   intros φ1 φ2 H H2 c Hc; now apply H2, H.
 Qed.
 
-Hint Resolve subst_instance_cstrs_two
+#[global] Hint Resolve subst_instance_cstrs_two
      satisfies_equal_sets satisfies_subsets : univ_subst.
 
 Lemma val0_subst_instance_level u l v
@@ -728,7 +728,7 @@ Proof.
     eapply consistent_ext_trans_polymorphic_cases; eassumption.
 Qed.
 
-Hint Resolve consistent_ext_trans : univ_subst.
+#[global] Hint Resolve consistent_ext_trans : univ_subst.
 
 Lemma consistent_instance_valid_constraints {cf : checker_flags} Σ φ u univs :
   wf_ext_wk (Σ, φ) ->
@@ -755,7 +755,7 @@ Proof.
     rewrite equal_subst_instance_cstrs_mono; aa.
 Qed.
 
-Hint Resolve consistent_instance_valid_constraints : univ_subst.
+#[global] Hint Resolve consistent_instance_valid_constraints : univ_subst.
 
 Class SubstUnivPreserved {cf : checker_flags} {A} `{UnivSubst A} (R : ConstraintSet.t -> crelation A)
   := Build_SubstUnivPreserved :
@@ -1332,7 +1332,7 @@ Proof.
   unfold wf_branches, wf_branches_gen.
   intros h. solve_all.
 Qed.
-Hint Resolve subst_instance_wf_predicate
+#[global] Hint Resolve subst_instance_wf_predicate
   subst_instance_wf_branch subst_instance_wf_branches : pcuic.
 
 Lemma subst_instance_predicate_set_pparams u p params :

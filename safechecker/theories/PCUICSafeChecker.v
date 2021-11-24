@@ -33,6 +33,155 @@ Ltac Coq.Program.Tactics.program_solve_wf ::=
                 end
   end.
 
+Section OnUdecl.
+  Context {cf:checker_flags}.
+
+  Lemma In_unfold_inj {A} (f : nat -> A) n i : 
+    (forall i j, f i = f j -> i = j) ->
+    In (f i) (unfold n f) <-> i < n.
+  Proof.
+    intros hf. split.
+    now apply In_unfold_inj.
+    intros.
+    induction n in i, H |- *; simpl => //. lia.
+    eapply in_app_iff.
+    destruct (eq_dec i n). subst. right; left; auto.
+    left. eapply IHn. lia.
+  Qed.
+
+  Lemma In_Var_global_ext_poly {n Σ inst cstrs} : 
+    n < #|inst| ->
+    LevelSet.mem (Level.Var n) (global_ext_levels (Σ, Polymorphic_ctx (inst, cstrs))).
+  Proof.
+    intros Hn.
+    unfold global_ext_levels; simpl.
+      apply LevelSet.mem_spec; rewrite LevelSet.union_spec. left.
+    rewrite /AUContext.levels /= mapi_unfold.
+    apply LevelSetProp.of_list_1, InA_In_eq.
+    eapply In_unfold_inj; try congruence.
+  Qed.
+  
+  Lemma on_udecl_poly_bounded Σ inst cstrs :
+    wf Σ ->
+    on_udecl Σ (Polymorphic_ctx (inst, cstrs)) ->
+    closedu_cstrs #|inst| cstrs.
+  Proof.
+    rewrite /on_udecl. intros wfΣ [_ [nlevs _]].
+    red.
+    rewrite /closedu_cstrs.
+    intros x incstrs. simpl in nlevs.
+    specialize (nlevs x incstrs).
+    destruct x as [[l1 p] l2].
+    destruct nlevs.
+    apply LevelSetProp.Dec.F.union_1 in H.
+    apply LevelSetProp.Dec.F.union_1 in H0.
+    destruct H. eapply LSet_in_poly_bounded in H.
+    destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
+    eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
+    now rewrite H H0.
+    eapply (LSet_in_global_bounded #|inst|) in H => //. simpl.
+    destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
+    eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
+    now rewrite H H0.
+  Qed.
+ 
+  Lemma subst_instance_level_lift inst l : 
+    closedu_level #|inst| l ->
+    subst_instance_level (lift_instance #|inst| (level_var_instance 0 inst)) l = lift_level #|inst| l.
+  Proof.
+    destruct l => // /= /Nat.ltb_lt ltn.
+    rewrite nth_nth_error.
+    destruct nth_error eqn:eq. move:eq.
+    rewrite nth_error_map /level_var_instance [mapi_rec _ _ _]mapi_unfold (proj1 (nth_error_unfold _ _ _) ltn).
+    simpl. now intros [=].
+    eapply nth_error_None in eq. len in eq. lia.
+  Qed.
+  
+  Lemma subst_instance_level_var_instance inst l : 
+    closedu_level #|inst| l ->
+    subst_instance_level (level_var_instance 0 inst) l = l.
+  Proof.
+    destruct l => // /= /Nat.ltb_lt ltn.
+    rewrite /level_var_instance.
+    rewrite nth_nth_error.
+    now rewrite /level_var_instance [mapi_rec _ _ _]mapi_unfold (proj1 (nth_error_unfold _ _ _) ltn).
+  Qed.
+
+  Lemma variance_universes_spec Σ ctx v univs u u' : 
+    wf_ext (Σ, ctx) ->
+    wf_ext (Σ, univs) ->
+    variance_universes ctx v = Some (univs, u, u') ->
+    consistent_instance_ext (Σ, univs) ctx u ×
+    consistent_instance_ext (Σ, univs) ctx u'.
+  Proof.
+    intros wfctx wfext.
+    unfold variance_universes. destruct ctx as [|[inst cstrs]] => //.
+    intros [= eq].
+    set (vcstrs := ConstraintSet.union _ _) in *.
+    subst univs. simpl.
+    subst u u'. autorewrite with len.
+    repeat (split; auto).
+    - rewrite forallb_map /level_var_instance.
+      rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
+      intros x Hx. apply In_Var_global_ext_poly. len.
+    - destruct wfext as [onΣ onu]. simpl in *.
+      destruct onu as [_ [_ [_ sat]]].
+      do 2 red in sat.
+      unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
+      red. destruct check_univs => //.
+      unfold valid_constraints0.
+      intros val vsat.
+      destruct sat as [val' allsat].
+      red.
+      intro. red in vsat.
+      specialize (vsat x). intros hin. apply vsat.
+      unfold global_ext_constraints. simpl.
+      rewrite ConstraintSet.union_spec; left.
+      rewrite /vcstrs !ConstraintSet.union_spec.
+      left. right.
+      rewrite In_lift_constraints.
+      rewrite -> In_subst_instance_cstrs in hin.
+      destruct hin as [c' [eqx inc']]. clear vsat.
+      subst x. eexists. unfold subst_instance_cstr.
+      unfold lift_constraint. split; eauto. destruct c' as [[l comp] r].
+      simpl.
+      destruct wfctx as [_ wfctx]. simpl in wfctx.
+      eapply on_udecl_poly_bounded in wfctx; auto.
+      specialize (wfctx _ inc'). simpl in wfctx.
+      move/andP: wfctx => [cll clr].
+      rewrite !subst_instance_level_lift //.
+    - rewrite /level_var_instance.
+      rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
+      intros x Hx. apply In_Var_global_ext_poly. len.
+    - destruct wfext as [onΣ onu]. simpl in *.
+      destruct onu as [_ [_ [_ sat]]].
+      do 2 red in sat.
+      unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
+      red. destruct check_univs => //.
+      unfold valid_constraints0.
+      intros val vsat.
+      destruct sat as [val' allsat].
+      red.
+      intro. red in vsat.
+      specialize (vsat x). intros hin. apply vsat.
+      unfold global_ext_constraints. simpl.
+      rewrite ConstraintSet.union_spec; left.
+      rewrite /vcstrs !ConstraintSet.union_spec.
+      left. left.
+      rewrite -> In_subst_instance_cstrs in hin.
+      destruct hin as [c' [eqx inc']]. clear vsat.
+      subst x.
+      destruct c' as [[l comp] r].
+      simpl.
+      destruct wfctx as [_ wfctx]. simpl in wfctx.
+      eapply on_udecl_poly_bounded in wfctx; auto.
+      specialize (wfctx _ inc'). simpl in wfctx.
+      move/andP: wfctx => [cll clr]. rewrite /subst_instance_cstr /=.
+      rewrite !subst_instance_level_var_instance //.
+  Qed.
+
+End OnUdecl.
+
 Section CheckEnv.
   Context {cf:checker_flags}.
 
@@ -63,31 +212,6 @@ Section CheckEnv.
     destruct (eqb_spec id k); [discriminate|].
     easy.
   Defined.
-      
-  Definition check_variance univs (variances : option (list Variance.t)) :=
-    match variances with
-    | None => true
-    | Some v =>
-      match univs with
-      | Monomorphic_ctx _ => false
-      | Polymorphic_ctx auctx => eqb #|v| #|UContext.instance (AUContext.repr auctx)|
-      end
-    end.
-
-  Definition Build_on_inductive_sq {Σ ind mdecl}
-    : ∥ Alli (on_ind_body (lift_typing typing) Σ ind mdecl) 0 (ind_bodies mdecl) ∥ ->
-      ∥ wf_local Σ (ind_params mdecl) ∥ ->
-      context_assumptions (ind_params mdecl) = ind_npars mdecl ->
-      check_variance (ind_universes mdecl) (ind_variance mdecl) ->
-      ∥ on_inductive (lift_typing typing) Σ ind mdecl ∥.
-  Proof.
-    intros H H0 H1 H2. sq. econstructor; try eassumption.
-    unfold check_variance in H2. unfold on_variance.
-    destruct (ind_universes mdecl) eqn:E;
-    destruct (ind_variance mdecl) eqn:E'; try congruence.
-    2:split. now eapply eqb_eq in H2.
-  Defined.
-
 
   (* We pack up all the information required on the global environment and graph in a 
     single record. *)
@@ -1194,150 +1318,6 @@ Section CheckEnv.
       Qed.
   End PositivityCheck.
 
-  Lemma In_unfold_inj {A} (f : nat -> A) n i : 
-    (forall i j, f i = f j -> i = j) ->
-    In (f i) (unfold n f) <-> i < n.
-  Proof.
-    intros hf. split.
-    now apply In_unfold_inj.
-    intros.
-    induction n in i, H |- *; simpl => //. lia.
-    eapply in_app_iff.
-    destruct (eq_dec i n). subst. right; left; auto.
-    left. eapply IHn. lia.
-  Qed.
-
-  Lemma In_Var_global_ext_poly {n Σ inst cstrs} : 
-    n < #|inst| ->
-    LevelSet.mem (Level.Var n) (global_ext_levels (Σ, Polymorphic_ctx (inst, cstrs))).
-  Proof.
-    intros Hn.
-    unfold global_ext_levels; simpl.
-      apply LevelSet.mem_spec; rewrite LevelSet.union_spec. left.
-    rewrite /AUContext.levels /= mapi_unfold.
-    apply LevelSetProp.of_list_1, InA_In_eq.
-    eapply In_unfold_inj; try congruence.
-  Qed.
-  
-  Lemma on_udecl_poly_bounded Σ inst cstrs :
-    wf Σ ->
-    on_udecl Σ (Polymorphic_ctx (inst, cstrs)) ->
-    closedu_cstrs #|inst| cstrs.
-  Proof.
-    rewrite /on_udecl. intros wfΣ [_ [nlevs _]].
-    red.
-    rewrite /closedu_cstrs.
-    intros x incstrs. simpl in nlevs.
-    specialize (nlevs x incstrs).
-    destruct x as [[l1 p] l2].
-    destruct nlevs.
-    apply LevelSetProp.Dec.F.union_1 in H.
-    apply LevelSetProp.Dec.F.union_1 in H0.
-    destruct H. eapply LSet_in_poly_bounded in H.
-    destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
-    eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
-    now rewrite H H0.
-    eapply (LSet_in_global_bounded #|inst|) in H => //. simpl.
-    destruct H0. eapply LSet_in_poly_bounded in H0. simpl. now rewrite H H0.
-    eapply (LSet_in_global_bounded #|inst|) in H0 => //. simpl.
-    now rewrite H H0.
-  Qed.
- 
-  Lemma subst_instance_level_lift inst l : 
-    closedu_level #|inst| l ->
-    subst_instance_level (lift_instance #|inst| (level_var_instance 0 inst)) l = lift_level #|inst| l.
-  Proof.
-    destruct l => // /= /Nat.ltb_lt ltn.
-    rewrite nth_nth_error.
-    destruct nth_error eqn:eq. move:eq.
-    rewrite nth_error_map /level_var_instance [mapi_rec _ _ _]mapi_unfold (proj1 (nth_error_unfold _ _ _) ltn).
-    simpl. now intros [=].
-    eapply nth_error_None in eq. len in eq. lia.
-  Qed.
-  
-  Lemma subst_instance_level_var_instance inst l : 
-    closedu_level #|inst| l ->
-    subst_instance_level (level_var_instance 0 inst) l = l.
-  Proof.
-    destruct l => // /= /Nat.ltb_lt ltn.
-    rewrite /level_var_instance.
-    rewrite nth_nth_error.
-    now rewrite /level_var_instance [mapi_rec _ _ _]mapi_unfold (proj1 (nth_error_unfold _ _ _) ltn).
-  Qed.
-
-  Lemma variance_universes_spec Σ ctx v univs u u' : 
-    wf_ext (Σ, ctx) ->
-    wf_ext (Σ, univs) ->
-    variance_universes ctx v = Some (univs, u, u') ->
-    consistent_instance_ext (Σ, univs) ctx u * 
-    consistent_instance_ext (Σ, univs) ctx u'.
-  Proof.
-    intros wfctx wfext.
-    unfold variance_universes. destruct ctx as [|[inst cstrs]] => //.
-    intros [= eq].
-    set (vcstrs := ConstraintSet.union _ _) in *.
-    subst univs. simpl.
-    subst u u'. autorewrite with len.
-    repeat (split; auto).
-    - rewrite forallb_map /level_var_instance.
-      rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
-      intros x Hx. apply In_Var_global_ext_poly. len.
-    - destruct wfext as [onΣ onu]. simpl in *.
-      destruct onu as [_ [_ [_ sat]]].
-      do 2 red in sat.
-      unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
-      red. destruct check_univs => //.
-      unfold valid_constraints0.
-      intros val vsat.
-      destruct sat as [val' allsat].
-      red.
-      intro. red in vsat.
-      specialize (vsat x). intros hin. apply vsat.
-      unfold global_ext_constraints. simpl.
-      rewrite ConstraintSet.union_spec; left.
-      rewrite /vcstrs !ConstraintSet.union_spec.
-      left. right.
-      rewrite In_lift_constraints.
-      rewrite -> In_subst_instance_cstrs in hin.
-      destruct hin as [c' [eqx inc']]. clear vsat.
-      subst x. eexists. unfold subst_instance_cstr.
-      unfold lift_constraint. split; eauto. destruct c' as [[l comp] r].
-      simpl.
-      destruct wfctx as [_ wfctx]. simpl in wfctx.
-      eapply on_udecl_poly_bounded in wfctx; auto.
-      specialize (wfctx _ inc'). simpl in wfctx.
-      move/andP: wfctx => [cll clr].
-      rewrite !subst_instance_level_lift //.
-    - rewrite /level_var_instance.
-      rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
-      intros x Hx. apply In_Var_global_ext_poly. len.
-    - destruct wfext as [onΣ onu]. simpl in *.
-      destruct onu as [_ [_ [_ sat]]].
-      do 2 red in sat.
-      unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
-      red. destruct check_univs => //.
-      unfold valid_constraints0.
-      intros val vsat.
-      destruct sat as [val' allsat].
-      red.
-      intro. red in vsat.
-      specialize (vsat x). intros hin. apply vsat.
-      unfold global_ext_constraints. simpl.
-      rewrite ConstraintSet.union_spec; left.
-      rewrite /vcstrs !ConstraintSet.union_spec.
-      left. left.
-      rewrite -> In_subst_instance_cstrs in hin.
-      destruct hin as [c' [eqx inc']]. clear vsat.
-      subst x.
-      destruct c' as [[l comp] r].
-      simpl.
-      destruct wfctx as [_ wfctx]. simpl in wfctx.
-      eapply on_udecl_poly_bounded in wfctx; auto.
-      specialize (wfctx _ inc'). simpl in wfctx.
-      move/andP: wfctx => [cll clr]. rewrite /subst_instance_cstr /=.
-      rewrite !subst_instance_level_var_instance //.
-    Qed.
-
   Program Fixpoint check_wf_local (Σ : wf_env_ext) Γ : typing_result (∥ wf_local Σ Γ ∥) :=
     match Γ with
     | [] => ret (sq localenv_nil)
@@ -1511,8 +1491,42 @@ Section CheckEnv.
     now eapply isType_weaken.
   Qed.
 
+  Equations? check_variance {Σ : wf_env} (id : kername) univs (variances : option (list Variance.t))
+    (wfunivs : ∥ wf_ext (Σ, univs) ∥) : 
+    EnvCheck (∥ on_variance Σ univs variances ∥) :=
+    | id, univs, None, wfunivs := ret _
+    | id, univs, Some v, wfunivs with inspect (variance_universes univs v) := {
+      | exist (Some (univs', i, i')) eqvu =>
+        check_leq <- 
+          check_eq_true (eqb #|v| #|polymorphic_instance univs|)
+            (empty_ext Σ, IllFormedDecl (string_of_kername id) (Msg "Variance annotation does not have the right length"));;
+        Σ' <- make_wf_env_ext Σ id univs' ;;
+        ret _
+      | exist None eqvu => raise (empty_ext Σ, IllFormedDecl (string_of_kername id) (Msg "Ill-formed variance annotation")) }.
+  Proof.
+    - destruct Σ as [Σ [wfΣ] ΣG wfΣG], Σ' as [Σ' [wfΣ'] Σ'G wfΣ'G]. cbn in *; sq.
+      destruct univs => //.
+      symmetry in eqvu.
+      have wfext : wf_ext (Σ, univs').
+      { now subst. }
+      destruct (variance_universes_spec _ _ _ _ _ _ _ _ eqvu).
+      exists univs', i, i'; split => //.
+      now eapply eqb_eq in check_leq.
+    - sq. red. destruct univs; auto. exact tt.
+  Qed.
+    
+  Definition Build_on_inductive_sq {Σ ind mdecl}
+    : ∥ Alli (on_ind_body (lift_typing typing) Σ ind mdecl) 0 (ind_bodies mdecl) ∥ ->
+      ∥ wf_local Σ (ind_params mdecl) ∥ ->
+      context_assumptions (ind_params mdecl) = ind_npars mdecl ->
+      ∥ on_variance Σ (ind_universes mdecl) (ind_variance mdecl) ∥ -> 
+      ∥ on_inductive (lift_typing typing) Σ ind mdecl ∥.
+  Proof.
+    intros H H0 H1 H2. sq. econstructor; try eassumption.
+  Defined.
+
   Program Definition check_cstr_variance (Σ : wf_env) mdecl (id : kername) indices
-    (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true) cs 
+    (mdeclvar : ∥ on_variance Σ mdecl.(ind_universes) mdecl.(ind_variance) ∥) cs 
     (wfΣ : ∥ wf_ext (Σ, ind_universes mdecl) ∥)
     (wfΓ : ∥ wt_indices (Σ, ind_universes mdecl) mdecl indices cs ∥) :
     EnvCheck (∥ forall v : list Variance.t,
@@ -1569,10 +1583,10 @@ Section CheckEnv.
       now constructor.
     Qed.
     Next Obligation.
-      unfold variance_universes in Heq_anonymous.
-      unfold check_variance in mdeclvar.
-      rewrite -Heq_anonymous0 in mdeclvar.
-      destruct ind_universes as [|[]] => //.
+      sq. rewrite -Heq_anonymous0 in mdeclvar.
+      symmetry in Heq_anonymous.
+      eapply (variance_universes_insts (Σ := (empty_ext Σ))) in mdeclvar as [univs' [i [i' []]]].
+      rewrite Heq_anonymous in e. discriminate.
     Qed.
 
   (** Moving it causes a universe bug... *)
@@ -1601,7 +1615,7 @@ Section CheckEnv.
     (HΣ : Σ.(wf_env_ext_env) = (Σ0, ind_universes mdecl))
     (wfar : ∥ wf_ind_types Σ mdecl ∥)
     (wfpars : ∥ wf_local Σ (ind_params mdecl) ∥)
-    (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true)    
+    (mdeclvar : ∥ on_variance Σ0 mdecl.(ind_universes) mdecl.(ind_variance) ∥)    
     (n : nat) (idecl : one_inductive_body) (indices : context)
     (hnth : nth_error mdecl.(ind_bodies) n = Some idecl)
     (heq : ∥ ∑ inds, idecl.(ind_type) = it_mkProd_or_LetIn (mdecl.(ind_params) ,,, indices) (tSort inds) ∥)
@@ -1835,7 +1849,7 @@ Section CheckEnv.
 
   Program Definition check_indices (Σ : wf_env) mdecl (id : kername)
     (wfΣ : ∥ wf_ext (Σ, ind_universes mdecl) ∥)
-    (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true)
+    (mdeclvar : ∥ on_variance Σ mdecl.(ind_universes) mdecl.(ind_variance) ∥)
     indices (wfΓ : ∥ wf_local (Σ, ind_universes mdecl) (ind_params mdecl ,,, indices) ∥) :
     EnvCheck (∥ forall v : list Variance.t,
                     mdecl.(ind_variance) = Some v ->
@@ -1875,10 +1889,9 @@ Section CheckEnv.
   Next Obligation.
     rename Heq_anonymous0 into eqvar.
     rename Heq_anonymous into eqvaru.
-    unfold variance_universes in eqvaru.
-    unfold check_variance in mdeclvar.
-    rewrite -eqvar in mdeclvar.
-    destruct (ind_universes mdecl) as [|[inst cstrs]] => //.
+    sq. rewrite -eqvar in mdeclvar.
+    eapply (variance_universes_insts (Σ := empty_ext Σ)) in mdeclvar as [univs' [i [i' []]]].
+    rewrite -eqvaru in e; discriminate.
   Qed.
 
   Program Definition check_ind_types (Σ : wf_env_ext) (mdecl : mutual_inductive_body)
@@ -1897,7 +1910,7 @@ Section CheckEnv.
       (pf : Σ.(wf_env_ext_env) = (Σ0.(wf_env_env), mdecl.(ind_universes)))
       (wfpars : ∥ wf_local Σ mdecl.(ind_params) ∥)
       (wfars : ∥ wf_ind_types Σ mdecl ∥)
-      (mdeclvar : check_variance mdecl.(ind_universes) mdecl.(ind_variance) = true)
+      (mdeclvar : ∥ on_variance Σ0 mdecl.(ind_universes) mdecl.(ind_variance) ∥)
       (i : nat) (idecl : one_inductive_body)
       (hnth : nth_error mdecl.(ind_bodies) i = Some idecl)
       : EnvCheck (∥ on_ind_body (lift_typing typing) Σ mind mdecl i idecl ∥) :=
@@ -2020,14 +2033,14 @@ Section CheckEnv.
       let wfΣ : wf_env_ext := {| wf_env_ext_env := Σ; wf_env_ext_wf := _; 
         wf_env_ext_graph := G; wf_env_ext_graph_wf := HG |} in
       let id := string_of_kername kn in
-      check_var <- wrap_error Σ id (check_eq_true (check_variance mdecl.(ind_universes) mdecl.(ind_variance)) (Msg "variance"));;
+      check_var <- check_variance (Σ := Σ0) kn (ind_universes mdecl) (ind_variance mdecl) _ ;;
       check_pars <- wrap_error Σ id (check_context_wf_env wfΣ (ind_params mdecl)) ;;
       check_npars <- wrap_error Σ id 
         (check_eq_nat (context_assumptions (ind_params mdecl))
             (ind_npars mdecl) (Msg "wrong number of parameters")) ;;
       onarities <- check_ind_types wfΣ mdecl ;;
       check_bodies <- monad_Alli_nth mdecl.(ind_bodies) (fun i oib Hoib => check_one_ind_body Σ0 wfΣ kn mdecl eq check_pars onarities check_var i oib Hoib);;
-      ret (Build_on_inductive_sq check_bodies check_pars check_npars check_var)
+      ret (Build_on_inductive_sq check_bodies check_pars check_npars _)
     end.
   Next Obligation.
     sq. unfold on_constant_decl; rewrite <- Heq_anonymous; tas.
@@ -2040,7 +2053,13 @@ Section CheckEnv.
     sq. split; auto.
   Qed.
   Next Obligation.
-    simpl. reflexivity.
+    simpl. sq. split => //.
+  Qed.
+  Next Obligation.
+    reflexivity.
+  Qed.
+  Next Obligation.
+    exact check_var.
   Qed.
   Fail Next Obligation.
 

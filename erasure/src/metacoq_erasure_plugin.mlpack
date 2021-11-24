@@ -26,6 +26,7 @@ PCUICNormal
 PCUICPosition
 PCUICPretty
 TemplateToPCUIC
+PCUICExpandLets
 
 PCUICErrors
 PCUICUnivSubst

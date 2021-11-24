@@ -69,6 +69,8 @@ src/pCUICNormal.ml
 # src/pCUICConversion.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
+src/pCUICExpandLets.mli
+src/pCUICExpandLets.ml
 
 # From SafeChecker
 src/pCUICErrors.mli

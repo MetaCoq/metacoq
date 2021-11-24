@@ -1,55 +1,36 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool Utf8 CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
+Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
+
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
-     PCUICSigmaCalculus PCUICClosed
-     PCUICWeakening PCUICUnivSubst PCUICGlobalEnv PCUICTyping PCUICGeneration
+     PCUICSigmaCalculus PCUICClosed PCUICContexts PCUICSubstitution
+     PCUICWeakeningEnv PCUICWeakening 
+     PCUICUnivSubst PCUICGlobalEnv PCUICTyping PCUICGeneration
      PCUICConversion PCUICOnFreeVars PCUICInductives
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
      PCUICSafeLemmata PCUICInductives PCUICInductiveInversion.
-
+From MetaCoq.PCUIC Require Import PCUICEquality PCUICExpandLets.
 Set Warnings "+notation_overridden".
 
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICExpandLets.
-
 Import MCMonadNotation.
 
-Import MCMonadNotation.
+Implicit Types (cf : checker_flags) (Σ : global_env_ext). (* Use {cf} to parameterize by checker_flags where needed *)
 
-Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags where needed *)
+(** Translation which expands the lets in constructor arguments contexts and the correspomding
+  branches of pattern-matchings, so that let-expansion becomse unnecessary on the resulting terms.
 
-Require Import Equations.Prop.DepElim.
-From Equations Require Import Equations.
-
-
-(** Translation from PCUIC back to template-coq terms. 
-
-  This translation is not direct due to two peculiarities of template-coq's syntax:
-  - applications are n-ary and not all terms are well-formed, so we have to 
-    use an induction on the size of derivations to transform the binary applications
-    into n-ary ones.
-  - The representation of cases in template-coq is "compact" in the sense that 
-    the predicate and branches contexts do not appear in the syntax of terms but can 
-    be canonically rebuilt on-demand, as long as the environment has a declaration for the 
-    inductive type. In contrast, PCUIC has these contexts explicitely present in terms, 
-    so that the theory of reduction (confluence) and conversion do not need to rely on any 
-    such well-formedness arguments about the global environment, considerably simplifying the theory:
-    For example one couldn't do recursive calls on such "rebuilt" contexts using simple structural
-    recursion, the new contexts having no structural relation to the terms at hand.
-
-    This means that Template-Coq's `red1` reduction of cases requires well-formedness conditions
-    not readily available in PCUIC's. We solve this conundrum using subject reduction: indeed
-    cumulativity is always called starting with two well-sorted types, and we can hence show
-    that every one-step reduction in a PCUIC cumulativity derivation goes from a well-typed term
-    to a well-typed term. We can hence prove that Template-Coq's `red1` reductions follow from the
-    untyped PCUIC reduction when restricted to well-typed terms (which have many more invariants).
-    We actually just need the term to be reduced to be well-typed to show that the interpretation 
-    preserves one-step reduction in [trans_red1}].
-*)
+  The proof of correctness is complicated by the fact that the translation is valid only on well-scoped
+  terms, at the lowest level, so we carry around `on_free_vars` hypotheses everywhere. Reduction is 
+  only preserved when we are translating well-typed terms, as it relies on even stronger invariants on the 
+  representation of cases. Finally, the let-expansion of constructor's argument contexts is shown to 
+  preserve positivity and the cumulativity relation for cumulative inductive types, which is not entirely
+  trivial. *)
 
 (** Source = PCUIC, Target = Coq *)
 Module S := PCUICAst.
@@ -127,7 +108,7 @@ Definition plengths :=
     Nat.add_0_r, @app_nil_r, 
     @map_length, @mapi_length, @mapi_rec_length,
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
-    @smash_context_length, @arities_context_length).
+    @smash_context_length, @arities_context_length, @context_assumptions_map).
   
 
 Lemma trans_on_free_vars P t : 
@@ -175,6 +156,15 @@ Proof.
   constructor; cbn; (move/andP: h => /= // || move: h) ;
   rewrite ?shiftnP_closedP ?shiftnP_xpredT //;
   intros; try now eapply trans_on_free_vars.
+Qed.
+
+Lemma trans_on_free_vars_ctx k ctx : 
+  on_free_vars_ctx (shiftnP k xpred0) ctx ->
+  on_free_vars_ctx (shiftnP k xpred0) (map_context trans ctx).
+Proof.
+  intros hctx.
+  rewrite -closedP_shiftnP. eapply on_free_vars_ctx_trans.
+  rewrite closedP_shiftnP //.
 Qed.
 
 Lemma closedP_mon n n' P i : n <= n' -> closedP n P i -> closedP n' P i.
@@ -276,7 +266,7 @@ Proof.
   apply H.
 Qed.
 
-Lemma trans_in_level_set l Σ:
+Lemma trans_in_level_set l Σ :
   LevelSet.In l (S.global_ext_levels Σ) ->
   LevelSet.In l (T.global_ext_levels (trans_global Σ)).
 Proof.
@@ -285,7 +275,7 @@ Proof.
   apply H.
 Qed.
 
-Lemma trans_lookup Σ cst :
+Lemma trans_lookup (Σ : global_env) cst :
   lookup_env (trans_global_decls Σ) cst = option_map trans_global_decl (SE.lookup_env Σ cst).
 Proof.
   cbn in *.
@@ -297,7 +287,7 @@ Proof.
     + now rewrite IHΣ.
 Qed.
 
-Lemma trans_declared_constant Σ cst decl:
+Lemma trans_declared_constant (Σ : global_env) cst decl:
   S.declared_constant Σ cst decl ->
   T.declared_constant (trans_global_decls Σ) cst (trans_constant_body decl).
 Proof.
@@ -443,7 +433,9 @@ Proof.
       replace (context_assumptions (map_context trans (bcontext x))) with
         (context_assumptions ((subst_context (List.rev (map trans (pparams pred))) 0
         (map_context trans (bcontext x))@[puinst pred]))). 2:now len.
-      cbn. erewrite <- expand_lets_subst_comm. f_equal.
+      cbn. 
+      relativize (context_assumptions (bcontext x)).
+      erewrite <- expand_lets_subst_comm. f_equal. 2:now len.
       2:now len.
       rewrite subst_context_subst_context. f_equal.
       rewrite map_rev; f_equal. solve_all. rewrite b //. solve_all. len.
@@ -454,7 +446,7 @@ Proof.
       eapply on_free_vars_ctx_impl; tea.
       intros. eapply closedP_mon; tea. lia.
   - f_equal. rewrite H0 //.
-  - f_equal. rewrite !map_map_compose. solve_all.
+  - f_equal. rewrite !map_map_compose. red in X, X0. solve_all.
     rewrite a //. solve_all.
     rewrite b1 //. solve_all.
   - f_equal. rewrite !map_map_compose. solve_all.
@@ -837,8 +829,7 @@ Proof.
   nat_compare_specs; cbn. auto. now instantiate (1 := xpredT).
   erewrite on_free_vars_lift. eapply onb.
   erewrite (trans_lift _ _); revgoals. eapply onb.
-  rewrite (IHΓ p) //. f_equal. f_equal. len.
-  now rewrite context_assumptions_map.
+  rewrite (IHΓ p) //. f_equal. f_equal. now len.
   rewrite on_free_vars_ctx_snoc => /andP[] onΓ ont.
   f_equal; eauto.
 Qed.
@@ -855,7 +846,7 @@ Proof.
   erewrite (trans_lift _) => //. 2:exact onT.
   erewrite trans_extended_subst; tea.
   rewrite /expand_lets /expand_lets_k.
-  now rewrite (context_assumptions_map Γ) map_length.
+  now len.
 Qed.
 
 Lemma trans_expand_lets p Γ T : 
@@ -866,6 +857,16 @@ Proof.
   move=> onΓ onT.
   rewrite /SE.expand_lets /SE.expand_lets_k.
   rewrite (trans_expand_lets_k p) //.
+Qed.
+
+Lemma trans_expand_lets_map p Γ T : 
+  on_free_vars_ctx p Γ ->
+  on_free_vars_terms (shiftnP #|Γ| p) T ->
+  map trans (map (expand_lets Γ) T) = map (expand_lets (trans_local Γ)) (map trans T).
+Proof.
+  move=> onΓ onT.
+  eapply forallb_All in onT. solve_all.
+  rewrite (trans_expand_lets p) //.
 Qed.
 
 Lemma alpha_eq_trans {Γ Δ} : 
@@ -879,11 +880,24 @@ Qed.
 
 Definition wt {cf} Σ Γ t := ∑ T, Σ ;;; Γ |- t : T.
 
-Lemma isType_wt {cf} Σ Γ T : isType Σ Γ T -> wt Σ Γ T.
+Lemma isType_wt {cf} {Σ Γ T} : isType Σ Γ T -> wt Σ Γ T.
 Proof.
   intros [s hs]; now exists (PCUICAst.tSort s).
 Qed.
 Coercion isType_wt : isType >-> wt.
+
+Lemma wt_wf_local {cf} {Σ} {Γ t} : wt Σ Γ t -> wf_local Σ Γ.
+Proof.
+  intros [s hs]. now eapply typing_wf_local.
+Qed.
+
+Coercion wt_wf_local : wt >-> All_local_env.
+
+Lemma wt_red {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u} : wt Σ Γ t -> red1 Σ Γ t u -> wt Σ Γ u.
+Proof.
+  intros [s hs] r. exists s.
+  eapply subject_reduction; tea. now apply red1_red.
+Qed.
 
 Section wtsub.
   Context {cf} {Σ : PCUICEnvironment.global_env_ext} {wfΣ : PCUICTyping.wf Σ}.
@@ -1109,25 +1123,43 @@ Qed.
 
 Require Import PCUICContexts.
 
-Lemma trans_inst_case_branch_context p pred i br ci mdecl cdecl :
+Lemma eq_names_smash_context Γ :
+  All2 (fun x y => decl_name x = decl_name y) (smash_context [] (trans_local Γ)) (smash_context [] Γ).
+Proof.
+  induction Γ.
+  * constructor.
+  * destruct a as [na [b|] ty]; cbn; auto.
+    rewrite smash_context_acc (smash_context_acc _ [_]). constructor; auto.
+Qed.
+
+Lemma trans_inst_case_branch_context_gen p q pred i br ci mdecl cdecl :
   let pred' := PCUICAst.map_predicate id trans trans (map_context trans) pred in
   wf_branch cdecl br ->
   on_free_vars_ctx p (ind_params mdecl) ->
   on_free_vars_ctx (shiftnP (#|ind_params mdecl| + #|ind_bodies mdecl|) xpred0)
     (cstr_args cdecl) ->
-  on_free_vars_terms p pred.(pparams) ->
-  on_free_vars_ctx p br.(bcontext) ->
+  on_free_vars_terms q pred.(pparams) ->
+  on_free_vars_ctx (shiftnP #|pred.(pparams)| xpred0) br.(bcontext) ->
   (* on_free_vars_ctx p cdecl.(cstr_args) -> *)
   All2 (compare_decls eq eq) br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
+  let br' := trans_branch pred' (map_branch trans (map_context trans) br) in
   (case_branch_context ci
-    (trans_minductive_body mdecl) pred' (forget_types (smash_context [] br.(bcontext))) (trans_constructor_body i mdecl cdecl)) =
-    (smash_context [] (trans_local (inst_case_branch_context pred br))).
+    (trans_minductive_body mdecl) pred' (forget_types br'.(bcontext)) (trans_constructor_body i mdecl cdecl)) =
+    (trans_local (smash_context [] (inst_case_branch_context pred br))).
 Proof.
   intros p' wfbr onindpars onargs onpars onbctx.
   rewrite /inst_case_branch_context.
   rewrite /inst_case_context.
   rewrite /case_branch_context /case_branch_context_gen.
-  rewrite (trans_subst_context p p).
+  rewrite (trans_smash_context q) //.
+  { eapply on_free_vars_ctx_impl. 2:eapply on_free_vars_ctx_subst_context.
+    3:rewrite forallb_rev //; tea.
+    intros i'; rewrite shiftnP0 //.
+    len. rewrite on_free_vars_ctx_subst_instance //.
+    eapply on_free_vars_ctx_impl; tea.
+    intros o. rewrite /shiftnP /=. rewrite orb_false_r.
+    repeat nat_compare_specs; auto => //. } 
+  rewrite (trans_subst_context (shiftnP #|pred.(pparams)| xpred0) q).
   { rewrite on_free_vars_ctx_subst_instance //. }
   { rewrite [on_free_vars_terms _ _]forallb_rev //. }
   intros eq.
@@ -1136,18 +1168,54 @@ Proof.
   eapply map2_set_binder_name_alpha_eq.
   { apply eq_names_subst_context.
     eapply All2_map_left.
-    rewrite -(trans_smash_context p []) //.
+    rewrite -(trans_smash_context (shiftnP #|pred.(pparams)| xpred0) []) //.
     { rewrite on_free_vars_ctx_subst_instance //. }
     eapply All2_map_right.
     rewrite -(PCUICUnivSubstitution.subst_instance_smash _ _ []).
     eapply All2_map_right; cbn.
-    eapply All2_refl. intros. reflexivity. }
+    apply eq_names_smash_context. }
   eapply alpha_eq_subst_context.
   eapply alpha_eq_subst_instance in eq.
   symmetry in eq.
   eapply alpha_eq_trans in eq.
   rewrite -(trans_cstr_branch_context_inst p i) //.
   eapply alpha_eq_smash_context. exact eq.
+Qed.
+
+Lemma alpha_eq_on_free_vars_ctx {p Γ Δ} :
+  All2 (compare_decls eq eq) Γ Δ ->
+  on_free_vars_ctx p Γ ->
+  on_free_vars_ctx p Δ.
+Proof.
+  induction 1 => //.
+  rewrite !on_free_vars_ctx_snoc=> /andP[] clx cll.
+  apply /andP; split; auto.
+  destruct r; unfold ws_decl, test_decl in *; cbn in *; subst; auto; now rewrite -(All2_length X).
+Qed.
+
+
+Lemma trans_inst_case_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ}
+  {Γ : context} {pred i br ci c mdecl idecl cdecl} :
+  let pred' := PCUICAst.map_predicate id trans trans (map_context trans) pred in
+  let br' := trans_branch pred' (map_branch trans (map_context trans) br) in
+  wf_predicate mdecl idecl pred ->
+  wf_branch cdecl br ->
+  declared_constructor Σ (ci, c) mdecl idecl cdecl ->
+  on_free_vars_terms (shiftnP #|Γ| xpred0) pred.(pparams) ->
+  All2 (compare_decls eq eq) br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
+  (case_branch_context ci
+    (trans_minductive_body mdecl) pred' (forget_types br'.(bcontext)) (trans_constructor_body i mdecl cdecl)) =
+    (trans_local (smash_context [] (inst_case_branch_context pred br))).
+Proof.
+  intros pred' br' wfp wfbr declc onps com.
+  eapply (trans_inst_case_branch_context_gen xpred0 (shiftnP #|Γ| xpred0)) => //.
+  eapply closed_ctx_on_free_vars; eapply (declared_inductive_closed_params declc).
+  rewrite -closedn_ctx_on_free_vars. rewrite Nat.add_comm; eapply (declared_constructor_closed_args declc).
+  eapply alpha_eq_on_free_vars_ctx. symmetry; tea.
+  rewrite -closedn_ctx_on_free_vars.
+  relativize #|pparams pred|. eapply (closed_cstr_branch_context declc).
+  rewrite (wf_predicate_length_pars wfp).
+  now rewrite (declared_minductive_ind_npars declc).
 Qed.
 
 Lemma context_assumptions_map2_set_binder_name nas Γ :
@@ -1160,18 +1228,6 @@ Proof.
 Qed.
 
 Require Import PCUICSpine.
-
-(* Lemma case_branch_context_assumptions ind mdecl cdecl p (br : branch term) :
-  Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) (cstr_args cdecl) ->
-  context_assumptions (case_branch_context ind mdecl cdecl p br) = context_assumptions (cstr_args cdecl).
-Proof.
-  rewrite /case_branch_context /case_branch_context_gen.
-  intros Hforall.
-  rewrite context_assumptions_map2_set_binder_name. len.
-  eapply (Forall2_length Hforall).
-  now do 3 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context ?context_assumptions_subst_instance 
-    /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx.
-Qed. *)
 
 Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
   SE.context_assumptions (PCUICCases.cstr_branch_context ci mdecl cdecl) =
@@ -1270,7 +1326,7 @@ Proof.
 Qed.
 
 Require Import Morphisms.
-Instance map2_Proper {A B C} : Morphisms.Proper (pointwise_relation A (pointwise_relation B (@eq C)) ==> eq ==> eq ==> eq) map2.
+#[global] Instance map2_Proper {A B C} : Morphisms.Proper (pointwise_relation A (pointwise_relation B (@eq C)) ==> eq ==> eq ==> eq) map2.
 Proof.
   intros f g Hfg ? ? -> ? ? ->.
   eapply PCUICNameless.map2_ext, Hfg.
@@ -1366,7 +1422,7 @@ Qed.
 #[local] Hint Resolve declared_inductive_closed_indices : pcuic.
 
 Lemma trans_case_predicate_context {cf} {Σ : PCUICEnvironment.global_env_ext}
-  {wfΣ : PCUICTyping.wf Σ} Γ ci mdecl idecl p : 
+  {wfΣ : PCUICTyping.wf Σ} {Γ ci mdecl idecl p} : 
   S.declared_inductive Σ ci mdecl idecl ->
   S.consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p) → 
   let parctx := (PCUICEnvironment.ind_params mdecl)@[PCUICAst.puinst p] in
@@ -1454,17 +1510,6 @@ Proof.
   now rewrite !List.skipn_length map_length.
 Qed.
 
-Lemma alpha_eq_on_free_vars_ctx {p Γ Δ} :
-  All2 (compare_decls eq eq) Γ Δ ->
-  on_free_vars_ctx p Γ ->
-  on_free_vars_ctx p Δ.
-Proof.
-  induction 1 => //.
-  rewrite !on_free_vars_ctx_snoc=> /andP[] clx cll.
-  apply /andP; split; auto.
-  destruct r; unfold ws_decl, test_decl in *; cbn in *; subst; auto; now rewrite -(All2_length X).
-Qed.
-
 Lemma on_free_vars_ctx_cstr_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {c mdecl idecl cdecl} :
   declared_constructor Σ c mdecl idecl cdecl ->
   on_free_vars_ctx (shiftnP (context_assumptions (ind_params mdecl)) xpred0) 
@@ -1492,15 +1537,210 @@ Proof.
   - now eapply typing_spine_wt. 
 Qed.
 
-Lemma red_expand_lets_ctx (Σ : global_env) Γ Δ s s' Δ' t :
-  All2 (red Σ Γ) s s' ->
-  red Σ (Γ ,,, subst_context s 0 (smash_context [] Δ))
-    (expand_lets (subst_context s 0 Δ') t) 
-    (expand_lets (subst_context s' 0 Δ') t).
+Lemma red_expand_lets {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ t t' :
+  Σ ;;; Γ ,,, Δ ⊢ t ⇝ t' ->
+  Σ ;;; Γ ,,, smash_context [] Δ ⊢ expand_lets Δ t ⇝ expand_lets Δ t'.
 Proof.
   intros reds.
+  rewrite /expand_lets /expand_lets_k. cbn.
+  eapply (untyped_closed_red_subst (Γ := _ ,,, _) (Γ' := [])).
+  eapply untyped_subslet_extended_subst; tea.
+  len => /=. rewrite -shiftnP_add. rewrite foron_free_vars_extended_subst //.
+  now move/PCUICAlpha.is_closed_context_app_right: (clrel_ctx reds).
+  relativize #|Δ|. relativize (context_assumptions Δ).
+  eapply weakening_closed_red; tea. all:try now len. 2:reflexivity.
+  eapply is_closed_context_smash_end; fvs.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICConfluence PCUICNormal.
+
+Lemma red_context_rel_assumptions {cf} {Σ : global_env_ext} {Γ Δ Δ'} :
+  red_context_rel Σ Γ Δ Δ' -> context_assumptions Δ = context_assumptions Δ'.
+Proof.
+  induction 1; cbn; auto. destruct p; cbn; auto. lia.
+Qed.
+
+Lemma equality_expand_lets {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {le} {Δ} {T T'} : 
+  Σ ;;; Γ ,,, Δ ⊢ T ≤[le] T' ->
+  Σ ;;; Γ ,,, smash_context [] Δ ⊢ expand_lets Δ T ≤[le] expand_lets Δ T'.
+Proof.
+  intros cum.
+  pose proof (equality_is_closed_context cum).
+  eapply (weakening_equality (Γ'' := smash_context [] Δ)) in cum; tea.
+  rewrite /expand_lets /expand_lets_k.
+  eapply (PCUICConversion.untyped_substitution_equality (Γ'' := [])) in cum; tea. len in cum; tea.
+  simpl.
+  len.
+  now eapply PCUICContexts.untyped_subslet_extended_subst.
+  len. cbn. rewrite -shiftnP_add.
+  rewrite foron_free_vars_extended_subst //.
+  now move: H; rewrite on_free_vars_ctx_app => /andP[].
+  now eapply is_closed_context_smash_end.
+Qed.
+
+Lemma red_terms_lift {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ ts us} : 
+  is_closed_context (Γ ,,, Δ) ->
+  red_terms Σ Γ ts us ->
+  red_terms Σ (Γ ,,, Δ) (map (lift0 #|Δ|) ts) (map (lift0 #|Δ|) us).
+Proof.
+  intros r. solve_all.
+  eapply (weakening_closed_red (Γ' := [])) => //.
+Qed.
+
+Lemma onfvs_app Γ Δ : is_closed_context (Γ ,,, Δ) -> 
+  is_closed_context Γ /\ on_free_vars_ctx (shiftnP #|Γ| xpred0) Δ.
+Proof.
+  now rewrite on_free_vars_ctx_app => /andP.
+Qed.
+
+Lemma untyped_subslet_context_equality {cf} {Γ Γ' Δ Δ'} {s} :
+  untyped_subslet (Γ ,,, Δ) s Γ' ->
+  untyped_subslet (Γ ,,, Δ') s Γ'.
+Proof.
+  induction 1; constructor; auto.
+Qed.
+  
+Lemma weakening_is_closed_context Γ Δ : 
+  is_closed_context (Γ ,,, Δ) ->
+  is_closed_context (Γ ,,, smash_context [] Δ ,,, lift_context (context_assumptions Δ) 0 Δ).
+Proof.
+  move=> cl. rewrite on_free_vars_ctx_app.
+  apply/andP; split.
+  now eapply is_closed_context_smash_end.
+  eapply on_free_vars_ctx_lift_context0.
+  len => /=. rewrite -shiftnP_add addnP_shiftnP.
+  now move/PCUICAlpha.is_closed_context_app_right: cl.
+Qed.
+
+Lemma red_context_rel_conv_extended_subst {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} :
+  is_closed_context (Γ ,,, Δ) ->
+  is_closed_context (Γ ,,, Δ') ->
+  red_context_rel Σ Γ Δ Δ' ->
+  red_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
+  context_equality_rel false Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+Proof.
+  intros wfl wfr cum.
+  assert (is_closed_context (Γ ,,, smash_context [] Δ)).
+  { eapply is_closed_context_smash_end in wfl. eauto with fvs. }
+  induction cum in |- *; simpl; auto.
+  - split; constructor => //. constructor.
+  - depelim p; simpl.
+    move: wfl => /= /on_free_vars_ctx_snoc_ass_inv [] wfl clT.
+    move: wfr => /= /on_free_vars_ctx_snoc_ass_inv [] wfr clT';
+    specialize (IHcum wfl wfr) as [conv cum'];
+    try assert (is_closed_context (Γ,,, smash_context [] Γ0)) by
+      (rewrite /= smash_context_acc /= on_free_vars_ctx_snoc in H; now move/andP: H) => //.
+    all:auto.
+    * split; try constructor; auto.
+      + eapply into_closed_red => //. cbn. len. now cbn.
+      + rewrite !(lift_extended_subst _ 1).
+        move: H.
+        rewrite /= ![smash_context [_] _]smash_context_acc /= /map_decl /= => ha.
+        eapply (red_terms_lift (Δ := [_])) => //.
+      + now move/onfvs_app: H.
+      + move: H; simpl; rewrite /= !(smash_context_acc _ [_]) /=;
+        constructor; auto.
+        apply cum'. rewrite /map_decl /=.
+        constructor; auto.
+        eapply into_closed_red in r; fvs.
+        eapply red_equality in r.
+        eapply equality_expand_lets in r; tea.
+        etransitivity;tea. rewrite /expand_lets /expand_lets_k. simpl.
+        rewrite -(length_of cum).
+        rewrite -(red_context_rel_assumptions cum).
+        move: (PCUICSubstitution.context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
+        change (Γ ,,, smash_context [] Γ0) with (Γ ,,, smash_context [] Γ0 ,,, []).
+        eapply (untyped_substitution_equality_subst_conv (Γ' := [])); tea.
+        now eapply red_terms_equality_terms in conv.
+        3:eapply PCUICContexts.untyped_subslet_extended_subst.
+        3:{ eapply untyped_subslet_context_equality.
+            now eapply untyped_subslet_extended_subst. }
+        now eapply weakening_is_closed_context.
+        cbn -[is_closed_context]. rewrite on_free_vars_ctx_app.
+        apply/andP; split. now apply is_closed_context_smash_end.
+        len => /=. rewrite -shiftnP_add. eapply on_free_vars_ctx_lift_context0.
+        rewrite (red_context_rel_assumptions cum) addnP_shiftnP.
+        now move/PCUICAlpha.is_closed_context_app_right: wfr.
+        rewrite PCUICSubstitution.context_assumptions_smash_context /=.
+        rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
+        relativize #|Γ0|.
+        eapply is_open_term_lift.
+        len. rewrite (All2_fold_length cum). now len in clT'. reflexivity.
+    * move: wfl => /= /on_free_vars_ctx_snoc_def_inv => [] [] clΓ0 clb clT.
+      move: wfr => /= /on_free_vars_ctx_snoc_def_inv => [] [] clΓ0' clb' clT'.
+      specialize (IHcum clΓ0 clΓ0' ltac:(auto)) as [].
+      split; auto.
+      constructor; auto.
+      len.
+      eapply into_closed_red in r; fvs.
+      eapply red_expand_lets in r; tea.
+      etransitivity; tea. rewrite subst_context_nil.
+      rewrite /expand_lets /expand_lets_k. simpl.
+      rewrite -(length_of cum).
+      rewrite -(red_context_rel_assumptions cum).
+      move: (PCUICSubstitution.context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
+      change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
+      cbn. rewrite smash_context_acc /=.
+      change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
+      eapply (closed_red_red_subst (Γ := _ ,,, _) (Γ' := [])); tea.
+      2:{ eapply PCUICContexts.untyped_subslet_extended_subst. }
+      { now eapply weakening_is_closed_context. }
+      rewrite PCUICSubstitution.context_assumptions_smash_context /=.
+      rewrite -[context_assumptions Γ0](smash_context_length []); cbn.
+      relativize #|Γ0|.
+      eapply is_open_term_lift. 
+      len. rewrite (All2_fold_length cum). now len in clb'. reflexivity.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICSubstitution.
+
+Lemma is_closed_context_subst Γ Γ' s Δ :
+  is_closed_context (Γ ,,, Γ' ,,, Δ) ->
+  forallb (is_open_term Γ) s ->
+  #|s| = #|Γ'| ->
+  is_closed_context (Γ ,,, subst_context s 0 Δ).
+Proof.
+  intros clΓ cls slen.
+  rewrite on_free_vars_ctx_app.
+  rewrite  -app_context_assoc on_free_vars_ctx_app in clΓ.
+  move/andP: clΓ => [] -> /=; rewrite on_free_vars_ctx_app => /andP[] o o'.
+  apply on_free_vars_ctx_subst_context0 => //. now rewrite slen.
+Qed.
+
+Lemma red_expand_lets_ctx {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'' Δ s s' t} :
+  is_closed_context (Γ ,,, Γ' ,,, Δ) ->
+  is_closed_context (Γ ,,, Γ'' ,,, Δ) ->
+  untyped_subslet Γ s Γ' ->
+  untyped_subslet Γ s' Γ'' ->
+  All2 (closed_red Σ Γ) s s' ->
+  is_open_term (Γ ,,, subst_context s 0 Δ) t ->
+  Σ ;;; Γ ,,, subst_context s 0 (smash_context [] Δ) ⊢
+    (expand_lets (subst_context s 0 Δ) t) ⇝
+    (expand_lets (subst_context s' 0 Δ) t).
+Proof.
+  intros wf wf' subs subs' reds ont.
+  rewrite -smash_context_subst /= subst_context_nil.
+  have cls : is_closed_context (Γ,,, subst_context s 0 Δ).
+  { eapply is_closed_context_subst; tea. eapply closed_red_terms_open_left in reds. solve_all.
+    now rewrite -(untyped_subslet_length subs') (All2_length reds). }
+  have cls' : is_closed_context (Γ,,, subst_context s' 0 Δ).
+  { eapply is_closed_context_subst; tea. eapply closed_red_terms_open_right in reds. solve_all. 
+    now rewrite -(untyped_subslet_length subs'). }
+  etransitivity.
+  eapply red_expand_lets; tea.
+  eapply into_closed_red; tea. reflexivity.
   rewrite /expand_lets /expand_lets_k. len. cbn.
-Admitted.
+  eapply (closed_red_red_subst (Γ := _ ,,, _) (Γ' := [])); tea.
+  3:{ eapply untyped_subslet_extended_subst. }
+  eapply weakening_is_closed_context => //.
+  eapply (red_context_rel_conv_extended_subst) => //.
+  eapply red_ctx_rel_subst; tea. solve_all. apply X.
+  solve_all. apply X.
+  rewrite context_assumptions_subst.
+  rewrite -[context_assumptions Δ](smash_context_length []).
+  relativize #|smash_context [] _|. relativize #|Δ|.
+  eapply is_open_term_lift. 2-3:now len. apply ont.
+Qed.
 
 Require Import PCUICSubstitution.
 
@@ -1513,38 +1753,6 @@ Proof.
   rewrite -(untyped_subslet_length X).
   rewrite distr_lift_subst. constructor; auto.
 Qed.
-
-Lemma untyped_subslet_extended_subst Γ Δ :
-  untyped_subslet (Γ ,,, smash_context [] Δ)
-    (extended_subst Δ 0) 
-    (lift_context (context_assumptions Δ) 0 Δ).
-Proof.
-  induction Δ as [|[na [d|] ?] ?]; simpl; try constructor.
-  * rewrite lift_context_snoc /lift_decl /= /map_decl /=.
-    len. 
-    constructor => //.
-  * rewrite smash_context_acc. simpl.
-    rewrite /map_decl /= /map_decl /=. simpl.
-    rewrite lift_context_snoc /lift_decl /= /map_decl /=.
-    constructor.
-    rewrite (lift_extended_subst _ 1).
-    rewrite -(PCUICWeakening.lift_context_lift_context 1 _).
-    eapply (untyped_subslet_lift _ [_]); eauto.
-Qed.
-    
-Lemma red_expand_lets {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ t t' :
-  red Σ (Γ ,,, Δ) t t' ->
-  red Σ (Γ ,,, smash_context [] Δ) (expand_lets Δ t) (expand_lets Δ t').
-Proof.
-  intros reds.
-  rewrite /expand_lets /expand_lets_k. cbn.
-  eapply (untyped_substitution_red (P := shiftnP #|Γ| xpred0)  (Γ := _ ,,, _)  (Γ' := [])).
-  eapply untyped_subslet_extended_subst; tea.
-  admit. admit.
-  relativize #|Δ|. relativize (context_assumptions Δ).
-  eapply weakening_red; tea. all:try now len. 3:reflexivity.
-  admit. admit.
-Admitted.
 
 Lemma OnOne2_All2i_All2 {A B} {P : A -> A -> Type} {Q R} {n} {l l' : list A} {l'' : list B} : 
   OnOne2 P l l' ->
@@ -1565,7 +1773,125 @@ Qed.
 
 Require Import PCUICUnivSubstitution.
 
-Lemma trans_red1 {cf} (Σ : global_env_ext) {wfΣ : wf Σ} {wfΣ' : wf (trans_global_decls Σ.1)} Γ T U :
+Lemma OnOne2_All_OnOne2 {A} {P : A -> A -> Type} {Q R} l l' : 
+  OnOne2 P l l' ->
+  All Q l ->
+  (forall x y, Q x -> P x y -> R x y) ->
+  OnOne2 R l l'.
+Proof.
+  induction 1; intros H; depelim H; intros IH; constructor; eauto.
+Qed.
+
+Lemma OnOne2_All_All2 {A} {P : A -> A -> Type} {Q R} l l' : 
+  OnOne2 P l l' ->
+  All Q l ->
+  (forall x y, Q x -> P x y -> R x y) ->
+  (forall x, Q x -> R x x) ->
+  All2 R l l'.
+Proof.
+  induction 1; intros H; depelim H; intros IH; constructor; eauto.
+  clear -H X; solve_all.
+Qed.
+
+Lemma All2i_map_right_inv {A B C} {P : nat -> A -> B -> Type} {f : C -> B} n (l : list A) l' : 
+  All2i P n l (map f l') ->
+  All2i (fun n x y => P n x (f y)) n l l'.
+Proof.
+  induction l' in n, l |- *; cbn; intros h; depelim h; constructor; auto.
+Qed.
+
+Lemma All2i_map_left_inv {A B C} {P : nat -> A -> B -> Type} {f : C -> A} n l l' : 
+  All2i P n (map f l) l' ->
+  All2i (fun n x y => P n (f x) y) n l l'.
+Proof.
+  induction l in n, l' |- *; cbn; intros h; depelim h; constructor; auto.
+Qed.
+
+Lemma trans_is_closed_context Γ : is_closed_context Γ -> is_closed_context (map_context trans Γ).
+Proof.
+  move=> cl; eapply on_free_vars_ctx_impl; [|eapply (on_free_vars_ctx_trans 0)].
+  intros i. rewrite /closedP; now cbn.
+  now rewrite closedP_shiftnP shiftnP0.
+Qed.
+
+Lemma on_free_vars_ind_params {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {P ind mdecl idecl u} : 
+  declared_inductive Σ ind mdecl idecl ->
+  on_free_vars_ctx P (ind_params mdecl)@[u].
+Proof.
+  intros decl.
+  eapply on_free_vars_ctx_impl; [|eapply closedn_ctx_on_free_vars]; revgoals.
+  rewrite closedn_subst_instance_context.
+  eapply (declared_inductive_closed_params decl).
+  intros i; rewrite shiftnP0 //.
+Qed.
+
+Lemma shiftnP_mon n n' i : n <= n' -> shiftnP n xpred0 i -> shiftnP n' xpred0 i.
+Proof.
+  rewrite /shiftnP.
+  repeat nat_compare_specs; cbn; auto.
+Qed.
+
+Lemma is_closed_context_cstr_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ ind mdecl idecl cdecl u} : 
+  declared_constructor Σ ind mdecl idecl cdecl ->
+  is_closed_context Γ ->
+  is_closed_context (Γ ,,, (smash_context [] (ind_params mdecl))@[u] ,,, (cstr_branch_context ind.1 mdecl cdecl)@[u]).
+Proof.
+  intros declc clΓ.
+  rewrite -app_context_assoc on_free_vars_ctx_app clΓ /=.
+  rewrite on_free_vars_ctx_app.
+  apply/andP; split.
+  rewrite subst_instance_smash.
+  eapply on_free_vars_ctx_smash => //. apply (on_free_vars_ind_params declc).
+  len. cbn. 
+  rewrite on_free_vars_ctx_subst_instance.
+  eapply on_free_vars_ctx_impl; [|eapply (on_free_vars_ctx_cstr_branch_context declc)].
+  intros i. rewrite shiftnP_add. eapply shiftnP_mon.
+  move: (context_assumptions_bound (ind_params mdecl)). lia.
+Qed.
+
+Lemma trans_untyped_subslet {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ s Δ} : 
+  wf_local Σ (Γ ,,, Δ) ->
+  All (wt Σ Γ) s ->
+  untyped_subslet Γ s Δ -> 
+  untyped_subslet (trans_local Γ) (map trans s) (trans_local Δ).
+Proof.
+  induction 3 in |- *; cbn; try constructor; auto.
+  cbn. depelim X. now depelim X0.
+  depelim X. depelim X0.
+  rewrite (trans_subst (shiftnP #|Γ ,,, Δ|  xpred0) (shiftnP #|Γ| xpred0)).
+  red in l0. now eapply subject_is_open_term in l0. solve_all. now eapply wt_on_free_vars. 
+  constructor ; auto.
+Qed.
+
+Lemma untyped_subslet_length Γ s s' Δ : 
+  untyped_subslet Γ s Δ -> #|s| = #|s'| -> assumption_context Δ -> untyped_subslet Γ s' Δ.
+Proof.
+  induction 1 in s' |- *; cbn; destruct s' => /= //. constructor.
+  intros [=]. constructor ; auto. eapply IHX; auto. now depelim H.
+  intros. elimtype False; depelim H0. 
+Qed.
+
+Lemma wf_local_ind_params_weaken {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ind mdecl u} : 
+  declared_minductive Σ ind mdecl ->
+  wf_local Σ Γ ->
+  consistent_instance_ext Σ (ind_universes mdecl) u ->
+  wf_local Σ (Γ ,,, (ind_params mdecl)@[u]).
+Proof.
+  intros decli wfΓ cu.
+  eapply weaken_wf_local => //.
+  now eapply on_minductive_wf_params.
+Qed.
+
+Definition cf' cf := 
+  {| check_univs := cf.(check_univs);
+     prop_sub_type := cf.(prop_sub_type); 
+     indices_matter := cf.(indices_matter); 
+     lets_in_constructor_types := false |}.
+
+Notation wf_trans Σ := (@wf (cf' _) (trans_global_decls Σ.1)).
+Notation wf_ext_trans Σ := (@wf_ext (cf' _) (trans_global Σ)).
+
+Lemma trans_red1 {cf} (Σ : global_env_ext) {wfΣ : wf Σ} {wfΣ' : wf_trans Σ} Γ T U :
   red1 Σ Γ T U ->
   wt Σ Γ T ->
   red (trans_global Σ) (trans_local Γ) (trans T) (trans U).
@@ -1658,7 +1984,7 @@ Proof.
     destruct nth_error eqn:hnth.
     pose proof (nth_error_Some_length hnth).
     destruct args. simpl. elimtype False; cbn in H1. lia.
-    cbn -[mkApps].
+    cbn -[mkApps]. 
     eapply red1_red, red_fix.
     apply (trans_unfold_fix (shiftnP #|Γ| xpred0)); eauto.
     now eapply wt_on_free_vars in wtf.
@@ -1701,37 +2027,91 @@ Proof.
     cbn. 
     eapply OnOne2_All2. eapply OnOne2_map.
     2:intros x y h; exact h. 2:reflexivity.
-    eapply OnOne2_impl; tea. cbv beta.
-    intros x y [[r IH] wt]. specialize (IH wt).
-    red. exact IH.
+    eapply OnOne2_All_OnOne2; tea. cbv beta.
+    intros x y wtt [[r IH] wt]. specialize (IH wt).
+    red. apply IH.
     rewrite /trans_branch. cbn.
     eapply All2_map. cbn. eapply All2_map, All_All2_refl.
-    eapply All2i_All_right; tea. cbv beta.
-    intros _ cdecl br [wfbr eqbctx wfbctx eqinst wtb].
+    eapply All2i_nth_hyp in a0.
+    eapply All2i_All_right; tea. cbv beta. clear a0.
+    intros ctor cdecl br [hnth [wfbr eqbctx wfbctx eqinst wtb]].
     split => //. cbn [bcontext map_branch]. rewrite /id.
     rewrite [map (map_decl _) _](subst_instance_smash _ _ []) /=.
-    eapply (red_expand_lets_ctx (trans_global_decls Σ.1)).
-    eapply All2_rev. eapply All2_map, OnOne2_All2; tea; cbv beta.
-    intros x y [[red IH] wt]. now apply IH.
-    intros; reflexivity.
-
+    eapply (red_expand_lets_ctx (cf := cf' cf) (Σ := trans_global Σ) 
+      (Γ' := (trans_local (smash_context [] (ind_params mdecl))@[puinst p]))
+      (Γ'' := (trans_local (smash_context [] (ind_params mdecl))@[puinst p]))).
+    *  eapply alpha_eq_on_free_vars_ctx.
+      eapply All2_app; [|reflexivity].
+      eapply alpha_eq_subst_instance.
+      eapply alpha_eq_trans. symmetry. exact eqbctx.
+      rewrite - !trans_subst_instance_ctx -!trans_local_app.
+      rewrite -[_ ++ _]trans_local_app.
+      eapply trans_is_closed_context.
+      have declc : declared_constructor Σ (ci, ctor) mdecl idecl cdecl.
+      { split; tea. }
+      eapply (is_closed_context_cstr_branch_context declc).
+      destruct w2 as [? ? % typing_closed_ctx]; eauto.
+    * eapply alpha_eq_on_free_vars_ctx.
+      eapply All2_app; [|reflexivity].
+      eapply alpha_eq_subst_instance.
+      eapply alpha_eq_trans. symmetry. exact eqbctx.
+      rewrite - !trans_subst_instance_ctx -!trans_local_app.
+      rewrite -[_ ++ _]trans_local_app.
+      eapply trans_is_closed_context.
+      have declc : declared_constructor Σ (ci, ctor) mdecl idecl cdecl.
+      { split; tea. }
+      eapply (is_closed_context_cstr_branch_context declc).
+      destruct w2 as [? ? % typing_closed_ctx]; eauto.
+    * rewrite -map_rev.
+      eapply trans_untyped_subslet.
+      { rewrite subst_instance_smash. eapply wf_local_smash_end.
+        eapply wf_local_ind_params_weaken; tea. exact d. exact w2. }
+      { solve_all. }
+      rewrite subst_instance_smash.
+      eapply subslet_untyped_subslet; exact s.
+    * rewrite -map_rev.
+      eapply trans_untyped_subslet.
+      { rewrite subst_instance_smash. eapply wf_local_smash_end.
+        eapply wf_local_ind_params_weaken; tea. exact d. exact w2. }
+      { solve_all.
+        eapply spine_subst_wt_terms in s.
+        solve_all. eapply OnOne2_impl_All_r; tea.
+        2:solve_all. cbv beta; intros x y wtx [[Hr _]].
+        eapply wt_red; tea. }
+      eapply untyped_subslet_length.
+      rewrite subst_instance_smash. exact s. len.
+      eapply (OnOne2_length X).
+      pcuic. 
+    * eapply All2_rev. eapply All2_map.
+      eapply OnOne2_All_All2; tea; cbv beta.
+      intros x y wtx [[r Hr] wt].
+      specialize (Hr wt).
+      destruct wtx. eapply into_closed_red => //.
+      eapply typing_closed_ctx in t; tea.
+      now eapply trans_is_closed_context.
+      eapply trans_on_free_vars. len.
+      now eapply subject_is_open_term in t.
+      intros x []. eapply into_closed_red. reflexivity.
+      eapply typing_closed_ctx in t. now eapply trans_is_closed_context. auto.
+      eapply subject_is_open_term in t. eapply trans_on_free_vars. now len.
+    * len. destruct wtb. cbn in t.
+      eapply subject_is_open_term in t.
+      len in t. rewrite (case_branch_context_length wfbr) in t.
+      now eapply trans_on_free_vars.
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
-    cbn -[inst_case_predicate_context].
-    symmetry in a.
-    epose proof (trans_case_predicate_context _ _ _ _ p d c0 s w).
-    rewrite (inst_case_predicate_context_eq a) in w1.
-    assert (a' := alpha_eq_trans a).
-    rewrite trans_ind_predicate_context in a'. pcuic. pcuic.
-    set (p' := map_predicate id trans trans (map_context trans) p).
-    relativize (map_predicate id _ _ _ (set_preturn _ _)).
-    eapply red_case. 5:reflexivity. cbn. eapply All2_refl. reflexivity. 
-    rewrite -(inst_case_predicate_context_eq (p:=p') a').
+    eapply red_case_p.
+    symmetry in a. rewrite (inst_case_predicate_context_eq a) in w1.
     specialize (IHX w1).
-    rewrite trans_local_app in IHX.
-    rewrite H.
-    now rewrite (inst_case_predicate_context_eq a).
-    reflexivity.
-    eapply All2_map. cbn. eapply All2_refl. split; reflexivity.
+    rewrite -(inst_case_predicate_context_eq a) in IHX.
+    eapply alpha_eq_trans in a.
+    rewrite trans_ind_predicate_context in a. 
+    { eapply closed_ctx_is_closed_context, declared_inductive_closed_params; tea. }
+    { epose proof (declared_inductive_closed_indices _ _ _ d).
+      now eapply closedn_ctx_on_free_vars in H. }
+    set (p' := map_predicate id trans _ _ p).
+    rewrite -(inst_case_predicate_context_eq (p:=p') a).
+    rewrite (trans_case_predicate_context d c0 s w).
+    now rewrite -trans_local_app.
 
   - eapply wt_inv in wt as [hpars [mdecl [idecl []]]].
     eapply red_case_c; eauto.
@@ -1753,8 +2133,8 @@ Proof.
     cbn -[expand_lets].
     rewrite [map (map_decl _) _](subst_instance_smash _ _ []).
     rewrite -(smash_context_subst []) /=. len. rewrite subst_context_nil /id.
-    rewrite -eqctx. 
-    eapply (red_expand_lets (empty_ext (trans_global_decls Σ.1))). cbn.
+    rewrite -eqctx.
+    eapply (red_expand_lets (cf := cf' cf) (trans_global Σ)). cbn.
     rewrite /inst_case_branch_context in ih.
     rewrite /inst_case_context in ih.
     rewrite (trans_subst_context (shiftnP #|pparams p| xpred0) (shiftnP #|Γ| xpred0)) // in ih.
@@ -1763,7 +2143,21 @@ Proof.
       now rewrite closedP_shiftnP. }
     { rewrite [on_free_vars_terms _ _]forallb_rev. solve_all. }
     rewrite map_rev in ih.
-    now rewrite trans_subst_instance_ctx in ih.
+    rewrite trans_subst_instance_ctx in ih.
+    move: ih.
+    rewrite -![map (map_decl _) _]trans_subst_instance_ctx -trans_subst_instance_ctx.
+    rewrite -!map_rev -!(trans_subst_context (closedP #|pparams p| xpredT) (shiftnP #|Γ| xpred0)).
+    { move/andP: onfvs => [] onctx _. rewrite test_context_k_closed_on_free_vars_ctx in onctx.
+      now rewrite on_free_vars_ctx_subst_instance. }
+    { rewrite /on_free_vars_terms forallb_rev. solve_all. }
+    rewrite -!trans_local_app. 
+    intros r; eapply into_closed_red => //.
+    { eapply trans_is_closed_context.
+      rewrite -[SE.subst_context _ _ _](PCUICCasesContexts.inst_case_branch_context_eq (p:=p) a1).
+      destruct w5 as [? wt]. now eapply typing_closed_ctx in wt. }
+    { eapply trans_on_free_vars.
+      move/andP: onfvs => [] onctx onb. len.
+      now rewrite -shiftnP_add. }
 
   - eapply red_proj_c; eauto.
   - eapply red_app; eauto.
@@ -1813,7 +2207,7 @@ Proof.
     intros. repeat split; reflexivity.
 Qed.
 
-Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
+Lemma trans_R_global_instance {Σ : global_env} Re Rle gref napp u u' :
   R_global_instance Σ Re Rle gref napp u u' ->
   R_global_instance (trans_global_decls Σ) Re Rle gref napp u u'.
 Proof.
@@ -1881,7 +2275,7 @@ Proof.
   constructor.
 Qed.
 
-Lemma eq_context_upto_context_assumptions {cf} {Σ Re Rle} {Γ Δ} :
+Lemma eq_context_upto_context_assumptions {Σ : global_env} {Re Rle} {Γ Δ} :
   eq_context_upto Σ Re Rle Γ Δ ->
   context_assumptions Γ = context_assumptions Δ.
 Proof.
@@ -1889,7 +2283,7 @@ Proof.
   destruct p; subst; cbn; auto. f_equal; auto.
 Qed.
 
-Lemma eq_term_upto_univ_expand_lets {cf} {Σ Re Rle Γ Δ t u napp} :
+Lemma eq_term_upto_univ_expand_lets {cf} {Σ : global_env} {Re Rle Γ Δ t u napp} :
   subrelation Re Rle ->
   eq_context_upto Σ Re Rle Γ Δ ->
   eq_term_upto_univ_napp Σ Re Rle napp t u ->
@@ -1904,7 +2298,7 @@ Proof.
   apply (PCUICConfluence.eq_context_extended_subst eqctx).
 Qed.
 
-Lemma trans_eq_term_upto_univ {cf} {Σ Re Rle t u napp} : 
+Lemma trans_eq_term_upto_univ {cf} {Σ : global_env} {Re Rle t u napp} : 
   Reflexive Re -> Reflexive Rle ->
   Transitive Re -> SubstUnivPreserving Re ->
   subrelation Re Rle ->
@@ -1951,70 +2345,156 @@ Proof.
   - constructor; solve_all; eauto using subrelation_refl.
 Qed.
 
-Lemma trans_leq_term {cf} Σ ϕ T U :
-  PCUICEquality.leq_term Σ ϕ T U ->
-  leq_term (trans_global_decls Σ) ϕ (trans T) (trans U).
+Lemma trans_compare_term {cf} {Σ : global_env} {le ϕ T U} :
+  compare_term le Σ ϕ T U ->
+  compare_term (H:=cf' cf) le (trans_global_decls Σ) ϕ (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ ; eauto; tc.
+  destruct le; tc.
+  destruct le; tc.
+Qed.
+
+Lemma trans_leq_term {cf} {Σ : global_env} ϕ T U :
+  PCUICEquality.leq_term Σ ϕ T U ->
+  @leq_term (cf' cf) (trans_global_decls Σ) ϕ (trans T) (trans U).
+Proof.
+  eapply trans_eq_term_upto_univ; eauto; tc.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICContextConversion.
+
+Lemma wt_red1_wt {cf} {Σ} {wfΣ : wf Σ} {Γ t u} : 
+  wt Σ Γ t -> red1 Σ Γ t u -> wt Σ Γ u.
+Proof.
+  intros [s ht] r.
+  exists s. eapply subject_reduction1; tea.
 Qed.
 
 Section wtcumul.
   Import PCUICAst PCUICTyping PCUICEquality.
+  Context {cf : checker_flags}.
   Record wt_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) (Γ : PCUICEnvironment.context) T U := 
   { wt_red1_red1 : PCUICReduction.red1 Σ Γ T U;
-    wt_red1_dom : isType Σ Γ T;
-    wt_red1_codom : isType Σ Γ U }.
+    wt_red1_dom : wt Σ Γ T;
+    wt_red1_codom : wt Σ Γ U }.
 
-  Reserved Notation " Σ ;;; Γ |-- t <= u " (at level 50, Γ, t, u at next level).
+  Reserved Notation " Σ ;;; Γ |-- t <=[ le ] u " (at level 50, Γ, le, t, u at next level).
 
-  Inductive wt_cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-  | wt_cumul_refl t u : leq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |-- t <= u
-  | wt_cumul_red_l t u v : wt_red1 Σ Γ t v -> Σ ;;; Γ |-- v <= u -> Σ ;;; Γ |-- t <= u
-  | wt_cumul_red_r t u v : Σ ;;; Γ |-- t <= v -> wt_red1 Σ Γ u v -> Σ ;;; Γ |-- t <= u
-  where " Σ ;;; Γ |-- t <= u " := (wt_cumul Σ Γ t u) : type_scope.
+  Inductive wt_equality (le : bool) (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+  | wt_cumul_refl t u : compare_term le Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |-- t <=[le] u
+  | wt_cumul_red_l t u v : wt_red1 Σ Γ t v -> Σ ;;; Γ |-- v <=[le] u -> Σ ;;; Γ |-- t <=[le] u
+  | wt_cumul_red_r t u v : Σ ;;; Γ |-- t <=[le] v -> wt_red1 Σ Γ u v -> Σ ;;; Γ |-- t <=[le] u
+  where " Σ ;;; Γ |-- t <=[ le ] u " := (wt_equality le Σ Γ t u) : type_scope.
     
-  Lemma cumul_decorate {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ T U :
+  Definition wt_cumul := wt_equality true.
+  Definition wt_conv := wt_equality false.
+
+  Lemma cumul_decorate (Σ : global_env_ext) {wfΣ : wf Σ} Γ T U :
     isType Σ Γ T -> isType Σ Γ U ->
     cumul Σ Γ T U ->
-    wt_cumul Σ Γ T U.
+    wt_equality true Σ Γ T U.
+  Proof.
+    move/isType_wt => ht.
+    move/isType_wt => hu.
+    induction 1. 
+    - constructor. auto.
+    - pose proof (wt_red ht r).
+      econstructor 2.
+      econstructor; tea.
+      eapply IHX; tea.
+    - pose proof (wt_red hu r).
+      econstructor 3; eauto.
+      econstructor; tea.
+  Qed.
+
+  Lemma conv_decorate (Σ : global_env_ext) {wfΣ : wf Σ} Γ T U :
+    wt Σ Γ T -> wt Σ Γ U ->
+    conv Σ Γ T U ->
+    wt_equality false Σ Γ T U.
   Proof.
     intros ht hu.
     induction 1. 
     - constructor. auto.
-    - pose proof (isType_red1 ht r).
+    - pose proof (wt_red ht r).
       econstructor 2.
       econstructor; tea.
       eapply IHX; tea.
-    - pose proof (isType_red1 hu r).
+    - pose proof (wt_red hu r).
       econstructor 3; eauto.
       econstructor; tea.
   Qed.
+
+  Definition wt_equality_ctx {cf} le Σ := 
+    All2_fold (fun Γ Γ' => All_decls_alpha_le le (fun le => wt_equality le Σ Γ)).
+    
+  Lemma cumul_ctx_decorate (Σ : global_env_ext) {wfΣ : wf Σ} Γ Δ :
+    wf_local Σ Γ ->
+    wf_local Σ Δ ->
+    cumul_context Σ Γ Δ ->
+    wt_equality_ctx true Σ Γ Δ.
+  Proof.
+    intros wfΓ wfΔ. induction 1. constructor; auto.
+    depelim wfΓ; depelim wfΔ; depelim p; constructor; auto. now apply IHX.
+    constructor; auto. apply cumul_decorate => //.
+    { destruct l0 as [s hs].
+      exists s. eapply context_cumulativity; tea. }
+    eapply IHX => //.
+    constructor; auto. apply conv_decorate => //.
+    { now exists t. }
+    { exists t0. eapply context_cumulativity; tea. }
+    eapply cumul_decorate => //.
+    destruct l1 as [s Hs]. exists s.
+    eapply context_cumulativity; tea.
+  Qed.
+
+  Definition wt_equality_ctx_rel {cf} le Σ Γ := 
+    All2_fold (fun Δ Δ' => All_decls_alpha_le le (fun le => wt_equality le Σ (Γ ,,, Δ))).
+
 End wtcumul.
 
-Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
-  wf (trans_global_decls Σ.1) ->
-  wt_cumul Σ Γ T U ->
-  cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+Lemma trans_conv {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
+  wf_trans Σ ->
+  wt_conv Σ Γ T U ->
+  conv (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
-    eapply trans_leq_term in l.
+    red in c. red.
+    eapply trans_compare_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
-    apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
-    eapply red_cumul_cumul; tea.
+    apply trans_red1 in r; eauto.
+    eapply red_conv_conv; tea. 
   - destruct w as [r ht hv].
-    apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
+    apply trans_red1 in r; eauto. 
+    eapply red_conv_conv_inv; tea.
+Qed.
+
+Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
+  wf_trans Σ ->
+  wt_cumul Σ Γ T U ->
+  cumul (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+Proof.
+  intros wfΣ'; induction 1. 
+  - constructor; auto.
+    red in c. red.
+    eapply trans_compare_term in c.
+    now rewrite -trans_global_ext_constraints.
+  - destruct w as [r ht hv].
+    apply trans_red1 in r; eauto.
+    eapply red_cumul_cumul; tea. 
+  - destruct w as [r ht hv].
+    apply trans_red1 in r; eauto. 
     eapply red_cumul_cumul_inv; tea.
 Qed.
 
-Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing TT.typing Σ) Γ.
+Definition TTwf_local {cf} Σ Γ := TT.All_local_env (TT.lift_typing (TT.typing (H:=cf' cf)) Σ) Γ.
 
 Lemma trans_wf_local' {cf} :
   forall (Σ : SE.global_env_ext) Γ (wfΓ : wf_local Σ Γ),
     let P :=
         (fun Σ0 Γ0 _ (t T : PCUICAst.term) _ =>
-           TT.typing (trans_global Σ0) (trans_local Γ0) (trans t) (trans T))
+           TT.typing (H:=cf' cf) (trans_global Σ0) (trans_local Γ0) (trans t) (trans T))
     in
     ST.All_local_env_over ST.typing P Σ Γ wfΓ ->
     TTwf_local (trans_global Σ) (trans_local Γ).
@@ -2032,10 +2512,11 @@ Lemma trans_wf_local_env {cf} Σ Γ :
   ST.All_local_env
         (ST.lift_typing
            (fun (Σ : SE.global_env_ext) Γ b ty =>
-              wf (trans_global Σ) ->
-              ST.typing Σ Γ b ty × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
+              wf_trans Σ ->
+              ST.typing Σ Γ b ty × 
+              TT.typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
         Γ ->
-  wf (trans_global Σ) ->
+  wf_trans Σ ->
   TTwf_local (trans_global Σ) (trans_local Γ).
 Proof.
   intros.
@@ -2079,7 +2560,7 @@ Lemma trans_mfix_All {cf} Σ Γ mfix idx :
       (fun (Σ : SE.global_env_ext)
           (Γ : SE.context) (b ty : PCUICAst.term) =>
         ST.typing Σ Γ b ty
-        × TT.typing (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
+        × TT.typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans b) (trans ty)) Σ)
     (SE.app_context Γ (SE.fix_context mfix)) ->
   TTwf_local (trans_global Σ)
     (trans_local Γ ,,, fix_context (map (map_def trans trans) mfix)).
@@ -2105,73 +2586,6 @@ Proof.
     assumption.  
 Qed.
 
-(* Lemma trans_mfix_All2 {cf} Σ Γ mfix (idx : nat) xfix:
-  is_open_term Γ (tFix xfix idx) ->
-  All
-  (fun d : def PCUICAst.term =>
-    (ST.typing Σ (SE.app_context Γ (SE.fix_context xfix))
-    (dbody d)
-    (S.lift0 #|SE.fix_context xfix| (dtype d)))
-    × TT.typing (trans_global Σ)
-      (trans_local (SE.app_context Γ (SE.fix_context xfix)))
-      (trans (dbody d))
-      (trans
-          (S.lift0 #|SE.fix_context xfix|
-            (dtype d)))) mfix ->
-  All
-    (fun d : def term =>
-    TT.typing (trans_global Σ)
-    (trans_local Γ ,,, fix_context (map (map_def trans trans) xfix)) 
-    (dbody d) (T.lift0 #|fix_context (map (map_def trans trans) xfix)| (dtype d))) 
-    (map (map_def trans trans) mfix).
-Proof.
-  intros hfix; induction 1.
-  - constructor.
-  - simpl; constructor.
-    + destruct p as [].
-      unfold app_context, SE.app_context in *.
-      unfold trans_local in t0.
-      rewrite map_app (trans_fix_context (shiftnP #|Γ| xpred0) _ idx) // in t0.
-      rewrite trans_dbody (trans_lift _ (shiftnP #|Γ| xpred0)) in t0.
-      replace(#|SE.fix_context xfix|) with
-          (#|TT.fix_context (map(map_def trans trans) xfix)|) in t0.
-        2:now rewrite TT.fix_context_length map_length fix_context_length.
-        now destruct x.
-    + auto.
-Qed. *)
-
-Lemma All_over_All {cf} Σ Γ wfΓ :
-  ST.All_local_env_over ST.typing
-    (fun (Σ : SE.global_env_ext) (Γ : SE.context)
-      (_ : wf_local Σ Γ) (t T : PCUICAst.term)
-      (_ : ST.typing Σ Γ t T) =>
-      wf (trans_global Σ) ->
-    TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)) Σ Γ wfΓ ->
-  ST.All_local_env
-    (ST.lift_typing
-      (fun (Σ0 : SE.global_env_ext) (Γ0 : SE.context)
-          (b ty : PCUICAst.term) =>
-          wf (trans_global Σ) ->
-
-        ST.typing Σ0 Γ0 b ty
-        × TT.typing (trans_global Σ0) (trans_local Γ0) (trans b) (trans ty)) Σ) Γ.
-Proof.
-  intros H.
-  induction H;cbn.
-  - constructor.
-  - constructor.
-    + apply IHAll_local_env_over.
-    + cbn in *.
-      destruct tu.
-      eexists;split;auto; assumption.
-  - constructor.
-    + apply IHAll_local_env_over.
-    + cbn in *.
-      destruct tu.
-      eexists;split;auto;eassumption.
-    + cbn in *.
-      split;auto;eassumption.
-Qed.
 
 Lemma trans_decompose_prod_assum :
   forall Γ t,
@@ -2400,53 +2814,329 @@ Proof.
   * rewrite /subst_instance /=. constructor; auto.
 Qed.
 
-(*Lemma trans_case_branch_type {cf} {Σ : global_env_ext} {wfΣ : wf Σ} ci mdecl idecl cdecl i p br :
-  declared_inductive Σ ci mdecl idecl ->
-  consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
-  wf_branch cdecl br ->
-  All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
-  let ptm := it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) in
-  case_branch_type ci (trans_minductive_body mdecl)
+Lemma map_expand_lets_lift_cancel Γ n ts : 
+  n = #|Γ| ->
+  map (expand_lets Γ) (map (lift0 n) ts) =
+  map (lift0 (context_assumptions Γ)) ts.
+Proof.
+  intros ->. solve_all. eapply All_refl.
+  intros x. now rewrite expand_lets_lift_cancel.
+Qed.
 
-    (map_predicate id trans trans (map_context trans) p)
+Lemma expand_lets_k_subst_comm Δ k s T : 
+  expand_lets_k Δ k (subst s k T) = 
+  subst (map (expand_lets Δ) s) k (expand_lets_k Δ (#|s| + k) T).
+Proof.
+  rewrite /expand_lets_k.
+  rewrite distr_lift_subst_rec.
+  rewrite -{1}(Nat.add_0_r k).
+  rewrite distr_subst_rec (Nat.add_comm #|s|). len.
+  rewrite map_map_compose. reflexivity.
+Qed.
+
+Lemma context_assumptions_set_binder_name nas Γ : 
+  #|nas| = #|Γ| ->
+  context_assumptions (map2 set_binder_name nas Γ) = context_assumptions Γ.
+Proof.
+  induction nas in Γ |- *; destruct Γ; cbn => //.
+  intros [=]. destruct c as [na [b|] ty]; cbn; auto.
+  rewrite IHnas //.
+Qed.
+  
+Lemma extended_subst_set_binder_name nas Γ k : 
+  #|nas| = #|Γ| ->
+  extended_subst (map2 set_binder_name nas Γ) k = 
+  extended_subst Γ k.
+Proof.
+  induction nas in Γ, k |- *; destruct Γ; cbn => //.
+  intros [=]. destruct c as [na [b|] ty]; cbn; f_equal; eauto.
+  len. rewrite map2_length //. rewrite H0.
+  rewrite IHnas //. rewrite context_assumptions_set_binder_name //.
+Qed.
+
+Lemma expand_lets_set_binder_name nas Γ t : 
+  #|nas| = #|Γ| ->
+  expand_lets (map2 set_binder_name nas Γ) t = expand_lets Γ t.
+Proof.
+  induction nas in Γ |- *; destruct Γ; cbn => //.
+  intros [=]. rewrite /expand_lets /expand_lets_k.
+  destruct c as [na [b|] ty]; cbn; try len;
+  rewrite extended_subst_set_binder_name // map2_length // H0
+    !context_assumptions_set_binder_name //.
+Qed.
+
+Lemma expand_lets_k_lift n k k' Γ t : 
+  expand_lets_k (lift_context n k Γ) k' (lift n (#|Γ| + k + k') t) =
+  lift n (k + k' + context_assumptions Γ) (expand_lets_k Γ k' t).
+Proof.
+  rewrite /expand_lets /expand_lets_k /=.
+  rewrite extended_subst_lift_context Nat.add_0_r.
+  epose proof (distr_lift_subst_rec _ _ _ k' (k + context_assumptions Γ)).
+  len. rewrite permute_lift. lia. rewrite !Nat.add_assoc /= in H.
+  rewrite (Nat.add_comm _ k') Nat.add_assoc.
+  relativize #|Γ|. erewrite <- H. 2:now len.
+  now len.
+Qed.
+
+Lemma lift_expand_lets_k Δ Γ t : 
+  closed_ctx Γ ->
+  on_free_vars (shiftnP (#|Γ| + #|Δ|) xpred0) t ->
+  lift (context_assumptions Δ) #|Δ| (expand_lets_k Γ #|Δ| t) =
+  expand_lets_k Γ (#|Δ| + context_assumptions Δ) (lift (context_assumptions Δ) #|Δ| t).
+Proof.
+  intros cl ont.
+  rewrite {1}/expand_lets_k.
+  rewrite -{1}(Nat.add_0_r #|Δ|).
+  rewrite /expand_lets_k.
+  rewrite (lift_closed _ _ (lift (context_assumptions Δ) #|Δ| t) _).
+  rewrite on_free_vars_closedn.
+  rewrite (Nat.add_comm #|Δ|).
+  rewrite -shiftnP_add.
+  eapply on_free_vars_lift_impl; rewrite shiftnP_add Nat.add_comm //.
+  rewrite (lift_closed _ _ t).
+  rewrite on_free_vars_closedn Nat.add_comm //.
+  rewrite distr_lift_subst_rec. len.
+  rewrite (lift_closed _ _ t).
+  rewrite on_free_vars_closedn Nat.add_comm //.
+  rewrite closed_subst_map_lift. len.
+  rewrite on_free_vars_closedn //. rewrite Nat.add_comm //.
+Qed.
+
+Lemma expand_lets_comm Γ Δ t :
+  closed_ctx Γ ->
+  on_free_vars (shiftnP (#|Γ| + #|Δ|) xpred0) t ->
+  expand_lets (expand_lets_ctx Γ Δ) (expand_lets_k Γ #|Δ| t) =
+  expand_lets_k Γ (context_assumptions Δ) (expand_lets Δ t).
+Proof.
+  intros clΓ ont.
+  rewrite {2}/expand_lets {3}/expand_lets_k.
+  rewrite PCUICInductives.expand_lets_k_subst_comm.
+  len. cbn.
+  rewrite {1}/expand_lets {1}/expand_lets_k.
+  len. f_equal.
+  - rewrite /expand_lets_k /expand_lets_ctx /expand_lets_k_ctx subst_extended_subst; len.
+    rewrite extended_subst_lift_context; try len. cbn.
+    rewrite !map_map_compose. apply map_ext => x.
+    now rewrite Nat.add_comm.
+  - rewrite lift_expand_lets_k //.
+Qed.
+
+Lemma to_extended_list_smash_context_eq Δ Δ' k :
+  #|Δ| = #|Δ'| ->
+  assumption_context Δ ->
+  assumption_context Δ' ->
+  to_extended_list_k Δ k =
+  to_extended_list_k Δ' k.
+Proof.
+  induction Δ in Δ', k |- *; cbn; destruct Δ' => /= //.
+  intros [=].
+  intros ass ass'. destruct a as [na [b|] ty]. elimtype False; depelim ass.
+  destruct c as [na' [b'|] ty']; cbn. elimtype False; depelim ass'.
+  rewrite !(reln_acc [_]). f_equal. eapply IHΔ => //.
+  now depelim ass. now depelim ass'.
+Qed.
+
+Lemma on_free_vars_subst_k s k t : 
+  forallb (on_free_vars xpred0) s -> 
+  on_free_vars (shiftnP (#|s| + k) xpred0) t ->
+  on_free_vars (shiftnP k xpred0) (subst s k t).
+Proof.
+  intros ons ont.
+  eapply on_free_vars_impl; [|eapply on_free_vars_subst_gen]; tea.
+  intros i. rewrite /substP /shiftnP.
+  repeat nat_compare_specs; cbn; auto.
+  nat_compare_specs => //.
+Qed.
+
+Lemma on_free_vars_expand_lets_k P Γ k t : 
+  on_free_vars_ctx P Γ ->
+  on_free_vars (shiftnP (k + #|Γ|) P) t ->
+  on_free_vars (shiftnP (k + context_assumptions Γ) P) (expand_lets_k Γ k t).
+Proof.
+  intros HΓ Ht.
+  rewrite /expand_lets_k /=.
+  eapply on_free_vars_impl; cycle 1.
+  - eapply on_free_vars_subst_gen.
+    1:eapply on_free_vars_extended_subst; eauto.
+    rewrite -> on_free_vars_lift. eauto.
+  - len. rewrite /substP /= /strengthenP /=.
+    intros i. simpl. rewrite /shiftnP.
+    repeat nat_compare_specs => /= //.
+    rewrite Nat.sub_0_r. 
+    replace (i + #|Γ| - context_assumptions Γ - (k + #|Γ|)) with (i - context_assumptions Γ - k) by lia.
+    rewrite /occ_betweenP. repeat nat_compare_specs => /= //.
+    rewrite orb_false_r.
+    replace (i - context_assumptions Γ - k) with (i - k - context_assumptions Γ) by lia.
+    rewrite orb_diag.
+    now replace (i - k - context_assumptions Γ) with (i - (k + context_assumptions Γ)) by lia.
+Qed.
+
+Lemma on_free_vars_case_predicate_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {P ind mdecl idecl p} :
+   let pctx := case_predicate_context ind mdecl idecl p in
+   declared_inductive Σ ind mdecl idecl ->
+   wf_predicate mdecl idecl p ->
+   forallb (on_free_vars P) (pparams p) ->
+   on_free_vars_ctx P pctx.
+Proof.
+  intros pctx decli wfp onps.
+  rewrite /pctx /case_predicate_context /case_predicate_context_gen.
+  eapply alpha_eq_on_free_vars_ctx. symmetry.
+  eapply eq_binder_annots_eq.
+  eapply (wf_pre_case_predicate_context_gen wfp).
+  rewrite /pre_case_predicate_context_gen.
+  eapply on_free_vars_ctx_inst_case_context; tea. reflexivity.
+  rewrite test_context_k_closed_on_free_vars_ctx.
+  rewrite (wf_predicate_length_pars wfp).
+  rewrite (declared_minductive_ind_npars decli).
+  exact (on_free_vars_ind_predicate_context (ind:=ind) decli).
+Qed.
+
+#[global] Hint Resolve declared_inductive_closed_params : pcuic.
+
+Lemma trans_case_branch_type {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {ci : case_info} {mdecl idecl cdecl i p br} :
+  declared_constructor Σ (ci, i) mdecl idecl cdecl ->
+  consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
+  wf_predicate mdecl idecl p ->
+  wf_branch cdecl br ->
+  All2 (compare_decls eq eq) (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+  All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
+  on_free_vars_terms (shiftnP #|Γ| xpred0) p.(pparams) ->
+  on_free_vars (shiftnP (S #|ind_indices idecl|) (shiftnP #|Γ| xpred0)) (preturn p) ->
+  let ptm := it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) in
+  let p' := map_predicate id trans trans (map_context trans) p in
+  let br' :=  (trans_branch p' (map_branch trans (map_context trans) br)) in
+  let cbctx := case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl in
+  let cbt' := case_branch_type ci (trans_minductive_body mdecl)
+    (trans_one_ind_body mdecl (inductive_ind ci) idecl) p' br'
   (it_mkLambda_or_LetIn
     (trans_local (case_predicate_context ci mdecl idecl p))
-    (Ast.preturn
+    (preturn
         (map_predicate id trans trans (map_context trans) p)))
-  i (trans_constructor_body cdecl)
-  (trans_branch (map_branch trans (map_context trans) br)) =
-  (trans_local (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl),
-   trans (case_branch_type ci mdecl idecl p br ptm i cdecl).2).
+  i (trans_constructor_body (inductive_ind ci) mdecl cdecl) in
+  (cbt'.1 = trans_local (smash_context [] cbctx)) *
+  (cbt'.2 = trans (expand_lets cbctx (case_branch_type ci mdecl idecl p br ptm i cdecl).2)).
 Proof.
-  intros.
-  rewrite /Ast.case_branch_type /Ast.case_branch_type_gen /=. f_equal.
-  - rewrite [Ast.case_branch_context_gen _ _ _ _ _ _]trans_inst_case_branch_context => //.
+  intros declc cu wfp wfbr wfpctx wfbctx onps ptm p' br'.
+  have wfbr' : wf_branch cdecl (map_branch trans (map_context trans) br).
+  { move: wfbr. rewrite /wf_branch /wf_branch_gen /=.
+    intros h. now rewrite forget_types_map_context. }
+  rewrite /case_branch_type /case_branch_type_gen /=.
+  set (brctx' := case_branch_context_gen _ _ _ _ _ _).
+  have eqbrctx' : brctx' = trans_local (smash_context [] 
+    (case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl)).
+  { rewrite /brctx' [case_branch_context_gen _ _ _ _ _ _](trans_inst_case_branch_context
+      (Γ := Γ)
+      (br := br) wfp wfbr declc) => //.
+    erewrite <- PCUICCasesContexts.inst_case_branch_context_eq => //. }
+  split => //.
+  rewrite expand_lets_mkApps trans_mkApps !lengths /=.
+  rewrite !map_app (map_map_compose _ _ _ _ trans).
+  f_equal.
+  { relativize #|cstr_args cdecl|. erewrite expand_lets_lift_cancel. 2:rewrite case_branch_context_length_args //.
+    rewrite case_branch_context_assumptions //. 
+    rewrite context_assumptions_map.
+    rewrite (trans_lift _ (shiftnP #|Γ| xpred0)).
+    { rewrite /ptm on_free_vars_it_mkLambda_or_LetIn.
+      apply/andP; split.
+      eapply (on_free_vars_case_predicate_context declc wfp) => //.
+      rewrite (case_predicate_context_length_indices wfp) => //. }
+    rewrite -trans_it_mkLambda_or_LetIn //. }
+  have onfvsargs : on_free_vars_ctx (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0)
+    (cstr_args cdecl).
+  { pose proof (declared_constructor_closed_args declc).
+    now eapply closedn_ctx_on_free_vars. }
+  f_equal.
+  rewrite !map_map_compose /id. 
+  pose proof (declared_constructor_closed_indices declc).
+  eapply forallb_All in H.
+  eapply All_map_eq. eapply All_impl; tea; cbv beta.
+  intros x cl.
+  { rewrite -(trans_expand_lets (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0)) //.
+    rewrite shiftnP_add.
+    eapply closedn_on_free_vars. red in cl. red. rewrite -cl.
+    f_equal. lia.
+    rewrite -trans_inds. 
+    rewrite -trans_subst_instance.
+    have fvsexpx : on_free_vars
+      (shiftnP (context_assumptions (cstr_args cdecl))
+         (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0))
+          (expand_lets (cstr_args cdecl) x)@[puinst p].
+    { eapply (@closedn_on_free_vars xpred0) in cl.
+      rewrite on_free_vars_subst_instance.
+      eapply (on_free_vars_expand_lets_k _ _ 0) => //.
+      rewrite shiftnP_add. red; rewrite -cl.
+      f_equal. f_equal. lia. }
+    rewrite -(trans_subst (shiftnP (context_assumptions (cstr_args cdecl)) (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0)) xpred0) //.
+    eapply (inds_is_open_terms []).
+    rewrite -trans_subst_instance_ctx.
+    have fvssi : on_free_vars
+      (shiftnP #|(ind_params mdecl)@[puinst p]|
+        (shiftnP (context_assumptions (cstr_args cdecl)) xpred0))
+      (S.subst (inds (inductive_mind ci) (puinst p) (SE.ind_bodies mdecl))
+        (#|ind_params mdecl| +
+          context_assumptions (trans_local (cstr_args cdecl)))
+        (expand_lets (cstr_args cdecl) x)@[puinst p]).
+    { len. rewrite shiftnP_add.
+      eapply on_free_vars_subst_k. eapply (inds_is_open_terms []).
+      len. rewrite shiftnP_add in fvsexpx.
+      red; rewrite -fvsexpx. f_equal. f_equal. lia. }
+    rewrite -(trans_expand_lets_k (shiftnP (context_assumptions (cstr_args cdecl)) xpred0)) //.
+    rewrite on_free_vars_ctx_subst_instance. eapply on_free_vars_ctx_impl.
+    2:{ eapply closedn_ctx_on_free_vars. eapply (declared_inductive_closed_params declc). }
+    { intros i'. rewrite shiftnP0 //. }
+    rewrite -map_rev.
+    rewrite -(trans_subst (shiftnP (context_assumptions (cstr_args cdecl) + context_assumptions (ind_params mdecl))
+      xpred0) (shiftnP #|Γ| xpred0)).
+    { rewrite context_assumptions_map.
+      relativize (context_assumptions (ind_params mdecl)).
+      eapply on_free_vars_expand_lets_k => //.
+      rewrite on_free_vars_ctx_subst_instance; eauto with pcuic.
+      2:now len.
+      rewrite shiftnP_add in fvssi. len in fvssi. len.
+      rewrite Nat.add_comm context_assumptions_map in fvssi => //. }
+    { rewrite forallb_rev. eapply forallb_All in onps. solve_all. }
     f_equal.
-    rewrite /case_branch_context.
-    symmetry. 
-    erewrite <- PCUICCasesContexts.inst_case_branch_context_eq => //.
-  - rewrite trans_mkApps !lengths.
-    rewrite trans_lift /ptm trans_it_mkLambda_or_LetIn. f_equal.
-    rewrite !map_app (map_map_compose _ _ _ _ trans). f_equal.
-    setoid_rewrite trans_subst. 
-    rewrite -(map_map_compose _ _ _ trans) map_rev. f_equal.
-    rewrite (map_map_compose _ _ _ _ trans).
-    setoid_rewrite trans_expand_lets_k.
-    rewrite /id trans_subst_instance_ctx.
-    rewrite -(map_map_compose _ _ _ trans). f_equal.
-    rewrite (map_map_compose _ _ _ _ trans).
-    setoid_rewrite trans_subst.
-    rewrite trans_inds.
-    rewrite -(map_map_compose _ _ _ trans). f_equal.
-    rewrite !map_map_compose.
-    now setoid_rewrite trans_subst_instance.
-    cbn. rewrite trans_mkApps map_app; f_equal. f_equal.
-    rewrite map_map_compose. setoid_rewrite <- trans_lift.
-    rewrite -(map_map_compose _ _ _ _ trans). f_equal.
-    now rewrite trans_to_extended_list.
-Qed.*)
+    rewrite /case_branch_context /case_branch_context_gen.
+    rewrite expand_lets_set_binder_name. len.
+    { eapply All2_length in wfbctx.
+      now rewrite cstr_branch_context_length in wfbctx. }
+    rewrite /pre_case_branch_context_gen /inst_case_context.
+    relativize #|cstr_args cdecl|.
+    erewrite expand_lets_subst_comm. 2:now len.
+    rewrite !context_assumptions_map !context_assumptions_subst_instance.
+    rewrite cstr_branch_context_assumptions Nat.add_0_r.
+    f_equal.
+    rewrite /cstr_branch_context; len.
+    rewrite Nat.add_comm.
+    rewrite expand_lets_subst_instance.
+    relativize (SE.context_assumptions _).
+    erewrite <-expand_lets_subst_comm. len.
+    rewrite subst_instance_expand_lets_ctx.
+    relativize #|cstr_args cdecl|.
+    erewrite expand_lets_comm. len.
+    rewrite subst_instance_subst_context.
+    rewrite instantiate_inds //. exact declc. 4:now len.
+    4:now len. now rewrite Nat.add_comm. rewrite closedn_subst_instance_context. eauto with pcuic.
+    len. eapply on_free_vars_subst_k. eapply (inds_is_open_terms []).
+    len. rewrite on_free_vars_subst_instance. 
+    eapply closedn_on_free_vars. rewrite Nat.add_assoc //. }
+  cbn. f_equal.
+  rewrite context_assumptions_map.
+  rewrite -(trans_smash_context (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0) []) //.
+  rewrite expand_lets_mkApps /= map_app trans_mkApps /=.
+  f_equal. f_equal; rewrite map_app. f_equal.
+  rewrite map_expand_lets_lift_cancel. now rewrite (case_branch_context_length_args wfbr).
+  rewrite (case_branch_context_assumptions wfbr).
+  rewrite !map_map_compose.
+  eapply forallb_All in onps. eapply All_map_eq, All_impl; tea; cbv beta.
+  intros x op. rewrite (trans_lift _ (shiftnP #|Γ| xpred0)) //.
+  rewrite -(to_extended_list_case_branch_context ci mdecl p _ _ (Forall2_All2 _ _ wfbr)).
+  rewrite map_expand_lets_to_extended_list.
+  rewrite -[to_extended_list _]trans_to_extended_list.
+  f_equal. eapply to_extended_list_smash_context_eq; pcuic; len.
+  now rewrite (case_branch_context_assumptions wfbr).
+Qed.
 
-From MetaCoq.PCUIC Require Import PCUICWeakeningEnv PCUICInductiveInversion.
 Lemma untyped_subslet_inds Γ ind u u' mdecl :
   untyped_subslet Γ (inds (inductive_mind ind) u (ind_bodies mdecl))
     (subst_instance u' (arities_context (ind_bodies mdecl))).
@@ -2475,7 +3165,7 @@ Proof.
       move/andP=> [] onΔ onT.
       rewrite on_free_vars_ctx_smash // /=.
       len. cbn.
-      eapply on_free_vars_expand_lets_k => //. }
+      eapply (on_free_vars_expand_lets_k _ _ 0) => //. }
   eapply red_conv_conv; [|reflexivity].
   clear hfvΓ hfv.
   induction Δ in Γ, T |- * using ctx_length_rev_ind.
@@ -2502,16 +3192,35 @@ Proof.
   rewrite -reln_lift Nat.add_0_r //.
 Qed.
 
-Lemma trans_type_of_constructor {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {wfΣ' : wf (trans_global Σ)} {mdecl idecl cdecl ind i u} :
+Lemma on_free_vars_to_extended_list_k P ctx k : 
+  forallb (on_free_vars (shiftnP (k + #|ctx|) P)) (to_extended_list_k ctx k).
+Proof.
+  rewrite /to_extended_list /to_extended_list_k.
+  have: (forallb (on_free_vars (shiftnP (k + #|ctx|) P)) []) by easy.
+  generalize (@nil term).
+  induction ctx in k |- *; intros l Hn.
+  - simpl; auto.
+  - simpl.
+    destruct a as [? [?|] ?].
+    * rewrite /= Nat.add_succ_r in Hn.
+      specialize (IHctx (S k) l Hn).
+      now rewrite Nat.add_succ_r Nat.add_1_r.
+    * rewrite Nat.add_succ_r Nat.add_1_r. eapply (IHctx (S k)).
+      rewrite -[_ + _](Nat.add_succ_r k #|ctx|) /= Hn.
+      rewrite /shiftnP.
+      nat_compare_specs => /= //.
+Qed.
+
+Lemma trans_type_of_constructor {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {wfΣ' : wf_trans Σ} {mdecl idecl cdecl ind i u} :
   declared_constructor Σ (ind, i) mdecl idecl cdecl ->
   consistent_instance_ext (trans_global Σ)
     (ind_universes (trans_minductive_body mdecl)) u ->
-  trans_global Σ ;;; [] ⊢ trans (ST.type_of_constructor mdecl cdecl (ind, i) u) =
-  TT.type_of_constructor 
+  equality (cf := cf' cf) false (trans_global Σ) [] (trans (ST.type_of_constructor mdecl cdecl (ind, i) u))
+  (TT.type_of_constructor 
     (trans_minductive_body mdecl) 
     (trans_constructor_body (inductive_ind ind) mdecl cdecl)
     (ind,i)
-    u.
+    u).
 Proof.
   intros oncstr onu.
   unfold ST.type_of_constructor.
@@ -2533,7 +3242,7 @@ Proof.
   ((arities_context (mapi (trans_one_ind_body mdecl) (ind_bodies mdecl)))@[u],,,
    trans_local (ind_params mdecl)@[u]).
   { pose proof (trans_declared_constructor _ _ _ _ _ oncstr).
-    epose proof (declared_inductive_closed_params (Σ := trans_global Σ) H).
+    epose proof (declared_inductive_closed_params (cf := cf' cf) (Σ := trans_global Σ) H).
     rewrite on_free_vars_ctx_app !on_free_vars_ctx_subst_instance.
     len.
     rewrite closedn_ctx_on_free_vars.
@@ -2541,14 +3250,34 @@ Proof.
     rewrite closedn_subst_instance_context.
     eapply closedn_ctx_upwards; tea. lia.
     rewrite andb_true_r. apply closed_ctx_on_free_vars.
-    epose proof (declared_minductive_closed_arities (proj1 (proj1 H))).
+    unshelve epose proof (declared_minductive_closed_arities (cf := cf' cf) (Σ := trans_global Σ) (proj1 (proj1 H))).
     apply H1. }
+  epose proof (declared_constructor_closed oncstr).
+  rewrite /closed_constructor_body in H.
+  move/andP: H => [] /andP[] clargs cli clty.
   have clterm : is_open_term
     ((arities_context (mapi (trans_one_ind_body mdecl) (ind_bodies mdecl)))@[u],,,
     map trans_decl (ind_params mdecl)@[u])
     (it_mkProd_or_LetIn (map trans_decl (cstr_args cdecl)@[u])
       (trans (cstr_concl mdecl (inductive_ind (ind, i).1) cdecl)@[u])).
-  { admit. }
+  { rewrite -trans_it_mkProd_or_LetIn.
+    eapply trans_on_free_vars. len.
+    rewrite on_free_vars_it_mkProd_or_LetIn.
+    apply/andP; split. rewrite on_free_vars_ctx_subst_instance.
+    eapply closedn_ctx_on_free_vars. now rewrite Nat.add_comm.
+    rewrite shiftnP_add. len. rewrite /cstr_concl.
+    rewrite subst_instance_mkApps on_free_vars_mkApps /=.
+    rewrite forallb_map forallb_app. apply/and3P; split.
+    rewrite /shiftnP orb_false_r. apply Nat.ltb_lt. 
+    assert (#|ind_bodies mdecl| > 0).
+    { destruct oncstr as [[] ?]. clear hnth. eapply nth_error_Some_length in e. lia. }
+    lia.
+    eapply forallb_impl. 2:eapply on_free_vars_to_extended_list_k.
+    intros x hx. rewrite on_free_vars_subst_instance.
+    rewrite Nat.add_assoc. rewrite -[shiftnP (_ + #|ind_bodies mdecl|) _]shiftnP_add.
+    intros H; exact H. solve_all.
+    rewrite on_free_vars_subst_instance. eapply closedn_on_free_vars in H.
+    now rewrite Nat.add_comm (Nat.add_comm _ #|ind_params mdecl|) Nat.add_assoc. }
   eapply equality_it_mkProd_or_LetIn.
   { eapply context_equality_rel_app.
     rewrite -trans_subst_instance_ctx.
@@ -2576,7 +3305,7 @@ Proof.
     rewrite trans_subst_instance_ctx.
     rewrite [map _ _]trans_subst_instance_ctx.
     rewrite context_assumptions_subst_instance //.
-    now len.
+    now len. now len.
     rewrite [map trans_decl _]trans_subst_instance_ctx.
     rewrite (map_map_compose _ _ _ _ trans).
     setoid_rewrite trans_subst_instance.
@@ -2590,8 +3319,20 @@ Proof.
   rewrite -trans_subst_instance_ctx.
   rewrite on_free_vars_it_mkProd_or_LetIn. len.
   cbn.
-  rewrite on_free_vars_ctx_smash //. admit. admit.
-Admitted.
+  rewrite on_free_vars_ctx_smash //.
+  rewrite -closedP_shiftnP. 
+  rewrite on_free_vars_ctx_subst_instance.
+  eapply on_free_vars_ctx_trans. eapply closedn_ctx_on_free_vars.
+  now rewrite Nat.add_comm.
+  cbn. 
+  eapply PCUICOnFreeVars.on_free_vars_expand_lets_k. now len.
+  rewrite Nat.add_comm on_free_vars_ctx_subst_instance.
+  eapply on_free_vars_ctx_trans.
+  now eapply closedn_ctx_on_free_vars.
+  move: clterm. len.
+  rewrite on_free_vars_it_mkProd_or_LetIn.
+  move/andP => [] _. now len.
+Qed.
 
 Lemma trans_eq_annots (Γ : list aname) Δ : 
   eq_annots Γ Δ ->
@@ -2615,39 +3356,234 @@ Proof.
   constructor. cbn. auto.
   now apply trans_eq_annots.
 Qed.
+ 
+Lemma extends_trans {Σ Σ' : global_env} : extends Σ Σ' -> extends (trans_global_decls Σ) (trans_global_decls Σ').
+Proof.
+  intros [? ->]. exists (trans_global_decls x).
+  rewrite /trans_global_decls map_app //.
+Qed.
+
+Lemma weaken_prop {cf} : weaken_env_prop
+  (lift_typing
+   (λ (Σ : global_env_ext) (Γ : context) (t T : term),
+      wf_trans Σ →
+      typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T))).
+Proof.
+  intros Σ Σ' u wf ext Γ t T.
+  unfold lift_typing. destruct T.
+  - intros Ht Hw. 
+    pose proof (extends_trans ext).
+    pose proof (wf_extends Hw X). 
+    specialize (Ht X0).
+    eapply (weakening_env (trans_global (Σ, u))); eauto.
+  - intros [s Hs]. exists s. intros Hw.
+    pose proof (extends_trans ext).
+    pose proof (wf_extends Hw X). 
+    specialize (Hs X0).
+    eapply (weakening_env (trans_global (Σ, u))); eauto.
+Qed.
+
+Lemma trans_arities_context mdecl :
+  arities_context (ind_bodies (trans_minductive_body mdecl)) = 
+  trans_local (arities_context (ind_bodies mdecl)).
+Proof.
+  rewrite /arities_context.
+  rewrite !rev_map_spec -map_rev -map_rev.
+  cbn. rewrite rev_mapi /trans_local map_map_compose map_mapi. cbn.
+  rewrite mapi_cst_map. solve_all.
+  eapply All_refl. intros; cbn. reflexivity.
+Qed.
+
+Lemma trans_subst_telescope p q s n Γ :
+  on_free_vars_terms p s -> on_free_vars_ctx q (List.rev Γ) ->
+  trans_local (subst_telescope s n Γ) = 
+  subst_telescope (map trans s) n (trans_local Γ).
+Proof.
+  induction Γ in s, n, q|- *.
+  - cbn; auto.
+  - intros ons; rewrite /= on_free_vars_ctx_app => /andP[] /= ona onΓ.
+    f_equal; eauto. rewrite!PCUICContextSubst.subst_telescope_cons /=.
+    rewrite (trans_subst_decl p q) //. move/andP: ona. now rewrite shiftnP0.
+    f_equal. rewrite mapi_rec_Sk. rewrite -(IHΓ (shiftnP 1 q)) //.
+    rewrite /subst_telescope. f_equal. unfold mapi.
+    apply mapi_rec_ext. intros. now rewrite Nat.add_succ_r.
+Qed.
+
+Lemma All2i_All2 {A B} {P : nat -> A -> B -> Type} {Q} n l l' :
+  All2i P n l l' ->
+  (forall i x y, P i x y -> Q x y) ->
+  All2 Q l l'.
+Proof.
+  induction 1; constructor; eauto.
+Qed.
+
+Lemma eq_annots_expand_lets_ctx (Γ : list aname) (Δ Δ' : context) :
+  eq_annots Γ (expand_lets_ctx Δ Δ') <-> eq_annots Γ Δ'.
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  etransitivity. eapply eq_annots_subst_context.
+  eapply eq_annots_lift_context.
+Qed.
+
+(** We need to go through the intermediate definition which just maps the translation 
+    on inductive declarations but does not perform smashing of the arguments contexts. *)
+
+Definition map_trans_constructor_body (d : PCUICEnvironment.constructor_body) :=
+  let args := trans_local d.(cstr_args) in
+  let indices := map trans d.(cstr_indices) in
+  {| cstr_name := d.(PCUICEnvironment.cstr_name);     
+     cstr_args := args;
+     cstr_indices := indices;
+     cstr_type := trans d.(cstr_type);
+     cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.
+      
+Definition map_trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
+  {| ind_name := d.(PCUICEnvironment.ind_name);
+     ind_relevance := d.(PCUICEnvironment.ind_relevance);
+     ind_indices := trans_local d.(PCUICEnvironment.ind_indices);
+     ind_type := trans d.(PCUICEnvironment.ind_type);
+     ind_sort := d.(PCUICEnvironment.ind_sort);
+     ind_kelim := d.(PCUICEnvironment.ind_kelim);
+     ind_ctors := List.map map_trans_constructor_body d.(PCUICEnvironment.ind_ctors);
+     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(PCUICEnvironment.ind_projs) |}.
+
+Definition map_trans_minductive_body md :=
+  {| ind_finite := md.(PCUICEnvironment.ind_finite);
+     ind_npars := md.(PCUICEnvironment.ind_npars);
+     ind_params := trans_local md.(PCUICEnvironment.ind_params);
+     ind_bodies := map map_trans_one_ind_body md.(PCUICEnvironment.ind_bodies);
+     ind_universes := md.(PCUICEnvironment.ind_universes);
+     ind_variance := md.(PCUICEnvironment.ind_variance)
+  |}.
+
+Lemma trans_case_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {ci c mdecl idecl cdecl p br} {Γ : context} :
+  declared_constructor Σ (ci, c) mdecl idecl cdecl ->
+  wf_predicate mdecl idecl p ->
+  wf_branch cdecl br ->
+  All2 (compare_decls eq eq) (bcontext br)	(cstr_branch_context ci mdecl cdecl) ->
+  on_free_vars_terms (shiftnP #|Γ| xpred0) p.(pparams) ->
+  let p' := map_predicate id trans trans (map_context trans) p in
+  let br' := map_branch trans (map_context trans) br in
+  trans_local (case_branch_context ci mdecl p (forget_types (bcontext br)) cdecl) =
+  inst_case_branch_context p' br'.
+Proof.
+  intros declc wfp wfbr onbctx onpars.
+  intros p' br'.
+  have onfvsargs : on_free_vars_ctx (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0)
+  (cstr_args cdecl).
+  { pose proof (declared_constructor_closed_args declc).
+    now eapply closedn_ctx_on_free_vars. }
+  have fvssi : on_free_vars_ctx
+    (shiftnP #|ind_params mdecl| xpred0)
+    (subst_context
+      (inds (inductive_mind ci) (abstract_instance (ind_universes mdecl))
+        (ind_bodies mdecl)) #|ind_params mdecl| (cstr_args cdecl)).
+    { eapply on_free_vars_ctx_subst_context. len.
+      now rewrite Nat.add_comm. eapply (inds_is_open_terms []). }
+  erewrite <-(PCUICCasesContexts.inst_case_branch_context_eq
+    (ind := ci) (mdecl := map_trans_minductive_body mdecl)
+    (cdecl := map_trans_constructor_body cdecl)).
+  rewrite /case_branch_context /case_branch_context_gen /pre_case_branch_context_gen.
+  rewrite trans_local_set_binder. f_equal.
+  rewrite /br' /=.
+  now rewrite forget_types_map_context.
+  rewrite /inst_case_context.
+  rewrite (trans_subst_context (shiftnP (context_assumptions (ind_params mdecl)) xpred0) (shiftnP #|Γ| xpred0)).
+  { rewrite on_free_vars_ctx_subst_instance.
+    eapply (on_free_vars_ctx_cstr_branch_context (c := (ci, c)) declc). }
+  rewrite [on_free_vars_terms _ _]forallb_rev //.
+  rewrite map_rev. f_equal.
+  rewrite /cstr_branch_context.
+  rewrite trans_subst_instance_ctx.
+  rewrite (trans_expand_lets_ctx xpred0 (shiftnP #|ind_params mdecl| xpred0)); eauto with pcuic.
+  f_equal. f_equal.
+  rewrite (trans_subst_context 
+    (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0) xpred0) //.
+  eapply (inds_is_open_terms []). 
+  f_equal. rewrite trans_inds //. cbn. now len. now len.
+  rewrite /br'. cbn [bcontext map_branch].
+  eapply alpha_eq_trans in onbctx.
+  etransitivity; tea.
+  rewrite /cstr_branch_context.
+  rewrite (trans_expand_lets_ctx xpred0 (shiftnP #|ind_params mdecl| xpred0)) //. eauto with pcuic.
+  rewrite (trans_subst_context (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0) xpred0) //.
+  eapply (inds_is_open_terms []). 
+  rewrite trans_inds. len.
+  cbn [cstr_args map_trans_constructor_body].
+  cbn [ind_params map_trans_minductive_body].
+  cbn [ind_universes map_trans_minductive_body].
+  rewrite /inds. len. reflexivity.
+Qed.
+  
+Lemma All_over_All {cf} Σ Γ wfΓ :
+  ST.All_local_env_over ST.typing
+    (fun (Σ : SE.global_env_ext) (Γ : SE.context)
+      (_ : wf_local Σ Γ) (t T : PCUICAst.term)
+      (_ : ST.typing Σ Γ t T) =>
+      wf_trans Σ ->
+    TT.typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T)) Σ Γ wfΓ ->
+  ST.All_local_env
+    (ST.lift_typing
+      (fun (Σ0 : SE.global_env_ext) (Γ0 : SE.context)
+          (b ty : PCUICAst.term) =>
+          wf_trans Σ ->
+        ST.typing Σ0 Γ0 b ty
+        × TT.typing (H:=cf' cf) (trans_global Σ0) (trans_local Γ0) (trans b) (trans ty)) Σ) Γ.
+Proof.
+  intros H.
+  induction H;cbn.
+  - constructor.
+  - constructor.
+    + apply IHAll_local_env_over.
+    + cbn in *.
+      destruct tu.
+      eexists;split;auto;try assumption.
+  - constructor.
+    + apply IHAll_local_env_over.
+    + cbn in *.
+      destruct tu.
+      eexists;split;auto;eassumption.
+    + cbn in *.
+      split;auto;eassumption.
+Qed.
 
 Theorem pcuic_expand_lets {cf} (Σ : SE.global_env_ext) Γ t T :
   wf Σ ->
   typing Σ Γ t T ->
-  wf (trans_global Σ) -> 
-  typing (trans_global Σ) (trans_local Γ) (trans t) (trans T).
+  wf_trans Σ -> 
+  typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T).
 Proof.
   intros X X0.
   revert Σ X Γ t T X0.
   apply (typing_ind_env (fun Σ Γ t T =>
-    wf (trans_global Σ) ->
-    TT.typing (trans_global Σ) (trans_local Γ) (trans t) (trans T)
+    wf_trans Σ ->
+    TT.typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T)
   )%type
     (fun Σ Γ => 
-    wf (trans_global Σ) ->
-    TT.All_local_env (TT.lift_typing TT.typing (trans_global Σ)) (trans_local Γ))
+    wf_trans Σ ->
+    TT.All_local_env (TT.lift_typing (TT.typing (H:=cf' cf)) (trans_global Σ)) (trans_local Γ))
   );intros.
-  - now eapply trans_wf_local_env => //; eapply All_over_All.
-  - rewrite (trans_lift _ (shiftnP #|skipn (S n) Γ| xpred0)). admit.
+  - eapply trans_wf_local_env => //. now eapply All_over_All.
+  - rewrite (trans_lift _ (shiftnP #|skipn (S n) Γ| xpred0)).
+    eapply closed_wf_local in wfΓ; tea.
+    eapply closedn_ctx_decl in wfΓ; tea.
+    move/andP: wfΓ=> /= [] _ cl.
+    rewrite skipn_length. eapply nth_error_Some_length in H. lia. 
+    now apply closedn_on_free_vars.
     rewrite trans_decl_type.
     eapply type_Rel; eauto.
-    + now apply map_nth_error.
+    now apply map_nth_error.
   - econstructor; eauto.
     destruct u; auto. simpl in H |- *.
     intros l inl. now rewrite <-trans_global_ext_levels.
   - eapply TT.type_Prod;auto.
   - eapply TT.type_Lambda;eauto.
   - eapply TT.type_LetIn;eauto.
-  - simpl. rewrite (trans_subst10 _ (shiftnP (S #|Γ|) xpred0) (shiftnP #|Γ| xpred0)); pcuic.
+  - simpl. rewrite (trans_subst10 _ (shiftnP (S #|Γ|) xpred0) (shiftnP #|Γ| xpred0)); eauto with pcuic.
     eapply type_is_open_term in X2.
     move: X2 => /= /andP[]. rewrite shiftnP_add //.
     now eapply subject_is_open_term in X4.
-    eapply type_App; tea.
+    eapply type_App; eauto.
   - rewrite trans_subst_instance.
     rewrite trans_cst_type.
     eapply TT.type_Const; eauto.
@@ -2662,7 +3598,27 @@ Proof.
     eapply TT.type_Construct; eauto.
     + eapply trans_declared_constructor; tea. 
     + now apply trans_consistent_instance_ext.
-    + admit.
+    + epose proof (declared_constructor_inv weaken_prop _ X isdecl) as [cs [hnth onc]].
+      destruct onc. red in on_ctype.
+      destruct on_ctype as [s Hs].
+      rewrite /type_of_constructor. forward Hs. eauto.
+      exists (s@[u]). red.
+      rewrite (trans_subst (shiftnP #|ind_bodies mdecl| xpred0) (shiftnP 0 xpred0)).
+      pose proof (declared_constructor_closed_gen_type isdecl).
+      eapply closedn_on_free_vars. len in H0. now rewrite closedn_subst_instance.
+      eapply (inds_is_open_terms []).
+      eapply (substitution (Γ := trans_local Γ) (Δ := []) (T:=tSort s@[u])).
+      rewrite trans_inds. eapply (weaken_subslet (Γ := trans_local Γ) (Γ' := [])); eauto with pcuic.
+      eapply subslet_inds. eapply (trans_declared_inductive _ _ _ _ isdecl).
+      now eapply trans_consistent_instance_ext.
+      rewrite trans_arities_context /=.
+      rewrite -trans_subst_instance_ctx.
+      eapply weaken_ctx; eauto.
+      clear hnth. eapply trans_declared_constructor in isdecl.
+      epose proof (typing_subst_instance_decl (trans_global Σ)
+        _ _ _ _ _ _ _ (proj1 (proj1 isdecl)) Hs).
+      forward X2. now eapply trans_consistent_instance_ext.
+      now rewrite trans_subst_instance_ctx trans_subst_instance.
     + symmetry. cbn.
       eapply (weaken_equality (Γ := []) (trans_local Γ)).
       now eapply wf_local_closed_context in X0.
@@ -2678,55 +3634,180 @@ Proof.
     2:{ eapply (wf_predicate_length_pars H0). }
     eapply TT.type_Case; auto.
     + now apply trans_declared_inductive.
-    + cbn. rewrite -trans_ind_predicate_context. pcuic. pcuic.
+    + cbn. rewrite -trans_ind_predicate_context. eauto with pcuic. eauto with pcuic.
       now eapply alpha_eq_trans.
     + now eapply trans_wf_predicate.
     + cbn. rewrite /id.
       now apply trans_consistent_instance_ext.
     + cbn [pparams pcontext].
-      rewrite (trans_case_predicate_context (Σ := Σ) Γ); tea.
+      rewrite (trans_case_predicate_context (Σ := Σ) (Γ := Γ)); tea.
       now rewrite -trans_local_app. 
-    + rewrite (trans_case_predicate_context (Σ := Σ) Γ); tea.
+    + rewrite (trans_case_predicate_context (Σ := Σ) (Γ := Γ)); tea.
       rewrite -trans_local_app. now eapply X3.
     + rewrite <- trans_global_ext_constraints.
       eassumption.
-    + move: X6.
-      admit.
+    + move: X5 X6. cbn.
+      have wfctx : wf_local Σ (Γ ,,, (ind_params mdecl,,, ind_indices idecl)@[puinst p]).
+      { eapply PCUICWeakening.weaken_wf_local; tea. eapply on_minductive_wf_params_indices_inst; tea. }
+      move: wfctx.
+      clear -wfΣ X10.
+      rewrite -map_app -[trans_local _ ++ _]trans_local_app.
+      rewrite -[map _ (trans_local _)]trans_subst_instance_ctx /id.
+      rewrite -[List.rev (trans_local _)]map_rev.
+      generalize (pparams p ++ indices).
+      change T.PCUICEnvironment.subst_instance_context with subst_instance_context.
+      rewrite -/context.
+      generalize (ind_params mdecl ,,, ind_indices idecl)@[puinst p] as Δ.
+      intros c; revert Γ. induction c using ctx_length_rev_ind.
+      * intros Γ l wf.
+        intros c; depelim c. constructor.
+      * intros Δ. rewrite app_context_assoc.
+        rewrite List.rev_app_distr /=. 
+        move=> l wfctx.
+        intros H. depelim H.
+        { depelim X6.
+          cbn; constructor. now apply t2.
+          unshelve epose proof (substitution_wf_local (Γ':=[vass na t]) _ wfctx). shelve.
+          { now eapply subslet_ass_tip. }
+          rewrite subst_telescope_subst_context in H.
+          specialize (X (subst_context [i] 0 Γ) ltac:(now len) _ _ X0 H).
+          rewrite subst_telescope_subst_context in X6.
+          specialize (X X6).
+          rewrite -subst_telescope_subst_context in X.
+          rewrite [map trans_decl _](trans_subst_telescope (shiftnP #|Δ| xpred0) 
+            (shiftnP (S #|Δ|) xpred0)) in X.
+          cbn. rewrite (subject_is_open_term t0) //. rewrite List.rev_involutive.
+          eapply wf_local_closed_context in wfctx.
+          now move: wfctx; rewrite on_free_vars_ctx_app /= => /andP[].
+          exact X. }
+        { intros c; depelim c. 
+          constructor. 
+          destruct (wf_local_app_inv wfctx) as [w _]. depelim w.
+          unshelve epose proof (substitution_wf_local (Γ':=[vdef na b t]) _ wfctx). shelve.
+          { now eapply subslet_def_tip. }
+          rewrite subst_telescope_subst_context in H.
+          specialize (X (subst_context [b] 0 Γ) ltac:(now len) _ _ X0 H).
+          rewrite subst_telescope_subst_context in c.
+          specialize (X c).
+          rewrite -subst_telescope_subst_context in X.
+          rewrite [map trans_decl _](trans_subst_telescope (shiftnP #|Δ| xpred0) 
+            (shiftnP (S #|Δ|) xpred0)) in X.
+          cbn. rewrite (subject_is_open_term l1) //. rewrite List.rev_involutive.
+          eapply wf_local_closed_context in wfctx.
+          now move: wfctx; rewrite on_free_vars_ctx_app /= => /andP[].
+          exact X. }
     + rewrite trans_mkApps map_app in X8. now eapply X8.
-    + admit.
-    + admit.
-      (* rewrite (trans_case_predicate_context Γ); tea.
-      eapply All2i_map. eapply All2i_map_right.
+    + red. eapply Forall2_map_right, Forall2_map.
       eapply Forall2_All2 in H4.
+      eapply All2i_All2_mix_left in X9; tea.
+      eapply All2i_nth_hyp in X9.
+      eapply All2_Forall2. eapply All2i_All2; tea; cbv beta.
+      intros i cdecl br [hnth [wfbr [cd _]]].
+      have declc : declared_constructor Σ (ci, i) mdecl idecl cdecl.
+      { split; tea. }
+      move: wfbr; rewrite /wf_branch /wf_branch_gen. cbn.
+      apply compare_decls_eq_context in cd.
+      rewrite /cstr_branch_context in cd.
+      eapply trans_eq_context_gen in cd.
+      eapply eq_context_gen_smash_context in cd.
+      intros eqann.
+      eapply (eq_annots_subst_context _ (map trans (inds (inductive_mind ci) (abstract_instance (ind_universes mdecl)) (ind_bodies mdecl))) #|ind_params mdecl|).
+      eapply (eq_annots_expand_lets_ctx _ (trans_local (ind_params mdecl))).
+      rewrite -(smash_context_subst []) /= subst_context_nil.
+      rewrite (expand_lets_smash_context _ []) /=. len; rewrite expand_lets_k_ctx_nil.
+      rewrite (trans_expand_lets_ctx xpred0 (shiftnP #|ind_params mdecl| xpred0)) in cd. 
+      eauto with pcuic.
+      { eapply on_free_vars_ctx_subst_context. len.
+        apply closedn_ctx_on_free_vars.
+        generalize (declared_constructor_closed_args declc).
+        now rewrite Nat.add_comm.
+        eapply (inds_is_open_terms []). }
+      rewrite (trans_subst_context (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0) xpred0) in cd.
+      { apply closedn_ctx_on_free_vars.
+        apply (declared_constructor_closed_args declc). }
+      apply (inds_is_open_terms []).
+      now eapply eq_context_gen_binder_annot in cd.
+    + eapply All2i_map. eapply All2i_map_right.
+      eapply Forall2_All2 in H4.
+      eapply All2i_nth_hyp in X9.
       eapply All2i_All2_mix_left in X9; tea.
       eapply All2i_impl ; tea.
       intros i cdecl br. cbv beta.
       set (cbt := case_branch_type _ _ _ _ _ _ _ _).
-      intros (wf & eqctx & Hbctx & Hb & IHb & Hbty & IHbty) brctxty.
+      intros (wf & hnth & eqctx & Hbctx & Hb & IHb & Hbty & IHbty).
+      have declc : declared_constructor Σ (ci, i) mdecl idecl cdecl.
+      { split; tea. }
+      have clargs : on_free_vars_ctx (shiftnP (#|ind_params mdecl| + #|ind_bodies mdecl|) xpred0)
+        (cstr_args cdecl).
+      { apply closedn_ctx_on_free_vars.
+        generalize (declared_constructor_closed_args declc). now rewrite Nat.add_comm. }
+      split. rewrite -(trans_cstr_branch_context xpred0); auto. eauto with pcuic.
+      cbn. now eapply alpha_eq_smash_context, alpha_eq_trans.
+      rewrite (trans_case_predicate_context declc H1 s H0).
+      intros brctxty.
+      have trbr := !! (trans_case_branch_type (Γ := Γ) declc H1 H0 wf X1 eqctx).
+      forward_keep trbr. 
+      { eapply ctx_inst_open_terms in X5.
+        eapply All_app in X5 as [].
+        now eapply All_forallb, All_impl; tea. }
+      forward trbr.
+      { eapply subject_is_open_term in pret. move: pret.
+        rewrite /predctx; len. rewrite (case_predicate_context_length_indices H0).
+        now rewrite shiftnP_add. }
+      rewrite -/ptm  in trbr.
+      set (p' := map_predicate _ _ _ _ _) in *.
+      cbv zeta in trbr.
+      set (br' := trans_branch _ _) in *.
+      set (cbctx := case_branch_context _ _ _ _ _) in trbr.
+      set (brctxty' := case_branch_type _ _ _ _ _ _ _ _) in trbr.
+      change brctxty with brctxty'. clear brctxty.
+      destruct trbr as [eqbrctx' eqbrty'].
+      specialize (IHb X10). specialize (IHbty X10). specialize (Hbctx X10).
+      have fvs_cbctx : on_free_vars_ctx (shiftnP #|Γ| xpred0) cbctx.
+      { eapply typing_closed_ctx in Hb; eauto.
+        now move: Hb; rewrite on_free_vars_ctx_app => /andP[]. }
       repeat split.
-      * rewrite /brctxty.
-        now eapply trans_cstr_branch_context_eq.
-      * pose proof (trans_case_branch_type ci mdecl idecl cdecl i p br isdecl H1 wf eqctx).
-        rewrite -/brctxty -/ptm in H5. cbn in H5. clearbody brctxty.
-        subst brctxty. rewrite -trans_local_app. cbn. apply IHb.
-      * pose proof (trans_case_branch_type ci mdecl idecl cdecl i p br isdecl H1 wf eqctx).
-        rewrite -/brctxty -/ptm in H5. cbn in H5. clearbody brctxty.
-        subst brctxty. rewrite -trans_local_app. cbn. apply IHbty. *)
+      * rewrite eqbrctx'.
+        rewrite trans_local_app in Hbctx.
+        eapply wf_local_smash_end in Hbctx.
+        rewrite (trans_smash_context (shiftnP #|Γ| xpred0)) //.
+      * rewrite eqbrctx' eqbrty'.
+        rewrite (trans_expand_lets (shiftnP #|Γ| xpred0)) //.
+        eapply subject_is_open_term in Hbty.
+        move: Hbty. rewrite /cbt. len.
+        now rewrite shiftnP_add.
+        rewrite (trans_smash_context (shiftnP #|Γ| xpred0)) //.
+        assert (bbody br' = expand_lets (trans_local cbctx) (trans (bbody br))) as ->.
+        { rewrite /br' /trans_branch; cbn [bbody].
+          rewrite -/(inst_case_context (pparams p') (puinst p') _).
+          cbn -[inst_case_context expand_lets].
+          f_equal. rewrite /cbctx.
+          rewrite (trans_case_branch_context (Γ := Γ) declc) //. }   
+        eapply (typing_expand_lets (Σ := trans_global Σ)).
+        now rewrite trans_local_app in IHb.
+      * rewrite eqbrctx' eqbrty'.
+        rewrite (trans_expand_lets (shiftnP #|Γ| xpred0)) //.
+        eapply subject_is_open_term in Hbty.
+        move: Hbty. rewrite /cbt. len.
+        now rewrite shiftnP_add.
+        rewrite (trans_smash_context (shiftnP #|Γ| xpred0)) //.
+        eapply (typing_expand_lets (Σ := trans_global Σ) _ _ _ (tSort ps)).
+        now rewrite trans_local_app in IHbty.
 
   - rewrite (trans_subst (shiftnP #|projection_context p.1.1 mdecl idecl u| xpred0) (shiftnP #|Γ| xpred0)).
-    admit. admit.
-    rewrite trans_subst_instance.
-    cbn.
-    rewrite map_rev.
+    { rewrite /projection_context /=; len. cbn.
+      destruct (declared_projection_type_and_eq _ isdecl) as [[] ?].
+      eapply isType_is_open_term in i. cbn in i; len in i.
+      rewrite on_free_vars_subst_instance //. }
+    { generalize (subject_is_open_term X1). move/type_is_open_term: X1.
+      now rewrite on_free_vars_mkApps /= forallb_rev => -> ->. }
+    rewrite trans_subst_instance /= map_rev.
     change (trans ty) with ((on_snd trans pdecl).2).
     eapply type_Proj.
     + now apply trans_declared_projection.
     + rewrite trans_mkApps in X2; eauto.
-    + rewrite map_length.
-      rewrite H.
-      destruct mdecl.
-      reflexivity.
-  - rewrite trans_dtype. simpl.
+    + rewrite map_length H. now destruct mdecl.
+  - rewrite trans_dtype /=.
     assert (is_open_term Γ (tFix mfix n)).
     { eapply (subject_is_open_term (Σ := Σ)). econstructor; tea. solve_all.
       destruct a as [s Hs]. exists s; intuition eauto.
@@ -2790,8 +3871,1712 @@ Proof.
       2:now exists s.
       eapply into_equality.
       eapply (trans_cumul (Σ := Σ)); eauto.
-      fvs. specialize (X1 X5). now eapply type_is_open_term in X1.
-      specialize (X3 X5). now eapply subject_is_open_term in X3.
-Admitted.
+      eapply (trans_on_free_vars_ctx 0). now eapply wf_local_closed_context in wfΓ.
+      specialize (X1 X5).
+      now eapply type_is_open_term in X1.
+      now eapply subject_is_open_term in X3.
+Qed.
 
-Print Assumptions pcuic_expand_lets.
+Lemma fresh_global_map {kn} {Σ : global_env} : 
+  fresh_global kn Σ -> fresh_global kn (map (on_snd trans_global_decl) Σ).
+Proof.
+  intros f.
+  now eapply Forall_map; cbn.
+Qed.
+
+Lemma fold_right_map {A B C} {f : B -> A -> A} {acc l} {g : C -> B} :
+  fold_right f acc (map g l) = fold_right (fun c a => f (g c) a) acc l.
+Proof.
+  induction l; cbn; auto. now rewrite IHl.
+Qed.
+
+Lemma fold_right_ext {A B} {f g : B -> A -> A} {acc l} :
+  f =2 g ->
+  fold_right f acc l = fold_right g acc l.
+Proof.
+  induction l; cbn; auto => Hfg. now rewrite IHl.
+Qed.
+
+Lemma trans_global_levels {Σ : global_env} : PCUICLookup.global_levels (trans_global_decls Σ) = PCUICLookup.global_levels Σ.
+Proof.
+  rewrite /PCUICLookup.global_levels.
+  rewrite /trans_global_decls fold_right_map.
+  eapply fold_right_ext. intros decl lvls.
+  destruct decl as [kn []]; cbn; reflexivity.
+Qed.
+
+Lemma trans_global_constraints {Σ : global_env} : PCUICLookup.global_constraints (trans_global_decls Σ) = PCUICLookup.global_constraints Σ.
+Proof.
+  rewrite /PCUICLookup.global_constraints.
+  rewrite fold_right_map.
+  eapply fold_right_ext. intros decl lvls.
+  destruct decl as [kn []]; cbn; reflexivity.
+Qed.
+
+Lemma type_it_mkProd_or_LetIn_smash_middle {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ' T s} :
+  Σ ;;; Γ |- it_mkProd_or_LetIn Δ (it_mkProd_or_LetIn Δ' T) : tSort s ->
+  Σ ;;; Γ |- it_mkProd_or_LetIn Δ (it_mkProd_or_LetIn (smash_context [] Δ') (expand_lets Δ' T)) : tSort s.
+Proof.
+  intros hit.
+  eapply subject_reduction; tea. clear hit.
+  eapply red_it_mkProd_or_LetIn.
+  revert T Δ; induction Δ' using ctx_length_rev_ind => T.
+  - rewrite expand_lets_nil; reflexivity.
+  - rewrite !it_mkProd_or_LetIn_app.
+    destruct d as [na [b|] ty]; cbn.
+    + rewrite smash_context_app_def.
+      specialize (X (subst_context [b] 0 Γ0) ltac:(now len) (subst [b] #|Γ0| T)).
+      etransitivity. eapply red1_red, red_zeta.
+      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r.
+      now rewrite expand_lets_vdef.
+    + rewrite smash_context_app_ass !it_mkProd_or_LetIn_app.
+      specialize (X Γ0 ltac:(easy)).
+      intros Δ. eapply red_prod. cbn. reflexivity.
+      rewrite expand_lets_vass. cbn. rewrite -[_ ,, _](app_context_assoc _ _ [_]). apply X.
+Qed.
+
+Lemma subst_context_expand_lets_ctx Δ s Δ' : 
+  subst_context (map (expand_lets Δ) s) 0 (expand_lets_k_ctx Δ #|s| Δ') =
+  expand_lets_ctx Δ (subst_context s 0 Δ').
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  relativize #|s|. erewrite <-subst_app_context. len. cbn.
+  2:now len.
+  rewrite /expand_lets /expand_lets_k.
+  rewrite -map_map_compose.
+  rewrite -subst_context_comm. f_equal.
+  cbn. now rewrite -distr_lift_subst_context.
+Qed.
+
+Lemma ctx_inst_expand_lets {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {univs} {Γ Δ} {s ctx} :
+  PCUICTyping.ctx_inst (λ (Σ : global_env_ext) (Γ : context) (t T : term), Σ;;; Γ |- t : T)  (Σ, univs) (Γ ,,, Δ) s ctx ->
+  PCUICTyping.ctx_inst (λ (Σ : global_env_ext) (Γ : context) (t T : term), Σ;;; Γ |- t : T) (Σ, univs) (Γ ,,, smash_context [] Δ) (map (expand_lets Δ) s) (List.rev (expand_lets_ctx Δ (List.rev ctx))).
+Proof.
+  induction 1.
+  - cbn. constructor.
+  - cbn. rewrite expand_lets_ctx_app /=.
+    rewrite List.rev_app_distr /=. constructor.
+    cbn. now eapply typing_expand_lets in t0.
+    rewrite subst_telescope_subst_context.
+    rewrite -subst_context_subst_telescope in IHX.
+    now rewrite (subst_context_expand_lets_ctx _ [i]).
+  - cbn. rewrite expand_lets_ctx_app /=.
+    rewrite List.rev_app_distr /=. constructor.
+    rewrite subst_telescope_subst_context.
+    rewrite -subst_context_subst_telescope in IHX.
+    now rewrite (subst_context_expand_lets_ctx _ [b]).
+Qed.
+
+Lemma rev_inj {A} {l l' : list A} : List.rev l = List.rev l' -> l = l'.
+Proof.
+  move: l'. induction l using rev_ind; destruct l' using rev_case => /= //.
+  - rewrite List.rev_app_distr /= //.
+  - rewrite List.rev_app_distr /= //.
+  - rewrite !List.rev_app_distr /= => [=] <- H.
+    f_equal; eauto.
+Qed.
+
+Lemma trans_local_subst_telescope p q s k Γ : 
+  on_free_vars_ctx p (List.rev Γ) ->
+  on_free_vars_terms q s ->
+  trans_local (subst_telescope s k Γ) = subst_telescope (map trans s) k (trans_local Γ).
+Proof.
+  intros onp onq.
+  eapply rev_inj.
+  rewrite -subst_context_subst_telescope -map_rev.
+  rewrite -subst_context_subst_telescope -map_rev.
+  rewrite [map _ _] (trans_subst_context p q) //.
+Qed.
+
+Lemma trans_ctx_inst_expand_lets {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ} {s} :
+  wf_trans Σ ->
+  wf_local Σ (Γ ,,, List.rev Δ) ->
+  PCUICTyping.ctx_inst (λ (Σ : global_env_ext) (Γ : context) (t T : term), Σ;;; Γ |- t : T) Σ Γ s Δ ->
+  PCUICTyping.ctx_inst (λ (Σ : global_env_ext) (Γ : context) (t T : term), 
+    typing (H:=cf' cf) Σ Γ t T) (trans_global Σ)
+    (trans_local Γ) (map trans s) (trans_local Δ).
+Proof.
+  intros wf wfctx i.
+  induction i in wfctx |- *.
+  - cbn. constructor.
+  - cbn. constructor. eapply pcuic_expand_lets; tea.
+    cbn in wfctx. rewrite -app_assoc in wfctx.
+    unshelve epose proof (substitution_wf_local (Σ := Σ) (Γ' := [vass na t]) _ wfctx). shelve.
+    { now eapply subslet_ass_tip. }
+    rewrite subst_context_subst_telescope in X. specialize (IHi X).    
+    rewrite (trans_local_subst_telescope (shiftnP (S #|Γ|) xpred0) (shiftnP #|Γ| xpred0)) in IHi.
+    { apply wf_local_closed_context in wfctx.
+      now move/onfvs_app: wfctx => /=. }
+    { cbn. now rewrite (subject_is_open_term t0). }
+    apply IHi.
+  - cbn. constructor.
+    cbn in wfctx. rewrite -app_assoc in wfctx.
+    unshelve epose proof (substitution_wf_local (Σ := Σ) (Γ' := [vdef na b t]) _ wfctx). shelve.
+    { eapply subslet_def_tip. eapply wf_local_app_inv in wfctx as [wf' _].
+      now depelim wf'. }
+    rewrite subst_context_subst_telescope in X. specialize (IHi X).    
+    rewrite (trans_local_subst_telescope (shiftnP (S #|Γ|) xpred0) (shiftnP #|Γ| xpred0)) in IHi.
+    { apply wf_local_closed_context in wfctx.
+      now move/onfvs_app: wfctx => /=. }
+    { eapply wf_local_app_inv in wfctx as [wf' _].
+      depelim wf'. cbn. now rewrite (subject_is_open_term l0). }
+    apply IHi.
+Qed.
+
+Lemma expand_lets_ctx_lift_context_cancel {Γ Δ} :
+  expand_lets_ctx Γ (lift_context #|Γ| 0 Δ) =
+  lift_context (context_assumptions Γ) 0 Δ.
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx /=.
+  rewrite (lift_context_lift_context _ 0) Nat.add_comm lift_context_add. 
+  rewrite subst_context_lift_context_cancel //. now len.
+Qed.
+
+#[global] Instance forallb_proper A : Proper (pointwise_relation A eq ==> eq ==> eq) (@forallb A).
+Proof.
+  intros f g eqfg x y ->. eapply forallb_ext. exact eqfg.
+Qed.
+
+#[global] Instance on_free_vars_terms_proper : Proper (pointwise_relation nat eq ==> eq ==> eq) on_free_vars_terms.
+Proof.
+  unfold on_free_vars_terms.
+  intros f g eqfg x y ->. now rewrite eqfg.
+Qed.
+
+#[global] Instance istrue_proper : Proper (eq ==> eq) (is_true).
+Proof.
+  now intros x y ->.
+Qed.
+
+Lemma Alli_nth_hyp_ind {A} {P : nat -> A -> Type} {n l} : 
+  Alli P n l ->
+  Alli (fun i x => (n <= i) * (nth_error l (i - n) = Some x) * P i x) n l.
+Proof.
+  induction 1; constructor.
+  rewrite Nat.sub_diag /=. eauto.
+  eapply Alli_impl; tea; cbv beta.
+  intros. intuition auto. lia.
+  pose proof (nth_error_Some_length b0).
+  destruct n0. cbn in *. destruct tl. cbn in *. depelim a0. depelim a0.
+  cbn in b0. rewrite -minus_Sn_m. lia. cbn. exact b0.
+Qed.
+
+Lemma Alli_nth_hyp {A} {P : nat -> A -> Type} {l} : 
+  Alli P 0 l ->
+  Alli (fun i x => (nth_error l i = Some x) * P i x) 0 l.
+Proof.
+  move/Alli_nth_hyp_ind => a.
+  eapply Alli_impl; tea; cbv beta.
+  intros n x; rewrite Nat.sub_0_r; intuition auto.
+Qed.
+
+Lemma trans_cstr_concl_eq m n cdecl :
+  on_free_vars_ctx (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)
+    (cstr_args cdecl) ->
+  on_free_vars_terms
+    (shiftnP (#|cstr_args cdecl| + #|ind_params m| + #|ind_bodies m|) xpred0)
+    (cstr_indices cdecl) ->
+  (trans_cstr_concl m n
+     (trans_local (SE.smash_context [] (cstr_args cdecl)))
+           (map trans
+              (map (expand_lets (cstr_args cdecl)) (cstr_indices cdecl)))) =
+  expand_lets (trans_local (cstr_args cdecl))
+    (trans (cstr_concl m n cdecl)).
+Proof.
+  intros onargs onindices.
+  rewrite /trans_cstr_concl /cstr_concl trans_mkApps expand_lets_mkApps.
+  f_equal. 
+  { rewrite /trans_cstr_concl_head /cstr_concl_head. len.
+    cbn [trans].
+    relativize #|cstr_args cdecl|.
+    erewrite expand_lets_tRel. 2:now len.
+    now rewrite context_assumptions_map. }
+  len. cbn.
+  rewrite !map_app. f_equal.
+  { rewrite trans_reln /=.
+    rewrite -trans_to_extended_list.
+    rewrite -/(to_extended_list_k (trans_local (ind_params m)) #|cstr_args cdecl|).
+    relativize #|cstr_args cdecl|. 
+    erewrite map_expand_lets_to_extended_list_k_above. 2:now len.
+    rewrite context_assumptions_map.
+    rewrite trans_to_extended_list //. }
+  { rewrite (trans_expand_lets_map (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) //.
+    now rewrite shiftnP_add Nat.add_assoc. }
+Qed.
+
+Lemma positive_cstr_smash_middle m n acc Γ Δ T :
+  positive_cstr m n acc (it_mkProd_or_LetIn Γ (it_mkProd_or_LetIn Δ T)) ->
+  positive_cstr m n acc (it_mkProd_or_LetIn Γ (it_mkProd_or_LetIn (smash_context [] Δ) (expand_lets Δ T))).
+Proof.
+  revert Δ acc T.
+  induction Γ using ctx_length_rev_ind. cbn.
+  - intros Δ. induction Δ using ctx_length_rev_ind. 
+    { cbn; auto. intros; rewrite expand_lets_nil //. }
+    intros acc T. rewrite !it_mkProd_or_LetIn_app.
+    destruct d as [na [b|] ty].
+    * cbn.
+      rewrite smash_context_app_def.
+      intros p. depelim p. solve_discr.
+      rewrite expand_lets_vdef.
+      eapply X. now len. 
+      rewrite subst_it_mkProd_or_LetIn Nat.add_0_r in p => //.
+    * rewrite smash_context_app_ass expand_lets_vass.
+      rewrite it_mkProd_or_LetIn_app /=.
+      intros p; depelim p. solve_discr.
+      cbn in *.
+      constructor 3; auto.
+  - intros Δ acc T. destruct d as [na [b|] ty]; rewrite !it_mkProd_or_LetIn_app /=; intros p; depelim p; 
+      try solve_discr.
+    * constructor. rewrite !subst_it_mkProd_or_LetIn.
+      len => /=. rewrite -(expand_lets_subst_comm _ _ _ _).
+      rewrite -(smash_context_subst []).
+      eapply X. now len.
+      now rewrite !subst_it_mkProd_or_LetIn !Nat.add_0_r in p.
+    * constructor => //. cbn.
+      cbn in p0. eapply X; auto.
+Qed.
+
+Lemma closedn_trans n t : closedn n t -> closedn n (trans t).
+Proof. intros cl; rewrite on_free_vars_closedn. eapply trans_on_free_vars.
+  now rewrite -on_free_vars_closedn. 
+Qed.
+
+Lemma trans_destArity ctx t : 
+  destArity (trans_local ctx) (trans t) = match destArity ctx t with
+  | Some (ctx, T) => Some (trans_local ctx, T)
+  | None => None
+  end.
+Proof.
+  induction t in ctx |- *; cbn; auto.
+  rewrite (IHt2 (ctx ,, vass na t1)) //.
+  rewrite (IHt3 (ctx ,, vdef na t1 t2)) //.
+Qed.
+
+Lemma trans_ind_realargs m k i :
+  ind_realargs i = ind_realargs (trans_one_ind_body m k i).
+Proof.
+  unfold ind_realargs.
+  rewrite /PCUICTypingDef.destArity. 
+  rewrite (trans_destArity []).
+  destruct destArity => //. destruct p. 
+  now len.
+Qed.
+
+Lemma positive_cstr_arg_trans m acc p T :
+  positive_cstr_arg m acc T ->
+  on_free_vars p T ->
+  positive_cstr_arg (trans_minductive_body m) (trans_local acc) (trans T).
+Proof.
+  induction 1 in p |- *.
+  - intros ont.
+    constructor; len. now eapply closedn_trans.
+  - rewrite on_free_vars_mkApps => /= /andP[] onk onl.
+    rewrite trans_mkApps. econstructor 2. now len. now len. 
+    solve_all. len. now eapply closedn_trans. len.
+    cbn. rewrite rev_mapi. rewrite nth_error_mapi e /= //. len.
+    now rewrite -trans_ind_realargs.
+  - cbn. move/and3P => [] onb onty ont.
+    constructor 3. 
+    rewrite (trans_subst (shiftnP 1 p) p) in IHX => /= //.
+    now rewrite onb. eapply IHX.
+    eapply on_free_vars_subst => /= //. now erewrite onb.
+    exact ont.
+  - cbn. move/andP=> []onty ont.
+    constructor 4. len; now eapply closedn_trans.
+    eapply IHX; tea.
+Qed.
+
+Lemma positive_cstr_trans m n acc p T :
+  positive_cstr m n acc T ->
+  on_free_vars p T ->
+  positive_cstr (trans_minductive_body m) n (trans_local acc) (trans T).
+Proof.
+  induction 1 in p |- *.
+  - cbn. intros. rewrite trans_mkApps.
+    cbn. rewrite /headrel. relativize #|ctx|.
+    relativize #|ind_bodies m|.
+    constructor. solve_all.
+    rewrite on_free_vars_closedn. eapply trans_on_free_vars. len.
+    now rewrite -on_free_vars_closedn. all:now len.
+  - cbn. move/and3P => [] onb onty ont. constructor.
+    rewrite (trans_subst (shiftnP 1 p) p) in IHX => /= //.
+    now rewrite onb. eapply IHX.
+    eapply on_free_vars_subst => /= //. now erewrite onb. exact ont.
+  - cbn. move/andP=> [] onty ont.
+    constructor. now eapply positive_cstr_arg_trans.
+    now eapply IHX.
+Qed. 
+
+Lemma smash_assumption_context Γ : 
+  assumption_context Γ ->
+  smash_context [] Γ = Γ.
+Proof.
+  induction Γ using rev_ind.
+  - now reflexivity.
+  - destruct x as [na [b|] ty].
+    intros ass. eapply assumption_context_app in ass as []. elimtype False; depelim a0.
+    intros ass.
+    rewrite smash_context_app_ass IHΓ. now eapply assumption_context_app in ass as [].
+    reflexivity.
+Qed.
+
+Lemma smash_context_idempotent Γ : 
+  smash_context [] (smash_context [] Γ) = smash_context [] Γ.
+Proof.
+  rewrite smash_assumption_context //. pcuic.
+Qed.
+
+Definition fresh_levels global_levels levels := 
+  LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels.
+
+Definition declared_constraints_levels levels cstrs := 
+  ConstraintSet.For_all (fun '(l1,_,l2) => LevelSet.In l1 levels
+    /\ LevelSet.In l2 levels) cstrs.
+
+Definition declared_constraints_levels_union levels cstrs cstrs' :
+  declared_constraints_levels levels cstrs ->
+  declared_constraints_levels levels cstrs' ->
+  declared_constraints_levels levels (ConstraintSet.union cstrs cstrs').
+Proof.
+  intros decl decl'.
+  rewrite /declared_constraints_levels.
+  intros x inx.
+  eapply ConstraintSetProp.FM.union_1 in inx as [].
+  now eapply decl. now eapply decl'.
+Qed.
+  
+Definition declared_constraints_levels_union_left levels levels' cstrs :
+  declared_constraints_levels levels cstrs ->
+  declared_constraints_levels (LevelSet.union levels levels') cstrs.
+Proof.
+  rewrite /declared_constraints_levels.
+  intros hx x inx.
+  specialize (hx x inx).
+  destruct x as [[l d] r]. split.
+  destruct hx. now eapply LevelSetFact.union_2.
+  now eapply LevelSetFact.union_2.
+Qed.
+  
+Definition declared_constraints_levels_union_right levels levels' cstrs :
+  declared_constraints_levels levels' cstrs ->
+  declared_constraints_levels (LevelSet.union levels levels') cstrs.
+Proof.
+  rewrite /declared_constraints_levels.
+  intros hx x inx.
+  specialize (hx x inx).
+  destruct x as [[l d] r]. split.
+  destruct hx. now eapply LevelSetFact.union_3.
+  now eapply LevelSetFact.union_3.
+Qed.
+
+Definition declared_constraints_levels_subset levels levels' cstrs :
+  declared_constraints_levels levels cstrs ->
+  LevelSet.Subset levels levels' ->
+  declared_constraints_levels levels' cstrs.
+Proof.
+  rewrite /declared_constraints_levels.
+  intros hx sub x inx.
+  specialize (hx x inx).
+  destruct x as [[l d] r]. split.
+  now eapply sub.
+  now eapply sub.
+Qed.
+
+Lemma on_udecl_spec `{checker_flags} Σ (udecl : universes_decl) :
+  on_udecl Σ udecl =
+  let levels := levels_of_udecl udecl in
+  let global_levels := global_levels Σ in
+  let all_levels := LevelSet.union levels global_levels in
+  fresh_levels global_levels levels 
+  /\ declared_constraints_levels all_levels (constraints_of_udecl udecl)
+  /\ match udecl with
+      | Monomorphic_ctx ctx =>  LevelSet.for_all (negb ∘ Level.is_var) ctx.1
+      | _ => True
+  end
+  /\ satisfiable_udecl Σ udecl.
+Proof. reflexivity. Qed.
+
+Lemma on_udecl_prop_spec `{checker_flags} Σ (udecl : universes_decl) :
+  on_udecl_prop Σ udecl = 
+    let levels := levels_of_udecl udecl in
+    let global_levels := global_levels Σ in
+    let all_levels := LevelSet.union levels global_levels in
+    declared_constraints_levels all_levels (constraints_of_udecl udecl)
+    /\ match udecl with
+      | Monomorphic_ctx ctx => LevelSet.for_all (negb ∘ Level.is_var) ctx.1
+                              /\ LevelSet.Subset ctx.1 global_levels
+                              /\ ConstraintSet.Subset ctx.2 (global_constraints Σ)
+                              /\ satisfiable_udecl Σ udecl
+      | _ => True
+      end.
+Proof. reflexivity. Qed.
+
+Notation levels_of_list := LevelSetProp.of_list.
+
+Lemma levels_of_list_app l l' : 
+  levels_of_list (l ++ l') = 
+  LevelSet.union (levels_of_list l) 
+    (levels_of_list l').
+Proof.
+  rewrite /LevelSetProp.of_list fold_right_app.
+  induction l; cbn.
+  now rewrite LevelSet_union_empty.
+  apply LevelSet.eq_leibniz. red.
+  rewrite IHl. rewrite LevelSetProp.union_add //.
+Qed.
+
+From Coq Require Import MSetDecide.
+
+Module ConstraintSetDecide := WDecide (ConstraintSet).
+Ltac csets := ConstraintSetDecide.fsetdec.
+
+Definition aulevels inst cstrs : 
+  AUContext.levels (inst, cstrs) = 
+  LevelSetProp.of_list (unfold #|inst| Level.Var).
+Proof.
+  cbn.
+  now rewrite mapi_unfold.
+Qed.
+
+#[global] Instance unfold_proper {A} : Proper (eq ==> `=1` ==> eq) (@unfold A).
+Proof.
+  intros x y -> f g eqfg.
+  induction y; cbn; auto. f_equal; auto. f_equal. apply eqfg.
+Qed.
+
+(* sLemma unfold_add {A} n k (f : nat -> A) : skipn k (unfold (k + n) f) = unfold k (fun x => f (x + n)). *)
+
+Lemma unfold_add {A} n k (f : nat -> A) : unfold (n + k) f = unfold k f ++ unfold n (fun x => f (x + k)).
+Proof.
+  induction n in k |- *.
+  cbn. now rewrite app_nil_r.
+  cbn. rewrite IHn. now rewrite app_assoc.
+Qed.
+
+
+Definition unfold_levels_app n k : 
+  LevelSetProp.of_list (unfold (n + k) Level.Var) = 
+  LevelSet.union (LevelSetProp.of_list (unfold k Level.Var))
+    (LevelSetProp.of_list (unfold n (fun i => Level.Var (k + i)))).
+Proof.
+  rewrite unfold_add levels_of_list_app //.
+  now setoid_rewrite Nat.add_comm at 1.
+Qed.
+
+Lemma levels_of_list_spec l ls : 
+  LevelSet.In l (levels_of_list ls) <-> In l ls.
+Proof.
+  now rewrite LevelSetProp.of_list_1 InA_In_eq.
+Qed.
+
+Lemma In_unfold k l n : 
+  In l (unfold n (λ i : nat, Level.Var (k + i))) <-> ∃ k' : nat, l = Level.Var k' ∧ k <= k' < k + n.
+Proof.
+  induction n; cbn => //. firstorder. lia.
+  split. intros [] % in_app_or => //.
+  eapply IHn in H as [k' [eq lt]]. subst l; exists k'. intuition lia.
+  destruct H as []; subst => //.
+  exists (k + n). intuition lia.
+  intros [k' [-> lt]].
+  apply/in_or_app.
+  destruct (eq_dec k' (k + n)). subst k'.
+  right => //. cbn; auto.
+  left. eapply IHn. exists k'; intuition lia.
+Qed.
+
+Lemma In_levels_of_list k l n : 
+  LevelSet.In l (levels_of_list (unfold n (fun i => Level.Var (k + i)))) <->
+  exists k', l = Level.Var k' /\ k <= k' < k + n. 
+Proof.
+  rewrite LevelSetProp.of_list_1 InA_In_eq. now apply In_unfold.
+Qed.
+
+Lemma In_lift_level k l n : LevelSet.In l (levels_of_list (unfold n (λ i : nat, Level.Var i))) <->
+  LevelSet.In (lift_level k l) (levels_of_list (unfold n (λ i : nat, Level.Var (k + i)))).
+Proof.
+  split.
+  - move/(In_levels_of_list 0) => [k' [-> l'lt]].
+    eapply In_levels_of_list. exists (k + k'); cbn; intuition lia.
+  - move/(In_levels_of_list k) => [k' [eq l'lt]].
+    eapply (In_levels_of_list 0).
+    destruct l; noconf eq. exists n0; cbn; intuition lia.
+Qed.
+
+Lemma not_var_lift l k s : 
+  LS.For_all (λ x : LS.elt, ~~ Level.is_var x) s ->
+  LevelSet.In l s ->
+  LevelSet.In (lift_level k l) s.
+Proof.
+  intros.
+  specialize (H _ H0). cbn in H.
+  destruct l; cbn => //.
+Qed.
+
+Lemma declared_constraints_levels_lift s n k cstrs : 
+  LS.For_all (λ x : LS.elt, (negb ∘ Level.is_var) x) s ->
+  declared_constraints_levels
+    (LevelSet.union (levels_of_list (unfold n (λ i : nat, Level.Var i))) s) cstrs ->
+  declared_constraints_levels
+    (LevelSet.union (levels_of_list (unfold n (λ i : nat, Level.Var (k + i)))) s)
+    (lift_constraints k cstrs).
+Proof.
+  rewrite /declared_constraints_levels.
+  intros hs ha [[l d] r] inx.
+  eapply In_lift_constraints in inx as [c' [eq incs]].
+  specialize (ha _ incs). destruct c' as [[l' d'] r']; cbn in eq; noconf eq.
+  destruct ha as [inl' inr'].
+  apply LevelSetFact.union_1 in inl'. apply LevelSetFact.union_1 in inr'.
+  split.
+  - apply LevelSet.union_spec.
+    destruct inl'.
+    + left. now apply In_lift_level.
+    + right. apply not_var_lift => //.
+  - apply LevelSet.union_spec.
+    destruct inr'.
+    + left. now apply In_lift_level.
+    + right. apply not_var_lift => //.
+Qed.
+
+Definition levels_of_cstr (c : ConstraintSet.elt) :=
+  let '(l, d, r) := c in
+  LevelSet.add l (LevelSet.add r LevelSet.empty).
+
+Definition levels_of_cstrs cstrs := 
+  ConstraintSet.fold (fun c acc => LevelSet.union (levels_of_cstr c) acc) cstrs.
+
+Lemma levels_of_cstrs_acc l cstrs acc :
+  LevelSet.In l acc \/ LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <->
+  LevelSet.In l (levels_of_cstrs cstrs acc).
+Proof.
+  rewrite /levels_of_cstrs.
+  rewrite !ConstraintSet.fold_spec.
+  induction (ConstraintSet.elements cstrs) in acc |- * => /=.
+  split. intros []; auto. inversion H. firstorder.
+  split.
+  intros []. apply IHl0. left. now eapply LevelSetFact.union_3.
+  apply IHl0 in H as []. apply IHl0. left.
+  eapply LevelSet.union_spec. left. 
+  eapply LevelSet.union_spec in H. destruct H => //. inversion H.
+  apply IHl0. right => //.
+  intros. apply IHl0 in H as [].
+  eapply LevelSet.union_spec in H. destruct H => //.
+  right. apply IHl0. left. apply LevelSet.union_spec. now left.
+  now left. right.
+  eapply IHl0. now right.
+Qed.
+
+Lemma levels_of_cstrs_spec l cstrs : 
+  LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <-> 
+  exists d r, ConstraintSet.In (l, d, r) cstrs \/ ConstraintSet.In (r, d, l) cstrs.
+Proof.
+  rewrite -levels_of_cstrs_acc.
+  split.
+  - intros []. inversion H.
+    move: H.
+    rewrite /levels_of_cstrs.
+    eapply ConstraintSetProp.fold_rec.
+    + intros s' em inl. inversion inl.
+    + intros x a s' s'' inx ninx na.
+      intros.
+      destruct x as [[l' d] r].
+      eapply LevelSet.union_spec in H0 as [].
+      eapply LevelSet.add_spec in H0 as []; subst.
+      exists d, r. left. now apply na.
+      eapply LevelSet.add_spec in H0 as []; subst.
+      exists d, l'. right; now apply na. inversion H0.
+      specialize (H H0) as [d' [r' h]].
+      exists d', r'. red in na.
+      destruct h. destruct (na (l, d', r')).
+      firstorder. firstorder.
+  
+  - intros [d [r [indr|indr]]].
+    rewrite /levels_of_cstrs. right.
+    move: indr; eapply ConstraintSetProp.fold_rec.
+    intros. now specialize (H _ indr).
+    intros x a s' s'' inx inx' add inih ihih'.
+    eapply LevelSet.union_spec.
+    eapply add in ihih' as []; subst. left.
+    eapply LevelSet.add_spec. now left. firstorder.
+    right.
+    rewrite /levels_of_cstrs.
+    move: indr; eapply ConstraintSetProp.fold_rec.
+    intros. now specialize (H _ indr).
+    intros x a s' s'' inx inx' add inih ihih'.
+    eapply LevelSet.union_spec.
+    eapply add in ihih' as []; subst. left.
+    eapply LevelSet.add_spec. right. eapply LevelSet.add_spec; now left. firstorder.
+Qed.
+
+Lemma declared_constraints_levels_in levels cstrs : 
+  LevelSet.Subset (levels_of_cstrs cstrs LevelSet.empty) levels ->
+  declared_constraints_levels levels cstrs.
+Proof.
+  rewrite /declared_constraints_levels.
+  intros sub [[l d] r] inx. red in sub.
+  split. apply (sub l). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
+  apply (sub r). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
+Qed.
+
+Lemma In_variance_cstrs l d r v i i' : 
+  ConstraintSet.In (l, d, r) (variance_cstrs v i i') ->
+    (In l i \/ In l i') /\ (In r i \/ In r i').
+Proof.
+  induction v in i, i' |- *; destruct i, i'; intros; try solve [inversion H].
+  cbn in H.
+  destruct a. apply IHv in H. cbn. firstorder auto.
+  eapply ConstraintSet.add_spec in H as []. noconf H. cbn; firstorder.
+  eapply IHv in H; firstorder.
+  eapply ConstraintSet.add_spec in H as []. noconf H. cbn; firstorder.
+  eapply IHv in H; firstorder.
+Qed.
+
+Lemma In_lift l n k : In l (map (lift_level k) (unfold n Level.Var)) <->
+  In l (unfold n (fun i => Level.Var (k + i))).
+Proof.
+  induction n; cbn; auto. firstorder.
+  firstorder.
+  move: H1; rewrite map_app. 
+  intros [] % in_app_or.
+  apply/in_or_app. firstorder.
+  apply/in_or_app. firstorder.
+  move: H1; intros [] % in_app_or.
+  rewrite map_app. apply/in_or_app. firstorder.
+  rewrite map_app. apply/in_or_app. firstorder.
+Qed.
+
+(* duplicated *)
+Lemma is_assumption_context_spec Γ :
+  is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+Proof.
+ induction Γ; cbn.
+ - split; econstructor.
+ - split; intros H.
+   + destruct a; cbn in *. destruct decl_body; inversion H. now econstructor.
+   + invs H. cbn. now eapply IHΓ.
+Qed.
+
+Lemma trans_cumul_ctx_rel {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ'} :
+  wf_trans Σ ->
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ ,,, Δ') ->
+  PCUICConversion.cumul_ctx_rel Σ Γ Δ Δ' ->
+  PCUICConversion.cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+Proof.
+  intros wf' wfl wfr.
+  induction 1; cbn; constructor; auto.
+  eapply IHX. now depelim wfl. now depelim wfr.
+  destruct p; constructor; cbn in *; auto.
+  - rewrite -trans_local_app. eapply (trans_cumul (Σ := Σ)) => //.
+    depelim wfl; depelim wfr. red in l, l0.
+    eapply cumul_decorate; tea. 
+    { destruct l0 as [s Hs]. exists s. eapply context_cumulativity; tea.
+      eapply All2_fold_app. reflexivity. apply X. }
+  - rewrite -trans_local_app. eapply (trans_conv (Σ := Σ)) => //.
+    depelim wfl; depelim wfr. red in l, l0.
+    eapply conv_decorate; tea. auto.
+    now exists T. 
+    { red in l2. exists T'. eapply context_cumulativity; tea.
+      eapply All2_fold_app. reflexivity. apply X. }
+  - rewrite -trans_local_app. eapply (trans_cumul (Σ := Σ)) => //.
+    depelim wfl; depelim wfr. red in l, l0.
+    eapply cumul_decorate; tea. 
+    { destruct l1 as [s Hs]. exists s. eapply context_cumulativity; tea.
+      eapply All2_fold_app. reflexivity. apply X. }
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICRedTypeIrrelevance.
+
+Lemma pres_let_bodies_assumption_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ'} :
+  #|Γ| = #|Γ'| ->
+  assumption_context Γ ->
+  assumption_context Γ' ->
+  All2_fold (λ _ _ : list context_decl, pres_let_bodies) Γ Γ'.
+Proof.
+  induction Γ in Γ' |- *; destruct Γ' => /= //; constructor; auto.
+  - apply IHΓ. lia. now depelim H0. now depelim H1.
+  - red. destruct a as [na [b|] ty], c as [na' [b'|] ty']; cbn in *; try exact tt;
+    depelim H0; depelim H1.
+Qed.
+
+Lemma cumul_type_irrelevance {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' T U} :
+  wf (trans_global Σ) ->
+  #|Γ| = #|Γ'| ->
+  assumption_context Γ ->
+  assumption_context Γ' ->
+  cumul Σ Γ T U ->
+  cumul Σ Γ' T U.
+Proof.
+  intros wf len ass ass'.
+  induction 1. constructor; auto.
+  eapply context_pres_let_bodies_red1 in r.
+  econstructor 2; tea. now eapply pres_let_bodies_assumption_context.
+  eapply context_pres_let_bodies_red1 in r.
+  econstructor 3; tea. now eapply pres_let_bodies_assumption_context.
+Qed.
+
+Section wtcumul'.
+  Import PCUICAst PCUICTyping PCUICEquality.
+  Context {cf : checker_flags}.
+  
+  Reserved Notation " Σ ;;; Γ | Γ' |-- t <=[ le ] u " (at level 50, Γ, Γ' , le, t, u at next level).
+
+  Inductive wt_equality_hetero (le : bool) (Σ : global_env_ext) (Γ Γ' : context) : term -> term -> Type :=
+  | wt_cumul_refl' t u : compare_term le Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ | Γ' |-- t <=[le] u 
+  | wt_cumul_red_l' t u v : wt_red1 Σ Γ t v -> Σ ;;; Γ | Γ' |-- v <=[le] u -> Σ ;;; Γ | Γ' |-- t <=[le] u
+  | wt_cumul_red_r' t u v : Σ ;;; Γ | Γ' |-- t <=[le] v -> wt_red1 Σ Γ' u v -> Σ ;;; Γ | Γ' |-- t <=[le] u
+  where " Σ ;;; Γ | Γ' |-- t <=[ le ] u " := (wt_equality_hetero le Σ Γ Γ' t u) : type_scope.
+    
+  Definition wt_cumul_hetero := wt_equality_hetero true.
+  Definition wt_conv_hetero := wt_equality_hetero false.
+
+  Lemma cumul_decorate_hetero (Σ : global_env_ext) {wfΣ : wf Σ} {Γ Γ' T U} :
+    isType Σ Γ T -> isType Σ Γ' U ->
+    #|Γ| = #|Γ'| ->
+    assumption_context Γ ->
+    assumption_context Γ' ->  
+    cumul Σ Γ T U ->
+    wt_equality_hetero true Σ Γ Γ' T U.
+  Proof.
+    move/isType_wt => ht.
+    move/isType_wt => hu.
+    move=> hlen ass ass'.
+    induction 1. 
+    - constructor. auto.
+    - pose proof (wt_red ht r).
+      econstructor 2.
+      econstructor; tea.
+      eapply IHX; tea.
+    - eapply context_pres_let_bodies_red1 in r.
+      2:eapply pres_let_bodies_assumption_context; tea.
+      pose proof (wt_red hu r).
+      econstructor 3; eauto.
+      econstructor; tea.
+  Qed.
+
+
+  Lemma conv_decorate_hetero (Σ : global_env_ext) {wfΣ : wf Σ} {Γ Γ' T U} :
+    wt Σ Γ T -> wt Σ Γ' U ->
+    #|Γ| = #|Γ'| ->
+    assumption_context Γ ->
+    assumption_context Γ' ->  
+    conv Σ Γ T U ->
+    wt_equality_hetero false Σ Γ Γ' T U.
+  Proof.
+    move=> ht hu hlen ass ass'.
+    induction 1. 
+    - constructor. auto.
+    - pose proof (wt_red ht r).
+      econstructor 2.
+      econstructor; tea.
+      eapply IHX; tea.
+    - eapply context_pres_let_bodies_red1 in r.
+      2:eapply pres_let_bodies_assumption_context; tea.
+      pose proof (wt_red hu r).
+      econstructor 3; eauto.
+      econstructor; tea.
+  Qed.
+End wtcumul'.
+
+Lemma pres_let_bodies_trans Γ Γ' : 
+  All2_fold (fun _ _ => pres_let_bodies) Γ Γ' ->
+  All2_fold (fun _ _ => pres_let_bodies) (trans_local Γ) (trans_local Γ').
+Proof.
+  intros a; eapply All2_fold_map, All2_fold_impl; tea; cbv beta.
+  unfold pres_let_bodies; intros _ _ [] []; cbn.
+  destruct decl_body, decl_body0; cbn => //. intros [=]. now subst.
+Qed.
+
+Lemma trans_cumul' {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ Γ' T U} {wfΣ : PCUICTyping.wf Σ} :
+  wf_trans Σ ->
+  wt_cumul_hetero Σ Γ Γ' T U ->
+  #|Γ| = #|Γ'| ->
+  assumption_context Γ ->
+  assumption_context Γ' ->  
+  cumul (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+Proof.
+  intros wfΣ'; induction 1. 
+  - constructor; auto.
+    red in c. red.
+    eapply trans_compare_term in c.
+    now rewrite -trans_global_ext_constraints.
+  - destruct w as [r ht hv].
+    intros.
+    apply trans_red1 in r; eauto.
+    eapply red_cumul_cumul; eauto. 
+  - destruct w as [r ht hv].
+    apply trans_red1 in r; eauto.
+    intros.
+    eapply context_pres_let_bodies_red in r.
+    intros; eapply red_cumul_cumul_inv; eauto.
+    eapply pres_let_bodies_trans; tea.
+    eapply pres_let_bodies_assumption_context; tea. now symmetry. 
+Qed.
+
+Lemma trans_conv' {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ Γ' T U} {wfΣ : PCUICTyping.wf Σ} :
+  wf_trans Σ ->
+  wt_conv_hetero Σ Γ Γ' T U ->
+  #|Γ| = #|Γ'| ->
+  assumption_context Γ ->
+  assumption_context Γ' ->  
+  conv (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+Proof.
+  intros wfΣ'; induction 1. 
+  - constructor; auto.
+    red in c. red.
+    eapply trans_compare_term in c.
+    now rewrite -trans_global_ext_constraints.
+  - destruct w as [r ht hv].
+    intros.
+    apply trans_red1 in r; eauto.
+    eapply red_conv_conv; eauto. 
+  - destruct w as [r ht hv].
+    apply trans_red1 in r; eauto.
+    intros.
+    eapply context_pres_let_bodies_red in r.
+    intros; eapply red_conv_conv_inv; eauto.
+    eapply pres_let_bodies_trans; tea.
+    eapply pres_let_bodies_assumption_context; tea. now symmetry. 
+Qed.
+
+Lemma trans_cumul_ctx_rel' {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ'} :
+  wf_trans Σ ->
+  wf_local Σ (Γ ,,, Δ) ->
+  wf_local Σ (Γ' ,,, Δ') ->
+  #|Γ| = #|Γ'| ->
+  assumption_context (Γ ,,, Δ) ->
+  assumption_context (Γ' ,,, Δ') ->
+  PCUICConversion.cumul_ctx_rel Σ Γ Δ Δ' ->
+  PCUICConversion.cumul_ctx_rel (cf:=cf' cf) (trans_global Σ) (trans_local Γ) (trans_local Δ) (trans_local Δ').
+Proof.
+  intros wf' wfl wfr eqlen ass ass'.
+  induction 1; cbn; constructor; auto.
+  eapply IHX. now depelim wfl. now depelim wfr. now depelim ass. now depelim ass'.
+  destruct p; constructor; cbn in *; auto.
+  - rewrite -trans_local_app. eapply (trans_cumul' (Σ := Σ) (Γ' := Γ' ,,, Γ'0)) => //.
+    depelim wfl; depelim wfr. red in l, l0.
+    eapply cumul_decorate_hetero; tea.
+    len. now rewrite (All2_fold_length X) eqlen.
+    now depelim ass. now depelim ass'.
+    len. now rewrite (All2_fold_length X) eqlen.
+    now depelim ass. now depelim ass'.
+  - elimtype False. depelim ass.
+  - elimtype False; depelim ass.
+Qed.
+
+Lemma assumption_context_arities_context mdecl : 
+  assumption_context (arities_context mdecl).
+Proof.
+  rewrite /arities_context rev_map_spec -map_rev.
+  induction (List.rev mdecl); cbn; auto with pcuic.
+  constructor. apply IHl.
+Qed.
+
+Lemma expand_lets_smash_context_id Γ x : 
+  expand_lets (smash_context [] Γ) x = x.
+Proof.
+  rewrite expand_lets_assumption_context //. pcuic.
+Qed.
+
+Lemma expand_lets_expand_lets Γ Δ x : 
+  expand_lets (Γ ,,, smash_context [] Δ) (expand_lets Δ x) = 
+  expand_lets (Γ ,,, Δ) x.
+Proof.
+  rewrite expand_lets_app expand_lets_smash_context_id.
+  rewrite context_assumptions_smash_context /=.
+  now rewrite -expand_lets_app.
+Qed.
+
+Lemma trans_type_local_ctx {cf} {Σ Γ Δ s} : 
+  wf Σ -> wf_trans Σ ->
+  type_local_ctx (PCUICEnvTyping.lift_typing typing) Σ Γ Δ s ->
+  type_local_ctx (PCUICEnvTyping.lift_typing (typing (H:=cf' cf))) (trans_global Σ) (trans_local Γ) (trans_local Δ) s.
+Proof.
+  intros wf wf'.
+  induction Δ; cbn.
+  unfold PCUICTypingDef.wf_universe, wf_universe.
+  destruct s => //. now rewrite [global_ext_levels _]trans_global_ext_levels.
+  destruct a as [? [?|] ?] => /= //; intuition auto.
+  destruct a0 as [s' Hs]. exists s'. 
+  all:rewrite -trans_local_app.
+  now eapply (pcuic_expand_lets _ _ _ (tSort _)).
+  now eapply (pcuic_expand_lets _ _ _ _).
+  now eapply (pcuic_expand_lets _ _ _ (tSort _)).
+Qed.
+
+Lemma trans_on_context {cf} {Σ Γ} : 
+  wf Σ -> wf_trans Σ ->
+  on_context (PCUICEnvTyping.lift_typing typing) Σ Γ ->
+  on_context (PCUICEnvTyping.lift_typing (typing (H:=cf' cf))) (trans_global Σ) (trans_local Γ).
+Proof.
+  intros wf wf'.
+  induction 1; cbn; constructor; auto.
+  destruct t0 as [s Hs]. exists s. now eapply (pcuic_expand_lets _ _ _ (tSort _)).
+  destruct t0 as [s Hs]. exists s. now eapply (pcuic_expand_lets _ _ _ (tSort _)).
+  now eapply (pcuic_expand_lets _ _ _ _).
+Qed.
+
+Lemma Alli_map {A B} (P : nat -> B -> Type) {f : A -> B} {n l} : 
+  Alli (fun n x => P n (f x)) n l ->
+  Alli P n (map f l).
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma trans_projs ind n n' :
+  map trans (projs ind n n') = projs ind n n'.
+Proof.
+  induction n'; cbn; auto. now f_equal.
+Qed.
+
+Lemma sub_context_set_empty s : sub_context_set ContextSet.empty s.
+Proof.
+  red. split.
+  intros x hin. cbn in hin. now eapply LevelSetFact.empty_iff in hin.
+  intros x hin. cbn in hin. now eapply ConstraintSetFact.empty_iff in hin.
+Qed.
+
+Lemma wt_subst_instance {cf} {Σ : global_env} {ϕ : universes_decl} {Γ T u univs} :
+  wf_ext_wk (Σ, Polymorphic_ctx univs) ->
+  wt (Σ, Polymorphic_ctx univs) Γ T ->
+  consistent_instance_ext (Σ, ϕ) (Polymorphic_ctx univs) u ->
+  wt (Σ, ϕ) Γ@[u] T@[u].
+Proof.
+  intros wf [s Hs] cu. exists (s@[u]).
+  eapply typing_subst_instance'; tea.
+  eapply sub_context_set_empty.
+Qed.
+
+Lemma wt_expand_lets {cf} {Σ : global_env_ext} {Γ Δ T} :
+  wf Σ ->
+  wt Σ (Γ ,,, Δ) T ->
+  wt Σ (Γ ,,, smash_context [] Δ) (expand_lets Δ T).
+Proof.
+  intros wf [s Hs]. exists (expand_lets Δ s).
+  now eapply typing_expand_lets.
+Qed.
+
+Lemma on_free_vars_ctx_mon k k' Γ : 
+  k <= k' ->
+  on_free_vars_ctx (shiftnP k xpred0) Γ ->
+  on_free_vars_ctx (shiftnP k' xpred0) Γ.
+Proof.
+  intros hk. eapply on_free_vars_ctx_impl.
+  rewrite /shiftnP => i.
+  repeat nat_compare_specs => //.
+Qed.
+
+Lemma ctx_inst_wt {cf} {Σ Γ s Δ} : 
+  ctx_inst Σ Γ s Δ ->
+  All (wt Σ Γ) s.
+Proof.
+  induction 1; try constructor; auto.
+  now exists t.
+Qed.
+
+Lemma wf_ind_indices {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {mind mdecl i idecl} :
+  on_ind_body (lift_typing typing) Σ mind mdecl i idecl ->
+  wf_local Σ (ind_params mdecl ,,, ind_indices idecl).
+Proof.
+  intros [].
+  rewrite ind_arity_eq in onArity.
+  destruct onArity as [s Hs].
+  eapply type_it_mkProd_or_LetIn_inv in Hs as [Δs [ts [_ Hs]]].
+  eapply type_it_mkProd_or_LetIn_inv in Hs as [Δs' [ts' []]].
+  eapply typing_wf_local in t. now rewrite app_context_nil_l in t.
+Qed.
+
+Lemma nth_error_smash_onfvs P Γ n c : 
+  nth_error (smash_context [] Γ) n = Some c ->
+  on_free_vars_ctx P (smash_context [] Γ) -> 
+  on_free_vars_decl (shiftnP (context_assumptions Γ - S n) P) c.
+Proof.
+  induction Γ in P, n, c |- * using ctx_length_rev_ind.
+  - cbn. rewrite nth_error_nil => //.
+  - destruct d as [na [b|] ty].
+    * rewrite smash_context_app_def.
+      intros hnth onfvs.
+      specialize (H (subst_context [b] 0 Γ)).
+      forward H by now len. len.
+      specialize (H _ _ _ hnth onfvs).
+      len in H.
+    * rewrite smash_context_app_ass.
+      destruct (lt_dec n (context_assumptions Γ)); revgoals.
+      { intros hnth.
+        have hn : n = context_assumptions Γ.
+        { apply nth_error_Some_length in hnth. len in hnth. lia. }
+        move: hnth.
+        subst n. rewrite nth_error_app_ge; len => //.
+        cbn. rewrite Nat.sub_diag /=. intros [= <-].
+        rewrite on_free_vars_ctx_app /= => /andP[] ond _.
+        rewrite /on_free_vars_ctx /= in ond. rewrite shiftnP0 in ond.
+        move/andP: ond.
+        assert (context_assumptions Γ + 1 - S (context_assumptions Γ) = 0) as -> by lia.
+        now rewrite shiftnP0. }
+      { rewrite nth_error_app_lt. now len.
+        intros hnth onp. len. cbn.
+        move: onp; rewrite on_free_vars_ctx_app /= => /andP[] ondecl onctx.
+        specialize (H Γ ltac:(now lia) _ _ _ hnth onctx).
+        rewrite shiftnP_add in H. red; rewrite -H. lia_f_equal.
+      }
+Qed.
+
+Lemma on_free_vars_projs p ind n k : 
+  forallb (on_free_vars (shiftnP 1 p)) (projs ind n k).
+Proof.
+  induction k; cbn; auto.
+Qed.
+
+Lemma trans_on_udecl {cf} {Σ : global_env} {univs} : 
+  on_udecl Σ univs ->
+  on_udecl (cf := cf' cf) (trans_global_decls Σ) univs.
+Proof.
+  cbn.
+  unfold on_udecl. cbn. intuition auto.
+  cbn.
+  rewrite trans_global_levels //.
+  rewrite trans_global_levels //.
+  move: H3.
+  rewrite /satisfiable_udecl. cbn. 
+  rewrite /PCUICLookup.global_ext_constraints.
+  rewrite trans_global_constraints //.
+Qed.
+
+Lemma trans_wf {cf} {Σ : global_env_ext} : wf Σ -> wf_trans Σ.
+Proof.
+  rewrite /PCUICEnvironment.fst_ctx.
+  induction 1 as [|Σ0 kn d X IHX f udecl onu ond]. constructor.
+  have onud : on_udecl (cf := cf' cf) (map (on_snd trans_global_decl) Σ0)
+      (PCUICLookup.universes_decl_of_decl (trans_global_decl d)).
+  { apply trans_on_udecl in onu. destruct d => //. }
+  cbn; constructor; eauto.
+  { now eapply fresh_global_map. }
+  destruct d; cbn in *.
+  * move: ond; rewrite /on_constant_decl.
+    destruct c as [type [body|] univs] => /=.
+    intros Hty; exact (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
+    unfold on_type, lift_typing.
+    intros [s Hty]. exists s. 
+    exact (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
+  * change (wf Σ0) in X.
+    generalize ond. intros []; econstructor; eauto.
+    + cbn.
+      eapply (Alli_mapi _ _ _).1, Alli_impl; tea.
+      intros n idecl onind; generalize onind; intros []; econstructor; tea.
+      { cbn. rewrite ind_arity_eq !trans_it_mkProd_or_LetIn //. }
+      { cbn. destruct onArity as [s Hty]. exists s.
+        exact (pcuic_expand_lets (Σ0, ind_universes m) [] _ _ X Hty IHX). }
+      { instantiate (1 := ind_cunivs).
+        red in onConstructors. 
+        eapply All2_map_left, All2_impl; tea.
+        intros cdecl univs onc; generalize onc; intros [].
+        have parsfvs: on_free_vars_ctx xpred0 (ind_params m).
+        { red in onParams. now eapply wf_local_closed_context in onParams. }
+        have oncargs: on_free_vars_ctx (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)
+          (cstr_args cdecl).
+        { eapply sorts_local_ctx_wf_local in on_cargs.
+          eapply wf_local_closed_context in on_cargs.
+          now move/onfvs_app: on_cargs; len.
+          rewrite cstr_eq in on_ctype. destruct on_ctype as [s Hs].
+          eapply typing_wf_local in Hs. eapply weaken_wf_local; tea. }
+        have oncindices: on_free_vars_terms (shiftnP (#|cstr_args cdecl| + #|ind_params m| + #|ind_bodies m|) xpred0)
+            (cstr_indices cdecl).
+        { rewrite cstr_eq in on_ctype. destruct on_ctype as [s Hs].
+          eapply subject_is_open_term in Hs. move: Hs.
+          rewrite !on_free_vars_it_mkProd_or_LetIn.
+          move/and3P => [] _ _. rewrite /cstr_concl.
+          rewrite on_free_vars_mkApps /=. move/andP => [] _.
+          len. rewrite !shiftnP_add forallb_app. move/andP => [] _ //. }
+        econstructor; tea.
+        { cbn; rewrite -cstr_args_length.
+          rewrite context_assumptions_smash_context context_assumptions_map //. }
+        { cbn; rewrite /trans_cstr_concl /trans_cstr_concl_head /cstr_concl_head. now len. }
+        { destruct on_ctype as [s Hty].
+          exists s.
+          epose proof (pcuic_expand_lets (Σ0, ind_universes m) _ _ _ X Hty IHX).
+          rewrite trans_arities_context. cbn.
+          rewrite cstr_eq in X0. rewrite !trans_it_mkProd_or_LetIn in X0.
+          eapply type_it_mkProd_or_LetIn_smash_middle in X0.
+          eapply meta_conv_term; tea. f_equal. f_equal.
+          rewrite /trans_cstr_concl /cstr_concl /trans_cstr_concl_head /cstr_concl_head. len => /=.
+          rewrite trans_mkApps expand_lets_mkApps map_app. f_equal.
+          cbn [trans]. relativize #|cstr_args cdecl|. erewrite expand_lets_tRel => //.
+          now len. now len.
+          rewrite map_app. f_equal.
+          rewrite trans_to_extended_list.
+          relativize #|cstr_args cdecl|.
+          erewrite map_expand_lets_to_extended_list_k_above; now try len.
+          now len. }
+        { rewrite trans_arities_context /=.
+          clear -X onud on_cargs IHX.
+          rewrite -trans_local_app.
+          induction (cstr_args cdecl) in univs, on_cargs |- * => //.
+          destruct a as [na [b|] ty].
+          - apply IHc. apply on_cargs.
+          - cbn [trans_local map].
+            rewrite [smash_context _ (_ :: _)](smash_context_app_expand _ _ [_]).
+            rewrite /snoc; cbn. unfold app_context. cbn.
+            rewrite expand_lets_ctx_tip /=.  
+            destruct univs => //.
+            split. cbn in IHc. apply IHc, on_cargs.
+            destruct on_cargs as [hs ht]. red in ht.
+            have fvsc : on_free_vars_ctx (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0) c.
+            { eapply typing_wf_local, wf_local_closed_context in ht.
+                move/onfvs_app: ht. now len. }
+            have fvsty : on_free_vars (shiftnP (#|c| + #|ind_params m| + #|ind_bodies m|) xpred0) ty.
+            { eapply subject_is_open_term in ht.
+              move: ht. len. rewrite Nat.add_assoc //. }
+            eapply typing_expand_lets in ht.
+            eapply pcuic_expand_lets in ht; eauto.
+            rewrite trans_local_app in ht.
+            rewrite -> (trans_smash_context (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) in ht; auto.
+            rewrite (trans_expand_lets (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) // in ht.
+            rewrite shiftnP_add Nat.add_assoc //. }
+        { move: on_cindices.
+          len.
+          rewrite trans_arities_context; cbn.
+          rewrite -(trans_smash_context (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0) []) //.
+          rewrite -[trans_local (ind_params m) ++ _]trans_local_app.
+          rewrite -[_ ++ _]trans_local_app.
+          intros ci. eapply (ctx_inst_expand_lets (Σ := (Σ0, ind_universes m))) in ci.
+          rewrite List.rev_involutive in ci.
+          rewrite expand_lets_ctx_lift_context_cancel in ci.
+          rewrite -(trans_expand_lets_map (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) //.
+          rewrite shiftnP_add Nat.add_assoc //.
+          rewrite -(trans_lift_context (shiftnP #|ind_params m| xpred0)).
+          { rewrite ind_arity_eq in onArity.
+            destruct onArity as [s Hs].
+            eapply subject_is_open_term in Hs.
+            move: Hs; rewrite !on_free_vars_it_mkProd_or_LetIn /=.
+            move/and3P => [] _. now rewrite shiftnP0. }
+          rewrite -map_rev.
+          eapply trans_ctx_inst_expand_lets in ci; tea.
+          rewrite List.rev_involutive.
+          relativize (context_assumptions (cstr_args cdecl)). cbn.
+          eapply weakening_wf_local. 3:now len.
+          { rewrite -app_context_assoc.
+            eapply weaken_wf_local; tea.
+            eapply wf_arities_context'; tea.
+            rewrite ind_arity_eq in onArity.
+            destruct onArity as [s Hs].
+            rewrite -it_mkProd_or_LetIn_app in Hs.
+            eapply type_it_mkProd_or_LetIn_inv in Hs as [? [? [Hs _]]].
+            eapply sorts_local_ctx_All_local_env in Hs; eauto. 
+            now rewrite app_context_nil_l in Hs. }
+          { eapply wf_local_smash_end. 
+            eapply sorts_local_ctx_wf_local in on_cargs => //.
+            eapply weaken_wf_local => //.
+            eapply wf_arities_context'; eauto. }
+        }
+        { cbn.
+          rewrite -(trans_smash_context (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0) []) //.
+          rewrite -(trans_expand_lets_map (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) //.
+          rewrite shiftnP_add Nat.add_assoc //.
+          rewrite trans_cstr_concl_eq //.
+          rewrite -(trans_expand_lets (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) //.
+          rewrite shiftnP_add Nat.add_assoc //. 
+          { rewrite cstr_eq in on_ctype.
+            destruct on_ctype as [s Hs].
+            eapply subject_is_open_term in Hs. len in Hs.
+            move: Hs; rewrite !on_free_vars_it_mkProd_or_LetIn.
+            move/and3P => [] onpars onargs onconcl.
+            now rewrite !shiftnP_add in onconcl. }
+          rewrite -!trans_it_mkProd_or_LetIn.
+          rewrite cstr_eq in on_ctype_positive.
+          eapply positive_cstr_smash_middle in on_ctype_positive.
+          eapply (positive_cstr_trans _ _ _ (shiftnP #|ind_bodies m| xpred0)) in on_ctype_positive.
+          exact on_ctype_positive.
+          rewrite cstr_eq in on_ctype.
+          destruct on_ctype as [s Hs].
+          eapply subject_is_open_term in Hs.
+          len in Hs.
+          move: Hs; rewrite !on_free_vars_it_mkProd_or_LetIn.
+          move/and3P => [] onpars onargs onconcl.
+          apply/and3P; split => //.
+          rewrite on_free_vars_ctx_smash //.
+          len. rewrite on_free_vars_expand_lets_k //. }
+        { intros v indv.
+          move: (on_ctype_variance v indv). clear -indv parsfvs onVariance onc X onu ond onud IHX onParams oncargs oncindices.
+          rewrite indv in onVariance.
+          eapply variance_universes_insts in onVariance as [univs' [u [u' [eqv hunivs cu cu' equlen eqvlen equ' cli equ]]]].
+          rewrite /cstr_respects_variance.
+          rewrite eqv.
+          intuition auto.
+          { cbn [cstr_args trans_constructor_body].
+            rewrite smash_context_idempotent.
+            cbn [ind_params trans_minductive_body].
+            have clpars : is_closed_context (ind_params m).
+            { now eapply wf_local_closed_context in onParams. }
+            rewrite -(trans_smash_context xpred0 []) //.
+            rewrite -(trans_smash_context (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0) []) //.
+            rewrite -(trans_expand_lets_ctx xpred0 (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) //.
+            rewrite on_free_vars_ctx_smash //.
+            rewrite [ind_arities _]trans_arities_context -trans_local_app.
+            rewrite -!trans_subst_instance_ctx.
+            cbn in a. cbn.
+            eapply (trans_cumul_ctx_rel' (Σ := (Σ0, univs')) 
+              (Γ' := (arities_context (ind_bodies m),,, SE.smash_context [] (ind_params m))@[u'])) => //.
+            { rewrite subst_instance_app subst_instance_smash.
+              rewrite subst_instance_expand_lets_ctx. 
+              eapply wf_local_expand_lets.
+              rewrite subst_instance_smash. unshelve eapply wf_local_smash_end. cbn; auto.
+              rewrite -!subst_instance_app_ctx. 
+              pose proof (on_cargs onc). simpl in X.
+              eapply sorts_local_ctx_wf_local in X0 => //.
+              eapply typing_subst_instance_wf_local; tea.
+              split => //. cbn. split; try apply onu.
+              destruct ind_universes. cbn in eqv. noconf eqv. split.
+              destruct ind_universes. cbn in eqv. noconf eqv. cbn.
+              apply sub_context_set_empty.
+              eapply weaken_wf_local => //.
+              now eapply wf_arities_context'. }
+            { rewrite subst_instance_app subst_instance_smash.
+              rewrite subst_instance_expand_lets_ctx. 
+              eapply wf_local_expand_lets.
+              rewrite subst_instance_smash. unshelve eapply wf_local_smash_end. cbn; auto.
+              rewrite -!subst_instance_app_ctx.
+              pose proof (on_cargs onc). simpl in X0.
+              eapply sorts_local_ctx_wf_local in X0 => //.
+              eapply typing_subst_instance_wf_local; tea.
+              split => //. cbn. split; try apply onu.
+              destruct ind_universes. cbn in eqv. noconf eqv. split.
+              destruct ind_universes. cbn in eqv. noconf eqv. cbn.
+              apply sub_context_set_empty.
+              eapply weaken_wf_local => //.
+              now eapply wf_arities_context'. }
+            { now len. }
+            { pose proof (assumption_context_arities_context (ind_bodies m)).
+              rewrite subst_instance_app_ctx.
+              repeat apply assumption_context_app_inv => //; pcuic. }
+            { pose proof (assumption_context_arities_context (ind_bodies m)).
+              rewrite subst_instance_app_ctx.
+              repeat apply assumption_context_app_inv => //; pcuic. }
+          }
+          { do 3 eapply All2_map.
+            eapply All2_map_inv in b.
+            eapply All2_All in b. eapply All_All2_refl.
+            pose proof (ctx_inst_wt (on_cindices onc)).
+            move/forallb_All: oncindices => hi.
+            eapply All_mix in b; tea. clear hi.
+            eapply (All_mix X0) in b; clear X0.
+            eapply All_impl; tea; cbv beta.
+            destruct (ind_universes m) eqn:eqind. noconf eqv.
+            intros x [wtx [onfvs cv]].
+            rewrite -!(trans_expand_lets (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)) //.
+            rewrite shiftnP_add Nat.add_assoc //.
+            cbn -[ind_arities].
+            rewrite -(trans_smash_context (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0) []) //.
+            rewrite [ind_arities _]trans_arities_context.
+            rewrite -[trans_local _ ++ _]trans_local_app.
+            have fvsparsargs : on_free_vars_ctx (shiftnP #|ind_bodies m| xpred0)
+              (ind_params m,,, SE.smash_context [] (cstr_args cdecl)).
+            { rewrite on_free_vars_ctx_app; apply /andP; split.
+              eapply (on_free_vars_ctx_mon 0); tea. lia.
+              rewrite on_free_vars_ctx_smash // shiftnP_add //. }
+            rewrite -(trans_smash_context (shiftnP (#|ind_bodies m|) xpred0) []) //.
+            rewrite -[_ ++ _]trans_local_app.
+            rewrite -[map (map_decl _) _]trans_subst_instance_ctx.
+            rewrite -!(trans_expand_lets (shiftnP #|ind_bodies m| xpred0)) //.
+            { len => /=.
+              rewrite -shiftnP_add.
+              rewrite (on_free_vars_expand_lets_k _ _ 0) //  shiftnP_add // /= shiftnP_add //. }
+            rewrite -!trans_subst_instance.
+            eapply (trans_conv' (Σ := (Σ0, univs')) 
+              (Γ' := (arities_context (ind_bodies m),,,
+              SE.smash_context []
+                (ind_params m,,, SE.smash_context [] (cstr_args cdecl)))@[u'])); eauto.
+            2:now len.
+            2-3:pose proof (assumption_context_arities_context (ind_bodies m));
+              rewrite subst_instance_app_ctx;
+              repeat apply assumption_context_app_inv => //; pcuic.
+            eapply conv_decorate_hetero; eauto.
+            3:now len.
+            3-4:pose proof (assumption_context_arities_context (ind_bodies m));
+              rewrite subst_instance_app_ctx;
+              repeat apply assumption_context_app_inv => //; pcuic.
+            { eapply wt_subst_instance; tea.
+              split => //. cbn. split; apply onu.
+              eapply wt_expand_lets => //.
+              rewrite app_context_assoc.
+              eapply wt_expand_lets => //. }
+            { eapply wt_subst_instance; tea.
+              split => //. cbn. split; apply onu.
+              eapply wt_expand_lets => //.
+              rewrite app_context_assoc.
+              eapply wt_expand_lets => //. }
+            rewrite smash_context_app smash_context_idempotent.
+            rewrite -smash_context_app.
+            now rewrite !expand_lets_expand_lets. }
+        }
+        { cbn. rewrite is_assumption_context_spec. pcuic. }
+      }
+    { have parsfvs: on_free_vars_ctx xpred0 (ind_params m).
+      { red in onParams. now eapply wf_local_closed_context in onParams. }
+      intros indps.
+      cbn in indps. forward onProjections.
+      intros eq. rewrite eq /= in indps. congruence. 
+      cbn. destruct (ind_ctors idecl) as [|c []] eqn:hctors => /= //.
+      depelim onConstructors. depelim onConstructors.
+      have wfargs : wf_local (Σ0, ind_universes m) (arities_context (ind_bodies m),,, ind_params m,,, cstr_args c).
+      { destruct o. eapply sorts_local_ctx_wf_local in on_cargs => //.
+        rewrite cstr_eq in on_ctype. destruct on_ctype as [s Hs].
+        eapply typing_wf_local in Hs. eapply weaken_wf_local; tea. }
+      have oncargs: on_free_vars_ctx (shiftnP (#|ind_params m| + #|ind_bodies m|) xpred0)
+        (cstr_args c).
+      { eapply wf_local_closed_context in wfargs.
+        now move/onfvs_app: wfargs; len. }
+      clear -indps X onu ond IHX onProjections wfargs oncargs.
+      have lenprojs : #|ind_projs idecl| > 0.
+      { destruct (ind_projs idecl) => /= //. lia. }
+      destruct onProjections; econstructor; eauto; cbn; try len => //.
+      rewrite context_assumptions_smash_context /= // context_assumptions_map //.
+      eapply Alli_nth_hyp in on_projs.
+      eapply Alli_map, Alli_impl; tea; cbv beta.
+      move=> n' x [] hnthp. eapply nth_error_Some_length in hnthp.
+      rewrite /on_projection.
+      cbn [cstr_args trans_constructor_body ind_params trans_minductive_body].
+      rewrite (smash_context_app _ (smash_context _ _)).
+      rewrite smash_context_idempotent. rewrite -smash_context_app.
+      rewrite -[trans_local _ ++ _]trans_local_app.
+      rewrite -(trans_smash_context (shiftnP #|ind_bodies m| xpred0) []) //.
+      { eapply wf_local_closed_context in wfargs.
+        move: wfargs; rewrite -app_context_assoc => /onfvs_app. now len. }
+      rewrite nth_error_map. rewrite context_assumptions_smash_context /= context_assumptions_map /=.
+      destruct nth_error eqn:hnth => /= //. intros []; split; auto.
+      rewrite H. destruct x => //.
+      destruct x => /= //. cbn in H0. subst t.
+      set (ind := {| inductive_mind := kn; inductive_ind := n |}) in *.
+      rewrite -(trans_inds ind).
+      have fvsdecl : on_free_vars
+        (shiftnP
+          (n' + context_assumptions (ind_params m) + #|ind_bodies m|) xpred0)
+        (decl_type c0).
+      { eapply nth_error_smash_onfvs in hnth.
+        2:{ apply on_free_vars_ctx_smash => //.
+            eapply wf_local_closed_context in wfargs.
+            now move: wfargs; rewrite -app_context_assoc => /onfvs_app. }
+        len in hnth.
+        move/andP: hnth => [] _ o.
+        red; rewrite -o shiftnP_add. lia_f_equal. }
+      erewrite <-(trans_lift _ _); tea.
+      have fvslift : on_free_vars (shiftnP (n' + 1 + context_assumptions (ind_params m) + #|ind_bodies m|) xpred0) 
+        (lift 1 n' (decl_type c0)).
+      { rewrite -2!shiftnP_add Nat.add_comm.
+        eapply on_free_vars_lift_impl.
+        rewrite !shiftnP_add //. }
+      rewrite (trans_subst (shiftnP 1 (shiftnP (context_assumptions (ind_params m) + #|ind_bodies m|) xpred0)) xpred0). 
+      { eapply on_free_vars_subst; [eapply on_free_vars_projs|].
+        rewrite projs_length !shiftnP_add Nat.add_assoc //. }
+      { eapply (inds_is_open_terms [] ind). }
+      f_equal. erewrite (trans_subst _ (shiftnP 1 xpred0)); tea.
+      2:{ eapply on_free_vars_projs. }
+      now rewrite trans_projs.
+    }
+    { cbn. move: ind_sorts.
+      rewrite /check_ind_sorts.
+      destruct Universe.is_prop => //.
+      destruct Universe.is_sprop => //.
+      intuition auto.
+      rewrite /PCUICLookup.global_ext_constraints.
+      rewrite trans_global_constraints //.
+      destruct indices_matter => //.
+      now eapply (trans_type_local_ctx (Σ := (Σ0, ind_universes m))). }
+    { intros v indv. specialize (onIndices v indv).
+      move: onIndices. rewrite /ind_respects_variance.
+      rewrite indv in onVariance.
+      eapply variance_universes_insts in onVariance as [univs' [u [u' [eqv hunivs cu cu' equlen eqvlen equ' cli equ]]]].
+      cbn [variance_universes ind_universes trans_minductive_body].
+      rewrite eqv.
+      cbn [cstr_args trans_constructor_body].
+      cbn [ind_params trans_minductive_body].
+      have clpars : is_closed_context (ind_params m).
+      { now eapply wf_local_closed_context in onParams. }
+      rewrite -(trans_smash_context xpred0 []) //.
+      have wfindices := !! wf_ind_indices onind.
+      have fvsindices: on_free_vars_ctx (shiftnP (#|ind_params m|) xpred0)
+          (ind_indices idecl).
+      { move/wf_local_closed_context: wfindices; rewrite on_free_vars_ctx_app => /andP[] //. }
+      rewrite -(trans_smash_context (shiftnP (#|ind_params m|) xpred0) []) //.
+      rewrite -(trans_expand_lets_ctx xpred0 (shiftnP (#|ind_params m|) xpred0)) //.
+      rewrite on_free_vars_ctx_smash //.
+      rewrite -!trans_subst_instance_ctx.
+      have wf_ext : wf_global_ext Σ0 (ind_universes m).
+      { destruct (ind_universes m) eqn:equniv => //.
+        cbn. split => //. split => //. cbn.
+        split; try apply onu.
+        eapply sub_context_set_empty. }
+      eapply (trans_cumul_ctx_rel' (Σ := (Σ0, univs')) 
+          (Γ' := (smash_context [] (ind_params m))@[u'])) => //.
+      { rewrite subst_instance_expand_lets_ctx.
+        rewrite !subst_instance_smash.
+        rewrite -[_ ,,, _]app_context_nil_l app_context_assoc.
+        eapply wf_local_expand_lets.
+        rewrite app_context_nil_l. eapply wf_local_smash_end.
+        rewrite -subst_instance_app_ctx.
+        eapply wf_local_subst_instance; tea. }
+      { rewrite subst_instance_expand_lets_ctx.
+        rewrite !subst_instance_smash.
+        rewrite -[_ ,,, _]app_context_nil_l app_context_assoc.
+        eapply wf_local_expand_lets.
+        rewrite app_context_nil_l. eapply wf_local_smash_end.
+        rewrite -subst_instance_app_ctx.
+        eapply wf_local_subst_instance; tea. }
+      { now len. }
+      { repeat apply assumption_context_app_inv; pcuic. }
+      { repeat apply assumption_context_app_inv; pcuic. }
+    }
+  + cbn. eapply (trans_on_context _ _ onParams).
+  + cbn. rewrite context_assumptions_map //.
+  + move: onVariance. rewrite /on_variance /=.
+    destruct ind_universes => //.
+    destruct ind_variance => //.
+    intros [univs' [i [i' []]]]; exists univs', i, i'; split => //.
+    all:now eapply (trans_consistent_instance_ext (Σ0, univs')).  
+Qed.
+
+Lemma trans_wf_ext {cf} {Σ : global_env_ext} : wf_ext Σ -> wf_ext_trans Σ.
+Proof.
+  intros; split. now eapply trans_wf. destruct X. 
+  now eapply trans_on_udecl.
+Qed.
+
+(** From a typing derivation in pcuic we build one where there are no lets 
+  in constructor types, and branches of cases are appropriately substituted. *)
+Theorem expand_lets_sound {cf} {Σ : global_env_ext} {Γ t T} {wfΣ : wf Σ} :
+  typing Σ Γ t T ->
+  typing (H := cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T).
+Proof.
+  intros ht; eapply pcuic_expand_lets; tea.
+  now eapply trans_wf.
+Qed.
+
+(* Print Assumptions expand_lets_sound. *)
+
+From MetaCoq.PCUIC Require Import PCUICWcbvEval PCUICCanonicity PCUICCSubst.
+
+Lemma trans_csubst a k b :
+  closed a ->
+  closedn 1 b ->
+  trans (csubst a k b) = csubst (trans a) k (trans b).
+Proof.
+  intros ona onb.
+  rewrite closed_subst //.
+  rewrite closed_subst //. rewrite on_free_vars_closedn trans_on_free_vars // -on_free_vars_closedn //.
+  rewrite (trans_subst (shiftnP 1 xpred0) xpred0) //.
+  rewrite closedn_on_free_vars //.
+  cbn. now rewrite -(on_free_vars_closedn 0) ona.
+Qed.
+
+Lemma eval_wt {cf} {Σ} {wfΣ : wf Σ} {t t'} : 
+  wt Σ [] t ->
+  eval Σ t t' ->
+  wt Σ [] t'.
+Proof.
+  intros [T Ht] ev. exists T.
+  now eapply subject_reduction_eval.
+Qed.
+
+Lemma wt_closed {cf} {Σ} {wfΣ : wf Σ} {Γ t} : 
+  wt Σ Γ t ->
+  closedn #|Γ| t.
+Proof.
+  intros [T Ht]. exact (subject_closed Ht).
+Qed.
+
+(* Lemma wt_csubst {cf} {Σ} {wfΣ : wf Σ} {na t a b} :
+  wt Σ [] a ->
+  wt Σ [vass na t] b ->
+  wt Σ [] (csubst a 0 b).
+Proof.
+  intros [Ta Ha] [Tb Hb].
+  exists (subst [a] 0 Tb).
+  rewrite closed_subst. exact (subject_closed Ha).
+  eapply (substitution (Γ := []) (Δ := [])).
+  now eapply subslet_ass_tip. rewrite app_context_nil_l. exact Hb. *)
+
+Lemma closed_inst_case_context pars u ctx : 
+  forallb (closedn 0) pars ->
+  closedn_ctx #|pars| ctx ->
+  closed_ctx (inst_case_context pars u ctx).
+Proof.
+  intros hpars hctx.
+  rewrite /inst_case_context.
+  eapply (closedn_ctx_subst 0 0) => //. len.
+  rewrite closedn_subst_instance_context //.
+  rewrite forallb_rev //.
+Qed.
+
+Lemma trans_closedn k t : closedn k t -> closedn k (trans t).
+Proof.
+  rewrite !on_free_vars_closedn.
+  apply trans_on_free_vars.
+Qed.
+
+Lemma isFixApp_mkApps f u : isFixApp (mkApps f u) = isFixApp f.
+Proof.
+  rewrite /isFixApp.
+  destruct (decompose_app f) eqn:dapp.
+  pose proof (decompose_app_notApp _ _ _ dapp).
+  eapply decompose_app_inv in dapp. subst f.
+  cbn. rewrite -mkApps_app. rewrite decompose_app_mkApps. destruct t => //.
+  now cbn. 
+Qed.
+
+Lemma isFixApp_trans f : isFixApp f = isFixApp (trans f).
+Proof.
+  induction f => //. cbn.
+  rewrite (isFixApp_mkApps (trans f1) [trans f2]).
+  now rewrite (isFixApp_mkApps f1 [f2]).
+Qed.
+
+Lemma trans_wcbveval {cf} {Σ} {wfΣ : wf Σ} t u : 
+  closed t ->
+  eval Σ t u -> eval (trans_global_decls Σ) (trans t) (trans u).
+Proof.
+  intros wt ev; revert wt.
+  induction ev.
+  - move=> /= /andP[] onf ona. cbn in *. econstructor; eauto.
+    eapply eval_closed in onf; tea.
+    eapply eval_closed in ona; tea.
+    move: onf => /= /andP[] ont onb.
+    rewrite -trans_csubst //.
+    eapply IHev3. now eapply closed_csubst.
+  - move=> /= /andP[] /andP[] onb0 ont onb1.
+    econstructor; eauto.
+    eapply eval_closed in onb0; tea.
+    rewrite -trans_csubst //.
+    eapply IHev2.
+    now eapply closed_csubst.
+  - intros _.
+    cbn. econstructor. eapply trans_declared_constant; tea.
+    cbn; rewrite e //.
+    rewrite -trans_subst_instance; apply IHev.
+    rewrite closedn_subst_instance.
+    eapply declared_constant_closed_body in isdecl; tea.
+  - move=> /= /andP[] /andP[] clp cldiscr clbrs.
+    rewrite trans_mkApps in IHev1.
+    econstructor.
+    * eapply IHev1; eauto.
+    * rewrite !nth_error_map e //.
+    * eapply trans_declared_constructor; tea.
+    * cbn. rewrite skipn_map_length e0.
+      rewrite context_assumptions_smash_context context_assumptions_map //.
+    * rewrite /iota_red.
+      cbn -[expand_lets].
+      rewrite expand_lets_assumption_context.
+      { apply assumption_context_subst_context.
+        apply assumption_context_subst_instance.
+        apply smash_context_assumption_context; pcuic. }
+      eapply nth_error_forallb in clbrs; tea.
+      move: clbrs => /andP[] clctx clb.
+      move/andP: clp => [] /= /andP[] clpars clpctx clpret.
+      have clexp: closedn (context_assumptions (bcontext br))
+        (expand_lets (inst_case_branch_context p br) (bbody br)).
+      { relativize (context_assumptions _).
+        eapply (closedn_expand_lets 0) => //. 3:now len.
+        2:{ len. rewrite Nat.add_0_r // in clb. }
+        eapply closed_inst_case_context => //. }
+      have clargs : forallb (closedn 0) args.
+      { eapply eval_closed in ev1; tea.
+        now move: ev1; rewrite closedn_mkApps /= => ev1. }
+      forward IHev2.
+      { rewrite /iota_red.
+        eapply closedn_subst0 => //.
+        now rewrite forallb_rev; apply forallb_skipn.
+        cbn; len.
+        rewrite e0 //. }
+      relativize (subst0 _ _). exact IHev2.
+      rewrite /iota_red.
+      rewrite (trans_subst (shiftnP (context_assumptions (bcontext br)) xpred0) xpred0).
+      rewrite closedn_on_free_vars //.
+      rewrite forallb_rev forallb_skipn //.
+      eapply forallb_impl; tea. intros.
+      rewrite -(on_free_vars_closedn 0) //.
+      rewrite map_rev map_skipn. f_equal.
+      rewrite (trans_expand_lets xpred0).
+      rewrite /inst_case_branch_context.
+      apply (closedn_ctx_on_free_vars 0).
+      eapply closed_inst_case_context => //.
+      len. rewrite Nat.add_0_r in clb. rewrite closedn_on_free_vars //.
+      f_equal.
+      rewrite /inst_case_branch_context /inst_case_context.
+      rewrite (trans_subst_context (shiftnP #|pparams p| xpred0) xpred0).
+      rewrite on_free_vars_ctx_subst_instance.
+      { now apply closedn_ctx_on_free_vars. }
+      rewrite /on_free_vars_terms forallb_rev.
+      eapply forallb_impl; tea. intros. now eapply (@closedn_on_free_vars xpred0 0).
+      rewrite map_rev. rewrite trans_subst_instance_ctx //.
+      
+  - cbn => cldiscr.
+    specialize (IHev1 cldiscr). rewrite trans_mkApps in IHev1.
+    econstructor; tea.
+    rewrite nth_error_map e //.
+    apply IHev2.
+    eapply eval_closed in ev1; tea.
+    move: ev1; rewrite closedn_mkApps /= => onargs.
+    eapply nth_error_forallb in onargs; tea.
+
+  - move=> /= /andP[] clf cla.
+    rewrite trans_mkApps /= in IHev1.
+    eapply eval_closed in ev1; tea.
+    move: ev1; rewrite closedn_mkApps => /andP[] clfix clargsv.
+    rewrite -closed_unfold_fix_cunfold_eq in e => //.
+    forward IHev3.
+    { cbn. apply/andP; split.
+      rewrite closedn_mkApps /= clargsv andb_true_r.
+      eapply closed_unfold_fix; tea. now eapply eval_closed in ev2. }
+    eapply (trans_unfold_fix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply eval_fix; eauto. len.
+    rewrite -closed_unfold_fix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix.
+    cbn in IHev3. rewrite trans_mkApps in IHev3. eapply IHev3.
+    
+  - move=> /= /andP[] clf cla.
+    rewrite trans_mkApps /= in IHev1.
+    eapply eval_closed in ev1; tea.
+    move: ev1; rewrite closedn_mkApps => /andP[] clfix clargsv.
+    rewrite -closed_unfold_fix_cunfold_eq in e => //.
+    specialize (IHev1 clf).
+    rewrite trans_mkApps /=.
+    eapply (trans_unfold_fix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply eval_fix_value. eauto. eauto. 
+    rewrite -closed_unfold_fix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix. now len.
+    
+  - move=> /= /andP[] /andP[] clp.
+    rewrite closedn_mkApps => /andP[] clfix clargs clbrs.
+    rewrite -closed_unfold_cofix_cunfold_eq in e => //.
+    forward IHev.
+    { cbn. rewrite clp clbrs closedn_mkApps /=.
+      rewrite (closed_unfold_cofix mfix idx narg fn) // clargs //. }
+    cbn in IHev. rewrite trans_mkApps /=.
+    eapply (trans_unfold_cofix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply red_cofix_case.
+    rewrite -closed_unfold_cofix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix.
+    rewrite trans_mkApps in IHev => //.
+    
+  - move=> /=; rewrite closedn_mkApps => /andP[] clfix clargs.
+    rewrite -closed_unfold_cofix_cunfold_eq in e => //.
+    forward IHev.
+    { cbn. rewrite closedn_mkApps /=.
+      rewrite (closed_unfold_cofix mfix idx narg fn) // clargs //. }
+    cbn in IHev. rewrite trans_mkApps /=.
+    eapply (trans_unfold_cofix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply red_cofix_proj.
+    rewrite -closed_unfold_cofix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix.
+    rewrite trans_mkApps in IHev => //.
+  
+  - move=> /= /andP[] clf cla.
+    eapply eval_app_cong; eauto.
+    rewrite -isFixApp_trans.
+    clear -i. induction f' => /= //.
+    
+  - move=> clt. eapply eval_atom.
+    destruct t => //.
+Qed.
+

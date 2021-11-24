@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.Template Require Ast TypingWf WfInv TermEquality.
+From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
@@ -24,7 +24,7 @@ From MetaCoq.PCUIC Require Import PCUICWcbvEval.
 Existing Class ST.wf.
 
 Lemma trans_wcbvEval {cf} {Σ} {wfΣ : ST.wf Σ} T U :
-  Template.Ast.wf T ->
+  WfAst.wf Σ T ->
   WcbvEval.eval Σ [] T U ->
   let Σ' := trans_global (Ast.Env.empty_ext Σ) in
   PCUICWcbvEval.eval Σ' (trans Σ' T) (trans Σ' U).

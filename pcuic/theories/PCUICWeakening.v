@@ -2,9 +2,10 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICWeakeningEnv
-  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration
-  PCUICSigmaCalculus PCUICRenameDef PCUICRenameProp PCUICOnFreeVars.
+  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICCumulativity
+  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration PCUICClosedTyping
+  PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICRenameTyp PCUICOnFreeVars.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -396,7 +397,22 @@ Proof.
   eapply weakening_renaming.
 Qed.
 
-Lemma weakening_red `{cf:checker_flags} {Σ} {wfΣ : wf Σ} {P Γ Γ' Γ'' M N} :
+Lemma weakening_red `{cf:checker_flags} {Σ:global_env_ext} {wfΣ : wf Σ} {P Γ Γ' Γ'' M N} :
+  on_ctx_free_vars P (Γ ,,, Γ') ->
+  on_free_vars P M ->
+  red Σ (Γ ,,, Γ') M N ->
+  red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
+Proof.
+  intros onctx onf; induction 1.
+  - constructor. eapply weakening_red1; auto.
+    eapply on_free_vars_impl; tea. auto.
+  - reflexivity.
+  - etransitivity.
+    * eapply IHX1 => //.
+    * eapply IHX2. eapply red_on_free_vars ; tea. 
+Qed.
+
+Lemma weakening_red' `{cf:checker_flags} {Σ:global_env_ext} {wfΣ : wf Σ} {P Γ Γ' Γ'' M N} :
   on_ctx_free_vars P (Γ ,,, Γ') ->
   on_free_vars P M ->
   red Σ (Γ ,,, Γ') M N ->
@@ -411,22 +427,7 @@ Proof.
     * eapply IHX2. eapply red_on_free_vars; tea.
 Qed.
 
-Lemma weakening_red' `{cf:checker_flags} {Σ} {wfΣ : wf Σ} {P Γ Γ' Γ'' M N} :
-  on_ctx_free_vars P (Γ ,,, Γ') ->
-  on_free_vars P M ->
-  red Σ (Γ ,,, Γ') M N ->
-  red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
-Proof.
-  intros onctx onf; induction 1.
-  - constructor. eapply weakening_red1; auto.
-    eapply on_free_vars_impl; tea. auto.
-  - reflexivity.
-  - etransitivity.
-    * eapply IHX1 => //.
-    * eapply IHX2. eapply red_on_free_vars; tea.
-Qed.
-
-Lemma weakening_red_0 {cf} {Σ} {wfΣ : wf Σ} {P Γ Γ' M N n} :
+Lemma weakening_red_0 {cf} {Σ:global_env_ext} {wfΣ : wf Σ} {P Γ Γ' M N n} :
   n = #|Γ'| ->
   on_ctx_free_vars P Γ ->
   on_free_vars P M ->
@@ -542,7 +543,7 @@ Proof.
   rewrite !app_context_nil_l in X.
   forward X by eauto using typing_wf_local.
   specialize (X ty).
-  eapply PCUICClosed.typecheck_closed in ty as [_ [clΓ [clt clT]%andb_and]]; auto.
+  eapply PCUICClosedTyping.typecheck_closed in ty as [_ [clΓ [clt clT]%andb_and]]; auto.
   rewrite !lift_closed // in X.
   now rewrite closed_ctx_lift in X.
 Qed.

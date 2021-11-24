@@ -3,11 +3,8 @@ From Coq Require Import Morphisms.
 Require Import ssreflect ssrfun ssrbool.
 From MetaCoq.Template Require Import config utils MCPred.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst
+  PCUICLiftSubst PCUICUnivSubst 
   PCUICEquality PCUICSigmaCalculus PCUICClosed.
-
-(* For the last proof only, about reduction, requiring closed global declarations. *)
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICWeakeningEnv.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -236,6 +233,11 @@ Proof.
   rewrite /on_free_vars_ctx => f g Hfg x.
   now setoid_rewrite Hfg. 
 Qed.
+
+Notation is_open_term Γ := (on_free_vars (shiftnP #|Γ| xpred0)).
+Notation is_open_decl Γ := (on_free_vars_decl (shiftnP #|Γ| xpred0)).
+Notation is_closed_context := (on_free_vars_ctx xpred0).
+
 
 Lemma on_free_vars_decl_impl (p q : nat -> bool) d : 
   (forall i, p i -> q i) -> 
@@ -854,8 +856,6 @@ Proof.
   now rewrite orb_false_r.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICReduction.
-
 Lemma on_free_vars_fix_subst P mfix idx :
   on_free_vars P (tFix mfix idx) ->
   forallb (on_free_vars P) (fix_subst mfix).
@@ -1125,140 +1125,6 @@ Proof.
   apply closedP_shiftnP_impl.
 Qed.
  
-(** This shows preservation by reduction of closed/noccur_between predicates 
-  necessary to prove exchange and strengthening lemmas. *)
-Lemma red1_on_free_vars {cf} {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
-  red1 Σ Γ u v ->
-  on_free_vars P u ->
-  on_ctx_free_vars P Γ ->
-  on_free_vars P v.
-Proof.
-  intros h hav hctx.
-  induction h using red1_ind_all in P, hav, hctx |- *.
-  all: try solve [
-    simpl ; constructor ; eapply IHh ;
-    try (simpl in hav; rtoProp);
-    try eapply urenaming_vass ;
-    try eapply urenaming_vdef ;
-    assumption
-  ].
-  all:simpl in hav |- *; try toAll.
-  all:try move/and3P: hav => [h1 h2 h3].
-  all:try (move/andP: hav => [] /andP [] h1 h2 h3).
-  all:try move/andP: hav => [h1 h2].
-  all:try move/andP: h3 => [] h3 h4.
-  all:try move/andP: h4 => [] h4 h5.
-  all:try rewrite ?h1 // ?h2 // ?h3 // ?h4 // ?IHh /= // ?andb_true_r.
-  all:try eapply on_free_vars_subst1; eauto.
-  - destruct (nth_error Γ i) eqn:hnth => //.
-    simpl in H. noconf H.
-    epose proof (nth_error_on_free_vars_ctx P 0 Γ i c).
-    forward H0. { now rewrite addnP0. }
-    specialize (H0 hav hnth). simpl in H0.
-    rewrite /test_decl H in H0.
-    rewrite on_free_vars_lift0 //.
-    now move/andP: H0 => [] /=.
-  - rewrite /iota_red.
-    rename h5 into hbrs.
-    move: h4. rewrite on_free_vars_mkApps => /andP [] /= _ hargs.
-    apply on_free_vars_subst.
-    { rewrite forallb_rev forallb_skipn //. }
-    len.
-    rewrite H0.
-    rewrite /expand_lets /expand_lets_k /=.
-    eapply forallb_nth_error in hbrs.
-    erewrite H in hbrs; simpl in hbrs.
-    move/andP: hbrs => [] hbr hbody.
-    eapply on_free_vars_subst.
-    * relativize (context_assumptions _).
-      + unshelve eapply foron_free_vars_extended_subst. eauto.
-        eapply on_free_vars_ctx_inst_case_context; tea => //.
-      + now len.
-    * rewrite extended_subst_length.
-      rewrite shiftnP_add.
-      eapply on_free_vars_lift_impl in hbody. len.
-      now rewrite Nat.add_comm.
-  - rewrite !on_free_vars_mkApps in hav |- *.
-    rtoProp.
-    eapply on_free_vars_unfold_fix in H; eauto. 
-  - move: h4; rewrite !on_free_vars_mkApps.
-    move=> /andP [] hcofix ->.
-    eapply on_free_vars_unfold_cofix in hcofix; eauto.
-    now rewrite hcofix.
-  - move: hav; rewrite !on_free_vars_mkApps => /andP [] hcofix ->.
-    eapply on_free_vars_unfold_cofix in H as ->; eauto.
-  - eapply closed_on_free_vars. rewrite closedn_subst_instance.
-    eapply declared_constant_closed_body; eauto.
-  - move: hav; rewrite on_free_vars_mkApps /=.
-    now move/(nth_error_forallb H).
-  - rewrite (on_ctx_free_vars_concat _ _ [_]) // /= hctx
-      on_ctx_free_vars_tip /= addnP_shiftnP /on_free_vars_decl
-      /test_decl /= // hctx h2.
-  - rewrite (on_ctx_free_vars_concat _ _ [_]) // hctx
-      on_ctx_free_vars_tip /= addnP_shiftnP /on_free_vars_decl /test_decl /= h2 /=
-      /foroptb /= h1 // h2.
-  - solve_all.
-    + eapply OnOne2_impl_All_r; eauto. solve_all.
-    + now rewrite -(OnOne2_length X).
-    + now rewrite -(OnOne2_length X).
-  - relativize #|pcontext p|. 
-    * erewrite on_ctx_free_vars_extend; rewrite // hctx.
-      erewrite on_free_vars_ctx_inst_case_context => //.
-    * now len.
-  - toAll.
-    clear -h1 hctx X h5.
-    eapply OnOne2_All_mix_left in X; tea.
-    toAll. eapply OnOne2_impl_All_r in X; tea; solve_all; rewrite -?b0 //.
-    eapply b1 => //.
-    relativize #|bcontext x|.
-    * erewrite on_ctx_free_vars_extend; rewrite // hctx.
-      erewrite on_free_vars_ctx_inst_case_context => //. solve_all.
-    * now len.
-  - rewrite (on_ctx_free_vars_concat _ _ [_]) // /= hctx
-      on_ctx_free_vars_tip /= addnP_shiftnP /on_free_vars_decl /test_decl /= h1 /= //.
-  - toAll. eapply OnOne2_impl_All_r; eauto; solve_all.
-  - toAll. unfold test_def.
-    rewrite -(OnOne2_length X).
-    eapply OnOne2_impl_All_r; eauto; solve_all.
-    destruct x, y; noconf b; simpl in *. rtoProp; solve_all.
-  - toAll. unfold test_def in *. rewrite -(OnOne2_length X).
-    eapply OnOne2_impl_All_r; eauto; solve_all;
-     destruct x, y; noconf b; simpl in *; rtoProp; solve_all.
-    apply b0 => //.
-    rewrite -(fix_context_length mfix0).
-    erewrite on_ctx_free_vars_extend; rewrite // hctx.
-    now apply on_free_vars_fix_context.
-  - toAll. unfold test_def.
-    rewrite -(OnOne2_length X).
-    eapply OnOne2_impl_All_r; eauto; solve_all.
-    destruct x, y; noconf b; simpl in *. rtoProp; solve_all.
-  - toAll. unfold test_def in *. rewrite -(OnOne2_length X).
-    eapply OnOne2_impl_All_r; eauto; solve_all;
-    destruct x, y; noconf b; simpl in *; rtoProp; solve_all.
-    apply b0 => //.
-    rewrite -(fix_context_length mfix0).
-    rewrite on_ctx_free_vars_extend // hctx.
-    now apply on_free_vars_fix_context.
-Qed.
-
-Lemma red_on_free_vars {cf} {P : nat -> bool} {Σ Γ u v} {wfΣ : wf Σ} :
-  red Σ Γ u v ->
-  on_free_vars P u ->
-  on_ctx_free_vars P Γ ->
-  on_free_vars P v.
-Proof.
-  induction 1; eauto using red1_on_free_vars.
-Qed.
-
-Lemma on_free_vars_ctx_snoc {P Γ d} : 
-  on_free_vars_ctx P (Γ ,, d) =
-  on_free_vars_ctx P Γ && on_free_vars_decl (shiftnP #|Γ| P) d.
-Proof.
-  rewrite - !on_free_vars_ctx_on_ctx_free_vars /snoc /=.
-  rewrite -(shiftnP_add 1) (on_ctx_free_vars_concat _ _ [_]) /=. f_equal.
-  now rewrite on_ctx_free_vars_tip {1 2}/shiftnP /= addnP_shiftnP.
-Qed.
-
 Lemma on_ctx_free_vars_snoc {P Γ d} : 
   on_ctx_free_vars (shiftnP 1 P) (Γ ,, d) =
   on_ctx_free_vars P Γ && on_free_vars_decl P d.
@@ -1361,6 +1227,17 @@ Proof.
   repeat nat_compare_specs => // /=.
   now replace (n + (i - n)) with i by lia.
 Qed.
+
+
+Lemma on_free_vars_ctx_snoc {P Γ d} : 
+  on_free_vars_ctx P (Γ ,, d) =
+  on_free_vars_ctx P Γ && on_free_vars_decl (shiftnP #|Γ| P) d.
+Proof.
+  rewrite - !on_free_vars_ctx_on_ctx_free_vars /snoc /=.
+  rewrite -(shiftnP_add 1) (on_ctx_free_vars_concat _ _ [_]) /=. f_equal.
+  now rewrite on_ctx_free_vars_tip {1 2}/shiftnP /= addnP_shiftnP.
+Qed.
+
 
 Lemma on_free_vars_ctx_smash P Γ acc : 
   on_free_vars_ctx P Γ ->

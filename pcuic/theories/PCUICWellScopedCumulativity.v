@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
-     PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
+     PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitutionConv
      PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
-     PCUICParallelReduction PCUICParallelReductionConfluence
+     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedTyping
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution.
 
 Require Import CRelationClasses CMorphisms.
@@ -32,10 +32,6 @@ From Equations Require Import Equations.
 
 Reserved Notation " Σ ;;; Γ ⊢ t ≤[ le ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤[ le ]  u").
-
-Notation is_open_term Γ := (on_free_vars (shiftnP #|Γ| xpred0)).
-Notation is_open_decl Γ := (on_free_vars_decl (shiftnP #|Γ| xpred0)).
-Notation is_closed_context := (on_free_vars_ctx xpred0).
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
@@ -170,7 +166,7 @@ Proof.
 Qed.
 
 Lemma equality_forget {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality le Σ Γ x y -> if le then cumul Σ Γ x y else conv Σ Γ x y.
+  equality le Σ Γ x y -> if le then cumulAlgo Σ Γ x y else convAlgo Σ Γ x y.
 Proof.
   induction 1.
   - destruct le; simpl in *; constructor; auto.
@@ -179,11 +175,11 @@ Proof.
 Qed.
 
 Lemma equality_forget_cumul {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality true Σ Γ x y -> cumul Σ Γ x y.
+  equality true Σ Γ x y -> cumulAlgo Σ Γ x y.
 Proof. apply (equality_forget (le:=true)). Qed.
 
 Lemma equality_forget_conv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality false Σ Γ x y -> conv Σ Γ x y.
+  equality false Σ Γ x y -> convAlgo Σ Γ x y.
 Proof. apply (equality_forget (le:=false)). Qed.
 #[global] Hint Resolve equality_forget_cumul equality_forget_conv : pcuic.
 
@@ -226,7 +222,7 @@ Section EqualityLemmas.
 
   Lemma wf_local_closed_context {Γ} : wf_local Σ Γ -> on_free_vars_ctx xpred0 Γ.
   Proof.
-    move/PCUICClosed.closed_wf_local.
+    move/PCUICClosedTyping.closed_wf_local.
     now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
   Qed.
 
@@ -748,8 +744,8 @@ Section WtContextConversion.
     - pose proof (isType_wf_local i).
       eapply wf_local_closed_context in X.
       eapply isType_open in i. apply isType_open in i0.
-      eapply PCUICClosed.subject_closed in t.
-      eapply PCUICClosed.subject_closed in t0.
+      eapply PCUICClosedTyping.subject_closed in t.
+      eapply PCUICClosedTyping.subject_closed in t0.
       eapply (@closedn_on_free_vars xpred0) in t.
       eapply (@closedn_on_free_vars xpred0) in t0.
       eapply into_equality_open_decls with Δ; eauto with fvs. rewrite /equality_decls.

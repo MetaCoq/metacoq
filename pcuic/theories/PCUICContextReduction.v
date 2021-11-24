@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
      PCUICContextRelation PCUICReduction PCUICCases PCUICWeakening
      PCUICTyping PCUICOnFreeVars PCUICSubstitution
-     PCUICRenameDef PCUICRenameProp PCUICInstDef PCUICInstProp.
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -16,7 +16,7 @@ Set Default Goal Selector "!".
 
 Section CtxReduction.
   Context {cf : checker_flags}.
-  Context {Σ : global_env}.
+  Context {Σ : global_env_ext}.
   Context (wfΣ : wf Σ).
 
   Lemma red_prod_alt Γ na M M' N N' :

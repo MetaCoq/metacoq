@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils PCUICPosition.
-From MetaCoq.PCUIC Require Export PCUICReduction PCUICCumulativity.
+From MetaCoq.PCUIC Require Export PCUICCumulativitySpec.
 From MetaCoq.PCUIC Require Export PCUICCases.
 
 Import MCMonadNotation.
@@ -29,10 +29,6 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
  *)
 
-#[global]
-Hint Rewrite subst_instance_length 
-  fix_context_length fix_subst_length cofix_subst_length : len.
-
 Fixpoint isArity T :=
   match T with
   | tSort u => True
@@ -55,16 +51,17 @@ Include PCUICEnvTyping.
 (* AXIOM Postulate existence of a guard condition checker *)
 
 Class GuardChecker := 
-{ (* Structural recursion check *)
-  fix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
-  (* Guarded by destructors check *)
-  cofix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
+{ (* guard check for both fixpoints (bool = true) and cofixpoints (bool = false)  *)
+  guard : bool -> global_env_ext -> context -> mfixpoint term -> bool ;
 }.
 
 Axiom guard_checking : GuardChecker.
 #[global]
 Existing Instance guard_checking.
-  
+
+Definition fix_guard := guard true. 
+Definition cofix_guard := guard false. 
+
 Definition destInd (t : term) :=
   match t with
   | tInd ind u => Some (ind, u)
@@ -148,6 +145,8 @@ Definition wf_universe Σ s :=
   end.
 
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
+
+Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | type_Rel n decl :
@@ -264,12 +263,11 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 | type_Cumul t A B s :
     Σ ;;; Γ |- t : A -> 
     Σ ;;; Γ |- B : tSort s ->
-    Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- t : B
+    Σ ;;; Γ |- A <=s B -> 
+    Σ ;;; Γ |- t : B
 
 where " Σ ;;; Γ |- t : T " := (typing Σ Γ t T)
 and "'wf_local' Σ Γ " := (All_local_env (lift_typing typing Σ) Γ).
-
-
 
 Lemma meta_conv {cf} {Σ Γ t A B} :
     Σ ;;; Γ |- t : A ->
@@ -305,7 +303,7 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
 
-Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar PCUICConversion.
+Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParSpec PCUICConversionSpec.
 
   Definition typing := @typing.
   Definition wf_universe := @wf_universe.
@@ -318,8 +316,8 @@ Module PCUICDeclarationTyping :=
     PCUICTerm
     PCUICEnvironment
     PCUICEnvTyping
-    PCUICConversionPar
-    PCUICConversion
+    PCUICConversionParSpec
+    PCUICConversionSpec
     PCUICTypingDef
     PCUICLookup.
 Include PCUICDeclarationTyping.
@@ -492,7 +490,7 @@ Defined.
 Lemma type_Cumul' {cf:checker_flags} {Σ Γ t} T {T'} : 
   Σ ;;; Γ |- t : T ->
   isType Σ Γ T' ->
-  Σ ;;; Γ |- T <= T' ->
+  Σ ;;; Γ |- T <=s T' ->
   Σ ;;; Γ |- t : T'.
 Proof.
   intros Ht [s Hs] cum.
@@ -711,7 +709,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        P Σ Γ t A ->
        Σ ;;; Γ |- B : tSort s ->
        P Σ Γ B (tSort s) ->
-       Σ ;;; Γ |- A <= B ->
+       Σ ;;; Γ |- A <=s B ->
        P Σ Γ t B) ->
 
       env_prop P PΓ.
@@ -1176,7 +1174,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ t A ->
         Σ ;;; Γ |- B : tSort s ->
         P Σ Γ B (tSort s) ->
-        Σ ;;; Γ |- A <= B ->
+        Σ ;;; Γ |- A <=s B ->
         P Σ Γ t B) ->
 
        env_prop P PΓ.
@@ -1193,8 +1191,8 @@ Ltac my_rename_hyp h th :=
   | (wf _) => fresh "wf"
   | consistent_instance_ext _ _ ?cu => fresh "cu" cu
   | (typing _ _ ?t _) => fresh "type" t
-  | (@cumul _ _ _ ?t _) => fresh "cumul" t
-  | (conv _ _ ?t _) => fresh "conv" t
+  | (@cumulSpec _ _ _ ?t _) => fresh "cumul" t
+  | (@convSpec _ _ ?t _) => fresh "conv" t
   | (All_local_env (lift_typing (@typing _) _) ?G) => fresh "wf" G
   | (All_local_env (lift_typing (@typing _) _) _) => fresh "wf"
   | (All_local_env _ _ ?G) => fresh "H" G

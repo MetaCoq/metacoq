@@ -2,12 +2,13 @@
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSubst PCUICTyping
-     PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
+     PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction PCUICOnFreeVars
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
      PCUICSigmaCalculus PCUICContextReduction
-     PCUICContextConversion PCUICWeakening PCUICUnivSubst
-     PCUICWellScopedCumulativity PCUICUnivSubstitution.
+     PCUICWeakening PCUICUnivSubst
+     PCUICWellScopedCumulativity PCUICUnivSubstitutionConv.
 
+     (* PCUICContextConversion  *)
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
@@ -36,7 +37,7 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 #[global]
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
-Derive Signature for conv cumul assumption_context.
+Derive Signature for convAlgo cumulAlgo assumption_context.
 Derive Signature for clos_refl_trans_1n.
 
 Require Import CMorphisms.
@@ -107,6 +108,12 @@ Section EquivalenceConvCumulDefs.
   Qed.
 
 End EquivalenceConvCumulDefs.
+
+Section EquivalenceConvSpecAlgo.
+
+
+
+End EquivalenceConvSpecAlgo.
 
 (* TODO MOVE *)
 Fixpoint isFixApp t : bool :=

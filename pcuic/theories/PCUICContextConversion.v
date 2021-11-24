@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCases
      PCUICCumulativity PCUICReduction
-     PCUICParallelReduction PCUICEquality PCUICUnivSubstitution
+     PCUICParallelReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICParallelReductionConfluence PCUICConfluence
      PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICGuardCondition.
@@ -64,7 +64,7 @@ Hint Resolve refl_red : pcuic.
 
 Section ContextReduction.
   Context {cf : checker_flags}.
-  Context (Σ : global_env).
+  Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 
   Local Definition red1_red_ctxP Γ Γ' :=
@@ -178,7 +178,7 @@ Section ContextReduction.
         forward H2 by auto.
         specialize (H2 hnth). noconf e.
         move/andP: H3 => [] /=. rewrite H /=.
-        rewrite PCUICInstProp.addnP_xpredT shiftnP_xpredT //.
+        rewrite PCUICInstConv.addnP_xpredT shiftnP_xpredT //.
       * epose proof (red_ctx_on_free_vars _ _ _ H0 onΓ).
         eapply weakening_red_0; eauto.
         rewrite firstn_length_le //.
@@ -1454,9 +1454,9 @@ Lemma wt_cum_equality {cf} {Σ} {wfΣ : wf Σ} {Γ : context} {t A B : term} {s}
   Σ ;;; Γ ⊢ A ≤ B. 
 Proof.
   move=> a; move: a (typing_wf_local a).
-  move/PCUICClosed.type_closed/(@closedn_on_free_vars xpred0) => clA.
+  move/PCUICClosedTyping.type_closed/(@closedn_on_free_vars xpred0) => clA.
   move/wf_local_closed_context => clΓ.
-  move/PCUICClosed.subject_closed/(@closedn_on_free_vars xpred0) => clB cum.
+  move/PCUICClosedTyping.subject_closed/(@closedn_on_free_vars xpred0) => clB cum.
   now apply into_equality.
 Qed.
 
@@ -1523,7 +1523,7 @@ Proof.
         assert (is_open_term Δ T).
         { eapply nth_error_closed_context in Hnth. 2:eauto with fvs.
           rewrite -eqΔ in Hnth. now move/andP: Hnth => []. }
-        eapply PCUICClosed.subject_closed in Hty.
+        eapply PCUICClosedTyping.subject_closed in Hty.
         eapply (@closedn_on_free_vars xpred0) in Hty.
         eapply (weakening_cumul0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty Hty)); cbn. lia.
         exact c0.
@@ -1552,7 +1552,7 @@ Proof.
           2:{ rewrite shiftnP_add /shiftnP /= orb_false_r. apply Nat.ltb_lt. lia. }
           rewrite /test_decl /= in hΔ'. move: hΔ'.
           now rewrite hn addnP_shiftnP. }
-        eapply PCUICClosed.subject_closed in ondecl.
+        eapply PCUICClosedTyping.subject_closed in ondecl.
         eapply (@closedn_on_free_vars xpred0) in ondecl.
         eapply (weakening_cumul0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty ondecl)); cbn. lia.
         exact c.

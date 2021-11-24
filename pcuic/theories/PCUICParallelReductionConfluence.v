@@ -3,9 +3,10 @@ From Coq Require CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
      PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
-     PCUICReflect PCUICInduction PCUICClosed PCUICDepth PCUICOnFreeVars
-     PCUICRenameDef PCUICRenameProp PCUICInstDef PCUICInstProp
-     PCUICParallelReduction PCUICWeakening.
+     PCUICReflect PCUICInduction PCUICClosed PCUICClosedTyping PCUICDepth PCUICOnFreeVars
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICWeakening
+     PCUICParallelReduction.
+     
 
 Require Import ssreflect ssrbool.
 Require Import Morphisms CRelationClasses.

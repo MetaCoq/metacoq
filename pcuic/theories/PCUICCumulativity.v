@@ -18,33 +18,33 @@ Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity *)
 
-Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+Inductive cumulAlgo `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | cumul_refl t u : leq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
 | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
 | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
 
-where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |- t <= u " := (cumulAlgo Σ Γ t u) : type_scope.
 
 (** *** Conversion   
  *)
 
-Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
+Inductive convAlgo `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | conv_refl t u : eq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
 | conv_red_l t u v : red1 Σ Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
 | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t = u
 
-where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
+where " Σ ;;; Γ |- t = u " := (@convAlgo _ Σ Γ t u) : type_scope.
 
 #[global]
 Hint Resolve cumul_refl conv_refl : pcuic.
 
-Module PCUICConversionPar <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
-  Definition conv := @conv.
-  Definition cumul := @cumul.
-End PCUICConversionPar.
+Module PCUICConversionParAlgo <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
+  Definition conv := @convAlgo.
+  Definition cumul := @cumulAlgo.
+End PCUICConversionParAlgo.
 
-Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar.
-Include PCUICConversion.
+Module PCUICConversionAlgo := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParAlgo.
+Include PCUICConversionAlgo.
 
 Notation conv_context Σ Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
 Notation cumul_context Σ Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
@@ -85,13 +85,13 @@ Proof.
 Qed.
 
 #[global]
-Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumul Σ Γ).
+Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumulAlgo Σ Γ).
 Proof.
   intro; constructor. reflexivity.
 Qed.
 
 #[global]
-Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (conv Σ Γ).
+Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (convAlgo Σ Γ).
 Proof.
   intro; constructor. reflexivity.
 Qed.
@@ -247,7 +247,7 @@ Qed.
 
 #[global]
 Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
-  Symmetric (conv Σ Γ).
+  Symmetric (convAlgo Σ Γ).
 Proof.
   intros t u X. induction X.
   - eapply eq_term_sym in e; now constructor.

@@ -2,9 +2,10 @@
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICCases PCUICSigmaCalculus
-     PCUICUnivSubst PCUICContextSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
-     PCUICReduction PCUICContextRelation PCUICWeakening PCUICCumulativity PCUICUnivSubstitution
-     PCUICRenameDef PCUICRenameProp PCUICInstDef PCUICInstProp PCUICOnFreeVars.
+     PCUICUnivSubst PCUICContextSubst PCUICTyping 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosed PCUICClosedTyping
+     PCUICReduction PCUICContextRelation PCUICWeakening PCUICCumulativity PCUICUnivSubstitutionConv
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICInstTyp PCUICOnFreeVars.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -1372,11 +1373,11 @@ Notation " Σ ;;; Γ |- t = u ✓" := (wt_conv Σ Γ t u) (at level 50, Γ, t, u
 
 Definition wt_cumul_cum {cf} {Σ Γ T U} : Σ ;;; Γ |- T <= U ✓ -> Σ ;;; Γ |- T <= U.
 Proof. intros H. apply (wt_equality_eq H). Defined.
-Coercion wt_cumul_cum : wt_cumul >-> cumul.
+Coercion wt_cumul_cum : wt_cumul >-> cumulAlgo.
 
 Definition wt_conv_conv {cf} {Σ Γ T U} : Σ ;;; Γ |- T = U ✓ -> Σ ;;; Γ |- T = U.
 Proof. intros H; apply (wt_equality_eq H). Defined.
-Coercion wt_conv_conv : wt_conv >-> conv.
+Coercion wt_conv_conv : wt_conv >-> convAlgo.
 
 Definition red1P P Σ Γ t v := 
   on_ctx_free_vars P Γ × on_free_vars P t × red1 Σ Γ t v.
@@ -1432,7 +1433,7 @@ Section SubstitutionLemmas.
     now rewrite shiftnPF_closedPT.
   Qed.
 
-  Lemma wt_equality_equalityP {le} {Γ : context} {T U} : wt_equality le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
+  Lemma wt_equality_equalityP {le} {Γ : context} {T  U} : wt_equality le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
   Proof.
     move=> [] dom.
     move: (isType_wf_local dom) => /closed_wf_local clΓ.

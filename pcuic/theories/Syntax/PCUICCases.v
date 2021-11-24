@@ -10,6 +10,8 @@ From Equations Require Import Equations.
 Set Equations Transparent.
 Set Default Goal Selector "!".
 
+Coercion ci_ind : case_info >-> inductive.
+
 (** * Functions related to the "compact" case representation *)
 
 (** Inductive substitution, to produce a constructors' type *)
@@ -397,3 +399,23 @@ Definition is_constructor n ts :=
   | Some a => isConstruct_app a
   | None => false
   end.
+
+Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
+Proof.
+  unfold fix_subst. generalize (tFix mfix). intros.
+  induction mfix; simpl; auto.
+Qed.
+
+Lemma cofix_subst_length mfix : #|cofix_subst mfix| = #|mfix|.
+Proof.
+  unfold cofix_subst. generalize (tCoFix mfix). intros.
+  induction mfix; simpl; auto.
+Qed.
+
+Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
+Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
+
+#[global]
+Hint Rewrite subst_instance_length 
+  fix_context_length fix_subst_length cofix_subst_length : len.
+

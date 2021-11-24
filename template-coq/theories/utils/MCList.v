@@ -504,6 +504,19 @@ Lemma mapi_length {A B} (f : nat -> A -> B) (l : list A) :
 Proof. apply mapi_rec_length. Qed.
 #[global] Hint Rewrite @mapi_length : len.
 
+Lemma mapi_cons {A B} (f : nat -> A -> B) a l :
+  mapi f (a :: l) = f 0 a :: mapi (fun x => f (S x)) l.
+Proof.
+  now rewrite /mapi /= mapi_rec_Sk.
+Qed.
+
+Lemma mapi_nth {A B} (l : list A) (l' : list B) (default : A) : #|l| = #|l'| ->
+    mapi (fun i _ => nth i l default) l' = l.
+Proof.
+  induction l' in l |- *; destruct l => /= //.
+  simpl. intros [= Hl]. cbn. f_equal. now rewrite mapi_rec_Sk.
+Qed.
+
 Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
 Proof.
   induction l in n |- *; destruct n; simpl; auto.

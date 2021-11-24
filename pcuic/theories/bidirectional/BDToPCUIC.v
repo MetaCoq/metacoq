@@ -1,6 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine PCUICSR.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine PCUICSR PCUICWellScopedCumulativity PCUICConversion.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping.
 
 Require Import ssreflect ssrbool.
@@ -275,11 +275,10 @@ Section BDToPCUICTyping.
 
     - intros ; intro.
 
-      assert (cparams : ctx_inst Σ Γ (pparams p) (List.rev (subst_instance (puinst p) (ind_params mdecl)))).
+      assert (cparams : ctx_inst Σ Γ (pparams p) (List.rev (ind_params mdecl)@[puinst p])).
       { apply ctx_inst_impl ; auto.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
-        
         apply (wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
         - by destruct isdecl.
         - eapply wf_local_app_inv.
@@ -416,44 +415,17 @@ Section BDToPCUICTyping.
         apply weakening.
         all: auto.
 
-    - red ; intros ; econstructor ; eauto.
-      2: by apply red_cumul.
-      constructor ; auto.
-      eapply isType_Sort_inv.
-      1: done.
-      eapply isType_red.
-      2: eassumption.
-      eapply validity.
-      eauto.
-    
     - red ; intros.
-      have [] : (isType Σ Γ (tProd na A B)).
-      { eapply isType_red.
-        2: eassumption.
-        eapply validity.
-        eauto.
-      }
-      econstructor.
-      + by auto.
-      + by eassumption.
-      + by apply red_cumul. 
-    
+      now eapply type_reduction_closed.
+
     - red ; intros.
-      have [] : (isType Σ Γ (mkApps (tInd ind ui) args)).
-      { eapply isType_red.
-        2: eassumption.
-        eapply validity.
-        eauto.
-      }
+      now eapply type_reduction_closed.
 
-      econstructor.
-      + by auto.
-      + by eassumption.
-      + by apply red_cumul. 
+    - red ; intros.
+      now eapply type_reduction_closed.
 
-    - intros. red. intros ? [].
-      econstructor.
-      all:by eauto.
+    - red ; intros.
+      now eapply PCUICArities.type_equality.
 
   Qed.
 
@@ -485,6 +457,21 @@ Proof.
   assumption.
 Qed.
 
+Theorem infering_sort_isType `{checker_flags} (Σ : global_env_ext) Γ t u (wfΣ : wf Σ) :
+  wf_local Σ Γ -> Σ ;;; Γ |- t ▹□ u -> isType Σ Γ t.
+Proof.
+  intros wfΓ Ht.
+  exists u.
+  now apply infering_sort_typing.
+Qed.
+
+Theorem einfering_sort_isType `{checker_flags} (Σ : global_env_ext) Γ t (wfΣ : wf Σ) :
+  wf_local Σ Γ -> (∑ u, Σ ;;; Γ |- t ▹□ u) -> isType Σ Γ t.
+Proof.
+  intros wfΓ [u Ht].
+  now eapply infering_sort_isType.
+Qed.
+
 Theorem infering_prod_typing `{checker_flags} (Σ : global_env_ext) Γ t na A B (wfΣ : wf Σ) :
   wf_local Σ Γ -> Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t : tProd na A B.
 Proof.
@@ -506,4 +493,50 @@ Theorem wf_local_bd_typing `{checker_flags} (Σ : global_env_ext) Γ (wfΣ : wf 
 Proof.
   apply bidirectional_to_pcuic.
   assumption.
+Qed.
+
+Theorem wf_local_bd_rel_typing `{checker_flags} (Σ : global_env_ext) Γ Γ' (wfΣ : wf Σ) :
+  wf_local Σ Γ -> wf_local_bd_rel Σ Γ Γ' -> wf_local_rel Σ Γ Γ'.
+Proof.
+  intros.
+  now apply bidirectional_to_pcuic.
+Qed.
+
+Theorem ctx_inst_bd_typing `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :
+  wf_local Σ (Γ,,,Δ) ->
+  PCUICTyping.ctx_inst checking Σ Γ l (List.rev Δ) ->
+  PCUICTyping.ctx_inst typing Σ Γ l (List.rev Δ).
+Proof.
+  intros wfΓ inl.
+  rewrite -(List.rev_involutive Δ) in wfΓ.
+  remember (List.rev Δ) as Δ'.
+  clear HeqΔ'.
+  induction inl in wfΓ |- *.
+  - constructor.
+  - assert (Σ ;;; Γ |- i : t).
+    {
+      rewrite /= app_context_assoc in wfΓ.
+      eapply wf_local_app_inv in wfΓ as [wfΓ _].
+      inversion wfΓ ; subst.
+      now apply checking_typing.
+    }
+    constructor ; tea.
+    eapply IHinl.
+    rewrite /= app_context_assoc in wfΓ.
+    rewrite -subst_context_rev_subst_telescope.
+    eapply substitution_wf_local ; tea.
+    constructor.
+    1: constructor.
+    now rewrite subst_empty.
+  - constructor.
+    eapply IHinl.
+    rewrite /= app_context_assoc in wfΓ.
+    rewrite -subst_context_rev_subst_telescope.
+    eapply substitution_wf_local ; tea.
+    rewrite -{1}(subst_empty 0 b).
+    constructor.
+    1: constructor.
+    rewrite !subst_empty.
+    eapply wf_local_app_inv in wfΓ as [wfΓ _].
+    now inversion wfΓ ; subst.
 Qed.

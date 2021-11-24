@@ -1,6 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubstitution PCUICClosed PCUICWellScopedCumulativity PCUICSR.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICUnivSubstitution PCUICClosed PCUICWellScopedCumulativity PCUICSR.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
 (** The dependency on BDToPCUIC is minimal, it is only used in conjuction with validity to avoid having to prove well-formedness of inferred types simultaneously with bidirectional -> undirected *)
 
@@ -69,51 +69,44 @@ Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
   Σ ;;; Γ |- t ◃ T.
 Proof.
   intros (?&?&?).
-  econstructor.
-  1: eassumption.
-  by apply equality_forget_cumul.
+  now econstructor.
 Qed.
 
 Lemma conv_infer_sort `{checker_flags} Σ (wfΣ : wf Σ) Γ t s :
-  wf_local Σ Γ ->
   Σ ;;; Γ |- t : tSort s ->
   (∑ T' : term, Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ tSort s) ->
   {s' & Σ ;;; Γ |- t ▹□ s' × leq_universe Σ s' s}.
 Proof.
-  intros ? tyt (T'&?&Cumt).
+  intros tyt (T'&?&Cumt).
   apply equality_Sort_r_inv in Cumt as (?&?&?) ; auto.
-  eexists. split ; [idtac|eassumption].
-  econstructor ; [eassumption|..].
-  by apply closed_red_red.
+  eexists.
+  split ; tea.
+  now econstructor.
 Qed.
 
-Lemma conv_infer_prod `{checker_flags} Σ (wfΣ : wf Σ) Γ t n A B :
-  wf_local Σ Γ ->
-  Σ ;;; Γ |- t : tProd n A B ->
-  (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ ⊢ T' ≤ tProd n A B)) ->
-  ∑ n' A' B', Σ ;;; Γ |- t ▹Π (n',A',B')
-      × (Σ ;;; Γ ⊢ A' = A) × (Σ ;;; Γ ,, vass n A ⊢ B' ≤ B).
+Lemma conv_infer_prod `{checker_flags} Σ (wfΣ : wf Σ) Γ t na A B :
+  Σ ;;; Γ |- t : tProd na A B ->
+  (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ ⊢ T' ≤ tProd na A B)) ->
+  ∑ na' A' B', [× Σ ;;; Γ |- t ▹Π (na',A',B'),
+    eq_binder_annot na na', Σ ;;; Γ ⊢ A' = A & Σ ;;; Γ ,, vass na A ⊢ B' ≤ B].
 Proof.
-  intros ? tyt (T'&?&Cumt).
+  intros tyt (T'&?&Cumt).
   apply equality_Prod_r_inv in Cumt as (?&?&?&[]) ; auto.
-  do 3 eexists. repeat split ; tea.
+  do 3 eexists. split ; tea.
   econstructor ; tea.
-  by eapply closed_red_red ; eauto.
 Qed.
 
 Lemma conv_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
-  wf_local Σ Γ ->
   Σ ;;; Γ |- t : mkApps (tInd ind ui) args ->
   (∑ T', (Σ ;;; Γ |- t ▹ T') × (Σ ;;; Γ ⊢ T' ≤ mkApps (tInd ind ui) args)) ->
-  ∑ ui' args', Σ ;;; Γ |- t ▹{ind} (ui',args')
-      × (R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui)
-      × equality_terms Σ Γ args' args.
+  ∑ ui' args', [× Σ ;;; Γ |- t ▹{ind} (ui',args'),
+      R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui
+      & equality_terms Σ Γ args' args].
 Proof.
-  intros ? tyt (T'&?&Cumt).
+  intros tyt (T'&?&Cumt).
   apply equality_Ind_r_inv in Cumt as (?&?&[]) ; auto.
-  do 2 eexists. repeat split ; tea.
-  econstructor ; tea.
-  by eapply closed_red_red ; eauto.
+  do 2 eexists. split ; tea.
+  now econstructor.
 Qed.
 
 Section BDFromPCUIC.
@@ -171,9 +164,7 @@ Proof.
       constructor.
       apply leq_universe_product_mon.
       all: assumption.
-    + constructor ; [assumption|..].
-      eexists ; eassumption.  
-
+      
   - intros n A t ? ? ? ? CumA ? (?&?&?).
     apply conv_infer_sort in CumA ; auto.
     destruct CumA as (?&?&?).
@@ -197,49 +188,45 @@ Proof.
 
   - intros t na A B u ? ? ? ? ? Cumt ? (?&?&?).
     apply conv_infer_prod in Cumt ; auto.
-    destruct Cumt as (?&?&?&?&?&?).
+    destruct Cumt as (?&?&?&[]).
     eexists.
     split.
     + econstructor ; eauto.
       econstructor ; eauto.
-      apply equality_forget_cumul.
-      etransitivity ; eauto.
-      eapply equality_le_le.
-      by symmetry.
-    + eapply substitution_equality_vass.
-      all: eassumption.
+      etransitivity ; tea.
+      now apply equality_eq_le.
+    + now eapply substitution_equality_vass.
   
   - intros.
     eexists.
     split.
-    2: by eapply typing_equality ; tea ; constructor ; eauto.
-    econstructor.
-    all: eassumption.
+    1: econstructor ; tea.
+    apply equality_refl.
+    1: fvs.
+    rewrite on_free_vars_subst_instance.
+    now eapply closed_on_free_vars, declared_constant_closed_type.
     
   - intros.
     eexists.
     split.
-    2: by eapply typing_equality ; tea ; econstructor ; eauto.
-    econstructor.
-    all: eassumption.
+    1: econstructor ; tea.
+    apply equality_refl.
+    1: fvs.
+    rewrite on_free_vars_subst_instance.
+    now eapply closed_on_free_vars, declared_inductive_closed_type.
     
   - intros.
     eexists.
     split.
-    2: by eapply typing_equality ; tea ; econstructor ; eauto.
-    econstructor.
-    all: eassumption.
+    1: econstructor ; tea.
+    apply equality_refl.
+    1: fvs.
+    now eapply closed_on_free_vars, declared_constructor_closed_type.
     
   - intros ci p c brs indices ps mdecl idecl isdecl wfΣ' wfbΓ epar ? predctx wfpred ? ? ty_p Cump ? ? _ Hinst ty_c Cumc ? ? ? ty_br.
 
-    (* assert (wf_universe Σ ps).
-    { apply validity in ty_p.
-      apply isType_wf_universes in ty_p; auto.
-      now apply (ssrbool.elimT wf_universe_reflect) in ty_p.
-    } *)
-
     apply conv_infer_sort in Cump as (?&?&?) ; auto.
-    apply conv_infer_ind in Cumc as (?&?&?&?&?) ; auto.
+    apply conv_infer_ind in Cumc as (?&?&[]) ; auto.
     eexists.
     split.
     + econstructor.
@@ -320,7 +307,7 @@ Proof.
            eapply subject_is_open_term ; tea.
 
   - intros ? c u mdecl idecl cdecl [] isdecl args ? ? ? Cumc ? ty.
-    apply conv_infer_ind in Cumc as (ui'&args'&?&?&?) ; auto.
+    apply conv_infer_ind in Cumc as (ui'&args'&[]) ; auto.
     eexists.
     split.
     + econstructor.
@@ -412,10 +399,86 @@ Qed.
 End BDFromPCUIC.
 
 (** The direct consequence on typing *)
-Lemma typing_infering `{checker_flags} (Σ : global_env_ext) Γ t T (wfΣ : wf Σ) :
-  Σ ;;; Γ |- t : T -> {T' & Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T}.
+Lemma typing_infering `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t T} :
+  Σ ;;; Γ |- t : T -> ∑ T', Σ ;;; Γ |- t ▹ T' × Σ ;;; Γ ⊢ T' ≤ T.
 Proof.
-  intros ty.
+  intros.
   apply bidirectional_from_pcuic.
   all: assumption.
+Qed.
+
+Lemma typing_checking `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t T} :
+  Σ ;;; Γ |- t : T -> Σ ;;; Γ |- t ◃ T.
+Proof.
+  move => /typing_infering [T' [? ?]].
+  now econstructor.
+Qed.
+
+Lemma typing_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u} :
+  Σ ;;; Γ |- t : tSort u -> ∑ u', Σ ;;; Γ |- t ▹□ u' × leq_universe Σ u' u.
+Proof.
+  intros.
+  apply conv_infer_sort ; tea.
+  now apply typing_infering.
+Qed.
+
+Lemma isType_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t} :
+  isType Σ Γ t -> ∑ u', Σ ;;; Γ |- t ▹□ u'.
+Proof.
+  intros [? ty].
+  eapply typing_infering_sort in ty as [? []]; tea.
+  now eexists.
+Qed.
+
+Lemma typing_infer_prod `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na A B} :
+  Σ ;;; Γ |- t : tProd na A B ->
+  ∑ na' A' B', [× Σ ;;; Γ |- t ▹Π (na',A',B'),
+    eq_binder_annot na na', Σ ;;; Γ ⊢ A' = A & Σ ;;; Γ ,, vass na A ⊢ B' ≤ B].
+Proof.
+  intros.
+  apply conv_infer_prod ; tea.
+  now apply typing_infering.
+Qed.
+
+Lemma typing_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
+  Σ ;;; Γ |- t : mkApps (tInd ind ui) args ->
+  ∑ ui' args', [× Σ ;;; Γ |- t ▹{ind} (ui',args'),
+      R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| ui' ui
+      & equality_terms Σ Γ args' args].
+Proof.
+  intros.
+  apply conv_infer_ind ; tea.
+  now apply typing_infering.
+Qed.
+
+Lemma wf_local_wf_local_bd `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} :
+  wf_local Σ Γ ->
+  wf_local_bd Σ Γ.
+Proof.
+  intros.
+  eapply bidirectional_from_pcuic ; tea.
+  now eapply type_Prop_wf.
+Qed.
+
+Lemma wf_local_rel_wf_local_bd `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ Γ'} :
+  wf_local_rel Σ Γ Γ' ->
+  wf_local_bd_rel Σ Γ Γ'.
+Proof.
+  intros wfΓ'.
+  induction Γ' as [|[? [] ?]] in wfΓ' |- *.
+  all: constructor ; inversion wfΓ' ; subst ; cbn in *.
+  1,4: now apply IHΓ'.
+  - now apply isType_infering_sort.
+  - now apply typing_checking.
+  - now apply isType_infering_sort.  
+Qed.
+
+Theorem ctx_inst_bd_typing `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :
+  PCUICTyping.ctx_inst typing Σ Γ l Δ ->
+  PCUICTyping.ctx_inst checking Σ Γ l Δ.
+Proof.
+  intros inl.
+  induction inl.
+  all: constructor ; tea.
+  now apply typing_checking.
 Qed.

@@ -5,7 +5,7 @@ From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICPosition PCUICTyping.
+  PCUICPosition PCUICTyping PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping.
 
 From MetaCoq Require Export LibHypsNaming.
@@ -17,8 +17,6 @@ From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-
-Notation "Σ ;;; Γ |- t --> t'" := (red Σ Γ t t') (at level 50, Γ, t, t' at next level) : type_scope.
 Reserved Notation " Σ ;;; Γ |- t ▹ T " (at level 50, Γ, t, T at next level).
 Reserved Notation " Σ ;;; Γ |- t ▹□ u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t ▹Π ( na , A , B ) " (at level 50, Γ, t, na, A, B at next level).
@@ -126,25 +124,25 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
 with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
 | infer_sort_Sort t T u:
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ |- T --> tSort u ->
+  Σ ;;; Γ ⊢ T ⇝ tSort u ->
   Σ ;;; Γ |- t ▹□ u
 
 with infering_prod `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> aname -> term -> term -> Type :=
 | infer_prod_Prod t T na A B:
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ |- T --> tProd na A B ->
+  Σ ;;; Γ ⊢ T  ⇝ tProd na A B ->
   Σ ;;; Γ |- t ▹Π (na,A,B)
 
 with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : inductive -> term -> Instance.t -> list term -> Type :=
 | infer_ind_Ind ind t T u args:
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ |- T --> mkApps (tInd ind u) args ->
+  Σ ;;; Γ ⊢ T ⇝ mkApps (tInd ind u) args ->
   Σ ;;; Γ |- t ▹{ind} (u,args) 
 
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | check_Cons t T T':
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ |- T <= T' ->
+  Σ ;;; Γ ⊢ T ≤ T' ->
   Σ ;;; Γ |- t ◃ T'
 
 where " Σ ;;; Γ |- t ▹ T " := (@infering _ Σ Γ t T) : type_scope
@@ -441,26 +439,26 @@ Section BidirectionalInduction.
     (forall (Γ : context) (t T : term) (u : Universe.t),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ |- T --> tSort u ->
+      Σ ;;; Γ ⊢ T ⇝ tSort u ->
       Psort Γ t u) ->
 
     (forall (Γ : context) (t T : term) (na : aname) (A B : term),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ |- T --> tProd na A B ->
+      Σ ;;; Γ ⊢ T ⇝ tProd na A B ->
       Pprod Γ t na A B) ->
 
     (forall (Γ : context) (ind : inductive) (t T : term) (ui : Instance.t)
       (args : list term),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ |- T --> mkApps (tInd ind ui) args ->
+      Σ ;;; Γ ⊢ T ⇝ mkApps (tInd ind ui) args ->
       Pind Γ ind t ui args) ->
 
     (forall (Γ : context) (t T T' : term),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ |- T <= T' ->
+      Σ ;;; Γ ⊢ T ≤ T' ->
       Pcheck Γ t T') ->
       
     env_prop_bd.
@@ -482,7 +480,7 @@ Section BidirectionalInduction.
     - intros x ; apply p.
       apply wf_precompose ; apply lt_wf.
     }
-    clear p.     
+    clear p.
     intros d IH.
     destruct d ; simpl.
     4: destruct i.

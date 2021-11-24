@@ -79,7 +79,7 @@ Let Psort Γ t u :=
 Let Pprod Γ t (na : aname) A B :=
   wf_local Σ Γ -> forall na' A' B', Σ ;;; Γ |- t ▹Π (na',A',B') ->
   [× eq_binder_annot na na', Σ ;;; Γ ⊢ A = A'
-      & Σ ;;; Γ,, vass na' A' ⊢ B = B'].
+      & Σ ;;; Γ,, vass na A ⊢ B = B'].
 
 Let Pind Γ ind t u args :=
   wf_local Σ Γ -> forall ind' u' args', Σ ;;; Γ |- t ▹{ind'} (u',args') ->
@@ -124,7 +124,6 @@ Proof.
       all: auto.
     + by apply wf_local_closed_context.
 
-
   - apply equality_Prod_r => //.
     1: by eapply subject_is_open_term, infering_sort_typing ; eauto.
     apply X1 in X4 ; auto.
@@ -139,16 +138,9 @@ Proof.
     + apply checking_typing ; auto. eexists. apply infering_sort_typing; eauto.
 
   - apply X0 in X3 as [] ; auto.
-    eapply substitution_equality_vass.
-    + eapply checking_typing ; auto.
-      2: eexact X1.
-      eapply isType_tProd, validity, infering_prod_typing ; eauto.
-    + eapply equality_equality_ctx.
-      2: eassumption.
-      constructor.
-      1: by apply context_equality_refl, wf_local_closed_context.
-      constructor ; eauto.
-
+    eapply substitution_equality_vass ; tea.
+    eapply checking_typing ; auto.
+    eapply isType_tProd, validity, infering_prod_typing ; eauto.
 
   - replace decl0 with decl by (eapply declared_constant_inj ; eassumption).
     eapply typing_equality => //.
@@ -282,57 +274,151 @@ Proof.
 
   - inversion_clear X3.
     eapply (equality_Sort_inv false).
-    eapply equality_red_r_inv.
-    2: eassumption.
-    eapply equality_red_l_inv.
-    2: eassumption.
-    auto.
+    etransitivity.
+    2: now eapply red_conv.
+    etransitivity ; auto.
+    symmetry.
+    now eapply red_conv.
 
   - inversion_clear X3.
-    eapply equality_Prod_Prod_inv.
-    eapply equality_red_r_inv.
+    assert (c : Σ ;;; Γ ⊢ tProd na A B = tProd na' A' B').
+    { etransitivity.
+      2: now eapply red_conv.
+      etransitivity ; auto.
+      symmetry.
+      now eapply red_conv.
+    }
+    eapply equality_Prod_Prod_inv in c as [].
+    split ; tea.
+    eapply equality_equality_ctx.
     2: eassumption.
-    eapply equality_red_l_inv.
-    2: eassumption.
-    auto.
+    constructor.
+    1: by apply context_equality_refl, wf_local_closed_context.
+    constructor ; eauto.
 
   - inversion_clear X3.
     eapply (@equality_Ind_inv _ _ _ false).
-    eapply equality_red_r_inv.
-    2: eassumption.
-    eapply equality_red_l_inv.
-    2: eassumption.
-    auto.
+    etransitivity.
+    2: now eapply red_conv.
+    etransitivity ; auto.
+    symmetry.
+    now eapply red_conv.
 Qed.
 
 End BDUnique.
 
-Theorem uniqueness_inferred `{checker_flags} Σ (wfΣ : wf Σ) Γ (wfΓ : wf_local Σ Γ) t T T' :
+Theorem infering_unique `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t T T'} :
   Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t ▹ T' -> Σ ;;; Γ ⊢ T = T'.
 Proof.
-  intros.
-  pose proof (bidirectional_unique Σ wfΣ) as bdu.
-  repeat destruct bdu as [? bdu].
-  eauto.
+  intros ty ty'.
+  now eapply bidirectional_unique in ty'.
 Qed.
 
-Corollary principal_type `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
+Theorem infering_checking `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t T T'} :
+  Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t ◃ T' -> Σ ;;; Γ ⊢ T ≤ T'.
+Proof.
+  intros ty ty'.
+  depelim ty'.
+  eapply bidirectional_unique in ty ; tea.
+  etransitivity ; tea.
+  now apply equality_eq_le.
+Qed.
+
+Theorem infering_sort_sort `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t u u'} :
+  Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t ▹□ u' -> eq_universe Σ u u'.
+Proof.
+  intros ty ty'.
+  now eapply bidirectional_unique in ty'.
+Qed.
+
+Theorem infering_sort_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
+  {Γ} {wfΓ : wf_local Σ Γ} {t u T} :
+  Σ ;;; Γ |- t ▹□ u -> Σ ;;; Γ |- t ▹ T -> ∑ u', Σ ;;; Γ ⊢ T ⇝ tSort u' × eq_universe Σ u u'.
+Proof.
+  intros ty ty'.
+  depelim ty.
+  eapply bidirectional_unique in i ; tea.
+  assert (c' : Σ ;;; Γ ⊢ T = tSort u).
+  {
+    etransitivity ; tea.
+    now eapply red_equality.
+  }
+  symmetry in c'.
+  now eapply equality_Sort_l_inv in c'.
+Qed.
+
+Theorem infering_prod_prod `{checker_flags} {Σ} (wfΣ : wf Σ)
+  {Γ} (wfΓ : wf_local Σ Γ) {t na na' A A' B B'} :
+  Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t ▹Π(na',A',B') ->
+    [× eq_binder_annot na na', Σ ;;; Γ ⊢ A = A' & Σ ;;; Γ ,, vass na A ⊢ B = B'].
+Proof.
+  intros ty ty'.
+  now eapply bidirectional_unique in ty'.
+Qed.
+
+Theorem infering_prod_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
+  {Γ} (wfΓ : wf_local Σ Γ) {t na A B T} :
+  Σ ;;; Γ |- t ▹Π(na,A,B) ->
+  Σ ;;; Γ |- t ▹ T ->
+  ∑ na' A' B', [× Σ ;;; Γ ⊢ T ⇝ tProd na' A' B',
+    eq_binder_annot na na',
+    Σ ;;; Γ ⊢ A = A' &
+    Σ ;;; Γ,, vass na A ⊢ B = B'].
+Proof.
+  intros ty ty'.
+  depelim ty.
+  eapply bidirectional_unique in i ; tea.
+  assert (c' : Σ ;;; Γ ⊢ T = tProd na A B).
+  {
+    etransitivity ; tea.
+    now eapply red_equality.
+  }
+  symmetry in c'.
+  now eapply equality_Prod_l_inv in c'.
+Qed.
+
+Theorem infering_prod_sort `{checker_flags} {Σ} (wfΣ : wf Σ)
+  {Γ} (wfΓ : wf_local Σ Γ) {t na A B u} :
+  Σ ;;; Γ |- t ▹Π (na,A,B) -> Σ ;;; Γ |- t ▹□ u -> False.
+Proof.
+  intros ty ty'.
+  depelim ty.
+  depelim ty'.
+  eapply bidirectional_unique in i ; tea.
+  eapply equality_Sort_Prod_inv.
+  etransitivity.
+  1: etransitivity ; tea.
+  1: symmetry.
+  all: now eapply red_equality.
+Qed.
+
+Theorem infering_ind_ind `{checker_flags} {Σ} (wfΣ : wf Σ)
+  {Γ} (wfΓ : wf_local Σ Γ) {t ind ind' u u' args args'} :
+  Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t ▹{ind'} (u',args') ->
+    [× ind = ind',
+      R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef ind) #|args| u u',
+      is_closed_context Γ &
+      All2 (fun a a' => Σ ;;; Γ ⊢ a = a') args args'].
+Proof.
+  intros ty ty'.
+  now eapply bidirectional_unique in ty'.
+Qed.
+
+Corollary principal_type `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ t T} :
   Σ ;;; Γ |- t : T ->
   ∑ T',
     (forall T'', Σ ;;; Γ |- t : T'' -> Σ ;;; Γ ⊢ T' ≤ T'') × Σ ;;; Γ |- t : T'.
 Proof.
   intros ty.
-  assert (wf_local Σ Γ) by (eapply typing_wf_local ; eauto).
+  assert (wf_local Σ Γ) by pcuic.
   apply typing_infering in ty as (S & infS & _); auto.
   exists S.
   repeat split.
   2: by apply infering_typing.
   intros T' ty.
-  apply typing_infering in ty as (S' & infS' & cum'); auto.
+  eapply typing_infering in ty as (S' & infS' & cum'); auto.
   etransitivity ; eauto.
-  apply equality_eq_le.
-  eapply uniqueness_inferred.
-  all: eauto.
+  now eapply equality_eq_le, infering_unique.
 Qed.
 
 

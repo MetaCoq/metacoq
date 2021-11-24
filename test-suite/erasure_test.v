@@ -45,6 +45,5 @@ Set Warnings "-abstract-large-number".
 Definition bignat := Eval compute in 10000.
 MetaCoq Erase bignat.
 
-Require Import vs.
-(* FIXME unbound rel in erasure! *)
-(* MetaCoq Erase main. *)
+From MetaCoq.TestSuite Require Import vs.
+MetaCoq Erase main.

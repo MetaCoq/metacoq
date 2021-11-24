@@ -47,3 +47,4 @@ MetaCoq Erase bignat.
 
 From MetaCoq.TestSuite Require Import vs.
 MetaCoq Erase main.
+(* let-expansion adds a ~25% overhead *)

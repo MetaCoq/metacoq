@@ -4,34 +4,45 @@ From MetaCoq.Template Require Import config utils uGraph Pretty Environment Typi
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC TemplateToPCUICCorrectness TemplateToPCUICWcbvEval.
+From MetaCoq.PCUIC Require PCUICExpandLets PCUICExpandLetsCorrectness.
 Set Warnings "+notation-overridden".
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr EWcbvEval EDeps.
 
-#[global]
-Existing Instance extraction_checker_flags.
+#[local] Instance extraction_checker_flags : checker_flags := 
+  {| check_univs := true;
+     prop_sub_type := false;
+     indices_matter := false;
+     lets_in_constructor_types := true |}.
 
-(* This is the total erasure function + the optimization that removes all 
-  pattern-matches on propositions. *)
+(* This is the total erasure function +
+  let-expansion of constructor arguments and case branches +
+  shrinking of the global environment dependencies +
+  the optimization that removes all pattern-matches on propositions. *)
 
 Program Definition erase_template_program (p : Ast.Env.program) 
   (wfΣ : ∥ Typing.wf_ext (Ast.Env.empty_ext p.1) ∥)
   (wt : ∥ ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥)
   : (EAst.global_context * EAst.term) :=
-  let Σ := (trans_global (Ast.Env.empty_ext p.1)).1 in
-  let wfΣ := map_squash (template_to_pcuic_env_ext (Ast.Env.empty_ext p.1)) wfΣ in
-  let t := ErasureFunction.erase (empty_ext Σ) wfΣ nil (trans Σ p.2) _ in
+  let Σ0 := (trans_global (Ast.Env.empty_ext p.1)).1 in
+  let Σ := (PCUICExpandLets.trans_global_decls Σ0) in
+  let wfΣ := map_squash (PCUICExpandLetsCorrectness.trans_wf_ext ∘
+    (template_to_pcuic_env_ext (Ast.Env.empty_ext p.1))) wfΣ in
+  let t := ErasureFunction.erase (empty_ext Σ) wfΣ nil (PCUICExpandLets.trans (trans Σ0 p.2)) _ in
   let Σ' := ErasureFunction.erase_global (term_global_deps t) Σ (sq_wf_ext wfΣ) in
   (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
 
 Next Obligation.
   sq. destruct wt as [T Ht].
-  set (Σ' := empty_ext (trans_global_decls _)).
-  exists (trans Σ'.1 T).
-  change (@nil (@BasicAst.context_decl term)) with (trans_local Σ'.1 []).
+  cbn.
+  set (Σ' := empty_ext _).
+  exists (PCUICExpandLets.trans (trans (trans_global_decls p.1) T)).
+  change Σ' with (PCUICExpandLets.trans_global (trans_global (Ast.Env.empty_ext p.1))).
+  change (@nil (@BasicAst.context_decl term)) with (PCUICExpandLets.trans_local (trans_local (trans_global_decls p.1) [])).
+  eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)).
   apply (template_to_pcuic_typing (Ast.Env.empty_ext p.1));simpl. apply wfΣ0.
-  apply Ht.
+  apply Ht. Unshelve. now eapply template_to_pcuic_env.
 Defined.
 
 Import EOptimizePropDiscr.
@@ -48,20 +59,25 @@ Lemma erase_template_program_correctness (wfl := EWcbvEval.default_wcbv_flags) {
 Proof.
   unfold erase_template_program.
   intros [= <- <-] v ev.
-  pose proof (erase_correct (trans_global Σ)).
-  set wftΣ : ∥ wf_ext (trans_global Σ) ∥ :=
-    (map_squash (template_to_pcuic_env_ext (Ast.Env.empty_ext p.1)) wfΣ).
-  specialize (H wftΣ (trans (trans_global Σ) p.2) (trans (trans_global Σ) v)).
-  set wtp : PCUICSafeLemmata.welltyped (trans_global Σ) [] (trans (trans_global Σ) p.2) :=
+  pose proof (erase_correct (PCUICExpandLets.trans_global (trans_global Σ))).
+  set wftΣ : ∥ wf_ext (PCUICExpandLets.trans_global (trans_global Σ)) ∥ :=
+    (map_squash (PCUICExpandLetsCorrectness.trans_wf_ext ∘ template_to_pcuic_env_ext (Ast.Env.empty_ext p.1)) wfΣ).
+  specialize (H wftΣ (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) (PCUICExpandLets.trans (trans (trans_global Σ) v))).
+  set wtp : PCUICSafeLemmata.welltyped (PCUICExpandLets.trans_global (trans_global Σ)) [] 
+    (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) :=
     (erase_template_program_obligation_1 p wfΣ wt).
-  set (t' := erase (trans_global Σ) wftΣ [] (trans (trans_global Σ) p.2) wtp).
-  set (deps := (term_global_deps t')).
-  specialize (H (erase_global deps (trans_global Σ) (sq_wf_ext wftΣ)) _ deps wtp eq_refl).
+  set (t' := erase (PCUICExpandLets.trans_global (trans_global Σ)) 
+    wftΣ [] (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) wtp).
+  set (deps := (term_global_deps _)).
+  change (empty_ext (PCUICExpandLets.trans_global_decls (trans_global_decls p.1))) with
+    (PCUICExpandLets.trans_global (trans_global Σ)) in *.
+  specialize (H (erase_global deps (PCUICExpandLets.trans_global (trans_global Σ)) (sq_wf_ext wftΣ))).
+  specialize (H _ deps wtp eq_refl).
   forward H. eapply Kernames.KernameSet.subset_spec. reflexivity.
   specialize (H eq_refl).
   destruct wt, wfΣ.
   forward H.
-  { unshelve eapply trans_wcbvEval; eauto. exact extraction_checker_flags.
+  { eapply PCUICExpandLetsCorrectness.expand_lets_sound. unshelve eapply trans_wcbvEval; eauto. exact extraction_checker_flags.
     apply w.
     destruct s as [T HT].
     clear -w HT. now eapply TypingWf.typing_wf in HT. }  

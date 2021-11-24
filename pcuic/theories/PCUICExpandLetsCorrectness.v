@@ -4926,23 +4926,28 @@ Proof.
   induction k; cbn; auto.
 Qed.
 
+Lemma trans_on_udecl {cf} {Σ : global_env} {univs} : 
+  on_udecl Σ univs ->
+  on_udecl (cf := cf' cf) (trans_global_decls Σ) univs.
+Proof.
+  cbn.
+  unfold on_udecl. cbn. intuition auto.
+  cbn.
+  rewrite trans_global_levels //.
+  rewrite trans_global_levels //.
+  move: H3.
+  rewrite /satisfiable_udecl. cbn. 
+  rewrite /PCUICLookup.global_ext_constraints.
+  rewrite trans_global_constraints //.
+Qed.
+
 Lemma trans_wf {cf} {Σ : global_env_ext} : wf Σ -> wf_trans Σ.
 Proof.
   rewrite /PCUICEnvironment.fst_ctx.
   induction 1 as [|Σ0 kn d X IHX f udecl onu ond]. constructor.
-  have onud : on_udecl (map (on_snd trans_global_decl) Σ0)
+  have onud : on_udecl (cf := cf' cf) (map (on_snd trans_global_decl) Σ0)
       (PCUICLookup.universes_decl_of_decl (trans_global_decl d)).
-  { subst udecl; cbn.
-    move: onu. unfold on_udecl. cbn. intuition auto.
-    cbn.
-    rewrite trans_global_levels //. destruct d => //.
-    rewrite trans_global_levels //. destruct d => //.
-    destruct d => //.
-    move: H3.
-    rewrite /satisfiable_udecl. cbn. 
-    rewrite /PCUICLookup.global_ext_constraints.
-    rewrite trans_global_constraints //.
-    destruct d => //. }
+  { apply trans_on_udecl in onu. destruct d => //. }
   cbn; constructor; eauto.
   { now eapply fresh_global_map. }
   destruct d; cbn in *.
@@ -5328,6 +5333,12 @@ Proof.
     all:now eapply (trans_consistent_instance_ext (Σ0, univs')).  
 Qed.
 
+Lemma trans_wf_ext {cf} {Σ : global_env_ext} : wf_ext Σ -> wf_ext_trans Σ.
+Proof.
+  intros; split. now eapply trans_wf. destruct X. 
+  now eapply trans_on_udecl.
+Qed.
+
 (** From a typing derivation in pcuic we build one where there are no lets 
   in constructor types, and branches of cases are appropriately substituted. *)
 Theorem expand_lets_sound {cf} {Σ : global_env_ext} {Γ t T} {wfΣ : wf Σ} :
@@ -5339,3 +5350,232 @@ Proof.
 Qed.
 
 (* Print Assumptions expand_lets_sound. *)
+
+From MetaCoq.PCUIC Require Import PCUICWcbvEval PCUICCanonicity PCUICCSubst.
+
+Lemma trans_csubst a k b :
+  closed a ->
+  closedn 1 b ->
+  trans (csubst a k b) = csubst (trans a) k (trans b).
+Proof.
+  intros ona onb.
+  rewrite closed_subst //.
+  rewrite closed_subst //. rewrite on_free_vars_closedn trans_on_free_vars // -on_free_vars_closedn //.
+  rewrite (trans_subst (shiftnP 1 xpred0) xpred0) //.
+  rewrite closedn_on_free_vars //.
+  cbn. now rewrite -(on_free_vars_closedn 0) ona.
+Qed.
+
+Lemma eval_wt {cf} {Σ} {wfΣ : wf Σ} {t t'} : 
+  wt Σ [] t ->
+  eval Σ t t' ->
+  wt Σ [] t'.
+Proof.
+  intros [T Ht] ev. exists T.
+  now eapply subject_reduction_eval.
+Qed.
+
+Lemma wt_closed {cf} {Σ} {wfΣ : wf Σ} {Γ t} : 
+  wt Σ Γ t ->
+  closedn #|Γ| t.
+Proof.
+  intros [T Ht]. exact (subject_closed Ht).
+Qed.
+
+(* Lemma wt_csubst {cf} {Σ} {wfΣ : wf Σ} {na t a b} :
+  wt Σ [] a ->
+  wt Σ [vass na t] b ->
+  wt Σ [] (csubst a 0 b).
+Proof.
+  intros [Ta Ha] [Tb Hb].
+  exists (subst [a] 0 Tb).
+  rewrite closed_subst. exact (subject_closed Ha).
+  eapply (substitution (Γ := []) (Δ := [])).
+  now eapply subslet_ass_tip. rewrite app_context_nil_l. exact Hb. *)
+
+Lemma closed_inst_case_context pars u ctx : 
+  forallb (closedn 0) pars ->
+  closedn_ctx #|pars| ctx ->
+  closed_ctx (inst_case_context pars u ctx).
+Proof.
+  intros hpars hctx.
+  rewrite /inst_case_context.
+  eapply (closedn_ctx_subst 0 0) => //. len.
+  rewrite closedn_subst_instance_context //.
+  rewrite forallb_rev //.
+Qed.
+
+Lemma trans_closedn k t : closedn k t -> closedn k (trans t).
+Proof.
+  rewrite !on_free_vars_closedn.
+  apply trans_on_free_vars.
+Qed.
+
+Lemma isFixApp_mkApps f u : isFixApp (mkApps f u) = isFixApp f.
+Proof.
+  rewrite /isFixApp.
+  destruct (decompose_app f) eqn:dapp.
+  pose proof (decompose_app_notApp _ _ _ dapp).
+  eapply decompose_app_inv in dapp. subst f.
+  cbn. rewrite -mkApps_app. rewrite decompose_app_mkApps. destruct t => //.
+  now cbn. 
+Qed.
+
+Lemma isFixApp_trans f : isFixApp f = isFixApp (trans f).
+Proof.
+  induction f => //. cbn.
+  rewrite (isFixApp_mkApps (trans f1) [trans f2]).
+  now rewrite (isFixApp_mkApps f1 [f2]).
+Qed.
+
+Lemma trans_wcbveval {cf} {Σ} {wfΣ : wf Σ} t u : 
+  closed t ->
+  eval Σ t u -> eval (trans_global_decls Σ) (trans t) (trans u).
+Proof.
+  intros wt ev; revert wt.
+  induction ev.
+  - move=> /= /andP[] onf ona. cbn in *. econstructor; eauto.
+    eapply eval_closed in onf; tea.
+    eapply eval_closed in ona; tea.
+    move: onf => /= /andP[] ont onb.
+    rewrite -trans_csubst //.
+    eapply IHev3. now eapply closed_csubst.
+  - move=> /= /andP[] /andP[] onb0 ont onb1.
+    econstructor; eauto.
+    eapply eval_closed in onb0; tea.
+    rewrite -trans_csubst //.
+    eapply IHev2.
+    now eapply closed_csubst.
+  - intros _.
+    cbn. econstructor. eapply trans_declared_constant; tea.
+    cbn; rewrite e //.
+    rewrite -trans_subst_instance; apply IHev.
+    rewrite closedn_subst_instance.
+    eapply declared_constant_closed_body in isdecl; tea.
+  - move=> /= /andP[] /andP[] clp cldiscr clbrs.
+    rewrite trans_mkApps in IHev1.
+    econstructor.
+    * eapply IHev1; eauto.
+    * rewrite !nth_error_map e //.
+    * eapply trans_declared_constructor; tea.
+    * cbn. rewrite skipn_map_length e0.
+      rewrite context_assumptions_smash_context context_assumptions_map //.
+    * rewrite /iota_red.
+      cbn -[expand_lets].
+      rewrite expand_lets_assumption_context.
+      { apply assumption_context_subst_context.
+        apply assumption_context_subst_instance.
+        apply smash_context_assumption_context; pcuic. }
+      eapply nth_error_forallb in clbrs; tea.
+      move: clbrs => /andP[] clctx clb.
+      move/andP: clp => [] /= /andP[] clpars clpctx clpret.
+      have clexp: closedn (context_assumptions (bcontext br))
+        (expand_lets (inst_case_branch_context p br) (bbody br)).
+      { relativize (context_assumptions _).
+        eapply (closedn_expand_lets 0) => //. 3:now len.
+        2:{ len. rewrite Nat.add_0_r // in clb. }
+        eapply closed_inst_case_context => //. }
+      have clargs : forallb (closedn 0) args.
+      { eapply eval_closed in ev1; tea.
+        now move: ev1; rewrite closedn_mkApps /= => ev1. }
+      forward IHev2.
+      { rewrite /iota_red.
+        eapply closedn_subst0 => //.
+        now rewrite forallb_rev; apply forallb_skipn.
+        cbn; len.
+        rewrite e0 //. }
+      relativize (subst0 _ _). exact IHev2.
+      rewrite /iota_red.
+      rewrite (trans_subst (shiftnP (context_assumptions (bcontext br)) xpred0) xpred0).
+      rewrite closedn_on_free_vars //.
+      rewrite forallb_rev forallb_skipn //.
+      eapply forallb_impl; tea. intros.
+      rewrite -(on_free_vars_closedn 0) //.
+      rewrite map_rev map_skipn. f_equal.
+      rewrite (trans_expand_lets xpred0).
+      rewrite /inst_case_branch_context.
+      apply (closedn_ctx_on_free_vars 0).
+      eapply closed_inst_case_context => //.
+      len. rewrite Nat.add_0_r in clb. rewrite closedn_on_free_vars //.
+      f_equal.
+      rewrite /inst_case_branch_context /inst_case_context.
+      rewrite (trans_subst_context (shiftnP #|pparams p| xpred0) xpred0).
+      rewrite on_free_vars_ctx_subst_instance.
+      { now apply closedn_ctx_on_free_vars. }
+      rewrite /on_free_vars_terms forallb_rev.
+      eapply forallb_impl; tea. intros. now eapply (@closedn_on_free_vars xpred0 0).
+      rewrite map_rev. rewrite trans_subst_instance_ctx //.
+      
+  - cbn => cldiscr.
+    specialize (IHev1 cldiscr). rewrite trans_mkApps in IHev1.
+    econstructor; tea.
+    rewrite nth_error_map e //.
+    apply IHev2.
+    eapply eval_closed in ev1; tea.
+    move: ev1; rewrite closedn_mkApps /= => onargs.
+    eapply nth_error_forallb in onargs; tea.
+
+  - move=> /= /andP[] clf cla.
+    rewrite trans_mkApps /= in IHev1.
+    eapply eval_closed in ev1; tea.
+    move: ev1; rewrite closedn_mkApps => /andP[] clfix clargsv.
+    rewrite -closed_unfold_fix_cunfold_eq in e => //.
+    forward IHev3.
+    { cbn. apply/andP; split.
+      rewrite closedn_mkApps /= clargsv andb_true_r.
+      eapply closed_unfold_fix; tea. now eapply eval_closed in ev2. }
+    eapply (trans_unfold_fix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply eval_fix; eauto. len.
+    rewrite -closed_unfold_fix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix.
+    cbn in IHev3. rewrite trans_mkApps in IHev3. eapply IHev3.
+    
+  - move=> /= /andP[] clf cla.
+    rewrite trans_mkApps /= in IHev1.
+    eapply eval_closed in ev1; tea.
+    move: ev1; rewrite closedn_mkApps => /andP[] clfix clargsv.
+    rewrite -closed_unfold_fix_cunfold_eq in e => //.
+    specialize (IHev1 clf).
+    rewrite trans_mkApps /=.
+    eapply (trans_unfold_fix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply eval_fix_value. eauto. eauto. 
+    rewrite -closed_unfold_fix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix. now len.
+    
+  - move=> /= /andP[] /andP[] clp.
+    rewrite closedn_mkApps => /andP[] clfix clargs clbrs.
+    rewrite -closed_unfold_cofix_cunfold_eq in e => //.
+    forward IHev.
+    { cbn. rewrite clp clbrs closedn_mkApps /=.
+      rewrite (closed_unfold_cofix mfix idx narg fn) // clargs //. }
+    cbn in IHev. rewrite trans_mkApps /=.
+    eapply (trans_unfold_cofix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply red_cofix_case.
+    rewrite -closed_unfold_cofix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix.
+    rewrite trans_mkApps in IHev => //.
+    
+  - move=> /=; rewrite closedn_mkApps => /andP[] clfix clargs.
+    rewrite -closed_unfold_cofix_cunfold_eq in e => //.
+    forward IHev.
+    { cbn. rewrite closedn_mkApps /=.
+      rewrite (closed_unfold_cofix mfix idx narg fn) // clargs //. }
+    cbn in IHev. rewrite trans_mkApps /=.
+    eapply (trans_unfold_cofix xpred0) in e; tea.
+    2:now eapply (@closedn_on_free_vars xpred0 0).
+    eapply red_cofix_proj.
+    rewrite -closed_unfold_cofix_cunfold_eq; tea.
+    now eapply closedn_trans in clfix.
+    rewrite trans_mkApps in IHev => //.
+  
+  - move=> /= /andP[] clf cla.
+    eapply eval_app_cong; eauto.
+    rewrite -isFixApp_trans.
+    clear -i. induction f' => /= //.
+    
+  - move=> clt. eapply eval_atom.
+    destruct t => //.
+Qed.

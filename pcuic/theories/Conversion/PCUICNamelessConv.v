@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICCases
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction PCUICCases
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCumulativitySpec PCUICCumulativity PCUICPosition PCUICUnivSubst
      PCUICContextRelation PCUICNamelessDef PCUICGuardCondition PCUICClosedTyping PCUICUnivSubstitutionConv
      PCUICClosed PCUICSigmaCalculus (* for context manipulations *).

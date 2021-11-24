@@ -111,6 +111,25 @@ End EquivalenceConvCumulDefs.
 
 Section EquivalenceConvSpecAlgo.
 
+  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
+
+  Proposition red1_cumulSpec (M N : term) :
+    red1 Σ Γ M N -> Σ ;;; Γ |- M =s N.
+  Proof. 
+  intro r. induction r using red1_ind_all.
+  - eapply cumul_beta.
+  - eapply cumul_zeta.    
+  - eapply cumul_rel; eauto. 
+  - eapply cumul_iota; eauto.  
+  - eapply cumul_fix; eauto.
+  - eapply cumul_cofix_case; eauto.  
+  - eapply cumul_cofix_proj; eauto.
+  - eapply cumul_delta; eauto.
+  - eapply cumul_proj; eauto.
+  - eapply cumul_Lambda; eauto. reflexivity.
+  - eapply cumul_Lambda; eauto. 
+    * reflexivity.
+    * 
 
 
 End EquivalenceConvSpecAlgo.

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCumulativity
   PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef PCUICWeakeningEnvConv
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICGuardCondition

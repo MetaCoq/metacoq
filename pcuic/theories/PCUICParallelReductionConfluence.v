@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require CMorphisms.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
-     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICSize PCUICLiftSubst
+     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction 
      PCUICReflect PCUICInduction PCUICClosed PCUICClosedTyping PCUICDepth PCUICOnFreeVars
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICWeakening
      PCUICParallelReduction.

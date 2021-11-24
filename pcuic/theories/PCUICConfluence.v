@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
      PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedTyping

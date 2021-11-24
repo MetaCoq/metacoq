@@ -2,7 +2,7 @@
 From Coq Require Import CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.Template Require Import config utils BasicAst Reflect.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICEquality
      PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCases PCUICOnFreeVars.
 
 Set Default Goal Selector "!".
@@ -67,20 +67,20 @@ Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Pro
 | cumul_Lambda na na' ty ty' t t' :
     eq_binder_annot na na' ->
     cumulSpec0 Σ Re Re Γ ty ty' ->
-    cumulSpec0 Σ Re Rle Γ t t' ->
+    cumulSpec0 Σ Re Rle (Γ ,, vass na ty) t t' ->
     cumulSpec0 Σ Re Rle Γ (tLambda na ty t) (tLambda na' ty' t')
 
 | cumul_Prod na na' a a' b b' :
     eq_binder_annot na na' ->
     cumulSpec0 Σ Re Re Γ a a' ->
-    cumulSpec0 Σ Re Rle Γ b b' ->
+    cumulSpec0 Σ Re Rle (Γ ,, vass na b) b b' ->
     cumulSpec0 Σ Re Rle Γ (tProd na a b) (tProd na' a' b')
 
 | cumul_LetIn na na' t t' ty ty' u u' :
     eq_binder_annot na na' ->
     cumulSpec0 Σ Re Re Γ t t' ->
     cumulSpec0 Σ Re Re Γ ty ty' ->
-    cumulSpec0 Σ Re Rle Γ u u' ->
+    cumulSpec0 Σ Re Rle (Γ ,, vdef na t ty) u u' ->
     cumulSpec0 Σ Re Rle Γ (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
 | cumul_Case indn p p' c c' brs brs' :
@@ -118,11 +118,11 @@ Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Pro
 
 (** Beta red *)
 | cumul_beta na t b a :
-    cumulSpec0 Σ Re Rle Γ (tApp (tLambda na t b) a) (subst10 a b)
+    cumulSpec0 Σ Re Rle Γ (tApp (tLambda na t b) a) (b {0 := a})
 
 (** Let *)
 | cumul_zeta na b t b' :
-    cumulSpec0 Σ Re Rle Γ (tLetIn na b t b') (subst10 b b')
+    cumulSpec0 Σ Re Rle Γ (tLetIn na b t b') (b' {0 := b})
 
 | cumul_rel i body :
     option_map decl_body (nth_error Γ i) = Some (Some body) ->
@@ -239,3 +239,232 @@ Section ContextConversion.
     := cumul_ctx_refl Γ.
 
 End ContextConversion.
+
+
+Definition cumulSpec0_ctx Σ Re Rle := (OnOne2_local_env (on_one_decl (fun Δ t t' => cumulSpec0 Σ Re Rle Δ t t'))).
+Definition cumulSpec0_ctx_rel Σ Re Rle Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => cumulSpec0 Σ Re Rle (Γ ,,, Δ) t t'))).
+
+Lemma cumul0_ind_all :
+  forall (Σ : global_env) (P : forall (Re Rle : Universe.t -> Universe.t -> Prop), context -> term -> term -> Type),
+
+        (* beta *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (na : aname) (t b a : term),
+        P Re Rle Γ (tApp (tLambda na t b) a) (b {0 := a})) ->
+
+        (* let *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (na : aname) (b t b' : term), P Re Rle  Γ (tLetIn na b t b') (b' {0 := b})) ->
+
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (i : nat) (body : term),
+        option_map decl_body (nth_error Γ i) = Some (Some body) -> P Re Rle  Γ (tRel i) ((lift0 (S i)) body)) ->
+
+        (* iota *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
+          (p : predicate term) (brs : list (branch term)) br,
+          nth_error brs c = Some br ->
+          #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+          P Re Rle  Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
+              (iota_red ci.(ci_npar) p args br)) ->
+
+        (* fix unfolding *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn : term),
+        unfold_fix mfix idx = Some (narg, fn) ->
+        is_constructor narg args = true -> P Re Rle Γ (mkApps (tFix mfix idx) args) (mkApps fn args)) ->
+
+      (* cofix unfolding *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) ci (p : predicate term) (mfix : mfixpoint term) (idx : nat)
+          (args : list term) (narg : nat) (fn : term) (brs : list (branch term)),
+        unfold_cofix mfix idx = Some (narg, fn) ->
+        P Re Rle Γ (tCase ci p (mkApps (tCoFix mfix idx) args) brs) (tCase ci p (mkApps fn args) brs)) ->
+
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term)
+          (narg : nat) (fn : term),
+        unfold_cofix mfix idx = Some (narg, fn) -> P Re Rle Γ (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))) ->
+
+        (* constant unfolding *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) c (decl : constant_body) (body : term),
+        declared_constant Σ c decl ->
+        forall u : Instance.t, cst_body decl = Some body -> P Re Rle Γ (tConst c u) (subst_instance u body)) ->
+
+        (* Proj *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
+         (arg : term),
+           nth_error args (pars + narg) = Some arg ->
+           P Re Rle  Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
+
+        (* transitivity *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t u v : term),
+           cumulSpec0 Σ Re Rle Γ t u -> P Re Rle Γ t u ->
+           cumulSpec0 Σ Re Rle Γ u v -> P Re Rle Γ u v ->
+           P Re Rle Γ t v) ->
+
+        (* symmetry *)
+       (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t u : term),
+       cumulSpec0 Σ Re Re Γ u t -> P Re Re Γ u t ->
+       P Re Rle Γ t u) ->
+
+        (* reflexivity *)
+        (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t : term),
+        P Re Rle Γ t t) ->
+        
+        (* congruence rules *)
+
+        (forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (na na' : aname) (ty ty' t t' : term),
+        eq_binder_annot na na' ->  
+        cumulSpec0 Σ Re Re Γ ty ty' -> P Re Re Γ ty ty' -> 
+        cumulSpec0 Σ Re Rle (Γ ,, vass na ty) t t' -> P Re Rle (Γ ,, vass na ty) t t' -> 
+        P Re Rle Γ (tLambda na ty t) (tLambda na' ty' t')) ->
+
+       (* (forall (Γ : context) (na : aname) (ty ty' t t : term),
+        eq_binder_annot na na' ->  
+        cumulSpec0 Σ Re Rle Σ Γ ty ty' -> P Re Rle Γ ty ty' -> 
+        cumulSpec0 Σ Re Rle Σ Γ t t' -> P Re Rle Γ t t' -> 
+        P Γ (tLambda na ty t) (tLambda na' ty' t')) ->
+
+       (forall (Γ : context) (na : aname) (M M' N : term),
+        red1 Σ (Γ,, vass na N) M M' -> P (Γ,, vass na N) M M' -> P Γ (tLambda na N M) (tLambda na N M')) ->
+
+       (forall (Γ : context) (na : aname) (b t b' r : term),
+        red1 Σ Γ b r -> P Γ b r -> P Γ (tLetIn na b t b') (tLetIn na r t b')) ->
+
+       (forall (Γ : context) (na : aname) (b t b' r : term),
+        red1 Σ Γ t r -> P Γ t r -> P Γ (tLetIn na b t b') (tLetIn na b r b')) ->
+
+       (forall (Γ : context) (na : aname) (b t b' r : term),
+        red1 Σ (Γ,, vdef na b t) b' r -> P (Γ,, vdef na b t) b' r -> P Γ (tLetIn na b t b') (tLetIn na b t r)) ->
+
+       (forall (Γ : context) (ci : case_info) p params' c brs,
+          OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) p.(pparams) params' ->
+           P Γ (tCase ci p c brs)
+               (tCase ci (set_pparams p params') c brs)) ->
+
+       (forall (Γ : context) (ci : case_info) p preturn' c brs,
+          red1 Σ (Γ ,,, inst_case_predicate_context p) p.(preturn) preturn' ->
+          P (Γ ,,, inst_case_predicate_context p) p.(preturn) preturn' ->
+          P Γ (tCase ci p c brs)
+              (tCase ci (set_preturn p preturn') c brs)) ->
+       
+       (forall (Γ : context) (ind : case_info) (p : predicate term) (c c' : term) (brs : list (branch term)),
+        red1 Σ Γ c c' -> P Γ c c' -> P Γ (tCase ind p c brs) (tCase ind p c' brs)) ->
+
+       (forall (Γ : context) ci p c brs brs',
+          OnOne2 (fun br br' =>
+          (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, inst_case_branch_context p br)) 
+            (P (Γ ,,, inst_case_branch_context p br)))
+            bbody bcontext br br')) brs brs' ->
+          P Γ (tCase ci p c brs) (tCase ci p c brs')) ->
+
+       (forall (Γ : context) (p : projection) (c c' : term), red1 Σ Γ c c' -> P Γ c c' ->
+                                                             P Γ (tProj p c) (tProj p c')) ->
+
+       (forall (Γ : context) (M1 N1 : term) (M2 : term), red1 Σ Γ M1 N1 -> P Γ M1 N1 ->
+                                                         P Γ (tApp M1 M2) (tApp N1 M2)) ->
+
+       (forall (Γ : context) (M2 N2 : term) (M1 : term), red1 Σ Γ M2 N2 -> P Γ M2 N2 ->
+                                                         P Γ (tApp M1 M2) (tApp M1 N2)) ->
+
+       (forall (Γ : context) (na : aname) (M1 M2 N1 : term),
+        red1 Σ Γ M1 N1 -> P Γ M1 N1 -> P Γ (tProd na M1 M2) (tProd na N1 M2)) ->
+
+       (forall (Γ : context) (na : aname) (M2 N2 M1 : term),
+        red1 Σ (Γ,, vass na M1) M2 N2 -> P (Γ,, vass na M1) M2 N2 -> P Γ (tProd na M1 M2) (tProd na M1 N2)) ->
+
+       (forall (Γ : context) (ev : nat) (l l' : list term),
+           OnOne2 (Trel_conj (red1 Σ Γ) (P Γ)) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+                                      (P (Γ ,,, fix_context mfix0))) dbody
+                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+        P Γ (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ Γ) (P Γ)) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+
+       (forall (Γ : context) (mfix0 mfix1 : list (def term)) (idx : nat),
+        OnOne2 (on_Trel_eq (Trel_conj (red1 Σ (Γ ,,, fix_context mfix0))
+                                      (P (Γ ,,, fix_context mfix0))) dbody
+                           (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+        P Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)) -> *)
+
+       forall (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t t0 : term), cumulSpec0 Σ Re Rle Γ t t0 -> P Re Rle Γ t t0.
+Proof.
+  intros. rename X12 into Xlast. revert Re Rle Γ t t0 Xlast.
+  fix aux 4. intros Re Rle Γ t u.
+  move aux at top.
+  destruct 1.
+  - eapply X8; eauto.   
+  - eapply X9; eauto.   
+  - eapply X10; eauto.   
+ - admit.
+ - admit.
+ - admit.
+ - admit.
+ - admit.
+ - admit.
+ - eapply X11; eauto.   
+ - admit.
+ - admit.
+ - admit.
+ - admit.
+ - admit.
+ - admit.
+ - eapply X.
+ - eapply X0.
+ - eapply X1; eauto. 
+ - eapply X2; eauto.
+ - eapply X3; eauto.
+ - eapply X4; eauto.
+ - eapply X5; eauto.
+ - eapply X6; eauto.
+ - eapply X7; eauto.
+Admitted.   
+      
+ (* eapply X3; eauto.
+  - eapply X4; eauto.
+  - eapply X5; eauto.
+
+  - revert params' o.
+    generalize (pparams p).
+    fix auxl 3.
+    intros params params' [].
+    + constructor. split; auto.
+    + constructor. auto.
+      
+  - revert brs' o.
+    revert brs.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + simpl in *. constructor; intros; intuition auto.
+    + constructor. eapply auxl. apply Hl.
+
+  - revert l l' o.
+    fix auxl 3.
+    intros l l' Hl. destruct Hl.
+    + constructor. split; auto.
+    + constructor. auto.
+
+  - eapply X23.
+    revert mfix0 mfix1 o; fix auxl 3.
+    intros l l' Hl; destruct Hl;
+    constructor; try split; auto; intuition.
+
+  - eapply X24.
+    revert o. generalize (fix_context mfix0). intros c Xnew.
+    revert mfix0 mfix1 Xnew; fix auxl 3; intros l l' Hl;
+    destruct Hl; constructor; try split; auto; intuition.
+
+  - eapply X25.
+    revert mfix0 mfix1 o.
+    fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+
+  - eapply X26.
+    revert o. generalize (fix_context mfix0). intros c new.
+    revert mfix0 mfix1 new; fix auxl 3; intros l l' Hl; destruct Hl;
+      constructor; try split; auto; intuition.
+Defined. *)

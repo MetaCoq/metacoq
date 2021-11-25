@@ -7,6 +7,7 @@ theories/utils/PCUICPrimitive.v
 theories/utils/PCUICAstUtils.v
 theories/utils/PCUICUtils.v
 theories/utils/PCUICSize.v
+theories/utils/PCUICPretty.v
 
 theories/Syntax/PCUICCases.v
 theories/Syntax/PCUICInduction.v
@@ -27,12 +28,16 @@ theories/Conversion/PCUICRenameConv.v
 theories/Conversion/PCUICInstConv.v
 theories/Conversion/PCUICWeakeningEnvConv.v
 theories/Conversion/PCUICUnivSubstitutionConv.v
+theories/Conversion/PCUICWeakeningConv.v
+theories/Conversion/PCUICClosedConv.v
 
 theories/Typing/PCUICNamelessTyp.v
 theories/Typing/PCUICRenameTyp.v
 theories/Typing/PCUICInstTyp.v
 theories/Typing/PCUICWeakeningEnvTyp.v
+theories/Typing/PCUICWeakeningTyp.v
 theories/Typing/PCUICUnivSubstitutionTyp.v
+theories/Typing/PCUICClosedTyp.v
 
 theories/PCUICContextSubst.v
 theories/PCUICCasesContexts.v
@@ -40,12 +45,10 @@ theories/PCUICReduction.v
 theories/PCUICTyping.v
 theories/PCUICGuardCondition.v
 theories/PCUICGlobalEnv.v
-theories/PCUICClosedTyping.v
 theories/PCUICInversion.v
 theories/PCUICNormal.v
 theories/PCUICEquality.v
 theories/PCUICEqualityDec.v
-theories/PCUICWeakening.v
 theories/PCUICSubstitution.v
 theories/PCUICContextReduction.v
 theories/PCUICCumulativity.v
@@ -73,7 +76,6 @@ theories/PCUICCanonicity.v
 
 theories/PCUICCSubst.v
 theories/PCUICWcbvEval.v
-theories/PCUICPretty.v
 theories/PCUICCumulProp.v
 theories/PCUICElimination.v
 theories/PCUICSN.v

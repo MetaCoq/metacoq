@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
-     PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCases
+     PCUICLiftSubst PCUICTyping PCUICWeakeningConv PCUICWeakeningTyp PCUICCases
      PCUICCumulativity PCUICReduction
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICParallelReductionConfluence PCUICConfluence

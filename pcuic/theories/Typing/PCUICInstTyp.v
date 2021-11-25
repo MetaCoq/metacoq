@@ -4,8 +4,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation
   PCUICTyping PCUICReduction PCUICCumulativity 
-  PCUICEquality PCUICGlobalEnv PCUICClosed PCUICClosedTyping PCUICEquality PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
-  PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICWeakening PCUICInstDef PCUICInstConv
+  PCUICEquality PCUICGlobalEnv PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICEquality PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICWeakeningConv PCUICWeakeningTyp PCUICInstDef PCUICInstConv
   PCUICGuardCondition PCUICUnivSubstitutionConv PCUICOnFreeVars.
 
 Require Import ssreflect ssrbool.

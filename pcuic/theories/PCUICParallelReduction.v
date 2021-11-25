@@ -4,9 +4,11 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnvConv PCUICInduction
-     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars PCUICWeakening
-     PCUICContextRelation PCUICSubstitution.
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars 
+     PCUICContextRelation PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
 
+     (* PCUICWeakening  PCUICSubstitution. *)
+     
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
@@ -1352,7 +1354,7 @@ Qed.
     - rewrite rename_subst_instance.
       econstructor; tea.
       rewrite rename_closed. 2: assumption.
-      eapply (PCUICClosedTyping.declared_constant_closed_body). all: eauto.
+      eapply (PCUICClosedTyp.declared_constant_closed_body). all: eauto.
     - rewrite rename_mkApps. simpl. cbn in H0; inv_on_free_vars.
       econstructor; tea. 2:erewrite nth_error_map, heq_nth_error; reflexivity.
       solve_all.
@@ -2309,7 +2311,7 @@ Section ParallelSubstitution.
 
     - simpl. rewrite inst_closed0.
       rewrite PCUICClosed.closedn_subst_instance; auto.
-      eapply (PCUICClosedTyping.declared_constant_closed_body). all: eauto.
+      eapply (PCUICClosedTyp.declared_constant_closed_body). all: eauto.
       econstructor; eauto with pcuic.
 
     - eapply pred1_refl_gen. now apply pred1_subst_pred1_ctx in Hrel.

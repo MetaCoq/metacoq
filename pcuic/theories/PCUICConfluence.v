@@ -3,8 +3,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICLiftSubst PCUICTyping
      PCUICReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
-     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedTyping
-     PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICInstDef PCUICInstConv PCUICWeakening. 
+     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
+     PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICInstDef PCUICInstConv PCUICWeakeningConv PCUICWeakeningTyp. 
 
 
 (* We show that conversion/cumulativity starting from well-typed terms is transitive.

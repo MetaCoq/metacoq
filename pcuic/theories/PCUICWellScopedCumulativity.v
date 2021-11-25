@@ -2,9 +2,9 @@
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
-     PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitutionConv
+     PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
      PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
-     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedTyping
+     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution.
 
 Require Import CRelationClasses CMorphisms.
@@ -222,7 +222,7 @@ Section EqualityLemmas.
 
   Lemma wf_local_closed_context {Γ} : wf_local Σ Γ -> on_free_vars_ctx xpred0 Γ.
   Proof.
-    move/PCUICClosedTyping.closed_wf_local.
+    move/PCUICClosedTyp.closed_wf_local.
     now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
   Qed.
 
@@ -744,8 +744,8 @@ Section WtContextConversion.
     - pose proof (isType_wf_local i).
       eapply wf_local_closed_context in X.
       eapply isType_open in i. apply isType_open in i0.
-      eapply PCUICClosedTyping.subject_closed in t.
-      eapply PCUICClosedTyping.subject_closed in t0.
+      eapply PCUICClosedTyp.subject_closed in t.
+      eapply PCUICClosedTyp.subject_closed in t0.
       eapply (@closedn_on_free_vars xpred0) in t.
       eapply (@closedn_on_free_vars xpred0) in t0.
       eapply into_equality_open_decls with Δ; eauto with fvs. rewrite /equality_decls.

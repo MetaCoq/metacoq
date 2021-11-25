@@ -2,7 +2,8 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICSigmaCalculus PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICWeakening
+     PCUICLiftSubst PCUICSigmaCalculus PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICUnivSubst PCUICUnivSubstitutionConv.
 

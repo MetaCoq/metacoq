@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSub
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction PCUICOnFreeVars
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
      PCUICSigmaCalculus PCUICContextReduction
-     PCUICWeakening PCUICUnivSubst
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst
      PCUICWellScopedCumulativity PCUICUnivSubstitutionConv.
 
      (* PCUICContextConversion  *)

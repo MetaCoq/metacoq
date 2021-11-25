@@ -4,8 +4,8 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICOnOne PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation
   PCUICTyping PCUICReduction PCUICCumulativity 
-  PCUICEquality PCUICGlobalEnv PCUICClosed PCUICClosedTyping PCUICEquality PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
-  PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICWeakening PCUICInstDef
+  PCUICEquality PCUICGlobalEnv PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICEquality PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICWeakeningConv PCUICWeakeningTyp PCUICInstDef
   PCUICGuardCondition PCUICUnivSubstitutionConv PCUICOnFreeVars.
 
 

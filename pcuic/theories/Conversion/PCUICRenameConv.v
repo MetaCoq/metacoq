@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICCases P
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCumulativity
   PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef PCUICWeakeningEnvConv
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICGuardCondition
-  PCUICWeakeningEnvTyp PCUICClosedTyping.
+  PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.

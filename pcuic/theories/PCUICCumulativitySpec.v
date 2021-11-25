@@ -10,6 +10,12 @@ Set Default Goal Selector "!".
 Reserved Notation " Σ ;;; Γ |- t <=s u " (at level 50, Γ, t, u at next level).
 Reserved Notation " Σ ;;; Γ |- t =s u " (at level 50, Γ, t, u at next level).
 
+Definition cumul_predicate (cumul : context -> term -> term -> Type) Γ Re p p' :=
+  All2 (cumul Γ) p.(pparams) p'.(pparams) *
+  (R_universe_instance Re p.(puinst) p'.(puinst) *
+  ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
+    cumul (Γ ,,, inst_case_predicate_context p) p.(preturn) p'.(preturn))).
+
 (** * Definition of cumulativity and conversion relations *)
 
 Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) : term -> term -> Type :=
@@ -73,7 +79,7 @@ Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Pro
 | cumul_Prod na na' a a' b b' :
     eq_binder_annot na na' ->
     cumulSpec0 Σ Re Re Γ a a' ->
-    cumulSpec0 Σ Re Rle (Γ ,, vass na b) b b' ->
+    cumulSpec0 Σ Re Rle (Γ ,, vass na a) b b' ->
     cumulSpec0 Σ Re Rle Γ (tProd na a b) (tProd na' a' b')
 
 | cumul_LetIn na na' t t' ty ty' u u' :
@@ -84,11 +90,11 @@ Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Pro
     cumulSpec0 Σ Re Rle Γ (tLetIn na t ty u) (tLetIn na' t' ty' u')
 
 | cumul_Case indn p p' c c' brs brs' :
-    eq_predicate (cumulSpec0 Σ Re Re Γ) Re p p' ->
+    cumul_predicate (cumulSpec0 Σ Re Re) Γ Re p p' ->
     cumulSpec0 Σ Re Re Γ c c' ->
-    All2 (fun x y =>
-      eq_context_gen eq eq (bcontext x) (bcontext y) *
-      cumulSpec0 Σ Re Re Γ (bbody x) (bbody y)
+    All2 (fun br br' =>
+      eq_context_gen eq eq (bcontext br) (bcontext br') * 
+      cumulSpec0 Σ Re Re (Γ ,,, inst_case_branch_context p br) (bbody br) (bbody br)
     ) brs brs' ->
     cumulSpec0 Σ Re Rle Γ (tCase indn p c brs) (tCase indn p' c' brs')
 
@@ -99,7 +105,7 @@ Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Pro
 | cumul_Fix mfix mfix' idx :
     All2 (fun x y =>
       cumulSpec0 Σ Re Re Γ x.(dtype) y.(dtype) *
-      cumulSpec0 Σ Re Re Γ x.(dbody) y.(dbody) *
+      cumulSpec0 Σ Re Re (Γ ,,, fix_context mfix) x.(dbody) y.(dbody) *
       (x.(rarg) = y.(rarg)) *
       eq_binder_annot x.(dname) y.(dname)
     )%type mfix mfix' ->
@@ -108,7 +114,7 @@ Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Pro
 | cumul_CoFix mfix mfix' idx :
     All2 (fun x y =>
       cumulSpec0 Σ Re Re Γ x.(dtype) y.(dtype) *
-      cumulSpec0 Σ Re Re Γ x .(dbody) y.(dbody) *
+      cumulSpec0 Σ Re Re (Γ ,,, fix_context mfix) x .(dbody) y.(dbody) *
       (x.(rarg) = y.(rarg)) *
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->

@@ -272,9 +272,9 @@ struct
     let info = { ci_ind = ind; ci_npar = npar; ci_relevance = r } in
     let pred = { pparams = Array.to_list pars; 
                  puinst = univs; 
-                 pcontext = Array.to_list pctx;
+                 pcontext = List.rev (Array.to_list pctx);
                  preturn = pret } in
-    let branches = List.map (fun (bctx, br) -> { bcontext = Array.to_list bctx; bbody = br }) brs in
+    let branches = List.map (fun (bctx, br) -> { bcontext = List.rev (Array.to_list bctx); bbody = br }) brs in
     Coq_tCase (info,pred,c,branches)
 
   let mkProj p c = Coq_tProj (p,c)

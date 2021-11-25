@@ -72,6 +72,8 @@ theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
+theories/PCUICExpandConstructors.v
+theories/PCUICExpandConstructorsCorrectness.v
 # theories/All.v
 
 # To do separate extraction of the files, not working currently

@@ -112,12 +112,12 @@ struct
         let evm, puinst = D.unquote_universe_instance evm p.auinst in
         let evm, pars = map_evm (aux env) evm p.apars in
         let pars = Array.of_list pars in
-        let napctx = CArray.map_of_list D.unquote_aname p.apcontext in
+        let napctx = CArray.map_of_list D.unquote_aname (List.rev p.apcontext) in
         let pctx = CaseCompat.case_predicate_context env ci puinst pars napctx in 
         let evm, pret = aux (Environ.push_rel_context pctx env) evm p.apreturn in
         let evm, c = aux env evm c in
         let brs = List.map (fun { abcontext = bctx; abbody = bbody } ->
-          let nabctx = CArray.map_of_list D.unquote_aname bctx in
+          let nabctx = CArray.map_of_list D.unquote_aname (List.rev bctx) in
           (nabctx, bbody)) brs in
         let brs = CaseCompat.case_branches_contexts env ci puinst pars (Array.of_list brs) in
         let denote_br evm (nas, bctx, bbody) = 

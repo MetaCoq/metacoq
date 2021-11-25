@@ -74,10 +74,10 @@ struct
 
   let mk_predicate (uinst, pars, pctx, pret) =
     let pars = to_coq_listl tTerm (Array.to_list pars) in
-    let pctx = to_coq_listl taname (Array.to_list pctx) in
+    let pctx = to_coq_listl taname (List.rev (Array.to_list pctx)) in
     constr_mkApp (tmk_predicate, [| Lazy.force tTerm; uinst; pars; pctx; pret |])
   let mk_branch (bctx, bbody) =
-    let bctx = to_coq_listl taname (Array.to_list bctx) in
+    let bctx = to_coq_listl taname (List.rev (Array.to_list bctx)) in
     constr_mkApp (tmk_branch, [| Lazy.force tTerm; bctx; bbody |])
 
   let mk_case_info (ind, npar, relevance) =

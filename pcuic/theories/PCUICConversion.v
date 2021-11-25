@@ -109,6 +109,8 @@ Section EquivalenceConvCumulDefs.
 
 End EquivalenceConvCumulDefs.
 
+Existing Instance All2_reflexivity.
+
 Section EquivalenceConvSpecAlgo.
 
   Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
@@ -116,21 +118,67 @@ Section EquivalenceConvSpecAlgo.
   Proposition red1_cumulSpec (M N : term) :
     red1 Σ Γ M N -> Σ ;;; Γ |- M =s N.
   Proof. 
-  intro r. induction r using red1_ind_all.
-  - eapply cumul_beta.
-  - eapply cumul_zeta.    
-  - eapply cumul_rel; eauto. 
-  - eapply cumul_iota; eauto.  
-  - eapply cumul_fix; eauto.
-  - eapply cumul_cofix_case; eauto.  
-  - eapply cumul_cofix_proj; eauto.
-  - eapply cumul_delta; eauto.
-  - eapply cumul_proj; eauto.
-  - eapply cumul_Lambda; eauto. reflexivity.
-  - eapply cumul_Lambda; eauto. 
-    * reflexivity.
-    * 
+  intro r. induction r using red1_ind_all; try (econstructor; eauto; reflexivity).
+  - eapply cumul_Case; try reflexivity. 
+    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity. 
+      induction X; econstructor; try reflexivity; try eassumption. exact (p.2).
+    * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity.
+  - eapply cumul_Case; try reflexivity. 
+    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity. 
+  - eapply cumul_Case; try reflexivity. 
+    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * eauto.
+    * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity. 
+  - eapply cumul_Case; try reflexivity. 
+    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * induction X; econstructor.
+      + destruct p0 as [ [ _ hbody ] hhd ]. rewrite hhd. split; reflexivity.
+      + apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity.
+      + split; reflexivity. 
+      + exact IHX.           
+  - eapply cumul_Evar. induction X; econstructor; eauto; try reflexivity.  
+    * exact p.2.
+  - eapply cumul_Fix. set (mfixAbs := mfix0). unfold mfixAbs at 2. clearbody mfixAbs. 
+    induction X; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.
+  - eapply cumul_Fix. set (mfixAbs := mfix0). unfold mfixAbs at 2. 
+    assert (Habs : mfixAbs = mfix0) by reflexivity. clearbody mfixAbs. 
+    induction X; destruct Habs; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.   
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.  
+  - eapply cumul_CoFix. set (mfixAbs := mfix0). unfold mfixAbs at 2. clearbody mfixAbs. 
+    induction X; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.
+  - eapply cumul_CoFix. set (mfixAbs := mfix0). unfold mfixAbs at 2. 
+    assert (Habs : mfixAbs = mfix0) by reflexivity. clearbody mfixAbs. 
+    induction X; destruct Habs; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.   
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.
+  Defined.       
 
+  Proposition cumulAlgo_cumulSpec {le} (M N : open_term Γ) :
+    Σ ;;; Γ ⊢ M ≤[le] N -> if le then  Σ ;;; Γ |- M <=s N else Σ ;;; Γ |- M =s N.
+  Proof.  
+  induction 1.   
 
 End EquivalenceConvSpecAlgo.
 

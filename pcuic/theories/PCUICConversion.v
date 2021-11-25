@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSub
      PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
      PCUICSigmaCalculus PCUICContextReduction
      PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst
-     PCUICWellScopedCumulativity PCUICUnivSubstitutionConv.
+     PCUICWellScopedCumulativity PCUICUnivSubstitutionConv PCUICInduction.
 
      (* PCUICContextConversion  *)
 Require Import CRelationClasses.
@@ -113,9 +113,9 @@ Existing Instance All2_reflexivity.
 
 Section EquivalenceConvSpecAlgo.
 
-  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
+  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
 
-  Proposition red1_cumulSpec (M N : term) :
+  Proposition red1_cumulSpec (Γ : context) (M N : term) :
     red1 Σ Γ M N -> Σ ;;; Γ |- M =s N.
   Proof. 
   intro r. induction r using red1_ind_all; try (econstructor; eauto; reflexivity).
@@ -133,7 +133,7 @@ Section EquivalenceConvSpecAlgo.
   - eapply cumul_Case; try reflexivity. 
     * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
     * induction X; econstructor.
-      + destruct p0 as [ [ _ hbody ] hhd ]. rewrite hhd. split; reflexivity.
+      + destruct p0 as [ [ _ hbody ] hhd ]. rewrite hhd. split; eauto. reflexivity.  
       + apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity.
       + split; reflexivity. 
       + exact IHX.           
@@ -175,10 +175,74 @@ Section EquivalenceConvSpecAlgo.
     * repeat split; reflexivity.
   Defined.       
 
-  Proposition cumulAlgo_cumulSpec {le} (M N : open_term Γ) :
+  Proposition convPec_cumulSpec (Γ : context) (M N : term) :
+    Σ ;;; Γ |- M =s N -> Σ ;;; Γ |- M <=s N.
+  Proof. 
+    intro Hconv. apply cumul_Sym. apply cumul_Sym. assumption.
+  Defined.    
+
+  Proposition cumul_mkApps (Γ : context) {Re Rle} M N args args' :
+    cumulSpec0 Σ Re Rle Γ M N  -> 
+    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
+    cumulSpec0 Σ Re Rle Γ (mkApps M args) (mkApps N args').
+  Proof.
+    intros HMN Hargs. revert M N HMN; induction Hargs; intros.
+    - eassumption.
+    - cbn. eapply IHHargs. eapply cumul_App; eauto.
+  Defined.           
+
+  Ltac try_with_nil := match goal with H : _ |- _ => eapply (H _ _ _ _ [] []); eauto end.
+
+  Proposition eq_term_upto_univ_napp_cumulSpec (Γ : context) {Re Rle} M N args args' :
+    eq_term_upto_univ_napp Σ Re Rle #|args| M N -> 
+    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
+    cumulSpec0 Σ Re Rle Γ (mkApps M args) (mkApps N args').
+  Proof.  
+    induction M in Γ , Re, Rle, N , args, args' |- * using term_forall_list_ind ; intros H Hargs; depelim H; 
+      try (solve [eapply cumul_mkApps; eauto ; econstructor; eauto; try_with_nil]).
+    - apply cumul_mkApps; eauto. eapply All2_All_mix_left in X. 2: tea.
+      eapply cumul_Evar. eapply All2_impl; try exact X. cbv beta. intuition. 
+      try_with_nil.
+    - eapply (IHM1 _ _ _ _ (M2 :: args) (u' :: args')); eauto. econstructor; eauto. try_with_nil.
+    - eapply cumul_Ind; eauto.
+    - eapply cumul_Construct; eauto.
+    - apply cumul_mkApps; eauto. unfold tCasePredProp in X. destruct X as [ X [ Xctx Xreturn ]].
+      eapply cumul_Case.
+      * unfold cumul_predicate, eq_predicate in *. repeat split.
+        + destruct e. eapply All2_All_mix_left in X. 2: tea.
+          eapply All2_impl. 1: eassumption. cbn. intuition.
+          try_with_nil.
+        + intuition.
+        + intuition.
+        + try_with_nil. intuition.
+      * try_with_nil.
+      * unfold tCaseBrsProp in X0. eapply All2_All_mix_left in X0. 2: tea.
+        eapply All2_impl. 1: eassumption. cbn. intuition.
+        try_with_nil.
+    - apply cumul_mkApps; eauto. eapply cumul_Fix. unfold tFixProp in *.
+      eapply All2_All_mix_left in X. 2: tea. eapply All2_impl; try exact X. cbv beta. intuition; try_with_nil.
+    - apply cumul_mkApps; eauto. eapply cumul_CoFix. unfold tFixProp in *.
+      eapply All2_All_mix_left in X. 2: tea. eapply All2_impl; try exact X. cbv beta. intuition; try_with_nil.
+  Defined.
+  
+  Proposition eq_term_upto_univ_cumulSpec (Γ : context) {Re Rle} M N :
+    eq_term_upto_univ Σ Re Rle M N -> cumulSpec0 Σ Re Rle Γ M N.
+  Proof.
+    intros. eapply (eq_term_upto_univ_napp_cumulSpec _ _ _ [] []); eauto. 
+  Defined. 
+  
+  Proposition cumulAlgo_cumulSpec {le} (Γ : context) (M N : open_term Γ) :
     Σ ;;; Γ ⊢ M ≤[le] N -> if le then  Σ ;;; Γ |- M <=s N else Σ ;;; Γ |- M =s N.
   Proof.  
-  induction 1.   
+  induction 1.
+  - destruct le; eapply eq_term_upto_univ_cumulSpec; eauto. 
+  - destruct le. 
+    * eapply cumul_Trans; eauto. apply convPec_cumulSpec. apply red1_cumulSpec ; assumption.
+    * eapply cumul_Trans; eauto. apply red1_cumulSpec ; assumption.
+  - destruct le. 
+    * eapply cumul_Trans; eauto. apply cumul_Sym. apply red1_cumulSpec ; assumption.
+    * eapply cumul_Trans; eauto. apply cumul_Sym. apply red1_cumulSpec ; assumption.
+  Defined. 
 
 End EquivalenceConvSpecAlgo.
 

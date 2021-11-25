@@ -94,7 +94,7 @@ Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Pro
     cumulSpec0 Σ Re Re Γ c c' ->
     All2 (fun br br' =>
       eq_context_gen eq eq (bcontext br) (bcontext br') * 
-      cumulSpec0 Σ Re Re (Γ ,,, inst_case_branch_context p br) (bbody br) (bbody br)
+      cumulSpec0 Σ Re Re (Γ ,,, inst_case_branch_context p br) (bbody br) (bbody br')
     ) brs brs' ->
     cumulSpec0 Σ Re Rle Γ (tCase indn p c brs) (tCase indn p' c' brs')
 

@@ -106,7 +106,7 @@ Section Wcbv.
       eval discr (mkApps (tConstruct ind c) args) ->
       is_propositional_ind Σ ind = Some false ->
       nth_error brs c = Some br ->
-      #|skipn pars args| = br.1 ->
+      #|skipn pars args| = #|br.1| ->
       eval (iota_red pars args br) res ->
       eval (tCase (ind, pars) discr brs) res
 
@@ -116,7 +116,7 @@ Section Wcbv.
       eval discr tBox ->
       is_propositional_ind Σ ind = Some true ->
       brs = [ (n,f) ] ->
-      eval (substl (repeat tBox n) f) res ->
+      eval (substl (repeat tBox #|n|) f) res ->
       eval (tCase (ind, pars) discr brs) res
 
   (** Fix unfolding, with guard *)

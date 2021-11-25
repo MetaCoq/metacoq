@@ -25,7 +25,7 @@ Fixpoint csubst t k u :=
   | tApp u v => tApp (csubst t k u) (csubst t k v)
   | tLetIn na b b' => tLetIn na (csubst t k b) (csubst t (S k) b')
   | tCase ind c brs =>
-    let brs' := List.map (fun br => (br.1, csubst t (br.1 + k) br.2)) brs in
+    let brs' := List.map (fun br => (br.1, csubst t (#|br.1| + k) br.2)) brs in
     tCase ind (csubst t k c) brs'
   | tProj p c => tProj p (csubst t k c)
   | tFix mfix idx =>

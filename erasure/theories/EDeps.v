@@ -358,13 +358,13 @@ Lemma erases_deps_forall_ind Σ Σ'
       (forall body : Extract.E.term, Extract.E.cst_body cb' = Some body -> P body) ->
         P (Extract.E.tConst kn))
   (Hconstruct : forall (ind : inductive) (c : nat), P (Extract.E.tConstruct ind c))
-  (Hcase : forall (p : inductive × nat) mdecl idecl mdecl' idecl' (discr : Extract.E.term) (brs : list (nat × Extract.E.term)),
+  (Hcase : forall (p : inductive × nat) mdecl idecl mdecl' idecl' (discr : Extract.E.term) (brs : list (list name × Extract.E.term)),
         PCUICAst.declared_inductive Σ (fst p) mdecl idecl ->
         ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' discr ->
         P discr ->
-        Forall (fun br : nat × Extract.E.term => erases_deps Σ Σ' br.2) brs ->
+        Forall (fun br : _ × Extract.E.term => erases_deps Σ Σ' br.2) brs ->
         Forall (fun br => P br.2) brs ->
         P (Extract.E.tCase p discr brs))
   (Hproj : forall (p : projection) mdecl idecl mdecl' idecl' (t : Extract.E.term),

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import List.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Erasure Require Import EAst.
 
 (** * Deriving a compact induction principle for terms
@@ -24,7 +24,7 @@ Lemma term_forall_list_ind :
     (forall s, P (tConst s)) ->
     (forall (i : inductive) (n : nat), P (tConstruct i n)) ->
     (forall (p : inductive * nat) (t : term),
-        P t -> forall l : list (nat * term),
+        P t -> forall l : list (list name * term),
         All (fun x => P x.2) l -> P (tCase p t l)) ->
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->

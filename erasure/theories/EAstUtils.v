@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils Kernames.
+From MetaCoq.Template Require Import utils BasicAst Kernames.
 From MetaCoq.Erasure Require Import EAst.
 From MetaCoq.PCUIC Require PCUICPrimitive.
 Require Import ssreflect ssrbool.

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Erasure Require Import EAst EInduction.
 
 (** * Lifting and substitution for the AST
@@ -19,7 +19,7 @@ Fixpoint lift n k t : term :=
   | tLetIn na b b' => tLetIn na (lift n k b) (lift n (S k) b')
   | tCase ind c brs =>
     let brs' := List.map (fun br => 
-      (br.1, lift n (br.1 + k) br.2)) brs in
+      (br.1, lift n (#|br.1| + k) br.2)) brs in
     tCase ind (lift n k c) brs'
   | tProj p c => tProj p (lift n k c)
   | tFix mfix idx =>
@@ -57,7 +57,7 @@ Fixpoint subst s k u :=
   | tApp u v => tApp (subst s k u) (subst s k v)
   | tLetIn na b b' => tLetIn na (subst s k b) (subst s (S k) b')
   | tCase ind c brs =>
-    let brs' := List.map (fun br => (br.1, subst s (br.1 + k) br.2)) brs in
+    let brs' := List.map (fun br => (br.1, subst s (#|br.1| + k) br.2)) brs in
     tCase ind (subst s k c) brs'
   | tProj p c => tProj p (subst s k c)
   | tFix mfix idx =>
@@ -85,7 +85,7 @@ Fixpoint closedn k (t : term) : bool :=
   | tApp u v => closedn k u && closedn k v
   | tLetIn na b b' => closedn k b && closedn (S k) b'
   | tCase ind c brs =>
-    let brs' := List.forallb (fun br => closedn (br.1 + k) br.2) brs in
+    let brs' := List.forallb (fun br => closedn (#|br.1| + k) br.2) brs in
     closedn k c && brs'
   | tProj p c => closedn k c
   | tFix mfix idx =>

@@ -446,9 +446,9 @@ Section Erase.
         In particular, note that #|br.(bcontext)| = context_assumptions br.(bcontext) when no lets are present.
     *)
     Definition erase_brs p Γ (brs : list (branch term)) 
-      (H : forall d, In d brs -> welltyped Σ (Γ ,,, inst_case_branch_context p d) (bbody d)) : list (nat * E.term) :=
+      (H : forall d, In d brs -> welltyped Σ (Γ ,,, inst_case_branch_context p d) (bbody d)) : list (list name * E.term) :=
       map_InP (fun br wt => let br' := erase (Γ ,,, inst_case_branch_context p br) (bbody br) wt in 
-        (#|br.(bcontext)|, br')) brs H.
+        (erase_context br.(bcontext), br')) brs H.
   
   End EraseMfix.
 
@@ -1210,6 +1210,7 @@ Proof.
     clear H1.
     solve_all. rewrite -b.
     rewrite app_length inst_case_branch_context_length in a0.
+    rewrite map_length.
     eapply a0. now move/andP: a => [].
   - unfold test_def in *. solve_all.
     eapply All2_All2_mix in X; tea. solve_all.

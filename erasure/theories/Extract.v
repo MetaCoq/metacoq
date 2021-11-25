@@ -46,6 +46,9 @@ Definition is_box c :=
 
 Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level).
 
+Definition erase_context (Γ : context) : list name :=
+  map (fun d => d.(decl_name).(binder_name)) Γ.
+
 Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :=
     erases_tRel : forall i : nat, Σ;;; Γ |- tRel i ⇝ℇ E.tRel i
   | erases_tVar : forall n : ident, Σ;;; Γ |- tVar n ⇝ℇ E.tVar n
@@ -69,12 +72,12 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
         Σ;;; Γ |- tConstruct kn k n ⇝ℇ E.tConstruct kn k
   | erases_tCase1 (ci : case_info) (p : predicate term) (c : term)
         (brs : list (branch term)) (c' : E.term)
-        (brs' : list (nat × E.term)) :
+        (brs' : list (list name × E.term)) :
         Informative Σ ci.(ci_ind) ->
         Σ;;; Γ |- c ⇝ℇ c' ->
         All2
-          (fun (x : branch term) (x' : nat × E.term) =>
-          Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ snd x' × #|bcontext x| = fst x') brs brs' ->
+          (fun (x : branch term) (x' : list name × E.term) =>
+          Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ snd x' × erase_context (bcontext x) = fst x') brs brs' ->
         Σ;;; Γ |- tCase ci p c brs ⇝ℇ E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'
   | erases_tProj : forall (p : (inductive × nat) × nat) (c : term) (c' : E.term),
                    let ind := fst (fst p) in
@@ -130,7 +133,8 @@ Lemma erases_forall_list_ind
           PCUICElimination.Informative Σ ci.(ci_ind) ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
-          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 × #|bcontext x| = x'.1) brs brs' ->
+          All2 (fun x x' => Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ x'.2 × 
+            erase_context (bcontext x) = x'.1) brs brs' ->
           Forall2 (fun br br' => P (Γ ,,, inst_case_branch_context p br) (bbody br) br'.2) brs brs' ->
           P Γ (tCase ci p c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
       (Hproj : forall Γ p c c',

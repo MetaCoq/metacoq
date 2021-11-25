@@ -84,7 +84,7 @@ Proof.
     rewrite IHt1 // IHt2 //.
   - rewrite IHt //.
     f_equal. eapply All_forallb_eq_forallb; tea. cbn.
-    intros. specialize (H (x.1 + k')).
+    intros. specialize (H (#|x.1| + k')).
     rewrite Nat.add_assoc (Nat.add_comm k) in H.
     now rewrite !Nat.add_assoc.
   - eapply All_forallb_eq_forallb; tea. cbn.
@@ -142,7 +142,7 @@ Section optimize.
       match ETyping.is_propositional_ind Σ (fst ind) with
       | Some true =>
         match brs' with
-        | [(a, b)] => ECSubst.substl (repeat E.tBox a) b
+        | [(a, b)] => ECSubst.substl (repeat E.tBox #|a|) b
         | _ => E.tCase ind (optimize c) brs'
         end
       | _ => E.tCase ind (optimize c) brs'
@@ -277,7 +277,7 @@ Section optimize.
       * f_equal; auto.
       * depelim X. simpl in *.
         rewrite e //.
-        assert (br = #|repeat tBox br|). now rewrite repeat_length.
+        assert (#|br| = #|repeat tBox #|br| |). now rewrite repeat_length.
         rewrite {2}H0.
         rewrite substl_csubst_comm //.
         solve_all. eapply All_repeat => //.
@@ -290,12 +290,6 @@ Section optimize.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
     - destruct ETyping.is_propositional_ind as [[|]|]=> //;
       now rewrite IHb.
-    - f_equal; solve_all.
-      destruct x; unfold EAst.map_def; simpl in *. 
-      autorewrite with len. f_equal; eauto.
-    - f_equal; solve_all.
-      destruct x; unfold EAst.map_def; simpl in *. 
-      autorewrite with len. f_equal; eauto.
   Qed.
 
   Lemma optimize_substl s t : 
@@ -672,8 +666,8 @@ Qed.
 Lemma closed_iota_red pars c args brs br :
   forallb (closedn 0) args ->
   nth_error brs c = Some br ->
-  #|skipn pars args| = br.1 ->
-  closedn br.1 br.2 ->
+  #|skipn pars args| = #|br.1| ->
+  closedn #|br.1| br.2 ->
   closed (iota_red pars args br).
 Proof.
   intros clargs hnth hskip clbr.

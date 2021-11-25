@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Export utils BasicAst Universes.
+From MetaCoq.Template Require Import utils BasicAst Universes.
 From MetaCoq.PCUIC Require Import PCUICPrimitive.
 (** * Extracted terms
 
@@ -36,7 +36,7 @@ Inductive term : Set :=
 | tConst     : kername -> term
 | tConstruct : inductive -> nat -> term
 | tCase      : (inductive * nat) (* # of parameters *) ->
-               term (* discriminee *) -> list (nat * term) (* branches *) -> term
+               term (* discriminee *) -> list (list name * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import config utils Reflect.
+From MetaCoq.Template Require Import config utils BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect ECSubst.
 Require Import ssreflect.
 
@@ -119,5 +119,5 @@ Qed.
 
 Definition tDummy := tVar ""%string.
 
-Definition iota_red npar args (br : nat * term) :=
+Definition iota_red npar args (br : list name * term) :=
   substl (List.rev (List.skipn npar args)) br.2.

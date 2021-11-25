@@ -210,8 +210,10 @@ Proof.
       eapply All2i_All2_All2; tea; cbv beta.
       intros n cdecl br br'.
       intros [hnth [? [? [? [? [? []]]]]]] []. split => //.
-      rewrite lift_inst_case_branch_context //.      { rewrite test_context_k_closed_on_free_vars_ctx.
-        eapply alpha_eq_on_free_vars. symmetry; tea.        rewrite -closedn_ctx_on_free_vars.
+      rewrite lift_inst_case_branch_context //. 
+      { rewrite test_context_k_closed_on_free_vars_ctx.
+        eapply alpha_eq_on_free_vars. symmetry; tea.  
+        rewrite -closedn_ctx_on_free_vars.
         rewrite (wf_predicate_length_pars H0).
         rewrite (declared_minductive_ind_npars isdecl).
         eapply PCUICClosed.closed_cstr_branch_context; tea. split; tea. }
@@ -219,7 +221,7 @@ Proof.
       assert (#|inst_case_branch_context p br| = #|bcontext br|).
       { rewrite /inst_case_branch_context. now len. }
       rewrite /map_branch_k /= -H6 -app_length.
-      rewrite -e2 -H6 -app_length.
+      rewrite -e2 map_length -H6 -app_length.
       rewrite -(PCUICCasesContexts.inst_case_branch_context_eq a).
       eapply e.
       eapply weakening_wf_local => //.
@@ -487,7 +489,7 @@ Proof.
         rewrite map_length Nat.add_0_r.
         rewrite -/(case_branch_context_gen ci mdecl (pparams p) (puinst p) (map decl_name bcontext) cdecl').
         rewrite -/(case_branch_context ci mdecl p (forget_types bcontext) cdecl').
-        rewrite (subst_case_branch_context _ x _ idecl _ br) //.
+        rewrite (subst_case_branch_context _ x _ idecl _ br) // map_length.
         rewrite app_context_assoc //.
     + econstructor.
       eapply is_type_subst; tea.

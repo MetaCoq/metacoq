@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
-From MetaCoq.Template Require Import utils.
+From MetaCoq.Template Require Import utils BasicAst.
 From MetaCoq.Erasure Require Import EAst EAstUtils ETyping.
 From MetaCoq.PCUIC Require Import PCUICPrimitive.
 
@@ -116,25 +116,19 @@ Section print_term.
   | tCase (mkInd mind i as ind, pars) t brs =>
     match lookup_ind_decl mind i with
     | Some oib =>
-      let fix print_branch Γ arity br {struct br} :=
-          match arity with
-            | 0 => "=> " ^ print_term Γ true false br
-            | S n =>
-              match br with
-              | tLambda na B =>
-                let na' := fresh_name Γ na br in
-                string_of_name na' ^ "  " ^ print_branch (vass na' :: Γ) n B
-              | _ => "=> " ^ print_term Γ true false br
-              end
-            end
-        in
-        let brs := map (fun '(arity, br) =>
-                          print_branch Γ arity br) brs in
-        let brs := combine brs oib.(ind_ctors) in
-        parens top ("match " ^ print_term Γ true false t ^
-                    " with " ^ nl ^
-                    print_list (fun '(b, (na, _)) => na ^ " " ^ b)
-                    (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
+      let fix print_args Γ nas br {struct nas} :=
+        match nas with
+        | [] => "=>" ^ " " ^ br Γ 
+        | na :: nas => 
+          string_of_name na ^ "  " ^ print_args (vass na :: Γ) nas br
+        end
+      in
+      let brs := map (fun '(nas, br) => print_args Γ (List.rev nas) (fun Γ => print_term Γ true false br)) brs in
+      let brs := combine brs oib.(ind_ctors) in
+      parens top ("match " ^ print_term Γ true false t ^
+                  " with " ^ nl ^
+                  print_list (fun '(b, (na, _)) => na ^ " " ^ b)
+                  (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
     | None =>
       "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
               ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"

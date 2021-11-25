@@ -480,7 +480,7 @@ Proof.
     eapply All_forallb. unfold tCaseBrsProp_k in X0.
     eapply All2_All_mix_left in X1; eauto.
     close_Forall. intros [] []. cbn in *. intros.
-    solve_all. subst. eapply b0. eauto. 
+    solve_all. subst. rewrite map_length. eapply b0. eauto. 
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - epose proof (All2_length X0).
@@ -1075,6 +1075,7 @@ Proof.
       eapply isPropositional_propositional; eauto.
       invs e. cbn in *.
       rewrite -eq_npars in e0. rewrite e0 in H8.
+      rewrite map_length.
       rewrite (assumption_context_assumptions (bcontext y)) // ?rev_repeat in H8 => //.
       { eapply assumption_context_compare_decls. symmetry in a. exact a.
         rewrite /cstr_branch_context. eapply assumption_context_expand_lets_ctx.
@@ -1147,6 +1148,7 @@ Proof.
          
          eapply isPropositional_propositional; eauto.
          rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length e0.
+         rewrite map_length.
          eapply assumption_context_assumptions.
          eapply assumption_context_compare_decls. symmetry; tea.
          eapply (assumption_context_cstr_branch_context d).
@@ -1226,14 +1228,14 @@ Proof.
 
          rewrite rev_repeat in H9.
          
-         enough (#|skipn (ind_npars mdecl) args| = n) as <- by eauto.
-
+         enough (#|skipn (ind_npars mdecl) args| = #|n|) as <- by eauto.
          edestruct invert_Case_Construct as (? & ? & ? & ?).
          { econstructor. eauto. }
          { eapply subject_reduction. eauto. exact Hty.
            eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
 
-        rewrite eq_npars. rewrite e0. 
+        rewrite eq_npars. rewrite e0. subst n.
+        rewrite map_length. 
         rewrite assumption_context_assumptions //.
         eapply assumption_context_compare_decls. symmetry; tea.
         eapply (assumption_context_cstr_branch_context d).

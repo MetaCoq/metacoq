@@ -1,6 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine PCUICSR PCUICWellScopedCumulativity PCUICConversion.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine PCUICSR PCUICWellScopedCumulativity PCUICConversion PCUICOnFreeVars.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping.
 
 Require Import ssreflect ssrbool.
@@ -291,7 +291,19 @@ Section BDToPCUICTyping.
         rewrite -H.
         eapply ctx_inst_app_weak ; eauto.
         1: eapply validity ; auto.
-        now rewrite H.
+        rewrite H.
+        apply into_equality ; tea.
+        - fvs.
+        - eapply type_is_open_term ; eauto.
+        - rewrite on_free_vars_mkApps /= forallb_app.
+          apply /andP ; split.
+          + eapply All_forallb'.
+            1: eapply ctx_inst_closed ; tea.
+            intros.
+            by rewrite -PCUICConversion.is_open_term_closed.
+          + apply forallb_skipn.
+            eapply type_is_open_term in X5 ; eauto.
+            by rewrite on_free_vars_mkApps /= in X5.  
       }
       
       assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
@@ -317,7 +329,7 @@ Section BDToPCUICTyping.
       }
       
       econstructor ; eauto.
-      1: now eapply PCUICArities.type_equality ; eauto ; eexists.
+      1: now eapply type_Cumul.
 
       eapply All2i_impl.
       1:{ apply All2i_prod ; [eassumption|idtac].
@@ -404,16 +416,17 @@ Section BDToPCUICTyping.
         all: auto.
 
     - red ; intros.
-      now eapply type_reduction_closed.
+      now eapply type_reduction.
 
     - red ; intros.
-      now eapply type_reduction_closed.
+      now eapply type_reduction.
 
     - red ; intros.
-      now eapply type_reduction_closed.
+      now eapply type_reduction.
 
     - red ; intros.
-      now eapply PCUICArities.type_equality.
+      destruct X3.
+      now econstructor.
 
   Qed.
 

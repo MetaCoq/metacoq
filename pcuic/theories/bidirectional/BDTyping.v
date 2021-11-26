@@ -84,7 +84,8 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
   ctx_inst checking Σ Γ (pparams p)
   (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
-  Σ ;;; Γ ⊢ mkApps (tInd ci u) args ≤ mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
+  cumul Σ Γ (mkApps (tInd ci u) args)
+    (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args)) ->
   isCoFinite mdecl.(ind_finite) = false ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
@@ -124,25 +125,25 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
 with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
 | infer_sort_Sort t T u:
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ ⊢ T ⇝ tSort u ->
+  red Σ Γ T (tSort u) ->
   Σ ;;; Γ |- t ▹□ u
 
 with infering_prod `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> aname -> term -> term -> Type :=
 | infer_prod_Prod t T na A B:
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ ⊢ T  ⇝ tProd na A B ->
+  red Σ Γ T (tProd na A B) ->
   Σ ;;; Γ |- t ▹Π (na,A,B)
 
 with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : inductive -> term -> Instance.t -> list term -> Type :=
 | infer_ind_Ind ind t T u args:
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ ⊢ T ⇝ mkApps (tInd ind u) args ->
+  red Σ Γ T (mkApps (tInd ind u) args) ->
   Σ ;;; Γ |- t ▹{ind} (u,args) 
 
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | check_Cons t T T':
   Σ ;;; Γ |- t ▹ T ->
-  Σ ;;; Γ ⊢ T ≤ T' ->
+  cumul Σ Γ T T' ->
   Σ ;;; Γ |- t ◃ T'
 
 where " Σ ;;; Γ |- t ▹ T " := (@infering _ Σ Γ t T) : type_scope
@@ -395,7 +396,8 @@ Section BidirectionalInduction.
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
       ctx_inst (fun _ => Pcheck) Σ Γ p.(pparams)
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
-      Σ ;;; Γ ⊢ mkApps (tInd ci u) args ≤ mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
+      cumul Σ Γ (mkApps (tInd ci u) args) 
+        (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args)) ->
       isCoFinite mdecl.(ind_finite) = false ->
       let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       wf_branches idecl brs ->
@@ -439,26 +441,26 @@ Section BidirectionalInduction.
     (forall (Γ : context) (t T : term) (u : Universe.t),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ ⊢ T ⇝ tSort u ->
+      red Σ Γ T (tSort u) ->
       Psort Γ t u) ->
 
     (forall (Γ : context) (t T : term) (na : aname) (A B : term),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ ⊢ T ⇝ tProd na A B ->
+      red Σ Γ T (tProd na A B) ->
       Pprod Γ t na A B) ->
 
     (forall (Γ : context) (ind : inductive) (t T : term) (ui : Instance.t)
       (args : list term),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ ⊢ T ⇝ mkApps (tInd ind ui) args ->
+      red Σ Γ T (mkApps (tInd ind ui) args) ->
       Pind Γ ind t ui args) ->
 
     (forall (Γ : context) (t T T' : term),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      Σ ;;; Γ ⊢ T ≤ T' ->
+      cumul Σ Γ T T' ->
       Pcheck Γ t T') ->
       
     env_prop_bd.

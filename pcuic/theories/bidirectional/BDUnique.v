@@ -227,6 +227,8 @@ Proof.
 
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.
+    eapply into_closed_red in X1 ; fvs.
+    eapply into_closed_red in X5 ; fvs.
     eapply closed_red_confluence in X5 as [? [? ru']]; tea.
     eapply invert_red_sort in ru' ; subst.
     eapply closed_red_confluence in X1 as [? [ru' ru]].
@@ -237,6 +239,8 @@ Proof.
 
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.
+    eapply into_closed_red in X1 ; fvs.
+    eapply into_closed_red in X5 ; fvs.
     eapply closed_red_confluence in X5 as [? [? rA']]; tea.
     eapply invert_red_prod in rA' as (?&B0&[]); subst.
     eapply closed_red_confluence in X1 as [? [rA' rA]].
@@ -255,6 +259,8 @@ Proof.
   
   - inversion X3 ; subst.
     eapply X0 in X4 as [T'' []]; subst ; tea.
+    eapply into_closed_red in X1 ; fvs.
+    eapply into_closed_red in X5 ; fvs.
     eapply closed_red_confluence in X5 as [? [? rind']]; tea.
     eapply invert_red_mkApps_tInd in rind' as [? []]; subst.
     eapply closed_red_confluence in X1 as [? [rind' rind]].
@@ -291,13 +297,16 @@ Proof.
 Qed.
 
 Theorem infering_checking `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t T T'} :
-  Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t ◃ T' -> Σ ;;; Γ ⊢ T ≤ T'.
+  is_open_term Γ T' -> Σ ;;; Γ |- t ▹ T -> Σ ;;; Γ |- t ◃ T' -> Σ ;;; Γ ⊢ T ≤ T'.
 Proof.
-  intros ty ty'.
+  intros ? ty ty'.
   depelim ty'.
   eapply infering_unique' in ty ; tea.
-  etransitivity ; tea.
-  now apply equality_eq_le.
+  etransitivity ; last first.
+  - apply into_equality ; tea.
+    1: fvs.
+    now eapply type_is_open_term, infering_typing.
+  - now eapply equality_eq_le.
 Qed.
 
 Theorem infering_sort_sort `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t u u'} :
@@ -314,8 +323,11 @@ Theorem infering_sort_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
 Proof.
   intros ty ty'.
   depelim ty.
-  eapply bidirectional_unique in i as [T'' [r r']]; tea.
-  eapply closed_red_confluence in c as [? [? ru]]; tea.
+  eapply into_closed_red in r.
+  2: fvs.
+  2: now eapply type_is_open_term, infering_typing.
+  eapply bidirectional_unique in i as [T'' []]; tea.
+  eapply closed_red_confluence in r as [? [? ru]]; tea.
   eapply invert_red_sort in ru ; subst.
   now etransitivity.
 Qed.
@@ -339,7 +351,7 @@ Proof.
   intros ty ty'.
   eapply infering_prod_prod in ty as (A''&B''&[]); tea.
   subst.
-  assert (Σ ;;; Γ ⊢ A =A').
+  assert (Σ ;;; Γ ⊢ A = A').
   {
     etransitivity.
     2: symmetry.
@@ -366,8 +378,11 @@ Theorem infering_prod_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
 Proof.
   intros ty ty'.
   depelim ty.
+  eapply into_closed_red in r.
+  2: fvs.
+  2: now eapply type_is_open_term, infering_typing.
   eapply bidirectional_unique in i as [? []]; tea.
-  eapply closed_red_confluence in c as [? [? rA']]; tea.
+  eapply closed_red_confluence in r as [? [? rA']]; tea.
   eapply invert_red_prod in rA' as (A'&B'&[]); subst.
   exists A', B' ; split ; tea.
   now etransitivity.

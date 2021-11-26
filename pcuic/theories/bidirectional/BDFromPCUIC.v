@@ -52,16 +52,6 @@ Proof.
     constructor; auto.
 Qed.
 
-Lemma conv_sym `{checker_flags} Σ Γ :
-  CRelationClasses.Symmetric (equality false Σ Γ).
-Proof.
-  intros t t' co.
-  induction co.
-  + constructor ; auto. by cbn ; symmetry.
-  + try solve [econstructor ; eauto].
-  + try solve [econstructor ; eauto].
-Qed.
-
 (** Lemmata to get checking and constrained inference from inference + cumulativity. Relies on confluence + injectivity of type constructors *)
 
 Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
@@ -69,7 +59,8 @@ Lemma conv_check `{checker_flags} Σ (wfΣ : wf Σ) Γ t T :
   Σ ;;; Γ |- t ◃ T.
 Proof.
   intros (?&?&?).
-  now econstructor.
+  econstructor ; tea.
+  now apply equality_forget_cumul.
 Qed.
 
 Lemma conv_infer_sort `{checker_flags} Σ (wfΣ : wf Σ) Γ t s :
@@ -81,7 +72,8 @@ Proof.
   apply equality_Sort_r_inv in Cumt as (?&?&?) ; auto.
   eexists.
   split ; tea.
-  now econstructor.
+  econstructor ; tea.
+  now apply closed_red_red.
 Qed.
 
 Lemma conv_infer_prod `{checker_flags} Σ (wfΣ : wf Σ) Γ t na A B :
@@ -94,6 +86,7 @@ Proof.
   apply equality_Prod_r_inv in Cumt as (?&?&?&[]) ; auto.
   do 3 eexists. split ; tea.
   econstructor ; tea.
+  now apply closed_red_red.
 Qed.
 
 Lemma conv_infer_ind `{checker_flags} Σ (wfΣ : wf Σ) Γ t ind ui args :
@@ -106,7 +99,8 @@ Proof.
   intros tyt (T'&?&Cumt).
   apply equality_Ind_r_inv in Cumt as (?&?&[]) ; auto.
   do 2 eexists. split ; tea.
-  now econstructor.
+  econstructor ; tea.
+  now apply closed_red_red.
 Qed.
 
 Section BDFromPCUIC.
@@ -193,6 +187,7 @@ Proof.
     split.
     + econstructor ; eauto.
       econstructor ; eauto.
+      apply equality_forget_cumul.
       etransitivity ; tea.
       now apply equality_eq_le.
     + now eapply substitution_equality_vass.
@@ -245,9 +240,9 @@ Proof.
         1: by rewrite Nat.add_0_r ; destruct wfpred.
         by apply app_nil_r.
 
-      * apply equality_mkApps_eq ; auto.
+      * apply equality_forget_cumul, equality_mkApps_eq ; auto.
         
-        -- by apply wf_local_closed_context.
+        -- fvs.
            
         -- constructor.
            replace #|x1| with #|pparams p ++ indices|.
@@ -410,7 +405,8 @@ Lemma typing_checking `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ 
   Σ ;;; Γ |- t : T -> Σ ;;; Γ |- t ◃ T.
 Proof.
   move => /typing_infering [T' [? ?]].
-  now econstructor.
+  econstructor ; tea.
+  now apply equality_forget_cumul.
 Qed.
 
 Lemma typing_infering_sort `{checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t u} :

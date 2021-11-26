@@ -3,7 +3,8 @@ From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICRename PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence.
+  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICRename PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence
+  PCUICWellScopedCumulativity.
 
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
 
@@ -475,7 +476,6 @@ Section OnFreeVars.
       eapply red_on_free_vars in Hred ; tea.
       by move: Hred => /= /andP [].
     - intros ? ? ? ? ? ? _ HT Hred.
-
       intros ? HΓ Ht.
       specialize (HT _ HΓ Ht).
       eapply red_on_free_vars in Hred ; tea.
@@ -879,19 +879,19 @@ Proof.
     econstructor ; eauto.
     rewrite -/(rename f (tSort u)).
     eapply red_rename ; tea.
-    eapply infering_on_free_vars ; tea.
+    now eapply infering_on_free_vars.
 
   - intros. red. intros P Δ f hf hΓ ht.
     econstructor ; eauto.
     rewrite -/(rename f (tProd na A B)).
     eapply red_rename ; tea.
-    eapply infering_on_free_vars ; tea.
+    now eapply infering_on_free_vars.
 
   - intros. red. intros P Δ f hf hΓ ht.
     econstructor ; eauto.
     rewrite -/(rename f (tInd ind ui)) -rename_mkApps.
     eapply red_rename ; tea.
-    eapply infering_on_free_vars ; tea.
+    now eapply infering_on_free_vars.
 
   - intros. red. intros P Δ f hf hΓ ht.
     econstructor ; eauto.

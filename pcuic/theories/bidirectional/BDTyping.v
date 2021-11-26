@@ -84,7 +84,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
   ctx_inst checking Σ Γ (pparams p)
   (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
-  Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
+  Σ ;;; Γ ⊢ mkApps (tInd ci u) args ≤ mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
   isCoFinite mdecl.(ind_finite) = false ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
@@ -395,7 +395,7 @@ Section BidirectionalInduction.
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
       ctx_inst (fun _ => Pcheck) Σ Γ p.(pparams)
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
-      Σ ;;; Γ |- mkApps (tInd ci u) args <= mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
+      Σ ;;; Γ ⊢ mkApps (tInd ci u) args ≤ mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args) ->
       isCoFinite mdecl.(ind_finite) = false ->
       let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       wf_branches idecl brs ->

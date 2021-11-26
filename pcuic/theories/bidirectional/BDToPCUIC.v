@@ -291,19 +291,7 @@ Section BDToPCUICTyping.
         rewrite -H.
         eapply ctx_inst_app_weak ; eauto.
         1: eapply validity ; auto.
-        rewrite H.
-        apply PCUICWellScopedCumulativity.into_equality ; tea.
-        - by apply PCUICWellScopedCumulativity.wf_local_closed_context.
-        - eapply type_is_open_term ; eauto.
-        - rewrite PCUICOnFreeVars.on_free_vars_mkApps /= forallb_app.
-          apply /andP ; split.
-          + eapply All_forallb'.
-            1: eapply ctx_inst_closed ; tea.
-            intros.
-            by rewrite -PCUICConversion.is_open_term_closed.
-          + apply forallb_skipn.
-            eapply type_is_open_term in X5 ; eauto.
-            by rewrite PCUICOnFreeVars.on_free_vars_mkApps /= in X5. 
+        now rewrite H.
       }
       
       assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
@@ -329,7 +317,7 @@ Section BDToPCUICTyping.
       }
       
       econstructor ; eauto.
-      1: eapply type_Cumul ; eauto.
+      1: now eapply PCUICArities.type_equality ; eauto ; eexists.
 
       eapply All2i_impl.
       1:{ apply All2i_prod ; [eassumption|idtac].

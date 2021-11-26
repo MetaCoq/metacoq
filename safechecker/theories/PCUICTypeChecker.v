@@ -145,7 +145,7 @@ Section Typecheck.
 
   Local Notation "x <- c1 ;; c2" := (
     match c1 with 
-      | TypeError e p => raise e
+      | TypeError e absurd => raise e
       | Checked x => c2
     end)
     (at level 100, c1 at next level, right associativity).
@@ -222,13 +222,13 @@ Section Typecheck.
     Defined.
     Next Obligation.
       sq.
-      eapply p.
-      eapply infering_sort_infering in X0 as [u []]; tea.
+      eapply absurd.
+      eapply infering_sort_infering in X0; tea.
       eexists. sq. eassumption.
     Qed.
     Next Obligation.
       sq.
-      eapply p.
+      eapply absurd.
       inversion X0.
       eexists.
       now sq.
@@ -244,7 +244,7 @@ Section Typecheck.
     Defined.
     Next Obligation.
       sq.
-      apply p.
+      apply absurd.
       eapply isType_infering_sort in H as [u ?].
       now exists u.
     Qed.
@@ -266,13 +266,13 @@ Section Typecheck.
     Qed.
     Next Obligation.
       sq.
-      apply p.
+      apply absurd.
       sq.
       now eapply infering_checking.
     Qed.
     Next Obligation.
       sq.
-      apply p.
+      apply absurd.
       destruct H.
       eexists.
       now sq.
@@ -320,16 +320,16 @@ Section Typecheck.
       now eapply checking_typing.
     Qed.
     Next Obligation.
-    sq. eapply p. sq.
+    sq. eapply absurd. sq.
     inversion H ; subst.
     now eapply typing_checking.
     Qed.
     Next Obligation.
-      sq. eapply p. sq.
+      sq. eapply absurd. sq.
       now inversion H ; subst.
     Qed.
     Next Obligation.
-      sq. eapply p. sq.
+      sq. eapply absurd. sq.
       now inversion H.
     Qed.
     Next Obligation.
@@ -338,13 +338,13 @@ Section Typecheck.
       now eapply infering_sort_typing.
     Qed.
     Next Obligation.
-      sq. eapply p.
+      sq. eapply absurd.
       inversion H ; subst.
       eapply isType_infering_sort in X0 as [] ; tea.
       eexists. now sq.
     Qed.
     Next Obligation.
-      sq. eapply p. sq.
+      sq. eapply absurd. sq.
       now inversion H.
     Qed.
  
@@ -376,18 +376,18 @@ Section Typecheck.
       eapply checking_typing ; pcuic.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       inversion H ; subst ; cbn in *.
       now eapply typing_checking.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       inversion H ; subst ; cbn in *.
       destruct X0 as [s ?].
       now exists s.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now inversion H.
     Qed.
     Next Obligation.
@@ -395,11 +395,11 @@ Section Typecheck.
       now constructor.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now inversion H.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now inversion H.
     Qed.
 
@@ -436,11 +436,11 @@ Section Typecheck.
       all: now apply eqb_binder_annot_spec.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now inversion H.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now inversion H.
     Qed.
     Next Obligation.
@@ -461,7 +461,7 @@ Section Typecheck.
       all: now apply eqb_binder_annot_spec.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now inversion H.
     Qed.
     Next Obligation.
@@ -582,12 +582,12 @@ Section Typecheck.
         now apply context_equality_rel_cons.
       Qed.
       Next Obligation.
-        sq. apply p. sq.
+        sq. apply absurd. sq.
         eapply context_equality_rel_app in H.
         now depelim H.
       Qed.
       Next Obligation.
-        sq. apply p. sq.
+        sq. apply absurd. sq.
         eapply context_equality_rel_app in H.
         depelim H.
         now apply context_equality_rel_app.
@@ -692,11 +692,11 @@ Section Typecheck.
       now inversion wfΔ ; subst.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now depelim H.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       apply typing_checking.
       now depelim H.
     Qed.
@@ -731,11 +731,11 @@ Section Typecheck.
       sq. constructor; auto.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now depelim H.
     Qed.
     Next Obligation.
-      sq. apply p. sq.
+      sq. apply absurd. sq.
       now depelim H.
     Qed.
     
@@ -993,18 +993,18 @@ Section Typecheck.
       * now destruct i as [? []].
     Defined.
     Next Obligation.
-      sq. apply p0. sq.
+      sq. apply absurd. sq.
       now depelim H.
     Qed.
     Next Obligation.
-      sq. apply p0. sq.
+      sq. apply absurd. sq.
       now depelim H.
     Qed.
     Next Obligation.
-      sq. apply p0. sq.
+      sq. apply absurd. sq.
       depelim H.
       apply All2_fold_All2.
-      now inversion p1.
+      now inversion p0.
     Qed.
     End check_brs.
 
@@ -1056,11 +1056,11 @@ Section Typecheck.
     now apply infering_sort_typing.
   Qed.
   Next Obligation.
-    sq. apply p. sq.
+    sq. apply absurd. sq.
     now depelim H.
   Qed.
   Next Obligation.
-    sq. apply p. sq.
+    sq. apply absurd. sq.
     depelim H.
     apply isType_infering_sort in i as [u ?]; tea.
     exists u.
@@ -1099,11 +1099,11 @@ Section Typecheck.
     constructor ; tea.
   Qed.
   Next Obligation.
-    sq. apply p. sq.
+    sq. apply absurd. sq.
     now depelim H.
   Qed.
   Next Obligation.
-    sq. apply p. sq.
+    sq. apply absurd. sq.
     now depelim H.
   Qed.
 
@@ -1124,6 +1124,16 @@ Section Typecheck.
 
   Local Notation check_eq_true b e :=
     (if b as b' return (typing_result (is_true b')) then ret eq_refl else raise e).
+
+  Lemma ctx_inst_length {ty Γ args Δ} :
+    PCUICTyping.ctx_inst ty Σ Γ args Δ -> 
+    #|args| = context_assumptions Δ.
+  Proof.
+    induction 1; simpl; auto.
+    rewrite /subst_telescope in IHX.
+    rewrite context_assumptions_mapi in IHX. congruence.
+    rewrite context_assumptions_mapi in IHX. congruence.
+  Qed.
 
   Equations infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term)
   : typing_result ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }) by struct t :=
@@ -1181,7 +1191,7 @@ Section Typecheck.
     ret (ty; _) ;
 
   infer Γ HΓ (tConstruct ind k u) with lookup_ind_decl ind := {
-    | TypeError e p := raise e ;
+    | TypeError e absurd := raise e ;
     | Checked (mdecl;(idecl;decl))
         with inspect (nth_error idecl.(ind_ctors) k) := {
     | exist (Some cdecl) HH :=
@@ -1205,8 +1215,8 @@ Section Typecheck.
           (Msg "Case on coinductives disallowed") ;;
     check_eq_true (eqb (ind_npars mdecl) ci.(ci_npar))
                   (Msg "not the right number of parameters") ;;
-    check_eq_true (eqb (ind_relevance idecl) ci.(ci_relevance))
-                  (Msg "invalid relevance annotation on case") ;;
+    (* check_eq_true (eqb (ind_relevance idecl) ci.(ci_relevance))
+                  (Msg "invalid relevance annotation on case") ;; *)
     (*let '(params, indices) := chop ci.(ci_npar) args in *)
     let chop_args := chop ci.(ci_npar) args
     in let params := chop_args.1 in let indices := chop_args.2 in
@@ -1228,7 +1238,7 @@ Section Typecheck.
       ret (mkApps ptm (indices ++ [c]); _) ;
 
   infer Γ HΓ (tProj (ind, n, k) c) with lookup_ind_decl ind := {
-    | TypeError e p := raise e ;
+    | TypeError e absurd := raise e ;
     | Checked (mdecl;(idecl;decl))
       with inspect (nth_error idecl.(ind_projs) k) := {
         | exist None _ := raise (Msg "projection not found") ;
@@ -1297,12 +1307,12 @@ Section Typecheck.
     sq; econstructor; eassumption.
   Defined.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now eexists.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now eexists.
   Qed.
@@ -1317,12 +1327,12 @@ Section Typecheck.
       sq; econstructor; eassumption.
   Defined.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now eexists.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now eexists.
   Qed.
@@ -1343,17 +1353,17 @@ Section Typecheck.
     sq; econstructor; eassumption.
   Defined.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now eexists.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now eexists.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now eexists.
   Qed.
@@ -1378,27 +1388,28 @@ Section Typecheck.
     now econstructor.
   Defined.
   Next Obligation.
-    sq. apply p. sq.
+    sq. apply absurd. sq.
     inversion X0 ; subst.
-    eapply infering_prod_infering in X5 as (na'&A'&B'&[]); tea.
-    inversion X6 ; tea ; subst.
+    eapply infering_prod_infering in X5 as (A'&B'&[]); tea.
+    eapply closed_red_confluence in X3 as [T'' [r1 r2]]; tea.
+    eapply invert_red_prod in r1 as (A''&B''&[]); subst.
+    eapply invert_red_prod in r2 as (?œ&?&[e']).
+    injection e' as <- <- <-.
+    inversion X6 ; subst.
     econstructor ; tea.
     etransitivity ; tea.
-    eapply equality_eq_le.
-    etransitivity ; tea.
-    eapply equality_Prod_Prod_inv.
     etransitivity.
-    1: symmetry.
-    all: now eapply red_equality.
+    2: now eapply red_equality_inv.
+    now etransitivity ; eapply red_equality.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
-    eapply infering_prod_infering in X2 as (na'&A'&B'&[]) ; tea.
+    eapply infering_prod_infering in X2 as (A'&B'&[]) ; tea.
     now do 3 eexists.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now inversion X1.
   Qed.
@@ -1410,7 +1421,7 @@ Section Typecheck.
     etransitivity. eassumption. reflexivity.
   Defined.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     now inversion X0.
   Qed.
   Next Obligation.
@@ -1431,13 +1442,13 @@ Section Typecheck.
     sq; econstructor; eassumption.
   Defined.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     epose proof (H := declared_inductive_unique_sig isdecl X2).
     now injection H.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     now do 2 eexists.
   Qed.
@@ -1448,7 +1459,7 @@ Section Typecheck.
     now symmetry.
   Defined.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     epose proof (H := declared_inductive_unique_sig isdecl decl).
     now injection H.
@@ -1464,7 +1475,7 @@ Section Typecheck.
     congruence.
   Qed.
   Next Obligation.
-    sq. apply p.
+    sq. apply absurd.
     inversion X0 ; subst.
     do 2 eexists.
     exact isdecl.
@@ -1560,7 +1571,7 @@ Section Typecheck.
       rewrite -(subst_context_smash_context _ _ []).
       rewrite -(spine_subst_inst_subst X3).
       rewrite - !smash_context_subst /= !subst_context_nil.
-      eapply compare_global_instance_sound in i2; pcuic.
+      eapply compare_global_instance_sound in i1; pcuic.
       eapply (inductive_cumulative_indices X0); tea.
   Qed.
   
@@ -1633,7 +1644,6 @@ Section Typecheck.
     sq.
     apply eqb_eq in i. subst ind'.
     eapply eqb_eq in i0.
-    eapply eqb_eq in i1.
     rewrite /indices /chop_args chop_firstn_skipn /=.
     assert (wf_branches idecl brs).
     {
@@ -1649,10 +1659,10 @@ Section Typecheck.
     - now eapply All2_fold_All2 in check_wfpctx_conv.
     - now eapply wf_local_rel_wf_local_bd, wf_local_app_inv, wf_case_predicate_context.
     - now econstructor.
-    - eapply ctx_inst_bd_typing ; tea.
+    - eapply ctx_inst_typing_bd ; tea.
       eapply ctx_inst_smash.
       now rewrite subst_instance_smash /= in wt_params.
-    - eapply equality_forget_cumul, equality_mkApps_eq.
+    - eapply equality_mkApps_eq.
       1-3: fvs.
       + constructor.
         eapply compare_global_instance_sound ; tea.
@@ -1683,30 +1693,280 @@ Section Typecheck.
       now eapply wf_local_rel_wf_local_bd, wf_local_app_inv.
   Qed.
   Next Obligation.
+    intros; clearbody isty wfp.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    destruct ps as [ps ?].
+    cbn in *.
     intros. sq.
     destruct X as [? [ty]].
     inversion ty ; subst.
-    apply p0. sq.
-  Admitted.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd. sq.
+    eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
+    2:{
+      econstructor ; tea.
+    }
+    
+    eapply All2i_impl ; tea.
+    cbn.
+    subst.
+    intuition.
+  Qed.
   Next Obligation.
+    intros; clearbody isty wfp.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    destruct ps as [ps ?].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    eapply infering_sort_sort in s as <- ; tea.
+    now eapply wf_case_predicate_context.
+  Qed.
+  Next Obligation.
+    intros; clearbody isty wfp.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    eexists. now sq.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    sq.
+    now eapply All2_fold_All2.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    sq.
+    rewrite /params /chop_args chop_firstn_skipn /=.
+    eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
+    2: now econstructor.
+    subst.
+    etransitivity.
+    1: now eapply All2_firstn, red_terms_equality_terms.
+    etransitivity.
+    1: now symmetry ; eapply All2_firstn, red_terms_equality_terms.
+    eapply invert_cumul_ind_ind in X4 as [_ eq].
+    move: (eq) => /All2_length.
+    rewrite app_length => alen.
+    rewrite -(firstn_skipn (ci_npar ci) args0) in eq.
+    eapply All2_app_inv in eq as [] ; tea.
+    apply ctx_inst_length in X3; tea.
+    move: alen.
+    rewrite X3 context_assumptions_rev context_assumptions_subst_instance
+      -(declared_minductive_ind_npars isdecl0) H3 => alen.
+    now apply firstn_length_le.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    sq.
+    apply ctx_inst_bd_typing, ctx_inst_smash in X3 ; tea.
+    2: eapply PCUICWeakening.weaken_wf_local, on_minductive_wf_params ; tea.
+    2: exact isdecl0.
+    now rewrite subst_instance_smash.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    unshelve eapply (compare_global_instance_complete _ _ _ _ _ _ _ Cumul) ; tea.
+    - now sq.
+    - now sq. 
+    - apply/wf_universe_instanceP.
+      rewrite -wf_universeb_instance_forall.
+      assert (tyu : isType Σ Γ (mkApps (tInd ind' u) args)).
+      {
+        eapply isType_red.
+        2: exact c0.
+        now eapply validity, infering_typing.
+      }
+      eapply isType_wf_universes in tyu ; tea.
+      rewrite wf_universes_mkApps in tyu.
+      now move: tyu => /andP [].
 
+    - apply infering_typing, typing_wf_universes in ty ; tea.
+      move: ty => /andP [].
+      now rewrite {1}/wf_universes /= wf_universeb_instance_forall =>
+        /andP [] /wf_universe_instanceP.
+
+    - eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
+      2: now econstructor.
+      subst.
+      erewrite All2_length ; tea.
+      erewrite <- All2_length ; tea.
+      now eapply invert_cumul_ind_ind.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    now apply absurd.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    now apply/eqb_spec.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args mdecl idecl isdecl.
+    destruct I as [ind' [u [args []]]].
+    destruct d as [mdecl [idecl isdecl]].
+    cbn in *.
+    intros. sq.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    eapply declared_inductive_inj in isdecl as []; tea.
+    subst.
+    apply absurd.
+    now apply/negPf.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    apply absurd.
+    now do 2 eexists.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    subst ind' u args.
+    destruct I as [ind' [u [args []]]].
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    cbn in *.
+    sq.
+    apply absurd.
+    eapply infering_ind_ind in X2 as [? []] ; try assumption.
+    2: now econstructor.
+    now apply/eqb_spec.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct cty as [A cty].
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    cbn in *.
+    sq.
+    apply absurd.
+    inversion X2 ; subst.
+    eapply infering_unique in cty as [T'' []]; tea.
+    eapply closed_red_confluence in X7 as [? [? r]] ; tea.
+    eapply invert_red_mkApps_tInd in r as [? []]; subst.
+    do 3 eexists.
+    sq.
+    now etransitivity.
+  Qed.
+  Next Obligation.
+    intros.
+    destruct X as [? [ty]].
+    inversion ty ; subst.
+    cbn in *.
+    sq.
+    apply absurd.
+    inversion X2.
+    now eexists ; sq.
+  Qed.
 
   Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
 
   (* tProj *)
-  Next Obligation. simpl; eauto using validity_wf. Defined.
+  Next Obligation. eapply validity_wf ; tea. sq. now eapply infering_typing. Defined.
   Next Obligation.
     simpl in *; sq.
     pose proof (on_declared_inductive decl) as [onmib oni].
     eapply onProjections in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
-    eapply type_Proj with (pdecl := (i1, t)).
+    
+    eapply infer_Proj with (pdecl := (i1, t)).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
       now apply beq_nat_true.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
-      eapply type_reduction_closed; eassumption.
+      econstructor ; tea.
     - eapply type_reduction_closed in X1; eauto.
+      2: now apply infering_typing.
       eapply validity in X1; eauto.
       destruct (ssrbool.elimT (eqb_spec ind I)); auto.
       unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X1 as [parsubst [argsubst [sp sp' cu]]]; eauto.
@@ -1726,14 +1986,151 @@ Section Typecheck.
       rewrite List.firstn_length. lia.
     - destruct ind_projs => //. rewrite nth_error_nil in HH; congruence.
   Defined.
+  Next Obligation.
+    sq.
+    apply absurd.
+    inversion X0.
+    subst.
+    destruct H1 as [[] []].
+    cbn in * ; subst.
+    eapply declared_inductive_inj in decl as [-> ->] ; tea.
+    eapply Nat.eqb_refl.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    apply/eqb_spec.
+    cbn in *.
+    sq.
+    inversion X0.
+    subst.
+    eapply infering_ind_ind in X5 as [? []] ; try assumption.
+    2: now econstructor.
+    easy.
+  Qed.
+  Next Obligation.
+    cbn in *.
+    sq.
+    apply absurd.
+    inversion X0 ; subst.
+    inversion X2 ; subst.
+    eapply infering_unique in X1 as [? [r ?]]; tea.
+    eapply closed_red_confluence in X3 as [? [? r']]; tea.
+    eapply invert_red_mkApps_tInd in r' as [? []]; subst.
+    do 3 eexists.
+    sq.
+    now etransitivity.
+  Qed.
+  Next Obligation.
+    cbn in *.
+    sq.
+    apply absurd.
+    inversion X0 ; subst.
+    inversion X1 ; subst.
+    now do 2 eexists.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    eapply declared_inductive_inj in decl as [].
+    2: exact H1.
+    subst.
+    destruct H1 as [[] []] ; cbn in *.
+    congruence.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    apply absurd.
+    do 2 eexists.
+    eapply H1.
+  Qed.
 
   (* tFix *)
   Next Obligation. sq. now eapply PCUICWeakening.All_mfix_wf. Defined.
-  Next Obligation. sq. constructor; auto. Qed.
+  Next Obligation.
+    sq.
+    constructor; auto.
+    eapply All_impl ; tea.
+    intros.
+    now apply isType_infering_sort.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    now inversion X0.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    now inversion X0.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    sq.
+    now inversion X0 ; subst.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    sq.
+    inversion X0 ; subst.
+    eapply All_impl.
+    1: eexact X1.
+    intros.
+    now eapply einfering_sort_isType.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    congruence.
+  Qed.
 
   (* tCoFix *)
   Next Obligation. sq. now eapply PCUICWeakening.All_mfix_wf. Defined.
-  Next Obligation.  sq. constructor ; auto. Qed.
+  Next Obligation.
+    sq.
+    constructor; auto.
+    eapply All_impl ; tea.
+    intros.
+    now apply isType_infering_sort.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    now inversion X0.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    now inversion X0.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    sq.
+    now inversion X0 ; subst.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    sq.
+    inversion X0 ; subst.
+    eapply All_impl.
+    1: eexact X1.
+    intros.
+    now eapply einfering_sort_isType.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0 ; subst.
+    congruence.
+  Qed.
+  Next Obligation.
+    sq.
+    inversion X0.
+  Qed.
 
 (* 
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
@@ -1750,9 +2147,27 @@ Section Typecheck.
 
   Definition check_isType := infer_isType infer.
 
-  Program Definition check Γ (HΓ : ∥ wf_local Σ Γ ∥) t A
+  Equations check Γ (HΓ : ∥ wf_local Σ Γ ∥) t A
     : typing_result (∥ Σ;;; Γ |- t : A ∥) :=
-    check_isType Γ HΓ A ;;
-    check_wftype infer Γ HΓ t A _.
+    check Γ HΓ t A :=
+      check_isType Γ HΓ A ;;
+      bdcheck infer Γ HΓ t A _ ;;
+      ret _.
+  Next Obligation.
+    sq.
+    now apply checking_typing.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    sq.
+    now apply typing_checking.
+  Qed.
+  Next Obligation.
+    sq.
+    apply absurd.
+    sq.
+    now eapply validity.
+  Qed.
 
 End Typecheck.

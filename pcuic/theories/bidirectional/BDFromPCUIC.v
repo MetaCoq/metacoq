@@ -245,8 +245,7 @@ Proof.
         1: by rewrite Nat.add_0_r ; destruct wfpred.
         by apply app_nil_r.
 
-      * apply equality_forget_cumul.
-        apply equality_mkApps_eq ; auto.
+      * apply equality_mkApps_eq ; auto.
         
         -- by apply wf_local_closed_context.
            
@@ -473,7 +472,7 @@ Proof.
   - now apply isType_infering_sort.  
 Qed.
 
-Theorem ctx_inst_bd_typing `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :
+Theorem ctx_inst_typing_bd `{checker_flags} (Σ : global_env_ext) Γ l Δ (wfΣ : wf Σ) :
   PCUICTyping.ctx_inst typing Σ Γ l Δ ->
   PCUICTyping.ctx_inst checking Σ Γ l Δ.
 Proof.

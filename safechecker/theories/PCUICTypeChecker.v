@@ -219,6 +219,7 @@ Section Typecheck.
     Next Obligation.
       sq.
       econstructor ; tea.
+      now apply closed_red_red.
     Defined.
     Next Obligation.
       sq.
@@ -262,13 +263,14 @@ Section Typecheck.
     Next Obligation. destruct hA; now apply wat_welltyped. Qed.
     Next Obligation.
       sq.
-      now econstructor.
+      econstructor ; tea.
+      now apply equality_forget_cumul.
     Qed.
     Next Obligation.
       sq.
       apply absurd.
       sq.
-      now eapply infering_checking.
+      now eapply infering_checking ; fvs.
     Qed.
     Next Obligation.
       sq.
@@ -789,7 +791,6 @@ Section Typecheck.
     - eapply check_constraints_spec ; eauto.  
   Qed.
   Next Obligation.
-    rewrite /valid_constraints in H1.
     (*missing completeness of check_constraints*)
   Admitted.
   Next Obligation.
@@ -1125,16 +1126,6 @@ Section Typecheck.
   Local Notation check_eq_true b e :=
     (if b as b' return (typing_result (is_true b')) then ret eq_refl else raise e).
 
-  Lemma ctx_inst_length {ty Γ args Δ} :
-    PCUICTyping.ctx_inst ty Σ Γ args Δ -> 
-    #|args| = context_assumptions Δ.
-  Proof.
-    induction 1; simpl; auto.
-    rewrite /subst_telescope in IHX.
-    rewrite context_assumptions_mapi in IHX. congruence.
-    rewrite context_assumptions_mapi in IHX. congruence.
-  Qed.
-
   Equations infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term)
   : typing_result ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }) by struct t :=
 
@@ -1385,11 +1376,17 @@ Section Typecheck.
   Next Obligation.
     sq.
     econstructor ; tea.
-    now econstructor.
+    econstructor ; tea.
+    now apply closed_red_red.
   Defined.
   Next Obligation.
     sq. apply absurd. sq.
     inversion X0 ; subst.
+    assert (is_open_term Γ A).
+    {
+      apply infering_prod_typing, type_is_open_term in X5 ; tea.
+      now move : X5 => /= /andP [].
+    }
     eapply infering_prod_infering in X5 as (A'&B'&[]); tea.
     eapply closed_red_confluence in X3 as [T'' [r1 r2]]; tea.
     eapply invert_red_prod in r1 as (A''&B''&[]); subst.
@@ -1397,7 +1394,13 @@ Section Typecheck.
     injection e' as <- <- <-.
     inversion X6 ; subst.
     econstructor ; tea.
-    etransitivity ; tea.
+    apply equality_forget_cumul.
+    transitivity A ; tea.
+    1:{
+      apply into_equality ; tea.
+      - fvs.
+      - now eapply type_is_open_term, infering_typing.
+    } 
     etransitivity.
     2: now eapply red_equality_inv.
     now etransitivity ; eapply red_equality.
@@ -1658,27 +1661,17 @@ Section Typecheck.
     econstructor ; tea.
     - now eapply All2_fold_All2 in check_wfpctx_conv.
     - now eapply wf_local_rel_wf_local_bd, wf_local_app_inv, wf_case_predicate_context.
-    - now econstructor.
+    - econstructor ; tea.
+      now apply closed_red_red.
     - eapply ctx_inst_typing_bd ; tea.
       eapply ctx_inst_smash.
       now rewrite subst_instance_smash /= in wt_params.
-    - eapply equality_mkApps_eq.
-      1-3: fvs.
-      + constructor.
-        eapply compare_global_instance_sound ; tea.
-        pcuic.
-      + have ea : args = (params ++ skipn (ci_npar ci) args) by
-          rewrite -{1}(firstn_skipn (ci_npar ci) args) /params /chop_args chop_firstn_skipn //.
-        rewrite {1}ea.
-        eapply All2_app ; tea.
-        eapply wt_terms_equality.
-        eapply infering_typing, validity in cty ; tea.
-        eapply isType_red in cty.
-        2: exact c0.
-        eapply isType_mkApps_Ind_smash_inv in cty as [s' _]; tea.
-        eapply spine_subst_wt_terms in s'.
-        rewrite ea in s'.
-        now eapply All_app.
+    - eapply compare_global_instance_sound ; tea.
+      pcuic. 
+    - rewrite /params /chop_args chop_firstn_skipn /= in eq_params.
+      eapply All2_impl ; tea.
+      intros ? ? ?.
+      now apply equality_forget_conv.
     - now eapply negbTE.
     - eapply All2i_impl.
       1: eapply All2i_prod.
@@ -1692,6 +1685,7 @@ Section Typecheck.
       cbn ; intros ? ? ? [? []] ; intuition auto.
       now eapply wf_local_rel_wf_local_bd, wf_local_app_inv.
   Qed.
+
   Next Obligation.
     intros; clearbody isty wfp.
     destruct cty as [A cty].
@@ -1709,13 +1703,14 @@ Section Typecheck.
     eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
     2:{
       econstructor ; tea.
+      now apply closed_red_red.
     }
-    
     eapply All2i_impl ; tea.
     cbn.
     subst.
     intuition.
   Qed.
+
   Next Obligation.
     intros; clearbody isty wfp.
     destruct cty as [A cty].
@@ -1733,6 +1728,7 @@ Section Typecheck.
     eapply infering_sort_sort in s as <- ; tea.
     now eapply wf_case_predicate_context.
   Qed.
+
   Next Obligation.
     intros; clearbody isty wfp.
     destruct cty as [A cty].
@@ -1748,6 +1744,7 @@ Section Typecheck.
     apply absurd.
     eexists. now sq.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1764,6 +1761,7 @@ Section Typecheck.
     sq.
     now eapply All2_fold_All2.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1780,23 +1778,20 @@ Section Typecheck.
     sq.
     rewrite /params /chop_args chop_firstn_skipn /=.
     eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
-    2: now econstructor.
+    2: now econstructor ; tea ; eapply closed_red_red.
     subst.
     etransitivity.
     1: now eapply All2_firstn, red_terms_equality_terms.
     etransitivity.
     1: now symmetry ; eapply All2_firstn, red_terms_equality_terms.
-    eapply invert_cumul_ind_ind in X4 as [_ eq].
-    move: (eq) => /All2_length.
-    rewrite app_length => alen.
-    rewrite -(firstn_skipn (ci_npar ci) args0) in eq.
-    eapply All2_app_inv in eq as [] ; tea.
-    apply ctx_inst_length in X3; tea.
-    move: alen.
-    rewrite X3 context_assumptions_rev context_assumptions_subst_instance
-      -(declared_minductive_ind_npars isdecl0) H3 => alen.
-    now apply firstn_length_le.
+    eapply into_equality_terms ; tea.
+    - fvs.
+    - eapply Forall_forallb.
+      2: intros ? H ; apply H.
+      now eapply Forall_firstn, All_Forall, closed_red_terms_open_left.
+    - now eapply All_forallb, ctx_inst_open_terms.
   Qed.
+    
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1816,6 +1811,7 @@ Section Typecheck.
     2: exact isdecl0.
     now rewrite subst_instance_smash.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1850,12 +1846,13 @@ Section Typecheck.
         /andP [] /wf_universe_instanceP.
 
     - eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
-      2: now econstructor.
+      2: now econstructor ; tea ; apply closed_red_red.
       subst.
-      erewrite All2_length ; tea.
+      erewrite All2_length.
+      2: eassumption.
       erewrite <- All2_length ; tea.
-      now eapply invert_cumul_ind_ind.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1870,6 +1867,7 @@ Section Typecheck.
     subst.
     now apply absurd.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1885,6 +1883,7 @@ Section Typecheck.
     apply absurd.
     now apply/eqb_spec.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1900,6 +1899,7 @@ Section Typecheck.
     apply absurd.
     now apply/negPf.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1908,6 +1908,7 @@ Section Typecheck.
     apply absurd.
     now do 2 eexists.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1919,9 +1920,10 @@ Section Typecheck.
     sq.
     apply absurd.
     eapply infering_ind_ind in X2 as [? []] ; try assumption.
-    2: now econstructor.
+    2: now econstructor ; tea ; apply closed_red_red.
     now apply/eqb_spec.
   Qed.
+
   Next Obligation.
     intros.
     destruct cty as [A cty].
@@ -1931,6 +1933,9 @@ Section Typecheck.
     sq.
     apply absurd.
     inversion X2 ; subst.
+    apply into_closed_red in X7.
+    2: fvs.
+    2: now eapply type_is_open_term, infering_typing. 
     eapply infering_unique in cty as [T'' []]; tea.
     eapply closed_red_confluence in X7 as [? [? r]] ; tea.
     eapply invert_red_mkApps_tInd in r as [? []]; subst.
@@ -1938,6 +1943,7 @@ Section Typecheck.
     sq.
     now etransitivity.
   Qed.
+
   Next Obligation.
     intros.
     destruct X as [? [ty]].
@@ -1965,6 +1971,7 @@ Section Typecheck.
       now apply beq_nat_true.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
       econstructor ; tea.
+      now apply closed_red_red.
     - eapply type_reduction_closed in X1; eauto.
       2: now apply infering_typing.
       eapply validity in X1; eauto.
@@ -2005,7 +2012,7 @@ Section Typecheck.
     inversion X0.
     subst.
     eapply infering_ind_ind in X5 as [? []] ; try assumption.
-    2: now econstructor.
+    2: now econstructor ; tea ; eapply closed_red_red.
     easy.
   Qed.
   Next Obligation.
@@ -2014,6 +2021,9 @@ Section Typecheck.
     apply absurd.
     inversion X0 ; subst.
     inversion X2 ; subst.
+    eapply into_closed_red in X3.
+    2: fvs.
+    2: now eapply type_is_open_term, infering_typing.
     eapply infering_unique in X1 as [? [r ?]]; tea.
     eapply closed_red_confluence in X3 as [? [? r']]; tea.
     eapply invert_red_mkApps_tInd in r' as [? []]; subst.

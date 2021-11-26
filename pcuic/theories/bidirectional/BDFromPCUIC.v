@@ -32,6 +32,17 @@ Proof.
   destruct le ; auto.
 Qed.
 
+Lemma ctx_inst_length {ty Σ Γ args Δ} :
+PCUICTyping.ctx_inst ty Σ Γ args Δ -> 
+#|args| = context_assumptions Δ.
+Proof.
+induction 1; simpl; auto.
+rewrite /subst_telescope in IHX.
+rewrite context_assumptions_mapi in IHX. congruence.
+rewrite context_assumptions_mapi in IHX. congruence.
+Qed.
+
+
 Lemma ctx_inst_app_impl {P Q Σ Γ} {Δ : context} {Δ' args} (c : PCUICTyping.ctx_inst P Σ Γ args (Δ ++ Δ')) :
   (forall Γ' t T, P Σ Γ' t T -> Q Σ Γ' t T) ->
   PCUICTyping.ctx_inst Q Σ Γ (firstn (context_assumptions Δ) args) Δ.
@@ -239,35 +250,24 @@ Proof.
         rewrite (firstn_app_left _ 0).
         1: by rewrite Nat.add_0_r ; destruct wfpred.
         by apply app_nil_r.
-
-      * apply equality_forget_cumul, equality_mkApps_eq ; auto.
+      
+      * replace #|x1| with #|pparams p ++ indices|.
+        1: assumption.
+        symmetry.
+        eapply All2_length.
+        eassumption.
+      * move: (a) => /All2_length alen.
+        rewrite -(firstn_skipn (ci_npar ci) x1) in a.
+        eapply All2_app_inv in a as [].
+        1: now eapply All2_impl ; tea ; intros ; eapply equality_forget_conv.
+        rewrite -epar ; destruct wfpred as [->].
+        apply ctx_inst_length in Hinst; tea.
+        move: alen.
+        rewrite Hinst context_assumptions_rev context_assumptions_subst_instance
+          context_assumptions_app -(declared_minductive_ind_npars isdecl) => alen.
+        rewrite firstn_length_le.
+        all: lia.
         
-        -- fvs.
-           
-        -- constructor.
-           replace #|x1| with #|pparams p ++ indices|.
-           1: assumption.
-           symmetry.
-           eapply All2_length.
-           eassumption.
-
-        -- rewrite -{1}(firstn_skipn (ci_npar ci) x1).
-           apply All2_app.
-           ++ replace (pparams p) with (firstn (ci_npar ci) (pparams p ++ indices)).
-              1: by apply All2_firstn.
-              rewrite {2}(app_nil_end (pparams p)) -(firstn_O indices).
-              apply firstn_app_left.
-              rewrite <- epar.
-              destruct wfpred as [->].
-              by apply plus_n_O.
-           ++ apply All2_skipn.
-              eapply All_All2.
-              1: eapply All2_All_left ; tea.
-              1: intros ; eapply equality_is_open_term_left ; tea.
-              cbn ; intros.
-              apply equality_refl ; auto.
-              by apply wf_local_closed_context.
-
       * eapply All2i_impl.
         1: eassumption.
         intros j cdecl br (?&Hbr).

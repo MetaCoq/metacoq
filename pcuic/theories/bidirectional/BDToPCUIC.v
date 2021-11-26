@@ -279,34 +279,43 @@ Section BDToPCUICTyping.
       { apply ctx_inst_impl ; auto.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
-        apply (wf_local_subst_instance_decl _ _ (inductive_mind ci) (InductiveDecl mdecl)) ; eauto.
-        - by destruct isdecl.
-        - eapply wf_local_app_inv.
-          eapply on_minductive_wf_params_indices ; eauto.
+        move: (isdecl) => [? ?].
+        eapply wf_local_subst_instance_decl ; eauto.
+        eapply wf_local_app_inv.
+        now eapply on_minductive_wf_params_indices.
+      }
+
+      assert (cum : Σ;;; Γ ⊢ mkApps (tInd ci u) args ≤
+        mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args)).
+      {
+        eapply equality_mkApps_eq.
+        1-3: fvs.
+        - now constructor.
+        - eapply type_is_open_term in X5 ; eauto.
+          move: X5.
+          rewrite on_free_vars_mkApps -{-3}(firstn_skipn (ci_npar ci) args)
+          forallb_app /= => /andP [? ?].
+          apply All2_app ; tea.
+          + eapply into_equality_terms ; tea.
+            1: fvs.
+            eapply All_forallb'.
+            1: eapply ctx_inst_closed ; tea.
+            intros.
+            by rewrite -is_open_term_closed.
+          + now apply equality_terms_refl ; fvs.
       }
 
       assert (ctx_inst Σ Γ (pparams p ++ skipn (ci_npar ci) args)
-              (List.rev (subst_instance (puinst p) (ind_params mdecl,,, ind_indices idecl)))).
+        (List.rev (subst_instance (puinst p) (ind_params mdecl,,, ind_indices idecl)))).
       {
         rewrite -H.
         eapply ctx_inst_app_weak ; eauto.
         1: eapply validity ; auto.
-        rewrite H.
-        apply into_equality ; tea.
-        - fvs.
-        - eapply type_is_open_term ; eauto.
-        - rewrite on_free_vars_mkApps /= forallb_app.
-          apply /andP ; split.
-          + eapply All_forallb'.
-            1: eapply ctx_inst_closed ; tea.
-            intros.
-            by rewrite -PCUICConversion.is_open_term_closed.
-          + apply forallb_skipn.
-            eapply type_is_open_term in X5 ; eauto.
-            by rewrite on_free_vars_mkApps /= in X5.  
+        now rewrite H.
       }
       
-      assert (isType Σ Γ (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
+      assert (isType Σ Γ (mkApps (tInd ci (puinst p))
+        (pparams p ++ skipn (ci_npar ci) args))) as [? tyapp].
       {
         eexists.
         eapply type_mkApps_arity.
@@ -329,7 +338,7 @@ Section BDToPCUICTyping.
       }
       
       econstructor ; eauto.
-      1: now eapply type_Cumul.
+      1: now eapply type_Cumul ; eauto ; eapply equality_forget_cumul.
 
       eapply All2i_impl.
       1:{ apply All2i_prod ; [eassumption|idtac].

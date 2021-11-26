@@ -83,9 +83,10 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   forall u args,
   Σ ;;; Γ |- c ▹{ci} (u,args) ->
   ctx_inst checking Σ Γ (pparams p)
-  (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
-  cumul Σ Γ (mkApps (tInd ci u) args)
-    (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args)) ->
+      (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
+  R_global_instance Σ (eq_universe Σ) (leq_universe Σ)
+      (IndRef ci) #|args| u (puinst p) ->
+  All2 (conv Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
   isCoFinite mdecl.(ind_finite) = false ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
@@ -200,7 +201,7 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | |- _ => exact 1
     end.
-    - exact (S (Nat.max a0 (Nat.max i (Nat.max i1 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (infering_sort_size _) a1)))))).
+    - exact (S (Nat.max a0 (Nat.max i (Nat.max i1 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (infering_sort_size _) a2)))))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
                (all_size _ (fun x p => checking_size _ _ _ _ _ p) a0))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
@@ -396,8 +397,9 @@ Section BidirectionalInduction.
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
       ctx_inst (fun _ => Pcheck) Σ Γ p.(pparams)
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
-      cumul Σ Γ (mkApps (tInd ci u) args) 
-        (mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args)) ->
+      R_global_instance Σ (eq_universe Σ) (leq_universe Σ)
+          (IndRef ci) #|args| u (puinst p) ->
+      All2 (conv Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
       isCoFinite mdecl.(ind_finite) = false ->
       let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       wf_branches idecl brs ->
@@ -588,8 +590,8 @@ Section BidirectionalInduction.
           lia. 
 
       + cbn in IH.
-        clear - IH a1.
-        induction a1 as [|j cdecl br cdecls brs].
+        clear - IH a2.
+        induction a2 as [|j cdecl br cdecls brs].
         1: by constructor.
         destruct r as (?&?&?).
         constructor.
@@ -597,9 +599,9 @@ Section BidirectionalInduction.
           all: try assumption.
           all: applyIH.
           cbn.
-          fold predctx ptm (wfl_size_rel a2).
+          fold predctx ptm (wfl_size_rel a1).
           lia.
-        * apply IHa1.
+        * apply IHa2.
           intros.
           apply IH.
           simpl.

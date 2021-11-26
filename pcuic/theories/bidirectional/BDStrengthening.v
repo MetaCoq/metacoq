@@ -753,17 +753,20 @@ Proof.
       eapply closed_ctx_on_free_vars, declared_inductive_closed_params.
       eassumption.
 
-    + rewrite /= /id -map_skipn -map_app.
-      eapply cumul_renameP in X8 ; tea.
-      * by rewrite !rename_mkApps /= in X8.
-      * rewrite on_free_vars_mkApps /=.
-        eapply All_forallb, bidirectional_on_free_vars ; tea.
-      * rewrite on_free_vars_mkApps /=.
-        rewrite forallb_app ; apply /andP ; split ; tea.
-        apply forallb_skipn.
-        eapply All_forallb, bidirectional_on_free_vars ; tea.
+    + now rewrite map_length.
+
+    + rewrite /= firstn_map.
+      eapply bidirectional_on_free_vars in X4 ; tea.
+      eapply forallb_All in on_pars.
+      eapply All_firstn in X4.
+      eapply All2_map, All2_impl.
+      1: eapply All2_All_mix_right.
+      2: eapply All2_All_mix_left.
+      1-3: eassumption.
+      intros ? ? [[]].
+      now eapply conv_renameP.
     + by apply rename_wf_branches.
-    + eapply Forall2_All2 in H4.
+    + eapply Forall2_All2 in H5.
       eapply All2i_All2_mix_left in X9; eauto.
       eapply All2i_All_mix_right in X9 ; eauto.
       eapply All2i_nth_hyp in X9.

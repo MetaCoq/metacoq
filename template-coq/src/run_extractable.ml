@@ -230,8 +230,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))
-  | Coq_tmInductive i ->
-    tmMap (fun _ -> Obj.magic ()) (tmInductive (to_mie i))
+  | Coq_tmInductive (inferu, i) ->
+    tmMap (fun _ -> Obj.magic ()) (tmInductive (unquote_bool inferu) (to_mie i))
   | Coq_tmExistingInstance k ->
     Obj.magic (tmExistingInstance (unquote_global_reference k))
   | Coq_tmInferInstance t ->

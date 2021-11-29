@@ -1376,6 +1376,13 @@ Lemma weakening_cumul0 {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ : closed_conte
   Σ ;;; Γ ,,, Γ'' |- lift0 n M <= lift0 n N.
 Proof. intros; subst. apply (weakening_cumul (Γ':= [])); tea; eauto with fvs. Qed.
 
+Lemma weakening_cumulSpec0 {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ : closed_context} {Γ'' : open_context Γ}
+  {M N : open_term Γ} n :
+  n = #|Γ''| ->
+  Σ ;;; Γ |- M <=s N ->
+  Σ ;;; Γ ,,, Γ'' |- lift0 n M <=s lift0 n N.
+  Admitted.
+
 Lemma split_closed_context {Γ : context} (n : nat) : 
   is_closed_context Γ ->
   n <= #|Γ| ->
@@ -1454,9 +1461,9 @@ Lemma wt_cum_equality {cf} {Σ} {wfΣ : wf Σ} {Γ : context} {t A B : term} {s}
   Σ ;;; Γ ⊢ A ≤ B. 
 Proof.
   move=> a; move: a (typing_wf_local a).
-  move/PCUICClosedTyping.type_closed/(@closedn_on_free_vars xpred0) => clA.
+  move/PCUICClosedTyp.type_closed/(@closedn_on_free_vars xpred0) => clA.
   move/wf_local_closed_context => clΓ.
-  move/PCUICClosedTyping.subject_closed/(@closedn_on_free_vars xpred0) => clB cum.
+  move/PCUICClosedTyp.subject_closed/(@closedn_on_free_vars xpred0) => clB cum.
   now apply into_equality.
 Qed.
 
@@ -1491,7 +1498,7 @@ Lemma context_cumulativity_prop {cf:checker_flags} :
     All_local_env
       (lift_typing (fun Σ (Γ : context) (t T : term) =>
         forall Γ' : context, cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ) Γ).
-Proof.
+(* Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps;
     try solve [econstructor; eauto].
 
@@ -1523,9 +1530,9 @@ Proof.
         assert (is_open_term Δ T).
         { eapply nth_error_closed_context in Hnth. 2:eauto with fvs.
           rewrite -eqΔ in Hnth. now move/andP: Hnth => []. }
-        eapply PCUICClosedTyping.subject_closed in Hty.
+        eapply PCUICClosedTyp.subject_closed in Hty.
         eapply (@closedn_on_free_vars xpred0) in Hty.
-        eapply (weakening_cumul0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty Hty)); cbn. lia.
+        eapply (weakening_cumulSpec0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty Hty)); cbn. lia.
         exact c0.
     + cbn in X. destruct X as [s ondecl].
       specialize (ondecl _ Hrel).
@@ -1552,9 +1559,9 @@ Proof.
           2:{ rewrite shiftnP_add /shiftnP /= orb_false_r. apply Nat.ltb_lt. lia. }
           rewrite /test_decl /= in hΔ'. move: hΔ'.
           now rewrite hn addnP_shiftnP. }
-        eapply PCUICClosedTyping.subject_closed in ondecl.
+        eapply PCUICClosedTyp.subject_closed in ondecl.
         eapply (@closedn_on_free_vars xpred0) in ondecl.
-        eapply (weakening_cumul0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty ondecl)); cbn. lia.
+        eapply (weakening_cumulSpec0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty ondecl)); cbn. lia.
         exact c.
   - constructor; pcuic.
     eapply forall_Γ'0. repeat (constructor; pcuic).
@@ -1614,7 +1621,8 @@ Proof.
     apply (wt_cum_context_equality true) in X5; tea.
     eapply (equality_equality_ctx X5) in X4.
     now eapply equality_forget in X4. 
-Qed.
+Qed. *)
+Admitted.
 
 Lemma closed_context_cumul_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
   Σ ⊢ Γ ≤ Γ' -> cumul_context Σ Γ Γ'.

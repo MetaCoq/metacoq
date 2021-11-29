@@ -38,6 +38,7 @@ theories/Typing/PCUICWeakeningEnvTyp.v
 theories/Typing/PCUICWeakeningTyp.v
 theories/Typing/PCUICUnivSubstitutionTyp.v
 theories/Typing/PCUICClosedTyp.v
+theories/Typing/PCUICContextConversionTyp.v
 
 theories/PCUICContextSubst.v
 theories/PCUICCasesContexts.v

@@ -1,4 +1,5 @@
 -R . MetaCoq.Translations
+-I ../template-coq/
 
 sigma.v
 MiniHoTT.v

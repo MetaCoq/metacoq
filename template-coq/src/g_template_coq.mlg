@@ -1,5 +1,5 @@
 
-DECLARE PLUGIN "template_coq"
+DECLARE PLUGIN "coq-metacoq-template.template_coq"
 
 {
 

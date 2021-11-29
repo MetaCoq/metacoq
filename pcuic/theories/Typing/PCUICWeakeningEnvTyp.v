@@ -12,19 +12,99 @@ Require Import ssreflect.
 Set Default Goal Selector "!".
 Implicit Types (cf : checker_flags).
 
+Lemma subrelations_extends `{CF:checker_flags} Σ Σ' φ :
+  extends Σ Σ' ->
+  RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) (eq_universe (global_ext_constraints (Σ',φ))).
+Proof. 
+  intros [Σ'' ->] x y e. eapply eq_universe_subset; eauto.  eapply global_ext_constraints_app.
+Defined. 
+
+Lemma subrelations_leq__extends `{CF:checker_flags} Σ Σ' φ :
+  extends Σ Σ' ->
+  RelationClasses.subrelation (leq_universe (global_ext_constraints (Σ,φ))) (leq_universe (global_ext_constraints (Σ',φ))).
+Proof. 
+  intros [Σ'' ->] x y e. eapply leq_universe_subset; eauto.  eapply global_ext_constraints_app.
+Defined.
+
 Lemma weakening_env_convSpec `{CF:checker_flags} Σ Σ' φ Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
   convSpec (Σ, φ) Γ M N ->
   convSpec (Σ', φ) Γ M N.
-Admitted.
+Proof. 
+  intros HΣ' Hextends Ind. 
+  revert Γ M N Ind Σ' HΣ' Hextends. 
+  eapply (convSpec0_ind_all Σ (eq_universe (global_ext_constraints (Σ,φ))) 
+            (fun Γ M N => forall Σ' : global_env, wf Σ' -> extends Σ Σ' -> (Σ', φ);;; Γ |- M =s N)); intros; try solve [econstructor; eauto with extends; intuition]. 
+  - eapply cumul_Evar. eapply All2_impl. 1: tea. cbn; intros. apply X2.2; eauto.    
+  - eapply cumul_Case; intuition.
+    * destruct X. repeat split; intuition. 
+      + eapply All2_impl. 1: tea. cbn; intros. apply X.2; eauto.
+      + eapply R_universe_instance_impl'; eauto. apply subrelations_extends; eauto. 
+    * eapply All2_impl. 1: tea. cbn; intros. intuition.  
+  - eapply cumul_Fix. eapply All2_impl. 1: tea. cbn; intros. intuition.
+  - eapply cumul_CoFix. eapply All2_impl. 1: tea. cbn; intros. intuition.
+  - eapply cumul_Ind.
+    * eapply R_global_instance_weaken_env; eauto. all: apply subrelations_extends; eauto. 
+    * eapply All2_impl. 1: tea. cbn; intros. intuition.  
+  - eapply cumul_Construct.
+    * eapply R_global_instance_weaken_env; eauto. all: apply subrelations_extends; eauto. 
+    * eapply All2_impl. 1: tea. cbn; intros. intuition.  
+  - eapply cumul_Sort. eapply eq_universe_subset; eauto. destruct X0. rewrite e. eapply global_ext_constraints_app.
+  - eapply cumul_Const. eapply R_universe_instance_impl'; eauto. apply subrelations_extends; eauto. 
+  Defined. 
 
 Lemma weakening_env_cumulSpec `{CF:checker_flags} Σ Σ' φ Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
   cumulSpec (Σ, φ) Γ M N ->
   cumulSpec (Σ', φ) Γ M N.
-Admitted.
+  intros HΣ' Hextends Ind.
+  unfold cumulSpec. 
+  pose proof (subrelations_leq__extends _ _  φ Hextends). revert H.
+  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hle. 
+  revert Γ M N Ind Σ' Rle Hle HΣ' Hextends. 
+  eapply (cumulSpec0_ind_all Σ (eq_universe (global_ext_constraints (Σ,φ))) 
+            (fun Rle Γ M N => forall (Σ' : global_env) Rle', RelationClasses.subrelation Rle Rle' -> wf Σ' -> extends Σ Σ' -> cumulSpec0 Σ' (eq_universe (global_ext_constraints (Σ',φ))) Rle' Γ M N)) 
+            with (Rle := leq_universe (global_ext_constraints (Σ,φ))); 
+              intros; try solve [econstructor; eauto with extends; intuition]. 
+  - eapply cumul_Sym. apply X0; eauto. apply subrelations_extends; eauto. 
+  - eapply cumul_Evar. eapply All2_impl. 1: tea. cbn; intros. apply X2.2; eauto.
+    apply subrelations_extends; eauto.      
+  - eapply cumul_App; intuition. eapply X2; eauto.  
+    apply subrelations_extends; eauto.      
+  - eapply cumul_Lambda; intuition. eapply X0; eauto.  
+    apply subrelations_extends; eauto.      
+  - eapply cumul_Prod; intuition. eapply X0; eauto.  
+    apply subrelations_extends; eauto.      
+  - eapply cumul_LetIn; intuition. 
+    + eapply X0; eauto. apply subrelations_extends; eauto.      
+    + eapply X2; eauto. apply subrelations_extends; eauto.      
+  - eapply cumul_Case; intuition.
+    * destruct X. repeat split; intuition. 
+      + eapply All2_impl. 1: tea. cbn; intros. apply X.2; eauto.
+        apply subrelations_extends; eauto.
+      + eapply R_universe_instance_impl'; eauto. apply subrelations_extends; eauto. 
+      + eapply b; eauto. apply subrelations_extends; eauto.    
+    * eapply X1; eauto. apply subrelations_extends; eauto.    
+    * eapply All2_impl. 1: tea. cbn; intros. intuition.
+      eapply b; eauto. apply subrelations_extends; eauto.      
+  - eapply cumul_Proj. eapply X0; eauto. apply subrelations_extends; eauto.
+  - eapply cumul_Fix. eapply All2_impl. 1: tea. cbn; intros. intuition.
+    + eapply a1; eauto. apply subrelations_extends; eauto.
+    + eapply 
+    - eapply cumul_CoFix. eapply All2_impl. 1: tea. cbn; intros. intuition.
+  - eapply cumul_Ind.
+    * eapply R_global_instance_weaken_env; eauto. 
+      + apply subrelations_extends; eauto. 
+      + 
+    * eapply All2_impl. 1: tea. cbn; intros. intuition.  
+  - eapply cumul_Construct.
+    * eapply R_global_instance_weaken_env; eauto. all: apply subrelations_extends; eauto. 
+    * eapply All2_impl. 1: tea. cbn; intros. intuition.  
+  - eapply cumul_Sort. eapply eq_universe_subset; eauto. destruct X0. rewrite e. eapply global_ext_constraints_app.
+  - eapply cumul_Const. eapply R_universe_instance_impl'; eauto. apply subrelations_extends; eauto. 
+  Defined.
 
 Lemma weakening_env_conv_decls {cf} {Σ φ Σ' Γ Γ'} :
   wf Σ' -> extends Σ Σ' ->
@@ -118,7 +198,7 @@ Proof.
   intros HPΣ wfΣ' Hext Hdecl.
   destruct decl.
   1:{
-    destruct c. destruct cst_body0.
+    destruct c. destruct 0.
     - simpl in *.
       red in Hdecl |- *. simpl in *.
       eapply HPΣ; eauto.
@@ -232,7 +312,7 @@ Lemma declared_inductive_inv `{checker_flags} {Σ P ind mdecl idecl} :
   weaken_env_prop (lift_typing P) ->
   wf Σ -> Forall_decls_typing P Σ ->
   declared_inductive Σ ind mdecl idecl ->
-  on_ind_body (lift_typing P) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl.
+   (lift_typing P) (Σ, ind_universes mdecl) (inductive_mind ind) mdecl (inductive_ind ind) idecl.
 Proof.
   intros.
   destruct H0 as [Hmdecl Hidecl].
@@ -257,7 +337,7 @@ Proof.
   intros.
   destruct Hdecl as [Hidecl Hcdecl].
   set (declared_inductive_inv HP wfΣ HΣ Hidecl) as HH.
-  clearbody HH. pose proof HH.(onConstructors) as HH'.
+   HH. pose proof HH.(onConstructors) as HH'.
   eapply All2_nth_error_Some in Hcdecl; tea.
 Defined.
 
@@ -348,7 +428,7 @@ Qed.
 Lemma on_declared_inductive `{checker_flags} {Σ ref mdecl idecl} {wfΣ : wf Σ} :
   declared_inductive Σ ref mdecl idecl ->
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl *
-  on_ind_body (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl (inductive_ind ref) idecl.
+   (lift_typing typing) (Σ, ind_universes mdecl) (inductive_mind ref) mdecl (inductive_ind ref) idecl.
 Proof.
   intros Hdecl.
   split.
@@ -361,7 +441,7 @@ Lemma on_declared_constructor `{checker_flags} {Σ ref mdecl idecl cdecl}
   (Hdecl : declared_constructor Σ ref mdecl idecl cdecl) :
   on_inductive (lift_typing typing) (Σ, ind_universes mdecl)
                (inductive_mind (fst ref)) mdecl *
-  on_ind_body (lift_typing typing) (Σ, ind_universes mdecl)
+   (lift_typing typing) (Σ, ind_universes mdecl)
               (inductive_mind (fst ref)) mdecl (inductive_ind (fst ref)) idecl *
   ∑ ind_ctor_sort,
     let onib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in

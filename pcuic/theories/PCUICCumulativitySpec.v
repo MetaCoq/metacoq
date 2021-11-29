@@ -300,7 +300,7 @@ Lemma cumulSpec0_ind_all :
 
         (* transitivity *)
        (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t u v : term),
-          is_open_term Γ u -> 
+          is_closed_context Γ -> is_open_term Γ u ->
           cumulSpec0 Σ Re Rle Γ t u -> P Rle Γ t u ->
           cumulSpec0 Σ Re Rle Γ u v -> P Rle Γ u v ->
           P Rle Γ t v) ->
@@ -502,7 +502,7 @@ Lemma convSpec0_ind_all :
 
         (* transitivity *)
        (forall  (Γ : context) (t u v : term),
-          is_open_term Γ u -> 
+          is_closed_context Γ -> is_open_term Γ u ->
           cumulSpec0 Σ Re Re Γ t u -> P Γ t u ->
           cumulSpec0 Σ Re Re Γ u v -> P Γ u v ->
           P Γ t v) ->

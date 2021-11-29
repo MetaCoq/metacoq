@@ -54,6 +54,8 @@ Proof.
   - eapply cumul_Const. eapply R_universe_instance_impl'; eauto. apply subrelations_extends; eauto. 
   Defined. 
 
+Ltac subrel := apply subrelations_extends; eauto.
+
 Lemma weakening_env_cumulSpec `{CF:checker_flags} Σ Σ' φ Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
@@ -62,49 +64,52 @@ Lemma weakening_env_cumulSpec `{CF:checker_flags} Σ Σ' φ Γ M N :
   intros HΣ' Hextends Ind.
   unfold cumulSpec. 
   pose proof (subrelations_leq__extends _ _  φ Hextends). revert H.
-  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hle. 
-  revert Γ M N Ind Σ' Rle Hle HΣ' Hextends. 
+  assert (RelationClasses.subrelation 
+          (eq_universe (global_ext_constraints (Σ,φ)))
+          (leq_universe (global_ext_constraints (Σ',φ)))). 
+  { etransitivity; try apply subrelations_leq__extends; eauto. 
+    apply eq_universe_leq_universe.  } revert H.
+  generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hlee Hle . 
+  revert Γ M N Ind Σ' Rle Hle Hlee HΣ' Hextends. 
   eapply (cumulSpec0_ind_all Σ (eq_universe (global_ext_constraints (Σ,φ))) 
-            (fun Rle Γ M N => forall (Σ' : global_env) Rle', RelationClasses.subrelation Rle Rle' -> wf Σ' -> extends Σ Σ' -> cumulSpec0 Σ' (eq_universe (global_ext_constraints (Σ',φ))) Rle' Γ M N)) 
+            (fun Rle Γ M N => forall (Σ' : global_env) Rle', RelationClasses.subrelation Rle Rle' -> RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) Rle' -> wf Σ' -> extends Σ Σ' -> cumulSpec0 Σ' (eq_universe (global_ext_constraints (Σ',φ))) Rle' Γ M N)) 
             with (Rle := leq_universe (global_ext_constraints (Σ,φ))); 
               intros; try solve [econstructor; eauto with extends; intuition]. 
-  - eapply cumul_Sym. apply X0; eauto. apply subrelations_extends; eauto. 
-  - eapply cumul_Evar. eapply All2_impl. 1: tea. cbn; intros. apply X2.2; eauto.
-    apply subrelations_extends; eauto.      
-  - eapply cumul_App; intuition. eapply X2; eauto.  
-    apply subrelations_extends; eauto.      
-  - eapply cumul_Lambda; intuition. eapply X0; eauto.  
-    apply subrelations_extends; eauto.      
-  - eapply cumul_Prod; intuition. eapply X0; eauto.  
-    apply subrelations_extends; eauto.      
+  - eapply cumul_Sym. apply X0; eauto. all : apply subrelations_extends; eauto. 
+  - eapply cumul_Evar. eapply All2_impl. 1: tea. cbn; intros. apply X2.2; eauto; subrel.
+  - eapply cumul_App; intuition. eapply X2; eauto; subrel.
+  - eapply cumul_Lambda; intuition. eapply X0; eauto; subrel.
+  - eapply cumul_Prod; intuition. eapply X0; eauto; subrel.
   - eapply cumul_LetIn; intuition. 
-    + eapply X0; eauto. apply subrelations_extends; eauto.      
-    + eapply X2; eauto. apply subrelations_extends; eauto.      
+    + eapply X0; eauto; subrel.
+    + eapply X2; eauto; subrel.
   - eapply cumul_Case; intuition.
     * destruct X. repeat split; intuition. 
-      + eapply All2_impl. 1: tea. cbn; intros. apply X.2; eauto.
-        apply subrelations_extends; eauto.
-      + eapply R_universe_instance_impl'; eauto. apply subrelations_extends; eauto. 
-      + eapply b; eauto. apply subrelations_extends; eauto.    
-    * eapply X1; eauto. apply subrelations_extends; eauto.    
+      + eapply All2_impl. 1: tea. cbn; intros. apply X.2; eauto; subrel.
+      + eapply R_universe_instance_impl'; eauto; subrel.
+      + eapply b; eauto; subrel.
+    * eapply X1; eauto; subrel.      
     * eapply All2_impl. 1: tea. cbn; intros. intuition.
-      eapply b; eauto. apply subrelations_extends; eauto.      
-  - eapply cumul_Proj. eapply X0; eauto. apply subrelations_extends; eauto.
+      eapply b; eauto; subrel.
+  - eapply cumul_Proj. eapply X0; eauto; subrel.
   - eapply cumul_Fix. eapply All2_impl. 1: tea. cbn; intros. intuition.
-    + eapply a1; eauto. apply subrelations_extends; eauto.
-    + eapply 
-    - eapply cumul_CoFix. eapply All2_impl. 1: tea. cbn; intros. intuition.
+    + eapply a1; eauto;subrel.
+    + eapply a0; eauto;subrel.
+  - eapply cumul_CoFix. eapply All2_impl. 1: tea. cbn; intros. intuition.
+    + eapply a1; eauto; subrel.
+    + eapply a0; eauto; subrel.
   - eapply cumul_Ind.
-    * eapply R_global_instance_weaken_env; eauto. 
-      + apply subrelations_extends; eauto. 
-      + 
+    * eapply @R_global_instance_weaken_env with (Re := eq_universe (global_ext_constraints (Σ, φ))) (Rle := Rle); eauto. 
+      subrel.
     * eapply All2_impl. 1: tea. cbn; intros. intuition.  
+      apply b; eauto; subrel. 
   - eapply cumul_Construct.
-    * eapply R_global_instance_weaken_env; eauto. all: apply subrelations_extends; eauto. 
-    * eapply All2_impl. 1: tea. cbn; intros. intuition.  
-  - eapply cumul_Sort. eapply eq_universe_subset; eauto. destruct X0. rewrite e. eapply global_ext_constraints_app.
-  - eapply cumul_Const. eapply R_universe_instance_impl'; eauto. apply subrelations_extends; eauto. 
-  Defined.
+    * eapply @R_global_instance_weaken_env with (Re := eq_universe (global_ext_constraints (Σ, φ))) (Rle := Rle); eauto. 
+      subrel.
+    * eapply All2_impl. 1: tea. cbn; intros. intuition. 
+      apply b; eauto; subrel. 
+  - eapply cumul_Const; eauto. eapply R_universe_instance_impl'; eauto; subrel.  
+Defined.
 
 Lemma weakening_env_conv_decls {cf} {Σ φ Σ' Γ Γ'} :
   wf Σ' -> extends Σ Σ' ->

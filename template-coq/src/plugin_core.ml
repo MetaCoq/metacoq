@@ -218,9 +218,13 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : Declarations.constant_body 
     with
       Not_found -> fail ~st Pp.(str "constant not found " ++ Names.KerName.print kn)
 
-let tmInductive (mi : mutual_inductive_entry) : unit tm =
+let tmInductive (infer_univs : bool) (mie : mutual_inductive_entry) : unit tm =
   fun ~st env evd success _fail ->
-    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) []) ;
+    let ctx, mie = 
+      if infer_univs then Tm_util.RetypeMindEntry.infer_mentry_univs env Univ.ContextSet.empty mie
+      else Univ.ContextSet.empty, mie
+    in
+    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mie (UState.Monomorphic_entry ctx, Names.Id.Map.empty) []) ;
     success ~st (Global.env ()) evd ()
 
 let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =

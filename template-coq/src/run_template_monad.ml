@@ -291,10 +291,13 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
   else
     not_supported_verb trm "unquote_mutual_inductive_entry"
 
-
-let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
+let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
   let evm, ctx, mind = unquote_mutual_inductive_entry env evm mind in
+  let ctx, mind = 
+    if infer_univs then Tm_util.RetypeMindEntry.infer_mentry_univs env ctx mind
+    else ctx, mind
+  in
   let () = DeclareUctx.declare_universe_context ~poly:false ctx in
   let univs = (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) in
   ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind univs [])
@@ -458,8 +461,9 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let evm,trm = denote_term env evm (reduce_all env evm trm) in
     Plugin_core.run ~st (Plugin_core.tmEval red trm) env evm
       (fun ~st env evm trm -> k ~st env evm (quote_term env trm))
-  | TmMkInductive mind ->
-    declare_inductive env evm mind;
+  | TmMkInductive (b, mind) ->
+    let infer_univs = unquote_bool (reduce_all env evm b) in
+    declare_inductive env evm infer_univs mind;
     let env = Global.env () in
     k ~st env evm (Lazy.force unit_tt)
   | TmUnquote t ->

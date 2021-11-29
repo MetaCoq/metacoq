@@ -1,10 +1,9 @@
 From Coq Require Import Bool List Arith Lia.
 From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICRename PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence
-  PCUICWellScopedCumulativity.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv 
+  PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
+  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICRename PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence PCUICWellScopedCumulativity PCUICClosed.
 
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
 
@@ -173,9 +172,9 @@ Proof.
   rewrite /case_predicate_context /case_predicate_context_gen /pre_case_predicate_context_gen /inst_case_context.
   erewrite <- on_free_vars_map2_cstr_args.
   2: rewrite fold_context_k_length !map_length ; eapply All2_length ; tea.
-  apply on_free_vars_ctx_subst_context.
+  apply on_free_vars_ctx_subst_context0.
   2: by rewrite forallb_rev.
-  rewrite on_free_vars_subst_instance_context List.rev_length.
+  rewrite on_free_vars_ctx_subst_instance List.rev_length.
   apply closedn_ctx_on_free_vars_shift.
   replace #|pparams p| with (context_assumptions (ind_params mdecl)).
   1: eapply closed_ind_predicate_context ; tea ; eapply declared_minductive_closed ; eauto.
@@ -279,7 +278,7 @@ Proof.
     }
     apply on_free_vars_subst.
     + eapply foron_free_vars_extended_subst.
-      rewrite on_free_vars_subst_instance_context.
+      rewrite on_free_vars_ctx_subst_instance.
       eapply closed_ctx_on_free_vars, declared_inductive_closed_params.
       by eapply decli.
     + rewrite extended_subst_length subst_instance_length context_assumptions_subst_instance.
@@ -609,7 +608,7 @@ Proof.
     rewrite -(rename_subst_telescope _ [_]).
     apply IHins ; tea.
     rewrite -subst_context_subst_telescope.
-    apply on_free_vars_ctx_subst_context.
+    apply on_free_vars_ctx_subst_context0.
     1: assumption.
     by rewrite /= andb_true_r.
   - rewrite rename_telescope_cons /=.
@@ -619,7 +618,7 @@ Proof.
     rewrite -(rename_subst_telescope _ [_]).
     apply IHins ; tea.
     rewrite -subst_context_subst_telescope.
-    apply on_free_vars_ctx_subst_context.
+    apply on_free_vars_ctx_subst_context0.
     1: assumption.
     by rewrite /= andb_true_r.
 Qed.
@@ -749,7 +748,7 @@ Proof.
       rewrite rename_context_telescope rename_telescope_shiftn0 /=.
       eapply rename_telescope ; tea.
       rewrite rev_involutive.
-      rewrite on_free_vars_subst_instance_context.
+      rewrite on_free_vars_ctx_subst_instance.
       eapply closed_ctx_on_free_vars, declared_inductive_closed_params.
       eassumption.
 
@@ -782,8 +781,7 @@ Proof.
         1:eapply (declared_inductive_closed_params isdecl).
         rewrite rename_closedn_ctx //.
         eapply closed_cstr_branch_context.
-        1:by eapply declared_minductive_closed ; eauto.
-        eapply (declared_constructor_closed (c:=(ci.(ci_ind),i))). split; tea.
+        now split.
       }
       cbn -[case_branch_type case_predicate_context].
       rewrite case_branch_type_fst.

@@ -325,8 +325,8 @@ Inductive typing_result (A : Type) :=
 Global Arguments Checked {A} a.
 Global Arguments TypeError {A} t a.
 
-#[global]
-(* Instance typing_monad : Monad typing_result :=
+(* #[global]
+ Instance typing_monad : Monad typing_result :=
   {| ret A a := Checked a ;
      bind A B m f :=
        match m with
@@ -380,7 +380,7 @@ Definition wrap_error {A} Σ (id : string) (check : typing_result A) : EnvCheck 
   | TypeError e a => EnvError Σ (IllFormedDecl id e)
   end.
 
-Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
+(* Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = ret a1 -> All2 (fun a b => f a = ret b) l1 a1.
 Proof.
   induction l1 in a1 |- *; cbn; intros.
@@ -440,4 +440,4 @@ Proof.
     simpl. intro h. inv h.
     destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
     eexists _,_. rewrite -> H, H0. intuition eauto.
-Qed.
+Qed. *)

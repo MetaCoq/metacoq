@@ -590,8 +590,7 @@ Qed.
     wf_universes Σ (mkApps f args) = wf_universes Σ f && forallb (wf_universes Σ) args.
   Proof.
     induction args using rev_ind; simpl; auto. now rewrite andb_true_r.
-    rewrite mkApps_app /= IHargs forallb_app /=.
-    now rewrite andb_true_r andb_assoc.
+    now rewrite mkApps_app forallb_app /= andb_true_r andb_assoc -IHargs.
   Qed.
     
   Lemma type_local_ctx_wf Σ Γ Δ s : type_local_ctx

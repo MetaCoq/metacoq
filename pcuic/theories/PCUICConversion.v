@@ -1478,11 +1478,7 @@ Section Inversions.
     - eapply equality_App_r; eauto with fvs.
   Qed.
 
-  Lemma equality_Evar {le Γ ev args args'} :
-    All2 (equality false Σ Γ) args args' ->
-    Σ;;; Γ ⊢ tEvar ev args ≤[le] tEvar ev args'.
-  Proof.
-  Admitted.
+ 
 
   Notation "Σ ;;; Γ ⊢ t ⇝1 u" := (closed_red1 Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ⇝1  u").
@@ -1498,47 +1494,6 @@ Proof.
   - eapply red1_mkApps_f, r.
 Qed.
 
-
-  Lemma equality_Ind {le Γ ind ui ui' l l'} :
-  [×  R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui',
-      is_closed_context Γ & equality_terms Σ Γ l l'] ->
-  Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] mkApps (tInd ind ui') l'.
-  Admitted. 
-
-  Lemma equality_Construct {le Γ i k ui ui' l l'} :
-  [× R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (ConstructRef i k) #|l| ui ui',
-     is_closed_context Γ & equality_terms Σ Γ l l'] ->
-  Σ ;;; Γ ⊢ mkApps (tConstruct i k ui) l ≤[le] mkApps (tConstruct i k ui') l'.
-  Admitted. 
-
-  (* Lemma equality_mkApps_cumul {Γ : closed_context} {hd hd' : open_term Γ} {args args'} :
-    eq_term_upto_univ_napp Σ.1 (eq_universe (global_ext_constraints Σ)) (leq_universe (global_ext_constraints Σ)) #|args| hd hd' ->
-    All2 (equality false Σ Γ) args args' ->
-    Σ;;; Γ ⊢ mkApps hd args ≤ mkApps hd' args'.
-  Proof.
-    intros cum cum_args. destruct Γ as [Γ HΓ], hd as [hd Hhd], hd' as [hd' Hhd'].
-    revert hd hd' Hhd Hhd' cum.
-    induction cum_args; intros hd hd' Hhd HHd' cum; auto.
-    - econstructor 1; eauto. 
-    - cbn. 
-      pose (open_xy := equality_is_open_term r). cbn in open_xy. apply andb_andI in open_xy. destruct open_xy as [Hrev Hxy]. 
-      apply andb_andI in Hxy. destruct Hxy as [Hx Hy].
-      induction r. 
-      * unshelve eapply IHcum_args. 
-        + apply andb_and. split; eauto. 
-        + apply andb_and. split; eauto.
-        + cbn. econstructor. 1: exact cum. exact c.
-      * eapply red_equality_left; tea. 2: apply IHr; eauto.
-        eapply (closed_red1_mkApps_left _ l).     
-        econstructor; tea; cbn; eauto with fvs.
-        eapply red1_red. constructor; auto.
-    - eapply red_equality_right; tea.
-      econstructor; tea; cbn; eauto with fvs.
-      eapply red1_red. constructor; auto.         
-    etransitivity.
-    - eapply equality_App_l; tea; eauto with fvs.
-    - eapply equality_App_r; eauto with fvs.
-  Qed. *)
 End Inversions.
 
 
@@ -3659,13 +3614,130 @@ Qed.
 
 End CumulSubst.
 
+Section MoreCongruenceLemmas.
+
+  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
+
+  (* Lemma equality_Evar_ {le Γ ev args0 args args0' args'} :
+  All2 (equality false Σ Γ) args0 args0' ->
+  All2 (equality false Σ Γ) args args' ->
+  Σ;;; Γ ⊢ tEvar ev (args0 ++ args) ≤[le] tEvar ev (args0' ++ args').
+Proof.
+  intros cum_args0 cum_args.
+  revert args args' cum_args.
+  induction cum_args0; intros args args' cum_args; cbn ; eauto. 
+  - repeat rewrite app_nil_r; eauto.
+  - replace (args0 ++ x :: l) with ((args0 ++ [x]) ++ l) by admit. 
+    replace (args0' ++ y :: l') with ((args0' ++ [y]) ++ l') by admit. 
+    eapply IHcum_args.
+    etransitivity.
+  - eapply equality_App_l; tea; eauto with fvs.
+  - eapply equality_App_r; eauto with fvs.
+Qed. *)
+
+
+  (* Lemma equality_Eval_r {le Γ ev u v args args'} :
+  Σ ;;; Γ ⊢ tEvar ev args ≤[le] tEvar ev args' ->
+  Σ ;;; Γ ⊢ u ≤[le] v ->
+  Σ ;;; Γ ⊢ tEvar ev (args ++ [u]) ≤[le] tEvar ev (args' ++ [v]).
+  Proof.
+    intros Hargs Huv.
+    induction Huv; cbn. 
+    - constructor; cbn; eauto with fvs. cbn in c.
+      destruct le; constructor; eauto with fvs; try reflexivity.
+      + eapply leq_term_leq_term_napp; tc; tas.
+      + apply eq_term_eq_term_napp; tc; tas.repeat rewrite app_nil_r; eauto. 
+  
+   - eapply red_equality_left; tea.
+      econstructor; tea; cbn; eauto with fvs.
+      eapply red1_red. constructor; auto.
+    - eapply red_equality_right; tea.
+      econstructor; tea; cbn; eauto with fvs.
+      eapply red1_red. constructor; auto.
+  Qed. *)
+
+  Lemma red_terms_evar Γ args args0 ev : 
+    red_terms Σ Γ args args0 -> red Σ Γ (tEvar ev args) (tEvar ev args0).
+    intros Hargs. eapply red_evar. 
+    eapply All2_impl. 1: tea. intros. destruct X; eauto. 
+  Defined.   
+
+  Lemma equality_Evar {le Γ ev args args'} :
+    equality_terms Σ Γ args args' -> is_closed_context Γ ->
+    Σ;;; Γ ⊢ tEvar ev args ≤[le] tEvar ev args'.
+  Proof.
+    intros Hargsargs' HΓ. pose proof (Hargs := equality_terms_open_terms_left Hargsargs'). pose proof (Hargs' := equality_terms_open_terms_right Hargsargs'). 
+    apply equality_terms_alt in Hargsargs'. destruct Hargsargs' as [args0 [args0'  [Hargs0 Hargs0' Hargs0args0']]].      
+    pose proof (Hargs0_c :=  closed_red_terms_open_right Hargs0). 
+    pose proof (Hargs0'_c :=  closed_red_terms_open_right Hargs0'). 
+    assert (Σ;;; Γ ⊢  tEvar ev args0 ≤[le] tEvar ev args0').
+    { econstructor; eauto; cbn. 3: econstructor; eauto.
+      all: eapply All_forallb; eauto. }
+    eapply red_terms_evar with (ev := ev)in Hargs0.
+    eapply red_terms_evar with (ev := ev)in Hargs0'.
+    eapply red_equality_left in X. 2: split; eauto; cbn; eauto.
+    eapply red_equality_right in X. 2: split; eauto; cbn; eauto.
+    exact X.
+  Defined. 
+
+  Lemma equality_Ind {le Γ ind ui ui' l l'} :
+  [×  R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui',
+      is_closed_context Γ & equality_terms Σ Γ l l'] ->
+  Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] mkApps (tInd ind ui') l'.
+    intros [Rglob Rclosed Hll']. apply equality_terms_alt in Hll'. destruct Hll' as [l0 [l0'  [Hl0 Hl0' Hl0l0']]].
+    assert (Σ ;;; Γ ⊢ mkApps (tInd ind ui) l0 ≤[le] mkApps (tInd ind ui') l0').
+    { econstructor 1; eauto. 
+      - cbn. clear -cf wfΣ Hl0. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0; eauto; intros. cbn in *. econstructor; eauto. 
+        destruct r; eapply red_is_open_term; eauto.
+      - cbn. clear -cf wfΣ Hl0'. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0'; eauto; intros. cbn in *. econstructor; eauto. 
+        destruct r; eapply red_is_open_term; eauto.
+      - apply All2_length in Hl0.  rewrite Hl0 in Rglob. clear Hl0 Hl0'. 
+        apply eq_term_upto_univ_napp_mkApps; eauto.  
+        econstructor; eauto. assert (#|l0| + 0 = #|l0|) by lia. rewrite H. destruct le; eauto.                      
+    } 
+    apply red_terms_equality_terms in Hl0, Hl0'. 
+    etransitivity. 
+    - eapply equality_mkApps. 
+      * refine (equality_refl' (exist Γ Rclosed) (exist (tInd ind ui) _)); eauto. 
+      * eassumption.
+    - cbn. etransitivity; try apply X.
+      eapply equality_mkApps.
+      * refine (equality_refl' (exist Γ Rclosed) (exist (tInd ind ui') _)); eauto. 
+      * symmetry. eassumption.
+  Defined.
+
+  Lemma equality_Construct {le Γ i k ui ui' l l'} :
+  [× R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (ConstructRef i k) #|l| ui ui',
+     is_closed_context Γ & equality_terms Σ Γ l l'] ->
+  Σ ;;; Γ ⊢ mkApps (tConstruct i k ui) l ≤[le] mkApps (tConstruct i k ui') l'.
+  intros [Rglob Rclosed Hll']. apply equality_terms_alt in Hll'. destruct Hll' as [l0 [l0'  [Hl0 Hl0' Hl0l0']]].
+  assert (Σ ;;; Γ ⊢ mkApps (tConstruct i k ui) l0 ≤[le] mkApps (tConstruct i k ui') l0').
+  { econstructor 1; eauto. 
+    - cbn. clear -cf wfΣ Hl0. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0; eauto; intros. cbn in *. econstructor; eauto. 
+      destruct r; eapply red_is_open_term; eauto.
+    - cbn. clear -cf wfΣ Hl0'. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0'; eauto; intros. cbn in *. econstructor; eauto. 
+      destruct r; eapply red_is_open_term; eauto.
+    - apply All2_length in Hl0.  rewrite Hl0 in Rglob. clear Hl0 Hl0'. 
+      apply eq_term_upto_univ_napp_mkApps; eauto.  
+      econstructor; eauto. assert (#|l0| + 0 = #|l0|) by lia. rewrite H. destruct le; eauto.                      
+  }
+  apply red_terms_equality_terms in Hl0, Hl0'. 
+  etransitivity. 
+  - eapply equality_mkApps. 
+    * refine (equality_refl' (exist Γ Rclosed) (exist (tConstruct i k ui) _)); eauto. 
+    * eassumption.
+  - cbn. etransitivity; try apply X.
+    eapply equality_mkApps.
+    * refine (equality_refl' (exist Γ Rclosed) (exist (tConstruct i k ui') _)); eauto. 
+    * symmetry. eassumption.
+Defined.
+
+
+End MoreCongruenceLemmas.
 
 Section CumulSpecIsCumulAlgo.
 
 Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
-
-Lemma shiftnP_S P n : shiftnP (S n) P =1 shiftnP 1 (shiftnP n P).
-  Admitted.
 
 Proposition cumulSpec_cumulAlgo (Γ : closed_context) (M N : open_term Γ) :
   Σ ;;; Γ |- M =s N  ->
@@ -3690,21 +3762,21 @@ Proof.
     cbn in *. apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Hty Ht]; destruct HN as [Hty' Ht'].
     eapply equality_Lambda; eauto. eapply Heqtt'.
     * change (is_closed_context (Γ,, vass na ty)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto. 
-    * rewrite shiftnP_S; eauto.
-    * rewrite shiftnP_S; eauto.
+    * rewrite PCUICRenameTyp.shiftnP_S; eauto.
+    * rewrite PCUICRenameTyp.shiftnP_S; eauto.
   - intros Γ na na' a a' b b' Hna Haa' foo IHe1 IHe2 HΓ HM HN. cbn in *; apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ha Hb]; destruct HN as [Ha' Hb'].
     eapply equality_Prod; eauto. eapply IHe2. 
     * change (is_closed_context (Γ,, vass na a)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto.  
-    * rewrite shiftnP_S; eauto.
-    * rewrite shiftnP_S; eauto.
+    * rewrite PCUICRenameTyp.shiftnP_S; eauto.
+    * rewrite PCUICRenameTyp.shiftnP_S; eauto.
   - intros Γ na na' t t' ty ty' u u' Hna _ Heqtt' _ Heqtyty' _ Hequu' HΓ HM HN. 
     cbn in *. apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ht Htyu]; destruct HN as [Ht' Htyu'].
     apply andb_andI in Htyu; apply andb_andI in Htyu'; destruct Htyu as [Hty Hu]; destruct Htyu' as [Hty' Hu'].
     eapply equality_LetIn; eauto. eapply Hequu'.
     * change (is_closed_context (Γ,, vdef na t ty)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto.
       rewrite /on_free_vars_decl /test_decl. apply andb_and. split; eauto. 
-    * rewrite shiftnP_S; eauto.
-    * rewrite shiftnP_S; eauto.
+    * rewrite PCUICRenameTyp.shiftnP_S; eauto.
+    * rewrite PCUICRenameTyp.shiftnP_S; eauto.
   - intros Γ indn p p' c c' brs brs' Hpp' _ Hcc' Hbrsbrs' HΓ H H'.
     cbn in *. apply andb_andI in H; apply andb_andI in H'; destruct H as [Hp H]; destruct H' as [Hp' H'].
     apply andb_andI in H; apply andb_andI in H'; destruct H as [Hreturn H]; destruct H' as [Hreturn' H'].
@@ -3752,18 +3824,19 @@ Proof.
     * admit.
     * admit.   
     * admit.
-  - intros. eapply equality_Ind. split; eauto. rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2. 
+  - intros. eapply equality_Ind; eauto. split; eauto. rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2. 
     apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4. 
     apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.   
     apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].   
     eapply Heqxy.2; eauto.   
-  - intros. eapply equality_Construct. split; eauto. rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2. 
+  - intros. eapply equality_Construct; eauto ; split; eauto. rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2. 
     apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4. 
     apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.   
     apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].   
     eapply Heqxy.2; eauto.
   - intros. econstructor 1; eauto. econstructor; eauto.
   - intros. econstructor 1; eauto. econstructor; eauto.
-Defined.   
+  Unshelve. all: eauto. 
+  Defined.   
 
 End CumulSpecIsCumulAlgo.

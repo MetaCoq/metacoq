@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect CRelationClasses.
 From MetaCoq.Template Require Import utils config Universes uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICOnFreeVars
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
      PCUICCases PCUICContextRelation PCUICCumulativity PCUICTyping PCUICReduction PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICClosed PCUICPosition PCUICGuardCondition PCUICUnivSubstitutionConv.
@@ -26,7 +26,96 @@ valid_constraints (global_ext_constraints (Σ.1, univs))
   Σ ;;; Γ |- A =s B ->
   (Σ.1,univs) ;;; subst_instance u Γ |- subst_instance u A =s subst_instance u B.
 Proof.
-Admitted. 
+  intros e H. pose proof (He := eq_universe_subst_instance _ _ _ e).
+  revert Γ A B H e. 
+  eapply (convSpec0_ind_all Σ (eq_universe (global_ext_constraints Σ)) 
+            (fun Γ A B => valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
+            (Σ.1 , univs) ;;; Γ@[u] |- A@[u] =s B@[u])); intros; cbn ;
+            try solve [econstructor; intuition; eauto].
+  - rewrite subst_instance_subst. solve [econstructor].
+  - rewrite subst_instance_subst. solve [econstructor].
+  - rewrite subst_instance_lift. eapply cumul_rel.
+    unfold subst_instance.
+    unfold option_map in *. destruct (nth_error Γ) eqn:E; inversion H.
+    unfold map_context. rewrite nth_error_map E. cbn.
+    rewrite map_decl_body. destruct c. cbn in H2. subst.
+    reflexivity.
+  - rewrite subst_instance_mkApps. cbn.
+    rewrite iota_red_subst_instance.
+    change (bcontext br) with (bcotext (map_branch (subst_instance u) br)). 
+    eapply cumul_iota; eauto with pcuic.
+    * rewrite nth_error_map H //.
+    * simpl. now len.
+  - rewrite !subst_instance_mkApps. cbn.
+    eapply cumul_fix.
+    + unfold unfold_fix in *. destruct (nth_error mfix idx) eqn:E.
+      * inversion H.
+        rewrite nth_error_map E. cbn.
+        destruct d. cbn in *. cbn in *; try congruence.
+        f_equal. f_equal. 
+        now rewrite subst_instance_subst fix_subst_instance_subst.
+      * inversion H.
+    + unfold is_constructor in *.
+      destruct (nth_error args narg) eqn:E; inversion H0; clear H0.
+      rewrite nth_error_map E. cbn.
+     eapply isConstruct_app_subst_instance.
+  - rewrite !subst_instance_mkApps.
+    unfold unfold_cofix in *. destruct (nth_error mfix idx) eqn:E.
+    + inversion H.
+    eapply cumul_cofix_case.  fold subst_instance_constr.
+    unfold unfold_cofix.
+    rewrite nth_error_map E. cbn.
+    rewrite subst_instance_subst.
+    now rewrite cofix_subst_instance_subst.
+    + cbn.
+    inversion H.
+  - unfold unfold_cofix in *.
+    destruct nth_error eqn:E; inversion H.
+    rewrite !subst_instance_mkApps.
+    eapply cumul_cofix_proj. fold subst_instance.
+    unfold unfold_cofix.
+    rewrite nth_error_map. destruct nth_error; cbn.
+     1: rewrite subst_instance_subst cofix_subst_instance_subst.
+    all: now inversion E.
+  - rewrite subst_instance_two. solve [econstructor; eauto].
+  - rewrite !subst_instance_mkApps.
+    eapply cumul_proj. now rewrite nth_error_map H.
+  - eapply cumul_Trans; intuition.
+    * rewrite on_free_vars_subst_instance_context; eauto.
+    * rewrite on_free_vars_subst_instance. unfold is_open_term. 
+      replace #|Γ@[u]| with #|Γ|; eauto. rewrite map_length; eauto.
+  - eapply cumul_Evar. eapply All2_map. 
+    eapply All2_impl. 1: tea. cbn; intros. eapply X0.2; eauto.
+  - eapply cumul_Case; try solve [intuition; eauto]. 
+    * destruct X as [X [Xuni [Xcont [_ Xret]]]]. repeat split; eauto; cbn. 
+      + apply All2_map. eapply All2_impl. 1: tea. cbn; intros. eapply X3.2; eauto.
+      + apply precompose_subst_instance. eapply R_universe_instance_impl; eauto.   
+      + rewrite subst_instance_app inst_case_predicate_context_subst_instance in Xret.
+        eapply Xret. eauto.          
+    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+      repeat split; eauto; intuition.
+      rewrite subst_instance_app inst_case_branch_context_subst_instance in X1; eauto. 
+  - eapply cumul_Fix. apply All2_map. eapply All2_impl. 1: tea. 
+    cbn; intros; intuition. 
+    rewrite subst_instance_app fix_context_subst_instance in X0; eauto. 
+  - eapply cumul_CoFix. apply All2_map. eapply All2_impl. 1: tea. 
+    cbn; intros; intuition. 
+    rewrite subst_instance_app fix_context_subst_instance in X0; eauto. 
+  - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
+    * apply precompose_subst_instance_global. cbn. 
+      rewrite map_length. eapply R_global_instance_impl_same_napp; eauto.
+      all: eapply eq_universe_subst_instance; eauto.
+    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+      eapply X0.2; eauto.
+      - repeat rewrite subst_instance_mkApps. eapply cumul_Construct.
+      * apply precompose_subst_instance_global. cbn. 
+        rewrite map_length. eapply R_global_instance_impl_same_napp; eauto.
+        all: eapply eq_universe_subst_instance; eauto.
+      * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+        eapply X0.2; eauto.
+    - eapply cumul_Const. apply precompose_subst_instance.
+      eapply R_universe_instance_impl; eauto. 
+Defined. 
 
 Lemma cumulSpec_subst_instance (Σ : global_env_ext) Γ u A B univs :
   valid_constraints (global_ext_constraints (Σ.1, univs))
@@ -35,7 +124,109 @@ Lemma cumulSpec_subst_instance (Σ : global_env_ext) Γ u A B univs :
   (Σ.1,univs) ;;; subst_instance u Γ
                    |- subst_instance u A <=s subst_instance u B.
 Proof.
-Admitted. 
+  intros e H. unfold cumulSpec.  
+  set (Rle' := leq_universe (global_ext_constraints (Σ.1,univs))). 
+  set (Re := eq_universe (global_ext_constraints Σ)).
+  pose proof (Hle := leq_universe_subst_instance _ _ _ e).
+  pose proof (Hee := eq_universe_subst_instance _ _ _ e).
+  assert (He : subrelation Re
+          (fun x y : Universe.t => Rle' x@[u] y@[u])).
+  { etransitivity; try apply leq_universe_subst_instance; eauto.
+    apply eq_universe_leq_universe.  }
+  pose proof (He_ := He). pose proof (Hle_ := Hle).  
+  revert Hle_ He_. fold Rle'. generalize Rle'. unfold Rle' in *; clear Rle'; intros Rle' Hle_ He_.
+  revert Γ A B H Rle' Hle_ He_ e. 
+  eapply (cumulSpec0_ind_all Σ (eq_universe (global_ext_constraints Σ)) 
+            (fun Rle Γ A B => forall (Rle' : _ -> _ -> Prop), subrelation Rle
+            (fun x y : Universe.t_ => Rle' x@[u] y@[u]) ->
+            subrelation (eq_universe Σ)
+                        (fun x y : Universe.t_ => Rle' x@[u] y@[u]) ->
+            valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
+               cumulSpec0 Σ (eq_universe (global_ext_constraints (Σ.1,univs))) Rle' Γ@[u] A@[u] B@[u]))
+             with (Rle := leq_universe (global_ext_constraints Σ))  ; intros; cbn ;
+            try solve [econstructor; intuition; eauto].
+  - rewrite subst_instance_subst. solve [econstructor].
+  - rewrite subst_instance_subst. solve [econstructor].
+  - rewrite subst_instance_lift. eapply cumul_rel.
+    unfold subst_instance.
+    unfold option_map in *. destruct (nth_error Γ) eqn:E; inversion H.
+    unfold map_context. rewrite nth_error_map E. cbn.
+    rewrite map_decl_body. destruct c. cbn in H2. subst.
+    reflexivity.
+  - rewrite subst_instance_mkApps. cbn.
+    rewrite iota_red_subst_instance.
+    change (bcontext br) with (bcotext (map_branch (subst_instance u) br)). 
+    eapply cumul_iota; eauto with pcuic.
+    * rewrite nth_error_map H //.
+    * simpl. now len.
+  - rewrite !subst_instance_mkApps. cbn.
+    eapply cumul_fix.
+    + unfold unfold_fix in *. destruct (nth_error mfix idx) eqn:E.
+      * inversion H.
+        rewrite nth_error_map E. cbn.
+        destruct d. cbn in *. cbn in *; try congruence.
+        f_equal. f_equal. 
+        now rewrite subst_instance_subst fix_subst_instance_subst.
+      * inversion H.
+    + unfold is_constructor in *.
+      destruct (nth_error args narg) eqn:E; inversion H0; clear H0.
+      rewrite nth_error_map E. cbn.
+     eapply isConstruct_app_subst_instance.
+  - rewrite !subst_instance_mkApps.
+    unfold unfold_cofix in *. destruct (nth_error mfix idx) eqn:E.
+    + inversion H.
+    eapply cumul_cofix_case.  fold subst_instance_constr.
+    unfold unfold_cofix.
+    rewrite nth_error_map E. cbn.
+    rewrite subst_instance_subst.
+    now rewrite cofix_subst_instance_subst.
+    + cbn.
+    inversion H.
+  - unfold unfold_cofix in *.
+    destruct nth_error eqn:E; inversion H.
+    rewrite !subst_instance_mkApps.
+    eapply cumul_cofix_proj. fold subst_instance.
+    unfold unfold_cofix.
+    rewrite nth_error_map. destruct nth_error; cbn.
+     1: rewrite subst_instance_subst cofix_subst_instance_subst.
+    all: now inversion E.
+  - rewrite subst_instance_two. solve [econstructor; eauto].
+  - rewrite !subst_instance_mkApps.
+    eapply cumul_proj. now rewrite nth_error_map H.
+  - eapply cumul_Trans; intuition.
+    * rewrite on_free_vars_subst_instance_context; eauto.
+    * rewrite on_free_vars_subst_instance. unfold is_open_term. 
+      replace #|Γ@[u]| with #|Γ|; eauto. rewrite map_length; eauto.
+  - eapply cumul_Evar. eapply All2_map. 
+    eapply All2_impl. 1: tea. cbn; intros. eapply X2.2; eauto.
+  - eapply cumul_Case; try solve [intuition; eauto]. 
+    * destruct X as [X [Xuni [Xcont [_ Xret]]]]. repeat split; eauto; cbn. 
+      + apply All2_map. eapply All2_impl. 1: tea. cbn; intros. eapply X5.2; eauto.
+      + apply precompose_subst_instance. eapply R_universe_instance_impl; eauto.   
+      + rewrite subst_instance_app inst_case_predicate_context_subst_instance in Xret.
+        eapply Xret; eauto.           
+    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+      repeat split; eauto; intuition.
+      rewrite subst_instance_app inst_case_branch_context_subst_instance in b; eauto. 
+  - eapply cumul_Fix. apply All2_map. eapply All2_impl. 1: tea. 
+    cbn; intros; intuition. 
+    rewrite subst_instance_app fix_context_subst_instance in a0; eauto. 
+  - eapply cumul_CoFix. apply All2_map. eapply All2_impl. 1: tea. 
+    cbn; intros; intuition. 
+    rewrite subst_instance_app fix_context_subst_instance in a0; eauto. 
+ - repeat rewrite subst_instance_mkApps. eapply cumul_Ind.
+    * apply precompose_subst_instance_global.  
+      rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
+    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+      eapply X2.2; eauto.
+ - repeat rewrite subst_instance_mkApps. eapply cumul_Construct.
+    * apply precompose_subst_instance_global. cbn. 
+      rewrite map_length. eapply R_global_instance_impl_same_napp; try eapply H; eauto.
+    * eapply All2_map. eapply All2_impl. 1: tea. cbn; intros.
+      eapply X2.2; eauto.
+  - eapply cumul_Const. apply precompose_subst_instance.
+    eapply R_universe_instance_impl; eauto. 
+Defined. 
 
 Lemma conv_decls_subst_instance (Σ : global_env_ext) {Γ Γ'} u univs d d' :
   valid_constraints (global_ext_constraints (Σ.1, univs))

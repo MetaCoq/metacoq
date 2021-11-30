@@ -6,7 +6,7 @@ Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
-
+Set Printing Universes.
 Definition R_universe_instance R :=
   fun u u' => Forall2 R (List.map Universe.make u) (List.map Universe.make u').
 

@@ -5,8 +5,11 @@ Import ListNotations.
 
 Derive Signature for Forall Forall2.
 
-(** Combinators *)
+Local Set Universe Polymorphism.
+Local Set Polymorphic Inductive Cumulativity.
 
+(** Combinators *)
+Set Printing Universes.
 (** Forall combinators in Type to allow building them by recursion *)
 Inductive All {A} (P : A -> Type) : list A -> Type :=
     All_nil : All P []

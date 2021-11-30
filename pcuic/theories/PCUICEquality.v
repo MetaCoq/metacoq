@@ -1330,7 +1330,8 @@ Proof.
   intros hRe hRle ctx ctx' onc.
   eapply equiv_reflectT.
   - intros hcc'.
-    eapply All2_fold_forallb2, All2_fold_impl_onctx; tea.
+    eapply All2_fold_forallb2.
+    apply: All2_fold_impl_onctx. tea. tea.
     unfold ondecl; intuition auto.
     depelim X0; cbn in * => //;
     intuition auto.
@@ -1341,7 +1342,9 @@ Proof.
       destruct (a equ Re 0 hRe T') => //.
   - intros hcc'.
     eapply forallb2_bcompare_decl_All2_fold in hcc'; tea.
-    eapply All2_fold_impl_onctx in onc; tea; simpl; intuition eauto.
+    eapply All2_fold_impl_onctx in onc. exact onc. exact hcc'.
+    tea; simpl; intuition eauto.
+    intuition auto.
     destruct X0.
     move: H.
     destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //.
@@ -1427,7 +1430,7 @@ Proof.
     * red in onuinst. 
       eapply Forall2_forallb2, Forall2_impl; eauto.
       now move=> x y /X.
-    * destruct (reflect_eq_ctx (pcontext p) (pcontext p')) => //.
+    * elim: (reflect_eq_ctx (pcontext p) (pcontext p')) => //.
     * ih. contradiction.
   - move/andb_and => [/andb_and [/andb_and [ppars pinst] pctx] pret].
     intuition auto.
@@ -1436,7 +1439,7 @@ Proof.
     * solve_all. red. apply All2_Forall2.
       eapply (All2_impl pinst); eauto.
       now move=> x y /X.
-    * now destruct (reflect_eq_ctx (pcontext p) (pcontext p')).
+    * move: pctx; elim: (reflect_eq_ctx (pcontext p) (pcontext p')) => //.
     * now destruct (r _ _ 0 X (preturn p')).
 Qed.
 
@@ -1541,7 +1544,7 @@ Proof.
     apply (reflectT_subrelation' hle).
 
   - cbn - [eqb]. eqspecs => /=.
-    destruct (reflect_eq_predicate he hle p p0 X).
+    elim: (reflect_eq_predicate he hle p p0 X).
     ih. clear X. rename X0 into X.
     induction l in brs, X |- *.
     + destruct brs.
@@ -1553,19 +1556,19 @@ Proof.
       * cbn - [eqb]. inversion X. subst.
         destruct a, b. cbn - [eqb eqb_binder_annots].
         destruct X0 as [onc onbod].
-        destruct (reflect_eq_ctx bcontext bcontext0) => // /=.
+        elim: (reflect_eq_ctx bcontext bcontext0) => // /= eqctx eqp.
         -- cbn - [eqb].
            pose proof (onbod equ Re 0 he bbody0) as hh. cbn in hh.
            destruct hh => /=.
-           ++ cbn -[eqb eqb_binder_annots] in *. destruct (IHl X1 brs).
-              ** constructor ; try easy. inversion e2. subst.
+           ++ cbn -[eqb eqb_binder_annots] in *. destruct (IHl X1 brs) => //.
+              ** constructor ; try easy. inversion e1. subst.
                  constructor; auto.
               ** constructor. intro bot. apply f. inversion bot. subst.
                  inversion X3. subst. constructor; auto.
            ++ constructor. intro bot. apply f. inversion bot. subst.
               inversion X3. subst. destruct X4. assumption.
         -- constructor. intro bot. inversion bot. subst.
-           inversion X3. subst. destruct X4. cbn in e1. subst.
+           inversion X3. subst. destruct X4. cbn in e0. subst.
            contradiction.
     + simpl. constructor. intros bot; inv bot; contradiction.
   - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.

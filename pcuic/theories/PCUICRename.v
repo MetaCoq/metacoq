@@ -1120,9 +1120,10 @@ Proof using cf.
     rewrite H /= in hbo.
     rewrite lift0_rename.
     destruct (decl_body decl') eqn:hdecl => //. noconf hbo.
-    sigma in H0. sigma. rewrite H0.
+    sigma in H0. setoid_rewrite rshiftk_S in H0.
+    rewrite rename_compose rename_inst H0.
     relativize (t.[_]).
-    2:{ setoid_rewrite rshiftk_S. rewrite -rename_inst.
+    2:{ setoid_rewrite <- rshiftk_S. rewrite -rename_inst.
         now rewrite -(lift0_rename (S (f i)) _). }
     constructor. now rewrite e' /= hdecl.
   - rewrite rename_mkApps. simpl.

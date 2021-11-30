@@ -8,8 +8,6 @@ From Equations Require Import Equations.
 From Equations.Prop Require Import Subterm.
 Import PCUICEnvTyping.
 
-
-
 Definition def_depth_gen (depth : term -> nat) (x : def term)
   := max (depth (dtype x)) (depth (dbody x)).
 
@@ -132,14 +130,14 @@ Proof.
     eapply (nth_error_depth depth) in hnth.
     rewrite depth_lift. lia. simpl. lia.
     simpl. lia.
-  - eapply (All_depth k) in X. lia.
+  - move/(All_depth k): X; intros. lia.
   - specialize (IHt1 k); specialize (IHt2 (S k)); lia.
   - specialize (IHt1 k); specialize (IHt2 (S k)); lia.
   - specialize (IHt1 k); specialize (IHt2 k); specialize (IHt3 (S k)); lia.
   - specialize (IHt1 k); specialize (IHt2 k); lia.
   - destruct X as [? [? ?]].
     rewrite /predicate_depth_gen /=.
-    eapply (All_depth k) in a.
+    move/(All_depth k): a => a.
     assert ((list_depth (map (subst s k) (pparams p)) +
         context_depth (pcontext p)) <= 
       (list_depth (pparams p) + context_depth (pcontext p) + list_depth s)) by lia.

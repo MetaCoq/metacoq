@@ -69,6 +69,7 @@ theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
+theories/PCUICPHOAS.v
 # theories/All.v
 
 # To do separate extraction of the files, not working currently

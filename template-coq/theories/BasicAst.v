@@ -86,6 +86,9 @@ Arguments mkBindAnn {_}.
 Arguments binder_name {_}.
 Arguments binder_relevance {_}.
 
+Definition bAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
+Definition bNamed s := {| binder_name := nNamed s; binder_relevance := Relevant |}.
+
 Derive NoConfusion for binder_annot.
 
 Instance eqdec_binder_annot (A : Type) (e : Classes.EqDec A) : Classes.EqDec (binder_annot A).

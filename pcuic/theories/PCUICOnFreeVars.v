@@ -1649,6 +1649,18 @@ Proof.
 Qed.
 #[global] Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
 
+Lemma on_free_vars_ctx_inst_case_context_weak P Γ pars puinst pctx :
+  forallb (on_free_vars (shiftnP #|Γ| P)) pars ->
+  test_context_k (fun k : nat => on_free_vars (closedP k xpredT)) #|pars| pctx ->
+  on_free_vars_ctx P Γ ->
+  on_free_vars_ctx P (Γ ,,, inst_case_context pars puinst pctx).
+Proof.
+  intros.
+  rewrite on_free_vars_ctx_app H1 /=.
+  eapply on_free_vars_ctx_inst_case_context; trea.
+Qed.  
+#[global] Hint Resolve on_free_vars_ctx_inst_case_context : fvs.
+
 Lemma on_ctx_free_vars_fix_context P Γ mfix :
   All (fun x : def term => test_def (on_free_vars P) (on_free_vars (shiftnP #|mfix| P)) x) mfix ->
   on_ctx_free_vars P Γ ->
@@ -1661,7 +1673,21 @@ Proof.
     eapply on_free_vars_fix_context => //.
   - now len.
 Qed.
+
+Lemma on_free_vars_ctx_fix_context_weak P Γ mfix :
+  All (fun x : def term => test_def (on_free_vars (shiftnP #|Γ| P)) (on_free_vars (shiftnP #|mfix| (shiftnP #|Γ| P))) x) mfix ->
+  on_free_vars_ctx P Γ ->
+  on_free_vars_ctx P (Γ ,,, fix_context mfix).
+Proof.
+  intros.
+  rewrite -on_free_vars_ctx_on_ctx_free_vars; len.
+  rewrite -shiftnP_add.
+  eapply on_ctx_free_vars_fix_context => //.
+  now rewrite on_free_vars_ctx_on_ctx_free_vars.
+Qed.
+
 #[global] Hint Resolve on_ctx_free_vars_fix_context : fvs.
+#[global] Hint Resolve on_free_vars_ctx_fix_context_weak : fvs.
 #[global] Hint Resolve on_ctx_free_vars_snoc_ass on_ctx_free_vars_snoc_def : fvs.
 #[global] Hint Resolve on_ctx_free_vars_inst_case_context : fvs.
 #[global] Hint Extern 3 (is_true (_ && _)) => apply/andP; idtac : fvs.

@@ -220,12 +220,6 @@ Section EqualityLemmas.
     move/isType_closedPT. now rewrite closedP_shiftnP.
   Qed.
 
-  Lemma wf_local_closed_context {Γ} : wf_local Σ Γ -> on_free_vars_ctx xpred0 Γ.
-  Proof.
-    move/PCUICClosedTyp.closed_wf_local.
-    now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
-  Qed.
-
   Lemma into_equality {le} {Γ : context} {T U} : 
     (if le then Σ;;; Γ |- T <= U else Σ;;; Γ |- T = U) ->
     is_closed_context Γ -> is_open_term Γ T ->

@@ -386,6 +386,20 @@ Proof.
   apply (env_prop_wf_local typecheck_closed Σ wfΣ _ wfΓ).
 Qed.
 
+
+
+Lemma closed_ctx_on_ctx_free_vars Γ : closed_ctx Γ = on_ctx_free_vars (closedP #|Γ| xpredT) Γ.
+Proof.
+  rewrite closedn_ctx_on_free_vars.
+  now rewrite -on_free_vars_ctx_on_ctx_free_vars shiftnP_closedP shiftnP_xpredT Nat.add_0_r.
+Qed.
+
+Lemma wf_local_closed_context `{checker_flags} {Σ Γ} {wfΣ : wf Σ} : wf_local Σ Γ -> on_free_vars_ctx xpred0 Γ.
+Proof.
+  move/PCUICClosedTyp.closed_wf_local.
+  now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
+Qed.
+
 Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ : 
   wf Σ.1 -> ctx_inst typing Σ Γ i Δ -> All (closedn #|Γ|) i.
 Proof.

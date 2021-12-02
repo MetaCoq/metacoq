@@ -1333,12 +1333,6 @@ Proof.
   now eapply typing_wf_local.
 Qed.
 
-Lemma closed_ctx_on_ctx_free_vars Γ : closed_ctx Γ = on_ctx_free_vars (closedP #|Γ| xpredT) Γ.
-Proof.
-  rewrite closedn_ctx_on_free_vars.
-  now rewrite -on_free_vars_ctx_on_ctx_free_vars shiftnP_closedP shiftnP_xpredT Nat.add_0_r.
-Qed.
-
 Lemma shiftnPF_closedPT (Γ : context) : shiftnP #|Γ| xpred0 =1 closedP #|Γ| xpredT.
 Proof.
   intros i; rewrite /shiftnP /closedP orb_false_r.

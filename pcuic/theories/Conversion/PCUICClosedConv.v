@@ -192,7 +192,6 @@ Qed.
 
 
 
-
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Lemma closedn_All_local_closed:
@@ -218,4 +217,3 @@ Proof.
   now rewrite closedn_ctx_cons /=.
 Qed.
 
-  

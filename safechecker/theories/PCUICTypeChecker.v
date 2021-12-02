@@ -138,15 +138,16 @@ Lemma substitution_wf_local_rel `{checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' s �
 Section Typecheck.
   Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
           (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥)
-          (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
+          (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ))
+          (cunivs : check_univs).
 
-  Local Notation ret := Checked (only parsing).
-  Local Notation raise := (fun e => TypeError e _) (only parsing).
+  Local Notation ret := Checked_comp (only parsing).
+  Local Notation raise := (fun e => TypeError_comp e _) (only parsing).
 
   Local Notation "x <- c1 ;; c2" := (
     match c1 with 
-      | TypeError e absurd => raise e
-      | Checked x => c2
+      | TypeError_comp e absurd => raise e
+      | Checked_comp x => c2
     end)
     (at level 100, c1 at next level, right associativity).
 
@@ -167,7 +168,7 @@ Section Typecheck.
   (* replaces convert and convert_leq*)
   Equations convert (le : conv_pb) Γ t u
           (ht : welltyped Σ Γ t) (hu : welltyped Σ Γ u)
-    : typing_result (∥ Σ ;;; Γ ⊢ t ≤[le] u ∥) :=
+    : typing_result_comp (∥ Σ ;;; Γ ⊢ t ≤[le] u ∥) :=
     convert le Γ t u ht hu
       with inspect (eqb_termp Σ G le t u) := {
         | @exist true He := ret _ ; 
@@ -203,10 +204,10 @@ Section Typecheck.
 
   Section InferAux.
     Variable (infer : forall Γ (HΓ : ∥ wf_local Σ Γ ∥) (t : term),
-                 typing_result ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ })).
+                 typing_result_comp ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ })).
 
     Equations infer_type Γ (HΓ : ∥ wf_local Σ Γ ∥) t
-      : typing_result ({u : Universe.t & ∥ Σ ;;; Γ |- t ▹□ u ∥}) :=
+      : typing_result_comp ({u : Universe.t & ∥ Σ ;;; Γ |- t ▹□ u ∥}) :=
       infer_type Γ HΓ t :=
         tx <- infer Γ HΓ t ;;
         s <- reduce_to_sort HeΣ Γ tx.π1 _ ;;
@@ -235,7 +236,7 @@ Section Typecheck.
       now sq.
     Qed.
     
-    Equations infer_isType Γ (HΓ : ∥wf_local Σ Γ ∥) T : typing_result (∥ isType Σ Γ T ∥) :=
+    Equations infer_isType Γ (HΓ : ∥wf_local Σ Γ ∥) T : typing_result_comp (∥ isType Σ Γ T ∥) :=
       infer_isType Γ HΓ T :=
         infer_type Γ HΓ T ;;
         ret _. 
@@ -251,7 +252,7 @@ Section Typecheck.
     Qed.
 
     Equations bdcheck Γ (HΓ : ∥wf_local Σ Γ ∥) t A (hA : ∥ isType Σ Γ A ∥)
-      : typing_result (∥ Σ ;;; Γ |- t ◃ A ∥) :=
+      : typing_result_comp (∥ Σ ;;; Γ |- t ◃ A ∥) :=
       bdcheck Γ HΓ t A hA :=
         A' <- infer Γ HΓ t ;;
         convert Cumul Γ A'.π1 A _ _ ;;
@@ -281,11 +282,11 @@ Section Typecheck.
     Qed.
     
     (* Program Definition infer_scheme Γ HΓ t :
-      typing_result (∑ ctx u, ∥ Σ ;;; Γ |- t : mkAssumArity ctx u ∥) :=
+      typing_result_comp (∑ ctx u, ∥ Σ ;;; Γ |- t : mkAssumArity ctx u ∥) :=
       '(T; p) <- infer Γ HΓ t;;
       match reduce_to_arity HeΣ Γ T _ with
       | inleft car => ret (conv_ar_context car; conv_ar_univ car; _)
-      | inright _ => TypeError (NotAnArity T)
+      | inright _ => TypeError_comp (NotAnArity T)
       end.
     Next Obligation.
       intros; subst.
@@ -298,13 +299,13 @@ Section Typecheck.
       eapply type_reduction; eauto. exact r.
     Qed. *)
 
-    (* Lemma sq_wfl_nil : ∥ wf_local Σ [] ∥.
+    Lemma sq_wfl_nil : ∥ wf_local Σ [] ∥.
     Proof.
      repeat constructor.
-    Qed. *)
+    Qed.
 
 
-    Equations check_context Γ : typing_result (∥ wf_local Σ Γ ∥)
+    Equations check_context Γ : typing_result_comp (∥ wf_local Σ Γ ∥)
     := 
       check_context [] := ret _ ;
       check_context ({| decl_body := None; decl_type := A |} :: Γ) :=
@@ -356,7 +357,7 @@ Section Typecheck.
     Qed.
 
     Equations check_context_rel Γ (wfΓ : ∥ wf_local Σ Γ ∥) (Δ : context) :
-      typing_result (∥ wf_local_rel Σ Γ Δ ∥) :=
+      typing_result_comp (∥ wf_local_rel Σ Γ Δ ∥) :=
 
       check_context_rel Γ wfΓ [] := ret _ ;
 
@@ -407,7 +408,7 @@ Section Typecheck.
 
     Equations check_equality_decl (le : conv_pb) Γ d d'
       (wtd : wt_decl Σ Γ d) (wtd' : wt_decl Σ Γ d')
-      : typing_result (∥ equality_open_decls le Σ Γ d d' ∥) :=
+      : typing_result_comp (∥ equality_open_decls le Σ Γ d d' ∥) :=
       check_equality_decl le Γ
         {| decl_name := na; decl_body := Some b; decl_type := ty |}
         {| decl_name := na'; decl_body := Some b'; decl_type := ty' |}
@@ -531,7 +532,7 @@ Section Typecheck.
 
     Equations check_equality_ctx (le : conv_pb) Γ Δ Δ'
       (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-      typing_result (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
+      typing_result_comp (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
 
       check_equality_ctx le Γ [] [] _ _ := ret _ ;
       
@@ -596,7 +597,7 @@ Section Typecheck.
       Qed.
       
     Equations check_alpha_equality_ctx Δ Δ'
-      : typing_result (∥ eq_context_gen eq eq Δ Δ' ∥) :=
+      : typing_result_comp (∥ eq_context_gen eq eq Δ Δ' ∥) :=
       check_alpha_equality_ctx Δ Δ' with
         inspect (forallb2 (bcompare_decls eqb eqb) Δ Δ') :=  {
       | @exist true e := ret _ ; 
@@ -613,7 +614,7 @@ Section Typecheck.
     Qed.
 
     (* Equations infer_terms Γ (wfΓ : ∥ wf_local Σ Γ ∥) ts
-      : typing_result (∥ All (welltyped Σ Γ) ts ∥) :=
+      : typing_result_comp (∥ All (welltyped Σ Γ) ts ∥) :=
       match ts with
       | t :: ts =>
         checkt <- infer Γ wfΓ t ;;
@@ -641,7 +642,7 @@ Section Typecheck.
 
 
     Equations check_inst Γ (wfΓ : ∥ wf_local Σ Γ ∥) Δ (wfΔ : ∥ wf_local_rel Σ Γ (List.rev Δ) ∥) (HΔ : assumption_context Δ) ts : 
-      typing_result (∥ ctx_inst Σ Γ ts Δ ∥) by struct ts :=
+      typing_result_comp (∥ ctx_inst Σ Γ ts Δ ∥) by struct ts :=
     check_inst Γ _ [] _ _ [] := ret _ ;
     check_inst Γ wfΓ
       ({|decl_name := na ; decl_body := Some ; decl_type := T|} :: Δ)
@@ -704,7 +705,7 @@ Section Typecheck.
     Qed.
     
     Equations check_equality_terms Γ ts ts' (wts : ∥ All (welltyped Σ Γ) ts ∥) (wts' : ∥ All (welltyped Σ Γ) ts' ∥) : 
-      typing_result (∥ equality_terms Σ Γ ts ts' ∥) :=
+      typing_result_comp (∥ equality_terms Σ Γ ts ts' ∥) :=
     check_equality_terms Γ [] [] _ _ := ret _ ;
     check_equality_terms Γ (t :: ts) (t' :: ts') wts wts' :=
       convt <- convert Conv Γ t t' _ _ ;;
@@ -744,7 +745,7 @@ Section Typecheck.
   End InferAux.
 
   Equations lookup_ind_decl ind
-    : typing_result
+    : typing_result_comp
         ({decl & {body & declared_inductive (fst Σ) ind decl body}}) :=
   lookup_ind_decl ind with
     inspect (lookup_env (fst Σ) ind.(inductive_mind)) := {
@@ -766,7 +767,7 @@ Section Typecheck.
   Defined.
 
   Equations check_consistent_instance uctx u
-    : typing_result (consistent_instance_ext Σ uctx u) :=
+    : typing_result_comp (consistent_instance_ext Σ uctx u) :=
   check_consistent_instance (Monomorphic_ctx _) u 
     with (Nat.eq_dec #|u| 0) := {
       | left _ := ret _ ;
@@ -794,6 +795,7 @@ Section Typecheck.
     (*missing completeness of check_constraints*)
   Admitted.
   Next Obligation.
+    sq.
     clear -e2 H HG.
     (* todo: should be a lemma? *)
     induction u.
@@ -818,14 +820,20 @@ Section Typecheck.
     inversion X1.
     congruence.
   Qed.
-    
+
+
+  Lemma eq_diff u u' : ~ (eq_universe Σ u u') -> exists v : valuation, 
+    satisfies v Σ /\ ~ (⟦u⟧_v%u =⟦u'⟧_v%u).
+  Proof.
+    clear.
+  Admitted.
 
   (* Obligation Tactic := Program.Tactics.program_simplify ; eauto 2. *)
   
   Equations check_is_allowed_elimination
     (u : Universe.t) (wfu : wf_universe Σ u)
     (al : allowed_eliminations) :
-    typing_result (is_allowed_elimination Σ u al) :=
+    typing_result_comp (is_allowed_elimination Σ u al) :=
 
   check_is_allowed_elimination u wfu IntoSProp
     with inspect (Universe.is_sprop u) := {
@@ -852,7 +860,13 @@ Section Typecheck.
     now rewrite e.
   Qed.
   Next Obligation.
-  Admitted.
+    pose proof HeΣ as HeΣ.
+    sq.
+    apply wf_ext_consistent in HeΣ as [v Hv].
+    rewrite /is_allowed_elimination /is_allowed_elimination0 cunivs in H.
+    specialize (H v Hv).
+    destruct u => //=.
+  Qed.
   Next Obligation.
     unfold is_allowed_elimination, is_allowed_elimination0.
     destruct check_univs; auto.
@@ -865,8 +879,15 @@ Section Typecheck.
       + discriminate.
   Qed.
   Next Obligation.
-  Admitted.
+    pose proof HeΣ as HeΣ.
+    sq.
+    apply wf_ext_consistent in HeΣ as [v Hv].
+    rewrite /is_allowed_elimination /is_allowed_elimination0 cunivs in H.
+    specialize (H v Hv).
+    destruct u => //=.
+  Qed.
   Next Obligation.
+    sq.
     unfold is_allowed_elimination, is_allowed_elimination0.
     destruct check_univs eqn:cu; auto.
     intros val sat.
@@ -881,13 +902,28 @@ Section Typecheck.
           rewrite cu in check.
           specialize (check val sat).
           now rewrite check.
-        * destruct HΣ, Hφ.
-          now apply wf_ext_global_uctx_invariants.
-        * destruct HΣ, Hφ.
-          now apply global_ext_uctx_consistent.
+        * now apply wf_ext_global_uctx_invariants.
+        * now apply global_ext_uctx_consistent.
   Qed.
   Next Obligation.
-  Admitted.    
+    pose proof HeΣ as HeΣ.
+    sq.
+    apply wf_ext_consistent in HeΣ as [v Hv].
+    rewrite /is_allowed_elimination /is_allowed_elimination0 cunivs in H.
+    destruct u => //=.
+    cbn in e0.
+    move: e0.
+    unshelve epose proof (eq_universeP _ _ _ _ _ t Universe.type0 _ _) ; tea.
+    1-2: now sq.
+    1: admit.
+    destruct X => //.
+    eapply eq_diff in f as [v' [Hv' Habs]].
+    intros _.
+    specialize (H v' Hv').
+    apply Habs.
+    cbn in *.
+    now destruct (val v' t).
+  Admitted.
   Next Obligation.
     unfold is_allowed_elimination, is_allowed_elimination0.
     destruct check_univs; auto.
@@ -901,7 +937,7 @@ Section Typecheck.
       n ctors brs ∥).
 
   Section check_brs.
-    Context (infer : forall (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }))
+    Context (infer : forall (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result_comp ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }))
      (Γ : context) (wfΓ : ∥ wf_local Σ Γ ∥) (ps : Universe.t)
      (ci : case_info) (mdecl : mutual_inductive_body)
      (idecl : one_inductive_body) (p : predicate term) (args : list term).
@@ -942,7 +978,7 @@ Section Typecheck.
     Equations check_branches (n : nat) (ctors : list constructor_body)
       (brs : list (branch term)) 
       (isdecl : ∥ Alli (fun i cdecl => declared_constructor Σ (ci, i) mdecl idecl cdecl) n ctors ∥)
-      : typing_result (wt_brs Γ ci mdecl idecl p ps ptm ctors brs n) by struct brs := 
+      : typing_result_comp (wt_brs Γ ci mdecl idecl p ps ptm ctors brs n) by struct brs := 
 
       check_branches n [] [] i := ret _ ;
       
@@ -1036,12 +1072,12 @@ Section Typecheck.
   Qed.
 
   Section check_mfix.
-  Context (infer : forall (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }))
+  Context (infer : forall (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term), typing_result_comp ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }))
      (Γ : context) (wfΓ : ∥ wf_local Σ Γ ∥).
 
   Equations check_mfix_types (mfix : mfixpoint term)
-  : typing_result (∥ All (fun x => isType Σ Γ (dtype x)) mfix ∥) :=
-    check_mfix_types [] := Checked (sq All_nil) ;
+  : typing_result_comp (∥ All (fun x => isType Σ Γ (dtype x)) mfix ∥) :=
+    check_mfix_types [] := Checked_comp (sq All_nil) ;
     (* (* probably not tail recursive but needed so that next line terminates *)
       check_mfix_types mfix ;;
       infer_type infer Γ wfΓ (dtype def) ;;
@@ -1073,11 +1109,11 @@ Section Typecheck.
     (wf_types : ∥ All (fun x => isType Σ Γ (dtype x)) mfix ∥)
     (Δ : context)
     (wfΔ : ∥ wf_local Σ (Γ,,,Δ) ∥)
-    : typing_result (∥ All (fun d =>
+    : typing_result_comp (∥ All (fun d =>
         Σ ;;; Γ ,,, Δ |-
           dbody d ◃ (lift0 #|Δ|) (dtype d)) mfix∥) :=
 
-    check_mfix_bodies [] _ _ _ := Checked (sq All_nil) ;
+    check_mfix_bodies [] _ _ _ := Checked_comp (sq All_nil) ;
 
     check_mfix_bodies (def :: mfix) wf_types Δ wfΔ :=
       bdcheck infer (Γ ,,, Δ) _ (dbody def) (lift0 #|Δ| (dtype def)) _ ;;
@@ -1124,10 +1160,10 @@ Section Typecheck.
   Qed.
 
   Local Notation check_eq_true b e :=
-    (if b as b' return (typing_result (is_true b')) then ret eq_refl else raise e).
+    (if b as b' return (typing_result_comp (is_true b')) then ret eq_refl else raise e).
 
   Equations infer (Γ : context) (HΓ : ∥ wf_local Σ Γ ∥) (t : term)
-  : typing_result ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }) by struct t :=
+  : typing_result_comp ({ A : term & ∥ Σ ;;; Γ |- t ▹ A ∥ }) by struct t :=
 
   infer Γ HΓ (tRel n)
     with inspect (nth_error Γ n) := {
@@ -1147,7 +1183,7 @@ Section Typecheck.
   infer Γ HΓ (tProd na A B) :=
     s1 <- infer_type infer Γ HΓ A ;;
     s2 <- infer_type infer (Γ,,vass na A) _ B ;;
-    Checked (tSort (Universe.sort_of_product s1.π1 s2.π1);_) ;
+    Checked_comp (tSort (Universe.sort_of_product s1.π1 s2.π1);_) ;
 
   infer Γ HΓ (tLambda na A t) :=
     infer_type infer Γ HΓ A ;;
@@ -1182,8 +1218,8 @@ Section Typecheck.
     ret (ty; _) ;
 
   infer Γ HΓ (tConstruct ind k u) with lookup_ind_decl ind := {
-    | TypeError e absurd := raise e ;
-    | Checked (mdecl;(idecl;decl))
+    | TypeError_comp e absurd := raise e ;
+    | Checked_comp (mdecl;(idecl;decl))
         with inspect (nth_error idecl.(ind_ctors) k) := {
     | exist (Some cdecl) HH :=
       check_consistent_instance mdecl.(ind_universes) u ;;
@@ -1229,8 +1265,8 @@ Section Typecheck.
       ret (mkApps ptm (indices ++ [c]); _) ;
 
   infer Γ HΓ (tProj (ind, n, k) c) with lookup_ind_decl ind := {
-    | TypeError e absurd := raise e ;
-    | Checked (mdecl;(idecl;decl))
+    | TypeError_comp e absurd := raise e ;
+    | Checked_comp (mdecl;(idecl;decl))
       with inspect (nth_error idecl.(ind_projs) k) := {
         | exist None _ := raise (Msg "projection not found") ;
         | exist (Some pdecl) HH =>
@@ -1819,16 +1855,15 @@ Section Typecheck.
     destruct I as [ind' [u [args []]]].
     destruct d as [mdecl [idecl isdecl]].
     cbn in *.
-    intros. sq.
+    intros.
     destruct X as [? [ty]].
     inversion ty ; subst.
     eapply declared_inductive_inj in isdecl as []; tea.
     subst.
     apply absurd.
     unshelve eapply (compare_global_instance_complete _ _ _ _ _ _ _ Cumul) ; tea.
-    - now sq.
-    - now sq. 
-    - apply/wf_universe_instanceP.
+    - sq.
+      apply/wf_universe_instanceP.
       rewrite -wf_universeb_instance_forall.
       assert (tyu : isType Σ Γ (mkApps (tInd ind' u) args)).
       {
@@ -1840,12 +1875,14 @@ Section Typecheck.
       rewrite wf_universes_mkApps in tyu.
       now move: tyu => /andP [].
 
-    - apply infering_typing, typing_wf_universes in ty ; tea.
+    - sq.
+      apply infering_typing, typing_wf_universes in ty ; tea.
       move: ty => /andP [].
       now rewrite {1}/wf_universes /= wf_universeb_instance_forall =>
         /andP [] /wf_universe_instanceP.
 
-    - eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
+    - sq.
+      eapply infering_ind_ind in X2 as [args'' []] ; try assumption.
       2: now econstructor ; tea ; apply closed_red_red.
       subst.
       erewrite All2_length.
@@ -2144,7 +2181,7 @@ Section Typecheck.
 
 (* 
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A
-    : typing_result (∥ isWfArity Σ Γ A ∥) :=
+    : typing_result_comp (∥ isWfArity Σ Γ A ∥) :=
     match destArity [] A with
     | None => raise (Msg (print_term Σ Γ A ^ " is not an arity"))
     | Some (ctx, s) => XX <- check_context (Γ ,,, ctx) ;;
@@ -2158,7 +2195,7 @@ Section Typecheck.
   Definition check_isType := infer_isType infer.
 
   Equations check Γ (HΓ : ∥ wf_local Σ Γ ∥) t A
-    : typing_result (∥ Σ;;; Γ |- t : A ∥) :=
+    : typing_result_comp (∥ Σ;;; Γ |- t : A ∥) :=
     check Γ HΓ t A :=
       check_isType Γ HΓ A ;;
       bdcheck infer Γ HΓ t A _ ;;

@@ -1739,13 +1739,13 @@ Section ReduceFns.
   Qed.
 
   Equations? reduce_to_sort (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result (∑ u, ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
+    : typing_result_comp (∑ u, ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
     reduce_to_sort Γ t h with view_sortc t := {
-      | view_sort_sort s => Checked (s; _);
+      | view_sort_sort s => Checked_comp (s; _);
       | view_sort_other t _ with inspect (hnf Γ t h) :=
         | exist hnft eq with view_sortc hnft := {
-          | view_sort_sort s => Checked (s; _);
-          | view_sort_other hnft r => TypeError (NotASort hnft) _
+          | view_sort_sort s => Checked_comp (s; _);
+          | view_sort_other hnft r => TypeError_comp (NotASort hnft) _
         }
       }.
   Proof.
@@ -1766,7 +1766,7 @@ Section ReduceFns.
   Qed.
 
   Lemma reduce_to_sort_complete {Γ t wt} e p :
-    reduce_to_sort Γ t wt = TypeError e p ->
+    reduce_to_sort Γ t wt = TypeError_comp e p ->
     (forall s, red Σ Γ t (tSort s) -> False).
   Proof.
     intros _ s r.
@@ -1777,13 +1777,13 @@ Section ReduceFns.
   Qed.
 
   Equations? reduce_to_prod (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result (∑ na a b, ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
+    : typing_result_comp (∑ na a b, ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
     reduce_to_prod Γ t h with view_prodc t := {
-      | view_prod_prod na a b => Checked (na; a; b; _);
+      | view_prod_prod na a b => Checked_comp (na; a; b; _);
       | view_prod_other t _ with inspect (hnf Γ t h) :=
         | exist hnft eq with view_prodc hnft := {
-          | view_prod_prod na a b => Checked (na; a; b; _);
-          | view_prod_other hnft _ => TypeError (NotAProduct t hnft) _
+          | view_prod_prod na a b => Checked_comp (na; a; b; _);
+          | view_prod_other hnft _ => TypeError_comp (NotAProduct t hnft) _
         }
       }.
   Proof.
@@ -1803,7 +1803,7 @@ Section ReduceFns.
   Qed.
 
   Lemma reduce_to_prod_complete {Γ t wt} e p :
-    reduce_to_prod Γ t wt = TypeError e p ->
+    reduce_to_prod Γ t wt = TypeError_comp e p ->
     (forall na a b, red Σ Γ t (tProd na a b) -> False).
   Proof.
     intros _ na a b r.
@@ -1814,16 +1814,16 @@ Section ReduceFns.
   Qed.
 
   Equations? reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result (∑ i u l, ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
+    : typing_result_comp (∑ i u l, ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
-        | view_ind_tInd i u => Checked (i; u; args; _);
+        | view_ind_tInd i u => Checked_comp (i; u; args; _);
         | view_ind_other thd _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t [] h) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i' u with inspect (decompose_stack π) := {
-              | exist (l, _) eq_decomp' => Checked (i'; u; l; _)
+              | exist (l, _) eq_decomp' => Checked_comp (i'; u; l; _)
               };
-            | view_ind_other _ _ => TypeError (NotAnInductive t) _
+            | view_ind_other _ _ => TypeError_comp (NotAnInductive t) _
             }
           }
         }
@@ -1880,7 +1880,7 @@ Section ReduceFns.
   Qed.
 
   Lemma reduce_to_ind_complete Γ ty wat e p :
-    reduce_to_ind Γ ty wat = TypeError e p ->
+    reduce_to_ind Γ ty wat = TypeError_comp e p ->
     forall ind u args,
       red Σ Γ ty (mkApps (tInd ind u) args) ->
       False.

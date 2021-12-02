@@ -321,11 +321,24 @@ Definition string_of_type_error Σ (e : type_error) : string :=
 
 Inductive typing_result (A : Type) :=
 | Checked (a : A)
-| TypeError (t : type_error) (a : A -> False).
+| TypeError (t : type_error).
 Global Arguments Checked {A} a.
-Global Arguments TypeError {A} t a.
+Global Arguments TypeError {A} t.
 
-(* #[global]
+Inductive typing_result_comp (A : Type) :=
+| Checked_comp (a : A)
+| TypeError_comp (t : type_error) (a : A -> False).
+Global Arguments Checked_comp {A} a.
+Global Arguments TypeError_comp {A} t a.
+
+Coercion typing_error_forget {A : Type} (t : typing_result_comp A) :
+  typing_result A :=
+  match t with
+    | Checked_comp a => Checked a
+    | TypeError_comp e a => TypeError e
+  end.
+
+#[global]
  Instance typing_monad : Monad typing_result :=
   {| ret A a := Checked a ;
      bind A B m f :=
@@ -343,7 +356,7 @@ Instance monad_exc : MonadExc type_error typing_result :=
       | Checked a => m
       | TypeError t => f t
       end
-  }. *)
+  }.
 
 Inductive env_error :=
 | IllFormedDecl (e : string) (e : type_error)
@@ -377,10 +390,10 @@ Global Instance envcheck_monad_exc
 Definition wrap_error {A} Σ (id : string) (check : typing_result A) : EnvCheck A :=
   match check with
   | Checked a => CorrectDecl a
-  | TypeError e a => EnvError Σ (IllFormedDecl id e)
+  | TypeError e => EnvError Σ (IllFormedDecl id e)
   end.
 
-(* Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
+Lemma monad_map_All2 (X Y : Type) (f : X -> typing_result Y) (l1 : list X) (a1 : list Y) :
   monad_map f l1 = ret a1 -> All2 (fun a b => f a = ret b) l1 a1.
 Proof.
   induction l1 in a1 |- *; cbn; intros.
@@ -440,4 +453,4 @@ Proof.
     simpl. intro h. inv h.
     destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
     eexists _,_. rewrite -> H, H0. intuition eauto.
-Qed. *)
+Qed.

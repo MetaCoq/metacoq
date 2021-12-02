@@ -415,6 +415,26 @@ Proof.
   all: now eapply red_terms_equality_terms.
 Qed.
 
+Theorem infering_ind_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
+  {Γ} (wfΓ : wf_local Σ Γ) {t ind u args T} :
+  Σ ;;; Γ |- t ▹{ind} (u,args) ->
+  Σ ;;; Γ |- t ▹ T ->
+  ∑ args',
+    Σ ;;; Γ ⊢ T ⇝ mkApps (tInd ind u) args' ×
+      red_terms Σ Γ args args'.
+Proof.
+  intros ty ty'.
+  depelim ty.
+  eapply into_closed_red in r.
+  2: fvs.
+  2: now eapply type_is_open_term, infering_typing.
+  eapply bidirectional_unique in i as [? []]; tea.
+  eapply closed_red_confluence in r as [? [? rind]]; tea.
+  eapply invert_red_mkApps_tInd in rind as [args' []]; subst.
+  exists args' ; split ; tea.
+  now etransitivity.
+Qed.
+
 Corollary principal_type `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ t T} :
   Σ ;;; Γ |- t : T ->
   ∑ T',

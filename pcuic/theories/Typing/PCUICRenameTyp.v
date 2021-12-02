@@ -159,24 +159,10 @@ Lemma on_free_vars_rename P f t :
   on_free_vars P (rename f t) = on_free_vars (P ∘ f) t.
 Admitted. 
 
-Lemma urename_is_open_term P Γ Δ f u : let sP := shiftnP #|Γ| P in
-   urenaming sP Δ Γ f -> is_closed_context Γ -> is_closed_context Δ -> is_open_term Γ u -> is_open_term Δ (rename f u).
-   intros sP hf HΓ HΔ Hu. rewrite on_free_vars_rename.
-   eapply on_free_vars_impl. 2: tea. clear Hu. intros n Hn.
-   unfold urenaming in hf. 
-   specialize (hf n). destruct (nth_error Γ n) eqn : Hnth.
-   - specialize (hf c); cbn in hf. forward hf. 
-     * unfold shiftnP in Hn. unfold sP , shiftnP.
-       rewrite orb_false_r in Hn. intuition. 
-     * destruct (hf eq_refl) as [decl' [Hfn _]].
-       unfold sP , shiftnP. rewrite orb_false_r. 
-       clear -HΔ Hfn. assert (f n < #|Δ|). 
-       { eapply nth_error_Some'. exists decl'. eauto. }
-       toProp; eauto.   
-  - rewrite nth_error_None in Hnth. unfold shiftnP in *. rewrite orb_false_r in Hn. 
-    toProp Hn. clear -Hn Hnth. intuition.
-Defined. 
-
+Lemma rename_on_free_vars n t f :
+  on_free_vars (shiftnP n xpred0) t -> rename (shiftn n f) t = t.
+Proof.
+Admitted.
 
 Lemma urename_on_free_vars_shift P Γ Δ f u (Ξ:list context_decl) : 
    let sP := shiftnP #|Γ| P in
@@ -210,6 +196,17 @@ Lemma urename_on_free_vars_shift P Γ Δ f u (Ξ:list context_decl) :
     * toProp H. destruct H; [toProp H |]; intuition.      
 Defined.  
 
+Lemma urename_is_open_term P Γ Δ f u : let sP := shiftnP #|Γ| P in
+   urenaming sP Δ Γ f -> is_closed_context Γ -> is_closed_context Δ -> is_open_term Γ u -> is_open_term Δ (rename f u).
+Proof.
+  intros sP hf HΓ HΔ Hu.
+  unfold is_open_term.
+  rewrite <- (shiftnP0 (shiftnP #|Δ| xpred0)).
+  rewrite <- (shiftn0 f).
+  eapply urename_on_free_vars_shift with (Ξ:=[]); eauto.
+  rewrite shiftnP0; eauto. 
+Defined. 
+
 Lemma on_free_vars_ctx_inst_case_context 
   P (Γ : list context_decl) (pars : list term)
   (puinst : Instance.t) (pctx : list context_decl) :
@@ -222,6 +219,61 @@ Proof.
   eapply on_free_vars_ctx_inst_case_context; trea; solve_all.
   rewrite test_context_k_closed_on_free_vars_ctx //.
 Qed.
+
+
+Lemma rename_context_on_free_vars f (p : predicate term) l  :
+on_free_vars_ctx (closedP #|pparams p| xpredT) l ->  
+rename_context (shiftn #|pparams p| f) l = l.
+Proof.
+  intro Hclosed. 
+  unfold on_free_vars_ctx in Hclosed. 
+  unfold rename_context, fold_context_k. 
+  induction l; eauto.
+  cbn in *. rewrite alli_app in Hclosed. toProp Hclosed.
+  destruct Hclosed as [H Hclosed]. 
+  rewrite mapi_rec_app. rewrite List.distr_rev.
+  rewrite IHl; eauto.
+  cbn in *. f_equal.
+  toProp Hclosed. destruct Hclosed as [Hclosed _].
+  destruct a; unfold map_decl; cbn.
+  unfold on_free_vars_decl in Hclosed. 
+  unfold test_decl in Hclosed.
+  toProp Hclosed. cbn in Hclosed.
+  destruct Hclosed as [Hbody Htype].
+  f_equal.
+  - destruct decl_body; eauto; cbn in *. 
+    f_equal. rewrite closedP_shiftnP in Hbody.
+    rewrite shiftnP_add in Hbody. rewrite shiftn_add.
+    apply rename_on_free_vars; eauto.
+  - rewrite closedP_shiftnP in Htype.
+    rewrite shiftnP_add in Htype. rewrite shiftn_add.
+    apply rename_on_free_vars; eauto.
+Defined.
+
+Lemma inst_case_predicate_context_rename f p :  
+  on_free_vars_ctx (closedP #|pparams p| xpredT) (pcontext p) ->
+  inst_case_predicate_context (rename_predicate f p) = rename_context f (inst_case_predicate_context p).
+Proof. 
+  intro Hclosed. unfold inst_case_predicate_context.
+  unfold pparams at 1. cbn.
+  replace (pcontext p) with 
+  (rename_context (shiftn #|(pparams p)| f) (pcontext p)) at 1.
+  - rewrite <- rename_inst_case_context. reflexivity.
+  - apply rename_context_on_free_vars; eauto.
+Defined.   
+
+Lemma inst_case_branch_context_rename f p x :
+on_free_vars_ctx (closedP #|pparams p| xpredT) (bcontext x) ->  
+inst_case_branch_context (rename_predicate f p) 
+     (rename_branch f x) =
+     rename_context f (inst_case_branch_context p x).
+Proof.
+  intro Hclosed. unfold inst_case_branch_context. cbn. 
+  replace (bcontext x) with 
+  (rename_context (shiftn #|(pparams p)| f) (bcontext x)) at 1.
+  - rewrite <- rename_inst_case_context. reflexivity.
+  - apply rename_context_on_free_vars; eauto.
+Defined.     
 
 Lemma convSpec_renameP P Σ Γ Δ f A B : let sP := shiftnP #|Γ| P in
     wf Σ.1 ->
@@ -336,8 +388,13 @@ Proof.
          eapply (All2_All_mix_right Hp') in Xparam.
          eapply All2_impl. 1: tea. cbn; intros. destruct X as [[X [X''' X']] X'']. apply X'; eauto.
        + unfold preturn. cbn. rewrite (All2_fold_length Xcontext). eapply Xreturn; eauto.
-         ++ unfold inst_case_predicate_context.
-            admit.
+         ++ rewrite app_context_length.
+            eapply urenaming_ext; try apply shiftnP_add; try reflexivity. 
+            rewrite <- (All2_fold_length Xcontext).
+            rewrite <- inst_case_predicate_context_length.
+            rewrite test_context_k_closed_on_free_vars_ctx in Hcontext. 
+            rewrite inst_case_predicate_context_rename; eauto. 
+            apply urenaming_context; eauto.
          ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
             unfold inst_case_predicate_context. 
             apply on_free_vars_ctx_inst_case_context; eauto.
@@ -366,7 +423,13 @@ Proof.
        apply andb_and in Hx. destruct Hx as [Hx Hbodyx].
        apply andb_and in Hy. destruct Hy as [Hy Hbodyy].
        apply Heqxy; eauto.
-       + admit.
+       + rewrite app_context_length.
+       eapply urenaming_ext; try apply shiftnP_add; try reflexivity. 
+       rewrite <- (All2_fold_length Hbcontext).
+       rewrite <- (inst_case_branch_context_length p).
+       rewrite test_context_k_closed_on_free_vars_ctx in Hx. 
+       rewrite inst_case_branch_context_rename; eauto. 
+       apply urenaming_context; eauto.
        + rewrite test_context_k_closed_on_free_vars_ctx in Hx.
          unfold inst_case_predicate_context.
          apply on_free_vars_ctx_inst_case_context; eauto.
@@ -399,7 +462,12 @@ Proof.
       + cbn in Hx; eapply andb_and in Hx. intuition.
       + cbn in Hy; eapply andb_and in Hy. intuition.
     * eapply Hbody; eauto. 
-      + admit. 
+      + rewrite app_context_length.
+      eapply urenaming_ext; try apply shiftnP_add; try reflexivity. 
+      rewrite <- (All2_length X).
+      rewrite rename_fix_context.
+      rewrite <- fix_context_length.
+      apply urenaming_context; eauto. 
       + rewrite on_free_vars_ctx_app. 
         apply andb_and; split; eauto.
         apply on_free_vars_fix_context.
@@ -441,7 +509,43 @@ Proof.
     * eapply Htype; eauto. 
       + cbn in Hx; eapply andb_and in Hx. intuition.
       + cbn in Hy; eapply andb_and in Hy. intuition.
-    * eapply Hbody; eauto. all : admit.
+    * eapply Hbody; eauto. 
+      + rewrite app_context_length.
+      eapply urenaming_ext; try apply shiftnP_add; try reflexivity. 
+      rewrite <- (All2_length X).
+      rewrite rename_fix_context.
+      rewrite <- fix_context_length.
+      apply urenaming_context; eauto. 
+      + rewrite on_free_vars_ctx_app. 
+        apply andb_and; split; eauto.
+        apply on_free_vars_fix_context.
+        eapply All2_All_left. 1: tea. cbn; intros.
+        apply X3.1.  
+      + unfold test_def in Hx. apply andb_and in Hx. 
+        destruct Hx as [_ Hx]. 
+        unfold is_open_term. rewrite app_length.
+        rewrite <- shiftnP_add. 
+        rewrite fix_context_length. exact Hx.    
+      + unfold test_def in Hy. apply andb_and in Hy. 
+        destruct Hy as [_ Hy]. 
+        unfold is_open_term. rewrite app_length.
+        rewrite <- shiftnP_add. 
+        rewrite fix_context_length. 
+        rewrite (All2_length X). exact Hy.    
+      + rewrite on_free_vars_ctx_app.   
+        apply andb_and; split; eauto.
+        apply on_free_vars_fix_context.
+        apply All_map. 
+        eapply All2_All_left. 1: tea. cbn ; intros.
+        destruct X3 as [[Hx0 _] _].
+        unfold test_def. unfold test_def in Hx0.
+        apply andb_and in Hx0. destruct Hx0 as [Hx0type Hx0body].
+        apply andb_and. cbn. split. 
+        ++ eapply urename_is_open_term; eauto.
+        ++ rewrite map_length. rewrite <-(All2_length X).
+           rewrite <- fix_context_length.
+           eapply urename_on_free_vars_shift; eauto.
+           rewrite fix_context_length; eauto. 
   - repeat rewrite rename_mkApps. eapply cumul_Ind.
     * repeat rewrite map_length; eauto.
     * rewrite on_free_vars_mkApps in H1; 
@@ -466,7 +570,7 @@ Proof.
       eapply Hxy; eauto.   
   - eapply cumul_Sort; eauto.
   - eapply cumul_Const; eauto.
-Admitted. 
+Defined. 
 
 Lemma cumulSpec_renameP P Σ Γ Δ f A B : let sP := shiftnP #|Γ| P in
     wf Σ.1 ->

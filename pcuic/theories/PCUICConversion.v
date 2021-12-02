@@ -3618,44 +3618,6 @@ Section MoreCongruenceLemmas.
 
   Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
 
-  (* Lemma equality_Evar_ {le Γ ev args0 args args0' args'} :
-  All2 (equality false Σ Γ) args0 args0' ->
-  All2 (equality false Σ Γ) args args' ->
-  Σ;;; Γ ⊢ tEvar ev (args0 ++ args) ≤[le] tEvar ev (args0' ++ args').
-Proof.
-  intros cum_args0 cum_args.
-  revert args args' cum_args.
-  induction cum_args0; intros args args' cum_args; cbn ; eauto. 
-  - repeat rewrite app_nil_r; eauto.
-  - replace (args0 ++ x :: l) with ((args0 ++ [x]) ++ l) by admit. 
-    replace (args0' ++ y :: l') with ((args0' ++ [y]) ++ l') by admit. 
-    eapply IHcum_args.
-    etransitivity.
-  - eapply equality_App_l; tea; eauto with fvs.
-  - eapply equality_App_r; eauto with fvs.
-Qed. *)
-
-
-  (* Lemma equality_Eval_r {le Γ ev u v args args'} :
-  Σ ;;; Γ ⊢ tEvar ev args ≤[le] tEvar ev args' ->
-  Σ ;;; Γ ⊢ u ≤[le] v ->
-  Σ ;;; Γ ⊢ tEvar ev (args ++ [u]) ≤[le] tEvar ev (args' ++ [v]).
-  Proof.
-    intros Hargs Huv.
-    induction Huv; cbn. 
-    - constructor; cbn; eauto with fvs. cbn in c.
-      destruct le; constructor; eauto with fvs; try reflexivity.
-      + eapply leq_term_leq_term_napp; tc; tas.
-      + apply eq_term_eq_term_napp; tc; tas.repeat rewrite app_nil_r; eauto. 
-  
-   - eapply red_equality_left; tea.
-      econstructor; tea; cbn; eauto with fvs.
-      eapply red1_red. constructor; auto.
-    - eapply red_equality_right; tea.
-      econstructor; tea; cbn; eauto with fvs.
-      eapply red1_red. constructor; auto.
-  Qed. *)
-
   Lemma red_terms_evar Γ args args0 ev : 
     red_terms Σ Γ args args0 -> red Σ Γ (tEvar ev args) (tEvar ev args0).
     intros Hargs. eapply red_evar. 
@@ -3739,6 +3701,18 @@ Section CumulSpecIsCumulAlgo.
 
 Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
 
+Lemma on_free_vars_ctx_inst_case_context_xpred0 (Γ : list context_decl) (pars : list term)
+  (puinst : Instance.t) (pctx : list context_decl) :
+  forallb (on_free_vars (shiftnP #|Γ| xpred0)) pars ->
+  on_free_vars_ctx (closedP #|pars| xpredT) pctx ->
+  on_free_vars_ctx xpred0 Γ ->
+  on_free_vars_ctx xpred0 (Γ,,, inst_case_context pars puinst pctx).
+Proof.
+  intros. rewrite on_free_vars_ctx_app H1 /=.
+  eapply on_free_vars_ctx_inst_case_context; trea; solve_all.
+  rewrite test_context_k_closed_on_free_vars_ctx //.
+Qed.
+
 Proposition cumulSpec_cumulAlgo (Γ : closed_context) (M N : open_term Γ) :
   Σ ;;; Γ |- M =s N  ->
   Σ ;;; Γ ⊢ M = N.
@@ -3793,7 +3767,8 @@ Proof.
         eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].   
         eapply Heqxy.2; eauto. 
       + eapply Hpret.
-        ++ admit. 
+        ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
+           unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context_xpred0; eauto. 
         ++ admit.
         ++ admit.    
     * unfold equality_brs. clear - Hbrs Hbrs' HΓ Hbrsbrs'.

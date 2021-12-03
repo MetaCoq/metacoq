@@ -335,15 +335,11 @@ Local Open Scope univ_scope.
 Definition gc_leq_universe_n n ctrs (u u' : Universe.t)
   := forall v, gc_satisfies v ctrs -> ⟦ u ⟧_v <_n ⟦u'⟧_v.
 
-Definition gc_eq_universe0 φ (u u' : Universe.t) :=
+Definition gc_eq_universe φ (u u' : Universe.t) :=
   forall v, gc_satisfies v φ -> ⟦ u ⟧_v = ⟦ u' ⟧_v.
 
 Definition gc_leq_universe φ (u u' : Universe.t)
-  := if check_univs then gc_leq_universe_n 0 φ u u' else True.
-
-Definition gc_eq_universe φ (u u' : Universe.t)
-  := if check_univs then gc_eq_universe0 φ u u' else True.
-
+  := gc_leq_universe_n 0 φ u u'.
 
 Lemma gc_leq_universe_n_iff n ctrs u u' :
   leq_universe_n n ctrs u u'
@@ -367,18 +363,17 @@ Proof.
 Defined.
 
 Lemma gc_leq_universe_0_iff ctrs u u':
-  leq_universe0 ctrs u u'
+  leq_universe ctrs u u'
   <-> on_Some_or_None (fun ctrs => gc_leq_universe_n 0 ctrs u u')
                       (gc_of_constraints ctrs).
 Proof.
-  rewrite leq_universe0_leq_universe_n.
+  rewrite leq_universe_leq_universe_n.
   apply gc_leq_universe_n_iff.
 Qed.
 
-
-Lemma gc_eq_universe0_iff ctrs u u' :
-  eq_universe0 ctrs u u'
-  <-> on_Some_or_None (fun ctrs => gc_eq_universe0 ctrs u u')
+Lemma gc_eq_universe_iff ctrs u u' :
+  eq_universe ctrs u u'
+  <-> on_Some_or_None (fun ctrs => gc_eq_universe ctrs u u')
                     (gc_of_constraints ctrs).
 Proof.
   split.
@@ -401,21 +396,8 @@ Lemma gc_leq_universe_iff ctrs u u' :
   <-> on_Some_or_None (fun ctrs => gc_leq_universe ctrs u u')
                     (gc_of_constraints ctrs).
 Proof.
-  unfold leq_universe, leq_universe0, gc_leq_universe.
-  destruct check_univs.
+  unfold leq_universe, leq_universe, gc_leq_universe.
   apply gc_leq_universe_0_iff.
-  destruct (gc_of_constraints ctrs); reflexivity.
-Qed.
-
-Lemma gc_eq_universe_iff ctrs u u' :
-  eq_universe ctrs u u'
-  <-> on_Some_or_None (fun ctrs => gc_eq_universe ctrs u u')
-                    (gc_of_constraints ctrs).
-Proof.
-  unfold eq_universe, eq_universe0, gc_eq_universe.
-  destruct check_univs.
-  apply gc_eq_universe0_iff.
-  destruct (gc_of_constraints ctrs); reflexivity.
 Qed.
 
 End GC.
@@ -1636,8 +1618,7 @@ Section CheckLeq.
   Qed.
 
   Definition check_leqb_universe (u1 u2 : Universe.t) :=
-    ~~ check_univs
-    || (prop_sub_type && Universe.is_prop u1 && ~~ Universe.is_sprop u2)
+    (prop_sub_type && Universe.is_prop u1 && ~~ Universe.is_sprop u2)
     || Universe.eqb u1 u2
     || leqb_universe_n false u1 u2.
 
@@ -1647,7 +1628,7 @@ Section CheckLeq.
     : check_leqb_universe u1 u2 <-> gc_leq_universe uctx.2 u1 u2.
   Proof.
     unfold check_leqb_universe, gc_leq_universe.
-    destruct check_univs; split; cbn; trivial; intro H.
+    split; cbn; trivial; intro H.
     - move/orP: H => [/orP [/andP [/andP [ps isp] issp]|ps]|].
       destruct u1 => //.
       apply (leqb_universe_n_spec0 false). simpl.
@@ -1660,8 +1641,7 @@ Section CheckLeq.
   Qed.
 
   Definition check_eqb_universe (u1 u2 : Universe.t) :=
-    ~~ check_univs
-    || Universe.eqb u1 u2
+    Universe.eqb u1 u2
     || (leqb_universe_n false u1 u2 && leqb_universe_n false u2 u1).
 
   Lemma check_eqb_universe_exprs_spec (l1 l2 : Universe.t0)
@@ -1670,7 +1650,7 @@ Section CheckLeq.
     : check_eqb_universe l1 l2 <-> gc_eq_universe uctx.2 l1 l2.
   Proof.
     unfold check_eqb_universe, gc_eq_universe.
-    destruct check_univs; split;auto;intro H.
+    split;auto;intro H.
     - toProp H as [H|H].
       + apply univ_expr_eqb_true_iff in H; subst. intros v Hv; reflexivity.
       + toProp H as [H1 H2].
@@ -1702,33 +1682,32 @@ Section CheckLeq.
     destruct u1, u2; simpl; rewrite ?check_eqb_universe_exprs_spec; auto; cbn; unfold check_eqb_universe; 
     repeat rewrite ?orb_true_r ?orb_false_r ?andb_true_r ?andb_false_r; cbn.
     9:reflexivity.
-    all:unfold gc_eq_universe; destruct check_univs eqn:cu; cbn; try split; auto; try discriminate.
-    intros. all: try (red; intros v gc; simpl; auto).
+    all:unfold gc_eq_universe; cbn; try split; auto; try discriminate.
+    all: try (red; intros v gc; simpl; auto).
     all:try solve [intros Hgc; destruct HC as [v Hv]; specialize (Hgc v Hv); simpl in Hgc; try discriminate].
-    rewrite !andb_true_r in v.
     intros Hgc.
     destruct (Universe.exprs t0).
-    now rewrite fold_left_false andb_false_r in v.
+    now rewrite fold_left_false andb_false_r in Hgc.
     destruct (Universe.exprs t0).
-    now rewrite fold_left_false /= in v.
+    intros Hgc.
+    now rewrite fold_left_false /= in Hgc.
   Qed.
 
   Lemma check_eqb_universe_refl :
     forall u, check_eqb_universe u u.
   Proof.
     intro u. unfold check_eqb_universe.
-    rewrite Universe.eqb_refl.
-    rewrite ssrbool.orbT. reflexivity.
+    rewrite Universe.eqb_refl /=. reflexivity.
   Qed.
 
   Definition check_gc_constraint (gc : GoodConstraint.t) :=
-    negb check_univs || match gc with
-                       | gc_le l z l' => leqb_level_n z l l'
-                       | gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lSet (Level l)
-                       | gc_le_set_var k n => leqb_level_n (Z.of_nat k) lSet (Var n)
-                       | gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level l) lSet
-                       | gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Var n) lSet
-                       end.
+    match gc with
+    | gc_le l z l' => leqb_level_n z l l'
+    | gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lSet (Level l)
+    | gc_le_set_var k n => leqb_level_n (Z.of_nat k) lSet (Var n)
+    | gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level l) lSet
+    | gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Var n) lSet
+    end.
 
   Definition check_gc_constraints
     := GoodConstraintSet.for_all check_gc_constraint.
@@ -1741,9 +1720,9 @@ Section CheckLeq.
 
   Lemma check_gc_constraint_spec gc
     : check_gc_constraint gc
-      -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies0 v gc else True.
+      -> forall v, gc_satisfies v uctx.2 -> gc_satisfies0 v gc.
   Proof.
-    unfold check_gc_constraint. destruct check_univs; [cbn|trivial].
+    unfold check_gc_constraint. cbn.
     destruct gc as [l z l'|k l|k n|l k|n k].
     - intros HH v Hv; apply leqb_level_n_spec0 in HH.
       specialize (HH v Hv). cbn in *. toProp.
@@ -1766,10 +1745,10 @@ Section CheckLeq.
 
   Lemma check_gc_constraints_spec ctrs
     : check_gc_constraints ctrs
-      -> if check_univs then forall v, gc_satisfies v uctx.2 -> gc_satisfies v ctrs else True.
+      -> forall v, gc_satisfies v uctx.2 -> gc_satisfies v ctrs.
   Proof.
     pose proof check_gc_constraint_spec as XX.
-    unfold check_gc_constraint. destruct check_univs; [cbn|trivial].
+    unfold check_gc_constraint. cbn.
     intros HH v Hv.
     apply GoodConstraintSet.for_all_spec. now intros x y [].
     apply GoodConstraintSet.for_all_spec in HH. 2: now intros x y [].
@@ -1782,6 +1761,45 @@ Section CheckLeq.
                              (Universe.make l1) (Universe.make l2)) u1 u2.
 
 End CheckLeq.
+
+Section CheckLeq'.
+  Context {cf:checker_flags}.
+
+  Context (G : universes_graph)
+          uctx (Huctx: global_gc_uctx_invariants uctx) (HC : gc_consistent uctx.2)
+          (HG : G = make_graph uctx).
+ 
+  (*Lemma check_gc_constraint_complete gcs
+    : gc_consistent gcs -> check_gc_constraints G gcs.
+  Proof.
+    unfold check_gc_constraints. cbn.
+    intros [v Hv].
+    unfold gc_satisfies in Hv.
+    apply GoodConstraintSetFact.for_all_iff in Hv; eauto. 2:typeclasses eauto.
+    apply GoodConstraintSetFact.for_all_iff; eauto. typeclasses eauto.
+    intros gc hc. specialize (Hv gc hc). cbn in Hv.
+    unfold gc_satisfies0 in Hv.
+    destruct gc as [l z l'|k l|k n|l k|n k].
+    - cbn. apply (leqb_level_n_spec G uctx Huctx HC HG). admit. admit.
+      intros v' Hv'. cbn.
+      specialize (HH v Hv). cbn in *. toProp.
+      pose proof (val_level_of_variable_level v l).
+      pose proof (val_level_of_variable_level v l').
+      destruct l, l'; cbn in *; lled; lia.
+    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
+      specialize (HH v Hv). cbn -[Z.of_nat] in HH. unfold gc_satisfies0. toProp.
+      cbn in *. lled; lia.
+    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
+      specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
+      lled; lia.
+    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
+      specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
+      lled; lia.
+    - intros HH v Hv; apply leqb_level_n_spec0 in HH.
+      specialize (HH v Hv). cbn in HH. unfold gc_satisfies0. toProp.
+      lled; lia.
+  Qed. *)
+End CheckLeq'.
 
 (* This section: specif in term of raw uctx *)
 Section CheckLeq2.
@@ -1883,7 +1901,7 @@ Section CheckLeq2.
     : check_leqb_universe G u1 u2 -> leq_universe uctx.2 u1 u2.
   Proof.
     unfold check_leqb_universe, leq_universe.
-    destruct check_univs; cbn; [|trivial].
+    cbn.
     case_eq (prop_sub_type && Universe.is_prop u1 && ~~ Universe.is_sprop u2). {
       simpl. intros e e' v Hv. toProp e as [Hp Hu1]. toProp Hp as [ps isp].
       rewrite (is_prop_val _ isp v).
@@ -1922,7 +1940,7 @@ Section CheckLeq2.
     : check_eqb_universe G u1 u2 -> eq_universe uctx.2 u1 u2.
   Proof.
     unfold check_eqb_universe, eq_universe.
-    destruct check_univs; cbn; [|trivial].
+    cbn.
     case_eq (Universe.eqb u1 u2). {
       intros e _ v Hv. apply eqb_true_iff in e. now destruct e. }
     intros _; cbn.
@@ -1954,22 +1972,149 @@ Section CheckLeq2.
     exact eq.
   Qed.
 
+  Definition leq_level_n z l l' :=
+    leq_universe_n z uctx.2 (Universe.make l) (Universe.make l').
+
+  Definition valid_gc_constraint (gc : GoodConstraint.t) :=
+    match gc with
+    | gc_le l z l' => leq_level_n z l l'
+    | gc_lt_set_level k l => leq_level_n (Z.of_nat (S k)) lSet (Level l)
+    | gc_le_set_var k n => leq_level_n (Z.of_nat k) lSet (Var n)
+    | gc_le_level_set l k => leq_level_n (- Z.of_nat k)%Z (Level l) lSet
+    | gc_le_var_set n k => leq_level_n (- Z.of_nat k)%Z (Var n) lSet
+    end.
+
+  Definition valid_gc_constraints (gcs : GoodConstraintSet.t) :=
+    GoodConstraintSet.For_all valid_gc_constraint gcs.
+    
+  Lemma leq_level_n_complete z l l' :
+    level_declared l ->
+    level_declared l' ->
+    leq_level_n z l l' ->
+    leqb_level_n G z l l'.
+  Proof.
+    intros decll decll'.
+    unfold leq_level_n.
+    intros le; eapply gc_leq_universe_n_iff in le.
+    unfold is_graph_of_uctx, gc_of_uctx in HG.
+    destruct gc_of_constraints; [cbn in *|contradiction HG].
+    now apply (leqb_level_n_spec G _ Huctx' HC' HG' z l l' decll decll').
+  Qed.
+
+  Definition gc_levels_declared' (vset : VSet.t) gc :=
+     match gc with
+    | gc_le l _ l' => VSet.In (VariableLevel.to_noprop l) vset /\ 
+      VSet.In (VariableLevel.to_noprop l') vset
+     | gc_lt_set_level _ n | gc_le_level_set n _ =>
+	     VSet.In (Level.Level n) vset
+    | gc_le_set_var _ n | gc_le_var_set n _ => VSet.In (Level.Var n) vset
+     end.
+  
+  Definition gcs_levels_declared (vset : VSet.t) gcs :=
+    GoodConstraintSet.For_all (gc_levels_declared' vset) gcs.
+  
+  Lemma check_gc_constraint_complete cstr :
+    gc_levels_declared' uctx.1 cstr ->
+    valid_gc_constraint cstr ->
+    check_gc_constraint G cstr.
+  Proof.
+    destruct cstr; cbn; intros hin; apply leq_level_n_complete; intuition auto.
+    unfold level_declared. all:apply Huctx.
+  Qed.
+
+  Lemma check_gc_constraints_complete cstrs :
+    gcs_levels_declared uctx.1 cstrs ->
+    valid_gc_constraints cstrs ->
+    check_gc_constraints G cstrs.
+  Proof.
+    unfold gcs_levels_declared, valid_gc_constraints, check_gc_constraints.
+    intros hdecl hval.
+    eapply GoodConstraintSetFact.for_all_iff. typeclasses eauto.
+    intros cstr hcstr. specialize (hdecl cstr hcstr).
+    specialize (hval cstr hcstr). eapply check_gc_constraint_complete => //.
+  Qed.
+
+  Definition valid_gc_constraints_ext gc :=
+    forall v, satisfies v uctx.2 -> gc_satisfies v gc.
+
+  Lemma valid_gc_constraints_aux gc :
+    valid_gc_constraints_ext gc ->
+    valid_gc_constraints gc.
+  Proof.
+    intros Hv v inv.
+    unfold gc_satisfies in Hv.
+    destruct v; cbn in *; red;
+    intros v Hv'; specialize (Hv _ Hv');
+    eapply GoodConstraintSetFact.for_all_iff in Hv; try typeclasses eauto;
+    specialize (Hv _ inv); cbn in Hv; cbn; 
+    rewrite ?val_level_of_variable_level //.
+
+    now eapply Z.leb_le in Hv.
+    eapply Nat.leb_le in Hv. lia. 
+    apply Nat.leb_le in Hv. lia.
+    apply Nat.leb_le in Hv. lia.
+    apply Nat.leb_le in Hv. lia.
+  Qed.
+
+  Lemma valid_valid_gc cstrs gc : 
+    valid_constraints uctx.2 cstrs ->
+    gc_of_constraints cstrs = Some gc ->
+    valid_gc_constraints gc.
+  Proof.
+    intros Hgc vgc. apply valid_gc_constraints_aux.
+    intros v Hv.
+    pose proof (gc_of_constraints_spec v cstrs).
+    rewrite vgc /= in H. apply H. apply Hgc. apply Hv.
+  Qed.
+
+  Lemma gc_of_constraints_declared cstrs levels gc :
+    global_uctx_invariants (levels, cstrs) ->
+    gc_of_constraints cstrs = Some gc ->
+    gcs_levels_declared levels gc.
+  Proof.
+    intros Hlev hc.
+    pose proof (gc_of_uctx_invariants (levels, cstrs) (levels, gc)).
+    cbn in H. rewrite hc in H. specialize (H eq_refl). now apply H.
+  Qed.
+
   Lemma check_constraints_spec ctrs
     : check_constraints G ctrs -> valid_constraints uctx.2 ctrs.
   Proof.
     unfold check_constraints, valid_constraints.
-    case_eq (gc_of_constraints ctrs); [|discriminate].
+    case_eq (gc_of_constraints ctrs); [|try discriminate].
     intros ctrs' Hctrs' HH.
-    eapply (check_gc_constraints_spec _ uctx' Huctx' HC' HG') in HH.
-    destruct check_univs; cbn; [|trivial].
+    epose proof (check_gc_constraints_spec _ uctx' Huctx' HC' HG' _ HH).
     intros v Hv.
+    cbn. 
     apply gc_of_constraints_spec.
     apply gc_of_constraints_spec in Hv.
-    rewrite Hctrs'; cbn. apply HH.
+    rewrite Hctrs'; cbn. eapply H.
     clear -HG Hv.
     unfold is_graph_of_uctx, gc_of_uctx in HG.
-    now destruct (gc_of_constraints uctx.2).
+    destruct (gc_of_constraints uctx.2) => //; cbn in uctx', HG.
   Qed.
+
+  (* Completeness holds only for well-formed constraints sets *)
+  Lemma check_constraints_complete ctrs :
+    global_uctx_invariants (uctx.1, ctrs) ->
+    valid_constraints uctx.2 ctrs -> 
+    check_constraints G ctrs.
+  Proof.
+    intros.
+    unfold check_constraints.
+    case_eq (gc_of_constraints ctrs); [|try discriminate].
+    2:{ destruct HC as [v Hv].
+        pose proof (gc_of_constraints_spec v ctrs).
+        intros.
+        specialize (H0 v Hv).
+        rewrite H2 /= in H1. intuition. }
+    intros cstr gc.
+    eapply check_gc_constraints_complete.
+    { eapply gc_of_constraints_declared. 2:tea. cbn. red in H.  unfold is_graph_of_uctx, gc_of_uctx in HG.
+      destruct (gc_of_constraints uctx.2) => //; cbn in uctx', HG. }
+    eapply valid_valid_gc; tea.
+  Qed.
+
 End CheckLeq2.
 
 (* Show proof irrelevance: we are using sets with canonical representations to represent the graph *)

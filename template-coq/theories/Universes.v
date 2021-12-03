@@ -1400,114 +1400,67 @@ Section Univ.
 
   Definition consistent ctrs := exists v, satisfies v ctrs.
 
-  Definition eq_universe0 (φ : ConstraintSet.t) u u' :=
+  Definition eq_universe (φ : ConstraintSet.t) u u' :=
     forall v, satisfies v φ -> (Universe.univ_val v u = Universe.univ_val v u').
 
   Definition leq_universe_n n (φ : ConstraintSet.t) u u' :=
     forall v, satisfies v φ -> (univ_le_n n (Universe.univ_val v u) (Universe.univ_val v u'))%u.
 
-  Definition leq_universe0 (φ : ConstraintSet.t) u u' :=
+  Definition leq_universe (φ : ConstraintSet.t) u u' :=
     forall v, satisfies v φ -> (Universe.univ_val v u <= Universe.univ_val v u')%u.
 
-  Lemma leq_universe0_leq_universe_n (φ : ConstraintSet.t) u u' :
-    leq_universe0 φ u u' <-> leq_universe_n 0 φ u u'.
+  Lemma leq_universe_leq_universe_n (φ : ConstraintSet.t) u u' :
+    leq_universe φ u u' <-> leq_universe_n 0 φ u u'.
   Proof. intros. reflexivity. Qed.
 
   Definition lt_universe := leq_universe_n 1.
 
-  Definition eq_universe φ u u'
-    := if check_univs then eq_universe0 φ u u' else True.
-
-  Definition leq_universe φ u u'
-    := if check_univs then leq_universe0 φ u u' else True.
-
   (* ctrs are "enforced" by φ *)
 
-  Definition valid_constraints0 φ ctrs
-    := forall v, satisfies v φ -> satisfies v ctrs.
-
   Definition valid_constraints φ ctrs
-    := if check_univs then valid_constraints0 φ ctrs else True.
+    := forall v, satisfies v φ -> satisfies v ctrs.
 
   Lemma valid_subset φ φ' ctrs
     : ConstraintSet.Subset φ φ' -> valid_constraints φ ctrs
       ->  valid_constraints φ' ctrs.
   Proof.
     unfold valid_constraints.
-    destruct check_univs; [|trivial].
     intros Hφ H v Hv. apply H.
     intros ctr Hc. apply Hv. now apply Hφ.
   Qed.
 
-
   (** **** Lemmas about eq and leq **** *)
-
-  Global Instance eq_universe0_refl φ : Reflexive (eq_universe0 φ).
-  Proof.
-    intros vH s; reflexivity.
-  Qed.
 
   Global Instance eq_universe_refl φ : Reflexive (eq_universe φ).
   Proof.
-    intro s.
-    unfold eq_universe; destruct check_univs;
-      [apply eq_universe0_refl|constructor].
+    intros vH s; reflexivity.
   Qed.
-
-  Global Instance leq_universe0_refl φ : Reflexive (leq_universe0 φ).
+  
+  Global Instance leq_universe_refl φ : Reflexive (leq_universe φ).
   Proof.
     intros s vH;cbn;reflexivity.
   Qed.
 
-  Global Instance leq_universe_refl φ : Reflexive (leq_universe φ).
-  Proof.
-    intro s.
-    unfold leq_universe; destruct check_univs;
-      [apply leq_universe0_refl|constructor].
-  Qed.
-
-  Global Instance eq_universe0_sym φ : Symmetric (eq_universe0 φ).
+  Global Instance eq_universe_sym φ : Symmetric (eq_universe φ).
   Proof.
     intros s s' e vH. symmetry ; eauto.
   Qed.
 
-  Global Instance eq_universe_sym φ : Symmetric (eq_universe φ).
-  Proof.
-    unfold eq_universe. destruct check_univs ; eauto.
-    eapply eq_universe0_sym.
-  Qed.
-
-  Global Instance eq_universe0_trans φ : Transitive (eq_universe0 φ).
+  Global Instance eq_universe_trans φ : Transitive (eq_universe φ).
   Proof.
     intros s1 s2 s3 h1 h2 v h.
     etransitivity ; try eapply h1 ; eauto.
   Qed.
 
-  Global Instance eq_universe_trans φ : Transitive (eq_universe φ).
-  Proof.
-    intros s1 s2 s3.
-    unfold eq_universe. destruct check_univs ; auto.
-    intros h1 h2.
-    eapply eq_universe0_trans ; eauto.
-  Qed.
-
-  Global Instance leq_universe0_trans φ : Transitive (leq_universe0 φ).
+  Global Instance leq_universe_trans φ : Transitive (leq_universe φ).
   Proof.
     intros s1 s2 s3 h1 h2 v h. etransitivity.
     - eapply h1. assumption.
     - eapply h2. assumption.
   Qed.
 
-  Global Instance leq_universe_trans φ : Transitive (leq_universe φ).
-  Proof.
-    intros s1 s2 s3.
-    unfold leq_universe. destruct check_univs ; auto.
-    intros h1 h2.
-    eapply leq_universe0_trans ; eauto.
-  Qed.
-
   Lemma eq_leq_universe φ u u' :
-    eq_universe0 φ u u' <-> leq_universe0 φ u u' /\ leq_universe0 φ u' u.
+    eq_universe φ u u' <-> leq_universe φ u u' /\ leq_universe φ u' u.
   Proof.
     split.
     intro H; split; intros v Hv; specialize (H v Hv); now rewrite H.
@@ -1516,18 +1469,18 @@ Section Univ.
     destruct (Universe.univ_val v u), (Universe.univ_val v u'); try now auto.
   Qed.
 
-  Lemma leq_universe0_sup_l φ s1 s2 :
+  Lemma leq_universe_sup_l φ s1 s2 :
     Universe.is_prop s1 = false -> Universe.is_sprop s1 = false -> 
-    leq_universe0 φ s1 (Universe.sup s1 s2).
+    leq_universe φ s1 (Universe.sup s1 s2).
   Proof.
     intros H1 H2 v Hv.
     specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
     rewrite val_universe_sup Hzero. destruct (Universe.univ_val v s2); simpl; lia.
   Qed.
 
-  Lemma leq_universe0_sup_r φ s1 s2 :
+  Lemma leq_universe_sup_r φ s1 s2 :
     Universe.is_prop s2 = false -> Universe.is_sprop s2 = false -> 
-    leq_universe0 φ s2 (Universe.sup s1 s2).
+    leq_universe φ s2 (Universe.sup s1 s2).
   Proof.
     intros H1 H2 v Hv.
     specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
@@ -1535,14 +1488,14 @@ Section Univ.
     destruct (Universe.univ_val v s1); simpl; lia.
   Qed.
 
-  Lemma leq_universe0_sup_l' φ (s1 s2 : Universe.t0) :
-    leq_universe0 φ (Universe.lType s1) (Universe.lType (Universe.sup0 s1 s2)).
+  Lemma leq_universe_sup_l' φ (s1 s2 : Universe.t0) :
+    leq_universe φ (Universe.lType s1) (Universe.lType (Universe.sup0 s1 s2)).
   Proof.
     intros v Hv. cbn. rewrite val_sup. lia.
   Qed.
 
-  Lemma leq_universe0_sup_r' φ (s1 s2 : Universe.t0) :
-    leq_universe0 φ (Universe.lType s2) (Universe.lType (Universe.sup0 s1 s2)).
+  Lemma leq_universe_sup_r' φ (s1 s2 : Universe.t0) :
+    leq_universe φ (Universe.lType s2) (Universe.lType (Universe.sup0 s1 s2)).
   Proof.
     intros v Hv. cbn. rewrite val_sup. lia.
   Qed.
@@ -1550,30 +1503,25 @@ Section Univ.
   Lemma leq_universe_product φ (s1 s2 : Universe.t)
     : leq_universe φ s2 (Universe.sort_of_product s1 s2).
   Proof.
-    unfold leq_universe; destruct check_univs; [cbn|constructor].
+    unfold leq_universe; cbn.
     unfold Universe.sort_of_product.
-    destruct s2; cbn; try apply leq_universe0_refl.
-    destruct s1;cbn;try apply leq_universe0_refl.
-    apply leq_universe0_sup_r'.
+    destruct s2; cbn; try apply leq_universe_refl; auto.
+    destruct s1;cbn;try apply leq_universe_refl; try lia.
+    apply leq_universe_sup_r'.
   Qed.
   (* Rk: [leq_universe φ s1 (sort_of_product s1 s2)] does not hold due to
      impredicativity. *)
 
   Global Instance eq_universe_leq_universe φ : subrelation (eq_universe φ) (leq_universe φ).
   Proof.
-    unfold eq_universe, leq_universe; destruct check_univs; [|intuition].
+    unfold eq_universe, leq_universe; intuition.
     intros u u' HH v Hv. rewrite (HH v Hv). reflexivity.
   Qed.
 
-  Global Instance eq_universe0_equivalence φ : Equivalence (eq_universe0 φ) :=
+  Global Instance eq_universe_equivalence φ : Equivalence (eq_universe φ) :=
      {| Equivalence_Reflexive := _ ;
         Equivalence_Symmetric := _;
         Equivalence_Transitive := _ |}.
-
-  Global Instance eq_universe_equivalence φ : Equivalence (eq_universe φ) :=
-     {| Equivalence_Reflexive := eq_universe_refl _ ;
-        Equivalence_Symmetric := eq_universe_sym _;
-        Equivalence_Transitive := eq_universe_trans _ |}.
 
   Global Instance leq_universe_preorder φ : PreOrder (leq_universe φ) :=
      {| PreOrder_Reflexive := leq_universe_refl _ ;
@@ -1593,10 +1541,10 @@ Section Univ.
     intros. f_equal; lia.
   Qed.
 
-  Global Instance leq_universe0_antisym φ
-    : Antisymmetric _ (eq_universe0 φ) (leq_universe0 φ).
+  Global Instance leq_universe_antisym φ
+    : Antisymmetric _ (eq_universe φ) (leq_universe φ).
   Proof.
-    intros t u tu ut. unfold leq_universe0, eq_universe0 in *.
+    intros t u tu ut. unfold leq_universe, eq_universe in *.
     red in tu, ut.
     intros v sat.
     specialize (tu _ sat).
@@ -1604,13 +1552,7 @@ Section Univ.
     simpl in tu, ut.
     apply lle_antisym; tea.
   Qed.
-
-  Global Instance leq_universe_antisym φ
-    : Antisymmetric _ (eq_universe φ) (leq_universe φ).
-  Proof.
-    intros t u tu ut. unfold leq_universe, eq_universe in *.
-    destruct check_univs; [|trivial]. eapply leq_universe0_antisym; auto.
-  Qed.
+  
 
   Global Instance leq_universe_partial_order φ
     : PartialOrder (eq_universe φ) (leq_universe φ).
@@ -1619,7 +1561,6 @@ Section Univ.
     now eapply eq_universe_leq_universe, symmetry.
     intros [l r]. now eapply leq_universe_antisym.
   Defined.
-
 
   Definition eq_universe_leq_universe' {cf} φ u u'
     := @eq_universe_leq_universe cf φ u u'.
@@ -1630,7 +1571,7 @@ Section Univ.
 
   (** Elimination restriction *)
 
-  Definition is_allowed_elimination0
+  Definition is_allowed_elimination
              φ (into : Universe.t) (allowed : allowed_eliminations) : Prop :=
     forall v,
       satisfies v φ ->
@@ -1641,9 +1582,6 @@ Section Univ.
       | IntoAny, _ => True
       | _, _ => False
       end.
-  
-  Definition is_allowed_elimination φ into allowed :=
-    if check_univs then is_allowed_elimination0 φ into allowed else True.
   
   (* Is [a] a subset of [a']? *)
   Definition allowed_eliminations_subset (a a' : allowed_eliminations) : bool :=
@@ -1943,7 +1881,7 @@ Lemma leq_universe_product_mon {cf: checker_flags} ϕ u u' v v' :
   leq_universe ϕ v v' ->
   leq_universe ϕ (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
 Proof.
-  unfold leq_universe in *; destruct check_univs; [|trivial].
+  unfold leq_universe in *.
   intros H1 H2 vv Hv. specialize (H1 _ Hv). specialize (H2 _ Hv).
   cbn in *. unfold Universe.sort_of_product.
   destruct (Universe.is_prop v) eqn:e, (Universe.is_prop v') eqn:f;
@@ -1983,7 +1921,7 @@ Section UniverseLemmas.
   Context {cf:checker_flags}.
 
   Ltac unfold_eq_universe
-    := unfold eq_universe in *; destruct check_univs; [intros v Hv|trivial].
+    := unfold eq_universe in *; intros v Hv.
 
   Lemma sup0_idem s : Universe.sup0 s s = s.
   Proof.
@@ -2075,14 +2013,13 @@ Section no_prop_leq_type.
     leq_universe ϕ u u' ->
     leq_universe ϕ (Universe.super u) (Universe.super u').
   Proof.
-    unfold leq_universe. destruct check_univs; [|trivial].
+    unfold leq_universe. 
     intros H v Hv. specialize (H v Hv). simpl in *.
     destruct u as [| |], u' as  [| |]; lled; cbn -[Z.add] in *; try lia;
     rewrite !val_map_succ; lia.
   Qed.
 
   Lemma leq_universe_props u1 u2 :
-    check_univs ->
     consistent ϕ ->
     leq_universe ϕ u1 u2 ->
     match u1, u2 with
@@ -2096,55 +2033,51 @@ Section no_prop_leq_type.
     | Universe.lType _, _ => False
     end.
   Proof.
-    intros cu [v Hv].
-    unfold leq_universe. rewrite cu.
+    intros [v Hv].
+    unfold leq_universe.
     intros Hle. specialize (Hle _ Hv).
     destruct u1, u2; simpl; auto.
     simpl in Hle. now destruct prop_sub_type.
   Qed.
 
   Lemma leq_universe_prop_r u1 u2 :
-    check_univs ->
     consistent ϕ ->
     leq_universe ϕ u1 u2 ->
     Universe.is_prop u2 -> Universe.is_prop u1.
   Proof.
-    intros Hcf cu le.
+    intros cu le.
     apply leq_universe_props in le; auto.
     destruct u1, u2; simpl in *; auto.
   Qed.
 
   Lemma leq_universe_sprop_r u1 u2 :
-    check_univs ->
     consistent ϕ ->
     leq_universe ϕ u1 u2 ->
     Universe.is_sprop u2 -> Universe.is_sprop u1.
   Proof.
-    intros Hcf cu le.
+    intros cu le.
     apply leq_universe_props in le; auto.
     destruct u1, u2; simpl in *; auto.
   Qed.
   
   Lemma leq_universe_prop_no_prop_sub_type u1 u2 :
-    check_univs ->
     prop_sub_type = false ->
     consistent ϕ ->
     leq_universe ϕ u1 u2 ->
     Universe.is_prop u1 -> Universe.is_prop u2.
   Proof.
-    intros Hcf cu ps le.
+    intros cu ps le.
     apply leq_universe_props in le; auto.
     destruct u1, u2; simpl in *; auto.
     cong.
   Qed.
 
   Lemma leq_universe_sprop_l u1 u2 :
-    check_univs ->
     consistent ϕ ->
     leq_universe ϕ u1 u2 ->
     Universe.is_sprop u1 -> Universe.is_sprop u2.
   Proof.
-    intros Hcf cu le.
+    intros cu le.
     apply leq_universe_props in le; auto.
     destruct u1, u2; simpl in *; auto.
   Qed.
@@ -2158,7 +2091,7 @@ Section no_prop_leq_type.
     Universe.is_prop l -> Universe.is_prop l' ->
     leq_universe ϕ l l'.
   Proof.
-    red. destruct check_univs; [|trivial].
+    red.
     intros H1 H2 v Hv. eapply is_prop_val in H1; eapply is_prop_val in H2.
     rewrite -> H1, H2. lled; lia.
   Qed.
@@ -2167,37 +2100,34 @@ Section no_prop_leq_type.
     Universe.is_sprop l -> Universe.is_sprop l' ->
     leq_universe ϕ l l'.
   Proof.
-    red. destruct check_univs; [|trivial].
+    red.
     intros H1 H2 v Hv. eapply is_sprop_val in H1; eapply is_sprop_val in H2.
     rewrite -> H1, H2. lled; lia.
   Qed.
   
   Lemma leq_prop_is_prop_sprop {x s} :
-    check_univs ->
     prop_sub_type = false ->
     consistent ϕ ->
     leq_universe ϕ x s ->
     (Universe.is_prop s \/ Universe.is_sprop s <-> Universe.is_prop x \/ Universe.is_sprop x).
   Proof.
-    intros H H0 H1 H2; split;intros Hor; destruct Hor; eauto with univ_lemmas.
+    intros H0 H1 H2; split;intros Hor; destruct Hor; eauto with univ_lemmas.
   Qed.
 
   Lemma is_prop_gt l l' :
-    check_univs ->
     consistent ϕ ->
     leq_universe ϕ (Universe.super l) l' -> Universe.is_prop l' -> False.
   Proof.
-    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
+    intros [v Hv] H1 H2. rewrite /leq_universe in H1.
     eapply is_prop_val with (v:=v) in H2. specialize (H1 _ Hv).
     rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
   Qed.
   
   Lemma is_sprop_gt l l' :
-    check_univs ->
     consistent ϕ ->
     leq_universe ϕ (Universe.super l) l' -> Universe.is_sprop l' -> False.
   Proof.
-    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
+    intros [v Hv] H1 H2. rewrite /leq_universe in H1.
     eapply is_sprop_val with (v:=v) in H2. specialize (H1 _ Hv).
     rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
   Qed.

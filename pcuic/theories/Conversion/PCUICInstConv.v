@@ -1222,13 +1222,7 @@ Section Sigma.
 
 Context `{cf: checker_flags}.
 
-(*
-Lemma shift_Up_comm σ : ↑ ∘s ⇑ σ =1 ⇑ (⇑ σ).
-Proof.
-  intros i. unfold subst_compose. simpl.
-  unfold subst_compose, Up. simpl.
-  destruct i.
-  sigma. *)
+
 Lemma well_subst_Up {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ na A} :
   wf_local Σ (Δ ,, vass na A.[σ]) ->
   Σ ;;; Δ ⊢ σ : Γ ->
@@ -1520,16 +1514,22 @@ Proof.
     2:now rewrite Upn_S. simpl.
     apply usubst_Up'.
     + intuition.
-    + admit.   
-    + admit. 
+    + solve_all. unfold on_free_vars_decl, test_decl in H0. toProp H0.
+      cbn in H0. rewrite shiftnP_add in H0. rewrite <- app_length in H0.  
+      destruct H0; tea. 
+    + solve_all. unfold on_free_vars_decl, test_decl in H0. toProp H0.
+      cbn in H0. rewrite shiftnP_add in H0. rewrite <- app_length in H0.  
+      destruct H0; tea.    
   - rewrite inst_context_snoc. rewrite inst_context_snoc in hΔ'.
     rewrite on_free_vars_ctx_snoc in hΔ'. toProp hΔ'.  
     eapply usubst_ext.
     2:now rewrite Upn_S. simpl.
     apply usubst_Up.
     + intuition.
-    + admit.
-Admitted. 
+    + solve_all. unfold on_free_vars_decl, test_decl in H0. toProp H0.
+      cbn in H0. rewrite shiftnP_add in H0. rewrite <- app_length in H0.  
+      destruct H0; tea. 
+Defined. 
 
 Lemma usubst_app_up {Γ Δ σ Δ'} :
   usubst Γ σ Δ ->
@@ -1807,7 +1807,16 @@ Proof.
       + rewrite inst_fix_context_up. eapply usubst_app_up; eauto.
         rewrite <- inst_fix_context. rewrite on_free_vars_fix_context; eauto.
         apply All_map. eapply All_impl. 1:tea. cbn; intros. rewrite map_length. 
-      unfold test_def in *. solve_all. all: admit.       
+      unfold test_def in *. solve_all. 
+        ++ destruct x0; cbn. eapply inst_is_open_term; eauto.
+        ++ destruct x0; cbn in *. 
+           rewrite shiftnP_add. rewrite shiftnP_add in H3.
+           rewrite <- fix_context_length. rewrite <- fix_context_length in H3.
+           rewrite <- app_length. rewrite <- app_length in H3. 
+           eapply (inst_is_open_term (fix_context mfix0 ++ Γ)); eauto.
+           +++ eapply usubst_ext. 2: apply up_Upn. admit.
+           +++ rewrite on_free_vars_ctx_app; solve_all. 
+              rewrite on_free_vars_fix_context; eauto. 
       + now len.
     * rewrite on_free_vars_ctx_app. rewrite on_free_vars_fix_context; solve_all.
     *  rewrite shiftnP_add in onb. rewrite <- fix_context_length in onb. rewrite <- app_length in onb. tea.            

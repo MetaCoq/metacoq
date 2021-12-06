@@ -3,7 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation 
-  PCUICTyping PCUICEquality
+  PCUICTyping PCUICEquality PCUICOnFreeVars
   PCUICSigmaCalculus PCUICRenameDef.
 
 Require Import ssreflect ssrbool.
@@ -62,8 +62,10 @@ Notation "Σ ;;; Δ ⊢ σ : Γ" :=
 
 (* Untyped substitution for untyped reduction / cumulativity *)
 Definition usubst (Γ : context) σ (Δ : context) :=
+  is_closed_context Δ × 
   forall x decl,
     nth_error Γ x = Some decl ->
+    is_open_term Δ (σ x) ×
     (forall b,
         decl.(decl_body) = Some b ->
         (∑ x' decl', σ x = tRel x' ×
@@ -72,30 +74,4 @@ Definition usubst (Γ : context) σ (Δ : context) :=
           option_map (rename (rshiftk (S x'))) decl'.(decl_body) = Some (b.[↑^(S x) ∘s σ])) +
         (* This allows to expand a let-binding everywhere *)
         (σ x = b.[↑^(S x) ∘s σ])).
-
-Definition well_subst_usubst {cf} Σ Γ σ Δ :
-  Σ ;;; Δ ⊢ σ : Γ ->
-  usubst Γ σ Δ.
-Proof.
-  intros hσ x decl hnth b hb.
-  specialize (hσ x decl hnth) as [_ h].
-  now apply h.
-Qed.
-
-Coercion well_subst_usubst : well_subst >-> usubst.
-
-Definition inst_constructor_body mdecl f c := 
-  map_constructor_body #|mdecl.(ind_params)| #|mdecl.(ind_bodies)|
-   (fun k => inst  (up k f)) c.
-
-Definition rigid_head t :=
-  match t with
-  | tVar _
-  | tSort _
-  | tConst _ _
-  | tInd _ _
-  | tConstruct _ _ _ => true
-  | _ => false
-  end.
-
 

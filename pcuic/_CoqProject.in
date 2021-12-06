@@ -30,6 +30,7 @@ theories/Conversion/PCUICWeakeningEnvConv.v
 theories/Conversion/PCUICUnivSubstitutionConv.v
 theories/Conversion/PCUICWeakeningConv.v
 theories/Conversion/PCUICClosedConv.v
+theories/Conversion/PCUICOnFreeVarsConv.v
 
 theories/Typing/PCUICNamelessTyp.v
 theories/Typing/PCUICRenameTyp.v

@@ -3,7 +3,7 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCumulativity
-  PCUICTyping PCUICEquality PCUICSigmaCalculus.
+  PCUICSigmaCalculus PCUICTyping.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -49,6 +49,8 @@ Definition urenaming (P : nat -> bool) Γ Δ f :=
       on_Some_or_None (fun body => Some (rename (f ∘ rshiftk (S i)) body) =
          option_map (rename (rshiftk (S (f i)))) decl'.(decl_body)) decl.(decl_body))).
 
+
+         
 (* Definition of a good renaming with respect to typing *)
 Definition renaming P Σ Γ Δ f :=
   wf_local Σ Γ × urenaming P Γ Δ f.

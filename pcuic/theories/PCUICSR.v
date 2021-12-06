@@ -837,9 +837,6 @@ Qed.
 
 Definition conj_impl {A B} : A -> (A -> B) -> A × B := fun x f => (x, f x).
 
-Lemma shiftnP_S P n : shiftnP (S n) P =1 shiftnP 1 (shiftnP n P).
-Proof. now rewrite (shiftnP_add 1). Qed.
-
 Lemma is_open_term_snoc (Γ : context) M d : on_free_vars (shiftnP 1 (shiftnP #|Γ| xpred0)) M -> is_open_term (Γ ,, d) M.
 Proof.
   rewrite /=.

@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICInduction 
-     PCUICContextRelation PCUICCases PCUICOnFreeVars PCUICClosed PCUICTyping.
+     PCUICLiftSubst PCUICUnivSubst PCUICInduction
+     PCUICContextRelation PCUICCases PCUICClosed.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.

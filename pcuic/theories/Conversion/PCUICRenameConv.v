@@ -19,6 +19,7 @@ Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+
 Lemma rename_mkApps :
   forall f t l,
     rename f (mkApps t l) = mkApps (rename f t) (map (rename f) l).

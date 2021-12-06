@@ -39,6 +39,9 @@ Proof.
   nat_compare_specs => //. apply Hi.
 Qed.
 
+Lemma shiftnP_S P n : shiftnP (S n) P =1 shiftnP 1 (shiftnP n P).
+Proof. now rewrite (shiftnP_add 1). Qed.
+
 Definition closedP (n : nat) (P : nat -> bool) := 
   fun i => if i <? n then P i else false.
 

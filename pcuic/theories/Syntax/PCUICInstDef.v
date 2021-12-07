@@ -40,32 +40,11 @@ Definition inst_mutual_inductive_body σ m :=
   map_mutual_inductive_body (fun i => inst (⇑^i σ)) m.
 
 
-(* Well-typedness of a substitution *)
-
-Definition well_subst {cf} Σ (Γ : context) σ (Δ : context) :=
-  forall x decl,
-    nth_error Γ x = Some decl ->
-    Σ ;;; Δ |- σ x : ((lift0 (S x)) (decl_type decl)).[ σ ] ×
-    (forall b,
-        decl.(decl_body) = Some b ->
-        (∑ x' decl', σ x = tRel x' ×
-          nth_error Δ x' = Some decl' ×
-          (* Γ_x', x := b : ty -> Δ_x', x' := b.[↑^S x ∘s σ]. 
-             Δ |- ↑^(S x) ∘s σ : Γ_x
-            *)
-          option_map (rename (rshiftk (S x'))) decl'.(decl_body) = Some (b.[↑^(S x) ∘s σ])) +
-        (σ x = b.[↑^(S x) ∘s σ])).
-
-Notation "Σ ;;; Δ ⊢ σ : Γ" :=
-  (well_subst Σ Γ σ Δ) (at level 50, Δ, σ, Γ at next level).
-
 
 (* Untyped substitution for untyped reduction / cumulativity *)
 Definition usubst (Γ : context) σ (Δ : context) :=
-  is_closed_context Δ × 
   forall x decl,
     nth_error Γ x = Some decl ->
-    is_open_term Δ (σ x) ×
     (forall b,
         decl.(decl_body) = Some b ->
         (∑ x' decl', σ x = tRel x' ×
@@ -75,3 +54,19 @@ Definition usubst (Γ : context) σ (Δ : context) :=
         (* This allows to expand a let-binding everywhere *)
         (σ x = b.[↑^(S x) ∘s σ])).
 
+(* Untyped substitution for untyped reduction / cumulativity *)
+Definition closed_subst (Γ : context) σ (Δ : context) :=
+  is_closed_context Δ × 
+  (forall x decl, nth_error Γ x = Some decl -> is_open_term Δ (σ x)) × 
+  usubst Γ σ Δ.
+
+(* Well-typedness of a substitution *)
+
+Definition well_subst {cf} Σ (Γ : context) σ (Δ : context) :=
+  (forall x decl,
+    nth_error Γ x = Some decl ->
+    Σ ;;; Δ |- σ x : ((lift0 (S x)) (decl_type decl)).[ σ ]) ×
+  usubst Γ σ Δ.  
+
+Notation "Σ ;;; Δ ⊢ σ : Γ" :=
+  (well_subst Σ Γ σ Δ) (at level 50, Δ, σ, Γ at next level).

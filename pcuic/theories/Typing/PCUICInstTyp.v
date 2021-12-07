@@ -20,15 +20,22 @@ Implicit Types cf : checker_flags.
 
 Open Scope sigma_scope.
 
-
 Definition well_subst_usubst {cf} (Σ:global_env_ext) (wfΣ : wf Σ) Γ σ Δ :
   is_closed_context Δ -> 
   Σ ;;; Δ ⊢ σ : Γ ->
   usubst Γ σ Δ.
 Proof.
-  intros hΔ hσ. split; tea. 
-  intros x decl hnth. specialize (hσ x decl hnth) as [htype h]. split; eauto. 
-  clear h. pose proof (typing_wf_local htype). pose (wf_local_closed_context X).  
+  intuition. 
+Defined. 
+
+Definition well_subst_closed_subst {cf} (Σ:global_env_ext) (wfΣ : wf Σ) Γ σ Δ :
+  is_closed_context Δ -> 
+  Σ ;;; Δ ⊢ σ : Γ ->
+  closed_subst Γ σ Δ.
+Proof.
+  intros hΔ [typed_σ hσ]. repeat split; tea. 
+  intros x decl hnth. specialize (typed_σ x decl hnth) as htype. 
+  pose proof (typing_wf_local htype). pose (wf_local_closed_context X).  
   apply closedn_on_free_vars. eapply subject_closed; eauto.
 Defined. 
 
@@ -90,7 +97,7 @@ Proof.
 Defined.   
 
 Lemma inst_convSpec {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
-  usubst Γ σ Δ ->
+  closed_subst Γ σ Δ ->
   is_closed_context Γ ->
   is_open_term Γ A ->
   is_open_term Γ B ->
@@ -101,7 +108,7 @@ Proof.
   revert Γ A B e Δ σ HΓ HfreeA HfreeB hσ e. 
   eapply (convSpec0_ind_all Σ.1 (eq_universe (global_ext_constraints Σ)) 
   (fun Γ A B => forall (Δ : context) (σ : nat -> term),
-  usubst Γ σ Δ ->
+  closed_subst Γ σ Δ ->
   is_closed_context Γ ->
   is_open_term Γ A ->
   is_open_term Γ B ->
@@ -111,7 +118,7 @@ Proof.
   - rewrite subst10_inst. sigma. solve [econstructor].
   - rename X into hσ.  
     destruct (nth_error Γ i) eqn:hnth; noconf H.
-    red in hσ. destruct hσ as [_ hσ]. specialize hσ with (1 := hnth) as IH. destruct IH as [_ IH].
+    red in hσ. destruct hσ as [_ [_ hσ]]. specialize (hσ _ _ hnth) as IH.
     specialize IH with (1:=H) as [[x' [decl' [hi [hnth' eqbod]]]]|eqr].
     * rewrite /= hi. sigma.
       destruct (decl_body decl') eqn:hdecl => //. noconf eqbod.
@@ -161,15 +168,15 @@ Proof.
   - eapply cumul_App; try apply X0; try apply X2; eauto.         
   - pose proof X3.1. eapply cumul_Lambda; try apply X0; try apply X2; eauto;
     try rewrite shiftnP_S; eauto. 
-    * eapply usubst_up_vass; eauto. eapply inst_is_open_term; eauto.
+    * eapply closed_subst_up_vass; eauto. eapply inst_is_open_term; eauto.
     * rewrite on_free_vars_ctx_snoc. apply andb_and; split; eauto.
   - eapply cumul_Prod; try apply X0; try apply X2; eauto;
     try rewrite shiftnP_S; eauto.
-    * eapply usubst_up_vass; eauto. eapply inst_is_open_term; eauto. 
+    * eapply closed_subst_up_vass; eauto. eapply inst_is_open_term; eauto. 
     * rewrite on_free_vars_ctx_snoc. apply andb_and; split; eauto.
   - eapply cumul_LetIn; try apply X0; try apply X2; eauto; try apply X4; 
     try rewrite shiftnP_S; eauto.
-    * eapply usubst_up_vdef; eauto; eapply inst_is_open_term; eauto.
+    * eapply closed_subst_up_vdef; eauto; eapply inst_is_open_term; eauto.
     * rewrite on_free_vars_ctx_snoc_def; eauto.
   - rename p0 into Hp'; rename p1 into Hreturn'; rename p2 into Hcontext'; rename p3 into Hc'; rename p4 into Hbrs'.
       rename p5 into Hp; rename p6 into Hreturn; rename p7 into Hcontext; rename p8 into Hc; rename p9 into Hbrs.
@@ -183,8 +190,8 @@ Proof.
           ++ rewrite <- (All2_fold_length Xcontext). rewrite <- inst_case_predicate_context_length.
              rewrite test_context_k_closed_on_free_vars_ctx in Hcontext. 
              rewrite inst_case_predicate_context_inst; eauto. 
-             eapply usubst_ext. 2: symmetry; apply up_Upn.
-              eapply usubst_app; eauto. rewrite inst_inst_case_context; eauto. 
+             eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+              eapply closed_subst_app; eauto. rewrite inst_inst_case_context; eauto. 
               rewrite on_free_vars_ctx_inst_case_context_nil; eauto.
               +++ rewrite forallb_map. eapply forallb_impl. 2:tea. cbn; intros.
                   eapply inst_is_open_term; eauto.    
@@ -216,8 +223,8 @@ Proof.
         + rewrite <- (All2_fold_length Hbcontext). 
         rewrite <- (inst_case_branch_context_length p).
         rewrite inst_case_branch_context_inst; eauto. 
-        eapply usubst_ext. 2: symmetry; apply up_Upn.
-        eapply usubst_app; eauto. 
+        eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+        eapply closed_subst_app; eauto. 
         rewrite inst_inst_case_context_wf; eauto.
           ++ rewrite test_context_k_closed_on_free_vars_ctx; tea.
           ++  rewrite on_free_vars_ctx_inst_case_context_nil; eauto.
@@ -251,8 +258,8 @@ Proof.
      * rewrite <- (All2_length X). eapply Hbody; eauto. 
        + rewrite inst_fix_context_up.
        rewrite <- fix_context_length.
-       eapply usubst_ext. 2: symmetry; apply up_Upn.
-       apply usubst_app; eauto. rewrite <- inst_fix_context.
+       eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+       apply closed_subst_app; eauto. rewrite <- inst_fix_context.
         apply on_free_vars_fix_context.
          apply All_map. 
          eapply All2_All_left. 1: tea. cbn ; intros.
@@ -295,8 +302,8 @@ Proof.
      * rewrite <- (All2_length X). eapply Hbody; eauto. 
        + rewrite inst_fix_context_up.
        rewrite <- fix_context_length.
-       eapply usubst_ext. 2: symmetry; apply up_Upn.
-       apply usubst_app; eauto. rewrite <- inst_fix_context.
+       eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+       apply closed_subst_app; eauto. rewrite <- inst_fix_context.
         apply on_free_vars_fix_context.
          apply All_map. 
          eapply All2_All_left. 1: tea. cbn ; intros.
@@ -352,7 +359,7 @@ Proof.
 Defined.  
    
 Lemma inst_cumulSpec {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
-  usubst Γ σ Δ ->
+  closed_subst Γ σ Δ ->
   is_closed_context Γ ->
   is_open_term Γ A ->
   is_open_term Γ B ->
@@ -363,7 +370,7 @@ Proof.
   revert Γ A B e Δ σ HΓ HfreeA HfreeB hσ e. 
   eapply (cumulSpec0_ind_all Σ.1 (eq_universe (global_ext_constraints Σ)) 
   (fun Rle Γ A B => forall (Δ : context) (σ : nat -> term),
-  usubst Γ σ Δ ->
+  closed_subst Γ σ Δ ->
   is_closed_context Γ ->
   is_open_term Γ A ->
   is_open_term Γ B ->
@@ -374,7 +381,7 @@ Proof.
   - rewrite subst10_inst. sigma. solve [econstructor].
   - rename X into hσ.  
     destruct (nth_error Γ i) eqn:hnth; noconf H.
-    red in hσ. destruct hσ as [_ hσ]. specialize hσ with (1 := hnth) as IH. destruct IH as [_ IH].
+    red in hσ. destruct hσ as [_ [_ hσ]]. specialize (hσ _ _ hnth) as IH.
     specialize IH with (1:=H) as [[x' [decl' [hi [hnth' eqbod]]]]|eqr].
     * rewrite /= hi. sigma.
       destruct (decl_body decl') eqn:hdecl => //. noconf eqbod.
@@ -424,15 +431,15 @@ Proof.
   - eapply cumul_App; try apply X0; try apply X2; eauto.         
   - pose proof X3.1. eapply cumul_Lambda; try apply X0; try apply X2; eauto;
     try rewrite shiftnP_S; eauto. 
-    * eapply usubst_up_vass; eauto. eapply inst_is_open_term; eauto.
+    * eapply closed_subst_up_vass; eauto. eapply inst_is_open_term; eauto.
     * rewrite on_free_vars_ctx_snoc. apply andb_and; split; eauto.
   - eapply cumul_Prod; try apply X0; try apply X2; eauto;
     try rewrite shiftnP_S; eauto.
-    * eapply usubst_up_vass; eauto. eapply inst_is_open_term; eauto. 
+    * eapply closed_subst_up_vass; eauto. eapply inst_is_open_term; eauto. 
     * rewrite on_free_vars_ctx_snoc. apply andb_and; split; eauto.
   - eapply cumul_LetIn; try apply X0; try apply X2; eauto; try apply X4; 
     try rewrite shiftnP_S; eauto.
-    * eapply usubst_up_vdef; eauto; eapply inst_is_open_term; eauto.
+    * eapply closed_subst_up_vdef; eauto; eapply inst_is_open_term; eauto.
     * rewrite on_free_vars_ctx_snoc_def; eauto.
   - rename p0 into Hp'; rename p1 into Hreturn'; rename p2 into Hcontext'; rename p3 into Hc'; rename p4 into Hbrs'.
       rename p5 into Hp; rename p6 into Hreturn; rename p7 into Hcontext; rename p8 into Hc; rename p9 into Hbrs.
@@ -446,8 +453,8 @@ Proof.
           ++ rewrite <- (All2_fold_length Xcontext). rewrite <- inst_case_predicate_context_length.
              rewrite test_context_k_closed_on_free_vars_ctx in Hcontext. 
              rewrite inst_case_predicate_context_inst; eauto. 
-             eapply usubst_ext. 2: symmetry; apply up_Upn.
-              eapply usubst_app; eauto. rewrite inst_inst_case_context; eauto. 
+             eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+              eapply closed_subst_app; eauto. rewrite inst_inst_case_context; eauto. 
               rewrite on_free_vars_ctx_inst_case_context_nil; eauto.
               +++ rewrite forallb_map. eapply forallb_impl. 2:tea. cbn; intros.
                   eapply inst_is_open_term; eauto.    
@@ -479,8 +486,8 @@ Proof.
         + rewrite <- (All2_fold_length Hbcontext). 
         rewrite <- (inst_case_branch_context_length p).
         rewrite inst_case_branch_context_inst; eauto. 
-        eapply usubst_ext. 2: symmetry; apply up_Upn.
-        eapply usubst_app; eauto. 
+        eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+        eapply closed_subst_app; eauto. 
         rewrite inst_inst_case_context_wf; eauto.
           ++ rewrite test_context_k_closed_on_free_vars_ctx; tea.
           ++  rewrite on_free_vars_ctx_inst_case_context_nil; eauto.
@@ -514,8 +521,8 @@ Proof.
      * rewrite <- (All2_length X). eapply Hbody; eauto. 
        + rewrite inst_fix_context_up.
        rewrite <- fix_context_length.
-       eapply usubst_ext. 2: symmetry; apply up_Upn.
-       apply usubst_app; eauto. rewrite <- inst_fix_context.
+       eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+       apply closed_subst_app; eauto. rewrite <- inst_fix_context.
         apply on_free_vars_fix_context.
          apply All_map. 
          eapply All2_All_left. 1: tea. cbn ; intros.
@@ -558,8 +565,8 @@ Proof.
      * rewrite <- (All2_length X). eapply Hbody; eauto. 
        + rewrite inst_fix_context_up.
        rewrite <- fix_context_length.
-       eapply usubst_ext. 2: symmetry; apply up_Upn.
-       apply usubst_app; eauto. rewrite <- inst_fix_context.
+       eapply closed_subst_ext. 2: symmetry; apply up_Upn.
+       apply closed_subst_app; eauto. rewrite <- inst_fix_context.
         apply on_free_vars_fix_context.
          apply All_map. 
          eapply All2_All_left. 1: tea. cbn ; intros.
@@ -838,7 +845,7 @@ Proof.
     + eapply iht. all: auto.
     + eapply ihB. all: auto.
     + eapply inst_cumulSpec => //.
-      * eapply well_subst_usubst; tea. eapply wf_local_closed_context; tea.
+      * eapply well_subst_closed_subst; tea. eapply wf_local_closed_context; tea.
       * eapply wf_local_closed_context; tea.
       * eapply type_closed in ht.
         now eapply closedn_on_free_vars.

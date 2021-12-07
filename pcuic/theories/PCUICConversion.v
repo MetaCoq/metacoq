@@ -3923,6 +3923,15 @@ Proof.
   Unshelve. all: eauto. 
 Defined.   
 
+Lemma convSpec_convAlgo_curry (Γ : context) (M N : term) :
+  is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N ->
+  Σ ;;; Γ |- M =s N  ->
+  Σ ;;; Γ ⊢ M = N.
+Proof.
+  intros clΓ clM clN.
+  eapply (convSpec_convAlgo (exist Γ clΓ) (exist M clM) (exist N clN)).
+Qed.
+
 Lemma cumulSpec_cumulAlgo_curry (Γ : context) (M N : term) :
   is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N ->
   Σ ;;; Γ |- M <=s N  ->

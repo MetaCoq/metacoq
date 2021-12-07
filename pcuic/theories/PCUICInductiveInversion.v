@@ -2,12 +2,16 @@
 From Coq Require Import Utf8.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICUnivSubstitution 
-     PCUICTyping PCUICGlobalEnv PCUICWeakeningEnv PCUICWeakening
+     PCUICLiftSubst PCUICUnivSubst PCUICUnivSubstitution
+     PCUICTyping PCUICGlobalEnv 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSigmaCalculus (* for smash_context lemmas, to move *)
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
+     PCUICSubstitution PCUICClosed PCUICClosedConv PCUICClosedTyp
+     PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICEquality PCUICConfluence PCUICCasesContexts
-     PCUICOnFreeVars PCUICContextConversion PCUICContextSubst PCUICUnivSubstitution
+     PCUICOnFreeVars PCUICContextConversion PCUICContextConversionTyp PCUICContextSubst 
+     PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICSpine PCUICInductives PCUICWellScopedCumulativity PCUICValidity.
 
@@ -107,7 +111,8 @@ Proof.
       * eapply isType_equality_refl; pcuic.
   - destruct (IHtyping1 wfΣ) as [T' [rarg [f [[unf fty] Hcumul]]]].
     exists T', rarg, f. intuition auto.
-    + etransitivity; eauto. now eapply wt_cum_equality.
+    etransitivity; eauto.
+    eapply PCUICConversion.cumulSpec_cumulAlgo_curry in c; eauto; fvs.
 Qed.
 
 Lemma subslet_cofix {cf:checker_flags} (Σ : global_env_ext) Γ mfix :
@@ -174,7 +179,8 @@ Proof.
     * eapply nth_error_all in a0; tea. cbn in a0. now eapply isType_equality_refl.
   - destruct (IHtyping1 wfΣ) as [d [[[Hnth wfcofix] ?] ?]].
     exists d. intuition auto.
-    etransitivity; eauto. now eapply wt_cum_equality.
+    etransitivity; eauto.
+    now eapply PCUICConversion.cumulSpec_cumulAlgo_curry in c; tea; fvs.
 Qed.
 
 Lemma wf_cofixpoint_all {cf:checker_flags} (Σ : global_env_ext) mfix :
@@ -2290,6 +2296,35 @@ Proof.
 Qed.
 
 Lemma into_context_equality_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
+  (c : PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ') : 
+  is_closed_context (Γ ,,, Δ) ->
+  is_closed_context (Γ ,,, Δ') ->
+  context_equality_rel true Σ Γ Δ Δ'.
+Proof.
+  intros wf wf'.
+  eapply context_equality_rel_app.
+  apply into_context_equality; eauto with fvs.
+  apply All2_fold_app; auto. reflexivity.
+  induction c; try solve[constructor; auto].
+  move: wf; rewrite /= on_free_vars_ctx_snoc => /andP[] h0 h1.
+  move: wf'; rewrite /= on_free_vars_ctx_snoc => /andP[] h2 h3.
+  destruct p; constructor; auto.
+  - eapply cumulSpec_cumulAlgo_curry in c0; fvs.
+    constructor; auto. now eapply equality_forget in c0.
+    unfold ws_decl in h3. cbn in h3.
+    len. rewrite (All2_fold_length c). now len in h3.
+  - eapply cumulSpec_cumulAlgo_curry in c1; eauto.
+    eapply convSpec_convAlgo in c1; eauto.
+  co  constructor; auto.
+    
+  fvs.
+
+  apply equality_forget in c0.
+  move/ : wf.
+
+Qed.
+
+Lemma into_context_equality_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
   (c : cumul_ctx_rel Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
@@ -2380,7 +2415,7 @@ Proof.
     simpl => Ru.
     pose proof (onVariance onmind) as onvari.
     rewrite indv in onvari.
-    apply into_context_equality_rel in respv; auto.
+    eapply (into_context_equality_rel (Σ := Σ)) in respv; auto.
     2:{ move/wf_local_closed_context: X.
         rewrite - !(subst_instance_smash _ _ []).
         rewrite - !subst_instance_app_ctx !is_closed_subst_inst //.

@@ -1,11 +1,13 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnv PCUICWeakening
-     PCUICSigmaCalculus  PCUICInstDef PCUICInstProp PCUICContextSubst
-     PCUICSubstitution PCUICClosed PCUICCumulativity PCUICGeneration PCUICReduction
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICSigmaCalculus  PCUICInstDef PCUICInstConv PCUICContextSubst
+     PCUICSubstitution PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICCumulativity PCUICGeneration PCUICReduction
      PCUICEquality PCUICConfluence PCUICParallelReductionConfluence
-     PCUICContextConversion PCUICUnivSubstitution
+     PCUICContextConversion PCUICUnivSubstitutionConv
+     PCUICUnivSubstitutionTyp
      PCUICConversion PCUICGlobalEnv PCUICInversion PCUICContexts PCUICArities
      PCUICParallelReduction PCUICWfUniverses PCUICSpine.
 
@@ -636,7 +638,7 @@ Proof.
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto; depelim wfΔ.
   * constructor.
   * rewrite extended_subst_length. rewrite lift_closed.
-    red in l0. autorewrite with len. now eapply subject_closed in l0.
+    red in l0. autorewrite with len. fvs.
     constructor. auto. specialize (IHΔ wfΔ).
     red in l0.
     eapply weaken_ctx in l0. 3:eapply wf_local_smash_context; eauto. 2:auto.
@@ -644,9 +646,9 @@ Proof.
   * rewrite smash_context_acc. simpl.
     rewrite /map_decl /= /map_decl /=. simpl.
     destruct l as [s Hs].
-    rewrite lift_closed. now eapply subject_closed in Hs.
+    rewrite lift_closed. fvs.
     rewrite (lift_extended_subst _ 1).
-    rewrite -{4}(closed_ctx_lift 1 0 Δ). now eapply closed_wf_local.
+    rewrite -{4}(closed_ctx_lift 1 0 Δ); fvs.
     constructor.
     { eapply (subslet_lift _ [_]); eauto.
       constructor. eapply wf_local_smash_context; auto.
@@ -662,8 +664,7 @@ Proof.
       reflexivity.
       simpl.
       rewrite distr_lift_subst. f_equal.
-      rewrite lift_closed //. autorewrite with len.
-      now apply subject_closed in Hs. }
+      rewrite lift_closed //. autorewrite with len; fvs. }
 Qed.
 
 Lemma context_subst_to_extended_list_k {cf:checker_flags} Σ Δ :
@@ -678,7 +679,7 @@ Proof.
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; auto;
   depelim wfΔ.
   * intros n. rewrite extended_subst_length. rewrite lift_closed.
-    red in l0. autorewrite with len. now eapply subject_closed in l0.
+    red in l0. autorewrite with len; fvs.
     rewrite (reln_lift 1 0).
     rewrite map_map_compose map_subst_lift1.
     autorewrite with len.
@@ -806,14 +807,13 @@ Proof.
   now rewrite to_extended_list_k_subst to_extended_list_k_lift_context.
 Qed.
 
-
-From MetaCoq.PCUIC Require Import PCUICRenameDef PCUICRenameProp.
+From MetaCoq.PCUIC Require Import PCUICRenameDef PCUICRenameConv PCUICRenameTyp.
 
 Lemma extended_subst_lift_context n (Γ : context) (k k' : nat) :
   extended_subst (lift_context n k Γ) k' =
   map (lift n (k + context_assumptions Γ + k')) (extended_subst Γ k').
 Proof.
-  pose proof (PCUICRenameProp.rename_extended_subst).
+  pose proof (rename_extended_subst).
   rewrite -rename_context_lift_context.
   rewrite lift_extended_subst -H.
   rewrite (lift_extended_subst _ k').
@@ -1220,7 +1220,7 @@ Proof.
       (arities_context (ind_bodies mdecl))).
   { eapply wf_arities_context; eauto. }
   destruct (ind_cunivs oib) as [|? []] eqn:hequ => //.
-  eapply PCUICClosed.sorts_local_ctx_All_local_env in wfargs.
+  eapply PCUICClosedConv.sorts_local_ctx_All_local_env in wfargs.
   2:{ eapply All_local_env_app. split; auto.
       red in onpars. eapply (All_local_env_impl _ _ _ onpars).
       intros. destruct T; simpl in *.
@@ -1564,7 +1564,7 @@ Proof.
   intros []; split; auto.
   eapply type_Cumul; eauto.
   econstructor; pcuic.
-  now do 2 constructor.
+  now eapply cumul_Sort.
 Qed.
 
 Lemma type_local_ctx_wf {cf:checker_flags} {Σ Γ Δ s} :
@@ -1701,7 +1701,6 @@ Proof.
     exact (declared_inductive_valid_type d _ _ a c).
   - specialize (IHtyping1 _ _ wfΣ decli) as [IH cu]; split; auto.
     eapply typing_spine_weaken_concl; pcuic.
-    now eapply into_ws_cumul.
 Qed.
 
 Lemma isType_mkApps_Ind_inv {cf:checker_flags} {Σ Γ ind u args} (wfΣ : wf Σ.1)

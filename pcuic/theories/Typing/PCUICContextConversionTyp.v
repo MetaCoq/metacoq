@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICParallelReductionConfluence PCUICConfluence
      PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity
-     PCUICGuardCondition PCUICContextConersion.
+     PCUICGuardCondition PCUICContextConversion.
 
 From MetaCoq.PCUIC Require Export PCUICContextRelation.
 

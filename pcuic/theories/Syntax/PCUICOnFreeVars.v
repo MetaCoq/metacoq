@@ -32,6 +32,15 @@ Proof. rewrite /shiftnP. intros i; rewrite Nat.sub_0_r //. Qed.
 Lemma shiftnP_add n k P : shiftnP n (shiftnP k P) =1 shiftnP (n + k) P.
 Proof. rewrite /shiftnP. intros i; repeat nat_compare_specs => // /=. lia_f_equal. Qed.
 
+Lemma shiftnP_shiftn P f i : (shiftnP i P) ∘ (shiftn i f) =1 shiftnP i (P ∘ f).
+Proof.
+  intros k.
+  rewrite !/shiftnP /shiftn.
+  destruct (Nat.ltb_spec k i) => /=.
+  all: nat_compare_specs => //=.
+  by rewrite minus_plus.
+Qed.
+
 Lemma shiftnP_impl (p q : nat -> bool) : (forall i, p i -> q i) ->
   forall n i, shiftnP n p i -> shiftnP n q i.
 Proof.

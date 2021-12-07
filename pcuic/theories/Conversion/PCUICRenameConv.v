@@ -187,9 +187,6 @@ Section Renaming.
 
 Context `{cf : checker_flags}.
 
-
-
-
 Lemma eq_term_upto_univ_rename Σ :
   forall Re Rle napp u v f,
     eq_term_upto_univ_napp Σ Re Rle napp u v ->

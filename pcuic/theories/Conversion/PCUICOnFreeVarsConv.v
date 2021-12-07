@@ -11,11 +11,93 @@ From Equations Require Import Equations.
 
 Lemma on_free_vars_rename P f t :
   on_free_vars P (rename f t) = on_free_vars (P ∘ f) t.
-Admitted. 
+Proof.
+  induction t in P, f |- * using term_forall_list_ind.
+
+  all: cbn => //.
+
+  - erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    all: eauto.
+  - by rewrite IHt1 IHt2 shiftnP_shiftn.
+  - by rewrite IHt1 IHt2 shiftnP_shiftn.
+  - by rewrite IHt1 IHt2 IHt3 shiftnP_shiftn.
+  - by rewrite IHt1 IHt2.
+  - destruct X as (IHpar&ctx&IHret).
+    f_equal.
+    1: erewrite forallb_map, All_forallb_eq_forallb ; tea ; eauto.
+    f_equal.
+    1: by rewrite IHret shiftnP_shiftn.
+    f_equal.
+    1: by rewrite map_length.
+    f_equal.
+    1: auto.
+    erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    1: reflexivity.
+    intros b [].
+    f_equal.
+    1: by rewrite map_length.
+    by rewrite /PCUICSigmaCalculus.rename_branch /= e shiftnP_shiftn.
+  - erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    1: reflexivity.
+    intros ? [? ebod].
+    rewrite /test_def /=.
+    f_equal.
+    1: auto.
+    by rewrite map_length ebod shiftnP_shiftn.
+  - erewrite forallb_map, All_forallb_eq_forallb ; tea.
+    1: reflexivity.
+    intros ? [? ebod].
+    rewrite /test_def /=.
+    f_equal.
+    1: auto.
+    by rewrite map_length ebod shiftnP_shiftn.
+Qed.
+
+Lemma shiftn_ext_cond (P : nat -> bool) f f' n :
+  (forall i, P i -> f i = f' i) -> 
+  forall k,
+  shiftnP n P k ->
+  shiftn n f k = shiftn n f' k.
+Proof.
+  intros.
+  unfold shiftn, shiftnP in H0 |- *.
+  nat_compare_specs ; cbn in *.
+  now f_equal.
+Qed.
+
+Lemma rename_ext_cond (P : nat -> bool) f f' t : 
+  ( forall i, P i -> f i = f' i ) ->
+  on_free_vars P t -> 
+  rename f t = rename f' t.
+Proof.
+  intros H Ht.
+  revert P f f' H Ht.
+  elim t using term_forall_list_ind; cbn in |- *; intros; try easy.
+
+  1-6,8:
+    try rewrite H; try rewrite H0 ; try rewrite H1 ; try easy;
+    solve [f_equal; solve_all; eauto using shiftn_ext_cond].
+
+  - f_equal; solve_all.
+    * eapply map_predicate_shift_eq_spec; solve_all; eauto using shiftn_ext_cond.
+    * apply map_branch_shift_eq_spec; solve_all; eauto using shiftn_ext_cond.
+  - f_equal.
+    rewrite /test_def in Ht.
+    solve_all ; eauto using shiftn_ext_cond.
+  - f_equal.
+    rewrite /test_def in Ht.
+    solve_all ; eauto using shiftn_ext_cond.
+Qed.
 
 Lemma rename_on_free_vars n t f :
   on_free_vars (shiftnP n xpred0) t -> rename (shiftn n f) t = t.
-Admitted.
+Proof.
+  intros.
+  erewrite rename_ext_cond ; tea.
+  1: now apply rename_ren_id.
+  intros i.
+  now rewrite /shiftnP /shiftn orb_false_r => -> //=.
+Qed.
 
 
 Lemma urename_on_free_vars_shift P Γ Δ f u (Ξ:list context_decl) : 

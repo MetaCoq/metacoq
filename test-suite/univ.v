@@ -107,7 +107,7 @@ Module to.
  MetaCoq Run (t <- tmQuoteInductive (cp "list") ;;
               t <- tmEval all (mind_body_to_entry t) ;;
               tmPrint t ;;
-              tmMkInductive (clean_universes_decl t)).
+              tmMkInductive false (clean_universes_decl t)).
 
  Print list.
 End to.

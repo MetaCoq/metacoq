@@ -221,28 +221,23 @@ module RetypeMindEntry =
     in
     evm, mind
 
-  let infer_mentry_univs env ctx mind = 
-    let evm = Evd.from_env env in
+  let infer_mentry_univs env evm mind = 
     let evm = 
       match mind.mind_entry_universes with
-      | Entries.Monomorphic_ind_entry ->
-        evm
-      | Entries.Template_ind_entry ctx ->
+      | Entries.Monomorphic_entry ctx ->
         Evd.merge_context_set (UState.UnivFlexible false) evm ctx
-      | Entries.Polymorphic_ind_entry uctx ->
+      | Entries.Polymorphic_entry (names, uctx) ->
         let uctx' = ContextSet.of_context uctx in
         Evd.merge_context_set (UState.UnivFlexible false) evm uctx'
     in
     let evm, mind = infer_mentry_univs env evm mind in
     let ctx, mind = 
       match mind.mind_entry_universes with
-      | Entries.Monomorphic_ind_entry ->
-        Evd.universe_context_set evm, mind
-      | Entries.Template_ind_entry ctx ->
-        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Template_ind_entry (Evd.universe_context_set evm) }
-      | Entries.Polymorphic_ind_entry uctx ->
+      | Entries.Monomorphic_entry ctx ->
+        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Monomorphic_entry (Evd.universe_context_set evm) }
+      | Entries.Polymorphic_entry (names, uctx) ->
         let uctx' = Evd.to_universe_context evm in
-        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_ind_entry uctx' }
+        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_entry (names, uctx') }
     in ctx, mind
 end 
 

@@ -290,14 +290,15 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
 
 let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool) (mind: Constr.t) : unit =
   let mind = reduce_all env evm mind in
-  let evm, mind = unquote_mutual_inductive_entry env evm mind in
+  let evm' = Evd.from_env env in
+  let evm', mind = unquote_mutual_inductive_entry env evm' mind in
   let mind = 
     if infer_univs then
-      let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env ctx mind in
+      let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env evm' mind in
       DeclareUctx.declare_universe_context ~poly:false ctx; mind
     else mind
   in
-  let names = Evd.universe_binders evm in
+  let names = Evd.universe_binders evm' in
   ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind names [])
 
 let not_in_tactic s =

@@ -219,7 +219,8 @@ let tmInductive (infer_univs : bool) (mie : mutual_inductive_entry) : unit tm =
   fun ~st env evd success _fail ->
     let mie = 
       if infer_univs then
-        let ctx = Tm_util.RetypeMindEntry.infer_mentry_univs env Univ.ContextSet.empty mie in
+        let evm = Evd.from_env env in
+        let ctx, mie = Tm_util.RetypeMindEntry.infer_mentry_univs env evm mie in
         DeclareUctx.declare_universe_context ~poly:false ctx; mie
       else mie
     in

@@ -2,7 +2,8 @@
 From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst 
+     PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed 
+     PCUICClosedTyp PCUICCSubst 
      PCUICSubstitution PCUICInversion.
 
 Require Import ssreflect ssrbool.
@@ -17,7 +18,7 @@ From Equations Require Import Equations.
 
   This reduction strategy is supposed to mimick at the Coq level the
   reduction strategy of ML programming languages. It is used to state
-  the extraction conjecture that can be applied to Coq terms to produce
+  the extraction theorem that can be applied to Coq terms to produce
   (untyped) terms where all proofs are erased to a dummy value. *)
 
 

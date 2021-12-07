@@ -2,12 +2,13 @@
 From Coq Require Import CRelationClasses ProofIrrelevance ssreflect ssrbool.
 From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
+     PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICUnivSubstitutionConv
+     PCUICUnivSubstitutionTyp
      PCUICCumulativity PCUICPosition PCUICEquality PCUICSigmaCalculus
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConfluence PCUICConversion PCUICContextConversion
-     PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICWfUniverses
-     PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosed PCUICClosedTyp PCUICSubstitution PCUICWfUniverses
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICGeneration PCUICUtils PCUICContexts
      PCUICWellScopedCumulativity PCUICConversion.
 
 Require Import Equations.Prop.DepElim.
@@ -70,7 +71,7 @@ Proof.
   intros isdecl u.
   unfold inds.
   pose proof (proj1 isdecl) as declm'. 
-  apply PCUICWeakeningEnv.on_declared_minductive in declm' as [oind oc]; auto.
+  apply on_declared_minductive in declm' as [oind oc]; auto.
   clear oc.
   assert (Alli (fun i x =>
   (Σ, ind_universes mdecl) ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : (ind_type x)) 0 (ind_bodies mdecl)).
@@ -243,7 +244,8 @@ Section WfEnv.
     intros.
     eapply type_Cumul; tea. apply X0.π2.
     destruct le.
-    - now eapply equality_forget in X1.
+    - eapply equality_forget in X1.
+      epose proof (cumulAlgo_cumulSpec Σ (le:=true)).
     - eapply equality_eq_le in X1.
       now eapply equality_forget in X1.
   Qed.

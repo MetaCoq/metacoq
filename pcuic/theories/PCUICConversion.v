@@ -231,7 +231,7 @@ Section CumulSpecIsCumulAlgo.
     intros. eapply (eq_term_upto_univ_napp_cumulSpec _ _ _ [] []); eauto. 
   Defined. 
   
-  Proposition cumulAlgo_cumulSpec {le} (Γ : context) (M N : open_term Γ) :
+  Proposition cumulAlgo_cumulSpec {le} (Γ : context) (M N : term) :
     Σ ;;; Γ ⊢ M ≤[le] N -> if le then  Σ ;;; Γ |- M <=s N else Σ ;;; Γ |- M =s N.
   Proof.  
   induction 1.

@@ -1290,7 +1290,7 @@ Proof.
   - intros [|n] decl e. 
     * simpl in *. inversion e. subst. clear e.  simpl => //.
     * cbn -[rshiftk] in *.
-      specialize (h.1 _ _ e) as h1.
+      specialize (h.1 _ _ e) as h1. 
       change (S #|Δ|) with #|Δ ,, vass na A |. unfold subst_compose.
       admit. 
   - eapply usubst_Up; eauto; intuition.
@@ -1604,19 +1604,21 @@ Proof.
     * apply All_forallb. apply All_map.
       apply forallb_All in Hparam.
       solve_all.
-    * destruct X as [_ [_ Hreturn']].
+    * destruct X as [_ [Hcontext' Hreturn']]. repeat rewrite <- inst_case_predicate_context_length.
+      rewrite <- (inst_context_length σ). 
       rewrite shiftnP_add. rewrite <- app_length.
-      apply (Hreturn' (Γ ,,, pcontext p) (Δ ,,, pcontext p) (up #|pcontext p| σ)).
-      all : admit.
+      eapply (Hreturn' (Γ ,,, PCUICCases.inst_case_predicate_context p)).
+      + rewrite inst_context_length. eapply closed_subst_app_up; eauto.
+        admit. 
+      + rewrite on_free_vars_ctx_inst_case_context; eauto.    
+      + rewrite shiftnP_add in Hreturn. rewrite <- inst_case_predicate_context_length in Hreturn. 
+        rewrite <- app_length in Hreturn. assumption.
     * rewrite test_context_k_closed_on_free_vars_ctx.
       solve_all.
     * eapply IHu; eauto.
     * apply All_forallb. unfold tCaseBrsProp in X0. eapply forallb_All in Hbody.
-      solve_all. rewrite shiftnP_add. rewrite <- app_length.
-      apply (b0 (Γ ,,, bcontext x) (Δ ,,, bcontext x) (up #|bcontext x| σ)).
-      + admit.  
-      + admit.
-      + rewrite shiftnP_add in H0. rewrite  <- app_length in H0. apply H0. 
+      solve_all.
+      admit. 
   - cbn. eapply forallb_All in Hu. eapply (All_mix Hu) in X. remember Hu. solve_all. unfold test_def in *. 
     toProp a0. destruct a0 as [xtype xbody]. toProp.
     * eapply a1; eauto.

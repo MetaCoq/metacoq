@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICTyping PCUICPosition PCUICUnivSubst
      PCUICContextRelation PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv PCUICConversion
-     PCUICWellScopedCumulativity PCUICOnFreeVars PCUICConfluence PCUICClosedTyp
+     PCUICWellScopedCumulativity PCUICOnFreeVars PCUICOnFreeVarsConv PCUICConfluence PCUICClosedTyp PCUICClosed
      PCUICSigmaCalculus (* for context manipulations *).
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect ssrbool.
@@ -21,23 +21,6 @@ Implicit Types cf : checker_flags.
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
-Lemma nl_cumulSpec {cf:checker_flags} :
-  forall (Σ:global_env_ext) Γ A B, wf Σ ->
-  is_closed_context Γ ->
-  is_open_term Γ A ->
-  is_open_term Γ B ->
-  Σ ;;; Γ |- A <=s B ->
-  nlg Σ ;;; nlctx Γ |- nl A <=s nl B.
-Proof.
-  intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (le:=true)). 
-  eapply into_equality.
-  - eapply nl_cumul. eapply (equality_forget (le:=true)). 
-  unshelve eapply (cumulSpec_cumulAlgo _ _ (exist _ _ ) (exist _ _) (exist _ _)); eauto; cbn. 
-  - eapply closed_ctx_on_free_vars. apply closed_nlctx.  admit.
-  - eapply closedn_on_free_vars. apply closed_nl. rewrite nlctx_length. 
-    admit. 
-Admitted. 
 
 Lemma nlg_wf_local {cf : checker_flags} :
   forall Σ Γ (hΓ : wf_local Σ Γ),
@@ -117,6 +100,33 @@ Proof.
   intros.
   now rewrite nl_global_ext_levels.
 Qed.
+
+(* Seems unused *)
+
+(*
+Lemma nl_wf {cf:checker_flags} (Σ : global_env_ext) : 
+  wf Σ -> wf (nlg Σ).
+
+Lemma nl_cumulSpec {cf:checker_flags} :
+  forall (Σ:global_env_ext) Γ A B, wf Σ ->
+  is_closed_context Γ ->
+  is_open_term Γ A ->
+  is_open_term Γ B ->
+  Σ ;;; Γ |- A <=s B ->
+  nlg Σ ;;; nlctx Γ |- nl A <=s nl B.
+Proof.
+  intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (le:=true)). 
+  eapply into_equality.
+  - eapply nl_cumul. eapply (equality_forget (le:=true)). 
+  unshelve eapply (cumulSpec_cumulAlgo _ _ (exist _ _ ) (exist _ _) (exist _ _)); eauto; cbn. 
+  - eapply closed_ctx_on_free_vars. apply closed_nlctx. 
+    rewrite is_closed_ctx_closed; eauto.
+  - eapply closedn_on_free_vars. apply closed_nl. rewrite nlctx_length.
+    rewrite on_free_vars_closedn; eauto.
+  - eapply closedn_on_free_vars. apply closed_nl. rewrite nlctx_length.
+    rewrite on_free_vars_closedn; eauto.
+  Unshelve. eapply nl_wf; eauto. 
+Defined. 
 
 Lemma typing_nlg {cf : checker_flags} :
   env_prop (fun Σ Γ t T => nlg Σ ;;; nlctx Γ |- nl t : nl T)
@@ -281,3 +291,4 @@ Proof.
 Qed.
 
 
+*)

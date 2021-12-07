@@ -411,17 +411,23 @@ Lemma cumulSpec0_ind_all :
        forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t t0 : term), cumulSpec0 Σ Re Rle Γ t t0 -> P Rle Γ t t0.
 Proof.
   intros. rename X24 into Xlast. revert Rle Γ t t0 Xlast.
-  fix  aux 4. intros Rle Γ t u.
+  fix aux 5. intros Rle Γ t u.
   move aux at top.
   destruct 1.
   - eapply X8; eauto.
   - eapply X9; eauto.   
   - eapply X10; eauto.   
-  - eapply X20; eauto. clear -a aux. induction a; econstructor; eauto.
-  - eapply X21; eauto. clear -a aux. induction a; econstructor; eauto.
+  - eapply X20; eauto. clear -a aux.
+    revert args args' a.
+    fix aux' 3; destruct 1; constructor; auto.
+  - eapply X21; eauto. clear -a aux.
+    revert args args' a.
+    fix aux' 3; destruct 1; constructor; auto.
   - eapply X22; eauto. 
   - eapply X23; eauto. 
-  - eapply X11. induction a; econstructor; eauto.
+  - eapply X11.
+    revert args args' a.
+    fix aux' 3; destruct 1; constructor; auto.
   - eapply X12; eauto.
   - eapply X13; eauto.   
   - eapply X14; eauto.   
@@ -429,28 +435,37 @@ Proof.
   - eapply X16 ; eauto. 
     + unfold cumul_predicate in *. destruct c0 as [c0 [cuniv [ccontext creturn]]].
       repeat split ; eauto.
-      * induction c0; econstructor; eauto.
-    + induction a; econstructor; eauto. intuition.    
+      * revert c0. generalize (pparams p), (pparams p').
+        fix aux' 3; destruct 1; constructor; auto.
+    + revert brs brs' a.
+      fix aux' 3; destruct 1; constructor; intuition auto.
   - eapply X17 ; eauto. 
   - eapply X18 ; eauto. 
-    set (mfixAbs := mfix). unfold mfixAbs at 3.  
-    assert (Habs : mfixAbs = mfix) by reflexivity. clearbody mfixAbs.
-     induction a; destruct Habs;  econstructor; eauto; intuition. 
+    revert a.  
+    set (mfixAbs := mfix). unfold mfixAbs at 2 5.
+    clearbody mfixAbs.
+    revert mfix mfix'.
+    fix aux' 3; destruct 1; constructor. 
+    + intuition auto.
+    + auto.
   - eapply X19 ; eauto. 
-     set (mfixAbs := mfix). unfold mfixAbs at 3.  
-     assert (Habs : mfixAbs = mfix) by reflexivity. clearbody mfixAbs.
-      induction a; destruct Habs;  econstructor; eauto; intuition. 
+    revert a.  
+    set (mfixAbs := mfix). unfold mfixAbs at 2 5.
+    clearbody mfixAbs.
+    revert mfix mfix'.
+    fix aux' 3; destruct 1; constructor. 
+    + intuition auto.
+    + auto.
   - eapply X.
   - eapply X0.
-  -  eapply X1; eauto. 
+  - eapply X1; eauto. 
   - eapply X2; eauto.
   - eapply X3; eauto.
   - eapply X4; eauto.
   - eapply X5; eauto.
   - eapply X6; eauto.
   - eapply X7; eauto.
-Admitted.
-      
+Defined.
 
 Lemma convSpec0_ind_all :
   forall (Σ : global_env) (Re : Universe.t -> Universe.t -> Prop)
@@ -611,44 +626,60 @@ Lemma convSpec0_ind_all :
           R_universe_instance Re u u' -> P Γ (tConst c u) (tConst c u') ) ->
 
        forall  (Γ : context) (t t0 : term), cumulSpec0 Σ Re Re Γ t t0 -> P Γ t t0.
-       Proof.
-        intros. rename X24 into Xlast. revert Γ t t0 Xlast.
-        fix  aux 4. intros Γ t u.
-        move aux at top.
-        destruct 1.
-        - eapply X8; eauto.
-        - eapply X9; eauto.   
-        - eapply X10; eauto.   
-        - eapply X20; eauto. clear -a aux. induction a; econstructor; eauto.
-        - eapply X21; eauto. clear -a aux. induction a; econstructor; eauto.
-        - eapply X22; eauto. 
-        - eapply X23; eauto. 
-        - eapply X11. induction a; econstructor; eauto.
-        - eapply X12; eauto.
-        - eapply X13; eauto.   
-        - eapply X14; eauto.   
-        - eapply X15; eauto.   
-        - eapply X16 ; eauto. 
-          + unfold cumul_predicate in *. destruct c0 as [c0 [cuniv [ccontext creturn]]].
-            repeat split ; eauto.
-            * induction c0; econstructor; eauto.
-          + induction a; econstructor; eauto. intuition.    
-        - eapply X17 ; eauto. 
-        - eapply X18 ; eauto. 
-          set (mfixAbs := mfix). unfold mfixAbs at 3.  
-          assert (Habs : mfixAbs = mfix) by reflexivity. clearbody mfixAbs.
-           induction a; destruct Habs;  econstructor; eauto; intuition. 
-        - eapply X19 ; eauto. 
-           set (mfixAbs := mfix). unfold mfixAbs at 3.  
-           assert (Habs : mfixAbs = mfix) by reflexivity. clearbody mfixAbs.
-            induction a; destruct Habs;  econstructor; eauto; intuition. 
-        - eapply X.
-        - eapply X0.
-        -  eapply X1; eauto. 
-        - eapply X2; eauto.
-        - eapply X3; eauto.
-        - eapply X4; eauto.
-        - eapply X5; eauto.
-        - eapply X6; eauto.
-        - eapply X7; eauto.
-      Admitted.
+Proof.
+  intros. rename X24 into Xlast. revert Γ t t0 Xlast.
+  fix aux 4. intros Γ t u.
+  move aux at top.
+  destruct 1.
+  - eapply X8; eauto.
+  - eapply X9; eauto.   
+  - eapply X10; eauto.   
+  - eapply X20; eauto. clear -a aux.
+    revert args args' a.
+    fix aux' 3; destruct 1; constructor; auto.
+  - eapply X21; eauto. clear -a aux.
+    revert args args' a.
+    fix aux' 3; destruct 1; constructor; auto.
+  - eapply X22; eauto. 
+  - eapply X23; eauto. 
+  - eapply X11.
+    revert args args' a.
+    fix aux' 3; destruct 1; constructor; auto.
+  - eapply X12; eauto.
+  - eapply X13; eauto.   
+  - eapply X14; eauto.   
+  - eapply X15; eauto.   
+  - eapply X16 ; eauto. 
+    + unfold cumul_predicate in *. destruct c0 as [c0 [cuniv [ccontext creturn]]].
+      repeat split ; eauto.
+      * revert c0. generalize (pparams p), (pparams p').
+        fix aux' 3; destruct 1; constructor; auto.
+    + revert brs brs' a.
+      fix aux' 3; destruct 1; constructor; intuition auto.
+  - eapply X17 ; eauto. 
+  - eapply X18 ; eauto. 
+    revert a.  
+    set (mfixAbs := mfix). unfold mfixAbs at 2 5.
+    clearbody mfixAbs.
+    revert mfix mfix'.
+    fix aux' 3; destruct 1; constructor. 
+    + intuition auto.
+    + auto.
+  - eapply X19 ; eauto. 
+    revert a.  
+    set (mfixAbs := mfix). unfold mfixAbs at 2 5.
+    clearbody mfixAbs.
+    revert mfix mfix'.
+    fix aux' 3; destruct 1; constructor. 
+    + intuition auto.
+    + auto.
+  - eapply X.
+  - eapply X0.
+  - eapply X1; eauto. 
+  - eapply X2; eauto.
+  - eapply X3; eauto.
+  - eapply X4; eauto.
+  - eapply X5; eauto.
+  - eapply X6; eauto.
+  - eapply X7; eauto.
+Defined.

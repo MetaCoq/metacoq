@@ -6,7 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICParallelReductionConfluence PCUICConfluence
      PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity
-     PCUICGuardCondition PCUICClosedTyp PCUICContextConversion.
+     PCUICGuardCondition PCUICConversion PCUICContextConversion PCUICClosedTyp.
+
 
 From MetaCoq.PCUIC Require Export PCUICContextRelation.
 
@@ -17,12 +18,26 @@ Arguments red_ctx : clear implicits.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Lemma weakening_cumulSpec0 {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ : closed_context} {Γ'' : open_context Γ}
+Lemma lift0_open {cf:checker_flags} {Γ : closed_context} {Γ'' : open_context Γ}
+  {M : open_term Γ} {n} :
+  n = #|Γ''| -> is_open_term (Γ ,,, Γ'') (lift0 n M).
+Proof. 
+  intro e. rewrite on_free_vars_lift0; eauto. rewrite app_length. rewrite <- shiftnP_add.
+  subst. rewrite addnP_shiftnP; intuition.
+Defined. 
+
+Lemma weakening_cumulSpec0 {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : closed_context} {Γ'' : open_context Γ}
   {M N : open_term Γ} n :
   n = #|Γ''| ->
   Σ ;;; Γ |- M <=s N ->
   Σ ;;; Γ ,,, Γ'' |- lift0 n M <=s lift0 n N.
-  Admitted.
+Proof.
+  intros e H. 
+  eapply (@cumulAlgo_cumulSpec _ _ true). 
+  eapply into_equality; try  apply lift0_open; eauto.
+  - cbn. eapply weakening_cumul0; eauto. apply cumulSpec_cumulAlgo in H; eauto. exact (equality_forget H).   
+  - cbn. rewrite on_free_vars_ctx_app; solve_all; intuition.    
+Defined. 
 
 Lemma split_closed_context {Γ : context} (n : nat) : 
   is_closed_context Γ ->
@@ -95,7 +110,7 @@ Proof.
   repeat PCUICSigmaCalculus.nat_compare_specs => //.
 Qed.
 
-Lemma wt_cum_equality {cf} {Σ} {wfΣ : wf Σ} {Γ : context} {t A B : term} {s} :
+Lemma wt_cum_equality {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : context} {t A B : term} {s} :
   Σ ;;; Γ |- t : A ->
   Σ ;;; Γ |- B : tSort s ->
   Σ ;;; Γ |- A <= B ->
@@ -108,7 +123,7 @@ Proof.
   now apply into_equality.
 Qed.
 
-Lemma wt_cum_context_equality {cf} {Σ} {wfΣ : wf Σ} {Γ Δ : context} le :
+Lemma wt_cum_context_equality {cf:checker_flags} {Σ:global_env_ext} {wfΣ : wf Σ} {Γ Δ : context} le :
   wf_local Σ Γ ->
   wf_local Σ Δ ->
   (if le then cumul_context Σ Γ Δ else conv_context Σ Γ Δ) ->
@@ -119,18 +134,30 @@ Proof.
   now eapply into_context_equality.
 Qed.
 
-Lemma All2_conv_over_refl {cf} {Σ} {Γ Γ' Δ} : 
+Lemma All2_conv_over_refl {cf:checker_flags} {Σ : global_env_ext} {Γ Γ' Δ} : 
   All2_fold (All_over (conv_decls Σ) Γ Γ') Δ Δ.
 Proof.
   eapply All2_fold_refl. intros ? ?; reflexivity.
 Qed.
 
-Lemma All2_cumul_over_refl {cf} {Σ} {Γ Γ' Δ} : 
+Lemma All2_cumul_over_refl {cf:checker_flags} {Σ : global_env_ext} {Γ Γ' Δ} : 
   All2_fold (All_over (cumul_decls Σ) Γ Γ') Δ Δ.
 Proof.
   eapply All2_fold_refl. intros ? ?; reflexivity.
 Qed.
 
+Lemma cumul_context_Algo_Spec {cf:checker_flags} Σ Γ' Γ :
+  Σ ⊢ Γ' ≤ Γ -> PCUICCumulativitySpec.cumul_context Σ Γ' Γ.
+Proof.
+  intros e.
+  eapply All2_fold_impl. 1: tea. cbn; intros.
+  destruct X.
+  - econstructor 1; eauto. eapply (@cumulAlgo_cumulSpec _ _ true); eauto.
+  - econstructor 2; eauto.
+    + eapply (@cumulAlgo_cumulSpec _ _ false); eauto.
+    + eapply (@cumulAlgo_cumulSpec _ _ true); eauto.
+Defined.
+ 
 Lemma context_cumulativity_prop {cf:checker_flags} :
   env_prop
     (fun Σ Γ t T =>
@@ -139,7 +166,7 @@ Lemma context_cumulativity_prop {cf:checker_flags} :
     All_local_env
       (lift_typing (fun Σ (Γ : context) (t T : term) =>
         forall Γ' : context, cumul_context Σ Γ' Γ -> wf_local Σ Γ' -> Σ;;; Γ' |- t : T) Σ) Γ).
-(* Proof.
+Proof.
   apply typing_ind_env; intros Σ wfΣ Γ wfΓ; intros **; rename_all_hyps;
     try solve [econstructor; eauto].
 
@@ -174,7 +201,8 @@ Lemma context_cumulativity_prop {cf:checker_flags} :
         eapply PCUICClosedTyp.subject_closed in Hty.
         eapply (@closedn_on_free_vars xpred0) in Hty.
         eapply (weakening_cumulSpec0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty Hty)); cbn. lia.
-        exact c0.
+        unshelve eapply (@cumulAlgo_cumulSpec _ _ true). apply into_equality; eauto.
+        intuition. 
     + cbn in X. destruct X as [s ondecl].
       specialize (ondecl _ Hrel).
       depelim Hconv.
@@ -203,7 +231,8 @@ Lemma context_cumulativity_prop {cf:checker_flags} :
         eapply PCUICClosedTyp.subject_closed in ondecl.
         eapply (@closedn_on_free_vars xpred0) in ondecl.
         eapply (weakening_cumulSpec0 (Γ := Δ) (Γ'' := Δ') (M := exist T H) (N := exist ty ondecl)); cbn. lia.
-        exact c.
+        unshelve eapply (@cumulAlgo_cumulSpec _ _ true). apply into_equality; eauto.
+        intuition. 
   - constructor; pcuic.
     eapply forall_Γ'0. repeat (constructor; pcuic).
     constructor; auto. red. eexists; eapply forall_Γ'; auto.
@@ -229,26 +258,33 @@ Lemma context_cumulativity_prop {cf:checker_flags} :
       eapply IHbty.
       eapply All2_fold_app => //. apply All2_cumul_over_refl.
       eapply context_cumulativity_wf_app; tea.
-  - econstructor. eapply fix_guard_context_cumulativity; eauto.
-    all:pcuic.
-    eapply (All_impl X0).
-    intros x [s [Hs IH]].
-    exists s; eauto.
-    eapply (All_impl X1).
-    intros x [Hs IH].
-    eapply IH.
-    now apply cumul_context_app_same.
-    eapply (All_mfix_wf); auto.
-    apply (All_impl X0); simpl.
-    intros x' [s [Hs' IH']]. exists s.
-    eapply IH'; auto.
   - econstructor.
-    eapply cofix_guard_context_cumulativity; eauto.
-    all:pcuic.
-    + eapply (All_impl X0).
+    all:pcuic. 
+    * eapply fix_guard_context_cumulativity; eauto.
+      eapply cumul_context_Algo_Spec; eauto. eapply into_context_equality; eauto.  
+      + apply wf_local_closed_context; eauto.  
+      + apply wf_local_closed_context; eauto.
+    * eapply (All_impl X0).
       intros x [s [Hs IH]].
       exists s; eauto.
-    + eapply (All_impl X1).
+    * eapply (All_impl X1).
+      intros x [Hs IH].
+      eapply IH.
+      now apply cumul_context_app_same.
+      eapply (All_mfix_wf); auto.
+      apply (All_impl X0); simpl.
+      intros x' [s [Hs' IH']]. exists s.
+      eapply IH'; auto.
+  - econstructor.
+    all:pcuic.
+    * eapply cofix_guard_context_cumulativity; eauto.
+      eapply cumul_context_Algo_Spec; eauto. eapply into_context_equality; eauto.  
+      + apply wf_local_closed_context; eauto.  
+      + apply wf_local_closed_context; eauto.
+    * eapply (All_impl X0).
+      intros x [s [Hs IH]].
+      exists s; eauto.
+    * eapply (All_impl X1).
       intros x [Hs IH].
       eapply IH.
       now apply cumul_context_app_same.
@@ -257,13 +293,20 @@ Lemma context_cumulativity_prop {cf:checker_flags} :
       intros x' [s [Hs' IH']]. exists s.
       eapply IH'; auto.
     
-  - econstructor; eauto.
-    eapply wt_cum_equality in X4; tea.
-    apply (wt_cum_context_equality true) in X5; tea.
-    eapply (equality_equality_ctx X5) in X4.
-    now eapply equality_forget in X4. 
-Qed. *)
-Admitted.
+  - econstructor; eauto. pose proof (wf_local_closed_context wfΓ).
+    pose proof (type_closed (forall_Γ' _ X5 X6)). eapply (@closedn_on_free_vars xpred0) in H0. 
+    pose proof (subject_closed (forall_Γ'0 _ X5 X6)). eapply (@closedn_on_free_vars xpred0) in H1. 
+    pose proof (type_closed typet). eapply (@closedn_on_free_vars xpred0) in H2. 
+    pose proof (subject_closed typeB). eapply (@closedn_on_free_vars xpred0) in H3. 
+    unshelve eapply (@cumulAlgo_cumulSpec  _ _ true); eauto.
+    apply into_equality; eauto.
+    * unshelve eapply (cumulSpec_cumulAlgo _ _ (exist Γ _) (exist A _) (exist B _)) in X4; eauto. 
+      apply equality_forget in X4. eapply wt_cum_equality in X4; tea.
+      apply (wt_cum_context_equality true) in X5; tea.
+      eapply (equality_equality_ctx X5) in X4.
+      now eapply equality_forget in X4.
+    * eapply wf_local_closed_context; eauto.  
+Qed. 
 
 Lemma closed_context_cumul_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
   Σ ⊢ Γ ≤ Γ' -> cumul_context Σ Γ Γ'.

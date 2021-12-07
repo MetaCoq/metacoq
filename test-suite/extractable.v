@@ -57,9 +57,8 @@ Defined.
 
 Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 
-
 MetaCoq Run
-    (tmInductive {| mind_entry_record := None
+    (tmInductive true {| mind_entry_record := None
                   ; mind_entry_finite := Finite
                   ; mind_entry_params := nil
                   ; mind_entry_inds :=

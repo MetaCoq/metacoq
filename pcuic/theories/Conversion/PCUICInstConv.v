@@ -2097,7 +2097,6 @@ Proof.
     rewrite on_free_vars_ctx_on_ctx_free_vars.
     now apply on_free_vars_ctx_prod_inv in a0 as []. *)
     admit. 
-Admitted.
 
 Lemma inst_cumul_ctx {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Δ Δ' σ} :
   usubst Γ σ Δ ->
@@ -2133,7 +2132,7 @@ Proof.
     (* rewrite on_ctx_free_vars_app addnP_shiftnP onΓ andb_true_r.
     rewrite on_free_vars_ctx_on_ctx_free_vars.
     now apply on_free_vars_ctx_prod_inv in a0 as []. *)
-Admitted. *)
+*)
 
 Definition inst_telescope r Γ :=
   mapi (fun i => map_decl (inst (up i r))) Γ.

@@ -108,28 +108,29 @@ Lemma urename_on_free_vars_shift P Γ Δ f u (Ξ:list context_decl) :
    on_free_vars (shiftnP #|Ξ| (shiftnP #|Γ| xpred0)) u -> 
    on_free_vars (shiftnP #|Ξ| (shiftnP #|Δ| xpred0)) 
                 (rename (shiftn #|Ξ| f) u).
-   intros sP hf HΓ HΔ Hu. rewrite on_free_vars_rename.
-   eapply on_free_vars_impl. 2: tea. clear Hu. intros n Hn.
-   apply urenaming_context with (Ξ:=Ξ) in hf. 
-   unfold urenaming in hf. 
-   specialize (hf n). destruct (nth_error (Γ,,, Ξ) n) eqn : Hnth.
-   - specialize (hf c); cbn in hf. forward hf. 
-     * unfold shiftnP in Hn. unfold sP , shiftnP.
-       toProp. toProp Hn. destruct Hn.
-       + intuition.
-       + right. toProp. toProp H. destruct H; intuition.       
-     * destruct (hf eq_refl) as [decl' [Hfn _]].
-       clear hf Hn. unfold sP , shiftnP. rewrite orb_false_r. 
-       assert (shiftn #|Ξ| f n < #|Δ,,, rename_context f Ξ|). 
-       { eapply nth_error_Some'. exists decl'. eauto. }
-       rewrite app_context_length in H.
-       rewrite rename_context_length in H.
-       toProp. clear -H.
-       repeat rewrite PeanoNat.Nat.ltb_lt. lia. 
-  - rewrite nth_error_None in Hnth. rewrite app_context_length in Hnth. unfold shiftnP in *. toProp Hn. toProp. unfold shiftn.
-    clear -Hn Hnth. destruct Hn.
-    * toProp H. intuition.
-    * toProp H. destruct H; [toProp H |]; intuition.      
+Proof.
+  intros sP hf HΓ HΔ Hu. rewrite on_free_vars_rename.
+  eapply on_free_vars_impl. 2: tea. clear Hu. intros n Hn.
+  apply urenaming_context with (Ξ:=Ξ) in hf. 
+  unfold urenaming in hf. 
+  specialize (hf n). destruct (nth_error (Γ,,, Ξ) n) eqn : Hnth.
+  - specialize (hf c); cbn in hf. forward hf. 
+    * unfold shiftnP in Hn. unfold sP , shiftnP.
+      toProp. toProp Hn. destruct Hn.
+      + intuition.
+      + right. toProp. toProp H. destruct H; intuition.       
+    * destruct (hf eq_refl) as [decl' [Hfn _]].
+      clear hf Hn. unfold sP , shiftnP. rewrite orb_false_r. 
+      assert (shiftn #|Ξ| f n < #|Δ,,, rename_context f Ξ|). 
+      { eapply nth_error_Some'. exists decl'. eauto. }
+      rewrite app_context_length in H.
+      rewrite rename_context_length in H.
+      toProp. clear -H.
+      repeat rewrite PeanoNat.Nat.ltb_lt. lia. 
+- rewrite nth_error_None in Hnth. rewrite app_context_length in Hnth. unfold shiftnP in *. toProp Hn. toProp. unfold shiftn.
+  clear -Hn Hnth. destruct Hn.
+  * toProp H. intuition.
+  * toProp H. destruct H; [toProp H |]; intuition.      
 Defined.  
 
 Lemma urename_is_open_term P Γ Δ f u : let sP := shiftnP #|Γ| P in

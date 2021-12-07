@@ -1117,7 +1117,7 @@ Section ContextConversion.
   
 End ContextConversion.
 
-#[global] Hint Resolve isType_open wf_local_closed_context : fvs.
+#[global] Hint Resolve isType_open PCUICClosedTyp.wf_local_closed_context : fvs.
 #[global] Hint Resolve conv_ctx_refl' : pcuic.
 #[global] Hint Constructors conv_decls : pcuic.
 

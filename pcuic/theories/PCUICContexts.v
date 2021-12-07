@@ -6,9 +6,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConversion PCUICContextConversion
-     PCUICContextSubst
-     PCUICClosed PCUICSigmaCalculus PCUICSubstitution PCUICUnivSubstitution
-     PCUICWeakening PCUICGeneration PCUICUtils.
+     PCUICContextSubst PCUICUnivSubstitutionConv
+     PCUICClosed PCUICSigmaCalculus PCUICSubstitution PCUICUnivSubstitutionTyp
+     PCUICWeakeningTyp PCUICWeakeningConv PCUICGeneration PCUICUtils.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
@@ -136,7 +136,7 @@ Lemma instantiate_minductive {cf:checker_flags} Σ ind mdecl u Γ t T :
   Σ ;;; subst_instance u Γ |- subst_instance u t : subst_instance u T.
 Proof.
   intros wfΣ isdecl Hu Ht.
-  red in isdecl. eapply PCUICUnivSubstitution.typing_subst_instance_decl in isdecl; eauto.
+  red in isdecl. eapply typing_subst_instance_decl in isdecl; eauto.
 Qed.
 
 Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
@@ -157,11 +157,11 @@ Proof.
   - destruct a0.
     exists (subst_instance_univ u x).
     eapply instantiate_minductive in t; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in t.
+    now rewrite subst_instance_app in t.
   - eapply instantiate_minductive in b1; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b1.
+    now rewrite subst_instance_app in b1.
   - eapply instantiate_minductive in b; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b.
+    now rewrite subst_instance_app in b.
 Qed.
 
 Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
@@ -179,12 +179,12 @@ Proof.
   - destruct a0.
     exists (subst_instance_univ u x).
     eapply instantiate_minductive in t; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in t.
+    now rewrite subst_instance_app in t.
   - eapply instantiate_minductive in b1; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b1.
+    now rewrite subst_instance_app in b1.
   - destruct s; simpl; intuition eauto.
     eapply instantiate_minductive in b; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b.
+    now rewrite subst_instance_app in b.
 Qed.
 
 Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs : 
@@ -430,12 +430,12 @@ Proof.
     apply inst_ext. len.
     rewrite (Upn_eq _ (List.rev args ⋅n ids)).
     rewrite subst_consn_compose.
-    rewrite PCUICInstProp.map_inst_idsn; len; try lia.
+    rewrite PCUICInstConv.map_inst_idsn; len; try lia.
     rewrite subst_compose_assoc.
     rewrite -(context_subst_length2 X).
     rewrite subst_consn_shiftn; len => //.
     sigma. rewrite Upn_eq. sigma.
-    rewrite PCUICInstProp.map_inst_idsn; len; try lia.
+    rewrite PCUICInstConv.map_inst_idsn; len; try lia.
     rewrite -subst_compose_assoc shiftk_compose.
     rewrite -subst_consn_app.
     rewrite subst_consn_shiftn //. now len.

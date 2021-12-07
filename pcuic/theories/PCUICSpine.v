@@ -3439,21 +3439,6 @@ Section WfEnv.
       eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
   Qed.
 
-  Lemma subject_is_open_term {Γ t T} : 
-    Σ ;;; Γ |- t : T ->
-    is_open_term Γ t.
-  Proof.
-    move/subject_closed.
-    now rewrite is_open_term_closed.
-  Qed.
-
-  Lemma type_is_open_term {Γ t T} : 
-    Σ ;;; Γ |- t : T ->
-    is_open_term Γ T.
-  Proof.
-    move/type_closed. now rewrite is_open_term_closed.
-  Qed.
-
   Lemma ctx_inst_open_terms Γ args Δ : 
     ctx_inst Σ Γ args Δ ->
     All (is_open_term Γ) args.

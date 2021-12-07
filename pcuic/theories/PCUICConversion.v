@@ -290,27 +290,9 @@ Proof.
   now len.
 Qed.
 
-Lemma is_open_term_closed (Γ : context) t :
-  closedn #|Γ| t = is_open_term Γ t.
-Proof.
-  rewrite closedP_on_free_vars.
-  eapply on_free_vars_ext.
-  now rewrite closedP_shiftnP.
-Qed.
-
-Lemma is_closed_ctx_closed (Γ : context) :
-  closed_ctx Γ = is_closed_context Γ.
-Proof.
-  rewrite closedn_ctx_on_free_vars //.
-Qed.
-
-#[global]
-Hint Rewrite is_open_term_closed is_closed_ctx_closed : fvs.
-
 #[global] Hint Resolve on_free_vars_shiftnP_S : fvs.
 #[global] Hint Rewrite @on_fvs_prod @on_fvs_lambda @on_fvs_letin : fvs.
 #[global] Hint Rewrite @on_free_vars_ctx_snoc : fvs.
-#[global] Hint Extern 4 => progress autorewrite with fvs : fvs.
 #[global] Hint Resolve closed_red_open_right : fvs.
 
 Ltac fvs := eauto 10 with fvs.
@@ -587,6 +569,12 @@ Section ConvCongruences.
     intros Hs H. now apply (closed_red_untyped_substitution (Γ' := [])).
   Qed.
 
+  Lemma untyped_subslet_def_tip {Γ na d ty} : untyped_subslet Γ [d] [vdef na d ty].
+  Proof.
+    rewrite -{1}(subst_empty 0 d). constructor. constructor.
+  Qed.
+  Hint Resolve untyped_subslet_def_tip : pcuic.
+
   Lemma invert_red_letin {Γ C na d ty b} :
     Σ ;;; Γ ⊢ (tLetIn na d ty b) ⇝ C ->
     (∑ d' ty' b',
@@ -616,12 +604,11 @@ Section ConvCongruences.
           constructor. all:constructor; eauto with fvs.
       - right; auto. transitivity (b {0 := r}); auto.
         eapply (closed_red_red_subst (Δ := [vass na ty]) (Γ' := [])); eauto with fvs.
-        * rewrite on_free_vars_ctx_snoc clΓ /= //.
         * constructor; [|constructor]. eapply into_closed_red; eauto with fvs.
         * constructor. constructor.
       - left. do 3 eexists. repeat split; eauto with pcuic.
         * transitivity r; pcuic.
-        * rewrite on_free_vars_ctx_snoc clΓ /= //; eauto with fvs.
+        * eauto with fvs.
         * eapply red_red_ctx_inv' in c1; [exact c1|].
           simpl. constructor; [now apply closed_red_ctx_refl|].
           constructor; eauto with fvs pcuic.
@@ -630,11 +617,7 @@ Section ConvCongruences.
         now transitivity r; eauto with pcuic fvs.
       - right; auto.
         transitivity (r {0 := d}); auto.
-        eapply (closed_red_untyped_substitution (Δ := [vdef na d ty]) (Γ' := [])); eauto.
-        * rewrite -{1}(subst_empty 0 d). constructor. constructor.
-        * cbn. eauto with fvs.
-        * split; eauto with fvs.
-          rewrite on_free_vars_ctx_snoc. eauto with fvs.
+        eapply (closed_red_untyped_substitution (Δ := [vdef na d ty]) (Γ' := [])); cbn; eauto with pcuic fvs.
   Qed.
 
   Lemma invert_red_prod {Γ na dom codom T} :
@@ -665,12 +648,6 @@ Section ConvCongruences.
         eexists _, _; split => //.
         transitivity N2; split; eauto with fvs.
   Qed.
-
-  Lemma untyped_subslet_def_tip {Γ na d ty} : untyped_subslet Γ [d] [vdef na d ty].
-  Proof.
-    rewrite -{1}(subst_empty 0 d). constructor. constructor.
-  Qed.
-  Hint Resolve untyped_subslet_def_tip : pcuic.
 
   (*Lemma equality_LetIn_l_inv {Γ na d ty b T} :
     Σ ;;; Γ ⊢ tLetIn na d ty b ≤ T ->
@@ -3700,6 +3677,18 @@ Section CumulSpecIsCumulAlgo.
 
 Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
 
+Lemma on_free_vars_ctx_inst_case_context_xpred0 (Γ : list context_decl) (pars : list term)
+  (puinst : Instance.t) (pctx : list context_decl) :
+  forallb (on_free_vars (shiftnP #|Γ| xpred0)) pars ->
+  on_free_vars_ctx (closedP #|pars| xpredT) pctx ->
+  on_free_vars_ctx xpred0 Γ ->
+  on_free_vars_ctx xpred0 (Γ,,, inst_case_context pars puinst pctx).
+Proof.
+  intros. rewrite on_free_vars_ctx_app H1 /=.
+  eapply on_free_vars_ctx_inst_case_context; trea; solve_all.
+  rewrite test_context_k_closed_on_free_vars_ctx //.
+Qed.
+
 Proposition convSpec_convAlgo (Γ : closed_context) (M N : open_term Γ) :
   Σ ;;; Γ |- M =s N  ->
   Σ ;;; Γ ⊢ M = N.
@@ -3934,4 +3923,23 @@ Proof.
   Unshelve. all: eauto. 
 Defined.   
 
+Lemma cumulSpec_cumulAlgo_curry (Γ : context) (M N : term) :
+  is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N ->
+  Σ ;;; Γ |- M <=s N  ->
+  Σ ;;; Γ ⊢ M ≤ N.
+Proof.
+  intros clΓ clM clN.
+  eapply (cumulSpec_cumulAlgo (exist Γ clΓ) (exist M clM) (exist N clN)).
+Qed.
 End CumulSpecIsCumulAlgo.
+
+Lemma cumulSpec_typed_cumulAlgo {cf} {Σ} {wfΣ : wf Σ} {Γ : context} {t A B s} :
+  Σ ;;; Γ |- t : A ->
+  Σ ;;; Γ |- B : tSort s ->
+  Σ ;;; Γ |- A <=s B  ->
+  Σ ;;; Γ ⊢ A ≤ B.
+Proof.
+  intros ta tb. eapply cumulSpec_cumulAlgo_curry; eauto with fvs.
+Qed.
+#[global] Hint Immediate cumulSpec_typed_cumulAlgo : pcuic.
+

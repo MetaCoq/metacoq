@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICParallelReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICParallelReductionConfluence PCUICConfluence
      PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity
-     PCUICGuardCondition PCUICContextConversion.
+     PCUICGuardCondition PCUICClosedTyp PCUICContextConversion.
 
 From MetaCoq.PCUIC Require Export PCUICContextRelation.
 
@@ -14,6 +14,8 @@ From Coq Require Import CRelationClasses ssreflect ssrbool.
 From Equations Require Import Equations.
 
 Arguments red_ctx : clear implicits.
+
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Lemma weakening_cumulSpec0 {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ : closed_context} {Γ'' : open_context Γ}
   {M N : open_term Γ} n :

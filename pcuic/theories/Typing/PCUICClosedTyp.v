@@ -371,11 +371,58 @@ Proof.
   now move/typecheck_closed => [_ [_ /andP [_ ct]]].
 Qed.
 
+#[global] Hint Extern 4 (closedn #|?Γ| ?A = true) =>
+  match goal with
+  | [ H : _ ;;; Γ |- A : _ |- _ ] => exact (subject_closed H)
+  end : fvs.
+
+#[global] Hint Extern 4 (closedn #|?Γ| ?A = true) =>
+  match goal with
+  | [ H : _ ;;; Γ |- _ : A |- _ ] => exact (type_closed H)
+  end : fvs.
+
+#[global] Hint Extern 10 => progress unfold PCUICTypingDef.typing in * : fvs.
+
 Lemma isType_closed {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ T} : isType Σ Γ T -> closedn #|Γ| T.
-Proof. intros [s Hs]. now eapply subject_closed in Hs. Qed.
+Proof. intros [s Hs]; fvs. Qed.
 
+#[global] Hint Extern 4 (closedn #|?Γ| ?A = true) =>
+  match goal with
+  | [ H : isType _ Γ A |- _ ] => exact (isType_closed H)
+  end : fvs.
 
+Lemma is_open_term_closed (Γ : context) t :
+  closedn #|Γ| t = is_open_term Γ t.
+Proof.
+  rewrite closedP_on_free_vars.
+  eapply on_free_vars_ext.
+  now rewrite closedP_shiftnP.
+Qed.
 
+Lemma is_closed_ctx_closed (Γ : context) :
+  closed_ctx Γ = is_closed_context Γ.
+Proof.
+  rewrite closedn_ctx_on_free_vars //.
+Qed.
+
+#[global]
+Hint Rewrite is_open_term_closed is_closed_ctx_closed : fvs.
+#[global] Hint Extern 4 => progress autorewrite with fvs : fvs.
+
+Lemma subject_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ t T} : 
+  Σ ;;; Γ |- t : T ->
+  is_open_term Γ t.
+Proof.
+  move/subject_closed.
+  now rewrite is_open_term_closed.
+Qed.
+
+Lemma type_is_open_term {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ.1} {Γ t T} : 
+  Σ ;;; Γ |- t : T ->
+  is_open_term Γ T.
+Proof.
+  move/type_closed. now rewrite is_open_term_closed.
+Qed.
 
 Lemma closed_wf_local `{checker_flags} {Σ Γ} :
   wf Σ.1 ->
@@ -386,7 +433,15 @@ Proof.
   apply (env_prop_wf_local typecheck_closed Σ wfΣ _ wfΓ).
 Qed.
 
+#[global] Hint Extern 4 (is_open_term ?Γ ?A = true) =>
+  match goal with
+  | [ H : _ ;;; Γ |- A : _ |- _ ] => exact (subject_is_open_term H)
+  end : fvs.
 
+#[global] Hint Extern 4 (is_open_term ?Γ ?A = true) =>
+  match goal with
+  | [ H : _ ;;; Γ |- _ : A |- _ ] => exact (type_is_open_term H)
+  end : fvs.
 
 Lemma closed_ctx_on_ctx_free_vars Γ : closed_ctx Γ = on_ctx_free_vars (closedP #|Γ| xpredT) Γ.
 Proof.
@@ -400,13 +455,25 @@ Proof.
   now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
 Qed.
 
+Lemma typing_closed_context {cf} {Σ} {wfΣ : wf Σ} {Γ T U} :
+  Σ ;;; Γ |- T : U ->
+  is_closed_context Γ.
+Proof.
+  now move/typing_wf_local/wf_local_closed_context.
+Qed.
+
+#[global] Hint Extern 4 (is_closed_context ?Γ = true) =>
+  match goal with
+  | [ H : _ ;;; Γ |- _ : _ |- _ ] => exact (typing_closed_context H)
+  end : fvs.
+
 Lemma ctx_inst_closed {cf:checker_flags} (Σ : global_env_ext) Γ i Δ : 
   wf Σ.1 -> ctx_inst typing Σ Γ i Δ -> All (closedn #|Γ|) i.
 Proof.
-  intros wfΣ; induction 1; auto; constructor; auto.
-  now eapply subject_closed in t0.
+  intros wfΣ; induction 1; auto; constructor; auto; fvs.
 Qed.
 
+#[global] Hint Resolve ctx_inst_closed : fvs.
 
 Lemma declared_decl_closed `{checker_flags} {Σ : global_env} {cst decl} :
   wf Σ ->
@@ -619,7 +686,7 @@ Proof.
 Qed.
 
 
-Hint Unfold inst_case_branch_context : len.
+#[global] Hint Unfold inst_case_branch_context : len.
 
 (** This shows preservation by reduction of closed/noccur_between predicates 
   necessary to prove exchange and strengthening lemmas. *)

@@ -17,6 +17,10 @@ Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+(** Hint database for solving closed/on_free_vars goals *)
+Create HintDb fvs.
+Ltac fvs := eauto with fvs.
+
 Implicit Type (cf : checker_flags).
 
 Definition shiftnP k p i :=

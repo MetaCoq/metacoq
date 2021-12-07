@@ -3,10 +3,11 @@ From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICTyping PCUICPosition PCUICUnivSubst
-     PCUICContextRelation PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv
+     PCUICContextRelation PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv PCUICConversion
+     PCUICWellScopedCumulativity PCUICOnFreeVars PCUICConfluence PCUICClosedTyp
      PCUICSigmaCalculus (* for context manipulations *).
 Require Import Equations.Prop.DepElim.
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 
 Implicit Types cf : checker_flags.
 
@@ -22,9 +23,20 @@ Local Set Keyed Unification.
 Set Default Goal Selector "!".
 
 Lemma nl_cumulSpec {cf:checker_flags} :
-  forall Σ Γ A B,
-    Σ ;;; Γ |- A <=s B ->
-    nlg Σ ;;; nlctx Γ |- nl A <=s nl B.
+  forall (Σ:global_env_ext) Γ A B, wf Σ ->
+  is_closed_context Γ ->
+  is_open_term Γ A ->
+  is_open_term Γ B ->
+  Σ ;;; Γ |- A <=s B ->
+  nlg Σ ;;; nlctx Γ |- nl A <=s nl B.
+Proof.
+  intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (le:=true)). 
+  eapply into_equality.
+  - eapply nl_cumul. eapply (equality_forget (le:=true)). 
+  unshelve eapply (cumulSpec_cumulAlgo _ _ (exist _ _ ) (exist _ _) (exist _ _)); eauto; cbn. 
+  - eapply closed_ctx_on_free_vars. apply closed_nlctx.  admit.
+  - eapply closedn_on_free_vars. apply closed_nl. rewrite nlctx_length. 
+    admit. 
 Admitted. 
 
 Lemma nlg_wf_local {cf : checker_flags} :
@@ -262,7 +274,10 @@ Proof.
         now rewrite -> XX, <- nl_lift.
     + now rewrite <-nl_wf_cofixpoint.
   - econstructor; tea.
-    now apply nl_cumulSpec.
+    apply nl_cumulSpec; eauto. 
+    + eapply wf_local_closed_context; eauto.  
+    + eapply closedn_on_free_vars. eapply type_closed; eauto.
+    + eapply closedn_on_free_vars. eapply subject_closed; eauto.
 Qed.
 
 

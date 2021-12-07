@@ -113,7 +113,7 @@ End EquivalenceConvCumulDefs.
 
 Section CumulSpecIsCumulAlgo.
 
-  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
+  Context {cf:checker_flags} (Σ : global_env_ext).
 
   Proposition red1_cumulSpec (Γ : context) (M N : term) :
     red1 Σ Γ M N -> Σ ;;; Γ |- M =s N.

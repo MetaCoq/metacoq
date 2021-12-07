@@ -10,12 +10,14 @@ Class GuardCheckerCorrect :=
 {
   guard_red1 b Σ Γ mfix mfix' idx :
       guard b Σ Γ mfix ->
-      red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
+      red1 Σ Γ ((if b then tFix else tCoFix) mfix idx) 
+               ((if b then tFix else tCoFix) mfix' idx) ->
       guard b Σ Γ mfix' ;
 
   guard_eq_term b Σ Γ mfix mfix' idx :
       guard b Σ Γ mfix ->
-      upto_names (tFix mfix idx) (tFix mfix' idx) ->
+      upto_names ((if b then tFix else tCoFix) mfix idx) 
+                 ((if b then tFix else tCoFix) mfix' idx) ->
       guard b Σ Γ mfix' ;
 
   guard_subst_instance {cf:checker_flags} b Σ Γ mfix u univs :

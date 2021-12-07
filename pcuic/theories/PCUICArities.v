@@ -244,10 +244,9 @@ Section WfEnv.
     intros.
     eapply type_Cumul; tea. apply X0.π2.
     destruct le.
-    - eapply equality_forget in X1.
-      epose proof (cumulAlgo_cumulSpec Σ (le:=true)).
+    - apply (cumulAlgo_cumulSpec Σ (le:=true)); eauto.   
     - eapply equality_eq_le in X1.
-      now eapply equality_forget in X1.
+      apply (cumulAlgo_cumulSpec Σ (le:=true)); eauto. 
   Qed.
 
   Lemma isType_tLetIn_red {Γ} (HΓ : wf_local Σ Γ) {na t A B}
@@ -395,7 +394,12 @@ Section WfEnv.
       depelim wf. clear l.
       eapply type_Cumul. econstructor; eauto.
       econstructor; eauto. now eapply typing_wf_universe in Ht; pcuic.
-      eapply red_cumul. eapply red1_red. constructor.
+      apply (cumulAlgo_cumulSpec Σ (le:=true)); eauto. apply into_equality; eauto.   
+      * eapply red_cumul. eapply red1_red. constructor.
+      * eapply wf_local_closed_context; eauto. 
+      * cbn;  solve_all; cbn in *.  
+        + eapply closedn_on_free_vars. eapply subject_closed; eauto.     
+        + eapply closedn_on_free_vars. eapply type_closed; eauto. 
     - have wf := typing_wf_local Ht.
       depelim wf; clear l.
       eapply type_Prod; eauto.
@@ -412,8 +416,7 @@ Section WfEnv.
     - eapply type_Cumul; eauto.
       econstructor; eauto using typing_wf_local with pcuic.
       eapply typing_wf_universe in Ht; auto with pcuic.
-      constructor. constructor.
-      eapply leq_universe_product.
+      eapply cumul_Sort. eapply leq_universe_product.
     - specialize (IHΓ' Γ  u (Universe.sort_of_product u s)); auto.
       unfold app_context in Ht.
       eapply type_Cumul.
@@ -425,7 +428,7 @@ Section WfEnv.
         + simpl. exact X0.π2.
         + eapply type_Cumul; eauto.
           econstructor; eauto with pcuic.
-          constructor. constructor. eapply leq_universe_product. }
+          eapply cumul_Sort. eapply leq_universe_product. }
       eapply (type_mkProd_or_LetIn {| decl_body := None |}) => /=; eauto.
       econstructor; eauto with pcuic.
       eapply typing_wf_local in Ht.
@@ -543,7 +546,7 @@ Section WfEnv.
     intros isdecl univs.
     unfold inds.
     pose proof (proj1 isdecl) as declm.
-    apply PCUICWeakeningEnv.on_declared_minductive in declm as [oind oc]; auto.
+    apply PCUICWeakeningEnvTyp.on_declared_minductive in declm as [oind oc]; auto.
     clear oc.
     assert (Alli (fun i x => 
       Σ ;;; [] |- tInd {| inductive_mind := inductive_mind ind; inductive_ind := i |} u : subst_instance u (ind_type x)) 0 (ind_bodies mdecl)). 
@@ -616,7 +619,7 @@ Section WfEnv.
       rewrite !subst_empty in t3.
       forward IHn.
       eapply type_Cumul. eapply t1. econstructor; intuition eauto using typing_wf_local with pcuic.
-      eapply (equality_forget e). rewrite {2}Hl in IHn.
+      eapply (cumulAlgo_cumulSpec Σ (le:=true)); eauto. rewrite {2}Hl in IHn.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
       
       intros Hs.
@@ -632,8 +635,7 @@ Section WfEnv.
       forward IHn.
       eapply type_Cumul. simpl in X. eapply X.
       econstructor; eauto with pcuic.
-      eapply equality_Sort_inv in e.
-      do 2 constructor.
+      eapply equality_Sort_inv in e. eapply cumul_Sort. 
       transitivity (Universe.sort_of_product x x0).
       eapply leq_universe_product. auto.
       rewrite {2}Hl in IHn.

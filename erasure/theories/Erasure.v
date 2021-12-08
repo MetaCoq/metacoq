@@ -11,8 +11,7 @@ From MetaCoq.Erasure Require Import EAstUtils ErasureFunction ErasureCorrectness
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr EWcbvEval EDeps.
 
 #[local] Instance extraction_checker_flags : checker_flags := 
-  {| check_univs := true;
-     prop_sub_type := false;
+  {| prop_sub_type := false;
      indices_matter := false;
      lets_in_constructor_types := true |}.
 

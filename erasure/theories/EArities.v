@@ -313,7 +313,6 @@ Section Elim'.
 Context `{cf : checker_flags}.
 Context {Σ : global_env_ext} {wfΣ : wf_ext Σ}.
 Variable Hcf : prop_sub_type = false.
-Variable Hcf' : check_univs = true.
 
 Lemma cumul_prop1 Γ A B u :
   Universe.is_prop u ->
@@ -418,7 +417,6 @@ Proof.
 Qed.
 
 Lemma cumul_prop1' (Σ : global_env_ext) Γ A B u :
-  check_univs = true ->
   wf_ext Σ ->
   isType Σ Γ A ->
   is_propositional u ->
@@ -498,11 +496,10 @@ Proof.
 Qed.
 
 Lemma leq_universe_propositional_r {cf : checker_flags} (ϕ : ConstraintSet.t) (u1 u2 : Universe.t_) :
-  check_univs ->
   consistent ϕ ->
   leq_universe ϕ u1 u2 -> is_propositional u2 -> is_propositional u1.
 Proof.
-  intros cu cons leq; unfold is_propositional.
+  intros cons leq; unfold is_propositional.
   destruct u2 => //.
   apply leq_universe_prop_r in leq => //.
   now rewrite leq.
@@ -512,12 +509,11 @@ Proof.
 Qed.
 
 Lemma leq_universe_propositional_l {cf : checker_flags} (ϕ : ConstraintSet.t) (u1 u2 : Universe.t_) :
-  check_univs ->
   prop_sub_type = false ->
   consistent ϕ ->
   leq_universe ϕ u1 u2 -> is_propositional u1 -> is_propositional u2.
 Proof.
-  intros cu ps cons leq; unfold is_propositional.
+  intros ps cons leq; unfold is_propositional.
   destruct u1 => //.
   eapply leq_universe_prop_no_prop_sub_type in leq => //.
   now rewrite leq.

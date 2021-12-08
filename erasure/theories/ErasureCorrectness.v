@@ -535,12 +535,12 @@ Proof.
   pose proof (PCUICValidity.validity Ht).  
   epose proof (PCUICPrincipality.common_typing _ wfΣ Hty Ht) as [C [Cty [Cty' Ht'']]].
   eapply PCUICSpine.typing_spine_strengthen in sp. 3:tea.
+  2: now eapply validity.
   edestruct (sort_typing_spine _ _ _ u _ _ _ pu sp) as [u' [Hty' isp']].
-  eapply cumul_prop1'. 5:tea. all:eauto.
+  eapply cumul_prop1'. 4:tea. all:eauto.
   eapply validity; eauto.
   exists ty, u'; split; auto.
   eapply PCUICSpine.type_mkApps; tea; eauto.
-  now eapply validity.
 Qed.
 
 
@@ -640,7 +640,7 @@ Proof.
   eapply isType_Sort; pcuic.
   destruct (ind_sort x0) => //.
   eapply PCUICSpine.inversion_it_mkProd_or_LetIn in ty; eauto.
-  epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ eq_refl wfΣ ty).
+  epose proof (typing_spine_proofs _ _ [] _ _ _ [] _ _ wfΣ ty).
   forward H0 by constructor. eexists; eauto.
   simpl. now exists cty. eapply PCUICConversion.equality_eq_le_gen, PCUICSR.wt_equality_refl; eauto.
   destruct H0 as [_ sorts].

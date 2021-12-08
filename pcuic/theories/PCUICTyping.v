@@ -176,33 +176,33 @@ Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ ci p ps md
              0 idecl.(ind_ctors) brs).
 
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| type_Rel n decl :
+| type_Rel : forall n decl,
     wf_local Σ Γ ->
     nth_error Γ n = Some decl ->
     Σ ;;; Γ |- tRel n : lift0 (S n) decl.(decl_type)
 
-| type_Sort s :
+| type_Sort : forall s,
     wf_local Σ Γ ->
     wf_universe Σ s ->
     Σ ;;; Γ |- tSort s : tSort (Universe.super s)
 
-| type_Prod na A B s1 s2 :
+| type_Prod : forall na A B s1 s2,
     Σ ;;; Γ |- A : tSort s1 ->
     Σ ;;; Γ ,, vass na A |- B : tSort s2 ->
     Σ ;;; Γ |- tProd na A B : tSort (Universe.sort_of_product s1 s2)
 
-| type_Lambda na A t s1 B :
+| type_Lambda : forall na A t s1 B,
     Σ ;;; Γ |- A : tSort s1 ->
     Σ ;;; Γ ,, vass na A |- t : B ->
     Σ ;;; Γ |- tLambda na A t : tProd na A B
 
-| type_LetIn na b B t s1 A :
+| type_LetIn : forall na b B t s1 A,
     Σ ;;; Γ |- B : tSort s1 ->
     Σ ;;; Γ |- b : B ->
     Σ ;;; Γ ,, vdef na b B |- t : A ->
     Σ ;;; Γ |- tLetIn na b B t : tLetIn na b B A
 
-| type_App t na A B s u :
+| type_App : forall t na A B s u,
     (* Paranoid assumption, allows to show equivalence with template-coq, 
        but eventually unnecessary thanks to validity. *)
     Σ ;;; Γ |- tProd na A B : tSort s ->
@@ -210,29 +210,26 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- u : A ->
     Σ ;;; Γ |- tApp t u : B{0 := u}
 
-| type_Const cst u :
+| type_Const : forall cst u decl, 
     wf_local Σ Γ ->
-    forall decl, 
     declared_constant Σ.1 cst decl ->
     consistent_instance_ext Σ decl.(cst_universes) u ->
     Σ ;;; Γ |- (tConst cst u) : subst_instance u decl.(cst_type)
 
-| type_Ind ind u :
+| type_Ind : forall ind u mdecl idecl,
     wf_local Σ Γ ->
-    forall mdecl idecl,
     declared_inductive Σ.1 ind mdecl idecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tInd ind u) : subst_instance u idecl.(ind_type)
 
-| type_Construct ind i u :
+| type_Construct : forall ind i u mdecl idecl cdecl, 
     wf_local Σ Γ ->
-    forall mdecl idecl cdecl,
     declared_constructor Σ.1 (ind, i) mdecl idecl cdecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
-| type_Case (ci : case_info) p c brs indices ps :
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
+| type_Case : forall ci p c brs indices ps mdecl idecl,
+    declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
@@ -241,14 +238,13 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
                         brs ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
-| type_Proj p c u :
-    forall mdecl idecl cdecl pdecl args,
+| type_Proj : forall p c u mdecl idecl cdecl pdecl args,
     declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     #|args| = ind_npars mdecl ->
     Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u (snd pdecl))
 
-| type_Fix mfix n decl :
+| type_Fix : forall mfix n decl,
     wf_local Σ Γ ->
     fix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
@@ -257,7 +253,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_fixpoint Σ.1 mfix -> 
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
   
-| type_CoFix mfix n decl :
+| type_CoFix : forall mfix n decl, 
     wf_local Σ Γ ->
     cofix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
@@ -266,7 +262,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_cofixpoint Σ.1 mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
   
-| type_Cumul t A B s :
+| type_Cumul : forall t A B s, 
     Σ ;;; Γ |- t : A -> 
     Σ ;;; Γ |- B : tSort s ->
     Σ ;;; Γ |- A <=s B -> 
@@ -386,7 +382,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max (wf_local_size _ typing_size _ wf_pctx)
       (Nat.max (ctx_inst_size typing_size ind_inst)
-        (Nat.max d1 (Nat.max d2 (branches_size typing_size brs_ty)))))).
+        (Nat.max d2 (Nat.max d3 (branches_size typing_size brs_ty)))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 

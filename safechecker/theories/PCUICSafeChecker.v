@@ -128,8 +128,6 @@ Section OnUdecl.
       destruct onu as [_ [_ [_ sat]]].
       do 2 red in sat.
       unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
-      red. destruct check_univs => //.
-      unfold valid_constraints0.
       intros val vsat.
       destruct sat as [val' allsat].
       red.
@@ -157,8 +155,6 @@ Section OnUdecl.
       destruct onu as [_ [_ [_ sat]]].
       do 2 red in sat.
       unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
-      red. destruct check_univs => //.
-      unfold valid_constraints0.
       intros val vsat.
       destruct sat as [val' allsat].
       red.

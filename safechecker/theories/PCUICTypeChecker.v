@@ -612,16 +612,14 @@ Section Typecheck.
     | None => TypeError (Msg "Cannot eliminate over this sort")
     end.
   Next Obligation.
-    unfold is_allowed_elimination, is_allowed_elimination0.
-    destruct check_univs; auto.
+    unfold is_allowed_elimination.
     intros val sat.
     symmetry in Heq_anonymous.
     apply is_sprop_val with (v := val) in Heq_anonymous.
     now rewrite Heq_anonymous.
   Qed.
   Next Obligation.
-    unfold is_allowed_elimination, is_allowed_elimination0.
-    destruct check_univs; auto.
+    unfold is_allowed_elimination.
     intros val sat.
     unfold is_propositional in *.
     destruct Universe.is_prop eqn:prop.
@@ -631,8 +629,7 @@ Section Typecheck.
       + discriminate.
   Qed.
   Next Obligation.
-    unfold is_allowed_elimination, is_allowed_elimination0.
-    destruct check_univs eqn:cu; auto.
+    unfold is_allowed_elimination.
     intros val sat.
     unfold is_propositional in *.
     destruct Universe.is_prop eqn:prop.
@@ -641,8 +638,7 @@ Section Typecheck.
       + apply is_sprop_val with (v := val) in sprop; rewrite sprop; auto.
       + destruct check_eqb_universe eqn:check; [|discriminate].
         eapply check_eqb_universe_spec' in check; eauto.
-        * unfold eq_universe, eq_universe0 in check.
-          rewrite cu in check.
+        * unfold eq_universe.
           specialize (check val sat).
           now rewrite check.
         * destruct HΣ, Hφ.
@@ -651,8 +647,7 @@ Section Typecheck.
           now apply global_ext_uctx_consistent.
   Qed.
   Next Obligation.
-    unfold is_allowed_elimination, is_allowed_elimination0.
-    destruct check_univs; auto.
+    easy.
   Qed.
 
   Notation wt_brs Γ ci mdecl idecl p ps ptm ctors brs n := 

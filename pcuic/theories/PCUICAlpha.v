@@ -2,8 +2,10 @@
 From Coq Require Import ssreflect ssrbool CRelationClasses CMorphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICTyping PCUICWeakening PCUICCumulativity PCUICEquality
-     PCUICConversion PCUICContextConversion PCUICValidity PCUICArities PCUICSpine
+     PCUICLiftSubst PCUICTyping PCUICWeakeningConv PCUICWeakeningTyp 
+     PCUICCumulativity PCUICEquality PCUICClosedTyp
+     PCUICConversion PCUICContextConversion PCUICContextConversionTyp 
+     PCUICValidity PCUICArities PCUICSpine
      PCUICInductives PCUICInductiveInversion PCUICOnFreeVars
      PCUICWellScopedCumulativity PCUICGuardCondition.
 
@@ -50,7 +52,7 @@ Section Alpha.
       destruct X0 as [s h].
       exists s. unfold PCUICTerm.tSort.
       change (tSort s) with (lift0 1 (tSort s)).
-      eapply PCUICWeakening.weakening with (Γ' := [ vass na ty ]).
+      eapply weakening with (Γ' := [ vass na ty ]).
       all: assumption.
     - destruct Γ. 1: discriminate.
       simpl in e.
@@ -60,7 +62,7 @@ Section Alpha.
       + exists s.
         change (tSort s) with (lift0 1 (lift0 (S i) (tSort s))).
         rewrite simpl_lift0.
-        eapply PCUICWeakening.weakening with (Γ' := [ c ]).
+        eapply weakening with (Γ' := [ c ]).
         all: assumption.
   Qed.
 
@@ -338,15 +340,15 @@ Section Alpha.
     - constructor.
     - rewrite !PCUICUnivSubst.subst_instance_cons. constructor; eauto.
       depelim p; constructor; simpl; intuition auto.
-      eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
+      eapply (PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
       intros x y u v ? ? ->; reflexivity.
       intros x y u v ? ? ->; reflexivity. exact vc.
       assumption.
-      eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
+      eapply (PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
       intros x y u v ? ? ->; reflexivity.
       intros x y u v ? ? ->; reflexivity. exact vc.
       assumption.
-      eapply (PCUICUnivSubstitution.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
+      eapply (PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_preserved Σ (fun _ => eq) (fun _ => eq)).
       intros x y u v ? ? ->; reflexivity.
       intros x y u v ? ? ->; reflexivity. exact vc.
       assumption.
@@ -448,7 +450,7 @@ Section Alpha.
     try reflexivity.
   Qed.
 
-  Import PCUICUnivSubstitution.
+  Import PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp.
   Lemma inst_case_predicate_context_eq {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl p} :
     wf_predicate mdecl idecl p ->
     eq_context_gen eq eq (ind_predicate_context ind mdecl idecl) (pcontext p) ->
@@ -489,33 +491,26 @@ Section Alpha.
   Proof.
     intros a eq.
     eapply All2_fold_All2 in eq.
-    induction eq; depelim a; cbn. constructor. constructor; auto. constructor; auto.
-    depelim r. subst. constructor; auto.
-    destruct l as [s Hs]. exists s.
-    eapply (closed_context_cumulativity _ (le:=false)); tea. apply IHeq. pcuic.
-    eapply context_equality_rel_app.
-    eapply eq_context_upto_conv_context_rel.
-    specialize (IHeq a). now eapply wf_local_closed_context in IHeq.
-    now eapply wf_local_closed_context in a.
-    eapply eq_context_gen_upto.
-    now eapply All2_fold_All2 in eq.
-    depelim r. subst. constructor; auto.
-    destruct l as [s Hs]. exists s.
-    eapply (closed_context_cumulativity _ (le := false)); tea. apply IHeq. pcuic.
-    eapply context_equality_rel_app.
-    eapply eq_context_upto_conv_context_rel.
-    specialize (IHeq a). now eapply wf_local_closed_context in IHeq.
-    now eapply wf_local_closed_context in a.
-    eapply eq_context_gen_upto.
-    now eapply All2_fold_All2 in eq.
-    red. red in l0.
-    eapply (closed_context_cumulativity _ (le := false)); tea. apply IHeq. pcuic.
-    eapply context_equality_rel_app.
-    eapply eq_context_upto_conv_context_rel.
-    specialize (IHeq a). now eapply wf_local_closed_context in IHeq.
-    now eapply wf_local_closed_context in a.
-    eapply eq_context_gen_upto.
-    now eapply All2_fold_All2 in eq.
+    induction eq; depelim a; cbn; try solve [constructor; auto];
+    depelim r; subst; constructor; auto.
+    - destruct l as [s Hs]. exists s.
+      eapply (closed_context_cumulativity _ (le:=false)); tea. apply IHeq. pcuic.
+      eapply context_equality_rel_app.
+      eapply eq_context_upto_conv_context_rel; fvs.
+      eapply eq_context_gen_upto.
+      now eapply All2_fold_All2 in eq.
+    - destruct l as [s Hs]. exists s.
+      eapply (closed_context_cumulativity _ (le := false)); tea. apply IHeq. pcuic.
+      eapply context_equality_rel_app.
+      eapply eq_context_upto_conv_context_rel. 1-2:fvs.
+      eapply eq_context_gen_upto.
+      now eapply All2_fold_All2 in eq.
+    - red. red in l0.
+      eapply (closed_context_cumulativity _ (le := false)); tea. apply IHeq. pcuic.
+      eapply context_equality_rel_app.
+      eapply eq_context_upto_conv_context_rel. 1-2:fvs.
+      eapply eq_context_gen_upto.
+      now eapply All2_fold_All2 in eq.
   Qed.
 
   Lemma case_branch_type_eq_context_gen_1 {ind mdecl idecl cdecl p n br} {ctx ctx' ret} :
@@ -555,10 +550,9 @@ Section Alpha.
     eapply (eq_context_upto_conv_context_rel []) in X0.
     eapply context_equality_rel_app in X0; tea.
     rewrite !app_context_nil_l in X0. exact X0.
-    all:rewrite !app_context_nil_l.
-    now eapply wf_local_closed_context in X.
-    now eapply wf_local_closed_context in X1.
+    all:rewrite !app_context_nil_l; fvs.
   Qed.
+
   Lemma upto_names_conv_context (Σ : global_env_ext) Γ Δ :
     Γ ≡Γ Δ -> conv_context Σ Γ Δ.
   Proof.
@@ -594,7 +588,8 @@ Section Alpha.
         specialize (p _ _ e0 eq).
         specialize (p0 _ _ e1 eq).
         eapply type_Cumul'; tea. now exists tu.π1.
-        constructor. eapply eq_term_leq_term.
+        eapply eq_term_upto_univ_cumulSpec.
+        eapply eq_term_leq_term.
         now eapply upto_names_impl_eq_term.
 
     - intros n decl hnth ih Δ v e eqctx; invs e.
@@ -607,8 +602,7 @@ Section Alpha.
       eapply type_Rel ; tea.
       eapply eq_context_conversion; tea. eapply X.π2.
       depelim e. destruct p.
-      constructor. eapply eq_term_leq_term.
-      eapply eq_term_upto_univ_lift.
+      eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term, eq_term_upto_univ_lift.
       eapply upto_names_impl_eq_term. now symmetry.
     - intros l ih hl Δ v e eqctx; invs e.
       specialize (ih _ eqctx).
@@ -639,8 +633,7 @@ Section Alpha.
         eapply isType_tProd; eauto. split; eauto with pcuic.
         eapply validity. eapply ihB; eauto.
         constructor; auto. constructor ; auto. reflexivity.
-      + constructor.
-        eapply eq_term_leq_term.
+      + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         apply eq_term_sym.
         constructor; auto.
         all: try (eapply upto_names_impl_eq_term ; assumption).
@@ -656,7 +649,7 @@ Section Alpha.
         * econstructor.
           -- eapply ihb; trea.
           -- eapply ihB; trea.
-          -- constructor. eapply eq_term_leq_term.
+          --  eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
              eapply upto_names_impl_eq_term. assumption.
         * eapply eq_context_conversion.
           -- eapply ihA; trea.
@@ -667,12 +660,11 @@ Section Alpha.
              ++ exists s1; eapply ihB; eauto.
              ++ eapply type_Cumul'; tea.
                 exists s1. eapply ihB; eauto.
-                constructor. eapply eq_term_leq_term.
+                eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
                 now apply upto_names_impl_eq_term.
       + destruct X2. exists x.
         eapply eq_context_conversion; tea. eauto.
-      + constructor.
-        eapply eq_term_leq_term.
+      + eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         apply eq_term_sym.
         constructor. assumption.
         all: try (eapply upto_names_impl_eq_term ; assumption).
@@ -688,8 +680,7 @@ Section Alpha.
         * eapply ihu; trea.
         * eapply ihty. reflexivity. auto.
       + destruct X1 as [s' Hs]. exists s'. eapply eq_context_conversion; tea. eauto.
-      + constructor.
-        eapply eq_term_leq_term.
+      + eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         apply eq_term_sym.
         eapply upto_names_impl_eq_term.
         eapply eq_term_upto_univ_subst ; now auto.
@@ -821,12 +812,12 @@ Section Alpha.
           intuition auto.
           { eapply type_Cumul. eapply IHbbody; auto.
             eapply eq_context_upto_cat; auto. eapply Hbr'ty.
-            constructor. eapply eq_term_leq_term.
+            eapply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
             rewrite /ptm /cpc. eapply case_branch_type_equiv; auto.
             now eapply case_predicate_context_equiv. }
 
 
-      + constructor. apply eq_term_leq_term.
+      + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         apply eq_term_mkApps; tea.
         rewrite /ptm.
         eapply eq_term_upto_univ_it_mkLambda_or_LetIn; tea; tc.
@@ -843,8 +834,7 @@ Section Alpha.
       + eapply validity ; eauto.
         econstructor ; eauto.
         eapply eq_context_conversion; tea; pcuic.
-      + constructor.
-        eapply eq_term_leq_term.
+      + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term.
         apply eq_term_sym.
         eapply upto_names_impl_eq_term.
         eapply eq_term_upto_univ_substs ; auto; try reflexivity.
@@ -857,7 +847,7 @@ Section Alpha.
       destruct hnth' as [decl' [hnth' hh]].
       destruct hh as [[[ety eqann] ebo] era].
       assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
-      { apply PCUICWeakening.All_mfix_wf; auto.
+      { apply PCUICWeakeningTyp.All_mfix_wf; auto.
         eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.
@@ -912,7 +902,8 @@ Section Alpha.
           exists s. rewrite <-H.
           eapply (weakening _ _ _ _ (tSort _)); eauto.
           eapply eq_context_conversion; tea. now symmetry.
-          apply cumul_refl. rewrite <- H.
+          eapply eq_term_upto_univ_cumulSpec.
+          rewrite <- H.
           eapply eq_term_upto_univ_lift.
           eapply eq_term_upto_univ_empty_impl.
           4: intuition eauto.
@@ -922,7 +913,7 @@ Section Alpha.
           enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
           apply upto_names_check_fix. solve_all.
         + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
-        + apply cumul_refl. eapply eq_term_leq_term, upto_names_impl_eq_term.
+        + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
           now symmetry.
 
   - intros mfix n decl types hguard hnth hwf ihmfix ihmfixb wffix Δ v e e'; invs e.
@@ -930,7 +921,7 @@ Section Alpha.
     destruct hnth' as [decl' [hnth' hh]].
     destruct hh as [[[ety eqann] ebo] era].
     assert (hwf' : wf_local Σ (Γ ,,, fix_context mfix')).
-    { apply PCUICWeakening.All_mfix_wf; auto.
+    { apply PCUICWeakeningTyp.All_mfix_wf; auto.
       eapply (All2_All_mix_left ihmfix) in X.
       clear -X.
       induction X; constructor; simpl; auto.
@@ -985,7 +976,7 @@ Section Alpha.
         exists s. rewrite <-H.
         eapply (weakening _ _ _ _ (tSort _)); eauto.
         eapply eq_context_conversion; tea. now symmetry.
-        apply cumul_refl. rewrite <- H.
+        apply eq_term_upto_univ_cumulSpec. rewrite <- H.
         eapply eq_term_upto_univ_lift.
         eapply eq_term_upto_univ_empty_impl.
         4: intuition eauto.
@@ -995,7 +986,7 @@ Section Alpha.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
         apply upto_names_check_cofix. solve_all.
       + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
-      + apply cumul_refl. eapply eq_term_leq_term, upto_names_impl_eq_term.
+      + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.
         now symmetry.
 
     - intros t A B X wf ht iht har ihar hcu Δ v e e'.
@@ -1007,7 +998,7 @@ Section Alpha.
         2:eapply PCUICInversion.into_ws_cumul; tea.
         specialize (wf _ e').
         apply wf_conv_context_closed => //.
-        apply upto_names_conv_context. now symmetry.
+        apply upto_names_conv_context. now symmetry. pcuic.
   Qed.
 
   Lemma typing_alpha {Σ : global_env_ext} {Γ u v A} {wfΣ : wf Σ.1} :

@@ -1788,7 +1788,8 @@ Proof.
     eapply IHh; eauto.
     + rewrite /PCUICCases.inst_case_predicate_context.
       rewrite /= -inst_inst_case_context_wf //.
-      rewrite /id. relativize #|pcontext p|; [eapply usubst_app_up|now len]; eauto. 
+      { now rewrite test_context_k_closed_on_free_vars_ctx. }
+      relativize #|pcontext p|; [eapply usubst_app_up|now len]; eauto. 
     + rewrite shiftnP_add in p1. rewrite <- inst_case_predicate_context_length in p1.
       rewrite <- app_length in p1. tea.        
   - simpl. eapply red_case_c; eauto.

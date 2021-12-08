@@ -377,25 +377,6 @@ End RedConv.
 
 Set SimplIsCbn.
 
-Ltac inv_on_free_vars :=
-  repeat match goal with
-  | [ H : is_true (on_free_vars_decl _ _) |- _ ] => progress cbn in H
-  | [ H : is_true (on_free_vars_decl _ (vdef _ _ _)) |- _ ] => unfold on_free_vars_decl, test_decl in H
-  | [ H : is_true (_ && _) |- _ ] => 
-    move/andP: H => []; intros
-  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
-    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
-      eapply forallb_All in H); intros
-  | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
-    move/andP: H => []; rewrite ?shiftnP_xpredT; intros
-  | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
-    rewrite -> test_context_k_closed_on_free_vars_ctx in H
-  end.
-
-Notation byfvs := (ltac:(cbn; eauto with fvs)) (only parsing).
-
-
 Definition conv_cum {cf:checker_flags} le Σ Γ T T' :=
   if le then Σ ;;; Γ |- T <= T' else Σ ;;; Γ |- T = T'.
 

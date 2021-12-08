@@ -159,8 +159,7 @@ Proof.
       eapply inst_is_open_term; eauto.
     - eapply cumul_Sym; try eapply X0; eauto. 
     - eapply cumul_Refl; eauto.
-    - eapply cumul_Evar. cbn in *. 
-    apply forallb_All in H0, H1. 
+  - eapply cumul_Evar. cbn in *. 
     eapply All2_All_mix_left in X; tea.
     eapply All2_All_mix_right in X; tea.
     eapply All2_map. eapply All2_impl. 1:tea. cbn; intros.
@@ -188,7 +187,6 @@ Proof.
           eapply All2_impl. 1: tea. cbn; intros. destruct X as [[X [X''' X']] X'']. apply X'; eauto.
         + unfold preturn. cbn. rewrite (All2_fold_length Xcontext). eapply Xreturn; eauto.
           ++ rewrite <- (All2_fold_length Xcontext). rewrite <- inst_case_predicate_context_length.
-             rewrite test_context_k_closed_on_free_vars_ctx in Hcontext. 
              rewrite inst_case_predicate_context_inst; eauto. 
              eapply closed_subst_ext. 2: symmetry; apply up_Upn.
               eapply closed_subst_app; eauto. rewrite inst_inst_case_context; eauto. 
@@ -196,8 +194,7 @@ Proof.
               +++ rewrite forallb_map. eapply forallb_impl. 2:tea. cbn; intros.
                   eapply inst_is_open_term; eauto.    
               +++ rewrite map_length. rewrite inst_context_on_free_vars ; eauto.
-          ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-             unfold PCUICCases.inst_case_predicate_context. 
+          ++ unfold PCUICCases.inst_case_predicate_context. 
              apply on_free_vars_ctx_inst_case_context; eauto.
           ++ unfold PCUICCases.inst_case_predicate_context.
              unfold is_open_term. rewrite app_length.
@@ -231,22 +228,20 @@ Proof.
             +++ rewrite forallb_map. eapply forallb_impl. 2:tea. simpl; intros. 
                 eapply inst_is_open_term; eauto.
             +++ rewrite map_length. tea.  
-        + rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-        unfold PCUICCases.inst_case_predicate_context. 
-        apply on_free_vars_ctx_inst_case_context; eauto.
+        + unfold PCUICCases.inst_case_predicate_context. 
+          apply on_free_vars_ctx_inst_case_context; eauto.
         + unfold PCUICCases.inst_case_predicate_context.
-        unfold is_open_term. rewrite app_length.
-        rewrite <- shiftnP_add.
-        rewrite inst_case_branch_context_length.   
-        eassumption.
+          unfold is_open_term. rewrite app_length.
+          rewrite <- shiftnP_add.
+          rewrite inst_case_branch_context_length.   
+          eassumption.
         + unfold PCUICCases.inst_case_predicate_context.
-        unfold is_open_term. rewrite app_length.
-        rewrite <- shiftnP_add. 
-        rewrite inst_case_branch_context_length.   
-        rewrite (All2_fold_length Hbcontext). eassumption.
+          unfold is_open_term. rewrite app_length.
+          rewrite <- shiftnP_add. 
+          rewrite inst_case_branch_context_length.   
+          rewrite (All2_fold_length Hbcontext). eassumption.
    - eapply cumul_Proj; try apply X0; eauto.
    - cbn. eapply cumul_Fix. cbn in H0, H1.         
-     apply forallb_All in H0, H1. 
      apply (All2_All_mix_left H0) in X. clear H0.   
      apply (All2_All_mix_right H1) in X. clear H1.
      apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -290,7 +285,6 @@ Proof.
          rewrite (All2_length X). exact Hy.
    - cbn. rewrite (All2_length X).
      eapply cumul_CoFix. cbn in H0, H1.         
-     apply forallb_All in H0, H1. 
      apply (All2_All_mix_left H0) in X. clear H0.   
      apply (All2_All_mix_right H1) in X. clear H1.
      apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -334,10 +328,7 @@ Proof.
          rewrite (All2_length X). exact Hy.
    - cbn. repeat rewrite inst_mkApps. eapply cumul_Ind.
      * repeat rewrite map_length; eauto.
-     * rewrite on_free_vars_mkApps in H1; 
-       rewrite on_free_vars_mkApps in H2.
-       apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
-       eapply forallb_All in Hargs, Hargs'.   
+     * rename b into Hargs', b0 into Hargs; eapply forallb_All in Hargs, Hargs'.   
        apply (All2_All_mix_left Hargs) in X. clear Hargs.   
        apply (All2_All_mix_right Hargs') in X. clear Hargs'.
        apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -345,10 +336,7 @@ Proof.
        eapply Hxy; eauto.
    - cbn. repeat rewrite inst_mkApps. eapply cumul_Construct.
      * repeat rewrite map_length; eauto.
-     * rewrite on_free_vars_mkApps in H1; 
-       rewrite on_free_vars_mkApps in H2.
-       apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
-       eapply forallb_All in Hargs, Hargs'.   
+     * rename b into Hargs', b0 into Hargs; eapply forallb_All in Hargs, Hargs'.   
        apply (All2_All_mix_left Hargs) in X. clear Hargs.   
        apply (All2_All_mix_right Hargs') in X. clear Hargs'.
        apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -422,8 +410,7 @@ Proof.
       eapply inst_is_open_term; eauto.
     - eapply cumul_Sym; try eapply X0; eauto. 
     - eapply cumul_Refl; eauto.
-    - eapply cumul_Evar. cbn in *. 
-    apply forallb_All in H0, H1. 
+  - eapply cumul_Evar. cbn in *. 
     eapply All2_All_mix_left in X; tea.
     eapply All2_All_mix_right in X; tea.
     eapply All2_map. eapply All2_impl. 1:tea. cbn; intros.
@@ -451,7 +438,6 @@ Proof.
           eapply All2_impl. 1: tea. cbn; intros. destruct X as [[X [X''' X']] X'']. apply X'; eauto.
         + unfold preturn. cbn. rewrite (All2_fold_length Xcontext). eapply Xreturn; eauto.
           ++ rewrite <- (All2_fold_length Xcontext). rewrite <- inst_case_predicate_context_length.
-             rewrite test_context_k_closed_on_free_vars_ctx in Hcontext. 
              rewrite inst_case_predicate_context_inst; eauto. 
              eapply closed_subst_ext. 2: symmetry; apply up_Upn.
               eapply closed_subst_app; eauto. rewrite inst_inst_case_context; eauto. 
@@ -459,8 +445,7 @@ Proof.
               +++ rewrite forallb_map. eapply forallb_impl. 2:tea. cbn; intros.
                   eapply inst_is_open_term; eauto.    
               +++ rewrite map_length. rewrite inst_context_on_free_vars ; eauto.
-          ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-             unfold PCUICCases.inst_case_predicate_context. 
+          ++ unfold PCUICCases.inst_case_predicate_context. 
              apply on_free_vars_ctx_inst_case_context; eauto.
           ++ unfold PCUICCases.inst_case_predicate_context.
              unfold is_open_term. rewrite app_length.
@@ -494,22 +479,20 @@ Proof.
             +++ rewrite forallb_map. eapply forallb_impl. 2:tea. simpl; intros. 
                 eapply inst_is_open_term; eauto.
             +++ rewrite map_length. tea.  
-        + rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-        unfold PCUICCases.inst_case_predicate_context. 
-        apply on_free_vars_ctx_inst_case_context; eauto.
+        + unfold PCUICCases.inst_case_predicate_context. 
+          apply on_free_vars_ctx_inst_case_context; eauto.
         + unfold PCUICCases.inst_case_predicate_context.
-        unfold is_open_term. rewrite app_length.
-        rewrite <- shiftnP_add.
-        rewrite inst_case_branch_context_length.   
-        eassumption.
+          unfold is_open_term. rewrite app_length.
+          rewrite <- shiftnP_add.
+          rewrite inst_case_branch_context_length.   
+          eassumption.
         + unfold PCUICCases.inst_case_predicate_context.
-        unfold is_open_term. rewrite app_length.
-        rewrite <- shiftnP_add. 
-        rewrite inst_case_branch_context_length.   
-        rewrite (All2_fold_length Hbcontext). eassumption.
+          unfold is_open_term. rewrite app_length.
+          rewrite <- shiftnP_add. 
+          rewrite inst_case_branch_context_length.   
+          rewrite (All2_fold_length Hbcontext). eassumption.
    - eapply cumul_Proj; try apply X0; eauto.
    - cbn. eapply cumul_Fix. cbn in H0, H1.         
-     apply forallb_All in H0, H1. 
      apply (All2_All_mix_left H0) in X. clear H0.   
      apply (All2_All_mix_right H1) in X. clear H1.
      apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -553,7 +536,6 @@ Proof.
          rewrite (All2_length X). exact Hy.
    - cbn. rewrite (All2_length X).
      eapply cumul_CoFix. cbn in H0, H1.         
-     apply forallb_All in H0, H1. 
      apply (All2_All_mix_left H0) in X. clear H0.   
      apply (All2_All_mix_right H1) in X. clear H1.
      apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -597,10 +579,7 @@ Proof.
          rewrite (All2_length X). exact Hy.
    - cbn. repeat rewrite inst_mkApps. eapply cumul_Ind.
      * repeat rewrite map_length; eauto.
-     * rewrite on_free_vars_mkApps in H1; 
-       rewrite on_free_vars_mkApps in H2.
-       apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
-       eapply forallb_All in Hargs, Hargs'.   
+     * rename b0 into Hargs, b into Hargs'; eapply forallb_All in Hargs, Hargs'.   
        apply (All2_All_mix_left Hargs) in X. clear Hargs.   
        apply (All2_All_mix_right Hargs') in X. clear Hargs'.
        apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -608,10 +587,7 @@ Proof.
        eapply Hxy; eauto.
    - cbn. repeat rewrite inst_mkApps. eapply cumul_Construct.
      * repeat rewrite map_length; eauto.
-     * rewrite on_free_vars_mkApps in H1; 
-       rewrite on_free_vars_mkApps in H2.
-       apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
-       eapply forallb_All in Hargs, Hargs'.   
+     * rename b0 into Hargs, b into Hargs'; eapply forallb_All in Hargs, Hargs'.   
        apply (All2_All_mix_left Hargs) in X. clear Hargs.   
        apply (All2_All_mix_right Hargs') in X. clear Hargs'.
        apply All2_map. eapply All2_impl. 1: tea. cbn; intros.

@@ -223,7 +223,6 @@ Proof.
    - eapply cumul_Sym; intuition; eauto.
    - eapply cumul_Refl; intuition; eauto.
    - eapply cumul_Evar. cbn in *. 
-     apply forallb_All in H0, H1. 
      eapply All2_All_mix_left in X; tea.
      eapply All2_All_mix_right in X; tea.
      eapply All2_map. eapply All2_impl. 1:tea. cbn; intros.
@@ -232,7 +231,7 @@ Proof.
    - eapply cumul_Lambda; try apply X0; try apply X2; eauto;
      try rewrite shiftnP_S; eauto. 
      * eapply urenaming_impl. 1: intro; rewrite shiftnP_S; eauto. apply urenaming_vass; eauto. 
-     * rewrite on_free_vars_ctx_snoc. apply andb_and; split; eauto.
+     * fvs.
      * rewrite on_free_vars_ctx_snoc. apply andb_and; split; eauto.
        cbn. eapply urename_is_open_term; eauto.  
    - eapply cumul_Prod; try apply X0; try apply X2; eauto;
@@ -260,11 +259,9 @@ Proof.
             eapply urenaming_ext; try apply shiftnP_add; try reflexivity. 
             rewrite <- (All2_fold_length Xcontext).
             rewrite <- inst_case_predicate_context_length.
-            rewrite test_context_k_closed_on_free_vars_ctx in Hcontext. 
             rewrite inst_case_predicate_context_rename; eauto. 
             apply urenaming_context; eauto.
-         ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-            unfold inst_case_predicate_context. 
+         ++ unfold inst_case_predicate_context. 
             apply on_free_vars_ctx_inst_case_context; eauto.
          ++ unfold inst_case_predicate_context.
             unfold is_open_term. rewrite app_length.
@@ -276,8 +273,7 @@ Proof.
             rewrite <- shiftnP_add. 
             rewrite inst_case_predicate_context_length.   
             rewrite (All2_fold_length Xcontext). eassumption.
-         ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-            unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
+         ++ unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
             +++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.
                 cbn; intros. eapply urename_is_open_term; eauto.
             +++ unfold pparams. cbn. rewrite map_length. exact Hcontext.
@@ -311,8 +307,7 @@ Proof.
         rewrite <- shiftnP_add. 
         rewrite inst_case_branch_context_length.    
         rewrite (All2_fold_length Hbcontext). eassumption.
-      + rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
-        unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
+      + unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
        ++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.
            cbn; intros. eapply urename_is_open_term; eauto.
        ++ unfold pparams. rewrite test_context_k_closed_on_free_vars_ctx in Hx.
@@ -320,7 +315,6 @@ Proof.
   - eapply cumul_Proj; try apply X0; eauto.
   - rewrite (All2_length X).
     eapply cumul_Fix. cbn in H0, H1.         
-    apply forallb_All in H0, H1. 
     apply (All2_All_mix_left H0) in X. clear H0.   
     apply (All2_All_mix_right H1) in X. clear H1.
     apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -368,7 +362,6 @@ Proof.
            rewrite fix_context_length; eauto. 
   - rewrite (All2_length X).
     eapply cumul_CoFix. cbn in H0, H1.         
-    apply forallb_All in H0, H1. 
     apply (All2_All_mix_left H0) in X. clear H0.   
     apply (All2_All_mix_right H1) in X. clear H1.
     apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
@@ -416,23 +409,17 @@ Proof.
            rewrite fix_context_length; eauto. 
   - repeat rewrite rename_mkApps. eapply cumul_Ind.
     * repeat rewrite map_length; eauto.
-    * rewrite on_free_vars_mkApps in H1; 
-      rewrite on_free_vars_mkApps in H2.
-      apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
-      eapply forallb_All in Hargs, Hargs'.   
-      apply (All2_All_mix_left Hargs) in X. clear Hargs.   
-      apply (All2_All_mix_right Hargs') in X. clear Hargs'.
+    * eapply forallb_All in b, b0.
+      apply (All2_All_mix_left b0) in X. clear b0.
+      apply (All2_All_mix_right b) in X. clear b.
       apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
       destruct X3 as [[Hx [Hxy_ Hxy]] Hy].    
       eapply Hxy; eauto.
   - repeat rewrite rename_mkApps. eapply cumul_Construct.
     * repeat rewrite map_length; eauto.
-    * rewrite on_free_vars_mkApps in H1; 
-      rewrite on_free_vars_mkApps in H2.
-      apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
-      eapply forallb_All in Hargs, Hargs'.   
-      apply (All2_All_mix_left Hargs) in X. clear Hargs.   
-      apply (All2_All_mix_right Hargs') in X. clear Hargs'.
+    * eapply forallb_All in b, b0.
+      apply (All2_All_mix_left b0) in X. clear b0.
+      apply (All2_All_mix_right b) in X. clear b.
       apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
       destruct X3 as [[Hx [Hxy_ Hxy]] Hy].    
       eapply Hxy; eauto.   
@@ -713,20 +700,16 @@ Proof.
            rewrite fix_context_length; eauto. 
   - repeat rewrite rename_mkApps. eapply cumul_Ind.
     * repeat rewrite map_length; eauto.
-    * rewrite on_free_vars_mkApps in H1; 
-      rewrite on_free_vars_mkApps in H2.
-      apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
-      eapply forallb_All in Hargs, Hargs'.   
-      apply (All2_All_mix_left Hargs) in X. clear Hargs.   
-      apply (All2_All_mix_right Hargs') in X. clear Hargs'.
+    * inv_on_free_vars.
+      eapply forallb_All in b, b0.
+      apply (All2_All_mix_left b0) in X. clear b0.   
+      apply (All2_All_mix_right b) in X. clear b.
       apply All2_map. eapply All2_impl. 1: tea. cbn; intros.
       destruct X3 as [[Hx [Hxy_ Hxy]] Hy].    
       eapply Hxy; eauto.
   - repeat rewrite rename_mkApps. eapply cumul_Construct.
     * repeat rewrite map_length; eauto.
-    * rewrite on_free_vars_mkApps in H1; 
-      rewrite on_free_vars_mkApps in H2.
-      apply andb_and in H1, H2. destruct H1 as [_ Hargs], H2 as [_ Hargs'].
+    * inv_on_free_vars. rename b into Hargs', b0 into Hargs.
       eapply forallb_All in Hargs, Hargs'.   
       apply (All2_All_mix_left Hargs) in X. clear Hargs.   
       apply (All2_All_mix_right Hargs') in X. clear Hargs'.

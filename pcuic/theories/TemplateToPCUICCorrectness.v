@@ -3,8 +3,9 @@ From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
-     PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
-     PCUICWeakening PCUICSubstitution PCUICGeneration PCUICCasesContexts.
+     PCUICLiftSubst PCUICEquality PCUICReduction 
+     PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICCasesContexts.
 
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
@@ -185,7 +186,7 @@ Proof.
   * intros [Σ'' [ext' _ ext'' hl]] [= ->].
     rewrite hl => /= //. cbn.
     rewrite nth_error_map hnth /=.
-    rewrite (PCUICWeakeningEnv.extends_lookup _ _ _ _ wfΣ' ext hl) /=.
+    rewrite (PCUICWeakeningEnvConv.extends_lookup _ _ _ _ wfΣ' ext hl) /=.
     rewrite nth_error_map hnth /=.
     red in X0.
     f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.
@@ -399,7 +400,7 @@ Proof.
       + rewrite e. f_equal.
         now rewrite map2_bias_left_length.
       + rewrite !map_map_compose.
-        rewrite map_map2 !PCUICUnivSubstitution.map2_map_r.
+        rewrite map_map2 !PCUICUnivSubstitutionConv.map2_map_r.
         clear -X0. cbn.
         generalize (ind_ctors idecl).
         induction X0; simpl; auto. destruct l; reflexivity.
@@ -456,7 +457,7 @@ Proof.
     f_equal; auto. solve_list.
     + rewrite e. f_equal.
       now rewrite map2_bias_left_length.
-    + rewrite map_map2 !PCUICUnivSubstitution.map2_map_r.
+    + rewrite map_map2 !PCUICUnivSubstitutionConv.map2_map_r.
       clear -X0. cbn.
       generalize (ind_ctors idecl).
       induction X0; simpl; auto. destruct l; reflexivity.
@@ -497,8 +498,8 @@ Proof.
   dest_lookup; cbn; f_equal; auto; solve_list.
   - rewrite /trans_predicate /= /map_predicate /=.
     f_equal; solve_all.
-  - rewrite PCUICUnivSubstitution.map2_map_r. cbn.
-    rewrite map_map2 PCUICUnivSubstitution.map2_map_r.
+  - rewrite PCUICUnivSubstitutionConv.map2_map_r. cbn.
+    rewrite map_map2 PCUICUnivSubstitutionConv.map2_map_r.
     eapply All_map2; tea; cbn => cdecl br.
     rewrite /map_branch /trans_branch /= /id.
     now intros; f_equal.
@@ -1214,10 +1215,10 @@ Section Trans_Global.
      (map2
      (fun (x : aname) (y : context_decl) =>
       set_binder_name x (map_decl (subst_instance (Ast.puinst p)) y))).
-    rewrite -PCUICUnivSubstitution.map2_map_r.
-    rewrite -[fold_context_k _ _]PCUICRenameProp.map2_set_binder_name_fold; len.
+    rewrite -PCUICUnivSubstitutionConv.map2_map_r.
+    rewrite -[fold_context_k _ _]PCUICRenameConv.map2_set_binder_name_fold; len.
     rewrite /trans_local map_map2 map2_trans.
-    rewrite -PCUICUnivSubstitution.map2_map_r. f_equal.
+    rewrite -PCUICUnivSubstitutionConv.map2_map_r. f_equal.
     rewrite [map _ _]trans_subst_context map_rev.
     rewrite /subst_context. f_equal.
     rewrite /Ast.Env.subst_instance_context /map_context.
@@ -1418,7 +1419,7 @@ Section Trans_Global.
     rewrite /Ast.case_predicate_context /case_predicate_context /case_predicate_context_gen.
     rewrite /Ast.case_predicate_context_gen.
     rewrite /trans_local map_map2 map2_trans.
-    rewrite -PCUICUnivSubstitution.map2_map_r. f_equal.
+    rewrite -PCUICUnivSubstitutionConv.map2_map_r. f_equal.
     { cbn. rewrite map2_map2_bias_left; len.
       rewrite map_map2. cbn. rewrite map2_cst //.
       len. }
@@ -1497,7 +1498,7 @@ Section Trans_Global.
     intros.
     rewrite /Ast.case_branch_context /Ast.case_branch_context_gen.
     rewrite /case_branch_context /case_branch_context_gen /pre_case_branch_context_gen.
-    rewrite /trans_local map_map2 map2_trans -PCUICUnivSubstitution.map2_map_r.
+    rewrite /trans_local map_map2 map2_trans -PCUICUnivSubstitutionConv.map2_map_r.
     f_equal. cbn. rewrite map2_map2_bias_left.
     eapply All2_length in X. len in X. now len.
     rewrite map_map2 /= map2_cst //.

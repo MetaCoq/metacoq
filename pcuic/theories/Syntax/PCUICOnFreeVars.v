@@ -1152,12 +1152,42 @@ Qed.
 #[global]
 Hint Rewrite @on_ctx_free_vars_snoc : fvs.
 
-Ltac inv_on_free_vars :=
-  match goal with
-  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress cbn in H; 
-    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => []); intros
+Lemma test_context_k_closed_on_free_vars_ctx k ctx :
+  test_context_k (fun k => on_free_vars (closedP k xpredT)) k ctx =
+  on_free_vars_ctx (closedP k xpredT) ctx.
+Proof.
+  rewrite test_context_k_eq /on_free_vars_ctx.
+  now setoid_rewrite shiftnP_closedP; setoid_rewrite shiftnP_xpredT; setoid_rewrite Nat.add_comm at 1.
+Qed.
+
+Lemma inv_on_free_vars_decl {P d} : 
+  on_free_vars_decl P d -> 
+  match d with
+  | {| decl_body := None; decl_type := t |} => on_free_vars P t
+  | {| decl_body := Some b; decl_type := t |} => on_free_vars P b /\ on_free_vars P t
   end.
+Proof.
+  unfold on_free_vars_decl, test_decl; destruct d; cbn => //.
+  move/andP => [] //. destruct decl_body; cbn => //.
+Qed.
+
+Ltac inv_on_free_vars :=
+  repeat match goal with
+  | [ H : is_true (on_free_vars_decl _ (vass _ _)) |- _ ] => apply inv_on_free_vars_decl in H; cbn in H
+  | [ H : is_true (on_free_vars_decl _ (vdef _ _ _)) |- _ ] => apply inv_on_free_vars_decl in H as []
+  | [ H : is_true (_ && _) |- _ ] => 
+    move/andP: H => []; intros
+  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
+    progress (cbn in H || rewrite on_free_vars_mkApps in H);
+    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
+      eapply forallb_All in H); intros
+  | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
+    move/andP: H => []; rewrite ?shiftnP_xpredT; intros
+  | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
+    rewrite -> test_context_k_closed_on_free_vars_ctx in H
+  end.
+
+Notation byfvs := (ltac:(cbn; eauto with fvs)) (only parsing).
 
 Lemma on_free_vars_vass {P na t} :
   on_free_vars P t ->
@@ -1386,20 +1416,6 @@ Proof.
   - revert cl1. generalize (pparams p0).
     fix auxl' 1.
     case => [|t' ts] /= //; cbn => /andP[] Ht' Hts; constructor; [apply auxt|apply auxl'] => //.
-  - now rewrite test_context_k_closed_on_free_vars_ctx in cl3.
-  - revert cl3. clear -auxt.
-    generalize (pcontext p0).
-    fix auxl 1.
-    intros []. 
-    * cbn. intros _. constructor.
-    * cbn. move/andP => [] cll clc.
-      constructor.
-      + now apply auxl.
-      + destruct c as [na [b|] ty]; cbn in *; constructor; cbn; apply auxt || exact tt.
-        { now move/andP: clc => []. }
-        { now move/andP: clc => []. }
-        apply clc.
-    
   - rename cl5 into cl. revert brs cl. clear -auxt.
     fix auxl' 1.
     destruct brs; [constructor|].

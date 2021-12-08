@@ -884,10 +884,10 @@ Section Alpha.
       eapply eq_context_conversion; tea.
       eapply type_Cumul'.
       + econstructor.
+        * assumption.
         * eapply (fix_guard_eq_term _ _ _ _ n); eauto.
           constructor. assumption.
         * eassumption.
-        * assumption.
         * eapply (All2_All_mix_left ihmfix) in X.
           clear -X.
           induction X; constructor; simpl; auto.
@@ -958,10 +958,10 @@ Section Alpha.
     eapply eq_context_conversion; tea.
     eapply type_Cumul'.
     + econstructor.
+      * assumption.
       * eapply (cofix_guard_eq_term _ _ _ _ n); eauto.
         constructor. assumption.
       * eassumption.
-      * assumption.
       * eapply (All2_All_mix_left ihmfix) in X.
         clear -X.
         induction X; constructor; simpl; auto.

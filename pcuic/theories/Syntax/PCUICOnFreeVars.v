@@ -1254,6 +1254,12 @@ Proof.
   now rewrite on_ctx_free_vars_tip {1 2}/shiftnP /= addnP_shiftnP.
 Qed.
 
+Lemma on_free_vars_ctx_snoc_impl {P Γ d} : 
+  on_free_vars_ctx P (Γ ,, d) ->
+  on_free_vars_ctx P Γ /\ on_free_vars_decl (shiftnP #|Γ| P) d.
+Proof.
+  now rewrite on_free_vars_ctx_snoc => /andP.
+Qed.
 
 Lemma on_free_vars_ctx_smash P Γ acc : 
   on_free_vars_ctx P Γ ->

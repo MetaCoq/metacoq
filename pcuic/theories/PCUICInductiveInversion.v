@@ -2295,7 +2295,30 @@ Proof.
   rewrite !subst_closedn //.
 Qed.
 
-Lemma into_context_equality_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
+Lemma subst_instance_expand_lets u Γ t :
+  subst_instance u (expand_lets Γ t) = 
+  expand_lets (subst_instance u Γ) (subst_instance u t).
+Proof.
+  rewrite /expand_lets /expand_lets_k.
+  rewrite subst_instance_subst.
+  rewrite subst_instance_extended_subst.
+  f_equal.
+  rewrite subst_instance_lift. len; f_equal.
+Qed.
+
+#[global]
+Hint Rewrite subst_instance_expand_lets closedn_subst_instance : substu.
+
+Lemma subst_instance_expand_lets_ctx u Γ Δ :
+  subst_instance u (expand_lets_ctx Γ Δ) =
+  expand_lets_ctx (subst_instance u Γ) (subst_instance u Δ).
+Proof.
+  rewrite /expand_lets_ctx /expand_lets_k_ctx.
+  rewrite !subst_instance_subst_context !subst_instance_lift_context; len.
+  now rewrite -subst_instance_extended_subst.
+Qed.
+
+Lemma cumul_ctx_relSpec_Algo {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
   (c : PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
@@ -2311,17 +2334,15 @@ Proof.
   destruct p; constructor; auto.
   - eapply cumulSpec_cumulAlgo_curry in c0; fvs.
     constructor; auto. now eapply equality_forget in c0.
-    unfold ws_decl in h3. cbn in h3.
     len. rewrite (All2_fold_length c). now len in h3.
-  - eapply cumulSpec_cumulAlgo_curry in c1; eauto.
-    eapply convSpec_convAlgo in c1; eauto.
-  co  constructor; auto.
-    
-  fvs.
-
-  apply equality_forget in c0.
-  move/ : wf.
-
+  - inv_on_free_vars; cbn in *.
+    eapply cumulSpec_cumulAlgo_curry in c1; eauto.
+    eapply convSpec_convAlgo_curry in c0; eauto; fvs.
+    constructor; auto.
+    now apply equality_forget in c0.
+    now apply equality_forget in c1.
+    len. rewrite (All2_fold_length c) //. now len in a.
+    len. rewrite (All2_fold_length c) //. now len in b0.
 Qed.
 
 Lemma into_context_equality_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
@@ -2415,7 +2436,7 @@ Proof.
     simpl => Ru.
     pose proof (onVariance onmind) as onvari.
     rewrite indv in onvari.
-    eapply (into_context_equality_rel (Σ := Σ)) in respv; auto.
+    eapply cumul_ctx_relSpec_Algo in respv.
     2:{ move/wf_local_closed_context: X.
         rewrite - !(subst_instance_smash _ _ []).
         rewrite - !subst_instance_app_ctx !is_closed_subst_inst //.
@@ -2485,14 +2506,14 @@ Qed.
 #[global] Hint Resolve declared_constructor_inductive : core.
 
 Lemma into_equality_terms {cf} {Σ} {wfΣ : wf Σ} {Γ l l'} : 
-  All2 (conv Σ Γ) l l' ->
+  All2 (convSpec Σ Γ) l l' ->
   is_closed_context Γ ->
   forallb (is_open_term Γ) l ->
   forallb (is_open_term Γ) l' ->
   equality_terms Σ Γ l l'.
 Proof.
   solve_all.
-  eapply into_equality; tea.
+  eapply convSpec_convAlgo_curry in b0; tea.
 Qed.
 
 Lemma on_constructor_closed_indices {cf} {Σ} {wfΣ : wf Σ} : 
@@ -2659,7 +2680,7 @@ Proof.
       rewrite -app_context_assoc -(smash_context_app_expand []).
       eapply wf_local_smash_end.
       rewrite - !subst_instance_app_ctx app_context_assoc //. }
-    apply into_context_equality_rel in args; auto.
+    apply cumul_ctx_relSpec_Algo in args; auto.
     2:{ move/wf_local_closed_context: X.
         rewrite - !(subst_instance_smash _ _ []).
         rewrite - !subst_instance_app_ctx !is_closed_subst_inst //.
@@ -3086,7 +3107,7 @@ Proof.
     rewrite -app_context_assoc -(smash_context_app_expand []).
     eapply wf_local_smash_end.
     rewrite - !subst_instance_app_ctx app_context_assoc //. }
-  apply into_context_equality_rel in onctx; auto.
+  eapply cumul_ctx_relSpec_Algo in onctx; auto.
   2:{ move/wf_local_closed_context: X.
       rewrite - !(subst_instance_smash _ _ []).
       rewrite - !subst_instance_app_ctx !is_closed_subst_inst //.
@@ -3319,7 +3340,8 @@ Proof.
     eapply type_Cumul'.
     econstructor; eauto. eapply isType_Sort; eauto.
     now eapply PCUICWfUniverses.typing_wf_universe in Hs.
-    eapply red_cumul. repeat constructor.
+    eapply convPec_cumulSpec, red1_cumulSpec.
+    repeat constructor.
   - intros T [s Hs].
     apply IHΔ.
     red.
@@ -3328,7 +3350,7 @@ Proof.
     depelim wf.
     destruct l as [s1 Hs1].
     exists (Universe.sort_of_product s1 s).
-    econstructor; eauto. Unshelve. 
+    econstructor; eauto. 
 Qed.
 
 Lemma wf_set_binder_name {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {nas Δ} :

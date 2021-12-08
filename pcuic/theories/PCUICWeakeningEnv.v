@@ -37,7 +37,6 @@ Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
     -> leq_universe ctrs t u -> leq_universe ctrs' t u.
 Proof.
   intros Hctrs H. unfold leq_universe in *.
-  destruct check_univs; [|trivial].
   intros v Hv. apply H.
   eapply satisfies_subset; eauto.
 Qed.
@@ -47,7 +46,6 @@ Lemma eq_universe_subset {cf:checker_flags} ctrs ctrs' t u
     -> eq_universe ctrs t u -> eq_universe ctrs' t u.
 Proof.
   intros Hctrs H. unfold eq_universe in *.
-  destruct check_univs; [|trivial].
   intros v Hv. apply H.
   eapply satisfies_subset; eauto.
 Qed.
@@ -407,7 +405,6 @@ Lemma weakening_env_is_allowed_elimination `{CF:checker_flags} Σ Σ' φ u allow
 Proof.
   intros wfΣ [Σ'' ->] al.
   unfold is_allowed_elimination in *.
-  destruct check_univs; auto.
   intros val sat.
   unshelve epose proof (al val _) as al.
   { eapply satisfies_subset; eauto.

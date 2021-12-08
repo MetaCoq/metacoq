@@ -1887,10 +1887,9 @@ Qed.
  
 Lemma consistent_instance_valid {cf} {Σ} {wfΣ : wf Σ} {inst cstrs u} :
   consistent_instance_ext Σ (Polymorphic_ctx (inst, cstrs)) u ->
-  check_univs = true ->
   forall v, satisfies v (global_ext_constraints Σ) -> satisfies v (subst_instance_cstrs u cstrs).
-Proof. rewrite /consistent_instance_ext /=; intros [_ [_ v]] cu.
-    red in v. now rewrite cu in v.
+Proof.
+  now rewrite /consistent_instance_ext /=; intros [_ [_ v]].
 Qed.
 
 Definition closedu_cstr k (cstr : (Level.t * ConstraintType.t * Level.t)) :=
@@ -2118,8 +2117,7 @@ Proof.
   rewrite !subst_instance_two in cum.
   rewrite subst_instance_two_context in cum.
   now rewrite subsu subsu' in cum.
-  unfold valid_constraints. destruct check_univs eqn:checku => //.
-  unfold valid_constraints0.
+  unfold valid_constraints.
   intros v0 sat.
   rewrite satisfies_subst_instance_ctr //.
   simpl in sat.
@@ -2155,7 +2153,7 @@ Proof.
     rewrite -H0 subsu subsu'.
     assert (#|u| = #|u'|) as lenu by lia.
     assert (#|l| = #|u|) as lenlu. now rewrite len1 H.
-    clear -checku Ru sat lenu lenlu.
+    clear -Ru sat lenu lenlu.
     induction l in u, u', Ru, lenu, lenlu |- *. simpl in *. destruct u, u';
     intro; rewrite ConstraintSetFact.empty_iff //.
     destruct u, u' => //; simpl in *.
@@ -2163,10 +2161,10 @@ Proof.
     specialize (IHl u u' Rl). do 2 forward IHl by lia.
     destruct a => //; intros x; rewrite ConstraintSetFact.add_iff;
     intros [<-|inx]; auto.
-    + do 2 red in Ra; rewrite checku in Ra;
+    + do 2 red in Ra;
       specialize (Ra _ sat); simpl in Ra.
       constructor. lia.
-    + do 2 red in Ra. rewrite checku in Ra.
+    + do 2 red in Ra.
       specialize  (Ra _ sat).
       constructor. now rewrite !Universes.Universe.val_make in Ra.
 Qed.

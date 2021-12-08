@@ -743,9 +743,7 @@ Proof.
   intros.
   eapply eq_term_upto_univ_trans with (subst_instance u2 x); tc.
   now eapply eq_term_upto_univ_subst_instance.
-  eapply (eq_term_upto_univ_subst_preserved Σ (fun _ => Re) (fun _ => Rle) napp ConstraintSet.empty ConstraintSet.empty u2).
-  red. destruct check_univs => //.
-  assumption.
+  now eapply (eq_term_upto_univ_subst_preserved Σ (fun _ => Re) (fun _ => Rle) napp ConstraintSet.empty ConstraintSet.empty u2).
 Qed.
 
 Lemma eq_context_upto_univ_subst_instance Σ Re Rle :

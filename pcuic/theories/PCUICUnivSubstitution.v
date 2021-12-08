@@ -164,7 +164,7 @@ Instance eq_universe_SubstUnivPreserving {cf:checker_flags} φ :
   SubstUnivPreserving (eq_universe φ).
 Proof.
   intros s u1 u2 hu.
-  unfold eq_universe in *; destruct check_univs; [|trivial].
+  unfold eq_universe in *.
   intros v Hv; cbn.
   assert (He : forall e, val v (subst_instance_level_expr u1 e)
                     = val v (subst_instance_level_expr u2 e)). {
@@ -202,7 +202,7 @@ Instance leq_universe_SubstUnivPreserving {cf:checker_flags} φ :
   SubstUnivPreserving (leq_universe φ).
 Proof.
   intros s u1 u2 hu.
-  unfold leq_universe in *; destruct check_univs; [|trivial].
+  unfold leq_universe in *.
   intros v Hv; cbn.
   assert (He : forall e, val v (subst_instance_level_expr u1 e)
                     <= val v (subst_instance_level_expr u2 e)). {
@@ -650,11 +650,11 @@ Qed.
 
 Lemma consistent_ext_trans_polymorphic_case_aux {cf : checker_flags} {Σ φ1 φ2 φ' udecl inst inst'} :
   wf_ext_wk (Σ, Polymorphic_ctx (φ1, φ2)) ->
-  valid_constraints0 (global_ext_constraints (Σ, Polymorphic_ctx (φ1, φ2)))
+  valid_constraints (global_ext_constraints (Σ, Polymorphic_ctx (φ1, φ2)))
                      (subst_instance_cstrs inst udecl) ->
-  valid_constraints0 (global_ext_constraints (Σ, φ'))
+  valid_constraints (global_ext_constraints (Σ, φ'))
                      (subst_instance_cstrs inst' φ2) ->
-  valid_constraints0 (global_ext_constraints (Σ, φ'))
+  valid_constraints (global_ext_constraints (Σ, φ'))
                      (subst_instance_cstrs
                         (subst_instance inst' inst) udecl).
 Proof.
@@ -701,7 +701,7 @@ Proof.
           destruct H2 as [[? [H2 ?]]|H2]; rewrite H2; tas.
           apply LevelSet_mem_union; right; apply LS.mem_spec, global_levels_Set.
   + unfold consistent_instance_ext, consistent_instance in H2.
-    unfold valid_constraints in *; destruct check_univs; [|trivial].
+    unfold valid_constraints in *.
     destruct φ as [φ|[φ1 φ2]]; simpl in *.
     * intros v Hv. rewrite <- subst_instance_cstrs_two.
       apply satisfies_subst_instance_ctr; tas.
@@ -739,7 +739,7 @@ Lemma consistent_instance_valid_constraints {cf : checker_flags} Σ φ u univs :
                     (subst_instance_cstrs u (global_ext_constraints (Σ, φ))).
 Proof.
   intros HΣ Hsub HH.
-  unfold valid_constraints; case_eq check_univs; [intro Hcf|trivial].
+  unfold valid_constraints.
   intros v Hv. apply satisfies_subst_instance_ctr; tas.
   apply satisfies_union; simpl; split.
   - destruct φ as [φ|[φ1 φ2]].
@@ -748,7 +748,6 @@ Proof.
       intros c Hc; eapply monomorphic_global_constraint_ext; tea.
       apply CS.union_spec; now left.
     + destruct HH as [_ [_ H1]].
-      unfold valid_constraints in H1; rewrite Hcf in H1.
       apply satisfies_subst_instance_ctr; aa.
   - apply satisfies_subst_instance_ctr; tas.
     apply satisfies_union in Hv. destruct HΣ.
@@ -765,21 +764,18 @@ Class SubstUnivPreserved {cf : checker_flags} {A} `{UnivSubst A} (R : Constraint
                      (precompose (R φ') (subst_instance u)).
 
 Lemma satisfies_subst_instance {cf : checker_flags} φ φ' u :
-  check_univs = true ->
   valid_constraints φ' (subst_instance_cstrs u φ) ->
   forall v, satisfies v φ' ->
        satisfies (subst_instance_valuation u v) φ.
 Proof.
   intros Hcf HH v Hv.
-  unfold valid_constraints in HH; rewrite Hcf in HH.
-  apply satisfies_subst_instance_ctr; aa.
+  apply satisfies_subst_instance_ctr ; aa.
 Qed.
 
 Global Instance leq_universe_subst_instance {cf : checker_flags} : SubstUnivPreserved leq_universe.
 Proof.
   intros φ φ' u HH t t' Htt'.
-  unfold leq_universe in *; case_eq check_univs;
-    [intro Hcf; rewrite Hcf in Htt'|trivial].
+  unfold leq_universe in *.
   intros v Hv; cbn.
   rewrite !subst_instance_univ_val'; tas.
   apply Htt'. clear t t' Htt'.
@@ -789,8 +785,7 @@ Qed.
 Global Instance eq_universe_subst_instance {cf : checker_flags} : SubstUnivPreserved eq_universe.
 Proof.
   intros φ φ' u HH t t' Htt'.
-  unfold eq_universe in *; case_eq check_univs;
-    [intro Hcf; rewrite Hcf in Htt'|trivial].
+  unfold eq_universe in *.
   intros v Hv; cbn.
   rewrite !subst_instance_univ_val'; tas.
   apply Htt'. clear t t' Htt'.
@@ -1523,8 +1518,7 @@ Lemma is_allowed_elimination_subst_instance {cf : checker_flags} (Σ : global_en
   is_allowed_elimination (global_ext_constraints (Σ.1, univs)) (subst_instance_univ inst u) al.
 Proof.
   intros val isal.
-  unfold is_allowed_elimination, is_allowed_elimination0 in *.
-  destruct check_univs eqn:cu; auto.
+  unfold is_allowed_elimination in *.
   intros ? sat.
   eapply satisfies_subst_instance in sat; eauto.
   specialize (isal _ sat).
@@ -2192,8 +2186,7 @@ Section SubstIdentity.
           rewrite inl inr.
           rewrite !CS.add_spec.
           intuition auto. }
-      unfold valid_constraints. destruct check_univs; auto.
-      unfold valid_constraints0. simpl.
+      unfold valid_constraints ; cbn.
       unfold satisfies.
       intros v. rewrite H.
       eapply CS_For_all_union.

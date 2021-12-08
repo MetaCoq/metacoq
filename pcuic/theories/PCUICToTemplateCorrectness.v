@@ -221,8 +221,6 @@ Proof.
     intros.
     now apply trans_mem_level_set.
   - unfold valid_constraints in *.
-    destruct config.check_univs;trivial.
-    unfold valid_constraints0 in *.
     intros.
     apply H1.
     unfold satisfies in *.
@@ -358,7 +356,7 @@ Proof.
     cbn.
     reflexivity.
   - red in X, X0.
-    f_equal; solve_all.    
+    f_equal; solve_all.
     + rewrite /trans_predicate /= /id /T.map_predicate /=.
       f_equal; solve_all.
     + rewrite /trans_branch; solve_all.

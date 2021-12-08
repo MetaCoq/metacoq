@@ -1788,7 +1788,7 @@ Qed.
 
 Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
 Proof.
-  red. destruct check_univs => //.
+  easy.
 Qed.
 
 Lemma upto_eq_impl Σ Re Rle :

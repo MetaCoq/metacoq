@@ -358,8 +358,6 @@ Proof.
     intros.
     now apply trans_mem_level_set.
   - unfold valid_constraints in *.
-    destruct config.check_univs;trivial.
-    unfold valid_constraints0 in *.
     intros.
     apply H1.
     unfold satisfies in *.
@@ -1984,8 +1982,7 @@ Proof.
 Qed.
 
 Definition cf' cf := 
-  {| check_univs := cf.(@check_univs);
-     prop_sub_type := cf.(@prop_sub_type); 
+  {| prop_sub_type := cf.(@prop_sub_type); 
      indices_matter := cf.(@indices_matter); 
      lets_in_constructor_types := false |}.
 

@@ -118,23 +118,21 @@ Qed.
 
 Lemma elim_restriction_works_kelim1 {cf : checker_flags} {Σ : global_env_ext} 
   {Γ T ci p c brs mdecl idecl} :
-  check_univs ->
   wf_ext Σ ->
   declared_inductive Σ ci.(ci_ind) mdecl idecl ->
   Σ ;;; Γ |- tCase ci p c brs : T ->
   (Is_proof Σ Γ (tCase ci p c brs) -> False) ->
   ind_kelim idecl = IntoAny \/ ind_kelim idecl = IntoSetPropSProp.
 Proof.
-  intros cu wfΣ. intros.
+  intros wfΣ. intros.
   assert (HT := X).
   eapply inversion_Case in X as [mdecl' [idecl' [isdecl' [indices [data cum]]]]]; eauto.
   destruct data.
   eapply declared_inductive_inj in isdecl' as []. 2:exact H. subst.
   enough (~ (Universe.is_prop ps \/ Universe.is_sprop ps)).
-  { clear -cu wfΣ allowed_elim H1.
+  { clear - wfΣ allowed_elim H1.
     apply wf_ext_consistent in wfΣ as (val&sat).
-    unfold is_allowed_elimination, is_allowed_elimination0 in *.
-    rewrite cu in allowed_elim.
+    unfold is_allowed_elimination in *.
     specialize (allowed_elim _ sat).
     destruct (ind_kelim idecl); auto;
       destruct ((Universe.univ_val val ps)) eqn:v; try easy;
@@ -284,12 +282,11 @@ Lemma is_propositional_subst_instance u s :
 Proof. destruct s => //. Qed.
 
 Lemma leq_universe_propositional_l {cf:checker_flags} ϕ u1 u2 :
-  check_univs ->
   prop_sub_type = false ->
   consistent ϕ ->
   leq_universe ϕ u1 u2 -> is_propositional u1 -> u1 = u2.
 Proof.
-  intros Hcf ps cu le.
+  intros Hcf ps le.
   unfold is_propositional.
   destruct (Universe.is_prop u1) eqn:eq.
   apply leq_universe_prop_no_prop_sub_type in le; auto.
@@ -310,7 +307,6 @@ Proof.
 Qed.
 
 Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
-  check_univs ->
   wf_ext Σ ->
   Σ ;;; Γ |-  T' : tSort s ->
   typing_spine Σ Γ (it_mkProd_or_LetIn Δ (mkApps (tInd ind u) args')) args T' ->
@@ -325,7 +321,7 @@ Lemma typing_spine_proofs {cf:checker_flags} Σ Γ Δ ind u args' args T' s :
         is_propositional (subst_instance_univ u idecl.(ind_sort)) -> 
         s = subst_instance_univ u idecl.(ind_sort)))))%type.
 Proof.
-  intros checku wfΣ Ht.
+  intros wfΣ Ht.
   induction Δ using PCUICInduction.ctx_length_rev_ind in Γ, args', args, T', Ht |- *; simpl; intros sp.
   - depelim sp. split; [repeat constructor|].
     * eapply equality_Ind_l_inv in e as [ui' [l' [red Req argeq]]] => //; auto.
@@ -506,14 +502,13 @@ Qed.
    that elimination to any type is allowed. *)
 
 Lemma Is_proof_mkApps_tConstruct `{cf : checker_flags} (Σ : global_env_ext) Γ ind n u mdecl idecl args :
-  check_univs = true ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ind mdecl idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) ->
   Is_proof Σ Γ (mkApps (tConstruct ind n u) args) ->
   #|ind_ctors idecl| <= 1 /\ ∥ All (Is_proof Σ Γ) (skipn (ind_npars mdecl) args) ∥.
 Proof.
-  intros checkunivs HΣ decli kelim [tyc [tycs [hc [hty hp]]]].
+  intros HΣ decli kelim [tyc [tycs [hc [hty hp]]]].
   assert (wfΣ : wf Σ) by apply HΣ.
   eapply inversion_mkApps in hc as [? [hc hsp]]; auto.
   eapply inversion_Construct in hc as [mdecl' [idecl' [cdecl' [wfΓ [declc [cu cum']]]]]]; auto.
@@ -606,12 +601,11 @@ Proof.
 Qed.
     
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :
-  check_univs = true ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ind mind idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) -> Informative Σ ind.
 Proof.
-  intros cu HΣ H indk.
+  intros HΣ H indk.
   assert (wfΣ : wf Σ) by apply HΣ.
   destruct (PCUICWeakeningEnv.on_declared_inductive  H) as [[]]; eauto.
   intros ?. intros.
@@ -621,13 +615,12 @@ Proof.
 Qed.
 
 Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T (ci : case_info) p c brs mind idecl : 
-  check_univs = true ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ci mind idecl ->
   Σ ;;; Γ |- tCase ci p c brs : T ->
   (Is_proof Σ Γ (tCase ci p c brs) -> False) -> Informative Σ ci.(ci_ind).
 Proof.
-  intros cu wfΣ decli HT H.
+  intros wfΣ decli HT H.
   eapply elim_restriction_works_kelim1 in HT; eauto.
   eapply elim_restriction_works_kelim; eauto.
   destruct (ind_kelim idecl); intuition congruence.
@@ -662,12 +655,12 @@ Proof.
 Qed.
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
-  check_univs = true -> wf_ext Σ ->
+  wf_ext Σ ->
   declared_inductive (fst Σ) (fst (fst p)) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
 Proof.
-  intros cu; intros. eapply elim_restriction_works_kelim; eauto.
+  intros; intros. eapply elim_restriction_works_kelim; eauto.
   eapply elim_restriction_works_proj_kelim1 in H0; eauto.
   intuition congruence.
 Qed.
@@ -694,7 +687,6 @@ Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
-Variable Hcf' : check_univs = true.
 
 Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->

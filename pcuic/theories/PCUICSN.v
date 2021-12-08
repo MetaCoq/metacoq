@@ -12,7 +12,7 @@ Require Import Equations.Prop.DepElim.
 
 Section Normalisation.
 
-  Context {cf : checker_flags}.
+  Context `{cf : checker_flags}.
   Context (Σ : global_env_ext).
 
   (* todo: missing wf_env hypothesis !*)
@@ -38,7 +38,7 @@ End Normalisation.
  *)
 Section Alpha.
 
-  Context {cf : checker_flags}.
+  Context `{cf : checker_flags}.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf Σ ∥).
 
@@ -81,7 +81,7 @@ Section Alpha.
       * constructor. assumption.
       * constructor. eapply eq_term_trans. 1: eauto.
         eapply eq_term_sym. assumption.
-    - specialize IHr1 with (1 := eq_term_refl _ _ _) (2 := hv).
+    - specialize IHr1 with (1 := @eq_term_refl cf _ _ _) (2 := hv).
       destruct IHr1 as [y' [h1 [e1]]].
       specialize IHr2 with (1 := hu) (2 := eq_term_sym _ _ _ _ e1).
       destruct IHr2 as [u' [h2 ?]].

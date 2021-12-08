@@ -21,7 +21,6 @@ Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
-Variable Hcf' : check_univs = true.
 
 Lemma cumul_sort_confluence {Σ} {wfΣ : wf Σ} {Γ A u v} :
   Σ ;;; Γ ⊢ A ≤ tSort u ->
@@ -91,7 +90,7 @@ Proof.
   destruct (cumul_sort_confluence hs hs') as [x' [conv [leq leq']]].
   intros isp.
   eapply leq_universe_prop_r in leq; eauto.
-  unshelve eapply (leq_universe_prop_no_prop_sub_type _ _ _ _ _ _ leq'); eauto.
+  unshelve eapply (leq_universe_prop_no_prop_sub_type _ _ _ _ _ leq'); eauto.
 Qed.
 
 Lemma is_sprop_bottom {Σ Γ T s s'} :
@@ -104,7 +103,7 @@ Proof.
   destruct (cumul_sort_confluence hs hs') as [x' [conv [leq leq']]].
   intros isp.
   eapply leq_universe_sprop_r in leq; eauto.
-  unshelve eapply (leq_universe_sprop_l _ _ _ _ _ leq'); eauto.
+  unshelve eapply (leq_universe_sprop_l _ _ _ _ leq'); eauto.
 Qed.
 
 Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' -> 
@@ -112,8 +111,9 @@ Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' ->
   Σ ;;; Γ ⊢ tSort u = tSort u'.
 Proof.
   move=> isp isp'.
-  constructor => //. constructor. 
-  red. red. rewrite Hcf'. red. intros. now rewrite (is_prop_val _ isp) (is_prop_val _ isp').
+  constructor => //. constructor.
+  do 2 red. intros.
+  now rewrite (is_prop_val _ isp) (is_prop_val _ isp').
 Qed.
 
 Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' -> 
@@ -122,8 +122,8 @@ Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' -
 Proof.
   move=> isp isp'.
   constructor => //. constructor. 
-  do 2 red. rewrite Hcf'.
-  red. intros. now rewrite (is_sprop_val _ isp) (is_sprop_val _ isp').
+  do 2 red. intros.
+  now rewrite (is_sprop_val _ isp) (is_sprop_val _ isp').
 Qed.
 
 Lemma equality_alt_closed {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
@@ -216,7 +216,6 @@ Proof.
 Qed.
 
 Lemma leq_universe_prop_spec Σ u1 u2 :
-  check_univs ->
   wf_ext Σ ->
   leq_universe Σ u1 u2 ->
   match u1, u2 with
@@ -230,9 +229,9 @@ Lemma leq_universe_prop_spec Σ u1 u2 :
   | Universe.lType _, _ => False
   end.
 Proof.
-  intros cu wf leq.
+  intros wf leq.
   apply wf_ext_consistent in wf.
-  apply (leq_universe_props _ _ _ cu wf leq).
+  apply (leq_universe_props _ _ _ wf leq).
 Qed.
 
 Lemma subrelation_eq_universe_eq_prop Σ : 

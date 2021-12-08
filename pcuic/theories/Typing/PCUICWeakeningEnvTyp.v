@@ -154,7 +154,6 @@ Qed.
 #[global]
 Hint Resolve weakening_env_cumul_ctx : extends.
 
-
 Lemma weakening_env `{checker_flags} :
   env_prop (fun Σ Γ t T =>
               forall Σ', wf Σ' -> extends Σ.1 Σ' -> (Σ', Σ.2) ;;; Γ |- t : T)
@@ -170,21 +169,21 @@ Proof.
     + eapply p; eauto.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
-  - econstructor; eauto 2 with extends.
+  - econstructor; eauto 2 with extends. econstructor; eauto 2 with extends.
     * revert X6. clear -Σ' wfΣ' extΣ.
       induction 1; constructor; eauto with extends.
     * close_Forall. intros; intuition eauto with extends.
   - econstructor; eauto with extends.
-    + eapply fix_guard_extends; eauto.
     + specialize (forall_Σ' _ wfΣ' extΣ).
       now apply wf_local_app_inv in forall_Σ'.
+    + eapply fix_guard_extends; eauto.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
       destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.
   - econstructor; eauto with extends.
-    + eapply cofix_guard_extends; eauto.
     + specialize (forall_Σ' _ wfΣ' extΣ).
       now apply wf_local_app_inv in forall_Σ'.
+    + eapply cofix_guard_extends; eauto.
     + eapply (All_impl X0); simpl; intuition eauto with extends.
       destruct X as [s Hs]; exists s. intuition eauto with extends.
     + eapply All_impl; eauto; simpl; intuition eauto with extends.

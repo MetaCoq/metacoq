@@ -1179,11 +1179,8 @@ Proof.
     * erewrite rename_predicate_preturn.
       rewrite rename_case_predicate_context //.
       eapply type_Case; eauto; tea; rewrite - ?rename_case_predicate_context.
+      7: constructor; eauto; tea; rewrite - ?rename_case_predicate_context.
       all:tea.
-      + now eapply rename_wf_predicate.
-      + simpl. eauto.
-        apply All_local_env_app_inv in IHpredctx as [].
-        eapply wf_local_app_renaming; eauto. apply a0.
       + simpl. eapply IHpret.
         split.
         ++ apply All_local_env_app_inv in IHpredctx as [].
@@ -1195,6 +1192,13 @@ Proof.
           relativize #|pcontext p|; [eapply urenaming_context|].
           { apply Hf. }
           now rewrite case_predicate_context_length.
+      + simpl. unfold id.
+        specialize (IHc _ _ _ Hf).
+        now rewrite rename_mkApps map_app in IHc.
+      + now eapply rename_wf_predicate.
+      + simpl. eauto.
+        apply All_local_env_app_inv in IHpredctx as [].
+        eapply wf_local_app_renaming; eauto. apply a0.
       + revert IHctxi.
         rewrite /= /id -map_app.
         rewrite -{2}[subst_instance _ _](rename_closedn_ctx f 0).
@@ -1211,9 +1215,6 @@ Proof.
         { simpl. rewrite rename_telescope_cons.
           constructor; cbn; eauto.
           now rewrite rename_subst_telescope /= in IHIHctxi. }
-      + simpl. unfold id.
-        specialize (IHc _ _ _ Hf).
-        now rewrite rename_mkApps map_app in IHc.
       + now eapply rename_wf_branches.
       + eapply Forall2_All2 in wfbrs.
         eapply All2i_All2_mix_left in Hbrs; eauto.
@@ -1282,9 +1283,9 @@ Proof.
     eapply wf_local_app_renaming in X; tea.
     simpl. eapply meta_conv.
     + eapply type_Fix.
+      * apply hf.
       * destruct hf; eapply fix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
-      * apply hf.
       * apply All_map, (All_impl ihmfixt).
         intros x [s [Hs IHs]].
         exists s. now eapply IHs.
@@ -1308,9 +1309,9 @@ Proof.
     eapply wf_local_app_renaming in X; eauto.
     simpl. eapply meta_conv.
     + eapply type_CoFix; auto.
+      * apply hf.
       * destruct hf; eapply cofix_guard_rename; eauto.
       * rewrite nth_error_map. rewrite hdecl. simpl. reflexivity.
-      * apply hf.
       * apply All_map, (All_impl ihmfixt).
         intros x [s [Hs IHs]].
         exists s. now eapply IHs.

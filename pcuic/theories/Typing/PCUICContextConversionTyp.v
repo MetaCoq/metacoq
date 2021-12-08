@@ -240,12 +240,12 @@ Proof.
     eapply forall_Γ'0; repeat (constructor; pcuic).
   - econstructor; pcuic.
     eapply forall_Γ'1; repeat (constructor; pcuic).
-  - econstructor; eauto.
-    * eapply context_cumulativity_wf_app; tea.
+  - econstructor; eauto. 2: constructor; eauto. 
     * eapply IHp0. rewrite /predctx.
       eapply All2_fold_app => //.
       eapply All2_fold_refl. intros ? ?; reflexivity.
       eapply context_cumulativity_wf_app; tea.
+    * eapply context_cumulativity_wf_app; tea.
     * revert X6.
       clear -Γ' X10 X11. induction 1; constructor; eauto.
     * eapply All2i_impl; tea => i cdecl br. cbv beta.

@@ -367,10 +367,13 @@ Proof.
     rewrite subst_instance_case_predicate_context.
     eapply type_Case with (p0:=subst_instance i p)
                           (ps:=subst_instance_univ i u); eauto with pcuic.
+    3: constructor; eauto with pcuic.                                              
+    + rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.
+      eapply Hpty; eauto. 
+    + eapply IHc in cu => //.
+      now rewrite subst_instance_mkApps map_app in cu.
     + simpl. eapply consistent_ext_trans; tea.
     + now rewrite -subst_instance_case_predicate_context -subst_instance_app_ctx.
-    + rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.
-      eapply Hpty; eauto.
     + destruct Hsub.
       cbn in *.
       eapply is_allowed_elimination_subst_instance; aa.
@@ -380,8 +383,6 @@ Proof.
       rewrite -[List.rev (subst_instance i _)]map_rev.
       clear -wfext Hsub cu. induction 1; cbn; constructor; simpl; eauto.
       all:now rewrite -(subst_instance_subst_telescope i [_]).
-    + eapply IHc in cu => //.
-      now rewrite subst_instance_mkApps map_app in cu.
     + rewrite -{1}(map_id (ind_ctors idecl)).
       eapply All2i_map. eapply All2i_impl; eauto. 
       cbn -[case_branch_type case_branch_context subst_instance].
@@ -405,11 +406,11 @@ Proof.
 
   - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ' HSub.
     rewrite (map_dtype _ (subst_instance u)). econstructor.
-    + now eapply fix_guard_subst_instance.
-    + rewrite nth_error_map H0. reflexivity.
     + specialize (H1 u univs wfΣ' HSub H2).
       rewrite subst_instance_app in H1.
       now eapply wf_local_app_inv in H1 as [].
+    + now eapply fix_guard_subst_instance.
+    + rewrite nth_error_map H0. reflexivity.
     + apply All_map, (All_impl X); simpl; intuition auto.
       destruct X1 as [s Hs]. exists (subst_instance_univ u s).
       now apply Hs.
@@ -428,29 +429,30 @@ Proof.
       rewrite map_map_compose.
       now rewrite subst_instance_check_one_fix.
 
-  - intros mfix n decl guard H X X0 X1 wfcofix u univs wfΣ' HSub H1.
-    rewrite (map_dtype _ (subst_instance u)). econstructor; tas.
-    + now eapply cofix_guard_subst_instance.
-    + rewrite nth_error_map H. reflexivity.
-    + specialize (X u univs wfΣ' HSub H1).
-      rewrite subst_instance_app in X.
-      now eapply wf_local_app_inv in X as [].
-    + apply All_map, (All_impl X0); simpl; intuition auto.
-      destruct X2 as [s Hs]. exists (subst_instance_univ u s).
-      now apply Hs.
-    + eapply All_map, All_impl; tea.
-      intros x [X1' X3].
-      * specialize (X3 u univs wfΣ' HSub H1). 
+      - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ' HSub.
+      rewrite (map_dtype _ (subst_instance u)). econstructor.
+      + specialize (H1 u univs wfΣ' HSub H2).
+        rewrite subst_instance_app in H1.
+        now eapply wf_local_app_inv in H1 as [].
+      + now eapply cofix_guard_subst_instance.
+      + rewrite nth_error_map H0. reflexivity.
+      + apply All_map, (All_impl X); simpl; intuition auto.
+        destruct X1 as [s Hs]. exists (subst_instance_univ u s).
+        now apply Hs.
+      + eapply All_map, All_impl; tea.
+        intros x [X1 X3]. 
+        specialize (X3 u univs wfΣ' HSub H2). 
         rewrite (map_dbody (subst_instance u)) in X3.
         rewrite subst_instance_lift in X3.
         rewrite fix_context_length ?map_length in X0, X1, X3.
+        rewrite (map_dtype _ (subst_instance u) x) in X3.
         rewrite subst_instance_app in X3.
-        rewrite <- (fix_context_subst_instance u mfix).
-        rewrite <- map_dtype. len. eapply X3.
-    + red; rewrite <- wfcofix.
-      unfold wf_cofixpoint.
-      rewrite map_map_compose.
-      now rewrite subst_instance_check_one_cofix.
+        rewrite <- (fix_context_subst_instance u mfix). len.
+        eapply X3.
+      + red; rewrite <- wffix.
+        unfold wf_cofixpoint.
+        rewrite map_map_compose.
+        now rewrite subst_instance_check_one_cofix.
       
   - intros t0 A B X X0 X1 X2 X3 X4 cum u univs wfΣ' HSub H.
     econstructor.

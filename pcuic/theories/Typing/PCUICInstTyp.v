@@ -691,12 +691,8 @@ Proof.
       rewrite inst_case_predicate_context //.
       eapply type_Case; eauto;
        rewrite - ?inst_case_predicate_context //.
-      + now eapply inst_wf_predicate.
-      + simpl.
-        apply All_local_env_app_inv in Hpctx as [].
-        eapply wf_local_app_inst; eauto.
-        apply All_local_env_app_inv in IHpredctx as [].
-        apply a2.
+      3: constructor; eauto;
+        rewrite - ?inst_case_predicate_context //.
       + apply All_local_env_app_inv in Hpctx as [].
         apply All_local_env_app_inv in IHpredctx as [].
         eapply IHpret.
@@ -705,6 +701,15 @@ Proof.
         ++ relativize #|pcontext p|; [eapply well_subst_app_up|] => //; rewrite /predctx; len.
            2:{ rewrite case_predicate_context_length //. }
            eapply wf_local_app_inst; eauto. apply a2.
+      + simpl. unfold id.
+        specialize (IHc _ _ HΔ Hf).
+        now rewrite inst_mkApps map_app in IHc.
+      + now eapply inst_wf_predicate.
+      + simpl.
+        apply All_local_env_app_inv in Hpctx as [].
+        eapply wf_local_app_inst; eauto.
+        apply All_local_env_app_inv in IHpredctx as [].
+        apply a2.
       + revert IHctxi.
         rewrite /= /id -map_app.
         rewrite -{2}[subst_instance _ _](inst_closedn_ctx f 0).
@@ -721,9 +726,6 @@ Proof.
         { simpl. rewrite inst_telescope_cons.
           constructor; cbn; eauto.
           now rewrite inst_subst_telescope /= in IHIHctxi. }
-      + simpl. unfold id.
-        specialize (IHc _ _ HΔ Hf).
-        now rewrite inst_mkApps map_app in IHc.
       + now eapply inst_wf_branches.
       + eapply Forall2_All2 in wfbrs.
         eapply All2i_All2_mix_left in Hbrs; eauto.

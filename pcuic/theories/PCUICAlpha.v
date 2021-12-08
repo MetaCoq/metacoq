@@ -713,6 +713,7 @@ Section Alpha.
       eapply R_universe_instance_eq in eqinst.
       assert (isType Σ Δ (mkApps ptm (args ++ [c]))).
       { eapply isType_eq_context_conversion. eapply validity. econstructor; eauto.
+        constructor; eauto. 
         solve_all. eapply a0; eauto; reflexivity. all:auto. }
       eapply type_Cumul'; tea.
       + have cu' : consistent_instance_ext Σ (ind_universes mdecl) (puinst p').
@@ -761,7 +762,7 @@ Section Alpha.
           intros ??? [[] ?]; try constructor; simpl; auto; now transitivity na'. }
         destruct (wf_local_app_inv X4) as [wfΔ _].
         assert (clΔ := (wf_local_closed_context wfΔ)).
-        econstructor; tea; eauto.
+        econstructor; tea; eauto. 2: constructor; tea ; eauto. 
         * eapply (type_equality (le:=true)).
           eapply IHc; eauto.
           eexists; eapply isType_mkApps_Ind; tea.

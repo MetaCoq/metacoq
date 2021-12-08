@@ -821,13 +821,6 @@ Section Typecheck.
     congruence.
   Qed.
 
-
-  Lemma eq_diff u u' : ~ (eq_universe Σ u u') -> exists v : valuation, 
-    satisfies v Σ /\ ~ (⟦u⟧_v%u =⟦u'⟧_v%u).
-  Proof.
-    clear.
-  Admitted.
-
   (* Obligation Tactic := Program.Tactics.program_simplify ; eauto 2. *)
   
   Equations check_is_allowed_elimination
@@ -911,19 +904,18 @@ Section Typecheck.
     apply wf_ext_consistent in HeΣ as [v Hv].
     rewrite /is_allowed_elimination /is_allowed_elimination0 cunivs in H.
     destruct u => //=.
-    cbn in e0.
-    move: e0.
-    unshelve epose proof (eq_universeP _ _ _ _ _ t Universe.type0 _ _) ; tea.
+    unshelve epose proof (eq_universeP _ _ _ _ _ t Universe.type0 _ _) as e'; tea.
     1-2: now sq.
-    1: admit.
-    destruct X => //.
-    eapply eq_diff in f as [v' [Hv' Habs]].
-    intros _.
+    1: move => l /UnivExprSet.singleton_spec -> ;
+      now apply LevelSetFact.union_3, global_levels_Set.
+    move: e0 => /= /ssrfun.esym /(elimF e') ne.
+    apply ne.
+    rewrite /eq_universe /eq_universe0 cunivs.
+    intros v' Hv'.
     specialize (H v' Hv').
-    apply Habs.
     cbn in *.
     now destruct (val v' t).
-  Admitted.
+  Qed.
   Next Obligation.
     unfold is_allowed_elimination, is_allowed_elimination0.
     destruct check_univs; auto.

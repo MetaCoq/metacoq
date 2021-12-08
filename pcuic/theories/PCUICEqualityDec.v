@@ -179,7 +179,7 @@ Local Ltac equspec equ h :=
 Local Ltac ih :=
   repeat lazymatch goal with
   | ih : forall lequ Rle napp hle t' ht ht', reflectT (eq_term_upto_univ_napp _ _ _ napp ?t _) _,
-    hle : forall u u' hu hu', reflectT (?Rle u u') (?lequ u u')
+    hle : forall u u' hu hu', reflect (?Rle u u') (?lequ u u')
     |- context [ eqb_term_upto_univ _ _ ?lequ ?t ?t' ] =>
     destruct (ih lequ Rle 0 hle t') ; nodec ; subst
   end.
@@ -252,20 +252,20 @@ Proof.
 Qed.
 
 Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
-  (forall u u', reflectT (Re u u') (equ u u')) ->
-  (forall u u', reflectT (Rle u u') (lequ u u')) ->
+  (forall u u', reflect (Re u u') (equ u u')) ->
+  (forall u u', reflect (Rle u u') (lequ u u')) ->
   forall ctx ctx',
   onctx
       (fun t : term =>
        forall (lequ : Universe.t -> Universe.t -> bool)
          (Rle : Universe.t -> Universe.t -> Prop) 
          (napp : nat),
-       (forall u u' : Universe.t, reflectT (Rle u u') (lequ u u')) ->
+       (forall u u' : Universe.t, reflect (Rle u u') (lequ u u')) ->
        forall t' : term,
        reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
          (eqb_term_upto_univ_napp Σ equ lequ napp t t')) 
       ctx ->
-  reflectT 
+  reflectT
     (eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx ctx')
     (forallb2 (bcompare_decls (eqb_term_upto_univ Σ equ equ)
       (eqb_term_upto_univ Σ equ equ)) ctx ctx').
@@ -298,7 +298,7 @@ Proof.
       now constructor.
 Qed.
 
-Definition eqb_univ_reflect : forall u u' : Universe.t, reflectT (u = u') (eqb u u').
+Definition eqb_univ_reflect : forall u u' : Universe.t, reflect (u = u') (eqb u u').
 Proof.
   intros u u'.
   destruct (eqb_spec u u'); constructor; auto.
@@ -379,8 +379,8 @@ Proof.
 Qed.
 
 Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} {p : Universe.t -> bool} {q : nat -> term -> bool} :
-  (forall u u', p u -> p u' -> reflectT (Re u u') (equ u u')) ->
-  (forall u u', p u -> p u' -> reflectT (Rle u u') (lequ u u')) ->
+  (forall u u', p u -> p u' -> reflect (Re u u') (equ u u')) ->
+  (forall u u', p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
   forall pr pr',
   Forall p (map Universe.make pr.(puinst)) ->
   Forall (on_universes p q) pr.(pparams) ->
@@ -391,14 +391,14 @@ Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t
   tCasePredProp
   (fun t : term =>
    forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
-   (forall u u' : Universe.t, p u -> p u' -> reflectT (Rle u u') (lequ u u')) ->
+   (forall u u' : Universe.t, p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
    forall t' : term,
    on_universes p q t ->
    on_universes p q t' ->
    reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp Σ equ lequ napp t t'))
   (fun t : term =>
    forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
-   (forall u u' : Universe.t, p u -> p u' -> reflectT (Rle u u') (lequ u u')) ->
+   (forall u u' : Universe.t, p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
    forall t' : term,
    on_universes p q t ->
    on_universes p q t' ->
@@ -441,8 +441,8 @@ Arguments eqb : simpl never.
 
 Lemma reflect_R_global_instance Σ equ lequ (p : Universe.t -> bool)
   (Re Rle : Universe.t -> Universe.t -> Prop) gr napp ui ui' :
-  (forall u u', p u -> p u' -> reflectT (Re u u') (equ u u')) ->
-  (forall u u', p u -> p u' -> reflectT (Rle u u') (lequ u u')) ->
+  (forall u u', p u -> p u' -> reflect (Re u u') (equ u u')) ->
+  (forall u u', p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
   forallb p (map Universe.make ui) ->
   forallb p (map Universe.make ui') ->
   reflect (R_global_instance Σ Re Rle gr napp ui ui')
@@ -484,8 +484,8 @@ Qed.
 Lemma reflect_eq_term_upto_univ Σ equ lequ
   (p : Universe.t -> bool) (q : nat -> term -> bool)
   (Re Rle : Universe.t -> Universe.t -> Prop) napp :
-  (forall u u', p u -> p u' -> reflectT (Re u u') (equ u u')) ->
-  (forall u u', p u -> p u' -> reflectT (Rle u u') (lequ u u')) ->
+  (forall u u', p u -> p u' -> reflect (Re u u') (equ u u')) ->
+  (forall u u', p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
   forall t t',
     on_universes p q t ->
     on_universes p q t' ->
@@ -530,7 +530,7 @@ Proof.
     ih.
     constructor. constructor. assumption.
   - cbn - [eqb]. eqspecs. equspec equ he.
-    destruct (eqb_annot_reflect n na); ih => //.
+    destruct (eqb_annot_reflect n na); ih => //=.
     constructor. constructor; assumption.
   - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle.
     destruct (eqb_annot_reflect n na); ih => //.
@@ -564,7 +564,7 @@ Proof.
            ++ constructor. intro bot. apply f.
               inversion bot. subst. constructor. inversion H0.
               subst. assumption.
-        -- constructor. intro bot. apply f.
+        -- constructor. intro bot. apply n.
            inversion bot. subst. inversion H0. subst.
            assumption.
   - cbn - [eqb]. eqspecs.
@@ -718,7 +718,7 @@ Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp:
 Proof.
   intros t t' he hle heqle.
   case: (reflect_eq_term_upto_univ Σ equ lequ xpredT (fun _ => xpredT) equ lequ) => //; eauto.
-  1-2:intros ; eapply reflectT_pred2.
+  1-2:intros ; apply/idP.
   1-2: apply on_universes_true.
   intros. eapply eq_term_upto_univ_impl. 5:tea. all:eauto.
 Qed.
@@ -747,7 +747,7 @@ Lemma eqb_term_upto_univ_refl :
 Proof.
   intros Σ eqb leqb napp t eqb_refl leqb_refl.
   case: (reflect_eq_term_upto_univ Σ eqb leqb xpredT (fun _ => xpredT) eqb leqb napp _ _ t t) => //.
-  1-2: intros; eapply equiv_reflectT; auto.
+  1-2: intros; apply/idP.
   1-2: apply on_universes_true.
   now unshelve epose proof (eq_term_upto_univ_refl Σ eqb leqb napp _ _ t).
 Qed.
@@ -777,18 +777,18 @@ Section EqualityDec.
     Lemma eq_universeP u u' :
     wf_universe Σ u ->
     wf_universe Σ u' ->
-    reflectT (eq_universe Σ u u') (check_eqb_universe G u u').
+    reflect (eq_universe Σ u u') (check_eqb_universe G u u').
   Proof.
     intros.
-    apply equiv_reflectT.
+    apply/(equivP idP) ; split.
     all: pose proof hΣ' as hΣ' ; sq.
-    - intros e.
-      eapply check_eqb_universe_complete ; eauto.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
     - intros e.
       eapply check_eqb_universe_spec' in e ; eauto.
       + assumption.
+      + now apply wf_ext_global_uctx_invariants.
+      + now apply global_ext_uctx_consistent.
+    - intros e.
+      eapply check_eqb_universe_complete ; eauto.
       + now apply wf_ext_global_uctx_invariants.
       + now apply global_ext_uctx_consistent.
   Qed.
@@ -796,18 +796,18 @@ Section EqualityDec.
   Lemma leq_universeP u u' :
   wf_universe Σ u ->
   wf_universe Σ u' ->
-  reflectT (leq_universe Σ u u') (check_leqb_universe G u u').
+  reflect (leq_universe Σ u u') (check_leqb_universe G u u').
   Proof.
     intros.
-    apply equiv_reflectT.
+    apply/(equivP idP) ; split.
     all: pose proof hΣ' as hΣ' ; sq.
-    - intros e.
-      eapply check_leqb_universe_complete ; eauto.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
     - intros e.
       eapply check_leqb_universe_spec' in e ; eauto.
       + assumption.
+      + now apply wf_ext_global_uctx_invariants.
+      + now apply global_ext_uctx_consistent.
+    - intros e.
+      eapply check_leqb_universe_complete ; eauto.
       + now apply wf_ext_global_uctx_invariants.
       + now apply global_ext_uctx_consistent.
   Qed.
@@ -815,7 +815,7 @@ Section EqualityDec.
   Lemma leq_relP (pb : conv_pb) u u' :
     wf_universe Σ u ->
     wf_universe Σ u' ->
-    reflectT (leq_rel pb Σ u u') (conv_pb_relb pb u u').
+    reflect (leq_rel pb Σ u u') (conv_pb_relb pb u u').
   Proof.
     destruct pb.
     - cbn.

@@ -2331,18 +2331,17 @@ Proof.
   induction c; try solve[constructor; auto].
   move: wf; rewrite /= on_free_vars_ctx_snoc => /andP[] h0 h1.
   move: wf'; rewrite /= on_free_vars_ctx_snoc => /andP[] h2 h3.
-  destruct p; constructor; auto.
+  destruct p; constructor; inv_on_free_vars; auto.
   - eapply cumulSpec_cumulAlgo_curry in c0; fvs.
     constructor; auto. now eapply equality_forget in c0.
     len. rewrite (All2_fold_length c). now len in h3.
-  - inv_on_free_vars; cbn in *.
-    eapply cumulSpec_cumulAlgo_curry in c1; eauto.
+  - eapply cumulSpec_cumulAlgo_curry in c1; eauto.
     eapply convSpec_convAlgo_curry in c0; eauto; fvs.
     constructor; auto.
     now apply equality_forget in c0.
     now apply equality_forget in c1.
-    len. rewrite (All2_fold_length c) //. now len in a.
-    len. rewrite (All2_fold_length c) //. now len in b0.
+    len. rewrite (All2_fold_length c) //. now len in H.
+    len. rewrite (All2_fold_length c) //. now len in H0.
 Qed.
 
 Lemma into_context_equality_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}

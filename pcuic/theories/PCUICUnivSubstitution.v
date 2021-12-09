@@ -765,7 +765,7 @@ Class SubstUnivPreserved {cf : checker_flags} {A} `{UnivSubst A} (R : Constraint
                      (precompose (R φ') (subst_instance u)).
 
 Lemma satisfies_subst_instance {cf : checker_flags} φ φ' u :
-  check_univs = true ->
+  check_univs ->
   valid_constraints φ' (subst_instance_cstrs u φ) ->
   forall v, satisfies v φ' ->
        satisfies (subst_instance_valuation u v) φ.

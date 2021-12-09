@@ -14,6 +14,7 @@ Section Normalisation.
 
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
+  Context (cu : check_univs).
 
   (* todo: missing wf_env hypothesis !*)
   Axiom normalisation :

@@ -21,7 +21,7 @@ Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
-Variable Hcf' : check_univs = true.
+Variable Hcf' : check_univs.
 
 Lemma cumul_sort_confluence {Σ} {wfΣ : wf Σ} {Γ A u v} :
   Σ ;;; Γ ⊢ A ≤ tSort u ->

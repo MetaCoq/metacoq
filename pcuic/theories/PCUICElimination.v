@@ -506,7 +506,7 @@ Qed.
    that elimination to any type is allowed. *)
 
 Lemma Is_proof_mkApps_tConstruct `{cf : checker_flags} (Σ : global_env_ext) Γ ind n u mdecl idecl args :
-  check_univs = true ->
+  check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ind mdecl idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) ->
@@ -606,7 +606,7 @@ Proof.
 Qed.
     
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :
-  check_univs = true ->
+  check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ind mind idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) -> Informative Σ ind.
@@ -621,7 +621,7 @@ Proof.
 Qed.
 
 Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T (ci : case_info) p c brs mind idecl : 
-  check_univs = true ->
+  check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ci mind idecl ->
   Σ ;;; Γ |- tCase ci p c brs : T ->
@@ -662,7 +662,7 @@ Proof.
 Qed.
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
-  check_univs = true -> wf_ext Σ ->
+  check_univs -> wf_ext Σ ->
   declared_inductive (fst Σ) (fst (fst p)) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
@@ -694,7 +694,7 @@ Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
-Variable Hcf' : check_univs = true.
+Variable Hcf' : check_univs.
 
 Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->

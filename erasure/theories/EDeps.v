@@ -2,7 +2,7 @@ From Coq Require Import Arith List.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import
      PCUICAst PCUICAstUtils PCUICTyping
-     PCUICInversion PCUICWeakeningEnv.
+     PCUICInversion PCUICWeakeningEnvConv PCUICWeakeningEnvTyp.
 Set Warnings "-notation-overridden".
 From MetaCoq.Erasure Require Import
      EAst EAstUtils ECSubst EInduction
@@ -448,15 +448,15 @@ Proof.
         destruct kername_eq_dec as [<-|]; [congruence|].
         easy. }
       inversion wfΣ; subst.
-      eapply PCUICWeakeningEnv.declared_constant_inv in H4; eauto.
-      2:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
+      eapply declared_constant_inv in H4; eauto.
+      2:eapply weaken_env_prop_typing.
       red in H4.
       rewrite body in *.
       cbn in *.
       eapply (erases_extends (_, cst_universes cb)); eauto.
       2: eexists [_]; reflexivity.
       eapply declared_constant_inv in H.
-      2:eapply PCUICWeakeningEnv.weaken_env_prop_typing.
+      2:eapply weaken_env_prop_typing.
       2: easy.
       2: easy.
       unfold on_constant_decl in H.

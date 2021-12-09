@@ -1,8 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils 
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+  PCUICReduction
   PCUICClosed PCUICTyping PCUICWcbvEval PCUICLiftSubst PCUICInversion PCUICArities
   PCUICSR PCUICGeneration PCUICSubstitution PCUICElimination
+  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
   PCUICWellScopedCumulativity
   PCUICContextConversion PCUICConversion PCUICCanonicity
   PCUICSpine PCUICInductives PCUICInductiveInversion PCUICConfluence 
@@ -48,7 +50,7 @@ Lemma isArity_ind_type (Σ : global_env_ext) mind ind idecl :
   isArity (ind_type idecl).
 Proof.
   intros. 
-  eapply (PCUICWeakeningEnv.declared_inductive_inv PCUICWeakeningEnv.weaken_env_prop_typing) in H; eauto.
+  eapply (declared_inductive_inv weaken_env_prop_typing) in H; eauto.
   - inv H. rewrite ind_arity_eq.
     change PCUICEnvironment.it_mkProd_or_LetIn with it_mkProd_or_LetIn.
     rewrite <- it_mkProd_or_LetIn_app.
@@ -151,7 +153,7 @@ Lemma declared_constructor_type_not_arity {Σ : global_env_ext} {wfΣ : wf Σ} {
 Proof.
   intros decl; sq.
   unfold type_of_constructor.
-  destruct (PCUICWeakeningEnv.on_declared_constructor decl) as [XX [s [XX1 Ht]]].
+  destruct (on_declared_constructor decl) as [XX [s [XX1 Ht]]].
   rewrite (cstr_eq Ht). clear -wfΣ decl.
   rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
   rewrite /cstr_concl.
@@ -218,7 +220,7 @@ Lemma declared_constructor_typing_spine_not_arity {Σ : global_env_ext} {wfΣ : 
 Proof.
   intros decl; sq.
   unfold type_of_constructor.
-  destruct (PCUICWeakeningEnv.on_declared_constructor decl) as [XX [s [XX1 Ht]]].
+  destruct (on_declared_constructor decl) as [XX [s [XX1 Ht]]].
   rewrite (cstr_eq Ht). clear -wfΣ decl.
   rewrite !PCUICUnivSubst.subst_instance_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn.
   rewrite /cstr_concl.

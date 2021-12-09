@@ -2,12 +2,15 @@
 From Coq Require Import Program ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
-     PCUICReflect PCUICWeakeningEnv PCUICCasesContexts
-     PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
-     PCUICConfluence PCUICConversion 
-     PCUICCumulativity PCUICSR PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination 
-     PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN.
+  PCUICReduction   
+  PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICCasesContexts
+  PCUICWeakeningConv PCUICWeakeningTyp
+  PCUICContextConversionTyp
+  PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
+  PCUICConfluence PCUICConversion
+  PCUICCumulativity PCUICSR PCUICSafeLemmata
+  PCUICValidity PCUICPrincipality PCUICElimination 
+  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN.
      
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness.
@@ -71,7 +74,7 @@ Section OnInductives.
     wf_local Σ (Γ ,,, (ind_params mdecl)@[u]).
   Proof.
     intros.
-    eapply PCUICWeakening.weaken_wf_local; tea.
+    eapply weaken_wf_local; tea.
     eapply PCUICArities.on_minductive_wf_params; tea.
   Qed.
   
@@ -83,7 +86,7 @@ Section OnInductives.
     wf_local Σ Γ ->
     wf_local Σ (Γ ,,, (ind_params mdecl ,,, ind_indices idecl)@[u]).
   Proof.
-    intros. eapply PCUICWeakening.weaken_wf_local; tea.
+    intros. eapply weaken_wf_local; tea.
     eapply PCUICInductives.on_minductive_wf_params_indices_inst; tea.
   Qed.
 
@@ -428,7 +431,7 @@ Section Erase.
     epose proof (wf_case_inst_case_context ps indices decli scrut_ty wf_pred pret_ty conv_pctx
       _ _ _ declc wfbr eqctx) as [wfictx eqictx].
     eexists.
-    eapply PCUICContextConversion.closed_context_conversion; tea.
+    eapply closed_context_conversion; tea.
     now symmetry.
   Qed.
 
@@ -759,7 +762,7 @@ Program Fixpoint erase_global_decls (deps : KernameSet.t) (Σ : global_env) : �
   end.
 Next Obligation.
   sq. split. cbn.
-  eapply PCUICWeakeningEnv.wf_extends. eauto. eexists [_]; reflexivity.
+  eapply wf_extends. eauto. eexists [_]; reflexivity.
   now inversion X; subst.
 Qed.
 
@@ -772,13 +775,13 @@ Next Obligation.
 Defined.
 
 Next Obligation.
-  sq. abstract (eapply PCUICWeakeningEnv.wf_extends; eauto; eexists [_]; reflexivity).
+  sq. abstract (eapply wf_extends; eauto; eexists [_]; reflexivity).
 Defined.
 Next Obligation.
-  sq. abstract (eapply PCUICWeakeningEnv.wf_extends; eauto; eexists [_]; reflexivity).
+  sq. abstract (eapply wf_extends; eauto; eexists [_]; reflexivity).
 Defined.
 Next Obligation.
-  sq. abstract (eapply PCUICWeakeningEnv.wf_extends; eauto; eexists [_]; reflexivity).
+  sq. abstract (eapply wf_extends; eauto; eexists [_]; reflexivity).
 Defined.
 
 Program Definition erase_global deps Σ : ∥wf Σ∥ -> _:=
@@ -1368,7 +1371,7 @@ Proof.
     unshelve epose proof (erases_erase (wfΣ := er) obl); eauto.
     cbn in H.
     eapply erases_closed in H => //.
-    cbn. destruct er. now eapply PCUICClosed.subject_closed in o0.
+    cbn. destruct er. now eapply PCUICClosedTyp.subject_closed in o0.
   + set (er := erase_global_decls_obligation_4 _ _ _ _ _ _). 
     clearbody er. destruct er.
     eapply IHΣ.

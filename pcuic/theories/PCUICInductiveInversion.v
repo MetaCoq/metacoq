@@ -1887,7 +1887,7 @@ Qed.
  
 Lemma consistent_instance_valid {cf} {Σ} {wfΣ : wf Σ} {inst cstrs u} :
   consistent_instance_ext Σ (Polymorphic_ctx (inst, cstrs)) u ->
-  check_univs = true ->
+  check_univs ->
   forall v, satisfies v (global_ext_constraints Σ) -> satisfies v (subst_instance_cstrs u cstrs).
 Proof. rewrite /consistent_instance_ext /=; intros [_ [_ v]] cu.
     red in v. now rewrite cu in v.

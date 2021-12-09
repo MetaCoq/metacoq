@@ -1213,14 +1213,6 @@ Proof.
   intros o H; induction o; constructor; auto.
 Qed.
 
-Lemma test_context_k_closed_on_free_vars_ctx k ctx :
-  test_context_k (fun k => on_free_vars (closedP k xpredT)) k ctx =
-  on_free_vars_ctx (closedP k xpredT) ctx.
-Proof.
-  rewrite test_context_k_eq /on_free_vars_ctx.
-  now setoid_rewrite shiftnP_closedP; setoid_rewrite shiftnP_xpredT; setoid_rewrite Nat.add_comm at 1.
-Qed.
-
 Lemma substP_shiftnP_gen k n p : 
   substP k n p (shiftnP (k + n) p) =1 shiftnP k p.
 Proof.
@@ -1324,16 +1316,15 @@ Proof.
   rewrite shiftnP_xpredT //.
 Qed.
 
-Lemma on_free_vars_ind_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl ->
-  on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT) 
-    (ind_predicate_context ind mdecl idecl).
+Lemma on_free_vars_ctx_All_fold P Γ : 
+  on_free_vars_ctx P Γ <~> All_fold (fun Γ => on_free_vars_decl (shiftnP #|Γ| P)) Γ.
 Proof.
-  intros decli.
-  rewrite <- closedn_ctx_on_free_vars.
-  eapply PCUICClosed.closed_ind_predicate_context; tea.
-  eapply (PCUICClosed.declared_minductive_closed (proj1 decli)).
+  split.
+  - now move/alli_Alli/Alli_rev_All_fold.
+  - intros a. apply (All_fold_Alli_rev (fun k => on_free_vars_decl (shiftnP k P)) 0) in a.
+    now apply alli_Alli.
 Qed.
+
 
 Lemma term_on_free_vars_ind :
   forall (P : (nat -> bool) -> term -> Type),
@@ -1416,7 +1407,21 @@ Proof.
   - revert cl1. generalize (pparams p0).
     fix auxl' 1.
     case => [|t' ts] /= //; cbn => /andP[] Ht' Hts; constructor; [apply auxt|apply auxl'] => //.
-  - rename cl5 into cl. revert brs cl. clear -auxt.
+  - apply on_free_vars_ctx_All_fold in cl3.
+    revert cl3. generalize (pcontext p0).
+    fix auxl 1.
+    { intros []. 
+      * cbn. intros _. constructor.
+      * cbn. intros a; depelim a.
+        constructor.
+        + now apply auxl.
+        + destruct c as [na [b'|] ty]; cbn in *; constructor; cbn; apply auxt || exact tt.
+          { move/andP: i; cbn. rewrite shiftnP_closedP.
+    +            { now move/andP: clc => []. }
+    +            { now move/andP: clc => []. }
+    +            apply clc. }
+    +      + now apply auxt.
+    - rename cl5 into cl. revert brs cl. clear -auxt.
     fix auxl' 1.
     destruct brs; [constructor|].
     move=> /= /andP [/andP [clctx clb] cll].
@@ -1479,15 +1484,6 @@ Proof.
   rewrite IHX /=.
   len in hx. len. rewrite -(All2_length X).
   destruct r; cbn in *; subst; auto.
-Qed.
-
-Lemma on_free_vars_ctx_All_fold P Γ : 
-  on_free_vars_ctx P Γ <~> All_fold (fun Γ => on_free_vars_decl (shiftnP #|Γ| P)) Γ.
-Proof.
-  split.
-  - now move/alli_Alli/Alli_rev_All_fold.
-  - intros a. apply (All_fold_Alli_rev (fun k => on_free_vars_decl (shiftnP k P)) 0) in a.
-    now apply alli_Alli.
 Qed.
 
 Lemma on_free_vars_ctx_any_xpredT P Γ : 

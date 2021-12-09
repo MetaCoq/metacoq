@@ -19,7 +19,8 @@ From MetaCoq.PCUIC Require Import PCUICSafeLemmata.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICUnivSubst.
 From MetaCoq.PCUIC Require Import PCUICValidity.
-From MetaCoq.PCUIC Require Import PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
+From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
@@ -156,7 +157,7 @@ Proof.
       + reflexivity.
       + reflexivity.
     - destruct wfΣ; auto. }
-  eapply (env_prop_typing PCUICWeakeningEnv.weakening_env) in cons; auto.
+  eapply (env_prop_typing weakening_env) in cons; auto.
   3: exists [(make_fresh_name Σ, InductiveDecl False_mib)]; reflexivity.
   2: now destruct wf'.
   

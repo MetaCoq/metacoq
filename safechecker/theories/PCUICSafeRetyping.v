@@ -6,10 +6,14 @@ From Equations Require Import Equations.
 From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICSafeLemmata PCUICSubstitution PCUICValidity
+     PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningConv PCUICWeakeningTyp 
+     PCUICClosed PCUICClosedTyp
+     PCUICSafeLemmata PCUICSubstitution PCUICValidity
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
-     PCUICWeakeningEnv PCUICContexts PCUICContextConversion PCUICOnFreeVars
+     PCUICContexts PCUICContextConversion PCUICContextConversionTyp PCUICOnFreeVars
      PCUICWellScopedCumulativity PCUICSafeLemmata.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
@@ -74,10 +78,10 @@ Lemma inductive_cumulative_indices_smash {cf : checker_flags} {Σ : global_env_e
 Proof.
   intros ind mdecl idecl u u' napp isdecl up cu cu' hR Γ pars pars' sppars sppars' eq.
   unshelve epose proof (spine_subst_smash_inv _ sppars) as [parsubst sppars2].
-  eapply PCUICWeakening.weaken_wf_local; tea. apply sppars.
+  eapply weaken_wf_local; tea. apply sppars.
   eapply (on_minductive_wf_params isdecl cu).
   unshelve epose proof (spine_subst_smash_inv _ sppars') as [parsubst' sppars3].
-  eapply PCUICWeakening.weaken_wf_local; tea. apply sppars.
+  eapply weaken_wf_local; tea. apply sppars.
   eapply (on_minductive_wf_params isdecl cu').
   epose proof (inductive_cumulative_indices isdecl cu cu' hR Γ pars pars' _ _ sppars2 sppars3 eq).
   intros.
@@ -139,6 +143,17 @@ Proof.
   eapply inversion_Prod in HT as (? & ? & ? & ? & ?); auto; split; try econstructor; eauto.
   eapply inversion_Lambda in HT as (? & ? & ? & ? & ?); auto; split; try econstructor; eauto.
   eapply inversion_LetIn in HT as (? & ? & ? & ? & ? & ?); auto; split; [split|]; try econstructor; eauto.
+Qed.
+
+Lemma on_free_vars_ind_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl → 
+  on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT) 
+    (ind_predicate_context ind mdecl idecl).
+Proof.
+  intros decli.
+  rewrite <- closedn_ctx_on_free_vars.
+  eapply closed_ind_predicate_context; tea.
+  eapply (declared_minductive_closed decli).
 Qed.
 
 Section TypeOf.
@@ -544,14 +559,14 @@ Section TypeOf.
           apply (spine_subst_smash_inv (Γ := Γ) (inst:=pparams p ++ skipn (ci_npar ci) l)
             (Δ := (ind_params mdecl ,,, ind_indices idecl)@[puinst p])
             (s := List.rev (pparams p ++ skipn (ci_npar ci) l))).
-          { eapply PCUICWeakening.weaken_wf_local; tea. pcuic.
+          { eapply weaken_wf_local; tea. pcuic.
             eapply on_minductive_wf_params_indices_inst; tea. }
-          { rewrite PCUICUnivSubstitution.subst_instance_app_ctx smash_context_app_expand.
+          { rewrite PCUICUnivSubstitutionConv.subst_instance_app_ctx smash_context_app_expand.
             rewrite List.rev_app_distr. eapply spine_subst_app.
             * len. 
             * eapply wf_local_expand_lets, wf_local_smash_end.
-              rewrite -app_context_assoc -PCUICUnivSubstitution.subst_instance_app_ctx.
-              eapply PCUICWeakening.weaken_wf_local => //. pcuic.
+              rewrite -app_context_assoc -PCUICUnivSubstitutionConv.subst_instance_app_ctx.
+              eapply weaken_wf_local => //. pcuic.
               eapply on_minductive_wf_params_indices_inst; tea.
             * len.
               rewrite skipn_all_app_eq. len. apply sppars.
@@ -593,7 +608,8 @@ Section TypeOf.
           eapply equality_terms_refl. fvs.
           fvs. }
         eapply meta_conv.
-        econstructor. 10:tea. all:tea.
+        econstructor. 3:tea. all:tea.
+        all:try split; eauto.
         destruct sp as [inst sp].
         apply (spine_subst_ctx_inst sp).
         now rewrite /ptm -(PCUICCasesContexts.inst_case_predicate_context_eq conv_pctx).
@@ -678,11 +694,11 @@ Section TypeOf.
         
         have clu'': is_closed_context (Γ,,, projection_context i mdecl idecl u'').
         eapply wf_local_closed_context.
-        eapply PCUICWeakening.weaken_wf_local; tea. pcuic.
+        eapply weaken_wf_local; tea. pcuic.
         eapply (wf_projection_context _ (p:= (i, n, k))); eauto.
         have clu': is_closed_context (Γ,,, projection_context i mdecl idecl u').
         eapply wf_local_closed_context.
-        eapply PCUICWeakening.weaken_wf_local; tea. pcuic.
+        eapply weaken_wf_local; tea. pcuic.
         eapply (wf_projection_context _ (p:= (i, n, k))); eauto.
 
         eapply (substitution_equality_subst_conv (Γ0 := projection_context i mdecl idecl u')
@@ -695,9 +711,9 @@ Section TypeOf.
         simpl. eapply validity; eauto.
         constructor; auto. now eapply wt_equality_refl.
         now apply All2_rev.
-        pose proof (PCUICClosed.declared_projection_closed declp').
+        pose proof (declared_projection_closed declp').
         eapply equality_refl => //.
-        { eapply PCUICWeakeningEnv.on_declared_projection in declp; eauto.
+        { eapply on_declared_projection in declp; eauto.
           rewrite closedn_on_free_vars //.
           len. 
           rewrite -(declared_minductive_ind_npars H) /=.
@@ -709,8 +725,8 @@ Section TypeOf.
         simpl. eapply validity; eauto.
         rewrite -(All2_length a) in Hargs'. rewrite Hargs' in Ru''.
         unshelve epose proof (projection_cumulative_indices declp _ H0 H1 Ru'').
-        { eapply (PCUICWeakeningEnv.weaken_lookup_on_global_env' _ _ _ w (proj1 (proj1 (proj1 declp)))). }
-        eapply PCUICWeakeningEnv.on_declared_projection in declp; eauto.
+        { eapply (weaken_lookup_on_global_env' _ _ _ w (proj1 (proj1 (proj1 declp)))). }
+        eapply on_declared_projection in declp; eauto.
         eapply weaken_equality in X0; eauto.
 
     - simpl in *.

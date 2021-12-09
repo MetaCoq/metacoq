@@ -273,76 +273,6 @@ Proof.
   destruct T; intuition eauto using wf_extends.
 Qed.
 
-(** Do we need weakening for wf_decl_pred? *)
-(* Lemma weaken_red1 {cf} (Σ Σ' : Ast.Env.global_env_ext) Γ t t' :
-   Typing.wf Σ.1 -> Typing.extends Σ.1 Σ'.1 -> Typing.wf Σ'.1 ->
-   Typing.red1 cf Σ Γ t t' ->
-   Typing.red1 cf Σ Γ t t'.
-Proof.
-
-Lemma weaken_cumul  {cf} (Σ Σ' : Ast.Env.global_env_ext) Γ t t' :
-   Typing.wf Σ.1 -> Typing.extends Σ.1 Σ'.1 -> Typing.wf Σ'.1 ->
-   Typing.TemplateConversionPar.cumul cf Σ Γ t t' ->
-   Typing.TemplateConversionPar.cumul cf Σ Γ t t'.
-Proof.
-  intros wf ext wf'.
-  induction 1.
-
-Lemma weaken_cumul_ctx_rel  {cf} (Σ Σ' : Ast.Env.global_env_ext) Γ Δ Δ' :
-   Typing.wf Σ.1 -> Typing.extends Σ.1 Σ'.1 -> Typing.wf Σ'.1 ->
-   Typing.TemplateConversion.cumul_ctx_rel Σ Γ Δ Δ' ->
-   Typing.TemplateConversion.cumul_ctx_rel Σ' Γ Δ Δ'.
-Proof.
-  intros wf ext wf'.
-  induction 1; constructor; auto.
-  destruct p; constructor; auto.
-
-
-Lemma weaken_wf_global_decl {cf} (Σ Σ' : Ast.Env.global_env_ext) kn d : 
-  Typing.wf Σ.1 -> Typing.extends Σ.1 Σ'.1 -> Typing.wf Σ'.1 ->
-  wf_global_decl Σ kn d -> wf_global_decl Σ' kn d.
-Proof.
-  intros wf ext wf' ong.
-  destruct d; cbn.
-  - cbn in ong.
-    red in ong |- *.
-    destruct Ast.Env.cst_body; intuition eauto using wf_extends, weaken_wf_decl_pred.
-    destruct ong. split. now eauto using wf_extends. auto.    
-  - cbn in ong |- *. 
-    destruct ong; split; solve_all.
-    * eapply Alli_impl; tea. intros n x []; econstructor; eauto using wf_extends.
-      + red in onArity. red. eapply weaken_wf_decl_pred. all:typeclasses eauto with core.
-      + instantiate (1 := ind_cunivs).
-        clear -onConstructors wf ext wf'.
-        induction onConstructors; constructor; auto.
-        destruct r; constructor => //.
-        { red in on_ctype |- *. eapply weaken_wf_decl_pred; typeclasses eauto with core. }
-        { clear -on_cargs wf ext wf'.
-          induction (Ast.Env.cstr_args x0) in on_cargs, y |- *; auto.
-          cbn. destruct a as [na [b|] ty]; cbn in *; intuition auto.
-          eapply weaken_wf_decl_pred; typeclasses eauto with core.
-          eapply weaken_wf_decl_pred; typeclasses eauto with core.
-          destruct y; intuition auto.
-          eapply weaken_wf_decl_pred; typeclasses eauto with core. }
-        { clear -on_cindices wf ext wf'.
-          induction on_cindices; constructor; auto.
-          eapply weaken_wf_decl_pred; typeclasses eauto with core. }
-        { clear -on_ctype_variance wf ext wf'. intros v hv. 
-          specialize (on_ctype_variance v hv).
-          red in on_ctype_variance |- *.
-          destruct Typing.variance_universes => //.
-          destruct p as [[] ?]; intuition auto. 
-          clear -a wf ext wf'.
-
-          admit.
-        }
-      + admit.
-      + admit.
-  * red in onParams |- *.
-    eapply Typing.All_local_env_impl; tea. intros.
-    eapply weaken_wf_decl_pred; typeclasses eauto with core.
-Qed. *) 
-
 Lemma wf_global_extends {cf} {Σ Σ' : Ast.Env.global_env} : Typing.wf Σ' -> Typing.extends Σ Σ' -> Typing.wf Σ.
 Proof.
   induction Σ'; cbn; auto.
@@ -2196,7 +2126,7 @@ Proof.
   intros.
   assert (hty := validity X2).
   eapply isType_mkApps_Ind_inv_spine in hty as [inst [sp cu]]; tea.
-  eapply type_Case; tea. split; tea.
+  eapply type_Case; tea; split => //.
   - now eapply PCUICSpine.spine_subst_ctx_inst.
   - solve_all. now eapply typing_wf_local in a0.
 Qed.
@@ -2741,7 +2671,14 @@ Proof.
   intros H; depind H; constructor; auto.
 Qed.
 
-
+Lemma trans_ind_arities {cf} Σ mdecl :
+  let Σ' := trans_global_decls Σ in
+  let mdecl' := trans_minductive_body Σ' mdecl in
+  ind_arities mdecl' = trans_local Σ' (ST.ind_arities mdecl).
+Proof.
+  intros. rewrite /ind_arities.
+  rewrite trans_arities_context //.
+Qed.
 
 Lemma trans_cstr_respects_variance {cf} Σ mdecl v cdecl :
   let Σ' := trans_global_decls Σ in
@@ -2753,10 +2690,24 @@ Lemma trans_cstr_respects_variance {cf} Σ mdecl v cdecl :
   All (WfAst.wf_decl Σ) (Ast.Env.ind_params mdecl) ->
   All (WfAst.wf_decl Σ) (Ast.Env.cstr_args cdecl) ->
   All (WfAst.wf Σ) (Ast.Env.cstr_indices cdecl) ->
+  (closed_ctx
+    (trans_local (trans_global_decls Σ)
+     (Ast.Env.app_context
+        (Ast.Env.app_context (ST.ind_arities mdecl)
+           (Ast.Env.smash_context [] (Ast.Env.ind_params mdecl)))
+        (Ast.Env.expand_lets_ctx (Ast.Env.ind_params mdecl)
+           (Ast.Env.smash_context [] (Ast.Env.cstr_args cdecl)))))) ->
+  All (fun x : Ast.term =>
+    closedn (Ast.Env.context_assumptions (Ast.Env.cstr_args cdecl) + 
+      Ast.Env.context_assumptions (Ast.Env.ind_params mdecl) + #|ST.ind_arities mdecl|)
+    (trans Σ' (Ast.Env.expand_lets
+      (Ast.Env.app_context (Ast.Env.ind_params mdecl)
+         (Ast.Env.cstr_args cdecl)) x)))
+      (Ast.Env.cstr_indices cdecl) ->
   ST.cstr_respects_variance Σ mdecl v cdecl ->
   cstr_respects_variance Σ' mdecl' v cdecl'.
 Proof.
-  intros Σ' mdecl' cdecl' wfΣ wfΣ' wfb wfp wfa wfi.
+  intros Σ' mdecl' cdecl' wfΣ wfΣ' wfb wfp wfa wfi clctx clidx.
   unfold ST.cstr_respects_variance, cstr_respects_variance.
   change (variance_universes (ind_universes mdecl') v) with
     (ST.variance_universes (Ast.Env.ind_universes mdecl) v).
@@ -2768,9 +2719,14 @@ Proof.
     rewrite trans_local_app trans_smash_context in c.
     change (trans_global_decls (Σ, udecl).1) with Σ' in c.
     now rewrite trans_arities_context in c.
-    {}
-
-
+    { rewrite !trans_local_app /= !trans_local_subst_instance.
+      rewrite -PCUICUnivSubstitutionConv.subst_instance_app_ctx.
+      rewrite PCUICClosed.closedn_subst_instance_context -trans_local_app //. }
+    { rewrite !trans_local_app /= !trans_local_subst_instance.
+      rewrite PCUICClosed.closedn_ctx_app /=.
+      rewrite !PCUICClosed.closedn_subst_instance_context.
+      rewrite subst_instance_length.
+      rewrite -PCUICClosed.closedn_ctx_app -trans_local_app //. }
     { eapply All_app_inv.
       eapply wf_subst_instance_context.
       eapply wf_expand_lets_ctx => //.
@@ -2789,9 +2745,30 @@ Proof.
     eapply All2_map. eapply All2_map_inv in a.
     eapply All2_refl_inv in a. eapply All_All2_refl.
     eapply All_map. solve_all.
-    eapply trans_conv in b; tea.
-    { move:b; rewrite !trans_local_subst_instance !trans_local_app trans_arities_context.
-      rewrite !trans_smash_context !trans_subst_instance !trans_expand_lets !trans_local_app //. }
+    eapply trans_conv in b0; tea.
+    { move:b0; rewrite !trans_local_subst_instance !trans_local_app trans_arities_context.
+      rewrite !trans_smash_context !trans_subst_instance !trans_expand_lets !trans_local_app //.
+      intros h. simpl in h.
+      eapply (PCUICConversion.cumulAlgo_cumulSpec _ (le:=false)).
+      eapply PCUICWellScopedCumulativity.into_equality; tea.
+      { move: clctx. 
+        rewrite smash_context_app_expand.
+        rewrite -!(trans_smash_context _ []).
+        rewrite -trans_expand_lets_ctx trans_ind_arities.
+        rewrite -!trans_local_app.
+        move/(closed_ctx_on_free_vars xpred0).
+        rewrite !Ast.Env.app_context_assoc.
+        now rewrite on_free_vars_subst_instance_context. }
+      { eapply closedn_on_free_vars. len. move: a0. 
+        rewrite /ST.ind_arities; len. rewrite Ast.Env.arities_context_length.
+        rewrite !context_assumptions_map.
+        rewrite trans_expand_lets trans_local_app.
+        rewrite PCUICClosed.closedn_subst_instance //. }
+      { eapply closedn_on_free_vars. len. move: a0. 
+        rewrite /ST.ind_arities; len. rewrite Ast.Env.arities_context_length.
+        rewrite !context_assumptions_map.
+        rewrite trans_expand_lets trans_local_app.
+        rewrite PCUICClosed.closedn_subst_instance //. } }
     { eapply wf_subst_instance_context.
       eapply All_app_inv => //; [|now eapply wf_ind_arities].
       eapply wf_smash_context => //.
@@ -2804,6 +2781,8 @@ Proof.
       eapply All_app_inv => //. }
 Qed.
 
+From MetaCoq.PCUIC Require Import PCUICClosed PCUICClosedTyp.
+
 Lemma trans_ind_respects_variance {cf} Σ mdecl v idecl :
   let Σ' := trans_global_decls Σ in
   let mdecl' := trans_minductive_body Σ' mdecl in
@@ -2812,10 +2791,13 @@ Lemma trans_ind_respects_variance {cf} Σ mdecl v idecl :
   wf Σ' ->
   wf_inductive_body Σ idecl ->
   All (WfAst.wf_decl Σ) (Ast.Env.ind_params mdecl) ->
+  closed_ctx (trans_local (trans_global_decls Σ)
+     (Ast.Env.app_context (Ast.Env.ind_params mdecl)
+        (Ast.Env.ind_indices idecl))) ->
   ST.ind_respects_variance Σ mdecl v (Ast.Env.ind_indices idecl) ->
   ind_respects_variance Σ' mdecl' v (ind_indices idecl').
 Proof.
-  intros Σ' mdecl' idecl' wfΣ wfΣ' wfb wfp.
+  intros Σ' mdecl' idecl' wfΣ wfΣ' wfb wfp clctx.
   unfold ST.ind_respects_variance, ind_respects_variance.
   change (variance_universes (ind_universes mdecl') v) with
     (ST.variance_universes (Ast.Env.ind_universes mdecl) v).
@@ -2823,6 +2805,16 @@ Proof.
   intros c. apply (trans_cumul_ctx_rel (Σ := (Σ, udecl))) in c; tea.
   { rewrite !trans_local_subst_instance trans_expand_lets_ctx in c.
     rewrite !trans_smash_context in c => //. }
+  { rewrite !trans_local_app !trans_local_subst_instance.
+    rewrite -PCUICUnivSubstitutionConv.subst_instance_app_ctx.
+    rewrite closedn_subst_instance_context.
+    rewrite trans_expand_lets_ctx !trans_smash_context -smash_context_app_expand.
+    apply closedn_smash_context. rewrite -trans_local_app //. }
+  { rewrite !trans_local_app !trans_local_subst_instance.
+    rewrite closedn_ctx_app subst_instance_length.
+    rewrite !PCUICClosed.closedn_subst_instance_context -closedn_ctx_app.
+    rewrite trans_expand_lets_ctx !trans_smash_context -smash_context_app_expand.
+    apply PCUICClosed.closedn_smash_context. rewrite -trans_local_app //. }
   { eapply All_app_inv.
     eapply wf_subst_instance_context.
     eapply wf_expand_lets_ctx => //.
@@ -2944,6 +2936,23 @@ Proof.
   induction i; cbn; auto. f_equal; auto.
 Qed.
 
+Lemma closed_arities_context {cf} Σ m : 
+  wf (trans_global_decls Σ) ->
+  All (fun idecl => on_type (PCUICEnvTyping.lift_typing typing)
+  (trans_global_decls Σ, Ast.Env.ind_universes m) []
+  (ind_type (trans_one_ind_body (trans_global_decls Σ) idecl))) (Ast.Env.ind_bodies m) ->
+  closed_ctx (trans_local (trans_global_decls Σ) (ST.ind_arities m)).
+Proof.
+  intros wfΣ.
+  rewrite /ST.ind_arities /Ast.Env.arities_context rev_map_spec.
+  induction 1. cbn. auto.
+  cbn. rewrite map_app closedn_ctx_app /=. len.
+  apply/andP; split. 
+  rewrite /test_decl /trans_decl /=.
+  destruct p as [s hs]. now eapply subject_closed in hs.
+  eapply closedn_ctx_upwards; tea. lia.
+Qed.
+
 Lemma trans_on_global_env `{checker_flags} Σ :
   (forall Σ Γ t T, Typing.wf Σ.1 -> 
     Typing.lift_typing Typing.typing Σ Γ t T ->
@@ -2981,38 +2990,59 @@ Proof.
     * destruct o0 as [onI onP onNP].
       constructor; auto.
       -- have wfpars := on_global_inductive_wf_params wfdecl.
-         eapply on_global_inductive_wf_bodies in wfdecl.
-         eapply Alli_All_mix in onI; tea.
-         eapply Alli_map. eapply Alli_impl. exact onI. eauto. intros n idecl [oni wf].
-         unshelve refine {| ind_cunivs := oni.(ST.ind_cunivs) |}.
+        eapply on_global_inductive_wf_bodies in wfdecl.
+        have clars: closed_ctx (trans_local (trans_global_decls Σ) (ST.ind_arities m)).
+        { eapply closed_arities_context => //. clear -X0 IHX0 X onI.
+          eapply Alli_All; tea; cbv beta.
+          move=> n x /Typing.onArity => o.
+          exact (X (Σ, Ast.Env.ind_universes m) [] (Ast.Env.ind_type x) None X0 o IHX0). }
+        eapply Alli_All_mix in onI; tea.
+        eapply Alli_map. eapply Alli_impl. exact onI. eauto. intros n idecl [oni wf].
+        have onarity : on_type (PCUICEnvTyping.lift_typing typing)
+          (trans_global_decls Σ, Ast.Env.ind_universes m) []
+          (ind_type (trans_one_ind_body (trans_global_decls Σ) idecl)).
+        { apply ST.onArity in oni. unfold on_type in *; simpl in *.
+          now apply (X (Σ, Ast.Env.ind_universes m) [] (Ast.Env.ind_type idecl) None). }
+        unshelve refine {| ind_cunivs := oni.(ST.ind_cunivs) |}; tea.
         --- simpl; rewrite oni.(ST.ind_arity_eq).
             now rewrite !trans_it_mkProd_or_LetIn.
-        --- apply ST.onArity in oni. unfold on_type in *; simpl in *.
-            now apply (X (Σ, Ast.Env.ind_universes m) [] (Ast.Env.ind_type idecl) None).
         --- pose proof oni.(ST.onConstructors) as X11. red in X11.
             red. eapply All2_map_left.
             destruct wf. solve_all.
             simpl.
             rename b into onc. rename y into cs.
             rename a0 into wfctype. rename a into wfcargs. rename b1 into wfcindices.
-            destruct onc; unshelve econstructor; eauto.
-            + simpl. unfold trans_local. rewrite context_assumptions_map.
-              now rewrite cstr_args_length. 
-            + simpl; unfold cstr_type, Ast.Env.cstr_type in cstr_eq |- *; simpl in *.
-               rewrite cstr_eq. rewrite !trans_it_mkProd_or_LetIn.
-               autorewrite with len. f_equal. f_equal.
-               rewrite !trans_mkApps /cstr_concl /cstr_concl_head /= //.
-               f_equal; auto. simpl. 
-               now rewrite /trans_local !map_length.
-               rewrite map_app /=. f_equal.
-               rewrite /trans_local !map_length.
-               unfold to_extended_list_k.
-               now rewrite trans_reln.
-            + unfold cstr_type, Ast.Env.cstr_type in on_ctype |- *; simpl in *.
-              red. 
+            destruct onc.
+            have onty : on_type (PCUICEnvTyping.lift_typing typing)
+              (trans_global_decls Σ, Ast.Env.ind_universes m)
+              (arities_context
+              (ind_bodies (trans_minductive_body (trans_global_decls Σ) m)))
+              (cstr_type (trans_constructor_body (trans_global_decls Σ) x)).
+            { unfold cstr_type, Ast.Env.cstr_type in on_ctype |- *; simpl in *. red. 
               move: (X (Σ, Ast.Env.ind_universes m) (Ast.Env.arities_context (Ast.Env.ind_bodies m)) 
                 (Ast.Env.cstr_type x) None).
-              now rewrite trans_arities_context.
+              now rewrite trans_arities_context. }
+            have ceq : cstr_type (trans_constructor_body (trans_global_decls Σ) x) =
+            it_mkProd_or_LetIn
+              (ind_params (trans_minductive_body (trans_global_decls Σ) m))
+              (it_mkProd_or_LetIn
+                 (cstr_args (trans_constructor_body (trans_global_decls Σ) x))
+                 (cstr_concl (trans_minductive_body (trans_global_decls Σ) m) n
+                    (trans_one_ind_body (trans_global_decls Σ) idecl)
+                    (trans_constructor_body (trans_global_decls Σ) x))).
+            { simpl; unfold cstr_type, Ast.Env.cstr_type in cstr_eq |- *; simpl in *.
+              rewrite cstr_eq. rewrite !trans_it_mkProd_or_LetIn.  
+              autorewrite with len. f_equal. f_equal.
+              rewrite !trans_mkApps /cstr_concl /cstr_concl_head /= //.
+              f_equal; auto. simpl. 
+              now rewrite /trans_local !map_length.
+              rewrite map_app /=. f_equal.
+              rewrite /trans_local !map_length.
+              unfold to_extended_list_k.
+              now rewrite trans_reln. }
+            unshelve econstructor; eauto.
+            + simpl. unfold trans_local. rewrite context_assumptions_map.
+              now rewrite cstr_args_length.
             + clear -X0 IHX0 X on_cargs. revert on_cargs. simpl.
               have foo := (X (Σ, udecl) _ _ _ X0).
               rewrite -trans_arities_context.
@@ -3094,11 +3124,37 @@ Proof.
                 constructor 4. len. eauto using trans_closedn.
                 now apply IHp. } 
               { cbn. now apply IHon_ctype_positive. }
-            + clear -wfpars wfdecl wfctype wfcargs wfcindices X0 IHX0 on_ctype_variance.
-              intros v indv.
+            + intros v indv.
               specialize (on_ctype_variance _ indv).
               cbn.
               eapply trans_cstr_respects_variance => //.
+              { do 2 red in onty. destruct onty as [s hs].
+                rewrite ceq in hs. eapply PCUICClosedTyp.subject_closed in hs.
+                len in hs.
+                rewrite -it_mkProd_or_LetIn_app in hs.
+                rewrite closedn_it_mkProd_or_LetIn in hs.
+                move/andP: hs => [] cl _. move: cl.
+                rewrite -Ast.Env.app_context_assoc.
+                rewrite !trans_local_app !trans_smash_context trans_expand_lets_ctx /=.
+                rewrite !trans_smash_context.
+                rewrite -(smash_context_app_expand []).
+                rewrite closedn_ctx_app /=; len => h.
+                apply/andP; split => //.
+                apply closedn_smash_context. rewrite /ST.ind_arities.
+                rewrite Ast.Env.arities_context_length //. }
+              { rewrite ceq in onty.
+                rewrite /cstr_concl in onty.
+                destruct onty as [s hs].
+                rewrite -it_mkProd_or_LetIn_app in hs.
+                eapply PCUICSpine.type_it_mkProd_or_LetIn_inv in hs as [Δs [us []]].
+                eapply typing_expand_lets in t. eapply subject_closed in t; move: t.
+                len. rewrite PCUICSigmaCalculus.expand_lets_mkApps.
+                rewrite closedn_mkApps => /andP[] _.
+                rewrite map_app forallb_app => /andP[] _.
+                move/forallb_All. solve_all.
+                rewrite trans_expand_lets trans_local_app.
+                rewrite !context_assumptions_map in b.
+                rewrite /ST.ind_arities Ast.Env.arities_context_length //. }
             + destruct lets_in_constructor_types.
               ++ eauto.
               ++ red in on_lets_in_type. red. rewrite <- on_lets_in_type.
@@ -3126,7 +3182,11 @@ Proof.
             eapply trans_check_ind_sorts in inds; tea.
         --- have inds := oni.(ST.onIndices).
             intros v hv. specialize (inds v hv).
-            now eapply trans_ind_respects_variance.
+            eapply trans_ind_respects_variance; tea.
+            move: onarity; cbn. rewrite oni.(ST.ind_arity_eq).
+            rewrite !trans_it_mkProd_or_LetIn.
+            move=> [] s /subject_closed. rewrite -it_mkProd_or_LetIn_app closedn_it_mkProd_or_LetIn /=.
+            rewrite andb_true_r trans_local_app //.
       -- red in onP. red.
           epose proof (Typing.env_prop_wf_local template_to_pcuic (Σ, Ast.Env.ind_universes m) X0 _ onP).
           cbv beta in X1. apply X1 => //.

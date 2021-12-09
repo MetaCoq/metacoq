@@ -3,12 +3,14 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICConfluence
      PCUICCumulativity PCUICSR PCUICPosition PCUICCasesContexts PCUICEquality
-     PCUICGlobalEnv PCUICNamelessDef PCUICNamelessProp
+     PCUICGlobalEnv PCUICNamelessDef
      PCUICAlpha PCUICNormal PCUICInversion PCUICReduction PCUICSubstitution
-     PCUICConversion PCUICContextConversion PCUICValidity
-     PCUICArities PCUICWeakeningEnv PCUICGeneration PCUICUnivSubstitution
+     PCUICConversion PCUICContextConversion PCUICContextConversionTyp PCUICValidity
+     PCUICArities PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICGeneration 
+     PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICParallelReductionConfluence PCUICWellScopedCumulativity
-     PCUICOnFreeVars  PCUICSpine PCUICInductives PCUICWeakening PCUICContexts PCUICInductiveInversion.
+     PCUICOnFreeVars  PCUICSpine PCUICInductives 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICContexts PCUICInductiveInversion.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -34,7 +36,7 @@ Proof.
   eapply PCUICSubstitution.substitution_wf_local.
   * eapply sp.
   * unshelve epose proof (on_minductive_wf_params_indices_inst isdecl _ cu).
-  rewrite PCUICUnivSubstitution.subst_instance_app_ctx in X.
+  rewrite PCUICUnivSubstitutionConv.subst_instance_app_ctx in X.
   eapply wf_local_app_inv in X as [].
   eapply wf_local_app => //.
   eapply wf_local_smash_end.
@@ -691,9 +693,6 @@ Section Lemmata.
     - exact e.
     - reflexivity.
   Qed.
-
-  Derive Signature for cumul.
-  Derive Signature for red1.
 
   Lemma app_cored_r :
     forall Γ u v1 v2,

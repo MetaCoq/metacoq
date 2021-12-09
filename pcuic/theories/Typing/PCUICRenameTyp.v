@@ -1179,7 +1179,7 @@ Proof.
     * erewrite rename_predicate_preturn.
       rewrite rename_case_predicate_context //.
       eapply type_Case; eauto; tea; rewrite - ?rename_case_predicate_context.
-      7: constructor; eauto; tea; rewrite - ?rename_case_predicate_context.
+      7,10: constructor; eauto; tea; rewrite - ?rename_case_predicate_context.
       all:tea.
       + simpl. eapply IHpret.
         split.

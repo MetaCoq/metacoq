@@ -240,7 +240,7 @@ Proof.
     eapply forall_Γ'0; repeat (constructor; pcuic).
   - econstructor; pcuic.
     eapply forall_Γ'1; repeat (constructor; pcuic).
-  - econstructor; eauto. 2: constructor; eauto. 
+  - econstructor; eauto. 2,3: constructor; eauto. 
     * eapply IHp0. rewrite /predctx.
       eapply All2_fold_app => //.
       eapply All2_fold_refl. intros ? ?; reflexivity.

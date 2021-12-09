@@ -1734,7 +1734,7 @@ Proof.
     set (ptm := it_mkLambda_or_LetIn _ _).
     rename c0 into c.
     assert (isType Σ Γ (mkApps ptm (indices ++ [mkApps (tConstruct ci c u) args]))).
-    { eapply validity. econstructor; eauto. constructor; eauto. apply (All2i_impl X9). intuition auto. }
+    { eapply validity. econstructor; eauto. all :constructor; eauto. apply (All2i_impl X9). intuition auto. }
     eapply All2i_nth_error in X9; tea.
     2:{ destruct declc. simpl in e. exact e. }
     cbn in X9.
@@ -2078,7 +2078,7 @@ Proof.
   - (* Case congruence on a parameter *) 
     destruct X0, X4.
     assert (isType Σ Γ (mkApps (it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p)) (indices ++ [c]))).
-    { eapply validity. econstructor; eauto. econstructor; eauto.
+    { eapply validity. econstructor; eauto. all: econstructor; eauto.
       eapply (All2i_impl X9); intuition auto. }
     set (ptm := it_mkLambda_or_LetIn _ _) in *.
     cbn -[ptm it_mkLambda_or_LetIn] in *.
@@ -2186,7 +2186,7 @@ Proof.
     { eapply closed_context_conversion; tea. }
     do 2 forward X7 by auto.
     eapply type_equality; tea.
-    { econstructor; tea. econstructor; tea. 
+    { econstructor; tea. all: econstructor; tea. 
       (* The branches contexts also depend on the parameters. *)
       apply All2i_nth_hyp in X7.
       eapply All2i_All2i_mix in X9; tea. clear X7.

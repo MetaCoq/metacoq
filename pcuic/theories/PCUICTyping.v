@@ -144,9 +144,8 @@ Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
 
-
-Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ ci p ps mdecl idecl indices ptm predctx brs :=
-| case_branch_info
+Variant case_side_conditions `{checker_flags} wf_local_fun typing Σ Γ ci p ps mdecl idecl indices predctx :=
+| case_side_info
     (eq_npars : mdecl.(ind_npars) = ci.(ci_npar))
     (wf_pred : wf_predicate mdecl idecl p)
     (cons : consistent_instance_ext Σ (ind_universes mdecl) p.(puinst))
@@ -158,7 +157,10 @@ Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ ci p ps md
     (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
                          (List.rev (subst_instance p.(puinst)
                                                    (ind_params mdecl ,,, ind_indices idecl))))
-    (not_cofinite : isCoFinite mdecl.(ind_finite) = false)
+    (not_cofinite : isCoFinite mdecl.(ind_finite) = false).
+
+Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ (ci:case_info) p ps mdecl idecl ptm  brs :=
+| case_branch_info
     (wf_brs : wf_branches idecl brs)
     (brs_ty :
        All2i (fun i cdecl br =>
@@ -230,8 +232,10 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     declared_inductive Σ ci.(ci_ind) mdecl idecl ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
+    case_side_conditions (fun Σ Γ => wf_local Σ Γ) typing Σ Γ ci p ps 
+                         mdecl idecl indices predctx  ->
     case_branch_typing (fun Σ Γ => wf_local Σ Γ) typing Σ Γ ci p ps 
-                        mdecl idecl indices ptm predctx brs ->
+                        mdecl idecl ptm brs ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
 | type_Proj : forall p c u mdecl idecl cdecl pdecl args,
@@ -357,7 +361,7 @@ Proof.
   revert Σ Γ t T d.
   fix typing_size 5.
   destruct 1.
-  10: destruct c0.
+  10: destruct c0, c1.
   all: repeat match goal with
            | H : typing _ _ _ _ |- _ => apply typing_size in H
     end;
@@ -387,7 +391,7 @@ Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
 Proof.
-  induction d; try destruct c0; simpl; try lia.
+  induction d; try destruct c0, c1; simpl; try lia.
 Qed.
 
 Fixpoint globenv_size (Σ : global_env) : size :=
@@ -510,7 +514,7 @@ Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
   wf_local_size Σ (@typing_size _) _ (typing_wf_local d) < typing_size d.
 Proof.
-  induction d; try destruct c0; simpl;
+  induction d; try destruct c0, c1; simpl;
   change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
   (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size H); try lia.
 Qed.
@@ -885,7 +889,7 @@ Proof.
 
     -- eapply X7; eauto. apply Hdecls; simpl; lia.
 
-    -- simpl in pΓ. destruct c0. 
+    -- simpl in pΓ. destruct c0, c1. 
        eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx; simpl; lia.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx; simpl; lia.

@@ -691,7 +691,7 @@ Proof.
       rewrite inst_case_predicate_context //.
       eapply type_Case; eauto;
        rewrite - ?inst_case_predicate_context //.
-      3: constructor; eauto;
+      3,4 : constructor; eauto;
         rewrite - ?inst_case_predicate_context //.
       + apply All_local_env_app_inv in Hpctx as [].
         apply All_local_env_app_inv in IHpredctx as [].

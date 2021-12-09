@@ -169,7 +169,7 @@ Proof.
     + eapply p; eauto.
   - econstructor; eauto 2 with extends.
     now apply extends_wf_universe.
-  - econstructor; eauto 2 with extends. econstructor; eauto 2 with extends.
+  - econstructor; eauto 2 with extends. all: econstructor; eauto 2 with extends.
     * revert X6. clear -Σ' wfΣ' extΣ.
       induction 1; constructor; eauto with extends.
     * close_Forall. intros; intuition eauto with extends.

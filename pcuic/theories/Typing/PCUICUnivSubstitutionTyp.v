@@ -367,7 +367,7 @@ Proof.
     rewrite subst_instance_case_predicate_context.
     eapply type_Case with (p0:=subst_instance i p)
                           (ps:=subst_instance_univ i u); eauto with pcuic.
-    3: constructor; eauto with pcuic.                                              
+    3,4: constructor; eauto with pcuic.                                              
     + rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.
       eapply Hpty; eauto. 
     + eapply IHc in cu => //.

@@ -259,7 +259,7 @@ Section Inversion.
   Proof.
     intros Γ ci p c brs T h.
     dependent induction h.
-    {  remember c0. destruct c0. repeat insum; repeat intimes; try eapply case_inv ; 
+    {  remember c0; remember c1. destruct c0, c1. repeat insum; repeat intimes; try eapply case_inv ; 
 	    [ try first [ eassumption | reflexivity ].. | try eapply typing_equality; econstructor; eauto ]. }
     repeat outsum; repeat outtimes; repeat insum; repeat intimes ; tea;
       [ try first

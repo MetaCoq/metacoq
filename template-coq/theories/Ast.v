@@ -529,9 +529,6 @@ Fixpoint closedn k (t : term) : bool :=
   end.
 
 Notation closed t := (closedn 0 t).
-Notation closed_decl n := (test_decl (closedn n)).
-Notation closedn_ctx := (test_context_k closedn).
-Notation closed_ctx := (closedn_ctx 0).
 
 Fixpoint noccur_between k n (t : term) : bool :=
   match t with

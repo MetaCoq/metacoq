@@ -7,6 +7,10 @@ From MetaCoq.PCUIC Require Export PCUICCases.
 
 Import MCMonadNotation.
 
+Import MCMonadNotation.
+
+Import MCMonadNotation.
+
 (* TODO: remove this export *)
 From MetaCoq Require Export LibHypsNaming.
 

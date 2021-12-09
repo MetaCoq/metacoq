@@ -2057,13 +2057,11 @@ Proof.
     exists fty, d'. split. lia.
     destruct s0 as [sp Hsp].
     unshelve eexists. eapply typing_spine_weaken_concl; eauto. exact (PCUICValidity.validity d').
-    exact (into_equality (le:=true) c (wf_local_closed_context (typing_wf_local d'))
-      (type_is_open_term d1) (subject_is_open_term d2)).
-    exact (s; d2).
-    epose proof (typing_spine_weaken_concl_size wfΣ sp (PCUICValidity.validity d')
-      (into_equality (le:=true) c (wf_local_closed_context (typing_wf_local d'))
-         (PCUICSpine.type_is_open_term d1) (PCUICSpine.subject_is_open_term d2)) (s; d2)).
-    simpl in H0. lia.
+    eapply cumulSpec_cumulAlgo_curry in c; eauto; fvs.
+    exact (s; d2). cbn.
+    epose proof (typing_spine_weaken_concl_size wfΣ sp (validity_term wfΣ d')
+      (cumulSpec_cumulAlgo_curry Σ wfΣ Γ A B (typing_closed_context d') (type_is_open_term d1) (subject_is_open_term d2) c)
+      (s; d2)). simpl in H0. lia.
 Qed.
 
 (** Finally, for each typing spine built above, assuming we can apply the induction hypothesis

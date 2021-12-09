@@ -3,11 +3,13 @@ From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine
-     PCUICGlobalEnv PCUICWeakeningEnv
-     PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
+     PCUICGlobalEnv PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitutionConv
+     PCUICUnivSubstitutionTyp PCUICClosedTyp
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
-     PCUICEquality PCUICReduction PCUICOnFreeVars PCUICWellScopedCumulativity
+     PCUICContextConversionTyp PCUICEquality PCUICReduction PCUICOnFreeVars 
+     PCUICWellScopedCumulativity
      PCUICInductiveInversion.
 
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
@@ -1114,9 +1116,7 @@ Proof.
 
   14:{ assert (wf_ext Σ) by (split; assumption). specialize (X1 _ _ H X5 _ X6).
        eapply cumul_prop_cum_l; tea.
-       eapply into_equality; auto. fvs.
-       eapply type_is_open_term; eauto.
-       eapply subject_is_open_term; eauto. }
+       eapply cumulSpec_cumulAlgo_curry in X4; tea; fvs. }
 
   6:{ eapply inversion_App in X6 as (na' & A' & B' & hf & ha & cum); auto.
       specialize (X3 _ _ H hf _ X7_1).
@@ -1152,7 +1152,8 @@ Proof.
   - eapply inversion_Prod in X4 as [s1' [s2' [Ha [Hb Hs]]]]; auto.
     specialize (X1 _ _ H Ha). 
     specialize (X1 _ (eq_term_upto_univ_napp_leq X5_1)).
-    eapply context_conversion in Hb. 3:{ constructor. apply conv_ctx_refl. constructor. eassumption.
+    eapply context_conversion in Hb.
+    3:{ constructor. apply conv_ctx_refl. constructor. eassumption.
       constructor. eauto. }
     2:{ constructor; eauto. now exists s1. }
     specialize (X3 _ _ H Hb _ X5_2).
@@ -1212,8 +1213,8 @@ Proof.
     { eapply wf_local_closed_context. eapply (wf_arities_context_inst isdecl H). }
     have clty : is_open_term (Γ,,, arities_context (ind_bodies mdecl)) (cstr_type cdecl').
     { eapply closedn_on_free_vars, closed_upwards.
-      eapply PCUICClosed.declared_constructor_closed_gen_type; tea. len. }
-    rewrite on_free_vars_ctx_subst_instance in clars.
+      eapply PCUICClosedTyp.declared_constructor_closed_gen_type; tea. len. }
+    rewrite on_free_vars_subst_instance_context in clars.
     etransitivity. 
     eapply (@substitution_untyped_cumul_prop_equiv _ Γ (subst_instance u (arities_context mdecl.(ind_bodies))) []); auto.
     * simpl.
@@ -1289,7 +1290,7 @@ Proof.
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X3.
     * cbn -[projection_context on_free_vars_ctx].
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X6.
-    * epose proof (PCUICClosed.declared_projection_closed a).
+    * epose proof (declared_projection_closed a).
       len. rewrite on_free_vars_subst_instance. simpl; len.
       rewrite (declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.
@@ -1297,17 +1298,14 @@ Proof.
       now eapply subslet_untyped_subslet.
     * epose proof (projection_subslet Σ _ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)).
       now eapply subslet_untyped_subslet.
-    * constructor => //. symmetry; constructor => //. fvs.
-      { now eapply subject_is_open_term in a0. }
-      { now eapply subject_is_open_term in X1. }
+    * constructor => //. symmetry; constructor => //; fvs.
       { now eapply leq_term_eq_term_prop_impl. }
       { now eapply All2_rev. }
     * eapply (@substitution_cumul_prop Σ Γ (projection_context p.1.1 mdecl' idecl' u') []) => //.
       { apply (projection_subslet Σ _ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)). }
       eapply cumul_prop_subst_instance; eauto.
-      cbn -[projection_context on_free_vars_ctx]; eapply is_closed_context_weaken => //. fvs.
-      now eapply wf_local_closed_context.
-      epose proof (PCUICClosed.declared_projection_closed a).
+      cbn -[projection_context on_free_vars_ctx]; eapply is_closed_context_weaken => //; fvs.
+      epose proof (declared_projection_closed a).
       simpl; len.
       rewrite (declared_minductive_ind_npars a) in H1.
       rewrite closedn_on_free_vars //. eapply closed_upwards; tea. lia.

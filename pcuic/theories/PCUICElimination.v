@@ -3,10 +3,12 @@ From Coq Require Import ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCasesContexts
      PCUICTyping PCUICGlobalEnv
-     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
-     PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
+     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
-     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
+     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata 
+     PCUICContextConversion PCUICContextConversionTyp
      PCUICCumulProp PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICOnFreeVars PCUICEquality.
 
@@ -145,8 +147,8 @@ Proof.
   red. exists (mkApps ptm (indices ++ [c])); intuition auto.
   exists ps.
   assert (Σ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])).
-  econstructor; eauto. split; auto.
-  split; auto. clear brs_ty.
+  econstructor; eauto. repeat (split; auto).
+  repeat split; auto. split; auto. split; auto. clear brs_ty.
   eapply type_mkApps. rewrite /ptm.
   eapply type_it_mkLambda_or_LetIn; tea.
   assert (wf Σ) by apply wfΣ.
@@ -400,7 +402,7 @@ Proof.
         eapply (type_Cumul _ _ _ _ (tSort s)) in codom; cycle 1; eauto.
         { econstructor; pcuic. }
         { eapply equality_Sort_inv in cum'.
-          do 2 constructor. etransitivity; eauto. eapply leq_universe_product. }
+          eapply cumul_Sort.  etransitivity; eauto. eapply leq_universe_product. }
         specialize (H _ codom).
         have eqctx : Σ ⊢ Γ ,, vass na ty = Γ ,, vass na' dom'.
         { constructor. apply context_equality_refl. fvs. constructor; auto. }
@@ -567,7 +569,7 @@ Proof.
     3:{ eapply subslet_app. 
       2:{ eapply weaken_subslet; auto. eapply PCUICArities.subslet_inds; eauto. } 
       eapply sub. }
-    2:{ eapply PCUICWeakening.weaken_wf_local; auto.
+    2:{ eapply PCUICWeakeningTyp.weaken_wf_local; auto.
         edestruct (PCUICInductiveInversion.on_constructor_inst declc); eauto.
         destruct s0 as [inst [sp _]].
         rewrite !subst_instance_app in sp.
@@ -613,7 +615,7 @@ Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) i
 Proof.
   intros cu HΣ H indk.
   assert (wfΣ : wf Σ) by apply HΣ.
-  destruct (PCUICWeakeningEnv.on_declared_inductive  H) as [[]]; eauto.
+  destruct (on_declared_inductive H) as [[]]; eauto.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
@@ -654,7 +656,7 @@ Proof.
   destruct (declared_inductive_inj H d) as [-> ->].
   destruct x2. cbn in *.
   pose proof (declared_projection_projs_nonempty X d).
-  pose proof (PCUICWeakeningEnv.on_declared_projection d) as [_ onp].
+  pose proof (on_declared_projection d) as [_ onp].
   simpl in onp. subst.
   destruct ind_cunivs as [|? []]; try contradiction.
   1,3:now destruct onp as (((? & ?) & ?) & ?).
@@ -764,8 +766,7 @@ Proof.
   - eapply type_Cumul' with (tSort u'); eauto.
     eapply PCUICArities.isType_Sort.
     now eapply PCUICWfUniverses.typing_wf_universe in HA.
-    pcuic.
-    constructor. constructor.
+    pcuic. eapply cumul_Sort.
     eapply subject_reduction in redv; eauto.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_prop_sorted_l; eauto.
@@ -775,8 +776,7 @@ Proof.
     eapply type_Cumul' with (tSort u'); eauto.
     eapply PCUICArities.isType_Sort.
     now eapply PCUICWfUniverses.typing_wf_universe in HB.
-    pcuic.
-    constructor. constructor. auto.
+    pcuic. eapply cumul_Sort; auto.
 Qed.
 
 Lemma cumul_sprop_inv (Σ : global_env_ext) Γ A B u u' :
@@ -792,7 +792,7 @@ Proof.
   apply cumul_alt in cum as [v [v' [[redv redv'] leq]]].
   - eapply type_Cumul' with (tSort u'); eauto.
     eapply PCUICArities.isType_Sort; pcuic.
-    constructor. constructor.
+    eapply cumul_Sort.
     eapply subject_reduction in redv; eauto.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_sprop_sorted_l; eauto.
@@ -800,8 +800,8 @@ Proof.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_sprop_sorted_r in leq; eauto.
     eapply type_Cumul' with (tSort u'); eauto.
-    eapply PCUICArities.isType_Sort; pcuic. 
-    constructor. constructor. auto.
+    eapply PCUICArities.isType_Sort; pcuic.
+    now eapply cumul_Sort. 
 Qed.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :

@@ -2309,6 +2309,7 @@ Proof.
     set (ptm := it_mkLambda_or_LetIn _ _).
     assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
     { eapply validity. econstructor; eauto. econstructor; eauto.
+      split; eauto.
       apply (All2i_impl X9). intuition auto. }
     assert (closed_red1 Σ (Γ,,, case_predicate_context ci mdecl idecl p) 
       (preturn p) preturn').
@@ -2317,11 +2318,11 @@ Proof.
       apply PCUICAlpha.inst_case_predicate_context_eq => //.
       now eapply All2_fold_All2. }
     eapply type_equality; tea.
-    * eapply type_Case; eauto. constructor; eauto. 
+    * eapply type_Case; eauto. constructor; eauto. constructor; eauto. 
       epose proof (wf_case_branches_types' (p:=set_preturn p preturn') ps _ brs isdecl (validity typec) H0
         (forall_u _ X2) H4 X1).
       eapply All2i_All2_mix_left in X9. 2:exact (Forall2_All2 _ _ H4). clear H4.
-      eapply (All2i_All2i_mix X3) in X9. clear X3.
+      eapply (All2i_All2i_mix X3) in X9. clear X3. 
       eapply (All2i_impl X9); intuition auto; clear X9.
       rewrite !case_branch_type_fst in a3 a4 *.
       set (cbty' := case_branch_type _ _ _ _ _ _ _ _) in *.
@@ -2354,8 +2355,10 @@ Proof.
     set (ptm := it_mkLambda_or_LetIn _ _).
     assert (isType Σ Γ (mkApps ptm (indices ++ [c]))).
     { eapply validity. econstructor; eauto. econstructor; eauto.
+      constructor; eauto.
       apply (All2i_impl X9). intuition auto. }
     eapply type_equality. eapply type_Case; eauto. 1: econstructor; eauto.
+    1:econstructor; eauto.
     * solve_all.
     * tas.
     * eapply equality_eq_le, equality_mkApps; tea.
@@ -2376,6 +2379,7 @@ Proof.
   - (* Case congruence on branches *)
     destruct X0, X4.
     eapply type_Case; eauto. econstructor; eauto.
+    econstructor; eauto.
     * eapply Forall2_All2 in H4.
       move: (All2_sym _ _ _ H4) => wfb.
       red. eapply All2_Forall2.

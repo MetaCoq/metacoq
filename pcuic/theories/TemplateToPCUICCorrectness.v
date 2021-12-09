@@ -2523,7 +2523,7 @@ Proof.
   intros.
   assert (hty := validity X2).
   eapply isType_mkApps_Ind_inv_spine in hty as [inst [sp cu]]; tea.
-  eapply type_Case; tea.
+  eapply type_Case; tea. split; tea.
   - now eapply PCUICSpine.spine_subst_ctx_inst.
   - solve_all. now eapply typing_wf_local in a0.
 Qed.

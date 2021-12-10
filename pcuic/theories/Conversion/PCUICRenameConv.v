@@ -5,7 +5,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICCases P
   PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCumulativity
   PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef PCUICWeakeningEnvConv
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICGuardCondition
-  PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp.
+  PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp
+  PCUICTyping.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -672,7 +673,7 @@ Qed.
 
 End Renaming.
 
-Instance rename_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) rename_context.
+#[global] Instance rename_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) rename_context.
 Proof.
   intros f g Hfg x y ->.
   apply fold_context_k_ext => i t.
@@ -951,8 +952,6 @@ Proof.
   rewrite /inst_case_branch_context.
   now rewrite rename_closedn_ctx.
 Qed.
-
-From MetaCoq.PCUIC Require Import PCUICTyping.
 
 Lemma red1_rename :
   forall P Σ Γ Δ u v f,

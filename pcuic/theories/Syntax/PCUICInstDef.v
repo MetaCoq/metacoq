@@ -21,7 +21,7 @@ Open Scope sigma_scope.
 Definition inst_context σ (Γ : context) : context :=
   fold_context_k (fun i => inst (⇑^i σ)) Γ.
 
-Instance inst_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) inst_context.
+#[global] Instance inst_context_ext : Proper (`=1` ==> Logic.eq ==> Logic.eq) inst_context.
 Proof.
   intros f g Hfg x y ->.
   apply fold_context_k_ext => i t.
@@ -34,7 +34,7 @@ Definition inst_context_snoc0 s Γ d :
   inst_context s (d :: Γ) =
   inst_context s Γ ,, map_decl (inst (⇑^#|Γ| s)) d.
 Proof. unfold inst_context. now rewrite fold_context_k_snoc0. Qed.
-Hint Rewrite inst_context_snoc0 : sigma.
+#[global] Hint Rewrite inst_context_snoc0 : sigma.
 
 Definition inst_mutual_inductive_body σ m :=
   map_mutual_inductive_body (fun i => inst (⇑^i σ)) m.

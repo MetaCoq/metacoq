@@ -54,7 +54,7 @@ Class GuardCheckerCorrect :=
 }.
 
 Axiom guard_checking_correct : GuardCheckerCorrect.
-Existing Instance guard_checking_correct.
+#[global] Existing Instance guard_checking_correct.
 
 Definition fix_guard_red1 := guard_red1 true.
 Definition fix_guard_eq_term := guard_eq_term true.

@@ -84,7 +84,7 @@ Proof.
   forward H.
   { eapply PCUICExpandLetsCorrectness.trans_wcbveval.
     { destruct s as [T HT].
-      eapply (PCUICClosed.subject_closed (Γ := [])).
+      eapply (PCUICClosedTyp.subject_closed (Γ := [])).
       unshelve apply (template_to_pcuic_typing (Ast.Env.empty_ext p.1) [] _ T);simpl; eauto.
       eapply w. }    
     unshelve eapply trans_wcbvEval; eauto. exact extraction_checker_flags.
@@ -101,7 +101,7 @@ Proof.
   2:eapply erases_erase.
   destruct s as [T HT].
   clear -w wftΣ HT; unshelve eapply (template_to_pcuic_typing _ []) in HT; eauto.
-  unshelve eapply PCUICClosed.subject_closed in HT.
+  unshelve eapply PCUICClosedTyp.subject_closed in HT.
   now eapply template_to_pcuic_env_ext. simpl in HT.
   now eapply PCUICExpandLetsCorrectness.trans_closedn.
 Qed.

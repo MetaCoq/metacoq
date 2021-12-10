@@ -261,6 +261,11 @@ Proof.
       ++ eapply weakening_env_convSpec; eauto.
       ++ eapply weakening_env_cumulSpec; eauto.
   - red in onP |- *. eapply All_local_env_impl; eauto.
+  - move: onVariance.
+    rewrite /on_variance. destruct ind_universes => //.
+    destruct ind_variance => //.
+    intros [univs' [i [i' []]]]. exists univs', i, i'. split => //.
+    all:eapply weakening_env_consistent_instance; tea.
 Qed.
 
 Lemma weakening_env_lookup_on_global_env `{checker_flags} P Σ Σ' c decl :

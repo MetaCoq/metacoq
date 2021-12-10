@@ -2758,7 +2758,7 @@ Proof.
         rewrite -!trans_local_app.
         move/(closed_ctx_on_free_vars xpred0).
         rewrite !Ast.Env.app_context_assoc.
-        now rewrite on_free_vars_subst_instance_context. }
+        now rewrite on_free_vars_ctx_subst_instance. }
       { eapply closedn_on_free_vars. len. move: a0. 
         rewrite /ST.ind_arities; len. rewrite Ast.Env.arities_context_length.
         rewrite !context_assumptions_map.
@@ -3028,7 +3028,6 @@ Proof.
               (it_mkProd_or_LetIn
                  (cstr_args (trans_constructor_body (trans_global_decls Σ) x))
                  (cstr_concl (trans_minductive_body (trans_global_decls Σ) m) n
-                    (trans_one_ind_body (trans_global_decls Σ) idecl)
                     (trans_constructor_body (trans_global_decls Σ) x))).
             { simpl; unfold cstr_type, Ast.Env.cstr_type in cstr_eq |- *; simpl in *.
               rewrite cstr_eq. rewrite !trans_it_mkProd_or_LetIn.  

@@ -2,7 +2,7 @@
 From Coq Require Import Utf8.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICUnivSubstitution
+     PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICGlobalEnv 
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp

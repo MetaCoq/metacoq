@@ -5,7 +5,7 @@ From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
-     PCUICWeakening PCUICSubstitution PCUICGeneration.
+     PCUICWeakeningConv PCUICSubstitution PCUICGeneration.
 Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.
@@ -21,8 +21,6 @@ From MetaCoq.PCUIC Require Import TemplateToPCUIC.
 From MetaCoq.Template Require Import TypingWf WcbvEval.
 From MetaCoq.PCUIC Require Import PCUICWcbvEval.
 
-Existing Class ST.wf.
-
 Lemma trans_wcbvEval {cf} {Σ} {wfΣ : ST.wf Σ} T U :
   WfAst.wf Σ T ->
   WcbvEval.eval Σ [] T U ->
@@ -31,7 +29,3 @@ Lemma trans_wcbvEval {cf} {Σ} {wfΣ : ST.wf Σ} T U :
 Proof.
   induction 2.
 Admitted.
-
-Check (fun (cf : checker_flags) Σ (wfΣ : ST.wf Σ) (T : Ast.term) =>
- trans_wcbvEval T T).
-

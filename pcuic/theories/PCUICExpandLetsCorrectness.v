@@ -6,10 +6,12 @@ From Equations Require Import Equations.
 
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
      PCUICSigmaCalculus PCUICClosed PCUICContexts PCUICSubstitution
-     PCUICWeakeningEnv PCUICWeakening 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICClosedTyp
+     PCUICReduction PCUICConversion PCUICCumulativity
      PCUICUnivSubst PCUICGlobalEnv PCUICTyping PCUICGeneration
      PCUICConversion PCUICOnFreeVars PCUICInductives
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
@@ -532,12 +534,12 @@ Proof.
       elim: is_assumption_context_spec => isass.
       { f_equal. cbn. now rewrite e. }
       f_equal.
-      rewrite PCUICUnivSubstitution.subst_instance_expand_lets e.
-      rewrite PCUICUnivSubstitution.subst_instance_subst_context. f_equal.
+      rewrite PCUICUnivSubstitutionConv.subst_instance_expand_lets e.
+      rewrite PCUICUnivSubstitutionConv.subst_instance_subst_context. f_equal.
       f_equal. rewrite [_@[u]]map_rev. f_equal. solve_all.
       solve_all. rewrite [_@[u]] map_map_compose.
       setoid_rewrite compose_map_decl.
-      setoid_rewrite PCUICUnivSubstitution.subst_instance_two.
+      setoid_rewrite PCUICUnivSubstitutionConv.subst_instance_two.
       clear -a. rewrite [_@[_]]map_map_compose.
       rewrite map_map_compose. solve_all.
   - f_equal.
@@ -1030,10 +1032,10 @@ Section wtsub.
           specialize (X a1) as [].
           eapply wf_local_expand_lets in a5.
           rewrite /PCUICCases.cstr_branch_context.
-          rewrite PCUICUnivSubstitution.subst_instance_expand_lets_ctx.
-          rewrite PCUICUnivSubstitution.subst_instance_subst_context.
-          rewrite PCUICUnivSubstitution.subst_instance_inds.
-          erewrite PCUICUnivSubstitution.subst_instance_id_mdecl; tea. }
+          rewrite PCUICUnivSubstitutionConv.subst_instance_expand_lets_ctx.
+          rewrite PCUICUnivSubstitutionConv.subst_instance_subst_context.
+          rewrite PCUICUnivSubstitutionConv.subst_instance_inds.
+          erewrite PCUICUnivSubstitutionConv.subst_instance_id_mdecl; tea. }
         erewrite PCUICCasesContexts.inst_case_branch_context_eq; tea. reflexivity.
         eexists; tea.
     - eapply inversion_Proj in h as (?&?&?&?&?&?&?&?&?); tea.
@@ -1055,13 +1057,13 @@ Ltac outtimes :=
     destruct ih as [? ?]
   end.
 
-Lemma red1_cumul {cf} (Σ : global_env_ext) Γ T U : red1 Σ Γ T U -> cumul Σ Γ T U.
+Lemma red1_cumul {cf} (Σ : global_env_ext) Γ T U : red1 Σ Γ T U -> cumulAlgo Σ Γ T U.
 Proof.
   intros r.
   econstructor 2; tea. constructor. apply leq_term_refl.
 Qed.
 
-Lemma red1_cumul_inv {cf} (Σ : global_env_ext) Γ T U : red1 Σ Γ T U -> cumul Σ Γ U T.
+Lemma red1_cumul_inv {cf} (Σ : global_env_ext) Γ T U : red1 Σ Γ T U -> cumulAlgo Σ Γ U T.
 Proof.
   intros r.
   econstructor 3; tea. constructor. eapply leq_term_refl.
@@ -1118,7 +1120,7 @@ Lemma trans_cstr_branch_context_inst p i ci mdecl cdecl u :
   (cstr_branch_context ci (trans_minductive_body mdecl) (trans_constructor_body i mdecl cdecl))@[u].
 Proof.
   move=> onps onargs.
-  rewrite trans_subst_instance_ctx -(PCUICUnivSubstitution.subst_instance_smash _ _ []). 
+  rewrite trans_subst_instance_ctx -(PCUICUnivSubstitutionConv.subst_instance_smash _ _ []). 
   rewrite (trans_cstr_branch_context p i) //.
 Qed.
 
@@ -1244,7 +1246,7 @@ Proof.
     rewrite -(trans_smash_context (shiftnP #|pred.(pparams)| xpred0) []) //.
     { rewrite on_free_vars_ctx_subst_instance //. }
     eapply All2_map_right.
-    rewrite -(PCUICUnivSubstitution.subst_instance_smash _ _ []).
+    rewrite -(PCUICUnivSubstitutionConv.subst_instance_smash _ _ []).
     eapply All2_map_right; cbn.
     rewrite /trans_branch.
     elim: is_assumption_context_spec => isass. cbn. cbn in isass.
@@ -1883,7 +1885,7 @@ Proof.
     eapply IHa; tea.
 Qed.
 
-Require Import PCUICUnivSubstitution.
+From MetaCoq.PCUIC Require Import PCUICUnivSubstitutionConv.
 
 Lemma OnOne2_All_OnOne2 {A} {P : A -> A -> Type} {Q R} l l' : 
   OnOne2 P l l' ->
@@ -2051,7 +2053,7 @@ Proof.
     relativize (trans (iota_red _ _ _ _)).
     eapply red1_red; eapply red_iota; tea; eauto. all:auto.
     * rewrite !nth_error_map H; reflexivity.
-    * rewrite trans_bcontext (PCUICSubstitution.context_assumptions_smash_context []) /= context_assumptions_map. lia.
+    * rewrite trans_bcontext (context_assumptions_smash_context []) /= context_assumptions_map. lia.
     * rewrite /iota_red. rewrite skipn_map_length in lenskip.
       have oninst : on_free_vars_ctx (shiftnP #|Γ| xpred0) (inst_case_branch_context p br).
       { rewrite -(PCUICCasesContexts.inst_case_branch_context_eq bctxeq).

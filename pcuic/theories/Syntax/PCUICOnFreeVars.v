@@ -1407,21 +1407,21 @@ Proof.
   - revert cl1. generalize (pparams p0).
     fix auxl' 1.
     case => [|t' ts] /= //; cbn => /andP[] Ht' Hts; constructor; [apply auxt|apply auxl'] => //.
-  - apply on_free_vars_ctx_All_fold in cl3.
-    revert cl3. generalize (pcontext p0).
+  - rewrite -test_context_k_closed_on_free_vars_ctx in cl3.
+    revert cl3. clear -auxt.
+    generalize (pcontext p0).
     fix auxl 1.
-    { intros []. 
-      * cbn. intros _. constructor.
-      * cbn. intros a; depelim a.
-        constructor.
-        + now apply auxl.
-        + destruct c as [na [b'|] ty]; cbn in *; constructor; cbn; apply auxt || exact tt.
-          { move/andP: i; cbn. rewrite shiftnP_closedP.
-    +            { now move/andP: clc => []. }
-    +            { now move/andP: clc => []. }
-    +            apply clc. }
-    +      + now apply auxt.
-    - rename cl5 into cl. revert brs cl. clear -auxt.
+    intros []. 
+    * cbn. intros _. constructor.
+    * cbn. move/andP => [] cll clc.
+      constructor.
+      + now apply auxl.
+      + destruct c as [na [b|] ty]; cbn in *; constructor; cbn; apply auxt || exact tt.
+        { now move/andP: clc => []. }
+        { now move/andP: clc => []. }
+        apply clc.
+
+  - rename cl5 into cl. revert brs cl. clear -auxt.
     fix auxl' 1.
     destruct brs; [constructor|].
     move=> /= /andP [/andP [clctx clb] cll].

@@ -1715,10 +1715,8 @@ Proof.
     [apply LevelSetProp.subset_empty|apply ConstraintSetProp.subset_empty].
 Qed.
 
-Definition wf_global_ext Σ ext :=
+Definition wf_global_ext {cf : checker_flags} Σ ext :=
   (wf_ext_wk (Σ, ext) * sub_context_set (monomorphic_udecl ext) (global_context_set Σ))%type.
-
-End CheckerFlags.
 
 Require Import Morphisms.
 Require Import ssreflect.

@@ -2388,4 +2388,4 @@ Proof.
       now eapply trans_cumul.
 Qed.
 
-Print Assumptions pcuic_to_template.
+(* Print Assumptions pcuic_to_template. *)

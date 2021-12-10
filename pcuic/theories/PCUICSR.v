@@ -3408,4 +3408,4 @@ Proof.
 Defined.
 
 (** Keep at the end to not disturb asynchronous proof processing *)
-Print Assumptions sr_red1.
+(* Print Assumptions sr_red1. *)

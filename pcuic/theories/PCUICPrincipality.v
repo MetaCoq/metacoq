@@ -732,4 +732,4 @@ Proof.
   now eapply eq_term_empty_leq_term.
 Qed.
 
-Print Assumptions principal_type.
+(* Print Assumptions principal_type. *)

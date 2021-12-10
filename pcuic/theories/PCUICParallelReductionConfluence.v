@@ -4502,4 +4502,4 @@ Proof.
   split; eapply triangle; auto.
 Qed.
 
-Print Assumptions pred1_diamond.
+(* Print Assumptions pred1_diamond. *)

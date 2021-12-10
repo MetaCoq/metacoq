@@ -1,15 +1,18 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
-  PCUICWeakening PCUICSubstitution PCUICGeneration PCUICArities
+  PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion
-  PCUICUnivSubstitution PCUICElimination PCUICSigmaCalculus PCUICContextConversion
-  PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICConfluence
+  PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
+  PCUICElimination PCUICSigmaCalculus PCUICContextConversion
+  PCUICUnivSubst PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICCumulativity PCUICConfluence
   PCUICInduction PCUICLiftSubst PCUICContexts PCUICSpine
   PCUICConversion PCUICValidity PCUICInductives PCUICConversion
   PCUICInductiveInversion PCUICNormal PCUICSafeLemmata
   PCUICParallelReductionConfluence PCUICSN
-  PCUICWcbvEval PCUICClosed PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity.
+  PCUICWcbvEval PCUICClosed PCUICClosedTyp
+  PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity.
   
 Local Existing Instance config.extraction_checker_flags.
 
@@ -50,7 +53,7 @@ Proof.
     eapply invert_red_prod in H1 as (? & ? & []); eauto; subst.
     exists (x2 {0 := hd}). split; sq.
     eapply (closed_red_untyped_substitution0 (Δ := [_])); eauto. econstructor. econstructor.
-    cbn. now rewrite (subject_is_open_term t).
+    cbn; fvs.
     now eapply isArity_subst.
 Qed.
 

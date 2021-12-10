@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils PCUICPosition.
-From MetaCoq.PCUIC Require Export PCUICReduction PCUICCumulativity.
+From MetaCoq.PCUIC Require Export PCUICCumulativitySpec.
 From MetaCoq.PCUIC Require Export PCUICCases.
 
 Import MCMonadNotation.
@@ -29,10 +29,6 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
  *)
 
-#[global]
-Hint Rewrite subst_instance_length 
-  fix_context_length fix_subst_length cofix_subst_length : len.
-
 Fixpoint isArity T :=
   match T with
   | tSort u => True
@@ -52,84 +48,20 @@ Definition extends (Σ Σ' : global_env) :=
 
 Include PCUICEnvTyping.
 
-(* AXIOM GUARD CONDITION *)
+(* AXIOM Postulate existence of a guard condition checker *)
 
 Class GuardChecker := 
-{ (* Structural recursion check *)
-  fix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
-  (* Guarded by destructors check *)
-  cofix_guard : global_env_ext -> context -> mfixpoint term -> bool ;
-
-  fix_guard_red1 Σ Γ mfix mfix' idx :
-      fix_guard Σ Γ mfix ->
-      red1 Σ Γ (tFix mfix idx) (tFix mfix' idx) ->
-      fix_guard Σ Γ mfix' ;
-
-  fix_guard_eq_term Σ Γ mfix mfix' idx :
-      fix_guard Σ Γ mfix ->
-      upto_names (tFix mfix idx) (tFix mfix' idx) ->
-      fix_guard Σ Γ mfix' ;
-  
-  fix_guard_lift Σ Γ Γ' Γ'' mfix :
-    let k' := (#|mfix| + #|Γ'|)%nat in
-    let mfix' := map (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| k')) mfix in
-    fix_guard Σ (Γ ,,, Γ') mfix ->
-    fix_guard Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') mfix' ;
-
-  fix_guard_subst Σ Γ Γ' Δ mfix s k :
-    let k' := (#|mfix| + k)%nat in
-    let mfix' := map (map_def (subst s k) (subst s k')) mfix in
-    fix_guard Σ (Γ ,,, Γ' ,,, Δ) mfix ->
-    fix_guard Σ (Γ ,,, subst_context s 0 Δ) mfix' ;
-
-  fix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
-    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-    fix_guard Σ Γ mfix ->
-    fix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
-                    mfix) ;
-
-  fix_guard_extends Σ Γ mfix Σ' : 
-    fix_guard Σ Γ mfix ->
-    extends Σ.1 Σ' ->
-    fix_guard Σ' Γ mfix ;
-
-  cofix_guard_red1 Σ Γ mfix mfix' idx :
-    cofix_guard Σ Γ mfix ->
-    red1 Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx) ->
-    cofix_guard Σ Γ mfix' ;
-
-  cofix_guard_eq_term Σ Γ mfix mfix' idx :
-    cofix_guard Σ Γ mfix ->
-    upto_names (tCoFix mfix idx) (tCoFix mfix' idx) ->
-    cofix_guard Σ Γ mfix' ;
-
-  cofix_guard_lift Σ Γ Γ' Γ'' mfix :
-    let k' := (#|mfix| + #|Γ'|)%nat in
-    let mfix' := map (map_def (lift #|Γ''| #|Γ'|) (lift #|Γ''| k')) mfix in
-    cofix_guard Σ (Γ ,,, Γ') mfix ->
-    cofix_guard Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') mfix' ;
-
-  cofix_guard_subst Σ Γ Γ' Δ mfix s k :
-    let k' := (#|mfix| + k)%nat in
-    let mfix' := map (map_def (subst s k) (subst s k')) mfix in
-    cofix_guard Σ (Γ ,,, Γ' ,,, Δ) mfix ->
-    cofix_guard Σ (Γ ,,, subst_context s 0 Δ) mfix' ;
-
-  cofix_guard_subst_instance {cf:checker_flags} Σ Γ mfix u univs :
-    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-    cofix_guard Σ Γ mfix ->
-    cofix_guard (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
-                    mfix) ;
-  
-  cofix_guard_extends Σ Γ mfix Σ' : 
-    cofix_guard Σ Γ mfix ->
-    extends Σ.1 Σ' ->
-    cofix_guard Σ' Γ mfix }.
+{ (* guard check for both fixpoints (bool = true) and cofixpoints (bool = false)  *)
+  guard : bool -> global_env_ext -> context -> mfixpoint term -> bool ;
+}.
 
 Axiom guard_checking : GuardChecker.
 #[global]
 Existing Instance guard_checking.
-  
+
+Definition fix_guard := guard true. 
+Definition cofix_guard := guard false. 
+
 Definition destInd (t : term) :=
   match t with
   | tInd ind u => Some (ind, u)
@@ -214,34 +146,65 @@ Definition wf_universe Σ s :=
 
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).
 
+Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
+
+Variant case_side_conditions `{checker_flags} wf_local_fun typing Σ Γ ci p ps mdecl idecl indices predctx :=
+| case_side_info
+    (eq_npars : mdecl.(ind_npars) = ci.(ci_npar))
+    (wf_pred : wf_predicate mdecl idecl p)
+    (cons : consistent_instance_ext Σ (ind_universes mdecl) p.(puinst))
+    (wf_pctx : wf_local_fun Σ (Γ ,,, predctx))
+    (* The predicate context is fixed, it is only used as a cache for information from the 
+      global environment *)
+    (conv_pctx : All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
+    (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
+    (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
+                         (List.rev (subst_instance p.(puinst)
+                                                   (ind_params mdecl ,,, ind_indices idecl))))
+    (not_cofinite : isCoFinite mdecl.(ind_finite) = false).
+
+Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ (ci:case_info) p ps mdecl idecl ptm  brs :=
+| case_branch_info
+    (wf_brs : wf_branches idecl brs)
+    (brs_ty :
+       All2i (fun i cdecl br =>
+        (* Also a cache, brctxty is built from br.(bcontext) by substituting in the 
+           parameters and universe instance  *)
+                All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
+                let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
+                (wf_local_fun Σ (Γ ,,, brctxty.1) ×
+                ((typing Σ (Γ ,,, brctxty.1) br.(bbody) (brctxty.2)) ×
+                (typing Σ (Γ ,,, brctxty.1) brctxty.2 (tSort ps)))))
+             0 idecl.(ind_ctors) brs).
+
 Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| type_Rel n decl :
+| type_Rel : forall n decl,
     wf_local Σ Γ ->
     nth_error Γ n = Some decl ->
     Σ ;;; Γ |- tRel n : lift0 (S n) decl.(decl_type)
 
-| type_Sort s :
+| type_Sort : forall s,
     wf_local Σ Γ ->
     wf_universe Σ s ->
     Σ ;;; Γ |- tSort s : tSort (Universe.super s)
 
-| type_Prod na A B s1 s2 :
+| type_Prod : forall na A B s1 s2,
     Σ ;;; Γ |- A : tSort s1 ->
     Σ ;;; Γ ,, vass na A |- B : tSort s2 ->
     Σ ;;; Γ |- tProd na A B : tSort (Universe.sort_of_product s1 s2)
 
-| type_Lambda na A t s1 B :
+| type_Lambda : forall na A t s1 B,
     Σ ;;; Γ |- A : tSort s1 ->
     Σ ;;; Γ ,, vass na A |- t : B ->
     Σ ;;; Γ |- tLambda na A t : tProd na A B
 
-| type_LetIn na b B t s1 A :
+| type_LetIn : forall na b B t s1 A,
     Σ ;;; Γ |- B : tSort s1 ->
     Σ ;;; Γ |- b : B ->
     Σ ;;; Γ ,, vdef na b B |- t : A ->
     Σ ;;; Γ |- tLetIn na b B t : tLetIn na b B A
 
-| type_App t na A B s u :
+| type_App : forall t na A B s u,
     (* Paranoid assumption, allows to show equivalence with template-coq, 
        but eventually unnecessary thanks to validity. *)
     Σ ;;; Γ |- tProd na A B : tSort s ->
@@ -249,87 +212,65 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     Σ ;;; Γ |- u : A ->
     Σ ;;; Γ |- tApp t u : B{0 := u}
 
-| type_Const cst u :
+| type_Const : forall cst u decl, 
     wf_local Σ Γ ->
-    forall decl, 
-    declared_constant Σ.1 cst decl ->
+    declared_constant Σ cst decl ->
     consistent_instance_ext Σ decl.(cst_universes) u ->
     Σ ;;; Γ |- (tConst cst u) : subst_instance u decl.(cst_type)
 
-| type_Ind ind u :
+| type_Ind : forall ind u mdecl idecl,
     wf_local Σ Γ ->
-    forall mdecl idecl,
-    declared_inductive Σ.1 ind mdecl idecl ->
+    declared_inductive Σ ind mdecl idecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tInd ind u) : subst_instance u idecl.(ind_type)
 
-| type_Construct ind i u :
+| type_Construct : forall ind i u mdecl idecl cdecl, 
     wf_local Σ Γ ->
-    forall mdecl idecl cdecl,
-    declared_constructor Σ.1 (ind, i) mdecl idecl cdecl ->
+    declared_constructor Σ (ind, i) mdecl idecl cdecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
     Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
 
-| type_Case (ci : case_info) p c brs indices ps :
-    forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
-    mdecl.(ind_npars) = ci.(ci_npar) ->
-    (* The predicate context is fixed, it is only used as a cache for information from the 
-      global environment *)
-    All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+| type_Case : forall ci p c brs indices ps mdecl idecl,
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-    wf_predicate mdecl idecl p ->
-    consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-    wf_local Σ (Γ ,,, predctx) ->
-    Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
-    is_allowed_elimination Σ ps idecl.(ind_kelim) ->
-    ctx_inst typing Σ Γ (p.(pparams) ++ indices)
-      (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
-    Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
-    isCoFinite mdecl.(ind_finite) = false ->
     let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-    wf_branches idecl brs ->
-    All2i (fun i cdecl br =>
-      (* Also a cache, brctxty is built from br.(bcontext) by substituting in the 
-        parameters and universe instance  *)
-      All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
-      let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-      (wf_local Σ (Γ ,,, brctxty.1) ×
-      ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
-       (Σ ;;; Γ ,,, brctxty.1 |- brctxty.2 : tSort ps))))
-      0 idecl.(ind_ctors) brs ->
+    declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+    Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
+    Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
+    case_side_conditions (fun Σ Γ => wf_local Σ Γ) typing Σ Γ ci p ps 
+                         mdecl idecl indices predctx  ->
+    case_branch_typing (fun Σ Γ => wf_local Σ Γ) typing Σ Γ ci p ps 
+                        mdecl idecl ptm brs ->
     Σ ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])
 
-| type_Proj p c u :
-    forall mdecl idecl cdecl pdecl,
-    declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
-    forall args,
+| type_Proj : forall p c u mdecl idecl cdecl pdecl args,
+    declared_projection Σ p mdecl idecl cdecl pdecl ->
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     #|args| = ind_npars mdecl ->
-    let ty := snd pdecl in
-    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u ty)
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u (snd pdecl))
 
-| type_Fix mfix n decl :
+| type_Fix : forall mfix n decl,
+    wf_local Σ Γ ->
     fix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
-    wf_local Σ Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
     All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype))) mfix ->
-    wf_fixpoint Σ.1 mfix -> 
+    wf_fixpoint Σ mfix -> 
     Σ ;;; Γ |- tFix mfix n : decl.(dtype)
   
-| type_CoFix mfix n decl :
+| type_CoFix : forall mfix n decl, 
+    wf_local Σ Γ ->
     cofix_guard Σ Γ mfix ->
     nth_error mfix n = Some decl ->
-    wf_local Σ Γ ->
     All (fun d => {s & Σ ;;; Γ |- d.(dtype) :  tSort s}) mfix ->
     All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) : lift0 #|fix_context mfix| d.(dtype)) mfix ->
-    wf_cofixpoint Σ.1 mfix ->
+    wf_cofixpoint Σ mfix ->
     Σ ;;; Γ |- tCoFix mfix n : decl.(dtype)
   
-| type_Cumul t A B s :
+| type_Cumul : forall t A B s, 
     Σ ;;; Γ |- t : A -> 
     Σ ;;; Γ |- B : tSort s ->
-    Σ ;;; Γ |- A <= B -> Σ ;;; Γ |- t : B
+    Σ ;;; Γ |- A <=s B -> 
+    Σ ;;; Γ |- t : B
 
 where " Σ ;;; Γ |- t : T " := (typing Σ Γ t T)
 and "'wf_local' Σ Γ " := (All_local_env (lift_typing typing Σ) Γ).
@@ -368,7 +309,7 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
 
-Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar PCUICConversion.
+Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParSpec PCUICConversionSpec.
 
   Definition typing := @typing.
   Definition wf_universe := @wf_universe.
@@ -381,8 +322,8 @@ Module PCUICDeclarationTyping :=
     PCUICTerm
     PCUICEnvironment
     PCUICEnvTyping
-    PCUICConversionPar
-    PCUICConversion
+    PCUICConversionParSpec
+    PCUICConversionSpec
     PCUICTypingDef
     PCUICLookup.
 Include PCUICDeclarationTyping.
@@ -423,8 +364,9 @@ Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : s
 Proof.
   revert Σ Γ t T d.
   fix typing_size 5.
-  destruct 1 ;
-    repeat match goal with
+  destruct 1.
+  10: destruct c0, c1.
+  all: repeat match goal with
            | H : typing _ _ _ _ |- _ => apply typing_size in H
     end;
     match goal with
@@ -442,9 +384,9 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
-  - exact (S (Nat.max (wf_local_size _ typing_size _ a0)
-      (Nat.max (ctx_inst_size typing_size c1)
-        (Nat.max d1 (Nat.max d2 (branches_size typing_size a1)))))).
+  - exact (S (Nat.max (wf_local_size _ typing_size _ wf_pctx)
+      (Nat.max (ctx_inst_size typing_size ind_inst)
+        (Nat.max d2 (Nat.max d3 (branches_size typing_size brs_ty)))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
@@ -453,7 +395,7 @@ Defined.
 
 Lemma typing_size_pos `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : typing_size d > 0.
 Proof.
-  induction d; simpl; try lia.
+  induction d; try destruct c0, c1; simpl; try lia.
 Qed.
 
 Fixpoint globenv_size (Σ : global_env) : size :=
@@ -555,7 +497,7 @@ Defined.
 Lemma type_Cumul' {cf:checker_flags} {Σ Γ t} T {T'} : 
   Σ ;;; Γ |- t : T ->
   isType Σ Γ T' ->
-  Σ ;;; Γ |- T <= T' ->
+  Σ ;;; Γ |- T <=s T' ->
   Σ ;;; Γ |- t : T'.
 Proof.
   intros Ht [s Hs] cum.
@@ -576,7 +518,7 @@ Lemma typing_wf_local_size `{checker_flags} {Σ} {Γ t T}
       (d :Σ ;;; Γ |- t : T) :
   wf_local_size Σ (@typing_size _) _ (typing_wf_local d) < typing_size d.
 Proof.
-  induction d; simpl; 
+  induction d; try destruct c0, c1; simpl;
   change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
   (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size H); try lia.
 Qed.
@@ -774,7 +716,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        P Σ Γ t A ->
        Σ ;;; Γ |- B : tSort s ->
        P Σ Γ B (tSort s) ->
-       Σ ;;; Γ |- A <= B ->
+       Σ ;;; Γ |- A <=s B ->
        P Σ Γ t B) ->
 
       env_prop P PΓ.
@@ -951,24 +893,24 @@ Proof.
 
     -- eapply X7; eauto. apply Hdecls; simpl; lia.
 
-    -- simpl in pΓ.
+    -- simpl in pΓ. destruct c0, c1. 
        eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
-        ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx. simpl. lia.
         ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx; simpl; lia.
-        ++ eapply (Hwf _ a0). rewrite /predctx; simpl.
+        ++ eapply (X14 _ _ _ H); eauto. rewrite /predctx; simpl; lia.
+        ++ eapply (Hwf _ wf_pctx). rewrite /predctx; simpl.
           change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
           (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size cf).
           lia.
-        ++ clear -c1 X14.
+        ++ clear -ind_inst X14.
           assert (forall (Γ' : context) (t T : term) (Hty : Σ;;; Γ' |- t : T),
-            typing_size Hty <= ctx_inst_size (@typing_size _) c1 ->
+            typing_size Hty <= ctx_inst_size (@typing_size _) ind_inst ->
             P Σ Γ' t T).
           { intros. eapply (X14 _ _ _ Hty). simpl.
             change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
             (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size cf).
             lia. }
-          clear -X c1.
-          revert c1 X.
+          clear -X ind_inst.
+          revert ind_inst X.
           generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl))).
           generalize (pparams p ++ indices).
           intros l c ctxi IH; induction ctxi; constructor; eauto.
@@ -979,7 +921,7 @@ Proof.
         ++ eapply (X14 _ _ _ H0); simpl. lia.
         ++ clear Hdecls. simpl in Hwf, Htywf, X14.
           clear -Hwf Htywf X14. 
-          subst ptm predctx; induction a1.
+          subst ptm predctx; induction brs_ty.
           ** constructor.
           ** destruct r0 as [eq [wfcbc [t t0]]]. constructor.
               --- split; auto. intros brctxty. 
@@ -994,7 +936,7 @@ Proof.
                   +++ simpl; auto with arith.
                   +++ eapply (X14 _ _ _ t0); eauto. simpl; auto with arith.
                       lia.
-              --- apply IHa1; auto. intros. apply (X14 _ _ _ Hty).
+              --- apply IHbrs_ty; auto. intros. apply (X14 _ _ _ Hty).
                   simpl. clear -H1; lia.
                   intros.
                   eapply (Hwf _ Hwf0). simpl. clear -H1; lia.
@@ -1239,7 +1181,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ t A ->
         Σ ;;; Γ |- B : tSort s ->
         P Σ Γ B (tSort s) ->
-        Σ ;;; Γ |- A <= B ->
+        Σ ;;; Γ |- A <=s B ->
         P Σ Γ t B) ->
 
        env_prop P PΓ.
@@ -1256,8 +1198,8 @@ Ltac my_rename_hyp h th :=
   | (wf _) => fresh "wf"
   | consistent_instance_ext _ _ ?cu => fresh "cu" cu
   | (typing _ _ ?t _) => fresh "type" t
-  | (@cumul _ _ _ ?t _) => fresh "cumul" t
-  | (conv _ _ ?t _) => fresh "conv" t
+  | (@cumulSpec _ _ _ ?t _) => fresh "cumul" t
+  | (@convSpec _ _ ?t _) => fresh "conv" t
   | (All_local_env (lift_typing (@typing _) _) ?G) => fresh "wf" G
   | (All_local_env (lift_typing (@typing _) _) _) => fresh "wf"
   | (All_local_env _ _ ?G) => fresh "H" G

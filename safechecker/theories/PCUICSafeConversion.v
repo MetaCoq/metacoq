@@ -3,11 +3,13 @@ From Coq Require Import ProofIrrelevance.
 From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
-     PCUICCumulativity PCUICEquality PCUICConversion
+     PCUICCumulativity PCUICConversion PCUICEquality PCUICConversion
      PCUICSafeLemmata PCUICNormal PCUICInversion PCUICReduction PCUICPosition
-     PCUICPrincipality PCUICContextConversion PCUICSN PCUICUtils PCUICWfUniverses
+     PCUICPrincipality PCUICContextConversion PCUICContextConversionTyp PCUICSN PCUICUtils PCUICWfUniverses
      PCUICOnFreeVars PCUICWellScopedCumulativity
-     PCUICWeakening PCUICClosed PCUICWeakeningEnv PCUICConvCumInversion PCUICEqualityDec.
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningConv PCUICWeakeningTyp 
+     PCUICClosed PCUICClosedTyp PCUICConvCumInversion PCUICEqualityDec.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 
 Require Import Equations.Prop.DepElim.
@@ -16,8 +18,6 @@ From Equations Require Import Equations.
 Local Set Keyed Unification.
 
 Set Default Goal Selector "!".
-
-Module PSR := PCUICSafeReduce.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
@@ -498,7 +498,7 @@ Section Conversion.
   Qed.
 
   Notation conv_stack_ctx Γ π1 π2 :=
-    (∥ Σ ⊢ Γ ,,, stack_context π1 = Γ ,,, stack_context π2 ∥).
+    (∥ (Σ ⊢ Γ ,,, stack_context π1 = Γ ,,, stack_context π2) ∥).
 
   Notation conv_term leq Γ t π t' π' :=
     (conv_cum leq Σ (Γ ,,, stack_context π) (zipp t π) (zipp t' π'))
@@ -1769,7 +1769,7 @@ Section Conversion.
       rewrite <-closedn_ctx_on_free_vars.
       destruct ci. cbn.
       eapply PCUICClosed.closedn_ctx_upwards.
-      { eapply (PCUICInst.closedn_ctx_cstr_branch_context (c:=(ci_ind, #|x|)) (idecl:=idecl)).
+      { eapply (PCUICInstConv.closedn_ctx_cstr_branch_context (c:=(ci_ind, #|x|)) (idecl:=idecl)).
         split; auto. rewrite e0; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
@@ -1799,7 +1799,7 @@ Section Conversion.
       rewrite <- closedn_ctx_on_free_vars.
       destruct ci. cbn.
       eapply PCUICClosed.closedn_ctx_upwards.
-      { eapply (PCUICInst.closedn_ctx_cstr_branch_context (c:=(ci_ind, #|x0|)) (idecl:=idecl)).
+      { eapply (PCUICInstConv.closedn_ctx_cstr_branch_context (c:=(ci_ind, #|x0|)) (idecl:=idecl)).
         split; auto. rewrite e0; cbn. rewrite nth_error_app_ge; auto.
         now rewrite Nat.sub_diag; cbn. }
       rewrite (wf_predicate_length_pars wf_pred).
@@ -1879,7 +1879,8 @@ Section Conversion.
     eapply case_conv_brs_inv in h1; tea.
     sq. destruct h1 as [mdecl [idecl [decli eqp eqp' eqm clm clm']]].
     transitivity (Γ ,,, stack_context π ,,, inst_case_context (pparams p') (puinst p') m').
-    - unfold app_context; rewrite <-app_assoc. 
+    - unfold app_context; rewrite <-app_assoc.
+      inv_on_free_vars. 
       eapply inst_case_context_equality; tea. 
       * fvs.
       * eapply hp.
@@ -2692,12 +2693,12 @@ Section Conversion.
       + eapply welltyped_zipc_zipp in h; auto.
         destruct h as [s h].
         rewrite zipp_as_mkApps in h.
-        eapply PCUICSpine.subject_is_open_term in h.
+        eapply subject_is_open_term in h.
         rewrite on_free_vars_mkApps in h. now apply andb_true_iff in h.
       + eapply welltyped_zipc_zipp in h'; auto.
         destruct h' as [s h'].
         rewrite zipp_as_mkApps in h'.
-        eapply PCUICSpine.subject_is_open_term in h'.
+        eapply subject_is_open_term in h'.
         rewrite on_free_vars_mkApps in h'. now apply andb_true_iff in h'.
   Qed.
 
@@ -2962,7 +2963,7 @@ Section Conversion.
     unfold app_context; rewrite <- !app_assoc.
     destruct X0 as [mdecl [idecl []]].
     etransitivity.
-    * eapply (inst_case_context_equality d e e0 i i0); tea. fvs.
+    * inv_on_free_vars. eapply (inst_case_context_equality d e e0 i i0); tea. fvs.
     * eapply context_equality_app_same. 2:eapply hx.
       rewrite on_free_vars_ctx_app.
       apply andb_true_iff. split; auto. 

@@ -1,10 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require CMorphisms.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
-     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
-     PCUICReflect PCUICInduction PCUICClosed PCUICDepth PCUICOnFreeVars
-     PCUICRename PCUICInst PCUICParallelReduction PCUICWeakening.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICSize PCUICLiftSubst
+     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction 
+     PCUICReflect PCUICInduction PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICDepth PCUICOnFreeVars
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICParallelReduction.
+     
 
 Require Import ssreflect ssrbool.
 Require Import Morphisms CRelationClasses.
@@ -4500,4 +4502,4 @@ Proof.
   split; eapply triangle; auto.
 Qed.
 
-Print Assumptions pred1_diamond.
+(* Print Assumptions pred1_diamond. *)

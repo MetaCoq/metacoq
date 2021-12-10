@@ -1,10 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
-     PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICLiftSubst PCUICTyping
+     PCUICReduction PCUICEquality PCUICUnivSubstitutionConv
      PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
-     PCUICParallelReduction PCUICParallelReductionConfluence
-     PCUICRedTypeIrrelevance.
+     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
+     PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICInstDef PCUICInstConv PCUICWeakeningConv PCUICWeakeningTyp. 
+
 
 (* We show that conversion/cumulativity starting from well-typed terms is transitive.
   We first use typing to decorate the reductions/comparisons with invariants 
@@ -15,7 +16,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyp
   so we also have [red_confluence]: as long as the starting contexts and terms are well-scoped 
   confluence holds. *)
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
+
 From Equations Require Import Equations.
 Require Import CRelationClasses CMorphisms.
 Require Import Equations.Prop.DepElim.
@@ -296,7 +298,7 @@ Proof.
     econstructor; eauto.
     red. intuition; eauto. reflexivity.
     apply All2_same; intros. intuition eauto; reflexivity.
-  - specialize (IHh (Δ ,,, inst_case_predicate_context p)).
+  - specialize (IHh (Δ ,,, PCUICCases.inst_case_predicate_context p)).
     forward IHh.
     eapply eq_context_upto_cat => //.
     now apply eq_context_upto_refl.    
@@ -811,7 +813,7 @@ Proof.
   eapply eq_context_upto_univ_subst_instance; tc. tea.
 Qed.*)
 
-Lemma red1_eq_term_upto_univ_l {Σ : global_env} Re Rle napp Γ u v u' :
+Lemma red1_eq_term_upto_univ_l {Σ : global_env_ext} Re Rle napp Γ u v u' :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   RelationClasses.Transitive Re ->
@@ -1058,7 +1060,7 @@ Proof.
     destruct e as [v' [red eq]].
     eapply red1_eq_context_upto_l in red.
     7:{ eapply eq_context_upto_cat.
-        2:{ instantiate (1:=inst_case_predicate_context p').
+        2:{ instantiate (1:=PCUICCases.inst_case_predicate_context p').
             rewrite /inst_case_predicate_context /inst_case_context.
             eapply eq_context_upto_subst_context; tc.
             eapply eq_context_upto_univ_subst_instance'.
@@ -1508,7 +1510,7 @@ Proof.
     now eapply eq_term_upto_univ_sym.
 Qed.
 
-Lemma red1_eq_term_upto_univ_r Σ Re Rle napp Γ u v u' :
+Lemma red1_eq_term_upto_univ_r (Σ : global_env_ext) Re Rle napp Γ u v u' :
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   RelationClasses.Symmetric Re ->
@@ -1664,10 +1666,6 @@ Proof.
   rewrite !mapi_cst_map.
   eapply All_All2_telescopei; eauto.
 Qed.
-
-From MetaCoq.PCUIC Require Import PCUICOnFreeVars PCUICInst.
-
-Import ssrbool.
 
 Lemma OnOne2_pars_pred1_ctx_over {cf : checker_flags} {Σ} {wfΣ : wf Σ} Γ params params' puinst pctx :
   on_ctx_free_vars xpredT Γ ->
@@ -2043,11 +2041,9 @@ Section RedPred.
 
 End RedPred.
 
-Import ssrbool.
-
 Section PredRed.
   Context {cf : checker_flags}.
-  Context {Σ : global_env}.
+  Context {Σ : global_env_ext}.
   Context (wfΣ : wf Σ).
 
   (** Parallel reduction is included in the reflexive transitive closure of 1-step reduction *)
@@ -2656,7 +2652,7 @@ Proof.
   intros r. now eapply ws_pred_ws_pred_curry, red_pred'.
 Qed.
 
-Lemma ws_pred1_red {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ} {P} {Γ Γ' : ws_context P} 
+Lemma ws_pred1_red {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {P} {Γ Γ' : ws_context P} 
   {t : ws_term (shiftnP #|Γ| P)} {u : ws_term (shiftnP #|Γ'| P)} :
   pred1 Σ Γ Γ' t u -> red Σ Γ t u.
 Proof.
@@ -2712,7 +2708,7 @@ Definition red_ctx Σ : relation context :=
 
 Section RedConfluence.
   Context {cf : checker_flags}.
-  Context {Σ : global_env} (wfΣ : wf Σ).
+  Context {Σ : global_env_ext} (wfΣ : wf Σ).
 
   Instance pred1_refl Γ : Reflexive (pred1 Σ Γ Γ).
   Proof. red; apply pred1_refl. Qed.
@@ -3818,11 +3814,61 @@ Section RedConfluence.
 
 End RedConfluence.
 
+(** Currently provable, but not if we add eta / sprop *)
+Lemma eq_term_upto_univ_napp_on_free_vars {cf:checker_flags} {Σ : global_env} {P eq leq napp} {t u} :
+    eq_term_upto_univ_napp Σ eq leq napp t u ->
+    on_free_vars P t ->
+    on_free_vars P u.
+Proof.
+  (* intros eqt ont. revert P t ont u eq leq napp eqt.
+  apply: term_on_free_vars_ind; intros; depelim eqt.
+  all:simpl; auto.
+  all:try solve [solve_all].
+  - destruct e as [? [? [? ?]]].
+    rewrite -(All2_fold_length a1).
+    rewrite -(All2_length a0).
+    solve_all.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    rewrite -(All2_fold_length a). now eapply b.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+Qed. *)
+
+  intros eqt ont. revert P t ont u eq leq napp eqt.
+  apply: term_on_free_vars_ind; intros; depelim eqt.
+  all:simpl; auto.
+  all:try solve [solve_all].
+  - destruct e as [? [? [? ?]]].
+    rewrite -(All2_fold_length a1).
+    rewrite -(All2_length a0).
+    solve_all.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    rewrite test_context_k_closed_on_free_vars_ctx.
+    destruct a.
+    eapply eq_context_upto_names_on_free_vars; tea.
+    destruct a as [hctx ihctx hb ihb].
+    rewrite -(All2_fold_length a2). now eapply ihb.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+  - rewrite -(All2_length a). solve_all.
+    apply/andP; split; eauto.
+    len in b2. eapply b2. eauto.
+Qed.
+
 Arguments red1_ctx _ _ _ : clear implicits.
 
 Section ConfluenceFacts.
   Context {cf : checker_flags}.
-  Context {Σ : global_env} {wfΣ : wf Σ}.
+  Context {Σ : global_env_ext} {wfΣ : wf Σ}.
 
   Lemma lift_to_ws_red {Γ : closed_context} {x : term} {p : on_free_vars (shiftnP #|Γ| xpred0) x} {y} : 
     red Σ Γ x y ->

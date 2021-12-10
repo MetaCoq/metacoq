@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
-     PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
+     PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
      PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
-     PCUICParallelReduction PCUICParallelReductionConfluence
+     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution.
 
 Require Import CRelationClasses CMorphisms.
@@ -32,10 +32,6 @@ From Equations Require Import Equations.
 
 Reserved Notation " Σ ;;; Γ ⊢ t ≤[ le ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤[ le ]  u").
-
-Notation is_open_term Γ := (on_free_vars (shiftnP #|Γ| xpred0)).
-Notation is_open_decl Γ := (on_free_vars_decl (shiftnP #|Γ| xpred0)).
-Notation is_closed_context := (on_free_vars_ctx xpred0).
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
@@ -170,7 +166,7 @@ Proof.
 Qed.
 
 Lemma equality_forget {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality le Σ Γ x y -> if le then cumul Σ Γ x y else conv Σ Γ x y.
+  equality le Σ Γ x y -> if le then cumulAlgo Σ Γ x y else convAlgo Σ Γ x y.
 Proof.
   induction 1.
   - destruct le; simpl in *; constructor; auto.
@@ -179,11 +175,11 @@ Proof.
 Qed.
 
 Lemma equality_forget_cumul {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality true Σ Γ x y -> cumul Σ Γ x y.
+  equality true Σ Γ x y -> cumulAlgo Σ Γ x y.
 Proof. apply (equality_forget (le:=true)). Qed.
 
 Lemma equality_forget_conv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality false Σ Γ x y -> conv Σ Γ x y.
+  equality false Σ Γ x y -> convAlgo Σ Γ x y.
 Proof. apply (equality_forget (le:=false)). Qed.
 #[global] Hint Resolve equality_forget_cumul equality_forget_conv : pcuic.
 
@@ -222,12 +218,6 @@ Section EqualityLemmas.
   Lemma isType_open {Γ T} : isType Σ Γ T -> on_free_vars (shiftnP #|Γ| xpred0) T.
   Proof.
     move/isType_closedPT. now rewrite closedP_shiftnP.
-  Qed.
-
-  Lemma wf_local_closed_context {Γ} : wf_local Σ Γ -> on_free_vars_ctx xpred0 Γ.
-  Proof.
-    move/PCUICClosed.closed_wf_local.
-    now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
   Qed.
 
   Lemma into_equality {le} {Γ : context} {T U} : 
@@ -320,6 +310,12 @@ From Equations.Type Require Import Relation_Properties.
 Notation "Σ ;;; Γ ⊢ t ⇝ u" := (closed_red Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ⇝  u").
 
+Lemma closed_red1_red {Σ Γ t t'} : closed_red1 Σ Γ t t' -> Σ ;;; Γ ⊢ t ⇝ t'.
+Proof.
+  intros []. split => //.
+  now eapply red1_red.
+Qed.
+
 Lemma biimpl_introT {T} {U} : Logic.BiImpl T U -> T -> U.
 Proof. intros [] => //. Qed.
 
@@ -380,25 +376,6 @@ End RedConv.
 #[global] Hint Resolve red_conv red_equality red_equality_inv : pcuic.
 
 Set SimplIsCbn.
-
-Ltac inv_on_free_vars :=
-  repeat match goal with
-  | [ H : is_true (on_free_vars_decl _ _) |- _ ] => progress cbn in H
-  | [ H : is_true (on_free_vars_decl _ (vdef _ _ _)) |- _ ] => unfold on_free_vars_decl, test_decl in H
-  | [ H : is_true (_ && _) |- _ ] => 
-    move/andP: H => []; intros
-  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
-    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
-      eapply forallb_All in H); intros
-  | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
-    move/andP: H => []; rewrite ?shiftnP_xpredT; intros
-  | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
-    rewrite -> test_context_k_closed_on_free_vars_ctx in H
-  end.
-
-Notation byfvs := (ltac:(cbn; eauto with fvs)) (only parsing).
-
 
 Definition conv_cum {cf:checker_flags} le Σ Γ T T' :=
   if le then Σ ;;; Γ |- T <= T' else Σ ;;; Γ |- T = T'.
@@ -742,8 +719,8 @@ Section WtContextConversion.
     - pose proof (isType_wf_local i).
       eapply wf_local_closed_context in X.
       eapply isType_open in i. apply isType_open in i0.
-      eapply PCUICClosed.subject_closed in t.
-      eapply PCUICClosed.subject_closed in t0.
+      eapply PCUICClosedTyp.subject_closed in t.
+      eapply PCUICClosedTyp.subject_closed in t0.
       eapply (@closedn_on_free_vars xpred0) in t.
       eapply (@closedn_on_free_vars xpred0) in t0.
       eapply into_equality_open_decls with Δ; eauto with fvs. rewrite /equality_decls.
@@ -794,3 +771,48 @@ Section WtContextConversion.
   Qed.
   
 End WtContextConversion.
+
+
+(** 
+The "natural" definition of conversion is given by [conv0]. It is the reflexive
+symmetric transitive closure of beta redution + equality modulo universes.
+It turns out to be equivalent to [conv1]: only beta reduction needs to be symmetrized.
+Cumulativity is defined in the same style ([cumul1]), not symmetrizing [leq_term] because
+it is oriented.
+
+Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
+[conv] which are defined as "reducing to a common term". It turns out to be equivalent
+to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v.
+*)
+
+Section ConvCumulDefs.
+  Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).
+
+  Definition conv0 : relation term
+    := clos_refl_sym_trans (relation_disjunction (closed_red1 Σ Γ) (eq_term Σ Σ)).
+
+  Definition genconv1 le : relation term
+    := clos_refl_trans (relation_disjunction (clos_sym (closed_red1 Σ Γ)) (compare_term le Σ.1 (global_ext_constraints Σ))).
+
+  Definition conv1 : relation term := genconv1 false.
+  Definition cumul1 : relation term := genconv1 true.
+
+  Lemma conv0_conv1 M N :
+    conv0  M N <~> conv1 M N.
+  Proof.
+    split; intro H.
+    - induction H.
+      + constructor. now destruct r; [left; left|right].
+      + reflexivity.
+      + now apply clos_rt_trans_Symmetric.
+      + etransitivity; eassumption.
+    - induction H.
+      + destruct r as [[]|].
+        * now constructor; left.
+        * now symmetry; constructor; left.
+        * now constructor; right.
+      + reflexivity.
+      + etransitivity; eassumption.
+  Defined.
+
+End ConvCumulDefs.

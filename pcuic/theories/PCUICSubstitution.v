@@ -2,9 +2,10 @@
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICCases PCUICSigmaCalculus
-     PCUICUnivSubst PCUICContextSubst PCUICTyping PCUICWeakeningEnv PCUICClosed
-     PCUICReduction PCUICContextRelation PCUICWeakening PCUICCumulativity PCUICUnivSubstitution
-     PCUICRename PCUICInst PCUICOnFreeVars.
+     PCUICUnivSubst PCUICContextSubst PCUICTyping 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosed PCUICClosedConv PCUICClosedTyp
+     PCUICReduction PCUICContextRelation PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity PCUICUnivSubstitutionConv
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICInstTyp PCUICOnFreeVars.
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -1038,48 +1039,6 @@ Proof.
   erewrite decompose_app_subst; eauto. simpl. auto.
 Qed.
 
-Lemma context_assumptions_smash_context Δ Γ :
-  context_assumptions (smash_context Δ Γ) = 
-  context_assumptions Δ + context_assumptions Γ.
-Proof.
-  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto;
-  rewrite IHΓ.
-  - now rewrite context_assumptions_fold.
-  - rewrite context_assumptions_app /=. lia.
-Qed. 
-
-Lemma nth_error_ass_subst_context s k Γ : 
-  (forall n d, nth_error Γ n = Some d -> decl_body d = None) ->
-  forall n d, nth_error (subst_context s k Γ) n = Some d -> decl_body d = None.
-Proof.
-  induction Γ as [|[? [] ?] ?] in |- *; simpl; auto;
-  intros; destruct n; simpl in *; rewrite ?subst_context_snoc in H0; simpl in H0.
-  - noconf H0; simpl.
-    specialize (H 0 _ eq_refl). simpl in H; discriminate.
-  - specialize (H 0 _ eq_refl). simpl in H; discriminate.
-  - noconf H0; simpl. auto.
-  - eapply IHΓ; intros; eauto.
-    now specialize (H (S n0) d0 H1).
-Qed.
-
-Lemma nth_error_smash_context Γ Δ : 
-  (forall n d, nth_error Δ n = Some d -> decl_body d = None) ->
-  forall n d, nth_error (smash_context Δ Γ) n = Some d -> decl_body d = None.
-Proof.
-  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto.
-  - intros. eapply (IHΓ (subst_context [t] 0 Δ)); tea.
-    now apply nth_error_ass_subst_context.
-  - intros. eapply IHΓ. 2:eauto.
-    intros.
-    pose proof (nth_error_Some_length H1). autorewrite with len in H2. simpl in H2.
-    destruct (eq_dec n0 #|Δ|).
-    * subst.
-      rewrite nth_error_app_ge in H1; try lia.
-      rewrite Nat.sub_diag /= in H1. noconf H1.
-      reflexivity.
-    * rewrite nth_error_app_lt in H1; try lia. eauto.
-Qed.
-
 Lemma substitution_check_one_cofix s k mfix inds :
   map_option_out (map check_one_cofix mfix) = Some inds ->
   map_option_out (map (fun x : def term =>
@@ -1139,43 +1098,6 @@ Proof.
 Qed.
 
 Arguments iota_red : simpl never.
-
-(** Standard substitution lemma for a context with no lets. *)
-
-Inductive nth_error_app_spec {A} (l l' : list A) (n : nat) : option A -> Type :=
-| nth_error_app_spec_left x : 
-  nth_error l n = Some x -> 
-  n < #|l| ->
-  nth_error_app_spec l l' n (Some x)
-| nth_error_app_spec_right x :
-  nth_error l' (n - #|l|) = Some x ->
-  #|l| <= n < #|l| + #|l'| ->
-  nth_error_app_spec l l' n (Some x)
-| nth_error_app_spec_out : #|l| + #|l'| <= n -> nth_error_app_spec l l' n None.
-
-Lemma nth_error_appP {A} (l l' : list A) (n : nat) : nth_error_app_spec l l' n (nth_error (l ++ l') n).
-Proof.
-  destruct (Nat.ltb n #|l|) eqn:lt; [apply Nat.ltb_lt in lt|apply Nat.ltb_nlt in lt].
-  * rewrite nth_error_app_lt //.
-    destruct (snd (nth_error_Some' _ _) lt) as [x eq].
-    rewrite eq.
-    constructor; auto.
-  * destruct (Nat.ltb n (#|l| + #|l'|)) eqn:ltb'; [apply Nat.ltb_lt in ltb'|apply Nat.ltb_nlt in ltb'].
-    + rewrite nth_error_app2; try lia.
-      destruct nth_error eqn:hnth.
-      - constructor 2; auto; try lia.
-      - constructor.
-        eapply nth_error_None in hnth. lia.
-    + case: nth_error_spec => //; try lia.
-      { intros. len in l0. lia. }
-      len. intros. constructor. lia.
-Qed.
-
-Lemma nth_error_app_context (Γ Δ : context) (n : nat) : 
-  nth_error_app_spec Δ Γ n (nth_error (Γ ,,, Δ) n).
-Proof.
-  apply nth_error_appP.
-Qed.
 
 (** Substitution without lets in Γ' *)
 Lemma subs_usubst {cf:checker_flags} Σ Γ Γ' Γ'' s :
@@ -1372,11 +1294,11 @@ Notation " Σ ;;; Γ |- t = u ✓" := (wt_conv Σ Γ t u) (at level 50, Γ, t, u
 
 Definition wt_cumul_cum {cf} {Σ Γ T U} : Σ ;;; Γ |- T <= U ✓ -> Σ ;;; Γ |- T <= U.
 Proof. intros H. apply (wt_equality_eq H). Defined.
-Coercion wt_cumul_cum : wt_cumul >-> cumul.
+Coercion wt_cumul_cum : wt_cumul >-> cumulAlgo.
 
 Definition wt_conv_conv {cf} {Σ Γ T U} : Σ ;;; Γ |- T = U ✓ -> Σ ;;; Γ |- T = U.
 Proof. intros H; apply (wt_equality_eq H). Defined.
-Coercion wt_conv_conv : wt_conv >-> conv.
+Coercion wt_conv_conv : wt_conv >-> convAlgo.
 
 Definition red1P P Σ Γ t v := 
   on_ctx_free_vars P Γ × on_free_vars P t × red1 Σ Γ t v.
@@ -1411,12 +1333,6 @@ Proof.
   now eapply typing_wf_local.
 Qed.
 
-Lemma closed_ctx_on_ctx_free_vars Γ : closed_ctx Γ = on_ctx_free_vars (closedP #|Γ| xpredT) Γ.
-Proof.
-  rewrite closedn_ctx_on_free_vars.
-  now rewrite -on_free_vars_ctx_on_ctx_free_vars shiftnP_closedP shiftnP_xpredT Nat.add_0_r.
-Qed.
-
 Lemma shiftnPF_closedPT (Γ : context) : shiftnP #|Γ| xpred0 =1 closedP #|Γ| xpredT.
 Proof.
   intros i; rewrite /shiftnP /closedP orb_false_r.
@@ -1432,7 +1348,7 @@ Section SubstitutionLemmas.
     now rewrite shiftnPF_closedPT.
   Qed.
 
-  Lemma wt_equality_equalityP {le} {Γ : context} {T U} : wt_equality le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
+  Lemma wt_equality_equalityP {le} {Γ : context} {T  U} : wt_equality le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
   Proof.
     move=> [] dom.
     move: (isType_wf_local dom) => /closed_wf_local clΓ.
@@ -1462,9 +1378,9 @@ Section SubstitutionLemmas.
           * econstructor; [|split]; tea. }
   Qed.
   
-  Lemma substitution_red1 {P Γ Γ' Γ'' s M N} :
+  Lemma substitution_red1 {Γ Γ' Γ'' s M N} :
     subs Σ Γ s Γ' -> wf_local Σ Γ ->
-    on_free_vars P M ->
+    is_open_term (Γ,,, Γ',,, Γ'') M ->
     red1 Σ (Γ ,,, Γ' ,,, Γ'') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
   Proof.
@@ -1474,9 +1390,9 @@ Section SubstitutionLemmas.
     now eapply subs_usubst.
   Qed.
 
-  Lemma substitution_let_red {P Γ Δ Γ' s M N} :
+  Lemma substitution_let_red {Γ Δ Γ' s M N} :
     subslet Σ Γ s Δ ->
-    on_free_vars P M ->
+    is_open_term (Γ,,, Δ,,, Γ') M ->
     red1 Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
   Proof.
@@ -1486,9 +1402,9 @@ Section SubstitutionLemmas.
     now eapply (subslet_usubst Hs).
   Qed.
 
-  Lemma substitution_untyped_let_red {P Γ Δ Γ' s M N} :
+  Lemma substitution_untyped_let_red {Γ Δ Γ' s M N} :
     untyped_subslet Γ s Δ ->
-    on_free_vars P M ->
+    is_open_term (Γ,,, Δ,,, Γ') M ->
     red1 Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
   Proof.
@@ -1498,10 +1414,10 @@ Section SubstitutionLemmas.
     now eapply subslet_usubst.
   Qed.
 
-  Lemma substitution_untyped_red {P Γ Δ Γ' s M N} :
+  Lemma substitution_untyped_red {Γ Δ Γ' s M N} :
     untyped_subslet Γ s Δ ->
-    on_free_vars P M ->
-    on_ctx_free_vars P (Γ,,, Δ,,, Γ') ->
+    is_open_term (Γ ,,, Δ ,,, Γ') M ->
+    on_ctx_free_vars (shiftnP #|Γ,,, Δ,,, Γ'| xpred0) (Γ,,, Δ,,, Γ') ->
     red Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
   Proof.
@@ -1512,10 +1428,10 @@ Section SubstitutionLemmas.
       eapply red_on_free_vars in X1; tea.
   Qed.
 
-  Lemma substitution_red {P Γ Δ Γ' s M N} :
+  Lemma substitution_red {Γ Δ Γ' s M N} :
     subslet Σ Γ s Δ -> wf_local Σ Γ ->
-    on_free_vars P M ->
-    on_ctx_free_vars P (Γ,,, Δ,,, Γ') ->
+    is_open_term (Γ ,,, Δ ,,, Γ') M ->
+    on_ctx_free_vars (shiftnP #|Γ,,, Δ,,, Γ'| xpred0) (Γ,,, Δ,,, Γ') ->
     red Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
   Proof.
@@ -1692,10 +1608,10 @@ Qed.
         now rewrite -Nat.add_assoc addnP_shiftnP_k.
   Qed.
   
-  Lemma untyped_substitution_red {P Γ Δ Γ' s M N} :
+  Lemma untyped_substitution_red {Γ Δ Γ' s M N} :
     untyped_subslet Γ s Δ ->
-    on_ctx_free_vars P (Γ ,,, Δ ,,, Γ') ->
-    on_free_vars P M ->
+    on_ctx_free_vars (shiftnP #|Γ,,, Δ,,, Γ'| xpred0) (Γ ,,, Δ ,,, Γ') ->
+    is_open_term (Γ ,,, Δ ,,, Γ') M ->
     red Σ (Γ ,,, Δ ,,, Γ') M N ->
     red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
   Proof.
@@ -1707,11 +1623,11 @@ Qed.
 
   (** The cumulativity relation is substitutive, yay! *)
 
-  Lemma substitution_untyped_cumul {P Γ Γ' Γ'' s M N} :
+  Lemma substitution_untyped_cumul {Γ Γ' Γ'' s M N} :
     untyped_subslet Γ s Γ' ->
-    on_free_vars P M ->
-    on_free_vars P N ->
-    on_ctx_free_vars P (Γ ,,, Γ' ,,, Γ'') ->
+    is_open_term (Γ ,,, Γ' ,,, Γ'') M ->
+    is_open_term (Γ ,,, Γ' ,,, Γ'') N ->
+    on_ctx_free_vars (shiftnP #|Γ ,,, Γ' ,,, Γ''| xpred0) (Γ ,,, Γ' ,,, Γ'') ->
     Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
     Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
   Proof.
@@ -1726,29 +1642,29 @@ Qed.
       eapply IHh; tea. eapply red1_on_free_vars in r; tea.
   Qed.
 
-  Lemma substitution_cumul0 {P Γ na t u u' a} :
-    on_ctx_free_vars P (Γ ,, vass na t) ->
-    on_free_vars P u ->
-    on_free_vars P u' ->
+  Lemma substitution_cumul0 {Γ na t u u' a} :
+    on_ctx_free_vars (shiftnP #|Γ ,, vass na t| xpred0) (Γ ,, vass na t) ->
+    is_open_term (Γ ,, vass na t) u ->
+    is_open_term (Γ ,, vass na t) u' ->
     Σ ;;; Γ ,, vass na t |- u <= u' ->
     Σ ;;; Γ |- subst10 a u <= subst10 a u'.
   Proof.
     move=> onΓ onu onu' Hu.
-    pose proof (@substitution_untyped_cumul P Γ [vass na t] [] [a] u u').
+    pose proof (@substitution_untyped_cumul Γ [vass na t] [] [a] u u').
     forward X.
     { constructor. constructor. }
     simpl in X. now apply X.
   Qed.
 
-  Lemma substitution_cumul_let {P Γ na t ty u u'} :
-    on_ctx_free_vars P (Γ ,, vdef na t ty) ->
-    on_free_vars P u ->
-    on_free_vars P u' ->
-    Σ ;;; Γ ,, vdef na t ty |- u <= u' ->
+  Lemma substitution_cumul_let {Γ na t ty u u'} :
+  on_ctx_free_vars (shiftnP #|Γ ,, vdef na t ty| xpred0) (Γ ,, vdef na t ty) ->
+  is_open_term (Γ ,, vdef na t ty) u ->
+  is_open_term (Γ ,, vdef na t ty) u' ->
+  Σ ;;; Γ ,, vdef na t ty |- u <= u' ->
     Σ ;;; Γ |- subst10 t u <= subst10 t u'.
   Proof.
     move=> onΓ onu onu' Hu.
-    pose proof (@substitution_untyped_cumul P Γ [vdef na t ty] [] [t] u u').
+    pose proof (@substitution_untyped_cumul Γ [vdef na t ty] [] [t] u u').
     forward X.
     { rewrite - {1}(subst_empty 0 t). constructor. constructor. }
     simpl in X. now apply X.
@@ -1760,12 +1676,8 @@ Qed.
       Σ ;;; Δ |- σ x : (decl.(decl_type)).[↑^(S x) ∘s σ]) ->
     well_subst Σ Γ σ Δ.
   Proof.
-    intros us hty.
-    intros x decl hnth.
-    split.
-    * specialize (hty x decl hnth).
-      now sigma.
-    * apply (us x decl hnth).
+    intros us hty. split; eauto. 
+    intros x decl hnth. specialize (hty x decl hnth). now sigma.
   Qed.
 
   Lemma subslet_well_subst {Γ Γ' s Δ} : 
@@ -1786,8 +1698,8 @@ Qed.
           rewrite nth_error_app_lt; len => //.
           now rewrite nth_error_subst_context hnth.
         - rewrite /subst_decl. simpl. 
-          rewrite lift0_inst !subst_inst_aux Nat.add_0_r.
-          sigma. rewrite -shiftk_shift -subst_compose_assoc -shiftk_shift.
+        sigma. rewrite -shiftk_shift -subst_compose_assoc -shiftk_shift.
+        (* rewrite lift0_inst !subst_inst_aux Nat.add_0_r. *)
           rewrite subst_shift_comm.
           rewrite -subst_fn_subst_consn. lia_f_equal. }
       { intros n hnth; len; intros hd [= ->].

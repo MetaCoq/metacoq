@@ -45,7 +45,7 @@ Qed.
 Lemma welltyped_is_open_term {cf Σ} {wfΣ : wf Σ} {Γ t} : 
   welltyped Σ Γ t -> is_open_term Γ t.
 Proof.
-  intros []. now eapply PCUICSpine.subject_is_open_term in X.
+  intros []; fvs.
 Qed.
 #[global] Hint Immediate welltyped_is_open_term : fvs.
 

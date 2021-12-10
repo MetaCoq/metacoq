@@ -2,8 +2,8 @@
 From Coq Require Import Program ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
-     PCUICGlobalEnv PCUICWeakening PCUICSubstitution 
-     PCUICWeakeningEnv PCUICOnFreeVars PCUICElimination.
+     PCUICGlobalEnv PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
 From MetaCoq.Erasure Require Import ETyping Extract Prelim.
 
 
@@ -152,7 +152,7 @@ Proof.
   intros hctx.
   rewrite /inst_case_branch_context /= /id.
   rewrite -rename_context_lift_context.
-  rewrite PCUICRename.rename_inst_case_context_wf //.
+  rewrite PCUICRenameConv.rename_inst_case_context_wf //.
   f_equal. apply map_ext => x.
   now setoid_rewrite <- PCUICSigmaCalculus.lift_rename.
 Qed.
@@ -216,7 +216,7 @@ Proof.
         rewrite -closedn_ctx_on_free_vars.
         rewrite (wf_predicate_length_pars H0).
         rewrite (declared_minductive_ind_npars isdecl).
-        eapply PCUICClosed.closed_cstr_branch_context; tea. split; tea. }
+        eapply PCUICClosedTyp.closed_cstr_branch_context; tea. split; tea. }
       rewrite -app_context_assoc -{1}(Nat.add_0_r #|Γ'|) -(lift_context_app _ 0).
       assert (#|inst_case_branch_context p br| = #|bcontext br|).
       { rewrite /inst_case_branch_context. now len. }
@@ -360,7 +360,7 @@ Proof.
   eapply alpha_eq_on_free_vars. symmetry; eassumption.
   rewrite (wf_predicate_length_pars wfp).
   rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decl).  rewrite -closedn_ctx_on_free_vars.
-  eapply PCUICClosed.closed_cstr_branch_context; tea.
+  eapply PCUICClosedTyp.closed_cstr_branch_context; tea.
   epose proof (PCUICCasesContexts.inst_case_branch_context_eq (p := subst_predicate s k p) a).
   now rewrite H.
 Qed.

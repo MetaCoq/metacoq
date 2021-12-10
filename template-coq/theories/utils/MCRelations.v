@@ -5,6 +5,12 @@ Require Import CRelationClasses.
 
 Infix "<~>" := iffT (at level 90).
 
+Definition iffT_l {P Q} : P <~> Q -> P -> Q.
+Proof.
+  apply: fst.
+Qed.
+Coercion iffT_l : CRelationClasses.iffT >-> Funclass.
+
 (** This allow to use implicit projections for move/ on "<~>" lemmas *)
 Hint View for move/ fst|2.
 Hint View for move/ snd|2.

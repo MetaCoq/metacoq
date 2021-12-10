@@ -3,15 +3,19 @@ From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
-     PCUICContextConversion PCUICConversion PCUICWfUniverses
+     PCUICContextConversion PCUICContextConversionTyp
+     PCUICConversion PCUICWfUniverses
      PCUICGlobalEnv PCUICEqualityDec PCUICSigmaCalculus
      (* Used for support lemmas *)
      PCUICInductives PCUICWfUniverses
      PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
-     PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv.
+     PCUICClosed PCUICClosedTyp
+     PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp .
 
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICErrors
   PCUICSafeConversion PCUICWfReduction PCUICWfEnv.
@@ -57,7 +61,7 @@ Proof.
   intros isdecl cu sp.
   eapply spine_subst_smash_inv in sp as [s hs].
   - eapply isType_mkApps_Ind; tea.
-  - eapply PCUICWeakening.weaken_wf_local; tea.
+  - eapply weaken_wf_local; tea.
     apply sp.
     eapply on_minductive_wf_params_indices_inst; tea.
 Qed.
@@ -1045,7 +1049,7 @@ Section Typecheck.
   Defined.
   Next Obligation. cbn in *.
     rewrite List.rev_involutive.
-    sq. eapply PCUICWeakening.weaken_wf_local => //.
+    sq. eapply weaken_wf_local => //.
     rewrite subst_instance_smash; eapply wf_local_smash_context.
     now eapply on_minductive_wf_params.
   Qed.
@@ -1091,7 +1095,7 @@ Section Typecheck.
     rewrite subst_instance_smash /= in wt_params.
     eapply ctx_inst_smash in wt_params.
     unshelve epose proof (ctx_inst_spine_subst _ wt_params).
-    { eapply PCUICWeakening.weaken_wf_local; tea. eapply on_minductive_wf_params; tea. exact X0. }
+    { eapply weaken_wf_local; tea. eapply on_minductive_wf_params; tea. exact X0. }
     eexists; eapply isType_mkApps_Ind_smash; tea.
     rewrite subst_instance_app List.rev_app_distr smash_context_app_expand.
     have wf_ctx : wf_local Σ
@@ -1099,7 +1103,7 @@ Section Typecheck.
       expand_lets_ctx (ind_params d)@[puinst p]
        (smash_context [] (ind_indices X)@[puinst p])).
     { eapply wf_local_expand_lets. eapply wf_local_smash_end.
-      rewrite -app_context_assoc. eapply PCUICWeakening.weaken_wf_local; tea.
+      rewrite -app_context_assoc. eapply weaken_wf_local; tea.
       rewrite -subst_instance_app_ctx.
       now eapply (on_minductive_wf_params_indices_inst X0). }
     rewrite -H1 in eq_params *.
@@ -1126,11 +1130,11 @@ Section Typecheck.
       apply smash_context_assumption_context; pcuic.
       eapply wf_local_smash_end. eapply substitution_wf_local. exact s.
       rewrite -app_context_assoc -subst_instance_app_ctx.
-      eapply PCUICWeakening.weaken_wf_local; tea. eapply on_minductive_wf_params_indices_inst; tea.
+      eapply weaken_wf_local; tea. eapply on_minductive_wf_params_indices_inst; tea.
       eapply spine_subst_smash in X1. eapply substitution_wf_local. exact X1.
       eapply wf_local_expand_lets, wf_local_smash_end.
       rewrite -app_context_assoc -subst_instance_app_ctx.
-      eapply PCUICWeakening.weaken_wf_local; tea. eapply on_minductive_wf_params_indices_inst; tea.
+      eapply weaken_wf_local; tea. eapply on_minductive_wf_params_indices_inst; tea.
       rewrite -(subst_context_smash_context _ _ []).
       rewrite -(spine_subst_inst_subst X1).
       rewrite - !smash_context_subst /= !subst_context_nil.
@@ -1195,11 +1199,7 @@ Section Typecheck.
     destruct cty as [A cty]. cbn in *. sq.
     apply eqb_eq in H0. subst ind'.
     eapply eqb_eq in H1. 
-    econstructor; eauto; pcuic.
-    - now eapply All2_fold_All2 in check_wfpctx_conv.
-    - eapply isType_mkApps_Ind_smash_inv in isty as [sp cu']; tea.
-      eapply spine_subst_ctx_inst in sp.
-      now eapply ctx_inst_smash.
+    econstructor; eauto. 2-3:split; eauto; pcuic.
     - eapply type_reduction_closed in cty. 2:tea.
       eapply type_equality; tea.
       eapply equality_mkApps_eq => //. fvs. constructor => //.
@@ -1212,6 +1212,10 @@ Section Typecheck.
       eapply spine_subst_wt_terms in s.
       eapply All2_app_inv. 2:erewrite !firstn_skipn. reflexivity.
       now eapply wt_terms_equality.
+    - now eapply All2_fold_All2 in check_wfpctx_conv.
+    - eapply isType_mkApps_Ind_smash_inv in isty as [sp cu']; tea.
+      eapply spine_subst_ctx_inst in sp.
+      now eapply ctx_inst_smash.
     - now eapply negb_true_iff in check_coind.
     - red. eapply All2_Forall2.
       clear - check_brs.
@@ -1262,7 +1266,7 @@ Section Typecheck.
 
   (* tFix *)
   Next Obligation. sq. constructor; auto. exists W; auto. Defined.
-  Next Obligation. sq. now eapply PCUICWeakening.All_mfix_wf in XX0. Defined.
+  Next Obligation. sq. now eapply All_mfix_wf in XX0. Defined.
   Next Obligation.
     sq. cbn in *. depelim XX.
     destruct i as [s HH].
@@ -1285,7 +1289,7 @@ Section Typecheck.
 
   (* tCoFix *)
   Next Obligation. sq. constructor; auto. exists W; auto. Defined.
-  Next Obligation. sq. now eapply PCUICWeakening.All_mfix_wf in XX. Defined.
+  Next Obligation. sq. now eapply All_mfix_wf in XX. Defined.
   Next Obligation.
     sq. cbn in *. depelim XX'.
     destruct i as [s HH].

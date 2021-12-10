@@ -3,14 +3,16 @@ From Coq Require Import Utf8 CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
-     PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
+     PCUICUnivSubst PCUICTyping PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICCumulativity PCUICPosition PCUICEquality
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICCasesContexts
      PCUICConfluence PCUICConversion PCUICContextConversion
-     PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICContextSubst
+     PCUICContextConversionTyp
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICClosed PCUICClosedTyp PCUICSubstitution PCUICContextSubst
      PCUICWellScopedCumulativity
-     PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICGeneration PCUICUtils PCUICContexts
      PCUICArities.
 
 Require Import Equations.Prop.DepElim.
@@ -524,9 +526,8 @@ Section WfEnv.
               eapply isType_apply in i; tea.
               now rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in i. }
           all:pcuic.
-          specialize (IHn Hsp').
-          destruct IHn as [instlen leq [instsubst [wfdom wfcodom cs subi]]].
-          split=> //; try lia.
+          destruct X0 as [instlen leq [instsubst [wfdom wfcodom cs subi]]].
+          split=> /= //; try lia.
           exists (instsubst ++ [hd]).
           eapply typing_spine_isType_dom in Hsp.
           eapply isType_it_mkProd_or_LetIn_wf_local in Hsp.
@@ -1395,7 +1396,7 @@ Qed.
 
 (*Open Scope sigma_scope.
 From Equations.Type Require Import Relation.
-From MetaCoq.PCUIC Require Import PCUICInst PCUICRename PCUICOnFreeVars PCUICParallelReduction.
+From MetaCoq.PCUIC Require Import PCUICInstDef PCUICInstProp PCUICRenameDef PCUICRenameProp PCUICOnFreeVars PCUICParallelReduction.
 
 Lemma red_inst {le} Δ Γ σ t u :
   usubst Γ σ Δ ->
@@ -1969,13 +1970,12 @@ Section WfEnv.
         3:now constructor.
         transitivity (lift0 1 (x {0 := b})).
         eapply red_expand_let. pcuic.
-        eapply PCUICClosed.type_closed in t2.
+        eapply type_closed in t2.
         rewrite -is_open_term_closed //.
         change (tSort u') with (lift0 1 (tSort u')).
         eapply (weakening_closed_red (Γ := Γ ,,, Δ) (Γ' := []) (Γ'' := [_])); auto with fvs.
         apply typing_wf_local in t2. eauto with fvs.
         eapply closed_red_refl; eauto with fvs.
-        apply typing_wf_local in t2. eauto with fvs.
 
       * specialize (IHΔ _ _ _ h) as (Δs & ts & [sorts IHΔ leq]).
         eapply inversion_Prod in IHΔ as [? [? [? [? ]]]]; tea.
@@ -2004,7 +2004,7 @@ Section WfEnv.
   Proof.
     move/type_it_mkProd_or_LetIn_inv => [Δs [ts [hΔ ht hs leq]]].
     eapply type_Cumul; tea. eapply type_Sort; pcuic.
-    do 2 econstructor.
+    eapply cumul_Sort.
     transitivity (sort_of_products Δs ts); auto using leq_universe_product.
     apply leq_universe_sort_of_products.
   Qed.
@@ -2384,7 +2384,7 @@ Section WfEnv.
           assumption.
   Qed.
 
-  Import PCUICInst.
+  Import PCUICInstDef PCUICInstConv.
 
   Local Open Scope sigma.
 
@@ -2834,7 +2834,7 @@ Section WfEnv.
   Proof.
     intros cl.
     sigma.
-    eapply PCUICInst.inst_ext_closed; tea.
+    eapply inst_ext_closed; tea.
     intros x Hx.
     rewrite -Upn_Upn Nat.add_comm Upn_Upn Upn_compose shiftn_Upn; sigma.
     now rewrite !Upn_subst_consn_lt; len; try lia.
@@ -3437,21 +3437,6 @@ Section WfEnv.
       eapply substitution_wf_local; tea.
       repeat (constructor; tea). eapply subslet_def_tip.
       eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
-  Qed.
-
-  Lemma subject_is_open_term {Γ t T} : 
-    Σ ;;; Γ |- t : T ->
-    is_open_term Γ t.
-  Proof.
-    move/subject_closed.
-    now rewrite is_open_term_closed.
-  Qed.
-
-  Lemma type_is_open_term {Γ t T} : 
-    Σ ;;; Γ |- t : T ->
-    is_open_term Γ T.
-  Proof.
-    move/type_closed. now rewrite is_open_term_closed.
   Qed.
 
   Lemma ctx_inst_open_terms Γ args Δ : 

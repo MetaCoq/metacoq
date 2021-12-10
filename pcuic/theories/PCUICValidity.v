@@ -3,10 +3,11 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICSigmaCalculus
-     PCUICClosed PCUICWeakeningEnv PCUICWeakening PCUICInversion
+     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
-     PCUICUnivSubst PCUICUnivSubstitution PCUICConfluence
-     PCUICUnivSubstitution PCUICConversion PCUICContexts 
+     PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp PCUICConfluence
+     PCUICConversion PCUICContexts 
      PCUICArities PCUICSpine PCUICInductives
      PCUICWellScopedCumulativity PCUICContexts PCUICWfUniverses.
      
@@ -14,7 +15,7 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect ssrbool.
 
-Derive Signature for typing cumul.
+Derive Signature for typing.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
@@ -53,7 +54,7 @@ Section Validity.
     intros.
     destruct X1 as [s Hs].
     exists s.
-    eapply (env_prop_typing PCUICWeakeningEnv.weakening_env (Σ, φ)); auto.
+    eapply (env_prop_typing weakening_env (Σ, φ)); auto.
     simpl; auto. now eapply wf_extends.
   Qed.
 
@@ -314,9 +315,7 @@ Section Validity.
       exists u.
       eapply type_Cumul.
       eapply type_LetIn; eauto. econstructor; pcuic.
-      eapply cumul_alt. exists (tSort u), (tSort u); intuition auto.
-      apply red1_red; repeat constructor.
-      reflexivity.
+      eapply convPec_cumulSpec, red1_cumulSpec; constructor.
 
     - (* Application *)
       destruct X3 as [u' Hu']. exists u'.
@@ -329,7 +328,6 @@ Section Validity.
       etransitivity; tea.
       eapply into_equality => //.
       all:eauto with fvs.
-      2:now eapply typing_wf_local in a0; eauto with fvs.
       do 2 constructor.
       apply leq_universe_product.
 

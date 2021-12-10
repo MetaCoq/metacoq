@@ -2,15 +2,17 @@
 From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICTyping PCUICNormal PCUICSR
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
+     PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
      PCUICContextConversion PCUICConversion PCUICWfUniverses
      PCUICGlobalEnv PCUICEqualityDec
      (* Used for support lemmas *)
      PCUICInductives PCUICWfUniverses
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
-     PCUICClosed PCUICUnivSubstitution PCUICWeakeningEnv
+     PCUICClosed PCUICClosedTyp PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICOnFreeVars PCUICWellScopedCumulativity.
 
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce PCUICErrors
@@ -439,7 +441,7 @@ Section CheckEnv.
       * eapply inversion_LetIn in h as [s' [? [? [? [? ?]]]]]; auto.
         specialize (IHΔ _ _ _ t1) as [s'' vdefty].
         exists s''.
-        eapply type_Cumul'. econstructor; eauto. pcuic.
+        eapply type_Cumul_alt. econstructor; eauto. pcuic.
         eapply red_cumul. repeat constructor.
       * eapply inversion_Prod in h as [? [? [? [? ]]]]; auto.
         specialize (IHΔ _ _ _ t0) as [s'' Hs''].
@@ -798,8 +800,7 @@ Section CheckEnv.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *.
       sq.
       apply wf_ind_types_wf_arities in wfar.
-      (* TODO lemma name clash between imports *)
-      eapply PCUICWeakening.weaken_wf_local; eauto. apply wfΣ.
+      eapply weaken_wf_local; eauto. apply wfΣ.
     Qed.
     Next Obligation.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *.
@@ -1385,8 +1386,8 @@ Section CheckEnv.
   Qed.
 
   Lemma cumul_ctx_rel_close' Σ Γ Δ Δ' : 
-    cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
-    cumul_ctx_rel Σ Γ Δ Δ'.
+    PCUICCumulativitySpec.cumul_context Σ (Γ ,,, Δ) (Γ ,,, Δ') ->
+    PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ'.
   Proof.
     intros H.
     eapply All2_fold_app_inv in H as [cumΓ cumΔs]; auto.
@@ -1407,9 +1408,38 @@ Section CheckEnv.
     split; constructor; reflexivity. reflexivity.
     split; constructor; reflexivity. reflexivity.
   Qed.
+    
+
+  Lemma eq_context_upto_cumul_context (Σ : global_env_ext) Re Rle :
+    RelationClasses.subrelation Re (eq_universe Σ) ->
+    RelationClasses.subrelation Rle (leq_universe Σ) ->
+    RelationClasses.subrelation Re Rle ->
+    CRelationClasses.subrelation (eq_context_upto Σ Re Rle) (fun Γ Γ' => PCUICCumulativitySpec.cumul_context Σ Γ Γ').
+  Proof.
+    intros HRe HRle hR Γ Δ h. induction h.
+    - constructor.
+    - constructor; tas.
+      depelim p; constructor; auto.
+      eapply eq_term_upto_univ_cumulSpec.
+      eapply eq_term_upto_univ_impl. 5:eauto. all:tea. 
+      now transitivity Rle. auto.
+      eapply eq_term_upto_univ_cumulSpec.
+      eapply eq_term_upto_univ_impl; eauto.
+      eapply eq_term_upto_univ_cumulSpec.
+      eapply eq_term_upto_univ_impl. 5:eauto. all:tea. 
+      now transitivity Rle. auto.
+  Qed.
+
+  Lemma eq_context_upto_univ_cumul_context {Σ : global_env_ext} Γ Δ :
+      eq_context_upto Σ.1 (eq_universe Σ) (leq_universe Σ) Γ Δ ->
+      PCUICCumulativitySpec.cumul_context Σ Γ Δ.
+  Proof.
+    intros h. eapply eq_context_upto_cumul_context; tea.
+    reflexivity. tc. tc.
+  Qed.
   Lemma leq_context_cumul_context (Σ : global_env_ext) Γ Δ Δ' : 
     eq_context true Σ Σ Δ Δ' ->
-    cumul_ctx_rel Σ Γ Δ Δ'.
+    PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ'.
   Proof.
     intros eqc.
     apply cumul_ctx_rel_close'.
@@ -1472,16 +1502,16 @@ Section CheckEnv.
     destruct heq as [inds eqind].
     move: Hsp. rewrite eqind.
     rewrite lift_it_mkProd_or_LetIn /= => Hs.
-    rewrite closed_ctx_lift in Hs. eapply PCUICClosed.closed_wf_local; eauto.
+    rewrite closed_ctx_lift in Hs. eapply closed_wf_local; eauto.
     rewrite app_context_assoc in Hs wfctx.
     eapply typing_spine_it_mkProd_or_LetIn_ext_list_inv in Hs; auto.
-    2:{ rewrite -app_context_assoc. eapply PCUICWeakening.weaken_wf_local; auto.
+    2:{ rewrite -app_context_assoc. eapply weaken_wf_local; auto.
         now eapply wf_ind_types_wf_arities. }
-    2:{ eapply PCUICClosed.closed_wf_local; eauto. }
+    2:{ eapply closed_wf_local; eauto. }
     eapply typing_spine_it_mkProd_or_LetIn_inv in Hs => //. auto.
     eapply weakening_wf_local; eauto.
     rewrite -app_context_assoc.
-    eapply PCUICWeakening.weaken_wf_local; eauto.
+    eapply weaken_wf_local; eauto.
     now eapply wf_ind_types_wf_arities.
     len.
     rewrite nth_error_rev in hnth. len.
@@ -1580,7 +1610,7 @@ Section CheckEnv.
       now apply leq_context_cumul_context.
       clear check_args.
       eapply All2_impl. eauto. simpl; intros.
-      now constructor.
+      now eapply eq_term_upto_univ_cumulSpec.
     Qed.
     Next Obligation.
       sq. rewrite -Heq_anonymous0 in mdeclvar.

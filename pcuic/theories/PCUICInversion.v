@@ -3,7 +3,7 @@ From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICLiftSubst PCUICUnivSubst
      PCUICTyping PCUICCumulativity PCUICConfluence PCUICConversion
-     PCUICWellScopedCumulativity.
+     PCUICOnFreeVars PCUICClosedTyp PCUICWellScopedCumulativity.
 
 Require Import Equations.Prop.DepElim.
 (* todo: make wf arguments implicit *)
@@ -45,9 +45,9 @@ Section Inversion.
   Proof.
     intros. eapply into_equality; tea.
     - eapply typing_wf_local in X; eauto with fvs.
-    - eapply PCUICClosed.type_closed in X.
+    - eapply PCUICClosedTyp.type_closed in X.
       eapply PCUICOnFreeVars.closedn_on_free_vars in X; tea.
-    - eapply PCUICClosed.subject_closed in X0.
+    - eapply PCUICClosedTyp.subject_closed in X0.
       eapply PCUICOnFreeVars.closedn_on_free_vars in X0; tea.
   Qed.
 
@@ -65,9 +65,9 @@ Section Inversion.
   Proof.
     intros ht. apply into_equality; auto. reflexivity.
     eauto with fvs.
-    eapply PCUICClosed.type_closed in ht.
+    eapply PCUICClosedTyp.type_closed in ht.
     now rewrite -is_open_term_closed.
-    eapply PCUICClosed.type_closed in ht.
+    eapply PCUICClosedTyp.type_closed in ht.
     now rewrite -is_open_term_closed.
   Qed.
   Hint Immediate typing_closed_ctx : fvs.
@@ -82,7 +82,9 @@ Section Inversion.
       repeat insum ;
       repeat intimes ;
       [ first [ eassumption | reflexivity ] ..
-      | try etransitivity ; try eassumption; try solve [eapply into_ws_cumul; tea] ]
+      | try etransitivity ; try eassumption; 
+        try eauto with pcuic;
+        try solve [eapply into_ws_cumul; tea] ]
     ].
 
   Derive Signature for typing.
@@ -257,12 +259,12 @@ Section Inversion.
   Proof.
     intros Γ ci p c brs T h.
     dependent induction h.
-    { repeat insum; repeat intimes; try eapply case_inv ; 
+    {  remember c0; remember c1. destruct c0, c1. repeat insum; repeat intimes; try eapply case_inv ; 
 	    [ try first [ eassumption | reflexivity ].. | try eapply typing_equality; econstructor; eauto ]. }
     repeat outsum; repeat outtimes; repeat insum; repeat intimes ; tea;
       [ try first
       [ eassumption | reflexivity ]..
-      | try etransitivity; try eassumption; eapply into_ws_cumul; tea ].
+      | try etransitivity; try eassumption; eapply into_ws_cumul; tea; eauto with pcuic ].
   Qed.
 
   Lemma inversion_Proj :

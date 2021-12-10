@@ -447,8 +447,8 @@ Proof.
   is_open_term Γ A ->
   is_open_term Γ B ->
   is_closed_context Δ ->
-  cumulSpec0 Σ.1 (eq_universe (global_ext_constraints Σ)) Rle Γ A B ->
-  cumulSpec0 Σ.1 (eq_universe (global_ext_constraints Σ)) Rle Δ (rename f A) (rename f B))); intros; cbn.
+  cumulSpec0 Σ.1 (Re := eq_universe (global_ext_constraints Σ)) Rle Γ A B ->
+  cumulSpec0 Σ.1 (Re := eq_universe (global_ext_constraints Σ)) Rle Δ (rename f A) (rename f B))); intros; cbn.
   - rewrite rename_subst10. solve [econstructor].
   - rewrite rename_subst10. solve [econstructor].
   - rename X0 into hf. unfold urenaming in hf.

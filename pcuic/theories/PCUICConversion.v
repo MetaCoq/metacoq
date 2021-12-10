@@ -182,9 +182,9 @@ Section CumulSpecIsCumulAlgo.
   Defined.    
 
   Proposition cumul_mkApps (Γ : context) {Re Rle} M N args args' :
-    cumulSpec0 Σ Re Rle Γ M N  -> 
-    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
-    cumulSpec0 Σ Re Rle Γ (mkApps M args) (mkApps N args').
+    cumulSpec0 Σ (Re := Re) Rle Γ M N  -> 
+    All2 (cumulSpec0 Σ (Re := Re) Re Γ) args args' ->
+    cumulSpec0 Σ (Re := Re) Rle Γ (mkApps M args) (mkApps N args').
   Proof.
     intros HMN Hargs. revert M N HMN; induction Hargs; intros.
     - eassumption.
@@ -195,8 +195,8 @@ Section CumulSpecIsCumulAlgo.
 
   Proposition eq_term_upto_univ_napp_cumulSpec (Γ : context) {Re Rle} M N args args' :
     eq_term_upto_univ_napp Σ Re Rle #|args| M N -> 
-    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
-    cumulSpec0 Σ Re Rle Γ (mkApps M args) (mkApps N args').
+    All2 (cumulSpec0 Σ (Re := Re) Re Γ) args args' ->
+    cumulSpec0 Σ (Re := Re) Rle Γ (mkApps M args) (mkApps N args').
   Proof.  
     induction M in Γ , Re, Rle, N , args, args' |- * using term_forall_list_ind ; intros H Hargs; depelim H; 
       try (solve [eapply cumul_mkApps; eauto ; econstructor; eauto; try_with_nil]).
@@ -226,7 +226,7 @@ Section CumulSpecIsCumulAlgo.
   Defined.
   
   Proposition eq_term_upto_univ_cumulSpec (Γ : context) {Re Rle} M N :
-    eq_term_upto_univ Σ Re Rle M N -> cumulSpec0 Σ Re Rle Γ M N.
+    eq_term_upto_univ Σ Re Rle M N -> cumulSpec0 Σ (Re := Re) Rle Γ M N.
   Proof.
     intros. eapply (eq_term_upto_univ_napp_cumulSpec _ _ _ [] []); eauto. 
   Defined. 

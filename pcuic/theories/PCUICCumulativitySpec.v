@@ -7,179 +7,177 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICEqualit
 
 Set Default Goal Selector "!".
 
-Reserved Notation " Σ ;;; Γ |- t <=s u " (at level 50, Γ, t, u at next level).
-Reserved Notation " Σ ;;; Γ |- t =s u " (at level 50, Γ, t, u at next level).
-
 Definition cumul_predicate (cumul : context -> term -> term -> Type) Γ Re p p' :=
   All2 (cumul Γ) p.(pparams) p'.(pparams) *
   (R_universe_instance Re p.(puinst) p'.(puinst) *
   ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
     cumul (Γ ,,, inst_case_predicate_context p) p.(preturn) p'.(preturn))).
 
+Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ Rle ] u" (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  ⊢  t  ≤s[ Rle ]  u").
+
 (** * Definition of cumulativity and conversion relations *)
 
-Inductive cumulSpec0 (Σ : global_env) (Re Rle : Universe.t -> Universe.t -> Prop) (Γ : context) : term -> term -> Type :=
+Inductive cumulSpec0 Σ {Re} (Rle : Universe.t -> Universe.t -> Prop) Γ : term -> term -> Type :=
 
 (* transitivity *)
 
 | cumul_Trans : forall t u v,
     is_closed_context Γ -> is_open_term Γ u -> 
-    cumulSpec0 Σ Re Rle Γ t u ->
-    cumulSpec0 Σ Re Rle Γ u v ->    
-    cumulSpec0 Σ Re Rle Γ t v 
+    Σ ;;; Γ ⊢ t ≤s[Rle] u ->
+    Σ ;;; Γ ⊢ u ≤s[Rle] v ->    
+    Σ ;;; Γ ⊢ t ≤s[Rle] v 
 
 (* symmetry *)
 
 | cumul_Sym : forall t u, 
-    cumulSpec0 Σ Re Re Γ t u ->
-    cumulSpec0 Σ Re Rle Γ u t  
+    Σ ;;; Γ ⊢ t ≤s[Re] u ->
+    Σ ;;; Γ ⊢ u ≤s[Rle] t  
 
 (* reflexivity *)
 
 | cumul_Refl : forall t,
-    cumulSpec0 Σ Re Rle Γ t t 
+    Σ ;;; Γ ⊢ t ≤s[Rle] t
 
 (* Cumulativity rules *)
 
 | cumul_Ind : forall i u u' args args', 
     R_global_instance Σ Re Rle (IndRef i) #|args| u u' ->
-    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
-    cumulSpec0 Σ Re Rle Γ (mkApps (tInd i u) args) (mkApps (tInd i u') args')
+    All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Re] u) args args' ->
+    Σ ;;; Γ ⊢ mkApps (tInd i u) args ≤s[Rle] mkApps (tInd i u') args'
 
 | cumul_Construct : forall i k u u' args args',
     R_global_instance Σ Re Rle (ConstructRef i k) #|args| u u' ->
-    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
-    cumulSpec0 Σ Re Rle Γ (mkApps (tConstruct i k u) args) (mkApps (tConstruct i k u') args')
-
+    All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Re] u) args args' ->
+    Σ ;;; Γ ⊢ mkApps (tConstruct i k u) args ≤s[Rle] mkApps (tConstruct i k u') args'
+   
 | cumul_Sort : forall s s',
     Rle s s' ->
-    cumulSpec0 Σ Re Rle Γ (tSort s) (tSort s')
+    Σ ;;; Γ ⊢ tSort s ≤s[Rle] tSort s'
 
 | cumul_Const : forall c u u',
     R_universe_instance Re u u' ->
-    cumulSpec0 Σ Re Rle Γ (tConst c u) (tConst c u')
+    Σ ;;; Γ ⊢ tConst c u ≤s[Rle] tConst c u'
 
 (* congruence rules *)
 
 | cumul_Evar : forall e args args', 
-    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
-    cumulSpec0 Σ Re Rle Γ (tEvar e args) (tEvar e args')
+    All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Re] u) args args' ->
+    Σ ;;; Γ ⊢ tEvar e args ≤s[Rle] tEvar e args'
 
 | cumul_App : forall t t' u u', 
-    cumulSpec0 Σ Re Rle Γ t t' ->
-    cumulSpec0 Σ Re Re Γ u u' ->
-    cumulSpec0 Σ Re Rle Γ (tApp t u) (tApp t' u')
+    Σ ;;; Γ ⊢ t ≤s[Rle] t' ->
+    Σ ;;; Γ ⊢ u ≤s[Re] u' ->
+    Σ ;;; Γ ⊢ tApp t u ≤s[Rle] tApp t' u'
 
 | cumul_Lambda : forall na na' ty ty' t t',
     eq_binder_annot na na' ->
-    cumulSpec0 Σ Re Re Γ ty ty' ->
-    cumulSpec0 Σ Re Rle (Γ ,, vass na ty) t t' ->
-    cumulSpec0 Σ Re Rle Γ (tLambda na ty t) (tLambda na' ty' t')
+    Σ ;;; Γ ⊢ ty ≤s[Re] ty' ->
+    Σ ;;; Γ ,, vass na ty ⊢ t ≤s[Rle] t' ->
+    Σ ;;; Γ ⊢ tLambda na ty t ≤s[Rle] tLambda na' ty' t'
 
 | cumul_Prod : forall na na' a a' b b',
     eq_binder_annot na na' ->
-    cumulSpec0 Σ Re Re Γ a a' ->
-    cumulSpec0 Σ Re Rle (Γ ,, vass na a) b b' ->
-    cumulSpec0 Σ Re Rle Γ (tProd na a b) (tProd na' a' b')
+    Σ ;;; Γ ⊢ a ≤s[Re] a' ->
+    Σ ;;; Γ ,, vass na a ⊢ b ≤s[Rle] b' ->
+    Σ ;;; Γ ⊢ tProd na a b ≤s[Rle] tProd na' a' b'
 
 | cumul_LetIn : forall na na' t t' ty ty' u u', 
     eq_binder_annot na na' ->
-    cumulSpec0 Σ Re Re Γ t t' ->
-    cumulSpec0 Σ Re Re Γ ty ty' ->
-    cumulSpec0 Σ Re Rle (Γ ,, vdef na t ty) u u' ->
-    cumulSpec0 Σ Re Rle Γ (tLetIn na t ty u) (tLetIn na' t' ty' u')
+    Σ ;;; Γ ⊢ t ≤s[Re] t' ->
+    Σ ;;; Γ ⊢ ty ≤s[Re] ty' ->
+    Σ ;;; Γ ,, vdef na t ty ⊢ u ≤s[Rle] u' ->
+    Σ ;;; Γ ⊢ tLetIn na t ty u ≤s[Rle] tLetIn na' t' ty' u'
 
 | cumul_Case indn : forall p p' c c' brs brs', 
-    cumul_predicate (cumulSpec0 Σ Re Re) Γ Re p p' ->
-    cumulSpec0 Σ Re Re Γ c c' ->
+    cumul_predicate (fun Γ t u => Σ ;;; Γ ⊢ t ≤s[Re] u) Γ Re p p' ->
+    Σ ;;; Γ ⊢ c ≤s[Re] c' ->
     All2 (fun br br' =>
       eq_context_gen eq eq (bcontext br) (bcontext br') × 
-      cumulSpec0 Σ Re Re (Γ ,,, inst_case_branch_context p br) (bbody br) (bbody br')
+      Σ ;;; Γ ,,, inst_case_branch_context p br ⊢ bbody br ≤s[Re] bbody br'
     ) brs brs' ->
-    cumulSpec0 Σ Re Rle Γ (tCase indn p c brs) (tCase indn p' c' brs')
+    Σ ;;; Γ ⊢ tCase indn p c brs ≤s[Rle] tCase indn p' c' brs'
 
 | cumul_Proj : forall p c c', 
-    cumulSpec0 Σ Re Re Γ c c' ->
-    cumulSpec0 Σ Re Rle Γ (tProj p c) (tProj p c')
+    Σ ;;; Γ ⊢ c ≤s[Re] c' ->
+    Σ ;;; Γ ⊢ tProj p c ≤s[Rle] tProj p c'
 
 | cumul_Fix : forall mfix mfix' idx,
     All2 (fun x y =>
-      cumulSpec0 Σ Re Re Γ x.(dtype) y.(dtype) ×
-      cumulSpec0 Σ Re Re (Γ ,,, fix_context mfix) x.(dbody) y.(dbody) ×
+      Σ ;;; Γ ⊢ x.(dtype) ≤s[Re] y.(dtype) ×
+      Σ ;;; Γ ,,, fix_context mfix ⊢ x.(dbody) ≤s[Re] y.(dbody) ×
       (x.(rarg) = y.(rarg)) ×
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
-    cumulSpec0 Σ Re Rle Γ (tFix mfix idx) (tFix mfix' idx)
+    Σ ;;; Γ ⊢ tFix mfix idx ≤s[Rle] tFix mfix' idx
 
 | cumul_CoFix : forall mfix mfix' idx,
     All2 (fun x y =>
-      cumulSpec0 Σ Re Re Γ x.(dtype) y.(dtype) ×
-      cumulSpec0 Σ Re Re (Γ ,,, fix_context mfix) x .(dbody) y.(dbody) ×
+      Σ ;;; Γ ⊢ x.(dtype) ≤s[Re] y.(dtype) ×
+      Σ ;;; Γ ,,, fix_context mfix ⊢ x.(dbody) ≤s[Re] y.(dbody) ×
       (x.(rarg) = y.(rarg)) ×
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
-    cumulSpec0 Σ Re Rle Γ (tCoFix mfix idx) (tCoFix mfix' idx)
+    Σ ;;; Γ ⊢ tCoFix mfix idx ≤s[Rle] tCoFix mfix' idx
 
 (** Reductions *)
 
 (** Beta red *)
 | cumul_beta : forall na t b a,
-    cumulSpec0 Σ Re Rle Γ (tApp (tLambda na t b) a) (b {0 := a})
+    Σ ;;; Γ ⊢ tApp (tLambda na t b) a ≤s[Rle] b {0 := a}
 
 (** Let *)
 | cumul_zeta : forall na b t b',
-    cumulSpec0 Σ Re Rle Γ (tLetIn na b t b') (b' {0 := b})
+    Σ ;;; Γ ⊢ tLetIn na b t b' ≤s[Rle] b' {0 := b}
 
 | cumul_rel i body :
     option_map decl_body (nth_error Γ i) = Some (Some body) ->
-    cumulSpec0 Σ Re Rle Γ (tRel i) (lift0 (S i) body)
+    Σ ;;; Γ ⊢ tRel i ≤s[Rle] lift0 (S i) body
 
 (** iota red *)
 | cumul_iota : forall ci c u args p brs br, 
     nth_error brs c = Some br ->
     #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
-    cumulSpec0 Σ Re Rle Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
-                         (iota_red ci.(ci_npar) p args br)
+    Σ ;;; Γ ⊢ tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs  ≤s[Rle] iota_red ci.(ci_npar) p args br
 
 (** Fix unfolding, with guard *)
 | cumul_fix : forall mfix idx args narg fn,
     unfold_fix mfix idx = Some (narg, fn) ->
     is_constructor narg args = true ->
-    cumulSpec0 Σ Re Rle Γ (mkApps (tFix mfix idx) args)
-                         (mkApps fn args)
+    Σ ;;; Γ ⊢ mkApps (tFix mfix idx) args ≤s[Rle] mkApps fn args
 
 (** CoFix-case unfolding *)
 | cumul_cofix_case : forall ip p mfix idx args narg fn brs,
     unfold_cofix mfix idx = Some (narg, fn) ->
-    cumulSpec0 Σ Re Rle Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-                         (tCase ip p (mkApps fn args) brs)
+    Σ ;;; Γ ⊢ tCase ip p (mkApps (tCoFix mfix idx) args) brs ≤s[Rle] tCase ip p (mkApps fn args) brs
 
 (** CoFix-proj unfolding *)
 | cumul_cofix_proj : forall p mfix idx args narg fn,
     unfold_cofix mfix idx = Some (narg, fn) ->
-    cumulSpec0 Σ Re Rle Γ (tProj p (mkApps (tCoFix mfix idx) args))
-                         (tProj p (mkApps fn args))
+    Σ ;;; Γ ⊢ tProj p (mkApps (tCoFix mfix idx) args) ≤s[Rle] tProj p (mkApps fn args)
 
 (** Constant unfolding *)
 | cumul_delta : forall c decl body (isdecl : declared_constant Σ c decl) u,
     decl.(cst_body) = Some body ->
-    cumulSpec0 Σ Re Rle Γ (tConst c u) (subst_instance u body)
+    Σ ;;; Γ ⊢ tConst c u ≤s[Rle] subst_instance u body
 
 (** Proj *)
 | cumul_proj : forall i pars narg args u arg,
     nth_error args (pars + narg) = Some arg ->
-    cumulSpec0 Σ Re Rle Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg.
+    Σ ;;; Γ ⊢ tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args) ≤s[Rle] arg
+
+where " Σ ;;; Γ ⊢ t ≤s[ Rle ] u " := (cumulSpec0 Σ Rle Γ t u) : type_scope.
 
 Definition convSpec `{checker_flags} Σ :=
-  let φ := (global_ext_constraints Σ) in cumulSpec0 Σ.1 (eq_universe φ) (eq_universe φ).
+  let φ := (global_ext_constraints Σ) in cumulSpec0 Σ.1 (Re := eq_universe φ) (eq_universe φ).
 
 (* ** Syntactic cumulativity up-to universes *)
 
 Definition cumulSpec `{checker_flags} Σ :=
-  let φ := (global_ext_constraints Σ) in cumulSpec0 Σ.1 (eq_universe φ) (leq_universe φ).
+  let φ := (global_ext_constraints Σ) in cumulSpec0 Σ.1 (Re := eq_universe φ) (leq_universe φ).
 
-Notation " Σ ;;; Γ |- t <=s u " := (@cumulSpec _ Σ Γ t u).
-Notation " Σ ;;; Γ |- t =s u " := (@convSpec _ Σ Γ t u).
+Notation " Σ ;;; Γ |- t <=s u " := (@cumulSpec _ Σ Γ t u) (at level 50, Γ, t, u at next level).
+Notation " Σ ;;; Γ |- t =s u " := (@convSpec _ Σ Γ t u) (at level 50, Γ, t, u at next level).
   
 Module PCUICConversionParSpec <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
   Definition conv := @convSpec.
@@ -247,8 +245,8 @@ Section ContextConversion.
 End ContextConversion.
 
 
-Definition cumulSpec0_ctx Σ Re Rle := (OnOne2_local_env (on_one_decl (fun Δ t t' => cumulSpec0 Σ Re Rle Δ t t'))).
-Definition cumulSpec0_ctx_rel Σ Re Rle Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => cumulSpec0 Σ Re Rle (Γ ,,, Δ) t t'))).
+Definition cumulSpec0_ctx Σ Re Rle := (OnOne2_local_env (on_one_decl (fun Δ t t' => cumulSpec0 Σ (Re := Re) Rle Δ t t'))).
+Definition cumulSpec0_ctx_rel Σ Re Rle Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => cumulSpec0 Σ (Re := Re) Rle (Γ ,,, Δ) t t'))).
 
 Lemma cumulSpec0_ind_all :
   forall (Σ : global_env) (Re : Universe.t -> Universe.t -> Prop)
@@ -301,13 +299,13 @@ Lemma cumulSpec0_ind_all :
         (* transitivity *)
        (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t u v : term),
           is_closed_context Γ -> is_open_term Γ u ->
-          cumulSpec0 Σ Re Rle Γ t u -> P Rle Γ t u ->
-          cumulSpec0 Σ Re Rle Γ u v -> P Rle Γ u v ->
+          cumulSpec0 Σ (Re := Re) Rle Γ t u -> P Rle Γ t u ->
+          cumulSpec0 Σ (Re := Re) Rle Γ u v -> P Rle Γ u v ->
           P Rle Γ t v) ->
 
         (* symmetry *)
        (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t u : term),
-        cumulSpec0 Σ Re Re Γ u t -> P Re Γ u t ->
+        cumulSpec0 Σ (Re := Re) Re Γ u t -> P Re Γ u t ->
         P Rle Γ t u) ->
 
         (* reflexivity *)
@@ -317,55 +315,55 @@ Lemma cumulSpec0_ind_all :
         (* congruence rules *)
 
         (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (ev : nat) (l l' : list term),
-          All2 (Trel_conj (cumulSpec0 Σ Re Re Γ) (P Re Γ)) l l' -> P Rle Γ (tEvar ev l) (tEvar ev l')) ->
+          All2 (Trel_conj (cumulSpec0 Σ (Re := Re) Re Γ) (P Re Γ)) l l' -> P Rle Γ (tEvar ev l) (tEvar ev l')) ->
 
         (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t t' u u' : term), 
-          cumulSpec0 Σ Re Rle Γ t t' -> P Rle Γ t t' ->
-          cumulSpec0 Σ Re Re Γ u u' -> P Re Γ u u' ->
+          cumulSpec0 Σ (Re := Re) Rle Γ t t' -> P Rle Γ t t' ->
+          cumulSpec0 Σ (Re := Re) Re Γ u u' -> P Re Γ u u' ->
           P Rle Γ (tApp t u) (tApp t' u')) ->
 
         (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (na na' : aname) (ty ty' t t' : term),
           eq_binder_annot na na' ->  
-          cumulSpec0 Σ Re Re Γ ty ty' -> P Re Γ ty ty' -> 
-          cumulSpec0 Σ Re Rle (Γ ,, vass na ty) t t' -> P Rle (Γ ,, vass na ty) t t' -> 
+          cumulSpec0 Σ (Re := Re )Re Γ ty ty' -> P Re Γ ty ty' -> 
+          cumulSpec0 Σ (Re := Re) Rle (Γ ,, vass na ty) t t' -> P Rle (Γ ,, vass na ty) t t' -> 
           P Rle Γ (tLambda na ty t) (tLambda na' ty' t')) ->
 
         (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (na na' : binder_annot name) (a a' b b' : term), 
           eq_binder_annot na na' ->
-          cumulSpec0 Σ Re Re Γ a a' -> P Re Γ a a' ->
-          cumulSpec0 Σ Re Rle (Γ,, vass na a) b b' -> P Rle (Γ,, vass na a) b b' ->
+          cumulSpec0 Σ (Re := Re) Re Γ a a' -> P Re Γ a a' ->
+          cumulSpec0 Σ (Re := Re) Rle (Γ,, vass na a) b b' -> P Rle (Γ,, vass na a) b b' ->
           P Rle Γ (tProd na a b) (tProd na' a' b')) ->
 
      (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (na na' : binder_annot name) (t t' ty ty' u u' : term),
-        eq_binder_annot na na' ->  cumulSpec0 Σ Re Re Γ t t' -> P Re Γ t t' ->
-        cumulSpec0 Σ Re Re Γ ty ty' -> P Re Γ ty ty' ->
-        cumulSpec0 Σ Re Rle (Γ,, vdef na t ty) u u' -> P Rle (Γ,, vdef na t ty) u u' ->
+        eq_binder_annot na na' ->  cumulSpec0 Σ (Re := Re) Re Γ t t' -> P Re Γ t t' ->
+        cumulSpec0 Σ (Re := Re) Re Γ ty ty' -> P Re Γ ty ty' ->
+        cumulSpec0 Σ (Re := Re) Rle (Γ,, vdef na t ty) u u' -> P Rle (Γ,, vdef na t ty) u u' ->
         P Rle Γ (tLetIn na t ty u) (tLetIn na' t' ty' u')) ->
 
       (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (indn : case_info) (p p' : predicate term)
         (c c' : term) (brs brs' : list (branch term)),
-        cumul_predicate (fun Γ t u => cumulSpec0 Σ Re Re Γ t u × P Re Γ t u) Γ Re p p' -> 
-        cumulSpec0 Σ Re Re Γ c c' -> P Re Γ c c' ->
+        cumul_predicate (fun Γ t u => cumulSpec0 Σ (Re := Re) Re Γ t u × P Re Γ t u) Γ Re p p' -> 
+        cumulSpec0 Σ (Re := Re) Re Γ c c' -> P Re Γ c c' ->
         All2
           (Trel_conj (fun br br' : branch term =>
                eq_context_gen eq eq (bcontext br) (bcontext br') *
-               cumulSpec0 Σ Re Re (Γ,,, inst_case_branch_context p br)
+               cumulSpec0 Σ (Re := Re) Re (Γ,,, inst_case_branch_context p br)
                  (bbody br) (bbody br')) 
             (fun br br' => P Re (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' -> 
        P Rle Γ (tCase indn p c brs) (tCase indn p' c' brs')) ->
 
        (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) 
           (p : projection) (c c' : term),
-        cumulSpec0 Σ Re Re Γ c c' -> P Re Γ c c' ->
+        cumulSpec0 Σ (Re := Re) Re Γ c c' -> P Re Γ c c' ->
          P Rle Γ (tProj p c) (tProj p c')) ->
 
        (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) 
           (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
           All2
             (fun x y : def term =>
-             ((cumulSpec0 Σ Re Re Γ (dtype x) (dtype y) × 
+             ((cumulSpec0 Σ (Re := Re) Re Γ (dtype x) (dtype y) × 
                 P Re Γ (dtype x) (dtype y)
-               × cumulSpec0 Σ Re Re (Γ,,, fix_context mfix) 
+               × cumulSpec0 Σ (Re := Re) Re (Γ,,, fix_context mfix) 
                    (dbody x) (dbody y)) × P Re (Γ,,, fix_context mfix) 
                    (dbody x) (dbody y) × rarg x = rarg y) *
              eq_binder_annot (dname x) (dname y)) mfix mfix' ->
@@ -375,9 +373,9 @@ Lemma cumulSpec0_ind_all :
            (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
            All2
              (fun x y : def term =>
-              ((cumulSpec0 Σ Re Re Γ (dtype x) (dtype y) × 
+              ((cumulSpec0 Σ (Re := Re) Re Γ (dtype x) (dtype y) × 
                  P Re Γ (dtype x) (dtype y)
-                × cumulSpec0 Σ Re Re (Γ,,, fix_context mfix) 
+                × cumulSpec0 Σ (Re := Re) Re (Γ,,, fix_context mfix) 
                     (dbody x) (dbody y)) × P Re (Γ,,, fix_context mfix) 
                     (dbody x) (dbody y) × rarg x = rarg y) *
               eq_binder_annot (dname x) (dname y)) mfix mfix' ->
@@ -389,14 +387,14 @@ Lemma cumulSpec0_ind_all :
             (Γ : context) (i : inductive) (u u' : list Level.t)
             (args args' : list term), 
       R_global_instance Σ Re Rle (IndRef i) #|args| u u' ->
-      All2 (Trel_conj (cumulSpec0 Σ Re Re Γ) (P Re Γ)) args args' ->
+      All2 (Trel_conj (cumulSpec0 Σ (Re := Re) Re Γ) (P Re Γ)) args args' ->
       P Rle Γ (mkApps (tInd i u) args) (mkApps (tInd i u') args')) ->
 
     (forall (Rle : Universe.t -> Universe.t -> Prop) 
       (Γ : context) (i : inductive) (k : nat) 
       (u u' : list Level.t) (args args' : list term), 
       R_global_instance Σ Re Rle (ConstructRef i k) #|args| u u' ->
-      All2 (Trel_conj (cumulSpec0 Σ Re Re Γ) (P Re Γ)) args args' ->
+      All2 (Trel_conj (cumulSpec0 Σ (Re := Re) Re Γ) (P Re Γ)) args args' ->
       P Rle Γ (mkApps (tConstruct i k u) args)
               (mkApps (tConstruct i k u') args')) ->
 
@@ -408,7 +406,7 @@ Lemma cumulSpec0_ind_all :
           (Γ : context) (c : kername) (u u' : list Level.t),
           R_universe_instance Re u u' -> P Rle Γ (tConst c u) (tConst c u') ) ->
 
-       forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t t0 : term), cumulSpec0 Σ Re Rle Γ t t0 -> P Rle Γ t t0.
+       forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (t t0 : term), cumulSpec0 Σ (Re := Re) Rle Γ t t0 -> P Rle Γ t t0.
 Proof.
   intros. rename X24 into Xlast. revert Rle Γ t t0 Xlast.
   fix aux 5. intros Rle Γ t u.
@@ -518,13 +516,13 @@ Lemma convSpec0_ind_all :
         (* transitivity *)
        (forall  (Γ : context) (t u v : term),
           is_closed_context Γ -> is_open_term Γ u ->
-          cumulSpec0 Σ Re Re Γ t u -> P Γ t u ->
-          cumulSpec0 Σ Re Re Γ u v -> P Γ u v ->
+          cumulSpec0 Σ (Re := Re) Re Γ t u -> P Γ t u ->
+          cumulSpec0 Σ (Re := Re) Re Γ u v -> P Γ u v ->
           P Γ t v) ->
 
         (* symmetry *)
        (forall  (Γ : context) (t u : term),
-        cumulSpec0 Σ Re Re Γ u t -> P Γ u t ->
+        cumulSpec0 Σ (Re := Re) Re Γ u t -> P Γ u t ->
         P Γ t u) ->
 
         (* reflexivity *)
@@ -534,55 +532,55 @@ Lemma convSpec0_ind_all :
         (* congruence rules *)
 
         (forall  (Γ : context) (ev : nat) (l l' : list term),
-          All2 (Trel_conj (cumulSpec0 Σ Re Re Γ) (P Γ)) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
+          All2 (Trel_conj (cumulSpec0 Σ (Re := Re) Re Γ) (P Γ)) l l' -> P Γ (tEvar ev l) (tEvar ev l')) ->
 
         (forall  (Γ : context) (t t' u u' : term), 
-          cumulSpec0 Σ Re Re Γ t t' -> P Γ t t' ->
-          cumulSpec0 Σ Re Re Γ u u' -> P Γ u u' ->
+          cumulSpec0 Σ (Re := Re) Re Γ t t' -> P Γ t t' ->
+          cumulSpec0 Σ (Re := Re) Re Γ u u' -> P Γ u u' ->
           P Γ (tApp t u) (tApp t' u')) ->
 
         (forall  (Γ : context) (na na' : aname) (ty ty' t t' : term),
           eq_binder_annot na na' ->  
-          cumulSpec0 Σ Re Re Γ ty ty' -> P Γ ty ty' -> 
-          cumulSpec0 Σ Re Re (Γ ,, vass na ty) t t' -> P (Γ ,, vass na ty) t t' -> 
+          cumulSpec0 Σ (Re := Re) Re Γ ty ty' -> P Γ ty ty' -> 
+          cumulSpec0 Σ (Re := Re) Re (Γ ,, vass na ty) t t' -> P (Γ ,, vass na ty) t t' -> 
           P Γ (tLambda na ty t) (tLambda na' ty' t')) ->
 
         (forall  (Γ : context) (na na' : binder_annot name) (a a' b b' : term), 
           eq_binder_annot na na' ->
-          cumulSpec0 Σ Re Re Γ a a' -> P Γ a a' ->
-          cumulSpec0 Σ Re Re (Γ,, vass na a) b b' -> P (Γ,, vass na a) b b' ->
+          cumulSpec0 Σ (Re := Re) Re Γ a a' -> P Γ a a' ->
+          cumulSpec0 Σ (Re := Re) Re (Γ,, vass na a) b b' -> P (Γ,, vass na a) b b' ->
           P Γ (tProd na a b) (tProd na' a' b')) ->
 
      (forall  (Γ : context) (na na' : binder_annot name) (t t' ty ty' u u' : term),
-        eq_binder_annot na na' ->  cumulSpec0 Σ Re Re Γ t t' -> P Γ t t' ->
-        cumulSpec0 Σ Re Re Γ ty ty' -> P Γ ty ty' ->
-        cumulSpec0 Σ Re Re (Γ,, vdef na t ty) u u' -> P (Γ,, vdef na t ty) u u' ->
+        eq_binder_annot na na' ->  cumulSpec0 Σ (Re := Re) Re Γ t t' -> P Γ t t' ->
+        cumulSpec0 Σ (Re := Re) Re Γ ty ty' -> P Γ ty ty' ->
+        cumulSpec0 Σ (Re := Re) Re (Γ,, vdef na t ty) u u' -> P (Γ,, vdef na t ty) u u' ->
         P Γ (tLetIn na t ty u) (tLetIn na' t' ty' u')) ->
 
       (forall  (Γ : context) (indn : case_info) (p p' : predicate term)
         (c c' : term) (brs brs' : list (branch term)),
-        cumul_predicate (fun Γ t u => cumulSpec0 Σ Re Re Γ t u * P Γ t u) Γ Re p p' -> 
-        cumulSpec0 Σ Re Re Γ c c' -> P Γ c c' ->
+        cumul_predicate (fun Γ t u => cumulSpec0 Σ (Re := Re) Re Γ t u * P Γ t u) Γ Re p p' -> 
+        cumulSpec0 Σ (Re := Re) Re Γ c c' -> P Γ c c' ->
         All2
           (Trel_conj (fun br br' : branch term =>
                eq_context_gen eq eq (bcontext br) (bcontext br') *
-               cumulSpec0 Σ Re Re (Γ,,, inst_case_branch_context p br)
+               cumulSpec0 Σ (Re := Re) Re (Γ,,, inst_case_branch_context p br)
                  (bbody br) (bbody br')) 
             (fun br br' => P (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' -> 
        P Γ (tCase indn p c brs) (tCase indn p' c' brs')) ->
 
        (forall  (Γ : context) 
           (p : projection) (c c' : term),
-        cumulSpec0 Σ Re Re Γ c c' -> P Γ c c' ->
+        cumulSpec0 Σ (Re := Re) Re Γ c c' -> P Γ c c' ->
          P Γ (tProj p c) (tProj p c')) ->
 
        (forall  (Γ : context) 
           (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
           All2
             (fun x y : def term =>
-             ((cumulSpec0 Σ Re Re Γ (dtype x) (dtype y) × 
+             ((cumulSpec0 Σ (Re := Re) Re Γ (dtype x) (dtype y) × 
                 P Γ (dtype x) (dtype y)
-               × cumulSpec0 Σ Re Re (Γ,,, fix_context mfix) 
+               × cumulSpec0 Σ (Re := Re) Re (Γ,,, fix_context mfix) 
                    (dbody x) (dbody y)) × P (Γ,,, fix_context mfix) 
                    (dbody x) (dbody y) × rarg x = rarg y) *
              eq_binder_annot (dname x) (dname y)) mfix mfix' ->
@@ -592,9 +590,9 @@ Lemma convSpec0_ind_all :
            (mfix : mfixpoint term) (mfix' : list (def term)) (idx : nat),
            All2
              (fun x y : def term =>
-              ((cumulSpec0 Σ Re Re Γ (dtype x) (dtype y) × 
+              ((cumulSpec0 Σ (Re := Re) Re Γ (dtype x) (dtype y) × 
                  P Γ (dtype x) (dtype y)
-                × cumulSpec0 Σ Re Re (Γ,,, fix_context mfix) 
+                × cumulSpec0 Σ (Re := Re) Re (Γ,,, fix_context mfix) 
                     (dbody x) (dbody y)) × P (Γ,,, fix_context mfix) 
                     (dbody x) (dbody y) × rarg x = rarg y) *
               eq_binder_annot (dname x) (dname y)) mfix mfix' ->
@@ -606,14 +604,14 @@ Lemma convSpec0_ind_all :
             (Γ : context) (i : inductive) (u u' : list Level.t)
             (args args' : list term), 
       R_global_instance Σ Re Re (IndRef i) #|args| u u' ->
-      All2 (Trel_conj (cumulSpec0 Σ Re Re Γ) (P Γ)) args args' ->
+      All2 (Trel_conj (cumulSpec0 Σ (Re := Re) Re Γ) (P Γ)) args args' ->
       P Γ (mkApps (tInd i u) args) (mkApps (tInd i u') args')) ->
 
     (forall  
       (Γ : context) (i : inductive) (k : nat) 
       (u u' : list Level.t) (args args' : list term), 
       R_global_instance Σ Re Re (ConstructRef i k) #|args| u u' ->
-      All2 (Trel_conj (cumulSpec0 Σ Re Re Γ) (P Γ)) args args' ->
+      All2 (Trel_conj (cumulSpec0 Σ (Re := Re) Re Γ) (P Γ)) args args' ->
       P Γ (mkApps (tConstruct i k u) args)
               (mkApps (tConstruct i k u') args')) ->
 
@@ -625,7 +623,7 @@ Lemma convSpec0_ind_all :
           (Γ : context) (c : kername) (u u' : list Level.t),
           R_universe_instance Re u u' -> P Γ (tConst c u) (tConst c u') ) ->
 
-       forall  (Γ : context) (t t0 : term), cumulSpec0 Σ Re Re Γ t t0 -> P Γ t t0.
+       forall  (Γ : context) (t t0 : term), cumulSpec0 Σ (Re := Re) Re Γ t t0 -> P Γ t t0.
 Proof.
   intros. rename X24 into Xlast. revert Γ t t0 Xlast.
   fix aux 4. intros Γ t u.

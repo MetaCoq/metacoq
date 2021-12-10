@@ -72,7 +72,7 @@ Lemma weakening_env_cumulSpec `{CF:checker_flags} Σ Σ' φ Γ M N :
   generalize (leq_universe (global_ext_constraints (Σ',φ))); intros Rle Hlee Hle . 
   revert Γ M N Ind Σ' Rle Hle Hlee HΣ' Hextends. 
   eapply (cumulSpec0_ind_all Σ (eq_universe (global_ext_constraints (Σ,φ))) 
-            (fun Rle Γ M N => forall (Σ' : global_env) Rle', RelationClasses.subrelation Rle Rle' -> RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) Rle' -> wf Σ' -> extends Σ Σ' -> cumulSpec0 Σ' (eq_universe (global_ext_constraints (Σ',φ))) Rle' Γ M N)) 
+            (fun Rle Γ M N => forall (Σ' : global_env) Rle', RelationClasses.subrelation Rle Rle' -> RelationClasses.subrelation (eq_universe (global_ext_constraints (Σ,φ))) Rle' -> wf Σ' -> extends Σ Σ' -> cumulSpec0 Σ' (Re := eq_universe (global_ext_constraints (Σ',φ))) Rle' Γ M N)) 
             with (Rle := leq_universe (global_ext_constraints (Σ,φ))); 
               intros; try solve [econstructor; eauto with extends; intuition]. 
   - eapply cumul_Sym. apply X0; eauto. all : apply subrelations_extends; eauto. 

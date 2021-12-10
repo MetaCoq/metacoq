@@ -362,8 +362,8 @@ Proof.
   is_closed_context Γ ->
   is_open_term Γ A ->
   is_open_term Γ B ->
-  cumulSpec0 Σ.1 (eq_universe (global_ext_constraints Σ)) Rle Γ A B ->
-  cumulSpec0 Σ.1 (eq_universe (global_ext_constraints Σ)) Rle Δ A.[σ] B.[σ])); intros.
+  cumulSpec0 Σ.1 (Re := eq_universe (global_ext_constraints Σ)) Rle Γ A B ->
+  cumulSpec0 Σ.1 (Re := eq_universe (global_ext_constraints Σ)) Rle Δ A.[σ] B.[σ])); intros.
   all: repeat inv_on_free_vars.
   - rewrite subst10_inst. sigma. solve [econstructor].
   - rewrite subst10_inst. sigma. solve [econstructor].

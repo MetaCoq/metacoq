@@ -142,7 +142,7 @@ Proof.
             subrelation (eq_universe Σ)
                         (fun x y : Universe.t_ => Rle' x@[u] y@[u]) ->
             valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
-               cumulSpec0 Σ (eq_universe (global_ext_constraints (Σ.1,univs))) Rle' Γ@[u] A@[u] B@[u]))
+               cumulSpec0 Σ (Re := eq_universe (global_ext_constraints (Σ.1,univs))) Rle' Γ@[u] A@[u] B@[u]))
              with (Rle := leq_universe (global_ext_constraints Σ))  ; intros; cbn ;
             try solve [econstructor; intuition; eauto].
   - rewrite subst_instance_subst. solve [econstructor].

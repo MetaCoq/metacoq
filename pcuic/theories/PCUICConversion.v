@@ -120,24 +120,30 @@ Section CumulSpecIsCumulAlgo.
   Proof. 
   intro r. induction r using red1_ind_all; try (econstructor; eauto; reflexivity).
   - eapply cumul_Case; try reflexivity. 
-    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity. 
+    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity.  
+      change (fun t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ Γ).
       induction X; econstructor; try reflexivity; try eassumption. exact (p.2).
     * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity.
   - eapply cumul_Case; try reflexivity. 
-    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * change (fun Γ t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ). 
+      destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
     * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity. 
   - eapply cumul_Case; try reflexivity. 
-    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * change (fun Γ t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ).
+      destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
     * eauto.
     * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity. 
   - eapply cumul_Case; try reflexivity. 
-    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * change (fun Γ t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ).
+      destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
     * induction X; econstructor.
       + destruct p0 as [ [ _ hbody ] hhd ]. rewrite hhd. split; eauto. reflexivity.  
       + apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity.
       + split; reflexivity. 
       + exact IHX.           
-  - eapply cumul_Evar. induction X; econstructor; eauto; try reflexivity.  
+  - eapply cumul_Evar.
+    change (fun t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ Γ).
+    induction X; econstructor; eauto; try reflexivity.  
     * exact p.2.
   - eapply cumul_Fix. set (mfixAbs := mfix0). unfold mfixAbs at 2. clearbody mfixAbs. 
     induction X; econstructor; eauto; try reflexivity.

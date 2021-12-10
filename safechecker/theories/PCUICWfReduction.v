@@ -257,10 +257,10 @@ Section fix_sigma.
       apply IH_sub. eauto.
       intros. eapply cored_redp in H0 as [].
       destruct (term_subterm_redp X0) as [t'' [[redt' [tst' Htst']]]].
-      eapply IH. eapply cored_redp. sq. eassumption. red.
-      sq. right. exists tst'. now rewrite Htst'.
-    Grab Existential Variables.
-    - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
+      unshelve eapply (IH t'').
+      - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
+      - eapply cored_redp; sq; eassumption.
+      - red. sq. right. exists tst'. now rewrite Htst'.
   Qed.
 
   Global Instance wf_redp_subterm : WellFounded redp_subterm_rel.

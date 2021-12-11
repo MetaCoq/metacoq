@@ -6,12 +6,10 @@ From MetaCoq.Template Require Import utils.
 
     Any extracted code planning to link with the plugin
     should use these same directives for consistency.
-
-    ExtrOCamlInt63 extracts comparison to int (-1, 0, 1), so one might need to adapt code accordingly.
 *)
 
 Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 (* Ignore [Decimal.int] before the extraction issue is solved:
    https://github.com/coq/coq/issues/7017. *)

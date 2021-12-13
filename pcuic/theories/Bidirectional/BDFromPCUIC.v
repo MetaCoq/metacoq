@@ -1,8 +1,7 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICUnivSubstitution PCUICClosed PCUICWellScopedCumulativity PCUICSR.
+From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICInductives PCUICInductiveInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICWfUniverses PCUICValidity PCUICContextConversion PCUICSpine PCUICOnFreeVars PCUICWfUniverses PCUICClosed PCUICWellScopedCumulativity PCUICSR PCUICClosedTyp PCUICUnivSubstitutionConv PCUICWeakeningEnvTyp PCUICWeakeningEnvConv.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC.
-(** The dependency on BDToPCUIC is minimal, it is only used in conjuction with validity to avoid having to prove well-formedness of inferred types simultaneously with bidirectional -> undirected *)
 
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -311,7 +310,8 @@ Proof.
       eapply All2_length.
       eassumption.
 
-    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args') by (apply infering_ind_typing in i0 ; auto).
+    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args')
+        by (apply infering_ind_typing in i0 ; auto).
       assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
           apply validity in X1 as [].
@@ -337,7 +337,7 @@ Proof.
         eapply equality_refl ;
           [apply wf_local_closed_context |eapply subject_is_open_term] ; tea.
       * apply wf_local_closed_context.
-        apply PCUICWeakening.weaken_wf_local ; auto.
+        apply PCUICWeakeningTyp.weaken_wf_local ; auto.
         eapply wf_projection_context ; eauto.
       * cbn -[projection_context].
         apply weaken_equality ; auto.
@@ -387,7 +387,7 @@ Proof.
     split.
     1: eassumption.
     etransitivity ; eauto.
-    eapply wt_cum_equality ; tea.
+    now eapply cumulSpec_typed_cumulAlgo.
 Qed.
 
 End BDFromPCUIC.

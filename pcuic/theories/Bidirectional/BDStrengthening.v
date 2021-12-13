@@ -3,7 +3,7 @@ From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICGlobalEnv 
   PCUICInduction PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICRename PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence PCUICWellScopedCumulativity PCUICClosed.
+  PCUICPosition PCUICTyping PCUICSigmaCalculus PCUICOnFreeVars PCUICClosed PCUICConfluence PCUICSpine PCUICInductiveInversion PCUICParallelReductionConfluence PCUICWellScopedCumulativity PCUICClosed PCUICRenameDef PCUICInstConv PCUICClosedTyp PCUICWeakeningEnvTyp PCUICRenameTyp PCUICRenameConv PCUICGuardCondition PCUICWeakeningConv.
 
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
 
@@ -109,18 +109,18 @@ Lemma on_ctx_free_vars_strengthenP Γ Γ' Γ'':
   on_ctx_free_vars (strengthenP #|Γ''| #|Γ'| xpredT) (Γ,,,Γ',,,lift_context #|Γ'| 0 Γ'').
 Proof.
   intros hΓ hΓ''.
-  rewrite !PCUICInst.on_ctx_free_vars_app.
+  rewrite !on_ctx_free_vars_app.
   repeat (apply /andP ; split).
   - rewrite /on_ctx_free_vars /lift_context /=.
     erewrite alli_fold_context_k_prop.
     apply alli_Alli in hΓ''.
     eapply alli_Alli, Alli_impl_le ; tea.
     move => i [? [?|] ?] /= ?.
-    + rewrite /on_free_vars_decl /test_decl /= !PCUICInst.addnP_xpredT => /andP [? ?].
+    + rewrite /on_free_vars_decl /test_decl /= !addnP_xpredT => /andP [? ?].
       apply /implyP => _.
       apply /andP ; split.
       all: rewrite lift_rename on_free_vars_rename Nat.add_0_r addnP_strengthen_lift //.
-    + rewrite /on_free_vars_decl /test_decl /= !PCUICInst.addnP_xpredT => ?.
+    + rewrite /on_free_vars_decl /test_decl /= !addnP_xpredT => ?.
       apply /implyP => _.
       rewrite lift_rename on_free_vars_rename Nat.add_0_r addnP_strengthen_lift //.
 
@@ -179,7 +179,7 @@ Proof.
   replace #|pparams p| with (context_assumptions (ind_params mdecl)).
   1: eapply closed_ind_predicate_context ; tea ; eapply declared_minductive_closed ; eauto.
   erewrite wf_predicate_length_pars ; tea.
-  eapply PCUICDeclarationTyping.onNpars, PCUICWeakeningEnv.on_declared_minductive ; eauto.
+  eapply onNpars, on_declared_minductive ; eauto.
 Qed.
 
 Lemma on_free_vars_case_branch_context `{checker_flags} {Σ : global_env_ext } {wfΣ : wf Σ} {P ci mdecl idecl p br cdecl} :
@@ -201,7 +201,7 @@ Proof.
   erewrite <- onNpars.
   2: eapply PCUICInductives.oi.
   2: apply decli.
-  eapply PCUICInst.closedn_ctx_cstr_branch_context.
+  eapply closedn_ctx_cstr_branch_context.
   eassumption.
 Qed.
 
@@ -321,7 +321,7 @@ Qed.
 
 Corollary lift_unlift_term {n k} t : unlift n k (lift n k t) = t.
 Proof.
-  by rewrite lift_rename /unlift rename_compose lift_unlift rename_ren_id.
+  by rewrite lift_rename /unlift (rename_compose _ _ _) lift_unlift rename_ren_id.
 Qed.
 
 Corollary lift_unlift_context {n k} Γ :
@@ -523,18 +523,6 @@ Proof.
   - by apply infering_typing.
 Qed.
 
-Axiom fix_guard_rename : forall P Σ Γ Δ mfix f,
-  urenaming P Γ Δ f ->
-  let mfix' := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
-  fix_guard Σ Δ mfix ->
-  fix_guard Σ Γ mfix'.
-
-Axiom cofix_guard_rename : forall P Σ Γ Δ mfix f,
-  urenaming P Γ Δ f ->
-  let mfix' := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
-  cofix_guard Σ Δ mfix ->
-  cofix_guard Σ Γ mfix'.
-
 Section BDRenaming.
 
 Context `{cf : checker_flags}.
@@ -728,11 +716,7 @@ Proof.
     rewrite rename_mkApps rename_it_mkLambda_or_LetIn map_app map_skipn /=.
     rewrite rename_case_predicate_context // case_predicate_context_length // rename_predicate_preturn.
     econstructor ; eauto.
-    + by eapply rename_wf_predicate.
-    + rewrite -rename_case_predicate_context ; tea.
-      eapply X1 ; tea.
-      eapply on_free_vars_case_predicate_context ; tea.
-    + eapply X3 ; tea.
+    + eapply X2 ; tea.
       * rewrite -rename_case_predicate_context //.
         erewrite <- case_predicate_context_length ; tea.
         apply urenaming_context ; assumption.
@@ -742,8 +726,12 @@ Proof.
         apply /andP ; split ; tea.
         rewrite on_free_vars_ctx_on_ctx_free_vars.
         eapply on_free_vars_case_predicate_context ; tea.
+    + by eapply rename_wf_predicate.
+    + rewrite -rename_case_predicate_context ; tea.
+      eapply X5 ; tea.
+      eapply on_free_vars_case_predicate_context ; tea.
     + rewrite -[subst_instance _ _](rename_closedn_ctx f 0).
-      { pose proof (declared_inductive_closed_params isdecl).
+      { pose proof (declared_inductive_closed_params H).
         now rewrite closedn_subst_instance_context. }
       rewrite rename_context_telescope rename_telescope_shiftn0 /=.
       eapply rename_telescope ; tea.
@@ -755,17 +743,11 @@ Proof.
     + now rewrite map_length.
 
     + rewrite /= firstn_map.
-      eapply bidirectional_on_free_vars in X4 ; tea.
-      eapply forallb_All in on_pars.
-      eapply All_firstn in X4.
-      eapply All2_map, All2_impl.
-      1: eapply All2_All_mix_right.
-      2: eapply All2_All_mix_left.
-      1-3: eassumption.
-      intros ? ? [[]].
+      eapply bidirectional_on_free_vars, (All_firstn (n := ci.(ci_npar))) in X ; tea.
+      solve_all.
       now eapply conv_renameP.
     + by apply rename_wf_branches.
-    + eapply Forall2_All2 in H5.
+    + eapply Forall2_All2 in H6.
       eapply All2i_All2_mix_left in X9; eauto.
       eapply All2i_All_mix_right in X9 ; eauto.
       eapply All2i_nth_hyp in X9.
@@ -778,7 +760,7 @@ Proof.
         split; eauto. }
       split; auto.
       { simpl. rewrite -rename_cstr_branch_context //.
-        1:eapply (declared_inductive_closed_params isdecl).
+        1:eapply (declared_inductive_closed_params H).
         rewrite rename_closedn_ctx //.
         eapply closed_cstr_branch_context.
         now split.
@@ -787,9 +769,9 @@ Proof.
       rewrite case_branch_type_fst.
       rewrite -rename_case_branch_context_gen //.
       2-3:len.
-      1:exact (declared_inductive_closed_params isdecl).
+      1:exact (declared_inductive_closed_params H).
       1:rewrite (wf_branch_length wfbr) //.
-      1:rewrite (wf_predicate_length_pars H0).
+      1:rewrite (wf_predicate_length_pars H1).
       1:erewrite declared_minductive_ind_npars ; eauto.
       assert (on_free_vars_ctx P brctxty.1).
       { rewrite case_branch_type_fst.
@@ -906,7 +888,7 @@ Qed.
 End BDRenaming.
 
 Theorem typing_renaming_cond_P `{checker_flags} {P f Σ Γ Δ t T} {wfΣ : wf Σ.1} :
-  PCUICRename.renaming P Σ Δ Γ f ->
+  renaming P Σ Δ Γ f ->
   on_ctx_free_vars P Γ ->
   on_free_vars P t ->
   Σ ;;; Γ |- t : T ->
@@ -941,7 +923,7 @@ Qed.
 Lemma urenaming_strengthen P Γ Γ' Γ'' :
   urenaming (strengthenP #|Γ''| #|Γ'| P) (Γ,,,Γ'') (Γ ,,, Γ' ,,, lift_context #|Γ'| 0 Γ'') (unlift_renaming #|Γ'| #|Γ''|).
 Proof.
-  rewrite <- PCUICWeakening.rename_context_lift_context.
+  rewrite <- rename_context_lift_context.
   intros i decl' pi nthi.
   rewrite /strengthenP in pi.
   destruct (Nat.ltb_spec0 i #|Γ''|) as [iΓ''|iΓ''].
@@ -1018,7 +1000,7 @@ Proof.
   { apply wf_local_app => //.
     erewrite <- (lift_unlift_context Γ'').
     eapply bidirectional_to_pcuic ; tea.
-    rewrite PCUICWeakening.rename_context_lift_context.
+    rewrite rename_context_lift_context.
     eapply bidirectional_renaming ; tea.
     - eapply All_local_app_rel, bidirectional_from_pcuic => //.
       eapply type_Prop_wf.
@@ -1027,7 +1009,7 @@ Proof.
     - eapply (urenaming_strengthen _ _ _ []).
     - apply (on_ctx_free_vars_strengthenP _ _ []) => //.
       eapply on_free_vars_ctx_on_ctx_free_vars_xpredT.
-      by apply PCUICWellScopedCumulativity.wf_local_closed_context.
+      by apply wf_local_closed_context.
     - rewrite -on_free_vars_ctx_lift_context.
       move: Hty => /typing_wf_local /closed_wf_local.
       rewrite closedn_ctx_app => /andP [_] /=.
@@ -1044,7 +1026,7 @@ Proof.
   4: eassumption.
   - split => //.
     apply urenaming_strengthen.
-  - move: wfΓ'' => /PCUICWellScopedCumulativity.wf_local_closed_context.
+  - move: wfΓ'' => /wf_local_closed_context.
     rewrite on_free_vars_ctx_app => /andP [? ?].
     apply on_ctx_free_vars_strengthenP.
     all: eapply on_free_vars_ctx_on_ctx_free_vars_xpredT ; eassumption.

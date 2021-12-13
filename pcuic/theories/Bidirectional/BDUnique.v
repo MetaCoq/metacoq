@@ -1,6 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICWeakening PCUICWeakeningEnv PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICUnivSubstitution PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICConfluence PCUICWellScopedCumulativity PCUICSR PCUICOnFreeVars.
+From MetaCoq.PCUIC Require Import PCUICGlobalEnv PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICEquality PCUICArities PCUICInversion PCUICReduction PCUICSubstitution PCUICConversion PCUICCumulativity PCUICGeneration PCUICWfUniverses PCUICContextConversion PCUICContextSubst PCUICContexts PCUICSpine PCUICWfUniverses PCUICUnivSubst PCUICClosed PCUICInductives PCUICValidity PCUICInductiveInversion PCUICConfluence PCUICWellScopedCumulativity PCUICSR PCUICOnFreeVars PCUICClosedTyp.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping BDToPCUIC BDFromPCUIC.
 
 Require Import ssreflect ssrbool.
@@ -193,13 +193,13 @@ Proof.
    
   - intros ? T' ty_T'.
     inversion ty_T' ; subst.
-    move: (isdecl) => /declared_inductive_inj /(_ isdecl0) [? ?].
+    move: (H) => /declared_inductive_inj /(_ H13) [? ?].
     subst.
     assert (op' : is_open_term Γ (mkApps ptm0 (skipn (ci_npar ci) args0 ++ [c]))).
       by now eapply type_is_open_term, infering_typing.
     move: op'.
     rewrite on_free_vars_mkApps => /andP [optm' oargs'].
-    eapply X3 in X12 as [args'' []] ; tea.
+    eapply X0 in X9 as [args'' []] ; tea.
     subst.
     eexists (mkApps ptm ((skipn (ci_npar ci) args'') ++ [c])).
     split.

@@ -5,7 +5,7 @@ From Coq Require String.
 From MetaCoq.Template Require Import config utils monad_utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICUtils
-  PCUICPosition PCUICTyping PCUICWellScopedCumulativity.
+  PCUICPosition PCUICTyping PCUICCumulativity PCUICReduction.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping.
 
 From MetaCoq Require Export LibHypsNaming.
@@ -31,7 +31,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   Σ ;;; Γ |- tRel n ▹ lift0 (S n) (decl_type decl)
 
 | infer_Sort s :
-  wf_universe Σ s->
+  wf_universe Σ s ->
   Σ ;;; Γ |- tSort s ▹ tSort (Universe.super s)
 
 | infer_Prod na A B s1 s2 :
@@ -70,25 +70,27 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   Σ ;;; Γ |- tConstruct ind i u ▹ type_of_constructor mdecl cdecl (ind, i) u
 
-| infer_Case (ci : case_info) p c brs ps :
-  forall mdecl idecl (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
+| infer_Case ci p c brs args u ps mdecl idecl : 
+  let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+  let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+  Σ ;;; Γ |- c ▹{ci} (u,args) ->
+  declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
+  Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
+  (* case_side_conditions (fun Σ Γ => wf_local Σ Γ) checking Σ Γ ci p ps
+    mdecl idecl indices predctx -> *) (*issue with wf_local_rel vs wf_local *)
   mdecl.(ind_npars) = ci.(ci_npar) ->
   All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
-  let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
   wf_predicate mdecl idecl p ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_local_bd_rel Σ Γ predctx ->
-  Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
   is_allowed_elimination Σ ps (ind_kelim idecl) ->
-  forall u args,
-  Σ ;;; Γ |- c ▹{ci} (u,args) ->
   ctx_inst checking Σ Γ (pparams p)
-      (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
+      (List.rev mdecl.(ind_params)@[p.(puinst)]) ->
+  isCoFinite mdecl.(ind_finite) = false ->
   R_global_instance Σ (eq_universe Σ) (leq_universe Σ)
       (IndRef ci) #|args| u (puinst p) ->
-  All2 (conv Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
-  isCoFinite mdecl.(ind_finite) = false ->
-  let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+  All2 (convAlgo Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
+  (* case_branch_typing *)
   wf_branches idecl brs ->
   All2i (fun i cdecl br =>
     All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
@@ -98,16 +100,14 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
     0 idecl.(ind_ctors) brs ->
   Σ ;;; Γ |- tCase ci p c brs ▹ mkApps ptm (skipn ci.(ci_npar) args ++ [c])
 
-| infer_Proj p c u :
-  forall mdecl idecl cdecl pdecl, 
+| infer_Proj p c u mdecl idecl cdecl pdecl args :
   declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
-  forall args,
   Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
   #|args| = ind_npars mdecl ->
   let ty := snd pdecl in
   Σ ;;; Γ |- tProj p c ▹ subst0 (c :: List.rev args) (subst_instance u ty)
 
-| infer_Fix (mfix : mfixpoint term) n decl :
+| infer_Fix mfix n decl :
   fix_guard Σ Γ mfix ->
   nth_error mfix n = Some decl ->
   All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▹□ s}) mfix ->
@@ -144,7 +144,7 @@ with infering_indu `{checker_flags} (Σ : global_env_ext) (Γ : context) : induc
 with checking `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
 | check_Cons t T T':
   Σ ;;; Γ |- t ▹ T ->
-  cumul Σ Γ T T' ->
+  Σ ;;; Γ |- T <= T' ->
   Σ ;;; Γ |- t ◃ T'
 
 where " Σ ;;; Γ |- t ▹ T " := (@infering _ Σ Γ t T) : type_scope
@@ -201,7 +201,7 @@ Proof.
     | H1 : size |- _  => exact (S H1)
     | |- _ => exact 1
     end.
-    - exact (S (Nat.max a0 (Nat.max i (Nat.max i1 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (infering_sort_size _) a2)))))).
+    - exact (S (Nat.max a0 (Nat.max i (Nat.max i0 (Nat.max (ctx_inst_size _ (checking_size _) c1) (branches_size (checking_size _) (infering_sort_size _) a2)))))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
                (all_size _ (fun x p => checking_size _ _ _ _ _ p) a0))).
     - exact (S (Nat.max (all_size _ (fun d p => infering_sort_size _ _ _ _ _ p.π2) a)
@@ -378,30 +378,32 @@ Section BidirectionalInduction.
       Pinfer Γ (tConstruct ind i u)
         (type_of_constructor mdecl cdecl (ind, i) u)) ->
 
-    (forall (Γ : context) (ci : case_info) p c brs ps mdecl idecl
-      (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
-      mdecl.(ind_npars) = ci.(ci_npar) ->
-      All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+    (forall (Γ : context) ci p c brs args u ps mdecl idecl,
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-      wf_predicate mdecl idecl p ->
-      consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-      wf_local_bd_rel Σ Γ predctx ->
-      PΓ_rel Γ predctx ->
-      Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
-      Psort (Γ ,,, predctx) p.(preturn) ps ->
-      is_allowed_elimination Σ ps idecl.(ind_kelim) ->
-      forall u args,
+      let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       Σ ;;; Γ |- c ▹{ci} (u,args) ->
       Pind Γ ci.(ci_ind) c u args ->
-      ctx_inst checking Σ Γ p.(pparams)
-          (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
+      declared_inductive Σ.1 ci.(ci_ind) mdecl idecl ->
+      Σ ;;; Γ ,,, predctx |- p.(preturn) ▹□ ps ->
+      Psort (Γ ,,, predctx) p.(preturn) ps ->
+      (* case_side_conditions (fun Σ Γ => wf_local Σ Γ) checking Σ Γ ci p ps
+        mdecl idecl indices predctx -> *) (*issue with wf_local_rel vs wf_local *)
+      mdecl.(ind_npars) = ci.(ci_npar) ->
+      All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+      wf_predicate mdecl idecl p ->
+      consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
+      wf_local_bd_rel Σ Γ predctx ->
+      PΓ_rel Γ predctx ->
+      is_allowed_elimination Σ ps (ind_kelim idecl) ->
+      ctx_inst checking Σ Γ (pparams p)
+          (List.rev mdecl.(ind_params)@[p.(puinst)]) ->
       ctx_inst (fun _ => Pcheck) Σ Γ p.(pparams)
           (List.rev (subst_instance p.(puinst) mdecl.(ind_params))) ->
+      isCoFinite mdecl.(ind_finite) = false ->
       R_global_instance Σ (eq_universe Σ) (leq_universe Σ)
           (IndRef ci) #|args| u (puinst p) ->
-      All2 (conv Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
-      isCoFinite mdecl.(ind_finite) = false ->
-      let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
+      All2 (convAlgo Σ Γ) (firstn (ci_npar ci) args) (pparams p) ->
+      (* case_branch_typing *)
       wf_branches idecl brs ->
       All2i (fun i cdecl br =>
         All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
@@ -462,7 +464,7 @@ Section BidirectionalInduction.
     (forall (Γ : context) (t T T' : term),
       Σ ;;; Γ |- t ▹ T ->
       Pinfer Γ t T ->
-      cumul Σ Γ T T' ->
+      Σ ;;; Γ |- T <= T' ->
       Pcheck Γ t T') ->
       
     env_prop_bd.

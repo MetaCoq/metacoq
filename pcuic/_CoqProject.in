@@ -94,12 +94,12 @@ theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
 
-theories/bidirectional/BDEnvironmentTyping.v
-theories/bidirectional/BDTyping.v
-theories/bidirectional/BDToPCUIC.v
-theories/bidirectional/BDFromPCUIC.v
-theories/bidirectional/BDUnique.v
-theories/bidirectional/BDStrengthening.v
+theories/Bidirectional/BDEnvironmentTyping.v
+theories/Bidirectional/BDTyping.v
+theories/Bidirectional/BDToPCUIC.v
+theories/Bidirectional/BDFromPCUIC.v
+theories/Bidirectional/BDUnique.v
+theories/Bidirectional/BDStrengthening.v
 
 # theories/All.v
 

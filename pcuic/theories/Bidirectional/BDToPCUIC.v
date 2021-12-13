@@ -1,6 +1,6 @@
 From Coq Require Import Bool List Arith Lia.
 From MetaCoq.Template Require Import config utils monad_utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICUnivSubstitution PCUICWeakening PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICWeakeningEnv PCUICContexts PCUICSpine PCUICSR PCUICWellScopedCumulativity PCUICConversion PCUICOnFreeVars.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICLiftSubst PCUICTyping PCUICInversion PCUICInductives PCUICInductiveInversion PCUICEquality PCUICUnivSubst PCUICClosed PCUICSubstitution PCUICValidity PCUICCumulativity PCUICInductives PCUICWfUniverses PCUICContexts PCUICSpine PCUICSR PCUICWellScopedCumulativity PCUICConversion PCUICOnFreeVars PCUICWeakeningTyp PCUICUnivSubstitutionTyp PCUICClosedTyp PCUICUnivSubstitutionConv.
 From MetaCoq.PCUIC Require Import BDEnvironmentTyping BDTyping.
 
 Require Import ssreflect ssrbool.
@@ -279,7 +279,7 @@ Section BDToPCUICTyping.
       { apply ctx_inst_impl ; auto.
         rewrite rev_involutive.
         apply wf_rel_weak ; auto.
-        move: (isdecl) => [? ?].
+        move: (H) => [? ?].
         eapply wf_local_subst_instance_decl ; eauto.
         eapply wf_local_app_inv.
         now eapply on_minductive_wf_params_indices.
@@ -291,27 +291,31 @@ Section BDToPCUICTyping.
         eapply equality_mkApps_eq.
         1-3: fvs.
         - now constructor.
-        - eapply type_is_open_term in X5 ; eauto.
-          move: X5.
+        - eapply type_is_open_term in X0 ; eauto.
+          move: X0.
           rewrite on_free_vars_mkApps -{-3}(firstn_skipn (ci_npar ci) args)
           forallb_app /= => /andP [? ?].
           apply All2_app ; tea.
-          + eapply into_equality_terms ; tea.
-            1: fvs.
-            eapply All_forallb'.
-            1: eapply ctx_inst_closed ; tea.
-            intros.
-            by rewrite -is_open_term_closed.
+          + assert (forallb (is_open_term Γ) p.(pparams)).
+            {
+              eapply All_forallb'.
+              1: now eapply ctx_inst_closed.
+              intros.
+              by rewrite -is_open_term_closed.
+            }
+            solve_all.
+            eapply into_equality ; tea.
+            fvs.
           + now apply equality_terms_refl ; fvs.
       }
 
       assert (ctx_inst Σ Γ (pparams p ++ skipn (ci_npar ci) args)
         (List.rev (subst_instance (puinst p) (ind_params mdecl,,, ind_indices idecl)))).
       {
-        rewrite -H.
+        rewrite -H0.
         eapply ctx_inst_app_weak ; eauto.
         1: eapply validity ; auto.
-        now rewrite H.
+        now rewrite H0.
       }
       
       assert (isType Σ Γ (mkApps (tInd ci (puinst p))
@@ -325,7 +329,7 @@ Section BDToPCUICTyping.
         rewrite !subst_instance_it_mkProd_or_LetIn -it_mkProd_or_LetIn_app -subst_instance_app - (app_nil_r (pparams p ++ skipn (ci_npar ci) args)).
         eapply arity_spine_it_mkProd_or_LetIn ; auto.
         - unshelve apply ctx_inst_spine_subst ; auto.
-          apply PCUICWeakening.weaken_wf_local ; auto.
+          apply weaken_wf_local ; auto.
           eapply on_minductive_wf_params_indices_inst ; eauto.
         - cbn.
           constructor.
@@ -338,7 +342,8 @@ Section BDToPCUICTyping.
       }
       
       econstructor ; eauto.
-      1: now eapply type_Cumul ; eauto ; eapply equality_forget_cumul.
+      2-3: split ; eauto.
+      1: now eapply type_Cumul ; eauto ; apply cumulAlgo_cumulSpec in cum.
 
       eapply All2i_impl.
       1:{ apply All2i_prod ; [eassumption|idtac].
@@ -435,8 +440,11 @@ Section BDToPCUICTyping.
 
     - red ; intros.
       destruct X3.
-      now econstructor.
-
+      econstructor ; eauto.
+      eapply (cumulAlgo_cumulSpec _ (le := true)), into_equality ; tea.
+      + fvs. 
+      + now eapply type_is_open_term.
+      + now eapply subject_is_open_term. 
   Qed.
 
 End BDToPCUICTyping.

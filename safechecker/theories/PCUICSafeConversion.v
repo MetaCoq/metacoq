@@ -63,7 +63,7 @@ Section Conversion.
   Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
   Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
 
-  Local Definition hΣ' : ∥ wf_ext Σ ∥.
+  Local Definition heΣ : ∥ wf_ext Σ ∥.
   Proof.
     destruct hΣ, Hφ; now constructor.
   Defined.
@@ -146,7 +146,7 @@ Section Conversion.
   Proof.
     intros Γ [u hu].
     destruct hΣ as [hΣ'].
-    apply normalisation_upto in hu as h. 2: assumption.
+    apply normalisation_upto in hu as h. 2: exact heΣ.
     dependent induction h.
     constructor. intros [y hy] r.
     unfold wcored in r. cbn in r.
@@ -274,7 +274,9 @@ Section Conversion.
           -- left. unfold posR in *.
              simpl in *. assumption.
           -- right. assumption.
-    - eapply normalisation_upto. all: assumption.
+    - eapply normalisation_upto.
+      2: assumption.
+      1: exact heΣ.
   Qed.
 
   Notation pzt u := (zipc (tm1 u) (stk1 u)) (only parsing).
@@ -701,15 +703,15 @@ Section Conversion.
          (mkpack Γ s t1 π1 t2 π2 h2) ->
        Ret s' Γ t1' π1' t2' π2'.
 
-  Notation yes := (Success _) (only parsing).
-  Notation no := (fun e => Error e _) (only parsing).
+  Local Notation yes := (Success _) (only parsing).
+  Local Notation no := (fun e => Error e _) (only parsing).
 
   (* TODO NOTE
      repack could also take another argument of type
      ConversionError -> ConversionError
      to keep a full error trace (we currently only do it partially).
   *)
-  Notation repack e :=
+  Local Notation repack e :=
     (match e with Success h => Success _ | Error er h => Error er _ end)
     (only parsing).
 
@@ -742,11 +744,11 @@ Section Conversion.
     with inspect (decompose_stack π1) := {
     | @exist (args1, ρ1) e1 with inspect (decompose_stack π2) := {
       | @exist (args2, ρ2) e2
-        with inspect (reduce_stack RedFlags.nodelta Σ hΣ
+        with inspect (reduce_stack RedFlags.nodelta Σ heΣ
                                    (Γ ,,, stack_context π1)
                                    t1 (appstack args1 []) _) := {
         | @exist (t1',π1') eq1
-          with inspect (reduce_stack RedFlags.nodelta Σ hΣ
+          with inspect (reduce_stack RedFlags.nodelta Σ heΣ
                                      (Γ ,,, stack_context π2)
                                      t2 (appstack args2 []) _) := {
           | @exist (t2',π2') eq2 => isconv_prog leq t1' (π1' ++ ρ1) t2' (π2' ++ ρ2) aux
@@ -897,7 +899,7 @@ Section Conversion.
 
     unfold_one_fix Γ mfix idx π h with inspect (unfold_fix mfix idx) := {
     | @exist (Some (arg, fn)) eq1 with inspect (decompose_stack_at π arg) := {
-      | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ hΣ
+      | @exist (Some (l, c, θ)) eq2 with inspect (reduce_stack RedFlags.default Σ heΣ
                                                                (Γ ,,, stack_context θ) c [] _) := {
         | @exist (cred, ρ) eq3 with construct_viewc cred := {
           | view_construct ind n ui := Some (fn, appstack l (App_l (zipc (tConstruct ind n ui) ρ) :: θ)) ;
@@ -1268,9 +1270,9 @@ Section Conversion.
     eapply Forall2_impl. 1: eassumption.
     intros. eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
     all: auto.
-    + destruct hΣ'. sq. eapply wf_ext_global_uctx_invariants.
-      eapply X.
-    + destruct hΣ'. sq; eapply global_ext_uctx_consistent; assumption.
+    + pose proof heΣ. sq. eapply wf_ext_global_uctx_invariants.
+      assumption.
+    + pose proof heΣ. sq. eapply global_ext_uctx_consistent; assumption.
   Qed.
   
   Arguments LevelSet.mem : simpl never.
@@ -1284,13 +1286,14 @@ Section Conversion.
     conv_pb_relb leq u u'.
   Proof.
     intros all1 all2 conv.
+    destruct heΣ.
     destruct leq; cbn.
     - eapply check_eqb_universe_complete; eauto.
-      + destruct hΣ' as [hΣ']; apply wf_ext_global_uctx_invariants, hΣ'.
-      + destruct hΣ' as [hΣ']; apply global_ext_uctx_consistent, hΣ'.
+      + now apply wf_ext_global_uctx_invariants.
+      + now apply global_ext_uctx_consistent.
     - eapply check_leqb_universe_complete; eauto.
-      + destruct hΣ' as [hΣ']; apply wf_ext_global_uctx_invariants, hΣ'.
-      + destruct hΣ' as [hΣ']; apply global_ext_uctx_consistent, hΣ'.
+      + now apply wf_ext_global_uctx_invariants.
+      + now apply global_ext_uctx_consistent.
   Qed.
   
   Lemma get_level_make l :
@@ -2529,7 +2532,7 @@ Section Conversion.
   Lemma reduced_case_discriminee_whne Γ π ci p c brs h :
     eqb_term (reduce_term
                 RedFlags.default
-                Σ hΣ (Γ,,, stack_context π) c h) c = true ->
+                Σ heΣ (Γ,,, stack_context π) c h) c = true ->
     isred_full Γ (tCase ci p c brs) π ->
     ∥whne RedFlags.default Σ (Γ,,, stack_context π) c∥.
   Proof.
@@ -2560,10 +2563,10 @@ Section Conversion.
     conv_stack_ctx Γ π π' ->
     true = eqb_term (reduce_term
                        RedFlags.default
-                       Σ hΣ (Γ,,, stack_context π) c h) c ->
+                       Σ heΣ (Γ,,, stack_context π) c h) c ->
     true = eqb_term (reduce_term
                        RedFlags.default
-                       Σ hΣ (Γ,,, stack_context π') c' h') c' ->
+                       Σ heΣ (Γ,,, stack_context π') c' h') c' ->
     welltyped Σ Γ (zipc (tCase ci p c brs) π) ->
     welltyped Σ Γ (zipc (tCase ci' p' c' brs') π') ->
     isred_full Γ (tCase ci p c brs) π ->
@@ -2589,8 +2592,8 @@ Section Conversion.
     red in isr1.
     eapply welltyped_zipc_zipp, welltyped_zipp_inv in wtc. 2:sq; auto.
     eapply welltyped_zipc_zipp, welltyped_zipp_inv in wtc'. 2:sq; auto.
-    destruct wtc. eapply inversion_Case in X0 as [mdecl [idecl [isdecl [indices [[] ?]]]]]; tea.
-    destruct wtc'. eapply inversion_Case in X0 as [mdecl' [idecl' [isdecl' [indices' [[] ?]]]]]; tea.
+    destruct wtc. eapply inversion_Case in X1 as [mdecl [idecl [isdecl [indices [[] ?]]]]]; tea.
+    destruct wtc'. eapply inversion_Case in X1 as [mdecl' [idecl' [isdecl' [indices' [[] ?]]]]] ; tea.
     eapply conv_cum_tCase_inv in equality_Case; eauto.
     destruct equality_Case as [[<- ? ? ?]].
     split; split; auto.
@@ -2599,7 +2602,7 @@ Section Conversion.
   Lemma reduced_proj_body_whne Γ π p c h :
     true = eqb_term (reduce_term
                 RedFlags.default
-                Σ hΣ (Γ,,, stack_context π) c h) c ->
+                Σ heΣ (Γ,,, stack_context π) c h) c ->
     isred_full Γ (tProj p c) π ->
     ∥whne RedFlags.default Σ (Γ,,, stack_context π) c∥.
   Proof.
@@ -2619,10 +2622,10 @@ Section Conversion.
     conv_stack_ctx Γ π π' ->
     true = eqb_term (reduce_term
                        RedFlags.default
-                       Σ hΣ (Γ,,, stack_context π) c h) c ->
+                       Σ heΣ (Γ,,, stack_context π) c h) c ->
     true = eqb_term (reduce_term
                        RedFlags.default
-                       Σ hΣ (Γ,,, stack_context π') c' h') c' ->
+                       Σ heΣ (Γ,,, stack_context π') c' h') c' ->
     isred_full Γ (tProj p c) π ->
     isred_full Γ (tProj p' c') π' ->
     conv_cum leq Σ (Γ,,, stack_context π) (zipp (tProj p c) π) (zipp (tProj p' c') π') ->
@@ -3096,9 +3099,9 @@ Section Conversion.
       } ;
 
     | prog_view_Case ci p c brs ci' p' c' brs'
-      with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
+      with inspect (reduce_term RedFlags.default Σ heΣ (Γ ,,, stack_context π1) c _) := {
       | @exist cred eq1 with inspect (eqb_term cred c) := {
-        | @exist true eq2 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
+        | @exist true eq2 with inspect (reduce_term RedFlags.default Σ heΣ (Γ ,,, stack_context π2) c' _) := {
           | @exist cred' eq3 with inspect (eqb_term cred' c') := {
             | @exist true eq4 with inspect (eqb ci ci') := {
               | @exist true eq5
@@ -3139,9 +3142,9 @@ Section Conversion.
         }
       } ;
 
-    | prog_view_Proj p c p' c' with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π1) c _) := {
+    | prog_view_Proj p c p' c' with inspect (reduce_term RedFlags.default Σ heΣ (Γ ,,, stack_context π1) c _) := {
       | @exist cred eq1 with inspect (eqb_term cred c) := {
-        | @exist true eq3 with inspect (reduce_term RedFlags.default Σ hΣ (Γ ,,, stack_context π2) c' _) := {
+        | @exist true eq3 with inspect (reduce_term RedFlags.default Σ heΣ (Γ ,,, stack_context π2) c' _) := {
           | @exist cred' eq2 with inspect (eqb_term cred' c') := {
             | @exist true eq4 with inspect (eqb p p') := {
               | @exist true eq5 with isconv_red_raw Conv c (Proj p :: π1) c' (Proj p' :: π2) aux := {
@@ -3173,7 +3176,7 @@ Section Conversion.
       with inspect (unfold_one_fix Γ mfix idx π1 _) := {
       | @exist (Some (fn, θ)) eq1 with inspect (decompose_stack θ) := {
         | @exist (l', θ') eq2
-          with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' []) _) := {
+          with inspect (reduce_stack RedFlags.nodelta Σ heΣ (Γ ,,, stack_context θ') fn (appstack l' []) _) := {
           | @exist (fn', ρ) eq3 :=
             isconv_prog leq fn' (ρ ++ θ') (tFix mfix' idx') π2 aux
           }
@@ -3182,7 +3185,7 @@ Section Conversion.
         | @exist (Some (fn, θ)) eq1
           with inspect (decompose_stack θ) := {
           | @exist (l', θ') eq2
-            with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context θ') fn (appstack l' []) _) := {
+            with inspect (reduce_stack RedFlags.nodelta Σ heΣ (Γ ,,, stack_context θ') fn (appstack l' []) _) := {
             | @exist (fn', ρ) eq3 :=
               isconv_prog leq (tFix mfix idx) π1 fn' (ρ ++ θ') aux
             }
@@ -3549,7 +3552,7 @@ Section Conversion.
     congruence.
   Qed.
   Next Obligation.
-    eapply red_welltyped; [auto|..].
+    eapply red_welltyped ; [auto|..].
     - exact h2.
     - match goal with
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
@@ -4364,7 +4367,7 @@ Section Conversion.
             (p : predicate term) (c : term) (brs : list (branch term))
             (h : welltyped Σ Γ (tCase ci p c brs)) : option term :=
     unfold_one_case Γ ci p c brs h
-    with inspect (reduce_stack RedFlags.default Σ hΣ Γ c [] _) := {
+    with inspect (reduce_stack RedFlags.default Σ heΣ Γ c [] _) := {
     | @exist (cred, ρ) eq with cc_viewc cred := {
       | ccview_construct ind' n ui with inspect (decompose_stack ρ) := {
         | @exist (args, ξ) eq' with inspect (nth_error brs n) := {
@@ -4480,7 +4483,7 @@ Section Conversion.
             (h : welltyped Σ Γ (tProj p c)) : option term :=
 
     unfold_one_proj Γ p c h with p := {
-    | (i, pars, narg) with inspect (reduce_stack RedFlags.default Σ hΣ Γ c [] _) := {
+    | (i, pars, narg) with inspect (reduce_stack RedFlags.default Σ heΣ Γ c [] _) := {
       | @exist (cred, ρ) eq with cc0_viewc cred := {
         | cc0view_construct ind' ui with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (nth_error args (pars + narg)) := {
@@ -4577,7 +4580,8 @@ Section Conversion.
       eapply PCUICSR.subject_reduction in typ.
       2: eauto.
       2: eapply red_proj_c, r.
-      eapply whnf_proj_arg_whne; eauto.
+      eapply whnf_proj_arg_whne ; eauto.
+      1: exact heΣ.
       now destruct cred.
     - match type of H3 with
       | _ = False_rect _ ?f => destruct f
@@ -4847,7 +4851,7 @@ Section Conversion.
     with inspect (reducible_head Γ t1 π1 h1) := {
     | @exist (Some (rt1, ρ1)) eq1 with inspect (decompose_stack ρ1) := {
       | @exist (l1, θ1) eq2
-        with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context ρ1) rt1 (appstack l1 []) _) := {
+        with inspect (reduce_stack RedFlags.nodelta Σ heΣ (Γ ,,, stack_context ρ1) rt1 (appstack l1 []) _) := {
         | @exist (rt1', θ1') eq3 :=
           isconv_prog leq rt1' (θ1' ++ θ1) t2 π2 aux
         }
@@ -4855,7 +4859,7 @@ Section Conversion.
     | @exist None nored1 with inspect (reducible_head Γ t2 π2 h2) := {
       | @exist (Some (rt2, ρ2)) eq1 with inspect (decompose_stack ρ2) := {
         | @exist (l2, θ2) eq2
-          with inspect (reduce_stack RedFlags.nodelta Σ hΣ (Γ ,,, stack_context ρ2) rt2 (appstack l2 []) _) := {
+          with inspect (reduce_stack RedFlags.nodelta Σ heΣ (Γ ,,, stack_context ρ2) rt2 (appstack l2 []) _) := {
           | @exist (rt2', θ2') eq3 :=
             isconv_prog leq t1 π1 rt2' (θ2' ++ θ2) aux
           }

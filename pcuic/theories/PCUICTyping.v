@@ -350,7 +350,8 @@ Definition branches_size {cf} {Σ Γ ci mdecl idecl p ps ptm brs}
       (Nat.max (typing_size _ _ _ _ p.2.2.1) (typing_size _ _ _ _ p.2.2.2))) a).
 
 Section CtxInstSize.
-  Context {cf} (typing_size : forall {Σ Γ t T}, Σ ;;; Γ |- t : T -> size).
+  Context {cf} (typing : global_env_ext -> context -> term -> term -> Type)
+  (typing_size : forall {Σ Γ t T}, typing Σ Γ t T -> size).
 
   Fixpoint ctx_inst_size {Σ Γ args Δ} (c : ctx_inst typing Σ Γ args Δ) : size :=
   match c with
@@ -385,7 +386,7 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max (wf_local_size _ typing_size _ wf_pctx)
-      (Nat.max (ctx_inst_size typing_size ind_inst)
+      (Nat.max (ctx_inst_size _ typing_size ind_inst)
         (Nat.max d2 (Nat.max d3 (branches_size typing_size brs_ty)))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) 
     (all_size _ (fun x p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
@@ -903,7 +904,7 @@ Proof.
           lia.
         ++ clear -ind_inst X14.
           assert (forall (Γ' : context) (t T : term) (Hty : Σ;;; Γ' |- t : T),
-            typing_size Hty <= ctx_inst_size (@typing_size _) ind_inst ->
+            typing_size Hty <= ctx_inst_size _ (@typing_size _) ind_inst ->
             P Σ Γ' t T).
           { intros. eapply (X14 _ _ _ Hty). simpl.
             change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)

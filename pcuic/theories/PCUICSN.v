@@ -17,7 +17,7 @@ Section Normalisation.
 
   (* todo: missing wf_env hypothesis !*)
   Axiom normalisation :
-    wf Σ ->
+    wf_ext Σ ->
     forall Γ t,
       welltyped Σ Γ t ->
       Acc (cored Σ Γ) t.
@@ -40,7 +40,7 @@ Section Alpha.
 
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥).
+  Context (hΣ : ∥ wf_ext Σ ∥).
 
   Notation eqt u v :=
     (∥ eq_term Σ (global_ext_constraints Σ) u v ∥).

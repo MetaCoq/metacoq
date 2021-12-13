@@ -220,12 +220,12 @@ Section Lemmata.
       eapply equality_Prod; auto. apply equality_refl => //.
   Qed.
 
-  Context (hΣ : ∥ wf Σ ∥).
+  Context (hΣ : wf Σ).
 
   Lemma validity_wf {Γ t T} :
     ∥ Σ ;;; Γ |- t : T ∥ -> welltyped Σ Γ T.
   Proof.
-    destruct hΣ as [wΣ]. intros [X].
+    intros [X].
     intros. eapply validity in X; try assumption.
     destruct X. now exists (tSort x).
   Defined.
@@ -233,7 +233,7 @@ Section Lemmata.
   Lemma wat_welltyped {Γ T} :
     ∥ isType Σ Γ T ∥ -> welltyped Σ Γ T.
   Proof.
-    destruct hΣ as [wΣ]. intros [X].
+    intros [X].
     now apply isType_welltyped.
   Defined.
 
@@ -243,7 +243,6 @@ Section Lemmata.
       welltyped Σ Γ v.
   Proof.
     intros [A h] e.
-    destruct hΣ.
     exists A. eapply typing_alpha ; eauto.
   Qed.
 
@@ -280,7 +279,6 @@ Section Lemmata.
       cored Σ Γ v u ->
       welltyped Σ Γ v.
   Proof.
-    destruct hΣ as [wΣ]; clear hΣ.
     intros Γ u v h r.
     revert h. induction r ; intros h.
     - destruct h as [A h]. exists A.
@@ -390,7 +388,6 @@ Section Lemmata.
       welltyped Σ Γ (zip t) ->
       welltyped Σ (Γ ,,, stack_context (snd t)) (fst t).
   Proof.
-    destruct hΣ as [wΣ].
     intros Γ [t π] h. simpl.
     destruct h as [T h].
     induction π in Γ, t, T, h |- *.
@@ -607,7 +604,6 @@ Section Lemmata.
       welltyped Σ Γ (it_mkLambda_or_LetIn Δ t) ->
       welltyped Σ (Γ ,,, Δ) t.
   Proof.
-    destruct hΣ as [wΣ].
     intros Γ Δ t h.
     induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
     - assumption.
@@ -755,7 +751,6 @@ Section Lemmata.
       welltyped Σ Γ t ->
       isProd t.
   Proof.
-    destruct hΣ as [wΣ].
     intros Γ t hp hw.
     induction t in Γ, hp, hw |- *.
     all: try discriminate hp.
@@ -932,7 +927,6 @@ Section Lemmata.
       ∥ red (fst Σ) Γ u v ∥ ->
       welltyped Σ Γ v.
   Proof.
-    destruct hΣ as [wΣ]; clear hΣ.
     intros Γ u v h [r].
     revert h. induction r using red_rect' ; intros h.
     - assumption.
@@ -961,7 +955,8 @@ Section Lemmata.
       nth_error l (pars + narg) <> None.
   Proof.
     intros Γ i pars narg i' c u l [T h].
-    apply PCUICInductiveInversion.invert_Proj_Construct in h as (<-&->&?); auto.
+    apply PCUICInductiveInversion.invert_Proj_Construct in h as (<-&->&?).
+    2: now sq.
     now apply nth_error_Some.
   Qed.
 
@@ -1067,9 +1062,8 @@ Section Lemmata.
       welltyped Σ Γ (tCase ci pred (mkApps (tConstruct ind' i u) args) brs) ->
       ci.(ci_ind) = ind'.
   Proof.
-    destruct hΣ as [wΣ].
     intros Γ ci ind' pred i u brs args [A h].
-    apply PCUICInductiveInversion.invert_Case_Construct in h; intuition auto.
+    apply PCUICInductiveInversion.invert_Case_Construct in h; intuition auto using sq.
   Qed.
 
   Lemma Proj_Construct_ind_eq :
@@ -1077,7 +1071,6 @@ Section Lemmata.
       welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
       i = i'.
   Proof.
-    destruct hΣ as [wΣ].
     intros Γ i i' pars narg c u l [T h].
     now apply PCUICInductiveInversion.invert_Proj_Construct in h.
   Qed.

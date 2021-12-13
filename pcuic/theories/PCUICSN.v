@@ -10,13 +10,26 @@ Require Import Equations.Prop.DepElim.
    We state is as well-foundedness of the reduction.
  *)
 
+Definition check_univs_tc {cf : checker_flags} : Prop := check_univs.
+Existing Class check_univs_tc.
+
+#[local] Instance default_cu : @check_univs_tc default_checker_flags.
+  Proof.
+    constructor.
+  Qed.
+
+#[local] Instance extraction_cu : @check_univs_tc extraction_checker_flags.
+Proof.
+  constructor.
+Qed.
+
 Section Normalisation.
 
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
 
-  (* todo: missing wf_env hypothesis !*)
   Axiom normalisation :
+    forall {_ : check_univs_tc},
     wf_ext Σ ->
     forall Γ t,
       welltyped Σ Γ t ->
@@ -38,7 +51,7 @@ End Normalisation.
  *)
 Section Alpha.
 
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {cu : check_univs_tc}.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf_ext Σ ∥).
 
@@ -138,7 +151,7 @@ Section Alpha.
     destruct hΣ.
     intros Γ u h.
     apply normalisation in h.
-    2: assumption.
+    2-3: assumption.
     eapply Acc_cored_cored'.
     - eassumption.
     - apply eq_term_refl.

@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICInduction PCUICLiftSubst PCUICContexts PCUICSpine
   PCUICConversion PCUICValidity PCUICInductives PCUICConversion
   PCUICInductiveInversion PCUICNormal PCUICSafeLemmata
-  PCUICParallelReductionConfluence PCUICSN
+  PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity.
   

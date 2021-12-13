@@ -58,16 +58,12 @@ Qed.
 
 Section Conversion.
 
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {cu : check_univs_tc}.
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
+  Context (heΣ : ∥ wf_ext Σ ∥).
   Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
 
-  Local Definition heΣ : ∥ wf_ext Σ ∥.
-  Proof.
-    destruct hΣ, Hφ; now constructor.
-  Defined.
-
+  Local Definition hΣ : ∥ wf Σ ∥ := map_squash (wf_ext_wf _) heΣ.
 
   Set Equations With UIP.
 
@@ -474,8 +470,10 @@ Section Conversion.
     split.
     - eapply eq_context_upto_cat.
       + eapply eq_context_upto_refl; tc.
-      + eapply eqb_ctx_spec; eassumption.
-    - eapply eqb_term_spec; eassumption.
+      + eapply eqb_ctx_spec ; tea.
+        all: now sq ; destruct heΣ.
+    - eapply eqb_term_spec; tea.
+      all: now sq ; destruct heΣ.
   Qed.
 
   Definition leqb_term_stack t1 π1 t2 π2 :=
@@ -495,8 +493,10 @@ Section Conversion.
     split.
     - eapply eq_context_upto_cat.
       + eapply eq_context_upto_refl; tc.
-      + eapply eqb_ctx_spec; eassumption.
-    - eapply leqb_term_spec; eassumption.
+      + eapply eqb_ctx_spec; tea.
+        all: now sq ; destruct heΣ.
+    - eapply leqb_term_spec; tea.
+      all: now sq ; destruct heΣ.
   Qed.
 
   Notation conv_stack_ctx Γ π1 π2 :=
@@ -757,25 +757,32 @@ Section Conversion.
       }
     }.
   Next Obligation.
+    
     symmetry in e1.
-    eapply welltyped_zipc_stack_context. all: eassumption.
+    sq.
+    now eapply welltyped_zipc_stack_context ; eauto.
   Qed.
   Next Obligation.
     clear aux eq1.
     symmetry in e2.
-    eapply welltyped_zipc_stack_context. all: eassumption.
+    sq.
+    now eapply welltyped_zipc_stack_context ; eauto.
   Qed.
   Next Obligation.
     simpl_reduce_stack.
+    sq.
     eapply red_welltyped ; try assumption ; revgoals.
-    - constructor. zip fold. eapply red_context_zip. simpl_stacks. eapply r0.
+    - zip fold. eapply red_context_zip. simpl_stacks. eapply r0.
     - cbn. simpl_stacks. assumption.
+    - eauto.
   Qed.
   Next Obligation.
     simpl_reduce_stack.
+    sq.
     eapply red_welltyped ; try assumption ; revgoals.
-    - constructor. zip fold. eapply red_context_zip. simpl_stacks. eapply r.
+    - zip fold. eapply red_context_zip. simpl_stacks. eapply r.
     - cbn. simpl_stacks. assumption.
+    - eauto.
   Qed.
   Next Obligation.
     match type of eq1 with
@@ -1155,6 +1162,7 @@ Section Conversion.
       specialize (isr eq_refl) as (noapp&_).
       cbn in *.
       clear H eq3 H0.
+      destruct heΣ.
       symmetry in eq2.
       apply decompose_stack_at_length in eq2 as ?.
       apply decompose_stack_at_eq in eq2 as ->.
@@ -1467,8 +1475,9 @@ Section Conversion.
                congruence
            end].
   Next Obligation.
-    eapply red_welltyped; tea.
-    constructor. eapply red_zipc.
+    sq.
+    eapply red_welltyped; eauto.
+    eapply red_zipc.
     eapply red_const. eassumption.
   Qed.
   Next Obligation.
@@ -1503,8 +1512,9 @@ Section Conversion.
       + sq. fvs.
   Qed.
   Next Obligation.
-    eapply red_welltyped ; [auto| exact h1|].
-    constructor. eapply red_zipc.
+    sq.
+    eapply red_welltyped ; [eauto|exact h1|..].
+    eapply red_zipc.
     eapply red_const. eassumption.
   Qed.
   Next Obligation.
@@ -1537,6 +1547,7 @@ Section Conversion.
     (* Both c and c' are axioms. Either they are different constants or they are not
        convertible because the universes are different. *)
     apply conv_cum_alt in H as [(?&?&[r1 r2 eq])]; auto.
+    2: sq ; eauto.
     rewrite zipp_as_mkApps in r1, r2.
     symmetry in eq1, eq2.
     generalize hΣ. intros [].
@@ -1559,10 +1570,10 @@ Section Conversion.
     welltyped Σ Γ (zipc (tCase ci motive discr brs) π) ->
     exists mib oib, declared_inductive Σ ci mib oib /\ #|brs| = #|ind_ctors oib|.
   Proof.
+    sq.
     intros wf.
     zip fold in wf.
-    apply welltyped_context in wf; [|assumption].
-    destruct hΣ.
+    apply welltyped_context in wf; [|auto].
     destruct wf as [ctyp typ].
     apply inversion_Case in typ as (mdecl&idecl&?&?&[]&?); auto.
     exists mdecl, idecl.
@@ -2515,7 +2526,8 @@ Section Conversion.
 
   Lemma welltyped_zipc_tProd_appstack_nil {Γ na A B l ρ} :
     welltyped Σ Γ (zipc (tProd na A B) (appstack l ρ)) -> l = [].
-  Proof. 
+  Proof.
+    pose proof hΣ as [hΣ].
     intros wh.
     rewrite zipc_appstack in wh.
     zip fold in wh.
@@ -2539,6 +2551,7 @@ Section Conversion.
     intros eq ir.
     destruct ir as (_&[wh]).
     apply eqb_term_spec in eq; tea.
+    2-3: now pose proof heΣ as [[]].
     epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
     eapply whnf_eq_term in eq; [|exact wh'].
     rewrite zipp_as_mkApps in wh.
@@ -2609,6 +2622,7 @@ Section Conversion.
     intros eq%eq_sym ir.
     destruct ir as (_&[wh]).
     apply eqb_term_spec in eq; tea.
+    2-3: now pose proof heΣ as [[]].
     epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
     eapply whnf_eq_term in eq; [|exact wh'].
     rewrite zipp_as_mkApps in wh.
@@ -3248,15 +3262,17 @@ Section Conversion.
     - constructor. eapply eqb_universe_instance_spec. auto.
   Qed.
   Next Obligation.
+    sq.
     eapply red_welltyped ; [auto|..].
     - exact h1.
-    - constructor. eapply red_zipc.
+    - eapply red_zipc.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
+    sq.
     eapply red_welltyped ; [auto|..].
     - exact h2.
-    - constructor. eapply red_zipc.
+    - eapply red_zipc.
       eapply red_const. eassumption.
   Qed.
   Next Obligation.
@@ -3505,12 +3521,12 @@ Section Conversion.
     simpl. constructor.
   Qed.
   Next Obligation.
+    pose proof heΣ as [].
     apply conv_cum_zipp; auto.
     destruct convp as [h1'], convbrs as [h2'], convargs as [h3].
     destruct convdiscr as [cdiscr]. cbn in cdiscr.
     unfold zipp in h1, h2. simpl in h1, h2.
-    pose proof hΣ as wΣ. destruct wΣ.
-    constructor.
+    sq.
     apply equality_eq_le_gen.
     change (eq_dec_to_bool ci ci') with (eqb ci ci') in eq5.
     destruct (eqb_spec ci ci'). 2: discriminate.
@@ -3524,7 +3540,6 @@ Section Conversion.
       eapply welltyped_is_open_term in h2.
       rewrite zipp_as_mkApps in h2.
       rewrite on_free_vars_mkApps in h2.
-      destruct hx as [hx]. 
       unfold is_open_case. rewrite (All2_fold_length hx).
       now apply andb_true_iff in h2 as [].
   Qed.
@@ -3552,14 +3567,15 @@ Section Conversion.
     congruence.
   Qed.
   Next Obligation.
-    eapply red_welltyped ; [auto|..].
-    - exact h2.
-    - match goal with
+    pose proof heΣ as [].
+    match goal with
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
         pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
       end.
-      constructor.
-      eapply red_zipc.
+    sq.
+    eapply red_welltyped ; [auto|..].
+    - exact h2.
+    - eapply red_zipc.
       eapply red_case_c; auto. eapply hr.
   Qed.
   Next Obligation.
@@ -3622,14 +3638,15 @@ Section Conversion.
   Qed.
 
   Next Obligation.
-    eapply red_welltyped ; [auto|..].
-    - exact h1.
-    - match goal with
+    pose proof heΣ as [].
+    match goal with
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
         pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
       end.
-      constructor.
-      eapply red_zipc.
+    sq.
+    eapply red_welltyped ; [auto|..].
+    - exact h1.
+    - eapply red_zipc.
       apply red_case_c, hr.
   Qed.
   Next Obligation.
@@ -3713,11 +3730,12 @@ Section Conversion.
     simpl. constructor.
   Qed.
   Next Obligation.
+    pose proof heΣ as [].
     destruct convdiscr as [h1'].
     change (true = eqb p p') in eq5.
     destruct (eqb_spec p p'). 2: discriminate. subst.
     apply conv_cum_zipp; auto.
-    clear eq3 eq4 aux. destruct hΣ. eapply conv_conv_cum_l.
+    clear eq3 eq4 aux. eapply conv_conv_cum_l.
     now eapply equality_Proj_c.
   Qed.
   Next Obligation.
@@ -3740,14 +3758,15 @@ Section Conversion.
       eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl. *)
   Qed.
   Next Obligation.
+    pose proof heΣ as [].
+    match goal with
+    | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
+      pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
+    end.
+    sq.
     eapply red_welltyped ; [auto|..].
     - exact h2.
-    - match goal with
-      | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
-        pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
-      end.
-      constructor.
-      eapply red_zipc.
+    - eapply red_zipc.
       eapply red_proj_c, hr.
   Qed.
   Next Obligation.
@@ -3813,14 +3832,15 @@ Section Conversion.
     * clear eq4 aux hr. eapply welltyped_zipc_zipp in h2; fvs.
   Qed.
   Next Obligation.
-    eapply red_welltyped ; [auto|..].
-    - exact h1.
-    - match goal with
+    pose proof heΣ as [].
+    match goal with
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
         pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
-      end.
-      constructor.
-      eapply red_zipc.
+    end.
+    sq.
+    eapply red_welltyped ; [auto|..].
+    - exact h1.
+    - eapply red_zipc.
       eapply red_proj_c, hr.
   Qed.
   Next Obligation.
@@ -3886,8 +3906,10 @@ Section Conversion.
   
   (* tFix *)
   Next Obligation.
+    pose proof hΣ as hΣ.
     cbn. rewrite zipc_appstack. cbn.
     apply unfold_one_fix_red_zipp in eq1 as r.
+    sq.
     apply unfold_one_fix_decompose in eq1 as d.
     rewrite <- eq2 in d. simpl in d.
     unfold zipp in r.
@@ -3903,15 +3925,15 @@ Section Conversion.
     assumption.
   Qed.
   Next Obligation.
+    pose proof heΣ.
     apply unfold_one_fix_red in eq1 as r1.
     apply unfold_one_fix_decompose in eq1 as d1.
     reduce_stack_facts.
     simpl_stacks.
-    destruct r1 as [r1].
+    sq.
     eapply red_welltyped.
     1: eauto.
     1: exact h1.
-    constructor.
     etransitivity.
     2: { apply red_zipc.
          rewrite stack_context_decompose.
@@ -3951,8 +3973,9 @@ Section Conversion.
   Qed.
   Lemma wt_zip_mkapps Γ f π : welltyped Σ Γ (zipc f π) -> is_open_term (Γ ,,, stack_context π) (mkApps f (decompose_stack π).1).
   Proof.
+    sq.
     intros. apply welltyped_zipc_zipp in H; auto.
-    rewrite zipp_as_mkApps in H. destruct hΣ; fvs.
+    rewrite zipp_as_mkApps in H. fvs.
   Qed.
 
   Next Obligation.
@@ -3991,7 +4014,9 @@ Section Conversion.
         now eapply wt_zip_mkapps.
   Qed.
   Next Obligation.
+    pose proof heΣ.
     apply unfold_one_fix_red_zipp in eq1 as r.
+    sq.
     apply unfold_one_fix_decompose in eq1 as d.
     clear aux eq1.
     apply welltyped_zipc_zipp in h2; auto.
@@ -4000,7 +4025,9 @@ Section Conversion.
     eapply red_welltyped; eauto.
   Qed.
   Next Obligation.
+    pose proof hΣ as hΣ.
     apply unfold_one_fix_red in eq1 as r1.
+    sq.
     apply unfold_one_fix_decompose in eq1 as d1.
     match type of eq3 with
     | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
@@ -4019,7 +4046,7 @@ Section Conversion.
     apply clrel_rel, red_context_zip in r2.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq2)). subst.
     rewrite zipc_appstack in hh. cbn in r2.
-    pose proof (red_welltyped _ hΣ hh (sq r2)) as hh'.
+    pose proof (red_welltyped _ hΣ hh r2) as hh'.
     rewrite zipc_stack_cat. assumption.
   Qed.
   Next Obligation.
@@ -4113,9 +4140,9 @@ Section Conversion.
     constructor.
   Qed.
   Next Obligation.
+    pose proof hΣ as [hΣ].
     apply conv_cum_zipp; auto.
     destruct convfix as [h1'].
-    destruct hΣ.
     eapply conv_conv_cum_l.
     change (true = eqb idx idx') in eq4.
     destruct (eqb_spec idx idx'). 2: discriminate.
@@ -4153,9 +4180,9 @@ Section Conversion.
     constructor.
   Qed.
   Next Obligation.
+    pose proof hΣ as [hΣ].
     apply conv_cum_zipp; auto.
     destruct convfix as [h1'].
-    destruct hΣ.
     eapply conv_conv_cum_l.
     change (true = eqb idx idx') in eq4.
     destruct (eqb_spec idx idx'). 2: discriminate.
@@ -4392,13 +4419,13 @@ Section Conversion.
   Qed.
   Next Obligation.
     simpl_reduce_stack.
-    destruct hΣ.
-    assert (r' : ∥ red Σ Γ (tCase ci p c brs)
-      (tCase ci p (mkApps (tConstruct ind' n ui) (decompose_stack ρ).1) brs) ∥).
-    { constructor. eapply red_case_c, r. }
+    destruct hΣ as [hΣ].
+    assert (r' : red Σ Γ (tCase ci p c brs)
+      (tCase ci p (mkApps (tConstruct ind' n ui) (decompose_stack ρ).1) brs))
+      by eapply red_case_c, r.
     pose proof (red_welltyped _ hΣ h r') as h'.
     destruct h'.
-    apply PCUICInductiveInversion.invert_Case_Construct in X0 as (?&?&?&?); auto.
+    apply PCUICInductiveInversion.invert_Case_Construct in X as (?&?&?&?); auto.
     congruence.
   Qed.
   
@@ -4428,16 +4455,15 @@ Section Conversion.
     all: intros eq'' ; noconf eq''.
     - clear H H0 H1.
       simpl_reduce_stack.
-      assert (r' : ∥ red Σ Γ (tCase ci p c brs)
-          (tCase ci p (mkApps (tConstruct ind' n ui) (decompose_stack ρ).1) brs) ∥).
-      { constructor. eapply red_case_c, r. }
+      destruct hΣ as [hΣ].
+      assert (r' : red Σ Γ (tCase ci p c brs)
+          (tCase ci p (mkApps (tConstruct ind' n ui) (decompose_stack ρ).1) brs))
+        by eapply red_case_c, r.
       pose proof (red_welltyped _ hΣ h r') as h'.
       eapply Case_Construct_ind_eq in h' ; eauto. subst.
       eapply cored_red_cored.
       + constructor. eapply red_iota. 1: now symmetry.
         destruct h as (?&typ).
-        destruct r' as [r'].
-        destruct hΣ.
         eapply PCUICSR.subject_reduction in typ; eauto.
         apply PCUICInductiveInversion.invert_Case_Construct in typ as (?&?&?&?); auto.
         rewrite H0 in eqbr; noconf eqbr.
@@ -4445,9 +4471,10 @@ Section Conversion.
       + eapply red_case_c, r.
     - clear H H0 H1.
       simpl_reduce_stack.
-      assert (r' : ∥ red Σ Γ (tCase ci p c brs)
-                     (tCase ci p (mkApps (tCoFix mfix idx) (decompose_stack ρ).1) brs) ∥).
-      { constructor. eapply red_case_c, r. }
+      assert (r' : red Σ Γ (tCase ci p c brs)
+                     (tCase ci p (mkApps (tCoFix mfix idx) (decompose_stack ρ).1) brs))
+        by eapply red_case_c, r.
+      destruct hΣ as [hΣ].
       pose proof (red_welltyped _ hΣ h r') as h'.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_case. eauto.
@@ -4545,7 +4572,8 @@ Section Conversion.
     - clear H H0 H1.
       simpl_reduce_stack.
       pose proof (red_proj_c (i, pars, narg) _ _ r) as r'.
-      pose proof (red_welltyped _ hΣ h (sq r')) as h'.
+      destruct hΣ as [hΣ].
+      pose proof (red_welltyped _ hΣ h r') as h'.
       apply Proj_Construct_ind_eq in h' ; auto. subst.
       eapply cored_red_cored.
       + constructor. eapply red_proj. eauto.
@@ -4556,7 +4584,8 @@ Section Conversion.
     - clear H H0 H1.
       simpl_reduce_stack.
       pose proof (red_proj_c (i, pars, narg) _ _ r) as r'.
-      pose proof (red_welltyped _ hΣ h (sq r')) as h'.
+      destruct hΣ as [hΣ].
+      pose proof (red_welltyped _ hΣ h r') as h'.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_proj. eauto.
       + eapply red_proj_c, r.
@@ -4581,7 +4610,6 @@ Section Conversion.
       2: eauto.
       2: eapply red_proj_c, r.
       eapply whnf_proj_arg_whne ; eauto.
-      1: exact heΣ.
       now destruct cred.
     - match type of H3 with
       | _ = False_rect _ ?f => destruct f
@@ -4619,9 +4647,11 @@ Section Conversion.
     reducible_head Γ _ π h := None.
   Next Obligation.
     zip fold in h.
+    sq.
     apply welltyped_context in h ; auto.
   Qed.
   Next Obligation.
+    sq.
     zip fold in h.
     apply welltyped_context in h ; auto.
   Qed.
@@ -4809,14 +4839,14 @@ Section Conversion.
       apply whnf_mkApps.
       eapply whne_const; eauto.
     - zip fold in h.
-      apply welltyped_context in h; auto.
       destruct hΣ.
+      apply welltyped_context in h; auto.
       destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
       unfold declared_constant in d; congruence.
     - zip fold in h.
-      apply welltyped_context in h; auto.
       destruct hΣ.
+      apply welltyped_context in h; auto.
       destruct h as (?&typ); auto.
       apply inversion_Const in typ as (?&?&?&?); auto.
       unfold declared_constant in d; congruence.
@@ -4878,23 +4908,27 @@ Section Conversion.
     }.
   Next Obligation.
     apply reducible_head_red_zipp in eq1 as r.
+    pose proof (hΣ := hΣ).
+    sq.
     apply reducible_head_decompose in eq1 as d.
     apply welltyped_zipc_zipp in h1 as hh1. 2: auto.
     cbn in *.
-    simpl_stacks.
     pose proof (red_welltyped _ hΣ hh1 r) as hh.
+    simpl_stacks.
     assumption.
   Qed.
   Next Obligation.
     apply reducible_head_cored in eq1 as r1. apply cored_red in r1.
-    destruct r1 as [r1].
+    pose proof hΣ.
+    sq.
     simpl_reduce_stack.
     eapply red_welltyped; revgoals. 3:auto.
-    - constructor. zip fold. eapply red_context_zip. simpl_stacks. exact r.
-    - cbn. simpl_stacks.
+    - zip fold. eapply red_context_zip. simpl_stacks. exact r.
+    - cbn.
+      simpl_stacks.
       eapply red_welltyped. 1:auto.
-      2:{ constructor. exact r1. }
-      eassumption.
+      2: exact r1.
+      eassumption. 
   Qed.
   Next Obligation.
     eapply R_cored. simpl.
@@ -4965,17 +4999,19 @@ Section Conversion.
   Qed.
   Next Obligation.
     apply reducible_head_red_zipp in eq1 as r.
+    pose proof (hΣ := hΣ).
+    sq.
     apply reducible_head_decompose in eq1 as d.
     cbn.
-    simpl_stacks.
-    apply welltyped_zipc_zipp in h2 as hh2. 2: auto.
-    simpl_stacks.
+    apply welltyped_zipc_zipp in h2 as hh2 ; auto.
     pose proof (red_welltyped _ hΣ hh2 r) as hh.
+    simpl_stacks.
     assumption.
   Qed.
   Next Obligation.
     apply reducible_head_cored in eq1 as r1. apply cored_red in r1.
-    destruct r1 as [r1].
+    pose proof (hΣ := hΣ).
+    sq.
     match type of eq3 with
     | _ = reduce_stack ?f ?Σ ?hΣ ?Γ ?t ?π ?h =>
       destruct (reduce_stack_sound f Σ hΣ Γ t π h) as [r2] ;
@@ -4995,11 +5031,9 @@ Section Conversion.
     apply decompose_stack_eq in eq2'. subst.
     rewrite stack_context_appstack in r2.
     eapply red_welltyped; [auto|..] ; revgoals.
-    - constructor. zip fold. eapply red_context_zip, r2.
+    - zip fold. eapply red_context_zip, r2.
     - rewrite zipc_appstack in r1. cbn.
-      eapply red_welltyped ; [auto|..] ; revgoals.
-      + constructor. eassumption.
-      + assumption.
+      eapply red_welltyped ; eauto.
   Qed.
   Next Obligation.
     eapply R_cored2. all: simpl. all: try reflexivity.
@@ -5100,6 +5134,8 @@ Section Conversion.
       apply All2_length in a.
       rewrite a in eq1.
       eapply eqb_termp_napp_spec; eauto.
+      pose proof heΣ as [[]].
+      now sq.
   Qed.
   Next Obligation.
     apply h; clear h.
@@ -5259,7 +5295,6 @@ Section Conversion.
   Next Obligation.
     unshelve eapply _isconv. all: try assumption.
     intros s' t1' π1' t2' π2' h1' h2' hx' hR.
-    apply welltyped_zipc_zipp in h1. 2: auto.
     destruct pp.
     assert (wth0 = H0) by apply proof_irrelevance. simpl in hR. subst.
     specialize (f (mkpack Γ s' t1' π1' t2' π2' h2') hR). cbn in f.

@@ -112,7 +112,7 @@ Qed.
 (** Well-founded relation allowing to define functions using weak-head reduction 
 on (welltyped) terms and going under binders. *)
 Section fix_sigma.
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {cu : check_univs_tc}.
   Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   Lemma term_subterm_red1 {Γ s s' t} {ts : term_subterm s t} :
@@ -229,7 +229,7 @@ Section fix_sigma.
 End fix_sigma.
 
 Section fix_sigma.
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {cu : check_univs_tc}.
   Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   (* Reducing at least one step or taking a subterm is well-founded *)
@@ -257,10 +257,10 @@ Section fix_sigma.
       apply IH_sub. eauto.
       intros. eapply cored_redp in H0 as [].
       destruct (term_subterm_redp X0) as [t'' [[redt' [tst' Htst']]]].
-      unshelve eapply (IH t'').
-      - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
-      - eapply cored_redp; sq; eassumption.
-      - red. sq. right. exists tst'. now rewrite Htst'.
+      eapply IH. eapply cored_redp. sq. eassumption. red.
+      sq. right. exists tst'. now rewrite Htst'.
+      Unshelve.
+    - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
   Qed.
 
   Global Instance wf_redp_subterm : WellFounded redp_subterm_rel.

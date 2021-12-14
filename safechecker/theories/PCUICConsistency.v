@@ -116,7 +116,7 @@ Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
-Theorem pcuic_consistent {cf:checker_flags} {cu : check_univs_tc} Σ t :
+Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ t :
   wf_ext Σ ->
   axiom_free Σ ->
   (* t : forall (P : Prop), P *)

@@ -186,7 +186,7 @@ Section OnUdecl.
 End OnUdecl.
 
 Section CheckEnv.
-  Context {cf:checker_flags} {cu : check_univs_tc}.
+  Context {cf:checker_flags} {nor : normalizing_flags}.
 
   Definition check_wf_type (kn : kername) (Σ : global_env_ext) (HΣ : ∥ wf_ext Σ ∥)
     G (HG : is_graph_of_uctx G (global_ext_uctx Σ)) t

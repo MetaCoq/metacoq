@@ -133,7 +133,7 @@ Qed.
   in particular. *)
 
 Section TypeOf.
-  Context {cf : checker_flags} {cu : check_univs_tc}.
+  Context {cf : checker_flags} {nor : normalizing_flags}.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf_ext Σ ∥).
 
@@ -173,7 +173,7 @@ Qed.
     (wfΓ : ∥ wf_local Σ Γ ∥)
     (wf : well_sorted Σ Γ T)
     (tx : principal_type Γ T) : principal_sort Γ T :=
-    match @reduce_to_sort cf cu Σ hΣ Γ tx _ with
+    match @reduce_to_sort cf nor Σ hΣ Γ tx _ with
     | Checked_comp (u;_) => (u;_)
     | TypeError_comp e _ => !
     end.
@@ -206,7 +206,7 @@ Qed.
     (wf : welltyped Σ Γ T)
     (isprod : ∥ ∑ na A B, red Σ Γ T (tProd na A B) ∥) : 
     ∑ na' A' B', ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥ :=
-    match @reduce_to_prod cf cu Σ hΣ Γ T wf with
+    match @reduce_to_prod cf nor Σ hΣ Γ T wf with
     | Checked_comp p => p
     | TypeError_comp e _ => !
     end.
@@ -438,7 +438,7 @@ Qed.
       1,3: fvs.
       now eapply type_is_open_term, infering_typing.
     - etransitivity.
-      1: now eapply red_equality. 
+      1: now eapply red_equality.
       now eapply red_equality_inv.
   Defined.
 

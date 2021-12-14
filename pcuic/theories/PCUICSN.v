@@ -10,36 +10,31 @@ Require Import Equations.Prop.DepElim.
    We state is as well-foundedness of the reduction.
  *)
 
-Definition check_univs_tc {cf : checker_flags} : Prop := check_univs.
-Existing Class check_univs_tc.
+Record normalizing_flags {cf : checker_flags} : Prop :=
+  { nor_check_univs :> check_univs }.
 
-#[local] Instance default_cu : @check_univs_tc default_checker_flags.
+Existing Class normalizing_flags.
+
+#[local] Instance default_normalizing : @normalizing_flags default_checker_flags.
   Proof.
-    constructor.
+    now constructor.
   Qed.
 
-#[local] Instance extraction_cu : @check_univs_tc extraction_checker_flags.
+#[local] Instance extraction_normalizing : @normalizing_flags extraction_checker_flags.
 Proof.
-  constructor.
+  now constructor.
 Qed.
 
 Section Normalisation.
 
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
   Context (Σ : global_env_ext).
 
   Axiom normalisation :
-    forall {_ : check_univs_tc},
     wf_ext Σ ->
     forall Γ t,
       welltyped Σ Γ t ->
       Acc (cored Σ Γ) t.
-
-  Lemma neq_mkApps u l : forall t, t <> tSort u -> mkApps t l <> tSort u.
-  Proof.
-    induction l; cbn; intros t e e'; try easy.
-    eapply IHl. 2: eassumption. intros e''; discriminate e''.
-  Qed.
 
 End Normalisation.
 
@@ -51,7 +46,7 @@ End Normalisation.
  *)
 Section Alpha.
 
-  Context {cf : checker_flags} {cu : check_univs_tc}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
   Context (Σ : global_env_ext).
   Context (hΣ : ∥ wf_ext Σ ∥).
 
@@ -151,7 +146,7 @@ Section Alpha.
     destruct hΣ.
     intros Γ u h.
     apply normalisation in h.
-    2-3: assumption.
+    2: assumption.
     eapply Acc_cored_cored'.
     - eassumption.
     - apply eq_term_refl.

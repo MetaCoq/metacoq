@@ -58,7 +58,7 @@ Qed.
 
 Section Conversion.
 
-  Context {cf : checker_flags} {cu : check_univs_tc}.
+  Context {cf : checker_flags} {nor : normalizing_flags}.
   Context (Σ : global_env_ext).
   Context (heΣ : ∥ wf_ext Σ ∥).
   Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).

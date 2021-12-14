@@ -112,7 +112,7 @@ Qed.
 (** Well-founded relation allowing to define functions using weak-head reduction 
 on (welltyped) terms and going under binders. *)
 Section fix_sigma.
-  Context {cf : checker_flags} {cu : check_univs_tc}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
   Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   Lemma term_subterm_red1 {Γ s s' t} {ts : term_subterm s t} :
@@ -229,7 +229,7 @@ Section fix_sigma.
 End fix_sigma.
 
 Section fix_sigma.
-  Context {cf : checker_flags} {cu : check_univs_tc}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
   Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   (* Reducing at least one step or taking a subterm is well-founded *)

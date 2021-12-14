@@ -56,7 +56,7 @@ Qed.
 *)
 Section Measure.
 
-  Context {cf : checker_flags} {cu : check_univs_tc}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
 
   Context (flags : RedFlags.t).
   Context (Σ : global_env_ext).
@@ -210,7 +210,7 @@ Opaque Acc_intro_generator.
 
 Section Reduce.
 
-  Context {cf : checker_flags} {cu : check_univs_tc}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
 
   Context (flags : RedFlags.t).
 
@@ -1741,7 +1741,7 @@ Section Reduce.
 End Reduce.
 
 Section ReduceFns.
-  Context {cf : checker_flags} {cu : check_univs_tc} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥).
+  Context {cf : checker_flags} {no : normalizing_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥).
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
@@ -2001,7 +2001,7 @@ Section ReduceFns.
   Qed.
   
   Local Instance wellfounded : WellFounded (@hnf_subterm_rel _ Σ) :=
-    @wf_hnf_subterm _ _ _ HΣ.
+    @wf_hnf_subterm _ _ HΣ.
   
   Equations? (noeqns) reduce_to_arity (Γ : context) (T : term) (wt : welltyped Σ Γ T)
     : (conv_arity Γ T) + {~Is_conv_to_Arity Σ Γ T}

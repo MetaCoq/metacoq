@@ -162,8 +162,10 @@ Lemma substitution_wf_local_rel `{checker_flags} {Σ} {wfΣ : wf Σ} {Γ Γ' s �
    Qed.
 
 Section Typecheck.
-  Context {cf : checker_flags} {cu : check_univs_tc} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
-          (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
+  Context
+    {cf : checker_flags} {nor : normalizing_flags}
+    {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
+    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
 
   Local Notation ret := Checked_comp (only parsing).
   Local Notation raise := (fun e => TypeError_comp e _) (only parsing).
@@ -915,7 +917,7 @@ Section Typecheck.
     - now apply wf_ext_global_uctx_invariants.
     - now apply wf_ext_consistent.
     - auto.
-    - auto.
+    - eapply nor.
     - eapply (subst_global_uctx_invariants inst) => //.
       now eapply forallb_Forall in H.
     - apply H1.
@@ -981,7 +983,7 @@ Section Typecheck.
   Next Obligation.
     sq.
     apply wf_ext_consistent in HΣ as [v Hv].
-    rewrite /is_allowed_elimination /is_allowed_elimination0 cu in H.
+    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs in H.
     specialize (H v Hv).
     destruct u => //=.
   Qed.
@@ -999,13 +1001,13 @@ Section Typecheck.
   Next Obligation.
     sq.
     apply wf_ext_consistent in HΣ as [v Hv].
-    rewrite /is_allowed_elimination /is_allowed_elimination0 cu in H.
+    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs in H.
     specialize (H v Hv).
     destruct u => //=.
   Qed.
   Next Obligation.
     sq.
-    rewrite /is_allowed_elimination /is_allowed_elimination0 cu.
+    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs.
     intros val sat.
     unfold is_propositional in *.
     destruct Universe.is_prop eqn:prop.
@@ -1015,7 +1017,7 @@ Section Typecheck.
       + destruct check_eqb_universe eqn:check; [|discriminate].
         eapply check_eqb_universe_spec' in check; eauto.
         * unfold eq_universe, eq_universe0 in check.
-          rewrite cu in check.
+          rewrite nor_check_univs in check.
           specialize (check val sat).
           now rewrite check.
         * now apply wf_ext_global_uctx_invariants.
@@ -1024,7 +1026,7 @@ Section Typecheck.
   Next Obligation.
     sq.
     move: (HΣ) => /wf_ext_consistent [v Hv].
-    rewrite /is_allowed_elimination /is_allowed_elimination0 cu in H.
+    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs in H.
     destruct u => //=.
     unshelve epose proof (eq_universeP _ _ _ _ _ t Universe.type0 _ _) as e'; tea.
     1-2: now sq ; destruct HΣ.
@@ -1032,17 +1034,17 @@ Section Typecheck.
       now apply LevelSetFact.union_3, global_levels_Set.
     move: e0 => /= /ssrfun.esym /(elimF e') ne.
     apply ne.
-    rewrite /eq_universe /eq_universe0 cu.
+    rewrite /eq_universe /eq_universe0 nor_check_univs.
     intros v' Hv'.
     specialize (H v' Hv').
     cbn in *.
     now destruct (val v' t).
   Qed.
   Next Obligation.
-    now rewrite /is_allowed_elimination /is_allowed_elimination0 cu.
+    now rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs.
   Qed.
   
-  Notation wt_brs Γ ci mdecl idecl p ps ptm ctors brs n := 
+  Notation wt_brs Γ ci mdecl idecl p ptm ctors brs n := 
     (∥ All2i (fun i cdecl br =>
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
       All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
@@ -1091,7 +1093,7 @@ Section Typecheck.
     Equations check_branches (n : nat) (ctors : list constructor_body)
       (brs : list (branch term)) 
       (isdecl : ∥ Alli (fun i cdecl => declared_constructor Σ (ci, i) mdecl idecl cdecl) n ctors ∥)
-      : typing_result_comp (wt_brs Γ ci mdecl idecl p ps ptm ctors brs n) by struct brs := 
+      : typing_result_comp (wt_brs Γ ci mdecl idecl p ptm ctors brs n) by struct brs := 
 
       check_branches n [] [] i := ret _ ;
       
@@ -2141,7 +2143,7 @@ Section Typecheck.
       2: now apply infering_typing.
       eapply validity in X1; eauto.
       destruct (ssrbool.elimT (eqb_spec ind I)); auto.
-      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X1 as [parsubst [argsubst [sp sp' cu']]]; eauto.
+      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X1 as [parsubst [argsubst [sp sp' cu]]]; eauto.
       pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
       pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
       autorewrite with len in H, H0.

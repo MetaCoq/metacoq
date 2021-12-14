@@ -23,7 +23,7 @@ From MetaCoq.Template Require Import TypingWf WcbvEval.
 From MetaCoq.PCUIC Require Import PCUICCSubst PCUICCanonicity PCUICWcbvEval.
 
 
-Tactic Notation "wf_inv" ident(H) intropattern(p) :=
+Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
   (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) || 
   (apply WfAst.wf_mkApps_napp in H; [|easy]; try destruct H as p).
 

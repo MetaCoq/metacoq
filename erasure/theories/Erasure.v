@@ -54,7 +54,7 @@ Lemma erase_template_program_correctness (wfl := EWcbvEval.default_wcbv_flags) {
   {wfΣ : ∥ Typing.wf_ext Σ ∥}
   {wt : ∥ ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥} {Σ' t'} :
   erase_template_program p wfΣ wt = (Σ', t') ->
-  forall v, WcbvEval.eval p.1 [] p.2 v ->
+  forall v, WcbvEval.eval p.1 p.2 v ->
   exists Σ'' v',
     PCUICExpandLets.trans_global (trans_global Σ) ;;; [] |- 
       PCUICExpandLets.trans (trans (trans_global Σ) v) ⇝ℇ v' /\ 
@@ -87,8 +87,7 @@ Proof.
       eapply (PCUICClosedTyp.subject_closed (Γ := [])).
       unshelve apply (template_to_pcuic_typing (Ast.Env.empty_ext p.1) [] _ T);simpl; eauto.
       eapply w. }    
-    unshelve eapply trans_wcbvEval; eauto. exact extraction_checker_flags.
-    apply w.
+    unshelve eapply trans_wcbvEval; eauto.
     destruct s as [T HT].
     clear -w HT. now eapply TypingWf.typing_wf in HT. }  
   destruct H as [v' [Hv He]].

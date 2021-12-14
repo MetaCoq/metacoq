@@ -8,7 +8,7 @@ From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
 
 Import MCMonadNotation.
 
-Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ Hφ
+Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
   : EnvCheck (
     let Σ' := trans_global_decls p.1 in
     ∑ A, ∥ (Σ', φ) ;;; [] |- trans Σ' p.2 : A ∥) :=
@@ -104,7 +104,7 @@ Definition fix_program_universes (p : Ast.Env.program) : Ast.Env.program :=
   let '(Σ, t) := p in
   (fix_global_env_universes Σ, t).
 
-Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ Hφ
+Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
   : string + string :=
   let p := fix_program_universes p in
   match infer_template_program (cf:=cf) p φ return string + string with

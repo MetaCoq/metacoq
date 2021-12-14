@@ -129,6 +129,7 @@ Proof.
     * rewrite /= eqr. sigma. reflexivity.
   - cbn. rewrite inst_mkApps. simpl.
     rewrite inst_iota_red //.
+    * rewrite skipn_length; lia.
     * change (bcontext br) with (bcontext (inst_branch σ br)).
       rewrite closedn_ctx_on_free_vars. 
       eapply nth_error_forallb in p4; tea. simpl in p4.
@@ -380,6 +381,7 @@ Proof.
     * rewrite /= eqr. sigma. eapply cumul_Refl.
   - cbn. rewrite inst_mkApps. simpl.
     rewrite inst_iota_red //.
+    * rewrite skipn_length; lia.
     * change (bcontext br) with (bcontext (inst_branch σ br)).
       rewrite closedn_ctx_on_free_vars. 
       eapply nth_error_forallb in p4; tea. simpl in p4.

@@ -1076,7 +1076,9 @@ Proof.
       eapply isErasable_Propositional in X0; eauto.
       eapply isPropositional_propositional; eauto.
       invs e. cbn in *.
-      rewrite -eq_npars in e0. rewrite e0 in H8.
+      rewrite -eq_npars in e0.
+      rewrite skipn_length in H8; [lia |].
+      rewrite e0 in H8.
       rewrite map_length.
       rewrite (assumption_context_assumptions (bcontext y)) // ?rev_repeat in H8 => //.
       { eapply assumption_context_compare_decls. symmetry in a. exact a.
@@ -1084,7 +1086,10 @@ Proof.
         eapply assumption_context_subst_context.
         apply (declared_constructor_assumption_context d). }
       rewrite ECSubst.substl_subst //.
-      { eapply All_Forall, All_repeat. econstructor. } }
+      { eapply All_Forall, All_repeat. econstructor. }
+      replace (ind_npars mdecl + #|bcontext y| - ind_npars mdecl) 
+      with #|bcontext y| in H8 by lia. eauto.
+      }
       depelim H4.
       cbn in H1.
       eapply erases_deps_subst. 2: eauto.
@@ -1149,7 +1154,10 @@ Proof.
          solve_all. eapply (erases_closed _ []); tea. } 
          
          eapply isPropositional_propositional; eauto.
-         rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length e0.
+         rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length.
+         rewrite skipn_length; [lia|]. rewrite e0.
+         replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
+    with (context_assumptions (bcontext br)) by lia.  
          rewrite map_length.
          eapply assumption_context_assumptions.
          eapply assumption_context_compare_decls. symmetry; tea.
@@ -1236,8 +1244,11 @@ Proof.
          { eapply subject_reduction. eauto. exact Hty.
            eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
 
-        rewrite eq_npars. rewrite e0. subst n.
-        rewrite map_length. 
+        rewrite eq_npars. rewrite skipn_length; [lia|].
+        rewrite e0.
+        replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
+    with (context_assumptions (bcontext br)) by lia.
+        subst n. rewrite map_length. 
         rewrite assumption_context_assumptions //.
         eapply assumption_context_compare_decls. symmetry; tea.
         eapply (assumption_context_cstr_branch_context d).

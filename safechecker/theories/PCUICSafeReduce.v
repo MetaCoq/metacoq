@@ -753,7 +753,6 @@ Section Reduce.
     - constructor.
       eapply red1_context.
       eapply red_iota; eauto.
-      rewrite skipn_length; lia.
   Qed.
   Next Obligation.
     clear eq.

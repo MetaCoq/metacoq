@@ -284,7 +284,7 @@ Section ParallelReduction.
     pred1_ctx Γ Γ' ->
     All2 (pred1 Γ Γ') args0 args1 ->
     nth_error brs1 c = Some br -> 
-    #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
+    #|args1| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
     All2 (pred1 Γ Γ') p0.(pparams) params' ->
     All2 (fun br br' => 
       pred1_ctx_over Γ Γ' (inst_case_branch_context p0 br) 
@@ -492,7 +492,7 @@ Section ParallelReduction.
                   (Γ' ,,, inst_case_context pparams1 p0.(puinst) br'.(bcontext)))
               bbody bcontext br br') brs0 brs1 ->
           nth_error brs1 c = Some br -> 
-          #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
+          #|args1| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
           P Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
                 (iota_red ci.(ci_npar) (set_pparams p0 pparams1) args1 br)) ->
 
@@ -981,12 +981,13 @@ Section ParallelWeakening.
   Proof. intros t; apply lift_rename. Qed.
 
   Lemma lift_iota_red n k pars p args br :
-    #|skipn pars args| = context_assumptions br.(bcontext) ->
+    #|args| = (pars + context_assumptions br.(bcontext))%nat ->
     test_context_k closedn #|pparams p| (bcontext br) ->
     lift n k (iota_red pars p args br) =
     iota_red pars (map_predicate_k id (lift n) k p) (List.map (lift n k) args) (map_branch_k (lift n) id k br).
   Proof.
-    intros hctx hctx'. rewrite !lift_rename'. rewrite rename_iota_red //.
+    intros hctx hctx'. rewrite !lift_rename'. 
+    rewrite rename_iota_red //; try (rewrite skipn_length; lia).
     f_equal; try setoid_rewrite <-lift_rename => //.
     unfold map_branch_k, rename_branch, map_branch_shift.
     f_equal.
@@ -1202,6 +1203,7 @@ Qed.
       eapply forallb_All in p4.
       eapply All2_All_mix_left in X3; tea.
       rewrite rename_iota_red //.
+      * rewrite skipn_length; lia.  
       * eapply All2_nth_error_Some_right in X3 as [br' [nthbr [? []]]]; tea.
         move/andP: i => [] clbctx onfvs.
         destruct p5.
@@ -1214,7 +1216,6 @@ Qed.
         rewrite rename_predicate_set_pparams.
         econstructor; tea; try solve [solve_all].
         + erewrite nth_error_map, heq_nth_error => //.
-        + simpl. now len.
         + simpl. eapply All2_map; solve_all.
         + eapply All2_map, (All2_impl X3).
           move=> x y [] /andP [] onctx onb [] IHctx [] [] Hbod IHbod eqc; cbn.
@@ -2079,6 +2080,7 @@ Section ParallelSubstitution.
     - simpl. now apply Hrel.
 
     - simpl. rewrite inst_mkApps inst_iota_red /= //.
+      * rewrite skipn_length; lia.
       * change (bcontext br) with (bcontext (inst_branch σ br)).
         eapply All2_nth_error_Some_right in X3; tea. destruct X3 as [br0 [hnthbr0 [pred [? eq]]]].
         cbn [bcontext inst_branch]. rewrite -eq.

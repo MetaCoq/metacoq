@@ -1297,7 +1297,7 @@ Proof.
     rewrite -/(inst_case_branch_context _ _).
     eapply red_iota => //.
     * rewrite H1 H //.
-    * now rewrite !List.skipn_length in H0 |- *; len.
+    * len; eauto.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.

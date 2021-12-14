@@ -29,7 +29,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Case *)
 | red_iota ci c u args p brs br :
     nth_error brs c = Some br ->
-    #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
     red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
          (iota_red ci.(ci_npar) p args br)
 
@@ -139,7 +139,7 @@ Lemma red1_ind_all :
        (forall (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
           (p : predicate term) (brs : list (branch term)) br,
           nth_error brs c = Some br ->
-          #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+          #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
           P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
               (iota_red ci.(ci_npar) p args br)) ->
 

@@ -727,7 +727,9 @@ Proof.
     apply on_free_vars_subst.
     { rewrite forallb_rev forallb_skipn //. }
     len.
-    rewrite H0.
+    rewrite skipn_length; try lia; rewrite H0.
+    replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
+    with (context_assumptions (bcontext br)) by lia. 
     rewrite /expand_lets /expand_lets_k /=.
     eapply forallb_nth_error in hbrs.
     erewrite H in hbrs; simpl in hbrs.

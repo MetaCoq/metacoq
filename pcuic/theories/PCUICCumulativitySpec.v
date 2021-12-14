@@ -16,6 +16,12 @@ Definition cumul_predicate (cumul : context -> term -> term -> Type) Γ Re p p' 
 Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ Rle ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ Rle ]  u").
 
+Definition R_global_Ind Σ Re Rle i napp :=
+  R_opt_variance Re Rle (global_variance Σ (IndRef i) napp).
+
+Definition R_global_Construct Σ Re Rle i k napp :=
+  R_opt_variance Re Rle (global_variance Σ (ConstructRef i k) napp).
+
 (** * Definition of cumulativity and conversion relations *)
 
 Inductive cumulSpec0 Σ (Re Rle : Universe.t -> Universe.t -> Prop) Γ : term -> term -> Type :=
@@ -42,12 +48,12 @@ Inductive cumulSpec0 Σ (Re Rle : Universe.t -> Universe.t -> Prop) Γ : term ->
 (* Cumulativity rules *)
 
 | cumul_Ind : forall i u u' args args', 
-    R_global_instance Σ Re Rle (IndRef i) #|args| u u' ->
+    R_global_Ind Σ Re Rle i #|args| u u' ->
     All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Re] u) args args' ->
     Σ ;;; Γ ⊢ mkApps (tInd i u) args ≤s[Rle] mkApps (tInd i u') args'
 
 | cumul_Construct : forall i k u u' args args',
-    R_global_instance Σ Re Rle (ConstructRef i k) #|args| u u' ->
+    R_global_Construct Σ Re Rle i k #|args| u u' ->
     All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Re] u) args args' ->
     Σ ;;; Γ ⊢ mkApps (tConstruct i k u) args ≤s[Rle] mkApps (tConstruct i k u') args'
    
@@ -137,7 +143,7 @@ Inductive cumulSpec0 Σ (Re Rle : Universe.t -> Universe.t -> Prop) Γ : term ->
 (** iota red *)
 | cumul_iota : forall ci c u args p brs br, 
     nth_error brs c = Some br ->
-    #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
     Σ ;;; Γ ⊢ tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs  ≤s[Rle] iota_red ci.(ci_npar) p args br
 
 (** Fix unfolding, with guard *)
@@ -266,7 +272,7 @@ Lemma cumulSpec0_ind_all :
        (forall (Rle : Universe.t -> Universe.t -> Prop) (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
           (p : predicate term) (brs : list (branch term)) br,
           nth_error brs c = Some br ->
-          #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+          #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
           P Rle  Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
               (iota_red ci.(ci_npar) p args br)) ->
 
@@ -483,7 +489,7 @@ Lemma convSpec0_ind_all :
        (forall  (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
           (p : predicate term) (brs : list (branch term)) br,
           nth_error brs c = Some br ->
-          #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+          #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
           P  Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
               (iota_red ci.(ci_npar) p args br)) ->
 

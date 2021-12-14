@@ -2052,7 +2052,8 @@ Proof.
     relativize (trans (iota_red _ _ _ _)).
     eapply red1_red; eapply red_iota; tea; eauto. all:auto.
     * rewrite !nth_error_map H; reflexivity.
-    * rewrite trans_bcontext (context_assumptions_smash_context []) /= context_assumptions_map. lia.
+    * rewrite trans_bcontext (context_assumptions_smash_context []) /= context_assumptions_map.
+      len. eauto.
     * rewrite /iota_red. rewrite skipn_map_length in lenskip.
       have oninst : on_free_vars_ctx (shiftnP #|Γ| xpred0) (inst_case_branch_context p br).
       { rewrite -(PCUICCasesContexts.inst_case_branch_context_eq bctxeq).
@@ -5660,7 +5661,7 @@ Proof.
     * eapply IHev1; eauto.
     * rewrite !nth_error_map e //.
     * eapply trans_declared_constructor; tea.
-    * cbn. rewrite skipn_map_length e0.
+    * len.
       rewrite trans_bcontext.
       rewrite context_assumptions_smash_context context_assumptions_map //.
     * rewrite /iota_red.
@@ -5686,8 +5687,12 @@ Proof.
       { rewrite /iota_red.
         eapply closedn_subst0 => //.
         now rewrite forallb_rev; apply forallb_skipn.
-        cbn; len.
-        rewrite e0 //. }
+        cbn; len. rewrite skipn_length; [lia|].
+        rewrite e0. 
+        replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
+    with (context_assumptions (bcontext br)) by lia.
+        eauto. 
+        }
       relativize (subst0 _ _). exact IHev2.
       rewrite /iota_red.
       rewrite (trans_subst (shiftnP (context_assumptions (bcontext br)) xpred0) xpred0).

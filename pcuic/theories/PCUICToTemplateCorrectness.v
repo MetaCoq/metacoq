@@ -1288,7 +1288,7 @@ Proof.
     eapply TT.red_iota; tea; eauto. all:auto.
     * rewrite !nth_error_map H; reflexivity.
     * eapply trans_declared_constructor; tea.
-    * rewrite -map_skipn map_length H0.
+    * rewrite map_length H0.
       eapply Forall2_All2 in wf_brs.
       eapply All2_nth_error in wf_brs; tea.
       2:eapply declc.

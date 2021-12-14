@@ -249,7 +249,7 @@ Qed.
   Qed.
   
   Obligation Tactic := intros ;
-    match goal with
+    try match goal with
       | infer : context [wellinferred _ _ _ -> principal_type _ _ ],
         wt : wellinferred _ _ _ |- _ =>
         try clear infer ; destruct wt as [T HT]
@@ -659,6 +659,32 @@ Qed.
 
   Definition type_of Γ wfΓ t wt : term := (infer Γ wfΓ t wt).
   
+  Definition principal_typing Σ Γ t P := 
+    forall T, Σ ;;; Γ |- t : T -> Σ ;;; Γ ⊢ P ≤ T.
+
+  Program Definition type_of_typing Γ t (wt : welltyped Σ Γ t) : ∑ T, ∥ (Σ ;;; Γ |- t : T) × principal_typing Σ Γ t T ∥ :=
+    let '(T; HT) := infer Γ _ t _ in
+    (T; _).
+  Next Obligation.
+    destruct wt; sq; pcuic.
+  Qed.
+  Next Obligation.
+    sq.
+    destruct wt as [T Ht].
+    eapply BDFromPCUIC.typing_infering in Ht as [T' [inf _]].
+    now exists T'.
+  Qed.
+  Next Obligation.
+    cbn in *. subst filtered_var.
+    clear Heq_anonymous.
+    destruct wt as [T' HT'].
+    sq. split. eapply BDToPCUIC.infering_typing in HT; pcuic. apply hΣ.
+    intros T'' HT''.
+    apply typing_infering in HT'' as [P [HP HP']].
+    eapply infering_checking;tea. 1-2: pcuic. apply hΣ. fvs.
+    econstructor; tea. now eapply equality_forget in HP'.
+  Qed.
+    
   Open Scope type_scope.
   
   Definition map_typing_result {A B} (f : A -> B) (e : typing_result A) : typing_result B :=

@@ -186,19 +186,19 @@ Section OnUdecl.
 End OnUdecl.
 
 Section CheckEnv.
-  Context {cf:checker_flags} (cuniv : check_univs).
+  Context {cf:checker_flags} {cu : check_univs_tc}.
 
-  Definition check_wf_type (kn : kername) (Σ : global_env_ext) (HΣ : ∥ wf Σ ∥) (HΣ' : ∥ on_udecl Σ.1 Σ.2 ∥)
+  Definition check_wf_type (kn : kername) (Σ : global_env_ext) (HΣ : ∥ wf_ext Σ ∥)
     G (HG : is_graph_of_uctx G (global_ext_uctx Σ)) t
     : EnvCheck (∥ isType Σ [] t ∥) :=
-    wrap_error Σ (string_of_kername kn) (check_isType HΣ HΣ' G HG cuniv [] sq_wfl_nil t).
+    wrap_error Σ (string_of_kername kn) (check_isType HΣ G HG [] sq_wfl_nil t).
 
-  Definition check_wf_judgement kn Σ HΣ HΣ' G HG t ty
+  Definition check_wf_judgement kn Σ HΣ G HG t ty
     : EnvCheck (∥ Σ;;; [] |- t : ty ∥)
-    := wrap_error Σ (string_of_kername kn) (@check _ Σ HΣ HΣ' G HG cuniv [] sq_wfl_nil t ty).
+    := wrap_error Σ (string_of_kername kn) (check HΣ G HG [] sq_wfl_nil t ty).
 
-  Definition infer_term Σ HΣ HΣ' G HG t :=
-    wrap_error Σ "toplevel term" (@infer _ Σ HΣ HΣ' G HG cuniv [] sq_wfl_nil t).
+  Definition infer_term Σ (HΣ : ∥ wf_ext Σ ∥) G HG t :=
+    wrap_error Σ "toplevel term" (infer HΣ G HG [] sq_wfl_nil t).
 
   Program Fixpoint check_fresh id env : EnvCheck (∥ fresh_global id env ∥) :=
     match env with
@@ -392,11 +392,11 @@ Section CheckEnv.
     Qed.
   End UniverseChecks.
 
-  Equations infer_typing (Σ : global_env_ext) (HΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥) 
+  Equations infer_typing (Σ : global_env_ext) (HΣ : ∥ wf_ext Σ ∥)
     (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t :
       typing_result (∑ T, ∥ Σ ;;; Γ |- t : T ∥) :=
-    infer_typing Σ HΣ Hφ G HG Γ wfΓ t :=
-      typing_error_forget (@infer cf Σ HΣ Hφ G HG cuniv Γ wfΓ t) ;;
+    infer_typing Σ HΣ G HG Γ wfΓ t :=
+      typing_error_forget (infer HΣ G HG Γ wfΓ t) ;;
       ret _.
   Next Obligation.
     exists y.
@@ -404,29 +404,17 @@ Section CheckEnv.
     now apply infering_typing.
   Qed.
   
-  Definition check_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
-    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : 
-    typing_result (∥ Σ ;;; Γ |- t : T ∥) := 
-    @check cf Σ (map_squash fst wfΣ) (map_squash snd wfΣ) G HG cuniv Γ wfΓ t T.
-
   Definition check_type_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T : typing_result (∥ Σ ;;; Γ |- t : T ∥) := 
-    check_type_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t T.
+    check (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t T.
   
-  Definition infer_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
-    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : 
-    typing_result (∑ T, ∥ Σ ;;; Γ |- t ▹ T ∥) :=
-      (@infer cf Σ (map_squash fst wfΣ) (map_squash snd wfΣ) G HG cuniv Γ wfΓ t).
-
   Definition infer_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : typing_result (∑ T, ∥ Σ ;;; Γ |- t ▹ T ∥) := 
-    infer_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t.
+    infer (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t.
   
   Equations infer_type_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
     (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : 
     typing_result (∑ u, ∥ Σ ;;; Γ |- t : tSort u∥) := 
     infer_type_wf_ext Σ wfΣ G HG Γ wfΓ t :=
-      typing_error_forget (@infer_type cf Σ (map_squash fst wfΣ) (map_squash snd wfΣ)
-        (@infer cf Σ (map_squash fst wfΣ) (map_squash snd wfΣ) G HG cuniv)
-        Γ wfΓ t) ;;
+      typing_error_forget (infer_type wfΣ (infer wfΣ G HG) Γ wfΓ t) ;;
       ret _.
   Next Obligation.
     exists y.
@@ -437,14 +425,9 @@ Section CheckEnv.
   Definition infer_type_wf_env (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t : typing_result (∑ u, ∥ Σ ;;; Γ |- t : tSort u ∥) := 
     infer_type_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ wfΓ t.
 
-  Definition check_context_wf_ext (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) 
-    (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ))  (Γ : context) : typing_result (∥ wf_local Σ Γ ∥) :=
-    @check_context cf Σ (map_squash fst wfΣ) 
-      (map_squash snd wfΣ) G HG
-      (@infer cf Σ (map_squash fst wfΣ) (map_squash snd wfΣ) G HG cuniv) Γ.
-
   Definition check_context_wf_env (Σ : wf_env_ext) (Γ : context) : typing_result (∥ wf_local Σ Γ ∥) :=
-    @check_context_wf_ext Σ (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) Γ.
+    check_context (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ)
+      (infer (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ)) Γ.
       
   (* Notation " ' pat <- m ;; f " := (bind m (fun pat => f)) (pat pattern, right associativity, at level 100, m at next level). *)
   
@@ -536,38 +519,15 @@ Section CheckEnv.
 
   Program Definition wf_env_conv (Σ : wf_env_ext) (le : conv_pb) (Γ : context) (t u : term) :
     welltyped Σ Γ t -> welltyped Σ Γ u -> typing_result (∥ Σ;;; Γ ⊢ t ≤[le] u ∥) :=
-    @convert _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ le Γ t u.
-  Next Obligation.
-    destruct Σ. sq. simpl. apply wf_env_ext_wf0.
-  Qed.
-  Next Obligation.
-    destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
-  Qed.
+    convert (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ t u.
 
   Program Definition wf_env_check_cumul_decl (Σ : wf_env_ext) le Γ d d' :=
-    @check_equality_decl _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ le Γ d d'.
-  Next Obligation.
-    destruct Σ; sq; simpl. apply wf_env_ext_wf0.
-  Qed.
-  Next Obligation.
-    destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
-  Qed.
-    
-  Lemma wf_ext_wf_p1 (Σ : global_env_ext) (wfΣ : wf_ext Σ) : wf Σ.1.
-  Proof. apply wfΣ. Qed.
-
-  Hint Resolve wf_ext_wf_p1 : pcuic.
+    check_equality_decl (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ d d'.
 
   Program Fixpoint wf_env_check_equality_ctx (le : conv_pb) (Σ : wf_env_ext) Γ Δ Δ' 
     (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
     typing_result (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
-    @check_equality_ctx _ Σ (wf_env_ext_sq_wf Σ) _ Σ _ le Γ Δ Δ' wfΔ wfΔ'.
-  Next Obligation.
-    destruct Σ as [? [?] ? ?]. sq; simpl. apply w.
-  Qed.
-  Next Obligation.
-    destruct Σ. sq. simpl. apply wf_env_ext_graph_wf0.
-  Qed.
+    check_equality_ctx (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ Δ Δ' wfΔ wfΔ'.
   
   Program Definition check_eq_term le (Σ : wf_env_ext) t u : typing_result (∥ compare_term le Σ Σ t u ∥) :=
     check <- check_eq_true (if le then leqb_term Σ Σ t u else eqb_term Σ Σ t u) (Msg "Terms are not equal") ;;
@@ -2062,17 +2022,17 @@ Section CheckEnv.
     rewrite pf. now apply onindices.
   Qed.
 
-  Program Definition check_wf_decl (Σ0 : wf_env) (Σ : global_env_ext)  HΣ HΣ' G HG
+  Program Definition check_wf_decl (Σ0 : wf_env) (Σ : global_env_ext)  HΣ G HG
              kn (d : global_decl) (eq : Σ = (Σ0, universes_decl_of_decl d))
     : EnvCheck (∥ on_global_decl (lift_typing typing) Σ kn d ∥) :=
     match d with
     | ConstantDecl cst =>
       match cst.(cst_body) with
-      | Some term => check_wf_judgement kn Σ HΣ HΣ' G HG term cst.(cst_type) ;; ret _
-      | None => check_wf_type kn Σ HΣ HΣ' G HG cst.(cst_type) ;; ret _
+      | Some term => check_wf_judgement kn Σ HΣ G HG term cst.(cst_type) ;; ret _
+      | None => check_wf_type kn Σ HΣ G HG cst.(cst_type) ;; ret _
       end
     | InductiveDecl mdecl =>
-      let wfΣ : wf_env_ext := {| wf_env_ext_env := Σ; wf_env_ext_wf := _; 
+      let wfΣ : wf_env_ext := {| wf_env_ext_env := Σ; wf_env_ext_wf := HΣ; 
         wf_env_ext_graph := G; wf_env_ext_graph_wf := HG |} in
       let id := string_of_kername kn in
       check_var <- check_variance (Σ := Σ0) kn (ind_universes mdecl) (ind_variance mdecl) _ ;;
@@ -2085,17 +2045,16 @@ Section CheckEnv.
       ret (Build_on_inductive_sq check_bodies check_pars check_npars _)
     end.
   Next Obligation.
-    sq. unfold on_constant_decl; rewrite <- Heq_anonymous; tas.
-  Qed.
-  Next Obligation.
     sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
     eassumption.
   Qed.
   Next Obligation.
-    sq. split; auto.
+    sq.
+    unfold on_constant_decl; rewrite <- Heq_anonymous.
+    eassumption.
   Qed.
   Next Obligation.
-    simpl. sq. split => //.
+    now sq.
   Qed.
   Next Obligation.
     reflexivity.
@@ -2103,7 +2062,6 @@ Section CheckEnv.
   Next Obligation.
     exact check_var.
   Qed.
-  Fail Next Obligation.
 
   Obligation Tactic := Program.Tactics.program_simpl.
 
@@ -2118,7 +2076,7 @@ Section CheckEnv.
         let udecl := universes_decl_of_decl d.2 in
         uctx <- check_udecl (string_of_kername d.1) Σ _ G.π1 (proj1 G.π2) udecl ;;
         let G' := add_uctx uctx.π1 G.π1 in
-        check_wf_decl wfΣ (Σ, udecl) _ _ G' _ d.1 d.2 _ ;;
+        check_wf_decl wfΣ (Σ, udecl) _ G' _ d.1 d.2 _ ;;
         match udecl with
         | Monomorphic_ctx _ => ret (G'; _)
         | Polymorphic_ctx _ => ret (G.π1; _)
@@ -2126,6 +2084,10 @@ Section CheckEnv.
     end.
   Next Obligation.
     repeat constructor.
+  Qed.
+  Next Obligation.
+    sq.
+    now constructor.
   Qed.
   Next Obligation.
     sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
@@ -2239,16 +2201,16 @@ Section CheckEnv.
   Definition check_wf_env_bool_spec (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T :
     check_type_wf_env_bool Σ Γ wfΓ t T = true -> ∥ Σ ;;; Γ |- t : T ∥.
   Proof.
-    unfold check_type_wf_env_bool, check_type_wf_env.
-    destruct check_type_wf_ext; auto.
+    unfold check_type_wf_env_bool.
+    destruct check_type_wf_env ; auto.
     discriminate.
   Qed.
 
   Definition check_wf_env_bool_spec2 (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t T :
     check_type_wf_env_bool Σ Γ wfΓ t T = false -> type_error.
   Proof.
-    unfold check_type_wf_env_bool, check_type_wf_env.
-    destruct check_type_wf_ext; auto.
+    unfold check_type_wf_env_bool.
+    destruct check_type_wf_env; auto.
     discriminate.
   Defined.
 
@@ -2266,21 +2228,18 @@ Section CheckEnv.
 
   Obligation Tactic := Program.Tactics.program_simpl.
 
-  Axiom typecheck_program : forall
-    (p : program) (φ : universes_decl) (Hφ : on_udecl p.1 φ), 
-    EnvCheck (∑ A, ∥ (p.1, φ) ;;; [] |- p.2  : A ∥).
-
-  (* Program Definition typecheck_program (p : program) φ Hφ
+  Program Definition typecheck_program (p : program) φ (Hφ : on_udecl p.1 φ)
     : EnvCheck (∑ A, ∥ (p.1, φ) ;;; [] |- p.2  : A ∥) :=
-    let Σ := fst p in
+    let Σ := p.1 in
     '(existT G HG) <- check_wf_env Σ ;;
     uctx <- check_udecl "toplevel term" Σ _ G (proj1 HG) φ ;;
     let G' := add_uctx uctx.π1 G in
-    @infer_term (Σ, φ) (proj2 HG) Hφ G' _ (snd p).
+    @infer_term (Σ, φ) _ G' _ p.2 ;;
+    ret _.
   Next Obligation.
-    exact (EnvCheck X).
+    sq.
+    now constructor.
   Defined.
-  Next Obligation.
   Next Obligation.
     (* todo: factorize with check_wf_env second obligation *)
     sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
@@ -2297,11 +2256,17 @@ Section CheckEnv.
     simpl. unfold global_ext_levels; simpl.
     destruct (gc_of_constraints (ConstraintSet.union _ _)); simpl in H => //.
     simpl. simpl in i.
-    subst G. symmetry. rewrite add_uctx_make_graph.
+    subst x. symmetry. rewrite add_uctx_make_graph.
     apply graph_eq; try reflexivity.
     now simpl; rewrite H. simpl in H.
     destruct (gc_of_constraints (ConstraintSet.union _ _)); simpl in H => //.
-  Qed. *)
+  Qed.
+  Next Obligation.
+    eexists.
+    sq.
+    now eapply infering_typing.
+  Qed.
+
 
 End CheckEnv.
 

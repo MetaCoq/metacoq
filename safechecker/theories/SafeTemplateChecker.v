@@ -3,12 +3,12 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     TemplateToPCUIC.
+     TemplateToPCUIC PCUICSN.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
 
 Import MCMonadNotation.
 
-Program Definition infer_template_program {cf : checker_flags} (p : Ast.Env.program) φ Hφ
+Program Definition infer_template_program {cf : checker_flags} {cu : check_univs_tc} (p : Ast.Env.program) φ Hφ
   : EnvCheck (
     let Σ' := trans_global_decls p.1 in
     ∑ A, ∥ (Σ', φ) ;;; [] |- trans Σ' p.2 : A ∥) :=
@@ -101,7 +101,7 @@ Definition fix_program_universes (p : Ast.Env.program) : Ast.Env.program :=
   let '(Σ, t) := p in
   (fix_global_env_universes Σ, t).
 
-Program Definition infer_and_print_template_program {cf : checker_flags} (p : Ast.Env.program) φ Hφ
+Program Definition infer_and_print_template_program {cf : checker_flags} {cu : check_univs_tc} (p : Ast.Env.program) φ Hφ
   : string + string :=
   let p := fix_program_universes p in
   match infer_template_program (cf:=cf) p φ Hφ return string + string with

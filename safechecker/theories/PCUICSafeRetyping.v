@@ -11,10 +11,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
      PCUICWeakeningConv PCUICWeakeningTyp 
      PCUICClosed PCUICClosedTyp
      PCUICSafeLemmata PCUICSubstitution PCUICValidity
-     PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion
+     PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion PCUICReduction
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
      PCUICContexts PCUICContextConversion PCUICContextConversionTyp PCUICOnFreeVars
-     PCUICWellScopedCumulativity PCUICSafeLemmata.
+     PCUICWellScopedCumulativity PCUICSafeLemmata PCUICSN PCUICConvCumInversion.
 
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 
@@ -109,18 +109,10 @@ Qed.
   substitution are costly here. No universe checking or conversion is done
   in particular. *)
 
-(* Lemma infering_well_typed `{checker_flags} {Σ : global_env_ext} {hΣ : wf Σ} Γ t T :
-  wf_local Σ Γ -> Σ ;;; Γ |- t ▹ T -> welltyped Σ Γ T.
-Proof.
-  intros wfΓ ty.
-  apply infering_typing, validity in ty; tea. destruct ty as [s tyT].
-  econstructor; eauto.
-Qed. *)
-
 Section TypeOf.
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {cu : check_univs_tc}.
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
+  Context (hΣ : ∥ wf_ext Σ ∥).
 
 Definition on_subterm P Pty Γ t : Type := 
   match t with
@@ -141,8 +133,8 @@ Proof.
     split; [split|]; econstructor ; [econstructor|..].
 Qed.
 
-Lemma on_free_vars_ind_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl → 
+Lemma on_free_vars_ind_predicate_context {wfΣ : wf Σ} {ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl -> 
   on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT) 
     (ind_predicate_context ind mdecl idecl).
 Proof.
@@ -151,17 +143,7 @@ Proof.
   eapply closed_ind_predicate_context; tea.
   eapply (declared_minductive_closed decli).
 Qed.
-
-Section TypeOf.
-  Context {cf : checker_flags}.
-  Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
-
-  #[local] Definition heΣ : ∥ wf_ext Σ ∥.
-  Proof.
-    destruct hΣ, Hφ; now constructor.
-  Defined.
-
+  
   #[local] Notation ret t := (t; _).
 
   #[local] Definition principal_type Γ t := 
@@ -179,7 +161,7 @@ Section TypeOf.
     (wfΓ : ∥ wf_local Σ Γ ∥)
     (wf : well_sorted Σ Γ T)
     (tx : principal_type Γ T) : principal_sort Γ T :=
-    match @reduce_to_sort cf Σ heΣ Γ tx _ with
+    match @reduce_to_sort cf cu Σ hΣ Γ tx _ with
     | Checked_comp (u;_) => (u;_)
     | TypeError_comp e _ => !
     end.
@@ -187,7 +169,7 @@ Section TypeOf.
     destruct tx ; cbn in *.
     destruct wf as [[]].
     sq.
-    eapply infering_typing, validity in s as []; tea.
+    eapply infering_typing, validity in s as []; eauto.
     now eexists.
   Defined.
   Next Obligation.
@@ -204,9 +186,7 @@ Section TypeOf.
     cbn in *.
     sq.
     destruct wf as [[? i]].
-    eapply infering_sort_infering in i ; tea.
-    apply wildcard'.
-    now eexists ; sq.
+    eapply infering_sort_infering in i ; eauto.
   Qed.
 
   Program Definition infer_as_prod Γ T
@@ -214,7 +194,7 @@ Section TypeOf.
     (wf : welltyped Σ Γ T)
     (isprod : ∥ ∑ na A B, red Σ Γ T (tProd na A B) ∥) : 
     ∑ na' A' B', ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥ :=
-    match @reduce_to_prod cf Σ heΣ Γ T wf with
+    match @reduce_to_prod cf cu Σ hΣ Γ T wf with
     | Checked_comp p => p
     | TypeError_comp e _ => !
     end.
@@ -313,7 +293,7 @@ Section TypeOf.
       | exist (TypeError e) _ => ! };
 
     infer Γ wfΓ (tCase ci p c brs) wt
-      with inspect (reduce_to_ind heΣ Γ (infer Γ wfΓ c _) _) :=
+      with inspect (reduce_to_ind hΣ Γ (infer Γ wfΓ c _) _) :=
       { | exist (Checked_comp indargs) _ =>
           let ptm := it_mkLambda_or_LetIn (inst_case_predicate_context p) p.(preturn) in
           ret (mkApps ptm (List.skipn ci.(ci_npar) indargs.π2.π2.π1 ++ [c]));
@@ -321,7 +301,7 @@ Section TypeOf.
 
     infer Γ wfΓ (tProj (ind, n, k) c) wt with inspect (@lookup_ind_decl ind) :=
       { | exist (Checked d) _ with inspect (nth_error d.π2.π1.(ind_projs) k) :=
-        { | exist (Some pdecl) _ with inspect (reduce_to_ind heΣ Γ (infer Γ wfΓ c _) _) :=
+        { | exist (Some pdecl) _ with inspect (reduce_to_ind hΣ Γ (infer Γ wfΓ c _) _) :=
           { | exist (Checked_comp indargs) _ => 
               let ty := snd pdecl in
               ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty));
@@ -393,7 +373,7 @@ Section TypeOf.
     inversion HT ; subst.
     constructor ; tea.
     1: now eapply infering_sort_isType.
-    apply checking_typing ; tea.
+    apply checking_typing ; eauto.
     now eapply infering_sort_isType.
   Qed.
   Next Obligation.
@@ -413,13 +393,13 @@ Section TypeOf.
     case ty as [].
     apply wat_welltyped ; tea.
     sq.
-    eapply validity, infering_typing ; tea.
+    eapply validity, infering_typing ; eauto.
   Defined.
   Next Obligation.
     case ty as [].
     sq.
     inversion HT ; subst.
-    eapply infering_prod_infering in X as (?&?&[]); tea.
+    eapply infering_prod_infering in X as (?&?&[]); eauto.
     do 3 eexists.
     now apply closed_red_red.
   Defined.
@@ -431,10 +411,10 @@ Section TypeOf.
     inversion HT ; subst.
     inversion X0 ; subst.
     move: (X) => tyt.
-    apply infering_prod_typing, validity, isType_tProd in tyt as [] ; tea.
+    apply infering_prod_typing, validity, isType_tProd in tyt as [] ; eauto.
     eapply infering_prod_prod in X as (?&?&[]).
     4: econstructor.
-    2-4: eassumption.
+    2-4: eauto.
     2: now apply closed_red_red.
     econstructor.
     1: econstructor ; tea.
@@ -515,14 +495,14 @@ Section TypeOf.
   
   Next Obligation.
     inversion HT ; subst.
-    inversion X2.
+    inversion X.
     now econstructor.
   Qed.
   Next Obligation.
     destruct infer.
     sq.
     cbn.
-    apply infering_typing, validity in s as [] ; tea.
+    apply infering_typing, validity in s as [] ; eauto.
     now eexists.
   Defined.
   Next Obligation.
@@ -531,9 +511,9 @@ Section TypeOf.
     cbn in *.
     sq.
     inversion HT ; subst.
-    move: (X2) => inf.
+    move: (X) => inf.
     eapply infering_ind_ind in inf as [? []].
-    2,3: eassumption.
+    2,3: eauto.
     2: now econstructor ; tea ; apply closed_red_red.
     subst.
     rewrite /ptm.
@@ -553,13 +533,13 @@ Section TypeOf.
       1: now eapply red_terms_equality_terms.
       1: symmetry.
       1: now eapply red_terms_equality_terms.
-      eapply into_equality_terms ; tea.
+      eapply alt_into_equality_terms ; tea.
       * fvs.
-      * eapply infering_ind_typing, validity, isType_open in X2 ; tea.
-        rewrite on_free_vars_mkApps in X2.
-        move: X2 => /andP [] _ /forallb_All ?.
+      * eapply infering_ind_typing, validity, isType_open in X ; auto.
+        rewrite on_free_vars_mkApps in X.
+        move: X => /andP [] _ /forallb_All ?.
         now eapply All_forallb, All_firstn.
-      * apply infering_typing, subject_is_open_term in HT ; tea.
+      * apply infering_typing, subject_is_open_term in HT ; auto.
         move: HT => /= /andP [] //.
   Defined.
   Next Obligation.
@@ -568,9 +548,7 @@ Section TypeOf.
     sq.
     apply a0.
     inversion HT ; subst.
-    eapply infering_ind_infering in i as [? []] ; tea.
-    do 3 eexists.
-    now sq.
+    eapply infering_ind_infering in i as [? []] ; eauto.
   Defined.
 
   Next Obligation.
@@ -582,7 +560,7 @@ Section TypeOf.
     destruct infer.
     sq.
     cbn.
-    eapply infering_typing, validity in s as []; tea.
+    eapply infering_typing, validity in s as []; eauto.
     now eexists.
   Defined.
   Next Obligation.
@@ -599,7 +577,7 @@ Section TypeOf.
     2: eexact isdecl.
     subst.
     eapply infering_ind_ind in X as [? []].
-    2-3: tea.
+    2-3: eauto.
     2: now econstructor ; tea ; apply closed_red_red.
     subst.
     econstructor.
@@ -616,7 +594,7 @@ Section TypeOf.
     cbn -[lookup_ind_decl] in *.
     sq.
     inversion HT.
-    eapply infering_ind_infering in s as [? []] ; tea.
+    eapply infering_ind_infering in s as [? []] ; eauto.
     apply a0.
     do 3 eexists.
     now sq.
@@ -693,7 +671,7 @@ Section TypeOf.
     - unfold type_of.
       destruct infer as [P HP].
       sq. simpl.
-      eapply infering_checking ; tea.
+      eapply infering_checking ; eauto.
       + now eapply typing_wf_local.
       + now eapply type_is_open_term.
       + now eapply typing_checking.   
@@ -719,9 +697,9 @@ Section TypeOf.
       cbn.
       sq.
       intros T' ; split.
-      + apply infering_typing ; tea.
+      + apply infering_typing ; eauto.
         now eapply typing_wf_local.
-      + eapply infering_checking ; tea.
+      + eapply infering_checking ; eauto.
         * now eapply typing_wf_local.
         * now eapply type_is_open_term.
         * now eapply typing_checking.

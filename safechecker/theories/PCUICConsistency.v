@@ -22,6 +22,7 @@ From MetaCoq.PCUIC Require Import PCUICValidity.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
+From MetaCoq.PCUIC Require Import PCUICSN.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 
@@ -115,7 +116,7 @@ Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
-Theorem pcuic_consistent {cf:checker_flags} Σ t :
+Theorem pcuic_consistent {cf:checker_flags} {cu : check_univs_tc } Σ t :
   wf_ext Σ ->
   axiom_free Σ ->
   (* t : forall (P : Prop), P *)
@@ -178,8 +179,8 @@ Proof.
       auto. }
 (*   assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.*)
   pose proof (iswelltyped _ _ _ _ typ_false) as wt.
-  pose proof (@hnf_sound _ _ (sq wf') _ _ wt) as [r].
-  pose proof (@hnf_complete _ _ (sq wf') _ _ wt) as [w].
+  pose proof (hnf_sound (sq wf') (h := wt)) as [r].
+  pose proof (hnf_complete (sq wf') (h := wt)) as [w].
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.

@@ -41,6 +41,32 @@ Ltac Coq.Program.Tactics.program_solve_wf ::=
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
+Lemma declared_global_uctx_global_ext_uctx {l} {Σ : global_env} {univs} : 
+  declared l (global_uctx Σ).1 ->
+  declared l (global_ext_uctx (Σ, univs)).1.
+Proof.
+  intros hd.
+  eapply LevelSet.union_spec. now right.
+Qed.
+
+Lemma global_uctx_invariants_ext {cf} {Σ : global_env} {wfΣ : wf Σ} {univs} : 
+  on_udecl_prop Σ univs ->
+  global_uctx_invariants (global_ext_uctx (Σ, univs)).
+Proof.
+  intros ond.
+  pose proof (wf_global_uctx_invariants _ wfΣ) as [Hs Hc].
+  split.
+  - eapply LevelSet.union_spec. right. apply Hs.
+  - intros x hx.
+    cbn in hx. unfold global_ext_constraints in hx.
+    eapply ConstraintSet.union_spec in hx.
+    destruct hx. cbn in H.
+    * now apply ond.
+    * specialize (Hc x H).
+      destruct x as ((l'&d')&r'). 
+      now destruct Hc; split; eapply declared_global_uctx_global_ext_uctx.
+Qed.
+
 Lemma spine_subst_smash_inv {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ inst Δ s} :
   wf_local Σ (Γ ,,, Δ) ->
@@ -776,8 +802,8 @@ Section Typecheck.
       now inversion Hl.
   Qed.   
 
-  (* Lemma subst_global_uctx_invariants inst cstrs (u : Instance.t) :
-    global_uctx_invariants ((global_ext_uctx (Σ.1,Polymorphic_ctx inst)).1, cstrs) ->
+  Lemma subst_global_uctx_invariants inst cstrs (u : Instance.t) :
+    global_uctx_invariants (global_ext_uctx (Σ.1,Polymorphic_ctx (inst, cstrs))) ->
     Forall (fun l => LevelSet.mem l (global_ext_levels Σ)) u ->
     global_uctx_invariants ((global_ext_uctx Σ).1,subst_instance_cstrs u cstrs).
   Proof.
@@ -790,13 +816,14 @@ Section Typecheck.
       rewrite /subst_instance_cstrs /= in Hctr.
       rewrite ConstraintSetProp.fold_spec_right in Hctr.
       set cstrs' := (List.rev (CS.elements cstrs)) in Hctr.
-      set Σ'' := (Σ.1,Polymorphic_ctx inst) in Hcs.
+      set Σ'' := (Σ.1,Polymorphic_ctx (inst, cstrs)) in Hcs.
       assert ((exists ct' l'', SetoidList.InA eq (l,ct',l'') cstrs') ->
         declared l (global_ext_levels Σ'')) as Hcs'.
       {
         intros [ct' [l'' in']].
         specialize (Hcs (l,ct',l'')).
         apply Hcs.
+        eapply ConstraintSet.union_spec. left.
         now apply ConstraintSetFact.elements_2, SetoidList.InA_rev.
       }
       assert ((exists ct' l'', SetoidList.InA eq (l'',ct',l') cstrs') ->
@@ -805,6 +832,7 @@ Section Typecheck.
         intros [ct' [l'' in']].
         specialize (Hcs (l'',ct',l')).
         apply Hcs.
+        eapply ConstraintSet.union_spec. left.
         now apply ConstraintSetFact.elements_2, SetoidList.InA_rev.
       }
       clear Hcs.
@@ -827,34 +855,40 @@ Section Typecheck.
         split.
         * destruct l.
           -- now apply wf_ext_global_uctx_invariants.
-          -- apply Hcs'.
+          -- cbn in Hcs'. 
+             forward Hcs'.
              do 2 eexists.
              constructor.
              reflexivity.
+             eapply In_Level_global_ext_poly in Hcs'.
+             red. eapply LevelSet.union_spec. now right.
           -- apply LevelSetFact.mem_2.
              pattern (nth n u Level.lSet).
              apply Forall_nth_def ; tea.
              now apply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
         * destruct l'.
           -- now apply wf_ext_global_uctx_invariants.
-          -- apply Hcs''.
+          -- forward Hcs''.
              do 2 eexists.
              constructor.
              reflexivity.
+             eapply In_Level_global_ext_poly in Hcs''.
+             eapply LevelSet.union_spec. now right.
           -- apply LevelSetFact.mem_2.
              pattern (nth n u Level.lSet).
              apply Forall_nth_def ; tea.
              now apply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
-  Qed. *)
+  Qed.
 
-  Equations check_consistent_instance uctx u
+  Equations check_consistent_instance uctx (wfg : ∥ global_uctx_invariants (global_ext_uctx (Σ.1, uctx)) ∥) 
+    u
     : typing_result_comp (consistent_instance_ext Σ uctx u) :=
-  check_consistent_instance (Monomorphic_ctx _) u 
+  check_consistent_instance (Monomorphic_ctx _) wfg u 
     with (Nat.eq_dec #|u| 0) := {
       | left _ := ret _ ;
       | right _ := (raise (Msg "monomorphic instance should be of length 0"))
     };
-  check_consistent_instance (Polymorphic_ctx (inst, cstrs)) u
+  check_consistent_instance (Polymorphic_ctx (inst, cstrs)) wfg u
     with inspect (AUContext.repr (inst, cstrs)) := {
     | exist inst' _ with (Nat.eq_dec #|u| #|inst'.1|) := {
       | right e1 := raise (Msg "instance does not have the right length") ;
@@ -875,12 +909,17 @@ Section Typecheck.
   Qed.
   Next Obligation.
     pose proof HΣ as [HΣ'].
+    destruct wfg as [wfg].
     suff: (@check_constraints cf G (subst_instance_cstrs u cstrs)) by congruence.
-    eapply check_constraints_complete ; tea.
+    eapply check_constraints_complete. 
     - now apply wf_ext_global_uctx_invariants.
     - now apply wf_ext_consistent.
-    - admit.
-  Admitted.
+    - auto.
+    - auto.
+    - eapply (subst_global_uctx_invariants inst) => //.
+      now eapply forallb_Forall in H.
+    - apply H1.
+  Qed.
   Next Obligation.
     sq.
     clear -e2 H HG.
@@ -1279,7 +1318,7 @@ Section Typecheck.
   infer Γ HΓ (tConst cst u)
     with inspect (lookup_env (fst Σ) cst) := {
     | exist (Some (ConstantDecl d)) HH =>
-        check_consistent_instance d.(cst_universes) u ;;
+        check_consistent_instance d.(cst_universes) _ u ;;
         let ty := subst_instance u d.(cst_type) in
         ret (ty; _)
     | _ => raise (UndeclaredConstant cst)
@@ -1287,7 +1326,7 @@ Section Typecheck.
 
   infer Γ HΓ (tInd ind u) :=
     d <- lookup_ind_decl ind ;;
-    check_consistent_instance d.π1.(ind_universes) u ;;
+    check_consistent_instance d.π1.(ind_universes) _ u ;;
     let ty := subst_instance u d.π2.π1.(ind_type) in
     ret (ty; _) ;
 
@@ -1296,7 +1335,7 @@ Section Typecheck.
     | Checked_comp (mdecl;(idecl;decl))
         with inspect (nth_error idecl.(ind_ctors) k) := {
     | exist (Some cdecl) HH :=
-      check_consistent_instance mdecl.(ind_universes) u ;;
+      check_consistent_instance mdecl.(ind_universes) _ u ;;
       ret (type_of_constructor mdecl cdecl (ind, k) u; _)
     | exist None _ := raise (UndeclaredConstructor ind k)
   }};
@@ -1321,7 +1360,7 @@ Section Typecheck.
     (*let '(params, indices) := chop ci.(ci_npar) args in *)
     let chop_args := chop ci.(ci_npar) args
     in let params := chop_args.1 in let indices := chop_args.2 in
-    cu <- check_consistent_instance (ind_universes mdecl) p.(puinst) ;;
+    cu <- check_consistent_instance (ind_universes mdecl) _ p.(puinst) ;;
     check_eq_true (compare_global_instance Σ (check_eqb_universe G) (check_leqb_universe G) (IndRef ind') 
       #|args| u p.(puinst))
       (Msg "invalid universe annotation on case, not larger than the discriminee's universes") ;;
@@ -1523,8 +1562,13 @@ Section Typecheck.
     inversion X0 ; subst.
     now inversion X1.
   Qed.
-
+  
   (* tConst *)
+  Next Obligation.
+    sq. eapply global_uctx_invariants_ext.
+    symmetry in HH.
+    now apply (weaken_lookup_on_global_env' _ _ _ HΣ HH).
+  Qed.
   Next Obligation.
     sq; constructor; try assumption.
     symmetry in HH.
@@ -1549,6 +1593,10 @@ Section Typecheck.
 
   (* tInd *)
   Next Obligation.
+    sq. eapply global_uctx_invariants_ext.
+    eapply (weaken_lookup_on_global_env' _ _ _ HΣ (proj1 X0)).
+  Qed.
+  Next Obligation.
     sq; econstructor; eassumption.
   Defined.
   Next Obligation.
@@ -1564,6 +1612,10 @@ Section Typecheck.
   Qed.
 
   (* tConstruct *)
+  Next Obligation.
+    sq. eapply global_uctx_invariants_ext.
+    eapply (weaken_lookup_on_global_env' _ _ _ HΣ (proj1 decl)).
+  Qed.
   Next Obligation.
     sq; econstructor; tea. split ; tea.
     now symmetry.
@@ -1598,6 +1650,10 @@ Section Typecheck.
     eexists; eauto using validity_wf.
   Defined.
   Next Obligation.
+    sq. eapply global_uctx_invariants_ext.
+    eapply (weaken_lookup_on_global_env' _ _ _ HΣ (proj1 X0)).
+  Qed.
+  Next Obligation.
     rewrite List.rev_involutive.
     sq.
     eapply wf_rel_weak ; eauto.
@@ -1608,7 +1664,6 @@ Section Typecheck.
     eapply assumption_context_rev.
     apply assumption_context_subst_instance, smash_context_assumption_context; constructor.
   Qed.
-
   Next Obligation.
     sq.
     apply eqb_eq in i. subst I.

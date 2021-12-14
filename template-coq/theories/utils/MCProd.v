@@ -112,7 +112,7 @@ Notation "[ × P1 , P2 , P3 , P4 , P5 , P6 , P7 & P8 ]" := (and8 P1 P2 P3 P4 P5 
 Notation "[ × P1 , P2 , P3 , P4 , P5 , P6 , P7 , P8 & P9 ]" := (and9 P1 P2 P3 P4 P5 P6 P7 P8 P9) : type_scope.
 
 
-Instance Prod_reflexivity {A} {P Q : A -> A -> Type} :
+#[global] Instance Prod_reflexivity {A} {P Q : A -> A -> Type} :
   CRelationClasses.Reflexive P -> CRelationClasses.Reflexive Q -> CRelationClasses.Reflexive (fun x y => prod (P x y) (Q x y)).
 Proof.
   econstructor; reflexivity.

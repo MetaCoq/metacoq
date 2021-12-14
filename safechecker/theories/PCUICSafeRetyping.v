@@ -8,6 +8,7 @@ From MetaCoq.Template Require Import config monad_utils utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICReduction
      PCUICWeakeningConv PCUICWeakeningTyp 
      PCUICClosed PCUICClosedTyp
      PCUICSafeLemmata PCUICSubstitution PCUICValidity
@@ -36,6 +37,28 @@ Add Search Blacklist "_graph_mut".
 Add Search Blacklist "obligation".
 
 Require Import ssreflect.
+
+Lemma into_equality_terms_Algo {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ l l'} : 
+  All2 (convAlgo Σ Γ) l l' ->
+  is_closed_context Γ ->
+  forallb (is_open_term Γ) l ->
+  forallb (is_open_term Γ) l' ->
+  equality_terms Σ Γ l l'.
+Proof.
+  solve_all.
+  now eapply into_equality.
+Qed.
+
+Lemma on_free_vars_ind_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl → 
+  on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT) 
+    (ind_predicate_context ind mdecl idecl).
+Proof.
+  intros decli.
+  rewrite <- closedn_ctx_on_free_vars.
+  eapply closed_ind_predicate_context; tea.
+  eapply (declared_minductive_closed decli).
+Qed.
 
 Inductive wellinferred {cf: checker_flags} Σ Γ t : Prop :=
   | iswellinferred T : Σ ;;; Γ |- t ▹ T -> wellinferred Σ Γ t.
@@ -133,17 +156,6 @@ Proof.
     split; [split|]; econstructor ; [econstructor|..].
 Qed.
 
-Lemma on_free_vars_ind_predicate_context {wfΣ : wf Σ} {ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl -> 
-  on_free_vars_ctx (closedP (context_assumptions (ind_params mdecl)) xpredT) 
-    (ind_predicate_context ind mdecl idecl).
-Proof.
-  intros decli.
-  rewrite <- closedn_ctx_on_free_vars.
-  eapply closed_ind_predicate_context; tea.
-  eapply (declared_minductive_closed decli).
-Qed.
-  
   #[local] Notation ret t := (t; _).
 
   #[local] Definition principal_type Γ t := 
@@ -505,6 +517,8 @@ Qed.
     apply infering_typing, validity in s as [] ; eauto.
     now eexists.
   Defined.
+
+
   Next Obligation.
     destruct infer.
     destruct indargs as (?&?&?&?).
@@ -526,7 +540,7 @@ Qed.
       2: symmetry.
       all: eapply All2_length ; eassumption.
     + eapply All2_impl.
-      2: intros ; now eapply equality_forget_conv.
+      2:intros; now eapply equality_forget_conv.
       etransitivity.
       1: eapply All2_firstn.
       1: etransitivity.

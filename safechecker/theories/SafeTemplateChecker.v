@@ -3,18 +3,21 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     TemplateToPCUIC PCUICSN.
+     TemplateToPCUIC PCUICSN BDToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
 
 Import MCMonadNotation.
 
-Program Definition infer_template_program {cf : checker_flags} {cu : check_univs_tc} (p : Ast.Env.program) φ Hφ
+Program Definition infer_template_program {cf : checker_flags} {cu : PCUICSN.check_univs_tc} (p : Ast.Env.program) φ
   : EnvCheck (
     let Σ' := trans_global_decls p.1 in
     ∑ A, ∥ (Σ', φ) ;;; [] |- trans Σ' p.2 : A ∥) :=
   let Σ' := trans_global_decls p.1 in
-  p <- typecheck_program (cf:=cf) (Σ', trans Σ' p.2) φ Hφ ;;
+  p <- typecheck_program (cf:=cf) (Σ', trans Σ' p.2) φ ;;
   ret (p.π1 ; _).
+Next Obligation.
+  sq. destruct X. eapply infering_typing; tea. eapply w. constructor.
+Qed.
 
 (** In Coq until 8.11 at least, programs can be ill-formed w.r.t. universes as they don't include
     all declarations of universes and constraints coming from section variable declarations.
@@ -101,10 +104,10 @@ Definition fix_program_universes (p : Ast.Env.program) : Ast.Env.program :=
   let '(Σ, t) := p in
   (fix_global_env_universes Σ, t).
 
-Program Definition infer_and_print_template_program {cf : checker_flags} {cu : check_univs_tc} (p : Ast.Env.program) φ Hφ
+Program Definition infer_and_print_template_program {cf : checker_flags} {cu : check_univs_tc} (p : Ast.Env.program) φ
   : string + string :=
   let p := fix_program_universes p in
-  match infer_template_program (cf:=cf) p φ Hφ return string + string with
+  match infer_template_program (cf:=cf) p φ return string + string with
   | CorrectDecl t =>
     let Σ' := trans_global_decls p.1 in
     inl ("Environment is well-formed and " ^ string_of_term (trans Σ' p.2) ^

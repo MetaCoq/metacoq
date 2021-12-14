@@ -2022,7 +2022,7 @@ Section CheckEnv.
     rewrite pf. now apply onindices.
   Qed.
 
-  Program Definition check_wf_decl (Σ0 : wf_env) (Σ : global_env_ext)  HΣ G HG
+  Program Definition check_wf_decl (Σ0 : wf_env) (Σ : global_env_ext) HΣ G HG
              kn (d : global_decl) (eq : Σ = (Σ0, universes_decl_of_decl d))
     : EnvCheck (∥ on_global_decl (lift_typing typing) Σ kn d ∥) :=
     match d with
@@ -2049,16 +2049,10 @@ Section CheckEnv.
     eassumption.
   Qed.
   Next Obligation.
-    sq.
-    unfold on_constant_decl; rewrite <- Heq_anonymous.
-    eassumption.
+    sq. unfold on_constant_decl. rewrite <- Heq_anonymous; tea.
   Qed.
-  Next Obligation.
-    now sq.
-  Qed.
-  Next Obligation.
-    reflexivity.
-  Qed.
+  Next Obligation. exact HΣ. Qed. 
+  Next Obligation. reflexivity. Qed.
   Next Obligation.
     exact check_var.
   Qed.
@@ -2086,8 +2080,7 @@ Section CheckEnv.
     repeat constructor.
   Qed.
   Next Obligation.
-    sq.
-    now constructor.
+    sq. split; eauto.
   Qed.
   Next Obligation.
     sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
@@ -2098,7 +2091,7 @@ Section CheckEnv.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
     pose proof (gc_of_constraints_union 
-      (constraints_of_udecl (universes_decl_of_decl g)) (global_constraints Σ)).
+      (constraints_of_udecl (universes_decl_of_decl g)) (global_constraints Σ)) as H0.
     rewrite Hctrs' /= in H0.
     red in i. unfold gc_of_uctx in i; simpl in i.
     case_eq (gc_of_constraints (global_constraints Σ));
@@ -2227,19 +2220,18 @@ Section CheckEnv.
   Qed.
 
   Obligation Tactic := Program.Tactics.program_simpl.
-
-  Program Definition typecheck_program (p : program) φ (Hφ : on_udecl p.1 φ)
-    : EnvCheck (∑ A, ∥ (p.1, φ) ;;; [] |- p.2  : A ∥) :=
-    let Σ := p.1 in
+  
+  Program Definition typecheck_program (p : program) φ
+    : EnvCheck (∑ A, ∥ wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥) :=
+    let Σ := fst p in
     '(existT G HG) <- check_wf_env Σ ;;
     uctx <- check_udecl "toplevel term" Σ _ G (proj1 HG) φ ;;
     let G' := add_uctx uctx.π1 G in
-    @infer_term (Σ, φ) _ G' _ p.2 ;;
+    inft <- @infer_term (Σ, φ) _ G' _ (snd p) ;; 
     ret _.
   Next Obligation.
-    sq.
-    now constructor.
-  Defined.
+    sq. split; tea.
+  Qed.
   Next Obligation.
     (* todo: factorize with check_wf_env second obligation *)
     sq. unfold is_graph_of_uctx, gc_of_uctx; simpl.
@@ -2262,11 +2254,9 @@ Section CheckEnv.
     destruct (gc_of_constraints (ConstraintSet.union _ _)); simpl in H => //.
   Qed.
   Next Obligation.
-    eexists.
-    sq.
-    now eapply infering_typing.
+    exists inft; sq. split; eauto.
+    split; eauto.
   Qed.
-
 
 End CheckEnv.
 

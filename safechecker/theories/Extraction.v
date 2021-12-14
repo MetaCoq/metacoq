@@ -42,9 +42,9 @@ Extract Constant Pos.mul => "( * )".
 Extract Constant Pos.min => "Pervasives.min".
 Extract Constant Pos.max => "Pervasives.max".
 Extract Constant Pos.compare =>
-    "fun x y -> if x=y then 0 else if x<y then -1 else 1".
+    "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
 Extract Constant Pos.compare_cont =>
-    "fun c x y -> if x=y then c else if x<y then -1 else 1".
+    "fun c x y -> if x=y then c else if x<y then Lt else Gt".
 
 
 Extract Constant N.add => "(+)".
@@ -57,7 +57,7 @@ Extract Constant N.max => "Pervasives.max".
 Extract Constant N.div => "fun a b -> if b=0 then 0 else a/b".
 Extract Constant N.modulo => "fun a b -> if b=0 then a else a mod b".
 Extract Constant N.compare =>
-    "fun x y -> if x=y then 0 else if x<y then -1 else 1".
+    "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
 
 
 Extract Constant Z.add => "(+)".
@@ -70,7 +70,7 @@ Extract Constant Z.abs => "Pervasives.abs".
 Extract Constant Z.min => "Pervasives.min".
 Extract Constant Z.max => "Pervasives.max".
 Extract Constant Z.compare =>
-    "fun x y -> if x=y then 0 else if x<y then -1 else 1".
+    "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
 
 Extract Constant Z.of_N => "fun p -> p".
 Extract Constant Z.abs_N => "Pervasives.abs".
@@ -86,7 +86,7 @@ Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(
 Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int Init
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes

@@ -3690,7 +3690,7 @@ Lemma case_predicate_context_alpha {cf : checker_flags}	{Σ : global_env_ext} {w
   All2 (fun x y => eq_binder_annot x y.(decl_name)) 
      (forget_types (pcontext p))
     (idecl_binder idecl :: ind_indices idecl) ->
-  All2 (compare_decls eq eq) (case_predicate_context' ind mdecl idecl p)
+  eq_context_upto_names (case_predicate_context' ind mdecl idecl p)
     (case_predicate_context ind mdecl idecl p).
 Proof.
   intros decli cu parctx sp.
@@ -3735,8 +3735,8 @@ Qed.
 
 Lemma inst_case_predicate_context_alpha_eq {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf Σ}
   {mdecl idecl ci p} :
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
-  All2 (compare_decls eq eq)
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  eq_context_upto_names
     (map2 set_binder_name (forget_types (pcontext p))
       (inst_case_context (pparams p) (puinst p)
           (ind_predicate_context ci mdecl idecl)))
@@ -3758,7 +3758,7 @@ Lemma pre_case_branch_context_eq {cf}	{Σ} {wfΣ : wf Σ} {ind mdecl idecl param
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) puinst ->
   wf_branch_gen cdecl bctx ->
-  All2 (compare_decls eq eq)
+  eq_context_upto_names
     (pre_case_branch_context ind mdecl params puinst cdecl)
     (case_branch_context_gen ind mdecl params puinst bctx cdecl).
 Proof.
@@ -3784,7 +3784,7 @@ Lemma wf_case_branch_type {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf 
   let predctx := case_predicate_context ci mdecl idecl p in
   Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   forall i cdecl br, 
     declared_constructor Σ (ci.(ci_ind), i) mdecl idecl cdecl ->
     wf_branch cdecl br ->
@@ -4152,7 +4152,7 @@ Lemma wf_case_branch_type' {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : wf
   let predctx := inst_case_predicate_context p in
   Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   forall i cdecl br, 
     declared_constructor Σ (ci.(ci_ind), i) mdecl idecl cdecl ->
     wf_branch cdecl br ->
@@ -4513,7 +4513,7 @@ Lemma wf_case_branches_types {cf : checker_flags}	{Σ : global_env_ext} {wfΣ : 
   Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   All2i (fun i cdecl br => 
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
     wf_local Σ (Γ ,,, brctxty.1) ×
@@ -4539,7 +4539,7 @@ Lemma wf_case_branches_types' {cf : checker_flags}	{Σ : global_env_ext} {wfΣ :
   Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
   wf_branches idecl brs ->
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   All2i (fun i cdecl br =>
     let cstr_br_ctx := case_branch_context_nopars ci mdecl p.(puinst) cdecl in
     let brctx' := map2 set_binder_name (forget_types (bcontext br)) cstr_br_ctx in

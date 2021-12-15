@@ -2102,7 +2102,7 @@ Qed.
 Lemma simpl_type_Case {H : checker_flags} {Σ : global_env_ext} {Γ} {ci : case_info} {p c brs ps mdecl idecl indices} {wfΣ : wf Σ} :
   declared_inductive Σ.1 ci mdecl idecl ->
   ind_npars mdecl = ci_npar ci ->
-  All2 (compare_decls eq eq) (pcontext p)
+  eq_context_upto_names (pcontext p)
   (ind_predicate_context ci mdecl idecl) ->
   let predctx := case_predicate_context ci mdecl idecl p in
   wf_predicate mdecl idecl p ->
@@ -2115,7 +2115,7 @@ Lemma simpl_type_Case {H : checker_flags} {Σ : global_env_ext} {Γ} {ci : case_
   wf_branches idecl brs ->
   All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
-  All2 (compare_decls eq eq) (bcontext br)
+  eq_context_upto_names (bcontext br)
   (cstr_branch_context ci mdecl cdecl) *
   (let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
     Σ;;; Γ,,, brctxty.1 |- bbody br : brctxty.2 × 

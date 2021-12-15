@@ -89,7 +89,7 @@ Proof.
 Qed.
 
 Lemma subslet_eq_context_alpha {cf} {Σ Γ s Δ Δ'} :
-  All2 (compare_decls eq eq) Δ Δ' →
+  eq_context_upto_names Δ Δ' →
   subslet Σ Γ s Δ → 
   subslet Σ Γ s Δ'.
 Proof.
@@ -100,7 +100,7 @@ Proof.
 Qed.
 
 Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  All2 (compare_decls eq eq) Γ Γ' -> conv_context Σ Γ Γ'.
+  eq_context_upto_names Γ Γ' -> conv_context Σ Γ Γ'.
 Proof.
   intros a.
   eapply eq_context_upto_empty_conv_context.
@@ -109,7 +109,7 @@ Proof.
   intros ?? []; constructor; subst; auto; reflexivity.
 Qed.
 
-Lemma wf_local_alpha {cf} {Σ} {wfΣ : wf Σ} Γ Γ' : All2 (compare_decls eq eq) Γ Γ' -> 
+Lemma wf_local_alpha {cf} {Σ} {wfΣ : wf Σ} Γ Γ' : eq_context_upto_names Γ Γ' -> 
   wf_local Σ Γ ->
   wf_local Σ Γ'.
 Proof.
@@ -126,7 +126,7 @@ Proof.
 Qed.
 
 Lemma subslet_eq_context_alpha_dom {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
-  All2 (compare_decls eq eq) Γ Γ' →
+  eq_context_upto_names Γ Γ' →
   subslet Σ Γ s Δ → 
   subslet Σ Γ' s Δ.
 Proof.

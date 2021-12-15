@@ -681,7 +681,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_trans {Γ Δ} : 
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   All2 (TermEquality.compare_decls eq eq) (trans_local Γ) (trans_local Δ).
 Proof.
   intros.
@@ -906,7 +906,7 @@ Qed.
 Lemma trans_inst_case_branch_context p br ci mdecl cdecl :
   let p' := PCUICAst.map_predicate id trans trans (map_context trans) p in
   wf_branch cdecl br ->
-  All2 (compare_decls eq eq) br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
   (case_branch_context ci
     (trans_minductive_body mdecl) (trans_constructor_body cdecl) (trans_predicate p')
     (trans_branch (PCUICAst.map_branch trans (map_context trans) br))) =
@@ -1018,7 +1018,7 @@ Qed.
 
 
 Lemma trans_ind_predicate_context_eq p ci mdecl idecl :
-  All2 (compare_decls eq eq) (PCUICAst.pcontext p)
+  eq_context_upto_names (PCUICAst.pcontext p)
     (PCUICCases.ind_predicate_context ci mdecl idecl) -> 
   All2
     (λ (x : binder_annot name) (y : Env.context_decl),
@@ -1034,7 +1034,7 @@ Proof.
 Qed.
 
 Lemma trans_cstr_branch_context_eq ci mdecl cdecl br :
-  All2 (compare_decls eq eq) (PCUICAst.bcontext br) 
+  eq_context_upto_names (PCUICAst.bcontext br) 
     (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
   All2
     (λ (x : binder_annot name) (y : Env.context_decl),
@@ -2169,7 +2169,7 @@ Lemma trans_case_branch_type {cf} {Σ : global_env_ext} {wfΣ : wf Σ} ci mdecl 
   declared_inductive Σ ci mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_branch cdecl br ->
-  All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
   let ptm := it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) in
   Ast.case_branch_type ci (trans_minductive_body mdecl)
   (trans_predicate

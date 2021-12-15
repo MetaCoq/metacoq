@@ -45,7 +45,7 @@ Qed.
 
 
 Lemma alpha_eq_context_closed {Γ Δ} :
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   is_closed_context Γ ->
   is_closed_context Δ.
 Proof.
@@ -56,7 +56,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_context_context_equality {cf Σ Γ Δ} {wfΣ : wf Σ} :
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   is_closed_context Γ ->
   Σ ⊢ Γ = Δ.
 Proof.
@@ -75,11 +75,11 @@ Lemma wf_case_inst_case_context {cf Σ} {wfΣ : wf Σ}
   let predctx := case_predicate_context ci mdecl idecl p in
   Σ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
   let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   forall i cdecl br,
     declared_constructor Σ (ci.(ci_ind), i) mdecl idecl cdecl ->
     wf_branch cdecl br ->
-    All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
+    eq_context_upto_names (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
     wf_local Σ (Γ ,,, inst_case_context (pparams p) (puinst p) br.(bcontext)) ×
      Σ ⊢ Γ ,,, inst_case_context (pparams p) (puinst p) br.(bcontext) =
          Γ ,,, case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl.
@@ -360,7 +360,7 @@ Section Lemmata.
   Qed.
   (* todo: rename alpha_eq *)
   Lemma compare_decls_conv Γ Γ' :
-    All2 (compare_decls eq eq) Γ Γ' ->
+    eq_context_upto_names Γ Γ' ->
     conv_context Σ Γ Γ'.
   Proof.
     intros.
@@ -369,15 +369,15 @@ Section Lemmata.
   Qed.
 
   Lemma compare_decls_eq_context Γ Γ' :
-    All2 (compare_decls eq eq) Γ Γ' <~>
+    eq_context_upto_names Γ Γ' <~>
     eq_context_gen eq eq Γ Γ'.
   Proof.
     split; induction 1; constructor; auto.
   Qed.
 
   Lemma alpha_eq_inst_case_context Γ Δ pars puinst :
-    All2 (compare_decls eq eq) Γ Δ ->
-    All2 (compare_decls eq eq) (inst_case_context pars puinst Γ) (inst_case_context pars puinst Δ).
+    eq_context_upto_names Γ Δ ->
+    eq_context_upto_names (inst_case_context pars puinst Γ) (inst_case_context pars puinst Δ).
   Proof.
     intros. rewrite /inst_case_context.
     now eapply alpha_eq_subst_context, alpha_eq_subst_instance.

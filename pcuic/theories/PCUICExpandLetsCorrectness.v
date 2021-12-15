@@ -915,8 +915,8 @@ Proof.
 Qed.
 
 Lemma alpha_eq_trans {Γ Δ} : 
-  All2 (compare_decls eq eq) Γ Δ ->
-  All2 (compare_decls eq eq) (trans_local Γ) (trans_local Δ).
+  eq_context_upto_names Γ Δ ->
+  eq_context_upto_names (trans_local Γ) (trans_local Δ).
 Proof.
   intros.
   eapply All2_map, All2_impl; tea.
@@ -1123,49 +1123,6 @@ Proof.
   rewrite (trans_cstr_branch_context p i) //.
 Qed.
 
-Lemma map2_set_binder_name_alpha (nas : list aname) (Δ Δ' : context) :
-  All2 (fun x y => eq_binder_annot x (decl_name y)) nas Δ ->
-  All2 (compare_decls eq eq) Δ Δ' ->
-  All2 (compare_decls eq eq) (map2 set_binder_name nas Δ) Δ'.
-Proof.
-  intros hl. induction 1 in nas, hl |- *; cbn; auto.
-  destruct nas; cbn; auto.
-  destruct nas; cbn; auto; depelim hl.
-  constructor; auto. destruct r; subst; cbn; constructor; auto;
-  now transitivity na.
-Qed.
-
-Notation eq_names := (All2 (fun x y => x = (decl_name y))).
-
-Lemma eq_names_subst_context nas Γ s k : 
-  eq_names nas Γ ->
-  eq_names nas (subst_context s k Γ).
-Proof.
-  induction 1.
-  * cbn; auto. constructor.
-  * rewrite subst_context_snoc. constructor; auto.
-Qed.
-
-Lemma eq_names_subst_instance nas Γ u : 
-  eq_names nas Γ ->
-  eq_names nas (subst_instance u Γ).
-Proof.
-  induction 1.
-  * cbn; auto.
-  * rewrite /subst_instance /=. constructor; auto.
-Qed.
-
-Lemma map2_set_binder_name_alpha_eq (nas : list aname) (Δ Δ' : context) :
-  All2 (fun x y => x = (decl_name y)) nas Δ' ->
-  All2 (compare_decls eq eq) Δ Δ' ->
-  (map2 set_binder_name nas Δ) = Δ'.
-Proof.
-  intros hl. induction 1 in nas, hl |- *; cbn; auto.
-  destruct nas; cbn; auto.
-  destruct nas; cbn; auto; depelim hl.
-  f_equal; auto. destruct r; subst; cbn; auto.
-Qed.
-
 Require Import PCUICContexts.
 
 Lemma eq_names_smash_context Γ :
@@ -1187,25 +1144,6 @@ Proof.
     now apply IHΓ.
 Qed.
 
-Lemma smash_assumption_context Γ : 
-  assumption_context Γ ->
-  smash_context [] Γ = Γ.
-Proof.
-  induction Γ using rev_ind.
-  - now reflexivity.
-  - destruct x as [na [b|] ty].
-    intros ass. eapply assumption_context_app in ass as []. elimtype False; depelim a0.
-    intros ass.
-    rewrite smash_context_app_ass IHΓ. now eapply assumption_context_app in ass as [].
-    reflexivity.
-Qed.
-
-Lemma smash_context_idempotent Γ : 
-  smash_context [] (smash_context [] Γ) = smash_context [] Γ.
-Proof.
-  rewrite smash_assumption_context //. pcuic.
-Qed.
-
 Lemma trans_inst_case_branch_context_gen p q pred i br ci mdecl cdecl :
   let pred' := PCUICAst.map_predicate id trans trans (map_context trans) pred in
   wf_branch cdecl br ->
@@ -1215,7 +1153,7 @@ Lemma trans_inst_case_branch_context_gen p q pred i br ci mdecl cdecl :
   on_free_vars_terms q pred.(pparams) ->
   on_free_vars_ctx (shiftnP #|pred.(pparams)| xpred0) br.(bcontext) ->
   (* on_free_vars_ctx p cdecl.(cstr_args) -> *)
-  All2 (compare_decls eq eq) br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
   let br' := trans_branch pred' (map_branch trans (map_context trans) br) in
   (case_branch_context ci
     (trans_minductive_body mdecl) pred' (forget_types br'.(bcontext)) (trans_constructor_body i mdecl cdecl)) =
@@ -1262,7 +1200,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_on_free_vars_ctx {p Γ Δ} :
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   on_free_vars_ctx p Γ ->
   on_free_vars_ctx p Δ.
 Proof.
@@ -1281,7 +1219,7 @@ Lemma trans_inst_case_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ}
   wf_branch cdecl br ->
   declared_constructor Σ (ci, c) mdecl idecl cdecl ->
   on_free_vars_terms (shiftnP #|Γ| xpred0) pred.(pparams) ->
-  All2 (compare_decls eq eq) br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
   (case_branch_context ci
     (trans_minductive_body mdecl) pred' (forget_types br'.(bcontext)) (trans_constructor_body i mdecl cdecl)) =
     (trans_local (smash_context [] (inst_case_branch_context pred br))).
@@ -1350,7 +1288,7 @@ Qed.
 Lemma trans_ind_predicate_context_eq p ci mdecl idecl :
   is_closed_context (ind_params mdecl) ->
   on_free_vars_ctx (shiftnP #|ind_params mdecl| xpred0) (ind_indices idecl) ->
-  All2 (compare_decls eq eq) (PCUICAst.pcontext p)
+  eq_context_upto_names (PCUICAst.pcontext p)
     (PCUICCases.ind_predicate_context ci mdecl idecl) -> 
   All2
     (λ (x : binder_annot name) (y : context_decl),
@@ -1370,9 +1308,9 @@ Lemma trans_cstr_branch_context_eq ci mdecl cdecl p i br :
   is_closed_context (ind_params mdecl) ->
   on_free_vars_ctx (shiftnP (#|ind_params mdecl| + #|ind_bodies mdecl|) xpred0)
   (cstr_args cdecl) ->
-  All2 (compare_decls eq eq) (PCUICAst.bcontext br) 
+  eq_context_upto_names (PCUICAst.bcontext br) 
     (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
-  All2 (compare_decls eq eq)
+  eq_context_upto_names
     (bcontext (trans_branch p (map_branch trans (map_context trans) br)))
     (cstr_branch_context ci (trans_minductive_body mdecl)
       (trans_constructor_body i mdecl cdecl)).
@@ -1420,7 +1358,7 @@ Proof.
 Qed.
 
 Lemma map2_set_binder_name_eq nas Δ Δ' :
-  All2 (compare_decls eq eq) Δ Δ' ->
+  eq_context_upto_names Δ Δ' ->
   map2 set_binder_name nas Δ = map2 set_binder_name nas Δ'.
 Proof.
   induction 1 in nas |- *; cbn; auto.
@@ -3097,8 +3035,8 @@ Lemma trans_case_branch_type {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ : con
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_predicate mdecl idecl p ->
   wf_branch cdecl br ->
-  All2 (compare_decls eq eq) (pcontext p) (ind_predicate_context ci mdecl idecl) ->
-  All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+  eq_context_upto_names (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
   on_free_vars_terms (shiftnP #|Γ| xpred0) p.(pparams) ->
   on_free_vars (shiftnP (S #|ind_indices idecl|) (shiftnP #|Γ| xpred0)) (preturn p) ->
   let ptm := it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) in
@@ -3559,7 +3497,7 @@ Lemma trans_case_branch_context {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {ci c 
   declared_constructor Σ (ci, c) mdecl idecl cdecl ->
   wf_predicate mdecl idecl p ->
   wf_branch cdecl br ->
-  All2 (compare_decls eq eq) (bcontext br)	(cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names (bcontext br)	(cstr_branch_context ci mdecl cdecl) ->
   on_free_vars_terms (shiftnP #|Γ| xpred0) p.(pparams) ->
   let p' := map_predicate id trans trans (map_context trans) p in
   let br' := map_branch trans (map_context trans) br in
@@ -4970,7 +4908,6 @@ Lemma assumption_context_arities_context mdecl :
 Proof.
   rewrite /arities_context rev_map_spec -map_rev.
   induction (List.rev mdecl); cbn; auto with pcuic.
-  constructor. apply IHl.
 Qed.
 
 Lemma expand_lets_smash_context_id Γ x : 

@@ -119,8 +119,15 @@ Section compare_decls.
 End compare_decls.
 Arguments compare_decls : clear implicits.
 
+Notation eq_context_upto_names := (All2 (compare_decls eq eq)).
+
 Notation eq_context_gen eq_term leq_term :=
   (All2_fold (fun _ _ => compare_decls eq_term leq_term)).
+
+Lemma eq_context_upto_names_gen Γ Γ' : eq_context_upto_names Γ Γ' <~> eq_context_gen eq eq Γ Γ'.
+Proof.
+  split; intros e; depind e; constructor; auto.
+Qed.
 
 Lemma compare_decls_impl eq_term leq_term eq_term' leq_term' :
   subrelation eq_term eq_term' ->
@@ -197,6 +204,24 @@ Polymorphic Instance compare_decl_trans eq_term leq_term :
 Proof.
   intros hle hre x y z h h'; depelim h; depelim h'; constructor; auto;
   etransitivity; eauto.
+Qed.
+
+#[global]
+Instance alpha_eq_reflexive : CRelationClasses.Reflexive eq_context_upto_names.
+Proof.
+  intros x. eapply All2_refl. reflexivity.
+Qed.
+
+#[global]
+Instance alpha_eq_symmmetric : CRelationClasses.Symmetric eq_context_upto_names.
+Proof.
+  intros x. eapply All2_symP. tc.
+Qed.
+
+#[global]
+Instance alpha_eq_trans : CRelationClasses.Transitive eq_context_upto_names.
+Proof.
+  intros x y z. apply All2_trans. tc.
 Qed.
 
 #[global]

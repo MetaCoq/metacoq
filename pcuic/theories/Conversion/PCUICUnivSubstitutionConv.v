@@ -519,9 +519,15 @@ Proof.
     all: now intros x y [].
 Qed.
 
-Definition wf_ext_wk  {cf : checker_flags} (Σ : global_env_ext)
+Definition wf_ext_wk {cf : checker_flags} (Σ : global_env_ext)
   := wf Σ.1 × on_udecl_prop Σ.1 Σ.2.
+  
+Lemma wf_ext_wk_wf {cf:checker_flags} Σ : wf_ext_wk Σ -> wf Σ.
+Proof. intro H; apply H. Qed.
 
+#[global]
+Hint Resolve wf_ext_wk_wf : core.
+  
 Lemma not_var_global_ext_levels {cf : checker_flags} Σ φ (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) :
   LS.For_all (negb ∘ Level.is_var)
                    (global_ext_levels (Σ, Monomorphic_ctx φ)).
@@ -2057,7 +2063,6 @@ Section SubstIdentity.
     subst_instance u Γ = Γ.
   Proof.
     intros. eapply (env_prop_wf_local subst_abstract_instance_id) in X0; eauto.
-    apply X.
   Qed.
 
 End SubstIdentity.

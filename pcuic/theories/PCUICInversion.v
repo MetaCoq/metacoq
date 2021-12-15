@@ -229,7 +229,7 @@ Section Inversion.
        (wf_pred : wf_predicate mdecl idecl p)
        (cons : consistent_instance_ext Σ (ind_universes mdecl) p.(puinst))
        (wf_pctx : wf_local Σ (Γ ,,, predctx))
-       (conv_pctx : All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
+       (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
        (pret_ty : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps)
        (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
        (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
@@ -241,7 +241,7 @@ Section Inversion.
        (wf_brs : wf_branches idecl brs)
        (brs_ty :
           All2i (fun i cdecl br =>
-                   All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
+                   eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
                    let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
                    (wf_local Σ (Γ ,,, brctxty.1) ×
                    ((Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×

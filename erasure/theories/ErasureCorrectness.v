@@ -32,19 +32,6 @@ Local Existing Instance config.extraction_checker_flags.
 
 (** ** Prelim on arities and proofs *)
 
-Lemma isArity_subst_instance u T :
-  isArity T ->
-  isArity (subst_instance u T).
-Proof.
-  induction T; cbn; intros; tauto.
-Qed.
-
-Lemma wf_ext_wk_wf {cf:checker_flags} Σ : wf_ext_wk Σ -> wf Σ.
-Proof. intro H; apply H. Qed.
-
-#[global]
-Hint Resolve wf_ext_wk_wf : core.
-
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
   wf_ext_wk Σ ->  wf_local Σ Γ ->
   wf_local (Σ.1, univs) (subst_instance u Γ) ->
@@ -731,14 +718,6 @@ Proof.
   destruct c. cbn.
   eapply (assumption_context_cstr_branch_context (c:=(i0, i))). split. exact decl. tea.
 Qed.
-
-Lemma All2_rev (A B : Type) (P : A -> B -> Type) l l' :
-  All2 P l l' ->
-  All2 P (List.rev l) (List.rev l').
-Proof.
-  induction 1. constructor.
-  simpl. eapply All2_app; auto.
-Qed.
         
 Lemma erases_subst0 (Σ : global_env_ext) Γ t s t' s' T :
   wf Σ -> wf_local Σ Γ ->
@@ -753,29 +732,6 @@ Proof.
   eapply erases_subst with (Γ' := Γ); eauto. 
   - cbn. unfold app_context. rewrite app_nil_r. eassumption.
   - cbn. unfold app_context. rewrite app_nil_r. eassumption.
-Qed.
-
-Lemma All_All2_flex {A B} (P : A -> Type) (Q : A -> B -> Type) l l' :
-  All P l ->
-  (forall x y, In y l' -> P x -> Q x y) ->
-  length l' = length l ->
-  All2 Q l l'.
-Proof.
-  intros H1 H2 Hl.
-  induction H1 in l', H2, Hl |- *; destruct l'; invs Hl.
-  - econstructor.
-  - econstructor; firstorder. eapply IHAll; firstorder. 
-Qed.
-
-
-Lemma rev_repeat {A : Type} (n : nat) (a : A) : 
-  List.rev (repeat a n) = repeat a n.
-Proof.
-  induction n.
-  - reflexivity.
-  - replace (S n) with (n + 1) at 2 by lia.
-    cbn [repeat]. cbn. rewrite  IHn.
-    now rewrite repeat_app. 
 Qed.
 
 Lemma smash_assumption_context Γ Δ : assumption_context Γ ->
@@ -851,7 +807,7 @@ Proof.
 Qed.
 
 Lemma assumption_context_compare_decls Γ Δ : 
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   assumption_context Γ ->
   assumption_context Δ.
 Proof.

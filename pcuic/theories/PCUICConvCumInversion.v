@@ -74,7 +74,7 @@ Proof.
 Qed.
       
 Lemma alpha_eq_context_gen Γ Δ : 
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   eq_context_gen eq eq Γ Δ.
 Proof.
   induction 1; constructor; auto.

@@ -1047,7 +1047,7 @@ Section Typecheck.
   Notation wt_brs Γ ci mdecl idecl p ptm ctors brs n := 
     (∥ All2i (fun i cdecl br =>
       let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
-      All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
+      eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
         Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2)
       n ctors brs ∥).
 
@@ -1063,7 +1063,7 @@ Section Typecheck.
     Context (predctx := case_predicate_context ci mdecl idecl p).
     Context (wfpret : ∥ Σ;;; Γ,,, predctx |- preturn p ▹□ ps ∥).
     Context (ptm := it_mkLambda_or_LetIn predctx (preturn p)).
-    Context (hpctx : ∥ All2 (compare_decls eq eq) (pcontext p)
+    Context (hpctx : ∥ eq_context_upto_names (pcontext p)
           (ind_predicate_context ci mdecl idecl) ∥).
              
     Lemma branch_helper n cdecl ctors br

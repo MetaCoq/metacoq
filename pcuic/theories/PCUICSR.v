@@ -258,7 +258,7 @@ Qed.
 Require Import PCUICOnFreeVars.
 
 Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} Γ Δ Δ' : 
-  All2 (compare_decls eq eq) Δ Δ' ->
+  eq_context_upto_names Δ Δ' ->
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
   context_equality_rel false Σ Γ Δ Δ'.
@@ -280,7 +280,7 @@ Proof.
 Qed.
 
 Lemma eq_context_alpha_reln Δ Δ' : 
-  All2 (compare_decls eq eq) Δ Δ' ->
+  eq_context_upto_names Δ Δ' ->
   forall acc n, reln acc n Δ = reln acc n Δ'.
 Proof.
   induction 1.
@@ -289,7 +289,7 @@ Proof.
 Qed.
 
 Lemma eq_context_alpha_to_extended_list Δ Δ' : 
-  All2 (compare_decls eq eq) Δ Δ' ->
+  eq_context_upto_names Δ Δ' ->
   to_extended_list Δ = to_extended_list Δ'.
 Proof.
   unfold to_extended_list, to_extended_list_k.
@@ -1275,7 +1275,7 @@ Lemma closed_red1_eq_context_upto_names {Σ Γ Γ'} {t u} :
 Proof.
   intros eqctx []; split; auto.
   - eapply eq_context_upto_names_on_free_vars; tea.
-  - now rewrite -(All2_fold_length eqctx).
+  - now rewrite -(All2_length eqctx).
   - eapply red1_eq_context_upto_names; tea.
 Qed.
   
@@ -1359,8 +1359,8 @@ Qed.
 Lemma inst_case_branch_context_eq {cf} {Σ} {wfΣ : wf Σ} {p br} {ind mdecl cdecl} :
   declared_minductive Σ (inductive_mind ind) mdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
-  All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ind mdecl cdecl) ->
-  All2 (compare_decls eq eq) (inst_case_branch_context p br) (pre_case_branch_context ind mdecl p.(pparams) p.(puinst) cdecl).
+  eq_context_upto_names br.(bcontext) (cstr_branch_context ind mdecl cdecl) ->
+  eq_context_upto_names (inst_case_branch_context p br) (pre_case_branch_context ind mdecl p.(pparams) p.(puinst) cdecl).
 Proof.
   intros declm cu eqbr.
   rewrite /inst_case_branch_context /pre_case_branch_context.
@@ -1748,7 +1748,7 @@ Proof.
     assert (wfbr : wf_branch cdecl br).
     { eapply Forall2_All2, All2_nth_error in H4; tea.
       eapply declc. }
-    assert(eqctx : All2 (compare_decls eq eq) ibrctx brctx).
+    assert(eqctx : eq_context_upto_names ibrctx brctx).
     { rewrite /brctx /ibrctx.
       rewrite /case_branch_context /case_branch_context_gen.
       etransitivity.
@@ -2314,9 +2314,8 @@ Proof.
     assert (closed_red1 Σ (Γ,,, case_predicate_context ci mdecl idecl p) 
       (preturn p) preturn').
     { eapply closed_red1_eq_context_upto_names; tea.
-      symmetry. apply All2_fold_app. reflexivity.
-      apply PCUICAlpha.inst_case_predicate_context_eq => //.
-      now eapply All2_fold_All2. }
+      rewrite PCUICCasesContexts.inst_case_predicate_context_eq => //.
+      reflexivity. }
     eapply type_equality; tea.
     * eapply type_Case; eauto. constructor; eauto. constructor; eauto. 
       epose proof (wf_case_branches_types' (p:=set_preturn p preturn') ps _ brs isdecl (validity typec) H0
@@ -2396,7 +2395,7 @@ Proof.
       move=> [] wfbr [] convctx [] [] wfcbc IHcbc [] Hb [] IHb [] Hbty IHbty.
       intuition auto. clear b0.
       eapply IHb. eapply closed_red1_eq_context_upto_names; tea.
-      eapply All2_fold_All2. eapply All2_app.
+      eapply All2_app.
       2:reflexivity. etransitivity.
       2:eapply pre_case_branch_context_eq; cbn; tea.
       apply inst_case_branch_context_eq => //. apply isdecl.
@@ -3266,7 +3265,7 @@ Section SRContext.
     eq_context_upto_names Γ Δ -> Γ ≡Γ Δ.
   Proof.
     induction 1; cbnr; try constructor; eauto.
-    depelim p; constructor; subst; auto.
+    depelim r; constructor; subst; auto.
     all:cbnr; eauto.
   Qed.
   

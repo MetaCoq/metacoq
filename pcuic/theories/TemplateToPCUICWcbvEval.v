@@ -617,7 +617,7 @@ Proof.
     erewrite (nth_error_map2 _ _ _ _ _ _ (proj2 decl')).
     reflexivity.
     rewrite nth_error_map H /=. reflexivity.
-    rewrite skipn_map_length H1.
+    len. rewrite H1.
     { eapply All2_length in a1. len in a1.
       rewrite /bctx case_branch_context_assumptions //.
       rewrite /trans_branch /=.

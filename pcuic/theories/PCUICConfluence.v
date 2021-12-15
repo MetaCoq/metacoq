@@ -890,8 +890,7 @@ Proof.
     have lenctx := All2_fold_length eqctx.
     eexists. split.
     + constructor; tea. 
-      epose proof (All2_length h2). rewrite !List.skipn_length in H0 |- *. 
-      congruence.
+      epose proof (All2_length h2). congruence.
     + unfold iota_red.
       eapply eq_term_upto_univ_substs => //.
       { rewrite /expand_lets /expand_lets_k.

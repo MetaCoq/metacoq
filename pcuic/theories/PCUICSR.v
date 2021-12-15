@@ -888,7 +888,7 @@ Lemma closed_red1_ind (Σ : global_env_ext) (P0 : context -> term -> term -> Typ
   (forall (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
     (p : predicate term) (brs : list (branch term)) br,
     nth_error brs c = Some br ->
-    #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
     P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
         (iota_red ci.(ci_npar) p args br)) ->
 

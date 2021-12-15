@@ -4464,8 +4464,7 @@ Section Conversion.
         destruct h as (?&typ).
         eapply PCUICSR.subject_reduction in typ; eauto.
         apply PCUICInductiveInversion.invert_Case_Construct in typ as (?&?&?&?); auto.
-        rewrite H0 in eqbr; noconf eqbr.
-        rewrite skipn_length; lia.
+        rewrite H0 in eqbr; noconf eqbr. eauto. 
       + eapply red_case_c, r.
     - clear H H0 H1.
       simpl_reduce_stack.

@@ -987,6 +987,7 @@ Proof using cf.
     constructor. now rewrite e' /= hdecl.
   - rewrite rename_mkApps. simpl.
     rewrite rename_iota_red //.
+    * rewrite skipn_length; lia.
     * change (bcontext br) with (bcontext (rename_branch f br)).
       move/and5P: hav => [_ _ _ _ hbrs].
       eapply nth_error_forallb in hbrs; tea. simpl in hbrs.

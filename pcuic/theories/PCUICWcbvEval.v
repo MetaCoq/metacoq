@@ -177,7 +177,7 @@ Section Wcbv.
     eval discr (mkApps (tConstruct ci.(ci_ind) c u) args) ->
     nth_error brs c = Some br ->
     declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
-    #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
     eval (iota_red ci.(ci_npar) p args br) res ->
     eval (tCase ci p discr brs) res
  
@@ -461,8 +461,7 @@ Section Wcbv.
     forallb (test_branch_k p closedn 0) brs ->
     forallb (closedn 0) p.(pparams) ->
     closed (mkApps (tConstruct ind c u) args) ->
-    #|skipn (ci_npar ci) args| = context_assumptions (bcontext br) ->
-    nth_error brs c = Some br ->
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->    nth_error brs c = Some br ->
     closed (iota_red (ci_npar ci) p args br).
   Proof.
     unfold iota_red => cbrs cpars cargs hass e.
@@ -474,7 +473,10 @@ Section Wcbv.
     now rewrite forallb_rev forallb_skipn //.
     simpl. rewrite List.rev_length /expand_lets /expand_lets_k.
     rewrite -(Nat.add_0_r #|skipn (ci_npar ci) args|).
+    rewrite skipn_length; [lia|].
     rewrite hass.
+    replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
+    with (context_assumptions (bcontext br)) by lia.
     move/andP: e => [cltx clb].
     have hl : context_assumptions (inst_case_branch_context p br) = context_assumptions (bcontext br).
     { rewrite /inst_case_branch_context. now len. }

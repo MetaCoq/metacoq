@@ -1532,7 +1532,7 @@ Section Trans_Global.
       unfold Ast.map_branch; cbn.
       rewrite map2_map2_bias_left; len.
       rewrite PCUICCases.map2_set_binder_name_context_assumptions; len.
-      rewrite -map_skipn map_length H1 /bctx.
+      rewrite H1 /bctx.
       rewrite case_branch_context_assumptions //; len.
       cbn. rewrite context_assumptions_map //.
 

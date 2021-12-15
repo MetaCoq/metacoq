@@ -191,7 +191,7 @@ Section Wcbv.
       nth_error brs c = Some br ->
       declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
       let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
-      #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+      #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
       eval (iota_red ci.(ci_npar) args bctx br) res ->
       eval (tCase ci p discr brs) res
 
@@ -278,7 +278,7 @@ Section Wcbv.
           nth_error brs c = Some br ->
           declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
           let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
-          #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+          #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
           eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res -> 
           P (tCase ci p discr brs) res) ->
       (forall (indnpararg : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)

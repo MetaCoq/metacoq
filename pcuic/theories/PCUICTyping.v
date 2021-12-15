@@ -216,13 +216,13 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_local Σ Γ ->
     declared_constant Σ cst decl ->
     consistent_instance_ext Σ decl.(cst_universes) u ->
-    Σ ;;; Γ |- (tConst cst u) : subst_instance u decl.(cst_type)
+    Σ ;;; Γ |- (tConst cst u) : decl.(cst_type)@[u]
 
 | type_Ind : forall ind u mdecl idecl,
     wf_local Σ Γ ->
     declared_inductive Σ ind mdecl idecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
-    Σ ;;; Γ |- (tInd ind u) : subst_instance u idecl.(ind_type)
+    Σ ;;; Γ |- (tInd ind u) : idecl.(ind_type)@[u]
 
 | type_Construct : forall ind i u mdecl idecl cdecl, 
     wf_local Σ Γ ->
@@ -246,7 +246,7 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     declared_projection Σ p mdecl idecl cdecl pdecl ->
     Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
     #|args| = ind_npars mdecl ->
-    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u (snd pdecl))
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (snd pdecl)@[u]
 
 | type_Fix : forall mfix n decl,
     wf_local Σ Γ ->

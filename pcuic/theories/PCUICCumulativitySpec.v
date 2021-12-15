@@ -165,7 +165,7 @@ Inductive cumulSpec0 Σ (Re Rle : Universe.t -> Universe.t -> Prop) Γ : term ->
 (** Constant unfolding *)
 | cumul_delta : forall c decl body (isdecl : declared_constant Σ c decl) u,
     decl.(cst_body) = Some body ->
-    Σ ;;; Γ ⊢ tConst c u ≤s[Rle] subst_instance u body
+    Σ ;;; Γ ⊢ tConst c u ≤s[Rle] body@[u]
 
 (** Proj *)
 | cumul_proj : forall i pars narg args u arg,

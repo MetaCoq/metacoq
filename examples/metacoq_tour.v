@@ -58,8 +58,6 @@ Check PCUICSR.subject_reduction.
 (** Verified conversion and type-checking *)
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
-From MetaCoq.Erasure Require Import Erasure Loader.
-
 Check PCUICSafeConversion.isconv_term_sound.
 Check PCUICSafeConversion.isconv_term_complete.
 
@@ -92,6 +90,7 @@ Qed.
 MetaCoq SafeCheck (fun x : nat => x + 1).
 
 (** Erasure *)
+From MetaCoq.Erasure Require Import Erasure Loader.
 
 (** Running erasure live in Coq *)
 Definition test (p : Ast.Env.program) : string :=
@@ -100,7 +99,6 @@ Definition test (p : Ast.Env.program) : string :=
 MetaCoq Quote Recursively Definition zero := 0.
 
 Definition zerocst := Eval lazy in test zero.
-Print zerocst.
 
 Definition singleton_elim := 
   ((fun (X : Set) (x : X) (e : x = x) =>

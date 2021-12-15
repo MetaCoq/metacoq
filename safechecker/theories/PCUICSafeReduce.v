@@ -1006,20 +1006,19 @@ Section Reduce.
           inversion H1. subst. inversion H2. subst. clear H1 H2.
           intros. cbn. rewrite H3. assumption.
   Defined.
-  Next Obligation.
+  (* Next Obligation.
     sq.
     now eapply R_Acc.
-    Unshelve.
-  Defined.
-  (* Replace the last obligation by the following to run inside Coq. *)
-  (* Next Obligation.
+  Defined. *)
+  (* We fuel the accessibility proof to run reduction inside Coq. *)
+  Next Obligation.
     revert h. generalize (t, π).
     refine (Acc_intro_generator
               (R:=fun x y => R Σ Γ x y)
               (P:=fun x => welltyped Σ Γ (zip x)) (fun x y Px Hy => _) 1000 _).
     - simpl in *. eapply welltyped_R_pres; eauto.
     - destruct heΣ. intros; eapply R_Acc; eassumption.
-  Defined. *)
+  Defined.
 
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.

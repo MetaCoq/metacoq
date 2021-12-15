@@ -3572,7 +3572,6 @@ Section Conversion.
       | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
         pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
       end.
-    sq.
     eapply red_welltyped ; [auto|..].
     - exact h2.
     - eapply red_zipc.
@@ -3763,7 +3762,6 @@ Section Conversion.
     | |- context [ reduce_term ?f ?Σ ?hΣ ?Γ ?t ?h ] =>
       pose proof (reduce_term_sound f Σ hΣ Γ t h) as [hr]
     end.
-    sq.
     eapply red_welltyped ; [auto|..].
     - exact h2.
     - eapply red_zipc.

@@ -20,6 +20,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
+
+(** Allow reduction to run inside Coq *)
+Transparent Acc_intro_generator.
+
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
 Import monad_utils.MCMonadNotation.
@@ -33,7 +37,6 @@ Set Equations With UIP.
 Set Equations Transparent.
 
 Add Search Blacklist "_graph_mut".
-
 Add Search Blacklist "obligation".
 
 Require Import ssreflect.
@@ -330,7 +333,6 @@ Qed.
         | exist None _ => ! };
 
     infer Γ wfΓ (tPrim p) wt := !.
-  Proof.
 
   Next Obligation.
     sq.
@@ -663,8 +665,8 @@ Qed.
     forall T, Σ ;;; Γ |- t : T -> Σ ;;; Γ ⊢ P ≤ T.
 
   Program Definition type_of_typing Γ t (wt : welltyped Σ Γ t) : ∑ T, ∥ (Σ ;;; Γ |- t : T) × principal_typing Σ Γ t T ∥ :=
-    let '(T; HT) := infer Γ _ t _ in
-    (T; _).
+    let it := infer Γ _ t _ in
+    (it.π1; _).
   Next Obligation.
     destruct wt; sq; pcuic.
   Qed.
@@ -675,10 +677,11 @@ Qed.
     now exists T'.
   Qed.
   Next Obligation.
-    cbn in *. subst filtered_var.
-    clear Heq_anonymous.
+    cbn in *. subst it.
+    destruct infer as []; cbn.
     destruct wt as [T' HT'].
-    sq. split. eapply BDToPCUIC.infering_typing in HT; pcuic. apply hΣ.
+    sq. split.
+    eapply BDToPCUIC.infering_typing in s; pcuic. apply hΣ.
     intros T'' HT''.
     apply typing_infering in HT'' as [P [HP HP']].
     eapply infering_checking;tea. 1-2: pcuic. apply hΣ. fvs.

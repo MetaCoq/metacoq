@@ -8,10 +8,9 @@ Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
-     PCUICSigmaCalculus PCUICClosed PCUICContexts PCUICSubstitution
+     PCUICSigmaCalculus PCUICClosed PCUICClosedTyp PCUICContexts PCUICSubstitution
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICClosedTyp
-     PCUICReduction PCUICConversion PCUICCumulativity
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity 
      PCUICUnivSubst PCUICUnivSubstitutionTyp PCUICGlobalEnv PCUICTyping PCUICGeneration
      PCUICConversion PCUICOnFreeVars PCUICInductives
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion

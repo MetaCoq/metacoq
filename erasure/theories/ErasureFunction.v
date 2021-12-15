@@ -190,17 +190,12 @@ Section fix_sigma.
     exact wf_reduction_aux.
   Defined.
   
-  Opaque wf_reduction_aux.
   Opaque wf_reduction.
-  Opaque Acc_intro_generator.
-  Opaque Wf.Acc_intro_generator.
+  
   Ltac sq := try (destruct HeΣ as [wfeΣ]; clear HeΣ);
     repeat match goal with
           | H : ∥ _ ∥ |- _ => destruct H
           end; try eapply sq.
-
-  Opaque reduce_to_prod.
-  Opaque reduce_to_sort.
 
   Equations(noeqns noind) is_arity Γ (HΓ : ∥wf_local Σ Γ∥) T (HT : welltyped Σ Γ T) :
     {Is_conv_to_Arity Σ Γ T} + {~ Is_conv_to_Arity Σ Γ T}
@@ -271,6 +266,7 @@ Section fix_sigma.
 
 End fix_sigma.
 
+Opaque wf_reduction_aux.
 Transparent wf_reduction.
 
 (* Top.sq should be used but the behavior is a bit different *)
@@ -284,6 +280,8 @@ Local Ltac sq :=
   - it represents a type, i.e., its type is an arity
   - it represents a proof: its sort is Prop.
 *)
+
+Opaque type_of_typing.
 
 Program Definition is_erasable (Σ : global_env_ext) (HΣ : ∥wf_ext Σ∥) (Γ : context) (t : PCUICAst.term) 
   (wt : welltyped Σ Γ t) :
@@ -378,6 +376,8 @@ Next Obligation.
   eapply equality_Sort_r_inv in pt as [u' [redu' leq]].
   now apply (H0 _ redu').
 Qed.
+
+Transparent type_of_typing.
 
 Lemma welltyped_brs (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T -> 
   ∥ All (fun br => welltyped Σ (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ∥.

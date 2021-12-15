@@ -1,6 +1,6 @@
 From Coq Require Import Recdef.
 From MetaCoq.Template Require Import TemplateMonad Loader.
-From MetaCoq.SafeChecker Require Import SafeTemplateChecker.
+(* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
 From MetaCoq.Erasure Require Import Erasure.
 From Coq Require Import String.

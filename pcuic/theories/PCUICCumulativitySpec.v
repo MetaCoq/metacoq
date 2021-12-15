@@ -16,10 +16,10 @@ Definition cumul_predicate (cumul : context -> term -> term -> Type) Γ Re p p' 
 Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ Rle ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ Rle ]  u").
 
-Definition R_global_Ind Σ Re Rle i napp :=
+Definition cumul_Ind_univ Σ Re Rle i napp :=
   R_opt_variance Re Rle (global_variance Σ (IndRef i) napp).
 
-Definition R_global_Construct Σ Re Rle i k napp :=
+Definition cumul_Construct_univ Σ Re Rle i k napp :=
   R_opt_variance Re Rle (global_variance Σ (ConstructRef i k) napp).
 
 (** * Definition of cumulativity and conversion relations *)
@@ -48,12 +48,12 @@ Inductive cumulSpec0 Σ (Re Rle : Universe.t -> Universe.t -> Prop) Γ : term ->
 (* Cumulativity rules *)
 
 | cumul_Ind : forall i u u' args args', 
-    R_global_Ind Σ Re Rle i #|args| u u' ->
+    cumul_Ind_univ Σ Re Rle i #|args| u u' ->
     All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Re] u) args args' ->
     Σ ;;; Γ ⊢ mkApps (tInd i u) args ≤s[Rle] mkApps (tInd i u') args'
 
 | cumul_Construct : forall i k u u' args args',
-    R_global_Construct Σ Re Rle i k #|args| u u' ->
+    cumul_Construct_univ Σ Re Rle i k #|args| u u' ->
     All2 (fun t u => Σ ;;; Γ ⊢ t ≤s[Re] u) args args' ->
     Σ ;;; Γ ⊢ mkApps (tConstruct i k u) args ≤s[Rle] mkApps (tConstruct i k u') args'
    

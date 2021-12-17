@@ -79,7 +79,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   (* case_side_conditions (fun Σ Γ => wf_local Σ Γ) checking Σ Γ ci p ps
     mdecl idecl indices predctx -> *) (*issue with wf_local_rel vs wf_local *)
   mdecl.(ind_npars) = ci.(ci_npar) ->
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
   wf_predicate mdecl idecl p ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_local_bd_rel Σ Γ predctx ->
@@ -93,7 +93,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   (* case_branch_typing *)
   wf_branches idecl brs ->
   All2i (fun i cdecl br =>
-    All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
+    eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
     let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
     wf_local_bd_rel Σ Γ brctxty.1 ×
     Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) ◃ brctxty.2)
@@ -159,7 +159,7 @@ and "'wf_local_bd_rel' Σ Γ Γ'" := (All_local_rel (lift_sorting checking infer
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ptm n ctors brs :=
   All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
-    (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
+    (eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
     let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
     (wf_local_bd_rel Σ Γ brctxty.1) × 
     Σ;;; Γ,,, brctxty.1 |- bbody br ◃ brctxty.2)
@@ -389,7 +389,7 @@ Section BidirectionalInduction.
       (* case_side_conditions (fun Σ Γ => wf_local Σ Γ) checking Σ Γ ci p ps
         mdecl idecl indices predctx -> *) (*issue with wf_local_rel vs wf_local *)
       mdecl.(ind_npars) = ci.(ci_npar) ->
-      All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+      eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
       wf_predicate mdecl idecl p ->
       consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
       wf_local_bd_rel Σ Γ predctx ->
@@ -406,7 +406,7 @@ Section BidirectionalInduction.
       (* case_branch_typing *)
       wf_branches idecl brs ->
       All2i (fun i cdecl br =>
-        All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
+        eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
         wf_local_bd_rel Σ Γ brctxty.1 ×
         PΓ_rel Γ brctxty.1 ×

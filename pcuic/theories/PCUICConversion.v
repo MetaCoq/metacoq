@@ -2000,7 +2000,7 @@ Section ConvRedConv.
         eapply OnOne2_app. constructor; auto. cbn. split; auto.
         eapply red1_eq_context_upto_names; tea.
         rewrite /inst_case_branch_context /=.
-        now eapply eq_context_gen_inst_case_context. }
+        now eapply eq_context_upto_names_gen, eq_context_gen_inst_case_context. }
       rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
   Qed.
 
@@ -2022,6 +2022,7 @@ Section ConvRedConv.
         now rewrite shiftnP_add. }
       rewrite !test_context_k_closed_on_free_vars_ctx in cl *.
       eapply eq_context_upto_names_on_free_vars; tea.
+      eapply eq_context_upto_names_gen.
       now symmetry.
     - now move: op => /= /andP[] => ->.
   Qed.
@@ -2046,6 +2047,7 @@ Section ConvRedConv.
           now eapply eq_context_gen_inst_case_context. }
         eapply equality_is_closed_context in cv.
         eapply eq_context_upto_names_on_free_vars; tea.
+        eapply eq_context_upto_names_gen.
         now eapply eq_context_gen_inst_case_context. }
     induction h.
     - apply equality_compare; tas.
@@ -2196,7 +2198,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
   Proof.
     intros onΓ onmfix onmfix' h.
-    assert (All2 (compare_decls eq eq) (fix_context mfix) (fix_context mfix')).
+    assert (eq_context_upto_names (fix_context mfix) (fix_context mfix')).
     { clear -h.
       unfold fix_context, mapi.
       generalize 0 at 2 4.
@@ -2233,7 +2235,7 @@ Section ConvRedConv.
         rewrite -H0.
         eapply red_eq_context_upto_names; tea.
         2:exact hbo'.
-        eapply All2_fold_All2, All2_app; auto.
+        eapply All2_app; auto.
         eapply All2_refl; reflexivity.
       - eapply All2_refl. intros.
         intuition auto. }

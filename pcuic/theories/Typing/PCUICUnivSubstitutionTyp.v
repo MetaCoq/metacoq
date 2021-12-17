@@ -572,8 +572,12 @@ Proof.
   now eapply (typing_subst_instance_decl _ _ _ (tSort _)).
 Qed.
 
-
-
+Lemma isArity_subst_instance u T :
+  isArity T ->
+  isArity (subst_instance u T).
+Proof.
+  induction T; cbn; intros; tauto.
+Qed.
 
 Lemma wf_local_subst_instance Σ Γ ext u :
   wf_global_ext Σ.1 ext ->

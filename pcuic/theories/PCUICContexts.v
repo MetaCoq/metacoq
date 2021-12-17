@@ -4,6 +4,7 @@ From Coq Require Import CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
+     PCUICEquality
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICConversion PCUICContextConversion
      PCUICContextSubst PCUICUnivSubstitutionConv
@@ -59,6 +60,27 @@ Qed.
 
 #[global]
 Hint Resolve smash_context_assumption_context : pcuic.
+#[global]
+Hint Constructors assumption_context : pcuic.
+
+Lemma smash_assumption_context Γ : 
+  assumption_context Γ ->
+  smash_context [] Γ = Γ.
+Proof.
+  induction Γ using rev_ind.
+  - now reflexivity.
+  - destruct x as [na [b|] ty].
+    intros ass. eapply assumption_context_app in ass as []. elimtype False; depelim a0.
+    intros ass.
+    rewrite smash_context_app_ass IHΓ. now eapply assumption_context_app in ass as [].
+    reflexivity.
+Qed.
+
+Lemma smash_context_idempotent Γ : 
+  smash_context [] (smash_context [] Γ) = smash_context [] Γ.
+Proof.
+  rewrite smash_assumption_context //; pcuic.
+Qed.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
   context_assumptions ctx = #|ctx|.
@@ -723,4 +745,47 @@ Lemma to_extended_list_subst_context_let_expand s Γ Δ :
 Proof.
   rewrite /subst_context_let_expand /to_extended_list /expand_lets_ctx /expand_lets_k_ctx.
   now rewrite !to_extended_list_k_subst to_extended_list_k_lift_context.
+Qed.
+
+Lemma map2_set_binder_name_alpha (nas : list aname) (Δ Δ' : context) :
+  All2 (fun x y => eq_binder_annot x (decl_name y)) nas Δ ->
+  eq_context_upto_names Δ Δ' ->
+  eq_context_upto_names (map2 set_binder_name nas Δ) Δ'.
+Proof.
+  intros hl. induction 1 in nas, hl |- *; cbn; auto.
+  destruct nas; cbn; auto.
+  destruct nas; cbn; auto; depelim hl.
+  constructor; auto. destruct r; subst; cbn; constructor; auto;
+  now transitivity na.
+Qed.
+
+Notation eq_names := (All2 (fun x y => x = (decl_name y))).
+
+Lemma eq_names_subst_context nas Γ s k : 
+  eq_names nas Γ ->
+  eq_names nas (subst_context s k Γ).
+Proof.
+  induction 1.
+  * cbn; auto. constructor.
+  * rewrite subst_context_snoc. constructor; auto.
+Qed.
+
+Lemma eq_names_subst_instance nas Γ u : 
+  eq_names nas Γ ->
+  eq_names nas (subst_instance u Γ).
+Proof.
+  induction 1.
+  * cbn; auto.
+  * rewrite /subst_instance /=. constructor; auto.
+Qed.
+
+Lemma map2_set_binder_name_alpha_eq (nas : list aname) (Δ Δ' : context) :
+  eq_names nas Δ' ->
+  eq_context_upto_names Δ Δ' ->
+  (map2 set_binder_name nas Δ) = Δ'.
+Proof.
+  intros hl. induction 1 in nas, hl |- *; cbn; auto.
+  destruct nas; cbn; auto.
+  destruct nas; cbn; auto; depelim hl.
+  f_equal; auto. destruct r; subst; cbn; auto.
 Qed.

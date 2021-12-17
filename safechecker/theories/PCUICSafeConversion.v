@@ -1777,7 +1777,6 @@ Section Conversion.
       depelim a2. clear a1 a2.
       destruct p0 as [p0 _].
       cbn in p0.
-      eapply alpha_eq_context_gen in p0.
       eapply PCUICConfluence.eq_context_upto_names_on_free_vars.
       2:symmetry; exact p0.
       rewrite <-closedn_ctx_on_free_vars.
@@ -1807,8 +1806,7 @@ Section Conversion.
     - eapply (wf_predicate_length_pars wf_pred0).
     - eapply alpha_eq_context_gen. etransitivity; tea.
       now symmetry.
-    - eapply alpha_eq_context_gen in p0.
-      eapply PCUICConfluence.eq_context_upto_names_on_free_vars.
+    - eapply PCUICConfluence.eq_context_upto_names_on_free_vars.
       2:symmetry; exact p0.
       rewrite <- closedn_ctx_on_free_vars.
       destruct ci. cbn.
@@ -2868,7 +2866,6 @@ Section Conversion.
       #|pparams p| p.(pcontext)).
     { rewrite test_context_k_closed_on_free_vars_ctx.
       destruct hcase.
-      eapply alpha_eq_context_gen in conv_pctx.
       eapply PCUICConfluence.eq_context_upto_names_on_free_vars.
       2:symmetry; exact conv_pctx.
       rewrite <- closedn_ctx_on_free_vars.
@@ -2888,7 +2885,6 @@ Section Conversion.
       now symmetry. 
     - now rewrite <- test_context_k_closed_on_free_vars_ctx.
     - rewrite test_context_k_closed_on_free_vars_ctx. 
-      eapply alpha_eq_context_gen in conv_pctx0.
       eapply PCUICConfluence.eq_context_upto_names_on_free_vars.
       2:symmetry; exact conv_pctx0.
       rewrite <- closedn_ctx_on_free_vars.

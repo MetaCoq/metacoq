@@ -165,7 +165,7 @@ Lemma on_free_vars_case_predicate_context `{checker_flags} Σ ci mdecl idecl p P
   declared_inductive Σ ci mdecl idecl ->
   forallb (on_free_vars P) (pparams p) ->
   wf_predicate mdecl idecl p ->
-  All2 (compare_decls eq eq) (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+  eq_context_upto_names (pcontext p) (ind_predicate_context ci mdecl idecl) ->
   on_free_vars_ctx P (case_predicate_context ci mdecl idecl p).
 Proof.
   intros.
@@ -241,7 +241,7 @@ Lemma on_free_vars_case_branch_type `{checker_flags} {Σ : global_env_ext } {wf�
   let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
   declared_constructor Σ (ci.(ci_ind),i) mdecl idecl cdecl ->
   wf_predicate mdecl idecl p ->
-  All2 (compare_decls eq eq) (pcontext p) (ind_predicate_context ci mdecl idecl) ->
+  eq_context_upto_names (pcontext p) (ind_predicate_context ci mdecl idecl) ->
   wf_branch cdecl br ->
   forallb (on_free_vars P) (pparams p) ->
   on_free_vars (shiftnP #|pcontext p| P) (preturn p) ->

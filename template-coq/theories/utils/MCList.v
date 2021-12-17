@@ -1199,3 +1199,13 @@ Proof.
   remember (fun (x : A) (_ : In x l) => f x) as g.
   funelim (map_In l g) => //; simpl; rewrite (H f0); trivial.
 Qed.
+
+Lemma rev_repeat {A : Type} (n : nat) (a : A) : 
+  List.rev (repeat a n) = repeat a n.
+Proof.
+  induction n.
+  - reflexivity.
+  - replace (S n) with (n + 1) at 2 by lia.
+    cbn [repeat]. cbn. rewrite  IHn.
+    now rewrite repeat_app. 
+Qed.

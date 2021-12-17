@@ -8,6 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICContextConversionTyp
   PCUICTyping PCUICGlobalEnv PCUICInversion PCUICGeneration
   PCUICConfluence PCUICConversion
+  PCUICUnivSubstitutionTyp
   PCUICCumulativity PCUICSR PCUICSafeLemmata
   PCUICValidity PCUICPrincipality PCUICElimination 
   PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN.

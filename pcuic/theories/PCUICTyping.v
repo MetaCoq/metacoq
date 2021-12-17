@@ -7,10 +7,6 @@ From MetaCoq.PCUIC Require Export PCUICCases.
 
 Import MCMonadNotation.
 
-Import MCMonadNotation.
-
-Import MCMonadNotation.
-
 (* TODO: remove this export *)
 From MetaCoq Require Export LibHypsNaming.
 
@@ -156,7 +152,7 @@ Variant case_side_conditions `{checker_flags} wf_local_fun typing Σ Γ ci p ps 
     (wf_pctx : wf_local_fun Σ (Γ ,,, predctx))
     (* The predicate context is fixed, it is only used as a cache for information from the 
       global environment *)
-    (conv_pctx : All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
+    (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
     (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
     (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
                          (List.rev (subst_instance p.(puinst)
@@ -170,7 +166,7 @@ Variant case_branch_typing `{checker_flags} wf_local_fun typing Σ Γ (ci:case_i
        All2i (fun i cdecl br =>
         (* Also a cache, brctxty is built from br.(bcontext) by substituting in the 
            parameters and universe instance  *)
-                All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
+                eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl) ×
                 let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
                 (wf_local_fun Σ (Γ ,,, brctxty.1) ×
                 ((typing Σ (Γ ,,, brctxty.1) br.(bbody) (brctxty.2)) ×
@@ -334,7 +330,7 @@ Definition isWfArity {cf:checker_flags} Σ (Γ : context) T :=
 Definition tybranches {cf} Σ Γ ci mdecl idecl p ps ptm n ctors brs :=
   All2i
   (fun (i : nat) (cdecl : constructor_body) (br : branch term) =>
-   (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) *
+   (eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl)) *
    (let brctxty := case_branch_type ci mdecl idecl p br ptm i cdecl in
     wf_local Σ (Γ,,, brctxty.1)
     × Σ;;; Γ,,, brctxty.1 |- bbody br : brctxty.2
@@ -653,7 +649,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         Forall_decls_typing P Σ.1 -> 
         PΓ Σ Γ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
-        All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+        eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
         wf_predicate mdecl idecl p ->
         consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
@@ -672,7 +668,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
         wf_branches idecl brs ->
         All2i (fun i cdecl br =>
-          (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
+          (eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
           let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
           (PΓ Σ (Γ ,,, brctxty.1) ×
            (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×
@@ -1118,7 +1114,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       Forall_decls_typing P Σ.1 -> 
       PΓ Σ Γ ->
       mdecl.(ind_npars) = ci.(ci_npar) ->
-      All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
+      eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
       let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
       wf_predicate mdecl idecl p ->
       consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
@@ -1137,7 +1133,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       let ptm := it_mkLambda_or_LetIn predctx p.(preturn) in
       wf_branches idecl brs ->
       All2i (fun i cdecl br =>
-        (All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
+        (eq_context_upto_names br.(bcontext) (cstr_branch_context ci mdecl cdecl)) ×
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm i cdecl in
         (PΓ Σ (Γ ,,, brctxty.1) ×
           (Σ ;;; Γ ,,, brctxty.1 |- br.(bbody) : brctxty.2) ×

@@ -718,7 +718,7 @@ Section Alpha.
       eapply type_Cumul'; tea.
       + have cu' : consistent_instance_ext Σ (ind_universes mdecl) (puinst p').
         { now rewrite -eqinst. }
-        have convctx' : All2 (compare_decls eq eq) (pcontext p') (ind_predicate_context ind mdecl idecl).
+        have convctx' : eq_context_upto_names (pcontext p') (ind_predicate_context ind mdecl idecl).
         { etransitivity; tea. symmetry. now eapply All2_fold_All2 in eqctx. }
         assert (eqp' : eq_context_gen eq eq (inst_case_predicate_context p')
           (case_predicate_context ind mdecl idecl p')).

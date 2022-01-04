@@ -11,116 +11,111 @@ From Equations Require Import Equations.
 Set Equations Transparent.
 Set Default Goal Selector "!".
 
+Reserved Notation " Σ ;;; Γ |- t ⇝ u " (at level 50, Γ, t, u at next level).
+
 Local Open Scope type_scope.
+
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
-| red_beta na t b a :
-    red1 Σ Γ (tApp (tLambda na t b) a) (subst10 a b)
+| red_beta na t b a : 
+  Σ ;;; Γ |- tApp (tLambda na t b) a ⇝ subst10 a b
 
 (** Let *)
 | red_zeta na b t b' :
-    red1 Σ Γ (tLetIn na b t b') (subst10 b b')
+  Σ ;;; Γ |- tLetIn na b t b' ⇝ subst10 b b'
 
 | red_rel i body :
     option_map decl_body (nth_error Γ i) = Some (Some body) ->
-    red1 Σ Γ (tRel i) (lift0 (S i) body)
+    Σ ;;; Γ |- tRel i ⇝ lift0 (S i) body
 
 (** Case *)
 | red_iota ci c u args p brs br :
     nth_error brs c = Some br ->
     #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
-    red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
-         (iota_red ci.(ci_npar) p args br)
+    Σ ;;; Γ |- tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs 
+        ⇝ iota_red ci.(ci_npar) p args br
 
 (** Fix unfolding, with guard *)
 | red_fix mfix idx args narg fn :
     unfold_fix mfix idx = Some (narg, fn) ->
     is_constructor narg args = true ->
-    red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
+    Σ ;;; Γ |- mkApps (tFix mfix idx) args ⇝ mkApps fn args
 
 (** CoFix-case unfolding *)
 | red_cofix_case ip p mfix idx args narg fn brs :
     unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip p (mkApps fn args) brs)
+    Σ ;;; Γ |- tCase ip p (mkApps (tCoFix mfix idx) args) brs ⇝
+         tCase ip p (mkApps fn args) brs
 
 (** CoFix-proj unfolding *)
 | red_cofix_proj p mfix idx args narg fn :
     unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
-         (tProj p (mkApps fn args))
+    Σ ;;; Γ |- tProj p (mkApps (tCoFix mfix idx) args) ⇝ tProj p (mkApps fn args)
 
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) (subst_instance u body)
+    Σ ;;; Γ |- tConst c u ⇝ subst_instance u body
 
 (** Proj *)
 | red_proj i pars narg args u arg:
     nth_error args (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg
+    Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args) ⇝ arg
 
 
-| abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
-| abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
+| abs_red_l na M M' N : Σ ;;; Γ |- M ⇝ M' -> Σ ;;; Γ |- tLambda na M N ⇝ tLambda na M' N
+| abs_red_r na M M' N : Σ ;;; Γ ,, vass na N |- M ⇝ M' -> Σ ;;; Γ |- tLambda na N M ⇝ tLambda na N M'
 
-| letin_red_def na b t b' r : red1 Σ Γ b r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na r t b')
-| letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
-| letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
+| letin_red_def na b t b' r : Σ ;;; Γ |- b ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na r t b'
+| letin_red_ty na b t b' r : Σ ;;; Γ |- t ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na b r b'
+| letin_red_body na b t b' r : Σ ;;; Γ ,, vdef na b t |- b' ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na b t r
 
 | case_red_param ci p params' c brs :
-    OnOne2 (red1 Σ Γ) p.(pparams) params' ->
-    red1 Σ Γ (tCase ci p c brs)
-             (tCase ci (set_pparams p params') c brs)
-
-(* | case_red_pcontext ci p pcontext' c brs :
-    OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ'))) p.(pcontext) pcontext' ->
-    red1 Σ Γ (tCase ci p c brs)
-      (tCase ci (set_pcontext p pcontext') c brs) *)
-           
+    OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) p.(pparams) params' ->
+    Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci (set_pparams p params') c brs
+       
 | case_red_return ci p preturn' c brs :
-  red1 Σ (Γ ,,, inst_case_predicate_context p) p.(preturn) preturn' ->
-  red1 Σ Γ (tCase ci p c brs)
-          (tCase ci (set_preturn p preturn') c brs)
+  Σ ;;; Γ ,,, inst_case_predicate_context p |- p.(preturn) ⇝ preturn' ->
+  Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci (set_preturn p preturn') c brs
     
 | case_red_discr ci p c c' brs :
-  red1 Σ Γ c c' -> 
-  red1 Σ Γ (tCase ci p c brs) (tCase ci p c' brs)
+  Σ ;;; Γ |- c ⇝ c' -> Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci p c' brs
 
 | case_red_brs ci p c brs brs' :    
     OnOne2 (fun br br' =>
-      on_Trel_eq (red1 Σ (Γ ,,, inst_case_branch_context p br)) bbody bcontext br br')
+      on_Trel_eq (fun t u => Σ ;;; Γ ,,, inst_case_branch_context p br |- t ⇝ u) bbody bcontext br br')
       brs brs' ->
-    red1 Σ Γ (tCase ci p c brs) (tCase ci p c brs')
+    Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci p c brs'
 
-| proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
+| proj_red p c c' : Σ ;;; Γ |- c ⇝ c' -> Σ ;;; Γ |- tProj p c ⇝ tProj p c'
 
-| app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (tApp N1 M2)
-| app_red_r M2 N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)
+| app_red_l M1 N1 M2 : Σ ;;; Γ |- M1 ⇝ N1 -> Σ ;;; Γ |- tApp M1 M2 ⇝ tApp N1 M2
+| app_red_r M2 N2 M1 : Σ ;;; Γ |- M2 ⇝ N2 -> Σ ;;; Γ |- tApp M1 M2 ⇝ tApp M1 N2
 
-| prod_red_l na M1 M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tProd na M1 M2) (tProd na N1 M2)
-| prod_red_r na M2 N2 M1 : red1 Σ (Γ ,, vass na M1) M2 N2 ->
-                               red1 Σ Γ (tProd na M1 M2) (tProd na M1 N2)
+| prod_red_l na M1 M2 N1 : Σ ;;; Γ |- M1 ⇝ N1 -> Σ ;;; Γ |- tProd na M1 M2 ⇝ tProd na N1 M2
+| prod_red_r na M2 N2 M1 : Σ ;;; Γ ,, vass na M1 |- M2 ⇝ N2 ->
+                           Σ ;;; Γ |- tProd na M1 M2 ⇝ tProd na M1 N2
 
-| evar_red ev l l' : OnOne2 (red1 Σ Γ) l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
+| evar_red ev l l' : OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) l l' -> Σ ;;; Γ |- tEvar ev l ⇝ tEvar ev l'
 
 | fix_red_ty mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ |- t ⇝ u) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- tFix mfix0 idx ⇝ tFix mfix1 idx
 
 | fix_red_body mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x)))
            mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+    Σ ;;; Γ |- tFix mfix0 idx ⇝ tFix mfix1 idx
 
 | cofix_red_ty mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ |- t ⇝ u) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
 
 | cofix_red_body mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
+where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
 Definition red1_ctx Σ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ Δ t t'))).
 Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ (Γ ,,, Δ) t t'))).
@@ -305,7 +300,9 @@ Defined.
 #[global]
 Hint Constructors red1 : pcuic.
 
-Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
+Definition red Σ Γ := clos_refl_trans (fun t u : term => Σ;;; Γ |- t ⇝ u).
+
+Notation " Σ ;;; Γ |- t ⇝* u " := (red Σ Γ t u) (at level 50, Γ, t, u at next level).
 
 Definition red_one_ctx_rel (Σ : global_env) (Γ : context) :=
   OnOne2_local_env
@@ -329,7 +326,7 @@ Definition red_context Σ := All2_fold (red_decls Σ).
 Definition red_context_rel Σ Γ :=
   All2_fold (fun Δ Δ' => red_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')).
 
-Lemma refl_red Σ Γ t : red Σ Γ t t.
+Lemma refl_red Σ Γ t : Σ ;;; Γ |- t ⇝* t.
 Proof.
   reflexivity.
 Defined.
@@ -625,12 +622,12 @@ Section ReductionCongruence.
     etransitivity; tea. constructor.
     clear -r.
     set (P := fun ctx t => 
-      forall Γ y, red1 Σ (hole_context ctx Γ) x y ->
-                  red1 Σ Γ t (fill_context y ctx)).
+      forall Γ y, Σ ;;; (hole_context ctx Γ) |- x ⇝ y ->
+                  Σ ;;; Γ |- t ⇝ fill_context y ctx).
     set (P' := fun l fill_l =>
       forall Γ y,
                    red1 Σ (hole_list_context l Γ) x y ->
-                   OnOne2 (red1 Σ Γ) fill_l (fill_list_context y l)).
+                   OnOne2 (fun t u : term => Σ;;; Γ |- t ⇝ u) fill_l (fill_list_context y l)).
     set (P'' := fun l fill_l =>
        forall p Γ y,
        red1 Σ (hole_branch_context p l Γ) x y ->
@@ -638,17 +635,10 @@ Section ReductionCongruence.
           let brctx := inst_case_branch_context p br in
           on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br')
           fill_l (fill_branch_context y l)).
-    (* set (Pfix := fun l fixc fill_l => *)
-    (*              forall Γ y, *)
-    (*                red1 Σ (hole_mfix_context l fixc Γ) x y -> *)
-    (*                (OnOne2 (on_Trel_eq (red1 (fst Σ) Γ) dtype (fun d => (dname d, dbody d, rarg d))) *)
-    (*                       fill_l (fill_mfix_context y l fixc)) + *)
-    (*                (OnOne2 (on_Trel_eq (red1 (fst Σ) (Γ ,,, fix_context fill_l)) dbody (fun d => (dname d, dtype d, rarg d))) *)
-    (*                       fill_l (fill_mfix_context y l fixc))). *)
     revert Γ y r.
-    eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta;
-      intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
-  Qed.
+    eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta.
+    all:  intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
+    Qed.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
   Proof.

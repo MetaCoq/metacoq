@@ -891,8 +891,8 @@ Section Lemmata.
       inversion e. reflexivity.
   Qed.
 
-  Hint Resolve conv_refl conv_alt_red : core.
-  Hint Resolve conv_refl : core.
+  Hint Resolve cumul_refl conv_alt_red : core.
+  Hint Resolve cumul_refl : core.
 
   Lemma cored_red_cored :
     forall Γ u v w,

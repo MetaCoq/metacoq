@@ -1601,7 +1601,7 @@ Proof.
     constructor; auto. eapply red_conv. now eapply closed_red1_red. 
     assert (Σ ;;; Γ |- tLambda n t b : tProd n t bty). econstructor; pcuics.
     now eapply validity in X0.
-    econstructor 3. reflexivity.
+    econstructor 3. eapply cumul_refl'.
     constructor. apply Hu.
 
   - (* LetIn body *)
@@ -3173,7 +3173,8 @@ Section SRContext.
       - destruct p; subst. constructor.
         apply conv_ctx_refl.
         destruct s as [[red ->]|[red ->]].
-        constructor; pcuics. now apply PCUICCumulativity.red_conv, red1_red.
+        constructor; pcuics. reflexivity. 
+        now apply PCUICCumulativity.red_conv, red1_red.      
         constructor. pcuic. now apply PCUICCumulativity.red_conv, red1_red.
         reflexivity.
       - constructor; auto. reflexivity. }
@@ -3221,7 +3222,7 @@ Section SRContext.
       + destruct X0; eexists; eapply subject_reduction1; tea.
       + eapply type_Cumul_alt; tea.
         destruct X0. exists x. eapply subject_reduction1; tea.
-        econstructor 2. eassumption. reflexivity.
+        econstructor 2. eassumption. eapply cumul_refl'.
       + eapply subject_reduction1; tea.
     - intro H; inversion H; subst; constructor; cbn in *; auto.
       + destruct X1 as [s Ht]. exists s.

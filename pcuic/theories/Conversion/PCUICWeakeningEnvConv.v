@@ -334,7 +334,7 @@ Proof.
   induction 1; simpl.
   - econstructor. eapply eq_term_subset.
     + eapply global_ext_constraints_app.
-    + simpl in *. eapply eq_term_upto_univ_weaken_env in e; simpl; eauto.
+    + simpl in *. eapply eq_term_upto_univ_weaken_env in l; simpl; eauto.
       1:exists Σ''; eauto.
       all:typeclasses eauto.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.

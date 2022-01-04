@@ -175,11 +175,11 @@ Proof.
 Qed.
 
 Lemma equality_forget_cumul {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality true Σ Γ x y -> cumulAlgo Σ Γ x y.
+  equality true Σ Γ x y -> Σ ;;; Γ |- x <=[leq_universe Σ] y.
 Proof. apply (equality_forget (le:=true)). Qed.
 
 Lemma equality_forget_conv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality false Σ Γ x y -> convAlgo Σ Γ x y.
+  equality false Σ Γ x y -> Σ ;;; Γ |- x <=[eq_universe Σ] y.
 Proof. apply (equality_forget (le:=false)). Qed.
 #[global] Hint Resolve equality_forget_cumul equality_forget_conv : pcuic.
 

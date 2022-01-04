@@ -1912,7 +1912,7 @@ Lemma inst_conv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
 Proof.
   intros hσ onA onB onΓ h.
   induction h.
-  - eapply conv_refl.
+  - eapply cumul_refl.
     eapply eq_term_upto_univ_inst. all:try typeclasses eauto. assumption.
   - eapply red_conv_conv.
     + eapply red1_inst; tea.

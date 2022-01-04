@@ -1117,13 +1117,13 @@ Lemma conv_renameP :
 Proof.
   intros P Σ Γ Δ f A B hΣ hf hA hB hΓ h.
   induction h.
-  - eapply conv_refl. eapply eq_term_upto_univ_rename. assumption.
-  - eapply conv_red_l.
+  - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.
+  - eapply cumul_red_l.
     + eapply red1_rename. all: try eassumption.
     + apply IHh.
       * eapply red1_on_free_vars; tea.
       * auto.
-  - eapply conv_red_r.
+  - eapply cumul_red_r.
     + eapply IHh; eauto. eapply (red1_on_free_vars); tea.
     + eapply red1_rename. all: try eassumption.
 Qed.

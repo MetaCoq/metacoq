@@ -37,7 +37,7 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 #[global]
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
-Derive Signature for convAlgo cumulAlgo assumption_context.
+Derive Signature for cumulAlgo0 assumption_context.
 Derive Signature for clos_refl_trans_1n.
 
 Require Import CMorphisms.
@@ -2137,10 +2137,10 @@ Section ConvRedConv.
       * constructor.
         { simpl. intuition reflexivity. }
         apply All2_same. intros. intuition reflexivity.
-    - eapply conv_red_l; eauto.
+    - eapply cumul_red_l; eauto.
       destruct b; constructor; eapply OnOne2_app;
       constructor; cbn; intuition eauto.
-    - eapply conv_red_r ; eauto.
+    - eapply cumul_red_r ; eauto.
       destruct b; constructor; apply OnOne2_app; constructor; simpl;
       intuition eauto.
   Qed.
@@ -2455,8 +2455,8 @@ Section ConvRedConv.
     eapply into_equality.
     { clear -h hna; induction h.
       - constructor; constructor; auto; reflexivity.
-      - eapply conv_red_l; tea; pcuic.
-      - eapply conv_red_r; tea; pcuic. }
+      - eapply cumul_red_l; tea; pcuic.
+      - eapply cumul_red_r; tea; pcuic. }
     { eauto with fvs. }
     all:rewrite on_fvs_lambda; eauto with fvs.
   Qed.
@@ -2471,12 +2471,10 @@ Section ConvRedConv.
     eapply into_equality => //.
     { induction h.
       - destruct le; now repeat constructor.
-      - destruct le.
-        + eapply cumul_red_l ; try eassumption; try econstructor; assumption.
-        + eapply conv_red_l ; try eassumption. try econstructor; assumption.
-      - destruct le.
-        + eapply cumul_red_r ; pcuic.
-        + eapply conv_red_r ; pcuic. }
+      - destruct le;
+         eapply cumul_red_l ; try eassumption; try econstructor; assumption.
+      - destruct le;
+         eapply cumul_red_r ; pcuic. }
     all:rewrite on_fvs_lambda onA /=; eauto with fvs.
   Qed.
 
@@ -2490,17 +2488,13 @@ Section ConvRedConv.
     rewrite /on_free_vars_decl /test_decl => /andP[] /= onty ont onu onu'.
     eapply into_equality => //.
     { clear -h. induction h.
-      - destruct le.
-        { eapply cumul_refl. constructor.
-          all: try eapply eq_term_refl; auto. }
-        { eapply conv_refl. constructor.
-          all: try eapply eq_term_refl; auto. }
-      - destruct le.
-        { eapply cumul_red_l; tea; pcuic. }
-        { eapply conv_red_l; tea; pcuic. }
-      - destruct le.
-        { eapply cumul_red_r ; pcuic. }
-        { eapply conv_red_r; pcuic. } }
+      - destruct le;
+        eapply cumul_refl; constructor.
+          all: try eapply eq_term_refl; auto. 
+      - destruct le;
+         eapply cumul_red_l; tea; pcuic. 
+      - destruct le;
+          eapply cumul_red_r ; pcuic. }
     { rewrite on_fvs_letin onty ont //. }
     { rewrite on_fvs_letin onty ont //. }
   Qed.

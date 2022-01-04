@@ -1744,10 +1744,11 @@ Proof.
   induction 4.
   - constructor. 
     eapply trans_eq_term in e; eauto.
+    unfold leq_term_ext. 
     now rewrite global_ext_constraints_trans.
-  - eapply conv_red_l; tea. eapply trans_red1; tea. apply IHX2.
+  - eapply cumul_red_l; tea. eapply trans_red1; tea. apply IHX2.
     eapply wf_red1 in r; tea. now eapply typing_wf_sigma in wfΣ. auto.
-  - eapply conv_red_r; tea. 2:eapply trans_red1; tea.
+  - eapply cumul_red_r; tea. 2:eapply trans_red1; tea.
     eapply IHX2. auto. eapply wf_red1 in r; tea. now eapply typing_wf_sigma; auto.
 Qed.
 
@@ -1763,6 +1764,7 @@ Proof.
   induction 4.
   - constructor. 
     eapply trans_leq_term in l; eauto.
+    unfold leq_term_ext.
     now rewrite global_ext_constraints_trans.
   - eapply cumul_red_l; tea. eapply trans_red1; tea. apply IHX2.
     eapply wf_red1 in r; tea. now eapply typing_wf_sigma in wfΣ. auto.

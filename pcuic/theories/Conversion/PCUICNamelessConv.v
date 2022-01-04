@@ -1383,12 +1383,12 @@ Lemma nl_conv {cf:checker_flags} :
 Proof.
   intros Σ Γ A B h.
   induction h.
-  - constructor. rewrite global_ext_constraints_nlg.
+  - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_eq_term.
     assumption.
-  - eapply conv_red_l. 2: eassumption.
+  - eapply cumul_red_l. 2: eassumption.
     destruct Σ. apply nl_red1. assumption.
-  - eapply conv_red_r. 1: eassumption.
+  - eapply cumul_red_r. 1: eassumption.
     destruct Σ. apply nl_red1. assumption.
 Qed.
 
@@ -1399,7 +1399,7 @@ Lemma nl_cumul {cf:checker_flags} :
 Proof.
   intros Σ Γ A B h.
   induction h.
-  - constructor. rewrite global_ext_constraints_nlg.
+  - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_leq_term.
     assumption.
   - eapply cumul_red_l. 2: eassumption.

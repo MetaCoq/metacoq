@@ -777,7 +777,7 @@ Section ContextConversion.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
     eapply cumul_alt. exists v', v''; intuition auto.
-    transitivity nf.
+    unfold leq_term_ext. transitivity nf.
     apply eq_term_leq_term. now symmetry.
     transitivity nf'; auto.
     now apply eq_term_leq_term.

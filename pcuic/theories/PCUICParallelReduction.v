@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils P
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnvConv PCUICInduction
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars 
-     PCUICContextRelation PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
      
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.

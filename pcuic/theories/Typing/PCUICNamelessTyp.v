@@ -3,7 +3,7 @@ From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICTyping PCUICPosition PCUICUnivSubst
-     PCUICContextRelation PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv PCUICConversion
+     PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv PCUICConversion
      PCUICWellScopedCumulativity PCUICOnFreeVars PCUICOnFreeVarsConv PCUICConfluence PCUICClosedTyp PCUICClosed
      PCUICSigmaCalculus (* for context manipulations *).
 Require Import Equations.Prop.DepElim.

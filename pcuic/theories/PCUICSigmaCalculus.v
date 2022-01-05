@@ -2086,12 +2086,6 @@ Proof.
     rewrite !mapi_length. now rewrite subst_app_decomp.
 Qed.
 
-Lemma smash_context_app Δ Γ Γ' :
-  smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
-Proof.
-  revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
-Qed.
-
 Lemma smash_context_acc Γ Δ :
   smash_context Δ Γ =
       subst_context (extended_subst Γ 0) 0 (lift_context (context_assumptions Γ) #|Γ| Δ)

@@ -1,44 +1,82 @@
 # PCUIC
 
+The order of files here should roughly be a linearization of the dependency DAG of the library.
+
 ## General
 
-| File         | Description                                  |
-|--------------|----------------------------------------------|
-| [PCUICUtils] | General utility, not specific to type-theory |
+| File                | Description
+|---------------------|----------------------------------------------
+| [PCUICUtils]        | Generally useful definitions and properties
+| [PCUICOnOne]        | Lemmas for the OnOne relation
+| [PCUICPrimitive]    | Definitions and lemmas for primitives datatypes
 
-[PCUICUtils]: PCUICUtils.v
+[PCUICUtils]: ./utils/PCUICUtils.v
+[PCUICOnOne]: ./utils/PCUICOnOne.v
+[PCUICPrimitive]: ./utils/PCUICPrimitive.v
 
-## Syntax
+## AST
 
-| File             | Description                                               |
-|------------------|-----------------------------------------------------------|
-| [PCUICAst]       | Definition of the syntax of PCUIC                         |
-| [PCUICAstUtils]  | Utility on syntax                                         |
-| [PCUICInduction] | Induction principle on syntax                             |
-| [PCUICLiftSubst] | Definition of renaming, lifting and substitution          |
-| [PCUICUnivSubst] | Universe substitution (for universe polymorphism)         |
-| [PCUICReflect]   | Instances of equality reflection                          |
+| File             | Description                                  
+|------------------|----------------------------------------------
+| [PCUICAst]       | Definition of the Abstract Syntax Tree of PCUIC
+| [PCUICAstUtils]  | General utilities on the AST
+| [PCUICCases]     | Utilities for the case representation
+| [PCUICInduction] | Induction principle on syntax
+| [PCUICSize]      | Size of terms
+| [PCUICDepth]     | Depth of terms
+| [PCUICReflect]   | Decidability of equality between terms
+| [PCUICContextRelations] | Helper lemmas for relations between contexts
+| [PCUICPosition]  | Notions of position and stack, well-order on positions
 
 [PCUICAst]: PCUICAst.v
-[PCUICAstUtils]: PCUICAstUtils.v
-[PCUICInduction]: PCUICInduction.v
-[PCUICLiftSubst]: PCUICLiftSubst.v
-[PCUICUnivSubst]: PCUICUnivSubst.v
-[PCUICReflect]: PCUICReflect.v
+[PCUICAstUtils]: ./utils/PCUICAstUtils.v
+[PCUICCases]: ./Syntax/PCUICCases.v
+[PCUICInduction]: ./Syntax/PCUICInduction.v
+[PCUICSize]: ./utils/PCUICSize.v
+[PCUICDepth]: ./Syntax/PCUICDepth.v
+[PCUICReflect]: ./Syntax/PCUICReflect.v
+[PCUICContextRelations]: ./Syntax/PCUICContextRelations.v
+[PCUICPosition]: ./Syntax/PUICPosition.v
+
+## Closedness, Renamings and Instantiations
+
+| File                  | Description                                               |
+|-----------------------|-----------------------------------------------------------|
+| [PCUICUnivSubst]      | Substitution of universe variables (for universe polymorphism)
+| [PCUICLiftSubst]      | First commutation properties for lifting and substitution
+| [PCUICSigmaCalculus]  | General theory of renamings
+| [PCUICClosed]         | Properties of the closedness predicate on terms
+| [PCUICOnFreeVars]     | General theory of predicates on (free) variables (generalizing closedness)
+| [PCUICRenameDef]      | Definition of "good" renamings
+| [PCUICInstDef]        | Definition of "good" instantiations
+
+[PCUICUnivSubst]: ./Syntax/PCUICUnivSubst.v
+[PCUICLiftSubst]: ./Syntax/PCUICLiftSubst.v
+[PCUICSigmaCalculus]: ./PCUICSigmaCalculus.v
+[PCUICClosed]: ./Syntax/PCUICClosed.v
+[PCUICOnFreeVars]: ./Syntax/PCUICOnFreeVars.v
+[PCUICRenameDef]: ./Syntax/PCUICRenameDef.v
+[PCUICInstDef]: ./Syntax/PCUICRenameDef.v
+
+## Nameless terms
+
+| File                | Description                                               |
+|---------------------|-----------------------------------------------------------|
+| [PCUICNamelessDef]  | Name-removing translation
+| 
+
+[PCUICNamelessDef]: ./Syntax/NamelessDef.v
+
+
 
 ## Typing and Meta Theory
 
 | File             | Description                                               |
 |------------------|-----------------------------------------------------------|
-| [PCUICPretty]    |  Pretty-printing of PCUIC terms                           |
-| [PCUICSize]      |  Size function on PCUIC terms                             |
 | [PCUICTyping]    | Definition of reduction, conversion and typing            |
 | [PCUICReduction] | Results on reduction (including parallel reduction)       |
-| [PCUICPosition]  | Notions of position and stack, well-order on positions    |
-| [PCUICNameless]  | Notion of terms without printing annotation               |
 | [PCUICWeakeningEnv] | Weakening on environments                              |
 | [PCUICClosed]    | Definition of closed terms                                |
-| [PCUICSigmaCalculus] | Type preservation for σ-calculus instantiation        |
 | [PCUICWeakening] | Weakening lemma                                           |
 | [PCUICCumulativity] | Some properties on cumulativity                        |
 | [PCUICEquality]  | Equality up to universes between terms                    |
@@ -57,7 +95,6 @@
 | [PCUICWcbvEval] | Weak-head call-by-value evaluation strategy |
 
 [PCUICPretty]: PCUICPretty.v
-[PCUICSize]: PCUICSize.v
 [PCUICTyping]: PCUICTyping.v
 [PCUICReduction]: PCUICReduction.v
 [PCUICPosition]: PCUICPosition.v

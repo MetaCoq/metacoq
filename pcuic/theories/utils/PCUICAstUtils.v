@@ -617,18 +617,12 @@ Lemma decompose_app_tFix mfix idx args t :
   decompose_app t = (tFix mfix idx, args) -> t = mkApps (tFix mfix idx) args.
 Proof. apply decompose_app_rec_tFix. Qed.
 
-Lemma mkApps_size x l : size (mkApps x l) = size x + list_size size l.
-Proof.
-  induction l in x |- *; simpl; simp list_size. lia.
-  rewrite IHl. simpl. lia.
-Qed.
-
 Lemma mkApps_eq_head {x l} : mkApps x l = x -> l = [].
 Proof.
-  assert (WF : WellFounded (precompose lt size))
+  assert (WF : WellFounded (precompose lt PCUICSize.size))
     by apply wf_precompose, lt_wf.
   induction l. simpl. constructor.
-  apply apply_noCycle_right. simpl. red. rewrite mkApps_size. simpl. lia.
+  apply apply_noCycle_right. simpl. red. rewrite size_mkApps. simpl. lia.
 Qed.
 
 Lemma mkApps_eq_inv {x y l} : x = mkApps y l -> size y <= size x.

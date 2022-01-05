@@ -3,7 +3,7 @@ From Coq Require Import CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.Template Require Import config utils BasicAst Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICEquality
-     PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCases PCUICOnFreeVars.
+     PCUICLiftSubst PCUICUnivSubst PCUICCases PCUICOnFreeVars.
 
 Set Default Goal Selector "!".
 

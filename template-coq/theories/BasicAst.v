@@ -443,6 +443,11 @@ Definition snoc {A} (Γ : list A) (d : A) := d :: Γ.
 
 Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level).
 
+Definition ondecl {A} (P : A -> Type) (d : context_decl A) :=
+  P d.(decl_type) × option_default P d.(decl_body) unit.
+
+Notation onctx P := (All (ondecl P)).
+
 Section ContextMap.
   Context {term term' : Type} (f : nat -> term -> term').
 
@@ -499,6 +504,7 @@ Qed.
 
 Section Contexts.
   Context {term term' term'' : Type}.
+  Notation context term := (list (context_decl term)).
 
   Lemma test_decl_impl (f g : term -> bool) x : (forall x, f x -> g x) -> 
     test_decl f x -> test_decl g x.
@@ -507,6 +513,31 @@ Section Contexts.
     move/andb_and=> [Hd Hb].
     apply/andb_and; split; eauto.
     destruct (decl_body x); simpl in *; eauto.
+  Qed.
+    
+  Definition onctx_k (P : nat -> term -> Type) k (ctx : context term) :=
+    Alli (fun i d => ondecl (P (Nat.pred #|ctx| - i + k)) d) 0 ctx.
+
+  Lemma ondeclP {P : term -> Type} {p : term -> bool} {d : context_decl term} :
+    (forall x, reflectT (P x) (p x)) ->
+    reflectT (ondecl P d) (test_decl p d).
+  Proof.
+    intros hr.
+    rewrite /ondecl /test_decl; destruct d as [decl_name decl_body decl_type]; cbn.
+    destruct (hr decl_type) => //;
+    destruct (reflect_option_default hr decl_body) => /= //; now constructor.
+  Qed.
+
+  Lemma onctxP {p : term -> bool} {ctx : context term} :
+    reflectT (onctx p ctx) (test_context p ctx).
+  Proof.
+    eapply equiv_reflectT.
+    - induction 1; simpl; auto. rewrite IHX /= //.
+      now move/(ondeclP reflectT_pred): p0.
+    - induction ctx.
+      * constructor.
+      * move => /= /andb_and [Hctx Hd]; constructor; eauto.
+        now move/(ondeclP reflectT_pred): Hd.
   Qed.
 
   Lemma map_decl_type (f : term -> term') decl : f (decl_type decl) = decl_type (map_decl f decl).
@@ -720,7 +751,7 @@ Section Contexts.
     now rewrite map_decl_id map_id.
   Qed.
     
-  Lemma forget_types_length (ctx : list (BasicAst.context_decl term)) :
+  Lemma forget_types_length (ctx : list (context_decl term)) :
     #|forget_types ctx| = #|ctx|.
   Proof.
     now rewrite /forget_types map_length.
@@ -737,6 +768,58 @@ Section Contexts.
   Proof.
     now rewrite /forget_types map_decl_name_fold_context_k.
   Qed.
+
+  Lemma All2_fold_impl_onctx (P : context term -> context term -> context_decl term -> context_decl term -> Type) P' Γ Δ Q :  
+  onctx Q Γ ->
+  All2_fold P Γ Δ ->
+  (forall Γ Δ d d', 
+    All2_fold P Γ Δ -> 
+    P Γ Δ d d' ->
+    ondecl Q d ->
+    P' Γ Δ d d') ->
+  All2_fold P' Γ Δ.
+Proof.
+  intros onc cr Hcr.
+  induction cr; depelim onc; constructor; intuition eauto.
+Qed.
+
+Lemma All2_fold_mapi (P : context term -> context term -> context_decl term -> context_decl term -> Type) (Γ Δ : context term) f g : 
+  All2_fold (fun Γ Δ d d' =>
+    P (mapi_context f Γ) (mapi_context g Δ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d')) Γ Δ 
+  <~> All2_fold P (mapi_context f Γ) (mapi_context g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(All2_fold_length X).
+  - induction Γ as [|d Γ] in Δ |- *; destruct Δ as [|d' Δ]; simpl; intros H;
+    depelim H; constructor; simpl in *; auto.
+    pose proof (All2_fold_length H). len in H0.
+    now rewrite <- H0 in p.
+Qed.
+
+Lemma All2_fold_map {P : context term -> context term -> context_decl term -> context_decl term -> Type} {Γ Δ : context term} f g : 
+  All2_fold (fun Γ Δ d d' =>
+    P (map_context f Γ) (map_context g Δ) (map_decl f d) (map_decl g d')) Γ Δ <~>
+  All2_fold P (map_context f Γ) (map_context g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(All2_fold_length X).
+  - induction Γ as [|d Γ] in Δ |- *; destruct Δ as [|d' Δ]; simpl; intros H;
+      depelim H; constructor; auto.
+Qed.
+
+Lemma All2_fold_cst_map {P : context_decl term -> context_decl term -> Type} {Γ Δ : context term} {f g} : 
+  All2_fold (fun _ _ d d' => P (f d) (g d')) Γ Δ <~>
+  All2_fold (fun _ _ => P) (map f Γ) (map g Δ).
+Proof.
+  split.
+  - induction 1; simpl; constructor; intuition auto;
+    now rewrite <-(All2_fold_length X).
+  - induction Γ as [|d Γ] in Δ |- *; destruct Δ as [|d' Δ]; simpl; intros H;
+      depelim H; constructor; auto.
+Qed.
+
 
 End Contexts.
 

@@ -4,7 +4,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICCases PCUICSigmaCalculus
      PCUICUnivSubst PCUICContextSubst PCUICTyping 
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosed PCUICClosedConv PCUICClosedTyp
-     PCUICReduction PCUICContextRelation PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity PCUICUnivSubstitutionConv
+     PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity PCUICUnivSubstitutionConv
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICInstTyp PCUICOnFreeVars.
 
 Require Import ssreflect.

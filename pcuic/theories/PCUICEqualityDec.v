@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICCumulativity PCUICEquality PCUICWfUniverses
-     PCUICContextRelation PCUICInduction.
+     PCUICInduction.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.

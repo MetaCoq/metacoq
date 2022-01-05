@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils PCUICOnOne
      PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICWellScopedCumulativity PCUICGuardCondition
-     PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion.
+     PCUICParallelReduction PCUICSpine PCUICInductives PCUICInductiveInversion PCUICSigmaCalculus.
 
 Require Import ssreflect ssrbool Utf8.
 From Equations Require Import Equations.
@@ -199,7 +199,6 @@ Proof.
     + simpl. intros hnth hnth'. specialize (IHX _ hnth hnth').
       now rewrite Nat.add_succ_r.
 Qed.
-From MetaCoq.PCUIC Require Import PCUICSigmaCalculus.
 
 Lemma conv_context_smash_end {cf Σ} {wfΣ : wf Σ} (Γ Δ Δ' : context) : 
   wf_local Σ (Γ ,,, Δ) ->
@@ -2580,7 +2579,7 @@ Proof.
       rewrite /to_extended_list (spine_subst_subst_to_extended_list_k iparsubst0).
       assumption. }
     rewrite firstn_skipn.
-    rewrite PCUICSigmaCalculus.smash_context_app PCUICSigmaCalculus.smash_context_acc in on_projs.
+    rewrite smash_context_app smash_context_acc in on_projs.
     rewrite nth_error_app_lt in on_projs.
     { autorewrite with len. simpl. 
       eapply nth_error_Some_length in Hnth. autorewrite with len in Hnth.

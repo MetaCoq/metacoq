@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils.
 
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.

@@ -3,7 +3,7 @@ From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
-     PCUICContextRelation PCUICReduction PCUICCases PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICReduction PCUICCases PCUICWeakeningConv PCUICWeakeningTyp
      PCUICTyping PCUICOnFreeVars PCUICSubstitution
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv.
 

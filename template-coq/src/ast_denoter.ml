@@ -190,7 +190,7 @@ struct
 
   let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
     match trm with
-    | Universes0.Level.Coq_lSet -> Univ.Level.set
+    | Universes0.Level.Coq_lzero -> Univ.Level.set
     | Universes0.Level.Level s ->
       let s = list_to_string s in
       let comps = CString.split_on_char '.' s in

@@ -83,7 +83,7 @@ struct
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
     if Univ.Level.is_prop l || Univ.Level.is_sprop l then
       failwith "Prop or SProp found in levels"
-    else if Univ.Level.is_set l then Universes0.Level.Coq_lSet
+    else if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
          | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
@@ -93,7 +93,7 @@ struct
     else if Univ.Level.is_sprop l then Coq_inl Universes0.PropLevel.Coq_lSProp
     else (* NOTE: in this branch we know that [l] is neither [SProp] nor [Prop]*)
       Coq_inr (quote_nonprop_level l)
-    (* else if Univ.Level.is_set l then Coq_inr Universes0.Level.Coq_lSet
+    (* else if Univ.Level.is_set l then Coq_inr Universes0.Level.Coq_lzero
      * else let l' = match Univ.Level.var_index l with
      *         | Some x -> Universes0.Level.Var (quote_int x)
      *         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))

@@ -327,7 +327,7 @@ Section CtxReduction.
   Proof.
     intros r.
     eapply All2_fold_app_inv => //.
-    move: (All2_fold_length r). len. lia.
+    move: (All2_fold_length r). len.
   Qed.
     
   (* 

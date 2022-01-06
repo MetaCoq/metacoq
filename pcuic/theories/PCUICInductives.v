@@ -836,7 +836,7 @@ Lemma lift_context_lift_context n k k' Γ :
   lift_context n (k + k') (lift_context k' k Γ) = lift_context (n + k') k Γ.
 Proof.
   rewrite - !rename_context_lift_context.
-  rewrite /PCUICRenameDef.rename_context fold_context_k_compose.
+  rewrite /rename_context fold_context_k_compose.
   apply fold_context_k_ext => i x.
   rewrite !rename_inst !shiftn_lift_renaming !ren_lift_renaming.
   sigma. apply inst_ext.
@@ -1730,7 +1730,7 @@ Proof.
   eapply arity_typing_spine in tyargs as [argslen leqs [instsubst [wfdom wfcodom cs subs]]] => //.
   apply context_subst_app in cs as [argsubst parsubst].
   eexists _, _. move=> parctx argctx.
-  rewrite subst_instance_assumptions in argsubst, parsubst.
+  rewrite context_assumptions_subst_instance in argsubst, parsubst.
   rewrite declm.(onNpars) in argsubst, parsubst.
   eapply subslet_app_inv in subs as [subp suba].
   rewrite subst_instance_length in subp, suba.
@@ -1775,7 +1775,7 @@ Proof.
   apply context_subst_app in cs as [argsubst parsubst].
   eexists (firstn (ind_npars mdecl) args), (skipn (ind_npars mdecl) args), _, _.
   move=> parctx argctx.
-  rewrite subst_instance_assumptions in argsubst, parsubst.
+  rewrite context_assumptions_subst_instance in argsubst, parsubst.
   rewrite declm.(onNpars) in argsubst, parsubst.
   eapply subslet_app_inv in subs as [subp suba].
   rewrite subst_instance_length in subp, suba.

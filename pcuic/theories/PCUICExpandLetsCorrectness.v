@@ -3072,7 +3072,6 @@ Proof.
   f_equal.
   { relativize #|cstr_args cdecl|. erewrite expand_lets_lift_cancel. 2:rewrite case_branch_context_length_args //.
     rewrite case_branch_context_assumptions //. 
-    rewrite context_assumptions_map.
     rewrite (trans_lift _ (shiftnP #|Γ| xpred0)).
     { rewrite /ptm on_free_vars_it_mkLambda_or_LetIn.
       apply/andP; split.
@@ -3122,16 +3121,16 @@ Proof.
     rewrite on_free_vars_ctx_subst_instance. eapply on_free_vars_ctx_impl.
     2:{ eapply closedn_ctx_on_free_vars. eapply (declared_inductive_closed_params declc). }
     { intros i'. rewrite shiftnP0 //. }
+    { len in fvssi. now len. }
     rewrite -map_rev.
     rewrite -(trans_subst (shiftnP (context_assumptions (cstr_args cdecl) + context_assumptions (ind_params mdecl))
       xpred0) (shiftnP #|Γ| xpred0)).
-    { rewrite context_assumptions_map.
-      relativize (context_assumptions (ind_params mdecl)).
+    { relativize (context_assumptions (ind_params mdecl)).
       eapply on_free_vars_expand_lets_k => //.
       rewrite on_free_vars_ctx_subst_instance; eauto with pcuic.
       2:now len.
       rewrite shiftnP_add in fvssi. len in fvssi. len.
-      rewrite Nat.add_comm context_assumptions_map in fvssi => //. }
+      rewrite Nat.add_comm => //. }
     { rewrite forallb_rev. eapply forallb_All in onps. solve_all. }
     f_equal.
     rewrite /case_branch_context /case_branch_context_gen.
@@ -3141,7 +3140,7 @@ Proof.
     rewrite /pre_case_branch_context_gen /inst_case_context.
     relativize #|cstr_args cdecl|.
     erewrite expand_lets_subst_comm. 2:now len.
-    rewrite !context_assumptions_map !context_assumptions_subst_instance.
+    rewrite !context_assumptions_subst_instance.
     rewrite cstr_branch_context_assumptions Nat.add_0_r.
     f_equal.
     rewrite /cstr_branch_context; len.
@@ -3159,7 +3158,6 @@ Proof.
     len. rewrite on_free_vars_subst_instance. 
     eapply closedn_on_free_vars. rewrite Nat.add_assoc //. }
   cbn. f_equal.
-  rewrite context_assumptions_map.
   rewrite -(trans_smash_context (shiftnP (#|ind_bodies mdecl| + #|ind_params mdecl|) xpred0) []) //.
   rewrite expand_lets_mkApps /= map_app trans_mkApps /=.
   f_equal. f_equal; rewrite map_app. f_equal.
@@ -5043,7 +5041,7 @@ Proof.
       destruct (lt_dec n (context_assumptions Γ)); revgoals.
       { intros hnth.
         have hn : n = context_assumptions Γ.
-        { apply nth_error_Some_length in hnth. len in hnth. lia. }
+        { apply nth_error_Some_length in hnth. len in hnth. }
         move: hnth.
         subst n. rewrite nth_error_app_ge; len => //.
         cbn. rewrite Nat.sub_diag /=. intros [= <-].

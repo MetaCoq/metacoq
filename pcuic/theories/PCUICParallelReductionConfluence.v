@@ -3612,7 +3612,7 @@ Section Rho.
     now rewrite -> shiftnP_xpredT in onpctx.
     eapply pred1_subst_consn; tea; eauto with fvs.
     - len. now rewrite (All2_length a).
-    - len. now rewrite (All2_length a).
+    - len. rewrite context_assumptions_fake_params. now rewrite (All2_length a).
     - now eapply All2_rev.
   Qed.
 
@@ -4034,8 +4034,10 @@ Section Rho.
       now eapply pred1_refl_gen.
 
     - simpl in *. simp rho; simpl.
-      destruct (lookup_env Σ c) eqn:Heq; pcuic. destruct g; pcuic.
-      destruct cst_body eqn:Heq'; pcuic.
+      destruct (lookup_env Σ c) eqn:Heq. 2:{ constructor; auto. }
+      destruct g. 2:{ constructor; auto. }
+      destruct c0. destruct cst_body0 eqn:Heq'. pcuic.
+      constructor; auto.
       
     - simpl in *. inv_on_free_vars. rewrite rho_app_proj.
       rewrite decompose_app_mkApps; auto.
@@ -4222,7 +4224,7 @@ Section Rho.
         econstructor. 1-2:tea.
         * erewrite nth_error_map, hbr. instantiate (1 := rho_br Γ'0 (rho_predicate Γ'0 p0) b).
           reflexivity.
-        * len. eauto.  
+        * len.
         * solve_all.
         * solve_all. eapply All2_map_right_inv in hbrs. solve_all.
           eapply on_contexts_app_inv => //. rewrite -heq_puinst.

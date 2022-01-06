@@ -507,9 +507,8 @@ Proof.
         assert (n + (i - n - #|s|) - n = (i - n - #|s|)) as -> by lia.
         apply inst_ext => k.
         rewrite nth_error_idsn_None //; try lia.
-        destruct nth_error eqn:hnth'.
-        + eapply nth_error_Some_length in hnth'. len in hnth'. lia.
-        + simpl. lia_f_equal.
+        destruct nth_error eqn:hnth'; simpl; len.
+        eapply nth_error_Some_length in hnth'. len in hnth'.
 Qed.
 
 Lemma inst_context_subst_k f s k Γ :
@@ -976,7 +975,7 @@ Proof.
   have hlen := nth_error_Some_length hnth. len in hlen.
   simpl in hlen.
   destruct (nth_error (List.rev (_ ++ inst_context _ _)) _) eqn:hnth'.
-  2:{ eapply nth_error_None in hnth'. len in hnth'. simpl in hnth'. lia. }
+  2:{ eapply nth_error_None in hnth'. len in hnth'. }
   rewrite nth_error_rev_inv in hnth; len; auto.
   len in hnth. simpl in hnth.
   rewrite nth_error_rev_inv in hnth'; len; auto; try lia.

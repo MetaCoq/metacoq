@@ -21,12 +21,6 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 #[global]
 Hint Rewrite Nat.add_0_r : len.
 
-Lemma context_assumptions_expand_lets_ctx Γ Δ :
-  context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.
-Proof. now rewrite /expand_lets_ctx /expand_lets_k_ctx; len. Qed.
-#[global]
-Hint Rewrite context_assumptions_expand_lets_ctx : len.
-
 Lemma smash_context_subst_empty s n Γ : 
   smash_context [] (subst_context s n Γ) =
   subst_context s n (smash_context [] Γ).
@@ -559,7 +553,6 @@ Lemma expand_lets_smash_context Γ Δ Δ' :
 Proof.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
   rewrite -smash_context_lift -smash_context_subst /=; len.
-  lia_f_equal.
 Qed.
 
 Lemma expand_lets_k_ctx_nil Γ k : expand_lets_k_ctx Γ k [] = [].
@@ -620,7 +613,7 @@ Proof.
   rewrite simpl_lift; len; try lia.
   rewrite subst_lift_above. now len.
   change (context_assumptions Δ) with (0 + context_assumptions Δ).
-  rewrite subst_lift_above. len. lia. now rewrite lift0_id.
+  rewrite subst_lift_above. len. now rewrite lift0_id.
 Qed.
 
 Lemma subslet_lift {cf} {Σ} {wfΣ : wf Σ} (Γ Δ : context) s Δ' :

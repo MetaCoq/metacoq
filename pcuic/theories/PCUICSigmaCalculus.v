@@ -118,7 +118,11 @@ Fixpoint rename f t : term :=
 
 Notation rename_predicate := (map_predicate_shift rename shiftn id).
 Notation rename_branches f := (map_branches_shift rename f).
-
+Definition rename_context f (Γ : context) : context :=
+  fold_context_k (fun i => rename (shiftn i f)) Γ.
+Definition rename_decl f d := map_decl (rename f) d.
+Definition rename_telescope r Γ :=
+  mapi (fun i => map_decl (rename (shiftn i r))) Γ.
 
 Lemma shiftn_ext n f f' : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
 Proof.
@@ -2220,3 +2224,13 @@ Qed.
 
 #[global]
 Hint Rewrite ren_lift_renaming subst_consn_compose : sigma.
+
+Lemma rename_context_length :
+  forall σ Γ,
+    #|rename_context σ Γ| = #|Γ|.
+Proof.
+  intros σ Γ. unfold rename_context.
+  apply fold_context_k_length.
+Qed.
+#[global]
+Hint Rewrite rename_context_length : sigma wf.

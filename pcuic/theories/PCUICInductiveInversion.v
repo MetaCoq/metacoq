@@ -422,7 +422,7 @@ Proof.
   { len.
     rewrite -(Nat.add_0_r (#|cstr_args cdecl| + #|ind_params mdecl|)).
     eapply closedn_ctx_subst. len.
-    rewrite -(subst_instance_assumptions u).
+    rewrite -(context_assumptions_subst_instance u).
     eapply closedn_ctx_expand_lets. eapply closedn_ctx_upwards; eauto. lia.
     len. eapply closedn_ctx_upwards; eauto. lia.
     rewrite forallb_rev.
@@ -682,7 +682,7 @@ Proof.
   split=> //. split=> //.
   split; auto. split => //.
   now len in Hu.
-  now rewrite Hargslen context_assumptions_app !context_assumptions_subst !subst_instance_assumptions; lia.
+  now rewrite Hargslen context_assumptions_app !context_assumptions_subst !context_assumptions_subst_instance; lia.
 
   exists (skipn #|cdecl.(cstr_args)| isubst), (firstn #|cdecl.(cstr_args)| isubst).
   apply make_context_subst_spec in Hisubst.
@@ -690,7 +690,7 @@ Proof.
   rewrite List.rev_involutive.
   move/context_subst_app.
   rewrite !subst_context_length !subst_instance_length.
-  rewrite context_assumptions_subst subst_instance_assumptions -H.
+  rewrite context_assumptions_subst context_assumptions_subst_instance -H.
   move=>  [argsub parsub].
   rewrite closed_ctx_subst in parsub.
   now rewrite closedn_subst_instance_context.
@@ -2703,14 +2703,14 @@ Proof.
       rewrite !subst_instance_extended_subst.
       rewrite (subst_context_subst_context (inds  _ u _)); len.
       rewrite (subst_context_subst_context (inds  _ u' _)); len.
-      rewrite -(subst_instance_assumptions u).
+      rewrite -(context_assumptions_subst_instance u).
       rewrite -(subst_extended_subst).
       rewrite (closed_ctx_subst (inds _ _ _)) //.
-      rewrite (subst_instance_assumptions u).
-      rewrite -(subst_instance_assumptions u').
+      rewrite (context_assumptions_subst_instance u).
+      rewrite -(context_assumptions_subst_instance u').
       rewrite -(subst_extended_subst).
       rewrite (closed_ctx_subst (inds _ u' _)) //.
-      rewrite (subst_instance_assumptions u').
+      rewrite (context_assumptions_subst_instance u').
       rewrite (subst_context_subst_context (List.rev pars)) /=; len.
       rewrite -(spine_subst_extended_subst spu).
       rewrite !subst_instance_lift_context. len.
@@ -2800,8 +2800,8 @@ Proof.
         now rewrite -context_assumptions_app in clx *. }
       len in cxy. autorewrite with substu in cxy.
       rewrite -context_assumptions_app in cxy.
-      rewrite -{1}(subst_instance_assumptions u (_ ++ _)) in cxy.
-      rewrite -{1}(subst_instance_assumptions u' (_ ++ _)) in cxy.
+      rewrite -{1}(context_assumptions_subst_instance u (_ ++ _)) in cxy.
+      rewrite -{1}(context_assumptions_subst_instance u' (_ ++ _)) in cxy.
       rewrite -(expand_lets_subst_comm' _ _ 0) in cxy.
       { len. substu; cbn.
         rewrite -context_assumptions_app in clx.
@@ -2825,7 +2825,7 @@ Proof.
       rewrite -/(expand_lets_ctx _ _).
       rewrite !subst_instance_subst_context !subst_instance_lift_context subst_instance_smash /=.
       rewrite subst_instance_extended_subst.
-      rewrite -(subst_instance_assumptions u).
+      rewrite -(context_assumptions_subst_instance u).
       rewrite -(subst_instance_length u).
       rewrite -/(expand_lets_k_ctx (ind_params mdecl)@[u] 0 (smash_context [] (cstr_args cdecl)@[u])).
       rewrite subst_context_expand_lets_k //.

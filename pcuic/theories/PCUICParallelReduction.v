@@ -6,8 +6,6 @@ From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils P
      PCUICSigmaCalculus PCUICWeakeningEnvConv PCUICInduction
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars 
      PCUICContextRelation PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
-
-     (* PCUICWeakening  PCUICSubstitution. *)
      
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -115,21 +113,6 @@ Section All2_fold.
     induction H; constructor; auto. eapply All_decls_impl; tea. eauto.
   Qed.
 
-  Global Instance on_contexts_has_length P (l l' : context) : 
-    HasLen (All2_fold P l l') #|l| #|l'|.
-  Proof. red. apply on_contexts_length. Qed.
-  Hint Extern 20 (#|?X| = #|?Y|) =>
-    match goal with
-      [ H : All2_fold _ ?X ?Y |- _ ] => apply (All2_fold_length H)
-    | [ H : All2_fold _ ?Y ?X |- _ ] => symmetry; apply (All2_fold_length H)
-    | [ H : on_contexts_over _ _ _ ?X ?Y |- _ ] => apply (on_contexts_length H)
-    | [ H : on_contexts_over _ _ _ ?Y ?X |- _ ] => symmetry; apply (on_contexts_length H)
-    end : pcuic.
-
-  Ltac pcuic := eauto with pcuic.
-
-  Derive Signature for All2_fold.
-
   Lemma on_contexts_app':
     forall P (Γ Γ' Γ'' : context),
       on_contexts P (Γ ,,, Γ') Γ'' ->
@@ -169,7 +152,7 @@ Section All2_fold.
   Proof.
     intros * a hl.
     apply: All2_fold_app_inv => //.
-    apply All2_fold_length in a. len in a. lia.
+    apply All2_fold_length in a. len in a.
   Qed.
   
   Lemma nth_error_pred1_ctx {P} {Γ Δ} i body' :
@@ -1873,7 +1856,7 @@ Section ParallelSubstitution.
       rewrite nth_error_app_lt //. lia.
       eapply simpl_pred; revgoals. 3:reflexivity.
       econstructor. eapply on_contexts_app => //.
-      rewrite nth_error_app_lt. len. len in l. lia.
+      rewrite nth_error_app_lt. len. len in l. 
       rewrite /inst_context nth_error_fold_context_k option_map_two /=.
       destruct (nth_error Δ1 x) => //. noconf eqb.
       cbn. rewrite H /= //.

@@ -17,16 +17,6 @@ Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
-
-Definition rename_context f (Γ : context) : context :=
-  fold_context_k (fun i => rename (shiftn i f)) Γ.
-
-Definition rename_decl f d := map_decl (rename f) d.
-
-Definition rename_telescope r Γ :=
-  mapi (fun i => map_decl (rename (shiftn i r))) Γ.
-
-
 Section Renaming.
 
 Context `{cf : checker_flags}.

@@ -37,11 +37,11 @@ Proof.
   assert (He : forall e : UnivExpr.t, val v e = val v' e). {
     intros [[] b]; cbnr; rewrite ?H1 ?H2; reflexivity. }
   rewrite !val_fold_right.
-  induction ((List.rev (Universe.exprs t).2)); cbn; congruence.
+  induction ((List.rev (Universe.exprs n).2)); cbn; congruence.
 Qed.
 (*
 Lemma is_prop_subst_instance_level u l
-  : Level.is_prop (subst_instance_level u l) = Level.is_prop l.
+    : Level.is_prop (subst_instance_level u l) = Level.is_prop l.
 Proof.
   destruct l; cbn; try reflexivity.
   destruct (le_lt_dec #|u| n) as [HH|HH].
@@ -69,7 +69,7 @@ Proof.
     apply val_le_caract. eexists; split.
     + apply Universe.map_spec. eexists; split; tea. reflexivity.
     + now rewrite He.
-  - destruct ((val_caract (Universe.map (subst_instance_level_expr u) t) v _).p1 eq_refl)
+  - destruct ((val_caract (Universe.map (subst_instance_level_expr u) n) v _).p1 eq_refl)
       as [_ [e [He1 He2]]].
     apply Universe.map_spec in He1. destruct He1 as [e0 [He0 He1]]; subst.
     eexists; split; tea. now rewrite <- He2, He.
@@ -191,7 +191,7 @@ Proof.
     apply val_le_caract. eexists; split.
     + apply Universe.map_spec; eexists; split; tea; reflexivity.
     + now rewrite He.
-  - destruct ((val_caract (Universe.map (subst_instance_level_expr u2) t) v _).p1 eq_refl)
+  - destruct ((val_caract (Universe.map (subst_instance_level_expr u2) n) v _).p1 eq_refl)
       as [_ [e [He1 He2]]]. rewrite <- He2.
     apply Universe.map_spec in He1. destruct He1 as [e0 [He0 He1]]; subst.
     eexists; split; [|eapply He]. eapply Universe.map_spec.
@@ -226,12 +226,12 @@ Proof.
   f_equal.
   rewrite Z.sub_0_r.
   eapply Nat2Z.inj_le.
-  remember (val v (subst_instance u2 t)) as val2 eqn:eq. symmetry in eq.
+  remember (val v (subst_instance u2 n)) as val2 eqn:eq. symmetry in eq.
   apply val_caract in eq.
   destruct eq.
   destruct H0 as [e [inet vale]].
   apply Universe.map_spec in inet as [e' [H1 H2]]; subst.
-  remember (val v (subst_instance u1 t)) as val1 eqn:eq. symmetry in eq.
+  remember (val v (subst_instance u1 n)) as val1 eqn:eq. symmetry in eq.
   apply val_caract in eq as [eq' [e'' [ine'' vale'']]].
   subst val1.
   apply Universe.map_spec in ine'' as [e0 [ine0 eq]].
@@ -905,7 +905,7 @@ Qed.
 
 (** Now routine lemmas ... *)
 
-Lemma In_subst_instance x u (l : Universe.t0) :
+Lemma In_subst_instance x u (l : Universe.nonEmptyUnivExprSet) :
   UnivExprSet.In x (subst_instance u l) <-> 
   (exists x', UnivExprSet.In x' l /\ x = subst_instance u x').
 Proof.
@@ -1653,7 +1653,7 @@ Lemma wf_universe_subst_instance {cf : checker_flags} (Σ : global_env_ext) univ
    sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
    wf_universe (Σ.1, univs) (subst_instance u l). 
 Proof.
-  destruct l; simpl; auto.
+  destruct l; simpl; auto. rename n into t.
   intros wfΣ Hl Hu sub e [[l n] [inl ->]]%In_subst_instance.
   destruct l; simpl; auto.
   - unfold global_ext_levels.

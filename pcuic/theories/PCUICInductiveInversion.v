@@ -1768,7 +1768,7 @@ Section Betweenu.
   Definition betweenu_level_expr (s : UnivExpr.t) :=
     betweenu_level (UnivExpr.get_level s).
 
-  Definition betweenu_universe0 (u : Universe.t0) :=
+  Definition betweenu_universe0 (u : Universe.nonEmptyUnivExprSet) :=
     UnivExprSet.for_all betweenu_level_expr u.
   
   Definition betweenu_universe (u : Universe.t) :=

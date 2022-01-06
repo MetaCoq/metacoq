@@ -348,18 +348,19 @@ Module Universe.
         - sorted
         - without duplicate
         - non empty *)
-  Record t0 := { t_set : UnivExprSet.t ;
-                 t_ne  : UnivExprSet.is_empty t_set = false }.
+  Record nonEmptyUnivExprSet
+           := { t_set : UnivExprSet.t ;
+                t_ne  : UnivExprSet.is_empty t_set = false }.
 
-  Derive NoConfusion for t0.
+  Derive NoConfusion for nonEmptyUnivExprSet.
   
   (** This needs a propositional UIP proof to show that [is_empty = false] is a set *)
   Set Equations With UIP.
-  #[global] Instance t0_eqdec : EqDec t0.
+  #[global] Instance nonEmptyUnivExprSet_eqdec : EqDec nonEmptyUnivExprSet.
   Proof. eqdec_proof. Qed.
 
   Inductive t_ :=
-    lProp | lSProp | lType (_ : t0).
+    lProp | lSProp | lType (_ : nonEmptyUnivExprSet).
   Derive NoConfusion for t_.
 
   #[global] Instance t_eqdec : EqDec t_.
@@ -367,7 +368,7 @@ Module Universe.
   
   Definition t := t_.
 
-  Coercion t_set : t0 >-> UnivExprSet.t.
+  Coercion t_set : nonEmptyUnivExprSet >-> UnivExprSet.t.
 
   Definition eqb (u1 u2 : t) : bool :=
     match u1, u2 with
@@ -377,7 +378,7 @@ Module Universe.
     | _,_ => false
     end.
 
-  Definition make' (e : UnivExpr.t) : t0
+  Definition make' (e : UnivExpr.t) : nonEmptyUnivExprSet
     := {| t_set := UnivExprSet.singleton e;
           t_ne := eq_refl |}.
 
@@ -394,7 +395,7 @@ Module Universe.
     apply H. now apply UnivExprSetFact.is_empty_2 in H'.
   Qed.
 
-  Program Definition add (e : UnivExpr.t) (u : t0) : t0
+  Program Definition add (e : UnivExpr.t) (u : nonEmptyUnivExprSet) : nonEmptyUnivExprSet
     := {| t_set := UnivExprSet.add e u |}.
   Next Obligation.
     apply not_Empty_is_empty; intro H.
@@ -414,7 +415,7 @@ Module Universe.
     apply UnivExprSet.add_spec.
   Qed.
 
-  Definition add_list : list UnivExpr.t -> t0 -> t0
+  Definition add_list : list UnivExpr.t -> nonEmptyUnivExprSet -> nonEmptyUnivExprSet
     := List.fold_left (fun u e => add e u).
 
   Lemma add_list_spec l u e :
@@ -500,7 +501,7 @@ Module Universe.
 
   (** The non empty / sorted / without dup list of univ expressions, the
       components of the pair are the head and the tail of the (non empty) list *)
-  Program Definition exprs (u : t0) : UnivExpr.t * list UnivExpr.t
+  Program Definition exprs (u : nonEmptyUnivExprSet) : UnivExpr.t * list UnivExpr.t
     := match UnivExprSet.elements u with
        | [] => False_rect _ _
        | e :: l => (e, l)
@@ -551,7 +552,7 @@ Module Universe.
     now destruct (Universe.exprs u).
   Qed.
 
-  Lemma In_exprs (u : t0) (e : UnivExpr.t) :
+  Lemma In_exprs (u : nonEmptyUnivExprSet) (e : UnivExpr.t) :
     UnivExprSet.In e u
     <-> e = (Universe.exprs u).1 \/ In e (Universe.exprs u).2.
   Proof.
@@ -562,7 +563,7 @@ Module Universe.
     eapply or_iff_compat_l. apply InA_In_eq.
   Qed.
 
-  Lemma In_exprs_rev (u : t0) (e : UnivExpr.t) :
+  Lemma In_exprs_rev (u : nonEmptyUnivExprSet) (e : UnivExpr.t) :
     UnivExprSet.In e u
     <-> e = (Universe.exprs u).1 \/ In e (List.rev (Universe.exprs u).2).
   Proof.
@@ -570,7 +571,7 @@ Module Universe.
     apply or_iff_compat_l. apply in_rev.
   Qed.
 
-  Definition map (f : UnivExpr.t -> UnivExpr.t) (u : t0) : t0 :=
+  Definition map (f : UnivExpr.t -> UnivExpr.t) (u : nonEmptyUnivExprSet) : nonEmptyUnivExprSet :=
     let '(e, l) := exprs u in
     add_list (List.map f l) (make' (f e)).
 
@@ -602,7 +603,7 @@ Module Universe.
     end.
 
   (** The l.u.b. of 2 non-prop universe sets *)
-  Program Definition sup0 (u v : t0) : t0 :=
+  Program Definition sup0 (u v : nonEmptyUnivExprSet) : nonEmptyUnivExprSet :=
     {| t_set := UnivExprSet.union u v |}.
   Next Obligation.
     apply not_Empty_is_empty; intro H.
@@ -622,7 +623,7 @@ Module Universe.
     | lType l1, lType l2  => lType (sup0 l1 l2)
     end.
 
-  Definition get_univ_exprs (u : t) (H1 : is_prop u = false) (H2 : is_sprop u = false) : t0.
+  Definition get_univ_exprs (u : t) (H1 : is_prop u = false) (H2 : is_sprop u = false) : nonEmptyUnivExprSet.
   destruct u; try discriminate;easy. Defined.
 
   (** Type of a product *)
@@ -637,7 +638,7 @@ Module Universe.
     now apply UnivExprSet.equal_spec.
   Qed.
 
-  Lemma elements_not_empty (u : Universe.t0) : UnivExprSet.elements u <> [].
+  Lemma elements_not_empty (u : Universe.nonEmptyUnivExprSet) : UnivExprSet.elements u <> [].
   Proof.
     destruct u as [u1 u2]; cbn; intro e.
     unfold UnivExprSet.is_empty, UnivExprSet.elements,
@@ -655,7 +656,7 @@ Module Universe.
                end
     end.
 
-  Global Instance Evaluable' : Evaluable t0
+  Global Instance Evaluable' : Evaluable nonEmptyUnivExprSet
     := fun v u => let '(e, u) := Universe.exprs u in
                List.fold_left (fun n e => Nat.max (val v e) n) u (val v e).
 
@@ -696,7 +697,7 @@ Definition is_propositional u :=
   Universe.is_prop u || Universe.is_sprop u.
 
 (** This coercion allows to see the universes as a [UnivExprSet.t] *)
-Coercion Universe.t_set : Universe.t0 >-> UnivExprSet.t.
+Coercion Universe.t_set : Universe.nonEmptyUnivExprSet >-> UnivExprSet.t.
 
 Declare Scope univ_scope.
 Delimit Scope univ_scope with u.
@@ -709,7 +710,7 @@ Ltac u :=
  (* change ConstraintSet.elt with UnivConstraint.t in *. *)
 
 
-Lemma val_fold_right (u : Universe.t0) v :
+Lemma val_fold_right (u : Universe.nonEmptyUnivExprSet) v :
   val v u = fold_right (fun e x => Nat.max (val v e) x) (val v (Universe.exprs u).1)
                        (List.rev (Universe.exprs u).2).
 Proof.
@@ -718,7 +719,7 @@ Proof.
   now rewrite fold_left_rev_right.
 Qed.
 
-Lemma val_In_le (u : Universe.t0) v e :
+Lemma val_In_le (u : Universe.nonEmptyUnivExprSet) v e :
   UnivExprSet.In e u -> val v e <= val v u.
 Proof.
   intro H. rewrite val_fold_right.
@@ -730,7 +731,7 @@ Proof.
     + specialize (IHl0 H0). lia.
 Qed.
 
-Lemma val_In_max (u : Universe.t0) v :
+Lemma val_In_max (u : Universe.nonEmptyUnivExprSet) v :
   exists e, UnivExprSet.In e u /\ val v e = val v u.
 Proof.
   eapply iff_ex. {
@@ -747,7 +748,7 @@ Proof.
       destruct H1 as [H1|H1]; [now left|right]. now constructor 2.
 Qed.
 
-Lemma val_ge_caract (u : Universe.t0) v k :
+Lemma val_ge_caract (u : Universe.nonEmptyUnivExprSet) v k :
   (forall e, UnivExprSet.In e u -> val v e <= k) <-> val v u <= k.
 Proof.
   split.
@@ -768,7 +769,7 @@ Proof.
   - intros H e He. eapply val_In_le in He. etransitivity; eassumption.
 Qed.
 
-Lemma val_le_caract (u : Universe.t0) v k :
+Lemma val_le_caract (u : Universe.nonEmptyUnivExprSet) v k :
   (exists e, UnivExprSet.In e u /\ k <= val v e) <-> k <= val v u.
 Proof.
   split.
@@ -791,7 +792,7 @@ Qed.
 
 
 
-Lemma val_caract (u : Universe.t0) v k :
+Lemma val_caract (u : Universe.nonEmptyUnivExprSet) v k :
   val v u = k
   <-> (forall e, UnivExprSet.In e u -> val v e <= k)
     /\ exists e, UnivExprSet.In e u /\ val v e = k.
@@ -873,7 +874,7 @@ Proof.
 Qed.
 
 (* 
-Lemma val_zero_exprs v (l : Universe.t0) : 0 <= val v l.
+Lemma val_zero_exprs v (l : Universe.nonEmptyUnivExprSet) : 0 <= val v l.
 Proof.
   rewrite val_fold_right.
   destruct (Universe.exprs l) as [e u']; clear l; cbn.
@@ -914,20 +915,20 @@ Proof.
   rewrite (H eq_refl v). discriminate.
 Qed.
 
-Lemma eq_univ (u v : Universe.t0) :
+Lemma eq_univ (u v : Universe.nonEmptyUnivExprSet) :
   u = v :> UnivExprSet.t -> u = v.
 Proof.
   destruct u as [u1 u2], v as [v1 v2]; cbn. intros X; destruct X.
   now rewrite (uip_bool _ _ u2 v2).
 Qed.
 
-Lemma eq_univ' (u v : Universe.t0) :
+Lemma eq_univ' (u v : Universe.nonEmptyUnivExprSet) :
   UnivExprSet.Equal u v -> u = v.
 Proof.
   intro H. now apply eq_univ, UnivExprSet.eq_leibniz.
 Qed.
 
-Lemma eq_univ'' (u v : Universe.t0) :
+Lemma eq_univ'' (u v : Universe.nonEmptyUnivExprSet) :
   UnivExprSet.elements u = UnivExprSet.elements v -> u = v.
 Proof.
   intro H. apply eq_univ.
@@ -946,14 +947,14 @@ Proof.
   - unfold Universe.make.
     destruct (UnivExprSet.elements _) as [|l0 L] eqn:Hu1; [discriminate|].
     destruct l0, L; try discriminate.
-    * destruct t,n;inversion H;subst.
+    * destruct n,n0;inversion H;subst.
       apply f_equal.
       apply eq_univ'';unfold UnivExpr.make.
       cbn. simpl in Hu1. rewrite Hu1. reflexivity.
-    * destruct e,n;inversion H;subst.
+    * destruct e,n0;inversion H;subst.
 Qed.
 
-Lemma univ_expr_eqb_true_iff (u v : Universe.t0) :
+Lemma univ_expr_eqb_true_iff (u v : Universe.nonEmptyUnivExprSet) :
   UnivExprSet.equal u v <-> u = v.
 Proof.
   split.
@@ -983,7 +984,7 @@ Proof.
   right; now rewrite IHl.
 Qed.
 
-Lemma UnivExprSet_For_all_exprs (P : UnivExpr.t -> Prop) (u : Universe.t0)
+Lemma UnivExprSet_For_all_exprs (P : UnivExpr.t -> Prop) (u : Universe.nonEmptyUnivExprSet)
   : UnivExprSet.For_all P u
     <-> P (Universe.exprs u).1 /\ Forall P (Universe.exprs u).2.
 Proof.
@@ -1388,7 +1389,6 @@ Section Univ.
   Lemma le_lle' n m : (0 <= n)%Z -> (n <= m)%Z -> (n <= m)%u.
   Proof. lled; lia. Qed. *)
 
-
   Inductive satisfies0 (v : valuation) : UnivConstraint.t -> Prop :=
   | satisfies0_Lt (l l' : Level.t) (z : Z) : (Z.of_nat (val v l) <= Z.of_nat (val v l') - z)%Z
                          -> satisfies0 v (l, ConstraintType.Le z, l')
@@ -1535,13 +1535,13 @@ Section Univ.
     destruct (Universe.univ_val v s1); simpl; lia.
   Qed.
 
-  Lemma leq_universe0_sup_l' φ (s1 s2 : Universe.t0) :
+  Lemma leq_universe0_sup_l' φ (s1 s2 : Universe.nonEmptyUnivExprSet) :
     leq_universe0 φ (Universe.lType s1) (Universe.lType (Universe.sup0 s1 s2)).
   Proof.
     intros v Hv. cbn. rewrite val_sup. lia.
   Qed.
 
-  Lemma leq_universe0_sup_r' φ (s1 s2 : Universe.t0) :
+  Lemma leq_universe0_sup_r' φ (s1 s2 : Universe.nonEmptyUnivExprSet) :
     leq_universe0 φ (Universe.lType s2) (Universe.lType (Universe.sup0 s1 s2)).
   Proof.
     intros v Hv. cbn. rewrite val_sup. lia.
@@ -1700,7 +1700,7 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
             end
           end.
 
-#[global] Instance subst_instance_univ0 : UnivSubst Universe.t0 :=
+#[global] Instance subst_instance_univ0 : UnivSubst Universe.nonEmptyUnivExprSet :=
   fun u => Universe.map (subst_instance_level_expr u).
 
 #[global] Instance subst_instance_univ : UnivSubst Universe.t :=
@@ -1725,7 +1725,7 @@ Section Closedu.
   Definition closedu_level_expr (s : UnivExpr.t) :=
     closedu_level (UnivExpr.get_level s).
 
-  Definition closedu_universe_levels (u : Universe.t0) :=
+  Definition closedu_universe_levels (u : Universe.nonEmptyUnivExprSet) :=
     UnivExprSet.for_all closedu_level_expr u.
 
   Definition closedu_universe (u : Universe.t) :=
@@ -1759,7 +1759,7 @@ Section UniverseClosedSubst.
     intro H.
     destruct s;auto;cbn in *.
     apply f_equal. apply eq_univ'.
-    destruct t as [ts H1].
+    destruct n as [ts H1].
     unfold closedu_universe_levels in *;cbn in *.
     intro e; split; intro He.
     - apply Universe.map_spec in He. destruct He as [e' [He' X]].
@@ -1817,7 +1817,7 @@ Section SubstInstanceClosed.
   Proof.
     intro H.
     destruct s;cbnr.
-    destruct t as [l Hl].
+    destruct n as [l Hl].
     apply UnivExprSet.for_all_spec; proper.
     intros e He. eapply Universe.map_spec in He.
     destruct He as [e' [He' X]]; subst.

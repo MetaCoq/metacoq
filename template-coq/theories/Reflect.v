@@ -335,13 +335,13 @@ Next Obligation.
 Defined.
 
 (* TODO: move *)
-Lemma eq_universe_iff (u v : Universe.t0) :
+Lemma eq_universe_iff (u v : Universe.nonEmptyUnivExprSet) :
   u = v <-> u = v :> UnivExprSet.t.
 Proof.
   destruct u, v; cbn; split. now inversion 1.
   intros ->. f_equal. apply uip.
 Qed.
-Lemma eq_universe_iff' (u v : Universe.t0) :
+Lemma eq_universe_iff' (u v : Universe.nonEmptyUnivExprSet) :
   u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
 Proof.
   etransitivity. apply eq_universe_iff.
@@ -353,7 +353,7 @@ Qed.
 #[global] Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
 Proof. intros e e'. repeat decide equality. Qed.
 
-#[global] Instance eq_dec_univ0 : EqDec Universe.t0.
+#[global] Instance eq_dec_univ0 : EqDec Universe.nonEmptyUnivExprSet.
 Proof.
   intros u v.
   assert (H : {UnivExprSet.elements u = UnivExprSet.elements v}

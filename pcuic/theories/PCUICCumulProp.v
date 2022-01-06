@@ -374,7 +374,7 @@ Proof.
   intros x y; unfold eq_univ_prop; intuition.
 Qed.
 
-Lemma UnivExprSet_For_all (P : UnivExpr.t -> Prop) (u : Universe.t0) :
+Lemma UnivExprSet_For_all (P : UnivExpr.t -> Prop) (u : Universe.nonEmptyUnivExprSet) :
   UnivExprSet.For_all P u <->
   Forall P (UnivExprSet.elements u).
 Proof.

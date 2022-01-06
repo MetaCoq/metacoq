@@ -906,7 +906,7 @@ Section CheckLeq.
   Definition gc_expr_declared e
     := on_Some_or_None (fun l => VSet.In l uctx.1) (UnivExpr.get_noprop e).
 
-  Definition gc_levels_declared (u : Universe.t0)
+  Definition gc_levels_declared (u : Universe.nonEmptyUnivExprSet)
     := UnivExprSet.For_all gc_expr_declared u.
 
   Definition gc_levels_declared_univ (u : Universe.t)
@@ -1089,7 +1089,7 @@ Section CheckLeq.
     unfold leqb_expr_univ_n, gc_leq_universe_n; cbn.
     intros H v Hv. destruct u; try discriminate;cbn in *.
     rewrite val_fold_right.
-    destruct (Universe.exprs t0) as [e u'] eqn:Ht0;cbn in *.
+    destruct (Universe.exprs n0) as [e u'] eqn:Ht0;cbn in *.
     rewrite <- !fold_left_rev_right in H; cbn in *.
     induction (List.rev u'); cbn in *.
     - apply leqb_expr_n_spec0; tas.
@@ -1101,9 +1101,9 @@ Section CheckLeq.
 
   Import Nbar Datatypes.
 
-  Coercion Universe.lType : Universe.t0 >-> Universe.t_.
+  Coercion Universe.lType : Universe.nonEmptyUnivExprSet >-> Universe.t_.
 
-  Lemma val_le_caract' (u : Universe.t0) v k :
+  Lemma val_le_caract' (u : Universe.nonEmptyUnivExprSet) v k :
     (exists e, UnivExprSet.In e u /\ Z.of_nat k <= Z.of_nat (val v e))%Z <-> (Z.of_nat k <= Z.of_nat (val v u))%Z.
   Proof.
     epose proof (val_le_caract u v k).
@@ -1116,7 +1116,7 @@ Section CheckLeq.
     lia.
   Qed.
 
-  Lemma val_ge_caract' (u : Universe.t0) v k :
+  Lemma val_ge_caract' (u : Universe.nonEmptyUnivExprSet) v k :
     (forall e, UnivExprSet.In e u -> (Z.of_nat (val v e) <= Z.of_nat k)%Z) <-> (Z.of_nat (val v u) <= Z.of_nat k)%Z.
   Proof.
     epose proof (val_ge_caract u v k).
@@ -1165,7 +1165,7 @@ Section CheckLeq.
 
   (* Non trivial lemma *)
   (* l + n  <= max (l1, ... ln)  -> exists i, l+n <= li *)
-  Lemma gc_leq_universe_n_sup lt (l : Level.t) b (u : Universe.t0)
+  Lemma gc_leq_universe_n_sup lt (l : Level.t) b (u : Universe.nonEmptyUnivExprSet)
         (e := (l, b)) :
       gc_level_declared l ->
       gc_levels_declared u ->
@@ -1475,7 +1475,7 @@ Section CheckLeq.
     - (*contradiction *)
       cbn in *. destruct HC as [v Hv];specialize (HH v Hv); cbn in HH.
       destruct lt; simpl in *; lled;lia.
-    - case_eq (Universe.exprs t0). intros e u' ee.
+    - case_eq (Universe.exprs n). intros e u' ee.
       assert (Hu': gc_expr_declared e /\ Forall gc_expr_declared u'). {
       split. apply Hu. apply Universe.In_exprs. left. now rewrite ee.
       apply Forall_forall. intros e' He'. apply Hu.
@@ -1508,7 +1508,7 @@ Section CheckLeq.
     end.
   
   (* this is function [real_check_leq] of kernel/uGraph.ml *)
-  Definition leqb_universe_exprs_n n (l1 l2 : Universe.t0) :=
+  Definition leqb_universe_exprs_n n (l1 l2 : Universe.nonEmptyUnivExprSet) :=
       let '(e1, u1) := Universe.exprs l1 in
       List.fold_left (fun b e1 => leqb_expr_univ_n n e1 l2 && b)
                      u1 (leqb_expr_univ_n n e1 l2).
@@ -1570,7 +1570,7 @@ Section CheckLeq.
         eapply val_is_sprop in vu2. now rewrite vu2 in issp.
         now rewrite H.
     - unfold val, Universe.Evaluable'.
-      destruct (Universe.exprs t0) as [e1 u1'] eqn:Hu1'.
+      destruct (Universe.exprs n) as [e1 u1'] eqn:Hu1'.
       subst u1.
       rewrite <- fold_left_rev_right in *; cbn in *.
       induction (List.rev u1'); cbn in *.
@@ -1584,7 +1584,7 @@ Section CheckLeq.
         * apply IHl; tas.
   Qed.
 
-  Lemma leqb_universe_expr_n_spec lt (l1 l2 : Universe.t0)
+  Lemma leqb_universe_expr_n_spec lt (l1 l2 : Universe.nonEmptyUnivExprSet)
         (Hu1  : gc_levels_declared l1)
         (Hu2  : gc_levels_declared l2)
     : leqb_universe_n lt l1 l2
@@ -1664,7 +1664,7 @@ Section CheckLeq.
     || Universe.eqb u1 u2
     || (leqb_universe_n false u1 u2 && leqb_universe_n false u2 u1).
 
-  Lemma check_eqb_universe_exprs_spec (l1 l2 : Universe.t0)
+  Lemma check_eqb_universe_exprs_spec (l1 l2 : Universe.nonEmptyUnivExprSet)
         (Hu1  : gc_levels_declared l1)
         (Hu2  : gc_levels_declared l2)
     : check_eqb_universe l1 l2 <-> gc_eq_universe uctx.2 l1 l2.
@@ -1707,9 +1707,9 @@ Section CheckLeq.
     all:try solve [intros Hgc; destruct HC as [v Hv]; specialize (Hgc v Hv); simpl in Hgc; try discriminate].
     rewrite !andb_true_r in v.
     intros Hgc.
-    destruct (Universe.exprs t0).
+    destruct (Universe.exprs n).
     now rewrite fold_left_false andb_false_r in v.
-    destruct (Universe.exprs t0).
+    destruct (Universe.exprs n).
     now rewrite fold_left_false /= in v.
   Qed.
 

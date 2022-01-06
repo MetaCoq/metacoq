@@ -89,7 +89,7 @@ Section CheckerFlags.
     sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
     wf_universe (Σ.1, univs) (subst_instance u l). 
   Proof.
-    destruct l; simpl; auto.
+    destruct l; simpl; auto. rename n into t. 
     intros wfΣ Hl Hu sub e [[l n] [inl ->]]%In_subst_instance.
     destruct l; simpl; auto.
     - unfold global_ext_levels.

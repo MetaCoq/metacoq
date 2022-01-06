@@ -119,7 +119,7 @@ Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
 Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.univexpr.npe.
 
 Register MetaCoq.Template.Universes.UnivExprSet.Mkt as metacoq.ast.univexprset.mkt.
-Register MetaCoq.Template.Universes.Universe.Build_t0 as metacoq.ast.universe.build0.
+Register MetaCoq.Template.Universes.Universe.Build_nonEmptyUnivExprSet as metacoq.ast.universe.build0.
 Register MetaCoq.Template.Universes.Universe.lSProp as metacoq.ast.universe.lsprop.
 Register MetaCoq.Template.Universes.Universe.lProp as metacoq.ast.universe.lprop.
 Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.universe.lnpe.

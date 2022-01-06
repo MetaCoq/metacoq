@@ -216,12 +216,12 @@ Section CheckerFlags.
 
   Lemma in_subst_instance l u u' : 
     In l (subst_instance u u') ->
-    In l u \/ In l u' \/ l = Level.lSet.
+    In l u \/ In l u' \/ l = Level.lzero.
   Proof.
     induction u'; simpl; auto.
     intros [].
     destruct a; simpl in *; subst; auto.
-    destruct (nth_in_or_default n u Level.lSet); auto.
+    destruct (nth_in_or_default n u Level.lzero); auto.
     specialize (IHu' H). intuition auto.
   Qed.
 
@@ -259,7 +259,7 @@ Section CheckerFlags.
       eapply (proj1 (LevelSetProp.of_list_1 _ _)) in wfx.
       apply SetoidList.InA_alt in wfx as [? [<- wfx]]. simpl in wfx.
       eapply In_unfold_inj in wfx; [|congruence].
-      destruct (nth_in_or_default n u (Level.lSet)).
+      destruct (nth_in_or_default n u (Level.lzero)).
       red in cu. eapply Forall_In in cu; eauto. rewrite e.
       red. eapply LS.union_spec. right. eapply global_levels_Set.
   Qed.

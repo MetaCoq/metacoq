@@ -130,7 +130,7 @@ Qed.
 
 Definition eq_level l1 l2 :=
   match l1, l2 with
-  | Level.lSet, Level.lSet => true
+  | Level.lzero, Level.lzero => true
   | Level.Level s1, Level.Level s2 => eqb s1 s2
   | Level.Var n1, Level.Var n2 => eqb n1 n2
   | _, _ => false

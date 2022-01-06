@@ -22,7 +22,7 @@ Local Ltac aa := rdest; eauto with univ_subst.
 
 Lemma subst_instance_level_val u l v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
-      (H2 : forall n, val v (nth n u Level.lSet) = valuation_poly v' n)
+      (H2 : forall n, val v (nth n u Level.lzero) = valuation_poly v' n)
   : val v (subst_instance_level u l) = val v' l.
 Proof.
   destruct l; cbn; try congruence. apply H2.
@@ -46,13 +46,13 @@ Proof.
   destruct l; cbn; try reflexivity.
   destruct (le_lt_dec #|u| n) as [HH|HH].
   + now rewrite nth_overflow.
-  + eapply (forallb_nth _ _ _ Level.lSet Hu) in HH.
+  + eapply (forallb_nth _ _ _ Level.lzero Hu) in HH.
     destruct HH as [l [HH1 HH2]]. rewrite HH1. now apply ssrbool.negbTE.
 Qed. *)
 
 Lemma subst_instance_univ_val u l v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
-      (H2 : forall n, val v (nth n u Level.lSet) = valuation_poly v' n)
+      (H2 : forall n, val v (nth n u Level.lzero) = valuation_poly v' n)
   : Universe.univ_val v (subst_instance_univ u l) = Universe.univ_val v' l.
 Proof.
   assert (He: forall e : UnivExpr.t, val v (subst_instance_level_expr u e) = val v' e). {
@@ -77,7 +77,7 @@ Qed.
 
 Definition subst_instance_valuation (u : Instance.t) (v : valuation) :=
   {| valuation_mono := valuation_mono v ;
-     valuation_poly := fun i => val v (nth i u Level.lSet) |}.
+     valuation_poly := fun i => val v (nth i u Level.lzero) |}.
 
 Lemma subst_instance_univ_val' u l v
   : Universe.univ_val v (subst_instance_univ u l) = Universe.univ_val (subst_instance_valuation u v) l.
@@ -691,7 +691,7 @@ Proof.
     apply LevelSet_mem_union in H. destruct H as [H|H].
     2: { destruct l; simpl; try (apply LevelSet_mem_union; right; assumption).
          apply consistent_instance_declared in H2.
-         apply (forallb_nth' n Level.lSet) in H2.
+         apply (forallb_nth' n Level.lzero) in H2.
          destruct H2 as [[? [H2 ?]]|H2]; rewrite H2; tas.
          apply LevelSet_mem_union; right.
          eapply LS.mem_spec.
@@ -703,7 +703,7 @@ Proof.
           1: apply Hφ in H. 1: now apply LS.mem_spec.
           all: now apply monomorphic_level_notin_AUContext in H.
        -- apply consistent_instance_declared in H2.
-          apply (forallb_nth' n Level.lSet) in H2.
+          apply (forallb_nth' n Level.lzero) in H2.
           destruct H2 as [[? [H2 ?]]|H2]; rewrite H2; tas.
           apply LevelSet_mem_union; right; apply LS.mem_spec, global_levels_Set.
   + unfold consistent_instance_ext, consistent_instance in H2.
@@ -955,7 +955,7 @@ Proof.
         now apply monomorphic_level_notin_AUContext in H.
     + apply LS.union_spec; now right.
   - apply consistent_instance_declared in H'.
-    apply (forallb_nth' n Level.lSet) in H'.
+    apply (forallb_nth' n Level.lzero) in H'.
     destruct H' as [[? [eq ?]]|eq]; rewrite eq.
     + now apply LS.mem_spec.
     + apply LS.union_spec; right; simpl.

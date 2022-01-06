@@ -113,7 +113,7 @@ Register MetaCoq.Template.Universes.Level.Level as metacoq.ast.level.Level.
 Register MetaCoq.Template.Universes.PropLevel.t as metacoq.ast.level.prop_level_type.
 Register MetaCoq.Template.Universes.PropLevel.lProp as metacoq.ast.level.lprop.
 Register MetaCoq.Template.Universes.PropLevel.lSProp as metacoq.ast.level.lsprop.
-Register MetaCoq.Template.Universes.Level.lSet as metacoq.ast.level.lSet.
+Register MetaCoq.Template.Universes.Level.lzero as metacoq.ast.level.lzero.
 Register MetaCoq.Template.Universes.Level.Var as metacoq.ast.level.Var.
 (* FIXME*)
 Register MetaCoq.Template.Universes.Universe.lType as metacoq.ast.univexpr.npe.

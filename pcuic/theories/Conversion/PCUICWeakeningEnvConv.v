@@ -435,7 +435,7 @@ Proof.
 Qed.
 
 Lemma global_levels_Set Σ :
-  LevelSet.In Level.lSet (global_levels Σ).
+  LevelSet.In Level.lzero (global_levels Σ).
 Proof.
   unfold global_levels.
   induction Σ; simpl; auto.
@@ -444,7 +444,7 @@ Proof.
 Qed.
 
 Lemma global_levels_set Σ :
-  LevelSet.Equal (LevelSet.union (LevelSet.singleton Level.lSet) (global_levels Σ))
+  LevelSet.Equal (LevelSet.union (LevelSet.singleton Level.lzero) (global_levels Σ))
   (global_levels Σ).
 Proof.
   apply LevelSetProp.union_subset_equal.

@@ -156,23 +156,23 @@ Definition gc_of_constraint `{checker_flags} (uc : UnivConstraint.t)
      let pair := fun x y => Some (GoodConstraintSet_pair x y) in
      match uc with
      (* Set _ _ *)
-     | (Level.lSet, Le z, r) => 
+     | (Level.lzero, Le z, r) => 
       match Z.compare z 0 with
       | Datatypes.Eq => empty
       | Datatypes.Lt => (* Set <= l + n *) empty
       | Datatypes.Gt => (* Set + n <= l *) 
         match r with
-        | Level.lSet => None
+        | Level.lzero => None
         | Level.Level s => singleton (gc_lt_set_level (Z.to_nat (z - 1)) s)
         | Level.Var n => singleton (gc_le_set_var (Z.to_nat z) n)
         end
       end
-     | (Level.lSet, Eq, Level.lSet) => empty
-     | (Level.lSet, Eq, Level.Level _) => None
-     | (Level.lSet, Eq, Level.Var n) => singleton (gc_le_var_set n 0%nat)
+     | (Level.lzero, Eq, Level.lzero) => empty
+     | (Level.lzero, Eq, Level.Level _) => None
+     | (Level.lzero, Eq, Level.Var n) => singleton (gc_le_var_set n 0%nat)
 
      (* Level _ _ *)
-     | (Level.Level l, Le z, Level.lSet) => 
+     | (Level.Level l, Le z, Level.lzero) => 
        (* l - n <= Set <-> l <= Set + n *)
         if (z <=? 0)%Z then singleton (gc_le_level_set l (Z.to_nat (Z.abs z)))
         else None
@@ -180,21 +180,21 @@ Definition gc_of_constraint `{checker_flags} (uc : UnivConstraint.t)
      | (Level.Level l, Le z, Level.Level l')
        => singleton (gc_le (Level l) z (Level l'))
      | (Level.Level l, Le z, Level.Var n) => singleton (gc_le (Level l) z (Var n))
-     | (Level.Level _, Eq, Level.lSet) => None
+     | (Level.Level _, Eq, Level.lzero) => None
      | (Level.Level l, Eq, Level.Level l')
        => pair (gc_le (Level l) 0 (Level l')) (gc_le (Level l') 0 (Level l))
      | (Level.Level l, Eq, Level.Var n)
        => pair (gc_le (Level l) 0 (Var n)) (gc_le (Var n) 0 (Level l))
 
      (* Var _ _ *)
-     | (Level.Var n, Le z, Level.lSet) => 
+     | (Level.Var n, Le z, Level.lzero) => 
       (* l - n <= Set <-> l <= Set + n *)
       if (z <=? 0)%Z then singleton (gc_le_var_set n (Z.to_nat (Z.abs z)))
       else None
 
      | (Level.Var n, Le z, Level.Level l) => singleton (gc_le (Var n) z (Level l))
      | (Level.Var n, Le z, Level.Var n') => singleton (gc_le (Var n) z (Var n'))
-     | (Level.Var n, Eq, Level.lSet) => singleton (gc_le_var_set n 0)
+     | (Level.Var n, Eq, Level.lzero) => singleton (gc_le_var_set n 0)
      | (Level.Var n, Eq, Level.Level l)
        => pair (gc_le (Var n) 0%Z (Level l)) (gc_le (Level l) 0%Z (Var n))
 
@@ -422,13 +422,13 @@ End GC.
 
 Module Import wGraph := WeightedGraph Level LevelSet.
 Module VSet := LevelSet.
-Local Notation lSet := Level.lSet.
+Local Notation lzero := Level.lzero.
 (* vtn = variable to noprop *)
 Local Notation vtn := VariableLevel.to_noprop.
 
 Definition universes_graph := t.
 Definition init_graph : universes_graph
-  := (VSet.singleton lSet, EdgeSet.empty, lSet).
+  := (VSet.singleton lzero, EdgeSet.empty, lzero).
 
 Lemma init_graph_invariants : invariants init_graph.
 Proof.
@@ -445,10 +445,10 @@ Definition uctx_invariants (uctx : ContextSet.t)
                            uctx.2.
 
 Definition global_uctx_invariants (uctx : ContextSet.t)
-  := LevelSet.In Level.lSet uctx.1 /\ uctx_invariants uctx.
+  := LevelSet.In Level.lzero uctx.1 /\ uctx_invariants uctx.
 
 Definition global_gc_uctx_invariants (uctx : VSet.t * GoodConstraintSet.t)
-  := VSet.In lSet uctx.1 /\ GoodConstraintSet.For_all (fun gc => match gc with
+  := VSet.In lzero uctx.1 /\ GoodConstraintSet.For_all (fun gc => match gc with
                  | gc_le l z l' => VSet.In (vtn l) uctx.1
                                  /\ VSet.In (vtn l') uctx.1
                  | gc_lt_set_level _ n
@@ -543,8 +543,8 @@ Qed.
 
 Definition edge_of_level (l : VariableLevel.t) : EdgeSet.elt :=
   match l with
-  | Level l => (lSet, 1%Z, Level.Level l)
-  | Var n => (lSet, 0%Z, Level.Var n)
+  | Level l => (lzero, 1%Z, Level.Level l)
+  | Var n => (lzero, 0%Z, Level.Var n)
   end.
 
 Definition EdgeSet_pair x y
@@ -555,14 +555,14 @@ Definition EdgeSet_triple x y z
 Definition edge_of_constraint (gc : GoodConstraint.t) : EdgeSet.elt :=
   match gc with
   | gc_le l z l' => (vtn l, z, vtn l')
-  | gc_lt_set_level k s => (lSet, Z.of_nat (S k), vtn (Level s)) 
-  | gc_le_set_var k n => (lSet, Z.of_nat k, vtn (Var n))
-  | gc_le_level_set s k => (vtn (Level s), (- Z.of_nat k)%Z, lSet)
-  | gc_le_var_set n k => (vtn (Var n), (- Z.of_nat k)%Z, lSet)
+  | gc_lt_set_level k s => (lzero, Z.of_nat (S k), vtn (Level s)) 
+  | gc_le_set_var k n => (lzero, Z.of_nat k, vtn (Var n))
+  | gc_le_level_set s k => (vtn (Level s), (- Z.of_nat k)%Z, lzero)
+  | gc_le_var_set n k => (vtn (Var n), (- Z.of_nat k)%Z, lzero)
   end.
 
 
-Lemma source_edge_of_level g : (edge_of_level g)..s = lSet.
+Lemma source_edge_of_level g : (edge_of_level g)..s = lzero.
 Proof.
   destruct g; reflexivity.
 Qed.
@@ -574,7 +574,7 @@ Qed.
 
 Definition variable_of_level (l : Level.t) : option VariableLevel.t
   := match l with
-      | Level.lSet => None
+      | Level.lzero => None
       | Level.Level s => Some (VariableLevel.Level s)
       | Level.Var n => Some (VariableLevel.Var n)
       end.
@@ -635,7 +635,7 @@ Qed.
 Definition make_graph (uctx : VSet.t * GoodConstraintSet.t) : t :=
   let init_edges := add_level_edges uctx.1 EdgeSet.empty in
   let edges := add_cstrs  uctx.2 init_edges in
-  (uctx.1, edges, lSet).
+  (uctx.1, edges, lzero).
 
 Lemma make_graph_E uctx e
   : EdgeSet.In e (wGraph.E (make_graph uctx))
@@ -770,7 +770,7 @@ Ltac simplify_sets :=
 
 Definition labelling_of_valuation (v : valuation) : labelling
   := fun x => match x with
-           | lSet => 0
+           | lzero => 0
            | Level.Level l => Pos.to_nat (v.(valuation_mono) l)
            | Level.Var n => (v.(valuation_poly) n)
            end.
@@ -792,7 +792,7 @@ Section MakeGraph.
     destruct x; cbnr.
     - intros _. now apply proj1 in Hl; cbn in Hl.
     - intro Hs. apply Nat2Pos.id.
-      assert (HH: EdgeSet.In (lSet, Z.of_nat 1, vtn (Level s)) (wGraph.E G)). {
+      assert (HH: EdgeSet.In (lzero, Z.of_nat 1, vtn (Level s)) (wGraph.E G)). {
         subst G. apply make_graph_E. left.
         exists (Level s). intuition. }
       apply (proj2 Hl) in HH; cbn in HH. lia.
@@ -1176,10 +1176,10 @@ Section CheckLeq.
     intros Hl Hu H.
     assert (HG1 : invariants G) by (subst; exact _).
     assert (HG2 : acyclic_no_loop G) by (subst; exact _).
-    assert (Hs : wGraph.s G = lSet) by now subst G.
-    assert (Vs : VSet.In lSet (wGraph.V G)).
+    assert (Hs : wGraph.s G = lzero) by now subst G.
+    assert (Vs : VSet.In lzero (wGraph.V G)).
     { rewrite <-Hs. now apply source_vertex. }
-    case_eq (lsp G l lSet).
+    case_eq (lsp G l lzero).
     (* case where there is a path from l to Set, so l <= Set+ (-m).
       This implies that -m + b <= val v u.
     *)
@@ -1208,7 +1208,7 @@ Section CheckLeq.
         u = false) as HH. {
         apply not_true_iff_false; intro HH.
         apply UnivExprSet.for_all_spec in HH; proper.
-        set (G' := wGraph.Subgraph1.G' G lSet l lset) in *.
+        set (G' := wGraph.Subgraph1.G' G lzero l lset) in *.
         assert (HG'1 : invariants G'). {
           subst G'; apply Subgraph1.HI'; tas. }
         assert (HG'2 : acyclic_no_loop G'). {
@@ -1254,7 +1254,7 @@ Section CheckLeq.
         rewrite H1 in H.
         destruct (lsp_s G' li) as [ni [Hni nipos]].
         { cbn. now rewrite HG. }
-        generalize (Subgraph1.lsp_G'_spec_left G lSet l Hinl Vs _ Hlset li).
+        generalize (Subgraph1.lsp_G'_spec_left G lzero l Hinl Vs _ Hlset li).
         fold G'. simpl in Hni.
         rewrite <-Hs, Hni.
         destruct (lsp_s G li Vli) as [sli [lspsli wsli]].
@@ -1262,7 +1262,7 @@ Section CheckLeq.
         assert (⎩ lt ⎭ <= - Z.of_nat b + lset + Z.of_nat bi + Z.of_nat (lab li)) by lia.
         destruct (lsp G l li) as [lli|] eqn:elli.
         2:{ elimtype False.
-          generalize (lsp_codistance G l lSet li).
+          generalize (lsp_codistance G l lzero li).
           now rewrite elli Hlset lspsli. }
         simpl in Hlt.
         assert (lli + Z.of_nat bi - Z.of_nat b < - Z.of_nat b + lset + Z.of_nat bi + Z.of_nat (lab li)) by lia.
@@ -1275,7 +1275,7 @@ Section CheckLeq.
         apply eq_max in hmax as [[= eq]|eq]. subst ni.
         unfold lab in H4. rewrite Hs Hni in H4.
         rewrite Z_of_to_label_pos in H4; try lia.
-        pose proof (lsp_codistance G l lSet li). rewrite Hlset lspsli elli in H5.
+        pose proof (lsp_codistance G l lzero li). rewrite Hlset lspsli elli in H5.
         simpl in H5. lia.
         simpl in eq. noconf eq.
         lia. }
@@ -1362,9 +1362,9 @@ Section CheckLeq.
             + specialize (IHl H). cbn. destruct a as [li' bi'].
               destruct (lsp G (wGraph.s G) li'); lia. }
         destruct XX as [K [HK1 HK2]].
-        assert (Hs' : VSet.In lSet (wGraph.V G)). {
+        assert (Hs' : VSet.In lzero (wGraph.V G)). {
           rewrite <- Hs; apply HG1. }
-        set (G' := wGraph.G' G lSet l K) in *.
+        set (G' := wGraph.G' G lzero l K) in *.
         assert (lsG : l <> wGraph.s G). intros eq. 
         { rewrite eq in HlSet, Hnl.
           congruence. }
@@ -1724,10 +1724,10 @@ Section CheckLeq.
   Definition check_gc_constraint (gc : GoodConstraint.t) :=
     negb check_univs || match gc with
                        | gc_le l z l' => leqb_level_n z l l'
-                       | gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lSet (Level l)
-                       | gc_le_set_var k n => leqb_level_n (Z.of_nat k) lSet (Var n)
-                       | gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level l) lSet
-                       | gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Var n) lSet
+                       | gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lzero (Level l)
+                       | gc_le_set_var k n => leqb_level_n (Z.of_nat k) lzero (Var n)
+                       | gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level l) lzero
+                       | gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Var n) lzero
                        end.
 
   Definition check_gc_constraints
@@ -1999,10 +1999,10 @@ Section CheckLeq2.
   Definition valid_gc_constraint (gc : GoodConstraint.t) :=
     match gc with
     | gc_le l z l' => leq_level_n z l l'
-    | gc_lt_set_level k l => leq_level_n (Z.of_nat (S k)) lSet (Level l)
-    | gc_le_set_var k n => leq_level_n (Z.of_nat k) lSet (Var n)
-    | gc_le_level_set l k => leq_level_n (- Z.of_nat k)%Z (Level l) lSet
-    | gc_le_var_set n k => leq_level_n (- Z.of_nat k)%Z (Var n) lSet
+    | gc_lt_set_level k l => leq_level_n (Z.of_nat (S k)) lzero (Level l)
+    | gc_le_set_var k n => leq_level_n (Z.of_nat k) lzero (Var n)
+    | gc_le_level_set l k => leq_level_n (- Z.of_nat k)%Z (Level l) lzero
+    | gc_le_var_set n k => leq_level_n (- Z.of_nat k)%Z (Var n) lzero
     end.
 
   Definition valid_gc_constraints (gcs : GoodConstraintSet.t) :=

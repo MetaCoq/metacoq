@@ -47,10 +47,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_levels (Σ : global_env) : LevelSet.t :=
     fold_right
       (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl.2) lvls)
-      (LevelSet.singleton (Level.lSet)) Σ.
+      (LevelSet.singleton (Level.lzero)) Σ.
 
   Lemma global_levels_Set Σ :
-    LevelSet.mem Level.lSet (global_levels Σ) = true.
+    LevelSet.mem Level.lzero (global_levels Σ) = true.
   Proof.
     induction Σ; simpl. reflexivity.
     apply LevelSet.mem_spec, LevelSet.union_spec; right.
@@ -486,7 +486,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition lift_level n l :=
       match l with 
-      | Level.lSet | Level.Level _ => l
+      | Level.lzero | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
 

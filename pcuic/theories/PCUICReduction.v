@@ -19,11 +19,11 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
 | red_beta na t b a : 
-  Σ ;;; Γ |- tApp (tLambda na t b) a ⇝ subst10 a b
+  Σ ;;; Γ |- tApp (tLambda na t b) a ⇝ b {0 := a}
 
 (** Let *)
 | red_zeta na b t b' :
-  Σ ;;; Γ |- tLetIn na b t b' ⇝ subst10 b b'
+  Σ ;;; Γ |- tLetIn na b t b' ⇝ b' {0 := b}
 
 | red_rel i body :
     option_map decl_body (nth_error Γ i) = Some (Some body) ->

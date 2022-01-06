@@ -42,7 +42,7 @@ Derive NoConfusion EqDec for allowed_eliminations.
 (** Levels are Set or Level or Var *)
 Module Level.
   Inductive t_ : Set :=
-  | lSet
+  | lzero
   | Level (_ : string)
   | Var (_ : nat) (* these are debruijn indices *).
   Derive NoConfusion EqDec for t_.
@@ -51,7 +51,7 @@ Module Level.
 
   Definition is_set (x : t) :=
     match x with
-    | lSet => true
+    | lzero => true
     | _ => false
     end.
 
@@ -63,7 +63,7 @@ Module Level.
 
   Global Instance Evaluable : Evaluable t
     := fun v l => match l with
-               | lSet =>  (0%nat)
+               | lzero =>  (0%nat)
                | Level s => (Pos.to_nat (v.(valuation_mono) s))
                | Var x => (v.(valuation_poly) x)
                end.
@@ -71,9 +71,9 @@ Module Level.
 
   Definition compare (l1 l2 : t) : comparison :=
     match l1, l2 with
-    | lSet, lSet => Eq
-    | lSet, _ => Lt
-    | _, lSet => Gt
+    | lzero, lzero => Eq
+    | lzero, _ => Lt
+    | _, lzero => Gt
     | Level s1, Level s2 => string_compare s1 s2
     | Level _, _ => Lt
     | _, Level _ => Gt
@@ -89,8 +89,8 @@ Module Level.
   Defined.
 
   Inductive lt_ : t -> t -> Prop :=
-  | ltSetLevel s : lt_ lSet (Level s)
-  | ltSetVar n : lt_ lSet (Var n)
+  | ltSetLevel s : lt_ lzero (Level s)
+  | ltSetVar n : lt_ lzero (Var n)
   | ltLevelLevel s s' : string_lt s s' -> lt_ (Level s) (Level s')
   | ltLevelVar s n : lt_ (Level s) (Var n)
   | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
@@ -254,8 +254,8 @@ Module UnivExpr.
 
   Definition make (l : Level.t) : t := (l, 0%nat).
 
-  Definition set : t := (Level.lSet, 0%nat).
-  Definition type1 : t := (Level.lSet, 1%nat).
+  Definition set : t := (Level.lzero, 0%nat).
+  Definition type1 : t := (Level.lzero, 1%nat).
 
   (* Used for (un)quoting. *)
   Definition from_kernel_repr (e : Level.t * bool) : t
@@ -470,7 +470,7 @@ Module Universe.
       | _ => false
     end.
 
-  Definition type0 : t := make Level.lSet.
+  Definition type0 : t := make Level.lzero.
   Definition type1 : t := lType (make' UnivExpr.type1).
 
   Definition of_levels (l : PropLevel.t + Level.t) : t :=
@@ -1660,7 +1660,7 @@ End Univ.
 (* This universe is a hack used in plugings to generate fresh universes *)
 Definition fresh_universe : Universe.t. exact Universe.type0. Qed.
 (* This level is a hack used in plugings to generate fresh levels *)
-Definition fresh_level : Level.t. exact Level.lSet. Qed.
+Definition fresh_level : Level.t. exact Level.lzero. Qed.
 
 
 (** * Universe substitution
@@ -1678,8 +1678,8 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 
 #[global] Instance subst_instance_level : UnivSubst Level.t :=
   fun u l => match l with
-            Level.lSet | Level.Level _ => l
-          | Level.Var n => List.nth n u Level.lSet
+            Level.lzero | Level.Level _ => l
+          | Level.Var n => List.nth n u Level.lzero
           end.
 
 #[global] Instance subst_instance_cstr : UnivSubst UnivConstraint.t :=
@@ -1691,12 +1691,12 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
 
 #[global] Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
   fun u e => match e with
-          | (Level.lSet, _)
+          | (Level.lzero, _)
           | (Level.Level _, _) => e
           | (Level.Var n, b) =>
             match nth_error u n with
             | Some l => (l,b)
-            | None => (Level.lSet, b)
+            | None => (Level.lzero, b)
             end
           end.
 
@@ -1797,7 +1797,7 @@ Section SubstInstanceClosed.
   Proof.
     destruct l; cbnr.
     unfold closedu_instance in Hcl.
-    destruct (nth_in_or_default n u Level.lSet).
+    destruct (nth_in_or_default n u Level.lzero).
     - intros _. eapply forallb_forall in Hcl; tea.
     - rewrite e; reflexivity.
   Qed.
@@ -1842,7 +1842,7 @@ Hint Resolve subst_instance_level_closedu subst_instance_level_expr_closedu
 
 Definition string_of_level (l : Level.t) : string :=
   match l with
-  | Level.lSet => "Set"
+  | Level.lzero => "Set"
   | Level.Level s => s
   | Level.Var n => "Var" ^ string_of_nat n
   end.

@@ -1801,15 +1801,6 @@ Section UniverseClosedSubst.
     lia_f_equal.
   Qed.
   
-  Definition lift_npl (k : nat) (e : Level.t) : Level.t :=
-    match e with
-    | Level.lSet => Level.lSet
-    | Level.Level s => Level.Level s
-    | Level.Var n => Level.Var (k + n)
-    end.
-
-  (* Definition lift_expr (n : nat) (e : UnivExpr.t) : UnivExpr.t. *)
-
   Lemma closedu_subst_instance_level_expr_app u u' e
     : closedu_level_expr #|u'| e -> subst_instance_level_expr (u' ++ u) e = subst_instance_level_expr u' e.
   Proof.

@@ -865,7 +865,7 @@ Section Typecheck.
              eapply In_Level_global_ext_poly in Hcs'.
              red. eapply LevelSet.union_spec. now right.
           -- apply LevelSetFact.mem_2.
-             pattern (nth n u Level.lSet).
+             pattern (nth n u Level.lzero).
              apply Forall_nth_def ; tea.
              now apply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
         * destruct l'.
@@ -877,7 +877,7 @@ Section Typecheck.
              eapply In_Level_global_ext_poly in Hcs''.
              eapply LevelSet.union_spec. now right.
           -- apply LevelSetFact.mem_2.
-             pattern (nth n u Level.lSet).
+             pattern (nth n u Level.lzero).
              apply Forall_nth_def ; tea.
              now apply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
   Qed.

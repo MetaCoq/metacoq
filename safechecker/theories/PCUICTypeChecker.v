@@ -1028,7 +1028,7 @@ Section Typecheck.
     move: (HΣ) => /wf_ext_consistent [v Hv].
     rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs in H.
     destruct u => //=.
-    unshelve epose proof (eq_universeP _ _ _ _ _ t Universe.type0 _ _) as e'; tea.
+    unshelve epose proof (eq_universeP _ _ _ _ _ n Universe.type0 _ _) as e'; tea.
     1-2: now sq ; destruct HΣ.
     1: move => l /UnivExprSet.singleton_spec -> ;
       now apply LevelSetFact.union_3, global_levels_Set.
@@ -1038,7 +1038,7 @@ Section Typecheck.
     intros v' Hv'.
     specialize (H v' Hv').
     cbn in *.
-    now destruct (val v' t).
+    now destruct (val v' n).
   Qed.
   Next Obligation.
     now rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs.

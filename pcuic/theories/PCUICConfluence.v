@@ -2363,7 +2363,7 @@ Section AbstractConfluence.
   End Definitions.
 
   Global Instance joinable_proper A :
-    Proper (relation_equivalence ==> relation_equivalence)%signature (@joinable A).
+    Proper (relation_equivalence ==> relation_equivalence)%signatureT (@joinable A).
   Proof.
     reduce_goal. split; unfold joinable; intros.
     destruct X0. exists x1. intuition eauto. setoid_rewrite (X x0 x1) in a. auto.
@@ -2374,7 +2374,7 @@ Section AbstractConfluence.
     exists z; split; auto.
   Qed.
 
-  Global Instance diamond_proper A : Proper (relation_equivalence ==> iffT)%signature (@diamond A).
+  Global Instance diamond_proper A : Proper (relation_equivalence ==> iffT)%signatureT (@diamond A).
   Proof.
     reduce_goal.
     rewrite /diamond.
@@ -2398,7 +2398,7 @@ Section AbstractConfluence.
     induction X0; try apply X in r; try solve [econstructor; eauto].
   Qed.
 
-  Global Instance confluent_proper A : Proper (relation_equivalence ==> iffT)%signature (@confluent A).
+  Global Instance confluent_proper A : Proper (relation_equivalence ==> iffT)%signatureT (@confluent A).
   Proof.
     reduce_goal.
     split; rewrite /confluent; auto.

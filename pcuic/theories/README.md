@@ -49,6 +49,7 @@ The order of files here should roughly be a linearization of the dependency DAG 
 | [PCUICOnFreeVars]     | General theory of predicates on (free) variables (generalizing closedness)
 | [PCUICRenameDef]      | Definition of "good" renamings
 | [PCUICInstDef]        | Definition of "good" instantiations
+| [PCUICContextSubst]   | Linking a context (with let-ins), an instance (reversed substitution) for its assumptions and a well-formed substitution for it
 
 [PCUICUnivSubst]: ./Syntax/PCUICUnivSubst.v
 [PCUICLiftSubst]: ./Syntax/PCUICLiftSubst.v
@@ -57,6 +58,7 @@ The order of files here should roughly be a linearization of the dependency DAG 
 [PCUICOnFreeVars]: ./Syntax/PCUICOnFreeVars.v
 [PCUICRenameDef]: ./Syntax/PCUICRenameDef.v
 [PCUICInstDef]: ./Syntax/PCUICRenameDef.v
+[PCUICContextSubst]: ./PCUICContextSubst.v
 
 ## Nameless terms
 
@@ -67,7 +69,14 @@ The order of files here should roughly be a linearization of the dependency DAG 
 
 [PCUICNamelessDef]: ./Syntax/NamelessDef.v
 
+## α-equality
 
+| File                  | Description
+| ----------------------| --------------------
+| [PCUICCasesContexts]  | Helper lemmas for the handling of case branche and predicate contexts
+
+
+[PCUICCasesContexts]: ./PCUICCasesContexts.v
 
 ## Typing and Meta Theory
 

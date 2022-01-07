@@ -3554,8 +3554,6 @@ Section Rho.
     case: eqb_spec => //.
   Qed.
 
-  Import PCUICContextRelation.
-
   Lemma pred1_ctx_over_refl_gen Γ Γ' Δ :
     pred1_ctx Σ Γ Γ' ->
     pred1_ctx_over Σ Γ Γ' Δ Δ.

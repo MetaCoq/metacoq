@@ -20,7 +20,6 @@ theories/Syntax/PCUICRenameDef.v
 theories/Syntax/PCUICInstDef.v
 theories/Syntax/PCUICLiftSubst.v
 theories/Syntax/PCUICTactics.v
-theories/Syntax/PCUICContextRelation.v
 theories/Syntax/PCUICUnivSubst.v
 theories/Syntax/PCUICClosed.v
 

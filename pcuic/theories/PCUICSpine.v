@@ -336,7 +336,7 @@ Section WfEnv.
     induction 1 in |- *; intros T' isTy redT.
     - constructor; eauto. transitivity ty; auto.
     - specialize (IHX (B {0 := hd})).
-      pose proof (isType_apply i0 t); tea; pcuic.
+      pose proof (isType_apply i0 t); tea.
       do 2 forward IHX by pcuic.
       eapply type_spine_cons with na A B; auto.
       etransitivity; eauto.
@@ -2214,7 +2214,8 @@ Section WfEnv.
     pose proof (typing_spine_isType_dom X).
     eapply isType_it_mkProd_or_LetIn_wf_local in X0.
     eapply typing_spine_ctx_inst in X as [argsi sp]; tea.
-    unshelve epose proof (ctx_inst_spine_subst _ argsi); pcuic.
+    unshelve epose proof (ctx_inst_spine_subst _ argsi).
+    1: now pcuic.
     pose proof (spine_subst_smash X). split => //.
     rewrite (ctx_inst_sub_subst argsi) in sp.
     rewrite /subst_let_expand.

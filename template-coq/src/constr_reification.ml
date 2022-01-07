@@ -126,7 +126,7 @@ struct
   let lSProp = ast "universe.lsprop"
   let lProp = ast "universe.lprop"
   let lnpe = ast "universe.lnpe"
-  let lSet = ast "level.lSet"
+  let lzero = ast "level.lzero"
   let tsort_family = ast "sort_family"
   let lfresh_universe = ast "fresh_universe"
   let lfresh_level = ast "fresh_level"
@@ -176,7 +176,7 @@ struct
   let tof_levels = ast "universe.of_levels"
   let tLevelSet_of_list = ast "universe.of_list"
 
-  let noprop_tSet = ast "noproplevel.lSet"
+  let noprop_tSet = ast "noproplevel.lzero"
   let noprop_tLevel = ast "noproplevel.Level"
   let noprop_tLevelVar = ast "noproplevel.Var"
   let univexpr_lProp = ast "univexpr.prop"

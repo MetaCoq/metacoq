@@ -194,7 +194,7 @@ struct
         let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
         Feedback.msg_info (str"Fresh level " ++ Univ.Level.pr l ++ str" was added to the context.");
         evm, l
-    else if constr_equall h lSet then
+    else if constr_equall h lzero then
       match args with
       | [] -> evm, Univ.Level.set
       | _ -> bad_term_verb trm "unquote_level"

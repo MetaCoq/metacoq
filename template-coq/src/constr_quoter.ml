@@ -190,7 +190,7 @@ struct
   let quote_nonprop_level l =
     if Univ.Level.is_prop l || Univ.Level.is_sprop l then
       failwith "quote_nonprop_level : Prop or SProp found in levels"
-    else if Level.is_set l then Lazy.force lSet
+    else if Level.is_set l then Lazy.force lzero
     else match Level.var_index l with
          | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
          | None -> constr_mkApp (tLevel, [| string_of_level l|])

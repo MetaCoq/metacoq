@@ -23,14 +23,9 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 Derive Signature for OnOne2_local_env.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
-Ltac pcuic := intuition eauto 3 with pcuic ||
-  (try solve [repeat red; cbn in *; intuition auto; eauto 3 with pcuic || (try lia || congruence)]).
 
 Arguments Nat.sub : simpl nomatch.
 Arguments Universe.sort_of_product : simpl nomatch.
-
-#[global]
-Hint Rewrite context_assumptions_subst_instance projs_length : len.
 
 (* Preservation of wf_*fixpoint *)  
 
@@ -2632,7 +2627,7 @@ Proof.
     epose proof (commut_lift_subst_rec _ _ 1 narg narg ltac:(reflexivity)) as hnarg.
     rewrite Nat.add_1_r in hnarg. rewrite <- hnarg => //. clear hnarg.
     rewrite (subst_app_decomp [_]) !lengths heq_length /= lift_mkApps /=.
-    rewrite (distr_subst [_]) /= !lengths {2}/projsubst projs_length.
+    rewrite (distr_subst [_]) /= !lengths.
     rewrite simpl_subst_k // [subst_instance _ projsubst]subst_instance_projs.
     epose proof (subst_app_simpl (List.rev (firstn narg (skipn (ind_npars mdecl) args0))) _ 0) as hs.
     rewrite !lengths /= in hs.
@@ -2642,7 +2637,7 @@ Proof.
     epose proof (subst_app_simpl 
       (map (subst0 [mkApps (tConstruct i 0 u0) (map (lift0 (ind_npars mdecl)) args0)])
         (projs i (ind_npars mdecl) narg))) as hs.
-    rewrite !lengths projs_length in hs.
+    rewrite !lengths in hs.
     rewrite -{}hs subst_app_decomp !lengths (distr_subst (List.rev args)) !lengths.
     assert (map (subst0 (List.rev args)) (subst_instance u (extended_subst (ind_params mdecl) 0)) = 
       iparsubst) as ->.
@@ -2692,15 +2687,14 @@ Proof.
     rewrite /indsubst1 subst_instance_inds. 
     rewrite (subst_instance_id_mdecl Σ u mdecl) //.
     rewrite (subst_closedn (List.rev args)).
-    { rewrite projs_length. eapply (closedn_subst _ 0).  
+    { eapply (closedn_subst _ 0).  
       eapply declared_minductive_closed_inds; eauto. exact isdecl.
-      simpl. autorewrite with len.
+      simpl; len. 
       rewrite closedn_subst_instance.
       clear projsubsl.
       eapply closed_wf_local in wfdecl.
       rewrite closedn_ctx_app in wfdecl.
-      move/andb_and: wfdecl => [_ wfdecl].
-      autorewrite with len in wfdecl.
+      move/andb_and: wfdecl => [_ wfdecl]. len in wfdecl.
       simpl in wfdecl.
       eapply closedn_ctx_decl in wfdecl; eauto.
       len in wfdecl.

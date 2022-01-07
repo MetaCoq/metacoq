@@ -471,6 +471,15 @@ Module Environment (T : Term).
     map (on_snd (f (S npars_ass))) (ind_projs oib).
   Proof. destruct oib; simpl. reflexivity. Qed.
 
+  Fixpoint projs ind npars k :=
+    match k with
+    | 0 => []
+    | S k' => (tProj ((ind, npars), k') (tRel 0)) :: projs ind npars k'
+    end.
+
+  Lemma projs_length ind npars k : #|projs ind npars k| = k.
+  Proof. induction k; simpl; auto. Qed.
+
   Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
     match Σ with
     | nil => None

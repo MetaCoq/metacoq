@@ -193,7 +193,7 @@ Section Validity.
       pose proof (All2_length hlen) as hlen';len in hlen'; simpl in hlen'; try lia.
       eapply All2_app_inv_l in hlen as (l1'&l2'&heq&alnas&allna).
       depelim allna. depelim allna.
-      rewrite map2_app => /= //; try lia. unfold aname. lia.
+      rewrite map2_app => /= //; try lia. unfold aname.
       eapply app_inj_tail in heq as [<- <-].
       simpl. eapply All2_fold_app; auto.
       constructor. constructor.

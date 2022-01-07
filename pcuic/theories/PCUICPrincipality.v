@@ -554,8 +554,6 @@ Proof.
       eapply validity in X2; auto.
       apply PCUICArities.isType_tProd in X2 as [tyA tyB].
       eapply (substitution_equality_subst_conv (Γ0 := [vass na A]) (Γ1 := [vass na A]) (Δ := [])); pcuic.
-      split. now eapply isType_wf_local in tyB.
-      now eapply subslet_ass_tip.
       constructor. 2:constructor.
       constructor; fvs.
 

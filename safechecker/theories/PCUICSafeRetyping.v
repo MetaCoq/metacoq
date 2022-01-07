@@ -681,10 +681,10 @@ Qed.
     destruct infer as []; cbn.
     destruct wt as [T' HT'].
     sq. split.
-    eapply BDToPCUIC.infering_typing in s; pcuic. apply hΣ.
+    eapply BDToPCUIC.infering_typing in s; pcuic.
     intros T'' HT''.
     apply typing_infering in HT'' as [P [HP HP']].
-    eapply infering_checking;tea. 1-2: pcuic. apply hΣ. fvs.
+    eapply infering_checking;tea. 1-2: pcuic. fvs.
     econstructor; tea. now eapply equality_forget in HP'.
   Qed.
     

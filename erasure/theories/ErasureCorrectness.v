@@ -1210,7 +1210,6 @@ Proof.
         eapply (assumption_context_cstr_branch_context d).
     + exists EAst.tBox. split. econstructor.
       eapply Is_type_eval; eauto. constructor. econstructor; eauto.
-    + apply wfΣ.
   - pose (Hty' := Hty).
     eapply inversion_Proj in Hty' as (? & ? & ? & [] & ? & ? & ? & ? & ?); [|easy].
     invs He.

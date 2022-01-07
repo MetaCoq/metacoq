@@ -3486,7 +3486,7 @@ Section CumulSubst.
     rewrite - !app_length.
     relativize #|Δ'0 ++ Γ''|; [apply (substitution_equality_subst_conv (le:=le') hs hs' eqs)|] => //.
     1:rewrite app_context_assoc //.
-    len. now rewrite len.
+    len.
   Qed. 
 
   Lemma weaken_context_equality_rel {le Γ Γ' Δ Δ'} :

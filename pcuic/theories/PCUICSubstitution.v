@@ -817,7 +817,7 @@ Proof.
   move: E chopm.
   rewrite chop_n_app ?map_length. {
     rewrite <- H1. apply onNpars in onmind.
-    now rewrite subst_instance_assumptions. }
+    now rewrite context_assumptions_subst_instance. }
   move=> [= <- <-] chopm.
   move: {chopm}(chopm _ (subst n (#|cs'.(cstr_args)| + k))).
   rewrite map_app.
@@ -1118,6 +1118,7 @@ Proof.
       replace #|Γ''| with ((#|Γ''| - S n) + S n) at 2 by lia.
       set (k := S n).
       sigma. apply inst_ext.
+      rewrite /rshiftk. rewrite (ren_shiftk (S n)).
       rewrite -shiftn_Upn - !Upn_Upn. intros i; lia_f_equal.
   - move: hnth.
     case: (nth_error_app_context Γ Γ' _) => // x' hnth hn' [=] eq; subst x'.
@@ -1167,7 +1168,7 @@ Proof.
     split; auto.
     * rewrite Upn_eq /subst_consn idsn_lt //.
     * rewrite nth_error_app_lt; len => //.
-      change (fun m => S (n + m)) with (lift_renaming (S n) 0).
+      change (rshiftk (S n)) with (lift_renaming (S n) 0).
       rewrite nth_error_subst_context /= hnth /=. split; eauto.
       rewrite /= hb /=. f_equal.
       rewrite subst_inst. rewrite Nat.add_0_r.

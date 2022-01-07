@@ -65,16 +65,6 @@ Proof.
     simpl in *. f_equal. all: easy.
 Qed.
 
-Lemma rename_context_length :
-  forall σ Γ,
-    #|rename_context σ Γ| = #|Γ|.
-Proof.
-  intros σ Γ. unfold rename_context.
-  apply fold_context_k_length.
-Qed.
-#[global]
-Hint Rewrite rename_context_length : sigma wf.
-
 Lemma rename_context_snoc0 :
   forall f Γ d,
     rename_context f (d :: Γ) =

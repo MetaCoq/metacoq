@@ -972,7 +972,7 @@ Lemma nl_expand_lets_k Γ k t :
   expand_lets_k (nlctx Γ) k (nl t).
 Proof.
   rewrite /expand_lets_k.
-  now rewrite nl_subst nl_extended_subst nl_lift; len.
+  now rewrite nl_subst nl_extended_subst nl_lift; len; autorewrite with len.
 Qed.
 
 Lemma nl_expand_lets Γ t : 
@@ -1039,7 +1039,7 @@ Lemma nl_expand_lets_ctx Γ Δ :
   expand_lets_ctx (nlctx Γ) (nlctx Δ).
 Proof.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
-  now rewrite nl_subst_context nl_extended_subst nl_lift_context; len.
+  now rewrite nl_subst_context nl_extended_subst nl_lift_context nl_context_assumptions; len.
 Qed.
 
 Lemma nl_inds ind puinst bodies :
@@ -1297,7 +1297,7 @@ Proof.
     rewrite -/(inst_case_branch_context _ _).
     eapply red_iota => //.
     * rewrite H1 H //.
-    * len; eauto.
+    * rewrite nl_context_assumptions; len; eauto.
   - rewrite !nl_mkApps. cbn. eapply red_fix with (narg:=narg).
     + unfold unfold_fix in *. rewrite nth_error_map.
       destruct (nth_error mfix idx). 2: discriminate.

@@ -1,12 +1,8 @@
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst.
-
+From MetaCoq.PCUIC Require Export PCUICTactics.
 From Coq Require Import CRelationClasses.
-
-Ltac pcuic :=
-  try repeat red; cbn in *;
-   try (solve [ intuition auto; eauto with pcuic || (try lia || congruence) ]).
 
 Lemma All2_fold_impl_onctx (P : context -> context -> context_decl -> context_decl -> Type) P' Γ Δ Q :  
   onctx Q Γ ->

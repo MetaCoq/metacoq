@@ -422,8 +422,8 @@ Proof.
       rewrite fix_context_length ?map_length in X0, X1, X3.
       rewrite (map_dtype _ (subst_instance u) x) in X3.
       rewrite subst_instance_app in X3.
-      rewrite <- (fix_context_subst_instance u mfix). len.
-      eapply X3.
+      rewrite <- (fix_context_subst_instance u mfix). 
+      now len.
     + red; rewrite <- wffix.
       unfold wf_fixpoint.
       rewrite map_map_compose.
@@ -447,8 +447,8 @@ Proof.
         rewrite fix_context_length ?map_length in X0, X1, X3.
         rewrite (map_dtype _ (subst_instance u) x) in X3.
         rewrite subst_instance_app in X3.
-        rewrite <- (fix_context_subst_instance u mfix). len.
-        eapply X3.
+        rewrite <- (fix_context_subst_instance u mfix). 
+        now len.
       + red; rewrite <- wffix.
         unfold wf_cofixpoint.
         rewrite map_map_compose.

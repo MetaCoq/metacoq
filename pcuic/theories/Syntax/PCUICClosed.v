@@ -9,16 +9,6 @@ From Equations Require Import Equations.
 
 (** * Lemmas about the [closedn] predicate *)
 
-Lemma subst_instance_assumptions u ctx :
-  context_assumptions (subst_instance u ctx) = context_assumptions ctx.
-Proof.
-  induction ctx; cbnr.
-  destruct (decl_body a); cbn; now rewrite IHctx.
-Qed.
-#[global]
-Hint Rewrite subst_instance_assumptions : len.
-
-
 Lemma lift_decl_closed n k d : closed_decl k d -> lift_decl n k d = d.
 Proof.
   case: d => na [body|] ty; rewrite /test_decl /lift_decl /map_decl /=; unf_term.

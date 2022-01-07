@@ -142,7 +142,7 @@ Proof.
       rewrite (Nat.add_comm _ (context_assumptions _)) rename_shiftnk.
       f_equal. rewrite Nat.add_comm rename_subst.
       rewrite rename_inds. f_equal.
-      rewrite shiftn_add. len. lia_f_equal.
+      rewrite shiftn_add. now len.
     ++ unfold id. f_equal. f_equal.
        rewrite map_app map_map_compose.
        rewrite map_map_compose.
@@ -919,7 +919,7 @@ Proof.
     eapply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
     split => //.
     eapply urenaming_ext.
-    { len. now rewrite -shiftnP_add. }
+    { now rewrite app_length -shiftnP_add. }
     { reflexivity. } now eapply urenaming_context.
   - destruct t0 as [s Hs]. red in t1.
     rewrite rename_context_snoc /=. constructor; auto.
@@ -927,11 +927,11 @@ Proof.
       apply (Hs P (Δ' ,,, rename_context f Γ0) (shiftn #|Γ0| f)).
       split => //.
       eapply urenaming_ext.
-      { len; now rewrite -shiftnP_add. }
+      { now rewrite app_length -shiftnP_add. }
       { reflexivity. } now eapply urenaming_context.
     * red. apply (t1 P). split => //.
       eapply urenaming_ext.
-      { len; now rewrite -shiftnP_add. }
+      { now rewrite app_length -shiftnP_add. }
       { reflexivity. } now eapply urenaming_context.
 Qed.
 
@@ -996,7 +996,7 @@ Proof.
   pose proof (nth_error_Some_length hnth). len in H.
   simpl in H.
   destruct (nth_error (List.rev (rename_context _ _)) _) eqn:hnth'.
-  2:{ eapply nth_error_None in hnth'. len in hnth'. simpl in hnth'. lia. }
+  2:{ eapply nth_error_None in hnth'. len in hnth'. }
   rewrite nth_error_rev_inv in hnth; len; auto.
   len in hnth. simpl in hnth.
   rewrite nth_error_rev_inv in hnth'; len; auto.
@@ -1187,9 +1187,9 @@ Proof.
         split.
         ++ apply All_local_env_app_inv in IHpredctx as [].
           eapply wf_local_app_renaming; eauto. apply a0.
-        ++ rewrite /predctx.
+        ++ rewrite /predctx app_length.
            eapply urenaming_ext.
-           { len. now rewrite -shiftnP_add. }
+           { now rewrite -shiftnP_add. }
            { reflexivity. }
           relativize #|pcontext p|; [eapply urenaming_context|].
           { apply Hf. }

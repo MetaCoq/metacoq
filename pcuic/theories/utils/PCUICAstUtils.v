@@ -1066,3 +1066,9 @@ Proof.
   - now rewrite context_assumptions_fold.
   - rewrite context_assumptions_app /=. lia.
 Qed. 
+
+Lemma context_assumptions_expand_lets_ctx Γ Δ :
+  context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.
+Proof. now rewrite /expand_lets_ctx /expand_lets_k_ctx; len. Qed.
+#[global]
+Hint Rewrite context_assumptions_expand_lets_ctx : len.

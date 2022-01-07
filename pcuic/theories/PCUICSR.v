@@ -30,7 +30,7 @@ Arguments Nat.sub : simpl nomatch.
 Arguments Universe.sort_of_product : simpl nomatch.
 
 #[global]
-Hint Rewrite subst_instance_assumptions projs_length : len.
+Hint Rewrite context_assumptions_subst_instance projs_length : len.
 
 (* Preservation of wf_*fixpoint *)  
 
@@ -2547,7 +2547,7 @@ Proof.
     rewrite !subst_instance_it_mkProd_or_LetIn !subst_it_mkProd_or_LetIn in tyargs, Hty.
     eapply typing_spine_inv in tyargs as [arg_sub [spargs sp]]; eauto.
     2:{ rewrite !context_assumptions_fold.
-        rewrite subst_instance_assumptions. rewrite H2.
+        rewrite context_assumptions_subst_instance. rewrite H2.
         apply onNpars in onmind. lia. }
     rewrite closed_ctx_subst in spargs.
     { eapply closed_wf_local; eauto. eapply on_minductive_wf_params; eauto. }
@@ -2556,7 +2556,7 @@ Proof.
     rewrite subst_it_mkProd_or_LetIn in sp.
     rewrite !subst_instance_mkApps !subst_mkApps in sp.
     eapply typing_spine_nth_error in sp; eauto.
-    2:{ rewrite !context_assumptions_fold. rewrite subst_instance_assumptions.
+    2:{ rewrite !context_assumptions_fold. rewrite context_assumptions_subst_instance.
         clear sp. eapply nth_error_Some_length in H.
         rewrite List.skipn_length in H. lia. }
     destruct sp as [decl [Hnth Hu0]].

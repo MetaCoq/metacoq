@@ -2224,7 +2224,7 @@ Section PredRed.
     intros x px. rewrite {1}/ids /=. split => //.
     split => //. eapply pred1_refl_gen => //.
     assert (#|Δ| = #|Δ'|).
-    { apply pred1_pred1_ctx in pred. eapply All2_fold_length in pred. len in pred. lia. }
+    { apply pred1_pred1_ctx in pred. eapply All2_fold_length in pred. len in pred. }
     move=> [na [b|] ty] => /= //.
     destruct (leb_spec_Set (S x) #|Δ|).
     - rewrite !nth_error_app_lt; try lia.
@@ -2265,12 +2265,11 @@ Section PredRed.
     apply X.
     pose proof (All2_fold_length predctx). len in H.
     red. split => //. split => //.
-    relativize #|Γ ,,, Δ|; [erewrite on_free_vars_ctx_on_ctx_free_vars|] => //.
-    len. lia.
+    relativize #|Γ ,,, Δ|; [erewrite on_free_vars_ctx_on_ctx_free_vars|] => //; len. 
     intros x px. rewrite {1}/ids /=. split => //.
     split => //. eapply pred1_refl_gen => //.
     assert (#|Δ| = #|Δ'|).
-    { apply pred1_pred1_ctx in pred. eapply All2_fold_length in pred. len in pred. lia. }
+    { apply pred1_pred1_ctx in pred. eapply All2_fold_length in pred. len in pred. }
     move=> [na [b|] ty] => /= //.
     destruct (leb_spec_Set (S x) #|Δ|).
     - rewrite !nth_error_app_lt; try lia.

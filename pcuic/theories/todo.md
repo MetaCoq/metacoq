@@ -21,8 +21,11 @@ theories/Syntax/PCUICOnFreeVars.v |
 theories/Syntax/PCUICRenameDef.v | this is only 60 lines, and has a weird dependency on typing for something in "syntax", we should probably do something (at least change the name). Also, there is a concurrent notion in PCUICParallelReduction.
 theories/Syntax/PCUICInstDef.v | similar to PCUICRenameDef.v
 theories/Syntax/PCUICLiftSubst.v | how much of this should go into files 
-theories/Syntax/PCUICContextRelation.v |
-theories/Syntax/PCUICUnivSubst.v
+theories/Syntax/PCUICContextRelation.v | made this a part of BasicAst, where context_decl is first defined
+theories/Syntax/PCUICUnivSubst.v | 
+theories/PCUICContextSubst.v | Is this worth keeping?
+theories/PCUICCasesContexts.v | similar to PCUICContextSubst.v
+
 
 theories/Conversion/PCUICNamelessConv.v
 theories/Conversion/PCUICRenameConv.v
@@ -42,8 +45,6 @@ theories/Typing/PCUICUnivSubstitutionTyp.v
 theories/Typing/PCUICClosedTyp.v
 theories/Typing/PCUICContextConversionTyp.v
 
-theories/PCUICContextSubst.v
-theories/PCUICCasesContexts.v
 theories/PCUICReduction.v
 theories/PCUICTyping.v
 theories/PCUICGuardCondition.v

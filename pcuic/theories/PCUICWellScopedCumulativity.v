@@ -3,7 +3,7 @@ From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
      PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
-     PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
+     PCUICSigmaCalculus PCUICContextReduction
      PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution.
 
@@ -611,7 +611,7 @@ Qed.
   context_equality le Σ Γ Γ'.
 Proof.
   rewrite /ws_context_equality /context_equality.
-  intros a. eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+  intros a. eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd.
   now destruct (into_equality_open_decls le hd) as [clΓ [isd [isd' eq]]].
 Qed.
@@ -622,7 +622,7 @@ Lemma from_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext}
   ws_context_equality le Σ Γ Γ'.
 Proof.
   rewrite /ws_context_equality /context_equality.
-  intros a; eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+  intros a; eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd. cbn in hd.
   destruct hd.
   rewrite /equality_decls. split => //.

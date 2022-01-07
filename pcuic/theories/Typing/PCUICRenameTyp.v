@@ -775,7 +775,7 @@ Proof.
   now replace (#|Γ| - S n + 0) with (Nat.pred #|Γ| - n + 0) by lia.
 Qed.
 
-Lemma All2_fold_impl_ind_onctx_k Q P P' Γ Δ :
+(* Lemma All2_fold_impl_ind_onctx_k Q P P' Γ Δ :
   onctx_k Q 0 Γ ->
   onctx_k Q 0 Δ ->
   All2_fold P Γ Δ ->
@@ -794,7 +794,7 @@ Proof.
   rewrite -> Nat.sub_0_r, Nat.add_0_r in *;
   apply Alli_helper in qΓ; apply Alli_helper in qΔ;
   simpl in *; eauto.
-Qed.
+Qed. *)
 
 Lemma ondecl_on_free_vars_decl P d :
   ondecl (on_free_vars P) d ->

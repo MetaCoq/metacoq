@@ -47,7 +47,8 @@ Definition lengths :=
     @inst_case_context_length,
     @ind_predicate_context_length,
     @map_context_length, @skipn_map_length,
-    @mapi_context_length, idsn_length, ren_ids_length).
+    @mapi_context_length, idsn_length, 
+    @projs_length, ren_ids_length).
 
 Ltac len ::= 
   repeat (rewrite !lengths /= //); try solve [lia_f_equal].
@@ -55,3 +56,7 @@ Ltac len ::=
 Tactic Notation "len" "in" hyp(id) :=
   repeat (rewrite !lengths /= // in id);
   try solve [lia_f_equal].
+
+(* Can be used after [move] by ssr tactics, e.g. [rewrite foo => /lens] *)
+Notation "'lens'" := ltac:(len) (only parsing).
+

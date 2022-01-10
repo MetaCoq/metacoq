@@ -97,7 +97,7 @@ Section OnUdecl.
     destruct nth_error eqn:eq. move:eq.
     rewrite nth_error_map /level_var_instance [mapi_rec _ _ _]mapi_unfold (proj1 (nth_error_unfold _ _ _) ltn).
     simpl. now intros [=].
-    eapply nth_error_None in eq. len in eq. lia.
+    eapply nth_error_None in eq; len in eq.
   Qed.
   
   Lemma subst_instance_level_var_instance inst l : 
@@ -1224,7 +1224,7 @@ Section CheckEnv.
         symmetry in Heq_anonymous1; eapply decompose_app_inv in Heq_anonymous1.
         subst t0. symmetry in Heq_anonymous.
         eapply nth_error_None in Heq_anonymous.
-        len in Heq_anonymous. lia.
+        len in Heq_anonymous.
       Qed.
 
       Next Obligation.
@@ -1363,7 +1363,7 @@ Section CheckEnv.
   Proof.
     intros H.
     eapply All2_fold_app_inv in H as [cumΓ cumΔs]; auto.
-    eapply All2_fold_length in H. len in H. lia.
+    eapply All2_fold_length in H. len in H.
   Qed.
 
   Lemma eq_decl_eq_decl_upto (Σ : global_env_ext) x y : 
@@ -1710,7 +1710,7 @@ Section CheckEnv.
     rename Heq_anonymous into hnth'.
     symmetry in hnth'. eapply nth_error_None in hnth'.
     eapply nth_error_Some_length in hnth.
-    len in hnth'. lia.
+    len in hnth'.
   Qed.
 
   Program Definition check_projections_cs (Σ : wf_env_ext) (mind : kername) (mdecl : mutual_inductive_body)

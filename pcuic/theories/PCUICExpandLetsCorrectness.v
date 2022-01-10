@@ -7,7 +7,7 @@ From Equations Require Import Equations.
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
+     PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
      PCUICSigmaCalculus PCUICClosed PCUICClosedTyp PCUICContexts PCUICSubstitution
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
      PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity 

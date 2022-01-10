@@ -633,15 +633,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       the instances of parameters and the inductive value without considering the 
       presence of let bindings. *)
 
-    Fixpoint projs ind npars k :=
-      match k with
-      | 0 => []
-      | S k' => (tProj ((ind, npars), k') (tRel 0)) :: projs ind npars k'
-      end.
-
-    Lemma projs_length ind npars k : #|projs ind npars k| = k.
-    Proof. induction k; simpl; auto. Qed.
-
     Definition on_projection mdecl mind i cdecl (k : nat) (p : ident * term) :=
       let Γ := smash_context [] (cdecl.(cstr_args) ++ mdecl.(ind_params)) in
       match nth_error Γ (context_assumptions cdecl.(cstr_args) - S k) with

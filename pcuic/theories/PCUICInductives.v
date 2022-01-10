@@ -2441,8 +2441,7 @@ Proof.
          -PCUICLiftSubst.lift_to_extended_list_k Nat.add_0_r
          -subst_context_map_subst_expand_lets; len.
       rewrite subst_extended_lift //; len. now rewrite closedn_subst_instance_context.
-      rewrite (lift_extended_subst _ #|ind_indices _|) subst_map_lift_lift_context; len.
-      reflexivity. }
+      rewrite (lift_extended_subst _ #|ind_indices _|) subst_map_lift_lift_context; len. }
   constructor => //.
   2:{ eexists; tea. rewrite /idxctx app_context_assoc in tyass; tea. }
   apply typing_wf_local in tyass.

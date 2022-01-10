@@ -2,7 +2,7 @@
 From Coq Require Import ssreflect ssrbool Utf8 CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
+     PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
      PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst PCUICTyping PCUICGlobalEnv 
      PCUICClosedTyp PCUICGeneration PCUICConversion (* Needs transitivity of cumulativity *)
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
@@ -22,7 +22,6 @@ Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags 
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
-
 
 (** Translation from PCUIC back to template-coq terms. 
 
@@ -940,8 +939,6 @@ Proof.
   f_equal; auto.
 Qed.
 
-Require Import PCUICSpine.
-
 Lemma case_branch_context_assumptions ind mdecl cdecl p br :
   Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) (cstr_args cdecl) ->
   context_assumptions (case_branch_context ind mdecl cdecl p br) = context_assumptions (cstr_args cdecl).
@@ -949,6 +946,7 @@ Proof.
   rewrite /case_branch_context /case_branch_context_gen.
   intros Hforall.
   rewrite context_assumptions_map2_set_binder_name. len.
+  rewrite !lengths.
   eapply (Forall2_length Hforall).
   now do 3 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context ?context_assumptions_subst_instance 
     /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx.

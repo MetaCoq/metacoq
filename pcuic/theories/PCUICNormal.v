@@ -1321,7 +1321,7 @@ Proof.
         rewrite -(List.rev_length (pparams motive)).
         eapply params_subslet.
         rewrite !on_free_vars_ctx_app onΓ /=. len.
-        rewrite fake_params_length on_free_vars_ctx_subst_instance.
+        rewrite on_free_vars_ctx_subst_instance.
         rewrite closed_fake_params /=.
         setoid_rewrite closedP_shiftnP_eq in p1.
         eapply on_free_vars_ctx_impl; tea.
@@ -1367,7 +1367,7 @@ Proof.
         rewrite -(List.rev_length (pparams motive)).
         eapply params_subslet.
         rewrite !on_free_vars_ctx_app onΓ /=. len.
-        rewrite fake_params_length on_free_vars_ctx_subst_instance.
+        rewrite on_free_vars_ctx_subst_instance.
         rewrite closed_fake_params /=.
         move: fvbctx.
         rewrite test_context_k_closed_on_free_vars_ctx closedP_shiftnP_eq => H.

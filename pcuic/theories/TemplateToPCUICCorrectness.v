@@ -2321,7 +2321,6 @@ Proof.
     set (p' := trans_predicate _ _ _ _ _ _ _).
     eapply (simpl_type_Case (p:=p') (ps:=ps)) => //. 
     + cbn. rewrite map2_map2_bias_left; len.
-      now rewrite !pclengths /= !lengths.
       eapply eq_binder_annots_eq.
       now eapply trans_ind_predicate_context.
     + cbn. split. cbn.
@@ -2762,12 +2761,12 @@ Proof.
         rewrite !Ast.Env.app_context_assoc.
         now rewrite on_free_vars_ctx_subst_instance. }
       { eapply closedn_on_free_vars. len. move: a0. 
-        rewrite /ST.ind_arities; len. rewrite Ast.Env.arities_context_length.
+        rewrite /ST.ind_arities; len. 
         rewrite !context_assumptions_map.
         rewrite trans_expand_lets trans_local_app.
         rewrite PCUICClosed.closedn_subst_instance //. }
       { eapply closedn_on_free_vars. len. move: a0. 
-        rewrite /ST.ind_arities; len. rewrite Ast.Env.arities_context_length.
+        rewrite /ST.ind_arities; len. 
         rewrite !context_assumptions_map.
         rewrite trans_expand_lets trans_local_app.
         rewrite PCUICClosed.closedn_subst_instance //. } }
@@ -2932,7 +2931,7 @@ Qed.
 
 Lemma trans_projs Σ kn n i mdecl  :
   map (trans (trans_global_decls Σ)) 
-    (ST.projs {| inductive_mind := kn; inductive_ind := n |} (Ast.Env.ind_npars mdecl) i) =
+    (Ast.Env.projs {| inductive_mind := kn; inductive_ind := n |} (Ast.Env.ind_npars mdecl) i) =
   projs {| inductive_mind := kn; inductive_ind := n |} (Ast.Env.ind_npars mdecl) i.
 Proof.
   induction i; cbn; auto. f_equal; auto.
@@ -3114,8 +3113,7 @@ Proof.
                 generalize (trans_destArity Σ [] _ wfty IHX0).
                 rewrite /ST.TemplateTyping.destArity /PCUICTypingDef.destArity.
                 destruct AstUtils.destArity as [[args s]|] => /= -> //.
-                len. rewrite context_assumptions_map.
-                now rewrite Ast.Env.smash_context_length. }
+                len. now rewrite context_assumptions_map. }
               { cbn. constructor 3. 
                 rewrite trans_subst in IHp. apply IHp.
                 move/WfAst.wf_inv: wfty => /= [[wfb wfty] wft].
@@ -3141,8 +3139,7 @@ Proof.
                 rewrite -(smash_context_app_expand []).
                 rewrite closedn_ctx_app /=; len => h.
                 apply/andP; split => //.
-                apply closedn_smash_context. rewrite /ST.ind_arities.
-                rewrite Ast.Env.arities_context_length //. }
+                now apply closedn_smash_context. }
               { rewrite ceq in onty.
                 rewrite /cstr_concl in onty.
                 destruct onty as [s hs].
@@ -3154,8 +3151,7 @@ Proof.
                 rewrite map_app forallb_app => /andP[] _.
                 move/forallb_All. solve_all.
                 rewrite trans_expand_lets trans_local_app.
-                rewrite !context_assumptions_map in b.
-                rewrite /ST.ind_arities Ast.Env.arities_context_length //. }
+                now rewrite !context_assumptions_map in b. }
             + destruct lets_in_constructor_types.
               ++ eauto.
               ++ red in on_lets_in_type. red. rewrite <- on_lets_in_type.

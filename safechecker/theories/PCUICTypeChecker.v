@@ -575,7 +575,8 @@ Section Typecheck.
          (* #|u| = #|inst| /\ valid_constraints φ (subst_instance_cstrs u cstrs) *)
        end.
   Next Obligation.
-    eapply forallb_All in H. eapply All_forallb'; tea.
+    match goal with [ H : is_true (forallb _ _) |- _ ] => eapply forallb_All in H end.
+    eapply All_forallb'; tea.
     clear -cf HG. intros x; simpl. now apply is_graph_of_uctx_levels.
   Qed.
   Next Obligation.
@@ -965,7 +966,9 @@ Section Typecheck.
   Next Obligation. intros; sq; now econstructor. Defined.
   (* tSort *)
   Next Obligation.
-    eapply (elimT wf_universe_reflect) in H.
+    match goal with [ H : is_true (wf_universeb _ _) |- _ ] =>
+    eapply (elimT wf_universe_reflect) in H
+    end.
     sq; econstructor; tas.
   Defined.
   (* tProd *)
@@ -1054,6 +1057,7 @@ Section Typecheck.
     apply assumption_context_subst_instance, smash_context_assumption_context; constructor.
   Qed.
 
+
   Lemma ctx_inst_wt Γ s Δ : ctx_inst Σ Γ s Δ -> All (welltyped Σ Γ) s.
   Proof.
     induction 1; try constructor; auto.
@@ -1063,14 +1067,15 @@ Section Typecheck.
   Next Obligation.
     destruct X7, X6, X3.
     sq. cbn in *.
-    apply eqb_eq in H1.
-    eapply eqb_eq in H0. subst I. cbn in *.
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst I. cbn in *.
     eapply type_reduction_closed in t; tea.
     eapply validity in t.
     eapply isType_mkApps_Ind_inv in t as [pars [args []]]; eauto.
     rewrite chop_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
     subst params indices.
-    eapply spine_subst_wt_terms in s. rewrite H1 in s.
+    eapply spine_subst_wt_terms in s.
+    match goal with [ H : ind_npars d = _ |- _ ] => rewrite H in s end.
     eapply All_impl; tea. intros ? []; auto. now exists x0.
   Qed.
   Next Obligation.
@@ -1081,8 +1086,8 @@ Section Typecheck.
   Next Obligation.
     cbn in *; sq.
     rename X5 into args.
-    apply eqb_eq in H0. subst I.
-    eapply eqb_eq in H1.
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst I.
     eapply type_reduction_closed in X7; tea.
     rewrite chop_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
     subst params indices.
@@ -1102,7 +1107,9 @@ Section Typecheck.
       rewrite -app_context_assoc. eapply PCUICWeakening.weaken_wf_local; tea.
       rewrite -subst_instance_app_ctx.
       now eapply (on_minductive_wf_params_indices_inst X0). }
-    rewrite -H1 in eq_params *.
+    match goal with [ H : ind_npars d = _ |- _ ] =>
+    rewrite -H in eq_params *
+    end.
     eapply spine_subst_app => //.
     * len. rewrite -(All2_length eq_params).
       now rewrite -(declared_minductive_ind_npars X0).
@@ -1134,7 +1141,9 @@ Section Typecheck.
       rewrite -(subst_context_smash_context _ _ []).
       rewrite -(spine_subst_inst_subst X1).
       rewrite - !smash_context_subst /= !subst_context_nil.
-      unshelve eapply compare_global_instance_sound in H3; pcuic.
+      match goal with [ H : is_true (compare_global_instance _ _ _ _ _ _ _) |- _ ] =>
+      unshelve eapply compare_global_instance_sound in H
+      end; pcuic.
       eapply (inductive_cumulative_indices X0); tea.
   Qed.
   
@@ -1142,8 +1151,8 @@ Section Typecheck.
   Next Obligation.
     intros. simpl in *. clearbody isty. subst filtered_var filtered_var0. subst.
     destruct cty as [A cty]. cbn in *. sq.
-    apply eqb_eq in H0. subst ind'.
-    eapply eqb_eq in H1.
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst ind'.
     eapply type_reduction_closed in cty; tea.
     rewrite chop_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
     subst params indices.
@@ -1152,14 +1161,16 @@ Section Typecheck.
     eapply wf_case_predicate_context; tea.
     eapply eq_context_gen_wf_predicate; eauto.
     rewrite -(All2_length eq_params).
-    now rewrite -H1.
+    match goal with [ H : ind_npars _ = _ |- _ ] =>
+      now rewrite -H
+    end.
   Qed.
     
   Next Obligation.
     intros; cbn in *. clearbody isty. subst filtered_var filtered_var0. subst.
     destruct cty as [A cty]. cbn in *. sq.
-    apply eqb_eq in H0. subst ind'.
-    eapply eqb_eq in H1. 
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst ind'.
     eapply eq_context_gen_wf_predicate; tea.
     rewrite -(All2_length eq_params).
     eapply type_reduction_closed in cty; tea.
@@ -1167,14 +1178,16 @@ Section Typecheck.
     eapply isType_mkApps_Ind_inv in cty as [pars [argsub []]]; eauto.
     rewrite chop_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
     subst params indices.
-    now rewrite -H1.
+    match goal with [ H : ind_npars _ = _ |- _ ] =>
+      now rewrite -H
+    end.
   Qed.
 
   Next Obligation.
     intros; cbn in *. clearbody isty. subst filtered_var filtered_var0. subst.
     destruct cty as [A cty]. cbn in *. clearbody wfp. sq.
-    apply eqb_eq in H0. subst ind'.
-    eapply eqb_eq in H1. 
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst ind'.
     now rewrite /pctx in typ_pret.
   Qed.
   Next Obligation. 
@@ -1193,8 +1206,8 @@ Section Typecheck.
   Next Obligation.
     intros; cbn in *. clearbody isty wfp. subst filtered_var filtered_var0. subst.
     destruct cty as [A cty]. cbn in *. sq.
-    apply eqb_eq in H0. subst ind'.
-    eapply eqb_eq in H1. 
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst ind'.
     econstructor; eauto; pcuic.
     - now eapply All2_fold_All2 in check_wfpctx_conv.
     - eapply isType_mkApps_Ind_smash_inv in isty as [sp cu']; tea.
@@ -1203,7 +1216,9 @@ Section Typecheck.
     - eapply type_reduction_closed in cty. 2:tea.
       eapply type_equality; tea.
       eapply equality_mkApps_eq => //. fvs. constructor => //.
-      unshelve eapply compare_global_instance_sound in H3; tea; pcuic.
+      match goal with [ H : is_true (compare_global_instance _ _ _ _ _ _ _) |- _ ] =>
+      unshelve eapply compare_global_instance_sound in H
+      end; tea; pcuic.
       rewrite chop_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
       subst params indices. rewrite -{1}(firstn_skipn (ci_npar ci) args).
       eapply All2_app => //.
@@ -1228,12 +1243,13 @@ Section Typecheck.
 
   (* tProj *)
   Next Obligation. simpl; eauto using validity_wf. Defined.
+
   Next Obligation.
     simpl in *; sq.
     pose proof (on_declared_inductive X7) as [onmib oni].
     eapply onProjections in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
-    eapply type_Proj with (pdecl := (i, t0)).
+    eapply type_Proj with (pdecl := (_, t0)).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
       now apply beq_nat_true.
@@ -1243,19 +1259,19 @@ Section Typecheck.
       eapply validity in X5; eauto.
       destruct (ssrbool.elimT (eqb_spec ind I)); auto.
       unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ X7 _) in X5 as [parsubst [argsubst [sp sp' cu]]]; eauto.
-      pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
-      pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
-      autorewrite with len in H, H2.
+      pose proof (Hl := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
+      pose proof (Hr := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
+      autorewrite with len in Hl, Hr.
       destruct (on_declared_inductive X7) eqn:ond.
-      rewrite -o.(onNpars) -H.
+      rewrite -o.(onNpars) -Hl.
       forward (o0.(onProjections)).
       intros H'; rewrite H' nth_error_nil // in Heq_anonymous.
       destruct ind_ctors as [|cs []]; auto.
       intros onps.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       destruct (ind_indices X6) => //.
-      simpl in H2.
-      rewrite List.skipn_length in H2.
+      simpl in Hr.
+      rewrite List.skipn_length in Hr.
       rewrite List.firstn_length. lia.
     - destruct ind_projs => //. rewrite nth_error_nil in Heq_anonymous; congruence.
   Defined.

@@ -275,7 +275,8 @@ Section CheckEnv.
     Tactics.program_simpl.
   Qed.
   Next Obligation.
-    simpl. intros. rewrite <- Huctx.
+    simpl. intros id Σ HΣ G HG udecl H H0 H1 uctx' Huctx H2.
+    rewrite <- Huctx.
     split; auto.
     assert (HH: ConstraintSet.For_all
                   (fun '(l1, _, l2) =>
@@ -1241,7 +1242,7 @@ Section CheckEnv.
         eapply forallb_All in check_closed. sq.
         symmetry in Heq_anonymous1; eapply decompose_app_inv in Heq_anonymous1.
         subst t0. econstructor 2; eauto.
-        now eapply eqb_eq in H.
+        match goal with [ H : is_true (eqb _ _) |- _ ] => now apply eqb_eq in H end.
       Qed.
       
       Next Obligation.
@@ -1825,12 +1826,13 @@ Section CheckEnv.
       unfold check_ind_sorts. simpl.
       pose proof (check_constructors_smallerP Σ cs u wfcs wfi).
       rewrite -Heq_anonymous. sq. split => //.
-      destruct H0 => //.
+      match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
     Qed.
     Next Obligation.
       unfold check_ind_sorts. simpl.
       pose proof (check_constructors_smallerP Σ cs u wfcs wfi).
-      sq. split. destruct H0 => //.
+      sq. split.
+      match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
       rewrite -Heq_anonymous; auto.
     Qed.
     
@@ -2093,20 +2095,20 @@ Section CheckEnv.
     intros ctrs' Hctrs'. rewrite Hctrs' in e.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
-    pose proof (gc_of_constraints_union 
+    pose proof (Hgc := gc_of_constraints_union
       (constraints_of_udecl (universes_decl_of_decl g)) (global_constraints Σ)).
-    rewrite Hctrs' /= in H0.
+    rewrite Hctrs' /= in Hgc.
     red in i. unfold gc_of_uctx in i; simpl in i.
     case_eq (gc_of_constraints (global_constraints Σ));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
-    intros Σctrs HΣctrs; rewrite HΣctrs in H0, i; simpl in *.
+    intros Σctrs HΣctrs; rewrite HΣctrs in Hgc, i; simpl in *.
     destruct (gc_of_constraints (ConstraintSet.union _ _)).
-    simpl in H0. 
+    simpl in Hgc.
     subst G. unfold global_ext_levels; simpl.
     symmetry. rewrite add_uctx_make_graph.
     apply graph_eq. simpl. reflexivity.
-    simpl. now rewrite H0. simpl. reflexivity.
-    now simpl in H0.
+    simpl. now rewrite Hgc. simpl. reflexivity.
+    now simpl in Hgc.
   Qed.
   Next Obligation.
     split; sq. 2: constructor; tas.
@@ -2117,9 +2119,9 @@ Section CheckEnv.
     intros ctrs' Hctrs'. rewrite Hctrs' in e.
     cbn in e. inversion e; subst; clear e.
     unfold global_ext_constraints; simpl.
-    pose proof (gc_of_constraints_union 
+    pose proof (Hgc := gc_of_constraints_union
       (constraints_of_udecl (universes_decl_of_decl g)) (global_constraints Σ)).
-    rewrite Hctrs' /= in H1.
+    rewrite Hctrs' /= in Hgc.
     red in i. unfold gc_of_uctx in i; simpl in i.
     assert (eq: monomorphic_constraints_decl g
                 = constraints_of_udecl (universes_decl_of_decl g)). {
@@ -2129,9 +2131,9 @@ Section CheckEnv.
     rewrite eq; clear eq. 
     case_eq (gc_of_constraints (global_constraints Σ));
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
-    intros Σctrs HΣctrs; rewrite HΣctrs in H1, i; simpl in *.
+    intros Σctrs HΣctrs; rewrite HΣctrs in Hgc, i; simpl in *.
     destruct (gc_of_constraints (ConstraintSet.union _ _)).
-    simpl in H1.
+    simpl in Hgc.
     subst G. unfold global_ext_levels; simpl.
     assert (eq: monomorphic_levels_decl g
                 = levels_of_udecl (universes_decl_of_decl g)). {
@@ -2139,8 +2141,8 @@ Section CheckEnv.
       destruct m, ind_universes0; try discriminate; reflexivity. }
     rewrite eq. simpl. rewrite add_uctx_make_graph.
     apply graph_eq; try reflexivity.
-    simpl. now rewrite H1.
-    now simpl in H1.
+    simpl. now rewrite Hgc.
+    now simpl in Hgc.
   Qed.
   Next Obligation.
     split; sq. 2: constructor; tas.

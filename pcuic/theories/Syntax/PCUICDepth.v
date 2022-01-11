@@ -57,6 +57,7 @@ Fixpoint depth t : nat :=
 
 Notation context_depth := (context_depth_gen depth).
 Notation list_depth := (list_depth_gen depth).
+Notation mfixpoint_depth := (mfixpoint_depth_gen depth).
 
 Lemma depth_mkApps f l : max (depth f) (list_depth l) <= depth (mkApps f l).
 Proof.
@@ -65,6 +66,25 @@ Proof.
   cbn -[max] in IHl.
   etransitivity; tea.
   lia.
+Qed.
+
+Lemma mfixpoint_depth_In {mfix d} :
+  In d mfix ->
+  depth (dbody d) <= mfixpoint_depth mfix /\
+  depth (dtype d) <= mfixpoint_depth mfix.
+Proof.
+  induction mfix in d |- *; simpl; auto.
+  move=> [->|H]. unfold def_depth_gen. split; try lia.
+  destruct (IHmfix d H). split; lia.
+Qed.
+
+Lemma mfixpoint_depth_nth_error {mfix i d} :
+  nth_error mfix i = Some d ->
+  depth (dbody d) <= mfixpoint_depth mfix.
+Proof.
+  induction mfix in i, d |- *; destruct i; simpl; try congruence.
+  move=> [] ->. unfold def_depth_gen. lia.
+  move/IHmfix. lia.
 Qed.
 
 Lemma nth_error_depth {A} (f : A -> nat) {l : list A} {n x} : 
@@ -250,6 +270,15 @@ Lemma list_depth_app {A} (depth : A -> nat) (l l' : list A) :
 Proof.
   induction l; simpl; auto.
   rewrite IHl. lia.
+Qed.
+
+Lemma In_list_depth {A : Type} (f : A -> nat) :
+  forall x xs, In x xs -> f x < S (list_depth_gen f xs).
+Proof.
+  intros. induction xs.
+  destruct H.
+  * destruct H. simpl; subst. lia.
+    specialize (IHxs H). simpl. lia.
 Qed.
 
 Lemma list_depth_rev {A} (depth : A -> nat) (l : list A) :

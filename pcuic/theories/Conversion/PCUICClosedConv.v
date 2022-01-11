@@ -3,7 +3,8 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICClosed 
-     PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnvConv.
+     PCUICOnFreeVars PCUICTyping PCUICReduction PCUICGlobalEnv PCUICWeakeningEnvConv
+     PCUICEquality.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -89,7 +90,7 @@ Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
 
 
 Lemma closedn_ctx_alpha {k ctx ctx'} : 
-  All2 (PCUICEquality.compare_decls eq eq) ctx ctx' ->
+  eq_context_upto_names ctx ctx' ->
   closedn_ctx k ctx = closedn_ctx k ctx'.
 Proof.
   induction 1 in k |- *; simpl; auto.

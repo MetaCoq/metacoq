@@ -2,9 +2,8 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICCumulativity
-  PCUICWeakeningEnvConv 
-  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration 
+  PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICCumulativity 
+  PCUICClosed
   PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICRenameTyp PCUICOnFreeVars
   PCUICClosedConv PCUICClosedTyp PCUICWeakeningConv.
 
@@ -21,7 +20,7 @@ Implicit Types cf : checker_flags.
 Set Default Goal Selector "!".
 Generalizable Variables Σ Γ t T.
 
-Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
+(* Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
   wf Σ.1 -> wf_local Σ Γ -> k >= #|Γ| ->
   Σ ;;; Γ |- t : T -> lift n k T = T /\ lift n k t = t.
 Proof.
@@ -35,7 +34,8 @@ Proof.
   apply (lift_closed n) in H0.
   simpl in *. forward H1 by lia.
   now apply (lift_closed n) in H1.
-Qed.
+Qed.*)
+
 Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} :
   wf_local Σ (Γ ,,, Γ') ->
   wf_local Σ (Γ ,,, Γ'') ->  
@@ -51,19 +51,19 @@ Proof.
   intros Δ t [T|] IH; unfold lift_typing; simpl.
   - intros Hf. rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r. rewrite !lift_rename. 
-    eapply (Hf (fun x => true)).
+    eapply (Hf xpredT).
     split.
     + apply wf_local_app; auto.
       apply All_local_env_fold in IH. apply IH.
-    + apply (weakening_renaming _ Γ Δ Γ'').
-  - intros [s Hs]; exists s.
+    + apply weakening_renaming.
+  - intros [s Hs]; exists s. red.
     rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r !lift_rename. 
-    apply (Hs (fun _ => true)).
+    eapply (Hs xpredT).
     split.
     + apply wf_local_app; auto.
       apply All_local_env_fold in IH. apply IH.
-    + apply (weakening_renaming _ Γ Δ Γ'').
+    + apply weakening_renaming.
 Qed.
 
 Lemma weakening_wf_local_eq {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ'' n} :
@@ -74,6 +74,7 @@ Lemma weakening_wf_local_eq {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf
 Proof.
   intros ? ? ->; now apply weakening_wf_local.
 Qed.
+
 Lemma weakening_rename_typing `{cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} {t T} :
   wf_local Σ (Γ ,,, Γ'') ->
   Σ ;;; Γ ,,, Γ' |- t : T ->
@@ -110,6 +111,7 @@ Proof.
   intros HΣ HΓΓ' * H.
   eapply (weakening_typing (Γ' := [])); eauto.
 Qed.
+
 Lemma weaken_wf_local {cf:checker_flags} {Σ Δ} Γ :
   wf Σ.1 ->
   wf_local Σ Γ ->
@@ -122,8 +124,6 @@ Proof.
   rewrite closed_ctx_lift //.
   now eapply closed_wf_local.
 Qed.
-
-
 
 
 Lemma lift_declared_constant `{checker_flags} Σ cst decl n k :
@@ -162,10 +162,11 @@ Proof.
   rewrite !app_context_nil_l in X.
   forward X by eauto using typing_wf_local.
   specialize (X ty).
-  eapply PCUICClosedTyp.typecheck_closed in ty as [_ [clΓ [clt clT]%andb_and]]; auto.
+  eapply typecheck_closed in ty as [_ [clΓ [clt clT]%andb_and]]; auto.
   rewrite !lift_closed // in X.
   now rewrite closed_ctx_lift in X.
 Qed.
+
 Lemma weakening_gen : forall (cf : checker_flags) (Σ : global_env_ext)
   (Γ Γ' : context) (t T : term) n, n = #|Γ'| ->
   wf Σ ->

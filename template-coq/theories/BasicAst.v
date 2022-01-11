@@ -614,6 +614,54 @@ Section Contexts.
     apply mapi_ext. intros. f_equal. rewrite List.rev_length. f_equal.
   Qed.
 
+  Local Set Keyed Unification.
+
+  Equations mapi_context_In (ctx : context term) (f : nat -> forall (x : context_decl term), In x ctx -> context_decl term) : context term :=
+  mapi_context_In nil _ := nil;
+  mapi_context_In (cons x xs) f := cons (f #|xs| x _) (mapi_context_In xs (fun n x H => f n x _)).
+
+  Lemma mapi_context_In_spec (f : nat -> term -> term) (ctx : context term) :
+    mapi_context_In ctx (fun n (x : context_decl term) (_ : In x ctx) => map_decl (f n) x) = 
+    mapi_context f ctx.
+  Proof.
+    remember (fun n (x : context_decl term) (_ : In x ctx) => map_decl (f n) x) as g.
+    funelim (mapi_context_In ctx g) => //=; rewrite (H f0) ; trivial.
+  Qed.
+
+  Equations fold_context_In (ctx : context term) (f : context term -> forall (x : context_decl term), In x ctx -> context_decl term) : context term :=
+  fold_context_In nil _ := nil;
+  fold_context_In (cons x xs) f := 
+    let xs' := fold_context_In xs (fun n x H => f n x _) in
+    cons (f xs' x _) xs'.
+
+  Equations fold_context (f : context term -> context_decl term -> context_decl term) (ctx : context term) : context term :=
+    fold_context f nil := nil;
+    fold_context f (cons x xs) := 
+      let xs' := fold_context f xs in
+      cons (f xs' x ) xs'.
+  
+  Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
+  Proof.
+    now apply_funelim (fold_context f Γ); intros; simpl; auto; f_equal.
+  Qed.
+  
+
+  Lemma fold_context_In_spec (f : context term -> context_decl term -> context_decl term) (ctx : context term) :
+    fold_context_In ctx (fun n (x : context_decl term) (_ : In x ctx) => f n x) = 
+    fold_context f ctx.
+  Proof.
+    remember (fun n (x : context_decl term) (_ : In x ctx) => f n x) as g.
+    funelim (fold_context_In ctx g) => //=; rewrite (H f0); trivial.
+  Qed.
+
+  #[global]
+  Instance fold_context_Proper : Proper (`=2` ==> `=1`) fold_context.
+  Proof.
+    intros f f' Hff' x.
+    funelim (fold_context f x); simpl; auto. simp fold_context.
+    now rewrite (H f' Hff').
+  Qed.
+
   (** This function allows to forget type annotations on a binding context. 
   Useful to relate the "compact" case representation in terms, with 
   its typing relation, where the context has types *)
@@ -621,7 +669,7 @@ Section Contexts.
     map decl_name c.
   
 End Contexts.
-#[global] Hint Rewrite @fold_context_k_length : len.
+#[global] Hint Rewrite @fold_context_length @fold_context_k_length : len.
 
 Section Contexts.
   Context {term term' term'' : Type}.

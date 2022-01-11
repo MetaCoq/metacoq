@@ -9,10 +9,12 @@ The order of files here should roughly be a linearization of the dependency DAG 
 | [PCUICUtils]        | Generally useful definitions and properties
 | [PCUICOnOne]        | Lemmas for the OnOne relation
 | [PCUICPrimitive]    | Definitions and lemmas for primitives datatypes
+| [PCUICTactics]      | Tactics used throughout the library
 
 [PCUICUtils]: ./utils/PCUICUtils.v
 [PCUICOnOne]: ./utils/PCUICOnOne.v
 [PCUICPrimitive]: ./utils/PCUICPrimitive.v
+[PCUICTactics]: ./Syntax/PCUICTactics.v
 
 ## AST
 
@@ -65,18 +67,72 @@ The order of files here should roughly be a linearization of the dependency DAG 
 | File                | Description                                               |
 |---------------------|-----------------------------------------------------------|
 | [PCUICNamelessDef]  | Name-removing translation
-| 
+| [PCUICNamelessConv] | Conversion is insensible to names
+| [PCUICNamelessTyp]  | Typing is insensible to names
 
 [PCUICNamelessDef]: ./Syntax/NamelessDef.v
+[PCUICNamelessConv]: ./Conversion/PCUICNamelessConv.v
+[PCUICNamelessTyp]: ./Typing/PCUICNamelessTyp.v
 
-## α-equality
+
+## Equality up to universes
 
 | File                  | Description
 | ----------------------| --------------------
+| [PCUICEquality]       | Equality up to universes between terms
 | [PCUICCasesContexts]  | Helper lemmas for the handling of case branche and predicate contexts
 
 
 [PCUICCasesContexts]: ./PCUICCasesContexts.v
+[PCUICEquality]: ./PCUICEquality.v
+
+## Typing
+
+| File                | Description                                               |
+|---------------------|-----------------------------------------------------------|
+| [PCUICClosedTyp.v]  | Well-typed terms are closed, and various consequences
+
+[PCUICClosedTyp]: ./Typing/PCUICClosedTyp.v
+
+## Stability of Conversion/Cumulativity
+
+| File                | Description                                               |
+|---------------------|-----------------------------------------------------------|
+| [PCUICRenameConv]   | Stability of cumulativities by renaming
+| [PCUICWeakeningConv] | Stability of cumulativities by extension of the local context (special case of renaming)
+| [PCUICInstConv]     | Stability of cumulativities by instantiation
+| [PCUICWeakeningEnvConv] | Stability of cumulativities by global environment extension
+| [PCUICUnivSubstitutionConv] | Stability of cumulativities by substitution of universe variables
+| [PCUICClosedConv] | Helper lemmas on the closedness predicate
+| [PCUICOnFreeVarsConv] | Helper lemmas for renamings and free variables
+
+
+[PCUICRenameConv]: ./Conversion/PCUICRenameConv.v
+[PCUICWeakeningConv]: ./Conversion/PCUICWeakeningConv.v
+[PCUICInstConv]: ./Conversion/PCUICInstConv.v
+[PCUICWeakeningEnvConv]: ./Conversion/PCUICWeakeningEnvConv.v
+[PCUICUnivSubstitutionConv]: ./Conversion/PCUICUnivSubstitutionConv.v
+[PCUICClosedConv]: ./Conversion/PCUICClosedConv.v
+
+## Stability of Typing
+
+| File                | Description                                               |
+|---------------------|-----------------------------------------------------------|
+| [PCUICRenameTyp]    | Stability of typing by renaming
+| [PCUICWeakeningTyp] | Stability of typing by extension of the local context (special case of renaming)
+| [PCUICInstTyp]      | Stability of typing by instatiation
+| [PCUICWeakeningEnvTyp] | Stability of typing by extension of the global environment
+| [PCUICUnivSubstitutionTyp] | Stability of typing by substitution of universe levels
+| [PCUICConversionTyp.v] | Stability of conversion by cumulativity of the local context
+
+
+[PCUICRenameTyp]: ./Typing/PCUICRenameTyp.v
+[PCUICWeakeningTyp]: ./Typing/PCUICWeakeningTyp.v
+[PCUICInstTyp]: ./Typing/PCUICInstTyp.v
+[PCUICWeakeningEnvTyp]: ./Typing/PCUICWeakeningEnvTyp.v
+[PCUICUnivSubstitutionTyp]: Typing/PCUICUnivSubstitutionTyp.v
+[PCUICConversionTyp]: Typing/PCUICContextConversionTyp.v
+
 
 ## Typing and Meta Theory
 
@@ -85,10 +141,8 @@ The order of files here should roughly be a linearization of the dependency DAG 
 | [PCUICTyping]    | Definition of reduction, conversion and typing            |
 | [PCUICReduction] | Results on reduction (including parallel reduction)       |
 | [PCUICWeakeningEnv] | Weakening on environments                              |
-| [PCUICClosed]    | Definition of closed terms                                |
 | [PCUICWeakening] | Weakening lemma                                           |
 | [PCUICCumulativity] | Some properties on cumulativity                        |
-| [PCUICEquality]  | Equality up to universes between terms                    |
 | [PCUICSubstitution] | Substitution lemma                                     |
 | [PCUICInversion] | Inversion lemmata on typing                               |
 | [PCUICGeneration] | Admissibility lemmata  (for instance `mkApps`)           |
@@ -107,13 +161,11 @@ The order of files here should roughly be a linearization of the dependency DAG 
 [PCUICTyping]: PCUICTyping.v
 [PCUICReduction]: PCUICReduction.v
 [PCUICPosition]: PCUICPosition.v
-[PCUICNameless]: PCUICNameless.v
 [PCUICWeakeningEnv]: PCUICWeakeningEnv.v
 [PCUICClosed]: PCUICClosed.v
 [PCUICSigmaCalculus]: PCUICSigmaCalculus.v
 [PCUICWeakening]: PCUICWeakening.v
 [PCUICCumulativity]: PCUICCumulativity.v
-[PCUICEquality]: PCUICEquality.v
 [PCUICSubstitution]: PCUICSubstitution.v
 [PCUICInversion]: PCUICInversion.v
 [PCUICGeneration]: PCUICGeneration.v

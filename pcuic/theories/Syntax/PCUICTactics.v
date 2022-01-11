@@ -35,6 +35,7 @@ Definition lengths :=
     @app_length, @List.rev_length, @extended_subst_length, @reln_length,
     Nat.add_0_r, @app_nil_r, @rev_map_length, @rev_length, @unfold_length,
     @map_length, @mapi_length, @mapi_rec_length, @map_InP_length,
+    @fold_context_length,
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
     fix_context_length, 
     @smash_context_length,

@@ -11,7 +11,7 @@ Require Import ssreflect ssrbool.
 
 Implicit Types cf : checker_flags.
 
-(** Typing / conversion does not rely on name annotations of binders.
+(** Typing does not rely on name annotations of binders.
 
   We prove this by constructing a type-preserving translation to 
   terms where all binders are anonymous. An alternative would be to 

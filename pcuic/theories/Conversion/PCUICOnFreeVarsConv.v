@@ -100,7 +100,7 @@ Proof.
 Qed.
 
 
-Lemma urename_on_free_vars_shift P Γ Δ f u (Ξ:list context_decl) : 
+Lemma urename_on_free_vars_shift P Γ Δ f u (Ξ: context) : 
    let sP := shiftnP #|Γ| P in
    urenaming sP Δ Γ f -> 
    is_closed_context Γ -> 

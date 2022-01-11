@@ -212,19 +212,19 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     wf_local Σ Γ ->
     declared_constant Σ cst decl ->
     consistent_instance_ext Σ decl.(cst_universes) u ->
-    Σ ;;; Γ |- (tConst cst u) : decl.(cst_type)@[u]
+    Σ ;;; Γ |- tConst cst u : decl.(cst_type)@[u]
 
 | type_Ind : forall ind u mdecl idecl,
     wf_local Σ Γ ->
     declared_inductive Σ ind mdecl idecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
-    Σ ;;; Γ |- (tInd ind u) : idecl.(ind_type)@[u]
+    Σ ;;; Γ |- tInd ind u : idecl.(ind_type)@[u]
 
 | type_Construct : forall ind i u mdecl idecl cdecl, 
     wf_local Σ Γ ->
     declared_constructor Σ (ind, i) mdecl idecl cdecl ->
     consistent_instance_ext Σ mdecl.(ind_universes) u ->
-    Σ ;;; Γ |- (tConstruct ind i u) : type_of_constructor mdecl cdecl (ind, i) u
+    Σ ;;; Γ |- tConstruct ind i u : type_of_constructor mdecl cdecl (ind, i) u
 
 | type_Case : forall ci p c brs indices ps mdecl idecl,
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in

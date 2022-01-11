@@ -2497,7 +2497,7 @@ Lemma trans_conv {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PC
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
-    red in c. red.
+    red in c. 
     eapply trans_compare_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
@@ -2515,7 +2515,7 @@ Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : P
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
-    red in c. red.
+    red in c.
     eapply trans_compare_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
@@ -4808,7 +4808,7 @@ Lemma trans_cumul' {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ Γ' T U} {wf�
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
-    red in c. red.
+    red in c. 
     eapply trans_compare_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
@@ -4834,7 +4834,7 @@ Lemma trans_conv' {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ Γ' T U} {wfΣ
 Proof.
   intros wfΣ'; induction 1. 
   - constructor; auto.
-    red in c. red.
+    red in c. 
     eapply trans_compare_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].

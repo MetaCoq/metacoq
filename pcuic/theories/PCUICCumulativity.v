@@ -15,10 +15,12 @@ Reserved Notation " Σ ;;; Γ |- t <=[ Rle ] u" (at level 50, Γ, t, u at next l
 
 Definition leq_term_ext `{checker_flags} (Σ : global_env_ext) Rle t u := eq_term_upto_univ Σ (eq_universe Σ) Rle t u.
 
+Notation " Σ ⊢ t <===[ Rle , napp ] u" := (eq_term_upto_univ Σ (eq_universe Σ) Rle t u) (at level 50, t, u at next level).
+
 (** ** Cumulativity *)
 
 Inductive cumulAlgo0 `{checker_flags} (Σ : global_env_ext) Rle (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term_ext Σ Rle t u -> Σ ;;; Γ |- t <=[Rle] u
+| cumul_refl t u : Σ ⊢ t <===[ Rle , 0] u -> Σ ;;; Γ |- t <=[Rle] u
 | cumul_red_l t u v : Σ ;;; Γ |- t ⇝ v -> Σ ;;; Γ |- v <=[Rle] u -> Σ ;;; Γ |- t <=[Rle] u
 | cumul_red_r t u v : Σ ;;; Γ |- t <=[Rle] v -> Σ ;;; Γ |- u ⇝ v -> Σ ;;; Γ |- t <=[Rle] u
 where " Σ ;;; Γ |- t <=[ Rle ] u " := (cumulAlgo0 Σ Rle Γ t u) : type_scope.
@@ -245,7 +247,7 @@ Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
   Symmetric (convAlgo Σ Γ).
 Proof.
   intros t u X. induction X.
-  - eapply eq_term_sym in l; now constructor.
+  - eapply eq_term_sym in e; now constructor.
   - eapply red_conv_conv_inv.
     + eapply red1_red in r. eauto.
     + eauto.

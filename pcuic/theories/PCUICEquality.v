@@ -270,89 +270,94 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   that surround the current term, used to implement cumulativity of inductive types
   correctly (only fully applied constructors and inductives benefit from it). *)  
 
+Reserved Notation " Σ ⊢ t <==[ Rle , napp ] u" (at level 50, t, u at next level,
+  format "Σ  ⊢  t  <==[ Rle , napp ]  u").
+
+
 Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) (napp : nat) : term -> term -> Type :=
-| eq_Rel n  :
-    eq_term_upto_univ_napp Σ Re Rle napp (tRel n) (tRel n)
+| eq_Rel : forall n,
+    Σ ⊢ tRel n <==[ Rle , napp ] tRel n
 
-| eq_Evar e args args' :
+| eq_Evar : forall e args args',
     All2 (eq_term_upto_univ_napp Σ Re Re 0) args args' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tEvar e args) (tEvar e args')
+    Σ ⊢ tEvar e args <==[ Rle , napp ] tEvar e args'
 
-| eq_Var id :
-    eq_term_upto_univ_napp Σ Re Rle napp (tVar id) (tVar id)
+| eq_Var : forall id,
+    Σ ⊢ tVar id <==[ Rle , napp ] tVar id
 
-| eq_Sort s s' :
+| eq_Sort : forall s s',
     Rle s s' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tSort s) (tSort s')
+    Σ ⊢ tSort s  <==[ Rle , napp ] tSort s'
 
-| eq_App t t' u u' :
-    eq_term_upto_univ_napp Σ Re Rle (S napp) t t' ->
-    eq_term_upto_univ_napp Σ Re Re 0 u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tApp t u) (tApp t' u')
+| eq_App : forall t t' u u',
+    Σ ⊢ t <==[ Rle , S napp ] t' ->
+    Σ ⊢ u <==[ Re , 0 ] u' ->
+    Σ ⊢ tApp t u <==[ Rle , napp ] tApp t' u'
 
-| eq_Const c u u' :
+| eq_Const : forall c u u',
     R_universe_instance Re u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tConst c u) (tConst c u')
+    Σ ⊢ tConst c u <==[ Rle , napp ] tConst c u'
 
-| eq_Ind i u u' :
+| eq_Ind : forall i u u',
     R_global_instance Σ Re Rle (IndRef i) napp u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tInd i u) (tInd i u')
+    Σ ⊢ tInd i u <==[ Rle , napp ] tInd i u'
 
-| eq_Construct i k u u' :
+| eq_Construct : forall i k u u',
     R_global_instance Σ Re Rle (ConstructRef i k) napp u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tConstruct i k u) (tConstruct i k u')
+    Σ ⊢ tConstruct i k u <==[ Rle , napp ] tConstruct i k u'
 
-| eq_Lambda na na' ty ty' t t' :
+| eq_Lambda : forall na na' ty ty' t t',
     eq_binder_annot na na' ->
-    eq_term_upto_univ_napp Σ Re Re 0 ty ty' ->
-    eq_term_upto_univ_napp Σ Re Rle 0 t t' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tLambda na ty t) (tLambda na' ty' t')
+    Σ ⊢ ty <==[ Re , 0 ] ty' ->
+    Σ ⊢ t <==[ Rle , 0 ] t' ->
+    Σ ⊢ tLambda na ty t <==[ Rle , napp ] tLambda na' ty' t'
 
-| eq_Prod na na' a a' b b' :
+| eq_Prod : forall na na' a a' b b',
     eq_binder_annot na na' ->
-    eq_term_upto_univ_napp Σ Re Re 0 a a' ->
-    eq_term_upto_univ_napp Σ Re Rle 0 b b' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tProd na a b) (tProd na' a' b')
+    Σ ⊢ a <==[ Re , 0 ] a' ->
+    Σ ⊢ b <==[ Rle , 0 ] b' ->
+    Σ ⊢ tProd na a b <==[ Rle , napp ] tProd na' a' b'
 
-| eq_LetIn na na' t t' ty ty' u u' :
+| eq_LetIn : forall na na' t t' ty ty' u u',
     eq_binder_annot na na' ->
-    eq_term_upto_univ_napp Σ Re Re 0 t t' ->
-    eq_term_upto_univ_napp Σ Re Re 0 ty ty' ->
-    eq_term_upto_univ_napp Σ Re Rle 0 u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tLetIn na t ty u) (tLetIn na' t' ty' u')
+    Σ ⊢ t <==[ Re , 0 ] t' ->
+    Σ ⊢ ty <==[ Re , 0 ] ty' ->
+    Σ ⊢ u <==[ Rle , 0 ] u' ->
+    Σ ⊢ tLetIn na t ty u <==[ Rle , napp ] tLetIn na' t' ty' u'
 
-| eq_Case indn p p' c c' brs brs' :
+| eq_Case : forall indn p p' c c' brs brs',
     eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p' ->
-    eq_term_upto_univ_napp Σ Re Re 0 c c' ->
+    Σ ⊢ c <==[ Re , 0 ] c' ->
     All2 (fun x y =>
       eq_context_gen eq eq (bcontext x) (bcontext y) *
-      eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
+      (Σ ⊢ x.(bbody) <==[ Re , 0 ] y.(bbody))
     ) brs brs' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
+    Σ ⊢ tCase indn p c brs <==[ Rle , napp ] tCase indn p' c' brs'
 
-| eq_Proj p c c' :
-    eq_term_upto_univ_napp Σ Re Re 0 c c' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tProj p c) (tProj p c')
+| eq_Proj : forall p c c',
+    Σ ⊢ c <==[ Re , 0 ] c' ->
+    Σ ⊢ tProj p c <==[ Rle , napp ] tProj p c'
 
-| eq_Fix mfix mfix' idx :
+| eq_Fix : forall mfix mfix' idx,
     All2 (fun x y =>
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dtype) y.(dtype) *
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dbody) y.(dbody) *
+      (Σ ⊢ x.(dtype) <==[ Re , 0 ] y.(dtype)) *
+      (Σ ⊢ x.(dbody) <==[ Re , 0 ] y.(dbody)) *
       (x.(rarg) = y.(rarg)) *
       eq_binder_annot x.(dname) y.(dname)
     )%type mfix mfix' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tFix mfix idx) (tFix mfix' idx)
+    Σ ⊢ tFix mfix idx <==[ Rle , napp ] tFix mfix' idx
 
-| eq_CoFix mfix mfix' idx :
+| eq_CoFix : forall mfix mfix' idx,
     All2 (fun x y =>
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dtype) y.(dtype) *
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dbody) y.(dbody) *
+      (Σ ⊢ x.(dtype) <==[ Re , 0 ] y.(dtype)) *
+      (Σ ⊢ x.(dbody) <==[ Re , 0 ] y.(dbody)) *
       (x.(rarg) = y.(rarg)) *
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tCoFix mfix idx) (tCoFix mfix' idx)
+    Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
     
-| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i).
+| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i)
+where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 

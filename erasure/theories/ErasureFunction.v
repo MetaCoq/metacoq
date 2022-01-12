@@ -306,7 +306,9 @@ Qed.
 Next Obligation.
   unfold type_of in *.
   destruct infer as [x [[Htx Hp]]].
-  destruct H as [T' [redT' isar]].
+  match goal with [ H : Is_conv_to_Arity _ _ _ |- _ ] =>
+  destruct H as [T' [redT' isar]]
+  end.
   sq. econstructor. split. eapply type_reduction_closed; eauto.
   eauto.
 Qed.
@@ -363,7 +365,8 @@ Next Obligation.
   clear Heq_anonymous0.
   intros (? & ? & ?).
   destruct s as [ | (? & ? & ?)]; simpl in *.
-  + destruct H. eapply arity_type_inv; eauto using typing_wf_local.
+  + match goal with [ H : ~ Is_conv_to_Arity _ _ _ |- _ ] => destruct H end.
+    eapply arity_type_inv; eauto using typing_wf_local.
   + pose proof (e0 _ t2).
     eapply type_reduction_closed in t0; eauto.
     eapply cumul_prop1' in t3; eauto.
@@ -387,7 +390,7 @@ Next Obligation.
   red in Hs.
   specialize (e _ Hs).
   eapply equality_Sort_r_inv in e as [u' [redu' leq]].
-  now apply (H0 _ redu').
+  match goal with [ H : forall s, _ -> False |- _ ] => now apply (H _ redu') end.
 Qed.
 
 Section Erase.

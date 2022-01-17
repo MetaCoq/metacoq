@@ -1492,13 +1492,13 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       now simpl.
     Qed.
 
-    (* Lemma is_acyclic_correct : reflect acyclic_no_loop is_acyclic. *)
-    (* Proof. *)
-    (*   eapply reflect_logically_equiv. eapply acyclic_caract2. *)
-    (*   apply VSet_Forall_reflect; intro x. *)
-    (*   destruct (lsp x x). destruct n. constructor; reflexivity. *)
-    (*   all: constructor; discriminate. *)
-    (* Qed. *)
+    Lemma is_acyclic_correct : reflect acyclic_no_loop is_acyclic. 
+    Proof.
+      eapply reflect_logically_equiv. eapply acyclic_caract2.
+      apply VSet_Forall_reflect; intro x.
+      destruct (lsp x x). destruct z. constructor; reflexivity.
+      all: constructor; discriminate.
+    Qed.
   End graph.
 
   Definition add_edges G e :=

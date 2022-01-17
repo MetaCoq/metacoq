@@ -116,7 +116,7 @@ Section CumulSpecIsCumulAlgo.
   Context {cf:checker_flags} (Σ : global_env_ext).
 
   Proposition red1_cumulSpec (Γ : context) (M N : term) :
-    red1 Σ Γ M N -> Σ ;;; Γ |- M =s N.
+    Σ ;;; Γ |- M ⇝ N -> Σ ;;; Γ |- M =s N.
   Proof. 
   intro r. induction r using red1_ind_all; try (econstructor; eauto; reflexivity).
   - eapply cumul_Case; try reflexivity. 
@@ -181,7 +181,7 @@ Section CumulSpecIsCumulAlgo.
     * repeat split; reflexivity.
   Defined.       
 
-  Proposition convPec_cumulSpec (Γ : context) (M N : term) :
+  Proposition convSpec_cumulSpec (Γ : context) (M N : term) :
     Σ ;;; Γ |- M =s N -> Σ ;;; Γ |- M <=s N.
   Proof. 
     intro Hconv. apply cumul_Sym. apply cumul_Sym. assumption.
@@ -236,14 +236,14 @@ Section CumulSpecIsCumulAlgo.
   Proof.
     intros. eapply (eq_term_upto_univ_napp_cumulSpec _ _ _ [] []); eauto. 
   Defined. 
-  
+
   Proposition cumulAlgo_cumulSpec {le} (Γ : context) (M N : term) :
-    Σ ;;; Γ ⊢ M ≤[le] N -> if le then  Σ ;;; Γ |- M <=s N else Σ ;;; Γ |- M =s N.
+    Σ ;;; Γ ⊢ M ≤[le] N -> if le then Σ ;;; Γ |- M <=s N else Σ ;;; Γ |- M =s N.
   Proof.  
   induction 1.
   - destruct le; eapply eq_term_upto_univ_cumulSpec; eauto. 
   - destruct le. 
-    * eapply cumul_Trans; eauto. apply convPec_cumulSpec. apply red1_cumulSpec ; assumption.
+    * eapply cumul_Trans; eauto. apply convSpec_cumulSpec. apply red1_cumulSpec ; assumption.
     * eapply cumul_Trans; eauto. apply red1_cumulSpec ; assumption.
   - destruct le. 
     * eapply cumul_Trans; eauto. apply cumul_Sym. apply red1_cumulSpec ; assumption.

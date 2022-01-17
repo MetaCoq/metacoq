@@ -315,7 +315,7 @@ Section Validity.
       exists u.
       eapply type_Cumul.
       eapply type_LetIn; eauto. econstructor; pcuic.
-      eapply convPec_cumulSpec, red1_cumulSpec; constructor.
+      eapply convSpec_cumulSpec, red1_cumulSpec; constructor.
 
     - (* Application *)
       destruct X3 as [u' Hu']. exists u'.

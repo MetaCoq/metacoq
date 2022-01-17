@@ -394,7 +394,7 @@ Section WfEnv.
       depelim wf. clear l.
       eapply type_Cumul. econstructor; eauto.
       econstructor; eauto. now eapply typing_wf_universe in Ht; pcuic.
-      eapply convPec_cumulSpec, red1_cumulSpec. constructor.
+      eapply convSpec_cumulSpec, red1_cumulSpec. constructor.
     - have wf := typing_wf_local Ht.
       depelim wf; clear l.
       eapply type_Prod; eauto.

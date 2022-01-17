@@ -3330,7 +3330,7 @@ Proof.
     eapply type_Cumul'.
     econstructor; eauto. eapply isType_Sort; eauto.
     now eapply PCUICWfUniverses.typing_wf_universe in Hs.
-    eapply convPec_cumulSpec, red1_cumulSpec.
+    eapply convSpec_cumulSpec, red1_cumulSpec.
     repeat constructor.
   - intros T [s Hs].
     apply IHΔ.

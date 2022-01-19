@@ -1,4 +1,4 @@
-(* Distributed under the terms of the MIT license. *)
+is(* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils BasicAst Universes Environment.
 From Equations Require Import Equations.
 

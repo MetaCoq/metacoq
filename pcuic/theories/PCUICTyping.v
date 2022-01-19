@@ -46,17 +46,19 @@ Include PCUICEnvTyping.
 
 (* AXIOM Postulate existence of a guard condition checker *)
 
+Inductive FixCoFix : Type := Fix | CoFix. 
+
 Class GuardChecker := 
 { (* guard check for both fixpoints (bool = true) and cofixpoints (bool = false)  *)
-  guard : bool -> global_env_ext -> context -> mfixpoint term -> bool ;
+  guard : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bool ;
 }.
 
 Axiom guard_checking : GuardChecker.
 #[global]
 Existing Instance guard_checking.
 
-Definition fix_guard := guard true. 
-Definition cofix_guard := guard false. 
+Definition fix_guard := guard Fix. 
+Definition cofix_guard := guard CoFix. 
 
 Definition destInd (t : term) :=
   match t with

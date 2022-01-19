@@ -20,15 +20,9 @@ Class GuardCheckerCorrect :=
                  ((if b then tFix else tCoFix) mfix' idx) ->
       guard b Σ Γ mfix' ;
 
-  guard_subst_instance {cf:checker_flags} b Σ Γ mfix u univs :
-    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-    guard b Σ Γ mfix ->
-    guard b (Σ.1, univs) (subst_instance u Γ) (map (map_def (subst_instance u) (subst_instance u))
-                    mfix) ;
-
   guard_extends b Σ Γ mfix Σ' : 
-    guard b Σ Γ mfix ->
     extends Σ.1 Σ'.1 ->
+    guard b Σ Γ mfix ->
     guard b Σ' Γ mfix ;
 
   guard_context_cumulativity `{checker_flags} b Σ Γ Γ' mfix :
@@ -37,17 +31,24 @@ Class GuardCheckerCorrect :=
     guard b Σ Γ' mfix ;
 
   guard_nl b Σ Γ mfix :
-    guard b Σ Γ mfix -> guard b (nlg Σ) (nlctx Γ) (map (map_def_anon nl nl) mfix) ;
+    let mfix' := map (map_def_anon nl nl) mfix in
+    guard b Σ Γ mfix -> guard b (nlg Σ) (nlctx Γ) mfix' ;
   
+  guard_subst_instance {cf:checker_flags} b Σ Γ mfix u univs :
+    let mfix' := map (map_def (subst_instance u) (subst_instance u)) mfix in
+    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
+    guard b Σ Γ mfix ->
+    guard b (Σ.1, univs) (subst_instance u Γ) mfix' ;
+
   guard_inst `{checker_flags} b Σ Γ Δ mfix σ :
-     Σ ;;; Γ ⊢ σ : Δ ->
      let mfix' := map (map_def (inst σ) (inst (up (List.length mfix) σ))) mfix in
+     Σ ;;; Γ ⊢ σ : Δ ->
      guard b Σ Δ mfix ->
      guard b Σ Γ mfix' ;
 
   guard_rename b P Σ Γ Δ mfix f :
-      urenaming P Γ Δ f ->
       let mfix' := map (map_def (rename f) (rename (shiftn (List.length mfix) f))) mfix in
+      urenaming P Γ Δ f ->
       guard b Σ Δ mfix ->
       guard b Σ Γ mfix' ;
                                    
@@ -56,20 +57,20 @@ Class GuardCheckerCorrect :=
 Axiom guard_checking_correct : GuardCheckerCorrect.
 #[global] Existing Instance guard_checking_correct.
 
-Definition fix_guard_red1 := guard_red1 true.
-Definition fix_guard_eq_term := guard_eq_term true.
-Definition fix_guard_subst_instance `{checker_flags} := guard_subst_instance true.
-Definition fix_guard_extends := guard_extends true.
-Definition fix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity true.
-Definition fix_guard_nl := guard_nl true.
-Definition fix_guard_inst `{checker_flags} := guard_inst true.
-Definition fix_guard_rename := guard_rename true.
+Definition fix_guard_red1 := guard_red1 Fix.
+Definition fix_guard_eq_term := guard_eq_term Fix.
+Definition fix_guard_subst_instance `{checker_flags} := guard_subst_instance Fix.
+Definition fix_guard_extends := guard_extends Fix.
+Definition fix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity Fix.
+Definition fix_guard_nl := guard_nl Fix.
+Definition fix_guard_inst `{checker_flags} := guard_inst Fix.
+Definition fix_guard_rename := guard_rename Fix.
 
-Definition cofix_guard_red1 := guard_red1 false.
-Definition cofix_guard_eq_term := guard_eq_term false.
-Definition cofix_guard_subst_instance `{checker_flags} := guard_subst_instance false.
-Definition cofix_guard_extends := guard_extends false.
-Definition cofix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity false.
-Definition cofix_guard_nl := guard_nl false.
-Definition cofix_guard_inst `{checker_flags} := guard_inst false.
-Definition cofix_guard_rename := guard_rename false.
+Definition cofix_guard_red1 := guard_red1 CoFix.
+Definition cofix_guard_eq_term := guard_eq_term CoFix.
+Definition cofix_guard_subst_instance `{checker_flags} := guard_subst_instance CoFix.
+Definition cofix_guard_extends := guard_extends CoFix.
+Definition cofix_guard_context_cumulativity `{checker_flags} := guard_context_cumulativity CoFix.
+Definition cofix_guard_nl := guard_nl CoFix.
+Definition cofix_guard_inst `{checker_flags} := guard_inst CoFix.
+Definition cofix_guard_rename := guard_rename CoFix.

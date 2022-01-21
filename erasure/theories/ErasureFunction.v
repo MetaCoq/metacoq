@@ -445,7 +445,7 @@ Section Erase.
   erase_prim (_; primIntModel i) := (_; primIntModel i);
   erase_prim (_; primFloatModel f) := (_; primFloatModel f).
   
-  Equations? (noind) erase (Γ : context) (t : term) (Ht : welltyped Σ Γ t) : E.term
+  Equations? erase (Γ : context) (t : term) (Ht : welltyped Σ Γ t) : E.term
       by struct t :=
     erase Γ t Ht with (is_erasable Σ HΣ Γ t Ht) :=
     {
@@ -1405,6 +1405,7 @@ Definition firstorder_env Σ :=
 
 Notation "Σ |- s ▷ t" := (PCUICWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
+(*
 Lemma isPropositional_is_propositional Σ ind n ui i u args b U T :
   wf_ext Σ ->
   Σ;;; [] |- tConstruct ind n ui : mkApps (tInd i u) args ->
@@ -1415,13 +1416,213 @@ Lemma isPropositional_is_propositional Σ ind n ui i u args b U T :
 Proof.
   intros. red in H.
   eapply inversion_Construct in X1 as (? & ? & ? & ? & ? & ? & ?); eauto.
+  pose proof d as d'.
   destruct d as [[d1 d3] d2].
   red in d1.
   cbn in d1. rewrite d1 d3 in H.
   unfold type_of_constructor in e.
+  eapply declared_constructor_inductive in d'.
+  eapply PCUICInductives.declared_inductive_type in d'.
+  rewrite d' in H.
+  rewrite destArity_it_mkProd_or_LetIn in H. cbn in H.
+Admitted.
+*)
+
+Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
+   wf_ext Σ ->
+   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->
+   Σ;;; Γ |- v : tSort u ->
+   Σ;;; Γ |- v' : tSort u' -> is_propositional u -> 
+   leq_universe (global_ext_constraints Σ) u' u.
+Proof.
+  intros wfΣ leq hv hv' isp.
+  eapply orb_true_iff in isp as [isp | isp].
+  - eapply leq_term_prop_sorted_l; eauto.
+  - eapply leq_term_sprop_sorted_l; eauto.
+Qed.
+
+Fixpoint map_erase Σ (H : ∥ wf_ext Σ ∥) Γ (ts : list term) (H2 : Forall (welltyped Σ Γ) ts) : list E.term.
+destruct ts as [ | t ts].
+- exact [].
+- eapply cons. refine (erase Σ H Γ t _). 
+  2: eapply (map_erase Σ H Γ ts).
+  all: now inversion H2; subst.
+Defined.
+
+Lemma erase_irrel Σ H Γ t H1 H2 : erase Σ H Γ t H1 = erase Σ H Γ t H2.
+Proof.
+  destruct H1 as [T Ht].
+  sq.
+  generalize (iswelltyped Ht).
+  intros wt.
+  set (wfΣ' := sq w).
+  clearbody wfΣ'.
+
+  revert Γ t T Ht wt wfΣ' H2.
+  eapply(typing_ind_env (fun Σ Γ t T =>
+       forall (wt : welltyped Σ Γ t)  (wfΣ' : ∥ wf_ext Σ ∥) H2,
+       erase Σ wfΣ' Γ t wt = erase Σ wfΣ' Γ t H2
+         )
+         (fun Σ Γ => wf_local Σ Γ)); intros; auto; clear Σ w; rename Σ0 into Σ.
+
+  all: simpl erase.
+  all: unfold erase_clause_1 in *.
+  all: unfold erase_clause_1_clause_13 in *. 
+  all: destruct is_erasable, is_erasable; try reflexivity;
+       sq; try (exfalso; tauto).
+  all: try now (f_equal; eauto).
+  - f_equal; eauto. admit.
+  - f_equal. admit.
+  - f_equal. admit.
 Admitted.
 
+Lemma map_erase_irrel Σ H Γ t H1 H2 : map_erase Σ H Γ t H1 = map_erase Σ H Γ t H2.
+Proof.
+  induction t.
+  - cbn. reflexivity.
+  - cbn. depelim H1; cbn. depelim H2; cbn.
+    f_equal.
+    + eapply erase_irrel.
+    + eapply IHt.
+Qed.
 
+Arguments map_erase _ _ _ _ _, _ _ _ _ {_}.
+
+Lemma erase_mkApps Σ H Γ t args H2 Ht Hargs :
+  wf_local Σ Γ ->
+  ~ ∥ isErasable Σ Γ (mkApps t args)∥ ->
+  erase Σ H Γ (mkApps t args) H2 = 
+  E.mkApps (erase Σ H Γ t Ht) (map_erase Σ H Γ args Hargs).
+Proof.
+  destruct H as [H].
+  intros Hwflocal Herasable. induction args in t, H2, Ht, Hargs, Herasable |- *.
+  - cbn. eapply erase_irrel.
+  - cbn [mkApps]. rewrite IHargs.
+    1: inversion Hargs; eauto.
+    2: eauto.
+    2:{ destruct H2. cbn in X. eapply inversion_mkApps in X as (? & ? & ?).
+        econstructor. eauto. }
+    intros Happ Hargs'.
+    etransitivity. simp erase. reflexivity. unfold erase_clause_1.
+    destruct is_erasable.
+    + exfalso. eapply Herasable. destruct s.
+      destruct H2. cbn. eapply Is_type_app; eauto.
+    + cbn [map_erase]. erewrite erase_irrel with (t := a).
+      cbn [E.mkApps]. f_equal. f_equal.
+      eapply erase_irrel. eapply map_erase_irrel.
+Qed.
+
+Inductive firstorder_value Σ Γ : term -> Prop :=
+| firstorder_value_C i n ui u args pandi : 
+   Σ ;;; Γ |- mkApps (tConstruct i n ui) args : 
+   mkApps (tInd i u) pandi ->
+   Forall (firstorder_value Σ Γ) args ->
+   isPropositional Σ i false ->
+   firstorder_value Σ Γ (mkApps (tConstruct i n ui) args).
+
+Lemma firstorder_value_inds :
+ forall (Σ : global_env_ext) (Γ : context) (P : term -> Prop),
+(forall (i : inductive) (n : nat) (ui u : Instance.t)
+   (args pandi : list term),
+ Σ;;; Γ |- mkApps (tConstruct i n ui) args : mkApps (tInd i u) pandi ->
+ Forall (firstorder_value Σ Γ) args ->
+ Forall P args ->
+ isPropositional (PCUICEnvironment.fst_ctx Σ) i false ->
+ P (mkApps (tConstruct i n ui) args)) ->
+forall t : term, firstorder_value Σ Γ t -> P t.
+Proof.
+  intros ? ? ? ?. fix rec 2. intros t [ ]. eapply H; eauto.
+  clear - H0 rec.
+  induction H0; econstructor; eauto.
+Qed.
+
+Lemma firstorder_ind_propositional {Σ : global_env_ext} i mind oind :
+  squash (wf_ext Σ) ->
+  declared_inductive Σ i mind oind ->
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  isPropositional Σ i false.
+Proof.
+  intros Hwf d. pose proof d as [d1 d2]. intros H. red in d1. unfold firstorder_ind in H.
+  red. sq.
+  unfold PCUICEnvironment.fst_ctx in *. rewrite d1 in H |- *.
+  solve_all. unfold firstorder_mutind in H0.
+  destruct forallb eqn:E.
+  - rewrite d2. eapply map_nth_error with (f := @firstorder_oneind (firstorder_env Σ)) in d2.
+    erewrite nth_nth_error in H0. rewrite d2 in H0.
+    unfold firstorder_oneind in H0. solve_all.
+    destruct (ind_sort oind) eqn:E2; inv H1. clear H3.
+    eapply PCUICInductives.declared_inductive_type in d.
+    rewrite d. rewrite E2.
+    now rewrite destArity_it_mkProd_or_LetIn.
+  - rewrite nth_repeat in H0. congruence.
+Qed.
+  
+Lemma firstorder_value_spec Σ Γ t i u args mind :
+  wf_ext Σ -> wf_local Σ Γ ->
+   Σ ;;; Γ |- t : mkApps (tInd i u) args -> 
+   PCUICWcbvEval.value t -> 
+  lookup_env Σ (i.(inductive_mind)) = Some (InductiveDecl mind) ->
+  @firstorder_ind Σ (firstorder_env Σ) i ->
+  firstorder_value Σ Γ t.
+Proof.
+  intros Hwf Hwfl Hty Hvalue.
+  revert i u args Hty.
+  induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH | t args' Hargs IH Hstuck ] using PCUICWcbvEval.value_values_ind; 
+   intros i u args Hty Hlookup Hfo.
+  - destruct t; inversion_clear Hvalue.
+    + exfalso. eapply inversion_Sort in Hty as (? & ? & Hcumul); eauto.
+      now eapply PCUICCanonicity.invert_cumul_sort_ind in Hcumul.
+    + exfalso. eapply inversion_Prod in Hty as (? & ? & ? & ? & Hcumul); eauto.
+      now eapply PCUICCanonicity.invert_cumul_sort_ind in Hcumul.
+    + exfalso. eapply inversion_Lambda in Hty as (? & ? & ? & ? & Hcumul); eauto.
+      now eapply PCUICCanonicity.invert_cumul_prod_ind in Hcumul.
+    + exfalso. eapply inversion_Ind in Hty as (? & ? & ? & ? & ? & ?); eauto.
+      eapply PCUICInductives.declared_inductive_type in d.
+      rewrite d in e. 
+      destruct (ind_params x ,,, ind_indices x0) as [ | [? [] ?] ? _] using rev_ind.
+      * cbn in e. now eapply PCUICCanonicity.invert_cumul_sort_ind in e.
+      * rewrite it_mkProd_or_LetIn_app in e. cbn in e. todo "letin".
+      * rewrite it_mkProd_or_LetIn_app in e. cbn in e. 
+        now eapply PCUICCanonicity.invert_cumul_prod_ind in e.
+    + eapply inversion_Construct in Hty as Hty'; eauto.
+      destruct Hty' as (? & ? & ? & ? & ? & ? & ?).
+      assert (ind = i) as ->. {
+         eapply PCUICInductiveInversion.Construct_Ind_ind_eq with (args0 := []); eauto.
+      }
+      eapply firstorder_value_C with (args := []); eauto.
+      eapply firstorder_ind_propositional; eauto.
+      now eapply (declared_constructor_inductive (ind := (i, _))).
+    + exfalso. eapply PCUICCanonicity.invert_fix_ind with (args0 := []) in Hty as [].
+      destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
+    + exfalso. eapply (PCUICCanonicity.typing_cofix_coind (args := [])) in Hty. red in Hty.
+      red in Hfo. unfold firstorder_ind in Hfo.
+      rewrite Hlookup in Hfo.
+      eapply andb_true_iff in Hfo as [Hfo _].
+      eapply PCUICCanonicity.check_recursivity_kind_inj in Hty; eauto. congruence.
+  - destruct t; inv Hhead.
+    + exfalso. now eapply PCUICCanonicity.invert_ind_ind in Hty.
+    + apply inversion_mkApps in Hty as H; auto.
+      destruct H as (?&typ_ctor&_).
+      apply inversion_Construct in typ_ctor as (?&?&?&?&?&?&?); auto.
+      pose proof d as [[d' _] _]. red in d'. cbn in *. unfold PCUICEnvironment.fst_ctx in *.
+      eapply PCUICInductiveInversion.Construct_Ind_ind_eq with (mdecl := x0) in Hty as Hty'; eauto.
+      destruct Hty' as (([[[]]] & ?)  & ? & ? & ? & ? & _). subst.
+      econstructor; eauto.
+      solve_all. eapply b. all: todo "crux".
+    + exfalso. eapply (PCUICCanonicity.typing_cofix_coind (args := args')) in Hty.
+      red in Hfo. unfold firstorder_ind in Hfo.
+      rewrite Hlookup in Hfo.
+      eapply andb_true_iff in Hfo as [Hfo _].
+      eapply PCUICCanonicity.check_recursivity_kind_inj in Hty; eauto. congruence.
+  - exfalso. destruct t; inversion Hstuck as [Hstuck'].
+    destruct PCUICWcbvEval.cunfold_fix as [[] | ] eqn:E; inversion Hstuck'.
+    eapply PCUICCanonicity.invert_fix_ind in Hty. auto.
+    unfold unfold_fix. unfold PCUICWcbvEval.cunfold_fix in E.
+    destruct (nth_error mfix idx); auto.
+    inversion E; subst; clear E.
+    eapply nth_error_None. now eapply leb_complete. Unshelve. all: todo "shelved". 
+Qed.  
+  
 Lemma firstorder_erases_deterministic {Σ t t' i u args mind} H H2 : 
   Σ ;;; [] |- t : mkApps (tInd i u) args -> 
   PCUICWcbvEval.value t ->
@@ -1430,120 +1631,36 @@ Lemma firstorder_erases_deterministic {Σ t t' i u args mind} H H2 :
   erases Σ [] t t' ->
   t' = erase Σ H [] t H2.
 Proof.
-  intros Hty Hvalue. revert Hty t' H2.
-  induction Hvalue as [ t Hvalue | t args' Hhead Hargs IH | t args' Hargs IH Hstuck ] using PCUICWcbvEval.value_values_ind; 
-    destruct H as [H]; intros Hty t' H2 Hlookup Hfo Herases.
-  - destruct t; inversion_clear Hvalue; simp erase; unfold erase_clause_1. 
-    + now inversion Herases.
-    + now inversion Herases.
-    + eapply inversion_Lambda in Hty as (? & ? & ? & ? & Hcumul). 2:eauto.
-      now eapply PCUICCanonicity.invert_cumul_prod_ind in Hcumul.
-    + inversion Herases; subst. unfold erase_clause_1. now destruct is_erasable.
-    + inversion Herases; subst.
-      * unfold erase_clause_1. destruct is_erasable as [[(? & ? & [|])]| s]; try reflexivity. 
-        -- exfalso. pose proof t as t'. eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?); eauto. 
-           eapply declared_constructor_type_not_arity. 1:eauto.
-           eapply invert_cumul_arity_r; eauto.
-        -- exfalso. destruct s as (? & ? & ?).
-           enough (is_propositional x0 = false) by congruence.
-           eapply isPropositional_is_propositional; eauto.
-      * unfold erase_clause_1. destruct is_erasable; sq; tauto.
-    + eapply PCUICCanonicity.invert_fix_ind with (args0 := []) in Hty as [].
-      destruct unfold_fix as [ [] | ]; auto. eapply nth_error_nil.
-    + inversion Herases; subst.
-      * eapply (PCUICCanonicity.typing_cofix_coind (args := [])) in Hty. red in Hty.
-        red in Hfo. unfold firstorder_ind in Hfo.
-        rewrite Hlookup in Hfo.
-        eapply andb_true_iff in Hfo as [Hfo _].
-        eapply PCUICCanonicity.check_recursivity_kind_inj in Hty; eauto. congruence.
-      * destruct is_erasable; sq; try reflexivity; now destruct f.
-  - eapply erases_mkApps_inv in Herases as [(? & ? & ? & -> & [Herasable] & ? & ? & ->)|(? & ? & -> & ? & ?)]. all:eauto.
-    + exfalso. eapply Is_type_app in Herasable as [Herasable]. 4: now rewrite <- PCUICAstUtils.mkApps_app. 2,3: eauto.
-      eapply validity in Hty as Hind.
-      destruct Hind as (univ & Hind).
-      eapply inversion_mkApps in Hind as Hind'.
-      destruct Hind' as (? & Hind' & Hspine').
-      eapply inversion_Ind in Hind' as (? & ? & ? & decl & ? & ?); eauto.
-      pose proof decl as d'.
-      destruct decl as [d1 d2].
-      red in d1. rewrite Hlookup in d1. inv d1. 
-      eapply inversion_mkApps in Hty as Hty'.
-      destruct Hty' as (? & Hty_ & Hspine).
-      destruct Herasable as (? & ? & [? | (? & ? & ?)]).
-      * rewrite <- PCUICAstUtils.mkApps_app in t0.
-        eapply arity_type_inv in Hty; eauto.
-        now eapply PCUICCanonicity.Is_conv_to_Arity_ind in Hty.
-      * eapply principal_type in Hty as Hprinc; eauto. destruct Hprinc as (T & HT).
-        rewrite <- PCUICAstUtils.mkApps_app in t0.
-        eapply HT in Hty as Hty', t0 as t0'.
-        destruct Hty' as [Hcumul1 Hty1], t0' as [Hcumul2 Hty2].
-        (* eapply equality_forget in Hcumul1, Hcumul2. cbn in *. 
-         *)eapply cumul_prop1' in Hcumul2; eauto.
-        eapply cumul_propositional in Hcumul1; eauto. 
-        2, 3: eapply validity; eauto.
-        unshelve epose proof (@PCUICInductives.isType_mkApps_Ind _ _ _ x3 i x4 _ _ _ _ _ _ _).
-        8: eapply leq_term_propositional_sorted_l in X. 11: exact Hcumul1. 9: reflexivity.
-        all:eauto. 1: todo "spine_subst".
-        unfold firstorder_ind in Hfo.
-        rewrite Hlookup in Hfo.
-        eapply andb_true_iff in Hfo as [_ Hfo]. 
-        unfold firstorder_mutind, firstorder_oneind in Hfo.
-        destruct forallb eqn:E.
-        -- eapply map_nth_error with (f := @firstorder_oneind (firstorder_env Σ)) in d2.
-           erewrite nth_nth_error in Hfo.
-           rewrite d2 in Hfo. clear d2.
-           eapply andb_true_iff in Hfo as [_ Hfo].
-           destruct (ind_sort x4); cbn in Hfo; try congruence.
-           eapply leq_universe_propositional_r in X; eauto.
-        -- rewrite nth_repeat in Hfo. congruence.
-    + destruct t; inversion_clear Hhead.
-      -- now eapply PCUICCanonicity.invert_ind_ind in Hty. 
-      -- eapply validity in Hty as Hind.
-         destruct Hind as (univ & Hind).
-         eapply inversion_mkApps in Hind as Hind'.
-         destruct Hind' as (? & ? & ?).
-         eapply inversion_Ind in t as (? & ? & ? & ? & ? & ?); eauto.
-         pose proof d as d'.
-         destruct d as [d1 d2].
-         red in d1. rewrite Hlookup in d1. inv d1.
-         eapply inversion_mkApps in Hty as Hty'.
-         destruct Hty' as (? & ? & ?).
-         eapply inversion_Construct in t as (? & ? & ? & ? & ? & ? & ?); eauto.
-         assert (ind = i) as ->. { eapply PCUICInductiveInversion.Construct_Ind_ind_eq; eauto. }
-
-         unfold firstorder_ind in Hfo. rewrite Hlookup in Hfo.
-         inversion H0; subst.
-         ++ todo "erase_mkApps and likely induction on args'".
-         ++ eapply (isErasable_Propositional (args := [])) in X. 2:eauto.
-            exfalso. red in X.
-            rewrite Hlookup in X.
-            pose proof d' as d''. destruct d'' as [Hd1 Hd2]. cbn in *. 
-            rewrite Hd2 in X.
-            destruct destArity as [[]|] eqn:E'; [ | assumption].
-            red in Hfo. eapply andb_true_iff in Hfo as [_ Hfo].
-            unfold firstorder_mutind in Hfo.
-            destruct forallb eqn:Ef.
-            ** unshelve eapply map_nth_error with (f := @firstorder_oneind (firstorder_env Σ)) in Hd2.
-               erewrite nth_nth_error in Hfo. rewrite Hd2 in Hfo. clear Hd2.
-               unfold firstorder_oneind in Hfo.
-               eapply andb_true_iff in Hfo as [_ Hfo].
-               erewrite PCUICInductives.declared_inductive_type in E'; eauto.
-               rewrite destArity_it_mkProd_or_LetIn in E'. cbn in E'. inversion E'; subst; clear E'.
-               eapply negb_true_iff in Hfo.
-               destruct (ind_sort x3) eqn:eq; cbn in *; congruence.
-            ** rewrite nth_repeat in Hfo. congruence.
-      -- eapply (PCUICCanonicity.typing_cofix_coind (args := args')) in Hty.
-         red in Hfo. unfold firstorder_ind in Hfo.
-         rewrite Hlookup in Hfo.
-         eapply andb_true_iff in Hfo as [Hfo _].
-         eapply PCUICCanonicity.check_recursivity_kind_inj in Hty; eauto. congruence.
-  - destruct t; inversion Hstuck as [Hstuck'].
-    destruct PCUICWcbvEval.cunfold_fix as [[] | ] eqn:E; inversion Hstuck'.
-    eapply PCUICCanonicity.invert_fix_ind in Hty. auto.
-    unfold unfold_fix. unfold PCUICWcbvEval.cunfold_fix in E.
-    destruct (nth_error mfix idx); auto.
-    inversion E; subst; clear E.
-    eapply nth_error_None. now eapply leb_complete.
+  sq. intros Hty Hvalue Hdecl Hfo Herase.
+  eapply firstorder_value_spec in Hty as Hfov; eauto.
+  clear - Hfov Herase. induction Hfov using firstorder_value_inds in t', H2, Herase |- *.
+  rewrite erase_mkApps.
+  - eapply inversion_mkApps in X as (? & XX & X).
+    clear XX. revert X. clear. generalize (mkApps (tInd i u) pandi). induction 1.  
+    + econstructor.
+    + econstructor. 1: now econstructor. eauto.
+  - intros. eapply erases_mkApps_inv in Herase as [(? & ? & ? & -> & [Herasable] & ? & ? & ->)|(? & ? & -> & ? & ?)]. all:eauto.
+    + exfalso. eapply isErasable_Propositional in Herasable; eauto.  
+      red in H1, Herasable.
+      edestruct lookup_env as [ [] | ], nth_error, destArity as [[] | ]; auto; congruence.  
+    + inv H3.
+      * cbn. unfold erase_clause_1. destruct is_erasable.
+        -- exfalso. sq. eapply (isErasable_Propositional (args := [])) in X0; eauto. 
+           red in H9, X0.
+           edestruct lookup_env as [ [] | ], nth_error, destArity as [[] | ]; auto; congruence.
+        -- f_equal. eapply Forall2_eq. clear X H2. induction H4.
+           ++ cbn. econstructor. 
+           ++ cbn. depelim Hyp1. cbn. inv H. inv H0. econstructor.
+              ** eapply H5; eauto.
+              ** eapply IHForall2; eauto.
+      * exfalso. eapply (isErasable_Propositional (args := [])) in X0; eauto.  
+        red in H1, X0.
+        edestruct lookup_env as [ [] | ], nth_error, destArity as [[] | ]; auto; congruence.
+  - eauto.
+  - intros X0. sq. eapply (isErasable_Propositional) in X0; eauto.
+    red in H1, X0.
+    edestruct lookup_env as [ [] | ], nth_error, destArity as [[] | ]; auto; congruence.  
+  - eapply inversion_mkApps in X as (? & XX & ?). now econstructor. Unshelve. all:exact False.
 Qed.
 
 Lemma erase_global_closed Σ deps wfΣ :

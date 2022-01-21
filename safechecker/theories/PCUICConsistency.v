@@ -166,7 +166,7 @@ Proof.
   set (False_ty := tInd (mkInd (make_fresh_name Σ) 0) []).
   assert (typ_false: (Σ', Σ.2);;; [] |- tApp t False_ty : False_ty).
   { apply validity in cons as typ_prod; auto.
-    destruct typ_prod. red in t0.
+    destruct typ_prod.
     eapply type_App with (B := tRel 0) (u := False_ty); eauto.
     eapply type_Ind with (u := []) (mdecl := False_mib) (idecl := False_oib); eauto.
     - hnf.

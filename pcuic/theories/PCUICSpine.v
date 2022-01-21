@@ -1658,7 +1658,7 @@ Section WfEnv.
         rewrite -eql nth_error_app_lt ?app_length /=; try lia.
         rewrite nth_error_app_ge // ?Nat.sub_diag //.
         destruct l0.
-        exists x. red.
+        exists x.
         change (tSort x) with  
           (subst0 (all_rels c (S #|l|) #|Δ|) (lift #|Δ| #|c| (tSort x))).
         { eapply (substitution (Γ' := lift_context #|Δ| 0 c) (Δ := [])); cbn; auto.
@@ -2422,7 +2422,7 @@ Section WfEnv.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-    destruct i as [s Hs]. red in Hs.
+    destruct i as [s Hs].
     eapply type_App; eauto. eapply i0.π2.
     eapply type_equality; eauto.
   Qed.
@@ -3000,8 +3000,7 @@ Section WfEnv.
         now eapply typing_wf_local in Hs.
         eapply spine_subst_smash in X; tea.
         eapply type_equality; tea.
-        + red in Hs.
-          eapply typing_expand_lets in Hs.
+        + eapply typing_expand_lets in Hs.
           eapply (substitution (s := List.rev i) (Δ := [])) in Hs; tea.
           simpl in Hs. now exists s; rewrite subst_context_nil /= in Hs.
           exact X.
@@ -3023,17 +3022,14 @@ Section WfEnv.
       rewrite H0 in H, dom. rewrite firstn_all in dom.
       intros HΔ; depelim HΔ.
       intros HΔ'; depelim HΔ'.
-      destruct l as [s Hs]. simpl in l0.
-      red in Hs, l0.
+      destruct l as [s Hs]. simpl in *.
       specialize (IHa _ dom).
       forward IHa. apply wf_local_app_inv; pcuic.
       forward IHa. apply wf_local_app_inv; pcuic.
-      red in l2. pcuic.
-      simpl.
       rewrite -(app_nil_r i).
-      eapply (ctx_inst_app IHa). simpl.
+      eapply (ctx_inst_app IHa).
       rewrite (ctx_inst_sub_subst IHa) /=.
-      constructor. constructor.
+      repeat constructor.
   Qed.
 
   Lemma subst_context_rev_subst_telescope s k Γ :

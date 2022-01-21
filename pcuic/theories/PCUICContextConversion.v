@@ -1242,7 +1242,7 @@ Proof.
   eapply wf_local_app => //.
   eapply All_local_env_app_inv in X1 as [].
   eapply All_local_env_impl_ind; tea => /=.
-  rewrite /lift_typing => Γ'' t' [t wf IH|wf [s IH]]; try exists s; eauto; red.
+  rewrite /lift_typing => Γ'' t' [t wf IH|wf [s IH]]; try exists s; eauto.
   eapply IH. eapply All2_fold_app => //.
   eapply All2_fold_refl. intros. eapply cumul_decls_refl.
   eapply All_local_env_app; split; auto.

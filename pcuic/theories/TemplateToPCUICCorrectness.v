@@ -2217,6 +2217,8 @@ Proof.
     rewrite trans_reln //.
 Qed.
 
+#[local] Hint Unfold lift_typing : core.
+
 Theorem template_to_pcuic {cf} :
   ST.env_prop (fun Σ Γ t T =>
     let Σ' := trans_global Σ in
@@ -2245,15 +2247,16 @@ Proof.
     now rewrite global_ext_levels_trans.
 
   - (* Casts *)
-    eapply refine_type. red. cbn. eapply type_App.
-    2:{ eapply type_Lambda; eauto. eapply type_Rel. econstructor; eauto.
-      eapply typing_wf_local. eauto. eauto. simpl. exists s; auto. reflexivity. }
-    eapply type_Prod. eauto.
-    instantiate (1 := s). simpl.
-    eapply (weakening _ _ [_] _ (tSort _)); eauto.
-    constructor; eauto. eapply typing_wf_local; eauto. red.
-    exists s; eauto. auto.
-    simpl. unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
+    eapply refine_type; cbn.
+    * eapply type_App.
+      2:{ eapply type_Lambda; eauto. eapply type_Rel. econstructor; eauto.
+        eapply typing_wf_local; eauto. reflexivity. }
+      eapply type_Prod. eauto.
+      instantiate (1 := s). simpl.
+      eapply (weakening _ _ [_] _ (tSort _)); eauto.
+      constructor; eauto. eapply typing_wf_local; eauto.
+      now eapply X2.
+    * unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
 
   - (* The interesting application case *)
     cbn; eapply type_mkApps; eauto.
@@ -2266,12 +2269,12 @@ Proof.
     * simpl in p.
       destruct (TypingWf.typing_wf _ wfΣ _ _ _ typrod) as [wfAB _].
       econstructor; eauto.
-      + exists s; eauto. eapply p; eauto.
+      + exists s; eauto.
       + rewrite -/Σ'.
         change (tProd na (trans Σ' A) (trans _ B)) with (trans Σ' (Ast.tProd na A B)).
         eapply trans_cumulSpec_typed; tea.
         eapply TypingWf.typing_all_wf_decl; eauto.
-        exists s; eauto. now eapply p.
+        exists s; eauto.
       + eapply typing_wf in ty; eauto. destruct ty as [wfhd _].
         rewrite trans_subst in IHX1; eauto with wf.
         eapply IHX1; cycle 1.

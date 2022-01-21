@@ -372,7 +372,7 @@ Next Obligation.
   simpl in *. 
   eapply validity in t1; auto.
   destruct t1 as [s Hs].
-  red in Hs. red in p, pt.
+  red in p, pt.
   specialize (pt _ Hs).
   eapply equality_Sort_r_inv in pt as [u' [redu' leq]].
   now apply (H0 _ redu').

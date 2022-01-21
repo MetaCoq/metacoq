@@ -311,7 +311,7 @@ Section Validity.
       constructor; auto.
 
     - (* Let *)
-      destruct X5 as [u Hu]. red in Hu.
+      destruct X5 as [u Hu].
       exists u.
       eapply type_Cumul.
       eapply type_LetIn; eauto. econstructor; pcuic.
@@ -374,7 +374,7 @@ Section Validity.
       eapply spine_subst_smash in X2; tea.
       destruct X4.
       destruct (on_declared_inductive isdecl) as [onmind oib].
-      rewrite /ptm. exists ps. red.
+      rewrite /ptm. exists ps.
       eapply type_mkApps; eauto.
       eapply type_it_mkLambda_or_LetIn; tea.
       have typred : isType Σ Γ (it_mkProd_or_LetIn predctx (tSort ps)).
@@ -415,7 +415,7 @@ Section Validity.
       pose proof isdecl as isdecl'.
       eapply declared_projection_type in isdecl'; eauto.
       subst ty.
-      destruct isdecl' as [s Hs]. red in Hs.
+      destruct isdecl' as [s Hs].
       unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.

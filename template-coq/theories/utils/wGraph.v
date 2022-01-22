@@ -441,30 +441,30 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
 
     Definition DisjointAdd x s s' := VSetProp.Add x s s' /\ ~ VSet.In x s.
 
-    Inductive SimplePathOf : VSet.t -> V.t -> V.t -> Type :=
-    | spathOf_refl s x : SimplePathOf s x x
-    | spathOf_step s s' x y z : DisjointAdd x s s' -> EdgeOf x y
-                               -> SimplePathOf s y z -> SimplePathOf s' x z.
+    Inductive SPath : VSet.t -> V.t -> V.t -> Type :=
+    | spath_refl s x : SPath s x x
+    | spath_step s s' x y z : DisjointAdd x s s' -> EdgeOf x y
+                               -> SPath s y z -> SPath s' x z.
 
-    Arguments spathOf_step {s s' x y z} H e p.
-    Derive Signature NoConfusion for SimplePathOf.
+    Arguments spath_step {s s' x y z} H e p.
+    Derive Signature NoConfusion for SPath.
 
-    (* Global Instance SimplePathOf_refl s : CRelationClasses.Reflexive (SimplePathOf s) *)
-    (*   := spathOf_refl s. *)
+    (* Global Instance SPath_refl s : CRelationClasses.Reflexive (SPath s) *)
+    (*   := spath_refl s. *)
 
-    Fixpoint to_pathOf {s x y} (p : SimplePathOf s x y) : PathOf x y :=
+    Fixpoint to_pathOf {s x y} (p : SPath s x y) : PathOf x y :=
       match p with
-      | spathOf_refl _ x => pathOf_refl x
-      | spathOf_step _ e p => pathOf_step e (to_pathOf p)
+      | spath_refl _ x => pathOf_refl x
+      | spath_step _ e p => pathOf_step e (to_pathOf p)
       end.
 
-    Fixpoint sweight {s x y} (p : SimplePathOf s x y) :=
+    Fixpoint sweight {s x y} (p : SPath s x y) :=
       match p with
-      | spathOf_refl _ _ => 0
-      | spathOf_step _ e p => e.π1 + sweight p
+      | spath_refl _ _ => 0
+      | spath_step _ e p => e.π1 + sweight p
       end.
 
-    Lemma sweight_weight {s x y} (p : SimplePathOf s x y)
+    Lemma sweight_weight {s x y} (p : SPath s x y)
       : sweight p = weight (to_pathOf p).
     Proof.
       induction p; cbn; lia.
@@ -477,16 +477,16 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       end.
 
     Program Definition to_simple : forall {x y} (p : PathOf x y),
-        is_simple p = true -> SimplePathOf (nodes p) x y
+        is_simple p = true -> SPath (nodes p) x y
       := fix to_simple {x y} p (Hp : is_simple p = true) {struct p} :=
            match
              p in PathOf t t0
-             return is_simple p = true -> SimplePathOf (nodes p) t t0
+             return is_simple p = true -> SPath (nodes p) t t0
            with
            | pathOf_refl x =>
-             fun _ => spathOf_refl (nodes (pathOf_refl x)) x
+             fun _ => spath_refl (nodes (pathOf_refl x)) x
            | @pathOf_step x y z e p0 =>
-             fun Hp0 => spathOf_step _ e (to_simple p0 _)
+             fun Hp0 => spath_step _ e (to_simple p0 _)
            end Hp.
     Next Obligation.
       split.
@@ -544,16 +544,16 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Qed.
 
 
-    Fixpoint add_end {s x y} (p : SimplePathOf s x y)
-      : forall {z} (e : EdgeOf y z) {s'} (Hs : DisjointAdd y s s'), SimplePathOf s' x z
+    Fixpoint add_end {s x y} (p : SPath s x y)
+      : forall {z} (e : EdgeOf y z) {s'} (Hs : DisjointAdd y s s'), SPath s' x z
       := match p with
-         | spathOf_refl s x => fun z e s' Hs => spathOf_step Hs e (spathOf_refl _ _)
-         | spathOf_step H e p
-           => fun z e' s' Hs => spathOf_step (DisjointAdd_add1 H Hs) e
+         | spath_refl s x => fun z e s' Hs => spath_step Hs e (spath_refl _ _)
+         | spath_step H e p
+           => fun z e' s' Hs => spath_step (DisjointAdd_add1 H Hs) e
                                         (add_end p e' (DisjointAdd_add3 H Hs))
          end.
 
-    Lemma weight_add_end {s x y} (p : SimplePathOf s x y) {z e s'} Hs
+    Lemma weight_add_end {s x y} (p : SPath s x y) {z e s'} Hs
       : sweight (@add_end s x y p z e s' Hs) = sweight p + e.π1.
     Proof.
       revert z e s' Hs. induction p.
@@ -580,22 +580,22 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
        apply H; assumption.
     Qed.
 
-   (* Fixpoint split {s x y} (p : SimplePathOf s x y) *)
-   (*   : SimplePathOf (VSet.remove y s) x y * ∑ s', SimplePathOf s' y y := *)
+   (* Fixpoint split {s x y} (p : SPath s x y) *)
+   (*   : SPath (VSet.remove y s) x y * ∑ s', SPath s' y y := *)
    (*    match p with *)
-   (*    | spathOf_refl s x => (spathOf_refl _ x, (VSet.empty; spathOf_refl _ x)) *)
-   (*    | spathOf_step s s' x0 y0 z0 H e p0 *)
+   (*    | spath_refl s x => (spath_refl _ x, (VSet.empty; spath_refl _ x)) *)
+   (*    | spath_step s s' x0 y0 z0 H e p0 *)
    (*      => match V.eq_dec x0 z0 with *)
-   (*        | left pp => (eq_rect _ (SimplePathOf _ _) (spathOf_refl _ _) _ pp, *)
-   (*                     (s'; eq_rect _ (fun x => SimplePathOf _ x _) *)
-   (*                                  (spathOf_step H e p0) _ pp)) *)
-   (*        | right pp => (spathOf_step (DisjointAdd_remove H pp) e (split p0).1, *)
+   (*        | left pp => (eq_rect _ (SPath _ _) (spath_refl _ _) _ pp, *)
+   (*                     (s'; eq_rect _ (fun x => SPath _ x _) *)
+   (*                                  (spath_step H e p0) _ pp)) *)
+   (*        | right pp => (spath_step (DisjointAdd_remove H pp) e (split p0).1, *)
    (*                      (split p0).2) *)
    (*        end *)
    (*    end. *)
 
-    Definition SimplePathOf_sub {s s' x y}
-      : VSet.Subset s s' -> SimplePathOf s x y -> SimplePathOf s' x y.
+    Definition SPath_sub {s s' x y}
+      : VSet.Subset s s' -> SPath s x y -> SPath s' x y.
     Proof.
       intros Hs p; revert s' Hs; induction p.
       - constructor.
@@ -610,8 +610,8 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
           apply Hs, d; intuition.
     Defined.
 
-    Definition weight_SimplePathOf_sub {s s' x y} Hs p
-      : sweight (@SimplePathOf_sub s s' x y Hs p) = sweight p.
+    Definition weight_SPath_sub {s s' x y} Hs p
+      : sweight (@SPath_sub s s' x y Hs p) = sweight p.
     Proof.
       revert s' Hs; induction p; simpl. reflexivity.
       intros s'0 Hs. now rewrite IHp.
@@ -623,15 +623,15 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       intros [H _] z Hz. apply H; intuition.
     Qed.
 
-    Fixpoint snodes {s x y} (p : SimplePathOf s x y) : VSet.t :=
+    Fixpoint snodes {s x y} (p : SPath s x y) : VSet.t :=
       match p with
-      | spathOf_refl s x => VSet.empty
-      | spathOf_step H e p => VSet.add x (snodes p)
+      | spath_refl s x => VSet.empty
+      | spath_step H e p => VSet.add x (snodes p)
       end.
 
-    Definition split {s x y} (p : SimplePathOf s x y)
+    Definition split {s x y} (p : SPath s x y)
       : forall u, {VSet.In u (snodes p)} + {u = y} -> 
-        SimplePathOf (VSet.remove u s) x u * SimplePathOf s u y.
+        SPath (VSet.remove u s) x u * SPath s u y.
     Proof.
       induction p; intros u Hu; cbn in *.
       - induction Hu. eapply False_rect, VSet.empty_spec; eassumption.
@@ -646,11 +646,11 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
           specialize (IHp _ Hu'). split.
           * econstructor. 2: eassumption. 2: exact IHp.1.
             now apply DisjointAdd_remove.
-          * eapply SimplePathOf_sub. 2: exact IHp.2.
+          * eapply SPath_sub. 2: exact IHp.2.
             eapply DisjointAdd_Subset; eassumption.
     Defined.
 
-    Lemma weight_split {s x y} (p : SimplePathOf s x y) {u Hu}
+    Lemma weight_split {s x y} (p : SPath s x y) {u Hu}
       : sweight (split p u Hu).1 + sweight (split p u Hu).2 = sweight p.
     Proof.
       induction p.
@@ -659,39 +659,39 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         destruct Hu; reflexivity.
       - simpl. destruct (V.eq_dec x u) as [X|X]; simpl.
         + destruct X; reflexivity.
-        + rewrite weight_SimplePathOf_sub.
+        + rewrite weight_SPath_sub.
           rewrite <- Z.add_assoc.
           now rewrite IHp.
     Qed.
 
-   (* Fixpoint split {s x y} (p : SimplePathOf s x y) *)
-   (*   : SimplePathOf (VSet.remove y s) x y * SimplePathOf s y y := *)
+   (* Fixpoint split {s x y} (p : SPath s x y) *)
+   (*   : SPath (VSet.remove y s) x y * SPath s y y := *)
    (*    match p with *)
-   (*    | spathOf_refl s x => (spathOf_refl _ x, spathOf_refl _ x) *)
-   (*    | spathOf_step s s' x0 y0 z0 H e p0 *)
+   (*    | spath_refl s x => (spath_refl _ x, spath_refl _ x) *)
+   (*    | spath_step s s' x0 y0 z0 H e p0 *)
    (*      => match V.eq_dec x0 z0 with *)
-   (*        | left pp => (eq_rect _ (SimplePathOf _ _) (spathOf_refl _ _) _ pp, *)
-   (*                     eq_rect _ (fun x => SimplePathOf _ x _) (spathOf_step H e p0) _ pp) *)
-   (*        | right pp => (spathOf_step (DisjointAdd_remove H pp) e (split p0).1, *)
-   (*                      SimplePathOf_sub (DisjointAdd_Subset H) (split p0).2) *)
+   (*        | left pp => (eq_rect _ (SPath _ _) (spath_refl _ _) _ pp, *)
+   (*                     eq_rect _ (fun x => SPath _ x _) (spath_step H e p0) _ pp) *)
+   (*        | right pp => (spath_step (DisjointAdd_remove H pp) e (split p0).1, *)
+   (*                      SPath_sub (DisjointAdd_Subset H) (split p0).2) *)
    (*        end *)
    (*    end. *)
 
-   (*  Lemma weight_split {s x y} (p : SimplePathOf s x y) *)
+   (*  Lemma weight_split {s x y} (p : SPath s x y) *)
    (*    : sweight (split p).1 + sweight (split p).2 = sweight p. *)
    (*  Proof. *)
    (*    induction p. *)
    (*    - reflexivity. *)
    (*    - simpl. destruct (V.eq_dec x z). *)
    (*      + destruct e0; cbn. reflexivity. *)
-   (*      + cbn. rewrite weight_SimplePathOf_sub; lia. *)
+   (*      + cbn. rewrite weight_SPath_sub; lia. *)
    (*  Qed. *)
 
-    Definition split' {s x y} (p : SimplePathOf s x y)
-      : SimplePathOf (VSet.remove y s) x y * SimplePathOf s y y
+    Definition split' {s x y} (p : SPath s x y)
+      : SPath (VSet.remove y s) x y * SPath s y y
       := split p y (right eq_refl).
 
-    Lemma weight_split' {s x y} (p : SimplePathOf s x y)
+    Lemma weight_split' {s x y} (p : SPath s x y)
       : sweight (split' p).1 + sweight (split' p).2 = sweight p.
     Proof.
       unfold split'; apply weight_split.
@@ -717,8 +717,8 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       - now apply VSetFact.remove_1.
     Qed.
       
-    Definition spathOf_one {s x y k} (Hx : VSet.In x s) (Hk : EdgeSet.In (x, k, y) (E G))
-      : SimplePathOf s x y.
+    Definition spath_one {s x y k} (Hx : VSet.In x s) (Hk : EdgeSet.In (x, k, y) (E G))
+      : SPath s x y.
     Proof.
       econstructor. 3: constructor. now apply DisjointAdd_remove1.
       exists k. assumption.
@@ -788,15 +788,15 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Qed.
 
     Fixpoint simplify {s x y} (q : PathOf y x)
-      : forall (p : SimplePathOf s x y) {s'},
-        VSet.Equal (VSet.union s (nodes q)) s' -> ∑ x', SimplePathOf s' x' x' :=
+      : forall (p : SPath s x y) {s'},
+        VSet.Equal (VSet.union s (nodes q)) s' -> ∑ x', SPath s' x' x' :=
       match q with
-      | pathOf_refl x => fun p s' Hs => (x; SimplePathOf_sub (simplify_aux1 Hs) p)
+      | pathOf_refl x => fun p s' Hs => (x; SPath_sub (simplify_aux1 Hs) p)
       | @pathOf_step y y' _ e q =>
         fun p s' Hs => match VSet.mem y s as X return VSet.mem y s = X -> _ with
               | true => fun XX => let '(p1, p2) := split' p in
                        if 0 <? sweight p2
-                       then (y; SimplePathOf_sub (simplify_aux1 Hs) p2)
+                       then (y; SPath_sub (simplify_aux1 Hs) p2)
                        else (simplify q (add_end p1 e
                                           (DisjointAdd_remove1 (VSetFact.mem_2 XX)))
                                       (simplify_aux2 XX Hs))
@@ -806,12 +806,12 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
               end eq_refl
       end.
 
-    Lemma weight_simplify {s x y} q (p : SimplePathOf s x y)
+    Lemma weight_simplify {s x y} q (p : SPath s x y)
       : forall {s'} Hs, (0 < weight q + sweight p)
         -> 0 < sweight (simplify q p (s':=s') Hs).π2.
     Proof.
       revert s p; induction q.
-      - cbn; intros. intuition. now rewrite weight_SimplePathOf_sub.
+      - cbn; intros. intuition. now rewrite weight_SPath_sub.
       - intros s p s' Hs H; cbn in H. simpl.
         set (F0 := proj2 (VSetFact.not_mem_iff s x)); clearbody F0.
         set (F1 := @VSetFact.mem_2 s x); clearbody F1.
@@ -820,7 +820,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         + case_eq (split' p); intros p1 p2 Hp.
           case_eq (0 <? sweight p2); intro eq.
           * cbn. apply Z.ltb_lt in eq.
-            rewrite weight_SimplePathOf_sub; lia.
+            rewrite weight_SPath_sub; lia.
           * eapply IHq. rewrite weight_add_end.
             pose proof (weight_split' p) as X; rewrite Hp in X; cbn in X.
             apply Z.ltb_ge in eq. rewrite <- X in H. lia.
@@ -910,7 +910,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         reflexivity. now eapply VSetFact.remove_m.
     Qed.
 
-    Lemma lsp0_spec_le {s x y} (p : SimplePathOf s x y)
+    Lemma lsp0_spec_le {s x y} (p : SPath s x y)
       : (Some (sweight p) <= lsp0 s x y)%nbar.
     Proof.
       induction p; rewrite lsp0_eq; simpl.
@@ -952,7 +952,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Qed.
 
     Lemma lsp0_spec_eq {s x y} n
-      : lsp0 s x y = Some n -> exists p : SimplePathOf s x y, sweight p = n.
+      : lsp0 s x y = Some n -> exists p : SPath s x y, sweight p = n.
     Proof.
       set (c := VSet.cardinal s). assert (e: VSet.cardinal s = c) by reflexivity.
       clearbody c; revert s e x y n.
@@ -996,7 +996,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       : lsp0 s x x = Some n -> 0 <= n.
     Proof.
       intros lspeq.
-      generalize (lsp0_spec_le (spathOf_refl s x)).
+      generalize (lsp0_spec_le (spath_refl s x)).
       rewrite lspeq. simpl. auto.
     Qed.
 
@@ -1069,11 +1069,11 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       case_eq (lsp0 s x y); [|cbn; trivial].
       intros n Hn Hs.
       apply lsp0_spec_eq in Hn; destruct Hn as [p Hp]; subst.
-      rewrite <- (weight_SimplePathOf_sub Hs p).
+      rewrite <- (weight_SPath_sub Hs p).
       apply lsp0_spec_le.
     Qed.
 
-    Definition snodes_Subset {s x y} (p : SimplePathOf s x y)
+    Definition snodes_Subset {s x y} (p : SPath s x y)
       : VSet.Subset (snodes p) s.
     Proof.
       induction p; cbn.
@@ -1084,8 +1084,8 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         eapply DisjointAdd_Subset; eassumption.
     Qed.
 
-    Definition reduce {s x y} (p : SimplePathOf s x y)
-      : SimplePathOf (snodes p) x y.
+    Definition reduce {s x y} (p : SPath s x y)
+      : SPath (snodes p) x y.
     Proof.
       induction p; cbn.
       - constructor.
@@ -1096,15 +1096,15 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Defined.
 
 
-    Definition simplify2 {x z} (p : PathOf x z) :  SimplePathOf (nodes p) x z.
+    Definition simplify2 {x z} (p : PathOf x z) :  SPath (nodes p) x z.
     Proof.
       induction p; cbn.
       - constructor.
       - case_eq (VSet.mem x (snodes IHp)); intro Hx.
         + apply VSetFact.mem_2 in Hx.
-          eapply SimplePathOf_sub. 2: exact (split _ _ (left Hx)).2.
+          eapply SPath_sub. 2: exact (split _ _ (left Hx)).2.
           apply VSetProp.subset_add_2; reflexivity.
-        + eapply SimplePathOf_sub. shelve.
+        + eapply SPath_sub. shelve.
           econstructor. 2: eassumption. 2: exact (reduce IHp).
           eapply DisjointAdd_add2. now apply VSetFact.not_mem_iff.
           Unshelve.
@@ -1112,13 +1112,13 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
           apply snodes_Subset.
     Defined.
 
-    Lemma weight_reduce {s x y} (p : SimplePathOf s x y)
+    Lemma weight_reduce {s x y} (p : SPath s x y)
       : sweight (reduce p) = sweight p.
     Proof.
       induction p; simpl; intuition.
     Qed.
 
-    Opaque split reduce SimplePathOf_sub.
+    Opaque split reduce SPath_sub.
 
     Lemma weight_simplify2 {HG : acyclic_no_loop} {x z} (p : PathOf x z)
       : weight p <= sweight (simplify2 p).
@@ -1129,7 +1129,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         set (F0 := @VSetFact.mem_2 (snodes (simplify2 p)) x); clearbody F0.
         set (F1 := VSetFact.not_mem_iff (snodes (simplify2 p)) x); clearbody F1.
         destruct (VSet.mem x (snodes (simplify2 p))).
-        + rewrite weight_SimplePathOf_sub.
+        + rewrite weight_SPath_sub.
           pose proof (@weight_split _ _ _ (simplify2 p))
                x (left (F0 (eq_refl))).
           set (q := split (simplify2 p) x (left (F0 (eq_refl)))) in *.
@@ -1138,7 +1138,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
           specialize (HG _ (pathOf_step e (to_pathOf q1))). cbn in HG.
           rewrite <- sweight_weight in HG. lia.
           transitivity (e.π1 + sweight (simplify2 p)); [|lia]. rewrite <- H. lia.
-        + rewrite weight_SimplePathOf_sub. cbn.
+        + rewrite weight_SPath_sub. cbn.
           rewrite weight_reduce; intuition.
     Qed.
 
@@ -1151,9 +1151,9 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       apply (edges_vertices _ e.π2).
     Qed.
 
-    Definition simplify2' {x z} (p : PathOf x z) :  SimplePathOf (V G) x z.
+    Definition simplify2' {x z} (p : PathOf x z) :  SPath (V G) x z.
     Proof.
-      eapply SimplePathOf_sub. 2: exact (simplify2 p).
+      eapply SPath_sub. 2: exact (simplify2 p).
       apply nodes_subset.
     Defined.
 
@@ -1161,7 +1161,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       : weight p <= sweight (simplify2' p).
     Proof.
       unfold simplify2'.
-      unshelve erewrite weight_SimplePathOf_sub.
+      unshelve erewrite weight_SPath_sub.
       eapply weight_simplify2.
     Qed.
 
@@ -1182,14 +1182,14 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         unfold lsp in e; rewrite e in X. inversion X.
     Qed.
     
-    Lemma SimplePathOf_In {s x y} (p : SimplePathOf s x y)
+    Lemma SPath_In {s x y} (p : SPath s x y)
     : sweight p <> 0 -> VSet.In x s.
     Proof.
       destruct p. simpl. lia.
       intros _. apply d. left; reflexivity.
     Qed.
 
-    Lemma SimplePathOf_In' {s x y} (p : SimplePathOf s x y) (H : VSet.In x (V G)) :
+    Lemma SPath_In' {s x y} (p : SPath s x y) (H : VSet.In x (V G)) :
       VSet.In y (V G).
     Proof.
       induction p. simpl; auto.
@@ -1207,7 +1207,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Lemma acyclic_lsp0_xx {HG : acyclic_no_loop} s x
       : lsp0 s x x = Some 0.
     Proof.
-      pose proof (lsp0_spec_le (spathOf_refl s x)) as H; cbn in H.
+      pose proof (lsp0_spec_le (spath_refl s x)) as H; cbn in H.
       case_eq (lsp0 s x x); [|intro e; rewrite e in H; cbn in H; lia].
       intros n Hn.
       pose proof (lsp0_spec_eq0 _ Hn).
@@ -1339,8 +1339,8 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Lemma lsp_xx_acyclic
       : VSet.For_all (fun x => lsp x x = Some 0) (V G) -> acyclic_no_loop'.
     Proof.
-      intros H. intros x [p Hp]. assert (hw: 0 < weight p + sweight ((spathOf_refl (V G) x))) by (simpl; lia).
-      simple refine (let Hq := weight_simplify p (spathOf_refl (V G) _)
+      intros H. intros x [p Hp]. assert (hw: 0 < weight p + sweight ((spath_refl (V G) x))) by (simpl; lia).
+      simple refine (let Hq := weight_simplify p (spath_refl (V G) _)
                                                _ hw
                      in _).
       + exact (V G).
@@ -1353,7 +1353,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         destruct q as [x' q]; cbn in Hq.
         assert (Some (sweight q) <= Some 0)%nbar. {
           erewrite <- H. eapply lsp0_spec_le.
-          eapply (SimplePathOf_In q). lia. }
+          eapply (SPath_In q). lia. }
         cbn in H0; lia.
     Defined.
 
@@ -1464,7 +1464,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       intros H.
       assert (VSet.In x (V G)).
       destruct (lsp0_spec_eq _ H).
-      apply (SimplePathOf_In' x0). eapply HI.
+      apply (SPath_In' x0). eapply HI.
       destruct (lsp_s _ H0) as [n' [lspeq w]].
       rewrite H in lspeq. congruence.
     Qed.
@@ -1584,15 +1584,15 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
           * lia.
     Qed.
 
-    Definition from_G' {S u v} (q : SimplePathOf G' S u v)
-      : SimplePathOf G S u v + (SimplePathOf G S u y_0 * SimplePathOf G S x_0 v).
+    Definition from_G' {S u v} (q : SPath G' S u v)
+      : SPath G S u v + (SPath G S u y_0 * SPath G S x_0 v).
     Proof.
       clear -q. induction q.
       - left; constructor.
       - induction (Edge.eq_dec (y_0, - K, x_0) (x, e.π1, y)) as [XX|XX].
         + right. split.
           * rewrite (fst_eq (fst_eq XX)); constructor.
-          * eapply SimplePathOf_sub.
+          * eapply SPath_sub.
             eapply DisjointAdd_Subset; eassumption.
             induction IHq as [IHq|IHq].
             -- now rewrite (snd_eq XX).
@@ -1604,11 +1604,11 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
             -- econstructor; try eassumption.
                 2: exact IHq.1.
                 exists e.π1. exact (EdgeSetFact.add_3 XX e.π2).
-            -- eapply SimplePathOf_sub; [|exact IHq.2].
+            -- eapply SPath_sub; [|exact IHq.2].
                 eapply DisjointAdd_Subset; eassumption.
     Defined.
 
-    Lemma from_G'_weight {S u v} (q : SimplePathOf G' S u v)
+    Lemma from_G'_weight {S u v} (q : SPath G' S u v)
       : match from_G' q with
         | inl q' => sweight q = sweight q'
         | inr (q1, q2) => sweight q <= sweight q1 - K + sweight q2
@@ -1620,7 +1620,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       - simpl.
         destruct (Edge.eq_dec (y_0, - K, x_0) (x, e.π1, y)) as [XX|XX]; simpl.
         + destruct (fst_eq (fst_eq XX)). simpl.
-          inversion XX. rewrite weight_SimplePathOf_sub.
+          inversion XX. rewrite weight_SPath_sub.
           destruct (from_G' q) as [q'|[q1 q2]]; simpl.
           * destruct (snd_eq XX); cbn.
             destruct e as [e He]; cbn in *; lia.
@@ -1631,7 +1631,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
             rewrite -sweight_weight in H. lia.
         + destruct (from_G' q) as [q'|[q1 q2]]; simpl.
           * lia.
-          * rewrite weight_SimplePathOf_sub; lia.
+          * rewrite weight_SPath_sub; lia.
     Qed.
 
     Lemma lsp_pathOf {x y} (p : PathOf G x y) : ∑ n, lsp G x y = Some n /\ weight p <= n.
@@ -1658,7 +1658,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Global Instance HG' : acyclic_no_loop G'.
     Proof.
       apply acyclic_caract2. exact _. intros x Hx.
-      pose proof (lsp0_spec_le G' (spathOf_refl G' (V G') x)) as H; cbn in H.
+      pose proof (lsp0_spec_le G' (spath_refl G' (V G') x)) as H; cbn in H.
       case_eq (lsp0 G' (V G) x x); [|intro e; rewrite e in H; cbn in H; lia].
       intros m Hm. unfold lsp; cbn; rewrite Hm. rewrite Hm in H.
       simpl in H.
@@ -1680,7 +1680,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Lemma lsp_G'_yx : (Some (- K) <= lsp G' y_0 x_0)%nbar.
     Proof.
       unshelve refine (transport (fun K => (Some K <= _)%nbar) _ (lsp0_spec_le _ _)).
-      - eapply spathOf_one; tas.
+      - eapply spath_one; tas.
         apply EdgeSet.add_spec. now left.
       - cbn. lia.
     Qed.
@@ -1694,8 +1694,8 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       apply EdgeSet.add_spec; now right.
     Qed.
 
-    Definition sto_G' {S u v} (p : SimplePathOf G S u v)
-      : SimplePathOf G' S u v.
+    Definition sto_G' {S u v} (p : SPath G S u v)
+      : SPath G' S u v.
     Proof.
       clear -p. induction p.
       - constructor.
@@ -1704,7 +1704,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Defined.
 
 
-    Lemma sto_G'_weight {S u v} (p : SimplePathOf G S u v)
+    Lemma sto_G'_weight {S u v} (p : SPath G S u v)
       : sweight (sto_G' p) = sweight p.
     Proof.
       clear.
@@ -1834,15 +1834,15 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
             * lia.
       Qed.
 
-      Definition from_G' {S u v} (q : SimplePathOf G' S u v)
-        : SimplePathOf G S u v + (SimplePathOf G S u y_0 * SimplePathOf G S x_0 v).
+      Definition from_G' {S u v} (q : SPath G' S u v)
+        : SPath G S u v + (SPath G S u y_0 * SPath G S x_0 v).
       Proof.
         clear -q. induction q.
         - left; constructor.
         - induction (Edge.eq_dec (y_0, K, x_0) (x, e.π1, y)) as [XX|XX].
           + right. split.
             * rewrite (fst_eq (fst_eq XX)); constructor.
-            * eapply SimplePathOf_sub.
+            * eapply SPath_sub.
               eapply DisjointAdd_Subset; eassumption.
               induction IHq as [IHq|IHq].
               -- now rewrite (snd_eq XX).
@@ -1854,11 +1854,11 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
               -- econstructor; try eassumption.
                   2: exact IHq.1.
                   exists e.π1. exact (EdgeSetFact.add_3 XX e.π2).
-              -- eapply SimplePathOf_sub; [|exact IHq.2].
+              -- eapply SPath_sub; [|exact IHq.2].
                   eapply DisjointAdd_Subset; eassumption.
       Defined.
 
-      Lemma from_G'_weight {S u v} (q : SimplePathOf G' S u v)
+      Lemma from_G'_weight {S u v} (q : SPath G' S u v)
         : sweight q = match from_G' q with
                       | inl q' => sweight q'
                       | inr (q1, q2) => sweight q1 + K + sweight q2
@@ -1870,7 +1870,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         - simpl.
           destruct (Edge.eq_dec (y_0, K, x_0) (x, e.π1, y)) as [XX|XX]; simpl.
           + destruct (fst_eq (fst_eq XX)). simpl.
-            inversion XX. rewrite weight_SimplePathOf_sub.
+            inversion XX. rewrite weight_SPath_sub.
             destruct (from_G' q) as [q'|[q1 q2]]; simpl.
             * destruct (snd_eq XX); cbn.
               destruct e as [e He]; cbn in *; lia.
@@ -1880,7 +1880,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
               unfold lsp in *. rewrite -> Hxs in XX; inversion XX.
           + destruct (from_G' q) as [q'|[q1 q2]]; simpl.
             * lia.
-            * rewrite weight_SimplePathOf_sub; lia.
+            * rewrite weight_SPath_sub; lia.
       Qed.
 
       Lemma lsp_pathOf {x y} (p : PathOf G x y) : ∑ n, lsp G x y = Some n.
@@ -1906,7 +1906,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       Global Instance HG' : acyclic_no_loop G'.
       Proof.
         apply acyclic_caract2. exact _. intros x Hx.
-        pose proof (lsp0_spec_le G' (spathOf_refl G' (V G') x)) as H; cbn in H.
+        pose proof (lsp0_spec_le G' (spath_refl G' (V G') x)) as H; cbn in H.
         case_eq (lsp0 G' (V G) x x); [|intro e; rewrite e in H; cbn in H; lia].
         intros m Hm. unfold lsp; cbn; rewrite Hm. rewrite Hm in H.
         simpl in H.
@@ -1924,7 +1924,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       Lemma lsp_G'_yx : (Some K <= lsp G' y_0 x_0)%nbar.
       Proof.
         unshelve refine (transport (fun K => (Some K <= _)%nbar) _ (lsp0_spec_le _ _)).
-        - eapply spathOf_one; tas.
+        - eapply spath_one; tas.
           apply EdgeSet.add_spec. now left.
         - cbn. lia.
       Qed.
@@ -1944,8 +1944,8 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
         apply EdgeSet.add_spec; now right.
       Qed.
 
-      Definition sto_G' {S u v} (p : SimplePathOf G S u v)
-        : SimplePathOf G' S u v.
+      Definition sto_G' {S u v} (p : SPath G S u v)
+        : SPath G' S u v.
       Proof.
         clear -p. induction p.
         - constructor.
@@ -1954,7 +1954,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       Defined.
 
 
-      Lemma sto_G'_weight {S u v} (p : SimplePathOf G S u v)
+      Lemma sto_G'_weight {S u v} (p : SPath G S u v)
         : sweight (sto_G' p) = sweight p.
       Proof.
         clear.
@@ -1993,7 +1993,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
           apply lsp0_spec_eq in Hk. destruct Hk as [p Hk].
           unshelve refine (transport (fun K => (Some K <= _)%nbar)
                                       _ (lsp0_spec_le _ _)).
-          eapply SimplePathOf_sub. shelve.
+          eapply SPath_sub. shelve.
           pose (p' := sto_G' p).
           unshelve econstructor.
           + exact (snodes G' p').
@@ -2002,11 +2002,11 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
             intro HH. eapply left, split in HH.
             destruct HH as [p1 _].
             apply from_G' in p1. destruct p1 as [p1|[p1 p2]].
-            all: epose proof (lsp0_spec_le _ (SimplePathOf_sub _ _ p1)) as HH;
+            all: epose proof (lsp0_spec_le _ (SPath_sub _ _ p1)) as HH;
               unfold lsp in Hxs; now erewrite Hxs in HH.
           + exists K. apply EdgeSet.add_spec. now left.
           + exact (reduce _ p').
-          + rewrite weight_SimplePathOf_sub. cbn.
+          + rewrite weight_SPath_sub. cbn.
             now rewrite weight_reduce sto_G'_weight Hk.
           Unshelve.
           2-3: now apply VSetProp.subset_remove_3.
@@ -2034,7 +2034,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
       VSet.Equal (VSet.add x (VSet.add x p)) (VSet.add x p).
     Proof. now sets. Qed.
 
-    Lemma SimplePathOf_sets {s x y} (p : SimplePathOf G s x y)
+    Lemma SPath_sets {s x y} (p : SPath G s x y)
       : x = y \/ VSet.In x s.
     Proof.
       induction p. left; auto.
@@ -2110,12 +2110,12 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Qed.
 
     Obligation Tactic := Program.Tactics.program_simpl.
-    Program Fixpoint sconcat {s s' x y z} (p : SimplePathOf G s x y) : Disjoint s s' -> 
-      SimplePathOf G s' y z -> SimplePathOf G (VSet.union s s') x z :=
-      match p in SimplePathOf _ s x y return Disjoint s s' -> SimplePathOf G s' y z -> SimplePathOf G (VSet.union s s') x z  with
-      | spathOf_refl _ _ _ => fun hin q => SimplePathOf_sub _ _ q
-      | @spathOf_step _ s s0 x y z' da e p => fun hin q =>
-        @spathOf_step _ (VSet.union s s') _ x y z _ e (@sconcat _ _ _ _ _ p _ q)
+    Program Fixpoint sconcat {s s' x y z} (p : SPath G s x y) : Disjoint s s' -> 
+      SPath G s' y z -> SPath G (VSet.union s s') x z :=
+      match p in SPath _ s x y return Disjoint s s' -> SPath G s' y z -> SPath G (VSet.union s s') x z  with
+      | spath_refl _ _ _ => fun hin q => SPath_sub _ _ q
+      | @spath_step _ s s0 x y z' da e p => fun hin q =>
+        @spath_step _ (VSet.union s s') _ x y z _ e (@sconcat _ _ _ _ _ p _ q)
       end.
       Next Obligation. sets. Qed.
       Next Obligation. 
@@ -2342,7 +2342,7 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
           * apply VSet.mem_spec in Vx.
             assert (x <> s G). 
             { destruct (V.eq_dec x (s G)) => //. rewrite e in Hxs.
-              epose proof (lsp0_spec_le G (spathOf_refl G (V G) (s G))).
+              epose proof (lsp0_spec_le G (spath_refl G (V G) (s G))).
               rewrite /lsp in Hxs. now rewrite Hxs in H. }
             pose (K := Z.succ (- n - n) ).
             unshelve epose proof (correct_labelling_lsp_G' _ _ _ _ Hxs K) as X;
@@ -2369,8 +2369,8 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
             destruct (V.eq_dec y y) as [?|?]; [|contradiction].
             destruct (V.eq_dec x y) as [Hy|Hy]. simpl in *. contradiction.
             simple refine (let YY := lsp0_spec_le G'
-                                (spathOf_step G' _ (V G) (s G) x x ?[XX] (K; _)
-                                             (spathOf_refl _ _ _)) in _).
+                                (spath_step G' _ (V G) (s G) x x ?[XX] (K; _)
+                                             (spath_refl _ _ _)) in _).
             [XX]: apply DisjointAdd_remove1. apply HI.
             apply EdgeSet.add_spec. left; reflexivity.
             clearbody YY; simpl in YY.

@@ -435,7 +435,7 @@ Proof.
   repeat split; cbn in *.
   1-2: inversion H. sets.
   apply VSet.singleton_spec in H. subst.
-  exists (paths_refl _ _). simpl. sq. lia.
+  exists (pathOf_refl _ _). simpl. sq. lia.
 Defined.
 
 Definition declared : Level.t -> LevelSet.t -> Prop := LevelSet.In.
@@ -704,7 +704,7 @@ Proof.
       simpl. apply Hi.
   - apply Hi.
   - cbn. intros l Hl. sq. destruct l.
-    exists (paths_refl _ _). sq. simpl. reflexivity.
+    exists (pathOf_refl _ _). sq. simpl. reflexivity.
     assert (He: EdgeSet.In (edge_of_level (Level s)) (wGraph.E (make_graph uctx))). {
       apply make_graph_E. left. exists (Level s). intuition. }
     unshelve eexists _.

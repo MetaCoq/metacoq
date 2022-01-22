@@ -1975,7 +1975,7 @@ Section CheckEnv.
   Next Obligation.
     destruct Σ as [Σ wfΣ G wfG]; simpl in *. sq.
     eapply nth_error_all in wfars; eauto; simpl in wfars.
-    destruct wfars as [s Hs]. red in Hs.
+    destruct wfars as [s Hs].
     clear X0; rewrite p in Hs.
     eapply PCUICSpine.inversion_it_mkProd_or_LetIn in Hs; eauto.
     now eapply inversion_Sort in Hs as [_ [wf _]].
@@ -1990,7 +1990,6 @@ Section CheckEnv.
     red in wfars. eapply nth_error_all in wfars; eauto; simpl in wfars.
     destruct wfars as [s Hs].
     apply eqb_eq in eqpars; apply eqb_eq in eqindices; subst.
-    red in Hs.
     rewrite split_at_firstn_skipn in Heq_anonymous.
     noconf Heq_anonymous.
     rewrite {1}H {1}H0 /app_context firstn_skipn.
@@ -2010,7 +2009,7 @@ Section CheckEnv.
     destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
     red. red.
     eapply nth_error_all in wfars; eauto; simpl in wfars.
-    destruct wfars as [s Hs]. red in Hs. now exists s.
+    destruct wfars as [s Hs]. now exists s.
   Qed.
 
   Next Obligation.

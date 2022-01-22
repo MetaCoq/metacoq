@@ -670,7 +670,7 @@ Proof.
   move=> wfΔ.
   eapply wf_local_app_inv in wfΔ as [wfΓ wfΔ].
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; try constructor.
-  * depelim wfΔ. repeat red in l, l0. red in l0.
+  * depelim wfΔ. repeat red in l, l0.
     specialize (IHΔ wfΔ).
     rewrite lift_context_snoc /lift_decl /= /map_decl /=.
     len. 

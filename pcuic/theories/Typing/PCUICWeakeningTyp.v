@@ -49,14 +49,14 @@ Proof.
   apply All_local_env_fold.
   eapply (All_local_env_impl_ind XΓ').
   intros Δ t [T|] IH; unfold lift_typing; simpl.
-  - intros Hf. red. rewrite -/(lift_context #|Γ''| 0 Δ).
+  - intros Hf. rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r. rewrite !lift_rename. 
     eapply (Hf (fun x => true)).
     split.
     + apply wf_local_app; auto.
       apply All_local_env_fold in IH. apply IH.
     + apply (weakening_renaming _ Γ Δ Γ'').
-  - intros [s Hs]; exists s. red.
+  - intros [s Hs]; exists s.
     rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r !lift_rename. 
     apply (Hs (fun _ => true)).

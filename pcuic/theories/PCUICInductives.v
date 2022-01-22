@@ -1432,7 +1432,7 @@ Proof.
     now rewrite /indsubst inds_length. }
   split.
   unfold projection_type in H0.
-  rewrite H0. exists s; auto. red.
+  rewrite H0. exists s; auto.
   rewrite -/indb in Hs.
   rewrite /projection_type' -/indb -/indsubst -/projsubst.
   rewrite Nat.add_1_r in Hs. exact Hs.
@@ -2369,7 +2369,7 @@ Proof.
   unshelve epose proof (on_inductive_inst isdecl _ _ _ cu); tea.
   rewrite -/(subst_context_let_expand _ _ _).
   rewrite subst_instance_app_ctx in X.
-  destruct X as [s Hs]. red in Hs.
+  destruct X as [s Hs].
   eapply type_it_mkProd_or_LetIn_inv in Hs as (idxs & inds & [sortsidx sortind leq]).
   set (idxctx := smash_context [] (ind_params mdecl)@[u] ,,, expand_lets_ctx (ind_params mdecl)@[u] (ind_indices idecl)@[u]) in *.
   have tyass : Σ ;;; Γ ,,, idxctx |- (decl_type iass)@[u] : tSort (ind_sort idecl)@[u].
@@ -2471,13 +2471,13 @@ Proof.
   unshelve epose proof (on_inductive_inst isdecl _ _ _ cu); tea.
   rewrite -/(subst_context_let_expand _ _ _).
   rewrite subst_instance_app_ctx in X.
-  destruct X as [s Hs]. red in Hs.
+  destruct X as [s Hs].
   eapply isType_it_mkProd_or_LetIn_app in Hs.
   2:eapply sp.
   rewrite subst_let_expand_it_mkProd_or_LetIn in Hs.
   eapply type_it_mkProd_or_LetIn_inv in Hs as (idxs & inds & [sortsidx sortind leq]).
   eexists (sort_of_products (subst_instance u (ind_sort idecl) :: idxs)
-    (Universe.super ps)); red.
+    (Universe.super ps)).
   set (idxctx := subst_context_let_expand _ _ _) in *.
   have tyass : Σ ;;; Γ ,,, idxctx |-
     subst (List.rev params) #|ind_indices idecl| (decl_type iass)@[u] : tSort (ind_sort idecl)@[u].

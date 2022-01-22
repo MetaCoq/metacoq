@@ -301,7 +301,7 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E)
 
   Import T E ET CS CT.
 
-  Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+  Parameter Inline typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
 
   Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
 

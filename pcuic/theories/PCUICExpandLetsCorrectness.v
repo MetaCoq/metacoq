@@ -3638,7 +3638,7 @@ Proof.
       destruct onc. red in on_ctype.
       destruct on_ctype as [s Hs].
       rewrite /type_of_constructor. forward Hs. eauto.
-      exists (s@[u]). red.
+      exists (s@[u]).
       rewrite (trans_subst (shiftnP #|ind_bodies mdecl| xpred0) (shiftnP 0 xpred0)).
       pose proof (declared_constructor_closed_gen_type isdecl).
       eapply closedn_on_free_vars. len in H0. now rewrite closedn_subst_instance.

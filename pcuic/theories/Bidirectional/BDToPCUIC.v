@@ -149,7 +149,7 @@ Section BDToPCUICTyping.
       auto.
     - destruct tu.
       apply c ; auto.
-      eexists. red. auto.
+      eexists. auto.
   Qed.
 
   Lemma bd_wf_local_rel Γ (wfΓ : wf_local Σ Γ) Γ' (all: wf_local_bd_rel Σ Γ Γ') :
@@ -174,7 +174,7 @@ Section BDToPCUICTyping.
     - destruct tu.
       apply c.
       1: by apply wf_local_app.
-      eexists. red.
+      eexists.
       apply s.
       by apply wf_local_app.
   Qed.
@@ -250,13 +250,12 @@ Section BDToPCUICTyping.
     
     - red ; intros ; econstructor ; eauto.
       + apply X2 ; auto.
-        eexists.
-        red. eauto.
+        eexists. eauto.
     
       + apply X4.
         constructor ; auto.
         * eexists. eauto.
-        * apply X2 ; auto. eexists. red. eauto.
+        * apply X2 ; auto. eexists. eauto.
     
     - red ; intros.
       eapply type_App' ; auto.

@@ -1539,7 +1539,7 @@ Proof.
       depelim p. destruct s as [[red <-]|[red <-]]; subst.
       exists tu.π1. now eapply t2.
       exact tu.
-      do 2 red. depelim p. destruct s as [[red <-]|[red <-]]; subst.
+      red. depelim p. destruct s as [[red <-]|[red <-]]; subst.
       specialize (t2 _ red). eapply type_equality; tea.
       exists tu.π1. apply t2. eapply (red_equality (le:=true)).
       now eapply closed_red1_red.
@@ -2223,7 +2223,7 @@ Proof.
         apply weaken_wf_local => //. eapply on_minductive_wf_params; tea. eapply isdecl. }
       eapply (type_equality (le:=false)); tea. 
       + eapply closed_context_conversion; tea.
-      + exists ps. red. exact wfcbcty'.
+      + exists ps. exact wfcbcty'.
       + eapply equality_mkApps; tea.
         { rewrite /ptm. cbn [preturn set_pparams].
           rewrite !lift_it_mkLambda_or_LetIn. 
@@ -2560,7 +2560,7 @@ Proof.
     { rewrite firstn_skipn.
       eapply (isType_subst_instance_decl _ _ _ _ _ u wf isdecl.p1.p1.p1) in projty; eauto.
       destruct projty as [s' Hs].
-      exists s'. red in Hs.
+      exists s'.
       rewrite /= /map_decl /= in Hs.
       eapply (weaken_ctx Γ) in Hs; auto.
       rewrite (subst_app_simpl [_]).

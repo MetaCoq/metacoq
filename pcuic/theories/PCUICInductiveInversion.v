@@ -1595,7 +1595,7 @@ Proof.
   (subst_instance u t)).
   { rewrite -subst_instance_app_ctx.
     destruct l as [s Hs]. exists s.
-    move: Hs. cbn. red.
+    move: Hs. cbn.
     now rewrite app_context_assoc. }
   depelim a.
   all:constructor.
@@ -3189,7 +3189,7 @@ Lemma wt_ind_app_variance {cf} {Σ} {wfΣ : wf Σ} {Γ ind u l}:
   (global_variance Σ (IndRef ind) #|l| = ind_variance (fst mdecl)).
 Proof.
   move => [s wat].
-  red in wat. eapply inversion_mkApps in wat as [ty [Hind Hargs]]; auto.
+  eapply inversion_mkApps in wat as [ty [Hind Hargs]]; auto.
   eapply inversion_Ind in Hind as [mdecl [idecl [wfΓ [decli [cu cum]]]]]; auto.
   eapply typing_spine_strengthen in Hargs; eauto. clear cum.
   exists (mdecl, idecl).
@@ -3320,9 +3320,7 @@ Proof.
   - now simpl.
   - intros T [s Hs].
     rewrite /= /mkProd_or_LetIn /=.
-    eapply IHΔ.
-    red in Hs.
-    exists s.
+    eapply IHΔ. exists s.
     have wf := typing_wf_local Hs.
     depelim wf.
     unfold PCUICTypingDef.typing.
@@ -3517,7 +3515,7 @@ Lemma isType_subst_all_rels {cf} {Σ} {wfΣ : wf Σ} {Γ Δ} {T} :
   isType Σ (Γ ,,, Δ) T ->
   isType Σ (Γ ,,, Δ) (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| T)).
 Proof.
-  intros [s Hs]; exists s. red in Hs |- *.
+  intros [s Hs]; exists s.
   pose proof (typing_wf_local Hs).
   eapply weakening_typing in Hs; tea.
   rewrite -(app_nil_l (lift_context _ _ _)) -/(app_context _ _) app_context_assoc in Hs.
@@ -3598,7 +3596,7 @@ Proof.
   eapply X. 2:pcuic. eauto with fvs.
 
   clear X.
-  destruct isty as [sort Hs]. red in Hs. exists sort. red.
+  destruct isty as [sort Hs]. exists sort.
   eapply (weakening_typing) in Hs; tea.
   eapply (substitution (Δ := [])) in Hs.
   2:{ epose proof (spine_subst_to_extended_list_k a). apply X. }
@@ -4027,7 +4025,7 @@ Proof.
               !to_extended_list_k_lift_context to_extended_list_k_subst
               PCUICLiftSubst.map_subst_instance_to_extended_list_k //. }
         rewrite /pre_case_branch_context /subst_let_expand_k.
-        eexists (subst_instance p.(puinst) (ind_sort idecl)). red.
+        eexists (subst_instance p.(puinst) (ind_sort idecl)).
         relativize #|cstr_args cdecl|.
         eapply (substitution (s := List.rev (pparams p)) (T := tSort _)); tea.
         eapply sppars.
@@ -4387,7 +4385,7 @@ Proof.
               !to_extended_list_k_lift_context to_extended_list_k_subst
               PCUICLiftSubst.map_subst_instance_to_extended_list_k //. }
         rewrite /pre_case_branch_context /subst_let_expand_k.
-        eexists (subst_instance p.(puinst) (ind_sort idecl)). red.
+        eexists (subst_instance p.(puinst) (ind_sort idecl)).
         relativize #|cstr_args cdecl|.
         eapply (substitution (s := List.rev (pparams p)) (T := tSort _)); tea.
         eapply sppars.

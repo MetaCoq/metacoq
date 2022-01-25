@@ -10,6 +10,8 @@ From Equations Require Import Equations.
 Set Equations Transparent.
 Set Default Goal Selector "!".
 
+Coercion ci_ind : case_info >-> inductive.
+
 (** * Functions related to the "compact" case representation *)
 
 (** Inductive substitution, to produce a constructors' type *)
@@ -42,8 +44,8 @@ Definition ind_predicate_context ind mdecl idecl : context :=
   let ictx := (expand_lets_ctx mdecl.(ind_params) idecl.(ind_indices)) in
   let indty := mkApps (tInd ind (abstract_instance mdecl.(ind_universes)))
     (to_extended_list (smash_context [] mdecl.(ind_params) ,,, ictx)) in
-  let inddecl := 
-    {| decl_name := 
+  let inddecl :=
+    {| decl_name :=
       {| binder_name := nNamed (ind_name idecl); binder_relevance := idecl.(ind_relevance) |};
        decl_body := None;
        decl_type := indty |}
@@ -65,7 +67,7 @@ Proof. rewrite /inst_case_context. now len. Qed.
 Hint Rewrite inst_case_context_length : len.
 
 Lemma inst_case_context_assumptions params puinst pctx :
-  context_assumptions (inst_case_context params puinst pctx) = 
+  context_assumptions (inst_case_context params puinst pctx) =
   context_assumptions pctx.
 Proof. rewrite /inst_case_context. now len. Qed.
 #[global]
@@ -84,6 +86,10 @@ Definition inst_case_branch_context (p : predicate term) (br : branch term) :=
 Lemma inst_case_branch_context_length p br :
   #|inst_case_branch_context p br| = #|br.(bcontext)|.
 Proof. rewrite /inst_case_branch_context. now len. Qed.
+
+Definition iota_red npar p args br :=
+  subst (List.rev (List.skipn npar args)) 0
+    (expand_lets (inst_case_branch_context p br) (bbody br)).
 
 Definition pre_case_predicate_context_gen ind mdecl idecl params puinst : context :=
   inst_case_context params puinst (ind_predicate_context ind mdecl idecl).
@@ -106,7 +112,7 @@ Lemma cstr_branch_context_length ind mdecl cdecl :
 Proof. rewrite /cstr_branch_context. now len. Qed.
 #[global]
 Hint Rewrite cstr_branch_context_length : len.
-    
+
 Definition pre_case_branch_context_gen ind mdecl cdecl params puinst : context :=
   inst_case_context params puinst (cstr_branch_context ind mdecl cdecl).
 
@@ -116,7 +122,7 @@ Definition case_branch_context_gen ind mdecl params puinst pctx cdecl :=
 Definition case_branch_context ind mdecl p bctx cdecl : context :=
   case_branch_context_gen ind mdecl p.(pparams) p.(puinst) bctx cdecl.
 Arguments case_branch_context _ _ _ !_.
-(* 
+(*
 Definition case_branch_context_gen ind mdecl params puinst bctx cdecl : context :=
   subst_context (List.rev params) 0
   (expand_lets_ctx (subst_instance puinst mdecl.(ind_params))
@@ -156,7 +162,7 @@ Definition case_branch_type ind mdecl idecl p (b : branch term) ptm i cdecl : co
 Arguments case_branch_type _ _ _ _ _ _ _ !_.
 
 Lemma case_branch_type_fst ci mdecl idecl p br ptm c cdecl :
-  (case_branch_type ci mdecl idecl p br ptm c cdecl).1 = 
+  (case_branch_type ci mdecl idecl p br ptm c cdecl).1 =
   (case_branch_context ci mdecl p (forget_types br.(bcontext)) cdecl).
 Proof. reflexivity. Qed.
 
@@ -166,15 +172,15 @@ Proof. reflexivity. Qed.
 Definition case_branches_types ind mdecl idecl p ptm : list (context * term) :=
   mapi (case_branch_type_gen ind mdecl idecl p.(pparams) p.(puinst) ptm) idecl.(ind_ctors). *)
 
-Lemma map2_length {A B C} (l : list A) (l' : list B) (f : A -> B -> C) : #|l| = #|l'| -> 
+Lemma map2_length {A B C} (l : list A) (l' : list B) (f : A -> B -> C) : #|l| = #|l'| ->
   #|map2 f l l'| = #|l|.
 Proof.
   induction l in l' |- *; destruct l' => /= //.
   intros [= eq]. now rewrite IHl.
 Qed.
 
-Lemma map2_set_binder_name_context_assumptions 
-  (l : list aname) (l' : context) : #|l| = #|l'| -> 
+Lemma map2_set_binder_name_context_assumptions
+  (l : list aname) (l' : context) : #|l| = #|l'| ->
   context_assumptions (map2 set_binder_name l l') = context_assumptions l'.
 Proof.
   induction l in l' |- *; destruct l' => /= //.
@@ -182,19 +188,19 @@ Proof.
 Qed.
 
 Definition idecl_binder idecl :=
-  {| decl_name := 
+  {| decl_name :=
     {| binder_name := nNamed idecl.(ind_name);
         binder_relevance := idecl.(ind_relevance) |};
      decl_body := None;
      decl_type := idecl.(ind_type) |}.
 
-Definition wf_predicate_gen mdecl idecl (pparams : list term) (pcontext : list aname) : Prop := 
+Definition wf_predicate_gen mdecl idecl (pparams : list term) (pcontext : list aname) : Prop :=
   let decl := idecl_binder idecl in
   (#|pparams| = mdecl.(ind_npars)) /\
-  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
+  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name))
     pcontext (decl :: idecl.(ind_indices))).
 
-Definition wf_predicate mdecl idecl (p : predicate term) : Prop := 
+Definition wf_predicate mdecl idecl (p : predicate term) : Prop :=
   wf_predicate_gen mdecl idecl p.(pparams) (forget_types p.(pcontext)).
 
 Definition wf_predicateb mdecl idecl (p : predicate term) : bool :=
@@ -202,7 +208,7 @@ Definition wf_predicateb mdecl idecl (p : predicate term) : bool :=
   eqb #|p.(pparams)| mdecl.(ind_npars)
   && forallb2 (fun na decl => eqb_binder_annot na decl.(decl_name))
     (forget_types p.(pcontext)) (decl :: idecl.(ind_indices)).
-  
+
 Lemma wf_predicateP mdecl idecl p : reflect (wf_predicate mdecl idecl p) (wf_predicateb mdecl idecl p).
 Proof.
   rewrite /wf_predicate /wf_predicate_gen /wf_predicateb.
@@ -213,11 +219,11 @@ Proof.
   * constructor; intros [H _]; contradiction.
 Qed.
 
-Definition wf_branch_gen cdecl (bctx : list aname) : Prop := 
-  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) 
+Definition wf_branch_gen cdecl (bctx : list aname) : Prop :=
+  (Forall2 (fun na decl => eq_binder_annot na decl.(decl_name))
     bctx cdecl.(cstr_args)).
-      
-Definition wf_branch cdecl (b : branch term) : Prop := 
+
+Definition wf_branch cdecl (b : branch term) : Prop :=
   wf_branch_gen cdecl (forget_types b.(bcontext)).
 
 Definition wf_branchb cdecl (b : branch term) : bool :=
@@ -230,15 +236,15 @@ Proof.
     (fun na decl => eqb_annot_reflect na decl.(decl_name))).
 Qed.
 
-Definition wf_branches_gen (ctors : list constructor_body) (brs : list (list aname)) : Prop := 
+Definition wf_branches_gen (ctors : list constructor_body) (brs : list (list aname)) : Prop :=
   Forall2 wf_branch_gen ctors brs.
-  
-Definition wf_branches idecl (brs : list (branch term)) : Prop := 
+
+Definition wf_branches idecl (brs : list (branch term)) : Prop :=
   Forall2 wf_branch idecl.(ind_ctors) brs.
 
 Definition wf_branchesb idecl (brs : list (branch term)) : bool :=
   forallb2 wf_branchb idecl.(ind_ctors) brs.
-  
+
 Lemma wf_branchesP idecl brs : reflect (wf_branches idecl brs) (wf_branchesb idecl brs).
 Proof.
   rewrite /wf_branches /wf_branches_gen /wf_branchesb.
@@ -268,7 +274,7 @@ Proof.
   unfold case_predicate_context, case_predicate_context_gen, pre_case_predicate_context_gen.
   pose proof (Forall2_length (proj2 hl)). simpl in H.
   rewrite -H.
-  rewrite map2_length; len. all:len. 
+  rewrite map2_length; len. all:len.
   - now len in H.
   - now len in H.
 Qed.
@@ -317,14 +323,14 @@ Qed.
 
 Lemma case_branch_context_assumptions {ind mdecl p br cdecl} :
   wf_branch cdecl br ->
-  context_assumptions (case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl) = 
+  context_assumptions (case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl) =
   context_assumptions cdecl.(cstr_args).
 Proof.
   intros hl.
   unfold case_branch_context, case_branch_context_gen, pre_case_branch_context_gen; len.
   apply Forall2_length in hl.
   rewrite /expand_lets_ctx /expand_lets_k_ctx. len.
-  rewrite map2_set_binder_name_context_assumptions. 
+  rewrite map2_set_binder_name_context_assumptions.
   - now rewrite hl; len.
   - len. rewrite /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx. now len.
 Qed.
@@ -357,3 +363,59 @@ Proof.
   destruct nth_error eqn:e => //.
   intros [= -> ->]. now rewrite e.
 Qed.
+
+(** *** Helper functions for reduction/conversion *)
+
+Definition fix_subst (l : mfixpoint term) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tFix l n :: aux n
+      end
+  in aux (List.length l).
+
+Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cofix_subst (l : mfixpoint term) :=
+  let fix aux n :=
+      match n with
+      | 0 => []
+      | S n => tCoFix l n :: aux n
+      end
+  in aux (List.length l).
+
+Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition is_constructor n ts :=
+  match List.nth_error ts n with
+  | Some a => isConstruct_app a
+  | None => false
+  end.
+
+Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
+Proof.
+  unfold fix_subst. generalize (tFix mfix). intros.
+  induction mfix; simpl; auto.
+Qed.
+
+Lemma cofix_subst_length mfix : #|cofix_subst mfix| = #|mfix|.
+Proof.
+  unfold cofix_subst. generalize (tCoFix mfix). intros.
+  induction mfix; simpl; auto.
+Qed.
+
+Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
+Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
+
+#[global]
+Hint Rewrite subst_instance_length 
+  fix_context_length fix_subst_length cofix_subst_length : len.
+

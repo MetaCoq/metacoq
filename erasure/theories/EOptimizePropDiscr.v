@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program.
 From MetaCoq.Template Require Import config utils Kernames.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICWeakeningEnv
+     PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICTyping PCUICInversion PCUICGeneration
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
@@ -272,7 +272,8 @@ Section optimize.
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
-    - destruct ETyping.is_propositional_ind as [[|]|] => /= //.
+    - unfold on_snd; cbn.
+      destruct ETyping.is_propositional_ind as [[|]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       * f_equal; auto.
       * depelim X. simpl in *.
@@ -283,7 +284,8 @@ Section optimize.
         solve_all. eapply All_repeat => //.
         now eapply closed_optimize.
       * depelim X. depelim X.
-        f_equal; eauto. f_equal; eauto. f_equal; eauto.
+        f_equal; eauto. f_equal; eauto.
+        f_equal; eauto.
         f_equal; eauto. f_equal; eauto.
         rewrite map_map_compose; solve_all.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
@@ -826,7 +828,7 @@ Proof.
     red in o0.
     rewrite [forallb _ _](IHer wf).
     red in H. destruct cb as [ty []]; cbn in *.
-    unshelve eapply PCUICClosed.subject_closed in o0. eapply wf.
+    unshelve eapply PCUICClosedTyp.subject_closed in o0. eapply wf.
     eapply erases_closed in H; tea. rewrite H //.
     destruct H.
     cbn. intros. red in wf. depelim wf.
@@ -863,6 +865,6 @@ Proof.
   sq. apply optimize_correct; tea.
   rewrite -Ht'.
   eapply (erase_global_closed Σ (term_global_deps t') swfΣ); tea.
-  clear HΣ'. eapply PCUICClosed.subject_closed in wt.
+  clear HΣ'. eapply PCUICClosedTyp.subject_closed in wt.
   eapply erases_closed in H; tea.  
 Qed.

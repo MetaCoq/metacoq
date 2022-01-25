@@ -1,10 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICInduction 
-     PCUICContextRelation PCUICReduction PCUICCases PCUICWeakening
-     PCUICTyping PCUICOnFreeVars PCUICRename PCUICInst PCUICSubstitution.
+     PCUICContextRelation PCUICReduction PCUICCases PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICTyping PCUICOnFreeVars PCUICSubstitution
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv.
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
@@ -15,7 +16,7 @@ Set Default Goal Selector "!".
 
 Section CtxReduction.
   Context {cf : checker_flags}.
-  Context {Σ : global_env}.
+  Context {Σ : global_env_ext}.
   Context (wfΣ : wf Σ).
 
   Lemma red_prod_alt Γ na M M' N N' :
@@ -326,7 +327,7 @@ Section CtxReduction.
   Proof.
     intros r.
     eapply All2_fold_app_inv => //.
-    move: (All2_fold_length r). len. lia.
+    move: (All2_fold_length r). len.
   Qed.
     
   (* 

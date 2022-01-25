@@ -819,3 +819,43 @@ Proof.
   pose proof (destArity_spec ctx T) as H.
   intro e; now rewrite e in H.
 Qed.
+
+(** Standard substitution lemma for a context with no lets. *)
+
+Inductive nth_error_app_spec {A} (l l' : list A) (n : nat) : option A -> Type :=
+| nth_error_app_spec_left x : 
+  nth_error l n = Some x -> 
+  n < #|l| ->
+  nth_error_app_spec l l' n (Some x)
+| nth_error_app_spec_right x :
+  nth_error l' (n - #|l|) = Some x ->
+  #|l| <= n < #|l| + #|l'| ->
+  nth_error_app_spec l l' n (Some x)
+| nth_error_app_spec_out : #|l| + #|l'| <= n -> nth_error_app_spec l l' n None.
+
+Lemma nth_error_appP {A} (l l' : list A) (n : nat) : nth_error_app_spec l l' n (nth_error (l ++ l') n).
+Proof.
+  destruct (Nat.ltb n #|l|) eqn:lt; [apply Nat.ltb_lt in lt|apply Nat.ltb_nlt in lt].
+  * rewrite nth_error_app_lt //.
+    destruct (snd (nth_error_Some' _ _) lt) as [x eq].
+    rewrite eq.
+    constructor; auto.
+  * destruct (Nat.ltb n (#|l| + #|l'|)) eqn:ltb'; [apply Nat.ltb_lt in ltb'|apply Nat.ltb_nlt in ltb'].
+    + rewrite nth_error_app2; try lia.
+      destruct nth_error eqn:hnth.
+      - constructor 2; auto; try lia.
+      - constructor.
+        eapply nth_error_None in hnth. lia.
+    + case: nth_error_spec => //; try lia.
+      { intros. len in l0. lia. }
+      len. intros. constructor. lia.
+Qed.
+
+Lemma nth_error_app_context (Γ Δ : context) (n : nat) : 
+  nth_error_app_spec Δ Γ n (nth_error (Γ ,,, Δ) n).
+Proof.
+  apply nth_error_appP.
+Qed.
+
+
+

@@ -130,7 +130,7 @@ Qed.
 
 Definition eq_level l1 l2 :=
   match l1, l2 with
-  | Level.lSet, Level.lSet => true
+  | Level.lzero, Level.lzero => true
   | Level.Level s1, Level.Level s2 => eqb s1 s2
   | Level.Var n1, Level.Var n2 => eqb n1 n2
   | _, _ => false
@@ -323,6 +323,7 @@ Definition eq_cast_kind (c c' : cast_kind) : bool :=
   | VmCast, VmCast
   | NativeCast, NativeCast
   | Cast, Cast => true
+  | RevertCast, RevertCast => true
   | _, _ => false
   end.
 
@@ -334,13 +335,13 @@ Next Obligation.
 Defined.
 
 (* TODO: move *)
-Lemma eq_universe_iff (u v : Universe.t0) :
+Lemma eq_universe_iff (u v : Universe.nonEmptyUnivExprSet) :
   u = v <-> u = v :> UnivExprSet.t.
 Proof.
   destruct u, v; cbn; split. now inversion 1.
   intros ->. f_equal. apply uip.
 Qed.
-Lemma eq_universe_iff' (u v : Universe.t0) :
+Lemma eq_universe_iff' (u v : Universe.nonEmptyUnivExprSet) :
   u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
 Proof.
   etransitivity. apply eq_universe_iff.
@@ -352,7 +353,7 @@ Qed.
 #[global] Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
 Proof. intros e e'. repeat decide equality. Qed.
 
-#[global] Instance eq_dec_univ0 : EqDec Universe.t0.
+#[global] Instance eq_dec_univ0 : EqDec Universe.nonEmptyUnivExprSet.
 Proof.
   intros u v.
   assert (H : {UnivExprSet.elements u = UnivExprSet.elements v}

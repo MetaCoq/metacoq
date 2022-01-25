@@ -19,7 +19,6 @@ PCUICAstUtils
 EqDecInstances
 PCUICEquality
 PCUICTyping
-PCUICReduction
 PCUICInduction
 PCUICWfUniverses
 PCUICNormal

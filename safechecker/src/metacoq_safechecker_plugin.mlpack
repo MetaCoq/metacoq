@@ -20,7 +20,6 @@ PCUICReflect
 PCUICEquality
 PCUICTyping
 PCUICWfUniverses
-PCUICReduction
 PCUICNormal
 PCUICPosition
 PCUICPretty

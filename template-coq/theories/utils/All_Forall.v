@@ -1885,6 +1885,26 @@ Proof.
   induction 1 ; cbn ; eauto.
 Qed.
 
+Lemma All2_rev (A B : Type) (P : A -> B -> Type) l l' :
+  All2 P l l' ->
+  All2 P (List.rev l) (List.rev l').
+Proof.
+  induction 1. constructor.
+  simpl. eapply All2_app; auto.
+Qed.
+
+Lemma All_All2_flex {A B} (P : A -> Type) (Q : A -> B -> Type) l l' :
+  All P l ->
+  (forall x y, In y l' -> P x -> Q x y) ->
+  length l' = length l ->
+  All2 Q l l'.
+Proof.
+  intros H1 H2 Hl.
+  induction H1 in l', H2, Hl |- *; destruct l'; depelim Hl.
+  - econstructor.
+  - econstructor; firstorder. eapply IHAll; firstorder. 
+Qed.
+
 Lemma All2_impl_In {A B} {P Q : A -> B -> Type} {l l'} :
   All2 P l l' ->
   (forall x y, In x l -> In y l' -> P x y -> Q x y) ->
@@ -2179,14 +2199,6 @@ Proof.
   intros A B R l l' n h.
   induction h in n |- *.
   all: destruct n ; try econstructor ; eauto.
-Qed.
-
-Lemma All2_rev (A : Type) (P : A -> A -> Type) (l l' : list A) :
-  All2 P l l' ->
-  All2 P (List.rev l) (List.rev l').
-Proof.
-  induction 1. constructor.
-  simpl. eapply All2_app; auto.
 Qed.
 
 Lemma All2_right_triv {A B} {l : list A} {l' : list B} P :

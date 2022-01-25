@@ -1,10 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require CMorphisms.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
-     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
-     PCUICReflect PCUICInduction PCUICClosed PCUICDepth PCUICOnFreeVars
-     PCUICRename PCUICInst PCUICParallelReduction PCUICWeakening.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICSize PCUICLiftSubst
+     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction 
+     PCUICReflect PCUICInduction PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICDepth PCUICOnFreeVars
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICParallelReduction.
+     
 
 Require Import ssreflect ssrbool.
 Require Import Morphisms CRelationClasses.
@@ -804,8 +806,8 @@ Section Rho.
   { | construct_cofix_construct ind' c u with eq_inductive ci.(ci_ind) ind' := 
     { | true with inspect (nth_error brs c) => 
         { | exist (Some br) eqbr =>
-            if eqb #|skipn (ci_npar ci) args| 
-              (context_assumptions (bcontext br)) then
+            if eqb #|args| 
+              (ci_npar ci + context_assumptions (bcontext br)) then
               let p' := rho_predicate_wf rho Γ p _ in 
               let args' := map_terms rho Γ args _ in 
               rho_iota_red_wf rho Γ p' ci.(ci_npar) args' br _
@@ -1161,7 +1163,7 @@ Section Rho.
       if eq_inductive ci.(ci_ind) ind' then
         match nth_error brs c with
         | Some br => 
-          if eqb #|skipn (ci_npar ci) args| (context_assumptions (bcontext br)) then
+          if eqb #|args| (ci_npar ci + context_assumptions (bcontext br)) then
             let args' := map (rho Γ) args in 
             rho_iota_red Γ p' ci.(ci_npar) args' br
           else tCase ci p' (rho Γ x) (map (rho_br Γ p') brs)
@@ -1875,7 +1877,7 @@ Section Rho.
 
   Lemma rename_rho_iota_red Γ Δ r p P pars args brs br c :
     renaming Γ Δ r ->
-    #|skipn pars args| = context_assumptions br.(bcontext) ->
+    #|args| = pars + context_assumptions br.(bcontext) ->
     forallb (on_free_vars P) (pparams p) ->
     closedn_ctx #|pparams p| br.(bcontext) ->
     on_free_vars (shiftnP #|bcontext br| P) (bbody br) ->
@@ -1897,8 +1899,11 @@ Section Rho.
     rewrite rename_subst0 map_rev map_skipn. f_equal.
     rewrite List.rev_length /expand_lets /expand_lets_k.
     rewrite rename_subst0. len.
-    rewrite shiftn_add -hlen Nat.add_comm rename_shiftnk.
-    rewrite hlen.
+    rewrite skipn_length; try lia. 
+    rewrite hlen. 
+    replace (pars + context_assumptions (bcontext br) - pars)
+      with (context_assumptions (bcontext br)) by lia.    
+    rewrite shiftn_add Nat.add_comm rename_shiftnk.
     relativize (context_assumptions _); [erewrite rename_extended_subst|now len].
     assert ((map (rho Δ) (map (rename r) (pparams p)) = map (rename r) (map (rho Γ) (pparams p)))).
     destruct hpred as [? _].
@@ -2136,7 +2141,7 @@ Section Rho.
           rewrite /= !rho_app_construct /= !rename_mkApps in H.
           simpl in H. rewrite rho_app_construct in H.
           apply mkApps_eq_inj in H as [_ Heq] => //.
-          now rewrite skipn_map_length.
+          len; eauto.  
           { cbn. len. eapply nth_error_forallb in p4; tea.
             move: p4 => /= /andP[]. rewrite test_context_k_closed_on_free_vars_ctx.
             now rewrite closedn_ctx_on_free_vars. }
@@ -2698,7 +2703,11 @@ Section Rho.
       eapply All2_nth_error_Some_right in X2 as [t' [hnth [? [[? ?] ?]]]]; tea.
       eapply nth_error_forallb in hbrs; tea. cbn in hbrs.
       move/andP: hbrs => [] hctx' hbody.
-      eapply on_free_vars_expand_lets_k. now len.
+      rewrite skipn_length; try lia. rewrite H1. 
+      replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
+      with (context_assumptions (bcontext br)) by lia.   
+      eapply on_free_vars_expand_lets_k.
+      now len.
       eapply on_free_vars_ctx_inst_case_context; trea; len; eauto with fvs.
       solve_all.
       rewrite -e. 
@@ -3603,7 +3612,7 @@ Section Rho.
     now rewrite -> shiftnP_xpredT in onpctx.
     eapply pred1_subst_consn; tea; eauto with fvs.
     - len. now rewrite (All2_length a).
-    - len. now rewrite (All2_length a).
+    - len. rewrite context_assumptions_fake_params. now rewrite (All2_length a).
     - now eapply All2_rev.
   Qed.
 
@@ -3767,9 +3776,11 @@ Section Rho.
         rewrite on_ctx_free_vars_xpredT. eapply on_free_vars_ctx_inst_case_context; trea. }
       intuition.
       forward X3. now rewrite -> shiftnP_xpredT in clbod.
-      rewrite breq -heq_length !List.skipn_length.
       pose proof (All2_length X1).
-      rewrite H eqb_refl.
+      rewrite H. rewrite heq_length. 
+      replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
+       with (context_assumptions (bcontext br)) by lia.   
+      rewrite breq eqb_refl.
       rewrite !subst_inst.
       assert (forallb (on_free_vars xpredT) args1).
       { solve_all; eauto with fvs. }
@@ -3809,7 +3820,8 @@ Section Rho.
         now len.
       + rewrite -subst_inst.
         eapply on_free_vars_subst. rewrite forallb_rev forallb_skipn //; tea.
-        eapply on_free_vars_expand_lets_k => //. len. tea.
+        eapply on_free_vars_expand_lets_k => //. len. 
+        rewrite skipn_length; lia.
         rewrite /inst_case_branch_context.
         eapply on_free_vars_ctx_inst_case_context; trea; len; solve_all. eauto with fvs.
         rewrite -breq -(All2_length X2) //.
@@ -3822,7 +3834,7 @@ Section Rho.
         eapply All2_rev in X1.
         eapply pred1_subst_consn; tea. eauto with fvs.
         rewrite forallb_rev forallb_skipn //. len. rewrite !List.skipn_length; lia.
-        len. rewrite List.skipn_length. rewrite breq. rewrite List.skipn_length in heq_length. lia.
+        len. rewrite breq List.skipn_length H heq_length. lia.  
         len. congruence.
 
     - (* Fix reduction *)
@@ -4022,8 +4034,10 @@ Section Rho.
       now eapply pred1_refl_gen.
 
     - simpl in *. simp rho; simpl.
-      destruct (lookup_env Σ c) eqn:Heq; pcuic. destruct g; pcuic.
-      destruct cst_body eqn:Heq'; pcuic.
+      destruct (lookup_env Σ c) eqn:Heq. 2:{ constructor; auto. }
+      destruct g. 2:{ constructor; auto. }
+      destruct c0. destruct cst_body0 eqn:Heq'. pcuic.
+      constructor; auto.
       
     - simpl in *. inv_on_free_vars. rewrite rho_app_proj.
       rewrite decompose_app_mkApps; auto.
@@ -4210,7 +4224,7 @@ Section Rho.
         econstructor. 1-2:tea.
         * erewrite nth_error_map, hbr. instantiate (1 := rho_br Γ'0 (rho_predicate Γ'0 p0) b).
           reflexivity.
-        * now len.
+        * len.
         * solve_all.
         * solve_all. eapply All2_map_right_inv in hbrs. solve_all.
           eapply on_contexts_app_inv => //. rewrite -heq_puinst.
@@ -4500,4 +4514,4 @@ Proof.
   split; eapply triangle; auto.
 Qed.
 
-Print Assumptions pred1_diamond.
+(* Print Assumptions pred1_diamond. *)

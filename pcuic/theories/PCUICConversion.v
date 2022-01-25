@@ -1,13 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSubst PCUICTyping
-     PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction
-     PCUICConfluence PCUICClosed PCUICParallelReductionConfluence PCUICEquality
-     PCUICSigmaCalculus PCUICContextReduction
-     PCUICContextConversion PCUICWeakening PCUICUnivSubst
-     PCUICWellScopedCumulativity PCUICUnivSubstitution.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSubst PCUICTyping PCUICOnOne
+     PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction PCUICOnFreeVars
+     PCUICConfluence PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICParallelReductionConfluence PCUICEquality
+     PCUICSigmaCalculus PCUICContextReduction PCUICContextConversion
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst
+     PCUICWellScopedCumulativity PCUICUnivSubstitutionConv PCUICInduction.
 
+     (* PCUICContextConversion  *)
 Require Import CRelationClasses.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
@@ -36,7 +37,7 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 #[global]
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
-Derive Signature for conv cumul assumption_context.
+Derive Signature for cumulAlgo0 assumption_context.
 Derive Signature for clos_refl_trans_1n.
 
 Require Import CMorphisms.
@@ -59,23 +60,45 @@ Proof.
   eapply All2_symP; tc.
 Qed.
 
+
+Lemma genconv1_is_open_term  {cf:checker_flags} {le} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) x y : 
+  genconv1 Σ Γ le x y ->
+  is_closed_context Γ ->
+    is_open_term Γ x ->
+    is_open_term Γ y.
+Proof.
+  induction 1; intros; eauto.
+  - destruct r as [[r|r]|r].
+    + eauto with fvs. 
+    + eauto with fvs. 
+    + eapply eq_term_upto_univ_napp_on_free_vars; eauto.
+Defined.
+
 Section EquivalenceConvCumulDefs.
 
   Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
-  (** We need conv1 to be defined on closed terms *)
-  (*Proposition conv_conv1 (M N : open_term Γ) :
-    conv1 Σ Γ M N <~> conv Σ Γ M N.
+  
+  Proposition genconv_genconv1 {le} (M N : open_term Γ) :
+    genconv1 Σ Γ le M N <~> Σ ;;; Γ ⊢ M ≤[le] N.
   Proof.
     split; intro H.
     - destruct M as [M HM], N as [N HN].
       cbn in H |- *.
       induction H in HM, HN |- *.
       + destruct r as [[r|r]|r].
-        * eapply red_conv; eauto.
-        * now econstructor 3; tea.
-        * now constructor.
-      + reflexivity.
-      + eapply equality_trans. conv_trans. etransitivity; tea.
+        * eapply red_conv. apply closed_red1_red. eauto. 
+        * eapply red_equality_right.
+          ** apply closed_red1_red. apply r.
+          ** refine (equality_refl' Γ (exist x _)). destruct r. eapply red1_is_open_term; eauto.
+        * destruct Γ; econstructor 1; eauto.
+      + exact (equality_refl' Γ (exist x HM)).
+      + etransitivity. 
+        ** apply IHclos_refl_trans1.
+           *** destruct Γ; eauto.
+           *** eapply genconv1_is_open_term; destruct Γ; eauto. 
+        ** apply IHclos_refl_trans2.
+           *** eapply genconv1_is_open_term; destruct Γ; eauto. 
+           *** destruct Γ; eauto.
     - induction H.
       + constructor. now right.
       + etransitivity; tea.
@@ -84,27 +107,150 @@ Section EquivalenceConvCumulDefs.
         constructor. left. now right.
   Qed.
 
-
-  Proposition cumul_cumul1 M N :
-    cumul1 Σ Γ M N <~> cumul Σ Γ M N.
-  Proof.
-    split; intro H.
-    - induction H.
-      + destruct r as [[r|r]|r].
-        * eapply red_cumul; eauto.
-        * now econstructor 3; tea.
-        * now constructor.
-      + reflexivity.
-      + etransitivity; tea.
-    - induction H.
-      + constructor. now right.
-      + etransitivity; tea.
-        constructor. left. now left.
-      + etransitivity; tea.
-        constructor. left. now right.
-  Qed.*)
-
 End EquivalenceConvCumulDefs.
+
+#[global] Existing Instance All2_reflexivity.
+
+Section CumulSpecIsCumulAlgo.
+
+  Context {cf:checker_flags} (Σ : global_env_ext).
+
+  Proposition red1_cumulSpec (Γ : context) (M N : term) :
+    Σ ;;; Γ |- M ⇝ N -> Σ ;;; Γ |- M =s N.
+  Proof. 
+  intro r. induction r using red1_ind_all; try (econstructor; eauto; reflexivity).
+  - eapply cumul_Case; try reflexivity. 
+    * destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity.  
+      change (fun t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ Γ).
+      induction X; econstructor; try reflexivity; try eassumption. exact (p.2).
+    * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity.
+  - eapply cumul_Case; try reflexivity. 
+    * change (fun Γ t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ). 
+      destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity. 
+  - eapply cumul_Case; try reflexivity. 
+    * change (fun Γ t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ).
+      destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * eauto.
+    * apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity. 
+  - eapply cumul_Case; try reflexivity. 
+    * change (fun Γ t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ).
+      destruct p as [p x]. cbn in *. try repeat split; cbn; try reflexivity; eauto. 
+    * induction X; econstructor.
+      + destruct p0 as [ [ _ hbody ] hhd ]. rewrite hhd. split; eauto. reflexivity.  
+      + apply All2_reflexivity. eapply Prod_reflexivity; intro x; reflexivity.
+      + split; reflexivity. 
+      + exact IHX.           
+  - eapply cumul_Evar.
+    change (fun t u => Σ.1 ;;; Γ ⊢ t ≤s[eq_universe Σ] u) with (convSpec Σ Γ).
+    induction X; econstructor; eauto; try reflexivity.  
+    * exact p.2.
+  - eapply cumul_Fix. set (mfixAbs := mfix0). unfold mfixAbs at 2. clearbody mfixAbs. 
+    induction X; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.
+  - eapply cumul_Fix. set (mfixAbs := mfix0). unfold mfixAbs at 2. 
+    assert (Habs : mfixAbs = mfix0) by reflexivity. clearbody mfixAbs. 
+    induction X; destruct Habs; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.   
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.  
+  - eapply cumul_CoFix. set (mfixAbs := mfix0). unfold mfixAbs at 2. clearbody mfixAbs. 
+    induction X; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.
+  - eapply cumul_CoFix. set (mfixAbs := mfix0). unfold mfixAbs at 2. 
+    assert (Habs : mfixAbs = mfix0) by reflexivity. clearbody mfixAbs. 
+    induction X; destruct Habs; econstructor; eauto; try reflexivity.
+    * destruct p as [ [ _ hdtype ] e ]. 
+      pose proof (erarg := snd_eq e). pose proof (edbody := snd_eq (fst_eq e)). 
+      pose proof (edname := fst_eq (fst_eq e)). clear e. destruct erarg, edbody, edname.  
+      repeat split; eauto ; try reflexivity.   
+    * apply All2_reflexivity. repeat eapply Prod_reflexivity; intro x; reflexivity.
+    * repeat split; reflexivity.
+  Defined.       
+
+  Proposition convSpec_cumulSpec (Γ : context) (M N : term) :
+    Σ ;;; Γ |- M =s N -> Σ ;;; Γ |- M <=s N.
+  Proof. 
+    intro Hconv. apply cumul_Sym. apply cumul_Sym. assumption.
+  Defined.    
+
+  Proposition cumul_mkApps (Γ : context) {Re Rle} M N args args' :
+    cumulSpec0 Σ Re Rle Γ M N  -> 
+    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
+    cumulSpec0 Σ Re Rle Γ (mkApps M args) (mkApps N args').
+  Proof.
+    intros HMN Hargs. revert M N HMN; induction Hargs; intros.
+    - eassumption.
+    - cbn. eapply IHHargs. eapply cumul_App; eauto.
+  Defined.           
+
+  Ltac try_with_nil := match goal with H : _ |- _ => eapply (H _ _ _ _ [] []); eauto end.
+
+  Proposition eq_term_upto_univ_napp_cumulSpec (Γ : context) {Re Rle} M N args args' :
+    eq_term_upto_univ_napp Σ Re Rle #|args| M N -> 
+    All2 (cumulSpec0 Σ Re Re Γ) args args' ->
+    cumulSpec0 Σ Re Rle Γ (mkApps M args) (mkApps N args').
+  Proof.  
+    induction M in Γ , Re, Rle, N , args, args' |- * using term_forall_list_ind ; intros H Hargs; depelim H; 
+      try (solve [eapply cumul_mkApps; eauto ; econstructor; eauto; try_with_nil]).
+    - apply cumul_mkApps; eauto. eapply All2_All_mix_left in X. 2: tea.
+      eapply cumul_Evar. eapply All2_impl; try exact X. cbv beta. intuition. 
+      try_with_nil.
+    - eapply (IHM1 _ _ _ _ (M2 :: args) (u' :: args')); eauto. econstructor; eauto. try_with_nil.
+    - eapply cumul_Ind; eauto.
+    - eapply cumul_Construct; eauto.
+    - apply cumul_mkApps; eauto. unfold tCasePredProp in X. destruct X as [ X [ Xctx Xreturn ]].
+      eapply cumul_Case.
+      * unfold cumul_predicate, eq_predicate in *. repeat split.
+        + destruct e. eapply All2_All_mix_left in X. 2: tea.
+          eapply All2_impl. 1: eassumption. cbn. intuition.
+          try_with_nil.
+        + intuition.
+        + intuition.
+        + try_with_nil. intuition.
+      * try_with_nil.
+      * unfold tCaseBrsProp in X0. eapply All2_All_mix_left in X0. 2: tea.
+        eapply All2_impl. 1: eassumption. cbn. intuition.
+        try_with_nil.
+    - apply cumul_mkApps; eauto. eapply cumul_Fix. unfold tFixProp in *.
+      eapply All2_All_mix_left in X. 2: tea. eapply All2_impl; try exact X. cbv beta. intuition; try_with_nil.
+    - apply cumul_mkApps; eauto. eapply cumul_CoFix. unfold tFixProp in *.
+      eapply All2_All_mix_left in X. 2: tea. eapply All2_impl; try exact X. cbv beta. intuition; try_with_nil.
+  Defined.
+  
+  Proposition eq_term_upto_univ_cumulSpec (Γ : context) {Re Rle} M N :
+    eq_term_upto_univ Σ Re Rle M N -> cumulSpec0 Σ Re Rle Γ M N.
+  Proof.
+    intros. eapply (eq_term_upto_univ_napp_cumulSpec _ _ _ [] []); eauto. 
+  Defined. 
+
+  Proposition cumulAlgo_cumulSpec {le} (Γ : context) (M N : term) :
+    Σ ;;; Γ ⊢ M ≤[le] N -> if le then Σ ;;; Γ |- M <=s N else Σ ;;; Γ |- M =s N.
+  Proof.  
+  induction 1.
+  - destruct le; eapply eq_term_upto_univ_cumulSpec; eauto. 
+  - destruct le. 
+    * eapply cumul_Trans; eauto. apply convSpec_cumulSpec. apply red1_cumulSpec ; assumption.
+    * eapply cumul_Trans; eauto. apply red1_cumulSpec ; assumption.
+  - destruct le. 
+    * eapply cumul_Trans; eauto. apply cumul_Sym. apply red1_cumulSpec ; assumption.
+    * eapply cumul_Trans; eauto. apply cumul_Sym. apply red1_cumulSpec ; assumption.
+  Defined. 
+
+End CumulSpecIsCumulAlgo.
 
 (* TODO MOVE *)
 Fixpoint isFixApp t : bool :=
@@ -123,8 +269,6 @@ Proof.
   - cbn. reflexivity.
   - cbn. rewrite IHl. reflexivity.
 Qed.
-
-Import PCUICOnFreeVars.
 
 Lemma on_fvs_prod {n na M1 M2} : 
   on_free_vars (shiftnP n xpred0) (tProd na M1 M2) = 
@@ -152,27 +296,9 @@ Proof.
   now len.
 Qed.
 
-Lemma is_open_term_closed (Γ : context) t :
-  closedn #|Γ| t = is_open_term Γ t.
-Proof.
-  rewrite closedP_on_free_vars.
-  eapply on_free_vars_ext.
-  now rewrite closedP_shiftnP.
-Qed.
-
-Lemma is_closed_ctx_closed (Γ : context) :
-  closed_ctx Γ = is_closed_context Γ.
-Proof.
-  rewrite closedn_ctx_on_free_vars //.
-Qed.
-
-#[global]
-Hint Rewrite is_open_term_closed is_closed_ctx_closed : fvs.
-
 #[global] Hint Resolve on_free_vars_shiftnP_S : fvs.
 #[global] Hint Rewrite @on_fvs_prod @on_fvs_lambda @on_fvs_letin : fvs.
 #[global] Hint Rewrite @on_free_vars_ctx_snoc : fvs.
-#[global] Hint Extern 4 => progress autorewrite with fvs : fvs.
 #[global] Hint Resolve closed_red_open_right : fvs.
 
 Ltac fvs := eauto 10 with fvs.
@@ -225,6 +351,7 @@ Section ConvCongruences.
       + eapply into_closed_red; [eapply red_prod|..]; fvs.
       + destruct le; (constructor; auto); reflexivity.
   Qed.
+
 
   Lemma equality_Sort_inv {Γ s s'} le :
     Σ ;;; Γ ⊢ tSort s ≤[le] tSort s' ->
@@ -448,6 +575,12 @@ Section ConvCongruences.
     intros Hs H. now apply (closed_red_untyped_substitution (Γ' := [])).
   Qed.
 
+  Lemma untyped_subslet_def_tip {Γ na d ty} : untyped_subslet Γ [d] [vdef na d ty].
+  Proof.
+    rewrite -{1}(subst_empty 0 d). constructor. constructor.
+  Qed.
+  Hint Resolve untyped_subslet_def_tip : pcuic.
+
   Lemma invert_red_letin {Γ C na d ty b} :
     Σ ;;; Γ ⊢ (tLetIn na d ty b) ⇝ C ->
     (∑ d' ty' b',
@@ -477,12 +610,11 @@ Section ConvCongruences.
           constructor. all:constructor; eauto with fvs.
       - right; auto. transitivity (b {0 := r}); auto.
         eapply (closed_red_red_subst (Δ := [vass na ty]) (Γ' := [])); eauto with fvs.
-        * rewrite on_free_vars_ctx_snoc clΓ /= //.
         * constructor; [|constructor]. eapply into_closed_red; eauto with fvs.
         * constructor. constructor.
       - left. do 3 eexists. repeat split; eauto with pcuic.
         * transitivity r; pcuic.
-        * rewrite on_free_vars_ctx_snoc clΓ /= //; eauto with fvs.
+        * eauto with fvs.
         * eapply red_red_ctx_inv' in c1; [exact c1|].
           simpl. constructor; [now apply closed_red_ctx_refl|].
           constructor; eauto with fvs pcuic.
@@ -491,11 +623,7 @@ Section ConvCongruences.
         now transitivity r; eauto with pcuic fvs.
       - right; auto.
         transitivity (r {0 := d}); auto.
-        eapply (closed_red_untyped_substitution (Δ := [vdef na d ty]) (Γ' := [])); eauto.
-        * rewrite -{1}(subst_empty 0 d). constructor. constructor.
-        * cbn. eauto with fvs.
-        * split; eauto with fvs.
-          rewrite on_free_vars_ctx_snoc. eauto with fvs.
+        eapply (closed_red_untyped_substitution (Δ := [vdef na d ty]) (Γ' := [])); cbn; eauto with pcuic fvs.
   Qed.
 
   Lemma invert_red_prod {Γ na dom codom T} :
@@ -526,12 +654,6 @@ Section ConvCongruences.
         eexists _, _; split => //.
         transitivity N2; split; eauto with fvs.
   Qed.
-
-  Lemma untyped_subslet_def_tip {Γ na d ty} : untyped_subslet Γ [d] [vdef na d ty].
-  Proof.
-    rewrite -{1}(subst_empty 0 d). constructor. constructor.
-  Qed.
-  Hint Resolve untyped_subslet_def_tip : pcuic.
 
   (*Lemma equality_LetIn_l_inv {Γ na d ty b T} :
     Σ ;;; Γ ⊢ tLetIn na d ty b ≤ T ->
@@ -1338,7 +1460,25 @@ Section Inversions.
     - eapply equality_App_l; tea; eauto with fvs.
     - eapply equality_App_r; eauto with fvs.
   Qed.
+
+ 
+
+  Notation "Σ ;;; Γ ⊢ t ⇝1 u" := (closed_red1 Σ Γ t u) (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  ⊢  t  ⇝1  u").
+
+  Lemma closed_red1_mkApps_left  {Γ} {t u ts} : 
+  Σ ;;; Γ ⊢ t ⇝1 u -> 
+  forallb (is_open_term Γ) ts ->
+  Σ ;;; Γ ⊢ mkApps t ts ⇝1 mkApps u ts.
+Proof.
+  intros r cl.
+  split; eauto with fvs.
+  - rewrite on_free_vars_mkApps (clrel_src r) //.
+  - eapply red1_mkApps_f, r.
+Qed.
+
 End Inversions.
+
 
 (*Section ConvCum.
   Import PCUICCumulativity.
@@ -1517,10 +1657,10 @@ Section ConvRedConv.
   Qed.
 
   Lemma equality_App :
-    forall Γ t1 t2 u1 u2,
-      Σ ;;; Γ ⊢ t1 = t2 ->
+    forall Γ t1 t2 u1 u2 le,
+      Σ ;;; Γ ⊢ t1 ≤[le] t2 ->
       Σ ;;; Γ ⊢ u1 = u2 ->
-      Σ ;;; Γ ⊢ tApp t1 u1 = tApp t2 u2.
+      Σ ;;; Γ ⊢ tApp t1 u1 ≤[le] tApp t2 u2.
   Proof.
     intros. etransitivity.
     - eapply equality_App_l; tea; eauto with fvs.
@@ -1860,7 +2000,7 @@ Section ConvRedConv.
         eapply OnOne2_app. constructor; auto. cbn. split; auto.
         eapply red1_eq_context_upto_names; tea.
         rewrite /inst_case_branch_context /=.
-        now eapply eq_context_gen_inst_case_context. }
+        now eapply eq_context_upto_names_gen, eq_context_gen_inst_case_context. }
       rewrite [is_open_term _ _]is_open_case_split onp onc /= //.
   Qed.
 
@@ -1882,6 +2022,7 @@ Section ConvRedConv.
         now rewrite shiftnP_add. }
       rewrite !test_context_k_closed_on_free_vars_ctx in cl *.
       eapply eq_context_upto_names_on_free_vars; tea.
+      eapply eq_context_upto_names_gen.
       now symmetry.
     - now move: op => /= /andP[] => ->.
   Qed.
@@ -1906,6 +2047,7 @@ Section ConvRedConv.
           now eapply eq_context_gen_inst_case_context. }
         eapply equality_is_closed_context in cv.
         eapply eq_context_upto_names_on_free_vars; tea.
+        eapply eq_context_upto_names_gen.
         now eapply eq_context_gen_inst_case_context. }
     induction h.
     - apply equality_compare; tas.
@@ -1995,10 +2137,10 @@ Section ConvRedConv.
       * constructor.
         { simpl. intuition reflexivity. }
         apply All2_same. intros. intuition reflexivity.
-    - eapply conv_red_l; eauto.
+    - eapply cumul_red_l; eauto.
       destruct b; constructor; eapply OnOne2_app;
       constructor; cbn; intuition eauto.
-    - eapply conv_red_r ; eauto.
+    - eapply cumul_red_r ; eauto.
       destruct b; constructor; apply OnOne2_app; constructor; simpl;
       intuition eauto.
   Qed.
@@ -2056,7 +2198,7 @@ Section ConvRedConv.
     Σ ;;; Γ ⊢ fix_or_cofix b mfix idx = fix_or_cofix b mfix' idx.
   Proof.
     intros onΓ onmfix onmfix' h.
-    assert (All2 (compare_decls eq eq) (fix_context mfix) (fix_context mfix')).
+    assert (eq_context_upto_names (fix_context mfix) (fix_context mfix')).
     { clear -h.
       unfold fix_context, mapi.
       generalize 0 at 2 4.
@@ -2093,7 +2235,7 @@ Section ConvRedConv.
         rewrite -H0.
         eapply red_eq_context_upto_names; tea.
         2:exact hbo'.
-        eapply All2_fold_All2, All2_app; auto.
+        eapply All2_app; auto.
         eapply All2_refl; reflexivity.
       - eapply All2_refl. intros.
         intuition auto. }
@@ -2313,8 +2455,8 @@ Section ConvRedConv.
     eapply into_equality.
     { clear -h hna; induction h.
       - constructor; constructor; auto; reflexivity.
-      - eapply conv_red_l; tea; pcuic.
-      - eapply conv_red_r; tea; pcuic. }
+      - eapply cumul_red_l; tea; pcuic.
+      - eapply cumul_red_r; tea; pcuic. }
     { eauto with fvs. }
     all:rewrite on_fvs_lambda; eauto with fvs.
   Qed.
@@ -2329,12 +2471,10 @@ Section ConvRedConv.
     eapply into_equality => //.
     { induction h.
       - destruct le; now repeat constructor.
-      - destruct le.
-        + eapply cumul_red_l ; try eassumption; try econstructor; assumption.
-        + eapply conv_red_l ; try eassumption. try econstructor; assumption.
-      - destruct le.
-        + eapply cumul_red_r ; pcuic.
-        + eapply conv_red_r ; pcuic. }
+      - destruct le;
+         eapply cumul_red_l ; try eassumption; try econstructor; assumption.
+      - destruct le;
+         eapply cumul_red_r ; pcuic. }
     all:rewrite on_fvs_lambda onA /=; eauto with fvs.
   Qed.
 
@@ -2348,17 +2488,13 @@ Section ConvRedConv.
     rewrite /on_free_vars_decl /test_decl => /andP[] /= onty ont onu onu'.
     eapply into_equality => //.
     { clear -h. induction h.
-      - destruct le.
-        { eapply cumul_refl. constructor.
-          all: try eapply eq_term_refl; auto. }
-        { eapply conv_refl. constructor.
-          all: try eapply eq_term_refl; auto. }
-      - destruct le.
-        { eapply cumul_red_l; tea; pcuic. }
-        { eapply conv_red_l; tea; pcuic. }
-      - destruct le.
-        { eapply cumul_red_r ; pcuic. }
-        { eapply conv_red_r; pcuic. } }
+      - destruct le;
+        eapply cumul_refl; constructor.
+          all: try eapply eq_term_refl; auto. 
+      - destruct le;
+         eapply cumul_red_l; tea; pcuic. 
+      - destruct le;
+          eapply cumul_red_r ; pcuic. }
     { rewrite on_fvs_letin onty ont //. }
     { rewrite on_fvs_letin onty ont //. }
   Qed.
@@ -2630,7 +2766,6 @@ Section ConvSubst.
     - eapply is_open_term_subst; tea; eauto with fvs pcuic.
       eapply (subslet_length Hs).
     - eapply substitution_untyped_red; tea; eauto with fvs.
-      2:eauto with fvs.
       now eapply subslet_untyped_subslet.
   Qed.
 
@@ -2723,8 +2858,6 @@ Section ConvSubst.
     now rewrite -(length_of H).
   Qed.
 
-  Import PCUICInst.
-
   Lemma All_decls_alpha_le_impl le P Q d d' : 
     All_decls_alpha_le le P d d' ->
     (forall le x y, P le x y -> Q le x y) ->
@@ -2742,7 +2875,7 @@ Section ConvSubst.
 
   Lemma test_decl_conv_decls_map {Γ Γ' : context} {p f g} {d : context_decl} :
     test_decl p d ->
-    (forall x, p x -> conv Σ Γ (f x) (g x)) ->
+    (forall x, p x -> convAlgo Σ Γ (f x) (g x)) ->
     conv_decls Σ Γ Γ' (map_decl f d) (map_decl g d).
   Proof.
     intros ht hxy.
@@ -2889,7 +3022,7 @@ Section ConvSubst.
   Lemma equality_elim {le} {Γ} {x y} :
     equality le Σ Γ x y ->
     [× is_closed_context Γ, is_open_term Γ x, is_open_term Γ y &
-    if le then cumul Σ Γ x y else conv Σ Γ x y].
+    if le then cumulAlgo Σ Γ x y else convAlgo Σ Γ x y].
   Proof.
     intros ws.
     repeat split; eauto with fvs.
@@ -3353,7 +3486,7 @@ Section CumulSubst.
     rewrite - !app_length.
     relativize #|Δ'0 ++ Γ''|; [apply (substitution_equality_subst_conv (le:=le') hs hs' eqs)|] => //.
     1:rewrite app_context_assoc //.
-    len. now rewrite len.
+    len.
   Qed. 
 
   Lemma weaken_context_equality_rel {le Γ Γ' Δ Δ'} :
@@ -3458,3 +3591,366 @@ Proof.
 Qed.
 
 End CumulSubst.
+
+Section MoreCongruenceLemmas.
+
+  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
+
+  Lemma red_terms_evar Γ args args0 ev : 
+    red_terms Σ Γ args args0 -> red Σ Γ (tEvar ev args) (tEvar ev args0).
+    intros Hargs. eapply red_evar. 
+    eapply All2_impl. 1: tea. intros. destruct X; eauto. 
+  Defined.   
+
+  Lemma equality_Evar {le Γ ev args args'} :
+    equality_terms Σ Γ args args' -> is_closed_context Γ ->
+    Σ;;; Γ ⊢ tEvar ev args ≤[le] tEvar ev args'.
+  Proof.
+    intros Hargsargs' HΓ. pose proof (Hargs := equality_terms_open_terms_left Hargsargs'). pose proof (Hargs' := equality_terms_open_terms_right Hargsargs'). 
+    apply equality_terms_alt in Hargsargs'. destruct Hargsargs' as [args0 [args0'  [Hargs0 Hargs0' Hargs0args0']]].      
+    pose proof (Hargs0_c :=  closed_red_terms_open_right Hargs0). 
+    pose proof (Hargs0'_c :=  closed_red_terms_open_right Hargs0'). 
+    assert (Σ;;; Γ ⊢  tEvar ev args0 ≤[le] tEvar ev args0').
+    { econstructor; eauto; cbn. 3: econstructor; eauto.
+      all: eapply All_forallb; eauto. }
+    eapply red_terms_evar with (ev := ev)in Hargs0.
+    eapply red_terms_evar with (ev := ev)in Hargs0'.
+    eapply red_equality_left in X. 2: split; eauto; cbn; eauto.
+    eapply red_equality_right in X. 2: split; eauto; cbn; eauto.
+    exact X.
+  Defined. 
+
+  Lemma equality_Ind {le Γ ind ui ui' l l'} :
+  [×  R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (IndRef ind) #|l| ui ui',
+      is_closed_context Γ & equality_terms Σ Γ l l'] ->
+  Σ ;;; Γ ⊢ mkApps (tInd ind ui) l ≤[le] mkApps (tInd ind ui') l'.
+    intros [Rglob Rclosed Hll']. apply equality_terms_alt in Hll'. destruct Hll' as [l0 [l0'  [Hl0 Hl0' Hl0l0']]].
+    assert (Σ ;;; Γ ⊢ mkApps (tInd ind ui) l0 ≤[le] mkApps (tInd ind ui') l0').
+    { econstructor 1; eauto. 
+      - cbn. clear -cf wfΣ Hl0. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0; eauto; intros. cbn in *. econstructor; eauto. 
+        destruct r; eapply red_is_open_term; eauto.
+      - cbn. clear -cf wfΣ Hl0'. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0'; eauto; intros. cbn in *. econstructor; eauto. 
+        destruct r; eapply red_is_open_term; eauto.
+      - apply All2_length in Hl0.  rewrite Hl0 in Rglob. clear Hl0 Hl0'. 
+        apply eq_term_upto_univ_napp_mkApps; eauto.  
+        econstructor; eauto. assert (#|l0| + 0 = #|l0|) by lia. rewrite H. destruct le; eauto.                      
+    } 
+    apply red_terms_equality_terms in Hl0, Hl0'. 
+    etransitivity. 
+    - eapply equality_mkApps. 
+      * refine (equality_refl' (exist Γ Rclosed) (exist (tInd ind ui) _)); eauto. 
+      * eassumption.
+    - cbn. etransitivity; try apply X.
+      eapply equality_mkApps.
+      * refine (equality_refl' (exist Γ Rclosed) (exist (tInd ind ui') _)); eauto. 
+      * symmetry. eassumption.
+  Defined.
+
+  Lemma equality_Construct {le Γ i k ui ui' l l'} :
+  [× R_global_instance Σ (eq_universe Σ) (compare_universe le Σ) (ConstructRef i k) #|l| ui ui',
+     is_closed_context Γ & equality_terms Σ Γ l l'] ->
+  Σ ;;; Γ ⊢ mkApps (tConstruct i k ui) l ≤[le] mkApps (tConstruct i k ui') l'.
+  intros [Rglob Rclosed Hll']. apply equality_terms_alt in Hll'. destruct Hll' as [l0 [l0'  [Hl0 Hl0' Hl0l0']]].
+  assert (Σ ;;; Γ ⊢ mkApps (tConstruct i k ui) l0 ≤[le] mkApps (tConstruct i k ui') l0').
+  { econstructor 1; eauto. 
+    - cbn. clear -cf wfΣ Hl0. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0; eauto; intros. cbn in *. econstructor; eauto. 
+      destruct r; eapply red_is_open_term; eauto.
+    - cbn. clear -cf wfΣ Hl0'. rewrite on_free_vars_mkApps; cbn. apply All_forallb. induction Hl0'; eauto; intros. cbn in *. econstructor; eauto. 
+      destruct r; eapply red_is_open_term; eauto.
+    - apply All2_length in Hl0.  rewrite Hl0 in Rglob. clear Hl0 Hl0'. 
+      apply eq_term_upto_univ_napp_mkApps; eauto.  
+      econstructor; eauto. assert (#|l0| + 0 = #|l0|) by lia. rewrite H. destruct le; eauto.                      
+  }
+  apply red_terms_equality_terms in Hl0, Hl0'. 
+  etransitivity. 
+  - eapply equality_mkApps. 
+    * refine (equality_refl' (exist Γ Rclosed) (exist (tConstruct i k ui) _)); eauto. 
+    * eassumption.
+  - cbn. etransitivity; try apply X.
+    eapply equality_mkApps.
+    * refine (equality_refl' (exist Γ Rclosed) (exist (tConstruct i k ui') _)); eauto. 
+    * symmetry. eassumption.
+Defined.
+
+
+End MoreCongruenceLemmas.
+
+Section CumulSpecIsCumulAlgo.
+
+Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ).
+
+Lemma on_free_vars_ctx_inst_case_context_xpred0 (Γ : list context_decl) (pars : list term)
+  (puinst : Instance.t) (pctx : list context_decl) :
+  forallb (on_free_vars (shiftnP #|Γ| xpred0)) pars ->
+  on_free_vars_ctx (closedP #|pars| xpredT) pctx ->
+  on_free_vars_ctx xpred0 Γ ->
+  on_free_vars_ctx xpred0 (Γ,,, inst_case_context pars puinst pctx).
+Proof.
+  intros. rewrite on_free_vars_ctx_app H1 /=.
+  eapply on_free_vars_ctx_inst_case_context; trea; solve_all.
+  rewrite test_context_k_closed_on_free_vars_ctx //.
+Qed.
+
+Proposition convSpec_convAlgo (Γ : closed_context) (M N : open_term Γ) :
+  Σ ;;; Γ |- M =s N  ->
+  Σ ;;; Γ ⊢ M = N.
+Proof. 
+  destruct Γ as [Γ  HΓ], M as [M HM], N as [N HN] ; cbn in *.  
+  intro e; revert Γ M N e HΓ HM HN. eapply (convSpec0_ind_all Σ (eq_universe (global_ext_constraints Σ))  (fun Γ M N => is_closed_context Γ ->
+  is_open_term Γ M -> is_open_term Γ N -> Σ ;;; Γ ⊢ M = N)).  
+  1-9: intros; econstructor 2; eauto; try solve [econstructor; eauto];
+    match goal with |- _ ;;; _  ⊢ ?t = _ => 
+      eapply (equality_refl' (exist Γ _) (exist t _)) end.
+  - intros; etransitivity; eauto. 
+  - intros; symmetry; eauto.
+  - intros Γ t; intros; eapply (equality_refl' (exist Γ _) (exist t _)).
+  - intros Γ ev args args' Hargsargs' HΓ Hargs Hargs'. cbn in *. eapply equality_Evar; eauto.
+    apply forallb_All in Hargs, Hargs'. apply (All2_All_mix_left Hargs) in Hargsargs'. clear Hargs.   
+    apply (All2_All_mix_right Hargs') in Hargsargs'. clear Hargs'. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
+    eapply Heqxy; eauto.    
+  - intros Γ t t' u u' Htt' Heqtt' Huu' Hequu' HΓ HM HN. cbn in *; apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ht Hu]; destruct HN as [Ht' Hu'].
+    eapply equality_App; eauto.
+  - intros Γ na na' ty ty' t t' Hna Htyty' Heqtyty' Htt' Heqtt' HΓ HM HN. 
+    cbn in *. apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Hty Ht]; destruct HN as [Hty' Ht'].
+    eapply equality_Lambda; eauto. eapply Heqtt'.
+    * change (is_closed_context (Γ,, vass na ty)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto. 
+    * rewrite shiftnP_S; eauto.
+    * rewrite shiftnP_S; eauto.
+  - intros Γ na na' a a' b b' Hna Haa' foo IHe1 IHe2 HΓ HM HN. cbn in *; apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ha Hb]; destruct HN as [Ha' Hb'].
+    eapply equality_Prod; eauto. eapply IHe2. 
+    * change (is_closed_context (Γ,, vass na a)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto.  
+    * rewrite shiftnP_S; eauto.
+    * rewrite shiftnP_S; eauto.
+  - intros Γ na na' t t' ty ty' u u' Hna _ Heqtt' _ Heqtyty' _ Hequu' HΓ HM HN. 
+    cbn in *. apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ht Htyu]; destruct HN as [Ht' Htyu'].
+    apply andb_andI in Htyu; apply andb_andI in Htyu'; destruct Htyu as [Hty Hu]; destruct Htyu' as [Hty' Hu'].
+    eapply equality_LetIn; eauto. eapply Hequu'.
+    * change (is_closed_context (Γ,, vdef na t ty)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto.
+      rewrite /on_free_vars_decl /test_decl. apply andb_and. split; eauto. 
+    * rewrite shiftnP_S; eauto.
+    * rewrite shiftnP_S; eauto.
+  - intros Γ indn p p' c c' brs brs' Hpp' _ Hcc' Hbrsbrs' HΓ H H'.
+    cbn in *. apply andb_andI in H; apply andb_andI in H'; destruct H as [Hp H]; destruct H' as [Hp' H'].
+    apply andb_andI in H; apply andb_andI in H'; destruct H as [Hreturn H]; destruct H' as [Hreturn' H'].
+    apply andb_andI in H; apply andb_andI in H'; destruct H as [Hcontext H]; destruct H' as [Hcontext' H'].
+    apply andb_andI in H; apply andb_andI in H'; destruct H as [Hc Hbrs]; destruct H' as [Hc' Hbrs'].
+    eapply equality_Case; eauto. 
+    * rewrite is_open_case_split. repeat (apply andb_and; split); eauto. 
+    * rewrite is_open_case_split. repeat (apply andb_and; split); eauto. 
+    * unfold cumul_predicate in Hpp'. unfold equality_predicate. destruct Hpp' as [Hpp' [Hinst [Hpcon Hpret]]].
+      split; eauto.
+      + clear - Hp Hp' Hpp' HΓ. apply forallb_All in Hp, Hp'. 
+        apply (All2_All_mix_left Hp) in Hpp'. clear Hp.   
+        apply (All2_All_mix_right Hp') in Hpp'. clear Hp'. 
+        eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].   
+        eapply Heqxy.2; eauto. 
+      + eapply Hpret.
+        ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
+           unfold inst_case_predicate_context. apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto. 
+        ++ rewrite shiftnP_add in Hreturn. rewrite <- inst_case_predicate_context_length in Hreturn.
+          rewrite <- app_length in Hreturn. eassumption.   
+        ++ rewrite shiftnP_add in Hreturn'. rewrite <- (All2_fold_length Hpcon) in Hreturn'.
+           rewrite <- inst_case_predicate_context_length in Hreturn'.
+           rewrite <- app_length in Hreturn'. eassumption.   
+    * unfold equality_brs. clear - Hp Hp' Hbrs Hbrs' HΓ Hbrsbrs'.
+      apply forallb_All in Hbrs, Hbrs'. apply (All2_All_mix_left Hbrs) in Hbrsbrs'. clear Hbrs.   
+      apply (All2_All_mix_right Hbrs') in Hbrsbrs'. clear Hbrs'. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].   
+      split; try apply Heqxy.1. clear Hbrsbrs'. rewrite test_context_k_closed_on_free_vars_ctx in Hx. toProp Hx. 
+      rewrite test_context_k_closed_on_free_vars_ctx in Hy. toProp Hy. eapply Heqxy.2. 
+      + apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto; intuition.
+      + rewrite shiftnP_add in Hx. erewrite <- inst_case_branch_context_length in Hx.
+        rewrite <- app_length in Hx. intuition.    
+      + rewrite shiftnP_add in Hy. rewrite <- (All2_fold_length Heqxy.1.1) in Hy. erewrite <- inst_case_branch_context_length in Hy.
+        rewrite <- app_length in Hy. intuition.    
+  - intros; eapply equality_Proj_c; eauto.
+  - intros Γ mfix mfix' idx Hmfixmfix' HΓ H H'. cbn in *. 
+    eapply equality_Fix; eauto. apply forallb_All in H, H'. 
+    apply (All2_All_mix_left H) in Hmfixmfix'. 
+    apply (All2_All_mix_right H') in Hmfixmfix'. 
+    eapply All2_impl. 1: tea. pose proof (Hfix := All2_length Hmfixmfix'); clear Hmfixmfix'; cbn; intros. destruct X as [[Hx [[ [_ [rtype _]] [rbody rargs]] rname]] Hy].
+    apply andb_andI in Hx; apply andb_andI in Hy; destruct Hx as [Hdtypex Hdbodyx]; destruct Hy as [Hdtypey Hdbodyy].
+    repeat split; eauto. eapply rbody. 
+    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto.
+    * rewrite shiftnP_add in Hdbodyx. erewrite <- fix_context_length in Hdbodyx.
+      rewrite <- app_length in Hdbodyx. intuition.    
+    * rewrite shiftnP_add in Hdbodyy. rewrite <- Hfix in Hdbodyy. erewrite <- fix_context_length in Hdbodyy.
+      rewrite <- app_length in Hdbodyy. intuition.    
+  - intros Γ mfix mfix' idx Hmfixmfix' HΓ H H'. cbn in *. 
+    eapply equality_CoFix; eauto. apply forallb_All in H, H'. 
+    apply (All2_All_mix_left H) in Hmfixmfix'. 
+    apply (All2_All_mix_right H') in Hmfixmfix'. 
+    eapply All2_impl. 1: tea. pose proof (Hfix := All2_length Hmfixmfix'); clear Hmfixmfix'; cbn; intros. destruct X as [[Hx [[ [_ [rtype _]] [rbody rargs]] rname]] Hy].
+    apply andb_andI in Hx; apply andb_andI in Hy; destruct Hx as [Hdtypex Hdbodyx]; destruct Hy as [Hdtypey Hdbodyy].
+    repeat split; eauto. eapply rbody. 
+    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto.
+    * rewrite shiftnP_add in Hdbodyx. erewrite <- fix_context_length in Hdbodyx.
+      rewrite <- app_length in Hdbodyx. intuition.    
+    * rewrite shiftnP_add in Hdbodyy. rewrite <- Hfix in Hdbodyy. erewrite <- fix_context_length in Hdbodyy.
+      rewrite <- app_length in Hdbodyy. intuition.    
+  - intros. eapply equality_Ind; eauto. split; eauto. rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2. 
+    apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4. 
+    apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.   
+    apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].   
+    eapply Heqxy.2; eauto.   
+  - intros. eapply equality_Construct; eauto ; split; eauto. rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2. 
+    apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4. 
+    apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.   
+    apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].   
+    eapply Heqxy.2; eauto.
+  - intros. econstructor 1; eauto. econstructor; eauto.
+  - intros. econstructor 1; eauto. econstructor; eauto.
+  Unshelve. all: eauto. 
+Defined.   
+
+Proposition cumulSpec_cumulAlgo (Γ : closed_context) (M N : open_term Γ) :
+  Σ ;;; Γ |- M <=s N  ->
+  Σ ;;; Γ ⊢ M ≤ N.
+Proof. 
+  destruct Γ as [Γ HΓ], M as [M HM], N as [N HN] ; cbn in *.  
+  unfold cumulSpec in *. 
+  set (Rle := leq_universe (global_ext_constraints Σ)).
+  set (Re := eq_universe (global_ext_constraints Σ)).
+  change Rle with (if true then Rle else Re).
+  remember (if true then Rle else Re) as Rle'. revert HeqRle'. generalize true. 
+  intros b Rle_eq e. revert Rle' Γ M N e b Rle_eq HΓ HM HN. 
+  apply (cumulSpec0_ind_all Σ (eq_universe (global_ext_constraints Σ)) 
+            (fun Rle' Γ M N => forall b, Rle' = (if b then Rle else Re) -> is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N -> 
+                                  Σ ;;; Γ ⊢ M ≤[b] N)).
+  1-9: intros; subst; destruct b ; econstructor 2; eauto; try solve [econstructor; eauto];
+    match goal with |- _ ;;; _  ⊢ ?t ≤[_] _ => 
+      eapply (equality_refl' (exist Γ _) (exist t _)) end.
+  all : intro Rle'. 
+  - intros; etransitivity; eauto. 
+  - intros. apply equality_eq_le_gen. apply symmetry. exact (convSpec_convAlgo (exist Γ H0) (exist u H2) (exist t H1) X).  
+  - intros Γ t; intros. eapply (equality_refl' (exist Γ H0) (exist t _)).
+  - intros Γ ev args args' Hargsargs' b eqb HΓ Hargs Hargs'. cbn in *. eapply equality_Evar; eauto.
+    apply forallb_All in Hargs, Hargs'. apply (All2_All_mix_left Hargs) in Hargsargs'. clear Hargs.   
+    apply (All2_All_mix_right Hargs') in Hargsargs'. clear Hargs'. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
+    eapply Heqxy; eauto.    
+  - intros Γ t t' u u' Htt' Heqtt' Huu' Hequu' b eqb HΓ HM HN. cbn in *; apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ht Hu]; destruct HN as [Ht' Hu'].
+    eapply equality_App; eauto.
+  - intros Γ na na' ty ty' t t' Hna Htyty' Heqtyty' Htt' Heqtt' b eqb HΓ HM HN. 
+    cbn in *. apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Hty Ht]; destruct HN as [Hty' Ht'].
+    eapply equality_Lambda; eauto. eapply Heqtt'; eauto. 
+    * change (is_closed_context (Γ,, vass na ty)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto. 
+    * rewrite shiftnP_S; eauto.
+    * rewrite shiftnP_S; eauto.
+  - intros Γ na na' a a' b b' Hna Haa' foo IHe1 IHe2 b_ eqb HΓ HM HN. cbn in *; apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ha Hb]; destruct HN as [Ha' Hb'].
+    eapply equality_Prod; eauto. eapply IHe2; eauto. 
+    * change (is_closed_context (Γ,, vass na a)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto.  
+    * rewrite shiftnP_S; eauto.
+    * rewrite shiftnP_S; eauto.
+  - intros Γ na na' t t' ty ty' u u' Hna _ Heqtt' _ Heqtyty' _ Hequu' b eqb HΓ HM HN. 
+    cbn in *. apply andb_andI in HM; apply andb_andI in HN; destruct HM as [Ht Htyu]; destruct HN as [Ht' Htyu'].
+    apply andb_andI in Htyu; apply andb_andI in Htyu'; destruct Htyu as [Hty Hu]; destruct Htyu' as [Hty' Hu'].
+    eapply equality_LetIn; eauto. eapply Hequu'; eauto. 
+    * change (is_closed_context (Γ,, vdef na t ty)). rewrite on_free_vars_ctx_snoc. apply andb_and. split; eauto.
+      rewrite /on_free_vars_decl /test_decl. apply andb_and. split; eauto. 
+    * rewrite shiftnP_S; eauto.
+    * rewrite shiftnP_S; eauto.
+  - intros Γ indn p p' c c' brs brs' Hpp' _ Hcc' Hbrsbrs' b eqb HΓ H H'.
+    cbn in *. apply andb_andI in H; apply andb_andI in H'; destruct H as [Hp H]; destruct H' as [Hp' H'].
+    apply andb_andI in H; apply andb_andI in H'; destruct H as [Hreturn H]; destruct H' as [Hreturn' H'].
+    apply andb_andI in H; apply andb_andI in H'; destruct H as [Hcontext H]; destruct H' as [Hcontext' H'].
+    apply andb_andI in H; apply andb_andI in H'; destruct H as [Hc Hbrs]; destruct H' as [Hc' Hbrs'].
+    eapply equality_eq_le_gen. eapply equality_Case; eauto. 
+    * rewrite is_open_case_split. repeat (apply andb_and; split); eauto. 
+    * rewrite is_open_case_split. repeat (apply andb_and; split); eauto. 
+    * unfold cumul_predicate in Hpp'. unfold equality_predicate. destruct Hpp' as [Hpp' [Hinst [Hpcon Hpret]]].
+      split; eauto.
+      + clear - Hp Hp' Hpp' HΓ. apply forallb_All in Hp, Hp'. 
+        apply (All2_All_mix_left Hp) in Hpp'. clear Hp.   
+        apply (All2_All_mix_right Hp') in Hpp'. clear Hp'. 
+        eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].   
+        eapply Heqxy.2; eauto. 
+      + eapply Hpret; eauto. 
+        ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
+           unfold inst_case_predicate_context. apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto. 
+        ++ rewrite shiftnP_add in Hreturn. rewrite <- inst_case_predicate_context_length in Hreturn.
+          rewrite <- app_length in Hreturn. eassumption.   
+        ++ rewrite shiftnP_add in Hreturn'. rewrite <- (All2_fold_length Hpcon) in Hreturn'.
+           rewrite <- inst_case_predicate_context_length in Hreturn'.
+           rewrite <- app_length in Hreturn'. eassumption.   
+    * unfold equality_brs. clear - Hp Hp' Hbrs Hbrs' HΓ Hbrsbrs'.
+      apply forallb_All in Hbrs, Hbrs'. apply (All2_All_mix_left Hbrs) in Hbrsbrs'. clear Hbrs.   
+      apply (All2_All_mix_right Hbrs') in Hbrsbrs'. clear Hbrs'. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].   
+      split; try apply Heqxy.1. clear Hbrsbrs'. rewrite test_context_k_closed_on_free_vars_ctx in Hx. toProp Hx. 
+      rewrite test_context_k_closed_on_free_vars_ctx in Hy. toProp Hy. eapply Heqxy.2; eauto. 
+      + apply PCUICOnFreeVarsConv.on_free_vars_ctx_inst_case_context ; eauto; intuition.
+      + rewrite shiftnP_add in Hx. erewrite <- inst_case_branch_context_length in Hx.
+        rewrite <- app_length in Hx. intuition.    
+      + rewrite shiftnP_add in Hy. rewrite <- (All2_fold_length Heqxy.1.1) in Hy. erewrite <- inst_case_branch_context_length in Hy.
+        rewrite <- app_length in Hy. intuition.    
+  - intros; eapply equality_Proj_c; eauto.
+  - intros Γ mfix mfix' idx Hmfixmfix' b eqb HΓ H H'. cbn in *. 
+    eapply equality_eq_le_gen. eapply equality_Fix; eauto. apply forallb_All in H, H'. 
+    apply (All2_All_mix_left H) in Hmfixmfix'. 
+    apply (All2_All_mix_right H') in Hmfixmfix'. 
+    eapply All2_impl. 1: tea. pose proof (Hfix := All2_length Hmfixmfix'); clear Hmfixmfix'; cbn; intros. destruct X as [[Hx [[ [_ [rtype _]] [rbody rargs]] rname]] Hy].
+    apply andb_andI in Hx; apply andb_andI in Hy; destruct Hx as [Hdtypex Hdbodyx]; destruct Hy as [Hdtypey Hdbodyy].
+    repeat split; eauto. eapply rbody; eauto. 
+    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto.
+    * rewrite shiftnP_add in Hdbodyx. erewrite <- fix_context_length in Hdbodyx.
+      rewrite <- app_length in Hdbodyx. intuition.    
+    * rewrite shiftnP_add in Hdbodyy. rewrite <- Hfix in Hdbodyy. erewrite <- fix_context_length in Hdbodyy.
+      rewrite <- app_length in Hdbodyy. intuition.    
+  - intros Γ mfix mfix' idx Hmfixmfix' b eqb HΓ H H'. cbn in *. 
+    eapply equality_eq_le_gen. eapply equality_CoFix; eauto. apply forallb_All in H, H'. 
+    apply (All2_All_mix_left H) in Hmfixmfix'. 
+    apply (All2_All_mix_right H') in Hmfixmfix'. 
+    eapply All2_impl. 1: tea. pose proof (Hfix := All2_length Hmfixmfix'); clear Hmfixmfix'; cbn; intros. destruct X as [[Hx [[ [_ [rtype _]] [rbody rargs]] rname]] Hy].
+    apply andb_andI in Hx; apply andb_andI in Hy; destruct Hx as [Hdtypex Hdbodyx]; destruct Hy as [Hdtypey Hdbodyy].
+    repeat split; eauto. eapply rbody; eauto. 
+    * rewrite on_free_vars_ctx_app; solve_all. rewrite on_free_vars_fix_context; eauto.
+    * rewrite shiftnP_add in Hdbodyx. erewrite <- fix_context_length in Hdbodyx.
+      rewrite <- app_length in Hdbodyx. intuition.    
+    * rewrite shiftnP_add in Hdbodyy. rewrite <- Hfix in Hdbodyy. erewrite <- fix_context_length in Hdbodyy.
+      rewrite <- app_length in Hdbodyy. intuition.    
+  - intros Γ i u u' args args' H X b eqb H0 H1 H2. eapply equality_Ind; eauto. split; eauto. 
+    * destruct b; subst; eauto.   
+    * rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2.  
+    apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4. 
+    apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.   
+    apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].   
+    eapply Heqxy.2; eauto.   
+  - intros Γ i k u u' args args' H X b eqb H0 H1 H2. eapply equality_Construct; eauto ; split; eauto.
+    1: destruct b; subst; eauto.  
+    rewrite on_free_vars_mkApps in H1. rewrite on_free_vars_mkApps in H2. 
+    apply andb_and in H1, H2. destruct H1, H2.  clear -X H0 H3 H4. 
+    apply forallb_All in H3, H4. apply (All2_All_mix_left H3) in X. clear H3.   
+    apply (All2_All_mix_right H4) in X. clear H4. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy] Hy].   
+    eapply Heqxy.2; eauto.
+  - intros. econstructor 1; eauto. destruct b; subst; econstructor; eauto.
+  - intros. econstructor 1; eauto. destruct b; subst; econstructor; eauto.
+  Unshelve. all: eauto. 
+Defined.   
+
+Lemma convSpec_convAlgo_curry (Γ : context) (M N : term) :
+  is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N ->
+  Σ ;;; Γ |- M =s N  ->
+  Σ ;;; Γ ⊢ M = N.
+Proof.
+  intros clΓ clM clN.
+  eapply (convSpec_convAlgo (exist Γ clΓ) (exist M clM) (exist N clN)).
+Qed.
+
+Lemma cumulSpec_cumulAlgo_curry (Γ : context) (M N : term) :
+  is_closed_context Γ -> is_open_term Γ M -> is_open_term Γ N ->
+  Σ ;;; Γ |- M <=s N  ->
+  Σ ;;; Γ ⊢ M ≤ N.
+Proof.
+  intros clΓ clM clN.
+  eapply (cumulSpec_cumulAlgo (exist Γ clΓ) (exist M clM) (exist N clN)).
+Qed.
+End CumulSpecIsCumulAlgo.
+
+Lemma cumulSpec_typed_cumulAlgo {cf} {Σ} {wfΣ : wf Σ} {Γ : context} {t A B s} :
+  Σ ;;; Γ |- t : A ->
+  Σ ;;; Γ |- B : tSort s ->
+  Σ ;;; Γ |- A <=s B  ->
+  Σ ;;; Γ ⊢ A ≤ B.
+Proof.
+  intros ta tb. eapply cumulSpec_cumulAlgo_curry; eauto with fvs.
+Qed.
+#[global] Hint Immediate cumulSpec_typed_cumulAlgo : pcuic.
+

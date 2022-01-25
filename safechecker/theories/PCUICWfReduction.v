@@ -1,9 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
-     PCUICWeakening PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICReduction PCUICConversion
+     PCUICPosition PCUICCumulativity PCUICSafeLemmata PCUICSN
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
      PCUICContextConversion PCUICConversion PCUICWfUniverses.
 
@@ -111,8 +112,8 @@ Qed.
 (** Well-founded relation allowing to define functions using weak-head reduction 
 on (welltyped) terms and going under binders. *)
 Section fix_sigma.
-  Context {cf : checker_flags}.
-  Context {Σ : global_env_ext} {HΣ : ∥wf Σ∥}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
+  Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   Lemma term_subterm_red1 {Γ s s' t} {ts : term_subterm s t} :
     red1 Σ (Γ ,,, term_subterm_context ts) s s' ->
@@ -228,8 +229,8 @@ Section fix_sigma.
 End fix_sigma.
 
 Section fix_sigma.
-  Context {cf : checker_flags}.
-  Context {Σ : global_env_ext} {HΣ : ∥wf Σ∥}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
+  Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
 
   (* Reducing at least one step or taking a subterm is well-founded *)
   Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, welltyped Σ Γ t) :=
@@ -258,7 +259,7 @@ Section fix_sigma.
       destruct (term_subterm_redp X0) as [t'' [[redt' [tst' Htst']]]].
       eapply IH. eapply cored_redp. sq. eassumption. red.
       sq. right. exists tst'. now rewrite Htst'.
-    Unshelve.
+      Unshelve.
     - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
   Qed.
 

@@ -40,14 +40,14 @@ Lemma welltyped_is_closed_context {cf Σ} {wfΣ : wf Σ} {Γ t} :
 Proof.
   intros []. now eapply typing_wf_local in X; fvs.
 Qed.
-#[global] Hint Immediate welltyped_is_closed_context : fvs.
+#[global] Hint Resolve welltyped_is_closed_context : fvs.
 
 Lemma welltyped_is_open_term {cf Σ} {wfΣ : wf Σ} {Γ t} : 
   welltyped Σ Γ t -> is_open_term Γ t.
 Proof.
-  intros []. now eapply PCUICSpine.subject_is_open_term in X.
+  intros []; fvs.
 Qed.
-#[global] Hint Immediate welltyped_is_open_term : fvs.
+#[global] Hint Resolve welltyped_is_open_term : fvs.
 
 
 (* We assume normalisation of the reduction.
@@ -56,7 +56,7 @@ Qed.
 *)
 Section Measure.
 
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
 
   Context (flags : RedFlags.t).
   Context (Σ : global_env_ext).
@@ -70,12 +70,11 @@ Section Measure.
 
   Lemma cored_welltyped :
     forall {Γ u v},
-      ∥ wf Σ ∥ -> welltyped Σ Γ u ->
+      wf Σ -> welltyped Σ Γ u ->
       cored Σ Γ v u ->
       welltyped Σ Γ v.
   Proof.
     intros Γ u v HΣ h r.
-    destruct HΣ as [wΣ].
     revert h. induction r ; intros h.
     - destruct h as [A HA]. exists A.
       eapply subject_reduction1 ; eassumption.
@@ -86,18 +85,18 @@ Section Measure.
 
   Lemma red_welltyped :
     forall {Γ u v},
-      ∥ wf Σ ∥ -> welltyped Σ Γ u ->
-      ∥ red (fst Σ) Γ u v ∥ ->
+      wf Σ -> welltyped Σ Γ u ->
+      red (fst Σ) Γ u v ->
       welltyped Σ Γ v.
   Proof.
-    intros hΣ Γ u v h [r]. apply red_cored_or_eq in r.
+    intros hΣ Γ u v h r. apply red_cored_or_eq in r.
     destruct r as [r|[]]; [|assumption].
-    eapply cored_welltyped; eassumption.
+    eapply cored_welltyped ; eauto.
   Qed.
 
   Corollary R_Acc_aux :
     forall Γ t p,
-      wf Σ -> welltyped Σ Γ t ->
+      wf_ext Σ -> welltyped Σ Γ t ->
       Acc (R_aux Γ) (t ; p).
   Proof.
     intros Γ t p HΣ h.
@@ -111,7 +110,7 @@ Section Measure.
 
   Corollary R_Acc :
     forall Γ t,
-      wf Σ -> welltyped Σ Γ (zip t) ->
+      wf_ext Σ -> welltyped Σ Γ (zip t) ->
       Acc (R Γ) t.
   Proof.
     intros Γ t HΣ h.
@@ -211,12 +210,14 @@ Opaque Acc_intro_generator.
 
 Section Reduce.
 
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
 
   Context (flags : RedFlags.t).
 
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥).
+  Context (heΣ : ∥ wf_ext Σ ∥).
+
+  Local Definition hΣ : ∥ wf Σ ∥ := map_squash (wf_ext_wf Σ) heΣ.
 
   Existing Instance Req_refl.
 
@@ -476,11 +477,12 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
+    pose proof (hΣ := hΣ).
+    sq.
     pose proof (welltyped_context _ hΣ _ _ h) as hc.
     simpl in hc.
     (* Should be a lemma! *)
-    destruct hΣ as [wΣ].
-    clear - eq hc wΣ.
+    clear - eq hc hΣ.
     revert c hc eq.
     generalize (Γ ,,, stack_context π) as Δ. clear Γ π.
     intro Γ.
@@ -727,58 +729,64 @@ Section Reduce.
   Qed.
   Next Obligation.
     clear eq.
-    destruct hΣ.
+    pose proof (hΣ := hΣ).
+    sq.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
     apply eq_sym, decompose_stack_eq in prf'; subst.
     apply Req_red in r; cbn in r.
+    sq.
     rewrite zipc_appstack in r.
     cbn in r.
-    pose proof r as [r'].
-    eapply red_welltyped in r; eauto.
-    zip fold in r.
-    apply welltyped_context in r as (?&typ); auto; cbn in *.
+    pose proof r as r'.
+    eapply red_welltyped in r' ; tea.
+    zip fold in r'.
+    apply welltyped_context in r' as (?&typ); auto; cbn in *.
     apply PCUICInductiveInversion.invert_Case_Construct in typ as H; auto.
+    2: now sq.
     destruct H as (?&?&nth&?); subst.
     rewrite nth in eqbr; noconf eqbr.
     constructor.
     eapply cored_red_cored; cycle 1.
-    - zip fold in r'; exact r'.
+    - zip fold in r; exact r.
     - constructor.
       eapply red1_context.
       eapply red_iota; eauto.
-      rewrite skipn_length; lia.
   Qed.
   Next Obligation.
     clear eq.
-    destruct hΣ.
+    pose proof (hΣ := hΣ).
+    sq.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
     apply eq_sym, decompose_stack_eq in prf'; subst.
     apply Req_red in r; cbn in r.
+    sq.
     rewrite zipc_appstack in r.
     cbn in r.
-    pose proof r as [r'].
+    pose proof r as r'.
     eapply red_welltyped in r; eauto.
     zip fold in r.
     apply welltyped_context in r as (?&typ); auto; cbn in *.
     apply PCUICInductiveInversion.invert_Case_Construct in typ as H; auto.
+    2: now sq.
     destruct H as (?&?&nth&?); subst.
     rewrite nth in bot; congruence.
   Qed.
   Next Obligation.
     clear eq.
-    destruct hΣ.
+    sq.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
     apply eq_sym, decompose_stack_eq in prf'; subst.
     apply Req_red in r; cbn in r.
+    sq.
     rewrite zipc_appstack in r.
     cbn in r.
-    pose proof r as [r'].
+    pose proof r as r'.
     eapply red_welltyped in r; eauto.
     zip fold in r.
     apply welltyped_context in r as (?&typ); auto; cbn in *.
@@ -791,13 +799,14 @@ Section Reduce.
   Qed.
   Next Obligation.
     clear eq.
-    destruct hΣ.
+    sq.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
     apply eq_sym, decompose_stack_eq in prf'; subst.
     apply Req_red in r; cbn in r.
-    pose proof r as [r'].
+    sq.
+    pose proof r as r'.
     eapply red_welltyped in r; eauto.
     zip fold in r.
     apply welltyped_context in r as (?&typ); auto; cbn in *.
@@ -836,10 +845,12 @@ Section Reduce.
     constructor.
   Qed.
   Next Obligation.
+    pose proof (hΣ := hΣ).
+    sq.
     left.
     apply Req_red in r as hr.
+    sq.
     pose proof (red_welltyped _ hΣ h hr) as hh.
-    destruct hr as [hr].
     eapply cored_red_cored ; try eassumption.
     unfold Pr in p. simpl in p. pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
@@ -853,12 +864,15 @@ Section Reduce.
     subst. constructor. eauto.
   Qed.
   Next Obligation.
+    pose proof (hΣ := hΣ).
+    sq.
     unfold Pr in p. simpl in p.
     pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
     symmetry in prf'. apply decompose_stack_eq in prf' as ?.
     subst.
     apply Req_red in r as hr.
+    sq.
     pose proof (red_welltyped _ hΣ h hr) as hh.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
@@ -893,7 +907,8 @@ Section Reduce.
         constructor. eapply red_cofix_proj. eauto. 
   Qed.
   Next Obligation.
-    destruct hΣ as [wΣ].
+    pose proof (hΣ := hΣ).
+    sq.
     unfold Pr in p. simpl in p.
     pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
@@ -905,7 +920,6 @@ Section Reduce.
       - clear eq. dependent destruction r.
         + apply cored_red in H. destruct H as [r].
           eapply red_welltyped ; eauto.
-          constructor.
           symmetry in prf'. apply decompose_stack_eq in prf'. subst.
           cbn in r. rewrite zipc_appstack in r. cbn in r.
           assumption.
@@ -917,7 +931,8 @@ Section Reduce.
     replace (zip (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args), π))
       with (zip (tCoFix mfix idx, appstack args (Proj (i, pars, narg) :: π)))
       in h'.
-    - destruct hΣ.
+    - pose proof (hΣ := hΣ).
+      sq.
       apply welltyped_context in h' ; auto. simpl in h'.
       destruct h' as [T h'].
       apply inversion_CoFix in h' ; auto.
@@ -960,6 +975,8 @@ Section Reduce.
     forall x y : term × stack, welltyped Σ Γ (zip x) -> R Σ Γ y x -> welltyped Σ Γ (zip y).
   Proof.
     intros x y H HR.
+    pose proof (hΣ := hΣ).
+    sq.
     depelim HR.
     - eapply cored_welltyped; eauto.
     - simpl in H1. revert H1; intros [= H2 _].
@@ -988,19 +1005,18 @@ Section Reduce.
           inversion H1. subst. inversion H2. subst. clear H1 H2.
           intros. cbn. rewrite H3. assumption.
   Defined.
-(*   Next Obligation.
-    destruct hΣ.
-    eapply R_Acc. all: assumption.
-  Defined.
- *)
-  (* Replace the last obligation by the following to run inside Coq. *)
+  (* Next Obligation.
+    sq.
+    now eapply R_Acc.
+  Defined. *)
+  (* We fuel the accessibility proof to run reduction inside Coq. *)
   Next Obligation.
     revert h. generalize (t, π).
     refine (Acc_intro_generator
               (R:=fun x y => R Σ Γ x y)
               (P:=fun x => welltyped Σ Γ (zip x)) (fun x y Px Hy => _) 1000 _).
     - simpl in *. eapply welltyped_R_pres; eauto.
-    - destruct hΣ. intros; eapply R_Acc; eassumption.
+    - destruct heΣ. intros; eapply R_Acc; eassumption.
   Defined.
 
   Definition reduce_stack Γ t π h :=
@@ -1360,6 +1376,7 @@ Section Reduce.
       destruct hd; try easy.
       destruct p as ((?&?)&?).
       eapply PCUICInductiveInversion.invert_Proj_Construct in typ' as (->&->&?); auto.
+      2: exact hΣ.
       congruence.
     - unfold isCoFix_app.
       now rewrite decompose_app_mkApps; destruct hd.
@@ -1405,6 +1422,7 @@ Section Reduce.
         destruct l.
         * simpl. eauto with pcuic.
         * exfalso.
+          
           destruct hΣ.
           cbn in h. zip fold in h. apply welltyped_context in h; auto.
           simpl in h. rewrite stack_context_appstack in h.
@@ -1425,7 +1443,9 @@ Section Reduce.
           apply inversion_App in h as (?&?&?&?&?); auto.
           apply inversion_Prod in t0 as (?&?&?&?&?); auto.
           eapply PCUICConversion.equality_Sort_Prod_inv; eauto.
-      + exfalso.
+      + pose proof hΣ.
+        sq.
+        exfalso.
         eapply welltyped_context in h as [s Hs]; tas.
         now eapply inversion_Prim in Hs.
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
@@ -1518,6 +1538,7 @@ Section Reduce.
           destruct (reduce x y z)
       end.
       noconf eq3; cbn in *.
+      pose proof hΣ as [hΣ].
       clear -hΣ eq4 ht eq2 eq1 h prf haux.
       destruct prf as (r&stacks&?).
       unfold Pr in stacks.
@@ -1534,8 +1555,7 @@ Section Reduce.
       rewrite zipc_appstack in h.
       apply Req_red in r as [r].
       cbn in *.
-      eapply red_welltyped in h; eauto using sq.
-      clear r.
+      eapply red_welltyped in h; eauto.
       rewrite zipc_appstack in h.
       cbn in h.
       rewrite tApp_mkApps in h.
@@ -1558,7 +1578,7 @@ Section Reduce.
       rewrite app_nil_r in *.
       rewrite <- app_assoc in *.
       cbn in *.
-      destruct hΣ, haux.
+      destruct haux.
       symmetry in eq1.
       constructor.
       constructor.
@@ -1578,6 +1598,7 @@ Section Reduce.
           destruct (reduce x y z)
       end.
       noconf eq; cbn in *.
+      pose proof hΣ as [hΣ].
       clear -hΣ ht prf' h prf haux.
       destruct prf as (r&stacks&?).
       unfold Pr in stacks.
@@ -1608,7 +1629,7 @@ Section Reduce.
         try rewrite stack_context_appstack in H;
         cbn in * ).
       rewrite app_nil_r in *.
-      destruct hΣ, haux.
+      destruct haux.
       constructor.
       apply whnf_mkApps, whne_case.
       eapply whnf_case_arg_whne; eauto.
@@ -1638,7 +1659,8 @@ Section Reduce.
           destruct (reduce x y z)
       end.
       noconf eq; cbn in *.
-      clear -hΣ ht prf' h prf haux.
+      pose proof hΣ as [hΣ].
+      clear -hΣ heΣ ht prf' h prf haux.
       destruct prf as (r&stacks&?).
       unfold Pr in stacks.
       cbn in *.
@@ -1668,7 +1690,7 @@ Section Reduce.
         try rewrite stack_context_appstack in H;
         cbn in * ).
       rewrite app_nil_r in *.
-      destruct hΣ, haux.
+      destruct haux.
       constructor. apply whnf_mkApps, whne_proj.
       eapply whnf_proj_arg_whne; eauto.
       destruct H as (noapp&_).
@@ -1717,7 +1739,7 @@ Section Reduce.
 End Reduce.
 
 Section ReduceFns.
-  Context {cf : checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥).
+  Context {cf : checker_flags} {no : normalizing_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥).
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
@@ -1727,8 +1749,7 @@ Section ReduceFns.
   Theorem hnf_sound {Γ t h} : ∥ Σ ;;; Γ ⊢ t ⇝ hnf Γ t h ∥.
   Proof.
     unfold hnf.
-    destruct HΣ.
-    destruct (reduce_term_sound RedFlags.default _ (sq w) _ _ h).
+    destruct (reduce_term_sound RedFlags.default _ HΣ _ _ h).
     sq. eapply into_closed_red; fvs.
   Defined.
   
@@ -1738,13 +1759,13 @@ Section ReduceFns.
   Qed.
 
   Equations? reduce_to_sort (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result (∑ u, ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
+    : typing_result_comp (∑ u, ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
     reduce_to_sort Γ t h with view_sortc t := {
-      | view_sort_sort s => ret (s; _);
+      | view_sort_sort s => Checked_comp (s; _);
       | view_sort_other t _ with inspect (hnf Γ t h) :=
         | exist hnft eq with view_sortc hnft := {
-          | view_sort_sort s => ret (s; _);
-          | view_sort_other hnft _ => raise (NotASort hnft)
+          | view_sort_sort s => Checked_comp (s; _);
+          | view_sort_other hnft r => TypeError_comp (NotASort hnft) _
         }
       }.
   Proof.
@@ -1752,35 +1773,37 @@ Section ReduceFns.
       eapply (wt_closed_red_refl hs).
     * pose proof (hnf_sound (h:=h)).
       now rewrite eq.
+    * sq.
+      pose proof (@hnf_complete Γ t h) as [wh].
+      pose proof (@hnf_sound Γ t h) as [r'].
+      destruct HΣ.
+      eapply PCUICContextConversion.closed_red_confluence in X0 as (?&r1&r2); eauto.
+      apply invert_red_sort in r2 as ->.
+      eapply whnf_red_inv in r1; eauto.
+      depelim r1.
+      rewrite H in r.
+      now cbn in r.
   Qed.
 
-  Lemma reduce_to_sort_complete {Γ t wt} e :
-    reduce_to_sort Γ t wt = TypeError e ->
+  Lemma reduce_to_sort_complete {Γ t wt} e p :
+    reduce_to_sort Γ t wt = TypeError_comp e p ->
     (forall s, red Σ Γ t (tSort s) -> False).
   Proof.
-    funelim (reduce_to_sort Γ t wt); try congruence.
     intros _ s r.
-    pose proof (@hnf_complete Γ t h) as [wh].
-    pose proof (@hnf_sound Γ t h) as [r'].
-    destruct HΣ.
-    eapply into_closed_red in r; fvs.
-    eapply PCUICContextConversion.closed_red_confluence in r as (?&r1&r2); eauto.
-    apply invert_red_sort in r2 as ->.
-    eapply whnf_red_inv in r1; eauto.
-    depelim r1.
-    clear Heq.
-    rewrite H in n0.
-    now cbn in n0.
+    apply p.
+    exists s.
+    sq.
+    eapply into_closed_red in r ; fvs.
   Qed.
 
   Equations? reduce_to_prod (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result (∑ na a b, ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
+    : typing_result_comp (∑ na a b, ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
     reduce_to_prod Γ t h with view_prodc t := {
-      | view_prod_prod na a b => ret (na; a; b; _);
+      | view_prod_prod na a b => Checked_comp (na; a; b; _);
       | view_prod_other t _ with inspect (hnf Γ t h) :=
         | exist hnft eq with view_prodc hnft := {
-          | view_prod_prod na a b => ret (na; a; b; _);
-          | view_prod_other hnft _ => raise (NotAProduct t hnft)
+          | view_prod_prod na a b => Checked_comp (na; a; b; _);
+          | view_prod_other hnft _ => TypeError_comp (NotAProduct t hnft) _
         }
       }.
   Proof.
@@ -1788,38 +1811,39 @@ Section ReduceFns.
       now eapply wt_closed_red_refl.
     * pose proof (hnf_sound (h:=h)).
       now rewrite eq.
+    * sq.
+      pose proof (@hnf_complete Γ t h) as [wh].
+      pose proof (@hnf_sound Γ t h) as [r'].
+      destruct HΣ.
+      eapply PCUICContextConversion.closed_red_confluence in X2 as (?&r1&r2); eauto.
+      apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
+      eapply whnf_red_inv in r1; auto.
+      depelim r1.
+      now rewrite H in n0.
   Qed.
 
-  Lemma reduce_to_prod_complete {Γ t wt} e :
-    reduce_to_prod Γ t wt = TypeError e ->
+  Lemma reduce_to_prod_complete {Γ t wt} e p :
+    reduce_to_prod Γ t wt = TypeError_comp e p ->
     (forall na a b, red Σ Γ t (tProd na a b) -> False).
   Proof.
-    funelim (reduce_to_prod Γ t wt); try congruence.
     intros _ na a b r.
-    pose proof (@hnf_complete Γ t h) as [wh].
-    pose proof (@hnf_sound Γ t h) as [r'].
-    destruct HΣ.
-    eapply into_closed_red in r; eauto; fvs.
-    eapply PCUICContextConversion.closed_red_confluence in r as (?&r1&r2); eauto.
-    apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
-    eapply whnf_red_inv in r1; auto.
-    depelim r1.
-    clear Heq.
-    rewrite H in n0.
-    now cbn in n0.
+    apply p.
+    exists na, a, b.
+    sq.
+    eapply into_closed_red; fvs.
   Qed.
 
   Equations? reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result (∑ i u l, ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
+    : typing_result_comp (∑ i u l, ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
-        | view_ind_tInd i u => ret (i; u; args; _);
+        | view_ind_tInd i u => Checked_comp (i; u; args; _);
         | view_ind_other thd _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t [] h) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i' u with inspect (decompose_stack π) := {
-              | exist (l, _) eq_decomp' => ret (i'; u; l; _)
+              | exist (l, _) eq_decomp' => Checked_comp (i'; u; l; _)
               };
-            | view_ind_other _ _ => raise (NotAnInductive t)
+            | view_ind_other _ _ => TypeError_comp (NotAnInductive t) _
             }
           }
         }
@@ -1845,43 +1869,47 @@ Section ReduceFns.
         now destruct decompose_stack. }
       apply decompose_stack_eq in decomp as ->.
       now rewrite <- eq_decomp'.
+    - sq.
+      pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t [] h) as wh.
+      unfold reduce_stack in *.
+      destruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)).
+      destruct wh as [wh].
+      apply Req_red in r' as [r'].
+      unfold Pr in stack_valid.
+      cbn in *.
+      destruct HΣ.
+      assert (wf Σ) by auto.
+      eapply into_closed_red in r'; fvs.
+      eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2) ; eauto.
+      assert (exists args, π' = appstack args []) as (?&->).
+      { exists ((decompose_stack π').1).
+        assert (decomp: decompose_stack π' = ((decompose_stack π').1, [])).
+        { now rewrite stack_valid; destruct decompose_stack; cbn. }
+        now apply decompose_stack_eq in decomp. }
+      unfold zipp in wh.
+      rewrite stack_context_appstack, decompose_stack_appstack in wh.
+      rewrite zipc_appstack in r2.
+      cbn in *.
+      rewrite app_nil_r in wh.
+      apply invert_red_mkApps_tInd in r1 as (?&[-> _ ?]); auto.
+      eapply whnf_red_inv in r2; eauto.
+      apply whnf_red_mkApps_inv in r2 as (?&?); auto.
+      depelim w.
+      noconf eq.
+      discriminate i0.
   Qed.
 
-  Lemma reduce_to_ind_complete Γ ty wat e :
-    reduce_to_ind Γ ty wat = TypeError e ->
+  Lemma reduce_to_ind_complete Γ ty wat e p :
+    reduce_to_ind Γ ty wat = TypeError_comp e p ->
     forall ind u args,
       red Σ Γ ty (mkApps (tInd ind u) args) ->
       False.
   Proof.
-    funelim (reduce_to_ind Γ ty wat); try congruence.
     intros _ ind u args' r.
-    pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t [] h) as wh.
-    unfold reduce_stack in *.
-    destruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)).
-    destruct wh as [wh].
-    apply Req_red in r' as [r'].
-    unfold Pr in stack_valid.
-    cbn in *.
-    destruct HΣ.
-    eapply into_closed_red in r'; fvs.
-    eapply into_closed_red in r; fvs.
-    eapply PCUICContextConversion.closed_red_confluence in r as (?&r1&r2);[|exact r'].
-    assert (exists args, π' = appstack args []) as (?&->).
-    { exists ((decompose_stack π').1).
-      assert (decomp: decompose_stack π' = ((decompose_stack π').1, [])).
-      { now rewrite stack_valid; destruct decompose_stack; cbn. }
-      now apply decompose_stack_eq in decomp. }
-    unfold zipp in wh.
-    rewrite stack_context_appstack, decompose_stack_appstack in wh.
-    rewrite zipc_appstack in r1.
-    cbn in *.
-    rewrite app_nil_r in wh.
-    apply invert_red_mkApps_tInd in r2 as (?&[-> _ ?]); auto.
-    eapply whnf_red_inv in r1; eauto.
-    apply whnf_red_mkApps_inv in r1 as (?&?); auto.
-    depelim w.
-    noconf eq.
-    discriminate i0.
+    apply p.
+    exists ind, u, args'.
+    sq.
+    eapply into_closed_red ; fvs.
   Qed.
   
   (* Definition of assumption-only arities (without lets) *)

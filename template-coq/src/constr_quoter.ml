@@ -182,6 +182,7 @@ struct
       Constr.VMcast -> Lazy.force kVmCast
     | Constr.DEFAULTcast -> Lazy.force kCast
     | Constr.NATIVEcast -> Lazy.force kNative
+    | Constr.REVERTcast -> Lazy.force kRevertCast
 
   let string_of_level s =
     to_string (Univ.Level.to_string s)
@@ -189,7 +190,7 @@ struct
   let quote_nonprop_level l =
     if Univ.Level.is_prop l || Univ.Level.is_sprop l then
       failwith "quote_nonprop_level : Prop or SProp found in levels"
-    else if Level.is_set l then Lazy.force lSet
+    else if Level.is_set l then Lazy.force lzero
     else match Level.var_index l with
          | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
          | None -> constr_mkApp (tLevel, [| string_of_level l|])
@@ -275,18 +276,20 @@ struct
     let var_list = CArray.map_to_list quote_variance var in
     to_coq_list (Lazy.force tVariance) var_list
 
+  let quote_ucontext inst const =
+    let inst' = quote_univ_instance inst in
+    let const' = quote_univ_constraints const in
+    constr_mkApp (tUContextmake, [|inst'; const'|])
+
   let quote_univ_contextset uctx =
     let levels' = quote_levelset (ContextSet.levels uctx) in
     let const' = quote_univ_constraints (ContextSet.constraints uctx) in
     pairl tLevelSet tConstraintSet levels' const'
 
   let quote_univ_context uctx =
-    let arr = (UContext.names uctx) in
-    let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
     let inst' = quote_univ_instance (UContext.instance uctx) in
     let const' = quote_univ_constraints (UContext.constraints uctx) in
-    let p = constr_mkApp (tUContextmake', [|inst'; const'|]) in
-    constr_mkApp (tUContextmake, [|idents; p |])
+    constr_mkApp (tUContextmake, [|inst'; const'|])
 
   (* let quote_variance_entry var =
     let listvar = constr_mkAppl (tlist, [| tVariance |]) in
@@ -311,18 +314,20 @@ struct
   let mkMonomorphic_entry ctx = 
      constr_mkApp (cMonomorphic_entry, [| ctx |])
   
-  let mkPolymorphic_entry ctx = 
-     constr_mkApp (cPolymorphic_entry, [| ctx |])
+  let mkPolymorphic_entry names ctx = 
+     let names = to_coq_list (Lazy.force tname) names in
+     constr_mkApp (cPolymorphic_entry, [| names; ctx |])
 
   let quote_inductive_universes uctx =
     match uctx with
-    | Entries.Monomorphic_entry ->
-      let f inst = Array.map (fun _ -> Anonymous) (Instance.to_array inst) in
-      let ctx = quote_univ_context (Univ.ContextSet.to_context f Univ.ContextSet.empty) in
+    | Entries.Monomorphic_entry uctx -> 
+      let ctx = quote_univ_context (Univ.ContextSet.to_context uctx) in
       constr_mkApp (cMonomorphic_entry, [| ctx |])
-    | Entries.Polymorphic_entry uctx ->
+    | Entries.Polymorphic_entry (names, uctx) ->
+      let names = CArray.map_to_list quote_name names in
+      let names = to_coq_list (Lazy.force tname) names in
       let ctx = quote_univ_context uctx in
-      constr_mkApp (cPolymorphic_entry, [| ctx |])
+      constr_mkApp (cPolymorphic_entry, [| names; ctx |])
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in

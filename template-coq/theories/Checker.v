@@ -101,7 +101,7 @@ Section Lookups.
   Definition polymorphic_constraints u :=
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx => (AUContext.repr ctx).2.2
+    | Polymorphic_ctx ctx => (AUContext.repr ctx).2
     end.
 
   Definition lookup_constant_type cst u :=
@@ -725,7 +725,6 @@ Section Typecheck.
       convert_leq Γ tx t'.
 
   End InferAux.
-
 
   Definition check_consistent_constraints cstrs :=
     if check_constraints G cstrs then ret tt

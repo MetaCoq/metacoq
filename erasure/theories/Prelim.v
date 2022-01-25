@@ -2,8 +2,8 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Erasure Require Import EAstUtils Extract EArities EWcbvEval.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
-     PCUICSubstitution PCUICLiftSubst PCUICClosed
-     PCUICWcbvEval PCUICSR  PCUICInversion PCUICGeneration
+     PCUICSubstitution PCUICLiftSubst PCUICClosedTyp
+     PCUICReduction PCUICWcbvEval PCUICSR PCUICInversion PCUICGeneration
      PCUICContextConversion PCUICArities PCUICWellScopedCumulativity PCUICCanonicity.
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.

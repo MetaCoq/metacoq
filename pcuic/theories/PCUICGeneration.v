@@ -12,12 +12,12 @@ Section Generation.
     term -> list term -> term -> Type :=
   | type_spine_nil ty ty' :
       isType Σ Γ ty' ->
-      Σ ;;; Γ |- ty <= ty' ->
+      Σ ;;; Γ |- ty <=s ty' ->
       typing_spine Σ Γ ty [] ty'
 
   | type_spine_cons hd tl na A B T B' :
       isType Σ Γ (tProd na A B) ->
-      Σ ;;; Γ |- T <= tProd na A B ->
+      Σ ;;; Γ |- T <=s tProd na A B ->
       Σ ;;; Γ |- hd : A ->
       typing_spine Σ Γ (subst10 hd B) tl B' ->
       typing_spine Σ Γ T (hd :: tl) B'.

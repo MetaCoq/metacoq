@@ -37,8 +37,8 @@ src/pCUICAstUtils.ml
 src/pCUICAstUtils.mli
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
-src/pCUICReduction.ml
-src/pCUICReduction.mli
+# src/pCUICReduction.ml
+# src/pCUICReduction.mli
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICPosition.mli

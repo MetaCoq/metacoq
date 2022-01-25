@@ -19,8 +19,10 @@ From MetaCoq.PCUIC Require Import PCUICSafeLemmata.
 From MetaCoq.PCUIC Require Import PCUICTyping.
 From MetaCoq.PCUIC Require Import PCUICUnivSubst.
 From MetaCoq.PCUIC Require Import PCUICValidity.
-From MetaCoq.PCUIC Require Import PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
+From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
+From MetaCoq.PCUIC Require Import PCUICSN.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
 
@@ -114,7 +116,7 @@ Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
-Theorem pcuic_consistent {cf:checker_flags} Σ t :
+Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ t :
   wf_ext Σ ->
   axiom_free Σ ->
   (* t : forall (P : Prop), P *)
@@ -156,7 +158,7 @@ Proof.
       + reflexivity.
       + reflexivity.
     - destruct wfΣ; auto. }
-  eapply (env_prop_typing PCUICWeakeningEnv.weakening_env) in cons; auto.
+  eapply (env_prop_typing weakening_env) in cons; auto.
   3: exists [(make_fresh_name Σ, InductiveDecl False_mib)]; reflexivity.
   2: now destruct wf'.
   
@@ -164,7 +166,7 @@ Proof.
   set (False_ty := tInd (mkInd (make_fresh_name Σ) 0) []).
   assert (typ_false: (Σ', Σ.2);;; [] |- tApp t False_ty : False_ty).
   { apply validity in cons as typ_prod; auto.
-    destruct typ_prod. red in t0.
+    destruct typ_prod.
     eapply type_App with (B := tRel 0) (u := False_ty); eauto.
     eapply type_Ind with (u := []) (mdecl := False_mib) (idecl := False_oib); eauto.
     - hnf.
@@ -175,10 +177,10 @@ Proof.
       auto.
     - cbn.
       auto. }
-  assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.
+(*   assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.*)
   pose proof (iswelltyped _ _ _ _ typ_false) as wt.
-  pose proof (@hnf_sound _ _ sqwf _ _ wt) as [r].
-  pose proof (@hnf_complete _ _ sqwf _ _ wt) as [w].
+  pose proof (hnf_sound (sq wf') (h := wt)) as [r].
+  pose proof (hnf_complete (sq wf') (h := wt)) as [w].
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.

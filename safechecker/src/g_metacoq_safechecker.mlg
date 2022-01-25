@@ -43,7 +43,7 @@ let check env evm (c, ustate) =
   in
   match check with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)
-  | Coq_inr s -> CErrors.user_err (pr_char_list s)
+  | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
 }
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
@@ -69,7 +69,7 @@ let retypecheck_term_dependencies env gr =
     let fake_inst = Univ.Instance.of_array (Array.mapi fake_level names) in
     let cu = (c, fake_inst) in
     let cbody, ctype, cstrs = Environ.constant_value_and_type env cu in
-    let env' = Environ.push_context (Univ.UContext.make names (fake_inst, cstrs)) env in
+    let env' = Environ.push_context (Univ.UContext.make (fake_inst, cstrs)) env in
     typecheck env' ctype;
     Option.iter (typecheck env') cbody
   in

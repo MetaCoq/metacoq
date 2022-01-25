@@ -83,7 +83,7 @@ Extract Constant Z.abs_N => "Pervasives.abs".
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+Extract Inductive Numeral.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
@@ -106,7 +106,8 @@ Extraction Inline Equations.Prop.Logic.True_rect_dep Equations.Prop.Logic.False_
 (** This Inline is because of a problem of weak type variables (partial application?) *)
 Extraction Inline PCUICPrimitive.prim_val_reflect_eq.
 
-Extract Constant PCUICTyping.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
+Extract Constant PCUICTyping.guard_checking => 
+  "(fun _ _ _ _ -> true)".
 
 Cd "src".
 

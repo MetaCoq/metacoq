@@ -92,14 +92,14 @@ sig
   val quote_constraint_type : Univ.constraint_type -> quoted_constraint_type
   val quote_univ_constraint : Univ.univ_constraint -> quoted_univ_constraint
   val quote_univ_instance : Univ.Instance.t -> quoted_univ_instance
-  val quote_univ_constraints : Univ.Constraints.t -> quoted_univ_constraints
+  val quote_univ_constraints : Univ.Constraint.t -> quoted_univ_constraints
   val quote_univ_context : Univ.UContext.t -> quoted_univ_context
   val quote_univ_contextset : Univ.ContextSet.t -> quoted_univ_contextset
   val quote_variance : Univ.Variance.t -> quoted_variance
-  val quote_abstract_univ_context : Univ.AbstractContext.t -> quoted_abstract_univ_context
+  val quote_abstract_univ_context : Univ.AUContext.t -> quoted_abstract_univ_context
 
   val mkMonomorphic_entry : quoted_univ_contextset -> quoted_universes_entry
-  val mkPolymorphic_entry : quoted_univ_context -> quoted_universes_entry
+  val mkPolymorphic_entry : quoted_name list -> quoted_univ_context -> quoted_universes_entry
 
   val mkMonomorphic_ctx : quoted_univ_contextset -> quoted_universes_decl
   val mkPolymorphic_ctx : quoted_abstract_univ_context -> quoted_universes_decl
@@ -164,15 +164,16 @@ struct
 
   let get_abstract_inductive_universes iu =
     match iu with
-    | Declarations.Monomorphic -> Univ.UContext.empty
-    | Polymorphic ctx -> Univ.AbstractContext.repr ctx
+    | Declarations.Monomorphic ctx -> Univ.UContext.empty
+    | Polymorphic ctx -> Univ.AUContext.repr ctx
 
   let quote_universes_entry = function
-    | Monomorphic_entry -> Q.mkMonomorphic_entry (Q.quote_univ_contextset Univ.ContextSet.empty)
-    | Polymorphic_entry ctx -> Q.mkPolymorphic_entry (Q.quote_univ_context ctx)
+    | Monomorphic_entry ctx -> Q.mkMonomorphic_entry (Q.quote_univ_contextset ctx)
+    | Polymorphic_entry (names, ctx) ->
+      Q.mkPolymorphic_entry (CArray.map_to_list Q.quote_name names) (Q.quote_univ_context ctx)
 
   let quote_universes_decl = function
-    | Monomorphic -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset Univ.ContextSet.empty)
+    | Monomorphic ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
@@ -267,11 +268,12 @@ struct
         let q_relevance = Q.quote_relevance ci.Constr.ci_relevance in
         let acc, q_pars = CArray.fold_left_map (fun acc par -> let (qt, acc) = quote_term acc env par in acc, qt) acc pars in 
         let qu = Q.quote_univ_instance u in
-        let pctx = CaseCompat.case_predicate_context (snd env) ci u pars predctx in 
+        let parsl =  Array.to_list pars in
+        let pctx = CaseCompat.case_predicate_context (snd env) ci u parsl predctx in 
         let qpctx = quote_name_annots predctx in
         let (qpred,acc) = quote_term acc (push_rel_context pctx env) pred in
         let (qdiscr,acc) = quote_term acc env discr in
-        let cbrs = CaseCompat.case_branches_contexts (snd env) ci u pars brs in  
+        let cbrs = CaseCompat.case_branches_contexts (snd env) ci u parsl brs in  
         let (branches,acc) =
           CArray.fold_left2 (fun (bodies,acc) (brnas, brctx, bbody) narg ->
             let (qbody,acc) = quote_term acc (push_rel_context brctx env) bbody in
@@ -322,7 +324,6 @@ struct
       in
       let envind = push_rel_context (List.rev indtys) env in
       let ref_name = Q.quote_kn (MutInd.canonical t) in
-      let ntyps = Array.length mib.mind_packets in
       let (ls,acc) =
         List.fold_left (fun (ls,acc) oib ->
           let named_ctors =
@@ -344,7 +345,6 @@ struct
               debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
                                   bool !opt_hnf_ctor_types)) ;
               let ty = Term.it_mkProd_or_LetIn ty ctx in
-              let ty = Inductive.abstract_constructor_type_relatively_to_inductive_types_context ntyps t ty in
               let ctx, concl = Term.decompose_prod_assum ty in
               let argctx, parsctx =
                 CList.chop (List.length ctx - List.length mib.mind_params_ctxt) ctx 
@@ -365,9 +365,9 @@ struct
           let projs, acc =
             match mib.Declarations.mind_record with
             | PrimRecord [|id, csts, relevance, ps|] ->  (* TODO handle mutual records *)
-                let ctxwolet = Vars.smash_rel_context mib.mind_params_ctxt in
+                let ctxwolet = Termops.smash_rel_context mib.mind_params_ctxt in
                 let indty = Constr.mkApp (Constr.mkIndU ((t,0),inst),
-                                        Context.Rel.instance Constr.mkRel 0 ctxwolet) in
+                                        Context.Rel.to_extended_vect Constr.mkRel 0 ctxwolet) in
                 let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
                 let envpars = push_rel_context (indbinder :: ctxwolet) env in
                 let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
@@ -440,7 +440,7 @@ struct
               | Def cs -> Some cs
               | OpaqueDef lc ->
                 if bypass then
-                  let c, univs = Global.force_proof Library.indirect_accessor lc in
+                  let c, univs = Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) lc in
                   let () = match univs with
                   | Opaqueproof.PrivateMonomorphic () -> ()
                   | Opaqueproof.PrivatePolymorphic (n, csts) -> if not (Univ.ContextSet.is_empty csts && Int.equal n 0) then 
@@ -528,7 +528,7 @@ since  [absrt_info] is a private type *)
     let variance = Option.map (CArray.map_to_list Q.quote_variance) t.mind_entry_variance in
     Q.quote_mutual_inductive_entry (mf, mp, is, uctx, variance) *)
 
-  let quote_constant_body_aux bypass env evm (cd : constant_body) =
+  let quote_constant_body_aux bypass env evm (cd : Opaqueproof.opaque constant_body) =
     let ty = quote_term env cd.const_type in
     let body =
       match cd.const_body with
@@ -536,7 +536,7 @@ since  [absrt_info] is a private type *)
       | Def cs -> Some (quote_term env cs)
       | OpaqueDef cs ->
         if bypass
-        then Some (quote_term env (fst (Global.force_proof Library.indirect_accessor cs)))
+        then Some (quote_term env (fst (Opaqueproof.force_proof Library.indirect_accessor (Environ.opaque_tables env) cs)))
         else None
       | Primitive _ -> failwith "Primitive types not supported by TemplateCoq"
     in
@@ -549,8 +549,9 @@ since  [absrt_info] is a private type *)
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in
     let uctx = match cd.const_universes with
-      | Polymorphic auctx -> Polymorphic_entry (Univ.AbstractContext.repr auctx)
-      | Monomorphic -> Monomorphic_entry
+      | Polymorphic auctx ->
+        Polymorphic_entry (Univ.AUContext.names auctx, Univ.AUContext.repr auctx)
+      | Monomorphic ctx -> Monomorphic_entry ctx
     in
     let univs = quote_universes_entry uctx in
     match body with

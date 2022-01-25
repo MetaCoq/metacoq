@@ -47,10 +47,10 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   Definition global_levels (Σ : global_env) : LevelSet.t :=
     fold_right
       (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl.2) lvls)
-      (LevelSet.singleton (Level.lSet)) Σ.
+      (LevelSet.singleton (Level.lzero)) Σ.
 
   Lemma global_levels_Set Σ :
-    LevelSet.mem Level.lSet (global_levels Σ) = true.
+    LevelSet.mem Level.lzero (global_levels Σ) = true.
   Proof.
     induction Σ; simpl. reflexivity.
     apply LevelSet.mem_spec, LevelSet.union_spec; right.
@@ -280,12 +280,17 @@ Module Conversion (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT 
         cumul_decls Γ Γ' (vdef na b T) (vdef na' b' T').
   
     Derive Signature NoConfusion for cumul_decls.
+
+    Notation conv_context := (All2_fold (conv_decls Σ)).
+    Notation cumul_context := (All2_fold (cumul_decls Σ)).
+
   End ContextConversion.
 
   Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
     All2_fold (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
-
+ 
 End Conversion.
+
 
 Module Type ConversionSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
   Include Conversion T E ET CT.
@@ -296,7 +301,7 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E)
 
   Import T E ET CS CT.
 
-  Parameter (typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+  Parameter Inline typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
 
   Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
 
@@ -481,7 +486,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition lift_level n l :=
       match l with 
-      | Level.lSet | Level.Level _ => l
+      | Level.lzero | Level.Level _ => l
       | Level.Var k => Level.Var (n + k)
       end.
 
@@ -627,15 +632,6 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       costly computations during type-checking and reduction: we can just substitute
       the instances of parameters and the inductive value without considering the 
       presence of let bindings. *)
-
-    Fixpoint projs ind npars k :=
-      match k with
-      | 0 => []
-      | S k' => (tProj ((ind, npars), k') (tRel 0)) :: projs ind npars k'
-      end.
-
-    Lemma projs_length ind npars k : #|projs ind npars k| = k.
-    Proof. induction k; simpl; auto. Qed.
 
     Definition on_projection mdecl mind i cdecl (k : nat) (p : ident * term) :=
       let Γ := smash_context [] (cdecl.(cstr_args) ++ mdecl.(ind_params)) in

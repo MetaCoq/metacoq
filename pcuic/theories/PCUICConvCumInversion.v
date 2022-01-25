@@ -1,8 +1,9 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICContextConversion PCUICContextReduction
-  PCUICConversion PCUICCumulProp PCUICEquality PCUICLiftSubst PCUICNormal PCUICReduction PCUICTyping 
-  PCUICGlobalEnv PCUICConfluence PCUICSubstitution PCUICClosed PCUICWeakeningEnv PCUICAlpha
+  PCUICCumulativity PCUICConversion PCUICCumulProp PCUICEquality PCUICLiftSubst PCUICNormal PCUICReduction PCUICTyping 
+  PCUICGlobalEnv PCUICConfluence PCUICSubstitution PCUICClosed PCUICClosedTyp
+  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICAlpha
   PCUICWellScopedCumulativity PCUICOnFreeVars.
 
 From MetaCoq.Template Require Import config.
@@ -26,6 +27,16 @@ Proof.
   apply eq_term_upto_univ_leq; cbn; auto.
 Qed.
 
+Lemma alt_into_equality_terms {cf Σ} {wfΣ : wf Σ} {Γ l l'} : 
+  All2 (convAlgo Σ Γ) l l' ->
+  is_closed_context Γ ->
+  forallb (is_open_term Γ) l ->
+  forallb (is_open_term Γ) l' ->
+  equality_terms Σ Γ l l'.
+Proof.
+  solve_all. eapply into_equality; tea.
+Qed.
+    
 (** Might be better suited with [red_context] hyps ensuring closedness directly *)
 Lemma red_ctx_rel_par_conv {cf Σ Γ Γ0 Γ0' Γ1 Γ1'} {wfΣ : wf Σ} :
   is_closed_context (Γ ,,, Γ0) ->
@@ -63,7 +74,7 @@ Proof.
 Qed.
       
 Lemma alpha_eq_context_gen Γ Δ : 
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   eq_context_gen eq eq Γ Δ.
 Proof.
   induction 1; constructor; auto.
@@ -92,10 +103,8 @@ Lemma inst_case_context_equality {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ pars
   declared_inductive Σ ind mdecl idecl ->
   #|pars| = ind_npars mdecl ->
   #|pars'| = ind_npars mdecl ->
-  test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
-      #|pars| ctx ->
-  test_context_k (fun k : nat => on_free_vars (closedP k xpredT))
-      #|pars'| ctx' ->
+  on_free_vars_ctx (closedP #|pars| xpredT) ctx ->
+  on_free_vars_ctx (closedP #|pars'| xpredT) ctx' ->
   is_closed_context Γ ->
   equality_terms Σ Γ pars pars' ->
   R_universe_instance (eq_universe Σ) puinst puinst' ->
@@ -110,7 +119,6 @@ Proof.
     apply on_free_vars_ctx_smash => //.
     generalize (declared_inductive_closed_params decli).
     now move/(closed_ctx_on_free_vars (shiftnP #|Γ| xpred0)). }
-  rewrite !test_context_k_closed_on_free_vars_ctx in onp onp'.
   have lenpars : #|pars| = context_assumptions (ind_params mdecl).
   { rewrite -(declared_minductive_ind_npars decli).
     now rewrite wfp. }
@@ -288,7 +296,7 @@ Section fixed.
       all: apply All2_length in a.
       all: try (constructor; constructor; rewrite a; auto).
       all: destruct leq; cbn; repeat constructor => //.
-    - eapply PCUICInductiveInversion.into_equality_terms => //.
+    - eapply alt_into_equality_terms => //.
       clear -a1 a a0.
       induction a1 in args, args', x2, a, x3, a0, a1 |- *; depelim a; depelim a0; [now constructor|].
       constructor.
@@ -357,15 +365,18 @@ Section fixed.
         * split; auto.
           + rewrite on_free_vars_ctx_app. apply /andP. split; auto. 
             eapply on_free_vars_ctx_inst_case_context; tea => //.
+            rewrite test_context_k_closed_on_free_vars_ctx //.
           + len. now setoid_rewrite shiftnP_add in p6.
         * eapply closed_red_refl.
           + rewrite on_free_vars_ctx_app. apply /andP. split; auto. 
             eapply on_free_vars_ctx_inst_case_context; tea => //.
+            now rewrite test_context_k_closed_on_free_vars_ctx.
           + eapply red_on_free_vars in r1; tea.
             { len. rewrite (All2_fold_length a5).
               now setoid_rewrite shiftnP_add in p1. }
             len. rewrite -shiftnP_add (All2_fold_length a5).
             eapply on_ctx_free_vars_inst_case_context; auto.
+            1:now rewrite test_context_k_closed_on_free_vars_ctx.
             now erewrite -> on_free_vars_ctx_on_ctx_free_vars. }
       eapply (equality_equality_ctx (Γ := Γ ,,, inst_case_predicate_context p') (le':=false)) => //.
       symmetry. eapply red_equality.
@@ -383,15 +394,16 @@ Section fixed.
       destruct p0, p1, r.
       cbn in p4, p9. move/andP: p4 => [fv p4].
       move/andP: p9 => [fv' p9].
-      constructor.
+      constructor. 
       2: { apply IHbrseq; auto. }
       have eqctx : Σ ⊢ Γ ,,, inst_case_branch_context p x0 = Γ ,,, inst_case_branch_context p' x1.
       { rewrite /inst_case_branch_context.
         eapply (inst_case_context_equality decli); tea.
         { apply (wf_predicate_length_pars wfp). }
         { apply (wf_predicate_length_pars wfp'). }
-        { now move/andP: fv'. }
-        { now move/andP: fv. }
+        { rewrite -test_context_k_closed_on_free_vars_ctx //.
+          now move/andP: fv'. }
+        { rewrite -test_context_k_closed_on_free_vars_ctx; now move/andP: fv. }
         now rewrite e e0. }
       rewrite e e0; split => //.
       transitivity (bbody x); tea.

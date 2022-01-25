@@ -213,7 +213,8 @@ Qed.
 Inductive cast_kind : Set :=
 | VmCast
 | NativeCast
-| Cast.
+| Cast
+| RevertCast.
 Derive NoConfusion EqDec for cast_kind.
 
 Record case_info := mk_case_info { 

@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         coq_version: 
-          - 'dev'
+          - '8.14'
         ocaml_version:
           - '4.07-flambda'
           - '4.12-flambda'

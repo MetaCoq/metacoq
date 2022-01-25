@@ -23,8 +23,7 @@ Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
 (* Universe issues: undeclared universes from sections *)
 (* MetaCoq Quote Recursively Definition boolq := bool_list. *)
-(* FIXME: correctly handle global monomorphic constraints *)
-(* MetaCoq SafeCheck bool_list. *)
+MetaCoq SafeCheck bool_list.
 MetaCoq CoqCheck bool_list.
 
 (* Even with universe checking disabled, we get:

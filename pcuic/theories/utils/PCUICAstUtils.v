@@ -330,7 +330,7 @@ Lemma reln_list_lift_above l p Γ :
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
 Proof.
-  generalize (le_refl p).
+  generalize (Nat.le_refl p).
   generalize p at 1 3 5.
   induction Γ in p, l |- *. simpl. auto.
   intros. destruct a. destruct decl_body. simpl.

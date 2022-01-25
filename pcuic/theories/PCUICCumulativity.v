@@ -15,7 +15,7 @@ Reserved Notation " Σ ;;; Γ |- t <=[ Rle ] u" (at level 50, Γ, t, u at next l
 
 Definition leq_term_ext `{checker_flags} (Σ : global_env_ext) Rle t u := eq_term_upto_univ Σ (eq_universe Σ) Rle t u.
 
-Notation " Σ ⊢ t <===[ Rle , napp ] u" := (eq_term_upto_univ Σ (eq_universe Σ) Rle t u) (at level 50, t, u at next level).
+Notation " Σ ⊢ t <===[ Rle , napp ] u" := (eq_term_upto_univ_napp Σ (eq_universe Σ) Rle napp t u) (at level 50, t, u at next level).
 
 (** ** Cumulativity *)
 

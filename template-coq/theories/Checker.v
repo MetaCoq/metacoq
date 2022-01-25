@@ -101,7 +101,7 @@ Section Lookups.
   Definition polymorphic_constraints u :=
     match u with
     | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx => (AUContext.repr ctx).2
+    | Polymorphic_ctx ctx => (AUContext.repr ctx).2.2
     end.
 
   Definition lookup_constant_type cst u :=

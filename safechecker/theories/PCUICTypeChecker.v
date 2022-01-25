@@ -905,7 +905,6 @@ Section Typecheck.
     - symmetry in e2.
       eapply forallb_All in e2. eapply All_forallb'; tea.
       clear -cf HG. intros x; simpl. now apply is_graph_of_uctx_levels.
-    - now rewrite mapi_length in e1.
     - eapply check_constraints_spec ; eauto.
       all: now sq ; destruct HΣ.
   Qed.
@@ -936,9 +935,6 @@ Section Typecheck.
       now auto.
     - cbn -[LevelSet.mem] in *.
       move: H mema => /andP [] /is_graph_of_uctx_levels -> //.
-  Qed.
-  Next Obligation.
-    now rewrite mapi_length in e1.
   Qed.
   Next Obligation.
     inversion X1.
@@ -1429,7 +1425,7 @@ Section Typecheck.
   Next Obligation. intros; sq; now inversion X0. Qed.
   (* tSort *)
   Next Obligation.
-    match goal with [ H : is_true (wf_universeb _ _) |- _ ] =>
+    match goal with [ H : true = (wf_universeb _ _) |- _ ] =>
       symmetry in H; eapply (elimT wf_universe_reflect) in H
     end.
     sq; econstructor; tas.
@@ -1730,7 +1726,7 @@ Section Typecheck.
       rewrite -subst_instance_app_ctx.
       now eapply (on_minductive_wf_params_indices_inst X0). }
     match goal with [ H : ind_npars d = _ |- _ ] =>
-    rewrite chop_firstn_skipn -H /= in eq_params *.
+    rewrite chop_firstn_skipn -H /= in eq_params *
     end.
     eapply spine_subst_app => //.
     * len. rewrite -(All2_length eq_params).
@@ -2170,7 +2166,7 @@ Section Typecheck.
       2: now apply infering_typing.
       eapply validity in X1; eauto.
       destruct (ssrbool.elimT (eqb_spec ind I)); auto.
-      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X5 as [parsubst [argsubst [sp sp' cu]]]; eauto.
+      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X1 as [parsubst [argsubst [sp sp' cu]]]; eauto.
       pose proof (Hl := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
       pose proof (Hr := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
       autorewrite with len in Hl, Hr.

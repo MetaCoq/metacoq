@@ -182,7 +182,6 @@ struct
       Constr.VMcast -> Lazy.force kVmCast
     | Constr.DEFAULTcast -> Lazy.force kCast
     | Constr.NATIVEcast -> Lazy.force kNative
-    | Constr.REVERTcast -> Lazy.force kRevertCast
 
   let string_of_level s =
     to_string (Univ.Level.to_string s)
@@ -212,7 +211,7 @@ struct
            constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])
 
   let quote_levelset s =
-    let levels = LSet.elements s in
+    let levels = Univ.Level.Set.elements s in
     let levels' =  to_coq_listl tlevel (List.map quote_nonprop_level levels) in
     constr_mkApp (tLevelSet_of_list, [|levels'|])
 
@@ -261,7 +260,7 @@ struct
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =
-    let const = Univ.Constraint.elements const in
+    let const = Univ.Constraints.elements const in
     List.fold_left (fun tm c ->
         constr_mkApp (tConstraintSetadd, [| c; tm|])
       ) (Lazy.force tConstraintSetempty) (constraints_ const)
@@ -276,20 +275,18 @@ struct
     let var_list = CArray.map_to_list quote_variance var in
     to_coq_list (Lazy.force tVariance) var_list
 
-  let quote_ucontext inst const =
-    let inst' = quote_univ_instance inst in
-    let const' = quote_univ_constraints const in
-    constr_mkApp (tUContextmake, [|inst'; const'|])
-
   let quote_univ_contextset uctx =
     let levels' = quote_levelset (ContextSet.levels uctx) in
     let const' = quote_univ_constraints (ContextSet.constraints uctx) in
     pairl tLevelSet tConstraintSet levels' const'
 
   let quote_univ_context uctx =
+    let arr = (UContext.names uctx) in
+    let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
     let inst' = quote_univ_instance (UContext.instance uctx) in
     let const' = quote_univ_constraints (UContext.constraints uctx) in
-    constr_mkApp (tUContextmake, [|inst'; const'|])
+    let p = constr_mkApp (tUContextmake', [|inst'; const'|]) in
+    constr_mkApp (tUContextmake, [|idents; p |])
 
   (* let quote_variance_entry var =
     let listvar = constr_mkAppl (tlist, [| tVariance |]) in
@@ -300,9 +297,9 @@ struct
       constr_mkApp (cSome, [| listvar; var' |]) *)
   
  let quote_abstract_univ_context uctx =
-    let arr = (AUContext.names uctx) in
+    let arr = (AbstractContext.names uctx) in
     let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
-    let const' = quote_univ_constraints (UContext.constraints (AUContext.repr uctx)) in
+    let const' = quote_univ_constraints (UContext.constraints (AbstractContext.repr uctx)) in
     constr_mkApp (tAUContextmake, [|idents; const'|])
 
   let mkMonomorphic_ctx t =
@@ -314,20 +311,18 @@ struct
   let mkMonomorphic_entry ctx = 
      constr_mkApp (cMonomorphic_entry, [| ctx |])
   
-  let mkPolymorphic_entry names ctx = 
-     let names = to_coq_list (Lazy.force tname) names in
-     constr_mkApp (cPolymorphic_entry, [| names; ctx |])
+  let mkPolymorphic_entry ctx = 
+     constr_mkApp (cPolymorphic_entry, [| ctx |])
 
   let quote_inductive_universes uctx =
     match uctx with
-    | Entries.Monomorphic_entry uctx -> 
-      let ctx = quote_univ_context (Univ.ContextSet.to_context uctx) in
+    | Entries.Monomorphic_entry ->
+      let f inst = Array.map (fun _ -> Anonymous) (Instance.to_array inst) in
+      let ctx = quote_univ_context (Univ.ContextSet.to_context f Univ.ContextSet.empty) in
       constr_mkApp (cMonomorphic_entry, [| ctx |])
-    | Entries.Polymorphic_entry (names, uctx) ->
-      let names = CArray.map_to_list quote_name names in
-      let names = to_coq_list (Lazy.force tname) names in
+    | Entries.Polymorphic_entry uctx ->
       let ctx = quote_univ_context uctx in
-      constr_mkApp (cPolymorphic_entry, [| names; ctx |])
+      constr_mkApp (cPolymorphic_entry, [| ctx |])
 
   let quote_ugraph (g : UGraph.t) =
     let inst' = quote_univ_instance Univ.Instance.empty in

@@ -4098,7 +4098,7 @@ Proof.
   intros. intuition auto. lia.
   pose proof (nth_error_Some_length b0).
   destruct n0. cbn in *. destruct tl. cbn in *. depelim a0. depelim a0.
-  cbn in b0. rewrite -minus_Sn_m. lia. cbn. exact b0.
+  cbn in b0. rewrite Nat.sub_succ_l //; lia.
 Qed.
 
 Lemma Alli_nth_hyp {A} {P : nat -> A -> Type} {l} : 

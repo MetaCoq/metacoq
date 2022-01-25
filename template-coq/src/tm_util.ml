@@ -5,7 +5,7 @@ let contrib_name = "template-coq"
 let gen_constant_in_modules s =
   lazy (
     let tm_ref = Coqlib.lib_ref s in
-    UnivGen.constr_of_monomorphic_global tm_ref
+    UnivGen.constr_of_monomorphic_global (Global.env ()) tm_ref
   )
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
@@ -101,7 +101,7 @@ module CaseCompat =
   let case_predicate_context_gen mip ci u paramsubst nas =
     let realdecls, _ = List.chop mip.mind_nrealdecls mip.mind_arity_ctxt in
     let self =
-      let args = Context.Rel.to_extended_vect mkRel 0 mip.mind_arity_ctxt in
+      let args = Context.Rel.instance mkRel 0 mip.mind_arity_ctxt in
       let inst = Instance.of_array (Array.init (Instance.length u) Level.var) in
       mkApp (mkIndU (ci.ci_ind, inst), args)
     in

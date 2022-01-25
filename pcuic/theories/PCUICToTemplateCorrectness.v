@@ -280,7 +280,7 @@ Lemma trans_subst xs k t:
 Proof.
   induction t in k |- * using PCUICInduction.term_forall_list_ind.
   all: cbn;try congruence.
-  - destruct leb;trivial.
+  - destruct Nat.leb;trivial.
     rewrite nth_error_map.
     destruct nth_error;cbn.
     2: now rewrite map_length.

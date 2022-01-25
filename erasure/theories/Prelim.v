@@ -118,7 +118,7 @@ Proof.
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.
-    + cbn. now rewrite <- minus_n_O.
+    + cbn. now rewrite Nat.sub_0_r.
     + cbn. rewrite IHm. lia. reflexivity.
 Qed.
 
@@ -130,7 +130,7 @@ Proof.
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.
-    + cbn. now rewrite <- minus_n_O.
+    + cbn. now rewrite Nat.sub_0_r.
     + cbn. rewrite IHm. lia. reflexivity.
 Qed.
 
@@ -146,14 +146,14 @@ Proof.
   induction mfix0 using rev_ind.
   - econstructor.
   - rewrite mapi_app. cbn in *. rewrite rev_app_distr. cbn in *.
-    rewrite app_length. cbn. rewrite plus_comm. cbn. econstructor.
+    rewrite app_length. cbn. rewrite Nat.add_comm /=; econstructor.
     + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
     + rewrite <- plus_n_O.
       rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.
       eapply inversion_Fix in X as (? & ? & ? & ? & ? & ? & ?) ; auto.
       econstructor; eauto. destruct H. subst.
-      rewrite <- app_assoc. rewrite nth_error_app_ge. lia.
-      rewrite minus_diag. cbn. reflexivity.
+      rewrite <- app_assoc, nth_error_app_ge; try lia.
+      now rewrite Nat.sub_diag.
 Qed.
 
 Lemma cofix_subst_nth mfix n :
@@ -164,8 +164,8 @@ Proof.
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.
-    + cbn. now rewrite <- minus_n_O.
-    + cbn. rewrite IHm. lia. reflexivity.
+    + cbn. now rewrite Nat.sub_0_r.
+    + cbn. rewrite IHm; lia_f_equal.
 Qed.
 
 Lemma ecofix_subst_nth mfix n :
@@ -176,7 +176,7 @@ Proof.
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.
-    + cbn. now rewrite <- minus_n_O.
+    + cbn. now rewrite Nat.sub_0_r.
     + cbn. rewrite IHm. lia. reflexivity.
 Qed.
 
@@ -192,14 +192,14 @@ Proof.
   induction mfix0 using rev_ind.
   - econstructor.
   - rewrite mapi_app. cbn in *. rewrite rev_app_distr. cbn in *.
-    rewrite app_length. cbn. rewrite plus_comm. cbn. econstructor.
+    rewrite app_length /= Nat.add_comm /=. econstructor.
     + eapply IHmfix0. destruct H as [L]. exists (x :: L). subst. now rewrite <- app_assoc.
     + rewrite <- plus_n_O.
       rewrite PCUICLiftSubst.simpl_subst_k. clear. induction l; cbn; try congruence.
       eapply inversion_CoFix in X as (? & ? & ? & ? & ? & ? & ?) ; auto.
       econstructor; eauto. destruct H. subst.
       rewrite <- app_assoc. rewrite nth_error_app_ge. lia.
-      rewrite minus_diag. cbn. reflexivity.
+      now rewrite Nat.sub_diag.
 Qed.
 
 (** ** Prelim on typing *)

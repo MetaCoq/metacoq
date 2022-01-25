@@ -111,7 +111,7 @@ struct
         let ci = Inductiveops.make_case_info (Global.env ()) ind relevance Constr.RegularStyle in
         let evm, puinst = D.unquote_universe_instance evm p.auinst in
         let evm, pars = map_evm (aux env) evm p.apars in
-        let parsa = Array.of_list pars in
+        let pars = Array.of_list pars in
         let napctx = CArray.map_of_list D.unquote_aname (List.rev p.apcontext) in
         let pctx = CaseCompat.case_predicate_context env ci puinst pars napctx in 
         let evm, pret = aux (Environ.push_rel_context pctx env) evm p.apreturn in
@@ -125,7 +125,8 @@ struct
           evm, (nas, bbody)
         in
         let evm, brs = array_map_evm denote_br evm brs in
-        let pcase = (ci, puinst, parsa, (napctx, pret), Constr.NoInvert, c, brs) in
+        (* todo: reify better case_info *)
+        let pcase = (ci, puinst, pars, (napctx, pret), Constr.NoInvert, c, brs) in
         evm, Constr.mkCase pcase
       | ACoq_tFix (lbd, i) ->
         let (names,types,bodies,rargs) = (List.map (fun p->p.adname) lbd,  List.map (fun p->p.adtype) lbd, List.map (fun p->p.adbody) lbd,

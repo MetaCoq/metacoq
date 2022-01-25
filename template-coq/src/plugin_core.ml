@@ -8,7 +8,7 @@ type reduction_strategy = Redexpr.red_expr (* Template.TemplateMonad.Common.redu
 type global_reference = Names.GlobRef.t (* Template.Ast.global_reference *)
 type term = Constr.t  (* Template.Ast.term *)
 type mutual_inductive_body = Declarations.mutual_inductive_body (* Template.Ast.mutual_inductive_body *)
-type constant_body = Opaqueproof.opaque Declarations.constant_body
+type constant_body = Declarations.constant_body
 type constant_entry = Entries.constant_entry (* Template.Ast.constant_entry *)
 type mutual_inductive_entry = Entries.mutual_inductive_entry (* Template.Ast.mutual_inductive_entry *)
 
@@ -95,9 +95,10 @@ let tmDefinition (nm : ident) ?poly:(poly=false) ?opaque:(opaque=false) (typ : t
 
 let tmAxiom (nm : ident) ?poly:(poly=false) (typ : term) : kername tm =
   fun ~st env evm success _fail ->
+    let univs = Evd.univ_entry ~poly evm in
     let param =
-      let entry = Evd.univ_entry ~poly evm
-       in Declare.ParameterEntry (None, (typ, entry), None)
+      let entry = Declare.parameter_entry ~univs typ in
+      Declare.ParameterEntry entry
     in
     let n =
       Declare.declare_constant ~name:nm
@@ -190,8 +191,10 @@ let _constant_entry_of_cb (cb : Declarations.constant_body) =
     const_entry_opaque = opaque;
     const_entry_inline_code = cb.const_inline_code }
   in
-  let parameter inline =
-    (secctx, (cb.const_type, universes_entry_of_decl cb.const_universes), inline)
+  let parameter inline = { parameter_entry_secctx = secctx;
+    parameter_entry_type = cb.const_type;
+    parameter_entry_universes = universes_entry_of_decl cb.const_universes;
+    parameter_entry_inline_code = inline }
   in
   match cb.const_body with
   | Def b -> DefinitionEntry (with_body_opaque (Mod_subst.force_constr b) false)
@@ -206,7 +209,7 @@ let _constant_entry_of_cb (cb : Declarations.constant_body) =
 *)
 
 (* get the definition associated to a kername *)
-let tmQuoteConstant (kn : kername) (bypass : bool) : Opaqueproof.opaque Declarations.constant_body tm =
+let tmQuoteConstant (kn : kername) (bypass : bool) : Declarations.constant_body tm =
   fun ~st env evd success fail ->
     (* todo(gmm): there is a bug here *)
     try
@@ -217,13 +220,13 @@ let tmQuoteConstant (kn : kername) (bypass : bool) : Opaqueproof.opaque Declarat
 
 let tmInductive (mi : mutual_inductive_entry) : unit tm =
   fun ~st env evd success _fail ->
-    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi Names.Id.Map.empty []) ;
+    ignore (DeclareInd.declare_mutual_inductive_with_eliminations mi (UState.Monomorphic_entry Univ.ContextSet.empty, Names.Id.Map.empty) []) ;
     success ~st (Global.env ()) evd ()
 
 let tmExistingInstance (gr : Names.GlobRef.t) : unit tm =
   fun ~st env evd success _fail ->
     let q = Libnames.qualid_of_path (Nametab.path_of_global gr) in
-    Classes.existing_instance Goptions.OptGlobal q None;
+    Classes.existing_instance Hints.Local q None;
     success ~st env evd ()
 
 let tmInferInstance (typ : term) : term option tm =

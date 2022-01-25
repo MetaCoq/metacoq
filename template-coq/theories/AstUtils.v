@@ -190,7 +190,7 @@ Fixpoint lookup_mind_decl (id : kername) (decls : global_env)
 
 Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
   match u with
-  | Polymorphic_ctx ctx => Polymorphic_entry (fst ctx) (Universes.AUContext.repr ctx)
+  | Polymorphic_ctx ctx => Polymorphic_entry (Universes.AUContext.repr ctx)
   | Monomorphic_ctx ctx => Monomorphic_entry ctx
   end.
 

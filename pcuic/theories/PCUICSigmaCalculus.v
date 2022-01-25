@@ -1280,7 +1280,7 @@ Lemma nat_recursion_ext {A} (x : A) f g n :
   Nat.recursion x f n = Nat.recursion x g n.
 Proof.
   intros.
-  generalize (le_refl n). 
+  generalize (Nat.le_refl n). 
   induction n at 1 3 4; simpl; auto. 
   intros. simpl. rewrite IHn0; try lia. now rewrite H.
 Qed.

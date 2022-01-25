@@ -24,9 +24,7 @@ Proof.
   intros k.
   rewrite !/shiftnP /shiftn.
   destruct (Nat.ltb_spec k i) => /=.
-  all: case_inequalities => //=.
-  1-2: lia.
-  by rewrite minus_plus.
+  all: case_inequalities => //=; lia_f_equal.
 Qed.
 
 Lemma on_free_vars_rename P f t :
@@ -943,8 +941,7 @@ Proof.
       apply rename_proper ; auto.
       intros x.
       rewrite !rshiftk_S lift_renaming_spec -(shiftn_rshiftk _ _ _) !shiftn_add -lift_renaming_spec.
-      rewrite Nat.add_0_r le_plus_minus_r.
-      1: lia.
+      rewrite Nat.add_0_r Nat.add_comm Nat.sub_add; try lia.
       rewrite (lift_unlift _ _ _) /ren_id /unlift_renaming.
       by move: (iΓ'') => /Nat.ltb_spec0 ->.
     + cbn ; destruct (decl_body decl'') ; rewrite //=.
@@ -955,8 +952,8 @@ Proof.
       change (S (i + _)) with
         (rshiftk (S i) (shiftn (#|Γ''| - S i) (lift_renaming #|Γ'| 0) x)).
       rewrite shiftn_lift_renaming lift_renaming_spec -(shiftn_rshiftk _ _ _) shiftn_add.
-      rewrite -lift_renaming_spec Nat.add_0_r le_plus_minus_r.
-      1: lia.
+      rewrite -lift_renaming_spec Nat.add_0_r.
+      rewrite Nat.add_comm Nat.sub_add //.
       rewrite (lift_unlift _ _ _) /ren_id /unlift_renaming.
       by move: (iΓ'') => /Nat.ltb_spec0 ->.
   - rewrite -app_context_assoc /= in nthi.

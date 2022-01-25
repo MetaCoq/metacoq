@@ -120,7 +120,7 @@ struct
     | Constr.DEFAULTcast -> Cast
     | Constr.NATIVEcast -> NativeCast
     | Constr.VMcast -> VmCast
-    | Constr.REVERTcast -> RevertCast
+
 
   let quote_dirpath (dp : DirPath.t) : BasicAst.dirpath =
     let l = DirPath.repr dp in
@@ -179,8 +179,8 @@ struct
        else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
-  let quote_univ_constraints (c : Univ.Constraint.t) : quoted_univ_constraints =
-    let l = constraints_ (Univ.Constraint.elements c) in
+  let quote_univ_constraints (c : Univ.Constraints.t) : quoted_univ_constraints =
+    let l = constraints_ (Univ.Constraints.elements c) in
     Universes0.ConstraintSet.(List.fold_right add l empty)
 
   let quote_variance (v : Univ.Variance.t) =
@@ -190,20 +190,21 @@ struct
     | Univ.Variance.Invariant -> Universes0.Variance.Invariant
 
   let quote_univ_context (uctx : Univ.UContext.t) : quoted_univ_context =
+    let names = CArray.map_to_list quote_name (Univ.UContext.names uctx)  in
     let levels = Univ.UContext.instance uctx  in
     let constraints = Univ.UContext.constraints uctx in
-    (quote_univ_instance levels, quote_univ_constraints constraints)
+    (names, (quote_univ_instance levels, quote_univ_constraints constraints))
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
     (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
-    let levels = List.map quote_nonprop_level (Univ.LSet.elements (Univ.ContextSet.levels uctx)) in
+    let levels = List.map quote_nonprop_level (Univ.Level.Set.elements (Univ.ContextSet.levels uctx)) in
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
   let quote_abstract_univ_context uctx =
-    let names = Univ.AUContext.names uctx in
+    let names = Univ.AbstractContext.names uctx in
     let levels = CArray.map_to_list quote_name names in
-    let constraints = Univ.UContext.constraints (Univ.AUContext.repr uctx) in
+    let constraints = Univ.UContext.constraints (Univ.AbstractContext.repr uctx) in
     (levels, quote_univ_constraints constraints)
 
   let quote_context_decl na b t =
@@ -386,7 +387,7 @@ struct
        let k = (quote_int (k - 1)) in
        ConstructRef (quote_inductive (kn,n), k)
 
-  let mkPolymorphic_entry names c = Universes0.Polymorphic_entry (names, c)
+  let mkPolymorphic_entry c = Universes0.Polymorphic_entry c
   let mkMonomorphic_entry c = Universes0.Monomorphic_entry c
 
 end

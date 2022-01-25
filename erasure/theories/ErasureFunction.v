@@ -2,7 +2,7 @@
 From Coq Require Import Program ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Kernames MCRelations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
-  PCUICReduction   
+  PCUICReduction
   PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICCasesContexts
   PCUICWeakeningConv PCUICWeakeningTyp
   PCUICContextConversionTyp
@@ -310,13 +310,12 @@ Next Obligation.
   match goal with [ H : Is_conv_to_Arity _ _ _ |- _ ] =>
   destruct H as [T' [redT' isar]] end.
   destruct wt as [T ht].
-  sq.
-  cbn in X. eapply type_reduction_closed in X; eauto.
+  sq. cbn in X. eapply type_reduction_closed in X; eauto.
   now exists T'.
 Qed.
 Next Obligation.
   sq. destruct type_of_typing as [x [[Hx ?]]]; cbn.
-  sq. destruct wt. cbn in H.
+  sq. destruct wt. cbn in n.
   now eapply validity in Hx; pcuic.
 Qed.
 Next Obligation.

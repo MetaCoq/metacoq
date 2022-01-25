@@ -365,7 +365,7 @@ Proof.
     change (subst_instance i (pcontext p)) with (pcontext (subst_instance i p)).
     change (map_predicate _ _ _ _ _) with (subst_instance i p).
     rewrite subst_instance_case_predicate_context.
-    eapply type_Case with (p0:=subst_instance i p)
+    eapply type_Case with (p:=subst_instance i p)
                           (ps:=subst_instance_univ i u); eauto with pcuic.
     3,4: constructor; eauto with pcuic.                                              
     + rewrite -subst_instance_case_predicate_context - !subst_instance_app_ctx.

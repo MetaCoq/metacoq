@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactics
   PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion
   PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
   PCUICConversion PCUICValidity PCUICInductives PCUICConversion
   PCUICInductiveInversion PCUICNormal PCUICSafeLemmata
   PCUICParallelReductionConfluence
-  PCUICWcbvEval PCUICClosed PCUICClosedTyp
+  PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity.
   
 Local Existing Instance config.extraction_checker_flags.
@@ -803,7 +803,7 @@ Section WeakNormalization.
       destruct cunfold_fix as [[rarg body]|] eqn:unf => //.
       pose proof cl as cl'.
       rewrite closedn_mkApps in cl'. move/andP: cl' => [clfix _].
-      rewrite -PCUICWcbvEval.closed_unfold_fix_cunfold_eq in unf => //.
+      rewrite -closed_unfold_fix_cunfold_eq in unf => //.
       rewrite /unfold_fix in unf.
       destruct nth_error eqn:nth => //. noconf unf.
       eapply whnf_fixapp. rewrite /unfold_fix nth.
@@ -1260,7 +1260,7 @@ Section WeakNormalization.
   Qed.
 
   Theorem subject_reduction_eval {t u T} :
-    Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
+    Σ ;;; [] |- t : T -> eval Σ t u -> Σ ;;; [] |- u : T.
   Proof.
     intros Hty Hred.
     eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.

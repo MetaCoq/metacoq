@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp 
-     PCUICClosed PCUICClosedTyp PCUICConvCumInversion PCUICEqualityDec.
+     PCUICClosed PCUICClosedTyp PCUICEqualityDec.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 
 Require Import Equations.Prop.DepElim.

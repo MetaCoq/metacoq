@@ -28,6 +28,7 @@ PCUICContextSubst.v | Is this worth keeping?
 PCUICCasesContexts.v | similar to PCUICContextSubst.v
 PCUICEquality.v |
 Conversion/PCUICNamelessConv.v | subsumed by PCUICAlpha, to be removed
+PCUICSigmaCalculus.v |
 Typing/PCUICNamelessTyp.v | subsumed by PCUICAlpha, to be removed
 Conversion/PCUICRenameConv.v |
 Conversion/PCUICInstConv.v |
@@ -43,58 +44,51 @@ Typing/PCUICWeakeningTyp.v |
 Typing/PCUICUnivSubstitutionTyp.v |
 Typing/PCUICClosedTyp.v | this is not about stability of typing, does putting it with the others still make sense?
 Typing/PCUICContextConversionTyp.v | there is no PCUICContextConversionConv counterpart, this is weird
-
-PCUICReduction.v
-PCUICTyping.v
-PCUICGuardCondition.v
-PCUICGlobalEnv.v
-PCUICInversion.v
-PCUICNormal.v
-PCUICEqualityDec.v
-PCUICSubstitution.v
-PCUICContextReduction.v
-PCUICCumulativity.v
-PCUICCumulativitySpec.v
+PCUICReduction.v | needs a bit of cleaning up to present the congruence lemmas properly
+PCUICTyping.v |
+PCUICGuardCondition.v |
+PCUICGlobalEnv.v | should this be integrated to EnvironmentTyping.v? Nothing specific to typing here
+PCUICGeneration.v | very short, should it be merged into Typing.v?
+PCUICInversion.v | how much is this redundant with the equivalence bidirectional <-> undirected? should we mention this is a consequence of confluence?
+PCUICEqualityDec.v | does this belong here or in the safe-checker?
+PCUICNormal.v |
+PCUICSN.v | try and minimize dependencies?
+PCUICSafeLemmata.v | should these lemmas be moved to other files where they belong?
+PCUICSubstitution.v | there seems to be a lot of mess in this file, does all of it belong here?
+PCUICContextReduction.v |
+PCUICCumulativitySpec.v |
+PCUICCumulativity.v | maybe change the name to be clearer?
+PCUICWfUniverses.v |
 PCUICParallelReduction.v
-PCUICParallelReductionConfluence.v
-PCUICConfluence.v
-PCUICWellScopedCumulativity.v
-PCUICContextConversion.v
-PCUICConversion.v
-PCUICConvCumInversion.v
-PCUICRedTypeIrrelevance.v
-PCUICGeneration.v
-PCUICAlpha.v
-PCUICContexts.v
-PCUICArities.v
-PCUICWfUniverses.v
-PCUICSpine.v
-PCUICInductives.v
-
-PCUICValidity.v
-PCUICInductiveInversion.v
-PCUICSR.v
-PCUICCanonicity.v
-
-PCUICCSubst.v
-PCUICWcbvEval.v
-PCUICCumulProp.v
-PCUICElimination.v
-PCUICSN.v
-PCUICPrincipality.v
-PCUICSigmaCalculus.v
-
-PCUICSafeLemmata.v
-
-TemplateToPCUIC.v
-TemplateToPCUICCorrectness.v
-TemplateToPCUICWcbvEval.v
-PCUICToTemplate.v
-PCUICToTemplateCorrectness.v
-PCUICExpandLets.v
-PCUICExpandLetsCorrectness.v
-
-Bidirectional/BDEnvironmentTyping.v
+PCUICParallelReductionConfluence.v | should we change rho’s name? it is very uninformative as is
+PCUICConfluence.v | also contains properties relating eq_term and reduction (eq_term is a simulation for confluence), should we split that apart?
+PCUICRedTypeIrrelevance.v |
+PCUICWellScopedCumulativity.v | the name `equality` is very confusing here imho
+PCUICContextConversion.v |
+PCUICConversion.v | There’s a lot here, putting forward the interesting bits or splitting the file might make sense
+PCUICContexts.v | Not sure what the coherence is here
+PCUICArities.v | There’s not much about arities here, maybe could be integrated into PCUICSpine (and maybe other places)?
+PCUICSpine.v | Not sure what’s happening here
+PCUICInductives.v |
+PCUICValidity.v |
+PCUICInductiveInversion.v |
+PCUICAlpha.v |
+PCUICSR.v |
+PCUICCSubst.v |
+PCUICWcbvEval.v |
+PCUICCanonicity.v | Does not prove canonicity at all… Should we still prove a form of progress here? Use other forms that are proven elsewhere more or less implicitely?
+PCUICCumulProp.v |
+PCUICElimination.v |
+PCUICConvCumInversion.v | This looks like something we should do otherwise using the relations we already have
+PCUICPrincipality.v | Should we keep this now that we have the proof using bidirectional typing?
+TemplateToPCUIC.v |
+TemplateToPCUICCorrectness.v |
+TemplateToPCUICWcbvEval.v |
+PCUICToTemplate.v |
+PCUICToTemplateCorrectness.v |
+PCUICExpandLets.v |
+PCUICExpandLetsCorrectness.v |
+Bidirectional/BDEnvironmentTyping.v | should ideally be integrated into EnvironmentTyping
 Bidirectional/BDTyping.v
 Bidirectional/BDToPCUIC.v
 Bidirectional/BDFromPCUIC.v

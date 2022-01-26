@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICConfluence PCUICConversion PCUICContextConversion
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosed PCUICClosedTyp PCUICSubstitution PCUICWfUniverses
      PCUICWeakeningConv PCUICWeakeningTyp PCUICGeneration PCUICUtils PCUICContexts
-     PCUICWellScopedCumulativity PCUICConversion.
+     PCUICWellScopedCumulativity PCUICConversion PCUICOnFreeVars.
 
 Require Import Equations.Prop.DepElim.
 Require Import Equations.Type.Relation_Properties.
@@ -128,7 +128,8 @@ Section WfEnv.
     - move=> [] onΓ [_ onΔ].
       apply All2_fold_app; auto.
   Qed.
-  Import PCUICOnFreeVars.
+
+
   Lemma invert_cumul_arity_l (Γ : context) (C : term) T :
     Σ;;; Γ ⊢ C ≤ T ->
     match destArity [] C with

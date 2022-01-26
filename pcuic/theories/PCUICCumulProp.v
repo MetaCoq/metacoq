@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine
      PCUICGlobalEnv PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitutionConv
@@ -126,16 +126,6 @@ Proof.
   constructor => //. constructor. 
   do 2 red. rewrite Hcf'.
   red. intros. now rewrite (is_sprop_val _ isp) (is_sprop_val _ isp').
-Qed.
-
-Lemma equality_alt_closed {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
-  Σ ;;; Γ ⊢ t ≤[le] u <~> 
-  ∑ v v',
-    [× Σ ;;; Γ ⊢ t ⇝ v, Σ ;;; Γ ⊢ u ⇝ v' & 
-       compare_term le Σ (global_ext_constraints Σ) v v'].
-Proof.
-  etransitivity. apply equality_alt.
-  split; intros (v & v' & cl); exists v, v'; intuition.
 Qed.
 
 Lemma conv_sort_inv {Σ : global_env_ext} {wfΣ : wf Σ} Γ s s' :

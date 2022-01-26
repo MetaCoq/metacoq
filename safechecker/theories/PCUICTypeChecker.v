@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICContexts PCUICSubstitution PCUICSpine PCUICInductiveInversion
      PCUICClosed PCUICClosedTyp
-     PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp PCUICConvCumInversion.
+     PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp.
 
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 

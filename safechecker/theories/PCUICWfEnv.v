@@ -43,7 +43,7 @@ Section GraphSpec.
     intros HH.
     refine (check_constraints_spec G (global_ext_uctx Σ) _ _ HG _ HH).
     sq; now eapply wf_ext_global_uctx_invariants.
-    sq; now apply global_ext_uctx_consistent.
+    sq; now eapply global_ext_uctx_consistent.
   Qed.
 
   Lemma is_graph_of_uctx_levels (l : Level.t) :

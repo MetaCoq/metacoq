@@ -56,7 +56,7 @@ Proof.
     + apply wf_local_app; auto.
       apply All_local_env_fold in IH. apply IH.
     + apply weakening_renaming.
-  - intros [s Hs]; exists s. red.
+  - intros [s Hs]; exists s.
     rewrite -/(lift_context #|Γ''| 0 Δ).
     rewrite Nat.add_0_r !lift_rename. 
     eapply (Hs xpredT).

@@ -5,7 +5,7 @@ From Equations Require Import Equations.
 
 From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICArities PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
      PCUICReduction
@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion PCUICReduction
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
      PCUICContexts PCUICContextConversion PCUICContextConversionTyp PCUICOnFreeVars
-     PCUICWellScopedCumulativity PCUICSafeLemmata PCUICSN.
+     PCUICWellScopedCumulativity PCUICSafeLemmata PCUICSN PCUICConvCumInversion.
 
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 
@@ -201,7 +201,7 @@ Qed.
     cbn in *.
     sq.
     destruct wf as [[? i]].
-    eapply infering_sort_infering in i ; eauto.
+    eapply infering_sort_infering in i; eauto.
   Qed.
 
   Program Definition infer_as_prod Γ T
@@ -549,7 +549,7 @@ Qed.
       1: now eapply red_terms_equality_terms.
       1: symmetry.
       1: now eapply red_terms_equality_terms.
-      eapply alt_into_equality_terms ; tea.
+      eapply PCUICConvCumInversion.alt_into_equality_terms ; tea.
       * fvs.
       * eapply infering_ind_typing, validity, isType_open in X ; auto.
         rewrite on_free_vars_mkApps in X.

@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICNormal PCUICSR
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
@@ -856,7 +856,7 @@ Section Typecheck.
         rewrite /subst_instance_level.
         split.
         * destruct l.
-          -- now apply wf_ext_global_uctx_invariants.
+          -- now eapply wf_ext_global_uctx_invariants.
           -- cbn in Hcs'. 
              forward Hcs'.
              do 2 eexists.
@@ -867,9 +867,9 @@ Section Typecheck.
           -- apply LevelSetFact.mem_2.
              pattern (nth n u Level.lzero).
              apply Forall_nth_def ; tea.
-             now apply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
+             now eapply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
         * destruct l'.
-          -- now apply wf_ext_global_uctx_invariants.
+          -- now eapply wf_ext_global_uctx_invariants.
           -- forward Hcs''.
              do 2 eexists.
              constructor.
@@ -879,7 +879,7 @@ Section Typecheck.
           -- apply LevelSetFact.mem_2.
              pattern (nth n u Level.lzero).
              apply Forall_nth_def ; tea.
-             now apply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
+             now eapply LevelSetFact.mem_1, wf_ext_global_uctx_invariants.
   Qed.
 
   Equations check_consistent_instance uctx (wfg : ∥ global_uctx_invariants (global_ext_uctx (Σ.1, uctx)) ∥) 
@@ -913,7 +913,7 @@ Section Typecheck.
     destruct wfg as [wfg].
     suff: (@check_constraints cf G (subst_instance_cstrs u cstrs)) by congruence.
     eapply check_constraints_complete. 
-    - now apply wf_ext_global_uctx_invariants.
+    - now eapply wf_ext_global_uctx_invariants.
     - now apply wf_ext_consistent.
     - auto.
     - eapply nor.
@@ -1016,8 +1016,8 @@ Section Typecheck.
           rewrite nor_check_univs in check.
           specialize (check val sat).
           now rewrite check.
-        * now apply wf_ext_global_uctx_invariants.
-        * now apply global_ext_uctx_consistent.
+        * now eapply wf_ext_global_uctx_invariants.
+        * now eapply global_ext_uctx_consistent.
   Qed.
   Next Obligation.
     sq.
@@ -1972,7 +1972,7 @@ Section Typecheck.
     etransitivity.
     1: now symmetry ; eapply All2_firstn, red_terms_equality_terms.
 
-    eapply alt_into_equality_terms ; tea.
+    eapply PCUICConvCumInversion.alt_into_equality_terms ; tea.
     - fvs.
     - eapply Forall_forallb.
       2: intros ? H ; apply H.

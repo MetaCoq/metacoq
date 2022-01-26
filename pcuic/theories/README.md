@@ -8,8 +8,8 @@
 | [PCUICOnOne]        | Lemmas for the OnOne relation
 | [PCUICPrimitive]    | Definitions and lemmas for primitives datatypes
 | [PCUICTactics]      | Tactics used throughout the library
-| [Extraction]        | Setup to extract the development to OCaml
-| [PCUICLoader]       | 
+| [Extraction]        | Setup to extract the development
+| [PCUICLoader]       | For plugins
 
 
 
@@ -281,8 +281,10 @@
 | [TemplateToPCUICCorrectness] | Type preservation of the aformentioned translation |
 | [PCUICToTemplate] | Translation from PCUIC syntax to Template-Coq syntax |
 | [PCUICToTemplateCorrectness] | Type preservation of the aformentioned translation |
+| [TemplateToPCUICWcbvEval] | The weak-head call-by-value evaluation strategy is preserved by the translation between Template Coq and PCUIC
 
-[TemplateToPCUIC]: TemplateToPCUIC.v
-[TemplateToPCUICCorrectness]: TemplateToPCUICCorrectness.v
-[PCUICToTemplate]: PCUICToTemplate.v
-[PCUICToTemplateCorrectness]: PCUICToTemplateCorrectness.v
+[TemplateToPCUIC]: ./TemplateToPCUIC.v
+[TemplateToPCUICCorrectness]: ./TemplateToPCUICCorrectness.v
+[PCUICToTemplate]: ./PCUICToTemplate.v
+[PCUICToTemplateCorrectness]: ./PCUICToTemplateCorrectness.v
+[TemplateToPCUICWcbvEval]: ./TemplateToPCUICWcbvEval.v

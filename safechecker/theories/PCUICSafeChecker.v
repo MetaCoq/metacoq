@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICTyping PCUICNormal PCUICSR
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICGeneration PCUICReflect PCUICEquality PCUICInversion PCUICValidity
@@ -1780,7 +1780,7 @@ Section CheckEnv.
     eapply forallbP_cond; eauto. clear wfcs.
     simpl; intros c wfc.
     pose proof (check_leqb_universe_spec' G (global_ext_uctx Σ)).
-    forward H. apply wf_ext_global_uctx_invariants; auto.
+    forward H. eapply wf_ext_global_uctx_invariants; eauto.
     forward H. apply wfΣ.
     eapply forallbP_cond; eauto. simpl. intros x wfx.
     specialize (H wfG x ind_sort). simpl.
@@ -1788,7 +1788,7 @@ Section CheckEnv.
     now simpl in H.
     intro. simpl in H.
     pose proof (check_leqb_universe_complete G (global_ext_uctx Σ)).
-    forward H1. apply wf_ext_global_uctx_invariants. now sq.
+    forward H1. eapply wf_ext_global_uctx_invariants. now sq.
     forward H1. apply wfΣ.
     specialize (H1 wfG x ind_sort). simpl in H1.
     forward H1.

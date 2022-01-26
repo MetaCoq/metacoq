@@ -1,10 +1,10 @@
 From Coq Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICContextConversion PCUICContextReduction
-  PCUICCumulativity PCUICConversion PCUICCumulProp PCUICEquality PCUICLiftSubst PCUICNormal PCUICReduction PCUICTyping 
+  PCUICCumulativity PCUICConversion PCUICEquality PCUICLiftSubst PCUICNormal PCUICReduction PCUICTyping 
   PCUICGlobalEnv PCUICConfluence PCUICSubstitution PCUICClosed PCUICClosedTyp
-  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICAlpha
-  PCUICWellScopedCumulativity PCUICOnFreeVars.
+  PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICWellScopedCumulativity PCUICOnFreeVars PCUICSR.
 
 From MetaCoq.Template Require Import config.
 From MetaCoq.Template Require Import utils.
@@ -52,8 +52,8 @@ Proof.
   apply red_ctx_rel_red_context_rel, red_context_app_same_left in r1; auto.
   2:{ now eapply on_free_vars_ctx_on_ctx_free_vars_closedP_impl. }
   eapply red_ctx_red_context in r0; eapply red_ctx_red_context in r1.
-  eapply PCUICSR.into_closed_red_ctx in r0 => //.
-  eapply PCUICSR.into_closed_red_ctx in r1 => //.
+  eapply into_closed_red_ctx in r0 => //.
+  eapply into_closed_red_ctx in r1 => //.
   eapply (red_ctx_context_equality (l:=false)) in r0.
   eapply (red_ctx_context_equality (l:=false)) in r1.
   apply context_equality_rel_app. etransitivity; tea.

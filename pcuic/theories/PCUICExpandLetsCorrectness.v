@@ -9,14 +9,14 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne PCUICCases PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
      PCUICSigmaCalculus PCUICClosed PCUICClosedTyp PCUICContexts PCUICSubstitution
-     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICEquality
      PCUICWeakeningConv PCUICWeakeningTyp PCUICCumulativity 
      PCUICUnivSubst PCUICUnivSubstitutionTyp PCUICGlobalEnv PCUICTyping PCUICGeneration
-     PCUICConversion PCUICOnFreeVars PCUICInductives
-     PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
+     PCUICConversion PCUICOnFreeVars
+     PCUICValidity PCUICArities PCUICInversion
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
      PCUICSafeLemmata PCUICInductives PCUICInductiveInversion.
-From MetaCoq.PCUIC Require Import PCUICEquality PCUICExpandLets.
+From MetaCoq.PCUIC Require Import PCUICExpandLets.
 Set Warnings "+notation_overridden".
 
 Import MCMonadNotation.

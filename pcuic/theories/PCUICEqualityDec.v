@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ProofIrrelevance ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICCumulativity PCUICEquality PCUICWfUniverses
      PCUICInduction.
@@ -785,12 +785,12 @@ Section EqualityDec.
     - intros e.
       eapply check_eqb_universe_spec' in e ; eauto.
       + assumption.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
+      + now eapply wf_ext_global_uctx_invariants.
+      + now eapply global_ext_uctx_consistent.
     - intros e.
       eapply check_eqb_universe_complete ; eauto.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
+      + now eapply wf_ext_global_uctx_invariants.
+      + now eapply global_ext_uctx_consistent.
   Qed.
 
   Lemma leq_universeP u u' :
@@ -804,12 +804,12 @@ Section EqualityDec.
     - intros e.
       eapply check_leqb_universe_spec' in e ; eauto.
       + assumption.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
+      + now eapply wf_ext_global_uctx_invariants.
+      + now eapply global_ext_uctx_consistent.
     - intros e.
       eapply check_leqb_universe_complete ; eauto.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
+      + now eapply wf_ext_global_uctx_invariants.
+      + now eapply global_ext_uctx_consistent.
   Qed.
 
   Lemma leq_relP (pb : conv_pb) u u' :

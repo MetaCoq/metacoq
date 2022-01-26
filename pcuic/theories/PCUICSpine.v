@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICCumulativity PCUICPosition PCUICEquality
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICCasesContexts
-     PCUICConfluence PCUICConversion PCUICContextConversion
+     PCUICConfluence PCUICParallelReductionConfluence PCUICConversion PCUICContextConversion
      PCUICContextConversionTyp
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICClosed PCUICClosedTyp PCUICSubstitution PCUICContextSubst
@@ -1328,8 +1328,6 @@ Proof.
   specialize  (IHΓ _ _ _ _ H).
   rewrite Nat.add_succ_r. apply IHΓ.
 Qed.
-
-Require Import PCUICParallelReductionConfluence.
 
 Lemma subst_lift_lift s k t : subst0 (map (lift0 k) s) (lift k #|s| t) = lift0 k (subst0 s t).
 Proof.

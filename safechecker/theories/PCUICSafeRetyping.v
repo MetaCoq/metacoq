@@ -15,7 +15,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduc
      PCUICGeneration PCUICInversion PCUICValidity PCUICInductives PCUICInductiveInversion PCUICReduction
      PCUICSpine PCUICSR PCUICCumulativity PCUICConversion PCUICConfluence PCUICArities
      PCUICContexts PCUICContextConversion PCUICContextConversionTyp PCUICOnFreeVars
-     PCUICWellScopedCumulativity PCUICSafeLemmata PCUICSN PCUICConvCumInversion.
+     PCUICWellScopedCumulativity PCUICSafeLemmata PCUICSN.
 
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 

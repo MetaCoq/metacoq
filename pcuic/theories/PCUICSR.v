@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICUtils PCUICOnOne
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICUtils PCUICOnOne
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICWeakeningEnvConv 
      PCUICWeakeningEnvTyp PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSubstitution PCUICCasesContexts PCUICClosed PCUICClosedTyp PCUICClosedConv

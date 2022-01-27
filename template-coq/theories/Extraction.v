@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
 From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOCamlFloats
     ExtrOCamlInt63 ExtrOcamlNatInt.
-From Coq Require Extraction.
+From Coq Require Ascii Extraction.
 (** * Extraction setup for template-coq.
 
     Any extracted code planning to link with the plugin's OCaml reifier

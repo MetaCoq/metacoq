@@ -151,7 +151,7 @@ let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0
   let {const_body = body; const_type = typ; const_universes = univs} = cd in
   Ast0.Env.({cst_type = quote_term env typ;
          cst_body = Option.map (quote_term env) (get_constant_body body);
-         cst_universes = quote_universes_decl univs})
+         cst_universes = quote_universes_decl univs None})
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)

@@ -2158,7 +2158,7 @@ Section Typecheck.
     eapply infer_Proj with (pdecl := (i1, t)).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
-      now apply beq_nat_true.
+      now apply Nat.eqb_eq.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
       econstructor ; tea.
       now apply closed_red_red.

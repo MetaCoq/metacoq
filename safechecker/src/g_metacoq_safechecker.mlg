@@ -53,7 +53,7 @@ let check env evm (c, ustate) =
     Feedback.msg_debug (str"Universes to reify: " ++ Printer.pr_universe_ctx_set evm uctx)
   in
   let uctx = time (str"Quoting universe context") 
-    (fun uctx -> Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx)) uctx in
+    (fun uctx -> (Ast_quoter.quote_univ_contextset uctx)) uctx in
   let check =
     time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program

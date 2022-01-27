@@ -174,11 +174,11 @@ struct
   let quote_universes_decl decl templ =
     match decl with
     | Monomorphic -> 
-      (match templ with
+      (* (match templ with
       | Some { template_context = ctx } ->
         Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
-      | None ->
-        Q.mkMonomorphic_ctx (Q.quote_univ_contextset Univ.ContextSet.empty))
+      | None -> *)
+        Q.mkMonomorphic_ctx (Q.quote_univ_contextset Univ.ContextSet.empty)
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =

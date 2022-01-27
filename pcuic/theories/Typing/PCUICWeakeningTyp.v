@@ -20,22 +20,6 @@ Implicit Types cf : checker_flags.
 Set Default Goal Selector "!".
 Generalizable Variables Σ Γ t T.
 
-(* Lemma typed_liftn `{checker_flags} Σ Γ t T n k :
-  wf Σ.1 -> wf_local Σ Γ -> k >= #|Γ| ->
-  Σ ;;; Γ |- t : T -> lift n k T = T /\ lift n k t = t.
-Proof.
-  intros wfΣ wfΓ Hk Hty.
-  apply typecheck_closed in Hty; eauto.
-  destruct Hty as [_ [_ Hcl]].
-  rewrite -> andb_and in Hcl. destruct Hcl as [clb clty].
-  pose proof (closed_upwards k clb).
-  pose proof (closed_upwards k clty).
-  simpl in *. forward H0 by lia.
-  apply (lift_closed n) in H0.
-  simpl in *. forward H1 by lia.
-  now apply (lift_closed n) in H1.
-Qed.*)
-
 Lemma weakening_wf_local {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Γ' Γ''} :
   wf_local Σ (Γ ,,, Γ') ->
   wf_local Σ (Γ ,,, Γ'') ->  

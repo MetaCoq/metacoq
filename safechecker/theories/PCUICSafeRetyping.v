@@ -201,7 +201,7 @@ Qed.
     cbn in *.
     sq.
     destruct wf as [[? i]].
-    eapply infering_sort_infering in i; eauto.
+    eapply infering_sort_infering in i ; eauto.
   Qed.
 
   Program Definition infer_as_prod Γ T

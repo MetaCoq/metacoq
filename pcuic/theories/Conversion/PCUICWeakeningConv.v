@@ -41,7 +41,7 @@ Proof.
   - auto.
   - rewrite lift_context_length. lia.
   - rewrite lift_context_length. lia.
-  Qed.
+Qed.
 
 Lemma weaken_nth_error_lt {Γ Γ' Γ'' v} : v < #|Γ'| ->
   nth_error (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') v =
@@ -66,22 +66,6 @@ Proof. rewrite !lift_context_alt.
   rewrite mapi_length; autorewrite with  len.
   rewrite simpl_lift //; lia.
 Qed.
-
-(* Lemma lift_simpl {Γ'' Γ' : context} {i t} :
-  i < #|Γ'| ->
-  lift0 (S i) (lift #|Γ''| (#|Γ'| - S i) t) = lift #|Γ''| #|Γ'| (lift0 (S i) t).
-Proof.
-  intros. assert (#|Γ'| = S i + (#|Γ'| - S i)) by easy.
-  rewrite -> H0 at 2.
-  rewrite permute_lift; try easy.
-Qed.
-
-
-Lemma All_local_env_eq P ctx ctx' :
-  All_local_env P ctx -> 
-  ctx = ctx' ->
-  All_local_env P ctx'.
-Proof. now intros H ->. Qed. *)
 
 Lemma weakening_renaming P Γ Γ' Γ'' :
   urenaming P (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 

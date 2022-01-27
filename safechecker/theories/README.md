@@ -2,7 +2,7 @@
 
 Implementation of a fuel-free, correct and complete type checker for PCUIC.
 It is suited for extraction which would remove the termination and
-correctness proofs.
+correctness/completeness proofs.
 
 
 | File                  | Description                                          |

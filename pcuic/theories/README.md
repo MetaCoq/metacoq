@@ -65,8 +65,8 @@
 | [PCUICSigmaCalculus]  | General theory of renamings
 | [PCUICClosed]         | Properties of the closedness predicate on terms
 | [PCUICOnFreeVars]     | General theory of predicates on (free) variables (generalizing closedness)
-| [PCUICRenameDef]      | Definition of "good" renamings
-| [PCUICInstDef]        | Definition of "good" instantiations
+| [PCUICRenameDef]      | Definition of well-behaved renamings
+| [PCUICInstDef]        | Definition of well-behaved instantiations
 | [PCUICContextSubst]   | Linking a context (with let-ins), an instance (reversed substitution) for its assumptions and a well-formed substitution for it
 
 [PCUICUnivSubst]: ./Syntax/PCUICUnivSubst.v
@@ -149,7 +149,7 @@
 | [PCUICTyping]       | Definition of typing
 | [PCUICGeneration]   | Derived typing rules for e.g. iterated application
 | [PCUICClosedTyp]    | Well-typed terms are closed, and various consequences
-| [PCUICInversion]    | Inversion lemmata on typing
+| [PCUICInversion]    | Inversion lemmas on typing
 
 [PCUICTyping]: ./PCUICTyping.v
 [PCUICGeneration]: ./PCUICGeneration.v
@@ -161,11 +161,11 @@
 
 | File                | Description                                               |
 |---------------------|-----------------------------------------------------------|
-| [PCUICRenameConv]   | Stability of cumulativities by renaming
-| [PCUICWeakeningConv] | Stability of cumulativities by extension of the local context (special case of renaming)
-| [PCUICInstConv]     | Stability of cumulativities by instantiation
-| [PCUICWeakeningEnvConv] | Stability of cumulativities by global environment extension
-| [PCUICUnivSubstitutionConv] | Stability of cumulativities by substitution of universe variables
+| [PCUICRenameConv]   | Stability of conversion/cumulativity by renaming
+| [PCUICWeakeningConv] | Stability of conversion/cumulativity by extension of the local context (special case of renaming)
+| [PCUICInstConv]     | Stability of conversion/cumulativity by instantiation
+| [PCUICWeakeningEnvConv] | Stability of conversion/cumulativity by global environment extension
+| [PCUICUnivSubstitutionConv] | Stability of conversion/cumulativity by substitution of universe variables
 | [PCUICClosedConv] | Helper lemmas on the closedness predicate
 | [PCUICOnFreeVarsConv] | Helper lemmas for renamings and free variables
 
@@ -207,10 +207,10 @@
 |-------------------|----------------------------------------------------
 | [PCUICContexts]     | Various properties on contexts
 | [PCUICArities]    | Properties on lists of terms
-| [PCUICSpine]      | Properties on spines (lists of terms) relating to typing, substitutions…
-| [PCUICInductives] | Technical typing and conversion lemmatas related to inductive definitions
+| [PCUICSpine]      | Properties on spines (lists of terms) relating to typing, substitutions, and so on
+| [PCUICInductives] | Technical typing and conversion lemmass related to inductive definitions
 | [PCUICValidity] | Every term `A` such that `Γ ⊢ t : A` is a type
-| [PCUICInductiveInversion] | Typing properties and inversions for inductive types, constructors and projections.
+| [PCUICInductiveInversion] | Typing properties and inversions for inductive types, constructors and projections
 | [PCUICAlpha] | Typing does not depend on names
 | [PCUICSR]    | Subject reduction: typing is preserved by reduction
 | [PCUICPrincipality] | Existence of a least type for any typable term
@@ -242,12 +242,12 @@
 | File               | Description                                             |
 |--------------------|---------------------------------------------------------|
 | [PCUICNormal]      | (Weak-head) neutral and normal forms                    |
-| [PCUICSafeLemmata] | Lemma-base for the safe checker                         |
+| [PCUICSafelemmas] | Lemma-base for the safe checker                         |
 | [PCUICConvCumInversion] | Definition of the relation used as specification by the safe conversion function
 | [PCUICSN]          | Axiom of normalisation                                  |
 
 [PCUICNormal]: ./PCUICNormal.v
-[PCUICSafeLemmata]: ./PCUICSafeLemmata.v
+[PCUICSafelemmas]: ./PCUICSafelemmas.v
 [PCUICSN]: ./PCUICSN.v
 [PCUICConvCumInversion]: ./PCUICConvCumInversion.v
 
@@ -281,7 +281,7 @@
 | [TemplateToPCUICCorrectness] | Type preservation of the aformentioned translation |
 | [PCUICToTemplate] | Translation from PCUIC syntax to Template-Coq syntax |
 | [PCUICToTemplateCorrectness] | Type preservation of the aformentioned translation |
-| [TemplateToPCUICWcbvEval] | The weak-head call-by-value evaluation strategy is preserved by the translation between Template Coq and PCUIC
+| [TemplateToPCUICWcbvEval] | The weak-head call-by-value evaluation strategy is preserved by the translation between Template-Coq and PCUIC
 
 [TemplateToPCUIC]: ./TemplateToPCUIC.v
 [TemplateToPCUICCorrectness]: ./TemplateToPCUICCorrectness.v

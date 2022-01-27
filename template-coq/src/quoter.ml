@@ -218,7 +218,7 @@ struct
     let rec quote_term (acc : 'a) env trm =
       let aux acc env trm =
       match Constr.kind trm with
-            | Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
+      | Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
       | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
       | Constr.Evar (n,args) ->
 	      let (args',acc) = quote_terms quote_term acc env (Array.of_list args) in

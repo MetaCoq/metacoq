@@ -22,15 +22,6 @@ Section print_term.
   Definition is_fresh (Γ : list ident) (id : ident) :=
     List.forallb (fun id' => negb (ident_eq id id')) Γ.
 
-  (* todo : duplicate in Environment ? *)
-  Fixpoint lookup_env (Σ : global_env) (id : kername) : option global_decl :=
-    match Σ with
-    | nil => None
-    | hd :: tl =>
-      if eq_kername id hd.1 then Some hd.2
-      else lookup_env tl id
-    end.
-
   Definition lookup_ind_decl ind i :=
     match lookup_env Σ ind with
     | Some (InductiveDecl {| ind_bodies := l; ind_universes := uctx |}) =>
@@ -281,20 +272,21 @@ Definition print_one_ind (short : bool) Σ Γ (mib : mutual_inductive_body) (oib
 
 Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : string) := 
   match prefix with 
-  | 0 => match Σ with [] => acc | _ => ("..." ++ nl ++ acc)%string end
+  | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ++ nl ++ acc)%string end
   | S n => 
-  match Σ with
+  let univs := Σ.(Env.universes) in
+  match Σ.(declarations) with
   | [] => acc
   | (kn, InductiveDecl mib) :: Σ => 
-    let Σ' := (Σ, mib.(ind_universes)) in
+    let Σ' := ({| Env.universes := univs; declarations := Σ |}, mib.(ind_universes)) in
     let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
-    print_env_aux short n Σ
+    print_env_aux short n Σ'.1
       ("Inductive " ++ 
        print_list (print_one_ind short Σ' names mib) nl mib.(ind_bodies) ++ "." ++ 
        nl ++ acc)%string
   | (kn, ConstantDecl cb) :: Σ =>
-    let Σ' := (Σ, cb.(cst_universes)) in
-    print_env_aux short n Σ
+    let Σ' := ({| Env.universes := univs; declarations := Σ |}, cb.(cst_universes)) in
+    print_env_aux short n Σ'.1
       ((match cb.(cst_body) with 
         | Some _ => "Definition "
         | None => "Axiom "

@@ -3,6 +3,13 @@ From MetaCoq.SafeChecker Require Import Loader.
 
 Local Open Scope string_scope.
 
+Print list.
+Definition bool_list := List.map negb (cons true (cons false nil)).
+Print Universes.
+Print Datatypes.
+
+MetaCoq SafeCheck bool_list.
+
 MetaCoq SafeCheck nat.
 Definition bool_list := List.map negb (cons true (cons false nil)).
 Set Printing Universes.
@@ -23,6 +30,12 @@ MetaCoq SafeCheck plus.
 MetaCoq CoqCheck Nat.add.
 *)
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
+
+
+Set Printing Universes.
+(* Universe issues: undeclared universes from sections *)
+(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
+MetaCoq CoqCheck bool_list.
 
 (* Even with universe checking disabled, we get:
 Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt

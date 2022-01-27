@@ -278,7 +278,11 @@ Module Environment (T : Term).
   | InductiveDecl : mutual_inductive_body -> global_decl.
   Derive NoConfusion for global_decl.
 
-  Definition global_env := list (kername * global_decl).
+  Definition global_declarations := list (kername * global_decl).
+
+  Record global_env := 
+    { universes : ContextSet.t;
+      declarations : global_declarations }.
 
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
@@ -486,13 +490,15 @@ Module Environment (T : Term).
   Lemma projs_length ind npars k : #|projs ind npars k| = k.
   Proof. induction k; simpl; auto. Qed.
 
-  Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
+  Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
     match Σ with
     | nil => None
     | d :: tl =>
       if eq_kername kn d.1 then Some d.2
-      else lookup_env tl kn
+      else lookup_global tl kn
     end.
+
+  Definition lookup_env (Σ : global_env) (kn : kername) := lookup_global Σ.(declarations) kn.
 
   Lemma context_assumptions_fold Γ f : context_assumptions (fold_context_k f Γ) = context_assumptions Γ.
   Proof.

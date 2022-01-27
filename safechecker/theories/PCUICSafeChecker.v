@@ -2068,9 +2068,12 @@ Section CheckEnv.
   Program Fixpoint check_wf_env (Σ : global_env)
     : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) /\ ∥ wf Σ ∥)) :=
     match Σ with
-    | [] => ret (init_graph; _)
+    | [] => 
+        uctx <- check_udecl "global graph" [] (sq (globenv_nil _)) init_graph _ gdecl ;;
+        let G' := add_uctx uctx.π1 init_graph in
+        ret (G'; _)
     | d :: Σ =>
-        G <- check_wf_env Σ ;;
+        G <- check_wf_env Σ gdecl ;;
         let wfΣ : wf_env := {| wf_env_env := Σ; wf_env_graph := G.π1 |} in
         check_fresh d.1 Σ ;;
         let udecl := universes_decl_of_decl d.2 in
@@ -2230,7 +2233,7 @@ Section CheckEnv.
   Program Definition typecheck_program (p : program) φ
     : EnvCheck (∑ A, ∥ wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥) :=
     let Σ := fst p in
-    '(existT G HG) <- check_wf_env Σ ;;
+    '(existT G HG) <- check_wf_env Σ φ ;;
     uctx <- check_udecl "toplevel term" Σ _ G (proj1 HG) φ ;;
     let G' := add_uctx uctx.π1 G in
     inft <- @infer_term (Σ, φ) _ G' _ (snd p) ;; 

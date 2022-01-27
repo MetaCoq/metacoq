@@ -548,7 +548,9 @@ End TemplateConversionPar.
 Module TemplateConversion := Conversion TemplateTerm Env TemplateEnvTyping TemplateConversionPar.
 Include TemplateConversion.  
 
-Definition extends (Σ Σ' : global_env) := { Σ'' & Σ' = Σ'' ++ Σ }.
+Definition extends (Σ Σ' : global_env) :=
+  Σ.(universes) = Σ'.(universes) ×
+  { Σ'' & Σ'.(declarations) = Σ'' ++ Σ.(declarations) }.
 
 Class GuardChecker := 
 { (* Structural recursion check *)
@@ -954,11 +956,15 @@ Proof.
   induction d; simpl; try lia.
 Qed.
 
-Fixpoint globenv_size (Σ : global_env) : size :=
+Fixpoint globdecls_size (Σ : global_declarations) : size :=
   match Σ with
   | [] => 1
-  | d :: Σ => S (globenv_size Σ)
+  | d :: Σ => S (globdecls_size Σ)
   end.
+
+Definition globenv_size (Σ : global_env) : size := 
+  globdecls_size Σ.(declarations).
+
 
 (** To get a good induction principle for typing derivations,
      we need:
@@ -967,7 +973,7 @@ Fixpoint globenv_size (Σ : global_env) : size :=
 
 Arguments lexprod [A B].
 
-Definition wf `{checker_flags} := Forall_decls_typing typing.
+Definition wf `{checker_flags} Σ := on_global (lift_typing typing) Σ.
 Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
 
 Lemma typing_wf_local `{checker_flags} {Σ} {Γ t T} :
@@ -992,9 +998,7 @@ Defined.
 
 Definition env_prop `{checker_flags} (P : forall Σ Γ t T, Type) (PΓ : forall Σ Γ (wfΓ : wf_local Σ Γ), Type):=
   forall Σ (wfΣ : wf Σ.1) Γ (wfΓ : wf_local Σ Γ) t T (ty : Σ ;;; Γ |- t : T),
-    Forall_decls_typing P Σ.1 * 
-    (PΓ Σ Γ (typing_wf_local ty) *
-    P Σ Γ t T).
+    on_global (lift_typing P) Σ.1 * (PΓ Σ Γ (typing_wf_local ty) * P Σ Γ t T).
 
 Lemma env_prop_typing `{checker_flags} {P PΓ} : env_prop P PΓ ->
   forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t T : term),
@@ -1006,7 +1010,7 @@ Lemma env_prop_wf_local `{checker_flags} {P PΓ} : env_prop P PΓ ->
 Proof. intros. red in X. now apply (X _ wfΣ _ wfΓ _ _ (type_Prop_wf Σ Γ wfΓ)). Qed.
 
 Lemma env_prop_sigma `{checker_flags} {P PΓ} : env_prop P PΓ ->
-  forall Σ (wfΣ : wf Σ), Forall_decls_typing P Σ.
+  forall Σ (wfΣ : wf Σ), on_global (lift_typing P) Σ.
 Proof.
   intros. eapply (X (empty_ext Σ)).
   apply wfΣ. constructor.
@@ -1138,7 +1142,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         P Σ Γ (tApp t l) t') ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) cst u (decl : constant_body),
-        Forall_decls_typing P Σ.1 ->
+        on_global (lift_typing P) Σ.1 ->
         PΓ Σ Γ wfΓ ->
         declared_constant Σ.1 cst decl ->
         consistent_instance_ext Σ decl.(cst_universes) u ->
@@ -1146,14 +1150,14 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) u
           mdecl idecl (isdecl : declared_inductive Σ.1 ind mdecl idecl),
-        Forall_decls_typing P Σ.1 ->
+        on_global (lift_typing P) Σ.1 ->
         PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tInd ind u) (subst_instance u (ind_type idecl))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (ind : inductive) (i : nat) u
             mdecl idecl cdecl (isdecl : declared_constructor Σ.1 (ind, i) mdecl idecl cdecl),
-        Forall_decls_typing P Σ.1 ->
+        on_global (lift_typing P) Σ.1 ->
         PΓ Σ Γ wfΓ ->
         consistent_instance_ext Σ mdecl.(ind_universes) u ->
         P Σ Γ (tConstruct ind i u) (type_of_constructor mdecl cdecl (ind, i) u)) ->
@@ -1161,7 +1165,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
      (forall (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ),     
       forall (ci : case_info) p c brs indices ps mdecl idecl
         (isdecl : declared_inductive Σ.1 ci.(ci_ind) mdecl idecl),
-        Forall_decls_typing P Σ.1 -> 
+        on_global (lift_typing P) Σ.1 -> 
         PΓ Σ Γ wfΓ ->
         mdecl.(ind_npars) = ci.(ci_npar) ->
         wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
@@ -1188,7 +1192,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
-        Forall_decls_typing P Σ.1 -> 
+        on_global (lift_typing P) Σ.1 -> 
         PΓ Σ Γ wfΓ ->
         Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
         P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
@@ -1253,13 +1257,12 @@ Proof.
   intros (Σ & wfΣ & Γ & t & t0 & H). simpl.
   intros IH. simpl in IH.
   split.
-  destruct Σ as [Σ φ]. destruct Σ.
-  constructor.
-  cbn in wfΣ; inversion_clear wfΣ. auto.
-  inv wfΣ.
+  destruct Σ as [Σ φ]. 
+  red. cbn. do 2 red in wfΣ. cbn in wfΣ.
+  depelim wfΣ. noconf H. constructor; auto.
   rename X14 into Xg.
-  constructor; auto. unfold Forall_decls_typing in IH.
-  - simple refine (let IH' := IH ((Σ, udecl); (X13; []; (tSort Universe.lProp); _; _)) in _).
+  constructor; auto.
+  - simple refine (let IH' := IH (({| universes := universes Σ; declarations := Σ0 |}, udecl); (X13; []; (tSort Universe.lProp); _; _)) in _).
     shelve. simpl. apply type_Prop.
     forward IH'. constructor 1; cbn. lia.
     apply IH'; auto.

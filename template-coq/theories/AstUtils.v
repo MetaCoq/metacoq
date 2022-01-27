@@ -180,7 +180,7 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : kername) (decls : global_env)
+Fixpoint lookup_mind_decl (id : kername) (decls : global_declarations)
  := match decls with
     | nil => None
     | (kn, InductiveDecl d) :: tl =>

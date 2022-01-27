@@ -163,7 +163,7 @@ Defined.
 
 #[global] Instance eqb_ctx : ReflectEq context := _.
 
-Definition eqb_constant_body (x y : constant_body) :=
+(*Definition eqb_constant_body (x y : constant_body) :=
   let (tyx, bodyx, univx) := x in
   let (tyy, bodyy, univy) := y in
   eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
@@ -230,4 +230,4 @@ Proof.
   refine {| eqb := eqb_global_decl |}.
   unfold eqb_global_decl.
   intros [] []; finish_reflect.
-Defined.
+Defined. *)

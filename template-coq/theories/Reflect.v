@@ -435,7 +435,7 @@ Proof.
   cong.
 Defined.
 
-Definition eqb_ConstraintSet x y :=
+(*Definition eqb_ConstraintSet x y :=
   eqb (ConstraintSet.this x) (ConstraintSet.this y).
 
 #[global] Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
@@ -447,9 +447,9 @@ Proof.
   destruct (eqb_spec thisx thisy); subst; constructor.
   - f_equal; apply uip.
   - congruence.
-Defined.
+Defined.*)
 
-Definition eqb_LevelSet x y :=
+(*Definition eqb_LevelSet x y :=
   eqb (LevelSet.this x) (LevelSet.this y).
 
 #[global] Instance reflect_LevelSet : ReflectEq LevelSet.t.
@@ -461,14 +461,7 @@ Proof.
   destruct (eqb_spec thisx thisy); subst; constructor.
   - f_equal; apply uip.
   - congruence.
-Defined.
-
-Definition eqb_universes_decl x y :=
-  match x, y with
-  | Monomorphic_ctx cx, Monomorphic_ctx cy => eqb cx cy
-  | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
-  | _, _ => false
-  end.
+Defined.*)
 
 Ltac finish_reflect :=
   (repeat
@@ -477,13 +470,21 @@ Ltac finish_reflect :=
     end);
   constructor; trivial; congruence.
 
+(*Definition eqb_universes_decl x y :=
+  match x, y with
+  | Monomorphic_ctx cx, Monomorphic_ctx cy => eqb cx cy
+  | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
+  | _, _ => false
+  end.
+
+  
 #[global] Instance reflect_universes_decl : ReflectEq universes_decl.
 Proof.
   refine {| eqb := eqb_universes_decl |}.
   unfold eqb_universes_decl.
   intros [] []; finish_reflect.
 Defined.
-
+*)
 Definition eqb_allowed_eliminations x y :=
   match x, y with
   | IntoSProp, IntoSProp

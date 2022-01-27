@@ -182,7 +182,7 @@ Proof.
   - apply GT. red. now apply string_compare_lt.
 Qed.
 
-Lemma transitive_string_lt : Transitive string_lt.
+#[local] Instance transitive_string_lt : Transitive string_lt.
 Proof.
   red. unfold string_lt.
   intro s; induction s.
@@ -224,6 +224,16 @@ Proof.
     + apply ascii_compare_Lt in H; now rewrite H.
 Qed.
 
+Lemma string_compare_Opp (x y : string) : string_compare x y = CompOpp (string_compare y x).
+Proof.
+  destruct (CompareSpec_string x y). subst.
+  rewrite (proj2 (string_compare_eq _ _)); auto.
+  rewrite (proj1 (string_compare_lt _ _)); auto.
+  rewrite (proj2 (string_compare_lt _ _)); auto.
+  red in H.
+  now apply string_compare_lt.
+Qed.
+
 Definition ascii_lt_irreflexive : Irreflexive ascii_lt.
 Proof.
   intro x. destruct x. unfold complement, ascii_lt; cbn.
@@ -237,4 +247,13 @@ Proof.
   - intro e; rewrite e in H0; clear e. now apply IHx.
   - apply ascii_lt_irreflexive.
   - intro e; rewrite e in H0; clear e. discriminate.
+Qed.
+
+Lemma string_compare_trans (x y z : string) c : string_compare x y = c -> string_compare y z = c -> string_compare x z = c.
+Proof.
+  destruct (CompareSpec_string x y); subst; intros <-;
+  destruct (CompareSpec_string y z); subst; try congruence.
+  eapply transitivity in H0. 2:eassumption. now red in H0.
+  eapply transitivity in H. 2:eassumption. red in H.
+  now apply string_compare_lt in H.
 Qed.

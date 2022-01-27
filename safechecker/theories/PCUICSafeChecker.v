@@ -36,6 +36,10 @@ Ltac Coq.Program.Tactics.program_solve_wf ::=
                 end
   end.
 
+
+Definition check_eq_true_lazy@{u u0 u1} {T : Type@{u} -> Type@{u0}} {E : Type@{u1}} {M : Monad T} {ME : MonadExc E T} (b : bool) (fe : unit -> E) : T b :=
+  if b as b0 return (T b0) then ret eq_refl else raise (fe tt).
+
 Section OnUdecl.
   Context {cf:checker_flags}.
 
@@ -244,7 +248,7 @@ Section CheckEnv.
   Proof.
     destruct (wf_env_ext_wf Σ).
     sq. apply X.
-  Qed.
+  Qed.  
 
   Section UniverseChecks.
   Obligation Tactic := idtac.
@@ -256,11 +260,11 @@ Section CheckEnv.
     let levels := levels_of_udecl udecl in
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
-    check_eq_true (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels)
-       (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels)));;
-    check_eq_true (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
-                                    (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
-                                    " |= " ^ print_constraint_set (constraints_of_udecl udecl))));;
+    check_eq_true_lazy (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels)
+       (fun _ => (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels))));;
+    check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
+       (fun _ => (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
+                                    " |= " ^ print_constraint_set (constraints_of_udecl udecl)))));;
     check_eq_true match udecl with
                   | Monomorphic_ctx ctx
                     => LevelSet.for_all (negb ∘ Level.is_var) ctx.1
@@ -271,7 +275,7 @@ Section CheckEnv.
     | None => fun _ =>
       raise (empty_ext Σ, IllFormedDecl id (Msg "constraints trivially not satisfiable"))
     | Some uctx' => fun Huctx =>
-      check_eq_true (wGraph.is_acyclic (add_uctx uctx' G))
+      check_eq_true (if cf.(check_univs) then wGraph.is_acyclic (add_uctx uctx' G) else true)
                     (empty_ext Σ, IllFormedDecl id (Msg "constraints not satisfiable"));;
       ret (uctx'; _)
     end eq_refl.
@@ -329,6 +333,7 @@ Section CheckEnv.
       destruct gc_of_constraints. simpl in H.
       inversion Huctx; subst; clear Huctx.
       clear -H H2 cf. rewrite add_uctx_make_graph in H2.
+      destruct check_univs. 2:{ todo "acyclicity checked skipped". }
       refine (eq_rect _ (fun G => wGraph.is_acyclic G = true) H2 _ _).
       apply graph_eq; try reflexivity.
       + assert(make_graph (global_ext_levels (Σ, udecl), t) = 

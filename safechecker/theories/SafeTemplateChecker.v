@@ -13,7 +13,7 @@ Program Definition infer_template_program {cf : checker_flags} {nor : normalizin
     let Σ' := trans_global_decls p.1 in
     ∑ A, ∥ (Σ', φ) ;;; [] |- trans Σ' p.2 : A ∥) :=
   let Σ' := trans_global_decls p.1 in
-  p <- typecheck_program (cf:=cf) (Σ', trans Σ' p.2) φ ;;
+  p <- typecheck_program (Σ', trans Σ' p.2) φ ;;
   ret (p.π1 ; _).
 Next Obligation.
   sq. destruct X. eapply infering_typing; tea. eapply w. constructor.
@@ -106,7 +106,6 @@ Definition fix_program_universes (p : Ast.Env.program) : Ast.Env.program :=
 
 Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
   : string + string :=
-  let p := fix_program_universes p in
   match infer_template_program (cf:=cf) p φ return string + string with
   | CorrectDecl t =>
     let Σ' := trans_global_decls p.1 in

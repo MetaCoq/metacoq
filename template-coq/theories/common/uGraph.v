@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssrbool MSetWeakList MSetFacts MSetProperties.
+Require Import ssrbool OrderedTypeAlt OrderedTypeEx OrdersAlt MSetAVL MSetFacts MSetProperties.
 From MetaCoq.Template Require Import utils config Universes wGraph.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
@@ -23,7 +23,12 @@ Derive NoConfusion for universes.
 
 (** variable levels are levels which are Level or Var *)
 Module VariableLevel.
-  Inductive t := Level (_ : string) | Var (_ : nat).
+  Inductive t_ := Level (_ : string) | Var (_ : nat).
+  Definition t := t_.
+
+  Declare Scope var_level.
+  Delimit Scope var_level with var_level.
+
   Definition lt : t -> t -> Prop :=
     fun x y => match x, y with
             | Level _, Var _ => True
@@ -40,6 +45,8 @@ Module VariableLevel.
     - intros [s1|n1] [s2|n2] [s3|n3]; cbn; intuition.
       eapply transitive_string_lt; eassumption.
   Qed.
+  Definition lt_trans : Transitive lt := _.
+
   Definition lt_compat : Proper (Logic.eq ==> Logic.eq ==> iff) lt.
     intros x y [] z t []; reflexivity.
   Qed.
@@ -50,6 +57,7 @@ Module VariableLevel.
             | Var n, Var n' => Nat.compare n n'
             | Var _, Level _ => Datatypes.Gt
             end.
+  Infix "?=" := compare : var_level.
   Definition compare_spec :
     forall x y : t, CompareSpec (x = y) (lt x y) (lt y x) (compare x y).
     intros [s|n] [s'|n']; cbn; try now constructor.
@@ -60,11 +68,52 @@ Module VariableLevel.
       2: apply PeanoNat.Nat.compare_spec.
       split; congruence.
   Qed.
+  Lemma compare_refl (x : t) : compare x x = Datatypes.Eq.
+  Proof.
+    destruct x => /= //.
+    rewrite string_compare_eq //.
+    now rewrite Nat.compare_refl.
+  Qed.
+
   Definition eq_dec : forall x y : t, {x = y} + {x <> y}.
     intros [s|n] [s'|n']; try now constructor.
     destruct (string_dec s s'); [left|right]; congruence.
     destruct (PeanoNat.Nat.eq_dec n n'); [left|right]; congruence.
   Defined.
+
+  Lemma compare_eq : forall x y : t, compare x y = Datatypes.Eq -> x = y.
+  Proof.
+    intros x y. destruct (compare_spec x y) => //.
+  Qed.
+  Lemma compare_sym : forall x y : t, (compare y x) = CompOpp (compare x y).
+  Proof.
+    induction x; destruct y; simpl; auto.
+    destruct (CompareSpec_string s0 s); subst.
+    destruct (string_compare_eq s s).
+    rewrite H0 //.
+    destruct (string_compare_lt s0 s). rewrite H0 //.
+    destruct (string_compare_lt s s0). rewrite H1 //.
+    red in H. auto.
+    apply PeanoNat.Nat.compare_antisym.
+  Qed.
+
+  Lemma compare_trans :
+    forall c (x y z : t), (x?=y)%var_level = c -> (y?=z)%var_level = c -> (x?=z)%var_level = c.
+  Proof.
+    intros c x y z.
+    destruct (compare_spec x y) => <-; subst.
+    destruct (compare_spec y z); auto.
+    destruct (compare_spec y z); auto; try congruence.
+    destruct (compare_spec x z); auto; try congruence.
+    subst. elimtype False. eapply irreflexivity. etransitivity; [exact H|exact H0].
+    elimtype False. eapply irreflexivity. etransitivity; [exact H|]. 
+    eapply transitivity; [exact H0|exact H1].
+    destruct (compare_spec y z); auto; try congruence.
+    destruct (compare_spec x z); auto; try congruence.
+    subst. elimtype False. eapply irreflexivity. etransitivity; [exact H|exact H0].
+    elimtype False. eapply irreflexivity. etransitivity; [exact H|]. 
+    eapply transitivity; [exact H1|exact H0].
+  Qed.
 
   Definition to_noprop (l : t) : Level.t :=
     match l with
@@ -81,8 +130,9 @@ Module VariableLevel.
                end.
 End VariableLevel.
 
-Coercion VariableLevel.to_noprop : VariableLevel.t >-> Level.t.
+Module VariableLevelOT := OrderedType_from_Alt VariableLevel.
 
+Coercion VariableLevel.to_noprop : VariableLevel.t >-> Level.t.
 
 Module GoodConstraint.
   Inductive t_ :=
@@ -96,15 +146,186 @@ Module GoodConstraint.
   | gc_le_level_set : string -> nat -> t_
   (* Var n <= Set + k *)
   | gc_le_var_set : nat -> nat -> t_.
+  Derive NoConfusion for t_.
   Definition t : Set := t_.
   Definition eq : t -> t -> Prop := Logic.eq.
+  Definition eq_refl := @eq_refl t.
+  Definition eq_sym := @eq_sym t.
+  Definition eq_trans := @eq_trans t.
+  
   Definition eq_equiv : RelationClasses.Equivalence eq := _.
   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
     unfold eq.
     decide equality. all: try apply VariableLevel.eq_dec.
     apply Z.eq_dec. all:apply string_dec || apply Peano_dec.eq_nat_dec.
   Defined.
+
+  Reserved Notation "x <c y" (at level 60).
+
+  Definition compare_cont (c : comparison) (d : comparison) : comparison :=
+    match c with
+    | Datatypes.Lt => Datatypes.Lt
+    | Datatypes.Eq => d
+    | Datatypes.Gt => Datatypes.Gt
+    end.
+
+  Definition compare (x : t) (y : t) : comparison :=
+    match x, y with
+    | gc_le u n v, gc_le u' n' v' => 
+      compare_cont (VariableLevel.compare u u') (compare_cont (Z.compare n n') (VariableLevel.compare v v'))
+    | _, gc_le _ _ _ => Datatypes.Lt
+    | gc_le _ _ _, _ => Gt
+    | gc_lt_set_level n s, gc_lt_set_level n' s' =>
+      compare_cont (Nat.compare n n') (string_compare s s')%string
+    | _, gc_lt_set_level _ _ => Datatypes.Lt
+    | gc_lt_set_level _ _, _ => Gt
+    | gc_le_set_var n s, gc_le_set_var n' s' =>
+      compare_cont (Nat.compare n n') (Nat.compare s s')
+    | _, gc_le_set_var _ _ => Datatypes.Lt
+    | gc_le_set_var _ _, _ => Datatypes.Gt
+    | gc_le_level_set s n, gc_le_level_set s' n' =>
+      compare_cont (Nat.compare n n') (string_compare s s')
+    | _, gc_le_level_set _ _ => Datatypes.Lt
+    | gc_le_level_set _ _, _ => Datatypes.Gt
+    | gc_le_var_set n k, gc_le_var_set n' k' =>
+      compare_cont (Nat.compare n n') (Nat.compare k k')
+    end.
+  Infix "?=" := compare.
+
+  Lemma compare_cont_CompOpp p q : CompOpp (compare_cont p q) = compare_cont (CompOpp p) (CompOpp q).
+  Proof.
+    destruct p, q; cbn => //.
+  Qed.
+
+  Lemma compare_sym (a b : t):
+    compare b a = CompOpp (compare a b).
+  Proof.
+    revert b. destruct a, b; try easy; cbn; 
+      rewrite !compare_cont_CompOpp -?VariableLevel.compare_sym ?Zcompare_antisym -?PeanoNat.Nat.compare_antisym
+      -?string_compare_Opp //.
+  Qed.
+  
+  Definition comparison_trans p q :=
+    match p, q with
+    | Datatypes.Eq, c => Some c
+    | c, Datatypes.Eq => Some c
+    | Datatypes.Lt, Datatypes.Gt => None 
+    | Datatypes.Gt, Datatypes.Lt => None
+    | c, _ => Some c
+    end.
+
+  Lemma compare_cont_trans {A} (cmp : A -> A -> comparison) :
+    (forall c x y z, cmp x y = c -> cmp y z = c -> cmp x z = c) ->
+    (forall x y, cmp x y = Datatypes.Eq -> x = y) ->
+    forall c x y z q q' q'',
+    (forall c, q = c -> q' = c -> q'' = c) ->
+    compare_cont (cmp x y) q = c -> compare_cont (cmp y z) q' = c -> compare_cont (cmp x z) q'' = c.
+  Proof.
+    intros Hc He c x y z q q' q'' Hqs.
+    destruct (cmp x y) eqn:e.
+    apply He in e. subst y.
+    cbn. intros ->.
+    destruct (cmp x z) eqn:e'; cbn.
+    apply He in e'. subst z. now apply Hqs.
+    all:auto.
+
+    cbn. intros <-.
+    destruct (cmp y z) eqn:e'; cbn.
+    apply He in e'. subst z. rewrite e /= //. intros _.
+    rewrite (Hc _ _ _ _ e e') /= //.
+    discriminate. cbn. intros <-.
+    destruct (cmp y z) eqn:e'; cbn => //.
+    eapply He in e'; subst. intros ->. rewrite e //.
+    intros _. rewrite (Hc _ _ _ _ e e') //.
+  Qed.
+
+  Lemma nat_compare_trans : forall c (x y z : nat), (x?=y)%nat = c -> (y?=z)%nat = c -> (x?=z)%nat = c.
+  Proof.
+    intros c x y z.
+    destruct (Nat.compare_spec x y); subst => // <-;
+    destruct (Nat.compare_spec y z); subst => //; 
+    destruct (Nat.compare_spec x z); subst => //; try lia.
+  Qed.
+
+  Lemma Z_compare_trans : forall c (x y z : Z), (x?=y)%Z = c -> (y?=z)%Z = c -> (x?=z)%Z = c.
+  Proof.
+    intros c x y z.
+    destruct (Z.compare_spec x y); subst => // <-;
+    destruct (Z.compare_spec y z); subst => //; 
+    destruct (Z.compare_spec x z); subst => //; try lia.
+  Qed.
+  
+  Lemma nat_compare_eq : forall (x y : nat), (x?=y)%nat = Datatypes.Eq -> x = y.
+  Proof.
+    intros x y.
+    destruct (Nat.compare_spec x y) => //.
+  Qed.
+  
+  Lemma compare_trans : forall c (x y z : t), (x?=y) = c -> (y?=z) = c -> (x?=z) = c.
+  Proof.
+    intros c x y z.
+    destruct x, y, z; cbn; try repeat apply compare_cont_trans; eauto using VariableLevel.compare_trans, VariableLevel.compare_eq;
+      try congruence.
+    all:eauto using string_compare_trans, nat_compare_trans, nat_compare_eq.
+    intros. eapply compare_cont_trans; tea; 
+      eauto using VariableLevel.compare_trans, VariableLevel.compare_eq, Z.compare_eq, Z_compare_trans.
+  Qed.
+
+  Lemma compare_eq (x y : t) : x ?= y = Datatypes.Eq -> x = y.
+  Proof.
+    destruct x, y; cbn => //.
+    destruct (VariableLevel.compare t0 t2) eqn:e => /= //.
+    apply VariableLevel.compare_eq in e. subst. cbn.
+    destruct (Z.compare z z0) eqn:e' => /= //.
+    apply Z.compare_eq in e'; subst.
+    intros H; apply VariableLevel.compare_eq in H; subst. reflexivity.
+    destruct (Nat.compare_spec n n0) => /= //; subst.
+    destruct (CompareSpec_string s s0) => /= //; subst => //.
+    destruct (Nat.compare_spec n n1) => /= //; subst.
+    destruct (Nat.compare_spec n0 n2) => /= //; subst => //.
+    destruct (Nat.compare_spec n n0) => /= //; subst.
+    destruct (CompareSpec_string s s0) => /= //; subst => //.
+    destruct (Nat.compare_spec n n1) => /= //; subst.
+    destruct (Nat.compare_spec n0 n2) => /= //; subst => //.
+  Qed.
+
+  Lemma compare_refl (x : t) : x ?= x = Datatypes.Eq.
+  Proof.
+    destruct x => /= //;
+    rewrite ?VariableLevel.compare_refl /= ?Z.compare_refl /= ?Nat.compare_refl ?string_compare_eq //.
+  Qed.
+
+  Definition lt (x y : t) := (x ?= y = Datatypes.Lt).
+  Lemma lt_trans (x y z : t) : lt x y -> lt y z -> lt x z.
+  Proof. apply compare_trans. Qed.
+  Lemma lt_not_eq (x y : t) : lt x y -> ~ eq x y.
+  Proof.
+    intros lt eq. red in eq. subst x.
+    red in lt. rewrite compare_refl in lt => //.
+  Qed.
+
+  Lemma lt_strorder : StrictOrder lt.
+  Proof.
+    split.
+    - intros x hlt. apply lt_not_eq in hlt. now apply hlt.
+    - red. eapply lt_trans.
+  Qed.
+  Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+    intros x y ? ? ? ?. now rewrite H H0.
+  Qed.
+  
+  Lemma compare_spec : forall x y : t, CompSpec eq lt x y (compare x y).
+  Proof.
+    intros x y.
+    destruct (x ?= y) eqn:e; constructor.
+    - now eapply compare_eq in e.
+    - now red.
+    - red. rewrite compare_sym e //.
+  Qed.
+
 End GoodConstraint.
+
 Module GoodConstraintSet := Make GoodConstraint.
 Module GoodConstraintSetFact := WFactsOn GoodConstraint GoodConstraintSet.
 Module GoodConstraintSetProp := WPropertiesOn GoodConstraint GoodConstraintSet.
@@ -118,10 +339,10 @@ Lemma GoodConstraintSet_pair_In x y z
 Proof.
   intro H. apply GoodConstraintSetFact.add_iff in H.
   destruct H; [intuition|].
-  apply GoodConstraintSetFact.singleton_1 in H; intuition.
+  apply GoodConstraintSetFact.singleton_1 in H. intuition.
 Qed.
 
-Import VariableLevel GoodConstraint.
+Import VariableLevel GoodConstraint(t_(..)).
 
 Definition gc_satisfies0 v (gc : GoodConstraint.t) : bool :=
   match gc with
@@ -135,16 +356,24 @@ Definition gc_satisfies0 v (gc : GoodConstraint.t) : bool :=
 Definition gc_satisfies v : GoodConstraintSet.t -> bool :=
   GoodConstraintSet.for_all (gc_satisfies0 v).
 
+Arguments GoodConstraintSet.for_all : simpl never.
+
 Definition gc_consistent ctrs : Prop := exists v, gc_satisfies v ctrs.
 
 Lemma gc_satisfies_pair v gc1 gc2 :
   (gc_satisfies0 v gc1 /\ gc_satisfies0 v gc2) <->
   gc_satisfies v (GoodConstraintSet_pair gc1 gc2).
 Proof.
-  cbn; destruct (GoodConstraint.eq_dec gc2 gc1); cbn;
-    rewrite if_true_false.
-  now destruct e. symmetry. apply andb_and.
-Defined.
+  unfold gc_satisfies, GoodConstraintSet_pair.
+  rewrite [is_true (GoodConstraintSet.for_all _ _)]GoodConstraintSet.for_all_spec.
+  split.
+  - intros [sat1 sat2] x.
+    rewrite GoodConstraintSet.add_spec. move=> [->|] //.
+    rewrite GoodConstraintSet.singleton_spec => -> //.
+  - intros ha. split; apply ha;
+    rewrite GoodConstraintSet.add_spec;
+    rewrite GoodConstraintSet.singleton_spec; auto.
+Qed.
 
 (* None -> not satisfiable *)
 (* Some empty -> useless *)
@@ -228,8 +457,9 @@ Lemma gc_of_constraint_spec v uc :
 Proof.
   split.
   - destruct 1; destruct l, l'; try constructor.
+    all:unfold gc_of_constraint.
     all: cbn -[GoodConstraintSet_pair] in *.
-    all: lled; cbn -[GoodConstraintSet_pair]; try reflexivity.
+    all: cbn -[GoodConstraintSet_pair]; try reflexivity.
     all: rewrite ?if_true_false; repeat toProp ; try lia.
     all: try solve [destruct (Z.compare_spec z 0); simpl; try constructor; lia].
     destruct (Z.compare_spec z 0); simpl; try constructor; try lia.
@@ -239,7 +469,8 @@ Proof.
     apply gc_satisfies_singleton; simpl; try (apply Nat.ltb_lt||apply Nat.leb_le); lia).
     all:try (destruct (Z.leb_spec z 0); simpl; try constructor; try lia;
       apply gc_satisfies_singleton; simpl; apply Nat.leb_le; lia).
-    all: apply gc_satisfies_pair; split; cbn; toProp; try lia.
+    all: try (apply gc_satisfies_pair; split; cbn; toProp; try lia).
+    all: (apply gc_satisfies_singleton; cbn; toProp; lia).
   - destruct uc as [[[] []] []]; intro H; constructor.
     all: cbn -[GoodConstraintSet_pair] in *; try contradiction.
     all: rewrite -> ?if_true_false in *; lled; cbn -[GoodConstraintSet_pair] in *;
@@ -252,6 +483,7 @@ Proof.
       apply gc_satisfies_singleton in H; simpl in H; 
       (apply Nat.ltb_lt in H || apply Nat.leb_le in H);
       try lia).
+    all:(try apply gc_satisfies_singleton in H; cbn in H; try toProp H); try lia.
     all: apply gc_satisfies_pair in H; destruct H as [H1 H2]; cbn in *;
       repeat toProp; try lia.
 Qed.
@@ -816,8 +1048,9 @@ Section MakeGraph.
     - apply GoodConstraintSet.for_all_spec.
       intros x y []; reflexivity.
       intros gc Hgc.
-      pose proof (proj2 (make_graph_E uctx (edge_of_constraint gc))
-                        (or_intror (ex_intro _ gc (conj Hgc eq_refl)))) as XX.
+      pose proof (proj2 (make_graph_E uctx (edge_of_constraint gc))) as XX.
+      forward XX.
+      { right. exists gc. split => //. }
       specialize (H.p2 _ XX).
       destruct gc as [[] z []|k ?| |n|n]; intro HH; cbn in *; toProp; try lia.
   Qed.
@@ -871,7 +1104,7 @@ Proof.
   2: intro; split; [discriminate|inversion 1].
   intros ctrs Hctrs.
   pose proof (gc_of_uctx_invariants uctx (uctx.1, ctrs)) as XX.
-  cbn in XX; rewrite Hctrs in XX; specialize (XX eq_refl Huctx).
+  cbn in XX. rewrite Hctrs in XX. specialize (XX eq_refl Huctx).
   etransitivity. apply make_graph_invariants in XX.
   etransitivity. apply is_acyclic_spec; tas.
   apply acyclic_caract1; tas.
@@ -1724,10 +1957,10 @@ Section CheckLeq.
   Definition check_gc_constraint (gc : GoodConstraint.t) :=
     negb check_univs || match gc with
                        | gc_le l z l' => leqb_level_n z l l'
-                       | gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lzero (Level l)
-                       | gc_le_set_var k n => leqb_level_n (Z.of_nat k) lzero (Var n)
-                       | gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level l) lzero
-                       | gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Var n) lzero
+                       | gc_lt_set_level k l => leqb_level_n (Z.of_nat (S k)) lzero (Level.Level l)
+                       | gc_le_set_var k n => leqb_level_n (Z.of_nat k) lzero (Level.Var n)
+                       | gc_le_level_set l k => leqb_level_n (- Z.of_nat k)%Z (Level.Level l) lzero
+                       | gc_le_var_set n k => leqb_level_n (- Z.of_nat k)%Z (Level.Var n) lzero
                        end.
 
   Definition check_gc_constraints
@@ -1999,10 +2232,10 @@ Section CheckLeq2.
   Definition valid_gc_constraint (gc : GoodConstraint.t) :=
     match gc with
     | gc_le l z l' => leq_level_n z l l'
-    | gc_lt_set_level k l => leq_level_n (Z.of_nat (S k)) lzero (Level l)
-    | gc_le_set_var k n => leq_level_n (Z.of_nat k) lzero (Var n)
-    | gc_le_level_set l k => leq_level_n (- Z.of_nat k)%Z (Level l) lzero
-    | gc_le_var_set n k => leq_level_n (- Z.of_nat k)%Z (Var n) lzero
+    | gc_lt_set_level k l => leq_level_n (Z.of_nat (S k)) lzero (Level.Level l)
+    | gc_le_set_var k n => leq_level_n (Z.of_nat k) lzero (Level.Var n)
+    | gc_le_level_set l k => leq_level_n (- Z.of_nat k)%Z (Level.Level l) lzero
+    | gc_le_var_set n k => leq_level_n (- Z.of_nat k)%Z (Level.Var n) lzero
     end.
 
   Definition valid_gc_constraints (gcs : GoodConstraintSet.t) :=
@@ -2307,7 +2540,7 @@ Section AddLevelsCstrs.
     destruct fold_left eqn:eq.
     - constructor.
       + intros.
-        setoid_rewrite ConstraintSetFact.elements_iff; setoid_rewrite InA_In_eq at 2.
+        setoid_rewrite ConstraintSetFact.elements_iff; setoid_rewrite InA_In_eq.
         transitivity ((exists (c : UnivConstraint.t) (gcs : GoodConstraintSet.t),
           gc_of_constraint c = Some gcs /\
           In c (ConstraintSet.elements s) /\ GoodConstraintSet.In gc gcs) \/ GCS.In gc GCS.empty).

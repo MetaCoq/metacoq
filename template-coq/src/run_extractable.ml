@@ -155,8 +155,7 @@ let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
-let of_nat (t : Datatypes.nat) : int =
-  failwith "of_constr"
+let of_nat (t : int) : int = t
 
 let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
   match ck with

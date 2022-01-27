@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
 From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOCamlFloats
-    ExtrOCamlInt63.
+    ExtrOCamlInt63 ExtrOcamlNatInt.
 From Coq Require Extraction.
 (** * Extraction setup for template-coq.
 
@@ -85,6 +85,7 @@ Extract Constant Z.min => "Pervasives.min".
 Extract Constant Z.max => "Pervasives.max".
 Extract Constant Z.compare =>
  "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
+Extract Constant Z.eqb => "Int.equal".
 
 Extract Constant Z.of_N => "fun p -> p".
 Extract Constant Z.abs_N => "Pervasives.abs".
@@ -94,7 +95,9 @@ Extract Constant Z.abs_N => "Pervasives.abs".
 
 Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
-
+ Extract Constant Ascii.compare =>
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
+ 
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".
 Extract Constant Equations.Init.pr2 => "snd".

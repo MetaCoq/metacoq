@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats.
+From Coq Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats
+  ExtrOcamlNatInt.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
@@ -79,6 +80,8 @@ Extract Constant Z.abs_N => "Pervasives.abs".
     For the moment we don't even try *)
 
 Extract Constant ascii_compare =>
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
+Extract Constant Ascii.compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int Init

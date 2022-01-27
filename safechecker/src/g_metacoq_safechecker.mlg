@@ -34,11 +34,18 @@ let check env evm (c, ustate) =
   let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
   let uctx = UState.context_set ustate in
   Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
-  let uctx = Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx) in
+  let ugraph = Environ.universes env in
+  let levels = UGraph.domain ugraph in
+  let levels = Univ.Level.Set.remove Univ.Level.set levels in
+  let cstrs = UGraph.constraints_for ~kept:levels ugraph in
+  let uctx = Univ.ContextSet.union uctx (levels, cstrs) in
+  let uctx = time (str"Quoting universe context") 
+    (fun uctx -> Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx)) uctx in
   let check =
     time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program
-        Config0.default_checker_flags term)
+        (*Config0.default_checker_flags*)
+        Config0.type_in_type term)
       uctx
   in
   match check with

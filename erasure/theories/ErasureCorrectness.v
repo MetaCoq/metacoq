@@ -19,7 +19,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICOnFreeVars PCUICWellScopedCumulativity PCUICValidity
   PCUICContexts PCUICEquality PCUICSpine
   PCUICInductives.
-Require Import PCUICTactics.
+From MetaCoq.PCUIC Require Import PCUICTactics.
 
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect.

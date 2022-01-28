@@ -3,8 +3,7 @@
 From Coq Require Import Utf8 ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus
-     PCUICEquality PCUICTyping.
+     PCUICLiftSubst PCUICEquality PCUICSigmaCalculus.
      
 Require Import Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.     
@@ -76,7 +75,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_smash_context Δ Δ' : 
-  eq_context_upto_names Δ Δ' →
+  eq_context_upto_names Δ Δ' ->
   eq_context_upto_names (smash_context [] Δ) (smash_context [] Δ').
 Proof.
   induction 1.
@@ -88,7 +87,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_lift_context n k Δ Δ' : 
-  eq_context_upto_names Δ Δ' →
+  eq_context_upto_names Δ Δ' ->
   eq_context_upto_names (lift_context n k Δ) (lift_context n k Δ').
 Proof.
   induction 1.
@@ -99,7 +98,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_subst_context s k Δ Δ' : 
-  eq_context_upto_names Δ Δ' →
+  eq_context_upto_names Δ Δ' ->
   eq_context_upto_names (subst_context s k Δ) (subst_context s k Δ').
 Proof.
   induction 1.

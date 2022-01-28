@@ -3,7 +3,7 @@ From Coq Require Import ssreflect CRelationClasses.
 From MetaCoq.Template Require Import utils config Universes uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
-     PCUICCases PCUICContextRelation PCUICCumulativity PCUICTyping
+     PCUICCases PCUICCumulativity PCUICTyping
      PCUICReduction PCUICWeakeningEnvConv
      PCUICClosed PCUICPosition PCUICGuardCondition.
 

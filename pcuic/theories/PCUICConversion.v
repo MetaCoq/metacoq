@@ -1,15 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICLiftSubst PCUICTyping PCUICOnOne
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCases PCUICLiftSubst PCUICTyping PCUICOnOne
      PCUICSubstitution PCUICPosition PCUICCumulativity PCUICReduction PCUICOnFreeVars
      PCUICConfluence PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICParallelReductionConfluence PCUICEquality
      PCUICSigmaCalculus PCUICContextReduction PCUICContextConversion
      PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst
      PCUICWellScopedCumulativity PCUICUnivSubstitutionConv PCUICInduction.
 
-     (* PCUICContextConversion  *)
-Require Import CRelationClasses.
+Require Import CRelationClasses CMorphisms.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.
 
@@ -40,7 +39,6 @@ Hint Resolve eq_universe_leq_universe' : pcuic.
 Derive Signature for cumulAlgo0 assumption_context.
 Derive Signature for clos_refl_trans_1n.
 
-Require Import CMorphisms.
 Notation equality_terms Σ Γ := (All2 (equality false Σ Γ)).
 #[global]
 Instance equality_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (equality_terms Σ Γ).
@@ -59,55 +57,6 @@ Proof.
   intros x y.
   eapply All2_symP; tc.
 Qed.
-
-
-Lemma genconv1_is_open_term  {cf:checker_flags} {le} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : context) x y : 
-  genconv1 Σ Γ le x y ->
-  is_closed_context Γ ->
-    is_open_term Γ x ->
-    is_open_term Γ y.
-Proof.
-  induction 1; intros; eauto.
-  - destruct r as [[r|r]|r].
-    + eauto with fvs. 
-    + eauto with fvs. 
-    + eapply eq_term_upto_univ_napp_on_free_vars; eauto.
-Defined.
-
-Section EquivalenceConvCumulDefs.
-
-  Context {cf:checker_flags} (Σ : global_env_ext) (wfΣ : wf Σ) (Γ : closed_context).
-  
-  Proposition genconv_genconv1 {le} (M N : open_term Γ) :
-    genconv1 Σ Γ le M N <~> Σ ;;; Γ ⊢ M ≤[le] N.
-  Proof.
-    split; intro H.
-    - destruct M as [M HM], N as [N HN].
-      cbn in H |- *.
-      induction H in HM, HN |- *.
-      + destruct r as [[r|r]|r].
-        * eapply red_conv. apply closed_red1_red. eauto. 
-        * eapply red_equality_right.
-          ** apply closed_red1_red. apply r.
-          ** refine (equality_refl' Γ (exist x _)). destruct r. eapply red1_is_open_term; eauto.
-        * destruct Γ; econstructor 1; eauto.
-      + exact (equality_refl' Γ (exist x HM)).
-      + etransitivity. 
-        ** apply IHclos_refl_trans1.
-           *** destruct Γ; eauto.
-           *** eapply genconv1_is_open_term; destruct Γ; eauto. 
-        ** apply IHclos_refl_trans2.
-           *** eapply genconv1_is_open_term; destruct Γ; eauto. 
-           *** destruct Γ; eauto.
-    - induction H.
-      + constructor. now right.
-      + etransitivity; tea.
-        constructor. left. now left.
-      + etransitivity; tea.
-        constructor. left. now right.
-  Qed.
-
-End EquivalenceConvCumulDefs.
 
 #[global] Existing Instance All2_reflexivity.
 
@@ -427,15 +376,13 @@ Section ConvCongruences.
     (forall x y, R x y -> on_Trel S f x y) ->
     (forall x y, R x y -> inclusion (clos_refl_trans R) (clos_refl_trans S). *)
 
-  Notation "( x | y )" := (exist x y).
-
   Lemma closed_red_clos {Γ t u} :
     closed_red Σ Γ t u ->
     clos_refl_trans (closed_red1 Σ Γ) t u.
   Proof.
     intros [clΓ clt r].
     assert (clu := red_on_free_vars r clt byfvs).
-    unshelve eapply (red_ws_red _ (Γ | clΓ) (exist t byfvs) (exist u byfvs)) in r; cbn; eauto with fvs.
+    unshelve eapply (red_ws_red _ (exist Γ clΓ) (exist t byfvs) (exist u byfvs)) in r; cbn; eauto with fvs.
     depind r. all:try solve [econstructor; split; eauto with fvs].
     destruct y as [y hy]; econstructor 3; [eapply IHr1|eapply IHr2]; reflexivity.
   Qed.
@@ -1622,8 +1569,6 @@ Section ConvRedConv.
     - eapply conv_cum_red_conv_inv; eauto.
   Qed.
 
-  Import PCUICOnFreeVars.
-
   (* Lemma equality_Case {Γ indn p brs u v} :
     Σ ;;; Γ ⊢ u = v ->
     Σ ;;; Γ ⊢ tCase indn p u brs ≤ tCase indn p v brs.
@@ -2727,8 +2672,6 @@ Qed. *)
 
 Section ConvSubst.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
-
-  Import PCUICOnFreeVars.
 
   Lemma subslet_open {Γ s Γ'} : subslet Σ Γ s Γ' ->
     forallb (is_open_term Γ) s.

@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICLiftSubst PCUICUnivSubst PCUICInduction
-     PCUICContextRelation PCUICCases PCUICClosed.
+     PCUICCases PCUICClosed PCUICTactics.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.

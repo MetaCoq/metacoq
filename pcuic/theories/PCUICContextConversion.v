@@ -8,8 +8,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
      PCUICContextReduction PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICGuardCondition PCUICClosedTyp.
 
-From MetaCoq.PCUIC Require Export PCUICContextRelation.
-
 From Coq Require Import CRelationClasses ssreflect ssrbool.
 From Equations Require Import Equations.
 

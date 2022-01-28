@@ -2,12 +2,16 @@
 From Coq Require Import CMorphisms.
 From MetaCoq.Template Require Import LibHypsNaming config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICReflect PCUICContextRelation.
+     PCUICLiftSubst PCUICReflect.
 
 Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
+
+Ltac pcuic :=
+  try repeat red; cbn in *;
+   try (solve [ intuition auto; eauto with pcuic || (try lia || congruence) ]).
 
 #[global]
 Instance All2_fold_len {A} P (Γ Δ : list A) : HasLen (All2_fold P Γ Δ) #|Γ| #|Δ| :=

@@ -1,11 +1,11 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import RelationClasses CRelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils PCUICDepth PCUICCases
+From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils PCUICTactics PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
      PCUICSigmaCalculus PCUICWeakeningEnvConv PCUICInduction
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars 
-     PCUICContextRelation PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
      
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.

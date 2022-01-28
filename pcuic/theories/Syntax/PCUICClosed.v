@@ -1,8 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms. 
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICSigmaCalculus.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction PCUICUnivSubst PCUICLiftSubst PCUICSigmaCalculus.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.

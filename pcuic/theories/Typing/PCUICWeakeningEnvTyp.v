@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
   PCUICEquality PCUICContextSubst PCUICUnivSubst PCUICCases
   PCUICReduction PCUICCumulativity PCUICTyping
-  PCUICGuardCondition PCUICContextRelation PCUICGlobalEnv
+  PCUICGuardCondition PCUICGlobalEnv
   PCUICWeakeningEnvConv.
 From Equations Require Import Equations.
 

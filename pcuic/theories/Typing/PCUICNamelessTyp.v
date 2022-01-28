@@ -3,7 +3,7 @@ From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICReduction PCUICTyping PCUICPosition PCUICUnivSubst
-     PCUICContextRelation PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv PCUICConversion
+     PCUICNamelessDef PCUICGuardCondition PCUICNamelessConv PCUICConversion
      PCUICWellScopedCumulativity PCUICOnFreeVars PCUICOnFreeVarsConv PCUICConfluence PCUICClosedTyp PCUICClosed
      PCUICSigmaCalculus (* for context manipulations *).
 Require Import Equations.Prop.DepElim.
@@ -11,7 +11,7 @@ Require Import ssreflect ssrbool.
 
 Implicit Types cf : checker_flags.
 
-(** Typing / conversion does not rely on name annotations of binders.
+(** Typing does not rely on name annotations of binders.
 
   We prove this by constructing a type-preserving translation to 
   terms where all binders are anonymous. An alternative would be to 

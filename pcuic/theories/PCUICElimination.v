@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCasesContexts
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCasesContexts
      PCUICTyping PCUICGlobalEnv
      PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine 
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCasesContexts
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
      PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata 
      PCUICContextConversion PCUICContextConversionTyp
-     PCUICCumulProp PCUICWellScopedCumulativity.
+     PCUICCumulProp PCUICWellScopedCumulativity PCUICArities.
 From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICOnFreeVars PCUICEquality.
 
 Require Equations.Prop.DepElim.
@@ -51,7 +51,6 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
-From MetaCoq.PCUIC Require Import PCUICArities.
 
 Lemma typing_spine_case_predicate {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
   {mdecl idecl} {u params indices ps} {c} :
@@ -791,7 +790,9 @@ Proof.
   intros [[HA HB]|[HB HA]] cum; split; auto;
   apply cumul_alt in cum as [v [v' [[redv redv'] leq]]].
   - eapply type_Cumul' with (tSort u'); eauto.
-    eapply PCUICArities.isType_Sort; pcuic.
+    eapply isType_Sort.
+    1: now destruct u.
+    1: pcuic.
     eapply cumul_Sort.
     eapply subject_reduction in redv; eauto.
     eapply subject_reduction in redv'; eauto.
@@ -800,7 +801,9 @@ Proof.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_sprop_sorted_r in leq; eauto.
     eapply type_Cumul' with (tSort u'); eauto.
-    eapply PCUICArities.isType_Sort; pcuic.
+    eapply PCUICArities.isType_Sort.
+    1: now destruct u.
+    1: now pcuic.
     now eapply cumul_Sort. 
 Qed.
 

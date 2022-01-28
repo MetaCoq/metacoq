@@ -5,7 +5,7 @@ From Equations Require Import Equations.
 
 From Coq Require Import Bool String List Program.
 From MetaCoq.Template Require Import config monad_utils utils uGraph.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICArities PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICArities PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICGlobalEnv
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
      PCUICReduction
@@ -549,7 +549,7 @@ Qed.
       1: now eapply red_terms_equality_terms.
       1: symmetry.
       1: now eapply red_terms_equality_terms.
-      eapply alt_into_equality_terms ; tea.
+      eapply PCUICConvCumInversion.alt_into_equality_terms ; tea.
       * fvs.
       * eapply infering_ind_typing, validity, isType_open in X ; auto.
         rewrite on_free_vars_mkApps in X.

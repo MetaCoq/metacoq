@@ -2,9 +2,8 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst PCUICEquality PCUICTyping PCUICCumulativity
-  PCUICWeakeningEnvConv 
-  PCUICClosed PCUICReduction PCUICPosition PCUICGeneration 
+  PCUICLiftSubst PCUICTyping PCUICCumulativity 
+  PCUICClosed PCUICReduction 
   PCUICSigmaCalculus PCUICRenameDef PCUICRenameConv PCUICOnFreeVars
   PCUICClosedConv PCUICClosedTyp.
 
@@ -33,15 +32,15 @@ Proof.
 Qed.
 
 Lemma weaken_nth_error_ge {Γ Γ' v Γ''} : #|Γ'| <= v ->
-  nth_error (Γ ,,, Γ') v =
-  nth_error (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (#|Γ''| + v).
+  nth_error (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (#|Γ''| + v) =
+  nth_error (Γ ,,, Γ') v.
 Proof.
   intros Hv.
   rewrite -> !nth_error_app_context_ge, ?lift_context_length.
   - f_equal. lia.
-  - rewrite lift_context_length. lia.
-  - rewrite lift_context_length. lia.
   - auto.
+  - rewrite lift_context_length. lia.
+  - rewrite lift_context_length. lia.
 Qed.
 
 Lemma weaken_nth_error_lt {Γ Γ' Γ'' v} : v < #|Γ'| ->
@@ -68,22 +67,6 @@ Proof. rewrite !lift_context_alt.
   rewrite simpl_lift //; lia.
 Qed.
 
-Lemma lift_simpl {Γ'' Γ' : context} {i t} :
-  i < #|Γ'| ->
-  lift0 (S i) (lift #|Γ''| (#|Γ'| - S i) t) = lift #|Γ''| #|Γ'| (lift0 (S i) t).
-Proof.
-  intros. assert (#|Γ'| = S i + (#|Γ'| - S i)) by easy.
-  rewrite -> H0 at 2.
-  rewrite permute_lift; try easy.
-Qed.
-
-
-Lemma All_local_env_eq P ctx ctx' :
-  All_local_env P ctx -> 
-  ctx = ctx' ->
-  All_local_env P ctx'.
-Proof. now intros H ->. Qed.
-
 Lemma weakening_renaming P Γ Γ' Γ'' :
   urenaming P (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Γ ,,, Γ') 
     (lift_renaming #|Γ''| #|Γ'|).
@@ -91,7 +74,7 @@ Proof.
   intros i d hpi hnth.
   rewrite /lift_renaming.
   destruct (Nat.leb #|Γ'| i) eqn:leb; [apply Nat.leb_le in leb|eapply Nat.leb_nle in leb].
-  - rewrite -weaken_nth_error_ge //.
+  - rewrite weaken_nth_error_ge //.
     exists d; split; auto.
     split; auto.
     split.
@@ -110,7 +93,7 @@ Proof.
       apply rename_ext => k. simpl. now repeat nat_compare_specs.
 Qed.
 
-Variant lookup_decl_spec Γ Δ i : option context_decl -> Type :=
+(* Variant lookup_decl_spec Γ Δ i : option context_decl -> Type :=
 | lookup_head d : i < #|Δ| ->
   nth_error Δ i = Some d -> lookup_decl_spec Γ Δ i (Some d)
 | lookup_tail d : #|Δ| <= i < #|Γ| + #|Δ| ->
@@ -133,12 +116,12 @@ Proof.
       apply nth_error_Some_length in hnth.
       split; lia.
     * constructor. eapply nth_error_None in hnth. lia.
-Qed.
+Qed. *)
 
 #[global]
 Hint Rewrite rename_context_length : len.
 
-Variant shiftn_spec k f i : nat -> Type :=
+(* Variant shiftn_spec k f i : nat -> Type :=
 | shiftn_below : i < k -> shiftn_spec k f i i
 | shiftn_above : k <= i -> shiftn_spec k f i (k + f (i - k)).
 
@@ -150,7 +133,7 @@ Proof.
     now constructor.
   * apply Nat.ltb_nlt in ltb.
     constructor. lia.
-Qed.
+Qed. *)
 
 Lemma rename_context_lift_context n k Γ :
   rename_context (lift_renaming n k) Γ = lift_context n k Γ.
@@ -188,7 +171,7 @@ Proof.
     now lia_f_equal.
 Qed.
 
-Lemma decompose_app_rec_lift n k t l :
+(* Lemma decompose_app_rec_lift n k t l :
   let (f, a) := decompose_app_rec t l in
   decompose_app_rec (lift n k t) (map (lift n k) l)  = (lift n k f, map (lift n k) a).
 Proof.
@@ -221,7 +204,7 @@ Qed.
 #[export] Hint Resolve lift_is_constructor : core.
 
 #[global]
-Hint Rewrite subst_instance_lift lift_mkApps distr_lift_subst distr_lift_subst10 : lift.
+Hint Rewrite subst_instance_lift lift_mkApps distr_lift_subst distr_lift_subst10 : lift. *)
 
 Definition lift_mutual_inductive_body n k m :=
   map_mutual_inductive_body (fun k' => lift n (k' + k)) m.
@@ -265,15 +248,13 @@ Proof.
   - reflexivity.
 Qed.
 
-
-
 Lemma weakening_red1 `{cf:checker_flags} {Σ} Γ Γ' Γ'' M N :
   wf Σ ->
   on_free_vars xpredT M ->
   red1 Σ (Γ ,,, Γ') M N ->
   red1 Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
-  intros wfΣ H.
+  intros.
   rewrite !lift_rename.
   eapply red1_rename; eauto.
   eapply weakening_renaming.
@@ -285,13 +266,10 @@ Lemma weakening_red `{cf:checker_flags} {Σ:global_env_ext} {wfΣ : wf Σ} {P Γ
   red Σ (Γ ,,, Γ') M N ->
   red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
-  intros onctx onf; induction 1.
-  - constructor. eapply weakening_red1; auto.
-    eapply on_free_vars_impl; tea. auto.
-  - reflexivity.
-  - etransitivity.
-    * eapply IHX1 => //.
-    * eapply IHX2. eapply red_on_free_vars ; tea. 
+  intros.
+  rewrite !lift_rename.
+  eapply red_rename; eauto.
+  eapply weakening_renaming.
 Qed.
 
 Lemma weakening_red' `{cf:checker_flags} {Σ:global_env_ext} {wfΣ : wf Σ} {P Γ Γ' Γ'' M N} :
@@ -300,13 +278,7 @@ Lemma weakening_red' `{cf:checker_flags} {Σ:global_env_ext} {wfΣ : wf Σ} {P �
   red Σ (Γ ,,, Γ') M N ->
   red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
-  intros onctx onf; induction 1.
-  - constructor. eapply weakening_red1; auto.
-    eapply on_free_vars_impl; tea. auto.
-  - reflexivity.
-  - etransitivity.
-    * eapply IHX1 => //.
-    * eapply IHX2. eapply red_on_free_vars; tea.
+  now eapply weakening_red.
 Qed.
 
 Lemma weakening_red_0 {cf} {Σ:global_env_ext} {wfΣ : wf Σ} {P Γ Γ' M N n} :
@@ -318,7 +290,7 @@ Lemma weakening_red_0 {cf} {Σ:global_env_ext} {wfΣ : wf Σ} {P Γ Γ' M N n} :
 Proof. move=> -> onctx ont; eapply (weakening_red (Γ':=[])); tea. Qed.
 
 (* TODO MOVE *)
-Lemma fix_context_alt_length :
+(* Lemma fix_context_alt_length :
   forall l,
     #|fix_context_alt l| = #|l|.
 Proof.
@@ -326,7 +298,7 @@ Proof.
   unfold fix_context_alt.
   rewrite List.rev_length.
   rewrite mapi_length. reflexivity.
-Qed.
+Qed. *)
 
 Lemma weakening_cumul `{CF:checker_flags} {Σ Γ Γ' Γ'' M N} :
   wf Σ.1 ->
@@ -336,22 +308,17 @@ Lemma weakening_cumul `{CF:checker_flags} {Σ Γ Γ' Γ'' M N} :
   Σ ;;; Γ ,,, Γ' |- M <= N ->
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N.
 Proof.
-  intros wfΣ onM onN onctx. induction 1.
-  - constructor. now apply lift_leq_term.
-  - econstructor 2; eauto.
-    * eapply weakening_red1 in r; auto. 1:exact r.
-    * eapply IHX; tas.
-      eapply red1_on_free_vars; [| |tea]; tea.
-  - econstructor 3; eauto.
-    * eapply IHX; tas.
-      eapply red1_on_free_vars; [| |tea]; tea.
-    * eapply weakening_red1 in r; auto. exact r.    
+  intros.
+  rewrite !lift_rename -rename_context_lift_context.
+  eapply cumul_renameP ; tea.
+  rewrite rename_context_lift_context.
+  now eapply weakening_renaming.
 Qed.
 
-Lemma destInd_lift n k t : destInd (lift n k t) = destInd t.
+(* Lemma destInd_lift n k t : destInd (lift n k t) = destInd t.
 Proof.
   destruct t; simpl; try congruence.
-Qed.
+Qed. *)
 
 Lemma weakening_conv `{cf:checker_flags} :
   forall Σ Γ Γ' Γ'' M N,
@@ -362,17 +329,11 @@ Lemma weakening_conv `{cf:checker_flags} :
     Σ ;;; Γ ,,, Γ' |- M = N ->
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
 Proof.
-  intros Σ Γ Γ' Γ'' M N wfΣ onM onN onctx. induction 1.
-  - constructor.
-    now apply lift_eq_term.
-  - econstructor 2.
-    * eapply weakening_red1 in r; auto. 1:exact r.
-    * eapply IHX; tas.
-      eapply red1_on_free_vars; [| |tea]; tea.
-  - econstructor 3.
-    * eapply IHX; tas.
-      eapply red1_on_free_vars; [| |tea]; tea.
-    * eapply weakening_red1 in r; auto. exact r.    
+  intros.
+  rewrite !lift_rename -rename_context_lift_context.
+  eapply conv_renameP ; tea.
+  rewrite rename_context_lift_context.
+  now eapply weakening_renaming.
 Qed.
 
 Lemma isType_on_free_vars {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ T} : 

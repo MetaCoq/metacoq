@@ -649,36 +649,6 @@ Proof.
 Qed.
 #[global]
 Hint Rewrite @map_predicate_id : map.
-
-Definition ondecl {A} (P : A -> Type) (d : BasicAst.context_decl A) :=
-  P d.(decl_type) × option_default P d.(decl_body) unit. 
-  
-Notation onctx P := (All (ondecl P)).
-
-Definition onctx_k (P : nat -> term -> Type) k (ctx : context) :=
-  Alli (fun i d => ondecl (P (Nat.pred #|ctx| - i + k)) d) 0 ctx.
-
-Lemma ondeclP {P : term -> Type} {p : term -> bool} {d : context_decl} :
-  (forall x, reflectT (P x) (p x)) ->
-  reflectT (ondecl P d) (test_decl p d).
-Proof.
-  intros hr.
-  rewrite /ondecl /test_decl; destruct d; cbn.
-  destruct (hr decl_type) => //;
-  destruct (reflect_option_default hr decl_body) => /= //; now constructor.
-Qed.
-
-Lemma onctxP {p : term -> bool} {ctx : context} :
-  reflectT (onctx p ctx) (test_context p ctx).
-Proof.
-  eapply equiv_reflectT.
-  - induction 1; simpl; auto. rewrite IHX /= //.
-    now move/(ondeclP reflectT_pred): p0.
-  - induction ctx.
-    * constructor.
-    * move => /= /andb_and [Hctx Hd]; constructor; eauto.
-      now move/(ondeclP reflectT_pred): Hd.
-Qed.
   
 Definition tCasePredProp_k
             (P : nat -> term -> Type)

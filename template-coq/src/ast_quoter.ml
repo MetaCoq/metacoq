@@ -193,7 +193,7 @@ struct
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
     (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
-    let levels = List.filter_map 
+    let levels = CList.filter_map 
       (fun l -> match quote_level l with
         | Coq_inl _ -> None
         | Coq_inr l -> Some l)

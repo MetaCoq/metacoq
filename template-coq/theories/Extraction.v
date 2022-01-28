@@ -95,7 +95,7 @@ Extract Constant Z.abs_N => "Pervasives.abs".
 
 Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
- Extract Constant Ascii.compare =>
+Extract Constant Ascii.compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
  
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].

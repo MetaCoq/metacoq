@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-  PCUICLiftSubst PCUICUnivSubst PCUICContextRelation PCUICCumulativity
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCases PCUICInduction
+  PCUICLiftSubst PCUICUnivSubst PCUICCumulativity
   PCUICTyping PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef 
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICOnFreeVarsConv PCUICGuardCondition PCUICTyping
   PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp PCUICRenameConv.
@@ -773,27 +773,6 @@ Proof.
   move/(Alli_shiftn_inv 0 _ 1) => H.
   eapply Alli_impl; tea => n x /=.
   now replace (#|Γ| - S n + 0) with (Nat.pred #|Γ| - n + 0) by lia.
-Qed.
-
-Lemma All2_fold_impl_ind_onctx_k Q P P' Γ Δ :
-  onctx_k Q 0 Γ ->
-  onctx_k Q 0 Δ ->
-  All2_fold P Γ Δ ->
-  (forall Γ Δ d d',
-    All2_fold P Γ Δ ->
-    onctx_k Q 0 Γ ->
-    All2_fold P' Γ Δ ->
-    ondecl (Q #|Γ|) d ->
-    ondecl (Q #|Δ|) d' ->
-    P Γ Δ d d' ->
-    P' Γ Δ d d') ->
-  All2_fold P' Γ Δ.
-Proof.
-  intros qΓ qΔ cr Hcr.
-  induction cr in qΓ, qΔ |- *; constructor; depelim qΓ; depelim qΔ; intuition eauto;
-  rewrite -> Nat.sub_0_r, Nat.add_0_r in *;
-  apply Alli_helper in qΓ; apply Alli_helper in qΔ;
-  simpl in *; eauto.
 Qed.
 
 Lemma ondecl_on_free_vars_decl P d :

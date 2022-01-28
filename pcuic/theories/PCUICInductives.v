@@ -1,10 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICLiftSubst PCUICUnivSubst PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
      PCUICWeakeningConv PCUICWeakeningTyp
-     PCUICSigmaCalculus  PCUICInstDef PCUICInstConv PCUICContextSubst
-     PCUICSubstitution PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICCumulativity PCUICGeneration PCUICReduction
+     PCUICSigmaCalculus PCUICInstDef PCUICInstConv PCUICContextSubst
+     PCUICRenameDef PCUICRenameConv PCUICRenameTyp
+     PCUICSubstitution PCUICOnFreeVars PCUICClosed PCUICClosedConv PCUICClosedTyp 
+     PCUICCumulativity PCUICGeneration PCUICReduction PCUICWellScopedCumulativity
      PCUICEquality PCUICConfluence PCUICParallelReductionConfluence
      PCUICContextConversion PCUICUnivSubstitutionConv
      PCUICUnivSubstitutionTyp
@@ -575,8 +577,6 @@ Proof.
     specialize (IHΓ _ _ _ e). subst x0. f_equal. lia.
 Qed.
 
-Import PCUICWellScopedCumulativity.
-
 Lemma isType_it_mkProd_or_LetIn_inv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ T} :
   isType Σ Γ (it_mkProd_or_LetIn Δ T) ->
   isType Σ (Γ ,,, Δ) T.
@@ -807,7 +807,6 @@ Proof.
   now rewrite to_extended_list_k_subst to_extended_list_k_lift_context.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICRenameDef PCUICRenameConv PCUICRenameTyp.
 
 Lemma extended_subst_lift_context n (Γ : context) (k k' : nat) :
   extended_subst (lift_context n k Γ) k' =
@@ -1591,8 +1590,6 @@ Proof.
   eapply type_local_ctx_All_local_env; eauto.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICInduction.
-
 Lemma isType_it_mkProd_or_LetIn_smash {cf:checker_flags} Σ Γ Δ s :
   wf Σ.1 ->
   isType Σ Γ (it_mkProd_or_LetIn Δ (tSort s)) ->
@@ -1939,7 +1936,6 @@ Proof.
   destruct t; simpl; congruence.
 Qed.
 
-Import PCUICOnFreeVars.
 Lemma is_closed_context_expand_let Γ na b ty Δ :
   is_closed_context (Γ ,, vdef na b ty ,,, Δ) ->
   is_closed_context (Γ ,,, subst_context [b] 0 Δ).

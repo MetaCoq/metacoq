@@ -2,12 +2,13 @@
 From Coq Require Import RelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICCanonicity PCUICGeneration PCUICLiftSubst
+     PCUICGeneration PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICPosition PCUICNormal
      PCUICInversion PCUICSR PCUICSN
      PCUICUtils PCUICReduction PCUICValidity PCUICSafeLemmata
      PCUICConfluence PCUICConversion
-     PCUICOnFreeVars PCUICWellScopedCumulativity PCUICCanonicity.
+     PCUICOnFreeVars PCUICWellScopedCumulativity
+     PCUICCanonicity.
      
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfReduction.
 

@@ -4,9 +4,7 @@ From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Import Nat.
 
-(** * Lifting and substitution for the AST
-
-  Along with standard commutation lemmas.
+(** * Commutation lemmas for the lifting and substitution operations.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
 

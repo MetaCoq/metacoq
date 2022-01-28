@@ -4,7 +4,7 @@ From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.Template Require Import config utils BasicAst.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICLiftSubst PCUICEquality PCUICUnivSubst
-     PCUICContextRelation PCUICReduction.
+     PCUICReduction.
 
 Set Default Goal Selector "!".
 

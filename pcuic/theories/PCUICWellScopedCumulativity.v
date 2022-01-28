@@ -3,7 +3,7 @@ From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
      PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
-     PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
+     PCUICSigmaCalculus PCUICContextReduction
      PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution.
 
@@ -17,11 +17,7 @@ From Equations Require Import Equations.
   showing that all the considered contexts/terms are well-scoped. In a second step
   we use confluence of one-step reduction on well-scoped terms [ws_red_confluence], which also 
   commutes with alpha,universe-equivalence of contexts and terms [red1_eq_context_upto_l].
-  We can drop the invariants on free variables at each step as reduction preserves free-variables,
-  so we also have [red_confluence]: as long as the starting contexts and terms are well-scoped 
-  confluence holds. *)
-
-(** We can now derive transitivity of the conversion relation on *well-scoped* 
+  We can now derive transitivity of the conversion relation on *well-scoped* 
   terms. To deal with the closedness side condition we put them in the definition
   of conversion/cumulativity: as terms need to move between contexts, and
   we sometimes need to consider conversion in open contexts, we work with
@@ -314,6 +310,16 @@ Lemma closed_red1_red {Σ Γ t t'} : closed_red1 Σ Γ t t' -> Σ ;;; Γ ⊢ t �
 Proof.
   intros []. split => //.
   now eapply red1_red.
+Qed.
+
+Lemma equality_alt_closed {cf} {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
+  Σ ;;; Γ ⊢ t ≤[le] u <~> 
+  ∑ v v',
+    [× closed_red Σ Γ t v, closed_red Σ Γ u v' & 
+       compare_term le Σ (global_ext_constraints Σ) v v'].
+Proof.
+  etransitivity. apply equality_alt.
+  split; intros (v & v' & cl); exists v, v'; intuition.
 Qed.
 
 Lemma biimpl_introT {T} {U} : Logic.BiImpl T U -> T -> U.
@@ -611,7 +617,7 @@ Qed.
   context_equality le Σ Γ Γ'.
 Proof.
   rewrite /ws_context_equality /context_equality.
-  intros a. eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+  intros a. eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd.
   now destruct (into_equality_open_decls le hd) as [clΓ [isd [isd' eq]]].
 Qed.
@@ -622,7 +628,7 @@ Lemma from_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext}
   ws_context_equality le Σ Γ Γ'.
 Proof.
   rewrite /ws_context_equality /context_equality.
-  intros a; eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+  intros a; eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd. cbn in hd.
   destruct hd.
   rewrite /equality_decls. split => //.
@@ -771,48 +777,3 @@ Section WtContextConversion.
   Qed.
   
 End WtContextConversion.
-
-
-(** 
-The "natural" definition of conversion is given by [conv0]. It is the reflexive
-symmetric transitive closure of beta redution + equality modulo universes.
-It turns out to be equivalent to [conv1]: only beta reduction needs to be symmetrized.
-Cumulativity is defined in the same style ([cumul1]), not symmetrizing [leq_term] because
-it is oriented.
-
-Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
-[conv] which are defined as "reducing to a common term". It turns out to be equivalent
-to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v.
-*)
-
-Section ConvCumulDefs.
-  Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).
-
-  Definition conv0 : relation term
-    := clos_refl_sym_trans (relation_disjunction (closed_red1 Σ Γ) (eq_term Σ Σ)).
-
-  Definition genconv1 le : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (closed_red1 Σ Γ)) (compare_term le Σ.1 (global_ext_constraints Σ))).
-
-  Definition conv1 : relation term := genconv1 false.
-  Definition cumul1 : relation term := genconv1 true.
-
-  Lemma conv0_conv1 M N :
-    conv0  M N <~> conv1 M N.
-  Proof.
-    split; intro H.
-    - induction H.
-      + constructor. now destruct r; [left; left|right].
-      + reflexivity.
-      + now apply clos_rt_trans_Symmetric.
-      + etransitivity; eassumption.
-    - induction H.
-      + destruct r as [[]|].
-        * now constructor; left.
-        * now symmetry; constructor; left.
-        * now constructor; right.
-      + reflexivity.
-      + etransitivity; eassumption.
-  Defined.
-
-End ConvCumulDefs.

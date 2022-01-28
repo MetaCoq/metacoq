@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp 
-     PCUICClosed PCUICClosedTyp PCUICConvCumInversion PCUICEqualityDec.
+     PCUICClosed PCUICClosedTyp PCUICEqualityDec PCUICConvCumInversion.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
 
 Require Import Equations.Prop.DepElim.
@@ -1279,8 +1279,8 @@ Section Conversion.
     intros. eapply (check_eqb_universe_spec' G (global_ext_uctx Σ)).
     all: auto.
     + pose proof heΣ. sq. eapply wf_ext_global_uctx_invariants.
-      assumption.
-    + pose proof heΣ. sq. eapply global_ext_uctx_consistent; assumption.
+      eassumption.
+    + pose proof heΣ. sq. eapply global_ext_uctx_consistent; eassumption.
   Qed.
   
   Arguments LevelSet.mem : simpl never.
@@ -1297,11 +1297,11 @@ Section Conversion.
     destruct heΣ.
     destruct leq; cbn.
     - eapply check_eqb_universe_complete; eauto.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
+      + now eapply wf_ext_global_uctx_invariants.
+      + now eapply global_ext_uctx_consistent.
     - eapply check_leqb_universe_complete; eauto.
-      + now apply wf_ext_global_uctx_invariants.
-      + now apply global_ext_uctx_consistent.
+      + now eapply wf_ext_global_uctx_invariants.
+      + now eapply global_ext_uctx_consistent.
   Qed.
   
   Lemma get_level_make l :

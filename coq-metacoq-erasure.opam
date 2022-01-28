@@ -21,9 +21,7 @@ build: [
 install: [
   [make "-C" "erasure" "install"]
 ]
-version: "dev"            
 depends: [
-  "coq" { = version }
   "coq-metacoq-template" {= version}
   "coq-metacoq-pcuic" {= version}
   "coq-metacoq-safechecker" {= version}

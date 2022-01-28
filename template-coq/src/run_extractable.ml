@@ -95,7 +95,7 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
             let pars, args = CArray.chop mib.mind_nparams args in
             let envconcl = push_rel_context argctx envcstr in
             List.map (quote_term envconcl) args
-          in           
+          in
           let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
           ((quote_ident nm, qargctx, Array.to_list qindices, ty, quote_int ar) :: ls, acc))
@@ -151,12 +151,11 @@ let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0
   let {const_body = body; const_type = typ; const_universes = univs} = cd in
   Ast0.Env.({cst_type = quote_term env typ;
          cst_body = Option.map (quote_term env) (get_constant_body body);
-         cst_universes = quote_universes_decl univs})
+         cst_universes = quote_universes_decl univs None})
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
-let of_nat (t : Datatypes.nat) : int =
-  failwith "of_constr"
+let of_nat (t : int) : int = t
 
 let of_cast_kind (ck: BasicAst.cast_kind) : Constr.cast_kind =
   match ck with

@@ -1,4 +1,5 @@
-MSetWeakList
+Int0
+MSetAVL
 EqdepFacts
 Utils
 
@@ -20,7 +21,6 @@ PCUICReflect
 PCUICEquality
 PCUICTyping
 PCUICWfUniverses
-PCUICReduction
 PCUICNormal
 PCUICPosition
 PCUICPretty

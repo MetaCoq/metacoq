@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping PCUICSafeLemmata PCUICValidity PCUICNameless
-     PCUICEquality PCUICConfluence PCUICUnivSubstitution.
+     PCUICTyping PCUICSafeLemmata PCUICValidity PCUICReduction
+     PCUICEquality PCUICConfluence PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp.
 
 Require Import Equations.Prop.DepElim.
 
@@ -10,23 +10,31 @@ Require Import Equations.Prop.DepElim.
    We state is as well-foundedness of the reduction.
  *)
 
+Record normalizing_flags {cf : checker_flags} : Prop :=
+  { nor_check_univs :> check_univs }.
+
+Existing Class normalizing_flags.
+
+#[local] Instance default_normalizing : @normalizing_flags default_checker_flags.
+  Proof.
+    now constructor.
+  Qed.
+
+#[local] Instance extraction_normalizing : @normalizing_flags extraction_checker_flags.
+Proof.
+  now constructor.
+Qed.
+
 Section Normalisation.
 
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
   Context (Σ : global_env_ext).
 
-  (* todo: missing wf_env hypothesis !*)
   Axiom normalisation :
-    wf Σ ->
+    wf_ext Σ ->
     forall Γ t,
       welltyped Σ Γ t ->
       Acc (cored Σ Γ) t.
-
-  Lemma neq_mkApps u l : forall t, t <> tSort u -> mkApps t l <> tSort u.
-  Proof.
-    induction l; cbn; intros t e e'; try easy.
-    eapply IHl. 2: eassumption. intros e''; discriminate e''.
-  Qed.
 
 End Normalisation.
 
@@ -38,9 +46,9 @@ End Normalisation.
  *)
 Section Alpha.
 
-  Context {cf : checker_flags}.
+  Context {cf : checker_flags} {no : normalizing_flags}.
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥).
+  Context (hΣ : ∥ wf_ext Σ ∥).
 
   Notation eqt u v :=
     (∥ eq_term Σ (global_ext_constraints Σ) u v ∥).

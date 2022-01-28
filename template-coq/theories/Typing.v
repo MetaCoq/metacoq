@@ -184,7 +184,7 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
        in the common case where no let-binding appears to avoid this. *)
     declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
     let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
-    #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+    #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
     red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
          (iota_red ci.(ci_npar) args bctx br)
 
@@ -291,7 +291,7 @@ Lemma red1_ind_all :
           nth_error brs c = Some br ->
           declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
           let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
-          #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+          #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
           P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) 
                 (iota_red ci.(ci_npar) args bctx br)) ->
 

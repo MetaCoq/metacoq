@@ -2,9 +2,9 @@
 From Coq Require Import ssreflect ssrbool Utf8 CRelationClasses.
 From Equations.Type Require Import Relation Relation_Properties.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
-     PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts
-     PCUICWeakening PCUICUnivSubst PCUICTyping PCUICGlobalEnv 
-     PCUICGeneration PCUICConversion (* Needs transitivity of cumulativity *)
+     PCUICLiftSubst PCUICEquality PCUICReduction PCUICCasesContexts PCUICTactics
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICUnivSubst PCUICTyping PCUICGlobalEnv 
+     PCUICClosedTyp PCUICGeneration PCUICConversion (* Needs transitivity of cumulativity *)
      PCUICValidity PCUICArities PCUICInversion PCUICInductiveInversion
      PCUICCases PCUICWellScopedCumulativity PCUICSpine PCUICSR
      PCUICSafeLemmata PCUICInductives PCUICInductiveInversion.
@@ -22,7 +22,6 @@ Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags 
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
-
 
 (** Translation from PCUIC back to template-coq terms. 
 
@@ -681,7 +680,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_trans {Γ Δ} : 
-  All2 (compare_decls eq eq) Γ Δ ->
+  eq_context_upto_names Γ Δ ->
   All2 (TermEquality.compare_decls eq eq) (trans_local Γ) (trans_local Δ).
 Proof.
   intros.
@@ -782,9 +781,9 @@ Section wtsub.
           specialize (X a1) as [].
           eapply wf_local_expand_lets in a5.
           rewrite /PCUICCases.cstr_branch_context.
-          rewrite PCUICUnivSubstitution.subst_instance_expand_lets_ctx PCUICUnivSubstitution.subst_instance_subst_context.
-          rewrite PCUICUnivSubstitution.subst_instance_inds.
-          erewrite PCUICUnivSubstitution.subst_instance_id_mdecl; tea. }
+          rewrite subst_instance_expand_lets_ctx PCUICUnivSubstitutionConv.subst_instance_subst_context.
+          rewrite PCUICUnivSubstitutionConv.subst_instance_inds.
+          erewrite PCUICUnivSubstitutionConv.subst_instance_id_mdecl; tea. }
         erewrite PCUICCasesContexts.inst_case_branch_context_eq; tea. reflexivity.
         eexists; tea.
     - eapply inversion_Proj in h as (?&?&?&?&?&?&?&?&?); tea.
@@ -906,7 +905,7 @@ Qed.
 Lemma trans_inst_case_branch_context p br ci mdecl cdecl :
   let p' := PCUICAst.map_predicate id trans trans (map_context trans) p in
   wf_branch cdecl br ->
-  All2 (compare_decls eq eq) br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names br.(PCUICAst.bcontext) (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
   (case_branch_context ci
     (trans_minductive_body mdecl) (trans_constructor_body cdecl) (trans_predicate p')
     (trans_branch (PCUICAst.map_branch trans (map_context trans) br))) =
@@ -940,8 +939,6 @@ Proof.
   f_equal; auto.
 Qed.
 
-Require Import PCUICSpine.
-
 Lemma case_branch_context_assumptions ind mdecl cdecl p br :
   Forall2 (fun na decl => eq_binder_annot na decl.(decl_name)) br.(bcontext) (cstr_args cdecl) ->
   context_assumptions (case_branch_context ind mdecl cdecl p br) = context_assumptions (cstr_args cdecl).
@@ -949,6 +946,7 @@ Proof.
   rewrite /case_branch_context /case_branch_context_gen.
   intros Hforall.
   rewrite context_assumptions_map2_set_binder_name. len.
+  rewrite !lengths.
   eapply (Forall2_length Hforall).
   now do 3 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context ?context_assumptions_subst_instance 
     /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx.
@@ -1018,7 +1016,7 @@ Qed.
 
 
 Lemma trans_ind_predicate_context_eq p ci mdecl idecl :
-  All2 (compare_decls eq eq) (PCUICAst.pcontext p)
+  eq_context_upto_names (PCUICAst.pcontext p)
     (PCUICCases.ind_predicate_context ci mdecl idecl) -> 
   All2
     (λ (x : binder_annot name) (y : Env.context_decl),
@@ -1034,7 +1032,7 @@ Proof.
 Qed.
 
 Lemma trans_cstr_branch_context_eq ci mdecl cdecl br :
-  All2 (compare_decls eq eq) (PCUICAst.bcontext br) 
+  eq_context_upto_names (PCUICAst.bcontext br) 
     (PCUICCases.cstr_branch_context ci mdecl cdecl) ->
   All2
     (λ (x : binder_annot name) (y : Env.context_decl),
@@ -1128,7 +1126,7 @@ Require Import Morphisms.
 Instance map2_Proper {A B C} : Morphisms.Proper (pointwise_relation A (pointwise_relation B (@eq C)) ==> eq ==> eq ==> eq) map2.
 Proof.
   intros f g Hfg ? ? -> ? ? ->.
-  eapply PCUICNameless.map2_ext, Hfg.
+  eapply map2_ext, Hfg.
 Qed.
 
 Lemma map2_set_binder_name_eq nas Δ Δ' :
@@ -1211,7 +1209,7 @@ Proof.
   rewrite /case_predicate_context /PCUICCases.case_predicate_context.
   rewrite /case_predicate_context_gen /PCUICCases.case_predicate_context_gen.
   rewrite /trans_local map_map2 map2_trans.
-  rewrite -PCUICUnivSubstitution.map2_map_r. f_equal.
+  rewrite -PCUICUnivSubstitutionConv.map2_map_r. f_equal.
   rewrite /p' /=. now rewrite forget_types_map_context.
   rewrite /pre_case_predicate_context_gen /inst_case_context.
   rewrite /PCUICCases.pre_case_predicate_context_gen /PCUICCases.inst_case_context.
@@ -1288,7 +1286,7 @@ Proof.
     eapply TT.red_iota; tea; eauto. all:auto.
     * rewrite !nth_error_map H; reflexivity.
     * eapply trans_declared_constructor; tea.
-    * rewrite -map_skipn map_length H0.
+    * rewrite map_length H0.
       eapply Forall2_All2 in wf_brs.
       eapply All2_nth_error in wf_brs; tea.
       2:eapply declc.
@@ -1349,7 +1347,7 @@ Proof.
     cbn -[case_predicate_context].
     eapply red1_alpha_eq. eapply IHX.
     { destruct w1 as [sr hs]; exists sr.
-      eapply PCUICContextConversion.context_conversion; tea.
+      eapply PCUICContextConversionTyp.context_conversion; tea.
       eapply PCUICSafeLemmata.wf_inst_case_context; tea.
       destruct w2. pcuic.
       rewrite /inst_case_context.
@@ -1384,7 +1382,7 @@ Proof.
     rewrite -[_ ++ _]trans_local_app.
     eapply IHred.
     destruct w4 as [s' Hs]. exists s'.
-    eapply PCUICContextConversion.context_conversion; tea.
+    eapply PCUICContextConversionTyp.context_conversion; tea.
     eapply wf_local_alpha; tea. pcuic.
     now eapply compare_decls_conv.
 
@@ -1495,6 +1493,8 @@ Proof.
   eapply trans_eq_term_upto_univ ; eauto.
 Qed.
 
+From MetaCoq.PCUIC Require Import PCUICCumulativity.
+
 Section wtcumul.
   Import PCUICAst PCUICTyping PCUICEquality.
   Record wt_red1 {cf} (Σ : PCUICEnvironment.global_env_ext) (Γ : PCUICEnvironment.context) T U := 
@@ -1512,7 +1512,7 @@ Section wtcumul.
     
   Lemma cumul_decorate {cf} (Σ : global_env_ext) {wfΣ : wf Σ} Γ T U :
     isType Σ Γ T -> isType Σ Γ U ->
-    cumul Σ Γ T U ->
+    cumulAlgo Σ Γ T U ->
     wt_cumul Σ Γ T U.
   Proof.
     intros ht hu.
@@ -1973,7 +1973,7 @@ Proof.
   depind sp.
   - intros arg Harg. simpl.
     sig.
-    * econstructor; eauto. apply cumul_refl'. 
+    * econstructor; eauto. reflexivity.
       constructor.
     * simpl. lia.
   - intros arg Harg. simpl.
@@ -2055,13 +2055,11 @@ Proof.
     exists fty, d'. split. lia.
     destruct s0 as [sp Hsp].
     unshelve eexists. eapply typing_spine_weaken_concl; eauto. exact (PCUICValidity.validity d').
-    exact (into_equality (le:=true) c (wf_local_closed_context (typing_wf_local d'))
-      (PCUICSpine.type_is_open_term d1) (PCUICSpine.subject_is_open_term d2)).
-    exact (s; d2).
-    epose proof (typing_spine_weaken_concl_size wfΣ sp (PCUICValidity.validity d')
-      (into_equality (le:=true) c (wf_local_closed_context (typing_wf_local d'))
-         (PCUICSpine.type_is_open_term d1) (PCUICSpine.subject_is_open_term d2)) (s; d2)).
-    simpl in H0. lia.
+    eapply cumulSpec_cumulAlgo_curry in c; eauto; fvs.
+    exact (s; d2). cbn.
+    epose proof (typing_spine_weaken_concl_size wfΣ sp (validity_term wfΣ d')
+      (cumulSpec_cumulAlgo_curry Σ wfΣ Γ A B (typing_closed_context d') (type_is_open_term d1) (subject_is_open_term d2) c)
+      (s; d2)). simpl in H0. lia.
 Qed.
 
 (** Finally, for each typing spine built above, assuming we can apply the induction hypothesis
@@ -2169,7 +2167,7 @@ Lemma trans_case_branch_type {cf} {Σ : global_env_ext} {wfΣ : wf Σ} ci mdecl 
   declared_inductive Σ ci mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_branch cdecl br ->
-  All2 (compare_decls eq eq) (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
+  eq_context_upto_names (bcontext br) (cstr_branch_context ci mdecl cdecl) ->
   let ptm := it_mkLambda_or_LetIn (case_predicate_context ci mdecl idecl p) (preturn p) in
   Ast.case_branch_type ci (trans_minductive_body mdecl)
   (trans_predicate
@@ -2212,7 +2210,7 @@ Proof.
     now rewrite trans_to_extended_list.
 Qed.
 
-From MetaCoq.PCUIC Require Import PCUICClosed PCUICWeakeningEnv.
+From MetaCoq.PCUIC Require Import PCUICClosed PCUICWeakeningEnvConv PCUICWeakeningEnvTyp.
 
 Theorem pcuic_to_template {cf} (Σ : SE.global_env_ext) Γ t T :
   ST.wf Σ ->
@@ -2380,10 +2378,12 @@ Proof.
   - eapply TT.type_Conv.
     + eassumption.
     + eassumption.
-    + eapply cumul_decorate in X4; tea.
+    + eapply cumulSpec_cumulAlgo_curry in X4; tea; fvs.
+      eapply equality_forget in X4.
+      eapply cumul_decorate in X4; tea.
       2:eapply validity; tea.
       2:now exists s.
       now eapply trans_cumul.
 Qed.
 
-Print Assumptions pcuic_to_template.
+(* Print Assumptions pcuic_to_template. *)

@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import LibHypsNaming config utils Reflect.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
      PCUICLiftSubst PCUICReflect PCUICContextRelation.
 
-Require Import ssreflect.
+Require Import ssreflect ssrbool.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 Set Equations With UIP.
@@ -119,8 +119,15 @@ Section compare_decls.
 End compare_decls.
 Arguments compare_decls : clear implicits.
 
+Notation eq_context_upto_names := (All2 (compare_decls eq eq)).
+
 Notation eq_context_gen eq_term leq_term :=
   (All2_fold (fun _ _ => compare_decls eq_term leq_term)).
+
+Lemma eq_context_upto_names_gen Γ Γ' : eq_context_upto_names Γ Γ' <~> eq_context_gen eq eq Γ Γ'.
+Proof.
+  split; intros e; depind e; constructor; auto.
+Qed.
 
 Lemma compare_decls_impl eq_term leq_term eq_term' leq_term' :
   subrelation eq_term eq_term' ->
@@ -200,6 +207,24 @@ Proof.
 Qed.
 
 #[global]
+Instance alpha_eq_reflexive : CRelationClasses.Reflexive eq_context_upto_names.
+Proof.
+  intros x. eapply All2_refl. reflexivity.
+Qed.
+
+#[global]
+Instance alpha_eq_symmmetric : CRelationClasses.Symmetric eq_context_upto_names.
+Proof.
+  intros x. eapply All2_symP. tc.
+Qed.
+
+#[global]
+Instance alpha_eq_trans : CRelationClasses.Transitive eq_context_upto_names.
+Proof.
+  intros x y z. apply All2_trans. tc.
+Qed.
+
+#[global]
 Polymorphic Instance eq_context_refl eq_term leq_term : 
   CRelationClasses.Reflexive eq_term -> 
   CRelationClasses.Reflexive leq_term -> 
@@ -245,89 +270,94 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   that surround the current term, used to implement cumulativity of inductive types
   correctly (only fully applied constructors and inductives benefit from it). *)  
 
+Reserved Notation " Σ ⊢ t <==[ Rle , napp ] u" (at level 50, t, u at next level,
+  format "Σ  ⊢  t  <==[ Rle , napp ]  u").
+
+
 Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) (napp : nat) : term -> term -> Type :=
-| eq_Rel n  :
-    eq_term_upto_univ_napp Σ Re Rle napp (tRel n) (tRel n)
+| eq_Rel : forall n,
+    Σ ⊢ tRel n <==[ Rle , napp ] tRel n
 
-| eq_Evar e args args' :
+| eq_Evar : forall e args args',
     All2 (eq_term_upto_univ_napp Σ Re Re 0) args args' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tEvar e args) (tEvar e args')
+    Σ ⊢ tEvar e args <==[ Rle , napp ] tEvar e args'
 
-| eq_Var id :
-    eq_term_upto_univ_napp Σ Re Rle napp (tVar id) (tVar id)
+| eq_Var : forall id,
+    Σ ⊢ tVar id <==[ Rle , napp ] tVar id
 
-| eq_Sort s s' :
+| eq_Sort : forall s s',
     Rle s s' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tSort s) (tSort s')
+    Σ ⊢ tSort s  <==[ Rle , napp ] tSort s'
 
-| eq_App t t' u u' :
-    eq_term_upto_univ_napp Σ Re Rle (S napp) t t' ->
-    eq_term_upto_univ_napp Σ Re Re 0 u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tApp t u) (tApp t' u')
+| eq_App : forall t t' u u',
+    Σ ⊢ t <==[ Rle , S napp ] t' ->
+    Σ ⊢ u <==[ Re , 0 ] u' ->
+    Σ ⊢ tApp t u <==[ Rle , napp ] tApp t' u'
 
-| eq_Const c u u' :
+| eq_Const : forall c u u',
     R_universe_instance Re u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tConst c u) (tConst c u')
+    Σ ⊢ tConst c u <==[ Rle , napp ] tConst c u'
 
-| eq_Ind i u u' :
+| eq_Ind : forall i u u',
     R_global_instance Σ Re Rle (IndRef i) napp u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tInd i u) (tInd i u')
+    Σ ⊢ tInd i u <==[ Rle , napp ] tInd i u'
 
-| eq_Construct i k u u' :
+| eq_Construct : forall i k u u',
     R_global_instance Σ Re Rle (ConstructRef i k) napp u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tConstruct i k u) (tConstruct i k u')
+    Σ ⊢ tConstruct i k u <==[ Rle , napp ] tConstruct i k u'
 
-| eq_Lambda na na' ty ty' t t' :
+| eq_Lambda : forall na na' ty ty' t t',
     eq_binder_annot na na' ->
-    eq_term_upto_univ_napp Σ Re Re 0 ty ty' ->
-    eq_term_upto_univ_napp Σ Re Rle 0 t t' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tLambda na ty t) (tLambda na' ty' t')
+    Σ ⊢ ty <==[ Re , 0 ] ty' ->
+    Σ ⊢ t <==[ Rle , 0 ] t' ->
+    Σ ⊢ tLambda na ty t <==[ Rle , napp ] tLambda na' ty' t'
 
-| eq_Prod na na' a a' b b' :
+| eq_Prod : forall na na' a a' b b',
     eq_binder_annot na na' ->
-    eq_term_upto_univ_napp Σ Re Re 0 a a' ->
-    eq_term_upto_univ_napp Σ Re Rle 0 b b' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tProd na a b) (tProd na' a' b')
+    Σ ⊢ a <==[ Re , 0 ] a' ->
+    Σ ⊢ b <==[ Rle , 0 ] b' ->
+    Σ ⊢ tProd na a b <==[ Rle , napp ] tProd na' a' b'
 
-| eq_LetIn na na' t t' ty ty' u u' :
+| eq_LetIn : forall na na' t t' ty ty' u u',
     eq_binder_annot na na' ->
-    eq_term_upto_univ_napp Σ Re Re 0 t t' ->
-    eq_term_upto_univ_napp Σ Re Re 0 ty ty' ->
-    eq_term_upto_univ_napp Σ Re Rle 0 u u' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tLetIn na t ty u) (tLetIn na' t' ty' u')
+    Σ ⊢ t <==[ Re , 0 ] t' ->
+    Σ ⊢ ty <==[ Re , 0 ] ty' ->
+    Σ ⊢ u <==[ Rle , 0 ] u' ->
+    Σ ⊢ tLetIn na t ty u <==[ Rle , napp ] tLetIn na' t' ty' u'
 
-| eq_Case indn p p' c c' brs brs' :
+| eq_Case : forall indn p p' c c' brs brs',
     eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p' ->
-    eq_term_upto_univ_napp Σ Re Re 0 c c' ->
+    Σ ⊢ c <==[ Re , 0 ] c' ->
     All2 (fun x y =>
       eq_context_gen eq eq (bcontext x) (bcontext y) *
-      eq_term_upto_univ_napp Σ Re Re 0 (bbody x) (bbody y)
+      (Σ ⊢ x.(bbody) <==[ Re , 0 ] y.(bbody))
     ) brs brs' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tCase indn p c brs) (tCase indn p' c' brs')
+    Σ ⊢ tCase indn p c brs <==[ Rle , napp ] tCase indn p' c' brs'
 
-| eq_Proj p c c' :
-    eq_term_upto_univ_napp Σ Re Re 0 c c' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tProj p c) (tProj p c')
+| eq_Proj : forall p c c',
+    Σ ⊢ c <==[ Re , 0 ] c' ->
+    Σ ⊢ tProj p c <==[ Rle , napp ] tProj p c'
 
-| eq_Fix mfix mfix' idx :
+| eq_Fix : forall mfix mfix' idx,
     All2 (fun x y =>
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dtype) y.(dtype) *
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dbody) y.(dbody) *
+      (Σ ⊢ x.(dtype) <==[ Re , 0 ] y.(dtype)) *
+      (Σ ⊢ x.(dbody) <==[ Re , 0 ] y.(dbody)) *
       (x.(rarg) = y.(rarg)) *
       eq_binder_annot x.(dname) y.(dname)
     )%type mfix mfix' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tFix mfix idx) (tFix mfix' idx)
+    Σ ⊢ tFix mfix idx <==[ Rle , napp ] tFix mfix' idx
 
-| eq_CoFix mfix mfix' idx :
+| eq_CoFix : forall mfix mfix' idx,
     All2 (fun x y =>
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dtype) y.(dtype) *
-      eq_term_upto_univ_napp Σ Re Re 0 x.(dbody) y.(dbody) *
+      (Σ ⊢ x.(dtype) <==[ Re , 0 ] y.(dtype)) *
+      (Σ ⊢ x.(dbody) <==[ Re , 0 ] y.(dbody)) *
       (x.(rarg) = y.(rarg)) *
       eq_binder_annot x.(dname) y.(dname)
     ) mfix mfix' ->
-    eq_term_upto_univ_napp Σ Re Rle napp (tCoFix mfix idx) (tCoFix mfix' idx)
+    Σ ⊢ tCoFix mfix idx <==[ Rle , napp ] tCoFix mfix' idx
     
-| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i).
+| eq_Prim i : eq_term_upto_univ_napp Σ Re Rle napp (tPrim i) (tPrim i)
+where " Σ ⊢ t <==[ Rle , napp ] u " := (eq_term_upto_univ_napp Σ _ Rle napp t u) : type_scope.
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
@@ -1074,608 +1104,6 @@ Proof.
   eapply eq_term_upto_univ_substs; try easy.
   intro; apply eq_universe_leq_universe.
   now eapply All2_same.
-Qed.
-
-(** ** Boolean version **  *)
-
-Definition compare_universe_variance (equ lequ : Universe.t -> Universe.t -> bool) v u u' :=
-  match v with
-  | Variance.Irrelevant => true
-  | Variance.Covariant => lequ (Universe.make u) (Universe.make u')
-  | Variance.Invariant => equ (Universe.make u) (Universe.make u')
-  end.
-
-Definition compare_universe_instance equ u u' :=
-  forallb2 equ (map Universe.make u) (map Universe.make u').
-  
-Fixpoint compare_universe_instance_variance equ lequ v u u' :=
-  match u, u' with
-  | u :: us, u' :: us' =>
-    match v with
-    | [] => compare_universe_instance_variance equ lequ v us us' 
-      (* Missing variance stands for irrelevance *)
-    | v :: vs => compare_universe_variance equ lequ v u u' &&
-        compare_universe_instance_variance equ lequ vs us us'
-    end
-  | [], [] => true
-  | _, _ => false
-  end.
-
-Definition compare_global_instance Σ equ lequ gr napp :=
-  match global_variance Σ gr napp with
-  | Some v => compare_universe_instance_variance equ lequ v
-  | None => compare_universe_instance equ
-  end.
-
-Definition eqb_binder_annots (x y : list aname) : bool :=
-  forallb2 eqb_binder_annot x y.
-
-Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool) napp (u v : term) : bool :=
-  match u, v with
-  | tRel n, tRel m =>
-    eqb n m
-
-  | tEvar e args, tEvar e' args' =>
-    eqb e e' &&
-    forallb2 (eqb_term_upto_univ_napp Σ equ equ 0) args args'
-
-  | tVar id, tVar id' =>
-    eqb id id'
-
-  | tSort u, tSort u' =>
-    lequ u u'
-
-  | tApp u v, tApp u' v' =>
-    eqb_term_upto_univ_napp Σ equ lequ (S napp) u u' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 v v'
-
-  | tConst c u, tConst c' u' =>
-    eqb c c' &&
-    forallb2 equ (map Universe.make u) (map Universe.make u')
-
-  | tInd i u, tInd i' u' =>
-    eqb i i' &&
-    compare_global_instance Σ equ lequ (IndRef i) napp u u'
-
-  | tConstruct i k u, tConstruct i' k' u' =>
-    eqb i i' &&
-    eqb k k' &&
-    compare_global_instance Σ equ lequ (ConstructRef i k) napp u u'
-
-  | tLambda na A t, tLambda na' A' t' =>
-    eqb_binder_annot na na' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 A A' &&
-    eqb_term_upto_univ_napp Σ equ lequ 0 t t'
-
-  | tProd na A B, tProd na' A' B' =>
-    eqb_binder_annot na na' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 A A' &&
-    eqb_term_upto_univ_napp Σ equ lequ 0 B B'
-
-  | tLetIn na B b u, tLetIn na' B' b' u' =>
-    eqb_binder_annot na na' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 B B' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 b b' &&
-    eqb_term_upto_univ_napp Σ equ lequ 0 u u'
-
-  | tCase indp p c brs, tCase indp' p' c' brs' =>
-    eqb indp indp' &&
-    eqb_predicate_gen
-      (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
-      (bcompare_decls eqb eqb)
-      (eqb_term_upto_univ_napp Σ equ equ 0) p p' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 c c' &&
-    forallb2 (fun x y =>
-      forallb2 
-        (bcompare_decls eqb eqb)
-        x.(bcontext) y.(bcontext) &&
-      eqb_term_upto_univ_napp Σ equ equ 0 (bbody x) (bbody y)
-    ) brs brs'
-
-  | tProj p c, tProj p' c' =>
-    eqb p p' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 c c'
-
-  | tFix mfix idx, tFix mfix' idx' =>
-    eqb idx idx' &&
-    forallb2 (fun x y =>
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dtype) y.(dtype) &&
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dbody) y.(dbody) &&
-      eqb x.(rarg) y.(rarg) &&
-      eqb_binder_annot x.(dname) y.(dname)
-    ) mfix mfix'
-
-  | tCoFix mfix idx, tCoFix mfix' idx' =>
-    eqb idx idx' &&
-    forallb2 (fun x y =>
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dtype) y.(dtype) &&
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dbody) y.(dbody) &&
-      eqb x.(rarg) y.(rarg) &&
-      eqb_binder_annot x.(dname) y.(dname)
-    ) mfix mfix'
-
-  | tPrim p, tPrim p' => eqb p p'
-
-  | _, _ => false
-  end.
-
-Notation eqb_term_upto_univ Σ eq leq := (eqb_term_upto_univ_napp Σ eq leq 0).
-
-Ltac eqspec :=
-  lazymatch goal with
-  | |- context [ eqb ?u ?v ] =>
-    destruct (eqb_spec u v) ; nodec ; subst
-  end.
-
-Ltac eqspecs :=
-  repeat eqspec.
-
-Local Ltac equspec equ h :=
-  repeat lazymatch goal with
-  | |- context [ equ ?x ?y ] =>
-    destruct (h x y) ; nodec ; subst
-  end.
-
-Local Ltac ih :=
-  repeat lazymatch goal with
-  | ih : forall lequ Rle napp hle t', reflectT (eq_term_upto_univ_napp _ _ _ napp ?t _) _,
-    hle : forall u u', reflectT (?Rle u u') (?lequ u u')
-    |- context [ eqb_term_upto_univ _ _ ?lequ ?t ?t' ] =>
-    destruct (ih lequ Rle 0 hle t') ; nodec ; subst
-  end.
-
-Lemma compare_global_instance_impl (equ lequ : _ -> _ -> bool) Σ Re Rle gr napp :
-  RelationClasses.subrelation equ Re ->
-  RelationClasses.subrelation lequ Rle ->
-  subrelation (compare_global_instance Σ equ lequ gr napp) (R_global_instance Σ Re Rle gr napp).
-Proof.
-  intros hre hrle x y.
-  unfold compare_global_instance, R_global_instance, R_opt_variance.
-  destruct global_variance as [v|].
-  induction x in v, y |- *; destruct v, y; simpl; auto.
-  rtoProp. intros [Hat Hxy]. split; auto.
-  destruct t; simpl in *; auto.
-  intro. eapply forallb2_Forall2 in H.
-  eapply Forall2_impl; tea; eauto.
-Qed.
-
-Lemma Forall2_forallb2:
-  forall (A : Type) (p : A -> A -> bool) (l l' : list A),
-  Forall2 (fun x y : A => p x y) l l' -> forallb2 p l l'.
-Proof.
-  induction 1; simpl; auto.
-  now rewrite H IHForall2.
-Qed.
-
-Lemma compare_global_instance_impl_inv (equ lequ : _ -> _ -> bool) Σ Re Rle gr napp :
-  RelationClasses.subrelation Re equ ->
-  RelationClasses.subrelation Rle lequ ->
-  subrelation (R_global_instance Σ Re Rle gr napp) (compare_global_instance Σ equ lequ gr napp).
-Proof.
-  intros hre hrle x y.
-  unfold compare_global_instance, R_global_instance.
-  destruct global_variance as [v|]; auto.
-  induction x in v, y |- *; destruct v, y; simpl; auto.    
-  rtoProp. intros [Hat Hxy]. split; auto.
-  destruct t; simpl in *; auto.
-  intro. red. eapply Forall2_forallb2.
-  eapply Forall2_impl; tea; eauto.
-Qed.
-
-Lemma eqb_annot_spec {A} na na' : eqb_binder_annot na na' <-> @eq_binder_annot A A na na'.
-Proof.
-  unfold eqb_binder_annot, eq_binder_annot.
-  now destruct Classes.eq_dec.
-Qed.
-
-Lemma eqb_annot_reflect {A} na na' : reflect (@eq_binder_annot A A na na') (eqb_binder_annot na na').
-Proof.
-  unfold eqb_binder_annot, eq_binder_annot.
-  destruct Classes.eq_dec; constructor; auto.
-Qed.
-
-Lemma eqb_annot_refl {A} n : @eqb_binder_annot A n n.
-Proof.
-  apply eqb_annot_spec. reflexivity.
-Qed.
-
-Lemma eqb_annots_spec nas nas' : eqb_binder_annots nas nas' <-> Forall2 (on_rel eq binder_relevance) nas nas'.
-Proof.
-  unfold eqb_binder_annots, eq_binder_annot.
-  split; intros.
-  eapply forallb2_Forall2 in H.
-  eapply (Forall2_impl H). unfold on_rel. apply eqb_annot_spec.
-  eapply Forall2_forallb2, (Forall2_impl H); apply eqb_annot_spec.
-Qed.
-
-Lemma eqb_annots_reflect nas nas' : reflectT (All2 (on_rel eq binder_relevance) nas nas') (eqb_binder_annots nas nas').
-Proof.
-  unfold eqb_binder_annots, eq_binder_annot.
-  destruct forallb2 eqn:H; constructor.
-  eapply Forall2_All2. now apply eqb_annots_spec.
-  intros H'; apply All2_Forall2, eqb_annots_spec in H'.
-  red in H'. unfold eqb_binder_annots in H'. congruence.
-Qed.
-
-(*Lemma eqb_context_reflect ctx ctx' : reflectT (eq_context_gen false (eq_term_up)) *)
-
-Lemma forallb2_bcompare_decl_All2_fold
-  (P : term -> term -> bool) Γ Δ : 
-  forallb2 (bcompare_decls P P) Γ Δ ->
-  All2_fold (fun _ _ => bcompare_decls P P) Γ Δ.
-Proof.
-  induction Γ as [|[na [b|] ty] Γ] in Δ |- *; destruct Δ as [|[na' [b'|] ty'] Δ]; simpl => //; constructor; auto;
-  now move/andb_and: H => [].
-Qed.
-
-Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
-  (forall u u', reflectT (Re u u') (equ u u')) ->
-  (forall u u', reflectT (Rle u u') (lequ u u')) ->
-  forall ctx ctx',
-  onctx
-      (fun t : term =>
-       forall (lequ : Universe.t -> Universe.t -> bool)
-         (Rle : Universe.t -> Universe.t -> Prop) 
-         (napp : nat),
-       (forall u u' : Universe.t, reflectT (Rle u u') (lequ u u')) ->
-       forall t' : term,
-       reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
-         (eqb_term_upto_univ_napp Σ equ lequ napp t t')) 
-      ctx ->
-  reflectT 
-    (eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx ctx')
-    (forallb2 (bcompare_decls (eqb_term_upto_univ Σ equ equ)
-      (eqb_term_upto_univ Σ equ equ)) ctx ctx').
-Proof.
-  intros hRe hRle ctx ctx' onc.
-  eapply equiv_reflectT.
-  - intros hcc'.
-    eapply All2_fold_forallb2, All2_fold_impl_onctx; tea.
-    unfold ondecl; intuition auto.
-    depelim X0; cbn in * => //;
-    intuition auto.
-    + destruct (eqb_annot_reflect na na') => //.
-      destruct (a equ Re 0 hRe T') => //.
-    + destruct (eqb_annot_reflect na na') => //.
-      destruct (b0 equ Re 0 hRe b') => //.
-      destruct (a equ Re 0 hRe T') => //.
-  - intros hcc'.
-    eapply forallb2_bcompare_decl_All2_fold in hcc'; tea.
-    eapply All2_fold_impl_onctx in onc; tea; simpl; intuition eauto.
-    destruct X0.
-    move: H.
-    destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //.
-    + destruct (eqb_annot_reflect na na') => //.
-      destruct (r equ Re 0 hRe ty') => //.
-      destruct (o equ Re 0 hRe bod') => //.
-      now constructor.
-      now rewrite andb_false_r.
-    + destruct (eqb_annot_reflect na na') => //.
-      destruct (r equ Re 0 hRe ty') => //.
-      now constructor.
-Qed.
-
-Definition eqb_univ_reflect : forall u u' : Universe.t, reflectT (u = u') (eqb u u').
-Proof.
-  intros u u'.
-  destruct (eqb_spec u u'); constructor; auto.
-Qed.
-
-Lemma eq_dec_to_bool_refl {A} {ea : Classes.EqDec A} (x : A) : 
-  eq_dec_to_bool x x.
-Proof.
-  unfold eq_dec_to_bool.
-  destruct (Classes.eq_dec x x).
-  constructor.
-  congruence.
-Qed.
-
-Lemma reflect_eq_ctx ctx ctx' : 
-  reflectT 
-    (eq_context_gen eq eq ctx ctx')
-    (forallb2 (bcompare_decls eqb eqb) ctx ctx').
-Proof.
-  eapply equiv_reflectT.
-  - intros hcc'.
-    eapply All2_fold_forallb2; tea.
-    unfold ondecl; intuition auto.
-    eapply All2_fold_impl; tea. intros.
-    destruct X; cbn. subst; auto.
-    destruct (eqb_annot_reflect na na') => /= //.
-    apply eq_dec_to_bool_refl.
-    subst.
-    destruct (eqb_annot_reflect na na') => /= //.
-    apply/andb_and; split; apply eq_dec_to_bool_refl.
-  - intros hcc'.
-    eapply forallb2_bcompare_decl_All2_fold in hcc'; tea.
-    eapply All2_fold_impl in hcc'; tea; simpl; intuition eauto.
-    move: H.
-    destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //.
-    + destruct (eqb_annot_reflect na na') => //.
-      unfold eq_dec_to_bool. repeat destruct eq_dec => //; subst; cbn; auto; constructor; auto.
-    + destruct (eqb_annot_reflect na na') => //.
-      unfold eq_dec_to_bool. repeat destruct eq_dec => //; subst; cbn; auto; constructor; auto.
-Qed.
-
-Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
-  (forall u u', reflectT (Re u u') (equ u u')) ->
-  (forall u u', reflectT (Rle u u') (lequ u u')) ->
-  forall p p',
-  tCasePredProp
-  (fun t : term =>
-   forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
-   (forall u u' : Universe.t, reflectT (Rle u u') (lequ u u')) ->
-   forall t' : term,
-   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp Σ equ lequ napp t t'))
-  (fun t : term =>
-   forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
-   (forall u u' : Universe.t, reflectT (Rle u u') (lequ u u')) ->
-   forall t' : term,
-   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp Σ equ lequ napp t t')) p ->
-  reflectT (eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re p p') 
-    (eqb_predicate_gen (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
-      (bcompare_decls eqb eqb)
-      (eqb_term_upto_univ_napp Σ equ equ 0) p p').
-Proof.
-  intros.
-  solve_all. unfold eq_predicate, eqb_predicate, eqb_predicate_gen.
-  cbn -[eqb]; apply equiv_reflectT.
-  - intros H; rtoProp.
-    destruct H as [onpars [onuinst [pctx pret]]].
-    intuition auto; rtoProp; intuition auto.
-    * solve_all. destruct (a _ Re 0 X y); auto; try contradiction.
-    * red in onuinst. 
-      eapply Forall2_forallb2, Forall2_impl; eauto.
-      now move=> x y /X.
-    * destruct (reflect_eq_ctx (pcontext p) (pcontext p')) => //.
-    * ih. contradiction.
-  - move/andb_and => [/andb_and [/andb_and [ppars pinst] pctx] pret].
-    intuition auto.
-    * solve_all.
-      now destruct (a _ _ 0 X y).
-    * solve_all. red. apply All2_Forall2.
-      eapply (All2_impl pinst); eauto.
-      now move=> x y /X.
-    * now destruct (reflect_eq_ctx (pcontext p) (pcontext p')).
-    * now destruct (r _ _ 0 X (preturn p')).
-Qed.
-
-Arguments eqb : simpl never.
-
-Lemma reflect_eq_term_upto_univ Σ equ lequ (Re Rle : Universe.t -> Universe.t -> Prop) napp :
-  (forall u u', reflectT (Re u u') (equ u u')) ->
-  (forall u u', reflectT (Rle u u') (lequ u u')) ->
-  forall t t', reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
-                   (eqb_term_upto_univ_napp Σ equ lequ napp t t').
-Proof.
-  intros he hle t t'.
-  induction t in t', napp, lequ, Rle, hle |- * using term_forall_list_ind.
-  all: destruct t' ; nodec.
-  (* all: try solve [ *)
-  (*   cbn - [eqb] ; eqspecs ; equspec equ h ; ih ; *)
-  (*   constructor ; constructor ; assumption *)
-  (* ]. *)
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    constructor. constructor ; assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    constructor. constructor ; assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    cbn.
-    induction X in l0 |- *.
-    + destruct l0.
-      * constructor. constructor. constructor.
-      * constructor. intro bot. inversion bot. inversion X.
-    + destruct l0.
-      * constructor. intro bot. inversion bot. subst. inversion X0.
-      * cbn. destruct (p _ _ 0 he t).
-        -- destruct (IHX l0).
-           ++ constructor. constructor. constructor ; try assumption.
-              inversion e0. subst. assumption.
-           ++ constructor. intro bot. inversion bot. subst.
-              inversion X0. subst.
-              apply f. constructor. assumption.
-        -- constructor. intro bot. apply f.
-           inversion bot. subst. inversion X0. subst. assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    constructor. constructor. assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he.
-    destruct (eqb_annot_reflect n na); ih.
-    constructor. constructor; assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle.
-    destruct (eqb_annot_reflect n na); ih.
-    constructor. constructor ; assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle.
-    destruct (eqb_annot_reflect n na); ih.
-    constructor. constructor ; assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    destruct (IHt1 lequ Rle (S napp) hle t'1);
-    constructor; try (constructor ; assumption).
-    intros H; inv H. auto.
-    destruct (IHt1 lequ Rle (S napp) hle t'1); constructor; auto.
-    intros H; inv H; auto.
-    intros H; inv H; auto.
-  - cbn - [eqb].
-    pose proof (eqb_spec s k) as H.
-    match goal with
-    | |- context G[ eqb ?x ?y ] =>
-      set (toto := eqb x y) in * ;
-      let G' := context G[toto] in
-      change G'
-    end.
-    destruct H ; nodec. subst.
-    equspec equ he. equspec lequ hle. ih.
-    cbn. induction u in ui |- *.
-    + destruct ui.
-      * constructor. constructor. constructor.
-      * constructor. intro bot. inversion bot. subst. inversion H0.
-    + destruct ui.
-      * constructor. intro bot. inversion bot. subst. inversion H0.
-      * cbn. equspec equ he. equspec lequ hle.
-        -- cbn. destruct (IHu ui).
-           ++ constructor. constructor.
-              inversion e. subst.
-              constructor ; assumption.
-           ++ constructor. intro bot. apply f.
-              inversion bot. subst. constructor. inversion H0.
-              subst. assumption.
-        -- constructor. intro bot. apply f.
-           inversion bot. subst. inversion H0. subst.
-           assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    simpl; apply equiv_reflectT.
-    inversion 1; subst.
-    eapply compare_global_instance_impl_inv; eauto.
-    apply (reflectT_subrelation he).
-    apply (reflectT_subrelation hle).
-    intro; constructor; eapply compare_global_instance_impl; eauto.
-    apply (reflectT_subrelation' he).
-    apply (reflectT_subrelation' hle).
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    simpl; apply equiv_reflectT.
-    inversion 1; subst.
-    eapply compare_global_instance_impl_inv; eauto.
-    apply (reflectT_subrelation he).
-    apply (reflectT_subrelation hle).
-    intro; constructor; eapply compare_global_instance_impl; eauto.
-    apply (reflectT_subrelation' he).
-    apply (reflectT_subrelation' hle).
-
-  - cbn - [eqb]. eqspecs => /=.
-    destruct (reflect_eq_predicate he hle p p0 X).
-    ih. clear X. rename X0 into X.
-    induction l in brs, X |- *.
-    + destruct brs.
-      * constructor. constructor ; try assumption.
-        constructor.
-      * constructor. intro bot. inversion bot. subst. inversion X2.
-    + destruct brs.
-      * constructor. intro bot. inversion bot. subst. inversion X2.
-      * cbn - [eqb]. inversion X. subst.
-        destruct a, b. cbn - [eqb eqb_binder_annots].
-        destruct X0 as [onc onbod].
-        destruct (reflect_eq_ctx bcontext bcontext0) => // /=.
-        -- cbn - [eqb].
-           pose proof (onbod equ Re 0 he bbody0) as hh. cbn in hh.
-           destruct hh => /=.
-           ++ cbn -[eqb eqb_binder_annots] in *. destruct (IHl X1 brs).
-              ** constructor ; try easy. inversion e2. subst.
-                 constructor; auto.
-              ** constructor. intro bot. apply f. inversion bot. subst.
-                 inversion X3. subst. constructor; auto.
-           ++ constructor. intro bot. apply f. inversion bot. subst.
-              inversion X3. subst. destruct X4. assumption.
-        -- constructor. intro bot. inversion bot. subst.
-           inversion X3. subst. destruct X4. cbn in e1. subst.
-           contradiction.
-    + simpl. constructor. intros bot; inv bot; contradiction.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    constructor. constructor ; assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    cbn - [eqb]. induction m in X, mfix |- *.
-    + destruct mfix.
-      * constructor. constructor. constructor.
-      * constructor. intro bot. inversion bot. subst. inversion X0.
-    + destruct mfix.
-      * constructor. intro bot. inversion bot. subst. inversion X0.
-      * cbn - [eqb].
-      inversion X. subst.
-        destruct X0 as [h1 h2].
-        destruct (h1 equ Re 0 he (dtype d)).
-        -- destruct (h2 equ Re 0 he (dbody d)).
-           ++ cbn - [eqb]. eqspecs.
-              ** cbn - [eqb]. destruct (IHm X1 mfix).
-                 --- destruct (eqb_annot_reflect (dname a) (dname d)).
-                      constructor. constructor. constructor ; try easy.
-                     inversion e2. assumption.
-                     constructor. intro bot; inversion bot. subst.
-                     apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
-                     assumption.
-                  --- rewrite andb_false_r.
-                      constructor. intro bot. apply f.
-                     inversion bot. subst. constructor.
-                     inversion X0. subst. assumption.                     
-              ** constructor. intro bot. inversion bot. subst.
-                 apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
-                 assumption.
-           ++ constructor. intro bot. apply f.
-              inversion bot. subst. inversion X0. subst.
-              apply X2.
-        -- constructor. intro bot. apply f.
-           inversion bot. subst. inversion X0. subst. apply X2.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih.
-    cbn - [eqb]. induction m in X, mfix |- *.
-    + destruct mfix.
-      * constructor. constructor. constructor.
-      * constructor. intro bot. inversion bot. subst. inversion X0.
-    + destruct mfix.
-      * constructor. intro bot. inversion bot. subst. inversion X0.
-      * cbn - [eqb]. inversion X. subst.
-        destruct X0 as [h1 h2].
-        destruct (h1 equ Re 0 he (dtype d)).
-        -- destruct (h2 equ Re 0 he (dbody d)).
-           ++ cbn - [eqb]. eqspecs.
-              ** cbn - [eqb]. destruct (IHm X1 mfix).
-                 --- destruct (eqb_annot_reflect (dname a) (dname d)).
-                    constructor. constructor. constructor ; try easy.
-                    inversion e2. assumption.
-                    constructor. intro bot; inversion bot. subst.
-                    apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
-                    assumption.
-                 --- rewrite andb_false_r.
-                     constructor. intro bot. apply f.
-                     inversion bot. subst. constructor.
-                     inversion X0. subst. assumption.
-              ** constructor. intro bot. inversion bot. subst.
-                 apply n. inversion X0. subst. destruct X2 as [[? ?] ?].
-                 assumption.
-           ++ constructor. intro bot. apply f.
-              inversion bot. subst. inversion X0. subst.
-              apply X2.
-        -- constructor. intro bot. apply f.
-           inversion bot. subst. inversion X0. subst. apply X2.
-  - cbn - [eqb]. eqspecs. do 2 constructor.
-Qed.
-
-Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp :
-  RelationClasses.subrelation equ Re ->
-  RelationClasses.subrelation lequ Rle ->
-  RelationClasses.subrelation equ Rle ->
-  subrelation (eqb_term_upto_univ_napp Σ equ lequ napp) (eq_term_upto_univ_napp Σ Re Rle napp).
-Proof.
-  intros he hle heqle t t'.
-  case: (reflect_eq_term_upto_univ Σ equ lequ equ lequ) => //; eauto.
-  1-2:eapply reflectT_pred2.
-  intros. eapply eq_term_upto_univ_impl. 5:tea. all:eauto.
-Qed.
-
-Lemma compare_global_instance_refl :
-  forall Σ (eqb leqb : Universe.t -> Universe.t -> bool) gr napp u,
-    (forall u, eqb u u) ->
-    (forall u, leqb u u) ->
-    compare_global_instance Σ eqb leqb gr napp u u.
-Proof.
-  intros Σ eqb leqb gr napp u eqb_refl leqb_refl.
-  rewrite /compare_global_instance.
-  destruct global_variance as [v|].
-  induction u in v |- *; destruct v; simpl; auto.
-  rtoProp. split; auto.
-  destruct t; simpl; auto.
-  rewrite /compare_universe_instance.
-  rewrite forallb2_map; eapply forallb2_refl; intro; apply eqb_refl.
-Qed.
-
-Lemma eqb_term_upto_univ_refl :
-  forall Σ (eqb leqb : Universe.t -> Universe.t -> bool) napp t,
-    (forall u, eqb u u) ->
-    (forall u, leqb u u) ->
-    eqb_term_upto_univ_napp Σ eqb leqb napp t t.
-Proof.
-  intros Σ eqb leqb napp t eqb_refl leqb_refl.
-  case: (reflect_eq_term_upto_univ Σ eqb leqb eqb leqb napp _ _ t t) => //.
-  * intros. eapply equiv_reflectT; auto.
-  * intros. eapply equiv_reflectT; auto.
-  * intros.
-    unshelve epose proof (eq_term_upto_univ_refl Σ eqb leqb napp _ _); eauto.
 Qed.
 
 (** ** Behavior on mkApps and it_mkLambda_or_LetIn **  *)

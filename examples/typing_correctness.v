@@ -5,7 +5,7 @@ From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeCh
 From Equations Require Import Equations.
 
 Local Existing Instance default_checker_flags.
-
+Local Existing Instance PCUICSN.default_normalizing.
 Import MCMonadNotation.
 
 (* ********************************************************* *)
@@ -28,7 +28,7 @@ Definition gctx : global_env_ext :=
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)
 
-Program Definition check_wf_env_ext {cf:checker_flags} (Σ : global_env) id (ext : universes_decl) : 
+Program Definition check_wf_env_ext (Σ : global_env) id (ext : universes_decl) : 
     EnvCheck ({ Σ' : wf_env_ext | Σ'.(wf_env_ext_env) = (Σ, ext)}) :=
     '(G; pf) <- check_wf_env Σ ;;
     '(G'; pf') <- check_wf_env_ext Σ id _ G _ ext ;;
@@ -40,7 +40,7 @@ Program Definition check_wf_env_ext {cf:checker_flags} (Σ : global_env) id (ext
 Definition kername_of_string (s : string) : kername :=
   (MPfile [], s).
 
-Definition make_wf_env_ext {cf:checker_flags} (Σ : global_env_ext) : EnvCheck wf_env_ext :=
+Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext :=
   '(exist Σ' pf) <- check_wf_env_ext Σ.1 (kername_of_string "toplevel") Σ.2 ;;
   ret Σ'.
 
@@ -59,7 +59,7 @@ Defined.
 
 Definition inh {cf:checker_flags} (Σ : wf_env_ext) Γ T := ∑ t, ∥ typing Σ Γ t T ∥.
 
-Definition check_inh {cf:checker_flags} (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
+Definition check_inh (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
   prf <- check_type_wf_env_fast Σ Γ wfΓ t (T := T) ;;
   ret (t; prf).
 

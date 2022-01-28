@@ -8,85 +8,40 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 Set Default Goal Selector "!".
 
-(** * Definition of cumulativity and conversion relations
+(** * Definition of cumulativity and conversion relations *)
 
-The "natural" definition of conversion is given by [conv0]. It is the reflexive
-symmetric transitive closure of beta redution + equality modulo universes.
-It turns out to be equivalent to [conv1]: only beta reduction needs to be symmetrized.
-Cumulativity is defined in the same style ([cumul1]), not symmetrizing [leq_term] because
-it is oriented.
+Reserved Notation " Σ ;;; Γ |- t <=[ Rle ] u" (at level 50, Γ, t, u at next level,
+  format "Σ  ;;;  Γ  |-  t  <=[ Rle ] u").
 
-Those definitions are NOT used in the definition of typing. Instead we use [cumul] and
-[conv] which are defined as "reducing to a common term". It tunrs out to be equivalent
-to [conv1] and [cumul1] by confluence. It will be shown afterward, in PCUICConversion.v.
-*)
+Definition leq_term_ext `{checker_flags} (Σ : global_env_ext) Rle t u := eq_term_upto_univ Σ (eq_universe Σ) Rle t u.
 
-Section ConvCumulDefs.
-  Context {cf:checker_flags} (Σ : global_env_ext) (Γ : context).
-
-  Definition conv0 : relation term
-    := clos_refl_sym_trans (relation_disjunction (red1 Σ Γ) (eq_term Σ Σ)).
-
-  Definition conv1 : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (eq_term Σ Σ)).
-
-  Lemma conv0_conv1 M N :
-    conv0 M N <~> conv1 M N.
-  Proof.
-    split; intro H.
-    - induction H.
-      + constructor. now destruct r; [left; left|right].
-      + reflexivity.
-      + now apply clos_rt_trans_Symmetric.
-      + etransitivity; eassumption.
-    - induction H.
-      + destruct r as [[]|].
-        * now constructor; left.
-        * now symmetry; constructor; left.
-        * now constructor; right.
-      + reflexivity.
-      + etransitivity; eassumption.
-  Defined.
-
-  Definition cumul1 : relation term
-    := clos_refl_trans (relation_disjunction (clos_sym (red1 Σ Γ)) (leq_term Σ Σ)).
-
-End ConvCumulDefs.
-
-(* todo mode typing notation *)
-Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
-Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
-Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
+Notation " Σ ⊢ t <===[ Rle , napp ] u" := (eq_term_upto_univ_napp Σ (eq_universe Σ) Rle napp t u) (at level 50, t, u at next level).
 
 (** ** Cumulativity *)
 
-Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| cumul_refl t u : leq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
-| cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
-| cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
+Inductive cumulAlgo0 `{checker_flags} (Σ : global_env_ext) Rle (Γ : context) : term -> term -> Type :=
+| cumul_refl t u : Σ ⊢ t <===[ Rle , 0] u -> Σ ;;; Γ |- t <=[Rle] u
+| cumul_red_l t u v : Σ ;;; Γ |- t ⇝ v -> Σ ;;; Γ |- v <=[Rle] u -> Σ ;;; Γ |- t <=[Rle] u
+| cumul_red_r t u v : Σ ;;; Γ |- t <=[Rle] v -> Σ ;;; Γ |- u ⇝ v -> Σ ;;; Γ |- t <=[Rle] u
+where " Σ ;;; Γ |- t <=[ Rle ] u " := (cumulAlgo0 Σ Rle Γ t u) : type_scope.
 
-where " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) : type_scope.
+Definition cumulAlgo `{checker_flags} Σ Γ t u := Σ ;;; Γ |- t <=[ leq_universe Σ ] u.
 
-(** *** Conversion   
- *)
+Definition convAlgo `{checker_flags} Σ Γ t u := Σ ;;; Γ |- t <=[ eq_universe Σ ] u.
 
-Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
-| conv_refl t u : eq_term Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
-| conv_red_l t u v : red1 Σ Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
-| conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 (fst Σ) Γ u v -> Σ ;;; Γ |- t = u
-
-where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
+Notation " Σ ;;; Γ |- t <= u " := (cumulAlgo Σ Γ t u) (at level 50, Γ, t, u at next level).
+Notation " Σ ;;; Γ |- t = u " := (convAlgo Σ Γ t u) (at level 50, Γ, t, u at next level).
 
 #[global]
-Hint Resolve cumul_refl conv_refl : pcuic.
+Hint Resolve cumul_refl : pcuic.
 
-Module PCUICConversionPar <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
-  Definition conv := @conv.
-  Definition cumul := @cumul.
-End PCUICConversionPar.
+Module PCUICConversionParAlgo <: EnvironmentTyping.ConversionParSig PCUICTerm PCUICEnvironment PCUICEnvTyping.
+  Definition conv := @convAlgo.
+  Definition cumul := @cumulAlgo.
+End PCUICConversionParAlgo.
 
-Module PCUICConversion := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionPar.
-Include PCUICConversion.
+Module PCUICConversionAlgo := EnvironmentTyping.Conversion PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParAlgo.
+Include PCUICConversionAlgo.
 
 Notation conv_context Σ Γ Γ' := (All2_fold (conv_decls Σ) Γ Γ').
 Notation cumul_context Σ Γ Γ' := (All2_fold (cumul_decls Σ) Γ Γ').
@@ -107,7 +62,7 @@ Qed.
 
 Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t <= u <~> { v & { v' & (red Σ Γ t v * red Σ Γ u v' * 
-  leq_term Σ (global_ext_constraints Σ) v v')%type } }.
+  leq_term_ext Σ (leq_universe Σ) v v')%type } }.
 Proof.
   split.
   - induction 1.
@@ -122,20 +77,20 @@ Proof.
     induction redv.
     * induction redv'.
     ** constructor; auto.
-    ** econstructor 3; eauto.
-    * econstructor 2; eauto.
+    ** econstructor 3; eauto. eapply IHredv'; eauto. 
+    * econstructor 2; eauto. eapply IHredv; eauto.
 Qed.
 
 #[global]
-Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumul Σ Γ).
+Instance cumul_refl' {cf:checker_flags} Σ Γ : Reflexive (cumulAlgo Σ Γ).
 Proof.
-  intro; constructor. reflexivity.
+  intro; constructor. unfold leq_term_ext. reflexivity.
 Qed.
 
 #[global]
-Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (conv Σ Γ).
+Instance conv_refl' {cf:checker_flags} Σ Γ : Reflexive (convAlgo Σ Γ).
 Proof.
-  intro; constructor. reflexivity.
+  intro; constructor. unfold leq_term_ext. reflexivity.
 Qed.
 
 Lemma red_cumul `{cf : checker_flags} {Σ : global_env_ext} {Γ t u} :
@@ -163,7 +118,7 @@ Lemma red_cumul_cumul `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} :
 Proof.
   intros. apply clos_rt_rt1n in X.
   induction X. 1: auto.
-  econstructor 2; eauto.
+  econstructor 2; eauto. eapply IHX; eauto.
 Qed.
 
 Lemma red_cumul_cumul_inv `{cf : checker_flags} {Σ : global_env_ext} {Γ t u v} :
@@ -276,7 +231,7 @@ Lemma red_conv_conv `{cf : checker_flags} Σ Γ t u v :
 Proof.
   intros. apply clos_rt_rt1n_iff in X.
   induction X; auto.
-  econstructor 2; eauto.
+  now econstructor 2.
 Qed.
 
 Lemma red_conv_conv_inv `{cf : checker_flags} Σ Γ t u v :
@@ -289,7 +244,7 @@ Qed.
 
 #[global]
 Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
-  Symmetric (conv Σ Γ).
+  Symmetric (convAlgo Σ Γ).
 Proof.
   intros t u X. induction X.
   - eapply eq_term_sym in e; now constructor.
@@ -372,13 +327,14 @@ Section ContextConversion.
   Global Instance conv_ctx_refl : Reflexive (All2_fold (conv_decls Σ)).
   Proof.
     intro Γ; induction Γ; try econstructor; auto.
-    destruct a as [na [b|] ty]; constructor; auto; pcuic.
+    destruct a as [na [b|] ty]; constructor; auto; pcuic; eapply conv_refl'. 
   Qed.
 
   Global Instance cumul_ctx_refl : Reflexive (All2_fold (cumul_decls Σ)).
   Proof.
     intro Γ; induction Γ; try econstructor; auto.
-    destruct a as [na [b|] ty]; econstructor; eauto; pcuic; eapply cumul_refl'.
+    destruct a as [na [b|] ty];
+     econstructor; eauto; pcuic; try eapply conv_refl'; eapply cumul_refl'.
   Qed.
 
   Definition conv_ctx_refl' Γ : conv_context Γ Γ

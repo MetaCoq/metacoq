@@ -2,30 +2,27 @@ From MetaCoq.Template Require Import Loader.
 From MetaCoq.SafeChecker Require Import Loader.
 
 Local Open Scope string_scope.
+
 MetaCoq SafeCheck nat.
+Definition bool_list := List.map negb (cons true (cons false nil)).
+Set Printing Universes.
+(* Universe issues: undeclared universes from sections *)
+(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
+MetaCoq SafeCheck bool_list.
+MetaCoq CoqCheck bool_list.
 
 (*
 Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([Set])
 *)
 
 MetaCoq SafeCheck 3.
-MetaCoq SafeCheck (3 + 1).
 
-MetaCoq Quote Definition foo := (3 + 1).
+(*MetaCoq Quote Definition foo := (3 + 1).
 
 MetaCoq SafeCheck plus.
 MetaCoq CoqCheck Nat.add.
-
+*)
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
-
-
-Definition bool_list := List.map negb (cons true (cons false nil)).
-Set Printing Universes.
-(* Universe issues: undeclared universes from sections *)
-(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
-(* FIXME: correctly handle global monomorphic constraints *)
-(* MetaCoq SafeCheck bool_list. *)
-MetaCoq CoqCheck bool_list.
 
 (* Even with universe checking disabled, we get:
 Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt
@@ -38,11 +35,13 @@ Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.I
 
 (* Unset Universe Minimization ToSet. *)
 
-From Coq Require Import Decimal.
+(* From Coq Require Import Decimal. *)
 
-Definition bignat : nat := Nat.of_num_uint 10000%uint.
-MetaCoq SafeCheck bignat.
-MetaCoq CoqCheck bignat.
+(* Takes 2 minutes because of the highly inefficient implementations of maps and sets of 
+  universe levels (lists without duplicates, so checking equality all the time). *)
+(* Definition bignat : nat := Nat.of_num_uint 10000%uint. *)
+(* MetaCoq SafeCheck bignat.
+MetaCoq CoqCheck bignat. *)
 
 (*Require Import String.
 From MetaCoq.Template Require Import Loader Core TemplateMonad monad_utils Pretty.
@@ -562,7 +561,8 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
 (* MetaCoq Run (tmEval (unfold concatkn)
   (@safechecker_test.concat) >>=  tmQuote >>= tmPrint). *)
   (* fun t => tmEval cbv (print_program false 1 t) >>= tmPrint). *)
-
+(* Too slow for now *)
+(*
 MetaCoq SafeCheck @issect'.
 
 MetaCoq SafeCheck @ap_pp.
@@ -574,3 +574,4 @@ MetaCoq CoqCheck isequiv_adjointify.
 
 MetaCoq SafeCheck @IsEquiv.
 MetaCoq CoqCheck IsEquiv.
+*)

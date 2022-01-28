@@ -3,18 +3,21 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     TemplateToPCUIC.
+     TemplateToPCUIC PCUICSN BDToPCUIC.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
 
 Import MCMonadNotation.
 
-Program Definition infer_template_program {cf : checker_flags} (p : Ast.Env.program) φ Hφ
+Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
   : EnvCheck (
     let Σ' := trans_global_decls p.1 in
     ∑ A, ∥ (Σ', φ) ;;; [] |- trans Σ' p.2 : A ∥) :=
   let Σ' := trans_global_decls p.1 in
-  p <- typecheck_program (cf:=cf) (Σ', trans Σ' p.2) φ Hφ ;;
+  p <- typecheck_program (Σ', trans Σ' p.2) φ ;;
   ret (p.π1 ; _).
+Next Obligation.
+  sq. destruct X. eapply infering_typing; tea. eapply w. constructor.
+Qed.
 
 (** In Coq until 8.11 at least, programs can be ill-formed w.r.t. universes as they don't include
     all declarations of universes and constraints coming from section variable declarations.
@@ -29,6 +32,11 @@ Definition update_cst_universes univs cb :=
                       | x => x
                       end |}.
 
+Definition global_universes_def := 
+  {| Ast.Env.cst_body := Some (Ast.tSort (Universes.Universe.of_levels (inl Universes.PropLevel.lProp)));
+     Ast.Env.cst_type := Ast.tSort (Universes.Universe.super (Universes.Universe.of_levels (inl Universes.PropLevel.lProp)));
+     Ast.Env.cst_universes := Monomorphic_ctx ContextSet.empty |}.
+  
 Definition update_mib_universes univs mib :=
   {| Ast.Env.ind_finite := mib.(Ast.Env.ind_finite);
      Ast.Env.ind_npars := mib.(Ast.Env.ind_npars);
@@ -88,23 +96,20 @@ Section FoldMap.
 
 End FoldMap.
 
-Definition fix_global_env_universes (Σ : Ast.Env.global_env) : Ast.Env.global_env :=
-  let fix_decl '(kn, decl) declared :=
-    let '(declu, declcstrs) := Ast.monomorphic_udecl_decl decl in
-    let declared := LevelSet.union declu declared in
-    let dangling := dangling_universes declared declcstrs in
-    ((kn, update_universes (LevelSet.union declu dangling, declcstrs) decl), LevelSet.union declared dangling)
-  in
-  fst (fold_map_right fix_decl Σ LevelSet.empty).
+Definition kername_of_string (s : string) : kername :=
+  (MPfile [], s).
 
-Definition fix_program_universes (p : Ast.Env.program) : Ast.Env.program :=
+Definition fix_global_env_universes (Σ : Ast.Env.global_env) φ : Ast.Env.global_env :=
+  Σ ++ [(kername_of_string "__global_universes_constant", Ast.Env.ConstantDecl (update_cst_universes φ global_universes_def))].
+
+Definition fix_program_universes (p : Ast.Env.program) φ : Ast.Env.program :=
   let '(Σ, t) := p in
-  (fix_global_env_universes Σ, t).
+  (fix_global_env_universes Σ φ, t).
 
-Program Definition infer_and_print_template_program {cf : checker_flags} (p : Ast.Env.program) φ Hφ
-  : string + string :=
-  let p := fix_program_universes p in
-  match infer_template_program (cf:=cf) p φ Hφ return string + string with
+Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags}
+  (p : Ast.Env.program) φ : string + string :=
+  let p := fix_program_universes p φ in
+  match infer_template_program (cf:=cf) p (Monomorphic_ctx ContextSet.empty) return string + string with
   | CorrectDecl t =>
     let Σ' := trans_global_decls p.1 in
     inl ("Environment is well-formed and " ^ string_of_term (trans Σ' p.2) ^

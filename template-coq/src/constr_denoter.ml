@@ -172,8 +172,7 @@ struct
           let evm = Evd.add_global_univ evm l in
           if !strict_unquote_universe_mode then
             CErrors.user_err (str ("Level "^s^" is not a declared level and you are in Strict Unquote Universe Mode."))
-          else (Feedback.msg_info (str"Fresh universe " ++ Univ.Level.pr l ++ str" was added to the context.");
-                evm, l)
+          else (evm, l)
         with
         | UGraph.AlreadyDeclared -> evm, l
     else
@@ -195,7 +194,7 @@ struct
         let evm, l = Evd.new_univ_level_variable (Evd.UnivFlexible false) evm in
         Feedback.msg_info (str"Fresh level " ++ Univ.Level.pr l ++ str" was added to the context.");
         evm, l
-    else if constr_equall h lSet then
+    else if constr_equall h lzero then
       match args with
       | [] -> evm, Univ.Level.set
       | _ -> bad_term_verb trm "unquote_level"

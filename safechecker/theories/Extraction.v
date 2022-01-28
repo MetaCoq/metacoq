@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats.
+From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats
+  ExtrOcamlNatInt.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
@@ -78,14 +79,9 @@ Extract Constant Z.abs_N => "Pervasives.abs".
 (** Z.div and Z.modulo are quite complex to define in terms of (/) and (mod).
     For the moment we don't even try *)
 
-    
-(* Ignore [Decimal.int] before the extraction issue is solved:
-   https://github.com/coq/coq/issues/7017. *)
-Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-
 Extract Constant ascii_compare =>
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
+Extract Constant Ascii.compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int Init
@@ -106,7 +102,8 @@ Extraction Inline Equations.Prop.Logic.True_rect_dep Equations.Prop.Logic.False_
 (** This Inline is because of a problem of weak type variables (partial application?) *)
 Extraction Inline PCUICPrimitive.prim_val_reflect_eq.
 
-Extract Constant PCUICTyping.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
+Extract Constant PCUICTyping.guard_checking => 
+  "(fun _ _ _ _ -> true)".
 
 Cd "src".
 

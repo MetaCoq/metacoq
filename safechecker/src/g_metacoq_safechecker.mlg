@@ -34,11 +34,31 @@ let check env evm (c, ustate) =
   let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
   let uctx = UState.context_set ustate in
   Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
-  let uctx = Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx) in
+  let ugraph = Environ.universes env in
+  let levels = UGraph.domain ugraph in
+  let cstrs, eqs = UGraph.constraints_of_universes ugraph in
+  let levels, cstrs = 
+    List.fold_right (fun eqs acc ->
+      match Univ.Level.Set.elements eqs with
+      | [] -> acc
+      | x :: [] -> acc
+      | x :: rest ->
+        List.fold_right (fun p (levels, cstrs) ->
+          (Univ.Level.Set.add p levels, Univ.Constraints.add (x, Univ.Eq, p) cstrs)) rest acc)
+      eqs (levels, cstrs)
+  in
+  let levels = Univ.Level.Set.remove Univ.Level.set levels in
+  let uctx = Univ.ContextSet.union uctx (levels, cstrs) in
+  let () = 
+    Feedback.msg_debug (str"Universes to reify: " ++ Printer.pr_universe_ctx_set evm uctx)
+  in
+  let uctx = time (str"Quoting universe context") 
+    (fun uctx -> (Ast_quoter.quote_univ_contextset uctx)) uctx in
   let check =
     time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program
-        Config0.default_checker_flags term)
+        (*Config0.default_checker_flags*)
+        Config0.type_in_type term)
       uctx
   in
   match check with
@@ -61,7 +81,7 @@ let retypecheck_term_dependencies env gr =
   let typecheck env c = ignore (Typeops.infer env c) in
   let typecheck_constant c =
     let auctx = Environ.constant_context env c in
-    let names = Univ.AUContext.names auctx in
+    let names = Univ.AbstractContext.names auctx in
     let dp = Names.DirPath.make [Names.Id.of_string "MetaCoq"; Names.Id.of_string "Retypecheck"] in
     let fake_level i _ =
      Univ.Level.make (Univ.Level.UGlobal.make dp "" i)

@@ -330,7 +330,7 @@ Lemma reln_list_lift_above l p Γ :
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
   Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
 Proof.
-  generalize (le_refl p).
+  generalize (Nat.le_refl p).
   generalize p at 1 3 5.
   induction Γ in p, l |- *. simpl. auto.
   intros. destruct a. destruct decl_body. simpl.
@@ -1021,3 +1021,54 @@ Equations view_prod_sortc (t : term) : view_prod_sort t := {
   | tSort u => view_prod_sort_sort u;
   | t => view_prod_sort_other t _ _
   }.
+
+
+
+Lemma nth_error_ass_subst_context s k Γ : 
+  (forall n d, nth_error Γ n = Some d -> decl_body d = None) ->
+  forall n d, nth_error (subst_context s k Γ) n = Some d -> decl_body d = None.
+Proof.
+  induction Γ as [|[? [] ?] ?] in |- *; simpl; auto;
+  intros; destruct n; simpl in *; rewrite ?subst_context_snoc in H0; simpl in H0.
+  - noconf H0; simpl.
+    specialize (H 0 _ eq_refl). simpl in H; discriminate.
+  - specialize (H 0 _ eq_refl). simpl in H; discriminate.
+  - noconf H0; simpl. auto.
+  - eapply IHΓ; intros; eauto.
+    now specialize (H (S n0) d0 H1).
+Qed.
+
+Lemma nth_error_smash_context Γ Δ : 
+  (forall n d, nth_error Δ n = Some d -> decl_body d = None) ->
+  forall n d, nth_error (smash_context Δ Γ) n = Some d -> decl_body d = None.
+Proof.
+  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto.
+  - intros. eapply (IHΓ (subst_context [t] 0 Δ)); tea.
+    now apply nth_error_ass_subst_context.
+  - intros. eapply IHΓ. 2:eauto.
+    intros.
+    pose proof (nth_error_Some_length H1). autorewrite with len in H2. simpl in H2.
+    destruct (eq_dec n0 #|Δ|).
+    * subst.
+      rewrite nth_error_app_ge in H1; try lia.
+      rewrite Nat.sub_diag /= in H1. noconf H1.
+      reflexivity.
+    * rewrite nth_error_app_lt in H1; try lia. eauto.
+Qed.
+
+
+Lemma context_assumptions_smash_context Δ Γ :
+  context_assumptions (smash_context Δ Γ) = 
+  context_assumptions Δ + context_assumptions Γ.
+Proof.
+  induction Γ as [|[? [] ?] ?] in Δ |- *; simpl; auto;
+  rewrite IHΓ.
+  - now rewrite context_assumptions_fold.
+  - rewrite context_assumptions_app /=. lia.
+Qed. 
+
+Lemma context_assumptions_expand_lets_ctx Γ Δ :
+  context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.
+Proof. now rewrite /expand_lets_ctx /expand_lets_k_ctx; len. Qed.
+#[global]
+Hint Rewrite context_assumptions_expand_lets_ctx : len.

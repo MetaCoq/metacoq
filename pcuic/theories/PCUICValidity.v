@@ -3,10 +3,11 @@ From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
      PCUICLiftSubst PCUICTyping PCUICSigmaCalculus
-     PCUICClosed PCUICWeakeningEnv PCUICWeakening PCUICInversion
+     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
-     PCUICUnivSubst PCUICUnivSubstitution PCUICConfluence
-     PCUICUnivSubstitution PCUICConversion PCUICContexts 
+     PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp PCUICConfluence
+     PCUICConversion PCUICContexts 
      PCUICArities PCUICSpine PCUICInductives
      PCUICWellScopedCumulativity PCUICContexts PCUICWfUniverses.
      
@@ -14,7 +15,7 @@ From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect ssrbool.
 
-Derive Signature for typing cumul.
+Derive Signature for typing.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
@@ -53,7 +54,7 @@ Section Validity.
     intros.
     destruct X1 as [s Hs].
     exists s.
-    eapply (env_prop_typing PCUICWeakeningEnv.weakening_env (Σ, φ)); auto.
+    eapply (env_prop_typing weakening_env (Σ, φ)); auto.
     simpl; auto. now eapply wf_extends.
   Qed.
 
@@ -192,7 +193,7 @@ Section Validity.
       pose proof (All2_length hlen) as hlen';len in hlen'; simpl in hlen'; try lia.
       eapply All2_app_inv_l in hlen as (l1'&l2'&heq&alnas&allna).
       depelim allna. depelim allna.
-      rewrite map2_app => /= //; try lia. unfold aname. lia.
+      rewrite map2_app => /= //; try lia. unfold aname.
       eapply app_inj_tail in heq as [<- <-].
       simpl. eapply All2_fold_app; auto.
       constructor. constructor.
@@ -310,13 +311,11 @@ Section Validity.
       constructor; auto.
 
     - (* Let *)
-      destruct X5 as [u Hu]. red in Hu.
+      destruct X5 as [u Hu].
       exists u.
       eapply type_Cumul.
       eapply type_LetIn; eauto. econstructor; pcuic.
-      eapply cumul_alt. exists (tSort u), (tSort u); intuition auto.
-      apply red1_red; repeat constructor.
-      reflexivity.
+      eapply convSpec_cumulSpec, red1_cumulSpec; constructor.
 
     - (* Application *)
       destruct X3 as [u' Hu']. exists u'.
@@ -329,7 +328,6 @@ Section Validity.
       etransitivity; tea.
       eapply into_equality => //.
       all:eauto with fvs.
-      2:now eapply typing_wf_local in a0; eauto with fvs.
       do 2 constructor.
       apply leq_universe_product.
 
@@ -376,7 +374,7 @@ Section Validity.
       eapply spine_subst_smash in X2; tea.
       destruct X4.
       destruct (on_declared_inductive isdecl) as [onmind oib].
-      rewrite /ptm. exists ps. red.
+      rewrite /ptm. exists ps.
       eapply type_mkApps; eauto.
       eapply type_it_mkLambda_or_LetIn; tea.
       have typred : isType Σ Γ (it_mkProd_or_LetIn predctx (tSort ps)).
@@ -417,7 +415,7 @@ Section Validity.
       pose proof isdecl as isdecl'.
       eapply declared_projection_type in isdecl'; eauto.
       subst ty.
-      destruct isdecl' as [s Hs]. red in Hs.
+      destruct isdecl' as [s Hs].
       unshelve eapply isType_mkApps_Ind_inv in X2 as [parsubst [argsubst [sppar sparg 
         lenpars lenargs cu]]]; eauto.
       2:eapply isdecl.p1.

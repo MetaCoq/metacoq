@@ -21,9 +21,7 @@ build: [
 install: [
   [make "-C" "safechecker" "install"]
 ]
-version: "dev"
 depends: [
-  "coq-metacoq-template" {= version}
   "coq-metacoq-pcuic" {= version}
 ]
 synopsis: "Implementation and verification of safe conversion and typechecking algorithms for Coq"

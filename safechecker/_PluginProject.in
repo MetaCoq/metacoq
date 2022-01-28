@@ -6,8 +6,10 @@
 # src/classes0.ml
 
 # From Coq's stdlib
-src/mSetWeakList.mli
-src/mSetWeakList.ml
+src/int0.mli
+src/int0.ml
+src/mSetAVL.mli
+src/mSetAVL.ml
 src/eqdepFacts.mli
 src/eqdepFacts.ml
 
@@ -36,8 +38,8 @@ src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli
 src/pCUICEquality.ml
-src/pCUICReduction.ml
-src/pCUICReduction.mli
+# src/pCUICReduction.ml
+# src/pCUICReduction.mli
 src/pCUICTyping.ml
 src/pCUICTyping.mli
 src/pCUICPosition.mli

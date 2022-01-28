@@ -21,7 +21,6 @@ build: [
 install: [
   [make "-C" "template-coq" "install"]
 ]
-version: "dev"
 depends: [
   "ocaml" {>= "4.07.1"}
   "coq" { = "dev" }

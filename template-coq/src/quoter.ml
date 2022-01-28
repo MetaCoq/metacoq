@@ -171,8 +171,14 @@ struct
     | Monomorphic_entry -> Q.mkMonomorphic_entry (Q.quote_univ_contextset Univ.ContextSet.empty)
     | Polymorphic_entry ctx -> Q.mkPolymorphic_entry (Q.quote_univ_context ctx)
 
-  let quote_universes_decl = function
-    | Monomorphic -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset Univ.ContextSet.empty)
+  let quote_universes_decl decl templ =
+    match decl with
+    | Monomorphic -> 
+      (* (match templ with
+      | Some { template_context = ctx } ->
+        Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
+      | None -> *)
+        Q.mkMonomorphic_ctx (Q.quote_univ_contextset Univ.ContextSet.empty)
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
@@ -384,7 +390,7 @@ struct
       in
       let nparams = Q.quote_int mib.Declarations.mind_nparams in
       let paramsctx, acc = quote_rel_context quote_term acc env mib.Declarations.mind_params_ctxt in
-      let uctx = quote_universes_decl mib.Declarations.mind_universes in
+      let uctx = quote_universes_decl mib.Declarations.mind_universes mib.Declarations.mind_template in
       let var = Option.map (CArray.map_to_list Q.quote_variance) mib.Declarations.mind_variance in
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
       let finite = Q.quote_mind_finiteness mib.Declarations.mind_finite in
@@ -458,7 +464,7 @@ struct
                   Feedback.msg_debug (str"Exception raised while checking body of " ++ KerName.print kn);
                   raise e
             in
-            let uctx = quote_universes_decl cd.const_universes in
+            let uctx = quote_universes_decl cd.const_universes None in
             let ty, acc =
               let ty = cd.const_type in
               (try quote_term acc (Global.env ()) ty
@@ -544,7 +550,7 @@ since  [absrt_info] is a private type *)
 
   let quote_constant_body bypass env evm cd =
     let ty, body = quote_constant_body_aux bypass env evm cd in
-    Q.mk_constant_body ty body (quote_universes_decl cd.const_universes)
+    Q.mk_constant_body ty body (quote_universes_decl cd.const_universes None)
 
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in

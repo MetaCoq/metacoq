@@ -39,7 +39,14 @@ let list_to_string (l : char list) : string =
   aux 0 l;
   Bytes.to_string buf
 
-
+let rec filter_map f l =
+  match l with
+  | [] -> []
+  | x :: xs ->
+    match f x with
+    | Some x' -> x' :: filter_map f xs
+    | None -> filter_map f xs
+    
 let rec app_full trm acc =
   match Constr.kind trm with
     Constr.App (f, xs) -> app_full f (Array.to_list xs @ acc)

@@ -376,8 +376,6 @@ Section ConvCongruences.
     (forall x y, R x y -> on_Trel S f x y) ->
     (forall x y, R x y -> inclusion (clos_refl_trans R) (clos_refl_trans S). *)
 
-  (* Notation "( x | y )" := (exist x y). *)
-
   Lemma closed_red_clos {Γ t u} :
     closed_red Σ Γ t u ->
     clos_refl_trans (closed_red1 Σ Γ) t u.

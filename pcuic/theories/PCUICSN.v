@@ -1,26 +1,29 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICTyping PCUICSafeLemmata PCUICValidity PCUICReduction
-     PCUICEquality PCUICConfluence PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp.
+From MetaCoq.PCUIC Require Import
+  PCUICAst PCUICAstUtils PCUICTyping PCUICSafeLemmata PCUICValidity
+  PCUICReduction PCUICEquality PCUICConfluence PCUICUnivSubstitutionConv
+  PCUICUnivSubstitutionTyp.
 
 Require Import Equations.Prop.DepElim.
 
-(* We assume normalisation of the reduction.
-   We state is as well-foundedness of the reduction.
- *)
+(** We assume normalisation of the reduction.
+    We state is as well-foundedness of the reduction.
+*)
 
 Record normalizing_flags {cf : checker_flags} : Prop :=
   { nor_check_univs :> check_univs }.
 
 Existing Class normalizing_flags.
 
-#[local] Instance default_normalizing : @normalizing_flags default_checker_flags.
-  Proof.
-    now constructor.
-  Qed.
+#[local] Instance default_normalizing :
+  @normalizing_flags default_checker_flags.
+Proof.
+  now constructor.
+Qed.
 
-#[local] Instance extraction_normalizing : @normalizing_flags extraction_checker_flags.
+#[local] Instance extraction_normalizing :
+  @normalizing_flags extraction_checker_flags.
 Proof.
   now constructor.
 Qed.
@@ -39,11 +42,11 @@ Section Normalisation.
 End Normalisation.
 
 
-(* Since we are working with name annotations, reduction is sensitive to names.
-   In this section we provide cored' which corresponds to reduction upto
-   α-renaming, as well as the necessary lemmata to show it's well-founded and
-   can be used instead of the usual reduction as a measure.
- *)
+(** Since we are working with name annotations, reduction is sensitive to names.
+    In this section we provide cored' which corresponds to reduction up to
+    α-renaming, as well as the necessary lemmata to show it is well-founded and
+    can be used instead of the usual reduction as a measure.
+*)
 Section Alpha.
 
   Context {cf : checker_flags} {no : normalizing_flags}.

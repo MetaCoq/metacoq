@@ -294,7 +294,7 @@ Module Environment (T : Term).
   Coercion fst_ctx : global_env_ext >-> global_env.
 
   Definition empty_ext (Σ : global_env) : global_env_ext
-    := (Σ, Monomorphic_ctx ContextSet.empty).
+    := (Σ, Monomorphic_ctx).
 
   (** *** Programs
 
@@ -356,7 +356,7 @@ Module Environment (T : Term).
     Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
     Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
   Proof.
-    generalize (le_refl p).
+    generalize (Nat.le_refl p).
     generalize p at 1 3 5.
     induction Γ in p, l |- *. simpl. auto.
     intros. destruct a. destruct decl_body. simpl.

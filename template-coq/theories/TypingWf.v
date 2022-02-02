@@ -42,6 +42,7 @@ Lemma on_global_decl_impl `{checker_flags} Σ P Q kn d :
   on_global_env P Σ.1 ->
   on_global_decl P Σ kn d -> on_global_decl Q Σ kn d.
 Proof.
+  unfold on_global_env.
   intros X X0 o.
   destruct d; simpl.
   - destruct c; simpl. destruct cst_body0; simpl in *.
@@ -86,10 +87,11 @@ Lemma on_global_env_impl `{checker_flags} Σ P Q :
   (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
   on_global_env P Σ -> on_global_env Q Σ.
 Proof.
-  intros X X0.
-  simpl in *. induction X0; constructor; auto.
+  destruct Σ as [univs Σ]; cbn.
+  intros X [cu X0]; split => /= //. cbn in *.
+  induction X0; constructor; auto.
   clear IHX0.
-  eapply on_global_decl_impl; tea.
+  eapply on_global_decl_impl; tea. split => //.
 Qed.
 
 Lemma All_local_env_wf_decl_inv Σ (a : context_decl) (Γ : list context_decl)
@@ -177,8 +179,8 @@ Hint Extern 10 => constructor : wf.
 #[global]
 Hint Resolve All_skipn : wf.
 
-Lemma wf_sigma_extends_not_fresh {cf} k (Σ : global_env) k' (Σ' : global_env) P : 
-  on_global_env P ((k :: Σ) ++ [k'] ++ Σ') -> k.1 = k'.1 -> False.
+Lemma on_global_decls_extends_not_fresh {cf} {univs} k (Σ : global_declarations) k' (Σ' : global_declarations) P : 
+  on_global_decls P univs ((k :: Σ) ++ [k'] ++ Σ') -> k.1 = k'.1 -> False.
 Proof.
   intros H eq.
   depelim H.
@@ -191,21 +193,28 @@ Lemma lookup_env_extends {cf : checker_flags} (Σ : global_env) k d (Σ' : globa
   lookup_env Σ k = Some d ->
   extends Σ Σ' -> lookup_env Σ' k = Some d.
 Proof.
-  induction Σ in Σ', k, d |- *; cbn => //.
+  destruct Σ as [univs Σ]; cbn in *.
+  rewrite /lookup_env /on_global_env /=.
+  induction Σ in univs, Σ', k, d |- *; cbn => //.
   destruct eq_kername eqn:eqk.
   * move=> wfΣ' [=]. intros <- ext.
-    destruct ext as [Σ'' ->].
+    destruct ext as [univeq [Σ'' eq]] => /=. cbn in *.
+    subst univs. rewrite eq in wfΣ'.
+    destruct Σ' as [univs' Σ']; cbn in *.
+    subst Σ'. destruct wfΣ' as [cu wfΣ'].
     induction Σ''. 
     + cbn. now rewrite eqk.
     + cbn. destruct (eq_kername k a0.1) eqn:eqk' => //.
       change (eq_kername k a.1) with (Reflect.eqb k a.1) in eqk.
       change (eq_kername k a0.1) with (Reflect.eqb k a0.1) in eqk'.
       eapply eqb_eq in eqk. apply eqb_eq in eqk'. subst.
-      now apply wf_sigma_extends_not_fresh in wfΣ'.
+      apply on_global_decls_extends_not_fresh in wfΣ'; eauto.
       apply IHΣ''.
       now depelim wfΣ'.
-  * intros HΣ' Hl [Σ'' ->].
-    eapply IHΣ; tea.
+  * intros HΣ' Hl [univeq [Σ'' eq]]; cbn in *. subst univs.
+    rewrite eq in HΣ'. destruct HΣ'.
+    eapply IHΣ; tea. split; eauto. now rewrite eq.
+    red. split; eauto. reflexivity.
     exists (Σ'' ++ [a]).
     now rewrite -app_assoc.
 Qed.

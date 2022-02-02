@@ -673,8 +673,7 @@ Defined.
 Definition declared : Level.t -> LevelSet.t -> Prop := LevelSet.In.
 
 Definition uctx_invariants (uctx : ContextSet.t)
-  := ConstraintSet.For_all (fun '(l, _, l') => declared l uctx.1 /\ declared l' uctx.1)
-                           uctx.2.
+  := ConstraintSet.For_all (declared_cstr_levels uctx.1) uctx.2.
 
 Definition global_uctx_invariants (uctx : ContextSet.t)
   := LevelSet.In Level.lzero uctx.1 /\ uctx_invariants uctx.

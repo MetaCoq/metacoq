@@ -211,6 +211,7 @@ Register MetaCoq.Template.Ast.Env.Build_constant_body as metacoq.ast.Build_const
 Register MetaCoq.Template.Ast.Env.global_decl as metacoq.ast.global_decl.
 Register MetaCoq.Template.Ast.Env.ConstantDecl as metacoq.ast.ConstantDecl.
 Register MetaCoq.Template.Ast.Env.InductiveDecl as metacoq.ast.InductiveDecl.
+Register MetaCoq.Template.Ast.Env.Build_global_env as metacoq.ast.Build_global_env.
 Register MetaCoq.Template.Ast.Env.global_env as metacoq.ast.global_env.
 Register MetaCoq.Template.Ast.Env.global_env_ext as metacoq.ast.global_env_ext.
 Register MetaCoq.Template.Ast.Env.program as metacoq.ast.program.

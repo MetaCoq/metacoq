@@ -49,6 +49,7 @@ struct
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
+  type quoted_global_declarations = global_declarations
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -281,7 +282,7 @@ struct
   let mkProj p c = Coq_tProj (p,c)
 
 
-  let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
+  let mkMonomorphic_ctx () = Universes0.Monomorphic_ctx
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
   let mk_one_inductive_body (id, indices, sort, ty, kel, ctr, proj, relevance) =
@@ -314,6 +315,7 @@ struct
 
   let add_global_decl kn a b = (kn, a) :: b
 
+  let mk_global_env universes declarations = { universes; declarations }
   let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function

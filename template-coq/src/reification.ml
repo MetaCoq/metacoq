@@ -47,6 +47,7 @@ sig
   type quoted_mutual_inductive_body
   type quoted_constant_body
   type quoted_global_decl
+  type quoted_global_declarations
   type quoted_global_env
   type quoted_program  (* the return type of quote_recursively *)
 

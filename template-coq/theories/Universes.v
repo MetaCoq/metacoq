@@ -1,4 +1,4 @@
-From Coq Require Import MSetAVL MSetList MSetFacts MSetProperties MSetDecide.
+From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils BasicAst config.
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -1170,10 +1170,16 @@ Module UnivConstraint.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End UnivConstraint.
 
-Module ConstraintSet := MSetAVL.Make UnivConstraint.
+Module ConstraintSet := MSetList.MakeWithLeibniz UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
 Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
 Module CS := ConstraintSet.
+Module ConstraintSetDecide := WDecide (ConstraintSet).
+Ltac csets := ConstraintSetDecide.fsetdec.
+
+Definition declared_cstr_levels levels (cstr : UnivConstraint.t) :=
+  let '(l1,_,l2) := cstr in
+  LevelSet.In l1 levels /\ LevelSet.In l2 levels.
 
 Lemma CS_union_empty s : ConstraintSet.Equal (ConstraintSet.union ConstraintSet.empty s) s.
 Proof.
@@ -1254,12 +1260,25 @@ End AUContext.
 Module ContextSet.
   Definition t := LevelSet.t × ConstraintSet.t.
 
+  Definition levels : t -> LevelSet.t := fst.
+  Definition constraints : t -> ConstraintSet.t := snd.
+
   Definition empty : t := (LevelSet.empty, ConstraintSet.empty).
 
   Definition is_empty (uctx : t)
     := LevelSet.is_empty (fst uctx) && ConstraintSet.is_empty (snd uctx).
 End ContextSet.
 
+Definition contextset_subset (u u' : ContextSet.t) : Prop :=
+  LevelSet.Subset (ContextSet.levels u) (ContextSet.levels u') /\
+  ConstraintSet.Subset (ContextSet.constraints u) (ContextSet.constraints u').
+
+Infix "⊂_cs" := contextset_subset (at level 30).
+
+Lemma empty_contextset_subset u : ContextSet.empty ⊂_cs u.
+Proof.
+  red. split; cbn; [lsets|csets].
+Qed.
 
 (* Variance info is needed to do full universe polymorphism *)
 Module Variance.
@@ -1278,29 +1297,20 @@ Module Variance.
 End Variance.
 
 Inductive universes_decl : Type :=
-| Monomorphic_ctx (ctx : ContextSet.t)
+| Monomorphic_ctx
 | Polymorphic_ctx (cst : AUContext.t).
 
 Derive NoConfusion for universes_decl.
 
-Definition monomorphic_udecl u :=
-  match u with
-  | Monomorphic_ctx ctx => ctx
-  | _ => ContextSet.empty
-  end.
-
-Definition monomorphic_levels φ := (monomorphic_udecl φ).1.
-Definition monomorphic_constraints φ := (monomorphic_udecl φ).2.
-
 Definition levels_of_udecl u :=
   match u with
-  | Monomorphic_ctx ctx => fst ctx
+  | Monomorphic_ctx => LevelSet.empty
   | Polymorphic_ctx ctx => AUContext.levels ctx
   end.
 
 Definition constraints_of_udecl u :=
   match u with
-  | Monomorphic_ctx ctx => snd ctx
+  | Monomorphic_ctx => ConstraintSet.empty
   | Polymorphic_ctx ctx => snd (snd (AUContext.repr ctx))
   end.
 
@@ -1854,18 +1864,18 @@ Derive NoConfusion for universes_entry.
 Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
   match u with
   | Polymorphic_ctx ctx => Polymorphic_entry (Universes.AUContext.repr ctx)
-  | Monomorphic_ctx ctx => Monomorphic_entry ctx
+  | Monomorphic_ctx => Monomorphic_entry ContextSet.empty
   end.
 
 Definition polymorphic_instance uctx :=
   match uctx with
-  | Monomorphic_ctx c => Instance.empty
+  | Monomorphic_ctx => Instance.empty
   | Polymorphic_ctx c => fst (snd (AUContext.repr c))
   end.
 (* todo: duplicate of polymorphic_instance *)
 Definition abstract_instance decl :=
   match decl with
-  | Monomorphic_ctx _ => Instance.empty
+  | Monomorphic_ctx => Instance.empty
   | Polymorphic_ctx auctx => UContext.instance (AUContext.repr auctx)
   end.
 

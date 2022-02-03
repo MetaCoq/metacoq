@@ -1,6 +1,8 @@
+-generate-meta-for-package coq-metacoq-safechecker
 -I src
 -Q src MetaCoq.SafeChecker
 -R theories MetaCoq.SafeChecker
+-I ../template-coq
 
 # src/classes0.mli
 # src/classes0.ml

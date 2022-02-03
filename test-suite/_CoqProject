@@ -1,4 +1,5 @@
 -I ../template-coq/build
+-I ../template-coq/
 -I ../safechecker/src
 -I ../erasure/src
 -Q ../template-coq/theories MetaCoq.Template

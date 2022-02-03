@@ -1,6 +1,8 @@
 -I gen-src
 -Q gen-src MetaCoq.Template
 -R theories MetaCoq.Template
+META.coq-metacoq-template
+-I .
 
 # Generated Code by `ls -1 *.ml *.mli` in `template-coq/gen-src` after having compiled `Extraction.v`
 gen-src/signature.mli

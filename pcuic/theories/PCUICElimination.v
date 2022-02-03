@@ -235,7 +235,7 @@ Proof.
       now rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in cum.
       unshelve eapply (isType_subst (Δ := [vass _ _]) [hd]) in i1; pcuic.
       now rewrite subst_it_mkProd_or_LetIn in i1.
-      eapply subslet_ass_tip. eapply (type_equality (le:=false)); tea. now symmetry.
+      eapply subslet_ass_tip. eapply (type_equality (pb:=Conv)); tea. now symmetry.
 Qed.
 
 Inductive All_local_assum (P : context -> term -> Type) : context -> Type :=
@@ -429,7 +429,7 @@ Proof.
         split.
         intros prs;eapply All_local_assum_app in prs as [prd prs].
         depelim prd.
-        eapply (type_equality (le:=false) _ (U:=ty)) in t0.
+        eapply (type_equality (pb:=Conv) _ (U:=ty)) in t0.
         2:{ destruct s0 as [s' [Hs' _]]. exists s'; auto. }
         2:now symmetry.
         destruct H as [H _].

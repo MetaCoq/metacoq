@@ -1231,24 +1231,24 @@ Lemma subst_compare_term {cf:checker_flags} le Σ (φ : ConstraintSet.t) (l : li
   compare_term le Σ φ T U -> compare_term le Σ φ (subst l k T) (subst l k U).
 Proof.
   destruct le; simpl.
-  - apply subst_leq_term.
-  - apply subst_eq_term. 
+  - apply subst_eq_term.
+  - apply subst_leq_term. 
 Qed.
 
-Lemma subst_eq_decl `{checker_flags} {le Σ ϕ l k d d'} :
-  eq_decl le Σ ϕ d d' -> eq_decl le Σ ϕ (subst_decl l k d) (subst_decl l k d').
+Lemma subst_compare_decl `{checker_flags} {le Σ ϕ l k d d'} :
+  compare_decl le Σ ϕ d d' -> compare_decl le Σ ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.
   intros []; constructor; auto; destruct le; 
     intuition eauto using subst_compare_term, subst_eq_term, subst_leq_term.
 Qed.
 
-Lemma subst_eq_context `{checker_flags} le Σ φ l l' n k :
-  eq_context le Σ φ l l' ->
-  eq_context le Σ φ (subst_context n k l) (subst_context n k l').
+Lemma subst_compare_context `{checker_flags} le Σ φ l l' n k :
+  compare_context le Σ φ l l' ->
+  compare_context le Σ φ (subst_context n k l) (subst_context n k l').
 Proof.
   induction 1; rewrite ?subst_context_snoc /=; constructor; auto.
   erewrite (All2_fold_length X). simpl.
-  apply (subst_eq_decl p).
+  apply (subst_compare_decl p).
 Qed.
 
 From Coq Require Import ssrbool.
@@ -1278,17 +1278,17 @@ Section CtxReduction.
   Qed.
 End CtxReduction.
 
-Record wt_equality (le : bool) {cf} Σ (Γ : context) T U := 
+Record wt_equality {cf} (c : conv_pb) Σ (Γ : context) T U := 
   { wt_equality_dom : isType Σ Γ T;
     wt_equality_codom : isType Σ Γ U;
-    wt_equality_eq : if le then Σ ;;; Γ |- T <= U else Σ ;;; Γ |- T = U }.
+    wt_equality_eq : cumulAlgo_gen Σ Γ c T U }.
 
-Arguments wt_equality_dom {le cf Σ Γ T U}.
-Arguments wt_equality_codom {le cf Σ Γ T U}.
-Arguments wt_equality_eq {le cf Σ Γ T U}.
+Arguments wt_equality_dom {cf c Σ Γ T U}.
+Arguments wt_equality_codom {cf c Σ Γ T U}.
+Arguments wt_equality_eq {cf c Σ Γ T U}.
 
-Definition wt_cumul {cf} := wt_equality true.
-Definition wt_conv {cf} := wt_equality false.
+Definition wt_cumul {cf} := wt_equality Cumul.
+Definition wt_conv {cf} := wt_equality Conv.
 
 Notation " Σ ;;; Γ |- t <= u ✓" := (wt_cumul Σ Γ t u) (at level 50, Γ, t, u at next level).
 Notation " Σ ;;; Γ |- t = u ✓" := (wt_conv Σ Γ t u) (at level 50, Γ, t, u at next level).
@@ -1316,16 +1316,16 @@ Qed.
 Reserved Notation " Σ ;;; Γ |-[ P ] t <=[ le ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  |-[ P ]  t  <=[ le ]  u").
 
-Inductive cumulP {cf} (le : bool) (Σ : global_env_ext) (P : nat -> bool) (Γ : context) : term -> term -> Type :=
-| wt_cumul_refl t u : compare_term le Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |-[P] t <=[le] u
-| wt_cumul_red_l t u v : red1P P Σ Γ t v -> Σ ;;; Γ |-[P] v <=[le] u -> Σ ;;; Γ |-[P] t <=[le] u
-| wt_cumul_red_r t u v : Σ ;;; Γ |-[P] t <=[le] v -> red1P P Σ Γ u v -> Σ ;;; Γ |-[P] t <=[le] u
+Inductive cumulP {cf} (pb : conv_pb) (Σ : global_env_ext) (P : nat -> bool) (Γ : context) : term -> term -> Type :=
+| wt_cumul_refl t u : compare_term pb Σ.1 (global_ext_constraints Σ) t u -> Σ ;;; Γ |-[P] t <=[pb] u
+| wt_cumul_red_l t u v : red1P P Σ Γ t v -> Σ ;;; Γ |-[P] v <=[pb] u -> Σ ;;; Γ |-[P] t <=[pb] u
+| wt_cumul_red_r t u v : Σ ;;; Γ |-[P] t <=[pb] v -> red1P P Σ Γ u v -> Σ ;;; Γ |-[P] t <=[pb] u
 where " Σ ;;; Γ |-[ P ] t <=[ le ] u " := (cumulP le Σ P Γ t u) : type_scope.
 
-Notation " Σ ;;; Γ |-[ P ] t <= u " := (cumulP true Σ P Γ t u) (at level 50, Γ, t, u at next level,
+Notation " Σ ;;; Γ |-[ P ] t <= u " := (cumulP Cumul Σ P Γ t u) (at level 50, Γ, t, u at next level,
     format "Σ  ;;;  Γ  |-[ P ]  t  <=  u") : type_scope.
 
-Notation " Σ ;;; Γ |-[ P ] t = u " := (cumulP false Σ P Γ t u) (at level 50, Γ, t, u at next level,
+Notation " Σ ;;; Γ |-[ P ] t = u " := (cumulP Conv Σ P Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  |-[ P ]  t  =  u") : type_scope.
 
 Lemma isType_wf_local {cf:checker_flags} {Σ Γ T} : isType Σ Γ T -> wf_local Σ Γ.
@@ -1861,18 +1861,19 @@ Proof.
   + eapply (isType_substitution Hs), wteq.
   + eapply (isType_substitution Hs), wteq.
   + move/wt_equality_equalityP: wteq; elim.
-    - intros t u. destruct le; simpl; constructor; [now apply subst_leq_term|now apply subst_eq_term].
+    - intros t u cmp. 
+      constructor. now eapply subst_compare_term.
     - move=> t u v red cum.
       destruct le.
-      * eapply red_cumul_cumul.
-        eapply substitution_let_red; tea; eauto with wf; apply red.
       * eapply red_conv_conv.
+        eapply substitution_let_red; tea; eauto with wf; apply red.
+      * eapply red_cumul_cumul.
         eapply substitution_let_red; tea; eauto with wf; apply red.
     - move=> t u v red cum red'.
       destruct le.
-      * eapply red_cumul_cumul_inv; tea.
-        eapply substitution_let_red; tea; apply red'.
       * eapply red_conv_conv_inv; tea.
+        eapply substitution_let_red; tea; apply red'.
+      * eapply red_cumul_cumul_inv; tea.
         eapply substitution_let_red; tea; apply red'.
 Qed.
 

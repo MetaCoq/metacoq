@@ -712,7 +712,7 @@ Lemma red_conv_prop {Σ Γ T U} {wfΣ : wf_ext Σ} :
   Σ ;;; Γ ⊢ T ⇝ U ->
   Σ ;;; Γ |- T ~~ U.
 Proof.
-  move/(red_equality (le:=false)).
+  move/(red_equality (pb:=Conv)).
   now apply conv_cumul_prop.
 Qed.
 
@@ -948,7 +948,7 @@ Proof.
   eapply cumul_prop_alt. 
   assert(eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) (Γ ,, vdef na d t) (Γ ,, vdef na' d' t')).
   { repeat constructor; pcuic. eapply eq_context_upto_refl; typeclasses eauto. }
-  eapply (closed_red_eq_context_upto_l (le:=false)) in redr; eauto.
+  eapply (closed_red_eq_context_upto_l (pb:=Conv)) in redr; eauto.
   2:{ eapply clrel_ctx in redl. rewrite !on_free_vars_ctx_snoc in redl |- *.
       move/andP: redl => [] -> /= /andP[] cld clt.
       eapply PCUICConfluence.eq_term_upto_univ_napp_on_free_vars in cld; tea.
@@ -1310,7 +1310,7 @@ Proof.
       now apply subject_is_open_term in dty. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
-    now eapply eq_term_sym in a.
+    now symmetry in a.
   
   - eapply inversion_CoFix in X2 as (decl' & fixguard' & Hnth & types' & bodies & wfcofix & cum); auto.
     eapply cumul_cumul_prop in cum; eauto.
@@ -1322,7 +1322,7 @@ Proof.
       now apply subject_is_open_term in dty. }
     { now eapply cumul_prop_is_open in cum as []. }
     eapply eq_term_eq_term_prop_impl; eauto.
-    now eapply eq_term_sym in a.
+    now symmetry in a.
 Qed.
 
 End no_prop_leq_type.

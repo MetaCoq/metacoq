@@ -322,9 +322,9 @@ Section Validity.
       move: (typing_wf_universe wf Hu') => wfu'.
       eapply (substitution0 (n := na) (T := tSort u')); eauto.
       apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]; tas. intuition.
-      eapply (weakening_equality (le:=true) (Γ' := []) (Γ'' := [vass na A])) in b0; pcuic.
+      eapply (weakening_equality (pb:=Cumul) (Γ' := []) (Γ'' := [vass na A])) in b0; pcuic.
       simpl in b0.
-      eapply (type_equality (le:=true)); eauto. pcuic.
+      eapply (type_equality (pb:=Cumul)); eauto. pcuic.
       etransitivity; tea.
       eapply into_equality => //.
       all:eauto with fvs.

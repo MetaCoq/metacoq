@@ -789,15 +789,15 @@ Qed.
 
 Notation "⋆" := ltac:(solve [pcuic]) (only parsing).
 
-Notation decl_equality Σ Γ := (All_decls_alpha_le false
-  (fun (le : bool) (x0 y0 : term) => Σ ;;; Γ ⊢ x0 ≤[le] y0)).
+Notation decl_equality Σ Γ := (All_decls_alpha_pb Conv
+  (fun pb (x0 y0 : term) => Σ ;;; Γ ⊢ x0 ≤[pb] y0)).
 
 Lemma conv_decls_fix_context_gen {cf:checker_flags} Σ Γ mfix mfix1 :
   wf Σ.1 ->
   All2 (fun d d' => Σ ;;; Γ ⊢ d.(dtype) = d'.(dtype) × eq_binder_annot d.(dname) d'.(dname)) mfix mfix1 ->
   forall Γ' Γ'',
   Σ ⊢ Γ ,,, Γ' = Γ ,,, Γ'' ->
-  context_equality_rel false Σ (Γ ,,, Γ') (fix_context_gen #|Γ'| mfix) (fix_context_gen #|Γ''| mfix1).
+  context_equality_rel Conv Σ (Γ ,,, Γ') (fix_context_gen #|Γ'| mfix) (fix_context_gen #|Γ''| mfix1).
 Proof.    
   intros wfΣ a Γ' Γ'' convctx.
   split. eauto with fvs.
@@ -865,7 +865,7 @@ Proof.
 Qed.
 
 Lemma context_equality_rel_context_assumptions {cf:checker_flags} P Γ Δ Δ' :
-  context_equality_rel false P Γ Δ Δ' ->
+  context_equality_rel Conv P Γ Δ Δ' ->
   context_assumptions Δ = context_assumptions Δ'.
 Proof.
   move=> [] _. induction 1; auto.
@@ -1572,11 +1572,11 @@ Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
            positive_cstr_arg mdecl ([] ,,, (smash_context [] (ind_params mdecl) ,,, Γ)) t)
       Γ ->
   assumption_context Γ ->
-  context_equality_rel true Σ (subst_instance u (ind_arities mdecl) ,,,
+  context_equality_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
       subst_instance u
         (smash_context [] (PCUICEnvironment.ind_params mdecl)))
    (subst_instance u Γ) (subst_instance u' Γ) -> 
-  context_equality_rel true Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+  context_equality_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
     (subst_context (ind_subst mdecl ind u) (context_assumptions (ind_params mdecl)) (subst_instance u Γ))
     (subst_context (ind_subst mdecl ind u') (context_assumptions (ind_params mdecl)) (subst_instance u' Γ)).
 Proof.
@@ -1621,7 +1621,7 @@ Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'}
   declared_constructor Σ ind mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
- context_equality_rel true Σ (subst_instance u (ind_arities mdecl) ,,,
+ context_equality_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
     subst_instance u
       (smash_context [] (PCUICEnvironment.ind_params mdecl)))
  (smash_context []
@@ -1633,7 +1633,7 @@ Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'}
        (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
           (cstr_args cdecl)))) ->
 
-  context_equality_rel true Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+  context_equality_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
       (subst_context (inds (inductive_mind ind.1) u (ind_bodies mdecl)) (context_assumptions (ind_params mdecl))
        (smash_context []
           (subst_instance u
@@ -2313,7 +2313,7 @@ Lemma cumul_ctx_relSpec_Algo {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
   (c : PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
-  context_equality_rel true Σ Γ Δ Δ'.
+  context_equality_rel Cumul Σ Γ Δ Δ'.
 Proof.
   intros wf wf'.
   eapply context_equality_rel_app.
@@ -2323,14 +2323,14 @@ Proof.
   move: wf; rewrite /= on_free_vars_ctx_snoc => /andP[] h0 h1.
   move: wf'; rewrite /= on_free_vars_ctx_snoc => /andP[] h2 h3.
   destruct p; constructor; inv_on_free_vars; auto.
-  - eapply cumulSpec_cumulAlgo_curry in c0; fvs.
-    constructor; auto. now eapply equality_forget in c0.
+  - eapply cumulSpec_cumulAlgo_curry in eqt; fvs.
+    constructor; auto. now eapply equality_forget in eqt.
     len. rewrite (All2_fold_length c). now len in h3.
-  - eapply cumulSpec_cumulAlgo_curry in c1; eauto.
-    eapply convSpec_convAlgo_curry in c0; eauto; fvs.
+  - eapply cumulSpec_cumulAlgo_curry in eqt; eauto.
+    eapply convSpec_convAlgo_curry in eqb; eauto; fvs.
     constructor; auto.
-    now apply equality_forget in c0.
-    now apply equality_forget in c1.
+    now apply equality_forget in eqb.
+    now apply equality_forget in eqt.
     len. rewrite (All2_fold_length c) //. now len in H.
     len. rewrite (All2_fold_length c) //. now len in H0.
 Qed.
@@ -2339,7 +2339,7 @@ Lemma into_context_equality_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
   (c : cumul_ctx_rel Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
-  context_equality_rel true Σ Γ Δ Δ'.
+  context_equality_rel Cumul Σ Γ Δ Δ'.
 Proof.
   intros wf wf'.
   eapply context_equality_rel_app.
@@ -2370,7 +2370,7 @@ Lemma inductive_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   let indctx' := subst_instance u' idecl.(ind_indices) in
   let pindctx := subst_context parsubst 0 indctx in
   let pindctx' := subst_context parsubst' 0 indctx' in
-  context_equality_rel true Σ Γ (smash_context [] pindctx) (smash_context [] pindctx').
+  context_equality_rel Cumul Σ Γ (smash_context [] pindctx) (smash_context [] pindctx').
 Proof.
   intros * decli.
   destruct (on_declared_inductive decli) as [onmind oib].
@@ -2606,7 +2606,7 @@ Lemma constructor_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   in
   let pargctx := subst_context parsubst 0 argctx in
   let pargctx' := subst_context parsubst' 0 argctx' in
-  context_equality_rel true Σ Γ (smash_context [] pargctx) (smash_context [] pargctx') *
+  context_equality_rel Cumul Σ Γ (smash_context [] pargctx) (smash_context [] pargctx') *
   equality_terms Σ (Γ ,,, smash_context [] pargctx)
     (map (subst parsubst (context_assumptions (cstr_args cdecl)))
       (map (expand_lets argctx) (map (subst_instance u) (cstr_indices cdecl))))
@@ -2893,7 +2893,7 @@ Proof.
         eapply subst_instance_context_equality.
         2:now symmetry.
         apply (on_minductive_wf_params declc cu'). }
-      eapply (equality_expand_lets_equality_ctx (le:=false)) => //.
+      eapply (equality_expand_lets_equality_ctx (pb:=Conv)) => //.
       apply into_equality.
       { constructor.
         eapply eq_term_upto_univ_subst_instance; eauto; typeclasses eauto. }

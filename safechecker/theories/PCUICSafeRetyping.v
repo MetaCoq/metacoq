@@ -107,7 +107,7 @@ Lemma inductive_cumulative_indices_smash {cf : checker_flags} {Σ : global_env_e
   let indctx' := idecl.(ind_indices)@[u'] in
   let pindctx := subst_context_let_expand (List.rev pars) (ind_params mdecl)@[u] (smash_context [] indctx) in
   let pindctx' := subst_context_let_expand (List.rev pars') (ind_params mdecl)@[u'] (smash_context [] indctx') in
-  context_equality_rel true Σ Γ pindctx pindctx'.
+  context_equality_rel Cumul Σ Γ pindctx pindctx'.
 Proof.
   intros ind mdecl idecl u u' napp isdecl up cu cu' hR Γ pars pars' sppars sppars' eq.
   unshelve epose proof (spine_subst_smash_inv _ sppars) as [parsubst sppars2].

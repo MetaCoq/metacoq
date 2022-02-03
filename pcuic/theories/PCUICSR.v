@@ -255,7 +255,7 @@ Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} Γ Δ Δ' :
   eq_context_upto_names Δ Δ' ->
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
-  context_equality_rel false Σ Γ Δ Δ'.
+  context_equality_rel Conv Σ Γ Δ Δ'.
 Proof.
   induction 1.
   - constructor; auto. constructor.
@@ -551,8 +551,8 @@ Qed.
 Lemma conv_ctx_set_binder_name {cf} {Σ : global_env_ext} {wfΣ : wf Σ} (Γ Δ Δ' : context) (nas : list aname) :
   All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
   All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ' ->
-  context_equality_rel false Σ Γ Δ Δ' ->
-  context_equality_rel false Σ Γ (map2 set_binder_name nas Δ) (map2 set_binder_name nas Δ').
+  context_equality_rel Conv Σ Γ Δ Δ' ->
+  context_equality_rel Conv Σ Γ (map2 set_binder_name nas Δ) (map2 set_binder_name nas Δ').
 Proof.
   induction 1 in Δ' |- *; intros H; depelim H; intros [cl H']; split; auto;
   depelim H'. cbn. constructor; auto. eapply IHX; auto. split; auto.
@@ -565,7 +565,7 @@ Proof.
     apply eq_context_gen_eq_context_upto; tc.
     apply eq_binder_annots_eq_context_gen_ctx => //. }
   depelim a; cbn in *; constructor; auto;
-  eapply (equality_equality_ctx (le':=false)); tea.
+  eapply (equality_equality_ctx (pb':=Conv)); tea.
 Qed.
     
 Lemma OnOne2_All2_All2 {A B : Type} {l1 l2 : list A} {l3 : list B} {R1  : A -> A -> Type} {R2 R3 : A -> B -> Type} :
@@ -1274,7 +1274,7 @@ Proof.
 Qed.
   
 Lemma closed_red1_equality {cf} {Σ} {wfΣ : wf Σ} {Γ} {t u} : 
-  closed_red1 Σ Γ t u -> equality false Σ Γ t u.
+  closed_red1 Σ Γ t u -> equality Conv Σ Γ t u.
 Proof.
   intros cl. now eapply red_conv, closed_red1_red.
 Qed. 
@@ -1497,7 +1497,7 @@ Lemma type_Cumul_alt {cf} {Σ} {wfΣ : wf Σ} (Γ : context) (t T T' : term) :
   Σ;;; Γ |- T <= T' → Σ;;; Γ |- t : T'.
 Proof.
   intros Ht isty cum.
-  eapply (type_equality (le:=true)); tea.
+  eapply (type_equality (pb:=Cumul)); tea.
   eapply into_equality; fvs.
 Qed.
 
@@ -1540,7 +1540,7 @@ Proof.
       exact tu.
       red. depelim p. destruct s as [[red <-]|[red <-]]; subst.
       specialize (t2 _ red). eapply type_equality; tea.
-      exists tu.π1. apply t2. eapply (red_equality (le:=true)).
+      exists tu.π1. apply t2. eapply (red_equality (pb:=Cumul)).
       now eapply closed_red1_red.
       now eapply t1.
       
@@ -1812,7 +1812,7 @@ Proof.
         apply context_equality_rel_app. apply context_equality_eq_le. symmetry.
         etransitivity; tea. } 
     rewrite subst_context_nil -heq_ind_npars in hb *.
-    eapply (type_equality (le:=true)). exact hb. 3:auto.
+    eapply (type_equality (pb:=Cumul)). exact hb. 3:auto.
     assumption. clear hb.
     rewrite /case_branch_type.
     set cbtyg := (case_branch_type_gen _ _ _ _ _ _ _ _ _).
@@ -1820,7 +1820,7 @@ Proof.
     transitivity (subst0 (List.rev (skipn (ind_npars mdecl) args)) (expand_lets prebrctx cbtyg.2)).
     { eapply equality_eq_le.
       eapply (substitution_equality (Γ'' := [])). eapply spbrctx. 
-      symmetry. apply (equality_expand_lets_equality_ctx (le:=true)); tea. 
+      symmetry. apply (equality_expand_lets_equality_ctx (pb:=Cumul)); tea. 
       eapply wt_equality_refl.
       rewrite case_branch_type_fst in cbty.
       eapply closed_context_conversion in cbty. exact cbty.
@@ -2220,7 +2220,7 @@ Proof.
         eapply wf_local_closed_context.
         eapply wf_local_smash_end.
         apply weaken_wf_local => //. eapply on_minductive_wf_params; tea. eapply isdecl. }
-      eapply (type_equality (le:=false)); tea. 
+      eapply (type_equality (pb:=Conv)); tea. 
       + eapply closed_context_conversion; tea.
       + exists ps. exact wfcbcty'.
       + eapply equality_mkApps; tea.
@@ -2330,7 +2330,7 @@ Proof.
       split => //. split => //.
       eapply type_equality; tea.
       now exists ps.
-      eapply (equality_equality_ctx (le':=true)); tea.
+      eapply (equality_equality_ctx (pb':=Cumul)); tea.
       2:eapply closed_red1_equality, btyred.
       now apply context_equality_refl, wf_local_closed_context.
     * eapply equality_eq_le, equality_mkApps; tea.
@@ -2358,7 +2358,7 @@ Proof.
       eapply wt_equality_refl. eapply type_it_mkLambda_or_LetIn; tea.
       apply into_equality_terms.
       + eapply All2_app. apply All2_refl. reflexivity.
-        apply All2_tip. eapply (cumulAlgo_cumulSpec _ (le:=false)).
+        apply All2_tip. eapply (cumulAlgo_cumulSpec _ (pb:=Conv)).
         symmetry. now eapply closed_red1_equality.
       + now apply wf_local_closed_context.
       + eapply isType_open in X0.
@@ -2555,7 +2555,7 @@ Proof.
         rewrite List.skipn_length in H. lia. }
     destruct sp as [decl [Hnth Hu0]].
     simpl in on_projs. red in on_projs. len in Hnth. 
-    eapply type_equality; eauto.
+    eapply (type_equality (pb:=Cumul)); eauto.
     { rewrite firstn_skipn.
       eapply (isType_subst_instance_decl _ _ _ _ _ u wf isdecl.p1.p1.p1) in projty; eauto.
       destruct projty as [s' Hs].
@@ -2595,7 +2595,6 @@ Proof.
     set (argctxu1 := subst_context _ _ argsu1) in *.
     set (argctxu := subst_context _ _ argsu) in *.
     simpl.
-    instantiate (1:=true).
     set (pargctxu1 := subst_context cparsubst 0 argctxu1) in *.
     set (pargctxu := subst_context iparsubst 0 argctxu) in *.
     move=> [cumargs _]; eauto.
@@ -3166,7 +3165,7 @@ Section SRContext.
       - destruct p; subst. constructor.
         apply conv_ctx_refl.
         destruct s as [[red ->]|[red ->]].
-        constructor; pcuics. reflexivity. 
+        constructor; pcuics.
         now apply PCUICCumulativity.red_conv, red1_red.      
         constructor. pcuic. now apply PCUICCumulativity.red_conv, red1_red.
         reflexivity.

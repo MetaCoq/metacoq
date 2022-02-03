@@ -440,7 +440,7 @@ Section BDToPCUICTyping.
     - red ; intros.
       destruct X3.
       econstructor ; eauto.
-      eapply (cumulAlgo_cumulSpec _ (le := true)), into_equality ; tea.
+      eapply (cumulAlgo_cumulSpec _ (pb := Cumul)), into_equality ; tea.
       + fvs. 
       + now eapply type_is_open_term.
       + now eapply subject_is_open_term. 

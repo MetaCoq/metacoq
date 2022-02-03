@@ -199,7 +199,7 @@ Proof.
       rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r subst_mkApps /= in sp.
       apply (X (subst_context [t] 0 Γ0) ltac:(len; reflexivity) _ _ sp).
       eapply isType_apply in i; tea.
-      eapply (type_equality (le:=false)); tea. 2:now symmetry.
+      eapply (type_equality (pb:=Conv)); tea. 2:now symmetry.
       now eapply isType_tProd in i as [].
 Qed.
 

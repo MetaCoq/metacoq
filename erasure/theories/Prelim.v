@@ -228,7 +228,7 @@ Proof.
   intros. induction Γ2.
   - cbn; eauto.
   - destruct a. destruct decl_body.
-    + cbn. econstructor. inv X0. eauto. econstructor.
-      depelim X0; reflexivity. reflexivity. reflexivity.
-    + cbn. econstructor. inv X0. eauto. now econstructor.
+    + cbn. econstructor. inv X0. apply IHΓ2. eauto.
+      depelim X0; econstructor; reflexivity.
+    + cbn. econstructor. inv X0. apply IHΓ2. eauto. now econstructor.
 Qed.

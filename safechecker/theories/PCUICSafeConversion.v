@@ -199,21 +199,21 @@ Section Conversion.
     intros Γ t p w q s ht.
     rewrite R_aux_equation_1.
     unshelve eapply dlexmod_Acc.
-    - intros x y [e]. constructor. eapply eq_term_sym. assumption.
-    - intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
+    - intros x y [e]. constructor. symmetry. assumption.
+    - intros x y z [e1] [e2]. constructor. etransitivity. all: eauto.
     - intro u. eapply Subterm.wf_lexprod.
       + intro. eapply posR_Acc.
       + intros [w' q'].
         unshelve eapply dlexmod_Acc.
-        * intros x y [e]. constructor. eapply eq_term_sym. assumption.
-        * intros x y z [e1] [e2]. constructor. eapply eq_term_trans. all: eauto.
+        * intros x y [e]. constructor. symmetry. assumption.
+        * intros x y z [e1] [e2]. constructor. etransitivity. all: eauto.
         * intros [t' h']. eapply Subterm.wf_lexprod.
           -- intro. eapply posR_Acc.
           -- intro. eapply stateR_Acc.
         * intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]].
           eexists _,_. intuition eauto using sq.
-          constructor. eapply eq_term_trans. all: eauto.
-        * intros x. exists (sq (eq_term_refl _ _ _)). intros [[q'' h] ?].
+          constructor. etransitivity. all: eauto.
+        * intros x. exists (sq (compare_term_refl _ _ _)). intros [[q'' h] ?].
           unfold R_aux_obligations_obligation_2.
           simpl. f_equal. f_equal.
           eapply uip.
@@ -237,8 +237,8 @@ Section Conversion.
         * eapply wcored_wf.
     - intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]].
       eexists _,_. intuition eauto using sq.
-      constructor. eapply eq_term_trans. all: eauto.
-    - intros x. exists (sq (eq_term_refl _ _ _)). intros [[q' h] [? [? ?]]].
+      constructor. etransitivity. all: eauto.
+    - intros x. exists (sq (compare_term_refl _ _ _)). intros [[q' h] [? [? ?]]].
       unfold R_aux_obligations_obligation_1.
       simpl. f_equal. f_equal.
       eapply uip.
@@ -1285,13 +1285,13 @@ Section Conversion.
   
   Arguments LevelSet.mem : simpl never.
 
-  Notation conv_pb_relb := (conv_pb_relb G).
+  Notation compare_universeb := (compare_universeb G).
 
-  Lemma conv_pb_relb_complete leq u u' :
+  Lemma compare_universeb_complete leq u u' :
     wf_universe Σ u ->
     wf_universe Σ u' ->
-    conv_pb_rel leq (global_ext_constraints Σ) u u' ->
-    conv_pb_relb leq u u'.
+    compare_universe leq (global_ext_constraints Σ) u u' ->
+    compare_universeb leq u u'.
   Proof.
     intros all1 all2 conv.
     destruct heΣ.
@@ -1308,14 +1308,14 @@ Section Conversion.
     UnivExpr.get_level (UnivExpr.make l) = l.
   Proof. now destruct l. Qed.
   
-  Lemma conv_pb_relb_make_complete leq x y :
+  Lemma compare_universeb_make_complete leq x y :
     wf_universe_level Σ x ->
     wf_universe_level Σ y ->
-    conv_pb_rel leq (global_ext_constraints Σ) (Universe.make x) (Universe.make y) ->
-    conv_pb_relb leq (Universe.make x) (Universe.make y).
+    compare_universe leq (global_ext_constraints Σ) (Universe.make x) (Universe.make y) ->
+    compare_universeb leq (Universe.make x) (Universe.make y).
   Proof.
     intros wfx wfy r.
-    apply conv_pb_relb_complete; auto.
+    apply compare_universeb_complete; auto.
     - intros ? ->%UnivExprSet.singleton_spec; auto.
     - intros ? ->%UnivExprSet.singleton_spec; auto.
   Qed.
@@ -1336,27 +1336,27 @@ Section Conversion.
       cbn in *.
       apply Bool.andb_true_iff.
       split.
-      + apply (conv_pb_relb_make_complete Conv); auto.
+      + apply (compare_universeb_make_complete Conv); auto.
       + now apply IHu.
   Qed.
 
   Lemma compare_universe_variance_complete leq v u u' :
     wf_universe_level Σ u ->
     wf_universe_level Σ u' ->
-    R_universe_variance (eq_universe Σ) (conv_pb_rel leq Σ) v u u' ->
-    compare_universe_variance (check_eqb_universe G) (conv_pb_relb leq) v u u'.
+    R_universe_variance (eq_universe Σ) (compare_universe leq Σ) v u u' ->
+    compare_universe_variance (check_eqb_universe G) (compare_universeb leq) v u u'.
   Proof.
     intros memu memu' r.
     destruct v; cbn in *; auto.
-    - apply conv_pb_relb_make_complete; auto.
-    - apply (conv_pb_relb_make_complete Conv); auto.
+    - apply compare_universeb_make_complete; auto.
+    - apply (compare_universeb_make_complete Conv); auto.
   Qed.
 
   Lemma compare_universe_instance_variance_complete leq v u u' :
     wf_universe_instance Σ u ->
     wf_universe_instance Σ u' ->
-    R_universe_instance_variance (eq_universe Σ) (conv_pb_rel leq Σ) v u u' ->
-    compare_universe_instance_variance (check_eqb_universe G) (conv_pb_relb leq) v u u'.
+    R_universe_instance_variance (eq_universe Σ) (compare_universe leq Σ) v u u' ->
+    compare_universe_instance_variance (check_eqb_universe G) (compare_universeb leq) v u u'.
   Proof.
     intros memu memu' r.
     induction u in v, u', memu, memu', r |- *.
@@ -1376,8 +1376,8 @@ Section Conversion.
   Lemma compare_global_instance_complete u v leq gr napp :
     wf_universe_instance Σ u ->
     wf_universe_instance Σ v ->
-    R_global_instance Σ (eq_universe Σ) (conv_pb_rel leq Σ) gr napp u v ->
-    compare_global_instance Σ (check_eqb_universe G) (conv_pb_relb leq) gr napp u v.
+    R_global_instance Σ (eq_universe Σ) (compare_universe leq Σ) gr napp u v ->
+    compare_global_instance Σ (check_eqb_universe G) (compare_universeb leq) gr napp u v.
   Proof.
     intros consu consv r.
     unfold compare_global_instance, R_global_instance, R_opt_variance in *.
@@ -1588,12 +1588,12 @@ Section Conversion.
                forall (leq : conv_pb) (Δh : context_hole) (t : term) (Δh' : context_hole) (t' : term),
                  Δ = fill_context_hole Δh t ->
                  Δ' = fill_context_hole Δh' t' ->
-                 ∥ context_equality_rel false Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
+                 ∥ context_equality_rel Conv Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
                  ConversionResult (conv_cum leq Σ (Γ,,, context_hole_context Δh) t t'))
             (Δpre Δ'pre Δpost Δ'post : context)
             (eq : Δ = Δpre ,,, Δpost)
             (eq' : Δ' = Δ'pre ,,, Δ'post) :
-    ConversionResult (∥context_equality_rel false Σ Γ Δpre Δ'pre∥) by struct Δpre := {
+    ConversionResult (∥context_equality_rel Conv Σ Γ Δpre Δ'pre∥) by struct Δpre := {
 
     isconv_context_aux Γ Γ' Δ Δ' cc check [] [] Δpost Δ'post eq eq' => yes;
 
@@ -1732,9 +1732,9 @@ Section Conversion.
                forall (leq : conv_pb) (Δh : context_hole) (t : term) (Δh' : context_hole) (t' : term),
                  Δ = fill_context_hole Δh t ->
                  Δ' = fill_context_hole Δh' t' ->
-                 ∥context_equality_rel false Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
+                 ∥context_equality_rel Conv Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
                  ConversionResult (conv_cum leq Σ (Γ,,, context_hole_context Δh) t t'))
-    : ConversionResult (∥context_equality_rel false Σ Γ Δ Δ'∥) :=
+    : ConversionResult (∥context_equality_rel Conv Σ Γ Δ Δ'∥) :=
     isconv_context_aux Γ Γ' Δ Δ' cc check Δ Δ' [] [] eq_refl eq_refl.
 
   Lemma case_conv_brs_inv {Γ ci br br' p c brs1 brs2 π}
@@ -2320,7 +2320,7 @@ Section Conversion.
           forall Ξ,
             is_closed_context (Γ ,,, Ξ) ->
             #|Ξ| = i ->
-            equality_open_decls false Σ (Γ ,,, Ξ) d d'
+            equality_open_decls Conv Σ (Γ ,,, Ξ) d d'
         ) 0 l l'
       )
     end.
@@ -2659,7 +2659,7 @@ Section Conversion.
   Qed.
   
   Lemma conv_cum_red_conv_inv leq Γ Γ' t1 t2 t1' t2' :
-    context_equality false Σ Γ Γ' ->
+    context_equality Conv Σ Γ Γ' ->
     red Σ Γ t1 t1' ->
     red Σ Γ' t2 t2' ->
     sq_equality leq Σ Γ t1 t2 ->
@@ -5159,9 +5159,6 @@ Section Conversion.
       rewrite on_free_vars_mkApps in h2. now apply andb_true_iff in h2 as [].
   Qed.
 
-  Lemma leq_rel_conv_pb_dir leq : leq_rel (conv_pb_dir leq) = conv_pb_rel leq.
-  Proof. destruct leq; reflexivity. Qed.
-
   Next Obligation.
     unfold eqb_termp_napp in noteq.
     destruct ir1 as (notapp1&[whδ1]), ir2 as (notapp2&[whδ2]).
@@ -5197,7 +5194,6 @@ Section Conversion.
          apply inversion_Ind in typ2 as (?&?&?&?&?&?); auto.
          apply consistent_instance_ext_wf in c0.
          apply consistent_instance_ext_wf in c.
-         rewrite leq_rel_conv_pb_dir in H3.
          apply compare_global_instance_complete in H3; auto.
          rewrite PCUICParallelReductionConfluence.eqb_refl in noteq.
          apply All2_length in rargs1.
@@ -5218,7 +5214,6 @@ Section Conversion.
          apply inversion_Construct in typ2 as (?&?&?&?&?&?&?); auto.
          apply consistent_instance_ext_wf in c0.
          apply consistent_instance_ext_wf in c.
-         rewrite leq_rel_conv_pb_dir in H4.
          apply compare_global_instance_complete in H4; auto.
          rewrite !PCUICParallelReductionConfluence.eqb_refl in noteq.
          apply All2_length in rargs1.
@@ -5248,8 +5243,7 @@ Section Conversion.
       simpl in h2.
       apply inversion_Sort in h2 as (_&h2&_); auto.
       apply inversion_Sort in h1 as (_&h1&_); auto.
-      rewrite leq_rel_conv_pb_dir in H0.      
-      eapply conv_pb_relb_complete in H0; eauto.
+      eapply compare_universeb_complete in H0; eauto.
       congruence.
   Qed.
   

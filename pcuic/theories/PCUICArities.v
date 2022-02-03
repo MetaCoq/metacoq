@@ -136,7 +136,7 @@ Section WfEnv.
     | Some (ctx, s) =>
       ∑ T' ctx' s',
         [× Σ ;;; Γ ⊢ T ⇝ T', (destArity [] T' = Some (ctx', s')),
-          context_equality false Σ (Γ ,,, smash_context [] ctx) (Γ ,,, ctx') &
+          Σ ⊢ Γ ,,, smash_context [] ctx = Γ ,,, ctx' &
           leq_universe (global_ext_constraints Σ) s s']
     | None => unit
     end.
@@ -236,18 +236,18 @@ Section WfEnv.
     exists s'. now eapply (substitution (T:=tSort _)).
   Qed.
 
-  Lemma type_equality {le Γ t} T {U} :
+  Lemma type_equality {pb Γ t} T {U} :
     Σ ;;; Γ |- t : T ->
     isType Σ Γ U ->
-    Σ ;;; Γ ⊢ T ≤[le] U ->
+    Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ |- t : U.
   Proof.
     intros.
     eapply type_Cumul; tea. apply X0.π2.
-    destruct le.
-    - now eapply (cumulAlgo_cumulSpec Σ (le:=true)).
+    destruct pb.
     - eapply equality_eq_le in X1.
       now eapply cumulAlgo_cumulSpec in X1.
+    - now eapply cumulAlgo_cumulSpec.
   Qed.
 
   Lemma isType_tLetIn_red {Γ} (HΓ : wf_local Σ Γ) {na t A B}
@@ -258,7 +258,7 @@ Section WfEnv.
     exists s.
     assert (Hs := typing_wf_universe _ H).
     apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
-    eapply (type_equality (le:=true)) with (A' {0 := t}). eapply substitution_let in HB; eauto.
+    eapply (type_equality (pb:=Cumul)) with (A' {0 := t}). eapply substitution_let in HB; eauto.
     * econstructor; eauto with pcuic. econstructor; eauto.
     * eapply equality_Sort_r_inv in H as [s' [H H']].
       transitivity (tSort s'); eauto.
@@ -615,7 +615,7 @@ Section WfEnv.
       rewrite !subst_empty in t3.
       forward IHn.
       eapply type_Cumul. eapply t1. econstructor; intuition eauto using typing_wf_local with pcuic.
-      eapply (cumulAlgo_cumulSpec _ (le:=true)), e. rewrite {2}Hl in IHn.
+      eapply (cumulAlgo_cumulSpec _ (pb:=Cumul)), e. rewrite {2}Hl in IHn.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
       
       intros Hs.

@@ -6,6 +6,7 @@ Require Import ssreflect.
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.
 
+Implicit Types (cf : checker_flags).
 
 Ltac absurd :=
   match goal with
@@ -1620,9 +1621,8 @@ Section Univ.
     intros [l r]. now eapply leq_universe_antisym.
   Defined.
 
-
-  Definition eq_universe_leq_universe' {cf} φ u u'
-    := @eq_universe_leq_universe cf φ u u'.
+  Definition eq_universe_leq_universe' φ u u'
+    := @eq_universe_leq_universe φ u u'.
   Definition leq_universe_refl' φ u
     := @leq_universe_refl φ u.
 
@@ -2203,3 +2203,32 @@ Section no_prop_leq_type.
   Qed.
 
 End no_prop_leq_type.
+
+Definition compare_universe {cf:checker_flags} (pb : conv_pb) :=
+  match pb with
+  | Conv => eq_universe
+  | Cumul => leq_universe
+  end.
+  
+#[global] Instance compare_universe_subrel {cf} pb Σ : RelationClasses.subrelation (eq_universe Σ) (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_refl {cf} pb Σ : RelationClasses.Reflexive (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_trans {cf} pb Σ : RelationClasses.Transitive (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_preorder {cf} pb Σ : RelationClasses.PreOrder (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.

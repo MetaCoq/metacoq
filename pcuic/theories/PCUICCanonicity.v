@@ -262,7 +262,7 @@ Section Spines.
       eapply wf_local_rel_app_inv in wfty as [wfty _]. depelim wfty.
       eapply equality_Prod_Prod_inv in e as [eqna dom codom].
       assert (Σ ;;; Γ |- hd : ty).
-      { eapply (type_equality (le:=false)); pcuic. now symmetry. }
+      { eapply (type_equality (pb:=Conv)); pcuic. now symmetry. }
       eapply (substitution0_equality (t:=hd)) in codom; eauto.
       eapply typing_spine_strengthen in sp. 3:tea.
       rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp.
@@ -321,7 +321,7 @@ Section Spines.
         rewrite subst_app_simpl /=; len; rewrite H.
         now rewrite -(expand_lets_subst_comm _ _ _).
         eapply isType_apply in i; tea.
-        eapply (type_equality (le:=false)); tea. 2:now symmetry.
+        eapply (type_equality (pb:=Conv)); tea. 2:now symmetry.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -351,7 +351,7 @@ Section Spines.
         apply (H (subst_context [t] 0 Γ0) ltac:(len; reflexivity) _ _ sp).
         now len.
         eapply isType_apply in i; tea.
-        eapply (type_equality (le:=false)); tea. 2:now symmetry.
+        eapply (type_equality (pb:=Conv)); tea. 2:now symmetry.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -1133,7 +1133,7 @@ Section WeakNormalization.
       eapply IHHe3.
       rewrite (closed_subst a' 0 b); auto.
       rewrite /subst1 in t3. eapply t3.
-      eapply (type_equality (le:=false)); eauto.
+      eapply (type_equality (pb:=Conv)); eauto.
       eapply subject_reduction in IHHe2; eauto. now eexists.
       eapply equality_Prod_Prod_inv in e0 as [eqna dom codom]; eauto.
       now symmetry.

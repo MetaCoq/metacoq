@@ -115,22 +115,21 @@ Lemma compare_term_subset {cf:checker_flags} le Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> compare_term le Σ φ t t' -> compare_term le Σ φ' t t'.
 Proof.
-  destruct le; [apply leq_term_subset|apply eq_term_subset].
+  destruct le; [apply eq_term_subset|apply leq_term_subset].
 Qed.
 
-Lemma eq_decl_subset {cf:checker_flags} le Σ φ φ' d d'
+Lemma compare_decl_subset {cf:checker_flags} le Σ φ φ' d d'
   : ConstraintSet.Subset φ φ'
-    -> eq_decl le Σ φ d d' -> eq_decl le Σ φ' d d'.
+    -> compare_decl le Σ φ d d' -> compare_decl le Σ φ' d d'.
 Proof.
-  intros Hφ []; constructor; destruct le;
-  eauto using leq_term_subset, eq_term_subset.
+  intros Hφ []; constructor; eauto using compare_term_subset.
 Qed.
 
-Lemma eq_context_subset {cf:checker_flags} le Σ φ φ' Γ Γ'
+Lemma compare_context_subset {cf:checker_flags} le Σ φ φ' Γ Γ'
   : ConstraintSet.Subset φ φ'
-    -> eq_context le Σ φ Γ Γ' ->  eq_context le Σ φ' Γ Γ'.
+    -> compare_context le Σ φ Γ Γ' ->  compare_context le Σ φ' Γ Γ'.
 Proof.
-  intros Hφ. induction 1; constructor; auto; eapply eq_decl_subset; eassumption.
+  intros Hφ. induction 1; constructor; auto; eapply compare_decl_subset; eassumption.
 Qed.
 
 Ltac my_rename_hyp h th :=
@@ -334,7 +333,7 @@ Proof.
   induction 1; simpl.
   - econstructor. eapply eq_term_subset.
     + eapply global_ext_constraints_app.
-    + simpl in *. eapply eq_term_upto_univ_weaken_env in e; simpl; eauto.
+    + simpl in *. eapply eq_term_upto_univ_weaken_env in c; simpl; eauto.
       1:exists Σ''; eauto.
       all:typeclasses eauto.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.
@@ -351,7 +350,7 @@ Proof.
   induction 1; simpl.
   - econstructor. eapply leq_term_subset.
     + eapply global_ext_constraints_app.
-    + simpl in *. eapply eq_term_upto_univ_weaken_env in e; simpl; eauto.
+    + simpl in *. eapply eq_term_upto_univ_weaken_env in c; simpl; eauto.
       1:exists Σ''; eauto.
       all:typeclasses eauto.
   - econstructor 2; eauto. eapply weakening_env_red1; eauto. exists Σ''; eauto.

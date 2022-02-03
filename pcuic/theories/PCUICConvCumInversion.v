@@ -15,8 +15,8 @@ Set Default Goal Selector "!".
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Definition conv_cum {cf:checker_flags} leq Σ Γ u v :=
-  ∥ Σ ;;; Γ ⊢ u ≤[conv_pb_dir leq] v ∥.
+Definition conv_cum {cf:checker_flags} pb Σ Γ u v :=
+  ∥ Σ ;;; Γ ⊢ u ≤[pb] v ∥.
 
 Lemma eq_term_eq_termp {cf:checker_flags} leq (Σ : global_env_ext) x y :
   eq_term Σ Σ x y ->
@@ -44,7 +44,7 @@ Lemma red_ctx_rel_par_conv {cf Σ Γ Γ0 Γ0' Γ1 Γ1'} {wfΣ : wf Σ} :
   red_ctx_rel Σ Γ Γ0 Γ0' ->
   red_ctx_rel Σ Γ Γ1 Γ1' ->
   eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ0' Γ1' ->
-  context_equality_rel false Σ Γ Γ0 Γ1.
+  context_equality_rel Conv Σ Γ Γ0 Γ1.
 Proof.
   intros clΓ0 clΓ1 r0 r1 eq.
   apply red_ctx_rel_red_context_rel, red_context_app_same_left in r0; auto.
@@ -54,12 +54,12 @@ Proof.
   eapply red_ctx_red_context in r0; eapply red_ctx_red_context in r1.
   eapply into_closed_red_ctx in r0 => //.
   eapply into_closed_red_ctx in r1 => //.
-  eapply (red_ctx_context_equality (l:=false)) in r0.
-  eapply (red_ctx_context_equality (l:=false)) in r1.
+  eapply (red_ctx_context_equality (l:=Conv)) in r0.
+  eapply (red_ctx_context_equality (l:=Conv)) in r1.
   apply context_equality_rel_app. etransitivity; tea.
   symmetry. etransitivity; tea.
   eapply (eq_context_upto_cat _ _ _ Γ _ Γ) in eq. 2:reflexivity.
-  eapply (eq_context_upto_context_equality (le:=false)) in eq. 2-3:fvs.
+  eapply (eq_context_upto_context_equality (pb:=Conv)) in eq. 2-3:fvs.
   now symmetry.
 Qed.
 
@@ -167,8 +167,8 @@ Proof.
   assert (forall P Q, (P <~> Q) -> (∥P∥ <-> ∥Q∥)) by
       (intros P Q H; split; intros [p]; constructor; apply H in p; auto).
   destruct leq; cbn; apply H.
-  * eapply (equality_alt_closed (le:=false)).
-  * eapply (equality_alt_closed (le:=true)).
+  * eapply (equality_alt_closed (pb:=Conv)).
+  * eapply (equality_alt_closed (pb:=Cumul)).
 Qed.
 
 Lemma conv_conv_cum_l {cf:checker_flags} :
@@ -378,7 +378,7 @@ Section fixed.
             eapply on_ctx_free_vars_inst_case_context; auto.
             1:now rewrite test_context_k_closed_on_free_vars_ctx.
             now erewrite -> on_free_vars_ctx_on_ctx_free_vars. }
-      eapply (equality_equality_ctx (Γ := Γ ,,, inst_case_predicate_context p') (le':=false)) => //.
+      eapply (equality_equality_ctx (Γ := Γ ,,, inst_case_predicate_context p') (pb':=Conv)) => //.
       symmetry. eapply red_equality.
       eapply into_closed_red; eauto. 1:fvs.
       len. now setoid_rewrite shiftnP_add in p1.

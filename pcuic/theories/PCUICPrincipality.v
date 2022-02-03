@@ -165,7 +165,7 @@ Section Principality.
       assert(Σ ;;; Γ ,, vass x1 A' ⊢ B' = B'').
       { transitivity x4 => //.
         - now eapply red_equality.
-        - symmetry. eapply (equality_equality_ctx (le:=false)); tea.
+        - symmetry. eapply (equality_equality_ctx (pb:=Conv)); tea.
           2:eapply red_equality; tea.
           constructor; auto. eapply context_equality_refl. fvs.
           constructor. reflexivity. now symmetry. }
@@ -175,11 +175,11 @@ Section Principality.
       have convctx : Σ ⊢ Γ ,, vass na' dom' = Γ ,, vass x1 A'.
       { constructor. apply context_equality_refl. fvs. constructor => //. transitivity A'' => //.
         now symmetry. now symmetry. }
-      transitivity B'' => //. eapply (equality_equality_ctx (le':=false)); tea.
+      transitivity B'' => //. eapply (equality_equality_ctx (pb':=Conv)); tea.
       now apply equality_eq_le.
       eapply type_App'. tea.
       eapply type_reduction; eauto. eapply redA.
-      eapply (type_equality (le:=true)); eauto.
+      eapply (type_equality (pb:=Cumul)); eauto.
       { eapply validity in t0; auto.
         eapply isType_red in t0; [|exact redA].
         eapply isType_tProd in t0 as [? ?]; eauto. }
@@ -502,7 +502,7 @@ Proof.
     { repeat constructor; pcuic. }
     specialize (X3 onu t0 B).
     forward X3 by eapply context_conversion; eauto; pcuic.
-    eapply (type_equality (le:=false)).
+    eapply (type_equality (pb:=Conv)).
     * econstructor. eauto. instantiate (1 := bty).
       eapply context_conversion; eauto; pcuic.
       constructor; pcuic. constructor; pcuic. symmetry; constructor; auto.
@@ -534,7 +534,7 @@ Proof.
       now instantiate (1 := b'_ty).
     * eapply PCUICValidity.validity; eauto.
       econstructor; eauto.
-    * eapply (equality_LetIn (leq:=false)); pcuic.
+    * eapply (equality_LetIn (pb:=Conv)); pcuic.
       constructor; auto; fvs.
       constructor; fvs.
       apply equality_refl; fvs.
@@ -576,7 +576,7 @@ Proof.
     eapply PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
-    eapply (type_equality (le:=false)); eauto.
+    eapply (type_equality (pb:=Conv)); eauto.
     econstructor; eauto.
     eapply validity; eauto.
     econstructor; eauto.
@@ -654,7 +654,7 @@ Proof.
     eapply eq_term_empty_eq_term in X4.
     assert (wf_ext Σ) by (split; assumption).
     pose proof (principal_type_ind X3 a0) as [Ruu' X3'].
-    eapply (type_equality (le:=false)).
+    eapply (type_equality (pb:=Conv)).
     * clear a0.
       econstructor; eauto.
       now rewrite (All2_length X3').

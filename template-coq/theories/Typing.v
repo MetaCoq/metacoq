@@ -486,8 +486,7 @@ Definition leq_term_nocast `{checker_flags} (Σ : global_env) (φ : ConstraintSe
   leq_term Σ φ (strip_casts t) (strip_casts u).
 
 Reserved Notation " Σ ;;; Γ |- t : T " (at level 50, Γ, t, T at next level).
-Reserved Notation " Σ ;;; Γ |- t <= u " (at level 50, Γ, t, u at next level).
-Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
+Reserved Notation " Σ ;;; Γ |- t <=[ pb ] u " (at level 50, Γ, t, u at next level).
 
 (** ** Cumulativity:
 
@@ -496,23 +495,19 @@ Reserved Notation " Σ ;;; Γ |- t = u " (at level 50, Γ, t, u at next level).
   on well-typed terms. 
 *)
 
-Inductive cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
- | cumul_refl t u : leq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <= u
- | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <= u -> Σ ;;; Γ |- t <= u
- | cumul_red_r t u v : Σ ;;; Γ |- t <= v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <= u
-  where "Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u).
+Inductive cumul_gen `{checker_flags} (Σ : global_env_ext) (Γ : context) (pb : conv_pb) : term -> term -> Type :=
+ | cumul_refl t u : compare_term pb Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t <=[pb] u
+ | cumul_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v <=[pb] u -> Σ ;;; Γ |- t <=[pb] u
+ | cumul_red_r t u v : Σ ;;; Γ |- t <=[pb] v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t <=[pb] u
+  where "Σ ;;; Γ |- t <=[ pb ] u " := (cumul_gen Σ Γ pb t u).
 
 (** *** Conversion
 
   Reduction to terms in the eq_term relation
  *)
 
-Inductive conv `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> term -> Type :=
- | conv_refl t u : eq_term Σ (global_ext_constraints Σ) t u -> Σ ;;; Γ |- t = u
- | conv_red_l t u v : red1 Σ.1 Γ t v -> Σ ;;; Γ |- v = u -> Σ ;;; Γ |- t = u
- | conv_red_r t u v : Σ ;;; Γ |- t = v -> red1 Σ.1 Γ u v -> Σ ;;; Γ |- t = u
-
- where " Σ ;;; Γ |- t = u " := (@conv _ Σ Γ t u) : type_scope.
+Notation " Σ ;;; Γ |- t = u " := (cumul_gen Σ Γ Conv t u) (at level 50, Γ, t, u at next level) : type_scope.
+Notation " Σ ;;; Γ |- t <= u " := (cumul_gen Σ Γ Cumul t u) (at level 50, Γ, t, u at next level) : type_scope.
 
 Lemma conv_refl' `{checker_flags} : forall Σ Γ t, Σ ;;; Γ |- t = t.
   intros. constructor. apply eq_term_refl.
@@ -541,8 +536,7 @@ Module TemplateEnvTyping := EnvTyping TemplateTerm Env.
 Include TemplateEnvTyping.
 
 Module TemplateConversionPar <: ConversionParSig TemplateTerm Env TemplateEnvTyping.
-  Definition conv := @conv.
-  Definition cumul := @cumul.
+  Definition cumul_gen := @cumul_gen.
 End TemplateConversionPar.
 
 Module TemplateConversion := Conversion TemplateTerm Env TemplateEnvTyping TemplateConversionPar.
@@ -884,8 +878,6 @@ Module TemplateTyping <: Typing TemplateTerm Env TemplateEnvTyping
 
   Definition typing := @typing.
   Definition wf_universe := @wf_universe.
-  Definition conv := @conv.
-  Definition cumul := @cumul.
   Definition inds := inds.
   Definition destArity := destArity [].
 End TemplateTyping.

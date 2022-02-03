@@ -805,16 +805,22 @@ Ltac outtimes :=
     destruct ih as [? ?]
   end.
 
-Lemma red1_cumul {cf} (Σ : global_env_ext) Γ T U : TT.red1 Σ Γ T U -> TT.cumul Σ Γ T U.
+Lemma red1_cumul {cf} (Σ : global_env_ext) pb Γ T U : TT.red1 Σ Γ T U -> TT.cumul_gen Σ Γ pb T U.
 Proof.
   intros r.
-  econstructor 2; tea. constructor. apply TermEquality.leq_term_refl.
+  econstructor 2; tea. constructor. 
+  destruct pb.
+  - apply TermEquality.eq_term_refl.
+  - apply TermEquality.leq_term_refl.
 Qed.
 
-Lemma red1_cumul_inv {cf} (Σ : global_env_ext) Γ T U : TT.red1 Σ Γ T U -> TT.cumul Σ Γ U T.
+Lemma red1_cumul_inv {cf} (Σ : global_env_ext) pb Γ T U : TT.red1 Σ Γ T U -> TT.cumul_gen Σ Γ pb U T.
 Proof.
   intros r.
-  econstructor 3; tea. constructor. eapply TermEquality.leq_term_refl.
+  econstructor 3; tea. constructor.
+  destruct pb.
+  - eapply TermEquality.eq_term_refl.
+  - eapply TermEquality.leq_term_refl.
 Qed.
 
 Definition TTconv {cf} (Σ : global_env_ext) Γ : relation term := 
@@ -1530,11 +1536,11 @@ End wtcumul.
 
 Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
   wt_cumul Σ Γ T U ->
-  TT.cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+  TT.cumul_gen (trans_global Σ) (trans_local Γ) Cumul (trans T) (trans U).
 Proof.
   induction 1. 
   - constructor; auto.
-    eapply trans_leq_term in l.
+    eapply trans_leq_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
     apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
@@ -1934,8 +1940,8 @@ Proof.
   intros sp.
   induction sp in S' => tyT cum.
   * constructor; auto. now eapply equality_forget in cum.
-  * constructor; auto. eapply (into_equality (le:=true)) in c; fvs.
-    eapply (equality_forget (le:=true)). now transitivity ty'.
+  * constructor; auto. eapply (into_equality (pb:=Cumul)) in c; fvs.
+    eapply (equality_forget (pb:=Cumul)). now transitivity ty'.
   * intros isType. econstructor. eauto. eauto. eauto.
     apply IHsp; auto. eapply PCUICArities.isType_apply; tea.
 Defined.
@@ -1991,7 +1997,7 @@ Qed.
 Lemma TT_typing_spine_app {cf:checker_flags} Σ Γ ty T' args na A B arg s :
   TT.typing Σ Γ (T.tProd na A B) (T.tSort s) ->
   TT.typing_spine Σ Γ ty args T' ->
-  TT.cumul Σ Γ T' (T.tProd na A B) ->
+  TT.cumul_gen Σ Γ Cumul T' (T.tProd na A B) ->
   TT.typing Σ Γ arg A ->
   TT.typing_spine Σ Γ ty (args ++ [arg]) (T.subst1 arg 0 B).
 Proof.
@@ -2077,7 +2083,7 @@ Lemma make_typing_spine {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ fty l T}
   typing_spine_size sp <= n ->
   ∑ T', TT.typing_spine (trans_global Σ) (trans_local Γ) (trans fty) (map trans l) T' * 
     ((T' = trans T) +
-      (TT.cumul (trans_global Σ) (trans_local Γ) T' (trans T) *
+      (TT.cumul_gen (trans_global Σ) (trans_local Γ) Cumul T' (trans T) *
        ∑ s, TT.typing (trans_global Σ) (trans_local Γ) (trans T) (T.tSort s)))%type.
 Proof.
   induction sp; simpl; intros.

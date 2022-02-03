@@ -529,52 +529,46 @@ Section CheckEnv.
     typing_result (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
     check_equality_ctx (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ Δ Δ' wfΔ wfΔ'.
   
-  Program Definition check_eq_term le (Σ : wf_env_ext) t u : typing_result (∥ compare_term le Σ Σ t u ∥) :=
-    check <- check_eq_true (if le then leqb_term Σ Σ t u else eqb_term Σ Σ t u) (Msg "Terms are not equal") ;;
+  Program Definition check_eq_term pb (Σ : wf_env_ext) t u : typing_result (∥ compare_term pb Σ Σ t u ∥) :=
+    check <- check_eq_true (eqb_termp Σ Σ pb t u) (Msg "Terms are not equal") ;;
     ret _.
     Next Obligation.
       destruct Σ as [Σ wfΣ G wfG]; simpl in *. sq.
-      destruct le; simpl.
-      - eapply leqb_term_spec in check; sq; auto.
-        eapply wfΣ.
-      - eapply eqb_term_spec in check; sq; auto.
-        apply wfΣ.
+      apply eqb_termp_napp_spec in check; sq; auto. eapply wfΣ.
     Qed.
 
-  Program Definition check_eq_decl le (Σ : wf_env_ext) d d' : typing_result (∥ eq_decl le Σ Σ d d' ∥) := 
+  Program Definition check_eq_decl pb (Σ : wf_env_ext) d d' : typing_result (∥ compare_decl pb Σ Σ d d' ∥) := 
     match d, d' return typing_result _ with
     | {| decl_name := na; decl_body := Some b; decl_type := ty |},
       {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} => 
       eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
-      eqb <- check_eq_term false Σ b b' ;;
-      leqty <- check_eq_term le Σ ty ty' ;;
+      eqb <- check_eq_term Conv Σ b b' ;;
+      leqty <- check_eq_term pb Σ ty ty' ;;
       ret (let 'sq eqb := eqb in 
             let 'sq leqty := leqty in
             sq _)
     | {| decl_name := na; decl_body := None; decl_type := ty |},
       {| decl_name := na'; decl_body := None; decl_type := ty' |} => 
       eqna <- check_eq_true (eqb_binder_annot na na') (Msg "Binder annotations do not match") ;;
-      cumt <- check_eq_term le Σ ty ty' ;;
+      cumt <- check_eq_term pb Σ ty ty' ;;
       ret (let 'sq cumt := cumt in sq _)  
     | _, _ => raise (Msg "While checking syntactic cumulativity of contexts: declarations do not match")
     end.
     Next Obligation.
       eapply eqb_binder_annot_spec in eqna.
-      constructor; auto. red in leqty.
-      destruct le; auto.
+      constructor; auto.
     Qed.
     Next Obligation.
       eapply eqb_binder_annot_spec in eqna.
-      constructor; auto. red in cumt.
-      destruct le; auto.
+      constructor; auto. 
     Qed.
     
-  Program Fixpoint check_leq_context (le : bool) (Σ : wf_env_ext) Γ Δ : typing_result (∥ eq_context le Σ Σ Γ Δ ∥) :=
+  Program Fixpoint check_compare_context (pb : conv_pb) (Σ : wf_env_ext) Γ Δ : typing_result (∥ PCUICEquality.compare_context pb Σ Σ Γ Δ ∥) :=
     match Γ, Δ with
     | [], [] => ret (sq (All2_fold_nil _))
     | decl :: Γ, decl' :: Δ => 
-      cctx <- check_leq_context le Σ Γ Δ ;;
-      cdecl <- check_eq_decl le Σ decl decl' ;;
+      cctx <- check_compare_context pb Σ Γ Δ ;;
+      cdecl <- check_eq_decl pb Σ decl decl' ;;
       ret _
     | _, _ => raise (Msg "While checking equality of contexts: contexts do not have the same length")
     end.
@@ -590,12 +584,12 @@ Section CheckEnv.
       intuition congruence.
     Qed.
 
-  Program Fixpoint check_leq_terms (le : bool) (Σ : wf_env_ext) l l' : typing_result (∥ All2 (compare_term le Σ Σ) l l' ∥) :=
+  Program Fixpoint check_leq_terms (pb : conv_pb) (Σ : wf_env_ext) l l' : typing_result (∥ All2 (compare_term pb Σ Σ) l l' ∥) :=
     match l, l' with
     | [], [] => ret (sq All2_nil)
     | t :: l, t' :: l' => 
-      cctx <- check_leq_terms le Σ l l' ;;
-      cdecl <- check_eq_term le Σ t t' ;;
+      cctx <- check_leq_terms pb Σ l l' ;;
+      cdecl <- check_eq_term pb Σ t t' ;;
       ret _
     | _, _ => raise (Msg "While checking equality of term lists: lists do not have the same length")
     end.
@@ -949,7 +943,7 @@ Section CheckEnv.
     etransitivity.
     symmetry.
     epose proof (red_expand_let (isType_wf_local isty)).
-    epose proof (weakening_equality (le:=false) (Γ := Γ ,, decl) (Γ' := []) (Γ'' := Δ)).
+    epose proof (weakening_equality (pb:=Conv) (Γ := Γ ,, decl) (Γ' := []) (Γ'' := Δ)).
     simpl in X0.
     eapply X0.
     symmetry. eapply red_conv. apply X. fvs. eapply isType_wf_local, wf_local_closed_context in isty'. fvs.
@@ -1367,7 +1361,7 @@ Section CheckEnv.
   Qed.
 
   Lemma eq_decl_eq_decl_upto (Σ : global_env_ext) x y : 
-    eq_decl true Σ Σ x y ->
+    compare_decl Cumul Σ Σ x y ->
     eq_decl_upto_gen Σ (eq_universe Σ) (leq_universe Σ) x y.
   Proof.
     intros []; constructor; intuition auto. cbn. constructor.
@@ -1410,7 +1404,7 @@ Section CheckEnv.
     reflexivity. tc. tc.
   Qed.
   Lemma leq_context_cumul_context (Σ : global_env_ext) Γ Δ Δ' : 
-    eq_context true Σ Σ Δ Δ' ->
+    PCUICEquality.compare_context Cumul Σ Σ Δ Δ' ->
     PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ'.
   Proof.
     intros eqc.
@@ -1556,11 +1550,11 @@ Section CheckEnv.
            TODO: do as in Coq's kernel and implement a routine that takes whnfs of both sides and compare
            syntactically the heads. *)
         check_args <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
-          (check_leq_context true wfext 
+          (check_compare_context Cumul wfext
             (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
             (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))) ;;
         check_indices <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
-          (check_leq_terms false wfext
+          (check_leq_terms Conv wfext
             (map (subst_instance u ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))
             (map (subst_instance u' ∘ expand_lets (ind_params mdecl ,,, cs.(cstr_args))) (cstr_indices cs))) ;;
         ret _
@@ -1864,7 +1858,7 @@ Section CheckEnv.
       | Some ((univs0, u), u') => 
         '(exist wfext eq) <- make_wf_env_ext Σ id univs0 ;;
         checkctx <- wrap_error wfext.(@wf_env_ext_env cf) (string_of_kername id)
-          (check_leq_context true wfext
+          (check_compare_context Cumul wfext
             (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
             (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))) ;;
         ret _

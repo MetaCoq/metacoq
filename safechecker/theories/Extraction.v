@@ -83,7 +83,7 @@ Extract Constant Z.abs_N => "Pervasives.abs".
    https://github.com/coq/coq/issues/7017. *)
 Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Numeral.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".

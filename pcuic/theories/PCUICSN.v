@@ -90,12 +90,12 @@ Section Alpha.
       destruct r as [u' [r e]].
       exists u'. split.
       * constructor. assumption.
-      * constructor. eapply eq_term_trans. 1: eauto.
-        eapply eq_term_sym. assumption.
-    - specialize IHr1 with (1 := eq_term_refl _ _ _) (2 := hv).
-      destruct IHr1 as [y' [h1 [e1]]].
-      specialize IHr2 with (1 := hu) (2 := eq_term_sym _ _ _ _ e1).
-      destruct IHr2 as [u' [h2 ?]].
+      * constructor. etransitivity. 1: eauto.
+        now symmetry.
+    - specialize (IHr1 y v).
+      destruct IHr1 as [y' [h1 [e1]]]; auto. reflexivity.
+      specialize (IHr2 u y').
+      destruct IHr2 as [u' [h2 ?]]; auto. now symmetry.
       exists u'. split.
       + eapply cored_trans'. all: eauto.
       + assumption.
@@ -110,8 +110,8 @@ Section Alpha.
     intros Γ u v v' h e.
     eapply cored'_postpone.
     exists u, v. intuition eauto.
-    - constructor. apply eq_term_refl.
-    - constructor. apply eq_term_sym. assumption.
+    - constructor. reflexivity.
+    - constructor. now symmetry.
   Qed.
 
   Lemma Acc_impl :
@@ -133,12 +133,12 @@ Section Alpha.
     intros Γ u h. induction h as [u h ih].
     intros u' e. constructor. intros v [v' [u'' [r [[e1] [e2]]]]].
     assert (ee : eq_term Σ Σ u'' u).
-    { eapply eq_term_sym. eapply eq_term_trans. all: eassumption. }
+    { symmetry. etransitivity. all: eassumption. }
     eapply cored_upto in r as hh. 2: exact ee.
     destruct hh as [v'' [r' [e']]].
     eapply ih.
     - eassumption.
-    - eapply eq_term_sym. eapply eq_term_trans. all: eassumption.
+    - symmetry; etransitivity; eassumption.
   Qed.
 
   Lemma normalisation_upto :
@@ -152,7 +152,7 @@ Section Alpha.
     2: assumption.
     eapply Acc_cored_cored'.
     - eassumption.
-    - apply eq_term_refl.
+    - reflexivity.
   Qed.
 
   (* TODO Maybe switch to eq_context *)
@@ -274,8 +274,8 @@ Section Alpha.
   Proof.
     intros Γ u v h.
     exists u, v. intuition eauto.
-    - constructor. eapply eq_term_refl.
-    - constructor. eapply eq_term_refl.
+    - constructor. reflexivity.
+    - constructor. reflexivity.
   Qed.
 
 End Alpha.

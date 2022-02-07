@@ -30,7 +30,7 @@
 | [PCUICInduction] | Induction principle on syntax
 | [PCUICSize]      | Size of terms
 | [PCUICDepth]     | Depth of terms
-| [PCUICReflect]   | Decidability of equality between terms
+| [PCUICReflect]   | Decidability of ws_cumul_pb between terms
 | [PCUICContextRelations] | Helper lemmas for relations between contexts
 | [PCUICPosition]  | Notions of position and stack, well-order on positions
 
@@ -92,13 +92,13 @@
 [PCUICNamelessTyp]: ./Typing/PCUICNamelessTyp.v
 
 
-## Equality up to universes
+## ws_cumul_pb up to universes
 
 | File                  | Description
 | ----------------------| --------------------
-| [PCUICEquality]       | Equality up to universes between terms (`eq_term`)
+| [PCUICEquality]       | ws_cumul_pb up to universes between terms (`eq_term`)
 | [PCUICCasesContexts]  | Helper lemmas for the handling of case branche and predicate contexts
-| [PCUICEqualityDec]    | Decidability of equality up to universes
+| [PCUICEqualityDec]    | Decidability of ws_cumul_pb up to universes
 
 [PCUICCasesContexts]: ./PCUICCasesContexts.v
 [PCUICEquality]: ./PCUICEquality.v
@@ -113,7 +113,7 @@
 | [PCUICContextReduction] | Properties of reduction between contexts
 | [PCUICParallelReduction] | Definition of parallel reduction, and stability by weakening and substitution
 | [PCUICParallelReductionConfluence] | Proof of the diamond property for parallel reduction
-| [PCUICConfluence] | Proof of confluence for reduction and that equality up to universes is a simulation for reduction
+| [PCUICConfluence] | Proof of confluence for reduction and that ws_cumul_pb up to universes is a simulation for reduction
 | [PCUICRedTypeIrrelevance] | Types and names in the context are irrelevant for reduction, only the bodies of definitions are used
 
 

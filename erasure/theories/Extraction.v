@@ -20,7 +20,7 @@ Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(
 Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes Numeral
+           UnivSubst Typing Checker Retyping OrderedType Logic Common ws_cumul_pb Classes Numeral
            Uint63.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".

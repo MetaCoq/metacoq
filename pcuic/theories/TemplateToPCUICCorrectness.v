@@ -1732,40 +1732,24 @@ Proof.
     destruct a as [? []]; reflexivity.
 Qed.
 
-Lemma trans_conv {cf} (Σ : Ast.Env.global_env_ext) Γ T U :
+Lemma trans_cumul_gen {cf} (Σ : Ast.Env.global_env_ext) pb Γ T U :
   Typing.wf Σ.1 ->
   let Σ' := trans_global Σ in
   wf Σ' ->
   All (WfAst.wf_decl Σ.1) Γ ->
-  WfAst.wf Σ.1 T -> WfAst.wf Σ.1 U -> ST.conv Σ Γ T U ->
-  trans_global Σ ;;; trans_local Σ' Γ |- trans Σ' T = trans Σ' U.
+  WfAst.wf Σ.1 T -> WfAst.wf Σ.1 U -> ST.cumul_gen Σ Γ pb T U ->
+  trans_global Σ ;;; trans_local Σ' Γ |- trans Σ' T <=[pb] trans Σ' U.
 Proof.
   intros wfΣ Σ' wfΣ'.
   induction 4.
   - constructor. 
-    eapply trans_eq_term in e; eauto.
-    unfold leq_term_ext. 
-    now rewrite global_ext_constraints_trans.
-  - eapply cumul_red_l; tea. eapply trans_red1; tea. apply IHX2.
-    eapply wf_red1 in r; tea. now eapply typing_wf_sigma in wfΣ. auto.
-  - eapply cumul_red_r; tea. 2:eapply trans_red1; tea.
-    eapply IHX2. auto. eapply wf_red1 in r; tea. now eapply typing_wf_sigma; auto.
-Qed.
-
-Lemma trans_cumul {cf} (Σ : Ast.Env.global_env_ext) Γ T U :
-  Typing.wf Σ.1 ->
-  let Σ' := trans_global Σ in
-  wf Σ' ->
-  All (WfAst.wf_decl Σ.1) Γ ->
-  WfAst.wf Σ.1 T -> WfAst.wf Σ.1 U -> ST.cumul Σ Γ T U ->
-  trans_global Σ ;;; trans_local Σ' Γ |- trans Σ' T <= trans Σ' U.
-Proof.
-  intros wfΣ Σ' wfΣ'.
-  induction 4.
-  - constructor. 
-    eapply trans_leq_term in l; eauto.
-    unfold leq_term_ext.
-    now rewrite global_ext_constraints_trans.
+    destruct pb.
+    * eapply trans_eq_term in c; eauto.
+      unfold leq_term_ext. 
+      now rewrite global_ext_constraints_trans.
+    * eapply trans_leq_term in c; eauto.
+      unfold leq_term_ext. 
+      now rewrite global_ext_constraints_trans.
   - eapply cumul_red_l; tea. eapply trans_red1; tea. apply IHX2.
     eapply wf_red1 in r; tea. now eapply typing_wf_sigma in wfΣ. auto.
   - eapply cumul_red_r; tea. 2:eapply trans_red1; tea.
@@ -2135,39 +2119,39 @@ Qed.
 
 From MetaCoq.PCUIC Require Import PCUICOnFreeVars.
 
-Lemma trans_cumulSpec {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ.1} {Γ T T'} :
+Lemma trans_cumulSpec {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ.1} {pb Γ T T'} :
   let Σ' := trans_global Σ in
   wf Σ' ->
   All (WfAst.wf_decl Σ.1) Γ ->
   WfAst.wf Σ.1 T ->
   WfAst.wf Σ.1 T' ->
-  ST.cumul Σ Γ T T' ->
+  ST.cumul_gen Σ Γ pb T T' ->
   is_closed_context (trans_local Σ' Γ) ->
   is_open_term (trans_local Σ' Γ) (trans Σ' T) ->
   is_open_term (trans_local Σ' Γ) (trans Σ' T') ->
-  Σ';;; trans_local Σ' Γ |- trans Σ' T <=s trans Σ' T'.
+  Σ';;; trans_local Σ' Γ ⊢ trans Σ' T ≤s[pb] trans Σ' T'.
 Proof.
   intros Σ' wfΣ' wfΓ wfT wfT' cum clΓ clT clT'.
-  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (le:=true)).
-  eapply PCUICWellScopedCumulativity.into_equality; eauto with fvs.
-  eapply trans_cumul; tea.
+  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=pb)).
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb; eauto with fvs.
+  eapply trans_cumul_gen; tea.
 Qed.
 
-Lemma trans_cumulSpec_typed {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ.1} {Γ T T'} :
+Lemma trans_cumulSpec_typed {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ.1} {pb Γ T T'} :
   let Σ' := trans_global Σ in
   wf Σ' ->
   All (WfAst.wf_decl Σ.1) Γ ->
   WfAst.wf Σ.1 T ->
   WfAst.wf Σ.1 T' ->
-  ST.cumul Σ Γ T T' ->
+  ST.cumul_gen Σ Γ pb T T' ->
   isType Σ' (trans_local Σ' Γ) (trans Σ' T) ->
   isType Σ' (trans_local Σ' Γ) (trans Σ' T') ->
-  Σ';;; trans_local Σ' Γ |- trans Σ' T <=s trans Σ' T'.
+  Σ';;; trans_local Σ' Γ ⊢ trans Σ' T ≤s[pb] trans Σ' T'.
 Proof.
   intros Σ' wfΣ' wfΓ wfT wfT' cum ist ist'.
-  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (le:=true)).
-  eapply PCUICWellScopedCumulativity.into_equality; eauto with fvs.
-  eapply trans_cumul; tea.
+  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=pb)).
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb; eauto with fvs.
+  eapply trans_cumul_gen; tea.
   eapply isType_wf_local in ist; fvs.
 Qed.
 
@@ -2600,26 +2584,26 @@ Proof.
   move/andP: H0 => [] cl0' cl1'. len in cl1. len in cl1'.
   destruct p; constructor; cbn; auto; depelim X0; depelim X1; destruct w as []; destruct w0 as [].
   
-  eapply trans_cumul in c; tea.
-  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (le:=true)).
-  eapply PCUICWellScopedCumulativity.into_equality => //.
+  eapply trans_cumul_gen in eqt; tea.
+  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Cumul)).
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb => //.
   now eapply closed_ctx_on_free_vars in cl0.
   1-2:cbn in cl1, cl1'.
   1-2:rewrite closedn_on_free_vars //; len.
   now rewrite (All2_fold_length X).
 
-  eapply trans_conv in c; tea.
-  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (le:=false)).
-  eapply PCUICWellScopedCumulativity.into_equality => //.
+  eapply trans_cumul_gen in eqb; tea.
+  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Conv)).
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb => //.
   now eapply closed_ctx_on_free_vars in cl0.
   1-2:move/andP: cl1 => [] /= clb cbt.
   1-2:move/andP: cl1' => [] /= clb' cbt'.
   1-2:rewrite closedn_on_free_vars //; len.
   now rewrite (All2_fold_length X).
 
-  eapply trans_cumul in c0; tea.
-  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (le:=true)).
-  eapply PCUICWellScopedCumulativity.into_equality => //.
+  eapply trans_cumul_gen in eqt; tea.
+  eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Cumul)).
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb => //.
   now eapply closed_ctx_on_free_vars in cl0.
   1-2:move/andP: cl1 => [] /= clb cbt.
   1-2:move/andP: cl1' => [] /= clb' cbt'.
@@ -2749,12 +2733,12 @@ Proof.
     eapply All2_map. eapply All2_map_inv in a.
     eapply All2_refl_inv in a. eapply All_All2_refl.
     eapply All_map. solve_all.
-    eapply trans_conv in b0; tea.
+    eapply trans_cumul_gen in b0; tea.
     { move:b0; rewrite !trans_local_subst_instance !trans_local_app trans_arities_context.
       rewrite !trans_smash_context !trans_subst_instance !trans_expand_lets !trans_local_app //.
       intros h. simpl in h.
-      eapply (PCUICConversion.cumulAlgo_cumulSpec _ (le:=false)).
-      eapply PCUICWellScopedCumulativity.into_equality; tea.
+      eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Conv)).
+      eapply PCUICWellScopedCumulativity.into_ws_cumul_pb; tea.
       { move: clctx. 
         rewrite smash_context_app_expand.
         rewrite -!(trans_smash_context _ []).

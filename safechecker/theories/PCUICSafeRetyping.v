@@ -41,15 +41,15 @@ Add Search Blacklist "obligation".
 
 Require Import ssreflect.
 
-Lemma into_equality_terms_Algo {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ l l'} : 
+Lemma into_ws_cumul_pb_terms_Algo {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ l l'} : 
   All2 (convAlgo Σ Γ) l l' ->
   is_closed_context Γ ->
   forallb (is_open_term Γ) l ->
   forallb (is_open_term Γ) l' ->
-  equality_terms Σ Γ l l'.
+  ws_cumul_pb_terms Σ Γ l l'.
 Proof.
   solve_all.
-  now eapply into_equality.
+  now eapply into_ws_cumul_pb.
 Qed.
 
 Lemma on_free_vars_ind_predicate_context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {ind mdecl idecl} :
@@ -102,12 +102,12 @@ Lemma inductive_cumulative_indices_smash {cf : checker_flags} {Σ : global_env_e
   forall Γ pars pars',
   spine_subst Σ Γ pars (List.rev pars) (smash_context [] (subst_instance u (ind_params mdecl))) ->
   spine_subst Σ Γ pars' (List.rev pars') (smash_context [] (subst_instance u' (ind_params mdecl))) ->  
-  equality_terms Σ Γ pars pars' ->
+  ws_cumul_pb_terms Σ Γ pars pars' ->
   let indctx := idecl.(ind_indices)@[u] in
   let indctx' := idecl.(ind_indices)@[u'] in
   let pindctx := subst_context_let_expand (List.rev pars) (ind_params mdecl)@[u] (smash_context [] indctx) in
   let pindctx' := subst_context_let_expand (List.rev pars') (ind_params mdecl)@[u'] (smash_context [] indctx') in
-  context_equality_rel true Σ Γ pindctx pindctx'.
+  ws_cumul_ctx_pb_rel Cumul Σ Γ pindctx pindctx'.
 Proof.
   intros ind mdecl idecl u u' napp isdecl up cu cu' hR Γ pars pars' sppars sppars' eq.
   unshelve epose proof (spine_subst_smash_inv _ sppars) as [parsubst sppars2].
@@ -434,14 +434,14 @@ Qed.
     1: econstructor ; tea.
     1: now apply closed_red_red.
     econstructor ; tea.
-    eapply equality_forget_cumul.
+    eapply ws_cumul_pb_forget_cumul.
     etransitivity.
-    - eapply into_equality ; tea.
+    - eapply into_ws_cumul_pb ; tea.
       1,3: fvs.
       now eapply type_is_open_term, infering_typing.
     - etransitivity.
-      1: now eapply red_equality.
-      now eapply red_equality_inv.
+      1: now eapply red_ws_cumul_pb.
+      now eapply red_ws_cumul_pb_inv.
   Defined.
 
   Next Obligation.
@@ -542,14 +542,14 @@ Qed.
       2: symmetry.
       all: eapply All2_length ; eassumption.
     + eapply All2_impl.
-      2:intros; now eapply equality_forget_conv.
+      2:intros; now eapply ws_cumul_pb_forget_conv.
       etransitivity.
       1: eapply All2_firstn.
       1: etransitivity.
-      1: now eapply red_terms_equality_terms.
+      1: now eapply red_terms_ws_cumul_pb_terms.
       1: symmetry.
-      1: now eapply red_terms_equality_terms.
-      eapply PCUICConvCumInversion.alt_into_equality_terms ; tea.
+      1: now eapply red_terms_ws_cumul_pb_terms.
+      eapply PCUICConvCumInversion.alt_into_ws_cumul_pb_terms ; tea.
       * fvs.
       * eapply infering_ind_typing, validity, isType_open in X ; auto.
         rewrite on_free_vars_mkApps in X.
@@ -685,7 +685,7 @@ Qed.
     intros T'' HT''.
     apply typing_infering in HT'' as [P [HP HP']].
     eapply infering_checking;tea. 1-2: pcuic. fvs.
-    econstructor; tea. now eapply equality_forget in HP'.
+    econstructor; tea. now eapply ws_cumul_pb_forget in HP'.
   Qed.
     
   Open Scope type_scope.

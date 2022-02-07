@@ -36,7 +36,7 @@ Proof.
   - assumption.
 Qed.
 
-(** ** Boolean of equality **  *)
+(** ** Boolean of ws_cumul_pb **  *)
 
 Definition compare_universe_variance (equ lequ : Universe.t -> Universe.t -> bool) v u u' :=
   match v with
@@ -752,7 +752,7 @@ Proof.
   now unshelve epose proof (eq_term_upto_univ_refl Σ eqb leqb napp _ _ t).
 Qed.
 
-(** Checking equality *)
+(** Checking ws_cumul_pb *)
 
 Section EqualityDec.
   Context {cf : checker_flags}.
@@ -765,14 +765,14 @@ Section EqualityDec.
     destruct hΣ, Hφ; now constructor.
   Defined.
 
-  Definition conv_pb_relb pb :=
+  Definition compare_universeb pb :=
     match pb with
     | Conv => check_eqb_universe G
     | Cumul => check_leqb_universe G
     end.
   
   Definition eqb_termp_napp pb napp :=
-    eqb_term_upto_univ_napp Σ (check_eqb_universe G) (conv_pb_relb pb) napp.
+    eqb_term_upto_univ_napp Σ (check_eqb_universe G) (compare_universeb pb) napp.
 
     Lemma eq_universeP u u' :
     wf_universe Σ u ->
@@ -815,7 +815,7 @@ Section EqualityDec.
   Lemma leq_relP (pb : conv_pb) u u' :
     wf_universe Σ u ->
     wf_universe Σ u' ->
-    reflect (leq_rel pb Σ u u') (conv_pb_relb pb u u').
+    reflect (compare_universe pb Σ u u') (compare_universeb pb u u').
   Proof.
     destruct pb.
     - cbn.
@@ -966,7 +966,7 @@ Section EqualityDec.
     end.
 
   Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> eq_opt_term false Σ (global_ext_constraints Σ) t u.
+    : eqb_opt_term t u -> compare_opt_term Conv Σ (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn => //.
     apply eqb_term_spec; tea.
@@ -977,7 +977,7 @@ Section EqualityDec.
     eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
+    : eqb_decl d d' -> eq_decl Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. rtoProp. apply eqb_opt_term_spec in H1.
@@ -990,7 +990,7 @@ Section EqualityDec.
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
 
   Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context false Σ (global_ext_constraints Σ) Γ Δ.
+    : eqb_context Γ Δ -> eq_context Σ (global_ext_constraints Σ) Γ Δ.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.

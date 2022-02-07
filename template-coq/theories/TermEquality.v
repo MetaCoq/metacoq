@@ -263,17 +263,15 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 
-(* ** Syntactic conversion up-to universes *)
+(* ** Syntactic conversion/cumulativity up-to universes *)
 
-Definition eq_term `{checker_flags} Σ φ :=
-  eq_term_upto_univ Σ (eq_universe φ) (eq_universe φ).
+Definition compare_term `{checker_flags} (pb : conv_pb) Σ φ :=
+  eq_term_upto_univ Σ (eq_universe φ) (compare_universe pb φ).
 
-(* ** Syntactic cumulativity up-to universes *)
+Notation eq_term := (compare_term Conv).
+Notation leq_term := (compare_term Cumul).
 
-Definition leq_term `{checker_flags} Σ φ :=
-  eq_term_upto_univ Σ (eq_universe φ) (leq_universe φ).
-
-  Lemma R_global_instance_refl Σ Re Rle gr napp u : 
+Lemma R_global_instance_refl Σ Re Rle gr napp u : 
   RelationClasses.Reflexive Re ->
   RelationClasses.Reflexive Rle ->
   R_global_instance Σ Re Rle gr napp u u.

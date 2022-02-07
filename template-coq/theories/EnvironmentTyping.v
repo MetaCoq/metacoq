@@ -240,57 +240,50 @@ End EnvTypingSig.
 Module Type ConversionParSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E).
 
   Import T E ET.
+  
+  Parameter Inline cumul_gen : forall {cf : checker_flags}, global_env_ext -> context -> conv_pb -> term -> term -> Type.
 
-  Parameter (conv : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
-  Parameter (cumul : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type).
+  Notation conv Σ Γ := (cumul_gen Σ Γ Conv).
+  Notation cumul Σ Γ := (cumul_gen Σ Γ Cumul).
 
 End ConversionParSig.
 
 Module Conversion (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
   Import T E ET CT.
 
-  Section ContextConversion.
-    Context {cf : checker_flags}.
-    Context (Σ : global_env_ext).
+  Inductive All_decls_alpha_pb {pb} {P : conv_pb -> term -> term -> Type} :
+    context_decl -> context_decl -> Type :=
+  | all_decls_alpha_vass {na na' : binder_annot name} {t t' : term}
+    (eqna : eq_binder_annot na na')
+    (eqt : P pb t t') :
+    All_decls_alpha_pb (vass na t) (vass na' t')
   
-    Inductive conv_decls (Γ Γ' : context) : forall (x y : context_decl), Type :=
-    | conv_vass na na' T T' :
-        eq_binder_annot na na' ->
-        conv Σ Γ T T' ->
-        conv_decls Γ Γ' (vass na T) (vass na' T')
-  
-    | conv_vdef_body na na' b b' T T' :
-        eq_binder_annot na na' ->
-        conv Σ Γ b b' ->
-        conv Σ Γ T T' ->
-        conv_decls Γ Γ' (vdef na b T) (vdef na' b' T').
-    Derive Signature NoConfusion for conv_decls.
-  
-    Inductive cumul_decls (Γ Γ' : context) : forall (x y : context_decl), Type :=
-    | cumul_vass na na' T T' :
-        eq_binder_annot na na' ->
-        cumul Σ Γ T T' ->
-        cumul_decls Γ Γ' (vass na T) (vass na' T')
-  
-    | cumul_vdef_body na na' b b' T T' :
-        eq_binder_annot na na' ->
-        conv Σ Γ b b' -> (* Not that definiens must be convertible, otherwise this notion 
-                            of cumulativity is useless *)
-        cumul Σ Γ T T' ->
-        cumul_decls Γ Γ' (vdef na b T) (vdef na' b' T').
-  
-    Derive Signature NoConfusion for cumul_decls.
+  | all_decls_alpha_vdef {na na' : binder_annot name} {b t b' t' : term}
+    (eqna : eq_binder_annot na na')
+    (eqb : P Conv b b') (* Not that definiens must be convertible, otherwise this notion 
+    of cumulativity is useless *)
+    (eqt : P pb t t') :
+    All_decls_alpha_pb (vdef na b t) (vdef na' b' t').
 
-    Notation conv_context := (All2_fold (conv_decls Σ)).
-    Notation cumul_context := (All2_fold (cumul_decls Σ)).
+  Derive Signature NoConfusion for All_decls_alpha_pb.
+  
+  Arguments All_decls_alpha_pb pb P : clear implicits.
+  
+  Definition cumul_pb_decls {cf : checker_flags} pb (Σ : global_env_ext) (Γ Γ' : context) : forall (x y : context_decl), Type :=
+    All_decls_alpha_pb pb (cumul_gen Σ Γ).
 
-  End ContextConversion.
+  Definition cumul_pb_context {cf : checker_flags} pb (Σ : global_env_ext) := 
+    All2_fold (cumul_pb_decls pb Σ).
+  
+  Notation conv_decls := (cumul_pb_decls Conv).
+  Notation cumul_decls := (cumul_pb_decls Cumul).
+  Notation conv_context Σ := (cumul_pb_context Conv Σ).
+  Notation cumul_context Σ := (cumul_pb_context Cumul Σ).
 
   Definition cumul_ctx_rel {cf:checker_flags} Σ Γ Δ Δ' :=
     All2_fold (fun Δ Δ' => cumul_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')) Δ Δ'.
  
 End Conversion.
-
 
 Module Type ConversionSig (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E) (CT : ConversionParSig T E ET).
   Include Conversion T E ET CT.
@@ -303,13 +296,13 @@ Module Type Typing (T : Term) (E : EnvironmentSig T) (ET : EnvTypingSig T E)
 
   Parameter Inline typing : forall `{checker_flags}, global_env_ext -> context -> term -> term -> Type.
 
-  Parameter (wf_universe : global_env_ext -> Universe.t -> Prop).
+  Parameter Inline wf_universe : global_env_ext -> Universe.t -> Prop.
 
   Notation " Σ ;;; Γ |- t : T " :=
     (typing Σ Γ t T) (at level 50, Γ, t, T at next level) : type_scope.
 
   Parameter Inline inds : kername -> Instance.t -> list one_inductive_body -> list term.
-  Parameter destArity : term -> option (context * Universe.t).
+  Parameter Inline destArity : term -> option (context * Universe.t).
 
   Notation wf_local Σ Γ := (All_local_env (lift_typing typing Σ) Γ).
 
@@ -545,9 +538,9 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        cumul_ctx_rel (Σ, univs) (subst_instance u (smash_context [] (ind_params mdecl)))
-          (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
-          (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] indices)))
+        cumul_ctx_rel (Σ, univs) (smash_context [] (ind_params mdecl))@[u]
+          (expand_lets_ctx (ind_params mdecl) (smash_context [] indices))@[u]
+          (expand_lets_ctx (ind_params mdecl) (smash_context [] indices))@[u']
       | None => False
       end.
 
@@ -555,11 +548,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let univs := ind_universes mdecl in
       match variance_universes univs v with
       | Some (univs, u, u') =>
-        cumul_ctx_rel (Σ, univs) (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl)))
-          (subst_instance u (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs))))
-          (subst_instance u' (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))) *
+        cumul_ctx_rel (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl))@[u]
+          (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))@[u]
+          (expand_lets_ctx (ind_params mdecl) (smash_context [] (cstr_args cs)))@[u'] *
         All2 
-          (conv (Σ, univs) (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cstr_args cs))))
+          (conv (Σ, univs) (ind_arities mdecl ,,, smash_context [] (ind_params mdecl ,,, cstr_args cs))@[u])
           (map (subst_instance u ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
           (map (subst_instance u' ∘ expand_lets (ind_params mdecl ,,, cstr_args cs)) (cstr_indices cs))
       | None => False (* Monomorphic inductives have no variance attached *)

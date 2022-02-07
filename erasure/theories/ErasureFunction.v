@@ -242,7 +242,7 @@ Section fix_sigma.
     apply nisa.
 
     eapply invert_cumul_arity_l in H1.
-    2:eapply red_equality; tea.
+    2:eapply red_ws_cumul_pb; tea.
     destruct H1 as (? & ? & ?). sq.
 
     eapply invert_red_prod in X2 as (? & ? & []); eauto. subst. cbn in *.
@@ -374,7 +374,7 @@ Next Obligation.
   destruct t1 as [s Hs].
   red in p, pt.
   specialize (pt _ Hs).
-  eapply equality_Sort_r_inv in pt as [u' [redu' leq]].
+  eapply ws_cumul_pb_Sort_r_inv in pt as [u' [redu' leq]].
   now apply (H0 _ redu').
 Qed.
 

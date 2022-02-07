@@ -23,7 +23,6 @@ install: [
 ]
 version: "dev"
 depends: [
-  "coq-equations" {= "dev" }
   "coq-metacoq-template" {= version}
 ]
 synopsis: "A type system equivalent to Coq's and its metatheory"

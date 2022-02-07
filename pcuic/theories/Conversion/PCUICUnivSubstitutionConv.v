@@ -1458,7 +1458,7 @@ Proof.
     now rewrite <- (fix_context_subst_instance u mfix0).
 Qed.
 
-Lemma subst_instance_equality {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs :
+Lemma subst_instance_ws_cumul_pb {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs :
 valid_constraints (global_ext_constraints (Σ.1, univs))
                   (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A = B ->

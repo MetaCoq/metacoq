@@ -173,7 +173,7 @@ Proof.
   now eapply conv_decls_subst_instance.
 Qed.
 
-Lemma subst_instance_context_equality_rel (Σ : global_env_ext) {Γ Γ'} u univs :
+Lemma subst_instance_context_ws_cumul_pb_rel (Σ : global_env_ext) {Γ Γ'} u univs :
   valid_constraints (global_ext_constraints (Σ.1, univs)) (subst_instance_cstrs u Σ) ->
   cumul_context Σ Γ Γ' ->
   cumul_context (Σ.1, univs) (subst_instance u Γ) (subst_instance u Γ').

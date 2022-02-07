@@ -417,7 +417,7 @@ Section ContextConversion.
     exists t'', unf. intuition auto.
     Qed.
 
-  Lemma red_ctx_context_equality {l Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> Σ ⊢ Γ ≤[l] Γ'.
+  Lemma red_ctx_context_ws_cumul_pb {l Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> Σ ⊢ Γ ≤[l] Γ'.
   Proof.
     induction 1; constructor; auto.
     depelim p; constructor; eauto with fvs; pcuic.
@@ -496,16 +496,16 @@ Section ContextConversion.
     rewrite -(length_of rctx); eauto with fvs.
   Qed.
 
-  Lemma equality_red {pb} {Γ t u} :
+  Lemma ws_cumul_pb_red {pb} {Γ t u} :
     Σ ;;; Γ ⊢ t ≤[pb] u <~> 
     ∑ v v', [× Σ ;;; Γ ⊢ t ⇝ v, Σ ;;; Γ ⊢ u ⇝ v' &
       compare_term pb Σ (global_ext_constraints Σ) v v'].
   Proof.    
     split.
-    - move/equality_alt; intros (v & v' & [clΓ clt clu red red' leq]).
+    - move/ws_cumul_pb_alt; intros (v & v' & [clΓ clt clu red red' leq]).
       exists v, v'; repeat split; eauto with fvs.
     - intros (v & v' & [red red' leq]).
-      apply equality_alt; exists v, v'.
+      apply ws_cumul_pb_alt; exists v, v'.
       repeat split; eauto with fvs.
   Qed.
 
@@ -518,15 +518,15 @@ Section ContextConversion.
     cbn in *. exists v'; repeat split; eauto with fvs.
   Qed.
   
-  Lemma equality_red_ctx {pb} {Γ Γ'} {T U} :
+  Lemma ws_cumul_pb_red_ctx {pb} {Γ Γ'} {T U} :
     Σ ⊢ Γ ⇝ Γ' ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
   Proof.
     intros Hctx H.
-    apply equality_red in H as (v & v' & [redl redr leq]).
+    apply ws_cumul_pb_red in H as (v & v' & [redl redr leq]).
     destruct (closed_red_red_ctx Hctx redl) as [lnf [redl0 redr0]].
-    eapply equality_red.
+    eapply ws_cumul_pb_red.
     eapply closed_red_compare_term_l in leq as [? [? ?]]. 3:exact redr0.
     2:{ rewrite -(length_of Hctx). now eapply closed_red_open_right. }
     destruct (closed_red_red_ctx Hctx redr) as [rnf [redl1 redr1]].
@@ -567,10 +567,10 @@ Section ContextConversion.
     Σ ;;; Γ' ⊢ T ≤[pb] U.
   Proof.
     intros H Hctx.
-    apply equality_red in H as (v & v' & [redl redr leq]).
+    apply ws_cumul_pb_red in H as (v & v' & [redl redr leq]).
     epose proof (red_red_ctx_inv' Hctx redl).
     epose proof (red_red_ctx_inv' Hctx redr).
-    apply equality_red.
+    apply ws_cumul_pb_red.
     now exists v, v'.
   Qed.
   
@@ -702,7 +702,7 @@ Section ContextConversion.
     now symmetry. now transitivity nf'.
   Qed.
 
-  (* Conversion is untyped so this currently holds as context equality 
+  (* Conversion is untyped so this currently holds as context ws_cumul_pb 
      just allows cumulativity on types, which do not participate in reduction. 
      However the useful lemma is the one above that shows we can lift a 
      conversion from a large context to a smaller one (contravariance).    
@@ -741,19 +741,19 @@ Section ContextConversion.
     now apply eq_term_leq_term.
   Qed.
 
-  Lemma equality_compare_context {pb pb' Γ Δ T U} :
+  Lemma ws_cumul_pb_compare_context {pb pb' Γ Δ T U} :
     compare_context pb Σ Δ Γ ->
     is_closed_context Δ ->
     Σ ;;; Γ ⊢ T ≤[pb'] U ->
     Σ ;;; Δ ⊢ T ≤[pb'] U.
   Proof.
     intros eqctx cl cum.
-    eapply equality_red in cum as [nf [nf' [redl redr ?]]].
+    eapply ws_cumul_pb_red in cum as [nf [nf' [redl redr ?]]].
     eapply closed_red_eq_context_upto_r in redl; tea; eauto with fvs.
     eapply closed_red_eq_context_upto_r in redr; tea; eauto with fvs.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
-    eapply equality_red. exists v', v''; split; auto.
+    eapply ws_cumul_pb_red. exists v', v''; split; auto.
     destruct pb'; cbn in *; transitivity nf.
     now symmetry.
     transitivity nf' => //.
@@ -762,19 +762,19 @@ Section ContextConversion.
     now apply eq_term_leq_term.
   Qed.
   
-  Local Remark equality_compare_context_inv {pb pb' Γ Δ T U} :
+  Local Remark ws_cumul_pb_compare_context_inv {pb pb' Γ Δ T U} :
     compare_context pb Σ Γ Δ ->
     is_closed_context Δ ->
     Σ ;;; Γ ⊢ T ≤[pb'] U ->
     Σ ;;; Δ ⊢ T ≤[pb'] U.
   Proof.
     intros eqctx cl cum.
-    eapply equality_red in cum as [nf [nf' [redl redr ?]]].
+    eapply ws_cumul_pb_red in cum as [nf [nf' [redl redr ?]]].
     eapply closed_red_eq_context_upto_l in redl; tea; eauto with fvs.
     eapply closed_red_eq_context_upto_l in redr; tea; eauto with fvs.
     destruct redl as [v' [redv' eqv']].
     destruct redr as [v'' [redv'' eqv'']].
-    eapply equality_red. exists v', v''; split; auto.
+    eapply ws_cumul_pb_red. exists v', v''; split; auto.
     destruct pb'; cbn in *; transitivity nf.
     - now symmetry.
     - transitivity nf'; auto.
@@ -832,14 +832,14 @@ Section ContextConversion.
     eapply cumul_leq_context_upto; eauto.
   Qed.
 
-  Lemma equality_eq_context_upto {pb Γ Δ T U} :
+  Lemma ws_cumul_pb_eq_context_upto {pb Γ Δ T U} :
     eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ Δ ->
     is_closed_context Δ ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Δ ⊢ T ≤[pb] U.
   Proof.
     intros eqctx cl cum. symmetry in eqctx.
-    eapply (equality_compare_context (pb:=Conv)) in cum; tea.
+    eapply (ws_cumul_pb_compare_context (pb:=Conv)) in cum; tea.
   Qed.
 
   Lemma conv_alt_red_ctx {Γ : closed_context} {Γ'} {T U : open_term Γ} :
@@ -902,16 +902,16 @@ Section ContextConversion.
     split. pcuic. auto.
   Qed.
 
-  Lemma equality_red_ctx_inv {pb Γ Γ'} {T U} :
+  Lemma ws_cumul_pb_red_ctx_inv {pb Γ Γ'} {T U} :
     Σ ⊢ Γ' ⇝ Γ ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
   Proof.
     intros Hctx H.
-    apply equality_red in H as [v [v' [redl redr leq]]].
+    apply ws_cumul_pb_red in H as [v [v' [redl redr leq]]].
     epose proof (red_red_ctx_inv' Hctx redl). 
     epose proof (red_red_ctx_inv' Hctx redr). 
-    apply equality_red.
+    apply ws_cumul_pb_red.
     now exists v, v'.
   Qed.
 
@@ -940,8 +940,8 @@ Section ContextConversion.
     now apply on_free_vars_ctx_All_fold.
   Qed.
 
-  Lemma context_equality_red {pb} {Γ Γ' : context} :
-    context_equality pb Σ Γ Γ' ->
+  Lemma context_ws_cumul_pb_red {pb} {Γ Γ' : context} :
+    context_ws_cumul_pb pb Σ Γ Γ' ->
     ∑ Δ Δ', Σ ⊢ Γ ⇝ Δ × Σ ⊢ Γ' ⇝ Δ' ×
       eq_context_upto Σ (eq_universe Σ) (compare_universe pb Σ) Δ Δ'.
   Proof.
@@ -950,8 +950,8 @@ Section ContextConversion.
     - exists [], []; intuition pcuic.
     - destruct IHHctx as (Δ & Δ' & redl & redr & eq).
       destruct p.
-      { apply (equality_red_ctx redl) in eqt.
-        eapply equality_red in eqt as (v & v' & [tv tv' com]).
+      { apply (ws_cumul_pb_red_ctx redl) in eqt.
+        eapply ws_cumul_pb_red in eqt as (v & v' & [tv tv' com]).
         destruct (closed_red_eq_context_upto_l (pb:=pb) (Δ := Δ') byfvs tv' eq) as [t'' [redt'' eq']].
         exists (vass na v :: Δ), (vass na' t'' :: Δ').
         intuition auto. constructor; auto. constructor; auto.
@@ -962,11 +962,11 @@ Section ContextConversion.
         destruct pb; cbn in *.
         * transitivity v' => //.
         * transitivity v' => //. now eapply eq_term_leq_term. }
-      { apply (equality_red_ctx redl) in eqb.
-        eapply equality_red in eqb as (v & v' & [tv tv' com]).
+      { apply (ws_cumul_pb_red_ctx redl) in eqb.
+        eapply ws_cumul_pb_red in eqb as (v & v' & [tv tv' com]).
         destruct (closed_red_eq_context_upto_l (pb:=pb) (Δ := Δ') byfvs tv' eq) as [t'' [redt'' eq']].
-        apply (equality_red_ctx redl) in eqt.
-        eapply equality_red in eqt as (v0 & v0' & [tv0 tv0' com0]).
+        apply (ws_cumul_pb_red_ctx redl) in eqt.
+        eapply ws_cumul_pb_red in eqt as (v0 & v0' & [tv0 tv0' com0]).
         destruct (closed_red_eq_context_upto_l (pb:=pb) (Δ := Δ') byfvs tv0' eq) as [t0'' [redt0'' eq0']].
         exists (vdef na v v0 :: Δ), (vdef na' t'' t0'' :: Δ').
         intuition auto. constructor; auto. constructor; auto.
@@ -979,36 +979,36 @@ Section ContextConversion.
         * transitivity v0' => //. now eapply eq_term_leq_term. }
   Qed.
 
-  Lemma equality_equality_ctx {pb pb'} {Γ Γ'} {T U} :
+  Lemma ws_cumul_pb_ws_cumul_ctx {pb pb'} {Γ Γ'} {T U} :
     Σ ⊢ Γ' ≤[pb'] Γ ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
   Proof.
     intros Hctx H.
-    apply context_equality_red in Hctx => //.
+    apply context_ws_cumul_pb_red in Hctx => //.
     destruct Hctx as [Δ [Δ' [l [r elr]]]].
-    eapply (equality_red_ctx r) in H.
+    eapply (ws_cumul_pb_red_ctx r) in H.
     destruct pb'; cbn in *.
-    - eapply (equality_eq_context_upto (symmetry elr)) in H. 2:eauto with fvs.
-      now eapply (equality_red_ctx_inv l) in H.
-    - eapply (equality_compare_context (pb:=Cumul) elr) in H. 2:eauto with fvs.
-      now eapply (equality_red_ctx_inv l) in H.
+    - eapply (ws_cumul_pb_eq_context_upto (symmetry elr)) in H. 2:eauto with fvs.
+      now eapply (ws_cumul_pb_red_ctx_inv l) in H.
+    - eapply (ws_cumul_pb_compare_context (pb:=Cumul) elr) in H. 2:eauto with fvs.
+      now eapply (ws_cumul_pb_red_ctx_inv l) in H.
   Qed.
 
   #[global]
-  Instance conv_context_sym : Symmetric (context_equality Conv Σ).
+  Instance conv_context_sym : Symmetric (context_ws_cumul_pb Conv Σ).
   Proof.
     intros Γ Γ' conv.
     eapply All2_fold_sym; tea.
     clear Γ Γ' conv. intros Γ Γ' d d' H IH []; constructor; auto.
     now symmetry.
-    eapply equality_equality_ctx; tea. now symmetry.
+    eapply ws_cumul_pb_ws_cumul_ctx; tea. now symmetry.
     now symmetry.
-    eapply equality_equality_ctx; tea. now symmetry.
-    eapply equality_equality_ctx; tea. now symmetry.
+    eapply ws_cumul_pb_ws_cumul_ctx; tea. now symmetry.
+    eapply ws_cumul_pb_ws_cumul_ctx; tea. now symmetry.
   Qed.
 
-  Lemma equality_eq_le {Γ t u} : 
+  Lemma ws_cumul_pb_eq_le {Γ t u} : 
     Σ ;;; Γ ⊢ t = u -> Σ ;;; Γ ⊢ t ≤ u.
   Proof.
     induction 1.
@@ -1017,7 +1017,7 @@ Section ContextConversion.
     - econstructor 2; eauto.
     - econstructor 3; eauto.
   Qed.
-  Hint Resolve equality_eq_le : pcuic.
+  Hint Resolve ws_cumul_pb_eq_le : pcuic.
 
   Lemma conv_cumul_context {Γ Δ} : 
     Σ ⊢ Γ ≤[Conv] Δ -> Σ ⊢ Γ ≤[Cumul] Δ.
@@ -1025,46 +1025,46 @@ Section ContextConversion.
     induction 1; constructor; auto.
     eapply conv_context_sym in X.
     depelim p; constructor; auto. 
-    - now apply equality_eq_le.
-    - now apply equality_eq_le.
+    - now apply ws_cumul_pb_eq_le.
+    - now apply ws_cumul_pb_eq_le.
   Qed.
   Hint Resolve conv_cumul_context : pcuic.
 
   (** This is provable as conversion is not relying on types of variables,
       and bodies of let-ins are convertible even for context cumulativity. *)
 
-  Local Remark equality_equality_ctx_inv {pb pb'} {Γ Γ'} {T U} :
+  Local Remark ws_cumul_pb_ws_cumul_ctx_inv {pb pb'} {Γ Γ'} {T U} :
     Σ ⊢ Γ ≤[pb'] Γ' ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
     Σ ;;; Γ' ⊢ T ≤[pb] U.
   Proof.
     intros Hctx H.
-    apply context_equality_red in Hctx => //.
+    apply context_ws_cumul_pb_red in Hctx => //.
     destruct Hctx as [Δ [Δ' [l [r elr]]]].
-    eapply (equality_red_ctx_inv r).
+    eapply (ws_cumul_pb_red_ctx_inv r).
     destruct pb'; cbn in *.
-    - eapply (equality_red_ctx l) in H.
-      eapply (equality_compare_context_inv (pb:=Conv) elr) in H => //. eauto with fvs.
-    - eapply (equality_red_ctx l) in H.
-      eapply (equality_compare_context_inv (pb:=Cumul) elr) in H => //. eauto with fvs.
+    - eapply (ws_cumul_pb_red_ctx l) in H.
+      eapply (ws_cumul_pb_compare_context_inv (pb:=Conv) elr) in H => //. eauto with fvs.
+    - eapply (ws_cumul_pb_red_ctx l) in H.
+      eapply (ws_cumul_pb_compare_context_inv (pb:=Cumul) elr) in H => //. eauto with fvs.
   Qed.
 
-  Lemma equality_open_decls_equality_ctx {pb pb'} {Γ Γ'} {d d'} :
+  Lemma ws_cumul_decls_ws_cumul_ctx {pb pb'} {Γ Γ'} {d d'} :
     Σ ⊢ Γ' ≤[pb'] Γ ->
-    equality_open_decls pb Σ Γ d d' ->
-    equality_open_decls pb Σ Γ' d d'.
+    ws_cumul_decls pb Σ Γ d d' ->
+    ws_cumul_decls pb Σ Γ' d d'.
   Proof.
     intros Hctx H.
-    destruct H; constructor; auto; eapply equality_equality_ctx; tea.
+    destruct H; constructor; auto; eapply ws_cumul_pb_ws_cumul_ctx; tea.
   Qed.
 
   #[global]
-  Instance context_equality_trans pb : Transitive (context_equality pb Σ).
+  Instance context_ws_cumul_pb_trans pb : Transitive (context_ws_cumul_pb pb Σ).
   Proof.
     eapply All2_fold_trans.
     intros.
     etransitivity; tea.
-    now eapply (equality_open_decls_equality_ctx X).
+    now eapply (ws_cumul_decls_ws_cumul_ctx X).
   Qed.
   
 End ContextConversion.
@@ -1225,16 +1225,16 @@ Qed.
 #[global] Hint Extern 4 (is_true (on_free_vars_decl (shiftnP _ xpred0) _)) =>
   eapply on_free_vars_decl_eq; [eassumption|len; lia] : fvs.
 
-Lemma context_equality_false_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  context_equality Conv Σ Γ Γ' -> conv_context Σ Γ Γ'.
+Lemma context_ws_cumul_pb_false_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
+  context_ws_cumul_pb Conv Σ Γ Γ' -> conv_context Σ Γ Γ'.
 Proof.
-  apply: context_equality_forget.
+  apply: context_ws_cumul_pb_forget.
 Qed.
 
-Lemma context_equality_true_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  context_equality Cumul Σ Γ Γ' -> cumul_context Σ Γ Γ'.
+Lemma context_ws_cumul_pb_true_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
+  context_ws_cumul_pb Cumul Σ Γ Γ' -> cumul_context Σ Γ Γ'.
 Proof.
-  apply: context_equality_forget.
+  apply: context_ws_cumul_pb_forget.
 Qed.
 
 Ltac exass H := 
@@ -1243,12 +1243,12 @@ Ltac exass H :=
     assert (H : A); [idtac|exists H]
   end.
 
-Lemma into_context_equality {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
+Lemma into_context_ws_cumul_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} :
   is_closed_context Γ ->
   is_closed_context Γ' ->
   cumul_pb_context pb Σ Γ Γ' ->
-  context_equality pb Σ Γ Γ'.
+  context_ws_cumul_pb pb Σ Γ Γ'.
 Proof.
   move/on_free_vars_ctx_All_fold => onΓ.
   move/on_free_vars_ctx_All_fold => onΓ'.
@@ -1261,7 +1261,7 @@ Proof.
     move/on_free_vars_ctx_All_fold: onΓ => onΓ.
     move/on_free_vars_ctx_All_fold: onΔ => onΓ'.
     destruct X1 as [wsd [wsd' cumd]].
-    eapply into_equality_open_decls; cbn; tea.
+    eapply into_ws_cumul_decls; cbn; tea.
     rewrite (All2_fold_length X0) //. }
   { intros cum.
     eapply All2_fold_All_fold_mix in cum; tea.
@@ -1271,32 +1271,32 @@ Proof.
     move/on_free_vars_ctx_All_fold: onΓ => onΓ.
     move/on_free_vars_ctx_All_fold: onΔ => onΓ'.
     destruct X1 as [wsd [wsd' cumd]].
-    eapply into_equality_open_decls; cbn; tea.
+    eapply into_ws_cumul_decls; cbn; tea.
     rewrite (All2_fold_length X0) //. } 
 Qed.
 
-Lemma context_equality_refl {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ : context} :
+Lemma context_ws_cumul_pb_refl {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ : context} :
   is_closed_context Γ -> Σ ⊢ Γ ≤[pb] Γ.
 Proof.
   move/on_free_vars_ctx_All_fold.
   induction 1; constructor; auto.
-  eapply (into_equality_open_decls _ Γ); tea; eauto with fvs.
+  eapply (into_ws_cumul_decls _ Γ); tea; eauto with fvs.
   destruct pb; cbn; reflexivity.
 Qed.
 
-Lemma context_equality_app_same {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ Γ' Δ : context} :
+Lemma context_ws_cumul_pb_app_same {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ Γ' Δ : context} :
   is_closed_context (Γ ,,, Δ) ->
   Σ ⊢ Γ ≤[pb] Γ' -> Σ ⊢ Γ,,, Δ ≤[pb] Γ',,, Δ.
 Proof.
   move=> iscl cum.
-  eapply into_context_equality => //.
+  eapply into_context_ws_cumul_pb => //.
   eapply is_closed_context_cumul_app; tea; eauto with fvs.
   now rewrite (All2_fold_length cum).
   destruct pb.
   - apply conv_context_app_same.
-    now apply context_equality_false_forget.
+    now apply context_ws_cumul_pb_false_forget.
   - apply cumul_context_app_same.
-    now apply context_equality_true_forget.
+    now apply context_ws_cumul_pb_true_forget.
   
 Qed.
 
@@ -1308,15 +1308,15 @@ Proof.
   intros cum conv.
   pose proof (length_of conv). len in H.
   eapply All2_fold_app; eauto.
-  eapply context_equality_refl; cbn; eauto with fvs.
+  eapply context_ws_cumul_pb_refl; cbn; eauto with fvs.
   eapply All2_fold_app_inv in conv as []. 2:lia.
   eapply All2_fold_impl_ind; tea.
   intros. simpl in X1.
   pose proof (All2_fold_length cum).
-  eapply equality_open_decls_equality_ctx; tea.
-  eapply context_equality_app_same. 
-  { pose proof (context_equality_closed_left cum).
-    eapply (equality_open_decls_inv _ (Γ':=Γ' ,,, Γ0)) in X1 as [isc _]; tea.
+  eapply ws_cumul_decls_ws_cumul_ctx; tea.
+  eapply context_ws_cumul_pb_app_same. 
+  { pose proof (context_ws_cumul_pb_closed_left cum).
+    eapply (ws_cumul_decls_inv _ (Γ':=Γ' ,,, Γ0)) in X1 as [isc _]; tea.
     eapply is_closed_context_cumul_app; tea; try lia. }
   exact cum.
 Qed.

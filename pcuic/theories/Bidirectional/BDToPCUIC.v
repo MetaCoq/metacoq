@@ -287,7 +287,7 @@ Section BDToPCUICTyping.
       assert (cum : Σ;;; Γ ⊢ mkApps (tInd ci u) args ≤
         mkApps (tInd ci (puinst p)) (pparams p ++ skipn (ci_npar ci) args)).
       {
-        eapply equality_mkApps_eq.
+        eapply ws_cumul_pb_mkApps_eq.
         1-3: fvs.
         - now constructor.
         - eapply type_is_open_term in X0 ; eauto.
@@ -303,9 +303,9 @@ Section BDToPCUICTyping.
               by rewrite -is_open_term_closed.
             }
             solve_all.
-            eapply into_equality ; tea.
+            eapply into_ws_cumul_pb ; tea.
             fvs.
-          + now apply equality_terms_refl ; fvs.
+          + now apply ws_cumul_pb_terms_refl ; fvs.
       }
 
       assert (ctx_inst Σ Γ (pparams p ++ skipn (ci_npar ci) args)
@@ -440,7 +440,7 @@ Section BDToPCUICTyping.
     - red ; intros.
       destruct X3.
       econstructor ; eauto.
-      eapply (cumulAlgo_cumulSpec _ (pb := Cumul)), into_equality ; tea.
+      eapply (cumulAlgo_cumulSpec _ (pb := Cumul)), into_ws_cumul_pb ; tea.
       + fvs. 
       + now eapply type_is_open_term.
       + now eapply subject_is_open_term. 

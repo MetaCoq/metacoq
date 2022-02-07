@@ -293,7 +293,7 @@ Proof.
   eapply bidirectional_unique in ty as [? []]; tea.
   etransitivity.
   2: symmetry.
-  all: now eapply red_equality.
+  all: now eapply red_ws_cumul_pb.
 Qed.
 
 Theorem infering_checking `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t T T'} :
@@ -303,10 +303,10 @@ Proof.
   depelim ty'.
   eapply infering_unique' in ty ; tea.
   etransitivity ; last first.
-  - apply into_equality ; tea.
+  - apply into_ws_cumul_pb ; tea.
     1: fvs.
     now eapply type_is_open_term, infering_typing.
-  - now eapply equality_eq_le.
+  - now eapply ws_cumul_pb_eq_le.
 Qed.
 
 Theorem infering_sort_sort `{checker_flags} {Σ} (wfΣ : wf Σ) {Γ} (wfΓ : wf_local Σ Γ) {t u u'} :
@@ -355,16 +355,16 @@ Proof.
   {
     etransitivity.
     2: symmetry.
-    all: now eapply red_equality.
+    all: now eapply red_ws_cumul_pb.
   }
   split ; auto.
   etransitivity.
-  1: now eapply red_equality.
+  1: now eapply red_ws_cumul_pb.
   symmetry.
-  eapply equality_equality_ctx.
-  2: now eapply red_equality.
+  eapply ws_cumul_pb_ws_cumul_ctx.
+  2: now eapply red_ws_cumul_pb.
   constructor.
-  1: eapply context_equality_refl ; fvs.
+  1: eapply context_ws_cumul_pb_refl ; fvs.
   now constructor.
 Qed.
 
@@ -404,7 +404,7 @@ Theorem infering_ind_ind' `{checker_flags} {Σ} (wfΣ : wf Σ)
   {Γ} (wfΓ : wf_local Σ Γ) {t ind ind' u u' args args'} :
   Σ ;;; Γ |- t ▹{ind} (u,args) -> Σ ;;; Γ |- t ▹{ind'} (u',args') ->
     [× ind = ind', u = u' &
-      equality_terms Σ Γ args args'].
+      ws_cumul_pb_terms Σ Γ args args'].
 Proof.
   intros ty ty'.
   eapply bidirectional_unique in ty as [args'' []] ; tea.
@@ -412,7 +412,7 @@ Proof.
   split ; auto.
   etransitivity.
   2: symmetry.
-  all: now eapply red_terms_equality_terms.
+  all: now eapply red_terms_ws_cumul_pb_terms.
 Qed.
 
 Theorem infering_ind_infering `{checker_flags} {Σ} (wfΣ : wf Σ)
@@ -449,7 +449,7 @@ Proof.
   intros T' ty.
   eapply typing_infering in ty as (S' & infS' & cum'); auto.
   etransitivity ; eauto.
-  now eapply equality_eq_le, infering_unique'.
+  now eapply ws_cumul_pb_eq_le, infering_unique'.
 Qed.
 
 

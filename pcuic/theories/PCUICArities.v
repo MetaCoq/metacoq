@@ -108,7 +108,7 @@ Qed.
 Section WfEnv.
   Context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
-  Lemma context_equality_vass {Γ Γ' na na' A A'} le : 
+  Lemma context_ws_cumul_pb_vass {Γ Γ' na na' A A'} le : 
     eq_binder_annot na na' ->
     Σ ⊢ Γ ≤[le] Γ' ->
     Σ ;;; Γ ⊢ A ≤[le] A' ->
@@ -117,10 +117,10 @@ Section WfEnv.
     repeat (constructor; auto).
   Qed.
 
-  Lemma context_equality_app {le Γ Γ' Δ Δ'} : 
+  Lemma context_ws_cumul_pb_app {le Γ Γ' Δ Δ'} : 
     #|Δ| = #|Δ'| ->
     Σ ⊢ Γ ,,, Δ ≤[le] Γ' ,,, Δ' <~>
-    Σ ⊢ Γ ≤[le] Γ' × context_equality_rel le Σ Γ Δ Δ'.
+    Σ ⊢ Γ ≤[le] Γ' × context_ws_cumul_pb_rel le Σ Γ Δ Δ'.
   Proof.
     move => hlen; split.
     - move/All2_fold_app_inv. move/(_ hlen) => [] onΓ onΔ; split => //.
@@ -149,16 +149,16 @@ Section WfEnv.
     generalize (#|ctx|) at 2. intros n; revert ctx.
     induction n; intros ctx Hlen Γ T HT.
     - destruct ctx; simpl in Hlen; try lia.
-      eapply equality_Sort_l_inv in HT as [u' [redT leqT]].
+      eapply ws_cumul_pb_Sort_l_inv in HT as [u' [redT leqT]].
       exists (tSort u'), [], u'; split; auto.
-      cbn. eapply context_equality_refl; eauto with fvs.
+      cbn. eapply context_ws_cumul_pb_refl; eauto with fvs.
     - destruct ctx using rev_ind.
-      * eapply equality_Sort_l_inv in HT as [u' [redT leqT]].
+      * eapply ws_cumul_pb_Sort_l_inv in HT as [u' [redT leqT]].
         exists (tSort u'), [], u'; split; auto; cbn.  
-        apply context_equality_refl; eauto with fvs.
+        apply context_ws_cumul_pb_refl; eauto with fvs.
       * rewrite it_mkProd_or_LetIn_app in HT; simpl in HT.
         destruct x as [na [b|] ty]; unfold mkProd_or_LetIn in HT; simpl in *.
-        + eapply equality_LetIn_l_inv in HT; auto.
+        + eapply ws_cumul_pb_LetIn_l_inv in HT; auto.
           unfold subst1 in HT; rewrite subst_it_mkProd_or_LetIn in HT.
           rewrite app_length /= Nat.add_1_r in Hlen.
           simpl in HT. specialize (IHn (subst_context [b] 0 ctx) ltac:(rewrite
@@ -168,14 +168,14 @@ Section WfEnv.
           exists T', ctx', s'. split; auto.
           rewrite smash_context_app. simpl.
           now rewrite -smash_context_subst_empty.
-        + eapply equality_Prod_l_inv in HT; auto. 
+        + eapply ws_cumul_pb_Prod_l_inv in HT; auto. 
           rewrite -> app_length in Hlen.
           rewrite Nat.add_1_r in Hlen.
           destruct HT as [na' [A' [B' [redT convT HT]]]].
           specialize (IHn ctx ltac:(lia) (Γ ,, vass na' A') B').
-          forward IHn. eapply equality_equality_ctx; eauto.
-          { apply context_equality_vass; eauto. now symmetry.
-            eapply context_equality_refl. eauto with fvs.
+          forward IHn. eapply ws_cumul_pb_ws_cumul_ctx; eauto.
+          { apply context_ws_cumul_pb_vass; eauto. now symmetry.
+            eapply context_ws_cumul_pb_refl. eauto with fvs.
             now symmetry. }
           clear IHctx.
           destruct IHn as [T' [ctx' [s' [redT' destT convctx leq]]]].
@@ -192,12 +192,12 @@ Section WfEnv.
               autorewrite with len in convctx |- *.
               simpl in convctx. simpl. lia. }
             etransitivity; tea.
-            apply context_equality_app; auto.
-            split. apply context_equality_vass; auto.
-            apply context_equality_refl; eauto with fvs.
-            eapply context_equality_app; eauto.
-            eapply context_equality_refl; eauto with fvs.
-            eapply context_equality_closed_left in convctx.
+            apply context_ws_cumul_pb_app; auto.
+            split. apply context_ws_cumul_pb_vass; auto.
+            apply context_ws_cumul_pb_refl; eauto with fvs.
+            eapply context_ws_cumul_pb_app; eauto.
+            eapply context_ws_cumul_pb_refl; eauto with fvs.
+            eapply context_ws_cumul_pb_closed_left in convctx.
             move: convctx.
             rewrite !on_free_vars_ctx_app. autorewrite with fvs.
             move/andP => [] /andP[] -> /=; cbn; rewrite andb_true_r => onA' ->.
@@ -236,7 +236,7 @@ Section WfEnv.
     exists s'. now eapply (substitution (T:=tSort _)).
   Qed.
 
-  Lemma type_equality {pb Γ t} T {U} :
+  Lemma type_ws_cumul_pb {pb Γ t} T {U} :
     Σ ;;; Γ |- t : T ->
     isType Σ Γ U ->
     Σ ;;; Γ ⊢ T ≤[pb] U ->
@@ -245,7 +245,7 @@ Section WfEnv.
     intros.
     eapply type_Cumul; tea. apply X0.π2.
     destruct pb.
-    - eapply equality_eq_le in X1.
+    - eapply ws_cumul_pb_eq_le in X1.
       now eapply cumulAlgo_cumulSpec in X1.
     - now eapply cumulAlgo_cumulSpec.
   Qed.
@@ -258,11 +258,11 @@ Section WfEnv.
     exists s.
     assert (Hs := typing_wf_universe _ H).
     apply inversion_LetIn in H; tas. destruct H as [s1 [A' [HA [Ht [HB H]]]]].
-    eapply (type_equality (pb:=Cumul)) with (A' {0 := t}). eapply substitution_let in HB; eauto.
+    eapply (type_ws_cumul_pb (pb:=Cumul)) with (A' {0 := t}). eapply substitution_let in HB; eauto.
     * econstructor; eauto with pcuic. econstructor; eauto.
-    * eapply equality_Sort_r_inv in H as [s' [H H']].
+    * eapply ws_cumul_pb_Sort_r_inv in H as [s' [H H']].
       transitivity (tSort s'); eauto.
-      eapply red_equality.
+      eapply red_ws_cumul_pb.
       apply invert_red_letin in H as [H|H] => //.
       destruct H as [d' [ty' [b' [reds ]]]].
       discriminate.
@@ -316,10 +316,10 @@ Section WfEnv.
     depelim Hsp.
     constructor; auto.
     eapply isType_tLetIn_red in i; eauto with pcuic.
-    now eapply equality_LetIn_l_inv in e.
+    now eapply ws_cumul_pb_LetIn_l_inv in w.
     econstructor; eauto.
     eapply isType_tLetIn_red in i; eauto with pcuic.
-    now eapply equality_LetIn_l_inv in e.
+    now eapply ws_cumul_pb_LetIn_l_inv in w.
   Qed.
 
   Lemma typing_spine_letin {Γ na b B T args S} : 
@@ -330,11 +330,11 @@ Section WfEnv.
     intros Hty Hsp.
     depelim Hsp.
     constructor; auto.
-    - etransitivity; tea. eapply into_equality.
+    - etransitivity; tea. eapply into_ws_cumul_pb.
       eapply red_cumul, red1_red, red_zeta. all:eauto with fvs.
     - econstructor; eauto.
       etransitivity; tea.
-      eapply into_equality.
+      eapply into_ws_cumul_pb.
       eapply red_cumul. eapply red1_red, red_zeta.
       all:eauto with fvs.
   Qed.
@@ -606,7 +606,7 @@ Section WfEnv.
       assert (wfs' := typing_wf_universe wfΣ Hs).
       eapply inversion_LetIn in Hs as [? [? [? [? [? ?]]]]]; auto.
       eapply substitution_let in t1; auto.
-      eapply equality_LetIn_l_inv in e; auto.
+      eapply ws_cumul_pb_LetIn_l_inv in w; auto.
       pose proof (subslet_app_inv sub) as [subl subr].
       depelim subl. depelim subl. rewrite subst_empty in H0. rewrite H0 in subr.
       specialize (IHn (subst_context [b] 0 l) (subst [b] #|l| T) ltac:(rewrite subst_context_length; lia)).
@@ -615,7 +615,7 @@ Section WfEnv.
       rewrite !subst_empty in t3.
       forward IHn.
       eapply type_Cumul. eapply t1. econstructor; intuition eauto using typing_wf_local with pcuic.
-      eapply (cumulAlgo_cumulSpec _ (pb:=Cumul)), e. rewrite {2}Hl in IHn.
+      eapply (cumulAlgo_cumulSpec _ (pb:=Cumul)), w. rewrite {2}Hl in IHn.
       now rewrite -subst_app_simpl -H0 firstn_skipn in IHn.
       
       intros Hs.
@@ -631,7 +631,7 @@ Section WfEnv.
       forward IHn.
       eapply type_Cumul. simpl in X. eapply X.
       econstructor; eauto with pcuic.
-      eapply equality_Sort_inv in e. eapply cumul_Sort. 
+      eapply ws_cumul_pb_Sort_inv in w. eapply cumul_Sort. 
       transitivity (Universe.sort_of_product x x0).
       eapply leq_universe_product. auto.
       rewrite {2}Hl in IHn.

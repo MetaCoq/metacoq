@@ -25,7 +25,7 @@ Definition R_universe_instance R :=
 (** Cumulative inductive types:
 
   To simplify the development, we allow the variance list to not exactly 
-  match the instances, so as to keep syntactic equality an equivalence relation
+  match the instances, so as to keep syntactic ws_cumul_pb an equivalence relation
   even on ill-formed terms. It corresponds to the right notion on well-formed terms.
 *)
 
@@ -67,7 +67,7 @@ Definition global_variance Σ gr napp :=
     | Some (mdecl, idecl, cdecl) =>
       if (cdecl.(cstr_arity) + mdecl.(ind_npars))%nat <=? napp then
         (** Fully applied constructors are always compared at the same supertype, 
-          which implies that no universe equality needs to be checked here. *)
+          which implies that no universe ws_cumul_pb needs to be checked here. *)
         Some []
       else None
     | _ => None
@@ -267,10 +267,10 @@ Definition eq_predicate (eq_term : term -> term -> Type) Re p p' :=
   ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
     eq_term p.(preturn) p'.(preturn))).
 
-(** ** Syntactic equality up-to universes
+(** ** Syntactic ws_cumul_pb up-to universes
   We don't look at printing annotations *)
 
-(** Equality is indexed by a natural number that counts the number of applications
+(** ws_cumul_pb is indexed by a natural number that counts the number of applications
   that surround the current term, used to implement cumulativity of inductive types
   correctly (only fully applied constructors and inductives benefit from it). *)  
 
@@ -1263,7 +1263,7 @@ Proof.
   all: intros ? ? []; eauto.
 Qed.
 
-(** ** Syntactic equality up to printing anotations ** *)
+(** ** Syntactic ws_cumul_pb up to printing anotations ** *)
 
 Definition upto_names := eq_term_upto_univ [] eq eq.
 
@@ -1330,7 +1330,7 @@ Proof.
   all: reflexivity.
 Qed.
 
-(** ** Equality on contexts ** *)
+(** ** ws_cumul_pb on contexts ** *)
 
 Inductive rel_option {A B} (R : A -> B -> Type) : option A -> option B -> Type :=
 | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
@@ -1673,7 +1673,7 @@ Proof.
   clear. intros [] [] H; now inversion H.
 Qed.
 
-(** Equality of binder annotations *)
+(** ws_cumul_pb of binder annotations *)
 Notation eq_annots Γ Δ :=
   (Forall2 (fun na decl => eq_binder_annot na (decl_name decl)) Γ Δ).
 

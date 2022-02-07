@@ -92,18 +92,18 @@ Section Principality.
       repeat outtimes.
       specialize (IHu1 _ _ t) as [dom Hdom].
       specialize (IHu2 _ _ t0) as [codom Hcodom].
-      destruct (Hdom _ t).
-      eapply equality_Sort_r_inv in e0 as [domu [red leq]].
-      destruct (Hcodom _ t0).
-      eapply equality_Sort_r_inv in e0 as [codomu [cored coleq]].
+      destruct (Hdom _ t) as [e e'].
+      eapply ws_cumul_pb_Sort_r_inv in e as [domu [red leq]].
+      destruct (Hcodom _ t0) as [e e''].
+      eapply ws_cumul_pb_Sort_r_inv in e as [codomu [cored coleq]].
       exists (tSort (Universe.sort_of_product domu codomu)).
       int inversion_Prod.
       repeat outsum; repeat outtimes.
-      + etransitivity. 1: auto. 2:eapply e0.
-        destruct (Hdom _ t3) as [le' u1'].
-        eapply equality_Sort_r_inv in le' as [u' [redu' leu']].
-        destruct (Hcodom _ t4) as [le'' u2'].
-        eapply equality_Sort_r_inv in le'' as [u'' [redu'' leu'']].
+      + etransitivity. 1: auto. 2:eapply w0.
+        destruct (Hdom _ t1) as [le' u1'].
+        eapply ws_cumul_pb_Sort_r_inv in le' as [u' [redu' leu']].
+        destruct (Hcodom _ t2) as [le'' u2'].
+        eapply ws_cumul_pb_Sort_r_inv in le'' as [u'' [redu'' leu'']].
         constructor => //. fvs. constructor.
         apply leq_universe_product_mon; auto.
         pose proof (closed_red_confluence red redu') as [v' [redl redr]].
@@ -125,9 +125,9 @@ Section Principality.
       int inversion_Lambda.
       repeat outsum. repeat outtimes.
       etransitivity; eauto.
-      apply equality_Prod_l_inv in e2 as [na' [A' [B' [redA u1eq ?]]]] => //; auto.
+      apply ws_cumul_pb_Prod_l_inv in w2 as [na' [A' [B' [redA u1eq ?]]]] => //; auto.
       destruct (p0 _ t4).
-      eapply equality_Prod => //; auto.
+      eapply ws_cumul_pb_Prod => //; auto.
       transitivity A' => //. now symmetry.
 
     - eapply inversion_LetIn in hA as (s1 & bty & Hu2 & Hu1 & Hu3 & Hcum); auto.
@@ -141,50 +141,50 @@ Section Principality.
       int inversion_LetIn.
       destruct hB as (s1' & bty' & Hu2' & Hu1' & Hu3' & Hcum'); eauto.
       etransitivity; eauto.
-      eapply equality_LetIn; eauto using wt_equality_refl.
+      eapply ws_cumul_pb_LetIn; eauto using wt_cumul_pb_refl.
       now specialize (p'' _ Hu3') as [? ?].
 
     - eapply inversion_App in hA as [na [dom [codom [tydom [tyarg tycodom]]]]] => //; auto.
       destruct (IHu2 _ _ tyarg).
       destruct (IHu1 _ _ tydom).
       destruct (p _ tyarg). destruct (p0 _ tydom).
-      apply equality_Prod_r_inv in e0 as [? [A' [B' [redA eqann u1eq ?]]]] => //; auto.
+      apply ws_cumul_pb_Prod_r_inv in w0 as [? [A' [B' [redA eqann u1eq ?]]]] => //; auto.
       exists (subst [u2] 0 B').
       intros ? hB.
       eapply inversion_App in hB as [na' [dom' [codom' [tydom' [tyarg' tycodom']]]]] => //; auto.
       destruct (p0 _ tydom').
       destruct (p _ tyarg').
-      apply equality_Prod_r_inv in e1 as [? [A'' [B'' [redA' eqann' u1eq' ?]]]] => //; auto.
+      apply ws_cumul_pb_Prod_r_inv in w1 as [? [A'' [B'' [redA' eqann' u1eq' ?]]]] => //; auto.
       destruct (closed_red_confluence redA redA') as [nfprod [redl redr]].
       eapply invert_red_prod in redl as [? [? [? ? ?]]] => //. subst.
-      eapply invert_red_prod in redr as [? [? [? ? ?]]] => //. noconf e3.
+      eapply invert_red_prod in redr as [? [? [? ? ?]]] => //. noconf e.
       all:auto.
       assert(Σ ;;; Γ ⊢ A' = A'').
-      { transitivity x3 => //; eauto using red_equality.
-        symmetry. now apply red_equality. }
+      { transitivity x3 => //; eauto using red_ws_cumul_pb.
+        symmetry. now apply red_ws_cumul_pb. }
       assert(Σ ;;; Γ ,, vass x1 A' ⊢ B' = B'').
       { transitivity x4 => //.
-        - now eapply red_equality.
-        - symmetry. eapply (equality_equality_ctx (pb:=Conv)); tea.
-          2:eapply red_equality; tea.
-          constructor; auto. eapply context_equality_refl. fvs.
+        - now eapply red_ws_cumul_pb.
+        - symmetry. eapply (ws_cumul_pb_ws_cumul_ctx (pb:=Conv)); tea.
+          2:eapply red_ws_cumul_pb; tea.
+          constructor; auto. eapply context_ws_cumul_pb_refl. fvs.
           constructor. reflexivity. now symmetry. }
       split.
       etransitivity; eauto.
-      eapply (substitution0_equality (na:=na') (T:=dom')) => //.
+      eapply (substitution0_ws_cumul_pb (na:=na') (T:=dom')) => //.
       have convctx : Σ ⊢ Γ ,, vass na' dom' = Γ ,, vass x1 A'.
-      { constructor. apply context_equality_refl. fvs. constructor => //. transitivity A'' => //.
+      { constructor. apply context_ws_cumul_pb_refl. fvs. constructor => //. transitivity A'' => //.
         now symmetry. now symmetry. }
-      transitivity B'' => //. eapply (equality_equality_ctx (pb':=Conv)); tea.
-      now apply equality_eq_le.
+      transitivity B'' => //. eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv)); tea.
+      now apply ws_cumul_pb_eq_le.
       eapply type_App'. tea.
       eapply type_reduction; eauto. eapply redA.
-      eapply (type_equality (pb:=Cumul)); eauto.
+      eapply (type_ws_cumul_pb (pb:=Cumul)); eauto.
       { eapply validity in t0; auto.
         eapply isType_red in t0; [|exact redA].
         eapply isType_tProd in t0 as [? ?]; eauto. }
       transitivity dom' => //. transitivity A''.
-      all:apply equality_eq_le; symmetry => //.
+      all:apply ws_cumul_pb_eq_le; symmetry => //.
 
     - eapply inversion_Const in hA as [decl ?] => //; auto.
       repeat outtimes.
@@ -217,31 +217,31 @@ Section Principality.
       eapply inversion_Case in hA as (mdecl&idecl&isdecl&indices&[]&?); auto.
       destruct (IHu _ _ scrut_ty) as [? p0].
       destruct (p0 _ scrut_ty).
-      eapply equality_Ind_r_inv in e0 as [u' [x0' [redr redu ?]]]; auto.
+      eapply ws_cumul_pb_Ind_r_inv in w0 as [u' [x0' [redr redu ?]]]; auto.
       exists (mkApps ptm (indices ++ [u])); intros b hB; repeat split; auto.
       2:econstructor; eauto.
       eapply inversion_Case in hB as (mdecl'&idecl'&isdecl'&indices'&[]&?); tea. clear brs_ty0.
       destruct (declared_inductive_inj isdecl isdecl') as [-> ->].
       destruct (p0 _ scrut_ty0).
-      eapply equality_Ind_r_inv in e1 as [u'' [x9' [redr' redu' ?]]]; auto.
-      assert (equality_terms Σ Γ x0' x9').
+      eapply ws_cumul_pb_Ind_r_inv in w1 as [u'' [x9' [redr' redu' ?]]]; auto.
+      assert (ws_cumul_pb_terms Σ Γ x0' x9').
       { destruct (closed_red_confluence redr redr') as [nf [r r0]].
         eapply invert_red_mkApps_tInd in r as [args' [? ?]]; auto.
         eapply invert_red_mkApps_tInd in r0 as [args'' [? ?]]; auto.
         subst. solve_discr.
         clear -wfΣ i a a0 a1 a2.
-        transitivity args'; auto using red_terms_equality_terms.
-        now symmetry; apply red_terms_equality_terms. }
+        transitivity args'; auto using red_terms_ws_cumul_pb_terms.
+        now symmetry; apply red_terms_ws_cumul_pb_terms. }
       clear redr redr'.
       etransitivity; [|tea].
-      eapply equality_mkApps; auto. rewrite /ptm /predctx.
+      eapply ws_cumul_pb_mkApps; auto. rewrite /ptm /predctx.
       * eapply PCUICGeneration.type_it_mkLambda_or_LetIn in pret_ty.
-        eapply equality_eq_le, wt_equality_refl. eapply pret_ty. 
+        eapply ws_cumul_pb_eq_le, wt_cumul_pb_refl. eapply pret_ty. 
       * eapply All2_app. 2:constructor; auto.
-        assert (equality_terms Σ Γ (pparams p ++ indices) (pparams p ++ indices')).
+        assert (ws_cumul_pb_terms Σ Γ (pparams p ++ indices) (pparams p ++ indices')).
         { transitivity x9'; tea. transitivity x0' => //. now symmetry. }
         eapply All2_app_inv in X3 as [] => //.
-        eapply wt_equality_refl; tea.
+        eapply wt_cumul_pb_refl; tea.
       * split; eauto.
       * split; eauto.
 
@@ -251,7 +251,7 @@ Section Principality.
       simpl in *.
       specialize (IHu _ _ t) as [C HP].
       destruct (HP _ t).
-      eapply equality_Ind_r_inv in e1 as [u' [x0' [redr redu ?]]]; auto.
+      eapply ws_cumul_pb_Ind_r_inv in w0 as [u' [x0' [redr redu ?]]]; auto.
       exists (subst0 (u :: List.rev x0') (subst_instance u' t0)).
       intros B hB.
       eapply inversion_Proj in hB=>//; auto.
@@ -259,7 +259,7 @@ Section Principality.
       simpl in *.
       destruct (declared_projection_inj d d0) as [-> [-> [-> [= -> ->]]]].
       destruct (HP _ t2).
-      eapply equality_Ind_r_inv in e3 as [u'' [x0'' [redr' redu' ?]]]; auto.
+      eapply ws_cumul_pb_Ind_r_inv in w1 as [u'' [x0'' [redr' redu' ?]]]; auto.
       split; cycle 1.
       eapply type_reduction in t0. 2:exact redr.
       eapply (type_Proj _ _ _ _ _ _ _ _ _ _ d0); simpl; auto.
@@ -279,12 +279,12 @@ Section Principality.
           destruct t2 as [s Hs].
           eapply invert_type_mkApps_ind in Hs. intuition eauto. all:auto. eapply d. }
         transitivity (subst0 (u :: List.rev x0') (subst_instance x3 t3)); cycle 1.
-      eapply equality_eq_le.
-      assert (equality_terms Σ Γ x0' x9).
+      eapply ws_cumul_pb_eq_le.
+      assert (ws_cumul_pb_terms Σ Γ x0' x9).
       { transitivity x0'' => //.
-        transitivity x0. auto using red_terms_equality_terms.
-        symmetry. auto using red_terms_equality_terms. }
-      eapply (substitution_equality_subst_conv (Γ0 := projection_context ind x5 x6 u')
+        transitivity x0. auto using red_terms_ws_cumul_pb_terms.
+        symmetry. auto using red_terms_ws_cumul_pb_terms. }
+      eapply (substitution_ws_cumul_pb_subst_conv (Γ0 := projection_context ind x5 x6 u')
       (Γ1 := projection_context ind x5 x6 x3) (Δ := [])); auto.
       * eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
         simpl. eapply type_reduction; eauto. eapply redr. simpl.
@@ -294,8 +294,8 @@ Section Principality.
           eapply (wf_projection_context _ (p:=(ind, k, pars))); tea. pcuic. }
         eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
         simpl. eapply validity; eauto.
-      * constructor; auto. now eapply wt_equality_refl. now apply All2_rev.
-      * eapply equality_refl.
+      * constructor; auto. now eapply wt_cumul_pb_refl. now apply All2_rev.
+      * eapply ws_cumul_pb_refl.
         { eapply wf_local_closed_context. cbn -[projection_context].
           eapply PCUICWeakeningTyp.weaken_wf_local; pcuic.
           eapply (wf_projection_context _ (p:= (ind, k, pars))); pcuic. }
@@ -304,16 +304,16 @@ Section Principality.
         len. rewrite on_free_vars_subst_instance.
         rewrite closedn_on_free_vars //.
         eapply closed_upwards; tea. lia.
-      * eapply (substitution_equality (Γ:=Γ) (Γ' := projection_context ind x5 x6 u') (Γ'' := [])); auto.
+      * eapply (substitution_ws_cumul_pb (Γ:=Γ) (Γ' := projection_context ind x5 x6 u') (Γ'' := [])); auto.
         eapply (projection_subslet _ _ _ _ _ _ (ind, k, pars)); eauto.
         simpl. eapply type_reduction; eauto. eapply redr. simpl.
         eapply type_reduction in t0. 2:eapply redr.
         eapply validity; eauto. simpl in redu'.
-        rewrite e1 in redu'.
+        rewrite e0 in redu'.
         unshelve epose proof (projection_cumulative_indices d _ H H0 redu').
         { eapply (PCUICWeakeningEnvConv.weaken_lookup_on_global_env' _ _ _ wfΣ (proj1 (proj1 (proj1 d)))). }
         eapply on_declared_projection in d0; eauto.
-        eapply weaken_equality in X; eauto.
+        eapply weaken_ws_cumul_pb in X; eauto.
 
     - pose proof (typing_wf_local hA).
       apply inversion_Fix in hA as [decl [hguard [nthe [wfΓ [? [? ?]]]]]]=>//; auto.
@@ -355,12 +355,12 @@ Lemma principal_type_ind {cf:checker_flags} {Σ Γ c ind u u' args args'} {wfΣ:
      (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args| ui' u * 
     PCUICEquality.R_global_instance Σ.1 (eq_universe (global_ext_constraints Σ))
      (leq_universe (global_ext_constraints Σ)) (IndRef ind) #|args'| ui' u') * 
-  equality_terms Σ Γ args args'.
+  ws_cumul_pb_terms Σ Γ args args'.
 Proof.
   intros h h'.
   destruct (common_typing _ wfΣ h h') as [C [l [r ty]]].
-  eapply equality_Ind_r_inv in l as [ui' [l' [red Ru eqargs]]]; auto.
-  eapply equality_Ind_r_inv in r as [ui'' [l'' [red' Ru' eqargs']]]; auto.
+  eapply ws_cumul_pb_Ind_r_inv in l as [ui' [l' [red Ru eqargs]]]; auto.
+  eapply ws_cumul_pb_Ind_r_inv in r as [ui'' [l'' [red' Ru' eqargs']]]; auto.
   destruct (closed_red_confluence red red') as [nf [redl redr]].
   eapply invert_red_mkApps_tInd in redl as [args'' [-> eq0]]; auto.
   eapply invert_red_mkApps_tInd in redr as [args''' [eqnf eq1]]; auto.
@@ -371,8 +371,8 @@ Proof.
   exists ui'. split; auto.
 
   transitivity l'. now symmetry.
-  transitivity args'' => //. now apply red_terms_equality_terms.
-  transitivity l''. symmetry. auto using red_terms_equality_terms.
+  transitivity args'' => //. now apply red_terms_ws_cumul_pb_terms.
+  transitivity l''. symmetry. auto using red_terms_ws_cumul_pb_terms.
   now symmetry.
 Qed.
  
@@ -502,15 +502,15 @@ Proof.
     { repeat constructor; pcuic. }
     specialize (X3 onu t0 B).
     forward X3 by eapply context_conversion; eauto; pcuic.
-    eapply (type_equality (pb:=Conv)).
+    eapply (type_ws_cumul_pb (pb:=Conv)).
     * econstructor. eauto. instantiate (1 := bty).
       eapply context_conversion; eauto; pcuic.
       constructor; pcuic. constructor; pcuic. symmetry; constructor; auto.
     * have tyl := type_Lambda _ _ _ _ _ _ _ X0 X2.
       now eapply PCUICValidity.validity in tyl.
-    * eapply equality_Prod; eauto.
+    * eapply ws_cumul_pb_Prod; eauto.
       constructor; auto; fvs.
-      eapply equality_refl. now eapply typing_closed_ctx in codom.
+      eapply ws_cumul_pb_refl. now eapply typing_closed_ctx in codom.
       eapply type_closed, closedn_on_free_vars in X2.
       now len in X2; len. 
 
@@ -520,7 +520,7 @@ Proof.
     apply eq_term_empty_eq_term in X7_1.
     apply eq_term_empty_eq_term in X7_2.
     assert(Σ ⊢ Γ ,, vdef na t ty = Γ ,, vdef n b b_ty).
-    { constructor. eapply context_equality_refl. fvs. constructor => //.
+    { constructor. eapply context_ws_cumul_pb_refl. fvs. constructor => //.
       constructor; fvs. constructor; fvs. }   
     specialize (X5 onu u A).
     forward X5 by eapply closed_context_conversion; eauto; pcuic.
@@ -529,15 +529,15 @@ Proof.
     have uty : Σ ;;; Γ ,, vdef na t ty |- u : b'_ty.
     { eapply closed_context_conversion; eauto.
       pcuic. now symmetry. }
-    eapply type_equality.
+    eapply type_ws_cumul_pb.
     * econstructor. eauto. eauto.
       now instantiate (1 := b'_ty).
     * eapply PCUICValidity.validity; eauto.
       econstructor; eauto.
-    * eapply (equality_LetIn (pb:=Conv)); pcuic.
+    * eapply (ws_cumul_pb_LetIn (pb:=Conv)); pcuic.
       constructor; auto; fvs.
       constructor; fvs.
-      apply equality_refl; fvs.
+      apply ws_cumul_pb_refl; fvs.
     
   - eapply inversion_App in X6 as (na' & A' & B' & hf & ha & cum); auto.
     unfold leq_term in X1.
@@ -546,14 +546,14 @@ Proof.
     specialize (X5 onu _ _ ha (eq_term_empty_leq_term X7_2)).
     eapply leq_term_empty_leq_term in X7_1.
     eapply eq_term_empty_eq_term in X7_2.
-    eapply type_equality.
+    eapply type_ws_cumul_pb.
     * eapply type_App'; [eapply X3|eapply X5].
     * eapply validity; pcuic.
       eapply type_App; eauto.
-    * eapply equality_eq_le.
+    * eapply ws_cumul_pb_eq_le.
       eapply validity in X2; auto.
       apply PCUICArities.isType_tProd in X2 as [tyA tyB].
-      eapply (substitution_equality_subst_conv (Γ0 := [vass na A]) (Γ1 := [vass na A]) (Δ := [])); pcuic.
+      eapply (substitution_ws_cumul_pb_subst_conv (Γ0 := [vass na A]) (Γ1 := [vass na A]) (Δ := [])); pcuic.
       constructor. 2:constructor.
       constructor; fvs.
 
@@ -576,7 +576,7 @@ Proof.
     eapply PCUICUnivSubstitutionConv.eq_term_upto_univ_subst_instance; eauto; typeclasses eauto.
 
   - eapply inversion_Construct in X1 as [decl' [idecl' [cdecl' [wf [declc [cu cum]]]]]]; auto.
-    eapply (type_equality (pb:=Conv)); eauto.
+    eapply (type_ws_cumul_pb (pb:=Conv)); eauto.
     econstructor; eauto.
     eapply validity; eauto.
     econstructor; eauto.
@@ -589,14 +589,14 @@ Proof.
         erewrite PCUICOnFreeVars.on_free_vars_ctx_subst_instance.
         pose proof (declared_minductive_closed_arities declc).
         now eapply closed_ctx_on_free_vars in H0. }
-      eapply (substitution_equality_subst_conv (Δ := [])); eauto.
+      eapply (substitution_ws_cumul_pb_subst_conv (Δ := [])); eauto.
       eapply weaken_subslet; tea; eapply subslet_inds; tea; eapply isdecl.
       split; revgoals.
       eapply weaken_subslet; tea; eapply subslet_inds; tea; eapply isdecl.
       eapply PCUICWeakeningTyp.weaken_wf_local; tea.
       eapply (wf_arities_context_inst isdecl); tea.
       cbn. eapply conv_inds => //. fvs.
-      simpl. eapply equality_refl => //. tea.
+      simpl. eapply ws_cumul_pb_refl => //. tea.
       pose proof (declared_constructor_closed_gen_type declc) as cl.
       eapply closedn_on_free_vars in cl. len.
       rewrite -shiftnP_add. len in cl.
@@ -625,12 +625,12 @@ Proof.
     pose proof (eq_term_empty_eq_term X11).
     destruct e as [eqpars [eqinst [eqpctx eqpret]]].
     eapply eq_term_empty_eq_term in eqpret.
-    eapply type_equality.
+    eapply type_ws_cumul_pb.
     * econstructor; eauto. all:split; eauto.
     * tas.
     * clear brs_ty.
-      eapply equality_eq_le.
-      eapply equality_mkApps; pcuic.
+      eapply ws_cumul_pb_eq_le.
+      eapply ws_cumul_pb_mkApps; pcuic.
       rewrite /ptm. constructor. fvs.
       eapply PCUICGeneration.type_it_mkLambda_or_LetIn in pret_ty. subst predctx0; fvs.
       eapply PCUICGeneration.type_it_mkLambda_or_LetIn in pret. subst predctx; fvs.
@@ -654,7 +654,7 @@ Proof.
     eapply eq_term_empty_eq_term in X4.
     assert (wf_ext Σ) by (split; assumption).
     pose proof (principal_type_ind X3 a0) as [Ruu' X3'].
-    eapply (type_equality (pb:=Conv)).
+    eapply (type_ws_cumul_pb (pb:=Conv)).
     * clear a0.
       econstructor; eauto.
       now rewrite (All2_length X3').
@@ -672,7 +672,7 @@ Proof.
         eapply wf_local_closed_context in X1.
         eapply on_free_vars_ctx_impl; tea => //.
         move=> i //. }
-      eapply (substitution_equality_subst_conv (Γ0 := ctx) (Γ1 := ctx) (Δ := [])); eauto.
+      eapply (substitution_ws_cumul_pb_subst_conv (Γ0 := ctx) (Γ1 := ctx) (Δ := [])); eauto.
       + eapply PCUICInductives.projection_subslet; eauto.
         eapply validity in X3; auto.
       + split.
@@ -683,8 +683,8 @@ Proof.
         eapply PCUICInductives.projection_subslet; eauto.
         eapply validity in X3; auto.
       + constructor. constructor; fvs.
-        eapply All2_rev. eapply equality_terms_refl => //; fvs.
-      + rewrite /ctx; eapply equality_refl => //.
+        eapply All2_rev. eapply ws_cumul_pb_terms_refl => //; fvs.
+      + rewrite /ctx; eapply ws_cumul_pb_refl => //.
         epose proof (declared_projection_closed a).
         rewrite on_free_vars_subst_instance; len. len.
         rewrite -(declared_minductive_ind_npars a).

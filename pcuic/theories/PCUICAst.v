@@ -22,7 +22,7 @@ Ltac pcuicfo_gen tac :=
 Tactic Notation "pcuicfo" := pcuicfo_gen auto.
 Tactic Notation "pcuicfo" tactic(tac) := pcuicfo_gen tac.
 
-(* This allows not relying on lemma names getting a length equality out of some type. *)
+(* This allows not relying on lemma names getting a length ws_cumul_pb out of some type. *)
 Class HasLen (A : Type) (x y : nat) := len : A -> x = y.
 
 (** Note the use of a global reference to avoid capture. *)
@@ -611,7 +611,7 @@ Definition eqb_predicate_gen (eqb_univ_instance : Instance.t -> Instance.t -> bo
   forallb2 eqdecl p.(pcontext) p'.(pcontext) &&
   eqterm p.(preturn) p'.(preturn).
 
-(** Syntactic equality *)
+(** Syntactic ws_cumul_pb *)
 
 Definition eqb_predicate (eqterm : term -> term -> bool) (p p' : predicate term) :=
   eqb_predicate_gen eqb (eqb_context_decl eqterm) eqterm p p'.

@@ -41,15 +41,15 @@ Proof.
   intros wfΓ sp isc.
   depind sp.
   - destruct isc as (? & ? & ?). sq.
-    eapply red_equality_inv in H.
-    eapply (equality_trans _ _ _ H) in e; tea.
-    eapply PCUICConversion.invert_cumul_arity_l in e; eauto.
+    eapply red_ws_cumul_pb_inv in H.
+    eapply (ws_cumul_pb_trans _ _ _ H) in w; tea.
+    eapply PCUICConversion.invert_cumul_arity_l in w; eauto.
   - eapply IHsp.
     destruct isc as (? & ? & ?). sq.
-    eapply red_equality_inv in H.
-    eapply (equality_trans _ _ _ H) in e; tea.
-    eapply invert_cumul_arity_l in e; eauto.
-    destruct e as (? & H1 & H2). sq.
+    eapply red_ws_cumul_pb_inv in H.
+    eapply (ws_cumul_pb_trans _ _ _ H) in w; tea.
+    eapply invert_cumul_arity_l in w; eauto.
+    destruct w as (? & H1 & H2). sq.
     eapply invert_red_prod in H1 as (? & ? & []); eauto; subst.
     exists (x2 {0 := hd}). split; sq.
     eapply (closed_red_untyped_substitution0 (Δ := [_])); eauto. econstructor. econstructor.
@@ -82,7 +82,7 @@ Section Arities.
     intros [ar [red isA]]. sq.
     intros cum.
     have: Σ ;;; Γ ⊢ ar ≤ T.
-    { eapply equality_red_l_inv; tea. exact red. }
+    { eapply ws_cumul_pb_red_l_inv; tea. exact red. }
     now eapply invert_cumul_arity_l.
   Qed.
 
@@ -92,7 +92,7 @@ Section Arities.
     intros [ar [red isA]]. sq.
     intros cum.
     have: Σ ;;; Γ ⊢ T ≤ ar.
-    { eapply equality_red_r_inv; tea. exact red. }
+    { eapply ws_cumul_pb_red_r_inv; tea. exact red. }
     now eapply invert_cumul_arity_r.
   Qed.
   
@@ -226,7 +226,7 @@ Section Spines.
     is_open_term Γ (it_mkProd_or_LetIn Δ T) ->
     Σ ;;; Γ ⊢ it_mkProd_or_LetIn (smash_context [] Δ) (expand_lets Δ T) = it_mkProd_or_LetIn Δ T.
   Proof.
-    intros clΓ clp. symmetry. eapply red_equality.
+    intros clΓ clp. symmetry. eapply red_ws_cumul_pb.
     now apply red_it_mkProd_or_LetIn_smash.
   Qed.
   
@@ -240,9 +240,17 @@ Section Spines.
     specialize (r (wf_local_closed_context (isType_wf_local ty)) (isType_open ty)).
     eapply typing_spine_strengthen; tea.
     eapply isType_red; tea. eapply r.
-    eapply equality_eq_le; symmetry.
-    now eapply red_equality.
+    eapply ws_cumul_pb_eq_le; symmetry.
+    now eapply red_ws_cumul_pb.
   Qed.
+
+Lemma assumption_context_assumptions {Γ} :
+  assumption_context Γ ->
+  context_assumptions Γ = #|Γ|.
+Proof.
+  induction 1; cbn; auto. congruence.
+Qed.
+
   
   Lemma typing_spine_nth_error Γ Δ T args T' n arg decl : 
     assumption_context Δ ->
@@ -252,45 +260,19 @@ Section Spines.
     nth_error (List.rev Δ) n = Some decl ->
     Σ ;;; Γ |- arg : subst (List.rev (firstn n args)) 0 decl.(decl_type).
   Proof.
-    induction Δ in decl, n, args, arg, T |- * using ctx_length_rev_ind.
-    intros. now rewrite nth_error_nil in H1.
-    destruct d as [na [b|] ty]; intros ass; eapply assumption_context_app in ass as [assΓ ass].
-    * elimtype False; depelim ass.
-    * simpl. rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /= //.
-      intros wf sp; depelim sp. rewrite nth_error_nil //.
-      pose proof (wf_local_app_inv wf) as [_ wfty].
-      eapply wf_local_rel_app_inv in wfty as [wfty _]. depelim wfty.
-      eapply equality_Prod_Prod_inv in e as [eqna dom codom].
-      assert (Σ ;;; Γ |- hd : ty).
-      { eapply (type_equality (pb:=Conv)); pcuic. now symmetry. }
-      eapply (substitution0_equality (t:=hd)) in codom; eauto.
-      eapply typing_spine_strengthen in sp. 3:tea.
-      rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp.
-      destruct n => /=.
-      + intros [= ->].
-        rewrite List.rev_app_distr /= => [=] <- /=.
-        now rewrite subst_empty.
-      + rewrite List.rev_app_distr => Hnth /= hnth.
-        specialize (X (subst_context [hd] 0 Γ0) ltac:(len; reflexivity) (subst [hd] #|Γ0| T) tl n arg
-          (subst_decl [hd] n decl)).
-        forward X by now eapply assumption_context_fold.
-        forward X.
-        { eapply substitution_wf_local; eauto. eapply subslet_ass_tip; tea.
-          now rewrite app_context_assoc in wf. }
-        specialize (X sp Hnth).
-        forward X.
-        rewrite nth_error_rev; len.
-        now eapply nth_error_Some_length in hnth; len in hnth.
-        rewrite List.rev_involutive nth_error_subst_context.
-        pose proof (nth_error_Some_length hnth).
-        rewrite nth_error_rev // rev_involutive in hnth. len in hnth.
-        rewrite hnth. simpl. len in H.
-        rewrite (subst_app_simpl) /=; len.
-        rewrite firstn_length_le. now eapply nth_error_Some_length in Hnth.
-        eapply X.
-      + eapply isType_apply in i; tea.
+    intros ass wf sp hnth hdecl.
+    eapply typing_spine_nth_error in sp; tea.
+    2:{ eapply nth_error_Some_length in hdecl. len in hdecl.
+        move: (context_assumptions_bound Δ). 
+        pose proof (assumption_context_assumptions ass). lia. }
+    destruct sp as [decl' [hdecl' harg]].
+    pose proof (nth_error_Some_length hdecl).
+    rewrite (smash_assumption_context _ ass) in hdecl'.
+    rewrite nth_error_rev // List.rev_involutive in hdecl.
+    len in hdecl. rewrite (assumption_context_assumptions ass) in hdecl'.
+    rewrite hdecl in hdecl'. noconf hdecl'. exact harg.
   Qed.
-
+  
   Lemma typing_spine_all_inv Γ Δ T args T' :
     typing_spine Σ Γ (it_mkProd_or_LetIn Δ T) args T' ->
     #|args| = context_assumptions Δ ->
@@ -311,9 +293,9 @@ Section Spines.
         simpl; len => hargs. simpl in hargs.
         rewrite Nat.add_1_r in hargs. destruct args => //.
         depelim sp. noconf hargs.
-        eapply equality_Prod_Prod_inv in e as [eqna dom codom]. 
+        eapply ws_cumul_pb_Prod_Prod_inv in w as [eqna dom codom]. 
         rewrite expand_lets_vass. simpl.
-        eapply (substitution0_equality (t:=t)) in codom; eauto.
+        eapply (substitution0_ws_cumul_pb (t:=t)) in codom; eauto.
         eapply typing_spine_strengthen in sp. 3:tea.
         rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp.
         specialize (X (subst_context [t] 0 Γ0) ltac:(len; reflexivity) (subst [t] #|Γ0| T) _ sp).
@@ -321,7 +303,7 @@ Section Spines.
         rewrite subst_app_simpl /=; len; rewrite H.
         now rewrite -(expand_lets_subst_comm _ _ _).
         eapply isType_apply in i; tea.
-        eapply (type_equality (pb:=Conv)); tea. 2:now symmetry.
+        eapply (type_ws_cumul_pb (pb:=Conv)); tea. 2:now symmetry.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -332,8 +314,7 @@ Section Spines.
     induction Δ in args, args' |- * using ctx_length_rev_ind.
     - simpl. destruct args' using rev_case => /= // sp hargs // /=; try lia.
       depelim sp. eapply (f_equal (@length _)) in H; simpl in H; len in H; simpl in H.
-      eapply equality_Prod_r_inv in e as (? & ? & ? & []); auto.
-      eapply invert_red_mkApps_tInd in c as (? & []); auto. solve_discr.
+      now eapply invert_cumul_ind_prod in w.
     - rewrite it_mkProd_or_LetIn_app /=; destruct d as [na [b|] ty].
       * rewrite /mkProd_or_LetIn /=. simpl => /= sp.
         eapply typing_spine_letin_inv in sp; eauto.
@@ -344,14 +325,14 @@ Section Spines.
         simpl; len => /= hargs.
         rewrite Nat.add_1_r in hargs. destruct args'; simpl in * => //. lia.
         depelim sp.
-        eapply equality_Prod_Prod_inv in e as [eqna dom codom]; pcuic.
-        eapply (substitution0_equality (t:=t)) in codom; eauto.
+        eapply ws_cumul_pb_Prod_Prod_inv in w as [eqna dom codom]; pcuic.
+        eapply (substitution0_ws_cumul_pb (t:=t)) in codom; eauto.
         eapply typing_spine_strengthen in sp. 3:tea.
         rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r subst_mkApps /= in sp.
         apply (H (subst_context [t] 0 Γ0) ltac:(len; reflexivity) _ _ sp).
         now len.
         eapply isType_apply in i; tea.
-        eapply (type_equality (pb:=Conv)); tea. 2:now symmetry.
+        eapply (type_ws_cumul_pb (pb:=Conv)); tea. 2:now symmetry.
         now eapply isType_tProd in i as [].
   Qed.
 
@@ -395,17 +376,17 @@ Section Spines.
       intros Hargs. eapply nth_error_None in Hargs.
       len in Hargs. len; simpl.      
       depelim sp. 
-      + eapply equality_Prod_l_inv in e as [na' [dom [codom [eqna eqd eqc]]]].
+      + eapply ws_cumul_pb_Prod_l_inv in w as [na' [dom [codom [eqna eqd eqc]]]].
         simpl. rewrite subst_empty. simpl; len.
         simpl. rewrite Nat.sub_0_r firstn_app_2. simpl.
         rewrite it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=.
         etransitivity.
-        2:{ eapply equality_eq_le. symmetry. now eapply red_equality. }
-        eapply equality_Prod; eauto.
-      + eapply equality_Prod_Prod_inv in e as [eqna dom codom].
+        2:{ eapply ws_cumul_pb_eq_le. symmetry. now eapply red_ws_cumul_pb. }
+        eapply ws_cumul_pb_Prod; eauto.
+      + eapply ws_cumul_pb_Prod_Prod_inv in w as [eqna dom codom].
         assert (Σ ;;; Γ |- hd : ty).
-        { eapply type_equality; pcuic. eapply equality_eq_le. now symmetry. }
-        eapply (substitution0_equality (t:=hd)) in codom; eauto.
+        { eapply type_ws_cumul_pb; pcuic. eapply ws_cumul_pb_eq_le. now symmetry. }
+        eapply (substitution0_ws_cumul_pb (t:=hd)) in codom; eauto.
         eapply typing_spine_strengthen in sp. 3:eauto.
         rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in sp.
         simpl. replace (#|Γ0| + 1 - S #|tl|) with (#|Γ0| - #|tl|) by lia.
@@ -730,15 +711,15 @@ Section Normalization.
     intros axfree Ht capp. destruct capp.
     - eapply neutral_empty in H; eauto.
     - eapply inversion_Sort in Ht as (? & ? & ? & ? & ?); auto.
-      eapply equality_Sort_l_inv in c as (? & ? & ?).
+      eapply ws_cumul_pb_Sort_l_inv in c as (? & ? & ?).
       eapply invert_red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - eapply inversion_Prod in Ht as (? & ? & ? & ? & ?); auto.
-      eapply equality_Sort_l_inv in c as (? & ? & ?).
+      eapply ws_cumul_pb_Sort_l_inv in c as (? & ? & ?).
       eapply invert_red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - eapply inversion_Lambda in Ht as (? & ? & ? & ? & ?); auto.
-      eapply equality_Prod_l_inv in c as (? & ? & ? & (? & ?) & ?); auto.
+      eapply ws_cumul_pb_Prod_l_inv in c as (? & ? & ? & (? & ?) & ?); auto.
       eapply invert_red_mkApps_tInd in r as (? & eq & ?); eauto; eauto.
       solve_discr.
     - now rewrite head_mkApps /= /head /=.
@@ -823,20 +804,6 @@ Section WeakNormalization.
 
   Lemma typing_evar {Γ n l ty} : Σ ;;; Γ |- (tEvar n l) : ty -> False.
   Proof. intros Hty; depind Hty; eauto. Qed.
-
-  Lemma invert_cumul_prod_ind {Γ na dom codom ind u args} :
-    Σ ;;; Γ ⊢ tProd na dom codom ≤ mkApps (tInd ind u) args -> False.
-  Proof.
-    intros ht; eapply equality_Prod_l_inv in ht as (? & ? & ? & []); auto.
-    eapply invert_red_mkApps_tInd in c as (? & []); auto. solve_discr.
-  Qed.
-
-  Lemma invert_cumul_ind_prod {Γ na dom codom ind u args} :
-    Σ ;;; Γ ⊢ mkApps (tInd ind u) args ≤ tProd na dom codom -> False.
-  Proof.
-    intros ht; eapply equality_Prod_r_inv in ht as (? & ? & ? & []); auto.
-    eapply invert_red_mkApps_tInd in c as (? & []); auto. solve_discr.
-  Qed.
   
   Lemma typing_cofix_coind {Γ mfix idx args ind u indargs} :
     Σ ;;; Γ |- mkApps (tCoFix mfix idx) args : mkApps (tInd ind u) indargs ->
@@ -880,15 +847,6 @@ Section WeakNormalization.
     elim: Reflect.eqb_spec;
     elim: Reflect.eqb_spec; congruence.
   Qed.
-  
-  Lemma invert_cumul_sort_ind {Γ s ind u args} :
-    Σ;;; Γ ⊢ tSort s ≤ mkApps (tInd ind u) args -> False.
-  Proof.
-    intros cum.
-    apply PCUICConversion.equality_Sort_l_inv in cum as (?&?&?).
-    apply invert_red_mkApps_tInd in c as (?&[]); auto.
-    solve_discr.
-  Qed.
 
   Lemma wt_closed_red_refl {Γ t T} : Σ ;;; Γ |- t : T -> Σ ;;; Γ ⊢ t ⇝ t.
   Proof.
@@ -931,7 +889,7 @@ Section WeakNormalization.
     rewrite e in no_arg.
     eapply (wf_fixpoint_spine wfΣ) in t0; eauto.
     rewrite no_arg in t0. destruct t0 as [na [dom [codom cum]]].
-    eapply equality_Prod_l_inv in cum as (? & ? & ? & []).
+    eapply ws_cumul_pb_Prod_l_inv in cum as (? & ? & ? & []).
     eapply invert_red_mkApps_tInd in c as [? [eq _]]; auto.
     solve_discr.
     now eapply nth_error_all in a; tea.
@@ -1022,11 +980,11 @@ Section WeakNormalization.
     pose proof (subject_closed typed) as cl.
     depelim ne; simpl in *.
     - elimtype False. eauto using wh_neutral_empty.
-    - eapply inversion_Sort in typed as (? & ? & ?); auto.
+    - eapply inversion_Sort in typed as (? & ? & e); auto.
       now eapply invert_cumul_sort_ind in e.
-    - eapply inversion_Prod in typed as (? & ? & ? & ? & ?); auto.
+    - eapply inversion_Prod in typed as (? & ? & ? & ? & e); auto.
       now eapply invert_cumul_sort_ind in e.
-    - eapply inversion_Lambda in typed as (? & ? & ? & ? & ?); auto.
+    - eapply inversion_Lambda in typed as (? & ? & ? & ? & e); auto.
       now eapply invert_cumul_prod_ind in e.
     - now rewrite head_mkApps /= /head /=.
     - exfalso; eapply invert_ind_ind; eauto.
@@ -1128,14 +1086,14 @@ Section WeakNormalization.
       pose proof (subject_closed t1); auto.
       eapply eval_closed in H; eauto.
       eapply subject_reduction in IHHe1. 2-3:eauto.
-      eapply inversion_Lambda in IHHe1 as (? & ? & ? & ? & ?); eauto.
+      eapply inversion_Lambda in IHHe1 as (? & ? & ? & ? & e); eauto.
       eapply (substitution0 (Γ := [])) in t3; eauto.
       eapply IHHe3.
       rewrite (closed_subst a' 0 b); auto.
       rewrite /subst1 in t3. eapply t3.
-      eapply (type_equality (pb:=Conv)); eauto.
+      eapply (type_ws_cumul_pb (pb:=Conv)); eauto.
       eapply subject_reduction in IHHe2; eauto. now eexists.
-      eapply equality_Prod_Prod_inv in e0 as [eqna dom codom]; eauto.
+      eapply ws_cumul_pb_Prod_Prod_inv in e as [eqna dom codom]; eauto.
       now symmetry.
 
     - eapply inversion_LetIn in Ht as (? & ? & ? & ? & ? & ?); auto.

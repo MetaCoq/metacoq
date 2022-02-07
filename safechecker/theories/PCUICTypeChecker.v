@@ -288,7 +288,7 @@ Section Typecheck.
     Next Obligation.
       sq.
       econstructor ; tea.
-      now apply equality_forget_cumul.
+      now apply ws_cumul_pb_forget_cumul.
     Qed.
     Next Obligation.
       sq.
@@ -429,10 +429,10 @@ Section Typecheck.
       now inversion H.
     Qed.
 
-    Equations check_equality_decl (le : conv_pb) Γ d d'
+    Equations check_ws_cumul_pb_decl (le : conv_pb) Γ d d'
       (wtd : wt_decl Σ Γ d) (wtd' : wt_decl Σ Γ d')
-      : typing_result_comp (∥ equality_open_decls le Σ Γ d d' ∥) :=
-      check_equality_decl le Γ
+      : typing_result_comp (∥ ws_cumul_decls le Σ Γ d d' ∥) :=
+      check_ws_cumul_pb_decl le Γ
         {| decl_name := na; decl_body := Some b; decl_type := ty |}
         {| decl_name := na'; decl_body := Some b'; decl_type := ty' |}
         wtd wtd'
@@ -443,7 +443,7 @@ Section Typecheck.
             cumb <- convert Conv Γ b b' _ _ ;;
             ret _ ;
         } ;
-      check_equality_decl le Γ
+      check_ws_cumul_pb_decl le Γ
         {| decl_name := na; decl_body := None ; decl_type := ty |}
         {| decl_name := na'; decl_body := None ; decl_type := ty' |}
         wtd wtd'
@@ -453,7 +453,7 @@ Section Typecheck.
             cumt <- convert le Γ ty ty' _ _ ;;
             ret _
         } ;
-    check_equality_decl le Γ _ _ _ _ :=
+    check_ws_cumul_pb_decl le Γ _ _ _ _ :=
       raise (Msg "While checking cumulativity of contexts: declarations do not match").
     Next Obligation.
       sq.
@@ -545,26 +545,26 @@ Section Typecheck.
       destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
     Qed.
     
-    Lemma context_equality_rel_cons {le Γ Δ Δ' d d'} (c : context_equality_rel le Σ Γ Δ Δ') 
-      (p : equality_open_decls le Σ (Γ,,, Δ) d d') : 
-      context_equality_rel le Σ Γ (Δ ,, d) (Δ' ,, d').
+    Lemma context_ws_cumul_pb_rel_cons {le Γ Δ Δ' d d'} (c : context_ws_cumul_pb_rel le Σ Γ Δ Δ') 
+      (p : ws_cumul_decls le Σ (Γ,,, Δ) d d') : 
+      context_ws_cumul_pb_rel le Σ Γ (Δ ,, d) (Δ' ,, d').
     Proof.
       destruct c. split; auto.
       destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
     Qed.
 
-    Equations check_equality_ctx (le : conv_pb) Γ Δ Δ'
+    Equations check_ws_cumul_ctx (le : conv_pb) Γ Δ Δ'
       (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-      typing_result_comp (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
+      typing_result_comp (∥ context_ws_cumul_pb_rel le Σ Γ Δ Δ' ∥) :=
 
-      check_equality_ctx le Γ [] [] _ _ := ret _ ;
+      check_ws_cumul_ctx le Γ [] [] _ _ := ret _ ;
       
-      check_equality_ctx le Γ (decl :: Δ) (decl' :: Δ') wfΔ wfΔ' :=
-        check_equality_ctx le Γ Δ Δ' _ _ ;;
-        check_equality_decl le (Γ ,,, Δ) decl decl' _ _ ;;
+      check_ws_cumul_ctx le Γ (decl :: Δ) (decl' :: Δ') wfΔ wfΔ' :=
+        check_ws_cumul_ctx le Γ Δ Δ' _ _ ;;
+        check_ws_cumul_pb_decl le (Γ ,,, Δ) decl decl' _ _ ;;
         ret _ ;
       
-      check_equality_ctx le Γ _ _ _ _ :=
+      check_ws_cumul_ctx le Γ _ _ _ _ :=
         raise (Msg "While checking cumulativity of contexts: contexts do not have the same length").
       
       Next Obligation.
@@ -599,30 +599,30 @@ Section Typecheck.
         eapply context_cumulativity_wt_decl.
         1: now auto.
         1,3:now pcuics.
-        apply context_equality_rel_app.
+        apply context_ws_cumul_pb_rel_app.
         eassumption.
       Qed.
       Next Obligation.
         sq.
         eapply inv_wf_local in wfΔ as [wfΔ wfd].
         eapply inv_wf_local in wfΔ' as [wfΔ' wfd'].
-        now apply context_equality_rel_cons.
+        now apply context_ws_cumul_pb_rel_cons.
       Qed.
       Next Obligation.
         sq. apply absurd. sq.
-        eapply context_equality_rel_app in H.
+        eapply context_ws_cumul_pb_rel_app in H.
         now depelim H.
       Qed.
       Next Obligation.
         sq. apply absurd. sq.
-        eapply context_equality_rel_app in H.
+        eapply context_ws_cumul_pb_rel_app in H.
         depelim H.
-        now apply context_equality_rel_app.
+        now apply context_ws_cumul_pb_rel_app.
       Qed.
       
-    Equations check_alpha_equality_ctx Δ Δ'
+    Equations check_alpha_ws_cumul_ctx Δ Δ'
       : typing_result_comp (∥ eq_context_gen eq eq Δ Δ' ∥) :=
-      check_alpha_equality_ctx Δ Δ' with
+      check_alpha_ws_cumul_ctx Δ Δ' with
         inspect (forallb2 (bcompare_decls eqb eqb) Δ Δ') :=  {
       | @exist true e := ret _ ; 
       | @exist false e' := raise (Msg "While checking alpha-conversion of contexts: contexts differ")
@@ -728,14 +728,14 @@ Section Typecheck.
       now depelim H.
     Qed.
     
-    Equations check_equality_terms Γ ts ts' (wts : ∥ All (welltyped Σ Γ) ts ∥) (wts' : ∥ All (welltyped Σ Γ) ts' ∥) : 
-      typing_result_comp (∥ equality_terms Σ Γ ts ts' ∥) :=
-    check_equality_terms Γ [] [] _ _ := ret _ ;
-    check_equality_terms Γ (t :: ts) (t' :: ts') wts wts' :=
+    Equations check_ws_cumul_pb_terms Γ ts ts' (wts : ∥ All (welltyped Σ Γ) ts ∥) (wts' : ∥ All (welltyped Σ Γ) ts' ∥) : 
+      typing_result_comp (∥ ws_cumul_pb_terms Σ Γ ts ts' ∥) :=
+    check_ws_cumul_pb_terms Γ [] [] _ _ := ret _ ;
+    check_ws_cumul_pb_terms Γ (t :: ts) (t' :: ts') wts wts' :=
       convt <- convert Conv Γ t t' _ _ ;;
-      convts <- check_equality_terms Γ ts ts' _ _ ;;
+      convts <- check_ws_cumul_pb_terms Γ ts ts' _ _ ;;
       ret _ ;
-    check_equality_terms Γ _ _ _ _ := raise (Msg "While checking conversion of terms: lists do not have the same length").
+    check_ws_cumul_pb_terms Γ _ _ _ _ := raise (Msg "While checking conversion of terms: lists do not have the same length").
     Next Obligation.
       sq; now depelim wts.
     Qed.
@@ -1100,7 +1100,7 @@ Section Typecheck.
       check_branches n (cdecl :: cdecls) (br :: brs) i :=
         let brctxty := case_branch_type ci.(ci_ind) mdecl idecl p br ptm n cdecl in
         check_eq_bcontext <-
-          check_alpha_equality_ctx br.(bcontext) (cstr_branch_context ci mdecl cdecl) ;;
+          check_alpha_ws_cumul_ctx br.(bcontext) (cstr_branch_context ci mdecl cdecl) ;;
         bdcheck infer (Γ ,,, brctxty.1) _ br.(bbody) brctxty.2 _ ;;
         check_branches (S n) cdecls brs _ ;;
         ret _ ;
@@ -1367,9 +1367,9 @@ Section Typecheck.
       #|args| u p.(puinst))
       (Msg "invalid universe annotation on case, not larger than the discriminee's universes") ;;
     wt_params <- check_inst infer Γ HΓ (List.rev (smash_context [] (ind_params mdecl))@[p.(puinst)]) _ _ p.(pparams) ;;
-    eq_params <- check_equality_terms Γ params p.(pparams) _ _ ;;
+    eq_params <- check_ws_cumul_pb_terms Γ params p.(pparams) _ _ ;;
     let pctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
-    check_wfpctx_conv <- check_alpha_equality_ctx p.(pcontext) (ind_predicate_context ci mdecl idecl) ;;
+    check_wfpctx_conv <- check_alpha_ws_cumul_ctx p.(pcontext) (ind_predicate_context ci mdecl idecl) ;;
     let isty : ∥ isType Σ Γ (mkApps (tInd ci p.(puinst)) (p.(pparams) ++ indices)) ∥ := _ in
     let wfp : ∥ wf_predicate mdecl idecl p ∥ := _ in
     ps <- infer_type infer (Γ ,,, pctx) _ p.(preturn) ;;
@@ -1543,16 +1543,16 @@ Section Typecheck.
     2: now eapply closed_red_red.
     inversion X6 ; subst.
     econstructor ; tea.
-    apply equality_forget_cumul.
+    apply ws_cumul_pb_forget_cumul.
     transitivity A ; tea.
     1:{
-      apply into_equality ; tea.
+      apply into_ws_cumul_pb ; tea.
       - fvs.
       - now eapply type_is_open_term, infering_typing.
     } 
     etransitivity.
-    2: now eapply red_equality_inv.
-    now eapply red_equality.
+    2: now eapply red_ws_cumul_pb_inv.
+    now eapply red_ws_cumul_pb.
   Qed.
   Next Obligation.
     sq. apply absurd.
@@ -1837,7 +1837,7 @@ Section Typecheck.
     - rewrite /params /chop_args chop_firstn_skipn /= in eq_params.
       eapply All2_impl ; tea.
       intros ? ? ?.
-      now apply equality_forget_conv.
+      now apply ws_cumul_pb_forget_conv.
     - eapply All2i_impl.
       1: eapply All2i_prod.
       1: eassumption.
@@ -1945,11 +1945,11 @@ Section Typecheck.
     2: now econstructor ; tea ; eapply closed_red_red.
     subst.
     etransitivity.
-    1: now eapply All2_firstn, red_terms_equality_terms.
+    1: now eapply All2_firstn, red_terms_ws_cumul_pb_terms.
     etransitivity.
-    1: now symmetry ; eapply All2_firstn, red_terms_equality_terms.
+    1: now symmetry ; eapply All2_firstn, red_terms_ws_cumul_pb_terms.
 
-    eapply PCUICConvCumInversion.alt_into_equality_terms ; tea.
+    eapply PCUICConvCumInversion.alt_into_ws_cumul_pb_terms ; tea.
     - fvs.
     - eapply Forall_forallb.
       2: intros ? H ; apply H.

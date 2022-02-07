@@ -36,7 +36,7 @@ Proof.
   - assumption.
 Qed.
 
-(** ** Boolean of equality **  *)
+(** ** Boolean of ws_cumul_pb **  *)
 
 Definition compare_universe_variance (equ lequ : Universe.t -> Universe.t -> bool) v u u' :=
   match v with
@@ -752,7 +752,7 @@ Proof.
   now unshelve epose proof (eq_term_upto_univ_refl Σ eqb leqb napp _ _ t).
 Qed.
 
-(** Checking equality *)
+(** Checking ws_cumul_pb *)
 
 Section EqualityDec.
   Context {cf : checker_flags}.

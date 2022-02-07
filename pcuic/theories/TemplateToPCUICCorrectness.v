@@ -2133,7 +2133,7 @@ Lemma trans_cumulSpec {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ.1}
 Proof.
   intros Σ' wfΣ' wfΓ wfT wfT' cum clΓ clT clT'.
   eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=pb)).
-  eapply PCUICWellScopedCumulativity.into_equality; eauto with fvs.
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb; eauto with fvs.
   eapply trans_cumul_gen; tea.
 Qed.
 
@@ -2150,7 +2150,7 @@ Lemma trans_cumulSpec_typed {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf
 Proof.
   intros Σ' wfΣ' wfΓ wfT wfT' cum ist ist'.
   eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=pb)).
-  eapply PCUICWellScopedCumulativity.into_equality; eauto with fvs.
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb; eauto with fvs.
   eapply trans_cumul_gen; tea.
   eapply isType_wf_local in ist; fvs.
 Qed.
@@ -2586,7 +2586,7 @@ Proof.
   
   eapply trans_cumul_gen in eqt; tea.
   eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Cumul)).
-  eapply PCUICWellScopedCumulativity.into_equality => //.
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb => //.
   now eapply closed_ctx_on_free_vars in cl0.
   1-2:cbn in cl1, cl1'.
   1-2:rewrite closedn_on_free_vars //; len.
@@ -2594,7 +2594,7 @@ Proof.
 
   eapply trans_cumul_gen in eqb; tea.
   eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Conv)).
-  eapply PCUICWellScopedCumulativity.into_equality => //.
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb => //.
   now eapply closed_ctx_on_free_vars in cl0.
   1-2:move/andP: cl1 => [] /= clb cbt.
   1-2:move/andP: cl1' => [] /= clb' cbt'.
@@ -2603,7 +2603,7 @@ Proof.
 
   eapply trans_cumul_gen in eqt; tea.
   eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Cumul)).
-  eapply PCUICWellScopedCumulativity.into_equality => //.
+  eapply PCUICWellScopedCumulativity.into_ws_cumul_pb => //.
   now eapply closed_ctx_on_free_vars in cl0.
   1-2:move/andP: cl1 => [] /= clb cbt.
   1-2:move/andP: cl1' => [] /= clb' cbt'.
@@ -2738,7 +2738,7 @@ Proof.
       rewrite !trans_smash_context !trans_subst_instance !trans_expand_lets !trans_local_app //.
       intros h. simpl in h.
       eapply (PCUICConversion.cumulAlgo_cumulSpec _ (pb:=Conv)).
-      eapply PCUICWellScopedCumulativity.into_equality; tea.
+      eapply PCUICWellScopedCumulativity.into_ws_cumul_pb; tea.
       { move: clctx. 
         rewrite smash_context_app_expand.
         rewrite -!(trans_smash_context _ []).

@@ -322,11 +322,11 @@ Section Validity.
       move: (typing_wf_universe wf Hu') => wfu'.
       eapply (substitution0 (n := na) (T := tSort u')); eauto.
       apply inversion_Prod in Hu' as [na' [s1 [s2 Hs]]]; tas. intuition.
-      eapply (weakening_equality (pb:=Cumul) (Γ' := []) (Γ'' := [vass na A])) in b0; pcuic.
+      eapply (weakening_ws_cumul_pb (pb:=Cumul) (Γ' := []) (Γ'' := [vass na A])) in b0; pcuic.
       simpl in b0.
-      eapply (type_equality (pb:=Cumul)); eauto. pcuic.
+      eapply (type_ws_cumul_pb (pb:=Cumul)); eauto. pcuic.
       etransitivity; tea.
-      eapply into_equality => //.
+      eapply into_ws_cumul_pb => //.
       all:eauto with fvs.
       do 2 constructor.
       apply leq_universe_product.
@@ -387,7 +387,7 @@ Section Validity.
       { pcuic. }
       eapply typing_spine_strengthen; tea.
       2:{ rewrite /predctx /case_predicate_context /case_predicate_context_gen.
-          eapply equality_compare. 1-2:eauto with fvs.
+          eapply ws_cumul_pb_compare. 1-2:eauto with fvs.
           2:{ red.
               instantiate (1 := 
                 it_mkProd_or_LetIn (pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p))
@@ -490,7 +490,7 @@ Proof.
     exists (tProd na' A' B'). intuition; eauto.
     eapply validity in Hf'.
     econstructor; eauto with wf.
-    now eapply isType_equality_refl.
+    now eapply isType_ws_cumul_pb_refl.
     eapply isType_apply in Hf'; tea.
     eapply typing_spine_strengthen; tea.
 Qed.

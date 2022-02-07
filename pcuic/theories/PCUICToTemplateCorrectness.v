@@ -11,7 +11,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils Ast TypingWf UnivSubst
      TermEquality LiftSubst Reduction.
-
 Set Warnings "+notation_overridden".
 
 From MetaCoq.PCUIC Require Import PCUICEquality PCUICToTemplate.
@@ -1939,9 +1938,9 @@ Lemma typing_spine_weaken_concl {cf:checker_flags} {Σ Γ T args S S'} {wfΣ : w
 Proof.
   intros sp.
   induction sp in S' => tyT cum.
-  * constructor; auto. now eapply equality_forget in cum.
-  * constructor; auto. eapply (into_equality (pb:=Cumul)) in c; fvs.
-    eapply (equality_forget (pb:=Cumul)). now transitivity ty'.
+  * constructor; auto. now eapply ws_cumul_pb_forget in cum.
+  * constructor; auto. eapply (into_ws_cumul_pb (pb:=Cumul)) in c; fvs.
+    eapply (ws_cumul_pb_forget (pb:=Cumul)). now transitivity ty'.
   * intros isType. econstructor. eauto. eauto. eauto.
     apply IHsp; auto. eapply PCUICArities.isType_apply; tea.
 Defined.
@@ -2385,7 +2384,7 @@ Proof.
     + eassumption.
     + eassumption.
     + eapply cumulSpec_cumulAlgo_curry in X4; tea; fvs.
-      eapply equality_forget in X4.
+      eapply ws_cumul_pb_forget in X4.
       eapply cumul_decorate in X4; tea.
       2:eapply validity; tea.
       2:now exists s.

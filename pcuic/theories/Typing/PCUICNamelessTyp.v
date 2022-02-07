@@ -116,8 +116,8 @@ Lemma nl_cumulSpec {cf:checker_flags} :
   nlg Σ ;;; nlctx Γ |- nl A <=s nl B.
 Proof.
   intros. eapply (cumulAlgo_cumulSpec (nlg Σ) (pb:=Cumul)). 
-  eapply into_equality.
-  - eapply nl_cumul. eapply (equality_forget (pb:=Cumul)). 
+  eapply into_ws_cumul_pb.
+  - eapply nl_cumul. eapply (ws_cumul_pb_forget (pb:=Cumul)). 
   unshelve eapply (cumulSpec_cumulAlgo _ _ (exist _ _ ) (exist _ _) (exist _ _)); eauto; cbn. 
   - eapply closed_ctx_on_free_vars. apply closed_nlctx. 
     rewrite is_closed_ctx_closed; eauto.

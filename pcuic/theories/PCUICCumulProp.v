@@ -33,8 +33,8 @@ Lemma cumul_sort_confluence {Σ} {wfΣ : wf Σ} {Γ A u v} :
           leq_universe (global_ext_constraints Σ) v' v).
 Proof.
   move=> H H'.
-  eapply equality_Sort_r_inv in H as [u'u ?].
-  eapply equality_Sort_r_inv in H' as [vu ?].
+  eapply ws_cumul_pb_Sort_r_inv in H as [u'u ?].
+  eapply ws_cumul_pb_Sort_r_inv in H' as [vu ?].
   destruct p, p0.
   destruct (closed_red_confluence c c1) as [x [r1 r2]].
   eapply invert_red_sort in r1.
@@ -47,14 +47,14 @@ Lemma cumul_ind_confluence {Σ : global_env_ext} {wfΣ : wf Σ} {Γ A ind u v l 
   Σ ;;; Γ ⊢ A ≤ mkApps (tInd ind v) l' ->
   ∑ v' l'', 
     [× Σ ;;; Γ ⊢ A ⇝ (mkApps (tInd ind v') l''),
-       equality_terms Σ Γ l l'',
-       equality_terms Σ Γ l' l'',
+       ws_cumul_pb_terms Σ Γ l l'',
+       ws_cumul_pb_terms Σ Γ l' l'',
        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l| v' u &
        R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|l'| v' v].
 Proof.
   move=> H H'.
-  eapply equality_Ind_r_inv in H as [u'u [l'u [redl ru ?]]].
-  eapply equality_Ind_r_inv in H' as [vu [l''u [redr ru' ?]]].
+  eapply ws_cumul_pb_Ind_r_inv in H as [u'u [l'u [redl ru ?]]].
+  eapply ws_cumul_pb_Ind_r_inv in H' as [vu [l''u [redr ru' ?]]].
   destruct (closed_red_confluence redl redr) as [nf [redl' redr']].
   eapply invert_red_mkApps_tInd in redl'  as [args' [eqnf clΓ conv]].
   eapply invert_red_mkApps_tInd in redr'  as [args'' [eqnf' _ conv']].
@@ -62,13 +62,13 @@ Proof.
   all:auto. exists u'u, args'; split; auto.
   - transitivity (mkApps (tInd ind u'u) l'u).
     auto. eapply closed_red_mkApps => //.
-  - eapply red_terms_equality_terms in conv. 
+  - eapply red_terms_ws_cumul_pb_terms in conv. 
     transitivity l'u => //. now symmetry.
-  - eapply red_terms_equality_terms in conv'. 
+  - eapply red_terms_ws_cumul_pb_terms in conv'. 
     transitivity l''u => //. now symmetry.
 Qed.
 
-Lemma equality_LetIn_l_inv_alt {Σ Γ C na d ty b} {wfΣ : wf Σ.1} :
+Lemma ws_cumul_pb_LetIn_l_inv_alt {Σ Γ C na d ty b} {wfΣ : wf Σ.1} :
   wf_local Σ (Γ ,, vdef na d ty) ->
   Σ ;;; Γ ⊢ tLetIn na d ty b = C ->
   Σ ;;; Γ,, vdef na d ty ⊢ b = lift0 1 C.
@@ -76,10 +76,10 @@ Proof.
   intros wf Hlet.
   epose proof (red_expand_let wf).
   etransitivity. eapply red_conv, X.
-  eapply equality_is_open_term_left in Hlet.
+  eapply ws_cumul_pb_is_open_term_left in Hlet.
   { rewrite on_fvs_letin in Hlet. now move/and3P: Hlet => []. }
-  eapply (@weakening_equality _ _ _ _ Γ [] [vdef _ _ _]); auto.
-  now eapply equality_LetIn_l_inv in Hlet.
+  eapply (@weakening_ws_cumul_pb _ _ _ _ Γ [] [vdef _ _ _]); auto.
+  now eapply ws_cumul_pb_LetIn_l_inv in Hlet.
   now eapply wf_local_closed_context.
 Qed.
 
@@ -133,7 +133,7 @@ Lemma conv_sort_inv {Σ : global_env_ext} {wfΣ : wf Σ} Γ s s' :
   eq_universe (global_ext_constraints Σ) s s'.
 Proof.
   intros H.
-  eapply equality_alt_closed in H as [v [v' [redv redv' eqvv']]].
+  eapply ws_cumul_pb_alt_closed in H as [v [v' [redv redv' eqvv']]].
   eapply invert_red_sort in redv.
   eapply invert_red_sort in redv'. subst.
   now depelim eqvv'.
@@ -712,7 +712,7 @@ Lemma red_conv_prop {Σ Γ T U} {wfΣ : wf_ext Σ} :
   Σ ;;; Γ ⊢ T ⇝ U ->
   Σ ;;; Γ |- T ~~ U.
 Proof.
-  move/(red_equality (pb:=Conv)).
+  move/(red_ws_cumul_pb (pb:=Conv)).
   now apply conv_cumul_prop.
 Qed.
 
@@ -741,7 +741,7 @@ Proof.
     assert (Σ ;;; Γ ⊢ t ⇝ v) by (now apply into_closed_red).
     symmetry in X0.
     eapply conv_red_conv in X1. 2:exact X0.
-    3:{ eapply equality_refl. fvs. now rewrite (All2_fold_length X0). }
+    3:{ eapply ws_cumul_pb_refl. fvs. now rewrite (All2_fold_length X0). }
     2:{ eapply closed_red_refl. fvs. now rewrite (All2_fold_length X0). }
     symmetry in X1. now eapply conv_cumul_prop.
   - specialize (IHX X0). transitivity v => //.
@@ -749,7 +749,7 @@ Proof.
     assert (Σ ;;; Γ ⊢ u ⇝ v) by (now apply into_closed_red).
     symmetry in X0.
     eapply conv_red_conv in X1. 2:exact X0.
-    3:{ eapply equality_refl. fvs. now rewrite (All2_fold_length X0). }
+    3:{ eapply ws_cumul_pb_refl. fvs. now rewrite (All2_fold_length X0). }
     2:{ eapply closed_red_refl. fvs. now rewrite (All2_fold_length X0). }
     symmetry in X1. now eapply conv_cumul_prop.
 Qed.

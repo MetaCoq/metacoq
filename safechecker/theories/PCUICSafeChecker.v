@@ -522,12 +522,12 @@ Section CheckEnv.
     convert (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ t u.
 
   Program Definition wf_env_check_cumul_decl (Σ : wf_env_ext) le Γ d d' :=
-    check_equality_decl (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ d d'.
+    check_ws_cumul_pb_decl (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ d d'.
 
-  Program Fixpoint wf_env_check_equality_ctx (le : conv_pb) (Σ : wf_env_ext) Γ Δ Δ' 
+  Program Fixpoint wf_env_check_ws_cumul_ctx (le : conv_pb) (Σ : wf_env_ext) Γ Δ Δ' 
     (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-    typing_result (∥ context_equality_rel le Σ Γ Δ Δ' ∥) :=
-    check_equality_ctx (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ Δ Δ' wfΔ wfΔ'.
+    typing_result (∥ context_ws_cumul_pb_rel le Σ Γ Δ Δ' ∥) :=
+    check_ws_cumul_ctx (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ Δ Δ' wfΔ wfΔ'.
   
   Program Definition check_eq_term pb (Σ : wf_env_ext) t u : typing_result (∥ compare_term pb Σ Σ t u ∥) :=
     check <- check_eq_true (eqb_termp Σ Σ pb t u) (Msg "Terms are not equal") ;;
@@ -570,7 +570,7 @@ Section CheckEnv.
       cctx <- check_compare_context pb Σ Γ Δ ;;
       cdecl <- check_eq_decl pb Σ decl decl' ;;
       ret _
-    | _, _ => raise (Msg "While checking equality of contexts: contexts do not have the same length")
+    | _, _ => raise (Msg "While checking ws_cumul_pb of contexts: contexts do not have the same length")
     end.
 
     Next Obligation.
@@ -591,7 +591,7 @@ Section CheckEnv.
       cctx <- check_leq_terms pb Σ l l' ;;
       cdecl <- check_eq_term pb Σ t t' ;;
       ret _
-    | _, _ => raise (Msg "While checking equality of term lists: lists do not have the same length")
+    | _, _ => raise (Msg "While checking ws_cumul_pb of term lists: lists do not have the same length")
     end.
 
     Next Obligation.
@@ -604,7 +604,7 @@ Section CheckEnv.
   
   Program Fixpoint check_conv_args (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) l l'
     (wfl : wt_terms Σ Γ l) (wfl' : wt_terms Σ Γ l') :
-    typing_result (∥ equality_terms Σ Γ l l' ∥) :=
+    typing_result (∥ ws_cumul_pb_terms Σ Γ l l' ∥) :=
     match l, l' with
     | [], [] => ret (sq All2_nil)
     | t :: l, t' :: l' => 
@@ -885,34 +885,34 @@ Section CheckEnv.
     move: (smash_context [] Δ) => {}Δ.
     induction Δ using PCUICInduction.ctx_length_rev_ind in s, s', args |- *; simpl;
       rewrite ?it_mkProd_or_LetIn_app;
-    intros ass wf sp; depelim sp; try constructor.
-    * now eapply equality_Sort_Prod_inv in e.
+    intros ass wf sp; dependent elimination sp as [spnil isty isty' e|spcons isty isty' e e' cum]; try constructor.
+    * now eapply ws_cumul_pb_Sort_Prod_inv in e.
     * apply assumption_context_app in ass as [ass assd].  
       destruct d as [na [b|] ty]; unfold mkProd_or_LetIn in e; simpl in *.
       elimtype False; depelim assd.
-      eapply equality_Prod_Sort_inv in e; auto.
+      eapply ws_cumul_pb_Prod_Sort_inv in e; auto.
     * apply assumption_context_app in ass as [ass assd].  
       destruct d as [na' [b'|] ty']; unfold mkProd_or_LetIn in e; simpl in *.
       elimtype False; depelim assd.
-      eapply equality_Prod_Prod_inv in e as [eqann eqdom codom]; auto.
+      eapply ws_cumul_pb_Prod_Prod_inv in e as [eqann eqdom codom]; auto.
       rewrite List.rev_app_distr.
       constructor.
       eapply All_local_env_app_inv in wf as [wfΓ wfr].
       eapply All_local_env_app_inv in wfr as [wfd wfΓ0].
       depelim wfd. destruct l as [? Hs].
-      eapply type_equality; pcuic. eapply equality_eq_le. now symmetry.
+      eapply type_ws_cumul_pb; pcuic. eapply ws_cumul_pb_eq_le. now symmetry.
       rewrite subst_telescope_subst_context. cbn in *.
-      have tyhd : Σ ;;; Γ |- hd : ty'.
-      { eapply type_equality; tea.  eapply isType_tProd in i as [].
-        pcuic. eapply equality_eq_le. now symmetry. }
+      have tyhd : Σ ;;; Γ |- hd0 : ty'.
+      { eapply type_ws_cumul_pb; tea. eapply isType_tProd in isty as [].
+        pcuic. eapply ws_cumul_pb_eq_le. now symmetry. }
       eapply X. now len.
       pcuic.
       eapply substitution_wf_local; eauto. eapply subslet_ass_tip; tea. 
       rewrite app_context_assoc in wf; eapply wf.
       eapply typing_spine_strengthen; eauto.
-      eapply isType_apply in i; tea.
-      now rewrite /subst1 subst_it_mkProd_or_LetIn in i.
-      eapply substitution0_equality in codom; eauto.
+      eapply isType_apply in isty; tea.
+      now rewrite /subst1 subst_it_mkProd_or_LetIn in isty.
+      eapply substitution0_ws_cumul_pb in codom; eauto.
       now rewrite /subst1 subst_it_mkProd_or_LetIn in codom.
   Qed.
   
@@ -933,7 +933,7 @@ Section CheckEnv.
     eapply typing_spine_strengthen; eauto.
     eapply isType_lift; auto. len.  pcuic.
     now rewrite skipn_all_app.
-    eapply equality_eq_le.
+    eapply ws_cumul_pb_eq_le.
     etransitivity.
     2:{ symmetry; eapply red_conv. repeat constructor.
         * now eapply isType_wf_local, wf_local_closed_context in isty'.
@@ -943,12 +943,12 @@ Section CheckEnv.
     etransitivity.
     symmetry.
     epose proof (red_expand_let (isType_wf_local isty)).
-    epose proof (weakening_equality (pb:=Conv) (Γ := Γ ,, decl) (Γ' := []) (Γ'' := Δ)).
+    epose proof (weakening_ws_cumul_pb (pb:=Conv) (Γ := Γ ,, decl) (Γ' := []) (Γ'' := Δ)).
     simpl in X0.
     eapply X0.
     symmetry. eapply red_conv. apply X. fvs. eapply isType_wf_local, wf_local_closed_context in isty'. fvs.
     rewrite simpl_lift. lia. lia.
-    eapply equality_refl. eapply isType_wf_local in isty'. fvs.
+    eapply ws_cumul_pb_refl. eapply isType_wf_local in isty'. fvs.
     apply on_free_vars_lift0. rewrite /app_context /snoc; len.
     replace (#|Δ| + S #|Γ|) with (S #|Δ| + #|Γ|). 2:lia. rewrite Nat.add_1_r.
     rewrite -shiftnP_add addnP_shiftnP. eapply on_free_vars_subst.
@@ -966,12 +966,12 @@ Section CheckEnv.
   Proof.
     intros decl wf.
     cbn. intros sp.
-    depelim sp.
+    dependent elimination sp as [spcons isty isty' e e' cum].
     have istyl : isType Σ (Γ,, decl,,, Δ) (lift0 #|Δ| T).
     { eapply isType_lift; tea. len. pcuic. now rewrite skipn_all_app. }
     eapply typing_spine_strengthen; eauto.
-    eapply equality_Prod_Prod_inv in e as [eqann eqdom eqcodom]; auto.
-    eapply (substitution0_equality (t:=tRel #|Δ|)) in eqcodom; auto.
+    eapply ws_cumul_pb_Prod_Prod_inv in e as [eqann eqdom eqcodom]; auto.
+    eapply (substitution0_ws_cumul_pb (t:=tRel #|Δ|)) in eqcodom; auto.
     etransitivity; eauto.
     rewrite /subst1.
     replace ([tRel #|Δ|]) with (map (lift #|Δ| 0) [tRel 0]). 2:simpl; lia_f_equal.
@@ -979,7 +979,7 @@ Section CheckEnv.
     change 1 with (0 + #|[tRel 0]| + 0) at 1.
     rewrite -distr_lift_subst_rec /= //.
     rewrite subst_rel0_lift_id.
-    now eapply equality_eq_le, isType_equality_refl.
+    now eapply ws_cumul_pb_eq_le, isType_ws_cumul_pb_refl.
   Qed.
   
   (** Non-trivial lemma: 

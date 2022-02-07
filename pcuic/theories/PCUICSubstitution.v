@@ -1278,27 +1278,27 @@ Section CtxReduction.
   Qed.
 End CtxReduction.
 
-Record wt_equality {cf} (c : conv_pb) Σ (Γ : context) T U := 
-  { wt_equality_dom : isType Σ Γ T;
-    wt_equality_codom : isType Σ Γ U;
-    wt_equality_eq : cumulAlgo_gen Σ Γ c T U }.
+Record wt_cumul_pb {cf} (c : conv_pb) Σ (Γ : context) T U := 
+  { wt_cumul_pb_dom : isType Σ Γ T;
+    wt_cumul_pb_codom : isType Σ Γ U;
+    wt_cumul_pb_eq : cumulAlgo_gen Σ Γ c T U }.
 
-Arguments wt_equality_dom {cf c Σ Γ T U}.
-Arguments wt_equality_codom {cf c Σ Γ T U}.
-Arguments wt_equality_eq {cf c Σ Γ T U}.
+Arguments wt_cumul_pb_dom {cf c Σ Γ T U}.
+Arguments wt_cumul_pb_codom {cf c Σ Γ T U}.
+Arguments wt_cumul_pb_eq {cf c Σ Γ T U}.
 
-Definition wt_cumul {cf} := wt_equality Cumul.
-Definition wt_conv {cf} := wt_equality Conv.
+Definition wt_cumul {cf} := wt_cumul_pb Cumul.
+Definition wt_conv {cf} := wt_cumul_pb Conv.
 
 Notation " Σ ;;; Γ |- t <= u ✓" := (wt_cumul Σ Γ t u) (at level 50, Γ, t, u at next level).
 Notation " Σ ;;; Γ |- t = u ✓" := (wt_conv Σ Γ t u) (at level 50, Γ, t, u at next level).
 
 Definition wt_cumul_cum {cf} {Σ Γ T U} : Σ ;;; Γ |- T <= U ✓ -> Σ ;;; Γ |- T <= U.
-Proof. intros H. apply (wt_equality_eq H). Defined.
+Proof. intros H. apply (wt_cumul_pb_eq H). Defined.
 Coercion wt_cumul_cum : wt_cumul >-> cumulAlgo.
 
 Definition wt_conv_conv {cf} {Σ Γ T U} : Σ ;;; Γ |- T = U ✓ -> Σ ;;; Γ |- T = U.
-Proof. intros H; apply (wt_equality_eq H). Defined.
+Proof. intros H; apply (wt_cumul_pb_eq H). Defined.
 Coercion wt_conv_conv : wt_conv >-> convAlgo.
 
 Definition red1P P Σ Γ t v := 
@@ -1349,7 +1349,7 @@ Section SubstitutionLemmas.
     now rewrite shiftnPF_closedPT.
   Qed.
 
-  Lemma wt_equality_equalityP {le} {Γ : context} {T  U} : wt_equality le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
+  Lemma wt_cumul_pb_equalityP {le} {Γ : context} {T  U} : wt_cumul_pb le Σ Γ T U -> cumulP le Σ (closedP #|Γ| xpredT) Γ T U.
   Proof.
     move=> [] dom.
     move: (isType_wf_local dom) => /closed_wf_local clΓ.
@@ -1852,15 +1852,15 @@ Qed.
 
 (** Substitution into a *well-typed* cumulativity/conversion derivation. *)
 
-Lemma substitution_wt_equality {cf} {Σ} {wfΣ : wf Σ} {le Γ Γ' Γ'' s M N} :
+Lemma substitution_wt_cumul_pb {cf} {Σ} {wfΣ : wf Σ} {le Γ Γ' Γ'' s M N} :
   subslet Σ Γ s Γ' ->
-  wt_equality le Σ (Γ ,,, Γ' ,,, Γ'') M N ->
-  wt_equality le Σ (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
+  wt_cumul_pb le Σ (Γ ,,, Γ' ,,, Γ'') M N ->
+  wt_cumul_pb le Σ (Γ ,,, subst_context s 0 Γ'') (subst s #|Γ''| M) (subst s #|Γ''| N).
 Proof.
   move=> Hs wteq; split.
   + eapply (isType_substitution Hs), wteq.
   + eapply (isType_substitution Hs), wteq.
-  + move/wt_equality_equalityP: wteq; elim.
+  + move/wt_cumul_pb_equalityP: wteq; elim.
     - intros t u cmp. 
       constructor. now eapply subst_compare_term.
     - move=> t u v red cum.
@@ -1881,10 +1881,10 @@ Lemma substitution_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' s M N} :
   subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ✓ ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |-  subst s #|Γ''| M <= subst s #|Γ''| N ✓.
-Proof. apply substitution_wt_equality. Qed.
+Proof. apply substitution_wt_cumul_pb. Qed.
 
 Lemma substitution_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' s M N} :
   subslet Σ Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M = N ✓ ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |-  subst s #|Γ''| M = subst s #|Γ''| N ✓.
-Proof. apply substitution_wt_equality. Qed.
+Proof. apply substitution_wt_cumul_pb. Qed.

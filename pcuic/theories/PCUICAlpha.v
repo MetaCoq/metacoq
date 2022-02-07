@@ -268,7 +268,7 @@ Section Alpha.
     is_closed_context (Γ ,,, Δ) ->
     is_closed_context (Γ ,,, Δ') ->
     Δ ≡Γ Δ' ->
-    context_equality_rel le Σ Γ Δ Δ'.
+    context_ws_cumul_pb_rel le Σ Γ Δ Δ'.
   Proof.
     intros cl cl' eq.
     split; eauto with fvs.
@@ -293,7 +293,7 @@ Section Alpha.
     move: (on_free_vars_ctx_app xpred0 Γ Δ0).
     rewrite onΓ a /= => iscl'.
     eapply All_decls_alpha_pb_ws_decl; tea.
-    intros. apply equality_compare => //. now apply eq_term_compare_term, upto_names_impl_eq_term.
+    intros. apply ws_cumul_pb_compare => //. now apply eq_term_compare_term, upto_names_impl_eq_term.
     rewrite app_length (All2_fold_length IH') -app_length //.
 
   Qed.
@@ -495,19 +495,19 @@ Section Alpha.
     depelim r; subst; constructor; auto.
     - destruct l as [s Hs]. exists s.
       eapply (closed_context_cumulativity _ (pb:=Conv)); tea. apply IHeq. pcuic.
-      eapply context_equality_rel_app.
+      eapply context_ws_cumul_pb_rel_app.
       eapply eq_context_upto_conv_context_rel; fvs.
       eapply eq_context_gen_upto.
       now eapply All2_fold_All2 in eq.
     - destruct l as [s Hs]. exists s.
       eapply (closed_context_cumulativity _ (pb:=Conv)); tea. apply IHeq. pcuic.
-      eapply context_equality_rel_app.
+      eapply context_ws_cumul_pb_rel_app.
       eapply eq_context_upto_conv_context_rel. 1-2:fvs.
       eapply eq_context_gen_upto.
       now eapply All2_fold_All2 in eq.
     - red. red in l0.
       eapply (closed_context_cumulativity _ (pb:=Conv)); tea. apply IHeq. pcuic.
-      eapply context_equality_rel_app.
+      eapply context_ws_cumul_pb_rel_app.
       eapply eq_context_upto_conv_context_rel. 1-2:fvs.
       eapply eq_context_gen_upto.
       now eapply All2_fold_All2 in eq.
@@ -548,7 +548,7 @@ Section Alpha.
     eapply closed_context_conversion; tea.
     eapply typing_wf_local in X.
     eapply (eq_context_upto_conv_context_rel []) in X0.
-    eapply context_equality_rel_app in X0; tea.
+    eapply context_ws_cumul_pb_rel_app in X0; tea.
     rewrite !app_context_nil_l in X0. exact X0.
     all:rewrite !app_context_nil_l; fvs.
   Qed.
@@ -761,25 +761,25 @@ Section Alpha.
         destruct (wf_local_app_inv X4) as [wfΔ _].
         assert (clΔ := (wf_local_closed_context wfΔ)).
         econstructor; tea; eauto. 2,3: constructor; tea ; eauto. 
-        * eapply (type_equality (pb:=Cumul)).
+        * eapply (type_ws_cumul_pb (pb:=Cumul)).
           eapply IHc; eauto.
           eexists; eapply isType_mkApps_Ind; tea.
           unshelve eapply (ctx_inst_spine_subst _ ctxinst').
           eapply weaken_wf_local; tea.
           now eapply (on_minductive_wf_params_indices_inst isdecl).
-          eapply equality_eq_le. rewrite -eqinst.
-          eapply equality_mkApps; trea.
-          eapply equality_refl => //. eauto with fvs.
+          eapply ws_cumul_pb_eq_le. rewrite -eqinst.
+          eapply ws_cumul_pb_mkApps; trea.
+          eapply ws_cumul_pb_refl => //. eauto with fvs.
           eapply wf_local_closed_context in wfΓ.
           eapply isType_open in X1.
           rewrite on_free_vars_mkApps in X1. move/andP: X1 => [] _.
           rewrite forallb_app => /andP[] hargs hc.
           eapply All2_app.
-          2:{ eapply eq_terms_equality_terms => //.
+          2:{ eapply eq_terms_ws_cumul_pb_terms => //.
               now eapply wf_local_closed_context in wfΔ. }
           eapply ctx_inst_closed, All_app in Hctxi as []; eauto.
           eapply ctx_inst_closed, All_app in ctxinst' as []; eauto.
-          eapply eq_terms_equality_terms => //.
+          eapply eq_terms_ws_cumul_pb_terms => //.
           rewrite (All2_fold_length e') in a, a0.
           solve_all. now eapply closedn_on_free_vars.
           solve_all. now eapply closedn_on_free_vars.
@@ -989,11 +989,11 @@ Section Alpha.
         now symmetry.
 
     - intros t A B X wf ht iht har ihar hcu Δ v e e'.
-      eapply (type_equality (pb:=Cumul)).
+      eapply (type_ws_cumul_pb (pb:=Cumul)).
       + eapply iht; tea.
       + exists X; eauto.
         specialize (wf _ e'). now eapply eq_context_conversion.
-      + eapply (equality_equality_ctx (pb':=Conv)); tea.
+      + eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv)); tea.
         2:eapply PCUICInversion.into_ws_cumul; tea.
         specialize (wf _ e').
         apply wf_conv_context_closed => //.

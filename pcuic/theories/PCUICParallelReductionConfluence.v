@@ -914,7 +914,7 @@ Section Rho.
         eapply (mkApps_nApp_inj _ _ _ []) in H as [Hf Hargs]);
         [noconf Hf|reflexivity].
 
-  Set Equations With UIP. (* This allows to use decidable equality on terms. *)
+  Set Equations With UIP. (* This allows to use decidable ws_cumul_pb on terms. *)
 
   (* Most of this is discrimination, we should have a more robust tactic to  
     solve this. *)

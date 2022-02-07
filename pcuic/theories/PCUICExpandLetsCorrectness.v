@@ -1644,7 +1644,7 @@ Proof.
   now rewrite on_free_vars_ctx_app => /andP.
 Qed.
 
-Lemma untyped_subslet_context_ws_cumul_pb {cf} {Γ Γ' Δ Δ'} {s} :
+Lemma untyped_subslet_ws_cumul_ctx_pb {cf} {Γ Γ' Δ Δ'} {s} :
   untyped_subslet (Γ ,,, Δ) s Γ' ->
   untyped_subslet (Γ ,,, Δ') s Γ'.
 Proof.
@@ -1668,7 +1668,7 @@ Lemma red_context_rel_conv_extended_subst {cf} {Σ : global_env_ext} {wfΣ : wf 
   is_closed_context (Γ ,,, Δ') ->
   red_context_rel Σ Γ Δ Δ' ->
   red_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
-  context_ws_cumul_pb_rel Conv Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+  ws_cumul_ctx_pb_rel Conv Σ Γ (smash_context [] Δ) (smash_context [] Δ').
 Proof.
   intros wfl wfr cum.
   assert (is_closed_context (Γ ,,, smash_context [] Δ)).
@@ -1704,7 +1704,7 @@ Proof.
         eapply (untyped_substitution_ws_cumul_pb_subst_conv (Γ' := [])); tea.
         now eapply red_terms_ws_cumul_pb_terms in conv.
         3:eapply PCUICContexts.untyped_subslet_extended_subst.
-        3:{ eapply untyped_subslet_context_ws_cumul_pb.
+        3:{ eapply untyped_subslet_ws_cumul_ctx_pb.
             now eapply untyped_subslet_extended_subst. }
         now eapply weakening_is_closed_context.
         cbn -[is_closed_context]. rewrite on_free_vars_ctx_app.
@@ -3313,9 +3313,9 @@ Proof.
     rewrite on_free_vars_subst_instance. eapply closedn_on_free_vars in H.
     now rewrite Nat.add_comm (Nat.add_comm _ #|ind_params mdecl|) Nat.add_assoc. }
   eapply ws_cumul_pb_it_mkProd_or_LetIn.
-  { eapply context_ws_cumul_pb_rel_app.
+  { eapply ws_cumul_ctx_pb_rel_app.
     rewrite -trans_subst_instance_ctx.
-    now eapply context_ws_cumul_pb_refl. }
+    now eapply ws_cumul_ctx_pb_refl. }
   etransitivity.
   eapply ws_cumul_pb_it_mkProd_or_LetIn_smash => //.
   have <-: (expand_lets (map trans_decl (cstr_args cdecl)@[u])

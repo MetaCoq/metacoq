@@ -670,7 +670,7 @@ Qed.*)
   Lemma spine_subst_conv {Γ inst insts Δ inst' insts' Δ'} :
     spine_subst Σ Γ inst insts Δ ->
     spine_subst Σ Γ inst' insts' Δ' ->
-    context_ws_cumul_pb_rel Conv Σ Γ Δ Δ' ->
+    ws_cumul_ctx_pb_rel Conv Σ Γ Δ Δ' ->
     ws_cumul_pb_terms Σ Γ inst inst' -> 
     ws_cumul_pb_terms Σ Γ insts insts'.
   Proof.
@@ -2372,7 +2372,7 @@ Section WfEnv.
     assumption_context Γ -> assumption_context Γ' -> 
     wf_local Σ (Δ ,,, Γ) ->
     wf_local Σ (Δ ,,, Γ') ->
-    context_ws_cumul_pb_rel pb Σ Δ Γ Γ' ->
+    ws_cumul_ctx_pb_rel pb Σ Δ Γ Γ' ->
     subslet Σ Δ args Γ -> subslet Σ Δ args Γ'.
   Proof.
     intros ass ass' wf wf' a2.
@@ -2399,7 +2399,7 @@ Section WfEnv.
     assumption_context Γ -> assumption_context Γ' -> 
     wf_local Σ (Δ ,,, Γ) ->
     wf_local Σ (Δ ,,, Γ') ->
-    context_ws_cumul_pb_rel Cumul Σ Δ Γ Γ' ->
+    ws_cumul_ctx_pb_rel Cumul Σ Δ Γ Γ' ->
     spine_subst Σ Δ args (List.rev args) Γ -> 
     spine_subst Σ Δ args (List.rev args) Γ'.
   Proof.
@@ -2693,7 +2693,7 @@ Section WfEnv.
   Proof. apply context_assumptions_fold. Qed.
   Hint Rewrite @context_assumptions_lift @context_assumptions_subst : len.
 
-  Lemma context_ws_cumul_pb_rel'_context_assumptions {pb} {Γ} {Δ Δ'} : 
+  Lemma ws_cumul_ctx_pb_rel'_context_assumptions {pb} {Γ} {Δ Δ'} : 
     All2_fold
       (fun Γ' _ : context =>
         All_decls_alpha_pb pb
@@ -2704,15 +2704,15 @@ Section WfEnv.
     depelim p; simpl; auto. lia.
   Qed.
 
-  Lemma context_ws_cumul_pb_rel_context_assumptions {pb} {Γ} {Δ Δ'} : 
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
+  Lemma ws_cumul_ctx_pb_rel_context_assumptions {pb} {Γ} {Δ Δ'} : 
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
     context_assumptions Δ = context_assumptions Δ'.
   Proof.
-    intros []. now eapply context_ws_cumul_pb_rel'_context_assumptions.
+    intros []. now eapply ws_cumul_ctx_pb_rel'_context_assumptions.
   Qed.
   
   (* Lemma subslet_subs {cf} {Σ} {wfΣ : wf Σ} {Γ i Δ Δ'} :
-  context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
+  ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
   ctx_inst Σ Γ i (Li *)
 
   Lemma ws_cumul_pb_expand_lets_k {pb} {Γ Δ Γ'} {T T'} : 
@@ -2771,7 +2771,7 @@ Section WfEnv.
     eapply ws_cumul_pb_eq_le.
   Qed.
 
-  Lemma context_ws_cumul_pb_le_le {pb Γ Γ'} : 
+  Lemma ws_cumul_ctx_pb_le_le {pb Γ Γ'} : 
     Σ ⊢ Γ ≤[pb] Γ' -> Σ ⊢ Γ ≤ Γ'.
   Proof.
     intros a; eapply All2_fold_impl; tea.
@@ -2781,40 +2781,40 @@ Section WfEnv.
     now eapply ws_cumul_pb_le_le.
   Qed.
 
-  Lemma context_ws_cumul_pb_eq_le {pb Γ Δ} :
+  Lemma ws_cumul_ctx_pb_eq_le {pb Γ Δ} :
     Σ ⊢ Γ = Δ -> Σ ⊢ Γ ≤[pb] Δ.
   Proof.
     destruct pb; eauto.
-    apply context_ws_cumul_pb_le_le.
+    apply ws_cumul_ctx_pb_le_le.
   Qed.
 
-  Lemma subslet_context_ws_cumul_pb {pb} {Γ Γ' Δ Δ'} {s} :
+  Lemma subslet_ws_cumul_ctx_pb {pb} {Γ Γ' Δ Δ'} {s} :
     wf_local Σ (Γ ,,, Δ) ->
     wf_local Σ (Γ ,,, Δ') ->
-    context_ws_cumul_pb_rel pb Σ Γ Δ' Δ ->
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ' Δ ->
     subslet Σ (Γ ,,, Δ) s Γ' ->
     subslet Σ (Γ ,,, Δ') s Γ'.
   Proof.
     intros wfl wfr cumul.
     induction 1; constructor; auto.
     * eapply context_cumulativity; tea.
-      eapply context_ws_cumul_pb_rel_app in cumul.
-      eapply context_ws_cumul_pb_le_le in cumul.
-      now apply context_ws_cumul_pb_forget in cumul.
+      eapply ws_cumul_ctx_pb_rel_app in cumul.
+      eapply ws_cumul_ctx_pb_le_le in cumul.
+      now apply ws_cumul_ctx_pb_forget in cumul.
     * eapply context_cumulativity; tea.
-      eapply context_ws_cumul_pb_rel_app in cumul.
-      eapply context_ws_cumul_pb_le_le in cumul.
-      now apply context_ws_cumul_pb_forget in cumul.
+      eapply ws_cumul_ctx_pb_rel_app in cumul.
+      eapply ws_cumul_ctx_pb_le_le in cumul.
+      now apply ws_cumul_ctx_pb_forget in cumul.
   Qed.
 
   Arguments on_free_vars_ctx _ _ : simpl never.
 
-  Lemma context_ws_cumul_pb_rel_conv_extended_subst {pb} {Γ Δ Δ'} :
+  Lemma ws_cumul_ctx_pb_rel_conv_extended_subst {pb} {Γ Δ Δ'} :
     wf_local Σ (Γ ,,, Δ) ->
     wf_local Σ (Γ ,,, Δ') ->
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
     ws_cumul_pb_terms Σ (Γ ,,, smash_context [] Δ) (extended_subst Δ 0) (extended_subst Δ' 0) ×
-    context_ws_cumul_pb_rel pb Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+    ws_cumul_ctx_pb_rel pb Σ Γ (smash_context [] Δ) (smash_context [] Δ').
   Proof.
     intros wfl wfr [clΓ cum].
     assert (is_closed_context (Γ ,,, smash_context [] Δ)).
@@ -2840,18 +2840,18 @@ Section WfEnv.
           eapply ws_cumul_pb_expand_lets in eqt; tea.
           etransitivity;tea. rewrite /expand_lets /expand_lets_k. simpl.
           rewrite -(length_of cum).
-          rewrite -(context_ws_cumul_pb_rel'_context_assumptions cum).
+          rewrite -(ws_cumul_ctx_pb_rel'_context_assumptions cum).
           move: (context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
           change (Γ ,,, smash_context [] Γ0) with (Γ ,,, smash_context [] Γ0 ,,, []).
           eapply (substitution_ws_cumul_pb_subst_conv (Δ := [])); tea.
           { now eapply subslet_untyped_subslet, PCUICContexts.subslet_extended_subst. }
-          { eapply subslet_untyped_subslet, subslet_context_ws_cumul_pb. 3:tea.
+          { eapply subslet_untyped_subslet, subslet_ws_cumul_ctx_pb. 3:tea.
             now eapply wf_local_smash_end.
             now eapply wf_local_smash_end.
             now eapply PCUICContexts.subslet_extended_subst. }
           relativize (context_assumptions Γ').
           eapply is_closed_context_lift; tea; eauto with fvs. len.
-          now rewrite -(context_ws_cumul_pb_rel'_context_assumptions cum).
+          now rewrite -(ws_cumul_ctx_pb_rel'_context_assumptions cum).
           eapply ws_cumul_pb_refl.
           rewrite -[context_assumptions Γ0](smash_context_length []).
           eapply is_closed_context_lift; tea; eauto with fvs.
@@ -2870,20 +2870,20 @@ Section WfEnv.
         etransitivity; tea. 
         rewrite /expand_lets /expand_lets_k. simpl.
         rewrite -(length_of cum).
-        rewrite -(context_ws_cumul_pb_rel'_context_assumptions cum).
+        rewrite -(ws_cumul_ctx_pb_rel'_context_assumptions cum).
         move: (context_assumptions_smash_context [] Γ0); cbn => <-. simpl.
         change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
         cbn. rewrite smash_context_acc /=.
         change (smash_context [] Γ0 ++ Γ) with (Γ ,,, smash_context [] Γ0 ,,, []).
         eapply (substitution_ws_cumul_pb_subst_conv (Δ := [])); tea.
         { now eapply subslet_untyped_subslet, PCUICContexts.subslet_extended_subst. }
-        { eapply subslet_untyped_subslet, subslet_context_ws_cumul_pb. 3:tea.
+        { eapply subslet_untyped_subslet, subslet_ws_cumul_ctx_pb. 3:tea.
           now eapply wf_local_smash_end.
           now eapply wf_local_smash_end.
           now eapply PCUICContexts.subslet_extended_subst. }
         relativize (context_assumptions Γ').
         eapply is_closed_context_lift; tea; eauto with fvs. len.
-        now rewrite -(context_ws_cumul_pb_rel'_context_assumptions cum).
+        now rewrite -(ws_cumul_ctx_pb_rel'_context_assumptions cum).
         eapply ws_cumul_pb_refl.
         rewrite -[context_assumptions Γ0](smash_context_length []).
         eapply is_closed_context_lift; tea; eauto with fvs.
@@ -2898,19 +2898,19 @@ Section WfEnv.
   Qed.
 
 
-  Lemma context_ws_cumul_pb_rel_smash {pb} {Γ Δ Δ'} :
+  Lemma ws_cumul_ctx_pb_rel_smash {pb} {Γ Δ Δ'} :
     wf_local Σ (Γ ,,, Δ) ->
     wf_local Σ (Γ ,,, Δ') ->
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
-    context_ws_cumul_pb_rel pb Σ Γ (smash_context [] Δ) (smash_context [] Δ').
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
+    ws_cumul_ctx_pb_rel pb Σ Γ (smash_context [] Δ) (smash_context [] Δ').
   Proof.
-    now intros; apply context_ws_cumul_pb_rel_conv_extended_subst.
+    now intros; apply ws_cumul_ctx_pb_rel_conv_extended_subst.
   Qed.
 
   Lemma ws_cumul_pb_terms_ws_cumul_ctx {pb} {Γ Δ Δ'} {ts ts'} :
     wf_local Σ (Γ ,,, Δ) ->
     wf_local Σ (Γ ,,, Δ') ->
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
     ws_cumul_pb_terms Σ (Γ ,,, Δ') ts ts' ->
     ws_cumul_pb_terms Σ (Γ ,,, Δ) ts ts'.
   Proof.
@@ -2918,12 +2918,12 @@ Section WfEnv.
     eapply (All2_impl conv).
     intros x y xy.
     eapply ws_cumul_pb_ws_cumul_ctx.
-    now eapply context_ws_cumul_pb_rel_app in cum.
+    now eapply ws_cumul_ctx_pb_rel_app in cum.
     assumption.
   Qed.
 
-  Lemma context_ws_cumul_pb_rel_length {pb Γ Δ Δ'} :
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
+  Lemma ws_cumul_ctx_pb_rel_length {pb Γ Δ Δ'} :
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
     #|Δ| = #|Δ'|.
   Proof. intros []. apply (length_of a). Qed.
 
@@ -2942,24 +2942,24 @@ Section WfEnv.
     wf_local Σ (Γ ,,, Δ) ->
     wf_local Σ (Γ ,,, Δ') ->
     Σ ;;; Γ ,,, Δ ⊢ T ≤[le'] T' ->
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
     Σ ;;; Γ ,,, smash_context [] Δ ⊢ expand_lets Δ T ≤[le'] expand_lets Δ' T'.
   Proof.
     intros wfl wfr cum cumΓ.
     rewrite /expand_lets /expand_lets_k.
-    rewrite -(context_ws_cumul_pb_rel_length cumΓ) /=.
-    rewrite -(context_ws_cumul_pb_rel_context_assumptions cumΓ).
+    rewrite -(ws_cumul_ctx_pb_rel_length cumΓ) /=.
+    rewrite -(ws_cumul_ctx_pb_rel_context_assumptions cumΓ).
     change (Γ ,,, smash_context [] Δ) with (Γ ,,, smash_context [] Δ ,,, []).
     eapply (substitution_ws_cumul_pb_subst_conv (Δ := [])); tea.
-    3:{ eapply context_ws_cumul_pb_rel_conv_extended_subst; tea. }
+    3:{ eapply ws_cumul_ctx_pb_rel_conv_extended_subst; tea. }
     * eapply subslet_untyped_subslet, PCUICContexts.subslet_extended_subst; tea.
-    * eapply subslet_untyped_subslet, subslet_context_ws_cumul_pb; cycle 2.
-      + eapply context_ws_cumul_pb_rel_smash; tea.
+    * eapply subslet_untyped_subslet, subslet_ws_cumul_ctx_pb; cycle 2.
+      + eapply ws_cumul_ctx_pb_rel_smash; tea.
       + eapply PCUICContexts.subslet_extended_subst; tea.
       + now eapply wf_local_smash_end.
       + now eapply wf_local_smash_end.
     * simpl.
-      rewrite -(context_ws_cumul_pb_rel_context_assumptions cumΓ).
+      rewrite -(ws_cumul_ctx_pb_rel_context_assumptions cumΓ).
       rewrite -[context_assumptions _](smash_context_length [] Δ).
       eapply is_closed_context_lift; eauto with fvs.
     * rewrite -[context_assumptions _](smash_context_length [] Δ).
@@ -2967,7 +2967,7 @@ Section WfEnv.
   Qed.
 
   Lemma ctx_inst_cumul {pb Γ i Δ Δ'} :
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
     ctx_inst Σ Γ i (List.rev Δ) ->
     wf_local_rel Σ Γ Δ ->
     wf_local_rel Σ Γ Δ' ->
@@ -2998,7 +2998,7 @@ Section WfEnv.
         rewrite (firstn_app_left _ 0) ?firstn_0 // ?Nat.add_0_r // app_nil_r in t1.
         simpl.
         rewrite context_assumptions_rev in H0.
-        assert (context_assumptions Γ' = #|i|) by now rewrite -(context_ws_cumul_pb_rel'_context_assumptions a).
+        assert (context_assumptions Γ' = #|i|) by now rewrite -(ws_cumul_ctx_pb_rel'_context_assumptions a).
         rewrite map_subst_expand_lets in t1; len=> //.
         rewrite map_subst_expand_lets; len=> //.
         unshelve epose proof (ctx_inst_spine_subst _ IHa); tea.
@@ -3095,13 +3095,13 @@ Section WfEnv.
     rewrite List.rev_length Nat.add_0_r in le'; len; lia_f_equal.
   Qed.
 
-  Lemma context_ws_cumul_pb_rel_trans {pb Γ Δ Δ' Δ''} :
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ' ->
-    context_ws_cumul_pb_rel pb Σ Γ Δ' Δ'' ->
-    context_ws_cumul_pb_rel pb Σ Γ Δ Δ''.
+  Lemma ws_cumul_ctx_pb_rel_trans {pb Γ Δ Δ' Δ''} :
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' ->
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ' Δ'' ->
+    ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ''.
   Proof.
-    move/context_ws_cumul_pb_rel_app => h /context_ws_cumul_pb_rel_app h'.
-    apply context_ws_cumul_pb_rel_app.
+    move/ws_cumul_ctx_pb_rel_app => h /ws_cumul_ctx_pb_rel_app h'.
+    apply ws_cumul_ctx_pb_rel_app.
     now etransitivity.
   Qed.
 
@@ -3110,7 +3110,7 @@ Section WfEnv.
     subslet Σ Γ (List.rev s) Δ' ->
     subslet Σ Γ (List.rev s') Δ' ->
     OnOne2 (P Σ Γ) s s' ->
-    context_ws_cumul_pb pb Σ (Γ ,,, subst_context (List.rev s) 0 Δ)
+    ws_cumul_ctx_pb pb Σ (Γ ,,, subst_context (List.rev s) 0 Δ)
       (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
     wf_local Σ (Γ ,,, (List.rev Δ)) ->
     PCUICTyping.ctx_inst
@@ -3130,7 +3130,7 @@ Section WfEnv.
       eapply ctx_inst_cumul.
       2:{ instantiate (1:=subst_context [i] 0 (List.rev Δ)).
           rewrite -subst_telescope_subst_context List.rev_involutive. exact ctxi. }
-      eapply context_ws_cumul_pb_rel_app.
+      eapply ws_cumul_ctx_pb_rel_app.
       eapply (HP _ _ _ [i] [hd']); tea.
       repeat constructor. now rewrite subst_empty. repeat constructor.
       now rewrite subst_empty. constructor. auto.
@@ -3157,7 +3157,7 @@ Section WfEnv.
     subslet Σ Γ (List.rev s) Δ' ->
     subslet Σ Γ (List.rev s') Δ' ->
     All2 (P Σ Γ) s s' ->
-    context_ws_cumul_pb pb Σ (Γ ,,, subst_context (List.rev s) 0 Δ)
+    ws_cumul_ctx_pb pb Σ (Γ ,,, subst_context (List.rev s) 0 Δ)
       (Γ ,,, subst_context (List.rev s') 0 Δ)) ->
     wf_local Σ (Γ ,,, (List.rev Δ)) ->
     PCUICTyping.ctx_inst
@@ -3180,7 +3180,7 @@ Section WfEnv.
           rewrite -subst_context_subst_telescope.
           eapply substitution_wf_local; tea.
           repeat (constructor; tea). rewrite subst_empty; tea. }
-      eapply context_ws_cumul_pb_rel_app.
+      eapply ws_cumul_ctx_pb_rel_app.
       eapply (HP _ _  _ [i] [y]); tea.
       repeat constructor. now rewrite subst_empty.
       now apply subslet_ass_tip.
@@ -3224,7 +3224,7 @@ Section WfEnv.
     eapply All2_ctx_inst; tea.
     2:exact ctxi. 2:auto.
     cbn; clear -wfΣ; intros.
-    eapply substitution_context_ws_cumul_pb.
+    eapply substitution_ws_cumul_ctx_pb.
     now eapply subslet_untyped_subslet.
     now eapply subslet_untyped_subslet.
     eapply All2_rev.

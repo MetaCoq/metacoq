@@ -108,7 +108,7 @@ Qed.
 Section WfEnv.
   Context {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
 
-  Lemma context_ws_cumul_pb_vass {Γ Γ' na na' A A'} le : 
+  Lemma ws_cumul_ctx_pb_vass {Γ Γ' na na' A A'} le : 
     eq_binder_annot na na' ->
     Σ ⊢ Γ ≤[le] Γ' ->
     Σ ;;; Γ ⊢ A ≤[le] A' ->
@@ -117,10 +117,10 @@ Section WfEnv.
     repeat (constructor; auto).
   Qed.
 
-  Lemma context_ws_cumul_pb_app {le Γ Γ' Δ Δ'} : 
+  Lemma ws_cumul_ctx_pb_app {le Γ Γ' Δ Δ'} : 
     #|Δ| = #|Δ'| ->
     Σ ⊢ Γ ,,, Δ ≤[le] Γ' ,,, Δ' <~>
-    Σ ⊢ Γ ≤[le] Γ' × context_ws_cumul_pb_rel le Σ Γ Δ Δ'.
+    Σ ⊢ Γ ≤[le] Γ' × ws_cumul_ctx_pb_rel le Σ Γ Δ Δ'.
   Proof.
     move => hlen; split.
     - move/All2_fold_app_inv. move/(_ hlen) => [] onΓ onΔ; split => //.
@@ -151,11 +151,11 @@ Section WfEnv.
     - destruct ctx; simpl in Hlen; try lia.
       eapply ws_cumul_pb_Sort_l_inv in HT as [u' [redT leqT]].
       exists (tSort u'), [], u'; split; auto.
-      cbn. eapply context_ws_cumul_pb_refl; eauto with fvs.
+      cbn. eapply ws_cumul_ctx_pb_refl; eauto with fvs.
     - destruct ctx using rev_ind.
       * eapply ws_cumul_pb_Sort_l_inv in HT as [u' [redT leqT]].
         exists (tSort u'), [], u'; split; auto; cbn.  
-        apply context_ws_cumul_pb_refl; eauto with fvs.
+        apply ws_cumul_ctx_pb_refl; eauto with fvs.
       * rewrite it_mkProd_or_LetIn_app in HT; simpl in HT.
         destruct x as [na [b|] ty]; unfold mkProd_or_LetIn in HT; simpl in *.
         + eapply ws_cumul_pb_LetIn_l_inv in HT; auto.
@@ -174,8 +174,8 @@ Section WfEnv.
           destruct HT as [na' [A' [B' [redT convT HT]]]].
           specialize (IHn ctx ltac:(lia) (Γ ,, vass na' A') B').
           forward IHn. eapply ws_cumul_pb_ws_cumul_ctx; eauto.
-          { apply context_ws_cumul_pb_vass; eauto. now symmetry.
-            eapply context_ws_cumul_pb_refl. eauto with fvs.
+          { apply ws_cumul_ctx_pb_vass; eauto. now symmetry.
+            eapply ws_cumul_ctx_pb_refl. eauto with fvs.
             now symmetry. }
           clear IHctx.
           destruct IHn as [T' [ctx' [s' [redT' destT convctx leq]]]].
@@ -192,12 +192,12 @@ Section WfEnv.
               autorewrite with len in convctx |- *.
               simpl in convctx. simpl. lia. }
             etransitivity; tea.
-            apply context_ws_cumul_pb_app; auto.
-            split. apply context_ws_cumul_pb_vass; auto.
-            apply context_ws_cumul_pb_refl; eauto with fvs.
-            eapply context_ws_cumul_pb_app; eauto.
-            eapply context_ws_cumul_pb_refl; eauto with fvs.
-            eapply context_ws_cumul_pb_closed_left in convctx.
+            apply ws_cumul_ctx_pb_app; auto.
+            split. apply ws_cumul_ctx_pb_vass; auto.
+            apply ws_cumul_ctx_pb_refl; eauto with fvs.
+            eapply ws_cumul_ctx_pb_app; eauto.
+            eapply ws_cumul_ctx_pb_refl; eauto with fvs.
+            eapply ws_cumul_ctx_pb_closed_left in convctx.
             move: convctx.
             rewrite !on_free_vars_ctx_app. autorewrite with fvs.
             move/andP => [] /andP[] -> /=; cbn; rewrite andb_true_r => onA' ->.

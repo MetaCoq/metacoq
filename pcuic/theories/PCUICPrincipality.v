@@ -167,13 +167,13 @@ Section Principality.
         - now eapply red_ws_cumul_pb.
         - symmetry. eapply (ws_cumul_pb_ws_cumul_ctx (pb:=Conv)); tea.
           2:eapply red_ws_cumul_pb; tea.
-          constructor; auto. eapply context_ws_cumul_pb_refl. fvs.
+          constructor; auto. eapply ws_cumul_ctx_pb_refl. fvs.
           constructor. reflexivity. now symmetry. }
       split.
       etransitivity; eauto.
       eapply (substitution0_ws_cumul_pb (na:=na') (T:=dom')) => //.
       have convctx : Σ ⊢ Γ ,, vass na' dom' = Γ ,, vass x1 A'.
-      { constructor. apply context_ws_cumul_pb_refl. fvs. constructor => //. transitivity A'' => //.
+      { constructor. apply ws_cumul_ctx_pb_refl. fvs. constructor => //. transitivity A'' => //.
         now symmetry. now symmetry. }
       transitivity B'' => //. eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv)); tea.
       now apply ws_cumul_pb_eq_le.
@@ -520,7 +520,7 @@ Proof.
     apply eq_term_empty_eq_term in X7_1.
     apply eq_term_empty_eq_term in X7_2.
     assert(Σ ⊢ Γ ,, vdef na t ty = Γ ,, vdef n b b_ty).
-    { constructor. eapply context_ws_cumul_pb_refl. fvs. constructor => //.
+    { constructor. eapply ws_cumul_ctx_pb_refl. fvs. constructor => //.
       constructor; fvs. constructor; fvs. }   
     specialize (X5 onu u A).
     forward X5 by eapply closed_context_conversion; eauto; pcuic.

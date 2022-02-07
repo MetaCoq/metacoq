@@ -55,14 +55,14 @@ Proof.
   destruct r; unfold ws_decl, test_decl in *; cbn in *; subst; auto; now rewrite -(All2_length X).
 Qed.
 
-Lemma alpha_eq_context_context_ws_cumul_pb {cf Σ Γ Δ} {wfΣ : wf Σ} :
+Lemma alpha_eq_context_ws_cumul_ctx_pb {cf Σ Γ Δ} {wfΣ : wf Σ} :
   eq_context_upto_names Γ Δ ->
   is_closed_context Γ ->
   Σ ⊢ Γ = Δ.
 Proof.
   move=> eq cl.
   assert (cl' := alpha_eq_context_closed eq cl).
-  eapply eq_context_upto_context_ws_cumul_pb => //.
+  eapply eq_context_upto_ws_cumul_ctx_pb => //.
   eapply All2_fold_All2. eapply All2_impl; tea.
   intros x y []; constructor; subst; auto; try reflexivity.
 Qed.
@@ -94,7 +94,7 @@ Proof.
   { erewrite <- inst_case_branch_context_eq; tea. apply a1. }
   split => //.
   rewrite inst_case_branch_context_eq //.
-  eapply context_ws_cumul_pb_refl. fvs.
+  eapply ws_cumul_ctx_pb_refl. fvs.
 Qed.
 
 Section Lemmata.

@@ -526,7 +526,7 @@ Section CheckEnv.
 
   Program Fixpoint wf_env_check_ws_cumul_ctx (le : conv_pb) (Σ : wf_env_ext) Γ Δ Δ' 
     (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-    typing_result (∥ context_ws_cumul_pb_rel le Σ Γ Δ Δ' ∥) :=
+    typing_result (∥ ws_cumul_ctx_pb_rel le Σ Γ Δ Δ' ∥) :=
     check_ws_cumul_ctx (wf_env_ext_wf Σ) Σ (wf_env_ext_graph_wf Σ) le Γ Δ Δ' wfΔ wfΔ'.
   
   Program Definition check_eq_term pb (Σ : wf_env_ext) t u : typing_result (∥ compare_term pb Σ Σ t u ∥) :=

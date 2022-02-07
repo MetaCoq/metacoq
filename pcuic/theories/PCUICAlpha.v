@@ -268,7 +268,7 @@ Section Alpha.
     is_closed_context (Γ ,,, Δ) ->
     is_closed_context (Γ ,,, Δ') ->
     Δ ≡Γ Δ' ->
-    context_ws_cumul_pb_rel le Σ Γ Δ Δ'.
+    ws_cumul_ctx_pb_rel le Σ Γ Δ Δ'.
   Proof.
     intros cl cl' eq.
     split; eauto with fvs.
@@ -495,19 +495,19 @@ Section Alpha.
     depelim r; subst; constructor; auto.
     - destruct l as [s Hs]. exists s.
       eapply (closed_context_cumulativity _ (pb:=Conv)); tea. apply IHeq. pcuic.
-      eapply context_ws_cumul_pb_rel_app.
+      eapply ws_cumul_ctx_pb_rel_app.
       eapply eq_context_upto_conv_context_rel; fvs.
       eapply eq_context_gen_upto.
       now eapply All2_fold_All2 in eq.
     - destruct l as [s Hs]. exists s.
       eapply (closed_context_cumulativity _ (pb:=Conv)); tea. apply IHeq. pcuic.
-      eapply context_ws_cumul_pb_rel_app.
+      eapply ws_cumul_ctx_pb_rel_app.
       eapply eq_context_upto_conv_context_rel. 1-2:fvs.
       eapply eq_context_gen_upto.
       now eapply All2_fold_All2 in eq.
     - red. red in l0.
       eapply (closed_context_cumulativity _ (pb:=Conv)); tea. apply IHeq. pcuic.
-      eapply context_ws_cumul_pb_rel_app.
+      eapply ws_cumul_ctx_pb_rel_app.
       eapply eq_context_upto_conv_context_rel. 1-2:fvs.
       eapply eq_context_gen_upto.
       now eapply All2_fold_All2 in eq.
@@ -548,7 +548,7 @@ Section Alpha.
     eapply closed_context_conversion; tea.
     eapply typing_wf_local in X.
     eapply (eq_context_upto_conv_context_rel []) in X0.
-    eapply context_ws_cumul_pb_rel_app in X0; tea.
+    eapply ws_cumul_ctx_pb_rel_app in X0; tea.
     rewrite !app_context_nil_l in X0. exact X0.
     all:rewrite !app_context_nil_l; fvs.
   Qed.

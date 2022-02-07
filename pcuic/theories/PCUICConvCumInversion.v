@@ -44,7 +44,7 @@ Lemma red_ctx_rel_par_conv {cf Σ Γ Γ0 Γ0' Γ1 Γ1'} {wfΣ : wf Σ} :
   red_ctx_rel Σ Γ Γ0 Γ0' ->
   red_ctx_rel Σ Γ Γ1 Γ1' ->
   eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ0' Γ1' ->
-  context_ws_cumul_pb_rel Conv Σ Γ Γ0 Γ1.
+  ws_cumul_ctx_pb_rel Conv Σ Γ Γ0 Γ1.
 Proof.
   intros clΓ0 clΓ1 r0 r1 eq.
   apply red_ctx_rel_red_context_rel, red_context_app_same_left in r0; auto.
@@ -54,12 +54,12 @@ Proof.
   eapply red_ctx_red_context in r0; eapply red_ctx_red_context in r1.
   eapply into_closed_red_ctx in r0 => //.
   eapply into_closed_red_ctx in r1 => //.
-  eapply (red_ctx_context_ws_cumul_pb (l:=Conv)) in r0.
-  eapply (red_ctx_context_ws_cumul_pb (l:=Conv)) in r1.
-  apply context_ws_cumul_pb_rel_app. etransitivity; tea.
+  eapply (red_ctx_ws_cumul_ctx_pb (l:=Conv)) in r0.
+  eapply (red_ctx_ws_cumul_ctx_pb (l:=Conv)) in r1.
+  apply ws_cumul_ctx_pb_rel_app. etransitivity; tea.
   symmetry. etransitivity; tea.
   eapply (eq_context_upto_cat _ _ _ Γ _ Γ) in eq. 2:reflexivity.
-  eapply (eq_context_upto_context_ws_cumul_pb (pb:=Conv)) in eq. 2-3:fvs.
+  eapply (eq_context_upto_ws_cumul_ctx_pb (pb:=Conv)) in eq. 2-3:fvs.
   now symmetry.
 Qed.
 
@@ -99,7 +99,7 @@ Proof.
   move/Nat.ltb_lt => H; apply Nat.ltb_lt. lia.
 Qed.
 
-Lemma inst_case_context_ws_cumul_pb {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ pars pars' puinst puinst' ctx ctx'} :
+Lemma inst_case_ws_cumul_ctx_pb {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ pars pars' puinst puinst' ctx ctx'} :
   declared_inductive Σ ind mdecl idecl ->
   #|pars| = ind_npars mdecl ->
   #|pars'| = ind_npars mdecl ->
@@ -113,7 +113,7 @@ Lemma inst_case_context_ws_cumul_pb {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ p
 Proof.
   intros decli wfp wfp' onp onp' clΓ eqpars eqinst eqctx.
   rewrite /inst_case_context.
-  eapply context_ws_cumul_pb_rel_app.
+  eapply ws_cumul_ctx_pb_rel_app.
   have clpars : is_closed_context (Γ,,, smash_context [] (ind_params mdecl)).
   { rewrite on_free_vars_ctx_app clΓ /=.
     apply on_free_vars_ctx_smash => //.
@@ -126,12 +126,12 @@ Proof.
   { eapply PCUICContexts.smash_context_assumption_context => //. constructor. }
   have lenpars' : #|pars| = context_assumptions (smash_context [] (ind_params mdecl)).
   { rewrite context_assumptions_smash_context /= //. }
-  eapply (substitution_context_ws_cumul_pb_subst_conv (Γ'':=[]) 
+  eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ'':=[]) 
     (Γ' := smash_context [] mdecl.(ind_params))
     (Γ'0 := smash_context [] mdecl.(ind_params))) => //.
-  * eapply (PCUICSpine.context_ws_cumul_pb_rel_trans (Δ' := ctx'@[puinst])).
-    - eapply context_ws_cumul_pb_rel_app.
-      eapply eq_context_upto_context_ws_cumul_pb.
+  * eapply (PCUICSpine.ws_cumul_ctx_pb_rel_trans (Δ' := ctx'@[puinst])).
+    - eapply ws_cumul_ctx_pb_rel_app.
+      eapply eq_context_upto_ws_cumul_ctx_pb.
       { rewrite on_free_vars_ctx_app clpars /=. len.
         rewrite on_free_vars_ctx_subst_instance -lenpars.
         eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
@@ -142,7 +142,7 @@ Proof.
       eapply eq_context_upto_univ_subst_instance'; tc. 1:reflexivity.
       assumption.
     - cbn.
-      eapply subst_instance_context_ws_cumul_pb_rel => //.
+      eapply subst_instance_ws_cumul_ctx_pb_rel => //.
       rewrite !on_free_vars_ctx_app clΓ /=. len.
       apply /andP; split.
       { apply on_free_vars_ctx_smash => //.
@@ -355,7 +355,7 @@ Section fixed.
         * eapply closed_red_terms_open_right in clred'; solve_all. }
       symmetry. eapply red_terms_ws_cumul_pb_terms. eapply into_red_terms; tea. }
     have eq_instctx : Σ ⊢ Γ,,, inst_case_predicate_context p = Γ,,, inst_case_predicate_context p'.
-    { eapply (inst_case_context_ws_cumul_pb decli); tea.
+    { eapply (inst_case_ws_cumul_ctx_pb decli); tea.
       { apply (wf_predicate_length_pars wfp). }
       { apply (wf_predicate_length_pars wfp'). } }
     repeat split; eauto.
@@ -398,7 +398,7 @@ Section fixed.
       2: { apply IHbrseq; auto. }
       have eqctx : Σ ⊢ Γ ,,, inst_case_branch_context p x0 = Γ ,,, inst_case_branch_context p' x1.
       { rewrite /inst_case_branch_context.
-        eapply (inst_case_context_ws_cumul_pb decli); tea.
+        eapply (inst_case_ws_cumul_ctx_pb decli); tea.
         { apply (wf_predicate_length_pars wfp). }
         { apply (wf_predicate_length_pars wfp'). }
         { rewrite -test_context_k_closed_on_free_vars_ctx //.
@@ -408,23 +408,23 @@ Section fixed.
       rewrite e e0; split => //.
       transitivity (bbody x); tea.
       { eapply red_ws_cumul_pb. rewrite /inst_case_branch_context. split; auto.
-        1:now eapply context_ws_cumul_pb_closed_left in eqctx.
+        1:now eapply ws_cumul_ctx_pb_closed_left in eqctx.
         move/andP: fv' => []. now len; rewrite shiftnP_add. }
       transitivity (bbody y); tea.
-      { constructor; auto. 1:now eapply context_ws_cumul_pb_closed_left.
+      { constructor; auto. 1:now eapply ws_cumul_ctx_pb_closed_left.
         { eapply closed_red_open_right. eapply into_closed_red; tea.
-          { now eapply context_ws_cumul_pb_closed_left. }
+          { now eapply ws_cumul_ctx_pb_closed_left. }
           move/andP: fv' => []. len. now setoid_rewrite shiftnP_add. }
         move/andP: fv => [] fv fvx1. len.
         eapply red_on_free_vars in fvx1; tea.
         { rewrite e (All2_fold_length a0) -e0. now setoid_rewrite shiftnP_add in fvx1. }
         rewrite shiftnP_add. relativize (#|bcontext x1| + _).
         1:rewrite -> on_free_vars_ctx_on_ctx_free_vars. 2:now len.
-        now eapply context_ws_cumul_pb_closed_right in eqctx. }
+        now eapply ws_cumul_ctx_pb_closed_right in eqctx. }
       symmetry.
       eapply ws_cumul_pb_ws_cumul_ctx; tea.
       eapply red_ws_cumul_pb. rewrite /inst_case_branch_context. split; auto.
-      1:now eapply context_ws_cumul_pb_closed_right in eqctx.
+      1:now eapply ws_cumul_ctx_pb_closed_right in eqctx.
       move/andP: fv => []. len. now rewrite shiftnP_add.
   Qed.
   

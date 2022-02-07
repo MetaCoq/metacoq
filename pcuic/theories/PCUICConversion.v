@@ -292,7 +292,7 @@ Section ConvCongruences.
     transitivity (tProd na' N1 M2).
     - eapply ws_cumul_pb_Prod_l; eauto with fvs.
     - eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv) (Γ' := Γ ,, vass na' N1)) in X0.
-      2:{ constructor. 1:{ eapply context_ws_cumul_pb_refl; eauto with fvs. }
+      2:{ constructor. 1:{ eapply ws_cumul_ctx_pb_refl; eauto with fvs. }
           constructor; auto. 1:now symmetry. now symmetry. }
       eapply ws_cumul_pb_red in X0 as (codom & codom' & [rcodom rcodom' eqcodom]).
       eapply ws_cumul_pb_red.
@@ -733,7 +733,7 @@ Section ConvCongruences.
       transitivity codom0'; pcuic.
       transitivity codom0; pcuic.
       { eapply PCUICContextConversion.ws_cumul_pb_ws_cumul_ctx_inv; pcuic.
-        constructor; [apply context_ws_cumul_pb_refl|]; eauto with fvs.
+        constructor; [apply ws_cumul_ctx_pb_refl|]; eauto with fvs.
         constructor; auto. exact X. }
       constructor; eauto with fvs.
       cbn. eauto with fvs.
@@ -746,7 +746,7 @@ Section ConvCongruences.
       transitivity codom0'; pcuic.
       transitivity codom0; pcuic.
       { eapply PCUICContextConversion.ws_cumul_pb_ws_cumul_ctx_inv; pcuic.
-        constructor; [apply context_ws_cumul_pb_refl|]; eauto with fvs.
+        constructor; [apply ws_cumul_ctx_pb_refl|]; eauto with fvs.
         constructor; auto. exact X. }
       constructor. 2:cbn. all:eauto with fvs.
   Qed.
@@ -1527,7 +1527,7 @@ Section ConvRedConv.
     apply ws_cumul_pb_Prod_Prod_inv in X as []; intuition auto; sq; auto.
     eapply (ws_cumul_pb_ws_cumul_ctx (pb':=Conv)) in w0; tea.
     constructor; auto.
-    - apply context_ws_cumul_pb_refl; eauto with fvs.
+    - apply ws_cumul_ctx_pb_refl; eauto with fvs.
     - constructor; auto.
   Qed.
   
@@ -1674,7 +1674,7 @@ Section ConvRedConv.
 
 
   (*Lemma conv_context_red_context Γ Γ' Δ Δ' :
-    context_ws_cumul_pb false Σ (Γ ,,, Δ) (Γ' ,,, Δ') ->
+    ws_cumul_ctx_pb false Σ (Γ ,,, Δ) (Γ' ,,, Δ') ->
     #|Γ| = #|Γ'| ->
     ∑ Δ1 Δ1', red_ctx_rel Σ Γ Δ Δ1 × red_ctx_rel Σ Γ' Δ' Δ1' × 
       eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Δ1 Δ1'.
@@ -2675,7 +2675,7 @@ Section ConvRedConv.
           constructor; tea. 1,3:eauto with fvs.
           now generalize (closed_red_open_right rb1). }
         constructor.
-        { eapply context_ws_cumul_pb_refl; eauto with fvs. }
+        { eapply ws_cumul_ctx_pb_refl; eauto with fvs. }
         constructor; eauto. }
     { assert (Σ ;;; Γ ⊢ A1 = A2).
       - eapply ws_cumul_pb_red.
@@ -2686,7 +2686,7 @@ Section ConvRedConv.
           constructor; tea. 1,3:eauto with fvs.
           now generalize (closed_red_open_right rb1). }
         constructor.
-        { eapply context_ws_cumul_pb_refl; eauto with fvs. }
+        { eapply ws_cumul_ctx_pb_refl; eauto with fvs. }
         constructor; eauto. }
   Qed.
 
@@ -2870,14 +2870,14 @@ Section ConvSubst.
     - move/andP: ht => /= [] pb pty; eauto.
   Qed.
     
-  Lemma substitution_context_ws_cumul_pb_red_subst {Γ Δ Γ' s s'} : 
+  Lemma substitution_ws_cumul_ctx_pb_red_subst {Γ Δ Γ' s s'} : 
     is_closed_context (Γ ,,, Δ ,,, Γ') ->
     All2 (closed_red Σ Γ) s s' ->
     untyped_subslet Γ s Δ ->
     Σ ⊢ Γ ,,, subst_context s 0 Γ' = Γ ,,, subst_context s' 0 Γ'.
   Proof.
     intros.
-    eapply into_context_ws_cumul_pb.
+    eapply into_ws_cumul_ctx_pb.
     { eapply is_closed_subst_context; tea; solve_all; eauto with fvs.
       apply (untyped_subslet_length X0). }
     { eapply is_closed_subst_context; tea; solve_all; eauto with fvs.
@@ -2905,20 +2905,20 @@ Section ConvSubst.
     now rewrite -(Nat.add_0_r #|Γ|) subst_context_app.
   Qed.
 
-  Lemma eq_context_upto_context_ws_cumul_pb {pb Γ Γ'} : 
+  Lemma eq_context_upto_ws_cumul_ctx_pb {pb Γ Γ'} : 
     is_closed_context Γ ->
     is_closed_context Γ' ->
     eq_context_upto Σ (eq_universe Σ) (compare_universe pb Σ) Γ Γ' ->
-    context_ws_cumul_pb pb Σ Γ Γ'.
+    ws_cumul_ctx_pb pb Σ Γ Γ'.
   Proof.
     intros cl cl' eq.
-    apply into_context_ws_cumul_pb; auto.
+    apply into_ws_cumul_ctx_pb; auto.
     destruct pb; revgoals.
     { now eapply eq_context_upto_univ_cumul_context. }
     { now eapply eq_context_upto_univ_conv_context. }
   Qed.
 
-  Lemma substitution_context_ws_cumul_pb {Γ Δ Δ' Γ' s s'} : 
+  Lemma substitution_ws_cumul_ctx_pb {Γ Δ Δ' Γ' s s'} : 
     untyped_subslet Γ s Δ ->
     untyped_subslet Γ s' Δ' ->
     ws_cumul_pb_terms Σ Γ s s' ->
@@ -2929,10 +2929,10 @@ Section ConvSubst.
     move=> subs subs' eqsub cl cl'.
     destruct (ws_cumul_pb_substs_red eqsub subs) as (s0 & s'0 & [rs' rs'0 eqs]).
     transitivity (Γ ,,, subst_context s0 0 Γ').
-    { eapply substitution_context_ws_cumul_pb_red_subst; revgoals; tea. }
+    { eapply substitution_ws_cumul_ctx_pb_red_subst; revgoals; tea. }
     symmetry. transitivity (Γ ,,, subst_context s'0 0 Γ').
-    { eapply substitution_context_ws_cumul_pb_red_subst; revgoals; tea. }
-    eapply eq_context_upto_context_ws_cumul_pb.
+    { eapply substitution_ws_cumul_ctx_pb_red_subst; revgoals; tea. }
+    eapply eq_context_upto_ws_cumul_ctx_pb.
     { clear eqs; eapply is_closed_subst_context; tea; solve_all; eauto with fvs.
       rewrite -(All2_length rs'0). apply (untyped_subslet_length subs'). }
     { clear eqs; eapply is_closed_subst_context; tea; solve_all; eauto with fvs.
@@ -2962,7 +2962,7 @@ Section ConvSubst.
       + apply red_conv. eapply (closed_red_red_subst (Δ := Δ') (s' := s'0)); tea.
         rewrite !app_length -(untyped_subslet_length subs') -(All2_length eqsub).
         rewrite (untyped_subslet_length subs) - !app_length //.
-      + eapply substitution_context_ws_cumul_pb; tea.
+      + eapply substitution_ws_cumul_ctx_pb; tea.
     ** assert (All (is_open_term Γ) s0) by (eapply (All2_All_right redl); eauto with fvs).
       assert (All (is_open_term Γ) s'0) by (eapply (All2_All_right redr); eauto with fvs).
       eapply ws_cumul_pb_compare.
@@ -3100,31 +3100,31 @@ Proof.
     all: eauto with fvs.
 Qed.
 
-Definition context_ws_cumul_pb_rel {cf} pb Σ Γ Δ Δ' :=
+Definition ws_cumul_ctx_pb_rel {cf} pb Σ Γ Δ Δ' :=
   is_closed_context Γ ×
   All2_fold (fun Γ' _ => All_decls_alpha_pb pb (fun pb x y => Σ ;;; Γ ,,, Γ' ⊢ x ≤[pb] y)) Δ Δ'.    
 
-Lemma context_ws_cumul_pb_rel_app {cf} {Σ} {wfΣ : wf Σ} {pb Γ Δ Δ'} :
-  context_ws_cumul_pb_rel pb Σ Γ Δ Δ' <~> 
-  context_ws_cumul_pb pb Σ (Γ ,,, Δ) (Γ ,,, Δ').
+Lemma ws_cumul_ctx_pb_rel_app {cf} {Σ} {wfΣ : wf Σ} {pb Γ Δ Δ'} :
+  ws_cumul_ctx_pb_rel pb Σ Γ Δ Δ' <~> 
+  ws_cumul_ctx_pb pb Σ (Γ ,,, Δ) (Γ ,,, Δ').
 Proof.
   split; intros h.
   + eapply All2_fold_app => //.
-    * destruct h. now apply context_ws_cumul_pb_refl.
+    * destruct h. now apply ws_cumul_ctx_pb_refl.
     * eapply All2_fold_impl; tea. 1:apply h.
       intros ???? []; constructor; auto.
   + eapply All2_fold_app_inv in h as [].
     2:{ move: (length_of h). len; lia. }
     split.
-    { now apply context_ws_cumul_pb_closed_left in a. }
+    { now apply ws_cumul_ctx_pb_closed_left in a. }
     eapply All2_fold_impl; tea => /=.
     intros ???? []; constructor; auto.
 Qed.
 
-Lemma subst_instance_context_ws_cumul_pb {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Δ u u'} pb :
+Lemma subst_instance_ws_cumul_ctx_pb {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Δ u u'} pb :
   wf_local Σ (subst_instance u Δ) ->
   R_universe_instance (eq_universe (global_ext_constraints Σ)) u u' ->
-  context_ws_cumul_pb pb Σ (subst_instance u Δ) (subst_instance u' Δ).
+  ws_cumul_ctx_pb pb Σ (subst_instance u Δ) (subst_instance u' Δ).
 Proof.
   move=> wf equ.
   eapply All2_fold_map.
@@ -3182,10 +3182,10 @@ Proof.
   now apply eq_term_leq_term.
 Qed.
 
-Lemma subst_instance_context_ws_cumul_pb_rel {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ u u' pb} :
+Lemma subst_instance_ws_cumul_ctx_pb_rel {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ Δ u u' pb} :
   is_closed_context (Γ ,,, Δ) ->
   R_universe_instance (eq_universe Σ) u u' ->
-  context_ws_cumul_pb_rel pb Σ Γ (subst_instance u Δ) (subst_instance u' Δ).
+  ws_cumul_ctx_pb_rel pb Σ Γ (subst_instance u Δ) (subst_instance u' Δ).
 Proof.
   move=> equ.
   split; eauto with fvs.
@@ -3282,7 +3282,7 @@ Proof.
 Qed.
 
 Lemma ws_cumul_pb_it_mkProd_or_LetIn {cf pb Σ} {wfΣ : wf Σ} (Δ Γ Γ' : context) (B B' : term) :
-  context_ws_cumul_pb_rel Conv Σ Δ Γ Γ' ->
+  ws_cumul_ctx_pb_rel Conv Σ Δ Γ Γ' ->
   Σ ;;; Δ ,,, Γ ⊢ B ≤[pb] B' ->
   Σ ;;; Δ ⊢ it_mkProd_or_LetIn Γ B ≤[pb] it_mkProd_or_LetIn Γ' B'.
 Proof.
@@ -3313,11 +3313,11 @@ Proof.
 Qed.
 
 Lemma ws_cumul_pb_rel_it_mkLambda_or_LetIn {cf pb Σ} {wfΣ : wf Σ} (Δ Γ Γ' : context) (B B' : term) :
-  context_ws_cumul_pb_rel Conv Σ Δ Γ Γ' ->
+  ws_cumul_ctx_pb_rel Conv Σ Δ Γ Γ' ->
   Σ ;;; Δ ,,, Γ ⊢ B ≤[pb] B' ->
   Σ ;;; Δ ⊢ it_mkLambda_or_LetIn Γ B ≤[pb] it_mkLambda_or_LetIn Γ' B'.
 Proof.
-  move/context_ws_cumul_pb_rel_app => hc hb.
+  move/ws_cumul_ctx_pb_rel_app => hc hb.
   now eapply ws_cumul_pb_it_mkLambda_or_LetIn.
 Qed.
 
@@ -3449,13 +3449,13 @@ Section CumulSubst.
   Qed.
 
 
-  Lemma substitution_context_ws_cumul_pb_subst_conv {Γ Γ' Γ'0 Γ'' Δ Δ' s s' pb} :
-    context_ws_cumul_pb_rel pb Σ (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->
+  Lemma substitution_ws_cumul_ctx_pb_subst_conv {Γ Γ' Γ'0 Γ'' Δ Δ' s s' pb} :
+    ws_cumul_ctx_pb_rel pb Σ (Γ ,,, Γ' ,,, Γ'') Δ Δ' ->
     ws_cumul_pb_terms Σ Γ s s' ->
     untyped_subslet Γ s Γ' ->
     untyped_subslet Γ s' Γ'0 ->
     is_closed_context (Γ ,,, Γ'0) ->
-    context_ws_cumul_pb_rel pb Σ (Γ ,,, subst_context s 0 Γ'') (subst_context s #|Γ''| Δ) (subst_context s' #|Γ''| Δ').
+    ws_cumul_ctx_pb_rel pb Σ (Γ ,,, subst_context s 0 Γ'') (subst_context s #|Γ''| Δ) (subst_context s' #|Γ''| Δ').
   Proof.
     intros [cl cum] eqs hs hs' cl'.
     split.
@@ -3475,10 +3475,10 @@ Section CumulSubst.
     len.
   Qed. 
 
-  Lemma weaken_context_ws_cumul_pb_rel {pb Γ Γ' Δ Δ'} :
+  Lemma weaken_ws_cumul_ctx_pb_rel {pb Γ Γ' Δ Δ'} :
     is_closed_context Γ ->
-    context_ws_cumul_pb_rel pb Σ Γ' Δ Δ' ->
-    context_ws_cumul_pb_rel pb Σ (Γ ,,, Γ') Δ Δ'.
+    ws_cumul_ctx_pb_rel pb Σ Γ' Δ Δ' ->
+    ws_cumul_ctx_pb_rel pb Σ (Γ ,,, Γ') Δ Δ'.
   Proof.
     intros wf [cl eq].
     split.

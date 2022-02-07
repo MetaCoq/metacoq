@@ -793,7 +793,7 @@ Lemma conv_decls_fix_context_gen {cf:checker_flags} Σ Γ mfix mfix1 :
   All2 (fun d d' => Σ ;;; Γ ⊢ d.(dtype) = d'.(dtype) × eq_binder_annot d.(dname) d'.(dname)) mfix mfix1 ->
   forall Γ' Γ'',
   Σ ⊢ Γ ,,, Γ' = Γ ,,, Γ'' ->
-  context_ws_cumul_pb_rel Conv Σ (Γ ,,, Γ') (fix_context_gen #|Γ'| mfix) (fix_context_gen #|Γ''| mfix1).
+  ws_cumul_ctx_pb_rel Conv Σ (Γ ,,, Γ') (fix_context_gen #|Γ'| mfix) (fix_context_gen #|Γ''| mfix1).
 Proof.    
   intros wfΣ a Γ' Γ'' convctx.
   split. eauto with fvs.
@@ -829,7 +829,7 @@ Lemma conv_decls_fix_context {cf:checker_flags} {Σ} {wfΣ : wf Σ} {Γ mfix mfi
 Proof.    
   intros wfΓ a.
   apply (conv_decls_fix_context_gen _ _  _ _ wfΣ a [] []).
-  eapply context_ws_cumul_pb_refl. eauto with fvs.
+  eapply ws_cumul_ctx_pb_refl. eauto with fvs.
 Qed.
 
 Lemma isLambda_red1 Σ Γ b b' : isLambda b -> red1 Σ Γ b b' -> isLambda b'.
@@ -860,8 +860,8 @@ Proof.
   reflexivity.
 Qed.
 
-Lemma context_ws_cumul_pb_rel_context_assumptions {cf:checker_flags} P Γ Δ Δ' :
-  context_ws_cumul_pb_rel Conv P Γ Δ Δ' ->
+Lemma ws_cumul_ctx_pb_rel_context_assumptions {cf:checker_flags} P Γ Δ Δ' :
+  ws_cumul_ctx_pb_rel Conv P Γ Δ Δ' ->
   context_assumptions Δ = context_assumptions Δ'.
 Proof.
   move=> [] _. induction 1; auto.
@@ -1415,7 +1415,7 @@ Lemma ws_cumul_pb_Prod_Prod_inv_l {cf} {Σ} {wfΣ : wf Σ} Γ na na' A B A' B' :
 Proof.
   move/ws_cumul_pb_Prod_Prod_inv => []; split; auto.
   eapply ws_cumul_pb_ws_cumul_ctx; tea.
-  constructor; auto. eapply context_ws_cumul_pb_refl. eauto with fvs.
+  constructor; auto. eapply ws_cumul_ctx_pb_refl. eauto with fvs.
   constructor; auto. exact p0.
 Qed. 
 
@@ -1568,11 +1568,11 @@ Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
            positive_cstr_arg mdecl ([] ,,, (smash_context [] (ind_params mdecl) ,,, Γ)) t)
       Γ ->
   assumption_context Γ ->
-  context_ws_cumul_pb_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
+  ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
       subst_instance u
         (smash_context [] (PCUICEnvironment.ind_params mdecl)))
    (subst_instance u Γ) (subst_instance u' Γ) -> 
-  context_ws_cumul_pb_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+  ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
     (subst_context (ind_subst mdecl ind u) (context_assumptions (ind_params mdecl)) (subst_instance u Γ))
     (subst_context (ind_subst mdecl ind u') (context_assumptions (ind_params mdecl)) (subst_instance u' Γ)).
 Proof.
@@ -1617,7 +1617,7 @@ Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'}
   declared_constructor Σ ind mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
- context_ws_cumul_pb_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
+ ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
     subst_instance u
       (smash_context [] (PCUICEnvironment.ind_params mdecl)))
  (smash_context []
@@ -1629,7 +1629,7 @@ Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'}
        (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
           (cstr_args cdecl)))) ->
 
-  context_ws_cumul_pb_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+  ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
       (subst_context (inds (inductive_mind ind.1) u (ind_bodies mdecl)) (context_assumptions (ind_params mdecl))
        (smash_context []
           (subst_instance u
@@ -2171,8 +2171,8 @@ Lemma All2_fold_inst {cf} {le} {Σ} {wfΣ : wf Σ} mdecl l v i i' u u' Γ' Γ :
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
   R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
-  context_ws_cumul_pb_rel le (Σ.1, v) (subst_instance i Γ') (subst_instance i Γ) (subst_instance i' Γ) ->
-  context_ws_cumul_pb_rel le Σ (subst_instance u Γ') (subst_instance u Γ) (subst_instance u' Γ).
+  ws_cumul_ctx_pb_rel le (Σ.1, v) (subst_instance i Γ') (subst_instance i Γ) (subst_instance i' Γ) ->
+  ws_cumul_ctx_pb_rel le Σ (subst_instance u Γ') (subst_instance u Γ) (subst_instance u' Γ).
 Proof.
   unfold cumul_ctx_rel.
   intros onu onv cu cu' vari Ru.
@@ -2309,11 +2309,11 @@ Lemma cumul_ctx_relSpec_Algo {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
   (c : PCUICConversionSpec.cumul_ctx_rel Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
-  context_ws_cumul_pb_rel Cumul Σ Γ Δ Δ'.
+  ws_cumul_ctx_pb_rel Cumul Σ Γ Δ Δ'.
 Proof.
   intros wf wf'.
-  eapply context_ws_cumul_pb_rel_app.
-  apply into_context_ws_cumul_pb; eauto with fvs.
+  eapply ws_cumul_ctx_pb_rel_app.
+  apply into_ws_cumul_ctx_pb; eauto with fvs.
   apply All2_fold_app; auto. reflexivity.
   induction c; try solve[constructor; auto].
   move: wf; rewrite /= on_free_vars_ctx_snoc => /andP[] h0 h1.
@@ -2331,15 +2331,15 @@ Proof.
     len. rewrite (All2_fold_length c) //. now len in H0.
 Qed.
 
-Lemma into_context_ws_cumul_pb_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
+Lemma into_ws_cumul_ctx_pb_rel {cf} {Σ} {wfΣ : wf Σ} {Γ Δ Δ'}
   (c : cumul_ctx_rel Σ Γ Δ Δ') : 
   is_closed_context (Γ ,,, Δ) ->
   is_closed_context (Γ ,,, Δ') ->
-  context_ws_cumul_pb_rel Cumul Σ Γ Δ Δ'.
+  ws_cumul_ctx_pb_rel Cumul Σ Γ Δ Δ'.
 Proof.
   intros wf wf'.
-  eapply context_ws_cumul_pb_rel_app.
-  apply into_context_ws_cumul_pb; eauto with fvs.
+  eapply ws_cumul_ctx_pb_rel_app.
+  apply into_ws_cumul_ctx_pb; eauto with fvs.
   apply All2_fold_app; auto. reflexivity.
 Qed.
 
@@ -2366,7 +2366,7 @@ Lemma inductive_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   let indctx' := subst_instance u' idecl.(ind_indices) in
   let pindctx := subst_context parsubst 0 indctx in
   let pindctx' := subst_context parsubst' 0 indctx' in
-  context_ws_cumul_pb_rel Cumul Σ Γ (smash_context [] pindctx) (smash_context [] pindctx').
+  ws_cumul_ctx_pb_rel Cumul Σ Γ (smash_context [] pindctx) (smash_context [] pindctx').
 Proof.
   intros * decli.
   destruct (on_declared_inductive decli) as [onmind oib].
@@ -2437,11 +2437,11 @@ Proof.
     rewrite !expand_lets_smash_context.
     autorewrite with pcuic.
     rewrite !subst_instance_smash /= => args. cbn in args.
-    eapply (weaken_context_ws_cumul_pb_rel (Γ := Γ)) in args => //; eauto with fvs.
+    eapply (weaken_ws_cumul_ctx_pb_rel (Γ := Γ)) in args => //; eauto with fvs.
     2:{ eapply wf_local_closed_context. apply spu. }
     pose proof (spine_subst_smash spu) as sspu.
     pose proof (spine_subst_smash spu') as sspu'.
-    eapply (substitution_context_ws_cumul_pb_subst_conv (Γ := Γ) (Γ'' := []) (s := List.rev pars) (s' := List.rev pars')) in args.
+    eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ := Γ) (Γ'' := []) (s := List.rev pars) (s' := List.rev pars')) in args.
     2:{ eapply All2_rev => //. }
     2:{ eapply subslet_untyped_subslet, sspu. }
     2:{ eapply subslet_untyped_subslet, sspu'. }
@@ -2463,20 +2463,20 @@ Proof.
   simpl. intros.
   { rewrite /pindctx /pindctx' /indctx /indctx'.
     rewrite !(smash_context_subst []).
-    eapply (substitution_context_ws_cumul_pb_subst_conv (Γ'' := [])); eauto.
+    eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ'' := [])); eauto.
     3:eapply subslet_untyped_subslet, spu.
     3:eapply subslet_untyped_subslet, spu'.
     2:{ eapply spine_subst_conv; eauto.
-        eapply (weaken_context_ws_cumul_pb_rel (Γ' := [])).
+        eapply (weaken_ws_cumul_ctx_pb_rel (Γ' := [])).
         eapply spine_dom_wf in spu. eauto with fvs.
-        eapply subst_instance_context_ws_cumul_pb_rel => //.
+        eapply subst_instance_ws_cumul_ctx_pb_rel => //.
         rewrite app_context_nil_l //.
         rewrite closedn_subst_instance_context in clpu.
         now rewrite -is_closed_ctx_closed. }
     simpl.
     rewrite -(subst_instance_smash u _ []).
     rewrite -(subst_instance_smash u' _ []).
-    eapply subst_instance_context_ws_cumul_pb_rel => //.
+    eapply subst_instance_ws_cumul_ctx_pb_rel => //.
     rewrite -app_context_assoc.
     rewrite is_closed_context_weaken //. 
     eapply spine_dom_wf in spu. eauto with fvs.
@@ -2559,7 +2559,7 @@ Proof.
 Qed.
 
 (* For ease of application, avoiding to add a call to symmetry *)
-Lemma context_ws_cumul_pb_wf_local {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ Γ' Δ :
+Lemma ws_cumul_ctx_pb_wf_local {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} Γ Γ' Δ :
   wf_local Σ (Γ ,,, Δ) ->
   wf_local Σ Γ' ->
   Σ ⊢ Γ = Γ' ->
@@ -2573,13 +2573,13 @@ Proof.
   red in X0. destruct T; unfold lift_typing.
   - eapply closed_context_cumulativity; tea.
     eapply All_local_env_app; split=> //.
-    eapply context_ws_cumul_pb_app_same; tea. 2:now symmetry.
+    eapply ws_cumul_ctx_pb_app_same; tea. 2:now symmetry.
     eapply wf_local_app in X; tea.
     eauto with fvs.
   - destruct X0 as [s Hs]; exists s.
     eapply closed_context_cumulativity; tea.
     eapply All_local_env_app; split=> //.
-    eapply context_ws_cumul_pb_app_same; tea. 2:now symmetry.
+    eapply ws_cumul_ctx_pb_app_same; tea. 2:now symmetry.
     eapply wf_local_app in X; tea.
     eauto with fvs.
 Qed.
@@ -2602,7 +2602,7 @@ Lemma constructor_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   in
   let pargctx := subst_context parsubst 0 argctx in
   let pargctx' := subst_context parsubst' 0 argctx' in
-  context_ws_cumul_pb_rel Cumul Σ Γ (smash_context [] pargctx) (smash_context [] pargctx') *
+  ws_cumul_ctx_pb_rel Cumul Σ Γ (smash_context [] pargctx) (smash_context [] pargctx') *
   ws_cumul_pb_terms Σ (Γ ,,, smash_context [] pargctx)
     (map (subst parsubst (context_assumptions (cstr_args cdecl)))
       (map (expand_lets argctx) (map (subst_instance u) (cstr_indices cdecl))))
@@ -2685,10 +2685,10 @@ Proof.
       eapply positive_cstr_closed_args in args; eauto.
       2:{ rewrite indv. now simpl. }  
       rewrite - !smash_context_subst !subst_context_nil in args.
-      eapply (weaken_context_ws_cumul_pb_rel (Γ := Γ)) in args => //.
+      eapply (weaken_ws_cumul_ctx_pb_rel (Γ := Γ)) in args => //.
       pose proof (spine_subst_smash spu) as sspu.
       pose proof (spine_subst_smash spu') as sspu'.
-      eapply (substitution_context_ws_cumul_pb_subst_conv (Γ := Γ) (Γ'' := []) (s := List.rev pars) (s' := List.rev pars')) in args.
+      eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ := Γ) (Γ'' := []) (s := List.rev pars) (s' := List.rev pars')) in args.
       3:{ rewrite subst_instance_smash. eapply subslet_untyped_subslet, sspu. }
       3:{ eapply subslet_untyped_subslet, sspu'. }
       2:{ eapply All2_rev => //. }
@@ -2833,9 +2833,9 @@ Proof.
     intros Ru; split.
     { rewrite /pargctx /pargctx' /argctx /argctx'.
       rewrite !(smash_context_subst []).
-      unshelve eapply (substitution_context_ws_cumul_pb_subst_conv (Γ'' := []) _ _ spu spu') => //.
+      unshelve eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ'' := []) _ _ spu spu') => //.
       2:{ eapply spine_subst_conv; eauto.
-          eapply subst_instance_context_ws_cumul_pb_rel; eauto with fvs.
+          eapply subst_instance_ws_cumul_ctx_pb_rel; eauto with fvs.
           move: clΓparsu. now rewrite is_closed_context_subst_instance. }
       simpl.
       assert (subst_context (ind_subst mdecl c.1 u) 0 (subst_instance u (ind_params mdecl)) = 
@@ -2843,7 +2843,7 @@ Proof.
       { rewrite closed_ctx_subst; eauto. }
       rewrite -ispars.
       rewrite -(subst_instance_length u (ind_params mdecl)).
-      eapply (substitution_context_ws_cumul_pb_subst_conv (Γ := Γ)).
+      eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ := Γ)).
       3:{ eapply subslet_untyped_subslet, (weaken_subslet (Γ' := [])); eauto. eapply subslet_inds; eauto. }
       3:{ eapply subslet_untyped_subslet, PCUICArities.weaken_subslet; eauto; eapply subslet_inds; eauto. }
       3:{ simpl.
@@ -2855,7 +2855,7 @@ Proof.
         now rewrite !is_closed_subst_inst. }
       2:now eapply conv_inds.
       rewrite - !(subst_instance_smash _ _ []).
-      eapply subst_instance_context_ws_cumul_pb_rel => //.
+      eapply subst_instance_ws_cumul_ctx_pb_rel => //.
       rewrite - !app_context_assoc. eapply is_closed_context_weaken; auto.
       rewrite !app_context_assoc. apply is_closed_context_smash_end.
       rewrite -(is_closed_context_subst_instance _ (cstr_args cdecl) u).
@@ -2866,7 +2866,7 @@ Proof.
       replace (context_assumptions (cstr_args cdecl)) with i. subst i.
       unshelve eapply (ws_cumul_pb_terms_subst _ spu spu'); eauto.
       eapply spine_subst_conv; eauto.
-      eapply subst_instance_context_ws_cumul_pb_rel; eauto with fvs.
+      eapply subst_instance_ws_cumul_ctx_pb_rel; eauto with fvs.
       move: clΓparsu. now rewrite is_closed_context_subst_instance.
       2:subst i; len; rewrite /argctx; len; reflexivity.
       rewrite /expand_lets /expand_lets_k.
@@ -2884,9 +2884,9 @@ Proof.
       { rewrite -app_context_assoc. eapply weaken_wf_local => //.
         rewrite /argctx'.
         epose proof (on_constructor_inst_wf_args declc _ cu').
-        eapply context_ws_cumul_pb_wf_local; tea.
+        eapply ws_cumul_ctx_pb_wf_local; tea.
         apply (on_minductive_wf_params declc cu).
-        eapply subst_instance_context_ws_cumul_pb.
+        eapply subst_instance_ws_cumul_ctx_pb.
         2:now symmetry.
         apply (on_minductive_wf_params declc cu'). }
       eapply (ws_cumul_pb_expand_lets_ws_cumul_ctx (pb:=Conv)) => //.
@@ -2905,12 +2905,12 @@ Proof.
         eapply closedn_expand'' in H => //.
         substu. eapply closed_upwards; tea. len. } 
       rewrite /argctx /argctx'.
-      eapply weaken_context_ws_cumul_pb_rel. eauto with fvs.
+      eapply weaken_ws_cumul_ctx_pb_rel. eauto with fvs.
       rewrite /ind_subst.
       rewrite -(instantiate_inds declc cu).
       rewrite -(instantiate_inds declc cu').
       rewrite - !subst_instance_subst_context.
-      eapply subst_instance_context_ws_cumul_pb_rel => //.
+      eapply subst_instance_ws_cumul_ctx_pb_rel => //.
       epose proof (on_constructor_inst_wf_args declc _ cu).
       rewrite /ind_subst -(instantiate_inds declc cu) in X0.
       eapply wf_local_closed_context in X0; tea.

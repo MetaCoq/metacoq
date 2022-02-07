@@ -364,7 +364,7 @@ Proof.
   eapply ws_cumul_pb_ws_cumul_ctx.
   2: now eapply red_ws_cumul_pb.
   constructor.
-  1: eapply context_ws_cumul_pb_refl ; fvs.
+  1: eapply ws_cumul_ctx_pb_refl ; fvs.
   now constructor.
 Qed.
 

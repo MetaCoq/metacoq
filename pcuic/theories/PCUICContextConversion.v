@@ -417,7 +417,7 @@ Section ContextConversion.
     exists t'', unf. intuition auto.
     Qed.
 
-  Lemma red_ctx_context_ws_cumul_pb {l Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> Σ ⊢ Γ ≤[l] Γ'.
+  Lemma red_ctx_ws_cumul_ctx_pb {l Γ Γ'} : Σ ⊢ Γ ⇝ Γ' -> Σ ⊢ Γ ≤[l] Γ'.
   Proof.
     induction 1; constructor; auto.
     depelim p; constructor; eauto with fvs; pcuic.
@@ -940,8 +940,8 @@ Section ContextConversion.
     now apply on_free_vars_ctx_All_fold.
   Qed.
 
-  Lemma context_ws_cumul_pb_red {pb} {Γ Γ' : context} :
-    context_ws_cumul_pb pb Σ Γ Γ' ->
+  Lemma ws_cumul_ctx_pb_red {pb} {Γ Γ' : context} :
+    ws_cumul_ctx_pb pb Σ Γ Γ' ->
     ∑ Δ Δ', Σ ⊢ Γ ⇝ Δ × Σ ⊢ Γ' ⇝ Δ' ×
       eq_context_upto Σ (eq_universe Σ) (compare_universe pb Σ) Δ Δ'.
   Proof.
@@ -985,7 +985,7 @@ Section ContextConversion.
     Σ ;;; Γ' ⊢ T ≤[pb] U.
   Proof.
     intros Hctx H.
-    apply context_ws_cumul_pb_red in Hctx => //.
+    apply ws_cumul_ctx_pb_red in Hctx => //.
     destruct Hctx as [Δ [Δ' [l [r elr]]]].
     eapply (ws_cumul_pb_red_ctx r) in H.
     destruct pb'; cbn in *.
@@ -996,7 +996,7 @@ Section ContextConversion.
   Qed.
 
   #[global]
-  Instance conv_context_sym : Symmetric (context_ws_cumul_pb Conv Σ).
+  Instance conv_context_sym : Symmetric (ws_cumul_ctx_pb Conv Σ).
   Proof.
     intros Γ Γ' conv.
     eapply All2_fold_sym; tea.
@@ -1039,7 +1039,7 @@ Section ContextConversion.
     Σ ;;; Γ' ⊢ T ≤[pb] U.
   Proof.
     intros Hctx H.
-    apply context_ws_cumul_pb_red in Hctx => //.
+    apply ws_cumul_ctx_pb_red in Hctx => //.
     destruct Hctx as [Δ [Δ' [l [r elr]]]].
     eapply (ws_cumul_pb_red_ctx_inv r).
     destruct pb'; cbn in *.
@@ -1059,7 +1059,7 @@ Section ContextConversion.
   Qed.
 
   #[global]
-  Instance context_ws_cumul_pb_trans pb : Transitive (context_ws_cumul_pb pb Σ).
+  Instance ws_cumul_ctx_pb_trans pb : Transitive (ws_cumul_ctx_pb pb Σ).
   Proof.
     eapply All2_fold_trans.
     intros.
@@ -1225,16 +1225,16 @@ Qed.
 #[global] Hint Extern 4 (is_true (on_free_vars_decl (shiftnP _ xpred0) _)) =>
   eapply on_free_vars_decl_eq; [eassumption|len; lia] : fvs.
 
-Lemma context_ws_cumul_pb_false_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  context_ws_cumul_pb Conv Σ Γ Γ' -> conv_context Σ Γ Γ'.
+Lemma ws_cumul_ctx_pb_false_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
+  ws_cumul_ctx_pb Conv Σ Γ Γ' -> conv_context Σ Γ Γ'.
 Proof.
-  apply: context_ws_cumul_pb_forget.
+  apply: ws_cumul_ctx_pb_forget.
 Qed.
 
-Lemma context_ws_cumul_pb_true_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  context_ws_cumul_pb Cumul Σ Γ Γ' -> cumul_context Σ Γ Γ'.
+Lemma ws_cumul_ctx_pb_true_forget {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
+  ws_cumul_ctx_pb Cumul Σ Γ Γ' -> cumul_context Σ Γ Γ'.
 Proof.
-  apply: context_ws_cumul_pb_forget.
+  apply: ws_cumul_ctx_pb_forget.
 Qed.
 
 Ltac exass H := 
@@ -1243,12 +1243,12 @@ Ltac exass H :=
     assert (H : A); [idtac|exists H]
   end.
 
-Lemma into_context_ws_cumul_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
+Lemma into_ws_cumul_ctx_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} :
   is_closed_context Γ ->
   is_closed_context Γ' ->
   cumul_pb_context pb Σ Γ Γ' ->
-  context_ws_cumul_pb pb Σ Γ Γ'.
+  ws_cumul_ctx_pb pb Σ Γ Γ'.
 Proof.
   move/on_free_vars_ctx_All_fold => onΓ.
   move/on_free_vars_ctx_All_fold => onΓ'.
@@ -1275,7 +1275,7 @@ Proof.
     rewrite (All2_fold_length X0) //. } 
 Qed.
 
-Lemma context_ws_cumul_pb_refl {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ : context} :
+Lemma ws_cumul_ctx_pb_refl {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ : context} :
   is_closed_context Γ -> Σ ⊢ Γ ≤[pb] Γ.
 Proof.
   move/on_free_vars_ctx_All_fold.
@@ -1284,19 +1284,19 @@ Proof.
   destruct pb; cbn; reflexivity.
 Qed.
 
-Lemma context_ws_cumul_pb_app_same {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ Γ' Δ : context} :
+Lemma ws_cumul_ctx_pb_app_same {cf} {Σ} {wfΣ : wf Σ} {pb} {Γ Γ' Δ : context} :
   is_closed_context (Γ ,,, Δ) ->
   Σ ⊢ Γ ≤[pb] Γ' -> Σ ⊢ Γ,,, Δ ≤[pb] Γ',,, Δ.
 Proof.
   move=> iscl cum.
-  eapply into_context_ws_cumul_pb => //.
+  eapply into_ws_cumul_ctx_pb => //.
   eapply is_closed_context_cumul_app; tea; eauto with fvs.
   now rewrite (All2_fold_length cum).
   destruct pb.
   - apply conv_context_app_same.
-    now apply context_ws_cumul_pb_false_forget.
+    now apply ws_cumul_ctx_pb_false_forget.
   - apply cumul_context_app_same.
-    now apply context_ws_cumul_pb_true_forget.
+    now apply ws_cumul_ctx_pb_true_forget.
   
 Qed.
 
@@ -1308,14 +1308,14 @@ Proof.
   intros cum conv.
   pose proof (length_of conv). len in H.
   eapply All2_fold_app; eauto.
-  eapply context_ws_cumul_pb_refl; cbn; eauto with fvs.
+  eapply ws_cumul_ctx_pb_refl; cbn; eauto with fvs.
   eapply All2_fold_app_inv in conv as []. 2:lia.
   eapply All2_fold_impl_ind; tea.
   intros. simpl in X1.
   pose proof (All2_fold_length cum).
   eapply ws_cumul_decls_ws_cumul_ctx; tea.
-  eapply context_ws_cumul_pb_app_same. 
-  { pose proof (context_ws_cumul_pb_closed_left cum).
+  eapply ws_cumul_ctx_pb_app_same. 
+  { pose proof (ws_cumul_ctx_pb_closed_left cum).
     eapply (ws_cumul_decls_inv _ (Γ':=Γ' ,,, Γ0)) in X1 as [isc _]; tea.
     eapply is_closed_context_cumul_app; tea; try lia. }
   exact cum.

@@ -455,27 +455,27 @@ Inductive wt_cumul_pb_decls {cf : checker_flags} (pb : conv_pb) (Σ : global_env
     wt_cumul_pb_decls pb Σ Γ Γ' (vdef na b T) (vdef na' b' T').
 Derive Signature for wt_cumul_pb_decls.
 
-(* Definition ws_context_ws_cumul_pb {cf:checker_flags} (pb : conv_pb) (Σ : global_env_ext) :=
+(* Definition ws_ws_cumul_ctx_pb {cf:checker_flags} (pb : conv_pb) (Σ : global_env_ext) :=
   All2_fold (ws_cumul_pb_decls le Σ). *)
 
-(* Notation ws_cumul_context Σ := (ws_context_ws_cumul_pb true Σ).
-Notation ws_conv_context Σ := (ws_context_ws_cumul_pb false Σ). *)
+(* Notation ws_cumul_context Σ := (ws_ws_cumul_ctx_pb true Σ).
+Notation ws_conv_context Σ := (ws_ws_cumul_ctx_pb false Σ). *)
     
-Definition context_ws_cumul_pb {cf:checker_flags} (pb : conv_pb) (Σ : global_env_ext) (Γ Γ' : context) :=
+Definition ws_cumul_ctx_pb {cf:checker_flags} (pb : conv_pb) (Σ : global_env_ext) (Γ Γ' : context) :=
   All2_fold (fun Γ Γ' => ws_cumul_decls pb Σ Γ) Γ Γ'.
 
-Notation "Σ ⊢ Γ ≤[ pb ] Δ" := (context_ws_cumul_pb pb Σ Γ Δ) (at level 50, Γ, Δ at next level,
+Notation "Σ ⊢ Γ ≤[ pb ] Δ" := (ws_cumul_ctx_pb pb Σ Γ Δ) (at level 50, Γ, Δ at next level,
   format "Σ  ⊢  Γ  ≤[ pb ]  Δ") : pcuic.
 
-Notation "Σ ⊢ Γ = Δ" := (context_ws_cumul_pb Conv Σ Γ Δ) (at level 50, Γ, Δ at next level,
+Notation "Σ ⊢ Γ = Δ" := (ws_cumul_ctx_pb Conv Σ Γ Δ) (at level 50, Γ, Δ at next level,
   format "Σ  ⊢  Γ  =  Δ") : pcuic.
 
-Notation "Σ ⊢ Γ ≤ Δ" := (context_ws_cumul_pb Cumul Σ Γ Δ) (at level 50, Γ, Δ at next level,
+Notation "Σ ⊢ Γ ≤ Δ" := (ws_cumul_ctx_pb Cumul Σ Γ Δ) (at level 50, Γ, Δ at next level,
   format "Σ  ⊢  Γ  ≤  Δ") : pcuic.
 
 (* 
-Lemma ws_context_ws_cumul_pb_closed_right {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {Γ Γ'}:
-  ws_context_ws_cumul_pb pb Σ Γ Γ' -> is_closed_context Γ'.
+Lemma ws_ws_cumul_ctx_pb_closed_right {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {Γ Γ'}:
+  ws_ws_cumul_ctx_pb pb Σ Γ Γ' -> is_closed_context Γ'.
 Proof.
   intros X. red in X.
   induction X; auto.
@@ -484,8 +484,8 @@ Proof.
   now move/and4P: i => [].
 Qed.
 
-Lemma ws_context_ws_cumul_pb_closed_left {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {Γ Γ'}:
-  ws_context_ws_cumul_pb pb Σ Γ Γ' -> is_closed_context Γ.
+Lemma ws_ws_cumul_ctx_pb_closed_left {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {Γ Γ'}:
+  ws_ws_cumul_ctx_pb pb Σ Γ Γ' -> is_closed_context Γ.
 Proof.
   intros X. red in X.
   induction X; auto.
@@ -494,8 +494,8 @@ Proof.
   now move/and4P: i => [].
 Qed. *)
 
-Lemma context_ws_cumul_pb_closed_right {cf:checker_flags} {pb : conv_pb} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
-  context_ws_cumul_pb pb Σ Γ Γ' -> is_closed_context Γ'.
+Lemma ws_cumul_ctx_pb_closed_right {cf:checker_flags} {pb : conv_pb} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
+  ws_cumul_ctx_pb pb Σ Γ Γ' -> is_closed_context Γ'.
 Proof.
   intros X. red in X.
   induction X; auto.
@@ -503,8 +503,8 @@ Proof.
   rewrite -(All2_fold_length X); eauto with fvs.
 Qed.
 
-Lemma context_ws_cumul_pb_closed_left {cf:checker_flags} {pb : conv_pb} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
-  context_ws_cumul_pb pb Σ Γ Γ' -> is_closed_context Γ.
+Lemma ws_cumul_ctx_pb_closed_left {cf:checker_flags} {pb : conv_pb} {Σ} {wfΣ : wf Σ} {Γ Γ'}:
+  ws_cumul_ctx_pb pb Σ Γ Γ' -> is_closed_context Γ.
 Proof.
   intros X. red in X.
   induction X; auto.
@@ -512,25 +512,25 @@ Proof.
   eauto with fvs.
 Qed.
 
-#[global] Hint Resolve context_ws_cumul_pb_closed_left context_ws_cumul_pb_closed_right : fvs.
+#[global] Hint Resolve ws_cumul_ctx_pb_closed_left ws_cumul_ctx_pb_closed_right : fvs.
 
-(* Lemma into_context_ws_cumul_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
+(* Lemma into_ws_cumul_ctx_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} :
-  ws_context_ws_cumul_pb pb Σ Γ Γ' ->
-  context_ws_cumul_pb pb Σ Γ Γ'.
+  ws_ws_cumul_ctx_pb pb Σ Γ Γ' ->
+  ws_cumul_ctx_pb pb Σ Γ Γ'.
 Proof.
-  rewrite /ws_context_ws_cumul_pb /context_equality.
+  rewrite /ws_ws_cumul_ctx_pb /context_equality.
   intros a. eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd.
   now destruct (into_ws_cumul_decls le hd) as [clΓ [isd [isd' eq]]].
 Qed.
 
-Lemma from_context_ws_cumul_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
+Lemma from_ws_cumul_ctx_pb {cf:checker_flags} {pb : conv_pb} {Σ : global_env_ext} {wfΣ : wf Σ} 
   {Γ Γ' : context} :
-  context_ws_cumul_pb pb Σ Γ Γ' ->
-  ws_context_ws_cumul_pb pb Σ Γ Γ'.
+  ws_cumul_ctx_pb pb Σ Γ Γ' ->
+  ws_ws_cumul_ctx_pb pb Σ Γ Γ'.
 Proof.
-  rewrite /ws_context_ws_cumul_pb /context_equality.
+  rewrite /ws_ws_cumul_ctx_pb /context_equality.
   intros a; eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd. cbn in hd.
   destruct hd.
@@ -551,14 +551,14 @@ Qed. *)
 
 
 
-Definition wt_context_ws_cumul_pb {cf:checker_flags} (pb : conv_pb) (Σ : global_env_ext) :=
+Definition wt_ws_cumul_ctx_pb {cf:checker_flags} (pb : conv_pb) (Σ : global_env_ext) :=
   All2_fold (wt_cumul_pb_decls pb Σ).
 
-Notation "Σ ⊢ Γ ≤[ pb ] Δ ✓" := (wt_context_ws_cumul_pb pb Σ Γ Δ) (at level 50, Γ, Δ at next level,
+Notation "Σ ⊢ Γ ≤[ pb ] Δ ✓" := (wt_ws_cumul_ctx_pb pb Σ Γ Δ) (at level 50, Γ, Δ at next level,
   format "Σ  ⊢  Γ  ≤[ pb ]  Δ  ✓") : pcuic.
 
-Notation wt_cumul_context Σ := (wt_context_ws_cumul_pb Cumul Σ).
-Notation wt_conv_context Σ := (wt_context_ws_cumul_pb Conv Σ).
+Notation wt_cumul_context Σ := (wt_ws_cumul_ctx_pb Cumul Σ).
+Notation wt_conv_context Σ := (wt_ws_cumul_ctx_pb Conv Σ).
 
 Section WtContextConversion.
   Context {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ}.
@@ -580,8 +580,8 @@ Section WtContextConversion.
       destruct d as [na [b|] ty]; cbn in p; constructor; intuition auto.
   Qed.
 
-  Lemma wt_context_ws_cumul_pb_forget {pb} {Γ Γ' : context} :
-    wt_context_ws_cumul_pb pb Σ Γ Γ' ->
+  Lemma wt_ws_cumul_ctx_pb_forget {pb} {Γ Γ' : context} :
+    wt_ws_cumul_ctx_pb pb Σ Γ Γ' ->
     [× wf_local Σ Γ, wf_local Σ Γ' &
       match pb with Cumul => cumul_context Σ Γ Γ' | Conv => conv_context Σ Γ Γ' end].
   Proof.
@@ -596,10 +596,10 @@ Section WtContextConversion.
     destruct pb; auto.
   Qed.
 
-  Lemma into_wt_context_ws_cumul_pb {pb} {Γ Γ' : context} {T U : term} :
+  Lemma into_wt_ws_cumul_ctx_pb {pb} {Γ Γ' : context} {T U : term} :
     wf_local Σ Γ -> wf_local Σ Γ' ->
     (match pb with Cumul => cumul_context Σ Γ Γ' | Conv => conv_context Σ Γ Γ' end) ->
-    wt_context_ws_cumul_pb pb Σ Γ Γ'.
+    wt_ws_cumul_ctx_pb pb Σ Γ Γ'.
   Proof.
     move=> /wf_local_All_fold wfΓ /wf_local_All_fold wfΓ'.
     destruct pb=> eq.
@@ -611,9 +611,9 @@ Section WtContextConversion.
     destruct cum; cbn in wtd, wtd'; constructor; intuition auto.
   Qed.
 
-  Lemma wt_ws_context_ws_cumul_pb {pb} {Γ Γ' : context} {T U : term} :
-    wt_context_ws_cumul_pb pb Σ Γ Γ' ->
-    context_ws_cumul_pb pb Σ Γ Γ'.
+  Lemma wt_ws_ws_cumul_ctx_pb {pb} {Γ Γ' : context} {T U : term} :
+    wt_ws_cumul_ctx_pb pb Σ Γ Γ' ->
+    ws_cumul_ctx_pb pb Σ Γ Γ'.
   Proof.
     intros a; eapply All2_fold_impl_ind; tea.
     intros ???? wt ws eq; 
@@ -637,8 +637,8 @@ Section WtContextConversion.
       rewrite (All2_fold_length ws) //; eauto with fvs.
   Qed.
 
-  Lemma context_ws_cumul_pb_inv {pb} {Γ Γ' : context} :
-    context_ws_cumul_pb pb Σ Γ Γ' ->
+  Lemma ws_cumul_ctx_pb_inv {pb} {Γ Γ' : context} :
+    ws_cumul_ctx_pb pb Σ Γ Γ' ->
     [× on_free_vars_ctx xpred0 Γ, on_free_vars_ctx xpred0 Γ' &
       match pb with Cumul => cumul_context Σ Γ Γ' | Conv => conv_context Σ Γ Γ' end].
   Proof.
@@ -659,14 +659,14 @@ Section WtContextConversion.
     constructor; now symmetry.
   Qed.
 
-  Lemma context_ws_cumul_pb_forget {pb Γ Γ'} : 
-    context_ws_cumul_pb pb Σ Γ Γ' ->
+  Lemma ws_cumul_ctx_pb_forget {pb Γ Γ'} : 
+    ws_cumul_ctx_pb pb Σ Γ Γ' ->
     match pb with Cumul => cumul_context Σ Γ Γ' | Conv => conv_context Σ Γ Γ' end.
   Proof.
-    now move/context_ws_cumul_pb_inv => [].
+    now move/ws_cumul_ctx_pb_inv => [].
   Qed.
   
-  Lemma context_ws_cumul_pb_refl pb Γ : is_closed_context Γ -> context_ws_cumul_pb pb Σ Γ Γ.
+  Lemma ws_cumul_ctx_pb_refl pb Γ : is_closed_context Γ -> ws_cumul_ctx_pb pb Σ Γ Γ.
   Proof.
     move=> onΓ. cbn.
     move/on_free_vars_ctx_All_fold: onΓ => a.

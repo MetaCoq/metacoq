@@ -1588,12 +1588,12 @@ Section Conversion.
                forall (leq : conv_pb) (Δh : context_hole) (t : term) (Δh' : context_hole) (t' : term),
                  Δ = fill_context_hole Δh t ->
                  Δ' = fill_context_hole Δh' t' ->
-                 ∥ context_ws_cumul_pb_rel Conv Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
+                 ∥ ws_cumul_ctx_pb_rel Conv Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
                  ConversionResult (conv_cum leq Σ (Γ,,, context_hole_context Δh) t t'))
             (Δpre Δ'pre Δpost Δ'post : context)
             (eq : Δ = Δpre ,,, Δpost)
             (eq' : Δ' = Δ'pre ,,, Δ'post) :
-    ConversionResult (∥context_ws_cumul_pb_rel Conv Σ Γ Δpre Δ'pre∥) by struct Δpre := {
+    ConversionResult (∥ws_cumul_ctx_pb_rel Conv Σ Γ Δpre Δ'pre∥) by struct Δpre := {
 
     isconv_context_aux Γ Γ' Δ Δ' cc check [] [] Δpost Δ'post eq eq' => yes;
 
@@ -1732,9 +1732,9 @@ Section Conversion.
                forall (leq : conv_pb) (Δh : context_hole) (t : term) (Δh' : context_hole) (t' : term),
                  Δ = fill_context_hole Δh t ->
                  Δ' = fill_context_hole Δh' t' ->
-                 ∥context_ws_cumul_pb_rel Conv Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
+                 ∥ws_cumul_ctx_pb_rel Conv Σ Γ (context_hole_context Δh) (context_hole_context Δh')∥ ->
                  ConversionResult (conv_cum leq Σ (Γ,,, context_hole_context Δh) t t'))
-    : ConversionResult (∥context_ws_cumul_pb_rel Conv Σ Γ Δ Δ'∥) :=
+    : ConversionResult (∥ws_cumul_ctx_pb_rel Conv Σ Γ Δ Δ'∥) :=
     isconv_context_aux Γ Γ' Δ Δ' cc check Δ Δ' [] [] eq_refl eq_refl.
 
   Lemma case_conv_brs_inv {Γ ci br br' p c brs1 brs2 π}
@@ -1893,13 +1893,13 @@ Section Conversion.
     transitivity (Γ ,,, stack_context π ,,, inst_case_context (pparams p') (puinst p') m').
     - unfold app_context; rewrite <-app_assoc.
       inv_on_free_vars. 
-      eapply inst_case_context_ws_cumul_pb; tea. 
+      eapply inst_case_ws_cumul_ctx_pb; tea. 
       * fvs.
       * eapply hp.
       * eapply hp.
-    - unfold app_context. rewrite <- app_assoc. eapply context_ws_cumul_pb_app_same; auto.
+    - unfold app_context. rewrite <- app_assoc. eapply ws_cumul_ctx_pb_app_same; auto.
       rewrite on_free_vars_ctx_app.
-      apply andb_true_iff. split; auto. 1:now apply context_ws_cumul_pb_closed_left in hx.
+      apply andb_true_iff. split; auto. 1:now apply ws_cumul_ctx_pb_closed_left in hx.
       eapply on_free_vars_ctx_inst_case_context; trea.
       destruct hp.
       now eapply (ws_cumul_pb_terms_open_terms_right a).
@@ -2314,7 +2314,7 @@ Section Conversion.
     intro h.
     unfold fix_context_alt.
     match goal with
-    | |- context_ws_cumul_pb _ _ (_ ,,, List.rev ?l) (_ ,,, List.rev ?l') =>
+    | |- ws_cumul_ctx_pb _ _ (_ ,,, List.rev ?l) (_ ,,, List.rev ?l') =>
       assert (hi :
         All2i (fun i d d' =>
           forall Ξ,
@@ -2337,7 +2337,7 @@ Section Conversion.
     clear h.
     revert hi.
     match goal with
-    | |- context [ context_ws_cumul_pb _ _ (_ ,,, List.rev ?l) (_ ,,, List.rev ?l') ] =>
+    | |- context [ ws_cumul_ctx_pb _ _ (_ ,,, List.rev ?l) (_ ,,, List.rev ?l') ] =>
       generalize l' ;
       generalize l
     end.
@@ -2598,7 +2598,7 @@ Section Conversion.
     destruct hΣ, wh1 as [wh1], wh2 as [wh2].
     rewrite !zipp_as_mkApps in cc.
     eapply whne_conv_context in wh2.
-    2:{ symmetry in X. eapply context_ws_cumul_pb_forget in X. exact X. }
+    2:{ symmetry in X. eapply ws_cumul_ctx_pb_forget in X. exact X. }
     apply conv_cum_mkApps_inv in cc as [(ws_cumul_pb_Case&conv_args)]; eauto using whnf_mkApps.
     red in isr1.
     eapply welltyped_zipc_zipp, welltyped_zipp_inv in wtc. 2:sq; auto.
@@ -2651,7 +2651,7 @@ Section Conversion.
     destruct hΣ, wh1 as [wh1], wh2 as [wh2].
     rewrite !zipp_as_mkApps in cc.
     eapply whne_conv_context in wh2.
-    2:{ symmetry in X. eapply context_ws_cumul_pb_forget in X. exact X. }
+    2:{ symmetry in X. eapply ws_cumul_ctx_pb_forget in X. exact X. }
     apply conv_cum_mkApps_inv in cc as [(conv_proj&conv_args)]; eauto using whnf_mkApps.
     eapply conv_cum_tProj_inv in conv_proj; eauto.
     destruct conv_proj as [(<-&?)].
@@ -2659,7 +2659,7 @@ Section Conversion.
   Qed.
   
   Lemma conv_cum_red_conv_inv leq Γ Γ' t1 t2 t1' t2' :
-    context_ws_cumul_pb Conv Σ Γ Γ' ->
+    ws_cumul_ctx_pb Conv Σ Γ Γ' ->
     red Σ Γ t1 t1' ->
     red Σ Γ' t2 t2' ->
     sq_ws_cumul_pb leq Σ Γ t1 t2 ->
@@ -2698,7 +2698,7 @@ Section Conversion.
     2: apply red_mkApps; [reflexivity|exact a0].
     apply conv_cum_mkApps_inv in cc as [(ws_cumul_pb_Fix&conv_args)]; auto.
     2:{ eapply whnf_conv_context; eauto.
-        symmetry in X. now eapply context_ws_cumul_pb_forget in X. }
+        symmetry in X. now eapply ws_cumul_ctx_pb_forget in X. }
     apply conv_cum_tFix_inv in ws_cumul_pb_Fix as [(<-&?)]; auto.
     sq; split; auto. 
     * eapply All2_impl; tea; cbn. intros ? ? []. repeat split; auto.
@@ -2976,11 +2976,11 @@ Section Conversion.
     unfold app_context; rewrite <- !app_assoc.
     destruct X0 as [mdecl [idecl []]].
     etransitivity.
-    * inv_on_free_vars. eapply (inst_case_context_ws_cumul_pb d e e0 i i0); tea. fvs.
-    * eapply context_ws_cumul_pb_app_same. 2:eapply hx.
+    * inv_on_free_vars. eapply (inst_case_ws_cumul_ctx_pb d e e0 i i0); tea. fvs.
+    * eapply ws_cumul_ctx_pb_app_same. 2:eapply hx.
       rewrite on_free_vars_ctx_app.
       apply andb_true_iff. split; auto. 
-      1:now eapply context_ws_cumul_pb_closed_left in hx.
+      1:now eapply ws_cumul_ctx_pb_closed_left in hx.
       eapply on_free_vars_ctx_inst_case_context; trea.
       fvs.
   Qed.
@@ -5147,7 +5147,7 @@ Section Conversion.
     2: now depelim s1.
     2: now depelim s2.
     2: eapply whnf_conv_context; eauto.
-    2: symmetry in X0; eapply context_ws_cumul_pb_forget in X0; eauto.
+    2: symmetry in X0; eapply ws_cumul_ctx_pb_forget in X0; eauto.
     constructor.
     eapply ws_cumul_pb_terms_red_conv; eauto.
     all:eapply into_red_terms; tea.
@@ -5176,7 +5176,7 @@ Section Conversion.
     2: now inversion s1; subst.
     2: now inversion s2; subst.
     2: eapply whnf_conv_context; eauto.
-    2: { symmetry in X0. eapply context_ws_cumul_pb_forget in X0; tea. }
+    2: { symmetry in X0. eapply ws_cumul_ctx_pb_forget in X0; tea. }
     apply whnf_mkApps_inv in wh1.
     destruct t1; cbn in *.
     all: inversion s1; subst; clear s1.
@@ -5225,7 +5225,7 @@ Section Conversion.
     all: inversion r1; subst; clear r1.
     all: inversion c; subst; clear c.
     all: apply whnf_mkApps_inv in wh2.
-    all: eapply whnf_conv_context in wh2; [|symmetry in X0; eapply context_ws_cumul_pb_forget in X0; exact X0].
+    all: eapply whnf_conv_context in wh2; [|symmetry in X0; eapply ws_cumul_ctx_pb_forget in X0; exact X0].
     all: eapply whnf_red_inv in r2; auto.
     all: inversion r2; subst; clear r2.
     all: inversion s2; subst; clear s2.
@@ -5329,7 +5329,7 @@ Section Conversion.
     
   Next Obligation.
     destruct h1.
-    sq. eapply context_ws_cumul_pb_refl. fvs.
+    sq. eapply ws_cumul_ctx_pb_refl. fvs.
   Qed.
   
   Theorem isconv_term_sound :

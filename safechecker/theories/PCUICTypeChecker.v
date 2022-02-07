@@ -545,9 +545,9 @@ Section Typecheck.
       destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
     Qed.
     
-    Lemma context_ws_cumul_pb_rel_cons {le Γ Δ Δ' d d'} (c : context_ws_cumul_pb_rel le Σ Γ Δ Δ') 
+    Lemma ws_cumul_ctx_pb_rel_cons {le Γ Δ Δ' d d'} (c : ws_cumul_ctx_pb_rel le Σ Γ Δ Δ') 
       (p : ws_cumul_decls le Σ (Γ,,, Δ) d d') : 
-      context_ws_cumul_pb_rel le Σ Γ (Δ ,, d) (Δ' ,, d').
+      ws_cumul_ctx_pb_rel le Σ Γ (Δ ,, d) (Δ' ,, d').
     Proof.
       destruct c. split; auto.
       destruct d as [na [b|] ty], d' as [na' [b'|] ty']; try constructor; auto.
@@ -555,7 +555,7 @@ Section Typecheck.
 
     Equations check_ws_cumul_ctx (le : conv_pb) Γ Δ Δ'
       (wfΔ : ∥ wf_local Σ (Γ ,,, Δ) ∥) (wfΔ' : ∥ wf_local Σ (Γ ,,, Δ') ∥) : 
-      typing_result_comp (∥ context_ws_cumul_pb_rel le Σ Γ Δ Δ' ∥) :=
+      typing_result_comp (∥ ws_cumul_ctx_pb_rel le Σ Γ Δ Δ' ∥) :=
 
       check_ws_cumul_ctx le Γ [] [] _ _ := ret _ ;
       
@@ -599,25 +599,25 @@ Section Typecheck.
         eapply context_cumulativity_wt_decl.
         1: now auto.
         1,3:now pcuics.
-        apply context_ws_cumul_pb_rel_app.
+        apply ws_cumul_ctx_pb_rel_app.
         eassumption.
       Qed.
       Next Obligation.
         sq.
         eapply inv_wf_local in wfΔ as [wfΔ wfd].
         eapply inv_wf_local in wfΔ' as [wfΔ' wfd'].
-        now apply context_ws_cumul_pb_rel_cons.
+        now apply ws_cumul_ctx_pb_rel_cons.
       Qed.
       Next Obligation.
         sq. apply absurd. sq.
-        eapply context_ws_cumul_pb_rel_app in H.
+        eapply ws_cumul_ctx_pb_rel_app in H.
         now depelim H.
       Qed.
       Next Obligation.
         sq. apply absurd. sq.
-        eapply context_ws_cumul_pb_rel_app in H.
+        eapply ws_cumul_ctx_pb_rel_app in H.
         depelim H.
-        now apply context_ws_cumul_pb_rel_app.
+        now apply ws_cumul_ctx_pb_rel_app.
       Qed.
       
     Equations check_alpha_ws_cumul_ctx Δ Δ'

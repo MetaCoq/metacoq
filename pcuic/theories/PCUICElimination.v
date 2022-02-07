@@ -90,7 +90,7 @@ Lemma pre_case_predicate_context_gen_eq {cf: checker_flags} {Σ : global_env_ext
       Γ ,,, case_predicate_context' ci mdecl idecl p. 
 Proof.
   intros wf decli cu wfps sp.
-  eapply alpha_eq_context_context_ws_cumul_pb.
+  eapply alpha_eq_context_ws_cumul_ctx_pb.
   * eapply All2_app. 2:reflexivity.
     rewrite /pre_case_predicate_context_gen /inst_case_context /ind_predicate_context.
     rewrite /case_predicate_context' /=. cbn.
@@ -163,7 +163,7 @@ Proof.
     depelim H2. rewrite H3. constructor; auto. }
   assert (Σ ⊢ Γ ,,, pre_case_predicate_context_gen ci mdecl idecl (pparams p) (puinst p) = Γ ,,, predctx).
   { transitivity (Γ ,,, case_predicate_context' ci mdecl idecl p); revgoals.
-    * symmetry. eapply alpha_eq_context_context_ws_cumul_pb => //; fvs. now symmetry.
+    * symmetry. eapply alpha_eq_context_ws_cumul_ctx_pb => //; fvs. now symmetry.
     * eapply pre_case_predicate_context_gen_eq; tea. pcuic.
       now eapply PCUICWfUniverses.typing_wf_universe in pret_ty. }
   unshelve epose proof (typing_spine_case_predicate (ps:=ps) _ H cons _ sppars). 1-2:shelve. 
@@ -173,7 +173,7 @@ Proof.
     specialize (X2 spargs scrut_ty).
     eapply typing_spine_strengthen; tea; revgoals.
     + eapply ws_cumul_pb_it_mkProd_or_LetIn.
-      eapply context_ws_cumul_pb_rel_app.
+      eapply ws_cumul_ctx_pb_rel_app.
       now symmetry.
       apply ws_cumul_pb_refl; fvs.
     + eapply validity in pret_ty.
@@ -300,7 +300,7 @@ Proof.
   now destruct u1, u2.
 Qed.
 
-Lemma isType_context_ws_cumul_pb {cf Σ Γ Δ T} {wfΣ : wf Σ}:
+Lemma isType_ws_cumul_ctx_pb {cf Σ Γ Δ T} {wfΣ : wf Σ}:
   isType Σ Γ T ->
   wf_local Σ Δ ->
   Σ ⊢ Γ = Δ ->
@@ -404,10 +404,10 @@ Proof.
           eapply cumul_Sort.  etransitivity; eauto. eapply leq_universe_product. }
         specialize (H _ codom).
         have eqctx : Σ ⊢ Γ ,, vass na ty = Γ ,, vass na' dom'.
-        { constructor. apply context_ws_cumul_pb_refl. fvs. constructor; auto. }
+        { constructor. apply ws_cumul_ctx_pb_refl. fvs. constructor; auto. }
         forward H.
         { constructor. eapply (isType_it_mkProd_or_LetIn_inv (Δ := [_])) in i.
-          eapply isType_context_ws_cumul_pb; tea. pcuic.
+          eapply isType_ws_cumul_ctx_pb; tea. pcuic.
           eapply isType_red in i0. 2:exact red.
           now eapply isType_tProd in i0 as [].
           eapply ws_cumul_pb_ws_cumul_ctx. now symmetry in eqctx. assumption. }

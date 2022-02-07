@@ -282,7 +282,7 @@ Proof.
 
     + apply ws_cumul_pb_mkApps ; auto.
       * apply ws_cumul_pb_it_mkLambda_or_LetIn.
-        -- apply context_ws_cumul_pb_refl.
+        -- apply ws_cumul_ctx_pb_refl.
            unfold predctx.
            eapply wf_local_closed_context, wf_case_predicate_context ; eauto.
            eapply validity ; eassumption.

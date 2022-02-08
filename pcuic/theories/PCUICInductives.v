@@ -295,7 +295,7 @@ Section OnInductives.
     eapply isType_weaken => //.
     rewrite -(subst_instance_it_mkProd_or_LetIn u _ (tSort _)).
     rewrite -it_mkProd_or_LetIn_app in ar.
-    eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u) in ar.
+    eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u wfΣ) in ar.
     all:pcuic. eapply decli.
   Qed.
 
@@ -309,7 +309,7 @@ Section OnInductives.
     pose proof (oib.(onArity)) as ar.
     destruct ar as [s ar].
     eapply isType_weaken => //.
-    eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u) in ar.
+    eapply (typing_subst_instance_decl Σ [] _ _ _ (InductiveDecl mdecl) u wfΣ) in ar.
     all:pcuic. eapply decli.
   Qed.
 
@@ -335,10 +335,6 @@ Section OnInductives.
     destruct Σ. intros cu.
     eapply wf_universe_instantiate; eauto.
     now eapply consistent_instance_ext_wf.
-    eapply sub_context_set_trans.
-    eapply (weaken_lookup_on_global_env'' _ _ (InductiveDecl mdecl)); eauto.
-    eapply decli.
-    eapply global_context_set_sub_ext.
   Qed.
 
   Lemma nth_errror_arities_context decl :

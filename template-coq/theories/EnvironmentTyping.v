@@ -356,15 +356,14 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       ConstraintSet.union (constraints_of_udecl φ) univs.
 
     Definition satisfiable_udecl (univs : ContextSet.t) φ
-      := consistent (univs_ext_constraints (snd univs) φ).
+      := consistent (univs_ext_constraints (ContextSet.constraints univs) φ).
 
     (* Check that: *)
     (*   - declared levels are fresh *)
     (*   - all levels used in constraints are declared *)
-    (*   - level used in monomorphic contexts are only monomorphic *)
-    Definition on_udecl univs (udecl : universes_decl)
+    Definition on_udecl (univs : ContextSet.t) (udecl : universes_decl)
       := let levels := levels_of_udecl udecl in
-        let global_levels := fst univs in
+        let global_levels := ContextSet.levels univs in
         let all_levels := LevelSet.union levels global_levels in
         LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels
         /\ ConstraintSet.For_all (declared_cstr_levels all_levels) (constraints_of_udecl udecl)
@@ -805,6 +804,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       let levels := global_levels c in
       let cstrs := ContextSet.constraints c in
       ConstraintSet.For_all (declared_cstr_levels levels) cstrs /\ 
+      LS.For_all (negb ∘ Level.is_var) levels /\
       consistent cstrs.
 
     Definition on_global_env (g : global_env) : Type :=

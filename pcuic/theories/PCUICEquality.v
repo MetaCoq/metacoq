@@ -870,10 +870,14 @@ Proof.
   destruct t0; simpl; auto.
 Qed.
 
-Lemma global_variance_empty gr napp : global_variance [] gr napp = None.
+Lemma global_variance_empty gr napp env : env.(declarations) = [] -> global_variance env gr napp = None.
 Proof.
-  destruct gr; auto.
+  destruct env; cbn => ->. destruct gr; auto.
 Qed.
+
+Definition empty_global_env := 
+  {| universes := ContextSet.empty;
+     declarations := [] |}.
 
 (** Pure syntactic equality, without cumulative inductive types subtyping *)
 
@@ -882,11 +886,11 @@ Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  subrelation (R_global_instance [] Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
+  subrelation (R_global_instance empty_global_env Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
 Proof.
   intros he hle hele t t'.
   rewrite /R_global_instance /R_opt_variance. simpl.
-  rewrite global_variance_empty.
+  rewrite global_variance_empty //.
   destruct global_variance as [v|]; eauto using R_universe_instance_impl'.
   induction t in v, t' |- *; destruct v, t'; simpl; intros H; inv H; auto.
   simpl.
@@ -943,7 +947,7 @@ Instance eq_term_upto_univ_empty_impl Σ Re Re' Rle Rle' napp napp' :
   RelationClasses.subrelation Re Re' ->
   RelationClasses.subrelation Rle Rle' ->
   RelationClasses.subrelation Re Rle' ->
-  subrelation (eq_term_upto_univ_napp [] Re Rle napp) (eq_term_upto_univ_napp Σ Re' Rle' napp').
+  subrelation (eq_term_upto_univ_napp empty_global_env Re Rle napp) (eq_term_upto_univ_napp Σ Re' Rle' napp').
 Proof.
   intros he hle hele t t'.
   induction t in napp, napp', t', Rle, Rle', hle, hele |- * using term_forall_list_ind;
@@ -1218,7 +1222,8 @@ Proof.
   subst. constructor ; auto.
 Qed.
 
-Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
+Lemma valid_constraints_empty {cf} i : 
+  valid_constraints (empty_ext empty_global_env) (subst_instance_cstrs i (empty_ext empty_global_env)).
 Proof.
   red. destruct check_univs => //.
 Qed.
@@ -1234,12 +1239,12 @@ Qed.
 
 (** ** Syntactic equality up to printing anotations ** *)
 
-Definition upto_names := eq_term_upto_univ [] eq eq.
+Definition upto_names := eq_term_upto_univ empty_global_env eq eq.
 
 Infix "≡" := upto_names (at level 70).
 
-Infix "≡'" := (eq_term_upto_univ [] eq eq) (at level 70).
-Notation upto_names' := (eq_term_upto_univ [] eq eq).
+Infix "≡'" := (eq_term_upto_univ empty_global_env eq eq) (at level 70).
+Notation upto_names' := (eq_term_upto_univ empty_global_env eq eq).
 
 #[global]
 Instance upto_names_ref : Reflexive upto_names.

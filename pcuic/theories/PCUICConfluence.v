@@ -2869,7 +2869,7 @@ Section RedConfluence.
   Lemma red_ctx_clos_rt_red1_ctx : inclusion (red_ctx Σ) (clos_refl_trans_ctx (red1_ctx Σ)).
   Proof.
     intros x y H.
-    induction H; try firstorder.
+    induction H; [firstorder|].
     destruct p.
     - transitivity (Γ ,, vass na t').
       eapply clos_rt_OnOne2_local_env_ctx_incl, clos_rt_OnOne2_local_env_incl. constructor.

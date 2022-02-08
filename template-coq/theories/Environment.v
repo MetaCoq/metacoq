@@ -284,6 +284,8 @@ Module Environment (T : Term).
     { universes : ContextSet.t;
       declarations : global_declarations }.
 
+  Coercion universes : global_env >-> ContextSet.t.
+
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
 

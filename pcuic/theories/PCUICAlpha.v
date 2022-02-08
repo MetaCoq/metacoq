@@ -17,8 +17,8 @@ Implicit Types cf : checker_flags.
 
 Notation "`≡α`" := upto_names.
 Infix "≡α" := upto_names (at level 60).
-Notation "`≡Γ`" := (eq_context_upto [] eq eq).
-Infix "≡Γ" := (eq_context_upto [] eq eq) (at level 20, no associativity).
+Notation "`≡Γ`" := (eq_context_upto empty_global_env eq eq).
+Infix "≡Γ" := (eq_context_upto empty_global_env eq eq) (at level 20, no associativity).
 
 #[global]
 Instance upto_names_terms_refl : CRelationClasses.Reflexive (All2 `≡α`).
@@ -356,7 +356,7 @@ Section Alpha.
 
   Lemma eq_context_gen_upto ctx ctx' :
     eq_context_gen eq eq ctx ctx' ->
-    eq_context_upto [] eq eq ctx ctx'.
+    eq_context_upto empty_global_env eq eq ctx ctx'.
   Proof.
     intros a; eapply All2_fold_impl; tea.
     intros. destruct X; subst; constructor; auto; try reflexivity.
@@ -364,7 +364,7 @@ Section Alpha.
 
   Lemma case_predicate_context_equiv {ind mdecl idecl p p'} :
     eq_predicate upto_names' eq p p' ->
-    eq_context_upto [] eq eq
+    eq_context_upto empty_global_env eq eq
       (case_predicate_context ind mdecl idecl p)
       (case_predicate_context ind mdecl idecl p').
   Proof.

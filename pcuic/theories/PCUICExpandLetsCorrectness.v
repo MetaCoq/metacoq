@@ -4346,11 +4346,6 @@ Proof.
   rewrite IHl. rewrite LevelSetProp.union_add //.
 Qed.
 
-From Coq Require Import MSetDecide.
-
-Module ConstraintSetDecide := WDecide (ConstraintSet).
-Ltac csets := ConstraintSetDecide.fsetdec.
-
 Definition aulevels inst cstrs : 
   AUContext.levels (inst, cstrs) = 
   LevelSetProp.of_list (unfold #|inst| Level.Var).

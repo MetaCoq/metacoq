@@ -3492,7 +3492,7 @@ Proof.
     { unfold app_context.
       intros.
       rewrite nth_error_app2; [lia|].
-      rewrite minus_plus; auto. }
+      rewrite Nat.add_comm Nat.add_sub; auto. }
     eapply red_case.
     + induction IHparams; pcuic.
     + apply IHret; auto.

@@ -42,7 +42,7 @@ Proof.
   rewrite !/shiftnP /shiftn.
   destruct (Nat.ltb_spec k i) => /=.
   all: nat_compare_specs => //=.
-  by rewrite minus_plus.
+  by rewrite Nat.add_comm Nat.add_sub.
 Qed.
 
 Lemma shiftnP_impl (p q : nat -> bool) : (forall i, p i -> q i) ->

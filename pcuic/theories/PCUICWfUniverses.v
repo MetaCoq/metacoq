@@ -86,28 +86,18 @@ Section CheckerFlags.
     wf Σ ->
     wf_universe Σ l ->
     wf_universe_instance (Σ.1, univs) u ->
-    sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
     wf_universe (Σ.1, univs) (subst_instance u l). 
   Proof.
     destruct l; simpl; auto. rename n into t. 
-    intros wfΣ Hl Hu sub e [[l n] [inl ->]]%In_subst_instance.
+    intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
     destruct l; simpl; auto.
     - unfold global_ext_levels.
       apply LS.union_spec. right.
       apply global_levels_Set.
     - specialize (Hl (Level.Level s, n) inl).
       simpl in Hl.
-      destruct sub. unfold levels_of_udecl in H.
-      unfold global_ext_levels in Hl.
-      destruct Σ.2.
-      * eapply LS.union_spec in Hl.
-        destruct Hl as [Hl|Hl].
-        + now specialize (H _ Hl).
-        + eapply LS.union_spec. now right.
-      * eapply LS.union_spec in Hl as [Hl|Hl].
-        + simpl in Hl.
-          now apply monomorphic_level_notin_AUContext in Hl.
-        + apply LS.union_spec; now right.
+      apply monomorphic_level_in_global_ext in Hl.
+      eapply LS.union_spec. now right.
     - specialize (Hl (Level.Var n0, n) inl).
       eapply LS.union_spec in Hl as [Hl|Hl].
       + red in Hu.
@@ -118,8 +108,7 @@ Section CheckerFlags.
           destruct nth_error eqn:hnth; simpl.
           eapply nth_error_forall in Hu; eauto.
           eapply LS.union_spec; right. eapply global_levels_Set.
-        * simpl in sub.
-          unfold subst_instance. simpl.
+        * unfold subst_instance. simpl.
           destruct (nth_error u n0) eqn:hnth.
           2:{ simpl. rewrite hnth. eapply LS.union_spec; right; apply global_levels_Set. }
           eapply nth_error_forall in Hu. 2:eauto. change (nth_error u n0) with (nth_error u n0) in *.
@@ -131,10 +120,9 @@ Section CheckerFlags.
     wf Σ ->
     wf_universe (Σ, univs) s ->
     wf_universe_instance (Σ, φ) u ->
-    sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
     wf_universe (Σ, φ) (subst_instance_univ u s).
   Proof.
-    intros wfΣ Hs cu.
+    intros wfΣ Hs.
     apply (wf_universe_subst_instance_univ (Σ, univs) φ); auto.
   Qed.
 
@@ -149,10 +137,10 @@ Section CheckerFlags.
     now destruct a => /= //; auto.
   Qed.
 
-  Lemma wf_universe_level_mono Σ ctx u : 
+  Lemma wf_universe_level_mono Σ u : 
     wf Σ ->
-    on_udecl_prop Σ (Monomorphic_ctx ctx) ->
-    Forall (wf_universe_level (Σ, Monomorphic_ctx ctx)) u ->
+    on_udecl_prop Σ (Monomorphic_ctx) ->
+    Forall (wf_universe_level (Σ, Monomorphic_ctx)) u ->
     forallb (fun x => ~~ Level.is_var x) u.
   Proof.
     intros wf uprop.
@@ -164,29 +152,25 @@ Section CheckerFlags.
     now pose proof (not_var_global_levels wf _ H).
   Qed.
 
-  Lemma wf_universe_level_sub Σ ctx univs u :
-    wf_universe_level (Σ, Monomorphic_ctx ctx) u ->
-    sub_context_set ctx (global_ext_context_set (Σ, univs)) ->
+  Lemma wf_universe_level_sub Σ univs u :
+    wf_universe_level (Σ, Monomorphic_ctx) u ->
     wf_universe_level (Σ, univs) u.
   Proof.
-    intros wfx [sub _].
+    intros wfx.
     red in wfx |- *.
     eapply LevelSet.union_spec in wfx; simpl in *.
-    destruct wfx as [wfx|wfx].
-    now specialize (sub _ wfx).
+    destruct wfx as [wfx|wfx]. lsets.
     eapply LevelSet.union_spec. now right.
   Qed.
 
-  Lemma wf_universe_instance_sub Σ ctx univs u :
-    wf_universe_instance (Σ, Monomorphic_ctx ctx) u ->
-    sub_context_set ctx (global_ext_context_set (Σ, univs)) ->
+  Lemma wf_universe_instance_sub Σ univs u :
+    wf_universe_instance (Σ, Monomorphic_ctx) u ->
     wf_universe_instance (Σ, univs) u.
   Proof.
-    intros wfu [sub ?].
+    intros wfu.
     red in wfu |- *.
     eapply Forall_impl; eauto.
-    intros; eapply wf_universe_level_sub; eauto.
-    red. split; auto.
+    intros. red in H. cbn in H. eapply wf_universe_level_sub; eauto.
   Qed.
 
   Lemma In_Level_global_ext_poly s Σ cst : 
@@ -230,19 +214,17 @@ Section CheckerFlags.
     on_udecl_prop Σ univs ->
     wf_universe_instance (Σ, univs) u' ->
     wf_universe_instance (Σ, φ) u ->
-    sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
     wf_universe_instance (Σ, φ) (subst_instance u u').
   Proof.
-    intros wfΣ onup Hs cu subc.
+    intros wfΣ onup Hs cu.
     destruct univs.
     - red in Hs |- *.
-      unshelve epose proof (wf_universe_level_mono _ _ _ _ _ Hs); eauto.
+      unshelve epose proof (wf_universe_level_mono _ _ _ _ Hs); eauto.
       eapply forallb_Forall in H. apply Forall_map.
       solve_all. destruct x; simpl => //.
       eapply LS.union_spec. right. eapply global_levels_Set.
       eapply wf_universe_level_sub; eauto.
-    - simpl in subc.
-      clear subc onup.
+    - clear onup.
       red in Hs |- *.
       eapply Forall_map, Forall_impl; eauto.
       intros x wfx.
@@ -425,12 +407,11 @@ Qed.
   Lemma wf_universes_inst {Σ : global_env_ext} univs t u : 
     wf Σ ->
     on_udecl_prop Σ.1 univs ->
-    sub_context_set (monomorphic_udecl univs) (global_ext_context_set Σ) ->
     wf_universe_instance Σ u  ->
     wf_universes (Σ.1, univs) t ->
     wf_universes Σ (subst_instance u t).
   Proof.
-    intros wfΣ onudecl sub cu wft.
+    intros wfΣ onudecl cu wft.
     induction t using term_forall_list_ind; simpl in *; auto; try to_prop; 
       try apply /andP; to_wfu; intuition eauto 4.
 
@@ -489,16 +470,14 @@ Qed.
     intros Hl l inl; specialize (Hl l inl).
     apply LS.union_spec. apply LS.union_spec in Hl as [Hl|Hl]; simpl.
     left; auto.
-    right. destruct ext as [? ->]. simpl.
-    rewrite global_levels_ext.
-    eapply LS.union_spec. right; auto.
+    right. now eapply global_levels_sub; [apply ext|].
   Qed.
 
-  Lemma weaken_wf_universe_level Σ Σ' t : wf Σ' -> extends Σ.1 Σ' ->
+  Lemma weaken_wf_universe_level {Σ : global_env_ext} Σ' t : wf Σ -> wf Σ' -> extends Σ Σ' ->
     wf_universe_level Σ t ->
     wf_universe_level (Σ', Σ.2) t.
   Proof.
-    intros wfΣ ext.
+    intros wfΣ wfΣ' ext.
     unfold wf_universe_level.
     destruct t; simpl; auto;
     intros; apply LS.union_spec.
@@ -506,28 +485,25 @@ Qed.
     - eapply LS.union_spec in H as [H|H].
       left; auto.
       right; auto. simpl.
-      destruct ext. subst Σ'.
-      rewrite global_levels_ext.
-      eapply LS.union_spec. right; auto.
-    - eapply in_var_global_ext in H; eauto.
-      now eapply wf_extends.
+      eapply global_levels_sub. apply ext. apply H.
+    - cbn. eapply in_var_global_ext in H; eauto.
   Qed.
 
-  Lemma weaken_wf_universe_instance Σ Σ' t : wf Σ' -> extends Σ.1 Σ' ->
+  Lemma weaken_wf_universe_instance {Σ : global_env_ext} Σ' t : wf Σ -> wf Σ' -> extends Σ.1 Σ' ->
     wf_universe_instance Σ t ->
     wf_universe_instance (Σ', Σ.2) t.
   Proof.
-    intros wfΣ ext.
+    intros wfΣ wfΣ' ext.
     unfold wf_universe_instance.
     intros H; eapply Forall_impl; eauto.
     intros. now eapply weaken_wf_universe_level.
   Qed.
 
-  Lemma weaken_wf_universes Σ Σ' t : wf Σ' -> extends Σ.1 Σ' ->
+  Lemma weaken_wf_universes {Σ : global_env_ext} Σ' t : wf Σ -> wf Σ' -> extends Σ.1 Σ' ->
     wf_universes Σ t ->
     wf_universes (Σ', Σ.2) t.
   Proof.
-    intros wfΣ ext.
+    intros wfΣ wfΣ' ext.
     induction t using term_forall_list_ind; cbn in *; auto; intros; to_prop;
     try apply /andP; to_wfu; intuition eauto 4.
 
@@ -535,17 +511,13 @@ Qed.
   - now eapply weaken_wf_universe.
   - apply /andP; to_wfu; intuition eauto 4.
   - eapply forallb_impl ; tea.
-    now move => ? _ /wf_universe_reflect /weaken_wf_universe - /(_ ext)
-      /wf_universe_reflect.
+    now move => ? _ /wf_universe_reflect /weaken_wf_universe /wf_universe_reflect.
   - eapply forallb_impl ; tea.
-    now move => ? _ /wf_universe_reflect /weaken_wf_universe - /(_ ext)
-      /wf_universe_reflect.
+    now move => ? _ /wf_universe_reflect /weaken_wf_universe /wf_universe_reflect.
   - eapply forallb_impl ; tea.
-    now move => ? _ /wf_universe_reflect /weaken_wf_universe - /(_ ext)
-      /wf_universe_reflect.
+    now move => ? _ /wf_universe_reflect /weaken_wf_universe /wf_universe_reflect.
   - eapply forallb_impl ; tea.
-    now move => ? _ /wf_universe_reflect /weaken_wf_universe - /(_ ext)
-      /wf_universe_reflect.
+    now move => ? _ /wf_universe_reflect /weaken_wf_universe /wf_universe_reflect.
   - red in X.
     solve_all.
     rewrite /test_branch in b |- *.
@@ -558,7 +530,7 @@ Qed.
   Lemma wf_universes_weaken_full : weaken_env_prop_full (fun Σ Γ t T => 
       wf_universes Σ t && wf_universes Σ T).
   Proof.
-    red. intros.     
+    red. intros.
     to_prop; apply /andP; split; now apply weaken_wf_universes.
   Qed.
 
@@ -568,8 +540,8 @@ Qed.
         wf_universes Σ t && wf_universes Σ T)).
   Proof.
     red. intros.
-    unfold lift_typing in *. destruct T. now eapply (wf_universes_weaken_full (_, _)).
-    destruct X1 as [s Hs]; exists s. now eapply (wf_universes_weaken_full (_, _)).
+    unfold lift_typing in *. destruct T. now eapply (wf_universes_weaken_full (Σ, _)).
+    destruct X2 as [s Hs]; exists s. now eapply (wf_universes_weaken_full (Σ, _)).
   Qed.
 
   Lemma wf_universes_inds Σ mind u bodies : 
@@ -1075,20 +1047,14 @@ Qed.
       red in X1; cbn in X1.
       destruct (cst_body decl).
       * to_prop.
-        epose proof (weaken_lookup_on_global_env'' Σ.1 _ _ wf H).
         epose proof (weaken_lookup_on_global_env' Σ.1 _ _ wf H).
         eapply wf_universes_inst. 2:eauto. all:eauto.
-        simpl in H3.
-        eapply sub_context_set_trans; eauto.
-        eapply global_context_set_sub_ext.
+        simpl in H2.
         now eapply consistent_instance_ext_wf.
       * move: X1 => [s /andP[Hc _]].
         to_prop.
         eapply wf_universes_inst; eauto.
         exact (weaken_lookup_on_global_env' Σ.1 _ _ wf H).
-        epose proof (weaken_lookup_on_global_env'' Σ.1 _ _ wf H).
-        eapply sub_context_set_trans; eauto.
-        eapply global_context_set_sub_ext.
         now eapply consistent_instance_ext_wf.
 
     - apply/andP; split.
@@ -1100,10 +1066,6 @@ Qed.
       move: X1 => [s /andP[Hind ?]].
       eapply wf_universes_inst; eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 isdecl)).
-      generalize (weaken_lookup_on_global_env'' Σ.1 _ _ wf (proj1 isdecl)).
-      simpl. intros H'.
-      eapply sub_context_set_trans; eauto.
-      eapply global_context_set_sub_ext.
       now eapply consistent_instance_ext_wf.
 
     - apply/andP; split.
@@ -1119,10 +1081,6 @@ Qed.
       move: onc=> [_ /andP[onc _]].
       eapply wf_universes_inst; eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
-      generalize (weaken_lookup_on_global_env'' Σ.1 _ _ wf (proj1 (proj1 isdecl))).
-      simpl. intros H'.
-      eapply sub_context_set_trans; eauto.
-      eapply global_context_set_sub_ext.
       now eapply consistent_instance_ext_wf.
     
     - rewrite wf_universes_mkApps in H5.
@@ -1190,10 +1148,6 @@ Qed.
 
       eapply (wf_universes_inst (ind_universes mdecl)); eauto.
       exact (weaken_lookup_on_global_env' Σ.1 _ _ wf (proj1 (proj1 (proj1 isdecl)))).
-      generalize (weaken_lookup_on_global_env'' Σ.1 _ _ wf (proj1 (proj1 (proj1 isdecl)))).
-      simpl. intros H'.
-      eapply sub_context_set_trans; eauto.
-      eapply global_context_set_sub_ext.
       rewrite wf_universes_subst.
       eapply wf_universes_inds; eauto.
       eapply wf_abstract_instance.

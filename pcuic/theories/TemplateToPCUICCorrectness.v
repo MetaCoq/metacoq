@@ -99,25 +99,34 @@ Proof.
   revert t a; induction l; intros; simpl; try congruence.
 Qed.
 
-Definition trans_global_decls_acc Σ Σ' := 
+Definition trans_global_decls_acc univs Σ Σ' := 
   fold_right
-    (fun (decl : kername × Ast.Env.global_decl) (Σ' : global_env) =>
-      on_snd (trans_global_decl Σ') decl :: Σ') Σ' Σ.
+    (fun (decl : kername × Ast.Env.global_decl) (Σ' : global_declarations) =>
+      let Σ' := {| universes := univs; declarations := Σ' |} in
+      on_snd (trans_global_decl Σ') decl :: Σ'.(declarations)) Σ' Σ.
 
-Lemma trans_global_decls_app Σ Σ' : 
-  trans_global_decls (Σ ++ Σ') = trans_global_decls_acc Σ (trans_global_decls Σ').
+Lemma trans_global_decls_app univs Σ Σ' : 
+  trans_global_decls univs (Σ ++ Σ') = 
+  trans_global_decls_acc univs Σ (trans_global_decls univs Σ').
 Proof.
   rewrite /trans_global_decls /trans_global_decls_acc.
   now rewrite fold_right_app.
 Qed.
 
+Lemma incl_cs_refl cs : cs ⊂_cs cs.
+Proof.
+  split; [lsets|csets].
+Qed.
+
 Lemma extends_trans_global_decls_acc Σ Σ' : 
-  extends Σ' (trans_global_decls_acc Σ Σ').
+  extends Σ' {| universes := Σ'.(universes);
+    declarations := trans_global_decls_acc Σ'.(universes) Σ Σ'.(declarations) |}.
 Proof.
   induction Σ.
-  * now exists [].
+  * split; cbn. apply incl_cs_refl. now exists [].
   * rewrite /trans_global_decls_acc /=.
-    destruct IHΣ as [Σ'' eq].
+    destruct IHΣ as [univs [Σ'' eq]]. cbn in *.
+    split; cbn; auto.
     eexists (_ :: Σ'').
     rewrite -app_comm_cons. f_equal.
     now rewrite /trans_global_decls_acc in eq.
@@ -127,7 +136,7 @@ Definition wf_global_decl {cf} (Σ : Ast.Env.global_env_ext) kn decl :=
   Typing.on_global_decl (fun Σ => WfAst.wf_decl_pred Σ.1) Σ kn decl.
 
 (* Issue in equations: signatures cannot be found up-to arbitrary conversions. *)
-#[global] Hint Extern 4 (Signature (Typing.wf _) _ _) => exact (ST.on_global_env_Signature _ _ _) : typeclass_instances.
+#[global] Hint Extern 4 (Signature (Typing.wf _) _ _) => exact (on_global_env_Signature _ _ _) : typeclass_instances.
 
 Lemma trans_lookup_env {cf} Σ cst {wfΣ : Typing.wf Σ} :
   match Ast.Env.lookup_env Σ cst with

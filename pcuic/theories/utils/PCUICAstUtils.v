@@ -82,15 +82,14 @@ Ltac solve_all_one :=
 Ltac solve_all := repeat (progress solve_all_one).
 #[global] Hint Extern 10 => rewrite !map_branch_map_branch : all.
 #[global] Hint Extern 10 => rewrite !map_predicate_map_predicate : all.
-  
 
-Lemma lookup_env_nil c s : lookup_env [] c = Some s -> False.
+Lemma lookup_env_nil c s : lookup_global [] c = Some s -> False.
 Proof.
   induction c; simpl; auto => //.
 Qed.
 
-Lemma lookup_env_cons {kn d Σ kn' d'} : lookup_env ((kn, d) :: Σ) kn' = Some d' ->
-  (kn = kn' /\ d = d') \/ (kn <> kn' /\ lookup_env Σ kn' = Some d').
+Lemma lookup_env_cons {kn d Σ kn' d'} : lookup_global ((kn, d) :: Σ) kn' = Some d' ->
+  (kn = kn' /\ d = d') \/ (kn <> kn' /\ lookup_global Σ kn' = Some d').
 Proof.
   simpl.
   epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
@@ -100,7 +99,7 @@ Qed.
 
 Lemma lookup_env_cons_fresh {kn d Σ kn'} : 
   kn <> kn' ->
-  lookup_env ((kn, d) :: Σ) kn' = lookup_env Σ kn'.
+  lookup_global ((kn, d) :: Σ) kn' = lookup_global Σ kn'.
 Proof.
   simpl.
   epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
@@ -821,7 +820,7 @@ Definition fst_ctx : global_env_ext -> global_env := fst.
 Coercion fst_ctx : global_env_ext >-> global_env.
 
 Definition empty_ext (Σ : global_env) : global_env_ext
-  := (Σ, Monomorphic_ctx ContextSet.empty).
+  := (Σ, Monomorphic_ctx).
 
 (** Decompose an arity into a context and a sort *)
 

@@ -79,13 +79,11 @@ Lemma declared_decl_closed_ind `{checker_flags} {Σ : global_env} {wfΣ : wf Σ}
                  (Σ, universes_decl_of_decl decl) cst decl.
 Proof.
   intros.
-  eapply weaken_lookup_on_global_env; try red; eauto.
-  eapply on_global_env_impl; cycle 1. tea.
+  eapply weaken_lookup_on_global_env; eauto. red; eauto.
+  eapply (on_global_env_impl (empty_ext Σ)); cycle 1. tea.
   red; intros. unfold lift_typing in *. destruct T; intuition auto with wf.
-  destruct X1 as [s0 Hs0]. simpl. rtoProp; intuition.
+  destruct X2 as [s0 Hs0]. simpl. rtoProp; intuition.
 Qed.
- 
-
 
 Lemma declared_minductive_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl mind} : 
   Forall_decls_typing
@@ -192,7 +190,7 @@ Proof.
 
   - rewrite closedn_subst_instance.
     eapply lookup_on_global_env in X0; eauto.
-    destruct X0 as [Σ' [HΣ' IH]].
+    destruct X0 as [Σ' [hext [onu HΣ'] IH]].
     repeat red in IH. destruct decl, cst_body0. simpl in *.
     rewrite -> andb_and in IH. intuition auto.
     eauto using closed_upwards with arith.
@@ -495,7 +493,7 @@ Proof.
   intros h.
   unfold declared_constant in h.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
+  destruct h as [Σ' [ext wfΣ' decl']].
   red in decl'. red in decl'.
   destruct decl as [ty bo un]. simpl in *.
   destruct bo as [t|].
@@ -515,7 +513,7 @@ Proof.
   intros Σ cst decl body hΣ h e.
   unfold declared_constant in h.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
+  destruct h as [Σ' [ext wfΣ' decl']].
   red in decl'. red in decl'.
   destruct decl as [ty bo un]. simpl in *.
   rewrite e in decl'.
@@ -535,7 +533,7 @@ Proof.
   destruct h as [h1 h2].
   unfold declared_minductive in h1.
   eapply lookup_on_global_env in h1. 2: eauto.
-  destruct h1 as [Σ' [wfΣ' decl']].
+  destruct h1 as [Σ' [ext wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
   eapply Alli_nth_error in h. 2: eassumption.
   simpl in h. destruct h as [? [? h] ? ? ?].

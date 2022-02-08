@@ -315,7 +315,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   sq. destruct type_of_typing as [x [[Hx ?]]]; cbn.
-  sq. destruct wt. cbn in n.
+  sq. destruct wt. cbn in H.
   now eapply validity in Hx; pcuic.
 Qed.
 Next Obligation.

@@ -4,3 +4,4 @@ CAMLFLAGS+=-w -32 # Unused values
 CAMLFLAGS+=-w -34 # Unused types
 CAMLFLAGS+=-w -39 # Unused rec flags
 CAMLFLAGS+=-w -60 # Unused module in functor
+CAMLFLAGS+=-w -8 # Non-exhaustive matches (due to extraction of compare to -1, 0. 1)

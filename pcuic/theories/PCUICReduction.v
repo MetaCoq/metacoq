@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICLiftSubst PCUICUnivSubst PCUICInduction (*PCUICEquality *)
-     PCUICContextRelation PCUICCases.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils
+     PCUICLiftSubst PCUICUnivSubst PCUICInduction
+     PCUICCases PCUICClosed PCUICTactics.
 
 Require Import ssreflect.
 Require Import Equations.Prop.DepElim.
@@ -11,441 +11,111 @@ From Equations Require Import Equations.
 Set Equations Transparent.
 Set Default Goal Selector "!".
 
-Notation rtrans_clos := clos_refl_trans_n1.
-
-Lemma All2_many_OnOne2 :
-  forall A (R : A -> A -> Type) l l',
-    All2 R l l' ->
-    rtrans_clos (OnOne2 R) l l'.
-Proof.
-  intros A R l l' h.
-  induction h.
-  - constructor.
-  - econstructor.
-    + constructor. eassumption.
-    + clear - IHh. rename IHh into h.
-      induction h.
-      * constructor.
-      * econstructor.
-        -- econstructor 2. eassumption.
-        -- assumption.
-Qed.
-
-Definition tDummy := tVar String.EmptyString.
-Definition dummy_branch : branch term := mk_branch [] tDummy.
-
-Definition iota_red npar p args br :=
-  subst (List.rev (List.skipn npar args)) 0 
-    (expand_lets (inst_case_branch_context p br) (bbody br)).
-
-(** ** Reduction *)
-
-(** *** Helper functions for reduction *)
-
-Definition fix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_fix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (fix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition cofix_subst (l : mfixpoint term) :=
-  let fix aux n :=
-      match n with
-      | 0 => []
-      | S n => tCoFix l n :: aux n
-      end
-  in aux (List.length l).
-
-Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
-Definition is_constructor n ts :=
-  match List.nth_error ts n with
-  | Some a => isConstruct_app a
-  | None => false
-  end.
-
-Lemma fix_subst_length mfix : #|fix_subst mfix| = #|mfix|.
-Proof.
-  unfold fix_subst. generalize (tFix mfix). intros.
-  induction mfix; simpl; auto.
-Qed.
-
-Lemma cofix_subst_length mfix : #|cofix_subst mfix| = #|mfix|.
-Proof.
-  unfold cofix_subst. generalize (tCoFix mfix). intros.
-  induction mfix; simpl; auto.
-Qed.
-
-Lemma fix_context_length mfix : #|fix_context mfix| = #|mfix|.
-Proof. unfold fix_context. now rewrite List.rev_length mapi_length. Qed.
-
-
-(** *** One step strong beta-zeta-iota-fix-delta reduction
-
-  Inspired by the reduction relation from Coq in Coq [Barras'99].
-*)
-
-Arguments OnOne2 {A} P%type l l'.
-
-Definition set_pcontext (p : predicate term) (pctx' : context) : predicate term :=
-  {| pparams := p.(pparams);
-      puinst := p.(puinst);
-      pcontext := pctx';
-      preturn := p.(preturn) |}.
-
-Definition set_pcontext_two {p x} x' : 
-  set_pcontext (set_pcontext p x') x = set_pcontext p x := 
-  eq_refl.
-      
-Definition set_preturn (p : predicate term) (pret' : term) : predicate term :=
-  {| pparams := p.(pparams);
-      puinst := p.(puinst);
-      pcontext := p.(pcontext);
-      preturn := pret' |}.
-
-Definition set_preturn_two {p} pret pret' : set_preturn (set_preturn p pret') pret = set_preturn p pret := 
-  eq_refl.
-
-Definition set_pparams (p : predicate term) (pars' : list term) : predicate term :=
-  {| pparams := pars';
-     puinst := p.(puinst);
-     pcontext := p.(pcontext);
-     preturn := p.(preturn) |}.
-
-Definition set_pparams_two {p pars} pars' : set_pparams (set_pparams p pars') pars = set_pparams p pars := 
-  eq_refl.
-
-Definition map_decl_na (f : aname -> aname) (g : term -> term) d :=
-  {| decl_name := f (decl_name d);
-     decl_body := option_map g (decl_body d);
-     decl_type := g (decl_type d) |}.
-
-(** We do not allow alpha-conversion and P applies to only one of the 
-  fields in the context declaration. Used to define one-step context reduction. *)
-Definition on_one_decl (P : context -> term -> term -> Type)
-  Γ (d : context_decl) (d' : context_decl) : Type :=
-  match d, d' with
-  | {| decl_name := na; decl_body := None; decl_type := ty |},
-    {| decl_name := na'; decl_body := None; decl_type := ty' |} =>
-      na = na' × P Γ ty ty'
-  | {| decl_name := na; decl_body := Some b; decl_type := ty |},
-    {| decl_name := na'; decl_body := Some b'; decl_type := ty' |} =>
-      na = na' × 
-      ((P Γ ty ty' × b = b') +
-        (P Γ b b' × ty = ty'))
-  | _, _ => False
-  end.
-
-Lemma on_one_decl_impl (P Q : context -> term -> term -> Type) : 
-  (forall Γ, inclusion (P Γ) (Q Γ)) ->
-  forall Γ, inclusion (on_one_decl P Γ) (on_one_decl Q Γ).
-Proof.
-  intros HP Γ x y.
-  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl; firstorder auto.
-Qed.
-
-Lemma on_one_decl_map_na (P : context -> term -> term -> Type) f g : 
-  forall Γ,
-    inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl_na f g) Γ)) g) Γ)
-    (on_Trel (on_one_decl P (map (map_decl_na f g) Γ)) (map_decl_na f g)).
-Proof.
-  intros Γ x y.
-  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
-    auto.
-Qed.
-
-Lemma on_one_decl_map (P : context -> term -> term -> Type) f : 
-  forall Γ,
-    inclusion (on_one_decl (fun Γ => on_Trel (P (map (map_decl f) Γ)) f) Γ)
-    (on_Trel (on_one_decl P (map (map_decl f) Γ)) (map_decl f)).
-Proof.
-  intros Γ x y.
-  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
-    auto.
-Qed.
-
-Lemma on_one_decl_mapi_context (P : context -> term -> term -> Type) f : 
-  forall Γ,
-    inclusion (on_one_decl (fun Γ => on_Trel (P (mapi_context f Γ)) (f #|Γ|)) Γ)
-    (on_Trel (on_one_decl P (mapi_context f Γ)) (map_decl (f #|Γ|))).
-Proof.
-  intros Γ x y.
-  destruct x as [na [b|] ty], y as [na' [b'|] ty']; simpl in *; firstorder auto; subst; simpl;
-    auto.
-Qed.
-
-Lemma on_one_decl_test_impl (P Q : context -> term -> term -> Type) (p : term -> bool) : 
-  forall Γ d d', 
-    on_one_decl P Γ d d' ->
-    test_decl p d ->
-    (forall x y, p x -> P Γ x y -> Q Γ x y) ->
-    on_one_decl Q Γ d d'.
-Proof.
-  intros Γ [na [b|] ty] [na' [b'|] ty'] ond []%andb_and; simpl; firstorder auto.
-Qed.
-
-Section OnOne_local_2.
-  Context (P : forall (Γ : context), context_decl -> context_decl -> Type).
-
-  Inductive OnOne2_local_env : context -> context -> Type :=
-  | onone2_localenv_cons_abs Γ na na' t t' :
-      P Γ (vass na t) (vass na' t') ->
-      OnOne2_local_env (Γ ,, vass na t) (Γ ,, vass na' t')
-  | onone2_localenv_def Γ na na' b b' t t' :
-      P Γ (vdef na b t) (vdef na' b' t') ->
-      OnOne2_local_env (Γ ,, vdef na b t) (Γ ,, vdef na' b' t')
-  | onone2_localenv_cons_tl Γ Γ' d :
-      OnOne2_local_env Γ Γ' ->
-      OnOne2_local_env (Γ ,, d) (Γ' ,, d).
-End OnOne_local_2.
-
-#[global]
-Instance OnOne2_local_env_length {P ctx ctx'} : 
-  HasLen (OnOne2_local_env P ctx ctx') #|ctx| #|ctx'|.
-Proof.
-  induction 1; simpl; lia.
-Qed.
-
-Lemma OnOne2_local_env_impl R S :
-  (forall Δ, inclusion (R Δ) (S Δ)) ->
-  inclusion (OnOne2_local_env R)
-            (OnOne2_local_env S).
-Proof.
-  intros H x y H'.
-  induction H'; try solve [econstructor; firstorder].
-Qed.
-
-Lemma OnOne2_local_env_ondecl_impl P Q : 
-  (forall Γ, inclusion (P Γ) (Q Γ)) ->
-  inclusion (OnOne2_local_env (on_one_decl P)) (OnOne2_local_env (on_one_decl P)).
-Proof.
-  intros HP. now apply OnOne2_local_env_impl, on_one_decl_impl.
-Qed.
-
-Lemma OnOne2_local_env_map R Γ Δ (f : aname -> aname) (g : term -> term) :
-  OnOne2_local_env (fun Γ => on_Trel (R (map (map_decl_na f g) Γ)) (map_decl_na f g)) Γ Δ ->
-  OnOne2_local_env R (map (map_decl_na f g) Γ) (map (map_decl_na f g) Δ).
-Proof.
-  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
-Qed.
-
-Lemma OnOne2_local_env_map_context R Γ Δ (f : term -> term) :
-  OnOne2_local_env (fun Γ => on_Trel (R (map (map_decl f) Γ)) (map_decl f)) Γ Δ ->
-  OnOne2_local_env R (map_context f Γ) (map_context f Δ).
-Proof.
-  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
-Qed.
-
-Lemma OnOne2_local_env_mapi_context R Γ Δ (f : nat -> term -> term) :
-  OnOne2_local_env (fun Γ => on_Trel (R (mapi_context f Γ)) (map_decl (f #|Γ|))) Γ Δ ->
-  OnOne2_local_env R (mapi_context f Γ) (mapi_context f Δ).
-Proof.
-  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
-  rewrite -(length_of X). now constructor.
-Qed.
-
-Lemma test_context_k_impl {p q : nat -> term -> bool} {k k'} {ctx} :
-  (forall n t, p n t -> q n t) ->
-  k = k' ->
-  test_context_k p k ctx -> test_context_k q k' ctx.
-Proof.
-  intros Hfg <-.
-  induction ctx as [|[na [b|] ty] ctx]; simpl; auto;
-  move/andb_and=> [testp testd]; rewrite (IHctx testp);
-  eapply test_decl_impl; tea; eauto.
-Qed.
-
-Lemma OnOne2_local_env_test_context_k {P ctx ctx'} {k} {p q : nat -> term -> bool} : 
-  (forall n t, q n t -> p n t) ->
-  OnOne2_local_env P ctx ctx' ->
-  (forall Γ d d', 
-    P Γ d d' ->
-    test_context_k q k Γ ->
-    test_decl (q (#|Γ| + k)) d ->
-    test_decl (p (#|Γ| + k)) d') ->
-  test_context_k q k ctx ->
-  test_context_k p k ctx'.
-Proof.
-  intros hq onenv HPq.
-  induction onenv.
-  * move=> /= /andb_and [testq testd].
-    rewrite (test_context_k_impl _ _ testq) //.
-    simpl; eauto.
-  * move=> /= /andb_and [testq testd].
-    rewrite (test_context_k_impl _ _ testq) //.
-    simpl; eauto.
-  * move=> /= /andb_and [testq testd].
-    rewrite (IHonenv testq).
-    eapply test_decl_impl; tea.
-    intros x Hx. eapply hq.
-    now rewrite -(length_of onenv).
-Qed.
-
-Lemma on_one_decl_test_decl (P : context -> term -> term -> Type) Γ
-  (p q : term -> bool) d d' :
-  (forall t, p t -> q t) ->
-  (forall t t', P Γ t t' -> p t -> q t') ->
-  on_one_decl P Γ d d' ->
-  test_decl p d ->
-  test_decl q d'.
-Proof.
-  intros Hp.
-  unfold test_decl.
-  destruct d as [na [b|] ty], d' as [na' [b'|] ty']; simpl in * => //;
-   intuition auto; rtoProp;
-    subst; simpl; intuition eauto.
-Qed.
-
-Lemma OnOne2_local_env_impl_test {P Q ctx ctx'} {k} {p : nat -> term -> bool} : 
-  OnOne2_local_env P ctx ctx' ->
-  (forall Γ d d', 
-    P Γ d d' ->
-    test_context_k p k Γ ->
-    test_decl (p (#|Γ| + k)) d ->
-    Q Γ d d') ->
-  test_context_k p k ctx ->
-  OnOne2_local_env Q ctx ctx'.
-Proof.
-  intros onenv HPq.
-  induction onenv.
-  * move=> /= /andb_and [testq testd].
-    constructor; auto.
-  * move=> /= /andb_and [testq testd].
-    constructor; auto.
-  * move=> /= /andb_and [testq testd].
-    constructor; auto.
-Qed.
-
-(*Lemma OnOne2_local_env_mapi_context R (Γ Δ : context) (f g : nat -> term -> term) :
-  OnOne2_local_env (fun Γ d d' => R (mapi_context f Γ) (map_decl (f #|Γ|) d) (map_decl (g #|Γ|) d)) Γ Δ ->
-  OnOne2_local_env R (mapi_context f Γ) (mapi_context g Δ).
-Proof.
-  unfold on_Trel in *; induction 1; simpl; try solve [econstructor; intuition auto].
-  * rewrite /map_decl /=. econstructor.
-Qed.*)
+Reserved Notation " Σ ;;; Γ |- t ⇝ u " (at level 50, Γ, t, u at next level).
 
 Local Open Scope type_scope.
+
 Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
 (** Reductions *)
 (** Beta *)
-| red_beta na t b a :
-    red1 Σ Γ (tApp (tLambda na t b) a) (subst10 a b)
+| red_beta na t b a : 
+  Σ ;;; Γ |- tApp (tLambda na t b) a ⇝ b {0 := a}
 
 (** Let *)
 | red_zeta na b t b' :
-    red1 Σ Γ (tLetIn na b t b') (subst10 b b')
+  Σ ;;; Γ |- tLetIn na b t b' ⇝ b' {0 := b}
 
 | red_rel i body :
     option_map decl_body (nth_error Γ i) = Some (Some body) ->
-    red1 Σ Γ (tRel i) (lift0 (S i) body)
+    Σ ;;; Γ |- tRel i ⇝ lift0 (S i) body
 
 (** Case *)
 | red_iota ci c u args p brs br :
     nth_error brs c = Some br ->
-    #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
-    red1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
-         (iota_red ci.(ci_npar) p args br)
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
+    Σ ;;; Γ |- tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs 
+        ⇝ iota_red ci.(ci_npar) p args br
 
 (** Fix unfolding, with guard *)
 | red_fix mfix idx args narg fn :
     unfold_fix mfix idx = Some (narg, fn) ->
     is_constructor narg args = true ->
-    red1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
+    Σ ;;; Γ |- mkApps (tFix mfix idx) args ⇝ mkApps fn args
 
 (** CoFix-case unfolding *)
 | red_cofix_case ip p mfix idx args narg fn brs :
     unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip p (mkApps fn args) brs)
+    Σ ;;; Γ |- tCase ip p (mkApps (tCoFix mfix idx) args) brs ⇝
+         tCase ip p (mkApps fn args) brs
 
 (** CoFix-proj unfolding *)
 | red_cofix_proj p mfix idx args narg fn :
     unfold_cofix mfix idx = Some (narg, fn) ->
-    red1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
-         (tProj p (mkApps fn args))
+    Σ ;;; Γ |- tProj p (mkApps (tCoFix mfix idx) args) ⇝ tProj p (mkApps fn args)
 
 (** Constant unfolding *)
 | red_delta c decl body (isdecl : declared_constant Σ c decl) u :
     decl.(cst_body) = Some body ->
-    red1 Σ Γ (tConst c u) (subst_instance u body)
+    Σ ;;; Γ |- tConst c u ⇝ subst_instance u body
 
 (** Proj *)
 | red_proj i pars narg args u arg:
     nth_error args (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg
+    Σ ;;; Γ |- tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args) ⇝ arg
 
 
-| abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
-| abs_red_r na M M' N : red1 Σ (Γ ,, vass na N) M M' -> red1 Σ Γ (tLambda na N M) (tLambda na N M')
+| abs_red_l na M M' N : Σ ;;; Γ |- M ⇝ M' -> Σ ;;; Γ |- tLambda na M N ⇝ tLambda na M' N
+| abs_red_r na M M' N : Σ ;;; Γ ,, vass na N |- M ⇝ M' -> Σ ;;; Γ |- tLambda na N M ⇝ tLambda na N M'
 
-| letin_red_def na b t b' r : red1 Σ Γ b r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na r t b')
-| letin_red_ty na b t b' r : red1 Σ Γ t r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b r b')
-| letin_red_body na b t b' r : red1 Σ (Γ ,, vdef na b t) b' r -> red1 Σ Γ (tLetIn na b t b') (tLetIn na b t r)
+| letin_red_def na b t b' r : Σ ;;; Γ |- b ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na r t b'
+| letin_red_ty na b t b' r : Σ ;;; Γ |- t ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na b r b'
+| letin_red_body na b t b' r : Σ ;;; Γ ,, vdef na b t |- b' ⇝ r -> Σ ;;; Γ |- tLetIn na b t b' ⇝ tLetIn na b t r
 
 | case_red_param ci p params' c brs :
-    OnOne2 (red1 Σ Γ) p.(pparams) params' ->
-    red1 Σ Γ (tCase ci p c brs)
-             (tCase ci (set_pparams p params') c brs)
-
-(* | case_red_pcontext ci p pcontext' c brs :
-    OnOne2_local_env (on_one_decl (fun Γ' => red1 Σ (Γ ,,, Γ'))) p.(pcontext) pcontext' ->
-    red1 Σ Γ (tCase ci p c brs)
-      (tCase ci (set_pcontext p pcontext') c brs) *)
-           
+    OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) p.(pparams) params' ->
+    Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci (set_pparams p params') c brs
+       
 | case_red_return ci p preturn' c brs :
-  red1 Σ (Γ ,,, inst_case_predicate_context p) p.(preturn) preturn' ->
-  red1 Σ Γ (tCase ci p c brs)
-          (tCase ci (set_preturn p preturn') c brs)
+  Σ ;;; Γ ,,, inst_case_predicate_context p |- p.(preturn) ⇝ preturn' ->
+  Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci (set_preturn p preturn') c brs
     
 | case_red_discr ci p c c' brs :
-  red1 Σ Γ c c' -> 
-  red1 Σ Γ (tCase ci p c brs) (tCase ci p c' brs)
+  Σ ;;; Γ |- c ⇝ c' -> Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci p c' brs
 
 | case_red_brs ci p c brs brs' :    
     OnOne2 (fun br br' =>
-      on_Trel_eq (red1 Σ (Γ ,,, inst_case_branch_context p br)) bbody bcontext br br')
+      on_Trel_eq (fun t u => Σ ;;; Γ ,,, inst_case_branch_context p br |- t ⇝ u) bbody bcontext br br')
       brs brs' ->
-    red1 Σ Γ (tCase ci p c brs) (tCase ci p c brs')
+    Σ ;;; Γ |- tCase ci p c brs ⇝ tCase ci p c brs'
 
-| proj_red p c c' : red1 Σ Γ c c' -> red1 Σ Γ (tProj p c) (tProj p c')
+| proj_red p c c' : Σ ;;; Γ |- c ⇝ c' -> Σ ;;; Γ |- tProj p c ⇝ tProj p c'
 
-| app_red_l M1 N1 M2 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tApp M1 M2) (tApp N1 M2)
-| app_red_r M2 N2 M1 : red1 Σ Γ M2 N2 -> red1 Σ Γ (tApp M1 M2) (tApp M1 N2)
+| app_red_l M1 N1 M2 : Σ ;;; Γ |- M1 ⇝ N1 -> Σ ;;; Γ |- tApp M1 M2 ⇝ tApp N1 M2
+| app_red_r M2 N2 M1 : Σ ;;; Γ |- M2 ⇝ N2 -> Σ ;;; Γ |- tApp M1 M2 ⇝ tApp M1 N2
 
-| prod_red_l na M1 M2 N1 : red1 Σ Γ M1 N1 -> red1 Σ Γ (tProd na M1 M2) (tProd na N1 M2)
-| prod_red_r na M2 N2 M1 : red1 Σ (Γ ,, vass na M1) M2 N2 ->
-                               red1 Σ Γ (tProd na M1 M2) (tProd na M1 N2)
+| prod_red_l na M1 M2 N1 : Σ ;;; Γ |- M1 ⇝ N1 -> Σ ;;; Γ |- tProd na M1 M2 ⇝ tProd na N1 M2
+| prod_red_r na M2 N2 M1 : Σ ;;; Γ ,, vass na M1 |- M2 ⇝ N2 ->
+                           Σ ;;; Γ |- tProd na M1 M2 ⇝ tProd na M1 N2
 
-| evar_red ev l l' : OnOne2 (red1 Σ Γ) l l' -> red1 Σ Γ (tEvar ev l) (tEvar ev l')
+| evar_red ev l l' : OnOne2 (fun t u => Σ ;;; Γ |- t ⇝ u) l l' -> Σ ;;; Γ |- tEvar ev l ⇝ tEvar ev l'
 
 | fix_red_ty mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ |- t ⇝ u) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- tFix mfix0 idx ⇝ tFix mfix1 idx
 
 | fix_red_body mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x)))
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x)))
            mfix0 mfix1 ->
-    red1 Σ Γ (tFix mfix0 idx) (tFix mfix1 idx)
+    Σ ;;; Γ |- tFix mfix0 idx ⇝ tFix mfix1 idx
 
 | cofix_red_ty mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ Γ) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx)
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ |- t ⇝ u) dtype (fun x => (dname x, dbody x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
 
 | cofix_red_body mfix0 mfix1 idx :
-    OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, fix_context mfix0)) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
-    red1 Σ Γ (tCoFix mfix0 idx) (tCoFix mfix1 idx).
+    OnOne2 (on_Trel_eq (fun t u => Σ ;;; Γ ,,, fix_context mfix0 |- t ⇝ u) dbody (fun x => (dname x, dtype x, rarg x))) mfix0 mfix1 ->
+    Σ ;;; Γ |- tCoFix mfix0 idx ⇝ tCoFix mfix1 idx
+where " Σ ;;; Γ |- t ⇝ u " := (red1 Σ Γ t u).
 
 Definition red1_ctx Σ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ Δ t t'))).
 Definition red1_ctx_rel Σ Γ := (OnOne2_local_env (on_one_decl (fun Δ t t' => red1 Σ (Γ ,,, Δ) t t'))).
@@ -464,7 +134,7 @@ Lemma red1_ind_all :
        (forall (Γ : context) (ci : case_info) (c : nat) (u : Instance.t) (args : list term)
           (p : predicate term) (brs : list (branch term)) br,
           nth_error brs c = Some br ->
-          #|skipn (ci_npar ci) args| = context_assumptions br.(bcontext) ->
+          #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
           P Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
               (iota_red ci.(ci_npar) p args br)) ->
 
@@ -630,7 +300,9 @@ Defined.
 #[global]
 Hint Constructors red1 : pcuic.
 
-Definition red Σ Γ := clos_refl_trans (red1 Σ Γ).
+Definition red Σ Γ := clos_refl_trans (fun t u : term => Σ;;; Γ |- t ⇝ u).
+
+Notation " Σ ;;; Γ |- t ⇝* u " := (red Σ Γ t u) (at level 50, Γ, t, u at next level).
 
 Definition red_one_ctx_rel (Σ : global_env) (Γ : context) :=
   OnOne2_local_env
@@ -654,7 +326,7 @@ Definition red_context Σ := All2_fold (red_decls Σ).
 Definition red_context_rel Σ Γ :=
   All2_fold (fun Δ Δ' => red_decls Σ (Γ ,,, Δ) (Γ ,,, Δ')).
 
-Lemma refl_red Σ Γ t : red Σ Γ t t.
+Lemma refl_red Σ Γ t : Σ ;;; Γ |- t ⇝* t.
 Proof.
   reflexivity.
 Defined.
@@ -950,12 +622,12 @@ Section ReductionCongruence.
     etransitivity; tea. constructor.
     clear -r.
     set (P := fun ctx t => 
-      forall Γ y, red1 Σ (hole_context ctx Γ) x y ->
-                  red1 Σ Γ t (fill_context y ctx)).
+      forall Γ y, Σ ;;; (hole_context ctx Γ) |- x ⇝ y ->
+                  Σ ;;; Γ |- t ⇝ fill_context y ctx).
     set (P' := fun l fill_l =>
       forall Γ y,
                    red1 Σ (hole_list_context l Γ) x y ->
-                   OnOne2 (red1 Σ Γ) fill_l (fill_list_context y l)).
+                   OnOne2 (fun t u : term => Σ;;; Γ |- t ⇝ u) fill_l (fill_list_context y l)).
     set (P'' := fun l fill_l =>
        forall p Γ y,
        red1 Σ (hole_branch_context p l Γ) x y ->
@@ -963,17 +635,10 @@ Section ReductionCongruence.
           let brctx := inst_case_branch_context p br in
           on_Trel_eq (red1 Σ (Γ ,,, brctx)) bbody bcontext br br')
           fill_l (fill_branch_context y l)).
-    (* set (Pfix := fun l fixc fill_l => *)
-    (*              forall Γ y, *)
-    (*                red1 Σ (hole_mfix_context l fixc Γ) x y -> *)
-    (*                (OnOne2 (on_Trel_eq (red1 (fst Σ) Γ) dtype (fun d => (dname d, dbody d, rarg d))) *)
-    (*                       fill_l (fill_mfix_context y l fixc)) + *)
-    (*                (OnOne2 (on_Trel_eq (red1 (fst Σ) (Γ ,,, fix_context fill_l)) dbody (fun d => (dname d, dtype d, rarg d))) *)
-    (*                       fill_l (fill_mfix_context y l fixc))). *)
     revert Γ y r.
-    eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta;
-      intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
-  Qed.
+    eapply (fill_context_elim x P P' P''); subst P P' P''; cbv beta.
+    all:  intros **; simp fill_context; cbn in *; auto; try solve [constructor; eauto].
+    Qed.
 
   Theorem red_contextual_closure_equiv Γ t u : red Σ Γ t u <~> contextual_closure (red Σ) Γ t u.
   Proof.
@@ -1511,8 +1176,6 @@ Section ReductionCongruence.
           { now destruct p. }
           eapply red_one_param; eassumption.
     Qed.
-
-    Coercion ci_ind : case_info >-> inductive.
     
     (* Lemma red_one_pcontext :
       forall ci p c brs pcontext',
@@ -1634,7 +1297,10 @@ Section ReductionCongruence.
 
     Lemma All3_length {A B C} {R : A -> B -> C -> Type} l l' l'' :
       All3 R l l' l'' -> #|l| = #|l'| /\ #|l'| = #|l''|.
-    Proof. induction 1; simpl; intuition auto. Qed.
+    Proof. induction 1; simpl; intuition auto.
+           - f_equal. assumption.
+           - f_equal. assumption.  
+    Qed.
 
     Lemma All3_many_OnOne2All :
       forall B A (R : B -> A -> A -> Type) lΔ l l',
@@ -2467,123 +2133,5 @@ Section Stacks.
 
 End Stacks.
 
-(** Not used anywhere *)
-(*
-(* Properties about context closure *)
-(** Reductions at top level *)
-Inductive tred1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
+Implicit Types (cf : checker_flags).
 
-(** Beta *)
-| tred_beta na t b a :
-    tred1 Σ Γ (tApp (tLambda na t b) a) (subst10 a b)
-
-(** Let *)
-| tred_zeta na b t b' :
-    tred1 Σ Γ (tLetIn na b t b') (subst10 b b')
-
-| tred_rel i body :
-    option_map decl_body (nth_error Γ i) = Some (Some body) ->
-    tred1 Σ Γ (tRel i) (lift0 (S i) body)
-
-(** Case *)
-| tred_iota ci c u args p brs :
-    tred1 Σ Γ (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs)
-         (iota_red ci.(ci_npar) c args brs)
-
-(** Fix unfolding, with guard *)
-| tred_fix mfix idx args narg fn :
-    unfold_fix mfix idx = Some (narg, fn) ->
-    is_constructor narg args = true ->
-    tred1 Σ Γ (mkApps (tFix mfix idx) args) (mkApps fn args)
-
-(** CoFix-case unfolding *)
-| tred_cofix_case ip p mfix idx args narg fn brs :
-    unfold_cofix mfix idx = Some (narg, fn) ->
-    tred1 Σ Γ (tCase ip p (mkApps (tCoFix mfix idx) args) brs)
-         (tCase ip p (mkApps fn args) brs)
-
-(** CoFix-proj unfolding *)
-| tred_cofix_proj p mfix idx args narg fn :
-    unfold_cofix mfix idx = Some (narg, fn) ->
-    tred1 Σ Γ (tProj p (mkApps (tCoFix mfix idx) args))
-         (tProj p (mkApps fn args))
-
-(** Constant unfolding *)
-| tred_delta c decl body (isdecl : declared_constant Σ c decl) u :
-    decl.(cst_body) = Some body ->
-    tred1 Σ Γ (tConst c u) (subst_instance u body)
-
-(** Proj *)
-| tred_proj i pars narg args u arg:
-    nth_error args (pars + narg) = Some arg ->
-    tred1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg.
-
-Definition ctred1 Σ :=
-  context_env_clos (tred1 Σ).
-
-(* TODO Prove context_clos_impl using subrelation *)
-
-Lemma tred1_red1 :
-  forall Σ Γ u v,
-    tred1 Σ Γ u v ->
-    red1 Σ Γ u v.
-Proof.
-  intros Σ Γ u v h.
-  destruct h.
-  all: solve [
-    econstructor ; eauto
-  ].
-Qed.
-
-Lemma ctred1_red1 :
-  forall Σ Γ u v,
-    ctred1 Σ Γ u v ->
-    red1 Σ Γ u v.
-Proof.
-  intros Σ Γ u' v' [u [v [π [h [? ?]]]]]. subst.
-  induction π in Γ, u, v, h |- * using stack_rev_rect.
-  all: try solve [
-    rewrite 2!zipc_stack_cat ; cbn ;
-    rewrite stack_context_stack_cat in h ; cbn in h ;
-    rewrite ?app_context_nil_l ?app_context_assoc in h ;
-    econstructor ; eapply IHπ ; eassumption
-  ].
-  - cbn. eapply tred1_red1. assumption.
-  - rewrite 2!zipc_stack_cat. cbn.
-    rewrite stack_context_stack_cat in h. cbn in h.
-    rewrite app_context_nil_l in h.
-    eapply fix_red_ty. eapply OnOne2_app. constructor. cbn.
-    intuition auto.
-  - rewrite 2!zipc_stack_cat. cbn.
-    rewrite stack_context_stack_cat in h. cbn in h.
-    rewrite app_context_nil_l in h.
-    eapply fix_red_body. eapply OnOne2_app. constructor. cbn.
-    intuition auto.
-    eapply IHπ.
-    rewrite fix_context_fix_context_alt.
-    rewrite map_app. cbn. unfold def_sig at 2. cbn.
-    rewrite app_context_assoc in h.
-    assumption.
-  - rewrite 2!zipc_stack_cat. cbn.
-    rewrite stack_context_stack_cat in h. cbn in h.
-    rewrite app_context_nil_l in h.
-    eapply cofix_red_ty. eapply OnOne2_app. constructor. cbn.
-    intuition auto.
-  - rewrite 2!zipc_stack_cat. cbn.
-    rewrite stack_context_stack_cat in h. cbn in h.
-    rewrite app_context_nil_l in h.
-    eapply cofix_red_body. eapply OnOne2_app. constructor. cbn.
-    intuition auto.
-    eapply IHπ.
-    rewrite fix_context_fix_context_alt.
-    rewrite map_app. cbn. unfold def_sig at 2. cbn.
-    rewrite app_context_assoc in h.
-    assumption.
-  - rewrite 2!zipc_stack_cat. cbn.
-    rewrite stack_context_stack_cat in h. cbn in h.
-    rewrite app_context_nil_l in h.
-    econstructor. eapply OnOne2_app. constructor. cbn.
-    intuition auto.
-  -
-Qed.
-*)

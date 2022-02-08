@@ -1,15 +1,18 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
-  PCUICWeakening PCUICSubstitution PCUICGeneration PCUICArities
+From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactics
+  PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICArities
   PCUICWcbvEval PCUICSR PCUICInversion
-  PCUICUnivSubstitution PCUICElimination PCUICSigmaCalculus PCUICContextConversion
-  PCUICUnivSubst PCUICWeakeningEnv PCUICCumulativity PCUICConfluence
+  PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
+  PCUICElimination PCUICSigmaCalculus PCUICContextConversion
+  PCUICUnivSubst PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+  PCUICCumulativity PCUICConfluence
   PCUICInduction PCUICLiftSubst PCUICContexts PCUICSpine
   PCUICConversion PCUICValidity PCUICInductives PCUICConversion
   PCUICInductiveInversion PCUICNormal PCUICSafeLemmata
-  PCUICParallelReductionConfluence PCUICSN
-  PCUICWcbvEval PCUICClosed PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity.
+  PCUICParallelReductionConfluence
+  PCUICClosed PCUICClosedTyp
+  PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity.
   
 Local Existing Instance config.extraction_checker_flags.
 
@@ -50,7 +53,7 @@ Proof.
     eapply invert_red_prod in H1 as (? & ? & []); eauto; subst.
     exists (x2 {0 := hd}). split; sq.
     eapply (closed_red_untyped_substitution0 (Δ := [_])); eauto. econstructor. econstructor.
-    cbn. now rewrite (subject_is_open_term t).
+    cbn; fvs.
     now eapply isArity_subst.
 Qed.
 
@@ -282,7 +285,6 @@ Section Spines.
         pose proof (nth_error_Some_length hnth).
         rewrite nth_error_rev // rev_involutive in hnth. len in hnth.
         rewrite hnth. simpl. len in H.
-        replace (#|Γ0| - S (#|Γ0| - S n) + 0)%nat with n by lia. reflexivity.
         rewrite (subst_app_simpl) /=; len.
         rewrite firstn_length_le. now eapply nth_error_Some_length in Hnth.
         eapply X.
@@ -330,7 +332,6 @@ Section Spines.
     induction Δ in args, args' |- * using ctx_length_rev_ind.
     - simpl. destruct args' using rev_case => /= // sp hargs // /=; try lia.
       depelim sp. eapply (f_equal (@length _)) in H; simpl in H; len in H; simpl in H.
-      lia.
       eapply equality_Prod_r_inv in e as (? & ? & ? & []); auto.
       eapply invert_red_mkApps_tInd in c as (? & []); auto. solve_discr.
     - rewrite it_mkProd_or_LetIn_app /=; destruct d as [na [b|] ty].
@@ -560,7 +561,7 @@ Section Spines.
         now eapply typing_wf_local.
       * len; simpl. eapply nth_error_None in hargs => //.
         eapply nth_error_None. lia.
-      * eapply nth_error_None in hnth => //. len in hnth. lia.
+      * eapply nth_error_None in hnth => //. len in hnth.
     - eapply typing_spine_all_inv in sp => //.
       subst concl.
       rewrite expand_lets_mkApps subst_mkApps /= in sp.
@@ -802,7 +803,7 @@ Section WeakNormalization.
       destruct cunfold_fix as [[rarg body]|] eqn:unf => //.
       pose proof cl as cl'.
       rewrite closedn_mkApps in cl'. move/andP: cl' => [clfix _].
-      rewrite -PCUICWcbvEval.closed_unfold_fix_cunfold_eq in unf => //.
+      rewrite -closed_unfold_fix_cunfold_eq in unf => //.
       rewrite /unfold_fix in unf.
       destruct nth_error eqn:nth => //. noconf unf.
       eapply whnf_fixapp. rewrite /unfold_fix nth.
@@ -1207,7 +1208,7 @@ Section WeakNormalization.
         epose proof (fix_app_is_constructor X0 e); eauto.
         rewrite /is_constructor.
         destruct nth_error eqn:hnth => //.
-        2:{ eapply nth_error_None in hnth. len in hnth. lia. }
+        2:{ eapply nth_error_None in hnth. len in hnth. }
         assert (All (closedn 0) (argsv ++ [av])).
         { eapply subject_closed in X0; eauto.
           rewrite closedn_mkApps in X0.
@@ -1259,7 +1260,7 @@ Section WeakNormalization.
   Qed.
 
   Theorem subject_reduction_eval {t u T} :
-    Σ ;;; [] |- t : T -> PCUICWcbvEval.eval Σ t u -> Σ ;;; [] |- u : T.
+    Σ ;;; [] |- t : T -> eval Σ t u -> Σ ;;; [] |- u : T.
   Proof.
     intros Hty Hred.
     eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.

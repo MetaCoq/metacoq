@@ -1,5 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import OrdersTac ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats.
+From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats
+  ExtrOcamlNatInt.
 From MetaCoq.Template Require Import utils.
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
@@ -42,9 +43,9 @@ Extract Constant Pos.mul => "( * )".
 Extract Constant Pos.min => "Pervasives.min".
 Extract Constant Pos.max => "Pervasives.max".
 Extract Constant Pos.compare =>
-    "fun x y -> if x=y then 0 else if x<y then -1 else 1".
+    "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
 Extract Constant Pos.compare_cont =>
-    "fun c x y -> if x=y then c else if x<y then -1 else 1".
+    "fun c x y -> if x=y then c else if x<y then Lt else Gt".
 
 
 Extract Constant N.add => "(+)".
@@ -57,7 +58,7 @@ Extract Constant N.max => "Pervasives.max".
 Extract Constant N.div => "fun a b -> if b=0 then 0 else a/b".
 Extract Constant N.modulo => "fun a b -> if b=0 then a else a mod b".
 Extract Constant N.compare =>
-    "fun x y -> if x=y then 0 else if x<y then -1 else 1".
+    "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
 
 
 Extract Constant Z.add => "(+)".
@@ -70,7 +71,7 @@ Extract Constant Z.abs => "Pervasives.abs".
 Extract Constant Z.min => "Pervasives.min".
 Extract Constant Z.max => "Pervasives.max".
 Extract Constant Z.compare =>
-    "fun x y -> if x=y then 0 else if x<y then -1 else 1".
+    "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
 
 Extract Constant Z.of_N => "fun p -> p".
 Extract Constant Z.abs_N => "Pervasives.abs".
@@ -78,15 +79,10 @@ Extract Constant Z.abs_N => "Pervasives.abs".
 (** Z.div and Z.modulo are quite complex to define in terms of (/) and (mod).
     For the moment we don't even try *)
 
-    
-(* Ignore [Decimal.int] before the extraction issue is solved:
-   https://github.com/coq/coq/issues/7017. *)
-Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
-
 Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
+Extract Constant Ascii.compare =>
+ "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int Init
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes
@@ -106,7 +102,8 @@ Extraction Inline Equations.Prop.Logic.True_rect_dep Equations.Prop.Logic.False_
 (** This Inline is because of a problem of weak type variables (partial application?) *)
 Extraction Inline PCUICPrimitive.prim_val_reflect_eq.
 
-Extract Constant PCUICTyping.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
+Extract Constant PCUICTyping.guard_checking => 
+  "(fun _ _ _ _ -> true)".
 
 Cd "src".
 

@@ -82,8 +82,8 @@ Section DeclaredInv.
 
 End DeclaredInv.
 
-Definition wf_global_uctx_invariants {cf:checker_flags} Σ :
-  wf Σ ->
+Definition wf_global_uctx_invariants {cf:checker_flags} {P} Σ :
+  on_global_env P Σ ->
   global_uctx_invariants (global_uctx Σ).
 Proof.
  intros HΣ. split.
@@ -130,8 +130,8 @@ Proof.
        all: try eassumption.
 Qed.
 
-Definition wf_ext_global_uctx_invariants {cf:checker_flags} Σ :
-  wf_ext Σ ->
+Definition wf_ext_global_uctx_invariants {cf:checker_flags} {P} Σ :
+  on_global_env_ext P Σ ->
   global_uctx_invariants (global_ext_uctx Σ).
 Proof.
  intros HΣ. split.
@@ -146,7 +146,8 @@ Proof.
      split; apply LevelSet.union_spec; right; apply XX.
 Qed.
 
-Lemma wf_consistent {cf:checker_flags} Σ : wf Σ -> consistent (global_constraints Σ).
+Lemma wf_consistent {cf:checker_flags} Σ {P} :
+  on_global_env P Σ -> consistent (global_constraints Σ).
 Proof.
   destruct Σ.
   - exists {| valuation_mono := fun _ => 1%positive;  valuation_poly := fun _ => 0 |}.
@@ -165,8 +166,8 @@ Proof.
       now right.
 Qed.
 
-Definition global_ext_uctx_consistent {cf:checker_flags} Σ
- : wf_ext Σ -> consistent (global_ext_uctx Σ).2.
+Definition global_ext_uctx_consistent {cf:checker_flags} {P} Σ
+ : on_global_env_ext P Σ -> consistent (global_ext_uctx Σ).2.
 Proof. 
   intros HΣ. cbn. unfold global_ext_constraints.
   unfold wf_ext, on_global_env_ext in HΣ.

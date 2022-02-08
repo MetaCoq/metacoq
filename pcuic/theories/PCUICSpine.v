@@ -1,16 +1,18 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes utils BasicAst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICSigmaCalculus 
-     PCUICUnivSubst PCUICTyping PCUICUnivSubstitution
+     PCUICUnivSubst PCUICTyping PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICCumulativity PCUICPosition PCUICEquality
      PCUICInversion PCUICCumulativity PCUICReduction
      PCUICCasesContexts
-     PCUICConfluence PCUICConversion PCUICContextConversion
-     PCUICWeakeningEnv PCUICClosed PCUICSubstitution PCUICContextSubst
+     PCUICConfluence PCUICParallelReductionConfluence PCUICConversion PCUICContextConversion
+     PCUICContextConversionTyp
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICClosed PCUICClosedTyp PCUICSubstitution PCUICContextSubst
      PCUICWellScopedCumulativity
-     PCUICWeakening PCUICGeneration PCUICUtils PCUICContexts
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICGeneration PCUICUtils PCUICContexts
      PCUICArities.
 
 Require Import Equations.Prop.DepElim.
@@ -26,41 +28,11 @@ Notation ctx_inst := (ctx_inst typing).
 
 Ltac splits := repeat split.
 
-Definition lengths := 
-  (@context_assumptions_expand_lets_ctx, @context_assumptions_subst_context,
-  @context_assumptions_app,
-  @context_assumptions_subst_instance, @context_assumptions_lift_context,
-   @expand_lets_ctx_length, @subst_context_length,
-  @subst_instance_length, @expand_lets_k_ctx_length, @inds_length, @lift_context_length,
-  @app_length, @List.rev_length, @extended_subst_length, @reln_length,
-  Nat.add_0_r, @app_nil_r, 
-  @map_length, @mapi_length, @mapi_rec_length,
-  @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
-  @smash_context_length, @context_assumptions_smash_context,
-  @arities_context_length).
-
-Ltac trylia :=
-  lazymatch goal with
-  | [|-  @eq nat _ _] => try lia
-  | [|- @eq term _ _] => try solve [lia_f_equal]
-  | [|- _ <= _] => try lia
-  | [|- _ < _ ] => try lia
-  | [|- _ >= _] => try lia
-  | [|- _ > _ ] => try lia
-  | _ => idtac
-  end.
-
-Ltac len ::= try rewrite !lengths /= // ?lengths; trylia.
-Tactic Notation "len" "in" hyp(cl) := rewrite !lengths /= // ?lengths in cl.
-
-Notation "'lens'" := (ltac:(len)) (only parsing) : ssripat_scope.
-
 Lemma typing_spine_eq {cf:checker_flags} Σ Γ ty s s' ty' :
   s = s' ->
   typing_spine Σ Γ ty s ty' ->
   typing_spine Σ Γ ty s' ty'.
 Proof. now intros ->. Qed.
-
 
 Lemma All2_fold_mapi_right P (Γ Δ : context) g : 
   All2_fold (fun Γ Δ d d' =>
@@ -87,7 +59,7 @@ Proof.
 Qed.
 
 Lemma subslet_eq_context_alpha {cf} {Σ Γ s Δ Δ'} :
-  All2 (compare_decls eq eq) Δ Δ' →
+  eq_context_upto_names Δ Δ' →
   subslet Σ Γ s Δ → 
   subslet Σ Γ s Δ'.
 Proof.
@@ -98,7 +70,7 @@ Proof.
 Qed.
 
 Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} : 
-  All2 (compare_decls eq eq) Γ Γ' -> conv_context Σ Γ Γ'.
+  eq_context_upto_names Γ Γ' -> conv_context Σ Γ Γ'.
 Proof.
   intros a.
   eapply eq_context_upto_empty_conv_context.
@@ -107,7 +79,7 @@ Proof.
   intros ?? []; constructor; subst; auto; reflexivity.
 Qed.
 
-Lemma wf_local_alpha {cf} {Σ} {wfΣ : wf Σ} Γ Γ' : All2 (compare_decls eq eq) Γ Γ' -> 
+Lemma wf_local_alpha {cf} {Σ} {wfΣ : wf Σ} Γ Γ' : eq_context_upto_names Γ Γ' -> 
   wf_local Σ Γ ->
   wf_local Σ Γ'.
 Proof.
@@ -124,7 +96,7 @@ Proof.
 Qed.
 
 Lemma subslet_eq_context_alpha_dom {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' s Δ} :
-  All2 (compare_decls eq eq) Γ Γ' →
+  eq_context_upto_names Γ Γ' →
   subslet Σ Γ s Δ → 
   subslet Σ Γ' s Δ.
 Proof.
@@ -364,7 +336,7 @@ Section WfEnv.
     induction 1 in |- *; intros T' isTy redT.
     - constructor; eauto. transitivity ty; auto.
     - specialize (IHX (B {0 := hd})).
-      pose proof (isType_apply i0 t); tea; pcuic.
+      pose proof (isType_apply i0 t); tea.
       do 2 forward IHX by pcuic.
       eapply type_spine_cons with na A B; auto.
       etransitivity; eauto.
@@ -524,9 +496,8 @@ Section WfEnv.
               eapply isType_apply in i; tea.
               now rewrite /subst1 subst_it_mkProd_or_LetIn Nat.add_0_r in i. }
           all:pcuic.
-          specialize (IHn Hsp').
-          destruct IHn as [instlen leq [instsubst [wfdom wfcodom cs subi]]].
-          split=> //; try lia.
+          destruct X0 as [instlen leq [instsubst [wfdom wfcodom cs subi]]].
+          split=> /= //; try lia.
           exists (instsubst ++ [hd]).
           eapply typing_spine_isType_dom in Hsp.
           eapply isType_it_mkProd_or_LetIn_wf_local in Hsp.
@@ -1358,8 +1329,6 @@ Proof.
   rewrite Nat.add_succ_r. apply IHΓ.
 Qed.
 
-Require Import PCUICParallelReductionConfluence.
-
 Lemma subst_lift_lift s k t : subst0 (map (lift0 k) s) (lift k #|s| t) = lift0 k (subst0 s t).
 Proof.
   now rewrite (distr_lift_subst_rec _ _ _ 0 0).
@@ -1392,219 +1361,6 @@ Proof.
   specialize (IHc n (S n')).
   now rewrite -IHc.
 Qed.
-
-(*Open Scope sigma_scope.
-From Equations.Type Require Import Relation.
-From MetaCoq.PCUIC Require Import PCUICInst PCUICRename PCUICOnFreeVars PCUICParallelReduction.
-
-Lemma red_inst {le} Δ Γ σ t u :
-  usubst Γ σ Δ ->
-  red Σ Γ t u ->
-  red Σ Δ t.[σ] u.[σ].
-Proof.
-  intros us.
-  induction 1.
-  - now eapply red1_inst.
-  - reflexivity.
-  - etransitivity; tea.
-Qed.
-
-(* Lemma strong_substitutivity_clos_rt {le} {Γ Δ s t} σ τ :
-  ctxmap Γ Δ σ ->
-  ctxmap Γ Δ τ ->
-  pred1_subst Σ Γ Δ Δ σ τ ->
-  clos_refl_trans (pred1 Σ Γ Γ) s t ->
-  clos_refl_trans (pred1 Σ Δ Δ) s.[σ] t.[τ].
-Proof.
-
-Lemma red_strong_substitutivity {le} Γ Δ s t σ τ :
-  red Σ Γ s t ->
-  ctxmap Γ Δ σ ->
-  ctxmap Γ Δ τ ->
-  (forall x, red Σ Γ (σ x) (τ x)) ->
-  red Σ Δ s.[σ] t.[τ].
-Proof.
-  intros r ctxm ctxm' IH.
-  eapply red_pred in r; eauto.
-  eapply (strong_substitutivity_clos_rt σ τ) in r; tea.
-  - eapply pred_red => //.
-  - intros x. *)
-
-Lemma red_meta_conv Σ Γ t u t' u' : 
-  red Σ Γ t' u' -> t' = t -> u' = u ->
-  red Σ Γ t u.
-Proof. now intros r -> ->. Qed.
-
-Definition red_subst Σ Γ (σ σ' : nat -> term) :=
-  forall x, red Σ Γ (σ x) (σ' x).
-
-Lemma red_rename {cf} :
-  forall P Σ Γ Δ u v f,
-    wf Σ ->
-    (*on_ctx_free_vars P Γ -> *)
-    urenaming P Δ Γ f ->
-    on_free_vars P u ->
-    red Σ Γ u v ->
-    red Σ Δ (rename f u) (rename f v).
-Proof.
-  intros.
-  induction X1.
-  - constructor. now eapply red1_rename.
-  - reflexivity.
-  - etransitivity. eapply IHX1_1; eauto.
-    eapply IHX1_2. eapply red_on_free_vars; eauto.
-    admit.
-Abort.
-
-Lemma usubst_up Γ d : usubst Γ ↑ (Γ ,, d).
-Proof.
-  intros x decl nth b hb.
-  unfold shift. left.
-  exists (S x), decl. splits; auto.
-  sigma. rewrite hb /=. f_equal.
-Qed.
-
-Lemma red_subst_up {cf} {Σ} {wfΣ : wf Σ} Γ (σ σ' : nat -> term) d :
-  red_subst Σ Γ σ σ' ->
-  red_subst Σ (Γ ,, d) (up 1 σ) (up 1 σ').
-Proof.
-  intros r x.
-  unfold up. destruct Nat.leb. 2:reflexivity.
-  eapply red_meta_conv. 2-3:sigma; reflexivity.
-  destruct d as [na [d|] ty].
-  eapply red_inst; tea.
-  2:eapply r. eapply usubst_up.
-  eapply red_inst; tea.
-  2:eapply r. eapply usubst_up.
-Qed.
-
-Lemma red_subst_upn {cf} {Σ} {wfΣ : wf Σ} Γ (σ σ' : nat -> term) Δ :
-  red_subst Σ Γ σ σ' ->
-  red_subst Σ (Γ ,,, Δ) (up #|Δ| σ) (up #|Δ| σ').
-Proof.
-  induction Δ; simpl.
-  intros r x. specialize (r x).
-  eapply red_meta_conv; sigma. 2-3:reflexivity. assumption.
-  intros r h. rewrite -(up_up 1) -(up_up 1 #|Δ|).
-  now eapply red_subst_up.
-Qed.
- 
-Lemma red_red_onctx {cf:checker_flags} Σ {wfΣ : wf Σ} Δ σ σ' ctx :
-  red_subst Σ Δ σ σ' ->
-  onctx
-    (fun b : term =>
-    forall Δ σ σ',
-    red_subst Σ Δ σ σ' ->
-    red Σ Δ b.[σ] b.[σ']) ctx ->
-  All2_fold
-  (fun (Γ0 Δ0 : context) (d d' : context_decl) =>
-    red_decls Σ (Δ ,,, mapi_context (fun k => inst (up k σ)) Γ0)
-      (Δ ,,, mapi_context (fun k => inst (up k σ')) Δ0)
-      (map_decl (inst (up #|Γ0| σ)) d)
-      (map_decl (inst (up #|Γ0| σ')) d')) ctx ctx.
-Proof.
-  intros hsubs.
-  induction 1; constructor; auto.
-  destruct p. destruct x as [na [b|] ty]; constructor; auto; simpl in *;
-  rewrite /shiftf.
-  - eapply o. relativize #|l|.
-    now eapply red_subst_upn. rewrite mapi_context_length. len.
-  - eapply r. relativize #|l|.
-    now eapply red_subst_upn. rewrite mapi_context_length. len.
-  - eapply r. relativize #|l|.
-    now eapply red_subst_upn. rewrite mapi_context_length. len.
-Qed.
-
-Lemma red_red_inst {cf:checker_flags} (Σ : global_env_ext) Δ σ σ' b : wf Σ ->
-  (red_subst Σ Δ σ σ') ->
-  red Σ Δ b.[σ] b.[σ'].
-Proof.
-  intros wfΣ Hsubs.
-  revert Δ σ σ' Hsubs.
-  elim b using term_forall_list_ind;
-        intros; match goal with
-                  |- context [tRel _] => idtac
-                | |- _ => cbn -[plus]
-                end; try easy;
-      autorewrite with map; 
-      rewrite ?Nat.add_assoc;
-      try solve [f_equal; auto; solve_all].
-  
-  - apply red_evar. apply All2_map. solve_all.
-  - apply red_prod; eauto. eapply X0.
-    now eapply red_subst_up.
-
-  - apply red_abs; eauto using red_subst_up.
-
-  - apply red_letin; eauto using red_subst_up.
-  - apply red_app; eauto.
-  - eapply (red_case (p:=(inst_predicate σ p))); simpl; solve_all.
-    * rewrite mapi_context_inst. eapply r.
-      relativize #|pcontext p|.
-      now eapply red_subst_upn. now len.
-    * eapply PCUICContextReduction.red_ctx_rel_red_context_rel => //.
-      red.
-      eapply PCUICContextRelation.All2_fold_mapi.
-      eapply red_red_onctx; tea.
-    * red. solve_all.
-      eapply All_All2; tea => /=. solve_all; unfold on_Trel; simpl.
-      + eapply b0. relativize #|bcontext x|.
-        eapply red_subst_upn; tea.
-        now rewrite mapi_context_length.
-      + eapply PCUICContextReduction.red_ctx_rel_red_context_rel => //.
-        eapply PCUICContextRelation.All2_fold_mapi.
-        eapply red_red_onctx; tea.
-  - apply red_proj_c; eauto.
-  - apply red_fix_congr; eauto.
-    solve_all. eapply All_All2; tea; simpl; solve_all.
-    eapply b0. rewrite inst_fix_context_up.
-    relativize #|m|.
-    now eapply red_subst_upn. len.
-  - apply red_cofix_congr; eauto.
-    red in X. solve_all. eapply All_All2; tea; simpl; solve_all.
-    eapply b0.
-    rewrite inst_fix_context_up.
-    relativize #|m|.
-    now eapply red_subst_upn. len.
-Qed.
-Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
-  wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
-  red Σ.1 (Γ ,,, Δ) t (subst0 (all_rels Δ 0 #|Δ|) (lift #|Δ| #|Δ| t)).
-Proof.
-  intros wfΣ wfΓ.
-  sigma. rewrite -{1}(subst_ids t).
-  eapply red_red_inst; tea.
-  intros x. rewrite {1}/ids.
-  unfold subst_compose.
-  rewrite /ren /lift_renaming.
-  destruct (leb_spec_Set #|Δ| x); simpl.
-  **simpl. unfold Upn. simpl. unfold subst_consn. rewrite nth_error_nil.
-    simpl. unfold subst_compose. simpl. rewrite Nat.sub_0_r.
-    destruct (nth_error_spec (all_rels Δ 0 #|Δ|) (#|Δ| + x));
-    rewrite all_rels_length in l0 |- *. lia.
-    assert (#|Δ| + x - #|Δ| = x) as -> by lia.
-    reflexivity.
-  ** rewrite /subst_compose /ren /lift_renaming.
-    simpl. unfold Upn. simpl. unfold subst_consn. rewrite nth_error_nil.
-    simpl. unfold subst_compose. simpl. rewrite Nat.sub_0_r.
-    destruct (nth_error_spec (all_rels Δ 0 #|Δ|) x).
-    rewrite all_rels_length in l0 |- *; try lia.
-    eapply nth_error_all_rels_spec in e.
-    destruct e as [decl [Hnth Hdecl]].
-
-    destruct decl as [? [?|] ?]; simpl in Hdecl; subst x0.
-    assert (x = #|Δ| + (x - #|Δ|)). lia.
-    rewrite {1}H.
-    change (tRel  (#|Δ'| + (n - #|Δ'|))) with
-        (lift0 #|Δ'| (tRel (n - #|Δ'|))).
-    eapply (weakening_red _ _ []); auto.
-    simpl.
-    set (i := n - #|Δ'|) in *. clearbody i.
-    clear l Hle H.
-
-    etransitivi
-*)
-
 
 Lemma all_rels_subst {cf:checker_flags} Σ Δ Γ t :
   wf Σ.1 -> wf_local Σ (Γ ,,, Δ) ->
@@ -1900,7 +1656,7 @@ Section WfEnv.
         rewrite -eql nth_error_app_lt ?app_length /=; try lia.
         rewrite nth_error_app_ge // ?Nat.sub_diag //.
         destruct l0.
-        exists x. red.
+        exists x.
         change (tSort x) with  
           (subst0 (all_rels c (S #|l|) #|Δ|) (lift #|Δ| #|c| (tSort x))).
         { eapply (substitution (Γ' := lift_context #|Δ| 0 c) (Δ := [])); cbn; auto.
@@ -1969,13 +1725,12 @@ Section WfEnv.
         3:now constructor.
         transitivity (lift0 1 (x {0 := b})).
         eapply red_expand_let. pcuic.
-        eapply PCUICClosed.type_closed in t2.
+        eapply type_closed in t2.
         rewrite -is_open_term_closed //.
         change (tSort u') with (lift0 1 (tSort u')).
         eapply (weakening_closed_red (Γ := Γ ,,, Δ) (Γ' := []) (Γ'' := [_])); auto with fvs.
         apply typing_wf_local in t2. eauto with fvs.
         eapply closed_red_refl; eauto with fvs.
-        apply typing_wf_local in t2. eauto with fvs.
 
       * specialize (IHΔ _ _ _ h) as (Δs & ts & [sorts IHΔ leq]).
         eapply inversion_Prod in IHΔ as [? [? [? [? ]]]]; tea.
@@ -2004,7 +1759,7 @@ Section WfEnv.
   Proof.
     move/type_it_mkProd_or_LetIn_inv => [Δs [ts [hΔ ht hs leq]]].
     eapply type_Cumul; tea. eapply type_Sort; pcuic.
-    do 2 econstructor.
+    eapply cumul_Sort.
     transitivity (sort_of_products Δs ts); auto using leq_universe_product.
     apply leq_universe_sort_of_products.
   Qed.
@@ -2384,7 +2139,7 @@ Section WfEnv.
           assumption.
   Qed.
 
-  Import PCUICInst.
+  Import PCUICInstDef PCUICInstConv.
 
   Local Open Scope sigma.
 
@@ -2457,7 +2212,8 @@ Section WfEnv.
     pose proof (typing_spine_isType_dom X).
     eapply isType_it_mkProd_or_LetIn_wf_local in X0.
     eapply typing_spine_ctx_inst in X as [argsi sp]; tea.
-    unshelve epose proof (ctx_inst_spine_subst _ argsi); pcuic.
+    unshelve epose proof (ctx_inst_spine_subst _ argsi).
+    1: now pcuic.
     pose proof (spine_subst_smash X). split => //.
     rewrite (ctx_inst_sub_subst argsi) in sp.
     rewrite /subst_let_expand.
@@ -2665,7 +2421,7 @@ Section WfEnv.
 
     intros.
     specialize (IHHsp (tApp t0 hd)). apply IHHsp.
-    destruct i as [s Hs]. red in Hs.
+    destruct i as [s Hs].
     eapply type_App; eauto. eapply i0.π2.
     eapply type_equality; eauto.
   Qed.
@@ -2834,7 +2590,7 @@ Section WfEnv.
   Proof.
     intros cl.
     sigma.
-    eapply PCUICInst.inst_ext_closed; tea.
+    eapply inst_ext_closed; tea.
     intros x Hx.
     rewrite -Upn_Upn Nat.add_comm Upn_Upn Upn_compose shiftn_Upn; sigma.
     now rewrite !Upn_subst_consn_lt; len; try lia.
@@ -3243,8 +2999,7 @@ Section WfEnv.
         now eapply typing_wf_local in Hs.
         eapply spine_subst_smash in X; tea.
         eapply type_equality; tea.
-        + red in Hs.
-          eapply typing_expand_lets in Hs.
+        + eapply typing_expand_lets in Hs.
           eapply (substitution (s := List.rev i) (Δ := [])) in Hs; tea.
           simpl in Hs. now exists s; rewrite subst_context_nil /= in Hs.
           exact X.
@@ -3266,17 +3021,14 @@ Section WfEnv.
       rewrite H0 in H, dom. rewrite firstn_all in dom.
       intros HΔ; depelim HΔ.
       intros HΔ'; depelim HΔ'.
-      destruct l as [s Hs]. simpl in l0.
-      red in Hs, l0.
+      destruct l as [s Hs]. simpl in *.
       specialize (IHa _ dom).
       forward IHa. apply wf_local_app_inv; pcuic.
       forward IHa. apply wf_local_app_inv; pcuic.
-      red in l2. pcuic.
-      simpl.
       rewrite -(app_nil_r i).
-      eapply (ctx_inst_app IHa). simpl.
+      eapply (ctx_inst_app IHa).
       rewrite (ctx_inst_sub_subst IHa) /=.
-      constructor. constructor.
+      repeat constructor.
   Qed.
 
   Lemma subst_context_rev_subst_telescope s k Γ :
@@ -3437,21 +3189,6 @@ Section WfEnv.
       eapply substitution_wf_local; tea.
       repeat (constructor; tea). eapply subslet_def_tip.
       eapply wf_local_app_inv in wf as [wf _]. now depelim wf.
-  Qed.
-
-  Lemma subject_is_open_term {Γ t T} : 
-    Σ ;;; Γ |- t : T ->
-    is_open_term Γ t.
-  Proof.
-    move/subject_closed.
-    now rewrite is_open_term_closed.
-  Qed.
-
-  Lemma type_is_open_term {Γ t T} : 
-    Σ ;;; Γ |- t : T ->
-    is_open_term Γ T.
-  Proof.
-    move/type_closed. now rewrite is_open_term_closed.
   Qed.
 
   Lemma ctx_inst_open_terms Γ args Δ : 

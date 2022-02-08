@@ -1,13 +1,15 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssrbool.
 From MetaCoq.Template Require Import config utils Universes.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCasesContexts
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICCasesContexts
      PCUICTyping PCUICGlobalEnv
-     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine PCUICWeakeningEnv
-     PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitution
+     PCUICLiftSubst PCUICInductives PCUICGeneration PCUICSpine 
+     PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICSubstitution PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
      PCUICConversion PCUICCumulativity PCUICConfluence PCUICContexts
-     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata PCUICContextConversion
-     PCUICCumulProp PCUICWellScopedCumulativity.
+     PCUICSR PCUICInversion PCUICValidity PCUICSafeLemmata 
+     PCUICContextConversion PCUICContextConversionTyp
+     PCUICCumulProp PCUICWellScopedCumulativity PCUICArities.
 From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICOnFreeVars PCUICEquality.
 
 Require Equations.Prop.DepElim.
@@ -49,7 +51,6 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
 
-From MetaCoq.PCUIC Require Import PCUICArities.
 
 Lemma typing_spine_case_predicate {cf: checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {ci : case_info}
   {mdecl idecl} {u params indices ps} {c} :
@@ -145,8 +146,8 @@ Proof.
   red. exists (mkApps ptm (indices ++ [c])); intuition auto.
   exists ps.
   assert (Σ;;; Γ |- tCase ci p c brs : mkApps ptm (indices ++ [c])).
-  econstructor; eauto. split; auto.
-  split; auto. clear brs_ty.
+  econstructor; eauto. repeat (split; auto).
+  repeat split; auto. split; auto. split; auto. clear brs_ty.
   eapply type_mkApps. rewrite /ptm.
   eapply type_it_mkLambda_or_LetIn; tea.
   assert (wf Σ) by apply wfΣ.
@@ -400,7 +401,7 @@ Proof.
         eapply (type_Cumul _ _ _ _ (tSort s)) in codom; cycle 1; eauto.
         { econstructor; pcuic. }
         { eapply equality_Sort_inv in cum'.
-          do 2 constructor. etransitivity; eauto. eapply leq_universe_product. }
+          eapply cumul_Sort.  etransitivity; eauto. eapply leq_universe_product. }
         specialize (H _ codom).
         have eqctx : Σ ⊢ Γ ,, vass na ty = Γ ,, vass na' dom'.
         { constructor. apply context_equality_refl. fvs. constructor; auto. }
@@ -506,7 +507,7 @@ Qed.
    that elimination to any type is allowed. *)
 
 Lemma Is_proof_mkApps_tConstruct `{cf : checker_flags} (Σ : global_env_ext) Γ ind n u mdecl idecl args :
-  check_univs = true ->
+  check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ind mdecl idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) ->
@@ -567,7 +568,7 @@ Proof.
     3:{ eapply subslet_app. 
       2:{ eapply weaken_subslet; auto. eapply PCUICArities.subslet_inds; eauto. } 
       eapply sub. }
-    2:{ eapply PCUICWeakening.weaken_wf_local; auto.
+    2:{ eapply PCUICWeakeningTyp.weaken_wf_local; auto.
         edestruct (PCUICInductiveInversion.on_constructor_inst declc); eauto.
         destruct s0 as [inst [sp _]].
         rewrite !subst_instance_app in sp.
@@ -606,14 +607,14 @@ Proof.
 Qed.
     
 Lemma elim_restriction_works_kelim `{cf : checker_flags} (Σ : global_env_ext) ind mind idecl :
-  check_univs = true ->
+  check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ind mind idecl ->
   (ind_kelim idecl <> IntoPropSProp /\ ind_kelim idecl <> IntoSProp) -> Informative Σ ind.
 Proof.
   intros cu HΣ H indk.
   assert (wfΣ : wf Σ) by apply HΣ.
-  destruct (PCUICWeakeningEnv.on_declared_inductive  H) as [[]]; eauto.
+  destruct (on_declared_inductive H) as [[]]; eauto.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
@@ -621,7 +622,7 @@ Proof.
 Qed.
 
 Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T (ci : case_info) p c brs mind idecl : 
-  check_univs = true ->
+  check_univs ->
   wf_ext Σ ->
   declared_inductive (fst Σ) ci mind idecl ->
   Σ ;;; Γ |- tCase ci p c brs : T ->
@@ -654,7 +655,7 @@ Proof.
   destruct (declared_inductive_inj H d) as [-> ->].
   destruct x2. cbn in *.
   pose proof (declared_projection_projs_nonempty X d).
-  pose proof (PCUICWeakeningEnv.on_declared_projection d) as [_ onp].
+  pose proof (on_declared_projection d) as [_ onp].
   simpl in onp. subst.
   destruct ind_cunivs as [|? []]; try contradiction.
   1,3:now destruct onp as (((? & ?) & ?) & ?).
@@ -662,7 +663,7 @@ Proof.
 Qed.
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
-  check_univs = true -> wf_ext Σ ->
+  check_univs -> wf_ext Σ ->
   declared_inductive (fst Σ) (fst (fst p)) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
@@ -694,7 +695,7 @@ Section no_prop_leq_type.
 
 Context `{cf : checker_flags}.
 Variable Hcf : prop_sub_type = false.
-Variable Hcf' : check_univs = true.
+Variable Hcf' : check_univs.
 
 Lemma leq_term_prop_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->
@@ -764,8 +765,7 @@ Proof.
   - eapply type_Cumul' with (tSort u'); eauto.
     eapply PCUICArities.isType_Sort.
     now eapply PCUICWfUniverses.typing_wf_universe in HA.
-    pcuic.
-    constructor. constructor.
+    pcuic. eapply cumul_Sort.
     eapply subject_reduction in redv; eauto.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_prop_sorted_l; eauto.
@@ -775,8 +775,7 @@ Proof.
     eapply type_Cumul' with (tSort u'); eauto.
     eapply PCUICArities.isType_Sort.
     now eapply PCUICWfUniverses.typing_wf_universe in HB.
-    pcuic.
-    constructor. constructor. auto.
+    pcuic. eapply cumul_Sort; auto.
 Qed.
 
 Lemma cumul_sprop_inv (Σ : global_env_ext) Γ A B u u' :
@@ -791,8 +790,10 @@ Proof.
   intros [[HA HB]|[HB HA]] cum; split; auto;
   apply cumul_alt in cum as [v [v' [[redv redv'] leq]]].
   - eapply type_Cumul' with (tSort u'); eauto.
-    eapply PCUICArities.isType_Sort; pcuic.
-    constructor. constructor.
+    eapply isType_Sort.
+    1: now destruct u.
+    1: pcuic.
+    eapply cumul_Sort.
     eapply subject_reduction in redv; eauto.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_sprop_sorted_l; eauto.
@@ -800,8 +801,10 @@ Proof.
     eapply subject_reduction in redv'; eauto.
     eapply leq_term_sprop_sorted_r in leq; eauto.
     eapply type_Cumul' with (tSort u'); eauto.
-    eapply PCUICArities.isType_Sort; pcuic. 
-    constructor. constructor. auto.
+    eapply PCUICArities.isType_Sort.
+    1: now destruct u.
+    1: now pcuic.
+    now eapply cumul_Sort. 
 Qed.
 
 Lemma cumul_prop1 (Σ : global_env_ext) Γ A B u :

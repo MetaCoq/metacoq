@@ -9,7 +9,7 @@ module BaseExtractionDenoter =
 struct
   type t = Ast0.term
   type quoted_ident = char list
-  type quoted_int = Datatypes.nat
+  type quoted_int = int
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
   type quoted_bool = bool
@@ -141,10 +141,7 @@ struct
     {Context.binder_name = unquote_name q.binder_name;
      Context.binder_relevance = unquote_relevance q.binder_relevance}
 
-  let rec unquote_int (q: quoted_int) : int =
-    match q with
-    | Datatypes.O -> 0
-    | Datatypes.S x -> succ (unquote_int x)
+  let rec unquote_int (q: quoted_int) : int = q
   
   let unquote_evar env evm n l = 
     let id = Evar.unsafe_of_int (unquote_int n) in
@@ -163,7 +160,6 @@ struct
     | VmCast -> VMcast
     | NativeCast -> NATIVEcast
     | Cast -> DEFAULTcast
-
 
   let unquote_dirpath dp : DirPath.t =
     let l = List.map unquote_ident dp in
@@ -190,7 +186,7 @@ struct
 
   let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =
     match trm with
-    | Universes0.Level.Coq_lSet -> Univ.Level.set
+    | Universes0.Level.Coq_lzero -> Univ.Level.set
     | Universes0.Level.Level s ->
       let s = list_to_string s in
       let comps = CString.split_on_char '.' s in
@@ -201,7 +197,7 @@ struct
       Univ.Level.make (Univ.Level.UGlobal.make dp "" idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
-  let unquote_level_expr (trm : Universes0.Level.t * Datatypes.nat) : Univ.Universe.t =
+  let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Univ.Universe.t =
     let l = unquote_level (fst trm) in
     let u = Univ.Universe.make l in
     let n = unquote_int (snd trm) in

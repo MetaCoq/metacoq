@@ -2,13 +2,12 @@
 From MetaCoq.Template Require Import config utils.
 From Coq Require Import CRelationClasses ProofIrrelevance.
 From MetaCoq.Template Require Import config Universes utils BasicAst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICReflect PCUICLiftSubst PCUICUnivSubst PCUICTyping
-     PCUICInversion PCUICCumulativity PCUICReduction
-     PCUICConversion PCUICContextConversion
-     PCUICContextSubst
-     PCUICClosed PCUICSigmaCalculus PCUICSubstitution PCUICUnivSubstitution
-     PCUICWeakening PCUICGeneration PCUICUtils.
+     PCUICEquality PCUICCumulativity PCUICReduction
+     PCUICContextSubst PCUICUnivSubstitutionConv
+     PCUICClosed PCUICSigmaCalculus PCUICSubstitution PCUICUnivSubstitutionTyp
+     PCUICWeakeningTyp PCUICWeakeningConv PCUICGeneration PCUICUtils.
 
 From Equations Require Import Equations.
 Require Import Equations.Prop.DepElim.
@@ -19,12 +18,6 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 #[global]
 Hint Rewrite Nat.add_0_r : len.
-
-Lemma context_assumptions_expand_lets_ctx Γ Δ :
-  context_assumptions (expand_lets_ctx Γ Δ) = context_assumptions Δ.
-Proof. now rewrite /expand_lets_ctx /expand_lets_k_ctx; len. Qed.
-#[global]
-Hint Rewrite context_assumptions_expand_lets_ctx : len.
 
 Lemma smash_context_subst_empty s n Γ : 
   smash_context [] (subst_context s n Γ) =
@@ -59,6 +52,27 @@ Qed.
 
 #[global]
 Hint Resolve smash_context_assumption_context : pcuic.
+#[global]
+Hint Constructors assumption_context : pcuic.
+
+Lemma smash_assumption_context Γ : 
+  assumption_context Γ ->
+  smash_context [] Γ = Γ.
+Proof.
+  induction Γ using rev_ind.
+  - now reflexivity.
+  - destruct x as [na [b|] ty].
+    intros ass. eapply assumption_context_app in ass as []. elimtype False; depelim a0.
+    intros ass.
+    rewrite smash_context_app_ass IHΓ. now eapply assumption_context_app in ass as [].
+    reflexivity.
+Qed.
+
+Lemma smash_context_idempotent Γ : 
+  smash_context [] (smash_context [] Γ) = smash_context [] Γ.
+Proof.
+  rewrite smash_assumption_context //; pcuic.
+Qed.
 
 Lemma assumption_context_length ctx : assumption_context ctx ->
   context_assumptions ctx = #|ctx|.
@@ -136,7 +150,7 @@ Lemma instantiate_minductive {cf:checker_flags} Σ ind mdecl u Γ t T :
   Σ ;;; subst_instance u Γ |- subst_instance u t : subst_instance u T.
 Proof.
   intros wfΣ isdecl Hu Ht.
-  red in isdecl. eapply PCUICUnivSubstitution.typing_subst_instance_decl in isdecl; eauto.
+  red in isdecl. eapply typing_subst_instance_decl in isdecl; eauto.
 Qed.
 
 Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
@@ -157,11 +171,11 @@ Proof.
   - destruct a0.
     exists (subst_instance_univ u x).
     eapply instantiate_minductive in t; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in t.
+    now rewrite subst_instance_app in t.
   - eapply instantiate_minductive in b1; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b1.
+    now rewrite subst_instance_app in b1.
   - eapply instantiate_minductive in b; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b.
+    now rewrite subst_instance_app in b.
 Qed.
 
 Lemma sorts_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s : 
@@ -179,12 +193,12 @@ Proof.
   - destruct a0.
     exists (subst_instance_univ u x).
     eapply instantiate_minductive in t; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in t.
+    now rewrite subst_instance_app in t.
   - eapply instantiate_minductive in b1; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b1.
+    now rewrite subst_instance_app in b1.
   - destruct s; simpl; intuition eauto.
     eapply instantiate_minductive in b; eauto.
-    now rewrite PCUICUnivSubstitution.subst_instance_app in b.
+    now rewrite subst_instance_app in b.
 Qed.
 
 Lemma subst_type_local_ctx {cf:checker_flags} Σ Γ Δ Δ' s ctxs : 
@@ -430,12 +444,12 @@ Proof.
     apply inst_ext. len.
     rewrite (Upn_eq _ (List.rev args ⋅n ids)).
     rewrite subst_consn_compose.
-    rewrite PCUICInst.map_inst_idsn; len; try lia.
+    rewrite PCUICInstConv.map_inst_idsn; len; try lia.
     rewrite subst_compose_assoc.
     rewrite -(context_subst_length2 X).
     rewrite subst_consn_shiftn; len => //.
     sigma. rewrite Upn_eq. sigma.
-    rewrite PCUICInst.map_inst_idsn; len; try lia.
+    rewrite PCUICInstConv.map_inst_idsn; len; try lia.
     rewrite -subst_compose_assoc shiftk_compose.
     rewrite -subst_consn_app.
     rewrite subst_consn_shiftn //. now len.
@@ -537,7 +551,6 @@ Lemma expand_lets_smash_context Γ Δ Δ' :
 Proof.
   rewrite /expand_lets_ctx /expand_lets_k_ctx.
   rewrite -smash_context_lift -smash_context_subst /=; len.
-  lia_f_equal.
 Qed.
 
 Lemma expand_lets_k_ctx_nil Γ k : expand_lets_k_ctx Γ k [] = [].
@@ -598,7 +611,7 @@ Proof.
   rewrite simpl_lift; len; try lia.
   rewrite subst_lift_above. now len.
   change (context_assumptions Δ) with (0 + context_assumptions Δ).
-  rewrite subst_lift_above. len. lia. now rewrite lift0_id.
+  rewrite subst_lift_above. len. now rewrite lift0_id.
 Qed.
 
 Lemma subslet_lift {cf} {Σ} {wfΣ : wf Σ} (Γ Δ : context) s Δ' :
@@ -655,7 +668,7 @@ Proof.
   move=> wfΔ.
   eapply wf_local_app_inv in wfΔ as [wfΓ wfΔ].
   induction Δ as [|[na [d|] ?] ?] in wfΔ |- *; simpl; try constructor.
-  * depelim wfΔ. repeat red in l, l0. red in l0.
+  * depelim wfΔ. repeat red in l, l0.
     specialize (IHΔ wfΔ).
     rewrite lift_context_snoc /lift_decl /= /map_decl /=.
     len. 
@@ -723,4 +736,47 @@ Lemma to_extended_list_subst_context_let_expand s Γ Δ :
 Proof.
   rewrite /subst_context_let_expand /to_extended_list /expand_lets_ctx /expand_lets_k_ctx.
   now rewrite !to_extended_list_k_subst to_extended_list_k_lift_context.
+Qed.
+
+Lemma map2_set_binder_name_alpha (nas : list aname) (Δ Δ' : context) :
+  All2 (fun x y => eq_binder_annot x (decl_name y)) nas Δ ->
+  eq_context_upto_names Δ Δ' ->
+  eq_context_upto_names (map2 set_binder_name nas Δ) Δ'.
+Proof.
+  intros hl. induction 1 in nas, hl |- *; cbn; auto.
+  destruct nas; cbn; auto.
+  destruct nas; cbn; auto; depelim hl.
+  constructor; auto. destruct r; subst; cbn; constructor; auto;
+  now transitivity na.
+Qed.
+
+Notation eq_names := (All2 (fun x y => x = (decl_name y))).
+
+Lemma eq_names_subst_context nas Γ s k : 
+  eq_names nas Γ ->
+  eq_names nas (subst_context s k Γ).
+Proof.
+  induction 1.
+  * cbn; auto. constructor.
+  * rewrite subst_context_snoc. constructor; auto.
+Qed.
+
+Lemma eq_names_subst_instance nas Γ u : 
+  eq_names nas Γ ->
+  eq_names nas (subst_instance u Γ).
+Proof.
+  induction 1.
+  * cbn; auto.
+  * rewrite /subst_instance /=. constructor; auto.
+Qed.
+
+Lemma map2_set_binder_name_alpha_eq (nas : list aname) (Δ Δ' : context) :
+  eq_names nas Δ' ->
+  eq_context_upto_names Δ Δ' ->
+  (map2 set_binder_name nas Δ) = Δ'.
+Proof.
+  intros hl. induction 1 in nas, hl |- *; cbn; auto.
+  destruct nas; cbn; auto.
+  destruct nas; cbn; auto; depelim hl.
+  f_equal; auto. destruct r; subst; cbn; auto.
 Qed.

@@ -3,8 +3,7 @@
 From Coq Require Import Utf8 ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus
-     PCUICEquality PCUICTyping.
+     PCUICLiftSubst PCUICEquality PCUICSigmaCalculus.
      
 Require Import Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.     
@@ -14,27 +13,9 @@ Local Set SimplIsCbn.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-#[global]
-Instance alpha_eq_reflexive : CRelationClasses.Reflexive (All2 (compare_decls eq eq)).
-Proof.
-  intros x. eapply All2_refl; reflexivity.
-Qed.
-
-#[global]
-Instance alpha_eq_symmmetric : CRelationClasses.Symmetric (All2 (compare_decls eq eq)).
-Proof.
-  intros x. eapply All2_symP. tc.
-Qed.
-
-#[global]
-Instance alpha_eq_trans : CRelationClasses.Transitive (All2 (compare_decls eq eq)).
-Proof.
-  intros x y z. apply All2_trans. tc.
-Qed.
-
 Lemma map2_set_binder_name_alpha_eq (nas : list aname) (Δ Δ' : PCUICEnvironment.context) :
   All2 (fun x y => x = (decl_name y)) nas Δ' ->
-  All2 (compare_decls eq eq) Δ Δ' ->
+  eq_context_upto_names Δ Δ' ->
   (map2 set_binder_name nas Δ) = Δ'.
 Proof.
   intros hl. induction 1 in nas, hl |- *; cbn; auto.
@@ -63,11 +44,11 @@ Proof.
 Qed.
 
 (* Lemma All2_compare_decls_subst pars n Γ i :
-  All2 (compare_decls eq eq) (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i])
-  All2 (compare_decls eq eq) (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i]) *)
+  eq_context_upto_names (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i])
+  eq_context_upto_names (subst_context pars n Γ@[i]) (subst_context pars n Γ'@[i]) *)
 Lemma alpha_eq_subst_instance Δ Δ' i : 
-  All2 (compare_decls eq eq) Δ Δ' ->
-  All2 (compare_decls eq eq) Δ@[i] Δ'@[i].
+  eq_context_upto_names Δ Δ' ->
+  eq_context_upto_names Δ@[i] Δ'@[i].
 Proof.
   induction 1.
   * constructor.
@@ -77,7 +58,7 @@ Qed.
 
 
 Lemma alpha_eq_context_assumptions Δ Δ' : 
-  All2 (compare_decls eq eq) Δ Δ' ->
+  eq_context_upto_names Δ Δ' ->
   context_assumptions Δ = context_assumptions Δ'.
 Proof.
   induction 1; simpl; auto; try lia.
@@ -85,7 +66,7 @@ Proof.
 Qed.
 
 Lemma alpha_eq_extended_subst Δ Δ' k : 
-  All2 (compare_decls eq eq) Δ Δ' ->
+  eq_context_upto_names Δ Δ' ->
   extended_subst Δ k = extended_subst Δ' k.
 Proof.
   induction 1 in k |- *; simpl; auto.
@@ -94,8 +75,8 @@ Proof.
 Qed.
 
 Lemma alpha_eq_smash_context Δ Δ' : 
-  All2 (compare_decls eq eq) Δ Δ' →
-  All2 (compare_decls eq eq) (smash_context [] Δ) (smash_context [] Δ').
+  eq_context_upto_names Δ Δ' ->
+  eq_context_upto_names (smash_context [] Δ) (smash_context [] Δ').
 Proof.
   induction 1.
   * constructor.
@@ -106,8 +87,8 @@ Proof.
 Qed.
 
 Lemma alpha_eq_lift_context n k Δ Δ' : 
-  All2 (compare_decls eq eq) Δ Δ' →
-  All2 (compare_decls eq eq) (lift_context n k Δ) (lift_context n k Δ').
+  eq_context_upto_names Δ Δ' ->
+  eq_context_upto_names (lift_context n k Δ) (lift_context n k Δ').
 Proof.
   induction 1.
   * constructor.
@@ -117,8 +98,8 @@ Proof.
 Qed.
 
 Lemma alpha_eq_subst_context s k Δ Δ' : 
-  All2 (compare_decls eq eq) Δ Δ' →
-  All2 (compare_decls eq eq) (subst_context s k Δ) (subst_context s k Δ').
+  eq_context_upto_names Δ Δ' ->
+  eq_context_upto_names (subst_context s k Δ) (subst_context s k Δ').
 Proof.
   induction 1.
   * constructor.
@@ -128,7 +109,7 @@ Proof.
 Qed.
 
 Lemma inst_case_predicate_context_eq {mdecl idecl ind p} :
-  All2 (compare_decls eq eq) p.(pcontext) (ind_predicate_context ind mdecl idecl) ->
+  eq_context_upto_names p.(pcontext) (ind_predicate_context ind mdecl idecl) ->
   case_predicate_context ind mdecl idecl p = 
   inst_case_predicate_context p.
 Proof.
@@ -157,7 +138,7 @@ Definition case_predicate_context' ind mdecl idecl p :=
 
 Lemma eq_binder_annots_eq nas Γ : 
   All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Γ ->
-  All2 (compare_decls eq eq) (map2 set_binder_name nas Γ) Γ.
+  eq_context_upto_names (map2 set_binder_name nas Γ) Γ.
 Proof.
   induction 1; simpl; constructor; auto.
   destruct x, y as [na [b|] ty]; simpl; constructor; auto.
@@ -178,7 +159,6 @@ Proof.
   now rewrite /pre_case_branch_context; len.
 Qed.
 
-
 Lemma All2_eq_binder_subst_context (l : list (binder_annot name))  s k Γ :
   All2 (fun x y => eq_binder_annot x y.(decl_name)) l Γ ->
   All2 (fun x y => eq_binder_annot x y.(decl_name)) l (subst_context s k Γ).
@@ -194,7 +174,7 @@ Proof.
 Qed.
 
 Lemma inst_case_branch_context_eq {ind mdecl cdecl p br} : 
-  All2 (compare_decls eq eq) br.(bcontext) (cstr_branch_context ind mdecl cdecl) ->
+  eq_context_upto_names br.(bcontext) (cstr_branch_context ind mdecl cdecl) ->
   case_branch_context ind mdecl p (forget_types br.(bcontext)) cdecl = inst_case_branch_context p br.
 Proof.
   intros.

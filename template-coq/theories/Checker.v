@@ -726,7 +726,6 @@ Section Typecheck.
 
   End InferAux.
 
-
   Definition check_consistent_constraints cstrs :=
     if check_constraints G cstrs then ret tt
     else raise (UnsatisfiedConstraints cstrs).

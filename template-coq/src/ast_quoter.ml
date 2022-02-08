@@ -9,7 +9,7 @@ module ExtractedASTBaseQuoter =
 struct
   type t = Ast0.term
   type quoted_ident = char list
-  type quoted_int = Datatypes.nat
+  type quoted_int = int
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
   type quoted_bool = bool
@@ -67,11 +67,7 @@ struct
     let {Context.binder_name = n; Context.binder_relevance = relevance} = ann_n in
     { BasicAst.binder_name = quote_name n; BasicAst.binder_relevance = quote_relevance relevance }
 
- let quote_int i =
-    let rec aux acc i =
-      if i < 0 then acc
-      else aux (Datatypes.S acc) (i - 1)
-    in aux Datatypes.O (i - 1)
+  let quote_int i = i
 
   let quote_bool x = x
 
@@ -83,7 +79,7 @@ struct
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
     if Univ.Level.is_prop l || Univ.Level.is_sprop l then
       failwith "Prop or SProp found in levels"
-    else if Univ.Level.is_set l then Universes0.Level.Coq_lSet
+    else if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
          | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
@@ -93,7 +89,7 @@ struct
     else if Univ.Level.is_sprop l then Coq_inl Universes0.PropLevel.Coq_lSProp
     else (* NOTE: in this branch we know that [l] is neither [SProp] nor [Prop]*)
       Coq_inr (quote_nonprop_level l)
-    (* else if Univ.Level.is_set l then Coq_inr Universes0.Level.Coq_lSet
+    (* else if Univ.Level.is_set l then Coq_inr Universes0.Level.Coq_lzero
      * else let l' = match Univ.Level.var_index l with
      *         | Some x -> Universes0.Level.Var (quote_int x)
      *         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
@@ -197,7 +193,11 @@ struct
 
   let quote_univ_contextset (uctx : Univ.ContextSet.t) : quoted_univ_contextset =
     (* CHECKME: is is safe to assume that there will be no Prop or SProp? *)
-    let levels = List.map quote_nonprop_level (Univ.Level.Set.elements (Univ.ContextSet.levels uctx)) in
+    let levels = filter_map 
+      (fun l -> match quote_level l with
+        | Coq_inl _ -> None
+        | Coq_inr l -> Some l)
+      (Univ.Level.Set.elements (Univ.ContextSet.levels uctx)) in
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
@@ -263,7 +263,7 @@ struct
       { dname = Array.get ns i ;
         dtype = Array.get ts i ;
         dbody = Array.get ds i ;
-        rarg = Datatypes.O } :: xs
+        rarg = 0 } :: xs
     in
     let defs = List.fold_left mk_fun [] (seq 0 (Array.length ns)) in
     let block = List.rev defs in

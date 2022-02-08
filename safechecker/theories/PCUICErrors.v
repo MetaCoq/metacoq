@@ -325,8 +325,21 @@ Inductive typing_result (A : Type) :=
 Global Arguments Checked {A} a.
 Global Arguments TypeError {A} t.
 
+Inductive typing_result_comp (A : Type) :=
+| Checked_comp (a : A)
+| TypeError_comp (t : type_error) (a : A -> False).
+Global Arguments Checked_comp {A} a.
+Global Arguments TypeError_comp {A} t a.
+
+Coercion typing_error_forget {A : Type} (t : typing_result_comp A) :
+  typing_result A :=
+  match t with
+    | Checked_comp a => Checked a
+    | TypeError_comp e a => TypeError e
+  end.
+
 #[global]
-Instance typing_monad : Monad typing_result :=
+ Instance typing_monad : Monad typing_result :=
   {| ret A a := Checked a ;
      bind A B m f :=
        match m with

@@ -1,0 +1,435 @@
+digraph dependencies {
+node[style=filled]
+"safechecker/Extraction"[label="Extraction", color=paleturquoise1]
+"safechecker/PCUICConsistency"[label="PCUICConsistency", color=paleturquoise1]
+"safechecker/PCUICSafeRetyping"[label="PCUICSafeRetyping", color=paleturquoise1]
+"safechecker/SafeTemplateChecker"[label="SafeTemplateChecker", color=paleturquoise1]
+"safechecker/PCUICSafeChecker"[label="PCUICSafeChecker", color=paleturquoise1]
+"safechecker/PCUICTypeChecker"[label="PCUICTypeChecker", color=paleturquoise1]
+"safechecker/PCUICWfEnv"[label="PCUICWfEnv", color=paleturquoise1]
+"safechecker/PCUICWfReduction"[label="PCUICWfReduction", color=paleturquoise1]
+"safechecker/PCUICSafeConversion"[label="PCUICSafeConversion", color=paleturquoise1]
+"safechecker/PCUICSafeReduce"[label="PCUICSafeReduce", color=paleturquoise1]
+"safechecker/PCUICErrors"[label="PCUICErrors", color=paleturquoise1]
+"pcuic/PCUICTyping" -> "pcuic/Bidirectional/BDEnvironmentTyping"
+"template-coq/AstUtils" -> "pcuic/Bidirectional/BDEnvironmentTyping"
+"pcuic/Bidirectional/BDToPCUIC" -> "pcuic/Bidirectional/BDFromPCUIC"
+"pcuic/Bidirectional/BDTyping" -> "pcuic/Bidirectional/BDToPCUIC"
+"pcuic/PCUICSR" -> "pcuic/Bidirectional/BDToPCUIC"
+"pcuic/Bidirectional/BDEnvironmentTyping" -> "pcuic/Bidirectional/BDTyping"
+"pcuic/PCUICCumulativity" -> "pcuic/Bidirectional/BDTyping"
+"pcuic/Bidirectional/BDFromPCUIC" -> "pcuic/Bidirectional/BDUnique"
+"pcuic/Conversion/PCUICWeakeningEnvConv" -> "pcuic/Conversion/PCUICClosedConv"
+"pcuic/Conversion/PCUICUnivSubstitutionConv" -> "pcuic/Conversion/PCUICInstConv"
+"pcuic/Typing/PCUICWeakeningTyp" -> "pcuic/Conversion/PCUICInstConv"
+"pcuic/Conversion/PCUICRenameConv" -> "pcuic/Conversion/PCUICOnFreeVarsConv"
+"pcuic/Typing/PCUICClosedTyp" -> "pcuic/Conversion/PCUICRenameConv"
+"pcuic/Conversion/PCUICWeakeningEnvConv" -> "pcuic/Conversion/PCUICUnivSubstitutionConv"
+"pcuic/Conversion/PCUICRenameConv" -> "pcuic/Conversion/PCUICWeakeningConv"
+"pcuic/PCUICContextSubst" -> "pcuic/Conversion/PCUICWeakeningEnvConv"
+"pcuic/PCUICCumulativity" -> "pcuic/Conversion/PCUICWeakeningEnvConv"
+"pcuic/PCUICGlobalEnv" -> "pcuic/Conversion/PCUICWeakeningEnvConv"
+"pcuic/PCUICGuardCondition" -> "pcuic/Conversion/PCUICWeakeningEnvConv"
+"pcuic/PCUICInductiveInversion" -> "pcuic/PCUICAlpha"
+"pcuic/PCUICContexts" -> "pcuic/PCUICArities"
+"pcuic/PCUICInversion" -> "pcuic/PCUICArities"
+"pcuic/PCUICWfUniverses" -> "pcuic/PCUICArities"
+"pcuic/utils/PCUICPrimitive" -> "pcuic/PCUICAst"
+"pcuic/PCUICReduction" -> "pcuic/PCUICCSubst"
+"pcuic/PCUICTyping" -> "pcuic/PCUICCSubst"
+"pcuic/PCUICElimination" -> "pcuic/PCUICCanonicity"
+"pcuic/PCUICWcbvEval" -> "pcuic/PCUICCanonicity"
+"pcuic/PCUICEquality" -> "pcuic/PCUICCasesContexts"
+"pcuic/PCUICSigmaCalculus" -> "pcuic/PCUICCasesContexts"
+"pcuic/PCUICParallelReductionConfluence" -> "pcuic/PCUICConfluence"
+"pcuic/PCUICRedTypeIrrelevance" -> "pcuic/PCUICConfluence"
+"pcuic/PCUICWellScopedCumulativity" -> "pcuic/PCUICContextConversion"
+"pcuic/PCUICSubstitution" -> "pcuic/PCUICContextReduction"
+"pcuic/Syntax/PCUICLiftSubst" -> "pcuic/PCUICContextSubst"
+"pcuic/PCUICGeneration" -> "pcuic/PCUICContexts"
+"pcuic/PCUICSubstitution" -> "pcuic/PCUICContexts"
+"pcuic/Typing/PCUICUnivSubstitutionTyp" -> "pcuic/PCUICContexts"
+"pcuic/PCUICContextConversion" -> "pcuic/PCUICConversion"
+"pcuic/PCUICSafeLemmata" -> "pcuic/PCUICCumulProp"
+"pcuic/PCUICReduction" -> "pcuic/PCUICCumulativity"
+"pcuic/Syntax/PCUICOnFreeVars" -> "pcuic/PCUICCumulativitySpec"
+"pcuic/utils/PCUICOnOne" -> "pcuic/PCUICCumulativitySpec"
+"pcuic/PCUICCumulProp" -> "pcuic/PCUICElimination"
+"pcuic/Syntax/PCUICLiftSubst" -> "pcuic/PCUICEquality"
+"pcuic/Syntax/PCUICReflect" -> "pcuic/PCUICEquality"
+"pcuic/PCUICWfUniverses" -> "pcuic/PCUICEqualityDec"
+"pcuic/PCUICTyping" -> "pcuic/PCUICGeneration"
+"pcuic/PCUICTyping" -> "pcuic/PCUICGlobalEnv"
+"pcuic/PCUICReduction" -> "pcuic/PCUICGuardCondition"
+"pcuic/Syntax/PCUICInstDef" -> "pcuic/PCUICGuardCondition"
+"pcuic/Syntax/PCUICNamelessDef" -> "pcuic/PCUICGuardCondition"
+"pcuic/PCUICValidity" -> "pcuic/PCUICInductiveInversion"
+"pcuic/PCUICSpine" -> "pcuic/PCUICInductives"
+"pcuic/PCUICConversion" -> "pcuic/PCUICInversion"
+"pcuic/PCUICSR" -> "pcuic/PCUICNormal"
+"template-coq/UnivSubst" -> "pcuic/PCUICNormal"
+"pcuic/PCUICSubstitution" -> "pcuic/PCUICParallelReduction"
+"pcuic/Syntax/PCUICDepth" -> "pcuic/PCUICParallelReduction"
+"pcuic/PCUICParallelReduction" -> "pcuic/PCUICParallelReductionConfluence"
+"pcuic/PCUICCumulProp" -> "pcuic/PCUICPrincipality"
+"pcuic/PCUICContextReduction" -> "pcuic/PCUICRedTypeIrrelevance"
+"pcuic/Syntax/PCUICClosed" -> "pcuic/PCUICReduction"
+"pcuic/Syntax/PCUICPosition" -> "pcuic/PCUICReduction"
+"pcuic/Syntax/PCUICTactics" -> "pcuic/PCUICReduction"
+"pcuic/utils/PCUICOnOne" -> "pcuic/PCUICReduction"
+"pcuic/PCUICSafeLemmata" -> "pcuic/PCUICSN"
+"pcuic/PCUICAlpha" -> "pcuic/PCUICSR"
+"pcuic/PCUICNormal" -> "pcuic/PCUICSafeLemmata"
+"pcuic/Syntax/PCUICLiftSubst" -> "pcuic/PCUICSigmaCalculus"
+"pcuic/PCUICArities" -> "pcuic/PCUICSpine"
+"pcuic/PCUICCasesContexts" -> "pcuic/PCUICSpine"
+"pcuic/Typing/PCUICContextConversionTyp" -> "pcuic/PCUICSpine"
+"pcuic/Typing/PCUICInstTyp" -> "pcuic/PCUICSubstitution"
+"pcuic/PCUICCumulativitySpec" -> "pcuic/PCUICTyping"
+"pcuic/Syntax/PCUICPosition" -> "pcuic/PCUICTyping"
+"pcuic/utils/PCUICUtils" -> "pcuic/PCUICTyping"
+"pcuic/PCUICInductives" -> "pcuic/PCUICValidity"
+"pcuic/PCUICCSubst" -> "pcuic/PCUICWcbvEval"
+"pcuic/PCUICInversion" -> "pcuic/PCUICWcbvEval"
+"pcuic/PCUICConfluence" -> "pcuic/PCUICWellScopedCumulativity"
+"pcuic/PCUICGeneration" -> "pcuic/PCUICWfUniverses"
+"pcuic/PCUICSubstitution" -> "pcuic/PCUICWfUniverses"
+"pcuic/utils/PCUICAstUtils" -> "pcuic/Syntax/PCUICCases"
+"pcuic/PCUICSigmaCalculus" -> "pcuic/Syntax/PCUICClosed"
+"pcuic/Syntax/PCUICUnivSubst" -> "pcuic/Syntax/PCUICClosed"
+"pcuic/Syntax/PCUICInduction" -> "pcuic/Syntax/PCUICDepth"
+"pcuic/Syntax/PCUICCases" -> "pcuic/Syntax/PCUICInduction"
+"template-coq/utils/LibHypsNaming" -> "pcuic/Syntax/PCUICInduction"
+"pcuic/Syntax/PCUICRenameDef" -> "pcuic/Syntax/PCUICInstDef"
+"pcuic/Syntax/PCUICInduction" -> "pcuic/Syntax/PCUICLiftSubst"
+"pcuic/PCUICTyping" -> "pcuic/Syntax/PCUICNamelessDef"
+"pcuic/PCUICEquality" -> "pcuic/Syntax/PCUICOnFreeVars"
+"pcuic/Syntax/PCUICClosed" -> "pcuic/Syntax/PCUICOnFreeVars"
+"template-coq/utils/MCPred" -> "pcuic/Syntax/PCUICOnFreeVars"
+"pcuic/PCUICEquality" -> "pcuic/Syntax/PCUICPosition"
+"pcuic/Syntax/PCUICInduction" -> "pcuic/Syntax/PCUICReflect"
+"pcuic/PCUICTyping" -> "pcuic/Syntax/PCUICRenameDef"
+"pcuic/PCUICSigmaCalculus" -> "pcuic/Syntax/PCUICTactics"
+"pcuic/Syntax/PCUICInduction" -> "pcuic/Syntax/PCUICUnivSubst"
+"pcuic/Syntax/PCUICCases" -> "pcuic/TemplateToPCUIC"
+"template-coq/AstUtils" -> "pcuic/TemplateToPCUIC"
+"pcuic/Conversion/PCUICClosedConv" -> "pcuic/Typing/PCUICClosedTyp"
+"pcuic/Typing/PCUICWeakeningEnvTyp" -> "pcuic/Typing/PCUICClosedTyp"
+"pcuic/PCUICConversion" -> "pcuic/Typing/PCUICContextConversionTyp"
+"pcuic/Conversion/PCUICInstConv" -> "pcuic/Typing/PCUICInstTyp"
+"pcuic/Conversion/PCUICOnFreeVarsConv" -> "pcuic/Typing/PCUICRenameTyp"
+"pcuic/Conversion/PCUICUnivSubstitutionConv" -> "pcuic/Typing/PCUICUnivSubstitutionTyp"
+"pcuic/Typing/PCUICWeakeningEnvTyp" -> "pcuic/Typing/PCUICUnivSubstitutionTyp"
+"pcuic/Conversion/PCUICWeakeningEnvConv" -> "pcuic/Typing/PCUICWeakeningEnvTyp"
+"pcuic/Conversion/PCUICWeakeningConv" -> "pcuic/Typing/PCUICWeakeningTyp"
+"pcuic/Typing/PCUICRenameTyp" -> "pcuic/Typing/PCUICWeakeningTyp"
+"pcuic/utils/PCUICSize" -> "pcuic/utils/PCUICAstUtils"
+"template-coq/common/uGraph" -> "pcuic/utils/PCUICAstUtils"
+"pcuic/PCUICAst" -> "pcuic/utils/PCUICOnOne"
+"pcuic/utils/PCUICAstUtils" -> "pcuic/utils/PCUICPretty"
+"template-coq/EnvironmentTyping" -> "pcuic/utils/PCUICPrimitive"
+"template-coq/Reflect" -> "pcuic/utils/PCUICPrimitive"
+"pcuic/PCUICAst" -> "pcuic/utils/PCUICSize"
+"template-coq/config" -> "pcuic/utils/PCUICUtils"
+"template-coq/utils" -> "pcuic/utils/PCUICUtils"
+"template-coq/EnvironmentTyping" -> "template-coq/Ast"
+"template-coq/Ast" -> "template-coq/AstUtils"
+"template-coq/utils" -> "template-coq/BasicAst"
+"template-coq/Universes" -> "template-coq/Environment"
+"template-coq/Environment" -> "template-coq/EnvironmentTyping"
+"template-coq/AstUtils" -> "template-coq/Induction"
+"template-coq/WfAst" -> "template-coq/LiftSubst"
+"template-coq/Universes" -> "template-coq/Reflect"
+"template-coq/Induction" -> "template-coq/ReflectAst"
+"template-coq/Reflect" -> "template-coq/ReflectAst"
+"template-coq/Induction" -> "template-coq/TermEquality"
+"template-coq/Reflect" -> "template-coq/TermEquality"
+"template-coq/LiftSubst" -> "template-coq/Typing"
+"template-coq/ReflectAst" -> "template-coq/Typing"
+"template-coq/TermEquality" -> "template-coq/Typing"
+"template-coq/Induction" -> "template-coq/UnivSubst"
+"template-coq/BasicAst" -> "template-coq/Universes"
+"template-coq/config" -> "template-coq/Universes"
+"template-coq/UnivSubst" -> "template-coq/WfAst"
+"template-coq/Universes" -> "template-coq/common/uGraph"
+"template-coq/utils/wGraph" -> "template-coq/common/uGraph"
+"template-coq/utils/All_Forall" -> "template-coq/monad_utils"
+"template-coq/monad_utils" -> "template-coq/utils"
+"template-coq/utils/MCUtils" -> "template-coq/utils"
+"template-coq/utils/MCOption" -> "template-coq/utils/All_Forall"
+"template-coq/utils/MCSquash" -> "template-coq/utils/All_Forall"
+"template-coq/utils/MCPrelude" -> "template-coq/utils/MCList"
+"template-coq/utils/MCRelations" -> "template-coq/utils/MCList"
+"template-coq/utils/MCList" -> "template-coq/utils/MCOption"
+"template-coq/utils/MCProd" -> "template-coq/utils/MCOption"
+"template-coq/utils/MCReflect" -> "template-coq/utils/MCOption"
+"template-coq/utils/MCOption" -> "template-coq/utils/MCPred"
+"template-coq/utils/MCPrelude" -> "template-coq/utils/MCReflect"
+"template-coq/utils/MCCompare" -> "template-coq/utils/MCString"
+"template-coq/utils/All_Forall" -> "template-coq/utils/MCUtils"
+"template-coq/utils/MCArith" -> "template-coq/utils/MCUtils"
+"template-coq/utils/MCEquality" -> "template-coq/utils/MCUtils"
+"template-coq/utils/MCString" -> "template-coq/utils/MCUtils"
+"template-coq/utils/MCUtils" -> "template-coq/utils/wGraph"
+"safechecker/SafeTemplateChecker" -> "safechecker/Extraction"
+"safechecker/PCUICSafeReduce" -> "safechecker/PCUICConsistency"
+"pcuic/utils/PCUICPretty" -> "safechecker/PCUICErrors"
+"safechecker/PCUICTypeChecker" -> "safechecker/PCUICSafeChecker"
+"pcuic/PCUICEqualityDec" -> "safechecker/PCUICSafeConversion"
+"pcuic/PCUICPrincipality" -> "safechecker/PCUICSafeConversion"
+"safechecker/PCUICSafeReduce" -> "safechecker/PCUICSafeConversion"
+"pcuic/PCUICCanonicity" -> "safechecker/PCUICSafeReduce"
+"safechecker/PCUICErrors" -> "safechecker/PCUICSafeReduce"
+"safechecker/PCUICWfReduction" -> "safechecker/PCUICSafeReduce"
+"pcuic/Bidirectional/BDUnique" -> "safechecker/PCUICSafeRetyping"
+"safechecker/PCUICSafeReduce" -> "safechecker/PCUICSafeRetyping"
+"pcuic/Bidirectional/BDUnique" -> "safechecker/PCUICTypeChecker"
+"safechecker/PCUICSafeConversion" -> "safechecker/PCUICTypeChecker"
+"safechecker/PCUICWfEnv" -> "safechecker/PCUICTypeChecker"
+"pcuic/PCUICGlobalEnv" -> "safechecker/PCUICWfEnv"
+"pcuic/PCUICSN" -> "safechecker/PCUICWfReduction"
+"pcuic/utils/PCUICPretty" -> "safechecker/PCUICWfReduction"
+"pcuic/TemplateToPCUIC" -> "safechecker/SafeTemplateChecker"
+"template-coq/Typing" -> "safechecker/SafeTemplateChecker"
+"safechecker/PCUICSafeChecker" -> "safechecker/SafeTemplateChecker"
+"template-coq/Extraction"[label="Extraction", color=aquamarine]
+"template-coq/Constants"[label="Constants", color=aquamarine]
+"template-coq/monad_utils"[label="monad_utils", color=aquamarine]
+"template-coq/TemplateMonad/Extractable"[label="Extractable", color=aquamarine]
+"template-coq/TemplateMonad/Core"[label="Core", color=aquamarine]
+"template-coq/TemplateMonad/Common"[label="Common", color=aquamarine]
+"template-coq/TemplateMonad"[label="TemplateMonad", color=aquamarine]
+"template-coq/Checker"[label="Checker", color=aquamarine]
+"template-coq/WcbvEval"[label="WcbvEval", color=aquamarine]
+"template-coq/Normal"[label="Normal", color=aquamarine]
+"template-coq/TypingWf"[label="TypingWf", color=aquamarine]
+"template-coq/Reduction"[label="Reduction", color=aquamarine]
+"template-coq/Typing"[label="Typing", color=aquamarine]
+"template-coq/TermEquality"[label="TermEquality", color=aquamarine]
+"template-coq/Pretty"[label="Pretty", color=aquamarine]
+"template-coq/UnivSubst"[label="UnivSubst", color=aquamarine]
+"template-coq/LiftSubst"[label="LiftSubst", color=aquamarine]
+"template-coq/WfAst"[label="WfAst", color=aquamarine]
+"template-coq/EnvironmentTyping"[label="EnvironmentTyping", color=aquamarine]
+"template-coq/Induction"[label="Induction", color=aquamarine]
+"template-coq/Kernames"[label="Kernames", color=aquamarine]
+"template-coq/ReflectAst"[label="ReflectAst", color=aquamarine]
+"template-coq/Reflect"[label="Reflect", color=aquamarine]
+"template-coq/AstUtils"[label="AstUtils", color=aquamarine]
+"template-coq/Ast"[label="Ast", color=aquamarine]
+"template-coq/Environment"[label="Environment", color=aquamarine]
+"template-coq/BasicAst"[label="BasicAst", color=aquamarine]
+"template-coq/Universes"[label="Universes", color=aquamarine]
+"template-coq/config"[label="config", color=aquamarine]
+"template-coq/utils"[label="utils", color=aquamarine]
+"template-coq/common/uGraph"[label="uGraph", color=aquamarine]
+"template-coq/utils/MCUtils"[label="MCUtils", color=aquamarine]
+"template-coq/utils/wGraph"[label="wGraph", color=aquamarine]
+"template-coq/utils/MCString"[label="MCString", color=aquamarine]
+"template-coq/utils/MCSquash"[label="MCSquash", color=aquamarine]
+"template-coq/utils/MCRelations"[label="MCRelations", color=aquamarine]
+"template-coq/utils/MCPred"[label="MCPred", color=aquamarine]
+"template-coq/utils/MCProd"[label="MCProd", color=aquamarine]
+"template-coq/utils/MCOption"[label="MCOption", color=aquamarine]
+"template-coq/utils/MCList"[label="MCList", color=aquamarine]
+"template-coq/utils/LibHypsNaming"[label="LibHypsNaming", color=aquamarine]
+"template-coq/utils/MCEquality"[label="MCEquality", color=aquamarine]
+"template-coq/utils/MCCompare"[label="MCCompare", color=aquamarine]
+"template-coq/utils/MCArith"[label="MCArith", color=aquamarine]
+"template-coq/utils/All_Forall"[label="All_Forall", color=aquamarine]
+"template-coq/utils/MCReflect"[label="MCReflect", color=aquamarine]
+"template-coq/utils/MCPrelude"[label="MCPrelude", color=aquamarine]
+"template-coq/Typing" -> "template-coq/Checker"
+"template-coq/common/uGraph" -> "template-coq/Checker"
+"template-coq/TemplateMonad" -> "template-coq/Constants"
+"template-coq/TemplateMonad/Extractable" -> "template-coq/Constants"
+"template-coq/common/uGraph" -> "template-coq/Constants"
+"template-coq/Pretty" -> "template-coq/Extraction"
+"template-coq/Reflect" -> "template-coq/Extraction"
+"template-coq/TemplateMonad/Extractable" -> "template-coq/Extraction"
+"template-coq/AstUtils" -> "template-coq/Kernames"
+"template-coq/Typing" -> "template-coq/Normal"
+"template-coq/LiftSubst" -> "template-coq/Pretty"
+"template-coq/Typing" -> "template-coq/Reduction"
+"template-coq/TemplateMonad/Core" -> "template-coq/TemplateMonad"
+"template-coq/Ast" -> "template-coq/TemplateMonad/Common"
+"template-coq/AstUtils" -> "template-coq/TemplateMonad/Core"
+"template-coq/TemplateMonad/Common" -> "template-coq/TemplateMonad/Core"
+"template-coq/AstUtils" -> "template-coq/TemplateMonad/Extractable"
+"template-coq/TemplateMonad/Common" -> "template-coq/TemplateMonad/Extractable"
+"template-coq/Typing" -> "template-coq/TypingWf"
+"template-coq/TypingWf" -> "template-coq/WcbvEval"
+"erasure/Erasure"[label="Erasure", color=tan]
+"erasure/EOptimizePropDiscr"[label="EOptimizePropDiscr", color=tan]
+"erasure/ErasureFunction"[label="ErasureFunction", color=tan]
+"erasure/ErasureCorrectness"[label="ErasureCorrectness", color=tan]
+"erasure/EArities"[label="EArities", color=tan]
+"erasure/EInversion"[label="EInversion", color=tan]
+"erasure/ESubstitution"[label="ESubstitution", color=tan]
+"erasure/Prelim"[label="Prelim", color=tan]
+"erasure/Extraction"[label="Extraction", color=tan]
+"erasure/EAll"[label="EAll", color=tan]
+"erasure/EDeps"[label="EDeps", color=tan]
+"erasure/Extract"[label="Extract", color=tan]
+"erasure/ETyping"[label="ETyping", color=tan]
+"erasure/EWndEval"[label="EWndEval", color=tan]
+"erasure/EWcbvEval"[label="EWcbvEval", color=tan]
+"erasure/ECSubst"[label="ECSubst", color=tan]
+"erasure/EPretty"[label="EPretty", color=tan]
+"erasure/EReflect"[label="EReflect", color=tan]
+"erasure/ELiftSubst"[label="ELiftSubst", color=tan]
+"erasure/EInduction"[label="EInduction", color=tan]
+"erasure/EAstUtils"[label="EAstUtils", color=tan]
+"erasure/EAst"[label="EAst", color=tan]
+"pcuic/PCUICTyping" -> "pcuic/PCUICExpandLets"
+"pcuic/PCUICCanonicity" -> "pcuic/PCUICExpandLetsCorrectness"
+"pcuic/PCUICExpandLets" -> "pcuic/PCUICExpandLetsCorrectness"
+"pcuic/PCUICInductiveInversion" -> "pcuic/TemplateToPCUICCorrectness"
+"pcuic/TemplateToPCUIC" -> "pcuic/TemplateToPCUICCorrectness"
+"template-coq/TypingWf" -> "pcuic/TemplateToPCUICCorrectness"
+"pcuic/PCUICCanonicity" -> "pcuic/TemplateToPCUICWcbvEval"
+"pcuic/TemplateToPCUICCorrectness" -> "pcuic/TemplateToPCUICWcbvEval"
+"template-coq/WcbvEval" -> "pcuic/TemplateToPCUICWcbvEval"
+"erasure/EWcbvEval" -> "erasure/EAll"
+"erasure/EWndEval" -> "erasure/EAll"
+"erasure/Extract" -> "erasure/EAll"
+"pcuic/PCUICCanonicity" -> "erasure/EArities"
+"pcuic/PCUICPrincipality" -> "erasure/EArities"
+"erasure/Extract" -> "erasure/EArities"
+"pcuic/utils/PCUICPrimitive" -> "erasure/EAst"
+"template-coq/Kernames" -> "erasure/EAstUtils"
+"erasure/EAst" -> "erasure/EAstUtils"
+"erasure/ELiftSubst" -> "erasure/ECSubst"
+"erasure/ESubstitution" -> "erasure/EDeps"
+"erasure/EAst" -> "erasure/EInduction"
+"erasure/Prelim" -> "erasure/EInversion"
+"erasure/EInduction" -> "erasure/ELiftSubst"
+"erasure/ErasureFunction" -> "erasure/EOptimizePropDiscr"
+"erasure/ETyping" -> "erasure/EPretty"
+"pcuic/Syntax/PCUICReflect" -> "erasure/EReflect"
+"erasure/EInduction" -> "erasure/EReflect"
+"erasure/Prelim" -> "erasure/ESubstitution"
+"erasure/EAstUtils" -> "erasure/ETyping"
+"erasure/ECSubst" -> "erasure/ETyping"
+"erasure/EReflect" -> "erasure/ETyping"
+"pcuic/PCUICWcbvEval" -> "erasure/EWcbvEval"
+"erasure/ETyping" -> "erasure/EWcbvEval"
+"erasure/ETyping" -> "erasure/EWndEval"
+"pcuic/PCUICExpandLetsCorrectness" -> "erasure/Erasure"
+"pcuic/TemplateToPCUICWcbvEval" -> "erasure/Erasure"
+"template-coq/Pretty" -> "erasure/Erasure"
+"erasure/EOptimizePropDiscr" -> "erasure/Erasure"
+"erasure/EPretty" -> "erasure/Erasure"
+"erasure/EDeps" -> "erasure/ErasureCorrectness"
+"erasure/EInversion" -> "erasure/ErasureCorrectness"
+"safechecker/PCUICSafeRetyping" -> "erasure/ErasureFunction"
+"erasure/ErasureCorrectness" -> "erasure/ErasureFunction"
+"pcuic/PCUICElimination" -> "erasure/Extract"
+"erasure/ETyping" -> "erasure/Extract"
+"erasure/Erasure" -> "erasure/Extraction"
+"safechecker/PCUICErrors" -> "erasure/Prelim"
+"erasure/EArities" -> "erasure/Prelim"
+"erasure/EWcbvEval" -> "erasure/Prelim"
+"pcuic/Bidirectional/BDStrengthening"[label="BDStrengthening", color=lemonchiffon1]
+"pcuic/Bidirectional/BDUnique"[label="BDUnique", color=lemonchiffon1]
+"pcuic/Bidirectional/BDFromPCUIC"[label="BDFromPCUIC", color=lemonchiffon1]
+"pcuic/Bidirectional/BDToPCUIC"[label="BDToPCUIC", color=lemonchiffon1]
+"pcuic/Bidirectional/BDTyping"[label="BDTyping", color=lemonchiffon1]
+"pcuic/Bidirectional/BDEnvironmentTyping"[label="BDEnvironmentTyping", color=lemonchiffon1]
+"pcuic/PCUICExpandLetsCorrectness"[label="PCUICExpandLetsCorrectness", color=lemonchiffon1]
+"pcuic/PCUICExpandLets"[label="PCUICExpandLets", color=lemonchiffon1]
+"pcuic/PCUICToTemplateCorrectness"[label="PCUICToTemplateCorrectness", color=lemonchiffon1]
+"pcuic/PCUICToTemplate"[label="PCUICToTemplate", color=lemonchiffon1]
+"pcuic/TemplateToPCUICWcbvEval"[label="TemplateToPCUICWcbvEval", color=lemonchiffon1]
+"pcuic/TemplateToPCUICCorrectness"[label="TemplateToPCUICCorrectness", color=lemonchiffon1]
+"pcuic/TemplateToPCUIC"[label="TemplateToPCUIC", color=lemonchiffon1]
+"pcuic/PCUICSafeLemmata"[label="PCUICSafeLemmata", color=lemonchiffon1]
+"pcuic/PCUICSigmaCalculus"[label="PCUICSigmaCalculus", color=lemonchiffon1]
+"pcuic/PCUICPrincipality"[label="PCUICPrincipality", color=lemonchiffon1]
+"pcuic/PCUICSN"[label="PCUICSN", color=lemonchiffon1]
+"pcuic/PCUICElimination"[label="PCUICElimination", color=lemonchiffon1]
+"pcuic/PCUICCumulProp"[label="PCUICCumulProp", color=lemonchiffon1]
+"pcuic/PCUICWcbvEval"[label="PCUICWcbvEval", color=lemonchiffon1]
+"pcuic/PCUICCSubst"[label="PCUICCSubst", color=lemonchiffon1]
+"pcuic/PCUICCanonicity"[label="PCUICCanonicity", color=lemonchiffon1]
+"pcuic/PCUICSR"[label="PCUICSR", color=lemonchiffon1]
+"pcuic/PCUICInductiveInversion"[label="PCUICInductiveInversion", color=lemonchiffon1]
+"pcuic/PCUICValidity"[label="PCUICValidity", color=lemonchiffon1]
+"pcuic/PCUICInductives"[label="PCUICInductives", color=lemonchiffon1]
+"pcuic/PCUICSpine"[label="PCUICSpine", color=lemonchiffon1]
+"pcuic/PCUICWfUniverses"[label="PCUICWfUniverses", color=lemonchiffon1]
+"pcuic/PCUICArities"[label="PCUICArities", color=lemonchiffon1]
+"pcuic/PCUICContexts"[label="PCUICContexts", color=lemonchiffon1]
+"pcuic/PCUICAlpha"[label="PCUICAlpha", color=lemonchiffon1]
+"pcuic/PCUICGeneration"[label="PCUICGeneration", color=lemonchiffon1]
+"pcuic/PCUICRedTypeIrrelevance"[label="PCUICRedTypeIrrelevance", color=lemonchiffon1]
+"pcuic/PCUICConvCumInversion"[label="PCUICConvCumInversion", color=lemonchiffon1]
+"pcuic/PCUICConversion"[label="PCUICConversion", color=lemonchiffon1]
+"pcuic/PCUICContextConversion"[label="PCUICContextConversion", color=lemonchiffon1]
+"pcuic/PCUICWellScopedCumulativity"[label="PCUICWellScopedCumulativity", color=lemonchiffon1]
+"pcuic/PCUICConfluence"[label="PCUICConfluence", color=lemonchiffon1]
+"pcuic/PCUICParallelReductionConfluence"[label="PCUICParallelReductionConfluence", color=lemonchiffon1]
+"pcuic/PCUICParallelReduction"[label="PCUICParallelReduction", color=lemonchiffon1]
+"pcuic/PCUICCumulativitySpec"[label="PCUICCumulativitySpec", color=lemonchiffon1]
+"pcuic/PCUICCumulativity"[label="PCUICCumulativity", color=lemonchiffon1]
+"pcuic/PCUICContextReduction"[label="PCUICContextReduction", color=lemonchiffon1]
+"pcuic/PCUICSubstitution"[label="PCUICSubstitution", color=lemonchiffon1]
+"pcuic/PCUICEqualityDec"[label="PCUICEqualityDec", color=lemonchiffon1]
+"pcuic/PCUICEquality"[label="PCUICEquality", color=lemonchiffon1]
+"pcuic/PCUICNormal"[label="PCUICNormal", color=lemonchiffon1]
+"pcuic/PCUICInversion"[label="PCUICInversion", color=lemonchiffon1]
+"pcuic/PCUICGlobalEnv"[label="PCUICGlobalEnv", color=lemonchiffon1]
+"pcuic/PCUICGuardCondition"[label="PCUICGuardCondition", color=lemonchiffon1]
+"pcuic/PCUICTyping"[label="PCUICTyping", color=lemonchiffon1]
+"pcuic/PCUICReduction"[label="PCUICReduction", color=lemonchiffon1]
+"pcuic/PCUICCasesContexts"[label="PCUICCasesContexts", color=lemonchiffon1]
+"pcuic/PCUICContextSubst"[label="PCUICContextSubst", color=lemonchiffon1]
+"pcuic/Typing/PCUICContextConversionTyp"[label="PCUICContextConversionTyp", color=lemonchiffon1]
+"pcuic/Typing/PCUICClosedTyp"[label="PCUICClosedTyp", color=lemonchiffon1]
+"pcuic/Typing/PCUICUnivSubstitutionTyp"[label="PCUICUnivSubstitutionTyp", color=lemonchiffon1]
+"pcuic/Typing/PCUICWeakeningTyp"[label="PCUICWeakeningTyp", color=lemonchiffon1]
+"pcuic/Typing/PCUICWeakeningEnvTyp"[label="PCUICWeakeningEnvTyp", color=lemonchiffon1]
+"pcuic/Typing/PCUICInstTyp"[label="PCUICInstTyp", color=lemonchiffon1]
+"pcuic/Typing/PCUICRenameTyp"[label="PCUICRenameTyp", color=lemonchiffon1]
+"pcuic/Typing/PCUICNamelessTyp"[label="PCUICNamelessTyp", color=lemonchiffon1]
+"pcuic/Conversion/PCUICOnFreeVarsConv"[label="PCUICOnFreeVarsConv", color=lemonchiffon1]
+"pcuic/Conversion/PCUICClosedConv"[label="PCUICClosedConv", color=lemonchiffon1]
+"pcuic/Conversion/PCUICWeakeningConv"[label="PCUICWeakeningConv", color=lemonchiffon1]
+"pcuic/Conversion/PCUICUnivSubstitutionConv"[label="PCUICUnivSubstitutionConv", color=lemonchiffon1]
+"pcuic/Conversion/PCUICWeakeningEnvConv"[label="PCUICWeakeningEnvConv", color=lemonchiffon1]
+"pcuic/Conversion/PCUICInstConv"[label="PCUICInstConv", color=lemonchiffon1]
+"pcuic/Conversion/PCUICRenameConv"[label="PCUICRenameConv", color=lemonchiffon1]
+"pcuic/Conversion/PCUICNamelessConv"[label="PCUICNamelessConv", color=lemonchiffon1]
+"pcuic/Syntax/PCUICClosed"[label="PCUICClosed", color=lemonchiffon1]
+"pcuic/Syntax/PCUICUnivSubst"[label="PCUICUnivSubst", color=lemonchiffon1]
+"pcuic/Syntax/PCUICTactics"[label="PCUICTactics", color=lemonchiffon1]
+"pcuic/Syntax/PCUICLiftSubst"[label="PCUICLiftSubst", color=lemonchiffon1]
+"pcuic/Syntax/PCUICInstDef"[label="PCUICInstDef", color=lemonchiffon1]
+"pcuic/Syntax/PCUICRenameDef"[label="PCUICRenameDef", color=lemonchiffon1]
+"pcuic/Syntax/PCUICOnFreeVars"[label="PCUICOnFreeVars", color=lemonchiffon1]
+"pcuic/Syntax/PCUICNamelessDef"[label="PCUICNamelessDef", color=lemonchiffon1]
+"pcuic/Syntax/PCUICReflect"[label="PCUICReflect", color=lemonchiffon1]
+"pcuic/Syntax/PCUICPosition"[label="PCUICPosition", color=lemonchiffon1]
+"pcuic/Syntax/PCUICDepth"[label="PCUICDepth", color=lemonchiffon1]
+"pcuic/Syntax/PCUICInduction"[label="PCUICInduction", color=lemonchiffon1]
+"pcuic/Syntax/PCUICCases"[label="PCUICCases", color=lemonchiffon1]
+"pcuic/utils/PCUICPretty"[label="PCUICPretty", color=lemonchiffon1]
+"pcuic/utils/PCUICSize"[label="PCUICSize", color=lemonchiffon1]
+"pcuic/utils/PCUICUtils"[label="PCUICUtils", color=lemonchiffon1]
+"pcuic/utils/PCUICAstUtils"[label="PCUICAstUtils", color=lemonchiffon1]
+"pcuic/utils/PCUICPrimitive"[label="PCUICPrimitive", color=lemonchiffon1]
+"pcuic/utils/PCUICOnOne"[label="PCUICOnOne", color=lemonchiffon1]
+"pcuic/PCUICAst"[label="PCUICAst", color=lemonchiffon1]
+"pcuic/Bidirectional/BDFromPCUIC" -> "pcuic/Bidirectional/BDStrengthening"
+"pcuic/Conversion/PCUICUnivSubstitutionConv" -> "pcuic/Conversion/PCUICNamelessConv"
+"pcuic/Typing/PCUICClosedTyp" -> "pcuic/Conversion/PCUICNamelessConv"
+"pcuic/PCUICNormal" -> "pcuic/PCUICConvCumInversion"
+"template-coq/AstUtils" -> "pcuic/PCUICToTemplate"
+"pcuic/Syntax/PCUICCases" -> "pcuic/PCUICToTemplate"
+"template-coq/Reduction" -> "pcuic/PCUICToTemplateCorrectness"
+"template-coq/TypingWf" -> "pcuic/PCUICToTemplateCorrectness"
+"pcuic/PCUICSafeLemmata" -> "pcuic/PCUICToTemplateCorrectness"
+"pcuic/PCUICToTemplate" -> "pcuic/PCUICToTemplateCorrectness"
+"pcuic/Conversion/PCUICNamelessConv" -> "pcuic/Typing/PCUICNamelessTyp"
+"pcuic/PCUICConversion" -> "pcuic/Typing/PCUICNamelessTyp"
+}

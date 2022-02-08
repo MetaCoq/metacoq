@@ -189,7 +189,7 @@ struct
   let quote_nonprop_level l =
     if Univ.Level.is_prop l || Univ.Level.is_sprop l then
       failwith "quote_nonprop_level : Prop or SProp found in levels"
-    else if Level.is_set l then Lazy.force lSet
+    else if Level.is_set l then Lazy.force lzero
     else match Level.var_index l with
          | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
          | None -> constr_mkApp (tLevel, [| string_of_level l|])
@@ -211,7 +211,7 @@ struct
            constr_mkApp (tfrom_kernel_repr, [| hd ; tl |])
 
   let quote_levelset s =
-    let levels = LSet.elements s in
+    let levels = Univ.Level.Set.elements s in
     let levels' =  to_coq_listl tlevel (List.map quote_nonprop_level levels) in
     constr_mkApp (tLevelSet_of_list, [|levels'|])
 
@@ -260,7 +260,7 @@ struct
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =
-    let const = Univ.Constraint.elements const in
+    let const = Univ.Constraints.elements const in
     List.fold_left (fun tm c ->
         constr_mkApp (tConstraintSetadd, [| c; tm|])
       ) (Lazy.force tConstraintSetempty) (constraints_ const)
@@ -297,9 +297,9 @@ struct
       constr_mkApp (cSome, [| listvar; var' |]) *)
   
  let quote_abstract_univ_context uctx =
-    let arr = (AUContext.names uctx) in
+    let arr = (AbstractContext.names uctx) in
     let idents = to_coq_listl tname (CArray.map_to_list quote_name arr) in
-    let const' = quote_univ_constraints (UContext.constraints (AUContext.repr uctx)) in
+    let const' = quote_univ_constraints (UContext.constraints (AbstractContext.repr uctx)) in
     constr_mkApp (tAUContextmake, [|idents; const'|])
 
   let mkMonomorphic_ctx t =

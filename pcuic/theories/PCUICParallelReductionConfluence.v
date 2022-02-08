@@ -1,10 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require CMorphisms.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize PCUICLiftSubst
-     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
-     PCUICReflect PCUICInduction PCUICClosed PCUICDepth PCUICOnFreeVars
-     PCUICRename PCUICInst PCUICParallelReduction PCUICWeakening.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICTactics PCUICSize PCUICLiftSubst
+     PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction 
+     PCUICReflect PCUICInduction PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICDepth PCUICOnFreeVars
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICWeakeningConv PCUICWeakeningTyp
+     PCUICParallelReduction.
+     
 
 Require Import ssreflect ssrbool.
 Require Import Morphisms CRelationClasses.
@@ -19,88 +21,6 @@ Local Set Keyed Unification.
 
 Ltac solve_discr := (try (progress (prepare_discr; finish_discr; cbn [mkApps] in * )));
   try discriminate.
-
-Equations mapi_context_In (ctx : context) (f : nat -> forall (x : context_decl), In x ctx -> context_decl) : context :=
-mapi_context_In nil _ := nil;
-mapi_context_In (cons x xs) f := cons (f #|xs| x _) (mapi_context_In xs (fun n x H => f n x _)).
-
-Lemma mapi_context_In_spec (f : nat -> term -> term) (ctx : context) :
-  mapi_context_In ctx (fun n (x : context_decl) (_ : In x ctx) => map_decl (f n) x) = 
-  mapi_context f ctx.
-Proof.
-  remember (fun n (x : context_decl) (_ : In x ctx) => map_decl (f n) x) as g.
-  funelim (mapi_context_In ctx g) => //; simpl; rewrite (H f0); trivial.
-Qed.
-
-Equations fold_context_In (ctx : context) (f : context -> forall (x : context_decl), In x ctx -> context_decl) : context :=
-fold_context_In nil _ := nil;
-fold_context_In (cons x xs) f := 
-  let xs' := fold_context_In xs (fun n x H => f n x _) in
-  cons (f xs' x _) xs'.
-
-Equations fold_context (f : context -> context_decl -> context_decl) (ctx : context) : context :=
-  fold_context f nil := nil;
-  fold_context f (cons x xs) := 
-    let xs' := fold_context f xs in
-    cons (f xs' x ) xs'.
-  
-Lemma fold_context_length f Γ : #|fold_context f Γ| = #|Γ|.
-Proof.
-  now apply_funelim (fold_context f Γ); intros; simpl; auto; f_equal.
-Qed.
-#[global]
-Hint Rewrite fold_context_length : len.
-
-Lemma fold_context_In_spec (f : context -> context_decl -> context_decl) (ctx : context) :
-  fold_context_In ctx (fun n (x : context_decl) (_ : In x ctx) => f n x) = 
-  fold_context f ctx.
-Proof.
-  remember (fun n (x : context_decl) (_ : In x ctx) => f n x) as g.
-  funelim (fold_context_In ctx g) => //; simpl; rewrite (H f0); trivial.
-Qed.
-
-#[global]
-Instance fold_context_Proper : Proper (`=2` ==> `=1`) fold_context.
-Proof.
-  intros f f' Hff' x.
-  funelim (fold_context f x); simpl; auto. simp fold_context.
-  now rewrite (H f' Hff').
-Qed.
-
-Section list_depth.
-  Context {A : Type} (f : A -> nat).
-
-  Lemma In_list_depth:
-    forall x xs, In x xs -> f x < S (list_depth_gen f xs).
-  Proof.
-    intros. induction xs.
-    destruct H.
-    * destruct H. simpl; subst. lia.
-      specialize (IHxs H). simpl. lia.
-  Qed.
-
-End list_depth.
-
-Notation mfixpoint_depth := (mfixpoint_depth_gen depth).
-
-Lemma mfixpoint_depth_In {mfix d} :
-  In d mfix ->
-  depth (dbody d) <= mfixpoint_depth mfix /\
-  depth (dtype d) <= mfixpoint_depth mfix.
-Proof.
-  induction mfix in d |- *; simpl; auto.
-  move=> [->|H]. unfold def_depth_gen. split; try lia.
-  destruct (IHmfix d H). split; lia.
-Qed.
-
-Lemma mfixpoint_depth_nth_error {mfix i d} :
-  nth_error mfix i = Some d ->
-  depth (dbody d) <= mfixpoint_depth mfix.
-Proof.
-  induction mfix in i, d |- *; destruct i; simpl; try congruence.
-  move=> [] ->. unfold def_depth_gen. lia.
-  move/IHmfix. lia.
-Qed.
 
 Section FoldFix.
   Context (rho : context -> term -> term).
@@ -804,8 +724,8 @@ Section Rho.
   { | construct_cofix_construct ind' c u with eq_inductive ci.(ci_ind) ind' := 
     { | true with inspect (nth_error brs c) => 
         { | exist (Some br) eqbr =>
-            if eqb #|skipn (ci_npar ci) args| 
-              (context_assumptions (bcontext br)) then
+            if eqb #|args| 
+              (ci_npar ci + context_assumptions (bcontext br)) then
               let p' := rho_predicate_wf rho Γ p _ in 
               let args' := map_terms rho Γ args _ in 
               rho_iota_red_wf rho Γ p' ci.(ci_npar) args' br _
@@ -905,7 +825,7 @@ Section Rho.
 
   Lemma rho_ctx_over_length Δ Γ : #|rho_ctx_over Δ Γ| = #|Γ|.
   Proof.
-    now len.
+    now rewrite fold_context_length.
   Qed.
 
   Definition rho_fix_context Γ mfix :=
@@ -1161,7 +1081,7 @@ Section Rho.
       if eq_inductive ci.(ci_ind) ind' then
         match nth_error brs c with
         | Some br => 
-          if eqb #|skipn (ci_npar ci) args| (context_assumptions (bcontext br)) then
+          if eqb #|args| (ci_npar ci + context_assumptions (bcontext br)) then
             let args' := map (rho Γ) args in 
             rho_iota_red Γ p' ci.(ci_npar) args' br
           else tCase ci p' (rho Γ x) (map (rho_br Γ p') brs)
@@ -1656,7 +1576,7 @@ Section Rho.
   Qed.
   Transparent fold_context.
 
-  Lemma fold_context_mapi_context f g Γ : 
+  Lemma fold_context_mapi_context f g (Γ : context) : 
     fold_context f (mapi_context g Γ) =
     fold_context (fun Γ => f Γ ∘ map_decl (g #|Γ|)) Γ.
   Proof.
@@ -1665,7 +1585,7 @@ Section Rho.
     now rewrite -IHΓ; len.
   Qed.
 
-  Lemma mapi_context_fold_context f g Γ : 
+  Lemma mapi_context_fold_context f g (Γ : context) : 
     mapi_context f (fold_context (fun Γ => g (mapi_context f Γ)) Γ) =
     fold_context (fun Γ => map_decl (f #|Γ|) ∘ g Γ) Γ.
   Proof.
@@ -1714,7 +1634,8 @@ Section Rho.
     rewrite !compose_map_decl.
     eapply map_decl_eq_spec; tea => /= t.
     intros IH.
-    erewrite IH. rewrite -IHonc. len. reflexivity.
+    erewrite IH.
+    1: now rewrite -IHonc; len.
     rewrite mapi_context_fold.
     rewrite -/(rename_context r (rho_ctx l)).
     epose proof (shiftn_renaming [] [] (rho_ctx l) r).
@@ -1875,7 +1796,7 @@ Section Rho.
 
   Lemma rename_rho_iota_red Γ Δ r p P pars args brs br c :
     renaming Γ Δ r ->
-    #|skipn pars args| = context_assumptions br.(bcontext) ->
+    #|args| = pars + context_assumptions br.(bcontext) ->
     forallb (on_free_vars P) (pparams p) ->
     closedn_ctx #|pparams p| br.(bcontext) ->
     on_free_vars (shiftnP #|bcontext br| P) (bbody br) ->
@@ -1897,8 +1818,11 @@ Section Rho.
     rewrite rename_subst0 map_rev map_skipn. f_equal.
     rewrite List.rev_length /expand_lets /expand_lets_k.
     rewrite rename_subst0. len.
-    rewrite shiftn_add -hlen Nat.add_comm rename_shiftnk.
-    rewrite hlen.
+    rewrite skipn_length; try lia. 
+    rewrite hlen. 
+    replace (pars + context_assumptions (bcontext br) - pars)
+      with (context_assumptions (bcontext br)) by lia.    
+    rewrite shiftn_add Nat.add_comm rename_shiftnk.
     relativize (context_assumptions _); [erewrite rename_extended_subst|now len].
     assert ((map (rho Δ) (map (rename r) (pparams p)) = map (rename r) (map (rho Γ) (pparams p)))).
     destruct hpred as [? _].
@@ -2136,7 +2060,7 @@ Section Rho.
           rewrite /= !rho_app_construct /= !rename_mkApps in H.
           simpl in H. rewrite rho_app_construct in H.
           apply mkApps_eq_inj in H as [_ Heq] => //.
-          now rewrite skipn_map_length.
+          len; eauto.  
           { cbn. len. eapply nth_error_forallb in p4; tea.
             move: p4 => /= /andP[]. rewrite test_context_k_closed_on_free_vars_ctx.
             now rewrite closedn_ctx_on_free_vars. }
@@ -2698,7 +2622,11 @@ Section Rho.
       eapply All2_nth_error_Some_right in X2 as [t' [hnth [? [[? ?] ?]]]]; tea.
       eapply nth_error_forallb in hbrs; tea. cbn in hbrs.
       move/andP: hbrs => [] hctx' hbody.
-      eapply on_free_vars_expand_lets_k. now len.
+      rewrite skipn_length; try lia. rewrite H1. 
+      replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
+      with (context_assumptions (bcontext br)) by lia.   
+      eapply on_free_vars_expand_lets_k.
+      now len.
       eapply on_free_vars_ctx_inst_case_context; trea; len; eauto with fvs.
       solve_all.
       rewrite -e. 
@@ -2944,7 +2872,7 @@ Section Rho.
       rewrite subst_consn_ge. len; lia. len.
       rewrite -H0 {1}/ids.
       rewrite -inst_assoc.
-      rewrite -lift0_inst lift0_inst_id. len. lia.
+      rewrite -lift0_inst lift0_inst_id. len.
       len. replace (S x - #|mfix0|) with (S (x - #|mfix0|)) by lia.
       econstructor; tea. now rewrite H0.
   Qed.
@@ -3041,7 +2969,7 @@ Section Rho.
       rewrite subst_consn_ge. len; lia. len.
       rewrite -H0 {1}/ids.
       rewrite -inst_assoc.
-      rewrite -lift0_inst lift0_inst_id. len. lia.
+      rewrite -lift0_inst lift0_inst_id. len.
       len. replace (S x - #|mfix0|) with (S (x - #|mfix0|)) by lia.
       econstructor; tea. now rewrite H0.
   Qed.
@@ -3327,14 +3255,13 @@ Section Rho.
         eapply nth_error_smash_context in hnth'.
         now rewrite hnth'.
         intros ? ?; now rewrite nth_error_nil.
-      * len. intros x hnth' hi.
-        intros [= <-]. lia.
+      * len.
     - rewrite subst_consn_ge //. lia.
       pose proof (All2_length Ha). len in H. rewrite H.
-      rewrite subst_consn_ge //. len. lia. len. split => //.
+      rewrite subst_consn_ge //. 1: by len. split => //.
       split => //.
       * eapply pred1_refl_gen => //.
-      * intros decl. rewrite nth_error_app_ge. len. lia. len.
+      * intros decl. rewrite nth_error_app_ge. 1: by len. len.
         destruct nth_error eqn:hnth' => /= //.
         destruct decl_body eqn:db => /= //. intros [= <-].
         rewrite nth_error_app_ge; len; try lia.
@@ -3452,10 +3379,10 @@ Section Rho.
     induction Δ in onΔ, Γ, onΓ, Γ', hlen, Δ', b, onb, b', pred |- * using ctx_length_rev_ind.
     - destruct Δ'. simpl. now rewrite !expand_lets_nil.
       eapply pred1_pred1_ctx in pred.
-      move: (length_of pred). len. lia.
+      move: (length_of pred). len.
     - destruct Δ' using rev_case.
       { eapply pred1_pred1_ctx in pred.
-        move: (length_of pred). len. lia. }
+        move: (length_of pred). len. }
       pose proof (pred1_pred1_ctx _ pred).
       apply on_contexts_app_inv in X0 as [].
       apply on_contexts_app_inv in a0 as [].
@@ -3501,7 +3428,7 @@ Section Rho.
           { rewrite shiftnP_xpredT //. }
   Qed.
 
-  Lemma fold_context_cst ctx : ctx = fold_context (fun _ d => map_decl id d) ctx.
+  Lemma fold_context_cst (ctx : context) : ctx = fold_context (fun _ d => map_decl id d) ctx.
   Proof.
     induction ctx; simpl; auto. 
     now rewrite -IHctx map_decl_id.
@@ -3544,8 +3471,6 @@ Section Rho.
   Proof.
     case: eqb_spec => //.
   Qed.
-
-  Import PCUICContextRelation.
 
   Lemma pred1_ctx_over_refl_gen Γ Γ' Δ :
     pred1_ctx Σ Γ Γ' ->
@@ -3603,7 +3528,7 @@ Section Rho.
     now rewrite -> shiftnP_xpredT in onpctx.
     eapply pred1_subst_consn; tea; eauto with fvs.
     - len. now rewrite (All2_length a).
-    - len. now rewrite (All2_length a).
+    - len. rewrite context_assumptions_fake_params. now rewrite (All2_length a).
     - now eapply All2_rev.
   Qed.
 
@@ -3639,7 +3564,7 @@ Section Rho.
 
   Ltac rename_hyp h ht ::= my_rename_hyp h ht.
   
-  Lemma All2_fold_fold_context_right P f ctx ctx' :
+  Lemma All2_fold_fold_context_right P f (ctx ctx' : context) :
     All2_fold (fun Γ Γ' d d' => P Γ (fold_context_term f Γ') d (map_decl (f (fold_context_term f Γ')) d')) ctx ctx' ->
     All2_fold P ctx (fold_context_term f ctx').
   Proof.
@@ -3767,9 +3692,11 @@ Section Rho.
         rewrite on_ctx_free_vars_xpredT. eapply on_free_vars_ctx_inst_case_context; trea. }
       intuition.
       forward X3. now rewrite -> shiftnP_xpredT in clbod.
-      rewrite breq -heq_length !List.skipn_length.
       pose proof (All2_length X1).
-      rewrite H eqb_refl.
+      rewrite H. rewrite heq_length. 
+      replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
+       with (context_assumptions (bcontext br)) by lia.   
+      rewrite breq eqb_refl.
       rewrite !subst_inst.
       assert (forallb (on_free_vars xpredT) args1).
       { solve_all; eauto with fvs. }
@@ -3809,7 +3736,8 @@ Section Rho.
         now len.
       + rewrite -subst_inst.
         eapply on_free_vars_subst. rewrite forallb_rev forallb_skipn //; tea.
-        eapply on_free_vars_expand_lets_k => //. len. tea.
+        eapply on_free_vars_expand_lets_k => //. len. 
+        rewrite skipn_length; lia.
         rewrite /inst_case_branch_context.
         eapply on_free_vars_ctx_inst_case_context; trea; len; solve_all. eauto with fvs.
         rewrite -breq -(All2_length X2) //.
@@ -3822,7 +3750,7 @@ Section Rho.
         eapply All2_rev in X1.
         eapply pred1_subst_consn; tea. eauto with fvs.
         rewrite forallb_rev forallb_skipn //. len. rewrite !List.skipn_length; lia.
-        len. rewrite List.skipn_length. rewrite breq. rewrite List.skipn_length in heq_length. lia.
+        len. rewrite breq List.skipn_length H heq_length. lia.  
         len. congruence.
 
     - (* Fix reduction *)
@@ -4022,8 +3950,10 @@ Section Rho.
       now eapply pred1_refl_gen.
 
     - simpl in *. simp rho; simpl.
-      destruct (lookup_env Σ c) eqn:Heq; pcuic. destruct g; pcuic.
-      destruct cst_body eqn:Heq'; pcuic.
+      destruct (lookup_env Σ c) eqn:Heq. 2:{ constructor; auto. }
+      destruct g. 2:{ constructor; auto. }
+      destruct c0. destruct cst_body0 eqn:Heq'. pcuic.
+      constructor; auto.
       
     - simpl in *. inv_on_free_vars. rewrite rho_app_proj.
       rewrite decompose_app_mkApps; auto.
@@ -4210,7 +4140,7 @@ Section Rho.
         econstructor. 1-2:tea.
         * erewrite nth_error_map, hbr. instantiate (1 := rho_br Γ'0 (rho_predicate Γ'0 p0) b).
           reflexivity.
-        * now len.
+        * len.
         * solve_all.
         * solve_all. eapply All2_map_right_inv in hbrs. solve_all.
           eapply on_contexts_app_inv => //. rewrite -heq_puinst.
@@ -4500,4 +4430,4 @@ Proof.
   split; eapply triangle; auto.
 Qed.
 
-Print Assumptions pred1_diamond.
+(* Print Assumptions pred1_diamond. *)

@@ -3,8 +3,9 @@
 From Coq Require Import Bool String List Program BinPos Compare_dec Arith Lia.
 From MetaCoq.Template
 Require Import config Universes monad_utils utils BasicAst AstUtils UnivSubst.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICContextRelation
-     PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnv
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICOnOne PCUICCases 
+     PCUICContextReduction PCUICEquality PCUICLiftSubst PCUICTyping PCUICWeakeningEnvConv
+     PCUICWeakeningEnvTyp PCUICReduction PCUICClosedTyp
      PCUICInduction PCUICRedTypeIrrelevance PCUICOnFreeVars.
 Require Import ssreflect ssrbool.
 Set Asymmetric Patterns.
@@ -1235,7 +1236,7 @@ Proof.
   rewrite alli_app IHn /= //.
 Qed.
 
-Lemma red_terms_on_free_vars {cf : checker_flags} {Σ} {wfΣ : wf Σ} {Γ ts us}:
+Lemma red_terms_on_free_vars {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ ts us}:
   is_closed_context Γ ->
   forallb (is_open_term Γ) ts ->
   All2 (red Σ Γ) ts us ->
@@ -1250,7 +1251,7 @@ Definition br_fvs (Γ : context) (motive : predicate term) br :=
     #|pparams motive| (bcontext br) &&
   on_free_vars (shiftnP #|bcontext br| (shiftnP #|Γ| xpred0)) (bbody br).
 
-Lemma br_fvs_pres {cf:checker_flags} {Σ} {wfΣ : wf Σ} Γ motive brs brs' :
+Lemma br_fvs_pres {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} Γ motive brs brs' :
   is_closed_context Γ ->
   forallb (is_open_term Γ) (pparams motive) ->
   All (br_fvs Γ motive) brs ->
@@ -1270,7 +1271,7 @@ Proof.
   eapply on_free_vars_ctx_inst_case_context; trea. solve_all.
 Qed.
 
-Lemma whnf_red_trans {cf:checker_flags} Σ Γ x y z : wf Σ -> 
+Lemma whnf_red_trans {cf:checker_flags} {Σ : global_env_ext} Γ x y z : wf Σ -> 
   is_closed_context Γ ->
   is_open_term Γ x ->
   whnf_red Σ Γ x y ->
@@ -1320,7 +1321,7 @@ Proof.
         rewrite -(List.rev_length (pparams motive)).
         eapply params_subslet.
         rewrite !on_free_vars_ctx_app onΓ /=. len.
-        rewrite fake_params_length on_free_vars_ctx_subst_instance.
+        rewrite on_free_vars_ctx_subst_instance.
         rewrite closed_fake_params /=.
         setoid_rewrite closedP_shiftnP_eq in p1.
         eapply on_free_vars_ctx_impl; tea.
@@ -1366,7 +1367,7 @@ Proof.
         rewrite -(List.rev_length (pparams motive)).
         eapply params_subslet.
         rewrite !on_free_vars_ctx_app onΓ /=. len.
-        rewrite fake_params_length on_free_vars_ctx_subst_instance.
+        rewrite on_free_vars_ctx_subst_instance.
         rewrite closed_fake_params /=.
         move: fvbctx.
         rewrite test_context_k_closed_on_free_vars_ctx closedP_shiftnP_eq => H.

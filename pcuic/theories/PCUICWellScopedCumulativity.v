@@ -1,10 +1,10 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping
-     PCUICReduction PCUICWeakening PCUICEquality PCUICUnivSubstitution
-     PCUICContextRelation PCUICSigmaCalculus PCUICContextReduction PCUICContextRelation
-     PCUICParallelReduction PCUICParallelReductionConfluence
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst PCUICTyping PCUICCumulativity
+     PCUICReduction PCUICWeakeningConv PCUICWeakeningTyp PCUICEquality PCUICUnivSubstitutionConv
+     PCUICSigmaCalculus PCUICContextReduction
+     PCUICParallelReduction PCUICParallelReductionConfluence PCUICClosedConv PCUICClosedTyp
      PCUICRedTypeIrrelevance PCUICOnFreeVars PCUICConfluence PCUICSubstitution.
 
 Require Import CRelationClasses CMorphisms.
@@ -17,11 +17,7 @@ From Equations Require Import Equations.
   showing that all the considered contexts/terms are well-scoped. In a second step
   we use confluence of one-step reduction on well-scoped terms [ws_red_confluence], which also 
   commutes with alpha,universe-equivalence of contexts and terms [red1_eq_context_upto_l].
-  We can drop the invariants on free variables at each step as reduction preserves free-variables,
-  so we also have [red_confluence]: as long as the starting contexts and terms are well-scoped 
-  confluence holds. *)
-
-(** We can now derive transitivity of the conversion relation on *well-scoped* 
+  We can now derive transitivity of the conversion relation on *well-scoped* 
   terms. To deal with the closedness side condition we put them in the definition
   of conversion/cumulativity: as terms need to move between contexts, and
   we sometimes need to consider conversion in open contexts, we work with
@@ -32,10 +28,6 @@ From Equations Require Import Equations.
 
 Reserved Notation " Σ ;;; Γ ⊢ t ≤[ le ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤[ le ]  u").
-
-Notation is_open_term Γ := (on_free_vars (shiftnP #|Γ| xpred0)).
-Notation is_open_decl Γ := (on_free_vars_decl (shiftnP #|Γ| xpred0)).
-Notation is_closed_context := (on_free_vars_ctx xpred0).
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
@@ -170,7 +162,7 @@ Proof.
 Qed.
 
 Lemma equality_forget {cf:checker_flags} {le} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality le Σ Γ x y -> if le then cumul Σ Γ x y else conv Σ Γ x y.
+  equality le Σ Γ x y -> if le then cumulAlgo Σ Γ x y else convAlgo Σ Γ x y.
 Proof.
   induction 1.
   - destruct le; simpl in *; constructor; auto.
@@ -179,11 +171,11 @@ Proof.
 Qed.
 
 Lemma equality_forget_cumul {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality true Σ Γ x y -> cumul Σ Γ x y.
+  equality true Σ Γ x y -> Σ ;;; Γ |- x <=[leq_universe Σ] y.
 Proof. apply (equality_forget (le:=true)). Qed.
 
 Lemma equality_forget_conv {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ} {x y} :
-  equality false Σ Γ x y -> conv Σ Γ x y.
+  equality false Σ Γ x y -> Σ ;;; Γ |- x <=[eq_universe Σ] y.
 Proof. apply (equality_forget (le:=false)). Qed.
 #[global] Hint Resolve equality_forget_cumul equality_forget_conv : pcuic.
 
@@ -222,12 +214,6 @@ Section EqualityLemmas.
   Lemma isType_open {Γ T} : isType Σ Γ T -> on_free_vars (shiftnP #|Γ| xpred0) T.
   Proof.
     move/isType_closedPT. now rewrite closedP_shiftnP.
-  Qed.
-
-  Lemma wf_local_closed_context {Γ} : wf_local Σ Γ -> on_free_vars_ctx xpred0 Γ.
-  Proof.
-    move/PCUICClosed.closed_wf_local.
-    now rewrite closed_ctx_on_ctx_free_vars on_free_vars_ctx_on_ctx_free_vars_closedP.
   Qed.
 
   Lemma into_equality {le} {Γ : context} {T U} : 
@@ -320,6 +306,22 @@ From Equations.Type Require Import Relation_Properties.
 Notation "Σ ;;; Γ ⊢ t ⇝ u" := (closed_red Σ Γ t u) (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ⇝  u").
 
+Lemma closed_red1_red {Σ Γ t t'} : closed_red1 Σ Γ t t' -> Σ ;;; Γ ⊢ t ⇝ t'.
+Proof.
+  intros []. split => //.
+  now eapply red1_red.
+Qed.
+
+Lemma equality_alt_closed {cf} {le} {Σ : global_env_ext} {wfΣ : wf Σ} Γ t u :
+  Σ ;;; Γ ⊢ t ≤[le] u <~> 
+  ∑ v v',
+    [× closed_red Σ Γ t v, closed_red Σ Γ u v' & 
+       compare_term le Σ (global_ext_constraints Σ) v v'].
+Proof.
+  etransitivity. apply equality_alt.
+  split; intros (v & v' & cl); exists v, v'; intuition.
+Qed.
+
 Lemma biimpl_introT {T} {U} : Logic.BiImpl T U -> T -> U.
 Proof. intros [] => //. Qed.
 
@@ -380,25 +382,6 @@ End RedConv.
 #[global] Hint Resolve red_conv red_equality red_equality_inv : pcuic.
 
 Set SimplIsCbn.
-
-Ltac inv_on_free_vars :=
-  repeat match goal with
-  | [ H : is_true (on_free_vars_decl _ _) |- _ ] => progress cbn in H
-  | [ H : is_true (on_free_vars_decl _ (vdef _ _ _)) |- _ ] => unfold on_free_vars_decl, test_decl in H
-  | [ H : is_true (_ && _) |- _ ] => 
-    move/andP: H => []; intros
-  | [ H : is_true (on_free_vars ?P ?t) |- _ ] => 
-    progress (cbn in H || rewrite on_free_vars_mkApps in H);
-    (move/and5P: H => [] || move/and4P: H => [] || move/and3P: H => [] || move/andP: H => [] || 
-      eapply forallb_All in H); intros
-  | [ H : is_true (test_def (on_free_vars ?P) ?Q ?x) |- _ ] =>
-    move/andP: H => []; rewrite ?shiftnP_xpredT; intros
-  | [ H : is_true (test_context_k _ _ _ ) |- _ ] =>
-    rewrite -> test_context_k_closed_on_free_vars_ctx in H
-  end.
-
-Notation byfvs := (ltac:(cbn; eauto with fvs)) (only parsing).
-
 
 Definition conv_cum {cf:checker_flags} le Σ Γ T T' :=
   if le then Σ ;;; Γ |- T <= T' else Σ ;;; Γ |- T = T'.
@@ -634,7 +617,7 @@ Qed.
   context_equality le Σ Γ Γ'.
 Proof.
   rewrite /ws_context_equality /context_equality.
-  intros a. eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+  intros a. eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd.
   now destruct (into_equality_open_decls le hd) as [clΓ [isd [isd' eq]]].
 Qed.
@@ -645,7 +628,7 @@ Lemma from_context_equality {cf:checker_flags} {le : bool} {Σ : global_env_ext}
   ws_context_equality le Σ Γ Γ'.
 Proof.
   rewrite /ws_context_equality /context_equality.
-  intros a; eapply PCUICContextRelation.All2_fold_impl_ind; tea.
+  intros a; eapply All2_fold_impl_ind; tea.
   clear -wfΣ; intros Γ Δ d d' wseq IH hd. cbn in hd.
   destruct hd.
   rewrite /equality_decls. split => //.
@@ -742,8 +725,8 @@ Section WtContextConversion.
     - pose proof (isType_wf_local i).
       eapply wf_local_closed_context in X.
       eapply isType_open in i. apply isType_open in i0.
-      eapply PCUICClosed.subject_closed in t.
-      eapply PCUICClosed.subject_closed in t0.
+      eapply PCUICClosedTyp.subject_closed in t.
+      eapply PCUICClosedTyp.subject_closed in t0.
       eapply (@closedn_on_free_vars xpred0) in t.
       eapply (@closedn_on_free_vars xpred0) in t0.
       eapply into_equality_open_decls with Δ; eauto with fvs. rewrite /equality_decls.

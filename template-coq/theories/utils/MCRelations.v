@@ -3,7 +3,15 @@ Require Import ssreflect.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import CRelationClasses.
 
+#[global] Hint Mode Reflexive ! ! : typeclass_instances.
+
 Infix "<~>" := iffT (at level 90).
+
+Definition iffT_l {P Q} : P <~> Q -> P -> Q.
+Proof.
+  apply: fst.
+Qed.
+Coercion iffT_l : CRelationClasses.iffT >-> Funclass.
 
 (** This allow to use implicit projections for move/ on "<~>" lemmas *)
 Hint View for move/ fst|2.

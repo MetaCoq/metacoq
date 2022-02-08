@@ -23,6 +23,56 @@ Local Ltac inv H := inversion H; subst.
 
 (** ** Big step version of weak cbv beta-zeta-iota-fix-delta reduction. *)
 
+(** We use a different substitution function that requires no lifting as it assumes 
+  we are substituting closed terms. *)
+
+Fixpoint csubst t k u :=
+  match u with
+  | tRel n =>
+     match Nat.compare k n with
+    | Datatypes.Eq => t
+    | Gt => tRel n
+    | Lt => tRel (Nat.pred n)
+    end
+  | tEvar ev args => tEvar ev (List.map (csubst t k) args)
+  | tLambda na T M => tLambda na (csubst t k T) (csubst t (S k) M)
+  | tApp u v => mkApps (csubst t k u) (map (csubst t k) v)
+  | tProd na A B => tProd na (csubst t k A) (csubst t (S k) B)
+  | tLetIn na b ty b' => tLetIn na (csubst t k b) (csubst t k ty) (csubst t (S k) b')
+  | tCase ind p c brs =>
+    let k' := #|pcontext p| + k in
+    let brs' := map_branches_k (csubst t) k brs in
+    tCase ind (map_predicate id (csubst t k) (csubst t k') p) (csubst t k c) brs'
+  | tProj p c => tProj p (csubst t k c)
+  | tFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (csubst t k) (csubst t k')) mfix in
+    tFix mfix' idx
+  | tCoFix mfix idx =>
+    let k' := List.length mfix + k in
+    let mfix' := List.map (map_def (csubst t k) (csubst t k')) mfix in
+    tCoFix mfix' idx
+  | tCast c kd c' => tCast (csubst t k c) kd (csubst t k c')
+  | x => x
+  end.
+
+Definition substl defs body : term :=
+  fold_left (fun bod term => csubst term 0 bod)
+    defs body.
+
+Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d => Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
 Definition atom t :=
   match t with
   | tConstruct _ _ _
@@ -91,12 +141,12 @@ Definition isAxiom Σ x :=
   | _ => false
   end.
 
-Definition isStuckFix t args :=
+Definition isStuckFix t (args : list term) :=
   match t with
   | tFix mfix idx =>
-    match unfold_fix mfix idx with
+    match cunfold_fix mfix idx with
     | Some (narg, fn) =>
-      ~~ is_constructor narg args
+      #|args| <? narg
     | None => false
     end
   | _ => false
@@ -110,7 +160,8 @@ Proof.
 Qed.
 
 Section Wcbv.
-  Context (Σ : global_env) (Γ : context).
+  
+  Context (Σ : global_env).
   (* The local context is fixed: we are only doing weak reductions *)
 
   Inductive eval : term -> term -> Type :=
@@ -119,20 +170,14 @@ Section Wcbv.
   | eval_beta f na t b a a' l res :
       eval f (tLambda na t b) ->
       eval a a' ->
-      eval (mkApps (subst10 a' b) l) res ->
+      eval (mkApps (csubst a' 0 b) l) res ->
       eval (tApp f (a :: l)) res
 
   (** Let *)
   | eval_zeta na b0 b0' t b1 res :
       eval b0 b0' ->
-      eval (subst10 b0' b1) res ->
+      eval (csubst b0' 0 b1) res ->
       eval (tLetIn na b0 t b1) res
-
-  (** Local variable with bodies *)
-  | eval_rel_def i body res :
-      option_map decl_body (nth_error Γ i) = Some (Some body) ->
-      eval (lift0 (S i) body) res ->
-      eval (tRel i) res
 
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) u res :
@@ -146,7 +191,7 @@ Section Wcbv.
       nth_error brs c = Some br ->
       declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
       let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
-      #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+      #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
       eval (iota_red ci.(ci_npar) args bctx br) res ->
       eval (tCase ci p discr brs) res
 
@@ -159,30 +204,32 @@ Section Wcbv.
            
   (** Fix unfolding, with guard *)
   | eval_fix f mfix idx fixargsv args argsv narg fn res :
+      ~~ isApp f ->
       eval f (mkApps (tFix mfix idx) fixargsv) ->
       All2 eval args argsv ->
-      unfold_fix mfix idx = Some (narg, fn) ->
-      is_constructor narg (fixargsv ++ argsv) ->
+      cunfold_fix mfix idx = Some (narg, fn) ->
+      #|fixargsv| < narg < #|fixargsv| + #|args| ->
       eval (mkApps fn (fixargsv ++ argsv)) res ->
       eval (mkApps f args) res
 
   (** Fix stuck, with guard *)
   | eval_fix_value f mfix idx fixargsv args argsv narg fn :
+      ~~ isApp f ->
       eval f (mkApps (tFix mfix idx) fixargsv) ->
       All2 eval args argsv ->
-      unfold_fix mfix idx = Some (narg, fn) ->
-      ~~is_constructor narg (fixargsv ++ argsv) ->
+      cunfold_fix mfix idx = Some (narg, fn) ->
+      #|fixargsv ++ argsv| < narg ->
       eval (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))
 
   (** CoFix-case unfolding *)
   | red_cofix_case ip mfix idx p args narg fn brs res :
-      unfold_cofix mfix idx = Some (narg, fn) ->
+      cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tCase ip p (mkApps fn args) brs) res ->
       eval (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res
 
   (** CoFix-proj unfolding *)
   | red_cofix_proj p mfix idx args narg fn res :
-      unfold_cofix mfix idx = Some (narg, fn) ->
+      cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tProj p (mkApps fn args)) res ->
       eval (tProj p (mkApps (tCoFix mfix idx) args)) res
 
@@ -211,13 +258,12 @@ Section Wcbv.
       (forall (f : term) (na : aname) t b a a' l res,
           eval f (tLambda na t b) ->
           P f (tLambda na t b) -> eval a a' -> P a a' ->
-          eval (mkApps (b {0 := a'}) l) res -> P (mkApps (b {0 := a'}) l) res ->
+          eval (mkApps (csubst a' 0 b) l) res -> P (mkApps (csubst a' 0 b) l) res ->
           P (tApp f (a :: l)) res) ->
       (forall (na : aname) (b0 b0' t b1 res : term),
-          eval b0 b0' -> P b0 b0' -> eval (b1 {0 := b0'}) res -> P (b1 {0 := b0'}) res -> P (tLetIn na b0 t b1) res) ->
-      (forall (i : nat) (body res : term),
-          option_map decl_body (nth_error Γ i) = Some (Some body) ->
-          eval ((lift0 (S i)) body) res -> P ((lift0 (S i)) body) res -> P (tRel i) res) ->
+          eval b0 b0' -> P b0 b0' -> 
+          eval (csubst b0' 0 b1) res -> 
+          P (csubst b0' 0 b1) res -> P (tLetIn na b0 t b1) res) ->
       (forall c (decl : constant_body) (body : term),
           declared_constant Σ c decl ->
           forall (u : Instance.t) (res : term),
@@ -232,7 +278,7 @@ Section Wcbv.
           nth_error brs c = Some br ->
           declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
           let bctx := case_branch_context ci.(ci_ind) mdecl cdecl p br in
-          #|skipn (ci_npar ci) args| = context_assumptions bctx ->
+          #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
           eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res -> 
           P (tCase ci p discr brs) res) ->
       (forall (indnpararg : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)
@@ -244,32 +290,34 @@ Section Wcbv.
           P (tProj indnpararg discr) res) ->
       (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
              (narg : nat) (fn res : term),
+        ~~ isApp f ->
         eval f (mkApps (tFix mfix idx) fixargsv) ->
         P f (mkApps (tFix mfix idx) fixargsv) ->
         All2 eval args argsv ->
         All2 P args argsv ->
-        unfold_fix mfix idx = Some (narg, fn) ->
-        is_constructor narg (fixargsv ++ argsv) ->
+        cunfold_fix mfix idx = Some (narg, fn) ->
+        #|fixargsv| < narg < #|fixargsv| + #|args| ->
         eval (mkApps fn (fixargsv ++ argsv)) res ->
         P (mkApps fn (fixargsv ++ argsv)) res ->
         P (mkApps f args) res) ->
       (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
               (narg : nat) (fn : term),
+          ~~ isApp f ->
           eval f (mkApps (tFix mfix idx) fixargsv) ->
           P f (mkApps (tFix mfix idx) fixargsv) ->
           All2 eval args argsv ->
           All2 P args argsv ->
-          unfold_fix mfix idx = Some (narg, fn) ->
-          ~~ is_constructor narg (fixargsv ++ argsv) ->
+          cunfold_fix mfix idx = Some (narg, fn) ->
+          #|fixargsv ++ argsv| < narg ->
           P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
       (forall (ip : case_info) (mfix : mfixpoint term) (idx : nat) 
         (p : predicate term) (args : list term)
         (narg : nat) (fn : term) (brs : list (branch term)) (res : term),
-          unfold_cofix mfix idx = Some (narg, fn) ->
+          cunfold_cofix mfix idx = Some (narg, fn) ->
           eval (tCase ip p (mkApps fn args) brs) res ->
           P (tCase ip p (mkApps fn args) brs) res -> P (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res) ->
       (forall (p : projection) (mfix : mfixpoint term) (idx : nat) (args : list term) (narg : nat) (fn res : term),
-          unfold_cofix mfix idx = Some (narg, fn) ->
+          cunfold_cofix mfix idx = Some (narg, fn) ->
           eval (tProj p (mkApps fn args)) res ->
           P (tProj p (mkApps fn args)) res -> P (tProj p (mkApps (tCoFix mfix idx) args)) res) ->
       (forall f f' a a',
@@ -279,7 +327,7 @@ Section Wcbv.
           All2 eval a a' -> All2 P a a' -> P (tApp f a) (mkApps f' a')) ->
       (forall t : term, atom t -> P t t) -> forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbeta Hlet Hreldef Hcst Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcong Hatom.
+    intros P Hbeta Hlet Hcst Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcong Hatom.
     fix eval_evals_ind 3. destruct 1;
              try solve [match goal with [ H : _ |- _ ] =>
                              match type of H with
@@ -309,9 +357,6 @@ Section Wcbv.
 
   Definition value_head x :=
     isConstruct x || isCoFix x.
-
-  (* Lemma value_head_atom x : value_head x -> atom x. *)
-  (* Proof. destruct x; auto. Qed. *)
 
   Inductive value : term -> Type :=
   | value_atom t : atom t -> value t
@@ -395,7 +440,7 @@ Section Wcbv.
         * now eapply value_mkApps_values.
         * now eapply All2_All_right.
       + unfold isStuckFix.
-        now rewrite H.
+        rewrite H0. now eapply Nat.ltb_lt.
 
     - apply All2_right in X0.
       depelim IHeve.
@@ -451,69 +496,12 @@ Section Wcbv.
       eapply All2_app; auto.
     - destruct f; try discriminate.
       unfold isStuckFix in *.
-      destruct (unfold_fix _ _) as [(? & ?)|] eqn:uf; [|easy].
-      eapply (eval_fix_value _ _ _ []).
+      destruct (cunfold_fix _ _) as [(? & ?)|] eqn:uf; [|easy].
+      eapply Nat.ltb_lt in H.
+      eapply (eval_fix_value _ _ _ []); tea => //.
       + now eapply eval_atom.
       + now eapply All_All2.
-      + easy.
-      + easy.
   Qed.
-
-  (* (** Evaluation preserves closedness: *) *)
-  (* Lemma eval_closed : forall n t u, closedn n t = true -> eval t u -> closedn n u = true. *)
-  (* Proof. *)
-  (*   induction 2 using eval_ind; simpl in *; auto. eapply IHeval3. *)
-  (*   admit. *)
-  (* Admitted. (* closedness of evaluates for Eterms, not needed for verification *) *)
-
-  (* Lemma eval_tApp_tFix_inv mfix idx a v : *)
-  (*   eval (tApp (tFix mfix idx) a) v -> *)
-  (*   (exists fn arg, *)
-  (*       (unfold_fix mfix idx = Some (arg, fn)) * *)
-  (*       (eval (tApp fn a) v)). *)
-  (* Proof. *)
-  (*   intros H; depind H; try solve_discr. *)
-  (*   - depelim H. *)
-  (*   - depelim H. *)
-  (*   - eexists _, _; firstorder eauto. *)
-  (*   - now depelim H. *)
-  (*   - discriminate. *)
-  (* Qed. *)
-
-  (* Lemma eval_tRel n t : *)
-  (*   eval (tRel n) t -> *)
-  (*   (match option_map decl_body (nth_error Γ n) with *)
-  (*    | Some (Some b) => eval (lift0 (S n) b) t *)
-  (*    | _ => t = (tRel n) *)
-  (*    end). *)
-  (* Proof. *)
-  (*   intros H; depind H; try rewrite e; try solve_discr'; try now easy. *)
-  (*   destruct (mkApps_elim f args). *)
-  (*   change (tRel n) with (mkApps (tRel n) []) in x. *)
-  (*   eapply mkApps_eq_inj in x => //. intuition subst. constructor. simpl in x. rewrite firstn_nil in H, IHeval1. *)
-  (*   specialize (IHeval1 _ eq_refl). rewrite skipn_nil in e0. discriminate. *)
-  (*   change (tRel n) with (mkApps (tRel n) []) in x. *)
-  (*   eapply mkApps_eq_inj in x => //. intuition subst. specialize (IHeval _ eq_refl). *)
-  (*   destruct option_map as [[o|]|] => //. depelim a. simpl in i. simpl. auto. *)
-  (*   eapply mkApps_nisApp in x => //. intuition subst => //. *)
-  (* Qed. *)
-
-  (* Lemma eval_tVar i t : eval (tVar i) t -> False. *)
-  (* Proof. *)
-  (*   intros H; depind H; try solve_discr; try now easy. *)
-  (*   eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate. *)
-  (*   eapply mkApps_nisApp in x => //; intuition subst; auto. depelim a. eauto. *)
-  (* Qed. *)
-
-  (* Lemma eval_tEvar n l t : eval (tEvar n l) t -> False. *)
-  (*                         (* exists l', All2 eval l l' /\ (t = tEvar n l'). *) *)
-  (* Proof. *)
-  (*   intros H; depind H; try solve_discr; try now easy. *)
-  (*   eapply mkApps_nisApp in x => //; intuition subst; auto. discriminate. *)
-  (*   eapply mkApps_nisApp in x => //; intuition subst; auto. eauto. *)
-  (* Qed. *)
-
-  Derive Signature for All2.
 
   Lemma eval_atom_inj t t' : atom t -> eval t t' -> t = t'.
   Proof.
@@ -521,46 +509,40 @@ Section Wcbv.
     - eapply atom_mkApps in Ha; intuition subst.
       depelim a.
       apply atom_mkApps in H2 as (-> & ?).
-      unfold is_constructor in *.
-      now rewrite nth_error_nil in i.
+      cbn in *. lia.
 
     - eapply atom_mkApps in Ha; intuition subst.
       depelim a.
       apply atom_mkApps in H1 as (-> & ?).
-      unfold is_constructor in *.
-      now rewrite nth_error_nil in i.
+      cbn in *. reflexivity.
   Qed.
 
   Derive Signature for eval.
   
   Lemma eval_to_stuck_fix_inv mfix idx narg fn t args :
-    unfold_fix mfix idx = Some (narg, fn) ->
+    cunfold_fix mfix idx = Some (narg, fn) ->
     eval t (mkApps (tFix mfix idx) args) ->
-    ~~is_constructor narg args.
+    args = [] \/ #|args| < narg.
   Proof.
     intros uf ev.
     apply eval_to_value in ev.
     apply value_mkApps_inv in ev as [[(-> & ?)|]|]; try easy.
-    - unfold is_constructor in *.
-      now rewrite nth_error_nil.
     - unfold isStuckFix in *.
-      now rewrite uf in p.
+      rewrite uf in p.
+      destruct p. eapply Nat.ltb_lt in i. lia.
   Qed.
 
   Lemma eval_LetIn {n b ty t v} :
     eval (tLetIn n b ty t) v ->
     ∑ b',
-      eval b b' * eval (t {0 := b'}) v.
+      eval b b' * eval (csubst b' 0 t) v.
   Proof.
     intros H; depind H; try solve_discr'; try now easy.
-    - symmetry in H1. apply mkApps_nisApp in H1 => //; intuition subst; auto.
-      depelim a.
+    - depelim a.
       eapply eval_to_stuck_fix_inv in H; [|easy].
-      apply negb_true_iff in H.
-      now rewrite app_nil_r in i.
+      elimtype False. destruct H; subst; cbn in *; lia.
 
-    - symmetry in H0. eapply mkApps_nisApp in H0 => //; intuition subst; auto.
-      depelim a.
+    - depelim a.
       now rewrite app_nil_r.
   Qed.
 
@@ -574,155 +556,13 @@ Section Wcbv.
   Proof.
     intros H; depind H; try solve_discr'; try now easy.
     - exists decl. intuition auto. now rewrite e.
-    - symmetry in H1. eapply mkApps_nisApp in H1 => //; intuition subst; auto.
-      depelim a.
+    - depelim a.
       eapply eval_to_stuck_fix_inv in H; [|easy].
-      apply negb_true_iff in H.
-      now rewrite app_nil_r in i.
-    - symmetry in H0. eapply mkApps_nisApp in H0 => //; intuition subst; auto.
-      depelim a.
+      elimtype False. destruct H; subst; cbn in *; lia.
+    - depelim a.
       apply IHeval.
       now rewrite app_nil_r.
   Qed.
-
-  (* Lemma eval_mkApps_tCoFix mfix idx l v : *)
-  (*   eval (mkApps (tCoFix mfix idx) l) v -> *)
-  (*   ∑ l', All2 eval l l' * (v = mkApps (tCoFix mfix idx) l'). *)
-  (* Proof. *)
-  (*   intros H. *)
-  (*   depind H; try solve_discr'. *)
-  (*   - destruct (mkApps_elim f (a :: l0)). admit. *)
-  (*     rewrite [tApp _ _](mkApps_app f (firstn n l1) (skipn n l1)) in x. *)
-  (*     solve_discr'. *)
-  (*     specialize (IHeval1 _ _ _ eq_refl). *)
-  (*     firstorder eauto. *)
-  (*     solve_discr'. *)
-  (*   - destruct (mkApps_elim f args). solve_discr'. *)
-  (*     specialize (IHeval1 _ _ _ eq_refl). *)
-  (*     firstorder eauto. solve_discr. *)
-  (*   - destruct (mkApps_elim f args). solve_discr'. *)
-  (*     specialize (IHeval _ _ _ eq_refl). *)
-  (*     firstorder eauto. solve_discr. *)
-  (*   - destruct (mkApps_elim f [a]). *)
-  (*     replace (tApp (mkApps f (firstn n l0)) a) with (mkApps f (firstn n l0 ++ [a])) in x. *)
-  (*     2:now rewrite mkApps_app. *)
-  (*     solve_discr'. *)
-  (*     specialize (IHeval1 _ _ _ eq_refl). *)
-  (*     firstorder eauto. subst. *)
-  (*     exists (x ++ [a']). *)
-  (*     split. eapply All2_app; auto. *)
-  (*     now rewrite mkApps_app. *)
-  (*   - eapply atom_mkApps in i; intuition try easy. *)
-  (*     subst. *)
-  (*     exists []. intuition auto. *)
-  (* Qed. *)
-
-  (* Should follow from PCUIC's eval deterministic? *)
-  (* Lemma eval_deterministic {t v v'} : eval t v -> eval t v' -> v = v'. *)
-  (* Proof. *)
-  (*   intros tv. revert v'. *)
-  (*   revert t v tv. *)
-  (*   induction 1 using eval_evals_ind; intros v' tv'. *)
-  (*   - depelim tv'; auto. *)
-  (*     * specialize (IHtv1 _ tv'1); try congruence. inv IHtv1. *)
-  (*       specialize (IHtv2 _ tv'2). subst. *)
-  (*       specialize (IHtv3 _ tv'3). now subst. *)
-  (*     * rewrite [args](app_removelast_last a) in x. *)
-  (*       destruct args; discriminate. *)
-  (*       rewrite mkApps_app in x. simpl in x. injection x. intros. clear x. *)
-  (*       subst. *)
-  (*       admit. *)
-  (* Admitted. *)
-  (*   - depelim tv'; auto; try specialize (IHtv1 _ tv'1) || solve [depelim tv1]; try congruence. *)
-  (*     inv IHtv1. specialize (IHtv2 _ tv'2). subst. *)
-  (*     now specialize (IHtv3 _ tv'3). *)
-  (*     now subst f'. easy. *)
-  (*   - eapply eval_LetIn in tv' as [b' [evb evt]]. *)
-  (*     rewrite -(IHtv1 _ evb) in evt. *)
-  (*     eapply (IHtv2 _ evt). *)
-  (*   - depelim tv'; try solve_discr. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       solve_discr. inv H. *)
-  (*       now specialize (IHtv2 _ tv'2). *)
-  (*     * specialize (IHtv1 _ tv'1); solve_discr. *)
-  (*     * eapply eval_mkApps_tCoFix in tv1 as [l' [ev' eq]]. solve_discr. *)
-  (*     * easy. *)
-  (*   - subst. *)
-  (*     depelim tv'. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       solve_discr. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       now specialize (IHtv2 _ tv'2). *)
-  (*     * pose proof tv1. eapply eval_mkApps_tCoFix in H0. *)
-  (*       destruct H0 as [l' [evargs eq]]. solve_discr. *)
-  (*     * easy. *)
-  (*   - depelim tv' => //. *)
-  (*     * depelim tv'1. *)
-  (*     * depelim tv'1. *)
-  (*     * rewrite H in H0. inv H0. *)
-  (*       now specialize (IHtv _ tv'). *)
-  (*     * now depelim tv'1. *)
-
-  (*   - depelim tv'; try easy. *)
-  (*     * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * solve_discr. inv H1. rewrite H in H0. inv H0. *)
-  (*       now specialize (IHtv _ tv'). *)
-
-  (*   - depelim tv'; try easy. *)
-  (*     * solve_discr. inv H1. rewrite H in H0. inv H0. *)
-  (*       now specialize (IHtv _ tv'). *)
-  (*     * eapply eval_mkApps_tCoFix in tv'1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * eapply eval_mkApps_tCoFix in tv' as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-
-  (*   - eapply eval_Const in tv' as [decl' [body' [? ?]]]. *)
-  (*     intuition eauto. eapply IHtv. *)
-  (*     red in isdecl, H0. rewrite H0 in isdecl. inv isdecl. *)
-  (*     now rewrite H in H2; inv H2. *)
-
-  (*   - depelim tv'. *)
-  (*     * eapply eval_mkApps_tCoFix in tv1 as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * specialize (IHtv1 _ tv'1). *)
-  (*       solve_discr. inv H. *)
-  (*       now specialize (IHtv2 _ tv'2). *)
-  (*     * specialize (IHtv1 _ tv'). solve_discr. *)
-  (*     * easy. *)
-
-  (*   - depelim tv'; try easy. *)
-  (*     * eapply eval_mkApps_tCoFix in tv as [l' [evargs eq]]. *)
-  (*       solve_discr. *)
-  (*     * specialize (IHtv _ tv'1). solve_discr. *)
-
-  (*   - depelim tv'; try specialize (IHtv1 _ tv'1); subst; try easy. *)
-  (*     depelim tv1. easy. *)
-  (*     specialize (IHtv2 _ tv'2). congruence. *)
-
-  (*   - depelim tv'; try easy. *)
-  (* Qed. *)
-Lemma All2_app_inv_l :
-  forall A B R l1 l2 r,
-    @All2 A B R (l1 ++ l2) r ->
-    ∑ r1 r2,
-      (r = r1 ++ r2) ×
-      All2 R l1 r1 ×
-      All2 R l2 r2.
-Proof.
-  intros A B R l1 l2 r h.
-  exists (firstn #|l1| r), (skipn #|l1| r).
-  split ; [| split].
-  - rewrite firstn_skipn. reflexivity.
-  - apply All2_firstn with (n := #|l1|) in h.
-    rewrite firstn_app in h. rewrite firstn_all in h.
-    replace (#|l1| - #|l1|) with 0 in h by lia. cbn in h.
-    rewrite app_nil_r in h. assumption.
-  - apply All2_skipn with (n := #|l1|) in h.
-    rewrite skipn_all_app in h. assumption.
-Qed.
 
   Lemma eval_mkApps_cong f f' l l' :
     ~~ isApp f ->
@@ -742,62 +582,3 @@ Qed.
   Qed.
 
 End Wcbv.
-
-
-(** Well-typed closed programs can't go wrong: they always evaluate to a value. *)
-
-Conjecture closed_typed_wcbeval : forall {cf : checker_flags} (Σ : global_env_ext) t T,
-    Σ ;;; [] |- t : T -> ∑ u, eval (fst Σ) [] t u.
-
-(** Evaluation is a subrelation of reduction: *)
-
-Tactic Notation "redt" uconstr(y) := eapply (transitivity (R:=red _ _) (y:=y)).
-
-(* Lemma wcbeval_red : forall (Σ : global_env_ext) Γ t u, *)
-(*     eval Σ Γ t u -> red Σ Γ t u. *)
-(* Proof. *)
-(*   intros Σ. *)
-(*   induction 1 using eval_evals_ind; try solve[ constructor; eauto]. *)
-
-(*   - redt (tApp (tLambda na t b) (a :: l)); eauto. *)
-(*     eapply red_app; eauto. *)
-(*     redt (tApp (tLambda na t b) a'). eapply red_app; eauto. *)
-(*     redt (b {0 := a'}). do 2 econstructor. apply IHX3. *)
-
-(*   - redt (tLetIn na b0' t b1); eauto. *)
-(*     eapply red_letin; auto. *)
-(*     redt (b1 {0 := b0'}); auto. *)
-(*     do 2 econstructor. *)
-
-(*   - redt (lift0 (S i) body); auto. *)
-(*     eapply red1_red. econstructor. *)
-(*     auto. *)
-
-(*   - redt (subst_instance u body); auto. *)
-(*     eapply red1_red. econstructor; eauto. *)
-
-(*   - redt (tCase (ind, pars) p _ brs). *)
-(*     eapply red_case; eauto. *)
-(*     eapply All2_same. intros. split; auto. *)
-(*     redt (iota_red _ _ _ _); eauto. *)
-(*     eapply red1_red. econstructor. *)
-
-(*   - redt _. 2:eauto. *)
-(*     redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto. *)
-(*     apply red1_red. econstructor; eauto. *)
-
-(*   - redt (mkApps (tFix mfix idx) args'); eauto. *)
-(*     eapply red_mkApps; eauto. *)
-(*     redt (mkApps fn args'); eauto. *)
-(*     eapply red1_red. eapply red_fix; eauto. *)
-
-(*   - eapply red_mkApps; auto. *)
-
-(*   - redt _. eapply red1_red. eapply PCUICTyping.red_cofix_case; eauto. eauto. *)
-
-(*   - redt _. 2:eauto. *)
-(*     redt (tProj _ (mkApps _ _)). eapply red_proj_c. eauto. *)
-(*     apply red1_red. econstructor; eauto. *)
-
-(*   - eapply (red_mkApps _ _ [a] [a']); auto. *)
-(* Qed. *)

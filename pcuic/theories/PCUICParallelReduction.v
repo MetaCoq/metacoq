@@ -1,12 +1,12 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import RelationClasses CRelationClasses.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.PCUIC Require Import PCUICUtils PCUICAst PCUICAstUtils PCUICDepth PCUICCases
+From MetaCoq.PCUIC Require Import PCUICUtils PCUICOnOne PCUICAst PCUICAstUtils PCUICTactics PCUICDepth PCUICCases
      PCUICLiftSubst PCUICUnivSubst PCUICReduction PCUICTyping
-     PCUICSigmaCalculus PCUICWeakeningEnv PCUICInduction
-     PCUICRename PCUICInst PCUICOnFreeVars
-     PCUICContextRelation PCUICWeakening PCUICSubstitution.
-
+     PCUICSigmaCalculus PCUICWeakeningEnvConv PCUICInduction
+     PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICOnFreeVars 
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution.
+     
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
@@ -113,21 +113,6 @@ Section All2_fold.
     induction H; constructor; auto. eapply All_decls_impl; tea. eauto.
   Qed.
 
-  Global Instance on_contexts_has_length P (l l' : context) : 
-    HasLen (All2_fold P l l') #|l| #|l'|.
-  Proof. red. apply on_contexts_length. Qed.
-  Hint Extern 20 (#|?X| = #|?Y|) =>
-    match goal with
-      [ H : All2_fold _ ?X ?Y |- _ ] => apply (All2_fold_length H)
-    | [ H : All2_fold _ ?Y ?X |- _ ] => symmetry; apply (All2_fold_length H)
-    | [ H : on_contexts_over _ _ _ ?X ?Y |- _ ] => apply (on_contexts_length H)
-    | [ H : on_contexts_over _ _ _ ?Y ?X |- _ ] => symmetry; apply (on_contexts_length H)
-    end : pcuic.
-
-  Ltac pcuic := eauto with pcuic.
-
-  Derive Signature for All2_fold.
-
   Lemma on_contexts_app':
     forall P (Γ Γ' Γ'' : context),
       on_contexts P (Γ ,,, Γ') Γ'' ->
@@ -167,7 +152,7 @@ Section All2_fold.
   Proof.
     intros * a hl.
     apply: All2_fold_app_inv => //.
-    apply All2_fold_length in a. len in a. lia.
+    apply All2_fold_length in a. len in a.
   Qed.
   
   Lemma nth_error_pred1_ctx {P} {Γ Δ} i body' :
@@ -282,7 +267,7 @@ Section ParallelReduction.
     pred1_ctx Γ Γ' ->
     All2 (pred1 Γ Γ') args0 args1 ->
     nth_error brs1 c = Some br -> 
-    #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
+    #|args1| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
     All2 (pred1 Γ Γ') p0.(pparams) params' ->
     All2 (fun br br' => 
       pred1_ctx_over Γ Γ' (inst_case_branch_context p0 br) 
@@ -429,7 +414,7 @@ Section ParallelReduction.
     | pred1_ctx _ _ ?G => fresh "pred" G
     | nat -> bool => fresh "P"
     | nat -> nat => fresh "f"
-    | _ => PCUICWeakeningEnv.my_rename_hyp h th
+    | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
     end.
 
   Ltac rename_hyp h ht ::= my_rename_hyp h ht.
@@ -490,7 +475,7 @@ Section ParallelReduction.
                   (Γ' ,,, inst_case_context pparams1 p0.(puinst) br'.(bcontext)))
               bbody bcontext br br') brs0 brs1 ->
           nth_error brs1 c = Some br -> 
-          #|skipn (ci_npar ci) args1| = context_assumptions br.(bcontext) ->
+          #|args1| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
           P Γ Γ' (tCase ci p0 (mkApps (tConstruct ci.(ci_ind) c u) args0) brs0)
                 (iota_red ci.(ci_npar) (set_pparams p0 pparams1) args1 br)) ->
 
@@ -922,7 +907,7 @@ Ltac my_rename_hyp h th :=
   | nat -> bool => fresh "P"
   | nat -> nat => fresh "f"
   | urenaming _ _ _ ?f => fresh "u" f
-  | _ => PCUICWeakeningEnv.my_rename_hyp h th
+  | _ => PCUICWeakeningEnvConv.my_rename_hyp h th
   end.
 
 Ltac rename_hyp h ht ::= my_rename_hyp h ht.
@@ -979,12 +964,13 @@ Section ParallelWeakening.
   Proof. intros t; apply lift_rename. Qed.
 
   Lemma lift_iota_red n k pars p args br :
-    #|skipn pars args| = context_assumptions br.(bcontext) ->
+    #|args| = (pars + context_assumptions br.(bcontext))%nat ->
     test_context_k closedn #|pparams p| (bcontext br) ->
     lift n k (iota_red pars p args br) =
     iota_red pars (map_predicate_k id (lift n) k p) (List.map (lift n k) args) (map_branch_k (lift n) id k br).
   Proof.
-    intros hctx hctx'. rewrite !lift_rename'. rewrite rename_iota_red //.
+    intros hctx hctx'. rewrite !lift_rename'. 
+    rewrite rename_iota_red //; try (rewrite skipn_length; lia).
     f_equal; try setoid_rewrite <-lift_rename => //.
     unfold map_branch_k, rename_branch, map_branch_shift.
     f_equal.
@@ -1200,6 +1186,7 @@ Qed.
       eapply forallb_All in p4.
       eapply All2_All_mix_left in X3; tea.
       rewrite rename_iota_red //.
+      * rewrite skipn_length; lia.  
       * eapply All2_nth_error_Some_right in X3 as [br' [nthbr [? []]]]; tea.
         move/andP: i => [] clbctx onfvs.
         destruct p5.
@@ -1212,7 +1199,6 @@ Qed.
         rewrite rename_predicate_set_pparams.
         econstructor; tea; try solve [solve_all].
         + erewrite nth_error_map, heq_nth_error => //.
-        + simpl. now len.
         + simpl. eapply All2_map; solve_all.
         + eapply All2_map, (All2_impl X3).
           move=> x y [] /andP [] onctx onb [] IHctx [] [] Hbod IHbod eqc; cbn.
@@ -1352,7 +1338,7 @@ Qed.
     - rewrite rename_subst_instance.
       econstructor; tea.
       rewrite rename_closed. 2: assumption.
-      eapply (PCUICClosed.declared_constant_closed_body). all: eauto.
+      eapply (PCUICClosedTyp.declared_constant_closed_body). all: eauto.
     - rewrite rename_mkApps. simpl. cbn in H0; inv_on_free_vars.
       econstructor; tea. 2:erewrite nth_error_map, heq_nth_error; reflexivity.
       solve_all.
@@ -1870,7 +1856,7 @@ Section ParallelSubstitution.
       rewrite nth_error_app_lt //. lia.
       eapply simpl_pred; revgoals. 3:reflexivity.
       econstructor. eapply on_contexts_app => //.
-      rewrite nth_error_app_lt. len. len in l. lia.
+      rewrite nth_error_app_lt. len. len in l. 
       rewrite /inst_context nth_error_fold_context_k option_map_two /=.
       destruct (nth_error Δ1 x) => //. noconf eqb.
       cbn. rewrite H /= //.
@@ -2077,6 +2063,7 @@ Section ParallelSubstitution.
     - simpl. now apply Hrel.
 
     - simpl. rewrite inst_mkApps inst_iota_red /= //.
+      * rewrite skipn_length; lia.
       * change (bcontext br) with (bcontext (inst_branch σ br)).
         eapply All2_nth_error_Some_right in X3; tea. destruct X3 as [br0 [hnthbr0 [pred [? eq]]]].
         cbn [bcontext inst_branch]. rewrite -eq.
@@ -2309,7 +2296,7 @@ Section ParallelSubstitution.
 
     - simpl. rewrite inst_closed0.
       rewrite PCUICClosed.closedn_subst_instance; auto.
-      eapply (PCUICClosed.declared_constant_closed_body). all: eauto.
+      eapply (PCUICClosedTyp.declared_constant_closed_body). all: eauto.
       econstructor; eauto with pcuic.
 
     - eapply pred1_refl_gen. now apply pred1_subst_pred1_ctx in Hrel.

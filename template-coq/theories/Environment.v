@@ -147,6 +147,12 @@ Module Environment (T : Term).
   
   (* Smashing a context Γ with Δ depending on it is the same as smashing Γ
     and substituting all references to Γ in Δ by the expansions of let bindings. *)
+
+  Lemma smash_context_app Δ Γ Γ' :
+    smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
+  Proof.
+    revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
+  Qed.
   
   Fixpoint extended_subst (Γ : context) (n : nat) 
   (* Δ, smash_context Γ, n |- extended_subst Γ n : Γ *) :=
@@ -191,7 +197,7 @@ Module Environment (T : Term).
   Lemma expand_lets_ctx_length Γ Δ : #|expand_lets_ctx Γ Δ| = #|Δ|.
   Proof. now rewrite /expand_lets_ctx; len. Qed.
   #[global] Hint Rewrite expand_lets_ctx_length : len.
-  
+
   Definition fix_context (m : mfixpoint term) : context :=
     List.rev (mapi (fun i d => vass d.(dname) (lift i 0 d.(dtype))) m).
   
@@ -470,6 +476,15 @@ Module Environment (T : Term).
     ind_projs (map_one_inductive_body npars_ass arities f oib) =
     map (on_snd (f (S npars_ass))) (ind_projs oib).
   Proof. destruct oib; simpl. reflexivity. Qed.
+
+  Fixpoint projs ind npars k :=
+    match k with
+    | 0 => []
+    | S k' => (tProj ((ind, npars), k') (tRel 0)) :: projs ind npars k'
+    end.
+
+  Lemma projs_length ind npars k : #|projs ind npars k| = k.
+  Proof. induction k; simpl; auto. Qed.
 
   Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
     match Σ with

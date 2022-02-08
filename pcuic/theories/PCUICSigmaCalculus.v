@@ -118,7 +118,11 @@ Fixpoint rename f t : term :=
 
 Notation rename_predicate := (map_predicate_shift rename shiftn id).
 Notation rename_branches f := (map_branches_shift rename f).
-
+Definition rename_context f (Γ : context) : context :=
+  fold_context_k (fun i => rename (shiftn i f)) Γ.
+Definition rename_decl f d := map_decl (rename f) d.
+Definition rename_telescope r Γ :=
+  mapi (fun i => map_decl (rename (shiftn i r))) Γ.
 
 Lemma shiftn_ext n f f' : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
 Proof.
@@ -1276,7 +1280,7 @@ Lemma nat_recursion_ext {A} (x : A) f g n :
   Nat.recursion x f n = Nat.recursion x g n.
 Proof.
   intros.
-  generalize (le_refl n). 
+  generalize (Nat.le_refl n). 
   induction n at 1 3 4; simpl; auto. 
   intros. simpl. rewrite IHn0; try lia. now rewrite H.
 Qed.
@@ -2082,12 +2086,6 @@ Proof.
     rewrite !mapi_length. now rewrite subst_app_decomp.
 Qed.
 
-Lemma smash_context_app Δ Γ Γ' :
-  smash_context Δ (Γ ++ Γ') = smash_context (smash_context Δ Γ) Γ'.
-Proof.
-  revert Δ; induction Γ as [|[na [b|] ty]]; intros Δ; simpl; auto.
-Qed.
-
 Lemma smash_context_acc Γ Δ :
   smash_context Δ Γ =
       subst_context (extended_subst Γ 0) 0 (lift_context (context_assumptions Γ) #|Γ| Δ)
@@ -2220,3 +2218,13 @@ Qed.
 
 #[global]
 Hint Rewrite ren_lift_renaming subst_consn_compose : sigma.
+
+Lemma rename_context_length :
+  forall σ Γ,
+    #|rename_context σ Γ| = #|Γ|.
+Proof.
+  intros σ Γ. unfold rename_context.
+  apply fold_context_k_length.
+Qed.
+#[global]
+Hint Rewrite rename_context_length : sigma wf.

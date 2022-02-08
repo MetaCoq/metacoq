@@ -4,9 +4,7 @@ From MetaCoq.Template Require Import utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction.
 Import Nat.
 
-(** * Lifting and substitution for the AST
-
-  Along with standard commutation lemmas.
+(** * Commutation lemmas for the lifting and substitution operations.
   Definition of [closedn] (boolean) predicate for checking if
   a term is closed. *)
 
@@ -209,7 +207,7 @@ Lemma commut_lift_subst_rec M N n p k :
   k <= p -> lift n k (subst N p M) = subst N (p + n) (lift n k M).
 Proof.
   revert N n p k; elim M using term_forall_list_ind; intros; cbnr;
-    f_equal; auto; solve_all; rewrite ?plus_Snm_nSm -?Nat.add_assoc; eauto with all.
+    f_equal; auto; solve_all; rewrite ?Nat.add_succ_r -?Nat.add_assoc; eauto with all.
 
   - repeat nth_leb_simpl.
     rewrite -> simpl_lift by easy. f_equal; lia.
@@ -819,3 +817,43 @@ Proof.
   pose proof (destArity_spec ctx T) as H.
   intro e; now rewrite e in H.
 Qed.
+
+(** Standard substitution lemma for a context with no lets. *)
+
+Inductive nth_error_app_spec {A} (l l' : list A) (n : nat) : option A -> Type :=
+| nth_error_app_spec_left x : 
+  nth_error l n = Some x -> 
+  n < #|l| ->
+  nth_error_app_spec l l' n (Some x)
+| nth_error_app_spec_right x :
+  nth_error l' (n - #|l|) = Some x ->
+  #|l| <= n < #|l| + #|l'| ->
+  nth_error_app_spec l l' n (Some x)
+| nth_error_app_spec_out : #|l| + #|l'| <= n -> nth_error_app_spec l l' n None.
+
+Lemma nth_error_appP {A} (l l' : list A) (n : nat) : nth_error_app_spec l l' n (nth_error (l ++ l') n).
+Proof.
+  destruct (Nat.ltb n #|l|) eqn:lt; [apply Nat.ltb_lt in lt|apply Nat.ltb_nlt in lt].
+  * rewrite nth_error_app_lt //.
+    destruct (snd (nth_error_Some' _ _) lt) as [x eq].
+    rewrite eq.
+    constructor; auto.
+  * destruct (Nat.ltb n (#|l| + #|l'|)) eqn:ltb'; [apply Nat.ltb_lt in ltb'|apply Nat.ltb_nlt in ltb'].
+    + rewrite nth_error_app2; try lia.
+      destruct nth_error eqn:hnth.
+      - constructor 2; auto; try lia.
+      - constructor.
+        eapply nth_error_None in hnth. lia.
+    + case: nth_error_spec => //; try lia.
+      { intros. len in l0. lia. }
+      len. intros. constructor. lia.
+Qed.
+
+Lemma nth_error_app_context (Γ Δ : context) (n : nat) : 
+  nth_error_app_spec Δ Γ n (nth_error (Γ ,,, Δ) n).
+Proof.
+  apply nth_error_appP.
+Qed.
+
+
+

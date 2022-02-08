@@ -1,7 +1,5 @@
--generate-meta-for-package coq-metacoq-demo-plugin
 -R ../../template-coq/theories MetaCoq.Template
 -I ../../template-coq/build
--I ../../template-coq/
 
 -I src
 -I gen-src

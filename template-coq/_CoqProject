@@ -1,6 +1,5 @@
 -I src
 -R theories MetaCoq.Template
--I .
 
 # utils
 theories/utils/MCPrelude.v

@@ -1,5 +1,5 @@
 
-DECLARE PLUGIN "coq-metacoq-safechecker.plugin"
+DECLARE PLUGIN "metacoq_safechecker_plugin"
 
 {
 

@@ -1,8 +1,6 @@
--generate-meta-for-package coq-metacoq-erasure
 -I src
 -Q src MetaCoq.Erasure
 -R theories MetaCoq.Erasure
--I ../template-coq
 
 # src/classes0.mli
 # src/classes0.ml

@@ -3,7 +3,7 @@ open Stdarg
 open MyPlugin
 }
 
-DECLARE PLUGIN "coq-metacoq-demo-plugin.plugin"
+DECLARE PLUGIN "demo_plugin"
 
 VERNAC COMMAND EXTEND Make_vernac CLASSIFIED AS QUERY STATE program
    | [ "Showoff" ] ->

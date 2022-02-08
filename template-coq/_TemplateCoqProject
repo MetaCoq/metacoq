@@ -1,8 +1,6 @@
 -I src
 -Q src MetaCoq.Template
 -R theories MetaCoq.Template
-META.coq-metacoq-template
--I .
 
 # the MetaCoq plugin
 src/tm_util.ml

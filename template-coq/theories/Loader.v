@@ -2,7 +2,7 @@
 From MetaCoq.Template Require TemplateMonad.Core
   TemplateMonad.Extractable BasicAst Ast Constants.
 
-Declare ML Module "coq-metacoq-template.template_coq".
+Declare ML Module "template_coq".
 
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
   (only parsing).

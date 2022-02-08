@@ -1,4 +1,3 @@
-
 TIMED ?=
 
 all: template-coq pcuic safechecker erasure examples

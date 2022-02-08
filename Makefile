@@ -1,6 +1,13 @@
 
 TIMED ?=
 
+ifeq ($(shell which cygpath 2>/dev/null),)
+OCAMLPATH := $(shell pwd)/template-coq/:$(OCAMLPATH)
+else
+OCAMLPATH := $(shell cygpath -m `pwd`)/template-coq/;$(OCAMLPATH)
+endif
+export OCAMLPATH
+
 all: template-coq pcuic safechecker erasure examples
 
 .PHONY: all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations

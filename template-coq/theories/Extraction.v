@@ -1,5 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
+From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
+     LiftSubst UnivSubst Pretty.
 From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOCamlFloats
     ExtrOCamlInt63 ExtrOcamlNatInt.
 From Coq Require Ascii Extraction.
@@ -9,19 +11,7 @@ From Coq Require Ascii Extraction.
     should use these same directives for consistency.
 *)
 
-(************************************************************************)
-(*         *   The Coq Proof Assistant / The Coq Development Team       *)
-(*  v      *         Copyright INRIA, CNRS and contributors             *)
-(* <O___,, * (see version control and CREDITS file for authors & dates) *)
-(*   \VV/  **************************************************************)
-(*    //   *    This file is distributed under the terms of the         *)
-(*         *     GNU Lesser General Public License Version 2.1          *)
-(*         *     (see LICENSE file for the text of the license)         *)
-(************************************************************************)
-
 (** Extraction of [positive], [N] and [Z] into Ocaml's [int] *)
-
-Require Coq.extraction.Extraction.
 
 Require Import ZArith NArith.
 Require Import ExtrOcamlBasic.
@@ -48,55 +38,64 @@ Extract Inductive N => int [ "0" "" ]
 
 (** Efficient (but uncertified) versions for usual functions *)
 
+Extract Constant Nat.compare =>
+ "fun n m -> if n=m then 0 else if n<m then -1 else 1".
+
 Extract Constant Pos.add => "(+)".
-Extract Constant Pos.succ => "Pervasives.succ".
-Extract Constant Pos.pred => "fun n -> Pervasives.max 1 (n-1)".
-Extract Constant Pos.sub => "fun n m -> Pervasives.max 1 (n-m)".
+Extract Constant Pos.succ => "Stdlib.succ".
+Extract Constant Pos.pred => "fun n -> Stdlib.max 1 (n-1)".
+Extract Constant Pos.sub => "fun n m -> Stdlib.max 1 (n-m)".
 Extract Constant Pos.mul => "( * )".
-Extract Constant Pos.min => "Pervasives.min".
-Extract Constant Pos.max => "Pervasives.max".
+Extract Constant Pos.min => "Stdlib.min".
+Extract Constant Pos.max => "Stdlib.max".
 Extract Constant Pos.compare =>
- "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
+ "fun x y -> if x=y then 0 else if x<y then -1 else 1".
 Extract Constant Pos.compare_cont =>
- "fun c x y -> if x=y then c else if x<y then Lt else Gt".
+ "fun c x y -> if x=y then c else if x<y then -1 else 1".
 
 
 Extract Constant N.add => "(+)".
-Extract Constant N.succ => "Pervasives.succ".
-Extract Constant N.pred => "fun n -> Pervasives.max 0 (n-1)".
-Extract Constant N.sub => "fun n m -> Pervasives.max 0 (n-m)".
+Extract Constant N.succ => "Stdlib.succ".
+Extract Constant N.pred => "fun n -> Stdlib.max 0 (n-1)".
+Extract Constant N.sub => "fun n m -> Stdlib.max 0 (n-m)".
 Extract Constant N.mul => "( * )".
-Extract Constant N.min => "Pervasives.min".
-Extract Constant N.max => "Pervasives.max".
+Extract Constant N.min => "Stdlib.min".
+Extract Constant N.max => "Stdlib.max".
 Extract Constant N.div => "fun a b -> if b=0 then 0 else a/b".
 Extract Constant N.modulo => "fun a b -> if b=0 then a else a mod b".
 Extract Constant N.compare =>
- "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
+ "fun x y -> if x=y then 0 else if x<y then -1 else 1".
 
 
 Extract Constant Z.add => "(+)".
-Extract Constant Z.succ => "Pervasives.succ".
-Extract Constant Z.pred => "Pervasives.pred".
+Extract Constant Z.succ => "Stdlib.succ".
+Extract Constant Z.pred => "Stdlib.pred".
 Extract Constant Z.sub => "(-)".
 Extract Constant Z.mul => "( * )".
 Extract Constant Z.opp => "(~-)".
-Extract Constant Z.abs => "Pervasives.abs".
-Extract Constant Z.min => "Pervasives.min".
-Extract Constant Z.max => "Pervasives.max".
+Extract Constant Z.abs => "Stdlib.abs".
+Extract Constant Z.min => "Stdlib.min".
+Extract Constant Z.max => "Stdlib.max".
 Extract Constant Z.compare =>
- "fun x y -> if x=y then Eq else if x<y then Lt else Gt".
+ "fun x y -> if x=y then 0 else if x<y then -1 else 1".
 Extract Constant Z.eqb => "Int.equal".
 
 Extract Constant Z.of_N => "fun p -> p".
-Extract Constant Z.abs_N => "Pervasives.abs".
+Extract Constant Z.abs_N => "Stdlib.abs".
 
+(* Ignore [Decimal.int] before the extraction issue is solved:
+   https://github.com/coq/coq/issues/7017. *)
+Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+   
 (** Z.div and Z.modulo are quite complex to define in terms of (/) and (mod).
     For the moment we don't even try *)
 
 Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
+ "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
 Extract Constant Ascii.compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
+ "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
  
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".
@@ -110,10 +109,6 @@ Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
 Cd "gen-src".
-
-From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
-     LiftSubst UnivSubst Pretty.
-Import Init.Nat.
 
 (* Silence the warnings for specifications axioms of int63 *)
 Set Warnings "-extraction-logical-axiom".
@@ -140,5 +135,6 @@ Extraction Library BasicAst.
 Extraction Library Reflect.
 Extraction Library Pretty.
 Extraction Library config.
+Extraction Library Datatypes.
 
 Cd "..".

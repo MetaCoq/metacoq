@@ -41,7 +41,7 @@ Derive Signature for clos_refl_trans_1n.
 
 Notation equality_terms Σ Γ := (All2 (equality false Σ Γ)).
 #[global]
-Instance equality_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signatureT (equality_terms Σ Γ).
+Instance equality_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (equality_terms Σ Γ).
 Proof. intros x y -> x' y' -> f. exact f. Qed.
 
 #[global]

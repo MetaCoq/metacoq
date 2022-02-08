@@ -135,7 +135,7 @@ Section Alpha.
   Qed.
 
   Lemma upto_names_destInd Re Rle t u :
-    eq_term_upto_univ [] Re Rle t u ->
+    eq_term_upto_univ empty_global_env Re Rle t u ->
     rel_option (fun '(ind, u) '(ind', u') => (ind = ind') * R_universe_instance Re u u')%type (destInd t) (destInd u).
   Proof.
     induction 1; simpl; constructor; try congruence.
@@ -158,9 +158,9 @@ Section Alpha.
     pose proof (decompose_prod_assum_upto_names' [] [] ty ty' ltac:(constructor) eqty).
     do 2 destruct decompose_prod_assum.
     destruct X0 as [eqctx eqt].
-    apply (eq_context_upto_smash_context [] [] []) in eqctx; try constructor.
+    apply (eq_context_upto_smash_context empty_global_env [] []) in eqctx; try constructor.
     apply eq_context_upto_rev' in eqctx.
-    eapply (eq_context_upto_nth_error [] _ _ _ _ rarg) in eqctx.
+    eapply (eq_context_upto_nth_error empty_global_env _ _ _ _ rarg) in eqctx.
     subst rarg'.
     destruct (nth_error (List.rev (smash_context [] c)) rarg).
     inv eqctx. destruct X0.
@@ -571,7 +571,7 @@ Section Alpha.
   Lemma typing_alpha_prop :
     env_prop (fun Σ Γ u A =>
       forall Δ v,
-        eq_term_upto_univ [] eq eq u v ->
+        eq_term_upto_univ empty_global_env eq eq u v ->
         Γ ≡Γ Δ ->
         Σ ;;; Δ |- v : A)
     (fun Σ Γ => forall Δ, Γ ≡Γ Δ ->  wf_local Σ Δ).
@@ -1013,7 +1013,7 @@ Section Alpha.
   Local Ltac inv H := inversion H; subst; clear H.
 
   Lemma eq_term_upto_univ_napp_0 n t t' :
-    eq_term_upto_univ_napp [] eq eq n t t' ->
+    eq_term_upto_univ_napp empty_global_env eq eq n t t' ->
     t ≡α t'.
   Proof.
     apply eq_term_upto_univ_empty_impl; typeclasses eauto.

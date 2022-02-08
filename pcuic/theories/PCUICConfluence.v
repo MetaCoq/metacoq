@@ -89,6 +89,28 @@ Proof.
   intros []; split; tc.
 Qed.
 
+Lemma clos_rt_OnOne2_local_env_incl R :
+inclusion (OnOne2_local_env (on_one_decl (fun Δ => clos_refl_trans (R Δ))))
+          (clos_refl_trans (OnOne2_local_env (on_one_decl R))).
+Proof.
+  intros x y H.
+  induction H; firstorder; try subst na'.
+  - induction b. repeat constructor. pcuicfo.
+    constructor 2.
+    econstructor 3 with (Γ ,, vass na y); auto.
+  - subst.
+    induction a0. repeat constructor. pcuicfo.
+    constructor 2.
+    econstructor 3 with (Γ ,, vdef na b' y); auto.
+  - subst t'.
+    induction a0. constructor. constructor. red. simpl. pcuicfo.
+    constructor 2.
+    econstructor 3 with (Γ ,, vdef na y t); auto.
+  - clear H. induction IHOnOne2_local_env. constructor. now constructor 3.
+    constructor 2.
+    eapply transitivity. eauto. auto.
+Qed.
+
 Lemma All2_fold_refl {A} {P : list A -> list A -> A -> A -> Type} : 
   (forall Γ, Reflexive (P Γ Γ)) ->
   Reflexive (All2_fold P).
@@ -2830,28 +2852,6 @@ Section RedConfluence.
   Global Instance red_ctx_refl : Reflexive (red_ctx Σ).
   Proof.
     move=> x. eapply All2_fold_refl; intros; apply All_decls_refl; auto.
-  Qed.
-
-  Lemma clos_rt_OnOne2_local_env_incl R :
-    inclusion (OnOne2_local_env (on_one_decl (fun Δ => clos_refl_trans (R Δ))))
-              (clos_refl_trans (OnOne2_local_env (on_one_decl R))).
-  Proof.
-    intros x y H.
-    induction H; firstorder; try subst na'.
-    - induction b. repeat constructor. pcuicfo.
-      constructor 2.
-      econstructor 3 with (Γ ,, vass na y); auto.
-    - subst.
-      induction a0. repeat constructor. pcuicfo.
-      constructor 2.
-      econstructor 3 with (Γ ,, vdef na b' y); auto.
-    - subst t'.
-      induction a0. constructor. constructor. red. simpl. pcuicfo.
-      constructor 2.
-      econstructor 3 with (Γ ,, vdef na y t); auto.
-    - clear H. induction IHOnOne2_local_env. constructor. now constructor 3.
-      constructor 2.
-      eapply transitivity. eauto. auto.
   Qed.
 
   Hint Constructors clos_refl_trans_ctx : pcuic.

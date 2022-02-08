@@ -628,6 +628,35 @@ Proof.
   intuition auto. right. now eapply in_global_levels.
 Qed.
 
+Definition extends_decls (Σ Σ' : global_env) := 
+  Σ.(universes) = Σ'.(universes) ×
+  ∑ Σ'', declarations Σ' = Σ'' ++ Σ.(declarations).
+
+Existing Class extends_decls.
+
+#[global] Instance extends_decls_extends Σ Σ' : extends_decls Σ Σ' -> extends Σ Σ'.
+Proof.
+  intros []. split => //.
+  rewrite e. split; [lsets|csets].
+Qed.
+
 Definition weaken_env_prop `{checker_flags}
            (P : global_env_ext -> context -> term -> option term -> Type) :=
   forall Σ Σ' φ, wf Σ -> wf Σ' -> extends Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+
+Definition weaken_env_decls_prop `{checker_flags}
+  (P : global_env_ext -> context -> term -> option term -> Type) :=
+  forall Σ Σ' φ, wf Σ' -> extends_decls Σ Σ' -> forall Γ t T, P (Σ, φ) Γ t T -> P (Σ', φ) Γ t T.
+
+Lemma extends_decls_wf {cf} Σ Σ' : 
+  wf Σ' -> extends_decls Σ Σ' -> wf Σ.
+Proof.
+  intros [onu ond] [eq [Σ'' eq']].
+  split => //. 
+  - red. rewrite eq. apply onu.
+  - rewrite eq. rewrite eq' in ond.
+    revert ond; clear.
+    induction Σ''; cbn; auto.
+    intros H; depelim H.
+    apply IHΣ''. apply H.
+Qed. 

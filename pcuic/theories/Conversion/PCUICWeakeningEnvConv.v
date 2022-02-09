@@ -558,9 +558,9 @@ Proof.
     clear -H2. intros [[? ?] ?] Hc. specialize (H2 _ Hc).
     destruct H2 as [H H']. simpl. split.
     * apply LevelSet.union_spec in H. apply LevelSet.union_spec.
-      destruct H; [now left|right]. now apply in_global_levels.
+      destruct H; [now left|right]; auto.
     * apply LevelSet.union_spec in H'. apply LevelSet.union_spec.
-      destruct H'; [now left|right]. now apply in_global_levels.
+      destruct H'; [now left|right]; auto.
     (*+ revert H3. case_eq (universes_decl_of_decl d); trivial.
       intros ctx eq Hctx. repeat split.
       * auto.
@@ -625,7 +625,7 @@ Proof.
   eapply declared_cstr_levels_sub; tea.
   intros x' hin'.
   eapply LevelSet.union_spec. apply LevelSet.union_spec in hin'.
-  intuition auto. right. now eapply in_global_levels.
+  intuition auto.
 Qed.
 
 Definition extends_decls (Σ Σ' : global_env) := 

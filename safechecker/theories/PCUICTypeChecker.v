@@ -885,7 +885,7 @@ Section Typecheck.
   Equations check_consistent_instance uctx (wfg : ∥ global_uctx_invariants (global_ext_uctx (Σ.1, uctx)) ∥) 
     u
     : typing_result_comp (consistent_instance_ext Σ uctx u) :=
-  check_consistent_instance (Monomorphic_ctx _) wfg u 
+  check_consistent_instance (Monomorphic_ctx) wfg u 
     with (Nat.eq_dec #|u| 0) := {
       | left _ := ret _ ;
       | right _ := (raise (Msg "monomorphic instance should be of length 0"))

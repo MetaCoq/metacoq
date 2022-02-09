@@ -363,7 +363,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     (*   - all levels used in constraints are declared *)
     Definition on_udecl (univs : ContextSet.t) (udecl : universes_decl)
       := let levels := levels_of_udecl udecl in
-        let global_levels := ContextSet.levels univs in
+        let global_levels := global_levels univs in
         let all_levels := LevelSet.union levels global_levels in
         LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels
         /\ ConstraintSet.For_all (declared_cstr_levels all_levels) (constraints_of_udecl udecl)

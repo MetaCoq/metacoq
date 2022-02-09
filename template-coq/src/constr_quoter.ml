@@ -256,7 +256,9 @@ struct
        then constraints_ cs'
        else if (* fail on unisatisfiable ones -- well-typed term is expected *)
          Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
-       else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
+      else if (* fail on unisatisfiable ones -- well-typed term is expected *)
+        Univ.Level.is_prop l then failwith "Unisatisfiable constraint (Prop = l)"
+      else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =

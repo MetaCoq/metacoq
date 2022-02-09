@@ -178,14 +178,16 @@ struct
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_ugraph ?kept (g : UGraph.t) =
+    Feedback.msg_debug (Pp.str"Quoting ugraph");
     let levels, cstrs, eqs = 
       match kept with
       | None ->
         let cstrs, eqs = UGraph.constraints_of_universes g in
         UGraph.domain g, cstrs, eqs
-      | Some l ->
+      | Some l -> assert false
+        (* Feedback.msg_debug (Pp.str"kept univs passed");
         let cstrs = UGraph.constraints_for ~kept:l g in
-        l, cstrs, []
+        l, cstrs, [] *)
     in
     let levels, cstrs = 
       List.fold_right (fun eqs acc ->
@@ -198,6 +200,8 @@ struct
         eqs (levels, cstrs)
     in
     let levels = Univ.Level.Set.remove Univ.Level.set levels in
+    let levels = Univ.Level.Set.remove Univ.Level.prop levels in
+    let levels = Univ.Level.Set.remove Univ.Level.sprop levels in
     time (Pp.str"Quoting universe context") 
       (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 
@@ -531,10 +535,10 @@ struct
       b := y ;
       (x,y)
     in
-    let univs = Univ.Level.Set.union (Vars.universes_of_constr trm) !universes in
+    let _univs = Univ.Level.Set.union (Vars.universes_of_constr trm) !universes in
     let (tm, _) = quote_rem () env trm in
     let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc)  !constants (Q.empty_global_declarations ()) in
-    let univs = quote_ugraph ~kept:univs (Environ.universes env) in
+    let univs = quote_ugraph (*~kept:univs*) (Environ.universes env) in
     let env = Q.mk_global_env univs decls in
     Q.mk_program env tm
 

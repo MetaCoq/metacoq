@@ -31,34 +31,13 @@ let time prefix f x =
 
 let check env evm (c, ustate) =
   Feedback.msg_debug (str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
-  let uctx = UState.context_set ustate in
-  Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
-  let ugraph = Environ.universes env in
-  let levels = UGraph.domain ugraph in
-  let cstrs, eqs = UGraph.constraints_of_universes ugraph in
-  let levels, cstrs = 
-    List.fold_right (fun eqs acc ->
-      match Univ.Level.Set.elements eqs with
-      | [] -> acc
-      | x :: [] -> acc
-      | x :: rest ->
-        List.fold_right (fun p (levels, cstrs) ->
-          (Univ.Level.Set.add p levels, Univ.Constraints.add (x, Univ.Eq, p) cstrs)) rest acc)
-      eqs (levels, cstrs)
-  in
-  let levels = Univ.Level.Set.remove Univ.Level.set levels in
-  let uctx = Univ.ContextSet.union uctx (levels, cstrs) in
-  let () = 
-    Feedback.msg_debug (str"Universes to reify: " ++ Printer.pr_universe_ctx_set evm uctx)
-  in
-  let uctx = time (str"Quoting universe context") 
-    (fun uctx -> (Ast_quoter.quote_univ_contextset uctx)) uctx in
+  let prog = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
+  let uctx = Universes0.Monomorphic_ctx in
   let check =
     time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program
         (*Config0.default_checker_flags*)
-        Config0.type_in_type term)
+        Config0.type_in_type prog)
       uctx
   in
   match check with

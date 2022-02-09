@@ -198,7 +198,8 @@ struct
         eqs (levels, cstrs)
     in
     let levels = Univ.Level.Set.remove Univ.Level.set levels in
-    Q.quote_univ_contextset (levels, cstrs)
+    time (Pp.str"Quoting universe context") 
+      (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
     Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i)

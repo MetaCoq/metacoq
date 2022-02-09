@@ -2,7 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     PCUICElimination.
+     PCUICElimination PCUICWcbvEval.
 From MetaCoq.Erasure Require EAst ETyping.
 
 Module E := EAst.

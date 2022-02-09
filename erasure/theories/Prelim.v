@@ -8,11 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICErrors.
 From Coq Require Import Program ssreflect.
 
-
 Local Existing Instance extraction_checker_flags.
-
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
 
 Ltac inv H := inversion H; subst; clear H.
 

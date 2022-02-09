@@ -26,9 +26,6 @@ Require Import ssreflect.
 
 Local Set Keyed Unification.
 
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
-
 Local Existing Instance config.extraction_checker_flags.
 
 (** ** Prelim on arities and proofs *)
@@ -222,7 +219,7 @@ Proof.
     cbn. eapply typing_subst_instance in X1; eauto. apply snd in X1.
     cbn in X1. eapply X1; eauto.
   - unfold subst_instance.
-    cbn [PA.subst_instance_constr]. econstructor; eauto.
+    cbn [subst_instance_constr]. econstructor; eauto.
     eapply All2_map_left.
     eapply (All2i_All2_All2 X7 X10).
     intros ? ? [] [] (? & ? & ? & ? & ? & ?) (? & ?). split.
@@ -1224,7 +1221,7 @@ Proof.
         rewrite -mkApps_app in X.
 
         eapply tConstruct_no_Type in X; eauto. eapply H3 in X as [? []]; eauto.
-        2: now exists []; destruct Σ.
+        2: split; auto; now exists []; destruct Σ.
         destruct d as (? & ? & ?).
         destruct (declared_inductive_inj decli H5) as [<- <-].
         

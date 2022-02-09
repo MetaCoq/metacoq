@@ -6,11 +6,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
 From MetaCoq.Erasure Require Import ETyping Extract Prelim.
 
-
 Local Set Keyed Unification.
 
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
 Local Existing Instance config.extraction_checker_flags.
 
 (** ** Global Weakening  *)

@@ -441,3 +441,5 @@ pcuic/src/META.coq-metacoq-pcuic
 template-coq/META
 safechecker/META
 test-suite/plugin-demo/src/META.coq-metacoq-demo-plugin
+erasure/src/eSubstitution.ml
+erasure/src/eSubstitution.mli

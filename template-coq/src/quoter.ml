@@ -201,9 +201,10 @@ struct
     in
     let levels = Univ.Level.Set.remove Univ.Level.set levels in
     let levels = Univ.Level.Set.remove Univ.Level.prop levels in
-    let levels = Univ.Level.Set.remove Univ.Level.sprop levels in
-    time (Pp.str"Quoting universe context") 
-      (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
+    let _levels = Univ.Level.Set.remove Univ.Level.sprop levels in
+    Q.quote_univ_contextset Univ.ContextSet.empty
+    (* time (Pp.str"Quoting universe context") 
+      (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs) *)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
     Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i)

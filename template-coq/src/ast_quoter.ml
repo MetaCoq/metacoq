@@ -60,7 +60,7 @@ struct
     | Sorts.Relevant -> BasicAst.Relevant
     | Sorts.Irrelevant -> BasicAst.Irrelevant
 
-  let quote_name = function
+  let quote_name : Names.Name.t -> BasicAst.name = function
     | Anonymous -> Coq_nAnon
     | Name i -> Coq_nNamed (quote_ident i)
 
@@ -205,7 +205,7 @@ struct
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
-  let quote_abstract_univ_context uctx =
+  let quote_abstract_univ_context uctx : quoted_abstract_univ_context =
     let names = Univ.AbstractContext.names uctx in
     let levels = CArray.map_to_list quote_name names in
     let constraints = Univ.UContext.constraints (Univ.AbstractContext.repr uctx) in

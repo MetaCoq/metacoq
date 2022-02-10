@@ -38,8 +38,8 @@ let check env evm poly (c, ustate) =
     if poly then
       let uctx = Evd.to_universe_context evm in
       let inst, auctx = Univ.abstract_universes uctx in
-      Universes0.Polymorphic_ctx (Ast_quoter.quote_abstract_univ_context auctx)
-    else Universes0.Monomorphic_ctx 
+      Ast_quoter.mkPolymorphic_ctx (Ast_quoter.quote_abstract_univ_context auctx)
+    else Ast_quoter.mkMonomorphic_ctx ()
   in
   let check =
     time (str"Checking")

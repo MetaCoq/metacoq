@@ -270,7 +270,7 @@ Section CheckEnv.
     | None => fun _ =>
       raise (empty_ext Σ, IllFormedDecl id (Msg "constraints trivially not satisfiable"))
     | Some uctx' => fun Huctx =>
-      check_eq_true (if cf.(check_univs) then wGraph.is_acyclic (add_uctx uctx' G) else true)
+      check_eq_true (wGraph.is_acyclic (add_uctx uctx' G))
                     (empty_ext Σ, IllFormedDecl id (Msg "constraints not satisfiable"));;
       ret (uctx'; _)
     end eq_refl.
@@ -324,7 +324,6 @@ Section CheckEnv.
       destruct gc_of_constraints. simpl in H.
       inversion Huctx; subst; clear Huctx.
       clear -H H2 cf. rewrite add_uctx_make_graph in H2.
-      destruct check_univs. 2:{ todo "acyclicity checked skipped". }
       refine (eq_rect _ (fun G => wGraph.is_acyclic G = true) H2 _ _).
       apply graph_eq; try reflexivity.
       + assert(make_graph (global_ext_levels (Σ, udecl), t) = 

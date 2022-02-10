@@ -5,19 +5,12 @@ Local Open Scope string_scope.
 
 Print list.
 Definition bool_list := List.map negb (cons true (cons false nil)).
-Print Universes.
-Print Datatypes.
 
-MetaCoq SafeCheck bool_list.
-
-MetaCoq SafeCheck nat.
-Definition bool_list := List.map negb (cons true (cons false nil)).
-Set Printing Universes.
-(* Universe issues: undeclared universes from sections *)
-(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
 MetaCoq SafeCheck bool_list.
 MetaCoq CoqCheck bool_list.
 
+MetaCoq SafeCheck nat.
+MetaCoq SafeCheck List.map.
 (*
 Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([Set])
 *)
@@ -575,7 +568,7 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
   (@safechecker_test.concat) >>=  tmQuote >>= tmPrint). *)
   (* fun t => tmEval cbv (print_program false 1 t) >>= tmPrint). *)
 (* Too slow for now *)
-(*
+
 MetaCoq SafeCheck @issect'.
 
 MetaCoq SafeCheck @ap_pp.
@@ -587,4 +580,3 @@ MetaCoq CoqCheck isequiv_adjointify.
 
 MetaCoq SafeCheck @IsEquiv.
 MetaCoq CoqCheck IsEquiv.
-*)

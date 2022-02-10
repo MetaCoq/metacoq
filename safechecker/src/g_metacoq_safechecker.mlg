@@ -2,7 +2,7 @@
 DECLARE PLUGIN "coq-metacoq-safechecker.plugin"
 
 {
-
+open Attributes
 open Stdarg
 open Pp
 open PeanoNat.Nat
@@ -29,15 +29,24 @@ let time prefix f x =
   let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
   res
 
-let check env evm (c, ustate) =
+let check env evm poly (c, ustate) =
   Feedback.msg_debug (str"Quoting");
+  let uctx = Evd.universe_context_set evm in
+  let env = if poly then env else Environ.push_context_set ~strict:true uctx env in
   let prog = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
-  let uctx = Universes0.Monomorphic_ctx in
+  let uctx =
+    if poly then
+      let uctx = Evd.to_universe_context evm in
+      let inst, auctx = Univ.abstract_universes uctx in
+      Universes0.Polymorphic_ctx (Ast_quoter.quote_abstract_univ_context auctx)
+    else Universes0.Monomorphic_ctx 
+  in
   let check =
     time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program
-        (*Config0.default_checker_flags*)
-        Config0.type_in_type prog)
+        Config0.default_checker_flags
+        (* Config0.type_in_type *)
+         prog)
       uctx
   in
   match check with
@@ -46,11 +55,11 @@ let check env evm (c, ustate) =
 }
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
-| [ "MetaCoq" "SafeCheck" constr(c) ] -> {
+| #[ poly = polymorphic ] [ "MetaCoq" "SafeCheck" constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let c = Constrintern.interp_constr env evm c in
-    check env evm c
+    check env evm poly c
   }
 END
 

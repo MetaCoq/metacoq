@@ -2248,8 +2248,10 @@ Proof.
     move: (type_app Ht wfΣ). rewrite isapp.
     destruct (decompose_app t) eqn:da.
     intros [fty [d' [hd' [sp hsp]]]].
-    assert (IHt := X3 _ _ d' hd').
-    epose proof (make_typing_spine sp (typing_size Ht) X3 (validity d') hsp) as [T' [IH []]].
+    assert (hd'' : typing_size d' ≤ max (typing_size Ht) (typing_size Hp)) by lia.
+    assert (hsp' : typing_spine_size sp ≤ max (typing_size Ht) (typing_size Hp)) by lia.
+    assert (IHt := X2 _ _ d' hd'').
+    epose proof (make_typing_spine sp (max (typing_size Ht) (typing_size Hp)) X2 (validity d') hsp') as [T' [IH []]].
     * subst T'. rewrite (PCUICAstUtils.decompose_app_inv da).
       rewrite trans_mkApps mkApp_mkApps -AstUtils.mkApps_app.
       pose proof (AstUtils.mkApps_app (trans t0) (map trans l) [trans u]).
@@ -2257,9 +2259,9 @@ Proof.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.
       eassumption. 
-      eapply TT_typing_spine_app. simpl in X1. eapply X1.
+      eapply TT_typing_spine_app. simpl in X1. eapply X0.
       apply IH. apply TT.cumul_refl'.
-      apply X5.
+      apply X4.
     * destruct p as [hcum _].
       rewrite (PCUICAstUtils.decompose_app_inv da).
       rewrite trans_mkApps mkApp_mkApps -AstUtils.mkApps_app.
@@ -2268,14 +2270,14 @@ Proof.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.
       eassumption. 
-      eapply TT_typing_spine_app. simpl in X1. eapply X1.
+      eapply TT_typing_spine_app. simpl in X0. eapply X0.
       apply IH. apply hcum.
-      apply X5.
+      apply X4.
     * rewrite mkApp_mkApps.
       eapply type_mkApps_napp.
       apply trans_isApp in isapp. rewrite isapp //.
       now simpl in X2.
-      econstructor. simpl in X1. eapply X1.
+      econstructor. eapply X0.
       apply TT.cumul_refl'. assumption. constructor.
   - rewrite trans_subst_instance.
     rewrite trans_cst_type.

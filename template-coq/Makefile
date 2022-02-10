@@ -59,7 +59,7 @@ Makefile.template: _TemplateCoqProject
 	$(SED) -i -e s/coqdeps/coqdeps.template/g Makefile.template
 
 .merlin: Makefile.plugin
-	$(MAKE) -f $< $@
+	[ -e "gen-src/signature.mli" ] && $(MAKE) -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

@@ -42,7 +42,7 @@ mrproper:
 	rm -f Makefile.erasure
 
 .merlin: Makefile.plugin
-	make -f $< $@
+	[ -e "src/erasureFunction.ml" ] && make -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

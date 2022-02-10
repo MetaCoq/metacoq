@@ -65,11 +65,11 @@ Ltac rename_hyp_prefx h ht :=
 Ltac fallback_rename_hyp h th :=
   match th with
     | _ => rename_hyp h th
-    | true = beq_nat _ _ => fresh "beqnat_true"
-    | beq_nat _ _ = true => fresh "beqnat_true"
-    | false = beq_nat _ _ => fresh "beqnat_false"
-    | beq_nat _ _ = false => fresh "beqnat_false"
-    | beq_nat _ _ = _ => fresh "beqnat"
+    | true = Nat.eqb _ _ => fresh "beqnat_true"
+    | Nat.eqb _ _ = true => fresh "beqnat_true"
+    | false = Nat.eqb _ _ => fresh "beqnat_false"
+    | Nat.eqb _ _ = false => fresh "beqnat_false"
+    | Nat.eqb _ _ = _ => fresh "beqnat"
     | Zeq_bool _ _ = true => fresh "eq_Z_true"
     | Zeq_bool _ _ = false => fresh "eq_Z_false"
     | true = Zeq_bool _ _ => fresh "eq_Z_true"

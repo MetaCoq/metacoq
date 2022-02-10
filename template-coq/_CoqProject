@@ -21,6 +21,7 @@ theories/utils/wGraph.v
 theories/utils/MCUtils.v
 #theories/utils/MC_ExtrOCamlInt63.v
 theories/utils/MC_ExtrOCamlNatInt.v
+theories/utils/MC_ExtrOCamlZPosInt.v
 
 # common
 theories/common/uGraph.v

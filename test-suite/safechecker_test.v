@@ -478,7 +478,7 @@ Arguments e_retr {_ _} _ {_} _.
 Arguments e_adj {_ _} _ {_} _.
 Arguments e_isequiv {_ _ _}.
 
-Typeclasses Transparent e_fun e_inv.
+#[global] Typeclasses Transparent e_fun e_inv.
 
 Definition univalent_transport {A B : Type} {e: A ≃ B} : A -> B := e_fun e.
 

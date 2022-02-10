@@ -189,7 +189,8 @@ struct
         (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.pr (UGraph.repr g)); *)
         let dom = UGraph.domain g in
         let kept = Univ.Level.Set.inter dom l in
-        let cstrs = UGraph.constraints_for ~kept g in
+        let kept = Univ.Level.Set.remove Univ.Level.set kept in
+        let cstrs = time Pp.(str"Computing graph restriction") (UGraph.constraints_for ~kept) g in
         l, cstrs, []
     in
     let levels, cstrs = 

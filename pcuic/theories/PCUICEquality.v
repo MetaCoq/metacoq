@@ -875,10 +875,6 @@ Proof.
   destruct env; cbn => ->. destruct gr; auto.
 Qed.
 
-Definition empty_global_env := 
-  {| universes := ContextSet.empty;
-     declarations := [] |}.
-
 (** Pure syntactic equality, without cumulative inductive types subtyping *)
 
 #[global]

@@ -23,19 +23,16 @@ Definition univ := Level.Level "s".
 (* TODO move to SafeChecker *)
 
 Definition gctx : global_env_ext := 
-  ([], Monomorphic_ctx (LevelSet.singleton univ, ConstraintSet.empty)).
+  ({| universes := (LevelSet.singleton univ, ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
 
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)
 
 Program Definition check_wf_env_ext (Σ : global_env) id (ext : universes_decl) : 
-    EnvCheck ({ Σ' : wf_env_ext | Σ'.(wf_env_ext_env) = (Σ, ext)}) :=
-    '(G; pf) <- check_wf_env Σ ;;
-    '(G'; pf') <- check_wf_env_ext Σ id _ G _ ext ;;
-    ret (exist {| wf_env_ext_env := (Σ, ext) ;
-           wf_env_ext_wf := _ ;
-           wf_env_ext_graph := G' ;
-           wf_env_ext_graph_wf := _ |} eq_refl).
+  EnvCheck ({ Σ' : wf_env_ext | Σ'.(wf_env_ext_env) = (Σ, ext)}) :=
+  '(wfΣ; pf) <- check_wf_env (cf:=default_checker_flags) Σ ;;
+  '(exist wfΣ' pf') <- make_wf_env_ext wfΣ id ext ;;
+  ret (exist wfΣ' _).
 
 Definition kername_of_string (s : string) : kername :=
   (MPfile [], s).

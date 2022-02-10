@@ -286,6 +286,14 @@ Module Environment (T : Term).
 
   Coercion universes : global_env >-> ContextSet.t.
 
+  Definition empty_global_env := 
+    {| universes := ContextSet.empty;
+       declarations := [] |}.
+
+  Definition add_global_decl Σ decl := 
+    {| universes := Σ.(universes);
+       declarations := decl :: Σ.(declarations) |}.
+      
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
 

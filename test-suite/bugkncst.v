@@ -59,7 +59,7 @@ Fixpoint pocc_term (n:nat) (t:term): bool :=
 Definition bound_global_decl (d : kername * global_decl) : bool :=
   if kername_eq_dec str (fst d) then true else false.
 
-Definition bound_program (p : program) := List.existsb bound_global_decl (fst p).
+Definition bound_program (p : program) := List.existsb bound_global_decl (fst p).(declarations).
 
 Definition pocc_global_decl (d : kername * global_decl) : bool :=
 match snd d with
@@ -68,7 +68,7 @@ match snd d with
 | InductiveDecl _ => false
 end.
 
-Definition pocc_program p := pocc_term 2000 (snd p) || List.existsb pocc_global_decl (fst p).
+Definition pocc_program p := pocc_term 2000 (snd p) || List.existsb pocc_global_decl (fst p).(declarations).
 
 End occ_term_Sec.
 

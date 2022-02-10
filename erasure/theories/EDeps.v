@@ -419,10 +419,6 @@ Proof.
     constructor; [now apply f|now apply f'].
 Defined.
 
-Definition add_global_decl Σ decl := 
-  {| universes := Σ.(universes);
-     declarations := decl :: Σ.(declarations) |}.
-
 Lemma erases_deps_cons Σ Σ' kn decl decl' t :
   on_global_univs Σ.(universes) ->
   on_global_decls (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->

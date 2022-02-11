@@ -1,0 +1,10 @@
+
+package "plugin" (
+  directory = "."
+  requires = "coq-core.plugins.ltac coq-metacoq-template-ocaml.plugin"
+  archive(byte) = "metacoq_erasure_plugin.cma"
+  archive(native) = "metacoq_erasure_plugin.cmxa"
+  plugin(byte) = "metacoq_erasure_plugin.cma"
+  plugin(native) = "metacoq_erasure_plugin.cmxs"
+)
+directory = "."

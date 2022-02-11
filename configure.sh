@@ -17,16 +17,13 @@ then
     if [[ "$1" = "local" || "$1" = "--enable-local" ]]
     then
         echo "Building MetaCoq locally"
-        PCUIC_DEPS="-I ../template-coq/build -R ../template-coq/theories MetaCoq.Template"
+        PCUIC_DEPS="-R ../template-coq/theories MetaCoq.Template"
         SAFECHECKER_DEPS="-R ../pcuic/theories MetaCoq.PCUIC"
         ERASURE_DEPS="-R ../safechecker/theories MetaCoq.SafeChecker"
         TRANSLATIONS_DEPS=""
     else
         echo "Building MetaCoq globally (default)"
-        # The safechecker and erasure plugins depend on the extractable template-coq plugin
-        # These dependencies should not be necessary when separate linking of ocaml object
-        # files is supported by coq_makefile
-        PCUIC_DEPS="-I ${COQLIB}/user-contrib/MetaCoq/Template"
+        PCUIC_DEPS=""
         SAFECHECKER_DEPS=""
         ERASURE_DEPS=""
         TRANSLATIONS_DEPS=""

@@ -5,3 +5,11 @@ CAMLFLAGS+=-w -34 # Unused types
 CAMLFLAGS+=-w -39 # Unused rec flags
 CAMLFLAGS+=-w -60 # Unused module in functor
 CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin
+
+# Add the template-coq directory to the findlib path
+ifeq ($(shell which cygpath 2>/dev/null),)
+OCAMLPATH := $(shell pwd)/../template-coq/:$(OCAMLPATH)
+else
+OCAMLPATH := $(shell cygpath -m `pwd`)/../template-coq/;$(OCAMLPATH)
+endif
+export OCAMLPATH

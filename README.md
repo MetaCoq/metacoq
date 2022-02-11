@@ -220,10 +220,10 @@ MetaCoq is developed by (left to right)
 
 
 ```
-Copyright (c) 2014-2020 Gregory Malecha
-Copyright (c) 2015-2020 Abhishek Anand, Matthieu Sozeau
-Copyright (c) 2017-2020 Simon Boulier, Nicolas Tabareau, Cyril Cohen
-Copyright (c) 2018-2020 Danil Annenkov, Yannick Forster, Théo Winterhalter
+Copyright (c) 2014-2022 Gregory Malecha
+Copyright (c) 2015-2022 Abhishek Anand, Matthieu Sozeau
+Copyright (c) 2017-2022 Simon Boulier, Nicolas Tabareau, Cyril Cohen
+Copyright (c) 2018-2022 Danil Annenkov, Yannick Forster, Théo Winterhalter
 ```
 
 This software is distributed under the terms of the MIT license.

@@ -17,6 +17,7 @@ PrimInt63
 Uint0
 Int63
 Ascii
+Number
 String0
 Orders
 OrdersTac
@@ -35,6 +36,7 @@ Compare_dec
 Classes0
 EqDecInstances
 Logic1
+Logic2
 Relation
 MCPrelude
 MCReflect

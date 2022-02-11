@@ -158,7 +158,7 @@ Definition tsl_mind_body (ΣE : tsl_context) (mp : modpath)
                  ret (_, [{| ind_npars := mind.(ind_npars);
                              ind_bodies := bodies ;
                  ind_universes := match mind.(ind_universes) with 
-                  | Monomorphic_ctx _ => Monomorphic_ctx ContextSet.empty (* Don't redeclare universes *)
+                  | Monomorphic_ctx => Monomorphic_ctx
                   | Polymorphic_ctx ctx => Polymorphic_ctx ctx
                  end;
                  ind_variance := mind.(ind_variance) |}])).  (* FIXME always ok? *)

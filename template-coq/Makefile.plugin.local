@@ -10,5 +10,4 @@ CAMLFLAGS+=-bin-annot # For merlin
 
 INSTALLDEFAULTROOT=MetaCoq/Template
 
-post-all::
-	cp -a gen-src/metacoq_template_plugin.cm* build/
+.PHONY: META

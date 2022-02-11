@@ -1224,6 +1224,19 @@ Section WeakNormalization.
     eapply wcbeval_red in Hred; eauto. eapply subject_reduction; eauto.
   Qed.
 
+  Lemma value_canonical {t i u args} : 
+    Σ ;;; [] |- t : mkApps (tInd i u) args -> 
+    value t ->
+    construct_cofix_discr (head t).
+  Proof.
+    intros Ht Hvalue.
+    eapply value_axiom_free in Hvalue as H.
+    eapply wh_normal_ind_discr; eauto.
+    eapply eval_whne.
+    2: eapply value_final; eauto.
+    eapply @subject_closed with (Γ := []); eauto.
+  Qed.
+
   Lemma eval_ind_canonical {t i u args} : 
     Σ ;;; [] |- t : mkApps (tInd i u) args -> 
     forall t', eval Σ t t' ->

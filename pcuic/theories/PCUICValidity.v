@@ -495,6 +495,40 @@ Proof.
     eapply typing_spine_strengthen; tea.
 Qed.
 
+Lemma inversion_mkApps_direct {cf} {Σ} {wfΣ :  wf Σ.1} {Γ f u T} :
+  isType Σ Γ T ->
+  Σ ;;; Γ |- mkApps f u : T ->
+  ∑ A s', Σ ;;; Γ |- f : A × Σ ;;; Γ |- A : tSort s' × typing_spine Σ Γ A u T.
+Proof.
+  induction u in f, T |- *. simpl. intros.
+  { destruct X as [s X]. exists T, s. intuition pcuic. eapply typing_spine_refl. eexists; eauto. }
+  intros HT Hf. simpl in Hf.
+  destruct u. simpl in Hf, IHu.
+  - edestruct @inversion_App_size with (H0 := Hf) as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
+    eexists _, _; intuition eauto.
+    econstructor; eauto with pcuic.
+    eapply isType_equality_refl; eexists; eauto.
+    econstructor. all:eauto with pcuic.
+    
+    eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
+    eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
+    econstructor; red; cbn; eauto.
+  - specialize (IHu (tApp f a) T).
+    epose proof (IHu _ Hf) as [T' [s' [H' [H''' H'']]]].
+    edestruct @inversion_App_size with (H0 := H') as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
+    exists (tProd na' A' B'). exists s. intuition; eauto.
+    econstructor; eauto with wf.
+    1,2: eexists; eauto. 1:eapply isType_equality_refl; eexists; eauto.
+
+
+    eapply typing_spine_strengthen; tea.
+
+    eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
+    eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
+    econstructor; red; cbn; eauto.
+    Unshelve. eauto.
+Qed.
+
 (** "Economical" typing rule for applications, not requiring to check the product type *)
 Lemma type_App' {cf:checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ t na A B u} : 
   Σ;;; Γ |- t : tProd na A B ->

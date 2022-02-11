@@ -31,6 +31,54 @@ Module P := PCUICWcbvEval.
 
 Local Existing Instance config.extraction_checker_flags.
 
+
+Local Hint Constructors value red1 : wcbv.
+
+Lemma progress `{cf : checker_flags} : 
+  env_prop (fun Σ Γ t T => Γ = [] -> Σ ;;; Γ |- t : T -> {t' & red1 Σ t t'} + (value t))
+           (fun _ _ => True).
+Proof with eauto with wcbv; try congruence.
+  eapply typing_ind_env...
+  - intros Σ wfΣ Γ wfΓ n decl Hdecl _ -> Hty.
+    destruct n; inv Hdecl.
+  - intros Σ wfΣ Γ _ n b b_ty b' s1 b'_ty _ Hb_ty IHb_ty Hb IHb Hb' IHb' -> H.
+    destruct (IHb eq_refl) as [ [t' IH] | IH]; eauto with wcbv.
+  - admit.
+  - intros Σ wf Γ _ cst u decl Hdecls _ Hdecl Hcons -> H.
+    destruct (decl.(cst_body)) as [body | ] eqn:E.
+    + eauto with wcbv.
+    + todo "no axioms".
+  - intros Σ wfΣ Γ _ ci p c brs indices ps mdecl idecl Hidecl Hforall _ Heq Heq_context predctx Hwfpred Hcon Hwfl Hreturn IHreturn _.
+    intros Helim Hinst Hctxinst Hc IHc Hcof ptm Hwfbranches Hall -> H.
+    specialize (IHc eq_refl) as [[t' IH] | IH]; eauto with wcbv.
+    eapply PCUICCanonicity.value_canonical in IH; eauto.
+    unfold head in IH.
+    rewrite (PCUICInduction.mkApps_decompose_app c) in H, Hc |- *.
+    destruct (decompose_app c) as [h l]. clear c.
+    cbn - [decompose_app] in *.
+    destruct h; inv IH.
+    + left.
+      eapply tConstruct_
+    admit.
+  - intros Σ wfΣ Γ _ ((i, pars), arg) c u mdecl idecl cdecl pdecl Hcon args Hargs _ Hc IHc
+           Hlen ty -> H.
+    destruct (IHc eq_refl) as [[t' IH] | IH]; eauto with wcbv; clear IHc.
+    eapply PCUICCanonicity.value_canonical in IH; eauto.
+    unfold head in IH.
+    rewrite (PCUICInduction.mkApps_decompose_app c) in H, Hc |- *.
+    destruct (decompose_app c) as [h l]. clear c.
+    cbn - [decompose_app] in *.
+    destruct h; inv IH.
+    + assert (n = 0 /\ ind = i) as [-> ->] by admit.
+      left.
+      assert (Hlt : pars + arg < #|l|) by admit.
+      eapply nth_error_Some' in Hlt as [x Hx].
+      eauto with wcbv.
+    + todo "cofix".
+Qed.    
+
+
+
 (** ** Prelim on arities and proofs *)
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :

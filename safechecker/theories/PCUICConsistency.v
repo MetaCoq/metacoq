@@ -112,7 +112,7 @@ Proof.
     rewrite nth_nth_error.
     destruct nth_error eqn:nth; auto.
     eapply nth_error_forall in nth; eauto.
-Qed.
+Qed. 
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 

@@ -149,6 +149,7 @@ Qed.
 
 Section Wcbv.
   Context (Σ : global_env).
+
   (* The local context is empty: we are only doing weak reductions *)
 
   Inductive eval : term -> term -> Type :=
@@ -256,6 +257,37 @@ Section Wcbv.
       All value args ->
       isStuckFix f args ->
       value (mkApps f args)
+  .
+
+
+  Inductive red1 : term -> term -> Type :=
+  | red_app_left a a' b :
+     red1 a a' -> red1 (tApp a b) (tApp a' b)
+  | red_app_right a b b' :
+     value a -> red1 b b' -> red1 (tApp a b) (tApp a b')
+  | red_beta na t b a :
+     value a -> red1 (tApp (tLambda na t b) a) (csubst a 0 b)
+  | red_let_in b0 b0' na t b1 :
+      red1 b0 b0' -> red1 (tLetIn na b0 t b1) (tLetIn na b0' t b1)
+  | red_zeta b0 na t b1 :
+      value b0 -> red1 (tLetIn na b0 t b1) (csubst b0 0 b1)
+  | red_delta decl body c u (isdecl : declared_constant Σ c decl) :
+     decl.(cst_body) = Some body ->
+     red1 (tConst c u) (subst_instance u body)
+  | red_case_in ci p discr discr' brs :
+     red1 discr discr' -> red1 (tCase ci p discr brs) (tCase ci p discr' brs)
+  | red_iota ci c mdecl idecl cdecl u args p brs br :  
+    nth_error brs c = Some br ->
+    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
+    red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
+  | red_proj_in discr discr' i pars arg : 
+    red1 discr discr' -> red1 (tProj (i, pars, arg) discr)  (tProj (i, pars, arg) discr')
+  | red_proj i pars arg args u a :
+    nth_error args (pars + arg) = Some a ->
+    red1 (tProj (i, pars, arg) (mkApps (tConstruct i 0 u) args)) a
+  | red_fix mfix idx argsv a av fn :
+    red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) av)
   .
 
   Lemma value_values_ind : forall P : term -> Type,

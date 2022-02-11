@@ -3,10 +3,13 @@ CAMLFLAGS+=-w -33 # Unused opens
 CAMLFLAGS+=-w -8 # Non-exhaustive pattern-matching (due to comparison -> int translation)
 CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin
 
-# Add the template-coq directory to the findlib path
-ifeq ($(shell which cygpath 2>/dev/null),)
-OCAMLPATH := $(shell pwd)/../template-coq/:$(OCAMLPATH)
-else
-OCAMLPATH := $(shell cygpath -m `pwd`)/../template-coq/;$(OCAMLPATH)
+-include ../Makefile.conf
+
+ifeq '$(METACOQ_CONFIG)' 'local'
+  ifeq ($(shell which cygpath 2>/dev/null),)
+  OCAMLPATH := $(shell pwd)/../template-coq/:$(OCAMLPATH)
+  else
+  OCAMLPATH := $(shell cygpath -m `pwd`)/../template-coq/;$(OCAMLPATH)
+  endif
+  export OCAMLPATH
 endif
-export OCAMLPATH

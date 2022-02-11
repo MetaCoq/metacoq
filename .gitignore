@@ -442,3 +442,4 @@ erasure/src/eSubstitution.mli
 erasure/META
 template-coq/META
 safechecker/META
+Makefile.conf

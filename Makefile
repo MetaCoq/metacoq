@@ -1,16 +1,32 @@
 
 TIMED ?=
 
-ifeq ($(shell which cygpath 2>/dev/null),)
-OCAMLPATH := $(shell pwd)/template-coq/:$(OCAMLPATH)
-else
-OCAMLPATH := $(shell cygpath -m `pwd`)/template-coq/;$(OCAMLPATH)
+-include Makefile.conf
+
+ifeq '$(METACOQ_CONFIG)' 'local'
+  ifeq ($(shell which cygpath 2>/dev/null),)
+  OCAMLPATH := $(shell pwd)/template-coq/:$(OCAMLPATH)
+  else
+  OCAMLPATH := $(shell cygpath -m `pwd`)/template-coq/;$(OCAMLPATH)
+  endif
+  export OCAMLPATH
 endif
-export OCAMLPATH
 
-all: template-coq pcuic safechecker erasure examples
+all: printconf template-coq pcuic safechecker erasure examples
 
-.PHONY: all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
+.PHONY: printconf all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
+
+printconf:
+ifeq '$(METACOQ_CONFIG)' 'local'
+	@echo "Local configuration"
+else
+ifeq '$(METACOQ_CONFIG)' 'global'
+	@echo "Global configuration"
+else
+	@echo "Run ./configure.sh first"
+	@exit 1
+endif
+endif
 
 install: all translations
 	$(MAKE) -C template-coq install

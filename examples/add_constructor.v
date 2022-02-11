@@ -121,11 +121,10 @@ Definition test2 := letin.
 MetaCoq Run (add_constructor <%@eq%> "foo'"
                     <% (fun (eq':forall A, A -> A -> Type) => forall A x y, nat -> eq' A x x -> bool -> eq' A x y) %>).
 Definition test3 := foo'.
-Require Import Even.
-MetaCoq Run (add_constructor <%@odd%> "foo''"
+MetaCoq Run (add_constructor <%@Nat.Odd_alt%> "foo''"
                     <%(fun (even' odd':nat -> Prop) => odd' 0)%>).
 Definition test4 := foo''.
 Module A.
-MetaCoq Run (add_constructor <%even%> "foo'"
+MetaCoq Run (add_constructor <%Nat.Even_alt%> "foo'"
                     <%(fun (even' odd':nat -> Prop) => even' 0)%>).
 End A.

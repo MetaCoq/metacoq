@@ -256,7 +256,9 @@ struct
        then constraints_ cs'
        else if (* fail on unisatisfiable ones -- well-typed term is expected *)
          Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
-       else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
+      else if (* fail on unisatisfiable ones -- well-typed term is expected *)
+        Univ.Level.is_prop l then failwith "Unisatisfiable constraint (Prop = l)"
+      else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =
@@ -302,8 +304,7 @@ struct
     let const' = quote_univ_constraints (UContext.constraints (AbstractContext.repr uctx)) in
     constr_mkApp (tAUContextmake, [|idents; const'|])
 
-  let mkMonomorphic_ctx t =
-    constr_mkApp (cMonomorphic_ctx, [|t|])
+  let mkMonomorphic_ctx () = Lazy.force cMonomorphic_ctx
 
   let mkPolymorphic_ctx t =
     constr_mkApp (cPolymorphic_ctx, [|t|])
@@ -411,6 +412,9 @@ struct
   let add_global_decl kn d l =
     let pair = pairl tkername tglobal_decl kn d in
     constr_mkApp (c_cons, [| global_pairty (); pair; l|])
+
+  let mk_global_env univs decls =
+    constr_mkApp (tBuild_global_env, [| univs; decls |])
 
   let mk_program f s = pairl tglobal_env tTerm f s
 

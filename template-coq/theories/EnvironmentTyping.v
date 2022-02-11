@@ -33,30 +33,20 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
   | ConstantDecl cb => F cb.(cst_universes)
   | InductiveDecl mb => F mb.(ind_universes)
   end.
-
-  Definition monomorphic_udecl_decl := on_udecl_decl monomorphic_udecl.
-
-  Definition monomorphic_levels_decl := fst ∘ monomorphic_udecl_decl.
-
-  Definition monomorphic_constraints_decl := snd ∘ monomorphic_udecl_decl.
-
+  
   Definition universes_decl_of_decl := on_udecl_decl (fun x => x).
 
   (* Definition LevelSet_add_list l := LevelSet.union (LevelSetProp.of_list l). *)
 
-  Definition global_levels (Σ : global_env) : LevelSet.t :=
-    fold_right
-      (fun decl lvls => LevelSet.union (monomorphic_levels_decl decl.2) lvls)
-      (LevelSet.singleton (Level.lzero)) Σ.
+  Definition global_levels (univs : ContextSet.t) : LevelSet.t :=
+    LevelSet.union (ContextSet.levels univs) (LevelSet.singleton (Level.lzero)).
 
-  Lemma global_levels_Set Σ :
-    LevelSet.mem Level.lzero (global_levels Σ) = true.
+  Lemma global_levels_Set univs :
+    LevelSet.mem Level.lzero (global_levels univs) = true.
   Proof.
-    induction Σ; simpl. reflexivity.
     apply LevelSet.mem_spec, LevelSet.union_spec; right.
-    now apply LevelSet.mem_spec in IHΣ.
+    now apply LevelSet.singleton_spec.
   Qed.
-
 
   (** One can compute the constraints associated to a global environment or its
       extension by folding over its constituent definitions.
@@ -68,15 +58,13 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
       would forget the extension's constraints. *)
 
   Definition global_constraints (Σ : global_env) : ConstraintSet.t :=
-    fold_right (fun decl ctrs =>
-        ConstraintSet.union (monomorphic_constraints_decl decl.2) ctrs
-      ) ConstraintSet.empty Σ.
+    snd Σ.(universes).
 
   Definition global_uctx (Σ : global_env) : ContextSet.t :=
-    (global_levels Σ, global_constraints Σ).
+    (global_levels Σ.(universes), global_constraints Σ).
 
   Definition global_ext_levels (Σ : global_env_ext) : LevelSet.t :=
-    LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1).
+    LevelSet.union (levels_of_udecl (snd Σ)) (global_levels Σ.1.(universes)).
 
   Definition global_ext_constraints (Σ : global_env_ext) : ConstraintSet.t :=
     ConstraintSet.union
@@ -94,7 +82,7 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition consistent_instance `{checker_flags} (lvs : LevelSet.t) (φ : ConstraintSet.t) uctx (u : Instance.t) :=
     match uctx with
-    | Monomorphic_ctx c => List.length u = 0
+    | Monomorphic_ctx => List.length u = 0
     | Polymorphic_ctx c =>
       (* levels of the instance already declared *)
       forallb (fun l => LevelSet.mem l lvs) u /\
@@ -364,26 +352,22 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Open Scope type_scope.
 
-    Definition satisfiable_udecl `{checker_flags} Σ φ
-      := consistent (global_ext_constraints (Σ, φ)).
+    Definition univs_ext_constraints univs φ :=
+      ConstraintSet.union (constraints_of_udecl φ) univs.
+
+    Definition satisfiable_udecl (univs : ContextSet.t) φ
+      := consistent (univs_ext_constraints (ContextSet.constraints univs) φ).
 
     (* Check that: *)
     (*   - declared levels are fresh *)
     (*   - all levels used in constraints are declared *)
-    (*   - level used in monomorphic contexts are only monomorphic *)
-    Definition on_udecl Σ (udecl : universes_decl)
+    Definition on_udecl (univs : ContextSet.t) (udecl : universes_decl)
       := let levels := levels_of_udecl udecl in
-        let global_levels := global_levels Σ in
+        let global_levels := global_levels univs in
         let all_levels := LevelSet.union levels global_levels in
         LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels
-        /\ ConstraintSet.For_all (fun '(l1,_,l2) => LevelSet.In l1 all_levels
-                                                /\ LevelSet.In l2 all_levels)
-                                (constraints_of_udecl udecl)
-        /\ match udecl with
-          | Monomorphic_ctx ctx =>  LevelSet.for_all (negb ∘ Level.is_var) ctx.1
-          | _ => True
-          end
-        /\ satisfiable_udecl Σ udecl.
+        /\ ConstraintSet.For_all (declared_cstr_levels all_levels) (constraints_of_udecl udecl)
+        /\ satisfiable_udecl univs udecl.
 
     (** Positivity checking of the inductive, ensuring that the inductive itself 
       can only appear at the right of an arrow in each argument's types. *)
@@ -522,7 +506,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition variance_universes univs v :=
       match univs with
-      | Monomorphic_ctx ctx => None
+      | Monomorphic_ctx => None
       | Polymorphic_ctx auctx =>
         let (inst, cstrs) := auctx in
         let u' := level_var_instance 0 inst in
@@ -754,7 +738,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     Definition on_variance Σ univs (variances : option (list Variance.t)) :=
       match univs return Type with
-      | Monomorphic_ctx _ => variances = None
+      | Monomorphic_ctx => variances = None
       | Polymorphic_ctx auctx => 
         match variances with
         | None => unit
@@ -802,22 +786,32 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
 
     (** Well-formed global environments have no name clash. *)
 
-    Definition fresh_global (s : kername) : global_env -> Prop :=
-      Forall (fun g => g.1 <> s).
+    Definition fresh_global (s : kername) (g : global_declarations) : Prop :=
+      Forall (fun g => g.1 <> s) g.
 
-    Inductive on_global_env `{checker_flags} : global_env -> Type :=
-    | globenv_nil : on_global_env []
+    Inductive on_global_decls (univs : ContextSet.t) : global_declarations -> Type :=
+    | globenv_nil : on_global_decls univs []
     | globenv_decl Σ kn d :
-        on_global_env Σ ->
+        on_global_decls univs Σ ->
         fresh_global kn Σ ->
         let udecl := universes_decl_of_decl d in
-        on_udecl Σ udecl ->
-        on_global_decl (Σ, udecl) kn d ->
-        on_global_env (Σ ,, (kn, d)).
-    Derive Signature for on_global_env.
+        on_udecl univs udecl ->
+        on_global_decl ({| universes := univs; declarations := Σ |}, udecl) kn d ->
+        on_global_decls univs (Σ ,, (kn, d)).
+    Derive Signature for on_global_decls.
 
-    Definition on_global_env_ext `{checker_flags} (Σ : global_env_ext) :=
-      on_global_env Σ.1 × on_udecl Σ.1 Σ.2.
+    Definition on_global_univs (c : ContextSet.t) := 
+      let levels := global_levels c in
+      let cstrs := ContextSet.constraints c in
+      ConstraintSet.For_all (declared_cstr_levels levels) cstrs /\ 
+      LS.For_all (negb ∘ Level.is_var) levels /\
+      consistent cstrs.
+
+    Definition on_global_env (g : global_env) : Type :=
+      on_global_univs g.(universes) × on_global_decls g.(universes) g.(declarations).
+
+    Definition on_global_env_ext (Σ : global_env_ext) :=
+      on_global_env Σ.1 × on_udecl Σ.(universes) Σ.2.
 
   End GlobalMaps.
 
@@ -981,11 +975,15 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         P Σ Γ t T -> Q Σ Γ t T) ->
     on_global_env P Σ -> on_global_env Q Σ.
   Proof.
-    intros X X0.
-    simpl in *. revert wfΣ. induction X0; constructor; eauto.
+    unfold on_global_env in *.
+    intros X [hu X0]. split; auto.
+    simpl in *. destruct wfΣ as [cu wfΣ]. revert cu wfΣ.
+    revert X0. generalize (universes Σ) as univs, (declarations Σ). clear hu Σ.
+    induction 1; constructor; auto.
     { depelim wfΣ. eauto. }
-    depelim wfΣ. specialize (IHX0 wfΣ).
-    assert (X' := fun Γ t T => X (Σ, udecl0) Γ t T wfΣ X0 IHX0); clear X.
+    depelim wfΣ. specialize (IHX0 cu wfΣ).
+    assert (X' := fun Γ t T => X ({| universes := univs; declarations := Σ |}, udecl0) Γ t T 
+      (cu, wfΣ) (cu, X0) (cu, IHX0)); clear X.
     rename X' into X.
     clear IHX0. destruct d; simpl.
     - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.

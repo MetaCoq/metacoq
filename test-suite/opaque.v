@@ -1,4 +1,4 @@
-From Coq Require Import String List Nat.
+From Coq Require Import String List PeanoNat.
 From MetaCoq.Template Require Import All.
 
 Import MCMonadNotation String ListNotations.
@@ -27,8 +27,8 @@ Proof.
   split;eexists;eexists;cbn; now intuition.
 Qed.
 
-Time MetaCoq Run (t <- tmQuoteRecTransp Plus.le_plus_r false ;;
+Time MetaCoq Run (t <- tmQuoteRecTransp Nat.le_add_r false ;;
                   tmDefinition "add_comm_syn" t). (* quote respecting transparency *)
 
-Time MetaCoq Run (t <- tmQuoteRec Plus.le_plus_r ;;
+Time MetaCoq Run (t <- tmQuoteRec Nat.le_add_r ;;
                   tmDefinition "add_comm_syn'" t). (* quote ignoring transparency settings  *)

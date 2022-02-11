@@ -1,5 +1,12 @@
 open Pp
 
+let time prefix f x =
+  let start = Unix.gettimeofday () in
+  let res = f x in
+  let stop = Unix.gettimeofday () in
+  let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
+  res
+  
 let contrib_name = "template-coq"
 
 let gen_constant_in_modules s =

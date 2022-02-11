@@ -49,6 +49,7 @@ struct
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
+  type quoted_global_declarations = global_declarations
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -59,7 +60,7 @@ struct
     | Sorts.Relevant -> BasicAst.Relevant
     | Sorts.Irrelevant -> BasicAst.Irrelevant
 
-  let quote_name = function
+  let quote_name : Names.Name.t -> BasicAst.name = function
     | Anonymous -> Coq_nAnon
     | Name i -> Coq_nNamed (quote_ident i)
 
@@ -88,19 +89,18 @@ struct
     if Univ.Level.is_prop l then Coq_inl Universes0.PropLevel.Coq_lProp
     else if Univ.Level.is_sprop l then Coq_inl Universes0.PropLevel.Coq_lSProp
     else (* NOTE: in this branch we know that [l] is neither [SProp] nor [Prop]*)
-      Coq_inr (quote_nonprop_level l)
-    (* else if Univ.Level.is_set l then Coq_inr Universes0.Level.Coq_lzero
-     * else let l' = match Univ.Level.var_index l with
-     *         | Some x -> Universes0.Level.Var (quote_int x)
-     *         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
-     *      in Coq_inr l' *)
-
+      try Coq_inr (quote_nonprop_level l)
+      with e -> assert false
+    
   let quote_universe s : Universes0.Universe.t =
     match Univ.Universe.level s with
       Some l -> Universes0.Universe.of_levels (quote_level l)
-    | _ -> let univs =
-          List.map (fun (l,i) -> (quote_nonprop_level l, i > 0)) (Univ.Universe.repr s) in
-    Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
+    | _ -> 
+      let univs = List.map (fun (l,i) -> 
+          match quote_level l with
+          | Coq_inl lprop -> assert false
+          | Coq_inr ql -> (ql, i > 0)) (Univ.Universe.repr s) in
+      Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
 
   let quote_sort s =
     quote_universe (Sorts.univ_of_sort s)
@@ -154,12 +154,14 @@ struct
     | _ -> false
 
   let quote_univ_constraint ((l, ct, l') : Univ.univ_constraint) : quoted_univ_constraint =
-    ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
+    try ((quote_nonprop_level l, quote_constraint_type ct), quote_nonprop_level l')
+    with e -> assert false
 
   let quote_univ_instance (i : Univ.Instance.t) : quoted_univ_instance =
     let arr = Univ.Instance.to_array i in
     (* we assume that valid instances do not contain [Prop] or [SProp] *)
-    CArray.map_to_list quote_nonprop_level arr
+    try CArray.map_to_list quote_nonprop_level arr
+    with e -> assert false
 
    (* (Prop, Le | Lt, l),  (Prop, Eq, Prop) -- trivial, (l, c, Prop)  -- unsatisfiable  *)
   let rec constraints_ (cs : Univ.univ_constraint list) : quoted_univ_constraint list =
@@ -170,9 +172,11 @@ struct
          (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
           (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
        then constraints_ cs'
-       else if (* fail on unisatisfiable ones -- well-typed term is expected *)
+       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
          Univ.Level.is_prop l' then failwith "Unsatisfiable constraint (l <= Prop)"
-       else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
+       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
+          Univ.Level.is_prop l then failwith "Unsatisfiable constraint (Prop = l')"
+        else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
          quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints (c : Univ.Constraints.t) : quoted_univ_constraints =
@@ -201,7 +205,7 @@ struct
     let constraints = Univ.ContextSet.constraints uctx in
     (Universes0.LevelSetProp.of_list levels, quote_univ_constraints constraints)
 
-  let quote_abstract_univ_context uctx =
+  let quote_abstract_univ_context uctx : quoted_abstract_univ_context =
     let names = Univ.AbstractContext.names uctx in
     let levels = CArray.map_to_list quote_name names in
     let constraints = Univ.UContext.constraints (Univ.AbstractContext.repr uctx) in
@@ -281,7 +285,7 @@ struct
   let mkProj p c = Coq_tProj (p,c)
 
 
-  let mkMonomorphic_ctx tm = Universes0.Monomorphic_ctx tm
+  let mkMonomorphic_ctx () = Universes0.Monomorphic_ctx
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
   let mk_one_inductive_body (id, indices, sort, ty, kel, ctr, proj, relevance) =
@@ -314,6 +318,7 @@ struct
 
   let add_global_decl kn a b = (kn, a) :: b
 
+  let mk_global_env universes declarations = { universes; declarations }
   let mk_program decls tm = (decls, tm)
 
   let quote_mind_finiteness = function

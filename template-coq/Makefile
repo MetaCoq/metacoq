@@ -9,7 +9,6 @@ coq: Makefile.coq
 template-coq: coq Makefile.template
 # Force building the ML code before the .v's requiring them.
 	$(MAKE) -f Makefile.template optfiles
-	cp -a src/template_coq.cm* build/
 	$(MAKE) -f Makefile.template
 
 # The extractable template plugin to run *extracted* template programs in OCaml
@@ -21,12 +20,12 @@ plugin: coq template-coq Makefile.plugin
 
 .PHONY: install html clean mrproper all plugin
 
-install: Makefile.coq coq template-coq plugin
+install: Makefile.coq Makefile.template Makefile.plugin
 	$(MAKE) -f Makefile.coq install
 	$(MAKE) -f Makefile.template install
 	$(MAKE) -f Makefile.plugin install
 
-uninstall: Makefile.coq coq template-coq plugin
+uninstall: Makefile.coq Makefile.template Makefile.plugin
 	$(MAKE) -f Makefile.coq uninstall
 	$(MAKE) -f Makefile.template uninstall
 	$(MAKE) -f Makefile.plugin uninstall
@@ -38,7 +37,6 @@ clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	$(MAKE) -f Makefile.template clean
 	$(MAKE) -f Makefile.plugin clean
-	rm -f build/*
 
 mrproper:
 	rm -f Makefile.coq
@@ -59,7 +57,7 @@ Makefile.template: _TemplateCoqProject
 	$(SED) -i -e s/coqdeps/coqdeps.template/g Makefile.template
 
 .merlin: Makefile.plugin
-	$(MAKE) -f $< $@
+	[ -e "gen-src/signature.mli" ] && $(MAKE) -f $< $@
 
 cleanplugin: Makefile.plugin
 	make -f Makefile.plugin clean

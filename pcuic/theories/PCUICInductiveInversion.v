@@ -278,11 +278,9 @@ Section OnConstructor.
     pose proof (on_declared_constructor declc) as [[onmind oib] [cunivs [hnth onc]]].
     pose proof (onc.(on_cargs)). simpl in X.
     split. split. split.
-    2:{ eapply (weaken_lookup_on_global_env'' _ _ (InductiveDecl mdecl)); tea.
+    2:{ eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); tea.
         eapply declc. }
-    red. split; eauto. simpl. 
-    eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl)); eauto.
-    eapply declc.
+    red. apply wfΣ. 
     eapply sorts_local_ctx_wf_local in X => //. clear X.
     eapply weaken_wf_local => //.
     eapply wf_arities_context; eauto; eapply declc.
@@ -1850,7 +1848,7 @@ Lemma variance_universes_insts {cf} {Σ mdecl l} :
   ∑ v i i',
   [× variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i'),
     match ind_universes mdecl with
-    | Monomorphic_ctx (_, cstrs) => False
+    | Monomorphic_ctx => False
     | Polymorphic_ctx (inst, cstrs) => 
       let cstrs := ConstraintSet.union (ConstraintSet.union cstrs (lift_constraints #|i| cstrs)) (variance_cstrs l i i')
       in v = Polymorphic_ctx (inst ++ inst, cstrs)
@@ -1927,7 +1925,8 @@ Lemma on_udecl_prop_poly_bounded {cf:checker_flags} Σ inst cstrs :
   on_udecl_prop Σ (Polymorphic_ctx (inst, cstrs)) ->
   closedu_cstrs #|inst| cstrs.
 Proof.
-  rewrite /on_udecl_prop. intros wfΣ [nlevs _].
+  rewrite /on_udecl_prop.
+  intros wfΣ nlevs.
   red.
   rewrite /closedu_cstrs.
   intros x incstrs.
@@ -2127,7 +2126,7 @@ Proof.
   2:{ rewrite -satisfies_subst_instance_ctr //.
       rewrite equal_subst_instance_cstrs_mono //.
       red; apply monomorphic_global_constraint; auto. }
-  destruct (ind_universes mdecl) as [[inst cstrs']|[inst cstrs']].
+  destruct (ind_universes mdecl) as [|[inst cstrs']].
   { simpl in vari => //. }
   cbn in cstrs. subst v; cbn.
   rewrite !satisfies_union. len.

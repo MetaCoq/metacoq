@@ -46,6 +46,7 @@ struct
   type quoted_mutual_inductive_body = Constr.t (* of type Ast.mutual_inductive_body *)
   type quoted_constant_body = Constr.t (* of type Ast.constant_body *)
   type quoted_global_decl = Constr.t (* of type Ast.global_decl *)
+  type quoted_global_declarations = Constr.t (* of type Ast.global_declarations *)
   type quoted_global_env = Constr.t (* of type Ast.global_env *)
   type quoted_program = Constr.t (* of type Ast.program *)
 
@@ -214,6 +215,7 @@ struct
   let tglobal_decl = ast "global_decl"
   let tConstantDecl = ast "ConstantDecl"
   let tInductiveDecl = ast "InductiveDecl"
+  let tBuild_global_env = ast "Build_global_env"
   let tglobal_env = ast "global_env"
 
   let (tglobal_reference, tVarRef, tConstRef, tIndRef, tConstructRef) =

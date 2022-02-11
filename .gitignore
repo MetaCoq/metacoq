@@ -435,9 +435,11 @@ bidirectional/CoqMakefile.conf
 
 bidirectional/.vscode/
 
-erasure/src/META.coq-metacoq-erasure
-erasure/META
 pcuic/src/META.coq-metacoq-pcuic
+test-suite/plugin-demo/src/META.coq-metacoq-demo-plugin
+erasure/src/eSubstitution.ml
+erasure/src/eSubstitution.mli
+erasure/META
 template-coq/META
 safechecker/META
-test-suite/plugin-demo/src/META.coq-metacoq-demo-plugin
+Makefile.conf

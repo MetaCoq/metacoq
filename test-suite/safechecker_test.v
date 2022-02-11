@@ -3,14 +3,14 @@ From MetaCoq.SafeChecker Require Import Loader.
 
 Local Open Scope string_scope.
 
-MetaCoq SafeCheck nat.
+Print list.
 Definition bool_list := List.map negb (cons true (cons false nil)).
-Set Printing Universes.
-(* Universe issues: undeclared universes from sections *)
-(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
+
 MetaCoq SafeCheck bool_list.
 MetaCoq CoqCheck bool_list.
 
+MetaCoq SafeCheck nat.
+MetaCoq SafeCheck List.map.
 (*
 Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([Set])
 *)
@@ -23,6 +23,12 @@ MetaCoq SafeCheck plus.
 MetaCoq CoqCheck Nat.add.
 *)
 Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
+
+
+Set Printing Universes.
+(* Universe issues: undeclared universes from sections *)
+(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
+MetaCoq CoqCheck bool_list.
 
 (* Even with universe checking disabled, we get:
 Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt
@@ -472,7 +478,7 @@ Arguments e_retr {_ _} _ {_} _.
 Arguments e_adj {_ _} _ {_} _.
 Arguments e_isequiv {_ _ _}.
 
-Typeclasses Transparent e_fun e_inv.
+#[global] Typeclasses Transparent e_fun e_inv.
 
 Definition univalent_transport {A B : Type} {e: A ≃ B} : A -> B := e_fun e.
 
@@ -562,7 +568,7 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
   (@safechecker_test.concat) >>=  tmQuote >>= tmPrint). *)
   (* fun t => tmEval cbv (print_program false 1 t) >>= tmPrint). *)
 (* Too slow for now *)
-(*
+
 MetaCoq SafeCheck @issect'.
 
 MetaCoq SafeCheck @ap_pp.
@@ -574,4 +580,3 @@ MetaCoq CoqCheck isequiv_adjointify.
 
 MetaCoq SafeCheck @IsEquiv.
 MetaCoq CoqCheck IsEquiv.
-*)

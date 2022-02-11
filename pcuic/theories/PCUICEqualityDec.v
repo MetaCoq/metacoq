@@ -757,7 +757,7 @@ Qed.
 Section EqualityDec.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
+  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1.(universes) Σ.2 ∥).
   Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
 
   Local Definition hΣ' : ∥ wf_ext Σ ∥.

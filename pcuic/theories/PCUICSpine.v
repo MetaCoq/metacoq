@@ -219,8 +219,7 @@ Proof.
   intros wfext ctxi cu.
   induction ctxi; simpl; constructor; auto.
   * destruct Σ as [Σ univs].
-    eapply (typing_subst_instance'' Σ); eauto. apply wfext.
-    apply wfext.
+    eapply (typing_subst_instance'' Σ); eauto.
   * rewrite (subst_telescope_subst_instance u [i]).
     apply IHctxi.
   * rewrite (subst_telescope_subst_instance u [b]).
@@ -820,14 +819,10 @@ Qed.*)
     induction subsl; simpl; rewrite ?subst_instance_subst; constructor; auto.
     * destruct Σ as [Σ' univs].
       rewrite -subst_instance_subst.
-      eapply (typing_subst_instance'' Σ'); simpl; auto.
-      apply wfext. simpl in wfext. apply t0. 
-      apply wfext. auto.
+      eapply (typing_subst_instance'' Σ'); simpl; eauto.
     * rewrite - !subst_instance_subst. simpl.
       destruct Σ as [Σ' univs].
-      eapply (typing_subst_instance'' Σ'); simpl; auto.
-      apply wfext. simpl in wfext. apply t0. 
-      apply wfext. auto.
+      eapply (typing_subst_instance'' Σ'); simpl; eauto.
   Qed.
 
   Lemma spine_subst_weakening {Γ i s Δ Γ'} : 

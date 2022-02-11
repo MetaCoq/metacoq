@@ -2,7 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     PCUICElimination.
+     PCUICElimination PCUICWcbvEval.
 From MetaCoq.Erasure Require EAst ETyping.
 
 Module E := EAst.
@@ -229,18 +229,18 @@ Definition erases_mutual_inductive_body (mib : mutual_inductive_body) (mib' : E.
   Forall2 erases_one_inductive_body bds (mib'.(E.ind_bodies)) /\
   mib.(ind_npars) = mib'.(E.ind_npars).
 
-Inductive erases_global_decls : global_env -> E.global_declarations -> Prop :=
-| erases_global_nil : erases_global_decls [] []
+Inductive erases_global_decls (univs : ContextSet.t) : global_declarations -> E.global_declarations -> Prop :=
+| erases_global_nil : erases_global_decls univs [] []
 | erases_global_cnst Σ cb cb' kn Σ' :
-    erases_constant_body (Σ, cst_universes cb) cb cb' ->
-    erases_global_decls Σ Σ' ->
-    erases_global_decls ((kn, ConstantDecl cb) :: Σ) ((kn, E.ConstantDecl cb') :: Σ')
+    erases_constant_body ({| universes := univs; declarations := Σ |}, cst_universes cb) cb cb' ->
+    erases_global_decls univs Σ Σ' ->
+    erases_global_decls univs ((kn, ConstantDecl cb) :: Σ) ((kn, E.ConstantDecl cb') :: Σ')
 | erases_global_ind Σ mib mib' kn Σ' :
     erases_mutual_inductive_body mib mib' ->
-    erases_global_decls Σ Σ' ->
-    erases_global_decls ((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
+    erases_global_decls univs Σ Σ' ->
+    erases_global_decls  univs((kn, InductiveDecl mib) :: Σ) ((kn, E.InductiveDecl mib') :: Σ').
 
-Definition erases_global Σ Σ' := erases_global_decls Σ Σ'.
+Definition erases_global Σ Σ' := erases_global_decls Σ.(universes) Σ.(declarations) Σ'.
 
 Definition inductive_arity (t : term) :=
   match fst (decompose_app t) with

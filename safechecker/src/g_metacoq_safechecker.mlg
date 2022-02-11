@@ -2,7 +2,7 @@
 DECLARE PLUGIN "coq-metacoq-safechecker.plugin"
 
 {
-
+open Attributes
 open Stdarg
 open Pp
 open PeanoNat.Nat
@@ -29,36 +29,24 @@ let time prefix f x =
   let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
   res
 
-let check env evm (c, ustate) =
+let check env evm poly (c, ustate) =
   Feedback.msg_debug (str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
-  let uctx = UState.context_set ustate in
-  Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
-  let ugraph = Environ.universes env in
-  let levels = UGraph.domain ugraph in
-  let cstrs, eqs = UGraph.constraints_of_universes ugraph in
-  let levels, cstrs = 
-    List.fold_right (fun eqs acc ->
-      match Univ.Level.Set.elements eqs with
-      | [] -> acc
-      | x :: [] -> acc
-      | x :: rest ->
-        List.fold_right (fun p (levels, cstrs) ->
-          (Univ.Level.Set.add p levels, Univ.Constraints.add (x, Univ.Eq, p) cstrs)) rest acc)
-      eqs (levels, cstrs)
+  let uctx = Evd.universe_context_set evm in
+  let env = if poly then env else Environ.push_context_set ~strict:true uctx env in
+  let prog = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
+  let uctx =
+    if poly then
+      let uctx = Evd.to_universe_context evm in
+      let inst, auctx = Univ.abstract_universes uctx in
+      Ast_quoter.mkPolymorphic_ctx (Ast_quoter.quote_abstract_univ_context auctx)
+    else Ast_quoter.mkMonomorphic_ctx ()
   in
-  let levels = Univ.Level.Set.remove Univ.Level.set levels in
-  let uctx = Univ.ContextSet.union uctx (levels, cstrs) in
-  let () = 
-    Feedback.msg_debug (str"Universes to reify: " ++ Printer.pr_universe_ctx_set evm uctx)
-  in
-  let uctx = time (str"Quoting universe context") 
-    (fun uctx -> (Ast_quoter.quote_univ_contextset uctx)) uctx in
   let check =
     time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program
-        (*Config0.default_checker_flags*)
-        Config0.type_in_type term)
+        Config0.default_checker_flags
+        (* Config0.type_in_type *)
+         prog)
       uctx
   in
   match check with
@@ -67,11 +55,11 @@ let check env evm (c, ustate) =
 }
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
-| [ "MetaCoq" "SafeCheck" constr(c) ] -> {
+| #[ poly = polymorphic ] [ "MetaCoq" "SafeCheck" constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let c = Constrintern.interp_constr env evm c in
-    check env evm c
+    check env evm poly c
   }
 END
 

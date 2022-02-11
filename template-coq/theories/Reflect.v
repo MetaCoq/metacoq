@@ -463,13 +463,6 @@ Proof.
   - congruence.
 Defined.
 
-Definition eqb_universes_decl x y :=
-  match x, y with
-  | Monomorphic_ctx cx, Monomorphic_ctx cy => eqb cx cy
-  | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
-  | _, _ => false
-  end.
-
 Ltac finish_reflect :=
   (repeat
     match goal with
@@ -477,6 +470,14 @@ Ltac finish_reflect :=
     end);
   constructor; trivial; congruence.
 
+Definition eqb_universes_decl x y :=
+  match x, y with
+  | Monomorphic_ctx, Monomorphic_ctx => true
+  | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
+  | _, _ => false
+  end.
+
+  
 #[global] Instance reflect_universes_decl : ReflectEq universes_decl.
 Proof.
   refine {| eqb := eqb_universes_decl |}.

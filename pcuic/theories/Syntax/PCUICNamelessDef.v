@@ -147,9 +147,13 @@ Definition nl_global_decl (d : global_decl) : global_decl :=
   | InductiveDecl mib => InductiveDecl (nl_mutual_inductive_body mib)
   end.
 
-Definition nl_global_env (Σ : global_env) : global_env :=
+Definition nl_global_declarations (Σ : global_declarations) : global_declarations :=
   (map (on_snd nl_global_decl) Σ).
 
+Definition nl_global_env (Σ : global_env) : global_env :=
+  {| universes := Σ.(universes); 
+     declarations := nl_global_declarations Σ.(declarations) |}.
+  
 Definition nlg (Σ : global_env_ext) : global_env_ext :=
   let '(Σ, φ) := Σ in
   (nl_global_env Σ, φ).

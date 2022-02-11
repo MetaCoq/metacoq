@@ -9,7 +9,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInducti
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
 
-Lemma type_local_ctx_All_local_env {cf:checker_flags} P Σ Γ Δ s : 
+Implicit Types (cf : checker_flags) (Σ : global_env_ext).
+
+Lemma type_local_ctx_All_local_env {cf} P Σ Γ Δ s : 
   All_local_env (lift_typing P Σ) Γ ->
   type_local_ctx (lift_typing P) Σ Γ Δ s ->
   All_local_env (lift_typing P Σ) (Γ ,,, Δ).
@@ -20,7 +22,7 @@ Proof.
    exists s; auto.
 Qed.
 
-Lemma sorts_local_ctx_All_local_env {cf:checker_flags} P Σ Γ Δ s : 
+Lemma sorts_local_ctx_All_local_env {cf} P Σ Γ Δ s : 
   All_local_env (lift_typing P Σ) Γ ->
   sorts_local_ctx (lift_typing P) Σ Γ Δ s ->
   All_local_env (lift_typing P Σ) (Γ ,,, Δ).
@@ -83,7 +85,7 @@ Proof.
     unfold closed_decl. unfold Pclosed, lift_typing in *. now simpl.
 Qed.
 
-Lemma weaken_env_prop_closed {cf:checker_flags} : 
+Lemma weaken_env_prop_closed {cf} : 
   weaken_env_prop (lift_typing (fun (_ : global_env_ext) (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T)).
 Proof. repeat red. intros. destruct t; red in X0; eauto. Qed.
@@ -100,50 +102,53 @@ Proof.
 Qed.
 
 Lemma on_global_env_impl `{checker_flags} Σ P Q :
-  (forall Σ Γ t T, on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+  (forall Σ Γ t T, on_global_env P Σ.1 ->
+    on_global_env Q Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
   on_global_env P Σ -> on_global_env Q Σ.
 Proof.
   intros X X0.
-  simpl in *. induction X0; constructor; auto.
-  clear IHX0. destruct d; simpl.
+  simpl in *. destruct X0 as [ongu ond]; constructor; auto.
+  destruct Σ as [univs Σ]; cbn in *.
+  induction ond; constructor; auto.
+  destruct d; simpl.
   - destruct c; simpl. destruct cst_body0; simpl in *; now eapply X.
   - red in o. simpl in *.
     destruct o0 as [onI onP onNP].
     constructor; auto.
     -- eapply Alli_impl. exact onI. eauto. intros.
-       refine {| ind_arity_eq := X1.(ind_arity_eq);
-                 ind_cunivs := X1.(ind_cunivs) |}.
-       --- apply onArity in X1. unfold on_type in *; simpl in *.
+       refine {| ind_arity_eq := X0.(ind_arity_eq);
+                 ind_cunivs := X0.(ind_cunivs) |}.
+       --- apply onArity in X0. unfold on_type in *; simpl in *.
            now eapply X.
-       --- pose proof X1.(onConstructors) as X11. red in X11.
+       --- pose proof X0.(onConstructors) as X11. red in X11.
           eapply All2_impl; eauto.
-          simpl. intros. destruct X2 as [? ? ? ?]; unshelve econstructor; eauto.
-          * apply X; eauto.
-          * clear -X0 X on_cargs. revert on_cargs.
+          simpl. intros. destruct X1 as [? ? ? ?]; unshelve econstructor; eauto.
+          * apply X; cbn; eauto. split; eauto. split; eauto.
+          * clear -X0 ond ongu IHond X on_cargs. revert on_cargs.
             generalize (cstr_args x0).
             induction c in y |- *; destruct y; simpl; auto;
               destruct a as [na [b|] ty]; simpl in *; auto;
           split; intuition eauto.
-          * clear -X0 X on_cindices.
+          all: apply X; try split; cbn; eauto.
+          * clear -X0 ond ongu IHond X on_cindices.
             revert on_cindices.
             generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
             generalize (cstr_indices x0).
-            induction 1; simpl; constructor; auto.
-       --- simpl; intros. pose (onProjections X1 H0). simpl in *; auto.
-       --- destruct X1. simpl. unfold check_ind_sorts in *.
+            induction 1; simpl; constructor; auto. apply X; try split; cbn; eauto.
+       --- simpl; intros. pose (onProjections X0 H0). simpl in *; auto.
+       --- destruct X0. simpl. unfold check_ind_sorts in *.
            destruct Universe.is_prop => //.
            destruct Universe.is_sprop; auto.
            split.
            * apply ind_sorts.
            * destruct indices_matter; auto.
-             eapply type_local_ctx_impl. eapply ind_sorts. auto.
-      --- eapply X1.(onIndices).
+             eapply type_local_ctx_impl. eapply ind_sorts.
+             intros. apply X; eauto; split; eauto.
+      --- eapply X0.(onIndices).
     -- red in onP. red.
        eapply All_local_env_impl. eauto.
        intros. now apply X.
 Qed.
-
-
 
 Lemma closedn_All_local_env (ctx : list context_decl) :
   All_local_env 
@@ -154,17 +159,14 @@ Proof.
   induction 1; auto; rewrite closedn_ctx_cons IHX /=; now move/andP: t0 => [].
 Qed.
 
-
-
-
-Lemma declared_minductive_closed_inds {cf:checker_flags} {Σ ind mdecl u} {wfΣ : wf Σ} :
+Lemma declared_minductive_closed_inds {cf} {Σ ind mdecl u} {wfΣ : wf Σ} :
   declared_minductive Σ (inductive_mind ind) mdecl ->
   forallb (closedn 0) (inds (inductive_mind ind) u (ind_bodies mdecl)).
 Proof.
   intros h.
   red in h.
   eapply lookup_on_global_env in h. 2: eauto.
-  destruct h as [Σ' [wfΣ' decl']].
+  destruct h as [Σ' [ext wfΣ' decl']].
   red in decl'. destruct decl' as [h ? ? ?].
   rewrite inds_spec. rewrite forallb_rev.
   unfold mapi.
@@ -173,7 +175,6 @@ Proof.
   - reflexivity.
   - simpl. eauto.
 Qed.
-
 
 Lemma closed_cstr_branch_context_gen {cf : checker_flags} {Σ} {wfΣ : wf Σ} {c mdecl cdecl} : 
   closed_inductive_decl mdecl ->
@@ -188,12 +189,6 @@ Proof.
   eapply (closedn_ctx_subst 0). len. now rewrite Nat.add_comm.
   eapply closed_inds.
 Qed.
-
-
-
-
-
-Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 Lemma closedn_All_local_closed:
   forall (cf : checker_flags) (Σ : global_env_ext) (Γ : context) (ctx : list context_decl)

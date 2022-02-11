@@ -310,7 +310,7 @@ Program Fixpoint provedCopy (n:nat) {wf lt n} : nat :=
   match n with 0 => 0 | S k => S (provedCopy k) end.
   Next Obligation.  apply lt_wf. Defined.
 Print Assumptions provedCopy.
-MetaCoq Quote Recursively Definition pCopy := provedCopy. (* program *)
+(* MetaCoq Quote Recursively Definition pCopy := provedCopy. program *)
 
 Definition x := 3.
 Definition provedCopyx := provedCopy x.

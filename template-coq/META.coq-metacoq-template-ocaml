@@ -1,6 +1,6 @@
 # TODO: Generate automatically with Dune
 
-package "template_ocaml" (
+package "plugin" (
     description = "The MetaCoq Template Library"
     version = "8.8"
     directory = "gen-src"
@@ -9,14 +9,5 @@ package "template_ocaml" (
     plugin(byte) = "metacoq_template_plugin.cma"
     plugin(native) = "metacoq_template_plugin.cmxs"
 )
-package "template_coq" (
-    description = "The MetaCoq Coq Template Plugin"
-    version = "8.8"
-    directory = "src"
-    requires = "coq-core.plugins.ltac"
-    archive(byte) = "template_coq.cma"
-    archive(native) = "template_coq.cmxa"
-    plugin(byte) = "template_coq.cma"
-    plugin(native) = "template_coq.cmxs"
-)
+
 directory = "."

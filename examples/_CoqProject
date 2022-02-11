@@ -1,7 +1,3 @@
--I ../template-coq/build
--I ../template-coq
--I ../safechecker/src
--I ../erasure/src
 -Q ../template-coq/theories MetaCoq.Template
 -Q ../pcuic/theories MetaCoq.PCUIC
 -Q ../safechecker/theories MetaCoq.SafeChecker

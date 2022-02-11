@@ -9,7 +9,6 @@ coq: Makefile.coq
 template-coq: coq Makefile.template
 # Force building the ML code before the .v's requiring them.
 	$(MAKE) -f Makefile.template optfiles
-	cp -a src/template_coq.cm* build/
 	$(MAKE) -f Makefile.template
 
 # The extractable template plugin to run *extracted* template programs in OCaml
@@ -38,7 +37,6 @@ clean: Makefile.coq
 	$(MAKE) -f Makefile.coq clean
 	$(MAKE) -f Makefile.template clean
 	$(MAKE) -f Makefile.plugin clean
-	rm -f build/*
 
 mrproper:
 	rm -f Makefile.coq

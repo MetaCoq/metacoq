@@ -884,6 +884,63 @@ Proof.
   symmetry; apply (make_graph_spec2 (uctx.1, ctrs)); tas.
 Qed.
 
+Definition Equal_graph := 
+  fun G G' : universes_graph =>
+  LevelSet.Equal G.1.1 G'.1.1 /\
+  wGraph.EdgeSet.Equal G.1.2 G'.1.2 /\ Level.eq G.2 G'.2.
+Global Instance: RelationClasses.RewriteRelation Equal_graph := {}.
+
+Global Instance equal_graph_equiv : RelationClasses.Equivalence Equal_graph.
+Proof. split; unfold Equal_graph.
+  - intros [[vs es] s]; cbn. intuition reflexivity.
+  - intros [[vs es] s] [[vs' es'] s']; cbn.
+    intuition now symmetry.
+  - intros [[vs es] s] [[vs' es'] s'] [[vs'' es''] s'']; cbn.
+    intuition etransitivity; eauto.
+Qed.
+
+Lemma PathOf_proper {g g' x y} : Equal_graph g g' -> PathOf g x y -> PathOf g' x y.
+Proof.
+  intros eq; induction 1; econstructor; eauto.
+  destruct e as [n ine]. apply eq in ine. now exists n.
+Defined.
+
+Lemma PathOf_proper_weight {g g' x y} (eq: Equal_graph g g') (p : PathOf g x y) : weight (PathOf_proper eq p) = weight p.
+Proof.
+  induction p; cbn; auto. destruct e; cbn.
+  now rewrite IHp.
+Qed.
+
+Global Instance invariants_proper : Proper (Equal_graph ==> impl) invariants.
+Proof.
+  intros [[vs es] s] [[vs' es'] s']; cbn in *.
+  intros eq [ev sv sp]; constructor; eauto; cbn in *; intros.
+  - firstorder eauto.
+  - destruct eq as [? []]; cbn in *. rewrite -H1. now apply H.
+  - specialize (sp x). apply eq in H. specialize (sp H).
+    destruct sp as [[p hp]].
+    pose proof (hs := proj2 (proj2 eq)); cbn in hs.
+    rewrite -{2 4 6}hs.
+    split; exists (PathOf_proper eq p). cbn.
+    sq. now rewrite (PathOf_proper_weight eq).
+Qed.
+
+Global Instance invariants_proper_iff : Proper (Equal_graph ==> iff) invariants.
+Proof.
+  intros g g' eq. split. now rewrite eq.
+  now rewrite eq.
+Qed.
+
+Global Instance acyclic_no_loop_proper : Proper (Equal_graph ==> iff) acyclic_no_loop.
+Proof.
+  intros g g' eq. split.
+  - intros ac x p.
+    rewrite -(PathOf_proper_weight (symmetry eq) p).
+    apply ac.
+  - intros ac x p.
+    rewrite -(PathOf_proper_weight eq p).
+    apply ac.
+Qed.
 
 (* This section: specif in term of gc_uctx *)
 Section CheckLeq.
@@ -891,7 +948,7 @@ Section CheckLeq.
 
   Context (G : universes_graph)
           uctx (Huctx: global_gc_uctx_invariants uctx) (HC : gc_consistent uctx.2)
-          (HG : G = make_graph uctx).
+          (HG : Equal_graph G (make_graph uctx)).
 
   Definition on_inl {A B : Type} (P : A -> Prop) (x : A + B) :=
     match x with
@@ -906,7 +963,7 @@ Section CheckLeq.
   Lemma gc_level_declared_make_graph (l : Level.t) :
     gc_level_declared l -> VSet.In l (wGraph.V G).
   Proof.
-    intros Hl;subst;assumption.
+    intros Hl;subst. now apply HG.
   Qed.
 
   Definition gc_expr_declared e
@@ -948,11 +1005,12 @@ Section CheckLeq.
     correct_labelling G L ->
     val (valuation_of_labelling L) e = (n + (L l))%nat.
   Proof.
-    intros Hl [HG1 HG2]. subst G. simpl in HG1.
+    intros Hl [HG1 HG2]. rewrite [wGraph.s _](proj2 (proj2 HG)) in HG1. simpl in HG1.
     destruct l as [|l|l]; rewrite ?HG1; cbnr.
     pose proof (make_graph_E uctx (edge_of_level (VariableLevel.Level l))).p2 as H.
     forward H. {
       left. eexists; split; try reflexivity; tas. }
+    apply HG in H.
     specialize (HG2 _ H); cbn in HG2. rewrite HG1 in HG2; cbn in HG2.
     f_equal. clear -HG2. set (L (Level.Level l)) in *; clearbody n.
     destruct n; try lia.
@@ -967,14 +1025,24 @@ Section CheckLeq.
     exact (val_valuation_of_labelling' L l 0 Hl HL).
   Qed.
 
+  Instance correct_labelling_proper : Proper (Equal_graph ==> Logic.eq ==> iff) correct_labelling.
+  Proof.
+    intros g g' eq x ? <-.
+    unfold correct_labelling.
+    rewrite [wGraph.s _](proj2 (proj2 eq)).
+    now setoid_rewrite (proj1 (proj2 eq)).
+  Qed.
+
   (** ** Check of leq ** *)
 
   Lemma leq_universe_vertices0 n (l l' : Level.t)
     : leq_vertices G n l l'
       -> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
   Proof.
-    intros H v Hv. subst G.
+    intros H v Hv. 
     apply make_graph_spec in Hv; tas.
+    eapply correct_labelling_proper in Hv; tea. 2:reflexivity.
+    red in Hv. 
     specialize (H _ Hv).
     rewrite !val_labelling_of_valuation. lled; try lia.
   Qed.
@@ -984,8 +1052,10 @@ Section CheckLeq.
     : gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l')
       -> leq_vertices G n l l'.
   Proof.
-    subst G. intros H v Hv.
+    intros H v Hv.
+    eapply correct_labelling_proper in Hv. 2:symmetry; tea. 2:reflexivity.
     pose proof (H _ (make_graph_spec' _ Huctx _ Hv)) as HH.
+    eapply HG in Hl, Hl'.
     rewrite <- (valuation_labelling_eq _ _ Hv l Hl).
     rewrite <- (valuation_labelling_eq _ _ Hv l' Hl').
     pose proof (val_labelling_of_valuation (valuation_of_labelling v) l).
@@ -1011,7 +1081,9 @@ Section CheckLeq.
       -> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
   Proof.
     intro HH. apply leq_universe_vertices0.
-    apply leqb_vertices_correct; tas; clear HH; subst G; exact _.
+    apply leqb_vertices_correct; tas; clear HH.
+    rewrite HG; exact _.
+    rewrite HG; exact _.
   Qed.
 
   Lemma leqb_level_n_spec n (l l' : Level.t)
@@ -1019,9 +1091,9 @@ Section CheckLeq.
     : leqb_level_n n l l'
       <-> gc_leq_universe_n n uctx.2 (Universe.make l) (Universe.make l').
   Proof with try exact _.
-    symmetry. etransitivity. apply leq_universe_vertices; subst G; assumption.
-    etransitivity. subst G; apply leqb_vertices_correct...
-    unfold leqb_level_n; now subst G.
+    symmetry. etransitivity. apply leq_universe_vertices; now apply HG.
+    etransitivity. apply leqb_vertices_correct... 1-2:now rewrite HG; exact _.
+    now unfold leqb_level_n.
   Qed.
   
   (* this is function [check_smaller_expr] of kernel/uGraph.ml *)
@@ -1180,9 +1252,9 @@ Section CheckLeq.
             /\ gc_leq_universe_n ⎩ lt ⎭ uctx.2 (Universe.make' e) (Universe.make' e').
   Proof.
     intros Hl Hu H.
-    assert (HG1 : invariants G) by (subst; exact _).
-    assert (HG2 : acyclic_no_loop G) by (subst; exact _).
-    assert (Hs : wGraph.s G = lzero) by now subst G.
+    assert (HG1 : invariants G) by (rewrite HG; exact _).
+    assert (HG2 : acyclic_no_loop G) by (rewrite HG; exact _).
+    assert (Hs : wGraph.s G = lzero) by apply (proj2 (proj2 HG)).
     assert (Vs : VSet.In lzero (wGraph.V G)).
     { rewrite <-Hs. now apply source_vertex. }
     case_eq (lsp G l lzero).
@@ -1192,8 +1264,7 @@ Section CheckLeq.
     - intros lset Hlset. red in H.
       (** Needs to strengthen the argument using a valuations of l with - m *)
       assert (Hinl : VSet.In l (wGraph.V G)). {
-        red in Hl;  cbn in Hl;
-          now subst G. }
+        red in Hl;  cbn in Hl. now apply HG. }
       epose proof (lsp_to_s G Hinl).
       rewrite Hs in H0. specialize (H0 Hlset).
       pose proof (lsp_s G _ Hinl) as [sl [lspsl slpos]].
@@ -1237,7 +1308,7 @@ Section CheckLeq.
         specialize (Hu ei Hei).
         destruct ei as [li bi]; cbn in *.
         assert (Vli : VSet.In li (wGraph.V G)).
-        { rewrite HG. now cbn. }
+        { now apply HG. }
 
         simpl in H. unfold is_lt in HH.
         match goal with
@@ -1259,7 +1330,7 @@ Section CheckLeq.
           rewrite Z_of_to_label_pos //; lia. }
         rewrite H1 in H.
         destruct (lsp_s G' li) as [ni [Hni nipos]].
-        { cbn. now rewrite HG. }
+        { cbn. now apply HG. }
         generalize (Subgraph1.lsp_G'_spec_left G lzero l Hinl Vs _ Hlset li).
         fold G'. simpl in Hni.
         rewrite <-Hs, Hni.
@@ -1318,7 +1389,7 @@ Section CheckLeq.
     (* case where there is no path from l to Set *)
     - intros HlSet. subst e.
       assert (Hl' : VSet.In l (wGraph.V G)). {
-        red in Hl; cbn in Hl; now subst G. }
+        red in Hl; cbn in Hl; now apply HG. }
 
       assert (UnivExprSet.for_all
                 (fun ei => match ei with
@@ -1357,7 +1428,7 @@ Section CheckLeq.
           - intros [li bi] Hei; trivial.
             specialize (Hu _ Hei); cbn in Hu.
             destruct (lsp_s G li) as [ni' [Hni' ni'pos]].
-            { now subst G. }
+            { now apply HG. }
             rewrite Hni'.
             rewrite UnivExprSet.fold_spec. rewrite <- fold_left_rev_right.
             apply UnivExprSetFact.elements_1, InA_In_eq, in_rev in Hei.
@@ -1408,7 +1479,7 @@ Section CheckLeq.
           simpl. assert (Z.max nl (K + 0) = K). lia. now rewrite H0. }
         rewrite XX in H.
         destruct (lsp_s G li) as [ni [Hni nipos]].
-        { now subst G. }
+        { now apply HG. }
         specialize (HK2 _ Hei); cbn in HK2. rewrite Hni in HK2.
 
         case_eq (lsp G l li).
@@ -1833,7 +1904,7 @@ Section CheckLeq2.
   Context {cf:checker_flags}.
 
   Definition is_graph_of_uctx G uctx
-    := on_Some (fun uctx => make_graph uctx = G) (gc_of_uctx uctx).
+    := on_Some (fun uctx => Equal_graph (make_graph uctx) G) (gc_of_uctx uctx).
 
   Context (G : universes_graph)
           uctx (Huctx: global_uctx_invariants uctx) (HC : consistent uctx.2)
@@ -1862,7 +1933,7 @@ Section CheckLeq2.
     exact HC. contradiction HG.
   Qed.
 
-  Let HG' : G = make_graph uctx'.
+  Let HG' : Equal_graph G (make_graph uctx').
     subst uctx'; cbn. clear Huctx'.
     unfold is_graph_of_uctx, gc_of_uctx in *.
     destruct (gc_of_constraints uctx.2) as [ctrs|].
@@ -2240,11 +2311,6 @@ Section AddLevelsCstrs.
     firstorder auto.
   Qed.
 
-  Definition Equal_graph := 
-    fun G G' : universes_graph =>
-    LevelSet.Equal G.1.1 G'.1.1 /\
-    wGraph.EdgeSet.Equal G.1.2 G'.1.2 /\ Level.eq G.2 G'.2.
-  
   Lemma forallb_spec {A : Type} (p : A -> bool) (l : list A) :
     match forallb p l with 
     | true => forall x : A, In x l -> p x

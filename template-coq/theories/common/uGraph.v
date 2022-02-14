@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssrbool MSetWeakList MSetFacts MSetProperties.
+Require Import ssrbool MSetWeakList MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils config Universes wGraph.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
@@ -108,6 +108,8 @@ End GoodConstraint.
 Module GoodConstraintSet := Make GoodConstraint.
 Module GoodConstraintSetFact := WFactsOn GoodConstraint GoodConstraintSet.
 Module GoodConstraintSetProp := WPropertiesOn GoodConstraint GoodConstraintSet.
+Module GoodConstraintSetDecide := WDecide (GoodConstraintSet).
+Ltac gcsets := GoodConstraintSetDecide.fsetdec.
 
 Definition GoodConstraintSet_pair x y
   := GoodConstraintSet.add y (GoodConstraintSet.singleton x).
@@ -593,11 +595,6 @@ Definition add_level_edges :=
       | Some ll => EdgeSet.add (edge_of_level ll) E
       end).
 
-Lemma edgeset_equal s s' : EdgeSet.Equal s s' -> s = s'.
-Proof.
-  intros Heq; now apply EdgeSet.eq_leibniz.
-Qed.
-
 Definition add_cstrs ctrs := 
   GoodConstraintSet.fold (fun ctr => EdgeSet.add (edge_of_constraint ctr)) ctrs.
 
@@ -623,13 +620,22 @@ Proof.
     now setoid_rewrite InA_In_eq.
 Qed.
 
-#[global] Instance add_cstrs_proper : Proper (GoodConstraintSet.Equal ==> Logic.eq ==> Logic.eq)%signature add_cstrs.
+#[global] Instance add_cstrs_proper : Proper (Logic.eq ==> EdgeSet.Equal ==> EdgeSet.Equal)%signature add_cstrs.
 Proof.
-  intros s s' eq x y ->.
-  eapply wGraph.EdgeSet.eq_leibniz.
-  intro e.
+  intros s s' eq x y H.
+  intros e.
+  rewrite /add_cstrs.
+  rewrite !GoodConstraintSet.fold_spec. subst s'.
+  induction (GoodConstraintSet.elements s) in x, y, H, e |- *; cbn; auto.
+  apply IHl. now rewrite H.
+Qed.
+
+#[global] Instance add_cstrs_proper' : Proper (GoodConstraintSet.Equal ==> EdgeSet.Equal ==> EdgeSet.Equal)%signature add_cstrs.
+Proof.
+  intros s s' eq x y H.
+  red in H. intros e.
   rewrite !add_cstrs_spec.
-  firstorder auto.
+  rewrite H. firstorder auto.
 Qed.
 
 Definition make_graph (uctx : VSet.t * GoodConstraintSet.t) : t :=
@@ -2148,7 +2154,7 @@ Section CheckLeq2.
 End CheckLeq2.
 
 (* Show proof irrelevance: we are using sets with canonical representations to represent the graph *)
-Lemma graph_eq : forall (G G' : universes_graph),
+(* Lemma graph_eq : forall (G G' : universes_graph),
     VSet.Equal G.1.1 G'.1.1
     -> EdgeSet.Equal G.1.2 G'.1.2
     -> G.2 = G'.2
@@ -2160,15 +2166,12 @@ Proof.
   f_equal.
   now apply VSet.eq_leibniz.
   now apply EdgeSet.eq_leibniz.
-Qed.
+Qed. *)
 
 Require Import ssreflect.
-Require Import MSetDecide.
 Module EdgeSetDecide := WDecide (EdgeSet).
-Module GoodConstraintSetDecide := WDecide (GoodConstraintSet).
 Module GCS := GoodConstraintSet.
 Ltac esets := EdgeSetDecide.fsetdec.
-Ltac gcsets := GoodConstraintSetDecide.fsetdec.
 
 Section AddLevelsCstrs.
 
@@ -2191,7 +2194,7 @@ Section AddLevelsCstrs.
     (exists c, option_edge_of_level c = Some e /\ VSet.In c x) \/ EdgeSet.In e g.
   Proof.
     rewrite /add_level_edges VSet.fold_spec.
-    setoid_rewrite (VSetFact.elements_iff x). setoid_rewrite InA_In_eq at 2.
+    setoid_rewrite (VSetFact.elements_iff x). setoid_rewrite InA_In_eq.
     induction (VSet.elements x) in g |- *; simpl.
     intuition auto. now destruct H0 as [c [_ F]].
     rewrite {}IHl.
@@ -2210,44 +2213,49 @@ Section AddLevelsCstrs.
   Qed.
 
   Lemma add_cstrs_union g ctrs1 ctrs2 : 
-    add_cstrs (GoodConstraintSet.union ctrs1 ctrs2) g =
-    add_cstrs ctrs1 (add_cstrs ctrs2 g).
+    EdgeSet.Equal (add_cstrs (GoodConstraintSet.union ctrs1 ctrs2) g) (add_cstrs ctrs1 (add_cstrs ctrs2 g)).
   Proof.
-    apply edgeset_equal. intros e.
+    intros e.
     rewrite !add_cstrs_spec.
     setoid_rewrite GoodConstraintSet.union_spec.
     firstorder eauto.
   Qed.
 
   Lemma add_level_edges_union g l1 l2 :
-    add_level_edges (VSet.union l1 l2) g =
-    add_level_edges l1 (add_level_edges l2 g).
+    EdgeSet.Equal (add_level_edges (VSet.union l1 l2) g)
+    (add_level_edges l1 (add_level_edges l2 g)).
   Proof.
-    apply edgeset_equal. intros e.
+    intros e.
     rewrite !add_level_edges_spec.
     setoid_rewrite VSet.union_spec.
     firstorder eauto.
   Qed.
 
   Lemma add_level_edges_add_cstrs_comm l c g : 
-    add_level_edges l (add_cstrs c g) = 
-    add_cstrs c (add_level_edges l g).
+    EdgeSet.Equal (add_level_edges l (add_cstrs c g))
+      (add_cstrs c (add_level_edges l g)).
   Proof.
-    apply edgeset_equal. intros e.
+    intros e.
     rewrite !add_level_edges_spec !add_cstrs_spec add_level_edges_spec.
     firstorder auto.
   Qed.
 
+  Definition equal_graph (G G' : universes_graph) :=
+    LevelSet.equal G.1.1 G'.1.1 && EdgeSet.equal G.1.2 G'.1.2 && Level.eqb G.2 G'.2.
+
   Lemma add_uctx_make_graph levels1 levels2 ctrs1 ctrs2
-  : add_uctx (levels1, ctrs1) (make_graph (levels2, ctrs2))
-    = make_graph (VSet.union levels1 levels2,
-                  GoodConstraintSet.union ctrs1 ctrs2).
+  : equal_graph (add_uctx (levels1, ctrs1) (make_graph (levels2, ctrs2)))
+    (make_graph (VSet.union levels1 levels2,
+                  GoodConstraintSet.union ctrs1 ctrs2)).
   Proof.
     rewrite /make_graph /= /add_uctx /=.
-    f_equal. f_equal. unfold GoodConstraintSet.t in ctrs1.
-    rewrite add_cstrs_union. f_equal.
-    rewrite add_level_edges_union.
-    now rewrite add_level_edges_add_cstrs_comm.
+    unfold equal_graph. rtoProp. split. split. cbn.
+    eapply LevelSet.equal_spec. reflexivity.
+    eapply EdgeSet.equal_spec.
+    unfold GoodConstraintSet.t in ctrs1.
+    rewrite add_cstrs_union. simpl.
+    rewrite add_level_edges_add_cstrs_comm.
+    now rewrite add_level_edges_union. now cbn.
   Qed.
 
   Definition gc_result_eq (x y : option GoodConstraintSet.t) :=

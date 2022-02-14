@@ -157,7 +157,7 @@ Module Level.
 
 End Level.
 
-Module LevelSet := MSetList.MakeWithLeibniz Level.
+Module LevelSet := MSetAVL.Make Level.
 Module LevelSetFact := WFactsOn Level LevelSet.
 Module LevelSetProp := WPropertiesOn Level LevelSet.
 Module LevelSetDecide := WDecide (LevelSet).
@@ -195,10 +195,8 @@ Proof.
     * rewrite LevelSet.add_spec. intuition auto.
 Qed.
 
-Lemma LevelSet_union_empty s : LevelSet.union LevelSet.empty s = s.
+Lemma LevelSet_union_empty s : LevelSet.Equal (LevelSet.union LevelSet.empty s) s.
 Proof.
-  apply LevelSet.eq_leibniz.
-  change LevelSet.eq with LevelSet.Equal.
   intros x; rewrite LevelSet.union_spec. lsets.
 Qed.
 

@@ -498,7 +498,7 @@ struct
                   let c, univs = Global.force_proof Library.indirect_accessor lc in
                   let () = match univs with
                   | Opaqueproof.PrivateMonomorphic () -> ()
-                  | Opaqueproof.PrivatePolymorphic (n, csts) -> if not (Univ.ContextSet.is_empty csts && Int.equal n 0) then 
+                  | Opaqueproof.PrivatePolymorphic csts -> if not (Univ.ContextSet.is_empty csts) then
                     CErrors.user_err Pp.(str "Private polymorphic universes not supported by TemplateCoq")
                   in Some c
                 else None

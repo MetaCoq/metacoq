@@ -249,6 +249,9 @@ Section CheckEnv.
   Section UniverseChecks.
   Obligation Tactic := idtac.
 
+  Instance proper_is_true : Proper (eq ==> eq) is_true.
+  Proof. now intros x y ->. Qed.
+
   Program Definition check_udecl id (Σ : global_env) (HΣ : ∥ wf Σ ∥) G
           (HG : is_graph_of_uctx G (global_uctx Σ)) (udecl : universes_decl)
     : EnvCheck (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
@@ -327,15 +330,14 @@ Section CheckEnv.
       rewrite {}HΣctrs {}Hctrs in H. simpl in H.
       destruct gc_of_constraints. simpl in H.
       inversion Huctx; subst; clear Huctx.
-      clear -H H2 cf. rewrite add_uctx_make_graph in H2.
-      refine (eq_rect _ (fun G => wGraph.is_acyclic G = true) H2 _ _).
-      apply graph_eq; try reflexivity.
-      + assert(make_graph (global_ext_levels (Σ, udecl), t) = 
-        make_graph (global_ext_levels (Σ, udecl), (GoodConstraintSet.union ctrs Σctrs))).
-        apply graph_eq. simpl; reflexivity.
+      clear -H H2 cf. setoid_rewrite add_uctx_make_graph in H2.
+      red; rewrite -H2. apply is_acyclic_proper.
+      + assert(Equal_graph (make_graph (global_ext_levels (Σ, udecl), t)) 
+          (make_graph (global_ext_levels (Σ, udecl), (GoodConstraintSet.union ctrs Σctrs)))).
+        red. split. cbn. reflexivity. split.
         unfold make_graph. simpl.
         now rewrite H. simpl. reflexivity.
-        rewrite H0. reflexivity.
+        apply H0.
       + now simpl in H. 
     Qed.
 

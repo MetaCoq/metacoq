@@ -1995,7 +1995,7 @@ Proof.
                         /\ In c' (CS.elements ctrs)).
     1: intuition.
     apply iff_ex; intro. apply and_iff_compat_l. symmetry.
-    etransitivity. 1: eapply CS.elements_spec1.
+    etransitivity. 1: symmetry; eapply CS.elements_spec1.
     etransitivity. 1: eapply SetoidList.InA_alt.
     split; intro; eauto.
     now destruct H as [? [[] ?]].

@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssrbool MSetWeakList MSetFacts MSetProperties MSetDecide.
+Require Import ssrbool MSetWeakList MSetFacts MSetProperties MSetDecide Morphisms.
 From MetaCoq.Template Require Import utils config Universes wGraph.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
@@ -2240,24 +2240,224 @@ Section AddLevelsCstrs.
     firstorder auto.
   Qed.
 
-  Definition equal_graph (G G' : universes_graph) :=
-    LevelSet.equal G.1.1 G'.1.1 && EdgeSet.equal G.1.2 G'.1.2 && Level.eqb G.2 G'.2.
-
-  Lemma add_uctx_make_graph levels1 levels2 ctrs1 ctrs2
-  : equal_graph (add_uctx (levels1, ctrs1) (make_graph (levels2, ctrs2)))
-    (make_graph (VSet.union levels1 levels2,
-                  GoodConstraintSet.union ctrs1 ctrs2)).
+  Definition Equal_graph := 
+    fun G G' : universes_graph =>
+    LevelSet.Equal G.1.1 G'.1.1 /\
+    wGraph.EdgeSet.Equal G.1.2 G'.1.2 /\ Level.eq G.2 G'.2.
+  
+  Lemma forallb_spec {A : Type} (p : A -> bool) (l : list A) :
+    match forallb p l with 
+    | true => forall x : A, In x l -> p x
+    | false => exists x : A, In x l × p x = false
+    end.
   Proof.
-    rewrite /make_graph /= /add_uctx /=.
-    unfold equal_graph. rtoProp. split. split. cbn.
-    eapply LevelSet.equal_spec. reflexivity.
-    eapply EdgeSet.equal_spec.
-    unfold GoodConstraintSet.t in ctrs1.
-    rewrite add_cstrs_union. simpl.
-    rewrite add_level_edges_add_cstrs_comm.
-    now rewrite add_level_edges_union. now cbn.
+    induction l; cbn.
+    - now intros.
+    - destruct (forallb p l) eqn:heq.
+      rewrite andb_true_r.
+      destruct (p a) eqn:he.
+      intros x []. subst; auto. now apply IHl.
+      exists a; auto.
+      rewrite andb_false_r. destruct IHl as [x [inx hx]].
+      exists x. intuition auto.
   Qed.
 
+  Lemma forallb_in {A : Type} (p : A -> bool) (l l' : list A) :
+    (forall x : A, In x l <-> In x l') ->
+    forallb p l = forallb p l'.
+  Proof.
+    intros heq.
+    generalize (forallb_spec p l).
+    generalize (forallb_spec p l').
+    do 2 destruct forallb; intuition auto.
+    destruct H0 as [x [hin hp]].
+    - specialize (H x (proj1 (heq x) hin)). red in H; congruence.
+    - destruct H as [x [hin hp]].
+      specialize (H0 x (proj2 (heq _) hin)). congruence.
+  Qed.
+
+  Lemma levelset_for_all_eq f f' l l' : 
+    (forall x, f x = f' x) -> LevelSet.Equal l l' -> 
+    LevelSet.for_all f l = LevelSet.for_all f' l'.
+  Proof.
+    intros Hf heq.
+    rewrite !VSetFact.for_all_b.
+    setoid_replace f with f'; auto.
+    eapply forallb_in. 
+    intros x.
+    red in heq.
+    specialize (heq x).
+    rewrite -!InA_In_eq.
+    now rewrite -!LevelSetFact.elements_iff.
+  Qed.
+ 
+  Lemma Nbar_max_spec n m v : 
+    Nbar.max n m = v ->
+    (Nbar.le n m /\ v = m) \/ (Nbar.le m n /\ v = n).
+  Proof.
+    destruct n, m; cbn; firstorder.
+    destruct (Z.max_spec_le z z0); firstorder; try lia.
+    left. split; auto. congruence.
+    right. split; auto. congruence.
+  Qed.
+
+  Lemma Nbar_max_spec' n m : 
+    Nbar.le n m -> Nbar.max m n = m.
+  Proof.
+    destruct n, m; cbn; firstorder. f_equal. lia.
+  Qed.
+
+  Lemma Nbar_max_spec'' n m : 
+    Nbar.le n m -> Nbar.max n m = m.
+  Proof.
+    destruct n, m; cbn; firstorder. f_equal. lia.
+  Qed.
+
+  Lemma Nbar_max_le n m k : Nbar.le (Nbar.max n m) k ->
+    Nbar.le n k /\ Nbar.le m k.
+  Proof.
+    intros hl.
+    generalize (Nbar_max_spec n m _ eq_refl). intuition subst; try rewrite H1 in hl; auto.
+    - now transitivity m.
+    - now transitivity n.
+  Qed.
+
+  Lemma fold_left_max_spec (l : list Nbar.t) acc n : 
+    fold_left Nbar.max l acc = n ->
+    (n = acc /\ (forall x, In x l -> Nbar.le x n)) \/
+    (In n l /\ Nbar.le acc n /\ (forall x, In x l -> Nbar.le x n)).
+  Proof.
+    induction l in acc, n |- *.
+    - cbn. intros ->; firstorder.
+    - cbn. intros H. specialize (IHl _ _ H).
+      destruct IHl. firstorder auto.
+      symmetry in H0. apply Nbar_max_spec in H0.
+      firstorder auto. right. firstorder auto. subst; auto. now rewrite H2. subst x n.
+      rewrite H2. reflexivity.
+      left. firstorder auto. subst x n. now rewrite H2.
+      destruct H0.
+      right. firstorder auto.
+      now apply Nbar_max_le in H1.
+      now apply Nbar_max_le in H1.
+  Qed.
+
+
+  Lemma fold_left_max_spec' (l : list Nbar.t) acc n : 
+    (n = acc /\ (forall x, In x l -> Nbar.le x n)) \/
+    (In n l /\ Nbar.le acc n /\ (forall x, In x l -> Nbar.le x n)) ->
+    fold_left Nbar.max l acc = n.
+  Proof.
+    induction l in acc, n |- *.
+    - cbn. intuition.
+    - cbn. intros H.
+      apply IHl. intuition auto.
+      subst acc.
+      pose proof (H1 a). left. split. symmetry. eapply Nbar_max_spec'; auto.
+      intuition auto.
+      left. split; intuition auto. subst a.
+      symmetry. now apply Nbar_max_spec''.
+      right. intuition auto. specialize (H2 a).
+      apply Nbar.max_lub; auto.
+  Qed.
+
+  Lemma fold_left_comm_ext (l l' : list Nbar.t) : 
+    (forall x, In x l <-> In x l') ->
+    fold_left Nbar.max l =1 fold_left Nbar.max l'.
+  Proof.
+    intros eql acc.
+    generalize (fold_left_max_spec l acc _ eq_refl).
+    generalize (fold_left_max_spec l' acc _ eq_refl).
+    intuition auto.
+    - now rewrite H H0.
+    - rewrite H. apply fold_left_max_spec'. left; intuition auto.
+      specialize (H2 x (proj1 (eql _) H3)). congruence.
+    - rewrite H0. symmetry.
+      apply fold_left_max_spec'. left; intuition auto.
+      specialize (H4 x (proj2 (eql _) H2)). congruence.
+    - apply fold_left_max_spec'. right.
+      intuition auto. now apply eql. now apply H3, eql.
+  Qed.
+
+  Lemma fold_left_comm_ext2 f f' (l l' : list (Z × Level.t)) : f =1 f' -> 
+    (forall x, In x l <-> In x l') ->
+    fold_left Nbar.max (map f l) =1 fold_left Nbar.max (map f' l').
+  Proof.
+    intros eqf eqg.
+    apply fold_left_comm_ext.
+    intros.
+    rewrite !in_map_iff. firstorder eauto.
+    specialize (eqg x0). exists x0; intuition auto. now rewrite -eqf.
+    exists x0. specialize (eqg x0). rewrite eqf; intuition auto.
+  Qed.
+   
+  Lemma Equal_graph_edges {e e'} : Equal_graph e e' -> 
+    forall x, In x (EdgeSet.elements e.1.2) <-> In x (EdgeSet.elements e'.1.2).
+  Proof.
+    intros [vs [es ?]]. intros x. red in vs.
+    now rewrite -!InA_In_eq -!EdgeSetFact.elements_iff.
+  Qed.
+
+  Lemma succs_proper x e e' v: Equal_graph e e' ->
+    In x (succs e v) <-> In x (succs e' v).
+  Proof.
+    intros eq. unfold succs.
+    rewrite !in_map_iff.
+    setoid_rewrite filter_In.
+    now setoid_rewrite (Equal_graph_edges eq).
+  Qed.
+    
+  Lemma fold_left_comm_ext3 f f' e e' x : f =1 f' -> 
+    Equal_graph e e' ->
+    fold_left Nbar.max (map f (succs e x)) =1 
+    fold_left Nbar.max (map f' (succs e' x)).
+  Proof.
+    intros eqf eqg.
+    apply fold_left_comm_ext2; auto.
+    intros. now apply succs_proper.
+  Qed.
+
+  #[global] Instance lsp_proper : Morphisms.Proper (Equal_graph ==> Logic.eq ==> Logic.eq ==> Logic.eq)%signature lsp.
+  Proof.
+    intros e e' He x ? <- y ? <-.
+    unfold lsp, lsp0.
+    pose proof (proj1 He).
+    change (wGraph.V e) with e.1.1.
+    change (wGraph.V e') with e'.1.1.
+    replace (LevelSet.cardinal e'.1.1) with (LevelSet.cardinal e.1.1).
+    2:{ now rewrite H. }
+    revert H.
+    generalize e.1.1, e'.1.1. intros t0 t1.
+    induction (LevelSet.cardinal t0) in t0, t1, e, e', He, x, y |- *. cbn; auto.
+    cbn. intros eqt. 
+    replace (LevelSet.mem x t0) with (LevelSet.mem x t1).
+    2:{ now rewrite eqt. }
+    destruct LevelSet.mem; auto.
+    apply fold_left_comm_ext3; auto.
+    intros [n0 y0]. f_equal. 
+    apply (IHn e e' He).
+    intros elt. rewrite !LevelSet.remove_spec.
+    intuition auto. now apply eqt. now apply eqt.
+  Qed.
+
+  #[global] Instance is_acyclic_proper : Morphisms.Proper (Equal_graph ==> Logic.eq)%signature is_acyclic.
+  Proof.
+    intros e e' eq.
+    unfold is_acyclic.
+    eapply levelset_for_all_eq; tea. cbn.
+    intros x. now setoid_rewrite eq.
+    apply eq.
+  Qed.
+
+  Lemma add_uctx_make_graph levels1 levels2 ctrs1 ctrs2 : 
+    Equal_graph (add_uctx (levels1, ctrs1) (make_graph (levels2, ctrs2)))
+      (make_graph (VSet.union levels1 levels2,
+                    GoodConstraintSet.union ctrs1 ctrs2)).
+  Proof.
+    rewrite /make_graph /= /add_uctx /=.
+    unfold Equal_graph. split => //. split => //.
+    now rewrite add_cstrs_union /= add_level_edges_add_cstrs_comm add_level_edges_union.
+  Qed.
+    
   Definition gc_result_eq (x y : option GoodConstraintSet.t) :=
     match x, y with
     | Some x, Some y => GoodConstraintSet.eq x y

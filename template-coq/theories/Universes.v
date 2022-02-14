@@ -1,4 +1,4 @@
-From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
+From Coq Require Import MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils BasicAst config.
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -1173,15 +1173,13 @@ Module UnivConstraint.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End UnivConstraint.
 
-Module ConstraintSet := MSetList.MakeWithLeibniz UnivConstraint.
+Module ConstraintSet := MSetAVL.Make UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
 Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
 Module CS := ConstraintSet.
 
-Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s = s.
+Lemma CS_union_empty s : ConstraintSet.Equal (ConstraintSet.union ConstraintSet.empty s) s.
 Proof.
-  apply ConstraintSet.eq_leibniz.
-  change ConstraintSet.eq with ConstraintSet.Equal.
   intros x; rewrite ConstraintSet.union_spec. lsets.
 Qed.
 
@@ -1206,17 +1204,6 @@ Proof.
   intros s s' eqs.
   unfold CS.For_all. split; intros IH x inxs; apply (IH x);
   now apply eqs.
-Qed.
-
-(* Being built up from sorted lists without duplicates, constraint sets have 
-  decidable equality. This is however not used in the development. *)
-Set Equations With UIP.
-Remark ConstraintSet_EqDec : EqDec ConstraintSet.t.
-Proof.
-  intros p p'.
-  destruct (ConstraintSet.eq_dec p p').
-  - now left; eapply ConstraintSet.eq_leibniz in e.
-  - right. intros ->. apply n. reflexivity.
 Qed.
 
 (** {6 Universe instances} *)

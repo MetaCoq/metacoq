@@ -222,13 +222,13 @@ Section Wcbv.
       eval (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))
 
   (** CoFix-case unfolding *)
-  | red_cofix_case ip mfix idx p args narg fn brs res :
+  | eval_cofix_case ip mfix idx p args narg fn brs res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tCase ip p (mkApps fn args) brs) res ->
       eval (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res
 
   (** CoFix-proj unfolding *)
-  | red_cofix_proj p mfix idx args narg fn res :
+  | eval_cofix_proj p mfix idx args narg fn res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tProj p (mkApps fn args)) res ->
       eval (tProj p (mkApps (tCoFix mfix idx) args)) res

@@ -206,13 +206,13 @@ Section Wcbv.
       eval (tApp f a) (tApp (mkApps (tFix mfix idx) argsv) av)
 
   (** CoFix-case unfolding *)
-  | red_cofix_case ip mfix idx p args narg fn brs res :
+  | eval_cofix_case ip mfix idx p args narg fn brs res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tCase ip p (mkApps fn args) brs) res ->
       eval (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res
 
   (** CoFix-proj unfolding *)
-  | red_cofix_proj p mfix idx args narg fn res :
+  | eval_cofix_proj p mfix idx args narg fn res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tProj p (mkApps fn args)) res ->
       eval (tProj p (mkApps (tCoFix mfix idx) args)) res
@@ -259,7 +259,6 @@ Section Wcbv.
       value (mkApps f args)
   .
 
-
   Inductive red1 : term -> term -> Type :=
   | red_app_left a a' b :
      red1 a a' -> red1 (tApp a b) (tApp a' b)
@@ -280,14 +279,31 @@ Section Wcbv.
     nth_error brs c = Some br ->
     declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
     #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
+    All value args ->
     red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
   | red_proj_in discr discr' i pars arg : 
     red1 discr discr' -> red1 (tProj (i, pars, arg) discr)  (tProj (i, pars, arg) discr')
   | red_proj i pars arg args u a :
     nth_error args (pars + arg) = Some a ->
+    All value args ->
     red1 (tProj (i, pars, arg) (mkApps (tConstruct i 0 u) args)) a
-  | red_fix mfix idx argsv a av fn :
-    red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) av)
+  | red_fix mfix idx argsv a fn :
+    All value argsv ->
+    value a ->
+    unfold_fix mfix idx = Some (#|argsv|, fn) ->
+    isConstruct_app a = true ->
+    red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) a)
+  | red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
+                       (idx : nat) (args : list term) 
+                       (narg : nat) (fn : term),
+                     cunfold_cofix mfix idx = Some (narg, fn) ->
+                     red1 (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))
+  | red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
+                       (idx : nat) (p : predicate term) 
+                       (args : list term) (narg : nat) 
+                       (fn : term) (brs : list (branch term)),
+                     cunfold_cofix mfix idx = Some (narg, fn) ->
+                     red1 (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)
   .
 
   Lemma value_values_ind : forall P : term -> Type,
@@ -570,6 +586,31 @@ Section Wcbv.
     simpl in *.
     intros hnth.
     rewrite -IHfix_subst => //.
+    rewrite (subst_app_decomp [_]). simpl.
+    f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
+  Lemma closed_cofix_substl_subst_eq {mfix idx d} : 
+    closed (tCoFix mfix idx) ->
+    nth_error mfix idx = Some d ->
+    subst0 (cofix_subst mfix) (dbody d) = substl (cofix_subst mfix) (dbody d).
+  Proof.  
+    move=> /= Hf; f_equal; f_equal.
+    have clfix : All (closedn 0) (cofix_subst mfix).
+    { clear idx.
+      solve_all.
+      unfold cofix_subst.
+      move: #|mfix| => n.
+      induction n. constructor.
+      constructor; auto.
+      simpl. solve_all. }
+    move: (cofix_subst mfix) (dbody d) clfix.
+    clear; induction cofix_subst => Hfix /= //.
+    now rewrite subst_empty.
+    move=> Ha; depelim Ha.
+    simpl in *.
+    intros hnth.
+    rewrite -IHcofix_subst => //.
     rewrite (subst_app_decomp [_]). simpl.
     f_equal. rewrite lift_closed // closed_subst //.
   Qed.

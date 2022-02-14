@@ -76,12 +76,12 @@ Section Inversion.
     dependent induction h ; [
       repeat insum ;
       repeat intimes ;
-      [ first [ eassumption | try reflexivity ] .. | try solve [eapply typing_ws_cumul_pb; econstructor; eauto] ]
+      [ try first [ eassumption | try reflexivity ] .. | try solve [eapply typing_ws_cumul_pb; econstructor; eauto] ]
     | repeat outsum ;
       repeat outtimes ;
       repeat insum ;
       repeat intimes ;
-      [ first [ eassumption | reflexivity ] ..
+      [ try first [ eassumption | reflexivity ] ..
       | try etransitivity ; try eassumption; 
         try eauto with pcuic;
         try solve [eapply into_ws_cumul; tea] ]
@@ -158,21 +158,7 @@ Section Inversion.
         typing_size H1 < typing_size H × typing_size H2 < typing_size H ×
         Σ ;;; Γ ⊢ tSort (Universe.sort_of_product s1 s2) ≤ T.
   Proof.
-    intros Γ na A B T h.
-    unshelve (dependent induction h ; [
-      repeat insum ;
-      repeat intimes ;
-      [ try first [ eassumption | try reflexivity ] .. | try solve [eapply typing_equality; econstructor; eauto] ]
-    | repeat outsum ;
-      repeat outtimes ;
-      repeat insum ;
-      repeat intimes ;
-      [ try first [ eassumption | reflexivity ] ..
-      | try etransitivity ; try eassumption; 
-        try eauto with pcuic;
-        try solve [eapply into_ws_cumul; tea] ]
-    ]).
-    all:eauto.
+    intros Γ na A B T h. unshelve invtac h; eauto.
     all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); lia.
   Qed.
 
@@ -217,20 +203,7 @@ Section Inversion.
       typing_size H1 < typing_size H × typing_size H2 < typing_size H × typing_size H3 < typing_size H ×
         Σ ;;; Γ ⊢ B{ 0 := v } ≤ T.
   Proof.
-    intros Γ u v T h. 
-    unshelve (dependent induction h ; [
-      repeat insum ;
-      repeat intimes ;
-      [ try first [ eassumption | try reflexivity ] .. | try solve [eapply typing_equality; econstructor; eauto] ]
-    | repeat outsum ;
-      repeat outtimes ;
-      repeat insum ;
-      repeat intimes ;
-      [ try first [ eassumption | reflexivity ] ..
-      | try etransitivity ; try eassumption; 
-        try eauto with pcuic;
-        try solve [eapply into_ws_cumul; tea] ]
-    ]).
+    intros Γ u v T h. unshelve invtac h.
     4,5,6,10,11,12: eauto.
     all: unfold typing_size at 2; fold (typing_size h1); fold (typing_size h2); try fold (typing_size h3); lia.
   Qed.

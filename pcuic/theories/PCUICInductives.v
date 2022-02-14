@@ -621,14 +621,6 @@ Proof.
   intros. apply H. lia.
 Qed.
 
-Lemma typing_spine_refl {cf} {Σ} {wfΣ : wf Σ} {Γ T} :
-  isType Σ Γ T ->
-  typing_spine Σ Γ T [] T.
-Proof.
-  intros isty. constructor; auto.
-  eauto with pcuic.
-Qed.
-
 Lemma subslet_extended_subst {cf:checker_flags} Σ Δ :
   wf Σ.1 ->
   wf_local Σ Δ ->

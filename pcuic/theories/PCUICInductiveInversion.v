@@ -812,10 +812,10 @@ Lemma Construct_Ind_ind_eq' {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
     ∑ s, 
       sorts_local_ctx (lift_typing typing) Σ Γ argctx2 s ×
       (** Parameters match *)
-      equality_terms Σ Γ (firstn mdecl.(ind_npars) args) (firstn mdecl.(ind_npars) args') ×
+      ws_cumul_pb_terms Σ Γ (firstn mdecl.(ind_npars) args) (firstn mdecl.(ind_npars) args') ×
 
     (** Indices match *)
-    equality_terms Σ Γ
+    ws_cumul_pb_terms Σ Γ
       (map (subst0 (argsubst ++ parsubst) ∘ 
       subst (inds (inductive_mind i) u mdecl.(ind_bodies)) (#|cdecl.(cstr_args)| + #|ind_params mdecl|)
       ∘ (subst_instance u)) 

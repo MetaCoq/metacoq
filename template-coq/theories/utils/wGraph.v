@@ -338,6 +338,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
   Module EdgeSetFact := WFactsOn Edge EdgeSet.
   Module EdgeSetProp := WPropertiesOn Edge EdgeSet.
   Module EdgeSetDecide := WDecide (EdgeSet).
+  Ltac esets := EdgeSetDecide.fsetdec.
 
   Definition t := (VSet.t * EdgeSet.t * V.t)%type.
 

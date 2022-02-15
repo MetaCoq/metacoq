@@ -111,7 +111,7 @@ let unquote_univ_constraint evm c (* of type univ_constraint *) : _ * univ_const
 
 
 (* set given by MSets.MSetWeakList.Make *)
-let unquote_set trm =
+let _unquote_set trm =
   let (h, args) = app_full trm [] in
   (* h supposed to be Mkt, the constructor of the record *)
   match args with
@@ -119,18 +119,11 @@ let unquote_set trm =
   | _ -> not_supported_verb trm "unquote_set"
 
 
-let unquote_constraints evm c (* of type constraints *) : _ * Univ.Constraint.t =
-  let c = unquote_set c in
+let unquote_constraints env evm c (* of type constraints *) : _ * Univ.Constraint.t =
+  let c = reduce_all env evm (constr_mkApp (tConstraintSet_elements, [| c |])) in
+  let c = unquote_list c in
   List.fold_left (fun (evm, set) c -> let evm, c = unquote_univ_constraint evm c in evm, Univ.Constraint.add c set)
                  (evm, Univ.Constraint.empty) c
-
-
-let denote_variance trm (* of type Variance *) : Variance.t =
-  if constr_equall trm cIrrelevant then Variance.Irrelevant
-  else if constr_equall trm cCovariant then Variance.Covariant
-  else if constr_equall trm cInvariant then Variance.Invariant
-  else not_supported_verb trm "denote_variance"
-
 
 (* let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
   let i, c = unquote_pair trm in
@@ -138,38 +131,45 @@ let denote_variance trm (* of type Variance *) : Variance.t =
   let evm, c = unquote_constraints evm c in
   evm, Univ.UContext.make (i, c) *)
 
-let unquote_levelset evm c (* of type Level.Set.t *) : _ * Univ.LSet.t =
-  let c = unquote_set c in
+let unquote_levelset env evm c (* of type Level.Set.t *) : _ * Univ.LSet.t =
+  let c = reduce_all env evm (constr_mkApp (tLevelSet_elements, [| c |])) in
+  let c = unquote_list c in
   List.fold_left (fun (evm, set) c -> let evm, c = unquote_level evm c in evm, Univ.LSet.add c set)
                  (evm, Univ.LSet.empty) c
 
-let denote_ucontextset evm trm (* of type ContextSet.t *) : _ * ContextSet.t =
+let denote_ucontextset env evm trm (* of type ContextSet.t *) : _ * ContextSet.t =
   let i, c = unquote_pair trm in
-  let evm, i = unquote_levelset evm i in
-  let evm, c = unquote_constraints evm c in
+  let evm, i = unquote_levelset env evm i in
+  let evm, c = unquote_constraints env evm c in
   evm, (i, c)
 
 let denote_names evm trm : _ * Name.t array =
   let l = unquote_list trm in
   evm, CArray.map_of_list unquote_name l
 
-let denote_ucontext evm trm (* of type UContext.t *) : _ * UContext.t =
+let denote_ucontext env evm trm (* of type UContext.t *) : _ * UContext.t =
   let l, c = unquote_pair trm in
   let l = unquote_list l in
   let evm, vars = map_evm unquote_level evm l in
   let vars = Instance.of_array (Array.of_list vars) in
-  let evm, c = unquote_constraints evm c in
+  let evm, c = unquote_constraints env evm c in
   evm, (UContext.make (vars, c))
 
-let denote_aucontext evm trm (* of type AbstractContext.t *) : _ * AUContext.t =
+let denote_aucontext env evm trm (* of type AbstractContext.t *) : _ * AUContext.t =
   let i, c = unquote_pair trm in
   let l = unquote_list i in
   let vars = List.mapi (fun i l -> Level.var i) l in
   let vars = Instance.of_array (Array.of_list vars) in
-  let evm, c = unquote_constraints evm c in
+  let evm, c = unquote_constraints env evm c in
   evm, snd (abstract_universes (CArray.map_of_list unquote_name l) (UContext.make (vars, c)))
 
+let denote_variance trm (* of type Variance *) : Variance.t =
+  if constr_equall trm cIrrelevant then Variance.Irrelevant
+  else if constr_equall trm cCovariant then Variance.Covariant
+  else if constr_equall trm cInvariant then Variance.Invariant
+  else not_supported_verb trm "denote_variance"
 
+  
 let denote_variance evm trm (* of type Variance.t list *) : _ * Variance.t array =
   let variances = List.map denote_variance (unquote_list trm) in
   evm, Array.of_list variances
@@ -189,31 +189,31 @@ let _to_entry_inductive_universes = function
   | Monomorphic_uctx ctx -> Monomorphic_entry ctx
   | Polymorphic_uctx ctx -> Polymorphic_entry (AUContext.names ctx, AUContext.repr ctx)
 
-let _denote_universes_decl evm trm (* of type universes_decl *) : _ * universe_context_type =
+let _denote_universes_decl env evm trm (* of type universes_decl *) : _ * universe_context_type =
   let (h, args) = app_full trm [] in
   match args with
   | ctx :: [] -> if constr_equall h cMonomorphic_ctx then
-                   let evm, ctx = denote_ucontextset evm ctx in
+                   let evm, ctx = denote_ucontextset env evm ctx in
                    evm, Monomorphic_uctx ctx
                  else if constr_equall h cPolymorphic_ctx then
-                   let evm, ctx = denote_aucontext evm ctx in
+                   let evm, ctx = denote_aucontext env evm ctx in
                    evm, Polymorphic_uctx ctx
                  else
                    not_supported_verb trm "denote_universes_decl"
   | _ -> bad_term_verb trm "denote_universes_decl"
 
-let denote_universes_entry evm trm (* of type universes_entry *) : _ * Entries.universes_entry =
+let denote_universes_entry env evm trm (* of type universes_entry *) : _ * Entries.universes_entry =
   let (h, args) = app_full trm [] in
   match args with
   | ctx :: [] -> if constr_equall h cMonomorphic_entry then
-                   let evm, ctx = denote_ucontextset evm ctx in
+                   let evm, ctx = denote_ucontextset env evm ctx in
                    evm, Monomorphic_entry ctx
                  else
                    not_supported_verb trm "denote_universes_entry"
   | names :: ctx :: [] ->
      if constr_equall h cPolymorphic_entry then
        let evm, names = denote_names evm names in
-       let evm, ctx = denote_ucontext evm ctx in
+       let evm, ctx = denote_ucontext env evm ctx in
         evm, Polymorphic_entry (names, ctx)
      else
       not_supported_verb trm "denote_universes_entry"
@@ -269,7 +269,7 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
        let finite = denote_mind_entry_finite finite in
        let envpars, evm, params = denote_context env evm params in
        let evm, inds = map_evm (unquote_one_inductive_entry env) evm (unquote_list inds) in
-       let evm, univs = denote_universes_entry evm univs in
+       let evm, univs = denote_universes_entry env evm univs in
        let template = unquote_bool template in
        let variance = unquote_map_option
            (fun v -> CArray.map_of_list (unquote_map_option unquote_variance) (unquote_list v))

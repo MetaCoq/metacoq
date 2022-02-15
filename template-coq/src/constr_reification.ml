@@ -175,7 +175,6 @@ struct
   (* let tto_kernel_repr = ast "universe.to_kernel_repr" *)
   let tof_levels = ast "universe.of_levels"
   let tLevelSet_of_list = ast "universe.of_list"
-
   let noprop_tSet = ast "noproplevel.lzero"
   let noprop_tLevel = ast "noproplevel.Level"
   let noprop_tLevelVar = ast "noproplevel.Var"
@@ -196,7 +195,9 @@ struct
   let tConstraintSet = ast "ConstraintSet.t_"
   let tConstraintSetempty = ast "ConstraintSet.empty"
   let tConstraintSetadd = ast "ConstraintSet.add"
+  let tConstraintSet_elements = ast "ConstraintSet.elements"
   let tLevelSet = ast "LevelSet.t"
+  let tLevelSet_elements = ast "LevelSet.elements"
   let tmake_univ_constraint = ast "make_univ_constraint"
   let tinit_graph = ast "graph.init"
   (* FIXME this doesn't exist! *)

@@ -137,6 +137,7 @@ Register MetaCoq.Template.Universes.Polymorphic_ctx as metacoq.ast.Polymorphic_c
 Register MetaCoq.Template.Universes.ConstraintSet.t_ as metacoq.ast.ConstraintSet.t_.
 Register MetaCoq.Template.Universes.ConstraintSet.empty as metacoq.ast.ConstraintSet.empty.
 Register MetaCoq.Template.Universes.ConstraintSet.add as metacoq.ast.ConstraintSet.add.
+Register MetaCoq.Template.Universes.ConstraintSet.elements as metacoq.ast.ConstraintSet.elements.
 
 Register MetaCoq.Template.Universes.UContext.t as metacoq.ast.UContext.t.
 Register MetaCoq.Template.Universes.UContext.make as metacoq.ast.UContext.make.
@@ -144,6 +145,7 @@ Register MetaCoq.Template.Universes.AUContext.t as metacoq.ast.AUContext.t.
 Register MetaCoq.Template.Universes.AUContext.make as metacoq.ast.AUContext.make.
 
 Register MetaCoq.Template.Universes.LevelSet.t_ as metacoq.ast.LevelSet.t.
+Register MetaCoq.Template.Universes.LevelSet.elements as metacoq.ast.LevelSet.elements.
 Register MetaCoq.Template.Universes.UnivConstraint.make as metacoq.ast.make_univ_constraint.
 
 Register MetaCoq.Template.common.uGraph.init_graph as metacoq.ast.graph.init.

@@ -1,4 +1,4 @@
-From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
+From Coq Require Import MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils BasicAst config.
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -95,6 +95,7 @@ Module Level.
   | ltLevelLevel s s' : string_lt s s' -> lt_ (Level s) (Level s')
   | ltLevelVar s n : lt_ (Level s) (Var n)
   | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
+  Derive Signature for lt_.
 
   Definition lt := lt_.
 
@@ -157,7 +158,7 @@ Module Level.
 
 End Level.
 
-Module LevelSet := MSetList.MakeWithLeibniz Level.
+Module LevelSet := MSetAVL.Make Level.
 Module LevelSetFact := WFactsOn Level LevelSet.
 Module LevelSetProp := WPropertiesOn Level LevelSet.
 Module LevelSetDecide := WDecide (LevelSet).
@@ -195,10 +196,8 @@ Proof.
     * rewrite LevelSet.add_spec. intuition auto.
 Qed.
 
-Lemma LevelSet_union_empty s : LevelSet.union LevelSet.empty s = s.
+Lemma LevelSet_union_empty s : LevelSet.Equal (LevelSet.union LevelSet.empty s) s.
 Proof.
-  apply LevelSet.eq_leibniz.
-  change LevelSet.eq with LevelSet.Equal.
   intros x; rewrite LevelSet.union_spec. lsets.
 Qed.
 
@@ -1080,6 +1079,7 @@ Module ConstraintType.
   Inductive lt_ : t -> t -> Prop :=
   | LeLe n m : (n < m)%Z -> lt_ (Le n) (Le m)
   | LeEq n : lt_ (Le n) Eq.
+  Derive Signature for lt_.
   Definition lt := lt_.
 
   Lemma lt_strorder : StrictOrder lt.
@@ -1173,15 +1173,13 @@ Module UnivConstraint.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End UnivConstraint.
 
-Module ConstraintSet := MSetList.MakeWithLeibniz UnivConstraint.
+Module ConstraintSet := MSetAVL.Make UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
 Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
 Module CS := ConstraintSet.
 
-Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s = s.
+Lemma CS_union_empty s : ConstraintSet.Equal (ConstraintSet.union ConstraintSet.empty s) s.
 Proof.
-  apply ConstraintSet.eq_leibniz.
-  change ConstraintSet.eq with ConstraintSet.Equal.
   intros x; rewrite ConstraintSet.union_spec. lsets.
 Qed.
 
@@ -1206,17 +1204,6 @@ Proof.
   intros s s' eqs.
   unfold CS.For_all. split; intros IH x inxs; apply (IH x);
   now apply eqs.
-Qed.
-
-(* Being built up from sorted lists without duplicates, constraint sets have 
-  decidable equality. This is however not used in the development. *)
-Set Equations With UIP.
-Remark ConstraintSet_EqDec : EqDec ConstraintSet.t.
-Proof.
-  intros p p'.
-  destruct (ConstraintSet.eq_dec p p').
-  - now left; eapply ConstraintSet.eq_leibniz in e.
-  - right. intros ->. apply n. reflexivity.
 Qed.
 
 (** {6 Universe instances} *)

@@ -26,6 +26,26 @@ Local Set Keyed Unification.
 Set Equations Transparent.
 
 Import MCMonadNotation.
+Require Import Morphisms.
+
+Instance proper_add_level_edges levels : Morphisms.Proper (wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature (add_level_edges levels).
+Proof.
+  intros e e' he.
+  rewrite /add_level_edges.
+  rewrite !VSet.fold_spec.
+  induction (VSet.elements levels) in e, e', he |- *; cbn; auto.
+  apply IHl. destruct variable_of_level => //.
+  now rewrite he.
+Qed.
+
+Instance proper_add_uctx cstrs : Morphisms.Proper (Equal_graph ==> Equal_graph)%signature (add_uctx cstrs).
+Proof.
+  intros g g' eq. rewrite /add_uctx; cbn.
+  split. cbn. now rewrite (proj1 eq).
+  cbn. split => //.
+  rewrite /add_level_edges. now rewrite (proj1 (proj2 eq)).
+  apply eq.
+Qed.
 
 (** It otherwise tries [auto with *], very bad idea. *)
 Ltac Coq.Program.Tactics.program_solve_wf ::= 
@@ -248,7 +268,7 @@ Section CheckEnv.
 
   Section UniverseChecks.
   Obligation Tactic := idtac.
-
+ 
   Program Definition check_udecl id (Σ : global_env) (HΣ : ∥ wf Σ ∥) G
           (HG : is_graph_of_uctx G (global_uctx Σ)) (udecl : universes_decl)
     : EnvCheck (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
@@ -327,15 +347,11 @@ Section CheckEnv.
       rewrite {}HΣctrs {}Hctrs in H. simpl in H.
       destruct gc_of_constraints. simpl in H.
       inversion Huctx; subst; clear Huctx.
-      clear -H H2 cf. rewrite add_uctx_make_graph in H2.
-      refine (eq_rect _ (fun G => wGraph.is_acyclic G = true) H2 _ _).
-      apply graph_eq; try reflexivity.
-      + assert(make_graph (global_ext_levels (Σ, udecl), t) = 
-        make_graph (global_ext_levels (Σ, udecl), (GoodConstraintSet.union ctrs Σctrs))).
-        apply graph_eq. simpl; reflexivity.
+      clear -H H2 cf HG. rewrite -HG add_uctx_make_graph in H2.
+      red; rewrite -H2. apply is_acyclic_proper.
+      + red. split. cbn. reflexivity. split.
         unfold make_graph. simpl.
         now rewrite H. simpl. reflexivity.
-        rewrite H0. reflexivity.
       + now simpl in H. 
     Qed.
 
@@ -349,22 +365,20 @@ Section CheckEnv.
     intros. simpl.
     destruct uctx as [uctx' [gcof onu]].
     subst G'.
-    simpl. split.
+    simpl. split; [|sq; pcuic].
     red in wfG |- *.
     unfold global_ext_uctx, gc_of_uctx. simpl.
     unfold gc_of_uctx in gcof. simpl in gcof.
     unfold gc_of_uctx in wfG. unfold global_ext_constraints. simpl in wfG |- *.
     pose proof (gc_of_constraints_union (constraints_of_udecl ext) (global_constraints Σ)).
     destruct (gc_of_constraints (global_constraints Σ)); simpl in *; auto.
-    destruct (gc_of_constraints (constraints_of_udecl ext)); simpl in *; auto.
-    noconf gcof.
+    destruct (gc_of_constraints (constraints_of_udecl ext)); simpl in *; auto; noconf gcof.
     simpl in H.
     destruct gc_of_constraints; simpl in *; auto.
-    symmetry. subst G.
-    rewrite add_uctx_make_graph.
-    apply graph_eq; simpl; auto.
-    reflexivity. now rewrite H. discriminate.
-    sq. pcuic.
+    symmetry. rewrite -wfG add_uctx_make_graph. simpl.
+    unfold make_graph. simpl. split; simpl. reflexivity.
+    split; try reflexivity.
+    now rewrite H.
   Qed.
 
   Program Definition make_wf_env_ext (Σ : wf_env) id (ext : universes_decl) : 
@@ -2052,6 +2066,60 @@ Section CheckEnv.
 
   Obligation Tactic := Program.Tactics.program_simpl.
 
+  Definition cs_equal (x y : ContextSet.t) : Prop :=
+    LevelSet.Equal x.1 y.1 /\ ConstraintSet.Equal x.2 y.2.
+
+  Definition gcs_equal x y : Prop :=
+    LevelSet.Equal x.1 y.1 /\ GoodConstraintSet.Equal x.2 y.2.
+  
+  Require Import Relation_Definitions.
+
+  Definition R_opt {A} (R : relation A) : relation (option A) :=
+    fun x y => match x, y with
+      | Some x, Some y => R x y
+      | None, None => True
+      | _, _ => False
+    end.
+
+  Instance gc_of_constraints_proper : Proper (ConstraintSet.Equal ==> R_opt GoodConstraintSet.Equal) gc_of_constraints.
+  Proof.
+    intros c c' eqc; cbn.
+    destruct (gc_of_constraintsP c);
+    destruct (gc_of_constraintsP c'); cbn.
+    - intros cs; rewrite i i0. firstorder eauto.
+    - destruct e0 as [cs [incs gcn]].
+      apply eqc in incs. destruct (e cs incs) as [? []]. congruence.
+    - destruct e as [cs [incs gcn]].
+      apply eqc in incs. destruct (e0 cs incs) as [? []]. congruence.
+    - exact I.
+  Qed.
+
+  Instance proper_add_level_edges' : Morphisms.Proper (LevelSet.Equal ==> wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature add_level_edges.
+  Proof.
+    intros l l' hl e e' <-.
+    intros x; rewrite !add_level_edges_spec. firstorder eauto.
+  Qed.
+  
+  Instance make_graph_proper : Proper (gcs_equal ==> Equal_graph) make_graph.
+  Proof.
+    intros [v c] [v' c'] [eqv eqc]; cbn.
+    unfold make_graph; cbn in *.
+    split; cbn; auto.
+    split; cbn; try reflexivity.
+    now rewrite eqc eqv.
+  Qed.
+  Require Import SetoidTactics.
+
+  Instance is_graph_of_uctx_proper G : Proper (cs_equal ==> iff) (is_graph_of_uctx G).
+  Proof.
+    intros [l c] [l' c'] [eql eqc]; cbn.
+    unfold is_graph_of_uctx; cbn. cbn in *.
+    pose proof (gc_of_constraints_proper _ _ eqc).
+    destruct (gc_of_constraints c); cbn in *; destruct (gc_of_constraints c'); cbn.
+    now setoid_replace (l, t) with (l', t0) using relation gcs_equal. elim H. elim H.
+    intuition.
+  Qed.
+
   Program Fixpoint check_wf_env (Σ : global_env)
     : EnvCheck (∑ G, (is_graph_of_uctx G (global_uctx Σ) /\ ∥ wf Σ ∥)) :=
     match Σ with
@@ -2070,7 +2138,7 @@ Section CheckEnv.
         end
     end.
   Next Obligation.
-    repeat constructor.
+    constructor. red. cbn. reflexivity. repeat constructor.
   Qed.
   Next Obligation.
     sq. split; eauto.
@@ -2091,11 +2159,10 @@ Section CheckEnv.
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
     intros Σctrs HΣctrs; rewrite HΣctrs in H0, i; simpl in *.
     destruct (gc_of_constraints (ConstraintSet.union _ _)).
-    simpl in H0. 
-    subst G. unfold global_ext_levels; simpl.
-    symmetry. rewrite add_uctx_make_graph.
-    apply graph_eq. simpl. reflexivity.
-    simpl. now rewrite H0. simpl. reflexivity.
+    simpl in H0. unfold global_ext_levels; simpl.
+    symmetry. rewrite -i add_uctx_make_graph.
+    simpl. split; simpl. reflexivity. split. 
+    now rewrite H0. reflexivity.
     now simpl in H0.
   Qed.
   Next Obligation.
@@ -2121,14 +2188,13 @@ Section CheckEnv.
       [|intro HH; rewrite HH in i; cbn in i; contradiction i].
     intros Σctrs HΣctrs; rewrite HΣctrs in H1, i; simpl in *.
     destruct (gc_of_constraints (ConstraintSet.union _ _)).
-    simpl in H1.
-    subst G. unfold global_ext_levels; simpl.
+    simpl in H1. unfold global_ext_levels; simpl.
     assert (eq: monomorphic_levels_decl g
                 = levels_of_udecl (universes_decl_of_decl g)). {
       destruct g. destruct c, cst_universes0; try discriminate; reflexivity.
       destruct m, ind_universes0; try discriminate; reflexivity. }
-    rewrite eq. simpl. rewrite add_uctx_make_graph.
-    apply graph_eq; try reflexivity.
+    rewrite eq. simpl. rewrite -i add_uctx_make_graph.
+    split; try reflexivity.
     simpl. now rewrite H1.
     now simpl in H1.
   Qed.
@@ -2143,7 +2209,11 @@ Section CheckEnv.
       destruct g. destruct c, cst_universes0; try discriminate; reflexivity.
       destruct m, ind_universes0; try discriminate; reflexivity. }
     rewrite eq1; clear eq1.
-    now rewrite LevelSet_union_empty CS_union_empty.
+    setoid_replace (LevelSet.union LevelSet.empty (global_levels Σ),
+    ConstraintSet.union ConstraintSet.empty (global_constraints Σ)) with
+      (global_levels Σ, global_constraints Σ) using relation cs_equal.
+      apply i.
+    split; cbn; auto using LevelSet_union_empty, CS_union_empty.
   Qed.
 
   Obligation Tactic := idtac.
@@ -2171,10 +2241,8 @@ Section CheckEnv.
     destruct (gc_of_constraints (global_constraints Σ)) eqn:HΣcstrs; auto.
     simpl. unfold global_ext_levels; simpl.
     destruct (gc_of_constraints (ConstraintSet.union _ _)); simpl in H => //.
-    simpl.
-    subst G. symmetry. rewrite add_uctx_make_graph.
-    apply graph_eq; try reflexivity.
-    now simpl; rewrite H.
+    simpl. rewrite -i add_uctx_make_graph.
+    apply make_graph_proper. split; auto. reflexivity.
     sq; split; auto.
   Qed.
 
@@ -2241,9 +2309,9 @@ Section CheckEnv.
     simpl. unfold global_ext_levels; simpl.
     destruct (gc_of_constraints (ConstraintSet.union _ _)); simpl in H => //.
     simpl. simpl in i.
-    subst x. symmetry. rewrite add_uctx_make_graph.
-    apply graph_eq; try reflexivity.
-    now simpl; rewrite H. simpl in H.
+    rewrite -i add_uctx_make_graph. apply make_graph_proper.
+    split; auto; try reflexivity.
+    simpl in H.
     destruct (gc_of_constraints (ConstraintSet.union _ _)); simpl in H => //.
   Qed.
   Next Obligation.

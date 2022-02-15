@@ -700,6 +700,7 @@ Section Wcbv.
   Proof.
     destruct d, d'.
     destruct d, d0.
+
     assert (d0 = d) as -> by now apply uip.
     assert (e1 = e2) as -> by now apply uip.
     assert (e = e0) as -> by now apply uip.

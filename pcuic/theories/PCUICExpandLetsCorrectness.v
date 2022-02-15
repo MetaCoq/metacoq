@@ -4332,18 +4332,6 @@ Proof. reflexivity. Qed.
 
 Notation levels_of_list := LevelSetProp.of_list.
 
-Lemma levels_of_list_app l l' : 
-  levels_of_list (l ++ l') = 
-  LevelSet.union (levels_of_list l) 
-    (levels_of_list l').
-Proof.
-  rewrite /LevelSetProp.of_list fold_right_app.
-  induction l; cbn.
-  now rewrite LevelSet_union_empty.
-  apply LevelSet.eq_leibniz. red.
-  rewrite IHl. rewrite LevelSetProp.union_add //.
-Qed.
-
 From Coq Require Import MSetDecide.
 
 Module ConstraintSetDecide := WDecide (ConstraintSet).
@@ -4355,31 +4343,6 @@ Definition aulevels inst cstrs :
 Proof.
   cbn.
   now rewrite mapi_unfold.
-Qed.
-
-#[global] Instance unfold_proper {A} : Proper (eq ==> `=1` ==> eq) (@unfold A).
-Proof.
-  intros x y -> f g eqfg.
-  induction y; cbn; auto. f_equal; auto. f_equal. apply eqfg.
-Qed.
-
-(* sLemma unfold_add {A} n k (f : nat -> A) : skipn k (unfold (k + n) f) = unfold k (fun x => f (x + n)). *)
-
-Lemma unfold_add {A} n k (f : nat -> A) : unfold (n + k) f = unfold k f ++ unfold n (fun x => f (x + k)).
-Proof.
-  induction n in k |- *.
-  cbn. now rewrite app_nil_r.
-  cbn. rewrite IHn. now rewrite app_assoc.
-Qed.
-
-
-Definition unfold_levels_app n k : 
-  LevelSetProp.of_list (unfold (n + k) Level.Var) = 
-  LevelSet.union (LevelSetProp.of_list (unfold k Level.Var))
-    (LevelSetProp.of_list (unfold n (fun i => Level.Var (k + i)))).
-Proof.
-  rewrite unfold_add levels_of_list_app //.
-  now setoid_rewrite Nat.add_comm at 1.
 Qed.
 
 Lemma levels_of_list_spec l ls : 

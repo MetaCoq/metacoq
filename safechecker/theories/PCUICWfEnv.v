@@ -1,6 +1,6 @@
 
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ProofIrrelevance.
+From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICTyping PCUICGlobalEnv.
@@ -55,8 +55,9 @@ Section GraphSpec.
       rewrite -> XX in *; simpl in *; [|contradiction].
     unfold gc_of_uctx in XX; simpl in XX.
     destruct (gc_of_constraints Σ); [|discriminate].
-    inversion XX; subst. generalize (global_ext_levels Σ); intros lvs; cbn.
-    reflexivity.
+    inversion XX; subst.
+    unfold is_true. rewrite !LevelSet.mem_spec. 
+    symmetry. apply HG. 
   Qed.
 
 End GraphSpec.

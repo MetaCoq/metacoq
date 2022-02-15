@@ -436,34 +436,182 @@ Proof.
   cong.
 Defined.
 
-Definition eqb_ConstraintSet x y :=
-  eqb (ConstraintSet.this x) (ConstraintSet.this y).
-
-#[global] Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
+#[global] Instance Z_as_int : ReflectEq Int.Z_as_Int.t.
 Proof.
-  refine {| eqb := eqb_ConstraintSet |}.
-  intros [thisx okx] [thisy oky].
-  unfold eqb_ConstraintSet.
-  cbn -[eqb].
-  destruct (eqb_spec thisx thisy); subst; constructor.
-  - f_equal; apply uip.
-  - congruence.
+  refine {| eqb := Z.eqb |}.
+  apply Z.eqb_spec.
 Defined.
 
-Definition eqb_LevelSet x y :=
-  eqb (LevelSet.this x) (LevelSet.this y).
 
-#[global] Instance reflect_LevelSet : ReflectEq LevelSet.t.
+Scheme level_lt_ind_dep := Induction for Level.lt_ Sort Prop.
+Scheme constraint_type_lt_ind_dep := Induction for ConstraintType.lt_ Sort Prop.
+Scheme constraint_lt_ind_dep := Induction for UnivConstraint.lt_ Sort Prop.
+Derive Signature for UnivConstraint.lt_.
+Derive Signature for le.
+Set Equations With UIP.
+
+Derive NoConfusion EqDec for comparison.
+
+Lemma string_compare_irrel {s s'} {c} (H H' : string_compare s s' = c) : H = H'.
 Proof.
-  refine {| eqb := eqb_LevelSet |}.
-  intros [thisx okx] [thisy oky].
-  unfold eqb_LevelSet.
-  cbn -[eqb].
-  destruct (eqb_spec thisx thisy); subst; constructor.
-  - f_equal; apply uip.
-  - congruence.
-Defined.
+  apply uip.
+Qed.  
 
+Scheme le_ind_prop := Induction for le Sort Prop.
+
+Lemma nat_le_irrel {x y : nat} (l l' : x <= y) : l = l'.
+Proof.
+  induction l using le_ind_prop; depelim l'.
+  - reflexivity.
+  - lia.
+  - lia.
+  - f_equal. apply IHl.
+Qed.
+
+Lemma lt_level_irrel {x y : Level.t} (l l' : Level.lt_ x y) : l = l'.
+Proof.
+  induction l using level_lt_ind_dep; depelim l'; auto.
+  - now replace s0 with s2 by apply uip.
+  - f_equal. apply nat_le_irrel.
+Qed.
+
+Lemma constraint_type_lt_level_irrel {x y} (l l' : ConstraintType.lt_ x y) : l = l'.
+Proof.
+  induction l using constraint_type_lt_ind_dep; depelim l'; auto.
+  f_equal. apply uip.
+Qed.
+
+Require Import RelationClasses.
+Existing Instance ConstraintType.lt_strorder.
+    
+Lemma constraint_lt_irrel (x y : UnivConstraint.t) (l l' : UnivConstraint.lt_ x y) : l = l'.
+Proof.
+  revert l'. induction l using constraint_lt_ind_dep.
+  - intros l'. depelim l'.
+    now rewrite (lt_level_irrel l l4).
+    now elim (irreflexivity (R:=ConstraintType.lt) l4).
+    now elim (irreflexivity l4).
+  - intros l'; depelim l'.
+    now elim (irreflexivity (R:=ConstraintType.lt) l).
+    now rewrite (constraint_type_lt_level_irrel l l4).
+    now elim (irreflexivity l4).
+  - intros l'; depelim l'.
+    now elim (irreflexivity l).
+    now elim (irreflexivity l).
+    now rewrite (lt_level_irrel l l4).
+Qed.
+
+Module LevelSetsUIP.
+  Import LevelSet.Raw.
+  
+  Fixpoint levels_tree_eqb (x y : LevelSet.Raw.t) := 
+  match x, y with
+  | LevelSet.Raw.Leaf, LevelSet.Raw.Leaf => true
+  | LevelSet.Raw.Node h l o r, LevelSet.Raw.Node h' l' o' r' => 
+    eqb h h' && levels_tree_eqb l l' && eqb o o' && levels_tree_eqb r r'
+  | _, _ => false
+  end.
+  
+  Scheme levels_tree_rect := Induction for LevelSet.Raw.tree Sort Type.
+
+  #[global] Instance levels_tree_reflect : ReflectEq LevelSet.Raw.t.
+  Proof.
+    refine {| eqb := levels_tree_eqb |}.
+    induction x using levels_tree_rect; destruct y; try constructor; auto; try congruence.
+    cbn [levels_tree_eqb].
+    destruct (eqb_spec t0 t2); try constructor; auto; try congruence.
+    destruct (IHx1 y1); try constructor; auto; try congruence.
+    destruct (eqb_spec t1 t3); try constructor; auto; try congruence.
+    destruct (IHx2 y2); try constructor; auto; try congruence.
+  Qed.
+  
+  Derive NoConfusion for LevelSet.Raw.tree.
+  Derive Signature for LevelSet.Raw.bst.
+  
+  Definition eqb_LevelSet x y :=
+    eqb (LevelSet.this x) (LevelSet.this y).
+  
+  Lemma ok_irrel (x : t) (o o' : Ok x) : o = o'.
+  Proof.
+    unfold Ok in *.
+    induction o.
+    - now depelim o'.
+    - depelim o'. f_equal; auto.
+      clear -l0 l2. red in l0, l2.
+      extensionality y. extensionality inl.
+      apply lt_level_irrel.
+      extensionality y. extensionality inl.
+      apply lt_level_irrel.
+  Qed.
+
+  #[global] Instance reflect_LevelSet : ReflectEq LevelSet.t.
+  Proof.
+    refine {| eqb := eqb_LevelSet |}.
+    intros [thisx okx] [thisy oky].
+    unfold eqb_LevelSet.
+    cbn -[eqb].
+    destruct (eqb_spec thisx thisy); subst; constructor.
+    - f_equal. apply ok_irrel.
+    - congruence.
+  Defined.
+End LevelSetsUIP.
+
+Module ConstraintSetsUIP.
+  Import ConstraintSet.Raw.
+
+  Fixpoint cs_tree_eqb (x y : t) := 
+    match x, y with
+    | ConstraintSet.Raw.Leaf, ConstraintSet.Raw.Leaf => true
+    | ConstraintSet.Raw.Node h l o r, ConstraintSet.Raw.Node h' l' o' r' => 
+      eqb h h' && cs_tree_eqb l l' && eqb o o' && cs_tree_eqb r r'
+    | _, _ => false
+    end.
+
+  Scheme cs_tree_rect := Induction for ConstraintSet.Raw.tree Sort Type.
+
+  #[global] Instance cs_tree_reflect : ReflectEq ConstraintSet.Raw.t.
+  Proof.
+    refine {| eqb := cs_tree_eqb |}.
+    induction x using cs_tree_rect; destruct y; try constructor; auto; try congruence.
+    cbn [cs_tree_eqb].
+    destruct (eqb_spec t0 t1); try constructor; auto; try congruence.
+    destruct (IHx1 y1); try constructor; auto; try congruence.
+    destruct (eqb_spec p p0); try constructor; auto; try congruence.
+    destruct (IHx2 y2); try constructor; auto; try congruence.
+  Qed.
+
+  Definition eqb_ConstraintSet x y :=
+    eqb (ConstraintSet.this x) (ConstraintSet.this y).
+
+  Derive NoConfusion for ConstraintSet.Raw.tree.
+  Derive Signature for ConstraintSet.Raw.bst.
+
+  Lemma ok_irrel (x : t) (o o' : Ok x) : o = o'.
+  Proof.
+    unfold Ok in *.
+    induction o.
+    - now depelim o'.
+    - depelim o'. f_equal; auto.
+      clear -l0 l2. red in l0, l2.
+      extensionality y. extensionality inl.
+      apply constraint_lt_irrel.
+      extensionality y. extensionality inl.
+      apply constraint_lt_irrel.
+  Qed.
+
+  #[global] Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
+  Proof.
+    refine {| eqb := eqb_ConstraintSet |}.
+    intros [thisx okx] [thisy oky].
+    unfold eqb_ConstraintSet. cbn.
+    cbn -[eqb].
+    destruct (eqb_spec thisx thisy); subst; constructor.
+    - f_equal. apply ok_irrel.
+    - congruence.
+  Defined.
+
+End ConstraintSetsUIP.
+ 
 Definition eqb_universes_decl x y :=
   match x, y with
   | Monomorphic_ctx cx, Monomorphic_ctx cy => eqb cx cy
@@ -477,7 +625,7 @@ Ltac finish_reflect :=
     | |- context[eqb ?a ?b] => destruct (eqb_spec a b); [subst|constructor; congruence]
     end);
   constructor; trivial; congruence.
-
+ 
 #[global] Instance reflect_universes_decl : ReflectEq universes_decl.
 Proof.
   refine {| eqb := eqb_universes_decl |}.

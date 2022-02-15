@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-Require Import ssrbool MSetWeakList MSetFacts MSetProperties MSetDecide Morphisms.
+Require Import ssrbool MSetAVL MSetFacts MSetProperties MSetDecide Morphisms.
 From MetaCoq.Template Require Import utils config Universes wGraph.
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
@@ -104,6 +104,65 @@ Module GoodConstraint.
     decide equality. all: try apply VariableLevel.eq_dec.
     apply Z.eq_dec. all:apply string_dec || apply Peano_dec.eq_nat_dec.
   Defined.
+
+  Definition compare : t -> t -> comparison :=
+    fun x y =>
+    match x, y with
+    | gc_le l z r, gc_le l' z' r' =>
+      Pos.switch_Eq 
+        (Pos.switch_Eq (VariableLevel.compare l l')
+          (Z.compare z z')) (VariableLevel.compare r r')
+    | _, gc_le _ _ _ => Datatypes.Lt
+    | gc_le _ _ _, _ => Gt
+
+    | gc_lt_set_level n s, gc_lt_set_level n' s' => 
+      Pos.switch_Eq (Nat.compare n n') (string_compare s s')
+    | _, gc_lt_set_level _ _ => Datatypes.Lt
+    | gc_lt_set_level _ _, _ => Gt 
+    
+    | gc_le_set_var l r, gc_le_set_var l' r' =>
+      Pos.switch_Eq (Nat.compare l l') (Nat.compare r r')
+    | _, gc_le_set_var l' r' => Datatypes.Lt
+    | gc_le_set_var l r, _ => Gt
+    
+    | gc_le_level_set s n, gc_le_level_set s' n' =>
+      Pos.switch_Eq (string_compare s s') (Nat.compare n n')
+    | _, gc_le_level_set s' n' => Datatypes.Lt
+    | gc_le_level_set s n, _ => Gt
+        
+    | gc_le_var_set l r, gc_le_var_set l' r' => Pos.switch_Eq (Nat.compare l l') (Nat.compare r r')
+    end.
+
+  Definition lt x y := compare x y = Datatypes.Lt.
+  
+  Lemma lt_strorder : StrictOrder lt.
+  Proof.
+    (* constructor.
+    - intros []; intro X; inversion X; subst;
+      try (eapply Level.lt_strorder; eassumption).
+      eapply ConstraintType.lt_strorder; eassumption.
+      - intros ? ? ? X Y; invs X; invs Y; constructor; tea.
+        etransitivity; eassumption.
+        2: etransitivity; eassumption.
+        eapply ConstraintType.lt_strorder; eassumption. *)
+  Admitted.
+  
+  Lemma compare_spec x y
+  : CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
+  Proof.
+    unfold lt.
+    destruct x, y; cbn; repeat constructor; tas.
+    destruct (VariableLevel.compare_spec t0 t2); cbn; repeat constructor; tas.
+    destruct (Z.compare_spec z z0); cbn; repeat constructor; tas.
+    destruct (VariableLevel.compare_spec t1 t3); cbn; repeat constructor; tas.
+    red. congruence. subst.
+  Admitted.
+    
+  Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Proof.
+    intros ? ? X ? ? Y; invs X; invs Y. reflexivity.
+  Qed.
+
 End GoodConstraint.
 Module GoodConstraintSet := Make GoodConstraint.
 Module GoodConstraintSetFact := WFactsOn GoodConstraint GoodConstraintSet.
@@ -143,9 +202,16 @@ Lemma gc_satisfies_pair v gc1 gc2 :
   (gc_satisfies0 v gc1 /\ gc_satisfies0 v gc2) <->
   gc_satisfies v (GoodConstraintSet_pair gc1 gc2).
 Proof.
-  cbn; destruct (GoodConstraint.eq_dec gc2 gc1); cbn;
-    rewrite if_true_false.
-  now destruct e. symmetry. apply andb_and.
+  unfold GoodConstraintSet_pair.
+  unfold gc_satisfies.
+  rewrite /is_true GoodConstraintSet.for_all_spec.
+  split. intros.
+  intros x. rewrite !GoodConstraintSet.add_spec !GoodConstraintSet.singleton_spec.
+  intuition subst; auto.
+  unfold GoodConstraintSet.For_all.
+  intros hf.
+  split; apply hf; rewrite !GoodConstraintSet.add_spec; auto.
+  right. now rewrite !GoodConstraintSet.singleton_spec.
 Defined.
 
 (* None -> not satisfiable *)
@@ -638,9 +704,11 @@ Proof.
   rewrite H. firstorder auto.
 Qed.
 
+(** This introduces both Set </<= l constraints for the new variables, and the given
+  constraints. *)
 Definition make_graph (uctx : VSet.t * GoodConstraintSet.t) : t :=
   let init_edges := add_level_edges uctx.1 EdgeSet.empty in
-  let edges := add_cstrs  uctx.2 init_edges in
+  let edges := add_cstrs uctx.2 init_edges in
   (uctx.1, edges, lzero).
 
 Lemma make_graph_E uctx e
@@ -2581,7 +2649,7 @@ Section AddLevelsCstrs.
     destruct fold_left eqn:eq.
     - constructor.
       + intros.
-        setoid_rewrite ConstraintSetFact.elements_iff; setoid_rewrite InA_In_eq at 2.
+        setoid_rewrite ConstraintSetFact.elements_iff. setoid_rewrite InA_In_eq.
         transitivity ((exists (c : UnivConstraint.t) (gcs : GoodConstraintSet.t),
           gc_of_constraint c = Some gcs /\
           In c (ConstraintSet.elements s) /\ GoodConstraintSet.In gc gcs) \/ GCS.In gc GCS.empty).

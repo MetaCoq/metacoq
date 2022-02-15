@@ -95,6 +95,7 @@ Module Level.
   | ltLevelLevel s s' : string_lt s s' -> lt_ (Level s) (Level s')
   | ltLevelVar s n : lt_ (Level s) (Var n)
   | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
+  Derive Signature for lt_.
 
   Definition lt := lt_.
 
@@ -1078,6 +1079,7 @@ Module ConstraintType.
   Inductive lt_ : t -> t -> Prop :=
   | LeLe n m : (n < m)%Z -> lt_ (Le n) (Le m)
   | LeEq n : lt_ (Le n) Eq.
+  Derive Signature for lt_.
   Definition lt := lt_.
 
   Lemma lt_strorder : StrictOrder lt.

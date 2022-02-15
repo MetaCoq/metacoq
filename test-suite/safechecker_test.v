@@ -1,36 +1,22 @@
 From MetaCoq.Template Require Import Loader.
 From MetaCoq.SafeChecker Require Import Loader.
+Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
 
 Local Open Scope string_scope.
-MetaCoq SafeCheck nat.
 
+MetaCoq SafeCheck nat.
 (*
 Environment is well-formed and Ind(Coq.Init.Datatypes.nat,0,[]) has type: Sort([Set])
 *)
 
-MetaCoq SafeCheck 3.
 MetaCoq SafeCheck (3 + 1).
 
-MetaCoq Quote Definition foo := (3 + 1).
-
-MetaCoq SafeCheck plus.
-MetaCoq CoqCheck Nat.add.
-
-Require Import MetaCoq.SafeChecker.SafeTemplateChecker.
-
-
 Definition bool_list := List.map negb (cons true (cons false nil)).
-Set Printing Universes.
-(* Universe issues: undeclared universes from sections *)
-(* MetaCoq Quote Recursively Definition boolq := bool_list. *)
 MetaCoq SafeCheck bool_list.
 MetaCoq CoqCheck bool_list.
 
-(* Even with universe checking disabled, we get:
-Error: Type error: Msgundeclared level, while checking MetaCoq.Template.Universes.LevelSet.Raw.elt
-*)
 (* Time MetaCoq SafeCheck @infer_and_print_template_program. *)
-(*
+(* Uses template polymorphism:
 Error:
 Type error: Terms are not <= for cumulativity: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]) after reduction: Sort([Coq.Init.Datatypes.23,Coq.Init.Datatypes.24]) Sort([Set]), while checking MetaCoq.Template.Universes.Universe.Expr.t
 *)
@@ -43,20 +29,6 @@ Definition bignat : nat := Nat.of_num_uint 10000%uint.
 MetaCoq SafeCheck bignat.
 MetaCoq CoqCheck bignat.
 
-(*Require Import String.
-From MetaCoq.Template Require Import Loader Core TemplateMonad monad_utils Pretty.
-Import MonadNotation.
-Open Scope monad_scope.
-Require Import String.
-Open Scope string_scope.
-Definition topkn s : BasicAst.kername := 
-  (Datatypes.pair (BasicAst.MPfile ("safechecker_test" :: nil)%list) (s))%string.
-
-MetaCoq Quote Recursively Definition prodq := prod_rect.
-
-MetaCoq Run
-  (tmEval cbv (print_program false 2 prodq) >>= tmPrint).
-*)
 Set Universe Polymorphism.
 
 (* Basic notations *)
@@ -557,10 +529,6 @@ Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
   := BuildIsEquiv A B f g (issect' f g issect isretr) isretr
                   (is_adjoint' f g issect isretr).
 
-
-(* MetaCoq Run (tmEval (unfold concatkn)
-  (@safechecker_test.concat) >>=  tmQuote >>= tmPrint). *)
-  (* fun t => tmEval cbv (print_program false 1 t) >>= tmPrint). *)
 
 MetaCoq SafeCheck @issect'.
 

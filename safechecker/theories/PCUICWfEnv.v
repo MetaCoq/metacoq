@@ -1,10 +1,57 @@
-
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils uGraph.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICTyping PCUICGlobalEnv.
-     
+From MetaCoq.SafeChecker Require Import PCUICEnvMap.
+  
+(* We pack up all the information required on the global environment and graph in a 
+single record. *)
+
+Record wf_env {cf:checker_flags} := { 
+  wf_env_env :> global_env;
+  wf_env_map :> EnvMap.t;
+  wf_env_map_repr :> EnvMap.repr wf_env_env wf_env_map;
+  wf_env_wf :> ∥ wf wf_env_env ∥;
+  wf_env_graph :> universes_graph;
+  wf_env_graph_wf : is_graph_of_uctx wf_env_graph (global_uctx wf_env_env)
+}.
+
+Record wf_env_ext {cf:checker_flags} := { 
+  wf_env_ext_env :> global_env_ext;
+  wf_env_ext_map :> EnvMap.t;
+  wf_env_ext_map_repr :> EnvMap.repr wf_env_ext_env wf_env_ext_map;
+  wf_env_ext_wf :> ∥ wf_ext wf_env_ext_env ∥;
+  wf_env_ext_graph :> universes_graph;
+  wf_env_ext_graph_wf : is_graph_of_uctx wf_env_ext_graph (global_ext_uctx wf_env_ext_env)
+}.
+
+Section WfEnv.
+  Context {cf : checker_flags}.
+
+  Definition wf_env_sq_wf (Σ : wf_env) : ∥ wf Σ ∥.
+  Proof.
+    destruct (wf_env_wf Σ).
+    sq. apply X.
+  Qed.
+
+  Definition wf_env_ext_sq_wf (Σ : wf_env_ext) : ∥ wf Σ ∥.
+  Proof.
+    destruct (wf_env_ext_wf Σ).
+    sq. apply X.
+  Qed.
+
+  Definition lookup (Σ : wf_env_ext) (kn : kername) : option global_decl :=
+    EnvMap.lookup kn Σ.(wf_env_ext_map).
+
+  Lemma lookup_lookup_env Σ kn : lookup Σ kn = lookup_env Σ kn.
+  Proof.
+    rewrite /lookup. destruct Σ as [Σ map repr [wfext] G HG].
+    apply EnvMap.lookup_spec; auto.
+  Qed.
+
+End WfEnv.
+
 Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
 Proof.
@@ -19,12 +66,26 @@ Proof.
   contradiction HC.
 Defined.
 
+(** Any well-formed global environment gives rise to a well-formed universe graph corresponding to it. *)
+
 Lemma graph_of_wf_ext {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ G, is_graph_of_uctx G (global_ext_uctx Σ).
 Proof.
   destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
 Defined.
+
+(** Build an optimized environment representation for lookups along with the graph associated to a well-formed 
+  global environment. The graph building is separated, so that [(build_wf_env_ext Σ wfΣ).(wf_env_ext_env)] is
+  convertible to [Σ]. *)
+
+Definition build_wf_env_ext {cf : checker_flags} (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) : wf_env_ext := 
+  {| wf_env_ext_env := Σ; 
+     wf_env_ext_map := EnvMap.of_global_env Σ; 
+     wf_env_ext_map_repr := eq_refl;
+     wf_env_ext_wf := wfΣ;
+     wf_env_ext_graph := (graph_of_wf_ext wfΣ).π1;
+     wf_env_ext_graph_wf := (graph_of_wf_ext wfΣ).π2 |}.
 
 Section GraphSpec.
   Context {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)

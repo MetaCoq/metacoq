@@ -24,7 +24,7 @@ From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import PCUICSN.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.SafeChecker Require Import PCUICSafeReduce.
+From MetaCoq.SafeChecker Require Import PCUICEnvMap PCUICWfEnv PCUICSafeReduce.
 
 Local Opaque hnf.
 
@@ -179,8 +179,9 @@ Proof.
       auto. }
 (*   assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.*)
   pose proof (iswelltyped _ _ _ _ typ_false) as wt.
-  pose proof (hnf_sound (sq wf') (h := wt)) as [r].
-  pose proof (hnf_complete (sq wf') (h := wt)) as [w].
+  set (wf_env := build_wf_env_ext _ (sq wf')).
+  pose proof (hnf_sound wf_env (h := wt)) as [r].
+  pose proof (hnf_complete wf_env (h := wt)) as [w].
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.

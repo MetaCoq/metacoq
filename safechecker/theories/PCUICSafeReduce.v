@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICCanonicity.
      
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfReduction.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfReduction PCUICWfEnv.
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -68,7 +68,7 @@ Section Measure.
   Definition R Γ u v :=
     R_aux Γ (zip u ; stack_pos (fst u) (snd u))
             (zip v ; stack_pos (fst v) (snd v)).
-
+  
   Lemma cored_welltyped :
     forall {Γ u v},
       wf Σ -> welltyped Σ Γ u ->
@@ -87,7 +87,7 @@ Section Measure.
   Lemma red_welltyped :
     forall {Γ u v},
       wf Σ -> welltyped Σ Γ u ->
-      red (fst Σ) Γ u v ->
+      red Σ Γ u v ->
       welltyped Σ Γ v.
   Proof.
     intros hΣ Γ u v h r. apply red_cored_or_eq in r.
@@ -215,8 +215,9 @@ Section Reduce.
 
   Context (flags : RedFlags.t).
 
-  Context (Σ : global_env_ext).
-  Context (heΣ : ∥ wf_ext Σ ∥).
+  Context (Σ : wf_env_ext).
+  
+  Local Definition heΣ : ∥ wf_ext Σ ∥ := Σ.
 
   Local Definition hΣ : ∥ wf Σ ∥ := map_squash (wf_ext_wf Σ) heΣ.
 
@@ -385,7 +386,7 @@ Section Reduce.
       } ;
 
     | red_view_Const c u π with RedFlags.delta flags := {
-      | true with inspect (lookup_env (fst Σ) c) := {
+      | true with inspect (lookup Σ c) := {
         | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq :=
           let body' := subst_instance u body in
           rec reduce body' π ;
@@ -512,7 +513,9 @@ Section Reduce.
   Next Obligation.
     left. econstructor. eapply red1_context.
     econstructor.
-    - unfold declared_constant. rewrite <- eq. reflexivity.
+    - unfold declared_constant. 
+      rewrite lookup_lookup_env in eq.
+      rewrite <- eq. reflexivity.
     - cbn. reflexivity.
   Qed.
 
@@ -521,7 +524,8 @@ Section Reduce.
     eapply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
-    unfold declared_constant in d. rewrite <- eq in d.
+    unfold declared_constant in d. rewrite lookup_lookup_env in eq.
+    rewrite <- eq in d.
     discriminate.
   Qed.
   Next Obligation.
@@ -529,7 +533,7 @@ Section Reduce.
     eapply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
-    unfold declared_constant in d. rewrite <- eq in d.
+    unfold declared_constant in d. rewrite lookup_lookup_env in eq. rewrite <- eq in d.
     discriminate.
   Qed.
 
@@ -788,6 +792,7 @@ Section Reduce.
     rewrite zipc_appstack in r.
     cbn in r.
     pose proof r as r'.
+    destruct Σ.(wf_env_ext_wf).
     eapply red_welltyped in r; eauto.
     zip fold in r.
     apply welltyped_context in r as (?&typ); auto; cbn in *.
@@ -808,6 +813,7 @@ Section Reduce.
     apply Req_red in r; cbn in r.
     sq.
     pose proof r as r'.
+    destruct Σ.(wf_env_ext_wf).
     eapply red_welltyped in r; eauto.
     zip fold in r.
     apply welltyped_context in r as (?&typ); auto; cbn in *.
@@ -1486,7 +1492,7 @@ Section Reduce.
       assumption.
     - unfold zipp. case_eq (decompose_stack π). intros.
       constructor. constructor. eapply whne_mkApps. econstructor.
-      + symmetry. exact eq.
+      + symmetry. rewrite <-lookup_lookup_env. exact eq.
       + reflexivity.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
@@ -1661,7 +1667,7 @@ Section Reduce.
       end.
       noconf eq; cbn in *.
       pose proof hΣ as [hΣ].
-      clear -hΣ heΣ ht prf' h prf haux.
+      clear -hΣ ht prf' h prf haux.
       destruct prf as (r&stacks&?).
       unfold Pr in stacks.
       cbn in *.
@@ -1740,17 +1746,17 @@ Section Reduce.
 End Reduce.
 
 Section ReduceFns.
-  Context {cf : checker_flags} {no : normalizing_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥).
+  Context {cf : checker_flags} {no : normalizing_flags} (Σ : wf_env_ext).
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
 
-  Definition hnf := reduce_term RedFlags.default Σ HΣ.
+  Definition hnf := reduce_term RedFlags.default Σ.
 
   Theorem hnf_sound {Γ t h} : ∥ Σ ;;; Γ ⊢ t ⇝ hnf Γ t h ∥.
   Proof.
     unfold hnf.
-    destruct (reduce_term_sound RedFlags.default _ HΣ _ _ h).
+    destruct (reduce_term_sound RedFlags.default _ _ _ h).
     sq. eapply into_closed_red; fvs.
   Defined.
   
@@ -1770,14 +1776,15 @@ Section ReduceFns.
         }
       }.
   Proof.
-    * destruct h as [? hs]. sq.
+    * destruct (wf_env_ext_wf Σ).
+      destruct h as [? hs]. sq.
       eapply (wt_closed_red_refl hs).
     * pose proof (hnf_sound (h:=h)).
       now rewrite eq.
     * sq.
       pose proof (@hnf_complete Γ t h) as [wh].
       pose proof (@hnf_sound Γ t h) as [r'].
-      destruct HΣ.
+      destruct (wf_env_ext_wf Σ).
       eapply PCUICContextConversion.closed_red_confluence in X0 as (?&r1&r2); eauto.
       apply invert_red_sort in r2 as ->.
       eapply whnf_red_inv in r1; eauto.
@@ -1790,6 +1797,7 @@ Section ReduceFns.
     reduce_to_sort Γ t wt = TypeError_comp e p ->
     (forall s, red Σ Γ t (tSort s) -> False).
   Proof.
+    destruct (wf_env_ext_wf Σ).
     intros _ s r.
     apply p.
     exists s.
@@ -1808,6 +1816,7 @@ Section ReduceFns.
         }
       }.
   Proof.
+    all:destruct (wf_env_ext_wf Σ).
     * destruct h as [? hs]. sq.
       now eapply wt_closed_red_refl.
     * pose proof (hnf_sound (h:=h)).
@@ -1815,7 +1824,6 @@ Section ReduceFns.
     * sq.
       pose proof (@hnf_complete Γ t h) as [wh].
       pose proof (@hnf_sound Γ t h) as [r'].
-      destruct HΣ.
       eapply PCUICContextConversion.closed_red_confluence in X2 as (?&r1&r2); eauto.
       apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
       eapply whnf_red_inv in r1; auto.
@@ -1827,6 +1835,7 @@ Section ReduceFns.
     reduce_to_prod Γ t wt = TypeError_comp e p ->
     (forall na a b, red Σ Γ t (tProd na a b) -> False).
   Proof.
+    destruct (wf_env_ext_wf Σ).
     intros _ na a b r.
     apply p.
     exists na, a, b.
@@ -1839,7 +1848,7 @@ Section ReduceFns.
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
         | view_ind_tInd i u => Checked_comp (i; u; args; _);
-        | view_ind_other thd _ with inspect (reduce_stack RedFlags.default Σ HΣ Γ t [] h) := {
+        | view_ind_other thd _ with inspect (reduce_stack RedFlags.default Σ Γ t [] h) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i' u with inspect (decompose_stack π) := {
               | exist (l, _) eq_decomp' => Checked_comp (i'; u; l; _)
@@ -1850,12 +1859,13 @@ Section ReduceFns.
         }
       }.
   Proof.
+    all:destruct (wf_env_ext_wf Σ) as [wfΣ].
     - destruct h as [? h].
       assert (X : mkApps (tInd i u) args = t).
       { etransitivity. 2: symmetry; eapply mkApps_decompose_app.
         now rewrite <- eq_decomp. }
       rewrite X. sq; eapply (wt_closed_red_refl h).
-    - pose proof (reduce_stack_sound RedFlags.default Σ HΣ _ _ [] h).
+    - pose proof (reduce_stack_sound RedFlags.default Σ _ _ [] h).
       rewrite <- eq in H.
       cbn in *.
       assert (π = appstack l []) as ->.
@@ -1871,15 +1881,13 @@ Section ReduceFns.
       apply decompose_stack_eq in decomp as ->.
       now rewrite <- eq_decomp'.
     - sq.
-      pose proof (reduce_stack_whnf RedFlags.default Σ HΣ Γ t [] h) as wh.
+      pose proof (reduce_stack_whnf RedFlags.default Σ Γ t [] h) as wh.
       unfold reduce_stack in *.
       destruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)).
       destruct wh as [wh].
       apply Req_red in r' as [r'].
       unfold Pr in stack_valid.
       cbn in *.
-      destruct HΣ.
-      assert (wf Σ) by auto.
       eapply into_closed_red in r'; fvs.
       eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2) ; eauto.
       assert (exists args, π' = appstack args []) as (?&->).
@@ -1906,6 +1914,7 @@ Section ReduceFns.
       red Σ Γ ty (mkApps (tInd ind u) args) ->
       False.
   Proof.
+    destruct (wf_env_ext_wf Σ) as [wfΣ].
     intros _ ind u args' r.
     apply p.
     exists ind, u, args'.
@@ -2000,7 +2009,7 @@ Section ReduceFns.
   Qed.
   
   Local Instance wellfounded : WellFounded (@hnf_subterm_rel _ Σ) :=
-    @wf_hnf_subterm _ _ HΣ.
+    @wf_hnf_subterm _ _ (wf_env_ext_wf Σ).
   
   Equations? (noeqns) reduce_to_arity (Γ : context) (T : term) (wt : welltyped Σ Γ T)
     : (conv_arity Γ T) + {~Is_conv_to_Arity Σ Γ T}
@@ -2019,7 +2028,7 @@ Section ReduceFns.
   Proof.
     all: pose proof (@hnf_sound Γ T wt) as [r].
     all: rewrite <- ?eqhnf in r.
-    all: destruct HΣ as [wf].
+    all: destruct (wf_env_ext_wf Σ) as [wfΣ].
     - destruct wt as (?&typ).
       eapply subject_reduction_closed in r; eauto.
       apply inversion_Prod in r as (?&?&?&?&?); auto.
@@ -2037,7 +2046,6 @@ Section ReduceFns.
       eexists; eauto using sq.
     - constructor; auto.
     - pose proof (@hnf_complete Γ T wt) as [w].
-      destruct HΣ.
       apply Is_conv_to_Arity_inv in H as [(na&A&B&[r'])|(u&[r'])]; auto.
       + eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2); eauto.
         apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.

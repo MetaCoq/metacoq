@@ -7,7 +7,7 @@ CAMLFLAGS+=-w -34 # Unused type
 CAMLFLAGS+=-w -60 # Unused module
 CAMLFLAGS+=-bin-annot # For merlin
 CAMLFLAGS+=-open Metacoq_template_plugin
-CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin
+CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin,stdlib-shims
 
 -include ../../Makefile.conf
 

@@ -8,6 +8,8 @@
 # From Coq's stdlib
 src/orderedTypeAlt.mli
 src/orderedTypeAlt.ml
+src/orderedType0.mli
+src/orderedType0.ml
 src/fMapList.mli
 src/fMapList.ml
 src/decidableType.mli

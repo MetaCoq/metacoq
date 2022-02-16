@@ -6,6 +6,7 @@ Utils
 WGraph
 UGraph0
 OrderedTypeAlt
+OrderedType0
 Kernames
 FMapList
 DecidableType

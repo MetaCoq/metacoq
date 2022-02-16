@@ -450,3 +450,5 @@ erasure/src/pCUICExpandLetsCorrectness.ml
 erasure/src/pCUICExpandLetsCorrectness.mli
 erasure/src/pCUICWfEnv.ml
 erasure/src/pCUICWfEnv.mli
+erasure/src/orderedType0.ml
+erasure/src/orderedType0.mli

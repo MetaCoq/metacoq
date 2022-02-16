@@ -10,6 +10,8 @@ src/eqdepFacts.mli
 src/eqdepFacts.ml
 src/orderedTypeAlt.mli
 src/orderedTypeAlt.ml
+src/orderedType0.mli
+src/orderedType0.ml
 
 # From template
 src/ssrbool.ml

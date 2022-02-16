@@ -536,7 +536,7 @@ MetaCoq SafeCheck @ap_pp.
 MetaCoq CoqCheck ap_pp.
 
 (* FIXME TODO Private polymorphic universes *)
-Fail MetaCoq SafeCheck @isequiv_adjointify.
+MetaCoq SafeCheck @isequiv_adjointify.
 MetaCoq CoqCheck isequiv_adjointify.
 
 MetaCoq SafeCheck @IsEquiv.

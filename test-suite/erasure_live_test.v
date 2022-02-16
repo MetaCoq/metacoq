@@ -322,7 +322,7 @@ Definition ans_provedCopyx :=
 MetaCoq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
 (* We don't run those every time as they are really expensive *)
 Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
-Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).
+(* Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx). *)
 
 From MetaCoq.Erasure Require Import Loader.
 MetaCoq Erase provedCopyx.

@@ -92,7 +92,7 @@ Module Level.
   Inductive lt_ : t -> t -> Prop :=
   | ltSetLevel s : lt_ lzero (Level s)
   | ltSetVar n : lt_ lzero (Var n)
-  | ltLevelLevel s s' : string_lt s s' -> lt_ (Level s) (Level s')
+  | ltLevelLevel s s' : StringOT.lt s s' -> lt_ (Level s) (Level s')
   | ltLevelVar s n : lt_ (Level s) (Var n)
   | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
   Derive Signature for lt_.
@@ -103,11 +103,11 @@ Module Level.
   Proof.
     constructor.
     - intros [| |] X; inversion X.
-      eapply string_lt_irreflexive; tea.
+      now eapply irreflexivity in H1.
       eapply Nat.lt_irrefl; tea.
     - intros [| |] [| |] [| |] X1 X2;
         inversion X1; inversion X2; constructor.
-      eapply transitive_string_lt; tea.
+      now transitivity s0.
       etransitivity; tea.
   Qed.
 
@@ -137,7 +137,7 @@ Module Level.
   Global Instance eqb_refl : Reflexive eqb.
   Proof.
     intros []; unfold eqb; cbnr.
-    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto.
+    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto. reflexivity.
     - rewrite Nat.compare_refl. reflexivity.
   Qed.
 
@@ -147,7 +147,7 @@ Module Level.
     - apply iff_reflect. unfold eqb; cbn.
       destruct (CompareSpec_string s s0); split; intro HH;
         try reflexivity; try discriminate; try congruence.
-      all: inversion HH; subst; now apply string_lt_irreflexive in H.
+      all: inversion HH; subst; now apply irreflexivity in H.
     - apply iff_reflect. unfold eqb; cbn.
       destruct (Nat.compare_spec n n0); split; intro HH;
         try reflexivity; try discriminate; try congruence.

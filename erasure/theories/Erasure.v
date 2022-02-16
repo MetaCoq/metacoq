@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC TemplateToPCUICCorrectness TemplateToPCUICWcbvEval.
 From MetaCoq.PCUIC Require PCUICExpandLets PCUICExpandLetsCorrectness.
 Set Warnings "+notation-overridden".
-From MetaCoq.SafeChecker Require Import PCUICErrors.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr EWcbvEval EDeps.
 
@@ -29,7 +29,7 @@ Program Definition erase_template_program (p : Ast.Env.program)
   let Σ := (PCUICExpandLets.trans_global_decls Σ0) in
   let wfΣ := map_squash (PCUICExpandLetsCorrectness.trans_wf_ext ∘
     (template_to_pcuic_env_ext (Ast.Env.empty_ext p.1))) wfΣ in
-  let t := ErasureFunction.erase (empty_ext Σ) wfΣ nil (PCUICExpandLets.trans (trans Σ0 p.2)) _ in
+  let t := ErasureFunction.erase (build_wf_env_ext (empty_ext Σ) wfΣ) nil (PCUICExpandLets.trans (trans Σ0 p.2)) _ in
   let Σ' := ErasureFunction.erase_global (term_global_deps t) Σ (sq_wf_ext wfΣ) in
   (EOptimizePropDiscr.optimize_env Σ', EOptimizePropDiscr.optimize Σ' t).
 
@@ -69,8 +69,8 @@ Proof.
   set wtp : PCUICSafeLemmata.welltyped (PCUICExpandLets.trans_global (trans_global Σ)) [] 
     (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) :=
     (erase_template_program_obligation_1 p wfΣ wt).
-  set (t' := erase (PCUICExpandLets.trans_global (trans_global Σ)) 
-    wftΣ [] (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) wtp).
+  set (t' := erase (build_wf_env_ext (empty_ext (PCUICExpandLets.trans_global (trans_global Σ)))
+    wftΣ) [] (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) wtp).
   set (deps := (term_global_deps _)).
   change (empty_ext (PCUICExpandLets.trans_global_decls (trans_global_decls p.1))) with
     (PCUICExpandLets.trans_global (trans_global Σ)) in *.

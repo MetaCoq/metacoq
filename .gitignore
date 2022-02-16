@@ -434,3 +434,19 @@ bidirectional/CoqMakefile
 bidirectional/CoqMakefile.conf
 
 bidirectional/.vscode/
+erasure/src/decidableType.ml
+erasure/src/decidableType.mli
+erasure/src/fMapAVL.ml
+erasure/src/fMapAVL.mli
+erasure/src/fMapFacts.ml
+erasure/src/fMapFacts.mli
+erasure/src/fMapInterface.ml
+erasure/src/fMapInterface.mli
+erasure/src/fMapList.ml
+erasure/src/fMapList.mli
+erasure/src/pCUICEnvMap.ml
+erasure/src/pCUICEnvMap.mli
+erasure/src/pCUICExpandLetsCorrectness.ml
+erasure/src/pCUICExpandLetsCorrectness.mli
+erasure/src/pCUICWfEnv.ml
+erasure/src/pCUICWfEnv.mli

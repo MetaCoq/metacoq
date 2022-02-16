@@ -7,6 +7,11 @@ WGraph
 UGraph0
 OrderedTypeAlt
 Kernames
+FMapList
+DecidableType
+FMapInterface
+FMapAVL
+FMapFacts
 
 Classes0
 Logic1
@@ -26,8 +31,11 @@ PCUICPosition
 PCUICPretty
 TemplateToPCUIC
 PCUICExpandLets
+PCUICExpandLetsCorrectness
 
 PCUICErrors
+PCUICEnvMap
+PCUICWfEnv
 PCUICUnivSubst
 PCUICSafeReduce
 PCUICSafeRetyping

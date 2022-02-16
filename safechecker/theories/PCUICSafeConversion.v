@@ -55,27 +55,6 @@ Qed.
   conversion (and cumulativity) checking for PCUIC.
 
  *)
-
-Create HintDb wf_env discriminated.
-Global Hint Constants Opaque : wf_env.
-Global Hint Variables Opaque : wf_env.
-
-Global Hint Resolve wf_env_ext_wf : wf_env.
-
-Ltac unsquash_wf_env := 
-  match goal with
-  | Σ : wf_env_ext |- _ => try destruct Σ.(wf_env_ext_wf) as [wfΣ]
-  end.
-
-Definition wf_env_ext_sq_wf {cf:checker_flags} (Σ : wf_env_ext) : ∥ wf Σ ∥ := map_squash (wf_ext_wf _) Σ.
-Global Hint Resolve wf_env_ext_sq_wf : wf_env.
-Global Hint Resolve wf_env_ext_graph_wf : wf_env.
-
-Definition Σudecl {cf} (Σ : wf_env_ext) : ∥ on_udecl Σ.(wf_env_ext_env).1 Σ.(wf_env_ext_env).2 ∥ := 
-  map_squash (fun x => x.2) Σ.
-Global Hint Resolve Σudecl : wf_env.
-
-Ltac wf_env := auto with wf_env.
   
 Section Conversion.
 

@@ -52,6 +52,27 @@ Section WfEnv.
 
 End WfEnv.
 
+
+Create HintDb wf_env discriminated.
+Global Hint Constants Opaque : wf_env.
+Global Hint Variables Opaque : wf_env.
+
+Global Hint Resolve wf_env_ext_wf : wf_env.
+
+Ltac unsquash_wf_env := 
+  match goal with
+  | Σ : wf_env_ext |- _ => try destruct Σ.(wf_env_ext_wf) as [wfΣ]
+  end.
+
+Global Hint Resolve wf_env_ext_sq_wf : wf_env.
+Global Hint Resolve wf_env_ext_graph_wf : wf_env.
+
+Definition Σudecl {cf : checker_flags} (Σ : wf_env_ext) : ∥ on_udecl Σ.(wf_env_ext_env).1 Σ.(wf_env_ext_env).2 ∥ := 
+  map_squash (fun x => x.2) Σ.
+Global Hint Resolve Σudecl : wf_env.
+
+Ltac wf_env := auto with wf_env.
+
 Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
   : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
 Proof.
@@ -82,7 +103,7 @@ Defined.
 Definition build_wf_env_ext {cf : checker_flags} (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) : wf_env_ext := 
   {| wf_env_ext_env := Σ; 
      wf_env_ext_map := EnvMap.of_global_env Σ; 
-     wf_env_ext_map_repr := eq_refl;
+     wf_env_ext_map_repr := EnvMap.repr_global_env Σ;
      wf_env_ext_wf := wfΣ;
      wf_env_ext_graph := (graph_of_wf_ext wfΣ).π1;
      wf_env_ext_graph_wf := (graph_of_wf_ext wfΣ).π2 |}.

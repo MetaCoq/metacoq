@@ -28,6 +28,8 @@ Set Equations Transparent.
 Import MCMonadNotation.
 Require Import Morphisms.
 
+Implicit Types (cf : checker_flags).
+
 Instance proper_add_level_edges levels : Morphisms.Proper (wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature (add_level_edges levels).
 Proof.
   intros e e' he.
@@ -46,6 +48,61 @@ Proof.
   rewrite /add_level_edges. now rewrite (proj1 (proj2 eq)).
   apply eq.
 Qed.
+
+
+Definition cs_equal (x y : ContextSet.t) : Prop :=
+  LevelSet.Equal x.1 y.1 /\ ConstraintSet.Equal x.2 y.2.
+
+Definition gcs_equal x y : Prop :=
+  LevelSet.Equal x.1 y.1 /\ GoodConstraintSet.Equal x.2 y.2.
+  Require Import Relation_Definitions.
+
+  Definition R_opt {A} (R : relation A) : relation (option A) :=
+    fun x y => match x, y with
+      | Some x, Some y => R x y
+      | None, None => True
+      | _, _ => False
+    end.
+
+  Instance gc_of_constraints_proper {cf} : Proper (ConstraintSet.Equal ==> R_opt GoodConstraintSet.Equal) gc_of_constraints.
+  Proof.
+    intros c c' eqc; cbn.
+    destruct (gc_of_constraintsP c);
+    destruct (gc_of_constraintsP c'); cbn.
+    - intros cs; rewrite i i0. firstorder eauto.
+    - destruct e0 as [cs [incs gcn]].
+      apply eqc in incs. destruct (e cs incs) as [? []]. congruence.
+    - destruct e as [cs [incs gcn]].
+      apply eqc in incs. destruct (e0 cs incs) as [? []]. congruence.
+    - exact I.
+  Qed.
+
+  Instance proper_add_level_edges' : Morphisms.Proper (LevelSet.Equal ==> wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature add_level_edges.
+  Proof.
+    intros l l' hl e e' <-.
+    intros x; rewrite !add_level_edges_spec. firstorder eauto.
+  Qed.
+  
+  Instance make_graph_proper : Proper (gcs_equal ==> Equal_graph) make_graph.
+  Proof.
+    intros [v c] [v' c'] [eqv eqc]; cbn.
+    unfold make_graph; cbn in *.
+    split; cbn; auto.
+    split; cbn; try reflexivity.
+    now rewrite eqc eqv.
+  Qed.
+  Require Import SetoidTactics.
+
+  Instance is_graph_of_uctx_proper {cf} G : Proper (cs_equal ==> iff) (is_graph_of_uctx G).
+  Proof.
+    intros [l c] [l' c'] [eql eqc]; cbn.
+    unfold is_graph_of_uctx; cbn. cbn in *.
+    pose proof (gc_of_constraints_proper _ _ eqc).
+    destruct (gc_of_constraints c); cbn in *; destruct (gc_of_constraints c'); cbn.
+    now setoid_replace (l, t) with (l', t0) using relation gcs_equal. elim H. elim H.
+    intuition.
+  Qed.
+
 
 (** It otherwise tries [auto with *], very bad idea. *)
 Ltac Coq.Program.Tactics.program_solve_wf ::= 
@@ -2023,61 +2080,7 @@ Section CheckEnv.
   Next Obligation. intros. now rewrite eq. Qed.
 
   Obligation Tactic := Program.Tactics.program_simpl.
-
-  Definition cs_equal (x y : ContextSet.t) : Prop :=
-    LevelSet.Equal x.1 y.1 /\ ConstraintSet.Equal x.2 y.2.
-
-  Definition gcs_equal x y : Prop :=
-    LevelSet.Equal x.1 y.1 /\ GoodConstraintSet.Equal x.2 y.2.
   
-  Require Import Relation_Definitions.
-
-  Definition R_opt {A} (R : relation A) : relation (option A) :=
-    fun x y => match x, y with
-      | Some x, Some y => R x y
-      | None, None => True
-      | _, _ => False
-    end.
-
-  Instance gc_of_constraints_proper : Proper (ConstraintSet.Equal ==> R_opt GoodConstraintSet.Equal) gc_of_constraints.
-  Proof.
-    intros c c' eqc; cbn.
-    destruct (gc_of_constraintsP c);
-    destruct (gc_of_constraintsP c'); cbn.
-    - intros cs; rewrite i i0. firstorder eauto.
-    - destruct e0 as [cs [incs gcn]].
-      apply eqc in incs. destruct (e cs incs) as [? []]. congruence.
-    - destruct e as [cs [incs gcn]].
-      apply eqc in incs. destruct (e0 cs incs) as [? []]. congruence.
-    - exact I.
-  Qed.
-
-  Instance proper_add_level_edges' : Morphisms.Proper (LevelSet.Equal ==> wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature add_level_edges.
-  Proof.
-    intros l l' hl e e' <-.
-    intros x; rewrite !add_level_edges_spec. firstorder eauto.
-  Qed.
-  
-  Instance make_graph_proper : Proper (gcs_equal ==> Equal_graph) make_graph.
-  Proof.
-    intros [v c] [v' c'] [eqv eqc]; cbn.
-    unfold make_graph; cbn in *.
-    split; cbn; auto.
-    split; cbn; try reflexivity.
-    now rewrite eqc eqv.
-  Qed.
-  Require Import SetoidTactics.
-
-  Instance is_graph_of_uctx_proper G : Proper (cs_equal ==> iff) (is_graph_of_uctx G).
-  Proof.
-    intros [l c] [l' c'] [eql eqc]; cbn.
-    unfold is_graph_of_uctx; cbn. cbn in *.
-    pose proof (gc_of_constraints_proper _ _ eqc).
-    destruct (gc_of_constraints c); cbn in *; destruct (gc_of_constraints c'); cbn.
-    now setoid_replace (l, t) with (l', t0) using relation gcs_equal. elim H. elim H.
-    intuition.
-  Qed.
-
   Import PCUICEnvMap.
 
   Lemma levels_of_monomorphic g ctx : 
@@ -2153,10 +2156,8 @@ Section CheckEnv.
   Next Obligation.
     unsquash_wf_env; sq.
     have [wfΣ'] := wfΣ.(wf_env_wf).
-    unfold EnvMap.repr.
-    rewrite EnvMap.of_global_env_cons.
-    { constructor; auto using EnvMap.wf_fresh_globals. }
-    cbn. now rewrite (wfΣ.(wf_env_map_repr)).
+    cbn. apply EnvMap.repr_add; eauto.
+    apply wfΣ.
   Qed.
   Next Obligation.
     have [wfΣ'] := wfΣ.(wf_env_wf).
@@ -2181,10 +2182,7 @@ Section CheckEnv.
   Next Obligation.
     unsquash_wf_env; sq.
     have [wfΣ'] := wfΣ.(wf_env_wf).
-    unfold EnvMap.repr.
-    rewrite EnvMap.of_global_env_cons.
-    { constructor; auto using EnvMap.wf_fresh_globals. }
-    cbn. now rewrite (wfΣ.(wf_env_map_repr)).
+    eapply EnvMap.repr_add; eauto. apply wfΣ.
   Qed.
 
   Next Obligation.

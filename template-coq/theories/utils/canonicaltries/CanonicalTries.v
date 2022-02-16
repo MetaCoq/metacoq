@@ -5,7 +5,8 @@
    Copyright: Andrew W. Appel and Inria.
    License: BSD-3-Clause. *)
 
-From Coq Require Import PArith FunctionalExtensionality.
+From Coq Require Import Program FunctionalExtensionality.
+From MetaCoq.Template Require Import String2pos.
 
 (* To avoid useless definitions of inductors in extracted code. *)
 Local Unset Elimination Schemes.

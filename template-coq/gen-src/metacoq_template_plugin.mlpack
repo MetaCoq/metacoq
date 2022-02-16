@@ -22,7 +22,6 @@ Orders
 OrdersTac
 OrdersFacts
 OrdersLists
-OrderedType0
 Int0
 MSetInterface
 MSetFacts

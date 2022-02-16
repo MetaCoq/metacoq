@@ -4,7 +4,7 @@ CAMLFLAGS+=-w -32 # Unused values
 CAMLFLAGS+=-w -34 # Unused types
 CAMLFLAGS+=-w -39 # Unused rec flags
 CAMLFLAGS+=-w -60 # Unused module in functor
-CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin
+CAMLPKGS+=-package coq-metacoq-template-ocaml.plugin,stdlib-shims
 
 -include ../Makefile.conf
 

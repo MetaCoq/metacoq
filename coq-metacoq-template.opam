@@ -22,6 +22,7 @@ install: [
   [make "-C" "template-coq" "install"]
 ]
 depends: [
+  "stdlib-shims"
   "ocaml" {>= "4.07.1"}
   "coq" { = "dev" }
   "coq-equations" { = "dev" }

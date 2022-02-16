@@ -7,7 +7,7 @@ src/META.coq-metacoq-safechecker
 # src/classes0.ml
 
 # From Coq's stdlib
-src/eqdepFalcts.mli
+src/eqdepFacts.mli
 src/eqdepFacts.ml
 src/orderedTypeAlt.mli
 src/orderedTypeAlt.ml

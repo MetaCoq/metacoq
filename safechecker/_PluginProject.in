@@ -8,6 +8,10 @@
 # From Coq's stdlib
 src/eqdepFacts.mli
 src/eqdepFacts.ml
+src/orderedTypeAlt.mli
+src/orderedTypeAlt.ml
+src/orderedType0.mli
+src/orderedType0.ml
 
 # From template
 src/ssrbool.ml
@@ -72,8 +76,22 @@ src/pCUICPretty.mli
 src/pCUICPretty.ml
 
 # From SafeChecker
+# src/string2pos.mli
+# src/string2pos.ml
+# src/canonicalTries.mli
+# src/canonicalTries.ml
+src/kernames.mli
+src/kernames.ml
+src/fMapList.mli
+src/fMapList.ml
+src/fMapAVL.mli
+src/fMapAVL.ml
 src/pCUICErrors.mli
 src/pCUICErrors.ml
+src/pCUICEnvMap.mli
+src/pCUICEnvMap.ml
+src/pCUICWfEnv.mli
+src/pCUICWfEnv.ml
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
 src/pCUICEqualityDec.mli

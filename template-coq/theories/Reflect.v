@@ -471,7 +471,7 @@ Qed.
 Lemma lt_level_irrel {x y : Level.t} (l l' : Level.lt_ x y) : l = l'.
 Proof.
   induction l using level_lt_ind_dep; depelim l'; auto.
-  - now replace s0 with s2 by apply uip.
+  - now replace l with l0 by apply uip.
   - f_equal. apply nat_le_irrel.
 Qed.
 

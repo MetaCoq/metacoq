@@ -31,18 +31,17 @@ Module VariableLevel.
   Definition lt : t -> t -> Prop :=
     fun x y => match x, y with
             | Level _, Var _ => True
-            | Level s, Level s' => string_lt s s'
+            | Level s, Level s' => StringOT.lt s s'
             | Var n, Var n' => n < n'
             | Var _, Level _ => False
             end.
   Global Instance lt_strorder : StrictOrder lt.
     split.
     - intros [s|n] H; cbn in H.
-      unfold string_lt in H.
-      pose proof (string_compare_eq s s). intuition.
-      rewrite H in H0. discriminate. intuition.
+      now eapply irreflexivity in H.
+      lia.
     - intros [s1|n1] [s2|n2] [s3|n3]; cbn; intuition.
-      eapply transitive_string_lt; eassumption.
+      eapply transitivity; eassumption.
   Qed.
   Definition lt_trans : Transitive lt := _.
 
@@ -88,12 +87,7 @@ Module VariableLevel.
   Lemma compare_sym : forall x y : t, (compare y x) = CompOpp (compare x y).
   Proof.
     induction x; destruct y; simpl; auto.
-    destruct (CompareSpec_string s0 s); subst.
-    destruct (string_compare_eq s s).
-    rewrite H0 //.
-    destruct (string_compare_lt s0 s). rewrite H0 //.
-    destruct (string_compare_lt s s0). rewrite H1 //.
-    red in H. auto.
+    apply StringOT.compare_sym.
     apply PeanoNat.Nat.compare_antisym.
   Qed.
 
@@ -162,13 +156,6 @@ Module GoodConstraint.
 
   Reserved Notation "x <c y" (at level 60).
 
-  Definition compare_cont (c : comparison) (d : comparison) : comparison :=
-    match c with
-    | Datatypes.Lt => Datatypes.Lt
-    | Datatypes.Eq => d
-    | Datatypes.Gt => Datatypes.Gt
-    end.
-
   Definition compare (x : t) (y : t) : comparison :=
     match x, y with
     | gc_le u n v, gc_le u' n' v' => 
@@ -192,53 +179,15 @@ Module GoodConstraint.
     end.
   Infix "?=" := compare.
 
-  Lemma compare_cont_CompOpp p q : CompOpp (compare_cont p q) = compare_cont (CompOpp p) (CompOpp q).
-  Proof.
-    destruct p, q; cbn => //.
-  Qed.
-
   Lemma compare_sym (a b : t):
     compare b a = CompOpp (compare a b).
   Proof.
     revert b. destruct a, b; try easy; cbn; 
       rewrite !compare_cont_CompOpp -?VariableLevel.compare_sym ?Zcompare_antisym -?PeanoNat.Nat.compare_antisym
-      -?string_compare_Opp //.
+      -?StringOT.compare_sym //.
   Qed.
   
-  Definition comparison_trans p q :=
-    match p, q with
-    | Datatypes.Eq, c => Some c
-    | c, Datatypes.Eq => Some c
-    | Datatypes.Lt, Datatypes.Gt => None 
-    | Datatypes.Gt, Datatypes.Lt => None
-    | c, _ => Some c
-    end.
-
-  Lemma compare_cont_trans {A} (cmp : A -> A -> comparison) :
-    (forall c x y z, cmp x y = c -> cmp y z = c -> cmp x z = c) ->
-    (forall x y, cmp x y = Datatypes.Eq -> x = y) ->
-    forall c x y z q q' q'',
-    (forall c, q = c -> q' = c -> q'' = c) ->
-    compare_cont (cmp x y) q = c -> compare_cont (cmp y z) q' = c -> compare_cont (cmp x z) q'' = c.
-  Proof.
-    intros Hc He c x y z q q' q'' Hqs.
-    destruct (cmp x y) eqn:e.
-    apply He in e. subst y.
-    cbn. intros ->.
-    destruct (cmp x z) eqn:e'; cbn.
-    apply He in e'. subst z. now apply Hqs.
-    all:auto.
-
-    cbn. intros <-.
-    destruct (cmp y z) eqn:e'; cbn.
-    apply He in e'. subst z. rewrite e /= //. intros _.
-    rewrite (Hc _ _ _ _ e e') /= //.
-    discriminate. cbn. intros <-.
-    destruct (cmp y z) eqn:e'; cbn => //.
-    eapply He in e'; subst. intros ->. rewrite e //.
-    intros _. rewrite (Hc _ _ _ _ e e') //.
-  Qed.
-
+  
   Lemma nat_compare_trans : forall c (x y z : nat), (x?=y)%nat = c -> (y?=z)%nat = c -> (x?=z)%nat = c.
   Proof.
     intros c x y z.
@@ -266,7 +215,7 @@ Module GoodConstraint.
     intros c x y z.
     destruct x, y, z; cbn; try repeat apply compare_cont_trans; eauto using VariableLevel.compare_trans, VariableLevel.compare_eq;
       try congruence.
-    all:eauto using string_compare_trans, nat_compare_trans, nat_compare_eq.
+    all:eauto using StringOT.compare_trans, nat_compare_trans, nat_compare_eq.
     intros. eapply compare_cont_trans; tea; 
       eauto using VariableLevel.compare_trans, VariableLevel.compare_eq, Z.compare_eq, Z_compare_trans.
   Qed.
@@ -280,11 +229,11 @@ Module GoodConstraint.
     apply Z.compare_eq in e'; subst.
     intros H; apply VariableLevel.compare_eq in H; subst. reflexivity.
     destruct (Nat.compare_spec n n0) => /= //; subst.
-    destruct (CompareSpec_string s s0) => /= //; subst => //.
+    destruct (CompareSpec_string s s0) => /= //; red in H; subst => //.
     destruct (Nat.compare_spec n n1) => /= //; subst.
     destruct (Nat.compare_spec n0 n2) => /= //; subst => //.
     destruct (Nat.compare_spec n n0) => /= //; subst.
-    destruct (CompareSpec_string s s0) => /= //; subst => //.
+    destruct (CompareSpec_string s s0) => /= //; red in H; subst => //.
     destruct (Nat.compare_spec n n1) => /= //; subst.
     destruct (Nat.compare_spec n0 n2) => /= //; subst => //.
   Qed.

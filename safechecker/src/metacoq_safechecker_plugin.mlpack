@@ -1,6 +1,10 @@
 EqdepFacts
 Utils
-
+OrderedTypeAlt
+OrderedType0
+Kernames
+FMapList
+FMapAVL
 Ssrbool
 WGraph
 UGraph0
@@ -26,6 +30,8 @@ TemplateToPCUIC
 PCUICUnivSubst
 
 PCUICErrors
+PCUICEnvMap
+PCUICWfEnv
 PCUICSafeReduce
 PCUICEqualityDec
 PCUICSafeConversion

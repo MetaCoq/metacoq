@@ -8,7 +8,23 @@
 # From Coq's stdlib
 src/orderedTypeAlt.mli
 src/orderedTypeAlt.ml
+src/orderedType0.mli
+src/orderedType0.ml
+src/fMapList.mli
+src/fMapList.ml
+src/decidableType.mli
+src/decidableType.ml
+src/fMapInterface.mli
+src/fMapInterface.ml
+src/fMapAVL.mli
+src/fMapAVL.ml
+src/fMapFacts.mli
+src/fMapFacts.ml
 
+# src/string2pos.mli
+# src/string2pos.ml
+# src/canonicalTries.mli
+# src/canonicalTries.ml
 src/ssrbool.ml
 src/ssrbool.mli
 src/uGraph0.ml
@@ -67,10 +83,16 @@ src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICExpandLets.mli
 src/pCUICExpandLets.ml
+src/pCUICExpandLetsCorrectness.mli
+src/pCUICExpandLetsCorrectness.ml
 
 # From SafeChecker
 src/pCUICErrors.mli
 src/pCUICErrors.ml
+src/pCUICEnvMap.mli
+src/pCUICEnvMap.ml
+src/pCUICWfEnv.mli
+src/pCUICWfEnv.ml
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
 # src/pCUICSafeConversion.mli

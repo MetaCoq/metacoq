@@ -136,8 +136,6 @@ gen-src/nat0.ml
 gen-src/nat0.mli
 gen-src/number.ml
 gen-src/number.mli
-gen-src/orderedType0.ml
-gen-src/orderedType0.mli
 gen-src/ordersFacts.ml
 gen-src/ordersFacts.mli
 gen-src/ordersLists.ml

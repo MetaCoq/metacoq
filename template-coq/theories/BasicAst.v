@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import ssreflect Morphisms Setoid.
+From Coq Require Import ssreflect Morphisms Orders Setoid.
 From MetaCoq.Template Require Import utils.
 From Coq Require Floats.SpecFloat.
 From Equations Require Import Equations.
@@ -40,7 +40,6 @@ Definition qualid  := string. (* e.g. Datatypes.nat *)
 (** Type of directory paths. Essentially a list of module identifiers. The
     order is reversed to improve sharing. E.g. A.B.C is ["C";"B";"A"] *)
 Definition dirpath := list ident.
-
 #[global] Instance dirpath_eqdec : Classes.EqDec dirpath := _.
 
 Definition string_of_dirpath : dirpath -> string
@@ -167,8 +166,9 @@ Lemma ident_eq_spec x y : reflect (x = y) (ident_eq x y).
 Proof.
   unfold ident_eq. destruct (string_compare_eq x y).
   destruct string_compare; constructor; auto.
-  intro Heq; specialize (H0 Heq). discriminate.
-  intro Heq; specialize (H0 Heq). discriminate.
+  - now apply H.
+  - intro Heq; specialize (H0 Heq). discriminate.
+  - intro Heq; specialize (H0 Heq). discriminate.
 Qed.
 
 (* todo : better ? *)

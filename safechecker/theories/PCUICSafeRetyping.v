@@ -19,7 +19,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICAriti
 
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce.
 
 (** Allow reduction to run inside Coq *)
 Transparent Acc_intro_generator.
@@ -137,8 +137,7 @@ Qed.
 
 Section TypeOf.
   Context {cf : checker_flags} {nor : normalizing_flags}.
-  Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf_ext Σ ∥).
+  Context (Σ : wf_env_ext).
 
 Definition on_subterm P Pty Γ t : Type := 
   match t with
@@ -176,11 +175,12 @@ Qed.
     (wfΓ : ∥ wf_local Σ Γ ∥)
     (wf : well_sorted Σ Γ T)
     (tx : principal_type Γ T) : principal_sort Γ T :=
-    match @reduce_to_sort cf nor Σ hΣ Γ tx _ with
+    match @reduce_to_sort cf nor Σ Γ tx _ with
     | Checked_comp (u;_) => (u;_)
     | TypeError_comp e _ => !
     end.
   Next Obligation.
+    destruct Σ.(wf_env_ext_wf).
     destruct tx ; cbn in *.
     destruct wf as [[]].
     sq.
@@ -196,6 +196,7 @@ Qed.
     now apply closed_red_red.
   Qed.
   Next Obligation.
+    destruct Σ.(wf_env_ext_wf).
     clear Heq_anonymous.
     destruct tx.
     cbn in *.
@@ -209,11 +210,12 @@ Qed.
     (wf : welltyped Σ Γ T)
     (isprod : ∥ ∑ na A B, red Σ Γ T (tProd na A B) ∥) : 
     ∑ na' A' B', ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥ :=
-    match @reduce_to_prod cf nor Σ hΣ Γ T wf with
+    match @reduce_to_prod cf nor Σ Γ T wf with
     | Checked_comp p => p
     | TypeError_comp e _ => !
     end.
     Next Obligation.
+      destruct Σ.(wf_env_ext_wf).
       clear Heq_anonymous.
       sq.
       destruct isprod as (?&?&?&?).
@@ -227,13 +229,15 @@ Qed.
     Qed.
     
   Equations lookup_ind_decl ind : typing_result
-        (∑ decl body, declared_inductive (fst Σ) ind decl body) :=
-  lookup_ind_decl ind with inspect (lookup_env (fst Σ) ind.(inductive_mind)) :=
+        (∑ decl body, declared_inductive Σ ind decl body) :=
+  lookup_ind_decl ind with inspect (lookup Σ ind.(inductive_mind)) :=
     { | exist (Some (InductiveDecl decl)) look with inspect (nth_error decl.(ind_bodies) ind.(inductive_ind)) :=
       { | exist (Some body) eqnth => Checked (decl; body; _);
         | exist None _ => raise (UndeclaredInductive ind) };
       | _ => raise (UndeclaredInductive ind) }.
   Next Obligation.
+    destruct Σ.(wf_env_ext_wf).
+    rewrite lookup_lookup_env in look.
     split.
     - symmetry in look.
       etransitivity. eassumption. reflexivity.
@@ -245,13 +249,14 @@ Qed.
   Proof.
     apply_funelim (lookup_ind_decl ind).
     1-2:intros * _ her [mdecl [idecl [declm decli]]];
-    red in declm; rewrite declm in e0; congruence.
+    red in declm. 1-2:rewrite lookup_lookup_env in e0; rewrite declm in e0; congruence.
     1-2:intros * _ _ => // => _ [mdecl [idecl [declm /= decli]]].
-    red in declm. rewrite declm in look. noconf look.
+    red in declm. rewrite lookup_lookup_env in look. rewrite declm in look. noconf look.
     congruence.
   Qed.
   
   Obligation Tactic := intros ;
+    try destruct (wf_env_ext_wf Σ) as [wfΣ];
     try match goal with
       | infer : context [wellinferred _ _ _ -> principal_type _ _ ],
         wt : wellinferred _ _ _ |- _ =>
@@ -293,7 +298,7 @@ Qed.
       let pi := infer_as_prod Γ ty wfΓ _ _ in
       ret (subst10 a pi.π2.π2.π1);
 
-    infer Γ wfΓ (tConst cst u) wt with inspect (lookup_env (fst Σ) cst) :=
+    infer Γ wfΓ (tConst cst u) wt with inspect (lookup Σ cst) :=
       { | exist (Some (ConstantDecl d)) _ := ret (subst_instance u d.(cst_type));
         |  _ := ! };
 
@@ -308,7 +313,7 @@ Qed.
       | exist (TypeError e) _ => ! };
 
     infer Γ wfΓ (tCase ci p c brs) wt
-      with inspect (reduce_to_ind hΣ Γ (infer Γ wfΓ c _) _) :=
+      with inspect (reduce_to_ind Σ Γ (infer Γ wfΓ c _) _) :=
       { | exist (Checked_comp indargs) _ =>
           let ptm := it_mkLambda_or_LetIn (inst_case_predicate_context p) p.(preturn) in
           ret (mkApps ptm (List.skipn ci.(ci_npar) indargs.π2.π2.π1 ++ [c]));
@@ -316,7 +321,7 @@ Qed.
 
     infer Γ wfΓ (tProj (ind, n, k) c) wt with inspect (@lookup_ind_decl ind) :=
       { | exist (Checked d) _ with inspect (nth_error d.π2.π1.(ind_projs) k) :=
-        { | exist (Some pdecl) _ with inspect (reduce_to_ind hΣ Γ (infer Γ wfΓ c _) _) :=
+        { | exist (Some pdecl) _ with inspect (reduce_to_ind Σ Γ (infer Γ wfΓ c _) _) :=
           { | exist (Checked_comp indargs) _ => 
               let ty := snd pdecl in
               ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty));
@@ -346,11 +351,11 @@ Qed.
   Qed.
 
   Next Obligation.
-    depind HT.
+    inversion HT.
   Qed.
 
   Next Obligation.
-    depind HT.
+    inversion HT.
   Qed.
 
   Next Obligation.
@@ -445,17 +450,19 @@ Qed.
   Defined.
 
   Next Obligation.
-    sq.
-    inversion HT.
-    now constructor.
+    sq. cbn in e. rewrite lookup_lookup_env in e.
+    inversion HT. subst. red in isdecl. rewrite isdecl in e. noconf e.
+    exact HT.
   Qed.
   Next Obligation.
-    inversion HT ; subst.
+    cbn in e. clear wildcard. rewrite lookup_lookup_env in e.
+    inversion HT ; subst. red in isdecl. rewrite isdecl in e.
     congruence.
   Qed.
   Next Obligation.
-    inversion HT ; subst.
-    congruence.
+    cbn in e. clear wildcard. rewrite lookup_lookup_env in e.
+    inversion HT ; subst. red in isdecl.
+    rewrite isdecl in e. congruence.
   Qed.
 
   Next Obligation.
@@ -706,7 +713,6 @@ Qed.
       apply sq.
       now exact (typing_wf_local wt').
     - case wt as [wt'].
-      case hΣ as [hΣ'].
       apply typing_infering in wt'.
       case wt' as [T' [i]].
       exists T'.
@@ -728,6 +734,7 @@ Qed.
     ∑ P, ∥ forall T, Σ ;;; Γ |- t : T -> (Σ ;;; Γ |- t : P) * (Σ ;;; Γ ⊢ P ≤ T) ∥.
   Proof.
     unshelve eexists (infer Γ _ t _).
+    all:destruct Σ.(wf_env_ext_wf) as [wfΣ].
     - destruct wt.
       sq.
       now eapply typing_wf_local.

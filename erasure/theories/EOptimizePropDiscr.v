@@ -7,6 +7,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICConfluence PCUICConversion 
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
+
+From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
     ErasureFunction ELiftSubst.
@@ -417,7 +419,7 @@ Qed.
 
 Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : global_env_ext} {wfΣ : ∥ wf_ext Σ ∥} {t v Σ' t' deps} :
   forall wt : welltyped Σ [] t,
-  erase Σ wfΣ [] t wt = t' ->
+  erase (build_wf_env_ext Σ wfΣ) [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
   erase_global deps Σ (sq_wf_ext wfΣ) = Σ' ->
   PCUICWcbvEval.eval Σ t v ->
@@ -839,7 +841,7 @@ Qed.
 
 Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :
   forall wt : welltyped Σ [] t,
-  erase Σ (sq wfΣ) [] t wt = t' ->
+  erase (build_wf_env_ext Σ (sq wfΣ)) [] t wt = t' ->
   erase_global (term_global_deps t') Σ (sq wfΣ.1) = Σ' ->
   PCUICWcbvEval.eval Σ t v ->
   ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 

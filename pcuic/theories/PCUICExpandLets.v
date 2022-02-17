@@ -96,8 +96,12 @@ Definition trans_global_decl (d : PCUICEnvironment.global_decl) :=
   | PCUICEnvironment.InductiveDecl bd => InductiveDecl (trans_minductive_body bd)
   end.
 
-Definition trans_global_decls (d : PCUICEnvironment.global_env) : global_env :=
+Definition trans_global_decls (d : PCUICEnvironment.global_declarations) : global_declarations :=
   List.map (on_snd trans_global_decl) d.
 
+Definition trans_global_env (d : PCUICEnvironment.global_env) : global_env :=
+  {| universes := d.(PCUICEnvironment.universes);
+     declarations := trans_global_decls d.(PCUICEnvironment.declarations) |}.
+  
 Definition trans_global (Σ : PCUICEnvironment.global_env_ext) : global_env_ext :=
-  (trans_global_decls (fst Σ), snd Σ).
+  (trans_global_env (fst Σ), snd Σ).

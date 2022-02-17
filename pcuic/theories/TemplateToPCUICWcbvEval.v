@@ -121,7 +121,7 @@ Ltac dest_lookup :=
   
 Lemma trans_csubst {cf} Σ a k b :
   Typing.wf Σ ->
-  let Σ' := trans_global_decls Σ in
+  let Σ' := trans_global_env Σ in
   wf Σ' ->
   WfAst.wf Σ a ->
   trans Σ' (WcbvEval.csubst a k b) = csubst (trans Σ' a) k (trans Σ' b).
@@ -158,7 +158,7 @@ Qed.
 
 Lemma trans_substl {cf} Σ a b :
   Typing.wf Σ ->
-  let Σ' := trans_global_decls Σ in
+  let Σ' := trans_global_env Σ in
   wf Σ' ->
   All (WfAst.wf Σ) a ->
   trans Σ' (WcbvEval.substl a b) = substl (map (trans Σ') a) (trans Σ' b).
@@ -328,8 +328,8 @@ Proof.
 Qed.
 
 Lemma trans_fix_subst Σ mfix :
-  fix_subst (map (map_def (trans (trans_global_decls Σ)) (trans (trans_global_decls Σ))) mfix) = 
-  map (trans (trans_global_decls Σ)) (Typing.fix_subst mfix).
+  fix_subst (map (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ))) mfix) = 
+  map (trans (trans_global_env Σ)) (Typing.fix_subst mfix).
 Proof.
   unfold Typing.fix_subst, fix_subst.
   len. generalize #|mfix|; induction n; simpl; auto.
@@ -337,8 +337,8 @@ Proof.
 Qed.
 
 Lemma trans_cofix_subst Σ mfix :
-  cofix_subst (map (map_def (trans (trans_global_decls Σ)) (trans (trans_global_decls Σ))) mfix) = 
-  map (trans (trans_global_decls Σ)) (Typing.cofix_subst mfix).
+  cofix_subst (map (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ))) mfix) = 
+  map (trans (trans_global_env Σ)) (Typing.cofix_subst mfix).
 Proof.
   unfold Typing.cofix_subst, cofix_subst.
   len. generalize #|mfix|; induction n; simpl; auto.
@@ -377,13 +377,13 @@ Qed.
 
 Lemma trans_cunfold_fix {cf} {Σ mfix idx narg fn} :
   Typing.wf Σ -> 
-  wf (trans_global_decls Σ) ->
+  wf (trans_global_env Σ) ->
   All (fun def : def Ast.term => Swf_fix Σ def) mfix ->
   WcbvEval.cunfold_fix mfix idx = Some (narg, fn) ->
   cunfold_fix
     (map
-    (map_def (trans (trans_global_decls Σ)) (trans (trans_global_decls Σ)))
-      mfix) idx = Some (narg, trans (trans_global_decls Σ) fn).
+    (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ)))
+      mfix) idx = Some (narg, trans (trans_global_env Σ) fn).
 Proof.
   intros wfΣ wfΣ'.
   unfold WcbvEval.cunfold_fix, cunfold_fix.
@@ -397,13 +397,13 @@ Qed.
 
 Lemma trans_cunfold_cofix {cf} {Σ mfix idx narg fn} :
   Typing.wf Σ -> 
-  wf (trans_global_decls Σ) ->
+  wf (trans_global_env Σ) ->
   All (fun def : def Ast.term => Swf_fix Σ def) mfix ->
   WcbvEval.cunfold_cofix mfix idx = Some (narg, fn) ->
   cunfold_cofix
     (map
-    (map_def (trans (trans_global_decls Σ)) (trans (trans_global_decls Σ)))
-      mfix) idx = Some (narg, trans (trans_global_decls Σ) fn).
+    (map_def (trans (trans_global_env Σ)) (trans (trans_global_env Σ)))
+      mfix) idx = Some (narg, trans (trans_global_env Σ) fn).
 Proof.
   intros wfΣ wfΣ'.
   unfold WcbvEval.cunfold_cofix, cunfold_cofix.
@@ -560,7 +560,7 @@ Proof.
 Qed.
 
 Lemma trans_wcbvEval {cf} {Σ} {wfΣ : ST.wf Σ} T U :
-  let Σ' := trans_global_decls Σ in
+  let Σ' := trans_global_env Σ in
   wf Σ' ->
   WfAst.wf Σ T ->
   WcbvEval.eval Σ T U ->

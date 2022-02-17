@@ -162,11 +162,7 @@ Lemma type_local_ctx_instantiate {cf:checker_flags} Σ ind mdecl Γ Δ u s :
 Proof.
   intros Hctx Hu.
   induction Δ; simpl in *; intuition auto.
-  { destruct Σ as [Σ univs]. eapply (wf_universe_subst_instance (Σ, ind_universes mdecl)); eauto.
-    simpl in *.
-    assert (wg := weaken_lookup_on_global_env'' _ _ _ Hctx Hu).
-    eapply sub_context_set_trans. eauto.
-    eapply global_context_set_sub_ext. }
+  { destruct Σ as [Σ univs]. eapply (wf_universe_subst_instance (Σ, ind_universes mdecl)); eauto. }
   destruct a as [na [b|] ty]; simpl; intuition auto.
   - destruct a0.
     exists (subst_instance_univ u x).

@@ -42,7 +42,7 @@ Derive Signature for clos_refl_trans_1n.
 Notation ws_cumul_pb_terms Σ Γ := (All2 (ws_cumul_pb Conv Σ Γ)).
 
 #[global]
-Instance ws_cumul_pb_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signature (ws_cumul_pb_terms Σ Γ).
+Instance ws_cumul_pb_terms_Proper {cf:checker_flags} Σ Γ : CMorphisms.Proper (eq ==> eq ==> arrow)%signatureT (ws_cumul_pb_terms Σ Γ).
 Proof. intros x y -> x' y' -> f. exact f. Qed.
 
 #[global]
@@ -3535,7 +3535,7 @@ Proof.
     { unfold app_context.
       intros.
       rewrite nth_error_app2; [lia|].
-      rewrite minus_plus; auto. }
+      rewrite Nat.add_comm Nat.add_sub; auto. }
     eapply red_case.
     + induction IHparams; pcuic.
     + apply IHret; auto.

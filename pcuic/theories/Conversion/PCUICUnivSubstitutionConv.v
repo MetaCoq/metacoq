@@ -446,7 +446,7 @@ Lemma consistent_instance_declared {cf: checker_flags} lvs φ uctx u :
   consistent_instance lvs φ uctx u -> 
   forallb (fun l => LS.mem l lvs) u.
 Proof.
-  unfold consistent_instance. destruct uctx as [ctx|ctx].
+  unfold consistent_instance. destruct uctx as [|ctx].
   1: destruct u; [reflexivity|discriminate].
   intuition auto.
 Qed.
@@ -514,17 +514,7 @@ Qed.
 Lemma not_var_global_levels {cf : checker_flags} {Σ} (hΣ : wf Σ) :
   LS.For_all (negb ∘ Level.is_var) (global_levels Σ).
 Proof.
-  induction hΣ as [|Σ kn d hΣ IH HH univs Hu Hd].
-  - intros l Hl. simpl in Hl. eapply LS.singleton_spec in Hl.
-    now subst l.
-  - subst univs. intros l Hl. simpl in Hl; apply LS.union_spec in Hl.
-    destruct Hl as [Hl|Hl]; auto. clear -Hu Hl.
-    destruct d as [[? ? [φ|?]]|[? ? ? ? [φ|?]]]; cbn in *;
-      unfold monomorphic_levels_decl in *; cbn in *;
-      try now apply LS.empty_spec in Hl.
-    all: destruct Hu as [_ [_ [Hu _]]];
-      apply LevelSetFact.for_all_2 in Hu; auto.
-    all: now intros x y [].
+  destruct hΣ as [onu ond]. apply onu.
 Qed.
 
 Definition wf_ext_wk {cf : checker_flags} (Σ : global_env_ext)
@@ -536,33 +526,18 @@ Proof. intro H; apply H. Qed.
 #[global]
 Hint Resolve wf_ext_wk_wf : core.
   
-Lemma not_var_global_ext_levels {cf : checker_flags} Σ φ (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) :
-  LS.For_all (negb ∘ Level.is_var)
-                   (global_ext_levels (Σ, Monomorphic_ctx φ)).
-Proof.
-  destruct hΣ as [hΣ Hφ].
-  intros l Hl; apply LS.union_spec in Hl; destruct Hl as [Hl|Hl].
-  - destruct Hφ as [_ [Hφ _]]. apply LevelSetFact.for_all_2 in Hφ; auto.
-    now intros x y [].
-  - eapply not_var_global_levels; eassumption.
-Qed.
+Lemma not_var_global_ext_levels {cf : checker_flags} Σ (hΣ : wf_ext_wk (Σ, Monomorphic_ctx)) :
+  LS.For_all (negb ∘ Level.is_var) (global_ext_levels (Σ, Monomorphic_ctx)).
+Proof. apply hΣ. Qed.
 
 Lemma levels_global_constraint {cf : checker_flags} Σ (hΣ : wf Σ) c :
   CS.In c (global_constraints Σ)
   -> LS.In c.1.1 (global_levels Σ)
     /\ LS.In c.2 (global_levels Σ).
 Proof.
-  induction hΣ as [|Σ kn d hΣ IH HH univs Hu Hd].
-  - intro H; now apply CS.empty_spec in H.
-  - subst univs. intro Hc. simpl in *; apply CS.union_spec in Hc.
-    destruct Hc as [Hc|Hc]; auto.
-    + clear -Hu Hc.
-      destruct d as [[? ? [φ|?]]|[? ? ? ? [φ|?]]]; cbn in *;
-        unfold monomorphic_levels_decl, monomorphic_constraints_decl in *; cbn in *;
-          try now apply CS.empty_spec in Hc.
-      all: destruct Hu as [_ [Hu [_ _]]].
-      all: destruct c as [[l1 c] l2]; exact (Hu _ Hc).
-    + split; apply LS.union_spec; now right.
+  intros inc.
+  destruct hΣ. destruct o. specialize (H c inc). 
+  destruct c as [[l eq] r]; apply H.
 Qed.
 
 Lemma levels_global_ext_constraint {cf : checker_flags} Σ φ (hΣ : wf_ext_wk (Σ, φ)) c :
@@ -572,8 +547,8 @@ Lemma levels_global_ext_constraint {cf : checker_flags} Σ φ (hΣ : wf_ext_wk (
 Proof.
   intro H. apply CS.union_spec in H; simpl in H.
   destruct hΣ as [hΣ Hφ], H as [Hc|H]; simpl in *.
-  - destruct Hφ as [Hφ _]. unfold global_ext_levels. simpl.
-    destruct c as [[l1 c] l2]; exact  (Hφ _ Hc).
+  - red in Hφ. unfold global_ext_levels. simpl.
+    destruct c as [[l1 c] l2]; exact (Hφ _ Hc).
   - apply levels_global_constraint in H; tas.
     split; apply LS.union_spec; right; apply H.
 Qed.
@@ -591,9 +566,9 @@ Proof.
   - now apply not_var_global_levels in H2.
 Qed.
 
-Lemma monomorphic_global_constraint_ext {cf : checker_flags} Σ φ
-      (hΣ : wf_ext_wk (Σ, Monomorphic_ctx φ)) c :
-  CS.In c (global_ext_constraints (Σ, Monomorphic_ctx φ))
+Lemma monomorphic_global_constraint_ext {cf : checker_flags} Σ
+      (hΣ : wf_ext_wk (Σ, Monomorphic_ctx)) c :
+  CS.In c (global_ext_constraints (Σ, Monomorphic_ctx))
   -> is_monomorphic_cstr c.
 Proof.
   intros H. apply levels_global_ext_constraint in H; tas.
@@ -684,18 +659,17 @@ Qed.
 
 Lemma consistent_ext_trans_polymorphic_cases {cf : checker_flags} Σ φ φ' udecl inst inst' :
   wf_ext_wk (Σ, φ) ->
-  sub_context_set (monomorphic_udecl φ) (global_ext_context_set (Σ, φ')) ->
   consistent_instance_ext (Σ, φ) (Polymorphic_ctx udecl) inst ->
   consistent_instance_ext (Σ, φ') φ inst' ->
   consistent_instance_ext (Σ, φ') (Polymorphic_ctx udecl)
                           (subst_instance inst' inst).
 Proof.
-  intros HΣφ Hφ [H [H0 H1]] H2.
+  intros HΣφ [H [H0 H1]] H2.
   repeat split.
   2: now rewrite subst_instance_instance_length.
   + rewrite forallb_map. apply forallb_forall.
     intros l Hl. unfold global_ext_levels in *; simpl in *.
-    eapply forallb_forall in H; tea. clear -Hφ H H2 Hl.
+    eapply forallb_forall in H; tea. clear -H H2 Hl.
     apply LevelSet_mem_union in H. destruct H as [H|H].
     2: { destruct l; simpl; try (apply LevelSet_mem_union; right; assumption).
          apply consistent_instance_declared in H2.
@@ -707,22 +681,22 @@ Proof.
     *  destruct l; simpl.
        -- apply LevelSet_mem_union; right; apply LS.mem_spec, global_levels_Set.
        -- apply LS.mem_spec in H.
-          destruct φ as [φ|[φ1 φ2]]; simpl in *.
-          1: apply Hφ in H. 1: now apply LS.mem_spec.
-          all: now apply monomorphic_level_notin_AUContext in H.
+          destruct φ as [|[φ1 φ2]]; simpl in *.
+          { now apply LevelSetFact.empty_iff in H. }
+          now apply monomorphic_level_notin_AUContext in H.
        -- apply consistent_instance_declared in H2.
           apply (forallb_nth' n Level.lzero) in H2.
           destruct H2 as [[? [H2 ?]]|H2]; rewrite H2; tas.
           apply LevelSet_mem_union; right; apply LS.mem_spec, global_levels_Set.
   + unfold consistent_instance_ext, consistent_instance in H2.
     unfold valid_constraints in *; destruct check_univs; [|trivial].
-    destruct φ as [φ|[φ1 φ2]]; simpl in *.
+    destruct φ as [|[φ1 φ2]]; simpl in *.
     * intros v Hv. rewrite <- subst_instance_cstrs_two.
       apply satisfies_subst_instance_ctr; tas.
       apply H1. apply satisfies_subst_instance_ctr; tas.
       rewrite equal_subst_instance_cstrs_mono; aa.
       apply satisfies_union; simpl; split.
-      -- intros c Hc. now apply Hv, Hφ.
+      -- intros c Hc. now apply Hv.
       -- apply satisfies_union in Hv; apply Hv.
     * destruct H2 as [_ [_ H2]].
       eapply consistent_ext_trans_polymorphic_case_aux; try eassumption.
@@ -730,12 +704,11 @@ Qed.
 
 Lemma consistent_ext_trans {cf : checker_flags} Σ φ φ' udecl inst inst' :
   wf_ext_wk (Σ, φ) ->
-  sub_context_set (monomorphic_udecl φ) (global_ext_context_set (Σ, φ')) ->
   consistent_instance_ext (Σ, φ) udecl inst ->
   consistent_instance_ext (Σ, φ') φ inst' ->
   consistent_instance_ext (Σ, φ') udecl (subst_instance inst' inst).
 Proof.
-  intros HΣφ Hφ H1 H2. destruct udecl as [?|udecl].
+  intros HΣφ H1 H2. destruct udecl as [|udecl].
   - (* udecl monomorphic *)
     cbn; now len.
   - (* udecl polymorphic *)
@@ -746,21 +719,19 @@ Qed.
 
 Lemma consistent_instance_valid_constraints {cf : checker_flags} Σ φ u univs :
   wf_ext_wk (Σ, φ) ->
-  CS.Subset (monomorphic_constraints φ)
-                       (global_ext_constraints (Σ, univs)) ->
   consistent_instance_ext (Σ, univs) φ u ->
   valid_constraints (global_ext_constraints (Σ, univs))
                     (subst_instance_cstrs u (global_ext_constraints (Σ, φ))).
 Proof.
-  intros HΣ Hsub HH.
+  intros HΣ HH.
   unfold valid_constraints; case_eq check_univs; [intro Hcf|trivial].
   intros v Hv. apply satisfies_subst_instance_ctr; tas.
   apply satisfies_union; simpl; split.
-  - destruct φ as [φ|[φ1 φ2]].
+  - destruct φ as [|[φ1 φ2]].
     + cbn. apply satisfies_subst_instance_ctr; tas.
-      (rewrite equal_subst_instance_cstrs_mono; aa; try by move=> ? /Hsub/Hv); [].
-      intros c Hc; eapply monomorphic_global_constraint_ext; tea.
-      apply CS.union_spec; now left.
+      rewrite equal_subst_instance_cstrs_mono; aa.
+      * intros x hin. csets.
+      * intros x hin. csets.
     + destruct HH as [_ [_ H1]].
       unfold valid_constraints in H1; rewrite Hcf in H1.
       apply satisfies_subst_instance_ctr; aa.
@@ -945,19 +916,24 @@ Proof.
       now destruct nth_error. 
 Qed.
 
+Lemma monomorphic_level_notin_levels_of_udecl s udecl :
+  LevelSet.In (Level.Level s) (levels_of_udecl udecl) -> False.
+Proof.
+  destruct udecl; cbn.
+  - lsets.
+  - apply monomorphic_level_notin_AUContext.
+Qed.
+
 Lemma LevelIn_subst_instance {cf : checker_flags} Σ l u univs :
   LS.In l (global_ext_levels Σ) ->
-  LS.Subset (monomorphic_levels Σ.2) (global_ext_levels (Σ.1, univs)) ->
   consistent_instance_ext (Σ.1, univs) Σ.2 u ->
   LS.In (subst_instance_level u l) (global_ext_levels (Σ.1, univs)).
 Proof.
-  intros H H0 H'. destruct l; simpl.
+  intros H H'. destruct l; simpl.
   - apply LS.union_spec; right; simpl.
     apply global_levels_Set.
   - apply LS.union_spec in H; destruct H as [H|H]; simpl in *.
-    + apply H0. destruct Σ as [? φ]; cbn in *; clear -H.
-      destruct φ as [?|?]; tas;
-        now apply monomorphic_level_notin_AUContext in H.
+    + now apply monomorphic_level_notin_levels_of_udecl in H.
     + apply LS.union_spec; now right.
   - apply consistent_instance_declared in H'.
     apply (forallb_nth' n Level.lzero) in H'.
@@ -1619,16 +1595,12 @@ Lemma All_local_env_over_subst_instance {cf : checker_flags} Σ Γ (wfΓ : wf_lo
   All_local_env_over typing
                      (fun Σ0 Γ0 (_ : wf_local Σ0 Γ0) t T (_ : Σ0;;; Γ0 |- t : T) =>
        forall u univs, wf_ext_wk Σ0 ->
-                  sub_context_set (monomorphic_udecl Σ0.2)
-                                  (global_ext_context_set (Σ0.1, univs)) ->
                   consistent_instance_ext (Σ0.1, univs) Σ0.2 u ->
                   (Σ0.1, univs) ;;; subst_instance u Γ0
                   |- subst_instance u t : subst_instance u T)
                      Σ Γ wfΓ ->
   forall u univs,
     wf_ext_wk Σ ->
-    sub_context_set (monomorphic_udecl Σ.2)
-                    (global_ext_context_set (Σ.1, univs)) ->
     consistent_instance_ext (Σ.1, univs) Σ.2 u ->
     wf_local (Σ.1, univs) (subst_instance u Γ).
 Proof.
@@ -1651,46 +1623,39 @@ Proof.
   now simpl in wfΣ.
 Qed.
 
+Lemma monomorphic_level_in_global_ext l Σ :
+  LevelSet.In (Level.Level l) (global_ext_levels Σ) ->
+  LevelSet.In (Level.Level l) (global_levels Σ).
+Proof.
+  unfold global_ext_levels.
+  intros [hin|hin] % LevelSet.union_spec.
+  - now eapply monomorphic_level_notin_levels_of_udecl in hin.
+  - apply hin.
+Qed. 
+
 Lemma wf_universe_subst_instance {cf : checker_flags} (Σ : global_env_ext) univs u l :
    wf Σ ->
    wf_universe Σ l ->
    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-   sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
    wf_universe (Σ.1, univs) (subst_instance u l). 
 Proof.
   destruct l; simpl; auto. rename n into t.
-  intros wfΣ Hl Hu sub e [[l n] [inl ->]]%In_subst_instance.
+  intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
   destruct l; simpl; auto.
   - unfold global_ext_levels.
     apply LS.union_spec. right.
     apply global_levels_Set.
   - specialize (Hl (Level.Level s, n) inl).
-    simpl in Hl.
-    destruct sub. unfold levels_of_udecl in H.
-    unfold global_ext_levels in Hl.
-    destruct Σ.2.
-    * eapply LS.union_spec in Hl.
-      destruct Hl as [Hl|Hl].
-      + now specialize (H _ Hl).
-      + eapply LS.union_spec. now right.
-    * eapply LS.union_spec in Hl as [Hl|Hl].
-      + simpl in Hl.
-        now apply monomorphic_level_notin_AUContext in Hl.
-      + apply LS.union_spec; now right.
+    simpl in Hl. apply monomorphic_level_in_global_ext in Hl.
+    eapply LS.union_spec. now right.
   - specialize (Hl (Level.Var n0, n) inl).
     eapply LS.union_spec in Hl as [Hl|Hl].
     + red in Hu.
       unfold levels_of_udecl in Hl.
       destruct Σ.2.
       * simpl in Hu.
-        destruct u; try discriminate.
-        simpl in sub. destruct sub.
-        specialize (H _ Hl).
-        simpl in H. unfold subst_instance. simpl.
-        rewrite nth_error_nil. eapply LS.union_spec. right.
-        eapply global_levels_Set.
-      * simpl in sub.
-        destruct Hu as [declu [us vc]].
+        destruct u; try discriminate. lsets.
+      * destruct Hu as [declu [us vc]].
         unfold subst_instance. simpl.
         destruct (nth_error u n0) eqn:hnth.
         2:{ simpl. eapply LS.union_spec; right; apply global_levels_Set. }
@@ -1700,34 +1665,20 @@ Proof.
     + now apply not_var_global_levels in Hl.
 Qed.
 
-Definition global_context_set Σ : ContextSet.t
-  := (global_levels Σ, global_constraints Σ).
+Definition global_context_set Σ : ContextSet.t := universes Σ.
 
 Lemma global_context_set_sub_ext Σ φ :
   sub_context_set (global_context_set Σ) (global_ext_context_set (Σ, φ)).
 Proof.
   split.
-  - cbn. apply LevelSetProp.union_subset_2.
+  - cbn. unfold global_ext_levels. cbn.
+    unfold global_levels. 
+    intros x hin. apply LevelSet.union_spec; right.
+    now apply LevelSet.union_spec; left.
   - apply ConstraintSetProp.union_subset_2.
 Qed.
 
-
-Lemma weaken_lookup_on_global_env'' {cf : checker_flags} Σ c decl :
-  wf Σ ->
-  lookup_env Σ c = Some decl ->
-  sub_context_set (monomorphic_udecl (universes_decl_of_decl decl))
-                  (global_context_set Σ).
-Proof.
-  intros X1 X2; pose proof (weaken_lookup_on_global_env' _ _ _ X1 X2) as XX.
-  set (φ := universes_decl_of_decl decl) in *; clearbody φ. clear -XX.
-  destruct φ as [φ|φ].
-  - split; apply XX.
-  - split;
-    [apply LevelSetProp.subset_empty|apply ConstraintSetProp.subset_empty].
-Qed.
-
-Definition wf_global_ext {cf : checker_flags} Σ ext :=
-  (wf_ext_wk (Σ, ext) * sub_context_set (monomorphic_udecl ext) (global_context_set Σ))%type.
+Definition wf_global_ext {cf : checker_flags} Σ ext := wf_ext_wk (Σ, ext).
 
 Require Import Morphisms.
 Require Import ssreflect.
@@ -1767,10 +1718,8 @@ Section SubstIdentity.
     wf_global_ext Σ (ind_universes mdecl).
   Proof.
     intros wfΣ decli.
-    epose proof (weaken_lookup_on_global_env'' _ _ (InductiveDecl mdecl) wfΣ decli); eauto with pcuic.
     split; auto.
     epose proof (weaken_lookup_on_global_env' _ _ (InductiveDecl mdecl) wfΣ decli); eauto.
-    red. simpl. split; auto.
   Qed.
 
   Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcuic.
@@ -1802,7 +1751,7 @@ Section SubstIdentity.
   Proof.
     intros wfΣ wf_glob_ext.
     red. red.
-    destruct udecl as [?|[univs cst]] eqn:indu.
+    destruct udecl as [|[univs cst]] eqn:indu.
     { simpl. reflexivity. }
     split; [|split].
     - simpl abstract_instance.
@@ -1821,7 +1770,8 @@ Section SubstIdentity.
       assert(CS.Equal (subst_instance_cstrs (unfold #|univs| Level.Var) cst) cst).
       { unfold CS.Equal; intros a.
         unfold subst_instance_cstrs.
-        red in wf_glob_ext. destruct wf_glob_ext as [[_ [wfext _]] _].
+        red in wf_glob_ext.
+        destruct wf_glob_ext as [_ wfext].
         unfold on_udecl_prop in wfext.
         simpl constraints_of_udecl in wfext.
         simpl levels_of_udecl in wfext.
@@ -1857,11 +1807,7 @@ Section SubstIdentity.
   Proof.
     intros onu lin.
     destruct (Σ.2); intuition eauto.
-    simpl in lin, onu.
-    red in onu. destruct onu as [_ [nvar _]].
-    eapply LevelSet.for_all_spec in nvar.
-    - specialize (nvar _ lin). simpl in nvar. discriminate.
-    - typeclasses eauto.
+    simpl in lin, onu. lsets.
   Qed.
 
   Lemma consistent_instance_ext_subst_abs Σ decl u :

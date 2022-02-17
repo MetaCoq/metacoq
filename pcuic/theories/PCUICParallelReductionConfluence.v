@@ -510,14 +510,14 @@ Section Rho.
         dbody := rho (Γ ,,, mfixctx) (dbody d) _; rarg := (rarg d) |})).
   Next Obligation.
     eapply (In_list_depth (def_depth_gen depth)) in H.
-    eapply le_lt_trans with (def_depth_gen depth d).
+    eapply Nat.le_lt_trans with (def_depth_gen depth d).
     unfold def_depth_gen. lia.
     unfold mfixpoint_depth in H0.
     lia.
   Qed.
   Next Obligation.
     eapply (In_list_depth (def_depth_gen depth)) in H.
-    eapply le_lt_trans with (def_depth_gen depth d).
+    eapply Nat.le_lt_trans with (def_depth_gen depth d).
     unfold def_depth_gen. lia.
     unfold mfixpoint_depth in H0.
     lia.
@@ -1176,10 +1176,9 @@ Section Rho.
     intros. simpl. rewrite mapi_app. simpl.
     rewrite IHm. cbn.
     rewrite - app_assoc. simpl. rewrite List.rev_length.
-    rewrite Nat.add_0_r. rewrite minus_diag. simpl.
+    rewrite Nat.add_0_r. rewrite Nat.sub_diag Nat.add_0_r. simpl.
     f_equal. apply mapi_ext_size. simpl; intros.
-    rewrite List.rev_length in H.
-    f_equal. f_equal. lia. f_equal. f_equal. f_equal. lia.
+    rewrite List.rev_length in H. lia_f_equal.
   Qed.
 
   Lemma fold_fix_context_rev {Γ m} :

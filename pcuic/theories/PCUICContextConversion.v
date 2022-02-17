@@ -1106,7 +1106,7 @@ Instance eq_subrel_eq_univ {cf:checker_flags} Σ : RelationClasses.subrelation e
 Proof. intros x y []. reflexivity. Qed.
 
 Lemma eq_context_upto_empty_conv_context {cf:checker_flags} (Σ : global_env_ext) :
-  subrelation (eq_context_upto [] eq eq) (fun Γ Γ' => conv_context Σ Γ Γ').
+  subrelation (eq_context_upto empty_global_env eq eq) (fun Γ Γ' => conv_context Σ Γ Γ').
 Proof.
   intros Γ Δ h. induction h.
   - constructor.
@@ -1116,16 +1116,16 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_univ_conv_context {cf:checker_flags} {Σ : global_env_ext} Γ Δ :
-    eq_context_upto Σ.1 (eq_universe Σ) (eq_universe Σ) Γ Δ ->
-    conv_context Σ Γ Δ.
+  eq_context_upto Σ.1 (eq_universe Σ) (eq_universe Σ) Γ Δ ->
+  conv_context Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_conv_context; tea.
   reflexivity.
 Qed.
 
 Lemma eq_context_upto_univ_cumul_context {cf:checker_flags} {Σ : global_env_ext} Γ Δ :
-    eq_context_upto Σ.1 (eq_universe Σ) (leq_universe Σ) Γ Δ ->
-    cumul_context Σ Γ Δ.
+  eq_context_upto Σ.1 (eq_universe Σ) (leq_universe Σ) Γ Δ ->
+  cumul_context Σ Γ Δ.
 Proof.
   intros h. eapply eq_context_upto_cumul_context; tea.
   reflexivity. tc. tc.

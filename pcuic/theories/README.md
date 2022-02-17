@@ -92,13 +92,13 @@
 [PCUICNamelessTyp]: ./Typing/PCUICNamelessTyp.v
 
 
-## ws_cumul_pb up to universes
+## Equality up to universes
 
 | File                  | Description
 | ----------------------| --------------------
-| [PCUICEquality]       | ws_cumul_pb up to universes between terms (`eq_term`)
+| [PCUICEquality]       | Equality up to universes between terms (`eq_term`)
 | [PCUICCasesContexts]  | Helper lemmas for the handling of case branche and predicate contexts
-| [PCUICEqualityDec]    | Decidability of ws_cumul_pb up to universes
+| [PCUICEqualityDec]    | Decidability of equality up to universes
 
 [PCUICCasesContexts]: ./PCUICCasesContexts.v
 [PCUICEquality]: ./PCUICEquality.v
@@ -113,7 +113,7 @@
 | [PCUICContextReduction] | Properties of reduction between contexts
 | [PCUICParallelReduction] | Definition of parallel reduction, and stability by weakening and substitution
 | [PCUICParallelReductionConfluence] | Proof of the diamond property for parallel reduction
-| [PCUICConfluence] | Proof of confluence for reduction and that ws_cumul_pb up to universes is a simulation for reduction
+| [PCUICConfluence] | Proof of confluence for reduction and that equality up to universes is a simulation for reduction
 | [PCUICRedTypeIrrelevance] | Types and names in the context are irrelevant for reduction, only the bodies of definitions are used
 
 

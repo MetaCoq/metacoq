@@ -38,7 +38,8 @@ Definition type_of_constructor mdecl (cdecl : constructor_body) (c : inductive *
   subst0 (inds mind u mdecl.(ind_bodies)) (subst_instance u (cstr_type cdecl)).
 
 Definition extends (Σ Σ' : global_env) :=
-  { Σ'' & Σ' = Σ'' ++ Σ }.
+  Σ.(universes) ⊂_cs Σ'.(universes) ×
+  { Σ'' & Σ'.(declarations) = Σ'' ++ Σ.(declarations) }.
   
 (** ** Typing relation *)
 
@@ -397,11 +398,14 @@ Proof.
   induction d; try destruct c0, c1; simpl; try lia.
 Qed.
 
-Fixpoint globenv_size (Σ : global_env) : size :=
+Fixpoint global_declarations_size (Σ : global_declarations) : size :=
   match Σ with
   | [] => 1
-  | d :: Σ => S (globenv_size Σ)
+  | d :: Σ => S (global_declarations_size Σ)
   end.
+
+Definition globenv_size (Σ : global_env) : size :=
+  global_declarations_size Σ.(declarations).
 
 (** To get a good induction principle for typing derivations,
      we need:
@@ -432,7 +436,7 @@ Hint Resolve wf_ext_wf : core.
 
 Lemma wf_ext_consistent {cf:checker_flags} Σ :
   wf_ext Σ -> consistent Σ.
-Proof. intros [? [? [? [? ?]]]]; assumption. Qed.
+Proof. intros [? [? [? ?]]]; assumption. Qed.
 #[global]
 Hint Resolve wf_ext_consistent : core.
 
@@ -746,83 +750,89 @@ Proof.
   intros IH. simpl in IH.
   split.
   - clear X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12.
-    destruct Σ as [Σ φ]. destruct Σ.
-    constructor.
-    cbn in wfΣ; inversion_clear wfΣ. auto.
-    rename X0 into Xg.
-    constructor; auto. unfold Forall_decls_typing in IH.
-    * simple refine (let IH' := IH ((Σ, udecl); (X; []; (tSort Universe.lProp); _; _)) in _).
+    destruct Σ as [Σ φ]. 
+    red. cbn. do 2 red in wfΣ. cbn in wfΣ.
+    destruct Σ as [univs Σ]; cbn in *.
+    set (Σg:= {| universes := univs; declarations := Σ |}) in *.
+    destruct wfΣ; split => //.
+    unfold Σg in o |- *; cbn in o.
+    rename o into ongu. rename o0 into o. cbn in o |- *.
+    destruct o. { constructor. }
+    rename o1 into Xg.
+    set (wfΣ := (ongu, o) : on_global_env (lift_typing typing) {| universes := univs; declarations := Σ |}).
+    set (Σ':= {| universes := univs; declarations := Σ |}) in *.
+    constructor; auto.
+    * simple refine (let IH' := IH ((Σ', udecl); 
+      (wfΣ; []; (tSort Universe.lProp); _; _)) in _).
       shelve. simpl. apply type_Prop.
       forward IH'. constructor 1; cbn. lia.
       apply IH'; auto.
+
     * simpl. simpl in *.
-      destruct d; simpl.
+      destruct d.
       + destruct c; simpl in *.
         destruct cst_body0; simpl in *.
         simpl.
-        red in Xg; simpl in Xg. intros. red. simpl.
-        specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Xg)))))).
+        intros. red in Xg. simpl in Xg.
+        specialize (IH (existT _ (Σ', udecl) (existT _ wfΣ (existT _ _ (existT _ _ (existT _ _ Xg)))))).
         simpl in IH.
-        forward IH. constructor 1. simpl; lia.
+        forward IH. constructor 1. simpl; subst Σ' Σg. cbn. lia.
         apply IH.
         red. simpl. red in Xg; simpl in Xg.
         destruct Xg as [s Hs]. red. simpl.
-        specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Hs)))))).
+        specialize (IH (existT _ (Σ', udecl) (existT _ wfΣ (existT _ _ (existT _ _ (existT _ _ Hs)))))).
         simpl in IH.
-        forward IH. constructor 1. simpl; lia. exists s. eapply IH.
+        forward IH. constructor 1. simpl; subst Σ' Σg; cbn; lia. exists s. eapply IH.
       + red in Xg.
         destruct Xg as [onI onP onnp]; constructor; eauto.
-        eapply Alli_impl; eauto. clear onI onP onnp; intros n x Xg.
-        refine {| ind_arity_eq := Xg.(ind_arity_eq);
-                  ind_cunivs := Xg.(ind_cunivs) |}.
-                  
-        ++ apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ [] (existT _ _ (existT _ _ Hs)))))).
-            simpl in IH. simpl. apply IH; constructor 1; simpl; lia.
-        ++ pose proof Xg.(onConstructors) as Xg'.
+        { unshelve eset (IH' := fun p => IH (existT _ (Σ', udecl) (existT _ wfΣ p)) _).
+          constructor. cbn; subst Σ' Σg; lia. clearbody IH'. cbn in IH'.
+          clear IH; rename IH' into IH.
+          eapply Alli_impl; eauto. cbn in IH. clear onI onP onnp. intros n x Xg.
+          refine {| ind_arity_eq := Xg.(ind_arity_eq);
+                    ind_cunivs := Xg.(ind_cunivs) |}.
+          - apply onArity in Xg. destruct Xg as [s Hs]. exists s; auto.
+            apply (IH (_; _; _; Hs)).
+          - pose proof Xg.(onConstructors) as Xg'.
             eapply All2_impl; eauto. intros.
-            destruct X0 as [cass tyeq onctyp oncargs oncind].
+            destruct X as [cass tyeq onctyp oncargs oncind].
             unshelve econstructor; eauto.
-            destruct onctyp as [s Hs].
-            simpl in Hs.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hs)))))).
-            simpl in IH. simpl. exists s. simpl. apply IH; constructor 1; simpl; auto with arith.
-            eapply sorts_local_ctx_impl; eauto. simpl. intros. red in X0.
-            destruct T.
-            specialize (IH ((Σ, udecl); (X; _; _; _; X0))).
-            apply IH. simpl. constructor 1. simpl. auto with arith.
-            destruct X0 as [u Hu]. exists u.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hu)))))).
-            apply IH. simpl. constructor 1. simpl. auto with arith.
-            clear -X IH oncind.
-            revert oncind.
-            generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
-            generalize (cstr_indices x0). induction 1; constructor; auto.
-            simpl in t2 |- *.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ t2)))))).
-            apply IH. simpl. constructor 1. simpl. auto with arith.
-        ++ intros Hprojs; pose proof (onProjections Xg Hprojs); auto. 
-        ++ destruct Xg. simpl. unfold check_ind_sorts in *.
+            { destruct onctyp as [s Hs].
+              pose proof (typing_wf_local (Σ:= (Σ', udecl)) Hs). simpl in Hs.
+              exists s; apply (IH (_; _; _; Hs)). }
+            { eapply sorts_local_ctx_impl; eauto. simpl. intros. red in X.
+              destruct T.
+              specialize (IH (_; _; _; X)).
+              apply IH.
+              destruct X as [u Hu]. exists u.
+              apply (IH (_; _; _; Hu)). }
+            { clear -IH oncind.
+              revert oncind.
+              generalize (List.rev (lift_context #|cstr_args x0| 0 (ind_indices x))).
+              generalize (cstr_indices x0). induction 1; constructor; auto.
+              red in t0 |- *.
+              apply (IH (_; (_; (_; t0)))). }
+          - intros Hprojs; pose proof (onProjections Xg Hprojs); auto.
+          - destruct Xg. simpl. unfold check_ind_sorts in *.
             destruct Universe.is_prop; auto.
             destruct Universe.is_sprop; auto.
             split. apply ind_sorts0. destruct indices_matter; auto.
             eapply type_local_ctx_impl. eapply ind_sorts0.
-            intros. red in X0.
+            intros. red in X.
             destruct T.
-            specialize (IH ((Σ, udecl); (X; _; _; _; X0))).
-            apply IH. simpl. constructor 1. simpl. auto with arith.
-            destruct X0 as [u Hu]. exists u.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hu)))))).
-            apply IH. simpl. constructor 1. simpl. auto with arith.
-          ++ apply (onIndices Xg).
-          ++ red in onP |- *.
-            eapply All_local_env_impl; eauto.
-            intros. destruct T; simpl in X0.
-            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ X0)))))).
-            simpl in IH. apply IH. constructor 1. simpl. lia.
-            destruct X0 as [u Hu].
-            specialize (IH (existT _ (Σ, udecl) (existT _ X (existT _ _ (existT _ _ (existT _ _ Hu)))))).
-            simpl in IH. simpl. exists u. apply IH. constructor 1. simpl. lia.
+            specialize (IH (_; _; _; X)).
+            apply IH.
+            destruct X as [u Hu]. exists u.
+            apply (IH (_; _; _; Hu)).
+          - apply (onIndices Xg). }
+        { red in onP |- *.
+          eapply All_local_env_impl; eauto.
+          intros. destruct T; simpl in X.
+          apply (IH ((Σ', udecl); (wfΣ; _; _; _; X))).
+          constructor 1. simpl. subst Σ' Σg; cbn; lia.
+          destruct X as [u Hu].
+          exists u; apply (IH ((Σ', udecl); (wfΣ; _; _; _; Hu))).
+          constructor 1. simpl. subst Σ' Σg; cbn; lia. }
 
   - assert (forall Γ t T (Hty : Σ ;;; Γ |- t : T),
                   typing_size Hty < typing_size H ->
@@ -1228,13 +1238,27 @@ Section All_local_env.
   Lemma lookup_on_global_env P (Σ : global_env) c decl :
     on_global_env P Σ ->
     lookup_env Σ c = Some decl ->
-    { Σ' & { wfΣ' : on_global_env P Σ'.1 & on_global_decl P Σ' c decl } }.
+    { Σ' : global_env & [× extends Σ' Σ, on_global_env P Σ' &
+       on_global_decl P (Σ', universes_decl_of_decl decl) c decl] }.
   Proof.
-    induction 1; simpl. congruence.
+    destruct Σ as [univs Σ]; rewrite /on_global_env /lookup_env; cbn.
+    intros [cu Σp].
+    induction Σp; simpl. congruence.
     unfold eq_kername; destruct kername_eq_dec; subst.
     intros [= ->].
-    exists (Σ, udecl). exists X. auto.
-    apply IHX.
+    exists ({| universes := univs; declarations := Σ |}).
+    split.
+    - red; cbn. split; [split;[lsets|csets]|].
+      exists [(kn, decl)] => //.
+    - split => //.
+    - apply o0.
+    - intros hl. destruct (IHΣp hl) as [Σ' []].
+      exists Σ'.
+      split=> //.
+      destruct e. red; cbn in *.
+      split; [auto|].
+      destruct s as [Σ'' ->].
+      exists (Σ'' ,, (kn, d)) => //.
   Qed.
 
   Lemma All_local_env_app (P : context -> term -> option term -> Type) l l' :

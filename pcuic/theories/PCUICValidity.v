@@ -27,8 +27,8 @@ Section Validity.
   Lemma isType_weaken_full : weaken_env_prop_full (fun Σ Γ t T => isType Σ Γ T).
   Proof.
     red. intros.
-    destruct X1 as [u Hu]; exists u; pcuic.
-    unshelve eapply (weaken_env_prop_typing _ _ _ _ X0 _ _ (Some (tSort u))); eauto with pcuic.
+    destruct X2 as [u Hu]; exists u; pcuic.
+    unshelve eapply (weaken_env_prop_typing _ _ _ _ _ X1 _ _ (Some (tSort u))); eauto with pcuic.
     red. simpl. destruct Σ. eapply Hu.
   Qed.
 
@@ -39,23 +39,21 @@ Section Validity.
       (lift_typing (fun Σ Γ (_ T : term) => isType Σ Γ T)).
   Proof.
     red. intros.
-    unfold lift_typing in *. destruct T. now eapply (isType_weaken_full (_, _)).
-    destruct X1 as [s Hs]; exists s. now eapply (isType_weaken_full (_, _)).
+    unfold lift_typing in *. destruct T. now eapply (isType_weaken_full (Σ, _)).
+    destruct X2 as [s Hs]; exists s. now eapply (isType_weaken_full (Σ, _)).
   Qed.
   Hint Resolve isType_weaken : pcuic.
 
-  Lemma isType_extends (Σ : global_env) (Σ' : PCUICEnvironment.global_env) (φ : universes_decl) :
-    wf Σ' ->
+  Lemma isType_extends (Σ : global_env) (Σ' : global_env) (φ : universes_decl) :
+    wf Σ -> wf Σ' ->
     extends Σ Σ' ->
     forall Γ : context,
     forall t0 : term,
     isType (Σ, φ) Γ t0 -> isType (Σ', φ) Γ t0.
   Proof.
-    intros.
-    destruct X1 as [s Hs].
+    intros wfΣ wfΣ' ext Γ t [s Hs].
     exists s.
     eapply (env_prop_typing weakening_env (Σ, φ)); auto.
-    simpl; auto. now eapply wf_extends.
   Qed.
 
   Lemma weaken_env_prop_isType :
@@ -65,10 +63,9 @@ Section Validity.
           (Γ0 : PCUICEnvironment.context) (_ T : term) =>
         isType Σ0 Γ0 T)).
   Proof.
-    red. intros.
-    red in X1 |- *.
+    red. intros Σ Σ' ϕ wfΣ wfΣ' ext *. unfold lift_typing.
     destruct T. now eapply isType_extends.
-    destruct X1 as [s Hs]; exists s; now eapply isType_extends.
+    intros [s Hs]; exists s. now eapply (isType_extends (empty_ext Σ)).
   Qed.
 
   Lemma isType_Sort_inv {Σ : global_env_ext} {Γ s} : wf Σ -> isType Σ Γ (tSort s) -> wf_universe Σ s.

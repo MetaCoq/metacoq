@@ -89,6 +89,28 @@ Proof.
   intros []; split; tc.
 Qed.
 
+Lemma clos_rt_OnOne2_local_env_incl R :
+inclusion (OnOne2_local_env (on_one_decl (fun Δ => clos_refl_trans (R Δ))))
+          (clos_refl_trans (OnOne2_local_env (on_one_decl R))).
+Proof.
+  intros x y H.
+  induction H; firstorder; try subst na'.
+  - induction b. repeat constructor. pcuicfo.
+    constructor 2.
+    econstructor 3 with (Γ ,, vass na y); auto.
+  - subst.
+    induction a0. repeat constructor. pcuicfo.
+    constructor 2.
+    econstructor 3 with (Γ ,, vdef na b' y); auto.
+  - subst t'.
+    induction a0. constructor. constructor. red. simpl. pcuicfo.
+    constructor 2.
+    econstructor 3 with (Γ ,, vdef na y t); auto.
+  - clear H. induction IHOnOne2_local_env. constructor. now constructor 3.
+    constructor 2.
+    eapply transitivity. eauto. auto.
+Qed.
+
 Lemma All2_fold_refl {A} {P : list A -> list A -> A -> A -> Type} : 
   (forall Γ, Reflexive (P Γ Γ)) ->
   Reflexive (All2_fold P).
@@ -2357,7 +2379,7 @@ Section AbstractConfluence.
   End Definitions.
 
   Global Instance joinable_proper A :
-    Proper (relation_equivalence ==> relation_equivalence)%signature (@joinable A).
+    Proper (relation_equivalence ==> relation_equivalence)%signatureT (@joinable A).
   Proof.
     reduce_goal. split; unfold joinable; intros.
     destruct X0. exists x1. intuition eauto. setoid_rewrite (X x0 x1) in a. auto.
@@ -2368,7 +2390,7 @@ Section AbstractConfluence.
     exists z; split; auto.
   Qed.
 
-  Global Instance diamond_proper A : Proper (relation_equivalence ==> iffT)%signature (@diamond A).
+  Global Instance diamond_proper A : Proper (relation_equivalence ==> iffT)%signatureT (@diamond A).
   Proof.
     reduce_goal.
     rewrite /diamond.
@@ -2392,7 +2414,7 @@ Section AbstractConfluence.
     induction X0; try apply X in r; try solve [econstructor; eauto].
   Qed.
 
-  Global Instance confluent_proper A : Proper (relation_equivalence ==> iffT)%signature (@confluent A).
+  Global Instance confluent_proper A : Proper (relation_equivalence ==> iffT)%signatureT (@confluent A).
   Proof.
     reduce_goal.
     split; rewrite /confluent; auto.
@@ -2832,28 +2854,6 @@ Section RedConfluence.
     move=> x. eapply All2_fold_refl; intros; apply All_decls_refl; auto.
   Qed.
 
-  Lemma clos_rt_OnOne2_local_env_incl R :
-    inclusion (OnOne2_local_env (on_one_decl (fun Δ => clos_refl_trans (R Δ))))
-              (clos_refl_trans (OnOne2_local_env (on_one_decl R))).
-  Proof.
-    intros x y H.
-    induction H; firstorder; try subst na'.
-    - induction b. repeat constructor. pcuicfo.
-      constructor 2.
-      econstructor 3 with (Γ ,, vass na y); auto.
-    - subst.
-      induction a0. repeat constructor. pcuicfo.
-      constructor 2.
-      econstructor 3 with (Γ ,, vdef na b' y); auto.
-    - subst t'.
-      induction a0. constructor. constructor. red. simpl. pcuicfo.
-      constructor 2.
-      econstructor 3 with (Γ ,, vdef na y t); auto.
-    - clear H. induction IHOnOne2_local_env. constructor. now constructor 3.
-      constructor 2.
-      eapply transitivity. eauto. auto.
-  Qed.
-
   Hint Constructors clos_refl_trans_ctx : pcuic.
   Hint Resolve alpha_eq_reflexive : pcuic.  
   Set Firstorder Solver eauto with pcuic core typeclass_instances.
@@ -2869,7 +2869,7 @@ Section RedConfluence.
   Lemma red_ctx_clos_rt_red1_ctx : inclusion (red_ctx Σ) (clos_refl_trans_ctx (red1_ctx Σ)).
   Proof.
     intros x y H.
-    induction H; try firstorder.
+    induction H; [firstorder|].
     destruct p.
     - transitivity (Γ ,, vass na t').
       eapply clos_rt_OnOne2_local_env_ctx_incl, clos_rt_OnOne2_local_env_incl. constructor.

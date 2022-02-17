@@ -146,8 +146,12 @@ Section Trans.
     end.
 End Trans.
 
-Definition trans_global_decls (d : Ast.Env.global_env) : global_env :=
-  fold_right (fun decl Σ' => on_snd (trans_global_decl Σ') decl :: Σ') [] d.
+Definition trans_global_decls univs (d : Ast.Env.global_declarations) : global_declarations :=
+  fold_right (fun decl Σ' => on_snd (trans_global_decl {| universes := univs; declarations := Σ' |}) decl :: Σ') [] d.
+
+Definition trans_global_env (d : Ast.Env.global_env) : global_env :=
+  {| universes := d.(Ast.Env.universes); 
+     declarations := trans_global_decls d.(Ast.Env.universes) d.(Ast.Env.declarations) |}.
 
 Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext :=
-  (trans_global_decls (fst Σ), snd Σ).
+  (trans_global_env (fst Σ), snd Σ).

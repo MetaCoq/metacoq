@@ -100,8 +100,8 @@ Section Lookups.
 
   Definition polymorphic_constraints u :=
     match u with
-    | Monomorphic_ctx _ => ConstraintSet.empty
-    | Polymorphic_ctx ctx => (AUContext.repr ctx).2
+    | Monomorphic_ctx => ConstraintSet.empty
+    | Polymorphic_ctx ctx => (AUContext.repr ctx).2.2
     end.
 
   Definition lookup_constant_type cst u :=
@@ -839,7 +839,7 @@ Open Scope monad.
 
 Definition default_fuel : Fuel := Nat.pow 2 14.
 
-Fixpoint fresh id (env : global_env) : bool :=
+Fixpoint fresh id (env : global_declarations) : bool :=
   match env with
   | nil => true
   | cons g env => negb (eq_constant g.1 id) && fresh id env
@@ -896,7 +896,7 @@ Section Checker.
                      inds.(ind_bodies) (ret ())
     end.
 
-  Fixpoint check_fresh id (env : global_env) : EnvCheck () :=
+  Fixpoint check_fresh id (env : global_declarations) : EnvCheck () :=
     match env with
     | [] => ret ()
     | g :: env =>
@@ -906,47 +906,36 @@ Section Checker.
       else ret ()
     end.
 
-  Definition monomorphic_constraints u :=
-    match u with
-    | Monomorphic_ctx ctx => snd ctx
-    | Polymorphic_ctx ctx => ConstraintSet.empty
-    end.
-
-  (* FIXME : universe polym declarations *)
-  Definition global_decl_univs d :=
-    match d with
-    | ConstantDecl cb => monomorphic_constraints cb.(cst_universes)
-    | InductiveDecl mb => monomorphic_constraints mb.(ind_universes)
-    end.
-
   Definition add_gc_constraints ctrs  (G : universes_graph) : universes_graph
     := (G.1.1,  GoodConstraintSet.fold
                   (fun ctr => wGraph.EdgeSet.add (edge_of_constraint ctr)) ctrs G.1.2,
         G.2).
 
-  Fixpoint check_wf_env (g : global_env)
-    : EnvCheck universes_graph :=
+  Fixpoint check_wf_declarations (univs : ContextSet.t) (G : universes_graph) (g : global_declarations)
+    : EnvCheck () :=
     match g with
-    | [] => ret init_graph
+    | [] => ret tt
     | g :: env =>
-      G <- check_wf_env env ;;
-      match gc_of_constraints (global_decl_univs g.2) with
-      | None =>
-        EnvError (IllFormedDecl (string_of_kername g.1)
-                             (UnsatisfiableConstraints (global_decl_univs g.2)))
-      | Some ctrs =>
-        wrap_error "" (check_consistent_constraints G (global_decl_univs g.2)) ;;
-        let G' := add_gc_constraints ctrs G in
-        check_wf_decl env G' g.1 g.2 ;;
-        check_fresh g.1 env ;;
-        ret G'
-      end
+      check_wf_declarations univs G env ;;
+      check_wf_decl {| universes := univs; declarations := env |} G g.1 g.2 ;;
+      check_fresh g.1 env ;;
+      ret tt
     end.
 
   Definition typecheck_program (p : program) : EnvCheck term :=
     let Σ := fst p in
-    G <- check_wf_env Σ ;;
-    infer_term Σ G (snd p).
+    let (univs, decls) := (Σ.(universes), Σ.(declarations)) in
+    match gc_of_constraints (snd univs) with
+    | None => EnvError (IllFormedDecl "toplevel"
+        (UnsatisfiableConstraints univs.2))
+    | Some ctrs =>
+      let G := add_gc_constraints ctrs init_graph in
+      if wGraph.is_acyclic G then
+        check_wf_declarations univs G decls ;;
+        infer_term Σ G (snd p)
+      else EnvError (IllFormedDecl "toplevel" 
+        (UnsatisfiableConstraints univs.2))
+    end.
 
 End Checker.
 

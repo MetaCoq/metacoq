@@ -482,6 +482,7 @@ Proof.
 Qed.
 
 Require Import RelationClasses.
+Existing Instance ConstraintType.lt_strorder.
     
 Lemma constraint_lt_irrel (x y : UnivConstraint.t) (l l' : UnivConstraint.lt_ x y) : l = l'.
 Proof.
@@ -610,13 +611,6 @@ Module ConstraintSetsUIP.
   Defined.
 
 End ConstraintSetsUIP.
- 
-Definition eqb_universes_decl x y :=
-  match x, y with
-  | Monomorphic_ctx cx, Monomorphic_ctx cy => eqb cx cy
-  | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
-  | _, _ => false
-  end.
 
 Ltac finish_reflect :=
   (repeat
@@ -624,7 +618,14 @@ Ltac finish_reflect :=
     | |- context[eqb ?a ?b] => destruct (eqb_spec a b); [subst|constructor; congruence]
     end);
   constructor; trivial; congruence.
- 
+
+Definition eqb_universes_decl x y :=
+  match x, y with
+  | Monomorphic_ctx, Monomorphic_ctx => true
+  | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
+  | _, _ => false
+  end.
+  
 #[global] Instance reflect_universes_decl : ReflectEq universes_decl.
 Proof.
   refine {| eqb := eqb_universes_decl |}.

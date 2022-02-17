@@ -106,7 +106,7 @@ sig
   val mkMonomorphic_entry : quoted_univ_contextset -> quoted_universes_entry
   val mkPolymorphic_entry : quoted_name list -> quoted_univ_context -> quoted_universes_entry
 
-  val mkMonomorphic_ctx : quoted_univ_contextset -> quoted_universes_decl
+  val mkMonomorphic_ctx : unit -> quoted_universes_decl
   val mkPolymorphic_ctx : quoted_abstract_univ_context -> quoted_universes_decl
 
   val quote_mind_finiteness : Declarations.recursivity_kind -> quoted_mind_finiteness
@@ -153,9 +153,10 @@ sig
 
   val mk_constant_decl : quoted_constant_body -> quoted_global_decl
 
-  val empty_global_declarations : unit -> quoted_global_env
-  val add_global_decl : quoted_kernel_name -> quoted_global_decl -> quoted_global_env -> quoted_global_env
-
+  val empty_global_declarations : unit -> quoted_global_declarations
+  val add_global_decl : quoted_kernel_name -> quoted_global_decl -> quoted_global_declarations -> quoted_global_declarations
+  
+  val mk_global_env : quoted_univ_contextset -> quoted_global_declarations -> quoted_global_env
   val mk_program : quoted_global_env -> t -> quoted_program
 end
 
@@ -169,7 +170,7 @@ struct
 
   let get_abstract_inductive_universes iu =
     match iu with
-    | Declarations.Monomorphic ctx -> Univ.UContext.empty
+    | Declarations.Monomorphic _ -> Univ.UContext.empty
     | Polymorphic ctx -> Univ.AUContext.repr ctx
 
   let quote_universes_entry = function
@@ -177,9 +178,44 @@ struct
     | Polymorphic_entry (names, ctx) ->
       Q.mkPolymorphic_entry (CArray.map_to_list Q.quote_name names) (Q.quote_univ_context ctx)
 
-  let quote_universes_decl = function
-    | Monomorphic ctx -> Q.mkMonomorphic_ctx (Q.quote_univ_contextset ctx)
+  let quote_universes_decl decl templ =
+    match decl with
+    | Monomorphic _ -> Q.mkMonomorphic_ctx ()
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
+
+  let quote_ugraph ?kept (g : UGraph.t) =
+    Feedback.msg_debug (Pp.str"Quoting ugraph");
+    let levels, cstrs, eqs = 
+      match kept with
+      | None ->
+        let cstrs, eqs = UGraph.constraints_of_universes g in
+        UGraph.domain g, cstrs, eqs
+      | Some l -> 
+        Feedback.msg_debug Pp.(str"Quoting graph restricted to: " ++ Univ.LSet.pr Univ.Level.pr l);
+        (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.pr (UGraph.repr g)); *)
+        let dom = UGraph.domain g in
+        let kept = Univ.LSet.inter dom l in
+        let kept = Univ.LSet.remove Univ.Level.set kept in
+        let cstrs = time Pp.(str"Computing graph restriction") (UGraph.constraints_for ~kept) g in
+        l, cstrs, []
+    in
+    let levels, cstrs = 
+      List.fold_right (fun eqs acc ->
+        match Univ.LSet.elements eqs with
+        | [] -> acc
+        | x :: [] -> acc
+        | x :: rest ->
+          List.fold_right (fun p (levels, cstrs) ->
+            (Univ.LSet.add p levels, Univ.Constraint.add (x, Univ.Eq, p) cstrs)) rest acc)
+        eqs (levels, cstrs)
+    in
+    let levels = Univ.LSet.remove Univ.Level.set levels in
+    let levels = Univ.LSet.remove Univ.Level.prop levels in
+    let levels = Univ.LSet.remove Univ.Level.sprop levels in
+    let cstrs = Univ.Constraint.remove (Univ.Level.prop, Univ.Lt, Univ.Level.set) cstrs in
+    Feedback.msg_debug (Pp.str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
+    time (Pp.str"Quoting universe context") 
+      (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 
   let quote_inductive' (ind, i) : Q.quoted_inductive =
     Q.quote_inductive (Q.quote_kn (Names.MutInd.canonical ind), Q.quote_int i)
@@ -218,7 +254,7 @@ struct
     let rec quote_term (acc : 'a) env trm =
       let aux acc env trm =
       match Constr.kind trm with
-            | Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
+      | Constr.Rel i -> (Q.mkRel (Q.quote_int (i - 1)), acc)
       | Constr.Var v -> (Q.mkVar (Q.quote_ident v), acc)
       | Constr.Evar (n,args) ->
 	      let (args',acc) = quote_terms quote_term acc env (Array.of_list args) in
@@ -389,7 +425,7 @@ struct
       in
       let nparams = Q.quote_int mib.Declarations.mind_nparams in
       let paramsctx, acc = quote_rel_context quote_term acc env mib.Declarations.mind_params_ctxt in
-      let uctx = quote_universes_decl mib.Declarations.mind_universes in
+      let uctx = quote_universes_decl mib.Declarations.mind_universes mib.Declarations.mind_template in
       let var = Option.map (CArray.map_to_list Q.quote_variance) mib.Declarations.mind_variance in
       let bodies = List.map Q.mk_one_inductive_body (List.rev ls) in
       let finite = Q.quote_mind_finiteness mib.Declarations.mind_finite in
@@ -412,9 +448,26 @@ struct
     Ind of Names.inductive * mutual_inductive_body
   | Const of KerName.t
 
+  let universes_of_ctx ctx = 
+    Context.Rel.fold_inside (fun univs d -> Univ.LSet.union univs
+      (Context.Rel.Declaration.fold_constr (fun c univs -> Univ.LSet.union univs (Vars.universes_of_constr c)) d univs))
+      ~init:Univ.LSet.empty ctx
+  
+  let universes_of_mib mib = 
+    let pars = mib.mind_params_ctxt in
+    let univs = universes_of_ctx pars in
+      Array.fold_left (fun univs oib ->
+        let univsty = universes_of_ctx oib.mind_arity_ctxt in
+        Array.fold_left (fun univs cty -> 
+          let univscty = Vars.universes_of_constr cty in
+          Univ.LSet.union univs univscty)
+          univsty oib.mind_user_lc)
+        univs mib.mind_packets
+
   let quote_term_rec bypass env trm =
     let visited_terms = ref Names.KNset.empty in
     let visited_types = ref Mindset.empty in
+    let universes = ref Univ.LSet.empty in
     let constants = ref [] in
     let add quote_term quote_type trm acc =
       match trm with
@@ -423,7 +476,9 @@ struct
         if Mindset.mem t !visited_types then ()
         else
           begin
-            visited_types := Mindset.add t !visited_types ;
+            visited_types := Mindset.add t !visited_types;
+            let univs = universes_of_mib mib in
+            let () = universes := Univ.LSet.union univs !universes in
             let (kn,d,acc) =
               try quote_type acc env mi mib
               with e ->
@@ -461,15 +516,19 @@ struct
               match body with
               | None -> None, acc
               | Some tm -> 
+                let univs = Vars.universes_of_constr tm in
+                let () = universes := Univ.LSet.union univs !universes in
                 try let (tm, acc) = quote_term acc (Global.env ()) tm in
                   (Some tm, acc)
                 with e ->
                   Feedback.msg_debug (str"Exception raised while checking body of " ++ KerName.print kn);
                   raise e
             in
-            let uctx = quote_universes_decl cd.const_universes in
+            let uctx = quote_universes_decl cd.const_universes None in
             let ty, acc =
               let ty = cd.const_type in
+              let univs = Vars.universes_of_constr ty in
+              let () = universes := Univ.LSet.union univs !universes in
               (try quote_term acc (Global.env ()) ty
                 with e ->
                   Feedback.msg_debug (str"Exception raised while checking type of " ++ KerName.print kn);
@@ -492,8 +551,12 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let decls =  List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc)  !constants (Q.empty_global_declarations ()) in
-    Q.mk_program decls tm
+    let univs = Univ.LSet.union (Vars.universes_of_constr trm) !universes in
+    let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc)  !constants (Q.empty_global_declarations ()) in
+    let univs = Univ.LSet.filter (fun l -> Option.is_empty (Univ.Level.var_index l)) univs in
+    let univs = quote_ugraph ~kept:univs (Environ.universes env) in
+    let env = Q.mk_global_env univs decls in
+    Q.mk_program env tm
 
   let quote_rel_context env ctx =
     fst (quote_rel_context (fun acc env t -> (quote_term (snd env) t, acc)) () ((), env) ctx)
@@ -553,7 +616,7 @@ since  [absrt_info] is a private type *)
 
   let quote_constant_body bypass env evm cd =
     let ty, body = quote_constant_body_aux bypass env evm cd in
-    Q.mk_constant_body ty body (quote_universes_decl cd.const_universes)
+    Q.mk_constant_body ty body (quote_universes_decl cd.const_universes None)
 
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in
@@ -586,7 +649,4 @@ since  [absrt_info] is a private type *)
   let quote_entry_of bypass env evm t =
     try Some (quote_entry_aux bypass env evm t)
     with Not_found -> None *)
-
-  let quote_ugraph (g : UGraph.t) =
-    Q.quote_univ_constraints (fst (UGraph.constraints_of_universes g))
 end

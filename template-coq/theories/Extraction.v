@@ -13,9 +13,15 @@ From MetaCoq.Template Require Import MC_ExtrOCamlZPosInt.
 
 Extract Constant ascii_compare =>
  "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
-Extract Constant Ascii.compare =>
- "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
+Extract Constant Ascii.eqb =>
+ "fun x y -> x = y".
  
+(* Ignore [Decimal.int] before the extraction issue is solved:
+  https://github.com/coq/coq/issues/7017. *)
+Extract Inductive Decimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+Extract Inductive Hexadecimal.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+Extract Inductive Number.int => unit [ "(fun _ -> ())" "(fun _ -> ())" ] "(fun _ _ _ -> assert false)".
+
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".
 Extract Constant Equations.Init.pr2 => "snd".

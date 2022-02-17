@@ -49,6 +49,7 @@ struct
   type quoted_mutual_inductive_body = mutual_inductive_body
   type quoted_constant_body = constant_body
   type quoted_global_decl = global_decl
+  type quoted_global_declarations = (kername * global_decl) list
   type quoted_global_env = global_env
   type quoted_program = program
 
@@ -141,7 +142,7 @@ struct
     {Context.binder_name = unquote_name q.binder_name;
      Context.binder_relevance = unquote_relevance q.binder_relevance}
 
-  let rec unquote_int (q: quoted_int) : int =
+  let rec unquote_int (q: quoted_int) : int = 
     match q with
     | Datatypes.O -> 0
     | Datatypes.S x -> succ (unquote_int x)
@@ -201,7 +202,7 @@ struct
       Univ.Level.make (Univ.Level.UGlobal.make dp "" idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
-  let unquote_level_expr (trm : Universes0.Level.t * Datatypes.nat) : Univ.Universe.t =
+  let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Univ.Universe.t =
     let l = unquote_level (fst trm) in
     let u = Univ.Universe.make l in
     let n = unquote_int (snd trm) in

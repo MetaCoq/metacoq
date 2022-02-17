@@ -188,12 +188,6 @@ Fixpoint lookup_mind_decl (id : kername) (decls : global_declarations)
     | _ :: tl => lookup_mind_decl id tl
     end.
 
-Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
-  match u with
-  | Polymorphic_ctx ctx => Polymorphic_entry (Universes.AUContext.repr ctx)
-  | Monomorphic_ctx => Monomorphic_entry ContextSet.empty
-  end.
-
 (* TODO factorize in Environment *)
 (* was mind_decl_to_entry *)
 Definition mind_body_to_entry (decl : mutual_inductive_body)

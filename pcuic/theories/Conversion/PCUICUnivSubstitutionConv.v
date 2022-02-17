@@ -10,6 +10,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICInducti
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
 
+Implicit Types (cf : checker_flags).
+
 (** * Universe Substitution lemmas for typing derivations. *)
 
 Local Set Keyed Unification.
@@ -243,6 +245,12 @@ Proof.
     exists e0; split; auto.
 Qed.
 
+#[global]
+Instance compare_universe_substu {cf} le Σ : SubstUnivPreserving (compare_universe le Σ).
+Proof.
+  destruct le; tc.
+Qed.
+
 Global Instance subst_instance_def {A} `(UnivSubst A) : UnivSubst (def A)
   := fun u => map_def (subst_instance u) (subst_instance u).
 
@@ -364,7 +372,7 @@ Proof.
                         /\ In c' (CS.elements ctrs)).
     1: intuition.
     apply iff_ex; intro. apply and_iff_compat_l. symmetry.
-    etransitivity. 1: eapply CS.elements_spec1.
+    etransitivity. 1: symmetry; apply CS.elements_spec1.
     etransitivity. 1: eapply SetoidList.InA_alt.
     split; intro; eauto.
     now destruct H as [? [[] ?]].
@@ -863,16 +871,13 @@ Proof.
 Qed.
 
 Lemma leq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (leq_term Σ).
-Proof. exact _. Qed.
+Proof. apply eq_term_upto_univ_subst_preserved; cbn; apply _. Qed.
 
 Lemma eq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (eq_term Σ).
-Proof. exact _. Qed.
+Proof. apply eq_term_upto_univ_subst_preserved; cbn; exact _. Qed.
 
-Lemma compare_term_subst_instance {cf : checker_flags} le Σ : SubstUnivPreserved (compare_term le Σ).
-Proof. destruct le; simpl; unfold compare_term. 
-  - apply leq_term_subst_instance.
-  - apply eq_term_subst_instance.
-Qed.
+Lemma compare_term_subst_instance {cf : checker_flags} pb Σ : SubstUnivPreserved (compare_term pb Σ).
+Proof. apply eq_term_upto_univ_subst_preserved; cbn; try destruct pb; exact _. Qed.
 
 (** Now routine lemmas ... *)
 
@@ -1429,7 +1434,7 @@ Proof.
     now rewrite <- (fix_context_subst_instance u mfix0).
 Qed.
 
-Lemma subst_instance_equality {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs :
+Lemma subst_instance_ws_cumul_pb {cf : checker_flags} (Σ : global_env_ext) Γ u A B univs :
 valid_constraints (global_ext_constraints (Σ.1, univs))
                   (subst_instance_cstrs u Σ) ->
   Σ ;;; Γ |- A = B ->
@@ -1471,16 +1476,16 @@ Proof.
   rewrite subst_instance_univ_val'; auto.
 Qed.
 
-Global Instance eq_decl_subst_instance {cf : checker_flags} le Σ : SubstUnivPreserved (eq_decl le Σ).
+Global Instance compare_decl_subst_instance {cf : checker_flags} pb Σ : SubstUnivPreserved (compare_decl pb Σ).
 Proof.
-  intros φ1 φ2 u HH ? ? [] => /=; destruct le; constructor; auto;
-   (eapply eq_term_subst_instance || eapply leq_term_subst_instance); tea.
+  intros φ1 φ2 u HH ? ? [] => /=; constructor; auto;
+   eapply compare_term_subst_instance; tea.
 Qed.
 
-Global Instance eq_context_subst_instance {cf : checker_flags} le Σ : SubstUnivPreserved (eq_context le Σ).
+Global Instance compare_context_subst_instance {cf : checker_flags} pb Σ : SubstUnivPreserved (compare_context pb Σ).
 Proof.
   intros φ φ' u HH Γ Γ' X. eapply All2_fold_map, All2_fold_impl; tea.
-  intros. eapply eq_decl_subst_instance; eassumption.
+  intros. eapply compare_decl_subst_instance; eassumption.
 Qed.
 
 Lemma subst_instance_destArity Γ A u :

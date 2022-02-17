@@ -22,13 +22,6 @@ open Stdarg
 open Tacarg
 open Genredexpr
 
-let _ = Goptions.declare_bool_option {
-  Goptions.optdepr = false;
-  Goptions.optkey = ["Template";"Cast";"Propositions"];
-  Goptions.optread = (fun () -> !Quoter.cast_prop);
-  Goptions.optwrite = (fun a -> Quoter.cast_prop:=a);
-}
-
 (* If strict unquote universe mode is on then fail when unquoting a non *)
 (* declared universe / an empty list of level expressions. *)
 (* Otherwise, add it / a fresh level the global environnment. *)

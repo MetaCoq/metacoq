@@ -20,7 +20,7 @@ Implicit Types cf : checker_flags.
 Set Default Goal Selector "!".
 Generalizable Variables Σ Γ t T.
 
-(* FIXME inefficiency in equations: using a very slow "pattern_sigma" to simplify an equality between sigma types *)
+(* FIXME inefficiency in equations: using a very slow "pattern_sigma" to simplify an ws_cumul_pb between sigma types *)
 Ltac Equations.CoreTactics.destruct_tele_eq H ::= noconf H.
 
 Lemma closed_ctx_lift n k ctx : closed_ctx ctx -> lift_context n k ctx = ctx.

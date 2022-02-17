@@ -14,7 +14,7 @@ Extract Constant Ascii.compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
  
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes Numeral
+           UnivSubst Typing Checker Retyping OrderedType Logic Common ws_cumul_pb Classes Numeral
            Uint63.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".

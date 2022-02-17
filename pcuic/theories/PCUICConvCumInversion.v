@@ -15,8 +15,8 @@ Set Default Goal Selector "!".
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
-Definition conv_cum {cf:checker_flags} leq Σ Γ u v :=
-  ∥ Σ ;;; Γ ⊢ u ≤[conv_pb_dir leq] v ∥.
+Definition conv_cum {cf:checker_flags} pb Σ Γ u v :=
+  ∥ Σ ;;; Γ ⊢ u ≤[pb] v ∥.
 
 Lemma eq_term_eq_termp {cf:checker_flags} leq (Σ : global_env_ext) x y :
   eq_term Σ Σ x y ->
@@ -27,14 +27,14 @@ Proof.
   apply eq_term_upto_univ_leq; cbn; auto.
 Qed.
 
-Lemma alt_into_equality_terms {cf Σ} {wfΣ : wf Σ} {Γ l l'} : 
+Lemma alt_into_ws_cumul_pb_terms {cf Σ} {wfΣ : wf Σ} {Γ l l'} : 
   All2 (convAlgo Σ Γ) l l' ->
   is_closed_context Γ ->
   forallb (is_open_term Γ) l ->
   forallb (is_open_term Γ) l' ->
-  equality_terms Σ Γ l l'.
+  ws_cumul_pb_terms Σ Γ l l'.
 Proof.
-  solve_all. eapply into_equality; tea.
+  solve_all. eapply into_ws_cumul_pb; tea.
 Qed.
     
 (** Might be better suited with [red_context] hyps ensuring closedness directly *)
@@ -44,7 +44,7 @@ Lemma red_ctx_rel_par_conv {cf Σ Γ Γ0 Γ0' Γ1 Γ1'} {wfΣ : wf Σ} :
   red_ctx_rel Σ Γ Γ0 Γ0' ->
   red_ctx_rel Σ Γ Γ1 Γ1' ->
   eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) Γ0' Γ1' ->
-  context_equality_rel false Σ Γ Γ0 Γ1.
+  ws_cumul_ctx_pb_rel Conv Σ Γ Γ0 Γ1.
 Proof.
   intros clΓ0 clΓ1 r0 r1 eq.
   apply red_ctx_rel_red_context_rel, red_context_app_same_left in r0; auto.
@@ -54,12 +54,12 @@ Proof.
   eapply red_ctx_red_context in r0; eapply red_ctx_red_context in r1.
   eapply into_closed_red_ctx in r0 => //.
   eapply into_closed_red_ctx in r1 => //.
-  eapply (red_ctx_context_equality (l:=false)) in r0.
-  eapply (red_ctx_context_equality (l:=false)) in r1.
-  apply context_equality_rel_app. etransitivity; tea.
+  eapply (red_ctx_ws_cumul_ctx_pb (l:=Conv)) in r0.
+  eapply (red_ctx_ws_cumul_ctx_pb (l:=Conv)) in r1.
+  apply ws_cumul_ctx_pb_rel_app. etransitivity; tea.
   symmetry. etransitivity; tea.
   eapply (eq_context_upto_cat _ _ _ Γ _ Γ) in eq. 2:reflexivity.
-  eapply (eq_context_upto_context_equality (le:=false)) in eq. 2-3:fvs.
+  eapply (eq_context_upto_ws_cumul_ctx_pb (pb:=Conv)) in eq. 2-3:fvs.
   now symmetry.
 Qed.
 
@@ -99,21 +99,21 @@ Proof.
   move/Nat.ltb_lt => H; apply Nat.ltb_lt. lia.
 Qed.
 
-Lemma inst_case_context_equality {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ pars pars' puinst puinst' ctx ctx'} :
+Lemma inst_case_ws_cumul_ctx_pb {cf Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ pars pars' puinst puinst' ctx ctx'} :
   declared_inductive Σ ind mdecl idecl ->
   #|pars| = ind_npars mdecl ->
   #|pars'| = ind_npars mdecl ->
   on_free_vars_ctx (closedP #|pars| xpredT) ctx ->
   on_free_vars_ctx (closedP #|pars'| xpredT) ctx' ->
   is_closed_context Γ ->
-  equality_terms Σ Γ pars pars' ->
+  ws_cumul_pb_terms Σ Γ pars pars' ->
   R_universe_instance (eq_universe Σ) puinst puinst' ->
   eq_context_gen eq eq ctx ctx' ->
   Σ ⊢ Γ,,, inst_case_context pars puinst ctx = Γ,,, inst_case_context pars' puinst' ctx'.
 Proof.
   intros decli wfp wfp' onp onp' clΓ eqpars eqinst eqctx.
   rewrite /inst_case_context.
-  eapply context_equality_rel_app.
+  eapply ws_cumul_ctx_pb_rel_app.
   have clpars : is_closed_context (Γ,,, smash_context [] (ind_params mdecl)).
   { rewrite on_free_vars_ctx_app clΓ /=.
     apply on_free_vars_ctx_smash => //.
@@ -126,12 +126,12 @@ Proof.
   { eapply PCUICContexts.smash_context_assumption_context => //. constructor. }
   have lenpars' : #|pars| = context_assumptions (smash_context [] (ind_params mdecl)).
   { rewrite context_assumptions_smash_context /= //. }
-  eapply (substitution_context_equality_subst_conv (Γ'':=[]) 
+  eapply (substitution_ws_cumul_ctx_pb_subst_conv (Γ'':=[]) 
     (Γ' := smash_context [] mdecl.(ind_params))
     (Γ'0 := smash_context [] mdecl.(ind_params))) => //.
-  * eapply (PCUICSpine.context_equality_rel_trans (Δ' := ctx'@[puinst])).
-    - eapply context_equality_rel_app.
-      eapply eq_context_upto_context_equality.
+  * eapply (PCUICSpine.ws_cumul_ctx_pb_rel_trans (Δ' := ctx'@[puinst])).
+    - eapply ws_cumul_ctx_pb_rel_app.
+      eapply eq_context_upto_ws_cumul_ctx_pb.
       { rewrite on_free_vars_ctx_app clpars /=. len.
         rewrite on_free_vars_ctx_subst_instance -lenpars.
         eapply on_free_vars_ctx_impl; tea. apply shiftnP_up. lia. }
@@ -142,7 +142,7 @@ Proof.
       eapply eq_context_upto_univ_subst_instance'; tc. 1:reflexivity.
       assumption.
     - cbn.
-      eapply subst_instance_context_equality_rel => //.
+      eapply subst_instance_ws_cumul_ctx_pb_rel => //.
       rewrite !on_free_vars_ctx_app clΓ /=. len.
       apply /andP; split.
       { apply on_free_vars_ctx_smash => //.
@@ -167,8 +167,8 @@ Proof.
   assert (forall P Q, (P <~> Q) -> (∥P∥ <-> ∥Q∥)) by
       (intros P Q H; split; intros [p]; constructor; apply H in p; auto).
   destruct leq; cbn; apply H.
-  * eapply (equality_alt_closed (le:=false)).
-  * eapply (equality_alt_closed (le:=true)).
+  * eapply (ws_cumul_pb_alt_closed (pb:=Conv)).
+  * eapply (ws_cumul_pb_alt_closed (pb:=Cumul)).
 Qed.
 
 Lemma conv_conv_cum_l {cf:checker_flags} :
@@ -178,7 +178,7 @@ Lemma conv_conv_cum_l {cf:checker_flags} :
 Proof.
   intros Σ [] Γ u v h.
   - cbn. constructor. assumption.
-  - cbn. constructor. now apply equality_eq_le.
+  - cbn. constructor. now apply ws_cumul_pb_eq_le.
 Qed.
 
 Lemma conv_conv_cum_r {cf:checker_flags} :
@@ -188,7 +188,7 @@ Lemma conv_conv_cum_r {cf:checker_flags} :
 Proof.
   intros Σ [] Γ u v h.
   - cbn. constructor. now symmetry.
-  - cbn. constructor. apply equality_eq_le.
+  - cbn. constructor. apply ws_cumul_pb_eq_le.
     now symmetry.
 Qed.
 
@@ -263,7 +263,7 @@ Section fixed.
     isApp hd' = false ->
     whnf RedFlags.default Σ Γ (mkApps hd args) ->
     whnf RedFlags.default Σ Γ (mkApps hd' args') ->
-    ∥conv_cum_napp leq Γ #|args| hd hd' × equality_terms Σ Γ args args'∥.
+    ∥conv_cum_napp leq Γ #|args| hd hd' × ws_cumul_pb_terms Σ Γ args args'∥.
   Proof.
     intros conv notapp notapp' wh wh'.
     eapply conv_cum_alt in conv as [(?&?&[r1 r2 e])]; auto.
@@ -296,7 +296,7 @@ Section fixed.
       all: apply All2_length in a.
       all: try (constructor; constructor; rewrite a; auto).
       all: destruct leq; cbn; repeat constructor => //.
-    - eapply alt_into_equality_terms => //.
+    - eapply alt_into_ws_cumul_pb_terms => //.
       clear -a1 a a0.
       induction a1 in args, args', x2, a, x3, a0, a1 |- *; depelim a; depelim a0; [now constructor|].
       constructor.
@@ -314,9 +314,9 @@ Section fixed.
     whnf RedFlags.default Σ Γ (tCase ci p discr brs) ->
     whnf RedFlags.default Σ Γ (tCase ci' p' discr' brs') ->
     ∥ [× ci = ci',
-      equality_predicate Σ Γ p p',
+      ws_cumul_pb_predicate Σ Γ p p',
       Σ;;; Γ ⊢ discr = discr' &
-      equality_brs Σ Γ p brs brs']∥.
+      ws_cumul_pb_brs Σ Γ p brs brs']∥.
   Proof.
     intros conv decli decli' wfp wfp' whl whr.
     depelim whl; solve_discr.
@@ -346,21 +346,21 @@ Section fixed.
     { eapply into_red_terms; tea. }
     have clred' : red_terms Σ Γ (pparams p') motivepars0.
     { eapply into_red_terms; tea. }
-    have eqpars : equality_terms Σ Γ (pparams p) (pparams p').
+    have eqpars : ws_cumul_pb_terms Σ Γ (pparams p) (pparams p').
     { etransitivity => //. 
-      { eapply red_terms_equality_terms; tea. }
+      { eapply red_terms_ws_cumul_pb_terms; tea. }
       transitivity motivepars0.
-      { eapply eq_terms_equality_terms; fvs.
+      { eapply eq_terms_ws_cumul_pb_terms; fvs.
         * eapply closed_red_terms_open_right in clred; solve_all.
         * eapply closed_red_terms_open_right in clred'; solve_all. }
-      symmetry. eapply red_terms_equality_terms. eapply into_red_terms; tea. }
+      symmetry. eapply red_terms_ws_cumul_pb_terms. eapply into_red_terms; tea. }
     have eq_instctx : Σ ⊢ Γ,,, inst_case_predicate_context p = Γ,,, inst_case_predicate_context p'.
-    { eapply (inst_case_context_equality decli); tea.
+    { eapply (inst_case_ws_cumul_ctx_pb decli); tea.
       { apply (wf_predicate_length_pars wfp). }
       { apply (wf_predicate_length_pars wfp'). } }
     repeat split; eauto.
     - transitivity motiveret0. 
-      { eapply equality_alt_closed. exists motiveret, motiveret0.
+      { eapply ws_cumul_pb_alt_closed. exists motiveret, motiveret0.
         split; auto. 
         * split; auto.
           + rewrite on_free_vars_ctx_app. apply /andP. split; auto. 
@@ -378,11 +378,11 @@ Section fixed.
             eapply on_ctx_free_vars_inst_case_context; auto.
             1:now rewrite test_context_k_closed_on_free_vars_ctx.
             now erewrite -> on_free_vars_ctx_on_ctx_free_vars. }
-      eapply (equality_equality_ctx (Γ := Γ ,,, inst_case_predicate_context p') (le':=false)) => //.
-      symmetry. eapply red_equality.
+      eapply (ws_cumul_pb_ws_cumul_ctx (Γ := Γ ,,, inst_case_predicate_context p') (pb':=Conv)) => //.
+      symmetry. eapply red_ws_cumul_pb.
       eapply into_closed_red; eauto. 1:fvs.
       len. now setoid_rewrite shiftnP_add in p1.
-    - apply equality_alt_closed; eauto.
+    - apply ws_cumul_pb_alt_closed; eauto.
       exists discr'0, discr'1. split; eauto.
       all:eapply into_closed_red; eauto.
     - rename a0 into brsa1.
@@ -398,7 +398,7 @@ Section fixed.
       2: { apply IHbrseq; auto. }
       have eqctx : Σ ⊢ Γ ,,, inst_case_branch_context p x0 = Γ ,,, inst_case_branch_context p' x1.
       { rewrite /inst_case_branch_context.
-        eapply (inst_case_context_equality decli); tea.
+        eapply (inst_case_ws_cumul_ctx_pb decli); tea.
         { apply (wf_predicate_length_pars wfp). }
         { apply (wf_predicate_length_pars wfp'). }
         { rewrite -test_context_k_closed_on_free_vars_ctx //.
@@ -407,24 +407,24 @@ Section fixed.
         now rewrite e e0. }
       rewrite e e0; split => //.
       transitivity (bbody x); tea.
-      { eapply red_equality. rewrite /inst_case_branch_context. split; auto.
-        1:now eapply context_equality_closed_left in eqctx.
+      { eapply red_ws_cumul_pb. rewrite /inst_case_branch_context. split; auto.
+        1:now eapply ws_cumul_ctx_pb_closed_left in eqctx.
         move/andP: fv' => []. now len; rewrite shiftnP_add. }
       transitivity (bbody y); tea.
-      { constructor; auto. 1:now eapply context_equality_closed_left.
+      { constructor; auto. 1:now eapply ws_cumul_ctx_pb_closed_left.
         { eapply closed_red_open_right. eapply into_closed_red; tea.
-          { now eapply context_equality_closed_left. }
+          { now eapply ws_cumul_ctx_pb_closed_left. }
           move/andP: fv' => []. len. now setoid_rewrite shiftnP_add. }
         move/andP: fv => [] fv fvx1. len.
         eapply red_on_free_vars in fvx1; tea.
         { rewrite e (All2_fold_length a0) -e0. now setoid_rewrite shiftnP_add in fvx1. }
         rewrite shiftnP_add. relativize (#|bcontext x1| + _).
         1:rewrite -> on_free_vars_ctx_on_ctx_free_vars. 2:now len.
-        now eapply context_equality_closed_right in eqctx. }
+        now eapply ws_cumul_ctx_pb_closed_right in eqctx. }
       symmetry.
-      eapply equality_equality_ctx; tea.
-      eapply red_equality. rewrite /inst_case_branch_context. split; auto.
-      1:now eapply context_equality_closed_right in eqctx.
+      eapply ws_cumul_pb_ws_cumul_ctx; tea.
+      eapply red_ws_cumul_pb. rewrite /inst_case_branch_context. split; auto.
+      1:now eapply ws_cumul_ctx_pb_closed_right in eqctx.
       move/andP: fv => []. len. now rewrite shiftnP_add.
   Qed.
   
@@ -477,11 +477,11 @@ Section fixed.
     constructor; [|now auto].
     destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
-    - eapply equality_alt_closed; exists (dtype x), (dtype y). split; eauto.
+    - eapply ws_cumul_pb_alt_closed; exists (dtype x), (dtype y). split; eauto.
       all:eapply into_closed_red; eauto. 
       { now move/andP: i1. }
       { now move/andP: i2. }
-    - eapply equality_alt_closed.
+    - eapply ws_cumul_pb_alt_closed.
       exists (dbody x), (dbody y).
       split; [| |easy].
       all:eapply into_closed_red; auto.
@@ -537,11 +537,11 @@ Section fixed.
     constructor; [|now auto].
     destruct r as ((?&(((? & ?) & ?)&?))&?), p as (?&?&?&?&?), p0 as (?&?&?&?&?).
     split; auto; try congruence.
-    - eapply equality_alt_closed; exists (dtype x), (dtype y). split; eauto.
+    - eapply ws_cumul_pb_alt_closed; exists (dtype x), (dtype y). split; eauto.
       all:eapply into_closed_red; eauto. 
       { now move/andP: i1. }
       { now move/andP: i2. }
-    - eapply equality_alt_closed.
+    - eapply ws_cumul_pb_alt_closed.
       exists (dbody x), (dbody y).
       split; [| |easy].
       all:eapply into_closed_red; auto.
@@ -568,7 +568,7 @@ Section fixed.
     depelim r2.
     depelim c0.
     split; [easy|].
-    apply equality_alt_closed; eauto.
+    apply ws_cumul_pb_alt_closed; eauto.
     exists c'0, c'1; split; eauto. 
     all:eapply into_closed_red; eauto.
   Qed.

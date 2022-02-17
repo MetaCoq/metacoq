@@ -1272,7 +1272,7 @@ Proof.
     pose proof (onProjs.(on_projs_noidx _ _ _ _ _ _)).
     destruct (ind_indices idecl); simpl in H; try discriminate.
     simpl. rewrite [subst_instance_univ _ _]sortu.
-    eapply equality_compare => //.
+    eapply ws_cumul_pb_compare => //.
     now eapply wf_local_closed_context in X0.
     constructor. reflexivity.
     rewrite -subst_instance_it_mkProd_or_LetIn.
@@ -1597,12 +1597,12 @@ Proof.
   rewrite !it_mkProd_or_LetIn_app /= /mkProd_or_LetIn /=; rewrite smash_context_app; intros Γ u Hu.
   - simpl.
     assert (wfu := typing_wf_universe wfΣ Hu).
-    eapply inversion_LetIn in Hu as [? [? [? [? [? ?]]]]]; auto.
+    eapply inversion_LetIn in Hu as [? [? [? [? [? e]]]]]; auto.
     eapply substitution_let in t1; auto.
     rewrite /subst1 subst_it_mkProd_or_LetIn /= in t1.
     specialize (X (subst_context [b] 0 Δ) ltac:(autorewrite with len; lia)).
-    eapply equality_LetIn_l_inv in e; eauto.
-    eapply type_equality in t1. 3:eauto.
+    eapply ws_cumul_pb_LetIn_l_inv in e; eauto.
+    eapply type_ws_cumul_pb in t1. 3:eauto.
     2:{ pcuic. eexists; econstructor; pcuic. }
     specialize (X _ _ t1).
     now rewrite -smash_context_subst /= subst_context_nil.
@@ -1611,7 +1611,7 @@ Proof.
     eapply inversion_Prod in Hu as [? [? [? [? ?]]]]; auto.
     specialize (X Δ ltac:(reflexivity)).
     specialize (X _ _ t0).
-    eapply type_equality; eauto.
+    eapply type_ws_cumul_pb; eauto.
     econstructor; pcuic.
     eapply isType_intro. econstructor; pcuic.
 Qed.

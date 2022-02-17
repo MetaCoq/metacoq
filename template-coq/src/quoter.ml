@@ -15,8 +15,13 @@ let cast_prop = ref (false)
 
 (* whether Set Template Cast Propositions is on, as needed for erasure in Certicoq *)
 let is_cast_prop () = !cast_prop
-
-
+let warn_primitive_turned_into_axiom = 
+  CWarnings.create ~name:"primitive-turned-into-axiom" ~category:"metacoq"
+          Pp.(fun prim -> str "Quoting primitive " ++ str prim ++ str " into an axiom.")
+let warn_ignoring_private_polymorphic_universes =
+  CWarnings.create ~name:"private-polymorphic-universes-ignored" ~category:"metacoq"
+          Pp.(fun () -> str "Ignoring private polymorphic universes.")
+          
 let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr.constr) : Constr.rel_declaration =
   let (name,value,typ) = old in
   match value with
@@ -491,16 +496,20 @@ struct
             let cd = Environ.lookup_constant c env in
             let body = match cd.const_body with
               | Undef _ -> None
-              | Primitive _ -> CErrors.user_err Pp.(str "Primitives are unsupported by TemplateCoq")
+              | Primitive t -> 
+                  warn_primitive_turned_into_axiom (CPrimitives.to_string t);
+                  None
               | Def cs -> Some cs
               | OpaqueDef lc ->
                 if bypass then
                   let c, univs = Global.force_proof Library.indirect_accessor lc in
-                  let () = match univs with
-                  | Opaqueproof.PrivateMonomorphic () -> ()
-                  | Opaqueproof.PrivatePolymorphic csts -> if not (Univ.ContextSet.is_empty csts) then
-                    CErrors.user_err Pp.(str "Private polymorphic universes not supported by TemplateCoq")
-                  in Some c
+                  match univs with
+                  | Opaqueproof.PrivateMonomorphic () -> Some c
+                  | Opaqueproof.PrivatePolymorphic csts -> 
+                    let () = 
+                      if not (Univ.ContextSet.is_empty csts) then 
+                        warn_ignoring_private_polymorphic_universes ()
+                    in Some c
                 else None
             in
             let tm, acc =

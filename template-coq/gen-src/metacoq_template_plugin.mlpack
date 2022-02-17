@@ -23,11 +23,12 @@ Orders
 OrdersTac
 OrdersFacts
 OrdersLists
-OrderedType0
+Int0
 MSetInterface
 MSetFacts
 MSetDecide
 MSetList
+MSetAVL
 MSetProperties
 BinNums
 EqDec
@@ -37,6 +38,7 @@ Classes0
 EqDecInstances
 Logic1
 Logic2
+Number
 Relation
 MCPrelude
 MCReflect

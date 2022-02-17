@@ -619,11 +619,11 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t : term) na A B u s,
        PΓ Σ Γ ->
-       Σ ;;; Γ |- tProd na A B : tSort s -> P Σ Γ (tProd na A B) (tSort s) ->
+       forall (Hp : Σ ;;; Γ |- tProd na A B : tSort s), P Σ Γ (tProd na A B) (tSort s) ->
        forall (Ht : Σ ;;; Γ |- t : tProd na A B), P Σ Γ t (tProd na A B) ->
 
        (* Give a stronger induction hypothesis allowing to crawl under applications *)
-       (forall t' T' (Ht' : Σ ;;; Γ |- t' : T'), typing_size Ht' <= typing_size Ht -> P Σ Γ t' T') ->
+       (forall t' T' (Ht' : Σ ;;; Γ |- t' : T'), typing_size Ht' <= max (typing_size Ht) (typing_size Hp) -> P Σ Γ t' T') ->
 
        Σ ;;; Γ |- u : A -> P Σ Γ u A ->
        P Σ Γ (tApp t u) (B{0 := u})) ->
@@ -887,8 +887,9 @@ Proof.
     -- match reverse goal with
           H : _ |- _ => eapply H
           end; eauto. all:try unshelve eapply X14; simpl; auto; try lia.
-          Unshelve. 2:exact H0.
-        simpl. intros.
+        exact H. 2:exact H0. 1-2:lia.
+        simpl. instantiate (1:= H). instantiate (1:=H0).
+        intros. 
         eapply X14. instantiate (1 := Ht').
         simpl. lia.
         

@@ -384,8 +384,8 @@ Lemma nl_compare_term {cf:checker_flags} le Σ:
     compare_term le (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
   destruct le; intros.
-  - apply nl_leq_term. assumption.
   - apply nl_eq_term. assumption.
+  - apply nl_leq_term. assumption.
 Qed.
 
 Corollary eq_term_nl_eq :
@@ -784,8 +784,8 @@ Qed.
 
 Lemma nl_eq_decl {cf:checker_flags} :
   forall le Σ φ d d',
-    eq_decl le Σ φ d d' ->
-    eq_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
+    compare_decl le Σ φ d d' ->
+    compare_decl le (nl_global_env Σ) φ (map_decl nl d) (map_decl nl d').
 Proof.
   intros le Σ φ d d' []; constructor; destruct le; 
   intuition auto using nl_eq_term, nl_leq_term.
@@ -793,8 +793,8 @@ Qed.
 
 Lemma nl_eq_decl' {cf:checker_flags} :
   forall le Σ φ d d',
-    eq_decl le Σ φ d d' ->
-    eq_decl le (nl_global_env Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
+    compare_decl le Σ φ d d' ->
+    compare_decl le (nl_global_env Σ) φ (map_decl_anon nl d) (map_decl_anon nl d').
 Proof.
   intros le Σ φ d d' []; constructor; destruct le;
   intuition auto using nl_eq_term, nl_leq_term.
@@ -802,8 +802,8 @@ Qed.
 
 Lemma nl_eq_context {cf:checker_flags} :
   forall le Σ φ Γ Γ',
-    eq_context le Σ φ Γ Γ' ->
-    eq_context le (nl_global_env Σ) φ (nlctx Γ) (nlctx Γ').
+    compare_context le Σ φ Γ Γ' ->
+    compare_context le (nl_global_env Σ) φ (nlctx Γ) (nlctx Γ').
 Proof.
   intros le Σ φ Γ Γ' h.
   unfold eq_context, nlctx.

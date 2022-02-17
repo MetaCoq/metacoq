@@ -1,4 +1,4 @@
-From Coq Require Import MSetList MSetFacts MSetProperties MSetDecide.
+From Coq Require Import MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
 From MetaCoq.Template Require Import utils BasicAst config.
 From Equations Require Import Equations.
 Require Import ssreflect.
@@ -6,6 +6,7 @@ Require Import ssreflect.
 Local Open Scope nat_scope.
 Local Open Scope string_scope2.
 
+Implicit Types (cf : checker_flags).
 
 Ltac absurd :=
   match goal with
@@ -91,9 +92,10 @@ Module Level.
   Inductive lt_ : t -> t -> Prop :=
   | ltSetLevel s : lt_ lzero (Level s)
   | ltSetVar n : lt_ lzero (Var n)
-  | ltLevelLevel s s' : string_lt s s' -> lt_ (Level s) (Level s')
+  | ltLevelLevel s s' : StringOT.lt s s' -> lt_ (Level s) (Level s')
   | ltLevelVar s n : lt_ (Level s) (Var n)
   | ltVarVar n n' : Nat.lt n n' -> lt_ (Var n) (Var n').
+  Derive Signature for lt_.
 
   Definition lt := lt_.
 
@@ -101,11 +103,11 @@ Module Level.
   Proof.
     constructor.
     - intros [| |] X; inversion X.
-      eapply string_lt_irreflexive; tea.
+      now eapply irreflexivity in H1.
       eapply Nat.lt_irrefl; tea.
     - intros [| |] [| |] [| |] X1 X2;
         inversion X1; inversion X2; constructor.
-      eapply transitive_string_lt; tea.
+      now transitivity s0.
       etransitivity; tea.
   Qed.
 
@@ -135,7 +137,7 @@ Module Level.
   Global Instance eqb_refl : Reflexive eqb.
   Proof.
     intros []; unfold eqb; cbnr.
-    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto.
+    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto. reflexivity.
     - rewrite Nat.compare_refl. reflexivity.
   Qed.
 
@@ -145,7 +147,7 @@ Module Level.
     - apply iff_reflect. unfold eqb; cbn.
       destruct (CompareSpec_string s s0); split; intro HH;
         try reflexivity; try discriminate; try congruence.
-      all: inversion HH; subst; now apply string_lt_irreflexive in H.
+      all: inversion HH; subst; now apply irreflexivity in H.
     - apply iff_reflect. unfold eqb; cbn.
       destruct (Nat.compare_spec n n0); split; intro HH;
         try reflexivity; try discriminate; try congruence.
@@ -156,7 +158,7 @@ Module Level.
 
 End Level.
 
-Module LevelSet := MSetList.MakeWithLeibniz Level.
+Module LevelSet := MSetAVL.Make Level.
 Module LevelSetFact := WFactsOn Level LevelSet.
 Module LevelSetProp := WPropertiesOn Level LevelSet.
 Module LevelSetDecide := WDecide (LevelSet).
@@ -1077,6 +1079,7 @@ Module ConstraintType.
   Inductive lt_ : t -> t -> Prop :=
   | LeLe n m : (n < m)%Z -> lt_ (Le n) (Le m)
   | LeEq n : lt_ (Le n) Eq.
+  Derive Signature for lt_.
   Definition lt := lt_.
 
   Lemma lt_strorder : StrictOrder lt.
@@ -1170,7 +1173,7 @@ Module UnivConstraint.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 End UnivConstraint.
 
-Module ConstraintSet := MSetList.MakeWithLeibniz UnivConstraint.
+Module ConstraintSet := MSetAVL.Make UnivConstraint.
 Module ConstraintSetFact := WFactsOn UnivConstraint ConstraintSet.
 Module ConstraintSetProp := WPropertiesOn UnivConstraint ConstraintSet.
 Module CS := ConstraintSet.
@@ -1616,9 +1619,8 @@ Section Univ.
     intros [l r]. now eapply leq_universe_antisym.
   Defined.
 
-
-  Definition eq_universe_leq_universe' {cf} φ u u'
-    := @eq_universe_leq_universe cf φ u u'.
+  Definition eq_universe_leq_universe' φ u u'
+    := @eq_universe_leq_universe φ u u'.
   Definition leq_universe_refl' φ u
     := @leq_universe_refl φ u.
 
@@ -2199,3 +2201,32 @@ Section no_prop_leq_type.
   Qed.
 
 End no_prop_leq_type.
+
+Definition compare_universe {cf:checker_flags} (pb : conv_pb) :=
+  match pb with
+  | Conv => eq_universe
+  | Cumul => leq_universe
+  end.
+  
+#[global] Instance compare_universe_subrel {cf} pb Σ : RelationClasses.subrelation (eq_universe Σ) (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_refl {cf} pb Σ : RelationClasses.Reflexive (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_trans {cf} pb Σ : RelationClasses.Transitive (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_preorder {cf} pb Σ : RelationClasses.PreOrder (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.

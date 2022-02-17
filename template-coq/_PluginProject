@@ -70,7 +70,8 @@ gen-src/primInt63.ml
 gen-src/primInt63.mli
 gen-src/uint0.ml
 gen-src/uint0.mli
-
+gen-src/int0.ml
+gen-src/int0.mli
 gen-src/sumbool.mli
 gen-src/sumbool.ml
 gen-src/zeven.mli
@@ -129,14 +130,14 @@ gen-src/mSetInterface.ml
 gen-src/mSetInterface.mli
 gen-src/mSetList.ml
 gen-src/mSetList.mli
+gen-src/mSetAVL.ml
+gen-src/mSetAVL.mli
 gen-src/mSetProperties.ml
 gen-src/mSetProperties.mli
 gen-src/nat0.ml
 gen-src/nat0.mli
 gen-src/number.ml
 gen-src/number.mli
-gen-src/orderedType0.ml
-gen-src/orderedType0.mli
 gen-src/ordersFacts.ml
 gen-src/ordersFacts.mli
 gen-src/ordersLists.ml

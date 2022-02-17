@@ -2,6 +2,10 @@
 -R theories MetaCoq.Template
 -I .
 
+# canonical tries library
+theories/utils/canonicaltries/String2pos.v
+theories/utils/canonicaltries/CanonicalTries.v
+
 # utils
 theories/utils/MCPrelude.v
 theories/utils/MCReflect.v

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config Universes Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICSN PCUICLiftSubst.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.
 
 Import MCMonadNotation.
@@ -28,17 +28,11 @@ Definition gctx : global_env_ext :=
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)
 
-Program Definition check_wf_env_ext (Σ : global_env) id (ext : universes_decl) : 
-  EnvCheck ({ Σ' : wf_env_ext | Σ'.(wf_env_ext_env) = (Σ, ext)}) :=
-  '(wfΣ; pf) <- check_wf_env (cf:=default_checker_flags) Σ ;;
-  '(exist wfΣ' pf') <- make_wf_env_ext wfΣ id ext ;;
-  ret (exist wfΣ' _).
-
 Definition kername_of_string (s : string) : kername :=
   (MPfile [], s).
 
 Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext :=
-  '(exist Σ' pf) <- check_wf_env_ext Σ.1 (kername_of_string "toplevel") Σ.2 ;;
+  '(exist Σ' pf) <- check_wf_ext Σ ;;
   ret Σ'.
 
 Definition gctx_wf_env : wf_env_ext.

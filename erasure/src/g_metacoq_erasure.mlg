@@ -31,9 +31,9 @@ let time prefix f x =
   let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
   res
 
-let check env evm c =
+let check ~bypass env evm c =
   Feedback.msg_debug (str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
+  let term = time (str"Quoting") (Ast_quoter.quote_term_rec bypass env) (EConstr.to_constr evm c) in
   let checker_flags = Config0.extraction_checker_flags in
   let erase = time (str"Erasing")
       (Erasure.erase_and_print_template_program checker_flags)
@@ -43,10 +43,16 @@ let check env evm c =
 }
 
 VERNAC COMMAND EXTEND MetaCoqErase CLASSIFIED AS QUERY
+| [ "MetaCoq" "Bypass" "Erase" constr(c) ] -> {
+    let env = Global.env () in
+    let evm = Evd.from_env env in
+    let (c, _) = Constrintern.interp_constr env evm c in
+    check ~bypass:true env evm c
+  }
 | [ "MetaCoq" "Erase" constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let (c, _) = Constrintern.interp_constr env evm c in
-    check env evm c
+    check ~bypass:false env evm c
   }
 END

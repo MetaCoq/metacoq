@@ -9,7 +9,7 @@ module BaseExtractionDenoter =
 struct
   type t = Ast0.term
   type quoted_ident = char list
-  type quoted_int = int
+  type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
   type quoted_bool = bool
@@ -142,7 +142,10 @@ struct
     {Context.binder_name = unquote_name q.binder_name;
      Context.binder_relevance = unquote_relevance q.binder_relevance}
 
-  let rec unquote_int (q: quoted_int) : int = q
+  let rec unquote_int (q: quoted_int) : int = 
+    match q with
+    | Datatypes.O -> 0
+    | Datatypes.S x -> succ (unquote_int x)
   
   let unquote_evar env evm n l = 
     let id = Evar.unsafe_of_int (unquote_int n) in

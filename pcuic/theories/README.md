@@ -30,7 +30,7 @@
 | [PCUICInduction] | Induction principle on syntax
 | [PCUICSize]      | Size of terms
 | [PCUICDepth]     | Depth of terms
-| [PCUICReflect]   | Decidability of equality between terms
+| [PCUICReflect]   | Decidability of ws_cumul_pb between terms
 | [PCUICContextRelations] | Helper lemmas for relations between contexts
 | [PCUICPosition]  | Notions of position and stack, well-order on positions
 

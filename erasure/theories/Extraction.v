@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Ascii FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOcamlNatInt ExtrOCamlFloats ExtrOCamlInt63.
+From Coq Require Import Ascii FSets ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlFloats ExtrOCamlInt63.
 From MetaCoq.Template Require Import utils.
 
 (** * Extraction setup for the erasure phase of template-coq.
@@ -14,7 +14,7 @@ Extract Constant Ascii.compare =>
  "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
  
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
-           UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes Numeral
+           UnivSubst Typing Checker Retyping OrderedType Logic Common ws_cumul_pb Classes Numeral
            Uint63.
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".

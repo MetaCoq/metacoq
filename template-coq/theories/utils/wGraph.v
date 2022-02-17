@@ -1,5 +1,5 @@
 Require Import ZArith Zcompare Lia ssrbool.
-Require Import MSets.MSetList MSetFacts MSetProperties.
+Require Import MSetAVL MSetFacts MSetProperties.
 From MetaCoq.Template Require Import MCUtils.
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -269,12 +269,7 @@ Import Nbar.
 
 Require Import MSetDecide MSetInterface.
 
-Module Type UsualOrderedTypeWithLeibniz.
-  Include UsualOrderedType.
-  Parameter eq_leibniz : forall x y, eq x y -> x = y.
-End UsualOrderedTypeWithLeibniz.
-
-Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLeibniz with Module E := V).
+Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module E := V).
   Module VSetFact := WFactsOn V VSet.
   Module VSetProp := WPropertiesOn V VSet.
   Module VSetDecide := WDecide (VSet).
@@ -339,10 +334,11 @@ Module WeightedGraph (V : UsualOrderedTypeWithLeibniz) (VSet : MSetList.SWithLei
     Definition eq_leibniz : forall x y, eq x y -> x = y := fun x y eq => eq.
     
   End Edge.
-  Module EdgeSet:= MSets.MSetList.MakeWithLeibniz Edge.
+  Module EdgeSet:= MSetAVL.Make Edge.
   Module EdgeSetFact := WFactsOn Edge EdgeSet.
   Module EdgeSetProp := WPropertiesOn Edge EdgeSet.
   Module EdgeSetDecide := WDecide (EdgeSet).
+  Ltac esets := EdgeSetDecide.fsetdec.
 
   Definition t := (VSet.t * EdgeSet.t * V.t)%type.
 

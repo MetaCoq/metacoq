@@ -11,7 +11,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction
 Set Warnings "-notation-overridden".
 From MetaCoq.Template Require Import config utils Ast TypingWf UnivSubst
      TermEquality LiftSubst Reduction.
-
 Set Warnings "+notation_overridden".
 
 From MetaCoq.PCUIC Require Import PCUICEquality PCUICToTemplate.
@@ -751,16 +750,22 @@ Ltac outtimes :=
     destruct ih as [? ?]
   end.
 
-Lemma red1_cumul {cf} (Σ : global_env_ext) Γ T U : TT.red1 Σ Γ T U -> TT.cumul Σ Γ T U.
+Lemma red1_cumul {cf} (Σ : global_env_ext) pb Γ T U : TT.red1 Σ Γ T U -> TT.cumul_gen Σ Γ pb T U.
 Proof.
   intros r.
-  econstructor 2; tea. constructor. apply TermEquality.leq_term_refl.
+  econstructor 2; tea. constructor. 
+  destruct pb.
+  - apply TermEquality.eq_term_refl.
+  - apply TermEquality.leq_term_refl.
 Qed.
 
-Lemma red1_cumul_inv {cf} (Σ : global_env_ext) Γ T U : TT.red1 Σ Γ T U -> TT.cumul Σ Γ U T.
+Lemma red1_cumul_inv {cf} (Σ : global_env_ext) pb Γ T U : TT.red1 Σ Γ T U -> TT.cumul_gen Σ Γ pb U T.
 Proof.
   intros r.
-  econstructor 3; tea. constructor. eapply TermEquality.leq_term_refl.
+  econstructor 3; tea. constructor.
+  destruct pb.
+  - eapply TermEquality.eq_term_refl.
+  - eapply TermEquality.leq_term_refl.
 Qed.
 
 Definition TTconv {cf} (Σ : global_env_ext) Γ : relation term := 
@@ -1476,11 +1481,11 @@ End wtcumul.
 
 Lemma trans_cumul {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
   wt_cumul Σ Γ T U ->
-  TT.cumul (trans_global Σ) (trans_local Γ) (trans T) (trans U).
+  TT.cumul_gen (trans_global Σ) (trans_local Γ) Cumul (trans T) (trans U).
 Proof.
   induction 1. 
   - constructor; auto.
-    eapply trans_leq_term in l.
+    eapply trans_leq_term in c.
     now rewrite -trans_global_ext_constraints.
   - destruct w as [r ht hv].
     apply trans_red1 in r; eauto. 2:destruct ht as [s hs]; now eexists.
@@ -1879,9 +1884,9 @@ Lemma typing_spine_weaken_concl {cf:checker_flags} {Σ Γ T args S S'} {wfΣ : w
 Proof.
   intros sp.
   induction sp in S' => tyT cum.
-  * constructor; auto. now eapply equality_forget in cum.
-  * constructor; auto. eapply (into_equality (le:=true)) in c; fvs.
-    eapply (equality_forget (le:=true)). now transitivity ty'.
+  * constructor; auto. now eapply ws_cumul_pb_forget in cum.
+  * constructor; auto. eapply (into_ws_cumul_pb (pb:=Cumul)) in c; fvs.
+    eapply (ws_cumul_pb_forget (pb:=Cumul)). now transitivity ty'.
   * intros isType. econstructor. eauto. eauto. eauto.
     apply IHsp; auto. eapply PCUICArities.isType_apply; tea.
 Defined.
@@ -1937,7 +1942,7 @@ Qed.
 Lemma TT_typing_spine_app {cf:checker_flags} Σ Γ ty T' args na A B arg s :
   TT.typing Σ Γ (T.tProd na A B) (T.tSort s) ->
   TT.typing_spine Σ Γ ty args T' ->
-  TT.cumul Σ Γ T' (T.tProd na A B) ->
+  TT.cumul_gen Σ Γ Cumul T' (T.tProd na A B) ->
   TT.typing Σ Γ arg A ->
   TT.typing_spine Σ Γ ty (args ++ [arg]) (T.subst1 arg 0 B).
 Proof.
@@ -2023,7 +2028,7 @@ Lemma make_typing_spine {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ fty l T}
   typing_spine_size sp <= n ->
   ∑ T', TT.typing_spine (trans_global Σ) (trans_local Γ) (trans fty) (map trans l) T' * 
     ((T' = trans T) +
-      (TT.cumul (trans_global Σ) (trans_local Γ) T' (trans T) *
+      (TT.cumul_gen (trans_global Σ) (trans_local Γ) Cumul T' (trans T) *
        ∑ s, TT.typing (trans_global Σ) (trans_local Γ) (trans T) (T.tSort s)))%type.
 Proof.
   induction sp; simpl; intros.
@@ -2187,8 +2192,10 @@ Proof.
     move: (type_app Ht wfΣ). rewrite isapp.
     destruct (decompose_app t) eqn:da.
     intros [fty [d' [hd' [sp hsp]]]].
-    assert (IHt := X3 _ _ d' hd').
-    epose proof (make_typing_spine sp (typing_size Ht) X3 (validity d') hsp) as [T' [IH []]].
+    assert (hd'' : typing_size d' ≤ max (typing_size Ht) (typing_size Hp)) by lia.
+    assert (hsp' : typing_spine_size sp ≤ max (typing_size Ht) (typing_size Hp)) by lia.
+    assert (IHt := X2 _ _ d' hd'').
+    epose proof (make_typing_spine sp (max (typing_size Ht) (typing_size Hp)) X2 (validity d') hsp') as [T' [IH []]].
     * subst T'. rewrite (PCUICAstUtils.decompose_app_inv da).
       rewrite trans_mkApps mkApp_mkApps -AstUtils.mkApps_app.
       pose proof (AstUtils.mkApps_app (trans t0) (map trans l) [trans u]).
@@ -2196,9 +2203,9 @@ Proof.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.
       eassumption. 
-      eapply TT_typing_spine_app. simpl in X1. eapply X1.
+      eapply TT_typing_spine_app. simpl in X1. eapply X0.
       apply IH. apply TT.cumul_refl'.
-      apply X5.
+      apply X4.
     * destruct p as [hcum _].
       rewrite (PCUICAstUtils.decompose_app_inv da).
       rewrite trans_mkApps mkApp_mkApps -AstUtils.mkApps_app.
@@ -2207,14 +2214,14 @@ Proof.
       apply trans_isApp in da.
       eapply type_mkApps_napp. rewrite da //.
       eassumption. 
-      eapply TT_typing_spine_app. simpl in X1. eapply X1.
+      eapply TT_typing_spine_app. simpl in X0. eapply X0.
       apply IH. apply hcum.
-      apply X5.
+      apply X4.
     * rewrite mkApp_mkApps.
       eapply type_mkApps_napp.
       apply trans_isApp in isapp. rewrite isapp //.
       now simpl in X2.
-      econstructor. simpl in X1. eapply X1.
+      econstructor. eapply X0.
       apply TT.cumul_refl'. assumption. constructor.
   - rewrite trans_subst_instance.
     rewrite trans_cst_type.
@@ -2319,7 +2326,7 @@ Proof.
     + eassumption.
     + eassumption.
     + eapply cumulSpec_cumulAlgo_curry in X4; tea; fvs.
-      eapply equality_forget in X4.
+      eapply ws_cumul_pb_forget in X4.
       eapply cumul_decorate in X4; tea.
       2:eapply validity; tea.
       2:now exists s.

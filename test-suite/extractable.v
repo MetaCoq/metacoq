@@ -6,6 +6,7 @@ From MetaCoq.Template.TemplateMonad Require Import
      Common Extractable.
 
 Local Open Scope string_scope.
+Import MCMonadNotation.
 
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
    (only parsing).
@@ -48,13 +49,6 @@ MetaCoq Run
     (tmBind (tmQuoteInductive (MPfile ["Datatypes"; "Init"; "Coq"], "nat"))
             (fun mi => tmMsg (string_of_nat (length mi.(ind_bodies))))).
 
-Definition empty_constraints : ConstraintSet.t_.
-  econstructor.
-  Unshelve.
-  2:{ exact nil. }
-  constructor.
-Defined.
-
 Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 
 
@@ -69,7 +63,7 @@ MetaCoq Run
                        ; mind_entry_lc := tProd nAnon <% bool %> (tRel 1) ::
                                           tProd nAnon <% string %> (tRel 1) :: nil
                        |} :: nil
-                  ; mind_entry_universes := Monomorphic_entry (LevelSet.empty, empty_constraints)
+                  ; mind_entry_universes := Monomorphic_entry ContextSet.empty
                   ; mind_entry_template := false
                   ; mind_entry_variance := None
                   ; mind_entry_private := None |}).

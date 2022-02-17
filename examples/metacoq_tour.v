@@ -57,7 +57,7 @@ Check PCUICSR.subject_reduction.
 
 (** Verified conversion and type-checking *)
 
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
 Check PCUICSafeConversion.isconv_term_sound.
 Check PCUICSafeConversion.isconv_term_complete.
 
@@ -114,7 +114,7 @@ MetaCoq Erase singleton_elim.
 
 (** Conclusion: Status of MetaCoq 
 
-  - 1.0 expected by Christmas with correctness and completeness of the typechecker.
+  - Correctness and complete typechecker for (a large fragment of) Coq.
 
   - All metatheory proofs are finished. Compared to Coq's implementation:
   

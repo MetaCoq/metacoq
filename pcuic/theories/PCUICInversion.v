@@ -43,7 +43,7 @@ Section Inversion.
     Σ ;;; Γ |- T <= U ->
     Σ ;;; Γ ⊢ T ≤ U.
   Proof.
-    intros. eapply into_equality; tea.
+    intros. eapply into_ws_cumul_pb; tea.
     - eapply typing_wf_local in X; eauto with fvs.
     - eapply PCUICClosedTyp.type_closed in X.
       eapply PCUICOnFreeVars.closedn_on_free_vars in X; tea.
@@ -59,11 +59,11 @@ Section Inversion.
   Qed.
   Hint Immediate typing_closed_ctx : fvs.
 
-  Lemma typing_equality le Γ t T : 
+  Lemma typing_ws_cumul_pb le Γ t T : 
     Σ ;;; Γ |- t : T ->
     Σ ;;; Γ ⊢ T ≤[le] T.
   Proof.
-    intros ht. apply into_equality; auto. destruct le ; reflexivity.
+    intros ht. apply into_ws_cumul_pb; auto. destruct le ; reflexivity.
     eauto with fvs.
     eapply PCUICClosedTyp.type_closed in ht.
     now rewrite -is_open_term_closed.
@@ -76,7 +76,7 @@ Section Inversion.
     dependent induction h ; [
       repeat insum ;
       repeat intimes ;
-      [ first [ eassumption | try reflexivity ] .. | try solve [eapply typing_equality; econstructor; eauto] ]
+      [ first [ eassumption | try reflexivity ] .. | try solve [eapply typing_ws_cumul_pb; econstructor; eauto] ]
     | repeat outsum ;
       repeat outtimes ;
       repeat insum ;
@@ -260,7 +260,7 @@ Section Inversion.
     intros Γ ci p c brs T h.
     dependent induction h.
     {  remember c0; remember c1. destruct c0, c1. repeat insum; repeat intimes; try eapply case_inv ; 
-	    [ try first [ eassumption | reflexivity ].. | try eapply typing_equality; econstructor; eauto ]. }
+	    [ try first [ eassumption | reflexivity ].. | try eapply typing_ws_cumul_pb; econstructor; eauto ]. }
     repeat outsum; repeat outtimes; repeat insum; repeat intimes ; tea;
       [ try first
       [ eassumption | reflexivity ]..
@@ -331,7 +331,7 @@ Section Inversion.
     intros Γ Δ t T h.
     induction Δ as [| [na [b|] A] Δ ih ] in Γ, t, h |- *.
     - eexists. split ; eauto. cbn.
-      eapply into_equality; [reflexivity|..].
+      eapply into_ws_cumul_pb; [reflexivity|..].
       eauto with fvs.
       eapply type_closed in h.
       now eapply closedn_on_free_vars in h.
@@ -343,7 +343,7 @@ Section Inversion.
       destruct hh as [s1 [A' [? [? [? ?]]]]].
       exists A'. split ; eauto.
       cbn. etransitivity; tea.
-      eapply equality_it_mkProd_or_LetIn_codom.
+      eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.
       assumption.
     - simpl. apply ih in h. cbn in h.
       destruct h as [B [h c]].
@@ -351,7 +351,7 @@ Section Inversion.
       pose proof hh as [s1 [B' [? [? ?]]]].
       exists B'. split ; eauto.
       cbn. etransitivity; tea.
-      eapply equality_it_mkProd_or_LetIn_codom.
+      eapply ws_cumul_pb_it_mkProd_or_LetIn_codom.
       assumption.
   Qed.
 

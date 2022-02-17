@@ -2,7 +2,7 @@
 DECLARE PLUGIN "metacoq_safechecker_plugin"
 
 {
-
+open Attributes
 open Stdarg
 open Pp
 open PeanoNat.Nat
@@ -29,29 +29,38 @@ let time prefix f x =
   let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
   res
 
-let check env evm (c, ustate) =
+let check env evm poly (c, ustate) =
   Feedback.msg_debug (str"Quoting");
-  let term = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
-  let uctx = UState.context_set ustate in
-  Feedback.msg_debug (str"Universes added: " ++ Printer.pr_universe_ctx_set evm uctx);
-  let uctx = Universes0.Monomorphic_ctx (Ast_quoter.quote_univ_contextset uctx) in
+  let uctx = Evd.universe_context_set evm in
+  let env = if poly then env else Environ.push_context_set ~strict:true uctx env in
+  let prog = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
+  let uctx =
+    if poly then
+      let uctx = Evd.to_universe_context evm in
+      let names = Array.map (fun _ -> Names.Name.Anonymous) (Univ.Instance.to_array (Univ.UContext.instance uctx)) in
+      let inst, auctx = Univ.abstract_universes names uctx in
+      Ast_quoter.mkPolymorphic_ctx (Ast_quoter.quote_abstract_univ_context auctx)
+    else Ast_quoter.mkMonomorphic_ctx ()
+  in
   let check =
     time (str"Checking")
       (SafeTemplateChecker.infer_and_print_template_program
-        Config0.default_checker_flags term)
+        Config0.default_checker_flags
+        (* Config0.type_in_type *)
+         prog)
       uctx
   in
   match check with
   | Coq_inl s -> Feedback.msg_info (pr_char_list s)
-  | Coq_inr s -> CErrors.user_err ~hdr:"metacoq" (pr_char_list s)
+  | Coq_inr s -> CErrors.user_err (pr_char_list s)
 }
 
 VERNAC COMMAND EXTEND MetaCoqSafeCheck CLASSIFIED AS QUERY
-| [ "MetaCoq" "SafeCheck" constr(c) ] -> {
+| #[ poly = polymorphic ] [ "MetaCoq" "SafeCheck" constr(c) ] -> {
     let env = Global.env () in
     let evm = Evd.from_env env in
     let c = Constrintern.interp_constr env evm c in
-    check env evm c
+    check env evm poly c
   }
 END
 

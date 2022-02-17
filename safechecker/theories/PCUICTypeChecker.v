@@ -888,7 +888,7 @@ Section Typecheck.
   Equations check_consistent_instance uctx (wfg : ∥ global_uctx_invariants (global_ext_uctx (Σ, uctx)) ∥) 
     u
     : typing_result_comp (consistent_instance_ext Σ uctx u) :=
-  check_consistent_instance (Monomorphic_ctx _) wfg u 
+  check_consistent_instance (Monomorphic_ctx) wfg u 
     with (Nat.eq_dec #|u| 0) := {
       | left _ := ret _ ;
       | right _ := (raise (Msg "monomorphic instance should be of length 0"))
@@ -908,7 +908,7 @@ Section Typecheck.
     - symmetry in e2.
       eapply forallb_All in e2. eapply All_forallb'; tea.
       clear -cf Σ. intros x; simpl. apply (is_graph_of_uctx_levels Σ); wf_env.
-    - now rewrite mapi_length in e1.
+    - len in e1.
     - eapply check_constraints_spec ; eauto; wf_env.
   Qed.
   Next Obligation.
@@ -939,7 +939,7 @@ Section Typecheck.
       move: H mema => /andP [] /is_graph_of_uctx_levels -> //; wf_env.
   Qed.
   Next Obligation.
-    now rewrite mapi_length in e1.
+    len in e1.
   Qed.
   Next Obligation.
     inversion X1. rewrite lookup_lookup_env in e1.
@@ -1431,8 +1431,9 @@ Section Typecheck.
   Next Obligation. intros; sq; now inversion X0. Qed.
   (* tSort *)
   Next Obligation.
-    symmetry in e.
-    eapply (elimT wf_universe_reflect) in e.
+    match goal with [ H : true = (wf_universeb _ _) |- _ ] =>
+      symmetry in H; eapply (elimT wf_universe_reflect) in H
+    end.
     sq; econstructor; tas.
   Defined.
   Next Obligation.
@@ -1667,6 +1668,19 @@ Section Typecheck.
     eapply assumption_context_rev.
     apply assumption_context_subst_instance, smash_context_assumption_context; constructor.
   Qed.
+  
+  (*Next Obligation.
+    destruct X7, X6, X3.
+    sq. cbn in *.
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst I. cbn in *.
+    eapply type_reduction_closed in t; tea.
+    eapply validity in t.
+    eapply isType_mkApps_Ind_inv in t as [pars [args []]]; eauto.
+    rewrite chop_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
+    subst params indices.
+    eapply spine_subst_wt_terms in s.
+    match goal with [ H : ind_npars d = _ |- _ ] => rewrite H in s end.*)
   Next Obligation.
     sq.
     apply eqb_eq in i. subst I.
@@ -1685,10 +1699,19 @@ Section Typecheck.
   Qed.
     
   Next Obligation.
+    (*cbn in *; sq.
+    rename X5 into args.
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst I.
+    eapply type_reduction_closed in X7; tea.
+    rewrite chop_firstn_skipn in Heq_anonymous. noconf Heq_anonymous.
+    subst params indices.
+    eapply validity in X7.
+    eapply isType_mkApps_Ind_inv in X7 as [pars [argsub []]]; eauto.*)
     (*todo: factor*)
     sq.
-    apply eqb_eq in i. subst I.
-    eapply eqb_eq in i0.
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst I.
     rewrite chop_firstn_skipn -i0 /=.
     eapply type_reduction_closed, validity in X3.
     2: now eapply infering_typing.
@@ -1707,7 +1730,9 @@ Section Typecheck.
       rewrite -app_context_assoc. eapply weaken_wf_local; eauto.
       rewrite -subst_instance_app_ctx.
       now eapply (on_minductive_wf_params_indices_inst X0). }
-    rewrite chop_firstn_skipn -i0 /= in eq_params *.
+    match goal with [ H : ind_npars d = _ |- _ ] =>
+    rewrite chop_firstn_skipn -H /= in eq_params *
+    end.
     eapply spine_subst_app => //.
     * len. rewrite -(All2_length eq_params).
       now rewrite -(declared_minductive_ind_npars X0).
@@ -1809,8 +1834,8 @@ Section Typecheck.
     destruct ps as [ps ?].
     cbn in *.
     sq.
-    apply eqb_eq in i. subst ind'.
-    eapply eqb_eq in i0.
+    repeat match goal with [ H : is_true (eqb _ _) |- _ ] => apply eqb_eq in H end.
+    subst ind'.
     rewrite /indices /chop_args chop_firstn_skipn /=.
     assert (wf_branches idecl brs).
     {
@@ -2130,11 +2155,11 @@ Section Typecheck.
     pose proof (on_declared_inductive decl) as [onmib oni].
     eapply onProjections in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
-    
+    (* eapply type_Proj with (pdecl := (_, t0)). *)
     eapply infer_Proj with (pdecl := (i1, t)).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
-      now apply beq_nat_true.
+      now apply Nat.eqb_eq.
     - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
       econstructor ; tea.
       now apply closed_red_red.
@@ -2143,11 +2168,11 @@ Section Typecheck.
       eapply validity in X1; eauto.
       destruct (ssrbool.elimT (eqb_spec ind I)); auto.
       unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X1 as [parsubst [argsubst [sp sp' cu]]]; eauto.
-      pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
-      pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
-      autorewrite with len in H, H0.
+      pose proof (Hl := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
+      pose proof (Hr := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
+      autorewrite with len in Hl, Hr.
       destruct (on_declared_inductive decl) eqn:ond.
-      rewrite -o.(onNpars) -H.
+      rewrite -o.(onNpars) -Hl.
       forward (o0.(onProjections)).
       intros H'; rewrite H' nth_error_nil // in HH.
       destruct ind_ctors as [|cs []]; auto.
@@ -2155,7 +2180,7 @@ Section Typecheck.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       destruct (ind_indices idecl) => //.
       simpl in *.
-      rewrite List.skipn_length in H0.
+      rewrite List.skipn_length in Hr.
       rewrite List.firstn_length. lia.
     - destruct ind_projs => //. rewrite nth_error_nil in HH; congruence.
   Defined.

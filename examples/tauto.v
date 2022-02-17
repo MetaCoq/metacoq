@@ -805,8 +805,8 @@ Proof.
      }
     assert (predicate_size tsize (map_predicate id (subst [tRel 0] k) (subst [tRel 0] (#|pcontext t| + k)) t) <=
       predicate_size tsize t).
-    { apply plus_le_compat; simpl; auto. 2:apply X. destruct X.
-      induction a; simpl; auto. apply le_n_S, plus_le_compat; simpl; auto. }
+    { apply Nat.add_le_mono; simpl; auto. 2:apply X. destruct X.
+      induction a; simpl; auto. apply le_n_S, Nat.add_le_mono; simpl; auto. }
   lia.
   - eapply le_n_S.
     generalize (#|m| + k). intro p.
@@ -1024,13 +1024,13 @@ Section Plugin.
   Inductive NotSolvable (s: string) : Prop := notSolvable: NotSolvable s.
 
   Definition inhabit_formula gamma Mphi Gamma :
-    match reify (empty_ext []) gamma Mphi with
+    match reify (empty_ext empty_global_env) gamma Mphi with
       Some phi => 
       match tauto_proc (size phi) {| hyps := []; concl := phi |} with 
         Valid => sem (concl {| hyps := []; concl := phi |}) (can_val_Prop Gamma)
       | _ => NotSolvable "not a valid formula" end 
     | None => NotSolvable "not a formaula" end.
-    destruct (reify (empty_ext []) gamma Mphi); try exact (notSolvable _).
+    destruct (reify (empty_ext _) gamma Mphi); try exact (notSolvable _).
     destruct (tauto_proc (size f) {| hyps := []; concl := f |}) eqn : e; try exact (notSolvable _).
     exact (tauto_sound (size f) (mkS [] f) e (can_val_Prop Gamma) (trivial_hyp [] _)).
   Defined.

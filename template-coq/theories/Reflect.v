@@ -350,14 +350,14 @@ Qed.
 
 (* move in Universes.v ?? *)
 #[global] Instance eq_dec_UnivExpr : EqDec UnivExpr.t.
-Proof. intros e e'. repeat decide equality. Qed.
+Proof. intros e e'. decide equality; apply eq_dec. Qed.
 
 #[global] Instance eq_dec_univ0 : EqDec Universe.nonEmptyUnivExprSet.
 Proof.
   intros u v.
   assert (H : {UnivExprSet.elements u = UnivExprSet.elements v}
               + {~ UnivExprSet.elements u = UnivExprSet.elements v}). {
-    repeat decide equality. }
+    decide equality. apply eq_dec. }
   destruct H as [H|H]; [left; now apply eq_universe_iff' in H|right].
   intro X; apply H; now apply eq_universe_iff' in X.
 Defined.
@@ -481,7 +481,6 @@ Proof.
 Qed.
 
 Require Import RelationClasses.
-Existing Instance ConstraintType.lt_strorder.
     
 Lemma constraint_lt_irrel (x y : UnivConstraint.t) (l l' : UnivConstraint.lt_ x y) : l = l'.
 Proof.

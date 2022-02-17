@@ -1,8 +1,13 @@
-Require Import String ZArith Lia Morphisms.
+Require Import Ascii String ZArith Lia Morphisms.
 From Equations Require Import Equations.
 Set Equations Transparent.
 
-Derive NoConfusion EqDec for Strings.Ascii.ascii string positive Z.
+(* Do not change, [ascii_dec] and [string_dec] are extracted specifically *)
+Global Instance ascii_eqdec : EqDec ascii := ascii_dec.
+Global Instance string_eqdec : EqDec string := string_dec.
+
+Derive NoConfusion for ascii string.
+Derive NoConfusion EqDec for positive Z.
 
 Declare Scope metacoq_scope.
 

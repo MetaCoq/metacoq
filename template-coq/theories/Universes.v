@@ -310,7 +310,7 @@ Module UnivExpr.
 
   Definition eq_dec (l1 l2 : t) : {l1 = l2} + {l1 <> l2}.
   Proof.
-    repeat decide equality.
+    decide equality; apply eq_dec.
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
@@ -1082,14 +1082,14 @@ Module ConstraintType.
   Derive Signature for lt_.
   Definition lt := lt_.
 
-  Lemma lt_strorder : StrictOrder lt.
+  #[global] Instance lt_strorder : StrictOrder lt.
   Proof.
     constructor.
     - intros []; intro X; inversion X. lia.
     - intros ? ? ? X Y; invs X; invs Y; constructor. lia.
   Qed.
 
-  Lemma lt_compat : Proper (eq ==> eq ==> iff) lt.
+  #[global] Instance lt_compat : Proper (eq ==> eq ==> iff) lt.
   Proof.
     intros ? ? X ? ? Y; invs X; invs Y. reflexivity.
   Qed.
@@ -1111,8 +1111,7 @@ Module ConstraintType.
 
   Lemma eq_dec x y : {eq x y} + {~ eq x y}.
   Proof.
-    unfold eq. decide equality.
-    apply Z.eq_dec.
+    unfold eq. decide equality. apply Z.eq_dec.
   Qed.
 End ConstraintType.
 
@@ -1149,9 +1148,9 @@ Module UnivConstraint.
 
   Definition compare : t -> t -> comparison :=
     fun '(l1, t, l2) '(l1', t', l2') =>
-      Pos.switch_Eq (Pos.switch_Eq (Level.compare l2 l2')
-                                   (ConstraintType.compare t t'))
-                    (Level.compare l1 l1').
+      compare_cont (Level.compare l1 l1')
+        (compare_cont (ConstraintType.compare t t')
+                    (Level.compare l2 l2')).
 
   Lemma compare_spec x y
     : CompareSpec (eq x y) (lt x y) (lt y x) (compare x y).
@@ -1167,7 +1166,7 @@ Module UnivConstraint.
 
   Lemma eq_dec x y : {eq x y} + {~ eq x y}.
   Proof.
-    unfold eq. repeat decide equality.
+    unfold eq. decide equality; apply eq_dec.
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.

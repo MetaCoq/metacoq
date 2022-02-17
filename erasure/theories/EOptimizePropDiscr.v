@@ -822,20 +822,19 @@ Qed.
 
 Lemma erases_global_closed_env {Σ : global_env} Σ' : wf Σ -> erases_global Σ Σ' -> closed_env Σ'.
 Proof.
-  intros wf er. move: wf.
-  induction er. intros wf.
+  destruct Σ as [univs Σ]; cbn in *.
+  intros [onu wf] er; cbn in *.
+  move: wf. red in er; cbn in er.
+  induction er; intros wf.
   - constructor.
   - cbn. destruct cb' as [[]].
-    cbn in *. intros wf. red in wf; depelim wf.
-    red in o0.
-    rewrite [forallb _ _](IHer wf).
+    cbn in *. depelim wf. 
+    rewrite [forallb _ _](IHer wf) andb_true_r.
     red in H. destruct cb as [ty []]; cbn in *.
-    unshelve eapply PCUICClosedTyp.subject_closed in o0. eapply wf.
-    eapply erases_closed in H; tea. rewrite H //.
-    destruct H.
-    cbn. intros. red in wf. depelim wf.
-    apply IHer, wf.
-  - intros wf. red in wf. depelim wf.
+    unshelve eapply PCUICClosedTyp.subject_closed in o0. cbn. split; auto.
+    eapply erases_closed in H; tea. elim H.
+    cbn. apply IHer. now depelim wf.
+  - depelim wf.
     cbn. apply IHer, wf.
 Qed.
 

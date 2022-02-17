@@ -420,11 +420,12 @@ Proof.
 Defined.
 
 Lemma erases_deps_cons Σ Σ' kn decl decl' t :
-  wf ((kn, decl) :: Σ) ->
+  on_global_univs Σ.(universes) ->
+  on_global_decls (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->
   erases_deps Σ Σ' t ->
-  erases_deps ((kn, decl) :: Σ) ((kn, decl') :: Σ') t.
+  erases_deps (add_global_decl Σ (kn, decl)) ((kn, decl') :: Σ') t.
 Proof.
-  intros wfΣ er.
+  intros wfu wfΣ er.
   induction er using erases_deps_forall_ind; try solve [now constructor].
   apply lookup_env_Some_fresh in H as not_fresh.
   econstructor.
@@ -440,7 +441,7 @@ Proof.
   - unfold erases_constant_body in *.
     destruct PCUICAst.PCUICEnvironment.cst_body eqn:body.
     + destruct E.cst_body eqn:ebody; [|easy].
-      assert (PCUICAst.declared_constant ((kn, decl) :: Σ) kn0 cb).
+      assert (PCUICAst.declared_constant (add_global_decl Σ (kn, decl)) kn0 cb).
       { unfold PCUICAst.declared_constant.
         cbn.
         unfold eq_kername.
@@ -453,8 +454,9 @@ Proof.
       red in H4.
       rewrite body in *.
       cbn in *.
-      eapply (erases_extends (_, cst_universes cb)); eauto.
-      2: eexists [_]; reflexivity.
+      eapply (erases_extends (_, cst_universes cb)); cbn. 5:tea.
+      1,3,5,6:constructor; auto.
+      2:{ split; auto. eexists [_]; reflexivity. }
       eapply declared_constant_inv in H.
       2:eapply weaken_env_prop_typing.
       2: easy.
@@ -468,6 +470,7 @@ Proof.
     destruct H as [H H'].
     split; eauto. red in H |- *.
     inv wfΣ.
+    unfold PCUICEnvironment.lookup_env.
     simpl. unfold eq_kername.
     destruct (kername_eq_dec (inductive_mind p.1) kn); auto. subst.
     eapply lookup_env_Some_fresh in H; eauto. contradiction.
@@ -480,7 +483,7 @@ Proof.
   - econstructor; eauto.
     destruct H as [H H'].
     split; eauto. red in H |- *.
-    inv wfΣ.
+    inv wfΣ. unfold PCUICEnvironment.lookup_env.
     simpl. unfold eq_kername.
     destruct (kername_eq_dec (inductive_mind p.1.1) kn); auto. subst.
     eapply lookup_env_Some_fresh in H; eauto. contradiction.
@@ -597,7 +600,8 @@ Lemma erases_global_all_deps Σ Σ' :
   globals_erased_with_deps Σ Σ'.
 Proof.
   intros wf erg.
-  induction Σ as [|(kn, decl) Σ IH] in Σ', wf, erg |- *; cbn in *.
+  set (Σg := Σ). destruct Σ as [univs Σ]; cbn in *.
+  induction Σ as [|(kn, decl) Σ IH] in Σ', Σg, wf, erg |- *; cbn in *.
   - depelim erg.
     split; [intros ? ? decl; discriminate decl|].
     intros ? ? ? [decl _]; discriminate decl.
@@ -618,24 +622,31 @@ Proof.
       * unfold erases_constant_body, on_constant_decl in *.
         destruct ?; [|easy].
         destruct ?; [|easy].
-        eapply (erases_extends (_, cst_universes cst')).
-        4: eexists [_]; cbn; reflexivity.
-        all: eauto.
+        depelim wf. depelim o0. cbn in *.
+        eapply (erases_extends ({| universes := univs; declarations := Σ |}, cst_universes cst')); eauto.
+        cbn. 4:{ split; eauto; cbn; try reflexivity. eexists [_]; cbn; reflexivity. }
+        constructor; auto. cbn. red in o2. rewrite E in o2. exact o2.
+        split; auto. 
       * intros.
-        apply erases_deps_cons; [easy|].
+        eapply (erases_deps_cons {| universes := univs; declarations := Σ |} _ kn (PCUICEnvironment.ConstantDecl cst')); auto.
         unfold erases_constant_body in *.
-        rewrite H0 in *.
+        rewrite H1 in *.
         destruct ?; [|easy].
         unfold on_constant_decl in *.
-        rewrite E in *.
         cbn in *.
-        eapply (erases_deps_single (_, _)); eauto.
-        now constructor.
-    + assert (exists decl' Σ'', Σ' = (kn, decl') :: Σ'' /\ erases_global Σ Σ'')
+        eapply (erases_deps_single (_, _)). 3:eauto.
+        depelim wf. depelim o0.
+        now split; cbn; eauto.
+        depelim wf. depelim o0. do 2 red in o2. now rewrite E in o2.
+        apply IH; eauto. depelim wf. now depelim o0.
+    + set (Σu := {| universes := univs; declarations := Σ |}).
+      assert (wfΣu : PCUICTyping.wf Σu).
+      { depelim wf. now depelim o0. }
+      assert (exists decl' Σ'', Σ' = (kn, decl') :: Σ'' /\ erases_global Σu Σ'')
         as (erdecl & ? & -> & erg')
           by now depelim erg; eexists _, _.
-      apply IH in erg'; [|now inversion wf].
-      assert (decl_ext: PCUICAst.declared_constant Σ kn' cst').
+      apply IH in erg'. 2:{ depelim wf. now depelim o0. }
+      assert (decl_ext: PCUICAst.declared_constant Σu kn' cst').
       { unfold PCUICAst.declared_constant in *; cbn in *.
         unfold eq_kername in *.
         now destruct kername_eq_dec; [|congruence]. }
@@ -650,20 +661,21 @@ Proof.
         unfold on_constant_decl, erases_constant_body in *.
         destruct ?; [|easy].
         destruct ?; [|easy].
-        eapply (erases_extends (_, cst_universes cst')).
-        4: eexists [_]; cbn; reflexivity.
-        all: eauto.
+        eapply (erases_extends (Σu, cst_universes cst')).
+        4:{ split; cbn; auto. eexists [_]; cbn; reflexivity. }
+        all: cbn; eauto.
       * intros.
         apply H0 in H1.
-        now apply erases_deps_cons.
+        eapply (erases_deps_cons Σu); eauto. apply wfΣu. apply wf.
   + intros k mdecl idecl decli.
     depelim erg.
-    * inv wf.
-      specialize (IH _ X erg).
+    * inv wf. inv X.
+      specialize (IH _ (H0, X0) erg).
       apply proj2 in IH. specialize (IH k mdecl idecl).
       forward IH.
       destruct decli as [decli ?]. split; auto.
       red in decli |- *. simpl in decli |- *.
+      unfold PCUICEnvironment.lookup_env in decli |- *. simpl in *.
       unfold eq_kername in decli |- *.
       destruct kername_eq_dec. subst. discriminate. auto.
       destruct IH as [mdecl' [idecl' [decli' er]]].
@@ -673,19 +685,20 @@ Proof.
       unfold declared_minductive in *.
       simpl. destruct kername_eq_dec; subst; auto.
       unfold PCUICAst.declared_minductive in decli.
+      unfold PCUICEnvironment.lookup_env in decli.
       simpl in decli. rewrite eq_kername_refl in decli. intuition discriminate.
-    * inv wf.
-      specialize (IH _ X erg).
+    * inv wf. inv X.
+      specialize (IH _ (H0, X0) erg).
       destruct decli as [decli ?]. 
       simpl in decli |- *.
-      unfold PCUICAst.declared_minductive in decli.
+      unfold PCUICAst.declared_minductive, PCUICEnvironment.lookup_env in decli.
       simpl in decli.
-      unfold eq_kername in decli |- *.
+      unfold eq_kername in decli |- *. simpl in *.
       destruct kername_eq_dec. subst. noconf decli.
-      destruct (Forall2_nth_error_left (proj1 H) _ _ H2); eauto.
+      destruct (Forall2_nth_error_left (proj1 H) _ _ H3); eauto.
       eexists _, _; intuition eauto. split; eauto. red.
       simpl. destruct kername_eq_dec; try congruence.
-      destruct (proj2 IH _ _ _ (conj decli H2)) as [m' [i' [decli' ei]]].
+      destruct (proj2 IH _ _ _ (conj decli H3)) as [m' [i' [decli' ei]]].
       eexists _, _; intuition eauto.
       destruct decli'; red; split; eauto.
       red in d |- *. simpl.

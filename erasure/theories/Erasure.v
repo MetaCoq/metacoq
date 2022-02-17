@@ -26,7 +26,7 @@ Program Definition erase_template_program (p : Ast.Env.program)
   (wt : ∥ ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥)
   : (EAst.global_context * EAst.term) :=
   let Σ0 := (trans_global (Ast.Env.empty_ext p.1)).1 in
-  let Σ := (PCUICExpandLets.trans_global_decls Σ0) in
+  let Σ := (PCUICExpandLets.trans_global_env Σ0) in
   let wfΣ := map_squash (PCUICExpandLetsCorrectness.trans_wf_ext ∘
     (template_to_pcuic_env_ext (Ast.Env.empty_ext p.1))) wfΣ in
   let t := ErasureFunction.erase (build_wf_env_ext (empty_ext Σ) wfΣ) nil (PCUICExpandLets.trans (trans Σ0 p.2)) _ in
@@ -37,9 +37,9 @@ Next Obligation.
   sq. destruct wt as [T Ht].
   cbn.
   set (Σ' := empty_ext _).
-  exists (PCUICExpandLets.trans (trans (trans_global_decls p.1) T)).
+  exists (PCUICExpandLets.trans (trans (trans_global_env p.1) T)).
   change Σ' with (PCUICExpandLets.trans_global (trans_global (Ast.Env.empty_ext p.1))).
-  change (@nil (@BasicAst.context_decl term)) with (PCUICExpandLets.trans_local (trans_local (trans_global_decls p.1) [])).
+  change (@nil (@BasicAst.context_decl term)) with (PCUICExpandLets.trans_local (trans_local (trans_global_env p.1) [])).
   eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)).
   apply (template_to_pcuic_typing (Ast.Env.empty_ext p.1));simpl. apply wfΣ0.
   apply Ht. Unshelve. now eapply template_to_pcuic_env.
@@ -72,7 +72,7 @@ Proof.
   set (t' := erase (build_wf_env_ext (empty_ext (PCUICExpandLets.trans_global (trans_global Σ)))
     wftΣ) [] (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) wtp).
   set (deps := (term_global_deps _)).
-  change (empty_ext (PCUICExpandLets.trans_global_decls (trans_global_decls p.1))) with
+  change (empty_ext (PCUICExpandLets.trans_global_env (trans_global_env p.1))) with
     (PCUICExpandLets.trans_global (trans_global Σ)) in *.
   specialize (H (erase_global deps (PCUICExpandLets.trans_global (trans_global Σ)) (sq_wf_ext wftΣ))).
   specialize (H _ deps wtp eq_refl).
@@ -93,7 +93,7 @@ Proof.
   destruct H as [v' [Hv He]].
   sq.
   eapply EOptimizePropDiscr.optimize_correct in He.
-  change (empty_ext (trans_global_decls p.1)) with (trans_global Σ).
+  change (empty_ext (trans_global_env p.1)) with (trans_global Σ).
   set (eΣ := erase_global _ _ _) in *. eexists; exists v'. split => //.
   constructor. exact He. eapply erase_global_closed.
   eapply (erases_closed _ []).

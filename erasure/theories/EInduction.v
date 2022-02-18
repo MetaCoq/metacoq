@@ -29,7 +29,7 @@ Lemma term_forall_list_ind :
     (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), All (fun x => P (dbody x)) m -> P (tCoFix m n)) ->
-    (forall p, P (tPrim p)) ->
+    (* (forall p, P (tPrim p)) -> *)
     forall t : term, P t.
 Proof.
   intros until t. revert t.

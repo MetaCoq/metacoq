@@ -990,7 +990,7 @@ Section WeakNormalization.
     - exfalso; eapply invert_ind_ind; eauto.
     - exfalso; eapply invert_fix_ind; eauto.
     - now rewrite head_mkApps /head /=.
-    - now eapply inversion_Prim in typed.
+    (* - now eapply inversion_Prim in typed. *)
   Qed.
 
   Lemma whnf_ind_finite t ind u indargs : 

@@ -164,7 +164,7 @@ Section optimize.
     | tVar _ => t
     | tConst _ => t
     | tConstruct _ _ => t
-    | tPrim _ => t
+    (* | tPrim _ => t *)
     end.
 
   Lemma optimize_mkApps f l : optimize (mkApps f l) = mkApps (optimize f) (map optimize l).

@@ -230,8 +230,8 @@ Section ParallelReduction.
     | tVar _
     | tSort _
     | tInd _ _
-    | tConstruct _ _ _ 
-    | tPrim _ => true
+    | tConstruct _ _ _  => true
+    (* | tPrim _ => true *)
     | _ => false
     end.
 

@@ -4683,7 +4683,7 @@ Section Conversion.
   Qed.
 
   (* TODO move to PCUICNormal *)
-  Lemma whnf_mkApps_tPrim_inv : 
+  (*Lemma whnf_mkApps_tPrim_inv : 
     forall (f : RedFlags.t) (Σ : global_env) (Γ : context) p (args : list term),
       whnf f Σ Γ (mkApps (tPrim p) args) -> args = [].
   Proof.
@@ -4698,7 +4698,7 @@ Section Conversion.
     rewrite mkApps_app in teq.
     cbn in teq. noconf teq.
     eauto.
-  Qed.
+  Qed.*)
 
   Lemma reducible_head_None Γ t π h :
     isApp t = false ->
@@ -4759,9 +4759,9 @@ Section Conversion.
     - constructor; eexists _, (decompose_stack π).1.
       split; [constructor; eauto with pcuic|].
       eauto with pcuic.
-    - apply whnf_mkApps_tPrim_inv in wh as ->.
+    (* - apply whnf_mkApps_tPrim_inv in wh as ->.
       constructor; eexists _, [].
-      eauto using whnf_red with pcuic.
+      eauto using whnf_red with pcuic. *)
     - constructor; eexists _, (decompose_stack π).1.
       split; [econstructor|]; eauto.
       split; [eauto with pcuic|].

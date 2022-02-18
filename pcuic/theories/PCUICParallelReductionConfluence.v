@@ -1844,7 +1844,7 @@ Section Rho.
     rename r (rho Γ t) = rho Δ (rename r t).
   Proof.
     revert t Γ Δ r P.
-    refine (PCUICDepth.term_ind_depth_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+    refine (PCUICDepth.term_ind_depth_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
       intros until Γ; intros Δ r P Hr ont; try subst Γ; try rename Γ0 into Γ; repeat inv_on_free_vars.
     all:auto 2.
 

@@ -99,8 +99,8 @@ Section Trans.
   | Ast.tCoFix mfix idx =>
     let mfix' := List.map (map_def trans trans) mfix in
     tCoFix mfix' idx
-  | Ast.tInt n => tPrim (primInt; primIntModel (uint63_to_model n))
-  | Ast.tFloat n => tPrim (primFloat; primFloatModel (float64_to_model n))
+  (* | Ast.tInt n => tPrim (primInt; primIntModel (uint63_to_model n)) *)
+  (* | Ast.tFloat n => tPrim (primFloat; primFloatModel (float64_to_model n)) *)
   end.
 
   Definition trans_decl (d : Ast.Env.context_decl) :=

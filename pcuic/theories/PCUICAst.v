@@ -206,9 +206,9 @@ Inductive term :=
 | tCase (indn : case_info) (p : predicate term) (c : term) (brs : list (branch term))
 | tProj (p : projection) (c : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
-| tCoFix (mfix : mfixpoint term) (idx : nat)
+| tCoFix (mfix : mfixpoint term) (idx : nat).
 (** We use faithful models of primitive type values in PCUIC *)
-| tPrim (prim : prim_val term).
+(* | tPrim (prim : prim_val term). *)
 
 Derive NoConfusion for term.
 
@@ -484,7 +484,7 @@ Instance subst_instance_constr : UnivSubst term :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def (subst_instance_constr u) (subst_instance_constr u)) mfix in
     tCoFix mfix' idx
-  | tPrim _ => c
+  (* | tPrim _ => c *)
   end.
 
 (** Tests that the term is closed over [k] universe variables *)

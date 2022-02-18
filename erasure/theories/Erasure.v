@@ -114,5 +114,4 @@ Local Open Scope string_scope.
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
   let (Σ', t) := erase_template_program p (todo "wf_env") (todo "welltyped") in
-  Pretty.print_term (Ast.Env.empty_ext p.1) [] true p.2 ^ nl ^
-  " erases to: " ^ nl ^ print_term Σ' [] true false t.
+  print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ'.

@@ -184,14 +184,14 @@ struct
     | Polymorphic ctx -> Q.mkPolymorphic_ctx (Q.quote_abstract_univ_context ctx)
 
   let quote_ugraph ?kept (g : UGraph.t) =
-    Feedback.msg_debug (Pp.str"Quoting ugraph");
+    debug Pp.(fun () -> str"Quoting ugraph");
     let levels, cstrs, eqs = 
       match kept with
       | None ->
         let cstrs, eqs = UGraph.constraints_of_universes g in
         UGraph.domain g, cstrs, eqs
       | Some l -> 
-        Feedback.msg_debug Pp.(str"Quoting graph restricted to: " ++ Univ.LSet.pr Univ.Level.pr l);
+        debug Pp.(fun () -> str"Quoting graph restricted to: " ++ Univ.LSet.pr Univ.Level.pr l);
         (* Feedback.msg_debug Pp.(str"Graph is: "  ++ UGraph.pr_universes Univ.Level.pr (UGraph.repr g)); *)
         let dom = UGraph.domain g in
         let kept = Univ.LSet.inter dom l in
@@ -213,7 +213,7 @@ struct
     let levels = Univ.LSet.remove Univ.Level.prop levels in
     let levels = Univ.LSet.remove Univ.Level.sprop levels in
     let cstrs = Univ.Constraint.remove (Univ.Level.prop, Univ.Lt, Univ.Level.set) cstrs in
-    Feedback.msg_debug (Pp.str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
+    debug Pp.(fun () -> str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
     time (Pp.str"Quoting universe context") 
       (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)
 

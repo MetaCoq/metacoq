@@ -101,7 +101,7 @@ Proof.
     rewrite b. now rewrite forget_types_length map_context_length. 
   - f_equal; auto; red in X; solve_list.
   - f_equal; auto; red in X; solve_list.
-  - destruct p as [? []]; eauto.
+  (* - destruct p as [? []]; eauto. *)
 Qed.
 
 Definition on_fst {A B C} (f:A->C) (p:A×B) := (f p.1, p.2).
@@ -275,7 +275,7 @@ Proof.
       cbn in *.
       now rewrite e e0.  
     + apply IHX.
-  - destruct p as [? []]; eauto.
+  (* - destruct p as [? []]; eauto. *)
 Qed.
 
 Lemma trans_subst10 u B:
@@ -325,7 +325,7 @@ Proof.
       destruct p.
       now rewrite e e0.
     + apply IHX.
-  - destruct p as [? []]; eauto.
+  (* - destruct p as [? []]; eauto. *)
 Qed.
 
 Lemma trans_subst_instance_ctx Γ u :
@@ -443,7 +443,7 @@ Proof.
   - rewrite <- IHx3.
     reflexivity.
   - destruct (trans x1);cbn;trivial.
-  - destruct prim as [? []]; eauto.
+  (* - destruct prim as [? []]; eauto. *)
 Qed.
 
 Lemma trans_mkProd_or_LetIn a t:
@@ -476,7 +476,7 @@ Proof.
   destruct t; cbnr.
   generalize (trans t1) (trans t2); clear.
   induction t; intros; cbnr.
-  destruct prim as [? []]; cbnr.
+  (* destruct prim as [? []]; cbnr. *)
 Qed.
 
 Lemma trans_unfold_fix mfix idx narg fn :
@@ -1020,7 +1020,7 @@ Proof.
     cbn; eauto. cbn in p0. destruct p0. eauto.
   - cbn. red in X. solve_all.
   - cbn. red in X. solve_all.
-  - destruct p as [? []]; constructor.
+  (* - destruct p as [? []]; constructor. *)
 Qed.
 
 #[global] Hint Resolve trans_wf : wf.
@@ -1434,7 +1434,7 @@ Proof.
     red in X0. solve_all_one.
     eapply trans_eq_context_gen_eq_binder_annot in a.
     now rewrite !map_context_trans.
-  - destruct p as [? []]; constructor.
+  (* - destruct p as [? []]; constructor. *)
 Qed.
 
 Lemma trans_leq_term {cf} Σ ϕ T U :
@@ -1667,26 +1667,26 @@ Proof.
   - eapply IHt3 in e as e'. assumption.
   - noconf e. simpl.
     now destruct (mkApp_ex (trans t1) (trans t2)) as [f [args ->]].
-  - noconf e. now destruct prim as [? []] => /=.
+  (* - noconf e. now destruct prim as [? []] => /=. *)
 Qed.
 
 Lemma trans_isApp t : PCUICAst.isApp t = false -> Ast.isApp (trans t) = false.
 Proof.
   destruct t => //.
-  now destruct prim as [? []].
+  (* now destruct prim as [? []]. *)
 Qed.
 
 Lemma trans_nisApp t : ~~ PCUICAst.isApp t -> ~~ Ast.isApp (trans t).
 Proof.
   destruct t => //.
-  now destruct prim as [? []].
+  (* now destruct prim as [? []]. *)
 Qed.
 
 Lemma trans_destInd t : ST.destInd t = TT.destInd (trans t).
 Proof.
   destruct t => //. simpl.
   now destruct (mkApp_ex (trans t1) (trans t2)) as [f [u ->]].
-  now destruct prim as [? []].
+  (* now destruct prim as [? []]. *)
 Qed.
 
 Lemma trans_decompose_app t : 

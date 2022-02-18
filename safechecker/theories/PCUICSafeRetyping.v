@@ -335,9 +335,9 @@ Qed.
 
     infer Γ wfΓ (tCoFix mfix n) wt with inspect (nth_error mfix n) :=
       { | exist (Some f) _ => ret f.(dtype);
-        | exist None _ => ! };
+        | exist None _ => ! }.
 
-    infer Γ wfΓ (tPrim p) wt := !.
+    (* infer Γ wfΓ (tPrim p) wt := !. *)
 
   Next Obligation.
     sq.
@@ -662,9 +662,9 @@ Qed.
     congruence.
   Qed.
 
-  Next Obligation.
+  (* Next Obligation.
     inversion HT.
-  Qed.
+  Qed. *)
 
   Definition type_of Γ wfΓ t wt : term := (infer Γ wfΓ t wt).
   

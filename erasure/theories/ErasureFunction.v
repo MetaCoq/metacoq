@@ -483,7 +483,7 @@ Section Erase.
       erase Γ (tCoFix mfix n) Ht _ :=
         let mfix' := erase_mfix (erase) Γ mfix _ in
         E.tCoFix mfix' n;
-      erase Γ (tPrim p) Ht _ := E.tPrim (erase_prim p)
+      (* erase Γ (tPrim p) Ht _ := E.tPrim (erase_prim p) *)
     }.
   Proof.
     all:try clear b'; try clear f'; try clear brs'; try clear erase.

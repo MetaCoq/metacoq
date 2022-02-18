@@ -39,8 +39,8 @@ Inductive term : Set :=
                term (* discriminee *) -> list (list name * term) (* branches *) -> term
 | tProj      : projection -> term -> term
 | tFix       : mfixpoint term -> nat -> term
-| tCoFix     : mfixpoint term -> nat -> term
-| tPrim      : prim_val term -> term.
+| tCoFix     : mfixpoint term -> nat -> term.
+(* | tPrim      : prim_val term -> term. *)
 
 Bind Scope erasure with term.
 

@@ -3,6 +3,8 @@ Require Import ssreflect.
 Require Import Equations.Type.Relation Equations.Type.Relation_Properties.
 Require Import CRelationClasses.
 
+#[global] Hint Mode Reflexive ! ! : typeclass_instances.
+
 Infix "<~>" := iffT (at level 90).
 
 Definition iffT_l {P Q} : P <~> Q -> P -> Q.

@@ -278,8 +278,22 @@ Module Environment (T : Term).
   | InductiveDecl : mutual_inductive_body -> global_decl.
   Derive NoConfusion for global_decl.
 
-  Definition global_env := list (kername * global_decl).
+  Definition global_declarations := list (kername * global_decl).
 
+  Record global_env := 
+    { universes : ContextSet.t;
+      declarations : global_declarations }.
+
+  Coercion universes : global_env >-> ContextSet.t.
+
+  Definition empty_global_env := 
+    {| universes := ContextSet.empty;
+       declarations := [] |}.
+
+  Definition add_global_decl Σ decl := 
+    {| universes := Σ.(universes);
+       declarations := decl :: Σ.(declarations) |}.
+      
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
 
@@ -290,7 +304,7 @@ Module Environment (T : Term).
   Coercion fst_ctx : global_env_ext >-> global_env.
 
   Definition empty_ext (Σ : global_env) : global_env_ext
-    := (Σ, Monomorphic_ctx ContextSet.empty).
+    := (Σ, Monomorphic_ctx).
 
   (** *** Programs
 
@@ -352,7 +366,7 @@ Module Environment (T : Term).
     Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) l ->
     Forall (fun x => exists n, x = tRel n /\ p <= n /\ n < p + length Γ) (reln l p Γ).
   Proof.
-    generalize (le_refl p).
+    generalize (Nat.le_refl p).
     generalize p at 1 3 5.
     induction Γ in p, l |- *. simpl. auto.
     intros. destruct a. destruct decl_body. simpl.
@@ -486,13 +500,15 @@ Module Environment (T : Term).
   Lemma projs_length ind npars k : #|projs ind npars k| = k.
   Proof. induction k; simpl; auto. Qed.
 
-  Fixpoint lookup_env (Σ : global_env) (kn : kername) : option global_decl :=
+  Fixpoint lookup_global (Σ : global_declarations) (kn : kername) : option global_decl :=
     match Σ with
     | nil => None
     | d :: tl =>
       if eq_kername kn d.1 then Some d.2
-      else lookup_env tl kn
+      else lookup_global tl kn
     end.
+
+  Definition lookup_env (Σ : global_env) (kn : kername) := lookup_global Σ.(declarations) kn.
 
   Lemma context_assumptions_fold Γ f : context_assumptions (fold_context_k f Γ) = context_assumptions Γ.
   Proof.

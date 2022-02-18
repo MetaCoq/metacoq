@@ -26,7 +26,7 @@ Definition SingletonProp `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
     declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      extends Σ Σ' ->
+      extends_decls Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       ∥Is_proof Σ' Γ (mkApps (tConstruct ind n u) args)∥ /\
        #|ind_ctors idecl| <= 1 /\
@@ -37,7 +37,7 @@ Definition Computational `{cf : checker_flags} (Σ : global_env_ext) (ind : indu
     declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf Σ' ->
-      extends Σ Σ' ->
+      extends_decls Σ Σ' ->
       welltyped Σ' Γ (mkApps (tConstruct ind n u) args) ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) -> False.
 
@@ -46,7 +46,7 @@ Definition Informative `{cf : checker_flags} (Σ : global_env_ext) (ind : induct
     declared_inductive (fst Σ) ind mdecl idecl ->
     forall Γ args u n (Σ' : global_env_ext),
       wf_ext Σ' ->
-      extends Σ Σ' ->
+      extends_decls Σ Σ' ->
       Is_proof Σ' Γ (mkApps (tConstruct ind n u) args) ->
        #|ind_ctors idecl| <= 1 /\
        squash (All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args)).
@@ -618,7 +618,7 @@ Proof.
   intros ?. intros.
   eapply declared_inductive_inj in H as []; eauto; subst idecl0 mind.
   eapply Is_proof_mkApps_tConstruct in X1; tea.
-  now eapply weakening_env_declared_inductive.
+  now eapply weakening_env_declared_inductive; tc.
 Qed.
 
 Lemma elim_restriction_works `{cf : checker_flags} (Σ : global_env_ext) Γ T (ci : case_info) p c brs mind idecl : 

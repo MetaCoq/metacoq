@@ -244,7 +244,7 @@ Lemma mapi_ext_size {A B} (f g : nat -> A -> B) l k :
   (forall k' x, k' < k + #|l| -> f k' x = g k' x) ->
   mapi_rec f l k = mapi_rec g l k.
 Proof.
-  intros Hl. generalize (Le.le_refl k). generalize k at 1 3 4.
+  intros Hl. generalize (Nat.le_refl k). generalize k at 1 3 4.
   induction l in k, Hl |- *. simpl. auto.
   intros. simpl in *. erewrite Hl; try lia.
   f_equal. eapply (IHl (S k)); try lia. intros. apply Hl. lia.

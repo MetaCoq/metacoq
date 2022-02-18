@@ -273,22 +273,22 @@ Definition print_one_ind (short : bool) Σ Γ (mib : mutual_inductive_body) (oib
   if short then "..."
   else print_list (print_one_cstr Σ Γpars mib) nl oib.(ind_ctors).
 
-Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : string) := 
+Fixpoint print_env_aux (short : bool) (prefix : nat) univs (Σ : global_declarations) (acc : string) := 
   match prefix with 
   | 0 => match Σ with [] => acc | _ => ("..." ++ nl ++ acc)%string end
   | S n => 
   match Σ with
   | [] => acc
   | (kn, InductiveDecl mib) :: Σ => 
-    let Σ' := (Σ, mib.(ind_universes)) in
+    let Σ' := ({| universes := univs; declarations := Σ |}, mib.(ind_universes)) in
     let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
-    print_env_aux short n Σ
+    print_env_aux short n univs Σ
       ("Inductive " ++ 
        print_list (print_one_ind short Σ' names mib) nl mib.(ind_bodies) ++ "." ++ 
        nl ++ acc)%string
   | (kn, ConstantDecl cb) :: Σ =>
-    let Σ' := (Σ, cb.(cst_universes)) in
-    print_env_aux short n Σ
+    let Σ' := ({| universes := univs; declarations := Σ |}, cb.(cst_universes)) in
+    print_env_aux short n univs Σ
       ((match cb.(cst_body) with 
         | Some _ => "Definition "
         | None => "Axiom "
@@ -302,7 +302,7 @@ Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : st
   end
   end.
 
-Definition print_env (short : bool) (prefix : nat) Σ := print_env_aux short prefix Σ EmptyString.
+Definition print_env (short : bool) (prefix : nat) Σ := print_env_aux short prefix Σ.(universes) Σ.(declarations) EmptyString.
 
 Definition print_program (short : bool) (prefix : nat) (p : program) : string := 
   print_env short prefix (fst p) ++ nl ++

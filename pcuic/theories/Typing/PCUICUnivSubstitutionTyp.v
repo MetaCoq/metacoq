@@ -209,15 +209,11 @@ Hint Resolve declared_inductive_wf_ext_wk declared_inductive_wf_global_ext : pcu
 Lemma typing_subst_instance :
   env_prop (fun Σ Γ t T => forall u univs,
                 wf_ext_wk Σ ->
-                sub_context_set (monomorphic_udecl Σ.2)
-                                (global_ext_context_set (Σ.1, univs)) ->
                 consistent_instance_ext (Σ.1, univs) Σ.2 u ->
                 (Σ.1,univs) ;;; subst_instance u Γ
                 |- subst_instance u t : subst_instance u T)
           (fun Σ Γ => forall u univs,
           wf_ext_wk Σ ->
-          sub_context_set (monomorphic_udecl Σ.2)
-                          (global_ext_context_set (Σ.1, univs)) ->
           consistent_instance_ext (Σ.1, univs) Σ.2 u ->
           wf_local(Σ.1,univs) (subst_instance u Γ)).
 Proof.
@@ -231,26 +227,26 @@ Proof.
       ++ exists (subst_instance_univ u tu.π1). eapply p0; auto.
       ++ apply p; auto.
 
-  - intros n decl eq X u univs wfΣ' H Hsub. rewrite subst_instance_lift.
+  - intros n decl eq X u univs wfΣ' H. rewrite subst_instance_lift.
     rewrite map_decl_type. econstructor; aa.
     unfold subst_instance, map_context.
     now rewrite nth_error_map eq.
-  - intros l X Hl u univs wfΣ' HSub H.
+  - intros l X Hl u univs wfΣ' H.
     rewrite subst_instance_univ_super.
     + econstructor.
       * aa.
       * now apply wf_universe_subst_instance.
-  - intros n t0 b s1 s2 X X0 X1 X2 X3 u univs wfΣ' HSub H.
+  - intros n t0 b s1 s2 X X0 X1 X2 X3 u univs wfΣ' H.
     rewrite product_subst_instance; aa. econstructor.
     + eapply X1; eauto.
     + eapply X3; eauto.
-  - intros n t0 b s1 bty X X0 X1 X2 X3 u univs wfΣ' HSub H.
+  - intros n t0 b s1 bty X X0 X1 X2 X3 u univs wfΣ' H.
     econstructor.
     + eapply X1; aa.
     + eapply X3; aa.
-  - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' HSub H.
+  - intros n b b_ty b' s1 b'_ty X X0 X1 X2 X3 X4 X5 u univs wfΣ' H.
     econstructor; eauto. eapply X5; aa.
-  - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' HSub H.
+  - intros t0 na A B s u X X0 X1 X2 X3 X4 X5 u0 univs wfΣ' H.
     rewrite subst_instance_subst. cbn. econstructor.
     + eapply X1; eauto.
     + eapply X3; eauto.
@@ -271,7 +267,7 @@ Proof.
 
   - intros ci p c brs args u mdecl idecl isdecl hΣ hΓ indnp eqpctx wfp cup
       wfpctx pty Hpty Hcpc kelim
-      Hctxi IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext Hsub cu.
+      Hctxi IHctxi Hc IHc notCoFinite wfbrs hbrs i univs wfext cu.
     rewrite subst_instance_mkApps subst_instance_it_mkLambda_or_LetIn map_app.
     cbn.
     change (subst_instance i (preturn p)) with (preturn (subst_instance i p)).
@@ -287,14 +283,13 @@ Proof.
       now rewrite subst_instance_mkApps map_app in cu.
     + simpl. eapply consistent_ext_trans; tea.
     + now rewrite -subst_instance_case_predicate_context -subst_instance_app_ctx.
-    + destruct Hsub.
-      cbn in *.
+    + cbn in *.
       eapply is_allowed_elimination_subst_instance; aa.
     + move: IHctxi. simpl.
       rewrite -subst_instance_app.
       rewrite -subst_instance_two_context.
       rewrite -[List.rev (subst_instance i _)]map_rev.
-      clear -wfext Hsub cu. induction 1; cbn; constructor; simpl; eauto.
+      clear -wfext cu. induction 1; cbn; constructor; simpl; eauto.
       all:now rewrite -(subst_instance_subst_telescope i [_]).
     + rewrite -{1}(map_id (ind_ctors idecl)).
       eapply All2i_map. eapply All2i_impl; eauto. 
@@ -304,11 +299,11 @@ Proof.
       rewrite - !subst_instance_case_branch_context - !subst_instance_app_ctx.
       rewrite -subst_instance_case_predicate_context subst_instance_case_branch_type.
       repeat split; auto.
-      * specialize (ihbod i univs wfext Hsub cu).
+      * specialize (ihbod i univs wfext cu).
         cbn. eapply ihbod.
-      * specialize (ihbty i univs wfext Hsub cu).
+      * specialize (ihbty i univs wfext cu).
         cbn. eapply ihbty.
-  - intros p c u mdecl idecl cdecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' HSub H0.
+  - intros p c u mdecl idecl cdecl pdecl isdecl args X X0 X1 X2 H u0 univs wfΣ' H0.
     rewrite subst_instance_subst. cbn.
     rewrite !subst_instance_two.
     rewrite {4}/subst_instance /subst_instance_list /=.
@@ -317,9 +312,9 @@ Proof.
     eapply X2 in H0; tas. rewrite subst_instance_mkApps in H0.
     eassumption.
 
-  - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ' HSub.
+  - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ'.
     rewrite (map_dtype _ (subst_instance u)). econstructor.
-    + specialize (H1 u univs wfΣ' HSub H2).
+    + specialize (H1 u univs wfΣ' H2).
       rewrite subst_instance_app in H1.
       now eapply wf_local_app_inv in H1 as [].
     + now eapply fix_guard_subst_instance.
@@ -329,7 +324,7 @@ Proof.
       now apply Hs.
     + eapply All_map, All_impl; tea.
       intros x [X1 X3]. 
-      specialize (X3 u univs wfΣ' HSub H2). 
+      specialize (X3 u univs wfΣ' H2). 
       rewrite (map_dbody (subst_instance u)) in X3.
       rewrite subst_instance_lift in X3.
       rewrite fix_context_length ?map_length in X0, X1, X3.
@@ -342,9 +337,9 @@ Proof.
       rewrite map_map_compose.
       now rewrite subst_instance_check_one_fix.
 
-      - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ' HSub.
+      - intros mfix n decl H H0 H1 X X0 wffix u univs wfΣ'.
       rewrite (map_dtype _ (subst_instance u)). econstructor.
-      + specialize (H1 u univs wfΣ' HSub H2).
+      + specialize (H1 u univs wfΣ' H2).
         rewrite subst_instance_app in H1.
         now eapply wf_local_app_inv in H1 as [].
       + now eapply cofix_guard_subst_instance.
@@ -354,7 +349,7 @@ Proof.
         now apply Hs.
       + eapply All_map, All_impl; tea.
         intros x [X1 X3]. 
-        specialize (X3 u univs wfΣ' HSub H2). 
+        specialize (X3 u univs wfΣ' H2). 
         rewrite (map_dbody (subst_instance u)) in X3.
         rewrite subst_instance_lift in X3.
         rewrite fix_context_length ?map_length in X0, X1, X3.
@@ -367,17 +362,16 @@ Proof.
         rewrite map_map_compose.
         now rewrite subst_instance_check_one_cofix.
       
-  - intros t0 A B X X0 X1 X2 X3 X4 cum u univs wfΣ' HSub H.
+  - intros t0 A B X X0 X1 X2 X3 X4 cum u univs wfΣ' H.
     econstructor.
     + eapply X2; aa.
     + eapply X4; aa.
-    + destruct HSub. eapply cumulSpec_subst_instance; aa.
+    + eapply cumulSpec_subst_instance; aa.
 Qed.
 
 Lemma typing_subst_instance' Σ φ Γ t T u univs :
   wf_ext_wk (Σ, univs) ->
   (Σ, univs) ;;; Γ |- t : T ->
-  sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
   consistent_instance_ext (Σ, φ) univs u ->
   (Σ, φ) ;;; subst_instance u Γ
             |- subst_instance u t : subst_instance u T.
@@ -389,7 +383,6 @@ Qed.
 Lemma typing_subst_instance_wf_local Σ φ Γ u univs :
   wf_ext_wk (Σ, univs) ->
   wf_local (Σ, univs) Γ ->
-  sub_context_set (monomorphic_udecl univs) (global_ext_context_set (Σ, φ)) ->
   consistent_instance_ext (Σ, φ) univs u ->
   wf_local (Σ, φ) (subst_instance u Γ).
 Proof.
@@ -400,14 +393,12 @@ Qed.
 Lemma typing_subst_instance'' Σ φ Γ t T u univs :
   wf_ext_wk (Σ, univs) ->
   (Σ, univs) ;;; Γ |- t : T ->
-  sub_context_set (monomorphic_udecl univs) (global_context_set Σ) ->
   consistent_instance_ext (Σ, φ) univs u ->
   (Σ, φ) ;;; subst_instance u Γ
             |- subst_instance u t : subst_instance u T.
 Proof.
   intros X X0 X1.
   eapply (typing_subst_instance (Σ, univs)); tas. 1: apply X.
-  etransitivity; tea. apply global_context_set_sub_ext.
 Qed.
 
 Lemma typing_subst_instance_ctx (Σ : global_env_ext) Γ t T ctx u :
@@ -420,10 +411,7 @@ Lemma typing_subst_instance_ctx (Σ : global_env_ext) Γ t T ctx u :
 Proof.
   destruct Σ as [Σ φ]. intros X X0 X1.
   eapply typing_subst_instance''; tea.
-  - split; tas.
-  - simpl. unfold sub_context_set. split; simpl.
-    * intros x hx. now eapply LS.empty_spec in hx.
-    * intros x hx. now eapply CS.empty_spec in hx. 
+  split; tas.
 Qed.
 
 Lemma typing_subst_instance_decl Σ Γ t T c decl u :
@@ -436,9 +424,8 @@ Lemma typing_subst_instance_decl Σ Γ t T c decl u :
 Proof.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   eapply typing_subst_instance''; tea.
-  - split; tas.
-    eapply weaken_lookup_on_global_env'; tea.
-  - eapply weaken_lookup_on_global_env''; tea.
+  split; tas.
+  eapply weaken_lookup_on_global_env'; tea.
 Qed.
 
 
@@ -544,7 +531,7 @@ Qed.
       simpl in H; noconf H. apply H0.
     - destruct decli as [declm _].
       eapply declared_inductive_wf_global_ext in declm; auto.
-      destruct declm. apply w.
+      destruct declm. apply o.
   Qed.
 
   Lemma subst_instance_ind_type_id Σ mdecl ind idecl :
@@ -561,7 +548,6 @@ Qed.
     eapply typed_subst_abstract_instance in t; eauto.
     destruct decli as [declm _].
     eapply declared_inductive_wf_global_ext in declm; auto.
-    destruct declm. apply w.
   Qed.
 
   Lemma isType_subst_instance_id Σ Γ T :

@@ -302,11 +302,13 @@ Lemma GoodConstraintSet_pair_In x y z
 Proof.
   intro H. apply GoodConstraintSetFact.add_iff in H.
   destruct H; [intuition|].
-  apply GoodConstraintSetFact.singleton_1 in H; intuition.
+  apply GoodConstraintSetFact.singleton_1 in H. intuition.
 Qed.
 
 Definition gc_satisfies v : GoodConstraintSet.t -> bool :=
   GoodConstraintSet.for_all (gc_satisfies0 v).
+
+Arguments GoodConstraintSet.for_all : simpl never.
 
 Definition gc_consistent ctrs : Prop := exists v, gc_satisfies v ctrs.
 
@@ -314,17 +316,16 @@ Lemma gc_satisfies_pair v gc1 gc2 :
   (gc_satisfies0 v gc1 /\ gc_satisfies0 v gc2) <->
   gc_satisfies v (GoodConstraintSet_pair gc1 gc2).
 Proof.
-  unfold GoodConstraintSet_pair.
-  unfold gc_satisfies.
-  rewrite /is_true GoodConstraintSet.for_all_spec.
-  split. intros.
-  intros x. rewrite !GoodConstraintSet.add_spec !GoodConstraintSet.singleton_spec.
-  intuition subst; auto.
-  unfold GoodConstraintSet.For_all.
-  intros hf.
-  split; apply hf; rewrite !GoodConstraintSet.add_spec; auto.
-  right. now rewrite !GoodConstraintSet.singleton_spec.
-Defined.
+  unfold gc_satisfies, GoodConstraintSet_pair.
+  rewrite [is_true (GoodConstraintSet.for_all _ _)]GoodConstraintSet.for_all_spec.
+  split.
+  - intros [sat1 sat2] x.
+    rewrite GoodConstraintSet.add_spec. move=> [->|] //.
+    rewrite GoodConstraintSet.singleton_spec => -> //.
+  - intros ha. split; apply ha;
+    rewrite GoodConstraintSet.add_spec;
+    rewrite GoodConstraintSet.singleton_spec; auto.
+Qed.
 
 Section GcOfConstraint.
   Import VariableLevel GoodConstraint.
@@ -412,8 +413,9 @@ Lemma gc_of_constraint_spec v uc :
 Proof.
   split.
   - destruct 1; destruct l, l'; try constructor.
+    all:unfold gc_of_constraint.
     all: cbn -[GoodConstraintSet_pair] in *.
-    all: lled; cbn -[GoodConstraintSet_pair]; try reflexivity.
+    all: cbn -[GoodConstraintSet_pair]; try reflexivity.
     all: rewrite ?if_true_false; repeat toProp ; try lia.
     all: try solve [destruct (Z.compare_spec z 0); simpl; try constructor; lia].
     destruct (Z.compare_spec z 0); simpl; try constructor; try lia.
@@ -423,7 +425,8 @@ Proof.
     apply gc_satisfies_singleton; simpl; try (apply Nat.ltb_lt||apply Nat.leb_le); lia).
     all:try (destruct (Z.leb_spec z 0); simpl; try constructor; try lia;
       apply gc_satisfies_singleton; simpl; apply Nat.leb_le; lia).
-    all: apply gc_satisfies_pair; split; cbn; toProp; try lia.
+    all: try (apply gc_satisfies_pair; split; cbn; toProp; try lia).
+    all: (apply gc_satisfies_singleton; cbn; toProp; lia).
   - destruct uc as [[[] []] []]; intro H; constructor.
     all: cbn -[GoodConstraintSet_pair] in *; try contradiction.
     all: rewrite -> ?if_true_false in *; lled; cbn -[GoodConstraintSet_pair] in *;
@@ -436,6 +439,7 @@ Proof.
       apply gc_satisfies_singleton in H; simpl in H; 
       (apply Nat.ltb_lt in H || apply Nat.leb_le in H);
       try lia).
+    all:(try apply gc_satisfies_singleton in H; cbn in H; try toProp H); try lia.
     all: apply gc_satisfies_pair in H; destruct H as [H1 H2]; cbn in *;
       repeat toProp; try lia.
 Qed.
@@ -625,8 +629,7 @@ Defined.
 Definition declared : Level.t -> LevelSet.t -> Prop := LevelSet.In.
 
 Definition uctx_invariants (uctx : ContextSet.t)
-  := ConstraintSet.For_all (fun '(l, _, l') => declared l uctx.1 /\ declared l' uctx.1)
-                           uctx.2.
+  := ConstraintSet.For_all (declared_cstr_levels uctx.1) uctx.2.
 
 Definition global_uctx_invariants (uctx : ContextSet.t)
   := LevelSet.In Level.lzero uctx.1 /\ uctx_invariants uctx.

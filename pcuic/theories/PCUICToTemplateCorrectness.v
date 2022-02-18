@@ -118,64 +118,27 @@ Defined.
 
 Lemma trans_global_ext_levels Σ:
   S.global_ext_levels Σ = T.global_ext_levels (trans_global Σ).
-Proof.
-  unfold S.global_ext_levels, global_ext_levels.
-  destruct Σ.
-  cbn [trans_global fst snd].
-  f_equal.
-  induction g.
-  - reflexivity.
-  - unfold S.global_levels in IHg.
-    cbn.
-    rewrite IHg.
-    f_equal.
-    destruct a.
-    cbn.
-    unfold T.monomorphic_levels_decl, T.monomorphic_udecl_decl, T.on_udecl_decl.
-    unfold S.monomorphic_levels_decl, S.monomorphic_udecl_decl, S.on_udecl_decl.
-    destruct g0.
-    + cbn.
-      destruct c.
-      reflexivity.
-    + cbn.
-      destruct m.
-      reflexivity.
-Qed.
+Proof. reflexivity. Qed.
 
 Lemma trans_global_ext_constraints Σ :
   S.global_ext_constraints Σ = T.global_ext_constraints (trans_global Σ).
-Proof.
-  destruct Σ.
-  unfold S.global_ext_constraints, T.global_ext_constraints. simpl.
-  f_equal. clear u.
-  induction g.
-  - reflexivity.
-  - simpl. rewrite IHg. f_equal. clear.
-    destruct a as [? []]; reflexivity.
-Qed.
+Proof. reflexivity. Qed.
 
 Lemma trans_mem_level_set l Σ:
   LevelSet.mem l (S.global_ext_levels Σ) ->
   LevelSet.mem l (T.global_ext_levels (trans_global Σ)).
-Proof.
-  intros.
-  rewrite <- trans_global_ext_levels.
-  apply H.
-Qed.
+Proof. auto. Qed.
 
 Lemma trans_in_level_set l Σ:
   LevelSet.In l (S.global_ext_levels Σ) ->
   LevelSet.In l (T.global_ext_levels (trans_global Σ)).
-Proof.
-  intros.
-  rewrite <- trans_global_ext_levels.
-  apply H.
-Qed.
+Proof. auto. Qed.
 
 Lemma trans_lookup Σ cst :
-  Ast.Env.lookup_env (trans_global_decls Σ) cst = option_map trans_global_decl (SE.lookup_env Σ cst).
+  Ast.Env.lookup_env (trans_global_env Σ) cst = option_map trans_global_decl (SE.lookup_env Σ cst).
 Proof.
   cbn in *.
+  destruct Σ as [univs Σ].
   induction Σ.
   - reflexivity.
   - cbn.
@@ -186,7 +149,7 @@ Qed.
 
 Lemma trans_declared_constant Σ cst decl:
   S.declared_constant Σ cst decl ->
-  T.declared_constant (trans_global_decls Σ) cst (trans_constant_body decl).
+  T.declared_constant (trans_global_env Σ) cst (trans_constant_body decl).
 Proof.
   unfold T.declared_constant.
   rewrite trans_lookup.
@@ -211,28 +174,11 @@ Proof.
   unfold consistent_instance_ext, S.consistent_instance_ext in *.
   unfold consistent_instance, S.consistent_instance in *.
   destruct decl;trivial.
-  destruct H as (?&?&?).
-  repeat split;trivial.
-  - eapply forallb_impl.
-    2: apply H.
-    cbv beta.
-    intros.
-    now apply trans_mem_level_set.
-  - unfold valid_constraints in *.
-    destruct config.check_univs;trivial.
-    unfold valid_constraints0 in *.
-    intros.
-    apply H1.
-    unfold satisfies in *.
-    unfold ConstraintSet.For_all in *.
-    intros.
-    apply H2.
-    now apply trans_constraintSet_in.
 Qed.
 
 Lemma trans_declared_inductive Σ ind mdecl idecl:
   S.declared_inductive Σ ind mdecl idecl ->
-  T.declared_inductive (trans_global_decls Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl).
+  T.declared_inductive (trans_global_env Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl).
 Proof.
   intros [].
   split.
@@ -243,7 +189,7 @@ Qed.
 
 Lemma trans_declared_constructor Σ ind mdecl idecl cdecl :
   S.declared_constructor Σ ind mdecl idecl cdecl ->
-  T.declared_constructor (trans_global_decls Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl)
+  T.declared_constructor (trans_global_env Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body idecl)
     (trans_constructor_body cdecl).
 Proof.
   intros [].
@@ -279,7 +225,7 @@ Lemma trans_subst xs k t:
 Proof.
   induction t in k |- * using PCUICInduction.term_forall_list_ind.
   all: cbn;try congruence.
-  - destruct leb;trivial.
+  - destruct Nat.leb;trivial.
     rewrite nth_error_map.
     destruct nth_error;cbn.
     2: now rewrite map_length.
@@ -1429,7 +1375,7 @@ Qed.
 
 Lemma trans_R_global_instance Σ Re Rle gref napp u u' :
   PCUICEquality.R_global_instance Σ Re Rle gref napp u u' ->
-  TermEquality.R_global_instance (trans_global_decls Σ) Re Rle gref napp u u'.
+  TermEquality.R_global_instance (trans_global_env Σ) Re Rle gref napp u u'.
 Proof.
   unfold PCUICEquality.R_global_instance, PCUICEquality.global_variance.
   unfold TermEquality.R_global_instance, TermEquality.global_variance.
@@ -1463,7 +1409,7 @@ Qed.
 Lemma trans_eq_term_upto_univ {cf} :
   forall Σ Re Rle t u napp,
     PCUICEquality.eq_term_upto_univ_napp Σ Re Rle napp t u ->
-    TermEquality.eq_term_upto_univ_napp (trans_global_decls Σ) Re Rle napp (trans t) (trans u).
+    TermEquality.eq_term_upto_univ_napp (trans_global_env Σ) Re Rle napp (trans t) (trans u).
 Proof.
   intros Σ Re Rle t u napp e.
   induction t using term_forall_list_ind in Rle, napp, u, e |- *.
@@ -1493,7 +1439,7 @@ Qed.
 
 Lemma trans_leq_term {cf} Σ ϕ T U :
   PCUICEquality.leq_term Σ ϕ T U ->
-  TermEquality.leq_term (trans_global_decls Σ) ϕ (trans T) (trans U).
+  TermEquality.leq_term (trans_global_env Σ) ϕ (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ ; eauto.
 Qed.
@@ -1821,7 +1767,7 @@ Proof.
 Qed.
 
 Lemma trans_check_rec_kind Σ k f :
-  ST.check_recursivity_kind Σ k f = TT.check_recursivity_kind (trans_global_decls Σ) k f.
+  ST.check_recursivity_kind Σ k f = TT.check_recursivity_kind (trans_global_env Σ) k f.
 Proof.
   unfold ST.check_recursivity_kind, TT.check_recursivity_kind.
   rewrite trans_lookup.
@@ -1829,7 +1775,7 @@ Proof.
 Qed.
 
 Lemma trans_wf_fixpoint Σ mfix :
-  TT.wf_fixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix) = 
+  TT.wf_fixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
   ST.wf_fixpoint Σ mfix.
 Proof.
   unfold ST.wf_fixpoint, TT.wf_fixpoint.
@@ -1840,7 +1786,7 @@ Proof.
 Qed.
 
 Lemma trans_wf_cofixpoint Σ mfix :
-  TT.wf_cofixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix) = 
+  TT.wf_cofixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
   ST.wf_cofixpoint Σ mfix.
 Proof.
   unfold ST.wf_cofixpoint, TT.wf_cofixpoint.
@@ -2238,8 +2184,6 @@ Proof.
     eapply TT.type_Rel; eauto.
     + now apply map_nth_error.
   - econstructor; eauto.
-    destruct u; auto. simpl in H |- *.
-    intros l inl. now rewrite <-trans_global_ext_levels.
   - eapply TT.type_Prod;assumption.
   - eapply TT.type_Lambda;eassumption.
   - eapply TT.type_LetIn;eassumption.
@@ -2283,7 +2227,6 @@ Proof.
     rewrite trans_cst_type.
     eapply TT.type_Const; eauto.
     + now apply trans_declared_constant.
-    + now apply trans_consistent_instance_ext.
   - rewrite trans_subst_instance.
     rewrite trans_ind_type.
     eapply TT.type_Ind; eauto.
@@ -2295,7 +2238,6 @@ Proof.
       constructor.
       * now apply trans_declared_inductive. 
       * now apply map_nth_error. 
-    + now apply trans_consistent_instance_ext.
   - rewrite trans_mkApps map_app.
     simpl.
     rewrite /ptm trans_it_mkLambda_or_LetIn.
@@ -2310,8 +2252,6 @@ Proof.
     + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map map_length.
       rewrite (wf_predicate_length_pars H0).
       now rewrite (declared_minductive_ind_npars isdecl).
-    + cbn. rewrite /id.
-      now apply trans_consistent_instance_ext.
     + cbn [Ast.pparams Ast.pcontext trans_predicate].
       rewrite (trans_case_predicate_context Γ); tea.
       now rewrite -trans_local_app. 

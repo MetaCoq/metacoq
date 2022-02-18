@@ -1,7 +1,6 @@
 -I src
 -Q src MetaCoq.Erasure
 -R theories MetaCoq.Erasure
-
 # src/classes0.mli
 # src/classes0.ml
 

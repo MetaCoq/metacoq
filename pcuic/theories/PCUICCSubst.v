@@ -50,7 +50,7 @@ Proof.
     simpl; try f_equal; eauto with pcuic; solve_all.
   - destruct (PeanoNat.Nat.compare_spec k n).
     + subst k.
-      rewrite PeanoNat.Nat.leb_refl minus_diag /=.
+      rewrite PeanoNat.Nat.leb_refl Nat.sub_diag /=.
       now rewrite lift_closed.
     + destruct (leb_spec_Set k n); try lia.
       destruct (nth_error_spec [t] (n - k) ).

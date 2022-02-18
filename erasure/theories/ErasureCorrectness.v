@@ -26,9 +26,6 @@ Require Import ssreflect.
 
 Local Set Keyed Unification.
 
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
-
 Local Existing Instance config.extraction_checker_flags.
 
 (** ** Prelim on arities and proofs *)
@@ -37,7 +34,6 @@ Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
   wf_ext_wk Σ ->  wf_local Σ Γ ->
   wf_local (Σ.1, univs) (subst_instance u Γ) ->
   isErasable Σ Γ T ->
-  sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
   consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
   isErasable (Σ.1,univs) (subst_instance u Γ) (subst_instance u T).
 Proof.
@@ -200,7 +196,6 @@ Lemma erases_subst_instance0
   : env_prop (fun Σ Γ t T => wf_ext_wk Σ ->
                            forall t' u univs,
                              wf_local (Σ.1, univs) (subst_instance u Γ) ->
-      sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->
       consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
     (Σ.1,univs) ;;; (subst_instance u Γ) |- subst_instance u t ⇝ℇ t')
@@ -213,7 +208,7 @@ Proof.
     eapply H0 in X2; eauto. apply X2.
     cbn. econstructor. eauto. cbn. econstructor.
     eapply typing_subst_instance in X0; eauto. apply snd in X0.
-    cbn in X0. destruct X0. refine (t0 _ _ _ _ _); eauto.
+    cbn in X0. destruct X0. refine (t0 _ _ _ _); eauto.
   - cbn. econstructor.
     eapply H0 in X3; eauto.
     eapply H1 in X3; eauto. exact X3.
@@ -224,7 +219,7 @@ Proof.
     cbn. eapply typing_subst_instance in X1; eauto. apply snd in X1.
     cbn in X1. eapply X1; eauto.
   - unfold subst_instance.
-    cbn [PA.subst_instance_constr]. econstructor; eauto.
+    cbn [subst_instance_constr]. econstructor; eauto.
     eapply All2_map_left.
     eapply (All2i_All2_All2 X7 X10).
     intros ? ? [] [] (? & ? & ? & ? & ? & ?) (? & ?). split.
@@ -245,7 +240,7 @@ Proof.
       now destruct X5 as [s [Hs ?]]; exists s.
       eapply All_mfix_wf in X5; auto. subst types.
       
-      revert X5. clear - wfΣ wfΓ H2 H3 X2 X3.
+      revert X5. clear - wfΣ wfΓ H2 X2 X3.
       induction 1.
       - eauto.
       - cbn. econstructor; eauto. cbn in *.
@@ -279,7 +274,7 @@ Proof.
     destruct X5 as [s [Hs ?]]; now exists s.
     eapply All_mfix_wf in X5; auto. subst types.
     
-    revert X5. clear - wfΣ wfΓ H2 H3 X2 X3.
+    revert X5. clear - wfΣ wfΓ H2 X2 X3.
     induction 1.
     - eauto.
     - cbn. econstructor; eauto. cbn in *.
@@ -313,29 +308,27 @@ Lemma erases_subst_instance :
   forall t T, Σ ;;; Γ |- t : T ->
     forall t' u univs,
   wf_local (Σ.1, univs) (subst_instance u Γ) ->
-sub_context_set (monomorphic_udecl Σ.2) (global_ext_context_set (Σ.1, univs)) ->      consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
+   consistent_instance_ext (Σ.1,univs) (Σ.2) u ->
     Σ ;;; Γ |- t ⇝ℇ t' ->
     (Σ.1,univs) ;;; (subst_instance u Γ) |- subst_instance u t ⇝ℇ t'.
 Proof.
-  intros Σ X Γ X0 t T X1 t' u univs X2 H H0 H1.
+  intros Σ X Γ X0 t T X1 t' u univs H H0 H1.
   unshelve eapply (erases_subst_instance0 Σ _ Γ _ _ _); tea; eauto.
 Qed.
 
 Lemma erases_subst_instance'' Σ φ Γ t T u univs t' :
   wf_ext_wk (Σ, univs) ->
   (Σ, univs) ;;; Γ |- t : T ->
-  sub_context_set (monomorphic_udecl univs) (global_context_set Σ) ->
   consistent_instance_ext (Σ, φ) univs u ->
   (Σ, univs) ;;; Γ |- t ⇝ℇ t' ->
   (Σ, φ) ;;; subst_instance u Γ
             |- subst_instance u t ⇝ℇ  t'.
 Proof.
-  intros X X0 X1. intros.
+  intros X X0. intros.
   eapply (erases_subst_instance (Σ, univs)); tas.
   eapply typing_wf_local; eassumption. eauto.
   eapply typing_wf_local.
   eapply typing_subst_instance''; eauto.
-  etransitivity; tea. apply global_context_set_sub_ext.
 Qed.
 
 Lemma erases_subst_instance_decl Σ Γ t T c decl u t' :
@@ -350,7 +343,6 @@ Proof.
   destruct Σ as [Σ φ]. intros X X0 X1 X2.
   eapply erases_subst_instance''; tea. split; tas.
   eapply weaken_lookup_on_global_env'; tea.
-  eapply weaken_lookup_on_global_env''; tea.
 Qed.
 
 (** ** Erasure and applications  *)
@@ -966,7 +958,7 @@ Proof.
 
       eapply tConstruct_no_Type in X1; auto.
       
-      eapply H6 in X1 as []; eauto. 2: exists []; now destruct Σ.
+      eapply H6 in X1 as []; eauto. 2: split; auto; exists []; now destruct Σ.
 
       destruct (ind_ctors idecl) eqn:hctors.
       { cbn in *. depelim brs_ty. rewrite nth_error_nil // in Hnth. }
@@ -1222,7 +1214,7 @@ Proof.
         rewrite -mkApps_app in X.
 
         eapply tConstruct_no_Type in X; eauto. eapply H3 in X as [? []]; eauto.
-        2: now exists []; destruct Σ.
+        2: split; auto; now exists []; destruct Σ.
         destruct d as (? & ? & ?).
         destruct (declared_inductive_inj decli H5) as [<- <-].
         

@@ -40,7 +40,7 @@ Proof.
   induction n; cbn; auto with arith.
 Qed.
 
-Definition max_name_length (Σ : global_env) : nat :=
+Definition max_name_length (Σ : global_declarations) : nat :=
   fold_right max 0 (map (fun '(kn, _) => String.length (string_of_kername kn)) Σ).
 
 Lemma max_name_length_ge Σ :
@@ -55,12 +55,12 @@ Proof.
 Qed.
 
 Definition make_fresh_name (Σ : global_env) : kername :=
-  (MPfile [], string_repeat "a"%char (S (max_name_length Σ))).
+  (MPfile [], string_repeat "a"%char (S (max_name_length Σ.(declarations)))).
 
-Lemma make_fresh_name_fresh Σ :
-  fresh_global (make_fresh_name Σ) Σ.
+Lemma make_fresh_name_fresh (Σ : global_env) :
+  fresh_global (make_fresh_name Σ) Σ.(declarations).
 Proof.
-  pose proof (max_name_length_ge Σ) as all.
+  pose proof (max_name_length_ge Σ.(declarations)) as all.
   eapply Forall_impl; eauto.
   cbn.
   intros (kn&decl) le.
@@ -89,7 +89,7 @@ Definition False_mib : mutual_inductive_body :=
      ind_npars := 0;
      ind_params := [];
      ind_bodies := [False_oib];
-     ind_universes := Monomorphic_ctx ContextSet.empty;
+     ind_universes := Monomorphic_ctx;
      ind_variance := None |}.
 
 Definition axiom_free Σ :=
@@ -116,6 +116,9 @@ Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
+Definition global_env_add (Σ : global_env) d := 
+  {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
+
 Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ t :
   wf_ext Σ ->
   axiom_free Σ ->
@@ -124,10 +127,11 @@ Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ t :
   False.
 Proof.
   intros wfΣ axfree cons.
-  set (Σext := ((make_fresh_name Σ, InductiveDecl False_mib) :: Σ.1, Σ.2)).
+  set (Σext := (global_env_add Σ.1 (make_fresh_name Σ, InductiveDecl False_mib), Σ.2)).
   assert (wf': wf_ext Σext).
-  { constructor; [constructor|].
-    - destruct wfΣ; auto.
+  { constructor; [constructor|]; auto; try apply wfΣ.
+    constructor; auto.
+    - apply wfΣ.
     - apply make_fresh_name_fresh.
     - red.
       cbn.
@@ -135,8 +139,7 @@ Proof.
       { now intros ? ?%LevelSet.empty_spec. }
       split.
       { now intros ? ?%ConstraintSet.empty_spec. }
-      split; auto.
-      destruct wfΣ as (?&(?&?&?&[val sat])).
+      destruct wfΣ as (?&(?&?&[val sat])).
       exists val.
       intros l isin.
       apply sat; auto.
@@ -156,13 +159,14 @@ Proof.
         * constructor.
       + constructor.
       + reflexivity.
-      + reflexivity.
-    - destruct wfΣ; auto. }
+      + reflexivity. }
   eapply (env_prop_typing weakening_env) in cons; auto.
-  3: exists [(make_fresh_name Σ, InductiveDecl False_mib)]; reflexivity.
+  2:instantiate (1:=Σext.1).
+  3:{ split; auto; cbn. split; [lsets|csets].
+      exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity. }
   2: now destruct wf'.
   
-  set (Σ' := _ ++ _) in cons.
+  set (Σ' := Σext.1) in cons.
   set (False_ty := tInd (mkInd (make_fresh_name Σ) 0) []).
   assert (typ_false: (Σ', Σ.2);;; [] |- tApp t False_ty : False_ty).
   { apply validity in cons as typ_prod; auto.

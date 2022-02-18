@@ -180,19 +180,13 @@ Fixpoint remove_arity (n : nat) (t : term) : term :=
           end
   end.
 
-Fixpoint lookup_mind_decl (id : kername) (decls : global_env)
+Fixpoint lookup_mind_decl (id : kername) (decls : global_declarations)
  := match decls with
     | nil => None
     | (kn, InductiveDecl d) :: tl =>
       if eq_kername kn id then Some d else lookup_mind_decl id tl
     | _ :: tl => lookup_mind_decl id tl
     end.
-
-Definition universes_entry_of_decl (u : universes_decl) : universes_entry :=
-  match u with
-  | Polymorphic_ctx ctx => Polymorphic_entry (fst ctx) (Universes.AUContext.repr ctx)
-  | Monomorphic_ctx ctx => Monomorphic_entry ctx
-  end.
 
 (* TODO factorize in Environment *)
 (* was mind_decl_to_entry *)

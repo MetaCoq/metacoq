@@ -384,28 +384,28 @@ Proof.
 Qed.
 
 Lemma eq_term_empty_leq_term {cf:checker_flags} {Σ : global_env_ext} {x y} :
-  eq_term [] Σ x y ->
-  leq_term [] Σ x y.
+  eq_term empty_global_env Σ x y ->
+  leq_term empty_global_env Σ x y.
 Proof.
   eapply eq_term_upto_univ_impl; auto; typeclasses eauto.
 Qed.
 
 Lemma eq_term_empty_eq_term {cf:checker_flags} {Σ : global_env_ext} {x y} :
-  eq_term [] Σ x y ->
+  eq_term empty_global_env Σ x y ->
   eq_term Σ Σ x y.
 Proof.
   eapply eq_term_upto_univ_empty_impl; auto; typeclasses eauto.
 Qed.
 
 Lemma leq_term_empty_leq_term {cf:checker_flags} {Σ : global_env_ext} {x y} :
-  leq_term [] Σ x y ->
+  leq_term empty_global_env Σ x y ->
   leq_term Σ Σ x y.
 Proof.
   eapply eq_term_upto_univ_empty_impl; auto; typeclasses eauto.
 Qed.
 
 Lemma eq_context_empty_eq_context {cf:checker_flags} {Σ : global_env_ext} {x y} :
-  eq_context_upto [] (eq_universe Σ) (eq_universe Σ) x y ->
+  eq_context_upto empty_global_env (eq_universe Σ) (eq_universe Σ) x y ->
   eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) x y.
 Proof.
   intros.
@@ -428,7 +428,7 @@ Proof.
 Qed.
 
 Lemma R_global_instance_empty_universe_instance Re Rle ref napp u u' :
-  R_global_instance [] Re Rle ref napp u u' ->
+  R_global_instance empty_global_env Re Rle ref napp u u' ->
   R_universe_instance Re u u'.
 Proof.
   rewrite /R_global_instance.
@@ -436,7 +436,7 @@ Proof.
 Qed.
 
 Lemma eq_context_upto_inst_case_context {cf : checker_flags} {Σ : global_env_ext} pars pars' puinst puinst' ctx :
-  All2 (eq_term_upto_univ [] (eq_universe Σ) (eq_universe Σ)) pars pars' ->
+  All2 (eq_term_upto_univ empty_global_env (eq_universe Σ) (eq_universe Σ)) pars pars' ->
   R_universe_instance (eq_universe Σ) puinst puinst' ->
   eq_context_upto Σ.1 (eq_universe Σ) (eq_universe Σ) (inst_case_context pars puinst ctx)
     (inst_case_context pars' puinst' ctx).
@@ -454,7 +454,7 @@ Lemma typing_leq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :
   on_udecl Σ.1 Σ.2 ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- t' : T' ->
-  leq_term [] Σ t' t -> 
+  leq_term empty_global_env Σ t' t -> 
   (* No cumulativity of inductive types, as they can relate 
     inductives in different sorts. *)
   Σ ;;; Γ |- t' : T.
@@ -464,7 +464,7 @@ Proof.
   eapply (typing_ind_env 
   (fun Σ Γ t T =>
     forall (onu : on_udecl Σ.1 Σ.2),
-    forall t' T' : term, Σ ;;; Γ |- t' : T' -> leq_term [] Σ t' t -> Σ;;; Γ |- t' : T)
+    forall t' T' : term, Σ ;;; Γ |- t' : T' -> leq_term empty_global_env Σ t' t -> Σ;;; Γ |- t' : T)
   (fun Σ Γ => wf_local Σ Γ)); auto;intros Σ wfΣ Γ wfΓ; intros.
     1-13:match goal with
     [ H : leq_term _ _ _ _ |- _ ] => depelim H
@@ -722,7 +722,7 @@ Lemma typing_eq_term {cf:checker_flags} (Σ : global_env_ext) Γ t t' T T' :
   wf_ext Σ ->
   Σ ;;; Γ |- t : T ->
   Σ ;;; Γ |- t' : T' ->
-  eq_term [] Σ t t' ->
+  eq_term empty_global_env Σ t t' ->
   Σ ;;; Γ |- t' : T.
 Proof.
   intros wfΣ ht ht' eq.

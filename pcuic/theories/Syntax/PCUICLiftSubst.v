@@ -207,7 +207,7 @@ Lemma commut_lift_subst_rec M N n p k :
   k <= p -> lift n k (subst N p M) = subst N (p + n) (lift n k M).
 Proof.
   revert N n p k; elim M using term_forall_list_ind; intros; cbnr;
-    f_equal; auto; solve_all; rewrite ?plus_Snm_nSm -?Nat.add_assoc; eauto with all.
+    f_equal; auto; solve_all; rewrite ?Nat.add_succ_r -?Nat.add_assoc; eauto with all.
 
   - repeat nth_leb_simpl.
     rewrite -> simpl_lift by easy. f_equal; lia.

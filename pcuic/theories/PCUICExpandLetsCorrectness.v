@@ -258,64 +258,27 @@ Defined.
 
 Lemma trans_global_ext_levels Σ:
   S.global_ext_levels Σ = T.global_ext_levels (trans_global Σ).
-Proof.
-  unfold S.global_ext_levels, global_ext_levels.
-  destruct Σ.
-  cbn [trans_global fst snd].
-  f_equal.
-  induction g.
-  - reflexivity.
-  - unfold S.global_levels in IHg.
-    cbn.
-    rewrite IHg.
-    f_equal.
-    destruct a.
-    cbn.
-    unfold T.monomorphic_levels_decl, T.monomorphic_udecl_decl, T.on_udecl_decl.
-    unfold S.monomorphic_levels_decl, S.monomorphic_udecl_decl, S.on_udecl_decl.
-    destruct g0.
-    + cbn.
-      destruct c.
-      reflexivity.
-    + cbn.
-      destruct m.
-      reflexivity.
-Qed.
+Proof. reflexivity. Qed.
 
 Lemma trans_global_ext_constraints Σ :
   S.global_ext_constraints Σ = T.global_ext_constraints (trans_global Σ).
-Proof.
-  destruct Σ.
-  unfold S.global_ext_constraints, T.global_ext_constraints. simpl.
-  f_equal. clear u.
-  induction g.
-  - reflexivity.
-  - simpl. rewrite IHg. f_equal. clear.
-    destruct a as [? []]; reflexivity.
-Qed.
-
+Proof. reflexivity. Qed.
+  
 Lemma trans_mem_level_set l Σ:
   LevelSet.mem l (S.global_ext_levels Σ) ->
   LevelSet.mem l (T.global_ext_levels (trans_global Σ)).
-Proof.
-  intros.
-  rewrite <- trans_global_ext_levels.
-  apply H.
-Qed.
+Proof. auto. Qed. 
 
 Lemma trans_in_level_set l Σ :
   LevelSet.In l (S.global_ext_levels Σ) ->
   LevelSet.In l (T.global_ext_levels (trans_global Σ)).
-Proof.
-  intros.
-  rewrite <- trans_global_ext_levels.
-  apply H.
-Qed.
+Proof. auto. Qed.
 
 Lemma trans_lookup (Σ : global_env) cst :
-  lookup_env (trans_global_decls Σ) cst = option_map trans_global_decl (SE.lookup_env Σ cst).
+  lookup_env (trans_global_env Σ) cst = option_map trans_global_decl (SE.lookup_env Σ cst).
 Proof.
   cbn in *.
+  destruct Σ as [univs Σ].
   induction Σ.
   - reflexivity.
   - cbn.
@@ -326,7 +289,7 @@ Qed.
 
 Lemma trans_declared_constant (Σ : global_env) cst decl:
   S.declared_constant Σ cst decl ->
-  T.declared_constant (trans_global_decls Σ) cst (trans_constant_body decl).
+  T.declared_constant (trans_global_env Σ) cst (trans_constant_body decl).
 Proof.
   unfold T.declared_constant.
   rewrite trans_lookup.
@@ -346,33 +309,12 @@ Qed.
 Lemma trans_consistent_instance_ext {cf} Σ decl u:
   S.consistent_instance_ext Σ decl u ->
   T.consistent_instance_ext (trans_global Σ) decl u.
-Proof.
-  intros H.
-  unfold consistent_instance_ext, S.consistent_instance_ext in *.
-  unfold consistent_instance, S.consistent_instance in *.
-  destruct decl;trivial.
-  destruct H as (?&?&?).
-  repeat split;trivial.
-  - eapply forallb_impl.
-    2: apply H.
-    cbv beta.
-    intros.
-    now apply trans_mem_level_set.
-  - unfold valid_constraints in *.
-    destruct config.check_univs;trivial.
-    unfold valid_constraints0 in *.
-    intros.
-    apply H1.
-    unfold satisfies in *.
-    unfold ConstraintSet.For_all in *.
-    intros.
-    apply H2.
-    now apply trans_constraintSet_in.
-Qed.
+Proof. auto. Qed. 
 
 Lemma trans_declared_inductive Σ ind mdecl idecl:
   S.declared_inductive Σ ind mdecl idecl ->
-  T.declared_inductive (trans_global_decls Σ) ind (trans_minductive_body mdecl) (trans_one_ind_body mdecl (inductive_ind ind) idecl).
+  T.declared_inductive (trans_global_env Σ) ind (trans_minductive_body mdecl)
+   (trans_one_ind_body mdecl (inductive_ind ind) idecl).
 Proof.
   intros [].
   split.
@@ -384,7 +326,7 @@ Qed.
 Lemma trans_declared_constructor Σ c mdecl idecl cdecl :
   let ind := (inductive_ind (fst c)) in
   S.declared_constructor Σ c mdecl idecl cdecl ->
-  T.declared_constructor (trans_global_decls Σ) c (trans_minductive_body mdecl) (trans_one_ind_body mdecl ind idecl)
+  T.declared_constructor (trans_global_env Σ) c (trans_minductive_body mdecl) (trans_one_ind_body mdecl ind idecl)
     (trans_constructor_body ind mdecl cdecl).
 Proof.
   intros ind [].
@@ -1939,7 +1881,7 @@ Definition cf' cf :=
      indices_matter := cf.(@indices_matter); 
      lets_in_constructor_types := false |}.
 
-Notation wf_trans Σ := (@wf (cf' _) (trans_global_decls Σ.1)).
+Notation wf_trans Σ := (@wf (cf' _) (trans_global_env Σ.1)).
 Notation wf_ext_trans Σ := (@wf_ext (cf' _) (trans_global Σ)).
 
 Lemma trans_red1 {cf} (Σ : global_env_ext) {wfΣ : wf Σ} {wfΣ' : wf_trans Σ} Γ T U :
@@ -2265,7 +2207,7 @@ Qed.
 
 Lemma trans_R_global_instance {Σ : global_env} Re Rle gref napp u u' :
   R_global_instance Σ Re Rle gref napp u u' ->
-  R_global_instance (trans_global_decls Σ) Re Rle gref napp u u'.
+  R_global_instance (trans_global_env Σ) Re Rle gref napp u u'.
 Proof.
   unfold PCUICEquality.R_global_instance, PCUICEquality.global_variance.
   destruct gref; simpl; auto.
@@ -2359,7 +2301,7 @@ Lemma trans_eq_term_upto_univ {cf} {Σ : global_env} {Re Rle t u napp} :
   Transitive Re -> SubstUnivPreserving Re ->
   subrelation Re Rle ->
   PCUICEquality.eq_term_upto_univ_napp Σ Re Rle napp t u ->
-  eq_term_upto_univ_napp (trans_global_decls Σ) Re Rle napp (trans t) (trans u).
+  eq_term_upto_univ_napp (trans_global_env Σ) Re Rle napp (trans t) (trans u).
 Proof.
   intros hre hrle hret hres hsub e.
   induction t using term_forall_list_ind in Rle, hrle, hsub, napp, u, e |- *.
@@ -2404,14 +2346,14 @@ Qed.
 
 Lemma trans_compare_term {cf} {Σ : global_env} {pb ϕ T U} :
   compare_term pb Σ ϕ T U ->
-  compare_term (H:=cf' cf) pb (trans_global_decls Σ) ϕ (trans T) (trans U).
+  compare_term (H:=cf' cf) pb (trans_global_env Σ) ϕ (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ ; eauto; tc.
 Qed.
 
 Lemma trans_leq_term {cf} {Σ : global_env} ϕ T U :
   PCUICEquality.leq_term Σ ϕ T U ->
-  @compare_term (cf' cf) Cumul (trans_global_decls Σ) ϕ (trans T) (trans U).
+  @compare_term (cf' cf) Cumul (trans_global_env Σ) ϕ (trans T) (trans U).
 Proof.
   eapply trans_eq_term_upto_univ; eauto; tc.
 Qed.
@@ -2752,7 +2694,7 @@ Proof.
 Qed.
 
 Lemma trans_check_rec_kind Σ k f :
-  ST.check_recursivity_kind Σ k f = TT.check_recursivity_kind (trans_global_decls Σ) k f.
+  ST.check_recursivity_kind Σ k f = TT.check_recursivity_kind (trans_global_env Σ) k f.
 Proof.
   unfold ST.check_recursivity_kind, TT.check_recursivity_kind.
   rewrite trans_lookup.
@@ -2761,7 +2703,7 @@ Qed.
 
 Lemma trans_wf_fixpoint Σ p n mfix :
   on_free_vars_mfix p n mfix ->
-  TT.wf_fixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix) = 
+  TT.wf_fixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
   ST.wf_fixpoint Σ mfix.
 Proof.
   intros hmfix.
@@ -2773,7 +2715,7 @@ Proof.
 Qed.
 
 Lemma trans_wf_cofixpoint Σ mfix :
-  TT.wf_cofixpoint (trans_global_decls Σ) (map (map_def trans trans) mfix) = 
+  TT.wf_cofixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
   ST.wf_cofixpoint Σ mfix.
 Proof.
   unfold ST.wf_cofixpoint, TT.wf_cofixpoint.
@@ -3391,30 +3333,39 @@ Proof.
   now apply trans_eq_annots.
 Qed.
  
-Lemma extends_trans {Σ Σ' : global_env} : extends Σ Σ' -> extends (trans_global_decls Σ) (trans_global_decls Σ').
+Lemma extends_trans {Σ Σ' : global_env} : extends Σ Σ' -> extends (trans_global_env Σ) (trans_global_env Σ').
 Proof.
-  intros [? ->]. exists (trans_global_decls x).
-  rewrite /trans_global_decls map_app //.
+  intros [onu [Σ'' eq]].
+  split => //. exists (trans_global_decls Σ'').
+  rewrite /= eq /trans_global_decls /= map_app //.
 Qed.
 
-Lemma weaken_prop {cf} : weaken_env_prop
+Lemma extends_decls_trans {Σ Σ' : global_env} : extends_decls Σ Σ' -> 
+  extends_decls (trans_global_env Σ) (trans_global_env Σ').
+Proof.
+  intros [onu [Σ'' eq]].
+  split => //. exists (trans_global_decls Σ'').
+  rewrite /= eq /trans_global_decls /= map_app //.
+Qed.
+
+Lemma weaken_prop {cf} : weaken_env_decls_prop
   (lift_typing
    (λ (Σ : global_env_ext) (Γ : context) (t T : term),
       wf_trans Σ →
       typing (H:=cf' cf) (trans_global Σ) (trans_local Γ) (trans t) (trans T))).
 Proof.
-  intros Σ Σ' u wf ext Γ t T.
+  intros Σ Σ' u wf' ext Γ t T.
   unfold lift_typing. destruct T.
-  - intros Ht Hw. 
-    pose proof (extends_trans ext).
-    pose proof (wf_extends Hw X). 
-    specialize (Ht X0).
-    eapply (weakening_env (trans_global (Σ, u))); eauto.
+  - intros Ht Hw.
+    pose proof (extends_decls_trans ext).
+    assert (wfΣ := extends_decls_wf _ _ Hw X).
+    eapply (weakening_env (trans_global (Σ, u))); eauto. tc.
+    
   - intros [s Hs]. exists s. intros Hw.
-    pose proof (extends_trans ext).
-    pose proof (wf_extends Hw X). 
+    pose proof (extends_decls_trans ext).
+    pose proof (extends_decls_wf _ _ Hw X). 
     specialize (Hs X0).
-    eapply (weakening_env (trans_global (Σ, u))); eauto.
+    eapply (weakening_env (trans_global (Σ, u))); eauto. tc.
 Qed.
 
 Lemma trans_arities_context mdecl :
@@ -3608,8 +3559,6 @@ Proof.
     eapply type_Rel; eauto.
     now apply map_nth_error.
   - econstructor; eauto.
-    destruct u; auto. simpl in H |- *.
-    intros l inl. now rewrite <-trans_global_ext_levels.
   - eapply TT.type_Prod;auto.
   - eapply TT.type_Lambda;eauto.
   - eapply TT.type_LetIn;eauto.
@@ -3622,17 +3571,16 @@ Proof.
     rewrite trans_cst_type.
     eapply TT.type_Const; eauto.
     + now apply trans_declared_constant.
-    + now apply trans_consistent_instance_ext.
   - rewrite trans_subst_instance.
     rewrite (trans_ind_type mdecl (inductive_ind ind)).
-    eapply TT.type_Ind; eauto.
-    + now apply trans_declared_inductive.
+    eapply TT.type_Ind. eauto.
+    + eapply (trans_declared_inductive _ _ _ _ isdecl).
     + now apply trans_consistent_instance_ext.
   - eapply (type_ws_cumul_pb (pb:=Conv)).
-    eapply TT.type_Construct; eauto.
-    + eapply trans_declared_constructor; tea. 
+    eapply TT.type_Construct. eauto.
+    + eapply trans_declared_constructor in isdecl; tea. 
     + now apply trans_consistent_instance_ext.
-    + epose proof (declared_constructor_inv weaken_prop _ X isdecl) as [cs [hnth onc]].
+    + red in X. epose proof (declared_constructor_inv_decls weaken_prop _ X isdecl) as [cs [hnth onc]].
       destruct onc. red in on_ctype.
       destruct on_ctype as [s Hs].
       rewrite /type_of_constructor. forward Hs. eauto.
@@ -3672,8 +3620,6 @@ Proof.
       rewrite -trans_local_app. now eapply X3.
     + rewrite trans_mkApps map_app in X8. now eapply X8.
     + now eapply trans_wf_predicate.
-    + cbn. rewrite /id.
-      now apply trans_consistent_instance_ext.
     + cbn [pparams pcontext].
       rewrite (trans_case_predicate_context (Σ := Σ) (Γ := Γ)); tea.
       now rewrite -trans_local_app. 
@@ -3916,7 +3862,7 @@ Proof.
 Qed.
 
 Lemma fresh_global_map {kn} {Σ : global_env} : 
-  fresh_global kn Σ -> fresh_global kn (map (on_snd trans_global_decl) Σ).
+  fresh_global kn Σ.(declarations) -> fresh_global kn (trans_global_decls Σ.(declarations)).
 Proof.
   intros f.
   now eapply Forall_map; cbn.
@@ -3935,21 +3881,11 @@ Proof.
   induction l; cbn; auto => Hfg. now rewrite IHl.
 Qed.
 
-Lemma trans_global_levels {Σ : global_env} : PCUICLookup.global_levels (trans_global_decls Σ) = PCUICLookup.global_levels Σ.
-Proof.
-  rewrite /PCUICLookup.global_levels.
-  rewrite /trans_global_decls fold_right_map.
-  eapply fold_right_ext. intros decl lvls.
-  destruct decl as [kn []]; cbn; reflexivity.
-Qed.
+Lemma trans_global_levels {Σ : global_env} : PCUICLookup.global_levels (trans_global_env Σ) = PCUICLookup.global_levels Σ.
+Proof. reflexivity. Qed.
 
-Lemma trans_global_constraints {Σ : global_env} : PCUICLookup.global_constraints (trans_global_decls Σ) = PCUICLookup.global_constraints Σ.
-Proof.
-  rewrite /PCUICLookup.global_constraints.
-  rewrite fold_right_map.
-  eapply fold_right_ext. intros decl lvls.
-  destruct decl as [kn []]; cbn; reflexivity.
-Qed.
+Lemma trans_global_constraints {Σ : global_env} : PCUICLookup.global_constraints (trans_global_env Σ) = PCUICLookup.global_constraints Σ.
+Proof. reflexivity. Qed.
 
 Lemma type_it_mkProd_or_LetIn_smash_middle {cf} {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ Δ' T s} :
   Σ ;;; Γ |- it_mkProd_or_LetIn Δ (it_mkProd_or_LetIn Δ' T) : tSort s ->
@@ -4096,7 +4032,7 @@ Proof.
   intros. intuition auto. lia.
   pose proof (nth_error_Some_length b0).
   destruct n0. cbn in *. destruct tl. cbn in *. depelim a0. depelim a0.
-  cbn in b0. rewrite -minus_Sn_m. lia. cbn. exact b0.
+  cbn in b0. rewrite Nat.sub_succ_l //; lia.
 Qed.
 
 Lemma Alli_nth_hyp {A} {P : nat -> A -> Type} {l} : 
@@ -4245,287 +4181,6 @@ Proof.
     now eapply IHX.
 Qed. 
 
-Definition fresh_levels global_levels levels := 
-  LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels.
-
-Definition declared_constraints_levels levels cstrs := 
-  ConstraintSet.For_all (fun '(l1,_,l2) => LevelSet.In l1 levels
-    /\ LevelSet.In l2 levels) cstrs.
-
-Definition declared_constraints_levels_union levels cstrs cstrs' :
-  declared_constraints_levels levels cstrs ->
-  declared_constraints_levels levels cstrs' ->
-  declared_constraints_levels levels (ConstraintSet.union cstrs cstrs').
-Proof.
-  intros decl decl'.
-  rewrite /declared_constraints_levels.
-  intros x inx.
-  eapply ConstraintSetProp.FM.union_1 in inx as [].
-  now eapply decl. now eapply decl'.
-Qed.
-  
-Definition declared_constraints_levels_union_left levels levels' cstrs :
-  declared_constraints_levels levels cstrs ->
-  declared_constraints_levels (LevelSet.union levels levels') cstrs.
-Proof.
-  rewrite /declared_constraints_levels.
-  intros hx x inx.
-  specialize (hx x inx).
-  destruct x as [[l d] r]. split.
-  destruct hx. now eapply LevelSetFact.union_2.
-  now eapply LevelSetFact.union_2.
-Qed.
-  
-Definition declared_constraints_levels_union_right levels levels' cstrs :
-  declared_constraints_levels levels' cstrs ->
-  declared_constraints_levels (LevelSet.union levels levels') cstrs.
-Proof.
-  rewrite /declared_constraints_levels.
-  intros hx x inx.
-  specialize (hx x inx).
-  destruct x as [[l d] r]. split.
-  destruct hx. now eapply LevelSetFact.union_3.
-  now eapply LevelSetFact.union_3.
-Qed.
-
-Definition declared_constraints_levels_subset levels levels' cstrs :
-  declared_constraints_levels levels cstrs ->
-  LevelSet.Subset levels levels' ->
-  declared_constraints_levels levels' cstrs.
-Proof.
-  rewrite /declared_constraints_levels.
-  intros hx sub x inx.
-  specialize (hx x inx).
-  destruct x as [[l d] r]. split.
-  now eapply sub.
-  now eapply sub.
-Qed.
-
-Lemma on_udecl_spec `{checker_flags} Σ (udecl : universes_decl) :
-  on_udecl Σ udecl =
-  let levels := levels_of_udecl udecl in
-  let global_levels := global_levels Σ in
-  let all_levels := LevelSet.union levels global_levels in
-  fresh_levels global_levels levels 
-  /\ declared_constraints_levels all_levels (constraints_of_udecl udecl)
-  /\ match udecl with
-      | Monomorphic_ctx ctx =>  LevelSet.for_all (negb ∘ Level.is_var) ctx.1
-      | _ => True
-  end
-  /\ satisfiable_udecl Σ udecl.
-Proof. reflexivity. Qed.
-
-Lemma on_udecl_prop_spec `{checker_flags} Σ (udecl : universes_decl) :
-  on_udecl_prop Σ udecl = 
-    let levels := levels_of_udecl udecl in
-    let global_levels := global_levels Σ in
-    let all_levels := LevelSet.union levels global_levels in
-    declared_constraints_levels all_levels (constraints_of_udecl udecl)
-    /\ match udecl with
-      | Monomorphic_ctx ctx => LevelSet.for_all (negb ∘ Level.is_var) ctx.1
-                              /\ LevelSet.Subset ctx.1 global_levels
-                              /\ ConstraintSet.Subset ctx.2 (global_constraints Σ)
-                              /\ satisfiable_udecl Σ udecl
-      | _ => True
-      end.
-Proof. reflexivity. Qed.
-
-Notation levels_of_list := LevelSetProp.of_list.
-
-From Coq Require Import MSetDecide.
-
-Module ConstraintSetDecide := WDecide (ConstraintSet).
-Ltac csets := ConstraintSetDecide.fsetdec.
-
-Definition aulevels inst cstrs : 
-  AUContext.levels (inst, cstrs) = 
-  LevelSetProp.of_list (unfold #|inst| Level.Var).
-Proof.
-  cbn.
-  now rewrite mapi_unfold.
-Qed.
-
-Lemma levels_of_list_spec l ls : 
-  LevelSet.In l (levels_of_list ls) <-> In l ls.
-Proof.
-  now rewrite LevelSetProp.of_list_1 InA_In_eq.
-Qed.
-
-Lemma In_unfold k l n : 
-  In l (unfold n (λ i : nat, Level.Var (k + i))) <-> ∃ k' : nat, l = Level.Var k' ∧ k <= k' < k + n.
-Proof.
-  induction n; cbn => //. firstorder. lia.
-  split. intros [] % in_app_or => //.
-  eapply IHn in H as [k' [eq lt]]. subst l; exists k'. intuition lia.
-  destruct H as []; subst => //.
-  exists (k + n). intuition lia.
-  intros [k' [-> lt]].
-  apply/in_or_app.
-  destruct (eq_dec k' (k + n)). subst k'.
-  right => //. cbn; auto.
-  left. eapply IHn. exists k'; intuition lia.
-Qed.
-
-Lemma In_levels_of_list k l n : 
-  LevelSet.In l (levels_of_list (unfold n (fun i => Level.Var (k + i)))) <->
-  exists k', l = Level.Var k' /\ k <= k' < k + n. 
-Proof.
-  rewrite LevelSetProp.of_list_1 InA_In_eq. now apply In_unfold.
-Qed.
-
-Lemma In_lift_level k l n : LevelSet.In l (levels_of_list (unfold n (λ i : nat, Level.Var i))) <->
-  LevelSet.In (lift_level k l) (levels_of_list (unfold n (λ i : nat, Level.Var (k + i)))).
-Proof.
-  split.
-  - move/(In_levels_of_list 0) => [k' [-> l'lt]].
-    eapply In_levels_of_list. exists (k + k'); cbn; intuition lia.
-  - move/(In_levels_of_list k) => [k' [eq l'lt]].
-    eapply (In_levels_of_list 0).
-    destruct l; noconf eq. exists n0; cbn; intuition lia.
-Qed.
-
-Lemma not_var_lift l k s : 
-  LS.For_all (λ x : LS.elt, ~~ Level.is_var x) s ->
-  LevelSet.In l s ->
-  LevelSet.In (lift_level k l) s.
-Proof.
-  intros.
-  specialize (H _ H0). cbn in H.
-  destruct l; cbn => //.
-Qed.
-
-Lemma declared_constraints_levels_lift s n k cstrs : 
-  LS.For_all (λ x : LS.elt, (negb ∘ Level.is_var) x) s ->
-  declared_constraints_levels
-    (LevelSet.union (levels_of_list (unfold n (λ i : nat, Level.Var i))) s) cstrs ->
-  declared_constraints_levels
-    (LevelSet.union (levels_of_list (unfold n (λ i : nat, Level.Var (k + i)))) s)
-    (lift_constraints k cstrs).
-Proof.
-  rewrite /declared_constraints_levels.
-  intros hs ha [[l d] r] inx.
-  eapply In_lift_constraints in inx as [c' [eq incs]].
-  specialize (ha _ incs). destruct c' as [[l' d'] r']; cbn in eq; noconf eq.
-  destruct ha as [inl' inr'].
-  apply LevelSetFact.union_1 in inl'. apply LevelSetFact.union_1 in inr'.
-  split.
-  - apply LevelSet.union_spec.
-    destruct inl'.
-    + left. now apply In_lift_level.
-    + right. apply not_var_lift => //.
-  - apply LevelSet.union_spec.
-    destruct inr'.
-    + left. now apply In_lift_level.
-    + right. apply not_var_lift => //.
-Qed.
-
-Definition levels_of_cstr (c : ConstraintSet.elt) :=
-  let '(l, d, r) := c in
-  LevelSet.add l (LevelSet.add r LevelSet.empty).
-
-Definition levels_of_cstrs cstrs := 
-  ConstraintSet.fold (fun c acc => LevelSet.union (levels_of_cstr c) acc) cstrs.
-
-Lemma levels_of_cstrs_acc l cstrs acc :
-  LevelSet.In l acc \/ LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <->
-  LevelSet.In l (levels_of_cstrs cstrs acc).
-Proof.
-  rewrite /levels_of_cstrs.
-  rewrite !ConstraintSet.fold_spec.
-  induction (ConstraintSet.elements cstrs) in acc |- * => /=.
-  split. intros []; auto. inversion H. firstorder.
-  split.
-  intros []. apply IHl0. left. now eapply LevelSetFact.union_3.
-  apply IHl0 in H as []. apply IHl0. left.
-  eapply LevelSet.union_spec. left. 
-  eapply LevelSet.union_spec in H. destruct H => //. inversion H.
-  apply IHl0. right => //.
-  intros. apply IHl0 in H as [].
-  eapply LevelSet.union_spec in H. destruct H => //.
-  right. apply IHl0. left. apply LevelSet.union_spec. now left.
-  now left. right.
-  eapply IHl0. now right.
-Qed.
-
-Lemma levels_of_cstrs_spec l cstrs : 
-  LevelSet.In l (levels_of_cstrs cstrs LevelSet.empty) <-> 
-  exists d r, ConstraintSet.In (l, d, r) cstrs \/ ConstraintSet.In (r, d, l) cstrs.
-Proof.
-  rewrite -levels_of_cstrs_acc.
-  split.
-  - intros []. inversion H.
-    move: H.
-    rewrite /levels_of_cstrs.
-    eapply ConstraintSetProp.fold_rec.
-    + intros s' em inl. inversion inl.
-    + intros x a s' s'' inx ninx na.
-      intros.
-      destruct x as [[l' d] r].
-      eapply LevelSet.union_spec in H0 as [].
-      eapply LevelSet.add_spec in H0 as []; subst.
-      exists d, r. left. now apply na.
-      eapply LevelSet.add_spec in H0 as []; subst.
-      exists d, l'. right; now apply na. inversion H0.
-      specialize (H H0) as [d' [r' h]].
-      exists d', r'. red in na.
-      destruct h. destruct (na (l, d', r')).
-      firstorder. firstorder.
-  
-  - intros [d [r [indr|indr]]].
-    rewrite /levels_of_cstrs. right.
-    move: indr; eapply ConstraintSetProp.fold_rec.
-    intros. now specialize (H _ indr).
-    intros x a s' s'' inx inx' add inih ihih'.
-    eapply LevelSet.union_spec.
-    eapply add in ihih' as []; subst. left.
-    eapply LevelSet.add_spec. now left. firstorder.
-    right.
-    rewrite /levels_of_cstrs.
-    move: indr; eapply ConstraintSetProp.fold_rec.
-    intros. now specialize (H _ indr).
-    intros x a s' s'' inx inx' add inih ihih'.
-    eapply LevelSet.union_spec.
-    eapply add in ihih' as []; subst. left.
-    eapply LevelSet.add_spec. right. eapply LevelSet.add_spec; now left. firstorder.
-Qed.
-
-Lemma declared_constraints_levels_in levels cstrs : 
-  LevelSet.Subset (levels_of_cstrs cstrs LevelSet.empty) levels ->
-  declared_constraints_levels levels cstrs.
-Proof.
-  rewrite /declared_constraints_levels.
-  intros sub [[l d] r] inx. red in sub.
-  split. apply (sub l). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
-  apply (sub r). eapply levels_of_cstrs_spec. do 2 eexists; firstorder eauto.
-Qed.
-
-Lemma In_variance_cstrs l d r v i i' : 
-  ConstraintSet.In (l, d, r) (variance_cstrs v i i') ->
-    (In l i \/ In l i') /\ (In r i \/ In r i').
-Proof.
-  induction v in i, i' |- *; destruct i, i'; intros; try solve [inversion H].
-  cbn in H.
-  destruct a. apply IHv in H. cbn. firstorder auto.
-  eapply ConstraintSet.add_spec in H as []. noconf H. cbn; firstorder.
-  eapply IHv in H; firstorder.
-  eapply ConstraintSet.add_spec in H as []. noconf H. cbn; firstorder.
-  eapply IHv in H; firstorder.
-Qed.
-
-Lemma In_lift l n k : In l (map (lift_level k) (unfold n Level.Var)) <->
-  In l (unfold n (fun i => Level.Var (k + i))).
-Proof.
-  induction n; cbn; auto. firstorder.
-  firstorder.
-  move: H1; rewrite map_app. 
-  intros [] % in_app_or.
-  apply/in_or_app. firstorder.
-  apply/in_or_app. firstorder.
-  move: H1; intros [] % in_app_or.
-  rewrite map_app. apply/in_or_app. firstorder.
-  rewrite map_app. apply/in_or_app. firstorder.
-Qed.
-
 Lemma cumul_context_Spec_Algo {cf:checker_flags} {Σ} {wfΣ : wf Σ.1} {Γ Γ'} :
   wf_local Σ Γ ->
   wf_local Σ Γ' ->
@@ -4562,14 +4217,6 @@ Proof.
   eapply PCUICContextConversionTyp.context_cumulativity; tea.
   eapply cumul_context_Spec_Algo; tea. pcuic.
 Qed.
-(* 
-Lemma red_cumulSpec {cf:checker_flags} {Σ : global_env_ext} {Γ : context} {M N : term} :
-  red Σ Γ M N -> Σ ;;; Γ |- M =s N.
-Proof.
-  induction 1.
-  - now apply red1_cumulSpec.
-  - apply cumul_Refl.
-  -  *)
 
 Lemma trans_cumulSpec {cf} {Σ : PCUICEnvironment.global_env_ext} {Γ T U} {wfΣ : PCUICTyping.wf Σ} :
   wf_trans Σ ->
@@ -4896,7 +4543,7 @@ Proof.
   intros wf wf'.
   induction Δ; cbn.
   unfold PCUICTypingDef.wf_universe, wf_universe.
-  destruct s => //. now rewrite [global_ext_levels _]trans_global_ext_levels.
+  destruct s => //.
   destruct a as [? [?|] ?] => /= //; intuition auto.
   destruct a0 as [s' Hs]. exists s'. 
   all:rewrite -trans_local_app.
@@ -4945,7 +4592,6 @@ Lemma wt_subst_instance {cf} {Σ : global_env} {ϕ : universes_decl} {Γ T u uni
 Proof.
   intros wf [s Hs] cu. exists (s@[u]).
   eapply PCUICUnivSubstitutionTyp.typing_subst_instance'; tea.
-  eapply sub_context_set_empty.
 Qed.
 
 Lemma wt_expand_lets {cf} {Σ : global_env_ext} {Γ Δ T} :
@@ -5030,37 +4676,31 @@ Qed.
 
 Lemma trans_on_udecl {cf} {Σ : global_env} {univs} : 
   on_udecl Σ univs ->
-  on_udecl (cf := cf' cf) (trans_global_decls Σ) univs.
-Proof.
-  cbn.
-  unfold on_udecl. cbn. intuition auto.
-  cbn.
-  rewrite trans_global_levels //.
-  rewrite trans_global_levels //.
-  move: H3.
-  rewrite /satisfiable_udecl. cbn. 
-  rewrite /PCUICLookup.global_ext_constraints.
-  rewrite trans_global_constraints //.
-Qed.
+  on_udecl (trans_global_env Σ) univs.
+Proof. auto. Qed.
 
 Lemma trans_wf {cf} {Σ : global_env_ext} : wf Σ -> wf_trans Σ.
 Proof.
   rewrite /PCUICEnvironment.fst_ctx.
-  induction 1 as [|Σ0 kn d X IHX f udecl onu ond]. constructor.
-  have onud : on_udecl (cf := cf' cf) (map (on_snd trans_global_decl) Σ0)
-      (PCUICLookup.universes_decl_of_decl (trans_global_decl d)).
-  { apply trans_on_udecl in onu. destruct d => //. }
+  destruct Σ as [[gunivs Σ] udecl]; cbn. intros [onu wfΣ]; cbn in *.
+  induction wfΣ as [|Σ0 kn d X IHX f udecl' onu' ond]. constructor; auto. constructor.
+  have onud : on_udecl gunivs (PCUICLookup.universes_decl_of_decl (trans_global_decl d)).
+  { apply (trans_on_udecl (Σ:= {| universes := gunivs; declarations := Σ0 |})) in onu'. destruct d => //. }
   cbn; constructor; eauto.
-  { now eapply fresh_global_map. }
+  rename Σ0 into Σd.
+  set (Σ0 := {| universes := gunivs; declarations := Σd |}).
+  rename X into Xd.
+  set (X := (onu, Xd) : wf Σ0).
+  constructor; auto; try apply IHX.
+  { now apply (fresh_global_map (Σ := Σ0)). }
   destruct d; cbn in *.
-  * move: ond; rewrite /on_constant_decl.
+  * cbn. red. move: ond; rewrite /on_constant_decl.
     destruct c as [type [body|] univs] => /=.
-    intros Hty; exact (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
+    intros Hty; eapply (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
     unfold on_type, lift_typing.
     intros [s Hty]. exists s. 
     exact (pcuic_expand_lets (Σ0, univs) [] _ _ X Hty IHX).
-  * change (wf Σ0) in X.
-    generalize ond. intros []; econstructor; eauto.
+  * generalize ond. intros []; econstructor; eauto.
     + cbn.
       eapply (Alli_mapi _ _ _).1, Alli_impl; tea.
       intros n idecl onind; generalize onind; intros []; econstructor; tea.
@@ -5225,11 +4865,10 @@ Proof.
               pose proof (on_cargs onc). simpl in X.
               eapply sorts_local_ctx_wf_local in X0 => //.
               eapply typing_subst_instance_wf_local; tea.
-              split => //. cbn. split; try apply onu.
-              destruct ind_universes. cbn in eqv. noconf eqv. split.
-              destruct ind_universes. cbn in eqv. noconf eqv. cbn.
-              apply sub_context_set_empty.
-              eapply weaken_wf_local => //.
+              split => //. cbn. try apply onu.
+              destruct ind_universes. cbn in eqv. noconf eqv.
+              - now eapply on_udecl_on_udecl_prop.
+              - eapply weaken_wf_local => //.
               now eapply wf_arities_context'. }
             { rewrite subst_instance_app subst_instance_smash.
               rewrite subst_instance_expand_lets_ctx. 
@@ -5239,12 +4878,11 @@ Proof.
               pose proof (on_cargs onc). simpl in X0.
               eapply sorts_local_ctx_wf_local in X0 => //.
               eapply typing_subst_instance_wf_local; tea.
-              split => //. cbn. split; try apply onu.
-              destruct ind_universes. cbn in eqv. noconf eqv. split.
-              destruct ind_universes. cbn in eqv. noconf eqv. cbn.
-              apply sub_context_set_empty.
-              eapply weaken_wf_local => //.
-              now eapply wf_arities_context'. }
+              split => //. cbn.
+              - destruct ind_universes. cbn in eqv. noconf eqv.
+                now eapply on_udecl_on_udecl_prop.
+              - eapply weaken_wf_local => //.
+                now eapply wf_arities_context'. }
             { now len. }
             { pose proof (assumption_context_arities_context (ind_bodies m)).
               rewrite subst_instance_app_ctx.
@@ -5296,12 +4934,12 @@ Proof.
               rewrite subst_instance_app_ctx;
               repeat apply assumption_context_app_inv => //; pcuic.
             { eapply wt_subst_instance; tea.
-              split => //. cbn. split; apply onu.
+              split => //. cbn. now eapply on_udecl_on_udecl_prop.
               eapply wt_expand_lets => //.
               rewrite app_context_assoc.
               eapply wt_expand_lets => //. }
             { eapply wt_subst_instance; tea.
-              split => //. cbn. split; apply onu.
+              split => //. cbn. now eapply on_udecl_on_udecl_prop.
               eapply wt_expand_lets => //.
               rewrite app_context_assoc.
               eapply wt_expand_lets => //. }
@@ -5379,7 +5017,6 @@ Proof.
       destruct Universe.is_sprop => //.
       intuition auto.
       rewrite /PCUICLookup.global_ext_constraints.
-      rewrite trans_global_constraints //.
       destruct indices_matter => //.
       now eapply (trans_type_local_ctx (Σ := (Σ0, ind_universes m))). }
     { intros v indv. specialize (onIndices v indv).
@@ -5403,9 +5040,7 @@ Proof.
       rewrite -!trans_subst_instance_ctx.
       have wf_ext : wf_global_ext Σ0 (ind_universes m).
       { destruct (ind_universes m) eqn:equniv => //.
-        cbn. split => //. split => //. cbn.
-        split; try apply onu.
-        eapply sub_context_set_empty. }
+        cbn. split => //. cbn. now eapply on_udecl_on_udecl_prop. }
       eapply (trans_cumul_ctx_rel' (Σ := (Σ0, univs')) 
           (Γ' := (smash_context [] (ind_params m))@[u'])) => //.
       { rewrite subst_instance_expand_lets_ctx.
@@ -5428,11 +5063,6 @@ Proof.
     }
   + cbn. eapply (trans_on_context _ _ onParams).
   + cbn. rewrite context_assumptions_map //.
-  + move: onVariance. rewrite /on_variance /=.
-    destruct ind_universes => //.
-    destruct ind_variance => //.
-    intros [univs' [i [i' []]]]; exists univs', i, i'; split => //.
-    all:now eapply (trans_consistent_instance_ext (Σ0, univs')).  
 Qed.
 
 Lemma trans_wf_ext {cf} {Σ : global_env_ext} : wf_ext Σ -> wf_ext_trans Σ.
@@ -5532,7 +5162,7 @@ Qed.
 
 Lemma trans_wcbveval {cf} {Σ} {wfΣ : wf Σ} t u : 
   closed t ->
-  eval Σ t u -> eval (trans_global_decls Σ) (trans t) (trans u).
+  eval Σ t u -> eval (trans_global_env Σ) (trans t) (trans u).
 Proof.
   intros wt ev; revert wt.
   induction ev.

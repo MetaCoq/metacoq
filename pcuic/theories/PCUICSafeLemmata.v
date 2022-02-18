@@ -238,9 +238,9 @@ Section Lemmata.
   Defined.
 
   Lemma welltyped_alpha Γ u v :
-      welltyped Σ Γ u ->
-      eq_term_upto_univ [] eq eq u v ->
-      welltyped Σ Γ v.
+    welltyped Σ Γ u ->
+    eq_term_upto_univ empty_global_env eq eq u v ->
+    welltyped Σ Γ v.
   Proof.
     intros [A h] e.
     exists A. eapply typing_alpha ; eauto.

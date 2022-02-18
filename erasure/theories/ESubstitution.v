@@ -6,44 +6,41 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
 From MetaCoq.Erasure Require Import ETyping Extract Prelim.
 
-
 Local Set Keyed Unification.
 
-Module PA := PCUICAst.
-Module P := PCUICWcbvEval.
 Local Existing Instance config.extraction_checker_flags.
 
 (** ** Global Weakening  *)
 
 Lemma Is_type_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall (Σ' : global_env), wf Σ' -> extends Σ Σ' -> isErasable Σ Γ t -> isErasable (Σ', Σ.2) Γ t.
+  forall (Σ' : global_env), wf Σ' -> extends_decls Σ Σ' -> isErasable Σ Γ t -> isErasable (Σ', Σ.2) Γ t.
 Proof.
   intros. destruct X2 as [T []]. destruct Σ as [Σ]. cbn in *.
   exists T. split. change u with (snd (Σ,u)).
-  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends; eauto.
+  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
   destruct s; eauto.
   destruct s as (u' & ? & ?).
   right. exists u'. split; eauto.
   change u with (snd (Σ,u)).
-  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends.
+  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
 Qed.
 
 Lemma Is_proof_extends (Σ : global_env_ext) Γ t :
   wf_local Σ Γ ->
-  forall Σ', wf Σ' -> extends Σ Σ' -> Is_proof Σ Γ t -> Is_proof (Σ',Σ.2) Γ t.
+  forall Σ', wf Σ' -> extends_decls Σ Σ' -> Is_proof Σ Γ t -> Is_proof (Σ',Σ.2) Γ t.
 Proof.
   intros. destruct X2 as (? & ? & ? & ? & ?).
   exists x, x0. repeat split.
-  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends.
-  eapply weakening_env; [ | eauto | | ]; eauto using wf_extends.
+  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
+  eapply weakening_env; [ | eauto | | ]; eauto using extends_decls_wf; eauto; tc.
   eauto.
 Qed.
 
 (* todo move *)
 #[global]
-Instance extends_refl : CRelationClasses.Reflexive extends.
-Proof. now exists []. Qed.
+Instance extends_refl : CRelationClasses.Reflexive extends_decls.
+Proof. red. intros x. now split => //; exists []. Qed.
 
 Lemma Informative_extends:
   forall (Σ : global_env_ext) (ind : inductive)
@@ -52,41 +49,46 @@ Lemma Informative_extends:
     PCUICAst.declared_inductive (fst Σ) ind mdecl idecl ->
     forall (Σ' : global_env),
       wf Σ' ->
-      extends Σ Σ' ->
+      extends_decls Σ Σ' ->
       Informative Σ ind -> Informative (Σ', Σ.2) ind.
 Proof.
   repeat intros ?.
-  assert (extends Σ Σ'0). destruct X0, X2. subst. cbn. exists (x0 ++ x). cbn.
-  simpl in e0. now rewrite <- app_assoc.
+  assert (extends_decls Σ Σ'0).
+  { destruct X0, X2. subst. cbn. split => //.
+    rewrite e -e0 //.
+    destruct s as [Σ'' eq]. destruct s0 as [Σ''' ->].
+    rewrite eq. cbn. exists (Σ''' ++ Σ''). cbn.
+    now rewrite <- app_assoc. }
   edestruct H0; eauto. destruct H3.
 
   eapply weakening_env_declared_inductive in H; eauto.
   destruct H, H1.
   unfold PCUICAst.declared_minductive in *.
 
-  eapply extends_lookup in H1; eauto.
-  2:{ reflexivity. }
+  eapply extends_lookup in H1; eauto; tc.
+  2:{ cbn. eapply extends_decls_extends. reflexivity. }
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
   split. eauto. econstructor. eauto.
+  tc.
 Qed.
 
 Require Import ssrbool.
 
 Lemma erases_extends :
   env_prop (fun Σ Γ t T =>
-              forall Σ', wf Σ' -> extends Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
+              forall Σ', wf Σ' -> extends_decls Σ Σ' -> forall t', erases Σ Γ t t' -> erases (Σ', Σ.2) Γ t t')
            (fun Σ Γ => wf_local Σ Γ).
 Proof.
   apply typing_ind_env; intros; rename_all_hyps; auto.
   all: match goal with [ H : erases _ _ ?a _ |- _ ] => tryif is_var a then idtac else inv H end.
   all: try now (econstructor; eauto).
-  all: try now (econstructor; eapply Is_type_extends; eauto).
+  all: try now (econstructor; eapply Is_type_extends; eauto; tc).
   - econstructor.
     red.
     destruct isdecl as [[? ?] ?]. red in H. red in H4.
     rewrite H in H4.
-    eapply extends_lookup in H; eauto. now rewrite H.
+    eapply extends_lookup in H; eauto; tc. now rewrite H.
   - econstructor. all:eauto. 
     eapply Informative_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.

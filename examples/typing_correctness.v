@@ -23,7 +23,7 @@ Definition univ := Level.Level "s".
 (* TODO move to SafeChecker *)
 
 Definition gctx : global_env_ext := 
-  ([], Monomorphic_ctx (LevelSet.singleton univ, ConstraintSet.empty)).
+  ({| universes := (LevelSet.singleton univ, ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
 
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
     universe "s" declared  is well-formed. *)

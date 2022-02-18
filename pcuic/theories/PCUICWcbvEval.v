@@ -206,16 +206,18 @@ Section Wcbv.
       eval (tApp f a) (tApp (mkApps (tFix mfix idx) argsv) av)
 
   (** CoFix-case unfolding *)
-  | eval_cofix_case ip mfix idx p args narg fn brs res :
+  | eval_cofix_case ip mfix idx p discr args narg fn brs res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
+      eval discr (mkApps (tCoFix mfix idx) args) ->
       eval (tCase ip p (mkApps fn args) brs) res ->
-      eval (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res
+      eval (tCase ip p discr brs) res
 
   (** CoFix-proj unfolding *)
-  | eval_cofix_proj p mfix idx args narg fn res :
+  | eval_cofix_proj p mfix idx discr args narg fn res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
+      eval discr (mkApps (tCoFix mfix idx) args) ->
       eval (tProj p (mkApps fn args)) res ->
-      eval (tProj p (mkApps (tCoFix mfix idx) args)) res
+      eval (tProj p discr) res
 
   (** Non redex-producing heads applied to values are values *)
   | eval_app_cong f f' a a' :
@@ -297,12 +299,14 @@ Section Wcbv.
                        (idx : nat) (args : list term) 
                        (narg : nat) (fn : term),
                      cunfold_cofix mfix idx = Some (narg, fn) ->
+                     All value args ->
                      red1 (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))
   | red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
                        (idx : nat) (p : predicate term) 
                        (args : list term) (narg : nat) 
                        (fn : term) (brs : list (branch term)),
                      cunfold_cofix mfix idx = Some (narg, fn) ->
+                     All value args ->
                      red1 (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)
   .
 
@@ -694,17 +698,12 @@ Section Wcbv.
     - apply andb_true_iff.
       split; [|easy].
       solve_all.
-    - eapply IHev. rewrite closedn_mkApps.
-      rewrite closedn_mkApps in Hc'. move/andP: Hc' => [Hfix Hargs].
-      repeat (apply/andP; split; auto). 
+    - eapply IHev2. solve_all. rewrite !closedn_mkApps in H0 |- *. solve_all.
       rewrite -closed_unfold_cofix_cunfold_eq in e => //.
       eapply closed_unfold_cofix in e; eauto.
-    - eapply IHev. rewrite closedn_mkApps in Hc *.
-      move/andP: Hc => [Hfix Hargs].
-      rewrite closedn_mkApps Hargs.
+    - eapply IHev2. solve_all. rewrite !closedn_mkApps in H0 |- *. solve_all.
       rewrite -closed_unfold_cofix_cunfold_eq in e => //.
       eapply closed_unfold_cofix in e; eauto.
-      now rewrite e.
     - apply/andP; split; auto.
   Qed.
 
@@ -827,8 +826,6 @@ Section Wcbv.
         assert (e0 = e2) as -> by now apply uip.
         assert (d = d0) as -> by apply declared_constructor_unique.
         reflexivity.
-      + eapply eval_mkApps_tCoFix in ev1 as H.
-        destruct H as (? & ?). solve_discr.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
@@ -837,8 +834,6 @@ Section Wcbv.
         pose proof e0. rewrite e in H. noconf H.
         specialize (IHev2 _ ev'2); noconf IHev2.
         now assert (e = e0) as -> by now apply uip.
-      + apply eval_mkApps_tCoFix in ev1 as H.
-        destruct H as (? & ?); solve_discr.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
@@ -882,28 +877,21 @@ Section Wcbv.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
     - depelim ev'; try go.
-      * eapply eval_mkApps_tCoFix in ev'1 as H.
-        destruct H as (? & ?). solve_discr.
-      * apply mkApps_eq_inj in e' as H'; auto.
-        destruct H' as (H' & <-).
-        noconf H'.
-        assert (narg0 = narg) as -> by congruence.
-        assert (fn0 = fn) as -> by congruence.
-        assert (e' = eq_refl) as -> by now apply uip.
-        assert (e0 = e) as -> by now apply uip.
-        cbn in *; subst.
-        now specialize (IHev _ ev'); noconf IHev.
-      - depelim ev'; try go.
-        + cbn in *. exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-        + apply mkApps_eq_inj in e1 as H'; auto.
-          destruct H' as (H' & <-).
-          noconf H'.
-          assert (narg0 = narg) as -> by congruence.
-          assert (fn0 = fn) as -> by congruence.
-          assert (e1 = eq_refl) as -> by now apply uip.
-          assert (e0 = e) as -> by now apply uip.
-          cbn in *; subst.
-          now specialize (IHev _ ev'); noconf IHev.
+      specialize (IHev1 _ ev'1).
+      pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+      noconf H. noconf IHev1.
+      assert (narg0 = narg) as -> by congruence.
+      assert (fn0 = fn) as -> by congruence.
+      specialize (IHev2 _ ev'2); noconf IHev2.
+      now assert (e0 = e) as -> by now apply uip.
+    - depelim ev'; try go.
+      specialize (IHev1 _ ev'1).
+      pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+      noconf H. noconf IHev1.
+      assert (narg0 = narg) as -> by congruence.
+      assert (fn0 = fn) as -> by congruence.
+      specialize (IHev2 _ ev'2); noconf IHev2.
+      now assert (e0 = e) as -> by now apply uip.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         exfalso.

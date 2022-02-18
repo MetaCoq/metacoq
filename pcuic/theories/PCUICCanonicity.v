@@ -1191,26 +1191,33 @@ Section WeakNormalization.
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Case in Ht; auto; destruct_sigma Ht.
       destruct c.
-      pose proof (subject_closed scrut_ty) as H.
+      specialize (IHHe1 _ scrut_ty).
+      unshelve epose proof (subject_reduction Σ [] _ _ _ wfΣ _ IHHe1). 2:eauto.
+      pose proof (subject_closed X0).
+      etransitivity. eapply red_case_c. eapply IHHe1; eauto.
       rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
       assert (red Σ [] (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)).
       { eapply red1_red. eapply red_cofix_case.
         rewrite -closed_unfold_cofix_cunfold_eq in e; eauto. }
-      specialize (X X0).
-      specialize (IHHe _ X).
       redt _; eauto.
-      
+      eapply IHHe2.
+      eapply subject_reduction. 3: eapply X1. eauto.
+      eapply subject_reduction. 3: eapply red_case_c; eauto. all:eauto.      
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Proj in Ht; auto; destruct_sigma Ht.
-      pose proof (subject_closed t) as H.
+      specialize (IHHe1 _ t).
+      unshelve epose proof (subject_reduction Σ [] _ _ _ wfΣ _ IHHe1). 2:eauto.
+      pose proof (subject_closed X0).
+      etransitivity. eapply red_proj_c. eapply IHHe1; eauto.
       rewrite closedn_mkApps in H. move/andP: H => [clcofix clargs].
       assert (red Σ [] (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))).
       { eapply red1_red. eapply red_cofix_proj.
         rewrite -closed_unfold_cofix_cunfold_eq in e; eauto. }
-      specialize (X X0).
-      specialize (IHHe _ X).
-      redt _; eauto.
-
+        redt _; eauto.
+      eapply IHHe2.
+      eapply subject_reduction. 3: eapply X1. eauto.
+      eapply subject_reduction. 3: eapply red_proj_c; eauto. all:eauto.      
+    
     - eapply inversion_App in Ht as (? & ? & ? & Hf & Ha & Ht); auto.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).

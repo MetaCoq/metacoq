@@ -159,3 +159,44 @@ Section print_term.
   end.
 
 End print_term.
+
+Definition pr Σ (t : term) := print_term Σ [] true false t.
+
+Definition print_constant_body Σ kn decl :=
+  match decl.(cst_body) with
+  | Some b => "Definition " ^ string_of_kername kn ^ " := " ^ pr Σ b
+  | None => "Axiom " ^ string_of_kername kn
+  end.
+
+Definition pr_allowed_elim (elims : Universes.allowed_eliminations) :=
+  match elims with 
+  | Universes.IntoSProp => "into sprop"
+  | Universes.IntoPropSProp => "into prop or sprop"
+  | Universes.IntoSetPropSProp => "into set, prop or sprop"
+  | Universes.IntoAny => "into any sort"
+  end.
+
+Definition print_one_inductive_body npars body :=
+  let params := string_of_nat npars ^ " parameters" in
+  let prop := if body.(ind_propositional) then "propositional" else "computational" in
+  let kelim := pr_allowed_elim body.(ind_kelim) in
+  let ctors := print_list (fun idn => "| " ^ idn.1 ^ " " ^ string_of_nat idn.2 ^ " arguments") nl body.(ind_ctors) in
+  let projs :=
+  match body.(ind_projs) with
+  | [] => ""
+  | _ => nl ^ "projections: " ^ print_list (fun x => x) ", " body.(ind_projs) 
+  end
+  in
+  "Inductive " ^ body.(ind_name) ^ "(" ^ params ^ "," ^ prop ^ ", elimination " ^ kelim ^ ") := " ^ nl ^ ctors ^ projs.
+
+Definition print_inductive_body decl :=
+  print_list (print_one_inductive_body decl.(ind_npars)) nl decl.(ind_bodies).
+
+Definition print_decl Σ '(kn, d) := 
+  match d with
+  | ConstantDecl body => print_constant_body Σ kn body
+  | InductiveDecl mind => print_inductive_body mind
+  end.
+
+Definition print_global_context (g : global_context) := 
+  print_list (print_decl g) nl g.

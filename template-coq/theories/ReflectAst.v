@@ -152,10 +152,10 @@ Proof.
         subst. inversion e1. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - destruct (Uint63.eqs i i0) ; nodec.
+  (* - destruct (Int63.eqs i i0) ; nodec.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
-    subst. left. reflexivity.
+    subst. left. reflexivity. *)
 Defined.
 
 #[global] Instance reflect_term : ReflectEq term :=

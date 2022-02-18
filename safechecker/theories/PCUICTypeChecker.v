@@ -1414,9 +1414,9 @@ Section Typecheck.
       guarded <- check_eq_true (cofix_guard Σ Γ mfix) (Msg "Unguarded cofixpoint") ;;
       wfcofix <- check_eq_true (wf_cofixpoint Σ mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;
       ret (dtype decl; _)
-    } ;
+    }.
 
-  infer Γ HΓ (tPrim _) := raise (Msg "Primitive types are not supported").
+  (* infer Γ HΓ (tPrim _) := raise (Msg "Primitive types are not supported"). *)
 
   (* tRel *)
   Next Obligation. intros; sq; now econstructor. Defined.
@@ -2325,10 +2325,10 @@ Section Typecheck.
     inversion X0 ; subst.
     congruence.
   Qed.
-  Next Obligation.
+  (* Next Obligation.
     sq.
     inversion X0.
-  Qed.
+  Qed. *)
 
 (* 
   Program Definition check_isWfArity Γ (HΓ : ∥ wf_local Σ Γ ∥) A

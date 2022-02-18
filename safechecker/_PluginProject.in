@@ -23,8 +23,8 @@ src/wGraph.ml
 src/wGraph.mli
 
 # From PCUIC
-src/pCUICPrimitive.mli
-src/pCUICPrimitive.ml
+# src/pCUICPrimitive.mli
+# src/pCUICPrimitive.ml
 src/pCUICAst.ml
 src/pCUICAst.mli
 src/pCUICAstUtils.ml

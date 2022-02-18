@@ -256,10 +256,10 @@ Inductive eq_term_upto_univ_napp Σ (Re Rle : Universe.t -> Universe.t -> Prop) 
   eq_term_upto_univ_napp Σ Re Re 0 t1 t1' ->
   eq_cast_kind c c' ->
   eq_term_upto_univ_napp Σ Re Re 0 t2 t2' ->
-  eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2')
+  eq_term_upto_univ_napp Σ Re Rle napp (tCast t1 c t2) (tCast t1' c' t2').
 
-| eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
-| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f).
+(* | eq_Int i : eq_term_upto_univ_napp Σ Re Rle napp (tInt i) (tInt i)
+| eq_Float f : eq_term_upto_univ_napp Σ Re Rle napp (tFloat f) (tFloat f). *)
 
 Notation eq_term_upto_univ Σ Re Rle := (eq_term_upto_univ_napp Σ Re Rle 0).
 

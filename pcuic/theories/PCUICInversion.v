@@ -314,12 +314,12 @@ Section Inversion.
   Qed.
 
   (** At this stage we don't typecheck primitive values *)
-  Lemma inversion_Prim :
+  (* Lemma inversion_Prim :
     forall {Γ i T},
       Σ ;;; Γ |- tPrim i : T -> False.
   Proof.
     intros Γ i T h. now depind h.
-  Qed.
+  Qed. *)
 
   Lemma inversion_it_mkLambda_or_LetIn :
     forall {Γ Δ t T},

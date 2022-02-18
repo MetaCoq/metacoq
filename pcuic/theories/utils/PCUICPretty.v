@@ -253,7 +253,7 @@ Section print_term.
   | tCoFix l n =>
     parens top ("let cofix " ^ print_defs print_term Γ l ^ nl ^
                               " in " ^ List.nth_default (string_of_nat n) (map (string_of_aname ∘ dname) l) n)
-  | tPrim i => parens top (string_of_prim (print_term Γ true false) i)
+  (* | tPrim i => parens top (string_of_prim (print_term Γ true false) i) *)
   end.
 
 End print_term.

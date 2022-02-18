@@ -50,8 +50,8 @@ Fixpoint string_of_term (t : term) :=
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
-  | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
-  | tFloat f => "Float(" ^ string_of_float f ^ ")"
+  (* | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
+  | tFloat f => "Float(" ^ string_of_float f ^ ")" *)
   end.
   
 Fixpoint destArity Γ (t : term) :=
@@ -241,8 +241,8 @@ Fixpoint strip_casts t :=
   | tCoFix mfix idx =>
     let mfix' := List.map (map_def strip_casts strip_casts) mfix in
     tCoFix mfix' idx
-  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ 
-  | tInt _ | tFloat _ => t
+  | tRel _ | tVar _ | tSort _ | tConst _ _ | tInd _ _ | tConstruct _ _ _ => t
+  (* | tInt _ | tFloat _ => t *)
   end.
   
 Fixpoint decompose_prod_assum (Γ : context) (t : term) : context * term :=

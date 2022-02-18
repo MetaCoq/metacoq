@@ -70,8 +70,8 @@ sig
   val mkProj : quoted_proj -> t -> t
   val mkFix : (quoted_int array * quoted_int) * (quoted_aname array * t array * t array) -> t
   val mkCoFix : quoted_int * (quoted_aname array * t array * t array) -> t
-  val mkInt : quoted_int63 -> t
-  val mkFloat : quoted_float64 -> t
+  (* val mkInt : quoted_int63 -> t
+  val mkFloat : quoted_float64 -> t *)
 
   val mkBindAnn : quoted_name -> quoted_relevance -> quoted_aname
   val mkName : quoted_ident -> quoted_name
@@ -333,10 +333,12 @@ struct
          let t', acc = quote_term acc env c in
          let mib = Environ.lookup_mind (fst (Projection.inductive p)) (snd env) in
          (Q.mkProj p' t', add_inductive (Projection.inductive p) mib acc)
-      | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
-      | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc)
+      (* | Constr.Int i -> (Q.mkInt (Q.quote_int63 i), acc)
+      | Constr.Float f -> (Q.mkFloat (Q.quote_float64 f), acc) *)
       | Constr.Meta _ -> failwith "Meta not supported by TemplateCoq"
-      | Constr.Array _ -> failwith "Array not supported by TemplateCoq"
+      | Constr.Int _ -> failwith "Primitive ints not supported by TemplateCoq"
+      | Constr.Float _ -> failwith "Primitive floats not supported by TemplateCoq"
+      | Constr.Array _ -> failwith "Primitive arrays not supported by TemplateCoq"
       in
       aux acc env trm
     and quote_recdecl (acc : 'a) env b (ns,ts,ds) =

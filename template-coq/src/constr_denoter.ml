@@ -461,14 +461,14 @@ struct
       match args with
         proj::t::_ -> ACoq_tProj (proj, t)
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
-    else if constr_equall h tInt then
+    (* else if constr_equall h tInt then
       match args with
         t::_ -> ACoq_tInt t
       | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
     else if constr_equall h tFloat then
       match args with
         t::_ -> ACoq_tFloat t
-      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure"))
+      | _ -> CErrors.user_err (print_term t ++ Pp.str ("has bad structure")) *)
     else
       CErrors.user_err (str"inspect_term: cannot recognize " ++ print_term t ++ str" (maybe you forgot to reduce it?)")
 

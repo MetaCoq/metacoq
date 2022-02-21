@@ -590,9 +590,9 @@ Section Impl.
       destruct t0; simpl; auto.
   Qed.
 
-  Lemma global_variance_empty gr napp : global_variance [] gr napp = None.
+  Lemma global_variance_empty gr napp env : env.(declarations) = [] -> global_variance env gr napp = None.
   Proof.
-    destruct gr; auto.
+    destruct env; cbn => ->. destruct gr; auto.
   Qed.
 
   (** Pure syntactic equality, without cumulative inductive types subtyping *)
@@ -602,11 +602,11 @@ Section Impl.
     RelationClasses.subrelation (R Conv) (R' Conv) ->
     RelationClasses.subrelation (R Conv) (R' pb') ->
     RelationClasses.subrelation (R pb) (R' pb') ->
-    subrelation (R_global_instance [] R pb gr napp) (R_global_instance Σ R' pb' gr napp').
+    subrelation (R_global_instance empty_global_env R pb gr napp) (R_global_instance Σ R' pb' gr napp').
   Proof.
     intros he he' hle t t'.
     rewrite /R_global_instance /R_opt_variance. simpl.
-    rewrite global_variance_empty.
+    rewrite global_variance_empty //.
     destruct global_variance as [v|]; eauto using R_universe_instance_impl'.
     induction t in v, t' |- *; destruct v, t'; simpl; intros H; inv H; auto.
     simpl.
@@ -641,7 +641,7 @@ Section Impl.
     RelationClasses.subrelation (R Conv) (R' Conv) ->
     RelationClasses.subrelation (R Conv) (R' pb') ->
     RelationClasses.subrelation (R pb) (R' pb') ->
-    subrelation (compare_term_upto_univ_napp [] R pb napp) (compare_term_upto_univ_napp Σ R' pb' napp').
+    subrelation (compare_term_upto_univ_napp empty_global_env R pb napp) (compare_term_upto_univ_napp Σ R' pb' napp').
   Proof.
     intros he he' hle t t'.
     induction t in pb, pb', he', hle, napp, napp', t' |- * using term_forall_list_ind.
@@ -1038,162 +1038,6 @@ Proof.
   eapply eq_term_upto_univ_antisym; exact _.
 Qed.
 
-(* TODO look at this *)
-
-#[global]
-Instance R_global_instance_impl_same_napp Σ Re Re' Rle Rle' gr napp :
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp).
-Proof.
-  intros he hle t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
-  induction t in v, t' |- *; destruct v, t'; simpl; auto.
-  intros []; split; auto.
-  destruct t0; simpl; auto.
-  now eapply R_universe_instance_impl'.
-Qed.
-
-#[global]
-Instance R_global_instance_impl Σ Re Re' Rle Rle' gr napp napp' :
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Re Rle' ->
-  RelationClasses.subrelation Rle Rle' ->
-  napp <= napp' ->
-  subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
-Proof.
-  intros he hle hele hnapp t t'.
-  rewrite /R_global_instance /R_opt_variance.
-  destruct global_variance as [v|] eqn:glob.
-  rewrite (global_variance_napp_mon hnapp glob).
-  induction t in v, t' |- *; destruct v, t'; simpl; auto.
-  intros []; split; auto.
-  destruct t0; simpl; auto.
-  destruct (global_variance _ _ napp') as [v|] eqn:glob'; eauto using R_universe_instance_impl'.
-  induction t in v, t' |- *; destruct v, t'; simpl; auto; intros H; inv H.
-  eauto.
-  split; auto.
-  destruct t0; simpl; auto.
-Qed.
-
-Lemma global_variance_empty gr napp env : env.(declarations) = [] -> global_variance env gr napp = None.
-Proof.
-  destruct env; cbn => ->. destruct gr; auto.
-Qed.
-
-(** Pure syntactic equality, without cumulative inductive types subtyping *)
-
-#[global]
-Instance R_global_instance_empty_impl Σ Re Re' Rle Rle' gr napp napp' :
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  RelationClasses.subrelation Re Rle' ->
-  subrelation (R_global_instance empty_global_env Re Rle gr napp) (R_global_instance Σ Re' Rle' gr napp').
-Proof.
-  intros he hle hele t t'.
-  rewrite /R_global_instance /R_opt_variance. simpl.
-  rewrite global_variance_empty //.
-  destruct global_variance as [v|]; eauto using R_universe_instance_impl'.
-  induction t in v, t' |- *; destruct v, t'; simpl; intros H; inv H; auto.
-  simpl.
-  split; auto.
-  destruct t0; simpl; auto.
-Qed.
-
-Lemma onctx_eq_ctx_impl P ctx ctx' eq_term eq_term' :
-  onctx P ctx ->
-  (forall x, P x -> forall y, eq_term x y -> eq_term' x y) ->
-  eq_context_gen eq_term eq_term ctx ctx' ->
-  eq_context_gen eq_term' eq_term' ctx ctx'.
-Proof.
-  intros onc HP H1.
-  induction H1; depelim onc; constructor; eauto; intuition auto; simpl in *.
-  destruct o; depelim p; constructor; auto.
-Qed.
-
-#[global]
-Instance eq_term_upto_univ_impl Σ Re Re' Rle Rle' napp napp' :
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  RelationClasses.subrelation Re Rle' ->
-  napp <= napp' ->
-  subrelation (eq_term_upto_univ_napp Σ Re Rle napp) (eq_term_upto_univ_napp Σ Re' Rle' napp').
-Proof.
-  intros he hle hele hnapp t t'.
-  induction t in napp, napp', hnapp, t', Rle, Rle', hle, hele |- * using term_forall_list_ind;
-    try (inversion 1; subst; constructor;
-         eauto using R_universe_instance_impl'; fail).
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-  - inversion 1; subst; constructor.
-    eapply IHt1. 4:eauto. all:auto with arith. eauto.
-  - inversion 1; subst; constructor.
-    eapply R_global_instance_impl. 5:eauto. all:auto.
-  - inversion 1; subst; constructor.
-    eapply R_global_instance_impl. 5:eauto. all:eauto.
-  - inversion 1; subst; constructor; unfold eq_predicate in *; eauto; solve_all.
-    * eapply R_universe_instance_impl'; eauto.
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
-Qed.
-
-#[global]
-Instance eq_term_upto_univ_empty_impl Σ Re Re' Rle Rle' napp napp' :
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  RelationClasses.subrelation Re Rle' ->
-  subrelation (eq_term_upto_univ_napp empty_global_env Re Rle napp) (eq_term_upto_univ_napp Σ Re' Rle' napp').
-Proof.
-  intros he hle hele t t'.
-  induction t in napp, napp', t', Rle, Rle', hle, hele |- * using term_forall_list_ind;
-    try (inversion 1; subst; constructor;
-         eauto using R_universe_instance_impl'; fail).
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-  - inversion 1; subst; constructor. 
-    (* eapply shelf bug... fixed in unifall *)
-    eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
-  - inversion 1; subst; constructor.
-    eapply R_global_instance_empty_impl. 4:eauto. all:eauto.
-  - inversion 1; subst; constructor; unfold eq_predicate in *; solve_all.
-    * eapply R_universe_instance_impl'; eauto.
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.    
-Qed.
-
-#[global]
-Instance eq_term_upto_univ_leq Σ Re Rle napp napp' :
-  RelationClasses.subrelation Re Rle ->
-  napp <= napp' ->
-  subrelation (eq_term_upto_univ_napp Σ Re Re napp) (eq_term_upto_univ_napp Σ Re Rle napp').
-Proof.
-  intros H. eapply eq_term_upto_univ_impl; exact _.
-Qed.
-
-#[global]
-Instance eq_term_leq_term {cf:checker_flags} Σ φ
-  : subrelation (eq_term Σ φ) (leq_term Σ φ).
-Proof.
-  eapply eq_term_upto_univ_leq; auto; exact _.
-Qed.
-
-(* end look at this *)
-
 #[global]
 Instance leq_term_partial_order {cf:checker_flags} Σ φ
   : PartialOrder (eq_term Σ φ) (leq_term Σ φ).
@@ -1522,12 +1366,12 @@ End Mk.
 (** ** Syntactic ws_cumul_pb up to printing anotations ** *)
 
 
-Definition upto_names := compare_term_upto_univ [] (fun _ => eq) Conv.
+Definition upto_names := compare_term_upto_univ empty_global_env (fun _ => eq) Conv.
 
 Notation "`≡α`" := upto_names.
 Infix "≡α" := upto_names (at level 60).
-Notation "`≡Γ`" := (eq_context_upto [] (fun _ => eq) Conv).
-Infix "≡Γ" := (eq_context_upto [] (fun _ => eq) Conv) (at level 20, no associativity).
+Notation "`≡Γ`" := (eq_context_upto empty_global_env (fun _ => eq) Conv).
+Infix "≡Γ" := (eq_context_upto empty_global_env (fun _ => eq) Conv) (at level 20, no associativity).
 
 Section UptoNames.
 
@@ -1539,7 +1383,7 @@ Section UptoNames.
     subst. constructor ; auto.
   Qed.
 
-  Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext []) (subst_instance_cstrs i (empty_ext [])).
+  Lemma valid_constraints_empty {cf} i : valid_constraints (empty_ext empty_global_env) (subst_instance_cstrs i (empty_ext empty_global_env)).
   Proof.
     red. destruct check_univs => //.
   Qed.

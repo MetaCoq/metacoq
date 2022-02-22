@@ -11,10 +11,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICUnivSubstitutionTyp
   PCUICCumulativity PCUICSR PCUICSafeLemmata
   PCUICValidity PCUICPrincipality PCUICElimination 
-  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICFirstorder.
+  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICFirstorder PCUICEtaExpand.
      
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeRetyping.
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness.
+From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness EEtaExpanded.
 
 
 Local Open Scope string_scope.
@@ -1444,7 +1444,56 @@ Proof.
       cbn [E.mkApps]. f_equal. f_equal.
       eapply erase_irrel. eapply map_erase_irrel.
 Qed.
-  
+
+Lemma map_erase_length Σ H Γ t H1 : length (map_erase Σ H Γ t H1) = length t.
+Proof.
+  induction t; cbn; f_equal; [ | inversion H1; subst ]; eauto.
+Qed.
+
+Local Hint Constructors expanded : expanded.
+
+Lemma eta_expand_erase {Σ : global_env_ext} deps {wfΣ' : ∥wf Σ∥} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
+  PCUICEtaExpand.expanded Σ t ->
+  expanded (@erase_global deps Σ wfΣ') (@erase Σ wfΣ Γ t wt).
+Proof.
+  intros exp.
+  induction exp in Γ, wt |- *.
+  1-7,9-15: simp erase; unfold erase_clause_1 in *.
+  all: eauto using expanded.
+  all: try (destruct is_erasable; [ now eauto using expanded | eauto using expanded]).
+  - unfold erase_clause_1_clause_13. econstructor.
+    + eauto.
+    + clear - H0. todo "case".
+  - todo "fix".
+  - todo "cofix".
+  - destruct (is_erasable Σ wfΣ Γ (mkApps f6 args) wt).
+    + simp erase. destruct is_erasable. 1: now econstructor. sq. exfalso; tauto.
+    + rewrite erase_mkApps.
+      * todo "wt".
+      * intros. econstructor; eauto.
+        -- destruct f6; simp erase; unfold erase_clause_1; destruct is_erasable; cbn; eauto.
+        -- clear - H1. induction H1; cbn.
+          ++ econstructor.
+          ++ depelim Hyp1. cbn. econstructor; eauto.
+      * todo "wf_local".
+      * intros ?. now sq.
+      * todo "wt".
+  - destruct (is_erasable Σ wfΣ Γ (mkApps (tConstruct ind c u) args) wt).
+    + simp erase. destruct is_erasable. 1: now econstructor. sq. exfalso; tauto.
+    + rewrite erase_mkApps.
+      * todo "wt".
+      * intros. simp erase. unfold erase_clause_1. destruct is_erasable.
+        -- exfalso. sq. eapply Is_type_app in X.
+          ++ sq. eauto.
+          ++ eauto.
+          ++ todo "wf_local".
+          ++ todo "wt".
+        -- eapply expanded_tConstruct_app. todo "declared". rewrite map_erase_length. todo "declared".
+      * todo "wf_local".
+      * intros ?. now sq.
+      * todo "wt". Unshelve. all: todo "shelve".
+Qed.
+
 Lemma firstorder_erases_deterministic {Σ t t' i u args mind} H H2 : 
   Σ ;;; [] |- t : mkApps (tInd i u) args -> 
   PCUICWcbvEval.value t ->
@@ -1461,7 +1510,7 @@ Proof.
   revert t Hfov.
   eapply firstorder_value_inds. intros.
   rewrite erase_mkApps.
-  - eapply inversion_mkApps in X as (? & XX & X).
+  - eapply PCUICValidity.inversion_mkApps in X as (? & XX & X).
     clear XX. revert X. clear. generalize (mkApps (tInd i u) pandi). induction 1.  
     + econstructor.
     + econstructor. 1: now econstructor. eauto.

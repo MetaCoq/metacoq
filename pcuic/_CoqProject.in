@@ -88,9 +88,12 @@ theories/PCUICFirstorder.v
 
 theories/PCUICSafeLemmata.v
 
+theories/PCUICEtaExpand.v
+
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 theories/TemplateToPCUICWcbvEval.v
+theories/TemplateToPCUICExpanded.v
 theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v

@@ -105,6 +105,7 @@ Section Eta.
         | None => tVar ("Error: lookup of an inductive failed for "
                        ++ string_of_kername ind.(inductive_mind))
         end
+    | tCast t1 k t2 => tCast (eta_expand t1) k (eta_expand t2)
     | t => t
     end.
 
@@ -147,9 +148,9 @@ Inductive expanded : term -> Prop :=
 | expanded_tEvar (ev : nat) (args : list term) : expanded (tEvar ev args)
 | expanded_tSort (s : Universe.t) : expanded (tSort s)
 | expanded_tCast (t : term) (kind : cast_kind) (v : term) : expanded t -> expanded v -> expanded (tCast t kind v)
-| expanded_tProd (na : aname) (ty : term) (body : term) : expanded ty -> expanded body -> expanded (tProd na ty body)
-| expanded_tLambda (na : aname) (ty : term) (body : term) : expanded ty -> expanded body -> expanded (tLambda na ty body)
-| expanded_tLetIn (na : aname) (def : term) (def_ty : term) (body : term) : expanded def -> expanded def_ty -> expanded body -> expanded (tLetIn na def def_ty body)
+| expanded_tProd (na : aname) (ty : term) (body : term) : (* expanded ty -> expanded body -> *) expanded (tProd na ty body)
+| expanded_tLambda (na : aname) (ty : term) (body : term) : (* expanded ty -> *) expanded body -> expanded (tLambda na ty body)
+| expanded_tLetIn (na : aname) (def : term) (def_ty : term) (body : term) : expanded def (* -> expanded def_ty *) -> expanded body -> expanded (tLetIn na def def_ty body)
 | expanded_tApp (f : term) (args : list term) : ~ isConstruct f -> expanded f -> Forall expanded args -> expanded (tApp f args)
 | expanded_tConst (c : kername) (u : Instance.t) : expanded (tConst c u)
 | expanded_tInd (ind : inductive) (u : Instance.t) : expanded (tInd ind u)
@@ -184,14 +185,14 @@ forall (Σ : global_env) (P : term -> Prop),
 (forall (t : term) (kind : cast_kind) (v : term),
  expanded Σ t -> P t -> expanded Σ v -> P v -> P (tCast t kind v)) ->
 (forall (na : aname) (ty body : term),
- expanded Σ ty -> P ty -> expanded Σ body -> P body -> P (tProd na ty body)) ->
+ (* expanded Σ ty -> P ty -> expanded Σ body -> P body -> *) P (tProd na ty body)) ->
 (forall (na : aname) (ty body : term),
- expanded Σ ty -> P ty -> expanded Σ body -> P body -> P (tLambda na ty body)) ->
+ (* expanded Σ ty -> P ty -> *) expanded Σ body -> P body -> P (tLambda na ty body)) ->
 (forall (na : aname) (def def_ty body : term),
  expanded Σ def ->
  P def ->
- expanded Σ def_ty ->
- P def_ty -> expanded Σ body -> P body -> P (tLetIn na def def_ty body)) ->
+ (* expanded Σ def_ty ->
+ P def_ty -> *) expanded Σ body -> P body -> P (tLetIn na def def_ty body)) ->
 (forall (f7 : term) (args : list term),
  ~ isConstruct f7 ->
  expanded Σ f7 -> P f7 -> Forall (expanded Σ) args -> Forall P args -> P (tApp f7 args)) ->
@@ -238,3 +239,39 @@ Proof.
   - eapply H13; eauto. induction H18 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
   - eapply H14; eauto. induction H18 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
 Qed.
+
+Local Hint Constructors expanded.
+
+Lemma expanded_mkApps Σ f args :
+  expanded Σ f -> Forall (expanded Σ) args ->
+  ~ isConstruct_app f ->
+  expanded Σ (mkApps f args).
+Proof.
+  intros. destruct args; cbn.
+  - cbn. eauto.
+  - destruct f; cbn.
+    all: try now (econstructor; cbn; eauto; invs H; eauto).
+    invs H; cbn in *.
+    + econstructor; eauto. solve_all. eapply All_app_inv; eauto.
+    + exfalso. eapply H1; eauto.
+Qed.
+
+
+Lemma eta_expand_expanded {cf : config.checker_flags} Σ t :
+  wf Σ ->
+  expanded Σ (eta_expand Σ t).
+Proof.
+  intros wf.
+  induction t using term_forall_list_ind; try now (cbn; eauto).
+  - cbn. destruct (isConstruct_app t) eqn:E.
+    + induction t; cbn in *; try congruence.
+      * admit.
+      * admit.
+    + induction t; cbn. all: try now (eapply expanded_mkApps; eauto; solve_all).
+      * admit.
+      * cbn in E. congruence.
+  - cbn. admit.
+  - cbn. econstructor; eauto. unfold map_branches. solve_all.
+  - cbn. econstructor; eauto. unfold map_branches. solve_all.
+  - cbn. econstructor; eauto. unfold map_branches. solve_all.
+Admitted.

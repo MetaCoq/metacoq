@@ -14,9 +14,9 @@ Inductive expanded : term -> Prop :=
 | expanded_tVar (id : ident) : expanded (tVar id)
 | expanded_tEvar (ev : nat) (args : list term) : expanded (tEvar ev args)
 | expanded_tSort (s : Universe.t) : expanded (tSort s)
-| expanded_tProd (na : aname) (ty : term) (body : term) : expanded ty -> expanded body -> expanded (tProd na ty body)
-| expanded_tLambda (na : aname) (ty : term) (body : term) : expanded ty -> expanded body -> expanded (tLambda na ty body)
-| expanded_tLetIn (na : aname) (def : term) (def_ty : term) (body : term) : expanded def -> expanded def_ty -> expanded body -> expanded (tLetIn na def def_ty body)
+| expanded_tProd (na : aname) (ty : term) (body : term) : (* expanded ty -> expanded body -> *) expanded (tProd na ty body)
+| expanded_tLambda (na : aname) (ty : term) (body : term) : (* expanded ty ->  *)expanded body -> expanded (tLambda na ty body)
+| expanded_tLetIn (na : aname) (def : term) (def_ty : term) (body : term) : expanded def -> (* expanded def_ty ->  *)expanded body -> expanded (tLetIn na def def_ty body)
 | expanded_mkApps (f : term) (args : list term) : ~ isConstruct f -> expanded f -> Forall expanded args -> expanded (mkApps f args)
 | expanded_tConst (c : kername) (u : Instance.t) : expanded (tConst c u)
 | expanded_tInd (ind : inductive) (u : Instance.t) : expanded (tInd ind u)
@@ -40,14 +40,14 @@ forall (Σ : global_env) (P : term -> Prop),
 (forall (ev : nat) (args : list term), P (tEvar ev args)) ->
 (forall s : Universe.t, P (tSort s)) ->
 (forall (na : aname) (ty body : term),
- expanded Σ ty -> P ty -> expanded Σ body -> P body -> P (tProd na ty body)) ->
+(*  expanded Σ ty -> P ty -> expanded Σ body -> P body -> *) P (tProd na ty body)) ->
 (forall (na : aname) (ty body : term),
- expanded Σ ty -> P ty -> expanded Σ body -> P body -> P (tLambda na ty body)) ->
+(*  expanded Σ ty -> P ty -> *) expanded Σ body -> P body -> P (tLambda na ty body)) ->
 (forall (na : aname) (def def_ty body : term),
  expanded Σ def ->
  P def ->
- expanded Σ def_ty ->
- P def_ty -> expanded Σ body -> P body -> P (tLetIn na def def_ty body)) ->
+ (* expanded Σ def_ty -> 
+ P def_ty -> *) expanded Σ body -> P body -> P (tLetIn na def def_ty body)) ->
 (forall (f6 : term) (args : list term),
  ~ isConstruct f6 ->
  expanded Σ f6 -> P f6 -> Forall (expanded Σ) args -> Forall P args -> P (mkApps f6 args)) ->

@@ -1452,6 +1452,48 @@ Qed.
 
 Local Hint Constructors expanded : expanded.
 
+Lemma All_from_nth_error : forall (A : Type) (L1 : list A) (P : A -> Type),
+  (forall (n : nat) (x1 : A),
+   n < #|L1| -> nth_error L1 n = Some x1 -> P x1) ->
+  All P L1.
+Proof.
+  intros. induction L1; econstructor.
+  - eapply (X 0); cbn; try reflexivity. lia.
+  - eapply IHL1. intros. eapply (X (S n)); cbn; eauto. lia.
+Qed.
+
+Lemma welltyped_mkApps_inv {Σ : global_env_ext} Γ f args :  ∥ wf Σ ∥ ->
+  welltyped Σ Γ (mkApps f args) -> welltyped Σ Γ f /\ Forall (welltyped Σ Γ) args.
+Proof.
+  intros wf (A & HA). sq. eapply inversion_mkApps in HA as (? & ? & ?).
+  split. eexists; eauto.
+  induction t0 in f |- *; econstructor; eauto; econstructor; eauto.
+Qed.
+
+Local Arguments erase_global_decls _ _ {_}.
+
+Lemma erase_global_declared_constructor Σ ind c mind idecl cdecl wfΣ' deps :
+   declared_constructor Σ (ind, c) mind idecl cdecl ->
+   KernameSet.In ind.(inductive_mind) deps -> 
+   ETyping.declared_constructor (erase_global deps Σ wfΣ') (ind, c) (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl) (cdecl.(cstr_name), cdecl.(cstr_arity)).
+Proof.
+  intros [[]] Hin.
+  cbn in *. split. split. 
+  - red in H |- *. clear - H Hin. induction Σ as [ | [] Σ IH] in deps, wfΣ', H, Hin |- *.
+    + cbn in *. congruence.
+    + cbn in H. unfold eq_kername in H. destruct kername_eq_dec as [E | E].
+      * invs H. cbn.  eapply KernameSet.mem_spec in Hin as ->. cbn.
+        destruct kername_eq_dec; congruence.
+      * cbn - [erase_global]. destruct g. cbn.
+        -- destruct KernameSet.mem; eauto.
+           erewrite elookup_env_cons_disc; eauto. eapply IH; eauto.
+           eapply KernameSetFact.union_2. eauto.
+        -- cbn. destruct KernameSet.mem; eauto.
+           erewrite elookup_env_cons_disc; eauto. 
+  - cbn. now eapply map_nth_error.
+  - cbn. erewrite map_nth_error; eauto.
+Qed.
+
 Lemma eta_expand_erase {Σ : global_env_ext} deps {wfΣ' : ∥wf Σ∥} {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
   PCUICEtaExpand.expanded Σ t ->
   expanded (@erase_global deps Σ wfΣ') (@erase Σ wfΣ Γ t wt).
@@ -1463,35 +1505,44 @@ Proof.
   all: try (destruct is_erasable; [ now eauto using expanded | eauto using expanded]).
   - unfold erase_clause_1_clause_13. econstructor.
     + eauto.
-    + clear - H0. todo "case".
-  - todo "fix".
-  - todo "cofix".
+    + solve_all. eapply All_from_nth_error. intros. eapply nth_error_map_InP in H1 as (? & ? & ? & ?).
+      cbn in *. subst.
+      eapply All_nth_error in H0 as []; eauto.
+  - econstructor. solve_all. eapply All_from_nth_error. intros. eapply nth_error_map_InP in H1 as (? & ? & ? & ?).
+    cbn in *. subst. cbn. eapply All_nth_error in H0 as [? []]; eauto.
+  - econstructor. solve_all. eapply All_from_nth_error. intros. eapply nth_error_map_InP in H1 as (? & ? & ? & ?).
+    cbn in *. subst. cbn. eapply All_nth_error in H0 as [? []]; eauto.
   - destruct (is_erasable Σ wfΣ Γ (mkApps f6 args) wt).
     + simp erase. destruct is_erasable. 1: now econstructor. sq. exfalso; tauto.
-    + rewrite erase_mkApps.
-      * todo "wt".
+    + destruct wt as (T & wt). rewrite erase_mkApps.
+      * eapply welltyped_mkApps_inv; eauto. eexists; eauto.
       * intros. econstructor; eauto.
         -- destruct f6; simp erase; unfold erase_clause_1; destruct is_erasable; cbn; eauto.
         -- clear - H1. induction H1; cbn.
           ++ econstructor.
           ++ depelim Hyp1. cbn. econstructor; eauto.
-      * todo "wf_local".
+      * eapply typing_wf_local; eauto.
       * intros ?. now sq.
-      * todo "wt".
+      * eapply welltyped_mkApps_inv; eauto. eexists; eauto.
   - destruct (is_erasable Σ wfΣ Γ (mkApps (tConstruct ind c u) args) wt).
     + simp erase. destruct is_erasable. 1: now econstructor. sq. exfalso; tauto.
-    + rewrite erase_mkApps.
-      * todo "wt".
+    +  destruct wt as (T & wt). rewrite erase_mkApps.
+      * eapply welltyped_mkApps_inv; eauto. eexists; eauto.
       * intros. simp erase. unfold erase_clause_1. destruct is_erasable.
         -- exfalso. sq. eapply Is_type_app in X.
           ++ sq. eauto.
           ++ eauto.
-          ++ todo "wf_local".
-          ++ todo "wt".
-        -- eapply expanded_tConstruct_app. todo "declared". rewrite map_erase_length. todo "declared".
-      * todo "wf_local".
+          ++ eapply typing_wf_local; eauto.
+          ++ eauto.
+        -- eapply expanded_tConstruct_app.
+           { eapply erase_global_declared_constructor; eauto. todo "deps". }
+           rewrite map_erase_length. unfold erase_mutual_inductive_body. cbn.
+          sq. unshelve edestruct @declared_constructor_inv as (? & ? & ?); eauto.
+          2: erewrite <- cstr_args_length; eauto.
+          eapply weaken_env_prop_typing.
+      * eapply typing_wf_local; eauto.
       * intros ?. now sq.
-      * todo "wt". Unshelve. all: todo "shelve".
+      * eapply welltyped_mkApps_inv; eauto. eexists; eauto.
 Qed.
 
 Lemma firstorder_erases_deterministic {Σ t t' i u args mind} H H2 : 

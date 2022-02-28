@@ -934,7 +934,7 @@ Proof.
     elimtype False. destruct H1 as [cst [declc _]].
     { red in declc. destruct x1 as [d _]. red in d. rewrite d in declc. noconf declc. }
     destruct H1 as [mib [mib' [declm [declm' em]]]].
-    destruct em.
+    pose proof em as em'. destruct em'.
     destruct x1 as [x1 hnth].
     red in x1, declm. rewrite x1 in declm. noconf declm.
     eapply Forall2_nth_error_left in H1; eauto. destruct H1 as [? [? ?]].
@@ -958,11 +958,14 @@ Proof.
     elimtype False. destruct H0 as [cst [declc _]].
     { red in declc. destruct d as [[[d _] _] _]. red in d. rewrite d in declc. noconf declc. }
     destruct H0 as [mib [mib' [declm [declm' em]]]].
-    destruct d. destruct em.
+    destruct d. pose proof em as em'. destruct em'.
     eapply Forall2_nth_error_left in H5 as (x' & ? & ?); eauto.
     econstructor; eauto. split; eauto.
+    
+    eauto.
     destruct H0 as [[? ?] ?]. red in H0, declm. rewrite H0 in declm. now noconf declm.
-
+    destruct H0 as [[? ?] ?]. red in H0, declm. rewrite H0 in declm. now noconf declm.
+    
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     eapply All_Forall. eapply includes_deps_fold in Σer as [_ Σer].
@@ -1015,17 +1018,17 @@ Proof.
   split => //; eexists [(kn, d)]; intuition eauto.
   econstructor; eauto.
   red. destruct H. split; eauto.
+  red in H. red.
   inv wfΣ. inv X.
-  red in d0 |- *.
-  rewrite -d0. simpl. unfold lookup_env; simpl; unfold eq_kername. destruct kername_eq_dec; try congruence.
-  eapply lookup_env_Some_fresh in d0. subst kn; contradiction.
+  rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername. destruct kername_eq_dec; try congruence.
+  eapply lookup_env_Some_fresh in H. subst kn; contradiction.
   econstructor; eauto.
   red. destruct H. split; eauto.
   inv wfΣ. inv X.
-  red in d0 |- *.
-  rewrite -d0. simpl. unfold lookup_env; simpl; unfold eq_kername.
-  unfold lookup_env in d0; simpl in d0. destruct kername_eq_dec; try congruence.
-  eapply lookup_env_Some_fresh in d0. subst kn. contradiction.
+  red in H |- *.
+  rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername.
+  unfold lookup_env in H; simpl in H. destruct kername_eq_dec; try congruence.
+  eapply lookup_env_Some_fresh in H. subst kn. contradiction.
 Qed.
 
 Lemma lookup_env_ext {Σ kn kn' d d'} : 
@@ -1179,17 +1182,7 @@ Proof.
   destruct destArity as [[? ?]|] eqn:da; auto.
 Qed.
 
-Definition closed_decl (d : EAst.global_decl) := 
-  match d with
-  | EAst.ConstantDecl cb => 
-    option_default (ELiftSubst.closedn 0) (EAst.cst_body cb) true
-  | EAst.InductiveDecl _ => true
-  end.
-
-Definition closed_env (Σ : EAst.global_declarations) := 
-  forallb (test_snd closed_decl) Σ.
-
-Lemma lookup_env_closed {Σ kn decl} : closed_env Σ -> ETyping.lookup_env Σ kn = Some decl -> closed_decl decl.
+Lemma lookup_env_closed {Σ kn decl} : ETyping.closed_env Σ -> ETyping.lookup_env Σ kn = Some decl -> ETyping.closed_decl decl.
 Proof.
   induction Σ; cbn => //.
   move/andP => [] cla cle.
@@ -1377,7 +1370,7 @@ Qed.
 
 Lemma erase_global_closed Σ deps wfΣ :
   let Σ' := erase_global deps Σ wfΣ in
-  closed_env Σ'.
+  ETyping.closed_env Σ'.
 Proof.
   sq.
   revert Σ w deps. apply: global_env_ind; simpl; auto.
@@ -1388,9 +1381,9 @@ Proof.
   red in o3. rename o2 into onud.
   unfold erase_global. cbn -[erase_global_decls].
   destruct d as []; simpl; destruct KernameSet.mem.
-  + cbn [closed_env forallb]. cbn.
+  + cbn [ETyping.closed_env forallb]. cbn.
     rewrite [forallb _ _](IH _) andb_true_r.
-    rewrite /test_snd /closed_decl /=.
+    rewrite /test_snd /ETyping.closed_decl /=.
     set (er := erase_global_decls_obligation_1 _ _ _ _ _ _ _).
     set (er' := erase_global_decls_obligation_2 _ _ _ _ _ _ _).
     clearbody er er'.
@@ -1405,8 +1398,8 @@ Proof.
   + simpl. set (er := sq _).
     clearbody er. destruct er.
     eapply IH.
-  + cbn [closed_env forallb].
-    rewrite {1}/test_snd {1}/closed_decl /=.
+  + cbn [ETyping.closed_env forallb].
+    rewrite {1}/test_snd {1}/ETyping.closed_decl /=.
     eapply IH.
   + eapply IH.
   Unshelve. cbn. destruct Σ; auto.

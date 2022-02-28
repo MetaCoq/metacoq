@@ -44,17 +44,81 @@ Proof.
   simpl. destruct kername_eq_dec. subst => //. auto. 
 Qed.
 
-(** Knowledge of propositionality status oof an inductive type *)
+(** Knowledge of propositionality status of an inductive type and parameters *)
 
-Definition is_propositional_ind Σ ind :=
+Definition inductive_isprop_and_pars Σ ind :=
   match lookup_env Σ (inductive_mind ind) with
   | Some (InductiveDecl mdecl) =>
     match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
-    | Some idecl => Some (idecl.(ind_propositional))
+    | Some idecl => Some (idecl.(ind_propositional), mdecl.(ind_npars))
     | None => None
     end
   | _ => None
   end.
+
+
+Definition closed_decl (d : EAst.global_decl) := 
+  match d with
+  | EAst.ConstantDecl cb => 
+    option_default (ELiftSubst.closedn 0) (EAst.cst_body cb) true
+  | EAst.InductiveDecl _ => true
+  end.
+
+Definition closed_env (Σ : EAst.global_declarations) := 
+  forallb (test_snd closed_decl) Σ.
+  
+(** Environment extension and uniqueness of declarations in well-formed global environments *)
+
+Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.
+
+Definition fresh_global kn (Σ : global_declarations) :=
+  Forall (fun x => x.1 <> kn) Σ.
+
+Inductive wf_glob : global_declarations -> Prop :=
+| wf_glob_nil : wf_glob []
+| wf_glob_cons kn d Σ : 
+  wf_glob Σ ->
+  fresh_global kn Σ ->
+  wf_glob ((kn, d) :: Σ).
+Derive Signature for wf_glob.
+
+Lemma lookup_env_Some_fresh {Σ c decl} :
+  lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
+Proof.
+  induction Σ; cbn. 1: congruence.
+  unfold eq_kername; destruct kername_eq_dec; subst.
+  - intros [= <-] H2. inv H2.
+    contradiction.
+  - intros H1 H2. apply IHΣ; tas.
+    now inv H2.
+Qed.
+
+Lemma extends_lookup {Σ Σ' c decl} :
+  wf_glob Σ' ->
+  extends Σ Σ' ->
+  lookup_env Σ c = Some decl ->
+  lookup_env Σ' c = Some decl.
+Proof.
+  intros wfΣ' [Σ'' ->]. simpl.
+  induction Σ'' in wfΣ', c, decl |- *.
+  - simpl. auto.
+  - specialize (IHΣ'' c decl). forward IHΣ''.
+    + now inv wfΣ'.
+    + intros HΣ. specialize (IHΣ'' HΣ).
+      inv wfΣ'. simpl in *.
+      unfold eq_kername; destruct kername_eq_dec; subst; auto.
+      apply lookup_env_Some_fresh in IHΣ''; contradiction.
+Qed.
+
+Lemma extends_is_propositional {Σ Σ'} : 
+  wf_glob Σ' -> extends Σ Σ' ->
+  forall ind b, inductive_isprop_and_pars Σ ind = Some b -> inductive_isprop_and_pars Σ' ind = Some b.
+Proof.
+  intros wf ex ind b.
+  rewrite /inductive_isprop_and_pars.
+  destruct lookup_env eqn:lookup => //.
+  now rewrite (extends_lookup wf ex lookup).
+Qed.
 
 (** ** Reduction *)
 

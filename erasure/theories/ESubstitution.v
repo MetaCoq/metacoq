@@ -65,7 +65,7 @@ Proof.
   destruct H, H1.
   unfold PCUICAst.declared_minductive in *.
 
-  eapply extends_lookup in H1; eauto; tc.
+  eapply PCUICWeakeningEnvConv.extends_lookup in H1; eauto; tc.
   2:{ cbn. eapply extends_decls_extends. reflexivity. }
   rewrite H1 in H. inversion H. subst. clear H.
   rewrite H3 in H4. inversion H4. subst. clear H4.
@@ -88,7 +88,7 @@ Proof.
     red.
     destruct isdecl as [[? ?] ?]. red in H. red in H4.
     rewrite H in H4.
-    eapply extends_lookup in H; eauto; tc. now rewrite H.
+    eapply PCUICWeakeningEnvConv.extends_lookup in H; eauto; tc. now rewrite H.
   - econstructor. all:eauto. 
     eapply Informative_extends; eauto.
     eapply All2i_All2_All2; tea. cbv beta.

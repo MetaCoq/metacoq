@@ -5,6 +5,7 @@ theories/EAstUtils.v
 theories/EInduction.v
 theories/ELiftSubst.v
 theories/EReflect.v
+theories/ESpineView.v
 theories/EPretty.v
 theories/ECSubst.v
 theories/EWcbvEval.v
@@ -21,4 +22,5 @@ theories/EArities.v
 theories/ErasureCorrectness.v
 theories/ErasureFunction.v
 theories/EOptimizePropDiscr.v
+theories/ERemoveParams.v
 theories/Erasure.v

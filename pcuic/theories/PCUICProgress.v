@@ -13,6 +13,31 @@ From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUti
   PCUICParallelReductionConfluence
   PCUICWcbvEval PCUICClosed PCUICClosedTyp
   PCUICReduction PCUICCSubst PCUICOnFreeVars PCUICWellScopedCumulativity PCUICCanonicity PCUICWcbvEval.
+
+From Equations Require Import Equations.
+
+
+Lemma eval_tCase {cf : checker_flags} {Σ : global_env_ext}  ci p discr brs res T :
+  wf Σ ->
+  Σ ;;; [] |- tCase ci p discr brs : T ->
+  eval Σ (tCase ci p discr brs) res -> 
+  ∑ c u args, red Σ [] (tCase ci p discr brs) (tCase ci p ((mkApps (tConstruct ci.(ci_ind) c u) args)) brs).
+Proof.
+  intros wf wt H. depind H; try now (cbn in *; congruence).
+  - eapply inversion_Case in wt as (? & ? & ? & ? & cinv & ?); eauto.
+    eexists _, _, _. eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv.
+  - eapply inversion_Case in wt as wt'; eauto. destruct wt' as (? & ? & ? & ? & cinv & ?).
+    assert (Hred1 : Σ;;; [] |- tCase ip p discr brs ⇝* tCase ip p (mkApps fn args) brs). {
+      etransitivity. { eapply red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. } 
+      econstructor. econstructor.
+      rewrite closed_unfold_cofix_cunfold_eq. eauto.
+      enough (closed (mkApps (tCoFix mfix idx) args)) as Hcl by (rewrite closedn_mkApps in Hcl; solve_all).
+      eapply eval_closed. eauto.
+      2: eauto. eapply @subject_closed with (Γ := []); eauto. eapply cinv.
+    }
+    edestruct IHeval2 as (c & u & args0 & IH); eauto using subject_reduction.
+    exists c, u, args0. etransitivity; eauto.
+Qed.
   
 Local Existing Instance config.extraction_checker_flags.
 

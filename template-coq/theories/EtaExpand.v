@@ -5,7 +5,7 @@
     Coq's conversion, the proof is essentially [eq_refl].
     All dependencies are also expanded.*)
 
-From Coq Require Import List PeanoNat Bool Ascii String.
+From Coq Require Import List PeanoNat Bool Ascii String Lia.
 From MetaCoq.Template Require Import Kernames All Ast Typing.
 
 Open Scope string.
@@ -240,7 +240,7 @@ Proof.
   - eapply H14; eauto. induction H18 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
 Qed.
 
-Local Hint Constructors expanded.
+Local Hint Constructors expanded : core.
 
 Lemma expanded_mkApps Σ f args :
   expanded Σ f -> Forall (expanded Σ) args ->
@@ -257,21 +257,61 @@ Proof.
 Qed.
 
 
-Lemma eta_expand_expanded {cf : config.checker_flags} Σ t :
+Lemma expanded_fold_lambda Σ t l :
+  expanded Σ
+    (fold_right (fun '(nm, ty) (b : term) => tLambda nm ty b) t l) <->   expanded Σ t.
+Proof.
+  induction l as [ | []] in t |- *; cbn; split; firstorder.
+  eapply IHl.
+  now inversion H; subst.
+Qed.
+
+Lemma expanded_mkApps_tConstruct Σ mind idecl cdecl ind idx u args :
+  declared_constructor Σ (ind, idx) mind idecl cdecl ->
+  #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
+  expanded Σ (mkApps (tConstruct ind idx u) args).
+Proof.
+  intros Hdecl Heq. unfold mkApps.
+  destruct args eqn:E.
+  - econstructor; eauto. cbn in *. lia.
+  - eapply expanded_tConstruct_app; eauto.
+Qed.
+
+Lemma eta_expand_expanded {cf : config.checker_flags} {Σ : global_env_ext} Γ t T :
   wf Σ ->
+  typing Σ Γ t T ->
   expanded Σ (eta_expand Σ t).
 Proof.
-  intros wf.
-  induction t using term_forall_list_ind; try now (cbn; eauto).
-  - cbn. destruct (isConstruct_app t) eqn:E.
-    + induction t; cbn in *; try congruence.
-      * admit.
-      * admit.
-    + induction t; cbn. all: try now (eapply expanded_mkApps; eauto; solve_all).
-      * admit.
-      * cbn in E. congruence.
-  - cbn. admit.
+  intros wf Hty.
+  eapply @typing_ind_env with (t := t) (Σ := Σ) (P := fun Σ Γ t T => expanded Σ (eta_expand Σ t)) (PΓ := fun _ _ _ => True); intros; try now (cbn; eauto).
+  - cbn. destruct (isConstruct_app t0) eqn:E.
+    + induction t0; cbn in *; try congruence.
+      unfold eta_constructor in *.
+      destruct lookup_env as [[] | ] eqn:E1; try congruence.
+      destruct nth_error eqn:E2; try congruence.
+      destruct (nth_error (ind_ctors o) idx) eqn:E3; try congruence.
+      cbn in H. rewrite expanded_fold_lambda in H.
+      unfold eta_single. eapply expanded_fold_lambda.
+      rewrite Nat.sub_0_r in H.
+      unfold mkApps in H. destruct (ind_npars m + context_assumptions (cstr_args c)) eqn:EE.
+      * cbn in H. inversion H; subst. cbn.
+        simpl_list. destruct l.
+        -- cbn. econstructor; eauto.
+        -- cbn. eapply expanded_tConstruct_app; eauto. cbn. now rewrite H6. 
+      * eapply expanded_mkApps_tConstruct. split. split. red. all: eauto. 
+        rewrite rev_map_spec. simpl_list. rewrite EE. lia.
+    + assert (Forall(fun t : term => expanded Σ0.1 (eta_expand Σ0.1 t)) l). {
+        clear H1. clear X. induction X0; econstructor; eauto. }
+      induction t0; cbn.
+      all: try now (eapply expanded_mkApps; eauto; solve_all).
+      cbn in E. congruence.
+  - cbn. pose proof isdecl as isdecl'. destruct isdecl as [[]]. red in H1.
+    unfold eta_constructor. unfold fst_ctx in *. cbn in *. rewrite H1, H2, H3.
+    eapply expanded_fold_lambda. rewrite Nat.sub_0_r.
+    eapply expanded_mkApps_tConstruct; eauto.
+    rewrite rev_map_spec. now simpl_list.
   - cbn. econstructor; eauto. unfold map_branches. solve_all.
-  - cbn. econstructor; eauto. unfold map_branches. solve_all.
-  - cbn. econstructor; eauto. unfold map_branches. solve_all.
-Admitted.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn. now split.
+  - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn. now split.
+  - eapply typing_wf_local; eauto.
+Qed.

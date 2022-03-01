@@ -21,6 +21,8 @@ theories/EInversion.v
 theories/EArities.v
 theories/ErasureCorrectness.v
 theories/ErasureFunction.v
+theories/EExtends.v
 theories/EOptimizePropDiscr.v
 theories/ERemoveParams.v
+theories/EEtaExpanded.v
 theories/Erasure.v

@@ -781,6 +781,52 @@ Proof.
     rewrite subst_inds_concl_head. all:simpl; auto.
 Qed.
 
+Lemma Construct_Ind_ind_eq' {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
+  forall {Γ n i args u i' args' u' },
+  Σ ;;; Γ |- mkApps (tConstruct i n u) args : mkApps (tInd i' u') args' ->
+  ∑ mdecl idecl cdecl,
+  declared_constructor Σ.1 (i, n) mdecl idecl cdecl ×
+  (i = i') * 
+  (* Universe instances match *)
+  R_ind_universes Σ i (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' *
+  consistent_instance_ext Σ (ind_universes mdecl) u *    
+  consistent_instance_ext Σ (ind_universes mdecl) u' *    
+  (#|args| = (ind_npars mdecl + context_assumptions cdecl.(cstr_args))%nat) *
+  ∑ parsubst argsubst parsubst' argsubst',
+    let parctx := (subst_instance u (ind_params mdecl)) in
+    let parctx' := (subst_instance u' (ind_params mdecl)) in
+    let argctx := (subst_context parsubst 0
+    ((subst_context (inds (inductive_mind i) u mdecl.(ind_bodies)) #|ind_params mdecl|
+    (subst_instance u cdecl.(cstr_args))))) in
+    let argctx2 := (subst_context parsubst' 0
+    ((subst_context (inds (inductive_mind i) u' mdecl.(ind_bodies)) #|ind_params mdecl|
+    (subst_instance u' cdecl.(cstr_args))))) in
+    let argctx' := (subst_context parsubst' 0 (subst_instance u' idecl.(ind_indices))) in
+    
+    [× spine_subst Σ Γ (firstn (ind_npars mdecl) args) parsubst parctx,
+    spine_subst Σ Γ (firstn (ind_npars mdecl) args') parsubst' parctx',
+    spine_subst Σ Γ (skipn (ind_npars mdecl) args) argsubst argctx,
+    spine_subst Σ Γ (skipn (ind_npars mdecl) args')  argsubst' argctx' &
+    ∑ s, 
+      sorts_local_ctx (lift_typing typing) Σ Γ argctx2 s ×
+      (** Parameters match *)
+      ws_cumul_pb_terms Σ Γ (firstn mdecl.(ind_npars) args) (firstn mdecl.(ind_npars) args') ×
+
+    (** Indices match *)
+    ws_cumul_pb_terms Σ Γ
+      (map (subst0 (argsubst ++ parsubst) ∘ 
+      subst (inds (inductive_mind i) u mdecl.(ind_bodies)) (#|cdecl.(cstr_args)| + #|ind_params mdecl|)
+      ∘ (subst_instance u)) 
+        cdecl.(cstr_indices))
+      (skipn mdecl.(ind_npars) args') ].
+Proof.
+  intros Γ n i args u i' args' u' X.
+  eapply inversion_mkApps in X as X'. destruct X' as (? & X' & _).
+  eapply inversion_Construct in X' as (mdecl & idecl & cdecl & ? & ? & ? & ?); eauto.
+  exists mdecl, idecl, cdecl. split; eauto.
+  eapply Construct_Ind_ind_eq; eauto.
+Qed.
+
 Notation "⋆" := ltac:(solve [pcuic]) (only parsing).
 
 Notation decl_ws_cumul_pb Σ Γ := (All_decls_alpha_pb Conv

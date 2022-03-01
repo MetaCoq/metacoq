@@ -346,6 +346,48 @@ Section WfEnv.
       etransitivity; eauto.
   Qed.
 
+  Lemma typing_spine_refl {Γ T} :
+    isType Σ Γ T ->
+    typing_spine Σ Γ T [] T.
+  Proof.
+    intros isty. constructor; auto.
+    eauto with pcuic.
+  Qed.
+
+  Lemma inversion_mkApps_direct {Γ f u T} :
+    isType Σ Γ T ->
+    Σ ;;; Γ |- mkApps f u : T ->
+    ∑ A s', Σ ;;; Γ |- f : A × Σ ;;; Γ |- A : tSort s' × typing_spine Σ Γ A u T.
+  Proof.
+    induction u in f, T |- *. simpl. intros.
+    { destruct X as [s X]. exists T, s. intuition pcuic. eapply typing_spine_refl. eexists; eauto. }
+    intros HT Hf. simpl in Hf.
+    destruct u. simpl in Hf, IHu.
+    - edestruct @inversion_App_size with (H0 := Hf) as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
+      eexists _, _; intuition eauto.
+      econstructor; eauto with pcuic.
+      eapply isType_ws_cumul_pb_refl; eexists; eauto.
+      econstructor. all:eauto with pcuic.
+      
+      eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
+      eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
+      econstructor; cbn; eauto.
+    - specialize (IHu (tApp f a) T).
+      epose proof (IHu _ Hf) as [T' [s' [H' [H''' H'']]]].
+      edestruct @inversion_App_size with (H0 := H') as (na' & A' & B' & s & Hf' & Ha & HA & _ & _ & _ & HA'''); tea.
+      exists (tProd na' A' B'). exists s. intuition; eauto.
+      econstructor; eauto with wf.
+      1,2: eexists; eauto. 1:eapply isType_ws_cumul_pb_refl; eexists; eauto.
+    
+    
+      eapply typing_spine_strengthen; tea.
+    
+      eapply inversion_Prod in HA as (? & ? & ? & ? & ?); tea.
+      eapply isType_subst. econstructor. econstructor. rewrite subst_empty; eauto.
+      econstructor; cbn; eauto.
+      Unshelve. eauto.
+  Qed.
+
   Lemma subst_type_local_ctx {Γ Γ' Δ Δ' s ctxs} : 
     wf_local Σ (Γ ,,, Δ ,,, Γ') ->
     type_local_ctx (lift_typing typing) Σ (Γ ,,, Δ ,,, Γ') Δ' ctxs ->

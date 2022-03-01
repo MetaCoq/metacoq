@@ -52,6 +52,7 @@ theories/TypingWf.v
 theories/Normal.v
 theories/WcbvEval.v
 theories/Checker.v
+theories/EtaExpand.v
 
 # The Template monad
 theories/TemplateMonad.v

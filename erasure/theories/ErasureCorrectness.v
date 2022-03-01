@@ -810,19 +810,50 @@ Proof.
   depelim r; econstructor; auto.
 Qed. 
 
-Lemma Informative_cofix (cf : checker_flags) (Σ : global_env_ext) (ind : inductive) :
+
+Lemma eval_tCase {cf : checker_flags} {Σ : global_env_ext}  ci p discr brs res T :
+  wf Σ ->
+  Σ ;;; [] |- tCase ci p discr brs : T ->
+  eval Σ (tCase ci p discr brs) res -> 
+  ∑ c u args, PCUICReduction.red Σ [] (tCase ci p discr brs) (tCase ci p ((mkApps (tConstruct ci.(ci_ind) c u) args)) brs).
+Proof.
+  intros wf wt H. depind H; try now (cbn in *; congruence).
+  - eapply inversion_Case in wt as (? & ? & ? & ? & cinv & ?); eauto.
+    eexists _, _, _. eapply PCUICReduction.red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv.
+  - eapply inversion_Case in wt as wt'; eauto. destruct wt' as (? & ? & ? & ? & cinv & ?).
+    assert (Hred1 : PCUICReduction.red Σ [] (tCase ip p discr brs) (tCase ip p (mkApps fn args) brs)). {
+      etransitivity. { eapply PCUICReduction.red_case_c. eapply wcbeval_red. 2: eauto. eapply cinv. } 
+      econstructor. econstructor.
+      rewrite closed_unfold_cofix_cunfold_eq. eauto.
+      enough (closed (mkApps (tCoFix mfix idx) args)) as Hcl by (rewrite closedn_mkApps in Hcl; solve_all).
+      eapply eval_closed. eauto.
+      2: eauto. eapply @subject_closed with (Γ := []); eauto. eapply cinv. eauto.
+    }
+    edestruct IHeval2 as (c & u & args0 & IH); eauto using subject_reduction.
+    exists c, u, args0. etransitivity; eauto.
+Qed.
+
+Lemma Informative_cofix v ci p brs T (Σ : global_env_ext) (ind : inductive) :
+  wf Σ ->
    forall (mdecl : mutual_inductive_body) (idecl : one_inductive_body) mfix idx,
    declared_inductive Σ.1 ind mdecl idecl ->
-   forall (Γ : context) (args : list term) (u : Instance.t) 
-      (Σ' : global_env_ext) args',
+   forall (args : list term)  (Σ' : global_env_ext),
    Informative Σ ind ->
    wf_ext Σ' ->
    extends Σ Σ' ->
-   Σ ;;; Γ |- (mkApps (tCoFix mfix idx)) args : mkApps (tInd ind u) args' ->  
-   Is_proof Σ' Γ (mkApps (tCoFix mfix idx) args) ->
+   Σ ;;; [] |- tCase ci p (mkApps (tCoFix mfix idx) args) brs : T ->
+   Σ |-p tCase ci p (mkApps (tCoFix mfix idx) args) brs ▷ v ->
+   Is_proof Σ' [] (mkApps (tCoFix mfix idx) args) ->
    #|ind_ctors idecl| <= 1 /\
-   ∥ All (Is_proof Σ' Γ) (skipn (ind_npars mdecl) args) ∥.
+   ∥ All (Is_proof Σ' []) (skipn (ind_npars mdecl) args) ∥.
 Proof.
+  intros. destruct Σ as [Σ1 Σ2]. cbn in *.
+  eapply eval_tCase in X2 as X2'; eauto. destruct X2' as (? & ? & ? & ?).
+  eapply subject_reduction in X2 as X2'; eauto.
+  eapply inversion_Case in X2' as (? & ? & ? & ? & [] & ?); eauto.
+  eapply inversion_Case in X2 as (? & ? & ? & ? & [] & ?); eauto.
+  destruct Σ' as [Σ1' Σ2']. cbn in *.
+  eapply H0; eauto. 
 Admitted.
 
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
@@ -1540,7 +1571,7 @@ Proof.
         eapply PCUICReduction.red_cofix_case.
         rewrite closed_unfold_cofix_cunfold_eq; eauto. }
     invs He.
-    * edestruct IHeval1 as (? & ? & ?); eauto. todo "deps".
+    * edestruct IHeval1 as (? & ? & ?); eauto. now depelim Hed.
       depelim Hed.
       rename H0 into decli'. rename H1 into decli''. rename H2 into er. rename H3 into H0.
       eapply erases_mkApps_inv in H6; eauto.
@@ -1577,7 +1608,7 @@ Proof.
       eapply eval_to_mkApps_tBox_inv in H9 as Eq. subst.
       rewrite (All2i_length _ _ _ _ brs_ty) in H7.
       destruct brs as [ | ? []]; cbn in H7; try lia.
-      ++ todo "empty branches??".
+      ++ red in  todo "empty branches??".
       ++ invs X. invs X1. destruct y.
          eapply eval_iota_sing; eauto.
          eapply isPropositional_propositional; eauto. 

@@ -141,8 +141,8 @@ Section optimize.
     | tLetIn na b b' => tLetIn na (optimize b) (optimize b')
     | tCase ind c brs =>
       let brs' := List.map (on_snd optimize) brs in
-      match ETyping.is_propositional_ind Σ (fst ind) with
-      | Some true =>
+      match ETyping.inductive_isprop_and_pars Σ (fst ind) with
+      | Some (true, npars) =>
         match brs' with
         | [(a, b)] => ECSubst.substl (repeat E.tBox #|a|) b
         | _ => E.tCase ind (optimize c) brs'
@@ -150,8 +150,8 @@ Section optimize.
       | _ => E.tCase ind (optimize c) brs'
       end
     | tProj p c =>
-      match ETyping.is_propositional_ind Σ p.1.1 with 
-      | Some true => tBox
+      match ETyping.inductive_isprop_and_pars Σ p.1.1 with 
+      | Some (true, _) => tBox
       | _ => tProj p (optimize c)
       end
     | tFix mfix idx =>
@@ -210,7 +210,7 @@ Section optimize.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    - move/andP: H => [] clt cll. destruct ETyping.is_propositional_ind as [[|]|] => /= //.
+    - move/andP: H => [] clt cll. destruct ETyping.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       rewrite IHt //.
       depelim X. cbn in *.
@@ -223,9 +223,7 @@ Section optimize.
       depelim cll. depelim cll. solve_all.
       rtoProp; solve_all. solve_all.
       rtoProp; solve_all. solve_all.
-    - destruct ETyping.is_propositional_ind.
-      destruct b => //. cbn; auto.
-      cbn; auto.
+    - destruct ETyping.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
   Qed.
  
   Lemma subst_csubst_comm l t k b : 
@@ -275,7 +273,7 @@ Section optimize.
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
     - unfold on_snd; cbn.
-      destruct ETyping.is_propositional_ind as [[|]|] => /= //.
+      destruct ETyping.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       * f_equal; auto.
       * depelim X. simpl in *.
@@ -292,7 +290,7 @@ Section optimize.
         rewrite map_map_compose; solve_all.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
-    - destruct ETyping.is_propositional_ind as [[|]|]=> //;
+    - destruct ETyping.inductive_isprop_and_pars as [[[|] _]|]=> //;
       now rewrite IHb.
   Qed.
 
@@ -460,9 +458,9 @@ Proof.
 Qed.
 
 Lemma is_propositional_optimize Σ ind : 
-  is_propositional_ind Σ ind = is_propositional_ind (optimize_env Σ) ind.
+  inductive_isprop_and_pars Σ ind = inductive_isprop_and_pars (optimize_env Σ) ind.
 Proof.
-  rewrite /is_propositional_ind.
+  rewrite /inductive_isprop_and_pars.
   rewrite lookup_env_optimize.
   destruct lookup_env; simpl; auto.
   destruct g; simpl; auto.
@@ -487,67 +485,6 @@ Proof.
   induction l using rev_ind; simpl; auto => //.
   intros isf; specialize (IHl isf).
   now rewrite mkApps_app.
-Qed.
-
-Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.
-
-Definition fresh_global kn (Σ : global_declarations) :=
-  Forall (fun x => x.1 <> kn) Σ.
-
-Inductive wf_glob : global_declarations -> Type :=
-| wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
-  wf_glob Σ ->
-  fresh_global kn Σ ->
-  wf_glob ((kn, d) :: Σ).
-Derive Signature for wf_glob.
-
-Lemma lookup_env_Some_fresh {Σ c decl} :
-  lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
-Proof.
-  induction Σ; cbn. 1: congruence.
-  unfold eq_kername; destruct kername_eq_dec; subst.
-  - intros [= <-] H2. inv H2.
-    contradiction.
-  - intros H1 H2. apply IHΣ; tas.
-    now inv H2.
-Qed.
-
-Lemma extends_lookup {Σ Σ' c decl} :
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  lookup_env Σ c = Some decl ->
-  lookup_env Σ' c = Some decl.
-Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      unfold eq_kername; destruct kername_eq_dec; subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
-Qed.
-
-Lemma extends_is_propositional {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  forall ind b, is_propositional_ind Σ ind = Some b -> is_propositional_ind Σ' ind = Some b.
-Proof.
-  intros wf ex ind b.
-  rewrite /is_propositional_ind.
-  destruct lookup_env eqn:lookup => //.
-  now rewrite (extends_lookup wf ex lookup).
-Qed.
-
-Lemma weakening_eval_env (wfl : Ee.WcbvFlags) {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  ∀ v t, Ee.eval Σ v t -> Ee.eval Σ' v t.
-Proof.
-  intros wf ex t v ev.
-  induction ev; try solve [econstructor; eauto using (extends_is_propositional wf ex)].
-  econstructor; eauto.
-  red in isdecl |- *. eauto using extends_lookup.
 Qed.
 
 Lemma closedn_mkApps k f args : closedn k (mkApps f args) = closedn k f && forallb (closedn k) args.
@@ -707,7 +644,7 @@ Proof.
     have := (eval_closed _ clΣ _ _ cld ev1); rewrite closedn_mkApps => /andP[] _ clargs.
     rewrite optimize_iota_red in IHev2.
     eapply eval_closed in ev1 => //.
-    destruct ETyping.is_propositional_ind as [[]|]eqn:isp => //.
+    destruct ETyping.inductive_isprop_and_pars as [[]|]eqn:isp => //. noconf e.
     eapply Ee.eval_iota; eauto.
     now rewrite -is_propositional_optimize.
     rewrite nth_error_map e0 //. now len.
@@ -755,7 +692,7 @@ Proof.
     forward IHev.
     { rewrite closedn_mkApps clargs clbrs !andb_true_r.
       eapply closed_cunfold_cofix; tea. }
-    destruct ETyping.is_propositional_ind as [[]|] eqn:isp => //.
+    destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
     rewrite -> optimize_mkApps in IHev |- *. simpl.
     econstructor; eauto.
@@ -773,7 +710,7 @@ Proof.
 
   - rewrite closedn_mkApps; move/andP => [] clfix clargs. forward IHev.
     { rewrite closedn_mkApps clargs andb_true_r. eapply closed_cunfold_cofix; tea. }
-    destruct ETyping.is_propositional_ind as [[]|] eqn:isp; auto.
+    destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp; auto.
     rewrite -> optimize_mkApps in IHev |- *. simpl.
     econstructor; eauto.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
@@ -791,7 +728,7 @@ Proof.
   - move=> cld.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => clargs.
-    destruct ETyping.is_propositional_ind as [[]|] eqn:isp => //.
+    destruct ETyping.inductive_isprop_and_pars as [[[] pars']|] eqn:isp => //.
     rewrite optimize_mkApps in IHev1.
     rewrite optimize_nth in IHev2.
     econstructor; eauto. now rewrite -is_propositional_optimize.
@@ -818,24 +755,6 @@ Proof.
       rewrite orb_true_r /= // in i.
   - destruct t => //.
     all:constructor; eauto.
-Qed.
-
-Lemma erases_global_closed_env {Σ : global_env} Σ' : wf Σ -> erases_global Σ Σ' -> closed_env Σ'.
-Proof.
-  destruct Σ as [univs Σ]; cbn in *.
-  intros [onu wf] er; cbn in *.
-  move: wf. red in er; cbn in er.
-  induction er; intros wf.
-  - constructor.
-  - cbn. destruct cb' as [[]].
-    cbn in *. depelim wf. 
-    rewrite [forallb _ _](IHer wf) andb_true_r.
-    red in H. destruct cb as [ty []]; cbn in *.
-    unshelve eapply PCUICClosedTyp.subject_closed in o0. cbn. split; auto.
-    eapply erases_closed in H; tea. elim H.
-    cbn. apply IHer. now depelim wf.
-  - depelim wf.
-    cbn. apply IHer, wf.
 Qed.
 
 Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :

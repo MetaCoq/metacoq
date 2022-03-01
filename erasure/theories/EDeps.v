@@ -62,7 +62,7 @@ Proof.
   - depelim er.
     econstructor; eauto.
     induction X; [easy|].
-    depelim H2.
+    depelim H3.
     constructor; [|easy].
     now cbn.
   - depelim er.
@@ -110,7 +110,7 @@ Proof.
   - depelim er.
     econstructor; eauto.
     induction X; [easy|].
-    depelim H2.
+    depelim H3.
     constructor; [|easy].
     now cbn.
   - depelim er.
@@ -163,9 +163,9 @@ Proof.
   - depelim er.
     now constructor.
   - depelim er.
-    econstructor; [easy|easy|easy|easy|].
+    econstructor; [easy|easy|easy|easy|easy|].
     induction X; [easy|].
-    depelim H2.
+    depelim H3.
     constructor; [|easy].
     now cbn.
   - depelim er.
@@ -275,13 +275,13 @@ Proof.
     unfold ETyping.iota_red.
     apply erases_deps_substl.
     + intuition auto.
-      apply erases_deps_mkApps_inv in H3.
+      apply erases_deps_mkApps_inv in H4.
       now apply Forall_rev, Forall_skipn.
     + eapply nth_error_forall in e0; [|now eauto].
       assumption.
   - depelim er.
     subst brs; cbn in *.
-    depelim H2.
+    depelim H3.
     cbn in *.
     apply IHev2.
     apply erases_deps_substl; [|easy].
@@ -302,14 +302,14 @@ Proof.
     now apply erases_deps_mkApps.
   - depelim er.
     apply erases_deps_mkApps_inv in er as (? & ?).
-    depelim H3.
+    depelim H4.
     apply IHev.
-    econstructor; [easy|easy|easy| |easy].
+    econstructor; [easy|easy|easy|easy| |easy].
     apply erases_deps_mkApps; [|easy].
     now eapply erases_deps_cunfold_cofix; eauto.
   - depelim er.
     apply erases_deps_mkApps_inv in er as (? & ?).
-    depelim H2.
+    depelim H3.
     apply IHev.
     econstructor; eauto.
     apply erases_deps_mkApps; [|easy].
@@ -318,7 +318,7 @@ Proof.
     now apply IHev, H2.
   - depelim er.
     intuition auto.
-    apply erases_deps_mkApps_inv in H2 as (? & ?).
+    apply erases_deps_mkApps_inv in H3 as (? & ?).
     apply IHev2.
     rewrite nth_nth_error.
     destruct nth_error eqn:nth; [|now constructor].
@@ -361,6 +361,7 @@ Lemma erases_deps_forall_ind Σ Σ'
   (Hcase : forall (p : inductive × nat) mdecl idecl mdecl' idecl' (discr : Extract.E.term) (brs : list (list name × Extract.E.term)),
         PCUICAst.declared_inductive Σ (fst p) mdecl idecl ->
         ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
+        erases_mutual_inductive_body mdecl mdecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' discr ->
         P discr ->
@@ -370,6 +371,7 @@ Lemma erases_deps_forall_ind Σ Σ'
   (Hproj : forall (p : projection) mdecl idecl mdecl' idecl' (t : Extract.E.term),
         PCUICAst.declared_inductive Σ p.1.1 mdecl idecl ->
         ETyping.declared_inductive Σ' p.1.1 mdecl' idecl' ->
+        erases_mutual_inductive_body mdecl mdecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' t -> P t -> P (Extract.E.tProj p t))
   (Hfix : forall (defs : list (Extract.E.def Extract.E.term)) (i : nat),
@@ -401,7 +403,7 @@ Proof.
     now apply H2.
   - eapply Hcase; try eassumption.
     + now apply f.
-    + revert brs H2.
+    + revert brs H3.
       fix f' 2.
       intros brs []; [now constructor|].
       constructor; [now apply f|now apply f'].
@@ -427,7 +429,7 @@ Lemma erases_deps_cons Σ Σ' kn decl decl' t :
 Proof.
   intros wfu wfΣ er.
   induction er using erases_deps_forall_ind; try solve [now constructor].
-  apply lookup_env_Some_fresh in H as not_fresh.
+  apply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H as not_fresh.
   econstructor.
   - unfold PCUICAst.declared_constant in *; cbn.
     unfold eq_kername.
@@ -473,26 +475,26 @@ Proof.
     unfold PCUICEnvironment.lookup_env.
     simpl. unfold eq_kername.
     destruct (kername_eq_dec (inductive_mind p.1) kn); auto. subst.
-    eapply lookup_env_Some_fresh in H; eauto. contradiction.
+    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H; eauto. contradiction.
     destruct H0 as [H0 H0'].
     split; eauto. red in H0 |- *.
     inv wfΣ. simpl.
     destruct (kername_eq_dec (inductive_mind p.1) kn); auto. subst.
     destruct H as [H _].
-    eapply lookup_env_Some_fresh in H. eauto. contradiction.
+    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
   - econstructor; eauto.
     destruct H as [H H'].
     split; eauto. red in H |- *.
     inv wfΣ. unfold PCUICEnvironment.lookup_env.
     simpl. unfold eq_kername.
     destruct (kername_eq_dec (inductive_mind p.1.1) kn); auto. subst.
-    eapply lookup_env_Some_fresh in H; eauto. contradiction.
+    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H; eauto. contradiction.
     destruct H0 as [H0 H0'].
     split; eauto. red in H0 |- *.
     inv wfΣ. simpl.
     destruct (kername_eq_dec (inductive_mind p.1.1) kn); auto. subst.
     destruct H as [H _].
-    eapply lookup_env_Some_fresh in H. eauto. contradiction.
+    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
 Qed.
 
 Derive Signature for erases_global_decls.

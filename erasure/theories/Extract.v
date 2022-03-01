@@ -280,6 +280,7 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
 | erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
     declared_inductive Σ (fst p) mdecl idecl ->
     ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
+    erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' discr ->
     Forall (fun br => erases_deps Σ Σ' br.2) brs ->
@@ -287,6 +288,7 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
 | erases_deps_tProj p mdecl idecl mdecl' idecl' t :
     declared_inductive Σ p.1.1 mdecl idecl ->
     ETyping.declared_inductive Σ' p.1.1 mdecl' idecl' ->
+    erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' t ->
     erases_deps Σ Σ' (E.tProj p t)
@@ -331,3 +333,5 @@ Definition computational_ind Σ ind :=
 
 Definition computational_type Σ T :=
   exists ind, inductive_arity T = Some ind /\ computational_ind Σ ind.
+
+  

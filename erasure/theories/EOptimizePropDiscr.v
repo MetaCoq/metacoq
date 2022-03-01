@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
      
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
+From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps EExtends
     ErasureFunction ELiftSubst.
 
 Local Open Scope string_scope.
@@ -485,47 +485,6 @@ Proof.
   induction l using rev_ind; simpl; auto => //.
   intros isf; specialize (IHl isf).
   now rewrite mkApps_app.
-Qed.
-
-Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.
-
-Definition fresh_global kn (Σ : global_declarations) :=
-  Forall (fun x => x.1 <> kn) Σ.
-
-Inductive wf_glob : global_declarations -> Type :=
-| wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
-  wf_glob Σ ->
-  fresh_global kn Σ ->
-  wf_glob ((kn, d) :: Σ).
-Derive Signature for wf_glob.
-
-Lemma lookup_env_Some_fresh {Σ c decl} :
-  lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
-Proof.
-  induction Σ; cbn. 1: congruence.
-  unfold eq_kername; destruct kername_eq_dec; subst.
-  - intros [= <-] H2. inv H2.
-    contradiction.
-  - intros H1 H2. apply IHΣ; tas.
-    now inv H2.
-Qed.
-
-Lemma extends_lookup {Σ Σ' c decl} :
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  lookup_env Σ c = Some decl ->
-  lookup_env Σ' c = Some decl.
-Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      unfold eq_kername; destruct kername_eq_dec; subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
 Qed.
 
 Lemma extends_is_propositional {Σ Σ'} : 

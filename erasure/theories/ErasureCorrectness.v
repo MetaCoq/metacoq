@@ -853,7 +853,7 @@ Proof.
   eapply inversion_Case in X2' as (? & ? & ? & ? & [] & ?); eauto.
   eapply inversion_Case in X2 as (? & ? & ? & ? & [] & ?); eauto.
   destruct Σ' as [Σ1' Σ2']. cbn in *.
-  eapply H0; eauto. 
+  eapply H0; eauto.
 Admitted.
 
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
@@ -1595,8 +1595,9 @@ Proof.
       { todo "deps". }
       sq.
       eapply Informative_cofix in H7 as [H7 H7']; eauto.
-      2: eapply extends_refl.
-      2: now eapply subject_reduction_eval; eauto.
+      all: todo "todo".
+      (* 2: eapply extends_refl.
+      2: admit. 2: admit.
       2:{ rewrite mkApps_app.
       eapply Is_proof_app.
       eapply tCoFix_no_Type; eauto.
@@ -1608,11 +1609,11 @@ Proof.
       eapply eval_to_mkApps_tBox_inv in H9 as Eq. subst.
       rewrite (All2i_length _ _ _ _ brs_ty) in H7.
       destruct brs as [ | ? []]; cbn in H7; try lia.
-      ++ red in  todo "empty branches??".
+      ++ todo "empty branches??".
       ++ invs X. invs X1. destruct y.
          eapply eval_iota_sing; eauto.
          eapply isPropositional_propositional; eauto. 
-         all: todo "tricky".
+         all: todo "tricky". *)
       -- todo "cofix".         
       -- eapply subject_reduction_eval. 2: eauto. eauto.
     * exists EAst.tBox; split; auto.
@@ -1797,7 +1798,7 @@ Proof.
       * eexists. split; eauto. now constructor; econstructor.
       * eexists. split. 2: now constructor; econstructor.
         econstructor; eauto.
-        Unshelve. repeat econstructor.      
+        Unshelve. all: repeat econstructor.      
 Qed.
 
 Print Assumptions erases_correct.

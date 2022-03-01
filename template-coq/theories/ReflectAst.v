@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
-From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat Floats.FloatAxioms.
+From Coq Require Numbers.Cyclic.Int63.Uint63 Floats.PrimFloat Floats.FloatAxioms.
 From MetaCoq.Template Require Import utils AstUtils BasicAst Ast Reflect Environment Induction.
 Require Import ssreflect.
 From Equations Require Import Equations.
@@ -152,7 +152,7 @@ Proof.
         subst. inversion e1. subst.
         destruct (eq_dec rarg rarg0) ; nodec.
         subst. left. reflexivity.
-  - destruct (Int63.eqs i i0) ; nodec.
+  - destruct (Uint63.eqs i i0) ; nodec.
     subst. left. reflexivity.
   - destruct (eq_dec f f0) ; nodec.
     subst. left. reflexivity.

@@ -58,19 +58,6 @@ Section MapInP.
   map_InP nil _ := nil;
   map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
 End MapInP.
-(*
-Section MapInP.
-  Context {A B : Type}.
-  Context (size : B -> nat).
-  Context (proj : A -> B).
-
-  Equations? map_InP (l : list A) (f : forall x : A, size (proj x) < S (list_size (size ∘ proj) l) -> A) : list A :=
-  map_InP nil _ := nil;
-  map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
-  Proof.
-    all:lia.
-  Qed.
-End MapInP.*)
 
 Lemma map_InP_spec {A B : Type} (f : A -> B) (l : list A) :
   map_InP l (fun (x : A) _ => f x) = List.map f l.
@@ -163,24 +150,7 @@ Section isEtaExp.
       pose proof (size_mkApps_l napp nnil). lia.
     - eapply (In_size snd size) in H. cbn in H; lia.
   Qed.
-
-  (* Fixpoint isEtaExp k (e : EAst.term) := 
-    match e with  
-    | tRel i => true
-    | tEvar ev args => List.forallb (isEtaExp 0) args
-    | tLambda na M => isEtaExp 0 M
-    | tApp u v => isEtaExp (S k) u && isEtaExp 0 v
-    | tLetIn na b b' => isEtaExp 0 b && isEtaExp 0 b'
-    | tCase ind c brs => isEtaExp 0 c && List.forallb (test_snd (isEtaExp 0)) brs
-    | tProj p c => isEtaExp 0 c
-    | tFix mfix idx => List.forallb (test_def (isEtaExp 0)) mfix
-    | tCoFix mfix idx => List.forallb (test_def (isEtaExp 0)) mfix
-    | tBox => true
-    | tVar _ => true
-    | tConst _ => true
-    | tConstruct ind i => isEtaExp_app ind i k
-    end.
-   *)
+  
   Lemma isEtaExp_app_mon ind c i i' : i <= i' -> isEtaExp_app ind c i -> isEtaExp_app ind c i'.
   Proof.
     intros le.
@@ -189,32 +159,12 @@ Section isEtaExp.
     do 2 elim: Nat.leb_spec => //. lia.
   Qed.
 
-  (*Lemma isEtaExp_mon i i' t : i <= i' -> isEtaExp t -> isEtaExp i' t.
-  Proof.
-    intros le.
-    induction t in i, i', le |- * using EInduction.term_forall_list_ind; cbn; auto.
-    rtoProp; intuition eauto. eapply IHt1; tea; lia.
-    now eapply isEtaExp_app_mon.
-  Qed. *)
-
 End isEtaExp.
 Global Hint Rewrite @forallb_InP_spec : isEtaExp.
 
 Section strip.
   Context (Σ : global_context).
-  
-  (* Definition strip_app hd args :=
-    match hd with
-    | tConstruct kn c =>
-      match lookup_constructor_pars_args Σ kn c with
-      | Some (npars, nargs) => 
-        if Nat.leb (npars + nargs) (List.length args) then
-          mkApps hd (List.skipn npars args)
-        else 
-      | None => tApp u' v'
-      end
-    | _ => tApp u' v'
-    end. *)
+
   Section Def.
   Import TermSpineView.
   Equations? strip (t : term) : term 
@@ -254,8 +204,6 @@ Section strip.
       now eapply (In_size id size) in H.
     - rewrite size_mkApps.
       now eapply (In_size id size) in H.
-    (* - rewrite size_mkApps.
-      now eapply (In_size id size) in H. *)
     - now eapply size_mkApps_f.
     - pose proof (size_mkApps_l napp nnil).
       eapply (In_size id size) in H. change (fun x => size (id x)) with size in H. unfold id in H. lia.
@@ -264,20 +212,7 @@ Section strip.
   End Def.
 
   Hint Rewrite @map_InP_spec : strip.
-  (* Lemma strip_mkApps f l : strip (mkApps f l) = mkApps (strip f) (map strip l).
-  Proof.
-    induction l using rev_ind; simpl; auto.
-    rewrite mkApps_app /= IHl map_app /= mkApps_app /=.
-    unfold strip_app.
-    destruct decompose_app eqn:da. destruct t => //.
-    destruct lookup_constructor_pars_args as [[pars args]|] eqn:hlook => //.
-    destruct (Nat.leb_spec (pars + args) #|l0|) => //.
-    eapply decompose_app_inv in da. rewrite da. cbn.
-
-
-
-  Qed. *)
-
+  
   Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
   Proof.
     now induction n; simpl; auto; rewrite IHn.

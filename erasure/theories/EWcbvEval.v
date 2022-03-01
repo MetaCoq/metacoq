@@ -104,7 +104,7 @@ Section Wcbv.
   (** Case *)
   | eval_iota ind pars discr c args brs br res :
       eval discr (mkApps (tConstruct ind c) args) ->
-      is_propositional_ind Σ ind = Some false ->
+      inductive_isprop_and_pars Σ ind = Some (false, pars) ->
       nth_error brs c = Some br ->
       #|skipn pars args| = #|br.1| ->
       eval (iota_red pars args br) res ->
@@ -114,7 +114,7 @@ Section Wcbv.
   | eval_iota_sing ind pars discr brs n f res :
       with_prop_case ->
       eval discr tBox ->
-      is_propositional_ind Σ ind = Some true ->
+      inductive_isprop_and_pars Σ ind = Some (true, pars) ->
       brs = [ (n,f) ] ->
       eval (substl (repeat tBox #|n|) f) res ->
       eval (tCase (ind, pars) discr brs) res
@@ -156,7 +156,7 @@ Section Wcbv.
   (** Proj *)
   | eval_proj i pars arg discr args res :
       eval discr (mkApps (tConstruct i 0) args) ->
-      is_propositional_ind Σ i = Some false ->
+      inductive_isprop_and_pars Σ i = Some (false, pars) ->
       eval (List.nth (pars + arg) args tDummy) res ->
       eval (tProj (i, pars, arg) discr) res
 
@@ -164,7 +164,7 @@ Section Wcbv.
   | eval_proj_prop i pars arg discr :
       with_prop_case ->
       eval discr tBox ->
-      is_propositional_ind Σ i = Some true ->
+      inductive_isprop_and_pars Σ i = Some (true, pars) ->
       eval (tProj (i, pars, arg) discr) tBox
 
   (** Atoms (non redex-producing heads) applied to values are values *)
@@ -673,8 +673,56 @@ Section Wcbv.
 
   Set SsrRewrite.
 
+  Lemma eval_mkApps_inv f args v :
+    eval (mkApps f args) v ->
+    ∑ f', eval f f' ×  eval (mkApps f' args) v.
+  Proof.
+    revert f v; induction args using rev_ind; cbn; intros f v.
+    - intros ev. exists v. split => //. eapply eval_to_value in ev.
+      now eapply value_final.
+    - rewrite mkApps_app. intros ev.
+      depelim ev.
+      + specialize (IHargs _ _ ev1) as [f' [evf' evars]].
+        exists f'. split => //.
+        rewrite mkApps_app.
+        econstructor; tea.
+      + specialize (IHargs _ _ ev1) as [f' [evf' evars]].
+        exists f'. split => //.
+        rewrite mkApps_app.
+        eapply eval_beta; tea.
+      + specialize (IHargs _ _ ev1) as [f' [evf' ev]].
+        exists f'; split => //.
+        rewrite mkApps_app.
+        eapply eval_fix; tea.
+      + specialize (IHargs _ _ ev1) as [f' [evf' ev]].
+        exists f'; split => //.
+        rewrite mkApps_app.
+        eapply eval_fix_value; tea.
+      + specialize (IHargs _ _ ev1) as [f'' [evf' ev]].
+        exists f''; split => //.
+        rewrite mkApps_app.
+        eapply eval_app_cong; tea.
+      + cbn in i. discriminate.
+  Qed.
+
 End Wcbv.
 
 Arguments eval_unique_sig {_ _ _ _ _}.
 Arguments eval_deterministic {_ _ _ _ _}.
 Arguments eval_unique {_ _ _ _}.
+
+Section WcbvEnv.
+  Context {wfl : WcbvFlags}.
+
+  Lemma weakening_eval_env {Σ Σ'} : 
+    wf_glob Σ' -> extends Σ Σ' ->
+    forall v t, eval Σ v t -> eval Σ' v t.
+  Proof.
+    intros wf ex t v ev.
+    induction ev; try solve [econstructor; eauto using (extends_is_propositional wf ex)].
+    econstructor; eauto.
+    red in isdecl |- *. eauto using extends_lookup.
+  Qed.
+
+End WcbvEnv.
+

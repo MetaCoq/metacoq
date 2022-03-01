@@ -5,6 +5,7 @@ From Coq Require Import ssreflect.
 
 Definition def_size (size : term -> nat) (x : def term)
   := size (dtype x) + size (dbody x).
+  
 Definition mfixpoint_size (size : term -> nat) (l : mfixpoint term) :=
   list_size (def_size size) l.
 

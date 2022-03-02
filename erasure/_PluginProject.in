@@ -37,6 +37,8 @@ src/kernames.ml
 # src/typing0.mli
 # src/typing0.ml
 
+src/wcbvEval.mli
+src/wcbvEval.ml
 # From PCUIC
 # src/pCUICPrimitive.mli
 # src/pCUICPrimitive.ml
@@ -115,6 +117,13 @@ src/eTyping.ml
 src/eTyping.mli
 src/extract.mli
 src/extract.ml
+src/eWcbvEval.mli
+src/eWcbvEval.ml
+# src/eSpineView.mli
+# src/eSpineView.ml
+src/eRemoveParams.mli
+src/eRemoveParams.ml
+
 src/erasureFunction.mli
 src/erasureFunction.ml
 src/ePretty.mli

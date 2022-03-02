@@ -428,7 +428,7 @@ Proof.
     constructor; [now apply f|now apply f'].
 Defined.
 
-Lemma fresh_global_erase {cf : checker_flags} Σ Σ' kn :
+(* Lemma fresh_global_erase {cf : checker_flags} Σ Σ' kn :
 fresh_global kn Σ  -> erases_global Σ Σ' -> EExtends.fresh_global kn Σ'.
 Proof.
   induction 2.
@@ -446,7 +446,7 @@ Proof.
     econstructor. eauto. eapply fresh_global_erase; eauto.
   - forward IHerases_global_decls; sq; invs Hwf; eauto.
     econstructor. eauto. eapply fresh_global_erase; eauto.
-Qed.
+Qed. *)
 
 Lemma erases_deps_cons Σ Σ' kn decl decl' t :
   on_global_univs Σ.(universes) ->
@@ -495,14 +495,14 @@ Proof.
       apply H.
     + now destruct E.cst_body.
   - easy.
-  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto.
-    1: now eexists [(_, _)].
+  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto with pcuic.
+    { eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. }
     invs wfΣ.
     destruct H0. split. 2: eauto.
     destruct d. split; eauto.
     red. cbn. destruct kername_eq_dec; eauto.
     subst. 
-    eapply lookup_env_Some_fresh in H5. eauto. eapply H.
+    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H5. eauto. eapply H.
   - econstructor; eauto.
     destruct H as [H H'].
     split; eauto. red in H |- *.

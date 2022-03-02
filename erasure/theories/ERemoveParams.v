@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    ELiftSubst ESpineView EOptimizePropDiscr ErasureFunction.
+    ELiftSubst ESpineView EOptimizePropDiscr ErasureFunction EEtaExpanded.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -22,7 +22,7 @@ Set Equations Transparent.
 Local Set Keyed Unification.
 From Coq Require Import ssreflect ssrbool.
 
-(** We assumes [Prop </= Type] and universes are checked correctly in the following. *)
+(** We assume [Prop </= Type] and universes are checked correctly in the following. *)
 Local Existing Instance extraction_checker_flags.
 
 Ltac introdep := let H := fresh in intros H; depelim H.
@@ -33,134 +33,6 @@ Hint Constructors Ee.eval : core.
 Set Warnings "-notation-overridden".
 Import E.
 Set Warnings "+notation-overridden".
-
-
-Section AllInP.
-  Context {A : Type}.
-
-  Equations forallb_InP (l : list A) (H : forall x : A, In x l -> bool) : bool :=
-  | nil, _ := true ;
-  | (cons x xs), H := (H x _) && (forallb_InP xs (fun x inx => H x _)).
-End AllInP.
-
-Lemma forallb_InP_spec {A} (f : A -> bool) (l : list A) :
-  forallb_InP l (fun x _ => f x) = List.forallb f l.
-Proof.
-  remember (fun x _ => f x) as g.
-  funelim (forallb_InP l g) => //; simpl. f_equal.
-  now rewrite (H0 f).
-Qed.
-
-Section MapInP.
-  Context {A B : Type}.
-
-  Equations map_InP (l : list A) (f : forall x : A, In x l -> B) : list B :=
-  map_InP nil _ := nil;
-  map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
-End MapInP.
-
-Lemma map_InP_spec {A B : Type} (f : A -> B) (l : list A) :
-  map_InP l (fun (x : A) _ => f x) = List.map f l.
-Proof.
-  remember (fun (x : A) _ => f x) as g.
-  funelim (map_InP l g) => //; simpl. f_equal. cbn in H.
-  now rewrite (H f0).
-Qed.
-
-Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) : 
-  In x l -> size (proj x) < S (list_size (size ∘ proj) l).
-Proof.
-  induction l; cbn => //.
-  intros [->|hin]. lia. specialize (IHl hin); lia.
-Qed.
-
-Equations discr_construct (t : term) : Prop :=
-discr_construct (tConstruct ind n) := False ;
-discr_construct _ := True.
-
-Inductive construct_view : term -> Type :=
-| view_construct : forall ind n, construct_view (tConstruct ind n)
-| view_other : forall t, discr_construct t -> construct_view t.
-
-Equations construct_viewc t : construct_view t :=
-construct_viewc (tConstruct ind n) := view_construct ind n ;
-construct_viewc t := view_other t I.
-
-Section isEtaExp.
-  Context (Σ : global_context).
-  Definition lookup_minductive kn : option mutual_inductive_body :=
-    decl <- ETyping.lookup_env Σ kn;; 
-    match decl with
-    | ConstantDecl _ => None
-    | InductiveDecl mdecl => ret mdecl
-    end.
-
-  Definition lookup_inductive kn : option (mutual_inductive_body * one_inductive_body) :=
-    mdecl <- lookup_minductive (inductive_mind kn) ;;
-    idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
-    ret (mdecl, idecl).
-  
-  Definition lookup_inductive_pars kn : option nat := 
-    mdecl <- lookup_minductive kn ;;
-    ret mdecl.(ind_npars).
-  
-  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
-    '(mdecl, idecl) <- lookup_inductive kn ;;
-    cdecl <- nth_error idecl.(ind_ctors) c ;;
-    ret (mdecl.(ind_npars), cdecl.2).
-    
-  Definition isEtaExp_app ind c k :=
-    match lookup_constructor_pars_args ind c with
-    | Some (npars, nargs) => leb (npars + nargs) k
-    | None => false
-    end.
-    
-  Import TermSpineView.
-
-  Equations? isEtaExp (e : EAst.term) : bool
-    by wf e (fun x y : EAst.term => size x < size y) :=
-  | e with TermSpineView.view e := {
-    | tRel i => true
-    | tEvar ev args => forallb_InP args (fun x H => isEtaExp x)
-    | tLambda na M => isEtaExp M
-    | tApp u v napp nnil with construct_viewc u := 
-      { | view_construct ind i => isEtaExp_app ind i (List.length v) && forallb_InP v (fun x H => isEtaExp x)
-        | view_other _ _ => isEtaExp u && forallb_InP v (fun x H => isEtaExp x) }
-    | tLetIn na b b' => isEtaExp b && isEtaExp b'
-    | tCase ind c brs => isEtaExp c && forallb_InP brs (fun x H => isEtaExp x.2)
-    | tProj p c => isEtaExp c
-    | tFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
-    | tCoFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
-    | tBox => true
-    | tVar _ => true
-    | tConst _ => true
-    | tConstruct ind i => isEtaExp_app ind i 0 }.
-  Proof.
-    all:try lia.
-    all:try apply (In_size); tea.
-    all:try lia.
-    - now apply (In_size id size). 
-    - rewrite size_mkApps.
-      change (fun x => size (id x)) with size in H. cbn.
-      now apply (In_size id size).
-    - now eapply size_mkApps_f.
-    - change (fun x => size (id x)) with size in H.
-      eapply (In_size id size) in H. unfold id in H.
-      change (fun x => size x) with size in H. 
-      pose proof (size_mkApps_l napp nnil). lia.
-    - eapply (In_size snd size) in H. cbn in H; lia.
-  Qed.
-  
-  Lemma isEtaExp_app_mon ind c i i' : i <= i' -> isEtaExp_app ind c i -> isEtaExp_app ind c i'.
-  Proof.
-    intros le.
-    unfold isEtaExp_app.
-    destruct lookup_constructor_pars_args as [[pars args]|]=> //.
-    do 2 elim: Nat.leb_spec => //. lia.
-  Qed.
-
-End isEtaExp.
-Global Hint Rewrite @forallb_InP_spec : isEtaExp.
 
 Section strip.
   Context (Σ : global_context).
@@ -272,7 +144,7 @@ Section strip.
 
   Hint Rewrite @forallb_InP_spec : isEtaExp.
   Transparent isEtaExp_unfold_clause_1.
-  
+  (* 
   Lemma isEtaExp_mkApps_nonnil f v :
     ~~ isApp f -> v <> [] ->
     isEtaExp Σ (mkApps f v) = match construct_viewc f with 
@@ -331,9 +203,9 @@ Section strip.
       move/andP: et => [] -> /=. rtoProp; solve_all.
       rewrite forallb_app. rtoProp; repeat solve_all.
       eapply All_app_inv; eauto.
-  Qed.
+  Qed. *)
 
-  Lemma etaExp_csubst a k b : 
+   Lemma etaExp_csubst a k b : 
     isEtaExp Σ a -> isEtaExp Σ b -> isEtaExp Σ (ECSubst.csubst a k b).
   Proof.
     funelim (isEtaExp Σ b); cbn; simp isEtaExp; rewrite -?isEtaExp_equation_1; eauto;
@@ -351,7 +223,7 @@ Section strip.
       move/andP: H2 => [] eu ev.
       specialize (H _ k H1 eu).
       eapply isEtaExp_mkApps_intro => //. solve_all.
-  Qed.
+  Qed. 
 
   Local Lemma strip_mkApps_nonnil f v :
     ~~ isApp f -> v <> [] ->

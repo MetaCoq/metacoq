@@ -12,7 +12,7 @@ Local Unset Elimination Schemes.
 Inductive expanded : term -> Prop :=
 | expanded_tRel (n : nat) : expanded (tRel n)
 | expanded_tVar (id : ident) : expanded (tVar id)
-| expanded_tEvar (ev : nat) (args : list term) : expanded (tEvar ev args)
+| expanded_tEvar (ev : nat) (args : list term) : Forall expanded args -> expanded (tEvar ev args)
 | expanded_tSort (s : Universe.t) : expanded (tSort s)
 | expanded_tProd (na : aname) (ty : term) (body : term) : (* expanded ty -> expanded body -> *) expanded (tProd na ty body)
 | expanded_tLambda (na : aname) (ty : term) (body : term) : (* expanded ty ->  *)expanded body -> expanded (tLambda na ty body)
@@ -25,10 +25,10 @@ Inductive expanded : term -> Prop :=
 | expanded_tProj (proj : projection) (t : term) : expanded t -> expanded (tProj proj t)
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) :   Forall (fun d => expanded d.(dtype) /\ expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) :   Forall (fun d => expanded d.(dtype) /\ expanded d.(dbody)) mfix -> expanded (tCoFix mfix idx)
-| expanded_tPrim (prim : prim_val) : expanded (tPrim prim)
 | expanded_tConstruct_app ind c u mind idecl cdecl args :
     declared_constructor Σ (ind, c) mind idecl cdecl ->
     #|args| >= (ind_npars mind + context_assumptions (cstr_args cdecl)) ->
+    Forall expanded args ->
     expanded (mkApps (tConstruct ind c u) args).
 
 End expanded.
@@ -37,7 +37,7 @@ Lemma expanded_ind :
 forall (Σ : global_env) (P : term -> Prop),
 (forall n : nat, P (tRel n)) ->
 (forall id : ident, P (tVar id)) ->
-(forall (ev : nat) (args : list term), P (tEvar ev args)) ->
+(forall (ev : nat) (args : list term), Forall (expanded Σ) args -> Forall P args -> P (tEvar ev args)) ->
 (forall s : Universe.t, P (tSort s)) ->
 (forall (na : aname) (ty body : term),
 (*  expanded Σ ty -> P ty -> expanded Σ body -> P body -> *) P (tProd na ty body)) ->
@@ -71,22 +71,24 @@ forall (Σ : global_env) (P : term -> Prop),
  Forall (fun d => expanded Σ d.(dtype) /\ expanded Σ d.(dbody)) mfix -> 
  Forall (fun d => P d.(dtype) /\ P d.(dbody)) mfix -> 
  P (tCoFix mfix idx)) ->
-
-(forall prim : prim_val, P (tPrim prim)) ->
 (forall (ind : inductive) (c : nat) (u : Instance.t)
    (mind : mutual_inductive_body) (idecl : one_inductive_body)
    (cdecl : constructor_body) (args : list term),
  declared_constructor Σ (ind, c) mind idecl cdecl ->
  #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
+ Forall (expanded Σ) args ->
+ Forall P args ->
  P (mkApps (tConstruct ind c u) args)) ->
 forall t : term, expanded Σ t -> P t.
 Proof.
-  intros. revert t H15.
+  intros. revert t H14.
   fix f 2.
   intros t Hexp. destruct Hexp; eauto.
-  - assert (Forall P args) by (induction H16; econstructor; eauto).
+  - eapply H1; eauto. induction H14; econstructor; eauto.
+  - assert (Forall P args) by (induction H15; econstructor; eauto).
     destruct f0; eauto.
-  - eapply H9; eauto. induction H15; econstructor; eauto.
-  - eapply H11; eauto. induction H15 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
-  - eapply H12; eauto. induction H15 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
+  - eapply H9; eauto. induction H14; econstructor; eauto.
+  - eapply H11; eauto. induction H14 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
+  - eapply H12; eauto. induction H14 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
+  - eapply H13; eauto. clear - f H16. induction H16; econstructor; cbn in *; eauto; split.
 Qed.

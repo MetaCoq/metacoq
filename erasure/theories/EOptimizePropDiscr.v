@@ -487,16 +487,6 @@ Proof.
   now rewrite mkApps_app.
 Qed.
 
-Lemma extends_is_propositional {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  forall ind b, is_propositional_ind Σ ind = Some b -> is_propositional_ind Σ' ind = Some b.
-Proof.
-  intros wf ex ind b.
-  rewrite /is_propositional_ind.
-  destruct lookup_env eqn:lookup => //.
-  now rewrite (extends_lookup wf ex lookup).
-Qed.
-
 Lemma weakening_eval_env (wfl : Ee.WcbvFlags) {Σ Σ'} : 
   wf_glob Σ' -> extends Σ Σ' ->
   ∀ v t, Ee.eval Σ v t -> Ee.eval Σ' v t.

@@ -6,7 +6,17 @@
     All dependencies are also expanded.*)
 
 From Coq Require Import List PeanoNat Bool Ascii String Lia.
-From MetaCoq.Template Require Import Kernames All Ast Typing.
+From MetaCoq.Template Require Export
+     utils.MCUtils (* Utility functions *)
+     monad_utils   (* Monadic notations *)
+     uGraph        (* The graph of universes *)
+     BasicAst      (* The basic AST structures *)
+     Ast           (* The term AST *)
+     AstUtils      (* Utilities on the AST *)
+     Induction     (* Induction *)
+     LiftSubst     (* Lifting and substitution for terms *)
+     UnivSubst     (* Substitution of universe instances *)
+     Typing        (* Typing judgment *).
 
 Open Scope string.
 Open Scope nat.
@@ -17,7 +27,7 @@ Import ListNotations.
 From ReductionEffect Require Import PrintingEffect.
 
 Section Eta.
-   Context (Σ : global_env).
+   Context (Σ : global_declarations).
 
 (* 
   Fixpoint remove_top_prod (t : Ast.term) (n : nat) :=
@@ -46,7 +56,7 @@ Section Eta.
     let remaining := skipn #|args| (decompose_prod ty).1.2 in
     let remaining_names := skipn #|args| (decompose_prod ty).1.1 in
     let remaining_subst := mapi (subst (rev args)) remaining in 
-    fold_right (fun '(nm,ty) b => Ast.tLambda nm ty b) (mkApps t (prev_args ++ eta_args)) (combine remaining_names remaining_subst). 
+    fold_right (fun '(nm,ty) b => Ast.tLambda nm ty b) (mkApps t (prev_args ++ eta_args)) (combine remaining_names remaining_subst).
 
     (* 
  Definition eta_single' (t : Ast.term) (args : list Ast.term) (ty : Ast.term) (count : nat): term :=
@@ -61,7 +71,7 @@ Section Eta.
     fold_right (fun '(nm,ty) b => Ast.tLambda nm ty b) (mkApps t (prev_args ++ eta_args)) (combine remaining_names remaining). *)
   
   Definition eta_constructor (ind : inductive) c u args :=
-      match lookup_env Σ ind.(inductive_mind) with
+      match lookup_global Σ ind.(inductive_mind) with
         | Some (InductiveDecl mind) => 
            match nth_error mind.(ind_bodies) ind.(inductive_ind) with
            | Some idecl => 
@@ -82,7 +92,7 @@ Section Eta.
     | tApp hd args =>
       match hd with
       | tConstruct ind c u =>
-        match eta_constructor ind c u args with 
+        match eta_constructor ind c u (map eta_expand args) with 
         | Some res => res
         | None => tVar ("Error: lookup of an inductive failed for "
                        ++ string_of_kername ind.(inductive_mind))
@@ -111,14 +121,14 @@ Section Eta.
 
 End Eta.
 
-Fixpoint map_constants_global_env (f : constant_body -> constant_body) (Σ : global_env) : global_env :=
+Fixpoint map_constants_global_declarations (f : constant_body -> constant_body) (Σ : global_declarations) : global_declarations :=
   match Σ with
   | [] => []
-  | (kn, ConstantDecl cb) :: Σ' => (kn, ConstantDecl (f cb)) :: map_constants_global_env f Σ'
-  | gd :: Σ' => gd :: map_constants_global_env f Σ'
+  | (kn, ConstantDecl cb) :: Σ' => (kn, ConstantDecl (f cb)) :: map_constants_global_declarations f Σ'
+  | gd :: Σ' => gd :: map_constants_global_declarations f Σ'
   end.
 
-Definition eta_global_env (Σ : global_env) :=
+Definition eta_global_env (Σ : global_declarations) :=
   let f cb :=
      {| cst_type := eta_expand Σ cb.(cst_type) ; 
         cst_universes := cb.(cst_universes) ;
@@ -126,7 +136,7 @@ Definition eta_global_env (Σ : global_env) :=
                     | Some b => Some (eta_expand Σ b)
                     | None => None
                     end |} in
-  map_constants_global_env f Σ.
+  map_constants_global_declarations f Σ.
 
 (* MetaCoq Quote Recursively Definition p := (@pair).
 MetaCoq Unquote Definition q := (eta_expand p.1 p.2).
@@ -145,7 +155,7 @@ Local Unset Elimination Schemes.
 Inductive expanded : term -> Prop :=
 | expanded_tRel (n : nat) : expanded (tRel n)
 | expanded_tVar (id : ident) : expanded (tVar id)
-| expanded_tEvar (ev : nat) (args : list term) : expanded (tEvar ev args)
+| expanded_tEvar (ev : nat) (args : list term) : Forall expanded args -> expanded (tEvar ev args)
 | expanded_tSort (s : Universe.t) : expanded (tSort s)
 | expanded_tCast (t : term) (kind : cast_kind) (v : term) : expanded t -> expanded v -> expanded (tCast t kind v)
 | expanded_tProd (na : aname) (ty : term) (body : term) : (* expanded ty -> expanded body -> *) expanded (tProd na ty body)
@@ -167,11 +177,10 @@ Inductive expanded : term -> Prop :=
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : 
   Forall (fun d => expanded d.(dtype) /\ expanded d.(dbody)) mfix ->
   expanded (tCoFix mfix idx)
-| expanded_tInt (i : Int63.int) : expanded (tInt i)
-| expanded_tFloat (f : PrimFloat.float) : expanded (tFloat f)
 | expanded_tConstruct_app ind c u mind idecl cdecl args :
     declared_constructor Σ (ind, c) mind idecl cdecl ->
     #|args| >= (ind_npars mind + context_assumptions (cstr_args cdecl)) ->
+    Forall expanded args ->
     expanded (tApp (tConstruct ind c u) args).
 
 End expanded.
@@ -180,7 +189,7 @@ Lemma expanded_ind :
 forall (Σ : global_env) (P : term -> Prop),
 (forall n : nat, P (tRel n)) ->
 (forall id : ident, P (tVar id)) ->
-(forall (ev : nat) (args : list term), P (tEvar ev args)) ->
+(forall (ev : nat) (args : list term), Forall (expanded Σ) args -> Forall P args -> P (tEvar ev args)) ->
 (forall s : Universe.t, P (tSort s)) ->
 (forall (t : term) (kind : cast_kind) (v : term),
  expanded Σ t -> P t -> expanded Σ v -> P v -> P (tCast t kind v)) ->
@@ -221,23 +230,25 @@ forall (Σ : global_env) (P : term -> Prop),
   Forall (fun d => expanded Σ d.(dtype) /\ expanded Σ d.(dbody)) mfix -> 
   Forall (fun d => P d.(dtype) /\ P d.(dbody)) mfix -> 
   P (tCoFix mfix idx)) ->
-(forall i : PrimInt63.int, P (tInt i)) ->
-(forall f16 : PrimFloat.float, P (tFloat f16)) ->
 (forall (ind : inductive) (c : nat) (u : Instance.t)
    (mind : mutual_inductive_body) (idecl : one_inductive_body)
    (cdecl : constructor_body) (args : list term),
  declared_constructor Σ (ind, c) mind idecl cdecl ->
  #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
+ Forall (expanded Σ) args ->
+ Forall P args ->
  P (tApp (tConstruct ind c u) args)) -> forall t : term, expanded Σ t -> P t.
 Proof.
-  intros. revert t H18.
+  intros. revert t H16.
   fix f 2.
   intros t Hexp. destruct Hexp; eauto.
-  - assert (Forall P args) by (induction H19; econstructor; eauto).
+  - eapply H1; eauto. induction H16; econstructor; eauto.
+  - assert (Forall P args) by (induction H17; econstructor; eauto).
     destruct f0; eauto.
-  - eapply H11; eauto. induction H18; econstructor; eauto.
-  - eapply H13; eauto. induction H18 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
-  - eapply H14; eauto. induction H18 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
+  - eapply H11; eauto. induction H16; econstructor; eauto.
+  - eapply H13; eauto. induction H16 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
+  - eapply H14; eauto. induction H16 as [ | ? ? []]; econstructor; cbn in *; eauto; split.
+  - eapply H15; eauto. clear - f H18. induction H18; econstructor; cbn in *; eauto; split.
 Qed.
 
 Local Hint Constructors expanded : core.
@@ -269,6 +280,7 @@ Qed.
 Lemma expanded_mkApps_tConstruct Σ mind idecl cdecl ind idx u args :
   declared_constructor Σ (ind, idx) mind idecl cdecl ->
   #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
+  Forall (expanded Σ) args ->
   expanded Σ (mkApps (tConstruct ind idx u) args).
 Proof.
   intros Hdecl Heq. unfold mkApps.
@@ -280,14 +292,14 @@ Qed.
 Lemma eta_expand_expanded {cf : config.checker_flags} {Σ : global_env_ext} Γ t T :
   wf Σ ->
   typing Σ Γ t T ->
-  expanded Σ (eta_expand Σ t).
+  expanded Σ (eta_expand Σ.1.(declarations) t).
 Proof.
   intros wf Hty.
-  eapply @typing_ind_env with (t := t) (Σ := Σ) (P := fun Σ Γ t T => expanded Σ (eta_expand Σ t)) (PΓ := fun _ _ _ => True); intros; try now (cbn; eauto).
+  eapply @typing_ind_env with (t := t) (Σ := Σ) (P := fun Σ Γ t T => expanded Σ (eta_expand Σ.(declarations) t)) (PΓ := fun _ _ _ => True); intros; try now (cbn; eauto).
   - cbn. destruct (isConstruct_app t0) eqn:E.
     + induction t0; cbn in *; try congruence.
       unfold eta_constructor in *.
-      destruct lookup_env as [[] | ] eqn:E1; try congruence.
+      destruct lookup_global as [[] | ] eqn:E1; try congruence.
       destruct nth_error eqn:E2; try congruence.
       destruct (nth_error (ind_ctors o) idx) eqn:E3; try congruence.
       cbn in H. rewrite expanded_fold_lambda in H.
@@ -297,19 +309,21 @@ Proof.
       * cbn in H. inversion H; subst. cbn.
         simpl_list. destruct l.
         -- cbn. econstructor; eauto.
-        -- cbn. eapply expanded_tConstruct_app; eauto. cbn. now rewrite H6. 
+        -- cbn. eapply expanded_tConstruct_app; eauto. cbn. now rewrite H6. todo "lifting".
       * eapply expanded_mkApps_tConstruct. split. split. red. all: eauto. 
-        rewrite rev_map_spec. simpl_list. rewrite EE. lia.
-    + assert (Forall(fun t : term => expanded Σ0.1 (eta_expand Σ0.1 t)) l). {
+        rewrite rev_map_spec. simpl_list. rewrite EE. lia. todo "induction on X0".
+    + assert (Forall(fun t : term => expanded Σ0.1 (eta_expand Σ0.1.(declarations) t)) l). {
         clear H1. clear X. induction X0; econstructor; eauto. }
       induction t0; cbn.
       all: try now (eapply expanded_mkApps; eauto; solve_all).
       cbn in E. congruence.
   - cbn. pose proof isdecl as isdecl'. destruct isdecl as [[]]. red in H1.
+    unfold lookup_env in H1.
     unfold eta_constructor. unfold fst_ctx in *. cbn in *. rewrite H1, H2, H3.
     eapply expanded_fold_lambda. rewrite Nat.sub_0_r.
     eapply expanded_mkApps_tConstruct; eauto.
-    rewrite rev_map_spec. now simpl_list.
+    rewrite rev_map_spec. now simpl_list. rewrite rev_map_spec, <- List.map_rev.
+    eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor. 
   - cbn. econstructor; eauto. unfold map_branches. solve_all.
   - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn. now split.
   - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn. now split.

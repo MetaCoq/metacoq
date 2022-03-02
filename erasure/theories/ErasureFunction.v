@@ -11,10 +11,10 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICUnivSubstitutionTyp
   PCUICCumulativity PCUICSR PCUICSafeLemmata
   PCUICValidity PCUICPrincipality PCUICElimination 
-  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICFirstorder PCUICEtaExpand.
+  PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand.
      
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICSafeRetyping.
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness EEtaExpanded.
+From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -1011,66 +1011,38 @@ Lemma erases_deps_weaken kn d (Σ : global_env) (Σ' : EAst.global_declarations)
 Proof.
   intros wfΣ er.
   induction er using erases_deps_forall_ind; try solve [now constructor].
- (*  assert (kn <> kn0).
-  { inv wfΣ. inv X. intros <-.
-    eapply lookup_env_Some_fresh in H. contradiction. }
-  eapply erases_deps_tConst with cb cb'; eauto.
-  red. rewrite /lookup_env lookup_env_cons_fresh //.
-  red.
-  red in H1.
-  destruct (cst_body cb) eqn:cbe;
-  destruct (E.cst_body cb') eqn:cbe'; auto.
-  specialize (H3 _ eq_refl).
-  eapply on_declared_constant in H; auto.
-  2:{ inv wfΣ. now inv X. }
-  red in H. rewrite cbe in H. simpl in H.
-  eapply (erases_weakeninv_env (Σ := (Σ, cst_universes cb))
-     (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
-  simpl.
-  split => //; eexists [(kn, d)]; intuition eauto.
-  econstructor; eauto.
-  red. destruct H. split; eauto.
-  red in H. red.
-  inv wfΣ. inv X.
-  rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername. destruct kername_eq_dec; try congruence.
-  eapply lookup_env_Some_fresh in H. subst kn; contradiction.
-  econstructor; eauto.
-  red. destruct H. split; eauto.
-  inv wfΣ. inv X.
-  red in H |- *.
-  rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername.
-  unfold lookup_env in H; simpl in H. destruct kername_eq_dec; try congruence.
-  eapply lookup_env_Some_fresh in H. subst kn. contradiction. *)
   - assert (kn <> kn0).
-    { inv wfΣ. intros <-.
+    { inv wfΣ. inv X. intros <-.
       eapply lookup_env_Some_fresh in H. contradiction. }
     eapply erases_deps_tConst with cb cb'; eauto.
-    red. rewrite lookup_env_cons_fresh //.
+    red. rewrite /lookup_env lookup_env_cons_fresh //.
     red.
     red in H1.
     destruct (cst_body cb) eqn:cbe;
     destruct (E.cst_body cb') eqn:cbe'; auto.
     specialize (H3 _ eq_refl).
     eapply on_declared_constant in H; auto.
-    2:{ now inv wfΣ. }
+    2:{ inv wfΣ. now inv X. }
     red in H. rewrite cbe in H. simpl in H.
     eapply (erases_weakeninv_env (Σ := (Σ, cst_universes cb))
-       (Σ' := (((kn, d) :: Σ), cst_universes cb))); eauto.
-    simpl. now inv wfΣ.
-    eexists [(kn, d)]; intuition eauto.
-  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto. eexists [(_, _)]; cbn; eauto. 
+       (Σ' := (add_global_decl Σ (kn, d), cst_universes cb))); eauto.
+    simpl.
+    split => //; eexists [(kn, d)]; intuition eauto.
+  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto.
+    eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. 
   - econstructor; eauto.
     red. destruct H. split; eauto.
-    inv wfΣ.
-    red in d0 |- *.
-    rewrite -d0. simpl. unfold eq_kername. destruct kername_eq_dec; try congruence.
-    eapply lookup_env_Some_fresh in d0. subst kn; contradiction.
+    red in H. red.
+    inv wfΣ. inv X.
+    rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername. destruct kername_eq_dec; try congruence.
+    eapply lookup_env_Some_fresh in H. subst kn; contradiction.
   - econstructor; eauto.
     red. destruct H. split; eauto.
-    inv wfΣ.
-    red in d0 |- *.
-    rewrite -d0. simpl. unfold eq_kername. destruct kername_eq_dec; try congruence.
-    eapply lookup_env_Some_fresh in d0. subst kn; contradiction.
+    inv wfΣ. inv X.
+    red in H |- *.
+    rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername.
+    unfold lookup_env in H; simpl in H. destruct kername_eq_dec; try congruence.
+    eapply lookup_env_Some_fresh in H. subst kn. contradiction.
 Qed.
 
 Lemma lookup_env_ext {Σ kn kn' d d'} : 
@@ -1408,7 +1380,9 @@ Proof.
   induction o0. apply Pnil.
   apply (Pcons {| universes := univs; declarations := Σ |} kn d (o, o0)).
   exact IHo0.
-Notation "Σ |- s ▷ t" := (PCUICWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
+Qed.
+
+Local Notation "Σ |- s ▷ t" := (PCUICWcbvEval.eval Σ s t) (at level 50, s, t at next level) : type_scope.
 
 Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
    wf_ext Σ ->
@@ -1423,15 +1397,15 @@ Proof.
   - eapply leq_term_sprop_sorted_l; eauto.
 Qed.
 
-Fixpoint map_erase Σ (H : ∥ wf_ext Σ ∥) Γ (ts : list term) (H2 : Forall (welltyped Σ Γ) ts) : list E.term.
+Fixpoint map_erase (Σ : wf_env_ext) Γ (ts : list term) (H2 : Forall (welltyped Σ Γ) ts) : list E.term.
 destruct ts as [ | t ts].
 - exact [].
-- eapply cons. refine (erase Σ H Γ t _). 
-  2: eapply (map_erase Σ H Γ ts).
+- eapply cons. refine (erase Σ Γ t _). 
+  2: eapply (map_erase Σ Γ ts).
   all: now inversion H2; subst.
 Defined.
 
-Lemma erase_irrel Σ H Γ t H1 H2 : erase Σ H Γ t H1 = erase Σ H Γ t H2.
+Lemma erase_irrel Σ H Γ t H1 H2 : erase (build_wf_env_ext Σ H) Γ t H1 = erase (build_wf_env_ext Σ H) Γ t H2.
 Proof.
   destruct H1 as [T Ht].
   sq.
@@ -1443,7 +1417,7 @@ Proof.
   revert Γ t T Ht wt wfΣ' H2.
   eapply(typing_ind_env (fun Σ Γ t T =>
        forall (wt : welltyped Σ Γ t)  (wfΣ' : ∥ wf_ext Σ ∥) H2,
-       erase Σ wfΣ' Γ t wt = erase Σ wfΣ' Γ t H2
+       erase (build_wf_env_ext Σ wfΣ') Γ t wt = erase (build_wf_env_ext Σ wfΣ') Γ t H2
          )
          (fun Σ Γ => wf_local Σ Γ)); intros; auto; clear Σ w; rename Σ0 into Σ.
 
@@ -1481,7 +1455,7 @@ Proof.
     f_equal. intuition auto.
 Qed.
 
-Lemma map_erase_irrel Σ H Γ t H1 H2 : map_erase Σ H Γ t H1 = map_erase Σ H Γ t H2.
+Lemma map_erase_irrel Σ H Γ t H1 H2 : map_erase (build_wf_env_ext Σ H) Γ t H1 = map_erase (build_wf_env_ext Σ H) Γ t H2.
 Proof.
   induction t.
   - cbn. reflexivity.
@@ -1491,13 +1465,13 @@ Proof.
     + eapply IHt.
 Qed.
 
-Arguments map_erase _ _ _ _ _, _ _ _ _ {_}.
+Arguments map_erase _ _ _ _, _ _ _ {_}.
 
 Lemma erase_mkApps Σ H Γ t args H2 Ht Hargs :
   wf_local Σ Γ ->
   ~ ∥ isErasable Σ Γ (mkApps t args)∥ ->
-  erase Σ H Γ (mkApps t args) H2 = 
-  E.mkApps (erase Σ H Γ t Ht) (map_erase Σ H Γ args Hargs).
+  erase (build_wf_env_ext Σ H) Γ (mkApps t args) H2 = 
+  E.mkApps (erase (build_wf_env_ext Σ H) Γ t Ht) (map_erase (build_wf_env_ext Σ H) Γ args Hargs).
 Proof.
   destruct H as [H].
   intros Hwflocal Herasable. induction args in t, H2, Ht, Hargs, Herasable |- *.
@@ -1517,7 +1491,7 @@ Proof.
       eapply erase_irrel. eapply map_erase_irrel.
 Qed.
 
-Lemma map_erase_length Σ H Γ t H1 : length (map_erase Σ H Γ t H1) = length t.
+Lemma map_erase_length Σ H Γ t H1 : length (map_erase (build_wf_env_ext Σ H) Γ t H1) = length t.
 Proof.
   induction t; cbn; f_equal; [ | inversion H1; subst ]; eauto.
 Qed.
@@ -1551,7 +1525,9 @@ Lemma erase_global_declared_constructor Σ ind c mind idecl cdecl wfΣ' deps :
 Proof.
   intros [[]] Hin.
   cbn in *. split. split. 
-  - red in H |- *. clear - H Hin. induction Σ as [ | [] Σ IH] in deps, wfΣ', H, Hin |- *.
+  - red in H |- *. clear - H Hin.
+    destruct Σ as [Σ1 Σ2]. cbn in *.
+    induction Σ2 as [ | [] Σ2 IH] in deps, wfΣ', H, Hin |- *.
     + cbn in *. congruence.
     + cbn in H. unfold eq_kername in H. destruct kername_eq_dec as [E | E].
       * invs H. cbn.  eapply KernameSet.mem_spec in Hin as ->. cbn.
@@ -1566,17 +1542,23 @@ Proof.
   - cbn. erewrite map_nth_error; eauto.
 Qed.
 
+From MetaCoq.Erasure Require Import EEtaExpanded.
+
 Lemma eta_expand_erase {Σ : global_env_ext} Σ' {wfΣ : ∥wf_ext Σ∥} {Γ t} (wt : welltyped Σ Γ t) :
   PCUICEtaExpand.expanded Σ t ->
   erases_global Σ Σ' ->
-  expanded Σ' (@erase Σ wfΣ Γ t wt).
+  expanded Σ' (@erase (build_wf_env_ext Σ wfΣ) Γ t wt).
 Proof.
   intros exp Hdeps.
   induction exp in Γ, wt, Hdeps |- *.
-  1-7,9-15: simp erase; unfold erase_clause_1 in *.
+  1-7,9-14: simp erase; unfold erase_clause_1 in *.
   all: eauto using expanded.
   all: try (destruct is_erasable; [ now eauto using expanded | eauto using expanded]).
   all: try now (intros Hdeps; invs Hdeps; eauto using expanded).
+  - unfold erase_clause_1_clause_13. econstructor.
+    solve_all. eapply All_from_nth_error. intros. eapply nth_error_map_InP in H1 as (? & ? & ? & ?).
+    cbn in *. subst.
+    eapply All_nth_error in H0 as []; eauto.
   - unfold erase_clause_1_clause_13. econstructor.
     + eauto.
     + solve_all. eapply All_from_nth_error. intros. eapply nth_error_map_InP in H1 as (? & ? & ? & ?).
@@ -1586,7 +1568,7 @@ Proof.
     cbn in *. subst. cbn. eapply All_nth_error in H0 as [? []]; eauto.
   - econstructor. solve_all. eapply All_from_nth_error. intros. eapply nth_error_map_InP in H1 as (? & ? & ? & ?).
     cbn in *. subst. cbn. eapply All_nth_error in H0 as [? []]; eauto.
-  - destruct (is_erasable Σ wfΣ Γ (mkApps f6 args) wt).
+  - destruct (is_erasable (build_wf_env_ext Σ wfΣ) Γ (mkApps f6 args) wt).
     + simp erase. destruct is_erasable. 1: now econstructor. sq. exfalso; tauto.
     + destruct wt as (T & wt). revert Hdeps. rewrite erase_mkApps. 
       * eapply welltyped_mkApps_inv; sq; eauto. eexists; eauto.
@@ -1598,7 +1580,7 @@ Proof.
       * eapply typing_wf_local; eauto.
       * intros ?. now sq.
       * eapply welltyped_mkApps_inv; sq; eauto. eexists; eauto.
-  - destruct (is_erasable Σ wfΣ Γ (mkApps (tConstruct ind c u) args) wt).
+  - destruct (is_erasable (build_wf_env_ext Σ wfΣ) Γ (mkApps (tConstruct ind c u) args) wt).
     + simp erase. destruct is_erasable. 1: now econstructor. sq. exfalso; tauto.
     +  destruct wt as (T & wt). rewrite erase_mkApps.
       * eapply welltyped_mkApps_inv; sq; eauto. eexists; eauto.
@@ -1610,12 +1592,17 @@ Proof.
           ++ eauto.
         -- sq. eapply erases_declared_constructor in H as H'; eauto. destruct H' as (? & ? & ? & ?). 
            eapply expanded_tConstruct_app; eauto.
-           2: eapply erases_global_all_deps; eauto.
-           rewrite map_erase_length. destruct H4 as ((? & ? & ? & ? & ?) & ? & ?).
+           3: eapply erases_global_all_deps; eauto.
+           { rewrite map_erase_length. destruct H6 as ((? & ? & ? & ? & ?) & ? & ?).
            unshelve edestruct @declared_constructor_inv as (? & ? & ?); eauto.
            shelve. eapply weaken_env_prop_typing. 
            2: erewrite <- cstr_args_length; eauto; lia.
            eapply w.
+           }
+           solve_all. clear - Hdeps H2.
+           induction H2.
+           ++ econstructor.
+           ++ econstructor; eauto. eapply p. eauto.
       * eapply typing_wf_local; eauto.
       * intros ?. now sq.
       * eapply welltyped_mkApps_inv; sq; eauto. eexists; eauto. 

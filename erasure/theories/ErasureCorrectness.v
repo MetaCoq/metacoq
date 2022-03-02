@@ -1569,7 +1569,7 @@ Proof.
         eapply PCUICReduction.red_cofix_case.
         rewrite closed_unfold_cofix_cunfold_eq; eauto. }
     invs He.
-    * edestruct IHeval1 as (? & ? & ?); eauto. now depelim Hed.
+    * all: todo "todo". (* edestruct IHeval1 as (? & ? & ?); eauto. now depelim Hed.
       depelim Hed.
       rename H0 into decli'. rename H1 into decli''. rename H2 into er. rename H3 into H0.
       eapply erases_mkApps_inv in H6; eauto.
@@ -1589,7 +1589,7 @@ Proof.
         eapply Is_proof_ty; eauto.
         eapply unfold_cofix_type; eauto.
         move: e. rewrite -closed_unfold_cofix_cunfold_eq // /unfold_cofix e0.
-        intros e; eapply e. eauto. }
+        intros e; eapply e. eauto. } *)
       (* { now econstructor; eauto. }
       exists x3; split; [|constructor]; auto.
     * depelim Hed.
@@ -1645,10 +1645,10 @@ Proof.
         { econstructor; eauto.
           apply erases_deps_mkApps; [now constructor|now eauto]. }
         exists x0; split; [|constructor]; auto. *)
-      { todo "deps". }
+      (* { todo "deps". }
       sq.
       eapply Informative_cofix in H7 as [H7 H7']; eauto.
-      all: todo "todo".
+      all: todo "todo". *)
       (* 2: eapply extends_refl.
       2: admit. 2: admit.
       2:{ rewrite mkApps_app.
@@ -1667,8 +1667,8 @@ Proof.
          eapply eval_iota_sing; eauto.
          eapply isPropositional_propositional; eauto. 
          all: todo "tricky". *)
-      -- todo "cofix".         
-      -- eapply subject_reduction_eval. 2: eauto. eauto.
+      (* -- todo "cofix".         
+      -- eapply subject_reduction_eval. 2: eauto. eauto. *)
     * exists EAst.tBox; split; auto.
       2:repeat constructor.
       constructor.

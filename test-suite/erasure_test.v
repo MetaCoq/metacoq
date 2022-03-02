@@ -1,6 +1,6 @@
 From MetaCoq.Template Require Import Loader.
 From MetaCoq.Erasure Require Import Loader.
-(* From MetaCoq.SafeChecker Require Import Loader. *)
+From MetaCoq.SafeChecker Require Import Loader.
 Local Open Scope string_scope.
 
 MetaCoq Erase nat.

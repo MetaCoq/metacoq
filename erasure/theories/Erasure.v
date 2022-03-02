@@ -59,19 +59,21 @@ Module Transform.
     Context {eval' : program' -> value' -> Type}.
     Context {eval'' : program'' -> value'' -> Type}.
     
-  Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'') :
-    (forall p, o.(post) p -> o'.(pre) p) -> t program program'' value value'' eval eval''.
-  Proof.
-    intros hpp.
-    refine {| 
-      transform p hp := o'.(transform) (o.(transform) p hp) (hpp _ (o.(correctness) _ hp));
-      pre := o.(pre);
-      post := o'.(post);
-      obseq g g' v v' := exists g'' v'', o.(obseq) g g'' v v'' × o'.(obseq) g'' g' v'' v'
-      |}.
-    * intros inp pre.
+    Obligation Tactic := idtac.
+    Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'') 
+      (hpp : (forall p, o.(post) p -> o'.(pre) p)) : t program program'' value value'' eval eval'' :=
+      {| 
+        transform p hp := o'.(transform) (o.(transform) p hp) (hpp _ (o.(correctness) _ hp));
+        pre := o.(pre);
+        post := o'.(post);
+        obseq g g' v v' := exists g'' v'', o.(obseq) g g'' v v'' × o'.(obseq) g'' g' v'' v'
+        |}.
+    Next Obligation.
+      intros o o' hpp inp pre.
       eapply o'.(correctness).
-    * red.
+    Qed.
+    Next Obligation.
+      red. intros o o' hpp.
       intros p v pr ev.
       eapply o.(preservation) in ev; auto.
       cbn in ev. destruct ev as [v' [ev]].
@@ -81,7 +83,7 @@ Module Transform.
       destruct H as [v'' [[ev' obs']]].
       exists v''. constructor. split => //.
       exists (transform o p pr), v'. now split.
-  Defined.
+    Qed.
   End Comp.
 End Transform.
 Import ETyping.
@@ -91,45 +93,56 @@ Definition self_optimization program value eval eval' := Transform.t program pro
 Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
   EWcbvEval.eval (wfl:=wfl) p.1 p.2 t.
 
-Definition optimize_prop_discr_optimization : self_optimization eprogram EAst.term (eval_eprogram EWcbvEval.default_wcbv_flags) (eval_eprogram EWcbvEval.opt_wcbv_flags).
 Import Transform.
-  refine {|
-    transform p _ := (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
+Obligation Tactic := idtac.
+Program Definition optimize_prop_discr_optimization : self_optimization eprogram EAst.term (eval_eprogram EWcbvEval.default_wcbv_flags) (eval_eprogram EWcbvEval.opt_wcbv_flags) := 
+  {| transform p _ := (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
     pre p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v
     |}.
-  * intros [Σ t] [cle clt].
-    cbn in *. split.
-    move: cle. induction Σ at 1 3; cbn; auto.
-    move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
-    destruct a as [kn []]; cbn in * => //.
-    destruct E.cst_body => //. cbn in cla |- *.
-    now eapply EOptimizePropDiscr.closed_optimize.
-    now eapply EOptimizePropDiscr.closed_optimize.
-  * red. move=> [Σ t] /= v [cle clt] ev.
-    eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
-Defined.
+Next Obligation.
+  intros [Σ t] [cle clt].
+  cbn in *. split.
+  move: cle. induction Σ at 1 3; cbn; auto.
+  move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
+  destruct a as [kn []]; cbn in * => //.
+  destruct E.cst_body => //. cbn in cla |- *.
+  now eapply EOptimizePropDiscr.closed_optimize.
+  now eapply EOptimizePropDiscr.closed_optimize.
+Qed.
+Next Obligation.
+  red. move=> [Σ t] /= v [cle clt] ev.
+  eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
+Qed.
 
-Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : self_optimization eprogram EAst.term (eval_eprogram fl) (eval_eprogram fl).
-Import Transform.
-  refine {|
-    transform p _ := (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2);
+Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : self_optimization eprogram EAst.term (eval_eprogram fl) (eval_eprogram fl) :=
+  {|
+    transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
     pre p := [/\ wf_glob p.1, ERemoveParams.isEtaExp_env p.1, ERemoveParams.isEtaExp p.1 p.2, closed_env p.1 & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
-  * intros [Σ t] [wfe etae etat cle clt].
-    cbn -[ERemoveParams.strip] in *. split.
-    move: cle. induction Σ at 1 3; cbn; auto.
-    move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
-    destruct a as [kn []]; cbn in * => //.
-    destruct E.cst_body => //. cbn -[ERemoveParams.strip] in cla |- *.
-    now eapply ERemoveParams.closed_strip.
-    now eapply ERemoveParams.closed_strip.
-  * red. move=> [Σ t] /= v [wfe etae etat cle clt] ev.
-    eapply ERemoveParams.strip_eval in ev; eauto.
-Defined.
+Next Obligation.
+  intros fl [Σ t] [wfe etae etat cle clt].
+  simpl.
+  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
+  cbn -[ERemoveParams.strip] in *.
+  split.
+  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
+  induction Σ at 1 3; cbn; auto.
+  move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
+  destruct a as [kn []]; cbn in * => //.
+  destruct E.cst_body => //. cbn -[ERemoveParams.strip] in cla |- *.
+  now eapply ERemoveParams.closed_strip.
+  now eapply ERemoveParams.closed_strip.
+Qed.
+Next Obligation.
+  red. move=> [Σ t] /= v [wfe etae etat cle clt] ev.
+  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
+  eapply ERemoveParams.strip_eval in ev; eauto.
+Qed.
 
+Obligation Tactic := program_simpl.
 Program Definition erase_template_program (p : Ast.Env.program) 
   (wfΣ : ∥ Typing.wf_ext (Ast.Env.empty_ext p.1) ∥)
   (wt : ∥ ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥)
@@ -206,10 +219,10 @@ Qed.
 Definition eval_program (p : Ast.Env.program) (v : Ast.term) :=
   WcbvEval.eval p.1 p.2 v.
 
-Definition erase_transform : Transform.t Ast.Env.program eprogram Ast.term EAst.term eval_program (eval_eprogram EWcbvEval.default_wcbv_flags).
-Import Transform.
-  unshelve refine {|
-    pre p :=  
+Obligation Tactic := idtac.
+
+Program Definition erase_transform : Transform.t Ast.Env.program eprogram Ast.term EAst.term eval_program (eval_eprogram EWcbvEval.default_wcbv_flags) :=
+ {| pre p :=  
       let Σ := Ast.Env.empty_ext p.1 in
       ∥ Typing.wf_ext Σ × ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥;
     transform p hp := erase_template_program p (map_squash fst hp) (map_squash snd hp) ;
@@ -219,36 +232,32 @@ Import Transform.
       PCUICExpandLets.trans_global (trans_global Σ) ;;; [] |- 
       PCUICExpandLets.trans (trans (trans_global Σ) v) ⇝ℇ v' /\ 
       ∥ EWcbvEval.eval (wfl:=EWcbvEval.default_wcbv_flags) g'.1 g'.2 v' ∥ |}.
-  * intros [Σ t] [[wfext ht]].
-    destruct erase_template_program eqn:e.
-    unfold erase_template_program in e. simpl. injection e. intros <- <-. split.
-    eapply ERemoveParams.erase_global_wf_glob. split.
-    eapply erase_global_closed.
-    eapply (erases_closed _ []). 2:eapply erases_erase.
-    clear e. destruct ht as [T HT].
-    unshelve eapply (template_to_pcuic_typing _ []) in HT; eauto.
-    unshelve eapply PCUICClosedTyp.subject_closed in HT.
-    now eapply template_to_pcuic_env_ext. simpl in HT.
-    now eapply PCUICExpandLetsCorrectness.trans_closedn.  
-  * red. move=> [Σ t] v [[wf [T HT]]]. unfold eval_program.
-    intros ev.
-    destruct erase_template_program eqn:e.
-    eapply (erase_template_program_correctness) in e; tea.
-    destruct e as [v' [he [hev]]]. exists v'; split; split => //.
-Defined.
+Next Obligation.
+  intros [Σ t] [[wfext ht]].
+  destruct erase_template_program eqn:e.
+  unfold erase_template_program in e. simpl. injection e. intros <- <-. split.
+  eapply ERemoveParams.erase_global_wf_glob. split.
+  eapply erase_global_closed.
+  eapply (erases_closed _ []). 2:eapply erases_erase.
+  clear e. destruct ht as [T HT].
+  unshelve eapply (template_to_pcuic_typing _ []) in HT; eauto.
+  unshelve eapply PCUICClosedTyp.subject_closed in HT.
+  now eapply template_to_pcuic_env_ext. simpl in HT.
+  now eapply PCUICExpandLetsCorrectness.trans_closedn.
+Qed.
+Next Obligation.
+  red. move=> [Σ t] v [[wf [T HT]]]. unfold eval_program.
+  intros ev.
+  destruct erase_template_program eqn:e.
+  eapply (erase_template_program_correctness) in e; tea.
+  destruct e as [v' [he [hev]]]. exists v'; split; split => //.
+Qed.
 
-(* Lemma optimize_correctness (o : Transform.t) (p : eprogram) : 
-  o.(pre) p ->
-  let p' := o.(optimize) p in
-  forall v,
-    EWcbvEval.eval (wfl:=o.(input_flags)) p.1 p.2 v -> 
-    exists v', ∥ EWcbvEval.eval (wfl:=o.(output_flags)) p'.1 p'.2 v' × o.(obseq) p.1 p'.1 v v' ∥.
-Proof.
-  intros. now eapply o.(preservation).
-Qed. *)
-
+Obligation Tactic := program_simpl.
 Program Definition erasure_pipeline := 
-  Transform.compose erase_transform (Transform.compose (remove_params_optimization _) optimize_prop_discr_optimization _) _.
+  Transform.compose erase_transform 
+  (Transform.compose (remove_params_optimization _)
+    optimize_prop_discr_optimization _) _.
 Next Obligation.
   split => //. all:todo "etaexp".
 Qed.

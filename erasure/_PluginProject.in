@@ -119,10 +119,8 @@ src/extract.mli
 src/extract.ml
 src/eWcbvEval.mli
 src/eWcbvEval.ml
-src/eInduction.mli
-src/eInduction.ml
-src/eSpineView.mli
-src/eSpineView.ml
+# src/eSpineView.mli
+# src/eSpineView.ml
 src/eRemoveParams.mli
 src/eRemoveParams.ml
 

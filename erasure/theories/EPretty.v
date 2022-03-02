@@ -199,4 +199,4 @@ Definition print_decl Σ '(kn, d) :=
   end.
 
 Definition print_global_context (g : global_context) := 
-  print_list (print_decl g) nl g.
+  print_list (print_decl g) nl (List.rev g).

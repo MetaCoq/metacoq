@@ -650,6 +650,8 @@ End strip.
 Global Hint Rewrite @map_InP_spec : strip.
 Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
+Tactic Notation "simp_strip" "in" hyp(H) := simp strip in H; rewrite -?strip_equation_1 in H.
+Ltac simp_strip := simp strip; rewrite -?strip_equation_1.
 
 Definition isEtaExp_constant_decl Σ cb := 
   option_default (isEtaExp Σ) cb.(cst_body) true.
@@ -948,8 +950,112 @@ Proof.
     now apply remove_last_last. }
 Qed.
 
-Tactic Notation "simp_strip" "in" hyp(H) := simp strip in H; rewrite -?strip_equation_1 in H.
-Ltac simp_strip := simp strip; rewrite -?strip_equation_1.
+Module Fast.
+  Section faststrip.
+    Context (Σ : global_declarations).
+    
+    Equations strip (app : list term) (t : term) : term := {
+    | app, tEvar ev args => mkApps (EAst.tEvar ev (strip_args args)) app
+    | app, tLambda na M => mkApps (EAst.tLambda na (strip [] M)) app
+    | app, tApp u v => strip (strip [] v :: app) u
+    | app, tLetIn na b b' => mkApps (EAst.tLetIn na (strip [] b) (strip [] b')) app
+    | app, tCase ind c brs =>
+        let brs' := strip_brs brs in
+        mkApps (E.tCase (ind.1, 0) (strip [] c) brs') app
+    | app, tProj (ind, pars, args) c => mkApps (E.tProj (ind, 0, args) (strip [] c)) app
+    | app, tFix mfix idx =>
+        let mfix' := strip_defs mfix in
+        mkApps (E.tFix mfix' idx) app
+    | app, tCoFix mfix idx =>
+        let mfix' := strip_defs mfix in
+        mkApps (E.tCoFix mfix' idx) app
+    | app, tConstruct kn c with lookup_inductive_pars Σ (inductive_mind kn) := {
+        | Some npars => mkApps (EAst.tConstruct kn c) (List.skipn npars app)
+        | None => mkApps (EAst.tConstruct kn c) app }
+    | app, x => mkApps x app }
+    
+    where strip_args (t : list term) : list term :=
+    { | [] := [] 
+      | a :: args := (strip [] a) :: strip_args args
+    }
+    
+    where strip_brs (t : list (list name × term)) : list (list name × term) :=
+    { | [] := [] 
+      | a :: args := (a.1, (strip [] a.2)) :: strip_brs args }
+      
+    where strip_defs (t : mfixpoint term) : mfixpoint term :=
+    { | [] := []
+      | d :: defs := {| dname := dname d; dbody := strip [] d.(dbody); rarg := d.(rarg) |} :: strip_defs defs
+    }.
+
+    Local Ltac specIH := 
+          match goal with
+          | [ H : (forall args : list term, _) |- _ ] => specialize (H [] eq_refl)
+          end.
+          
+    Lemma strip_acc_opt t : 
+      forall args, ERemoveParams.strip Σ (mkApps t args) = strip (map (ERemoveParams.strip Σ) args) t.
+    Proof.
+      intros args.
+      remember (map (ERemoveParams.strip Σ) args) as args'.
+      revert args Heqargs'.
+      set (P:= fun args' t fs => forall args, args' = map (ERemoveParams.strip Σ) args -> ERemoveParams.strip Σ (mkApps t args) = fs).
+      apply (strip_elim P
+        (fun l l' => map (ERemoveParams.strip Σ) l = l')
+        (fun l l' => map (on_snd (ERemoveParams.strip Σ)) l = l')
+        (fun l l' => map (map_def (ERemoveParams.strip Σ)) l = l')); subst P; cbn -[lookup_inductive_pars isEtaExp ERemoveParams.strip]; clear.
+      all: try reflexivity.
+      all: intros *; simp_eta; simp_strip.
+      all: try solve [intros; subst; rtoProp; rewrite strip_mkApps // /=; simp_strip; repeat specIH; repeat (f_equal; intuition eauto)].
+      all: try solve [rewrite strip_mkApps //].
+      - intros IHv IHu.
+        specialize (IHv [] eq_refl). simpl in IHv.
+        intros args ->. specialize (IHu (v :: args)).
+        forward IHu. now rewrite -IHv. exact IHu.
+      - intros Hl args ->.
+        rewrite strip_mkApps // /=. now rewrite Hl.
+      - intros Hl args ->.
+        now rewrite strip_mkApps // /= Hl.
+      - intros IHa heq.
+        specIH. now rewrite IHa.
+      - intros IHa heq; specIH. f_equal; eauto. unfold on_snd. now rewrite IHa.
+      - intros IHa heq; specIH. unfold map_def. f_equal; eauto. now rewrite IHa.
+    Qed.
+
+    Lemma strip_fast t : ERemoveParams.strip Σ t = strip [] t.
+    Proof. now apply (strip_acc_opt t []). Qed.
+
+  End faststrip.
+  
+  Notation strip' Σ := (strip Σ []).
+
+  Definition strip_constant_decl Σ cb := 
+    {| cst_body := option_map (strip' Σ) cb.(cst_body) |}.
+    
+  Definition strip_inductive_decl idecl := 
+    {| ind_npars := 0; ind_bodies := idecl.(ind_bodies) |}.
+
+  Definition strip_decl Σ d :=
+    match d with
+    | ConstantDecl cb => ConstantDecl (strip_constant_decl Σ cb)
+    | InductiveDecl idecl => InductiveDecl (strip_inductive_decl idecl)
+    end.
+
+  Definition strip_env (Σ : EAst.global_declarations) := 
+    map (on_snd (strip_decl Σ)) Σ.
+
+  Lemma strip_env_fast Σ : ERemoveParams.strip_env Σ = strip_env Σ.
+  Proof.
+    unfold ERemoveParams.strip_env, strip_env.
+    induction Σ at 2 4; cbn; auto.
+    f_equal; eauto.
+    destruct a as [kn []]; cbn; auto.
+    destruct c as [[b|]]; cbn; auto. unfold on_snd; cbn.
+    do 2 f_equal. unfold ERemoveParams.strip_constant_decl, strip_constant_decl.
+    simpl. f_equal. f_equal. apply strip_fast.
+  Qed.
+
+End Fast.
 
 Scheme eval_nondep := Minimality for Ee.eval Sort Prop.
 
@@ -1767,4 +1873,20 @@ Proof.
   subst Σ'; eapply erase_global_wf_glob; tea.
   clear HΣ'. eapply PCUICClosedTyp.subject_closed in wt.
   eapply erases_closed in H; tea.  
+Qed.
+
+Lemma strip_fast_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :
+  forall wt : welltyped Σ [] t,
+  erase (build_wf_env_ext Σ (sq wfΣ)) [] t wt = t' ->
+  erase_global (term_global_deps t') Σ (sq wfΣ.1) = Σ' ->
+  isEtaExp_env Σ' ->
+  isEtaExp Σ' t' ->
+  PCUICWcbvEval.eval Σ t v ->
+  ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 
+  ∥ Ee.eval (Fast.strip_env Σ') (Fast.strip Σ' [] t') (Fast.strip Σ' [] v') ∥.
+Proof.
+  intros wt ?????.
+  eapply strip_correct in X; tea.
+  destruct X as [v' [er [ev]]]. exists v'; split => //.
+  split. now rewrite -!Fast.strip_fast -Fast.strip_env_fast.
 Qed.

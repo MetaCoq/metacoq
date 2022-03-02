@@ -461,3 +461,11 @@ erasure/src/pCUICWfEnv.ml
 erasure/src/pCUICWfEnv.mli
 erasure/src/orderedType0.ml
 erasure/src/orderedType0.mli
+erasure/src/eRemoveParams.ml
+erasure/src/eRemoveParams.mli
+erasure/src/eSpineView.ml
+erasure/src/eSpineView.mli
+erasure/src/eWcbvEval.ml
+erasure/src/eWcbvEval.mli
+erasure/src/wcbvEval.ml
+erasure/src/wcbvEval.mli

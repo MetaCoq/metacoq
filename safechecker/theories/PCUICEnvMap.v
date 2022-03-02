@@ -7,7 +7,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From Equations Require Import Equations.
 Import String2pos.
 
-(* Implementation of environment lookup using efficient canonical tries by Appel & Leroy *)
+(* Implementation of environment lookup using efficient maps *)
 
 Implicit Types (cf:checker_flags).
 
@@ -15,18 +15,19 @@ Module KernameMap := FMapAVL.Make KernameOT.OT.
 Module KernameMapFact := FMapFacts.WProperties KernameMap.
 
 Module EnvMap.
-  Definition t := KernameMap.t global_decl.
+  (* We keep the definition of EnvMap polymorphic over the data associated to a kername *)
+  Section Poly.
+  Context {A : Type}.
+
+  Definition t := KernameMap.t A.
 
   Definition empty : t := KernameMap.empty _.
 
-  Definition lookup (k : kername) (env : t) : option global_decl :=
+  Definition lookup (k : kername) (env : t) : option A :=
     KernameMap.find k env.
 
-  Definition add (k : kername) (g : global_decl) (env : t) : t :=
+  Definition add (k : kername) (g : A) (env : t) : t :=
     KernameMap.add k g env.
-
-  Definition of_global_env (g : global_env) : t :=
-    KernameMapFact.of_list g.(declarations).
 
   Lemma gso (e : t) kn kn' g : kn <> kn' ->
     lookup kn (add kn' g e) = lookup kn e.
@@ -47,13 +48,7 @@ Module EnvMap.
   Qed.
 
   Definition equal (g g' : t) := KernameMap.Equal g g'.
-    
-  Definition repr (g : global_env) (e : t) := 
-    equal e (of_global_env g).
-
-  Lemma repr_global_env (g : global_env) : repr g (of_global_env g).
-  Proof. red. reflexivity. Qed.
-
+  
   Lemma unfold_equal g g' : (forall i, lookup i g = lookup i g') -> equal g g'.
   Proof.
     intros heq.
@@ -91,39 +86,49 @@ Module EnvMap.
       + rewrite !gso //.
   Qed. *)
 
-  Inductive fresh_globals : global_declarations -> Prop :=
+  Definition fresh_global (s : kername) (g : list (kername × A)) :=
+    Forall (fun g0 : kername × A => g0.1 <> s) g.
+
+  Inductive fresh_globals : list (kername × A) -> Prop :=
     | fresh_globals_empty : fresh_globals []
     | fresh_globals_cons kn d g : 
       fresh_globals g -> fresh_global kn g ->
       fresh_globals ((kn, d) :: g). 
   Derive Signature for fresh_globals.
 
+
+
   Lemma fold_left_cons d g acc :
-    fold_left (fun (genv : t) (decl : kername × global_decl) => add decl.1 decl.2 genv) (d :: g) acc = 
-    fold_left (fun (genv : t) (decl : kername × global_decl) => add decl.1 decl.2 genv) g (add d.1 d.2 acc).
+    fold_left (fun (genv : t) (decl : kername × A) => add decl.1 decl.2 genv) (d :: g) acc = 
+    fold_left (fun (genv : t) (decl : kername × A) => add decl.1 decl.2 genv) g (add d.1 d.2 acc).
   Proof. reflexivity. Qed.
   
-  Lemma of_global_env_cons {cf:checker_flags} d g : fresh_globals (add_global_decl g d).(declarations) ->
-    of_global_env (add_global_decl g d) = add d.1 d.2 (of_global_env g).
+  Definition of_global_env (g : list (kername × A)) : t :=
+    KernameMapFact.of_list g.
+
+  Definition repr (g : list (kername × A)) (e : t) := 
+    equal e (of_global_env g).
+
+  Lemma repr_global_env (g : list (kername × A)) : repr g (of_global_env g).
+  Proof. red. reflexivity. Qed.
+
+  Lemma of_global_env_cons {cf:checker_flags} d g : fresh_globals (d :: g) ->
+    of_global_env (d :: g) = add d.1 d.2 (of_global_env g).
   Proof.
     unfold of_global_env. simpl. unfold KernameMapFact.uncurry.
     reflexivity.
   Qed.
   
-  Lemma wf_fresh_globals {cf} Σ : wf Σ -> fresh_globals Σ.(declarations).
-  Proof. destruct Σ as [univs Σ]; cbn.
-    move=> [] onu; cbn. induction 1; constructor; auto.
-  Qed.
-
-  Lemma repr_add {cf} {Σ : global_env} e k g : wf Σ ->
-    fresh_global k Σ.(declarations) ->
-    EnvMap.repr Σ e ->
-    EnvMap.repr (add_global_decl Σ (k, g)) (EnvMap.add k g e).
+  Lemma repr_add {cf} {Σ : list (kername × A)} e k g : 
+    fresh_globals Σ ->
+    fresh_global k Σ ->
+    repr Σ e ->
+    repr ((k, g) :: Σ) (add k g e).
   Proof.
     intros wfΣ fresh repr.
     red. rewrite /add. do 2 red in repr.
     rewrite repr. rewrite of_global_env_cons //.
-    constructor => //. now apply wf_fresh_globals.
+    constructor => //.
   Qed.
 
   Lemma lookup_add k v g : lookup k (add k v g) = Some v.
@@ -136,16 +141,21 @@ Module EnvMap.
   Proof.
     now rewrite /add_global_decl /lookup_env /= eq_kername_refl.
   Qed.
+  
+  Fixpoint lookup_global (Σ : list (kername × A)) (kn : kername) {struct Σ} : option A :=
+    match Σ with
+    | [] => None
+    | d :: tl => if eq_kername kn d.1 then Some d.2 else lookup_global tl kn
+    end.
 
-  Lemma lookup_spec {cf : checker_flags} (g : global_env) (e : t) : wf g ->
+  Lemma lookup_spec {cf : checker_flags} (g : list (kername × A)) (e : t) : 
+    fresh_globals g ->
     repr g e ->
-    forall k, lookup k e = lookup_env g k.
+    forall k, lookup k e = lookup_global g k.
   Proof.
-    set (Σ := g); destruct g as [univs g].
-    move=> []; cbn => onu.
     intros wf eq k. red in eq.
     move: eq.
-    induction g in Σ, e, k, wf |- *; auto.
+    induction g in e, k, wf |- *; auto.
     - simpl. intros eq.
       unfold lookup.
       rewrite -KernameMapFact.F.not_find_in_iff.
@@ -156,21 +166,30 @@ Module EnvMap.
       change (eq_kername k a.1) with (eqb k a.1).
       destruct (eqb_spec k a.1).
       * subst. 
-        change Σ with (add_global_decl {| universes := univs; declarations := g |} a).
-        rewrite of_global_env_cons; [now apply wf_fresh_globals|].
+        rewrite of_global_env_cons //.
         intros he. unfold lookup. rewrite he.
         now rewrite [KernameMap.find _ _]lookup_add.
-      * change Σ with (add_global_decl {| universes := univs; declarations := g |} a).
-        rewrite of_global_env_cons. now apply wf_fresh_globals.
+      * rewrite of_global_env_cons //.
         intros he. unfold lookup. rewrite he.
         rewrite [KernameMap.find _ _]lookup_add_other //.
         apply IHg. now depelim wf.
         reflexivity.
   Qed.
-
+  End Poly.
+  Arguments t : clear implicits.
 End EnvMap.
 
-Print Assumptions EnvMap.lookup_spec.
+Lemma wf_fresh_globals {cf} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
+Proof. destruct Σ as [univs Σ]; cbn.
+  move=> [] onu; cbn. induction 1; constructor; auto.
+Qed.
+
+Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
+  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
+Proof.
+  unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
+  reflexivity.
+Qed.
 
 (*
 Module EnvMap.

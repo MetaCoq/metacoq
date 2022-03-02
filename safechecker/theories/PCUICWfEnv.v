@@ -10,8 +10,8 @@ single record. *)
 
 Record wf_env {cf:checker_flags} := { 
   wf_env_env :> global_env;
-  wf_env_map :> EnvMap.t;
-  wf_env_map_repr :> EnvMap.repr wf_env_env wf_env_map;
+  wf_env_map :> EnvMap.t global_decl;
+  wf_env_map_repr :> EnvMap.repr wf_env_env.(declarations) wf_env_map;
   wf_env_wf :> ∥ wf wf_env_env ∥;
   wf_env_graph :> universes_graph;
   wf_env_graph_wf : is_graph_of_uctx wf_env_graph (global_uctx wf_env_env)
@@ -19,8 +19,8 @@ Record wf_env {cf:checker_flags} := {
 
 Record wf_env_ext {cf:checker_flags} := { 
   wf_env_ext_env :> global_env_ext;
-  wf_env_ext_map :> EnvMap.t;
-  wf_env_ext_map_repr :> EnvMap.repr wf_env_ext_env wf_env_ext_map;
+  wf_env_ext_map :> EnvMap.t global_decl;
+  wf_env_ext_map_repr :> EnvMap.repr wf_env_ext_env.(declarations) wf_env_ext_map;
   wf_env_ext_wf :> ∥ wf_ext wf_env_ext_env ∥;
   wf_env_ext_graph :> universes_graph;
   wf_env_ext_graph_wf : is_graph_of_uctx wf_env_ext_graph (global_ext_uctx wf_env_ext_env)
@@ -47,7 +47,7 @@ Section WfEnv.
   Lemma lookup_lookup_env Σ kn : lookup Σ kn = lookup_env Σ kn.
   Proof.
     rewrite /lookup. destruct Σ as [Σ map repr [wfext] G HG].
-    apply EnvMap.lookup_spec; auto.
+    apply EnvMap.lookup_spec; auto. now eapply wf_fresh_globals.
   Qed.
 
 End WfEnv.
@@ -102,8 +102,8 @@ Defined.
 
 Definition build_wf_env_ext {cf : checker_flags} (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) : wf_env_ext := 
   {| wf_env_ext_env := Σ; 
-     wf_env_ext_map := EnvMap.of_global_env Σ; 
-     wf_env_ext_map_repr := EnvMap.repr_global_env Σ;
+     wf_env_ext_map := EnvMap.of_global_env Σ.(declarations); 
+     wf_env_ext_map_repr := EnvMap.repr_global_env Σ.(declarations);
      wf_env_ext_wf := wfΣ;
      wf_env_ext_graph := (graph_of_wf_ext wfΣ).π1;
      wf_env_ext_graph_wf := (graph_of_wf_ext wfΣ).π2 |}.

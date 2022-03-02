@@ -2216,6 +2216,7 @@ Section CheckEnv.
     unsquash_wf_env; sq.
     have [wfΣ'] := wfΣ.(wf_env_wf).
     cbn. apply EnvMap.repr_add; eauto.
+    now eapply wf_fresh_globals.
     rewrite e //.
     apply wfΣ.
   Qed.
@@ -2247,6 +2248,7 @@ Section CheckEnv.
     unsquash_wf_env; sq.
     have [wfΣ'] := wfΣ.(wf_env_wf).
     eapply EnvMap.repr_add; eauto.
+    now eapply wf_fresh_globals.
     rewrite e //. apply wfΣ.
   Qed.
   Next Obligation.

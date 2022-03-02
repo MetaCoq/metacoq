@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Uint63 FloatOps FloatAxioms.
-From MetaCoq.Template Require Import config utils AstUtils.
+From MetaCoq.Template Require Import config utils AstUtils EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICCases.
 
 Lemma to_Z_bounded_bool (i : Int63.int) : 
@@ -40,8 +40,42 @@ Section Map2Bias.
   Qed.
 End Map2Bias.
 
+(** Global environment with a map for efficient lookups *)
+
+Record global_env_map := 
+  { trans_env_env :> global_env;
+    trans_env_map : EnvMap.t global_decl; 
+    trans_env_repr : EnvMap.repr trans_env_env.(declarations) trans_env_map }.
+
+Definition global_env_ext_map := global_env_map * universes_decl.
+
+Definition global_env_ext_map_global_env_ext (g : global_env_ext_map) : global_env_ext :=
+  (trans_env_env (fst g), g.2).
+Coercion global_env_ext_map_global_env_ext : global_env_ext_map >-> global_env_ext.
+
+Definition global_env_ext_map_global_env_map : global_env_ext_map -> global_env_map := fst.
+Coercion global_env_ext_map_global_env_map : global_env_ext_map >-> global_env_map.
+
+Module TransLookup.
+  Definition lookup_minductive (Σ : global_env_map) mind :=
+    match EnvMap.lookup mind Σ.(trans_env_map) with
+    | Some (InductiveDecl decl) => Some decl
+    | _ => None
+    end.
+
+  Definition lookup_inductive Σ ind :=
+    match lookup_minductive Σ (inductive_mind ind) with
+    | Some mdecl => 
+      match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
+      | Some idecl => Some (mdecl, idecl)
+      | None => None
+      end
+    | None => None
+    end.
+End TransLookup.
+
 Section Trans.
-  Context (Σ : global_env).
+  Context (Σ : global_env_map).
 
   Definition dummy_decl : context_decl := 
     vass {| binder_name := nAnon; binder_relevance := Relevant |} (tSort Universe.type0).
@@ -75,7 +109,7 @@ Section Trans.
   | Ast.tCase ci p c brs =>
     let p' := Ast.map_predicate id trans trans p in
     let brs' := List.map (Ast.map_branch trans) brs in
-    match lookup_inductive Σ ci.(ci_ind) with
+    match TransLookup.lookup_inductive Σ ci.(ci_ind) with
     | Some (mdecl, idecl) => 
       let tp := trans_predicate ci.(ci_ind) mdecl idecl p'.(Ast.pparams) p'.(Ast.puinst) p'.(Ast.pcontext) p'.(Ast.preturn) in
       let tbrs := 
@@ -146,12 +180,28 @@ Section Trans.
     end.
 End Trans.
 
-Definition trans_global_decls univs (d : Ast.Env.global_declarations) : global_declarations :=
-  fold_right (fun decl Σ' => on_snd (trans_global_decl {| universes := univs; declarations := Σ' |}) decl :: Σ') [] d.
+Program Definition add_global_decl (env : global_env_map) (d : kername × global_decl) :=
+  {| trans_env_env := add_global_decl env.(trans_env_env) d; 
+     trans_env_map := EnvMap.add d.1 d.2 env.(trans_env_map) |}.
+Next Obligation.
+  pose proof env.(trans_env_repr).
+  red in H. rewrite H. reflexivity.
+Qed.
 
-Definition trans_global_env (d : Ast.Env.global_env) : global_env :=
-  {| universes := d.(Ast.Env.universes); 
-     declarations := trans_global_decls d.(Ast.Env.universes) d.(Ast.Env.declarations) |}.
+Definition trans_global_decls env (d : Ast.Env.global_declarations) : global_env_map :=
+  fold_right (fun decl Σ' => 
+    let decl' := on_snd (trans_global_decl Σ') decl in
+    add_global_decl Σ' decl') env d.
 
-Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext :=
+Definition empty_trans_env univs := 
+  let init_global_env := {| universes := univs; declarations := [] |} in
+    {| trans_env_env := init_global_env; 
+       trans_env_map := EnvMap.empty;
+       trans_env_repr := fun y => eq_refl |}.
+
+Definition trans_global_env (d : Ast.Env.global_env) : global_env_map :=
+  let init := empty_trans_env d.(Ast.Env.universes) in
+  trans_global_decls init d.(Ast.Env.declarations).
+
+Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext_map :=
   (trans_global_env (fst Σ), snd Σ).

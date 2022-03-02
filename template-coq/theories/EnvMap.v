@@ -1,9 +1,7 @@
 
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect RelationClasses OrderedTypeAlt FMapAVL FMapFacts.
-From MetaCoq.Template Require Import config utils uGraph Reflect Kernames String2pos CanonicalTries.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICTyping PCUICGlobalEnv PCUICTyping.
+From MetaCoq.Template Require Import config utils uGraph Reflect BasicAst Kernames String2pos CanonicalTries.
 From Equations Require Import Equations.
 Import String2pos.
 
@@ -112,7 +110,7 @@ Module EnvMap.
   Lemma repr_global_env (g : list (kername × A)) : repr g (of_global_env g).
   Proof. red. reflexivity. Qed.
 
-  Lemma of_global_env_cons {cf:checker_flags} d g : fresh_globals (d :: g) ->
+  Lemma of_global_env_cons d g : fresh_globals (d :: g) ->
     of_global_env (d :: g) = add d.1 d.2 (of_global_env g).
   Proof.
     unfold of_global_env. simpl. unfold KernameMapFact.uncurry.
@@ -137,18 +135,13 @@ Module EnvMap.
   Lemma lookup_add_other k k' v g : k <> k' -> lookup k (add k' v g) = lookup k g.
   Proof. move=> eqk. rewrite gso //. Qed.
 
-  Lemma lookup_env_head d g : lookup_env (add_global_decl g d) d.1 = Some d.2.
-  Proof.
-    now rewrite /add_global_decl /lookup_env /= eq_kername_refl.
-  Qed.
-  
   Fixpoint lookup_global (Σ : list (kername × A)) (kn : kername) {struct Σ} : option A :=
     match Σ with
     | [] => None
     | d :: tl => if eq_kername kn d.1 then Some d.2 else lookup_global tl kn
     end.
 
-  Lemma lookup_spec {cf : checker_flags} (g : list (kername × A)) (e : t) : 
+  Lemma lookup_spec (g : list (kername × A)) (e : t) : 
     fresh_globals g ->
     repr g e ->
     forall k, lookup k e = lookup_global g k.
@@ -178,18 +171,6 @@ Module EnvMap.
   End Poly.
   Arguments t : clear implicits.
 End EnvMap.
-
-Lemma wf_fresh_globals {cf} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
-Proof. destruct Σ as [univs Σ]; cbn.
-  move=> [] onu; cbn. induction 1; constructor; auto.
-Qed.
-
-Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
-  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
-Proof.
-  unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
-  reflexivity.
-Qed.
 
 (*
 Module EnvMap.

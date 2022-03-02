@@ -1,16 +1,18 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils EnvMap.
 From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICCasesContexts.
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnvConv PCUICSubstitution PCUICGeneration PCUICCasesContexts.
 
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
-Implicit Types cf : checker_flags.
+Implicit Types (cf : checker_flags).
+
+Coercion Ast.Env.fst_ctx : Ast.Env.global_env_ext >-> Ast.Env.global_env.
 
 Definition lengths := 
   (@Ast.Env.context_assumptions_subst_context,
@@ -69,6 +71,36 @@ Module SEq := Template.TermEquality.
 Module ST := Template.Typing.
 Module SL := Template.LiftSubst.
 
+Lemma wf_fresh_globals {cf : checker_flags} (Σ : global_env) : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
+Proof.
+  destruct Σ as [univs Σ]; cbn.
+  move=> [] onu; cbn. induction 1; constructor; auto.
+Qed.
+
+Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
+  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
+Proof.
+  unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
+  reflexivity.
+Qed.
+
+Lemma trans_lookup_minductive {cf} {Σ : global_env_map} mind : wf Σ ->
+  TransLookup.lookup_minductive Σ mind = PCUICAst.lookup_minductive Σ mind.
+Proof.
+  intros wf.
+  unfold TransLookup.lookup_minductive.
+  rewrite (EnvMap .lookup_spec Σ.(declarations)) //.
+  now eapply wf_fresh_globals. apply Σ.
+Qed.
+
+Lemma trans_lookup_inductive {cf} {Σ : global_env_map} mind : wf Σ ->
+  TransLookup.lookup_inductive Σ mind = PCUICAst.lookup_inductive Σ mind.
+Proof.
+  intros wf.
+  unfold TransLookup.lookup_inductive, lookup_inductive.
+  rewrite trans_lookup_minductive //.
+Qed.
+
 Lemma mkApps_morphism (f : term -> term) u v :
   (forall x y, f (tApp x y) = tApp (f x) (f y)) ->
   f (mkApps u v) = mkApps (f u) (List.map f v).
@@ -99,17 +131,11 @@ Proof.
   revert t a; induction l; intros; simpl; try congruence.
 Qed.
 
-Definition trans_global_decls_acc univs Σ Σ' := 
-  fold_right
-    (fun (decl : kername × Ast.Env.global_decl) (Σ' : global_declarations) =>
-      let Σ' := {| universes := univs; declarations := Σ' |} in
-      on_snd (trans_global_decl Σ') decl :: Σ'.(declarations)) Σ' Σ.
-
-Lemma trans_global_decls_app univs Σ Σ' : 
-  trans_global_decls univs (Σ ++ Σ') = 
-  trans_global_decls_acc univs Σ (trans_global_decls univs Σ').
+Lemma trans_global_decls_app {Σ : global_env_map} (Σ' Σ'' : Ast.Env.global_declarations) : 
+  trans_global_decls Σ (Σ' ++ Σ'') = 
+  trans_global_decls (trans_global_decls Σ Σ'') Σ'.
 Proof.
-  rewrite /trans_global_decls /trans_global_decls_acc.
+  rewrite /trans_global_decls.
   now rewrite fold_right_app.
 Qed.
 
@@ -118,35 +144,33 @@ Proof.
   split; [lsets|csets].
 Qed.
 
-Lemma extends_trans_global_decls_acc Σ Σ' : 
-  extends Σ' {| universes := Σ'.(universes);
-    declarations := trans_global_decls_acc Σ'.(universes) Σ Σ'.(declarations) |}.
+Lemma extends_trans_global_decls_acc (Σ' : global_env_map) (Σ : Ast.Env.global_declarations) :
+  extends Σ' (trans_global_decls Σ' Σ).
 Proof.
   induction Σ.
   * split; cbn. apply incl_cs_refl. now exists [].
-  * rewrite /trans_global_decls_acc /=.
+  * rewrite /=.
     destruct IHΣ as [univs [Σ'' eq]]. cbn in *.
     split; cbn; auto.
     eexists (_ :: Σ'').
-    rewrite -app_comm_cons. f_equal.
-    now rewrite /trans_global_decls_acc in eq.
+    rewrite -app_comm_cons. now f_equal.
 Qed.
 
 Definition wf_global_decl {cf} (Σ : Ast.Env.global_env_ext) kn decl :=
-  Typing.on_global_decl (fun Σ => WfAst.wf_decl_pred Σ.1) Σ kn decl.
+  Typing.on_global_decl (fun (Σ : Ast.Env.global_env_ext) => WfAst.wf_decl_pred Σ) Σ kn decl.
 
 (* Issue in equations: signatures cannot be found up-to arbitrary conversions. *)
 (* #[global] Hint Extern 4 (Signature (Typing.wf _) _ _) => exact (on_global_env_Signature _ _ _) : typeclass_instances. *)
 
-Lemma trans_lookup_env {cf} Σ cst {wfΣ : Typing.wf Σ} :
+Lemma trans_lookup_env {cf} {Σ : Ast.Env.global_env} cst {wfΣ : Typing.wf Σ} :
   match Ast.Env.lookup_env Σ cst with
   | None => lookup_env (trans_global_env Σ) cst = None
   | Some d => 
-    ∑ Σ',
+    ∑ Σ' : Ast.Env.global_env,
       [× Typing.extends Σ' Σ,
         Typing.wf Σ', 
         wf_global_decl (Σ', Ast.universes_decl_of_decl d) cst d,
-        extends (trans_global_env Σ') (trans_global_env Σ) &
+        extends_decls (trans_global_env Σ') (trans_global_env Σ) &
         lookup_env (trans_global_env Σ) cst = Some (trans_global_decl (trans_global_env Σ') d)]
   end. 
 Proof.
@@ -164,7 +188,7 @@ Proof.
       split => //.
     * eapply TypingWf.typing_wf_sigma in wfΣ.
       destruct wfΣ as [onu ond]. now depelim ond.
-    * split => //. now cbn. 
+    * split => //.
       now exists [(a.1, trans_global_decl (trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ |}) a.2)].
     * cbn. now rewrite eq_kername_refl.
     * destruct wfΣ as [onu ond]. depelim ond.
@@ -191,7 +215,7 @@ Proof.
   intros [] []; split; [lsets|csets].
 Qed.
 
-Lemma extends_trans Σ Σ' Σ'' : extends Σ Σ' -> extends Σ' Σ'' -> extends Σ Σ''.
+Lemma extends_trans {Σ Σ' Σ'' : global_env} : extends Σ Σ' -> extends Σ' Σ'' -> extends Σ Σ''.
 Proof.
   intros [u [s eq]] [u' [s' eq']]; subst.
   split.
@@ -199,30 +223,32 @@ Proof.
   - eexists (s' ++ s); cbn. rewrite eq' eq. now rewrite app_assoc.
 Qed.
 
-Lemma trans_weakening {cf} Σ Σ' t : 
-  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf Σ' ->
+Lemma trans_weakening {cf} Σ {Σ' : global_env_map} t : 
+  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
   WfAst.wf Σ t ->
   trans (trans_global_env Σ) t = trans Σ' t.
 Proof.
   intros wfΣ ext wfΣ' wft.
   induction wft using WfAst.term_wf_forall_list_ind; cbn; auto; try solve [f_equal; solve_all].
-  rewrite /lookup_inductive /lookup_minductive.
-  destruct H as [H hnth]. red in H. move: H.
-  generalize (trans_lookup_env Σ (inductive_mind ci)).
-  destruct Ast.Env.lookup_env.
-  * intros [Σ'' [ext' wfΣ'' _ ext'' hl]] [= ->].
-    rewrite hl => /= //. cbn.
-    rewrite nth_error_map hnth /=.
-    rewrite (PCUICWeakeningEnvConv.extends_lookup _ _ _ _ wfΣ' ext hl) /=.
-    rewrite nth_error_map hnth /=.
-    red in X0.
-    f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.
-    f_equal. solve_all.
-  * discriminate.
+  rewrite !trans_lookup_inductive.
+  unshelve epose proof (trans_lookup_inductive (Σ := trans_global_env Σ) ci _); tc.
+  eapply PCUICWeakeningEnvConv.extends_decls_wf; tea. rewrite {}H1.
+  destruct H as [H hnth]. red in H.
+  generalize (trans_lookup_env (inductive_mind ci)).
+  move: H.
+  rewrite /lookup_inductive /lookup_minductive. intros ->.
+  intros [Σ'' [ext' wfΣ'' _ ext'' hl]].
+  rewrite hl => /= //. cbn.
+  rewrite nth_error_map hnth /=.
+  rewrite (PCUICWeakeningEnvConv.extends_lookup _ _ _ _ wfΣ' (extends_decls_extends _ _ ext) hl) /=.
+  rewrite nth_error_map hnth /=.
+  red in X0.
+  f_equal => //. rewrite /id. unfold trans_predicate. f_equal; solve_all.
+  f_equal. solve_all.
 Qed. 
 
-Lemma trans_decl_weakening {cf} Σ Σ' t : 
-  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf Σ' ->
+Lemma trans_decl_weakening {cf} Σ {Σ' : global_env_map} t : 
+  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
   WfAst.wf_decl Σ t ->
   trans_decl (trans_global_env Σ) t = trans_decl Σ' t.
 Proof.
@@ -231,14 +257,14 @@ Proof.
   rewrite trans_weakening => //; apply wft.
 Qed.  
 
-Lemma trans_local_length Σ Γ : #|trans_local Σ Γ| = #|Γ|.
+Lemma trans_local_length {Σ : global_env_map} Γ : #|trans_local Σ Γ| = #|Γ|.
 Proof. now rewrite map_length. Qed.
 
 #[global]
-Hint Rewrite trans_local_length : len.
+Hint Rewrite @trans_local_length : len.
 
-Lemma trans_local_weakening {cf} Σ Σ' t : 
-  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf Σ' ->
+Lemma trans_local_weakening {cf} Σ {Σ' : global_env_map} t : 
+  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
   All (WfAst.wf_decl Σ) t ->
   trans_local (trans_global_env Σ) t = trans_local Σ' t.
 Proof.
@@ -249,8 +275,8 @@ Proof.
   rewrite trans_weakening => //; apply p.
 Qed.  
 
-Lemma trans_ind_body_weakening {cf} Σ Σ' b : 
-  Typing.wf Σ -> extends (trans_global_env Σ) Σ' -> wf Σ' ->
+Lemma trans_ind_body_weakening {cf} Σ {Σ' : global_env_map} b : 
+  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
   TypingWf.wf_inductive_body Σ b ->
   trans_one_ind_body (trans_global_env Σ) b = trans_one_ind_body Σ' b.
 Proof.
@@ -267,10 +293,10 @@ Proof.
     rewrite trans_weakening //.
 Qed.
 
-Lemma trans_global_decl_weaken {cf} (Σ : Ast.Env.global_env_ext) Σ' kn d : 
-  Typing.wf Σ.1 -> extends (trans_global_env Σ.1) Σ' -> wf Σ' ->
+Lemma trans_global_decl_weaken {cf} (Σ : Ast.Env.global_env_ext) {Σ' : global_env_map} kn d : 
+  Typing.wf Σ -> extends_decls (trans_global_env Σ) Σ' -> wf Σ' ->
   wf_global_decl Σ kn d ->
-  trans_global_decl (trans_global_env Σ.1) d = trans_global_decl Σ' d.
+  trans_global_decl (trans_global_env Σ) d = trans_global_decl Σ' d.
 Proof.
   intros.
   destruct d; cbn; f_equal.
@@ -307,7 +333,7 @@ Lemma trans_lookup {cf} Σ cst :
   option_map (trans_global_decl (trans_global_env Σ)) (Ast.Env.lookup_env Σ cst).
 Proof.
   intros wf wf'.
-  generalize (trans_lookup_env Σ cst).
+  generalize (trans_lookup_env cst).
   destruct Ast.Env.lookup_env eqn:heq => //.
   intros [Σ' [ext wfΣ' wfdecl ext' hl]].
   rewrite hl. cbn. f_equal.
@@ -321,7 +347,7 @@ Section Translation.
   Notation trans_local := (trans_local (trans_global_env Σ)).
 
   Ltac dest_lookup := 
-    destruct lookup_inductive as [[mdecl idecl]|].
+    destruct TransLookup.lookup_inductive as [[mdecl idecl]|].
     Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) l l' : 
     map f (map2 g l l') = map2 (fun x y => f (g x y)) l l'.
   Proof.
@@ -470,7 +496,7 @@ Proof.
   now apply destArity_mkApps.
   destruct H as []. red in H.
   epose proof (trans_lookup Σ (inductive_mind ci.(ci_ind)) wfΣ wf').
-  destruct lookup_inductive as [[mdecl' idecl']|] eqn:hl => //.
+  destruct TransLookup.lookup_inductive as [[mdecl' idecl']|] eqn:hl => //.
 Qed. 
 
 (* TODO Duplicate? *)
@@ -697,8 +723,8 @@ Section Trans_Global.
   Qed.
 End Trans_Global.
 
-Lemma on_global_env_impl `{checker_flags} Σ P Q :
-  (forall Σ Γ t T, ST.on_global_env P Σ.1 -> P Σ Γ t T -> Q Σ Γ t T) ->
+Lemma on_global_env_impl `{checker_flags} {Σ : Ast.Env.global_env} P Q :
+  (forall (Σ : Ast.Env.global_env_ext) Γ t T, ST.on_global_env P Σ -> P Σ Γ t T -> Q Σ Γ t T) ->
   ST.on_global_env P Σ -> ST.on_global_env Q Σ.
 Proof.
   apply on_global_env_impl.
@@ -708,7 +734,7 @@ Lemma typing_wf_wf {cf}:
   forall (Σ : Ast.Env.global_env),
     ST.wf Σ ->
     ST.Forall_decls_typing
-      (fun (Σ : Ast.Env.global_env_ext) (_ : Ast.Env.context) (t T : Ast.term) => WfAst.wf Σ.1 t × WfAst.wf Σ.1 T) Σ.
+      (fun (Σ : Ast.Env.global_env_ext) (_ : Ast.Env.context) (t T : Ast.term) => WfAst.wf Σ t × WfAst.wf Σ T) Σ.
 Proof.
   intros Σ.
   eapply on_global_env_impl. clear.
@@ -842,6 +868,7 @@ Section Trans_Global.
       destruct wu as [mdecl'' [idecl'' [decli' hpctx' lenpars' eqpars' eqret' eqc' eqbrs']]].
       destruct (declared_inductive_inj decli decli'). subst.
       eapply forall_decls_declared_inductive in decli; tea.
+      rewrite trans_lookup_inductive.
       destruct lookup_inductive as [[mdecl idecl]|] eqn:hl => //.
       2:{ eapply lookup_inductive_None in hl. elim hl. eauto. }
       apply lookup_inductive_declared in hl.
@@ -1127,7 +1154,7 @@ Section Trans_Global.
     destruct u; [contradiction|]. cbn.
     generalize (map (trans Σ') u) (trans Σ' t) (trans Σ' t0); clear.
     induction l; intros; cbnr. apply IHl.
-    destruct lookup_inductive as [[]|] => //.
+    destruct TransLookup.lookup_inductive as [[]|] => //.
   Qed.
 
   Lemma trans_unfold_fix mfix idx narg fn :
@@ -1193,7 +1220,7 @@ Section Trans_Global.
   Qed.
   Ltac wf_inv H := try apply WfAst.wf_inv in H; simpl in H; rdest.
 
-  Lemma wf_wf_decl_pred : Typing.on_global_env (fun Σ => WfAst.wf_decl_pred Σ.1) Σ.
+  Lemma wf_wf_decl_pred : Typing.on_global_env (fun Σ => WfAst.wf_decl_pred Σ) Σ.
   Proof.
     move: (typing_wf_wf _ wfΣ).
     eapply on_global_env_impl.
@@ -1480,6 +1507,7 @@ Section Trans_Global.
       destruct a as [isdecl hpctx lenpar wfpar wfret wfc wfbrs].
       destruct (declared_inductive_inj isdecl (proj1 H0)). subst x x0.
       eapply forall_decls_declared_inductive in isdecl; tea.
+      rewrite trans_lookup_inductive.
       rewrite (declared_inductive_lookup isdecl).
       eapply All2_nth_error in wfbrs as []; tea. 2:exact (proj2 H0).
       have lenbr := (All2_length a); len in lenbr.
@@ -1501,6 +1529,7 @@ Section Trans_Global.
 
     - destruct a as [isdecl hpctx lenpar wfpar wfret wfc wfbrs].
       eapply forall_decls_declared_inductive in isdecl; tea.
+      rewrite trans_lookup_inductive.
       rewrite (declared_inductive_lookup isdecl).
       apply WfAst.wf_mkApps_napp in wfc as []; auto.
       pose proof (unfold_cofix_wf _ _ _ _ _ H w). wf_inv w.
@@ -1528,6 +1557,7 @@ Section Trans_Global.
 
     - destruct a as [isdecl hpctx lenpar wfpar wfret wfc wfbrs].
       eapply forall_decls_declared_inductive in isdecl; tea.
+      rewrite trans_lookup_inductive.
       rewrite (declared_inductive_lookup isdecl).
       constructor. solve_all.
       apply OnOne2_map. apply (OnOne2_All_mix_left wfpar) in X. clear wfpar.
@@ -1537,6 +1567,7 @@ Section Trans_Global.
       destruct (declared_inductive_inj isdecl isdecl').
       subst x x0.
       eapply forall_decls_declared_inductive in isdecl; tea.
+      rewrite trans_lookup_inductive.
       rewrite (declared_inductive_lookup isdecl).
       constructor. cbn. 
       rewrite trans_local_app in IHX.
@@ -1548,14 +1579,14 @@ Section Trans_Global.
     
     - destruct a as [isdecl hpctx wfpar wfret wfc wfbrs].
       eapply forall_decls_declared_inductive in isdecl; tea.
-      rewrite (declared_inductive_lookup isdecl).
+      rewrite trans_lookup_inductive (declared_inductive_lookup isdecl).
       constructor. cbn. apply IHX => //. 
 
     - destruct a as [isdecl' hpctx lenpar wfpar wfret wfc wfbrs].
       destruct (declared_inductive_inj isdecl isdecl').
       subst x x0.
       eapply forall_decls_declared_inductive in isdecl; tea.
-      rewrite (declared_inductive_lookup isdecl).
+      rewrite trans_lookup_inductive (declared_inductive_lookup isdecl).
       constructor.
       eapply OnOne2_map2.
       eapply All2_nth_hyp in wfbrs.
@@ -1664,29 +1695,39 @@ End Trans_Global.
 Lemma global_levels_trans Σ
   : global_levels (trans_global_env Σ) = Ast.global_levels Σ.(Ast.Env.universes).
 Proof.
-  induction Σ; simpl; auto.
+  induction Σ; simpl; auto. cbn.
+  induction declarations0; cbn; auto.
+Qed.
+
+Lemma global_constraints_trans Σ
+  : global_constraints (trans_global_env Σ) = Ast.global_constraints Σ.
+Proof.
+  induction Σ; simpl; auto. cbn.
+  induction declarations0; cbn; auto.
 Qed.
 
 Lemma global_ext_levels_trans Σ
   : global_ext_levels (trans_global Σ) = Ast.global_ext_levels Σ.
 Proof.
   destruct Σ.
-  now unfold trans_global, Ast.global_ext_levels, global_ext_levels; simpl.
+  unfold trans_global, Ast.global_ext_levels, global_ext_levels; simpl.
+  now rewrite global_levels_trans.
 Qed.
 
 Lemma global_ext_constraints_trans Σ
   : global_ext_constraints (trans_global Σ) = Ast.global_ext_constraints Σ.
 Proof.
   destruct Σ.
-  now unfold trans_global, Ast.global_ext_constraints, global_ext_constraints; simpl.
+  unfold trans_global, Ast.global_ext_constraints, global_ext_constraints; simpl.
+  now rewrite global_constraints_trans.
 Qed.
 
 Lemma trans_cumul_gen {cf} (Σ : Ast.Env.global_env_ext) pb Γ T U :
-  Typing.wf Σ.1 ->
+  Typing.wf Σ ->
   let Σ' := trans_global Σ in
   wf Σ' ->
-  All (WfAst.wf_decl Σ.1) Γ ->
-  WfAst.wf Σ.1 T -> WfAst.wf Σ.1 U -> ST.cumul_gen Σ Γ pb T U ->
+  All (WfAst.wf_decl Σ) Γ ->
+  WfAst.wf Σ T -> WfAst.wf Σ U -> ST.cumul_gen Σ Γ pb T U ->
   trans_global Σ ;;; trans_local Σ' Γ |- trans Σ' T <=[pb] trans Σ' U.
 Proof.
   intros wfΣ Σ' wfΣ'.
@@ -1694,7 +1735,9 @@ Proof.
   - constructor. 
     destruct pb.
     * eapply trans_eq_term in c; eauto.
+      now rewrite global_ext_constraints_trans.
     * eapply trans_leq_term in c; eauto.
+      now rewrite global_ext_constraints_trans.
   - eapply cumul_red_l; tea. eapply trans_red1; tea. apply IHX2.
     eapply wf_red1 in r; tea. now eapply typing_wf_sigma in wfΣ. auto.
   - eapply cumul_red_r; tea. 2:eapply trans_red1; tea.
@@ -1719,7 +1762,7 @@ Lemma trans_wf_local {cf}:
            trans_global Σ0;;; trans_local Σ' Γ0 |- trans Σ' t : trans Σ' T)
     in
     let Σ' := trans_global Σ in
-    wf Σ'.1 ->
+    wf Σ' ->
     ST.All_local_env_over ST.typing P Σ Γ wfΓ ->
     wf_local (trans_global Σ) (trans_local Σ' Γ).
 Proof.
@@ -1804,7 +1847,7 @@ Proof.
   - apply IHwft1.
   - rewrite mkApps_nonempty //.
     now destruct l => //.
-  - cbn. destruct lookup_inductive as [[mdecl' idecl']| ]; cbn => //.
+  - cbn. destruct TransLookup.lookup_inductive as [[mdecl' idecl']| ]; cbn => //.
 Qed.
 
 Lemma wf_it_mkProd_or_LetIn Σ Γ t
@@ -1998,7 +2041,7 @@ Qed.
 From MetaCoq.PCUIC Require Import PCUICValidity PCUICContexts PCUICInductives PCUICInductiveInversion.
 
 Lemma isType_mkApps_Ind_inv_spine {cf:checker_flags} {Σ : global_env_ext} {Γ ind u args} {wfΣ : wf Σ} {mdecl idecl} :
-  declared_inductive Σ.1 ind mdecl idecl ->
+  declared_inductive Σ ind mdecl idecl ->
   isType Σ Γ (mkApps (tInd ind u) args) ->
   ∑ s, PCUICSpine.spine_subst Σ Γ args s (ind_params mdecl ,,, ind_indices idecl)@[u] ×
         consistent_instance_ext Σ (ind_universes mdecl) u.
@@ -2031,7 +2074,7 @@ Proof.
 Qed.
 
 Lemma simpl_type_Case {H : checker_flags} {Σ : global_env_ext} {Γ} {ci : case_info} {p c brs ps mdecl idecl indices} {wfΣ : wf Σ} :
-  declared_inductive Σ.1 ci mdecl idecl ->
+  declared_inductive Σ ci mdecl idecl ->
   ind_npars mdecl = ci_npar ci ->
   eq_context_upto_names (pcontext p)
   (ind_predicate_context ci mdecl idecl) ->
@@ -2064,12 +2107,12 @@ Qed.
 
 From MetaCoq.PCUIC Require Import PCUICOnFreeVars.
 
-Lemma trans_cumulSpec {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ.1} {pb Γ T T'} :
+Lemma trans_cumulSpec {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ} {pb Γ T T'} :
   let Σ' := trans_global Σ in
   wf Σ' ->
-  All (WfAst.wf_decl Σ.1) Γ ->
-  WfAst.wf Σ.1 T ->
-  WfAst.wf Σ.1 T' ->
+  All (WfAst.wf_decl Σ) Γ ->
+  WfAst.wf Σ T ->
+  WfAst.wf Σ T' ->
   ST.cumul_gen Σ Γ pb T T' ->
   is_closed_context (trans_local Σ' Γ) ->
   is_open_term (trans_local Σ' Γ) (trans Σ' T) ->
@@ -2082,12 +2125,18 @@ Proof.
   eapply trans_cumul_gen; tea.
 Qed.
 
-Lemma trans_cumulSpec_typed {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ.1} {pb Γ T T'} :
+Local Hint Resolve isType_is_open_term : fvs.
+
+Global Instance wf_trans_env {cf} {Σ : global_env_ext_map} : wf Σ -> wf (global_env_ext_map_global_env_ext Σ).
+Proof. now cbn. Qed.
+Global Hint Resolve wf_trans_env : fvs.
+
+Lemma trans_cumulSpec_typed {cf} {Σ : Ast.Env.global_env_ext} {wfΣ : Typing.wf Σ} {pb Γ T T'} :
   let Σ' := trans_global Σ in
   wf Σ' ->
-  All (WfAst.wf_decl Σ.1) Γ ->
-  WfAst.wf Σ.1 T ->
-  WfAst.wf Σ.1 T' ->
+  All (WfAst.wf_decl Σ) Γ ->
+  WfAst.wf Σ T ->
+  WfAst.wf Σ T' ->
   ST.cumul_gen Σ Γ pb T T' ->
   isType Σ' (trans_local Σ' Γ) (trans Σ' T) ->
   isType Σ' (trans_local Σ' Γ) (trans Σ' T') ->
@@ -2148,6 +2197,25 @@ Qed.
 
 #[local] Hint Unfold lift_typing : core.
 
+Lemma trans_wf_universe Σ u : ST.wf_universe Σ u ->
+  wf_universe (trans_global Σ) u.
+Proof.
+  unfold ST.wf_universe, wf_universe.
+  now rewrite global_ext_levels_trans.
+Qed.
+
+Local Hint Resolve trans_wf_universe : trans.
+Local Hint Transparent Ast.Env.global_env_ext : trans.
+Local Hint Transparent Universe.t : trans.
+Local Hint Variables Transparent : trans.
+Ltac trans := try typeclasses eauto with trans.
+(* bug in Coq, typeclasses eauto tries exact with a quantified hypothesis starting with a let-in *)
+Ltac simpl_let := 
+  match goal with
+  | [ H : let _ := _ in _ |- _ ] => progress (cbv zeta in H)
+  end.
+Local Hint Extern 4 => simpl_let : trans.
+
 Theorem template_to_pcuic {cf} :
   ST.env_prop (fun Σ Γ t T =>
     let Σ' := trans_global Σ in
@@ -2160,7 +2228,7 @@ Theorem template_to_pcuic {cf} :
 Proof.
   apply ST.typing_ind_env.
   all: intros.
-  all: try solve [ econstructor; eauto with trans ].
+  all: try solve [ econstructor; trans ].
 
   - eapply trans_wf_local; eauto.
     
@@ -2168,7 +2236,7 @@ Proof.
     eapply refine_type. eapply type_Rel; eauto.
     unfold trans_local. rewrite nth_error_map. rewrite H. reflexivity.
     f_equal.
-  
+
   - (* Casts *)
     eapply refine_type; cbn.
     * eapply type_App.
@@ -2180,6 +2248,12 @@ Proof.
       constructor; eauto. eapply typing_wf_local; eauto.
       now eapply X2.
     * unfold subst1. rewrite simpl_subst; auto. now rewrite lift0_p.
+
+  - cbn. econstructor; trans.
+    cbn in *. trans. cbn in *; trans. now apply X3.
+
+  - econstructor; eauto with trans.
+  - econstructor; eauto with trans.
 
   - (* The interesting application case *)
     cbn; eapply type_mkApps; eauto.
@@ -2214,6 +2288,7 @@ Proof.
     replace (trans _ (Ast.Env.cst_type decl)) with
         (cst_type (trans_constant_body Σ' decl)) by (destruct decl; reflexivity).
     econstructor; eauto with trans.
+    now apply (trans_consistent_instance_ext Σ (Ast.Env.ConstantDecl decl)).
 
   - rewrite trans_subst_instance.
     pose proof (forall_decls_declared_inductive _ _ _ _ _ _ isdecl).
@@ -2221,6 +2296,7 @@ Proof.
     replace (trans _ (Ast.Env.ind_type idecl)) with
         (ind_type (trans_one_ind_body Σ' idecl)) by (destruct idecl; reflexivity).
     eapply type_Ind; eauto.
+    now apply (trans_consistent_instance_ext Σ (Ast.Env.InductiveDecl mdecl)).
 
   - pose proof (forall_decls_declared_constructor _ _ _ _ _ _ _ isdecl).
     unfold ST.type_of_constructor in *.
@@ -2228,16 +2304,18 @@ Proof.
     rewrite trans_subst_instance.
     rewrite trans_inds. simpl.
     eapply refine_type. econstructor; eauto with trans.
+    now apply (trans_consistent_instance_ext Σ (Ast.Env.InductiveDecl mdecl)).
     reflexivity.
 
   - cbn; rewrite trans_mkApps; auto with wf trans. 
     pose proof (forall_decls_declared_inductive _ _ _ _ _ _ isdecl).
+    rewrite trans_lookup_inductive.
     rewrite (declared_inductive_lookup _ H4).
     rewrite trans_it_mkLambda_or_LetIn.
     rewrite -/(trans_local Σ' (Ast.case_predicate_context _ _ _ _)).
     have lenpctx : #|Ast.pcontext p| = S #|Ast.Env.ind_indices idecl|.
     { eapply All2_length in X1; len in X1. } 
-    rewrite (trans_case_predicate_context Σ.1) //.
+    rewrite (trans_case_predicate_context Σ) //.
     rewrite map_app.
     specialize (X2 X7).
     specialize (X5 X7).
@@ -2254,7 +2332,7 @@ Proof.
       { rewrite PCUICCases.ind_predicate_context_length; len. }
       rewrite map_map2 /= map2_cst.
       rewrite PCUICCases.ind_predicate_context_length; len.
-      eapply (trans_ind_predicate_context Σ.1) in X1.
+      eapply (trans_ind_predicate_context Σ) in X1.
       eapply (eq_annots_ind_predicate_context ci).
       eapply All2_Forall2 => //. exact X1.
     + clear X6. 
@@ -2266,6 +2344,7 @@ Proof.
       rewrite trans_local_app in X2.
       rewrite /predctx in X2.
       rewrite trans_case_predicate_context in X2 => //.
+    + admit.
     + cbn. clear X6.
       now rewrite trans_mkApps map_app in X5.
     + red. eapply All2_Forall2.
@@ -2296,7 +2375,7 @@ Proof.
         eapply eq_binder_annots_eq.
         eapply trans_cstr_branch_context_alpha; tea. }
       intros brctxty'.
-      destruct (trans_case_branch_type Σ.1 ci mdecl idecl cdecl i p br X1 eqann) as [eqctx eqbty].
+      destruct (trans_case_branch_type Σ ci mdecl idecl cdecl i p br X1 eqann) as [eqctx eqbty].
       rewrite [brctxty'.2]eqbty.
       rewrite [brctxty'.1]eqctx. 
       clear eqctx eqbty.
@@ -2364,7 +2443,7 @@ Proof.
        now eapply TypingWf.typing_wf in a0.
     -- destruct decl; reflexivity.
 
-  - assert (WfAst.wf Σ.1 B).
+  - assert (WfAst.wf Σ B).
     { now apply typing_wf in X2. }
     eapply type_Cumul; eauto.
     eapply trans_cumulSpec_typed; eauto with trans. 
@@ -2501,12 +2580,12 @@ From MetaCoq.PCUIC Require Import PCUICOnFreeVars.
 
 Lemma trans_cumul_ctx_rel {cf} {Σ : Ast.Env.global_env_ext} Γ Δ Δ' :
   let Σ' := trans_global Σ in
-  Typing.wf Σ.1 -> wf Σ' ->
+  Typing.wf Σ -> wf Σ' ->
   ST.TemplateConversion.cumul_ctx_rel Σ Γ Δ Δ' ->
   closed_ctx (trans_local Σ' (Ast.Env.app_context Γ Δ)) ->
   closed_ctx (trans_local Σ' (Ast.Env.app_context Γ Δ')) ->
-  All (WfAst.wf_decl Σ.1) (Ast.Env.app_context Γ Δ) ->
-  All (WfAst.wf_decl Σ.1) (Ast.Env.app_context Γ Δ') ->
+  All (WfAst.wf_decl Σ) (Ast.Env.app_context Γ Δ) ->
+  All (WfAst.wf_decl Σ) (Ast.Env.app_context Γ Δ') ->
   cumul_ctx_rel Σ' (trans_local Σ' Γ) (trans_local Σ' Δ) (trans_local Σ' Δ').
 Proof.
   intros Σ' wfΣ wfΣ'. 
@@ -2754,14 +2833,14 @@ Qed.
 Lemma trans_type_local_ctx {cf} {Σ : Ast.Env.global_env_ext} Γ cs s (Σ' := trans_global Σ) :
   (forall (Σ : Ast.Env.global_env × universes_decl) 
   (Γ : Ast.Env.context) (t : Ast.term) (T : option Ast.term),
-  Typing.wf Σ.1 ->
+  Typing.wf Σ ->
   Typing.lift_typing Typing.typing Σ Γ t T ->
-  wf (trans_global_env Σ.1) ->
+  wf (trans_global_env Σ) ->
   lift_typing typing (trans_global Σ)
-  (trans_local (trans_global_env Σ.1) Γ)
-  (trans (trans_global_env Σ.1) t)
-  (option_map (trans (trans_global_env Σ.1)) T)) ->
-  Typing.wf Σ.1 ->
+  (trans_local (trans_global_env Σ) Γ)
+  (trans (trans_global_env Σ) t)
+  (option_map (trans (trans_global_env Σ)) T)) ->
+  Typing.wf Σ ->
   wf Σ' ->
   ST.type_local_ctx (Typing.TemplateEnvTyping.lift_typing Typing.typing) Σ Γ cs s ->
   type_local_ctx (PCUICEnvTyping.lift_typing typing)
@@ -2796,13 +2875,13 @@ Lemma trans_check_ind_sorts {cf} Σ udecl kn mdecl n idecl
   wf Σ' ->
   (forall (Σ : Ast.Env.global_env × universes_decl) 
     (Γ : Ast.Env.context) (t : Ast.term) (T : option Ast.term),
-  Typing.wf Σ.1 ->
+  Typing.wf Σ ->
   Typing.lift_typing Typing.typing Σ Γ t T ->
-  wf (trans_global_env Σ.1) ->
+  wf (trans_global_env Σ) ->
   lift_typing typing (trans_global Σ)
-    (trans_local (trans_global_env Σ.1) Γ)
-    (trans (trans_global_env Σ.1) t)
-    (option_map (trans (trans_global_env Σ.1)) T)) ->
+    (trans_local (trans_global_env Σ) Γ)
+    (trans (trans_global_env Σ) t)
+    (option_map (trans (trans_global_env Σ)) T)) ->
   forall (oni: Typing.on_ind_body (Typing.TemplateEnvTyping.lift_typing Typing.typing)
         (Σ, udecl) kn mdecl n idecl),
   ST.check_ind_sorts
@@ -2828,9 +2907,9 @@ Proof.
 Qed.
 
 Lemma on_global_decl_wf {cf} {Σ : Ast.Env.global_env_ext} {kn d} :
-  Typing.wf Σ.1 ->
+  Typing.wf Σ ->
   Typing.on_global_decl (Typing.TemplateEnvTyping.lift_typing Typing.typing) Σ kn d ->
-  Typing.on_global_decl (fun Σ => WfAst.wf_decl_pred Σ.1) Σ kn d.
+  Typing.on_global_decl (fun Σ => WfAst.wf_decl_pred Σ) Σ kn d.
 Proof.
   intros. eapply TypingWf.on_global_decl_impl; tea.
   intros.
@@ -2872,9 +2951,9 @@ Proof.
 Qed.
 
 Lemma trans_on_global_env `{checker_flags} Σ :
-  (forall Σ Γ t T, Typing.wf Σ.1 -> 
+  (forall Σ Γ t T, Typing.wf Σ -> 
     Typing.lift_typing Typing.typing Σ Γ t T ->
-    let Σ' := trans_global_env Σ.1 in
+    let Σ' := trans_global_env Σ in
     wf Σ' ->
     lift_typing typing (trans_global Σ) (trans_local Σ' Γ) (trans Σ' t) (option_map (trans Σ') T)) ->
   Typing.wf Σ -> wf (trans_global_env Σ).
@@ -3133,7 +3212,7 @@ Proof.
 Qed.
 
 Theorem template_to_pcuic_typing {cf} Σ Γ t T :
-  ST.wf Σ.1 ->
+  ST.wf Σ ->
   ST.typing Σ Γ t T ->
   let Σ' := trans_global Σ in
   typing Σ' (trans_local Σ'.1 Γ) (trans Σ'.1 t) (trans Σ'.1 T).

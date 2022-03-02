@@ -1,9 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils uGraph.
+From MetaCoq.Template Require Import config utils uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICTyping PCUICGlobalEnv.
-From MetaCoq.SafeChecker Require Import PCUICEnvMap.
   
 (* We pack up all the information required on the global environment and graph in a 
 single record. *)
@@ -25,6 +24,18 @@ Record wf_env_ext {cf:checker_flags} := {
   wf_env_ext_graph :> universes_graph;
   wf_env_ext_graph_wf : is_graph_of_uctx wf_env_ext_graph (global_ext_uctx wf_env_ext_env)
 }.
+
+Lemma wf_fresh_globals {cf : checker_flags} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
+Proof. destruct Σ as [univs Σ]; cbn.
+  move=> [] onu; cbn. induction 1; constructor; auto.
+Qed.
+
+Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
+  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
+Proof.
+  unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
+  reflexivity.
+Qed.
 
 Section WfEnv.
   Context {cf : checker_flags}.

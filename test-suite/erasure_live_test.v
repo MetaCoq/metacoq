@@ -8,7 +8,7 @@ Local Open Scope string_scope.
 
 From MetaCoq.Template Require Import utils.
 Import MCMonadNotation.
-
+Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
 #[local] Existing Instance extraction_checker_flags.
 
@@ -28,7 +28,7 @@ Definition exintrotest := Eval lazy in test exintro.
 Definition idnat := ((fun (X : Set) (x : X) => x) nat).
 
 MetaCoq Quote Recursively Definition idnatc := idnat.
-Definition test_idnat := Eval lazy in test idnatc.
+Time Definition test_idnat := Eval lazy in test idnatc.
 
 (** Check that optimization of singleton pattern-matchings work *)
 Definition singlelim := ((fun (X : Set) (x : X) (e : x = x) =>
@@ -308,7 +308,6 @@ Require Import Coq.Arith.Peano_dec.
 Require Import Arith.
 Program Fixpoint provedCopy (n:nat) {wf lt n} : nat :=
   match n with 0 => 0 | S k => S (provedCopy k) end.
-  Next Obligation.  apply lt_wf. Defined.
 Print Assumptions provedCopy.
 MetaCoq Quote Recursively Definition pCopy := provedCopy. (* program *)
 
@@ -320,9 +319,9 @@ MetaCoq Quote Recursively Definition cbv_provedCopyx :=
 Definition ans_provedCopyx :=
   Eval lazy in (test cbv_provedCopyx).
 MetaCoq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
-(* We don't run those every time as they are really expensive *)
 Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
-(* Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx). *)
+(* We don't run this one every time as it is really expensive *)
+(*Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).*)
 
 From MetaCoq.Erasure Require Import Loader.
 MetaCoq Erase provedCopyx.

@@ -52,6 +52,7 @@ EWcbvEval
 ESpineView
 EPretty
 Extract
+EEtaExpanded
 ERemoveParams
 ErasureFunction
 EOptimizePropDiscr

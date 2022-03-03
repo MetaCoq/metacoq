@@ -107,6 +107,8 @@ src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml
 src/eAstUtils.mli
+src/eEtaExpanded.mli
+src/eEtaExpanded.ml
 # src/eInduction.ml
 # src/eInduction.mli
 src/eLiftSubst.ml

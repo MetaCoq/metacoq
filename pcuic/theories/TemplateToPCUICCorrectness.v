@@ -2344,7 +2344,7 @@ Proof.
       rewrite trans_local_app in X2.
       rewrite /predctx in X2.
       rewrite trans_case_predicate_context in X2 => //.
-    + admit.
+    + now rewrite global_ext_constraints_trans.
     + cbn. clear X6.
       now rewrite trans_mkApps map_app in X5.
     + red. eapply All2_Forall2.
@@ -2533,6 +2533,7 @@ Proof.
   1-6:solve_all.
   - rewrite PCUICClosed.closedn_mkApps. solve_all.
   - eapply forall_decls_declared_inductive in H; tea.
+    rewrite trans_lookup_inductive.
     rewrite (declared_inductive_lookup _ H).
     destruct X0. 
     cbn.
@@ -2831,7 +2832,7 @@ Proof.
 Qed.
 
 Lemma trans_type_local_ctx {cf} {Σ : Ast.Env.global_env_ext} Γ cs s (Σ' := trans_global Σ) :
-  (forall (Σ : Ast.Env.global_env × universes_decl) 
+  (forall (Σ : Ast.Env.global_env_ext) 
   (Γ : Ast.Env.context) (t : Ast.term) (T : option Ast.term),
   Typing.wf Σ ->
   Typing.lift_typing Typing.typing Σ Γ t T ->
@@ -2849,12 +2850,7 @@ Lemma trans_type_local_ctx {cf} {Σ : Ast.Env.global_env_ext} Γ cs s (Σ' := tr
   (trans_local Σ' cs) s.
 Proof.
   intros IH wfΣ wfΣ'. induction cs; simpl; auto.
-  destruct Σ as [Σ univs]. unfold Σ'.
-  unfold trans_global. cbn -[trans_global_decls].
-  unfold ST.TemplateTyping.wf_universe.
-  unfold PCUICTypingDef.wf_universe.
-  unfold ST.wf_universe.
-  unfold wf_universe. 
+  { now intros; eapply trans_wf_universe. }
   destruct a as [na [b|] ty] => //;
   intros [? ?]; cbn. destruct p.
   intuition auto.
@@ -2873,7 +2869,7 @@ Lemma trans_check_ind_sorts {cf} Σ udecl kn mdecl n idecl
   (idecl' := trans_one_ind_body Σ' idecl) :
   Typing.wf Σ ->
   wf Σ' ->
-  (forall (Σ : Ast.Env.global_env × universes_decl) 
+  (forall (Σ : Ast.Env.global_env_ext) 
     (Γ : Ast.Env.context) (t : Ast.term) (T : option Ast.term),
   Typing.wf Σ ->
   Typing.lift_typing Typing.typing Σ Γ t T ->
@@ -2890,7 +2886,7 @@ Lemma trans_check_ind_sorts {cf} Σ udecl kn mdecl n idecl
   (Ast.Env.ind_indices idecl) (ST.ind_cunivs oni)
   (Ast.Env.ind_sort idecl) ->
   check_ind_sorts (PCUICEnvTyping.lift_typing typing)
-  (trans_global_env Σ, Ast.Env.ind_universes mdecl)
+  ((trans_global_env Σ, Ast.Env.ind_universes mdecl) : global_env_ext_map)
   (ind_params mdecl')
   (ind_kelim idecl')
   (ind_indices idecl')
@@ -2901,7 +2897,8 @@ Proof.
   unfold ST.check_ind_sorts, check_ind_sorts. cbn.
   destruct Universe.is_prop => //.
   destruct Universe.is_sprop => //.
-  intros []. split => //.
+  intros []. split => //. 
+  now rewrite -global_ext_constraints_trans in c.
   destruct indices_matter => //.
   now eapply trans_type_local_ctx in y.
 Qed.
@@ -2936,7 +2933,7 @@ Qed.
 Lemma closed_arities_context {cf} Σ m : 
   wf (trans_global_env Σ) ->
   All (fun idecl => on_type (PCUICEnvTyping.lift_typing typing)
-  (trans_global_env Σ, Ast.Env.ind_universes m) []
+  ((trans_global_env Σ, Ast.Env.ind_universes m) : global_env_ext_map) []
   (ind_type (trans_one_ind_body (trans_global_env Σ) idecl))) (Ast.Env.ind_bodies m) ->
   closed_ctx (trans_local (trans_global_env Σ) (ST.ind_arities m)).
 Proof.
@@ -2950,8 +2947,34 @@ Proof.
   eapply closedn_ctx_upwards; tea. lia.
 Qed.
 
+Lemma trans_env_env_universes {Σ : Ast.Env.global_env} : universes (trans_env_env (trans_global_env Σ)) = Ast.Env.universes Σ.
+Proof.
+  destruct Σ as [univs Σ] .
+  unfold trans_global_env; cbn -[trans_global_decls].
+  induction Σ => /= //.
+Qed. 
+
+Lemma env_eq (g g' : global_env) : 
+  g.(universes) = g'.(universes) ->
+  g.(declarations) = g'.(declarations) ->
+  g = g'.
+Proof.
+  destruct g, g'; cbn. congruence.
+Qed.
+
+Lemma trans_consistent_instance_ext_gen {cf:checker_flags} Σ udecl u : 
+  let Σ' := trans_global Σ in
+  Ast.consistent_instance_ext Σ udecl u ->
+  consistent_instance_ext Σ' udecl u.
+Proof.
+  intros Σ'. 
+  unfold Ast.consistent_instance_ext, consistent_instance_ext.
+  rewrite global_ext_levels_trans global_ext_constraints_trans.
+  trivial.
+Qed.
+
 Lemma trans_on_global_env `{checker_flags} Σ :
-  (forall Σ Γ t T, Typing.wf Σ -> 
+  (forall (Σ : Ast.Env.global_env_ext) Γ t T, Typing.wf Σ -> 
     Typing.lift_typing Typing.typing Σ Γ t T ->
     let Σ' := trans_global_env Σ in
     wf Σ' ->
@@ -2962,47 +2985,53 @@ Proof.
   simpl in *.
   destruct Σ as [univs Σ].
   destruct X0 as [onu ond]. split => //.
+  { now rewrite trans_env_env_universes. }
   cbn -[trans_global_env] in *.
+  rewrite trans_env_env_universes /= /trans_global_env /=.
   induction ond; simpl; constructor; auto.
   - red in f |- *. clear -f.
     induction f; cbn; constructor; auto. 
   - simpl. subst udecl.
-    clear -o. destruct d; simpl in *;
-      destruct o as [? [? ?]].
-    * split => //.
-    * split => //.    
+    clear -o.
+    now erewrite trans_global_decl_universes in o.
   - simpl.
     set (Σg := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |}).
     set (X0 := (onu, ond) : Typing.wf Σg).
-    assert (wfΣg : PCUICTyping.wf (trans_global_env Σg)) by split => //.
+    assert (trans_env_env (trans_global_env Σg) =
+       {| universes := univs;
+          declarations := declarations (trans_global_decls (empty_trans_env univs) Σ) |}) as <-.
+    { apply env_eq. 
+      now rewrite trans_env_env_universes. reflexivity. }    
+    assert (wfΣg : PCUICTyping.wf (trans_global_env Σg)).
+    { split; rewrite trans_env_env_universes //. }
     have wfdecl := on_global_decl_wf (Σ := (Σg, udecl)) X0 o0.
-    destruct d eqn:eqd; simpl in *.
+    destruct d eqn:eqd.
     * destruct c; simpl. destruct cst_body0; simpl in *.
-      red in o |- *. simpl in *. 
-      apply (X (Σg, cst_universes0) [] t (Some cst_type0)); auto.
+      red in o |- *. simpl in *.
+      eapply (X (Σg, cst_universes0) [] t (Some cst_type0)); auto.
       red in o0 |- *. simpl in *.
       now apply (X (Σg, cst_universes0) [] cst_type0 None).
     * destruct o0 as [onI onP onNP].
-      change {| universes := univs; declarations := trans_global_decls univs Σ |} with
-        (trans_global_env Σg).
+      simpl.
+      change (trans_env_env (trans_global_env Σg), Ast.Env.ind_universes m) with (global_env_ext_map_global_env_ext (trans_global (Σg, Ast.Env.ind_universes m))) in *.
+      change (trans_global_decls (empty_trans_env univs) Σ) with (global_env_ext_map_global_env_map (trans_global (Σg, Ast.Env.ind_universes m))).
       constructor; auto.
       -- have wfpars := on_global_inductive_wf_params wfdecl.
         eapply on_global_inductive_wf_bodies in wfdecl.
         have clars: closed_ctx (trans_local (trans_global_env Σg) (ST.ind_arities m)).
-        { eapply closed_arities_context => //. clear -onu X0 IHond X onI.
+        { eapply closed_arities_context => //. clear -onu wfΣg X0 IHond X onI.
           eapply Alli_All; tea; cbv beta.
           move=> n x /Typing.onArity => o.
-          apply (X (Σg, Ast.Env.ind_universes m) [] (Ast.Env.ind_type x) None X0 o).
-          split => //. }
+          apply (X (Σg, Ast.Env.ind_universes m) [] (Ast.Env.ind_type x) None X0 o) => //. }
         eapply Alli_All_mix in onI; tea.
         eapply Alli_map. eapply Alli_impl. exact onI. eauto. intros n idecl [oni wf].
         have onarity : on_type (PCUICEnvTyping.lift_typing typing)
-          (trans_global_env Σg, Ast.Env.ind_universes m) []
+          (trans_global (Σg, Ast.Env.ind_universes m)) []
           (ind_type (trans_one_ind_body (trans_global_env Σg) idecl)).
         { apply ST.onArity in oni. unfold on_type in *; simpl in *.
           now apply (X (Σg, Ast.Env.ind_universes m) [] (Ast.Env.ind_type idecl) None). }
         unshelve refine {| ind_cunivs := oni.(ST.ind_cunivs) |}; tea.
-        --- simpl; rewrite oni.(ST.ind_arity_eq).
+        --- cbn -[trans_global_env]. rewrite oni.(ST.ind_arity_eq).
             now rewrite ![trans _ _]trans_it_mkProd_or_LetIn.
         --- pose proof oni.(ST.onConstructors) as X11. red in X11.
             red. eapply All2_map_left.
@@ -3012,7 +3041,7 @@ Proof.
             rename a0 into wfctype. rename a into wfcargs. rename b1 into wfcindices.
             destruct onc.
             have onty : on_type (PCUICEnvTyping.lift_typing typing)
-              (trans_global_env Σg, Ast.Env.ind_universes m)
+              (trans_global (Σg, Ast.Env.ind_universes m))
               (arities_context
               (ind_bodies (trans_minductive_body (trans_global_env Σg) m)))
               (cstr_type (trans_constructor_body (trans_global_env Σg) x)).
@@ -3041,7 +3070,7 @@ Proof.
             unshelve econstructor; eauto.
             + simpl. unfold trans_local. rewrite context_assumptions_map.
               now rewrite cstr_args_length.
-            + clear -X0 onu IHond X on_cargs. revert on_cargs. simpl.
+            + clear -X0 wfΣg onu IHond X on_cargs. revert on_cargs. simpl.
               have foo := (X (Σg, udecl) _ _ _ X0).
               rewrite -trans_arities_context.
               clear X.
@@ -3058,7 +3087,7 @@ Proof.
               now apply (foo ty None).
               now apply (foo b (Some ty)).
               now apply (foo ty (Some (Ast.tSort _))).
-            + clear -X0 onu IHond X on_cindices.
+            + clear -X0 onu wfΣg IHond X on_cindices.
               revert on_cindices.
               rewrite -trans_lift_context /trans_local -map_rev.
               simpl. rewrite {2}/trans_local map_length.
@@ -3073,8 +3102,8 @@ Proof.
               now apply (foo i (Some t)).
               now rewrite (trans_subst_telescope _ [i] 0) in IHon_cindices.
               now rewrite (trans_subst_telescope _ [b] 0) in IHon_cindices.
-            + cbn in *.
-              clear -onI wfctype X0 onu IHond on_ctype_positive.
+            + cbn -[trans_global_env] in *.
+              clear -onI wfΣg wfctype X0 onu IHond on_ctype_positive.
               set (Σ' := trans_global_env Σg) in *.
               change [] with (map (trans_decl Σ') []).
               revert on_ctype_positive wfctype.
@@ -3093,7 +3122,7 @@ Proof.
               constructor. rewrite -(trans_subst _ [b]).
               apply IHon_ctype_positive. eapply WfAst.wf_subst; auto.
               move/WfAst.wf_inv => /= [wfty wft].
-              constructor. clear -onI X0 onu IHond p wfty.
+              constructor. clear -onI X0 wfΣg onu IHond p wfty.
               induction p.
               { constructor; rewrite map_length; eapply trans_closedn => //. }
               { rewrite trans_mkApps /=.
@@ -3108,7 +3137,7 @@ Proof.
                   destruct onI as [onI _]. eapply Typing.onArity in onI as [s Hs].
                   now eapply typing_wf in Hs. }
                 rewrite /trans_one_ind_body /= /ind_realargs /= /ST.ind_realargs.
-                generalize (trans_destArity Σg [] _ wfty (onu, IHond)).
+                generalize (trans_destArity Σg [] _ wfty wfΣg).
                 rewrite /ST.TemplateTyping.destArity /PCUICTypingDef.destArity.
                 destruct AstUtils.destArity as [[args s]|] => /= -> //.
                 len. now rewrite context_assumptions_map. }
@@ -3116,14 +3145,14 @@ Proof.
                 rewrite trans_subst in IHp. apply IHp.
                 move/WfAst.wf_inv: wfty => /= [[wfb wfty] wft].
                 eapply WfAst.wf_subst; auto. }
-              { cbn.
+              { cbn -[Σ'].
                 move/WfAst.wf_inv: wfty => /= [wfty wft].
                 constructor 4. len. eapply trans_closedn => //.
                 now apply IHp. } 
               { cbn. now apply IHon_ctype_positive. }
             + intros v indv.
               specialize (on_ctype_variance _ indv).
-              cbn.
+              cbn -[Σg].
               eapply trans_cstr_respects_variance => //.
               { do 2 red in onty. destruct onty as [s hs].
                 rewrite ceq in hs. eapply PCUICClosedTyp.subject_closed in hs.
@@ -3161,16 +3190,16 @@ Proof.
             destruct (Ast.Env.ind_projs idecl) => //.
             forward onp. congruence.
             destruct (Ast.Env.ind_ctors idecl) as [|? []] eqn:hctors => //.
-            cbn. destruct onp; split; auto.
-            cbn. now len. now len. len. rewrite on_projs_all.
+            cbn -[Σg]. destruct onp; split; auto.
+            cbn -[Σg]. now len. now len. len. rewrite on_projs_all.
             now rewrite context_assumptions_map.
-            cbn. eapply Alli_map, Alli_impl; tea.
+            cbn -[Σg]. eapply Alli_map, Alli_impl; tea.
             intros i [pname pdecl].
-            unfold ST.on_projection, on_projection. cbn -[inds].
+            unfold ST.on_projection, on_projection. cbn -[inds Σg].
             rewrite context_assumptions_map.
             rewrite -[trans_local _ _ ++ _]trans_local_app -(trans_smash_context _ []) nth_error_map.
             rewrite /Ast.Env.app_context. destruct nth_error => // /=.
-            intros [-> ->]. cbn. split => //.
+            intros [-> ->]. cbn -[Σg]. split => //.
             rewrite trans_subst trans_inds. f_equal.
             rewrite trans_subst trans_lift. f_equal. now rewrite trans_projs.
         --- have inds := oni.(ST.ind_sorts).
@@ -3178,14 +3207,23 @@ Proof.
         --- have inds := oni.(ST.onIndices).
             intros v hv. specialize (inds v hv).
             eapply trans_ind_respects_variance; tea.
-            move: onarity; cbn. rewrite oni.(ST.ind_arity_eq).
+            move: onarity; cbn -[Σg]. rewrite oni.(ST.ind_arity_eq).
             rewrite !trans_it_mkProd_or_LetIn.
             move=> [] s /subject_closed. rewrite -it_mkProd_or_LetIn_app closedn_it_mkProd_or_LetIn /=.
             rewrite andb_true_r trans_local_app //.
       -- red in onP. red.
           epose proof (Typing.env_prop_wf_local template_to_pcuic (Σg, Ast.Env.ind_universes m) X0 _ onP).
           cbv beta in X1. apply X1 => //.
-      -- cbn. rewrite context_assumptions_map //.
+      -- cbn -[trans_global]. rewrite context_assumptions_map //.
+      -- simpl.
+          clear -onVariance. move: onVariance.
+          unfold on_variance, Typing.on_variance.
+          destruct Ast.Env.ind_universes => //.
+          destruct Ast.Env.ind_variance => //.
+          move=> [univs' [i [i' []]]] vu cu cu' hl.
+          exists univs', i, i'; split => //.
+          all:change (trans_env_env (trans_global_env Σg), univs') with (global_env_ext_map_global_env_ext (trans_global (Σg, univs')));
+            now eapply trans_consistent_instance_ext_gen.
 Qed.
 
 Lemma template_to_pcuic_env {cf} Σ : Template.Typing.wf Σ -> wf (trans_global_env Σ).
@@ -3207,11 +3245,11 @@ Lemma template_to_pcuic_env_ext {cf} Σ : Template.Typing.wf_ext Σ -> wf_ext (t
 Proof.
   intros [u Hu].
   split. now apply template_to_pcuic_env.
-  destruct Hu as [? [? ?]].
-  split => //.
+  rewrite trans_env_env_universes.
+  now destruct Σ as [Σ udecl]; cbn in *.
 Qed.
 
-Theorem template_to_pcuic_typing {cf} Σ Γ t T :
+Theorem template_to_pcuic_typing {cf} {Σ : Ast.Env.global_env_ext} Γ t T :
   ST.wf Σ ->
   ST.typing Σ Γ t T ->
   let Σ' := trans_global Σ in

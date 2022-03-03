@@ -119,7 +119,7 @@ Qed.
 Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : self_optimization eprogram EAst.term (eval_eprogram fl) (eval_eprogram fl) :=
   {|
     transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
-    pre p := [/\ wf_glob p.1, ERemoveParams.isEtaExp_env p.1, ERemoveParams.isEtaExp p.1 p.2, closed_env p.1 & ELiftSubst.closedn 0 p.2];
+    pre p := [/\ wf_glob p.1, ERemoveParams.isEtaExp_env p.1, EEtaExpanded.isEtaExp p.1 p.2, closed_env p.1 & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.

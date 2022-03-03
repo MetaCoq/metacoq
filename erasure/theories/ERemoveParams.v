@@ -1779,85 +1779,79 @@ Proof.
     all:constructor; eauto.
 Qed.
 
-Lemma erase_global_fresh kn deps Σ wfΣ : 
-  let Σ' := erase_global deps Σ wfΣ in
+Lemma erase_global_decls_fresh kn deps Σ decls heq : 
+  let Σ' := erase_global_decls deps Σ decls heq in
+  PCUICTyping.fresh_global kn decls ->
+  fresh_global kn Σ'.
+Proof.
+  cbn.
+  revert deps Σ heq.
+  induction decls; [cbn; auto|].
+  - intros. red. constructor.
+  - destruct a as [kn' d]. intros. depelim H.
+    cbn in H, H0.
+    destruct d as []; simpl; destruct KernameSet.mem.
+    + cbn [ETyping.closed_env forallb]. cbn.
+      constructor => //. eapply IHdecls => //.
+    + eapply IHdecls => //.
+    + constructor; auto.
+      eapply IHdecls => //.
+    + eapply IHdecls => //.
+Qed.
+
+Lemma erase_global_fresh kn deps Σ : 
+  let Σ' := erase_global deps Σ in
   PCUICTyping.fresh_global kn Σ.(declarations) ->
   fresh_global kn Σ'.
 Proof.
-  sq.
-  revert Σ wfΣ deps.
-  apply: global_env_ind; simpl; auto. cbn. constructor.
-  intros Σ [kn' d] IH wf deps.
-  depelim wf. cbn in o0.
-  depelim o0.
-  assert (wfΣ := (o, o0) : wf Σ).
-  red in o3. rename o2 into onud.
-  unfold erase_global. cbn -[erase_global_decls].
-  intros fr.  
-  destruct d as []; simpl; destruct KernameSet.mem.
-  + cbn [ETyping.closed_env forallb]. cbn.
-    constructor. cbn. now depelim fr.
-    depelim fr. eapply IH.
-    apply fr.
-  + eapply IH. now depelim fr.
-  + depelim fr.
-    constructor; auto.
-    eapply IH, fr.
-  + depelim fr.
-    eapply IH, fr.
+  unfold erase_global.
+  intros fr. now eapply erase_global_decls_fresh.
 Qed.
 
-Lemma erase_global_wf_glob Σ deps wfΣ :
-  let Σ' := erase_global deps Σ wfΣ in
+Lemma erase_global_decls_wf_glob Σ deps decls heq :
+  let Σ' := erase_global_decls deps Σ decls heq in
   wf_glob Σ'.
 Proof.
-  sq.
-  revert Σ wfΣ deps.
-  apply: global_env_ind; simpl; auto. cbn. constructor.
-  intros Σ [kn d] IH wf deps.
-  depelim wf. cbn in o0.
-  depelim o0.
-  assert (wfΣ := (o, o0) : wf Σ).
-  red in o3. rename o2 into onud.
-  unfold erase_global. cbn -[erase_global_decls].
-  destruct d as []; simpl; destruct KernameSet.mem.
-  + cbn [ETyping.closed_env forallb]. cbn.
-    constructor. eapply IH.
-    rewrite /test_snd /ETyping.closed_decl /=.
-    set (er := ErasureFunction.erase_global_decls_obligation_1 _ _ _ _ _ _ _).
-    set (er' := ErasureFunction.erase_global_decls_obligation_2 _ _ _ _ _ _ _).
-    clearbody er er'.
-    destruct c as [ty [] univs]; cbn.
-    set (obl := ErasureFunction.erase_constant_body_obligation_1 _ _ _ _ _ _).
-    unfold erase_constant_body. cbn. clearbody obl.
-    cbn in o0. 2:auto.
-    unshelve epose proof (erases_erase (wfΣ := er) obl); eauto.
-    cbn in H.
-    eapply erase_global_fresh; auto.
-    eapply erase_global_fresh; eauto.
+  cbn.
+  revert deps Σ heq.
+  induction decls; [cbn; auto|].
+  { intros. constructor. }
+  intros. destruct a as [kn []]; simpl; destruct KernameSet.mem.
+  + constructor. eapply IHdecls => //.
+    eapply erase_global_decls_fresh; auto.
+    destruct Σ.(wf_env_wf).
+    destruct X. rewrite heq in o0. now depelim o0.
   + cbn.
-    eapply IH.
-  + constructor. eapply IH.
-    now eapply erase_global_fresh.
-  + eapply IH.
+    eapply IHdecls.
+  + constructor. eapply IHdecls.
+    eapply erase_global_decls_fresh.
+    destruct Σ.(wf_env_wf) as [[onu ond]].
+    rewrite heq in ond. now depelim ond.
+  + eapply IHdecls.
 Qed.
 
-Lemma strip_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :
-  forall wt : welltyped Σ [] t,
-  erase (build_wf_env_ext Σ (sq wfΣ)) [] t wt = t' ->
-  erase_global (term_global_deps t') Σ (sq wfΣ.1) = Σ' ->
+Lemma erase_global_wf_glob Σ deps :
+  let Σ' := erase_global deps Σ in
+  wf_glob Σ'.
+Proof. eapply erase_global_decls_wf_glob. Qed.
+
+Lemma strip_correct (wfl := Ee.default_wcbv_flags) (Σ : wf_env) univs wfext t v Σ' t' :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : welltyped Σext [] t,
+  erase Σext [] t wt = t' ->
+  erase_global (term_global_deps t') Σ = Σ' ->
   isEtaExp_env Σ' ->
   isEtaExp Σ' t' ->
   PCUICWcbvEval.eval Σ t v ->
-  ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 
+  ∃ v' : term, Σext;;; [] |- v ⇝ℇ v' ∧ 
   ∥ Ee.eval (strip_env Σ') (strip Σ' t') (strip Σ' v') ∥.
 Proof.
-  intros wt.
-  generalize (sq wfΣ.1) as swfΣ.
-  intros swfΣ HΣ' Ht' etaΣ' etat' ev.
-  pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
+  intros Σext wt.
+  intros HΣ' Ht' etaΣ' etat' ev.
+  pose proof (erases_erase wt); eauto.
   rewrite HΣ' in H.
   destruct wt as [T wt].
+  destruct wfext as [wf].
   assert (includes_deps Σ Σ' (term_global_deps t')).
   { rewrite <- Ht'.
     eapply erase_global_includes.
@@ -1865,8 +1859,8 @@ Proof.
     eapply term_global_deps_spec in H; eauto.
     eapply KernameSet.subset_spec.
     intros x hin; auto. }
-  pose proof (erase_global_erases_deps wfΣ wt H H0).
-  eapply ErasureCorrectness.erases_correct in ev as [v' [ev evv]]; tea.
+  pose proof (erase_global_erases_deps wf wt H H0).
+  eapply (ErasureCorrectness.erases_correct Σext) in ev as [v' [ev evv]]; tea.
   exists v'. split => //.
   sq. apply strip_eval; tea.
   subst Σ'; eapply erase_global_closed; tea.  
@@ -1875,17 +1869,18 @@ Proof.
   eapply erases_closed in H; tea.  
 Qed.
 
-Lemma strip_fast_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :
-  forall wt : welltyped Σ [] t,
-  erase (build_wf_env_ext Σ (sq wfΣ)) [] t wt = t' ->
-  erase_global (term_global_deps t') Σ (sq wfΣ.1) = Σ' ->
+Lemma strip_fast_correct (wfl := Ee.default_wcbv_flags) (Σ : wf_env) univs wfext t v Σ' t' :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : welltyped Σext [] t,
+  erase Σext [] t wt = t' ->
+  erase_global (term_global_deps t') Σ = Σ' ->
   isEtaExp_env Σ' ->
   isEtaExp Σ' t' ->
   PCUICWcbvEval.eval Σ t v ->
-  ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 
+  ∃ v' : term, Σext;;; [] |- v ⇝ℇ v' ∧ 
   ∥ Ee.eval (Fast.strip_env Σ') (Fast.strip Σ' [] t') (Fast.strip Σ' [] v') ∥.
 Proof.
-  intros wt ?????.
+  intros Σext wt ?????.
   eapply strip_correct in X; tea.
   destruct X as [v' [er [ev]]]. exists v'; split => //.
   split. now rewrite -!Fast.strip_fast -Fast.strip_env_fast.

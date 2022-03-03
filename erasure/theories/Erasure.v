@@ -180,26 +180,28 @@ Next Obligation.
 Qed.
 
 Obligation Tactic := program_simpl.
-Program Definition erase_template_program (p : Ast.Env.program) 
-  (wfΣ : ∥ Typing.wf_ext (Ast.Env.empty_ext p.1) ∥)
-  (wt : ∥ ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥)
+Program Definition erase_template_program (p : Ast.Env.program) univs 
+  (wfΣ : ∥ Typing.wf_ext (p.1, univs) ∥)
+  (wt : ∥ ∑ T, Typing.typing (p.1, univs) [] p.2 T ∥)
   : eprogram :=
   let Σ0 := (trans_global (Ast.Env.empty_ext p.1)).1 in
   let Σ := (PCUICExpandLets.trans_global_env Σ0) in
   let wfΣ := map_squash (PCUICExpandLetsCorrectness.trans_wf_ext ∘
-    (template_to_pcuic_env_ext (Ast.Env.empty_ext p.1))) wfΣ in
-  let t := ErasureFunction.erase (build_wf_env_ext (empty_ext Σ) wfΣ) nil (PCUICExpandLets.trans (trans Σ0 p.2)) _ in
-  let Σ' := ErasureFunction.erase_global (term_global_deps t) Σ (sq_wf_ext wfΣ) in
+    (template_to_pcuic_env_ext (p.1, univs))) wfΣ in
+  let wfe := build_wf_env _ (map_squash (wf_ext_wf _) wfΣ) in
+  let wfe' := make_wf_env_ext wfe univs wfΣ in
+  let t := ErasureFunction.erase wfe' nil (PCUICExpandLets.trans (trans Σ0 p.2)) _ in
+  let Σ' := ErasureFunction.erase_global (term_global_deps t) wfe in
   (Σ', t).
   
 Next Obligation.
   sq. destruct wt as [T Ht].
   cbn.
-  set (Σ' := empty_ext _).
+  set (Σ' := (_, univs)).
   exists (PCUICExpandLets.trans (trans (trans_global_env p.1) T)).
-  change Σ' with (PCUICExpandLets.trans_global (trans_global (Ast.Env.empty_ext p.1))).
+  change Σ' with (PCUICExpandLets.trans_global (trans_global (p.1, univs))).
   change (@nil (@BasicAst.context_decl term)) with (PCUICExpandLets.trans_local (trans_local (trans_global_env p.1) [])).
-  change (trans_global_env p.1) with (global_env_ext_map_global_env_map (trans_global (Ast.Env.empty_ext p.1))).
+  change (trans_global_env p.1) with (global_env_ext_map_global_env_map (trans_global (p.1, univs))).
   eapply (@PCUICExpandLetsCorrectness.expand_lets_sound (extraction_checker_flags)).
   now eapply template_to_pcuic_env.
   now eapply template_to_pcuic_typing.
@@ -207,11 +209,11 @@ Defined.
 
 (** The full correctness lemma of erasure from Template programs do λ-box *)
 
-Lemma erase_template_program_correctness {p : Ast.Env.program}
-  (Σ := Ast.Env.empty_ext p.1)
+Lemma erase_template_program_correctness {p : Ast.Env.program} univs
+  (Σ := (p.1, univs))
   {wfΣ : ∥ Typing.wf_ext Σ ∥}
-  {wt : ∥ ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥} {Σ' t'} :
-  erase_template_program p wfΣ wt = (Σ', t') ->
+  {wt : ∥ ∑ T, Typing.typing (p.1, univs) [] p.2 T ∥} {Σ' t'} :
+  erase_template_program p univs wfΣ wt = (Σ', t') ->
   forall v, WcbvEval.eval p.1 p.2 v ->
   exists v',
     PCUICExpandLets.trans_global (trans_global Σ) ;;; [] |- 
@@ -220,38 +222,40 @@ Lemma erase_template_program_correctness {p : Ast.Env.program}
 Proof.
   unfold erase_template_program.
   intros [= <- <-] v ev.
-  pose proof (erase_correct (PCUICExpandLets.trans_global (trans_global Σ))).
+  set (expΣ := (PCUICExpandLets.trans_global (trans_global Σ))).
+  set (wfexpΣ := build_wf_env _ _).
+  pose proof (erase_correct wfexpΣ).
+  set (wfexpΣ' := make_wf_env_ext _ _ _) in *.
   set wftΣ : ∥ wf_ext (PCUICExpandLets.trans_global (trans_global Σ)) ∥ :=
-    (map_squash (PCUICExpandLetsCorrectness.trans_wf_ext ∘ template_to_pcuic_env_ext (Ast.Env.empty_ext p.1)) wfΣ).
-  specialize (H wftΣ (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) (PCUICExpandLets.trans (trans (trans_global Σ) v))).
+    wfexpΣ'.(wf_env_ext_wf).
+  specialize (H univs wftΣ (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) (PCUICExpandLets.trans (trans (trans_global Σ) v))).
   set wtp : PCUICSafeLemmata.welltyped (PCUICExpandLets.trans_global (trans_global Σ)) [] 
     (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) :=
-    (erase_template_program_obligation_1 p wfΣ wt).
-  set (t' := erase (build_wf_env_ext (empty_ext (PCUICExpandLets.trans_global (trans_global Σ)))
-    wftΣ) [] (PCUICExpandLets.trans (trans (trans_global Σ) p.2)) wtp).
+    (erase_template_program_obligation_1 p univs wfΣ wt).
+  set (t' := erase wfexpΣ' [] (PCUICExpandLets.trans (trans (trans_global_env p.1) p.2)) wtp) in *.
   set (deps := (term_global_deps _)).
-  change (empty_ext (PCUICExpandLets.trans_global_env (trans_global_env p.1))) with
-    (PCUICExpandLets.trans_global (trans_global Σ)) in *.
-  specialize (H (erase_global deps (PCUICExpandLets.trans_global (trans_global Σ)) (sq_wf_ext wftΣ))).
+  (* change (empty_ext (PCUICExpandLets.trans_global_env (trans_global_env p.1))) with *)
+    (* (PCUICExpandLets.trans_global (trans_global Σ)) in *. *)
+  specialize (H (erase_global deps wfexpΣ)).
   specialize (H _ deps wtp eq_refl).
   forward H. eapply Kernames.KernameSet.subset_spec. reflexivity.
   specialize (H eq_refl).
   destruct wt, wfΣ.
-  have wfmid : wf (trans_global (Ast.Env.empty_ext p.1)).1.
+  have wfmid : wf (trans_global (p.1, univs)).1.
   { now eapply template_to_pcuic_env. }
   forward H.
-  { eapply PCUICExpandLetsCorrectness.trans_wcbveval.
+  { unfold wfexpΣ. simpl.
+    unshelve eapply (PCUICExpandLetsCorrectness.trans_wcbveval (Σ := (trans_global_env p.1, univs))).
     { destruct s as [T HT].
-      eapply (PCUICClosedTyp.subject_closed (Γ := [])).
-      unshelve apply (template_to_pcuic_typing [] _ T);simpl; eauto.
-      eapply w. }    
-    unshelve eapply trans_wcbvEval; eauto.
-    destruct s as [T HT].
+      eapply (PCUICClosedTyp.subject_closed (Γ := [])). 
+      apply (template_to_pcuic_typing (Σ := (p.1, univs)) [] _ T);simpl; eauto.
+      eapply w. Unshelve. now eapply template_to_pcuic_env. }
+    unshelve eapply trans_wcbvEval; eauto. apply w.
+    destruct s as [T HT]. eauto.
     clear -w HT. now eapply TypingWf.typing_wf in HT. }  
   destruct H as [v' [Hv He]].
   sq.
-  change (empty_ext (trans_global_env p.1)) with (trans_global Σ).
-  set (eΣ := erase_global _ _ _) in *. exists v'. split => //.
+  set (eΣ := erase_global _ _) in *. exists v'. split => //.
 Qed.
 
 Definition eval_program (p : Ast.Env.program) (v : Ast.term) :=
@@ -264,7 +268,7 @@ Program Definition erase_transform : Transform.t Ast.Env.program eprogram Ast.te
     pre p :=  
       let Σ := Ast.Env.empty_ext p.1 in
       ∥ Typing.wf_ext Σ × ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥;
-    transform p hp := erase_template_program p (map_squash fst hp) (map_squash snd hp) ;
+    transform p hp := erase_template_program p Monomorphic_ctx (map_squash fst hp) (map_squash snd hp) ;
     post p := (wf_glob p.1 /\ closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' :=
       let Σ := Ast.Env.empty_ext g.1 in

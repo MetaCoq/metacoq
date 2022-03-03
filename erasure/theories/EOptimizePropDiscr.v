@@ -415,19 +415,20 @@ Proof.
   eapply Is_type_eval_inv; eauto. eexists; eauto.
 Qed.
 
-Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : wf_env_ext} {t v Σ' t' deps} :
-  forall wt : welltyped Σ [] t,
-  erase Σ [] t wt = t' ->
+Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : wf_env} {univs wfext t v Σ' t' deps} :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : welltyped Σext [] t,
+  erase Σext [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
-  erase_global deps Σ (sq_wf_ext Σ) = Σ' ->
+  erase_global deps Σ = Σ' ->
   PCUICWcbvEval.eval Σ t v ->
-  @Ee.eval Ee.default_wcbv_flags Σ' t' tBox -> ∥ isErasable Σ [] t ∥.
+  @Ee.eval Ee.default_wcbv_flags Σ' t' tBox -> ∥ isErasable Σext [] t ∥.
 Proof.
-  intros [T wt].
+  intros Σext wt.
   intros.
-  destruct (erase_correct Σ _ _ _ _ _ _ H H0 H1 X) as [ev [eg [eg']]].
+  destruct (erase_correct Σ univs wfext _ _ _ _ _ wt H H0 H1 X) as [ev [eg [eg']]].
   pose proof (Ee.eval_deterministic H2 eg'). subst.
-  destruct Σ.(wf_env_ext_wf).
+  destruct wfext. destruct wt as [T wt].
   eapply erasable_tBox_value; eauto.
 Qed.
 
@@ -757,20 +758,21 @@ Proof.
     all:constructor; eauto.
 Qed.
 
-Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : wf_env_ext) t v Σ' t' :
-  forall wt : welltyped Σ [] t,
-  erase Σ [] t wt = t' ->
-  erase_global (term_global_deps t') Σ (sq_wf_ext Σ) = Σ' ->
+Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : wf_env) univs wfext t v Σ' t' :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : welltyped Σext [] t,
+  erase Σext [] t wt = t' ->
+  erase_global (term_global_deps t') Σ = Σ' ->
   PCUICWcbvEval.eval Σ t v ->
-  ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 
+  ∃ v' : term, Σext;;; [] |- v ⇝ℇ v' ∧ 
   ∥ @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ') (optimize Σ' t') (optimize Σ' v') ∥.
 Proof.
-  intros wt.
+  intros Σext wt.
   intros HΣ' Ht' ev.
   pose proof (erases_erase wt); eauto.
   rewrite HΣ' in H.
   destruct wt as [T wt].
-  have [wfe] := Σ.(wf_env_ext_wf).
+  have [wfe] := wfext.
   assert (includes_deps Σ Σ' (term_global_deps t')).
   { rewrite <- Ht'.
     eapply erase_global_includes.
@@ -779,12 +781,12 @@ Proof.
     eapply KernameSet.subset_spec.
     intros x hin; auto. }
   pose proof (erase_global_erases_deps wfe wt H H0).
-  eapply erases_correct in ev; eauto.
+  eapply (erases_correct Σext _ _ _ _ Σ') in ev; eauto.
   destruct ev as [v' [ev evv]].
   exists v'. split => //.
   sq. apply optimize_correct; tea.
   rewrite -Ht'.
-  eapply (erase_global_closed Σ (term_global_deps t') (sq_wf_ext Σ)); tea.
+  eapply (erase_global_closed Σ (term_global_deps t')); tea.
   clear HΣ'. eapply PCUICClosedTyp.subject_closed in wt.
   eapply erases_closed in H; tea.  
 Qed.

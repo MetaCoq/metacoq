@@ -9,14 +9,14 @@ let gen_constant_in_modules s =
   )
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
-let timing_opt =
+(* This allows to load template_plugin and the extractable plugin at the same time 
+  while have option settings apply to both *)
+  let timing_opt =
   let open Goptions in
   let key = ["MetaCoq"; "Timing"] in
-  (* This allows to load template_plugin and the extractable plugin at the same time *)
   let tables = get_tables () in
   try 
     let _ = OptionMap.find key tables in
-    Feedback.msg_debug (Pp.str "Option already declared");
     fun () -> 
       let tables = get_tables () in
       let opt = OptionMap.find key tables in
@@ -24,7 +24,6 @@ let timing_opt =
       | BoolValue b -> b
       | _ -> assert false
   with Not_found ->
-    Feedback.msg_debug (Pp.str "Option not already declared");
     declare_bool_option_and_ref ~depr:false ~key ~value:false
 
 let time prefix f x =

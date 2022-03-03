@@ -24,8 +24,6 @@ Open Scope nat.
 Import Template.Ast.
 Import ListNotations.
 
-From ReductionEffect Require Import PrintingEffect.
-
 Section Eta.
    Context (Σ : global_declarations).
 

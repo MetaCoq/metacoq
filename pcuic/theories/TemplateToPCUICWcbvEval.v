@@ -117,7 +117,7 @@ Proof.
 Qed.
 
 Ltac dest_lookup := 
-  destruct lookup_inductive as [[mdecl idecl]|].
+  destruct TransLookup.lookup_inductive as [[mdecl idecl]|].
   
 Lemma trans_csubst {cf} Σ a k b :
   Typing.wf Σ ->
@@ -471,7 +471,7 @@ Lemma isFixApp_trans Σ f : ~~ Ast.isApp f -> isFixApp (trans Σ f) -> WcbvEval.
 Proof.
   rewrite /isFixApp /WcbvEval.isFixApp.
   destruct f => //.
-  cbn. destruct lookup_inductive as [[]|]=> //.
+  cbn. destruct TransLookup.lookup_inductive as [[]|]=> //.
 Qed.
 
 Lemma eval_wf {cf} {Σ} {wfΣ : ST.wf Σ} {T U} :
@@ -575,8 +575,6 @@ Proof.
     cbn [trans].
     rewrite trans_mkApps in IHev3.
     cbn -[Σ']. 
-    (* cbn in cl; move: cl.
-    rewrite closedn_mkApps => /andP[] /= /andP[] clf clx cll. *)
     specialize (IHev1 wff). specialize (IHev2 wfx).
     cbn -[Σ'] in IHev1.
     pose proof (eval_wf wfx ev2).
@@ -608,6 +606,7 @@ Proof.
   - wf_inv wf [mdecl' [idecl' [decli ?]]].
     pose proof (declared_inductive_inj decli (proj1 H0)) as []. subst mdecl' idecl'.
     eapply forall_decls_declared_inductive in decli; tea.
+    rewrite trans_lookup_inductive.
     rewrite (declared_inductive_lookup _ decli).
     eapply All2_nth_error in a1; tea. 2:eapply H0.
     epose proof (forall_decls_declared_constructor _ _ _ _ _ _ _ H0) as decl'; tea.
@@ -704,13 +703,14 @@ Proof.
   
   - wf_inv wf [mdecl' [idecl' [decli ?]]].
     pose proof (forall_decls_declared_inductive _ _ _ _ _ _ decli) as decli';  tea.
+    rewrite trans_lookup_inductive.
     rewrite (declared_inductive_lookup _ decli').
     eapply WfAst.wf_mkApps_napp in w0 as []; [|easy].
     wf_inv w0 x.
     rewrite trans_mkApps /=.  
     eapply red_cofix_case.
     eapply trans_cunfold_cofix; tea.
-    rewrite /= (declared_inductive_lookup _ decli') trans_mkApps in IHev.
+    rewrite /= trans_lookup_inductive (declared_inductive_lookup _ decli') trans_mkApps in IHev.
     apply IHev.
     econstructor; tea.
     eapply WfAst.wf_mkApps; tea.
@@ -757,7 +757,7 @@ Proof.
     auto. rewrite SisFixApp_mkApps.
     eapply isFixApp_trans in hp => //.
     rewrite H //.
-    cbn. destruct lookup_inductive as [[mdecl idecl]|]=> //.
+    cbn. destruct TransLookup.lookup_inductive as [[mdecl idecl]|]=> //.
     
   - eapply eval_atom.
     destruct t => //.

@@ -27,6 +27,9 @@ Module EnvMap.
   Definition add (k : kername) (g : A) (env : t) : t :=
     KernameMap.add k g env.
 
+  Definition remove (k : kername) (env : t) : t :=
+    KernameMap.remove k env.
+
   Lemma gso (e : t) kn kn' g : kn <> kn' ->
     lookup kn (add kn' g e) = lookup kn e.
   Proof.

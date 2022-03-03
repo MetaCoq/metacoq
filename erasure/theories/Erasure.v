@@ -16,6 +16,13 @@ From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr ERemoveParams EW
      indices_matter := false;
      lets_in_constructor_types := true |}.
 
+(* Used to show timings of the ML execution *)
+ 
+Definition time : forall {A}, string -> (unit -> A) -> unit -> A :=
+  fun A s f x => f x.
+
+Extract Constant time => "(fun c f x -> let s = Tm_util.list_to_string c in Tm_util.time (Pp.str s) f x)".
+
 (* This is the total erasure function +
   let-expansion of constructor arguments and case branches +
   shrinking of the global environment dependencies +
@@ -41,13 +48,16 @@ Module Transform.
         ∥ eval' p' v' × obseq p p' v v' ∥.
 
     Record t := 
-    { pre : program -> Prop; 
+    { name : string; 
+      pre : program -> Prop; 
       transform : forall p : program, pre p -> program';
       post : program' -> Prop;
       correctness : forall input (p : pre input), post (transform input p);
       obseq : program -> program' -> value -> value' -> Prop;
-      preservation : preserves_eval pre transform obseq; 
-      }.
+      preservation : preserves_eval pre transform obseq; }.
+
+    Definition run (x : t) (p : program) (pr : pre x p) : program' := 
+      time x.(name) (fun _ => x.(transform) p pr) tt.
 
   End Opt.
   Arguments t : clear implicits.
@@ -63,7 +73,8 @@ Module Transform.
     Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'') 
       (hpp : (forall p, o.(post) p -> o'.(pre) p)) : t program program'' value value'' eval eval'' :=
       {| 
-        transform p hp := o'.(transform) (o.(transform) p hp) (hpp _ (o.(correctness) _ hp));
+        name := o.(name) ^ " -> " ^ o'.(name);
+        transform p hp := run o' (run o p hp) (hpp _ (o.(correctness) _ hp));
         pre := o.(pre);
         post := o'.(post);
         obseq g g' v v' := exists g'' v'', o.(obseq) g g'' v v'' × o'.(obseq) g'' g' v'' v'
@@ -96,7 +107,8 @@ Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.te
 Import Transform.
 Obligation Tactic := idtac.
 Program Definition optimize_prop_discr_optimization : self_optimization eprogram EAst.term (eval_eprogram EWcbvEval.default_wcbv_flags) (eval_eprogram EWcbvEval.opt_wcbv_flags) := 
-  {| transform p _ := (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
+  {| name := "optimize_prop_discr"; 
+    transform p _ := (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
     pre p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v
@@ -117,7 +129,32 @@ Next Obligation.
 Qed.
 
 Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : self_optimization eprogram EAst.term (eval_eprogram fl) (eval_eprogram fl) :=
-  {|
+  {| name := "remove_parameters";
+    transform p _ := (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2);
+    pre p := [/\ wf_glob p.1, ERemoveParams.isEtaExp_env p.1, ERemoveParams.isEtaExp p.1 p.2, closed_env p.1 & ELiftSubst.closedn 0 p.2];
+    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
+    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
+Next Obligation.
+  intros fl [Σ t] [wfe etae etat cle clt].
+  simpl.
+  cbn -[ERemoveParams.strip] in *.
+  split.
+  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
+  induction Σ at 1 3; cbn; auto.
+  move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
+  destruct a as [kn []]; cbn in * => //.
+  destruct E.cst_body => //. cbn -[ERemoveParams.strip] in cla |- *.
+  now eapply ERemoveParams.closed_strip.
+  now eapply ERemoveParams.closed_strip.
+Qed.
+Next Obligation.
+  red. move=> [Σ t] /= v [wfe etae etat cle clt] ev.
+  eapply ERemoveParams.strip_eval in ev; eauto.
+Qed.
+
+
+Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) : self_optimization eprogram EAst.term (eval_eprogram fl) (eval_eprogram fl) :=
+  {| name := "remove_parameters_fast";
     transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
     pre p := [/\ wf_glob p.1, ERemoveParams.isEtaExp_env p.1, ERemoveParams.isEtaExp p.1 p.2, closed_env p.1 & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
@@ -162,9 +199,10 @@ Next Obligation.
   exists (PCUICExpandLets.trans (trans (trans_global_env p.1) T)).
   change Σ' with (PCUICExpandLets.trans_global (trans_global (Ast.Env.empty_ext p.1))).
   change (@nil (@BasicAst.context_decl term)) with (PCUICExpandLets.trans_local (trans_local (trans_global_env p.1) [])).
-  eapply (PCUICExpandLetsCorrectness.expand_lets_sound (cf := extraction_checker_flags)).
-  apply (template_to_pcuic_typing (Ast.Env.empty_ext p.1));simpl. apply wfΣ0.
-  apply Ht. Unshelve. now eapply template_to_pcuic_env.
+  change (trans_global_env p.1) with (global_env_ext_map_global_env_map (trans_global (Ast.Env.empty_ext p.1))).
+  eapply (@PCUICExpandLetsCorrectness.expand_lets_sound (extraction_checker_flags)).
+  now eapply template_to_pcuic_env.
+  now eapply template_to_pcuic_typing.
 Defined.
 
 (** The full correctness lemma of erasure from Template programs do λ-box *)
@@ -205,7 +243,7 @@ Proof.
   { eapply PCUICExpandLetsCorrectness.trans_wcbveval.
     { destruct s as [T HT].
       eapply (PCUICClosedTyp.subject_closed (Γ := [])).
-      unshelve apply (template_to_pcuic_typing (Ast.Env.empty_ext p.1) [] _ T);simpl; eauto.
+      unshelve apply (template_to_pcuic_typing [] _ T);simpl; eauto.
       eapply w. }    
     unshelve eapply trans_wcbvEval; eauto.
     destruct s as [T HT].
@@ -222,7 +260,8 @@ Definition eval_program (p : Ast.Env.program) (v : Ast.term) :=
 Obligation Tactic := idtac.
 
 Program Definition erase_transform : Transform.t Ast.Env.program eprogram Ast.term EAst.term eval_program (eval_eprogram EWcbvEval.default_wcbv_flags) :=
- {| pre p :=  
+ {| name := "erasure";
+    pre p :=  
       let Σ := Ast.Env.empty_ext p.1 in
       ∥ Typing.wf_ext Σ × ∑ T, Typing.typing (Ast.Env.empty_ext p.1) [] p.2 T ∥;
     transform p hp := erase_template_program p (map_squash fst hp) (map_squash snd hp) ;
@@ -240,10 +279,11 @@ Next Obligation.
   eapply erase_global_closed.
   eapply (erases_closed _ []). 2:eapply erases_erase.
   clear e. destruct ht as [T HT].
-  unshelve eapply (template_to_pcuic_typing _ []) in HT; eauto.
-  unshelve eapply PCUICClosedTyp.subject_closed in HT.
-  now eapply template_to_pcuic_env_ext. simpl in HT.
+  eapply (template_to_pcuic_typing []) in HT; eauto.
+  simpl in HT.
+  eapply (@PCUICClosedTyp.subject_closed _ _) in HT.
   now eapply PCUICExpandLetsCorrectness.trans_closedn.
+  now eapply template_to_pcuic_env_ext.
 Qed.
 Next Obligation.
   red. move=> [Σ t] v [[wf [T HT]]]. unfold eval_program.
@@ -262,7 +302,17 @@ Next Obligation.
   split => //. all:todo "etaexp".
 Qed.
 
-Definition erase_program := erasure_pipeline.(transform).
+Definition erase_program := run erasure_pipeline.
+
+Program Definition erasure_pipeline_fast := 
+  Transform.compose erase_transform 
+  (Transform.compose (remove_params_fast_optimization _)
+    optimize_prop_discr_optimization _) _.
+Next Obligation.
+  split => //. all:todo "etaexp".
+Qed.
+
+Definition erase_program_fast := run erasure_pipeline_fast.
 
 Local Open Scope string_scope.
 
@@ -273,4 +323,9 @@ Local Open Scope string_scope.
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
   let (Σ', t) := erase_program p (todo "wf_env and welltyped term") in
-  print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ'.
+  time "Pretty printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.
+
+Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
+  : string :=
+  let (Σ', t) := erase_program_fast p (todo "wf_env and welltyped term") in
+  time "pretty-printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.

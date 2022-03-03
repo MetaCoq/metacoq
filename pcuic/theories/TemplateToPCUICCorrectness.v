@@ -2127,7 +2127,7 @@ Qed.
 
 Local Hint Resolve isType_is_open_term : fvs.
 
-Global Instance wf_trans_env {cf} {Σ : global_env_ext_map} : wf Σ -> wf (global_env_ext_map_global_env_ext Σ).
+Global Instance wf_trans_env {cf} {Σ : global_env_ext_map} : wf Σ -> wf (global_env_ext_map_global_env_map Σ).
 Proof. now cbn. Qed.
 Global Hint Resolve wf_trans_env : fvs.
 
@@ -3253,7 +3253,7 @@ Theorem template_to_pcuic_typing {cf} {Σ : Ast.Env.global_env_ext} Γ t T :
   ST.wf Σ ->
   ST.typing Σ Γ t T ->
   let Σ' := trans_global Σ in
-  typing Σ' (trans_local Σ'.1 Γ) (trans Σ'.1 t) (trans Σ'.1 T).
+  typing Σ' (trans_local Σ' Γ) (trans Σ' t) (trans Σ' T).
 Proof.
   intros wf ty.
   apply (ST.env_prop_typing template_to_pcuic); auto.

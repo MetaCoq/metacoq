@@ -32,6 +32,9 @@ src/wGraph.ml
 src/wGraph.mli
 src/kernames.mli
 src/kernames.ml
+src/envMap.mli
+src/envMap.ml
+
 # src/reflect.mli
 # src/reflect.ml
 # src/typing0.mli
@@ -90,8 +93,6 @@ src/pCUICExpandLetsCorrectness.ml
 # From SafeChecker
 src/pCUICErrors.mli
 src/pCUICErrors.ml
-src/pCUICEnvMap.mli
-src/pCUICEnvMap.ml
 src/pCUICWfEnv.mli
 src/pCUICWfEnv.ml
 src/pCUICSafeReduce.mli
@@ -107,8 +108,8 @@ src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml
 src/eAstUtils.mli
-# src/eInduction.ml
-# src/eInduction.mli
+src/eInduction.ml
+src/eInduction.mli
 src/eLiftSubst.ml
 src/eLiftSubst.mli
 src/eCSubst.mli
@@ -119,8 +120,8 @@ src/extract.mli
 src/extract.ml
 src/eWcbvEval.mli
 src/eWcbvEval.ml
-# src/eSpineView.mli
-# src/eSpineView.ml
+src/eSpineView.mli
+src/eSpineView.ml
 src/eRemoveParams.mli
 src/eRemoveParams.ml
 

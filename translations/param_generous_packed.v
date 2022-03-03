@@ -6,7 +6,7 @@ Import MCMonadNotation.
 
 Reserved Notation "'tsl_ty_param'".
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 
 MetaCoq Quote Definition tSigma := @sigT.
 MetaCoq Quote Definition tPair := @existT.

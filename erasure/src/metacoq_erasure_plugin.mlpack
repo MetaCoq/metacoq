@@ -13,6 +13,7 @@ DecidableType
 FMapInterface
 FMapAVL
 FMapFacts
+EnvMap
 
 WcbvEval
 
@@ -36,7 +37,6 @@ PCUICExpandLets
 PCUICExpandLetsCorrectness
 
 PCUICErrors
-PCUICEnvMap
 PCUICWfEnv
 PCUICUnivSubst
 PCUICSafeReduce

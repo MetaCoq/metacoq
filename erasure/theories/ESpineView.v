@@ -25,18 +25,18 @@ Inductive t : term -> Set :=
 Derive Signature for t.
 
 Definition view : forall x : term, t x :=
-  MkAppsInd.rec (P:=fun x => t x)
+  MkAppsInd.case (P:=fun x => t x)
     tBox tRel tVar 
-    (fun n l _ => tEvar n l) 
-    (fun n t _ => tLambda n t)
-    (fun n b _ t _ => tLetIn n b t)
-    (fun f l napp nnil _ _ => tApp f l napp nnil)
+    (fun n l => tEvar n l) 
+    (fun n t => tLambda n t)
+    (fun n b t => tLetIn n b t)
+    (fun f l napp nnil => tApp f l napp nnil)
     tConst
     tConstruct
-    (fun p t pt l pl => tCase p t l)
-    (fun p t pt => tProj p t)
-    (fun mfix n _ => tFix mfix n)
-    (fun mfix n _ => tCoFix mfix n).
+    (fun p t l => tCase p t l)
+    (fun p t => tProj p t)
+    (fun mfix n => tFix mfix n)
+    (fun mfix n => tCoFix mfix n).
 
 Lemma view_mkApps {f v} (vi : t (mkApps f v)) : ~~ isApp f -> v <> [] -> 
   exists hf vn, vi = tApp f v hf vn.

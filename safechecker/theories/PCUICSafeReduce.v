@@ -68,7 +68,7 @@ Section Measure.
   Definition R Γ u v :=
     R_aux Γ (zip u ; stack_pos (fst u) (snd u))
             (zip v ; stack_pos (fst v) (snd v)).
-  
+
   Lemma cored_welltyped :
     forall {Γ u v},
       wf Σ -> welltyped Σ Γ u ->
@@ -87,7 +87,7 @@ Section Measure.
   Lemma red_welltyped :
     forall {Γ u v},
       wf Σ -> welltyped Σ Γ u ->
-      red Σ Γ u v ->
+      red (fst Σ) Γ u v ->
       welltyped Σ Γ v.
   Proof.
     intros hΣ Γ u v h r. apply red_cored_or_eq in r.
@@ -95,33 +95,8 @@ Section Measure.
     eapply cored_welltyped ; eauto.
   Qed.
 
-  Corollary R_Acc_aux :
-    forall Γ t p,
-      wf_ext Σ -> welltyped Σ Γ t ->
-      Acc (R_aux Γ) (t ; p).
-  Proof.
-    intros Γ t p HΣ h.
-    eapply dlexprod_Acc.
-    - intros x. unfold well_founded.
-      eapply posR_Acc.
-    - eapply normalisation; eassumption.
-  Qed.
 
   Derive Signature for Acc.
-
-  Corollary R_Acc :
-    forall Γ t,
-      wf_ext Σ -> welltyped Σ Γ (zip t) ->
-      Acc (R Γ) t.
-  Proof.
-    intros Γ t HΣ h.
-    pose proof (R_Acc_aux _ _ (stack_pos (fst t) (snd t)) HΣ h) as h'.
-    clear h. rename h' into h.
-    dependent induction h.
-    constructor. intros y hy.
-    now eapply H0.
-  Qed.
-
   Lemma R_positionR :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2),
       t1 = t2 ->
@@ -215,13 +190,114 @@ Section Reduce.
 
   Context (flags : RedFlags.t).
 
-  Context (Σ : wf_env_ext).
-  
-  Local Definition heΣ : ∥ wf_ext Σ ∥ := Σ.
+  Context (X_type : abstract_env_impl).
 
-  Local Definition hΣ : ∥ wf Σ ∥ := map_squash (wf_ext_wf Σ) heΣ.
+  Context (X : X_type.π1).
+
+(*  Local Definition gΣ := abstract_env_rel Σ. *)
+
+  Local Definition heΣ Σ (wfΣ : abstract_env_rel X Σ) : 
+    ∥ wf_ext Σ ∥ :=  abstract_env_wf wfΣ.
+
+  Local Definition hΣ Σ (wfΣ : abstract_env_rel X Σ) :
+    ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ. 
 
   Existing Instance Req_refl.
+
+Lemma acc_dlexprod_gen P Q A B (leA : P -> A -> A -> Prop)
+  (HQ : ∥ ∑ p , Q p ∥) 
+  (HP : forall p p' x x', Q p -> Q p' -> leA p x x' -> leA p' x x')
+  (leB : forall x : A, B x -> B x -> Prop) :
+  (forall x, well_founded (leB x)) ->
+  forall x,
+    Acc (fun t t' => forall (p:P), Q p -> leA p t t') x ->
+    forall y,
+      Acc (leB x) y ->
+      Acc (fun t t' => forall (p:P), Q p -> @dlexprod A B (leA p) leB t t') (x;y).
+Proof.
+intros hw. induction 1 as [x hx ih1].
+intros y. induction 1 as [y hy ih2].
+constructor.
+intros [x' y'] h. 
+destruct HQ as [[p q]].
+specialize (h p q).
+simple inversion h.
+- intro hA. inversion H0. inversion H1. subst.
+  eapply ih1.
+  + intros. now eapply (HP _ _ _ _ q).
+  + apply hw.
+- intro hB. rewrite <- H0.
+  pose proof (projT2_eq H1) as p2.
+  set (projT1_eq H1) as p1 in *; cbn in p1.
+  destruct p1; cbn in p2; destruct p2.
+  eapply ih2. assumption.
+Qed.
+
+Lemma dlexprod_Acc_gen P Q A B (leA : P -> A -> A -> Prop)
+  (HQ : ∥ ∑ p , Q p ∥) 
+  (HP : forall p p' x x', Q p -> Q p' -> leA p x x' -> leA p' x x')
+  (leB : forall x : A, B x -> B x -> Prop) :
+    (forall x, well_founded (leB x)) ->
+    forall x y,
+      Acc (fun t t' => forall (p:P), Q p -> leA p t t') x ->
+      Acc (fun t t' => forall (p:P), Q p -> @dlexprod A B (leA p) leB t t') (x;y).
+Proof.
+  intros hB x y hA.
+  eapply acc_dlexprod_gen ; try assumption.
+  apply hB.
+Qed.
+
+Definition R_singleton Abs A 
+  (R : Abs -> A -> A -> Prop) (Q : Abs -> Prop) x (q : Q x) 
+  (HQ : forall x x' , Q x -> Q x' -> x = x') (a a' : A) : 
+  R x a a' <-> (forall x, Q x -> R x a a').
+Proof. 
+  split.
+  - intros H x' q'.  specialize (HQ x x' q q'). subst; eauto.
+  - eauto.
+Defined.
+
+Fixpoint Acc_equiv A (R R' : A -> A -> Prop) 
+  (Heq : forall a a', R a a' <-> R' a a') a 
+  (HAcc : Acc R a) : Acc R' a.
+  econstructor. intros. apply Heq in H.
+  destruct HAcc. eapply Acc_equiv; eauto.
+Defined.  
+
+Corollary R_Acc_aux :
+    forall Γ t p,
+    (forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t) ->
+    (Acc (fun t t' => forall Σ (wfΣ : abstract_env_rel X Σ), R_aux Σ Γ t t') (t ; p)).
+  Proof.
+    intros Γ t p h.
+    eapply dlexprod_Acc_gen.
+    - apply abstract_env_exists.
+    - intros. eapply abstract_env_cored; try apply H1; eauto.     
+    - intros x. unfold well_founded.
+      eapply posR_Acc.
+    - destruct (abstract_env_exists X) as [[Σ wfΣ]]; 
+      destruct (heΣ _ wfΣ).
+      eapply Acc_equiv; try  
+      eapply normalisation; eauto. 
+      eapply R_singleton with (Q := abstract_env_rel X)
+          (R := fun Σ a a' => cored Σ Γ a a'); eauto.
+      intros; eapply abstract_env_irr; eauto. 
+  Defined. 
+  
+  Corollary R_Acc :
+    forall Γ t,
+      (forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip t)) ->
+      Acc (fun t t' => forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ t t') t.
+  Proof.
+    intros Γ t h.
+    pose proof (R_Acc_aux _ _ (stack_pos (fst t) (snd t)) h) as h'.
+    clear h. rename h' into h.
+    dependent induction h.
+    constructor. intros y hy.
+    eapply H0; eauto. 
+  Qed.
+
+
 
   Definition inspect {A} (x : A) : { y : A | y = x } := exist x eq_refl.
 
@@ -238,12 +314,12 @@ Section Reduce.
 
   Notation rec reduce t π :=
     (let smaller := _ in
-     let '(exist res (conj prf (conj h (conj h1 h2)))) := reduce t π smaller in
-     exist res (conj (Req_trans _ _ _ _ _ (R_to_Req _ smaller)) (conj givePr givePr'))
+     let '(exist res prf_Σ) := reduce t π smaller in
+     exist res (fun Σ wfΣ => let '((conj prf (conj h (conj h1 h2)))) := prf_Σ Σ wfΣ in conj (Req_trans _ _ _ _ _ (R_to_Req _ (smaller Σ wfΣ))) (conj givePr givePr'))
     ) (only parsing).
 
   Notation give t π :=
-    (exist (t,π) (conj _ (conj givePr givePr'))) (only parsing).
+    (exist (t,π) (fun Σ wfΣ => conj _ (conj givePr givePr'))) (only parsing).
 
   Tactic Notation "zip" "fold" "in" hyp(h) :=
     lazymatch type of h with
@@ -259,7 +335,7 @@ Section Reduce.
       change C'
     end.
   
-  Lemma Req_red :
+  Lemma Req_red Σ :
     forall Γ x y,
       Req Σ Γ y x ->
       ∥ red Σ Γ (zip x) (zip y) ∥.
@@ -361,11 +437,11 @@ Section Reduce.
     cc0_viewc (tCoFix mfix idx) := cc0view_cofix mfix idx ;
     cc0_viewc t := cc0view_other t _.
   
-  Equations _reduce_stack (Γ : context) (t : term) (π : stack)
-            (h : welltyped Σ Γ (zip (t,π)))
-            (reduce : forall t' π', R Σ Γ (t',π') (t,π) ->
-                               { t'' : term * stack | Req Σ Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
-    : { t' : term * stack | Req Σ Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
+  Equations _reduce_stack (Γ : context) (t : term) (π : stack)          
+            (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip (t,π)))
+            (reduce : forall t' π', (forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ (t',π') (t,π)) ->
+                               { t'' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
+    : { t' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
 
     _reduce_stack Γ t π h reduce with red_viewc t π := {
 
@@ -386,7 +462,7 @@ Section Reduce.
       } ;
 
     | red_view_Const c u π with RedFlags.delta flags := {
-      | true with inspect (lookup Σ c) := {
+      | true with inspect (abstract_env_lookup X c) := {
         | @exist (Some (ConstantDecl {| cst_body := Some body |})) eq :=
           let body' := subst_instance u body in
           rec reduce body' π ;
@@ -479,9 +555,9 @@ Section Reduce.
     symmetry. assumption.
   Qed.
   Next Obligation.
-    pose proof (hΣ := hΣ).
-    sq.
-    pose proof (welltyped_context _ hΣ _ _ h) as hc.
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [hΣ].
+    pose proof (welltyped_context _ hΣ _ _ (h _ wfΣ)) as hc.
     simpl in hc.
     (* Should be a lemma! *)
     clear - eq hc hΣ.
@@ -514,26 +590,30 @@ Section Reduce.
     left. econstructor. eapply red1_context.
     econstructor.
     - unfold declared_constant. 
-      rewrite lookup_lookup_env in eq.
-      rewrite <- eq. reflexivity.
+      rewrite (abstract_env_lookup_correct _ _ wfΣ). rewrite <- eq. reflexivity.
     - cbn. reflexivity.
   Qed.
 
   Next Obligation.
-    destruct hΣ as [wΣ].
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [wΣ].
+    specialize (h _ wfΣ).
     eapply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
-    unfold declared_constant in d. rewrite lookup_lookup_env in eq.
-    rewrite <- eq in d.
+    unfold declared_constant in d. 
+    rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
   Next Obligation.
-    destruct hΣ as [wΣ].
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [wΣ].
+    specialize (h _ wfΣ).
     eapply welltyped_context in h ; auto. simpl in h.
     destruct h as [T h].
     apply inversion_Const in h as [decl [? [d [? ?]]]] ; auto.
-    unfold declared_constant in d. rewrite lookup_lookup_env in eq. rewrite <- eq in d.
+    unfold declared_constant in d. 
+    rewrite (abstract_env_lookup_correct _ _ wfΣ), <- eq in d.
     discriminate.
   Qed.
 
@@ -581,7 +661,8 @@ Section Reduce.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.
     pose proof (decompose_stack_eq _ _ _ e). subst.
-    clear eq3. symmetry in eq2.
+    clear eq3. specialize (prf _ wfΣ). destruct prf as [r [p p0]].
+    symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2).
     pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
     case_eq (decompose_stack ρ). intros l' θ' e'.
@@ -680,7 +761,8 @@ Section Reduce.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.
     pose proof (decompose_stack_eq _ _ _ e). subst.
-    clear eq3. symmetry in eq2.
+    clear eq3. specialize (prf _ wfΣ). destruct prf as [r [p p0]].
+    symmetry in eq2.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq2) as e2.
     pose proof (decompose_stack_at_length _ _ _ _ _ eq2).
     case_eq (decompose_stack ρ). intros l' θ' e'.
@@ -710,7 +792,8 @@ Section Reduce.
         left. reflexivity.
   Qed.
   Next Obligation.
-    symmetry in eq4. clear eq3.
+    symmetry in eq4. 
+    clear eq3. specialize (prf _ wfΣ). destruct prf as [r [p p0]].
     unfold Pr in p. cbn in p.
     rewrite eq4 in p. simpl in p. subst.
     unfold Pr. cbn.
@@ -734,8 +817,9 @@ Section Reduce.
   Qed.
   Next Obligation.
     clear eq.
-    pose proof (hΣ := hΣ).
-    sq.
+    pose proof (hΣ := hΣ _ wfΣ).
+    sq. specialize (prf _ wfΣ). destruct prf as [r [p0 p1]].
+
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
@@ -744,7 +828,7 @@ Section Reduce.
     sq.
     rewrite zipc_appstack in r.
     cbn in r.
-    pose proof r as r'.
+    pose proof r as r'. specialize (h _ wfΣ).
     eapply red_welltyped in r' ; tea.
     zip fold in r'.
     apply welltyped_context in r' as (?&typ); auto; cbn in *.
@@ -761,7 +845,8 @@ Section Reduce.
   Qed.
   Next Obligation.
     clear eq.
-    pose proof (hΣ := hΣ).
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p0 p1]].
     sq.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
@@ -781,18 +866,18 @@ Section Reduce.
     rewrite nth in bot; congruence.
   Qed.
   Next Obligation.
-    clear eq.
+    clear eq. 
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p0 p1]].
     sq.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
     rewrite <- prf' in hh. cbn in hh. subst.
     apply eq_sym, decompose_stack_eq in prf'; subst.
-    apply Req_red in r; cbn in r.
+    apply Req_red in r; cbn in r. pose hΣ.
     sq.
     rewrite zipc_appstack in r.
     cbn in r.
     pose proof r as r'.
-    destruct Σ.(wf_env_ext_wf).
     eapply red_welltyped in r; eauto.
     zip fold in r.
     apply welltyped_context in r as (?&typ); auto; cbn in *.
@@ -804,7 +889,9 @@ Section Reduce.
       eapply red_cofix_case; eauto.
   Qed.
   Next Obligation.
-    clear eq.
+    clear eq. destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p0 p1]].
+    sq.
     sq.
     unfold Pr in p0. cbn in p0.
     pose proof p0 as hh.
@@ -813,7 +900,6 @@ Section Reduce.
     apply Req_red in r; cbn in r.
     sq.
     pose proof r as r'.
-    destruct Σ.(wf_env_ext_wf).
     eapply red_welltyped in r; eauto.
     zip fold in r.
     apply welltyped_context in r as (?&typ); auto; cbn in *.
@@ -824,6 +910,7 @@ Section Reduce.
   Qed.
   Next Obligation.
     clear eq reduce h.
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p0 p1]].
     destruct r.
     - inversion H. subst.
       clear H.
@@ -852,12 +939,13 @@ Section Reduce.
     constructor.
   Qed.
   Next Obligation.
-    pose proof (hΣ := hΣ).
-    sq.
+    pose proof (hΣ := hΣ _ wfΣ).
+    destruct (prf Σ wfΣ)  as [r [p p0]].
+    sq.    
     left.
     apply Req_red in r as hr.
     sq.
-    pose proof (red_welltyped _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ hΣ (h _ wfΣ) hr) as hh.
     eapply cored_red_cored ; try eassumption.
     unfold Pr in p. simpl in p. pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
@@ -871,7 +959,8 @@ Section Reduce.
     subst. constructor. eauto.
   Qed.
   Next Obligation.
-    pose proof (hΣ := hΣ).
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p p0]].
     sq.
     unfold Pr in p. simpl in p.
     pose proof p as p'.
@@ -880,7 +969,7 @@ Section Reduce.
     subst.
     apply Req_red in r as hr.
     sq.
-    pose proof (red_welltyped _ hΣ h hr) as hh.
+    pose proof (red_welltyped _ hΣ (h _ wfΣ) hr) as hh.
     cbn in hh. rewrite zipc_appstack in hh. cbn in hh.
     zip fold in hh.
     apply welltyped_context in hh. 2: assumption.
@@ -888,17 +977,18 @@ Section Reduce.
     apply Proj_red_cond in hh. all: eauto.
   Qed.
   Next Obligation.
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p p0]].
     unfold Pr in p. simpl in p.
     pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
     dependent destruction r.
-    - inversion e. subst.
+    - inversion H. subst.
       left. eapply cored_context.
       constructor.
       simpl in prf'. inversion prf'. subst.
       eapply red_cofix_proj with (args := []). eauto.
     - clear eq.
-      dependent destruction r.
+      dependent destruction H.
       + left.
         symmetry in prf'. apply decompose_stack_eq in prf' as ?. subst.
         cbn in H. rewrite zipc_appstack in H. cbn in H.
@@ -914,17 +1004,17 @@ Section Reduce.
         constructor. eapply red_cofix_proj. eauto. 
   Qed.
   Next Obligation.
-    pose proof (hΣ := hΣ).
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p p0]].
     sq.
     unfold Pr in p. simpl in p.
     pose proof p as p'.
     rewrite <- prf' in p'. simpl in p'. subst.
     assert (h' : welltyped Σ Γ (zip (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args), π))).
     { dependent destruction r.
-      - inversion e. subst.
-        simpl in prf'. inversion prf'. subst.
-        assumption.
-      - clear eq. dependent destruction r.
+      - inversion H. subst.
+        simpl in prf'. inversion prf'. subst. now apply h.  
+      - clear eq. dependent destruction H.
         + apply cored_red in H. destruct H as [r].
           eapply red_welltyped ; eauto.
           symmetry in prf'. apply decompose_stack_eq in prf'. subst.
@@ -933,13 +1023,12 @@ Section Reduce.
         + cbn in H0. destruct y'. inversion H0. subst. clear H0.
           symmetry in prf'. apply decompose_stack_eq in prf'. subst.
           rewrite zipc_appstack in H2. cbn in H2.
-          cbn. rewrite <- H2. assumption.
-    }
+          cbn. rewrite <- H2. now apply h.
+          }
     replace (zip (tProj (i, pars, narg) (mkApps (tCoFix mfix idx) args), π))
       with (zip (tCoFix mfix idx, appstack args (Proj (i, pars, narg) :: π)))
       in h'.
-    - pose proof (hΣ := hΣ).
-      sq.
+    - sq.
       apply welltyped_context in h' ; auto. simpl in h'.
       destruct h' as [T h'].
       apply inversion_CoFix in h' ; auto.
@@ -950,6 +1039,7 @@ Section Reduce.
   Qed.
   Next Obligation.
     clear eq.
+    destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p p0]].
     dependent destruction r.
     - inversion H. subst. cbn in prf'. inversion prf'. subst.
       cbn. reflexivity.
@@ -978,23 +1068,28 @@ Section Reduce.
     apply_funelim (red_discr t π). all: easy.
   Qed.
 
-  Lemma welltyped_R_pres Γ :
+  Lemma welltyped_R_pres Σ (wfΣ : abstract_env_rel X Σ) Γ :
     forall x y : term × stack, welltyped Σ Γ (zip x) -> R Σ Γ y x -> welltyped Σ Γ (zip y).
   Proof.
     intros x y H HR.
-    pose proof (hΣ := hΣ).
+    pose proof (heΣ := heΣ _ wfΣ).
+    pose proof (hΣ := hΣ _ wfΣ).
+    clear wfΣ X_type X.
     sq.
-    depelim HR.
-    - eapply cored_welltyped; eauto.
+    destruct x as [x πx], y as [y πy].
+    dependent induction HR.
+    - eapply cored_welltyped. all: eauto.
     - simpl in H1. revert H1; intros [= H2 _].
       now rewrite <- H2.
   Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
-           (h : welltyped Σ Γ (zip (t,π))) : { t' : term * stack | Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
+           (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip (t,π))) :
+           { t' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
     reduce_stack_full Γ t π h :=
-      Fix_F (R := R Σ Γ)
-            (fun x => welltyped Σ Γ (zip x) -> { t' : term * stack | Req Σ Γ t' x /\ Pr t' (snd x) /\ Pr' t' })
+      Fix_F (R := fun t t' => forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ t t')
+            (fun x => (forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip x))
+               -> { t' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t' x /\ Pr t' (snd x) /\ Pr' t' })
             (fun t' f => _) (x := (t, π)) _ _.
   Next Obligation.
     eapply _reduce_stack.
@@ -1002,51 +1097,52 @@ Section Reduce.
     - intros t' π' h'.
       eapply f.
       + assumption.
-      + simple inversion h'.
+      + intros. specialize (h' _ wfΣ). simple inversion h'.
         * cbn in H1. cbn in H2.
           inversion H1. subst. inversion H2. subst. clear H1 H2.
           intros.
-          destruct hΣ as [wΣ].
-          eapply cored_welltyped ; eassumption.
+          destruct (hΣ _ wfΣ) as [wΣ].
+          eapply cored_welltyped.
+          ++ eassumption.
+          ++ eapply H;  eauto.
+          ++ eauto. 
         * cbn in H1. cbn in H2.
           inversion H1. subst. inversion H2. subst. clear H1 H2.
-          intros. cbn. rewrite H3. assumption.
+          intros. cbn. rewrite H3. eauto.
   Defined.
-  (* Next Obligation.
-    sq.
-    now eapply R_Acc.
-  Defined. *)
   (* We fuel the accessibility proof to run reduction inside Coq. *)
   Next Obligation.
     revert h. generalize (t, π).
     refine (Acc_intro_generator
-              (R:=fun x y => R Σ Γ x y)
-              (P:=fun x => welltyped Σ Γ (zip x)) (fun x y Px Hy => _) 1000 _).
+              (R:=fun x y => forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ x y)
+              (P:=fun x => forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip x)) 
+              (fun x y Px Hy => _) 1000 _); intros. 
     - simpl in *. eapply welltyped_R_pres; eauto.
-    - destruct heΣ. intros; eapply R_Acc; eassumption.
+    - destruct (abstract_env_exists X) as [[Σ wfΣ]].
+      destruct (hΣ _ wfΣ) as [hΣ]. eapply R_Acc; eassumption.
   Defined.
 
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 
   Lemma reduce_stack_Req :
-    forall Γ t π h,
-      Req Σ Γ (reduce_stack Γ t π h) (t, π).
+    forall Σ (wfΣ : abstract_env_rel X Σ) Γ t π h,
+     Req Σ Γ (reduce_stack Γ t π h) (t, π).
   Proof.
-    intros Γ t π h.
+    intros Σ wfΣ Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]].
-    assumption.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r _]];
+    eassumption.
   Qed.
 
   Theorem reduce_stack_sound :
-    forall Γ t π h,
+    forall Σ (wfΣ : abstract_env_rel X Σ) Γ t π h,
       ∥ Σ ;;; Γ ⊢ zip (t, π) ⇝ zip (reduce_stack Γ t π h) ∥.
   Proof.
-    intros Γ t π h.
-    assert (req := reduce_stack_Req _ _ _ h).
+    intros Σ wfΣ Γ t π h.
+    assert (req := reduce_stack_Req Σ wfΣ _ _ _ h).
     eapply Req_red in req.
-    destruct hΣ.
+    destruct (hΣ _ wfΣ).
     sq. eapply into_closed_red; fvs.
   Qed.
 
@@ -1056,8 +1152,10 @@ Section Reduce.
       snd (decompose_stack π).
   Proof.
     intros Γ t π h.
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p p']]].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p p']]]; 
+    try eassumption.
     unfold Pr in p. symmetry. assumption.
   Qed.
 
@@ -1067,6 +1165,7 @@ Section Reduce.
       stack_context π.
   Proof.
     intros Γ t π h.
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
     pose proof (reduce_stack_decompose Γ t π h) as hd.
     case_eq (decompose_stack π). intros l ρ e1.
     case_eq (decompose_stack (snd (reduce_stack Γ t π h))). intros l' ρ' e2.
@@ -1087,8 +1186,9 @@ Section Reduce.
       isred (reduce_stack Γ t π h).
   Proof.
     intros Γ t π h hr.
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto. 
     split.
     - assumption.
     - apply hLam. assumption.
@@ -1099,9 +1199,9 @@ Section Reduce.
       isApp (fst (reduce_stack Γ t π h)) = false.
   Proof.
     intros Γ t π h.
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
-    assumption.
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto. 
   Qed.
 
   Lemma reduce_stack_noLamApp :
@@ -1112,20 +1212,22 @@ Section Reduce.
   Proof.
     intros Γ t π h.
     unfold reduce_stack.
-    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]].
-    assumption.
+    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto. 
   Qed.
 
-  Definition reduce_term Γ t (h : welltyped Σ Γ t) :=
+  Definition reduce_term Γ t 
+    (h : forall Σ, abstract_env_rel X Σ -> welltyped Σ Γ t) :=
     zip (reduce_stack Γ t [] h).
 
   Theorem reduce_term_sound :
-    forall Γ t h,
+    forall Γ t (h : forall Σ, abstract_env_rel X Σ -> welltyped Σ Γ t) 
+      Σ, abstract_env_rel X Σ ->
       ∥ Σ ;;; Γ ⊢ t ⇝ reduce_term Γ t h ∥.
   Proof.
-    intros Γ t h.
+    intros Γ t h Σ wfΣ.
     unfold reduce_term.
-    refine (reduce_stack_sound _ _ [] _).
+    refine (reduce_stack_sound _ _ _ _ [] _); eauto. 
   Qed.
 
   (* (* Potentially hard? Ok with SN? *) *)
@@ -1199,7 +1301,7 @@ Section Reduce.
     set ((reduce_stack_full_obligations_obligation_3 Γ t π h)).
     match goal with
     | |- P ?p (` (@Fix_F ?A ?R ?rt ?f ?t ?ht ?w)) =>
-      set (Q := fun x (y : rt x) => forall (w : welltyped Σ Γ (zip x)), P x (` (y w))) ;
+      set (Q := fun x (y : rt x) => forall (w :forall Σ, abstract_env_rel X Σ ->  welltyped Σ Γ (zip x)), P x (` (y w))) ;
       set (fn := @Fix_F A R rt f t ht)
     end.
     clearbody w.
@@ -1242,12 +1344,12 @@ Section Reduce.
     now rewrite mkApps_app.
   Qed.
 
-  Lemma whnf_non_ctor_finite_ind_typed Γ t ind u args :
+  Lemma whnf_non_ctor_finite_ind_typed Σ Γ t ind u args :
     wf Σ ->
     whnf flags Σ Γ t ->
     isConstruct_app t = false ->
     check_recursivity_kind Σ (inductive_mind ind) CoFinite = false ->
-    Σ;;; Γ |- t : mkApps (tInd ind u) args ->
+    Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
     whne flags Σ Γ t.
   Proof.
     intros wf wh ctor fin typ.
@@ -1267,7 +1369,6 @@ Section Reduce.
       unfold is_true in typ.
       unfold PCUICAst.PCUICEnvironment.fst_ctx in *.
       congruence.
-    (* - now eapply inversion_Prim in typ. *)
   Qed.
   
   Definition isCoFix_app t :=
@@ -1276,12 +1377,12 @@ Section Reduce.
     | _ => false
     end.
 
-  Lemma whnf_non_ctor_non_cofix_ind_typed Γ t ind u args :
+  Lemma whnf_non_ctor_non_cofix_ind_typed Σ Γ t ind u args :
     wf Σ ->
     whnf flags Σ Γ t ->
     isConstruct_app t = false ->
     isCoFix_app t = false ->
-    Σ;;; Γ |- t : mkApps (tInd ind u) args ->
+    Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
     whne flags Σ Γ t.
   Proof.
     intros wf wh ctor cof typ.
@@ -1302,7 +1403,7 @@ Section Reduce.
     (* - now eapply inversion_Prim in typ. *)
   Qed.
   
-  Lemma whnf_fix_arg_whne mfix idx body Γ t before args aftr ty :
+  Lemma whnf_fix_arg_whne mfix idx body Σ Γ t before args aftr ty :
     wf Σ ->
     unfold_fix mfix idx = Some (#|before|, body) ->
     match t with
@@ -1311,7 +1412,7 @@ Section Reduce.
     | _ => True
     end ->
     whnf flags Σ Γ (mkApps t args) ->
-    Σ;;; Γ |- mkApps (tFix mfix idx) (before ++ mkApps t args :: aftr) : ty ->
+    Σ ;;; Γ |- mkApps (tFix mfix idx) (before ++ mkApps t args :: aftr) : ty ->
     whne flags Σ Γ (mkApps t args).
   Proof.
     intros wf uf shape wh typ.
@@ -1334,7 +1435,7 @@ Section Reduce.
       congruence.
   Qed.
 
-  Lemma whnf_case_arg_whne Γ hd args ci p brs T :
+  Lemma whnf_case_arg_whne Σ Γ hd args ci p brs T :
     wf Σ ->
     match hd with
     | tApp _ _
@@ -1360,7 +1461,7 @@ Section Reduce.
       now destruct ind_finite.
   Qed.
 
-  Lemma whnf_proj_arg_whne Γ hd args p T :
+  Lemma whnf_proj_arg_whne Σ Γ hd args p T :
     wf Σ ->
     match hd with
     | tApp _ _
@@ -1369,7 +1470,7 @@ Section Reduce.
     | _ => True
     end ->
     whnf flags Σ Γ (mkApps hd args) ->
-    Σ;;; Γ |- tProj p (mkApps hd args) : T ->
+    Σ ;;; Γ |- tProj p (mkApps hd args) : T ->
     whne flags Σ Γ (mkApps hd args).
   Proof.
     intros wf shape wh typ.
@@ -1383,24 +1484,24 @@ Section Reduce.
       destruct hd; try easy.
       destruct p as ((?&?)&?).
       eapply PCUICInductiveInversion.invert_Proj_Construct in typ' as (->&->&?); auto.
-      2: exact hΣ.
+      2: sq; eapply wf.
       congruence.
     - unfold isCoFix_app.
       now rewrite decompose_app_mkApps; destruct hd.
   Qed.
 
   Lemma reduce_stack_whnf :
-    forall Γ t π h,
+    forall Γ t π h Σ (wfΣ : abstract_env_rel X Σ),
       let '(u, ρ) := reduce_stack Γ t π h in
-      ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥.
+       ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥.
   Proof.
-    intros Γ t π h.
+    intros Γ t π h Σ wfΣ.
     eapply reduce_stack_prop
       with (P := fun x y =>
         let '(u, ρ) := y in
         ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥
-      ).
-    clear.
+      ). 
+    clear -wfΣ.
     intros t π h aux haux.
     funelim (_reduce_stack Γ t π h aux).
     all: simpl.
@@ -1412,7 +1513,7 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      intros [t' π'] H eq. 
       rewrite eq in haux. cbn in haux.
       assumption.
     - clear Heq.
@@ -1429,9 +1530,10 @@ Section Reduce.
         destruct l.
         * simpl. eauto with pcuic.
         * exfalso.
-          
-          destruct hΣ.
-          cbn in h. zip fold in h. apply welltyped_context in h; auto.
+          destruct (hΣ _ wfΣ) as [hΣ].
+          cbn in h. zip fold in h.
+          specialize (h _ wfΣ).
+          apply welltyped_context in h; auto.
           simpl in h. rewrite stack_context_appstack in h.
           destruct h as [T h].
           apply inversion_App in h as (?&?&?&?&?); auto.
@@ -1443,8 +1545,9 @@ Section Reduce.
         destruct l.
         * simpl. eauto with pcuic.
         * exfalso.
-          destruct hΣ.
-          cbn in h. zip fold in h. apply welltyped_context in h; auto.
+          destruct (hΣ _ wfΣ) as [hΣ].
+          cbn in h. zip fold in h. 
+          specialize (h _ wfΣ). apply welltyped_context in h; auto.
           simpl in h. rewrite stack_context_appstack in h.
           destruct h as [T h].
           apply inversion_App in h as (?&?&?&?&?); auto.
@@ -1453,6 +1556,8 @@ Section Reduce.
       (* + pose proof hΣ.
         sq.
         exfalso.
+        destruct (hΣ _ wfΣ) as [hΣ].
+        specialize (h _ wfΣ).
         eapply welltyped_context in h as [s Hs]; tas.
         now eapply inversion_Prim in Hs. *)
     - unfold zipp. case_eq (decompose_stack π). intros l ρ e.
@@ -1463,7 +1568,7 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π'] [? [? [? ?]]] eq'. cbn.
+      intros [t' π'] Ha eq'. cbn.
       rewrite eq' in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π). intros.
@@ -1475,7 +1580,7 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      intros [t' π'] Ha eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π). intros.
@@ -1487,19 +1592,19 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π'] [? [? [? ?]]] eq'. cbn.
+      intros [t' π'] Ha eq'. cbn.
       rewrite eq' in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π). intros.
       constructor. constructor. eapply whne_mkApps. econstructor.
-      + symmetry. rewrite <-lookup_lookup_env. exact eq.
+      + symmetry. erewrite abstract_env_lookup_correct; eauto.
       + reflexivity.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π'] [? [? [? ?]]] eq. cbn.
+      intros [t' π'] Ha eq. cbn.
       rewrite eq in haux. cbn in haux.
       assumption.
     - unfold zipp. destruct decompose_stack eqn:eq.
@@ -1537,7 +1642,7 @@ Section Reduce.
         specialize (haux x y z) as ?;
         destruct (reduce x y z)
       end.
-      destruct a as (?&?&?&?).
+      destruct (a _ wfΣ) as (?&?&?&?).
       now destruct x.
     - match type of eq3 with
       | context [ reduce ?x ?y ?z ] =>
@@ -1545,9 +1650,9 @@ Section Reduce.
           destruct (reduce x y z)
       end.
       noconf eq3; cbn in *.
-      pose proof hΣ as [hΣ].
-      clear -hΣ eq4 ht eq2 eq1 h prf haux.
-      destruct prf as (r&stacks&?).
+      pose proof (hΣ _ wfΣ) as [hΣ].
+      clear -wfΣ hΣ eq4 ht eq2 eq1 h prf haux.
+      destruct (prf _ wfΣ) as (r&stacks&?).
       unfold Pr in stacks.
       cbn in *.
       unfold snd in stacks.
@@ -1605,9 +1710,9 @@ Section Reduce.
           destruct (reduce x y z)
       end.
       noconf eq; cbn in *.
-      pose proof hΣ as [hΣ].
-      clear -hΣ ht prf' h prf haux.
-      destruct prf as (r&stacks&?).
+      pose proof (hΣ _ wfΣ) as [hΣ].
+      clear -hΣ wfΣ ht prf' h prf haux.
+      destruct (prf _ wfΣ) as (r&stacks&?).
       unfold Pr in stacks.
       cbn in *.
       unfold snd in stacks.
@@ -1647,7 +1752,7 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π''] [? [? [? ?]]] eq''. cbn.
+      intros [t' π''] Ha eq''. cbn.
       rewrite eq'' in haux. cbn in haux.
       assumption.
     - match goal with
@@ -1655,7 +1760,7 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π''] [? [? [? ?]]] eq''. cbn.
+      intros [t' π''] Ha eq''. cbn.
       rewrite eq'' in haux. cbn in haux.
       assumption.
     - unfold zipp. case_eq (decompose_stack π). intros.
@@ -1666,9 +1771,9 @@ Section Reduce.
           destruct (reduce x y z)
       end.
       noconf eq; cbn in *.
-      pose proof hΣ as [hΣ].
-      clear -hΣ ht prf' h prf haux.
-      destruct prf as (r&stacks&?).
+      pose proof (hΣ _ wfΣ) as [hΣ].
+      clear -hΣ wfΣ ht prf' h prf haux.
+      destruct (prf _ wfΣ) as (r&stacks&?).
       unfold Pr in stacks.
       cbn in *.
       unfold snd in stacks.
@@ -1707,7 +1812,7 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π''] [? [? [? ?]]] eq'. cbn.
+      intros [t' π''] Ha eq'. cbn.
       rewrite eq' in haux. cbn in haux.
       assumption.
     - match goal with
@@ -1715,19 +1820,19 @@ Section Reduce.
         case_eq (reduce x y z) ;
         specialize (haux x y z)
       end.
-      intros [t' π''] [? [? [? ?]]] eq''. cbn.
+      intros [t' π''] Ha eq''. cbn.
       rewrite eq'' in haux. cbn in haux.
       assumption.
   Qed.
               
-  Theorem reduce_term_complete Γ t h :
+  Theorem reduce_term_complete Σ (wfΣ : abstract_env_rel X Σ) Γ t h :
     ∥whnf flags Σ Γ (reduce_term Γ t h)∥.
   Proof.
-    pose proof (reduce_stack_whnf Γ t [] h) as H.
+    pose proof (reduce_stack_whnf Γ t [] h _ wfΣ) as H.
     unfold reduce_term.
     unfold reduce_stack in *.
     destruct reduce_stack_full.
-    destruct a as (_&stack_eq&_).
+    destruct (a _ wfΣ) as (_&stack_eq&_).
     unfold Pr in stack_eq.
     cbn in stack_eq.
     destruct decompose_stack eqn:decomp.
@@ -1746,27 +1851,30 @@ Section Reduce.
 End Reduce.
 
 Section ReduceFns.
-  Context {cf : checker_flags} {no : normalizing_flags} (Σ : wf_env_ext).
+
+  Context {cf : checker_flags} {no : normalizing_flags} 
+          {X_type : abstract_env_impl} {X : X_type.π1}.
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
 
-  Definition hnf := reduce_term RedFlags.default Σ.
+  Definition hnf := reduce_term RedFlags.default X_type X.
 
-  Theorem hnf_sound {Γ t h} : ∥ Σ ;;; Γ ⊢ t ⇝ hnf Γ t h ∥.
+  Theorem hnf_sound {Γ t h} Σ (wfΣ : abstract_env_rel X Σ) : ∥ Σ ;;; Γ ⊢ t ⇝ hnf Γ t h ∥.
   Proof.
     unfold hnf.
-    destruct (reduce_term_sound RedFlags.default _ _ _ h).
+    destruct (reduce_term_sound RedFlags.default _ X _ _ h Σ wfΣ).
     sq. eapply into_closed_red; fvs.
   Defined.
   
-  Theorem hnf_complete {Γ t h} : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
+  Theorem hnf_complete {Γ t h} Σ (wfΣ : abstract_env_rel X Σ) : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
   Proof.
-    apply reduce_term_complete.
+    apply reduce_term_complete; eauto. 
   Qed.
 
-  Equations? reduce_to_sort (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result_comp (∑ u, ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
+  Equations? reduce_to_sort (Γ : context) (t : term) 
+    (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)
+    : typing_result_comp (∑ u, forall Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
     reduce_to_sort Γ t h with view_sortc t := {
       | view_sort_sort s => Checked_comp (s; _);
       | view_sort_other t _ with inspect (hnf Γ t h) :=
@@ -1776,37 +1884,40 @@ Section ReduceFns.
         }
       }.
   Proof.
-    * destruct (wf_env_ext_wf Σ).
-      destruct h as [? hs]. sq.
+    * destruct (h _ wfΣ) as [? hs]. 
+      pose proof (hΣ := hΣ _ X _ wfΣ). sq.
       eapply (wt_closed_red_refl hs).
     * pose proof (hnf_sound (h:=h)).
-      now rewrite eq.
-    * sq.
-      pose proof (@hnf_complete Γ t h) as [wh].
-      pose proof (@hnf_sound Γ t h) as [r'].
-      destruct (wf_env_ext_wf Σ).
-      eapply PCUICContextConversion.closed_red_confluence in X0 as (?&r1&r2); eauto.
+      now rewrite eq. 
+    * destruct (abstract_env_exists X) as [[Σ wfΣ]]. specialize (X1 _ wfΣ).
+      pose proof (hΣ := hΣ _ X _ wfΣ). sq.
+      pose proof (@hnf_complete Γ t h) as [wh]; eauto. 
+      pose proof (@hnf_sound Γ t h) as [r']; eauto.
+      eapply PCUICContextConversion.closed_red_confluence in X1 as (?&r1&r2); eauto.
       apply invert_red_sort in r2 as ->.
       eapply whnf_red_inv in r1; eauto.
       depelim r1.
       rewrite H in r.
-      now cbn in r.
+      now cbn in r.  
   Qed.
 
-  Lemma reduce_to_sort_complete {Γ t wt} e p :
+  Lemma reduce_to_sort_complete {Γ t wt} Σ (wfΣ : abstract_env_rel X Σ)  
+    e p :
     reduce_to_sort Γ t wt = TypeError_comp e p ->
     (forall s, red Σ Γ t (tSort s) -> False).
   Proof.
-    destruct (wf_env_ext_wf Σ).
     intros _ s r.
     apply p.
     exists s.
-    sq.
+    intros.
+    erewrite abstract_env_irr; try apply wfΣ; eauto. 
+    pose proof (hΣ := hΣ _ X _ wfΣ). sq.  
     eapply into_closed_red in r ; fvs.
   Qed.
 
-  Equations? reduce_to_prod (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result_comp (∑ na a b, ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
+  Equations? reduce_to_prod (Γ : context) (t : term) 
+    (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)
+    : typing_result_comp (∑ na a b, forall  Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
     reduce_to_prod Γ t h with view_prodc t := {
       | view_prod_prod na a b => Checked_comp (na; a; b; _);
       | view_prod_other t _ with inspect (hnf Γ t h) :=
@@ -1816,39 +1927,45 @@ Section ReduceFns.
         }
       }.
   Proof.
-    all:destruct (wf_env_ext_wf Σ).
-    * destruct h as [? hs]. sq.
+    * destruct (h _ wfΣ) as [? hs]. 
+      pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
       now eapply wt_closed_red_refl.
     * pose proof (hnf_sound (h:=h)).
       now rewrite eq.
-    * sq.
-      pose proof (@hnf_complete Γ t h) as [wh].
-      pose proof (@hnf_sound Γ t h) as [r'].
-      eapply PCUICContextConversion.closed_red_confluence in X2 as (?&r1&r2); eauto.
+    * destruct (abstract_env_exists X) as [[Σ wfΣ]].
+      specialize (X3 _ wfΣ).
+      sq.
+      pose proof (@hnf_complete Γ t h) as [wh]; eauto.
+      pose proof (@hnf_sound Γ t h) as [r']; eauto. 
+      destruct (hΣ _ _ _ wfΣ).
+      eapply PCUICContextConversion.closed_red_confluence in X3 as (?&r1&r2); eauto.
       apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
       eapply whnf_red_inv in r1; auto.
       depelim r1.
       now rewrite H in n0.
   Qed.
 
-  Lemma reduce_to_prod_complete {Γ t wt} e p :
+  Lemma reduce_to_prod_complete {Γ t wt} Σ (wfΣ : abstract_env_rel X Σ) 
+    e p :
     reduce_to_prod Γ t wt = TypeError_comp e p ->
     (forall na a b, red Σ Γ t (tProd na a b) -> False).
   Proof.
-    destruct (wf_env_ext_wf Σ).
     intros _ na a b r.
     apply p.
     exists na, a, b.
-    sq.
+    intros.
+    erewrite abstract_env_irr; try apply wfΣ; eauto. 
+    pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
     eapply into_closed_red; fvs.
   Qed.
 
-  Equations? reduce_to_ind (Γ : context) (t : term) (h : welltyped Σ Γ t)
-    : typing_result_comp (∑ i u l, ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
+  Equations? reduce_to_ind (Γ : context) (t : term) 
+    (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)
+    : typing_result_comp (∑ i u l, forall Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
         | view_ind_tInd i u => Checked_comp (i; u; args; _);
-        | view_ind_other thd _ with inspect (reduce_stack RedFlags.default Σ Γ t [] h) := {
+        | view_ind_other thd _ with inspect (reduce_stack RedFlags.default _ X Γ t [] h) := {
           | exist (hnft, π) eq with view_indc hnft := {
             | view_ind_tInd i' u with inspect (decompose_stack π) := {
               | exist (l, _) eq_decomp' => Checked_comp (i'; u; l; _)
@@ -1859,19 +1976,18 @@ Section ReduceFns.
         }
       }.
   Proof.
-    all:destruct (wf_env_ext_wf Σ) as [wfΣ].
-    - destruct h as [? h].
-      assert (X : mkApps (tInd i u) args = t).
+    - specialize (h _ wfΣ). destruct h  as [? h].
+      assert (Xeq : mkApps (tInd i u) args = t).
       { etransitivity. 2: symmetry; eapply mkApps_decompose_app.
         now rewrite <- eq_decomp. }
-      rewrite X. sq; eapply (wt_closed_red_refl h).
-    - pose proof (reduce_stack_sound RedFlags.default Σ _ _ [] h).
+      rewrite Xeq. pose proof (hΣ := hΣ _ _ _ wfΣ); sq; eapply (wt_closed_red_refl h).
+    - pose proof (reduce_stack_sound RedFlags.default _ X _ wfΣ _ _ [] h).
       rewrite <- eq in H.
       cbn in *.
       assert (π = appstack l []) as ->.
       2: { now rewrite zipc_appstack in H. }
       unfold reduce_stack in eq.
-      destruct reduce_stack_full as (?&_&stack_val&?).
+      destruct reduce_stack_full as (?&_&stack_val&?); eauto. 
       subst x.
       unfold Pr in stack_val.
       cbn in *.
@@ -1880,16 +1996,19 @@ Section ReduceFns.
         now destruct decompose_stack. }
       apply decompose_stack_eq in decomp as ->.
       now rewrite <- eq_decomp'.
-    - sq.
-      pose proof (reduce_stack_whnf RedFlags.default Σ Γ t [] h) as wh.
+    - destruct (abstract_env_exists X) as [[Σ wfΣ]].
+      specialize (X3 _ wfΣ).
+      pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
+      pose proof (reduce_stack_whnf RedFlags.default _ X Γ t [] h _  wfΣ) as wh.
       unfold reduce_stack in *.
-      destruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)).
+      destruct reduce_stack_full as ((hd&π')&r'&stack_valid&(notapp&_)); eauto. 
       destruct wh as [wh].
       apply Req_red in r' as [r'].
       unfold Pr in stack_valid.
       cbn in *.
       eapply into_closed_red in r'; fvs.
-      eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2) ; eauto.
+      eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2).
+      2 : exact X3. 
       assert (exists args, π' = appstack args []) as (?&->).
       { exists ((decompose_stack π').1).
         assert (decomp: decompose_stack π' = ((decompose_stack π').1, [])).
@@ -1900,25 +2019,26 @@ Section ReduceFns.
       rewrite zipc_appstack in r2.
       cbn in *.
       rewrite app_nil_r in wh.
-      apply invert_red_mkApps_tInd in r1 as (?&[-> _ ?]); auto.
       eapply whnf_red_inv in r2; eauto.
+      apply invert_red_mkApps_tInd in r1 as (?&[-> _ ?]); auto.
       apply whnf_red_mkApps_inv in r2 as (?&?); auto.
       depelim w.
       noconf eq.
       discriminate i0.
   Qed.
 
-  Lemma reduce_to_ind_complete Γ ty wat e p :
+  Lemma reduce_to_ind_complete  Σ (wfΣ : abstract_env_rel X Σ) Γ ty wat e p :
     reduce_to_ind Γ ty wat = TypeError_comp e p ->
     forall ind u args,
       red Σ Γ ty (mkApps (tInd ind u) args) ->
       False.
   Proof.
-    destruct (wf_env_ext_wf Σ) as [wfΣ].
     intros _ ind u args' r.
     apply p.
     exists ind, u, args'.
-    sq.
+    intros.
+    erewrite abstract_env_irr; try apply wfΣ; eauto. 
+    pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
     eapply into_closed_red ; fvs.
   Qed.
   
@@ -1967,7 +2087,7 @@ Section ReduceFns.
     build_conv_arity {
         conv_ar_context : list arity_ass;
         conv_ar_univ : Universe.t;
-        conv_ar_red : ∥ Σ ;;; Γ ⊢ T ⇝ mkAssumArity conv_ar_context conv_ar_univ ∥
+        conv_ar_red : forall Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ mkAssumArity conv_ar_context conv_ar_univ ∥
       }.
 
   Global Arguments conv_arity : clear implicits.
@@ -1976,14 +2096,14 @@ Section ReduceFns.
     is_closed_context Γ ->
     is_open_term Γ T ->
     conv_arity Γ T ->
-    Is_conv_to_Arity Σ Γ T.
+    forall Σ (wfΣ : abstract_env_rel X Σ), Is_conv_to_Arity Σ Γ T.
   Proof.
-    intros clΓ clT [asses univ r].
-    eexists. destruct r. split; [sq|]; tea.
+    intros clΓ clT [asses univ r] Σ wfΣ.
+    eexists. destruct (r _ wfΣ). split; [sq|]; tea.
     apply isArity_mkAssumArity.
   Qed.
 
-  Lemma isArity_red Γ u v :
+  Lemma isArity_red Σ Γ u v :
     isArity u ->
     red Σ Γ u v ->
     isArity v.
@@ -1993,7 +2113,7 @@ Section ReduceFns.
     eapply isArity_red1; eassumption.
   Qed.
   
-  Lemma Is_conv_to_Arity_red {wfΣ : wf Σ} Γ T T' :
+  Lemma Is_conv_to_Arity_red Σ {wfΣ : wf Σ} Γ T T' :
     Is_conv_to_Arity Σ Γ T ->
     Σ ;;; Γ ⊢ T ⇝ T' ->
     Is_conv_to_Arity Σ Γ T'.
@@ -2008,12 +2128,15 @@ Section ReduceFns.
     eapply isArity_red; eauto. exact reda''.
   Qed.
   
-  Local Instance wellfounded : WellFounded (@hnf_subterm_rel _ Σ) :=
-    @wf_hnf_subterm _ _ (wf_env_ext_wf Σ).
+  Local Instance wellfounded Σ wfΣ : WellFounded (@hnf_subterm_rel _ Σ) :=
+    @wf_hnf_subterm _ _ (heΣ _ X Σ wfΣ).
   
-  Equations? (noeqns) reduce_to_arity (Γ : context) (T : term) (wt : welltyped Σ Γ T)
-    : (conv_arity Γ T) + {~Is_conv_to_Arity Σ Γ T}
-    by wf ((Γ;T; wt) : (∑ Γ t, welltyped Σ Γ t)) hnf_subterm_rel  :=
+    (** not used anymore **)
+    (*
+  Equations? (noeqns) reduce_to_arity (Γ : context) (T : term) 
+    (wt : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ T)
+    : (conv_arity Γ T) + {forall Σ (wfΣ : abstract_env_rel X Σ), ~ Is_conv_to_Arity Σ Γ T} 
+    by wf ((Γ ; T ; wt) : (∑ Γ t, forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)) hnf_subterm_rel  :=
     reduce_to_arity Γ T wt with inspect (hnf Γ T wt) :=
       | exist Thnf eqhnf with view_prod_sortc Thnf := {
         | view_prod_sort_prod na A B with reduce_to_arity (Γ,, vass na A) B _ := {
@@ -2028,7 +2151,7 @@ Section ReduceFns.
   Proof.
     all: pose proof (@hnf_sound Γ T wt) as [r].
     all: rewrite <- ?eqhnf in r.
-    all: destruct (wf_env_ext_wf Σ) as [wfΣ].
+    all: destruct HΣ as [wf].
     - destruct wt as (?&typ).
       eapply subject_reduction_closed in r; eauto.
       apply inversion_Prod in r as (?&?&?&?&?); auto.
@@ -2046,6 +2169,7 @@ Section ReduceFns.
       eexists; eauto using sq.
     - constructor; auto.
     - pose proof (@hnf_complete Γ T wt) as [w].
+      destruct HΣ.
       apply Is_conv_to_Arity_inv in H as [(na&A&B&[r'])|(u&[r'])]; auto.
       + eapply PCUICContextConversion.closed_red_confluence in r' as (?&r1&r2); eauto.
         apply invert_red_prod in r2 as (?&?&[-> ? ?]); auto.
@@ -2057,6 +2181,6 @@ Section ReduceFns.
         eapply whnf_red_inv in r1; eauto.
         depelim r1.
         rewrite H in notsort; cbn in *; auto.
-  Qed. 
+  Qed. *)
 
 End ReduceFns.

@@ -538,18 +538,20 @@ Proof.
     eapply All2_All_right; tea; cbv beta; intuition auto.
 
   - wf_inv wf [mdecl' [idecl' []]].
-    eapply IHev.
+    eapply IHev2.
     econstructor; tea.
+    eapply IHev1 in w0.
     wf_inv w0 [hfix hargs].
     eapply WfAst.wf_mkApps => //.
     eapply wf_cunfold_cofix; tea. now depelim hfix.
 
   - wf_inv wf wf'.
-    wf_inv wf [hcofix hargs]. depelim hcofix.
-    eapply IHev.
+    eapply IHev2.
     econstructor; tea.
+    eapply IHev1 in wf.
+    wf_inv wf [hfix hargs].
     eapply WfAst.wf_mkApps => //.
-    eapply wf_cunfold_cofix; tea.
+    eapply wf_cunfold_cofix; tea. now depelim hfix.
     
   - wf_inv wf [[[hf ?]] ha].
     eapply WfAst.wf_mkApps; eauto.
@@ -705,28 +707,39 @@ Proof.
     pose proof (forall_decls_declared_inductive _ _ _ _ _ _ decli) as decli';  tea.
     rewrite trans_lookup_inductive.
     rewrite (declared_inductive_lookup _ decli').
-    eapply WfAst.wf_mkApps_napp in w0 as []; [|easy].
+    (* eapply WfAst.wf_mkApps_napp in w0 as []; [|easy].
     wf_inv w0 x.
     rewrite trans_mkApps /=.  
     eapply red_cofix_case.
     eapply trans_cunfold_cofix; tea.
     rewrite /= trans_lookup_inductive (declared_inductive_lookup _ decli') trans_mkApps in IHev.
-    apply IHev.
+    apply IHev. *)
+    assert (w1 : WfAst.wf Σ (Ast.mkApps (Ast.tCoFix mfix idx) args))
+      by (eapply eval_wf; eauto).
+    eapply WfAst.wf_mkApps_napp in w1 as []; [|easy].
+    wf_inv w1 x. 
+    eapply eval_cofix_case.
+    eapply trans_cunfold_cofix; tea. 
+    rewrite trans_mkApps in IHev1.  eapply IHev1. eauto.
+    rewrite /= (declared_inductive_lookup _ decli') trans_mkApps in IHev2.
+    apply IHev2.
     econstructor; tea.
     eapply WfAst.wf_mkApps; tea.
     eapply wf_cunfold_cofix; tea.
 
-  - wf_inv wf [hfix hargs].
-    wf_inv wf [hfix ha].
+  - wf_inv wf [?].
+    forward IHev1. eauto.
+    assert (w1 : WfAst.wf Σ (Ast.mkApps (Ast.tCoFix mfix idx) args))
+      by (eapply eval_wf; eauto).
+    wf_inv w1 [hfix ha].
     depelim hfix.
-    forward IHev.
-    { constructor. eapply WfAst.wf_mkApps => //.
-      eapply wf_cunfold_cofix; tea. }
-    rewrite trans_mkApps /=.
-    eapply red_cofix_proj.
+    eapply eval_cofix_proj.
     eapply trans_cunfold_cofix; tea.
-    cbn in IHev. now rewrite trans_mkApps in IHev.
-
+    rewrite trans_mkApps in IHev1.  eapply IHev1.
+    cbn in IHev2. rewrite trans_mkApps in IHev2.  eapply IHev2.
+    econstructor.
+    eapply WfAst.wf_mkApps => //.
+    eapply wf_cunfold_cofix; tea.
   - wf_inv wf [[[] ?] ?].
     eapply All2_All_mix_left in X; tea.
     rewrite trans_mkApps.

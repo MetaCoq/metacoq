@@ -275,7 +275,11 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_constant_body (Σ, cst_universes cb) cb cb' ->
     (forall body, E.cst_body cb' = Some body -> erases_deps Σ Σ' body) ->
     erases_deps Σ Σ' (E.tConst kn)
-| erases_deps_tConstruct ind c :
+| erases_deps_tConstruct ind c mdecl idecl cdecl mdecl' idecl' cdecl' :
+    PCUICAst.declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+    ETyping.declared_constructor Σ' (ind, c) mdecl' idecl' cdecl' ->
+    erases_mutual_inductive_body mdecl mdecl' ->
+    erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' (E.tConstruct ind c)
 | erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
     declared_inductive Σ (fst p) mdecl idecl ->

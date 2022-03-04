@@ -176,8 +176,13 @@ Module EnvMap.
 End EnvMap.
 
 (*
-Module EnvMap.
-  Definition t := PTree.tree global_decl.
+
+Module EnvMap'.
+
+Section Poly.
+Context {A : Type}.
+
+  Definition t := PTree.tree A.
 
   Lemma bool_cons_pos_inj a a' p p' : bool_cons_pos a p = bool_cons_pos a' p' -> a = a' /\ p = p'.
   Proof.
@@ -206,50 +211,53 @@ Module EnvMap.
     | xI p => xO (pos_succ p)
     end.
 
-  Fixpoint pos_of_string_cont (s: string) (p : positive) : positive :=
-    match s with
-    | EmptyString => pos_succ p
-    | String c s => ascii_cons_pos c (pos_of_string_cont s p)
+  Fixpoint listencoding (p : positive) :=
+    match p with
+    | xH => xO (xI xH)
+    | xO p => xO (xO (listencoding p))
+    | xI p => xI (xI (listencoding p))
     end.
-(*   
-  Lemma ascii_cons_pos_plus a p : 
-    ascii_cons_pos a (Pos.succ p) = (Pos.iter xO (ascii_cons_pos a 1) p)%positive.
-  Proof.
+
+  Fixpoint posapp (p : positive) (q : positive) :=
+    match p with 
+    | xH => q
+    | xI p => xI (posapp p q)
+    | xO p => xO (posapp p q)
+    end.
     
-   *)
-  (* Lemma ascii_cons_pos_plus a p p' : 
-    ascii_cons_pos a (p + p')%positive = (ascii_cons_pos a p + p')%positive.
+  Definition pos_cons (hd : positive) (tl : positive) :=
+    posapp (listencoding hd) (posapp (xO (xI xH)) tl).
+
+  Fixpoint pos_of_stringlist (l : list string) :=
+    match l with
+    | [] => xH
+    | x :: l => pos_cons (pos_of_string x) (pos_of_stringlist l)
+    end.
+
+  Lemma pos_app_inj p1 p2 q1 q2 : 
+    posapp (listencoding p1) q1 = posapp (listencoding p2) q2 -> p1 = p2 /\ q1 = q2.
   Proof.
-    induction p using Pos.peano_ind.
-    -  simpl. destruct p'; cbn.
-      rewrite Pos.xI_succ_xO.
-      cbn. *)
+    induction p1 in p2, q1, q2 |- *; destruct p2; cbn; try congruence.
+    all: try now firstorder congruence.
+    - intros H. depelim H. symmetry in H. firstorder congruence.
+    - intros H. depelim H. symmetry in H. firstorder congruence.
+  Qed.
 
-  
-  (* Lemma ascii_cons_pos_shiftl a p n p' : 
-    ascii_cons_pos a (Pos.shiftl p (N.pos n) + p') = ((Pos.iter xO (ascii_cons_pos a p) n) + p')%positive.
+  Lemma pos_cons_inj hd hd' tl tl' : pos_cons hd tl = pos_cons hd' tl' -> hd = hd' /\ tl = tl'.
   Proof.
-    induction n using Pos.peano_ind.
-    - cbn. destruct p'.
-      2:{ rewrite !Pos.add_xO.
+    unfold pos_cons. intros.
+    eapply pos_app_inj in H as [-> H]. cbn in H. depelim H. eauto.
+  Qed.
 
-      all:admit.
-    - cbn. rewrite !Pos.iter_succ.
-      destruct p'.
-      * cbn ,
-      rewrite Pos.add_xO.
-      cbn.
-
- *)
-
-  (* Lemma pos_of_string_cont_spec s p : pos_of_string_cont s p = 
-    (Pos.shiftl (pos_of_string s) (N.of_nat (String.length s)) + p)%positive.
+  Lemma pos_of_stringlist_inj l1 l2 :
+    pos_of_stringlist l1 = pos_of_stringlist l2 -> l1 = l2.
   Proof.
-    induction s.
-    - cbn. now destruct p; cbn.
-    - cbn. rewrite IHs.
-  Admitted. *)
-
+    induction l1 in l2 |- *; destruct l2; cbn; try congruence.
+    - destruct s; cbn. congruence.
+      destruct a; cbn; destruct b; cbn; congruence.
+    - destruct a; cbn. congruence. destruct a; cbn; destruct b; cbn; congruence.
+    - intros [? % pos_of_string_inj] % pos_cons_inj. f_equal; eauto.
+  Qed.
 
   Lemma pos_of_string_cont_inj s s' p : pos_of_string_cont s p = pos_of_string_cont s' p -> s = s'.
   Proof.

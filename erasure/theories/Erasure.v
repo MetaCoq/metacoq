@@ -426,7 +426,11 @@ Next Obligation.
   split => //. all:todo "etaexp".
 Qed.
 
+<<<<<<< HEAD
 Definition erase_program_fast := run erasure_pipeline_fast.
+=======
+Definition erase_program := erasure_pipeline.(transform).
+>>>>>>> personal/paramater-stripping-eta
 
 Local Open Scope string_scope.
 
@@ -437,9 +441,13 @@ Local Open Scope string_scope.
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
   let (Σ', t) := erase_program p (todo "wf_env and welltyped term") in
+<<<<<<< HEAD
   time "Pretty printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
   let (Σ', t) := erase_program_fast p (todo "wf_env and welltyped term") in
   time "pretty-printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.
+=======
+  print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ'.
+>>>>>>> personal/paramater-stripping-eta

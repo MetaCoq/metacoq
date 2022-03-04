@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
+From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps EExtends
     ErasureFunction ELiftSubst.
 
 Local Open Scope string_scope.
@@ -486,6 +486,16 @@ Proof.
   induction l using rev_ind; simpl; auto => //.
   intros isf; specialize (IHl isf).
   now rewrite mkApps_app.
+Qed.
+
+Lemma weakening_eval_env (wfl : Ee.WcbvFlags) {Σ Σ'} : 
+  wf_glob Σ' -> extends Σ Σ' ->
+  ∀ v t, Ee.eval Σ v t -> Ee.eval Σ' v t.
+Proof.
+  intros wf ex t v ev.
+  induction ev; try solve [econstructor; eauto using (extends_is_propositional wf ex)].
+  econstructor; eauto.
+  red in isdecl |- *. eauto using extends_lookup.
 Qed.
 
 Lemma closedn_mkApps k f args : closedn k (mkApps f args) = closedn k f && forallb (closedn k) args.

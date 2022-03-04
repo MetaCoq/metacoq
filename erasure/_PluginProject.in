@@ -89,8 +89,8 @@ src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICExpandLets.mli
 src/pCUICExpandLets.ml
-src/pCUICExpandLetsCorrectness.mli
-src/pCUICExpandLetsCorrectness.ml
+# src/pCUICExpandLetsCorrectness.mli
+# src/pCUICExpandLetsCorrectness.ml
 
 # From SafeChecker
 src/pCUICErrors.mli

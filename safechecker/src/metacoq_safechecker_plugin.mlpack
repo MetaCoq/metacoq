@@ -30,7 +30,6 @@ TemplateToPCUIC
 PCUICUnivSubst
 
 PCUICErrors
-PCUICEnvMap
 PCUICWfEnv
 PCUICSafeReduce
 PCUICEqualityDec

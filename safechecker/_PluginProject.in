@@ -90,8 +90,6 @@ src/fMapAVL.mli
 src/fMapAVL.ml
 src/pCUICErrors.mli
 src/pCUICErrors.ml
-src/pCUICEnvMap.mli
-src/pCUICEnvMap.ml
 src/pCUICWfEnv.mli
 src/pCUICWfEnv.ml
 src/pCUICSafeReduce.mli

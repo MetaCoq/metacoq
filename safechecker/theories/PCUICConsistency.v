@@ -23,8 +23,8 @@ From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import PCUICSN.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.SafeChecker Require Import PCUICEnvMap PCUICWfEnv PCUICSafeReduce.
+From MetaCoq.Template Require Import config utils EnvMap.
+From MetaCoq.SafeChecker Require Import PCUICWfEnv PCUICSafeReduce.
 
 Local Opaque hnf.
 

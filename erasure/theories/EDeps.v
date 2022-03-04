@@ -501,7 +501,7 @@ Proof.
     invs wfΣ.
     destruct H0. split. 2: eauto.
     destruct d. split; eauto.
-    red. cbn. destruct kername_eq_dec; eauto.
+    red. cbn. unfold eq_kername. destruct kername_eq_dec; eauto.
     subst. 
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H5. eauto. eapply H.
   - econstructor; eauto.

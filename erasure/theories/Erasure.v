@@ -101,7 +101,7 @@ Definition self_transform program value eval eval' := Transform.t program progra
 Definition eprogram := 
   (EAst.global_context * EAst.term).
 
-Import ERemoveParams.GlobalContextMap (make, global_decls).
+Import EEtaExpanded.GlobalContextMap (make, global_decls).
 
 Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
   EWcbvEval.eval (wfl:=wfl) p.1 p.2 t.
@@ -138,7 +138,7 @@ Proof.
 Qed.
 
 Definition eprogram_env := 
-  (ERemoveParams.GlobalContextMap.t * EAst.term).
+  (EEtaExpanded.GlobalContextMap.t * EAst.term).
 
 Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
   EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t.
@@ -153,7 +153,7 @@ Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) :
     pre p := 
     let decls := p.1.(global_decls) in
      [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
-      ERemoveParams.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+      EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
@@ -180,7 +180,7 @@ Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
     pre p := 
       let decls := p.1.(global_decls) in
       [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
-       ERemoveParams.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+       EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
@@ -300,7 +300,7 @@ Program Definition erase_pcuic_program (p : pcuic_program)
   let wfe' := make_wf_env_ext wfe p.1.2 wfΣ in
   let t := ErasureFunction.erase wfe' nil p.2 _ in
   let Σ' := ErasureFunction.erase_global (term_global_deps t) wfe in
-  (ERemoveParams.GlobalContextMap.make Σ' _, t).
+  (EEtaExpanded.GlobalContextMap.make Σ' _, t).
   
 Next Obligation.
   sq. destruct wt as [T Ht].
@@ -426,11 +426,7 @@ Next Obligation.
   split => //. all:todo "etaexp".
 Qed.
 
-<<<<<<< HEAD
 Definition erase_program_fast := run erasure_pipeline_fast.
-=======
-Definition erase_program := erasure_pipeline.(transform).
->>>>>>> personal/paramater-stripping-eta
 
 Local Open Scope string_scope.
 
@@ -441,13 +437,9 @@ Local Open Scope string_scope.
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
   let (Σ', t) := erase_program p (todo "wf_env and welltyped term") in
-<<<<<<< HEAD
   time "Pretty printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
   let (Σ', t) := erase_program_fast p (todo "wf_env and welltyped term") in
   time "pretty-printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.
-=======
-  print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ'.
->>>>>>> personal/paramater-stripping-eta

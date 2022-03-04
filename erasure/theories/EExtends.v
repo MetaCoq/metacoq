@@ -18,8 +18,8 @@ Lemma lookup_env_Some_fresh {Σ c decl} :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
   induction Σ; cbn. 1: congruence.
-  destruct BasicAst.kername_eq_dec; subst.
-  - intros [= <-] H2. inv H2.
+  unfold BasicAst.eq_kername. destruct BasicAst.kername_eq_dec; subst.
+  - intros [= <-] H2. invs H2.
     contradiction.
   - intros H1 H2. apply IHΣ; tas.
     now inv H2.
@@ -37,7 +37,7 @@ Proof.
   - specialize (IHΣ'' c decl). forward IHΣ''.
     + now inv wfΣ'.
     + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
+      inv wfΣ'. simpl in *. unfold BasicAst.eq_kername.
       destruct BasicAst.kername_eq_dec; subst; auto.
       apply lookup_env_Some_fresh in IHΣ''; contradiction.
 Qed.

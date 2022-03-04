@@ -707,13 +707,6 @@ Proof.
     pose proof (forall_decls_declared_inductive _ _ _ _ _ _ decli) as decli';  tea.
     rewrite trans_lookup_inductive.
     rewrite (declared_inductive_lookup _ decli').
-    (* eapply WfAst.wf_mkApps_napp in w0 as []; [|easy].
-    wf_inv w0 x.
-    rewrite trans_mkApps /=.  
-    eapply red_cofix_case.
-    eapply trans_cunfold_cofix; tea.
-    rewrite /= trans_lookup_inductive (declared_inductive_lookup _ decli') trans_mkApps in IHev.
-    apply IHev. *)
     assert (w1 : WfAst.wf Σ (Ast.mkApps (Ast.tCoFix mfix idx) args))
       by (eapply eval_wf; eauto).
     eapply WfAst.wf_mkApps_napp in w1 as []; [|easy].
@@ -721,7 +714,7 @@ Proof.
     eapply eval_cofix_case.
     eapply trans_cunfold_cofix; tea. 
     rewrite trans_mkApps in IHev1.  eapply IHev1. eauto.
-    rewrite /= (declared_inductive_lookup _ decli') trans_mkApps in IHev2.
+    rewrite /= trans_lookup_inductive (declared_inductive_lookup _ decli') trans_mkApps in IHev2.
     apply IHev2.
     econstructor; tea.
     eapply WfAst.wf_mkApps; tea.

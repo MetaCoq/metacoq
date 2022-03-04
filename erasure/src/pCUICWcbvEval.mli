@@ -20,9 +20,10 @@ type eval =
    * term * term * eval * eval * eval
 | Coq_eval_fix_value of term * term mfixpoint * nat * term list * term * 
    term * nat * term * eval * eval
-| Coq_red_cofix_case of case_info * term mfixpoint * nat * term predicate
-   * term list * nat * term * term branch list * term * eval
-| Coq_red_cofix_proj of projection * term mfixpoint * nat * term list * 
-   nat * term * term * eval
+| Coq_eval_cofix_case of case_info * term mfixpoint * nat * term predicate
+   * term * term list * nat * term * term branch list * term * eval * 
+   eval
+| Coq_eval_cofix_proj of projection * term mfixpoint * nat * term * term list
+   * nat * term * term * eval * eval
 | Coq_eval_app_cong of term * term * term * term * eval * eval
 | Coq_eval_atom of term

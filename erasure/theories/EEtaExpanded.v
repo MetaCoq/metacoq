@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames.
+From MetaCoq.Template Require Import config utils Kernames EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICTyping PCUICInversion PCUICGeneration
@@ -33,6 +33,13 @@ Hint Constructors Ee.eval : core.
 Set Warnings "-notation-overridden".
 Import E.
 Set Warnings "+notation-overridden".
+
+Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
+Proof.
+  induction l using rev_ind; simpl; auto.
+  rewrite mkApps_app /= IHl.
+  now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
+Qed.
 
 Section AllInP.
   Context {A : Type}.
@@ -349,11 +356,11 @@ Module GlobalContextMap.
     mdecl <- lookup_minductive Σ kn ;;
     ret mdecl.(ind_npars).
 
-  Lemma lookup_inductive_pars_spec Σ kn : lookup_inductive_pars Σ kn = ERemoveParams.lookup_inductive_pars Σ kn.
+  Lemma lookup_inductive_pars_spec Σ kn : lookup_inductive_pars Σ kn = EEtaExpanded.lookup_inductive_pars Σ kn.
   Proof.
-    rewrite /lookup_inductive_pars /ERemoveParams.lookup_inductive_pars.
-    rewrite /lookup_inductive /ERemoveParams.lookup_inductive.
-    rewrite /lookup_minductive /ERemoveParams.lookup_minductive.
+    rewrite /lookup_inductive_pars /EEtaExpanded.lookup_inductive_pars.
+    rewrite /lookup_inductive /EEtaExpanded.lookup_inductive.
+    rewrite /lookup_minductive /EEtaExpanded.lookup_minductive.
     rewrite (EnvMap.lookup_spec Σ.(global_decls)).
     eapply wf. eapply repr. reflexivity.
   Qed.

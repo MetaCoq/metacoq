@@ -320,10 +320,7 @@ Require Import Coq.Arith.Peano_dec.
 Require Import Arith Wf.
 Program Fixpoint provedCopy (n:nat) {wf lt n} : nat :=
   match n with 0 => 0 | S k => S (provedCopy k) end.
-<<<<<<< HEAD
 Next Obligation. eapply measure_wf, lt_wf. Qed. 
-=======
->>>>>>> personal/paramater-stripping-eta
 Print Assumptions provedCopy.
 MetaCoq Quote Recursively Definition pCopy := provedCopy. (* program *)
 

@@ -1606,26 +1606,25 @@ Qed.
 
 Local Arguments erase_global_decls _ _ {_}.
 
-Lemma erase_global_declared_constructor Σ ind c mind idecl cdecl wfΣ' deps :
+Lemma erase_global_declared_constructor (Σ : wf_env) ind c mind idecl cdecl deps :
    declared_constructor Σ (ind, c) mind idecl cdecl ->
    KernameSet.In ind.(inductive_mind) deps -> 
-   ETyping.declared_constructor (erase_global deps Σ wfΣ') (ind, c) (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl) (cdecl.(cstr_name), cdecl.(cstr_arity)).
+   ETyping.declared_constructor (erase_global deps Σ) (ind, c) (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl) (cdecl.(cstr_name), cdecl.(cstr_arity)).
 Proof.
   intros [[]] Hin.
   cbn in *. split. split. 
   - red in H |- *. clear - H Hin.
-    destruct Σ as [Σ1 Σ2]. cbn in *.
-    induction Σ2 as [ | [] Σ2 IH] in deps, wfΣ', H, Hin |- *.
+    destruct Σ as [[Σ1 Σ2] ]. cbn in *.
+    induction Σ2 as [ | [] Σ2 IH] in deps, H, Hin, wf_env_map_repr,wf_env_wf, wf_env_graph,wf_env_graph_wf |- *.
     + cbn in *. congruence.
     + cbn in H. unfold eq_kername in H. destruct kername_eq_dec as [E | E].
-      * invs H. cbn.  eapply KernameSet.mem_spec in Hin as ->. cbn.
-        destruct kername_eq_dec; congruence.
+      * invs H. cbn. eapply KernameSet.mem_spec in Hin as ->. cbn.
+        unfold eq_kername. destruct kername_eq_dec; congruence.
       * cbn - [erase_global]. destruct g. cbn.
         -- destruct KernameSet.mem; eauto.
-           erewrite elookup_env_cons_disc; eauto. eapply IH; eauto.
-           eapply KernameSetFact.union_2. eauto.
-        -- cbn. destruct KernameSet.mem; eauto.
-           erewrite elookup_env_cons_disc; eauto. 
+           erewrite elookup_env_cons_disc; eauto. todo "ugh". todo "ugh".
+        -- cbn. destruct KernameSet.mem; eauto. 
+           erewrite elookup_env_cons_disc; eauto.  todo "ugh". todo "ugh".
   - cbn. now eapply map_nth_error.
   - cbn. erewrite map_nth_error; eauto.
 Qed.

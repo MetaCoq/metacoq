@@ -28,16 +28,17 @@ Proof with eauto using expanded.
     forward IHexp; eauto.
     eapply expanded_mkApps; eauto. 2:solve_all.
     destruct f7; cbn in *; eauto.
-    destruct lookup_inductive as [[] | ]; cbn; eauto.
+    destruct TransLookup.lookup_inductive as [[] | ]; cbn; eauto.
   - wf_inv wf []. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app with (args := []).
     eauto. cbn. unfold trans_local. now rewrite context_assumptions_map. econstructor.
   - wf_inv wf (mdecl' & idecl' & []). eapply forall_decls_declared_inductive in d; eauto. 2: now eapply template_to_pcuic_env.
     unfold Σ'.
-    erewrite declared_inductive_lookup; eauto.
+    erewrite trans_lookup_inductive, declared_inductive_lookup; eauto.
     econstructor; eauto. cbn. induction a1; cbn; econstructor.
     + cbn. inversion H0; subst. eapply H3. eapply r.
     + inversion H0; subst. inversion H; subst. eapply IHa1; eauto.
+    + eapply template_to_pcuic_env; eauto.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.

@@ -455,7 +455,7 @@ Lemma lookup_env_optimize Σ kn :
 Proof.
   unfold optimize_env.
   induction Σ at 2 4; simpl; auto.
-  destruct kername_eq_dec => //.
+  unfold eq_kername; destruct kername_eq_dec => //.
 Qed.
 
 Lemma is_propositional_optimize Σ ind : 

@@ -1233,7 +1233,7 @@ Lemma lookup_env_closed {Σ kn decl} : ETyping.closed_env Σ -> ETyping.lookup_e
 Proof.
   induction Σ; cbn => //.
   move/andP => [] cla cle.
-  destruct kername_eq_dec.
+  unfold eq_kername; destruct kername_eq_dec.
   move=> [= <-]. apply cla.
   now eapply IHΣ.
 Qed.
@@ -1297,7 +1297,7 @@ Proof.
         eexists; intuition eauto.
         cbn. 
         rewrite indeps. cbn.
-        destruct (kername_eq_dec kn kn); try congruence. reflexivity.
+        rewrite eq_kername_refl. reflexivity.
         eapply erase_constant_body_correct; eauto.
         set (obl2 := erase_global_decls_obligation_2 _ _ _ _ _ _ _). clearbody obl2.
         set (obl1 := erase_global_decls_obligation_1 _ _ _ _ _ _ _) in *.
@@ -1339,7 +1339,7 @@ Proof.
           specialize (sub _ hin).
           eapply KernameSet.mem_spec in sub.
           simpl. rewrite sub.
-          red. cbn. destruct kername_eq_dec; try congruence.
+          red. cbn. rewrite eq_kername_refl.
           reflexivity.
           eapply erases_mutual. exact wfΣ.
           rewrite /declared_minductive /= /lookup_env e /=; rewrite -> eq_kername_refl => //. }

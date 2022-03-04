@@ -11,15 +11,15 @@ Require Import ssreflect.
  *)
 (** ** Environment lookup *)
 
-Fixpoint lookup_env (Σ : global_declarations) id : option global_decl :=
+Fixpoint lookup_env (Σ : global_context) id : option global_decl :=
   match Σ with
   | nil => None
   | hd :: tl =>
-    if kername_eq_dec id hd.1 is left _ then Some hd.2
+    if eq_kername id hd.1 then Some hd.2
     else lookup_env tl id
   end.
 
-Definition declared_constant (Σ : global_declarations) id decl : Prop :=
+Definition declared_constant (Σ : global_context) id decl : Prop :=
   lookup_env Σ id = Some (ConstantDecl decl).
 
 Definition declared_minductive Σ mind decl :=
@@ -41,7 +41,8 @@ Lemma elookup_env_cons_fresh {kn d Σ kn'} :
   kn <> kn' ->
   ETyping.lookup_env ((kn, d) :: Σ) kn' = ETyping.lookup_env Σ kn'.
 Proof.
-  simpl. destruct kername_eq_dec. subst => //. auto. 
+  simpl. change (eq_kername kn' kn) with (eqb kn' kn).
+  destruct (Reflect.eqb_spec kn' kn). subst => //. auto. 
 Qed.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)

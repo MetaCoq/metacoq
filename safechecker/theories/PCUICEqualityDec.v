@@ -47,12 +47,12 @@ Definition compare_universe_variance (equ lequ : Universe.t -> Universe.t -> boo
 
 Definition compare_universe_instance equ u u' :=
   forallb2 equ (map Universe.make u) (map Universe.make u').
-  
+
 Fixpoint compare_universe_instance_variance equ lequ v u u' :=
   match u, u' with
   | u :: us, u' :: us' =>
     match v with
-    | [] => compare_universe_instance_variance equ lequ v us us' 
+    | [] => compare_universe_instance_variance equ lequ v us us'
       (* Missing variance stands for irrelevance *)
     | v :: vs => compare_universe_variance equ lequ v u u' &&
         compare_universe_instance_variance equ lequ vs us us'
@@ -70,8 +70,8 @@ Definition compare_global_instance Σ equ lequ gr napp :=
 Definition eqb_binder_annots (x y : list aname) : bool :=
   forallb2 eqb_binder_annot x y.
 
-Fixpoint eqb_term_upto_univ_napp 
-  (equ lequ : Universe.t -> Universe.t -> bool) 
+Fixpoint eqb_term_upto_univ_napp
+  (equ lequ : Universe.t -> Universe.t -> bool)
   (gen_compare_global_instance : (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool)
   napp (u v : term) : bool :=
   match u, v with
@@ -129,7 +129,7 @@ Fixpoint eqb_term_upto_univ_napp
       (eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0) p p' &&
     eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 c c' &&
     forallb2 (fun x y =>
-      forallb2 
+      forallb2
         (bcompare_decls eqb eqb)
         x.(bcontext) y.(bcontext) &&
       eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 (bbody x) (bbody y)
@@ -162,7 +162,7 @@ Fixpoint eqb_term_upto_univ_napp
   | _, _ => false
   end.
 
-Notation eqb_term_upto_univ eq leq gen_compare_global_instance := 
+Notation eqb_term_upto_univ eq leq gen_compare_global_instance :=
   (eqb_term_upto_univ_napp eq leq gen_compare_global_instance 0).
 
 Ltac eqspec :=
@@ -185,7 +185,7 @@ Local Ltac ih :=
   | ih : forall lequ Rle napp hle hcomparel t' ht ht', reflectT (eq_term_upto_univ_napp _ _ _ napp ?t _) _,
     hle : forall u u' hu hu', reflect (?Rle u u') (?lequ u u') ,
     hcompare : forall ref n l l' _ _ , _ <-> _ ,
-    hcomparel : forall ref n l l' _ _ , _ <-> _ 
+    hcomparel : forall ref n l l' _ _ , _ <-> _
     |- context [ eqb_term_upto_univ _ ?lequ _ ?t ?t' ] =>
     first [destruct (ih lequ Rle 0 hle hcompare t') | destruct (ih lequ Rle 0 hle hcomparel t')]
        ; nodec ; subst
@@ -250,7 +250,7 @@ Proof.
 Qed.
 
 Lemma forallb2_bcompare_decl_All2_fold
-  (P : term -> term -> bool) Γ Δ : 
+  (P : term -> term -> bool) Γ Δ :
   forallb2 (bcompare_decls P P) Γ Δ ->
   All2_fold (fun _ _ => bcompare_decls P P) Γ Δ.
 Proof.
@@ -258,8 +258,10 @@ Proof.
   now move/andb_and: H => [].
 Qed.
 
-Lemma reflect_eq_context_IH {Σ equ lequ} 
-  {Re Rle : Universe.t -> Universe.t -> Prop} 
+Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
+
+Lemma reflect_eq_context_IH {Σ equ lequ}
+  {Re Rle : Universe.t -> Universe.t -> Prop}
   {gen_compare_global_instance : (Universe.t -> Universe.t -> Prop) -> global_reference -> nat -> list Level.t -> list Level.t -> bool }:
   (forall u u', reflect (Re u u') (equ u u')) ->
   (forall u u', reflect (Rle u u') (lequ u u')) ->
@@ -267,12 +269,12 @@ Lemma reflect_eq_context_IH {Σ equ lequ}
   onctx
       (fun t : term =>
        forall (lequ : Universe.t -> Universe.t -> bool)
-         (Rle : Universe.t -> Universe.t -> Prop) 
+         (Rle : Universe.t -> Universe.t -> Prop)
          (napp : nat),
        (forall u u' : Universe.t, reflect (Rle u u') (lequ u u')) ->
        forall t' : term,
        reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
-         (eqb_term_upto_univ_napp equ lequ gen_compare_global_instance napp t t')) 
+         (eqb_term_upto_univ_napp equ lequ gen_compare_global_instance napp t t'))
       ctx ->
   reflectT
     (eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx ctx')
@@ -313,15 +315,15 @@ Proof.
   destruct (eqb_spec u u'); constructor; auto.
 Qed.
 
-Lemma eq_dec_to_bool_refl {A} {ea : Classes.EqDec A} (x : A) : 
+Lemma eq_dec_to_bool_refl {A} {ea : Classes.EqDec A} (x : A) :
   eq_dec_to_bool x x.
 Proof.
   unfold eq_dec_to_bool.
   now destruct (Classes.eq_dec x x).
 Qed.
 
-Lemma reflect_eq_ctx ctx ctx' : 
-  reflectT 
+Lemma reflect_eq_ctx ctx ctx' :
+  reflectT
     (eq_context_gen eq eq ctx ctx')
     (forallb2 (bcompare_decls eqb eqb) ctx ctx').
 Proof.
@@ -349,7 +351,7 @@ Lemma forallb_true {A : Type} (l : list A) : forallb xpredT l.
 Proof.
   now induction l.
 Qed.
-  
+
 Lemma on_universes_true (t : term) : on_universes xpredT (fun _ => xpredT) t.
 Proof.
   induction t using term_forall_list_ind => //=.
@@ -390,13 +392,13 @@ Qed.
 Definition reflect_eq_predicate {Σ equ lequ}
   {gen_compare_global_instance : (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool}
   {Re Rle : Universe.t -> Universe.t -> Prop}
-  {p : Universe.t -> bool} 
+  {p : Universe.t -> bool}
   {q : nat -> term -> bool} :
   (forall u u', p u -> p u' -> reflect (Re u u') (equ u u')) ->
   (forall u u', p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
   (forall ref n l l', forallb p (map Universe.make l) ->
                       forallb p (map Universe.make l') ->
-                      R_global_instance Σ Re Re ref n l l' <-> 
+                      R_global_instance Σ Re Re ref n l l' <->
                       gen_compare_global_instance equ ref n l l') ->
   (forall ref n l l', forallb p (map Universe.make l) ->
                       forallb p (map Universe.make l') ->
@@ -408,14 +410,14 @@ Definition reflect_eq_predicate {Σ equ lequ}
   on_universes p q pr.(preturn) ->
   Forall p (map Universe.make pr'.(puinst)) ->
   Forall (on_universes p q) pr'.(pparams) ->
-  on_universes p q pr'.(preturn) -> 
+  on_universes p q pr'.(preturn) ->
   tCasePredProp
   (fun t : term =>
    forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
    (forall u u' : Universe.t, p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
   (forall ref n l l', forallb p (map Universe.make l) ->
                       forallb p (map Universe.make l') ->
-                      R_global_instance Σ Re Rle ref n l l' <-> 
+                      R_global_instance Σ Re Rle ref n l l' <->
                       gen_compare_global_instance lequ ref n l l') ->
   forall t' : term,
    on_universes p q t ->
@@ -432,7 +434,7 @@ Definition reflect_eq_predicate {Σ equ lequ}
    on_universes p q t ->
    on_universes p q t' ->
    reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp equ lequ gen_compare_global_instance napp t t')) pr ->
-  reflectT (eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re pr pr') 
+  reflectT (eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re pr pr')
     (eqb_predicate_gen (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
       (bcompare_decls eqb eqb)
       (eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0) pr pr').
@@ -465,6 +467,7 @@ Proof.
     * now destruct (reflect_eq_ctx (pcontext pr) (pcontext pr')).
     * now destruct (r _ _ 0 X H (preturn pr')).
 Qed.
+
 
 Arguments eqb : simpl never.
 
@@ -512,18 +515,18 @@ Qed.
 
 Lemma reflect_eq_term_upto_univ Σ equ lequ
   (p : Universe.t -> bool) (q : nat -> term -> bool)
-  (Re Rle : Universe.t -> Universe.t -> Prop) 
+  (Re Rle : Universe.t -> Universe.t -> Prop)
   (gen_compare_global_instance : (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool)
   napp :
   (forall u u', p u -> p u' -> reflect (Re u u') (equ u u')) ->
   (forall u u', p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
   (forall ref n l l', forallb p (map Universe.make l) ->
                       forallb p (map Universe.make l') ->
-                      R_global_instance Σ Re Re ref n l l' <-> 
+                      R_global_instance Σ Re Re ref n l l' <->
                       gen_compare_global_instance equ ref n l l') ->
   (forall ref n l l', forallb p (map Universe.make l) ->
                       forallb p (map Universe.make l') ->
-                      R_global_instance Σ Re Rle ref n l l' <-> 
+                      R_global_instance Σ Re Rle ref n l l' <->
                       gen_compare_global_instance lequ ref n l l') ->
   forall t t',
     on_universes p q t ->
@@ -569,7 +572,7 @@ Proof.
     ih.
     constructor. constructor. assumption.
   - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle.
-    destruct (eqb_annot_reflect n na); ih => //=. 
+    destruct (eqb_annot_reflect n na); ih => //=.
     constructor. constructor; assumption.
   - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle.
     destruct (eqb_annot_reflect n na); ih => //.
@@ -611,7 +614,7 @@ Proof.
     + inversion 1; subst. now apply hcomparel.
       (* now apply /reflect_R_global_instance. *)
     + intros H.
-      constructor. 
+      constructor.
       (* apply /reflect_R_global_instance ; tea. *)
       now rewrite hcomparel.
   - cbn - [eqb]. eqspecs.
@@ -662,7 +665,7 @@ Proof.
         inversion X3. subst. constructor; auto. }
         constructor. inversion e2. subst.
         constructor ; auto.
-    
+
   - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle. ih => //.
     constructor. constructor ; assumption.
 
@@ -701,7 +704,7 @@ Proof.
         cbn - [eqb]. destruct (IHm X1 mfix) => //.
         2:{ constructor. intro bot. apply f.
           inversion bot. subst. constructor.
-          inversion X0. subst. assumption. } 
+          inversion X0. subst. assumption. }
         constructor. constructor. constructor ; try easy.
         now inversion e3.
 
@@ -740,7 +743,7 @@ Proof.
         cbn - [eqb]. destruct (IHm X1 mfix) => //.
         2:{ constructor. intro bot. apply f.
           inversion bot. subst. constructor.
-          inversion X0. subst. assumption. } 
+          inversion X0. subst. assumption. }
         constructor. constructor. constructor ; try easy.
         now inversion e3.
 
@@ -757,13 +760,13 @@ Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp:
 Proof.
   intros t t' he hle heqle.
   case: (reflect_eq_term_upto_univ Σ equ lequ xpredT (fun _ => xpredT) equ lequ) => //; eauto.
-  1-2: intros ; apply/idP. 
-  - intros. apply reflect_iff. 
-    apply reflect_R_global_instance with (p := xpredT) ; tea; try reflexivity.  
-    1-2: intros; apply idP.    
-  - intros. apply reflect_iff. 
-    apply reflect_R_global_instance with (p := xpredT) ; tea; try reflexivity.  
-    1-2: intros; apply idP.    
+  1-2: intros ; apply/idP.
+  - intros. apply reflect_iff.
+    apply reflect_R_global_instance with (p := xpredT) ; tea; try reflexivity.
+    1-2: intros; apply idP.
+  - intros. apply reflect_iff.
+    apply reflect_R_global_instance with (p := xpredT) ; tea; try reflexivity.
+    1-2: intros; apply idP.
   - apply on_universes_true.
   - apply on_universes_true.
   - intros. eapply eq_term_upto_univ_impl. 5:tea. all:eauto.
@@ -773,92 +776,92 @@ Qed.
 Definition compare_global_instance_proper Σ equ equ' eqlu eqlu' :
     (forall u u', equ u u' = equ' u u') ->
     (forall u u', eqlu u u' = eqlu' u u') ->
-    forall ref n l l', 
-        compare_global_instance Σ equ eqlu ref n l l' =  
+    forall ref n l l',
+        compare_global_instance Σ equ eqlu ref n l l' =
         compare_global_instance Σ equ' eqlu' ref n l l'.
 Proof.
   intros Hequ Heqlu ref n l l'.
   apply eq_true_iff_eq. etransitivity.
   - symmetry. eapply reflect_iff.
-    eapply reflect_R_global_instance with (p := xpredT); intros; eauto. 
+    eapply reflect_R_global_instance with (p := xpredT); intros; eauto.
     1-2: apply idP.
     1-2: apply forallb_true.
   - eapply reflect_iff.
-    eapply reflect_R_global_instance with (p := xpredT); intros; eauto. 
+    eapply reflect_R_global_instance with (p := xpredT); intros; eauto.
     3-4: apply forallb_true.
-    + rewrite Hequ. destruct equ'; constructor; eauto.  
-    + rewrite Heqlu. destruct eqlu'; constructor; eauto.  
+    + rewrite Hequ. destruct equ'; constructor; eauto.
+    + rewrite Heqlu. destruct eqlu'; constructor; eauto.
 Defined.
 
-Definition eqb_term_upto_univ_proper Σ equ equ' eqlu eqlu'  
+Definition eqb_term_upto_univ_proper Σ equ equ' eqlu eqlu'
 (gen_compare_global_instance gen_compare_global_instance' : (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool)
 napp (t u : term) :
 (forall u u', equ u u' = equ' u u') ->
 (forall u u', eqlu u u' = eqlu' u u') ->
-(forall leq ref n l l', compare_global_instance Σ equ leq ref n l l' = 
+(forall leq ref n l l', compare_global_instance Σ equ leq ref n l l' =
                         gen_compare_global_instance leq ref n l l') ->
-(forall leq ref n l l', gen_compare_global_instance leq ref n l l' = 
+(forall leq ref n l l', gen_compare_global_instance leq ref n l l' =
                         gen_compare_global_instance' leq ref n l l') ->
 eqb_term_upto_univ_napp equ eqlu gen_compare_global_instance napp t u =
 eqb_term_upto_univ_napp equ' eqlu' gen_compare_global_instance' napp t u.
 Proof.
-intros Hequ Heqlu Hcompare Hgen_compare. apply eq_true_iff_eq. split; intros. 
-- eapply introT. 
-  * eapply reflect_eq_term_upto_univ; intros. 
+intros Hequ Heqlu Hcompare Hgen_compare. apply eq_true_iff_eq. split; intros.
+- eapply introT.
+  * eapply reflect_eq_term_upto_univ; intros.
     1-2: apply idP.
     3-4: apply on_universes_true.
     + apply reflect_iff. rewrite <- Hgen_compare, <- Hcompare.
-      eapply reflect_R_global_instance with (p := xpredT).  
-      1-2: intros; rewrite <- Hequ; apply idP.    
-      1-2: apply forallb_true. 
+      eapply reflect_R_global_instance with (p := xpredT).
+      1-2: intros; rewrite <- Hequ; apply idP.
+      1-2: apply forallb_true.
     + apply reflect_iff. rewrite <- Hgen_compare, <- Hcompare.
-      eapply reflect_R_global_instance with (p := xpredT).  
-      1: intros; rewrite <- Hequ; apply idP.    
-      1: intros; rewrite <- Heqlu; apply idP.    
-      1-2: apply forallb_true. 
+      eapply reflect_R_global_instance with (p := xpredT).
+      1: intros; rewrite <- Hequ; apply idP.
+      1: intros; rewrite <- Heqlu; apply idP.
+      1-2: apply forallb_true.
   * eapply elimT. 2: exact H.
-    eapply reflect_eq_term_upto_univ; intros; try assumption.  
-    1: intros; rewrite <- Hequ; apply idP.    
+    eapply reflect_eq_term_upto_univ; intros; try assumption.
+    1: intros; rewrite <- Hequ; apply idP.
     1: intros; rewrite <- Heqlu; apply idP.
     3-4: apply on_universes_true.
     + apply reflect_iff. rewrite <- Hcompare.
-      eapply reflect_R_global_instance with (p := xpredT).  
-      1-2: intros; rewrite <- Hequ; apply idP.    
-      1-2: apply forallb_true. 
+      eapply reflect_R_global_instance with (p := xpredT).
+      1-2: intros; rewrite <- Hequ; apply idP.
+      1-2: apply forallb_true.
     + apply reflect_iff. rewrite <- Hcompare.
-      eapply reflect_R_global_instance with (p := xpredT).  
-      1: intros; rewrite <- Hequ; apply idP.    
-      1: intros; rewrite <- Heqlu; apply idP.    
-      1-2: apply forallb_true. 
-  - eapply introT.  
-  * eapply reflect_eq_term_upto_univ; intros. 
+      eapply reflect_R_global_instance with (p := xpredT).
+      1: intros; rewrite <- Hequ; apply idP.
+      1: intros; rewrite <- Heqlu; apply idP.
+      1-2: apply forallb_true.
+  - eapply introT.
+  * eapply reflect_eq_term_upto_univ; intros.
   1-2: apply idP.
   3-4: apply on_universes_true.
   + apply reflect_iff. rewrite <- Hcompare.
-    eapply reflect_R_global_instance with (p := xpredT).  
-    1-2: intros; rewrite Hequ; apply idP.    
-    1-2: apply forallb_true. 
+    eapply reflect_R_global_instance with (p := xpredT).
+    1-2: intros; rewrite Hequ; apply idP.
+    1-2: apply forallb_true.
   + apply reflect_iff. rewrite <- Hcompare.
-    eapply reflect_R_global_instance with (p := xpredT).  
-    1: intros; rewrite Hequ; apply idP.    
-    1: intros; rewrite Heqlu; apply idP.    
+    eapply reflect_R_global_instance with (p := xpredT).
+    1: intros; rewrite Hequ; apply idP.
+    1: intros; rewrite Heqlu; apply idP.
     1-2: apply forallb_true.
     * eapply elimT. 2: exact H.
-    eapply reflect_eq_term_upto_univ; intros; try assumption.  
-    1: intros; rewrite <- Hequ; apply idP.    
+    eapply reflect_eq_term_upto_univ; intros; try assumption.
+    1: intros; rewrite <- Hequ; apply idP.
     1: intros; rewrite <- Heqlu; apply idP.
     3-4: apply on_universes_true.
     + apply reflect_iff. rewrite <- Hgen_compare, <- Hcompare.
-      eapply reflect_R_global_instance with (p := xpredT).  
-      1-2: intros; rewrite  Hequ; apply idP.    
-      1-2: apply forallb_true. 
-    + apply reflect_iff. rewrite <- Hgen_compare, <- Hcompare.
-      eapply reflect_R_global_instance with (p := xpredT).  
-      1: intros; rewrite Hequ; apply idP.    
-      1: intros; rewrite Heqlu; apply idP.    
+      eapply reflect_R_global_instance with (p := xpredT).
+      1-2: intros; rewrite  Hequ; apply idP.
       1-2: apply forallb_true.
-Defined.  
-    
+    + apply reflect_iff. rewrite <- Hgen_compare, <- Hcompare.
+      eapply reflect_R_global_instance with (p := xpredT).
+      1: intros; rewrite Hequ; apply idP.
+      1: intros; rewrite Heqlu; apply idP.
+      1-2: apply forallb_true.
+Defined.
+
 
 Lemma compare_global_instance_refl :
   forall Σ (eqb leqb : Universe.t -> Universe.t -> bool) gr napp u,
@@ -888,13 +891,13 @@ Proof.
   3-4: apply on_universes_true.
   3: now unshelve epose proof (eq_term_upto_univ_refl Σ eqb leqb napp _ _ t).
   - intros. apply reflect_iff.
-    eapply reflect_R_global_instance with (p := xpredT).   
-    1-2: intros; apply idP.    
-    1-2: apply forallb_true. 
+    eapply reflect_R_global_instance with (p := xpredT).
+    1-2: intros; apply idP.
+    1-2: apply forallb_true.
   - intros. apply reflect_iff.
-    eapply reflect_R_global_instance with (p := xpredT).   
-    1-2: intros; apply idP.    
-    1-2: apply forallb_true. 
+    eapply reflect_R_global_instance with (p := xpredT).
+    1-2: intros; apply idP.
+    1-2: apply forallb_true.
 Qed.
 
 (* genereic equality for contexts *)
@@ -912,31 +915,7 @@ Fixpoint eqb_ctx_gen equ gen_compare_global_instance
     | _, _ => false
     end.
 
-
-  
-  Definition eqb_ctx_gen_proper Σ equ equ' gen_compare_global_instance
-  gen_compare_global_instance' (Γ Δ : context) :
-    (forall u u', equ u u' = equ' u u') ->
-    (forall leq ref n l l', compare_global_instance Σ equ leq ref n l l' = 
-                            gen_compare_global_instance leq ref n l l') ->
-    (forall leq ref n l l', compare_global_instance Σ equ' leq ref n l l' = 
-                            gen_compare_global_instance' leq ref n l l') ->
-    (forall leq ref n l l', gen_compare_global_instance' leq ref n l l' = 
-                            gen_compare_global_instance leq ref n l l') ->
-    eqb_ctx_gen equ gen_compare_global_instance Γ Δ =
-    eqb_ctx_gen equ' gen_compare_global_instance' Γ Δ.
-  Proof. 
-    revert Δ; induction Γ; destruct Δ; simpl; eauto. 
-    intros Hequ Hcompare Hcompare' Hgen_compare.  destruct a. destruct decl_body.
-    all: destruct c; destruct decl_body; eauto;
-         apply eq_true_iff_eq; split; intros.
-    all: repeat (let foo := fresh "H" in apply andb_and in H; destruct H as [H foo]);
-         repeat (apply andb_and; split; eauto);
-         try first[ rewrite <- IHΓ | rewrite IHΓ]; eauto.
-    all: erewrite <- eqb_term_upto_univ_proper; eauto.
- Defined. 
-
-(** Checking equality *)
+(** Checking ws_cumul_pb *)
 
 Section EqualityDec.
   Context {cf : checker_flags}.
@@ -955,7 +934,7 @@ Section EqualityDec.
     | Conv => eq
     | Cumul => leq
     end.
-  
+
   Definition conv_pb_relb pb :=
     match pb with
     | Conv => check_eqb_universe G
@@ -963,11 +942,11 @@ Section EqualityDec.
     end.
 
   Definition eqb_termp_napp_gen pb eq leq compare_global_instance_gen napp :=
-      eqb_term_upto_univ_napp eq (conv_pb_relb_gen pb eq leq) 
+      eqb_term_upto_univ_napp eq (conv_pb_relb_gen pb eq leq)
                 compare_global_instance_gen napp.
 
   Definition eqb_termp_napp pb :=
-    eqb_termp_napp_gen pb (check_eqb_universe G) (check_leqb_universe G) 
+    eqb_termp_napp_gen pb (check_eqb_universe G) (check_leqb_universe G)
           (compare_global_instance Σ (check_eqb_universe G)).
 
     Lemma eq_universeP u u' :
@@ -1028,16 +1007,16 @@ Section EqualityDec.
     apply reflect_eq_term_upto_univ.
     - move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
       now apply eq_universeP.
-    - move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?. 
+    - move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
       destruct pb.
       + now apply eq_universeP.
       + now apply leq_universeP.
     - intros. apply reflect_iff.
-      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto. 
-      1-2: move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?; now apply eq_universeP; eauto. 
+      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto.
+      1-2: move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?; now apply eq_universeP; eauto.
     - intros. apply reflect_iff.
-      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto. 
-      1-2: move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?. 
+      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto.
+      1-2: move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?.
       + now apply eq_universeP.
       + destruct pb.
         * now apply eq_universeP.
@@ -1093,7 +1072,7 @@ Section EqualityDec.
     eapply (eqb_termp_napp_spec Cumul) ; tea.
   Qed.
 
-  Lemma reflect_leq_term t u : 
+  Lemma reflect_leq_term t u :
     wf_universes Σ t ->
     wf_universes Σ u ->
     reflectT (leq_term Σ Σ t u) (leqb_term t u).
@@ -1112,7 +1091,7 @@ Section EqualityDec.
     now apply (eqb_termp_napp_spec Conv).
   Qed.
 
-  Lemma reflect_eq_term t u : 
+  Lemma reflect_eq_term t u :
     wf_universes Σ t ->
     wf_universes Σ u ->
     reflectT (eq_term Σ t u) (eqb_term t u).
@@ -1162,18 +1141,18 @@ Section EqualityDec.
     end.
 
   Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> compare_opt_term Conv Σ (global_ext_constraints Σ) t u.
+    : eqb_opt_term t u -> eq_opt_term false Σ (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn => //.
     apply eqb_term_spec; tea.
   Qed.
 
   Definition eqb_decl (d d' : context_decl) :=
-    eqb_binder_annot d.(decl_name) d'.(decl_name) && 
+    eqb_binder_annot d.(decl_name) d'.(decl_name) &&
     eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl Σ (global_ext_constraints Σ) d d'.
+    : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. rtoProp. apply eqb_opt_term_spec in H1.
@@ -1186,7 +1165,7 @@ Section EqualityDec.
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
 
   Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context Σ (global_ext_constraints Σ) Γ Δ.
+    : eqb_context Γ Δ -> eq_context false Σ (global_ext_constraints Σ) Γ Δ.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.

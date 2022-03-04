@@ -70,14 +70,17 @@ Definition compare_global_instance Σ equ lequ gr napp :=
 Definition eqb_binder_annots (x y : list aname) : bool :=
   forallb2 eqb_binder_annot x y.
 
-Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool) napp (u v : term) : bool :=
+Fixpoint eqb_term_upto_univ_napp 
+  (equ lequ : Universe.t -> Universe.t -> bool) 
+  (gen_compare_global_instance : (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool)
+  napp (u v : term) : bool :=
   match u, v with
   | tRel n, tRel m =>
     eqb n m
 
   | tEvar e args, tEvar e' args' =>
     eqb e e' &&
-    forallb2 (eqb_term_upto_univ_napp Σ equ equ 0) args args'
+    forallb2 (eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0) args args'
 
   | tVar id, tVar id' =>
     eqb id id'
@@ -86,8 +89,8 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
     lequ u u'
 
   | tApp u v, tApp u' v' =>
-    eqb_term_upto_univ_napp Σ equ lequ (S napp) u u' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 v v'
+    eqb_term_upto_univ_napp equ lequ gen_compare_global_instance (S napp) u u' &&
+    eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 v v'
 
   | tConst c u, tConst c' u' =>
     eqb c c' &&
@@ -95,52 +98,52 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
 
   | tInd i u, tInd i' u' =>
     eqb i i' &&
-    compare_global_instance Σ equ lequ (IndRef i) napp u u'
+    gen_compare_global_instance lequ (IndRef i) napp u u'
 
   | tConstruct i k u, tConstruct i' k' u' =>
     eqb i i' &&
     eqb k k' &&
-    compare_global_instance Σ equ lequ (ConstructRef i k) napp u u'
+    gen_compare_global_instance lequ (ConstructRef i k) napp u u'
 
   | tLambda na A t, tLambda na' A' t' =>
     eqb_binder_annot na na' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 A A' &&
-    eqb_term_upto_univ_napp Σ equ lequ 0 t t'
+    eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 A A' &&
+    eqb_term_upto_univ_napp equ lequ gen_compare_global_instance 0 t t'
 
   | tProd na A B, tProd na' A' B' =>
     eqb_binder_annot na na' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 A A' &&
-    eqb_term_upto_univ_napp Σ equ lequ 0 B B'
+    eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 A A' &&
+    eqb_term_upto_univ_napp equ lequ gen_compare_global_instance 0 B B'
 
   | tLetIn na B b u, tLetIn na' B' b' u' =>
     eqb_binder_annot na na' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 B B' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 b b' &&
-    eqb_term_upto_univ_napp Σ equ lequ 0 u u'
+    eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 B B' &&
+    eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 b b' &&
+    eqb_term_upto_univ_napp equ lequ gen_compare_global_instance 0 u u'
 
   | tCase indp p c brs, tCase indp' p' c' brs' =>
     eqb indp indp' &&
     eqb_predicate_gen
       (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
       (bcompare_decls eqb eqb)
-      (eqb_term_upto_univ_napp Σ equ equ 0) p p' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 c c' &&
+      (eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0) p p' &&
+    eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 c c' &&
     forallb2 (fun x y =>
       forallb2 
         (bcompare_decls eqb eqb)
         x.(bcontext) y.(bcontext) &&
-      eqb_term_upto_univ_napp Σ equ equ 0 (bbody x) (bbody y)
+      eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 (bbody x) (bbody y)
     ) brs brs'
 
   | tProj p c, tProj p' c' =>
     eqb p p' &&
-    eqb_term_upto_univ_napp Σ equ equ 0 c c'
+    eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 c c'
 
   | tFix mfix idx, tFix mfix' idx' =>
     eqb idx idx' &&
     forallb2 (fun x y =>
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dtype) y.(dtype) &&
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dbody) y.(dbody) &&
+      eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 x.(dtype) y.(dtype) &&
+      eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 x.(dbody) y.(dbody) &&
       eqb x.(rarg) y.(rarg) &&
       eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
@@ -148,13 +151,13 @@ Fixpoint eqb_term_upto_univ_napp Σ (equ lequ : Universe.t -> Universe.t -> bool
   | tCoFix mfix idx, tCoFix mfix' idx' =>
     eqb idx idx' &&
     forallb2 (fun x y =>
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dtype) y.(dtype) &&
-      eqb_term_upto_univ_napp Σ equ equ 0 x.(dbody) y.(dbody) &&
+      eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 x.(dtype) y.(dtype) &&
+      eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0 x.(dbody) y.(dbody) &&
       eqb x.(rarg) y.(rarg) &&
       eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
 
-  (* | tPrim p, tPrim p' => eqb p p' *)
+  | tPrim p, tPrim p' => eqb p p'
 
   | _, _ => false
   end.
@@ -252,6 +255,10 @@ Proof.
 Qed.
 
 Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
+ 
+Lemma reflect_eq_context_IH {Σ equ lequ} 
+  {Re Rle : Universe.t -> Universe.t -> Prop} 
+  {gen_compare_global_instance : (Universe.t -> Universe.t -> Prop) -> global_reference -> nat -> list Level.t -> list Level.t -> bool }:
   (forall u u', reflect (Re u u') (equ u u')) ->
   (forall u u', reflect (Rle u u') (lequ u u')) ->
   forall ctx ctx',
@@ -263,12 +270,12 @@ Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> 
        (forall u u' : Universe.t, reflect (Rle u u') (lequ u u')) ->
        forall t' : term,
        reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
-         (eqb_term_upto_univ_napp Σ equ lequ napp t t')) 
+         (eqb_term_upto_univ_napp equ lequ gen_compare_global_instance napp t t')) 
       ctx ->
   reflectT
     (eq_context_gen (eq_term_upto_univ Σ Re Re) (eq_term_upto_univ Σ Re Re) ctx ctx')
-    (forallb2 (bcompare_decls (eqb_term_upto_univ Σ equ equ)
-      (eqb_term_upto_univ Σ equ equ)) ctx ctx').
+    (forallb2 (bcompare_decls (eqb_term_upto_univ equ equ gen_compare_global_instance)
+      (eqb_term_upto_univ equ equ gen_compare_global_instance)) ctx ctx').
 Proof.
   intros hRe hRle ctx ctx' onc.
   eapply equiv_reflectT.
@@ -297,6 +304,7 @@ Proof.
       destruct (r equ Re 0 hRe ty') => //.
       now constructor.
 Qed.
+
 
 Definition eqb_univ_reflect : forall u u' : Universe.t, reflect (u = u') (eqb u u').
 Proof.
@@ -378,7 +386,9 @@ Proof.
     now apply /andP.
 Qed.
 
-Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} {p : Universe.t -> bool} {q : nat -> term -> bool} :
+Definition reflect_eq_predicate {Σ equ lequ gen_compare_global_instance} {Re Rle : Universe.t -> Universe.t -> Prop}
+  {p : Universe.t -> bool} 
+  {q : nat -> term -> bool} :
   (forall u u', p u -> p u' -> reflect (Re u u') (equ u u')) ->
   (forall u u', p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
   forall pr pr',
@@ -395,18 +405,18 @@ Definition reflect_eq_predicate {Σ equ lequ} {Re Rle : Universe.t -> Universe.t
    forall t' : term,
    on_universes p q t ->
    on_universes p q t' ->
-   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp Σ equ lequ napp t t'))
+   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp equ lequ gen_compare_global_instance napp t t'))
   (fun t : term =>
    forall (lequ : Universe.t -> Universe.t -> bool) (Rle : Universe.t -> Universe.t -> Prop) (napp : nat),
    (forall u u' : Universe.t, p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
    forall t' : term,
    on_universes p q t ->
    on_universes p q t' ->
-   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp Σ equ lequ napp t t')) pr ->
+   reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t') (eqb_term_upto_univ_napp equ lequ gen_compare_global_instance napp t t')) pr ->
   reflectT (eq_predicate (eq_term_upto_univ_napp Σ Re Re 0) Re pr pr') 
     (eqb_predicate_gen (fun u u' => forallb2 equ (map Universe.make u) (map Universe.make u'))
       (bcompare_decls eqb eqb)
-      (eqb_term_upto_univ_napp Σ equ equ 0) pr pr').
+      (eqb_term_upto_univ_napp equ equ gen_compare_global_instance 0) pr pr').
 Proof.
   intros.
   solve_all. unfold eq_predicate, eqb_predicate, eqb_predicate_gen.
@@ -436,6 +446,7 @@ Proof.
     * now destruct (reflect_eq_ctx (pcontext pr) (pcontext pr')).
     * now destruct (r _ _ 0 X (preturn pr')).
 Qed.
+
 
 Arguments eqb : simpl never.
 
@@ -752,12 +763,27 @@ Proof.
   now unshelve epose proof (eq_term_upto_univ_refl Σ eqb leqb napp _ _ t).
 Qed.
 
+(* genereic equality for contexts *)
+
+Fixpoint eqb_ctx_gen equ gen_compare_global_instance
+    (Γ Δ : context) : bool :=
+    match Γ, Δ with
+    | [], [] => true
+    | {| decl_name := na1 ; decl_body := None ; decl_type := t1 |} :: Γ,
+      {| decl_name := na2 ; decl_body := None ; decl_type := t2 |} :: Δ =>
+      eqb_binder_annot na1 na2 && eqb_term_upto_univ equ equ gen_compare_global_instance t1 t2  && eqb_ctx_gen equ gen_compare_global_instance Γ Δ
+    | {| decl_name := na1 ; decl_body := Some b1 ; decl_type := t1 |} :: Γ,
+      {| decl_name := na2 ; decl_body := Some b2 ; decl_type := t2 |} :: Δ =>
+      eqb_binder_annot na1 na2 && eqb_term_upto_univ equ equ gen_compare_global_instance b1 b2 && eqb_term_upto_univ equ equ gen_compare_global_instance t1 t2 && eqb_ctx_gen equ gen_compare_global_instance Γ Δ
+    | _, _ => false
+    end.
+
 (** Checking ws_cumul_pb *)
 
 Section EqualityDec.
   Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
-  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1.(universes) Σ.2 ∥).
+  Context (hΣ : ∥ wf Σ ∥) (Hφ : ∥ on_udecl Σ.1 Σ.2 ∥).
   Context (G : universes_graph) (HG : is_graph_of_uctx G (global_ext_uctx Σ)).
 
   Local Definition hΣ' : ∥ wf_ext Σ ∥.
@@ -765,14 +791,26 @@ Section EqualityDec.
     destruct hΣ, Hφ; now constructor.
   Defined.
 
-  Definition compare_universeb pb :=
+
+  Definition conv_pb_relb_gen pb (eq leq : Universe.t -> Universe.t -> bool) :=
+    match pb with
+    | Conv => eq
+    | Cumul => leq
+    end.
+  
+  Definition conv_pb_relb pb :=
     match pb with
     | Conv => check_eqb_universe G
     | Cumul => check_leqb_universe G
     end.
-  
-  Definition eqb_termp_napp pb napp :=
-    eqb_term_upto_univ_napp Σ (check_eqb_universe G) (compare_universeb pb) napp.
+
+  Definition eqb_termp_napp_gen pb eq leq compare_global_instance_gen napp :=
+      eqb_term_upto_univ_napp eq (conv_pb_relb_gen pb eq leq) 
+                compare_global_instance_gen napp.
+
+  Definition eqb_termp_napp pb :=
+    eqb_termp_napp_gen pb (check_eqb_universe G) (check_leqb_universe G) 
+          (compare_global_instance Σ (check_eqb_universe G)).
 
     Lemma eq_universeP u u' :
     wf_universe Σ u ->
@@ -815,7 +853,7 @@ Section EqualityDec.
   Lemma leq_relP (pb : conv_pb) u u' :
     wf_universe Σ u ->
     wf_universe Σ u' ->
-    reflect (compare_universe pb Σ u u') (compare_universeb pb u u').
+    reflect (leq_rel pb Σ u u') (conv_pb_relb pb u u').
   Proof.
     destruct pb.
     - cbn.
@@ -922,17 +960,7 @@ Section EqualityDec.
     all: apply check_eqb_universe_refl.
   Qed.
 
-  Fixpoint eqb_ctx (Γ Δ : context) : bool :=
-    match Γ, Δ with
-    | [], [] => true
-    | {| decl_name := na1 ; decl_body := None ; decl_type := t1 |} :: Γ,
-      {| decl_name := na2 ; decl_body := None ; decl_type := t2 |} :: Δ =>
-      eqb_binder_annot na1 na2 && eqb_term t1 t2 && eqb_ctx Γ Δ
-    | {| decl_name := na1 ; decl_body := Some b1 ; decl_type := t1 |} :: Γ,
-      {| decl_name := na2 ; decl_body := Some b2 ; decl_type := t2 |} :: Δ =>
-      eqb_binder_annot na1 na2 && eqb_term b1 b2 && eqb_term t1 t2 && eqb_ctx Γ Δ
-    | _, _ => false
-    end.
+  Definition eqb_ctx := eqb_ctx_gen (check_eqb_universe G) (compare_global_instance Σ (check_eqb_universe G)).
 
   Lemma eqb_binder_annot_spec {A} na na' : eqb_binder_annot (A:=A) na na' -> eq_binder_annot (A:=A) na na'.
   Proof. case: eqb_annot_reflect => //. Qed.
@@ -966,7 +994,7 @@ Section EqualityDec.
     end.
 
   Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> compare_opt_term Conv Σ (global_ext_constraints Σ) t u.
+    : eqb_opt_term t u -> eq_opt_term false Σ (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn => //.
     apply eqb_term_spec; tea.
@@ -977,7 +1005,7 @@ Section EqualityDec.
     eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl Σ (global_ext_constraints Σ) d d'.
+    : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. rtoProp. apply eqb_opt_term_spec in H1.
@@ -990,7 +1018,7 @@ Section EqualityDec.
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
 
   Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context Σ (global_ext_constraints Σ) Γ Δ.
+    : eqb_context Γ Δ -> eq_context false Σ (global_ext_constraints Σ) Γ Δ.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.

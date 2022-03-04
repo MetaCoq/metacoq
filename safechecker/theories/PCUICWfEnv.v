@@ -58,6 +58,7 @@ Class abstract_env_struct {cf:checker_flags} (abstract_env_impl : Type) := {
   abstract_env_guard : abstract_env_impl -> FixCoFix -> context -> mfixpoint term -> bool;
   abstract_env_fixguard X := abstract_env_guard X Fix;
   abstract_env_cofixguard X := abstract_env_guard X CoFix;
+  abstract_env_universe : abstract_env_impl -> Universe.t -> bool;
   (* This part of the structure is here to state the correctness properties *)
   abstract_env_rel : abstract_env_impl -> global_env_ext -> Prop;
 }.
@@ -85,8 +86,8 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl : Type) (X : abstr
     lookup_env Σ c = abstract_env_lookup X c ;
   abstract_env_eq_correct X {Σ} (wfΣ : abstract_env_rel X Σ) u u' : check_eqb_universe (abstract_env_graph X wfΣ) u u' = abstract_env_eq X u u';
   abstract_env_leq_correct X {Σ} (wfΣ : abstract_env_rel X Σ) u u' : check_leqb_universe (abstract_env_graph X wfΣ) u u' = abstract_env_leq X u u';
-  abstract_env_compare_global_instance_correct X {Σ} (wfΣ : abstract_env_rel X Σ) leq ref n l l' : 
-    compare_global_instance Σ (check_eqb_universe (abstract_env_graph X wfΣ)) leq ref n l l' = 
+  abstract_env_compare_global_instance_correct X {Σ} (wfΣ : abstract_env_rel X Σ) leq ref n l l' :
+    compare_global_instance Σ (check_eqb_universe (abstract_env_graph X wfΣ)) leq ref n l l' =
     abstract_env_compare_global_instance X leq ref n l l';
   abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_rel X Σ) u : level_mem Σ u = abstract_env_level_mem X u;
   abstract_env_check_constraints_correct X {Σ} (wfΣ : abstract_env_rel X Σ) u : check_constraints (abstract_env_graph X wfΣ) u = abstract_env_check_constraints X u;
@@ -312,23 +313,23 @@ Program Definition optimized_abstract_env_prop {cf:checker_flags} :
 abstract_env_prop _ optimized_abstract_env_struct :=
    {| abstract_env_exists := fun Σ => sq (wf_env_ext_env Σ ; eq_refl); |}.
 Next Obligation. apply wf_env_ext_wf. Defined.
-Next Obligation. pose (wf_env_ext_wf X). sq. 
-  erewrite EnvMap.lookup_spec; try reflexivity. 
+Next Obligation. pose (wf_env_ext_wf X). sq.
+  erewrite EnvMap.lookup_spec; try reflexivity.
   1: apply wf_fresh_globals; eauto.
   1: apply wf_env_ext_map_repr. Qed.
-Next Obligation. cbn. 
+Next Obligation. cbn.
   pose proof (wf_env_ext_graph_wf X).
 Admitted.
 Next Obligation. Admitted.
 Next Obligation. cbn.
   erewrite compare_global_instance_proper; eauto.  intros.
   exact (optimized_abstract_env_prop_obligation_4 cf X _ eq_refl u u').
-Defined. 
+Defined.
 Next Obligation. eapply eq_true_iff_eq.
                  split; intros; eapply is_graph_of_uctx_levels; eauto;
                  eapply wf_env_ext_graph_wf. Qed.
 Next Obligation. unfold check_constraints.
   destruct gc_of_constraints; eauto.
-  unfold check_gc_constraints.  
+  unfold check_gc_constraints.
 Admitted.
 Next Obligation. apply fake_guard_correct. Defined.

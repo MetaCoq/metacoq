@@ -258,8 +258,6 @@ Proof.
   now move/andb_and: H => [].
 Qed.
 
-Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
-
 Lemma reflect_eq_context_IH {Σ equ lequ}
   {Re Rle : Universe.t -> Universe.t -> Prop}
   {gen_compare_global_instance : (Universe.t -> Universe.t -> Prop) -> global_reference -> nat -> list Level.t -> list Level.t -> bool }:
@@ -467,7 +465,6 @@ Proof.
     * now destruct (reflect_eq_ctx (pcontext pr) (pcontext pr')).
     * now destruct (r _ _ 0 X H (preturn pr')).
 Qed.
-
 
 Arguments eqb : simpl never.
 
@@ -915,7 +912,7 @@ Fixpoint eqb_ctx_gen equ gen_compare_global_instance
     | _, _ => false
     end.
 
-(** Checking ws_cumul_pb *)
+(** Checking equality *)
 
 Section EqualityDec.
   Context {cf : checker_flags}.
@@ -1141,7 +1138,7 @@ Section EqualityDec.
     end.
 
   Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> eq_opt_term false Σ (global_ext_constraints Σ) t u.
+    : eqb_opt_term t u -> compare_opt_term Conv Σ (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn => //.
     apply eqb_term_spec; tea.
@@ -1152,7 +1149,7 @@ Section EqualityDec.
     eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
+    : eqb_decl d d' -> eq_decl Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. rtoProp. apply eqb_opt_term_spec in H1.
@@ -1165,7 +1162,7 @@ Section EqualityDec.
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
 
   Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context false Σ (global_ext_constraints Σ) Γ Δ.
+    : eqb_context Γ Δ -> eq_context Σ (global_ext_constraints Σ) Γ Δ.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.

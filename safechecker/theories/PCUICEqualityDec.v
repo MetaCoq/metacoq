@@ -36,7 +36,7 @@ Proof.
   - assumption.
 Qed.
 
-(** ** Boolean of ws_cumul_pb **  *)
+(** ** Boolean of equality **  *)
 
 Definition compare_universe_variance (equ lequ : Universe.t -> Universe.t -> bool) v u u' :=
   match v with
@@ -157,12 +157,13 @@ Fixpoint eqb_term_upto_univ_napp
       eqb_binder_annot x.(dname) y.(dname)
     ) mfix mfix'
 
-  | tPrim p, tPrim p' => eqb p p'
+(*  | tPrim p, tPrim p' => eqb p p' *)
 
   | _, _ => false
   end.
 
-Notation eqb_term_upto_univ Σ eq leq := (eqb_term_upto_univ_napp Σ eq leq 0).
+Notation eqb_term_upto_univ eq leq gen_compare_global_instance := 
+  (eqb_term_upto_univ_napp eq leq gen_compare_global_instance 0).
 
 Ltac eqspec :=
   lazymatch goal with
@@ -183,7 +184,7 @@ Local Ltac ih :=
   repeat lazymatch goal with
   | ih : forall lequ Rle napp hle t' ht ht', reflectT (eq_term_upto_univ_napp _ _ _ napp ?t _) _,
     hle : forall u u' hu hu', reflect (?Rle u u') (?lequ u u')
-    |- context [ eqb_term_upto_univ _ _ ?lequ ?t ?t' ] =>
+    |- context [ eqb_term_upto_univ _ ?lequ _ ?t ?t' ] =>
     destruct (ih lequ Rle 0 hle t') ; nodec ; subst
   end.
 
@@ -254,8 +255,6 @@ Proof.
   now move/andb_and: H => [].
 Qed.
 
-Lemma reflect_eq_context_IH {Σ equ lequ} {Re Rle : Universe.t -> Universe.t -> Prop} :
- 
 Lemma reflect_eq_context_IH {Σ equ lequ} 
   {Re Rle : Universe.t -> Universe.t -> Prop} 
   {gen_compare_global_instance : (Universe.t -> Universe.t -> Prop) -> global_reference -> nat -> list Level.t -> list Level.t -> bool }:
@@ -304,7 +303,6 @@ Proof.
       destruct (r equ Re 0 hRe ty') => //.
       now constructor.
 Qed.
-
 
 Definition eqb_univ_reflect : forall u u' : Universe.t, reflect (u = u') (eqb u u').
 Proof.
@@ -447,10 +445,9 @@ Proof.
     * now destruct (r _ _ 0 X (preturn pr')).
 Qed.
 
-
 Arguments eqb : simpl never.
 
-Lemma reflect_R_global_instance Σ equ lequ (p : Universe.t -> bool)
+Lemma reflect_R_global_instance Σ equ lequ  (p : Universe.t -> bool)
   (Re Rle : Universe.t -> Universe.t -> Prop) gr napp ui ui' :
   (forall u u', p u -> p u' -> reflect (Re u u') (equ u u')) ->
   (forall u u', p u -> p u' -> reflect (Rle u u') (lequ u u')) ->
@@ -501,7 +498,7 @@ Lemma reflect_eq_term_upto_univ Σ equ lequ
     on_universes p q t ->
     on_universes p q t' ->
     reflectT (eq_term_upto_univ_napp Σ Re Rle napp t t')
-             (eqb_term_upto_univ_napp Σ equ lequ napp t t').
+             (eqb_term_upto_univ_napp equ lequ (compare_global_instance Σ equ) napp t t').
 Proof.
   intros he hle t t' ht ht'.
   induction t in t', napp, lequ, Rle, hle, ht, ht' |- * using term_forall_list_ind.
@@ -528,15 +525,15 @@ Proof.
       * move: ht => /= /andP [? ?].
         move: ht' => /= /andP [? ?].
         destruct (p0 _ _ 0 he t) => //.
-        -- destruct (IHX l0) => //.
-           ++ constructor. constructor. constructor ; try assumption.
+        -- cbn.  destruct (IHX l0) => //.
+           ++ compute. constructor. constructor. constructor ; try assumption.
               inversion e0. subst. assumption.
            ++ constructor. intro bot. inversion bot. subst.
               inversion X0. subst.
               apply f. constructor. assumption.
         -- constructor. intro bot. apply f.
            inversion bot. subst. inversion X0. subst. assumption.
-  - cbn - [eqb]. eqspecs. equspec equ he. equspec lequ hle.
+  - cbn - [eqb]. equspec lequ hle.
     all: auto.
     ih.
     constructor. constructor. assumption.
@@ -716,7 +713,7 @@ Proof.
         constructor. constructor. constructor ; try easy.
         now inversion e3.
 
-  (* - cbn - [eqb]. eqspecs. do 2 constructor. *)
+(*  - cbn - [eqb]. eqspecs. do 2 constructor. *)
 Qed.
 
 Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp:
@@ -724,7 +721,7 @@ Lemma eqb_term_upto_univ_impl (equ lequ : _ -> _ -> bool) Σ Re Rle napp:
   RelationClasses.subrelation lequ Rle ->
   RelationClasses.subrelation equ Rle ->
   forall t t',
-    eqb_term_upto_univ_napp Σ equ lequ napp t t' ->
+    eqb_term_upto_univ_napp equ lequ (compare_global_instance Σ equ) napp t t' ->
     eq_term_upto_univ_napp Σ Re Rle napp t t'.
 Proof.
   intros t t' he hle heqle.
@@ -754,7 +751,7 @@ Lemma eqb_term_upto_univ_refl :
   forall Σ (eqb leqb : Universe.t -> Universe.t -> bool) napp t,
     (forall u, eqb u u) ->
     (forall u, leqb u u) ->
-    eqb_term_upto_univ_napp Σ eqb leqb napp t t.
+    eqb_term_upto_univ_napp eqb leqb (compare_global_instance Σ eqb) napp t t.
 Proof.
   intros Σ eqb leqb napp t eqb_refl leqb_refl.
   case: (reflect_eq_term_upto_univ Σ eqb leqb xpredT (fun _ => xpredT) eqb leqb napp _ _ t t) => //.
@@ -778,7 +775,7 @@ Fixpoint eqb_ctx_gen equ gen_compare_global_instance
     | _, _ => false
     end.
 
-(** Checking ws_cumul_pb *)
+(** Checking equality *)
 
 Section EqualityDec.
   Context {cf : checker_flags}.
@@ -849,7 +846,7 @@ Section EqualityDec.
       + now eapply wf_ext_global_uctx_invariants.
       + now eapply global_ext_uctx_consistent.
   Qed.
-
+(*
   Lemma leq_relP (pb : conv_pb) u u' :
     wf_universe Σ u ->
     wf_universe Σ u' ->
@@ -860,7 +857,7 @@ Section EqualityDec.
       now apply eq_universeP.
     - cbn.
       now apply leq_universeP.
-  Qed.
+  Qed.*)
 
   Lemma reflect_eqb_termp_napp pb napp t u :
     wf_universes Σ t ->
@@ -994,7 +991,7 @@ Section EqualityDec.
     end.
 
   Lemma eqb_opt_term_spec t u
-    : eqb_opt_term t u -> eq_opt_term false Σ (global_ext_constraints Σ) t u.
+    : eqb_opt_term t u -> compare_opt_term Conv Σ (global_ext_constraints Σ) t u.
   Proof.
     destruct t, u; try discriminate; cbn => //.
     apply eqb_term_spec; tea.
@@ -1005,7 +1002,7 @@ Section EqualityDec.
     eqb_opt_term d.(decl_body) d'.(decl_body) && eqb_term d.(decl_type) d'.(decl_type).
 
   Lemma eqb_decl_spec d d'
-    : eqb_decl d d' -> eq_decl false Σ (global_ext_constraints Σ) d d'.
+    : eqb_decl d d' -> eq_decl Σ (global_ext_constraints Σ) d d'.
   Proof.
     unfold eqb_decl, eq_decl.
     intro H. rtoProp. apply eqb_opt_term_spec in H1.
@@ -1018,7 +1015,7 @@ Section EqualityDec.
   Definition eqb_context (Γ Δ : context) := forallb2 eqb_decl Γ Δ.
 
   Lemma eqb_context_spec Γ Δ
-    : eqb_context Γ Δ -> eq_context false Σ (global_ext_constraints Σ) Γ Δ.
+    : eqb_context Γ Δ -> eq_context Σ (global_ext_constraints Σ) Γ Δ.
   Proof.
     unfold eqb_context, eq_context.
     intro HH. apply forallb2_All2 in HH.

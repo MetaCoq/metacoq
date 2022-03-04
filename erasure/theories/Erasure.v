@@ -116,6 +116,7 @@ Program Definition optimize_prop_discr_optimization : self_transform eprogram EA
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v
     |}.
+
 Next Obligation.
   intros [Σ t] [cle clt].
   cbn in *. split.

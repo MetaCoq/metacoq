@@ -118,13 +118,46 @@ Proof.
   rewrite (decompose_app_rec_size t []); cbn. lia.
 Qed.
 
-Lemma decompose_app_app t u f l : decompose_app (tApp t u) = (f, l) -> l <> [].
+(* We redefine these lemmas locally so they can be used to compute a spine view in Coq itself *)
+Local Lemma decompose_app_rec_inv {t l' f l} :
+  decompose_app_rec t l' = (f, l) ->
+  mkApps t l' = mkApps f l.
+Proof.
+  induction t in f, l', l |- *; try intros [= <- <-]; try reflexivity.
+  simpl. apply/IHt1.
+Defined.
+
+Local Lemma decompose_app_inv {t f l} :
+  decompose_app t = (f, l) -> t = mkApps f l.
+Proof. by apply/decompose_app_rec_inv. Defined.
+
+Local Lemma decompose_app_rec_notApp :
+  forall t l u l',
+    decompose_app_rec t l = (u, l') ->
+    ~~ isApp u.
+Proof.
+  intros t l u l' e.
+  induction t in l, u, l', e |- *.
+  all: try (cbn in e ; inversion e ; reflexivity).
+  cbn in e. eapply IHt1. eassumption.
+Defined.
+
+Local Lemma decompose_app_notApp :
+  forall t u l,
+    decompose_app t = (u, l) ->
+    ~~ isApp u.
+Proof.
+  intros t u l e.
+  eapply decompose_app_rec_notApp. eassumption.
+Defined.
+
+Local Lemma decompose_app_app t u f l : decompose_app (tApp t u) = (f, l) -> l <> [].
 Proof.
   intros da.
   pose proof (decompose_app_inv da).
   intros ->. cbn in H. subst f.
   now move: (decompose_app_notApp _ _ _ da).
-Qed.
+Defined.
 
 Lemma size_mkApps_f {f l} (Hf : ~~ isApp f) (Hl : l <> []) : size f < size (mkApps f l).
 Proof.
@@ -215,6 +248,47 @@ Section MkApps_rec.
   Qed.
 
   End MkApps_rec.
+
+  Section MkApps_case.
+  Context {P : term -> Type}.
+
+  Context (pbox : P tBox)
+    (prel : forall n : nat, P (tRel n))
+    (pvar : forall i : ident, P (tVar i))
+    (pevar : forall (n : nat) (l : list term), P (tEvar n l))
+    (plam : forall (n : name) (t : term), P (tLambda n t))
+    (plet : forall (n : name) (t : term), forall t0 : term, P (tLetIn n t t0))
+    (papp : forall t u, ~~ isApp t -> u <> nil -> P (mkApps t u))
+    (pconst : forall s, P (tConst s))
+    (pconstruct : forall (i : inductive) (n : nat), P (tConstruct i n))
+    (pcase : forall (p : inductive * nat) (t : term) (l : list (list name * term)), P (tCase p t l))
+    (pproj : forall (s : projection) (t : term), P (tProj s t))
+    (pfix : forall (m : mfixpoint term) (n : nat), P (tFix m n))
+    (pcofix : forall (m : mfixpoint term) (n : nat), P (tCoFix m n)).
+
+  Import EqNotations.
+  
+  Equations case (t : term) : P t :=
+    | tRel n => prel n
+    | tVar n => pvar n
+    | tEvar n l => pevar n l
+    | tBox => pbox
+    | tLambda n1 t => plam n1 t
+    | tLetIn n2 t0 t1 => plet n2 t0 t1
+    | tApp t2 t3 with inspect (decompose_app (tApp t2 t3)) := 
+      { | exist _ (t, l) da := 
+        let napp := decompose_app_notApp _ _ _ da in
+        let nonnil := decompose_app_app _ _ _ _ da in
+        rew [P] (eq_sym (decompose_app_inv da)) in papp t l napp nonnil }
+    | tConst k => pconst k
+    | tConstruct i n => pconstruct i n
+    | tCase ina c brs => pcase ina c brs
+    | tProj p c => pproj p c
+    | tFix mfix idx => pfix mfix idx
+    | tCoFix mfix idx => pcofix mfix idx.
+
+  End MkApps_case.
+
 End MkAppsInd.
 
 (*Equations? head (t : term) : term 

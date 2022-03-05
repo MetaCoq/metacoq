@@ -370,7 +370,7 @@ Inductive T : Type :=
   | toto : Type -> T.
 MetaCoq Quote Recursively Definition TT := T.
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition t := (tSort (Universe.make (Level.Level "Top.20000"))).
 MetaCoq Unquote Definition t' := (tSort fresh_universe).
 MetaCoq Unquote Definition myProp := (tSort (Universe.lProp)).

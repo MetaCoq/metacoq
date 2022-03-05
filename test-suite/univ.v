@@ -33,16 +33,16 @@ Print univ_foo_back.
 Fail MetaCoq Unquote Definition t1 := (tSort (Universe.make (Level.Level "Top.400"))).
 (* Fails with "Level Top.<something> not a declared level and you are in Strict Unquote Universe Mode." *)
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition t2 := (tSort fresh_universe).
 MetaCoq Unquote Definition t3 := (tSort (Universe.make (Level.Level "Top.400"))).
 
 Monomorphic Universe i j.
 
-Set Strict Unquote Universe Mode.
+Set MetaCoq Strict Unquote Universe Mode.
 MetaCoq Test Quote (Type@{j} -> Type@{i}).
 MetaCoq Unquote Definition T'' := (tSort (Universe.make (Level.Level "j"))).
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 
 
 Polymorphic Definition pidentity {A : Type} (a : A) := a.
@@ -195,7 +195,7 @@ MetaCoq Unquote Definition bla := qtest.
 Definition nNamedR (s : string) := mkBindAnn (nNamed s) Relevant.
 Definition nAnonR := mkBindAnn nAnon Relevant.
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition bla' := (tLambda (nNamedR "T") (tSort (Universe.make (Level.Level "Top.46"))) (tLambda (nNamedR "T2") (tSort (Universe.make (Level.Level "Top.477"))) (tProd nAnonR (tRel 1) (tRel 1)))).
 
 Set Printing Universes.

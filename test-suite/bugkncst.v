@@ -19,8 +19,6 @@ Require Import Coq.Bool.Bool.
 Require Import MetaCoq.Template.Loader.
 Require Import MetaCoq.Template.All.
 
-Unset Template Cast Propositions.
-
 From MetaCoq.Template Require Import Pretty.
 (* Use template-coq to make a [program] from function defined above *)
 Time MetaCoq Quote Recursively Definition p_Plus1 := Plus1.

@@ -3,7 +3,7 @@ From MetaCoq.Template Require Import utils All Checker.
 From MetaCoq.Translations Require Import translation_utils MiniHoTT.
 Import MCMonadNotation.
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 
 Local Set Primitive Projections.
 Record prod A B := pair { π1 : A ; π2 : B }.

@@ -126,7 +126,7 @@ Defined.
 
 MetaCoq Quote Definition tm := ((fun A (x:A) => x) (Type -> Type) (fun x => x)).
 
-Unset Strict Unquote Universe Mode.
+Unset MetaCoq Strict Unquote Universe Mode.
 
 MetaCoq Run (let tm' := tsl_rec1 [] tm in
                      print_nf tm' ;;

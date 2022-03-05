@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	  "settings": {
+        "coqtop.args": [
+            "-I", "template-coq/src",
+            "-R", "template-coq/theories", "MetaCoq.Template",
+            "-R", "checker/theories", "MetaCoq.Checker",
+            "-R", "pcuic/theories", "MetaCoq.PCUIC",
+            "-R", "safechecker/theories", "MetaCoq.SafeChecker",
+            "-R", "erasure/theories", "MetaCoq.Erasure",
+            "-R", "translations", "MetaCoq.Translations",
+            "-R", "examples", "MetaCoq.Examples",
+            "-R", "test-suite/plugin-demo/theories", "MetaCoq.ExtractedPluginDemo"        
+        ]
+    }
+}

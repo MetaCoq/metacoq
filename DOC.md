@@ -78,12 +78,12 @@ The development uses three main hint databases:
 ## Options
 
 
-`Set / Unset Strict Unquote Universe Mode`. When this mode is on,
+`Set / Unset MetaCoq Strict Unquote Universe Mode`. When this mode is on,
 the unquoting of a universe level fails if this level does not exists.
 Otherwise the level is added to the current context. It is on by default.
 
 There is also an "opaque" universe `fresh_universe` which is unquoted to
-a fresh level when `Strict Unquote Universe Mode` is off.
+a fresh level when `MetaCoq Strict Unquote Universe Mode` is off.
 
 
 

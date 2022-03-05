@@ -13,9 +13,9 @@ DecidableType
 FMapInterface
 FMapAVL
 FMapFacts
+EnvMap
 
 WcbvEval
-
 Classes0
 Logic1
 Relation
@@ -31,12 +31,12 @@ PCUICWfUniverses
 PCUICNormal
 PCUICPosition
 PCUICPretty
+PCUICWcbvEval
 TemplateToPCUIC
 PCUICExpandLets
 PCUICExpandLetsCorrectness
 
 PCUICErrors
-PCUICEnvMap
 PCUICWfEnv
 PCUICUnivSubst
 PCUICSafeReduce
@@ -52,6 +52,7 @@ EWcbvEval
 ESpineView
 EPretty
 Extract
+EEtaExpanded
 ERemoveParams
 ErasureFunction
 EOptimizePropDiscr

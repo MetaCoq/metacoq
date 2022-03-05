@@ -1,11 +1,4 @@
 open Pp
-
-let time prefix f x =
-  let start = Unix.gettimeofday () in
-  let res = f x in
-  let stop = Unix.gettimeofday () in
-  let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
-  res
   
 let contrib_name = "template-coq"
 
@@ -16,16 +9,52 @@ let gen_constant_in_modules s =
   )
   (* lazy (Universes.constr_of_global (Coqlib.gen_reference_in_modules locstr dirs s)) *)
 
+(* This allows to load template_plugin and the extractable plugin at the same time 
+  while have option settings apply to both *)
+  let timing_opt =
+  let open Goptions in
+  let key = ["MetaCoq"; "Timing"] in
+  let tables = get_tables () in
+  try 
+    let _ = OptionMap.find key tables in
+    fun () -> 
+      let tables = get_tables () in
+      let opt = OptionMap.find key tables in
+      match opt.opt_value with
+      | BoolValue b -> b
+      | _ -> assert false
+  with Not_found ->
+    declare_bool_option_and_ref ~depr:false ~key ~value:false
 
-let opt_debug = ref false
+let time prefix f x =
+  if timing_opt () then 
+    let start = Unix.gettimeofday () in
+    let res = f x in
+    let stop = Unix.gettimeofday () in
+    let () = Feedback.msg_info Pp.(prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
+    res
+  else f x
+  
+let debug_opt =
+  let open Goptions in
+  let key = ["MetaCoq"; "Debug"] in
+  let tables = get_tables () in
+  try 
+    let _ = OptionMap.find key tables in
+    fun () -> 
+      let tables = get_tables () in
+      let opt = OptionMap.find key tables in
+      match opt.opt_value with
+      | BoolValue b -> b
+      | _ -> assert false
+  with Not_found ->
+  declare_bool_option_and_ref ~depr:false ~key ~value:false
 
 let debug (m : unit ->Pp.t) =
-  if !opt_debug then
+  if debug_opt () then
     Feedback.(msg_debug (m ()))
   else
     ()
-
-
 type ('a,'b) sum =
   Left of 'a | Right of 'b
 

@@ -469,3 +469,5 @@ erasure/src/eWcbvEval.ml
 erasure/src/eWcbvEval.mli
 erasure/src/wcbvEval.ml
 erasure/src/wcbvEval.mli
+erasure/src/envMap.ml
+erasure/src/envMap.mli

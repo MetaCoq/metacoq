@@ -15,6 +15,9 @@ Unset MetaCoq Debug.
 Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.
 
+Definition test_fast (p : Ast.Env.program) : string :=
+  erase_fast_and_print_template_program p.
+  
 MetaCoq Quote Recursively Definition zero := 0.
 
 Definition zerocst := Eval lazy in test zero.
@@ -41,6 +44,11 @@ Definition erase {A} (a : A) : TemplateMonad unit :=
   s <- tmEval lazy (erase_and_print_template_program aq) ;;
   tmMsg s.
 
+Definition erase_fast {A} (a : A) : TemplateMonad unit :=
+  aq <- tmQuoteRec a ;;  
+  s <- tmEval lazy (erase_fast_and_print_template_program aq) ;;
+  tmMsg s.
+
 MetaCoq Run (erase 0).
 MetaCoq Run (tmEval hnf idnat >>= erase).
 MetaCoq Run (tmEval hnf singlelim >>= erase).
@@ -56,7 +64,11 @@ Definition v01 : Vector.t nat 2 :=
 Definition v23 : Vector.t nat 2 :=
   (Vector.cons nat 2 1 (Vector.cons nat 3 0 (Vector.nil nat))).
 Definition vplus0123 := (vplus v01 v23).
-MetaCoq Run (tmEval hnf vplus0123 >>= erase).
+
+Set MetaCoq Timing.
+
+Time MetaCoq Run (tmEval hnf vplus0123 >>= erase).
+Time MetaCoq Run (tmEval hnf vplus0123 >>= erase_fast).
 
 (** Ackermann **)
 Fixpoint ack (n m:nat) {struct n} : nat :=
@@ -305,9 +317,10 @@ End HetList.
 Require Import Coq.Arith.Compare_dec.
 Require Import Coq.Arith.PeanoNat.
 Require Import Coq.Arith.Peano_dec.
-Require Import Arith.
+Require Import Arith Wf.
 Program Fixpoint provedCopy (n:nat) {wf lt n} : nat :=
   match n with 0 => 0 | S k => S (provedCopy k) end.
+Next Obligation. eapply measure_wf, lt_wf. Qed. 
 Print Assumptions provedCopy.
 (* MetaCoq Quote Recursively Definition pCopy := provedCopy. program *)
 
@@ -319,7 +332,7 @@ MetaCoq Quote Recursively Definition cbv_provedCopyx :=
 Definition ans_provedCopyx :=
   Eval lazy in (test cbv_provedCopyx).
 MetaCoq Quote Recursively Definition p_provedCopyx := provedCopyx. (* program *)
-Time Definition P_provedCopyx := Eval lazy in (test cbv_provedCopyx).
+Time Definition P_provedCopyx := Eval lazy in (test_fast cbv_provedCopyx).
 (* We don't run this one every time as it is really expensive *)
 (*Time Definition P_provedCopyxvm := Eval vm_compute in (test p_provedCopyx).*)
 

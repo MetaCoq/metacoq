@@ -8,6 +8,7 @@ open Pp
 open PeanoNat.Nat
 open Datatypes
 open PCUICSafeChecker
+open Tm_util
 
 let bytes_of_list l =
   let bytes = Bytes.create (List.length l) in
@@ -22,15 +23,8 @@ let pr_char_list l =
   (* We allow utf8 encoding *)
   str (Bytes.to_string (bytes_of_list l))
 
-let time prefix f x =
-  let start = Unix.gettimeofday () in
-  let res = f x in
-  let stop = Unix.gettimeofday () in
-  let () = Feedback.msg_debug (prefix ++ str " executed in: " ++ Pp.real (stop -. start) ++ str "s") in
-  res
-
 let check env evm poly (c, ustate) =
-  Feedback.msg_debug (str"Quoting");
+  debug (fun () -> str"Quoting");
   let uctx = Evd.universe_context_set evm in
   let env = if poly then env else Environ.push_context_set ~strict:true uctx env in
   let prog = time (str"Quoting") (Ast_quoter.quote_term_rec true env) (EConstr.to_constr evm c) in
@@ -87,7 +81,7 @@ let retypecheck_term_dependencies env gr =
   let process_object k _ty =
     let open Printer in
     match k with
-    | Variable id -> Feedback.msg_debug (str "Ignoring variable " ++ Names.Id.print id)
+    | Variable id -> debug (fun () -> str "Ignoring variable " ++ Names.Id.print id)
     | Axiom (ax, _) ->
       begin match ax with
         | Constant c -> typecheck_constant c

@@ -524,7 +524,7 @@ Proof.
   repeat rewrite <- ap_compose.
   cbn. symmetry. eapply concat. refine (ap_pp ((f ∘ g) ∘f) _ _)^.
   rewrite inv_inv. reflexivity.
-Qed.
+Defined.
 
 Definition isequiv_adjointify {A B : Type} (f : A -> B) (g : B -> A)
            (issect : g∘ f == id) (isretr : f  ∘ g == id)  : IsEquiv f
@@ -537,6 +537,7 @@ MetaCoq SafeCheck @issect'.
 MetaCoq SafeCheck @ap_pp.
 MetaCoq CoqCheck ap_pp.
 
+Set MetaCoq Timing.
 (* FIXME TODO Private polymorphic universes *)
 MetaCoq SafeCheck @isequiv_adjointify.
 MetaCoq CoqCheck isequiv_adjointify.

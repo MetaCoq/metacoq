@@ -23,8 +23,8 @@ From MetaCoq.PCUIC Require Import PCUICWeakeningEnvConv.
 From MetaCoq.PCUIC Require Import PCUICWeakeningEnvTyp.
 From MetaCoq.PCUIC Require Import PCUICWellScopedCumulativity.
 From MetaCoq.PCUIC Require Import PCUICSN.
-From MetaCoq.Template Require Import config utils.
-From MetaCoq.SafeChecker Require Import PCUICEnvMap PCUICWfEnv PCUICSafeReduce.
+From MetaCoq.Template Require Import config utils EnvMap.
+From MetaCoq.SafeChecker Require Import PCUICWfEnv PCUICSafeReduce.
 
 Local Opaque hnf.
 
@@ -112,7 +112,7 @@ Proof.
     rewrite nth_nth_error.
     destruct nth_error eqn:nth; auto.
     eapply nth_error_forall in nth; eauto.
-Qed.
+Qed. 
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 

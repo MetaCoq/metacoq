@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import config utils uGraph.
+From MetaCoq.Template Require Import config utils uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics
      PCUICLiftSubst PCUICUnivSubst PCUICSigmaCalculus PCUICTyping PCUICNormal PCUICSR
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
@@ -2111,7 +2111,7 @@ Section CheckEnv.
 
   Obligation Tactic := Program.Tactics.program_simpl.
   
-  Import PCUICEnvMap.
+  Import EnvMap.
 
   Definition global_uctx_univs (univs : ContextSet.t) :=
     (global_levels univs, ContextSet.constraints univs).
@@ -2186,7 +2186,7 @@ Section CheckEnv.
       Σ''.(wf_env_graph) = G }) with
     | [] => fun eq => 
       ret (exist {| wf_env_env := {| universes := univs; declarations := [] |}; 
-          wf_env_map := PCUICEnvMap.EnvMap.empty;
+          wf_env_map := EnvMap.empty;
           wf_env_graph := G |} _)
     | d :: Σ => fun eq =>
         bind (m:=EnvCheck) (check_wf_decls univs G wfG Σ) (fun wfΣ =>
@@ -2216,6 +2216,7 @@ Section CheckEnv.
     unsquash_wf_env; sq.
     have [wfΣ'] := wfΣ.(wf_env_wf).
     cbn. apply EnvMap.repr_add; eauto.
+    now eapply wf_fresh_globals.
     rewrite e //.
     apply wfΣ.
   Qed.
@@ -2247,6 +2248,7 @@ Section CheckEnv.
     unsquash_wf_env; sq.
     have [wfΣ'] := wfΣ.(wf_env_wf).
     eapply EnvMap.repr_add; eauto.
+    now eapply wf_fresh_globals.
     rewrite e //. apply wfΣ.
   Qed.
   Next Obligation.
@@ -2323,7 +2325,7 @@ Section CheckEnv.
     else fun eq => raise (check_wf_env_bool_spec2 Σ Γ wfΓ t T eq)) eq_refl.
 
   Next Obligation.
-    simpl; intros. exact (check_wf_env_bool_spec Σ Γ wfΓ t T eq).
+    simpl; intros. exact (check_wf_env_bool_spec Σ Γ wfΓ t0 T eq).
   Qed.
 
   Obligation Tactic := Program.Tactics.program_simpl.

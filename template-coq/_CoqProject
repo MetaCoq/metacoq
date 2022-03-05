@@ -39,6 +39,7 @@ theories/AstUtils.v
 theories/Reflect.v
 theories/ReflectAst.v
 theories/Kernames.v
+theories/EnvMap.v
 theories/Induction.v
 theories/EnvironmentTyping.v
 theories/WfAst.v
@@ -52,6 +53,7 @@ theories/TypingWf.v
 theories/Normal.v
 theories/WcbvEval.v
 theories/Checker.v
+theories/EtaExpand.v
 
 # The Template monad
 theories/TemplateMonad.v

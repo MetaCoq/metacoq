@@ -149,6 +149,7 @@ Qed.
 
 Section Wcbv.
   Context (Σ : global_env).
+
   (* The local context is empty: we are only doing weak reductions *)
 
   Inductive eval : term -> term -> Type :=
@@ -205,16 +206,18 @@ Section Wcbv.
       eval (tApp f a) (tApp (mkApps (tFix mfix idx) argsv) av)
 
   (** CoFix-case unfolding *)
-  | red_cofix_case ip mfix idx p args narg fn brs res :
+  | eval_cofix_case ip mfix idx p discr args narg fn brs res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
+      eval discr (mkApps (tCoFix mfix idx) args) ->
       eval (tCase ip p (mkApps fn args) brs) res ->
-      eval (tCase ip p (mkApps (tCoFix mfix idx) args) brs) res
+      eval (tCase ip p discr brs) res
 
   (** CoFix-proj unfolding *)
-  | red_cofix_proj p mfix idx args narg fn res :
+  | eval_cofix_proj p mfix idx discr args narg fn res :
       cunfold_cofix mfix idx = Some (narg, fn) ->
+      eval discr (mkApps (tCoFix mfix idx) args) ->
       eval (tProj p (mkApps fn args)) res ->
-      eval (tProj p (mkApps (tCoFix mfix idx) args)) res
+      eval (tProj p discr) res
 
   (** Non redex-producing heads applied to values are values *)
   | eval_app_cong f f' a a' :
@@ -256,6 +259,55 @@ Section Wcbv.
       All value args ->
       isStuckFix f args ->
       value (mkApps f args)
+  .
+
+  Inductive red1 : term -> term -> Type :=
+  | red_app_left a a' b :
+     red1 a a' -> red1 (tApp a b) (tApp a' b)
+  | red_app_right a b b' :
+     value a -> red1 b b' -> red1 (tApp a b) (tApp a b')
+  | red_beta na t b a :
+     value a -> red1 (tApp (tLambda na t b) a) (csubst a 0 b)
+  | red_let_in b0 b0' na t b1 :
+      red1 b0 b0' -> red1 (tLetIn na b0 t b1) (tLetIn na b0' t b1)
+  | red_zeta b0 na t b1 :
+      value b0 -> red1 (tLetIn na b0 t b1) (csubst b0 0 b1)
+  | red_delta decl body c u (isdecl : declared_constant Σ c decl) :
+     decl.(cst_body) = Some body ->
+     red1 (tConst c u) (subst_instance u body)
+  | red_case_in ci p discr discr' brs :
+     red1 discr discr' -> red1 (tCase ci p discr brs) (tCase ci p discr' brs)
+  | red_iota ci c mdecl idecl cdecl u args p brs br :  
+    nth_error brs c = Some br ->
+    declared_constructor Σ (ci.(ci_ind), c) mdecl idecl cdecl ->
+    #|args| = (ci.(ci_npar) + context_assumptions br.(bcontext))%nat ->
+    All value args ->
+    red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
+  | red_proj_in discr discr' i pars arg : 
+    red1 discr discr' -> red1 (tProj (i, pars, arg) discr)  (tProj (i, pars, arg) discr')
+  | red_proj i pars arg args u a :
+    nth_error args (pars + arg) = Some a ->
+    All value args ->
+    red1 (tProj (i, pars, arg) (mkApps (tConstruct i 0 u) args)) a
+  | red_fix mfix idx argsv a fn :
+    All value argsv ->
+    value a ->
+    unfold_fix mfix idx = Some (#|argsv|, fn) ->
+    isConstruct_app a = true ->
+    red1 (tApp ((mkApps (tFix mfix idx) argsv)) a) (tApp (mkApps fn argsv) a)
+  | red_cofix_proj : forall (p : projection) (mfix : mfixpoint term)
+                       (idx : nat) (args : list term) 
+                       (narg : nat) (fn : term),
+                     cunfold_cofix mfix idx = Some (narg, fn) ->
+                     All value args ->
+                     red1 (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args))
+  | red_cofix_case : forall (ip : case_info) (mfix : mfixpoint term)
+                       (idx : nat) (p : predicate term) 
+                       (args : list term) (narg : nat) 
+                       (fn : term) (brs : list (branch term)),
+                     cunfold_cofix mfix idx = Some (narg, fn) ->
+                     All value args ->
+                     red1 (tCase ip p (mkApps (tCoFix mfix idx) args) brs) (tCase ip p (mkApps fn args) brs)
   .
 
   Lemma value_values_ind : forall P : term -> Type,
@@ -542,6 +594,31 @@ Section Wcbv.
     f_equal. rewrite lift_closed // closed_subst //.
   Qed.
 
+  Lemma closed_cofix_substl_subst_eq {mfix idx d} : 
+    closed (tCoFix mfix idx) ->
+    nth_error mfix idx = Some d ->
+    subst0 (cofix_subst mfix) (dbody d) = substl (cofix_subst mfix) (dbody d).
+  Proof.  
+    move=> /= Hf; f_equal; f_equal.
+    have clfix : All (closedn 0) (cofix_subst mfix).
+    { clear idx.
+      solve_all.
+      unfold cofix_subst.
+      move: #|mfix| => n.
+      induction n. constructor.
+      constructor; auto.
+      simpl. solve_all. }
+    move: (cofix_subst mfix) (dbody d) clfix.
+    clear; induction cofix_subst => Hfix /= //.
+    now rewrite subst_empty.
+    move=> Ha; depelim Ha.
+    simpl in *.
+    intros hnth.
+    rewrite -IHcofix_subst => //.
+    rewrite (subst_app_decomp [_]). simpl.
+    f_equal. rewrite lift_closed // closed_subst //.
+  Qed.
+
   Lemma closed_unfold_fix_cunfold_eq mfix idx : 
     closed (tFix mfix idx) ->
     unfold_fix mfix idx = cunfold_fix mfix idx.
@@ -621,17 +698,12 @@ Section Wcbv.
     - apply andb_true_iff.
       split; [|easy].
       solve_all.
-    - eapply IHev. rewrite closedn_mkApps.
-      rewrite closedn_mkApps in Hc'. move/andP: Hc' => [Hfix Hargs].
-      repeat (apply/andP; split; auto). 
+    - eapply IHev2. solve_all. rewrite !closedn_mkApps in H0 |- *. solve_all.
       rewrite -closed_unfold_cofix_cunfold_eq in e => //.
       eapply closed_unfold_cofix in e; eauto.
-    - eapply IHev. rewrite closedn_mkApps in Hc *.
-      move/andP: Hc => [Hfix Hargs].
-      rewrite closedn_mkApps Hargs.
+    - eapply IHev2. solve_all. rewrite !closedn_mkApps in H0 |- *. solve_all.
       rewrite -closed_unfold_cofix_cunfold_eq in e => //.
       eapply closed_unfold_cofix in e; eauto.
-      now rewrite e.
     - apply/andP; split; auto.
   Qed.
 
@@ -755,8 +827,6 @@ Section Wcbv.
         assert (e0 = e2) as -> by now apply uip.
         assert (d = d0) as -> by apply declared_constructor_unique.
         reflexivity.
-      + eapply eval_mkApps_tCoFix in ev1 as H.
-        destruct H as (? & ?). solve_discr.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
@@ -765,8 +835,6 @@ Section Wcbv.
         pose proof e0. rewrite e in H. noconf H.
         specialize (IHev2 _ ev'2); noconf IHev2.
         now assert (e = e0) as -> by now apply uip.
-      + apply eval_mkApps_tCoFix in ev1 as H.
-        destruct H as (? & ?); solve_discr.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
@@ -810,28 +878,21 @@ Section Wcbv.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
     - depelim ev'; try go.
-      * eapply eval_mkApps_tCoFix in ev'1 as H.
-        destruct H as (? & ?). solve_discr.
-      * apply mkApps_eq_inj in e' as H'; auto.
-        destruct H' as (H' & <-).
-        noconf H'.
-        assert (narg0 = narg) as -> by congruence.
-        assert (fn0 = fn) as -> by congruence.
-        assert (e' = eq_refl) as -> by now apply uip.
-        assert (e0 = e) as -> by now apply uip.
-        cbn in *; subst.
-        now specialize (IHev _ ev'); noconf IHev.
-      - depelim ev'; try go.
-        + cbn in *. exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-        + apply mkApps_eq_inj in e1 as H'; auto.
-          destruct H' as (H' & <-).
-          noconf H'.
-          assert (narg0 = narg) as -> by congruence.
-          assert (fn0 = fn) as -> by congruence.
-          assert (e1 = eq_refl) as -> by now apply uip.
-          assert (e0 = e) as -> by now apply uip.
-          cbn in *; subst.
-          now specialize (IHev _ ev'); noconf IHev.
+      specialize (IHev1 _ ev'1).
+      pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+      noconf H. noconf IHev1.
+      assert (narg0 = narg) as -> by congruence.
+      assert (fn0 = fn) as -> by congruence.
+      specialize (IHev2 _ ev'2); noconf IHev2.
+      now assert (e0 = e) as -> by now apply uip.
+    - depelim ev'; try go.
+      specialize (IHev1 _ ev'1).
+      pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+      noconf H. noconf IHev1.
+      assert (narg0 = narg) as -> by congruence.
+      assert (fn0 = fn) as -> by congruence.
+      specialize (IHev2 _ ev'2); noconf IHev2.
+      now assert (e0 = e) as -> by now apply uip.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         exfalso.

@@ -20,6 +20,8 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
+src/envMap.mli
+src/envMap.ml
 
 # From PCUIC
 # src/pCUICPrimitive.mli
@@ -88,8 +90,6 @@ src/fMapAVL.mli
 src/fMapAVL.ml
 src/pCUICErrors.mli
 src/pCUICErrors.ml
-src/pCUICEnvMap.mli
-src/pCUICEnvMap.ml
 src/pCUICWfEnv.mli
 src/pCUICWfEnv.ml
 src/pCUICSafeReduce.mli

@@ -32,6 +32,9 @@ src/wGraph.ml
 src/wGraph.mli
 src/kernames.mli
 src/kernames.ml
+src/envMap.mli
+src/envMap.ml
+
 # src/reflect.mli
 # src/reflect.ml
 # src/typing0.mli
@@ -80,18 +83,18 @@ src/pCUICNormal.ml
 # src/pCUICContextConversion.ml
 # src/pCUICConversion.mli
 # src/pCUICConversion.ml
+src/pCUICWcbvEval.mli
+src/pCUICWcbvEval.ml
 src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICExpandLets.mli
 src/pCUICExpandLets.ml
-src/pCUICExpandLetsCorrectness.mli
-src/pCUICExpandLetsCorrectness.ml
+# src/pCUICExpandLetsCorrectness.mli
+# src/pCUICExpandLetsCorrectness.ml
 
 # From SafeChecker
 src/pCUICErrors.mli
 src/pCUICErrors.ml
-src/pCUICEnvMap.mli
-src/pCUICEnvMap.ml
 src/pCUICWfEnv.mli
 src/pCUICWfEnv.ml
 src/pCUICSafeReduce.mli
@@ -107,6 +110,10 @@ src/eAst.ml
 src/eAst.mli
 src/eAstUtils.ml
 src/eAstUtils.mli
+src/eInduction.ml
+src/eInduction.mli
+src/eEtaExpanded.mli
+src/eEtaExpanded.ml
 # src/eInduction.ml
 # src/eInduction.mli
 src/eLiftSubst.ml
@@ -119,8 +126,8 @@ src/extract.mli
 src/extract.ml
 src/eWcbvEval.mli
 src/eWcbvEval.ml
-# src/eSpineView.mli
-# src/eSpineView.ml
+src/eSpineView.mli
+src/eSpineView.ml
 src/eRemoveParams.mli
 src/eRemoveParams.ml
 

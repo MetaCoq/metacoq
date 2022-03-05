@@ -10,7 +10,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
-From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps 
+From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps EExtends
     ErasureFunction ELiftSubst.
 
 Local Open Scope string_scope.
@@ -415,19 +415,20 @@ Proof.
   eapply Is_type_eval_inv; eauto. eexists; eauto.
 Qed.
 
-Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : global_env_ext} {wfΣ : ∥ wf_ext Σ ∥} {t v Σ' t' deps} :
-  forall wt : welltyped Σ [] t,
-  erase (build_wf_env_ext Σ wfΣ) [] t wt = t' ->
+Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : wf_env} {univs wfext t v Σ' t' deps} :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : welltyped Σext [] t,
+  erase Σext [] t wt = t' ->
   KernameSet.subset (term_global_deps t') deps ->
-  erase_global deps Σ (sq_wf_ext wfΣ) = Σ' ->
+  erase_global deps Σ = Σ' ->
   PCUICWcbvEval.eval Σ t v ->
-  @Ee.eval Ee.default_wcbv_flags Σ' t' tBox -> ∥ isErasable Σ [] t ∥.
+  @Ee.eval Ee.default_wcbv_flags Σ' t' tBox -> ∥ isErasable Σext [] t ∥.
 Proof.
-  intros [T wt].
+  intros Σext wt.
   intros.
-  destruct (erase_correct Σ wfΣ _ _ _ _ _ _ H H0 H1 X) as [ev [eg [eg']]].
+  destruct (erase_correct Σ univs wfext _ _ _ _ _ wt H H0 H1 X) as [ev [eg [eg']]].
   pose proof (Ee.eval_deterministic H2 eg'). subst.
-  destruct wfΣ.
+  destruct wfext. destruct wt as [T wt].
   eapply erasable_tBox_value; eauto.
 Qed.
 
@@ -454,7 +455,7 @@ Lemma lookup_env_optimize Σ kn :
 Proof.
   unfold optimize_env.
   induction Σ at 2 4; simpl; auto.
-  destruct kername_eq_dec => //.
+  unfold eq_kername; destruct kername_eq_dec => //.
 Qed.
 
 Lemma is_propositional_optimize Σ ind : 
@@ -485,6 +486,16 @@ Proof.
   induction l using rev_ind; simpl; auto => //.
   intros isf; specialize (IHl isf).
   now rewrite mkApps_app.
+Qed.
+
+Lemma weakening_eval_env (wfl : Ee.WcbvFlags) {Σ Σ'} : 
+  wf_glob Σ' -> extends Σ Σ' ->
+  ∀ v t, Ee.eval Σ v t -> Ee.eval Σ' v t.
+Proof.
+  intros wf ex t v ev.
+  induction ev; try solve [econstructor; eauto using (extends_is_propositional wf ex)].
+  econstructor; eauto.
+  red in isdecl |- *. eauto using extends_lookup.
 Qed.
 
 Lemma closedn_mkApps k f args : closedn k (mkApps f args) = closedn k f && forallb (closedn k) args.
@@ -757,20 +768,21 @@ Proof.
     all:constructor; eauto.
 Qed.
 
-Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t v Σ' t' :
-  forall wt : welltyped Σ [] t,
-  erase (build_wf_env_ext Σ (sq wfΣ)) [] t wt = t' ->
-  erase_global (term_global_deps t') Σ (sq wfΣ.1) = Σ' ->
+Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : wf_env) univs wfext t v Σ' t' :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : welltyped Σext [] t,
+  erase Σext [] t wt = t' ->
+  erase_global (term_global_deps t') Σ = Σ' ->
   PCUICWcbvEval.eval Σ t v ->
-  ∃ v' : term, Σ;;; [] |- v ⇝ℇ v' ∧ 
+  ∃ v' : term, Σext;;; [] |- v ⇝ℇ v' ∧ 
   ∥ @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ') (optimize Σ' t') (optimize Σ' v') ∥.
 Proof.
-  intros wt.
-  generalize (sq wfΣ.1) as swfΣ.
-  intros swfΣ HΣ' Ht' ev.
-  pose proof (erases_erase (wfΣ := sq wfΣ) wt); eauto.
+  intros Σext wt.
+  intros HΣ' Ht' ev.
+  pose proof (erases_erase wt); eauto.
   rewrite HΣ' in H.
   destruct wt as [T wt].
+  have [wfe] := wfext.
   assert (includes_deps Σ Σ' (term_global_deps t')).
   { rewrite <- Ht'.
     eapply erase_global_includes.
@@ -778,13 +790,13 @@ Proof.
     eapply term_global_deps_spec in H; eauto.
     eapply KernameSet.subset_spec.
     intros x hin; auto. }
-  pose proof (erase_global_erases_deps wfΣ wt H H0).
-  eapply erases_correct in ev; eauto.
+  pose proof (erase_global_erases_deps wfe wt H H0).
+  eapply (erases_correct Σext _ _ _ _ Σ') in ev; eauto.
   destruct ev as [v' [ev evv]].
   exists v'. split => //.
   sq. apply optimize_correct; tea.
   rewrite -Ht'.
-  eapply (erase_global_closed Σ (term_global_deps t') swfΣ); tea.
+  eapply (erase_global_closed Σ (term_global_deps t')); tea.
   clear HΣ'. eapply PCUICClosedTyp.subject_closed in wt.
   eapply erases_closed in H; tea.  
 Qed.

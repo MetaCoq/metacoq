@@ -1,17 +1,16 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils uGraph.
+From MetaCoq.Template Require Import config utils uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICReflect PCUICTyping PCUICGlobalEnv.
-From MetaCoq.SafeChecker Require Import PCUICEnvMap.
   
 (* We pack up all the information required on the global environment and graph in a 
 single record. *)
 
 Record wf_env {cf:checker_flags} := { 
   wf_env_env :> global_env;
-  wf_env_map :> EnvMap.t;
-  wf_env_map_repr :> EnvMap.repr wf_env_env wf_env_map;
+  wf_env_map :> EnvMap.t global_decl;
+  wf_env_map_repr :> EnvMap.repr wf_env_env.(declarations) wf_env_map;
   wf_env_wf :> ∥ wf wf_env_env ∥;
   wf_env_graph :> universes_graph;
   wf_env_graph_wf : is_graph_of_uctx wf_env_graph (global_uctx wf_env_env)
@@ -19,12 +18,24 @@ Record wf_env {cf:checker_flags} := {
 
 Record wf_env_ext {cf:checker_flags} := { 
   wf_env_ext_env :> global_env_ext;
-  wf_env_ext_map :> EnvMap.t;
-  wf_env_ext_map_repr :> EnvMap.repr wf_env_ext_env wf_env_ext_map;
+  wf_env_ext_map :> EnvMap.t global_decl;
+  wf_env_ext_map_repr :> EnvMap.repr wf_env_ext_env.(declarations) wf_env_ext_map;
   wf_env_ext_wf :> ∥ wf_ext wf_env_ext_env ∥;
   wf_env_ext_graph :> universes_graph;
   wf_env_ext_graph_wf : is_graph_of_uctx wf_env_ext_graph (global_ext_uctx wf_env_ext_env)
 }.
+
+Lemma wf_fresh_globals {cf : checker_flags} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
+Proof. destruct Σ as [univs Σ]; cbn.
+  move=> [] onu; cbn. induction 1; constructor; auto.
+Qed.
+
+Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
+  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
+Proof.
+  unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
+  reflexivity.
+Qed.
 
 Section WfEnv.
   Context {cf : checker_flags}.
@@ -47,7 +58,7 @@ Section WfEnv.
   Lemma lookup_lookup_env Σ kn : lookup Σ kn = lookup_env Σ kn.
   Proof.
     rewrite /lookup. destruct Σ as [Σ map repr [wfext] G HG].
-    apply EnvMap.lookup_spec; auto.
+    apply EnvMap.lookup_spec; auto. now eapply wf_fresh_globals.
   Qed.
 
 End WfEnv.
@@ -102,8 +113,8 @@ Defined.
 
 Definition build_wf_env_ext {cf : checker_flags} (Σ : global_env_ext) (wfΣ : ∥ wf_ext Σ ∥) : wf_env_ext := 
   {| wf_env_ext_env := Σ; 
-     wf_env_ext_map := EnvMap.of_global_env Σ; 
-     wf_env_ext_map_repr := EnvMap.repr_global_env Σ;
+     wf_env_ext_map := EnvMap.of_global_env Σ.(declarations); 
+     wf_env_ext_map_repr := EnvMap.repr_global_env Σ.(declarations);
      wf_env_ext_wf := wfΣ;
      wf_env_ext_graph := (graph_of_wf_ext wfΣ).π1;
      wf_env_ext_graph_wf := (graph_of_wf_ext wfΣ).π2 |}.

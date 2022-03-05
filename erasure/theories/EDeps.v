@@ -8,6 +8,7 @@ From MetaCoq.Erasure Require Import
      EAst EAstUtils ECSubst EInduction
      ELiftSubst ESubstitution ETyping Extract
      EWcbvEval Prelim.
+From MetaCoq.Erasure Require EExtends.
 Set Warnings "+notation-overridden".
 From MetaCoq.Template Require Import config utils monad_utils.
 
@@ -357,7 +358,12 @@ Lemma erases_deps_forall_ind Σ Σ'
       (forall body : Extract.E.term, Extract.E.cst_body cb' = Some body -> erases_deps Σ Σ' body) ->
       (forall body : Extract.E.term, Extract.E.cst_body cb' = Some body -> P body) ->
         P (Extract.E.tConst kn))
-  (Hconstruct : forall (ind : inductive) (c : nat), P (Extract.E.tConstruct ind c))
+  (Hconstruct : forall (ind : inductive) (c : nat) mdecl idecl cdecl mdecl' idecl' cdecl',
+      PCUICAst.declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+      declared_constructor Σ' (ind, c) mdecl' idecl' cdecl' ->
+      erases_one_inductive_body idecl idecl' ->
+      erases_mutual_inductive_body mdecl mdecl' ->
+      P (Extract.E.tConstruct ind c))
   (Hcase : forall (p : inductive × nat) mdecl idecl mdecl' idecl' (discr : Extract.E.term) (brs : list (list name × Extract.E.term)),
         PCUICAst.declared_inductive Σ (fst p) mdecl idecl ->
         ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
@@ -401,6 +407,7 @@ Proof.
     intros.
     apply f.
     now apply H2.
+  - eauto.
   - eapply Hcase; try eassumption.
     + now apply f.
     + revert brs H3.
@@ -421,6 +428,26 @@ Proof.
     constructor; [now apply f|now apply f'].
 Defined.
 
+(* Lemma fresh_global_erase {cf : checker_flags} Σ Σ' kn :
+fresh_global kn Σ  -> erases_global Σ Σ' -> EExtends.fresh_global kn Σ'.
+Proof.
+  induction 2.
+  - econstructor.
+  - invs H. econstructor; eauto. eapply IHerases_global_decls; eauto.
+  - invs H. econstructor; eauto. eapply IHerases_global_decls; eauto.
+Qed.
+
+Lemma wf_global_erase {cf : checker_flags} Σ Σ' :
+  ∥ wf Σ ∥ -> erases_global Σ Σ' -> ∥ EExtends.wf_glob Σ' ∥.
+Proof.
+  intros Hwf H. induction H.
+  - sq. econstructor.
+  - forward IHerases_global_decls; sq; invs Hwf; eauto.
+    econstructor. eauto. eapply fresh_global_erase; eauto.
+  - forward IHerases_global_decls; sq; invs Hwf; eauto.
+    econstructor. eauto. eapply fresh_global_erase; eauto.
+Qed. *)
+
 Lemma erases_deps_cons Σ Σ' kn decl decl' t :
   on_global_univs Σ.(universes) ->
   on_global_decls (lift_typing typing) Σ.(universes) ((kn, decl) :: Σ.(declarations)) ->
@@ -436,9 +463,10 @@ Proof.
     inversion wfΣ; subst.
     destruct kername_eq_dec as [<-|]; [congruence|].
     eassumption.
-  - unfold ETyping.declared_constant in *; cbn.
+  - unfold ETyping.declared_constant in *. cbn -[Reflect.eqb].
     inversion wfΣ; subst.
-    destruct kername_eq_dec; [congruence|].
+    change (eq_kername kn0 kn) with (Reflect.eqb kn0 kn).
+    destruct (Reflect.eqb_spec kn0 kn); [congruence|].
     eassumption.
   - unfold erases_constant_body in *.
     destruct PCUICAst.PCUICEnvironment.cst_body eqn:body.
@@ -468,6 +496,14 @@ Proof.
       apply H.
     + now destruct E.cst_body.
   - easy.
+  - econstructor; eauto. eapply weakening_env_declared_constructor; eauto with pcuic.
+    { eapply extends_decls_extends. econstructor; try reflexivity. eexists [(_, _)]; reflexivity. }
+    invs wfΣ.
+    destruct H0. split. 2: eauto.
+    destruct d. split; eauto.
+    red. cbn. unfold eq_kername. destruct kername_eq_dec; eauto.
+    subst. 
+    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H5. eauto. eapply H.
   - econstructor; eauto.
     destruct H as [H H'].
     split; eauto. red in H |- *.
@@ -478,21 +514,24 @@ Proof.
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H; eauto. contradiction.
     destruct H0 as [H0 H0'].
     split; eauto. red in H0 |- *.
-    inv wfΣ. simpl.
-    destruct (kername_eq_dec (inductive_mind p.1) kn); auto. subst.
+    inv wfΣ. cbn. change (eq_kername (inductive_mind p.1) kn) with (Reflect.eqb (inductive_mind p.1) kn).    
+    destruct (Reflect.eqb_spec (inductive_mind p.1) kn); auto. subst.
     destruct H as [H _].
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
   - econstructor; eauto.
     destruct H as [H H'].
     split; eauto. red in H |- *.
     inv wfΣ. unfold PCUICEnvironment.lookup_env.
-    simpl. unfold eq_kername.
-    destruct (kername_eq_dec (inductive_mind p.1.1) kn); auto. subst.
+    simpl.
+    change (eq_kername (inductive_mind p.1.1) kn) with (Reflect.eqb (inductive_mind p.1.1) kn); auto.
+    destruct (Reflect.eqb_spec (inductive_mind p.1.1) kn). subst.
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H; eauto. contradiction.
+    apply H.
     destruct H0 as [H0 H0'].
     split; eauto. red in H0 |- *.
     inv wfΣ. simpl.
-    destruct (kername_eq_dec (inductive_mind p.1.1) kn); auto. subst.
+    change (eq_kername (inductive_mind p.1.1) kn) with (Reflect.eqb (inductive_mind p.1.1) kn); auto.
+    destruct (Reflect.eqb_spec (inductive_mind p.1.1) kn); auto. subst.
     destruct H as [H _].
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
 Qed.
@@ -513,11 +552,32 @@ Definition globals_erased_with_deps Σ Σ' :=
         ETyping.declared_inductive Σ' k mdecl' idecl' /\
         erases_mutual_inductive_body mdecl mdecl').
 
+Lemma erases_declared_constructor {Σ : global_env_ext} Σ' kn k mind idecl cdecl :
+  PCUICAst.declared_constructor Σ.1 (kn, k) mind idecl cdecl ->
+  globals_erased_with_deps Σ Σ' ->
+  exists mind' idecl', (* declared_inductive Σ' (kn, k).1 mind' idecl' ->
+  erases_one_inductive_body idecl idecl' -> *)
+  declared_constructor Σ' (kn, k) mind' idecl' (cstr_name cdecl, cstr_arity cdecl) /\
+  erases_one_inductive_body idecl idecl' /\
+  erases_mutual_inductive_body mind mind'.
+Proof.
+  intros [Hcon1 Hcon2] H.
+  eapply H in Hcon1 as Hcon3. destruct Hcon3 as (mdecl' & idecl' & H1 & H2).
+  pose proof H2 as H2'.
+  destruct H1. destruct H2. cbn in *.
+  destruct Hcon1 as [Hcon1 Hcon3]. red in Hcon1.
+  eapply Forall2_nth_error_Some_l in H2 as (? & ? & ?); eauto.
+  rewrite H2 in H1. invs H1. pose proof H4 as H4'.
+  destruct H4 as (? & ? & ? & ? & ?).
+  eapply Forall2_nth_error_Some_l in H1 as ([] & ? & ? & ?); subst; eauto.
+  eexists. eexists. split; [ | split]; eauto.
+  repeat eapply conj; try eassumption.
+Qed.
 
-Lemma erases_deps_single Σ Σ' t T et :
+Lemma erases_deps_single Σ Σ' Γ t T et :
   wf_ext Σ ->
-  Σ;;; [] |- t : T ->
-  Σ;;; [] |- t ⇝ℇ et ->
+  Σ;;; Γ |- t : T ->
+  Σ;;; Γ |- t ⇝ℇ et ->
   globals_erased_with_deps Σ Σ' ->
   erases_deps Σ Σ' et.
 Proof.
@@ -534,10 +594,15 @@ Proof.
   - apply inversion_Const in wt as (? & ? & ? & ? & ?); eauto.
     apply Σer in d as d'; destruct d' as (? & ? & ? & ?).
     now econstructor; eauto.
+  - eapply inversion_Construct in wt as (? & ? & ? & ? & ? & ? & ?); eauto.
+    pose proof d as d'. destruct d'.
+    destruct (proj2 Σer _ _ _ H0) as (? & ? & ? & ? & ?).
+    edestruct @erases_declared_constructor as (? & ? & ? & ? & ?); eauto.
+    econstructor; eauto.
   - apply inversion_Case in wt as (? & ? & ? & ? & [] & ?); eauto.
     destruct (proj2 Σer _ _ _ x1) as (? & ? & ? & ?).
     econstructor; eauto.
-    destruct H2. destruct x1. destruct H1.
+    destruct H2. destruct x1; eauto. destruct H1.
     eapply Forall2_All2 in H2. eapply All2_nth_error in H2; eauto.
     clear -wf brs_ty X H0 Σer.
     subst predctx ptm.
@@ -554,10 +619,10 @@ Proof.
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj2 Σer _ _ _ (proj1 (proj1 d))) as (? & ? & ? & ?).
-    econstructor; eauto. eapply d.
+    econstructor; eauto. eapply d.   
     destruct d as [[[declm decli] declc] _]. destruct H1. destruct H0.
     eapply Forall2_All2 in H1. eapply All2_nth_error in H1; eauto.
-
+ 
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
     clear -wf a0 X H Σer.
@@ -615,8 +680,7 @@ Proof.
       noconf decl'.
       depelim erg.
       exists cb'.
-      cbn.
-      destruct kername_eq_dec; [|congruence].
+      cbn. rewrite eq_kername_refl.
       split; [easy|].
       inversion wf; subst.
       cbn in *.
@@ -655,8 +719,9 @@ Proof.
       specialize (proj1 erg' kn' cst' decl_ext) as (cst & decl'' & ? & ?).
       exists cst.
       split; [|split].
-      * unfold declared_constant in *; cbn.
-        now destruct kername_eq_dec; [|congruence].
+      * unfold declared_constant in *; cbn. rewrite decl''.
+        change (eq_kername kn' kn) with (Reflect.eqb kn' kn).
+        destruct (Reflect.eqb_spec kn' kn); auto. congruence.
       * inversion wf; subst.
         eapply declared_constant_inv in decl_ext; eauto.
         2: exact weaken_env_prop_typing.
@@ -685,7 +750,7 @@ Proof.
       red. destruct decli'; split; auto.
       red in decli.
       unfold declared_minductive in *.
-      simpl. destruct kername_eq_dec; subst; auto.
+      simpl. unfold eq_kername. destruct kername_eq_dec; subst; auto.
       unfold PCUICAst.declared_minductive in decli.
       unfold PCUICEnvironment.lookup_env in decli.
       simpl in decli. rewrite eq_kername_refl in decli. intuition discriminate.
@@ -699,18 +764,18 @@ Proof.
       destruct kername_eq_dec. subst. noconf decli.
       destruct (Forall2_nth_error_left (proj1 H) _ _ H3); eauto.
       eexists _, _; intuition eauto. split; eauto. red.
-      simpl. destruct kername_eq_dec; try congruence.
+      simpl. unfold eq_kername. destruct kername_eq_dec; try congruence.
       destruct (proj2 IH _ _ _ (conj decli H3)) as [m' [i' [decli' ei]]].
       eexists _, _; intuition eauto.
       destruct decli'; red; split; eauto.
       red in d |- *. simpl.
-      destruct kername_eq_dec; subst; try congruence.
+      unfold eq_kername; destruct kername_eq_dec; subst; try congruence.
 Qed.       
 
-Lemma erases_global_erases_deps Σ t T et Σ' :
+Lemma erases_global_erases_deps Σ Γ t T et Σ' :
   wf_ext Σ ->
-  Σ;;; [] |- t : T ->
-  Σ;;; [] |- t ⇝ℇ et ->
+  Σ;;; Γ |- t : T ->
+  Σ;;; Γ |- t ⇝ℇ et ->
   erases_global Σ Σ' ->
   erases_deps Σ Σ' et.
 Proof.

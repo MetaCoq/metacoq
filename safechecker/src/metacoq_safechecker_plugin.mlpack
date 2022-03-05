@@ -8,6 +8,7 @@ FMapAVL
 Ssrbool
 WGraph
 UGraph0
+EnvMap
 Reflect
 
 Classes0
@@ -29,7 +30,6 @@ TemplateToPCUIC
 PCUICUnivSubst
 
 PCUICErrors
-PCUICEnvMap
 PCUICWfEnv
 PCUICSafeReduce
 PCUICEqualityDec

@@ -30,7 +30,7 @@ Inductive ConversionError :=
 | ProdNotConvertibleAnn
     (Γ1 : context) (na : aname) (A1 B1 : term)
     (Γ2 : context) (na' : aname) (A2 B2 : term)
-    
+
 | ContextNotConvertibleAnn
     (Γ : context) (decl : context_decl)
     (Γ' : context) (decl' : context_decl)
@@ -53,7 +53,7 @@ Inductive ConversionError :=
     (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
     (Γ2 : context)
     (ci' : case_info) (p' : predicate term) (c' : term) (brs' : list (branch term))
-    
+
 | CasePredUnequalUniverseInstances
     (Γ1 : context)
     (ci : case_info) (p : predicate term) (c : term) (brs : list (branch term))
@@ -123,7 +123,7 @@ Inductive type_error :=
   (* update here with the right notion *)
   (* (G : universes_graph) *)
   (Γ : context) (t u t' u' : term) (e : ConversionError)
-| NotConvertible 
+| NotConvertible
   (* update here with the right notion *)
   (* (G : universes_graph) *)
   (Γ : context) (t u : term)
@@ -203,34 +203,34 @@ Fixpoint string_of_conv_error Σ (e : ConversionError) : string :=
       nl ^ "are done on distinct inductive types."
   | CasePredParamsUnequalLength Γ ci p c brs Γ' ci' p' c' brs' =>
       "The predicates of the two stuck pattern-matches" ^ nl ^
-      print_term Σ Γ (tCase ci p c brs) ^ 
+      print_term Σ Γ (tCase ci p c brs) ^
       nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
       nl ^ "have an unequal number of parameters."
   | CasePredUnequalUniverseInstances Γ ci p c brs Γ' ci' p' c' brs' =>
       "The predicates of the two stuck pattern-matches" ^ nl ^
-      print_term Σ Γ (tCase ci p c brs) ^ 
+      print_term Σ Γ (tCase ci p c brs) ^
       nl ^ "and" ^ nl ^ print_term Σ Γ' (tCase ci' p' c' brs') ^
       nl ^ "have unequal universe instances."
   | ContextNotConvertibleAnn Γ decl Γ' decl' =>
-      "When comparing the declarations" ^ nl ^ 
+      "When comparing the declarations" ^ nl ^
       print_context_decl Σ Γ decl ^ nl ^
       "and" ^ nl ^
       print_context_decl Σ Γ' decl' ^ nl ^
       "the binder annotations are not equal"
   | ContextNotConvertibleType Γ decl Γ' decl' =>
-      "When comparing the declarations" ^ nl ^ 
+      "When comparing the declarations" ^ nl ^
       print_context_decl Σ Γ decl ^ nl ^
       "and" ^ nl ^
       print_context_decl Σ Γ' decl' ^ nl ^
       "the types are not convertible"
   | ContextNotConvertibleBody Γ decl Γ' decl' =>
-      "When comparing the declarations" ^ nl ^ 
+      "When comparing the declarations" ^ nl ^
       print_context_decl Σ Γ decl ^ nl ^
       "and" ^ nl ^
       print_context_decl Σ Γ' decl' ^ nl ^
       "the bodies are not convertible"
   | ContextNotConvertibleLength => "The contexts have unequal length"
-      
+
   | DistinctStuckProj Γ p c Γ' p' c' =>
       "The two stuck projections" ^ nl ^
       print_term Σ Γ (tProj p c) ^
@@ -302,7 +302,7 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
   | NotCumulSmaller le Γ t u t' u' e => "Types are not " ^
-      (if le then "<= for cumulativity:" ^ nl 
+      (if le then "<= for cumulativity:" ^ nl
        else "convertible:" ^ nl) ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
       nl ^ "after reduction:" ^ nl ^
@@ -320,7 +320,7 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | NotAnArity t => print_term Σ [] t ^ " is not an arity"
   | NotAnInductive t => "Not an inductive: " ^ print_term Σ [] t
   | IllFormedFix m i => "Ill-formed recursive definition"
-  | UnsatisfiedConstraints c => "Unsatisfied constraints" 
+  | UnsatisfiedConstraints c => "Unsatisfied constraints"
   | Msg s => "Msg: " ^ s
   end.
 

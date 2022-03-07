@@ -1255,9 +1255,9 @@ Section All_local_env.
     - intros hl. destruct (IHΣp hl) as [Σ' []].
       exists Σ'.
       split=> //.
-      destruct e. red; cbn in *.
+      destruct e as [eu ed]. red; cbn in *.
       split; [auto|].
-      destruct s as [Σ'' ->].
+      destruct ed as [Σ'' ->].
       exists (Σ'' ,, (kn, d)) => //.
   Qed.
 

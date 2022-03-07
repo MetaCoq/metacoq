@@ -774,18 +774,6 @@ Next Obligation.
   eapply wfG.
 Qed.
 
-Require Import Morphisms.
-Lemma add_uctx_proper : Morphisms.Proper (Logic.eq ==> uGraph.Equal_graph ==> uGraph.Equal_graph)%signature uGraph.add_uctx.
-Proof.
-  intros x ? -> g g' [? []].
-  split. cbn. lsets.
-  split. cbn. 
-  rewrite -2!uGraph.add_level_edges_add_cstrs_comm.
-  eapply uGraph.add_level_edges_proper.
-  
-  rewrite H0.
-  destruct eq. split. eapply LevelSetProp.Dec.F.union_1
-
 Program Definition make_wf_env_ext (Σ : wf_env) (univs : universes_decl) (prf : ∥ wf_ext (Σ, univs) ∥) : wf_env_ext :=
   {| wf_env_ext_env := (Σ, univs);
      wf_env_ext_map := Σ.(wf_env_map);
@@ -793,12 +781,34 @@ Program Definition make_wf_env_ext (Σ : wf_env) (univs : universes_decl) (prf :
      wf_env_ext_graph := 
       match uGraph.gc_of_constraints (constraints_of_udecl univs) with
       | Some gc => uGraph.add_uctx (levels_of_udecl univs, gc) Σ.(wf_env_graph)
-      | None => Σ.(wf_env_graph)
+      | None => !%prg
       end |}.
 
+Require Import Morphisms.
+From MetaCoq.Template Require Import uGraph.
+Global Instance proper_pair_levels_gcs : Proper ((=_lset) ==> GoodConstraintSet.Equal ==> (=_gcs)) (@pair LevelSet.t GoodConstraintSet.t).
+Proof.
+  intros l l' eq gcs gcs' eq'.
+  split; cbn; auto.
+Qed.
+
 Next Obligation.
-  destruct uGraph.gc_of_constraints eqn:eqgc.
-  - pose proof (wf_ext_gc_of_uctx prf) as [uctx' isg].
+  pose proof (wf_ext_gc_of_uctx prf) as [uctx' isg].
+  move: isg.
+  rewrite /uGraph.gc_of_uctx /=.
+  rewrite /global_ext_constraints /=.
+  pose proof (uGraph.gc_of_constraints_union (constraints_of_udecl univs) (global_constraints Σ)).
+  rewrite -Heq_anonymous /= in H. red in H.
+  destruct (uGraph.gc_of_constraints
+      (ConstraintSet.union (constraints_of_udecl univs)
+        (global_constraints Σ))) => //.
+Qed.
+
+Next Obligation.
+  set (foo := (fun H => False_rect _ (make_wf_env_ext_obligation_2 _ _ _ H))). clearbody foo.
+  destruct gc_of_constraints eqn:eqgc => //.
+  - rewrite /global_ext_uctx /global_ext_constraints /=.
+    pose proof (wf_ext_gc_of_uctx prf) as [uctx' isg].
     destruct prf.
     move: isg.
     pose proof (wfG := Σ.(wf_env_graph_wf)).
@@ -818,25 +828,10 @@ Next Obligation.
       (ConstraintSet.union (constraints_of_udecl univs)
         (global_constraints Σ))) => //.
     intros [= <-].
-    destruct (uGraph.gc_of_constraints (global_constraints Σ)) eqn:gc.
-    cbn in wfG.
-    rewrite -wfG.
-    
-    unfold uGraph.add_uctx.
-    split => /=. 
-    unfold global_levels.
-
-
-  todo "univs".
-  pose proof (wf_ext_gc_of_uctx prf) as [uctx' isg].
-  move: isg.
-  rewrite /uGraph.gc_of_uctx /=.
-  rewrite /global_ext_constraints /=.
-  pose proof (uGraph.gc_of_constraints_union (constraints_of_udecl univs) (global_constraints Σ)).
-  rewrite eqgc /= in H. red in H.
-  destruct (uGraph.gc_of_constraints
-    (ConstraintSet.union (constraints_of_udecl univs)
-       (global_constraints Σ))) => //.
+    destruct (uGraph.gc_of_constraints (global_constraints Σ)) eqn:gc => //.
+    cbn in wfG. symmetry. rewrite -wfG H. 
+    now eapply uGraph.add_uctx_make_graph.
+  - symmetry in eqgc. now elim (make_wf_env_ext_obligation_2 _ _ prf eqgc).
 Qed.
 
 Program Fixpoint erase_global_decls (deps : KernameSet.t) (Σ : wf_env) (decls : global_declarations) 
@@ -1646,7 +1641,42 @@ Proof.
   induction t0 in f |- *; econstructor; eauto; econstructor; eauto.
 Qed.
 
-Local Arguments erase_global_decls _ _ {_}.
+Local Arguments erase_global_decls _ _ _ : clear implicits.
+
+(* Lemma make_wf_env_ext_remove_kn kn decl univs decls : *)
+  (* make_wf_env_ext (remove_kn kn (add_global_decl  )) *)
+
+Lemma lookup_env_erase (Σ : wf_env) deps kn d :
+  KernameSet.In kn deps -> 
+  lookup_env Σ kn = Some (InductiveDecl d) ->
+  ETyping.lookup_env (erase_global deps Σ) kn = Some (EAst.InductiveDecl (erase_mutual_inductive_body d)).
+Proof.
+  intros hin.
+  rewrite /lookup_env. 
+  unfold erase_global.
+  set (e := eq_refl).
+  clearbody e.
+  move: e. generalize (declarations Σ) at 2 3 4.
+  induction g in Σ, deps, hin |- *.
+  - move=> /= //.
+  - intros e. destruct a as [kn' d'].
+    cbn -[erase_global_decls].
+    unfold eq_kername. destruct kername_eq_dec. subst kn'.
+    intros [= ->].
+    unfold erase_global_decls.
+    eapply KernameSet.mem_spec in hin. rewrite hin /=.
+    now rewrite eq_kername_refl.
+    intros hl. destruct d'. simpl.
+    destruct KernameSet.mem. cbn.
+    unfold eq_kername. destruct kername_eq_dec => //. 
+    eapply IHg => //. eapply KernameSet.union_spec. left => //.
+    eapply IHg => //.
+    simpl.
+    destruct KernameSet.mem. cbn.
+    unfold eq_kername. destruct kername_eq_dec => //. 
+    eapply IHg => //.
+    eapply IHg => //. 
+Qed.
 
 Lemma erase_global_declared_constructor (Σ : wf_env) ind c mind idecl cdecl deps :
    declared_constructor Σ (ind, c) mind idecl cdecl ->
@@ -1655,18 +1685,7 @@ Lemma erase_global_declared_constructor (Σ : wf_env) ind c mind idecl cdecl dep
 Proof.
   intros [[]] Hin.
   cbn in *. split. split. 
-  - red in H |- *. clear - H Hin.
-    destruct Σ as [[Σ1 Σ2] ]. cbn in *.
-    induction Σ2 as [ | [] Σ2 IH] in deps, H, Hin, wf_env_map_repr,wf_env_wf, wf_env_graph,wf_env_graph_wf |- *.
-    + cbn in *. congruence.
-    + cbn in H. unfold eq_kername in H. destruct kername_eq_dec as [E | E].
-      * invs H. cbn. eapply KernameSet.mem_spec in Hin as ->. cbn.
-        unfold eq_kername. destruct kername_eq_dec; congruence.
-      * cbn - [erase_global]. destruct g. cbn.
-        -- destruct KernameSet.mem; eauto.
-           erewrite elookup_env_cons_disc; eauto. todo "ugh". todo "ugh".
-        -- cbn. destruct KernameSet.mem; eauto. 
-           erewrite elookup_env_cons_disc; eauto.  todo "ugh". todo "ugh".
+  - red in H |- *. now eapply lookup_env_erase.
   - cbn. now eapply map_nth_error.
   - cbn. erewrite map_nth_error; eauto.
 Qed.

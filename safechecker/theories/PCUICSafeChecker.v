@@ -236,7 +236,6 @@ Section CheckEnv.
     check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
        (fun _ => (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
                                     " |= " ^ print_constraint_set (constraints_of_udecl udecl)))));;
-    (* TODO: could be optimized by reusing G *)
     match gc_of_uctx (uctx_of_udecl udecl) as X' return (X' = _ -> EnvCheck _) with
     | None => fun _ =>
       raise (empty_ext Σ, IllFormedDecl id (Msg "constraints trivially not satisfiable"))

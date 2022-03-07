@@ -1445,7 +1445,7 @@ Corollary R_Acc_aux :
     end ->
     whnf flags Σ Γ (mkApps hd args) ->
     Σ;;; Γ |- tCase ci p (mkApps hd args) brs : T ->
-    whne flags Σ Γ (mkApps hd args).
+    whne flags Σ Γ (mkApps hd args). 
   Proof.
     intros wf shape wh typ.
     apply inversion_Case in typ as (?&?&isdecl&?&[]&?); auto.

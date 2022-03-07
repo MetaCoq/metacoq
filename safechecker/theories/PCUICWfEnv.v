@@ -45,15 +45,32 @@ Proof.
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
 Defined.
 
+Definition level_mem : global_env_ext -> Level.t -> bool
+  := fun X l => LevelSet.mem l (global_ext_levels X).
+
 Class abstract_env_struct {cf:checker_flags} (abstract_env_impl : Type) := {
   abstract_env_lookup : abstract_env_impl -> kername -> option global_decl;
   abstract_env_eq : abstract_env_impl -> Universe.t -> Universe.t -> bool;
   abstract_env_leq : abstract_env_impl -> Universe.t -> Universe.t -> bool;
   abstract_env_compare_global_instance : abstract_env_impl -> (Universe.t -> Universe.t -> bool) -> global_reference -> nat -> list Level.t -> list Level.t -> bool;
-  abstract_env_universe : abstract_env_impl -> Universe.t -> bool;
+  abstract_env_level_mem : abstract_env_impl -> Level.t -> bool;
+  abstract_env_check_constraints : abstract_env_impl -> ConstraintSet.t -> bool;
+  abstract_env_guard : abstract_env_impl -> FixCoFix -> context -> mfixpoint term -> bool;
+  abstract_env_fixguard X := abstract_env_guard X Fix;
+  abstract_env_cofixguard X := abstract_env_guard X CoFix;
   (* This part of the structure is here to state the correctness properties *)
   abstract_env_rel : abstract_env_impl -> global_env_ext -> Prop;
 }.
+
+Definition abstract_env_wf_universeb {cf:checker_flags} (abstract_env_impl : Type) (X_ : abstract_env_struct abstract_env_impl)
+  : abstract_env_impl -> Universe.t -> bool
+  := fun X s => match s with
+  | Universe.lType l =>
+    UnivExprSet.for_all
+        (fun l0 : UnivExprSet.elt =>
+        abstract_env_level_mem X (UnivExpr.get_level l0)) l
+  | _ => true
+  end.
 
 Class abstract_env_prop {cf:checker_flags} (abstract_env_impl : Type) (X : abstract_env_struct abstract_env_impl) : Prop := {
 
@@ -71,10 +88,22 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl : Type) (X : abstr
   abstract_env_compare_global_instance_correct X {Σ} (wfΣ : abstract_env_rel X Σ) :
     compare_global_instance Σ (check_eqb_universe (abstract_env_graph X wfΣ)) =
     abstract_env_compare_global_instance X;
-  abstract_env_universe_correct X {Σ} (wfΣ : abstract_env_rel X Σ) u : wf_universeb Σ u = abstract_env_universe X u;
+  abstract_env_level_mem_correct X {Σ} (wfΣ : abstract_env_rel X Σ) u : level_mem Σ u = abstract_env_level_mem X u;
+  abstract_env_check_constraints_correct X {Σ} (wfΣ : abstract_env_rel X Σ) u : check_constraints (abstract_env_graph X wfΣ) u = abstract_env_check_constraints X u;
+  abstract_env_guard_correct X {Σ} (wfΣ : abstract_env_rel X Σ) fix_cofix Γ mfix :
+    guard fix_cofix Σ Γ mfix = abstract_env_guard X fix_cofix Γ mfix;
    }.
 
-
+Definition abstract_env_wf_universeb_correct {cf:checker_flags} (abstract_env_impl : Type) (X_ : abstract_env_struct abstract_env_impl)
+  (X__ : abstract_env_prop abstract_env_impl X_)
+   X {Σ} (wfΣ : abstract_env_rel X Σ) u : wf_universeb Σ u = abstract_env_wf_universeb _ _ X u.
+Proof.
+  destruct u; auto.
+  destruct n. cbn. repeat rewrite for_all_elements.
+  induction (UnivExprSet.elements t_set); cbn; auto.
+  rewrite <- IHl. erewrite <- abstract_env_level_mem_correct; eauto.
+  reflexivity.
+Defined.
 
 Definition abstract_env_impl {cf:checker_flags} := ∑ X Y, abstract_env_prop X Y.
 
@@ -105,6 +134,10 @@ Record abstract_env_ext {cf:checker_flags} := {
       abstract_env_ext_graph_wf_ := projT2 (graph_of_wf_ext abstract_env_ext_wf)
   }.
 
+Axiom guard_impl : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bool.
+Axiom guard_correct : forall fix_cofix Σ Γ mfix,
+  guard fix_cofix Σ Γ mfix = guard_impl fix_cofix Σ Γ mfix.
+
 Program Definition canonincal_abstract_env_struct {cf:checker_flags} :
   abstract_env_struct abstract_env_ext :=
   {| abstract_env_lookup := fun Σ => lookup_env (abstract_env_ext_env Σ) ;
@@ -113,9 +146,10 @@ Program Definition canonincal_abstract_env_struct {cf:checker_flags} :
      abstract_env_compare_global_instance := fun Σ =>
       compare_global_instance (abstract_env_ext_env Σ)
                               (check_eqb_universe (abstract_env_ext_graph_ Σ));
-     abstract_env_universe := fun Σ => wf_universeb (abstract_env_ext_env Σ);
+     abstract_env_level_mem := fun Σ => level_mem (abstract_env_ext_env Σ);
+     abstract_env_check_constraints := fun Σ => check_constraints (abstract_env_ext_graph_ Σ);
 
-
+     abstract_env_guard := fun Σ fix_cofix => guard_impl fix_cofix (abstract_env_ext_env Σ);
      abstract_env_rel := fun X Σ => Σ = abstract_env_ext_env X;
   |}.
 
@@ -123,10 +157,7 @@ Program Definition canonincal_abstract_env_prop {cf:checker_flags} :
   abstract_env_prop _ canonincal_abstract_env_struct :=
      {| abstract_env_exists := fun Σ => sq (abstract_env_ext_env Σ ; eq_refl); |}.
 Next Obligation. apply abstract_env_ext_wf. Defined.
-
-
-
-
+Next Obligation. apply guard_correct. Defined.
 (* We pack up all the information required on the global environment and graph in a
 single record. *)
 
@@ -148,17 +179,21 @@ Record wf_env_ext {cf:checker_flags} := {
   wf_env_ext_graph_wf : is_graph_of_uctx wf_env_ext_graph (global_ext_uctx wf_env_ext_env)
 }.
 
-Lemma wf_fresh_globals {cf : checker_flags} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
-Proof. destruct Σ as [univs Σ]; cbn.
-  move=> [] onu; cbn. induction 1; constructor; auto.
-Qed.
+Program Definition optimized_abstract_env_struct {cf:checker_flags} :
+  abstract_env_struct wf_env_ext :=
+  {| abstract_env_lookup := fun Σ k => EnvMap.lookup k (wf_env_ext_map Σ);
+     abstract_env_eq := fun Σ => check_eqb_universe (wf_env_ext_graph Σ);
+     abstract_env_leq := fun Σ => check_leqb_universe (wf_env_ext_graph Σ) ;
+     abstract_env_compare_global_instance := fun Σ =>
+      compare_global_instance (wf_env_ext_env Σ)
+                              (check_eqb_universe (wf_env_ext_graph Σ));
+     abstract_env_level_mem := fun Σ l => LevelSet.mem l (uGraph.wGraph.V (wf_env_ext_graph Σ));
+     abstract_env_check_constraints := fun Σ => check_constraints (wf_env_ext_graph Σ);
 
-Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
-  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
-Proof.
-  unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
-  reflexivity.
-Qed.
+     abstract_env_guard := fun Σ fix_cofix => guard_impl fix_cofix (wf_env_ext_env Σ);
+
+     abstract_env_rel := fun X Σ => Σ = wf_env_ext_env X;
+  |}.
 
 Section WfEnv.
   Context {cf : checker_flags}.
@@ -255,3 +290,19 @@ Section GraphSpec.
   Qed.
 
 End GraphSpec.
+
+
+Program Definition optimized_abstract_env_prop {cf:checker_flags} :
+abstract_env_prop _ optimized_abstract_env_struct :=
+   {| abstract_env_exists := fun Σ => sq (wf_env_ext_env Σ ; eq_refl); |}.
+Next Obligation. apply wf_env_ext_wf. Defined.
+Next Obligation. pose (wf_env_ext_wf X). sq. erewrite <- EnvMap.lookup_spec; eauto.
+                  apply wf_env_ext_map_repr. Qed.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. Admitted.
+Next Obligation. eapply eq_true_iff_eq.
+                 split; intros; eapply is_graph_of_uctx_levels; eauto;
+                 eapply wf_env_ext_graph_wf. Qed.
+Next Obligation. Admitted.
+Next Obligation. apply guard_correct. Defined.

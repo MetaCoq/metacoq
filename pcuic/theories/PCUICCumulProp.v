@@ -490,7 +490,7 @@ Proof.
   - now transitivity u'nf.
 Qed.
 
-Instance cumul_prop_transitive Σ Γ : wf Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
+Global Instance cumul_prop_transitive Σ Γ : wf Σ -> CRelationClasses.Transitive (cumul_prop Σ Γ).
 Proof. intros. red. intros. now eapply cumul_prop_trans. Qed.
 
 Lemma cumul_prop_cum_l {Σ Γ A T B} {wfΣ : wf_ext Σ} : 
@@ -1031,7 +1031,7 @@ Proof.
   solve_all. constructor; auto.
 Qed.
 
-Instance cumul_prop_sym' Σ Γ : wf Σ.1 -> CRelationClasses.Symmetric (cumul_prop Σ Γ).
+Global Instance cumul_prop_sym' Σ Γ : wf Σ.1 -> CRelationClasses.Symmetric (cumul_prop Σ Γ).
 Proof.
   now intros wf x y; eapply cumul_prop_sym.
 Qed.

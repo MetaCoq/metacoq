@@ -1348,7 +1348,7 @@ Corollary R_Acc_aux :
     wf Σ ->
     whnf flags Σ Γ t ->
     isConstruct_app t = false ->
-    check_recursivity_kind Σ (inductive_mind ind) CoFinite = false ->
+    check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite = false ->
     Σ ;;; Γ |- t : mkApps (tInd ind u) args ->
     whne flags Σ Γ t.
   Proof.
@@ -1419,12 +1419,12 @@ Corollary R_Acc_aux :
     apply inversion_mkApps in typ as (fix_ty & typ_fix & typ_args); auto.
     apply inversion_Fix in typ_fix as (def&?&?&?&?&?&?); auto.
     eapply All_nth_error in a; eauto.
-    eapply wf_fixpoint_spine in i0; eauto.
+    eapply wf_fixpoint_spine in i; eauto.
     2: { eapply PCUICSpine.typing_spine_strengthen; eauto. }
     unfold unfold_fix in uf.
     rewrite e in uf.
-    rewrite nth_error_snoc in i0 by congruence.
-    destruct i0 as (?&?&?&typ&fin).
+    rewrite nth_error_snoc in i by congruence.
+    destruct i as (?&?&?&typ&fin).
     eapply whnf_non_ctor_finite_ind_typed; try eassumption.
     - unfold isConstruct_app.
       rewrite decompose_app_mkApps by (now destruct t).
@@ -1445,7 +1445,7 @@ Corollary R_Acc_aux :
     end ->
     whnf flags Σ Γ (mkApps hd args) ->
     Σ;;; Γ |- tCase ci p (mkApps hd args) brs : T ->
-    whne flags Σ Γ (mkApps hd args).
+    whne flags Σ Γ (mkApps hd args). 
   Proof.
     intros wf shape wh typ.
     apply inversion_Case in typ as (?&?&isdecl&?&[]&?); auto.

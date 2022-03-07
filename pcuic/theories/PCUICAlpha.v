@@ -908,7 +908,7 @@ Section Alpha.
           4: intuition eauto.
           all: intros ? ? []; reflexivity.
         * revert wffix.
-          unfold wf_fixpoint.
+          unfold wf_fixpoint, wf_fixpoint_gen.
           enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
           apply upto_names_check_fix. solve_all.
         + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
@@ -981,7 +981,7 @@ Section Alpha.
         4: intuition eauto.
         all: intros ? ? []; reflexivity.
       * revert wffix.
-        unfold wf_cofixpoint.
+        unfold wf_cofixpoint, wf_cofixpoint_gen.
         enough (map check_one_cofix mfix = map check_one_cofix mfix') as ->; auto.
         apply upto_names_check_cofix. solve_all.
       + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.

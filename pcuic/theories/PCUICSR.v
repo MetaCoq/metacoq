@@ -38,7 +38,7 @@ Lemma wf_fixpoint_red1_type {cf Σ} {wfΣ : wf Σ} Γ mfix mfix1 :
   wf_fixpoint Σ mfix1.
 Proof.
   intros wffix o.
-  move: wffix; unfold wf_fixpoint.
+  move: wffix; unfold wf_fixpoint, wf_fixpoint_gen.
   enough (forall inds, map_option_out (map check_one_fix mfix) = Some inds ->
      map_option_out (map check_one_fix mfix1) = Some inds) => //.
   destruct map_option_out. now specialize (H _ eq_refl) as ->.
@@ -78,7 +78,7 @@ Lemma wf_fixpoint_red1_body {cf Σ} {wfΣ : wf Σ} Γ mfix mfix1 :
   wf_fixpoint Σ mfix1.
 Proof.
   intros wffix o.
-  move: wffix; unfold wf_fixpoint.
+  move: wffix; unfold wf_fixpoint, wf_fixpoint_gen.
   enough (map check_one_fix mfix = map check_one_fix mfix1) as -> => //.
   induction o.
   - simpl. f_equal.
@@ -99,7 +99,7 @@ Lemma wf_cofixpoint_red1_type {cf:checker_flags} (Σ : global_env_ext) Γ mfix m
   wf_cofixpoint Σ.1 mfix1.
 Proof.
   intros wfΣ wffix o.
-  move: wffix; unfold wf_cofixpoint.
+  move: wffix; unfold wf_cofixpoint, wf_cofixpoint_gen.
   enough (forall inds, map_option_out (map check_one_cofix mfix) = Some inds ->
      map_option_out (map check_one_cofix mfix1) = Some inds) => //.
   destruct map_option_out. now specialize (H _ eq_refl) as ->.
@@ -139,7 +139,7 @@ Lemma wf_cofixpoint_red1_body {cf:checker_flags} (Σ : global_env_ext) Γ mfix m
   wf_cofixpoint Σ.1 mfix1.
 Proof.
   intros wfΣ wffix o.
-  move: wffix; unfold wf_cofixpoint.
+  move: wffix; unfold wf_cofixpoint, wf_cofixpoint_gen.
   enough (map check_one_cofix mfix = map check_one_cofix mfix1) as -> => //.
   induction o.
   - simpl. f_equal.

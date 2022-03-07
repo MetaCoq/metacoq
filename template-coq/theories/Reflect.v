@@ -482,7 +482,6 @@ Proof.
 Qed.
 
 Require Import RelationClasses.
-Existing Instance ConstraintType.lt_strorder.
     
 Lemma constraint_lt_irrel (x y : UnivConstraint.t) (l l' : UnivConstraint.lt_ x y) : l = l'.
 Proof.

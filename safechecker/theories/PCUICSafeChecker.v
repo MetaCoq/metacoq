@@ -30,80 +30,6 @@ Require Import Morphisms.
 
 Implicit Types (cf : checker_flags).
 
-Instance proper_add_level_edges levels : Morphisms.Proper (wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature (add_level_edges levels).
-Proof.
-  intros e e' he.
-  rewrite /add_level_edges.
-  rewrite !VSet.fold_spec.
-  induction (VSet.elements levels) in e, e', he |- *; cbn; auto.
-  apply IHl. destruct variable_of_level => //.
-  now rewrite he.
-Qed.
-
-Instance proper_add_uctx cstrs : Morphisms.Proper (Equal_graph ==> Equal_graph)%signature (add_uctx cstrs).
-Proof.
-  intros g g' eq. rewrite /add_uctx; cbn.
-  split. cbn. now rewrite (proj1 eq).
-  cbn. split => //.
-  rewrite /add_level_edges. now rewrite (proj1 (proj2 eq)).
-  apply eq.
-Qed.
-
-
-Definition cs_equal (x y : ContextSet.t) : Prop :=
-  LevelSet.Equal x.1 y.1 /\ ConstraintSet.Equal x.2 y.2.
-
-Definition gcs_equal x y : Prop :=
-  LevelSet.Equal x.1 y.1 /\ GoodConstraintSet.Equal x.2 y.2.
-  Require Import Relation_Definitions.
-
-  Definition R_opt {A} (R : relation A) : relation (option A) :=
-    fun x y => match x, y with
-      | Some x, Some y => R x y
-      | None, None => True
-      | _, _ => False
-    end.
-
-  Instance gc_of_constraints_proper {cf} : Proper (ConstraintSet.Equal ==> R_opt GoodConstraintSet.Equal) gc_of_constraints.
-  Proof.
-    intros c c' eqc; cbn.
-    destruct (gc_of_constraintsP c);
-    destruct (gc_of_constraintsP c'); cbn.
-    - intros cs; rewrite i i0. firstorder eauto.
-    - destruct e0 as [cs [incs gcn]].
-      apply eqc in incs. destruct (e cs incs) as [? []]. congruence.
-    - destruct e as [cs [incs gcn]].
-      apply eqc in incs. destruct (e0 cs incs) as [? []]. congruence.
-    - exact I.
-  Qed.
-
-  Instance proper_add_level_edges' : Morphisms.Proper (LevelSet.Equal ==> wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature add_level_edges.
-  Proof.
-    intros l l' hl e e' <-.
-    intros x; rewrite !add_level_edges_spec. firstorder eauto.
-  Qed.
-  
-  Instance make_graph_proper : Proper (gcs_equal ==> Equal_graph) make_graph.
-  Proof.
-    intros [v c] [v' c'] [eqv eqc]; cbn.
-    unfold make_graph; cbn in *.
-    split; cbn; auto.
-    split; cbn; try reflexivity.
-    now rewrite eqc eqv.
-  Qed.
-  Require Import SetoidTactics.
-
-  Instance is_graph_of_uctx_proper {cf} G : Proper (cs_equal ==> iff) (is_graph_of_uctx G).
-  Proof.
-    intros [l c] [l' c'] [eql eqc]; cbn.
-    unfold is_graph_of_uctx; cbn. cbn in *.
-    pose proof (gc_of_constraints_proper _ _ eqc).
-    destruct (gc_of_constraints c); cbn in *; destruct (gc_of_constraints c'); cbn.
-    now setoid_replace (l, t) with (l', t0) using relation gcs_equal. elim H. elim H.
-    intuition.
-  Qed.
-
-
 (** It otherwise tries [auto with *], very bad idea. *)
 Ltac Coq.Program.Tactics.program_solve_wf ::= 
   match goal with 
@@ -393,13 +319,13 @@ Section CheckEnv.
 
   Program Definition check_wf_env_ext (Σ : global_env) (id : kername) (wfΣ : ∥ wf Σ ∥) (G : universes_graph) 
     (wfG : is_graph_of_uctx G (global_uctx Σ)) (ext : universes_decl) : 
-    EnvCheck (∑ G, is_graph_of_uctx G (global_ext_uctx (Σ, ext)) /\ ∥ wf_ext (Σ, ext) ∥) :=
+    EnvCheck ({ G | is_graph_of_uctx G (global_ext_uctx (Σ, ext)) /\ ∥ wf_ext (Σ, ext) ∥ }) :=
     match ext with
-    | Monomorphic_ctx => ret (G; _)
+    | Monomorphic_ctx => ret (exist G _)
     | Polymorphic_ctx _ => 
       uctx <- check_udecl (string_of_kername id) Σ wfΣ G wfG ext ;;
       let G' := add_uctx uctx.π1 G in
-      ret (G'; _)
+      ret (exist G' _)
     end.
   Next Obligation.
     intros. simpl.
@@ -437,7 +363,7 @@ Section CheckEnv.
 
   Program Definition make_wf_env_ext (Σ : wf_env) id (ext : universes_decl) : 
     EnvCheck ({ Σ' : wf_env_ext | Σ'.(wf_env_ext_env) = (Σ, ext)}) :=
-    '(G; pf) <- check_wf_env_ext Σ id _ Σ _ ext ;;
+    '(exist G pf) <- check_wf_env_ext Σ id _ Σ _ ext ;;
     ret (exist {| wf_env_ext_env := (Σ, ext) ;
            wf_env_ext_map := Σ.(wf_env_map) ;
            wf_env_ext_map_repr := Σ.(wf_env_map_repr) ; 
@@ -2118,7 +2044,7 @@ Section CheckEnv.
 
   Obligation Tactic := idtac.
   Program Definition check_univs (univs : ContextSet.t)
-    : EnvCheck (∑ G, is_graph_of_uctx G (global_uctx_univs univs) /\ ∥ on_global_univs univs ∥) :=
+    : EnvCheck ({ G | is_graph_of_uctx G (global_uctx_univs univs) /\ ∥ on_global_univs univs ∥ }) :=
     let id := "toplevel" in
     let levels := global_levels univs in
     let Σ : global_env := {| universes := univs; declarations := [] |} in
@@ -2135,7 +2061,7 @@ Section CheckEnv.
       let G' := make_graph uctx' in
       check_eq_true (wGraph.is_acyclic G')
                     (empty_ext Σ, IllFormedDecl id (Msg "constraints not satisfiable"));;
-      ret (G'; _)
+      ret (exist G' _)
     end eq_refl.
   Next Obligation.
     cbv beta. intros univs id levels Σ H H0 uctx' Huctx G' HG'.
@@ -2278,7 +2204,7 @@ Section CheckEnv.
   
   Program Definition check_wf_env (Σ : global_env) : EnvCheck ({ wfe : wf_env | wfe.(wf_env_env) = Σ }) := 
     G <- check_univs Σ.(universes) ;;
-    wfΣ <- check_wf_decls Σ.(universes) G.π1 G.π2 Σ.(declarations) ;;
+    wfΣ <- check_wf_decls Σ.(universes) (proj1_sig G) (proj2_sig G) Σ.(declarations) ;;
     ret (exist (proj1_sig wfΣ) _).
 
   Next Obligation.

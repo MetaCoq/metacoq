@@ -85,7 +85,7 @@ Global Hint Resolve Σudecl : wf_env.
 Ltac wf_env := auto with wf_env.
 
 Lemma wf_ext_gc_of_uctx {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
-  : ∑ uctx', gc_of_uctx (global_ext_uctx Σ) = Some uctx'.
+  : { uctx' | gc_of_uctx (global_ext_uctx Σ) = Some uctx' }.
 Proof.
   assert (consistent (global_ext_uctx Σ).2) as HC.
   { sq; apply (global_ext_uctx_consistent _ HΣ). }
@@ -101,7 +101,7 @@ Defined.
 (** Any well-formed global environment gives rise to a well-formed universe graph corresponding to it. *)
 
 Lemma graph_of_wf_ext {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf_ext Σ ∥)
-  : ∑ G, is_graph_of_uctx G (global_ext_uctx Σ).
+  : { G | is_graph_of_uctx G (global_ext_uctx Σ) }.
 Proof.
   destruct (wf_ext_gc_of_uctx HΣ) as [uctx Huctx].
   exists (make_graph uctx). unfold is_graph_of_uctx. now rewrite Huctx.
@@ -116,8 +116,8 @@ Definition build_wf_env_ext {cf : checker_flags} (Σ : global_env_ext) (wfΣ : �
      wf_env_ext_map := EnvMap.of_global_env Σ.(declarations); 
      wf_env_ext_map_repr := EnvMap.repr_global_env Σ.(declarations);
      wf_env_ext_wf := wfΣ;
-     wf_env_ext_graph := (graph_of_wf_ext wfΣ).π1;
-     wf_env_ext_graph_wf := (graph_of_wf_ext wfΣ).π2 |}.
+     wf_env_ext_graph := proj1_sig (graph_of_wf_ext wfΣ);
+     wf_env_ext_graph_wf := proj2_sig (graph_of_wf_ext wfΣ) |}.
 
 Section GraphSpec.
   Context {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)

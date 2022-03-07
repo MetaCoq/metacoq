@@ -13,7 +13,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICPrimitive
   PCUICValidity PCUICPrincipality PCUICElimination 
   PCUICOnFreeVars PCUICWellScopedCumulativity PCUICSN PCUICEtaExpand.
      
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICSafeRetyping PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICSafeReduce PCUICSafeRetyping.
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim EDeps ErasureCorrectness.
 
 Local Open Scope string_scope.
@@ -730,15 +730,61 @@ Definition erase_mutual_inductive_body (mib : mutual_inductive_body) : E.mutual_
   {| E.ind_npars := mib.(ind_npars);
      E.ind_bodies := bodies; |}.
 
+Lemma wf_env_fresh (Σ : wf_env) : EnvMap.EnvMap.fresh_globals Σ.(declarations).
+Proof.
+  destruct Σ.(wf_env_wf).
+  now eapply wf_fresh_globals. 
+Qed.
+
+Lemma wf_env_eta (Σ : wf_env) : {| universes := Σ.(universes); declarations := Σ.(declarations) |} = Σ.
+Proof.
+  destruct Σ => /= //. destruct wf_env_env => //.
+Qed.
+
 Program Definition remove_kn (kn : kername) (Σ : wf_env) decls (prf : exists d, Σ.(wf_env_env).(declarations) = (kn, d) :: decls) : wf_env :=
  {| wf_env_env := {| universes := Σ.(wf_env_env).(universes); declarations := decls |};
     wf_env_map := EnvMap.EnvMap.remove kn Σ.(wf_env_map);
     wf_env_graph := Σ.(wf_env_graph) |}.
 
-Next Obligation. Admitted.
-Next Obligation. Admitted.
-Next Obligation. Admitted.
+Import EnvMap.
+Next Obligation. 
+  pose proof Σ.(wf_env_map_repr). red in H0.
+  rewrite H in H0.
+  set (Σ0 := EnvMap.of_global_env decls).
+  epose proof (EnvMap.remove_add_eq decls kn prf Σ0).
+  forward_keep H1.
+  { pose proof (Σf := wf_env_fresh Σ). rewrite H in Σf. now depelim Σf. }
+  forward_keep H1.
+  { pose proof (Σf := wf_env_fresh Σ). rewrite H in Σf. now depelim Σf. }
+  forward_keep H1.
+  { red. unfold EnvMap.equal. reflexivity. }
+  rewrite H0 -H1. reflexivity.
+Qed.
+  
+Next Obligation.
+  destruct Σ.(wf_env_wf). sq.
+  destruct X as [onu ond]; split => //. rewrite H in ond.
+  now depelim ond.
+Qed.
 
+Next Obligation.
+  have wfG := Σ.(wf_env_graph_wf).
+  rewrite -(wf_env_eta Σ) in wfG.
+  rewrite H in wfG.
+  eapply wfG.
+Qed.
+
+Require Import Morphisms.
+Lemma add_uctx_proper : Morphisms.Proper (Logic.eq ==> uGraph.Equal_graph ==> uGraph.Equal_graph)%signature uGraph.add_uctx.
+Proof.
+  intros x ? -> g g' [? []].
+  split. cbn. lsets.
+  split. cbn. 
+  rewrite -2!uGraph.add_level_edges_add_cstrs_comm.
+  eapply uGraph.add_level_edges_proper.
+  
+  rewrite H0.
+  destruct eq. split. eapply LevelSetProp.Dec.F.union_1
 
 Program Definition make_wf_env_ext (Σ : wf_env) (univs : universes_decl) (prf : ∥ wf_ext (Σ, univs) ∥) : wf_env_ext :=
   {| wf_env_ext_env := (Σ, univs);
@@ -752,6 +798,35 @@ Program Definition make_wf_env_ext (Σ : wf_env) (univs : universes_decl) (prf :
 
 Next Obligation.
   destruct uGraph.gc_of_constraints eqn:eqgc.
+  - pose proof (wf_ext_gc_of_uctx prf) as [uctx' isg].
+    destruct prf.
+    move: isg.
+    pose proof (wfG := Σ.(wf_env_graph_wf)).
+    rewrite /uGraph.is_graph_of_uctx /=.
+    destruct uGraph.gc_of_uctx eqn:gc => //.
+    intros [= <-]. cbn.
+    move: gc.
+    rewrite /global_ext_uctx /= /global_ext_levels /=.
+    rewrite /global_ext_constraints /=.
+    set (G := Σ.(wf_env_graph)) in *.
+    pose proof (uGraph.gc_of_constraints_union (constraints_of_udecl univs) (global_constraints Σ)).
+    rewrite eqgc /= in H. red in H.
+    red in wfG.
+    unfold uGraph.gc_of_uctx. simpl.
+    unfold global_uctx in wfG. unfold uGraph.gc_of_uctx in wfG. simpl in wfG.
+    destruct (uGraph.gc_of_constraints
+      (ConstraintSet.union (constraints_of_udecl univs)
+        (global_constraints Σ))) => //.
+    intros [= <-].
+    destruct (uGraph.gc_of_constraints (global_constraints Σ)) eqn:gc.
+    cbn in wfG.
+    rewrite -wfG.
+    
+    unfold uGraph.add_uctx.
+    split => /=. 
+    unfold global_levels.
+
+
   todo "univs".
   pose proof (wf_ext_gc_of_uctx prf) as [uctx' isg].
   move: isg.
@@ -804,7 +879,7 @@ Next Obligation.
 Qed.
 
 Lemma wf_gc_of_uctx {cf:checker_flags} {Σ : global_env} (HΣ : ∥ wf Σ ∥)
-  : ∑ uctx', uGraph.gc_of_uctx (global_uctx Σ) = Some uctx'.
+  : {uctx' | uGraph.gc_of_uctx (global_uctx Σ) = Some uctx' }.
 Proof.
   assert (consistent (global_uctx Σ).2) as HC.
   { sq => //. apply X. }
@@ -817,7 +892,8 @@ Proof.
   contradiction HC.
 Defined.
 
-Lemma graph_of_wf {cf:checker_flags} {Σ : global_env} (wfΣ : ∥ wf Σ ∥) : ∑ G, uGraph.is_graph_of_uctx G (global_uctx Σ).
+Lemma graph_of_wf {cf:checker_flags} {Σ : global_env} (wfΣ : ∥ wf Σ ∥) : 
+  { G | uGraph.is_graph_of_uctx G (global_uctx Σ) }.
 Proof.
   destruct (wf_gc_of_uctx wfΣ) as [uctx Huctx] => //.
   exists (uGraph.make_graph uctx). unfold uGraph.is_graph_of_uctx. now rewrite Huctx.
@@ -828,8 +904,8 @@ Definition build_wf_env {cf : checker_flags} (Σ : global_env) (wfΣ : ∥ wf Σ
      wf_env_map := EnvMap.EnvMap.of_global_env Σ.(declarations); 
      wf_env_map_repr := EnvMap.EnvMap.repr_global_env Σ.(declarations);
      wf_env_wf := wfΣ;
-     wf_env_graph := (graph_of_wf wfΣ).π1;
-     wf_env_graph_wf := (graph_of_wf wfΣ).π2 |}.
+     wf_env_graph := proj1_sig (graph_of_wf wfΣ);
+     wf_env_graph_wf := proj2_sig (graph_of_wf wfΣ) |}.
 
 Definition erase_global deps Σ :=
   erase_global_decls deps Σ Σ.(declarations) eq_refl.
@@ -1283,11 +1359,6 @@ Proof.
     eapply All2_All2_mix in X; tea. solve_all.
     len in b. rewrite - (All2_length X).
     now eapply b.
-Qed.
-
-Lemma wf_env_eta (Σ : wf_env) : {| universes := Σ.(universes); declarations := Σ.(declarations) |} = Σ.
-Proof.
-  destruct Σ => /= //. destruct wf_env_env => //.
 Qed.
 
 Lemma erase_global_includes (Σ : wf_env) deps deps' :
@@ -1755,3 +1826,4 @@ Proof.
     eapply IHdecls => //.
   + eapply IHdecls => //.
 Qed.
+

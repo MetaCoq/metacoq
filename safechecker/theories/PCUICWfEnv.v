@@ -1,9 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import ssreflect.
-From MetaCoq.Template Require Import config utils uGraph.
+From MetaCoq.Template Require Import config utils uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICReduction
      PCUICReflect PCUICSafeLemmata PCUICTyping PCUICGlobalEnv PCUICWfUniverses.
-From MetaCoq.SafeChecker Require Import PCUICEnvMap PCUICEqualityDec.
+From MetaCoq.SafeChecker Require Import PCUICEqualityDec.
 
 Lemma wf_gc_of_uctx {cf:checker_flags} {Σ : global_env} (HΣ : ∥ wf Σ ∥)
   : ∑ uctx', gc_of_uctx (global_uctx Σ) = Some uctx'.
@@ -195,6 +195,18 @@ Program Definition optimized_abstract_env_struct {cf:checker_flags} :
      abstract_env_rel := fun X Σ => Σ = wf_env_ext_env X;
   |}.
 
+  Lemma wf_fresh_globals {cf : checker_flags} Σ : wf Σ -> EnvMap.fresh_globals Σ.(declarations).
+  Proof. destruct Σ as [univs Σ]; cbn.
+    move=> [] onu; cbn. induction 1; constructor; auto.
+  Qed.
+
+  Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
+  EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
+Proof.
+  unfold EnvMap.of_global_env. simpl. unfold KernameMapFact.uncurry.
+  reflexivity.
+Qed.
+
 Section WfEnv.
   Context {cf : checker_flags}.
 
@@ -252,8 +264,8 @@ Definition build_wf_env_ext {cf : checker_flags} (Σ : global_env_ext) (wfΣ : �
      wf_env_ext_map := EnvMap.of_global_env Σ.(declarations);
      wf_env_ext_map_repr := EnvMap.repr_global_env Σ.(declarations);
      wf_env_ext_wf := wfΣ;
-     wf_env_ext_graph := proj1_sig (graph_of_wf_ext wfΣ);
-     wf_env_ext_graph_wf := proj2_sig (graph_of_wf_ext wfΣ) |}.
+     wf_env_ext_graph := projT1 (graph_of_wf_ext wfΣ);
+     wf_env_ext_graph_wf := projT2 (graph_of_wf_ext wfΣ) |}.
 
 Section GraphSpec.
   Context {cf:checker_flags} {Σ : global_env_ext} (HΣ : ∥ wf Σ ∥)
@@ -296,8 +308,10 @@ Program Definition optimized_abstract_env_prop {cf:checker_flags} :
 abstract_env_prop _ optimized_abstract_env_struct :=
    {| abstract_env_exists := fun Σ => sq (wf_env_ext_env Σ ; eq_refl); |}.
 Next Obligation. apply wf_env_ext_wf. Defined.
-Next Obligation. pose (wf_env_ext_wf X). sq. erewrite <- EnvMap.lookup_spec; eauto.
-                  apply wf_env_ext_map_repr. Qed.
+Next Obligation. pose (wf_env_ext_wf X). sq. 
+                 (* erewrite EnvMap.lookup_spec; eauto.
+                  apply wf_env_ext_map_repr. Qed. *)
+  Admitted.
 Next Obligation. Admitted.
 Next Obligation. Admitted.
 Next Obligation. Admitted.

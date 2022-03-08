@@ -293,6 +293,12 @@ Module GoodConstraintSetDecide := WDecide (GoodConstraintSet).
 Module GCS := GoodConstraintSet.
 Ltac gcsets := GoodConstraintSetDecide.fsetdec.
 
+Definition gcs_equal x y : Prop :=
+  LevelSet.Equal x.1 y.1 /\ GoodConstraintSet.Equal x.2 y.2.
+
+Infix "=_gcs" := gcs_equal (at level 200).
+Notation "(=_gcs)" := gcs_equal (at level 0).
+
 Definition GoodConstraintSet_pair x y
   := GoodConstraintSet.add y (GoodConstraintSet.singleton x).
 
@@ -1074,9 +1080,13 @@ Definition Equal_graph :=
   fun G G' : universes_graph =>
   LevelSet.Equal G.1.1 G'.1.1 /\
   wGraph.EdgeSet.Equal G.1.2 G'.1.2 /\ Level.eq G.2 G'.2.
-Global Instance: RelationClasses.RewriteRelation Equal_graph := {}.
 
-Global Instance equal_graph_equiv : RelationClasses.Equivalence Equal_graph.
+Notation "'(=_g)'" := Equal_graph (at level 30).
+Infix "=_g" := Equal_graph (at level 30).
+
+Global Instance: RelationClasses.RewriteRelation ((=_g)) := {}.
+
+Global Instance equal_graph_equiv : RelationClasses.Equivalence ((=_g)).
 Proof. split; unfold Equal_graph.
   - intros [[vs es] s]; cbn. intuition reflexivity.
   - intros [[vs es] s] [[vs' es'] s']; cbn.
@@ -1085,19 +1095,19 @@ Proof. split; unfold Equal_graph.
     intuition etransitivity; eauto.
 Qed.
 
-Lemma PathOf_proper {g g' x y} : Equal_graph g g' -> PathOf g x y -> PathOf g' x y.
+Lemma PathOf_proper {g g' x y} : g =_g g' -> PathOf g x y -> PathOf g' x y.
 Proof.
   intros eq; induction 1; econstructor; eauto.
   destruct e as [n ine]. apply eq in ine. now exists n.
 Defined.
 
-Lemma PathOf_proper_weight {g g' x y} (eq: Equal_graph g g') (p : PathOf g x y) : weight (PathOf_proper eq p) = weight p.
+Lemma PathOf_proper_weight {g g' x y} (eq: g =_g g') (p : PathOf g x y) : weight (PathOf_proper eq p) = weight p.
 Proof.
   induction p; cbn; auto. destruct e; cbn.
   now rewrite IHp.
 Qed.
 
-Global Instance invariants_proper : Proper (Equal_graph ==> impl) invariants.
+Global Instance invariants_proper : Proper ((=_g) ==> impl) invariants.
 Proof.
   intros [[vs es] s] [[vs' es'] s']; cbn in *.
   intros eq [ev sv sp]; constructor; eauto; cbn in *; intros.
@@ -1111,13 +1121,13 @@ Proof.
     sq. now rewrite (PathOf_proper_weight eq).
 Qed.
 
-Global Instance invariants_proper_iff : Proper (Equal_graph ==> iff) invariants.
+Global Instance invariants_proper_iff : Proper ((=_g) ==> iff) invariants.
 Proof.
   intros g g' eq. split. now rewrite eq.
   now rewrite eq.
 Qed.
 
-Global Instance acyclic_no_loop_proper : Proper (Equal_graph ==> iff) acyclic_no_loop.
+Global Instance acyclic_no_loop_proper : Proper ((=_g) ==> iff) acyclic_no_loop.
 Proof.
   intros g g' eq. split.
   - intros ac x p.
@@ -1211,7 +1221,7 @@ Section CheckLeq.
     exact (val_valuation_of_labelling' L l 0 Hl HL).
   Qed.
 
-  Instance correct_labelling_proper : Proper (Equal_graph ==> Logic.eq ==> iff) correct_labelling.
+  Instance correct_labelling_proper : Proper ((=_g) ==> Logic.eq ==> iff) correct_labelling.
   Proof.
     intros g g' eq x ? <-.
     unfold correct_labelling.
@@ -2648,7 +2658,7 @@ Section AddLevelsCstrs.
     intros. now apply succs_proper.
   Qed.
 
-  #[global] Instance lsp_proper : Morphisms.Proper (Equal_graph ==> Logic.eq ==> Logic.eq ==> Logic.eq)%signature lsp.
+  #[global] Instance lsp_proper : Morphisms.Proper ((=_g) ==> Logic.eq ==> Logic.eq ==> Logic.eq)%signature lsp.
   Proof.
     intros e e' He x ? <- y ? <-.
     unfold lsp, lsp0.
@@ -2671,7 +2681,7 @@ Section AddLevelsCstrs.
     intuition auto. now apply eqt. now apply eqt.
   Qed.
 
-  #[global] Instance is_acyclic_proper : Morphisms.Proper (Equal_graph ==> Logic.eq)%signature is_acyclic.
+  #[global] Instance is_acyclic_proper : Morphisms.Proper ((=_g) ==> Logic.eq)%signature is_acyclic.
   Proof.
     intros e e' eq.
     unfold is_acyclic.
@@ -2843,3 +2853,62 @@ Section AddLevelsCstrs.
   Qed.
 
 End AddLevelsCstrs.
+
+#[global] Instance proper_add_level_edges levels : Morphisms.Proper (wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature (add_level_edges levels).
+Proof.
+  intros e e' he.
+  rewrite /add_level_edges.
+  rewrite !VSet.fold_spec.
+  induction (VSet.elements levels) in e, e', he |- *; cbn; auto.
+  apply IHl. destruct variable_of_level => //.
+  now rewrite he.
+Qed.
+
+#[global] Instance proper_add_uctx cstrs : Morphisms.Proper ((=_g) ==> Equal_graph)%signature (add_uctx cstrs).
+Proof.
+  intros g g' eq. rewrite /add_uctx; cbn.
+  split. cbn. now rewrite (proj1 eq).
+  cbn. split => //.
+  rewrite /add_level_edges. now rewrite (proj1 (proj2 eq)).
+  apply eq.
+Qed.
+
+#[global] Instance gc_of_constraints_proper {cf : checker_flags} : Proper ((=_cset) ==> R_opt GoodConstraintSet.Equal) gc_of_constraints.
+Proof.
+  intros c c' eqc; cbn.
+  destruct (gc_of_constraintsP c);
+  destruct (gc_of_constraintsP c'); cbn.
+  - intros cs; rewrite i i0. firstorder eauto.
+  - destruct e0 as [cs [incs gcn]].
+    apply eqc in incs. destruct (e cs incs) as [? []]. congruence.
+  - destruct e as [cs [incs gcn]].
+    apply eqc in incs. destruct (e0 cs incs) as [? []]. congruence.
+  - exact I.
+Qed.
+
+#[global] Instance proper_add_level_edges' : Morphisms.Proper ((=_lset) ==> wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature add_level_edges.
+Proof.
+  intros l l' hl e e' <-.
+  intros x; rewrite !add_level_edges_spec. firstorder eauto.
+Qed.
+
+#[global] Instance make_graph_proper : Proper ((=_gcs) ==> (=_g)) make_graph.
+Proof.
+  intros [v c] [v' c'] [eqv eqc]; cbn.
+  unfold make_graph; cbn in *.
+  split; cbn; auto.
+  split; cbn; try reflexivity.
+  now rewrite eqc eqv.
+Qed.
+
+Require Import SetoidTactics.
+
+#[global] Instance is_graph_of_uctx_proper {cf : checker_flags} G : Proper ((=_cs) ==> iff) (is_graph_of_uctx G).
+Proof.
+  intros [l c] [l' c'] [eql eqc]; cbn.
+  unfold is_graph_of_uctx; cbn. cbn in *.
+  pose proof (gc_of_constraints_proper _ _ eqc).
+  destruct (gc_of_constraints c); cbn in *; destruct (gc_of_constraints c'); cbn.
+  now setoid_replace (l, t0) with (l', t1) using relation gcs_equal. elim H. elim H.
+  intuition.
+Qed.

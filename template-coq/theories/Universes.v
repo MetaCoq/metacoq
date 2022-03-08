@@ -165,6 +165,9 @@ Module LevelSetDecide := WDecide (LevelSet).
 Module LS := LevelSet.
 Ltac lsets := LevelSetDecide.fsetdec.
 
+Notation "(=_lset)" := LevelSet.Equal (at level 0).
+Infix "=_lset" := LevelSet.Equal (at level 30).
+
 Definition LevelSet_pair x y
   := LevelSet.add y (LevelSet.singleton x).
 
@@ -1082,14 +1085,14 @@ Module ConstraintType.
   Derive Signature for lt_.
   Definition lt := lt_.
 
-  #[global] Instance lt_strorder : StrictOrder lt.
+  Global Instance lt_strorder : StrictOrder lt.
   Proof.
     constructor.
     - intros []; intro X; inversion X. lia.
     - intros ? ? ? X Y; invs X; invs Y; constructor. lia.
   Qed.
 
-  #[global] Instance lt_compat : Proper (eq ==> eq ==> iff) lt.
+  Global Instance lt_compat : Proper (eq ==> eq ==> iff) lt.
   Proof.
     intros ? ? X ? ? Y; invs X; invs Y. reflexivity.
   Qed.
@@ -1179,11 +1182,14 @@ Module CS := ConstraintSet.
 Module ConstraintSetDecide := WDecide (ConstraintSet).
 Ltac csets := ConstraintSetDecide.fsetdec.
 
+Notation "(=_cset)" := ConstraintSet.Equal (at level 0).
+Infix "=_cset" := ConstraintSet.Equal (at level 30).
+
 Definition declared_cstr_levels levels (cstr : UnivConstraint.t) :=
   let '(l1,_,l2) := cstr in
   LevelSet.In l1 levels /\ LevelSet.In l2 levels.
 
-Lemma CS_union_empty s : ConstraintSet.Equal (ConstraintSet.union ConstraintSet.empty s) s.
+Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s =_cset s.
 Proof.
   intros x; rewrite ConstraintSet.union_spec. lsets.
 Qed.
@@ -1204,7 +1210,7 @@ Proof.
   * intros y iny. apply (H y), CS.add_spec; right => //.
 Qed.
 
-#[global] Instance CS_For_all_proper P : Morphisms.Proper (CS.Equal ==> iff)%signature (ConstraintSet.For_all P).
+#[global] Instance CS_For_all_proper P : Morphisms.Proper ((=_cset) ==> iff)%signature (ConstraintSet.For_all P).
 Proof.
   intros s s' eqs.
   unfold CS.For_all. split; intros IH x inxs; apply (IH x);
@@ -1269,13 +1275,20 @@ Module ContextSet.
 
   Definition is_empty (uctx : t)
     := LevelSet.is_empty (fst uctx) && ConstraintSet.is_empty (snd uctx).
+
+  Definition equal (x y : t) : Prop :=
+    x.1 =_lset y.1 /\ x.2 =_cset y.2.
+  
+  Definition subset (x y : t) : Prop :=
+    LevelSet.Subset (levels x) (levels y) /\
+    ConstraintSet.Subset (constraints x) (constraints y).
+  
 End ContextSet.
 
-Definition contextset_subset (u u' : ContextSet.t) : Prop :=
-  LevelSet.Subset (ContextSet.levels u) (ContextSet.levels u') /\
-  ConstraintSet.Subset (ContextSet.constraints u) (ContextSet.constraints u').
-
-Infix "⊂_cs" := contextset_subset (at level 30).
+Notation "(=_cs)" := ContextSet.equal (at level 0).
+Notation "(⊂_cs)" := ContextSet.subset (at level 0).
+Infix "=_cs" := ContextSet.equal (at level 30).
+Infix "⊂_cs" := ContextSet.subset (at level 30).
 
 Lemma empty_contextset_subset u : ContextSet.empty ⊂_cs u.
 Proof.

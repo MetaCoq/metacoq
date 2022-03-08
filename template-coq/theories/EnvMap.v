@@ -138,6 +138,41 @@ Module EnvMap.
   Lemma lookup_add_other k k' v g : k <> k' -> lookup k (add k' v g) = lookup k g.
   Proof. move=> eqk. rewrite gso //. Qed.
 
+  Lemma remove_add_eq Σ k v e : 
+    fresh_globals Σ ->
+    fresh_global k Σ ->
+    repr Σ e ->
+    equal (remove k (add k v e)) e.
+  Proof.
+    unfold repr, equal, remove, add.
+    intros frΣ frk eq.
+    intros k'.
+    rewrite KernameMapFact.F.remove_o.
+    destruct KernameMap.E.eq_dec. eapply KernameOT.compare_eq in e0. subst k'.
+    - rewrite {}eq. induction frk. now cbn.
+      rewrite of_global_env_cons //. depelim frΣ. simpl in H0 |- *.
+      rewrite KernameMapFact.F.add_neq_o //. intros c. eapply KernameOT.compare_eq in c. contradiction.
+      now apply IHfrk.
+    - rewrite KernameMapFact.F.add_neq_o //.
+  Qed.
+
+  Lemma remove_add_o k k' v e : 
+    k <> k' ->
+    equal (remove k' (add k v e)) (add k v (remove k' e)).
+  Proof.
+    unfold repr, equal, remove, add.
+    intros neq k''.
+    rewrite KernameMapFact.F.remove_o.
+    destruct KernameMap.E.eq_dec. eapply KernameOT.compare_eq in e0. subst k'.
+    - rewrite KernameMapFact.F.add_neq_o //. intros c. eapply KernameOT.compare_eq in c. contradiction.
+      rewrite KernameMapFact.F.remove_o.
+      destruct KernameMap.E.eq_dec => //.
+      elimtype False; apply n. now apply KernameOT.compare_eq.
+    - rewrite !KernameMapFact.F.add_o //.
+      destruct (KernameMap.E.eq_dec k k'') => //.
+      rewrite KernameMapFact.F.remove_neq_o //.
+  Qed.
+
   Fixpoint lookup_global (Σ : list (kername × A)) (kn : kername) {struct Σ} : option A :=
     match Σ with
     | [] => None

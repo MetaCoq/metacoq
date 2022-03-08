@@ -1,4 +1,5 @@
-From Coq Require Import List ssreflect Arith Morphisms.
+From Coq Require Import List ssreflect Arith Morphisms Relation_Definitions.
+
 From MetaCoq Require Import MCPrelude MCList MCProd MCReflect.
 
 Definition option_get {A} (default : A) (x : option A) : A
@@ -24,6 +25,13 @@ Definition on_Some_or_None {A} (P : A -> Prop) : option A -> Prop :=
         | Some x => P x
         | None => True
         end.
+
+Definition R_opt {A} (R : relation A) : relation (option A) :=
+  fun x y => match x, y with
+    | Some x, Some y => R x y
+    | None, None => True
+    | _, _ => False
+  end.
 
 Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
   match o with Some x => f x | None => b end.

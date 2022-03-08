@@ -136,16 +136,18 @@ Section Wcbv.
       eval (tApp f a) (tApp (mkApps (tFix mfix idx) argsv) av)
 
   (** CoFix-case unfolding *)
-  | red_cofix_case ip mfix idx args narg fn brs res :
+  | eval_cofix_case ip mfix idx args discr narg fn brs res :
+      eval discr (mkApps (tCoFix mfix idx) args) ->
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tCase ip (mkApps fn args) brs) res ->
-      eval (tCase ip (mkApps (tCoFix mfix idx) args) brs) res
+      eval (tCase ip discr brs) res
 
   (** CoFix-proj unfolding *)
-  | red_cofix_proj p mfix idx args narg fn res :
+  | eval_cofix_proj p mfix idx args discr narg fn res :
+      eval discr (mkApps (tCoFix mfix idx) args) ->
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tProj p (mkApps fn args)) res ->
-      eval (tProj p (mkApps (tCoFix mfix idx) args)) res
+      eval (tProj p discr) res
 
   (** Constant unfolding *)
   | eval_delta c decl body (isdecl : declared_constant Σ c decl) res :
@@ -536,8 +538,6 @@ Section Wcbv.
         rewrite (uip e e2).
         specialize (IHev2 _ ev'2); noconf IHev2.
         now rewrite (uip e1 e4).
-      + apply eval_mkApps_tCoFix in ev1 as H.
-        destruct H as (? & ?); solve_discr.
     - depelim ev'; try go.
       + subst.
         noconf e2.
@@ -546,7 +546,6 @@ Section Wcbv.
         pose proof (uip e e1). subst.
         pose proof (uip i i0). subst i0.
         now specialize (IHev2 _ ev'2); noconf IHev2.
-      + apply eval_mkApps_tCoFix in ev1 as H; destruct H; solve_discr.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
@@ -591,29 +590,27 @@ Section Wcbv.
         cbn in *.
         now rewrite Bool.orb_true_r in i.
     - depelim ev'; try go.
-      + apply eval_mkApps_tCoFix in ev'1 as H; destruct H; solve_discr.
-      + apply eval_mkApps_tCoFix in ev'1 as H; destruct H; solve_discr.
-      + apply mkApps_eq_inj in e' as H'; auto.
-        destruct H' as (H' & <-).
-        noconf H'.
-        assert (narg0 = narg) as -> by congruence.
-        assert (fn0 = fn) as -> by congruence.
-        assert (e' = eq_refl) as -> by now apply uip.
-        assert (e0 = e) as -> by now apply uip.
-        cbn in *; subst.
-        now specialize (IHev _ ev'); noconf IHev.
+      move: (IHev1 _ ev'1).
+      eapply DepElim.simplification_sigma1 => heq IHev1'.
+      apply mkApps_eq_inj in heq as H'; auto.
+      destruct H' as (H' & <-). noconf H'.
+      assert (narg0 = narg) as -> by congruence.
+      assert (fn0 = fn) as -> by congruence.
+      noconf IHev1'.
+      assert (e0 = e) as -> by now apply uip.
+      cbn in *; subst.
+      now specialize (IHev2 _ ev'2); noconf IHev2.
     - depelim ev'; try go.
-      + apply mkApps_eq_inj in e1 as H'; auto.
-        destruct H' as (H' & <-).
-        noconf H'.
-        assert (narg0 = narg) as -> by congruence.
-        assert (fn0 = fn) as -> by congruence.
-        assert (e1 = eq_refl) as -> by now apply uip.
-        assert (e0 = e) as -> by now apply uip.
-        cbn in *; subst.
-        now specialize (IHev _ ev'); noconf IHev.
-      + exfalso; apply eval_mkApps_tCoFix in ev'1 as (? & ?); solve_discr.
-      + exfalso; apply eval_mkApps_tCoFix in ev' as (? & ?); solve_discr.
+      move: (IHev1 _ ev'1).
+      eapply DepElim.simplification_sigma1 => heq IHev1'.
+      apply mkApps_eq_inj in heq as H'; auto.
+      destruct H' as (H' & <-). noconf H'.
+      assert (narg0 = narg) as -> by congruence.
+      assert (fn0 = fn) as -> by congruence.
+      noconf IHev1'.
+      assert (e0 = e) as -> by now apply uip.
+      cbn in *; subst.
+      now specialize (IHev2 _ ev'2); noconf IHev2.
     - depelim ev'; try go.
       unfold ETyping.declared_constant in *.
       assert (decl0 = decl) as -> by congruence.
@@ -622,18 +619,16 @@ Section Wcbv.
       assert (isdecl0 = isdecl) as -> by now apply uip.
       now specialize (IHev _ ev'); noconf IHev.
     - depelim ev'; try go.
-      + apply eval_mkApps_tCoFix in ev1 as H; destruct H; solve_discr.
-      + specialize (IHev1 _ ev'1).
-        pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
-        noconf H.
-        noconf IHev1.
-        rewrite (uip e e0).
-        now specialize (IHev2 _ ev'2); noconf IHev2.
-    - depelim ev'; try go.
-      apply eval_mkApps_tCoFix in ev as H; destruct H; solve_discr.
+      specialize (IHev1 _ ev'1).
+      pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
+      noconf H.
+      noconf IHev1.
       rewrite (uip e e0).
-      rewrite (uip i0 i2).
-      now specialize (IHev _ ev'); noconf IHev.
+      now specialize (IHev2 _ ev'2); noconf IHev2.
+    - depelim ev'; try go.
+      specialize (IHev _ ev'). noconf IHev.
+      rewrite (uip e e0).
+      now rewrite (uip i0 i2).
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1); noconf IHev1.
         exfalso.

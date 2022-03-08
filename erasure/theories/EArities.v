@@ -436,6 +436,22 @@ Proof.
   eapply cumul_sprop1 in X2; eauto. now exists s.
 Qed.
 
+Lemma cumul_prop2' (Σ : global_env_ext) Γ A B u :
+  check_univs ->
+  wf_ext Σ ->
+  isType Σ Γ A ->
+  is_propositional u ->
+  Σ ;;; Γ |- B : tSort u ->
+  Σ ;;; Γ ⊢ B ≤ A ->
+  Σ ;;; Γ |- A : tSort u.
+Proof.
+  intros.
+  destruct X0 as [s Hs].
+  destruct u => //.
+  eapply cumul_prop2 in X2; eauto. now exists s.
+  eapply cumul_sprop2 in X2; eauto. now exists s.
+Qed.
+
 Lemma leq_term_propositional_sorted_l {Σ Γ v v' u u'} :
   wf_ext Σ ->
   PCUICEquality.leq_term Σ (global_ext_constraints Σ) v v' ->

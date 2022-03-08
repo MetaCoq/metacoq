@@ -467,7 +467,11 @@ erasure/src/eSpineView.ml
 erasure/src/eSpineView.mli
 erasure/src/eWcbvEval.ml
 erasure/src/eWcbvEval.mli
+erasure/src/pCUICWcbvEval.ml
+erasure/src/pCUICWcbvEval.mli
 erasure/src/wcbvEval.ml
 erasure/src/wcbvEval.mli
 erasure/src/envMap.ml
 erasure/src/envMap.mli
+erasure/src/eEtaExpanded.ml
+erasure/src/eEtaExpanded.mli

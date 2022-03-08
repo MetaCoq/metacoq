@@ -878,27 +878,28 @@ Lemma eval_mkApps_rect :
                                   (EAst.mkApps (EAst.tFix mfix idx) argsv) av))
               → (∀ (ip : inductive × nat) (mfix : EAst.mfixpoint EAst.term) 
                    (idx : nat) (args : list EAst.term) 
-                   (narg : nat) (fn : EAst.term) (brs : 
+                   (narg : nat) discr (fn : EAst.term) (brs : 
                                                  list 
                                                  (list name × EAst.term)) 
                    (res : EAst.term),
                    Ee.cunfold_cofix mfix idx = Some (narg, fn)
+                   -> Ee.eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
+                   -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
                    → Ee.eval Σ (EAst.tCase ip (EAst.mkApps fn args) brs) res
                      → P (EAst.tCase ip (EAst.mkApps fn args) brs) res
                        → P
-                           (EAst.tCase ip
-                              (EAst.mkApps (EAst.tCoFix mfix idx) args) brs)
+                           (EAst.tCase ip discr brs)
                            res)
                 → (∀ (p : projection) (mfix : EAst.mfixpoint EAst.term) 
                      (idx : nat) (args : list EAst.term) 
-                     (narg : nat) (fn res : EAst.term),
+                     (narg : nat) discr (fn res : EAst.term),
                      Ee.cunfold_cofix mfix idx = Some (narg, fn)
+                     -> Ee.eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
+                     -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
                      → Ee.eval Σ (EAst.tProj p (EAst.mkApps fn args)) res
                        → P (EAst.tProj p (EAst.mkApps fn args)) res
                          → P
-                             (EAst.tProj p
-                                (EAst.mkApps (EAst.tCoFix mfix idx) args))
-                             res)
+                             (EAst.tProj p discr) res)
                   → (∀ (c : kername) (decl : EAst.constant_body) 
                        (body : EAst.term),
                        declared_constant Σ c decl
@@ -1029,16 +1030,18 @@ Proof.
       move/andP: IHeval1 => [] evfix evargs.
       eapply isEtaExp_mkApps_intro => //.
       eapply All_app_inv. now solve_all. constructor; auto.
-  - rewrite isEtaExp_mkApps /= // => /andP[] /andP[] /= hco hargs hbrs.
-    eapply IHeval. simp_eta. rtoProp; intuition auto.
+  - move=> /andP[] hdiscr hbrs. specialize (IHeval1 hdiscr).
+    move: IHeval1. rewrite isEtaExp_mkApps // /= => /andP[] hcof hargs.
+    eapply IHeval2. simp_eta. rtoProp; intuition auto.
     apply isEtaExp_mkApps_intro; solve_all.
     eapply (isEtaExp_cunfold_cofix _ mfix idx); tea.
-    simp_eta in hco.
-  - rewrite isEtaExp_mkApps /= // => /andP[] /= hco hargs.
-    eapply IHeval. simp_eta. rtoProp; intuition auto.
+    simp_eta in hcof.
+  -  move=> hdiscr. specialize (IHeval1 hdiscr).
+    move: IHeval1. rewrite isEtaExp_mkApps // /= => /andP[] hcof hargs.
+    eapply IHeval2. simp_eta.
     apply isEtaExp_mkApps_intro; solve_all.
     eapply (isEtaExp_cunfold_cofix _ mfix idx); tea.
-    simp_eta in hco.
+    simp_eta in hcof.
   - move=> _. eapply IHeval. eapply isEtaExp_lookup in H; tea.
     now move: H; rewrite /isEtaExp_decl /= /isEtaExp_constant_decl H0 /=.
   - intros hd.
@@ -1379,46 +1382,57 @@ Proof.
       move/andP: ev1 => []. now simp isEtaExp. }
     now rewrite map_length. 
 
-  - rewrite closedn_mkApps.
-    move/andP => [] /= /andP[] clfix clargs clbrs.
-    simp_eta. rewrite isEtaExp_mkApps // /= => /andP[] /andP[]. simp_eta.
-    move=> etafix etaargs etabrs.
-    forward IHev.
-    { rewrite closedn_mkApps clargs clbrs !andb_true_r.
+  - move => /andP[] cld clbrs.
+    specialize (IHev1 cld).
+    simp_eta. move=> /andP[] etad etabrs.
+    forward IHev1 by auto.
+    move: (eval_etaexp etaΣ wfΣ ev1 etad).
+    rewrite isEtaExp_mkApps /= //. move/andP => [] etafix etaargs.
+    move: (eval_closed _ clΣ _ _ cld ev1).
+    rewrite closedn_mkApps. move=> /andP [] clfix clargs.
+    forward IHev2.
+    { rewrite clbrs andb_true_r. rewrite closedn_mkApps clargs andb_true_r.
       eapply closed_cunfold_cofix; tea. }
-    forward IHev.
-    { simp_eta; rewrite etabrs andb_true_r.
+    forward IHev2.
+    { simp_eta. rewrite etabrs andb_true_r.
       eapply isEtaExp_mkApps_intro.
-      eapply isEtaExp_cunfold_cofix; tea. solve_all. }
-    simp_strip. set (brs' := map _ _); simpl.
-    rewrite strip_mkApps // /=. simp_strip.
-    eapply Ee.red_cofix_case.
+      eapply isEtaExp_cunfold_cofix; tea. simp_eta in etafix. solve_all. }
+    rewrite strip_mkApps // /= in IHev1. simp_strip in IHev1.
+    simp_strip in IHev2.
+    simp_strip. set (brs' := map _ _) in *; simpl.
+    simp_eta in etafix.
+    eapply Ee.red_cofix_case; tea.
     eapply strip_cunfold_cofix; tea => //.
     { eapply closed_cofix_subst; tea. }
-    simp_strip in IHev.
-    change (map _ _) with brs' in IHev.
-    simpl in IHev.
-    rewrite strip_mkApps_etaexp in IHev.
+    rewrite strip_mkApps_etaexp in IHev2.
     { eapply isEtaExp_cunfold_cofix; tea. }
-    exact IHev.
+    exact IHev2.
 
-  - rewrite closedn_mkApps; move/andP => [] clfix clargs. forward IHev.
-    { rewrite closedn_mkApps clargs andb_true_r. eapply closed_cunfold_cofix; tea. }
-    simp_eta. rewrite isEtaExp_mkApps // /= => /andP[]. simp_eta.
-    move=> etafix etaargs.
-    forward IHev.
-    { simp_eta.
+  - move=> cld. simp_eta => etad.
+    specialize (IHev1 cld).
+    simp_eta.
+    forward IHev1 by auto.
+    move: (eval_etaexp etaΣ wfΣ ev1 etad).
+    rewrite isEtaExp_mkApps /= //. move/andP => [] etafix etaargs.
+    move: (eval_closed _ clΣ _ _ cld ev1).
+    rewrite closedn_mkApps. move=> /andP [] clfix clargs.
+    forward IHev2.
+    { rewrite closedn_mkApps clargs andb_true_r.
+      eapply closed_cunfold_cofix; tea. }
+    forward IHev2.
+    { simp_eta. 
       eapply isEtaExp_mkApps_intro.
-      eapply isEtaExp_cunfold_cofix; tea. solve_all. }
+      eapply isEtaExp_cunfold_cofix; tea. simp_eta in etafix. solve_all. }
     destruct p as [[ind pars] arg].
-    simp_strip.
-    simp_strip in IHev.
-    rewrite strip_mkApps // /=. simp_strip.
-    eapply Ee.red_cofix_proj.
-    apply strip_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    rewrite strip_mkApps_etaexp in IHev.
+    simp_strip. simp_eta in etafix.
+    simp_strip in IHev1. simp_strip in IHev2.
+    rewrite strip_mkApps // /= in IHev1 IHev2.
+    simp_strip in IHev1. 
+    rewrite strip_mkApps_etaexp in IHev2.
     now eapply isEtaExp_cunfold_cofix; tea.
-    apply IHev.
+    eapply Ee.red_cofix_proj; tea.
+    eapply strip_cunfold_cofix; tea.
+    { eapply closed_cofix_subst; tea. }
   
   - econstructor. red in H |- *.
     rewrite lookup_env_strip H //.

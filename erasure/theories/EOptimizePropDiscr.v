@@ -594,12 +594,13 @@ Proof.
   - apply andb_true_iff.
     split; [|easy].
     solve_all.
-  - eapply IHev. rewrite closedn_mkApps.
-    rewrite closedn_mkApps in Hc. move/andP: Hc => [Hfix Hargs].
+  - eapply IHev2. rewrite closedn_mkApps.
+    rewrite closedn_mkApps in IHev1. 
+    specialize (IHev1 Hc). move/andP: IHev1 => [Hfix Hargs].
     repeat (apply/andP; split; auto).
     eapply closed_cunfold_cofix; tea. 
-  - eapply IHev. rewrite closedn_mkApps in Hc *.
-    move/andP: Hc => [Hfix Hargs].
+  - specialize (IHev1 Hc). eapply IHev2. rewrite closedn_mkApps in IHev1 *.
+     move/andP: IHev1 => [Hfix Hargs].
     rewrite closedn_mkApps Hargs.
     rewrite andb_true_r.
     eapply closed_cunfold_cofix; tea.
@@ -699,33 +700,38 @@ Proof.
     eapply closed_fix_subst => //.
     now rewrite map_length. 
 
-  - move/andP => []. rewrite closedn_mkApps. move/andP => [] clfix clargs clbrs.
-    forward IHev.
-    { rewrite closedn_mkApps clargs clbrs !andb_true_r.
+  - move/andP => [] cd clbrs. specialize (IHev1 cd).
+    rewrite closedn_mkApps in IHev2.
+    move: (eval_closed _ clΣ _ _ cd ev1).
+    rewrite closedn_mkApps.
+    move/andP => [] clfix clargs.
+    forward IHev2.
+    { rewrite clargs clbrs !andb_true_r.
       eapply closed_cunfold_cofix; tea. }
+    rewrite -> optimize_mkApps in IHev1, IHev2. simpl.
     destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
+    simpl in IHev1.
+    eapply Ee.red_cofix_case. tea.
+    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
+    apply IHev2.
+    eapply Ee.red_cofix_case; tea.
+    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
+    simpl in *.
+    eapply Ee.red_cofix_case; tea.
+    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
+    eapply Ee.red_cofix_case; tea.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
-    econstructor; eauto.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-
-  - rewrite closedn_mkApps; move/andP => [] clfix clargs. forward IHev.
+  - intros cd. specialize (IHev1 cd).
+    move: (eval_closed _ clΣ _ _ cd ev1).
+    rewrite closedn_mkApps; move/andP => [] clfix clargs. forward IHev2.
     { rewrite closedn_mkApps clargs andb_true_r. eapply closed_cunfold_cofix; tea. }
     destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp; auto.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
+    rewrite -> optimize_mkApps in IHev1, IHev2. simpl in *.
     econstructor; eauto.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    rewrite -> optimize_mkApps in IHev |- *. simpl.
+    rewrite -> optimize_mkApps in IHev1, IHev2. simpl in *.
     econstructor; eauto.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
   
@@ -742,7 +748,9 @@ Proof.
     destruct ETyping.inductive_isprop_and_pars as [[[] pars']|] eqn:isp => //.
     rewrite optimize_mkApps in IHev1.
     rewrite optimize_nth in IHev2.
-    econstructor; eauto. now rewrite -is_propositional_optimize.
+    specialize (IHev1 cld).
+    eapply Ee.eval_proj; tea. noconf e.
+    now rewrite -is_propositional_optimize.
     eapply IHev2.
     rewrite nth_nth_error.
     destruct nth_error eqn:hnth => //.

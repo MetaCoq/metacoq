@@ -1023,7 +1023,7 @@ Proof.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
     eapply Ee.eval_iota_sing; tea. now constructor.
   - pose proof (Ee.eval_deterministic He1 Hc). subst c'.
-    eapply Ee.red_cofix_case; tea.
+    eapply Ee.eval_cofix_case; tea.
     now eapply Ee.value_final, Ee.eval_to_value.
   - cbn in i. discriminate.
 Qed.
@@ -1049,7 +1049,7 @@ Proof.
   - pose proof (eval_trans Hc He1); subst discr.
     eapply Ee.eval_iota_sing; tea.
   - pose proof (eval_trans Hc He1); subst discr.
-    eapply Ee.red_cofix_case; tea.
+    eapply Ee.eval_cofix_case; tea.
   - cbn in i. discriminate.
 Qed.
 
@@ -1905,7 +1905,7 @@ Proof.
             - now apply Forall_All, Forall_erases_deps_cofix_subst; eauto.
             - now eapply nth_error_forall in H2; eauto. }
           exists v'. split => //. split.
-          eapply Ee.red_cofix_case; tea.
+          eapply Ee.eval_cofix_case; tea.
           rewrite /Ee.cunfold_cofix nth' //. f_equal.
           f_equal.
           rewrite -(Ee.closed_cofix_substl_subst_eq (idx:=idx)) //. }
@@ -2024,7 +2024,7 @@ Proof.
             - now apply Forall_All, Forall_erases_deps_cofix_subst; eauto.
             - now eapply nth_error_forall in H1; eauto. }
           exists v'. split => //. split.
-          eapply Ee.red_cofix_proj; tea.
+          eapply Ee.eval_cofix_proj; tea.
           rewrite /Ee.cunfold_cofix nth' //. f_equal.
           f_equal.
           rewrite -(Ee.closed_cofix_substl_subst_eq (idx:=idx)) //. }

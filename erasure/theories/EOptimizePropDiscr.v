@@ -712,15 +712,15 @@ Proof.
     destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
     simpl in IHev1.
-    eapply Ee.red_cofix_case. tea.
+    eapply Ee.eval_cofix_case. tea.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     apply IHev2.
-    eapply Ee.red_cofix_case; tea.
+    eapply Ee.eval_cofix_case; tea.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     simpl in *.
-    eapply Ee.red_cofix_case; tea.
+    eapply Ee.eval_cofix_case; tea.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    eapply Ee.red_cofix_case; tea.
+    eapply Ee.eval_cofix_case; tea.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
     
   - intros cd. specialize (IHev1 cd).

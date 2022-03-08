@@ -136,14 +136,14 @@ Section Wcbv.
       eval (tApp f a) (tApp (mkApps (tFix mfix idx) argsv) av)
 
   (** CoFix-case unfolding *)
-  | red_cofix_case ip mfix idx args discr narg fn brs res :
+  | eval_cofix_case ip mfix idx args discr narg fn brs res :
       eval discr (mkApps (tCoFix mfix idx) args) ->
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tCase ip (mkApps fn args) brs) res ->
       eval (tCase ip discr brs) res
 
   (** CoFix-proj unfolding *)
-  | red_cofix_proj p mfix idx args discr narg fn res :
+  | eval_cofix_proj p mfix idx args discr narg fn res :
       eval discr (mkApps (tCoFix mfix idx) args) ->
       cunfold_cofix mfix idx = Some (narg, fn) ->
       eval (tProj p (mkApps fn args)) res ->

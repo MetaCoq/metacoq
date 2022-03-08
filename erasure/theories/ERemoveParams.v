@@ -1401,7 +1401,7 @@ Proof.
     simp_strip in IHev2.
     simp_strip. set (brs' := map _ _) in *; simpl.
     simp_eta in etafix.
-    eapply Ee.red_cofix_case; tea.
+    eapply Ee.eval_cofix_case; tea.
     eapply strip_cunfold_cofix; tea => //.
     { eapply closed_cofix_subst; tea. }
     rewrite strip_mkApps_etaexp in IHev2.
@@ -1430,7 +1430,7 @@ Proof.
     simp_strip in IHev1. 
     rewrite strip_mkApps_etaexp in IHev2.
     now eapply isEtaExp_cunfold_cofix; tea.
-    eapply Ee.red_cofix_proj; tea.
+    eapply Ee.eval_cofix_proj; tea.
     eapply strip_cunfold_cofix; tea.
     { eapply closed_cofix_subst; tea. }
   

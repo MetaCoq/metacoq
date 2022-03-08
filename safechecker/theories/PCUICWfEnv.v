@@ -206,6 +206,7 @@ Program Definition optimized_abstract_env_struct {cf:checker_flags} :
   Proof. destruct Σ as [univs Σ]; cbn.
     move=> [] onu; cbn. induction 1; constructor; auto.
   Qed.
+
   Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
   EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
 Proof.

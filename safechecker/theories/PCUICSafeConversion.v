@@ -481,7 +481,7 @@ Section Conversion.
 
   Definition eqb_term_stack t1 π1 t2 π2 :=
     eqb_ctx (stack_context π1) (stack_context π2) &&
-    eqb_term (zipp t1 π1) (zipp t2 π2).
+    eqb_term (zipp t1 π1) (zipp t2 π2).  
 
   Lemma eqb_term_stack_spec :
     forall Γ t1 π1 t2 π2,
@@ -501,15 +501,22 @@ Section Conversion.
         * exact (hΣ _ wfΣ).
         * pose proof (heΣ := heΣ _ wfΣ). sq. now destruct heΣ.
         * eapply abstract_env_graph_wf; eauto. 
-        * unfold PCUICEqualityDec.eqb_ctx.   
-          rewrite abstract_env_compare_global_instance_correct, abstract_env_eq_correct; eauto.
-          - eapply eqb_term_spec; tea.
+        * unfold PCUICEqualityDec.eqb_ctx.
+          erewrite eqb_ctx_gen_proper ; eauto.
+          ** intros; apply abstract_env_eq_correct.     
+          ** intros. erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+              intros. symmetry. apply abstract_env_eq_correct.
+          ** intros. symmetry. apply abstract_env_compare_global_instance_correct.     
+    - eapply eqb_term_spec; tea.
       * exact (hΣ _ wfΣ).
       * pose proof (heΣ := heΣ _ wfΣ). sq. now destruct heΣ.
       * apply abstract_env_graph_wf; eauto. 
       * unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp. cbn.  
-        unfold eqb_termp_napp_gen; cbn. 
-        rewrite abstract_env_compare_global_instance_correct, abstract_env_eq_correct; eauto.
+        unfold eqb_termp_napp_gen; cbn.
+        erewrite eqb_term_upto_univ_proper; eauto.
+        ** intros; apply abstract_env_eq_correct.     
+        ** intros; apply abstract_env_eq_correct.     
+        ** intros. apply abstract_env_compare_global_instance_correct.
         Unshelve. all: eauto. 
   Qed.
 
@@ -535,16 +542,23 @@ Section Conversion.
         * exact (hΣ _ wfΣ).
         * pose proof (heΣ := heΣ _ wfΣ). sq. now destruct heΣ.
         * apply abstract_env_graph_wf.
-        * unfold PCUICEqualityDec.eqb_ctx.   
-        rewrite abstract_env_compare_global_instance_correct, abstract_env_eq_correct; eauto.
+        * unfold PCUICEqualityDec.eqb_ctx.
+          erewrite eqb_ctx_gen_proper ; eauto.
+          ** intros; apply abstract_env_eq_correct.     
+          ** intros. erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+              intros. symmetry. apply abstract_env_eq_correct.
+          ** intros. symmetry. apply abstract_env_compare_global_instance_correct.     
     - eapply leqb_term_spec; tea.
         * exact (hΣ _ wfΣ).
         * pose proof (heΣ := heΣ _ wfΣ). sq. now destruct heΣ.
         * apply abstract_env_graph_wf.
         * unfold PCUICEqualityDec.leqb_term, eqb_termp, eqb_termp_napp. cbn. 
           unfold eqb_termp_napp_gen. cbn. 
-          rewrite abstract_env_compare_global_instance_correct, abstract_env_eq_correct, abstract_env_leq_correct. eauto.
-    Unshelve. all: eauto. 
+          erewrite eqb_term_upto_univ_proper; eauto.
+          ** intros; apply abstract_env_eq_correct.     
+          ** intros. apply abstract_env_leq_correct.     
+          ** intros. apply abstract_env_compare_global_instance_correct.
+      Unshelve. all: eauto. 
   Qed.
 
   Notation conv_stack_ctx Γ π1 π2 :=
@@ -580,7 +594,7 @@ Section Conversion.
     destruct π as [|[]]; cbn in *; try easy.
     destruct (decompose_stack π) in isr.
     destruct (abstract_env_exists X) as [[Σ wfΣ]].
-    destruct (isr _ wfΣ) as [isr'].
+    destruct (isr _ wfΣ) as [isr'].  
     depelim isr'; rewrite mkApps_tApp in *; try solve [solve_discr].
     apply whne_mkApps_inv in w; [|easy].
     destruct w as [|(?&?&?&?&?&?&?&?)]; [|discriminate].
@@ -2727,8 +2741,14 @@ Qed.
   Proof.
     intros eq ir. pose proof (heΣ _ wfΣ) as [[]]. 
     pose proof (hΣ _ wfΣ). 
-    destruct ir as (_&[wh]); eauto.  
-    erewrite <- abstract_env_compare_global_instance_correct, <- abstract_env_eq_correct in eq.
+    destruct ir as (_&[wh]); eauto. 
+    erewrite eqb_term_upto_univ_proper in eq.
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.  
     apply eqb_term_spec in eq; tea.
     2: sq; eauto. 2: apply abstract_env_graph_wf.
     epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
@@ -2802,7 +2822,13 @@ Qed.
   Proof.
     intros eq%eq_sym ir.
     destruct ir as (_&[wh]); eauto. 
-    erewrite <- abstract_env_compare_global_instance_correct, <- abstract_env_eq_correct in eq.
+    erewrite eqb_term_upto_univ_proper in eq.
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.  
     apply eqb_term_spec in eq; tea.
     2-3: now pose proof heΣ as [[]]. 2: apply abstract_env_graph_wf. 
     epose proof (reduce_term_complete _ _ _ _ _ _) as [wh'].
@@ -3090,6 +3116,18 @@ Qed.
       now rewrite (PCUICGlobalEnv.declared_minductive_ind_npars decli).
   Qed.
 
+  Definition forallb2_proper A B (R R' : A -> B -> bool) l l':
+    (forall a b, R a b = R' a b) ->
+    forallb2 R l l' = 
+    forallb2 R' l l'.
+  Proof.
+    intro e. revert l'.
+    induction l; destruct l'; eauto. 
+    cbn; intros. rewrite <- e.
+    apply eq_true_iff_eq. split; intros.
+     all: apply andb_and; now apply andb_and in H.
+  Qed.
+
   Definition isconv_predicate_params
             (Γ : context)
             (ci1 : case_info)
@@ -3211,9 +3249,12 @@ Qed.
     apply consistent_instance_ext_wf in cons0.
     specialize_Σ wfΣ; destruct H as [[]].
     apply eqb_universe_instance_complete in r; eauto.
-    erewrite <- abstract_env_eq_correct in not_eq_insts; eauto.
-    unfold eqb_universe_instance in r.
-    erewrite <- abstract_env_eq_correct in r; eauto. 
+    unfold eqb_universe_instance_gen in not_eq_insts.
+    erewrite forallb2_proper in not_eq_insts.
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    unfold eqb_universe_instance, eqb_universe_instance_gen in r.
+    erewrite forallb2_proper in r.
+    2: intros; symmetry; apply abstract_env_eq_correct.
     Unshelve. all: eauto. 
     congruence.
   Qed.
@@ -3541,9 +3582,14 @@ Qed.
 Qed.
   Next Obligation.
     destruct (abstract_env_exists X) as [[Σ wfΣ]]; 
-    right; split; [easy|]. erewrite <- abstract_env_eq_correct in uneq_u.
+    right; split; [easy|]. 
+    unfold eqb_universe_instance_gen in uneq_u.
+    erewrite forallb2_proper in uneq_u.
+    2: intros; symmetry; apply abstract_env_eq_correct.
     unfold eqb_universe_instance.
-    erewrite <- abstract_env_eq_correct; eauto. 
+    unfold eqb_universe_instance_gen.
+    erewrite forallb2_proper.
+    2: intros; symmetry; apply abstract_env_eq_correct.
     now rewrite <- uneq_u.
     Unshelve. all:eauto. 
   Qed.
@@ -3818,9 +3864,13 @@ Qed.
       exfalso.
       unfold reduce_term in eq4.
       rewrite e' in eq4. cbn in eq4.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq4; eauto.
-        Unshelve. all:eauto.
+      erewrite eqb_term_upto_univ_proper in eq4.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose proof (eqb_term_refl Σ (abstract_env_graph X wfΣ) c').
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp, eqb_termp_napp_gen  in H.
       rewrite H in eq4.
@@ -3833,8 +3883,13 @@ Qed.
       unfold reduce_term in eq4.
       rewrite <- H2 in eq4.
       cbn in eq4.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq4.
+      erewrite eqb_term_upto_univ_proper in eq4.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose proof (eqb_term_refl Σ (abstract_env_graph X wfΣ) c').
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp, eqb_termp_napp_gen in H1.
       rewrite H1 in eq4.
@@ -3904,8 +3959,13 @@ Qed.
       exfalso.
       unfold reduce_term in eq3.
       rewrite e' in eq3. cbn in eq3.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq3.
+      erewrite eqb_term_upto_univ_proper in eq3.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose (eqb_term_refl Σ (abstract_env_graph _ wfΣ) c).
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp in i. 
       unfold eqb_termp_napp_gen in i. cbn in i.
@@ -3919,8 +3979,13 @@ Qed.
       unfold reduce_term in eq3.
       rewrite <- H2 in eq3.
       cbn in eq3.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq3.
+      erewrite eqb_term_upto_univ_proper in eq3.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose (eqb_term_refl Σ (abstract_env_graph _ wfΣ) c).
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp in i. 
       unfold eqb_termp_napp_gen in i. cbn in i.
@@ -3929,7 +3994,7 @@ Qed.
     }
     unshelve eapply R_cored.
     simpl. intros; eapply cored_zipc. eapply cored_case. 
-    erewrite abstract_env_irr; eauto. 
+    erewrite abstract_env_irr; eauto.
   Qed.
   Next Obligation.
     rename H into wfΣ; specialize_Σ wfΣ.
@@ -4040,8 +4105,13 @@ Qed.
       exfalso.
       unfold reduce_term in eq4.
       rewrite e' in eq4. cbn in eq4.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq4.
+      erewrite eqb_term_upto_univ_proper in eq4.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose (eqb_term_refl Σ (abstract_env_graph _ wfΣ) c').
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp in i. 
       unfold eqb_termp_napp_gen in i. cbn in i.
@@ -4055,8 +4125,13 @@ Qed.
       unfold reduce_term in eq4.
       rewrite <- H2 in eq4.
       cbn in eq4.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq4.
+      erewrite eqb_term_upto_univ_proper in eq4.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose (eqb_term_refl Σ (abstract_env_graph _ wfΣ) c').
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp in i. 
       unfold eqb_termp_napp_gen in i. cbn in i.
@@ -4130,8 +4205,13 @@ Qed.
       exfalso.
       unfold reduce_term in eq3.
       rewrite e' in eq3. cbn in eq3.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq3.
+      erewrite eqb_term_upto_univ_proper in eq3.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose (eqb_term_refl Σ (abstract_env_graph _ wfΣ) c).
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp in i. 
       unfold eqb_termp_napp_gen in i. cbn in i.
@@ -4145,8 +4225,13 @@ Qed.
       unfold reduce_term in eq3.
       rewrite <- H2 in eq3.
       cbn in eq3.
-      erewrite <- abstract_env_compare_global_instance_correct, 
-              <- abstract_env_eq_correct in eq3.
+      erewrite eqb_term_upto_univ_proper in eq3.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+      2: intros; symmetry; apply abstract_env_eq_correct.
+      2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.
       pose (eqb_term_refl Σ (abstract_env_graph _ wfΣ) c).
       unfold PCUICEqualityDec.eqb_term, eqb_termp, eqb_termp_napp in i. 
       unfold eqb_termp_napp_gen in i. cbn in i.
@@ -5489,9 +5574,14 @@ Qed.
       + pose (heΣ _ H) as s ; sq. destruct s; eauto. 
       + apply abstract_env_graph_wf.
       + pose proof (heΣ _ H) as [[]].
-        erewrite <- (abstract_env_eq_correct X), <- (abstract_env_leq_correct X)
-              , <- (abstract_env_compare_global_instance_correct X) in eq1; eauto. 
-     Unshelve. all:eauto.          
+        unfold eqb_termp_napp_gen in eq1. 
+        erewrite eqb_term_upto_univ_proper in eq1; eauto. 
+        * intros; symmetry; apply abstract_env_eq_correct.
+        * destruct leq; intros; symmetry; first [apply abstract_env_eq_correct | apply abstract_env_leq_correct].
+        * intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+          intros; symmetry; apply abstract_env_eq_correct.
+        * intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+        Unshelve. all: eauto. 
   Qed.
   Next Obligation.
     apply h; clear h. intros Σ wfΣ.
@@ -5566,16 +5656,12 @@ Qed.
          rewrite PCUICParallelReductionConfluence.eqb_refl in noteq.
          apply All2_length in rargs1.
          rewrite <- rargs1 in H3.
-         erewrite <- (abstract_env_eq_correct X) , <- (abstract_env_leq_correct X),
-                 <- (abstract_env_compare_global_instance_correct X) in noteq. 
-          Unshelve. all: eauto. 
-         destruct leq; cbn in *.
-         - unfold compare_global_instance, global_variance, lookup_inductive, lookup_minductive in *.
-           erewrite (abstract_env_eq_correct X) in noteq. 
-           easy.
-           - unfold compare_global_instance, global_variance, lookup_inductive, lookup_minductive in *.
-           erewrite (abstract_env_eq_correct X), (abstract_env_leq_correct X) in noteq. 
-           easy.
+         erewrite <- abstract_env_compare_global_instance_correct in noteq. 
+         erewrite compare_global_instance_proper in noteq.
+         2: intros; apply abstract_env_eq_correct.
+         2: reflexivity.
+         cbn in noteq.  Unshelve. all: eauto.
+         rewrite H3 in noteq. easy. 
 }
     9: { destruct conv_hds as [H].
          inversion H; subst; clear H.
@@ -5595,15 +5681,12 @@ Qed.
          rewrite !PCUICParallelReductionConfluence.eqb_refl in noteq.
          apply All2_length in rargs1.
          rewrite <- rargs1 in H4.
-         erewrite <- (abstract_env_eq_correct X) , <- (abstract_env_leq_correct X),
-                 <- (abstract_env_compare_global_instance_correct X)  in noteq. 
-         destruct leq; cbn in *. Unshelve. all: eauto. 
-         - unfold compare_global_instance, global_variance, lookup_inductive, lookup_minductive in *.
-         erewrite (abstract_env_eq_correct X) in noteq. 
-         easy.
-         - unfold compare_global_instance, global_variance, lookup_inductive, lookup_minductive in *.
-         erewrite (abstract_env_eq_correct X), (abstract_env_leq_correct X) in noteq. 
-         easy.       
+         erewrite <- abstract_env_compare_global_instance_correct in noteq. 
+         erewrite compare_global_instance_proper in noteq.
+         2: intros; apply abstract_env_eq_correct.
+         2: reflexivity.
+         cbn in noteq.  Unshelve. all: eauto.
+         rewrite H4 in noteq. easy. 
          }
     all: apply conv_cum_alt in conv_hds as [(?&?&[r1 r2 ?])]; auto.
     all: eapply whnf_red_inv in r1; auto.
@@ -5629,13 +5712,7 @@ Qed.
       apply inversion_Sort in h2 as (_&h2&_); auto.
       apply inversion_Sort in h1 as (_&h1&_); auto.
       eapply compare_universeb_complete in H0; eauto.
-      erewrite <- (abstract_env_eq_correct X) , <- (abstract_env_leq_correct X) in noteq.
-      Unshelve. all:eauto.  
-      destruct leq; cbn in *.
-      + erewrite <- (abstract_env_eq_correct X) in H0.
-        Unshelve. all:eauto.  congruence.
-      + erewrite <- (abstract_env_leq_correct X) in H0.
-        Unshelve. all:eauto.  congruence.
+      destruct leq; cbn in *; easy. 
   Qed.
   
   Equations _isconv (s : state) (Γ : context)

@@ -82,7 +82,7 @@ Proof.
   (* We construct a term *)
   set (impl := tLambda (bNamed "s") (tSort u) (tLambda bAnon (tRel 0) (tRel 0))).
   (* Show that the empty context is well-formed  *)
-  assert (wfΓ : ∥ wf_local gctx_wf_env [] ∥) by do 2 constructor.
+  assert (wfΓ : forall Σ0 : global_env_ext, abstract_env_rel' gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
  fill_inh impl.
 Qed.
 

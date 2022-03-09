@@ -2383,13 +2383,13 @@ Section CheckEnv.
     (wfΓ : forall Σ0 : global_env_ext,
     abstract_env_rel' Σ Σ0 -> ∥ wf_local Σ0 Γ ∥) t {T} :
     typing_result (forall Σ0 : global_env_ext,
-      abstract_env_rel' Σ Σ0 -> ∥ Σ ;;; Γ |- t : T ∥) :=
+      abstract_env_rel' Σ Σ0 -> ∥ Σ0 ;;; Γ |- t : T ∥) :=
     (if check_type_wf_env_bool Σ Γ wfΓ t T as x return (check_type_wf_env_bool Σ Γ wfΓ t T = x -> typing_result _) then
       fun eq => ret _
     else fun eq => raise (check_wf_env_bool_spec2 Σ Γ wfΓ t T eq)) eq_refl.
 
   Next Obligation.
-    simpl; intros. exact (check_wf_env_bool_spec Σ Γ wfΓ t0 T eq).
+    simpl; intros. cbn in H; subst; exact (check_wf_env_bool_spec Σ Γ wfΓ t0 T eq).
   Qed.
 
   Obligation Tactic := Program.Tactics.program_simpl.

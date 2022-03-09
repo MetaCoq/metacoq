@@ -912,6 +912,30 @@ Fixpoint eqb_ctx_gen equ gen_compare_global_instance
     | _, _ => false
     end.
 
+
+
+  Definition eqb_ctx_gen_proper Σ equ equ' gen_compare_global_instance
+  gen_compare_global_instance' (Γ Δ : context) :
+    (forall u u', equ u u' = equ' u u') ->
+    (forall leq ref n l l', compare_global_instance Σ equ leq ref n l l' =
+                            gen_compare_global_instance leq ref n l l') ->
+    (forall leq ref n l l', compare_global_instance Σ equ' leq ref n l l' =
+                            gen_compare_global_instance' leq ref n l l') ->
+    (forall leq ref n l l', gen_compare_global_instance' leq ref n l l' =
+                            gen_compare_global_instance leq ref n l l') ->
+    eqb_ctx_gen equ gen_compare_global_instance Γ Δ =
+    eqb_ctx_gen equ' gen_compare_global_instance' Γ Δ.
+  Proof.
+    revert Δ; induction Γ; destruct Δ; simpl; eauto.
+    intros Hequ Hcompare Hcompare' Hgen_compare.  destruct a. destruct decl_body.
+    all: destruct c; destruct decl_body; eauto;
+         apply eq_true_iff_eq; split; intros.
+    all: repeat (let foo := fresh "H" in apply andb_and in H; destruct H as [H foo]);
+         repeat (apply andb_and; split; eauto);
+         try first[ rewrite <- IHΓ | rewrite IHΓ]; eauto.
+    all: erewrite <- eqb_term_upto_univ_proper; eauto.
+ Defined.
+
 (** Checking equality *)
 
 Section EqualityDec.
@@ -1009,7 +1033,7 @@ Section EqualityDec.
       + now apply eq_universeP.
       + now apply leq_universeP.
     - intros. apply reflect_iff.
-      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto.
+      eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto. 
       1-2: move => ? ? /wf_universe_reflect ? - /wf_universe_reflect ?; now apply eq_universeP; eauto.
     - intros. apply reflect_iff.
       eapply reflect_R_global_instance with (p := wf_universeb Σ); eauto.

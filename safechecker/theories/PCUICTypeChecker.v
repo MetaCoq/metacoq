@@ -1857,12 +1857,14 @@ Section Typecheck.
       rewrite -(spine_subst_inst_subst X4).
       rewrite - !smash_context_subst /= !subst_context_nil.
       erewrite <- abstract_env_compare_global_instance_correct in i1; eauto.
-      erewrite <- abstract_env_leq_correct in i1; eauto.
+      erewrite <- compare_global_instance_proper in i1.
+      2: reflexivity.
+      2: intros; apply abstract_env_leq_correct.
+      Unshelve. all: eauto.
       eapply compare_global_instance_sound in i1; pcuic.
       2: now destruct heΣ.
       eapply (inductive_cumulative_indices X1); tea.
       apply abstract_env_graph_wf.
-      Unshelve. eauto.
   Qed.
 
   Obligation Tactic := idtac.
@@ -2498,7 +2500,7 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq.
-    apply absurd. unfold abstract_env_cofixguard. 
+    apply absurd. unfold abstract_env_cofixguard.
     erewrite <- abstract_env_guard_correct; eauto.
     now inversion X1.
   Qed.

@@ -1843,11 +1843,8 @@ Proof.
     + bang.
   - econstructor; eauto.
     solve_all. rewrite erase_brs_eq.
-    eapply All_map_All. intros. exact H0. intros x y wx [exp' IH]. eauto.
-  - econstructor; eauto.
-    solve_all. rewrite erase_mfix_eq.
-    eapply All_map_All. intros. exact H0. intros x y wx [exp' IH].
-    now eapply IH. 
+    eapply All_map_All; tea. cbn. intros x wx [exp' IH]. eauto.
+  - todo "fix".
   - econstructor; eauto.
     solve_all. rewrite erase_mfix_eq.
     eapply All_map_All. intros. exact H0. intros x y wx [exp' IH]. now eapply IH.
@@ -1921,4 +1918,3 @@ Proof.
     eapply IHdecls => //.
   + eapply IHdecls => //.
 Qed.
-

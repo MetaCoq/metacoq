@@ -80,17 +80,21 @@ Proof.
   intros [->|hin]. lia. specialize (IHl hin); lia.
 Qed.
 
-Equations discr_construct (t : term) : Prop :=
-discr_construct (tConstruct ind n) := False ;
-discr_construct _ := True.
+Equations discr_construct_fix (t : term) : Prop :=
+  discr_construct_fix (tConstruct ind n) := False ;
+  discr_construct_fix (tFix mfix idx) := False ;
+  discr_construct_fix _ := True.
 
-Inductive construct_view : term -> Type :=
-| view_construct : forall ind n, construct_view (tConstruct ind n)
-| view_other : forall t, discr_construct t -> construct_view t.
+Inductive construct_fix_view : term -> Type :=
+| ccview_construct : forall ind n, construct_fix_view (tConstruct ind n)
+| ccview_fix : forall mfix idx, construct_fix_view (tFix mfix idx)
+| ccview_other : forall t, discr_construct_fix t -> construct_fix_view t.
 
-Equations construct_viewc t : construct_view t :=
-construct_viewc (tConstruct ind n) := view_construct ind n ;
-construct_viewc t := view_other t I.
+Equations cc_viewc t : construct_fix_view t :=
+  cc_viewc (tConstruct ind n) := ccview_construct ind n ;
+  cc_viewc (tFix mfix idx) := ccview_fix mfix idx ;
+  cc_viewc t := ccview_other t I.
+
 Lemma In_All {A} {P : A -> Type} l : 
     (∀ x : A, In x l -> P x) -> All P l.
 Proof.
@@ -132,6 +136,12 @@ Section isEtaExp.
     | Some (npars, nargs) => leb (npars + nargs) k
     | None => false
     end.
+
+  Definition isEtaExp_fixapp (mfix : mfixpoint term) idx k :=
+    match nth_error mfix idx with
+    | Some d => Nat.ltb d.(rarg) k
+    | None => false
+    end.    
     
   Import TermSpineView.
 
@@ -141,13 +151,14 @@ Section isEtaExp.
     | tRel i => true
     | tEvar ev args => forallb_InP args (fun x H => isEtaExp x)
     | tLambda na M => isEtaExp M
-    | tApp u v napp nnil with construct_viewc u := 
-      { | view_construct ind i => isEtaExp_app ind i (List.length v) && forallb_InP v (fun x H => isEtaExp x)
-        | view_other _ _ => isEtaExp u && forallb_InP v (fun x H => isEtaExp x) }
+    | tApp u v napp nnil with cc_viewc u := 
+      { | ccview_construct ind i => isEtaExp_app ind i (List.length v) && forallb_InP v (fun x H => isEtaExp x)
+        | ccview_fix mfix idx => isEtaExp_fixapp mfix idx (List.length v) && forallb_InP mfix (fun x H => isEtaExp x.(dbody)) && forallb_InP v (fun x H => isEtaExp x)
+        | ccview_other _ _ => isEtaExp u && forallb_InP v (fun x H => isEtaExp x) }
     | tLetIn na b b' => isEtaExp b && isEtaExp b'
     | tCase ind c brs => isEtaExp c && forallb_InP brs (fun x H => isEtaExp x.2)
     | tProj p c => isEtaExp c
-    | tFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
+    | tFix mfix idx => (* forallb_InP mfix (fun x H => isEtaExp x.(dbody)) *) false
     | tCoFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
     | tBox => true
     | tVar _ => true
@@ -159,8 +170,13 @@ Section isEtaExp.
     all:try lia.
     - now apply (In_size id size). 
     - rewrite size_mkApps.
-      change (fun x => size (id x)) with size in H. cbn.
       now apply (In_size id size).
+    - rewrite size_mkApps.
+      apply (In_size id (fun d => size d.(dbody))) in H. unfold id in H. 
+      change (fun x => size x) with size in H. cbn. lia.
+    - rewrite size_mkApps.
+      apply (In_size id size) in H. unfold id in H. 
+      change (fun x => size x) with size in H. cbn. lia.
     - now eapply size_mkApps_f.
     - change (fun x => size (id x)) with size in H.
       eapply (In_size id size) in H. unfold id in H.
@@ -179,39 +195,42 @@ Section isEtaExp.
 
   Hint Rewrite @forallb_InP_spec : isEtaExp.
 
-
   Lemma isEtaExp_mkApps_nonnil f v :
     ~~ isApp f -> v <> [] ->
-    isEtaExp (mkApps f v) = match construct_viewc f with 
-      | view_construct ind i => isEtaExp_app ind i #|v| && forallb isEtaExp v
-      | view_other t discr => isEtaExp f && forallb isEtaExp v
+    isEtaExp (mkApps f v) = match cc_viewc f with 
+      | ccview_construct ind i => isEtaExp_app ind i #|v| && forallb isEtaExp v
+      | ccview_fix mfix idx => isEtaExp_fixapp mfix idx #|v| && forallb_InP mfix (fun x H => isEtaExp x.(dbody)) && forallb isEtaExp v
+      | ccview_other t discr => isEtaExp f && forallb isEtaExp v
     end.
   Proof.
     rewrite isEtaExp_equation_1.
     intros napp hv.
     destruct (TermSpineView.view_mkApps (TermSpineView.view (mkApps f v)) napp hv) as [hna [hv' ->]].
-    cbn. destruct (construct_viewc f); cbn; simp isEtaExp => //.
+    cbn. destruct (cc_viewc f); cbn; simp isEtaExp => //.
   Qed.
 
   Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
   Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
+
+  Definition is_cons {A} (l : list A) := match l with [] => false | _ => true end.
   
-  Lemma isEtaExp_mkApps f v : ~~ isApp f ->
-    isEtaExp (mkApps f v) = match construct_viewc f with 
-      | view_construct ind i => isEtaExp_app ind i #|v| && forallb isEtaExp v
-      | view_other t discr => isEtaExp f && forallb isEtaExp v
+  Lemma isEtaExp_mkApps f v : ~~ isApp f -> 
+    isEtaExp (mkApps f v) = match cc_viewc f with 
+      | ccview_construct ind i => isEtaExp_app ind i #|v| && forallb isEtaExp v
+      | ccview_fix mfix idx => isEtaExp_fixapp mfix idx #|v| && forallb_InP mfix (fun x H => isEtaExp x.(dbody)) && forallb isEtaExp v
+      | ccview_other t discr => isEtaExp f && forallb isEtaExp v
     end.
   Proof.
     intros napp.
     destruct v using rev_case; simp_eta.
-    - destruct construct_viewc; rewrite andb_true_r //.
-    - rewrite isEtaExp_mkApps_nonnil //. now destruct v; cbn; congruence.
+    - destruct cc_viewc; rewrite ? andb_true_r //. cbn. unfold isEtaExp_fixapp. now destruct (nth_error); cbn.
+    - rewrite isEtaExp_mkApps_nonnil //. destruct v; cbn; try congruence.
   Qed.
 
   Lemma isEtaExp_Constructor ind i v :
     isEtaExp (mkApps (EAst.tConstruct ind i) v) = isEtaExp_app ind i #|v| && forallb isEtaExp v.
   Proof.
-    rewrite isEtaExp_mkApps //.
+    now rewrite isEtaExp_mkApps.
   Qed.
 
   Lemma isEtaExp_mkApps_intro t l : isEtaExp t -> All isEtaExp l -> isEtaExp (mkApps t l).
@@ -224,23 +243,32 @@ Section isEtaExp.
     pose proof (decompose_app_notApp _ _ _ da).
     destruct l0. simp_eta.
     - rewrite isEtaExp_mkApps //.
-      destruct construct_viewc. cbn. len.
-      rtoProp; repeat solve_all. cbn in et. simp isEtaExp in et.
-      eapply isEtaExp_app_mon; tea; lia.
-      eapply All_app_inv; eauto. rewrite et forallb_app /=.
-      rtoProp; repeat solve_all.
+      destruct cc_viewc.
+      + cbn. len.
+        rtoProp; repeat solve_all. cbn in et. simp isEtaExp in et.
+        eapply isEtaExp_app_mon; tea; lia.
+        eapply All_app_inv; eauto.
+      + cbn in *; congruence.
+      + rewrite et forallb_app /=. rtoProp; repeat solve_all. 
     - rewrite isEtaExp_mkApps in et => //.
-      destruct construct_viewc.
-      rewrite -mkApps_app. rewrite isEtaExp_Constructor.
-      cbn. cbn. rtoProp; solve_all.
-      eapply isEtaExp_app_mon; tea. cbn. len. lia. now depelim H1.
-      depelim H1. solve_all. eapply All_app_inv => //.
-      eapply All_app_inv => //. eauto.
-      rewrite -mkApps_app. rewrite isEtaExp_mkApps //.
-      destruct (construct_viewc t0) => //.
-      move/andP: et => [] -> /=. rtoProp; solve_all.
-      rewrite forallb_app. rtoProp; repeat solve_all.
-      eapply All_app_inv; eauto.
+      destruct cc_viewc.
+      + rewrite -mkApps_app. rewrite isEtaExp_Constructor.
+        cbn. cbn. rtoProp; solve_all.
+        eapply isEtaExp_app_mon; tea. cbn. len. lia. now depelim H1.
+        depelim H1. solve_all. eapply All_app_inv => //.
+        eapply All_app_inv => //. eauto.
+      + rewrite -mkApps_app. rewrite isEtaExp_mkApps //. simp cc_viewc.
+        rewrite forallb_InP_spec /isEtaExp_fixapp in et |- *.
+        rtoProp; repeat split.
+        * destruct nth_error; try congruence. eapply Nat.ltb_lt. eapply Nat.ltb_lt in H0.
+          cbn in H0. len. lia.
+        * solve_all.
+        * solve_all. eapply All_app_inv; solve_all. eapply All_app_inv; solve_all. 
+      + rewrite -mkApps_app. rewrite isEtaExp_mkApps //.
+        destruct (cc_viewc t0) => //.
+        move/andP: et => [] -> /=. rtoProp; solve_all.
+        rewrite forallb_app. rtoProp; repeat solve_all.
+        eapply All_app_inv; eauto.
   Qed.
 
   Lemma etaExp_csubst a k b : 
@@ -257,6 +285,15 @@ Section isEtaExp.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
       rewrite map_length. rtoProp; solve_all. solve_all.
+    - rewrite csubst_mkApps /=.
+      move/andP : H2 => [] /andP [] eu ef ev.
+      rewrite isEtaExp_mkApps //.
+      simp cc_viewc.
+      rtoProp; repeat split.
+      + rewrite /isEtaExp_fixapp in eu |- *. rewrite nth_error_map. destruct nth_error; try congruence.
+        cbn. now len.
+      + rewrite forallb_InP_spec. solve_all.
+      + solve_all.
     - rewrite csubst_mkApps /=.
       move/andP: H2 => [] eu ev.
       specialize (H _ k H1 eu).
@@ -279,17 +316,19 @@ Section isEtaExp.
     unfold ETyping.iota_red.
     rewrite isEtaExp_substl // forallb_rev forallb_skipn //.
   Qed.
-  
+  (* 
   Lemma isEtaExp_fix_subst mfix : 
     forallb (isEtaExp ∘ dbody) mfix ->
     forallb isEtaExp (ETyping.fix_subst mfix).
   Proof.
-    unfold ETyping.fix_subst. generalize #|mfix|.
-    solve_all. solve_all. revert n.
+    unfold ETyping.fix_subst.
+    generalize (@eq_refl _ #|mfix|). 
+    generalize #|mfix| at 1 3.
+    solve_all. solve_all. revert n H.
     induction n; intros; simp_eta; constructor; auto.
-    simp isEtaExp. solve_all.
-  Qed.
-
+    simp isEtaExp. solve_all. 
+  Qed. 
+ *)
   Lemma isEtaExp_cofix_subst mfix : 
     forallb (isEtaExp ∘ dbody) mfix ->
     forallb isEtaExp (ETyping.cofix_subst mfix).
@@ -666,7 +705,13 @@ Inductive expanded : term -> Prop :=
 | expanded_tCase (ind : inductive) (pars : nat) (discr : term) (branches : list (list name × term)) : 
     expanded discr -> Forall (fun br => expanded br.2) branches -> expanded (tCase (ind, pars) discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded t -> expanded (tProj proj t)
-| expanded_tFix (mfix : mfixpoint term) (idx : nat) :  Forall (fun d => expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
+| expanded_tFix (mfix : mfixpoint term) (idx : nat) args d : 
+  Forall (fun d => expanded d.(dbody)) mfix ->
+  Forall expanded args ->
+  args <> [] ->
+  nth_error mfix idx = Some d ->
+  #|args| > d.(rarg) ->
+  expanded (mkApps (tFix mfix idx) args)
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : Forall (fun d => expanded d.(dbody)) mfix -> expanded (tCoFix mfix idx)
 | expanded_tConstruct_app ind idx mind idecl cname c args :
     declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
@@ -700,8 +745,16 @@ forall (Σ : global_declarations) (P : term -> Prop),
  P (tCase (ind, pars) discr branches)) ->
 (forall (proj : projection) (t : term),
  expanded Σ t -> P t -> P (tProj proj t)) ->
-(forall (mfix : mfixpoint term) (idx : nat),
- Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix  -> P (tFix mfix idx)) ->
+(forall (mfix : mfixpoint term) (idx : nat) d args, 
+ Forall (fun d => expanded Σ d.(dbody)) mfix -> 
+ Forall (fun d => P d.(dbody)) mfix -> 
+ Forall (expanded Σ) args ->
+ Forall P args ->
+ args <> [] ->
+ nth_error mfix idx = Some d ->
+ #|args| > d.(rarg) ->
+ expanded Σ (mkApps (tFix mfix idx) args) ->
+ P (mkApps (tFix mfix idx) args)) ->
 (forall (mfix : mfixpoint term) (idx : nat),
  Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix ->
  P (tCoFix mfix idx)) ->
@@ -719,7 +772,10 @@ Proof.
   - eapply H1; eauto. induction H12; econstructor; cbn in *; eauto.
   - eapply H4; eauto. induction H13; econstructor; cbn in *; eauto.
   - eapply H6; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H8; eauto. induction H12; econstructor; cbn in *; eauto.
+  - eapply H8; eauto.
+    + clear - H12 f. induction H12; econstructor; cbn in *; eauto.
+    + clear - H13 f. induction H13; econstructor; cbn in *; eauto.
+    + eapply expanded_tFix; eauto.
   - eapply H9; eauto. induction H12; econstructor; cbn in *; eauto.
   - eapply H10; eauto. clear - H14 f. induction H14; econstructor; cbn in *; eauto.
 Qed.
@@ -765,14 +821,17 @@ Proof.
   - eapply andb_true_iff in H1 as []. destruct ind. econstructor; eauto.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2. 
     eapply In_All in H0. solve_all.
-  - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
-    eapply In_All in H. solve_all.
+  - congruence.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.
     rewrite forallb_InP_spec in H1. eapply forallb_Forall in H1.
     eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app; eauto. solve_all.
+  - rtoProp. rewrite forallb_InP_spec in H2. rewrite forallb_InP_spec in H3. eapply In_All in H. eapply In_All in H0. 
+    unfold isEtaExp_fixapp in H1. destruct nth_error eqn:E; try congruence.
+    eapply expanded_tFix.
+    all: try now solve_all. eapply Nat.ltb_lt in H1. lia.
   - eapply andb_true_iff in H1 as []. rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.
     econstructor.
     + destruct u; inv Heq; eauto.
@@ -789,6 +848,10 @@ Proof.
     (try eapply forallb_Forall); 
     eauto).
   - eapply isEtaExp_mkApps_intro; eauto. solve_all.
+  - rewrite isEtaExp_mkApps //. cbn [cc_viewc]. rtoProp. repeat split.
+    + unfold isEtaExp_fixapp. rewrite H4. eapply Nat.ltb_lt. lia.
+    + rewrite forallb_InP_spec. solve_all.
+    + solve_all.
   - rewrite isEtaExp_Constructor. eapply andb_true_iff.
     split. 2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.

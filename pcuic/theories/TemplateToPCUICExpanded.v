@@ -39,7 +39,12 @@ Proof with eauto using expanded.
     + cbn. inversion H0; subst. eapply H3. eapply r.
     + inversion H0; subst. inversion H; subst. eapply IHa1; eauto.
     + eapply template_to_pcuic_env; eauto.
-  - wf_inv wf ?. econstructor. solve_all.
+  - wf_inv wf [[]]. wf_inv w ?. eapply expanded_tFix.
+    + solve_all.
+    + solve_all.
+    + destruct args; cbn; congruence.
+    + now rewrite nth_error_map H4.
+    + now simpl_list.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.

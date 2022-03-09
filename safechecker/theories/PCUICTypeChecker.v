@@ -290,6 +290,15 @@ Section Typecheck.
 
   Notation hnf := (hnf (X := X)).  
 
+  Definition conv_pb_relb_gen_proper pb equ equ' eqlu eqlu' :
+  (forall u u', equ u u' = equ' u u') ->
+  (forall u u', eqlu u u' = eqlu' u u') ->
+  forall u u', 
+    conv_pb_relb_gen pb equ eqlu u u' = 
+    conv_pb_relb_gen pb equ' eqlu' u u'.
+   now destruct pb.
+  Defined.   
+
   Obligation Tactic := simpl in *; 
     Tactics.program_simplify;
     try unsquash_wf_env;
@@ -312,7 +321,14 @@ Section Typecheck.
             raise (NotCumulSmaller false Γ t u t' u' e)
       }}.
   Next Obligation.
-    unshelve erewrite <- abstract_env_eq_correct, <- abstract_env_leq_correct, <- abstract_env_compare_global_instance_correct in He; eauto.  
+    unfold eqb_termp_napp_gen in He. 
+    erewrite eqb_term_upto_univ_proper in He.
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: symmetry; eapply conv_pb_relb_gen_proper; first [apply abstract_env_eq_correct | apply abstract_env_leq_correct].   
+    2: intros; erewrite compare_global_instance_proper; try eapply abstract_env_compare_global_instance_correct; eauto. 
+    2: intros; symmetry; apply abstract_env_eq_correct.
+    2: intros; symmetry; eapply abstract_env_compare_global_instance_correct.  
+    Unshelve. all: eauto.  
     symmetry in He; eapply eqb_termp_napp_spec in He ; tea.
     all: pose (heΣ _ wfΣ) as heΣ; sq.
     2-3: now destruct heΣ.
@@ -1848,12 +1864,14 @@ Section Typecheck.
       rewrite -(spine_subst_inst_subst X4).
       rewrite - !smash_context_subst /= !subst_context_nil.
       erewrite <- abstract_env_compare_global_instance_correct in i1; eauto.  
-      erewrite <- abstract_env_leq_correct in i1; eauto.  
+      erewrite <- compare_global_instance_proper in i1.
+      2: reflexivity. 
+      2: intros; apply abstract_env_leq_correct.
+      Unshelve. all: eauto. 
       eapply compare_global_instance_sound in i1; pcuic.
       2: now destruct heΣ.
       eapply (inductive_cumulative_indices X1); tea.
       apply abstract_env_graph_wf. 
-      Unshelve. eauto.  
   Qed.
   
   Obligation Tactic := idtac.
@@ -1954,7 +1972,10 @@ Section Typecheck.
       now rewrite subst_instance_smash /= in wt_params.
       - now eapply negbTE.
     - erewrite <- abstract_env_compare_global_instance_correct in i1; eauto.  
-      erewrite <- abstract_env_leq_correct in i1; eauto.  
+      erewrite <- compare_global_instance_proper in i1.
+      2: reflexivity. 
+      2: intros; apply abstract_env_leq_correct.
+      Unshelve. all: eauto. 
       eapply compare_global_instance_sound ; tea.
       now destruct heΣ. apply abstract_env_graph_wf. 
     - rewrite /params /chop_args chop_firstn_skipn /= in eq_params.
@@ -1972,7 +1993,6 @@ Section Typecheck.
       }
       cbn ; intros ? ? ? [? []] ; intuition auto.
       now eapply wf_local_rel_wf_local_bd, wf_local_app_inv.
-    Unshelve. eauto.    
   Qed.
 
   Next Obligation.
@@ -2120,7 +2140,10 @@ Section Typecheck.
     apply absurd.
     erewrite <- abstract_env_compare_global_instance_correct in absurd.
     erewrite <- abstract_env_compare_global_instance_correct. 
-    erewrite abstract_env_eq_correct.
+    erewrite compare_global_instance_proper.
+    2: intros; apply abstract_env_eq_correct.
+    2: reflexivity. 
+    Unshelve. all: eauto. 
     unshelve eapply (compare_global_instance_complete _ _ _ _ _ _ Cumul) ; tea.
     - apply/wf_universe_instanceP.
       rewrite -wf_universeb_instance_forall.
@@ -2421,6 +2444,7 @@ Section Typecheck.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ].   
     cbn in *. specialize_Σ wfΣ ; sq.
+    unfold abstract_env_fixguard in guarded. 
     erewrite <- abstract_env_guard_correct in guarded; eauto.  
     constructor; auto.
     eapply All_impl ; tea.
@@ -2437,7 +2461,8 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq. 
-    apply absurd. erewrite <- abstract_env_guard_correct; eauto. 
+    apply absurd. unfold abstract_env_fixguard.
+    erewrite <- abstract_env_guard_correct; eauto. 
     now inversion X1.
   Qed.
   Next Obligation.
@@ -2471,6 +2496,7 @@ Section Typecheck.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ].   
     cbn in *. specialize_Σ wfΣ ; sq.
+    unfold abstract_env_cofixguard in guarded.
     erewrite <- abstract_env_guard_correct in guarded; eauto.  
     constructor; auto.
     eapply All_impl ; tea.
@@ -2487,7 +2513,8 @@ Section Typecheck.
   Next Obligation.
     destruct (abstract_env_exists X) as [[Σ wfΣ]].
     cbn in *. specialize_Σ wfΣ ; sq. 
-    apply absurd. erewrite <- abstract_env_guard_correct; eauto. 
+    apply absurd. unfold abstract_env_cofixguard. 
+    erewrite <- abstract_env_guard_correct; eauto. 
     now inversion X1.
   Qed.
   Next Obligation.

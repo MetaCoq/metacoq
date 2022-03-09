@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import utils.
     Any extracted code planning to link with the plugin
     should use these same directives for consistency.
 *)
- 
+
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common ws_cumul_pb Classes Numeral
            Uint63.

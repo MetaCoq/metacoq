@@ -36,6 +36,9 @@ Extract Constant Equations.Init.pr1 => "fst".
 Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 
+Extract Constant PCUICWfEnv.guard_impl => 
+  "(fun _ _ _ _ -> true)".
+
 Extract Constant PCUICTyping.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
 
 Cd "src".

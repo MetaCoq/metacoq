@@ -37,6 +37,7 @@ PCUICExpandLets
 PCUICExpandLetsCorrectness
 
 PCUICErrors
+PCUICEqualityDec
 PCUICWfEnv
 PCUICUnivSubst
 PCUICSafeReduce

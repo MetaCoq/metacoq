@@ -206,7 +206,6 @@ Program Definition optimized_abstract_env_struct {cf:checker_flags} :
   Proof. destruct Σ as [univs Σ]; cbn.
     move=> [] onu; cbn. induction 1; constructor; auto.
   Qed.
-
   Lemma of_global_env_cons {cf:checker_flags} d g : EnvMap.fresh_globals (add_global_decl g d).(declarations) ->
   EnvMap.of_global_env (add_global_decl g d).(declarations) = EnvMap.add d.1 d.2 (EnvMap.of_global_env g.(declarations)).
 Proof.
@@ -314,7 +313,7 @@ Program Definition optimized_abstract_env_prop {cf:checker_flags} :
 abstract_env_prop _ optimized_abstract_env_struct :=
    {| abstract_env_exists := fun Σ => sq (wf_env_ext_env Σ ; eq_refl); |}.
 Next Obligation. apply wf_env_ext_wf. Defined.
-Next Obligation. pose (wf_env_ext_wf X). sq.
+Next Obligation. pose (wf_env_ext_wf X). sq. 
   erewrite EnvMap.lookup_spec; try reflexivity.
   1: apply wf_fresh_globals; eauto.
   1: apply wf_env_ext_map_repr. Qed.

@@ -307,7 +307,8 @@ Section Typecheck.
 
   (* replaces convert and convert_leq*)
   Equations convert (le : conv_pb) Γ t u
-          (ht : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t) (hu : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ u)
+          (ht : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)
+          (hu : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ u)
     : typing_result_comp (forall Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ t ≤[le] u ∥) :=
     convert le Γ t u ht hu
       with inspect (eqb_termp_napp_gen le (abstract_env_eq X) (abstract_env_leq X) (abstract_env_compare_global_instance X) 0 t u) := {
@@ -318,7 +319,7 @@ Section Typecheck.
           | @exist (ConvError e) Hc :=
             let t' := hnf Γ t ht in
             let u' := hnf Γ u hu in
-            raise (NotCumulSmaller false Γ t u t' u' e)
+            raise (NotCumulSmaller false X Γ t u t' u' e)
       }}.
   Next Obligation.
     unshelve erewrite <- abstract_env_eq_correct, <- abstract_env_leq_correct, <- abstract_env_compare_global_instance_correct in He; eauto.
@@ -992,8 +993,8 @@ Section Typecheck.
     destruct wfg as [wfg].
     suff: (@abstract_env_check_constraints cf _ X_type.π2.π1 X (subst_instance_cstrs u cstrs)).
     - rewrite <- e3. congruence.
-    - intros. erewrite <- abstract_env_check_constraints_correct; eauto.
-      eapply check_constraints_complete with (uctx := global_ext_uctx Σ).
+    - intros. erewrite <- abstract_env_check_constraints_correct; eauto. 
+      eapply uGraph.check_constraints_complete with (uctx := global_ext_uctx Σ).
       + now eapply wf_ext_global_uctx_invariants.
       + now apply wf_ext_consistent.
       + apply abstract_env_graph_wf.
@@ -1430,7 +1431,7 @@ Section Typecheck.
     let ind' := I.π1 in let u := I.π2.π1 in let args := I.π2.π2.π1 in
     check_eq_true (eqb ci.(ci_ind) ind')
                   (* bad case info *)
-                  (NotConvertible Γ (tInd ci u) (tInd ind' u)) ;;
+                  (NotConvertible X Γ (tInd ci u) (tInd ind' u)) ;;
     d <- lookup_ind_decl ci.(ci_ind) ;;
     (*let (mdecl;(idecl;isdecl)):= d in*)
     let mdecl := d.π1 in let idecl := d.π2.π1 in let isdecl := d.π2.π2 in
@@ -1471,7 +1472,7 @@ Section Typecheck.
             (*let (ind';(u;(args;H))) := I in*)
             let ind' := I.π1 in let u := I.π2.π1 in let args := I.π2.π2.π1 in
             check_eq_true (eqb ind ind')
-                          (NotConvertible Γ (tInd ind u) (tInd ind' u)) ;;
+                          (NotConvertible X Γ (tInd ind u) (tInd ind' u)) ;;
             check_eq_true (ind_npars mdecl =? n)
                           (Msg "not the right number of parameters") ;;
             let ty := snd pdecl in

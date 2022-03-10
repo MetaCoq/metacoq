@@ -119,13 +119,10 @@ Inductive type_error :=
 | UndeclaredConstant (c : kername)
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
-| NotCumulSmaller (le : bool)
-  (* update here with the right notion *)
-  (* (G : universes_graph) *)
-  (Γ : context) (t u t' u' : term) (e : ConversionError)
-| NotConvertible
-  (* update here with the right notion *)
-  (* (G : universes_graph) *)
+| NotCumulSmaller {abstract_structure} (le : bool)
+  (G : abstract_structure) (Γ : context) (t u t' u' : term) (e : ConversionError)
+| NotConvertible {abstract_structure}
+  (G : abstract_structure)
   (Γ : context) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
@@ -301,7 +298,7 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
   | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
-  | NotCumulSmaller le Γ t u t' u' e => "Types are not " ^
+  | NotCumulSmaller _ le G Γ t u t' u' e => "Types are not " ^
       (if le then "<= for cumulativity:" ^ nl
        else "convertible:" ^ nl) ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
@@ -309,8 +306,8 @@ Definition string_of_type_error Σ (e : type_error) : string :=
       print_term Σ Γ t' ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u' ^
       nl ^ "error:" ^ nl ^ string_of_conv_error Σ e ^
       (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
-      " and context: " ^ nl ^ print_context Σ [] Γ
-  | NotConvertible Γ t u => "Terms are not convertible:" ^ nl ^
+      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
+  | NotConvertible _ G Γ t u => "Terms are not convertible:" ^ nl ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
       (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
       " and context: " ^ nl ^ print_context Σ [] Γ
@@ -329,7 +326,6 @@ Inductive typing_result (A : Type) :=
 | TypeError (t : type_error).
 Global Arguments Checked {A} a.
 Global Arguments TypeError {A} t.
-
 Inductive typing_result_comp (A : Type) :=
 | Checked_comp (a : A)
 | TypeError_comp (t : type_error) (a : A -> False).
@@ -367,9 +363,15 @@ Inductive env_error :=
 | IllFormedDecl (e : string) (e : type_error)
 | AlreadyDeclared (id : string).
 
+
+Section EnvCheck.
+
+  Context (abstract_structure : Type).
+
+
 Inductive EnvCheck (A : Type) :=
 | CorrectDecl (a : A)
-| EnvError (Σ : global_env_ext) (e : env_error).
+| EnvError (Σ : abstract_structure) (e : env_error).
 Global Arguments EnvError {A} Σ e.
 Global Arguments CorrectDecl {A} a.
 
@@ -383,7 +385,7 @@ Global Instance envcheck_monad : Monad EnvCheck :=
   |}.
 
 Global Instance envcheck_monad_exc
-  : MonadExc (global_env_ext * env_error) EnvCheck :=
+  : MonadExc (abstract_structure * env_error) EnvCheck :=
   { raise A '(g, e) := EnvError g e;
     catch A m f :=
       match m with
@@ -459,3 +461,5 @@ Proof.
     destruct (IHl1 _ el) as (? & ? & ? & ? & ->).
     eexists _,_. rewrite -> H, H0. intuition eauto.
 Qed.
+
+End EnvCheck.

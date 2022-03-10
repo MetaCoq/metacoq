@@ -1,11 +1,11 @@
-From Coq Require Import String List Nat.
+From Coq Require Import List Nat.
 From MetaCoq.Template Require Import All.
 
-Import MCMonadNotation String ListNotations.
+Import MCMonadNotation ListNotations.
 
 Definition foo : nat. exact 0. Qed.
 
-Local Open Scope string_scope.
+Local Open Scope bs_scope.
 MetaCoq Quote Recursively Definition foo_syn := foo.
 MetaCoq Quote Recursively Definition comm_syn := PeanoNat.Nat.add_comm.
 

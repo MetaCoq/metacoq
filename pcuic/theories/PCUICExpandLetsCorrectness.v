@@ -281,8 +281,7 @@ Proof.
   destruct Σ as [univs Σ].
   induction Σ.
   - reflexivity.
-  - cbn.
-    unfold eq_kername in *; destruct kername_eq_dec; subst.
+  - cbn. case: eqb_spec; intros e; subst.
     + destruct a; auto.
     + now rewrite IHΣ.
 Qed.

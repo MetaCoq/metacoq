@@ -859,36 +859,36 @@ Equations reify (Σ : global_env_ext) (Γ : context) (P : term) : option form
       | None => None
       } ;
     | tInd ind []
-      with kername_eq_dec ind.(inductive_mind) q_and := {
-      | left e2 with args := {
+      with eqb ind.(inductive_mind) q_and := {
+      | true with args := {
         | [ A ; B ] =>
           af <- reify Σ Γ A ;;
           bf <- reify Σ Γ B ;;
           ret (And af bf) ;
         | _ => None
         } ;
-      | right _
-        with kername_eq_dec ind.(inductive_mind) q_or := {
-        | left e2 with args := {
+      | false
+        with eqb ind.(inductive_mind) q_or := {
+        | true with args := {
           | [ A ; B ] =>
             af <- reify Σ Γ A ;;
             bf <- reify Σ Γ B ;;
             ret (Or af bf) ;
           | _ => None
           } ;
-        | right _
-          with kername_eq_dec ind.(inductive_mind) q_False := {
-          | left e2 with args := {
+        | false
+          with eqb ind.(inductive_mind) q_False := {
+          | true with args := {
             | [] => ret Fa ;
             | _ => None
             } ;
-      | right _
-          with kername_eq_dec ind.(inductive_mind) q_True := {
-          | left e2 with args := {
+      | false
+          with eqb ind.(inductive_mind) q_True := {
+          | true with args := {
             | [] => ret Tr ;
             | _ => None
             } ;
-              | right _ => None
+              | false => None
        }
         }
       }} ;

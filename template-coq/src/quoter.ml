@@ -466,7 +466,7 @@ struct
           univsty oib.mind_user_lc)
         univs mib.mind_packets
 
-  let quote_term_rec bypass env trm =
+  let quote_term_rec ~bypass ?(with_universes=true) env trm =
     let visited_terms = ref Names.KNset.empty in
     let visited_types = ref Mindset.empty in
     let universes = ref Univ.LSet.empty in
@@ -553,10 +553,17 @@ struct
       (x,y)
     in
     let (tm, _) = quote_rem () env trm in
-    let univs = Univ.LSet.union (Vars.universes_of_constr trm) !universes in
-    let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc)  !constants (Q.empty_global_declarations ()) in
-    let univs = Univ.LSet.filter (fun l -> Option.is_empty (Univ.Level.var_index l)) univs in
-    let univs = quote_ugraph ~kept:univs (Environ.universes env) in
+    let decls = List.fold_right (fun (kn, d) acc -> Q.add_global_decl kn d acc) !constants (Q.empty_global_declarations ()) in
+    let univs = 
+      if with_universes then 
+        let univs = Univ.LSet.union (Vars.universes_of_constr trm) !universes in
+        let univs = Univ.LSet.filter (fun l -> Option.is_empty (Univ.Level.var_index l)) univs in
+        quote_ugraph ~kept:univs (Environ.universes env)
+      else 
+        (debug Pp.(fun () -> str"Skipping universes: ");
+         time (Pp.str"Quoting empty universe context") 
+           (fun uctx -> Q.quote_univ_contextset uctx) Univ.ContextSet.empty)
+    in
     let env = Q.mk_global_env univs decls in
     Q.mk_program env tm
 

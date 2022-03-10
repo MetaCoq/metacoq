@@ -92,7 +92,7 @@ Lemma lookup_env_cons {kn d Σ kn' d'} : lookup_global ((kn, d) :: Σ) kn' = Som
   (kn = kn' /\ d = d') \/ (kn <> kn' /\ lookup_global Σ kn' = Some d').
 Proof.
   simpl.
-  epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
+  epose proof (ReflectEq.eqb_spec (A:=kername) kn' kn). simpl in H.
   elim: H. intros -> [= <-]; intuition auto.
   intros diff look. intuition auto.
 Qed.
@@ -102,7 +102,7 @@ Lemma lookup_env_cons_fresh {kn d Σ kn'} :
   lookup_global ((kn, d) :: Σ) kn' = lookup_global Σ kn'.
 Proof.
   simpl.
-  epose proof (Reflect.eqb_spec (A:=kername) kn' kn). simpl in H.
+  epose proof (ReflectEq.eqb_spec (A:=kername) kn' kn). simpl in H.
   elim: H. intros -> => //. auto.
 Qed.
 

@@ -91,7 +91,7 @@ Polymorphic Definition add_constructor (tm : Ast.term)
 
 
 (** * Examples *)
-Local Open Scope string.
+Local Open Scope bs_scope.
 (** Here we add a silly constructor to bool. *)
 MetaCoq Run (
     add_constructor <% bool %> "foo" <% (fun x : Type => nat -> x -> bool -> x) %>).

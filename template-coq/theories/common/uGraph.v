@@ -75,7 +75,7 @@ Module VariableLevel.
 
   Definition eq_dec : forall x y : t, {x = y} + {x <> y}.
     intros [s|n] [s'|n']; try now constructor.
-    destruct (string_dec s s'); [left|right]; congruence.
+    destruct (Classes.eq_dec s s'); [left|right]; congruence.
     destruct (PeanoNat.Nat.eq_dec n n'); [left|right]; congruence.
   Defined.
 
@@ -151,7 +151,7 @@ Module GoodConstraint.
   Definition eq_dec : forall x y : t, {eq x y} + {~ eq x y}.
     unfold eq.
     decide equality. all: try apply VariableLevel.eq_dec.
-    apply Z.eq_dec. all:apply string_dec || apply Peano_dec.eq_nat_dec.
+    apply Z.eq_dec. all:apply Classes.eq_dec || apply Peano_dec.eq_nat_dec.
   Defined.
 
   Reserved Notation "x <c y" (at level 60).
@@ -163,7 +163,7 @@ Module GoodConstraint.
     | _, gc_le _ _ _ => Datatypes.Lt
     | gc_le _ _ _, _ => Gt
     | gc_lt_set_level n s, gc_lt_set_level n' s' =>
-      compare_cont (Nat.compare n n') (string_compare s s')%string
+      compare_cont (Nat.compare n n') (string_compare s s')
     | _, gc_lt_set_level _ _ => Datatypes.Lt
     | gc_lt_set_level _ _, _ => Gt
     | gc_le_set_var n s, gc_le_set_var n' s' =>
@@ -229,11 +229,11 @@ Module GoodConstraint.
     apply Z.compare_eq in e'; subst.
     intros H; apply VariableLevel.compare_eq in H; subst. reflexivity.
     destruct (Nat.compare_spec n n0) => /= //; subst.
-    destruct (CompareSpec_string s s0) => /= //; red in H; subst => //.
+    rewrite StringOT.compare_eq => -> //.
     destruct (Nat.compare_spec n n1) => /= //; subst.
     destruct (Nat.compare_spec n0 n2) => /= //; subst => //.
     destruct (Nat.compare_spec n n0) => /= //; subst.
-    destruct (CompareSpec_string s s0) => /= //; red in H; subst => //.
+    rewrite (StringOT.compare_eq) => -> //.
     destruct (Nat.compare_spec n n1) => /= //; subst.
     destruct (Nat.compare_spec n0 n2) => /= //; subst => //.
   Qed.
@@ -883,7 +883,7 @@ Proof.
         exists (VariableLevel.Level l'); intuition. exists (VariableLevel.Var l'); intuition.
       * intros [[l' [[H1|H1] H2]]|H].
         right. subst a. destruct l'; apply EdgeSet.add_spec; left; tas.
-        destruct l'; left; [exists (VariableLevel.Level s)|exists (VariableLevel.Var n)]; intuition.
+        destruct l'; left; [exists (VariableLevel.Level t0)|exists (VariableLevel.Var n)]; intuition.
         right. destruct a; tas; apply EdgeSet.add_spec; right; tas.
 Qed.
 
@@ -901,7 +901,7 @@ Proof.
       destruct gc; try apply (Hi.p2 _ Hgc). apply Hi.
       simpl. apply Hi.
   - apply Hi.
-  - cbn. intros l Hl. sq. destruct l.
+  - cbn. intros l Hl. sq. destruct l as [|s|n].
     exists (pathOf_refl _ _). sq. simpl. reflexivity.
     assert (He: EdgeSet.In (edge_of_level (VariableLevel.Level s)) (wGraph.E (make_graph uctx))). {
       apply make_graph_E. left. exists (VariableLevel.Level s). intuition. }
@@ -987,7 +987,7 @@ Section MakeGraph.
     : forall x, VSet.In x uctx.1
            -> labelling_of_valuation (valuation_of_labelling l) x = l x.
   Proof.
-    destruct x; cbnr.
+    destruct x as [|s|n]; cbnr.
     - intros _. now apply proj1 in Hl; cbn in Hl.
     - intro Hs. apply Nat2Pos.id.
       assert (HH: EdgeSet.In (lzero, Z.of_nat 1, vtn (VariableLevel.Level s)) (wGraph.E G)). {
@@ -2447,12 +2447,12 @@ Section AddLevelsCstrs.
     rewrite {}IHl.
     split.
     * intros [[c [eq inl]]|?]; firstorder auto.
-      destruct a; simpl in *; auto.
+      destruct a as [|s|n]; simpl in *; auto.
       rewrite -> EdgeSet.add_spec in H. intuition auto.
       subst e. left; exists (Level.Level s); intuition auto.
       rewrite -> EdgeSet.add_spec in H. intuition auto.
       subst e. left; eexists; intuition eauto. reflexivity.
-    * intros [[[] [[= <-] [->|inl]]]|?]; simpl; auto;
+    * intros [[[|s|n] [[= <-] [->|inl]]]|?]; simpl; auto;
       rewrite -> ?EdgeSet.add_spec; simpl; intuition auto.
       left. exists (Level.Level s); auto.
       left. exists (Level.Var n); auto.

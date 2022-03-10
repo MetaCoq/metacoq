@@ -365,7 +365,7 @@ Proof.
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
-  unfold eq_kername; destruct kername_eq_dec; subst.
+  case: eqb_specT; intro eq; subst.
   - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl_ext. 3:tea. all:eauto.
   - apply IHonΣ; auto.
@@ -386,7 +386,7 @@ Proof.
     destruct Hext as [univs' [Σ'' HΣ'']]. split; eauto.
     exists (Σ'' ++ [(kn, d)]). now rewrite <- app_assoc.
   }
-  unfold eq_kername; destruct kername_eq_dec; subst.
+  case: eqb_specT; intro e; subst.
   - intros [= ->]. subst.
     clear Hext; eapply weakening_on_global_decl. 5:tea. all:eauto.
     destruct wfΣ. split => //. now depelim o2.

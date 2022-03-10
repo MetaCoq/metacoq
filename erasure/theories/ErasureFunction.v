@@ -1237,14 +1237,13 @@ Proof.
     red. destruct H. split; eauto.
     red in H. red.
     inv wfΣ. inv X.
-    rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername. destruct kername_eq_dec; try congruence.
+    rewrite -H. simpl. unfold lookup_env; simpl. destruct (eqb_spec (inductive_mind p.1) kn); try congruence.
     eapply lookup_env_Some_fresh in H. subst kn; contradiction.
   - econstructor; eauto.
     red. destruct H. split; eauto.
     inv wfΣ. inv X.
     red in H |- *.
-    rewrite -H. simpl. unfold lookup_env; simpl; unfold eq_kername.
-    unfold lookup_env in H; simpl in H. destruct kername_eq_dec; try congruence.
+    rewrite -H. simpl. unfold lookup_env; simpl; destruct (eqb_spec (inductive_mind p.1.1) kn); try congruence.
     eapply lookup_env_Some_fresh in H. subst kn. contradiction.
 Qed.
 
@@ -1256,23 +1255,23 @@ Proof.
   intros wf hl. 
   eapply lookup_env_Some_fresh in hl.
   inv wf. inv X.
-  destruct (kername_eq_dec kn kn'); subst; congruence.
+  destruct (eqb_spec kn kn'); subst; congruence.
 Qed.
 
 Lemma lookup_env_cons_disc {Σ kn kn' d} : 
   kn <> kn' ->
   lookup_env (add_global_decl Σ (kn', d)) kn = lookup_env Σ kn.
 Proof.
-  intros Hk. simpl; unfold lookup_env; simpl; unfold eq_kername; simpl.
-  destruct kername_eq_dec; congruence.
+  intros Hk. simpl; unfold lookup_env; simpl.
+  destruct (eqb_spec kn kn'); congruence.
 Qed.
 
 Lemma elookup_env_cons_disc {Σ kn kn' d} : 
   kn <> kn' ->
   ETyping.lookup_env ((kn', d) :: Σ) kn = ETyping.lookup_env Σ kn.
 Proof.
-  intros Hk. simpl; unfold eq_kername.
-  destruct kername_eq_dec; congruence.
+  intros Hk. simpl.
+  destruct (eqb_spec kn kn'); congruence.
 Qed.
 
 Lemma global_erases_with_deps_cons kn kn' d d' Σ Σ' : 
@@ -1404,9 +1403,9 @@ Lemma lookup_env_closed {Σ kn decl} : ETyping.closed_env Σ -> ETyping.lookup_e
 Proof.
   induction Σ; cbn => //.
   move/andP => [] cla cle.
-  unfold eq_kername; destruct kername_eq_dec.
+  case: eqb_spec. intros e; subst.
   move=> [= <-]. apply cla.
-  now eapply IHΣ.
+  intros hne; now eapply IHΣ.
 Qed.
 
 Lemma erases_closed Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' -> PCUICAst.closedn #|Γ| t -> ELiftSubst.closedn #|Γ| t'.
@@ -1450,7 +1449,7 @@ Proof.
     eapply KernameSet.subset_spec in sub.
     destruct (H i hin) as [[decl Hdecl]]. unfold lookup_env in Hdecl.
     cbn in Hdecl.
-    pose proof (eqb_spec i kn). unfold eqb in H0; cbn in H0.
+    pose proof (eqb_spec i kn).
     rewrite e in Hdecl. move: Hdecl. cbn -[erase_global_decls].
     elim: H0. intros -> [= <-].
     * destruct d as [|]; [left|right].
@@ -1737,19 +1736,19 @@ Proof.
   - move=> /= //.
   - intros e. destruct a as [kn' d'].
     cbn -[erase_global_decls].
-    unfold eq_kername. destruct kername_eq_dec. subst kn'.
+    case: (eqb_spec kn kn'); intros e'; subst.
     intros [= ->].
     unfold erase_global_decls.
     eapply KernameSet.mem_spec in hin. rewrite hin /=.
     now rewrite eq_kername_refl.
     intros hl. destruct d'. simpl.
     destruct KernameSet.mem. cbn.
-    unfold eq_kername. destruct kername_eq_dec => //. 
+    rewrite (negbTE (proj2 (neqb _ _) e')).
     eapply IHg => //. eapply KernameSet.union_spec. left => //.
     eapply IHg => //.
     simpl.
     destruct KernameSet.mem. cbn.
-    unfold eq_kername. destruct kername_eq_dec => //. 
+    rewrite (negbTE (proj2 (neqb _ _) e')).
     eapply IHg => //.
     eapply IHg => //. 
 Qed.

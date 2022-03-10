@@ -2202,7 +2202,7 @@ Section Typecheck.
     eapply declared_inductive_inj in isdecl as []; tea.
     subst.
     apply absurd.
-    now apply/eqb_spec.
+    now apply/eqb_specT.
   Qed.
 
   Next Obligation.
@@ -2250,7 +2250,7 @@ Section Typecheck.
     eapply infering_ind_ind in X0 as [? []].
     2-3: now auto.
     2: now econstructor ; tea ; apply closed_red_red.
-    now apply/eqb_spec.
+    now apply/eqb_specT.
   Qed.
 
   Next Obligation.
@@ -2308,18 +2308,18 @@ Section Typecheck.
     eapply infer_Proj with (pdecl := (i1, t)).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
-      now apply beq_nat_true.
-    - cbn. destruct (ssrbool.elimT (eqb_spec ind I)); [assumption|].
+      now apply Nat.eqb_eq.
+    - cbn. destruct (ssrbool.elimT (eqb_specT ind I)); [assumption|].
       econstructor ; tea.
       now apply closed_red_red.
     - eapply type_reduction_closed in X2; eauto.
       2: now apply infering_typing.
       eapply validity in X2; eauto.
-      destruct (ssrbool.elimT (eqb_spec ind I)); auto.
-      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X2 as [parsubst [argsubst [sp sp' cu]]]; eauto.
-      pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
-      pose proof (PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
-      autorewrite with len in H, H0.
+      destruct (ssrbool.elimT (eqb_specT ind I)); auto.
+      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X1 as [parsubst [argsubst [sp sp' cu]]]; eauto.
+      pose proof (Hl := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
+      pose proof (Hr := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
+      autorewrite with len in Hl, Hr.
       destruct (on_declared_inductive decl) eqn:ond.
       rewrite -o.(onNpars) -H.
       forward (o0.(onProjections)).
@@ -2350,7 +2350,7 @@ Section Typecheck.
     pose proof (heΣ _ wfΣ) as [heΣ].   
     cbn in *. specialize_Σ wfΣ ; sq. 
     apply absurd.
-    apply/eqb_spec.
+    apply/eqb_specT.
     cbn in *.
     sq.
     inversion X1.

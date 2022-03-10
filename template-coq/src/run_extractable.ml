@@ -6,8 +6,6 @@ open Tm_util
 open Ast_quoter
 open Ast_denoter
 
-(* todo : replace string_to_list and converse by (un)quote_string *)
-
 let to_reduction_strategy (s : Common0.reductionStrategy) : Plugin_core.reduction_strategy =
   match s with
    | Common0.Coq_cbv -> Plugin_core.rs_cbv
@@ -17,11 +15,11 @@ let to_reduction_strategy (s : Common0.reductionStrategy) : Plugin_core.reductio
    | Common0.Coq_lazy -> Plugin_core.rs_lazy
    | Common0.Coq_unfold x -> failwith "not yet implemented: to_reduction_strategy"
 
-let to_qualid (c : char list) : Libnames.qualid =
-  Libnames.qualid_of_string (list_to_string c)
+let to_qualid c : Libnames.qualid =
+  Libnames.qualid_of_string (unquote_string c)
 
-let of_qualid (q : Libnames.qualid) : char list =
-  string_to_list (Libnames.string_of_qualid q)
+let of_qualid (q : Libnames.qualid) =
+  quote_string (Libnames.string_of_qualid q)
 
 (* todo(gmm): this definition adapted from quoter.ml *)
 let quote_rel_decl env = function
@@ -196,8 +194,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmReturn x -> tmReturn x
   | Coq_tmBind (c, k) -> tmBind (interp_tm c) (fun x -> interp_tm (k x))
   | Coq_tmPrint t -> Obj.magic (tmPrint (to_constr t))
-  | Coq_tmMsg msg -> Obj.magic (tmMsg (list_to_string msg))
-  | Coq_tmFail err -> tmFailString (list_to_string err)
+  | Coq_tmMsg msg -> Obj.magic (tmMsg (unquote_string msg))
+  | Coq_tmFail err -> tmFailString (unquote_string err)
   | Coq_tmEval (r,t) ->
     tmBind (tmEval (to_reduction_strategy r) (to_constr t))
            (fun x -> Obj.magic (tmOfConstr x))
@@ -222,7 +220,7 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
     tmMap (fun x -> Obj.magic (List.map quote_global_reference x))
           (tmLocate (to_qualid id))
   | Coq_tmCurrentModPath ->
-    tmMap (fun mp -> Obj.magic (string_to_list (Names.ModPath.to_string mp)))
+    tmMap (fun mp -> Obj.magic (quote_string (Names.ModPath.to_string mp)))
           tmCurrentModPath
   | Coq_tmQuoteInductive kn ->
     tmBind (tmQuoteInductive (unquote_kn kn))

@@ -867,8 +867,8 @@ Section CheckEnv.
       rename Heq_anonymous2 into dc. *)
       symmetry in Heq_anonymous0.
       eapply decompose_prod_n_assum_inv in Heq_anonymous0; simpl in Heq_anonymous0; subst.
-      destruct (eqb_spec params (ind_params mdecl)) => //. subst params.
-      destruct (eqb_spec args (cstr_args cdecl)) => //. subst args.
+      destruct (eqb_specT params (ind_params mdecl)) => //. subst params.
+      destruct (eqb_specT args (cstr_args cdecl)) => //. subst args.
       eapply eqb_eq in eqarglen0.
       eapply eqb_eq in eqbindices.
       eapply eqb_eq in eqbpars.
@@ -1367,7 +1367,7 @@ Section CheckEnv.
         sq. rename Heq_anonymous into eqa.
         symmetry in eqa; eapply decompose_app_inv in eqa.
         subst t0.
-        move: eqhd; case: eqb_spec => // -> _.
+        move: eqhd; case: eqb_specT => // -> _.
         constructor.
         now eapply forallb_All in closedargs.
       Qed.
@@ -2103,7 +2103,7 @@ Section CheckEnv.
   Qed.
 
   Next Obligation.
-    destruct (eqb_spec params (ind_params mdecl)); [|discriminate]. subst params.
+    destruct (eqb_specT params (ind_params mdecl)); [|discriminate]. subst params.
     red. red.
     eapply nth_error_all in wfars; eauto; simpl in wfars.
     destruct wfars as [s Hs]. now exists s.
@@ -2399,9 +2399,8 @@ Section CheckEnv.
     let Σ := fst p in
     '(exist wfΣ eq) <- check_wf_ext (Σ, φ) ;;
     inft <- infer_term wfΣ (snd p) ;;
-    ret _.
+    ret (inft.π1; _).
   Next Obligation.
-    exists inft.
     assert (wfx : abstract_env_rel' x x) by reflexivity.
     specialize_Σ wfx.
     have [wfΣ] := (x.(wf_env_ext_wf)); sq. split; eauto.

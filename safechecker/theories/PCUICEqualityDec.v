@@ -168,7 +168,7 @@ Notation eqb_term_upto_univ eq leq gen_compare_global_instance :=
 Ltac eqspec :=
   lazymatch goal with
   | |- context [ eqb ?u ?v ] =>
-    destruct (eqb_spec u v) ; nodec ; subst
+    destruct (eqb_specT u v) ; nodec ; subst
   end.
 
 Ltac eqspecs :=
@@ -307,7 +307,7 @@ Proof.
       now constructor.
 Qed.
 
-Definition eqb_univ_reflect : forall u u' : Universe.t, reflect (u = u') (eqb u u').
+Definition eqb_univ_reflect : forall u u' : Universe.t, reflectProp (u = u') (eqb u u').
 Proof.
   intros u u'.
   destruct (eqb_spec u u'); constructor; auto.
@@ -333,16 +333,16 @@ Proof.
     destruct X; cbn ; subst.
     all: destruct (eqb_annot_reflect na na') => /= //.
     2: apply/andb_and; split.
-    all: apply eq_dec_to_bool_refl.
+    all: eapply eqb_refl.
   - intros hcc'.
     eapply forallb2_bcompare_decl_All2_fold in hcc'; tea.
     eapply All2_fold_impl in hcc'; tea; simpl; intuition eauto.
     move: H.
     destruct d as [na [bod|] ty], d' as [na' [bod'|] ty']; cbn in * => //.
+    + destruct (eqb_annot_reflect na na') => // /=.
+      repeat case: eqb_specT => //; intros; subst; cbn; auto; constructor; auto.
     + destruct (eqb_annot_reflect na na') => //.
-      unfold eq_dec_to_bool. repeat destruct eq_dec => //; subst; cbn; auto; constructor; auto.
-    + destruct (eqb_annot_reflect na na') => //.
-      unfold eq_dec_to_bool. repeat destruct eq_dec => //; subst; cbn; auto; constructor; auto.
+      repeat case: eqb_specT => //; intros; subst; cbn; auto; constructor; auto.
 Qed.
 
 Lemma forallb_true {A : Type} (l : list A) : forallb xpredT l.
@@ -586,7 +586,7 @@ Proof.
         intros H; now inv H.
       * constructor. intros H; now inv H.
   - cbn - [eqb].
-    destruct (eqb_spec s k) ; nodec. subst.
+    destruct (eqb_specT s k) ; nodec. subst.
     induction u in ui, ht, ht' |- *.
     + destruct ui.
       * constructor. constructor. constructor.

@@ -19,9 +19,9 @@ Local Ltac term_dec_tac term_dec :=
   repeat match goal with
          | t : term, u : term |- _ => fcase (term_dec t u)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
-         | i : string, i' : kername |- _ => fcase (string_dec i i')
+         | i : ident, i' : ident |- _ => fcase (eq_dec i i')
+         | i : kername, i' : kername |- _ => fcase (eq_dec i i')
+         | i : string, i' : kername |- _ => fcase (eq_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
          | i : prim_val _, i' : prim_val _ |- _ => fcase (eq_dec i i')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')
@@ -105,7 +105,7 @@ Proof.
 Defined.
 
 #[global]
-Instance ReflectEq_term : Reflect.ReflectEq _ :=
+Instance ReflectEq_term : ReflectEq.ReflectEq _ :=
   @EqDec_ReflectEq _ EqDec_term.
 
 Definition eqb_constant_body (x y : constant_body) :=

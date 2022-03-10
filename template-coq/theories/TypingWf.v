@@ -196,21 +196,17 @@ Proof.
   destruct Σ as [univs Σ]; cbn in *.
   rewrite /lookup_env /on_global_env /=.
   induction Σ in univs, Σ', k, d |- *; cbn => //.
-  destruct eq_kername eqn:eqk.
+  destruct (eqb_spec k a.1) as [e|e].
   * move=> wfΣ' [=]. intros <- ext.
     destruct ext as [univeq [Σ'' eq]] => /=. cbn in *.
     subst univs. rewrite eq in wfΣ'.
     destruct Σ' as [univs' Σ']; cbn in *.
     subst Σ'. destruct wfΣ' as [cu wfΣ'].
     induction Σ''. 
-    + cbn. now rewrite eqk.
-    + cbn. destruct (eq_kername k a0.1) eqn:eqk' => //.
-      change (eq_kername k a.1) with (Reflect.eqb k a.1) in eqk.
-      change (eq_kername k a0.1) with (Reflect.eqb k a0.1) in eqk'.
-      eapply eqb_eq in eqk. apply eqb_eq in eqk'. subst.
-      apply on_global_decls_extends_not_fresh in wfΣ'; eauto.
-      apply IHΣ''.
-      now depelim wfΣ'.
+    + cbn. now rewrite e eq_kername_refl.
+    + cbn. destruct (eqb_spec k a0.1) => //. subst.
+      { apply on_global_decls_extends_not_fresh in wfΣ'; eauto. }
+      subst. apply IHΣ''. now depelim wfΣ'.
   * intros HΣ' Hl [univeq [Σ'' eq]]; cbn in *. subst univs.
     rewrite eq in HΣ'. destruct HΣ'.
     eapply IHΣ; tea. split; eauto. now rewrite eq.

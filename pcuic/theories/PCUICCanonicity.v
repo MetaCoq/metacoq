@@ -155,7 +155,7 @@ Section Spines.
     eapply forallb_All in eqhd.
     destruct idx; simpl in Hl; [congruence|].
     eapply All_nth_error in eqhd; eauto.
-    now eapply Reflect.eqb_eq in eqhd.
+    now eapply ReflectEq.eqb_eq in eqhd.
   Qed.
   
   Lemma wf_cofixpoint_inv mfix idx decl :
@@ -180,7 +180,7 @@ Section Spines.
     eapply forallb_All in eqhd.
     destruct idx; simpl in Hl; [congruence|].
     eapply All_nth_error in eqhd; eauto.
-    now eapply Reflect.eqb_eq in eqhd.
+    now eapply ReflectEq.eqb_eq in eqhd.
   Qed.
 
     Lemma on_free_vars_it_mkLambda_or_LetIn {P Δ t} : 
@@ -837,7 +837,7 @@ Section WeakNormalization.
     - move=> [hargs ccum'].
       rewrite expand_lets_mkApps subst_mkApps /= in ccum'.
       eapply invert_cumul_ind_ind in ccum' as ((? & ?) & ?).
-      len in r. eapply Reflect.eqb_eq in i0. now subst ind'.
+      len in r. eapply ReflectEq.eqb_eq in i0. now subst ind'.
   Qed.
 
   Lemma check_recursivity_kind_inj {mind rk rk'} :
@@ -846,8 +846,8 @@ Section WeakNormalization.
   Proof.
     rewrite /check_recursivity_kind.
     case: lookup_env => //; case => // m.
-    elim: Reflect.eqb_spec;
-    elim: Reflect.eqb_spec; congruence.
+    elim: ReflectEq.eqb_spec;
+    elim: ReflectEq.eqb_spec; congruence.
   Qed.
 
   Lemma wt_closed_red_refl {Γ t T} : Σ ;;; Γ |- t : T -> Σ ;;; Γ ⊢ t ⇝ t.

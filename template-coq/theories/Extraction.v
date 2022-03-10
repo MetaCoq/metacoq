@@ -7,14 +7,9 @@
 
 From Coq Require Ascii Extraction ZArith NArith.
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
-From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOCamlFloats
+From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats
     ExtrOCamlInt63.
 From MetaCoq.Template Require Import MC_ExtrOCamlZPosInt.
-
-Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> 0 | x when x < 0 -> -1 | _ -> 1".
-Extract Constant Ascii.eqb =>
- "fun x y -> x = y".
  
 (* Ignore [Decimal.int] before the extraction issue is solved:
   https://github.com/coq/coq/issues/7017. *)

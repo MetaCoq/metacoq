@@ -293,6 +293,22 @@ Section GraphSpec.
     sq; now eapply global_ext_uctx_consistent.
   Qed.
 
+  Lemma check_constraints_complete ctrs (H : check_univs)
+  : valid_constraints (global_ext_constraints Σ) ctrs -> check_constraints G ctrs.
+  Proof.
+    pose proof HΣ'.
+    intros HH.
+    refine (check_constraints_complete G (global_ext_uctx Σ) _ _ HG _ _ _ HH); eauto; sq.
+    now eapply wf_ext_global_uctx_invariants.
+    now eapply global_ext_uctx_consistent.
+    pose proof (wf_ext_global_uctx_invariants Σ H0) as [H1 H2].
+    split; eauto.
+    unfold uctx_invariants in *; cbn in *.
+    unfold valid_constraints in HH. rewrite H in HH.
+    unfold valid_constraints0 in HH. unfold ConstraintSet.For_all.
+    intro x; specialize (H2 x). intro; apply H2.
+  Admitted.
+
   Lemma is_graph_of_uctx_levels (l : Level.t) :
     LevelSet.mem l (uGraph.wGraph.V G) <->
     LevelSet.mem l (global_ext_levels Σ).
@@ -309,18 +325,35 @@ Section GraphSpec.
 
 End GraphSpec.
 
+Definition leqb_universe_n_is_graph_of_wf_ext {cf:checker_flags} (X:wf_env_ext) u u':
+  is_graph_of_uctx X (global_ext_uctx X) ->
+  leqb_universe_n (graph_of_wf_ext X).π1 false u u' =
+  leqb_universe_n X false u u'.
+  Admitted.
+
 Program Definition optimized_abstract_env_prop {cf:checker_flags} :
 abstract_env_prop _ optimized_abstract_env_struct :=
    {| abstract_env_exists := fun Σ => sq (wf_env_ext_env Σ ; eq_refl); |}.
 Next Obligation. apply wf_env_ext_wf. Defined.
-Next Obligation. pose (wf_env_ext_wf X). sq. 
+Next Obligation. pose (wf_env_ext_wf X). sq.
   erewrite EnvMap.lookup_spec; try reflexivity.
   1: apply wf_fresh_globals; eauto.
   1: apply wf_env_ext_map_repr. Qed.
 Next Obligation. cbn.
   pose proof (wf_env_ext_graph_wf X).
-Admitted.
-Next Obligation. Admitted.
+  unfold check_eqb_universe.
+  destruct negb, Universe.eqb; eauto; cbn.
+  repeat rewrite leqb_universe_n_is_graph_of_wf_ext; eauto. Defined.
+Next Obligation.
+pose proof (wf_env_ext_graph_wf X).
+unfold check_leqb_universe.
+destruct negb; eauto; cbn.
+destruct prop_sub_type; cbn; eauto.
+all: destruct Universe.eqb; eauto; cbn.
+all: destruct Universe.is_prop; eauto; cbn.
+1-2: destruct negb; eauto; cbn.
+all :rewrite leqb_universe_n_is_graph_of_wf_ext; eauto.
+Defined.
 Next Obligation. cbn.
   erewrite compare_global_instance_proper; eauto.  intros.
   exact (optimized_abstract_env_prop_obligation_4 cf X _ eq_refl u u').
@@ -328,8 +361,23 @@ Defined.
 Next Obligation. eapply eq_true_iff_eq.
                  split; intros; eapply is_graph_of_uctx_levels; eauto;
                  eapply wf_env_ext_graph_wf. Qed.
-Next Obligation. unfold check_constraints.
-  destruct gc_of_constraints; eauto.
-  unfold check_gc_constraints.
-Admitted.
+Next Obligation. pose proof (wf_env_ext_graph_wf X).
+  case_eq check_univs; intro check_univ_eq.
+  apply eq_true_iff_eq; cbn.
+  split; intros.
+  - eapply check_constraints_spec in H0; eauto.
+    2: apply wf_env_ext_sq_wf.
+    2: apply Σudecl.
+    + eapply check_constraints_complete; eauto.
+    1: apply wf_env_ext_sq_wf.
+    1: apply Σudecl.
+    + admit.
+  -  eapply check_constraints_spec in H0; eauto.
+    2: apply wf_env_ext_sq_wf.
+    2: apply Σudecl.
+    + eapply check_constraints_complete; eauto.
+    1: apply wf_env_ext_sq_wf.
+    1: apply Σudecl.
+    admit.
+  Admitted.
 Next Obligation. apply fake_guard_correct. Defined.

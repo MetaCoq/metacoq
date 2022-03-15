@@ -120,8 +120,13 @@ Inductive type_error :=
 | UndeclaredInductive (c : inductive)
 | UndeclaredConstructor (c : inductive) (i : nat)
 | NotCumulSmaller (le : bool)
-  (G : universes_graph) (Γ : context) (t u t' u' : term) (e : ConversionError)
-| NotConvertible (G : universes_graph) (Γ : context) (t u : term)
+  (* update here with the right notion *)
+  (* (G : universes_graph) *)
+  (Γ : context) (t u t' u' : term) (e : ConversionError)
+| NotConvertible 
+  (* update here with the right notion *)
+  (* (G : universes_graph) *)
+  (Γ : context) (t u : term)
 | NotASort (t : term)
 | NotAProduct (t t' : term)
 | NotAnInductive (t : term)
@@ -296,18 +301,18 @@ Definition string_of_type_error Σ (e : type_error) : string :=
   | UndeclaredConstant c => "Undeclared constant " ^ string_of_kername c
   | UndeclaredInductive c => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
   | UndeclaredConstructor c i => "Undeclared inductive " ^ string_of_kername (inductive_mind c)
-  | NotCumulSmaller le G Γ t u t' u' e => "Types are not " ^
+  | NotCumulSmaller le Γ t u t' u' e => "Types are not " ^
       (if le then "<= for cumulativity:" ^ nl 
        else "convertible:" ^ nl) ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
       nl ^ "after reduction:" ^ nl ^
       print_term Σ Γ t' ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u' ^
       nl ^ "error:" ^ nl ^ string_of_conv_error Σ e ^
-      nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^
+      (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
       " and context: " ^ nl ^ snd (print_context Σ [] Γ)
-  | NotConvertible G Γ t u => "Terms are not convertible:" ^ nl ^
+  | NotConvertible Γ t u => "Terms are not convertible:" ^ nl ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
-      nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^
+      (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
       " and context: " ^ nl ^ snd (print_context Σ [] Γ)
   | NotASort t => "Not a sort: " ^ print_term Σ [] t
   | NotAProduct t t' => "Not a product" ^ print_term Σ [] t ^ nl ^

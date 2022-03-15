@@ -1952,7 +1952,7 @@ Proof.
 Qed.
 
 Lemma trans_check_rec_kind {cf} {Σ} {wfΣ : Typing.wf Σ} {wfΣ' : wf (trans_global_env Σ)} {k f} :
-  ST.check_recursivity_kind Σ k f = check_recursivity_kind (trans_global_env Σ) k f.
+  ST.check_recursivity_kind Σ k f = check_recursivity_kind (lookup_env (trans_global_env Σ)) k f.
 Proof.
   unfold ST.check_recursivity_kind, check_recursivity_kind.
   rewrite trans_lookup.
@@ -1967,7 +1967,7 @@ Lemma trans_wf_fixpoint {cf} {Σ} {wfΣ : Typing.wf Σ} {mfix} :
   wf_fixpoint (trans_global_env Σ) (map (map_def (trans Σ') (trans Σ')) mfix).
 Proof.
   intros Σ' wfΣ'.
-  unfold ST.wf_fixpoint, wf_fixpoint.
+  unfold ST.wf_fixpoint, wf_fixpoint, wf_fixpoint_gen.
   rewrite map_map_compose.
   intros wf.
   destruct map_option_out eqn:ma => //.
@@ -1983,7 +1983,7 @@ Lemma trans_wf_cofixpoint {cf} {Σ} {wfΣ : Typing.wf Σ} {mfix} :
   wf_cofixpoint (trans_global_env Σ) (map (map_def (trans Σ') (trans Σ')) mfix).
 Proof.
   intros Σ' wfΣ'.
-  unfold ST.wf_cofixpoint, wf_cofixpoint.
+  unfold ST.wf_cofixpoint, wf_cofixpoint, wf_cofixpoint_gen.
   rewrite map_map_compose.
   intros wf.
   destruct map_option_out eqn:ma => //.

@@ -2694,7 +2694,7 @@ Proof.
 Qed.
 
 Lemma trans_check_rec_kind Σ k f :
-  ST.check_recursivity_kind Σ k f = TT.check_recursivity_kind (trans_global_env Σ) k f.
+  ST.check_recursivity_kind (lookup_env Σ) k f = TT.check_recursivity_kind (lookup_env (trans_global_env Σ)) k f.
 Proof.
   unfold ST.check_recursivity_kind, TT.check_recursivity_kind.
   rewrite trans_lookup.
@@ -2707,7 +2707,7 @@ Lemma trans_wf_fixpoint Σ p n mfix :
   ST.wf_fixpoint Σ mfix.
 Proof.
   intros hmfix.
-  unfold ST.wf_fixpoint, TT.wf_fixpoint.
+  unfold ST.wf_fixpoint, TT.wf_fixpoint, ST.wf_fixpoint_gen, TT.wf_fixpoint_gen.
   rewrite map_map_compose.
   rewrite (map_option_out_check_one_fix hmfix).
   destruct map_option_out as [[]|] => //.
@@ -2719,6 +2719,7 @@ Lemma trans_wf_cofixpoint Σ mfix :
   ST.wf_cofixpoint Σ mfix.
 Proof.
   unfold ST.wf_cofixpoint, TT.wf_cofixpoint.
+  unfold ST.wf_cofixpoint_gen, TT.wf_cofixpoint_gen.
   rewrite map_map_compose.
   rewrite map_option_out_check_one_cofix.
   destruct map_option_out as [[]|] => //.
@@ -3797,7 +3798,7 @@ Proof.
     eapply TT.type_Fix; auto.
     + rewrite /trans_local map_app in X.
       now eapply TT.All_local_env_app_inv in X as [].
-    + now rewrite fix_guard_trans.
+    + now apply fix_guard_trans.
     + erewrite map_nth_error. 
       2: apply H0.
       destruct decl.

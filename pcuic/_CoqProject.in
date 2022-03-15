@@ -50,7 +50,6 @@ theories/PCUICGlobalEnv.v
 theories/PCUICInversion.v
 theories/PCUICNormal.v
 theories/PCUICEquality.v
-theories/PCUICEqualityDec.v
 theories/PCUICSubstitution.v
 theories/PCUICContextReduction.v
 theories/PCUICCumulativity.v

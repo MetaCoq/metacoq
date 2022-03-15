@@ -48,15 +48,16 @@ Defined.
 
 (** There is always a proof of `forall x : Sort s, x -> x` *)
 
-Definition inh (Σ : wf_env_ext) Γ T := (∑ t, ∥ typing Σ Γ t T ∥).
+Definition inh (Σ : wf_env_ext) Γ T := (∑ t, forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> ∥ typing Σ0 Γ t T ∥).
 
-Definition check_inh (Σ : wf_env_ext) Γ (wfΓ : ∥ wf_local Σ Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
+Definition check_inh (Σ : wf_env_ext) Γ 
+  (wfΓ : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> ∥ wf_local Σ0 Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
   prf <- check_type_wf_env_fast Σ Γ wfΓ t (T := T) ;;
   ret (t; prf).
 
 Ltac fill_inh t := 
   lazymatch goal with
-  [ wfΓ : ∥ wf_local _ ?Γ ∥ |- inh ?Σ ?Γ ?T ] => 
+  [ wfΓ : forall _ _ , ∥ wf_local _ ?Γ ∥ |- inh ?Σ ?Γ ?T ] => 
     let t := uconstr:(check_inh Σ Γ wfΓ t (T:=T)) in
     let proof := eval lazy in t in
     match proof with

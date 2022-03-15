@@ -60,7 +60,7 @@ Qed.
 Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
   { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f))  *
-    wf_fixpoint Σ.1  mfix
+    wf_fixpoint Σ  mfix
   * (Σ ;;; Γ |- f : T') * (Σ ;;; Γ ⊢ T' ≤ T) }}}%type.
 Proof.
   intros wfΣ H. depind H.
@@ -74,7 +74,7 @@ Proof.
     + split.
       * eauto.
       * eapply (substitution (Δ :=  [])); simpl; eauto with wf.
-        rename i into hguard. clear -i0 a a0 a1 hguard.
+        rename i into hguard. clear -f a a0 a1 hguard.
         pose proof a1 as a1'. apply All_rev in a1'.
         unfold fix_subst, fix_context. simpl.
         revert a1'. rewrite <- (@List.rev_length _ mfix).
@@ -123,7 +123,7 @@ Lemma subslet_cofix {cf:checker_flags} (Σ : global_env_ext) Γ mfix :
   (fun d : def term =>
    Σ;;; Γ ,,, fix_context mfix |- dbody d
    : lift0 #|fix_context mfix| (dtype d)) mfix ->
-  wf_cofixpoint Σ.1 mfix -> subslet Σ Γ (cofix_subst mfix) (fix_context mfix).
+  wf_cofixpoint Σ mfix -> subslet Σ Γ (cofix_subst mfix) (fix_context mfix).
 Proof.
   intros wfΓ hguard types bodies wfcofix.
   pose proof bodies as X1. apply All_rev in X1.
@@ -161,7 +161,7 @@ Qed.
 Lemma type_tCoFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
   Σ ;;; Γ |- tCoFix mfix idx : T ->
   ∑ d, (nth_error mfix idx = Some d) *
-    wf_cofixpoint Σ.1 mfix *
+    wf_cofixpoint Σ mfix *
     (Σ ;;; Γ |- subst0 (cofix_subst mfix) (dbody d) : (dtype d)) *
     (Σ ;;; Γ ⊢ dtype d ≤ T).
 Proof.
@@ -184,11 +184,11 @@ Proof.
 Qed.
 
 Lemma wf_cofixpoint_all {cf:checker_flags} (Σ : global_env_ext) mfix :
-  wf_cofixpoint Σ.1 mfix ->
-  ∑ mind, check_recursivity_kind Σ.1 mind CoFinite *
+  wf_cofixpoint Σ mfix ->
+  ∑ mind, check_recursivity_kind (lookup_env Σ) mind CoFinite *
   All (fun d => ∑ ctx i u args, (dtype d) = it_mkProd_or_LetIn ctx (mkApps (tInd {| inductive_mind := mind; inductive_ind := i |} u) args)) mfix.
 Proof.
-  unfold wf_cofixpoint.
+  unfold wf_cofixpoint, wf_cofixpoint_gen.
   destruct mfix. discriminate.
   simpl.
   destruct (check_one_cofix d) as [ind|] eqn:hcof.
@@ -584,11 +584,11 @@ Qed.
 
 Lemma wf_cofixpoint_typing_spine {cf:checker_flags} (Σ : global_env_ext) Γ ind u mfix idx d args args' : 
   wf Σ.1 -> wf_local Σ Γ ->
-  wf_cofixpoint Σ.1 mfix ->
+  wf_cofixpoint Σ mfix ->
   nth_error mfix idx = Some d ->
   isType Σ Γ (dtype d) ->
   typing_spine Σ Γ (dtype d) args (mkApps (tInd ind u) args') ->
-  check_recursivity_kind Σ (inductive_mind ind) CoFinite.
+  check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite.
 Proof.
   intros wfΣ wfΓ wfcofix Hnth wat sp.
   apply wf_cofixpoint_all in wfcofix.

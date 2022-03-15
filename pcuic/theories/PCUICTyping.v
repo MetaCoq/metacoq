@@ -50,8 +50,8 @@ Include PCUICEnvTyping.
 Inductive FixCoFix : Type := Fix | CoFix. 
 
 Class GuardChecker := 
-{ (* guard check for both fixpoints (bool = true) and cofixpoints (bool = false)  *)
-  guard : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bool ;
+{ (* guard check for both fixpoints (Fix) and cofixpoints (CoFix)  *)
+  guard : FixCoFix -> global_env_ext -> context -> mfixpoint term -> Prop ;
 }.
 
 Axiom guard_checking : GuardChecker.
@@ -79,8 +79,9 @@ Definition isCoFinite (r : recursivity_kind) :=
   | _ => false
   end.
 
-Definition check_recursivity_kind (Σ : global_env) ind r :=
-  match lookup_env Σ ind with
+Definition check_recursivity_kind 
+  (lookup: kername -> option global_decl) ind r :=
+  match lookup ind with
   | Some (InductiveDecl mib) => Reflect.eqb mib.(ind_finite) r
   | _ => false
   end.
@@ -101,16 +102,19 @@ Definition check_one_fix d :=
   | None => None (* Recursive argument not found *)
   end.
 
-Definition wf_fixpoint (Σ : global_env) mfix :=
+Definition wf_fixpoint_gen
+  (lookup: kername -> option global_decl) mfix :=
   let checks := map check_one_fix mfix in
   match map_option_out checks with
   | Some (ind :: inds) =>
     (* Check that mutually recursive fixpoints are all on the same mututal
        inductive block *)
     forallb (Reflect.eqb ind) inds &&
-    check_recursivity_kind Σ ind Finite
+    check_recursivity_kind lookup ind Finite
   | _ => false
   end.
+
+Definition wf_fixpoint (Σ : global_env) := wf_fixpoint_gen (lookup_env Σ).
 
 Definition check_one_cofix d :=
   let '{| dname := na;
@@ -124,16 +128,20 @@ Definition check_one_cofix d :=
   | None => None (* Not recursive on an inductive type *)
   end.
 
-Definition wf_cofixpoint (Σ : global_env) mfix :=
+Definition wf_cofixpoint_gen
+  (lookup: kername -> option global_decl) mfix :=
   let checks := map check_one_cofix mfix in
   match map_option_out checks with
   | Some (ind :: inds) =>
     (* Check that mutually recursive cofixpoints are all producing
        coinductives in the same mututal coinductive block *)
     forallb (Reflect.eqb ind) inds &&
-    check_recursivity_kind Σ ind CoFinite
+    check_recursivity_kind lookup ind CoFinite
   | _ => false
   end.
+
+  
+Definition wf_cofixpoint (Σ : global_env) := wf_cofixpoint_gen (lookup_env Σ).
 
 Definition wf_universe Σ s := 
   match s with
@@ -699,7 +707,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
        All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
            P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-       wf_fixpoint Σ.1 mfix ->
+       wf_fixpoint Σ mfix ->
        P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
@@ -710,7 +718,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
        All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
        All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
            P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-       wf_cofixpoint Σ.1 mfix ->
+       wf_cofixpoint Σ mfix ->
        P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,
@@ -994,7 +1002,7 @@ Proof.
                         Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
           {intros. eapply (X14 _ _ _ Hty); eauto. lia. }
           clear X14 Hwf Htywf.
-          clear e decl i a0 Hdecls i0.
+          clear e decl f a0 Hdecls i.
           remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
 
           induction a1; econstructor; eauto.
@@ -1041,7 +1049,7 @@ Proof.
                       Forall_decls_typing P Σ.1 * P Σ Γ0 t T).
         {intros. eapply (X14 _ _ _ Hty); eauto. lia. }
         clear X14 Hwf Htywf.
-        clear e decl i a0 Hdecls i0.
+        clear e decl c a0 Hdecls i.
         remember (fix_context mfix) as mfixcontext. clear Heqmfixcontext.
 
         induction a1; econstructor; eauto.
@@ -1171,7 +1179,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-        wf_fixpoint Σ.1 mfix ->
+        wf_fixpoint Σ mfix ->
         P Σ Γ (tFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
@@ -1182,7 +1190,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
         All (fun d => {s & (Σ ;;; Γ |- d.(dtype) : tSort s)%type * P Σ Γ d.(dtype) (tSort s)})%type mfix ->
         All (fun d => (Σ ;;; Γ ,,, types |- d.(dbody) : lift0 #|types| d.(dtype))%type *
             P Σ (Γ ,,, types) d.(dbody) (lift0 #|types| d.(dtype)))%type mfix ->
-        wf_cofixpoint Σ.1 mfix ->
+        wf_cofixpoint Σ mfix ->
         P Σ Γ (tCoFix mfix n) decl.(dtype)) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (t A B : term) s,

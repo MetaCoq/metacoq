@@ -440,7 +440,7 @@ Qed.
 Hint Resolve weakening_env_consistent_instance : extends.
 
 Lemma extends_check_recursivity_kind {cf:checker_flags} Σ ind k Σ' : extends Σ Σ' -> wf Σ' ->
-  check_recursivity_kind Σ ind k -> check_recursivity_kind Σ' ind k.
+  check_recursivity_kind (lookup_env Σ) ind k -> check_recursivity_kind (lookup_env Σ') ind k.
 Proof.
   intros ext wfΣ'.
   rewrite /check_recursivity_kind.
@@ -449,21 +449,21 @@ Proof.
   now rewrite Heq.
 Qed.
 
-Lemma extends_wf_fixpoint {cf:checker_flags} Σ mfix Σ' : extends Σ Σ' -> wf Σ' ->
+Lemma extends_wf_fixpoint {cf:checker_flags} (Σ Σ' : global_env_ext) mfix : extends Σ Σ' -> wf Σ' ->
   wf_fixpoint Σ mfix -> wf_fixpoint Σ' mfix.
 Proof.
   intros ext wfΣ'.
-  unfold wf_fixpoint.
+  unfold wf_fixpoint, wf_fixpoint_gen.
   destruct map_option_out as [[|ind inds]|]; auto.
   move/andb_and => [->] /=.
   now apply extends_check_recursivity_kind.
 Qed.
 
-Lemma extends_wf_cofixpoint {cf:checker_flags} Σ mfix Σ' : extends Σ Σ' -> wf Σ' ->
+Lemma extends_wf_cofixpoint {cf:checker_flags} (Σ Σ' : global_env_ext) mfix : extends Σ Σ' -> wf Σ' ->
   wf_cofixpoint Σ mfix -> wf_cofixpoint Σ' mfix.
 Proof.
   intros ext wfΣ'.
-  unfold wf_cofixpoint.
+  unfold wf_cofixpoint, wf_cofixpoint_gen.
   destruct map_option_out as [[|ind inds]|]; auto.
   move/andb_and => [->] /=.
   now apply extends_check_recursivity_kind.

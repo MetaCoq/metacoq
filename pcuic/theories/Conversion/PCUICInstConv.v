@@ -1013,7 +1013,7 @@ Lemma inst_wf_fixpoint Σ f mfix :
   wf_fixpoint Σ mfix ->
   wf_fixpoint Σ (map (map_def (inst f) (inst (up #|mfix| f))) mfix).
 Proof.
-  unfold wf_fixpoint.
+  unfold wf_fixpoint, wf_fixpoint_gen.
   rewrite map_map_compose.
   destruct (map_option_out (map check_one_fix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.
@@ -1025,7 +1025,8 @@ Lemma inst_wf_cofixpoint Σ f mfix :
   wf_cofixpoint Σ mfix ->
   wf_cofixpoint Σ (map (map_def (inst f) (inst (up #|mfix| f))) mfix).
 Proof.
-  rewrite /wf_cofixpoint map_map_compose.
+  unfold wf_cofixpoint, wf_cofixpoint_gen.
+  rewrite map_map_compose.
   destruct (map_option_out (map check_one_cofix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.
   2:{ intros x y. apply (inst_check_one_cofix f mfix). }

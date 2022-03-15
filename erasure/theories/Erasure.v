@@ -305,7 +305,7 @@ Program Definition erase_pcuic_program (p : pcuic_program)
   
 Next Obligation.
   sq. destruct wt as [T Ht].
-  cbn. now exists T.
+  cbn in *. subst. now exists T.
 Qed.
 Next Obligation.
   unfold erase_global.

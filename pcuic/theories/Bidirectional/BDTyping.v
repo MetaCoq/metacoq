@@ -112,7 +112,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   nth_error mfix n = Some decl ->
   All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▹□ s}) mfix ->
   All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) mfix ->
-  wf_fixpoint Σ.1 mfix -> 
+  wf_fixpoint Σ mfix -> 
   Σ ;;; Γ |- tFix mfix n ▹ dtype decl
 
 | infer_CoFix mfix n decl :
@@ -120,7 +120,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   nth_error mfix n = Some decl ->
   All (fun d => {s & Σ ;;; Γ |- d.(dtype) ▹□ s}) mfix ->
   All (fun d => Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) mfix ->
-  wf_cofixpoint Σ.1 mfix ->
+  wf_cofixpoint Σ mfix ->
   Σ ;;; Γ |- tCoFix mfix n ▹ dtype decl
 
 with infering_sort `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -> Universe.t -> Type :=
@@ -430,7 +430,7 @@ Section BidirectionalInduction.
       All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▹□ s) × Psort Γ d.(dtype) s}) mfix ->
       All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
                 Pcheck (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
-      wf_fixpoint Σ.1 mfix ->
+      wf_fixpoint Σ mfix ->
       Pinfer Γ (tFix mfix n) (dtype decl)) ->
     
     (forall (Γ : context) (mfix : mfixpoint term) (n : nat) decl,
@@ -439,7 +439,7 @@ Section BidirectionalInduction.
       All (fun d => {s & (Σ ;;; Γ |- d.(dtype) ▹□ s) × Psort Γ d.(dtype) s}) mfix ->
       All (fun d => (Σ ;;; Γ ,,, fix_context mfix |- d.(dbody) ◃ lift0 #|fix_context mfix| d.(dtype)) ×
                 Pcheck (Γ ,,, fix_context mfix) d.(dbody) (lift0 #|fix_context mfix| d.(dtype))) mfix ->
-      wf_cofixpoint Σ.1 mfix ->
+      wf_cofixpoint Σ mfix ->
       Pinfer Γ (tCoFix mfix n) (dtype decl)) ->
 
     (forall (Γ : context) (t T : term) (u : Universe.t),

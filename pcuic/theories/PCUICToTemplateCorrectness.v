@@ -1767,7 +1767,7 @@ Proof.
 Qed.
 
 Lemma trans_check_rec_kind Σ k f :
-  ST.check_recursivity_kind Σ k f = TT.check_recursivity_kind (trans_global_env Σ) k f.
+  ST.check_recursivity_kind (SE.lookup_env Σ) k f = TT.check_recursivity_kind (trans_global_env Σ) k f.
 Proof.
   unfold ST.check_recursivity_kind, TT.check_recursivity_kind.
   rewrite trans_lookup.
@@ -1778,7 +1778,7 @@ Lemma trans_wf_fixpoint Σ mfix :
   TT.wf_fixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
   ST.wf_fixpoint Σ mfix.
 Proof.
-  unfold ST.wf_fixpoint, TT.wf_fixpoint.
+  unfold ST.wf_fixpoint, ST.wf_fixpoint_gen, TT.wf_fixpoint.
   rewrite map_map_compose.
   rewrite map_option_out_check_one_fix.
   destruct map_option_out as [[]|] => //.
@@ -1789,7 +1789,7 @@ Lemma trans_wf_cofixpoint Σ mfix :
   TT.wf_cofixpoint (trans_global_env Σ) (map (map_def trans trans) mfix) = 
   ST.wf_cofixpoint Σ mfix.
 Proof.
-  unfold ST.wf_cofixpoint, TT.wf_cofixpoint.
+  unfold ST.wf_cofixpoint, ST.wf_cofixpoint_gen, TT.wf_cofixpoint.
   rewrite map_map_compose.
   rewrite map_option_out_check_one_cofix.
   destruct map_option_out as [[]|] => //.

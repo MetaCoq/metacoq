@@ -32,9 +32,9 @@ TemplateToPCUIC
 PCUICUnivSubst
 
 PCUICErrors
+PCUICEqualityDec
 PCUICWfEnv
 PCUICSafeReduce
-PCUICEqualityDec
 PCUICSafeConversion
 PCUICTypeChecker
 PCUICSafeChecker

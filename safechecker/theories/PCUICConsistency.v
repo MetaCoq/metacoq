@@ -57,7 +57,7 @@ Qed.
 Definition make_fresh_name (Σ : global_env) : kername :=
   (MPfile [], string_repeat "a"%char (S (max_name_length Σ.(declarations)))).
 
-Lemma make_fresh_name_fresh (Σ : global_env) :
+Lemma make_fresh_name_fresh Σ :
   fresh_global (make_fresh_name Σ) Σ.(declarations).
 Proof.
   pose proof (max_name_length_ge Σ.(declarations)) as all.
@@ -112,22 +112,26 @@ Proof.
     rewrite nth_nth_error.
     destruct nth_error eqn:nth; auto.
     eapply nth_error_forall in nth; eauto.
-Qed. 
+Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
-Definition global_env_add (Σ : global_env) d := 
+Definition canonical_abstract_env_impl {cf:checker_flags} : abstract_env_impl :=
+  (abstract_env_ext ; canonincal_abstract_env_struct ; canonincal_abstract_env_prop).
+
+Definition global_env_add (Σ : global_env) d :=
   {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
 
-Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} Σ t :
-  wf_ext Σ ->
-  axiom_free Σ ->
+Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} (_Σ :abstract_env_ext) t :
+  axiom_free _Σ ->
   (* t : forall (P : Prop), P *)
-  Σ ;;; [] |- t : tProd binder (tSort Prop_univ) (tRel 0) ->
+  _Σ ;;; [] |- t : tProd binder (tSort Prop_univ) (tRel 0) ->
   False.
 Proof.
-  intros wfΣ axfree cons.
+  intros axfree cons.
+  set (Σ := abstract_env_ext_env _Σ); set (wfΣ := abstract_env_ext_wf _Σ).
   set (Σext := (global_env_add Σ.1 (make_fresh_name Σ, InductiveDecl False_mib), Σ.2)).
+  destruct wfΣ as [wfΣ].
   assert (wf': wf_ext Σext).
   { constructor; [constructor|]; auto; try apply wfΣ.
     constructor; auto.
@@ -159,13 +163,14 @@ Proof.
         * constructor.
       + constructor.
       + reflexivity.
-      + reflexivity. }
+      + reflexivity.
+  }
   eapply (env_prop_typing weakening_env) in cons; auto.
   2:instantiate (1:=Σext.1).
   3:{ split; auto; cbn. split; [lsets|csets].
       exists [(make_fresh_name Σ.1, InductiveDecl False_mib)]; reflexivity. }
   2: now destruct wf'.
-  
+
   set (Σ' := Σext.1) in cons.
   set (False_ty := tInd (mkInd (make_fresh_name Σ) 0) []).
   assert (typ_false: (Σ', Σ.2);;; [] |- tApp t False_ty : False_ty).
@@ -181,11 +186,12 @@ Proof.
       auto.
     - cbn.
       auto. }
-(*   assert (sqwf: ∥ wf (Σ', Σ.2).1 ∥) by now destruct wf'.*)
   pose proof (iswelltyped _ _ _ _ typ_false) as wt.
-  set (wf_env := build_wf_env_ext _ (sq wf')).
-  pose proof (hnf_sound wf_env (h := wt)) as [r].
-  pose proof (hnf_complete wf_env (h := wt)) as [w].
+  set (_Σ' := Build_abstract_env_ext cf Σext (sq wf')).
+  unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
+  1 : cbn; intros; subst; exact wt.
+  unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].
+  1 : cbn; intros; subst; exact wt.
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.
   - unfold isConstruct_app in ctor.

@@ -137,9 +137,10 @@ Section Spines.
     wf_fixpoint Σ mfix ->
     nth_error mfix idx = Some decl ->
     ∑ mind, (check_one_fix decl = Some mind)  *
-      check_recursivity_kind Σ mind Finite.
+      check_recursivity_kind (lookup_env Σ) mind Finite.
   Proof.
     rewrite /wf_fixpoint => wffix nthe.
+    unfold wf_fixpoint_gen in *.
     move: wffix; case E: (map_option_out (map check_one_fix mfix)) => [l|] //.
     apply map_option_Some in E.
     eapply All2_map_left' in E.
@@ -161,9 +162,10 @@ Section Spines.
     wf_cofixpoint Σ mfix ->
     nth_error mfix idx = Some decl ->
     ∑ mind, (check_one_cofix decl = Some mind)  *
-      check_recursivity_kind Σ mind CoFinite.
+      check_recursivity_kind (lookup_env Σ) mind CoFinite.
   Proof.
     rewrite /wf_cofixpoint => wffix nthe.
+    unfold wf_cofixpoint_gen in *. 
     move: wffix; case E: (map_option_out (map check_one_cofix mfix)) => [l|] //.
     apply map_option_Some in E.
     eapply All2_map_left' in E.
@@ -454,7 +456,7 @@ Qed.
     | Some arg =>
       ∑ ind u indargs,
       (Σ ;;; Γ |- arg : mkApps (tInd ind u) indargs) *
-      check_recursivity_kind Σ.1 (inductive_mind ind) Finite
+      check_recursivity_kind (lookup_env Σ) (inductive_mind ind) Finite
     | None => ∑ na dom codom, Σ ;;; Γ ⊢ tProd na dom codom ≤ ty
     end.
   Proof.
@@ -501,7 +503,7 @@ Qed.
     typing_spine Σ Γ (dtype decl) args ty ->
     ∑ Γ' T, (decompose_prod_assum [] (dtype decl) = (Γ', T)) *
     ∑ ind u indargs, (T = mkApps (tInd ind u) indargs) *
-    check_recursivity_kind Σ.1 (inductive_mind ind) CoFinite *
+    check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite *
     if #|args| <? context_assumptions Γ' then
       (Σ ;;; Γ ⊢ subst0 (List.rev args)
       (it_mkProd_or_LetIn (firstn (context_assumptions Γ' - #|args|) (smash_context [] Γ'))
@@ -807,7 +809,7 @@ Section WeakNormalization.
   
   Lemma typing_cofix_coind {Γ mfix idx args ind u indargs} :
     Σ ;;; Γ |- mkApps (tCoFix mfix idx) args : mkApps (tInd ind u) indargs ->
-    check_recursivity_kind Σ (inductive_mind ind) CoFinite.
+    check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite.
   Proof.
     intros tyarg.
     eapply inversion_mkApps in tyarg as [A [Hcof sp]]; auto.
@@ -835,12 +837,12 @@ Section WeakNormalization.
     - move=> [hargs ccum'].
       rewrite expand_lets_mkApps subst_mkApps /= in ccum'.
       eapply invert_cumul_ind_ind in ccum' as ((? & ?) & ?).
-      len in r. eapply Reflect.eqb_eq in i1. now subst ind'.
+      len in r. eapply Reflect.eqb_eq in i0. now subst ind'.
   Qed.
 
   Lemma check_recursivity_kind_inj {mind rk rk'} :
-    check_recursivity_kind Σ mind rk ->
-    check_recursivity_kind Σ mind rk' -> rk = rk'.
+    check_recursivity_kind (lookup_env Σ) mind rk ->
+    check_recursivity_kind (lookup_env Σ) mind rk' -> rk = rk'.
   Proof.
     rewrite /check_recursivity_kind.
     case: lookup_env => //; case => // m.
@@ -997,7 +999,7 @@ Section WeakNormalization.
     axiom_free_value Σ [] t ->
     Σ ;;; [] |- t : mkApps (tInd ind u) indargs ->
     wh_normal Σ [] t ->
-    ~check_recursivity_kind Σ (inductive_mind ind) CoFinite ->
+    ~check_recursivity_kind (lookup_env Σ) (inductive_mind ind) CoFinite ->
     isConstruct_app t.
   Proof.
     intros axfree typed whnf ck.

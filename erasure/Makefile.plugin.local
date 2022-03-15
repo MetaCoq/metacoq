@@ -1,4 +1,5 @@
 CAMLFLAGS+=-open Metacoq_template_plugin
+CAMLFLAGS+=-w -20 # Unused arguments
 CAMLFLAGS+=-w -33 # Unused opens
 CAMLFLAGS+=-w -32 # Unused values
 CAMLFLAGS+=-w -8 # Non-exhaustive pattern-matching (due to comparison -> int translation)

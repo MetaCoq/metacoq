@@ -1,4 +1,4 @@
-From Coq Require Import Byte.
+From Coq Require Import Byte NArith.
 From MetaCoq.Template Require Import ReflectEq ByteCompare.
 From Equations Require Import Equations.
 
@@ -31,12 +31,15 @@ Qed.
 Require Import MCCompare.
 
 Definition lt x y := compare x y = Lt.
-Require Import Coq.NArith.NArith.
 
 Lemma compare_equiv x y : compare x y = N.compare (Byte.to_N x) (Byte.to_N y).
 Proof.
-  destruct x; abstract (destruct y; exact eq_refl).
+  reflexivity.
 Qed.
+(* 
+Proof.
+  destruct x; abstract (destruct y; exact eq_refl).
+Qed. *)
 
 Lemma compare_opp x y : compare x y = CompOpp (compare y x).
 Proof.
@@ -85,7 +88,9 @@ Qed.
 
 Definition eqb_compare x y : eqb x y = match compare x y with Eq => true | _ => false end.
 Proof.
-  destruct x; cbn; abstract (destruct y; cbn; exact eq_refl).
+  unfold eqb.
+  apply N.eqb_compare.
+  (* destruct x; cbn; abstract (destruct y; cbn; exact eq_refl). *)
 Qed.
 
 Global Program Instance byte_reflect_eq : ReflectEq byte := 

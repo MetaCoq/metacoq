@@ -116,8 +116,8 @@ gen-src/mCReflect.mli
 gen-src/mCReflect.ml
 gen-src/primFloat.mli
 gen-src/primFloat.ml
-gen-src/decimalString.mli
-gen-src/decimalString.ml
+#gen-src/decimalString.mli
+#gen-src/decimalString.ml
 gen-src/reflectEq.mli
 gen-src/reflectEq.ml
 gen-src/mCString.ml

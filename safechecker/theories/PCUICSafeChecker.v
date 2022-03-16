@@ -2402,8 +2402,8 @@ Section CheckEnv.
     ret (inft.π1; _).
   Next Obligation.
     assert (wfx : abstract_env_rel' x x) by reflexivity.
-    specialize_Σ wfx.
-    have [wfΣ] := (x.(wf_env_ext_wf)); sq. split; eauto.
+    have [wfΣ] := (x.(wf_env_ext_wf)).
+    cbn. specialize_Σ wfx. sq. split; eauto.
   Qed.
 
 End CheckEnv.

@@ -2316,12 +2316,12 @@ Section Typecheck.
       2: now apply infering_typing.
       eapply validity in X2; eauto.
       destruct (ssrbool.elimT (eqb_specT ind I)); auto.
-      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X1 as [parsubst [argsubst [sp sp' cu]]]; eauto.
+      unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X2 as [parsubst [argsubst [sp sp' cu]]]; eauto.
       pose proof (Hl := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
       pose proof (Hr := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
       autorewrite with len in Hl, Hr.
       destruct (on_declared_inductive decl) eqn:ond.
-      rewrite -o.(onNpars) -H.
+      rewrite -o.(onNpars) -Hl.
       forward (o0.(onProjections)).
       intros H'; rewrite H' nth_error_nil // in HH.
       destruct ind_ctors as [|cs []]; auto.
@@ -2329,7 +2329,7 @@ Section Typecheck.
       unshelve epose proof (onps.(on_projs_noidx _ _ _ _ _ _)).
       destruct (ind_indices idecl) => //.
       simpl in *.
-      rewrite List.skipn_length in H0.
+      rewrite List.skipn_length in e.
       rewrite List.firstn_length. lia.
     - destruct ind_projs => //. rewrite nth_error_nil in HH; congruence.
   Defined.

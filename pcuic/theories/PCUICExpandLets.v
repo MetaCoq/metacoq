@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import Int63 FloatOps FloatAxioms.
+From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICTyping.
 
 (** This translation expands lets in constructor arguments, so that 

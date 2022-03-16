@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import utils Environment EnvironmentTyping.
 From MetaCoq.Template Require Export Universes.
 (* For primitive integers and floats  *)
-From Coq Require Int63 Floats.PrimFloat Floats.SpecFloat.
+From Coq Require Uint63 Floats.PrimFloat Floats.SpecFloat.
 From Coq Require Import ssreflect Morphisms.
 From Equations Require Import Equations.
 
@@ -416,7 +416,7 @@ Inductive term : Type :=
 | tProj (proj : projection) (t : term)
 | tFix (mfix : mfixpoint term) (idx : nat)
 | tCoFix (mfix : mfixpoint term) (idx : nat)
-| tInt (i : Int63.int)
+| tInt (i : Uint63.int)
 | tFloat (f : PrimFloat.float).
 
 (** This can be used to represent holes, that, when unquoted, turn into fresh existential variables. 

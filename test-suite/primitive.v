@@ -6,7 +6,7 @@ Local Open Scope string_scope.
 Local Open Scope sint63_scope.
 Import MCMonadNotation.
 
-Definition bigint : Int63.int := 542985047%int63.
+Definition bigint : PrimInt63.int := 542985047%int63.
 
 Notation eval_hnf := (tmEval hnf).
 Notation eval := (tmEval all).

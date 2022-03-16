@@ -82,7 +82,7 @@ Definition isCoFinite (r : recursivity_kind) :=
 Definition check_recursivity_kind 
   (lookup: kername -> option global_decl) ind r :=
   match lookup ind with
-  | Some (InductiveDecl mib) => Reflect.eqb mib.(ind_finite) r
+  | Some (InductiveDecl mib) => ReflectEq.eqb mib.(ind_finite) r
   | _ => false
   end.
 
@@ -109,7 +109,7 @@ Definition wf_fixpoint_gen
   | Some (ind :: inds) =>
     (* Check that mutually recursive fixpoints are all on the same mututal
        inductive block *)
-    forallb (Reflect.eqb ind) inds &&
+    forallb (eqb ind) inds &&
     check_recursivity_kind lookup ind Finite
   | _ => false
   end.
@@ -135,7 +135,7 @@ Definition wf_cofixpoint_gen
   | Some (ind :: inds) =>
     (* Check that mutually recursive cofixpoints are all producing
        coinductives in the same mututal coinductive block *)
-    forallb (Reflect.eqb ind) inds &&
+    forallb (eqb ind) inds &&
     check_recursivity_kind lookup ind CoFinite
   | _ => false
   end.
@@ -1252,14 +1252,14 @@ Section All_local_env.
     destruct Σ as [univs Σ]; rewrite /on_global_env /lookup_env; cbn.
     intros [cu Σp].
     induction Σp; simpl. congruence.
-    unfold eq_kername; destruct kername_eq_dec; subst.
-    intros [= ->].
-    exists ({| universes := univs; declarations := Σ |}).
-    split.
-    - red; cbn. split; [split;[lsets|csets]|].
-      exists [(kn, decl)] => //.
-    - split => //.
-    - apply o0.
+    destruct (eqb_specT c kn); subst.
+    - intros [= ->].
+      exists ({| universes := univs; declarations := Σ |}).
+      split.
+      * red; cbn. split; [split;[lsets|csets]|].
+        exists [(kn, decl)] => //.
+      * split => //.
+      * apply o0.
     - intros hl. destruct (IHΣp hl) as [Σ' []].
       exists Σ'.
       split=> //.

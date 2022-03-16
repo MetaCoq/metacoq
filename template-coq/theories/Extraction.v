@@ -7,14 +7,9 @@
 
 From Coq Require Ascii Extraction ZArith NArith.
 From MetaCoq.Template Require Import utils Ast Reflect Induction.
-From Coq Require Import FSets ExtrOcamlBasic ExtrOcamlString ExtrOCamlFloats
+From Coq Require Import FSets ExtrOcamlBasic ExtrOCamlFloats
     ExtrOCamlInt63.
 From MetaCoq.Template Require Import MC_ExtrOCamlZPosInt.
-
-Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
-Extract Constant Ascii.compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
  
 Extract Inductive Equations.Init.sigma => "( * )" ["(,)"].
 Extract Constant Equations.Init.pr1 => "fst".

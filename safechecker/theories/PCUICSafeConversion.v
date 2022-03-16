@@ -2296,7 +2296,7 @@ Qed.
     apply All2_app. 1: assumption.
     constructor. 2: constructor.
     change (true = eqb u.(rarg) v.(rarg)) in eq1.
-    destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
+    destruct (eqb_specT u.(rarg) v.(rarg)). 2: discriminate.
     symmetry in eqann.
     apply eqb_binder_annot_spec in eqann.
     split; auto.
@@ -2332,7 +2332,7 @@ Qed.
     constructor.
     2: eauto.
     change (true = eqb u.(rarg) v.(rarg)) in eq1.
-    destruct (eqb_spec u.(rarg) v.(rarg)). 2: discriminate.
+    destruct (eqb_specT u.(rarg) v.(rarg)). 2: discriminate.
     symmetry in eqann.
     apply eqb_binder_annot_spec in eqann.
     clear eq1.
@@ -2367,7 +2367,7 @@ Qed.
     specialize_Σ wfΣ.
     destruct H as [H]; inversion H; destruct X0 as [_ [eq_uv eqann]].
     change (?ru =? ?rv) with (eqb ru rv) in eq1.
-    destruct (eqb_spec (rarg u) (rarg v)) as [|neq_uv]; [discriminate|].
+    destruct (eqb_specT (rarg u) (rarg v)) as [|neq_uv]; [discriminate|].
     exact (neq_uv eq_uv).
   Qed.
 
@@ -3771,9 +3771,7 @@ Qed.
     eexists. eassumption.
   Qed.
   Next Obligation.
-    change (eq_dec_to_bool ci ci') with (eqb ci ci') in eq5.
-    destruct (eqb_spec ci ci'). 2: discriminate.
-    assumption.
+    now apply eqb_eq.
   Qed.
   Next Obligation.
     eapply R_positionR. all: simpl.
@@ -3782,9 +3780,7 @@ Qed.
     eapply positionR_poscat. constructor.
   Qed.
   Next Obligation.
-    change (eq_dec_to_bool ci ci') with (eqb ci ci') in eq5.
-    destruct (eqb_spec ci ci'). 2: discriminate.
-    assumption.
+    now apply eqb_eq.
   Qed.
   Next Obligation.
     unshelve eapply R_stateR.
@@ -3802,7 +3798,7 @@ Qed.
     sq.
     apply ws_cumul_pb_eq_le_gen.
     change (eq_dec_to_bool ci ci') with (eqb ci ci') in eq5.
-    destruct (eqb_spec ci ci'). 2: discriminate.
+    destruct (eqb_specT ci ci'). 2: discriminate.
     subst. eapply ws_cumul_pb_Case. all: tas.
     * clear aux eq2 eq4. eapply welltyped_zipc_zipp in h1; eauto.
       eapply welltyped_is_open_term in h1.
@@ -4536,7 +4532,7 @@ Qed.
     destruct convfix as [h1'].
     eapply conv_conv_cum_l.
     change (true = eqb idx idx') in eq4.
-    destruct (eqb_spec idx idx'). 2: discriminate.
+    destruct (eqb_specT idx idx'). 2: discriminate.
     subst.
     eapply ws_cumul_pb_Fix; eauto.
     - clear aux eee. eapply welltyped_zipc_zipp in h1; fvs.
@@ -4584,7 +4580,7 @@ Qed.
     destruct convfix as [h1'].
     eapply conv_conv_cum_l.
     change (true = eqb idx idx') in eq4.
-    destruct (eqb_spec idx idx'). 2: discriminate.
+    destruct (eqb_specT idx idx'). 2: discriminate.
     subst.
     eapply ws_cumul_pb_CoFix; eauto.
     - clear aux h1'. eapply welltyped_zipc_zipp in h1; fvs.

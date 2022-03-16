@@ -1641,14 +1641,14 @@ Lemma wf_universe_subst_instance {cf : checker_flags} (Σ : global_env_ext) univ
 Proof.
   destruct l; simpl; auto. rename n into t.
   intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
-  destruct l; simpl; auto.
+  destruct l as [|s|n']; simpl; auto.
   - unfold global_ext_levels.
     apply LS.union_spec. right.
     apply global_levels_Set.
   - specialize (Hl (Level.Level s, n) inl).
     simpl in Hl. apply monomorphic_level_in_global_ext in Hl.
     eapply LS.union_spec. now right.
-  - specialize (Hl (Level.Var n0, n) inl).
+  - specialize (Hl (Level.Var n', n) inl).
     eapply LS.union_spec in Hl as [Hl|Hl].
     + red in Hu.
       unfold levels_of_udecl in Hl.
@@ -1657,7 +1657,7 @@ Proof.
         destruct u; try discriminate. lsets.
       * destruct Hu as [declu [us vc]].
         unfold subst_instance. simpl.
-        destruct (nth_error u n0) eqn:hnth.
+        destruct (nth_error u n') eqn:hnth.
         2:{ simpl. eapply LS.union_spec; right; apply global_levels_Set. }
         eapply forallb_Forall in declu.
         eapply nth_error_forall in declu; eauto.

@@ -2,11 +2,6 @@ Int0
 MSetAVL
 EqdepFacts
 Utils
-OrderedTypeAlt
-OrderedType0
-Kernames
-FMapList
-FMapAVL
 Ssrbool
 WGraph
 UGraph0

@@ -406,7 +406,7 @@ Proof.
   unfold strip_env.
   destruct Σ as [Σ map repr wf]; cbn.
   induction Σ at 2 4; simpl; auto.
-  rewrite /eq_kername; destruct kername_eq_dec => //.
+  case: eqb_spec => //.
 Qed.
 
 Lemma is_propositional_strip (Σ : GlobalContextMap.t) ind : 
@@ -557,10 +557,11 @@ Proof.
   - move=> _; rewrite /declared_constant /lookup_env /= //.
   - move=> /andP[] etaa etaΣ.
     destruct a as [kn' d']; cbn in *.
-    rewrite /declared_constant /=; rewrite /eq_kername; destruct kername_eq_dec.
-    * subst kn'. move=> [=]. intros ->.
+    rewrite /declared_constant /=.
+    case:eqb_specT => //.
+    * intros e; subst kn'. move=> [=]. intros ->.
       exists Σ. split => //. now exists [(kn, d)].
-    * move=> Hl. destruct (IHΣ etaΣ Hl) as [Σ' [ext eta]].
+    * intros ne. move=> Hl. destruct (IHΣ etaΣ Hl) as [Σ' [ext eta]].
       exists Σ'; split => //.
       destruct ext as [Σ'' ->].
       now exists ((kn', d')::Σ'').

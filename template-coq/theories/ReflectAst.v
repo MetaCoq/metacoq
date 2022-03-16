@@ -30,9 +30,9 @@ Local Ltac term_dec_tac term_dec :=
          | x : list aname, y : list aname |- _ =>
            fcase (eq_dec x y)
          | n : nat, m : nat |- _ => fcase (Nat.eq_dec n m)
-         | i : ident, i' : ident |- _ => fcase (string_dec i i')
-         | i : kername, i' : kername |- _ => fcase (kername_eq_dec i i')
-         | i : string, i' : kername |- _ => fcase (string_dec i i')
+         | i : ident, i' : ident |- _ => fcase (eq_dec i i')
+         | i : kername, i' : kername |- _ => fcase (eq_dec i i')
+         | i : string, i' : kername |- _ => fcase (eq_dec i i')
          | n : name, n' : name |- _ => fcase (eq_dec n n')
          | n : aname, n' : aname |- _ => fcase (eq_dec n n')
          | i : inductive, i' : inductive |- _ => fcase (eq_dec i i')

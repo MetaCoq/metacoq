@@ -40,11 +40,9 @@ Proof.
   let wf_proof := eval hnf in (make_wf_env_ext gctx) in 
   match wf_proof with
   | CorrectDecl ?x => exact x
-  | _ => fail "Couldn't prove the global environment is well-formed"
+  | _ => idtac wf_proof; fail "Couldn't prove the global environment is well-formed"
   end.
 Defined.
-
-
 
 (** There is always a proof of `forall x : Sort s, x -> x` *)
 

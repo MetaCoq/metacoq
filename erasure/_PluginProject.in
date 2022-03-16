@@ -5,22 +5,6 @@ src/META.coq-metacoq-erasure
 # src/classes0.mli
 # src/classes0.ml
 
-# From Coq's stdlib
-src/orderedTypeAlt.mli
-src/orderedTypeAlt.ml
-src/orderedType0.mli
-src/orderedType0.ml
-src/fMapList.mli
-src/fMapList.ml
-src/decidableType.mli
-src/decidableType.ml
-src/fMapInterface.mli
-src/fMapInterface.ml
-src/fMapAVL.mli
-src/fMapAVL.ml
-src/fMapFacts.mli
-src/fMapFacts.ml
-
 # src/string2pos.mli
 # src/string2pos.ml
 # src/canonicalTries.mli
@@ -31,8 +15,6 @@ src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml
 src/wGraph.mli
-src/kernames.mli
-src/kernames.ml
 src/envMap.mli
 src/envMap.ml
 

@@ -309,11 +309,11 @@ Definition string_of_type_error Σ (e : type_error) : string :=
       print_term Σ Γ t' ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u' ^
       nl ^ "error:" ^ nl ^ string_of_conv_error Σ e ^
       (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
-      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
+      " and context: " ^ nl ^ print_context Σ [] Γ
   | NotConvertible Γ t u => "Terms are not convertible:" ^ nl ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
       (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
-      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
+      " and context: " ^ nl ^ print_context Σ [] Γ
   | NotASort t => "Not a sort: " ^ print_term Σ [] t
   | NotAProduct t t' => "Not a product" ^ print_term Σ [] t ^ nl ^
     "(after reducing to " ^ print_term Σ [] t'

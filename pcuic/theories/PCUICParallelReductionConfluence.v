@@ -2051,7 +2051,7 @@ Section Rho.
         destruct (inspect_nth_error_rename (r:=r) eqbr) as [prf ->]; simp rho.
         cbv zeta. simp rho.
         cbn -[eqb]. autorewrite with len.
-        case: eqb_spec => // hlen.
+        case: eqb_specT => // hlen.
         + erewrite rename_rho_iota_red; tea => //.
           f_equal.
           pose proof (decompose_app_inv decapp). subst t.
@@ -3680,7 +3680,7 @@ Section Rho.
       rewrite rho_app_case.
       rewrite decompose_app_mkApps; auto.
       change eq_inductive with (@eqb inductive _).
-      destruct (eqb_spec ci.(ci_ind) ci.(ci_ind)); try discriminate.
+      destruct (eqb_specT ci.(ci_ind) ci.(ci_ind)); try discriminate.
       2:{ congruence. }
       unfold iota_red. eapply forallb_All in p4. eapply All2_All_mix_left in X3; tea.
       eapply All2_nth_error_Some_right in X3 as [br0 [hnth [hcl [IHbr [[predbod IHbod] breq]]]]]; tea.
@@ -3957,7 +3957,7 @@ Section Rho.
     - simpl in *. inv_on_free_vars. rewrite rho_app_proj.
       rewrite decompose_app_mkApps; auto.
       change eq_inductive with (@eqb inductive _).
-      destruct (eqb_spec i i) => //.
+      destruct (eqb_specT i i) => //.
       eapply All2_nth_error_Some_right in heq_nth_error as [t' [? ?]]; eauto.
       simpl in y. rewrite e0. simpl.
       auto. eapply y => //. 
@@ -4128,9 +4128,9 @@ Section Rho.
         subst c0. cbn -[eqb].
         simp rho.
         change eq_inductive with (@eqb inductive _).
-        destruct (eqb_spec ci.(ci_ind) ind). subst ind.
+        destruct (eqb_specT ci.(ci_ind) ind). subst ind.
         destruct (nth_error brs0 n) eqn:hbr => //.
-        case: eqb_spec => [eq|neq].
+        case: eqb_specT => [eq|neq].
         eapply pred1_mkApps_tConstruct in predc0 as [args' [? ?]]; pcuic. subst c1.
         intuition auto.
         rewrite rho_app_construct in Hc.
@@ -4277,7 +4277,7 @@ Section Rho.
         eapply pred1_mkApps_refl_tConstruct in Hc.
         destruct nth_error eqn:Heq.
         change eq_inductive with (@eqb inductive _).
-        destruct (eqb_spec ind ind0); subst.
+        destruct (eqb_specT ind ind0); subst.
         econstructor; eauto.
         now rewrite nth_error_map Heq.
         eapply pred_proj_congr, pred_mkApps; auto with pcuic.

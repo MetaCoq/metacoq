@@ -4,13 +4,13 @@
 (** If you don't want to have the following scopes opened you should *)
 (** not import this file or close them. *)
 
-From Coq Require Export Bool ZArith Arith Lia String List.
+From Coq Require Export Bool ZArith Arith Lia List.
 
 From MetaCoq.Template Require Export utils.MCUtils monad_utils.
 
 Global Set Asymmetric Patterns.
 
-Global Open Scope string_scope.
+Global Open Scope bs_scope.
 
 Global Open Scope list_scope.
 
@@ -19,7 +19,7 @@ Global Open Scope nat_scope.
 
 (** We keep [++] for lists and use [^] for stings. *)
 Declare Scope string_scope2.
-Notation "s1 ^ s2" := (String.append s1 s2) : string_scope2.
+Notation "s1 ^ s2" := (bytestring.String.append s1 s2) : string_scope2.
 Open Scope string_scope2.
 
 (** We want [*] from type_scope but [+] from nat_scope. *)

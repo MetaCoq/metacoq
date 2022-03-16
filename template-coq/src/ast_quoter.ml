@@ -1,14 +1,16 @@
 open Names
 open Datatypes
+open Kernames
 open BasicAst
 open Ast0
 open Ast0.Env
 open Tm_util
+open Caml_bytestring
 
 module ExtractedASTBaseQuoter =
 struct
   type t = Ast0.term
-  type quoted_ident = char list
+  type quoted_ident = Bytestring.String.t
   type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
@@ -18,7 +20,7 @@ struct
   type quoted_relevance = BasicAst.relevance
   type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
-  type quoted_kernel_name = BasicAst.kername
+  type quoted_kernel_name = Kernames.kername
   type quoted_inductive = inductive
   type quoted_proj = projection
   type quoted_global_reference = global_reference
@@ -53,8 +55,8 @@ struct
   type quoted_global_env = global_env
   type quoted_program = program
 
-  let quote_ident id =
-    string_to_list (Id.to_string id)
+  let quote_string = bytestring_of_caml_string
+  let quote_ident id = quote_string (Id.to_string id)
 
   let quote_relevance = function
     | Sorts.Relevant -> BasicAst.Relevant
@@ -68,12 +70,7 @@ struct
     let {Context.binder_name = n; Context.binder_relevance = relevance} = ann_n in
     { BasicAst.binder_name = quote_name n; BasicAst.binder_relevance = quote_relevance relevance }
 
-  let quote_int i =
-    let rec aux acc i =
-      if i < 0 then acc
-      else aux (Datatypes.S acc) (i - 1)
-    in aux Datatypes.O (i - 1)
-
+  let quote_int = Caml_nat.nat_of_caml_int
   let quote_bool x = x
 
   let quote_int63 x = x
@@ -85,7 +82,7 @@ struct
     if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
-         | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
+         | None -> Universes0.Level.Level (quote_string (Univ.Level.to_string l))
 
   let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
     try Coq_inr (quote_nonprop_level l)
@@ -120,18 +117,18 @@ struct
     | Constr.VMcast -> VmCast
 
 
-  let quote_dirpath (dp : DirPath.t) : BasicAst.dirpath =
+  let quote_dirpath (dp : DirPath.t) : Kernames.dirpath =
     let l = DirPath.repr dp in
     List.map quote_ident l
 
-  let rec quote_modpath (mp : ModPath.t) : BasicAst.modpath =
+  let rec quote_modpath (mp : ModPath.t) : Kernames.modpath =
     match mp with
     | MPfile dp -> MPfile (quote_dirpath dp)
     | MPbound mbid -> let (i, id, dp) = MBId.repr mbid in
       MPbound (quote_dirpath dp, quote_ident id, quote_int i)
     | MPdot (mp, id) -> MPdot (quote_modpath mp, quote_ident (Label.to_id id))
 
-  let quote_kn (kn : KerName.t) : BasicAst.kername =
+  let quote_kn (kn : KerName.t) : Kernames.kername =
     (quote_modpath (KerName.modpath kn),
      quote_ident (Label.to_id (KerName.label kn)))
 

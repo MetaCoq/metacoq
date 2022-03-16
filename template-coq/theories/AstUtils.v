@@ -14,7 +14,28 @@ Definition string_of_prim_int (i:Uint63.int) : string :=
 Definition string_of_float (f : PrimFloat.float) :=
   "<float>".
 
-Fixpoint string_of_term (t : term) :=
+Module string_of_term_tree.
+  Import bytestring.Tree.
+  Infix "^" := append.
+
+  Definition string_of_predicate {term} (f : term -> t) (p : predicate term) :=
+    "(" ^ "(" ^ concat "," (map f (pparams p)) ^ ")" 
+    ^ "," ^ string_of_universe_instance (puinst p)
+    ^ ",(" ^ String.concat "," (map (string_of_name ∘ binder_name) (pcontext p)) ^ ")"
+    ^ "," ^ f (preturn p) ^ ")".
+  
+  Definition string_of_branch (f : term -> t) (b : branch term) :=
+    "([" ^ String.concat "," (map (string_of_name ∘ binder_name) (bcontext b)) ^ "], "
+    ^ f (bbody b) ^ ")".
+    
+  Definition string_of_def {A} (f : A -> t) (def : def A) :=
+    "(" ^ string_of_name (binder_name (dname def))
+      ^ "," ^ string_of_relevance (binder_relevance (dname def))
+      ^ "," ^ f (dtype def)
+      ^ "," ^ f (dbody def)
+      ^ "," ^ string_of_nat (rarg def) ^ ")".
+
+  Fixpoint string_of_term (t : term) : Tree.t :=
   match t with
   | tRel n => "Rel(" ^ string_of_nat n ^ ")"
   | tVar n => "Var(" ^ n ^ ")"
@@ -53,7 +74,10 @@ Fixpoint string_of_term (t : term) :=
   (* | tInt i => "Int(" ^ string_of_prim_int i ^ ")"
   | tFloat f => "Float(" ^ string_of_float f ^ ")" *)
   end.
-  
+End string_of_term_tree.
+
+Definition string_of_term := Tree.to_string ∘ string_of_term_tree.string_of_term.
+
 Fixpoint destArity Γ (t : term) :=
   match t with
   | tProd na t b => destArity (Γ ,, vass na t) b
@@ -184,7 +208,7 @@ Fixpoint lookup_mind_decl (id : kername) (decls : global_declarations)
  := match decls with
     | nil => None
     | (kn, InductiveDecl d) :: tl =>
-      if eq_kername kn id then Some d else lookup_mind_decl id tl
+      if kn == id then Some d else lookup_mind_decl id tl
     | _ :: tl => lookup_mind_decl id tl
     end.
 

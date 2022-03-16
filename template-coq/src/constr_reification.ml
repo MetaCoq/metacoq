@@ -91,7 +91,7 @@ struct
 
   let unit_tt = resolve "metacoq.unit.intro"
 
-  let tAscii = resolve "metacoq.ascii.intro"
+  let tByte = resolve "metacoq.byte.type"
   let tlist = resolve "metacoq.list.type"
   let c_nil = resolve "metacoq.list.nil"
   let c_cons = resolve "metacoq.list.cons"

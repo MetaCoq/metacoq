@@ -1,5 +1,6 @@
 open Names
 open Constr
+open Kernames
 open BasicAst
 open Ast0
 open Env
@@ -8,7 +9,7 @@ open Tm_util
 module BaseExtractionDenoter =
 struct
   type t = Ast0.term
-  type quoted_ident = char list
+  type quoted_ident = Bytestring.String.t
   type quoted_int = Datatypes.nat
   type quoted_int63 = Uint63.t
   type quoted_float64 = Float64.t
@@ -18,7 +19,7 @@ struct
   type quoted_relevance = relevance
   type quoted_sort = Universes0.Universe.t
   type quoted_cast_kind = cast_kind
-  type quoted_kernel_name = BasicAst.kername
+  type quoted_kernel_name = kername
   type quoted_inductive = inductive
   type quoted_proj = projection
   type quoted_global_reference = global_reference
@@ -124,8 +125,10 @@ struct
     (* | Coq_tInt i -> ACoq_tInt i *)
     (* | Coq_tFloat f -> ACoq_tFloat f *)
 
+  let unquote_string = Caml_bytestring.caml_string_of_bytestring
+
   let unquote_ident (qi: quoted_ident) : Id.t =
-    let s = list_to_string qi in
+    let s = unquote_string qi in
     Id.of_string s
 
   let unquote_relevance (r : relevance) : Sorts.relevance =
@@ -142,10 +145,7 @@ struct
     {Context.binder_name = unquote_name q.binder_name;
      Context.binder_relevance = unquote_relevance q.binder_relevance}
 
-  let rec unquote_int (q: quoted_int) : int = 
-    match q with
-    | Datatypes.O -> 0
-    | Datatypes.S x -> succ (unquote_int x)
+  let unquote_int (q: quoted_int) : int = Caml_nat.caml_int_of_nat q
   
   let unquote_evar env evm n l = 
     let id = Evar.unsafe_of_int (unquote_int n) in
@@ -192,7 +192,7 @@ struct
     match trm with
     | Universes0.Level.Coq_lzero -> Univ.Level.set
     | Universes0.Level.Level s ->
-      let s = list_to_string s in
+      let s = unquote_string s in
       let comps = CString.split_on_char '.' s in
       let last, dp = CList.sep_last comps in
       let dp = DirPath.make (List.map Id.of_string comps) in
@@ -212,7 +212,7 @@ struct
     | Universes0.Universe.Coq_lSProp -> evd, Sorts.sprop
     | Universes0.Universe.Coq_lProp -> evd, Sorts.prop
     | Universes0.Universe.Coq_lType u ->
-       (* let u = Universes0.Universe.t_set l in *)
+       let u = Universes0.Universe.t_set u in
        let ux_list = Universes0.UnivExprSet.elements u in
        let l = List.map unquote_level_expr ux_list in
        let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
@@ -222,7 +222,7 @@ struct
   = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))
 
 
-  let unquote_global_reference (trm : BasicAst.global_reference) : GlobRef.t =
+  let unquote_global_reference (trm : Kernames.global_reference) : GlobRef.t =
     let open GlobRef in
     match trm with
     | VarRef id -> VarRef (unquote_ident id)

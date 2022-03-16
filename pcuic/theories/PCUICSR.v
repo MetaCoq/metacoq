@@ -2066,7 +2066,7 @@ Proof.
     eapply wf_cofixpoint_typing_spine in t; eauto.
     unfold check_recursivity_kind in t.
     rewrite isdecl.p1 in t.
-    apply Reflect.eqb_eq in t. rewrite t /= in heq_isCoFinite.
+    apply ReflectEq.eqb_eq in t. rewrite t /= in heq_isCoFinite.
     discriminate.
     
   - (* Case congruence on a parameter *) 

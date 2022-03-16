@@ -6,7 +6,6 @@
    provided term to build an inhabitant and then canonicity to show
    that this is a contradiction. *)
 
-From Coq Require Import Ascii String.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import PCUICAst.
 From MetaCoq.PCUIC Require Import PCUICAstUtils.
@@ -31,7 +30,7 @@ Local Opaque hnf.
 Fixpoint string_repeat c (n : nat) : string :=
   match n with
   | 0 => ""
-  | S n => String c (string_repeat c n)
+  | S n => String.String c (string_repeat c n)
   end.
 
 Lemma string_repeat_length c n :
@@ -55,7 +54,7 @@ Proof.
 Qed.
 
 Definition make_fresh_name (Σ : global_env) : kername :=
-  (MPfile [], string_repeat "a"%char (S (max_name_length Σ.(declarations)))).
+  (MPfile [], string_repeat "a"%byte (S (max_name_length Σ.(declarations)))).
 
 Lemma make_fresh_name_fresh Σ :
   fresh_global (make_fresh_name Σ) Σ.(declarations).

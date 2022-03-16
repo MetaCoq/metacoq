@@ -1,5 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
-From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats.
+From Coq Require Import OrdersTac Ascii ExtrOcamlBasic ExtrOcamlZInt ExtrOCamlInt63 ExtrOCamlFloats.
 From MetaCoq.Template Require Import utils MC_ExtrOCamlZPosInt.
 From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
      SafeTemplateChecker.
@@ -11,11 +11,6 @@ From MetaCoq.SafeChecker Require Import PCUICSafeChecker PCUICSafeConversion
 *)
 
 (** Here we could extract uint63_from/to_model to the identity *)
-
-Extract Constant ascii_compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
-Extract Constant Ascii.compare =>
- "fun x y -> match Char.compare x y with 0 -> Eq | x when x < 0 -> Lt | _ -> Gt".
 
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int Init
            UnivSubst Typing Checker Retyping OrderedType Logic Common Equality Classes

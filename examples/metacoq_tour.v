@@ -1,10 +1,9 @@
-From Coq Require Import String.
 From MetaCoq.Template Require config utils All.
 From MetaCoq.Template Require Import TemplateMonad.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICReduction PCUICCumulativity PCUICTyping PCUICSafeLemmata.
 
 Import MCMonadNotation.
-Local Open Scope string_scope.
+Local Open Scope bs_scope.
 
 (** MetaCoq is: 
 

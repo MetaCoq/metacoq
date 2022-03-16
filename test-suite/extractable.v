@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import
 From MetaCoq.Template.TemplateMonad Require Import
      Common Extractable.
 
-Local Open Scope string_scope.
+Local Open Scope bs_scope.
 Import MCMonadNotation.
 
 Notation "<% x %>" := (ltac:(let p y := exact y in quote_term x p))
@@ -24,7 +24,7 @@ MetaCoq Run
             (fun t => tmPrint t)).
 
 MetaCoq Run
-    (tmBind (tmDefinition "two" None <% 1 + 1 %>)
+    (tmBind (tmDefinition "two"%bs None <% 1 + 1 %>)
             (fun kn => tmPrint (Ast.tConst kn nil))).
 
 MetaCoq Run

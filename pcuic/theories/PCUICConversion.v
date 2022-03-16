@@ -1441,7 +1441,7 @@ Section Inversions.
 
   Lemma invert_cumul_ind_ind {Γ ind ind' u u' args args'} :
     Σ ;;; Γ ⊢ mkApps (tInd ind u) args ≤ mkApps (tInd ind' u') args' ->
-    (Reflect.eqb ind ind' * PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| u u' *
+    (eqb ind ind' * PCUICEquality.R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) #|args| u u' *
       ws_cumul_pb_terms Σ Γ args args').
   Proof.
     intros ht; eapply ws_cumul_pb_Ind_l_inv in ht as (? & ? & [? ? ?]); auto.

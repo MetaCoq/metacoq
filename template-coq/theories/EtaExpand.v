@@ -5,9 +5,9 @@
     Coq's conversion, the proof is essentially [eq_refl].
     All dependencies are also expanded.*)
 
-From Coq Require Import List PeanoNat Bool Ascii String Lia.
+From Coq Require Import List PeanoNat Bool Lia.
 From MetaCoq.Template Require Export
-     utils.MCUtils (* Utility functions *)
+     utils (* Utility functions *)
      monad_utils   (* Monadic notations *)
      uGraph        (* The graph of universes *)
      BasicAst      (* The basic AST structures *)
@@ -18,8 +18,8 @@ From MetaCoq.Template Require Export
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *).
 
-Open Scope string.
 Open Scope nat.
+Open Scope bs.
 
 Import Template.Ast.
 Import ListNotations.
@@ -307,7 +307,8 @@ Proof.
       * cbn in H. inversion H; subst. cbn.
         simpl_list. destruct l.
         -- cbn. econstructor; eauto.
-        -- cbn. eapply expanded_tConstruct_app; eauto. cbn. now rewrite H6. todo "lifting".
+        -- cbn. eapply expanded_tConstruct_app; eauto. cbn. now rewrite H6. 
+            todo "lifting".
       * eapply expanded_mkApps_tConstruct. split. split. red. all: eauto. 
         rewrite rev_map_spec. simpl_list. rewrite EE. lia. todo "induction on X0".
     + assert (Forall(fun t : term => expanded Σ0.1 (eta_expand Σ0.1.(declarations) t)) l). {

@@ -1,15 +1,14 @@
 (* Distributed under the terms of the MIT license. *)
-From MetaCoq.Template Require Import BasicAst uGraph TemplateMonad
+From MetaCoq.Template Require Import bytestring BasicAst uGraph TemplateMonad
      TemplateMonad.Extractable.
 
 (* Base types *)
 
-Register Coq.Strings.String.string as metacoq.string.type.
-Register Coq.Strings.String.EmptyString as metacoq.string.nil.
-Register Coq.Strings.String.String as metacoq.string.cons.
+Register bytestring.String.t as metacoq.string.type.
+Register bytestring.String.EmptyString as metacoq.string.nil.
+Register bytestring.String.String as metacoq.string.cons.
 
-Register Coq.Strings.Ascii.ascii as metacoq.ascii.type.
-Register Coq.Strings.Ascii.Ascii as metacoq.ascii.intro.
+Register Coq.Init.Byte.byte as metacoq.byte.type.
 
 Register Coq.Init.Datatypes.nat as metacoq.nat.type.
 Register Coq.Init.Datatypes.O as metacoq.nat.zero.
@@ -62,15 +61,21 @@ Register MetaCoq.Template.BasicAst.aname as metacoq.ast.aname.
 
 Register MetaCoq.Template.BasicAst.nAnon as metacoq.ast.nAnon.
 Register MetaCoq.Template.BasicAst.nNamed as metacoq.ast.nNamed.
-Register MetaCoq.Template.BasicAst.ident as metacoq.ast.ident.
-Register MetaCoq.Template.BasicAst.kername as metacoq.ast.kername.
-Register MetaCoq.Template.BasicAst.modpath as metacoq.ast.modpath.
-Register MetaCoq.Template.BasicAst.MPfile as metacoq.ast.MPfile.
-Register MetaCoq.Template.BasicAst.MPbound as metacoq.ast.MPbound.
-Register MetaCoq.Template.BasicAst.MPdot as metacoq.ast.MPdot.
+Register MetaCoq.Template.Kernames.ident as metacoq.ast.ident.
+Register MetaCoq.Template.Kernames.kername as metacoq.ast.kername.
+Register MetaCoq.Template.Kernames.modpath as metacoq.ast.modpath.
+Register MetaCoq.Template.Kernames.MPfile as metacoq.ast.MPfile.
+Register MetaCoq.Template.Kernames.MPbound as metacoq.ast.MPbound.
+Register MetaCoq.Template.Kernames.MPdot as metacoq.ast.MPdot.
+Register MetaCoq.Template.Kernames.inductive as metacoq.ast.inductive.
+Register MetaCoq.Template.Kernames.mkInd as metacoq.ast.mkInd.
+Register MetaCoq.Template.Kernames.global_reference as metacoq.ast.global_reference.
+Register MetaCoq.Template.Kernames.VarRef as metacoq.ast.VarRef.
+Register MetaCoq.Template.Kernames.ConstRef as metacoq.ast.ConstRef.
+Register MetaCoq.Template.Kernames.IndRef as metacoq.ast.IndRef.
+Register MetaCoq.Template.Kernames.ConstructRef as metacoq.ast.ConstructRef.
+
 Register MetaCoq.Template.BasicAst.name as metacoq.ast.name.
-Register MetaCoq.Template.BasicAst.inductive as metacoq.ast.inductive.
-Register MetaCoq.Template.BasicAst.mkInd as metacoq.ast.mkInd.
 Register MetaCoq.Template.BasicAst.def as metacoq.ast.def.
 Register MetaCoq.Template.BasicAst.mkdef as metacoq.ast.mkdef.
 Register MetaCoq.Template.BasicAst.cast_kind as metacoq.ast.cast_kind.
@@ -83,11 +88,6 @@ Register MetaCoq.Template.BasicAst.recursivity_kind as metacoq.ast.recursivity_k
 Register MetaCoq.Template.BasicAst.Finite as metacoq.ast.Finite.
 Register MetaCoq.Template.BasicAst.CoFinite as metacoq.ast.CoFinite.
 Register MetaCoq.Template.BasicAst.BiFinite as metacoq.ast.BiFinite.
-Register MetaCoq.Template.BasicAst.global_reference as metacoq.ast.global_reference.
-Register MetaCoq.Template.BasicAst.VarRef as metacoq.ast.VarRef.
-Register MetaCoq.Template.BasicAst.ConstRef as metacoq.ast.ConstRef.
-Register MetaCoq.Template.BasicAst.IndRef as metacoq.ast.IndRef.
-Register MetaCoq.Template.BasicAst.ConstructRef as metacoq.ast.ConstructRef.
 Register MetaCoq.Template.BasicAst.fresh_evar_id as metacoq.ast.fresh_evar_id.
 
 (* Universes *)

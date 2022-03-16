@@ -237,7 +237,7 @@ Proof.
   rewrite /lookup_env /=.
   induction Σ. 1: reflexivity.
   simpl.
-  unfold eq_kername; destruct kername_eq_dec; subst.
+  case: eqb_spec; intros e; subst.
   - reflexivity.
   - assumption.
 Qed.

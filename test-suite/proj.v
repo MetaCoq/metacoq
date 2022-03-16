@@ -23,7 +23,7 @@ Proof.
    |- ?T => quote_term T (fun x => pose (qgoal:=x))
   end.
   match goal with
-    H:= context [Ast.tProj (BasicAst.mkInd _ 0, 1, 0) _] |- _ => idtac
+    H:= context [Ast.tProj (Kernames.mkInd _ 0, 1, 0) _] |- _ => idtac
   end.
   reflexivity.
 Qed.

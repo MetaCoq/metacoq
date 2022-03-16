@@ -104,23 +104,21 @@ struct
   (* Quote OCaml int to Coq nat *)
   let quote_int =
     (* the cache is global but only accessible through quote_int *)
-    let cache = Hashtbl.create 10 in
+    let cache = Hashtbl.create 1023 in
     let rec recurse i =
       try Hashtbl.find cache i
-      with
-	Not_found ->
-	  if i = 0 then
-	    let result = Lazy.force tO in
-	    let _ = Hashtbl.add cache i result in
-	    result
-	  else
-	    let result = constr_mkApp (tS, [| recurse (i - 1) |]) in
-	    let _ = Hashtbl.add cache i result in
-	    result
+      with Not_found ->
+        if i = 0 then
+          let result = Lazy.force tO in
+          let _ = Hashtbl.add cache i result in
+          result
+        else
+          let result = constr_mkApp (tS, [| recurse (i - 1) |]) in
+          let _ = Hashtbl.add cache i result in
+          result
     in
-    fun i ->
-    if i >= 0 then recurse i else
-      CErrors.anomaly (str "Negative int can't be unquoted to nat.")
+    fun i -> if i >= 0 then recurse i else
+      CErrors.anomaly (str "Negative int can't be quoted to nat.")
 
   let quote_bool b =
     if b then Lazy.force ttrue else Lazy.force tfalse
@@ -128,10 +126,17 @@ struct
   let quote_int63 i = constr_mkApp (tInt, [| Constr.mkInt i |])
 
   let quote_float64 f = constr_mkApp (tFloat, [| Constr.mkFloat f |])
+  let quote_inductive (kn, i) =
+    constr_mkApp (tmkInd, [| kn; i |])
 
+  let byte_ind =
+    lazy (let ty = Lazy.force tByte in
+      match Constr.kind ty with
+      | Constr.Ind (ind, u) -> ind
+      | _ -> failwith "byte_ind : tByte is not bound to an inductive type")
+  
   let quote_char i =
-    constr_mkApp (tAscii, Array.of_list (List.map (fun m -> quote_bool ((i land m) = m))
-					 (List.rev [128;64;32;16;8;4;2;1])))
+    Constr.mkConstruct (Lazy.force byte_ind, (i+1))
 
   let chars = lazy (Array.init 255 quote_char)
 
@@ -348,9 +353,6 @@ struct
   let mk_proj_list d =
     to_coq_list (prodl tident tTerm)
                 (List.map (fun (a, b) -> pairl tident tTerm a b) d)
-
-  let quote_inductive (kn, i) =
-    constr_mkApp (tmkInd, [| kn; i |])
 
   let quote_dirpath dp =
     let l = DirPath.repr dp in

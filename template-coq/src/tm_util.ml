@@ -58,23 +58,6 @@ let debug (m : unit ->Pp.t) =
 type ('a,'b) sum =
   Left of 'a | Right of 'b
 
-(* todo(gmm): these are helper functions *)
-let string_to_list (s : string) : char list =
-  let rec aux acc i =
-    if i < 0 then acc
-    else aux (s.[i] :: acc) (i - 1)
-  in aux [] (String.length s - 1)
-
-let list_to_string (l : char list) : string =
-  let buf = Bytes.create (List.length l) in
-  let rec aux i = function
-    | [] -> ()
-    | c :: cs ->
-      Bytes.set buf i c; aux (succ i) cs
-  in
-  aux 0 l;
-  Bytes.to_string buf
-
 let rec filter_map f l =
   match l with
   | [] -> []

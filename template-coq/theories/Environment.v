@@ -504,7 +504,7 @@ Module Environment (T : Term).
     match Σ with
     | nil => None
     | d :: tl =>
-      if eq_kername kn d.1 then Some d.2
+      if kn == d.1 then Some d.2
       else lookup_global tl kn
     end.
 

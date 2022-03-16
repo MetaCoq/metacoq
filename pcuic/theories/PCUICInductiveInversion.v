@@ -238,8 +238,8 @@ Proof.
     apply decompose_app_inv in dapp => //.
     rewrite dapp. do 3 f_equal.
     symmetry.
-    change (eq_kername ind k) with (Reflect.eqb ind k) in eqk.
-    destruct (Reflect.eqb_spec ind k); auto. discriminate.
+    change (eq_kername ind k) with (ReflectEq.eqb ind k) in eqk.
+    destruct (ReflectEq.eqb_spec ind k); auto. discriminate.
     discriminate.
   - discriminate.
   - discriminate.

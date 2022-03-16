@@ -475,3 +475,5 @@ erasure/src/envMap.ml
 erasure/src/envMap.mli
 erasure/src/eEtaExpanded.ml
 erasure/src/eEtaExpanded.mli
+erasure/src/pCUICEqualityDec.ml
+erasure/src/pCUICEqualityDec.mli

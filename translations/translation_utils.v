@@ -18,10 +18,9 @@ Fixpoint lookup_tsl_table (E : tsl_table) (gr : global_reference)
   match E with
   | nil => None
   | hd :: tl =>
-    if gref_eq_dec gr (fst hd) then Some (snd hd)
+    if gref_eqb gr (fst hd) then Some (snd hd)
     else lookup_tsl_table tl gr
   end.
-
 
 Definition tsl_context := (global_env_ext * tsl_table)%type.
 
@@ -91,9 +90,9 @@ Definition nNamed n := {| binder_name := nNamed n; binder_relevance := Relevant 
 Definition tsl_name f := map_binder_annot (tsl_name0 f).
 
 
-Definition tmDebug {A} : A -> TemplateMonad unit
-  (* := tmPrint. *)
-  := fun _ => ret tt.
+Definition tmDebug {A} : A -> TemplateMonad unit :=
+  fun _ => ret tt.
+  (* fun x => tmPrint x ;; ret tt. *)
 
 
 Definition add_global_decl d (Σ : global_env_ext) : global_env_ext

@@ -1,6 +1,6 @@
 From Coq Require Import MSetList MSetAVL MSetFacts MSetProperties MSetDecide.
-From MetaCoq.Template Require Import utils BasicAst config.
 From Equations Require Import Equations.
+From MetaCoq.Template Require Import utils BasicAst config.
 Require Import ssreflect.
 
 Local Open Scope nat_scope.
@@ -40,13 +40,14 @@ Inductive allowed_eliminations : Set :=
 | IntoAny.
 Derive NoConfusion EqDec for allowed_eliminations.
 
+
 (** Levels are Set or Level or Var *)
 Module Level.
   Inductive t_ : Set :=
   | lzero
   | Level (_ : string)
   | Var (_ : nat) (* these are debruijn indices *).
-  Derive NoConfusion EqDec for t_.
+  Derive NoConfusion for t_.
 
   Definition t := t_.
 
@@ -83,11 +84,6 @@ Module Level.
 
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
-
-  Definition eq_dec (l1 l2 : t) : {l1 = l2}+{l1 <> l2}.
-  Proof.
-    decide equality. apply string_dec. apply Peano_dec.eq_nat_dec.
-  Defined.
 
   Inductive lt_ : t -> t -> Prop :=
   | ltSetLevel s : lt_ lzero (Level s)
@@ -137,7 +133,7 @@ Module Level.
   Global Instance eqb_refl : Reflexive eqb.
   Proof.
     intros []; unfold eqb; cbnr.
-    - rewrite (ssreflect.iffRL (string_compare_eq s s)). all: auto. reflexivity.
+    - rewrite (ssreflect.iffRL (string_compare_eq _ _)). all: auto. reflexivity.
     - rewrite Nat.compare_refl. reflexivity.
   Qed.
 
@@ -145,7 +141,7 @@ Module Level.
   Proof.
     destruct l, l'; cbn; try constructor; try reflexivity; try discriminate.
     - apply iff_reflect. unfold eqb; cbn.
-      destruct (CompareSpec_string s s0); split; intro HH;
+      destruct (CompareSpec_string t0 t1); split; intro HH;
         try reflexivity; try discriminate; try congruence.
       all: inversion HH; subst; now apply irreflexivity in H.
     - apply iff_reflect. unfold eqb; cbn.
@@ -154,7 +150,31 @@ Module Level.
       all: inversion HH; subst; now apply Nat.lt_irrefl in H.
   Qed.
 
+  Definition eq_level l1 l2 :=
+    match l1, l2 with
+    | Level.lzero, Level.lzero => true
+    | Level.Level s1, Level.Level s2 => ReflectEq.eqb s1 s2
+    | Level.Var n1, Level.Var n2 => ReflectEq.eqb n1 n2
+    | _, _ => false
+    end.
+  
+  #[global, program] Instance reflect_level : ReflectEq Level.t := {
+    eqb := eq_level
+  }.
+  Next Obligation.
+    destruct x, y.
+    all: unfold eq_level.
+    all: try solve [ constructor ; reflexivity ].
+    all: try solve [ constructor ; discriminate ].
+    - destruct (ReflectEq.eqb_spec t0 t1) ; nodec.
+      constructor. f_equal. assumption.
+    - destruct (ReflectEq.eqb_spec n n0) ; nodec.
+      constructor. subst. reflexivity.
+  Defined.
+
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
+  
+  Definition eq_dec : forall (l1 l2 : t), {l1 = l2}+{l1 <> l2} := Classes.eq_dec.
 
 End Level.
 
@@ -311,10 +331,9 @@ Module UnivExpr.
     destruct (Nat.compare_spec n n0); repeat constructor; tas. congruence.
   Qed.
 
-  Definition eq_dec (l1 l2 : t) : {l1 = l2} + {l1 <> l2}.
-  Proof.
-    decide equality; apply eq_dec.
-  Defined.
+  Global Instance reflect_t : ReflectEq t := reflect_prod _ _ .
+
+  Definition eq_dec : forall (l1 l2 : t), {l1 = l2} + {l1 <> l2} := Classes.eq_dec.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
@@ -338,13 +357,19 @@ Module UnivExprSetProp := WPropertiesOn UnivExpr UnivExprSet.
 
 (* We have decidable equality w.r.t leibniz equality for sets of levels.
   This means universes also have a decidable equality. *)
-#[global] Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t.
-Proof.
-  intros p p'.
-  destruct (UnivExprSet.eq_dec p p').
-  - now left; eapply UnivExprSet.eq_leibniz in e.
-  - right. intros ->. apply n. reflexivity.
+#[global, program] Instance univexprset_reflect : ReflectEq UnivExprSet.t := 
+  { eqb := UnivExprSet.equal }.
+Next Obligation.
+  destruct (UnivExprSet.equal x y) eqn:e; constructor.
+  eapply UnivExprSet.equal_spec in e.
+  now eapply UnivExprSet.eq_leibniz.
+  intros e'.
+  subst y.
+  pose proof (@UnivExprSetFact.equal_1 x x).
+  forward H. reflexivity. congruence.
 Qed.
+
+#[global] Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t := Classes.eq_dec.
 
 Module Universe.
   (** A universe is a list of universe expressions which is:
@@ -356,19 +381,24 @@ Module Universe.
                 t_ne  : UnivExprSet.is_empty t_set = false }.
 
   Derive NoConfusion for nonEmptyUnivExprSet.
-  
-  (** This needs a propositional UIP proof to show that [is_empty = false] is a set *)
-  Set Equations With UIP.
-  #[global] Instance nonEmptyUnivExprSet_eqdec : EqDec nonEmptyUnivExprSet.
-  Proof. eqdec_proof. Qed.
+
+  (* We use uip on the is_empty condition *)
+  #[global, program] Instance univexprset_reflect : ReflectEq nonEmptyUnivExprSet := 
+    { eqb x y := eqb x.(t_set) y.(t_set) }.
+  Next Obligation.
+    destruct (eqb_spec (t_set x) (t_set y)); constructor.
+    destruct x, y; cbn in *. subst.
+    now rewrite (uip t_ne0 t_ne1).
+    intros e; subst x; apply H.
+    reflexivity.
+  Qed.
+
+  #[global] Instance eq_dec_univ0 : EqDec Universe.nonEmptyUnivExprSet := eq_dec.
 
   Inductive t_ :=
     lProp | lSProp | lType (_ : nonEmptyUnivExprSet).
   Derive NoConfusion for t_.
 
-  #[global] Instance t_eqdec : EqDec t_.
-  Proof. eqdec_proof. Qed.
-  
   Definition t := t_.
 
   Coercion t_set : nonEmptyUnivExprSet >-> UnivExprSet.t.
@@ -377,9 +407,19 @@ Module Universe.
     match u1, u2 with
     | lSProp, lSProp => true
     | lProp, lProp => true
-    | lType e1, lType e2 => UnivExprSet.equal e1.(t_set) e2.(t_set)
+    | lType e1, lType e2 => eqb e1 e2
     | _,_ => false
     end.
+  
+  #[global, program] Instance reflect_eq_universe : ReflectEq t := 
+    { eqb := eqb }.
+  Next Obligation.
+    destruct x, y; cbn; try constructor; auto; try congruence.
+    destruct (eqb_spec n n0); constructor. now f_equal.
+    congruence. 
+  Qed.
+
+  #[global] Instance eq_dec_univ : EqDec t := eq_dec.
 
   Definition make' (e : UnivExpr.t) : nonEmptyUnivExprSet
     := {| t_set := UnivExprSet.singleton e;

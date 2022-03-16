@@ -9,9 +9,6 @@ Import String2pos.
 
 Implicit Types (cf:checker_flags).
 
-Module KernameMap := FMapAVL.Make KernameOT.OT.
-Module KernameMapFact := FMapFacts.WProperties KernameMap.
-
 Module EnvMap.
   (* We keep the definition of EnvMap polymorphic over the data associated to a kername *)
   Section Poly.
@@ -36,7 +33,7 @@ Module EnvMap.
     intros ne.
     unfold lookup, add.
     rewrite KernameMapFact.F.add_neq_o //.
-    intros eq. apply KernameOT.compare_eq in eq. congruence.
+    intros eq. apply Kername.compare_eq in eq. congruence.
   Qed.
 
   Lemma gss (e : t) kn kn' g : kn = kn' ->
@@ -45,7 +42,7 @@ Module EnvMap.
     intros eq.
     unfold lookup, add.
     rewrite KernameMapFact.F.add_eq_o //.
-    now apply KernameOT.compare_eq.
+    now apply Kername.compare_eq.
   Qed.
 
   Definition equal (g g' : t) := KernameMap.Equal g g'.
@@ -148,10 +145,10 @@ Module EnvMap.
     intros frΣ frk eq.
     intros k'.
     rewrite KernameMapFact.F.remove_o.
-    destruct KernameMap.E.eq_dec. eapply KernameOT.compare_eq in e0. subst k'.
+    destruct KernameMap.E.eq_dec. eapply Kername.compare_eq in e0. subst k'.
     - rewrite {}eq. induction frk. now cbn.
       rewrite of_global_env_cons //. depelim frΣ. simpl in H0 |- *.
-      rewrite KernameMapFact.F.add_neq_o //. intros c. eapply KernameOT.compare_eq in c. contradiction.
+      rewrite KernameMapFact.F.add_neq_o //. intros c. eapply Kername.compare_eq in c. contradiction.
       now apply IHfrk.
     - rewrite KernameMapFact.F.add_neq_o //.
   Qed.
@@ -163,11 +160,11 @@ Module EnvMap.
     unfold repr, equal, remove, add.
     intros neq k''.
     rewrite KernameMapFact.F.remove_o.
-    destruct KernameMap.E.eq_dec. eapply KernameOT.compare_eq in e0. subst k'.
-    - rewrite KernameMapFact.F.add_neq_o //. intros c. eapply KernameOT.compare_eq in c. contradiction.
+    destruct KernameMap.E.eq_dec. eapply Kername.compare_eq in e0. subst k'.
+    - rewrite KernameMapFact.F.add_neq_o //. intros c. eapply Kername.compare_eq in c. contradiction.
       rewrite KernameMapFact.F.remove_o.
       destruct KernameMap.E.eq_dec => //.
-      elimtype False; apply n. now apply KernameOT.compare_eq.
+      elimtype False; apply n. now apply Kername.compare_eq.
     - rewrite !KernameMapFact.F.add_o //.
       destruct (KernameMap.E.eq_dec k k'') => //.
       rewrite KernameMapFact.F.remove_neq_o //.
@@ -193,8 +190,7 @@ Module EnvMap.
       intros hin.
       red in eq. rewrite eq in hin.
       now eapply KernameMapFact.F.empty_in_iff in hin.
-    - cbn -[of_global_env].
-      change (eq_kername k a.1) with (eqb k a.1).
+    - cbn -[of_global_env eqb].
       destruct (eqb_spec k a.1).
       * subst. 
         rewrite of_global_env_cons //.

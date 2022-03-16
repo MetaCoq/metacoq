@@ -90,7 +90,7 @@ Section CheckerFlags.
   Proof.
     destruct l; simpl; auto. rename n into t. 
     intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
-    destruct l; simpl; auto.
+    destruct l as [|s|n']; simpl; auto.
     - unfold global_ext_levels.
       apply LS.union_spec. right.
       apply global_levels_Set.
@@ -98,7 +98,7 @@ Section CheckerFlags.
       simpl in Hl.
       apply monomorphic_level_in_global_ext in Hl.
       eapply LS.union_spec. now right.
-    - specialize (Hl (Level.Var n0, n) inl).
+    - specialize (Hl (Level.Var n', n) inl).
       eapply LS.union_spec in Hl as [Hl|Hl].
       + red in Hu.
         unfold levels_of_udecl in Hl.
@@ -109,9 +109,10 @@ Section CheckerFlags.
           eapply nth_error_forall in Hu; eauto.
           eapply LS.union_spec; right. eapply global_levels_Set.
         * unfold subst_instance. simpl.
-          destruct (nth_error u n0) eqn:hnth.
+          destruct (nth_error u n') eqn:hnth.
           2:{ simpl. rewrite hnth. eapply LS.union_spec; right; apply global_levels_Set. }
-          eapply nth_error_forall in Hu. 2:eauto. change (nth_error u n0) with (nth_error u n0) in *.
+          eapply nth_error_forall in Hu. 2:eauto. 
+          change (nth_error u n') with (nth_error u n') in *.
           rewrite -> hnth. simpl. apply Hu.
       + now apply not_var_global_levels in Hl.
   Qed.

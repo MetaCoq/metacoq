@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 Require Import MetaCoq.Template.utils.
-Require Import FSets ssreflect ExtrOcamlBasic ExtrOcamlString ExtrOcamlZInt.
+Require Import FSets ssreflect ExtrOcamlBasic ExtrOcamlZInt.
 
 (** * Extraction setup for the pcuic phase of MetaCoq.
 

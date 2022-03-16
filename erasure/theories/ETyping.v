@@ -42,7 +42,7 @@ Lemma elookup_env_cons_fresh {kn d Σ kn'} :
   ETyping.lookup_env ((kn, d) :: Σ) kn' = ETyping.lookup_env Σ kn'.
 Proof.
   simpl. change (eq_kername kn' kn) with (eqb kn' kn).
-  destruct (Reflect.eqb_spec kn' kn). subst => //. auto. 
+  destruct (eqb_spec kn' kn). subst => //. auto. 
 Qed.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)
@@ -87,7 +87,7 @@ Lemma lookup_env_Some_fresh {Σ c decl} :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
   induction Σ; cbn. 1: congruence.
-  unfold eq_kername; destruct kername_eq_dec; subst.
+  case: eqb_spec; intros e; subst.
   - intros [= <-] H2. inv H2.
     contradiction.
   - intros H1 H2. apply IHΣ; tas.
@@ -107,7 +107,7 @@ Proof.
     + now inv wfΣ'.
     + intros HΣ. specialize (IHΣ'' HΣ).
       inv wfΣ'. simpl in *.
-      unfold eq_kername; destruct kername_eq_dec; subst; auto.
+      case: eqb_spec; intros e; subst; auto.
       apply lookup_env_Some_fresh in IHΣ''; contradiction.
 Qed.
 
@@ -182,7 +182,7 @@ Proof.
   induction mfix; simpl; auto.
 Qed.
 
-Definition tDummy := tVar ""%string.
+Definition tDummy := tVar "".
 
 Definition iota_red npar args (br : list name * term) :=
   substl (List.rev (List.skipn npar args)) br.2.

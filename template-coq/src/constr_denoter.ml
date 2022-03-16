@@ -81,15 +81,9 @@ struct
 
   let unquote_char trm =
     let (h,args) = app_full trm [] in
-    if constr_equall h tAscii then
-      match args with
-        a :: b :: c :: d :: e :: f :: g :: h :: [] ->
-        let bits = List.rev [a;b;c;d;e;f;g;h] in
-        let v = List.fold_left (fun a n -> (a lsl 1) lor if unquote_bool n then 1 else 0) 0 bits in
-        char_of_int v
-      | _ -> bad_term_verb trm "unquote_char"
-    else
-      not_supported trm
+    match Constr.kind h with
+    | Constr.Construct ((ind, idx), u) -> Char.chr (idx - 1)
+    | _ -> not_supported_verb trm "unquote_char"
 
   let unquote_string trm =
     let rec go n trm =
@@ -320,8 +314,8 @@ struct
       not_supported_verb trm "unquote_inductive"
 
 
-  let unquote_int=unquote_nat
-  let print_term=Printer.pr_constr_env (Global.env ()) Evd.empty
+  let unquote_int = unquote_nat
+  let print_term = Printer.pr_constr_env (Global.env ()) Evd.empty
 
 
   let unquote_global_reference (trm : Constr.t) (* of type global_reference *) : GlobRef.t =

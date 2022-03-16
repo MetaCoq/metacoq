@@ -401,7 +401,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     in k ~st env evm qt
   | TmQuoteRecTransp  (bypass, trm) ->
     let bypass = unquote_bool (reduce_all env evm bypass) in
-    let qt = quote_term_rec bypass env trm in
+    let qt = quote_term_rec ~bypass ~with_universes:true env trm in
     k ~st env evm qt
   | TmQuoteInd (name, strict) ->
     let kn = unquote_kn (reduce_all env evm name) in

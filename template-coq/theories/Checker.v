@@ -366,7 +366,7 @@ Fixpoint eq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t}
   match t, u with
   | tRel n, tRel n' => Nat.eqb n n'
   | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 (eq_term φ) args args'
-  | tVar id, tVar id' => eq_string id id'
+  | tVar id, tVar id' => eqb id id'
   | tSort s, tSort s' => check_eqb_universe φ s s'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
@@ -398,7 +398,7 @@ Fixpoint leq_term `{checker_flags} (φ : universes_graph) (t u : term) {struct t
   match t, u with
   | tRel n, tRel n' => Nat.eqb n n'
   | tEvar ev args, tEvar ev' args' => Nat.eqb ev ev' && forallb2 (eq_term φ) args args'
-  | tVar id, tVar id' => eq_string id id'
+  | tVar id, tVar id' => eqb id id'
   | tSort s, tSort s' => check_leqb_universe φ s s'
   | tApp f args, tApp f' args' => eq_term φ f f' && forallb2 (eq_term φ) args args'
   | tCast f k T, tCast f' k' T' => eq_term φ f f' && eq_term φ T T'

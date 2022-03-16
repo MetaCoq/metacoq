@@ -18,10 +18,11 @@ From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr ERemoveParams EW
 
 (* Used to show timings of the ML execution *)
  
-Definition time : forall {A}, string -> (unit -> A) -> unit -> A :=
-  fun A s f x => f x.
+Definition time : forall {A B}, string -> (A -> B) -> A -> B :=
+  fun A B s f x => f x.
 
-Extract Constant time => "(fun c f x -> let s = Tm_util.list_to_string c in Tm_util.time (Pp.str s) f x)".
+Extract Constant time => 
+  "(fun c f x -> let s = Caml_bytestring.caml_string_of_bytestring c in Tm_util.time (Pp.str s) f x)".
 
 (* This is the total erasure function +
   let-expansion of constructor arguments and case branches +
@@ -437,10 +438,10 @@ Local Open Scope string_scope.
   Coq definition). *)
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let (Σ', t) := erase_program p (todo "wf_env and welltyped term") in
-  time "Pretty printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.
+  let p' := erase_program p (todo "wf_env and welltyped term") in
+  time "Pretty printing" print_program p'.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let (Σ', t) := erase_program_fast p (todo "wf_env and welltyped term") in
-  time "pretty-printing" (fun _ => print_term Σ' [] true false t ^ nl ^ "in:" ^ nl ^ print_global_context Σ') tt.
+  let p' := erase_program_fast p (todo "wf_env and welltyped term") in
+  time "pretty-printing" print_program p'.

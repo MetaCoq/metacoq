@@ -1570,7 +1570,7 @@ Proof.
   - intros. red. constructor.
   - destruct a as [kn' d]. intros. depelim H.
     cbn in H, H0.
-    destruct d as []; simpl; destruct KernameSet.mem.
+    destruct d as []; simpl; destruct KernameSet.mem.?
     + cbn [ETyping.closed_env forallb]. cbn.
       constructor => //. eapply IHdecls => //.
     + eapply IHdecls => //.

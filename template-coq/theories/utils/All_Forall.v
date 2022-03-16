@@ -2090,6 +2090,25 @@ Proof.
     + cbn in e. apply IHn with (l' := l') in e ; assumption.
 Qed.
 
+Lemma Forall2_nth_error_Some_r :
+  forall A B (P : A -> B -> Prop) l l' n t,
+    nth_error l' n = Some t ->
+    Forall2 P l l' ->
+    exists t',
+      nth_error l n = Some t' /\
+      P t' t.
+Proof.
+  intros A B P l l' n t e h.
+  induction n in l, l', t, e, h |- *.
+  - destruct h.
+    + cbn in e. discriminate.
+    + cbn in e. inversion e. subst.
+      exists x. split ; auto.
+  - destruct h.
+    + cbn in e. discriminate.
+    + cbn in e. apply IHn with (l := l) in e ; assumption.
+Qed.
+
 Lemma Forall2_nth_error_None_l :
   forall A B (P : A -> B -> Prop) l l' n,
     nth_error l n = None ->

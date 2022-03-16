@@ -375,7 +375,7 @@ Inductive EnvCheck (A : Type) :=
 Global Arguments EnvError {A} Σ e.
 Global Arguments CorrectDecl {A} a.
 
-Global Instance envcheck_monad : Monad EnvCheck :=
+Global Instance envcheck_monad {B} : Monad (EnvCheck B) :=
   {| ret A a := CorrectDecl a ;
       bind A B m f :=
         match m with

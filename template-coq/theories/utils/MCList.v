@@ -370,7 +370,7 @@ Fixpoint chop {A} (n : nat) (l : list A) :=
     end
   end.
 
-Lemma nth_map {A} (f : A -> A) n l d :
+Lemma nth_map {A B} (f : A -> B) n l d :
   (d = f d) ->
   nth n (map f l) d = f (nth n l d).
 Proof.

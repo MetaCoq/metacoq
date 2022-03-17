@@ -1,4 +1,4 @@
-From Coq Require Import Byte NArith.
+From Coq Require Import Strings.Byte NArith.
 From MetaCoq.Template Require Import ReflectEq ByteCompare.
 From Equations Require Import Equations.
 

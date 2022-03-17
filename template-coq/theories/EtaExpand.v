@@ -698,7 +698,20 @@ Lemma wf_fixpoint_rarg :
 , forall decl: def term
 , forall H2: wf_fixpoint Σ0.1 mfix, In decl mfix ->
 rarg decl < #|(decompose_prod (dtype decl)).1.2|.
-Proof. 
+Proof.
+  intros.
+  unfold wf_fixpoint in H2. destruct map_option_out eqn:E; try congruence.
+  destruct l eqn:E2; try congruence.
+  rewrite <- E2 in *. clear E2 H2 k l0.
+  induction mfix in l, E, H |- *.
+  - inversion H.
+  - cbn in E. destruct (check_one_fix a) eqn:Ea; try congruence.
+    destruct H as [-> | H].
+    + unfold check_one_fix in Ea. destruct decl; cbn.
+      destruct (decompose_prod_assum) eqn:Eprod; try congruence. unfold destInd in Ea.
+      destruct nth_error eqn:Enth; try congruence.
+      eapply nth_error_Some_length in Enth.
+      revert Enth. len.  
 Admitted.
 
 Lemma map2_length : 

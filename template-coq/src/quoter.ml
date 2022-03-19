@@ -31,9 +31,6 @@ let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr
 let getType env (t:Constr.t) : Constr.t =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
 
-(* TODO: remove? *)
-let opt_hnf_ctor_types = ref false
-
 let hnf_type env ty =
   let rec hnf_type continue ty =
     match Constr.kind ty with
@@ -385,8 +382,6 @@ struct
           let indsort = Q.quote_sort (inductive_sort oib) in
           let (reified_ctors,acc) =
             List.fold_left (fun (ls,acc) (nm,(ctx, ty),ar) ->
-              debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                  bool !opt_hnf_ctor_types)) ;
               let ty = Term.it_mkProd_or_LetIn ty ctx in
               let ctx, concl = Term.decompose_prod_assum ty in
               let argctx, parsctx =
@@ -400,7 +395,6 @@ struct
                 let envconcl = push_rel_context argctx envcstr in
                 quote_terms quote_term acc envconcl args
               in
-              let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
               let (ty,acc) = quote_term acc envind ty in
               ((Q.quote_ident nm, qargctx, Array.to_list qindices, ty, Q.quote_int ar) :: ls, acc))
               ([],acc) named_ctors

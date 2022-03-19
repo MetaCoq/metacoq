@@ -77,7 +77,8 @@ Definition trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
 
 Definition trans_constant_body bd :=
   {| cst_type := trans bd.(PCUICEnvironment.cst_type); cst_body := option_map trans bd.(PCUICEnvironment.cst_body);
-     cst_universes := bd.(PCUICEnvironment.cst_universes) |}.
+     cst_universes := bd.(PCUICEnvironment.cst_universes);
+     cst_relevance := bd.(PCUICEnvironment.cst_relevance) |}.
 
 
 Definition trans_minductive_body md :=

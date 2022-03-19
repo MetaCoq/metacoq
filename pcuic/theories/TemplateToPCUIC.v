@@ -162,8 +162,10 @@ Section Trans.
       ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(Ast.Env.ind_projs) |}.
 
   Definition trans_constant_body bd :=
-    {| cst_type := trans bd.(Ast.Env.cst_type); cst_body := option_map trans bd.(Ast.Env.cst_body);
-      cst_universes := bd.(Ast.Env.cst_universes) |}.
+    {| cst_type := trans bd.(Ast.Env.cst_type); 
+       cst_body := option_map trans bd.(Ast.Env.cst_body);
+       cst_universes := bd.(Ast.Env.cst_universes);
+       cst_relevance := bd.(Ast.Env.cst_relevance) |}.
 
   Definition trans_minductive_body md :=
     {| ind_finite := md.(Ast.Env.ind_finite);

@@ -112,8 +112,9 @@ Definition nlctx (Γ : context) : context :=
   map (map_decl_anon nl) Γ.
 
 Definition nl_constant_body c :=
-  Build_constant_body
-    (nl c.(cst_type)) (option_map nl c.(cst_body)) c.(cst_universes).
+  Build_constant_body  
+    (nl c.(cst_type)) (option_map nl c.(cst_body)) c.(cst_universes)
+    c.(cst_relevance).
 
 Definition nl_constructor_body c :=
   {| cstr_name := c.(cstr_name) ;   

@@ -87,8 +87,10 @@ Definition trans_minductive_body md :=
   |}.
 
 Definition trans_constant_body bd :=
-  {| cst_type := trans bd.(PCUICEnvironment.cst_type); cst_body := option_map trans bd.(PCUICEnvironment.cst_body);
-     cst_universes := bd.(PCUICEnvironment.cst_universes) |}.
+  {| cst_type := trans bd.(PCUICEnvironment.cst_type); 
+     cst_body := option_map trans bd.(PCUICEnvironment.cst_body);
+     cst_universes := bd.(PCUICEnvironment.cst_universes);
+     cst_relevance := bd.(PCUICEnvironment.cst_relevance) |}.
 
 Definition trans_global_decl (d : PCUICEnvironment.global_decl) :=
   match d with

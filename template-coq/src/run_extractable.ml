@@ -77,9 +77,6 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
     let indsort = Q.quote_sort (inductive_sort oib) in      
     let (reified_ctors,acc) =
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-          Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                      bool !Quoter.opt_hnf_ctor_types)) ;
-          let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
           ((quote_ident nm, qargctx, Array.to_list qindices, ty, quote_int ar) :: ls, acc))
         ([],acc) named_ctors

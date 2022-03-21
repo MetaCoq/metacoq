@@ -128,3 +128,25 @@ Proof.
   simpl. now rewrite Nat.add_1_r.
 Qed.
 *)
+
+Lemma closed_csubst t k u : 
+  closed t -> 
+  closedn (S k) u -> 
+  closedn k (ECSubst.csubst t 0 u).
+Proof.
+  intros.
+  rewrite ECSubst.closed_subst //.
+  eapply closedn_subst => /= //.
+  rewrite andb_true_r. eapply closed_upwards; tea. lia.
+Qed.
+
+Lemma closed_substl ts k u : 
+  forallb (closedn 0) ts -> 
+  closedn (#|ts| + k) u -> 
+  closedn k (ECSubst.substl ts u).
+Proof.
+  induction ts in u |- *; cbn => //.
+  move/andP=> [] cla clts.
+  intros clu. eapply IHts => //.
+  eapply closed_csubst => //.
+Qed.

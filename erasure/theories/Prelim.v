@@ -86,7 +86,7 @@ Proof.
   unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
 Qed.
 
-Lemma value_app_inv L :
+Lemma value_app_inv {wfl : Ee.WcbvFlags} L :
   Ee.value (EAst.mkApps EAst.tBox L) ->
   L = nil.
 Proof.

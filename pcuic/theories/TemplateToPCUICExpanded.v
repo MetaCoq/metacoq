@@ -12,7 +12,7 @@ Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
 
 Local Hint Constructors expanded : expanded.
 
-Lemma trans_expanded {cf : checker_flags} {Σ} {wfΣ : Template.Typing.wf Σ} T :
+(* Lemma trans_expanded {cf : checker_flags} {Σ} {wfΣ : Template.Typing.wf Σ} T :
   let Σ' := trans_global_env Σ in
   WfAst.wf Σ T ->
   EtaExpand.expanded Σ T ->
@@ -48,4 +48,4 @@ Proof with eauto using expanded.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.
-Qed.
+Qed. *)

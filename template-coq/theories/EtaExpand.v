@@ -17,6 +17,10 @@ From MetaCoq.Template Require Export
      LiftSubst     (* Lifting and substitution for terms *)
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *).
+
+From ReductionEffect Require Import PrintingEffect.
+ 
+Open Scope string.
 Open Scope nat.
 Open Scope bs.
 
@@ -51,12 +55,10 @@ Section Eta.
     let needed := count - #|args| in
     let prev_args := map (lift0 needed) args in
     let eta_args := rev_map tRel (seq 0 needed) in
-    let remaining := firstn needed (skipn #|args| (decompose_prod ty).1.2) in
-    let remaining_names := firstn needed (skipn #|args| (decompose_prod ty).1.1) in
-    let remaining_subst := mapi (subst (rev args)) remaining in 
-    let remaining_combined := (combine remaining_names remaining_subst) in 
-    (* let print := print_id remaining_combined in *)
-    fold_right (fun '(nm,ty) b => Ast.tLambda nm ty b) (mkApps (lift0 needed t) (prev_args ++ eta_args)) remaining_combined.
+    let remaining := firstn needed (skipn #|args| (rev (smash_context [] (decompose_prod_assum [] ty).1))) in
+    let remaining_subst := subst_context (rev args) 0 remaining in 
+    let print := print_id remaining_subst in 
+    fold_right (fun d b => Ast.tLambda d.(decl_name) d.(decl_type) b) (mkApps (lift0 needed t) (prev_args ++ eta_args)) remaining_subst.
   
   Definition eta_constructor (ind : inductive) c u args :=
       match lookup_global Σ ind.(inductive_mind) with
@@ -211,7 +213,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
         (discr:term) (branches : list (branch term)) : expanded Γ discr -> Forall (fun br => expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches -> expanded Γ (tCase ci type_info discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded Γ t -> expanded Γ (tProj proj t)
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) args d : 
-  d.(rarg) <= #|(decompose_prod  d.(dtype)).1.1| ->
+  d.(rarg) < context_assumptions (decompose_prod_assum []  d.(dtype)).1 ->
   Forall (fun d => 
            let ctx := List.rev (mapi (fun (i : nat) d => 1 + d.(rarg)) mfix) in
           expanded (ctx ++ Γ) d.(dbody)) mfix ->
@@ -267,7 +269,7 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
 (forall Γ (proj : projection) (t : term),
  expanded Σ Γ t -> P Γ t -> P Γ (tProj proj t)) ->
 (forall Γ (mfix : mfixpoint term) (idx : nat) d args, 
-  d.(rarg) <= #|(decompose_prod  d.(dtype)).1.1| ->
+  d.(rarg) < context_assumptions (decompose_prod_assum []  d.(dtype)).1 ->
   Forall (fun d =>  let ctx := List.rev (mapi (fun (i : nat) d => 1 + d.(rarg)) mfix) in expanded Σ (ctx ++ Γ) d.(dbody)) mfix -> 
   Forall (fun d => let ctx := List.rev (mapi (fun (i : nat) d => 1 + d.(rarg)) mfix) in P (ctx ++ Γ)%list d.(dbody)) mfix -> 
   Forall (expanded Σ Γ) args ->
@@ -323,7 +325,7 @@ Definition isRel_app t :=
   
 Lemma expanded_fold_lambda Σ Γ t l :
   expanded Σ Γ
-    (fold_right (fun '(nm, ty) (b : term) => tLambda nm ty b) t l) <->   expanded Σ (repeat 0 #|l| ++ Γ) t.
+    (fold_right (fun d (b : term) => tLambda d.(decl_name) d.(decl_type) b) t l) <->   expanded Σ (repeat 0 #|l| ++ Γ) t.
 Proof.
   induction l as [ | []] in t, Γ |- *; cbn - [repeat] in *.
   - reflexivity.
@@ -347,7 +349,7 @@ Proof.
 Qed.
 
 Lemma expanded_mkApps_tFix Σ Γ mfix idx d args :
-  d.(rarg) <= #|(decompose_prod  d.(dtype)).1.1| ->
+  d.(rarg) < context_assumptions (decompose_prod_assum []  d.(dtype)).1 ->
   nth_error mfix idx = Some d ->
   #|args| >= S (d.(rarg)) ->
   Forall (fun d0 : def term => let ctx := List.rev (mapi (fun (_ : nat) (d1 : def term) => 1 + rarg d1) mfix) in expanded Σ (ctx ++ Γ) (dbody d0)) mfix ->
@@ -442,6 +444,24 @@ Proof.
   destruct (decompose_prod (lift n (S m) t2)) as [[]]; cbn in *. lia.
 Qed.
 
+Lemma context_assumptions_lift' t Γ Γ' n m :
+context_assumptions Γ = context_assumptions Γ' ->
+context_assumptions (decompose_prod_assum Γ t).1 = 
+context_assumptions (decompose_prod_assum Γ'  (lift n m t)).1.
+Proof.
+  intros Hlen.
+  induction t in Γ, Γ', Hlen, n, m |- *; cbn; try lia.
+  - eapply IHt2. cbn; lia.
+  - eapply IHt3. cbn; lia.
+Qed.
+
+Lemma context_assumptions_lift t n m :
+context_assumptions (decompose_prod_assum [] t).1 = 
+context_assumptions (decompose_prod_assum [] (lift n m t)).1.
+Proof.
+  now eapply context_assumptions_lift'.
+Qed.
+
 Lemma expanded_unlift {Σ : global_env} Γ' Γ'' Γ t Γgoal :
   expanded Σ (Γ' ++ Γ'' ++ Γ) (lift #|Γ''| #|Γ'| t) ->
   (Γ' ++ Γ)%list = Γgoal ->
@@ -482,7 +502,7 @@ Proof.
     + destruct args0; cbn in *; congruence.
     + eauto.
     + revert H6. len. lia.
-     Unshelve. revert H6. len. cbn in *. rewrite <- decompose_prod_lift in H. lia.
+     Unshelve. revert H6. len. cbn in *. rewrite <- context_assumptions_lift in H. lia.
   - econstructor. solve_all. rewrite app_assoc.
     eapply b. autorewrite with len list. reflexivity. now len.
   - destruct t; invs H4.
@@ -525,8 +545,8 @@ Proof.
     + destruct args; cbn in *; congruence.
     + now rewrite !nth_error_map, H5.
     + len. lia.
-    Unshelve. cbn. rewrite H. eapply Nat.eq_le_incl.
-    now rewrite <- decompose_prod_lift.
+    Unshelve. cbn.
+    rewrite <- !context_assumptions_lift. lia.
   - econstructor. solve_all.
     unshelve epose proof (a (_ ++ _)%list _ _ _). 5: now rewrite <- app_assoc.
     shelve. autorewrite with len list in H |- *. eapply H.
@@ -588,7 +608,7 @@ expanded Σ0
        | Some p => let (n1, _) := p in n1
        | None => 0
        end) Γ')) l ->
-       n0 <= #|(decompose_prod T).1.1| ->
+       n0 <= context_assumptions (decompose_prod_assum [] T).1 ->
 expanded Σ0
   (map
      (fun x : option (nat × term) =>
@@ -611,20 +631,19 @@ Proof.
     autorewrite with len list in H2 |- *.
     rewrite !firstn_length in H2 |- *.
     rewrite !List.skipn_length. 
-    rewrite app_nth2 in H2. 2: { len. rewrite <- decompose_prod12. destruct List.length; lia. }
+    rewrite app_nth2 in H2. 2: { len. destruct context_assumptions; lia. }
     autorewrite with len in H2.
     replace ((S (n0 + n) -
-    Init.Nat.min (Init.Nat.min (S n0) #|(decompose_prod T).1.1|)
-      (Init.Nat.min (S n0) #|(decompose_prod T).1.2|))) with n in H2. 2:{
-        rewrite <- decompose_prod12. lia.
+    Init.Nat.min (S n0)
+      (#|[]| + context_assumptions (decompose_prod_assum [] T).1))) with n in H2. 2:{
+        len. destruct context_assumptions; lia.
     }
     unfold lift0 at 1.
     rewrite mkApps_tRel. 2:{ destruct l; cbn - [rev_map]; try congruence. rewrite rev_map_spec. cbn. clear. destruct List.rev; cbn; try congruence. }
     econstructor.
     { rewrite app_length, rev_map_spec, List.rev_length, !map_length, seq_length.
-    replace ((Init.Nat.min
-    (Init.Nat.min (S n0 - #|l|) (#|(decompose_prod T).1.1| - #|l|))
-    (Init.Nat.min (S n0 - #|l|) (#|(decompose_prod T).1.2| - #|l|)))) with (S n0 - #|l|). 2:{ rewrite <- !decompose_prod12. lia. }
+    replace ((Init.Nat.min (S n0 - #|l|)
+    (#|rev (smash_context [] (decompose_prod_assum [] T).1)| - #|l|))) with (S n0 - #|l|). 2:{ len. destruct #|l|; lia. }
     assert (0 <=? n = true) as -> by now destruct n.
     transitivity (S n0). 2: lia.
     rewrite app_nth2. 2:{ rewrite repeat_length; lia. }
@@ -634,22 +653,16 @@ Proof.
     eapply H2. }
     eapply app_Forall.
     + Opaque minus. solve_all. eapply @expanded_lift' with (Γ' := []). cbn; reflexivity.
-      cbn; reflexivity. 2: reflexivity.
-      rewrite repeat_length, <- decompose_prod12. lia. eauto.
+      cbn; reflexivity. 2: reflexivity. len. lia. eauto.
     + change ((0 :: seq 1 n0)) with (seq 0 (S n0)) in *.
       assert (S n0 > #|l| \/ S n0 <= #|l|) as [HH | HH] by lia.
       assert (S n0 = S n0 - #|l| + #|l|) as EE by lia.
       2:{ replace (S n0 - #|l|) with 0 by lia. cbn. econstructor. }
       rewrite EE in H3.
       rewrite seq_app, rev_map_spec, map_app, rev_app_distr in H3.
-      eapply Forall_app in H3 as [].
-      replace ((Init.Nat.min
-    (Init.Nat.min (S n0 - #|l|) (#|(decompose_prod T).1.1| - #|l|))
-    (Init.Nat.min (S n0 - #|l|) (#|(decompose_prod T).1.2| - #|l|)))) with (S n0 - #|l|). 2:{ rewrite <- !decompose_prod12. lia. }
-    rewrite <- EE in H0.
-    revert H0. len. rewrite !firstn_length, <- decompose_prod12.
-    replace ((Init.Nat.min (Init.Nat.min (S n0) #|(decompose_prod T).1.1|)
-    (Init.Nat.min (S n0) #|(decompose_prod T).1.1|))) with (S n0) by lia.
+      eapply Forall_app in H3 as []. rewrite Min.min_l. 2: len; lia.
+      rewrite <- EE in H0.
+    revert H0. len. rewrite !firstn_length, Min.min_l. 2:len;lia.
     rewrite rev_map_spec. intros.
     rewrite Forall_forall in H0 |- *. intros.
     specialize (H0 _ H1). rewrite <- in_rev in H1.
@@ -675,7 +688,6 @@ Proof.
   induction n; cbn; congruence.
 Qed.
 
-
 Lemma decompose_type_of_constructor :
   forall cf: config.checker_flags
 , forall Σ0: global_env_ext
@@ -687,7 +699,10 @@ Lemma decompose_type_of_constructor :
 , forall idecl: one_inductive_body
 , forall cdecl: constructor_body
 , forall isdecl': declared_constructor Σ0.1 (ind, i) mdecl idecl cdecl, 
-#|(decompose_prod (type_of_constructor mdecl cdecl (ind, i) u)).1.1| = ind_npars mdecl + context_assumptions (cstr_args cdecl).
+context_assumptions
+     (decompose_prod_assum [] (type_of_constructor mdecl cdecl (ind, i) u)).1 = ind_npars mdecl + context_assumptions (cstr_args cdecl).
+Proof.
+  
 Admitted.
 
 Lemma wf_fixpoint_rarg :
@@ -697,7 +712,7 @@ Lemma wf_fixpoint_rarg :
 , forall mfix: list (def term)
 , forall decl: def term
 , forall H2: wf_fixpoint Σ0.1 mfix, In decl mfix ->
-rarg decl < #|(decompose_prod (dtype decl)).1.2|.
+decl.(rarg) < context_assumptions (decompose_prod_assum []  decl.(dtype)).1.
 Proof.
   intros.
   unfold wf_fixpoint in H2. destruct map_option_out eqn:E; try congruence.
@@ -711,8 +726,9 @@ Proof.
       destruct (decompose_prod_assum) eqn:Eprod; try congruence. unfold destInd in Ea.
       destruct nth_error eqn:Enth; try congruence.
       eapply nth_error_Some_length in Enth.
-      revert Enth. len.  
-Admitted.
+      revert Enth. now len.
+    + destruct map_option_out eqn:?; try congruence. eapply IHmfix; eauto.
+Qed.
 
 Lemma map2_length : 
   forall {A B C : Type} (f : A -> B -> C) (l : list A) (l' : list B), #| map2 f l l'| = min #|l| #|l'|.
@@ -731,10 +747,23 @@ Proof.
   depind H; eauto.
 Qed.
 
+(* Lemma context_assumptions_decompose t :
+context_assumptions (decompose_prod_assum [] t).1 <=
+#|(decompose_prod t).1.2|.
+Proof.
+  setoid_rewrite <- Nat.add_0_r at 2. rewrite Nat.add_comm.
+  change 0 with (context_assumptions []).
+  generalize (@nil context_decl).
+  induction t; cbn; intros; try lia; len. 
+  - destruct (decompose_prod t2) as [[]]; cbn in *.
+    rewrite IHt2. cbn; lia.
+  - rewrite IHt3. cbn. lia. *)
+    
+
 Lemma eta_expand_expanded {cf : config.checker_flags} {Σ : global_env_ext} Γ Γ' t T :
   wf Σ ->
   typing Σ Γ t T ->
-  Forall2 (fun x y => match x with Some (n, t) => y.(decl_type) = t /\ #|(decompose_prod t).1.1| >= n | None => True end) Γ' Γ ->
+  Forall2 (fun x y => match x with Some (n, t) => y.(decl_type) = t /\ context_assumptions (decompose_prod_assum [] y.(decl_type)).1 >= n | None => True end) Γ' Γ ->
   expanded Σ (map (fun x => match x with Some (n, _) => n | None => 0 end ) Γ') (eta_expand Σ.1.(declarations) Γ' t).
 Proof.
   intros wf Hty. revert Γ'.
@@ -752,18 +781,15 @@ Proof.
     destruct x as [[] | ]. 
     + destruct H2. unfold eta_single. cbn.
       eapply expanded_fold_lambda.
-      rewrite !Nat.sub_0_r. rewrite combine_length. len.
+      rewrite !Nat.sub_0_r. len. rewrite firstn_length. len.
       destruct n0.
       * cbn. econstructor. now rewrite nth_nth_error, nth_error_map, H1. 
-      * rewrite seq_S,rev_map_spec, map_app, rev_app_distr. cbn.
-        rewrite !firstn_length.
-         assert (#|(decompose_prod (lift0 (S n) t0)).1.1|>= S n0) by now rewrite <- decompose_prod_lift.
-         assert (#|(decompose_prod (lift0 (S n) t0)).1.2|>= S n0) by now rewrite <- decompose_prod12.
-        rewrite !Min.min_l; try lia.
+      * rewrite seq_S,rev_map_spec, map_app, rev_app_distr. subst.
+         rewrite <- context_assumptions_lift, !Min.min_l; try lia.
         econstructor.
         -- rewrite app_nth2. 2: rewrite repeat_length; lia.
-           rewrite repeat_length. replace (S (n0 + n) - S n0) with n by lia.
-           rewrite nth_nth_error, nth_error_map, H1. cbn.
+           rewrite repeat_length. replace (S n0 + n - S n0) with n by lia.
+           rewrite nth_nth_error, nth_error_map,  H1. cbn.
            len. now rewrite seq_length.
         -- eapply Forall_forall. intros x [ | (? & <- & [_ ?] % in_seq) % in_rev % in_map_iff]; subst.
            all: econstructor; rewrite app_nth1; [now rewrite nth_repeat | rewrite repeat_length; lia].
@@ -788,7 +814,7 @@ Proof.
       eapply Forall2_nth_error_Some_l in H2 as (? & ? & ?). 2: eauto. 
       cbn in *. 
       destruct H4.
-      rewrite <- decompose_prod_lift. lia.
+      rewrite <- context_assumptions_lift. subst. lia.
     + cbn in H. unfold eta_constructor in *.
       destruct lookup_global as [[] | ] eqn:E1; eauto.
       destruct nth_error eqn:E2; eauto.
@@ -806,14 +832,15 @@ Proof.
            solve_all. eapply H4. solve_all. reflexivity.
       * eapply expanded_mkApps_tConstruct. split. split. red. all: eauto.
         rewrite rev_map_spec. simpl_list. rewrite EE. lia. eapply Forall_typing_spine_Forall in X0.
-        assert (#|(decompose_prod (type_of_constructor m c (ind, idx) u)).1.1| = ind_npars m + context_assumptions (cstr_args c)) as E. { 
+        assert ((context_assumptions
+        (decompose_prod_assum [] (type_of_constructor m c (ind, idx) u)).1) = ind_npars m + context_assumptions (cstr_args c)) as E. { 
           eapply decompose_type_of_constructor; eauto.
           split. split. red. all: eauto. }
         eapply app_Forall.
         -- Opaque minus. solve_all. eapply @expanded_lift' with (Γ' := []). 2: reflexivity. reflexivity.
            2: reflexivity. len.
-           { rewrite !firstn_length, !List.skipn_length. 
-             rewrite <- decompose_prod12, E, EE. lia.
+           { rewrite !firstn_length, !List.skipn_length. len.
+             rewrite E, EE. lia.
            }
            cbn. eauto.
         -- rewrite rev_map_spec. eapply Forall_rev. 
@@ -821,7 +848,7 @@ Proof.
            eapply in_seq in H4 as [_ H4].
            len. rewrite app_nth1. 2: len.
            eapply nth_repeat. cbn in *.
-           rewrite !firstn_length, !List.skipn_length, <- decompose_prod12, E, EE.
+           rewrite !firstn_length, !List.skipn_length. len. rewrite E, EE.
            rewrite map_length in H4. lia.
     + cbn in H. unfold eta_fixpoint in *.
       rewrite nth_error_map in H |- *.
@@ -831,8 +858,8 @@ Proof.
       
       eapply expanded_mkApps_tFix; fold lift.
       2:{rewrite !nth_error_map, Eid. reflexivity. }
-      ++ cbn. rewrite <- decompose_prod_lift. rewrite decompose_prod12.
-        eapply Nat.lt_le_incl, wf_fixpoint_rarg; eauto. 2: eapply nth_error_In; eauto.
+      ++ cbn. rewrite <- context_assumptions_lift. 
+        eapply wf_fixpoint_rarg; eauto. 2: eapply nth_error_In; eauto.
         clear - X. depind X; eauto.
       ++ len. rewrite seq_length. lia.
       ++ unfold eta_single in H.
@@ -856,7 +883,9 @@ Proof.
           eapply expanded_unlift. 2: reflexivity.
           eapply apply_expanded; eauto; len. 2:{ f_equal. instantiate (1 := repeat 0 (S (rarg d))). now len. }
           simpl_list. rewrite !app_assoc. f_equal. f_equal.
-          2:{ f_equal. rewrite !firstn_length. rewrite decompose_prod12. lia. }
+          2:{ f_equal. rewrite !firstn_length. len.
+              destruct context_assumptions; lia.
+           }
           f_equal.  rewrite !mapi_map. now eapply mapi_ext. }
 
          eapply expanded_unlift with (Γ'' :=  repeat 0 #|l|). 2: now rewrite <- app_assoc.
@@ -867,8 +896,8 @@ Proof.
          ** rewrite !mapi_map. now eapply mapi_ext.
          ** rewrite !firstn_length, !List.skipn_length.
             rewrite app_assoc. f_equal.
-            rewrite <- repeat_app. f_equal.
-            rewrite !decompose_prod12.           
+            rewrite <- repeat_app. f_equal. len.
+            destruct context_assumptions;
             lia.
          ** f_equal. len. lia.
       ++ eapply Forall_typing_spine_Forall in X0. eapply app_Forall.
@@ -876,13 +905,13 @@ Proof.
             len. rewrite !firstn_length, !List.skipn_length.
             eapply typing_wf_fixpoint in X.
             eapply wf_fixpoint_rarg in X. 2: eauto. 2: eapply nth_error_In; eauto.
-            rewrite decompose_prod12. lia.
+            len. lia.
          ** rewrite rev_map_spec. eapply Forall_rev. 
             eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
             eapply in_seq in H4 as [_ H4]. autorewrite with len in H4 |- *.
             rewrite !firstn_length, !List.skipn_length.
             rewrite app_nth1. eapply nth_repeat. len. 
-            eapply Nat.lt_le_trans. eauto. cbn. rewrite decompose_prod12.
+            eapply Nat.lt_le_trans. eauto. cbn.
             eapply typing_wf_fixpoint in X.
             eapply wf_fixpoint_rarg in X. 2: eauto. 2: eapply nth_error_In; eauto.
             lia.
@@ -895,9 +924,11 @@ Proof.
     eapply expanded_mkApps_tConstruct; eauto.
     rewrite rev_map_spec. now simpl_list. rewrite rev_map_spec, <- List.map_rev.
     eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
-    eapply in_rev, in_seq in H5 as [_ ?]. cbn in *.
-    rewrite combine_length, mapi_length, !firstn_length. rewrite <- decompose_prod12.
-    assert (#|(decompose_prod (type_of_constructor mdecl cdecl (ind, i) u)).1.1| = ind_npars mdecl + context_assumptions (cstr_args cdecl)) as ->. {
+    eapply in_rev, in_seq in H5 as [_ ?]. cbn in *. len.
+    rewrite !firstn_length. len.
+    assert ((context_assumptions
+    (decompose_prod_assum []
+       (type_of_constructor mdecl cdecl (ind, i) u)).1) = ind_npars mdecl + context_assumptions (cstr_args cdecl)) as ->. {
       eapply decompose_type_of_constructor; eauto.
     }
     rewrite app_nth1. now rewrite nth_repeat. rewrite repeat_length. lia.
@@ -919,11 +950,11 @@ Proof.
   - cbn. rewrite nth_error_map, H0. cbn. unfold eta_fixpoint. unfold fst_ctx in *. cbn in *.
     eapply expanded_fold_lambda.
     assert (#|(decompose_prod (dtype decl)).1.1| = #|(decompose_prod (dtype decl)).1.2|) as E1. { eapply decompose_prod12. }
-    assert (rarg decl < #|(decompose_prod (dtype decl)).1.2|) as E2. { eapply wf_fixpoint_rarg; eauto. now eapply nth_error_In. }
-    eapply expanded_mkApps_tFix; eauto; fold lift.
-    + rewrite <- E1 in E2. shelve.
-    + rewrite !nth_error_map, H0. cbn. eauto.
-    + simpl_list. rewrite rev_map_spec. simpl_list. cbn. lia.
+    assert (rarg decl < context_assumptions (decompose_prod_assum [] (dtype decl)).1) as E2. { eapply wf_fixpoint_rarg; eauto. now eapply nth_error_In. }
+    eapply expanded_mkApps_tFix.
+    + shelve.
+    + fold lift. rewrite !nth_error_map, H0. cbn. len. reflexivity.
+    + len. rewrite seq_length. lia.
     + fold lift. len. solve_all. destruct a as (? & ? & ?).
       rewrite !firstn_length. rewrite !Nat.min_l; try lia.
       eapply expanded_lift'.
@@ -933,19 +964,16 @@ Proof.
       eapply Forall2_app; solve_all.
       subst types. unfold Typing.fix_context.
       eapply All2_rev. eapply All2_mapi. eapply All_All2_refl, Forall_All, Forall_forall.
-      intros. split. reflexivity.
-      rewrite <- decompose_prod_lift.
-      eapply wf_fixpoint_rarg in H4; eauto.
-      rewrite decompose_prod12. lia.
-      Unshelve. cbn. rewrite <- decompose_prod_lift. lia.
+      intros. split. reflexivity. cbn.
+      rewrite <- context_assumptions_lift.
+      eapply wf_fixpoint_rarg in H4; eauto. len; lia.
+      Unshelve. cbn.  rewrite <- context_assumptions_lift. lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. eapply Forall_rev.
       eapply Forall_forall. intros ? (? & <- & ?) % in_map_iff. econstructor.
-      eapply in_seq in H4 as [_ ?]. cbn in *.
-      rewrite combine_length, mapi_length, !firstn_length.
+      eapply in_seq in H4 as [_ ?]. cbn in *. len.
+      rewrite !firstn_length.
       rewrite app_nth1. now rewrite nth_repeat.
-      rewrite repeat_length.
-      assert (#|(decompose_prod (dtype decl)).1.1| = #|(decompose_prod (dtype decl)).1.2|) as ->. eapply decompose_prod12.
-      lia.
+      rewrite repeat_length. len; lia.
     + cbn - [rev_map seq]. rewrite rev_map_spec. cbn. rewrite Nat.sub_0_r. cbn. destruct List.rev; cbn; congruence.
   - cbn. econstructor; eauto. eapply All_Forall, All_map, All_impl. eapply (All_mix X X0). intros ? ((? & ? & ?) & ? & ?). cbn.
      specialize (e0 (repeat None #|mfix| ++ Γ'))%list.

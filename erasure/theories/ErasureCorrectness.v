@@ -1693,6 +1693,7 @@ Proof.
            constructor. eapply Ee.eval_fix.
            ++ eauto.
            ++ eauto.
+           ++ eauto.
            ++ rewrite <- Ee.closed_unfold_fix_cunfold_eq.
               { unfold ETyping.unfold_fix. rewrite e -e4.
                 now rewrite (Forall2_length H4). }
@@ -1793,6 +1794,7 @@ Proof.
            destruct (nth_error _ _) eqn:nth; [|congruence].
            eapply All2_nth_error_Some in X as (? & ? & ? & ? & ?); [|eauto].
            constructor. eapply Ee.eval_fix_value.
+           ++ eauto.
            ++ eauto.
            ++ eauto.
            ++ unfold Ee.cunfold_fix. now rewrite e0.

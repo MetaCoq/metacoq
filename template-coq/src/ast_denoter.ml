@@ -201,22 +201,25 @@ struct
       Univ.Level.make (Univ.Level.UGlobal.make dp "" idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
-  let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Univ.Universe.t =
+  let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Sorts.t =
     let l = unquote_level (fst trm) in
-    let u = Univ.Universe.make l in
+    let u = Sorts.sort_of_univ @@ Univ.Universe.make l in
     let n = unquote_int (snd trm) in
-    if n > 0 && not (Univ.Level.is_prop l) then Univ.Universe.super u
+    if n > 0 && not (Univ.Level.is_prop l) then Sorts.super u
     else u
+
+  let sort_sup s1 s2 =
+    Sorts.sort_of_univ (Univ.Universe.sup (Sorts.univ_of_sort s1) (Sorts.univ_of_sort s2))
 
   let unquote_universe evd (trm : Universes0.Universe.t) =
     match trm with
-    | Universes0.Universe.Coq_lSProp -> evd, Univ.Universe.sprop
-    | Universes0.Universe.Coq_lProp -> evd, Univ.Universe.type0m
+    | Universes0.Universe.Coq_lSProp -> evd, Sorts.sprop
+    | Universes0.Universe.Coq_lProp -> evd, Sorts.prop
     | Universes0.Universe.Coq_lType u ->
        (* let u = Universes0.Universe.t_set l in *)
        let ux_list = Universes0.UnivExprSet.elements u in
        let l = List.map unquote_level_expr ux_list in
-       evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)
+       evd, List.fold_left sort_sup (List.hd l) (List.tl l)
 
   let unquote_universe_instance(evm: Evd.evar_map) (l: quoted_univ_instance): Evd.evar_map * Univ.Instance.t
   = (evm,  Univ.Instance.of_array (Array.of_list (List0.map unquote_level l)))

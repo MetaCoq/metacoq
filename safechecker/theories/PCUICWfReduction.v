@@ -8,6 +8,9 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICOnOne
      PCUICPretty PCUICArities PCUICConfluence PCUICSize
      PCUICContextConversion PCUICConversion PCUICWfUniverses.
 
+From MetaCoq.SafeChecker Require Import PCUICWfEnv.
+
+
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
 
@@ -230,25 +233,27 @@ End fix_sigma.
 
 Section fix_sigma.
   Context {cf : checker_flags} {no : normalizing_flags}.
-  Context {Σ : global_env_ext} {HΣ : ∥wf_ext Σ∥}.
+
+  Context (X_type : abstract_env_ext_impl).
+
+  Context (X : X_type.π1).
+
+  Context (X_correct : abstract_env_ext_correct _ X).
 
   (* Reducing at least one step or taking a subterm is well-founded *)
-  Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, welltyped Σ Γ t) :=
-    fun '(Γ2; t2; H) '(Γ1; t1; H2) =>
+  Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :=
+    fun '(Γ2; t2; H) '(Γ1; t1; H2) => forall Σ (wfΣ : abstract_env_ext_rel X Σ), 
     ∥ (redp Σ Γ1 t1 t2 * (Γ1 = Γ2)) + ∑ ts : term_subterm t2 t1, Γ2 = (Γ1 ,,, term_subterm_context ts) ∥.
-
-  Ltac sq' := try (destruct HΣ; clear HΣ);
-    repeat match goal with
-    | H : ∥ _ ∥ |- _ => destruct H; try clear H
-    end; try eapply sq.
 
   Definition wf_redp_subterm_rel : WellFounded redp_subterm_rel.
   Proof.
-    intros (Γ & s & H). sq'.
-    induction (normalisation Σ _ Γ s H) as [s _ IH].
+    intros (Γ & s & H). pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    destruct X_correct as [wf_extΣ]. specialize (wf_extΣ _ wfΣ). sq. 
+    induction (normalisation Σ wf_extΣ Γ s (H _ wfΣ)) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.
-    intros (Γ' & t2 & ?). intros [[[r eq]|[ts eqctx]]].
+    intros (Γ' & t2 & ?). intro R. specialize (R _ wfΣ).
+    destruct R as [[[r eq]|[ts eqctx]]].
     + subst. eapply Relation_Properties.trans_clos_tn1 in r.
       eapply IH. clear -r. 
       induction r; try solve [econstructor; auto].
@@ -257,10 +262,11 @@ Section fix_sigma.
       apply IH_sub. eauto.
       intros. eapply cored_redp in H0 as [].
       destruct (term_subterm_redp X0) as [t'' [[redt' [tst' Htst']]]].
-      eapply IH. eapply cored_redp. sq. eassumption. red.
+      eapply IH. eapply cored_redp. sq. eassumption. red. intros. 
       sq. right. exists tst'. now rewrite Htst'.
-      Unshelve.
-    - eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
+    Unshelve. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto. 
+              eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
+    Unshelve. eauto.  
   Qed.
 
   Global Instance wf_redp_subterm : WellFounded redp_subterm_rel.
@@ -271,9 +277,5 @@ Section fix_sigma.
   Opaque wf_redp_subterm.
   Opaque Acc_intro_generator.
   Opaque Wf.Acc_intro_generator.
-  Ltac sq := try (destruct HΣ as [wfΣ]; clear HΣ);
-    repeat match goal with
-    | H : ∥ _ ∥ |- _ => destruct H
-    end; try eapply sq.
 
 End fix_sigma.

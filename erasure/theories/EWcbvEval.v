@@ -416,6 +416,50 @@ Section Wcbv.
       * easy.
   Qed.
 
+
+  Lemma eval_mkApps_tFix_inv mfix idx args v :
+   with_guarded_fix ->
+    eval (mkApps (tFix mfix idx) args) v ->
+    (args = [] \/ exists av, v = tApp (mkApps (tFix mfix idx) (remove_last args)) av) \/
+    (exists n b, cunfold_fix mfix idx = Some (n, b) /\ n < #|args|).
+  Proof.
+    revert v.
+    induction args using List.rev_ind; intros wg v ev.
+    + left. now depelim ev.
+    + rewrite mkApps_app in ev.
+      cbn in *.
+      depelim ev.
+      all: try (eapply IHargs in ev1 as [Heq | (? & ? & ? & ?)]; eauto; rewrite ?Heq; try solve_discr;
+        len; rewrite ?Heq; rewrite Nat.add_comm; eauto 7).
+      * invs H. eauto 9.
+      * invs H. left. exists (x0 ++ [av]). rewrite mkApps_app. cbn. split. eauto. len. 
+      * subst. rewrite isFixApp_mkApps in i => //. rewrite v in i. cbn in i.
+        destruct isLambda; cbn in i; easy.
+      * invs i.
+  Qed.
+
+  Lemma eval_mkApps_tFix_inv mfix idx args v :
+   with_guarded_fix ->
+    eval (mkApps (tFix mfix idx) args) v ->
+    (exists args', v = mkApps (tFix mfix idx) args' /\ #|args| = #|args'|) \/
+    (exists n b, cunfold_fix mfix idx = Some (n, b) /\ n < #|args|).
+  Proof.
+    revert v.
+    induction args using List.rev_ind; intros wg v ev.
+    + left. exists [].
+      now depelim ev.
+    + rewrite mkApps_app in ev.
+      cbn in *.
+      depelim ev.
+      all: try (eapply IHargs in ev1 as [(? & ? & Heq) | (? & ? & ? & ?)]; eauto; rewrite ?Heq; try solve_discr;
+        len; rewrite ?Heq; rewrite Nat.add_comm; eauto 7).
+      * invs H. eauto 9.
+      * invs H. left. exists (x0 ++ [av]). rewrite mkApps_app. cbn. split. eauto. len. 
+      * subst. rewrite isFixApp_mkApps in i => //. rewrite v in i. cbn in i.
+        destruct isLambda; cbn in i; easy.
+      * invs i.
+  Qed.
+
   Derive NoConfusionHom for EAst.global_decl.
 
   Lemma Forall_Forall2_refl :

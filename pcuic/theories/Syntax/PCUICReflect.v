@@ -207,9 +207,9 @@ Qed.
 Instance reflect_eq_context : ReflectEq context := _.
 
 Definition eqb_constant_body (x y : constant_body) :=
-  let (tyx, bodyx, univx) := x in
-  let (tyy, bodyy, univy) := y in
-  eqb tyx tyy && eqb bodyx bodyy && eqb univx univy.
+  let (tyx, bodyx, univx, relx) := x in
+  let (tyy, bodyy, univy, rely) := y in
+  eqb tyx tyy && eqb bodyx bodyy && eqb univx univy && eqb relx rely.
 
 #[global]
 Instance reflect_constant_body : ReflectEq constant_body.

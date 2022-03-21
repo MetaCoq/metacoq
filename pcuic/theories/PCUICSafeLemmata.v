@@ -665,24 +665,26 @@ Section Lemmata.
   Qed.
 
   Lemma red_const :
-    forall {Γ c u cty cb cu},
-      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+    forall {Γ c u cty cb cu rel},
+      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu;
+        cst_relevance := rel |})
       = lookup_env Σ c ->
       red (fst Σ) Γ (tConst c u) (subst_instance u cb).
   Proof.
-    intros Γ c u cty cb cu e.
+    intros Γ c u cty cb cu rel e.
     econstructor. econstructor.
     - symmetry in e. exact e.
     - reflexivity.
   Qed.
 
   Lemma cored_const :
-    forall {Γ c u cty cb cu},
-      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu |})
+    forall {Γ c u cty cb cu rel},
+      Some (ConstantDecl {| cst_type := cty ; cst_body := Some cb ; cst_universes := cu;
+        cst_relevance := rel |})
       = lookup_env Σ c ->
       cored Σ Γ (subst_instance u cb) (tConst c u).
   Proof.
-    intros Γ c u cty cb cu e.
+    intros Γ c u cty cb cu rel e.
     symmetry in e.
     econstructor.
     econstructor.

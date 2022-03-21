@@ -133,7 +133,8 @@ Definition eta_global_env (Σ : global_declarations) :=
         cst_body := match cb.(cst_body) with
                     | Some b => Some (eta_expand Σ b)
                     | None => None
-                    end |} in
+                    end;
+        cst_relevance := cb.(cst_relevance) |} in
   map_constants_global_declarations f Σ.
 
 (* MetaCoq Quote Recursively Definition p := (@pair).

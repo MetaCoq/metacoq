@@ -165,7 +165,8 @@ Definition Translate {tsl : Translation} (ΣE : tsl_context) (id : ident)
         tmDebug "doneu" ;;
         gr' <- tmLocate1 id' ;;
         let decl := {| cst_universes := univs;
-                       cst_type := A; cst_body := Some t |} in
+                       cst_type := A; cst_body := Some t;
+                       cst_relevance := e.(cst_relevance) |} in
         let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
         let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
         Σ' <- tmEval lazy Σ' ;;
@@ -198,7 +199,8 @@ Definition Implement {tsl : Translation} (ΣE : tsl_context)
       kn <- tmLocateCst id ;;
       gr' <- tmLocate1 id' ;;
       let decl := {| cst_universes := Monomorphic_ctx;
-                     cst_type := tA; cst_body := None |} in
+                     cst_type := tA; cst_body := None;
+                     cst_relevance := Relevant |} in
       let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
       let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
       print_nf (id ^ " has been translated as " ^ id') ;;
@@ -236,7 +238,8 @@ Definition ImplementExisting {tsl : Translation} (ΣE : tsl_context) (id : ident
       tmLemma id' A' ;;
       gr' <- tmLocate1 id' ;;
       let decl := {| cst_universes := Monomorphic_ctx;
-                     cst_type := A; cst_body := e.(cst_body) |} in
+                     cst_type := A; cst_body := e.(cst_body);
+                     cst_relevance := e.(cst_relevance) |} in
       let Σ' := add_global_decl (kn, ConstantDecl decl) (fst ΣE) in
       let E' := (ConstRef kn, monomorph_globref_term gr') :: (snd ΣE) in
       print_nf (id ^ " has been translated as " ^ id') ;;

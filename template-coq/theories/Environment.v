@@ -256,14 +256,16 @@ Module Environment (T : Term).
 
   (** See [constant_body] from [declarations.ml] *)
   Record constant_body := {
-      cst_type : term;
-      cst_body : option term;
-      cst_universes : universes_decl }.
+    cst_type : term;
+    cst_body : option term;
+    cst_universes : universes_decl;
+    cst_relevance : relevance }.
 
   Definition map_constant_body f decl :=
     {| cst_type := f decl.(cst_type);
        cst_body := option_map f decl.(cst_body);
-       cst_universes := decl.(cst_universes) |}.
+       cst_universes := decl.(cst_universes);
+       cst_relevance := decl.(cst_relevance) |}.
 
   Lemma map_cst_type f decl :
     f (cst_type decl) = cst_type (map_constant_body f decl).

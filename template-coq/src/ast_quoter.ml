@@ -297,8 +297,8 @@ struct
      ind_npars = npars; ind_params = params; ind_bodies = inds;
      ind_universes = uctx; ind_variance = variance}
 
-  let mk_constant_body ty tm uctx =
-    {cst_type = ty; cst_body = tm; cst_universes = uctx}
+  let mk_constant_body ty tm uctx rel =
+    {cst_type = ty; cst_body = tm; cst_universes = uctx; cst_relevance = rel}
 
   let mk_inductive_decl bdy = InductiveDecl bdy
 

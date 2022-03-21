@@ -389,9 +389,9 @@ struct
     let var = to_coq_option (constr_mkAppl (tlist, [| tVariance |])) (to_coq_listl tVariance) var in
     constr_mkApp (tBuild_mutual_inductive_body, [|finite; npars; params; inds; uctx; var|])
 
-  let mk_constant_body ty tm uctx =
+  let mk_constant_body ty tm uctx rel =
     let tm = quote_optionl tTerm tm in
-    constr_mkApp (tBuild_constant_body, [|ty; tm; uctx|])
+    constr_mkApp (tBuild_constant_body, [|ty; tm; uctx; rel|])
 
   let mk_inductive_decl mind =
     constr_mkApp (tInductiveDecl, [|mind|])

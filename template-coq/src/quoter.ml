@@ -144,7 +144,7 @@ sig
     -> quoted_variance list option
     -> quoted_mutual_inductive_body
 
-  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_constant_body
+  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_relevance -> quoted_constant_body
 
   val mk_inductive_decl : quoted_mutual_inductive_body -> quoted_global_decl
 
@@ -530,7 +530,8 @@ struct
                   Feedback.msg_debug (str"Exception raised while checking type of " ++ KerName.print kn);
                   raise e)
             in
-            let cst_bdy = Q.mk_constant_body ty tm uctx in
+            let rel = Q.quote_relevance cd.const_relevance in
+            let cst_bdy = Q.mk_constant_body ty tm uctx rel in
             let decl = Q.mk_constant_decl cst_bdy in            
             constants := (Q.quote_kn kn, decl) :: !constants
           end
@@ -620,6 +621,7 @@ since  [absrt_info] is a private type *)
   let quote_constant_body bypass env evm cd =
     let ty, body = quote_constant_body_aux bypass env evm cd in
     Q.mk_constant_body ty body (quote_universes_decl cd.const_universes None)
+      (Q.quote_relevance cd.const_relevance)
 
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in

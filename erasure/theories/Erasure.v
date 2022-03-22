@@ -104,6 +104,8 @@ Definition eprogram :=
 
 Import EEtaExpanded.GlobalContextMap (make, global_decls).
 
+Arguments EWcbvEval.eval {wfl} _ _ _.
+
 Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
   EWcbvEval.eval (wfl:=wfl) p.1 p.2 t.
 
@@ -154,8 +156,8 @@ Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) :
     transform p pre := remove_params p;
     pre p := 
     let decls := p.1.(global_decls) in
-     [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
-      EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+     [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
+      EEtaExpanded.isEtaExp decls [] p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
@@ -171,7 +173,7 @@ Next Obligation.
   now eapply ERemoveParams.closed_strip.
 Qed.
 Next Obligation.
-  red. move=> [Σ t] /= v [wfe etae etat cle clt] ev.
+  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
   eapply ERemoveParams.strip_eval in ev; eauto.
 Qed.
 
@@ -181,8 +183,8 @@ Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
     transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
     pre p := 
       let decls := p.1.(global_decls) in
-      [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
-       EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+      [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
+       EEtaExpanded.isEtaExp decls [] p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
@@ -199,7 +201,7 @@ Next Obligation.
   now eapply ERemoveParams.closed_strip.
 Qed.
 Next Obligation.
-  red. move=> [Σ t] /= v [wfe etae etat cle clt] ev.
+  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
   rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
   eapply ERemoveParams.strip_eval in ev; eauto.
 Qed.

@@ -1497,7 +1497,7 @@ Admitted.
 Local Hint Resolve isEtaExp_eval : core.
 Local Hint Constructors eval : core.
 
-Arguments eval : clear implicits.
+Local Arguments eval : clear implicits.
 
 Lemma eval_opt_to_target Σ t v  :
 @eval opt_wcbv_flags Σ t v -> isEtaExp Σ [] t -> @eval target_wcbv_flags Σ t v.

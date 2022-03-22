@@ -763,7 +763,7 @@ Lemma strip_isFix Σ f :
   isFix f = isFix (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
-  all:rewrite map_InP_spec.
+  all:rewrite MCList.map_InP_spec.
   rewrite (negbTE (isFix_mkApps' _ _ _)) //.
   rewrite (negbTE (isFix_mkApps' _ _ _)) //; try apply map_nil => //.
   all:rewrite !(negbTE (isFix_mkApps_Construct _ _ _)) //.
@@ -773,7 +773,7 @@ Lemma strip_isFixApp Σ f :
   Ee.isFixApp f = Ee.isFixApp (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
-  all:rewrite map_InP_spec.
+  all:rewrite MCList.map_InP_spec.
   rewrite /Ee.isFixApp decompose_app_mkApps. clear Heq0. now move/negbTE: napp.
   cbn -[strip].
   rewrite /Ee.isFixApp decompose_app_mkApps. 

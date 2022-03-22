@@ -60,13 +60,17 @@ Proof.
       constructor. exists ev2. lia. constructor.
     * now cbn in i.
 Qed.
+
+Section eval_mkApps_rect.
   
+Variables (wfl : WcbvFlags) (Σ : global_declarations) 
+  (P : term → term → Type).
+
+  Let IH x y (ev : eval Σ x y) := 
+    forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u.
+
+
 Lemma eval_mkApps_rect :
-∀ (wfl : WcbvFlags) (Σ : global_declarations) 
-  (P : term → term → Type),
-  let IH x y (ev : eval Σ x y) := 
-    forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u
-  in
   (∀ a t t' : term,
 	  forall ev : eval Σ a tBox, P a tBox → 
     IH _ _ ev ->
@@ -235,6 +239,8 @@ Proof.
     unshelve eapply H; try match goal with |- eval _ _ _ => tea end; tea; unfold IH; intros; unshelve eapply IH'; tea; cbn; try lia
   end].
 Qed.
+
+End eval_mkApps_rect.
 
 Section OnSubterm.
 

@@ -234,45 +234,6 @@ Proof.
   now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
 Qed.
 
-Section AllInP.
-  Context {A : Type}.
-
-  Equations forallb_InP (l : list A) (H : forall x : A, In x l -> bool) : bool :=
-  | nil, _ := true ;
-  | (cons x xs), H := (H x _) && (forallb_InP xs (fun x inx => H x _)).
-End AllInP.
-
-Lemma forallb_InP_spec {A} (f : A -> bool) (l : list A) :
-  forallb_InP l (fun x _ => f x) = List.forallb f l.
-Proof.
-  remember (fun x _ => f x) as g.
-  funelim (forallb_InP l g) => //; simpl. f_equal.
-  now rewrite (H0 f).
-Qed.
-
-Section MapInP.
-  Context {A B : Type}.
-
-  Equations map_InP (l : list A) (f : forall x : A, In x l -> B) : list B :=
-  map_InP nil _ := nil;
-  map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
-End MapInP.
-
-Lemma map_InP_spec {A B : Type} (f : A -> B) (l : list A) :
-  map_InP l (fun (x : A) _ => f x) = List.map f l.
-Proof.
-  remember (fun (x : A) _ => f x) as g.
-  funelim (map_InP l g) => //; simpl. f_equal. cbn in H.
-  now rewrite (H f0).
-Qed.
-
-Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) : 
-  In x l -> size (proj x) < S (list_size (size ∘ proj) l).
-Proof.
-  induction l; cbn => //.
-  intros [->|hin]. lia. specialize (IHl hin); lia.
-Qed.
-
 Equations discr_expanded_head (t : term) : Prop :=
   discr_expanded_head (tConstruct ind n) := False ;
   discr_expanded_head (tFix mfix idx) := False ;
@@ -290,12 +251,6 @@ Equations expanded_head_viewc t : expanded_head_view t :=
   expanded_head_viewc (tFix mfix idx) := expanded_head_fix mfix idx ;
   expanded_head_viewc (tRel n) := expanded_head_rel n ;
   expanded_head_viewc t := expanded_head_other t I.
-
-Lemma In_All {A} {P : A -> Type} l : 
-    (∀ x : A, In x l -> P x) -> All P l.
-Proof.
-  induction l; cbn; constructor; auto.
-Qed.
   
 Ltac toAll := 
     repeat match goal with 
@@ -508,12 +463,6 @@ Section isEtaExp.
     - cbn. solve_all. eapply a in b. 2: reflexivity. revert b. now len.
     - destruct nth_error eqn:Hn; cbn in H1; try easy.
       eapply nth_error_Some_length in Hn. now eapply Nat.ltb_lt.
-  Qed.
-
-  Lemma option_default_ext {A B} (f : A -> B) x1 x2 d :
-    x1 = x2 -> option_default f x1 d = option_default f x2 d.
-  Proof.
-    now intros ->.
   Qed.
 
   Lemma etaExp_csubst' a k b n Γ Δ : 
@@ -983,11 +932,6 @@ Proof.
     * now cbn in i.
 Qed.
 
-Lemma app_tip_nil {A} (l : list A) (x : A) : (l ++ [x])%list <> [].
-Proof.
-  destruct l; cbn; congruence.
-Qed.
-
 Lemma eval_mkApps_Construct {fl : Ee.WcbvFlags} Σ kn c args args' : 
   All2 (Ee.eval Σ) args args' ->
   Ee.eval Σ (mkApps (tConstruct kn c) args) (mkApps (tConstruct kn c) args').
@@ -1002,17 +946,6 @@ Proof.
     destruct args' using rev_ind; try now rewrite ?mkApps_app; cbn; destruct Ee.with_guarded_fix; eauto.
     cbn. rewrite Ee.isFixApp_mkApps; eauto.
     cbn. try now rewrite ?mkApps_app; cbn; destruct Ee.with_guarded_fix; eauto.
-Qed.
-
-Definition remove_last {A} (args : list A) := 
-  List.firstn (#|args| - 1) args.
-
-Lemma remove_last_app {A} (l : list A) x : 
-  remove_last (l ++ [x]) = l.
-Proof.
-  unfold remove_last. cbn. len.
-  replace (#|l| + 1 -1) with #|l| by lia.
-  rewrite firstn_app Nat.sub_diag /= firstn_all app_nil_r //.
 Qed.
 
 Arguments isEtaExp : simpl never.
@@ -1076,23 +1009,6 @@ Proof.
   rewrite -hskip. rewrite last_last; split => //.
   rewrite heq. f_equal.
   now rewrite remove_last_app.
-Qed.
-
-Lemma remove_last_last {A} (l : list A) (a : A) : l <> [] ->
-  l = (remove_last l ++ [last l a])%list.
-Proof.
-  induction l using rev_ind.
-  congruence.
-  intros. rewrite remove_last_app last_last //.
-Qed.
-
-Lemma forallb_repeat {A} {p : A -> bool} {a : A} {n} : 
-  p a ->
-  forallb p (repeat a n).
-Proof.
-  intros pa.
-  induction n; cbn; auto.
-  now rewrite pa IHn.
 Qed.
 
 Lemma isEtaExp_lookup_ext {Σ} {kn d}: 
@@ -1226,15 +1142,6 @@ Proof.
      -- rewrite wg in i. rewrite isFixApp_mkApps in i => //. cbn in i. destruct EAst.isLambda; easy.
      -- right. repeat eexists. destruct args; cbn; congruence. eauto. len. lia.
    * inv i.
-Qed.
-
-Lemma Forall_last {A} (P : A -> Prop) a l : l <> [] -> Forall P l -> P (last l a).
-Proof.
-  intros. induction H0.
-  - congruence.
-  - destruct l.
-    + cbn. eauto.
-    + cbn. eapply IHForall. congruence.
 Qed.
 
 Lemma eval_etaexp {fl : Ee.WcbvFlags} {Σ a a'} : 

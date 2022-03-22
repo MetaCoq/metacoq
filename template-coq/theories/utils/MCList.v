@@ -1,5 +1,5 @@
 From Equations Require Import Equations.
-From Coq Require Import Bool Arith Lia SetoidList.
+From Coq Require Import Bool Arith Lia SetoidList Utf8.
 From MetaCoq Require Import MCPrelude MCRelations.
 
 Set Equations Transparent.
@@ -1209,3 +1209,92 @@ Proof.
     cbn [repeat]. cbn. rewrite  IHn.
     now rewrite repeat_app. 
 Qed.
+
+
+Section AllInP.
+  Context {A : Type}.
+
+  Equations forallb_InP (l : list A) (H : forall x : A, In x l -> bool) : bool :=
+  | nil, _ := true ;
+  | (cons x xs), H := (H x _) && (forallb_InP xs (fun x inx => H x _)).
+End AllInP.
+
+Lemma forallb_InP_spec {A} (f : A -> bool) (l : list A) :
+  forallb_InP l (fun x _ => f x) = List.forallb f l.
+Proof.
+  remember (fun x _ => f x) as g.
+  funelim (forallb_InP l g) => //; simpl. f_equal.
+  now rewrite (H0 f).
+Qed.
+
+Section MapInP.
+  Context {A B : Type}.
+
+  Equations map_InP (l : list A) (f : forall x : A, In x l -> B) : list B :=
+  map_InP nil _ := nil;
+  map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
+End MapInP.
+
+Lemma map_InP_spec {A B : Type} (f : A -> B) (l : list A) :
+  map_InP l (fun (x : A) _ => f x) = List.map f l.
+Proof.
+  remember (fun (x : A) _ => f x) as g.
+  funelim (map_InP l g) => //; simpl. f_equal. cbn in H.
+  now rewrite (H f0).
+Qed.
+
+Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) : 
+  In x l -> size (proj x) < S (list_size (size ∘ proj) l).
+Proof.
+  induction l; cbn => //.
+  intros [->|hin]. lia. specialize (IHl hin); lia.
+Qed.
+
+Lemma app_tip_nil {A} (l : list A) (x : A) : (l ++ [x])%list <> [].
+Proof.
+  destruct l; cbn; congruence.
+Qed.
+
+Definition remove_last {A} (args : list A) := 
+  List.firstn (#|args| - 1) args.
+
+Lemma remove_last_app {A} (l : list A) x : 
+  remove_last (l ++ [x]) = l.
+Proof.
+  unfold remove_last. cbn. len.
+  replace (#|l| + 1 -1) with #|l| by lia.
+  rewrite firstn_app Nat.sub_diag /= firstn_all app_nil_r //.
+Qed.
+
+Lemma remove_last_last {A} (l : list A) (a : A) : l <> [] ->
+  l = (remove_last l ++ [last l a])%list.
+Proof.
+  induction l using rev_ind.
+  congruence.
+  intros. rewrite remove_last_app last_last //.
+Qed.
+
+Lemma forallb_repeat {A} {p : A -> bool} {a : A} {n} : 
+  p a ->
+  forallb p (repeat a n).
+Proof.
+  intros pa.
+  induction n; cbn; auto.
+  now rewrite pa IHn.
+Qed.
+
+Lemma map_repeat {A B} (f : A -> B) a n : 
+  map f (repeat a n) = repeat (f a) n.
+Proof.
+  induction n; cbn; congruence.
+Qed.
+
+Lemma map2_length : 
+  forall {A B C : Type} (f : A -> B -> C) (l : list A) (l' : list B), #| map2 f l l'| = min #|l| #|l'|.
+Proof.
+  intros. induction l in l' |- *; cbn.
+  - reflexivity.
+  - destruct l'; cbn in *. lia. rewrite IHl. lia.
+Qed.
+
+

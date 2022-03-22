@@ -1,4 +1,4 @@
-From Coq Require Import List Bool Arith ssreflect Morphisms Lia.
+From Coq Require Import List Bool Arith ssreflect Morphisms Lia Utf8.
 From MetaCoq.Template Require Import MCPrelude MCReflect MCList MCRelations MCProd MCOption.
 From Equations Require Import Equations.
 Import ListNotations.
@@ -615,6 +615,12 @@ Proof. induction 1; constructor; auto. Qed.
 
 Lemma All_map_inv {A B} (P : B -> Type) (f : A -> B) l : All P (map f l) -> All (fun x => P (f x)) l.
 Proof. induction l; intros Hf; inv Hf; try constructor; eauto. Qed.
+
+Lemma In_All {A} {P : A -> Type} l : 
+    (∀ x : A, In x l -> P x) -> All P l.
+Proof.
+  induction l; cbn; constructor; auto.
+Qed.
 
 Lemma All_nth_error :
   forall A P l i x,
@@ -1487,6 +1493,14 @@ Proof.
   inversion_clear H. split; intuition auto.
 Qed.
 
+Lemma Forall_last {A} (P : A -> Prop) a l : l <> [] -> Forall P l -> P (last l a).
+Proof.
+  intros. induction H0.
+  - congruence.
+  - destruct l.
+    + cbn. eauto.
+    + cbn. eapply IHForall. congruence.
+Qed.
 
 Lemma All_safe_nth {A} {P : A -> Type} {Γ n} (isdecl : n < length Γ) : All P Γ ->
    P (safe_nth Γ (exist _ n isdecl)).

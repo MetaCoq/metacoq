@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim EWcbvEval ETyping ECSubst EInduction.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EWcbvEval ETyping ECSubst EInduction.
 
 Set Asymmetric Patterns.
 From Equations Require Import Equations.
@@ -9,7 +9,7 @@ Set Equations Transparent.
 Local Set Keyed Unification.
 
 #[global]
-Hint Constructors Ee.eval : core.
+Hint Constructors eval : core.
 
 
 Definition and_assum {A B : Type} (f : A) (f' : A -> B) : A × B :=
@@ -25,24 +25,24 @@ Definition atomic_term (t : EAst.term) :=
 Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
 Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
   
-Fixpoint eval_depth {wfl : Ee.WcbvFlags} {Σ : EAst.global_declarations} {t1 t2 : EAst.term} (ev : Ee.eval Σ t1 t2) { struct ev } : nat.
+Fixpoint eval_depth {wfl : WcbvFlags} {Σ : EAst.global_declarations} {t1 t2 : EAst.term} (ev : eval Σ t1 t2) { struct ev } : nat.
 Proof.
   rename eval_depth into aux.
   destruct ev.
   all:try match goal with
-  | [ H : Ee.eval _ _ _, H' : Ee.eval _ _ _, H'' : Ee.eval _ _ _ |- _ ] => 
+  | [ H : eval _ _ _, H' : eval _ _ _, H'' : eval _ _ _ |- _ ] => 
     apply aux in H; apply aux in H'; apply aux in H''; exact (S (Nat.max H (Nat.max H' H'')))
-  | [ H : Ee.eval _ _ _, H' : Ee.eval _ _ _ |- _ ] => 
+  | [ H : eval _ _ _, H' : eval _ _ _ |- _ ] => 
     apply aux in H; apply aux in H'; exact (S (Nat.max H H'))
-  | [ H : Ee.eval _ _ _ |- _ ] => apply aux in H; exact (S H)
+  | [ H : eval _ _ _ |- _ ] => apply aux in H; exact (S H)
   end.
   exact 1.
 Defined.
 
-Lemma eval_construct_size  {fl : Ee.WcbvFlags} [Σ kn c args e] : 
-  forall (ev : Ee.eval Σ (mkApps (tConstruct kn c) args) e),
+Lemma eval_construct_size  {fl : WcbvFlags} [Σ kn c args e] : 
+  forall (ev : eval Σ (mkApps (tConstruct kn c) args) e),
   ∑ args', (e = mkApps (tConstruct kn c) args') ×
-  All2 (fun x y => ∑ ev' : Ee.eval Σ x y, eval_depth ev' < eval_depth ev) args args'.
+  All2 (fun x y => ∑ ev' : eval Σ x y, eval_depth ev' < eval_depth ev) args args'.
 Proof.
   revert e; induction args using rev_ind; intros e.
   - intros ev. depelim ev. exists []=> //.
@@ -61,140 +61,150 @@ Proof.
     * now cbn in i.
 Qed.
   
-
 Lemma eval_mkApps_rect :
-∀ (wfl : Ee.WcbvFlags) (Σ : EAst.global_declarations) 
+∀ (wfl : WcbvFlags) (Σ : EAst.global_declarations) 
   (P : EAst.term → EAst.term → Type),
   (∀ a t t' : EAst.term,
-	 Ee.eval Σ a EAst.tBox
-     → P a EAst.tBox → Ee.eval Σ t t' → P t t' → P (EAst.tApp a t) EAst.tBox)
-  → (∀ (f0 : EAst.term) (na : name) (b a a' res : EAst.term),
-       Ee.eval Σ f0 (EAst.tLambda na b)
+	 eval Σ a EAst.tBox
+     → P a EAst.tBox → eval Σ t t' → P t t' → P (EAst.tApp a t) EAst.tBox)
+  → (∀ (f0 : EAst.term) (na : BasicAst.name) (b a a' res : EAst.term),
+       eval Σ f0 (EAst.tLambda na b)
        → P f0 (EAst.tLambda na b)
-         → Ee.eval Σ a a'
+         → eval Σ a a'
            → P a a'
-             → Ee.eval Σ (ECSubst.csubst a' 0 b) res
+             → eval Σ (ECSubst.csubst a' 0 b) res
                → P (ECSubst.csubst a' 0 b) res → P (EAst.tApp f0 a) res)
-    → (∀ (na : name) (b0 b0' b1 res : EAst.term),
-         Ee.eval Σ b0 b0'
+    → (∀ (na : BasicAst.name) (b0 b0' b1 res : EAst.term),
+         eval Σ b0 b0'
          → P b0 b0'
-           → Ee.eval Σ (ECSubst.csubst b0' 0 b1) res
+           → eval Σ (ECSubst.csubst b0' 0 b1) res
              → P (ECSubst.csubst b0' 0 b1) res → P (EAst.tLetIn na b0 b1) res)
-      → (∀ (ind : inductive) (pars : nat) (discr : EAst.term) 
+      → (∀ (ind : Kernames.inductive) (pars : nat) (discr : EAst.term) 
            (c : nat) (args : list EAst.term) (brs : 
                                               list 
-                                                (list name × EAst.term)) 
-           (br : list name × EAst.term) (res : EAst.term),
-           Ee.eval Σ discr (EAst.mkApps (EAst.tConstruct ind c) args)
+                                                (list BasicAst.name × EAst.term)) 
+           (br : list BasicAst.name × EAst.term) (res : EAst.term),
+           eval Σ discr (EAst.mkApps (EAst.tConstruct ind c) args)
            → P discr (EAst.mkApps (EAst.tConstruct ind c) args)
              → inductive_isprop_and_pars Σ ind = Some (false, pars)
                → nth_error brs c = Some br
                  → #|skipn pars args| = #|br.1|
-                   → Ee.eval Σ (iota_red pars args br) res
+                   → eval Σ (iota_red pars args br) res
                      → P (iota_red pars args br) res
                        → P (EAst.tCase (ind, pars) discr brs) res)
-        → (∀ (ind : inductive) (pars : nat) (discr : EAst.term) 
-             (brs : list (list name × EAst.term)) 
-             (n : list name) (f3 res : EAst.term),
-             Ee.with_prop_case
-             → Ee.eval Σ discr EAst.tBox
+        → (∀ (ind : Kernames.inductive) (pars : nat) (discr : EAst.term) 
+             (brs : list (list BasicAst.name × EAst.term)) 
+             (n : list BasicAst.name) (f3 res : EAst.term),
+             with_prop_case
+             → eval Σ discr EAst.tBox
                → P discr EAst.tBox
                  → inductive_isprop_and_pars Σ ind = Some (true, pars)
                    → brs = [(n, f3)]
-                     → Ee.eval Σ (ECSubst.substl (repeat EAst.tBox #|n|) f3)
+                     → eval Σ (ECSubst.substl (repeat EAst.tBox #|n|) f3)
                          res
                        → P (ECSubst.substl (repeat EAst.tBox #|n|) f3) res
                          → P (EAst.tCase (ind, pars) discr brs) res)
           → (∀ (f4 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
                (idx : nat) (argsv : list EAst.term) 
                (a av fn res : EAst.term),
-               Ee.eval Σ f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+               forall guarded : with_guarded_fix,
+               eval Σ f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
                → P f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-                 → Ee.eval Σ a av
+                 → eval Σ a av
                    → P a av
-                     → Ee.cunfold_fix mfix idx = Some (#|argsv|, fn)
-                       → Ee.eval Σ (EAst.tApp (EAst.mkApps fn argsv) av) res
+                     → cunfold_fix mfix idx = Some (#|argsv|, fn)
+                       → eval Σ (EAst.tApp (EAst.mkApps fn argsv) av) res
                          → P (EAst.tApp (EAst.mkApps fn argsv) av) res
                            → P (EAst.tApp f4 a) res)
             → (∀ (f5 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
                  (idx : nat) (argsv : list EAst.term) 
                  (a av : EAst.term) (narg : nat) (fn : EAst.term),
-                 Ee.eval Σ f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+                 forall guarded : with_guarded_fix,
+                 eval Σ f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
                  → P f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-                   → Ee.eval Σ a av
+                   → eval Σ a av
                      → P a av
-                       → Ee.cunfold_fix mfix idx = Some (narg, fn)
+                       → cunfold_fix mfix idx = Some (narg, fn)
                          → #|argsv| < narg
                            → P (EAst.tApp f5 a)
                                (EAst.tApp
                                   (EAst.mkApps (EAst.tFix mfix idx) argsv) av))
-              → (∀ (ip : inductive × nat) (mfix : EAst.mfixpoint EAst.term) 
+            → (∀ (f6 : term) (mfix : EAst.mfixpoint term) 
+                   (idx : nat) (a fn res : term) (narg : nat) 
+                   (unguarded : with_guarded_fix = false) 
+                   (e : eval Σ f6 (tFix mfix idx)),
+                   P f6 (tFix mfix idx)
+                   → ∀ (e0 : cunfold_fix mfix idx = Some (narg, fn)) 
+                       (e1 : eval Σ (tApp fn a) res),
+                       P (tApp fn a) res
+                       → P (tApp f6 a) res)
+              → (∀ (ip : Kernames.inductive × nat) (mfix : EAst.mfixpoint EAst.term) 
                    (idx : nat) (args : list EAst.term) 
                    (narg : nat) discr (fn : EAst.term) (brs : 
                                                  list 
-                                                 (list name × EAst.term)) 
+                                                 (list BasicAst.name × EAst.term)) 
                    (res : EAst.term),
-                   Ee.cunfold_cofix mfix idx = Some (narg, fn)
-                   -> Ee.eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
+                   cunfold_cofix mfix idx = Some (narg, fn)
+                   -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
                    -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                   → Ee.eval Σ (EAst.tCase ip (EAst.mkApps fn args) brs) res
+                   → eval Σ (EAst.tCase ip (EAst.mkApps fn args) brs) res
                      → P (EAst.tCase ip (EAst.mkApps fn args) brs) res
                        → P
                            (EAst.tCase ip discr brs)
                            res)
-                → (∀ (p : projection) (mfix : EAst.mfixpoint EAst.term) 
+                → (∀ (p : Kernames.projection) (mfix : EAst.mfixpoint EAst.term) 
                      (idx : nat) (args : list EAst.term) 
                      (narg : nat) discr (fn res : EAst.term),
-                     Ee.cunfold_cofix mfix idx = Some (narg, fn)
-                     -> Ee.eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
+                     cunfold_cofix mfix idx = Some (narg, fn)
+                     -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
                      -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                     → Ee.eval Σ (EAst.tProj p (EAst.mkApps fn args)) res
+                     → eval Σ (EAst.tProj p (EAst.mkApps fn args)) res
                        → P (EAst.tProj p (EAst.mkApps fn args)) res
                          → P
                              (EAst.tProj p discr) res)
-                  → (∀ (c : kername) (decl : EAst.constant_body) 
+                  → (∀ (c : Kernames.kername) (decl : EAst.constant_body) 
                        (body : EAst.term),
                        declared_constant Σ c decl
                        → ∀ res : EAst.term,
                            EAst.cst_body decl = Some body
-                           → Ee.eval Σ body res
+                           → eval Σ body res
                              → P body res → P (EAst.tConst c) res)
                     → (∀ (i : inductive) (pars arg : nat) 
                          (discr : EAst.term) (args : list EAst.term) 
                          (res : EAst.term),
-                         Ee.eval Σ discr
+                         eval Σ discr
                            (EAst.mkApps (EAst.tConstruct i 0) args)
                          → P discr (EAst.mkApps (EAst.tConstruct i 0) args)
                            → inductive_isprop_and_pars Σ i = Some (false, pars)
-                             → Ee.eval Σ (nth (pars + arg) args tDummy) res
+                             → eval Σ (nth (pars + arg) args tDummy) res
                                → P (nth (pars + arg) args tDummy) res
                                  → P (EAst.tProj (i, pars, arg) discr) res)
                       → (∀ (i : inductive) (pars arg : nat) 
                            (discr : EAst.term),
-                           Ee.with_prop_case
-                           → Ee.eval Σ discr EAst.tBox
+                           with_prop_case
+                           → eval Σ discr EAst.tBox
                              → P discr EAst.tBox
                                → inductive_isprop_and_pars Σ i = Some (true, pars)
                                  → P (EAst.tProj (i, pars, arg) discr)
                                      EAst.tBox)
                         → (∀ (f11 f' : EAst.term) a a' ,
-                             forall (ev : Ee.eval Σ f11 f'),
+                             forall (ev : eval Σ f11 f'),
                               P f11 f' ->
-                              (forall t u (ev' : Ee.eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u)
+                              (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u)
                             → ~~
-                                 (EAst.isLambda f' || Ee.isFixApp f'
+                                 (EAst.isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f')
                                   || isBox f')
-                                 → Ee.eval Σ a a'
+                                 → eval Σ a a'
                                 → P a a'
                           →  P (EAst.tApp f11 a) (EAst.tApp f' a'))
                                   
-                          → (∀ t : EAst.term, Ee.atom t → P t t)
-                            → ∀ t t0 : EAst.term, Ee.eval Σ t t0 → P t t0.
+                          → (∀ t : EAst.term, atom t → P t t)
+                            → ∀ t t0 : EAst.term, eval Σ t t0 → P t t0.
 Proof.
   intros.
-  pose proof (p := @Fix_F { t : _ & { t0 : _ & Ee.eval Σ t t0 }}).
+  pose proof (p := @Fix_F { t : _ & { t0 : _ & eval Σ t t0 }}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2))).
-  set(foo := existT _ t (existT _ t0 H) :  { t : _ & { t0 : _ & Ee.eval Σ t t0 }}).
+  set(foo := existT _ t (existT _ t0 H) :  { t : _ & { t0 : _ & eval Σ t t0 }}).
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
   change H with (projT2 (projT2 foo)).
@@ -216,9 +226,9 @@ Proof.
     eapply H; tea; unshelve eapply IH; tea; cbn; lia
   end].
   cbn in IH.
-  eapply X11; tea; eauto; try unshelve eapply IH; tea; cbn; try lia.
+  eapply X12; tea; eauto; try unshelve eapply IH; tea; cbn; try lia.
   Unshelve. 2:exact ev1. intros. unshelve eapply IH; tea. cbn. lia.
-Qed.
+Qed. 
 
 Section OnSubterm.
 
@@ -262,12 +272,12 @@ Definition Qsubst (Q : nat -> EAst.term -> Type) :=
 
 Definition Qfix (Q : nat -> EAst.term -> Type) :=
   forall n mfix idx, Q n (EAst.tFix mfix idx) -> 
-    forall args fn, Ee.cunfold_fix mfix idx = Some (args, fn) ->
+    forall args fn, cunfold_fix mfix idx = Some (args, fn) ->
     Q n fn.
 
 Definition Qcofix (Q : nat -> EAst.term -> Type) :=
   forall n mfix idx, Q n (EAst.tCoFix mfix idx) -> 
-    forall args fn, Ee.cunfold_cofix mfix idx = Some (args, fn) ->
+    forall args fn, cunfold_cofix mfix idx = Some (args, fn) ->
     Q n fn.
       
 Definition Qconst Σ (Q : nat -> EAst.term -> Type) :=
@@ -278,31 +288,31 @@ Definition Qconst Σ (Q : nat -> EAst.term -> Type) :=
     end.
 
 Lemma eval_preserve_mkApps_ind :
-∀ (wfl : Ee.WcbvFlags) (Σ : EAst.global_declarations) 
+∀ (wfl : WcbvFlags) (Σ : EAst.global_declarations) 
   (P' : EAst.term → EAst.term → Type)
   (Q : nat -> EAst.term -> Type)
   (P := (fun x y => P' x y × Q 0 x × Q 0 y)%type)
-  (HPQ : ∀ t u, Ee.eval Σ t u -> Q 0 t -> P' t u -> Q 0 u),
+  (HPQ : ∀ t u, eval Σ t u -> Q 0 t -> P' t u -> Q 0 u),
   Qconst Σ Q ->
   Qpres Q ->
   Qsubst Q ->
   Qfix Q ->
   Qcofix Q ->
   (∀ (a t t' : EAst.term),
-	 Ee.eval Σ a EAst.tBox ->
+	 eval Σ a EAst.tBox ->
      P a EAst.tBox →
-     Ee.eval Σ t t' → P t t' → P' (EAst.tApp a t) EAst.tBox)
+     eval Σ t t' → P t t' → P' (EAst.tApp a t) EAst.tBox)
   → (∀ (f0 : EAst.term) (na : name) (b a a' res : EAst.term),
-       Ee.eval Σ f0 (EAst.tLambda na b)
+       eval Σ f0 (EAst.tLambda na b)
        → P f0 (EAst.tLambda na b)
-         → Ee.eval Σ a a'
+         → eval Σ a a'
            → P a a'
-             → Ee.eval Σ (ECSubst.csubst a' 0 b) res
+             → eval Σ (ECSubst.csubst a' 0 b) res
                → P (ECSubst.csubst a' 0 b) res → P' (EAst.tApp f0 a) res)
     → (∀ (na : name) (b0 b0' b1 res : EAst.term),
-         Ee.eval Σ b0 b0'
+         eval Σ b0 b0'
          → P b0 b0'
-           → Ee.eval Σ (ECSubst.csubst b0' 0 b1) res
+           → eval Σ (ECSubst.csubst b0' 0 b1) res
              → P (ECSubst.csubst b0' 0 b1) res → 
              P' (EAst.tLetIn na b0 b1) res)
       → (∀ (ind : inductive) (pars : nat) (discr : EAst.term) 
@@ -310,45 +320,45 @@ Lemma eval_preserve_mkApps_ind :
                                               list 
                                                 (list name × EAst.term)) 
            (br : list name × EAst.term) (res : EAst.term),
-           Ee.eval Σ discr (EAst.mkApps (EAst.tConstruct ind c) args)
+           eval Σ discr (EAst.mkApps (EAst.tConstruct ind c) args)
            → P discr (EAst.mkApps (EAst.tConstruct ind c) args)
              → inductive_isprop_and_pars Σ ind = Some (false, pars)
                → nth_error brs c = Some br
                  → #|skipn pars args| = #|br.1|
-                   → Ee.eval Σ (iota_red pars args br) res
+                   → eval Σ (iota_red pars args br) res
                      → P (iota_red pars args br) res
                        → P' (EAst.tCase (ind, pars) discr brs) res)
         → (∀ (ind : inductive) (pars : nat) (discr : EAst.term) 
              (brs : list (list name × EAst.term)) 
              (n : list name) (f3 res : EAst.term),
-             Ee.with_prop_case
-             → Ee.eval Σ discr EAst.tBox
+             with_prop_case
+             → eval Σ discr EAst.tBox
                → P discr EAst.tBox
                  → inductive_isprop_and_pars Σ ind = Some (true, pars)
                    → brs = [(n, f3)]
-                     → Ee.eval Σ (ECSubst.substl (repeat EAst.tBox #|n|) f3)
+                     → eval Σ (ECSubst.substl (repeat EAst.tBox #|n|) f3)
                          res
                        → P (ECSubst.substl (repeat EAst.tBox #|n|) f3) res
                          → P' (EAst.tCase (ind, pars) discr brs) res)
           → (∀ (f4 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
                (idx : nat) (argsv : list EAst.term) 
                (a av fn res : EAst.term),
-               Ee.eval Σ f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+               eval Σ f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
                → P f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-                 → Ee.eval Σ a av
+                 → eval Σ a av
                    → P a av
-                     → Ee.cunfold_fix mfix idx = Some (#|argsv|, fn)
-                       → Ee.eval Σ (EAst.tApp (EAst.mkApps fn argsv) av) res
+                     → cunfold_fix mfix idx = Some (#|argsv|, fn)
+                       → eval Σ (EAst.tApp (EAst.mkApps fn argsv) av) res
                          → P (EAst.tApp (EAst.mkApps fn argsv) av) res
                            → P' (EAst.tApp f4 a) res)
             → (∀ (f5 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
                  (idx : nat) (argsv : list EAst.term) 
                  (a av : EAst.term) (narg : nat) (fn : EAst.term),
-                 Ee.eval Σ f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+                 eval Σ f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
                  → P f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-                   → Ee.eval Σ a av
+                   → eval Σ a av
                      → P a av
-                       → Ee.cunfold_fix mfix idx = Some (narg, fn)
+                       → cunfold_fix mfix idx = Some (narg, fn)
                          → #|argsv| < narg
                            → P' (EAst.tApp f5 a)
                                (EAst.tApp
@@ -359,10 +369,10 @@ Lemma eval_preserve_mkApps_ind :
                                                  list 
                                                  (list name × EAst.term)) 
                    (res : EAst.term),
-                   Ee.cunfold_cofix mfix idx = Some (narg, fn)
-                   -> Ee.eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
+                   cunfold_cofix mfix idx = Some (narg, fn)
+                   -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
                    -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                   → Ee.eval Σ (EAst.tCase ip (EAst.mkApps fn args) brs) res
+                   → eval Σ (EAst.tCase ip (EAst.mkApps fn args) brs) res
                      → P (EAst.tCase ip (EAst.mkApps fn args) brs) res
                        → P'
                            (EAst.tCase ip discr brs)
@@ -370,10 +380,10 @@ Lemma eval_preserve_mkApps_ind :
                 → (∀ (p : projection) (mfix : EAst.mfixpoint EAst.term) 
                      (idx : nat) (args : list EAst.term) 
                      (narg : nat) discr (fn res : EAst.term),
-                     Ee.cunfold_cofix mfix idx = Some (narg, fn)
-                     -> Ee.eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
+                     cunfold_cofix mfix idx = Some (narg, fn)
+                     -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
                      -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                     → Ee.eval Σ (EAst.tProj p (EAst.mkApps fn args)) res
+                     → eval Σ (EAst.tProj p (EAst.mkApps fn args)) res
                        → P (EAst.tProj p (EAst.mkApps fn args)) res
                          → P'
                              (EAst.tProj p discr) res)
@@ -382,44 +392,44 @@ Lemma eval_preserve_mkApps_ind :
                        declared_constant Σ c decl
                        → ∀ res : EAst.term,
                            EAst.cst_body decl = Some body
-                           → Ee.eval Σ body res
+                           → eval Σ body res
                              → P body res → P' (EAst.tConst c) res)
                     → (∀ (i : inductive) (pars arg : nat) 
                          (discr : EAst.term) (args : list EAst.term) 
                          (res : EAst.term),
-                         Ee.eval Σ discr
+                         eval Σ discr
                            (EAst.mkApps (EAst.tConstruct i 0) args)
                          → P discr (EAst.mkApps (EAst.tConstruct i 0) args)
                            → inductive_isprop_and_pars Σ i = Some (false, pars)
-                             → Ee.eval Σ (nth (pars + arg) args tDummy) res
+                             → eval Σ (nth (pars + arg) args tDummy) res
                                → P (nth (pars + arg) args tDummy) res
                                  → P' (EAst.tProj (i, pars, arg) discr) res)
                       → (∀ (i : inductive) (pars arg : nat) 
                            (discr : EAst.term),
-                           Ee.with_prop_case
-                           → Ee.eval Σ discr EAst.tBox
+                           with_prop_case
+                           → eval Σ discr EAst.tBox
                              → P discr EAst.tBox
                                → inductive_isprop_and_pars Σ i = Some (true, pars)
                                  → P' (EAst.tProj (i, pars, arg) discr)
                                      EAst.tBox)
                         → (∀ (f11 f' : EAst.term) a a' ,
-                             forall (ev : Ee.eval Σ f11 f'),
+                             forall (ev : eval Σ f11 f'),
                               P f11 f' ->  
-                              (forall t u (ev' : Ee.eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> P t u)
+                              (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> P t u)
                             → ~~
-                                 (EAst.isLambda f' || Ee.isFixApp f'
+                                 (EAst.isLambda f' || isFixApp f'
                                   || isBox f')
-                                 → Ee.eval Σ a a'
+                                 → eval Σ a a'
                                 → P a a'
                           →  P' (EAst.tApp f11 a) (EAst.tApp f' a'))
                                   
-                          → (∀ t : EAst.term, Ee.atom t → P' t t) ->
-  ∀ (t t0 : EAst.term), Q 0 t -> Ee.eval Σ t t0 → P' t t0.
+                          → (∀ t : EAst.term, atom t → P' t t) ->
+  ∀ (t t0 : EAst.term), Q 0 t -> eval Σ t t0 → P' t t0.
 Proof.
   intros * P'Q qconst Qpres Qs qfix qcofix. intros.
-  pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & Ee.eval Σ t t0 }}}).
+  pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2.π2))).
-  set(foo := existT _ t (existT _ t0 (existT _ X13 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & Ee.eval Σ t t0 }}}).
+  set(foo := existT _ t (existT _ t0 (existT _ X13 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
   change H with (projT2 (projT2 foo)).

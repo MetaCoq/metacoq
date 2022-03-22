@@ -18,9 +18,6 @@ From MetaCoq.Template Require Export
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *).
 
-From ReductionEffect Require Import PrintingEffect.
- 
-Open Scope string.
 Open Scope nat.
 Open Scope bs.
 
@@ -51,13 +48,11 @@ Section Eta.
       [ty] -- the term's type;
       [count] -- number of arguments *)
   Definition eta_single (t : Ast.term) (args : list Ast.term) (ty : Ast.term) (count : nat): term :=
-    (* let print := print_id (args, count) in *)
     let needed := count - #|args| in
     let prev_args := map (lift0 needed) args in
     let eta_args := rev_map tRel (seq 0 needed) in
     let remaining := firstn needed (skipn #|args| (rev (smash_context [] (decompose_prod_assum [] ty).1))) in
     let remaining_subst := subst_context (rev args) 0 remaining in 
-    let print := print_id remaining_subst in 
     fold_right (fun d b => Ast.tLambda d.(decl_name) d.(decl_type) b) (mkApps (lift0 needed t) (prev_args ++ eta_args)) remaining_subst.
   
   Definition eta_constructor (ind : inductive) c u args :=
@@ -684,12 +679,6 @@ Proof.
 Admitted.  
  *)
 
-Lemma map_repeat {A B} (f : A -> B) a n : 
-  map f (repeat a n) = repeat (f a) n.
-Proof.
-  induction n; cbn; congruence.
-Qed.
-
 Lemma decompose_type_of_constructor :
   forall cf: config.checker_flags
 , forall Σ0: global_env_ext
@@ -730,14 +719,6 @@ Proof.
       eapply nth_error_Some_length in Enth.
       revert Enth. now len.
     + destruct map_option_out eqn:?; try congruence. eapply IHmfix; eauto.
-Qed.
-
-Lemma map2_length : 
-  forall {A B C : Type} (f : A -> B -> C) (l : list A) (l' : list B), #| map2 f l l'| = min #|l| #|l'|.
-Proof.
-  intros. induction l in l' |- *; cbn.
-  - reflexivity.
-  - destruct l'; cbn in *. lia. rewrite IHl. lia.
 Qed.
 
 From Equations Require Import Equations.

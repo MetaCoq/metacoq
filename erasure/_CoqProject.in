@@ -9,7 +9,7 @@ theories/ESpineView.v
 theories/EPretty.v
 theories/ECSubst.v
 theories/EWcbvEval.v
-theories/EWtAst.v
+# theories/EWtAst.v
 theories/EWndEval.v
 theories/ETyping.v
 theories/EWcbvEvalInd.v

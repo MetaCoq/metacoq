@@ -55,8 +55,9 @@ Variable Σ : global_declarations.
 Local Unset Elimination Schemes.
  
 Inductive expanded (Γ : list nat): term -> Prop :=
-| expanded_tRel (n : nat) : nth_error Γ n = Some 0 -> expanded Γ (tRel n)
 | expanded_tRel_app (n : nat) args m : nth_error Γ n = Some m -> forall Hle : m <= #|args|, Forall (expanded Γ) args -> expanded Γ (mkApps (tRel n) args)
+| expanded_tVar (id : ident) : expanded Γ (tVar id)
+| expanded_tEvar (ev : nat) (args : list term) : Forall (expanded Γ) args -> expanded Γ (tEvar ev args)
 | expanded_tLambda (na : name) (body : term) : (* expanded Γ ty -> *) expanded (0 :: Γ) body -> expanded Γ (tLambda na body)
 | expanded_tLetIn (na : name) (def : term) (body : term) : expanded Γ def (* -> expanded Γ def_ty *) -> expanded (0 :: Γ) body -> expanded Γ (tLetIn na def body)
 | expanded_mkApps (f : term) (args : list term) : negb (isConstruct f || isFix f || isRel f) -> expanded Γ f -> Forall (expanded Γ) args -> expanded Γ (mkApps f args)
@@ -89,13 +90,14 @@ End expanded.
 
 Lemma expanded_ind :
   ∀ (Σ : global_declarations) (P : list nat → term → Prop),
-    (∀ (Γ : list nat) (n : nat), nth_error Γ n = Some 0 → P Γ (tRel n))
-    → (∀ (Γ : list nat) (n : nat) (args : list term) (m : nat),
+     (∀ (Γ : list nat) (n : nat) (args : list term) (m : nat),
          nth_error Γ n = Some m ->
           (m ≤ #|args|) ->
 	        Forall (expanded Σ Γ) args
         → Forall (P Γ) args 
-        → P Γ (mkApps (tRel n) args))
+        → P Γ (mkApps (tRel n) args)) →
+    (forall id : ident, forall Γ, P Γ (tVar id)) →
+    (forall (ev : nat) (args : list term) Γ, Forall (expanded Σ Γ) args → Forall (P Γ) args → P Γ (tEvar ev args)) 
     → (∀ (Γ : list nat) (na : name) (body : term),
           expanded Σ (0 :: Γ) body → P (0 :: Γ) body → P Γ (tLambda na body))
     → (∀ (Γ : list nat) (na : name) (def body : term),
@@ -161,10 +163,11 @@ Lemma expanded_ind :
     → (∀ Γ : list nat, P Γ tBox)
     → ∀ (Γ : list nat) (t : term), expanded Σ Γ t → P Γ t.
 Proof.
-  intros Σ P HRel HRel_app HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HBox.
+  intros Σ P HRel_app HVar HEvar HLamdba HLetIn HmkApps HConst HCase HProj HFix HCoFix HConstruct HBox.
   fix f 3.
   intros Γ t Hexp.  destruct Hexp; eauto.
   - eapply HRel_app; eauto. clear - f H0. induction H0; econstructor; eauto.
+  - eapply HEvar; eauto. clear - f H. induction H; econstructor; eauto.
   - eapply HmkApps; eauto. clear - f H0. induction H0; econstructor; eauto.
   - eapply HCase; eauto. induction H; econstructor; eauto.
   - assert (Forall (P Γ) args). { clear - H0 f. induction H0; econstructor; eauto. }
@@ -194,7 +197,6 @@ Lemma expanded_closed Σ Γ t :
 Proof.
   induction 1; cbn; eauto.
   all: try now (rewrite ?closedn_mkApps; rtoProp; repeat solve_all).
-  - eapply nth_error_Some_length in H. now eapply Nat.ltb_lt.
   - rewrite closedn_mkApps. rtoProp. split. cbn.
     + eapply nth_error_Some_length in H. now eapply Nat.ltb_lt.
     + solve_all.
@@ -442,12 +444,35 @@ Section isEtaExp.
 
   Hint Rewrite repeat_length : len.
 
-  Lemma expanded_lift Γ' Γ'' Γ t :
+  Lemma nth_error_app_Some {X} (A B : list X) n x : 
+    nth_error A n = Some x -> nth_error (A ++ B) n = Some x.
+  Proof.
+    induction n in A |- *; destruct A; cbn; try congruence.
+    eauto.
+  Qed.
+
+  Lemma expanded_weakening Γ' Γ t :
+    isEtaExp Γ t ->
+    isEtaExp (Γ ++ Γ') t.
+  Proof.
+    funelim (isEtaExp Γ t); simp_eta; eauto; intros Hexp; toAll; solve_all; rtoProp; repeat solve_all; eauto.
+    - destruct nth_error eqn:E; try easy. erewrite nth_error_app_Some; eauto.
+    - rewrite app_assoc. eapply a, b. reflexivity.
+    - rewrite app_assoc. eapply a, b. reflexivity.
+    - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
+    - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
+      rewrite app_assoc. eapply a, b. reflexivity.
+    - rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc]. rtoProp; repeat solve_all.
+      destruct nth_error eqn:E; try easy. erewrite nth_error_app_Some; eauto.
+    - rewrite isEtaExp_mkApps => //. rewrite Heq. rtoProp; repeat solve_all.
+  Qed.
+
+(*   Lemma expanded_lift Γ' Γ'' Γ t :
     isEtaExp (Γ' ++ Γ)%list t ->
     isEtaExp (Γ' ++ Γ'' ++ Γ)%list (lift #|Γ''| #|Γ'| t).
   Proof.
   Admitted.
-
+ *)
   Lemma isEtaExp_closed Γ t : 
     isEtaExp Γ t -> closedn #|Γ| t.
   Proof.
@@ -473,10 +498,7 @@ Section isEtaExp.
     funelim (isEtaExp Γ_ b); try simp_eta; eauto; try fold csubst;
       try toAll; repeat solve_all; subst.
     - intros. simp isEtaExp ; cbn. destruct (Nat.compare_spec #|Γ0| i) => //; simp_eta.
-      + setoid_rewrite <- lift_closed.
-        rewrite <- (app_nil_r (Γ0 ++ Δ)).
-        eapply expanded_lift with(Γ' := []); eassumption. 
-        eassumption.
+      + eapply expanded_weakening with (Γ := []). eauto.
       + rewrite nth_error_app2. lia.
         rewrite !nth_error_app2 in H0. lia. cbn. lia.
         erewrite option_default_ext; eauto.
@@ -508,10 +530,7 @@ Section isEtaExp.
       + solve_all.
     - rewrite csubst_mkApps /=. rtoProp. destruct (Nat.compare_spec #|Γ0| n) => //; simp_eta.
       + eapply isEtaExp_mkApps_intro => //. 2: solve_all.
-        setoid_rewrite <- lift_closed.
-        rewrite <- (app_nil_r (Γ0 ++ Δ)).
-        eapply expanded_lift with(Γ' := []); eassumption. 
-        eassumption.
+        now eapply expanded_weakening with (Γ := []).
       + rewrite isEtaExp_mkApps; eauto. cbn [expanded_head_viewc].
         rtoProp. split. 2: solve_all.
         rewrite !nth_error_app2 in H1 |- *; cbn; try lia.
@@ -592,11 +611,8 @@ Section isEtaExp.
           subst. rewrite nth_error_app2 in Hn; try lia.
           rewrite minus_diag in Hn. cbn in Hn. eapply Nat.ltb_lt.
           eapply Nat.leb_le in Hn. lia.        
-        * cbn in Hcl. solve_all. 
-          setoid_rewrite <- lift_closed.
-          rewrite <- (app_nil_r (Γ0 ++ Δ)). 
-          eapply expanded_lift. now rewrite app_nil_r.
-          eapply closed_upwards. eassumption. now len.
+        * cbn in Hcl. solve_all.
+          now eapply expanded_weakening.
         * destruct H2. solve_all. eapply a ;eauto. solve_all.          
       + rewrite isEtaExp_mkApps; eauto. cbn [expanded_head_viewc].
         rtoProp. intros. destruct H2. split. 2:{ solve_all. eapply a; eauto. solve_all. }
@@ -829,10 +845,8 @@ Lemma isEtaExp_expanded Σ Γ t :
   isEtaExp Σ Γ t -> expanded Σ Γ t.
 Proof.
   funelim (isEtaExp Σ Γ t); intros; solve_all; eauto.
-  - econstructor. destruct (nth_error); invs H. f_equal. eapply Nat.eqb_eq in H1; eauto.
-  - todo "tVar".
-  - rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. eapply In_All in H.
-    todo "tEvar".
+  - eapply expanded_tRel_app with (args := []). destruct (nth_error); invs H. f_equal. eapply Nat.eqb_eq in H1; eauto. cbn. lia. econstructor.
+  - rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. eapply In_All in H. econstructor. solve_all.
   - eapply andb_true_iff in H1 as []; eauto.
   - eapply isEtaExp_app_expanded in H as (? & ? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app with (args := []); eauto.
@@ -870,7 +884,6 @@ Proof.
     (try (eapply andb_true_iff; split; eauto));
     (try eapply forallb_Forall); 
     eauto).
-  - rewrite H. eapply Nat.eqb_eq; eauto.
   - rewrite isEtaExp_mkApps //. cbn [expanded_head_viewc].
     rtoProp. split. 2: solve_all. rewrite H.  now eapply Nat.leb_le.
   - eapply isEtaExp_mkApps_intro; eauto. solve_all. 

@@ -1136,7 +1136,14 @@ Qed.
 Lemma size_final {wfl : WcbvFlags} Σ t v :
   forall He : eval Σ t v, ∑ He' : eval Σ v v, eval_depth He' <= eval_depth He.
 Proof.
-Admitted.
+  intros He. induction He.
+  all: try now unshelve eexists; eauto; [ eapply IHHe | cbn; destruct IHHe; lia ].
+  all: try now unshelve eexists; eauto; [ eapply IHHe2 | cbn; destruct IHHe2; lia ].
+  all: try now unshelve eexists; eauto; [ eapply IHHe3 | cbn; destruct IHHe3; lia ].
+  all: try now unshelve eexists; eauto; cbn; lia.
+  - unshelve eexists; eauto. eapply eval_fix_value; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
+  - unshelve eexists. eapply eval_app_cong; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
+Qed.
 
 Lemma eval_mkApps_tFix_inv_unguarded {wfl : WcbvFlags} Σ mfix idx args v :
   with_guarded_fix = false ->
@@ -1392,7 +1399,7 @@ Proof.
         specialize eval_mkApps_tFix_inv_unguarded with (Heval := H); intros Hinv; destruct Hinv as [[Heq Heq'] | (a_ & args' & argsv & Heq & Hall & n & fn & Hunf & Hev & Hsz)]; eauto; try congruence.
         eapply IHeval3. eapply etaExp_csubst.
         
-        eapply IHeval2. rewrite H3. eapply Forall_last. eauto. solve_all.
+        eapply IHeval2. rewrite H3. eapply Forall_last. eauto. solve_all. 
         assert (isEtaExp Σ [] (mkApps (tApp fn a_) argsv) -> isEtaExp Σ []  (EAst.tLambda na b)) as IH. {
          unshelve eapply IHs; eauto.
         }

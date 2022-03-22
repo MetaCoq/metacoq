@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
      
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps EExtends
-    ErasureFunction ELiftSubst.
+    ErasureFunction ELiftSubst ECSubst EWcbvEval.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -292,6 +292,8 @@ Proof.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?. subst => //.
+  - rewrite is_box_tApp. move/IHev1 => ?. subst. cbn in i.
+    destruct EWcbvEval.with_guarded_fix => //.
   - destruct t => //.
 Qed. 
 
@@ -381,7 +383,7 @@ Lemma closed_iota_red pars c args brs br :
 Proof.
   intros clargs hnth hskip clbr.
   rewrite /iota_red.
-  eapply closed_substl => //.
+  eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
   now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
@@ -393,7 +395,7 @@ Lemma optimize_correct Σ t v :
   @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ) (optimize Σ t) (optimize Σ v).
 Proof.
   intros clΣ ev.
-  induction ev; simpl in *; try solve [econstructor; eauto].
+  induction ev; simpl in *.
 
   - move/andP => [] cla clt. econstructor; eauto.
   - move/andP => [] clf cla.
@@ -451,10 +453,12 @@ Proof.
     move: ev1 => /andP [] clfix clargs.
     eapply eval_closed in ev2; tas.
     rewrite optimize_mkApps in IHev1 |- *.
-    simpl in *. eapply Ee.eval_fix_value. auto. auto.
+    simpl in *. eapply Ee.eval_fix_value. auto. auto. auto.
     eapply optimize_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
     now rewrite map_length. 
+  
+  - discriminate.
 
   - move/andP => [] cd clbrs. specialize (IHev1 cd).
     rewrite closedn_mkApps in IHev2.
@@ -521,8 +525,7 @@ Proof.
     destruct ev1; simpl in *; eauto.
     * destruct t => //; rewrite optimize_mkApps /=.
     * destruct t => /= //; rewrite optimize_mkApps /=;
-      rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) 
-        // (negbTE (isFixApp_mkApps _ _ _)) //.
+      rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) // /=; rewrite isFixApp_mkApps //.
     * destruct f0 => //.
       rewrite optimize_mkApps /=.
       unfold Ee.isFixApp in i.

@@ -1798,7 +1798,7 @@ Lemma eta_expand_erase {Σ : wf_env_ext} Σ' {Γ t}
   (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> welltyped Σ0 Γ t) :
   PCUICEtaExpand.expanded Σ t ->
   erases_global Σ Σ' ->
-  expanded Σ' (@erase Σ Γ t wt).
+  expanded Σ' [] (@erase Σ Γ t wt).
 Proof.
   pose proof (referenced_impl_ext_wf Σ) as [wf]. 
   intros exp deps.

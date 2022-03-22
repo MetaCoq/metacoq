@@ -11,9 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 From MetaCoq.Template Require Import config utils BasicAst Universes.
 From MetaCoq.Erasure Require Import EAst ETyping EAstUtils.
-
-
-From MetaCoq.Erasure Require Import EWcbvEval.
+From MetaCoq.Erasure Require Import EWcbvEval EWcbvEvalInd.
 
 Lemma eval_trans' {wfl : WcbvFlags} {Σ e e' e''} :
   eval Σ e e' -> eval Σ e' e'' -> e' = e''.
@@ -1020,10 +1018,10 @@ Proof.
   - move=> _; rewrite /declared_constant /lookup_env /= //.
   - move=> /andP[] etaa etaΣ.
     destruct a as [kn' d']; cbn in *.
-    rewrite /declared_constant /=; rewrite /eq_kername; destruct kername_eq_dec.
-    * subst kn'. move=> [=]. intros ->.
+    elim: eqb_specT.
+    * intros ?; subst kn'. move=> [=]. intros ->.
       exists Σ. split => //. now exists [(kn, d)].
-    * move=> Hl. destruct (IHΣ etaΣ Hl) as [Σ' [ext eta]].
+    * intros hkn; move=> Hl. destruct (IHΣ etaΣ Hl) as [Σ' [ext eta]].
       exists Σ'; split => //.
       destruct ext as [Σ'' ->].
       now exists ((kn', d')::Σ'').
@@ -1294,6 +1292,8 @@ Proof.
       unfold isEtaExp_fixapp,  cunfold_fix in *.
       destruct nth_error; try easy.
       invs H5. eapply Nat.ltb_lt. lia.
+  * todo "foo".
+  * todo "bar".
   }
   1:{ move/isEtaExp_tApp'.
       destruct decompose_app eqn:da.
@@ -1404,10 +1404,9 @@ intros H. depind H; intros Hexp; eauto.
 - todo "const".
 - todo "proj".
 - todo "proj".
-- eapply eval_app_cong.
+- eapply eval_app_cong => //.
   + eapply IHeval1. todo "exp".
-  + eapply IHeval2. todo "exp".
   + destruct f'; cbn in *; eauto.
-
+  + eapply IHeval2. todo "exp".
 Qed.
  

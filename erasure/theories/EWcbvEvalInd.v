@@ -16,16 +16,16 @@ Definition and_assum {A B : Type} (f : A) (f' : A -> B) : A × B :=
   (f, f' f).
 
 
-Definition atomic_term (t : EAst.term) :=
+Definition atomic_term (t : term) :=
   match t with
-  | EAst.tBox | EAst.tConstruct _ _ | EAst.tConst _ | EAst.tRel _ | EAst.tVar _ => true
+  | tBox | tConstruct _ _ | tConst _ | tRel _ | tVar _ => true
   | _ => false
   end.
   
 Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
 Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
   
-Fixpoint eval_depth {wfl : WcbvFlags} {Σ : EAst.global_declarations} {t1 t2 : EAst.term} (ev : eval Σ t1 t2) { struct ev } : nat.
+Fixpoint eval_depth {wfl : WcbvFlags} {Σ : global_declarations} {t1 t2 : term} (ev : eval Σ t1 t2) { struct ev } : nat.
 Proof.
   rename eval_depth into aux.
   destruct ev.
@@ -62,74 +62,74 @@ Proof.
 Qed.
   
 Lemma eval_mkApps_rect :
-∀ (wfl : WcbvFlags) (Σ : EAst.global_declarations) 
-  (P : EAst.term → EAst.term → Type),
-  (∀ a t t' : EAst.term,
-	 eval Σ a EAst.tBox
-     → P a EAst.tBox → eval Σ t t' → P t t' → P (EAst.tApp a t) EAst.tBox)
-  → (∀ (f0 : EAst.term) (na : BasicAst.name) (b a a' res : EAst.term),
-       eval Σ f0 (EAst.tLambda na b)
-       → P f0 (EAst.tLambda na b)
+∀ (wfl : WcbvFlags) (Σ : global_declarations) 
+  (P : term → term → Type),
+  (∀ a t t' : term,
+	 eval Σ a tBox
+     → P a tBox → eval Σ t t' → P t t' → P (tApp a t) tBox)
+  → (∀ (f0 : term) (na : BasicAst.name) (b a a' res : term),
+       eval Σ f0 (tLambda na b)
+       → P f0 (tLambda na b)
          → eval Σ a a'
            → P a a'
              → eval Σ (ECSubst.csubst a' 0 b) res
-               → P (ECSubst.csubst a' 0 b) res → P (EAst.tApp f0 a) res)
-    → (∀ (na : BasicAst.name) (b0 b0' b1 res : EAst.term),
+               → P (ECSubst.csubst a' 0 b) res → P (tApp f0 a) res)
+    → (∀ (na : BasicAst.name) (b0 b0' b1 res : term),
          eval Σ b0 b0'
          → P b0 b0'
            → eval Σ (ECSubst.csubst b0' 0 b1) res
-             → P (ECSubst.csubst b0' 0 b1) res → P (EAst.tLetIn na b0 b1) res)
-      → (∀ (ind : Kernames.inductive) (pars : nat) (discr : EAst.term) 
-           (c : nat) (args : list EAst.term) (brs : 
+             → P (ECSubst.csubst b0' 0 b1) res → P (tLetIn na b0 b1) res)
+      → (∀ (ind : Kernames.inductive) (pars : nat) (discr : term) 
+           (c : nat) (args : list term) (brs : 
                                               list 
-                                                (list BasicAst.name × EAst.term)) 
-           (br : list BasicAst.name × EAst.term) (res : EAst.term),
-           eval Σ discr (EAst.mkApps (EAst.tConstruct ind c) args)
-           → P discr (EAst.mkApps (EAst.tConstruct ind c) args)
+                                                (list BasicAst.name × term)) 
+           (br : list BasicAst.name × term) (res : term),
+           eval Σ discr (mkApps (tConstruct ind c) args)
+           → P discr (mkApps (tConstruct ind c) args)
              → inductive_isprop_and_pars Σ ind = Some (false, pars)
                → nth_error brs c = Some br
                  → #|skipn pars args| = #|br.1|
                    → eval Σ (iota_red pars args br) res
                      → P (iota_red pars args br) res
-                       → P (EAst.tCase (ind, pars) discr brs) res)
-        → (∀ (ind : Kernames.inductive) (pars : nat) (discr : EAst.term) 
-             (brs : list (list BasicAst.name × EAst.term)) 
-             (n : list BasicAst.name) (f3 res : EAst.term),
+                       → P (tCase (ind, pars) discr brs) res)
+        → (∀ (ind : Kernames.inductive) (pars : nat) (discr : term) 
+             (brs : list (list BasicAst.name × term)) 
+             (n : list BasicAst.name) (f3 res : term),
              with_prop_case
-             → eval Σ discr EAst.tBox
-               → P discr EAst.tBox
+             → eval Σ discr tBox
+               → P discr tBox
                  → inductive_isprop_and_pars Σ ind = Some (true, pars)
                    → brs = [(n, f3)]
-                     → eval Σ (ECSubst.substl (repeat EAst.tBox #|n|) f3)
+                     → eval Σ (ECSubst.substl (repeat tBox #|n|) f3)
                          res
-                       → P (ECSubst.substl (repeat EAst.tBox #|n|) f3) res
-                         → P (EAst.tCase (ind, pars) discr brs) res)
-          → (∀ (f4 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
-               (idx : nat) (argsv : list EAst.term) 
-               (a av fn res : EAst.term),
+                       → P (ECSubst.substl (repeat tBox #|n|) f3) res
+                         → P (tCase (ind, pars) discr brs) res)
+          → (∀ (f4 : term) (mfix : mfixpoint term) 
+               (idx : nat) (argsv : list term) 
+               (a av fn res : term),
                forall guarded : with_guarded_fix,
-               eval Σ f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-               → P f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+               eval Σ f4 (mkApps (tFix mfix idx) argsv)
+               → P f4 (mkApps (tFix mfix idx) argsv)
                  → eval Σ a av
                    → P a av
                      → cunfold_fix mfix idx = Some (#|argsv|, fn)
-                       → eval Σ (EAst.tApp (EAst.mkApps fn argsv) av) res
-                         → P (EAst.tApp (EAst.mkApps fn argsv) av) res
-                           → P (EAst.tApp f4 a) res)
-            → (∀ (f5 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
-                 (idx : nat) (argsv : list EAst.term) 
-                 (a av : EAst.term) (narg : nat) (fn : EAst.term),
+                       → eval Σ (tApp (mkApps fn argsv) av) res
+                         → P (tApp (mkApps fn argsv) av) res
+                           → P (tApp f4 a) res)
+            → (∀ (f5 : term) (mfix : mfixpoint term) 
+                 (idx : nat) (argsv : list term) 
+                 (a av : term) (narg : nat) (fn : term),
                  forall guarded : with_guarded_fix,
-                 eval Σ f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-                 → P f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+                 eval Σ f5 (mkApps (tFix mfix idx) argsv)
+                 → P f5 (mkApps (tFix mfix idx) argsv)
                    → eval Σ a av
                      → P a av
                        → cunfold_fix mfix idx = Some (narg, fn)
                          → #|argsv| < narg
-                           → P (EAst.tApp f5 a)
-                               (EAst.tApp
-                                  (EAst.mkApps (EAst.tFix mfix idx) argsv) av))
-            → (∀ (f6 : term) (mfix : EAst.mfixpoint term) 
+                           → P (tApp f5 a)
+                               (tApp
+                                  (mkApps (tFix mfix idx) argsv) av))
+            → (∀ (f6 : term) (mfix : mfixpoint term) 
                    (idx : nat) (a fn res : term) (narg : nat) 
                    (unguarded : with_guarded_fix = false) 
                    (e : eval Σ f6 (tFix mfix idx)),
@@ -138,68 +138,68 @@ Lemma eval_mkApps_rect :
                        (e1 : eval Σ (tApp fn a) res),
                        P (tApp fn a) res
                        → P (tApp f6 a) res)
-              → (∀ (ip : Kernames.inductive × nat) (mfix : EAst.mfixpoint EAst.term) 
-                   (idx : nat) (args : list EAst.term) 
-                   (narg : nat) discr (fn : EAst.term) (brs : 
+              → (∀ (ip : Kernames.inductive × nat) (mfix : mfixpoint term) 
+                   (idx : nat) (args : list term) 
+                   (narg : nat) discr (fn : term) (brs : 
                                                  list 
-                                                 (list BasicAst.name × EAst.term)) 
-                   (res : EAst.term),
+                                                 (list BasicAst.name × term)) 
+                   (res : term),
                    cunfold_cofix mfix idx = Some (narg, fn)
-                   -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                   -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                   → eval Σ (EAst.tCase ip (EAst.mkApps fn args) brs) res
-                     → P (EAst.tCase ip (EAst.mkApps fn args) brs) res
+                   -> eval Σ discr (mkApps (tCoFix mfix idx) args)
+                   -> P discr (mkApps (tCoFix mfix idx) args)
+                   → eval Σ (tCase ip (mkApps fn args) brs) res
+                     → P (tCase ip (mkApps fn args) brs) res
                        → P
-                           (EAst.tCase ip discr brs)
+                           (tCase ip discr brs)
                            res)
-                → (∀ (p : Kernames.projection) (mfix : EAst.mfixpoint EAst.term) 
-                     (idx : nat) (args : list EAst.term) 
-                     (narg : nat) discr (fn res : EAst.term),
+                → (∀ (p : Kernames.projection) (mfix : mfixpoint term) 
+                     (idx : nat) (args : list term) 
+                     (narg : nat) discr (fn res : term),
                      cunfold_cofix mfix idx = Some (narg, fn)
-                     -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                     -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                     → eval Σ (EAst.tProj p (EAst.mkApps fn args)) res
-                       → P (EAst.tProj p (EAst.mkApps fn args)) res
+                     -> eval Σ discr (mkApps (tCoFix mfix idx) args)
+                     -> P discr (mkApps (tCoFix mfix idx) args)
+                     → eval Σ (tProj p (mkApps fn args)) res
+                       → P (tProj p (mkApps fn args)) res
                          → P
-                             (EAst.tProj p discr) res)
-                  → (∀ (c : Kernames.kername) (decl : EAst.constant_body) 
-                       (body : EAst.term),
+                             (tProj p discr) res)
+                  → (∀ (c : Kernames.kername) (decl : constant_body) 
+                       (body : term),
                        declared_constant Σ c decl
-                       → ∀ res : EAst.term,
-                           EAst.cst_body decl = Some body
+                       → ∀ res : term,
+                           cst_body decl = Some body
                            → eval Σ body res
-                             → P body res → P (EAst.tConst c) res)
+                             → P body res → P (tConst c) res)
                     → (∀ (i : inductive) (pars arg : nat) 
-                         (discr : EAst.term) (args : list EAst.term) 
-                         (res : EAst.term),
+                         (discr : term) (args : list term) 
+                         (res : term),
                          eval Σ discr
-                           (EAst.mkApps (EAst.tConstruct i 0) args)
-                         → P discr (EAst.mkApps (EAst.tConstruct i 0) args)
+                           (mkApps (tConstruct i 0) args)
+                         → P discr (mkApps (tConstruct i 0) args)
                            → inductive_isprop_and_pars Σ i = Some (false, pars)
                              → eval Σ (nth (pars + arg) args tDummy) res
                                → P (nth (pars + arg) args tDummy) res
-                                 → P (EAst.tProj (i, pars, arg) discr) res)
+                                 → P (tProj (i, pars, arg) discr) res)
                       → (∀ (i : inductive) (pars arg : nat) 
-                           (discr : EAst.term),
+                           (discr : term),
                            with_prop_case
-                           → eval Σ discr EAst.tBox
-                             → P discr EAst.tBox
+                           → eval Σ discr tBox
+                             → P discr tBox
                                → inductive_isprop_and_pars Σ i = Some (true, pars)
-                                 → P (EAst.tProj (i, pars, arg) discr)
-                                     EAst.tBox)
-                        → (∀ (f11 f' : EAst.term) a a' ,
+                                 → P (tProj (i, pars, arg) discr)
+                                     tBox)
+                        → (∀ (f11 f' : term) a a' ,
                              forall (ev : eval Σ f11 f'),
                               P f11 f' ->
                               (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u)
                             → ~~
-                                 (EAst.isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f')
+                                 (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f')
                                   || isBox f')
                                  → eval Σ a a'
                                 → P a a'
-                          →  P (EAst.tApp f11 a) (EAst.tApp f' a'))
+                          →  P (tApp f11 a) (tApp f' a'))
                                   
-                          → (∀ t : EAst.term, atom t → P t t)
-                            → ∀ t t0 : EAst.term, eval Σ t t0 → P t t0.
+                          → (∀ t : term, atom t → P t t)
+                            → ∀ t t0 : term, eval Σ t t0 → P t t0.
 Proof.
   intros.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & eval Σ t t0 }}).
@@ -232,7 +232,7 @@ Qed.
 
 Section OnSubterm.
 
-  Inductive on_subterms (Q : nat -> EAst.term -> Type) (n : nat) : EAst.term -> Type :=
+  Inductive on_subterms (Q : nat -> term -> Type) (n : nat) : term -> Type :=
   | on_atom t : atomic_term t -> on_subterms Q n t
   | on_evar k l : All (Q n) l -> on_subterms Q n (tEvar k l)
   | on_lambda na t : Q (S n) t -> on_subterms Q n (tLambda na t)
@@ -245,7 +245,7 @@ Section OnSubterm.
   | on_cofix mfix idx : All (fun d => Q (#|mfix| + n) d.(dbody)) mfix -> on_subterms Q n (tCoFix mfix idx).
   Derive Signature for on_subterms.
 
-  Definition Qpres (Q : nat -> EAst.term -> Type) := 
+  Definition Qpres (Q : nat -> term -> Type) := 
     forall n t, Q n t <~> OnSubterm.on_subterms Q n t.
   
   Lemma on_subterms_mkApps Q n f args : Qpres Q -> Q n (mkApps f args) <~> Q n f × All (Q n) args.
@@ -267,30 +267,30 @@ Section OnSubterm.
     
 End OnSubterm.
 
-Definition Qsubst (Q : nat -> EAst.term -> Type) :=
+Definition Qsubst (Q : nat -> term -> Type) :=
   forall n t l, Q (#|l| + n) t -> All (Q n) l -> Q n (substl l t).
 
-Definition Qfix (Q : nat -> EAst.term -> Type) :=
-  forall n mfix idx, Q n (EAst.tFix mfix idx) -> 
+Definition Qfix (Q : nat -> term -> Type) :=
+  forall n mfix idx, Q n (tFix mfix idx) -> 
     forall args fn, cunfold_fix mfix idx = Some (args, fn) ->
     Q n fn.
 
-Definition Qcofix (Q : nat -> EAst.term -> Type) :=
-  forall n mfix idx, Q n (EAst.tCoFix mfix idx) -> 
+Definition Qcofix (Q : nat -> term -> Type) :=
+  forall n mfix idx, Q n (tCoFix mfix idx) -> 
     forall args fn, cunfold_cofix mfix idx = Some (args, fn) ->
     Q n fn.
       
-Definition Qconst Σ (Q : nat -> EAst.term -> Type) :=
+Definition Qconst Σ (Q : nat -> term -> Type) :=
   ∀ kn decl, declared_constant Σ kn decl → 
-    match EAst.cst_body decl with
+    match cst_body decl with
     | None => unit
     | Some b => Q 0 b
     end.
 
 Lemma eval_preserve_mkApps_ind :
-∀ (wfl : WcbvFlags) (Σ : EAst.global_declarations) 
-  (P' : EAst.term → EAst.term → Type)
-  (Q : nat -> EAst.term -> Type)
+∀ (wfl : WcbvFlags) (Σ : global_declarations) 
+  (P' : term → term → Type)
+  (Q : nat -> term -> Type)
   (P := (fun x y => P' x y × Q 0 x × Q 0 y)%type)
   (HPQ : ∀ t u, eval Σ t u -> Q 0 t -> P' t u -> Q 0 u),
   Qconst Σ Q ->
@@ -298,138 +298,149 @@ Lemma eval_preserve_mkApps_ind :
   Qsubst Q ->
   Qfix Q ->
   Qcofix Q ->
-  (∀ (a t t' : EAst.term),
-	 eval Σ a EAst.tBox ->
-     P a EAst.tBox →
-     eval Σ t t' → P t t' → P' (EAst.tApp a t) EAst.tBox)
-  → (∀ (f0 : EAst.term) (na : name) (b a a' res : EAst.term),
-       eval Σ f0 (EAst.tLambda na b)
-       → P f0 (EAst.tLambda na b)
+  (∀ (a t t' : term),
+	 eval Σ a tBox ->
+     P a tBox →
+     eval Σ t t' → P t t' → P' (tApp a t) tBox) → 
+  (∀ (f0 : term) (na : name) (b a a' res : term),
+      eval Σ f0 (tLambda na b) → 
+      P f0 (tLambda na b)
          → eval Σ a a'
            → P a a'
              → eval Σ (ECSubst.csubst a' 0 b) res
-               → P (ECSubst.csubst a' 0 b) res → P' (EAst.tApp f0 a) res)
-    → (∀ (na : name) (b0 b0' b1 res : EAst.term),
+          → P (ECSubst.csubst a' 0 b) res → P' (tApp f0 a) res)
+    → (∀ (na : name) (b0 b0' b1 res : term),
          eval Σ b0 b0'
          → P b0 b0'
            → eval Σ (ECSubst.csubst b0' 0 b1) res
              → P (ECSubst.csubst b0' 0 b1) res → 
-             P' (EAst.tLetIn na b0 b1) res)
-      → (∀ (ind : inductive) (pars : nat) (discr : EAst.term) 
-           (c : nat) (args : list EAst.term) (brs : 
+             P' (tLetIn na b0 b1) res)
+      → (∀ (ind : inductive) (pars : nat) (discr : term) 
+           (c : nat) (args : list term) (brs : 
                                               list 
-                                                (list name × EAst.term)) 
-           (br : list name × EAst.term) (res : EAst.term),
-           eval Σ discr (EAst.mkApps (EAst.tConstruct ind c) args)
-           → P discr (EAst.mkApps (EAst.tConstruct ind c) args)
+                                                (list name × term)) 
+           (br : list name × term) (res : term),
+           eval Σ discr (mkApps (tConstruct ind c) args)
+           → P discr (mkApps (tConstruct ind c) args)
              → inductive_isprop_and_pars Σ ind = Some (false, pars)
                → nth_error brs c = Some br
                  → #|skipn pars args| = #|br.1|
                    → eval Σ (iota_red pars args br) res
                      → P (iota_red pars args br) res
-                       → P' (EAst.tCase (ind, pars) discr brs) res)
-        → (∀ (ind : inductive) (pars : nat) (discr : EAst.term) 
-             (brs : list (list name × EAst.term)) 
-             (n : list name) (f3 res : EAst.term),
+                       → P' (tCase (ind, pars) discr brs) res)
+        → (∀ (ind : inductive) (pars : nat) (discr : term) 
+             (brs : list (list name × term)) 
+             (n : list name) (f3 res : term),
              with_prop_case
-             → eval Σ discr EAst.tBox
-               → P discr EAst.tBox
+             → eval Σ discr tBox
+               → P discr tBox
                  → inductive_isprop_and_pars Σ ind = Some (true, pars)
                    → brs = [(n, f3)]
-                     → eval Σ (ECSubst.substl (repeat EAst.tBox #|n|) f3)
+                     → eval Σ (ECSubst.substl (repeat tBox #|n|) f3)
                          res
-                       → P (ECSubst.substl (repeat EAst.tBox #|n|) f3) res
-                         → P' (EAst.tCase (ind, pars) discr brs) res)
-          → (∀ (f4 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
-               (idx : nat) (argsv : list EAst.term) 
-               (a av fn res : EAst.term),
-               eval Σ f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-               → P f4 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+                       → P (ECSubst.substl (repeat tBox #|n|) f3) res
+                         → P' (tCase (ind, pars) discr brs) res)
+          → (∀ (f4 : term) (mfix : mfixpoint term) 
+               (idx : nat) (argsv : list term) 
+               (a av fn res : term),
+               with_guarded_fix ->
+               eval Σ f4 (mkApps (tFix mfix idx) argsv)
+               → P f4 (mkApps (tFix mfix idx) argsv)
                  → eval Σ a av
                    → P a av
                      → cunfold_fix mfix idx = Some (#|argsv|, fn)
-                       → eval Σ (EAst.tApp (EAst.mkApps fn argsv) av) res
-                         → P (EAst.tApp (EAst.mkApps fn argsv) av) res
-                           → P' (EAst.tApp f4 a) res)
-            → (∀ (f5 : EAst.term) (mfix : EAst.mfixpoint EAst.term) 
-                 (idx : nat) (argsv : list EAst.term) 
-                 (a av : EAst.term) (narg : nat) (fn : EAst.term),
-                 eval Σ f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
-                 → P f5 (EAst.mkApps (EAst.tFix mfix idx) argsv)
+                       → eval Σ (tApp (mkApps fn argsv) av) res
+                         → P (tApp (mkApps fn argsv) av) res
+                           → P' (tApp f4 a) res)
+            → (∀ (f5 : term) (mfix : mfixpoint term) 
+                 (idx : nat) (argsv : list term) 
+                 (a av : term) (narg : nat) (fn : term),
+                 with_guarded_fix ->
+                 eval Σ f5 (mkApps (tFix mfix idx) argsv)
+                 → P f5 (mkApps (tFix mfix idx) argsv)
                    → eval Σ a av
                      → P a av
                        → cunfold_fix mfix idx = Some (narg, fn)
                          → #|argsv| < narg
-                           → P' (EAst.tApp f5 a)
-                               (EAst.tApp
-                                  (EAst.mkApps (EAst.tFix mfix idx) argsv) av))
-              → (∀ (ip : inductive × nat) (mfix : EAst.mfixpoint EAst.term) 
-                   (idx : nat) (args : list EAst.term) 
-                   (narg : nat) discr (fn : EAst.term) (brs : 
+                           → P' (tApp f5 a)
+                               (tApp
+                                  (mkApps (tFix mfix idx) argsv) av))
+            → (∀ (f5 : term) (mfix : mfixpoint term) 
+            (idx : nat) (a av : term) (narg : nat) (fn : term) res,
+            with_guarded_fix = false ->
+            eval Σ f5 (tFix mfix idx)
+            → P f5 (tFix mfix idx)
+              → cunfold_fix mfix idx = Some (narg, fn)
+              → eval Σ (tApp fn a) res   
+              → P (tApp fn a) res
+              → P' (tApp f5 a) res) → 
+              
+              (∀ (ip : inductive × nat) (mfix : mfixpoint term) 
+                   (idx : nat) (args : list term) 
+                   (narg : nat) discr (fn : term) (brs : 
                                                  list 
-                                                 (list name × EAst.term)) 
-                   (res : EAst.term),
+                                                 (list name × term)) 
+                   (res : term),
                    cunfold_cofix mfix idx = Some (narg, fn)
-                   -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                   -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                   → eval Σ (EAst.tCase ip (EAst.mkApps fn args) brs) res
-                     → P (EAst.tCase ip (EAst.mkApps fn args) brs) res
+                   -> eval Σ discr (mkApps (tCoFix mfix idx) args)
+                   -> P discr (mkApps (tCoFix mfix idx) args)
+                   → eval Σ (tCase ip (mkApps fn args) brs) res
+                     → P (tCase ip (mkApps fn args) brs) res
                        → P'
-                           (EAst.tCase ip discr brs)
+                           (tCase ip discr brs)
                            res)
-                → (∀ (p : projection) (mfix : EAst.mfixpoint EAst.term) 
-                     (idx : nat) (args : list EAst.term) 
-                     (narg : nat) discr (fn res : EAst.term),
+                → (∀ (p : projection) (mfix : mfixpoint term) 
+                     (idx : nat) (args : list term) 
+                     (narg : nat) discr (fn res : term),
                      cunfold_cofix mfix idx = Some (narg, fn)
-                     -> eval Σ discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                     -> P discr (EAst.mkApps (EAst.tCoFix mfix idx) args)
-                     → eval Σ (EAst.tProj p (EAst.mkApps fn args)) res
-                       → P (EAst.tProj p (EAst.mkApps fn args)) res
+                     -> eval Σ discr (mkApps (tCoFix mfix idx) args)
+                     -> P discr (mkApps (tCoFix mfix idx) args)
+                     → eval Σ (tProj p (mkApps fn args)) res
+                       → P (tProj p (mkApps fn args)) res
                          → P'
-                             (EAst.tProj p discr) res)
-                  → (∀ (c : kername) (decl : EAst.constant_body) 
-                       (body : EAst.term),
+                             (tProj p discr) res)
+                  → (∀ (c : kername) (decl : constant_body) 
+                       (body : term),
                        declared_constant Σ c decl
-                       → ∀ res : EAst.term,
-                           EAst.cst_body decl = Some body
+                       → ∀ res : term,
+                           cst_body decl = Some body
                            → eval Σ body res
-                             → P body res → P' (EAst.tConst c) res)
+                             → P body res → P' (tConst c) res)
                     → (∀ (i : inductive) (pars arg : nat) 
-                         (discr : EAst.term) (args : list EAst.term) 
-                         (res : EAst.term),
+                         (discr : term) (args : list term) 
+                         (res : term),
                          eval Σ discr
-                           (EAst.mkApps (EAst.tConstruct i 0) args)
-                         → P discr (EAst.mkApps (EAst.tConstruct i 0) args)
+                           (mkApps (tConstruct i 0) args)
+                         → P discr (mkApps (tConstruct i 0) args)
                            → inductive_isprop_and_pars Σ i = Some (false, pars)
                              → eval Σ (nth (pars + arg) args tDummy) res
                                → P (nth (pars + arg) args tDummy) res
-                                 → P' (EAst.tProj (i, pars, arg) discr) res)
+                                 → P' (tProj (i, pars, arg) discr) res)
                       → (∀ (i : inductive) (pars arg : nat) 
-                           (discr : EAst.term),
+                           (discr : term),
                            with_prop_case
-                           → eval Σ discr EAst.tBox
-                             → P discr EAst.tBox
+                           → eval Σ discr tBox
+                             → P discr tBox
                                → inductive_isprop_and_pars Σ i = Some (true, pars)
-                                 → P' (EAst.tProj (i, pars, arg) discr)
-                                     EAst.tBox)
-                        → (∀ (f11 f' : EAst.term) a a' ,
+                                 → P' (tProj (i, pars, arg) discr)
+                                     tBox)
+                        → (∀ (f11 f' : term) a a' ,
                              forall (ev : eval Σ f11 f'),
                               P f11 f' ->  
                               (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> Q 0 t -> P t u)
                             → ~~
-                                 (EAst.isLambda f' || isFixApp f'
-                                  || isBox f')
+                                 (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f')
                                  → eval Σ a a'
                                 → P a a'
-                          →  P' (EAst.tApp f11 a) (EAst.tApp f' a'))
+                          →  P' (tApp f11 a) (tApp f' a'))
                                   
-                          → (∀ t : EAst.term, atom t → P' t t) ->
-  ∀ (t t0 : EAst.term), Q 0 t -> eval Σ t t0 → P' t t0.
+                          → (∀ t : term, atom t → P' t t) ->
+  ∀ (t t0 : term), Q 0 t -> eval Σ t t0 → P' t t0.
 Proof.
   intros * P'Q qconst Qpres Qs qfix qcofix. intros.
   pose proof (p := @Fix_F { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   specialize (p (MR lt (fun x => eval_depth x.π2.π2.π2))).
-  set(foo := existT _ t (existT _ t0 (existT _ X13 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
+  set(foo := existT _ t (existT _ t0 (existT _ X14 H)) :  { t : _ & { t0 : _ & { qt : Q 0 t & eval Σ t t0 }}}).
   change t with (projT1 foo).
   change t0 with (projT1 (projT2 foo)).
   change H with (projT2 (projT2 foo)).
@@ -440,7 +451,7 @@ Proof.
   forward p.
   2:{ apply p. apply measure_wf, lt_wf. }
   clear p.
-  rename X13 into qt.
+  rename X14 into qt.
   clear t t0 qt H.
   intros (t & t0 & qt & ev). 
   intros IH.
@@ -458,9 +469,9 @@ Proof.
   end].
   - eapply X0; tea. 1-2:(apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea]).
     assert (qs: Q 0 (csubst a' 0 b)).
-    { assert (Q 0 (EAst.tLambda na b)).
+    { assert (Q 0 (tLambda na b)).
       { eapply P'Q; tea. ih. }
-      eapply Qpres in X13. depelim X13 => //.
+      eapply Qpres in X14. depelim X14 => //.
       eapply (Qs 0 b [a']) in q1. now cbn in q1.
       repeat constructor.
       eapply P'Q; tea; ih. }
@@ -479,31 +490,38 @@ Proof.
     rewrite -(List.rev_length (skipn pars args)) in a.
     eapply (Qs _ _ (List.rev (skipn pars args))) in a.
     2:{ eapply All_rev, All_skipn. 
-      assert (Q 0 (EAst.mkApps (EAst.tConstruct ind c) args)).
+      assert (Q 0 (mkApps (tConstruct ind c) args)).
       eapply P'Q; tea; ih.
-      eapply on_subterms_mkApps in X13; tea. eapply X13. } 
+      eapply on_subterms_mkApps in X14; tea. eapply X14. } 
     eapply and_assum. ih. unfold iota_red. lia.
     intros hp'. split => //. eapply P'Q; tea.
   - eapply X3; tea. 1:(apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea]).
     subst brs. eapply All_tip in a. cbn in a.
     rewrite -(repeat_length tBox #|n|) in a.
-    eapply (Qs _ _ (repeat EAst.tBox #|n|)) in a.
+    eapply (Qs _ _ (repeat tBox #|n|)) in a.
     2:{ eapply All_repeat. 
         eapply P'Q; tea; ih. }
     eapply and_assum. ih.
     intros hp'. split => //. eapply P'Q; tea.
   - eapply X4; tea.
     1,2:(apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea]).
-    assert (qa : Q 0 (EAst.tApp (EAst.mkApps fn argsv) av)).
+    assert (qa : Q 0 (tApp (mkApps fn argsv) av)).
     { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply on_subterms_mkApps in ev1' as [hfix qargs] => //.
       eapply Qpres. eapply on_app. eapply on_subterms_mkApps => //.
       split => //. eapply (qfix 0 mfix idx) in hfix; tea.
       eapply P'Q; tea; ih. clear ev1'; ih. }
     apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea].
-  - eapply X6; tea.
+  - eapply X6; tea. 
     1:(apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea]).
-    assert (qa : Q 0 (EAst.tCase ip (EAst.mkApps fn args) brs)).
+    assert (qa : Q 0 (tApp fn a)).
+    { pose proof (ev1' := ev1). eapply P'Q in ev1' => //. 2:clear ev1'; ih.
+      eapply qfix in ev1'. cbn in IH. eapply ev1' in e.
+      eapply Qpres. eapply on_app => //. }
+    apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea].
+  - eapply X7; tea.
+    1:(apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea]).
+    assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply on_subterms_mkApps in ev1' as [hfix qargs] => //.
       eapply Qpres. eapply on_case. eapply on_subterms_mkApps => //.
@@ -511,15 +529,15 @@ Proof.
       clear ev1'; ih. }
     apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea].
   - cbn in IH.
-    assert (qa : Q 0 (EAst.tProj p (EAst.mkApps fn args))).
+    assert (qa : Q 0 (tProj p (mkApps fn args))).
     { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply on_subterms_mkApps in ev1' as [hfix qargs] => //.
       eapply Qpres. eapply on_proj. eapply on_subterms_mkApps => //.
       split => //. eapply (qcofix 0 mfix idx) in hfix; tea.
       clear ev1'; ih. }
-    eapply X7; tea.
+    eapply X8; tea.
     all:apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea].
-  - eapply X8; tea.
+  - eapply X9; tea.
     assert (Q 0 body).
     { cbn in IH; eapply qconst in isdecl. now rewrite e in isdecl. }
     all:apply and_assum; [ih|].
@@ -532,8 +550,8 @@ Proof.
         destruct n; eapply Qpres; constructor => //.
         depelim qargs. intros [] => //. now eapply IHargs. }
       clear ev1'; ih. }
-    eapply X9; tea.
+    eapply X10; tea.
     all:apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea].
-  - unshelve eapply X11; tea.
-    all:intros; apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea].
+  - unshelve eapply X12; tea.
+    all:try (intros; apply and_assum; [ih|intros hp'; split => //; eapply P'Q; tea]).
 Qed.

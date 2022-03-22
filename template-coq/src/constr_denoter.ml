@@ -210,15 +210,18 @@ struct
     else
       not_supported_verb trm "unquote_level"
 
-  let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Univ.Universe.t =
+  let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Sorts.t =
     let (h,args) = app_full trm [] in
     if constr_equall h c_pair then
       let l, b = unquote_pair trm in
       let evm, l' = unquote_level evm l in
-      let u = Univ.Universe.make l' in
-      evm, if unquote_nat b > 0 then Univ.Universe.super u else u
+      let u = Sorts.sort_of_univ @@ Univ.Universe.make l' in
+      evm, if unquote_nat b > 0 then Sorts.super u else u
     else
       not_supported_verb trm "unquote_univ_expr"
+
+  let sort_sup s1 s2 =
+    Sorts.sort_of_univ (Univ.Universe.sup (Sorts.univ_of_sort s1) (Sorts.univ_of_sort s2))
 
   let unquote_universe evm trm (* of type universe *)  =
     let (h,args) = app_full trm [] in
@@ -226,16 +229,16 @@ struct
       if !strict_unquote_universe_mode then
         CErrors.user_err (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
       else
-        let evm, u = Evd.new_univ_variable (Evd.UnivFlexible false) evm in
-        debug (fun () -> str"Fresh universe " ++ Univ.Universe.pr u ++ str" was added to the context.");
+        let evm, u = Evd.new_sort_variable (Evd.UnivFlexible false) evm in
+        debug (fun () -> str"Fresh universe " ++ Sorts.debug_print u ++ str" was added to the context.");
         evm, u
     else if constr_equall h lSProp then
       match args with
-         | [] -> evm, Univ.Universe.sprop
+         | [] -> evm, Sorts.sprop
          | _ -> bad_term_verb trm "unquote_univ_expr"
     else if constr_equall h lProp then
       match args with
-         | [] -> evm, Univ.Universe.type0m
+         | [] -> evm, Sorts.prop
          | _ -> bad_term_verb trm "unquote_univ_expr"
     else if constr_equall h lnpe then
       match args with
@@ -251,7 +254,7 @@ struct
                                               | [] -> assert false
                                               | e::q -> List.fold_left (fun (evm,u) e ->
                                                             let evm, u' = unquote_univ_expr evm e
-                                                            in evm, Univ.Universe.sup u u')
+                                                            in evm, sort_sup u u')
                                                           (unquote_univ_expr evm e) q)
                                           | _ -> bad_term_verb trm "unquote_universe 0"
                                         else

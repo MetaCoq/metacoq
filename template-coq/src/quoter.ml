@@ -9,7 +9,7 @@ open Reification
 let inductive_sort mip =
   match mip.mind_arity with
   | RegularArity s -> s.mind_sort
-  | TemplateArity ar -> Sorts.sort_of_univ ar.template_level
+  | TemplateArity ar -> ar.template_level
 
 let cast_prop = ref (false)
 

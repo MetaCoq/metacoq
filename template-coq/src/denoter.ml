@@ -22,7 +22,7 @@ sig
   val unquote_inductive :  quoted_inductive -> Names.inductive
   (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
   val unquote_proj : quoted_proj -> (quoted_inductive * quoted_int * quoted_int)
-  val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Univ.Universe.t
+  val unquote_universe : Evd.evar_map -> quoted_sort -> Evd.evar_map * Sorts.t
   val unquote_universe_instance: Evd.evar_map -> quoted_univ_instance -> Evd.evar_map * Univ.Instance.t
   (* val representsIndConstuctor : quoted_inductive -> Term.constr -> bool *)
   val inspect_term : t -> (t, quoted_int, quoted_ident, quoted_aname, quoted_sort, quoted_cast_kind, 
@@ -71,7 +71,7 @@ struct
       | ACoq_tEvar (n, l) -> 
         let evm, l' = map_evm (aux env) evm l in
         D.unquote_evar env evm n l'
-      | ACoq_tSort x -> let evm, u = D.unquote_universe evm x in evm, Constr.mkType u
+      | ACoq_tSort x -> let evm, u = D.unquote_universe evm x in evm, Constr.mkSort u
       | ACoq_tCast (t,c,ty) -> let evm, t = aux env evm t in
         let evm, ty = aux env evm ty in
         evm, Constr.mkCast (t, D.unquote_cast_kind c, ty)

@@ -1,6 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Universes.
-From MetaCoq.PCUIC Require Import PCUICPrimitive.
 (** * Extracted terms
 
   These are the terms produced by extraction: compared to kernel terms,

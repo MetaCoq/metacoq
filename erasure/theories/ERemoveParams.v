@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    ELiftSubst ESpineView EOptimizePropDiscr ErasureFunction EEtaExpanded ECSubst.
+    ELiftSubst ESpineView EOptimizePropDiscr ErasureFunction EEtaExpanded ECSubst EWcbvEvalInd.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -558,6 +558,116 @@ Module Fast.
 
 End Fast.
 
+(*
+Lemma eval_etaexp {fl : Ee.WcbvFlags} {Σ a a'} : 
+  isEtaExp_env Σ ->
+  wf_glob Σ ->
+  Ee.eval Σ a a' -> isEtaExp Σ a -> isEtaExp Σ a'.
+Proof.
+  intros etaΣ wfΣ.
+  induction 1 using eval_mkApps_rect.
+  all:try simp isEtaExp; rewrite -!isEtaExp_equation_1 => //.
+  - move/isEtaExp_tApp'.
+    destruct decompose_app eqn:da.
+    destruct construct_viewc eqn:vc.
+    * move => [hl [hf [ha /andP[] ise etal]]].
+      rewrite hf in H. eapply eval_construct in H as [? []]; solve_discr.
+    * move/and4P => [] etat etal etaf etaa.
+      eapply IHeval3; eauto. 
+      move: (IHeval1 etaf); simp_eta => etab.
+      eapply etaExp_csubst; eauto.
+  - rtoProp; intuition eauto using etaExp_csubst.
+  - rtoProp; intuition eauto using isEtaExp_substl.
+    eapply IHeval2. rewrite /iota_red.
+    eapply isEtaExp_substl; eauto. solve_all.
+    destruct args => //. rewrite skipn_nil. constructor.
+    rewrite isEtaExp_Constructor // in H4.
+    eapply All_skipn. move/andP: H4 => []. repeat solve_all.
+    eapply forallb_nth_error in H6; tea.
+    now erewrite H1 in H6.
+  - rtoProp; intuition auto.
+    eapply IHeval2. eapply isEtaExp_substl.
+    now apply forallb_repeat.
+    rewrite H2 in H6. simpl in H6.
+    now move/andP: H6.
+  - intros ise.
+    eapply IHeval3.
+    apply isEtaExp_tApp' in ise.
+    destruct decompose_app eqn:da.
+    destruct (construct_viewc t) eqn:cv.
+    * destruct ise as [? [? []]]. rewrite H4 in H.
+      eapply eval_construct in H as [? []];solve_discr.
+    * move/and4P: ise => [] iset isel isef isea.
+      rewrite -[EAst.tApp _ _](mkApps_app _ _ [av]).
+      specialize (IHeval1 isef).
+      rewrite isEtaExp_mkApps // in IHeval1.
+      simp construct_viewc in IHeval1.
+      move/andP: IHeval1 => [] evfix evargs.
+      eapply isEtaExp_mkApps_intro.
+      eapply isEtaExp_cunfold_fix; tea.
+      simp isEtaExp in evfix.
+      eapply All_app_inv. now solve_all. constructor; auto.
+  - intros ise.
+    apply isEtaExp_tApp' in ise.
+    destruct decompose_app eqn:da.
+    destruct (construct_viewc t) eqn:cv.
+    * destruct ise as [? [? []]]. rewrite H4 in H.
+      eapply eval_construct in H as [? []]; solve_discr.
+    * move/and4P: ise => [] iset isel isef isea.
+      rewrite -[EAst.tApp _ _](mkApps_app _ _ [av]).
+      specialize (IHeval1 isef).
+      rewrite isEtaExp_mkApps // in IHeval1.
+      simp construct_viewc in IHeval1.
+      move/andP: IHeval1 => [] evfix evargs.
+      eapply isEtaExp_mkApps_intro => //.
+      eapply All_app_inv. now solve_all. constructor; auto.
+  - move=> /andP[] hdiscr hbrs. specialize (IHeval1 hdiscr).
+    move: IHeval1. rewrite isEtaExp_mkApps // /= => /andP[] hcof hargs.
+    eapply IHeval2. simp_eta. rtoProp; intuition auto.
+    apply isEtaExp_mkApps_intro; solve_all.
+    eapply (isEtaExp_cunfold_cofix _ mfix idx); tea.
+    simp_eta in hcof.
+  -  move=> hdiscr. specialize (IHeval1 hdiscr).
+    move: IHeval1. rewrite isEtaExp_mkApps // /= => /andP[] hcof hargs.
+    eapply IHeval2. simp_eta.
+    apply isEtaExp_mkApps_intro; solve_all.
+    eapply (isEtaExp_cunfold_cofix _ mfix idx); tea.
+    simp_eta in hcof.
+  - move=> _. eapply IHeval. eapply isEtaExp_lookup in H; tea.
+    now move: H; rewrite /isEtaExp_decl /= /isEtaExp_constant_decl H0 /=.
+  - intros hd.
+    eapply IHeval2. specialize (IHeval1 hd).
+    move: IHeval1.
+    rewrite nth_nth_error in H1 *.
+    destruct nth_error eqn:hnth.
+    rewrite isEtaExp_Constructor.
+    destruct args => //. now rewrite nth_error_nil in hnth.
+    move=> /andP[] _ hargs. eapply nth_error_forallb in hnth; tea.
+    depelim H0. now cbn in H1.
+  - move/isEtaExp_tApp'.
+    destruct decompose_app eqn:da.
+    destruct construct_viewc.
+    * move=> [] hl [] hf [] ha /andP[] hl' etal.
+      move: H H0. rewrite hf => H H0.
+      destruct (eval_construct_size H) as [args' []]. subst f'.
+      rewrite -[EAst.tApp _ _](mkApps_app _ _ [a']).
+      rewrite isEtaExp_Constructor.
+      apply/andP; split => //.
+      + len. eapply All2_length in a0. rewrite -a0.
+        rewrite (remove_last_last l a) // in hl'. len in hl'.
+        now cbn in hl'.
+      + solve_all.
+        rewrite (remove_last_last l a) // in etal.
+        eapply All_app in etal as [etal etaa].
+        depelim etaa. clear etaa. rewrite -ha in i.
+        eapply All_app_inv; try constructor; eauto.
+        clear -H0 a0 etal. solve_all.
+        destruct b as [ev Hev]. eapply (H0 _ _ ev) => //. lia.
+    * move/and4P => [] etat etal etaf etaa.
+      eapply (isEtaExp_mkApps_intro _ f' [a']); eauto.
+Qed.
+*)
+
 Lemma isLambda_mkApps' f l :
   l <> nil ->
   ~~ EAst.isLambda (EAst.mkApps f l).
@@ -715,7 +825,25 @@ Lemma strip_eval {wfl:Ee.WcbvFlags} {Σ : GlobalContextMap.t} t v :
   isEtaExp Σ t ->
   Ee.eval (strip_env Σ) (strip Σ t) (strip Σ v).
 Proof.
-  intros clΣ etaΣ wfΣ ev.
+  intros clΣ etaΣ wfΣ ev clt etat.
+  assert (closed t && isEtaExp Σ t) by now rewrite clt etat. clear clt etat.
+  move: t v H ev.
+  apply: (eval_preserve_mkApps_ind wfl Σ _ (fun n x => closedn n x && isEtaExp Σ x)).
+  { move=> t u ev /andP[] clt etat evs.
+    rewrite (eval_closed _ clΣ _ _ clt ev).
+    now rewrite (eval_etaexp etaΣ wfΣ ev etat). }
+  { red. intros. destruct EAst.cst_body eqn:h => //.
+    eapply lookup_env_closed in clΣ; tea. cbn in clΣ.
+    rewrite h /= in clΣ. rewrite clΣ /=.
+    eapply isEtaExp_lookup in etaΣ; tea. cbn in etaΣ.
+    unfold isEtaExp_constant_decl in etaΣ. now rewrite h in etaΣ. } 
+  { red.
+    
+  }
+
+
+
+
   induction ev using eval_mkApps_rect; simpl in *. try solve [econstructor; eauto].
 
   - move/andP => [] cla clt.

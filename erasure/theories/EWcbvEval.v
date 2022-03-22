@@ -740,7 +740,16 @@ Section Wcbv.
     pose proof (eval_unique_sig ev ev').
     now noconf H.
   Qed.
-
+  
+  Lemma eval_trans {e e' e''} :
+    eval e e' -> eval e' e'' -> e' = e''.
+  Proof.
+    intros ev ev'.
+    eapply eval_to_value in ev.
+    eapply value_final in ev.
+    eapply (eval_deterministic ev ev').
+  Qed.
+  
   Lemma eval_unique {t v} :
     forall (ev1 : eval t v) (ev2 : eval t v),
       ev1 = ev2.

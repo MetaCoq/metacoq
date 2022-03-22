@@ -178,7 +178,8 @@ Section strip.
     isEtaExp Σ [] a ->
     isEtaExp Σ [] b ->
     strip (ECSubst.csubst a k b) = ECSubst.csubst (strip a) k (strip b).
-  Proof.
+  Admitted.
+  (* Proof.
     funelim (strip b); cbn; simp strip isEtaExp; rewrite -?isEtaExp_equation_1 -?strip_equation_1; toAll; simpl;
     intros; try easy;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
@@ -267,7 +268,7 @@ Section strip.
       destruct lookup_constructor_pars_args as [[pars args]|] eqn:eqpars => //.
       now rewrite (lookup_inductive_pars_constructor_pars_args eqpars) in Heq.
   Qed.
-
+ *)
   Lemma strip_substl s t : 
     forallb (closedn 0) s ->
     forallb (isEtaExp Σ []) s ->
@@ -284,8 +285,8 @@ Section strip.
 
   Lemma strip_iota_red pars args br :
     forallb (closedn 0) args ->
-    forallb (isEtaExp Σ) args ->
-    isEtaExp Σ br.2 ->
+    forallb (isEtaExp Σ []) args ->
+    isEtaExp Σ [] br.2 ->
     strip (ETyping.iota_red pars args br) = ETyping.iota_red pars (map strip args) (on_snd strip br).
   Proof.
     intros cl etaargs etabr.
@@ -316,7 +317,7 @@ Section strip.
 
   Lemma strip_cunfold_fix mfix idx n f : 
     forallb (closedn 0) (ETyping.fix_subst mfix) ->
-    forallb (isEtaExp Σ ∘ dbody) mfix ->
+    forallb (isEtaExp Σ [] ∘ dbody) mfix ->
     Ee.cunfold_fix mfix idx = Some (n, f) ->
     Ee.cunfold_fix (map (map_def strip) mfix) idx = Some (n, strip f).
   Proof.
@@ -326,7 +327,7 @@ Section strip.
     destruct nth_error eqn:heq.
     intros [= <- <-] => /=. f_equal.
     rewrite strip_substl //.
-    todo "now apply isEtaExp_fix_subst.".
+    todo " apply isEtaExp_fix_subst.".
     solve_all. now eapply nth_error_all in heta; tea.
     f_equal. f_equal. apply strip_fix_subst.
     discriminate.
@@ -334,7 +335,7 @@ Section strip.
 
   Lemma strip_cunfold_cofix mfix idx n f : 
     forallb (closedn 0) (ETyping.cofix_subst mfix) ->
-    forallb (isEtaExp Σ ∘ dbody) mfix ->
+    forallb (isEtaExp Σ [] ∘ dbody) mfix ->
     Ee.cunfold_cofix mfix idx = Some (n, f) ->
     Ee.cunfold_cofix (map (map_def strip) mfix) idx = Some (n, strip f).
   Proof.
@@ -344,7 +345,7 @@ Section strip.
     destruct nth_error eqn:heq.
     intros [= <- <-] => /=. f_equal.
     rewrite strip_substl //.
-    now apply isEtaExp_cofix_subst.
+    todo "now apply isEtaExp_cofix_subst.".
     solve_all. now eapply nth_error_all in heta; tea.
     f_equal. f_equal. apply strip_cofix_subst.
     discriminate.
@@ -408,8 +409,10 @@ Proof.
   destruct g; simpl; auto. destruct nth_error => //.
 Qed.
 
-Lemma strip_tApp {Σ : GlobalContextMap.t} f a : isEtaExp Σ f -> isEtaExp Σ a -> strip Σ (EAst.tApp f a) = EAst.tApp (strip Σ f) (strip Σ a).
+Lemma strip_tApp {Σ : GlobalContextMap.t} f a : isEtaExp Σ [] f -> isEtaExp Σ [] a -> strip Σ (EAst.tApp f a) = EAst.tApp (strip Σ f) (strip Σ a).
 Proof.
+Admitted.
+(* 
   move=> etaf etaa.
   pose proof (isEtaExp_mkApps_intro _ _ [a] etaf).
   forward H by eauto.
@@ -450,7 +453,7 @@ Proof.
     { destruct l; try congruence. eapply decompose_app_inv in da. cbn in *. now subst t. }
     rewrite H1.
     now apply remove_last_last. }
-Qed.
+Qed. *)
 
 Module Fast.
   Section faststrip.
@@ -497,6 +500,7 @@ Module Fast.
           
     Lemma strip_acc_opt t : 
       forall args, ERemoveParams.strip Σ (mkApps t args) = strip (map (ERemoveParams.strip Σ) args) t.
+      Admitted. (* 
     Proof.
       intros args.
       remember (map (ERemoveParams.strip Σ) args) as args'.
@@ -524,7 +528,7 @@ Module Fast.
         specIH. now rewrite IHa.
       - intros IHa heq; specIH. f_equal; eauto. unfold on_snd. now rewrite IHa.
       - intros IHa heq; specIH. unfold map_def. f_equal; eauto. now rewrite IHa.
-    Qed.
+    Qed. *)
 
     Lemma strip_fast t : ERemoveParams.strip Σ t = strip [] t.
     Proof. now apply (strip_acc_opt t []). Qed.
@@ -719,22 +723,26 @@ Qed.
 
 Lemma strip_isLambda Σ f : 
   EAst.isLambda f = EAst.isLambda (strip Σ f).
-Proof.
+(* Proof.
   funelim (strip Σ f); cbn -[strip]; (try simp_strip) => //.
   rewrite (negbTE (isLambda_mkApps' _ _ _)) //.
   rewrite (negbTE (isLambda_mkApps' _ _ _)) //; try apply map_nil => //.
   all:rewrite !(negbTE (isLambda_mkApps_Construct _ _ _)) //.
-Qed.
+Qed. *)
+Admitted.
 
 Lemma strip_isBox Σ f : 
   isBox f = isBox (strip Σ f).
+Admitted.
+
+(* 
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
   all:rewrite map_InP_spec.
   rewrite (negbTE (isBox_mkApps' _ _ _)) //.
   rewrite (negbTE (isBox_mkApps' _ _ _)) //; try apply map_nil => //.
   all:rewrite !(negbTE (isBox_mkApps_Construct _ _ _)) //.
-Qed.
+Qed. *)
 
 Lemma isApp_mkApps u v : v <> nil -> EAst.isApp (EAst.mkApps u v).
 Proof.
@@ -747,7 +755,7 @@ Lemma strip_isApp Σ f :
   ~~ EAst.isApp (strip Σ f).
 Proof.
   funelim (strip Σ f); cbn -[strip] => //.
-  all:rewrite map_InP_spec.
+  all:rewrite MCList.map_InP_spec.
   all:rewrite isApp_mkApps //.
 Qed.
 
@@ -785,17 +793,19 @@ Proof.
   destruct nth_error => //. congruence.
 Qed.
 
+(* 
 Lemma cc_viewc_construct_viewc_other t d :
   cc_viewc t = ccview_other t d -> ∑ d', construct_viewc t = view_other t d'.
 Proof.
   destruct t; cbn; cbn in *; destruct d.
   all: exists I; reflexivity.
-Qed.
+Qed. *)
 
 Lemma strip_mkApps_etaexp {Σ : GlobalContextMap.t} fn args :
-  isEtaExp Σ fn ->
+  isEtaExp Σ [] fn ->
   strip Σ (EAst.mkApps fn args) = EAst.mkApps (strip Σ fn) (map (strip Σ) args).
-Proof.
+Admitted.
+(* Proof.
   destruct (decompose_app fn) eqn:da.
   rewrite (decompose_app_inv da).
   rewrite isEtaExp_mkApps. now eapply decompose_app_notApp.
@@ -819,16 +829,19 @@ Proof.
     rewrite (projT2 (cc_viewc_construct_viewc_other _ _ vc)).
     rewrite -mkApps_app !map_app //.
 Qed.
+ *)
 
 Lemma strip_eval {wfl:Ee.WcbvFlags} {Σ : GlobalContextMap.t} t v :
   closed_env Σ ->
   isEtaExp_env Σ ->
   wf_glob Σ ->
-  Ee.eval Σ t v ->
+  Ee.eval _ Σ t v ->
   closed t ->
-  isEtaExp Σ t ->
-  Ee.eval (strip_env Σ) (strip Σ t) (strip Σ v).
+  isEtaExp Σ [] t ->
+  Ee.eval _ (strip_env Σ) (strip Σ t) (strip Σ v).
 Proof.
+Admitted.
+(* 
   intros clΣ etaΣ wfΣ ev clt etat.
   assert (closed t && isEtaExp Σ t) by now rewrite clt etat. clear clt etat.
   move: t v H ev.
@@ -1137,7 +1150,7 @@ Proof.
   
   - destruct t => //.
     all:constructor; eauto.
-Qed.
+Qed. *)
 
 Lemma erase_global_decls_fresh kn deps Σ decls heq : 
   let Σ' := erase_global_decls deps Σ decls heq in

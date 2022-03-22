@@ -64,14 +64,17 @@ Qed.
 Lemma eval_mkApps_rect :
 ∀ (wfl : WcbvFlags) (Σ : global_declarations) 
   (P : term → term → Type),
+  let IH x y (ev : eval Σ x y) := 
+    forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u
+  in
   (∀ a t t' : term,
-	 eval Σ a tBox
-     → P a tBox → eval Σ t t' → P t t' → P (tApp a t) tBox)
+	  forall ev : eval Σ a tBox, P a tBox → 
+    IH _ _ ev ->
+    eval Σ t t' → P t t' → P (tApp a t) tBox)
   → (∀ (f0 : term) (na : BasicAst.name) (b a a' res : term),
-       eval Σ f0 (tLambda na b)
-       → P f0 (tLambda na b)
-         → eval Σ a a'
-           → P a a'
+       forall ev : eval Σ f0 (tLambda na b),
+       P f0 (tLambda na b) → IH _ _ ev → 
+       eval Σ a a' → P a a'
              → eval Σ (ECSubst.csubst a' 0 b) res
                → P (ECSubst.csubst a' 0 b) res → P (tApp f0 a) res)
     → (∀ (na : BasicAst.name) (b0 b0' b1 res : term),
@@ -108,8 +111,9 @@ Lemma eval_mkApps_rect :
                (idx : nat) (argsv : list term) 
                (a av fn res : term),
                forall guarded : with_guarded_fix,
-               eval Σ f4 (mkApps (tFix mfix idx) argsv)
-               → P f4 (mkApps (tFix mfix idx) argsv)
+               forall ev : eval Σ f4 (mkApps (tFix mfix idx) argsv),
+               P f4 (mkApps (tFix mfix idx) argsv)
+               → IH _ _ ev
                  → eval Σ a av
                    → P a av
                      → cunfold_fix mfix idx = Some (#|argsv|, fn)
@@ -120,9 +124,9 @@ Lemma eval_mkApps_rect :
                  (idx : nat) (argsv : list term) 
                  (a av : term) (narg : nat) (fn : term),
                  forall guarded : with_guarded_fix,
-                 eval Σ f5 (mkApps (tFix mfix idx) argsv)
-                 → P f5 (mkApps (tFix mfix idx) argsv)
-                   → eval Σ a av
+                 forall ev : eval Σ f5 (mkApps (tFix mfix idx) argsv),
+                 P f5 (mkApps (tFix mfix idx) argsv) → IH _ _ ev
+                 → eval Σ a av
                      → P a av
                        → cunfold_fix mfix idx = Some (narg, fn)
                          → #|argsv| < narg
@@ -132,8 +136,9 @@ Lemma eval_mkApps_rect :
             → (∀ (f6 : term) (mfix : mfixpoint term) 
                    (idx : nat) (a fn res : term) (narg : nat) 
                    (unguarded : with_guarded_fix = false) 
-                   (e : eval Σ f6 (tFix mfix idx)),
+                   (ev : eval Σ f6 (tFix mfix idx)),
                    P f6 (tFix mfix idx)
+                   → IH _ _ ev
                    → ∀ (e0 : cunfold_fix mfix idx = Some (narg, fn)) 
                        (e1 : eval Σ (tApp fn a) res),
                        P (tApp fn a) res
@@ -190,7 +195,7 @@ Lemma eval_mkApps_rect :
                         → (∀ (f11 f' : term) a a' ,
                              forall (ev : eval Σ f11 f'),
                               P f11 f' ->
-                              (forall t u (ev' : eval Σ t u), eval_depth ev' <= eval_depth ev -> P t u)
+                            IH _ _ ev
                             → ~~
                                  (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f')
                                   || isBox f')
@@ -217,18 +222,19 @@ Proof.
   clear p.
   clear t t0 H.
   intros (t & t0 & ev). 
-  intros IH.
-  set (IH' t t0 H := IH (t; t0; H)). clearbody IH'; clear IH; rename IH' into IH.
-  cbn in IH. unfold MR in IH; cbn in IH. cbn.
-  destruct ev.
-  all:try solve [match goal with
+  intros IH'.
+  set (IH'' t t0 H := IH' (t; t0; H)). clearbody IH''; clear IH'; rename IH'' into IH'.
+  cbn in IH'. unfold MR in IH'; cbn in IH'. cbn.
+  destruct ev; cbn in IH'.
+  all:try match goal with
   | [ H : _ |- _ ] =>
-    eapply H; tea; unshelve eapply IH; tea; cbn; lia
+    eapply H; tea; unshelve eapply IH'; tea; cbn; try lia
+  end.
+  all:try solve[match goal with
+  | [ H : _ |- _ ] =>
+    unshelve eapply H; try match goal with |- eval _ _ _ => tea end; tea; unfold IH; intros; unshelve eapply IH'; tea; cbn; try lia
   end].
-  cbn in IH.
-  eapply X12; tea; eauto; try unshelve eapply IH; tea; cbn; try lia.
-  Unshelve. 2:exact ev1. intros. unshelve eapply IH; tea. cbn. lia.
-Qed. 
+Qed.
 
 Section OnSubterm.
 

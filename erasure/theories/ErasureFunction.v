@@ -1878,8 +1878,8 @@ Proof.
         -- sq. cbn.
            eapply expanded_tFix.
            3:{ destruct args; cbn in *; congruence. }
-           admit.
-           { solve_all.  clear - deps H2. induction H2; econstructor; eauto. eapply p. eauto. } 
+           { clear - H0. revert H0 Hyp0. cbn. admit. }
+           { solve_all.  clear - deps H2. induction H2; econstructor; eauto. eapply p. eauto. }
            admit.
            rewrite map_erase_length. admit.
       * eapply typing_wf_local; eauto.

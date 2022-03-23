@@ -51,7 +51,7 @@ Definition add_cstr_univs (mie : mutual_inductive_entry) :=
 Inductive foo : Set := 
  | bar : foo.
 
-Definition fooref := (MPfile ["inferindunivs"], "foo").
+Definition fooref := (MPfile ["inferindunivs"; "TestSuite"; "MetaCoq"], "foo").
 
 MetaCoq Run (tmQuoteInductive fooref >>= fun mib =>
     let mie := mind_body_to_entry mib in
@@ -62,7 +62,3 @@ Set Printing Universes.
 Set Printing All.
 
 Print foo'.
-
-
-
-

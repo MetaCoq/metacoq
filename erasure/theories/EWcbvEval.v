@@ -1028,3 +1028,129 @@ Proof.
     eapply nth_error_forallb in clargs; tea.
   - rtoProp; intuition auto.
 Qed.
+
+
+Lemma remove_last_length {X} {l : list X} : 
+  #|remove_last l| = match l with nil => 0 | _ => #|l| - 1 end.
+Proof.
+  unfold remove_last. rewrite firstn_length.
+  destruct l; cbn; lia.
+Qed.
+
+Lemma remove_last_length' {X} {l : list X} : 
+  l <> nil -> 
+  #|remove_last l| = #|l| - 1.
+Proof.
+  intros. rewrite remove_last_length. destruct l; try congruence; lia.
+Qed.
+ 
+Local Hint Rewrite @remove_last_length : len.
+
+Lemma eval_mkApps_tFix_inv_size {wfl : WcbvFlags} Σ mfix idx args v :
+with_guarded_fix ->
+  forall Heval : eval Σ (mkApps (tFix mfix idx) args) v,
+ (exists args', Forall2 (fun a a' => exists H : eval Σ a a', eval_depth H < eval_depth Heval) args args' /\ v = mkApps (tFix mfix idx) (args')) \/
+ (exists n b, args <> nil /\ cunfold_fix mfix idx = Some (n, b) /\ n < #|args|).
+Proof.
+ revert v.
+ induction args using List.rev_ind; intros v wg ev.
+ + left. exists []. split. repeat econstructor. now depelim ev.
+ + rewrite mkApps_app in ev |- *.
+   cbn in *.
+   depelim ev.
+  
+   all: try(specialize (IHargs) with (Heval := ev1); destruct IHargs as [(args' & ? & Heq) | (? & ? & ? & ? & ?)];eauto; rewrite ?Heq; try solve_discr; try congruence;
+     len; rewrite ?Heq; rewrite Nat.add_comm; eauto 9).
+   * right. repeat eexists. destruct args; cbn; congruence. eauto. lia.
+   * right. repeat eexists. destruct args; cbn; congruence. eauto. lia.
+   * sq. invs H0. eapply Forall2_length in H. right. repeat eexists. destruct args; cbn; congruence. eauto. lia.
+   * right. repeat eexists. destruct args; cbn; congruence. eauto. lia.
+   * sq. invs H0. left. eexists. split. sq. eapply Forall2_app. solve_all. destruct H. unshelve eexists. eauto. cbn. lia.
+     econstructor. 2: econstructor.
+     unshelve eexists. eauto. lia.
+     now rewrite !mkApps_app.
+   * right. repeat eexists. destruct args; cbn; congruence. eauto. lia.
+   * subst. sq.  rewrite wg in i. rewrite isFixApp_mkApps in i => //. cbn in i. destruct EAst.isLambda; easy.
+   * right. repeat eexists. destruct args; cbn; congruence. eauto. lia.
+   * inv i.
+Qed.
+
+Lemma size_final {wfl : WcbvFlags} Σ t v :
+  forall He : eval Σ t v, ∑ He' : eval Σ v v, eval_depth He' <= eval_depth He.
+Proof.
+  intros He. induction He.
+  all: try now unshelve eexists; eauto; [ eapply IHHe | cbn; destruct IHHe; lia ].
+  all: try now unshelve eexists; eauto; [ eapply IHHe2 | cbn; destruct IHHe2; lia ].
+  all: try now unshelve eexists; eauto; [ eapply IHHe3 | cbn; destruct IHHe3; lia ].
+  all: try now unshelve eexists; eauto; cbn; lia.
+  - unshelve eexists. repeat econstructor. cbn; lia.
+  - unshelve eexists; eauto. eapply eval_fix_value; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
+  - unshelve eexists. eapply eval_app_cong; eauto. eapply IHHe1. eapply IHHe2. cbn. destruct IHHe1, IHHe2. lia.
+Qed.
+
+Lemma eval_mkApps_tFix_inv_size_unguarded {wfl : WcbvFlags} Σ mfix idx args v :
+  with_guarded_fix = false ->
+  forall Heval : eval Σ (mkApps (tFix mfix idx) args) v,
+  (args = [] /\ v = tFix mfix idx)
+  \/ exists a args' argsv, (args = a :: args')%list /\ 
+                            Forall2 (fun a a' => a = a' \/ exists H : eval Σ a a', eval_depth H < eval_depth Heval) args' argsv /\
+                            exists n fn, cunfold_fix mfix idx = Some (n, fn) /\
+                            exists H : eval Σ (mkApps (tApp fn a) argsv) v, eval_depth H <= eval_depth Heval.
+Proof.
+ revert v.
+ induction args using List.rev_ind; intros v wg ev.
+ + left. now depelim ev.
+ + rewrite mkApps_app in ev |- *.
+   cbn in *.
+   depelim ev; right.
+  
+   all: try(specialize (IHargs) with (Heval := ev1); destruct IHargs as [[-> Heq] | (a & args' & argsv_ & Heqargs & Hall & n & fn_ & Hunf & Hev' & Hevsz')];eauto; try rewrite ?Heq; try solve_discr; try congruence;
+     len; try rewrite ?Heq; rewrite ?Nat.add_comm; eauto 9).
+   * subst. cbn. exists a, (args' ++ [x])%list,(argsv_ ++ [t'])%list. split. reflexivity.
+      repeat unshelve eexists; eauto. 2:{ rewrite mkApps_app. econstructor. eauto. eapply size_final. eauto. }
+      eapply Forall2_app.
+      solve_all. right. destruct H0. unshelve eexists; eauto. lia.
+      unshelve econstructor. right. unshelve eexists. eauto. lia. repeat econstructor.
+      cbn. generalize (mkApps_app (tApp fn_ a) argsv_ [t']). generalize (EAst.mkApps (tApp fn_ a) (argsv_ ++ [t'])).
+      cbn.  intros. subst. cbn. destruct size_final. cbn in *. lia.
+   * subst. cbn. exists a, (args' ++ [x])%list,(argsv_ ++ [a'])%list. split. reflexivity.
+     repeat unshelve eexists; eauto.
+     eapply Forall2_app.
+     solve_all. right. destruct H0. unshelve eexists; eauto. lia.
+   unshelve econstructor. right. unshelve eexists. eauto. lia. repeat econstructor.
+   rewrite mkApps_app. cbn. econstructor; eauto. eapply size_final; eauto.
+   cbn. generalize (mkApps_app (tApp fn_ a) argsv_ [a']). generalize (EAst.mkApps (tApp fn_ a) (argsv_ ++ [a'])).
+   intros. subst. cbn.
+   destruct size_final. cbn in *. lia.
+  
+   * invs Heq. exists x, [], []. repeat split. econstructor. repeat unshelve eexists; eauto.
+     cbn. lia.
+   * subst. cbn. eexists _, _, (argsv_ ++ [_])%list. repeat eexists. 2: eauto. eapply Forall2_app.
+     solve_all. right. destruct H0. exists x1. cbn. lia. econstructor. now left. econstructor.
+     Unshelve. 2:{ rewrite mkApps_app. eapply eval_fix'; eauto. }
+     cbn. generalize (mkApps_app (tApp fn_ a) argsv_ [x]). generalize (EAst.mkApps (tApp fn_ a) (argsv_ ++ [x])). intros. subst. cbn.
+     cbn in *. lia.
+   * subst. cbn in i. exfalso. destruct with_guarded_fix; easy.
+   * subst.  cbn. eexists _, _, (argsv_ ++ [_])%list. repeat eexists. 2: eauto. eapply Forall2_app.
+     solve_all. right. destruct H0. exists x1. cbn. lia. econstructor. now left. econstructor.
+     Unshelve. 2:{ rewrite mkApps_app. eapply eval_app_cong; eauto. }
+     cbn. generalize (mkApps_app (tApp fn_ a) argsv_ [x]). generalize (EAst.mkApps (tApp fn_ a) (argsv_ ++ [x])). intros. subst. cbn.
+     cbn in *. lia.
+   * subst. cbn. invs i.
+Qed.
+
+Lemma eval_construct  {fl : WcbvFlags} Σ kn c args e : 
+  eval Σ (mkApps (tConstruct kn c) args) e -> ∑ args', (e = mkApps (tConstruct kn c) args') × All2 (eval Σ) args args'.
+Proof.
+  revert e; induction args using rev_ind; intros e.
+  - intros ev. depelim ev. exists []=> //.
+  - intros ev. rewrite mkApps_app /= in ev.
+    depelim ev; try solve_discr.
+    destruct (IHargs _ ev1) as [? []]. solve_discr.
+    all:try specialize (IHargs _ ev1) as [? []]; try solve_discr.
+    * subst f'. 
+      exists (x0 ++ [a'])%list.
+      rewrite mkApps_app /= //.
+      cbn in i. split => //. eapply All2_app; eauto.
+    * now cbn in i.
+Qed.

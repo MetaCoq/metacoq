@@ -1785,20 +1785,30 @@ Proof.
 Qed.
 
 Lemma isConstruct_erase Σ Γ t wt : 
-  ~ PCUICEtaExpand.isConstruct t -> ~ isConstruct (erase Σ Γ t wt).
+~ (PCUICEtaExpand.isConstruct t || PCUICEtaExpand.isFix t || PCUICEtaExpand.isRel t) -> ~
+  (isConstruct (erase Σ Γ t wt) || isFix (erase Σ Γ t wt) || isRel (erase Σ Γ t wt)).
 Proof.
   apply (erase_elim Σ
-    (fun Γ t wt e => ~ PCUICEtaExpand.isConstruct t -> ~ isConstruct e)
+    (fun Γ t wt e => ~ (PCUICEtaExpand.isConstruct t || PCUICEtaExpand.isFix t || PCUICEtaExpand.isRel t) -> ~ (isConstruct e || isFix e || isRel e))
     (fun Γ l awt e => True)
     (fun Γ p l awt e => True)
     (fun Γ l awt e => True)); intros => //. bang.
 Qed.
 
+Lemma map_All_length {A B C : Type} {Q : C -> Type} {P : C -> A -> Prop}
+(fn : forall x : A, (forall y : C, Q y -> P y x) -> B) 
+  (l : list A) (Hl : forall y : C, Q y -> ∥ All (P y) l ∥) :
+#| (map_All fn l Hl)| = #|l|.
+Proof.
+  funelim (map_All fn l Hl); cbn; congruence.
+Qed.
+Local Hint Rewrite @map_All_length : len.
+
 Lemma eta_expand_erase {Σ : wf_env_ext} Σ' {Γ t} 
-  (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> welltyped Σ0 Γ t) :
-  PCUICEtaExpand.expanded Σ t ->
+  (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> welltyped Σ0 Γ t) Γ' :
+  PCUICEtaExpand.expanded Σ Γ' t ->
   erases_global Σ Σ' ->
-  expanded Σ' [] (@erase Σ Γ t wt).
+  expanded Σ' Γ' (@erase Σ Γ t wt).
 Proof.
   pose proof (referenced_impl_ext_wf Σ) as [wf]. 
   intros exp deps.
@@ -1808,9 +1818,10 @@ Proof.
   all: eauto using expanded.
   all : assert (wfΣ' : abstract_env_rel' Σ Σ) by reflexivity;
         specialize_Σ wfΣ'.
-  all: try (unfold inspect, erase_clause_1, erase_clause_1_clause_2;
+  all: try (unfold inspect, erase_clause_1, erase_clause_1_clause_2; cbn;
     destruct is_erasableb; [ now eauto using expanded | eauto using expanded]).
   all: try now (invs deps; eauto using expanded).
+  - admit.
   - econstructor.
     solve_all. rewrite erase_terms_eq. 
     eapply All_map_All. intros. exact H0. cbn. intros x wx rx [Hx IH]. eauto.
@@ -1821,7 +1832,7 @@ Proof.
       destruct (wt _ wfΣ') as (T & wt'). revert deps. rewrite erase_mkApps. 
       * eapply welltyped_mkApps_inv; sq; eauto.
       * intros. econstructor; eauto.
-        -- now eapply isConstruct_erase.
+        -- eapply wGraph.negbe. now eapply isConstruct_erase.
         -- clear - H1 deps. induction H1; cbn.
           ++ econstructor.
           ++ depelim Hyp1. cbn. econstructor; eauto.
@@ -1834,11 +1845,29 @@ Proof.
     + bang.
   - econstructor; eauto.
     solve_all. rewrite erase_brs_eq.
-    eapply All_map_All; tea. cbn. intros x wx [exp' IH]. eauto.
-  - todo "fix".
+    eapply All_map_All; tea. intros. eapply H0. cbn. intros x wx ? [exp' IH]. len. eauto.
+  - simp erase. destruct inspect as [b ise] eqn:hi. destruct b.
+    + simp erase. constructor.
+    + rewrite -hi -erase_equation_1.
+      destruct (wt _ wfΣ') as (T & wt').
+      clear hi; move: ise. elim: is_erasableb_reflect => // happ _.
+      rewrite erase_mkApps //.
+      * eapply welltyped_mkApps_inv; sq; eauto.
+      * intros. simp erase. destruct (inspect (is_erasableb Σ Γ (tFix mfix idx) Hyp0)). destruct x.
+        -- exfalso. sq. move: e.
+           elim: is_erasableb_reflect => // ise' _; sq. specialize X as X'. destruct X' as [].
+           apply happ. eapply Is_type_app in X; tea.
+           eapply typing_wf_local; eauto.
+        -- sq. cbn.
+           eapply expanded_tFix.
+           3:{ destruct args; cbn in *; congruence. }
+           admit. admit. admit.
+           rewrite map_erase_length. admit.
+      * eapply typing_wf_local; eauto.
+      * cbn; intros; subst. eapply welltyped_mkApps_inv; sq; eauto. 
   - econstructor; eauto.
     solve_all. rewrite erase_mfix_eq.
-    eapply All_map_All. intros. exact H0. intros x y wx [exp' IH]. now eapply IH.
+    eapply All_map_All. intros. exact H0. intros x y wx [exp' IH]. len. eauto.
   - simp erase. destruct inspect as [b ise] eqn:hi. destruct b.
     + simp erase. constructor.
     + rewrite -hi -erase_equation_1.

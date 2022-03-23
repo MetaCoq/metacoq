@@ -1,10 +1,10 @@
-From Coq Require Import List String.
-From MetaCoq.Template Require Import Ast AstUtils monad_utils Loader Core.
+From Coq Require Import List.
+From MetaCoq.Template Require Import All Loader.
 Import Ast.Env.
 Import ListNotations.
 Import MCMonadNotation.
 
-Local Open Scope string_scope.
+Local Open Scope bs_scope.
 
 Definition bnamed n := {| binder_name := nNamed n; binder_relevance := Relevant |}.
 
@@ -34,13 +34,13 @@ Definition add_cstr_univs (mie : mutual_inductive_entry) :=
     let cstrs := oie.(mind_entry_lc) in
     let cstr' := 
       it_mkProd_or_LetIn mie.(mind_entry_params)
-        (tProd (bnamed "newty"%string) qv
+        (tProd (bnamed "newty"%bs) qv
           (tProd (bnamed "new") (mkApps rid [qu; tRel 0])
             (mkApps (tRel (2 + List.length (mie.(mind_entry_params))))
               (to_extended_list mie.(mind_entry_params)))))
     in 
     let prime_cstrs := List.map (fun s => s ++ "'") oie.(mind_entry_consnames) in
-    {| mind_entry_typename := (oie.(mind_entry_typename) ++ "'")%string;
+    {| mind_entry_typename := (oie.(mind_entry_typename) ++ "'");
        mind_entry_arity := (*oie.(mind_entry_arity)*) qw; 
        mind_entry_lc := cstr' :: cstrs;
        mind_entry_consnames := "newcons" :: prime_cstrs |}

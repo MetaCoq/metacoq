@@ -182,6 +182,7 @@ module RetypeMindEntry =
     | Context.Rel.Declaration.LocalDef (na, b, ty) ->
       let evm, b = Typing.solve_evars env evm (EConstr.of_constr b) in
       let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
+      let evm = Typing.check env evm b ty in
       evm, Context.Rel.Declaration.LocalDef (na, b, ty)
     
   let retype_context env evm ctx = 
@@ -194,17 +195,19 @@ module RetypeMindEntry =
   let infer_mentry_univs env evm mind =
     let pars = mind.mind_entry_params in
     let evm, pars' = retype_context env evm pars in
+    let envpars = Environ.push_rel_context pars env in
     let evm, arities =
       List.fold_left 
         (fun (evm, ctx) oib -> 
           let ty = oib.mind_entry_arity in
-          let evm, _= retype env evm ty in 
+          let evm, s = retype envpars evm ty in
+          let ty = Term.it_mkProd_or_LetIn ty pars in
           (evm, Context.Rel.Declaration.LocalAssum (Context.annotR (Name oib.mind_entry_typename), ty) :: ctx))
         (evm, []) mind.mind_entry_inds
     in
     let env = Environ.push_rel_context arities env in
     let env = Environ.push_rel_context pars env in
-    let evm = 
+    let evm =
       List.fold_left 
         (fun evm oib ->
           let evm, cstrsu = 
@@ -215,7 +218,9 @@ module RetypeMindEntry =
             (evm, Univ.type0m_univ) oib.mind_entry_lc
           in 
           let _, indsort = Reduction.dest_arity env oib.mind_entry_arity in
-          let evm = Evd.set_leq_sort env evm (Sorts.sort_of_univ cstrsu) indsort in
+          let cstrsort = Sorts.sort_of_univ cstrsu in
+          (* Hacky, but we don't have a good way to enfore max() <= max() constraints yet *)
+          let evm = try Evd.set_leq_sort env evm cstrsort indsort with e -> evm in
           evm)
         evm mind.mind_entry_inds
     in
@@ -234,7 +239,7 @@ module RetypeMindEntry =
     let ctx, mind = 
       match mind.mind_entry_universes with
       | Entries.Monomorphic_entry ctx ->
-        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Monomorphic_entry (Evd.universe_context_set evm) }
+        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Monomorphic_entry ctx }
       | Entries.Polymorphic_entry (names, uctx) ->
         let uctx' = Evd.to_universe_context evm in
         Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_entry (names, uctx') }

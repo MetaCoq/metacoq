@@ -1821,7 +1821,24 @@ Proof.
   all: try (unfold inspect, erase_clause_1, erase_clause_1_clause_2; cbn;
     destruct is_erasableb; [ now eauto using expanded | eauto using expanded]).
   all: try now (invs deps; eauto using expanded).
-  - admit.
+  - simp erase. destruct inspect as [b ise] eqn:hi. destruct b.
+    + simp erase. constructor.
+    + rewrite -hi -erase_equation_1.
+      destruct (wt _ wfΣ') as (T & wt').
+      clear hi; move: ise. elim: is_erasableb_reflect => // happ _.
+      rewrite erase_mkApps //.
+      * eapply welltyped_mkApps_inv; sq; eauto.
+      * intros. simp erase. destruct (inspect (is_erasableb Σ Γ (tRel n) Hyp0)). destruct x.
+        -- exfalso. sq. move: e.
+           elim: is_erasableb_reflect => // ise' _; sq. specialize X as X'. destruct X' as [].
+           apply happ. eapply Is_type_app in X; tea.
+           eapply typing_wf_local; eauto.
+        -- sq. cbn.
+           econstructor. eauto.
+           now rewrite map_erase_length.
+           { solve_all.  clear - deps H2. induction H2; econstructor; eauto. eapply p. eauto. } 
+      * eapply typing_wf_local; eauto.
+      * intros. cbn in H3; subst. eapply welltyped_mkApps_inv; sq; eauto.
   - econstructor.
     solve_all. rewrite erase_terms_eq. 
     eapply All_map_All. intros. exact H0. cbn. intros x wx rx [Hx IH]. eauto.
@@ -1861,7 +1878,9 @@ Proof.
         -- sq. cbn.
            eapply expanded_tFix.
            3:{ destruct args; cbn in *; congruence. }
-           admit. admit. admit.
+           admit.
+           { solve_all.  clear - deps H2. induction H2; econstructor; eauto. eapply p. eauto. } 
+           admit.
            rewrite map_erase_length. admit.
       * eapply typing_wf_local; eauto.
       * cbn; intros; subst. eapply welltyped_mkApps_inv; sq; eauto. 

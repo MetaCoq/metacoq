@@ -226,6 +226,19 @@ module RetypeMindEntry =
     in
     evm, mind
 
+  let nf_mentry_univs evm mind =
+    let pars = List.map EConstr.Unsafe.to_rel_decl (Evarutil.nf_rel_context_evar evm (List.map EConstr.of_rel_decl mind.mind_entry_params)) in
+    let nf_evar c = EConstr.Unsafe.to_constr (Evarutil.nf_evar evm (EConstr.of_constr c)) in
+    let inds =
+      List.map
+          (fun oib -> 
+            let arity = nf_evar oib.mind_entry_arity in
+            let cstrs = List.map nf_evar oib.mind_entry_lc in
+            { oib with mind_entry_arity = arity; mind_entry_lc = cstrs })
+         mind.mind_entry_inds
+      in
+      { mind with mind_entry_params = pars; mind_entry_inds = inds }
+
   let infer_mentry_univs env evm mind = 
     let evm = 
       match mind.mind_entry_universes with
@@ -236,6 +249,8 @@ module RetypeMindEntry =
         Evd.merge_context_set (UState.UnivFlexible false) evm uctx'
     in
     let evm, mind = infer_mentry_univs env evm mind in
+    let evm = Evd.minimize_universes evm in
+    let mind = nf_mentry_univs evm mind in
     let ctx, mind = 
       match mind.mind_entry_universes with
       | Entries.Monomorphic_entry ctx ->

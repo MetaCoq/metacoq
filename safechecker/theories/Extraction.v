@@ -36,7 +36,7 @@ Extraction Inline Equations.Prop.Logic.True_rect_dep Equations.Prop.Logic.False_
 (** This Inline is because of a problem of weak type variables (partial application?) *)
 Extraction Inline PCUICPrimitive.prim_val_reflect_eq.
 
-Extract Constant PCUICWfEnv.guard_impl => 
+Extract Constant PCUICWfEnvImpl.guard_impl => 
   "(fun _ _ _ _ -> true)".
 
 Extract Constant PCUICTyping.guard_checking => 

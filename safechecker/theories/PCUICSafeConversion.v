@@ -4089,7 +4089,9 @@ Qed.
         apply wf_universe_instance_iff in H0.
         apply wf_universe_instance_iff in H1. 
         eapply abstract_env_compare_global_instance_correct; eauto.
-      - todo "wf_universe bureaucracy".
+      - pose proof h2 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq. 
+        apply welltyped_zipc_inv in Hc; eauto.  
+        apply welltyped_wf in Hc; eauto.  
     }
     dependent destruction hr.
     2:{
@@ -4106,7 +4108,9 @@ Qed.
         apply wf_universe_instance_iff in H3.
         apply wf_universe_instance_iff in H4. 
         eapply abstract_env_compare_global_instance_correct; eauto.
-      - todo "wf_universe bureaucracy".
+      - pose proof h2 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq. 
+        apply welltyped_zipc_inv in Hc; eauto.  
+        apply welltyped_wf in Hc; eauto.  
     }
     unshelve eapply R_cored2.
     all: try reflexivity.
@@ -4184,7 +4188,9 @@ Qed.
         apply wf_universe_instance_iff in H0.
         apply wf_universe_instance_iff in H1. 
         eapply abstract_env_compare_global_instance_correct; eauto.
-      - todo "wf_universe bureaucracy".
+      - pose proof h1 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq. 
+        apply welltyped_zipc_inv in Hc; eauto.  
+        apply welltyped_wf in Hc; eauto.  
     }
     dependent destruction hr.
     2:{
@@ -4201,7 +4207,9 @@ Qed.
         apply wf_universe_instance_iff in H3.
         apply wf_universe_instance_iff in H4. 
         eapply abstract_env_compare_global_instance_correct; eauto.
-      - todo "wf_universe bureaucracy".
+      - pose proof h1 as Hc. specialize_Σ wfΣ. pose proof (hΣ _  wfΣ); sq. 
+        apply welltyped_zipc_inv in Hc; eauto.  
+        apply welltyped_wf in Hc; eauto.  
     }
     unshelve eapply R_cored.
     simpl. intros; eapply cored_zipc. eapply cored_proj. 

@@ -1707,11 +1707,10 @@ Section Univ.
 
 End Univ.
 
-(* This universe is a hack used in plugings to generate fresh universes *)
-Definition fresh_universe : Universe.t. exact Universe.type0. Qed.
 (* This level is a hack used in plugings to generate fresh levels *)
-Definition fresh_level : Level.t. exact Level.lzero. Qed.
-
+Definition fresh_level : Level.t := Level.Level "__metacoq_fresh_level__".
+(* This universe is a hack used in plugins to generate fresh universes *)
+Definition fresh_universe : Universe.t := Universe.make fresh_level.
 
 (** * Universe substitution
 

@@ -179,9 +179,18 @@ struct
       with Not_found ->
         CErrors.user_err (str ("Level "^s^" is not a declared level."))
 
+  let is_fresh_level evm trm h args =
+    if constr_equall h tLevel then
+      match args with
+      | s :: [] -> debug (fun () -> str "Unquoting level " ++ Printer.pr_constr_env (Global.env ()) evm trm);
+        let s = (unquote_string s) in
+        s = "__metacoq_fresh_level__"
+      | _ -> bad_term_verb trm "unquote_level" 
+    else false
+
   let unquote_level evm trm (* of type level *) : Evd.evar_map * Univ.Level.t =
     let (h,args) = app_full trm [] in
-    if constr_equall h lfresh_level then
+    if is_fresh_level evm trm h args then
       if !strict_unquote_universe_mode then
         CErrors.user_err (str "It is not possible to unquote a fresh level in Strict Unquote Universe Mode.")
       else
@@ -216,14 +225,7 @@ struct
 
   let unquote_universe evm trm (* of type universe *)  =
     let (h,args) = app_full trm [] in
-    if constr_equall h lfresh_universe then
-      if !strict_unquote_universe_mode then
-        CErrors.user_err (str "It is not possible to unquote a fresh universe in Strict Unquote Universe Mode.")
-      else
-        let evm, u = Evd.new_sort_variable (Evd.UnivFlexible false) evm in
-        debug (fun () -> str"Fresh universe " ++ Sorts.debug_print u ++ str" was added to the context.");
-        evm, u
-    else if constr_equall h lSProp then
+    if constr_equall h lSProp then
       match args with
          | [] -> evm, Sorts.sprop
          | _ -> bad_term_verb trm "unquote_univ_expr"
@@ -236,26 +238,25 @@ struct
       | [x] ->
          let (h,args) = app_full x [] in
          if constr_equall h tBuild_Universe then
-                     match args with
-                       x :: _ :: [] -> (let (h,args) = app_full x [] in
-                                        if constr_equall h tMktUnivExprSet then
-                                          match args with
-                                          | x :: _ :: [] ->
-                                             (match unquote_list x with
-                                              | [] -> assert false
-                                              | e::q ->
-                                                let evm, u =
-                                                  List.fold_left (fun (evm,u) e ->
-                                                            let evm, u' = unquote_univ_expr evm e
-                                                            in evm, Univ.Universe.sup u u')
-                                                          (unquote_univ_expr evm e) q
-                                                in
-                                                evm, Sorts.sort_of_univ u)
-                                          | _ -> bad_term_verb trm "unquote_universe 0"
-                                        else
-                                          not_supported_verb trm "unquote_universe 0")
-                     | _ -> bad_term_verb trm "unquote_universe 1"
-               else  not_supported_verb trm "unquote_universe 2"
+           (match args with
+           | x :: _ :: [] -> 
+             (let (h,args) = app_full x [] in
+              if constr_equall h tMktUnivExprSet then
+                match args with
+                | x :: _ :: [] ->
+                    (match unquote_list x with
+                    | [] -> assert false
+                    | e::q ->
+                      let evm, u = List.fold_left (fun (evm,u) e ->
+                                  let evm, u' = unquote_univ_expr evm e
+                                  in evm, Univ.Universe.sup u u')
+                                (unquote_univ_expr evm e) q
+                      in evm, Sorts.sort_of_univ u)
+                | _ -> bad_term_verb trm "unquote_universe 0"
+              else
+                not_supported_verb trm "unquote_universe 0")
+           | _ -> bad_term_verb trm "unquote_universe 1")
+         else not_supported_verb trm "unquote_universe 2"
       | _ -> bad_term_verb trm "unquote_universe 3"
     else bad_term_verb trm "unquote_universe 4"
 

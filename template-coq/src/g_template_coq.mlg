@@ -134,7 +134,7 @@ VERNAC COMMAND EXTEND TemplateCoq_Make_Inductive CLASSIFIED AS SIDEFF STATE prog
         let (evm, def) = Constrintern.interp_open_constr env evm def in
         let (evm, pgm) = EConstr.fresh_global env evm (Lazy.force Template_monad.ptmMkInductive) in
         let pgm = Constr.mkApp (EConstr.to_constr evm pgm, 
-          [|to_constr_evars evm def|]) in
+          [|Constr_quoter.quote_bool false; to_constr_evars evm def|]) in
         run_template_program env evm ~poly pgm }
 END
 

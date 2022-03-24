@@ -1,8 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils All.
-Require Import Translations.translation_utils.
+From MetaCoq.Translations Require Import translation_utils.
 Require Import ssreflect.
-
+(* Import BasicAst. *)
 
 Reserved Notation "'tsl_ty_param'".
 
@@ -219,7 +219,7 @@ Definition tTranslate (ΣE : tsl_context) (id : ident)
       tmPrint d' ;;
       let entries := map mind_body_to_entry (snd d') in
       (* print_nf entries ;; *)
-      monad_fold_left (fun _ e => tmMkInductive e) entries tt ;;
+      monad_fold_left (fun _ e => tmMkInductive true e) entries tt ;;
       let decl := InductiveDecl kn d in
       print_nf  (id ^ " has been translated as " ^ id') ;;
       ret (Some (decl :: fst ΣE, E ++ snd ΣE))

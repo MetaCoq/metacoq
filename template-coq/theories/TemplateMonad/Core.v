@@ -52,7 +52,7 @@ Cumulative Inductive TemplateMonad@{t u} : Type@{t} -> Prop :=
 | tmQuoteConstant : kername -> bool (* bypass opacity? *) -> TemplateMonad constant_body
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
-| tmMkInductive : mutual_inductive_entry -> TemplateMonad unit
+| tmMkInductive : bool -> mutual_inductive_entry -> TemplateMonad unit
 | tmUnquote : Ast.term  -> TemplateMonad typed_term@{u}
 | tmUnquoteTyped : forall A : Type@{t}, Ast.term -> TemplateMonad A
 
@@ -80,7 +80,7 @@ Definition fail_nf {A} (msg : string) : TemplateMonad A
   := tmEval all msg >>= tmFail.
 
 Definition tmMkInductive' (mind : mutual_inductive_body) : TemplateMonad unit
-  := tmMkInductive (mind_body_to_entry mind).
+  := tmMkInductive false (mind_body_to_entry mind).
 
 Definition tmAxiom id := tmAxiomRed id None.
 Definition tmDefinition id {A} t := @tmDefinitionRed_ false id None A t.

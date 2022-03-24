@@ -53,7 +53,7 @@ Cumulative Inductive TM@{t} : Type@{t} -> Type :=
 
 (* unquote before making the definition *)
 (* FIXME take an optional universe context as well *)
-| tmInductive : mutual_inductive_entry -> TM unit
+| tmInductive : bool -> mutual_inductive_entry -> TM unit
 
 (* Typeclass registration and querying for an instance *)
 | tmExistingInstance : global_reference -> TM unit
@@ -87,7 +87,7 @@ Definition tmDefinition (nm : ident)
 
 
 Definition tmInductive' (mind : mutual_inductive_body) : TM unit
-  := tmInductive (mind_body_to_entry mind).
+  := tmInductive false (mind_body_to_entry mind).
 
 Definition tmLemmaRed (i : ident) (rd : reductionStrategy)
            (ty : Ast.term) :=

@@ -4,6 +4,7 @@ From MetaCoq.Template Require Import config utils uGraph EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICEquality PCUICReduction
      PCUICReflect PCUICSafeLemmata PCUICTyping PCUICGlobalEnv PCUICWfUniverses.
 From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfEnv. 
+From Equations Require Import Equations.
 
 Lemma wf_gc_of_uctx {cf:checker_flags} {Σ : global_env} (HΣ : ∥ wf Σ ∥)
 : ∑ uctx', gc_of_uctx (global_uctx Σ) = Some uctx'.
@@ -47,7 +48,7 @@ Defined.
 
 Require Import Morphisms.
 
-Instance consistent_proper : Proper (CS.Equal ==> iff) consistent.
+Global Instance consistent_proper : Proper (CS.Equal ==> iff) consistent.
 Proof.
   intros c c' eq. rewrite /consistent.
   now setoid_rewrite eq.
@@ -116,17 +117,9 @@ Global Instance canonincal_abstract_env_ext_struct {cf:checker_flags} :
      abstract_env_ext_rel := fun X Σ => Σ = referenced_impl_env_ext X
   |}.
 
-Definition init_env : global_env := {| universes := (LS.singleton Level.lzero , CS.empty); declarations := [] |}.
-
-Definition on_global_univ_init : on_global_univs init_env.
-Admitted.
-
 Program Global Instance canonincal_abstract_env_struct {cf:checker_flags} :
   abstract_env_struct referenced_impl referenced_impl_ext :=
  {|
- abstract_env_empty := {|
- referenced_impl_env := init_env ;
- |} ;
  abstract_env_init := fun cs H =>  {|
  referenced_impl_env := {| universes := cs ; declarations := [] |};
  |} ;
@@ -143,14 +136,9 @@ Program Global Instance canonincal_abstract_env_struct {cf:checker_flags} :
  |} ;
  abstract_env_rel := fun X Σ => Σ = referenced_impl_env X
  |}.
-Next Obligation. sq; constructor; cbn. 
-- apply on_global_univ_init.
-- econstructor.
-Qed.
-Next Obligation. sq; constructor; eauto. econstructor. Qed.
-Next Obligation. pose proof (referenced_impl_wf X) as [[? ?]]. sq. split; cbn; eauto.
-  destruct H; econstructor; eauto. 
-Qed.
+Next Obligation. sq; constructor; cbn; eauto. econstructor. Qed.
+Next Obligation. pose proof (referenced_impl_wf X) as [[? ?]]; sq; destruct H.
+  econstructor; eauto. econstructor; eauto.  Qed.
 Next Obligation. pose proof (referenced_impl_wf X) as [?]. sq. split; eauto.
   apply on_udecl_mono.
 Qed.   
@@ -204,12 +192,6 @@ Proof.
   reflexivity.
 Qed.
 
-Program Definition wf_env_empty {cf:checker_flags} : wf_env := 
-{|   
-  wf_env_referenced := abstract_env_empty;
-  wf_env_map := EnvMap.empty;
-  |}.
-
 Program Definition wf_env_init {cf:checker_flags} cs : 
   on_global_univs cs -> wf_env := fun H =>
   {|   
@@ -220,7 +202,6 @@ Program Definition wf_env_init {cf:checker_flags} cs :
 Program Global Instance optimized_abstract_env_struct {cf:checker_flags} :
   abstract_env_struct wf_env wf_env_ext :=
  {|
- abstract_env_empty := wf_env_empty;
  abstract_env_init := wf_env_init;
  abstract_env_add_decl X kn d H :=
   {| wf_env_referenced := @abstract_env_add_decl _ _ referenced_impl_ext _ X.(wf_env_referenced) kn d H ;

@@ -11,7 +11,8 @@ theories/ECSubst.v
 theories/EWcbvEval.v
 # theories/EWtAst.v
 theories/EWndEval.v
-theories/ETyping.v
+theories/EGlobalEnv.v
+theories/EEnvMap.v
 theories/EWcbvEvalInd.v
 theories/Extract.v
 theories/EDeps.v
@@ -25,6 +26,7 @@ theories/ErasureCorrectness.v
 theories/ErasureFunction.v
 theories/EExtends.v
 theories/EOptimizePropDiscr.v
-theories/ERemoveParams.v
+theories/EEtaExpandedFix.v
 theories/EEtaExpanded.v
+theories/ERemoveParams.v
 theories/Erasure.v

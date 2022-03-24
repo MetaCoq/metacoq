@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import utils.
-From MetaCoq.Erasure Require Import EAst EInduction ELiftSubst.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst.
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -149,4 +149,11 @@ Proof.
   move/andP=> [] cla clts.
   intros clu. eapply IHts => //.
   eapply closed_csubst => //.
+Qed.
+
+Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
+Proof.
+  induction l using rev_ind; simpl; auto.
+  rewrite mkApps_app /= IHl.
+  now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
 Qed.

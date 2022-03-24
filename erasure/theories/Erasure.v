@@ -95,14 +95,14 @@ Module Transform.
     Qed.
   End Comp.
 End Transform.
-Import ETyping.
+Import EGlobalEnv.
 
 Definition self_transform program value eval eval' := Transform.t program program value value eval eval'.
 
 Definition eprogram := 
   (EAst.global_context * EAst.term).
 
-Import EEtaExpanded.GlobalContextMap (make, global_decls).
+Import EEnvMap.GlobalContextMap (make, global_decls).
 
 Arguments EWcbvEval.eval {wfl} _ _ _.
 
@@ -142,7 +142,7 @@ Proof.
 Qed.
 
 Definition eprogram_env := 
-  (EEtaExpanded.GlobalContextMap.t * EAst.term).
+  (EEnvMap.GlobalContextMap.t * EAst.term).
 
 Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
   EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t.
@@ -156,8 +156,8 @@ Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) :
     transform p pre := remove_params p;
     pre p := 
     let decls := p.1.(global_decls) in
-     [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
-      EEtaExpanded.isEtaExp decls [] p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+     [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
+      EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
@@ -174,7 +174,7 @@ Next Obligation.
 Qed.
 Next Obligation.
   red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
-  eapply ERemoveParams.strip_eval in ev; eauto.
+  eapply ERemoveParams.strip_eval in ev; eauto. 
 Qed.
 
 Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
@@ -183,8 +183,8 @@ Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
     transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
     pre p := 
       let decls := p.1.(global_decls) in
-      [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
-       EEtaExpanded.isEtaExp decls [] p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+      [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
+       EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
     post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
     obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
 Next Obligation.
@@ -302,7 +302,7 @@ Program Definition erase_pcuic_program (p : pcuic_program)
   let wfe' := make_wf_env_ext wfe p.1.2 wfΣ in
   let t := ErasureFunction.erase wfe' nil p.2 _ in
   let Σ' := ErasureFunction.erase_global (term_global_deps t) wfe in
-  (EEtaExpanded.GlobalContextMap.make Σ' _, t).
+  (EEnvMap.GlobalContextMap.make Σ' _, t).
   
 Next Obligation.
   sq. destruct wt as [T Ht].

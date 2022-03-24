@@ -3,8 +3,9 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect ECSubst.
 Require Import ssreflect.
+Import MCMonadNotation.
 
-(** * Typing derivations
+(** * Global environments 
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 
@@ -39,11 +40,36 @@ Definition declared_projection Σ (proj : projection) mdecl idecl pdecl : Prop :
 
 Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
   kn <> kn' ->
-  ETyping.lookup_env ((kn, d) :: Σ) kn' = ETyping.lookup_env Σ kn'.
+  EGlobalEnv.lookup_env ((kn, d) :: Σ) kn' = EGlobalEnv.lookup_env Σ kn'.
 Proof.
   simpl. change (eq_kername kn' kn) with (eqb kn' kn).
   destruct (eqb_spec kn' kn). subst => //. auto. 
 Qed.
+
+Section Lookups.
+  Context (Σ : global_declarations).
+
+  Definition lookup_minductive kn : option mutual_inductive_body :=
+    decl <- lookup_env Σ kn;; 
+    match decl with
+    | ConstantDecl _ => None
+    | InductiveDecl mdecl => ret mdecl
+    end.
+
+  Definition lookup_inductive kn : option (mutual_inductive_body * one_inductive_body) :=
+    mdecl <- lookup_minductive (inductive_mind kn) ;;
+    idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
+    ret (mdecl, idecl).
+  
+  Definition lookup_inductive_pars kn : option nat := 
+    mdecl <- lookup_minductive kn ;;
+    ret mdecl.(ind_npars).
+  
+  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
+    '(mdecl, idecl) <- lookup_inductive kn ;;
+    cdecl <- nth_error idecl.(ind_ctors) c ;;
+    ret (mdecl.(ind_npars), cdecl.2).
+End Lookups.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)
 
@@ -56,7 +82,6 @@ Definition inductive_isprop_and_pars Σ ind :=
     end
   | _ => None
   end.
-
 
 Definition closed_decl (d : EAst.global_decl) := 
   match d with

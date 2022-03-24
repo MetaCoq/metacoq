@@ -2,7 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect ETyping.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv.
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
@@ -669,7 +669,7 @@ Section Wcbv.
       cbn in *; subst.
       now specialize (IHev2 _ ev'2); noconf IHev2.
     - depelim ev'; try go.
-      unfold ETyping.declared_constant in *.
+      unfold EGlobalEnv.declared_constant in *.
       assert (decl0 = decl) as -> by congruence.
       assert (body0 = body) as -> by congruence.
       assert (e0 = e) as -> by now apply uip.
@@ -882,6 +882,22 @@ Proof.
     * now cbn in i.
 Qed.
 
+Lemma eval_mkApps_Construct {fl : WcbvFlags} Σ kn c args args' : 
+  All2 (eval Σ) args args' ->
+  eval Σ (mkApps (tConstruct kn c) args) (mkApps (tConstruct kn c) args').
+Proof.
+  revert args'. induction args using rev_ind; intros args'; destruct args' using rev_case; intros a.
+  - depelim a. constructor => //.
+  - depelim a. cbn. now apply app_tip_nil in H.
+  - depelim a. now apply app_tip_nil in H.
+  - eapply All2_app_inv in a as []. 2:{ eapply All2_length in a. len in a. cbn in a. lia. } 
+    depelim a0. clear a0. rewrite !mkApps_app /=.
+    constructor; auto.
+    destruct args' using rev_ind; try now rewrite ?mkApps_app; cbn; destruct with_guarded_fix; eauto.
+    cbn. rewrite isFixApp_mkApps; eauto.
+    cbn. try now rewrite ?mkApps_app; cbn; destruct with_guarded_fix; eauto.
+Qed.
+
 Require Import Utf8.
 From MetaCoq.Template Require Import BasicAst.
 
@@ -961,7 +977,7 @@ Proof.
   apply cld.
 Qed.
 
-Lemma lookup_env_closed {Σ kn decl} : ETyping.closed_env Σ -> ETyping.lookup_env Σ kn = Some decl -> ETyping.closed_decl decl.
+Lemma lookup_env_closed {Σ kn decl} : EGlobalEnv.closed_env Σ -> EGlobalEnv.lookup_env Σ kn = Some decl -> EGlobalEnv.closed_decl decl.
 Proof.
   induction Σ; cbn => //.
   move/andP => [] cla cle.

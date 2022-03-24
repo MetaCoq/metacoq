@@ -46,7 +46,7 @@ Section optimize.
     | tLetIn na b b' => tLetIn na (optimize b) (optimize b')
     | tCase ind c brs =>
       let brs' := List.map (on_snd optimize) brs in
-      match ETyping.inductive_isprop_and_pars Σ (fst ind) with
+      match EGlobalEnv.inductive_isprop_and_pars Σ (fst ind) with
       | Some (true, npars) =>
         match brs' with
         | [(a, b)] => ECSubst.substl (repeat E.tBox #|a|) b
@@ -55,7 +55,7 @@ Section optimize.
       | _ => E.tCase ind (optimize c) brs'
       end
     | tProj p c =>
-      match ETyping.inductive_isprop_and_pars Σ p.1.1 with 
+      match EGlobalEnv.inductive_isprop_and_pars Σ p.1.1 with 
       | Some (true, _) => tBox
       | _ => tProj p (optimize c)
       end
@@ -115,7 +115,7 @@ Section optimize.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    - move/andP: H => [] clt cll. destruct ETyping.inductive_isprop_and_pars as [[[|] _]|] => /= //.
+    - move/andP: H => [] clt cll. destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       rewrite IHt //.
       depelim X. cbn in *.
@@ -128,7 +128,7 @@ Section optimize.
       depelim cll. depelim cll. solve_all.
       rtoProp; solve_all. solve_all.
       rtoProp; solve_all. solve_all.
-    - destruct ETyping.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
+    - destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
   Qed.
  
   Lemma subst_csubst_comm l t k b : 
@@ -178,7 +178,7 @@ Section optimize.
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
     - unfold on_snd; cbn.
-      destruct ETyping.inductive_isprop_and_pars as [[[|] _]|] => /= //.
+      destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       * f_equal; auto.
       * depelim X. simpl in *.
@@ -195,7 +195,7 @@ Section optimize.
         rewrite map_map_compose; solve_all.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
-    - destruct ETyping.inductive_isprop_and_pars as [[[|] _]|]=> //;
+    - destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|]=> //;
       now rewrite IHb.
   Qed.
 
@@ -211,27 +211,27 @@ Section optimize.
 
   Lemma optimize_iota_red pars args br :
     forallb (closedn 0) args ->
-    optimize (ETyping.iota_red pars args br) = ETyping.iota_red pars (map optimize args) (on_snd optimize br).
+    optimize (EGlobalEnv.iota_red pars args br) = EGlobalEnv.iota_red pars (map optimize args) (on_snd optimize br).
   Proof.
     intros cl.
-    unfold ETyping.iota_red.
+    unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.
     rewrite forallb_rev forallb_skipn //.
     now rewrite map_rev map_skipn.
   Qed.
   
-  Lemma optimize_fix_subst mfix : ETyping.fix_subst (map (map_def optimize) mfix) = map optimize (ETyping.fix_subst mfix).
+  Lemma optimize_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.fix_subst mfix).
   Proof.
-    unfold ETyping.fix_subst.
+    unfold EGlobalEnv.fix_subst.
     rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
   Qed.
 
-  Lemma optimize_cofix_subst mfix : ETyping.cofix_subst (map (map_def optimize) mfix) = map optimize (ETyping.cofix_subst mfix).
+  Lemma optimize_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.cofix_subst mfix).
   Proof.
-    unfold ETyping.cofix_subst.
+    unfold EGlobalEnv.cofix_subst.
     rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
@@ -239,7 +239,7 @@ Section optimize.
   Qed.
 
   Lemma optimize_cunfold_fix mfix idx n f : 
-    forallb (closedn 0) (ETyping.fix_subst mfix) ->
+    forallb (closedn 0) (EGlobalEnv.fix_subst mfix) ->
     Ee.cunfold_fix mfix idx = Some (n, f) ->
     Ee.cunfold_fix (map (map_def optimize) mfix) idx = Some (n, optimize f).
   Proof.
@@ -253,7 +253,7 @@ Section optimize.
   Qed.
 
   Lemma optimize_cunfold_cofix mfix idx n f : 
-    forallb (closedn 0) (ETyping.cofix_subst mfix) ->
+    forallb (closedn 0) (EGlobalEnv.cofix_subst mfix) ->
     Ee.cunfold_cofix mfix idx = Some (n, f) ->
     Ee.cunfold_cofix (map (map_def optimize) mfix) idx = Some (n, optimize f).
   Proof.
@@ -351,7 +351,7 @@ Definition optimize_decl Σ d :=
 Definition optimize_env (Σ : EAst.global_declarations) := 
   map (on_snd (optimize_decl Σ)) Σ.
 
-Import ETyping.
+Import EGlobalEnv.
 
 (* Lemma optimize_extends Σ Σ' : extends Σ Σ' ->
   optimize Σ t = optimize Σ' t. *)
@@ -414,7 +414,7 @@ Proof.
     have := (eval_closed _ clΣ _ _ cld ev1); rewrite closedn_mkApps => /andP[] _ clargs.
     rewrite optimize_iota_red in IHev2.
     eapply eval_closed in ev1 => //.
-    destruct ETyping.inductive_isprop_and_pars as [[]|]eqn:isp => //. noconf e.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[]|]eqn:isp => //. noconf e.
     eapply Ee.eval_iota; eauto.
     now rewrite -is_propositional_optimize.
     rewrite nth_error_map e0 //. now len.
@@ -469,7 +469,7 @@ Proof.
     { rewrite clargs clbrs !andb_true_r.
       eapply closed_cunfold_cofix; tea. }
     rewrite -> optimize_mkApps in IHev1, IHev2. simpl.
-    destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
     simpl in IHev1.
     eapply Ee.eval_cofix_case. tea.
@@ -487,7 +487,7 @@ Proof.
     move: (eval_closed _ clΣ _ _ cd ev1).
     rewrite closedn_mkApps; move/andP => [] clfix clargs. forward IHev2.
     { rewrite closedn_mkApps clargs andb_true_r. eapply closed_cunfold_cofix; tea. }
-    destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp; auto.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp; auto.
     rewrite -> optimize_mkApps in IHev1, IHev2. simpl in *.
     econstructor; eauto.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
@@ -505,7 +505,7 @@ Proof.
   - move=> cld.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => clargs.
-    destruct ETyping.inductive_isprop_and_pars as [[[] pars']|] eqn:isp => //.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars']|] eqn:isp => //.
     rewrite optimize_mkApps in IHev1.
     rewrite optimize_nth in IHev2.
     specialize (IHev1 cld).

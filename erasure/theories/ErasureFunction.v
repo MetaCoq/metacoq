@@ -973,12 +973,12 @@ Definition erase_global deps Σ :=
 Definition global_erased_with_deps (Σ : global_env) (Σ' : EAst.global_declarations) kn :=
   (exists cst, declared_constant Σ kn cst /\
    exists cst' : EAst.constant_body,
-    ETyping.declared_constant Σ' kn cst' /\
+    EGlobalEnv.declared_constant Σ' kn cst' /\
     erases_constant_body (Σ, cst_universes cst) cst cst' /\
     (forall body : EAst.term,
      EAst.cst_body cst' = Some body -> erases_deps Σ Σ' body)) \/
   (exists mib mib', declared_minductive Σ kn mib /\ 
-    ETyping.declared_minductive Σ' kn mib' /\
+    EGlobalEnv.declared_minductive Σ' kn mib' /\
     erases_mutual_inductive_body mib mib').
 
 Definition includes_deps (Σ : global_env) (Σ' : EAst.global_declarations) deps :=  
@@ -1260,7 +1260,7 @@ Qed.
 
 Lemma elookup_env_cons_disc {Σ kn kn' d} : 
   kn <> kn' ->
-  ETyping.lookup_env ((kn', d) :: Σ) kn = ETyping.lookup_env Σ kn.
+  EGlobalEnv.lookup_env ((kn', d) :: Σ) kn = EGlobalEnv.lookup_env Σ kn.
 Proof.
   intros Hk. simpl.
   destruct (eqb_spec kn kn'); congruence.
@@ -1279,7 +1279,7 @@ Proof.
   { eapply lookup_env_Some_fresh in declc.
     intros <-; contradiction. }
   exists cst'.
-  unfold ETyping.declared_constant. rewrite ETyping.elookup_env_cons_fresh //.
+  unfold EGlobalEnv.declared_constant. rewrite EGlobalEnv.elookup_env_cons_fresh //.
   { eapply lookup_env_Some_fresh in declc.
     intros <-; contradiction. }
   red in ebody. unfold erases_constant_body.
@@ -1317,7 +1317,7 @@ Proof.
   { eapply lookup_env_Some_fresh in declc.
     intros <-. contradiction. }
   exists cst'.
-  unfold ETyping.declared_constant.
+  unfold EGlobalEnv.declared_constant.
   red in ebody. unfold erases_constant_body.
   destruct (cst_body cst) eqn:bod; destruct (E.cst_body cst') eqn:bod' => //.
   intuition auto.
@@ -1440,7 +1440,7 @@ Proof.
         unfold lookup_env; simpl; rewrite e. cbn. rewrite eq_kername_refl //.
         pose proof (sub _ hin) as indeps.
         eapply KernameSet.mem_spec in indeps.
-        unfold ETyping.declared_constant.
+        unfold EGlobalEnv.declared_constant.
         destruct (H _ hin) as [[decl hd]].
         eexists; intuition eauto.
         cbn. 
@@ -1709,7 +1709,7 @@ Local Arguments erase_global_decls _ _ _ : clear implicits.
 Lemma lookup_env_erase (Σ : wf_env) deps kn d :
   KernameSet.In kn deps -> 
   lookup_env Σ kn = Some (InductiveDecl d) ->
-  ETyping.lookup_env (erase_global deps Σ) kn = Some (EAst.InductiveDecl (erase_mutual_inductive_body d)).
+  EGlobalEnv.lookup_env (erase_global deps Σ) kn = Some (EAst.InductiveDecl (erase_mutual_inductive_body d)).
 Proof.
   intros hin.
   rewrite /lookup_env. 
@@ -1741,7 +1741,7 @@ Qed.
 Lemma erase_global_declared_constructor (Σ : wf_env) ind c mind idecl cdecl deps :
    declared_constructor Σ (ind, c) mind idecl cdecl ->
    KernameSet.In ind.(inductive_mind) deps -> 
-   ETyping.declared_constructor (erase_global deps Σ) (ind, c) (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl) (cdecl.(cstr_name), cdecl.(cstr_arity)).
+   EGlobalEnv.declared_constructor (erase_global deps Σ) (ind, c) (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl) (cdecl.(cstr_name), cdecl.(cstr_arity)).
 Proof.
   intros [[]] Hin.
   cbn in *. split. split. 
@@ -1750,7 +1750,7 @@ Proof.
   - cbn. erewrite map_nth_error; eauto.
 Qed.
 
-From MetaCoq.Erasure Require Import EEtaExpanded.
+From MetaCoq.Erasure Require Import EEtaExpandedFix.
 
 Lemma All_map_All {A B C} {Q : C -> Type} {P : C -> A -> Prop}
   {Q' : B -> Type} {R : C -> A -> Prop} 
@@ -1921,7 +1921,7 @@ Qed.
 
 Lemma erase_global_closed Σ deps :
   let Σ' := erase_global deps Σ in
-  ETyping.closed_env Σ'.
+  EGlobalEnv.closed_env Σ'.
 Proof.
   sq.
   unfold erase_global.
@@ -1936,9 +1936,9 @@ Proof.
   destruct d as []; simpl; destruct KernameSet.mem.
   assert (wfs : PCUICTyping.wf {| universes := Σ.(universes); declarations := decls |}).
   { depelim X. rewrite e in o0. depelim o0; now split. }
-  + cbn [ETyping.closed_env forallb]. cbn.
+  + cbn [EGlobalEnv.closed_env forallb]. cbn.
     rewrite [forallb _ _](IHdecls) // andb_true_r.
-    rewrite /test_snd /ETyping.closed_decl /=.
+    rewrite /test_snd /EGlobalEnv.closed_decl /=.
     set (er := erase_global_decls_obligation_1 _ _ _ _ _ _ _).
     set (er' := erase_global_decls_obligation_2 _ _ _ _ _ _ _).
     clearbody er er'.
@@ -1952,8 +1952,8 @@ Proof.
     eapply erases_closed in H => //.
     cbn. destruct (obl _ eq_refl). clear H. now eapply PCUICClosedTyp.subject_closed in X0.
   + eapply IHdecls => //.
-  + cbn [ETyping.closed_env forallb].
-    rewrite {1}/test_snd {1}/ETyping.closed_decl /=.
+  + cbn [EGlobalEnv.closed_env forallb].
+    rewrite {1}/test_snd {1}/EGlobalEnv.closed_decl /=.
     eapply IHdecls => //.
   + eapply IHdecls => //.
 Qed.

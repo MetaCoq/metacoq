@@ -115,20 +115,20 @@ Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
-Definition canonical_abstract_env_impl {cf:checker_flags} : abstract_env_ext_impl :=
-  (referenced_impl ; canonincal_abstract_env_ext_struct ; canonincal_abstract_env_prop).
+Definition canonical_abstract_env_ext_impl {cf:checker_flags} : abstract_env_ext_impl :=
+  (referenced_impl_ext ; canonincal_abstract_env_ext_struct ; canonincal_abstract_env_ext_prop).
 
 Definition global_env_add (Σ : global_env) d :=
   {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
 
-Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} (_Σ :referenced_impl) t :
+Theorem pcuic_consistent {cf:checker_flags} {nor : normalizing_flags} (_Σ :referenced_impl_ext) t :
   axiom_free _Σ ->
   (* t : forall (P : Prop), P *)
   _Σ ;;; [] |- t : tProd binder (tSort Prop_univ) (tRel 0) ->
   False.
 Proof.
   intros axfree cons.
-  set (Σ := referenced_impl_env _Σ); set (wfΣ := referenced_impl_wf _Σ).
+  set (Σ := referenced_impl_env_ext _Σ); set (wfΣ := referenced_impl_ext_wf _Σ).
   set (Σext := (global_env_add Σ.1 (make_fresh_name Σ, InductiveDecl False_mib), Σ.2)).
   destruct wfΣ as [wfΣ].
   assert (wf': wf_ext Σext).
@@ -186,12 +186,10 @@ Proof.
     - cbn.
       auto. }
   pose proof (iswelltyped _ _ _ _ typ_false) as wt.
-  set (_Σ' := Build_referenced_impl cf Σext (sq wf')).
-  unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
-  1: econstructor; cbn; intros; subst; now sq. 
+  set (_Σ' := Build_referenced_impl_ext cf Σext (sq wf')). cbn in *. 
+  unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
   1: cbn; intros; subst; exact wt.
-  unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].
-  1: econstructor; cbn; intros; subst; now sq. 
+  unshelve epose proof (hnf_complete (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [w].
   1 : cbn; intros; subst; exact wt.
   eapply subject_reduction_closed in typ_false; eauto.
   eapply whnf_ind_finite with (indargs := []) in typ_false as ctor; auto.

@@ -142,13 +142,11 @@ Context {cf : checker_flags} {nor : normalizing_flags}.
 
   Context (X : X_type.π1).
 
-  Context (X_correct : abstract_env_ext_correct _ X).
-
   Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) : 
-    ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf wfΣ.
+    ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
 
   Local Definition hΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
-    ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ _. 
+    ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ. 
 
   Ltac specialize_Σ wfΣ :=
     repeat match goal with | h : _ |- _ => specialize (h _ wfΣ) end. 
@@ -189,7 +187,7 @@ Qed.
     (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥)
     (wf : forall Σ (wfΣ : abstract_env_ext_rel X Σ), well_sorted Σ Γ T)
     (tx : principal_type Γ T) : principal_sort Γ T :=
-    match @reduce_to_sort cf nor _ X X_correct Γ tx _ with
+    match @reduce_to_sort cf nor _ X Γ tx _ with
     | Checked_comp (u;_) => (u;_)
     | TypeError_comp e _ => !
     end.
@@ -229,7 +227,7 @@ Qed.
     (wf : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ T)
     (isprod : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ ∑ na A B, red Σ Γ T (tProd na A B) ∥) : 
     ∑ na' A' B', forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ tProd na' A' B' ∥ :=
-    match @reduce_to_prod cf nor _ X X_correct Γ T wf with
+    match @reduce_to_prod cf nor _ X Γ T wf with
     | Checked_comp p => p
     | TypeError_comp e _ => !
     end.
@@ -287,7 +285,8 @@ Qed.
     end.
 
 
-  Equations infer (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term) (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wellinferred Σ Γ t) :
+  Equations infer (Γ : context) (wfΓ : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ wf_local Σ Γ ∥) (t : term) 
+    (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wellinferred Σ Γ t) :
     principal_type Γ t
     by struct t :=
    infer Γ wfΓ (tRel n) wt with 
@@ -554,8 +553,9 @@ Qed.
     1: now symmetry.
     now do 2 eexists.
   Defined.
-   
-  Next Obligation.
+  Next Obligation. exact X_type. Defined. 
+  Next Obligation. exact X. Defined.
+  Next Obligation.    
     specialize_Σ wfΣ. inversion wt. 
     inversion X0 ; subst.
     inversion X1.
@@ -573,7 +573,7 @@ Qed.
   Next Obligation.
     cbn in *. intros.
     set (H := λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
-    infer_obligations_obligation_24 Γ ci p c brs wt Σ0
+    infer_obligations_obligation_26 Γ ci p c brs wt Σ0
       wfΣ0) in indargs. cbn in *. 
     set (infer _ wfΓ c H) in *. unfold H in *. clear H.
     pose proof p0.π2 as p02. 
@@ -617,7 +617,7 @@ Qed.
   Next Obligation.
   cbn in *. intros.
   set (H := λ (Σ : global_env_ext) (wfΣ : abstract_env_ext_rel X Σ),
-  infer_obligations_obligation_24 Γ ci p c brs wt Σ wfΣ) in a0.
+  infer_obligations_obligation_26 Γ ci p c brs wt Σ wfΣ) in a0.
   cbn in *. 
   set (infer _ wfΓ c H) in *.
   unfold H in *. clear H e. 
@@ -633,7 +633,8 @@ Qed.
     do 3 eexists. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     Unshelve. eauto. 
   Defined.
-
+  Next Obligation. exact X_type. Defined. 
+  Next Obligation. exact X. Defined.
   Next Obligation.  
   specialize_Σ wfΣ. destruct wt.
     inversion X0. inversion X1. 
@@ -651,7 +652,7 @@ Qed.
   Next Obligation.
   cbn in *. intros.
   set (H := λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
-  infer_obligations_obligation_28 Γ ind n k c
+  infer_obligations_obligation_32 Γ ind n k c
                                    wt Σ0 wfΣ0) in indargs. cbn in *. 
   set (infer _ wfΓ c H) in *. unfold H in *. clear H.
   pose proof p.π2 as p02. 
@@ -686,7 +687,7 @@ Qed.
     cbn in *. 
     set (H := (λ (Σ0 : global_env_ext) 
     (wfΣ0 : abstract_env_ext_rel X Σ0),
-    infer_obligations_obligation_28 Γ ind n k c wt
+    infer_obligations_obligation_32 Γ ind n k c wt
       Σ0 wfΣ0)) in a0.
       cbn in *. 
       set (infer _ wfΓ c H) in *.

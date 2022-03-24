@@ -238,8 +238,6 @@ Section fix_sigma.
 
   Context (X : X_type.π1).
 
-  Context (X_correct : abstract_env_ext_correct _ X).
-
   (* Reducing at least one step or taking a subterm is well-founded *)
   Definition redp_subterm_rel : Relation_Definitions.relation (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) :=
     fun '(Γ2; t2; H) '(Γ1; t1; H2) => forall Σ (wfΣ : abstract_env_ext_rel X Σ), 
@@ -248,7 +246,7 @@ Section fix_sigma.
   Definition wf_redp_subterm_rel : WellFounded redp_subterm_rel.
   Proof.
     intros (Γ & s & H). pose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
-    destruct X_correct as [wf_extΣ]. specialize (wf_extΣ _ wfΣ). sq. 
+    pose (wf_extΣ := abstract_env_ext_wf _ wfΣ). sq. 
     induction (normalisation Σ wf_extΣ Γ s (H _ wfΣ)) as [s _ IH].
     induction (term_subterm_wf s) as [s _ IH_sub] in Γ, H, IH |- *.
     econstructor.

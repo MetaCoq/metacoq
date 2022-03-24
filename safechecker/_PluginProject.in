@@ -82,6 +82,8 @@ src/pCUICErrors.mli
 src/pCUICErrors.ml
 src/pCUICWfEnv.mli
 src/pCUICWfEnv.ml
+src/pCUICWfEnvImpl.mli
+src/pCUICWfEnvImpl.ml
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
 src/pCUICEqualityDec.mli

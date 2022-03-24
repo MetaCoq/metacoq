@@ -82,6 +82,17 @@ Axiom guard_impl : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bo
 Axiom guard_correct : forall fix_cofix Σ Γ mfix,
   guard fix_cofix Σ Γ mfix <-> guard_impl fix_cofix Σ Γ mfix.
 
+Definition init_env : global_env := {| universes := (LS.singleton Level.lzero , CS.empty); declarations := [] |}.
+
+Definition on_global_univ_init_env : on_global_univs init_env.
+  repeat split. 
+  - intros x Hx; cbn in *. inversion Hx.
+  - intros x Hx; cbn in *. destruct x; eauto. now inversion Hx.
+  - red. unshelve eexists. 
+    + econstructor; eauto. intros; exact 1%positive.
+    + red. intros ? ?. cbn in *. inversion H.
+Defined.          
+
 Definition check_conv_pb_relb_correct {cf:checker_flags} (Σ : global_env_ext) (HΣ : ∥ wf_ext Σ ∥) G
   (HG : is_graph_of_uctx G (global_ext_uctx Σ)) conv_pb u u' :
   wf_universe Σ u' -> wf_universe Σ u -> 
@@ -120,6 +131,9 @@ Global Instance canonincal_abstract_env_ext_struct {cf:checker_flags} :
 Program Global Instance canonincal_abstract_env_struct {cf:checker_flags} :
   abstract_env_struct referenced_impl referenced_impl_ext :=
  {|
+ abstract_env_empty := {|
+ referenced_impl_env := {| universes := init_env ; declarations := [] |};
+ |} ;
  abstract_env_init := fun cs H =>  {|
  referenced_impl_env := {| universes := cs ; declarations := [] |};
  |} ;
@@ -136,6 +150,7 @@ Program Global Instance canonincal_abstract_env_struct {cf:checker_flags} :
  |} ;
  abstract_env_rel := fun X Σ => Σ = referenced_impl_env X
  |}.
+Next Obligation. sq. constructor; cbn; eauto. apply on_global_univ_init_env. econstructor. Qed.
 Next Obligation. sq; constructor; cbn; eauto. econstructor. Qed.
 Next Obligation. pose proof (referenced_impl_wf X) as [[? ?]]; sq; destruct H.
   econstructor; eauto. econstructor; eauto.  Qed.
@@ -192,6 +207,12 @@ Proof.
   reflexivity.
 Qed.
 
+Program Definition wf_env_empty {cf:checker_flags} :=
+ {|   
+  wf_env_referenced := abstract_env_empty ;
+  wf_env_map := EnvMap.empty;
+  |}.
+
 Program Definition wf_env_init {cf:checker_flags} cs : 
   on_global_univs cs -> wf_env := fun H =>
   {|   
@@ -202,6 +223,7 @@ Program Definition wf_env_init {cf:checker_flags} cs :
 Program Global Instance optimized_abstract_env_struct {cf:checker_flags} :
   abstract_env_struct wf_env wf_env_ext :=
  {|
+ abstract_env_empty := wf_env_empty;
  abstract_env_init := wf_env_init;
  abstract_env_add_decl X kn d H :=
   {| wf_env_referenced := @abstract_env_add_decl _ _ referenced_impl_ext _ X.(wf_env_referenced) kn d H ;

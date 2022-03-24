@@ -32,6 +32,7 @@ Class abstract_env_ext_struct {cf:checker_flags} (abstract_env_impl : Type) := {
 
 Class abstract_env_struct {cf:checker_flags} (abstract_env_impl abstract_env_ext_impl : Type)
   := {
+  abstract_env_empty : abstract_env_impl;
   abstract_env_init (cs:ContextSet.t) : on_global_univs cs -> abstract_env_impl;
   abstract_env_univ : abstract_env_impl -> ContextSet.t;
   abstract_env_global_declarations : abstract_env_impl -> global_declarations;

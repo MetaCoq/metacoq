@@ -113,7 +113,7 @@ Proof.
       + eapply wf_ext_consistent; eauto. 
 Defined. 
 
-Global Instance canonincal_abstract_env_ext_struct {cf:checker_flags} :
+Global Instance canonical_abstract_env_ext_struct {cf:checker_flags} :
   abstract_env_ext_struct referenced_impl_ext :=
   {| abstract_env_lookup := fun Σ => lookup_env (referenced_impl_env_ext Σ) ;
      abstract_env_conv_pb_relb := fun Σ conv_pb => conv_pb_relb (referenced_impl_ext_graph Σ) conv_pb ;
@@ -128,7 +128,7 @@ Global Instance canonincal_abstract_env_ext_struct {cf:checker_flags} :
      abstract_env_ext_rel := fun X Σ => Σ = referenced_impl_env_ext X
   |}.
 
-Program Global Instance canonincal_abstract_env_struct {cf:checker_flags} :
+Program Global Instance canonical_abstract_env_struct {cf:checker_flags} :
   abstract_env_struct referenced_impl referenced_impl_ext :=
  {|
  abstract_env_empty := {|
@@ -349,8 +349,8 @@ Section GraphSpec.
 End GraphSpec.
 
 
-Program Global Instance canonincal_abstract_env_ext_prop {cf:checker_flags} :
-  @abstract_env_ext_prop _ _ canonincal_abstract_env_ext_struct :=
+Program Global Instance canonical_abstract_env_ext_prop {cf:checker_flags} :
+  @abstract_env_ext_prop _ _ canonical_abstract_env_ext_struct :=
      {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
 Next Obligation. wf_env. Defined.
 Next Obligation. apply check_conv_pb_relb_correct; eauto; wf_env.   
@@ -376,7 +376,7 @@ Next Obligation. split; intros.
   Defined. 
 Next Obligation. apply guard_correct. Defined.
 
-Program Global Instance optimized_abstract_env_extprop {cf:checker_flags} :
+Program Global Instance optimized_abstract_env_ext_prop {cf:checker_flags} :
 @abstract_env_ext_prop _ _ optimized_abstract_env_ext_struct :=
    {| abstract_env_ext_exists := fun Σ => sq (referenced_impl_env_ext Σ ; eq_refl); |}.
 Next Obligation. wf_env. Defined.
@@ -389,8 +389,8 @@ Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf
 Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Defined.
 Next Obligation. now rewrite (abstract_env_guard_correct X.(wf_env_ext_referenced)); eauto. Defined.
 
-Program Global Instance canonincal_abstract_env_prop {cf:checker_flags} :
-  @abstract_env_prop _ _ _ canonincal_abstract_env_ext_struct canonincal_abstract_env_struct.
+Program Global Instance canonical_abstract_env_prop {cf:checker_flags} :
+  @abstract_env_prop _ _ _ canonical_abstract_env_ext_struct canonical_abstract_env_struct.
 Next Obligation. now sq. Qed.
 Next Obligation. wf_env. Qed.
 Next Obligation. now split. Qed.
@@ -438,7 +438,17 @@ Next Obligation. now sq. Qed.
 Next Obligation. wf_env. Qed.
 Next Obligation. now split. Qed.
 Next Obligation. now split. Qed.
-Next Obligation. now erewrite (@abstract_env_is_consistent_correct _ _ _ _ _ canonincal_abstract_env_prop); eauto. Qed.
+Next Obligation. now erewrite (@abstract_env_is_consistent_correct _ _ _ _ _ canonical_abstract_env_prop); eauto. Qed.
 Next Obligation. now erewrite (abstract_env_is_consistent_uctx_correct X.(wf_env_referenced)); eauto. Qed.
   
   
+Definition canonical_abstract_env_ext_impl {cf:checker_flags} : abstract_env_ext_impl :=
+  (referenced_impl_ext ; canonical_abstract_env_ext_struct ; canonical_abstract_env_ext_prop).
+  
+Definition optimized_abstract_env_ext_impl {cf:checker_flags} : abstract_env_ext_impl :=
+  (wf_env_ext ; optimized_abstract_env_ext_struct ; optimized_abstract_env_ext_prop).
+
+Definition optimized_abstract_env_impl {cf:checker_flags} : abstract_env_impl :=
+  (wf_env ; optimized_abstract_env_ext_impl ; optimized_abstract_env_struct ; optimized_abstract_env_prop).
+
+

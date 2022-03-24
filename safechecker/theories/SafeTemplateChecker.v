@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC PCUICSN BDToPCUIC.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl.
 
 Import MCMonadNotation.
 
@@ -13,8 +13,8 @@ Definition trans_program (p : Ast.Env.program) : program :=
   (Σ', trans Σ' p.2).
 
 Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
-  : EnvCheck (let p' := trans_program p in ∑ A, ∥ (p'.1, φ) ;;; [] |- p'.2 : A ∥) :=
-  p <- typecheck_program (trans_program p) φ ;;
+  : EnvCheck wf_env_ext (let p' := trans_program p in ∑ A, ∥ (p'.1, φ) ;;; [] |- p'.2 : A ∥) :=
+  p <- typecheck_program optimized_abstract_env_impl (trans_program p) φ ;;
   ret (p.π1 ; _).
 Next Obligation.
   sq. destruct X. eapply infering_typing; tea. eapply w. constructor.

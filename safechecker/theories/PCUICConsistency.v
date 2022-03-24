@@ -115,9 +115,6 @@ Qed.
 
 Definition binder := {| binder_name := nNamed "P"; binder_relevance := Relevant |}.
 
-Definition canonical_abstract_env_ext_impl {cf:checker_flags} : abstract_env_ext_impl :=
-  (referenced_impl_ext ; canonincal_abstract_env_ext_struct ; canonincal_abstract_env_ext_prop).
-
 Definition global_env_add (Σ : global_env) d :=
   {| universes := Σ.(universes); declarations := d :: Σ.(declarations) |}.
 

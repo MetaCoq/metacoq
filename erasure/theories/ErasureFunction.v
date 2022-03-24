@@ -1757,14 +1757,13 @@ Lemma All_map_All {A B C} {Q : C -> Type} {P : C -> A -> Prop}
   f args (ha: forall y : C, Q y -> ∥ All (R y) args ∥) :
   (forall y : C, Q y -> All (P y) args) ->
   (forall x y rx, P y x -> Q' (f x rx)) ->
-  All Q' (map_All f args ha).
+  forall y, Q y -> All Q' (map_All f args ha).
 Proof.
-  (* funelim (map_All f args ha).
+  funelim (map_All f args ha).
   - constructor.
-  - intros ha hf. 
-    depelim ha. constructor; eauto.
-Qed. *)
-Admitted.
+  - intros ha hf y hy. pose proof (ha y hy). depelim X0. econstructor; eauto.
+    eapply X; eauto. intros. eapply ha in X1. now invs X1.
+Qed.
  
 Lemma erase_brs_eq Σ Γ p ts wt : 
   erase_brs Σ Γ p ts wt = map_All (fun br wt => (erase_context (bcontext br), erase Σ _ (bbody br) wt)) ts wt.
@@ -1804,6 +1803,25 @@ Proof.
 Qed.
 Local Hint Rewrite @map_All_length : len.
 
+Lemma apply_expanded Σ Γ Γ' t t' :
+  expanded Σ Γ t -> Γ = Γ' -> t = t' -> expanded Σ Γ' t'.
+Proof. intros; now subst. Qed.
+
+Lemma nth_error_map_All {A B C} {Q : C -> Type} {P : C -> A  -> Prop} 
+(fn : forall (x : A) , (forall (y:C),  Q y -> P y x) -> B) :
+forall l : list A, forall H : (forall y : C, Q y -> ∥ All (P y) l ∥),
+forall n x,
+  nth_error l n = Some x ->
+  exists D, nth_error (map_All fn l H) n = Some (fn x D).
+Proof.
+  intros.
+  funelim (map_All fn l H).
+  - destruct n; invs H0.
+  - destruct n; invs H1.
+    + eexists. reflexivity.
+    + now eapply H.
+Qed.
+
 Lemma eta_expand_erase {Σ : wf_env_ext} Σ' {Γ t} 
   (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> welltyped Σ0 Γ t) Γ' :
   PCUICEtaExpand.expanded Σ Γ' t ->
@@ -1841,7 +1859,7 @@ Proof.
       * intros. cbn in H3; subst. eapply welltyped_mkApps_inv; sq; eauto.
   - econstructor.
     solve_all. rewrite erase_terms_eq. 
-    eapply All_map_All. intros. exact H0. cbn. intros x wx rx [Hx IH]. eauto.
+    eapply All_map_All. intros. exact H0. cbn. intros x wx rx [Hx IH]. eauto. eauto.
   - simp erase. destruct inspect as [b ise] eqn:hi. destruct b.
     + simp erase. now econstructor.
     + rewrite -hi -erase_equation_1. clear hi.
@@ -1875,18 +1893,26 @@ Proof.
            elim: is_erasableb_reflect => // ise' _; sq. specialize X as X'. destruct X' as [].
            apply happ. eapply Is_type_app in X; tea.
            eapply typing_wf_local; eauto.
-        -- sq. cbn.
+        -- sq. cbn. eapply nth_error_map_All in H4 as [D Hnth].
            eapply expanded_tFix.
            3:{ destruct args; cbn in *; congruence. }
-           { clear - H0. revert H0 Hyp0. cbn. admit. }
+          { rewrite erase_mfix_eq. solve_all. eapply All_map_All.
+            intros. eapply H0. intros. cbn in H |- *. destruct H.
+            eapply apply_expanded. eapply e1. eauto.
+            2: reflexivity. 2: eauto.
+            rewrite !rev_map_spec. do 2 f_equal. clear. 
+            generalize (erase_obligation_13 Σ Γ mfix idx Hyp0).
+            generalize (fix_context mfix). generalize mfix. clear.
+            intros. induction mfix; cbn; f_equal. eapply IHmfix.
+          }
            { solve_all.  clear - deps H2. induction H2; econstructor; eauto. eapply p. eauto. }
-           admit.
-           rewrite map_erase_length. admit.
+           { rewrite erase_mfix_eq. eapply Hnth. }
+           rewrite map_erase_length. cbn. lia.
       * eapply typing_wf_local; eauto.
       * cbn; intros; subst. eapply welltyped_mkApps_inv; sq; eauto. 
   - econstructor; eauto.
     solve_all. rewrite erase_mfix_eq.
-    eapply All_map_All. intros. exact H0. intros x y wx [exp' IH]. len. eauto.
+    eapply All_map_All. intros. exact H0. intros x y wx [exp' IH]. len. eauto. eauto.
   - simp erase. destruct inspect as [b ise] eqn:hi. destruct b.
     + simp erase. constructor.
     + rewrite -hi -erase_equation_1.

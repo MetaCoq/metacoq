@@ -679,6 +679,46 @@ Proof.
 Admitted.  
  *)
 
+ Lemma to_extended_list_k_map_subst:
+  forall n (k : nat) (c : context) k',
+    #|c| + k' <= k ->
+    to_extended_list_k c k' = map (subst n k) (to_extended_list_k c k').
+Proof.
+  intros n k c k'.
+  pose proof (to_extended_list_k_spec c k').
+  symmetry. solve_all.
+  destruct H as [x' [-> Hx']]. intuition. simpl.
+  destruct (leb_spec_Set k x').
+  - lia.
+  - reflexivity.
+Qed.
+
+ Lemma subst_cstr_concl_head ind u mdecl (arity : context) args :
+ let head := tRel (#|ind_bodies mdecl| - S (inductive_ind ind) + #|ind_params mdecl| + #|arity|) in
+ let s := (inds (inductive_mind ind) u (ind_bodies mdecl)) in
+ inductive_ind ind < #|ind_bodies mdecl| ->
+ subst s (#|arity| + #|ind_params mdecl|)
+       (subst_instance u (mkApps head (to_extended_list_k (ind_params mdecl) #|arity| ++ args)))
+ = mkApps (tInd ind u) (to_extended_list_k (ind_params mdecl) #|arity| ++
+                       map (subst s (#|arity| + #|ind_params mdecl|)) (map (subst_instance u) args)).
+Proof.
+ intros.
+ rewrite subst_instance_mkApps, subst_mkApps.
+ f_equal.
+ - subst head. unfold subst_instance. cbn[subst_instance_constr].
+   rewrite (subst_rel_eq _ _ (#|ind_bodies mdecl| - S (inductive_ind ind)) (tInd ind u)); cbn; try lia; auto.
+   subst s. rewrite inds_spec, rev_mapi, nth_error_mapi.
+   elim nth_error_spec.
+   + intros. simpl.
+     f_equal. destruct ind; simpl. f_equal. f_equal. simpl in H. lia.
+   + rewrite List.rev_length. lia.
+ - rewrite !map_app. f_equal.
+   rewrite map_subst_instance_to_extended_list_k.
+   erewrite to_extended_list_k_map_subst at 2.
+   + now rewrite Nat.add_comm.
+   + lia.
+Qed.
+
 Lemma decompose_type_of_constructor :
   forall cf: config.checker_flags
 , forall Σ0: global_env_ext
@@ -693,8 +733,29 @@ Lemma decompose_type_of_constructor :
 context_assumptions
      (decompose_prod_assum [] (type_of_constructor mdecl cdecl (ind, i) u)).1 = ind_npars mdecl + context_assumptions (cstr_args cdecl).
 Proof.
-  
-Admitted.
+  intros. red in wfΣ.
+  unfold type_of_constructor.
+  destruct isdecl' as [[Hmdecl Hidecl] Hcdecl]. red in Hmdecl.
+  eapply lookup_on_global_env in Hmdecl; eauto.
+  destruct Hmdecl as (Σ' & wfΣ' & Hext & [Hind Hparam Hnpars Hvar]).
+  unfold type_of_constructor.
+  eapply nth_error_alli in Hind; eauto.
+  destruct Hind.
+  red in onConstructors.
+  eapply All2_nth_error_Some in onConstructors; eauto.
+  destruct onConstructors as (univs & Hnth & H).
+  destruct H.
+  rewrite cstr_eq. cbn.
+  rewrite !subst_instance_it_mkProd_or_LetIn.
+  rewrite !subst_it_mkProd_or_LetIn.
+  rewrite <- it_mkProd_or_LetIn_app.
+  rewrite !decompose_prod_assum_it_mkProd.
+  - cbn. rewrite app_nil_r, !context_assumptions_app. now len.
+  - unfold cstr_concl, cstr_concl_head. rewrite Nat.add_0_r. len.
+    rewrite subst_cstr_concl_head. 
+    eapply is_ind_app_head_mkApps.
+    eapply nth_error_Some_length; eauto.
+Qed.
 
 Lemma wf_fixpoint_rarg :
   forall cf: config.checker_flags

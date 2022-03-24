@@ -43,3 +43,5 @@ univ.v
 tmVariable.v
 order_rec.v
 # primitive.v
+inferind.v
+inferindunivs.v

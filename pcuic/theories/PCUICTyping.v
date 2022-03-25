@@ -444,7 +444,7 @@ Hint Resolve wf_ext_wf : core.
 
 Lemma wf_ext_consistent {cf:checker_flags} Σ :
   wf_ext Σ -> consistent Σ.
-Proof. intros [? [? [? ?]]]; assumption. Qed.
+Proof. intros [_ [_ [_ [? _]]]]; assumption. Qed.
 #[global]
 Hint Resolve wf_ext_consistent : core.
 

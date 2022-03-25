@@ -209,7 +209,7 @@ Section OnUdecl.
       rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
       intros x Hx. apply In_Var_global_ext_poly. len.
     - destruct wfext as [onΣ onu]. simpl in *.
-      destruct onu as [_ [_ sat]].
+      destruct onu as [_ [_ [sat _]]].
       do 2 red in sat.
       unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
       red. destruct check_univs => //.
@@ -238,7 +238,7 @@ Section OnUdecl.
       rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
       intros x Hx. apply In_Var_global_ext_poly. len.
     - destruct wfext as [onΣ onu]. simpl in *.
-      destruct onu as [_ [_ sat]].
+      destruct onu as [_ [_ [sat _]]].
       do 2 red in sat.
       unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
       red. destruct check_univs => //.
@@ -304,6 +304,31 @@ Section CheckEnv.
   Section UniverseChecks.
   Obligation Tactic := idtac.
 
+  Lemma on_SomeP {A} {P : A -> Prop} (opta : option A) : on_Some P opta -> ∑ a, opta = Some a × P a.
+  Proof.
+    destruct opta as [a|]; [|intros []].
+    intros h; exists a; split; [reflexivity|assumption].
+  Qed.
+
+  Lemma wf_env_non_var_levels Σ (hΣ : ∥ wf Σ ∥) :
+    LS.For_all (negb ∘ Level.is_var) (PCUICLookup.global_levels Σ).
+  Proof. now destruct hΣ as [[[_ [? _]] _]]. Qed.
+
+  Context (full_subgraph : universes_graph -> universes_graph -> Prop).
+
+  Context (graph_extend :
+      forall (G1 G2 : universes_graph),
+      full_subgraph G1 G2 ->
+      forall uctx1 uctx2,
+      G1 =_g make_graph uctx1 ->
+      G2 =_g make_graph uctx2 ->
+      forall v, gc_satisfies v uctx1.2 ->
+           ∑ v', gc_satisfies v' uctx2.2 ×
+                              forall x, VSet.In x G1.1.1 -> val v x = val v' x).
+
+  Context (is_full_subgraph : universes_graph -> universes_graph -> bool)
+          (is_full_subgraph_spec : forall G1 G2, is_full_subgraph G1 G2 -> full_subgraph G1 G2).
+
   Program Definition check_udecl id (Σ : global_env) (HΣ : ∥ wf Σ ∥) G
           (HG : is_graph_of_uctx G (global_uctx Σ)) (udecl : universes_decl)
     : EnvCheck (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
@@ -311,7 +336,7 @@ Section CheckEnv.
     let levels := levels_of_udecl udecl in
     let global_levels := global_levels Σ in
     let all_levels := LevelSet.union levels global_levels in
-    check_eq_true_lazy (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels)
+    check_eq_true_lazy (LevelSet.for_all (fun l => Level.is_var l) levels)
        (fun _ => (empty_ext Σ, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels))));;
     check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
        (fun _ => (empty_ext Σ, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
@@ -320,8 +345,11 @@ Section CheckEnv.
     | None => fun _ =>
       raise (empty_ext Σ, IllFormedDecl id (Msg "constraints trivially not satisfiable"))
     | Some uctx' => fun Huctx =>
-      check_eq_true (wGraph.is_acyclic (add_uctx uctx' G))
+                     let G' := add_uctx uctx' G in
+      check_eq_true (wGraph.is_acyclic G')
                     (empty_ext Σ, IllFormedDecl id (Msg "constraints not satisfiable"));;
+      check_eq_true (is_full_subgraph G G')
+                    (empty_ext Σ, IllFormedDecl id (Msg "undeclared monomorphic constraints"));;
       ret (uctx'; _)
     end eq_refl.
   Next Obligation.
@@ -340,10 +368,11 @@ Section CheckEnv.
       apply LevelSet.mem_spec in H. apply LevelSet.mem_spec in H0.
       now split. }
     repeat split.
-    - clear -H. apply LevelSet.for_all_spec in H.
+    - clear -H HΣ. apply LevelSet.for_all_spec in H.
       2: now intros x y [].
-      intros l Hl. specialize (H l Hl).
-      apply negb_true_iff in H. now apply LevelSetFact.not_mem_iff in H.
+      intros l Hl Hlglob.
+      move: (wf_env_non_var_levels _ HΣ l Hlglob).
+      now rewrite (H l Hl).
     - exact HH.
     - clear -HΣ HH Huctx H2 HG. unfold gc_of_uctx, uctx_of_udecl in *.
       simpl in *.
@@ -379,6 +408,65 @@ Section CheckEnv.
         unfold make_graph. simpl.
         now rewrite H. simpl. reflexivity.
       + now simpl in H.
+    - apply is_full_subgraph_spec in H1.
+      intros v [gΣ [gcΣeq Σsat]]%gc_of_constraints_spec%on_SomeP.
+      destruct (on_SomeP _ HG) as [uctxΣ [uctxΣeq Geq]].
+      pose proof (add_uctx_make_graph uctx'.1 uctxΣ.1 uctx'.2 uctxΣ.2).
+      rewrite -2!surjective_pairing in H3; rewrite Geq in H3.
+      symmetry in Geq.
+      destruct uctxΣ; move: uctxΣeq; rewrite /gc_of_uctx gcΣeq=> [=] [=] ??; subst.
+      destruct (graph_extend G (add_uctx uctx' G) H1 _ _ Geq H3 v Σsat) as [vext [vextsat extendsv]].
+      simpl in vextsat.
+      assert(
+           exists v', satisfies v' (constraints_of_udecl udecl)
+                 /\ LevelSet.For_all (fun l => val v l = val v' l)
+                                    (ContextSet.levels (global_uctx Σ))).
+      {
+        exists vext; split.
+        + apply gc_of_constraints_spec.
+          have -> /= : gc_of_constraints (constraints_of_udecl udecl) = Some uctx'.2
+            by (move: (Huctx); unfold gc_of_uctx=> /=; case: (gc_of_constraints _)=> // ?[= -> //]).
+          unfold gc_satisfies.
+          apply GoodConstraintSet.for_all_spec; first by move=> ?? ->.
+          move=> ??; apply GoodConstraintSet.for_all_spec in vextsat; last by move=> ??->.
+          apply: vextsat; apply/GoodConstraintSet.union_spec; by left.
+        + move=> l Hl; apply extendsv.
+          exact (gc_level_declared_make_graph G _ Geq l Hl).
+      }
+
+      exists vext.(valuation_poly).
+      apply gc_of_constraints_spec.
+      have -> /= : gc_of_constraints (constraints_of_udecl udecl) = Some uctx'.2
+        by (move: (Huctx); unfold gc_of_uctx=> /=; case: (gc_of_constraints _)=> // ?[= -> //]).
+
+      assert (forall x, valuation_mono v x = valuation_mono vext x).
+      {
+
+      have: (let levels := PCUICLookup.global_levels (global_uctx Σ) in
+            LS.For_all (fun x : LS.elt => (negb ∘ Level.is_var) x) levels).
+      destruct HΣ as [[[_ [? _]] _]]. exact H4.
+
+
+
+      unfold gc_of_uctx in uctxΣeq. rewrite gcΣeq in uctxΣeq.
+
+       pose proof (Hunion := gc_of_constraints_union (constraints_of_udecl udecl) (global_constraints Σ)).
+       have Hucstr : gc_of_constraints (constraints_of_udecl udecl) = Some uctx'.2
+       by (move: (Huctx); unfold gc_of_uctx=> /=; case: (gc_of_constraints _)=> // ?[= -> //]).
+
+       rewrite gcΣeq Hucstr in Hunion.
+       case E: (gc_of_constraints _) Hunion=> ? /=.
+       destruct gc_of_constraints.
+
+        [|intro eq; rewrite eq in Huctx; contradiction HG].
+
+      rewrite gcΣeq -Huctx in H1.
+       case_eq (gc_of_constraints (ContextSet.constraints Σ)).
+       2: intros eq; rewrite eq in vsat; solve [inversion vsat].
+       intros gcΣ gcΣ_eq. rewrite gcΣ_eq in vsat.
+        
+       assert (exists v', )
+              gc_of_constraints_spec
     Qed.
 
   Instance consistent_proper : Proper (CS.Equal ==> iff) consistent.

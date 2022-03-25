@@ -1230,6 +1230,10 @@ Definition declared_cstr_levels levels (cstr : UnivConstraint.t) :=
   let '(l1,_,l2) := cstr in
   LevelSet.In l1 levels /\ LevelSet.In l2 levels.
 
+Definition is_declared_cstr_levels levels (cstr : UnivConstraint.t) : bool :=
+  let '(l1,_,l2) := cstr in
+  LevelSet.mem l1 levels && LevelSet.mem l2 levels.
+
 Lemma CS_union_empty s : ConstraintSet.union ConstraintSet.empty s =_cset s.
 Proof.
   intros x; rewrite ConstraintSet.union_spec. lsets.
@@ -1303,6 +1307,14 @@ Module AUContext.
 
   Definition levels (uctx : t) : LevelSet.t :=
     LevelSetProp.of_list (fst (repr uctx)).
+
+  #[local]
+  Existing Instance EqDec_ReflectEq.
+  Definition inter (au av : AUContext.t) : AUContext.t :=
+    let prefix := (split_prefix au.1 av.1).1.1 in
+    let lvls := fold_left_i (fun s i _ => LevelSet.add (Level.Var i) s) prefix LevelSet.empty in
+    let filter := ConstraintSet.filter (is_declared_cstr_levels lvls) in
+    make prefix (ConstraintSet.union (filter au.2) (filter av.2)).
 End AUContext.
 
 Module ContextSet.
@@ -1322,7 +1334,35 @@ Module ContextSet.
   Definition subset (x y : t) : Prop :=
     LevelSet.Subset (levels x) (levels y) /\
     ConstraintSet.Subset (constraints x) (constraints y).
-  
+
+  Definition inter (x y : t) : t :=
+    (LevelSet.inter (levels x) (levels y),
+      ConstraintSet.inter (constraints x) (constraints y)).
+
+  Definition inter_spec (x y : t) :
+    subset (inter x y) x /\
+      subset (inter x y) y /\
+      forall z, subset z x -> subset z y -> subset z (inter x y).
+  Proof.
+    split; last split.
+    1,2: split=> ?; [move=> /LevelSet.inter_spec [//]|move=> /ConstraintSet.inter_spec [//]].
+    move=> ? [??] [??]; split=> ??;
+    [apply/LevelSet.inter_spec|apply/ConstraintSet.inter_spec]; split; auto.
+  Qed.
+
+  Definition union (x y : t) : t :=
+    (LevelSet.union (levels x) (levels y), ConstraintSet.union (constraints x) (constraints y)).
+
+  Definition union_spec (x y : t) :
+    subset x (union x y) /\
+      subset y (union x y) /\
+      forall z, subset x z -> subset y z -> subset (union x y) z.
+  Proof.
+    split; last split.
+    1,2: split=> ??; [apply/LevelSet.union_spec|apply/ConstraintSet.union_spec ]; by constructor.
+    move=> ? [??] [??]; split=> ?;
+    [move=>/LevelSet.union_spec|move=>/ConstraintSet.union_spec]=>-[]; auto.
+  Qed.
 End ContextSet.
 
 Notation "(=_cs)" := ContextSet.equal (at level 0).

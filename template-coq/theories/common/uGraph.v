@@ -1223,7 +1223,7 @@ Section CheckLeq.
 
   Instance correct_labelling_proper : Proper ((=_g) ==> Logic.eq ==> iff) correct_labelling.
   Proof.
-    intros g g' eq x ? <-.
+    intros g g' eq x ? ->.
     unfold correct_labelling.
     rewrite [wGraph.s _](proj2 (proj2 eq)).
     now setoid_rewrite (proj1 (proj2 eq)).
@@ -2912,3 +2912,38 @@ Proof.
   now setoid_replace (l, t0) with (l', t1) using relation gcs_equal. elim H. elim H.
   intuition.
 Qed.
+
+
+
+Definition graph_extend (G1 G2 : universes_graph) :
+  full_subgraph G1 G2 ->
+  acyclic_no_loop G2 -> 
+  forall uctx1 uctx2,
+    global_gc_uctx_invariants uctx1 ->
+    global_gc_uctx_invariants uctx2 ->
+    G1 =_g make_graph uctx1 ->
+    G2 =_g make_graph uctx2 ->
+    forall v, gc_satisfies v uctx1.2 ->
+         ∑ v', gc_satisfies v' uctx2.2 ×
+                            forall x, VSet.In x G1.1.1 -> val v x = val v' x.
+Proof.
+  move=> embed acG2 uctx1 uctx2 guctx1 guctx2 eqG1 eqG2 v /make_graph_spec.
+  pose proof (invG1 := make_graph_invariants uctx1 guctx1).
+  rewrite <- eqG1 in invG1.
+  pose proof (invG2 := make_graph_invariants uctx2 guctx2).
+  rewrite <- eqG2 in invG2.
+  move=> /correct_labelling_proper HGl.
+  symmetry in eqG1.
+  specialize (HGl _ _ eqG1 eq_refl).
+  pose (l := labelling_of_valuation v).
+  pose (Gl := relabel_on G1 G2 l).
+  pose (l' := to_label ∘ (lsp Gl (wGraph.s Gl))).
+  exists (valuation_of_labelling l'); split.
+  - apply/make_graph_spec.
+    pose proof (extends_correct_labelling G1 G2 l HGl embed acG2).
+    pose proof (valuation_labelling_eq uctx2 _ H). 
+    apply/correct_labelling_proper; [symmetry; eassumption| reflexivity|].
+    pose proof (valuation_labelling_eq uctx2). 
+    (labelling_of_valuation v)
+
+valuation_labelling_eq

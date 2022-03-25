@@ -275,6 +275,174 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
   Module VSetDecide := WDecide (VSet).
   Ltac sets := VSetDecide.fsetdec.
 
+  (** Lemmas on sets *)
+
+  Lemma VSet_add_remove x y p : 
+    x <> y ->
+    VSet.Equal (VSet.add x (VSet.remove y p)) (VSet.remove y (VSet.add x p)).
+  Proof. now sets. Qed.
+
+  Lemma VSet_remove_add x p : 
+    ~ VSet.In x p ->
+    VSet.Equal (VSet.remove x (VSet.add x p)) p.
+  Proof. now sets. Qed.
+
+
+  Lemma VSet_add_add x y p : 
+    VSet.Equal (VSet.add x (VSet.add y p)) (VSet.add y (VSet.add x p)).
+  Proof. now sets. Qed.
+
+  Lemma VSet_add_add_same x p : 
+    VSet.Equal (VSet.add x (VSet.add x p)) (VSet.add x p).
+  Proof. now sets. Qed.
+
+  Definition Disjoint s s' := 
+    VSet.Empty (VSet.inter s s').
+
+  Definition DisjointAdd x s s' := VSetProp.Add x s s' /\ ~ VSet.In x s.
+
+  Lemma DisjointAdd_add1 {s0 s1 s2 x y}
+        (H1 : DisjointAdd x s0 s1) (H2 : DisjointAdd y s1 s2)
+    : DisjointAdd x (VSet.add y s0) s2.
+  Proof.
+    split.
+    intro z; split; intro Hz. 2: destruct Hz as [Hz|Hz].
+    - apply H2 in Hz. destruct Hz as [Hz|Hz]; [right|].
+      now apply VSetFact.add_1.
+      apply H1 in Hz. destruct Hz as [Hz|Hz]; [left; assumption|right].
+      now apply VSetFact.add_2.
+    - apply H2. right; apply H1. now left.
+    - apply H2. apply VSet.add_spec in Hz.
+      destruct Hz as [Hz|Hz]; [now left|right].
+      apply H1. now right.
+    - intro Hx. apply VSet.add_spec in Hx.
+      destruct Hx as [Hx|Hx].
+      subst. apply H2. apply H1. now left.
+      now apply H1.
+  Qed.
+
+  Lemma DisjointAdd_add2 {s x} (H : ~ VSet.In x s)
+    : DisjointAdd x s (VSet.add x s).
+  Proof.
+    split. apply VSetProp.Add_add.
+    assumption.
+  Qed.
+
+  Lemma DisjointAdd_add3  {s0 s1 s2 x y}
+        (H1 : DisjointAdd x s0 s1) (H2 : DisjointAdd y s1 s2)
+    : DisjointAdd y s0 (VSet.add y s0).
+  Proof.
+    apply DisjointAdd_add2. intro H.
+    unfold DisjointAdd in *.
+    apply H2. apply H1. now right.
+  Qed.
+
+
+
+  Lemma DisjointAdd_remove {s s' x y} (H : DisjointAdd x s s') (H' : x <> y)
+    : DisjointAdd x (VSet.remove y s) (VSet.remove y s').
+  Proof.
+    repeat split. 2: intros [H0|H0].
+    - intro H0. apply VSet.remove_spec in H0.
+      destruct H0 as [H0 H1].
+      pose proof ((H.p1 y0).p1 H0) as H2.
+      destruct H2; [now left|right].
+      apply VSetFact.remove_2; intuition.
+    - subst. apply VSet.remove_spec. split; [|assumption].
+      apply H.p1. left; reflexivity.
+    - apply VSet.remove_spec in H0; destruct H0 as [H0 H1].
+      apply VSet.remove_spec; split; [|assumption].
+      apply H.p1. right; assumption.
+    - intro H0. apply VSet.remove_spec in H0; destruct H0 as [H0 _].
+      apply H; assumption.
+  Qed.
+
+  Lemma DisjointAdd_Subset {x s s'}
+    : DisjointAdd x s s' -> VSet.Subset s s'.
+  Proof.
+    intros [H _] z Hz. apply H; intuition.
+  Qed.
+
+  Lemma DisjointAdd_union {s s' s'' x} (H : DisjointAdd x s s')
+    : ~ VSet.In x s'' -> DisjointAdd x (VSet.union s s'') (VSet.union s' s'').
+  Proof.
+    destruct H as [hadd hin].
+    split.
+    now eapply VSetProp.union_Add. sets.
+  Qed.
+
+  Lemma DisjointAdd_remove1 {s x} (H : VSet.In x s)
+    : DisjointAdd x (VSet.remove x s) s.
+  Proof.
+    split.
+    - intro z; split; intro Hz. 2: destruct Hz as [Hz|Hz].
+      + destruct (V.eq_dec x z). now left.
+        right. now apply VSetFact.remove_2.
+      + now subst.
+      + eapply VSetFact.remove_3; eassumption.
+    - now apply VSetFact.remove_1.
+  Qed.
+      
+
+  Global Instance Add_Proper : Proper (eq ==> VSet.Equal ==> VSet.Equal ==> iff) VSetProp.Add.
+  Proof.
+    intros x y -> s0 s1 eq s0' s1' eq'.
+    unfold VSetProp.Add. now setoid_rewrite eq; setoid_rewrite eq'.
+  Qed.
+
+  Global Instance DisjointAdd_Proper : Proper (eq ==> VSet.Equal ==> VSet.Equal ==> iff) DisjointAdd.
+  Proof.
+    intros x y -> s0 s1 eq s0' s1' eq'.
+    unfold DisjointAdd.
+    now rewrite eq eq'.
+  Qed.
+
+  Lemma Add_In {s x} (H : VSet.In x s)
+    : VSetProp.Add x s s.
+  Proof.
+    split. intuition.
+    intros []; try subst; assumption.
+  Qed.
+
+  Lemma Add_Add {s s' x} (H : VSetProp.Add x s s')
+    : VSetProp.Add x s' s'.
+  Proof.
+    apply Add_In, H. left; reflexivity.
+  Qed.
+
+  Lemma Disjoint_DisjointAdd x s s' s'' : 
+    DisjointAdd x s s' -> 
+    Disjoint s' s'' ->
+    Disjoint s s''.
+  Proof.
+    intros da; unfold Disjoint.
+    intros disj i. specialize (disj i).
+    intros ininter; apply disj.
+    eapply DisjointAdd_Subset in da.
+    sets.
+  Qed.
+
+  Lemma DisjointAdd_remove_add {x s} :
+    DisjointAdd x (VSet.remove x s) (VSet.add x s).
+  Proof. split; [intro|]; sets. Qed.
+
+  Lemma DisjointAdd_Equal x s s' s'' : DisjointAdd x s s' -> VSet.Equal s' s'' -> DisjointAdd x s s''.
+  Proof. now intros d <-. Qed.
+
+  Lemma DisjointAdd_Equal_l x s s' s'' : DisjointAdd x s s' -> VSet.Equal s s'' -> DisjointAdd x s'' s'.
+  Proof. now intros d <-. Qed.
+
+  Lemma DisjointAdd_remove_inv {x s s' z} : DisjointAdd x s (VSet.remove z s') -> 
+    VSet.Equal s (VSet.remove z s).
+  Proof.
+    intros [].
+    intros i. rewrite VSet.remove_spec.
+    intuition auto. red in H2; subst.
+    specialize (proj2 (H z) (or_intror H1)).
+    rewrite VSet.remove_spec.
+    intuition.
+  Qed.
+
   Module Edge.
     Definition t := (V.t * Z * V.t)%type.
     Definition eq : t -> t -> Prop := eq.
@@ -400,9 +568,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       | pathOf_step e p => Z.succ (length p)
       end.
 
-    (* Global Instance PathOf_refl : CRelationClasses.Reflexive PathOf := pathOf_refl. *)
-    (* Global Instance PathOf_trans : CRelationClasses.Transitive PathOf := @concat. *)
-
     Class invariants := mk_invariant
       { edges_vertices : (* E ⊆ V × V *)
          (forall e, EdgeSet.In e (E G) -> VSet.In e..s (V G) /\ VSet.In e..t (V G));
@@ -410,9 +575,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
         source_vertex : VSet.In (s G) (V G);
         (* s is a source that is lower than any other node *)
         source_pathOf : forall x, VSet.In x (V G) -> ∥ ∑ p : PathOf (s G) x, ∥ 0 <= weight p ∥ ∥ }.
-
-    Context {HI : invariants}.
-
 
     Definition PosPathOf x y := exists p : PathOf x y, weight p > 0.
 
@@ -434,8 +596,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       forall e, EdgeSet.In e (E G) -> Z.of_nat (l e..s) + e..w <= Z.of_nat (l e..t).
 
     Definition leq_vertices n x y := forall l, correct_labelling l -> Z.of_nat (l x) + n <= Z.of_nat (l y).
-
-    Definition DisjointAdd x s s' := VSetProp.Add x s s' /\ ~ VSet.In x s.
 
     Inductive SPath : VSet.t -> V.t -> V.t -> Type :=
     | spath_refl s x : SPath s x x
@@ -503,43 +663,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       reflexivity. specialize (IHp q); intuition.
     Qed.
 
-    Lemma DisjointAdd_add1 {s0 s1 s2 x y}
-          (H1 : DisjointAdd x s0 s1) (H2 : DisjointAdd y s1 s2)
-      : DisjointAdd x (VSet.add y s0) s2.
-    Proof.
-      split.
-      intro z; split; intro Hz. 2: destruct Hz as [Hz|Hz].
-      - apply H2 in Hz. destruct Hz as [Hz|Hz]; [right|].
-        now apply VSetFact.add_1.
-        apply H1 in Hz. destruct Hz as [Hz|Hz]; [left; assumption|right].
-        now apply VSetFact.add_2.
-      - apply H2. right; apply H1. now left.
-      - apply H2. apply VSet.add_spec in Hz.
-        destruct Hz as [Hz|Hz]; [now left|right].
-        apply H1. now right.
-      - intro Hx. apply VSet.add_spec in Hx.
-        destruct Hx as [Hx|Hx].
-        subst. apply H2. apply H1. now left.
-        now apply H1.
-    Qed.
-
-    Lemma DisjointAdd_add2 {s x} (H : ~ VSet.In x s)
-      : DisjointAdd x s (VSet.add x s).
-    Proof.
-      split. apply VSetProp.Add_add.
-      assumption.
-    Qed.
-
-    Lemma DisjointAdd_add3  {s0 s1 s2 x y}
-          (H1 : DisjointAdd x s0 s1) (H2 : DisjointAdd y s1 s2)
-      : DisjointAdd y s0 (VSet.add y s0).
-    Proof.
-      apply DisjointAdd_add2. intro H.
-      unfold DisjointAdd in *.
-      apply H2. apply H1. now right.
-    Qed.
-
-
     Fixpoint add_end {s x y} (p : SPath s x y)
       : forall {z} (e : EdgeOf y z) {s'} (Hs : DisjointAdd y s s'), SPath s' x z
       := match p with
@@ -557,24 +680,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       - intros; cbn. rewrite IHp; lia.
     Qed.
 
-
-    Lemma DisjointAdd_remove {s s' x y} (H : DisjointAdd x s s') (H' : x <> y)
-      : DisjointAdd x (VSet.remove y s) (VSet.remove y s').
-    Proof.
-      repeat split. 2: intros [H0|H0].
-     - intro H0. apply VSet.remove_spec in H0.
-       destruct H0 as [H0 H1].
-       pose proof ((H.p1 y0).p1 H0) as H2.
-       destruct H2; [now left|right].
-       apply VSetFact.remove_2; intuition.
-     - subst. apply VSet.remove_spec. split; [|assumption].
-       apply H.p1. left; reflexivity.
-     - apply VSet.remove_spec in H0; destruct H0 as [H0 H1].
-       apply VSet.remove_spec; split; [|assumption].
-       apply H.p1. right; assumption.
-     - intro H0. apply VSet.remove_spec in H0; destruct H0 as [H0 _].
-       apply H; assumption.
-    Qed.
 
    (* Fixpoint split {s x y} (p : SPath s x y) *)
    (*   : SPath (VSet.remove y s) x y * ∑ s', SPath s' y y := *)
@@ -613,10 +718,33 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       intros s'0 Hs. now rewrite IHp.
     Qed.
 
-    Lemma DisjointAdd_Subset {x s s'}
-      : DisjointAdd x s s' -> VSet.Subset s s'.
+    Obligation Tactic := Program.Tactics.program_simpl.
+    Program Fixpoint sconcat {s s' x y z} (p : SPath s x y) : Disjoint s s' -> 
+      SPath s' y z -> SPath (VSet.union s s') x z :=
+      match p in SPath s x y return Disjoint s s' -> SPath s' y z -> SPath (VSet.union s s') x z  with
+      | spath_refl _ _ => fun hin q => SPath_sub _ q
+      | @spath_step s s0 x y z' da e p => fun hin q =>
+        @spath_step (VSet.union s s') _ x y z _ e (@sconcat _ _ _ _ _ p _ q)
+      end.
+    Next Obligation. sets. Qed.
+    Next Obligation. 
+      eapply DisjointAdd_union; eauto.
+      destruct da. unfold Disjoint in hin.
+      intros inxs'. apply (hin x).
+      destruct (H x). specialize (H2 (or_introl eq_refl)).
+      now eapply VSet.inter_spec.
+    Qed.
+    Next Obligation.
+      eapply Disjoint_DisjointAdd in hin; eauto.
+    Qed.
+
+    Lemma sweight_sconcat {s s' x y z} (p : SPath s x y) (ss' : Disjoint s s')
+          (q : SPath s' y z) :
+      sweight (sconcat p ss' q) = sweight p + sweight q.
     Proof.
-      intros [H _] z Hz. apply H; intuition.
+     induction p; cbn.
+     1: by apply: weight_SPath_sub.
+     rewrite IHp; lia.
     Qed.
 
     Fixpoint snodes {s x y} (p : SPath s x y) : VSet.t :=
@@ -624,6 +752,7 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       | spath_refl s x => VSet.empty
       | spath_step H e p => VSet.add x (snodes p)
       end.
+
 
     Definition split {s x y} (p : SPath s x y)
       : forall u, {VSet.In u (snodes p)} + {u = y} -> 
@@ -693,59 +822,12 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       unfold split'; apply weight_split.
     Defined.    
 
-    Lemma DisjointAdd_union {s s' s'' x} (H : DisjointAdd x s s')
-      : ~ VSet.In x s'' -> DisjointAdd x (VSet.union s s'') (VSet.union s' s'').
-    Proof.
-      destruct H as [hadd hin].
-      split.
-      now eapply VSetProp.union_Add. sets.
-    Qed.
-
-    Lemma DisjointAdd_remove1 {s x} (H : VSet.In x s)
-      : DisjointAdd x (VSet.remove x s) s.
-    Proof.
-      split.
-      - intro z; split; intro Hz. 2: destruct Hz as [Hz|Hz].
-        + destruct (V.eq_dec x z). now left.
-          right. now apply VSetFact.remove_2.
-        + now subst.
-        + eapply VSetFact.remove_3; eassumption.
-      - now apply VSetFact.remove_1.
-    Qed.
-      
     Definition spath_one {s x y k} (Hx : VSet.In x s) (Hk : EdgeSet.In (x, k, y) (E G))
       : SPath s x y.
     Proof.
       econstructor. 3: constructor. now apply DisjointAdd_remove1.
       exists k. assumption.
     Defined.
-
-    Global Instance Add_Proper : Proper (eq ==> VSet.Equal ==> VSet.Equal ==> iff) VSetProp.Add.
-    Proof.
-      intros x y -> s0 s1 eq s0' s1' eq'.
-      unfold VSetProp.Add. now setoid_rewrite eq; setoid_rewrite eq'.
-    Qed.
-
-    Global Instance DisjointAdd_Proper : Proper (eq ==> VSet.Equal ==> VSet.Equal ==> iff) DisjointAdd.
-    Proof.
-      intros x y -> s0 s1 eq s0' s1' eq'.
-      unfold DisjointAdd.
-      now rewrite eq eq'.
-    Qed.
-
-    Lemma Add_In {s x} (H : VSet.In x s)
-      : VSetProp.Add x s s.
-    Proof.
-      split. intuition.
-      intros []; try subst; assumption.
-    Qed.
-
-    Lemma Add_Add {s s' x} (H : VSetProp.Add x s s')
-      : VSetProp.Add x s' s'.
-    Proof.
-      apply Add_In, H. left; reflexivity.
-    Qed.
-
 
     Lemma simplify_aux1 {s0 s1 s2} (H : VSet.Equal (VSet.union s0 s1) s2)
       : VSet.Subset s0 s2.
@@ -1138,6 +1220,8 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
           rewrite weight_reduce; intuition.
     Qed.
 
+    Context {HI : invariants}.
+
     Lemma nodes_subset {x y} (p : PathOf x y)
       : VSet.Subset (nodes p) (V G).
     Proof.
@@ -1497,8 +1581,9 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Qed.
   End graph.
 
-  Definition add_edges G e :=
-    add_edge (add_edge G e) (opp_edge e).
+  (* Unused as far as I can tell + introduce an equality constraint and not inequality.. *)
+  (* Definition add_edges G e := *)
+  (*   add_edge (add_edge G e) (opp_edge e). *)
   Arguments sweight {G s x y}.
   Arguments weight {G x y}.
 
@@ -2011,25 +2096,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       Qed.
     End subgraph2.
 
-    Lemma VSet_add_remove x y p : 
-      x <> y ->
-      VSet.Equal (VSet.add x (VSet.remove y p)) (VSet.remove y (VSet.add x p)).
-    Proof. now sets. Qed.
-    
-    Lemma VSet_remove_add x p : 
-      ~ VSet.In x p ->
-      VSet.Equal (VSet.remove x (VSet.add x p)) p.
-    Proof. now sets. Qed.
-
-
-    Lemma VSet_add_add x y p : 
-      VSet.Equal (VSet.add x (VSet.add y p)) (VSet.add y (VSet.add x p)).
-    Proof. now sets. Qed.
-
-    Lemma VSet_add_add_same x p : 
-      VSet.Equal (VSet.add x (VSet.add x p)) (VSet.add x p).
-    Proof. now sets. Qed.
-
     Lemma SPath_sets {s x y} (p : SPath G s x y)
       : x = y \/ VSet.In x s.
     Proof.
@@ -2090,62 +2156,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       eapply Hm. eapply VSet.mem_spec, VSet.add_spec. sets.
     Qed.
 
-    Definition Disjoint s s' := 
-      VSet.Empty (VSet.inter s s').
- 
-    Lemma Disjoint_DisjointAdd x s s' s'' : 
-      DisjointAdd x s s' -> 
-      Disjoint s' s'' ->
-      Disjoint s s''.
-    Proof.
-      intros da; unfold Disjoint.
-      intros disj i. specialize (disj i).
-      intros ininter; apply disj.
-      eapply DisjointAdd_Subset in da.
-      sets.
-    Qed.
-
-    Obligation Tactic := Program.Tactics.program_simpl.
-    Program Fixpoint sconcat {s s' x y z} (p : SPath G s x y) : Disjoint s s' -> 
-      SPath G s' y z -> SPath G (VSet.union s s') x z :=
-      match p in SPath _ s x y return Disjoint s s' -> SPath G s' y z -> SPath G (VSet.union s s') x z  with
-      | spath_refl _ _ _ => fun hin q => SPath_sub _ _ q
-      | @spath_step _ s s0 x y z' da e p => fun hin q =>
-        @spath_step _ (VSet.union s s') _ x y z _ e (@sconcat _ _ _ _ _ p _ q)
-      end.
-      Next Obligation. sets. Qed.
-      Next Obligation. 
-      Proof.
-        eapply DisjointAdd_union; eauto.
-        destruct da. unfold Disjoint in hin.
-        intros inxs'. apply (hin x).
-        destruct (H x). specialize (H2 (or_introl eq_refl)).
-        now eapply VSet.inter_spec.
-      Qed.
-      Next Obligation.
-        eapply Disjoint_DisjointAdd in hin; eauto.
-      Qed.
-
-    Lemma DisjointAdd_remove_add {x s} :
-      DisjointAdd x (VSet.remove x s) (VSet.add x s).
-    Proof. split; [intro|]; sets. Qed.
-
-    Lemma DisjointAdd_Equal x s s' s'' : DisjointAdd x s s' -> VSet.Equal s' s'' -> DisjointAdd x s s''.
-    Proof. now intros d <-. Qed.
-
-    Lemma DisjointAdd_Equal_l x s s' s'' : DisjointAdd x s s' -> VSet.Equal s s'' -> DisjointAdd x s'' s'.
-    Proof. now intros d <-. Qed.
-
-    Lemma DisjointAdd_remove_inv {x s s' z} : DisjointAdd x s (VSet.remove z s') -> 
-      VSet.Equal s (VSet.remove z s).
-    Proof.
-      intros [].
-      intros i. rewrite VSet.remove_spec.
-      intuition auto. red in H2; subst.
-      specialize (proj2 (H z) (or_intror H1)).
-      rewrite VSet.remove_spec.
-      intuition.
-    Qed.
 
     Lemma leq_vertices_caract0 {n x y} (Vy : VSet.In y (V G)) :
       leq_vertices G n x y <-> (Some n <= lsp G x y)%nbar.
@@ -2437,5 +2447,625 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     Qed.
 
   End subgraph.
+
+  Definition edge_map (f : Edge.t -> Edge.t) (es : EdgeSet.t) : EdgeSet.t :=
+    EdgeSetProp.of_list (map f (EdgeSetProp.to_list es)).
+
+  Lemma edge_map_spec1 f es : forall e, EdgeSet.In e es -> EdgeSet.In (f e) (edge_map f es).
+  Proof.
+    move=> e /EdgeSet.elements_spec1/InA_In_eq ?.
+    apply/EdgeSetProp.of_list_1; apply/InA_In_eq.
+    by apply: in_map.
+  Qed.
+
+  Lemma edge_map_spec2 f es e :
+    EdgeSet.In e (edge_map f es) <-> exists e0, e = f e0 /\ EdgeSet.In e0 es.
+  Proof.
+    split.
+    - move=> /EdgeSetProp.of_list_1/InA_In_eq/in_map_iff.
+      move=> [x [<- /InA_In_eq/EdgeSet.elements_spec1 ?]].
+      exists x; by split.
+    - move=> [? [->]]; apply: edge_map_spec1.
+  Qed.
+
+  Definition diff (l : labelling) x y := Z.of_nat (l y) - Z.of_nat (l x).
+  
+  Definition relabel (G : t) (l : labelling) : t :=
+    (V G, edge_map (fun e => (e..s , diff l e..s e..t, e..t)) (E G), s G).
+
+  Lemma relabel_weight G l (Gl := relabel G l) :
+    forall x y (p : PathOf Gl x y), weight p = Z.of_nat (l y) - Z.of_nat (l x).
+  Proof.
+    move=> x y; elim => [?/=|??? [? /= /edge_map_spec2 [?[[=]????]]] ? ->]. 
+    2: subst; unfold diff.
+    all: lia.
+  Qed.    
+
+  Lemma relabel_lsp G l (Gl := relabel G l) :
+    forall x y n, lsp Gl x y = Some n -> n = Z.of_nat (l y) - Z.of_nat (l x).
+  Proof.
+    move=> ??? /lsp0_spec_eq [p <-].
+    rewrite sweight_weight. apply: relabel_weight.
+  Qed.
+
+  Lemma acyclic_relabel G l (Gl := relabel G l) :
+    correct_labelling G l ->
+    acyclic_no_loop Gl.
+  Proof.
+    move=> HGl x p; rewrite relabel_weight.
+    have acG := acyclic_labelling G l HGl.
+    have xx0 := @lsp_xx G acG x.
+    move: (correct_labelling_lsp G xx0 l HGl); lia.
+  Qed.
+
+  Definition relabel_path G l (Gl := relabel G l) :
+    forall {x y}, PathOf G x y -> PathOf Gl x y.
+  Proof.
+    move=> x y; elim=> {x y}[x| x y z e p ih]; first constructor.
+    pose n := Z.of_nat (l y) - Z.of_nat (l x).
+    econstructor; last exact ih.
+    eexists; apply: (edge_map_spec1 _ _ _ e.π2).
+  Defined.
+
+  Lemma invariants_relabel G l (Gl := relabel G l) :
+    correct_labelling G l ->
+    invariants G ->
+    invariants Gl.
+  Proof.
+    move=> [sG0 _] [edgeG sG wG] ; constructor.
+    - move=> e /edge_map_spec2 [e' [-> ?]]; cbn; by apply: edgeG.
+    - apply: sG.
+    - move=> x xin; move: (wG x xin)=> [[p h]].
+      constructor.
+      exists (relabel_path G l p).
+      constructor; rewrite relabel_weight sG0; lia.
+  Qed.
+
+  Definition relabel_map G1 l (e : Edge.t) : Edge.t :=
+    if EdgeSet.mem e (E G1)
+    then (e..s , diff l e..s e..t, e..t)
+    else e.
+
+  Definition relabel_on (G1 G2 : t) (l : labelling) : t :=
+    (V G2, edge_map (relabel_map G1 l) (E G2), s G2).
+
+  Lemma weight_inverse G x y (p : PathOf G x y) (q : PathOf G y x) :
+    acyclic_no_loop G ->
+    weight p <= - weight q.
+  Proof.
+    move=> /(_ x (concat _ p q)); rewrite weight_concat; lia.
+  Qed.
+
+  Lemma sweight_inverse {G x y s s'} (p : SPath G s x y) (q : SPath G s' y x) :
+    acyclic_no_loop G ->
+    sweight p <= - sweight q.
+  Proof.
+    move=> acG.
+    move: (weight_inverse G x y (to_pathOf _ p) (to_pathOf _ q) acG).
+    by rewrite !sweight_weight.
+  Qed.
+
+
+  Definition acyclic_no_sloop G :=
+    forall x s (p : SPath G s x x), sweight p > 0 -> False.
+
+  Lemma acyclic_no_loop_sloop G (invG : invariants G) :
+    acyclic_no_loop G <-> acyclic_no_sloop G.
+  Proof.
+    etransitivity; first apply: acyclic_no_loop_loop'.
+    split.
+    - move=> acG x s p wp. apply: (acG x).
+      exists (to_pathOf _ p).
+      by rewrite -sweight_weight.
+    - move=> acG x [p wp].
+      pose (rx := spath_refl G VSet.empty x).
+      have hsupp : VSet.Equal (VSet.union VSet.empty (nodes G p)) (nodes G p).
+      { apply: VSetProp.empty_union_1. apply: VSet.empty_spec. }
+      unshelve epose (simplify G p rx hsupp).
+      apply: (acG s0.π1 _ s0.π2).
+      move: (weight_simplify G p rx hsupp).
+      rewrite {1}/rx /s0 /=; lia.
+  Qed.
+
+  Lemma DisjointAdd_add4 x s1 s2 : DisjointAdd x s1 s2 -> DisjointAdd x s1 (VSet.add x s2).
+  Proof.
+    move=> [addx xnotins1]. split=> // y.
+    etransitivity. apply VSet.add_spec. split.
+    - move=> [?|/addx //]; by left.
+    - move=> /addx; by right.
+  Qed.
+
+  Lemma DisjointAdd_In {x s1 s2} : DisjointAdd x s1 s2 -> VSet.In x s2.
+  Proof. move=> [h _]; apply/h; by left. Qed.
+
+
+  Lemma reroot_spath_aux1 {x s0 s1 s2} :
+    DisjointAdd x s1 s2 -> Disjoint s2 s0 ->
+    VSet.Subset (VSet.union s1 (VSet.add x s0)) (VSet.union s2 s0).
+  Proof.
+    move=> disjadd dijs20 ? /VSet.union_spec [].
+    1:move=> /(DisjointAdd_Subset disjadd) ?; apply/VSet.union_spec; by left.
+    move=> /VSet.add_spec[->|?]; apply/VSet.union_spec; [left| by right].
+    apply: DisjointAdd_In; eassumption.
+  Qed.    
+
+  Lemma reroot_spath_aux2 {x s0 s1 s2} :
+    DisjointAdd x s1 s2 -> Disjoint s2 s0 ->
+    DisjointAdd x s0 (VSet.add x s0).
+  Proof.
+    move=> disjadd disj20; apply: DisjointAdd_add2.
+    have ?:= DisjointAdd_In disjadd.
+    move=> xins'; apply: (disj20 x); apply/VSet.inter_spec; by split.
+  Qed.
+
+  Lemma reroot_spath_aux3 {x s0 s1 s2} :
+    DisjointAdd x s1 s2 -> Disjoint s2 s0 ->
+    Disjoint s1 (VSet.add x s0).
+  Proof.
+    move=> disjadd disj20.
+    have disj0' : Disjoint s1 s0 by
+      (apply: Disjoint_DisjointAdd; eassumption).
+    move=> ? /VSet.inter_spec [ins0] /VSet.add_spec [].
+    1: move=> eq; rewrite eq in ins0; case: disjadd=> _ /(_ ins0)//.
+    move=> ?; apply: disj0'; apply/VSet.inter_spec; split; eassumption.
+  Qed.
+
+  Definition reroot_spath_aux G s x z (p : SPath G s x z) y :
+    VSet.In y (snodes G p) ->
+    forall s' (q : SPath G s' z x),
+      Disjoint s s' -> { c : SPath G (VSet.union s s') y y |
+                        sweight c = sweight p + sweight q }.
+  Proof.
+    elim: p=> {x z}[s0 x|s0 s1 x y' z disj01 e p ih] /=.
+    - move=> /VSetFact.empty_iff [].
+    - case: (VSet.E.eq_dec y x)=> [->| neq]. 
+      * move=> _ s' q disj'; unshelve econstructor.
+        + refine (sconcat G (spath_step G s0 s1 _ _ _ disj01 e p) disj' q).
+        + rewrite sweight_sconcat //=.
+      * move=> /VSetDecide.MSetDecideTestCases.test_add_In /(_ neq).
+        move=> yinp s' q disj'.
+        move: (ih yinp (VSet.add x s')
+                  (add_end G q e (reroot_spath_aux2 disj01 disj'))
+                  (reroot_spath_aux3 disj01 disj'))=> [ihc ihw].
+        unshelve eexists (SPath_sub _ _ ihc).
+        1: apply: reroot_spath_aux1=> //.
+        rewrite weight_SPath_sub ihw /= weight_add_end;lia.
+  Qed.
+
+  Lemma reroot_spath G s x (p : SPath G s x x) y :
+    VSet.In y (snodes G p) ->
+    { c : SPath G s y y | sweight c = sweight p } .
+  Proof.
+    move=> yinp.
+    pose (rx := spath_refl G VSet.empty x).
+    have disj : Disjoint s VSet.empty
+      by move=> ? /VSet.inter_spec [_] /VSet.empty_spec [].
+    case: (reroot_spath_aux G s x x p y yinp _ rx disj)=> c wc.
+    unshelve eexists.
+    + apply: (SPath_sub _ _ c).
+      move=> ? /VSet.union_spec [//|/VSet.empty_spec[]].
+    + rewrite weight_SPath_sub wc /rx /=; lia.
+  Defined.
+
+
+  Section MapSPath.
+    Context {G1 G2} (on_edge : forall x y, EdgeOf G1 x y -> EdgeOf G2 x y).
+
+    Equations map_path {x y} (p : PathOf G1 x y) : PathOf G2 x y :=
+    | pathOf_refl _ x => pathOf_refl _ x
+    | pathOf_step _ x y' z e p =>
+        pathOf_step _ x y' z (on_edge _ _ e) (map_path p).
+
+    Definition weight_map_path1
+               (weight_on_edge : forall x y e, (on_edge x y e).π1 <= e.π1) :
+      forall x y (p : PathOf G1 x y),
+        weight (map_path p) <= weight p.
+    Proof.
+      move=> x y p; apply_funelim (map_path p); simp map_path; cbn=> //.
+      move=> ??? e ?; move: (weight_on_edge _ _ e); lia.
+    Qed.
+
+    Definition weight_map_path2
+              (weight_on_edge : forall x y e, (on_edge x y e).π1 >= e.π1) :
+      forall x y (p : PathOf G1 x y),
+        weight (map_path p) >= weight p.
+    Proof.
+      move=> x y p; apply_funelim (map_path p); simp map_path; cbn=> //.
+      move=> ??? e ?; move: (weight_on_edge _ _ e); lia.
+    Qed.
+
+    Equations map_spath {s x y} (p : SPath G1 s x y) : SPath G2 s x y :=
+    | spath_refl _ s x => spath_refl _ s x
+    | spath_step _ s1 s2 x y' z d e p =>
+        spath_step _ s1 s2 x y' z d (on_edge _ _ e) (map_spath p).
+
+
+    Definition weight_map_spath1
+              (weight_on_edge : forall x y e, (on_edge x y e).π1 <= e.π1) :
+      forall s x y (p : SPath G1 s x y),
+        sweight (map_spath p) <= sweight p.
+    Proof.
+      move=> s x y p; apply_funelim (map_spath p); simp map_spath; cbn=> //.
+      move=> ?????? e ?; move: (weight_on_edge _ _ e); lia.
+    Qed.
+
+    Definition weight_map_spath2
+              (weight_on_edge : forall x y e, (on_edge x y e).π1 >= e.π1) :
+      forall s x y (p : SPath G1 s x y),
+        sweight (map_spath p) >= sweight p.
+    Proof.
+      move=> s x y p; apply_funelim (map_spath p); simp map_spath; cbn=> //.
+      move=> ?????? e ?; move: (weight_on_edge _ _ e); lia.
+    Qed.
+
+  End MapSPath.
+
+  Lemma lsp_edge G `{invariants G} {x y} (e : EdgeOf G x y) : (Some e.π1 <= lsp G x y)%nbar.
+  Proof.
+    have xin : VSet.In x (V G) by case: (edges_vertices G _ e.π2).
+    pose proof (l := lsp0_spec_le G (spath_one G xin e.π2)).
+    cbn in l. rewrite Z.add_0_r in l. assumption.
+  Qed.
+    
+  Section RelabelOn.
+    Context G1 G2 l (Gl := relabel_on G1 G2 l).
+    Context `{invariants G1}.
+
+    Context (preserves_edges: forall e, EdgeSet.In e (E G1) -> EdgeSet.In e (E G2)).
+
+    Definition from1 [x y] : EdgeOf G1 x y -> EdgeOf Gl x y.
+    Proof.
+      move=> e. exists (diff l x y).
+      replace (_,_,_) with (relabel_map G1 l (x, e.π1, y)) by
+        (unfold relabel_map; move: e.π2=> /EdgeSet.mem_spec -> //=).
+      unfold Gl, relabel_on; cbn.
+      apply: edge_map_spec1; apply: preserves_edges; apply: e.π2.
+    Defined.
+
+    Definition from2 [x y] : EdgeOf G2 x y -> EdgeOf Gl x y.
+    Proof.
+      move=> e.
+      exists (if (EdgeSet.mem (x, e.π1, y) (E G1)) then diff l x y else e.π1).
+      case E: (EdgeSet.mem (x, e.π1, y) (E G1)).
+      + apply EdgeSet.mem_spec in E.
+        exact (from1 (e.π1 ; E)).π2.
+      + replace (_,_,_) with (relabel_map G1 l (x, e.π1, y))
+          by rewrite /relabel_map E //.
+      unfold Gl, relabel_on; cbn.
+      apply: edge_map_spec1; apply: e.π2.
+    Defined.
+
+    
+    Equations first_in {s x y} (p : SPath Gl s x y) : V.t :=
+    | spath_refl _ z => z
+    | spath_step s1 s2 x0 y0 z0 d e q with VSet.mem x0 (V G1) => {
+      | true => x0
+      | false => first_in q
+      }.
+
+    Lemma first_in_in {s x y} (p : SPath Gl s x y) :
+      VSet.In y (V G1) -> VSet.In (first_in p) (V G1).
+    Proof.
+      apply_funelim (first_in p); simp first_in.
+      move=> ???????? /VSet.mem_spec //.
+    Qed.
+
+    Lemma first_in_first {s x y} (p : SPath Gl s x y) :
+      VSet.In x (V G1) -> first_in p = x.
+    Proof.
+      apply_funelim (first_in p); simp first_in=> //.
+      move=> ????????? /VSetDecide.F.not_mem_iff //.
+    Qed.
+
+    Context (HGl : correct_labelling G1 l)
+            `{invariants G2}.
+
+
+    Context `{acyclic_no_loop G2}
+            (embed : forall v1 v2, VSet.In v1 (V G1) -> VSet.In v2 (V G1) ->
+                              (lsp G2 v1 v2 <= lsp G1 v1 v2)%nbar).
+    Lemma relabel_on_lsp_G1 {x y w} :
+      (Some w <= lsp G1 x y)%nbar -> w <= diff l x y.
+    Proof.
+      case Elsp: (lsp _ _ _)=> [n /=|]; last move=> [].
+      pose proof (h := correct_labelling_lsp G1 Elsp l HGl).
+      move: h; unfold diff; lia.
+    Qed.
+
+    Lemma relabel_on_lsp_G2 {x y w} :
+      VSet.In x (V G1) ->
+      VSet.In y (V G1) ->
+      (Some w <= lsp G2 x y)%nbar -> w <= diff l x y.
+    Proof.
+      move=> hx hy le1.
+      move: (le_trans _ _ _ le1 (embed _ _ hx hy)).
+      apply: relabel_on_lsp_G1.
+    Qed.
+
+
+    Lemma weight_from1 [x y] (e : EdgeOf G1 x y) : (from1 e).π1 >= e.π1.
+    Proof.
+      apply: Z.le_ge.
+      apply: relabel_on_lsp_G1.
+      apply: lsp_edge.
+    Qed.
+    
+    Lemma weight_from2 [x y] (e : EdgeOf G2 x y) : (from2 e).π1 >= e.π1.
+    Proof.
+      cbn; case E: (EdgeSet.mem _ _); last lia.
+      apply EdgeSet.mem_spec in E.
+      exact (weight_from1 (e.π1 ; E)).
+    Qed.
+
+    Lemma relabel_on_invariants : invariants Gl.
+    Proof.
+      constructor.
+      - move=> e /edge_map_spec2 [e0 [->]] /(edges_vertices G2)[??].
+        unfold relabel_map; case: (EdgeSet.mem _ _)=> //.
+      - apply: (source_vertex G2).
+      - move=> x /(source_pathOf G2 x) [[p [wp]]].
+        constructor.
+        exists (map_path from2 p).
+        constructor. etransitivity; first eassumption.
+        apply: Z.ge_le.
+        apply: weight_map_path2.
+        apply: weight_from2.
+    Qed.
+
+    
+    Lemma sweight_relabel_on_G1 {s x y} (p : SPath Gl s x y) :
+      VSet.In y (V G1) ->
+      exists n, lsp G2 x (first_in p) = Some n /\
+             sweight p <= n + diff l (first_in p) y.
+    Proof.
+      move=> yin.
+      induction p.
+      2:move: e => [w /= h];
+        move: {-}(h) => /edge_map_spec2 [e0 [+ e0G2]];
+        unfold relabel_map; case E: (EdgeSet.mem _ _).
+      - simp first_in.
+        exists 0; split; first rewrite lsp_xx //.
+        rewrite /diff /=; lia.
+      - move=> [=] ???; subst.
+        apply EdgeSet.mem_spec in E.
+        destruct e0 as [[x0 ?]?].
+        simp first_in. cbn.
+        case: (edges_vertices G1 _ E)=> [] /VSet.mem_spec -> ? /=.
+        exists 0; split; first rewrite lsp_xx //.
+        move: (IHp yin)=> [? []].
+        rewrite first_in_first //=.
+        rewrite lsp_xx /diff=> [=] <-.
+        lia.
+      - simp first_in.
+        pose proof (lc := lsp_codistance G2 x y (first_in p)).
+        destruct e0 as [[s w0] t].
+        pose proof (lbw := lsp_edge G2 (w0 ; e0G2)).
+        move: (IHp yin) lc=> [w1 []] -> /= wpb + [=] ???; subst.
+        move: {lbw}(plus_le_compat _ _ _ _ lbw (le_refl (Some w1)))=> /= le1 le2.
+        move: {le1 le2}(le_trans _ _ _ le1 le2)=> le.
+        case Ex: (VSet.mem s _)=> /=.
+        + exists 0; split; first rewrite lsp_xx //.
+          move: Ex=> /VSet.mem_spec=> sin.
+          move: (relabel_on_lsp_G2 (sin) (first_in_in p yin) le)=> /=.
+          move: wpb; unfold diff. lia.
+        + move: le; case E2: (lsp _ _ _)=> [n /=|]; last move=> [].
+          move=> le; exists n; split=> //.
+          move: wpb le; unfold diff; lia.
+    Qed.
+
+    Lemma sweight_relabel_on_G2 {s x y} (p : SPath Gl s x y) :
+      Disjoint (snodes Gl p) (V G1) ->
+      (Some (sweight p) <= lsp G2 x y)%nbar.
+    Proof.
+      induction p=> /=; first rewrite lsp_xx //.
+      move=> disj.
+      apply: le_trans; last apply: (lsp_codistance G2 x y z).
+      change (Some (?x + ?y)) with (Some x + Some y)%nbar.
+      apply: plus_le_compat; last apply: IHp.
+      + move: e=> [w]. unfold Gl, relabel_on; cbn.
+        move=> /edge_map_spec2 [[[s w'] t]].
+        unfold relabel_map.
+        case E0: (EdgeSet.mem _ _).
+        * move: E0=> /EdgeSet.mem_spec /(edges_vertices G1 _) [sin ?] [] [=] ???.
+          subst; exfalso; apply: (disj s).
+          apply/VSet.inter_spec; split=> //; by apply: VSetFact.add_1.
+        * move=> [] [=] ??? e2; subst. 
+          exact (lsp_edge G2 (w' ; e2)).
+      + move=> v /VSet.inter_spec [??]; apply: (disj v).
+        apply/VSet.inter_spec; split=> //.
+        by apply: VSetFact.add_2.
+    Qed.
+
+  Lemma acyclic_relabel_on : acyclic_no_sloop Gl.
+  Proof.
+    move=> x s p wp.
+    case E: (VSet.choose (VSet.inter (snodes Gl p) (V G1))) => [y|].
+    - move: E=> /VSet.choose_spec1/VSet.inter_spec [yinp yin1].
+      move: (reroot_spath Gl _ _ p y yinp)=> [q wq].
+      move: (sweight_relabel_on_G1 q yin1)=> [? []].
+      rewrite first_in_first // lsp_xx=> [=] <-.
+      rewrite wq. move: wp; unfold diff. lia.
+    - move: E wp=> /VSet.choose_spec2 /(sweight_relabel_on_G2 p).
+      rewrite lsp_xx /=; lia.
+  Qed.
+
+    Derive Subterm for SPath.
+    Next Obligation.
+      apply: Transitive_Closure.wf_clos_trans.
+      move=> [[s0 [x0 y0/=]] p0].
+      induction p0.
+      - constructor=> -[[s1 [x1 y1/=]] p1] h. inversion h.
+      - constructor=> -[[s1 [x1 y1/=]] p1] h.
+        depelim h.
+        move: IHp0.
+        set sig0 := sigmaI _ _ _.
+        set sig1 := sigmaI _ _ _.
+        have -> // : sig0 = sig1.
+        rewrite {}/sig0 {}/sig1.
+        apply (f_equal (SPath_sig_pack _ s' x z)) in H4.
+        noconf H4.
+        pose (f := fun p : (@sigma VSet.t
+            (fun s' : VSet.t =>
+             @sigma V.t
+               (fun x : V.t =>
+                @sigma V.t
+                  (fun y : V.t =>
+                   @sigma V.t
+                     (fun z : V.t =>
+                      @sigma (DisjointAdd x s0 s')
+                        (fun d : DisjointAdd x s0 s' =>
+                         @sigma (EdgeOf G x y)
+                           (fun e : EdgeOf G x y => SPath G s0 y z))))))) =>
+                     sigmaI (fun x => SPath G (pr1 x) (pr1 (pr2 x)) (pr2 (pr2 x)))
+                            {| pr1 := s0 ;
+                              pr2 := sigmaI (fun _ : V.t => V.t)
+                                            (pr1 (pr2 (pr2 p)))
+                                            (pr1 (pr2 (pr2 (pr2 p)))) |}
+                            (pr2 (pr2 (pr2 (pr2 (pr2 (pr2 p))))))).
+        apply: (f_equal f H4).
+    Qed.
+
+    Lemma spathG1_lsp_Gl x y :
+      VSet.Subset (V G1) (V G2) ->
+      SPath G1 (V G1) x y -> (Some (diff l x y) <= lsp Gl x y)%nbar.
+    Proof.
+      move=> vsub p.
+      pose q := SPath_sub Gl vsub (map_spath from1 p).
+      replace (diff _ _ _) with (sweight q).
+      1: apply: lsp0_spec_le.
+      move: (V G1) p (V G2) vsub @q=> V0 p; induction p=> s1 vsub.
+      - simp map_spath; cbn; first (unfold diff; lia).
+      - simp map_spath. simpl.
+        set vsub' := (fun _ => _). clearbody vsub'.
+        move: (IHp _ vsub') => /= ->; unfold diff; lia.
+    Qed.
+
+    Lemma lsp_Gl_upperbound_G1  x y :
+      VSet.In x (V G1) -> VSet.In y (V G1) ->
+      forall n, lsp Gl x y = Some n -> n <= diff l x y.
+    Proof.
+      move=> xin yin n /lsp0_spec_eq [p <-].
+      pose proof (bound := sweight_relabel_on_G1 p yin).
+      move: bound; rewrite first_in_first // lsp_xx => -[?] [[=]] <- //.
+    Qed.
+
+    Lemma lsp_Gl_between_G1 x y :
+      VSet.Subset (V G1) (V G2) ->
+      PathOf G1 x y ->
+      VSet.In x (V G1) ->
+      VSet.In y (V G1) ->
+      lsp Gl x y = Some (diff l x y).
+    Proof.
+      move=> vsub p xin yin.
+      pose proof (q := simplify2' G1 p).
+      pose proof (lb := spathG1_lsp_Gl _ _ vsub q).
+      move: lb; case Elsp: (lsp _ _ _)=> [w|]; last move=> [].
+      pose proof (ub := lsp_Gl_upperbound_G1 _ _ xin yin _ Elsp).
+      move=> /= ?; f_equal; lia.
+    Qed.
+      
+  End RelabelOn.
+
+  Record full_subgraph (G1 G2 : t) : Prop := {
+      vertices_sub : VSet.Subset (V G1) (V G2) ;
+      edges_sub : EdgeSet.Subset (E G1) (E G2) ;
+      same_src : s G1 = s G2 ;
+      lsp_dominate :
+      forall v1 v2, VSet.In v1 (V G1) -> VSet.In v2 (V G1) ->
+               (lsp G2 v1 v2 <= lsp G1 v1 v2)%nbar
+    }.
+
+  Local Instance reflectEq_vertices : ReflectEq (VSet.E.t).
+  Proof.
+    exists (fun x y => if VSet.E.compare x y is Eq then true else false).
+    move=> x y. move: (VSet.E.compare_spec x y) => [->||].
+    1: by apply: reflectP.
+    all: move=> p; apply: reflectF=> eq; move: p; rewrite eq.
+    all: have := (@irreflexivity _ _ (@StrictOrder_Irreflexive _ _ VSet.E.lt_strorder) y)=> //.
+  Qed. 
+
+  Local Instance reflectEq_nbar: ReflectEq Nbar.t.
+  Proof.
+    apply: reflect_option.
+    apply: EqDec_ReflectEq.
+  Qed.
+
+  (* Defined for completeness, but clearly not what should be used in practice *)
+  Definition is_full_subgraph (G1 G2 : t) : bool :=
+    VSet.subset (V G1) (V G2) &&
+      EdgeSet.subset (E G1) (E G2) &&
+      (s G1 == s G2) &&
+      VSet.for_all (fun x => VSet.for_all (fun y => lsp G1 x y == lsp G2 x y) (V G1)) (V G1).
+
+  Lemma is_full_subgraph_spec G1 G2 :
+    is_full_subgraph G1 G2 -> full_subgraph G1 G2.
+  Proof.
+    unfold is_full_subgraph.
+    move=> /andP [] /andP [] /andP [] /VSet.subset_spec ?.
+    move=> /EdgeSet.subset_spec ?.
+    move=> /(@ReflectEq.eqb_spec _ reflectEq_vertices _ _) ?.
+    move=> /VSet.for_all_spec h.
+    constructor=> // v1 v2 inv1 inv2.
+    move: (h v1 inv1)=> /VSet.for_all_spec /(_ v2  inv2).
+    move=> /(@ReflectEq.eqb_spec _ reflectEq_nbar _ _) ->.
+    apply: le_refl.
+  Qed.
+
+
+  Definition full_subgraph_on_edge {G1 G2} :
+    full_subgraph G1 G2 ->
+    forall x y, EdgeOf G1 x y -> EdgeOf G2 x y.
+  Proof.
+    move=> embed x y [w ine]; exists w.
+    exact (edges_sub _ _ embed _ ine).
+  Defined.
+
+  Section ExtendLabelling.
+    Context G1 G2 `{invariants G1, invariants G2}.
+    Context l (HGl : correct_labelling G1 l)
+            (embed : full_subgraph G1 G2)
+            (acG2 : acyclic_no_loop G2).
+
+    Let Gl := relabel_on G1 G2 l.
+    Let l' := to_label ∘ (lsp Gl (s Gl)).
+    
+    Lemma extends_labelling x : VSet.In x (V G1) -> l' x = l x.
+    Proof.
+      move=> xin1.
+      destruct (source_pathOf G1 x xin1) as [[p _]].
+      pose proof (lsp_eq := lsp_Gl_between_G1 G1 G2 l (edges_sub _ _ embed)
+                               HGl (lsp_dominate _ _ embed)
+                               _ _ (vertices_sub _ _ embed)
+                               p (source_vertex G1) xin1).
+      case: HGl=> [ls _].
+      rewrite /l'/Gl /= -(same_src _ _  embed) lsp_eq /diff ls.
+      replace (_ - _) with (Z.of_nat (l x)) by lia.
+      apply: Nat2Z.inj; rewrite Z_of_to_label.
+      move: (Zle_0_nat (l x))=> /Z.leb_spec0 -> //.
+    Qed.
+
+    Lemma relabel_on_correct_labelling : correct_labelling Gl l'.
+    Proof.
+      pose proof (invGl := relabel_on_invariants G1 G2 l
+                                                 (edges_sub _ _ embed)
+                                                 HGl).
+      pose proof (acGl := acyclic_relabel_on G1 G2 l HGl
+                                             (lsp_dominate _ _ embed)).
+      apply: lsp_correctness. by apply/acyclic_no_loop_sloop.
+    Qed.
+
+    Lemma extends_correct_labelling : correct_labelling G2 l'.
+    Proof.
+      case: relabel_on_correct_labelling => [sGl eGl].
+      split=> //.
+      move=> [[s w] t] ein.
+      pose (e' := from2 G1 G2 l (edges_sub _ _ embed) (w ; ein)).
+      epose (eGl (s, e'.π1, t) e'.π2).
+      epose (weight_from2 G1 G2 l (edges_sub _ _ embed) HGl (w ; ein)).
+      move: l0 g; cbn. lia.
+    Qed.        
+
+  End ExtendLabelling.
+  
 
 End WeightedGraph.

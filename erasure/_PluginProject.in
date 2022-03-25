@@ -45,8 +45,8 @@ src/pCUICPosition.mli
 src/pCUICPosition.ml
 src/pCUICNormal.mli
 src/pCUICNormal.ml
-# src/pCUICWfUniverses.mli
-# src/pCUICWfUniverses.ml
+src/pCUICWfUniverses.mli
+src/pCUICWfUniverses.ml
 # src/pCUICChecker.ml
 # src/pCUICChecker.mli
 # src/pCUICRetyping.ml
@@ -83,6 +83,8 @@ src/pCUICEqualityDec.mli
 src/pCUICEqualityDec.ml
 src/pCUICWfEnv.mli
 src/pCUICWfEnv.ml
+src/pCUICWfEnvImpl.mli
+src/pCUICWfEnvImpl.ml
 src/pCUICSafeReduce.mli
 src/pCUICSafeReduce.ml
 # src/pCUICSafeConversion.mli

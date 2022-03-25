@@ -331,8 +331,11 @@ struct
     let uctx = constr_mkApp (tUContextmake, [|inst' ; const'|]) in
     constr_mkApp (tadd_global_constraints, [|constr_mkApp (cMonomorphic_ctx, [| uctx |]); Lazy.force tinit_graph|])
 
-  let quote_sort s =
-    quote_universe (Sorts.univ_of_sort s)
+  let quote_sort s = match s with
+  | Sorts.Set -> quote_universe Universe.type0
+  | Sorts.Prop -> constr_mkApp (tof_levels, [| quote_level Level.prop |])
+  | Sorts.SProp -> constr_mkApp (tof_levels, [| quote_level Level.sprop |])
+  | Sorts.Type u -> quote_universe u
 
   let quote_sort_family = function
     | Sorts.InProp -> Lazy.force sfProp

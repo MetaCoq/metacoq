@@ -211,3 +211,69 @@ Definition tDummy := tVar "".
 
 Definition iota_red npar args (br : list name * term) :=
   substl (List.rev (List.skipn npar args)) br.2.
+
+
+  Class switchterm := 
+  { 
+  has_tBox : bool
+  ; has_tRel : bool
+  ; has_tVar : bool
+  ; has_tEvar : bool
+  ; has_tLambda : bool
+  ; has_tLetIn : bool
+  ; has_tApp : bool
+  ; has_tConst : bool
+  ; has_tConstruct : bool
+  ; has_tCase : bool
+  ; has_tProj : bool
+  ; has_tFix : bool
+  ; has_tCoFix : bool
+  }.
+  
+Section wf.
+  
+  Context {sw  : switchterm}.
+  Variable has_axioms : bool.
+  Variable Σ : global_context.
+
+  (* a term term is wellformed if
+    - it is closed up to k,
+    - it only contains constructos as indicated by sw,
+    - all occuring constructors are defined,
+    - all occuring constants are defined, and
+    - if has_axioms is false, all occuring constants have bodies *)
+  
+  Fixpoint wellformed k (t : term) : bool :=
+    match t with
+    | tRel i => has_tRel && Nat.ltb i k
+    | tEvar ev args => has_tEvar && List.forallb (wellformed k) args
+    | tLambda _ M => has_tLambda && wellformed (S k) M
+    | tApp u v => has_tApp && wellformed k u && wellformed k v
+    | tLetIn na b b' => has_tLetIn && wellformed k b && wellformed (S k) b'
+    | tCase ind c brs => has_tCase && 
+      let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
+      wellformed k c && brs'
+    | tProj p c => has_tProj && wellformed k c
+    | tFix mfix idx => has_tFix &&
+      let k' := List.length mfix + k in
+      List.forallb (test_def (wellformed k')) mfix
+    | tCoFix mfix idx => has_tCoFix &&
+      let k' := List.length mfix + k in
+      List.forallb (test_def (wellformed k')) mfix
+    | tBox => has_tBox
+    | tConst kn => has_tConst && match lookup_env Σ kn with Some (ConstantDecl d) => 
+        has_axioms || match d.(cst_body) with Some _ => true | _ => false end 
+        | _ => false end
+    | tConstruct ind c => has_tConstruct &&
+        match lookup_env Σ ind.(inductive_mind) with 
+        | Some (InductiveDecl mdecl) => 
+          match nth_error (ind_bodies mdecl) (inductive_ind ind) with 
+          | Some idecl => match nth_error (ind_ctors idecl) c with Some _ => true | _ => false end
+          | _ => false
+          end
+        | _ => false
+        end    
+    | tVar _ => has_tVar
+    end.
+
+End wf.

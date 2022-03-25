@@ -273,8 +273,6 @@ pcuic/src/pCUICReflect.ml
 pcuic/src/pCUICReflect.mli
 pcuic/src/pCUICUtils.ml
 pcuic/src/pCUICUtils.mli
-erasure/src/pCUICReduction.ml
-erasure/src/pCUICReduction.mli
 
 /pcuic/src/ssreflect.mli
 /_opam

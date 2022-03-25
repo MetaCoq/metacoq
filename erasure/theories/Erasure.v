@@ -95,116 +95,11 @@ Module Transform.
     Qed.
   End Comp.
 End Transform.
-Import EGlobalEnv.
-
-Definition self_transform program value eval eval' := Transform.t program program value value eval eval'.
-
-Definition eprogram := 
-  (EAst.global_context * EAst.term).
-
-Import EEnvMap.GlobalContextMap (make, global_decls).
-
-Arguments EWcbvEval.eval {wfl} _ _ _.
-
-Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
-  EWcbvEval.eval (wfl:=wfl) p.1 p.2 t.
 
 Import Transform.
 Obligation Tactic := idtac.
-Program Definition optimize_prop_discr_optimization : self_transform eprogram EAst.term (eval_eprogram EWcbvEval.default_wcbv_flags) (eval_eprogram EWcbvEval.opt_wcbv_flags) := 
-  {| name := "optimize_prop_discr"; 
-    transform p _ := 
-      (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
-    pre p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v
-    |}.
 
-Next Obligation.
-  intros [Σ t] [cle clt].
-  cbn in *. split.
-  move: cle. induction Σ at 1 3; cbn; auto.
-  move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
-  destruct a as [kn []]; cbn in * => //.
-  destruct E.cst_body => //. cbn in cla |- *.
-  now eapply EOptimizePropDiscr.closed_optimize.
-  now eapply EOptimizePropDiscr.closed_optimize.
-Qed.
-Next Obligation.
-  red. move=> [Σ t] /= v [cle clt] ev.
-  eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
-Qed.
-
-Lemma wf_glob_fresh Σ : wf_glob Σ -> EnvMap.EnvMap.fresh_globals Σ.
-Proof.
-  induction Σ. constructor; auto.
-  intros wf; depelim wf. constructor; auto.
-Qed.
-
-Definition eprogram_env := 
-  (EEnvMap.GlobalContextMap.t * EAst.term).
-
-Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
-  EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t.
-
-Program Definition remove_params (p : eprogram_env) : eprogram :=
-  (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2).
-
-Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : 
-  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
-  {| name := "remove_parameters";
-    transform p pre := remove_params p;
-    pre p := 
-    let decls := p.1.(global_decls) in
-     [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
-      EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
-    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
-Next Obligation.
-  intros fl [Σ t] [wfe etae etat cle clt].
-  simpl.
-  cbn -[ERemoveParams.strip] in *.
-  split.
-  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
-  rewrite forallb_map. eapply forallb_impl. intros.
-  destruct x as [kn []]; cbn in * => //.
-  destruct E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
-  now eapply ERemoveParams.closed_strip.
-  now eapply ERemoveParams.closed_strip.
-Qed.
-Next Obligation.
-  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
-  eapply ERemoveParams.strip_eval in ev; eauto. 
-Qed.
-
-Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
-  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
-  {| name := "remove_parameters_fast";
-    transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
-    pre p := 
-      let decls := p.1.(global_decls) in
-      [/\ wf_glob decls, ERemoveParams.isEtaExp_env decls, 
-       EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
-    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
-Next Obligation.
-  intros fl [Σ t] [wfe etae etat cle clt].
-  simpl.
-  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
-  cbn -[ERemoveParams.strip] in *.
-  split.
-  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
-  rewrite forallb_map. eapply forallb_impl. intros.
-  destruct x as [kn []]; cbn in * => //.
-  destruct E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
-  now eapply ERemoveParams.closed_strip.
-  now eapply ERemoveParams.closed_strip.
-Qed.
-Next Obligation.
-  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
-  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
-  eapply ERemoveParams.strip_eval in ev; eauto.
-Qed.
+Definition self_transform program value eval eval' := Transform.t program program value value eval eval'.
 
 Definition pcuic_program := 
   global_env_ext_map * term.
@@ -253,6 +148,114 @@ Program Definition build_global_env_map (g : global_env) : global_env_map :=
 Next Obligation.
   intros g. eapply EnvMap.EnvMap.repr_global_env.
 Qed.
+
+Import EGlobalEnv.
+
+Definition eprogram := 
+  (EAst.global_context * EAst.term).
+
+Import EEnvMap.GlobalContextMap (make, global_decls).
+
+Arguments EWcbvEval.eval {wfl} _ _ _.
+
+Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
+  EWcbvEval.eval (wfl:=wfl) p.1 p.2 t.
+
+Program Definition optimize_prop_discr_optimization : self_transform eprogram EAst.term (eval_eprogram EWcbvEval.default_wcbv_flags) (eval_eprogram EWcbvEval.opt_wcbv_flags) := 
+  {| name := "optimize_prop_discr"; 
+    transform p _ := 
+      (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
+    pre p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
+    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
+    obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v
+    |}.
+
+Next Obligation.
+  intros [Σ t] [cle clt].
+  cbn in *. split.
+  move: cle. induction Σ at 1 3; cbn; auto.
+  move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
+  destruct a as [kn []]; cbn in * => //.
+  destruct E.cst_body => //. cbn in cla |- *.
+  now eapply EOptimizePropDiscr.closed_optimize.
+  now eapply EOptimizePropDiscr.closed_optimize.
+Qed.
+Next Obligation.
+  red. move=> [Σ t] /= v [cle clt] ev.
+  eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
+Qed.
+
+Lemma wf_glob_fresh Σ : wf_glob Σ -> EnvMap.EnvMap.fresh_globals Σ.
+Proof.
+  induction Σ. constructor; auto.
+  intros wf; depelim wf. constructor; auto.
+Qed.
+
+Definition eprogram_env := 
+  (EEnvMap.GlobalContextMap.t * EAst.term).
+
+Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
+  EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t.
+
+Program Definition remove_params (p : eprogram_env) : eprogram :=
+  (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2).
+
+Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : 
+  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
+  {| name := "remove_parameters";
+    transform p pre := remove_params p;
+    pre p := 
+    let decls := p.1.(global_decls) in
+     [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
+      EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
+    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
+Next Obligation.
+  intros fl [Σ t] [wfe etae etat cle clt].
+  simpl.
+  cbn -[ERemoveParams.strip] in *.
+  split.
+  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
+  rewrite forallb_map. eapply forallb_impl. intros.
+  destruct x as [kn []]; cbn in * => //.
+  destruct E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
+  now eapply ERemoveParams.closed_strip.
+  now eapply ERemoveParams.closed_strip.
+Qed.
+Next Obligation.
+  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
+  eapply ERemoveParams.strip_eval in ev; eauto. 
+Qed.
+
+Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
+  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
+  {| name := "remove_parameters_fast";
+    transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
+    pre p := 
+      let decls := p.1.(global_decls) in
+      [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
+       EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
+    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
+    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
+Next Obligation.
+  intros fl [Σ t] [wfe etae etat cle clt].
+  simpl.
+  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
+  cbn -[ERemoveParams.strip] in *.
+  split.
+  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
+  rewrite forallb_map. eapply forallb_impl. intros.
+  destruct x as [kn []]; cbn in * => //.
+  destruct E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
+  now eapply ERemoveParams.closed_strip.
+  now eapply ERemoveParams.closed_strip.
+Qed.
+Next Obligation.
+  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
+  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
+  eapply ERemoveParams.strip_eval in ev; eauto.
+Qed.
+
 
 Definition let_expansion_obseq (p : pcuic_program) (p' : pcuic_program) (v : term) (v' : term) :=
   v' = PCUICExpandLets.trans v.
@@ -413,7 +416,7 @@ Program Definition erasure_pipeline :=
   optimize_prop_discr_optimization.
 
 Next Obligation.
-  sq. split => //. all:todo "etaexp".
+  destruct H. split => //. all:todo "etaexp".
 Qed.
 
 Definition erase_program := run erasure_pipeline.
@@ -425,7 +428,7 @@ Program Definition erasure_pipeline_fast :=
   remove_params_fast_optimization _ ▷ 
   optimize_prop_discr_optimization.
 Next Obligation.
-  split => //. all:todo "etaexp".
+  destruct H; split => //. all:todo "etaexp".
 Qed.
 
 Definition erase_program_fast := run erasure_pipeline_fast.

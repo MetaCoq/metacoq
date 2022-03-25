@@ -61,7 +61,7 @@ Proof.
 Qed.
 
 Lemma substl_subst s u : Forall (fun x => closed x) s ->
-substl s u = subst s 0 u.
+  substl s u = subst s 0 u.
 Proof.
   unfold substl.
   induction s in u |- *; cbn; intros H.

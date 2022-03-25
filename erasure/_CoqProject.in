@@ -14,6 +14,7 @@ theories/EWndEval.v
 theories/EGlobalEnv.v
 theories/EEnvMap.v
 theories/EWcbvEvalInd.v
+theories/EWcbvEvalEtaInd.v
 theories/Extract.v
 theories/EDeps.v
 theories/EAll.v

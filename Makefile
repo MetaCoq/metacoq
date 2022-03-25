@@ -1,6 +1,6 @@
 TIMED ?=
 
-all: template-coq pcuic safechecker erasure examples
+all: template-coq pcuic safechecker erasure examples test-suite translations
 
 .PHONY: all template-coq pcuic erasure install html clean mrproper .merlin test-suite translations
 

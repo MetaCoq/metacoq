@@ -64,7 +64,7 @@ Definition gcs_equal x y : Prop :=
       | _, _ => False
     end.
 
-  Instance gc_of_constraints_proper {cf} : Proper (ConstraintSet.Equal ==> R_opt GoodConstraintSet.Equal) gc_of_constraints.
+  Global Instance gc_of_constraints_proper {cf} : Proper (ConstraintSet.Equal ==> R_opt GoodConstraintSet.Equal) gc_of_constraints.
   Proof.
     intros c c' eqc; cbn.
     destruct (gc_of_constraintsP c);
@@ -77,13 +77,13 @@ Definition gcs_equal x y : Prop :=
     - exact I.
   Qed.
 
-  Instance proper_add_level_edges' : Morphisms.Proper (LevelSet.Equal ==> wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature add_level_edges.
+  Global Instance proper_add_level_edges' : Morphisms.Proper (LevelSet.Equal ==> wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature add_level_edges.
   Proof.
     intros l l' hl e e' <-.
     intros x; rewrite !add_level_edges_spec. firstorder eauto.
   Qed.
 
-  Instance make_graph_proper : Proper (gcs_equal ==> Equal_graph) make_graph.
+  Global Instance make_graph_proper : Proper (gcs_equal ==> Equal_graph) make_graph.
   Proof.
     intros [v c] [v' c'] [eqv eqc]; cbn.
     unfold make_graph; cbn in *.
@@ -93,7 +93,7 @@ Definition gcs_equal x y : Prop :=
   Qed.
   Require Import SetoidTactics.
 
-  Instance is_graph_of_uctx_proper {cf} G : Proper (cs_equal ==> iff) (is_graph_of_uctx G).
+  Global Instance is_graph_of_uctx_proper {cf} G : Proper (cs_equal ==> iff) (is_graph_of_uctx G).
   Proof.
     intros [l c] [l' c'] [eql eqc]; cbn.
     unfold is_graph_of_uctx; cbn. cbn in *.

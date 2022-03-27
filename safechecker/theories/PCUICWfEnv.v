@@ -25,7 +25,6 @@ Class abstract_env_ext_struct {cf:checker_flags} (abstract_env_impl : Type) := {
   abstract_env_guard : abstract_env_impl -> FixCoFix -> context -> mfixpoint term -> bool;
   abstract_env_fixguard X := abstract_env_guard X Fix;
   abstract_env_cofixguard X := abstract_env_guard X CoFix;
-  abstract_env_universe : abstract_env_impl -> Universe.t -> bool;
   (* This part of the structure is here to state the correctness properties *)
   abstract_env_ext_rel : abstract_env_impl -> global_env_ext -> Prop;
 }.

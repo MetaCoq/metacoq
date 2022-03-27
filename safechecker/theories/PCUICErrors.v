@@ -306,7 +306,7 @@ Definition string_of_type_error Σ (e : type_error) : string :=
       print_term Σ Γ t' ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u' ^
       nl ^ "error:" ^ nl ^ string_of_conv_error Σ e ^
       (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)
-      " and context: " ^ nl ^ snd (print_context Σ [] Γ)
+      " and context: " ^ nl ^ print_context Σ [] Γ
   | NotConvertible _ G Γ t u => "Terms are not convertible:" ^ nl ^
       print_term Σ Γ t ^ nl ^ "and:" ^ nl ^ print_term Σ Γ u ^
       (* nl ^ "in universe graph:" ^ nl ^ print_universes_graph G ^ nl ^ *)

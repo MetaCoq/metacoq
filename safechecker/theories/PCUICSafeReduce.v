@@ -190,16 +190,16 @@ Section Reduce.
 
   Context (flags : RedFlags.t).
 
-  Context (X_type : abstract_env_impl).
+  Context (X_type : abstract_env_ext_impl).
 
   Context (X : X_type.π1).
 
-(*  Local Definition gΣ := abstract_env_rel Σ. *)
+(*  Local Definition gΣ := abstract_env_ext_rel Σ. *)
 
-  Local Definition heΣ Σ (wfΣ : abstract_env_rel X Σ) :
-    ∥ wf_ext Σ ∥ :=  abstract_env_wf wfΣ.
+  Local Definition heΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
+    ∥ wf_ext Σ ∥ :=  abstract_env_ext_wf _ wfΣ.
 
-  Local Definition hΣ Σ (wfΣ : abstract_env_rel X Σ) :
+  Local Definition hΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ.
 
   Existing Instance Req_refl.
@@ -266,28 +266,28 @@ Defined.
 
 Corollary R_Acc_aux :
     forall Γ t p,
-    (forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t) ->
-    (Acc (fun t t' => forall Σ (wfΣ : abstract_env_rel X Σ), R_aux Σ Γ t t') (t ; p)).
+    (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) ->
+    (Acc (fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R_aux Σ Γ t t') (t ; p)).
   Proof.
     intros Γ t p h.
     eapply dlexprod_Acc_gen.
-    - apply abstract_env_exists.
+    - apply abstract_env_ext_exists.
     - intros. eapply abstract_env_cored; try apply H1; eauto.
     - intros x. unfold well_founded.
       eapply posR_Acc.
-    - destruct (abstract_env_exists X) as [[Σ wfΣ]];
+    - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]];
       destruct (heΣ _ wfΣ).
       eapply Acc_equiv; try
       eapply normalisation; eauto.
-      eapply R_singleton with (Q := abstract_env_rel X)
+      eapply R_singleton with (Q := abstract_env_ext_rel X)
           (R := fun Σ a a' => cored Σ Γ a a'); eauto.
-      intros; eapply abstract_env_irr; eauto.
+      intros; eapply abstract_env_ext_irr; eauto.
   Defined.
 
   Corollary R_Acc :
     forall Γ t,
-      (forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip t)) ->
-      Acc (fun t t' => forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ t t') t.
+      (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip t)) ->
+      Acc (fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ t t') t.
   Proof.
     intros Γ t h.
     pose proof (R_Acc_aux _ _ (stack_pos (fst t) (snd t)) h) as h'.
@@ -438,10 +438,10 @@ Corollary R_Acc_aux :
     cc0_viewc t := cc0view_other t _.
 
   Equations _reduce_stack (Γ : context) (t : term) (π : stack)
-            (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip (t,π)))
-            (reduce : forall t' π', (forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ (t',π') (t,π)) ->
-                               { t'' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
-    : { t' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
+            (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (t,π)))
+            (reduce : forall t' π', (forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ (t',π') (t,π)) ->
+                               { t'' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t'' (t',π') /\ Pr t'' π' /\ Pr' t'' })
+    : { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' (t,π) /\ Pr t' π /\ Pr' t' } :=
 
     _reduce_stack Γ t π h reduce with red_viewc t π := {
 
@@ -555,7 +555,7 @@ Corollary R_Acc_aux :
     symmetry. assumption.
   Qed.
   Next Obligation.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [hΣ].
     pose proof (welltyped_context _ hΣ _ _ (h _ wfΣ)) as hc.
     simpl in hc.
@@ -595,7 +595,7 @@ Corollary R_Acc_aux :
   Qed.
 
   Next Obligation.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [wΣ].
     specialize (h _ wfΣ).
     eapply welltyped_context in h ; auto. simpl in h.
@@ -606,7 +606,7 @@ Corollary R_Acc_aux :
     discriminate.
   Qed.
   Next Obligation.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [wΣ].
     specialize (h _ wfΣ).
     eapply welltyped_context in h ; auto. simpl in h.
@@ -845,7 +845,7 @@ Corollary R_Acc_aux :
   Qed.
   Next Obligation.
     clear eq.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p0 p1]].
     sq.
     unfold Pr in p0. cbn in p0.
@@ -889,7 +889,7 @@ Corollary R_Acc_aux :
       eapply red_cofix_case; eauto.
   Qed.
   Next Obligation.
-    clear eq. destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    clear eq. destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p0 p1]].
     sq.
     sq.
@@ -959,7 +959,7 @@ Corollary R_Acc_aux :
     subst. constructor. eauto.
   Qed.
   Next Obligation.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p p0]].
     sq.
     unfold Pr in p. simpl in p.
@@ -1004,7 +1004,7 @@ Corollary R_Acc_aux :
         constructor. eapply red_cofix_proj. eauto.
   Qed.
   Next Obligation.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [hΣ]. destruct (prf Σ wfΣ)  as [r [p p0]].
     sq.
     unfold Pr in p. simpl in p.
@@ -1068,7 +1068,7 @@ Corollary R_Acc_aux :
     apply_funelim (red_discr t π). all: easy.
   Qed.
 
-  Lemma welltyped_R_pres Σ (wfΣ : abstract_env_rel X Σ) Γ :
+  Lemma welltyped_R_pres Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
     forall x y : term × stack, welltyped Σ Γ (zip x) -> R Σ Γ y x -> welltyped Σ Γ (zip y).
   Proof.
     intros x y H HR.
@@ -1084,12 +1084,12 @@ Corollary R_Acc_aux :
   Qed.
 
   Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
-           (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip (t,π))) :
-           { t' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
+           (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (t,π))) :
+           { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
     reduce_stack_full Γ t π h :=
-      Fix_F (R := fun t t' => forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ t t')
-            (fun x => (forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip x))
-               -> { t' : term * stack | forall Σ (wfΣ : abstract_env_rel X Σ), Req Σ Γ t' x /\ Pr t' (snd x) /\ Pr' t' })
+      Fix_F (R := fun t t' => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ t t')
+            (fun x => (forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip x))
+               -> { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' x /\ Pr t' (snd x) /\ Pr' t' })
             (fun t' f => _) (x := (t, π)) _ _.
   Next Obligation.
     eapply _reduce_stack.
@@ -1114,11 +1114,11 @@ Corollary R_Acc_aux :
   Next Obligation.
     revert h. generalize (t, π).
     refine (Acc_intro_generator
-              (R:=fun x y => forall Σ (wfΣ : abstract_env_rel X Σ), R Σ Γ x y)
-              (P:=fun x => forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ (zip x))
+              (R:=fun x y => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ x y)
+              (P:=fun x => forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip x))
               (fun x y Px Hy => _) 1000 _); intros.
     - simpl in *. eapply welltyped_R_pres; eauto.
-    - destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       destruct (hΣ _ wfΣ) as [hΣ]. eapply R_Acc; eassumption.
   Defined.
 
@@ -1126,7 +1126,7 @@ Corollary R_Acc_aux :
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
 
   Lemma reduce_stack_Req :
-    forall Σ (wfΣ : abstract_env_rel X Σ) Γ t π h,
+    forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t π h,
      Req Σ Γ (reduce_stack Γ t π h) (t, π).
   Proof.
     intros Σ wfΣ Γ t π h.
@@ -1136,7 +1136,7 @@ Corollary R_Acc_aux :
   Qed.
 
   Theorem reduce_stack_sound :
-    forall Σ (wfΣ : abstract_env_rel X Σ) Γ t π h,
+    forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t π h,
       ∥ Σ ;;; Γ ⊢ zip (t, π) ⇝ zip (reduce_stack Γ t π h) ∥.
   Proof.
     intros Σ wfΣ Γ t π h.
@@ -1152,7 +1152,7 @@ Corollary R_Acc_aux :
       snd (decompose_stack π).
   Proof.
     intros Γ t π h.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
     destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p p']]];
     try eassumption.
@@ -1165,7 +1165,7 @@ Corollary R_Acc_aux :
       stack_context π.
   Proof.
     intros Γ t π h.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     pose proof (reduce_stack_decompose Γ t π h) as hd.
     case_eq (decompose_stack π). intros l ρ e1.
     case_eq (decompose_stack (snd (reduce_stack Γ t π h))). intros l' ρ' e2.
@@ -1186,7 +1186,7 @@ Corollary R_Acc_aux :
       isred (reduce_stack Γ t π h).
   Proof.
     intros Γ t π h hr.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
     destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
     split.
@@ -1199,7 +1199,7 @@ Corollary R_Acc_aux :
       isApp (fst (reduce_stack Γ t π h)) = false.
   Proof.
     intros Γ t π h.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     unfold reduce_stack.
     destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
   Qed.
@@ -1212,17 +1212,17 @@ Corollary R_Acc_aux :
   Proof.
     intros Γ t π h.
     unfold reduce_stack.
-    destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (reduce_stack_full Γ t π h) as [[t' π'] [r [p [hApp hLam]]]]; eauto.
   Qed.
 
   Definition reduce_term Γ t
-    (h : forall Σ, abstract_env_rel X Σ -> welltyped Σ Γ t) :=
+    (h : forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t) :=
     zip (reduce_stack Γ t [] h).
 
   Theorem reduce_term_sound :
-    forall Γ t (h : forall Σ, abstract_env_rel X Σ -> welltyped Σ Γ t)
-      Σ, abstract_env_rel X Σ ->
+    forall Γ t (h : forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ t)
+      Σ, abstract_env_ext_rel X Σ ->
       ∥ Σ ;;; Γ ⊢ t ⇝ reduce_term Γ t h ∥.
   Proof.
     intros Γ t h Σ wfΣ.
@@ -1301,7 +1301,7 @@ Corollary R_Acc_aux :
     set ((reduce_stack_full_obligations_obligation_3 Γ t π h)).
     match goal with
     | |- P ?p (` (@Fix_F ?A ?R ?rt ?f ?t ?ht ?w)) =>
-      set (Q := fun x (y : rt x) => forall (w :forall Σ, abstract_env_rel X Σ ->  welltyped Σ Γ (zip x)), P x (` (y w))) ;
+      set (Q := fun x (y : rt x) => forall (w :forall Σ, abstract_env_ext_rel X Σ ->  welltyped Σ Γ (zip x)), P x (` (y w))) ;
       set (fn := @Fix_F A R rt f t ht)
     end.
     clearbody w.
@@ -1491,7 +1491,7 @@ Corollary R_Acc_aux :
   Qed.
 
   Lemma reduce_stack_whnf :
-    forall Γ t π h Σ (wfΣ : abstract_env_rel X Σ),
+    forall Γ t π h Σ (wfΣ : abstract_env_ext_rel X Σ),
       let '(u, ρ) := reduce_stack Γ t π h in
        ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥.
   Proof.
@@ -1825,7 +1825,7 @@ Corollary R_Acc_aux :
       assumption.
   Qed.
 
-  Theorem reduce_term_complete Σ (wfΣ : abstract_env_rel X Σ) Γ t h :
+  Theorem reduce_term_complete Σ (wfΣ : abstract_env_ext_rel X Σ) Γ t h :
     ∥whnf flags Σ Γ (reduce_term Γ t h)∥.
   Proof.
     pose proof (reduce_stack_whnf Γ t [] h _ wfΣ) as H.
@@ -1853,28 +1853,28 @@ End Reduce.
 Section ReduceFns.
 
   Context {cf : checker_flags} {no : normalizing_flags}
-          {X_type : abstract_env_impl} {X : X_type.π1}.
+          {X_type : abstract_env_ext_impl} {X : X_type.π1}.
 
   (* We get stack overflow on Qed after Equations definitions when this is transparent *)
   Opaque reduce_stack_full.
 
   Definition hnf := reduce_term RedFlags.default X_type X.
 
-  Theorem hnf_sound {Γ t h} Σ (wfΣ : abstract_env_rel X Σ) : ∥ Σ ;;; Γ ⊢ t ⇝ hnf Γ t h ∥.
+  Theorem hnf_sound {Γ t h} Σ (wfΣ : abstract_env_ext_rel X Σ) : ∥ Σ ;;; Γ ⊢ t ⇝ hnf Γ t h ∥.
   Proof.
     unfold hnf.
     destruct (reduce_term_sound RedFlags.default _ X _ _ h Σ wfΣ).
     sq. eapply into_closed_red; fvs.
   Defined.
 
-  Theorem hnf_complete {Γ t h} Σ (wfΣ : abstract_env_rel X Σ) : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
+  Theorem hnf_complete {Γ t h} Σ (wfΣ : abstract_env_ext_rel X Σ) : ∥whnf RedFlags.default Σ Γ (hnf Γ t h)∥.
   Proof.
     apply reduce_term_complete; eauto.
   Qed.
 
   Equations? reduce_to_sort (Γ : context) (t : term)
-    (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)
-    : typing_result_comp (∑ u, forall Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
+    (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t)
+    : typing_result_comp (∑ u, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ tSort u ∥) :=
     reduce_to_sort Γ t h with view_sortc t := {
       | view_sort_sort s => Checked_comp (s; _);
       | view_sort_other t _ with inspect (hnf Γ t h) :=
@@ -1889,7 +1889,7 @@ Section ReduceFns.
       eapply (wt_closed_red_refl hs).
     * pose proof (hnf_sound (h:=h)).
       now rewrite eq.
-    * destruct (abstract_env_exists X) as [[Σ wfΣ]]. specialize (X1 _ wfΣ).
+    * destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]. specialize (X1 _ wfΣ).
       pose proof (hΣ := hΣ _ X _ wfΣ). sq.
       pose proof (@hnf_complete Γ t h) as [wh]; eauto.
       pose proof (@hnf_sound Γ t h) as [r']; eauto.
@@ -1901,7 +1901,7 @@ Section ReduceFns.
       now cbn in r.
   Qed.
 
-  Lemma reduce_to_sort_complete {Γ t wt} Σ (wfΣ : abstract_env_rel X Σ)
+  Lemma reduce_to_sort_complete {Γ t wt} Σ (wfΣ : abstract_env_ext_rel X Σ)
     e p :
     reduce_to_sort Γ t wt = TypeError_comp e p ->
     (forall s, red Σ Γ t (tSort s) -> False).
@@ -1910,14 +1910,15 @@ Section ReduceFns.
     apply p.
     exists s.
     intros.
-    erewrite abstract_env_irr; try apply wfΣ; eauto.
+    erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     pose proof (hΣ := hΣ _ X _ wfΣ). sq.
     eapply into_closed_red in r ; fvs.
+    Unshelve. eauto. 
   Qed.
 
   Equations? reduce_to_prod (Γ : context) (t : term)
-    (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)
-    : typing_result_comp (∑ na a b, forall  Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
+    (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t)
+    : typing_result_comp (∑ na a b, forall  Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ tProd na a b ∥) :=
     reduce_to_prod Γ t h with view_prodc t := {
       | view_prod_prod na a b => Checked_comp (na; a; b; _);
       | view_prod_other t _ with inspect (hnf Γ t h) :=
@@ -1932,7 +1933,7 @@ Section ReduceFns.
       now eapply wt_closed_red_refl.
     * pose proof (hnf_sound (h:=h)).
       now rewrite eq.
-    * destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    * destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       specialize (X3 _ wfΣ).
       sq.
       pose proof (@hnf_complete Γ t h) as [wh]; eauto.
@@ -1945,7 +1946,7 @@ Section ReduceFns.
       now rewrite H in n0.
   Qed.
 
-  Lemma reduce_to_prod_complete {Γ t wt} Σ (wfΣ : abstract_env_rel X Σ)
+  Lemma reduce_to_prod_complete {Γ t wt} Σ (wfΣ : abstract_env_ext_rel X Σ)
     e p :
     reduce_to_prod Γ t wt = TypeError_comp e p ->
     (forall na a b, red Σ Γ t (tProd na a b) -> False).
@@ -1954,14 +1955,15 @@ Section ReduceFns.
     apply p.
     exists na, a, b.
     intros.
-    erewrite abstract_env_irr; try apply wfΣ; eauto.
+    erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
     eapply into_closed_red; fvs.
+    Unshelve. eauto.
   Qed.
 
   Equations? reduce_to_ind (Γ : context) (t : term)
-    (h : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)
-    : typing_result_comp (∑ i u l, forall Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
+    (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t)
+    : typing_result_comp (∑ i u l, forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ t ⇝ mkApps (tInd i u) l ∥) :=
     reduce_to_ind Γ t h with inspect (decompose_app t) := {
       | exist (thd, args) eq_decomp with view_indc thd := {
         | view_ind_tInd i u => Checked_comp (i; u; args; _);
@@ -1996,7 +1998,7 @@ Section ReduceFns.
         now destruct decompose_stack. }
       apply decompose_stack_eq in decomp as ->.
       now rewrite <- eq_decomp'.
-    - destruct (abstract_env_exists X) as [[Σ wfΣ]].
+    - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       specialize (X3 _ wfΣ).
       pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
       pose proof (reduce_stack_whnf RedFlags.default _ X Γ t [] h _  wfΣ) as wh.
@@ -2027,7 +2029,7 @@ Section ReduceFns.
       discriminate i0.
   Qed.
 
-  Lemma reduce_to_ind_complete  Σ (wfΣ : abstract_env_rel X Σ) Γ ty wat e p :
+  Lemma reduce_to_ind_complete  Σ (wfΣ : abstract_env_ext_rel X Σ) Γ ty wat e p :
     reduce_to_ind Γ ty wat = TypeError_comp e p ->
     forall ind u args,
       red Σ Γ ty (mkApps (tInd ind u) args) ->
@@ -2037,9 +2039,10 @@ Section ReduceFns.
     apply p.
     exists ind, u, args'.
     intros.
-    erewrite abstract_env_irr; try apply wfΣ; eauto.
+    erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
     pose proof (hΣ := hΣ _ _ _ wfΣ). sq.
     eapply into_closed_red ; fvs.
+    Unshelve. eauto. 
   Qed.
 
   (* Definition of assumption-only arities (without lets) *)
@@ -2087,7 +2090,7 @@ Section ReduceFns.
     build_conv_arity {
         conv_ar_context : list arity_ass;
         conv_ar_univ : Universe.t;
-        conv_ar_red : forall Σ (wfΣ : abstract_env_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ mkAssumArity conv_ar_context conv_ar_univ ∥
+        conv_ar_red : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ Σ ;;; Γ ⊢ T ⇝ mkAssumArity conv_ar_context conv_ar_univ ∥
       }.
 
   Global Arguments conv_arity : clear implicits.
@@ -2096,7 +2099,7 @@ Section ReduceFns.
     is_closed_context Γ ->
     is_open_term Γ T ->
     conv_arity Γ T ->
-    forall Σ (wfΣ : abstract_env_rel X Σ), Is_conv_to_Arity Σ Γ T.
+    forall Σ (wfΣ : abstract_env_ext_rel X Σ), Is_conv_to_Arity Σ Γ T.
   Proof.
     intros clΓ clT [asses univ r] Σ wfΣ.
     eexists. destruct (r _ wfΣ). split; [sq|]; tea.
@@ -2134,9 +2137,9 @@ Section ReduceFns.
     (** not used anymore **)
     (*
   Equations? (noeqns) reduce_to_arity (Γ : context) (T : term)
-    (wt : forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ T)
-    : (conv_arity Γ T) + {forall Σ (wfΣ : abstract_env_rel X Σ), ~ Is_conv_to_Arity Σ Γ T}
-    by wf ((Γ ; T ; wt) : (∑ Γ t, forall Σ (wfΣ : abstract_env_rel X Σ), welltyped Σ Γ t)) hnf_subterm_rel  :=
+    (wt : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ T)
+    : (conv_arity Γ T) + {forall Σ (wfΣ : abstract_env_ext_rel X Σ), ~ Is_conv_to_Arity Σ Γ T}
+    by wf ((Γ ; T ; wt) : (∑ Γ t, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t)) hnf_subterm_rel  :=
     reduce_to_arity Γ T wt with inspect (hnf Γ T wt) :=
       | exist Thnf eqhnf with view_prod_sortc Thnf := {
         | view_prod_sort_prod na A B with reduce_to_arity (Γ,, vass na A) B _ := {

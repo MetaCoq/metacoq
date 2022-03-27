@@ -109,7 +109,7 @@ Definition wf_fixpoint_gen
   | Some (ind :: inds) =>
     (* Check that mutually recursive fixpoints are all on the same mututal
        inductive block *)
-    forallb (Reflect.eqb ind) inds &&
+    forallb (eqb ind) inds &&
     check_recursivity_kind lookup ind Finite
   | _ => false
   end.
@@ -135,7 +135,7 @@ Definition wf_cofixpoint_gen
   | Some (ind :: inds) =>
     (* Check that mutually recursive cofixpoints are all producing
        coinductives in the same mututal coinductive block *)
-    forallb (Reflect.eqb ind) inds &&
+    forallb (eqb ind) inds &&
     check_recursivity_kind lookup ind CoFinite
   | _ => false
   end.

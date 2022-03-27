@@ -195,8 +195,7 @@ Local Ltac ih :=
   repeat lazymatch goal with
   | ih : forall lequ Rle napp hle t' ht ht', reflectT (eq_term_upto_univ_napp _ _ _ napp ?t _) _,
     hle : forall u u' hu hu', reflect (?Rle u u') (?lequ u u') ,
-    hcompare : forall ref n l l' _ _ , _ <-> _ ,
-    hcomparel : forall ref n l l' _ _ , _ <-> _
+    hcompare : forall R leq H ref n l l' _ _ , _ <-> _ 
     |- context [ eqb_term_upto_univ _ ?lequ _ ?t ?t' ] =>
     destruct (ih lequ Rle 0 hle t')
        ; nodec ; subst

@@ -24,6 +24,7 @@ From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICSafeReduce PCUICEr
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
+Require Import Coq.Program.Program.
 
 Local Set Keyed Unification.
 Set Equations Transparent.
@@ -574,8 +575,6 @@ Section Typecheck.
       apply absurd. intros ;specialize_Σ wfΣ. sq.
       now inversion H.
     Qed.
-
-    Require Import Coq.Program.Program.
 
     Equations check_ws_cumul_pb_decl (le : conv_pb) Γ d d'
       (wtd : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wt_decl Σ Γ d) (wtd' : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wt_decl Σ Γ d')
@@ -1614,6 +1613,7 @@ Section Typecheck.
     Unshelve. all: eauto.  
   Qed.
   (* tApp *)
+  Next Obligation. exact X_type. Defined.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ].
     specialize_Σ wfΣ ; sq. 
@@ -1777,6 +1777,7 @@ Section Typecheck.
   Qed.
 
   (* tCase *)
+  Next Obligation. exact X_type. Defined.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply infering_typing, validity in X0 as []; eauto.
@@ -2306,6 +2307,7 @@ Section Typecheck.
   Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
 
   (* tProj *)
+  Next Obligation. Defined.
   Next Obligation. 
     pose proof (heΣ _ wfΣ) as [heΣ].   
     cbn in *. specialize_Σ wfΣ ; sq. 

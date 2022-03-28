@@ -12,6 +12,8 @@ From MetaCoq.Template Require Import config utils BasicAst Universes.
 From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EEnvMap.
 From MetaCoq.Erasure Require Import EWcbvEval EWcbvEvalInd.
 
+Set Default Proof Using "Type*".
+
 Lemma eval_trans' {wfl : WcbvFlags} {Σ e e' e''} :
   eval Σ e e' -> eval Σ e' e'' -> e' = e''.
 Proof.
@@ -31,7 +33,7 @@ Qed.
 
 Arguments eval : clear implicits.
 
-Lemma eval_app_cong_tApp {wfl : WcbvFlags} Σ t v args res :
+Lemma eval_app_cong_tApp Σ t v args res :
   eval target_wcbv_flags Σ t v ->  
   eval target_wcbv_flags Σ (tApp v args) res ->
   eval target_wcbv_flags Σ (tApp t args) res.
@@ -296,7 +298,7 @@ Section isEtaExp.
     | tVar _ => true
     | tConst _ => true
     | tConstruct ind i => isEtaExp_app ind i 0 }.
-  Proof.
+  Proof using Σ.
     all:try lia.
     all:try apply (In_size); tea.
     all:try lia.
@@ -357,7 +359,7 @@ Section isEtaExp.
       | expanded_head_rel n => option_default (fun m => m <=? List.length v) (nth_error Γ n) false && forallb (fun x => isEtaExp Γ x) v
       | expanded_head_other t discr => isEtaExp Γ f && forallb (isEtaExp Γ) v
     end.
-  Proof.
+  Proof using Σ.
     intros napp.
     destruct v using rev_case; simp_eta.
     - destruct expanded_head_viewc; rewrite ? andb_true_r //. cbn. unfold isEtaExp_fixapp. now destruct (nth_error); cbn.
@@ -534,7 +536,7 @@ Section isEtaExp.
     closed (EAst.tFix mfix idx) ->
     forallb (fun x => isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp (Γ ++ [1 + d.(EAst.rarg)] ++ Δ) b -> isEtaExp (Γ ++ Δ) (ECSubst.csubst (EAst.tFix mfix idx) k b).
-  Proof.
+  Proof using Type*.
     intros Hk Hnth Hcl. 
     remember (Γ ++ [1 + d.(EAst.rarg)] ++ Δ)%list as Γ_.
     funelim (isEtaExp Γ_ b); try simp_eta; eauto; try fold csubst;
@@ -624,7 +626,7 @@ Section isEtaExp.
     forallb (fun x => isEtaExp (rev_map (S ∘ rarg) mfix) x.(dbody)) mfix ->
     isEtaExp ((rev_map (S ∘ rarg) mfix) ++ Δ) t ->
     isEtaExp Δ (substl (fix_subst mfix) t).
-  Proof.
+  Proof using Type*.
     intros Hall Heta.
     assert (Hcl : closed (EAst.tFix mfix 0) ). { cbn. solve_all. eapply isEtaExp_closed in H. revert H. now len. }
     revert Hcl Hall Heta.  
@@ -1046,8 +1048,8 @@ Proof.
          cbn [expanded_head_viewc]. rtoProp. repeat split.
          ++ unfold isEtaExp_fixapp in *. destruct nth_error eqn:Hn; try easy. len.
             eapply Nat.ltb_lt in etal.
-            eapply Nat.ltb_lt. eapply Forall2_length in H3.
-            rewrite remove_last_length' in H3 |-*. eauto. lia.
+            eapply Nat.ltb_lt. eapply All2_length in a0.
+            rewrite remove_last_length' in a0 |-*. eauto. lia.
          ++ solve_all.
          ++ sq. solve_all. eapply All_app_inv. 2:{ repeat econstructor. eapply IHeval2. rewrite ha. eapply Forall_last; eauto. }
             eapply All_remove_last in isel.
@@ -1093,7 +1095,7 @@ Proof.
       -- solve_all. eapply (f_equal decompose_app) in Heq. rewrite !decompose_app_mkApps in Heq => //. invs Heq. sq.
          eapply isEtaExp_mkApps_intro. 
          eapply isEtaExp_cunfold_fix. 2: eauto. solve_all.
-         now rewrite app_nil_r in H6.
+         now rewrite app_nil_r in H5.
          eapply All_app_inv. 2: repeat econstructor; eauto.
          eapply All_remove_last in isel.
          solve_all. destruct b.
@@ -1165,18 +1167,18 @@ Proof.
 
     }
     {
-      specialize eval_mkApps_tFix_inv_size_unguarded with (Heval := H); intros Hinv; destruct Hinv as [[Heq ->] | (a_ & args' & argsv & Heq & Hall & n & fn & Hunf & Hev & Hsz)]; eauto.
+      specialize eval_mkApps_tFix_inv_size_unguarded with (Heval := H); intros Hinv; destruct Hinv as [[Heq ->] | (a_ & a_' & args' & argsv & Heq & Hall & n & fn & Hunf & Haa' & Hev & Hev' & Hsz)]; eauto.
       -- cbn in *. easy.
       -- eapply (isEtaExp_mkApps_intro _ _ f' [a']); eauto.
          unshelve eapply H0. 2: eauto. lia.
          eapply (isEtaExp_mkApps_intro).
-         eapply (isEtaExp_mkApps_intro _ _ fn [a_]); eauto. 2: econstructor; [ | econstructor].
+         eapply (isEtaExp_mkApps_intro _ _ fn [a_']); eauto. 2: econstructor; [ | econstructor].
          ++ eapply isEtaExp_cunfold_fix. 2: eauto. solve_all. now rewrite app_nil_r in H5.
          ++ solve_all. eapply All_firstn in isel. unfold remove_last in Heq. eapply All_Forall in isel.
             setoid_rewrite Heq in isel. invs isel. eauto.
          ++ eapply forallb_Forall in isel. eapply Forall_firstn in isel. unfold remove_last in Heq.
             setoid_rewrite Heq in isel. eapply Forall_All in isel. invs isel. solve_all. subst; eauto.
-            destruct H6. unshelve eapply H0. 2: eauto. lia. eauto.
+            destruct b0. unshelve eapply H0. 2: eauto. lia. eauto.
        }
   * intros (? & ? & ? & ?). rtoProp. solve_all.
       rewrite nth_error_nil in H6. easy.
@@ -1207,22 +1209,22 @@ Proof.
            simp_eta in IHeval1. eauto.
       }
       {
-        specialize eval_mkApps_tFix_inv_size_unguarded with (Heval := H); intros Hinv; destruct Hinv as [[Heq Heq'] | (a_ & args' & argsv & Heq & Hall & n & fn & Hunf & Hev & Hsz)]; eauto; try congruence.
+        specialize eval_mkApps_tFix_inv_size_unguarded with (Heval := H); intros Hinv; destruct Hinv as [[Heq Heq'] | (a_ & a_' & args' & argsv & Heq & Hall & n & fn & Hunf & Haa' & Hsz & Hev & Hsz')]; eauto; try congruence.
         eapply IHeval3. eapply etaExp_csubst.
         
         eapply IHeval2. rewrite H3. eapply Forall_last. eauto. solve_all. 
-        assert (isEtaExp Σ [] (mkApps (tApp fn a_) argsv) -> isEtaExp Σ []  (EAst.tLambda na b)) as IH. {
+        assert (isEtaExp Σ [] (mkApps (tApp fn a_') argsv) -> isEtaExp Σ []  (EAst.tLambda na b)) as IH. {
          unshelve eapply IHs; eauto.
         }
         simp_eta in IH. eapply IH.
         eapply (isEtaExp_mkApps_intro).
-        eapply (isEtaExp_mkApps_intro _ _ fn [a_]); eauto. 2: econstructor; [ | econstructor].
+        eapply (isEtaExp_mkApps_intro _ _ fn [a_']); eauto. 2: econstructor; [ | econstructor].
         ++ eapply isEtaExp_cunfold_fix. 2: eauto. solve_all. now rewrite app_nil_r in H4.
         ++ solve_all. eapply All_firstn in H6 as isel. unfold remove_last in Heq. eapply All_Forall in isel.
            setoid_rewrite Heq in isel. invs isel. eauto.
         ++ eapply All_Forall in H6 as isel. eapply Forall_firstn in isel. unfold remove_last in Heq.
            setoid_rewrite Heq in isel. eapply Forall_All in isel. invs isel. solve_all. subst; eauto.
-           destruct H4. unshelve eapply IHs. 2: eauto. lia. eauto.        
+           destruct b1. unshelve eapply IHs. 2: eauto. lia. eauto.        
       }
      
        * solve_all. rtoProp. solve_all. rewrite nth_error_nil in H5; easy.
@@ -1250,31 +1252,35 @@ Proof.
     destruct expanded_head_viewc.
     * clear IHs. move=> [] hl [] hf [] ha /andP[] hl' etal.
       move: H H0. rewrite hf => H H0.
-      eapply eval_construct in H as [? []];solve_discr.
+      clear H0; eapply eval_construct in H as [? []]; solve_discr.
     * solve_all. rtoProp. solve_all. subst.
-      specialize eval_mkApps_tFix_inv_size_unguarded with (Heval := H); intros Hinv; destruct Hinv as [[Heq Heq'] | (a_ & args' & argsv & Heq & Hall & n & fn_ & Hunf & Hev & Hsz)]; eauto; try congruence.
+      specialize eval_mkApps_tFix_inv_size_unguarded with (Heval := H); intros Hinv; 
+      destruct Hinv as [[Heq Heq'] | (a_ & a_' & args' & argsv & Heq & Hall & n & fn_ & Hunf & Hav & Hsza & Hev & Hsz)]; eauto; try congruence.
 
-      -- invs Heq'. eapply IHeval2. 
-         eapply (isEtaExp_mkApps_intro _ _ fn [a]); eauto. 2: econstructor; [ | econstructor].
-         ++ eapply isEtaExp_cunfold_fix. 2: eauto. solve_all. now rewrite app_nil_r in H4.
-         ++ rewrite H3. eapply Forall_last. 2: solve_all. eauto.
-      -- assert (isEtaExp Σ [] (mkApps (tApp fn_ a_) argsv) -> isEtaExp Σ [] (EAst.tFix mfix idx)). { eapply IHs; eauto. }
+      -- invs Heq'. eapply IHeval1. 
+         eapply (isEtaExp_mkApps_intro _ _ fn [av]); eauto. 2: econstructor; [ | econstructor].
+         ++ eapply isEtaExp_cunfold_fix. 2: eauto. solve_all. now rewrite app_nil_r in H7.
+         ++ eapply (H2 _ _ H1). lia. rewrite H6. eapply Forall_last. 2: solve_all. eauto.
+      -- assert (isEtaExp Σ [] (mkApps (tApp fn_ a_') argsv) -> isEtaExp Σ [] (EAst.tFix mfix idx)).
+        { intros; eapply H0; eauto. }
          exfalso.
-         forward H4.
+         forward H7.
          eapply isEtaExp_mkApps_intro. 
-         eapply (isEtaExp_mkApps_intro _ _ fn_ [a_]); eauto. 2: econstructor; [ | econstructor].
-         ** eapply isEtaExp_cunfold_fix. 2: eauto. solve_all. now rewrite app_nil_r in H7.
-         ** solve_all. eapply All_firstn in H6 as isel. unfold remove_last in Heq. eapply All_Forall in isel.
+         eapply (isEtaExp_mkApps_intro _ _ fn_ [a_']); eauto. 2: econstructor; [ | econstructor].
+         ** eapply isEtaExp_cunfold_fix. 2: eauto. solve_all. now rewrite app_nil_r in H10.
+         ** solve_all. eapply All_firstn in H9 as isel. unfold remove_last in Heq. eapply All_Forall in isel.
             setoid_rewrite Heq in isel. invs isel. eauto.
-         ** eapply All_firstn in H6 as isel. unfold remove_last in Heq. eapply All_Forall in isel.
+         ** eapply All_firstn in H9 as isel. unfold remove_last in Heq. eapply All_Forall in isel.
             setoid_rewrite Heq in isel. eapply Forall_All in isel. invs isel. solve_all; subst; eauto.
-            destruct H8.
-            unshelve eapply IHs. 2: eauto. lia. eauto.
+            destruct b0.
+            unshelve eapply H0. 2: eauto. lia. eauto.
          ** simp_eta in H3. easy.
-    * solve_all. rtoProp. solve_all. rewrite nth_error_nil in H5. easy.
+    * solve_all. rtoProp. solve_all. rewrite nth_error_nil in H8. easy.
     * move/and4P => [] etat etal etaf etaa.
-      forward IHeval1. eauto.
-      simp_eta in IHeval1. easy.
+      eapply IHeval1.
+      eapply (isEtaExp_mkApps_intro _ _ fn [av]); eauto.
+      eapply isEtaExp_cunfold_fix; tea.
+      simp_eta in IHs. specialize (IHs etaf). easy.
   - move=> /andP[] hdiscr hbrs. specialize (IHeval1 hdiscr).
     move: IHeval1. rewrite isEtaExp_mkApps // /= => /andP[] hcof hargs.
     eapply IHeval2. simp_eta. rtoProp; intuition auto.
@@ -1306,44 +1312,693 @@ eval Σ t v -> isEtaExp Σ [] t -> isEtaExp Σ [] v.
 Admitted.
 
 Local Arguments eval : clear implicits.
+*)
 
-Lemma eval_opt_to_target Σ t v  :
-@eval opt_wcbv_flags Σ t v -> isEtaExp Σ [] t -> @eval target_wcbv_flags Σ t v.
+Lemma mkApps_eq f args a t : ~~ isApp f -> mkApps f args = tApp a t ->
+  args <> [] /\ a = (mkApps f (remove_last args)) /\ t = last args t.
 Proof.
-intros H. depind H; intros Hexp; eauto.
-- todo "box".
-- todo "lambda".
-- simp_eta in Hexp. rtoProp. econstructor. eauto. eapply IHeval2. todo "isEtaExp csubst".
-- todo "case".
-- todo "case".
-- destruct argsv.
-  + cbn -[isEtaExp] in *. todo "impossible due to expansion".
-  + eapply eval_trans. eapply eval_app_cong.
-    * eapply IHeval1. todo "exp".
-    * cbn. destruct argsv using rev_ind; cbn; try eauto. now rewrite mkApps_app. 
-    * eapply IHeval2. todo "exp". 
-    * replace (tApp (mkApps fn (t :: argsv)) av) with (mkApps (tApp fn t) (argsv ++ [av])) in IHeval3 by now rewrite mkApps_app.
-      replace (tApp (mkApps (tFix mfix idx) (t :: argsv)) av) with (mkApps (tApp (tFix mfix idx) t) (argsv ++ [av])) by now rewrite mkApps_app.
-      forward IHeval3. todo "exp".
-      revert IHeval3. generalize (argsv ++ [av])%list. clear - e. intros l.
-      revert res.
-      induction l using rev_ind.
-      -- cbn in *. intros. eapply eval_fix'; eauto.
-      -- rewrite !mkApps_app; cbn. intros res H.
-         eapply eval_trans.
-         eapply eval_mkApps_inv with (args := [x]) in H as (? & ? & ?).
-         eapply eval_app_cong_tApp. eapply IHl; eauto.
-         cbn in *. eauto.
-         eapply value_final, eval_to_value; eauto.
-- todo "impossible due to expansion".
-- cbn in unguarded. congruence.
-- todo "case".
-- todo "proj".
-- todo "const".
-- todo "proj".
-- todo "proj".
-- eapply eval_app_cong => //.
-  + eapply IHeval1. todo "exp".
-  + destruct f'; cbn in *; eauto.
-  + eapply IHeval2. todo "exp".
-Qed. *)
+  intros napp eq.
+  destruct args using rev_case.
+  * cbn in eq. destruct f => //.
+  * split => //.
+    + intros neq. destruct args => //.
+    + rewrite mkApps_app in eq. noconf eq.
+      rewrite remove_last_app. split => //.
+      now rewrite last_last. 
+Qed.
+
+Lemma isEtaExp_fixapp_mon {mfix idx n n'} : n <= n' -> isEtaExp_fixapp mfix idx n -> isEtaExp_fixapp mfix idx n'.
+Proof.
+  rewrite /isEtaExp_fixapp.
+  destruct nth_error eqn:hnth => //.
+  intros hn. move/Nat.ltb_lt => hl. apply Nat.ltb_lt.  lia.
+Qed.
+
+Definition isStuckFix' t (args : list term) :=
+  match t with
+  | tFix mfix idx =>
+    match cunfold_fix mfix idx with
+    | Some (narg, fn) => #|args| <=? narg
+    | None => true
+    end
+  | _ => false
+  end.
+
+Lemma eval_stuck_fix_eq {Σ mfix idx args v} :
+  forall eva : @eval opt_wcbv_flags Σ (mkApps (tFix mfix idx) args) v,
+  ∑ args', All2 (fun a a' => @eval opt_wcbv_flags Σ a a') args args' ×
+    ((isStuckFix' (tFix mfix idx) args' × v = mkApps (tFix mfix idx) args') + isEtaExp_fixapp mfix idx #|args|).
+Proof.
+  intros H; depind H; try solve_discr.
+  + eapply mkApps_eq in H1 as [? []] => //; subst.
+    specialize (IHeval1 mfix idx _ _ eq_refl) as [args' []].
+    exists (args' ++ [t']).
+    rewrite (remove_last_last args t H1).
+    split. eapply All2_app => //. rewrite -H3. eauto.
+    destruct s.
+    * destruct p; solve_discr.
+    * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
+  + eapply mkApps_eq in H2 as [? []] => //; subst.
+    specialize (IHeval1 mfix idx _ _ eq_refl) as [args' []].
+    exists (args' ++ [a']).
+    rewrite (remove_last_last args a H2).
+    split. eapply All2_app => //. rewrite -H4. eauto.
+    destruct s.
+    * destruct p; solve_discr.
+    * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
+  + eapply mkApps_eq in H2 as [? []] => //; subst.
+    specialize (IHeval1 mfix0 idx0 (remove_last args) _ eq_refl) as [args' []].
+    exists (args' ++ [av]).
+    rewrite (remove_last_last args a H2).
+    split. eapply All2_app => //. rewrite -H4. eauto.
+    destruct s.
+    * destruct p; solve_discr. noconf H3.
+      right. len.
+      move: e; unfold isEtaExp_fixapp.
+      unfold Ee.cunfold_fix. destruct nth_error eqn:hnth => //.
+      intros [=]. rewrite H3. rewrite -(All2_length a0). eapply Nat.ltb_lt; lia.
+    * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
+  + eapply mkApps_eq in H1 as [? []] => //; subst.
+    specialize (IHeval1 mfix0 idx0 (remove_last args) _ eq_refl) as [args' []].
+    exists (args' ++ [av]).
+    rewrite (remove_last_last args a H1).
+    split. eapply All2_app => //. rewrite -H3. eauto.
+    destruct s.
+    * destruct p; solve_discr. noconf H2.
+      left. split. 
+      unfold isStuckFix'; rewrite e. len. eapply Nat.leb_le. lia.
+      now rewrite -[tApp _ _](mkApps_app _ _ [av]).
+    * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
+  + eapply mkApps_eq in H1 as [? []] => //; subst.
+    specialize (IHeval1 mfix idx (remove_last args) _ eq_refl) as [args' []].
+    exists (args' ++ [a']).
+    rewrite (remove_last_last args a H1).
+    split. eapply All2_app => //. rewrite -H3. eauto.
+    destruct s.
+    * destruct p. subst f'. cbn in i.
+      rewrite !negb_or in i.
+      move/andP: i => [] /andP[] _ /=.
+      rewrite Ee.isFixApp_mkApps /= //.
+    * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
+  + eapply atom_mkApps in i. destruct i => //. cbn in H0. subst args.
+    exists []. split; eauto.
+    left.
+    unfold isStuckFix', cunfold_fix. destruct nth_error => //.
+Qed.
+
+Lemma isEtaExp_FixApp {Σ mfix idx l} :
+  isEtaExp_fixapp mfix idx #|l| ->
+  forallb (λ d : def EAst.term, isEtaExp Σ (rev_map (λ d0 : def term, 1 + rarg d0) mfix ++ []) (dbody d)) mfix ->
+  forallb (isEtaExp Σ []) l ->
+  isEtaExp Σ [] (mkApps (tFix mfix idx) l).
+Proof.
+  intros hmfix hm hl.
+  funelim (isEtaExp Σ _ _) => //; solve_discr. noconf H.
+  unfold isEtaExp_fixapp in hmfix. destruct nth_error => //.
+  noconf H1. simp_eta. now rewrite hmfix hl /= hm /=.
+  now cbn in d.
+Qed.
+
+Lemma forallb_firstn {A} {p : A -> bool} {n l} : forallb p l -> forallb p (firstn n l).
+Proof.
+  intros hl. induction l in n, hl |- *; cbn => //.
+  - now rewrite firstn_nil.
+  - destruct n; cbn => //.
+    now move: hl => /= /andP[] -> /=.
+Qed.
+Lemma forallb_remove_last {A} {p : A -> bool} {l} : forallb p l -> forallb p (remove_last l).
+Proof.
+  intros hl; unfold remove_last. now apply forallb_firstn.
+Qed.
+
+Lemma forallb_last {A} {p : A -> bool} {l t} : l <> [] -> forallb p l -> p (last l t).
+Proof.
+  induction l => //. intros _. cbn. destruct l.
+  - now move/andP.
+  - move/andP => [] _ hl. apply IHl => //.
+Qed.
+
+Lemma isEtaExp_tFix {Σ mfix idx} : ~ isEtaExp Σ [] (tFix mfix idx).
+Proof.
+  intros he.
+  now simp_eta in he.
+Qed.
+
+Lemma neval_to_stuck_fix {Σ mfix idx t} :
+  isEtaExp_env Σ ->
+  wf_glob Σ ->
+  isEtaExp Σ [] t -> @eval opt_wcbv_flags Σ t (tFix mfix idx) -> False.
+Proof.
+  intros etaΣ wfΣ he hev.
+  pose proof (eval_etaexp etaΣ wfΣ hev he).
+  now apply isEtaExp_tFix in H.
+Qed.
+
+Lemma neval_to_stuck_fix_app {Σ mfix idx t args} :
+  isEtaExp_env Σ ->
+  wf_glob Σ ->
+  isEtaExp Σ [] t -> @eval opt_wcbv_flags Σ t (mkApps (tFix mfix idx) args) -> False.
+Proof.
+  intros etaΣ wfΣ he hev.
+  pose proof (eval_etaexp etaΣ wfΣ hev he).
+  move: H.
+  move/isEtaExp_tApp.
+  rewrite decompose_app_mkApps // /= // app_nil_r //.
+  move/andP => [] /andP[] etaapp etamfix etaargs.
+  eapply eval_to_value in hev.
+  move: etaapp. rewrite /isEtaExp_fixapp.
+  destruct nth_error eqn:hnth => // => /Nat.ltb_lt hrarg.
+  eapply stuck_fix_value_args in hev.
+  2:{ unfold cunfold_fix. rewrite hnth. reflexivity. }
+  lia.
+Qed.
+
+Lemma isEtaExp_tApp_eval {Σ} {f u v} : 
+  @eval opt_wcbv_flags Σ f v ->
+  isEtaExp Σ [] (tApp f u) -> 
+  (forall kn c args, v <> mkApps (tConstruct kn c) args) ->
+  (forall mfix idx args, v <> mkApps (tFix mfix idx) args) ->
+  let (hd, args) := decompose_app (tApp f u) in
+  match expanded_head_viewc hd with
+  | expanded_head_construct kn c => False
+  | expanded_head_fix mfix idx =>
+    args <> [] /\ f = mkApps hd (remove_last args) /\ u = last args u /\ 
+    [&& isEtaExp_fixapp mfix idx #|remove_last args|,
+    forallb (fun d => isEtaExp Σ (rev_map (fun  d => 1 + d.(rarg)) mfix ++ []) d.(dbody)) mfix,
+    forallb (isEtaExp Σ []) (remove_last args) & isEtaExp Σ [] u]
+  | expanded_head_rel n => False
+  | expanded_head_other _ discr => 
+    [&& isEtaExp Σ [] hd, forallb (isEtaExp Σ []) args, isEtaExp Σ [] f & isEtaExp Σ [] u]
+  end.
+Proof.
+  intros ev eta; revert eta ev.
+  move/isEtaExp_tApp'.
+  cbn -[decompose_app]. destruct decompose_app eqn:da.
+  destruct expanded_head_viewc eqn:cv => //.
+  * move=> [] hl [] ha [] ht /andP[] etaap etal.
+    rewrite ha. intros h.
+    eapply eval_construct in h as [? []]. subst v.
+    intros Hc _. specialize (Hc ind n x). now apply Hc.
+  * move=> [] hl [] ha [] ht /andP[] /andP[] etafix etab etal.
+    rewrite ha.
+    intros H; eapply eval_stuck_fix_eq in H as [args' [Hargs' [[]|]]]. subst v.
+    intros _ Hfix. elimtype False. eapply Hfix; trea.
+    intros Hc Hfix. intuition auto. rewrite i /= etab /=.
+    rewrite forallb_remove_last // /=.
+    rewrite ht. eapply forallb_last => //.
+  * move=> [] hl [] ha [] ht /andP[] hnth.
+    now rewrite nth_error_nil /= in hnth.
+Qed.
+
+Lemma isEtaExp_closedn Σ Γ t : isEtaExp Σ Γ t -> closedn #|Γ| t.
+Proof.
+  move/isEtaExp_expanded. apply expanded_closed.
+Qed.
+
+Lemma all_isEtaExp_closedn Σ Γ t : forallb (isEtaExp Σ Γ) t -> forallb (closedn #|Γ|) t.
+Proof.
+  solve_all. solve_all. now eapply isEtaExp_closedn.
+Qed.
+
+Lemma isEtaExp_iota_red' Σ pars args br :
+  forallb (isEtaExp Σ []) args ->
+  isEtaExp Σ (repeat 0 (#|args| - pars)) br.2 ->
+  isEtaExp Σ [] (EGlobalEnv.iota_red pars args br).
+Proof.
+  intros etaargs etabr.
+  eapply isEtaExp_iota_red; eauto.
+  apply all_isEtaExp_closedn in etaargs. solve_all.
+Qed.
+
+Lemma skipn_length {A} n (l : list A) : length (skipn n l) = length l - n.
+Proof.
+  induction l in n |- *; destruct n; simpl; auto.
+  intros. rewrite IHl; auto with arith.
+Qed.
+
+Lemma eval_mkApps_inv' {wfl : WcbvFlags} Σ f args v :
+  eval Σ (mkApps f args) v ->
+  ∑ f' args', eval Σ f f' × All2 (eval Σ) args args' × eval Σ (mkApps f' args') v.
+Proof.
+  revert f v; induction args using rev_ind; cbn; intros f v.
+  - intros ev. exists v, []. split => //. eapply eval_to_value in ev.
+    split => //. now eapply value_final.
+  - rewrite mkApps_app. intros ev.
+    depelim ev.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evars res]]]].
+      exists f', (args' ++ [t']). split => //.
+      rewrite mkApps_app.
+      econstructor; tea. eapply All2_app; auto.
+      econstructor; tea. eapply value_final. now eapply eval_to_value in ev2.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evars res]]]].
+      exists f', (args' ++ [a']). split => //. split; auto.
+      eapply All2_app; auto.
+      rewrite mkApps_app.
+      eapply eval_beta; tea. eapply value_final, eval_to_value; tea.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evars res]]]].
+      exists f', (args' ++ [av]); split => //. split => //.
+      eapply All2_app; auto.
+      rewrite mkApps_app.
+      eapply eval_fix; tea. eapply value_final, eval_to_value; tea.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evars res]]]].
+      exists f', (args' ++ [av]); split => //. split => //.
+      eapply All2_app; auto.
+      rewrite mkApps_app.
+      eapply eval_fix_value; tea. eapply value_final, eval_to_value; tea.
+    + destruct (IHargs _ _ ev1) as [f' [args' [evf' [evars res]]]].
+      exists f', (args' ++ [av]); split => //. split => //.
+      eapply All2_app; auto.
+      rewrite mkApps_app. 
+      eapply eval_fix'; eauto. eapply value_final, eval_to_value; tea.
+    + specialize (IHargs _ _ ev1) as [f'' [args' [evf' [evars res]]]].
+      exists f'', (args' ++ [a']); split => //. split => //.
+      eapply All2_app; auto.
+      rewrite mkApps_app.
+      eapply eval_app_cong; tea. eapply value_final, eval_to_value; tea.
+    + cbn in i. discriminate.
+Qed.
+
+Lemma eval_mkApps_inv_size {wfl : WcbvFlags} {Σ f args v} :
+  forall ev : eval Σ (mkApps f args) v,
+  ∑ f' args' (evf : eval Σ f f'),
+    [× eval_depth evf <= eval_depth ev,
+      All2 (fun a a' => ∑ eva : eval Σ a a', eval_depth eva <= eval_depth ev) args args' &
+      ∑ evres : eval Σ (mkApps f' args') v, eval_depth evres <= eval_depth ev].
+Proof.
+  revert f v; induction args using rev_ind; cbn; intros f v.
+  - intros ev. exists v, []. exists ev => //. split => //.
+    exact (size_final _ _ _ ev).
+  - rewrite mkApps_app. intros ev.
+    depelim ev.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evfs evars [evres res]]]]].
+      exists f', (args' ++ [t']). exists evf'.
+      rewrite mkApps_app. 
+      split => //. cbn. lia.
+      { eapply All2_app; auto.
+        { cbn. solve_all. destruct H as [eva evas]; exists eva. lia. }
+        constructor; auto. exists ev2. cbn; lia. }
+      unshelve econstructor; tea.
+      econstructor; tea.
+      exact (size_final _ _ _ ev2).π1. cbn.
+      destruct size_final; cbn. lia.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evfs evars [evres res]]]]].
+      exists f', (args' ++ [a']). exists evf'. split => //. 
+      cbn; lia.
+      { eapply All2_app; auto.
+        { cbn. solve_all. destruct H as [eva evas]; exists eva. lia. }
+        constructor; auto. exists ev2. cbn; lia. }
+      rewrite mkApps_app.
+      unshelve eexists.
+      eapply eval_beta; tea. 
+      exact (size_final _ _ _ ev2).π1. cbn.
+      destruct size_final; cbn; lia.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evfs evars [evres res]]]]].
+      exists f', (args' ++ [av]); exists evf'; split => //. 
+      cbn; lia. 
+      { eapply All2_app; auto.
+        { cbn. solve_all. destruct H as [eva evas]; exists eva. lia. }
+        constructor; auto. exists ev2. cbn; lia. }
+      rewrite mkApps_app.
+      unshelve eexists. eapply eval_fix; tea.
+      exact (size_final _ _ _ ev2).π1. cbn.
+      destruct size_final; cbn; lia.
+    + specialize (IHargs _ _ ev1) as [f' [args' [evf' [evfs evars [evres res]]]]].
+      exists f', (args' ++ [av]); exists evf'; split => //.
+      cbn; lia. 
+      { eapply All2_app; auto.
+        { cbn. solve_all. destruct H as [eva evas]; exists eva. lia. }
+        constructor; auto. exists ev2. cbn; lia. }
+      rewrite mkApps_app.
+      unshelve eexists. eapply eval_fix_value; tea.
+      exact (size_final _ _ _ ev2).π1. cbn.
+      destruct size_final; cbn; lia.
+    + destruct (IHargs _ _ ev1) as [f' [args' [evf' [evfs evars [evres res]]]]].
+      exists f', (args' ++ [av]); exists evf'; split => //.
+      cbn; lia. 
+      { eapply All2_app; auto.
+        { cbn. solve_all. destruct H as [eva evas]; exists eva. lia. }
+        constructor; auto. exists ev2. cbn; lia. }
+      rewrite mkApps_app.
+      unshelve eexists. eapply eval_fix'; tea.
+      exact (size_final _ _ _ ev2).π1. cbn.
+      destruct size_final; cbn; lia.
+    + specialize (IHargs _ _ ev1) as [f'' [args' [evf' [evfs evars [evres res]]]]].
+      exists f'', (args' ++ [a']); exists evf'; split => //.
+      cbn; lia.
+      { eapply All2_app; auto.
+        { cbn. solve_all. destruct H as [eva evas]; exists eva. lia. }
+        constructor; auto. exists ev2. cbn; lia. }
+      rewrite mkApps_app.
+      unshelve eexists. eapply eval_app_cong; tea.
+      exact (size_final _ _ _ ev2).π1. cbn.
+      destruct size_final; cbn; lia. 
+    + cbn in i. discriminate.
+Qed.
+
+Lemma eval_deterministic_all {wfl : WcbvFlags} {Σ} {t v v'} :
+  All2 (eval Σ) t v ->
+  All2 (eval Σ) t v' ->
+  v = v'.
+Proof.
+  induction 1 in v' |- *; intros H; depelim H; auto. f_equal; eauto.
+  now eapply eval_deterministic.
+Qed.
+
+Lemma eval_mkApps_Construct_size {wfl : WcbvFlags} {Σ ind c args v} :
+  forall ev : eval Σ (mkApps (tConstruct ind c) args) v,
+  ∑ args' (evf : eval Σ (tConstruct ind c) (tConstruct ind c)),
+    [× eval_depth evf <= eval_depth ev,
+      All2 (fun a a' => ∑ eva : eval Σ a a', eval_depth eva <= eval_depth ev) args args' &
+      v = mkApps (tConstruct ind c) args'].
+Proof.
+  intros ev.
+  destruct (eval_mkApps_inv_size ev) as [f'' [args' [? []]]].
+  exists args'. 
+  exists (eval_atom _ (tConstruct ind c) eq_refl).
+  cbn. split => //. destruct ev; cbn => //; auto with arith.
+  clear l. destruct (eval_construct _ _ _ _ _ ev) as [? []]. subst v.
+  eapply (eval_construct _ _ _ []) in x as [? []]. subst f''. depelim a1.
+  f_equal.
+  eapply eval_deterministic_all; tea.
+  eapply All2_impl; tea; cbn; eauto. now intros x y [].
+Qed.
+
+Lemma eval_app_cong_tApp' Σ t arg arg' res :
+  @value target_wcbv_flags t ->  
+  @eval target_wcbv_flags Σ arg arg' ->
+  @eval target_wcbv_flags Σ (tApp t arg') res ->
+  @eval target_wcbv_flags Σ (tApp t arg) res.
+Proof.
+  intros. depind H0.
+  - eapply eval_app_cong_tApp; tea. econstructor. constructor. constructor. exact H.
+  - pose proof (eval_trans' H H0_0). subst a'. econstructor; tea.
+  - pose proof (eval_trans' H H0_0). subst av. eapply eval_fix; tea.
+  - pose proof (eval_trans' H H0_0). subst av. eapply eval_fix_value; tea.
+  - eapply value_final in X. pose proof (eval_trans' X H0_). subst f.
+    pose proof (eval_trans' H H0_0). subst av.
+    eapply eval_fix'; tea.
+  - eapply eval_app_cong; tea.
+    eapply eval_trans; tea.
+  - now cbn in i.
+Qed.
+
+Lemma eval_value_cong {Σ} {f args args' res} : 
+  @value target_wcbv_flags f ->
+  All2 (@eval target_wcbv_flags Σ) args args' ->
+  @eval target_wcbv_flags Σ (mkApps f args') res ->
+  @eval target_wcbv_flags Σ (mkApps f args) res.
+Proof.
+  intros vf.
+  revert args' res; induction args using rev_ind.
+  - intros args' res H; depelim H. now cbn.
+  - intros args' res H.
+    eapply All2_app_inv_l in H as [r1 [r2 [? []]]]. depelim a0. depelim a0. subst args'. 
+    intros H.
+    rewrite mkApps_app in H |- *. rewrite mkApps_app.
+    eapply eval_mkApps_inv' in H as [f' [args' [evf' [evargs' evres]]]].
+    depelim evargs'. depelim evargs'.
+    pose proof (eval_trans' e0 e). subst y0.
+    eapply eval_app_cong_tApp. eapply IHargs. tea. exact evf'.
+    eapply eval_app_cong_tApp'. now eapply eval_to_value in evf'. exact e0. exact evres.
+Qed.
+
+Lemma eval_app_cong_mkApps {Σ} {f f' res : EAst.term} {args args'} :
+  @eval target_wcbv_flags Σ f f' → 
+  All2 (@eval target_wcbv_flags Σ) args args' ->
+  @eval target_wcbv_flags Σ (mkApps f' args') res → 
+  @eval target_wcbv_flags Σ (mkApps f args) res.
+Proof.
+  revert args' res; induction args using rev_ind.
+  - cbn. intros. eapply eval_trans. tea. now depelim X.
+  - intros args' res evf evargs evf'.
+    rewrite !mkApps_app. cbn.
+    eapply All2_app_inv_l in evargs as [r1 [r2 [? []]]]. depelim a0. depelim a0. subst args'. 
+    rewrite mkApps_app in evf'.
+    eapply eval_mkApps_inv' in evf' as [f'' [args' [evf'' [evargs' evres]]]].
+    depelim evargs'. depelim evargs'.
+    pose proof (eval_trans' e0 e). subst y0.
+    eapply eval_app_cong_tApp. eapply IHargs. tea. exact a. exact evf''.
+    eapply eval_app_cong_tApp'. now eapply eval_to_value in evf''. exact e0. exact evres.
+Qed.
+
+Lemma All_eval_etaexp {fl : WcbvFlags} Σ l l' :
+  isEtaExp_env Σ ->
+  wf_glob Σ ->
+  All2 (eval Σ) l l' -> forallb (isEtaExp Σ []) l -> forallb (isEtaExp Σ []) l'.
+Proof.
+  intros; solve_all. now eapply eval_etaexp.
+Qed.
+
+Lemma isFix_mkApps f args : ~~ isFix f -> ~~ isFix (mkApps f args).
+Proof.
+  induction args using rev_ind => //.
+  intros hf.
+  rewrite mkApps_app /= //.
+Qed.
+
+
+Lemma nisFixApp_nisFix f : ~~ isFixApp f -> ~~ isFix f.
+Proof.
+  unfold isFixApp.
+  destruct decompose_app eqn:da => /=.
+  rewrite (decompose_app_inv da).
+  intros h. now apply isFix_mkApps.
+Qed.
+
+Lemma eval_opt_to_target Σ t v :
+  isEtaExp_env Σ ->
+  wf_glob Σ ->
+  @eval opt_wcbv_flags Σ t v -> 
+  isEtaExp Σ [] t -> 
+  @eval target_wcbv_flags Σ t v.
+Proof.
+  intros etaΣ wfΣ.
+  intros H.
+  induction H using eval_mkApps_rect.
+  - move/(isEtaExp_tApp_eval H) => IH.
+    forward IH by (intros; intro; solve_discr).
+    forward IH by (intros; intro; solve_discr).
+    destruct (decompose_app (tApp a t)) eqn:da.
+    destruct (expanded_head_viewc t0) => //.
+    * move: IH => [] hl [] ha [] ht /andP[] etafix /and3P[] etab etal etat.
+      clear H0.
+      rewrite ha in H.
+      eapply eval_stuck_fix_eq in H as [args' [Hargs' [[]|]]]. solve_discr.
+      forward IHeval1 => //.
+      rewrite ha. eapply isEtaExp_FixApp => //. 
+      forward IHeval2 => //.
+      now econstructor.
+    * move: IH => /and4P [] ht0 hl ha ht.
+      forward IHeval1 => //.
+      forward IHeval2 => //.
+      econstructor; eauto.
+  - clear H0.
+    move/(isEtaExp_tApp_eval H) => IH.
+    forward IH by (intros; intro; solve_discr).
+    forward IH by (intros; intro; solve_discr).
+    destruct (decompose_app (tApp f0 a)) eqn:da.
+    destruct (expanded_head_viewc t) => //.
+    * move: IH => [] hl [] ha [] ht /andP[] etafix /and3P[] etab etal etat.
+      rewrite ha in H.
+      eapply eval_stuck_fix_eq in H as [args' [Hargs' [[]|]]]. solve_discr.
+      forward_keep IHeval1 => //.
+      rewrite ha. eapply isEtaExp_FixApp => //. 
+      forward IHeval2 => //.
+      forward IHeval3. eapply etaExp_csubst; tea. eapply eval_etaexp; tea.
+      eapply eval_etaexp in IHeval1; tea. simp_eta in IHeval1. exact IHeval1.
+      now econstructor.
+    * move: IH => /and4P [] ht0 hl ha ht.
+      forward_keep IHeval1 => //.
+      forward IHeval2 => //.
+      forward IHeval3. eapply etaExp_csubst; tea. eapply eval_etaexp; tea.
+      eapply eval_etaexp in IHeval1; tea. simp_eta in IHeval1. exact IHeval1.
+      econstructor; eauto.
+   
+  - intros Hexp; simp_eta in Hexp. rtoProp. econstructor. eauto.
+    forward_keep IHeval1 => //.
+    forward IHeval2 => //.
+    eapply etaExp_csubst; tea.
+    eapply eval_etaexp in IHeval1; tea. 
+  - simp_eta. move=> /andP[] etad etabrs.
+    forward IHeval1 => //.
+    move: (eval_etaexp etaΣ wfΣ IHeval1 etad).
+    rewrite isEtaExp_Constructor => /andP[] etac etaargs.
+    forward_keep IHeval2 => //.
+    eapply isEtaExp_iota_red'; eauto.
+    eapply forallb_nth_error in etabrs; tea. erewrite H1 in etabrs.
+    cbn in etabrs. now rewrite -H2 app_nil_r skipn_length in etabrs.
+    econstructor; tea.
+    
+  - simp_eta. move=> /andP[] etad etabrs.
+    forward IHeval1 => //.
+  - cbn -[isEtaExp] in *.
+    intros he. generalize he.
+    move/isEtaExp_tApp'.
+    destruct decompose_app eqn:da.
+    destruct expanded_head_viewc.  
+    * move=> [] hl [] hf [] ha heta.
+      clear H0.
+      rewrite hf in H. eapply eval_construct in H as [? []]; solve_discr.
+    * move => [hl [hf [ha /andP[] /andP[] etal etab]]] isel.
+      set (H' := H); assert (eval_depth H' = eval_depth H) by reflexivity.
+      clearbody H'. move: H' H4. rewrite {1 2}hf. intros H'.
+      pose proof H' as Hfix.
+      rewrite -[tApp _ _](mkApps_app _ _ [av]) in IHeval3.
+      forward_keep IHeval2.
+      { rewrite ha. now eapply forallb_last. }
+      unshelve epose proof (eval_mkApps_tFix_inv_size _ _ _ _ _ _ H') => //.
+      { red. reflexivity. }
+      intros hev.
+      destruct X as [[args' [hargs heq]]|].
+      { solve_discr. noconf H5.
+        forward IHeval3.
+        { rewrite app_nil_r in etab. eapply isEtaExp_cunfold_fix in etab. 2:tea.
+          eapply (isEtaExp_mkApps_intro _ [] _ _) => //. tea.
+          eapply All_app_inv.
+          2:eapply All_tip.1, eval_etaexp; tea.
+          eapply forallb_remove_last in isel.
+          eapply All_eval_etaexp in isel; tea. solve_all.
+          eapply All2_impl; tea. cbn. now intros ? ? []. }
+        destruct (eval_mkApps_inv_size IHeval3) as [f'' [args'' [evf' [evs evargs' [evres ressize]]]]].
+        rewrite -[tApp _ _](mkApps_app _ _ [a]). 
+        rewrite ha. rewrite -remove_last_last //.
+        assert (All2
+          (λ a a' : EAst.term, @eval target_wcbv_flags Σ a a')
+          l (args' ++ [av])).
+        { rewrite [l](remove_last_last l a hl). eapply All2_app => //.
+          eapply forallb_remove_last, forallb_All in isel.
+          eapply All2_All_mix_left in hargs; tea.
+          eapply All2_impl; tea.
+          { cbn. intros x y [etax []]. eapply (H0 _ _ x0) => //. lia. }
+          constructor. 2:constructor. now rewrite -ha. }
+        clear evs evargs'. clear ressize. move: X IHeval3.
+        generalize (args' ++ [av]) => evargs.
+        intros hargs'; depelim hargs' => //.
+        cbn. intros ev. eapply eval_mkApps_inv in ev as [f' [evf'' evargs]].
+        eapply eval_app_cong_mkApps.
+        eapply eval_fix' => //. constructor => //. now rewrite H2. exact e.
+        exact evf''. exact hargs'. exact evargs. }
+      { destruct s as [n [b [hrm [hunf hn]]]].
+        clear H0 hev; rewrite hf in H.
+        eapply neval_to_stuck_fix_app in H => //.
+        apply isEtaExp_FixApp => //.
+        move: hunf. rewrite /cunfold_fix /isEtaExp_fixapp.
+        destruct nth_error => //. intros [=]. eapply Nat.ltb_lt. now subst n.
+        now eapply forallb_remove_last. }
+    * move=> [] hl [] ha [] ht /andP[] hnth.
+      now rewrite nth_error_nil /= in hnth.
+    * move=> /and4P[] => ht hl hf ha. clear H0.
+      now eapply neval_to_stuck_fix_app in H; tea.
+      
+  - clear H0.
+    cbn -[isEtaExp] in *.
+    intros he. generalize he.
+    move/isEtaExp_tApp'.
+    destruct decompose_app eqn:da.
+    destruct expanded_head_viewc.
+    * move=> [] hl [] hf [] ha heta.
+      rewrite hf in H. eapply eval_construct in H as [? []]; solve_discr.
+    * move => [hl [hf [ha /andP[] /andP[] etal etab]]] isel.
+      rewrite hf in H.
+      elimtype False.
+      pose proof H as Hfix.
+      eapply eval_stuck_fix_eq in H as [args' [hargs [[hstuck ?]|]]].
+      { solve_discr. noconf H.
+        move: etal. rewrite /isEtaExp_fixapp.
+        unfold isStuckFix' in hstuck. rewrite H2 in hstuck.
+        move: H2. rewrite /cunfold_fix.
+        destruct nth_error eqn:hnth => //.
+        intros [=]. subst narg. rewrite -(All2_length hargs) in hstuck, H3.
+        move/Nat.ltb_lt. apply Nat.leb_le in hstuck.
+        rewrite remove_last_length' // in hstuck, H3. lia. }
+      eapply neval_to_stuck_fix_app in Hfix; tea.
+      eapply isEtaExp_FixApp => //.
+      now eapply forallb_remove_last.
+    * move=> [] hl [] ha [] ht /andP[] hnth.
+      now rewrite nth_error_nil /= in hnth.
+    * move=> /and4P[] => ht hl hf ha.
+      now eapply neval_to_stuck_fix_app in H; tea.
+  - cbn in unguarded. congruence.
+  - simp_eta => /andP[] etad etabrs.
+    forward IHeval1 by tas.
+    forward IHeval2.
+    { simp_eta. rewrite etabrs andb_true_r.
+      eapply eval_etaexp in H0; tea.
+      move: H0; rewrite isEtaExp_mkApps // /= => /andP[] etafix etaargs.
+      eapply isEtaExp_mkApps_intro.
+      eapply isEtaExp_cunfold_cofix; tea. simp_eta in etafix.
+      now rewrite app_nil_r in etafix. solve_all. }
+    econstructor; eauto.
+  - simp_eta => etad.
+    forward IHeval1 by tas.
+    forward IHeval2. { simp_eta.
+      eapply eval_etaexp in H0; tea.
+      move: H0; rewrite isEtaExp_mkApps // /= => /andP[] etafix etaargs.
+      eapply isEtaExp_mkApps_intro.
+      eapply isEtaExp_cunfold_cofix; tea. simp_eta in etafix.
+      now rewrite app_nil_r in etafix. solve_all. }
+    econstructor; eauto.
+  - move=> _.
+    forward IHeval.
+    { eapply isEtaExp_lookup in H; tea.
+      now rewrite /isEtaExp_decl /isEtaExp_constant_decl H0 /= in H. }
+    econstructor; eauto.
+  - simp_eta => etad.
+    forward IHeval1 by tas.
+    forward IHeval2.
+    { eapply eval_etaexp in H; tea.
+      move: H; rewrite isEtaExp_mkApps // /= => /andP[] etaapp etaargs.
+      rewrite nth_nth_error. destruct nth_error eqn:hnth => //.
+      eapply forallb_nth_error in etaargs; tea.
+      now erewrite hnth in etaargs. }
+    eapply eval_proj; tea.
+  - simp_eta => etad.
+    forward IHeval by tas.
+    eapply eval_proj_prop ; tea. 
+  - move/isEtaExp_tApp'.
+    destruct decompose_app eqn:da.
+    rewrite (decompose_app_inv da).
+    destruct expanded_head_viewc.
+    * move=> [] hl [] hf [] ha /andP[] heta etal.
+      set (H' := H) ; assert (eval_depth H' = eval_depth H) by reflexivity.
+      clearbody H'. move: H' H3. rewrite {1 2}hf. intros H'.
+      destruct (eval_mkApps_Construct_size H') as [args' [evc [evcs hargs ->]]].
+      intros hevd.
+      rewrite (remove_last_last l a hl).
+      rewrite -[tApp _ _](mkApps_app _ _ [a']).
+      eapply eval_mkApps_Construct. eapply All2_app.
+      eapply forallb_remove_last, forallb_All in etal.
+      eapply All2_All_mix_left in hargs; tea.
+      eapply All2_impl; tea. cbn; intros ? ? [].
+      destruct s as [evxy hevxy]. unshelve eapply H0; tea. lia.
+      constructor; [|constructor]. rewrite -ha.
+      eapply IHeval2. rewrite ha. now eapply forallb_last.
+    * move => [hl [hf [ha /andP[] /andP[] etal etab]]] isel.
+      forward IHeval2. { rewrite ha. now eapply forallb_last. }
+      clear H0.
+      rewrite hf in H.
+      pose proof H as Hfix.
+      eapply eval_stuck_fix_eq in H as [args' [hargs [[hstuck ?]|]]].
+      { subst f'. cbn in H1.
+        rewrite !negb_or /= in H1.
+        move/andP: H1 => [] /andP[] _.
+        rewrite isFixApp_mkApps //. }
+      { cbn in H1.
+        rewrite (remove_last_last l a hl) /=.
+        rewrite mkApps_app. eapply eval_app_cong.
+        rewrite hf in IHeval1. eapply IHeval1.
+        rewrite isEtaExp_mkApps // /= i etab /=.
+        now eapply forallb_remove_last. cbn.
+        move: H1. rewrite !negb_or => /andP[] /andP[] -> isfix -> /=.
+        rewrite andb_true_r. now eapply nisFixApp_nisFix.
+        now rewrite -ha. }
+    * move=> [] hl [] ha [] ht /andP[] hnth.
+      now rewrite nth_error_nil /= in hnth.
+    * move=> /and4P[] => ht hl hf ha.
+      forward IHeval1 by tas.
+      forward IHeval2 by tas.
+      rewrite -(decompose_app_inv da). eapply eval_app_cong; tea.
+      move: H1. rewrite !negb_or => /andP[] /andP[] -> isfix -> /=.
+      rewrite andb_true_r. now eapply nisFixApp_nisFix.
+  - intros hexp. now eapply eval_atom.
+Qed.

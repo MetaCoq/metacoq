@@ -113,14 +113,15 @@ Section eval_mkApps_rect.
           → #|argsv| < narg
           → P (tApp f5 a) (tApp (mkApps (tFix mfix idx) argsv) av))
     → (∀ (f6 : term) (mfix : mfixpoint term) 
-         (idx : nat) (a fn res : term) (narg : nat) 
+         (idx : nat) (a av fn res : term) (narg : nat) 
          (unguarded : with_guarded_fix = false) 
          (ev : eval Σ f6 (tFix mfix idx)),
           P f6 (tFix mfix idx)
           → IH _ _ ev
+          → forall (ev' : eval Σ a av), IH _ _ ev'
           → cunfold_fix mfix idx = Some (narg, fn)
-          → eval Σ (tApp fn a) res
-          → P (tApp fn a) res
+          → eval Σ (tApp fn av) res
+          → P (tApp fn av) res
           → P (tApp f6 a) res)
     → (∀ (ip : Kernames.inductive × nat) (mfix : mfixpoint term) 
          (idx : nat) (args : list term) 
@@ -203,5 +204,5 @@ Proof.
   end].
 Qed.
 
-End eval_mkApps_rect.
+End eval_mkApps_rect. 
 

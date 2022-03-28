@@ -302,8 +302,9 @@ Proof.
     constructor; [|easy].
     now apply erases_deps_mkApps.
   - depelim er.
-    eapply IHev2. econstructor; eauto.
     specialize (IHev1 er1).
+    specialize (IHev2 er2).
+    eapply IHev3. econstructor; eauto.
     eapply erases_deps_cunfold_fix; eauto.
     now depelim IHev1.
   - depelim er.

@@ -855,10 +855,11 @@ Proof.
     now rewrite map_length. 
 
   - rewrite strip_tApp //. simp_strip in e0.
+    simp_strip in e1.
     eapply Ee.eval_fix'; tea.
     eapply strip_cunfold_fix; tea.
     { eapply closed_fix_subst => //. }
-    { simp isEtaExp in i6. }
+    { simp isEtaExp in i10. }
     rewrite strip_tApp // in e.
 
   - simp_strip.

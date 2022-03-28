@@ -517,10 +517,9 @@ Proof.
   simpl. intros [= Hl]. cbn. f_equal. now rewrite mapi_rec_Sk.
 Qed.
 
-Lemma skipn_length {A} n (l : list A) : n <= length l -> length (skipn n l) = length l - n.
+Lemma skipn_length {A} n (l : list A) : length (skipn n l) = length l - n.
 Proof.
   induction l in n |- *; destruct n; simpl; auto.
-  intros. rewrite IHl; auto with arith.
 Qed.
 
 Lemma combine_map_id {A B} (l : list (A * B)) :

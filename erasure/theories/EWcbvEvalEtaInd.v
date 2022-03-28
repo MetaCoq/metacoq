@@ -212,9 +212,9 @@ Lemma eval_preserve_mkApps_ind :
             → P f5 (tFix mfix idx)
               → cunfold_fix mfix idx = Some (narg, fn)
               -> isEtaExp Σ fn
-              -> isEtaExp Σ a
-              → eval Σ (tApp fn a) res   
-              → P (tApp fn a) res
+              -> eval Σ a av -> P a av
+              → eval Σ (tApp fn av) res   
+              → P (tApp fn av) res
               -> isEtaExp Σ (tApp f5 a)
               → P' (tApp f5 a) res) → 
               
@@ -459,18 +459,22 @@ Proof.
       clear IH; rewrite ha in ev1. elimtype False.
       eapply eval_construct in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat. 
-      assert (qa : Q 0 (tApp fn a)).
+      assert (qav : Q 0 av).
+      { eapply P'Q; tea; ih. }
+      assert (qa : Q 0 (tApp fn av)).
       { pose proof (ev1' := ev1). eapply P'Q in ev1' => //. 2:clear ev1'; ih.
         eapply qfixs in ev1'. cbn in IH. eapply ev1' in e.
-        eapply (qapp _ _ [a]); split => //. now eapply All_tip.1. }
+        eapply (qapp _ _ [av]); split => //. now eapply All_tip.1. }
       assert (etafn : isEtaExp Σ fn).
       { assert (hfix : isEtaExp Σ (tFix mfix idx)) by iheta q.
         eapply isEtaExp_cunfold_fix. now simp_eta in hfix. exact e. }
-      assert (etaapp : isEtaExp Σ (tApp fn a)).
-      { change (isEtaExp Σ (mkApps fn [a])).
+      assert (etaav : isEtaExp Σ av).
+      { iheta q0. }
+      assert (etaapp : isEtaExp Σ (tApp fn av)).
+      { change (isEtaExp Σ (mkApps fn [av])).
         eapply isEtaExp_mkApps_intro => //.
         now eapply All_tip.1. }
-      split. eapply X6; tea. 1-2:(apply and_assum; [ih|hp' P'Q]).
+      split. eapply X6; tea. 1-3:(apply and_assum; [ih|hp' P'Q]).
       rewrite (decompose_app_inv da). eapply isEtaExp_mkApps_intro => //.
       now eapply forallb_All in etaargs.
       iheta qa.

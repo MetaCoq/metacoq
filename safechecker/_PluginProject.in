@@ -81,12 +81,14 @@ src/pCUICPretty.ml
 # src/canonicalTries.ml
 src/pCUICErrors.mli
 src/pCUICErrors.ml
-src/pCUICWfEnv.mli
-src/pCUICWfEnv.ml
-src/pCUICSafeReduce.mli
-src/pCUICSafeReduce.ml
 src/pCUICEqualityDec.mli
 src/pCUICEqualityDec.ml
+src/pCUICWfEnv.mli
+src/pCUICWfEnv.ml
+src/pCUICWfEnvImpl.mli
+src/pCUICWfEnvImpl.ml
+src/pCUICSafeReduce.mli
+src/pCUICSafeReduce.ml
 src/pCUICSafeConversion.mli
 src/pCUICSafeConversion.ml
 # src/pCUICWfEnv.mli

@@ -56,7 +56,7 @@ Check PCUICSR.subject_reduction.
 
 (** Verified conversion and type-checking *)
 
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker PCUICSafeRetyping Loader.
 Check PCUICSafeConversion.isconv_term_sound.
 Check PCUICSafeConversion.isconv_term_complete.
 
@@ -75,15 +75,15 @@ From MetaCoq.Examples Require Import metacoq_tour_prelude.
 Check check_inh.
 
 (** We construct a proof of typing entirely within Coq, calling the typechecker to produce the derivation *)
-Lemma identity_typing (u := Universe.make univ): 
+(* Lemma identity_typing (u := Universe.make univ): 
   inh gctx_wf_env [] (tProd (bNamed "s") (tSort u) (tImpl (tRel 0) (tRel 0))).
 Proof.
   (* We construct a term *)
   set (impl := tLambda (bNamed "s") (tSort u) (tLambda bAnon (tRel 0) (tRel 0))).
   (* Show that the empty context is well-formed  *)
-  assert (wfΓ : forall Σ0 : global_env_ext, abstract_env_rel' gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
- fill_inh impl.
-Qed.
+  assert (wfΓ : forall Σ0 : global_env_ext, abstract_env_ext_rel gctx_wf_env Σ0 -> ∥ wf_local Σ0 [] ∥) by do 2 constructor.
+  fill_inh impl.
+Qed. *)
 
 (** The extracted typechecker also runs in OCaml *)
 (* FIXME: checker unusable in OCaml due to representation of universes *)

@@ -8,7 +8,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICCumulativity PCUICSR PCUICSafeLemmata
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 
-From MetaCoq.SafeChecker Require Import PCUICWfEnv.
+From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
     ELiftSubst ESpineView EOptimizePropDiscr ErasureFunction EEtaExpanded ECSubst.
@@ -1549,13 +1549,13 @@ Proof.
   intros. destruct a as [kn []]; simpl; destruct KernameSet.mem.
   + constructor. eapply IHdecls => //.
     eapply erase_global_decls_fresh; auto.
-    destruct Σ.(wf_env_wf).
+    destruct Σ.(referenced_impl_wf).
     destruct X. rewrite heq in o0. now depelim o0.
   + cbn.
     eapply IHdecls.
   + constructor. eapply IHdecls.
     eapply erase_global_decls_fresh.
-    destruct Σ.(wf_env_wf) as [[onu ond]].
+    destruct Σ.(referenced_impl_wf) as [[onu ond]].
     rewrite heq in ond. now depelim ond.
   + eapply IHdecls.
 Qed.

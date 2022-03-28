@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import config Universes Loader.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICSN PCUICLiftSubst.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICTypeChecker PCUICSafeChecker.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv PCUICWfEnvImpl PCUICTypeChecker PCUICSafeChecker.
 From Equations Require Import Equations.
 
 Import MCMonadNotation.
@@ -23,23 +23,23 @@ Definition univ := Level.Level "s".
 (* TODO move to SafeChecker *)
 
 Definition gctx : global_env_ext := 
-  ({| universes := (LevelSet.singleton univ, ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
+  ({| universes := (LS.union (LevelSet.singleton Level.lzero) (LevelSet.singleton univ), ConstraintSet.empty); declarations := [] |}, Monomorphic_ctx).
 
 (** We use the environment checker to produce the proof that gctx, which is a singleton with only 
-    universe "s" declared  is well-formed. *)
+    universe "s" declared is well-formed. *)
 
 Definition kername_of_string (s : string) : kername :=
   (MPfile [], s).
 
-Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext :=
-  '(exist Σ' pf) <- check_wf_ext Σ ;;
+Definition make_wf_env_ext (Σ : global_env_ext) : EnvCheck wf_env_ext wf_env_ext :=
+  '(exist Σ' pf) <- check_wf_ext optimized_abstract_env_impl Σ ;;
   ret Σ'.
 
 Definition gctx_wf_env : wf_env_ext.
 Proof.
   let wf_proof := eval hnf in (make_wf_env_ext gctx) in 
   match wf_proof with
-  | CorrectDecl ?x => exact x
+  | CorrectDecl _ ?x => exact x
   | _ => fail "Couldn't prove the global environment is well-formed"
   end.
 Defined.
@@ -48,18 +48,18 @@ Defined.
 
 (** There is always a proof of `forall x : Sort s, x -> x` *)
 
-Definition inh (Σ : wf_env_ext) Γ T := (∑ t, forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> ∥ typing Σ0 Γ t T ∥).
+Definition inh (Σ : wf_env_ext) Γ T := (∑ t, forall Σ0 : global_env_ext, abstract_env_ext_rel Σ Σ0 -> ∥ typing Σ0 Γ t T ∥).
 
 Definition check_inh (Σ : wf_env_ext) Γ 
-  (wfΓ : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> ∥ wf_local Σ0 Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
-  prf <- check_type_wf_env_fast Σ Γ wfΓ t (T := T) ;;
+  (wfΓ : forall Σ0 : global_env_ext, abstract_env_ext_rel Σ Σ0 -> ∥ wf_local Σ0 Γ ∥) t {T} : typing_result (inh Σ Γ T) := 
+  prf <- check_type_wf_env_fast optimized_abstract_env_impl Σ Γ wfΓ t (T := T) ;;
   ret (t; prf).
 
 Ltac fill_inh t := 
   lazymatch goal with
   [ wfΓ : forall _ _ , ∥ wf_local _ ?Γ ∥ |- inh ?Σ ?Γ ?T ] => 
     let t := uconstr:(check_inh Σ Γ wfΓ t (T:=T)) in
-    let proof := eval lazy in t in
+    let proof := eval cbn in t in
     match proof with
     | Checked ?d => exact_no_check d
     | TypeError ?e => 

@@ -7,7 +7,7 @@ From MetaCoq.Template Require Import utils.
     Any extracted code planning to link with the plugin
     should use these same directives for consistency.
 *)
- 
+
 Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
            UnivSubst Typing Checker Retyping OrderedType Logic Common ws_cumul_pb Classes Numeral
            Uint63.
@@ -33,7 +33,7 @@ Extract Constant Equations.Init.pr1 => "fst".
 Extract Constant Equations.Init.pr2 => "snd".
 Extraction Inline Equations.Init.pr1 Equations.Init.pr2.
 
-Extract Constant PCUICWfEnv.guard_impl => "(fun _ _ _ _ -> true)".
+Extract Constant PCUICWfEnvImpl.guard_impl => "(fun _ _ _ _ -> true)".
 Extract Constant PCUICTyping.guard_checking => "(fun _ _ _ _ -> true)".
 
 Cd "src".

@@ -71,7 +71,6 @@ Zpower
 SpecFloat
 PrimFloat
 FloatOps
-DecimalString
 MCString
 MCUtils
 Signature

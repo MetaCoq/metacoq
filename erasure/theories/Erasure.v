@@ -6,7 +6,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      TemplateToPCUIC TemplateToPCUICCorrectness TemplateToPCUICWcbvEval.
 From MetaCoq.PCUIC Require PCUICExpandLets PCUICExpandLetsCorrectness.
 Set Warnings "+notation-overridden".
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnv.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require Import EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
 From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr ERemoveParams EWcbvEval EDeps.
 
@@ -288,12 +288,10 @@ Qed.
 Obligation Tactic := program_simpl.
 
 Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wfΣ : ∥ wf Σ ∥) : wf_env := 
-  {| wf_env_env := Σ.(trans_env_env);
+  {| wf_env_referenced := {| referenced_impl_env := Σ.(trans_env_env); referenced_impl_wf := wfΣ |} ;
      wf_env_map := Σ.(trans_env_map);
      wf_env_map_repr := Σ.(trans_env_repr);
-     wf_env_wf := wfΣ;
-     wf_env_graph := proj1_sig (graph_of_wf wfΣ);
-     wf_env_graph_wf := proj2_sig (graph_of_wf wfΣ) |}.
+ |}.
 
 Program Definition erase_pcuic_program (p : pcuic_program) 
   (wfΣ : ∥ wf_ext (H := config.extraction_checker_flags) p.1 ∥)

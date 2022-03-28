@@ -206,7 +206,7 @@ struct
             (Univ.LSet.add p levels, Univ.Constraint.add (x, Univ.Eq, p) cstrs)) rest acc)
         eqs (levels, cstrs)
     in
-    let levels = Univ.LSet.remove Univ.Level.set levels in
+    let levels = Univ.LSet.add Univ.Level.set levels in
     let levels = Univ.LSet.remove Univ.Level.prop levels in
     let levels = Univ.LSet.remove Univ.Level.sprop levels in
     let cstrs = Univ.Constraint.remove (Univ.Level.prop, Univ.Lt, Univ.Level.set) cstrs in

@@ -16,6 +16,15 @@ From MetaCoq.PCUIC Require Import PCUICInduction.
 Section CheckerFlags.
   Context {cf:checker_flags}.
 
+
+  Lemma wf_universe_type0 Σ : wf_universe Σ Universe.type0.
+  Proof.
+    simpl.
+    intros l hin%UnivExprSet.singleton_spec.
+    subst l. simpl.
+    apply LS.union_spec. right; apply global_levels_Set.
+  Qed.
+  
   Lemma wf_universe_type1 Σ : wf_universe Σ Universe.type1.
   Proof.
     simpl.
@@ -295,6 +304,8 @@ Section CheckerFlags.
       end.
 
     Definition wf_universes t := on_universes wf_universeb closedu t.
+
+  
 
     Lemma wf_universeb_instance_forall u :
       forallb wf_universeb (map Universe.make u) = wf_universeb_instance Σ u.
@@ -680,21 +691,27 @@ Qed.
     eapply In_unfold_var. exists k; split; eauto.
   Qed.
 
-  Definition wf_decl_universes Σ d :=
-    option_default (wf_universes Σ) d.(decl_body) true &&
-    wf_universes Σ d.(decl_type).
-  
+  Definition on_decl_universes (fu : Universe.t -> bool) (fc : nat -> term -> bool) d :=
+      option_default (on_universes fu fc) d.(decl_body) true &&
+      on_universes fu fc d.(decl_type).
+
+  Definition wf_decl_universes Σ := on_decl_universes (wf_universeb Σ) closedu.
+
+  Definition on_ctx_universes (fu : Universe.t -> bool) (fc : nat -> term -> bool) Γ :=
+    forallb (on_decl_universes fu fc) Γ.
+
   Definition wf_ctx_universes Σ Γ :=
     forallb (wf_decl_universes Σ) Γ.
   
   Lemma wf_universes_it_mkProd_or_LetIn {Σ Γ T} : 
     wf_universes Σ (it_mkProd_or_LetIn Γ T) = wf_ctx_universes Σ Γ && wf_universes Σ T.
   Proof.
-    induction Γ as [ |[na [b|] ty] Γ] using rev_ind ; simpl; auto ;
-    now rewrite it_mkProd_or_LetIn_app {1}/wf_universes /=
-      -!/(wf_universes _ _) IHΓ /wf_ctx_universes forallb_app /=
-      {3}/wf_decl_universes -!/(wf_universes _ _) /= ;
+    induction Γ as [ |[na [b|] ty] Γ] using rev_ind ; simpl; auto;
+    rewrite it_mkProd_or_LetIn_app {1}/wf_universes /=
+    -!/(wf_universes _ _) IHΓ /wf_ctx_universes forallb_app /=
+    {3}/wf_decl_universes -!/(wf_universes _ _) / on_decl_universes /= /wf_universes;
     repeat bool_congr.
+
   Qed.
 
   Lemma test_context_app p Γ Δ : 

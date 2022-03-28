@@ -27,6 +27,7 @@ PCUICUnivSubst
 PCUICErrors
 PCUICEqualityDec
 PCUICWfEnv
+PCUICWfEnvImpl
 PCUICSafeReduce
 PCUICSafeConversion
 PCUICTypeChecker

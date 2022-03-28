@@ -83,7 +83,7 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
   wf_predicate mdecl idecl p ->
   consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
   wf_local_bd_rel Σ Γ predctx ->
-  is_allowed_elimination Σ ps (ind_kelim idecl) ->
+  is_allowed_elimination Σ (ind_kelim idecl) ps ->
   ctx_inst checking Σ Γ (pparams p)
       (List.rev mdecl.(ind_params)@[p.(puinst)]) ->
   isCoFinite mdecl.(ind_finite) = false ->
@@ -394,7 +394,7 @@ Section BidirectionalInduction.
       consistent_instance_ext Σ (ind_universes mdecl) (puinst p) ->
       wf_local_bd_rel Σ Γ predctx ->
       PΓ_rel Γ predctx ->
-      is_allowed_elimination Σ ps (ind_kelim idecl) ->
+      is_allowed_elimination Σ (ind_kelim idecl) ps ->
       ctx_inst checking Σ Γ (pparams p)
           (List.rev mdecl.(ind_params)@[p.(puinst)]) ->
       ctx_inst (fun _ => Pcheck) Σ Γ p.(pparams)

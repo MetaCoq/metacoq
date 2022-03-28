@@ -164,7 +164,7 @@ Variant case_side_conditions `{checker_flags} wf_local_fun typing Σ Γ ci p ps 
     (* The predicate context is fixed, it is only used as a cache for information from the
       global environment *)
     (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
-    (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
+    (allowed_elim : is_allowed_elimination Σ idecl.(ind_kelim) ps)
     (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
                          (List.rev (subst_instance p.(puinst)
                                                    (ind_params mdecl ,,, ind_indices idecl))))
@@ -671,7 +671,7 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) ->
-        is_allowed_elimination Σ ps idecl.(ind_kelim) ->
+        is_allowed_elimination Σ idecl.(ind_kelim) ps ->
         ctx_inst typing Σ Γ (p.(pparams) ++ indices)
           (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
         ctx_inst P Σ Γ (p.(pparams) ++ indices)
@@ -1143,7 +1143,7 @@ Lemma typing_ind_env `{cf : checker_flags} :
       forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
       P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
       PΓ Σ (Γ ,,, predctx) ->
-      is_allowed_elimination Σ ps idecl.(ind_kelim) ->
+      is_allowed_elimination Σ idecl.(ind_kelim) ps ->
       ctx_inst typing Σ Γ (p.(pparams) ++ indices)
         (List.rev (subst_instance p.(puinst) (mdecl.(ind_params) ,,, idecl.(ind_indices)))) ->
       ctx_inst P Σ Γ (p.(pparams) ++ indices)

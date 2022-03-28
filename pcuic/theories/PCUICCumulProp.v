@@ -113,19 +113,20 @@ Lemma prop_sort_eq {Σ Γ u u'} : Universe.is_prop u -> Universe.is_prop u' ->
   is_closed_context Γ ->
   Σ ;;; Γ ⊢ tSort u = tSort u'.
 Proof.
-  move=> isp isp'.
+  destruct u, u';
+  move=> //_ //_.
   constructor => //. constructor. 
-  red. red. rewrite Hcf'. red. intros. now rewrite (is_prop_val _ isp) (is_prop_val _ isp').
+  red. red. constructor.
 Qed.
 
 Lemma sprop_sort_eq {Σ Γ u u'} : Universe.is_sprop u -> Universe.is_sprop u' -> 
   is_closed_context Γ ->
   Σ ;;; Γ ⊢ tSort u = tSort u'.
 Proof.
-  move=> isp isp'.
+  destruct u, u';
+  move=> //_ //_.
   constructor => //. constructor. 
-  do 2 red. rewrite Hcf'.
-  red. intros. now rewrite (is_sprop_val _ isp) (is_sprop_val _ isp').
+  do 2 red. constructor.
 Qed.
 
 Lemma conv_sort_inv {Σ : global_env_ext} {wfΣ : wf Σ} Γ s s' :
@@ -364,13 +365,13 @@ Proof.
   intros x y; unfold eq_univ_prop; intuition.
 Qed.
 
-Lemma UnivExprSet_For_all (P : UnivExpr.t -> Prop) (u : Universe.nonEmptyUnivExprSet) :
+Lemma UnivExprSet_For_all (P : UnivExpr.t -> Prop) (u : nonEmptyUnivExprSet) :
   UnivExprSet.For_all P u <->
   Forall P (UnivExprSet.elements u).
 Proof.
-  rewrite UnivExprSet_For_all_exprs.
-  pose proof (Universe.exprs_spec u).
-  destruct (Universe.exprs u). rewrite -H. simpl.
+  rewrite NonEmptySetFacts.UnivExprSet_For_all_exprs.
+  pose proof (NonEmptySetFacts.to_nonempty_list_spec u).
+  destruct (NonEmptySetFacts.to_nonempty_list u). rewrite -H. simpl.
   split. constructor; intuition.
   intros H'; inv H'; intuition.
 Qed.
@@ -383,14 +384,14 @@ Proof.
 Qed.
 
 Lemma univ_epxrs_elements_map g s : 
-  forall e, In e (UnivExprSet.elements (Universe.map g s)) <->
+  forall e, In e (UnivExprSet.elements (NonEmptySetFacts.map g s)) <->
       In e (map g (UnivExprSet.elements s)).
 Proof.
   intros e.
-  unfold Universe.map.
-  pose proof (Universe.exprs_spec s).
-  destruct (Universe.exprs s) as [e' l] eqn:eq.  
-  rewrite -univ_expr_set_in_elements Universe.add_list_spec.
+  unfold NonEmptySetFacts.map.
+  pose proof (NonEmptySetFacts.to_nonempty_list_spec s).
+  destruct (NonEmptySetFacts.to_nonempty_list s) as [e' l] eqn:eq.  
+  rewrite -univ_expr_set_in_elements NonEmptySetFacts.add_list_spec.
   rewrite -H. simpl. rewrite UnivExprSet.singleton_spec.
   intuition auto.
 Qed.
@@ -409,18 +410,18 @@ Proof.
 Qed.
 
 Lemma univ_exprs_map_all P g s : 
-  Forall P (UnivExprSet.elements (Universe.map g s)) <->
+  Forall P (UnivExprSet.elements (NonEmptySetFacts.map g s)) <->
   Forall (fun x => P (g x)) (UnivExprSet.elements s).
 Proof.
   rewrite !Forall_elements_in.
-  setoid_rewrite Universe.map_spec.
+  setoid_rewrite NonEmptySetFacts.map_spec.
   intuition auto.
   eapply H. now exists x.
   destruct H0 as [e' [ins ->]]. apply H; auto.
 Qed.
 
 Lemma expr_set_forall_map f g s : 
-  UnivExprSet.for_all f (Universe.map g s) <->
+  UnivExprSet.for_all f (NonEmptySetFacts.map g s) <->
   UnivExprSet.for_all (fun e => f (g e)) s.
 Proof.
   rewrite /is_true !UnivExprSet.for_all_spec !UnivExprSet_For_all.

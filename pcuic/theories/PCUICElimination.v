@@ -134,14 +134,10 @@ Proof.
   enough (~ (Universe.is_prop ps \/ Universe.is_sprop ps)).
   { clear -cu wfΣ allowed_elim H1.
     apply wf_ext_consistent in wfΣ as (val&sat).
-    unfold is_allowed_elimination, is_allowed_elimination0 in *.
+    unfold is_allowed_elimination, is_lSet, eq_universe, eq_val in *.
     rewrite cu in allowed_elim.
-    specialize (allowed_elim _ sat).
-    destruct (ind_kelim idecl); auto;
-      destruct ((Universe.univ_val val ps)) eqn:v; try easy;
-        try apply val_is_sprop in v;
-        try apply val_is_prop in v;
-        intuition congruence. }
+    destruct (ind_kelim idecl); auto; destruct ps; cbn in *; try discriminate;
+    intuition congruence. }
   intros Huf. apply H0.
   red. exists (mkApps ptm (indices ++ [c])); intuition auto.
   exists ps.

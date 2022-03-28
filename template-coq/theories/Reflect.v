@@ -152,13 +152,13 @@ Next Obligation.
 Defined.
 
 (* TODO: move *)
-Lemma eq_universe_iff (u v : Universe.nonEmptyUnivExprSet) :
+Lemma eq_universe_iff (u v : nonEmptyUnivExprSet) :
   u = v <-> u = v :> UnivExprSet.t.
 Proof.
   destruct u, v; cbn; split. now inversion 1.
   intros ->. f_equal. apply uip.
 Qed.
-Lemma eq_universe_iff' (u v : Universe.nonEmptyUnivExprSet) :
+Lemma eq_universe_iff' (u v : nonEmptyUnivExprSet) :
   u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
 Proof.
   etransitivity. apply eq_universe_iff.

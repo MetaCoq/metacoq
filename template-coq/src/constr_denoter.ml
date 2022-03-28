@@ -210,18 +210,15 @@ struct
     else
       not_supported_verb trm "unquote_level"
 
-  let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Sorts.t =
+  let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Univ.Universe.t =
     let (h,args) = app_full trm [] in
     if constr_equall h c_pair then
       let l, b = unquote_pair trm in
       let evm, l' = unquote_level evm l in
-      let u = Sorts.sort_of_univ @@ Univ.Universe.make l' in
-      evm, if unquote_nat b > 0 then Sorts.super u else u
+      let u = Univ.Universe.make l' in
+      evm, if unquote_nat b > 0 then Univ.Universe.super u else u
     else
       not_supported_verb trm "unquote_univ_expr"
-
-  let sort_sup s1 s2 =
-    Sorts.sort_of_univ (Univ.Universe.sup (Sorts.univ_of_sort s1) (Sorts.univ_of_sort s2))
 
   let unquote_universe evm trm (* of type universe *)  =
     let (h,args) = app_full trm [] in
@@ -252,10 +249,14 @@ struct
                                           | x :: _ :: [] ->
                                              (match unquote_list x with
                                               | [] -> assert false
-                                              | e::q -> List.fold_left (fun (evm,u) e ->
+                                              | e::q ->
+                                                let evm, u =
+                                                  List.fold_left (fun (evm,u) e ->
                                                             let evm, u' = unquote_univ_expr evm e
-                                                            in evm, sort_sup u u')
-                                                          (unquote_univ_expr evm e) q)
+                                                            in evm, Univ.Universe.sup u u')
+                                                          (unquote_univ_expr evm e) q
+                                                in
+                                                evm, Sorts.sort_of_univ u)
                                           | _ -> bad_term_verb trm "unquote_universe 0"
                                         else
                                           not_supported_verb trm "unquote_universe 0")

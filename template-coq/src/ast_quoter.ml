@@ -106,8 +106,11 @@ struct
           | Coq_inr ql -> (ql, i > 0)) (Univ.Universe.repr s) in
       Universes0.Universe.from_kernel_repr (List.hd univs) (List.tl univs)
 
-  let quote_sort s =
-    quote_universe (Sorts.univ_of_sort s)
+  let quote_sort s = match s with
+  | Sorts.Set -> quote_universe Univ.Universe.type0
+  | Sorts.SProp -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lSProp)
+  | Sorts.Prop -> Universes0.Universe.of_levels (Coq_inl Universes0.PropLevel.Coq_lProp)
+  | Sorts.Type u -> quote_universe u
 
   let quote_sort_family s =
     match s with

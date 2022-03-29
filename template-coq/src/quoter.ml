@@ -209,9 +209,6 @@ struct
         eqs (levels, cstrs)
     in
     let levels = Univ.Level.Set.remove Univ.Level.set levels in
-    let levels = Univ.Level.Set.remove Univ.Level.prop levels in
-    let levels = Univ.Level.Set.remove Univ.Level.sprop levels in
-    let cstrs = Univ.Constraints.remove (Univ.Level.prop, Univ.Lt, Univ.Level.set) cstrs in
     Feedback.msg_debug (Pp.str"Universe context: " ++ Univ.pr_universe_context_set Univ.Level.pr (levels, cstrs));
     time (Pp.str"Quoting universe context") 
       (fun uctx -> Q.quote_univ_contextset uctx) (levels, cstrs)

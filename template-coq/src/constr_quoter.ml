@@ -187,20 +187,14 @@ struct
     to_string (Univ.Level.to_string s)
 
   let quote_nonprop_level l =
-    if Univ.Level.is_prop l || Univ.Level.is_sprop l then
-      failwith "quote_nonprop_level : Prop or SProp found in levels"
-    else if Level.is_set l then Lazy.force lzero
+    if Level.is_set l then Lazy.force lzero
     else match Level.var_index l with
          | Some x -> constr_mkApp (tLevelVar, [| quote_int x |])
          | None -> constr_mkApp (tLevel, [| string_of_level l|])
 
   let quote_level l =
     Tm_util.debug (fun () -> str"quote_level " ++ Level.pr l);
-    if Level.is_sprop l then
-      constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelSProp |])
-    else if Level.is_prop l then
-      constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelProp |])
-    else constr_mkApp (cInr, [|Lazy.force tproplevel;Lazy.force tlevel; quote_nonprop_level l |])
+    constr_mkApp (cInr, [|Lazy.force tproplevel;Lazy.force tlevel; quote_nonprop_level l |])
 
   let quote_universe s =
     match Univ.Universe.level s with
@@ -250,16 +244,7 @@ struct
     match cs with
     | [] -> []
     | (l, ct, l') :: cs' ->
-       if (* ignore trivial constraints *)
-         (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
-          (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
-       then constraints_ cs'
-       else if (* fail on unisatisfiable ones -- well-typed term is expected *)
-         Univ.Level.is_prop l' then failwith "Unisatisfiable constraint (l <= Prop)"
-      else if (* fail on unisatisfiable ones -- well-typed term is expected *)
-        Univ.Level.is_prop l then failwith "Unisatisfiable constraint (Prop = l)"
-      else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
-         quote_univ_constraint (l,ct,l') :: constraints_ cs'
+      quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints const =
     let const = Univ.Constraints.elements const in
@@ -331,10 +316,16 @@ struct
     let uctx = constr_mkApp (tUContextmake, [|inst' ; const'|]) in
     constr_mkApp (tadd_global_constraints, [|constr_mkApp (cMonomorphic_ctx, [| uctx |]); Lazy.force tinit_graph|])
 
+
+  let sprop_level =
+    constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelSProp |])
+  let prop_level =
+    constr_mkApp (cInl, [|Lazy.force tproplevel;Lazy.force tlevel;Lazy.force tlevelProp |])
+
   let quote_sort s = match s with
   | Sorts.Set -> quote_universe Universe.type0
-  | Sorts.Prop -> constr_mkApp (tof_levels, [| quote_level Level.prop |])
-  | Sorts.SProp -> constr_mkApp (tof_levels, [| quote_level Level.sprop |])
+  | Sorts.Prop -> constr_mkApp (tof_levels, [| prop_level |])
+  | Sorts.SProp -> constr_mkApp (tof_levels, [| sprop_level |])
   | Sorts.Type u -> quote_universe u
 
   let quote_sort_family = function

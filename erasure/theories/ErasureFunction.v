@@ -1983,3 +1983,22 @@ Proof.
     eapply IHdecls => //.
   + eapply IHdecls => //.
 Qed.
+
+Lemma erases_deps_erase (cf := config.extraction_checker_flags) {Σ : wf_env} univs (wfΣ : ∥ wf_ext (Σ, univs) ∥)
+  (Σ' := make_wf_env_ext Σ univs wfΣ) t 
+  (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ' Σ0 -> PCUICSafeLemmata.welltyped Σ0 [] t) :
+  let et := erase Σ' [] t wt in
+  let deps := EAstUtils.term_global_deps et in
+  erases_deps Σ (erase_global deps Σ) et.
+Proof.
+  intros et deps. destruct wfΣ.
+  pose proof (wt Σ' eq_refl). destruct H.
+  eapply (erase_global_erases_deps w); tea.
+  eapply (erases_erase (Σ := Σ') (Γ := [])).
+  eapply erase_global_includes.
+  intros.
+  eapply term_global_deps_spec in H; eauto.
+  assumption.
+  eapply (erases_erase (Σ := Σ') (Γ := [])).
+  eapply KernameSet.subset_spec. reflexivity. 
+Qed.

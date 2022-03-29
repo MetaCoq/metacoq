@@ -2000,3 +2000,140 @@ Proof.
       rewrite andb_true_r. now eapply nisFixApp_nisFix.
   - intros hexp. now eapply eval_atom.
 Qed.
+
+Import PCUICAst.
+
+Lemma erases_App (Σ : global_env_ext) Γ f L t :
+  erases Σ Γ (tApp f L) t ->
+  (t = EAst.tBox × squash (isErasable Σ Γ (tApp f L)))
+  \/ exists f' L', t = EAst.tApp f' L' /\
+            erases Σ Γ f f' /\
+            erases Σ Γ L L'.
+Proof.
+  intros. generalize_eqs H.
+  revert f L.
+  inversion H; intros; try congruence; subst.
+  - invs H4. right. repeat eexists; eauto.
+  - left. split; eauto. now sq.
+Qed.
+
+Lemma erases_mkApps_inv (Σ : global_env_ext) Γ f L t :
+  Σ;;; Γ |- mkApps f L ⇝ℇ t ->
+  (exists L1 L2 L2', L = L1 ++ L2 /\
+                erases Σ Γ (mkApps f L1) EAst.tBox /\
+                Forall2 (erases Σ Γ) L2 L2' /\
+                t = EAst.mkApps EAst.tBox L2'
+  )
+  \/ exists f' L', t = EAst.mkApps f' L' /\
+            erases Σ Γ f f' /\
+            Forall2 (erases Σ Γ) L L'.
+Proof.
+  intros. revert f H ; induction L; cbn in *; intros.
+  - right. exists t, []. cbn. repeat split; eauto.
+  - eapply IHL in H; eauto.
+    destruct H as [ (? & ? & ? & ? & ? & ? & ?) | (? & ? & ? & ? & ?)].
+    + subst. left. exists (a :: x), x0, x1. repeat split; eauto.
+    + subst.
+      eapply erases_App in H0 as [ (-> & []) | (? & ? & ? & ? & ?)].
+      * left. exists [a], L, x0. cbn. repeat split; eauto. now constructor.
+      * subst. right. exists x1, (x2 :: x0). repeat split; eauto.
+Qed.
+
+Lemma declared_constructor_arity {cf : checker_flags} {Σ c mdecl idecl cdecl} {wf : wf Σ} :
+  PCUICAst.declared_constructor Σ c mdecl idecl cdecl ->
+  context_assumptions (cstr_args cdecl) = cstr_arity cdecl.
+Proof.
+  intros hd.
+  destruct (PCUICWeakeningEnvTyp.on_declared_constructor hd) as [[onmind onind] [cu []]].
+  now eapply cstr_args_length in o.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICEtaExpand. 
+From MetaCoq.Erasure Require Import EDeps.
+
+Lemma expanded_erases (cf := config.extraction_checker_flags) {Σ : global_env_ext} Σ' Γ Γ' t v :
+  wf Σ ->
+  Σ ;;; Γ |- t ⇝ℇ v ->
+  PCUICEtaExpand.expanded Σ.1 Γ' t ->
+  erases_deps Σ Σ' v ->
+  EEtaExpandedFix.expanded Σ' Γ' v.
+Proof.
+  intros wfΣ he exp etaΣ.
+  revert Γ v etaΣ he.
+  induction exp using PCUICEtaExpand.expanded_ind; cbn.
+  all:try solve [intros Γ0 v etaΣ hv; depelim hv; try depelim etaΣ; constructor; solve_all].
+  - move=> Γ0 etaΣ v /erases_mkApps_inv; intros [(?&?&?&?&?&?&?)|(?&?&?&?&?)]; subst.
+    * constructor => //.
+      eapply EDeps.erases_deps_mkApps_inv in v as [].
+      eapply Forall_All in H2. eapply Forall2_All2 in H5.
+      eapply All_app in H2 as []. 
+      solve_all.
+    * eapply EDeps.erases_deps_mkApps_inv in v as [].
+      depelim H4; simp_eta => //.
+      + eapply expanded_tRel_app; tea. now rewrite -(Forall2_length H5).
+        eapply Forall_All in H2. eapply Forall2_All2 in H5. solve_all.
+      + constructor => //. solve_all.
+  - intros Γ0 v etaΣ.
+    move=> /erases_mkApps_inv; intros [(?&?&?&?&?&?&?)|(?&?&?&?&?)]; subst.
+    * eapply erases_deps_mkApps_inv in etaΣ as [].
+      constructor => //.
+      eapply Forall_All in H1. eapply Forall2_All2 in H4.
+      eapply All_app in H1 as []. solve_all.
+    * eapply erases_deps_mkApps_inv in etaΣ as [].
+      specialize (IHexp _ _ H2 H3).
+      constructor => //.
+      clear -H H3. destruct H3; cbn in *; congruence.
+      solve_all.
+  - intros Γ0 v etaΣ hv; depelim hv; try constructor. 
+    depelim etaΣ.
+    eauto.
+    depelim etaΣ.
+    solve_all. rewrite -b2. len. eapply b1 => //.
+    exact a0.
+  - intros Γ0 v etaΣ.
+    move=> /erases_mkApps_inv; intros [(?&?&?&?&?&?&?)|(?&?&?&?&?)]; subst.
+    * eapply erases_deps_mkApps_inv in etaΣ as [].
+      constructor => //. 
+      eapply Forall_All in H2. eapply Forall2_All2 in H8.
+      eapply All_app in H2 as []. solve_all.
+    * eapply erases_deps_mkApps_inv in etaΣ as [].
+      depelim H7; simp_eta => //.
+      + eapply All2_nth_error_Some in H4; tea. destruct H4 as [? [? [? []]]]; tea.
+        assert (rev_map (fun d1 : def term => S (rarg d1)) mfix = rev_map (fun d1 => S (EAst.rarg d1)) mfix').
+        { rewrite !rev_map_spec. f_equal. clear -X. induction X; cbn; auto. destruct r as [? []]. rewrite e0 IHX //. }
+        depelim H6.
+        eapply EEtaExpandedFix.expanded_tFix; tea.
+        ++ cbn. rewrite -H6. solve_all.
+        ++ solve_all.
+        ++ intros hx0. subst x0. depelim H8 => //.
+        ++ now rewrite -(Forall2_length H8) -e1.
+      + constructor => //; solve_all.
+  - intros Γ0 v etaΣ hv. depelim hv. depelim etaΣ.
+    constructor => //. rewrite -(All2_length X). solve_all. constructor.
+  - intros Γ0 v etaΣ.
+    move=> /erases_mkApps_inv; intros [(?&?&?&?&?&?&?)|(?&?&?&?&?)]; subst.
+    * eapply erases_deps_mkApps_inv in etaΣ as [].
+      constructor => //.
+      eapply Forall_All in H2. eapply Forall2_All2 in H5.
+      eapply All_app in H2 as []. solve_all.
+    * depelim H4; simp_eta => //.
+      + eapply erases_deps_mkApps_inv in etaΣ as [].
+        depelim H4.
+        destruct cdecl'.
+        eapply EEtaExpandedFix.expanded_tConstruct_app; tea.
+        ++ cbn. rewrite -(Forall2_length H5).
+          destruct (PCUICGlobalEnv.declared_constructor_inj H H4) as [? []]. subst idecl0 mind cdecl0.    
+          rewrite (declared_constructor_arity H) in H0.
+          destruct H7. rewrite -H10.
+          destruct H8 as [? _].
+          eapply Forall2_nth_error_left in H8. 2:apply H.
+          destruct H8 as [[i' n'] [hnth heq]].
+          cbn in hnth.
+          rewrite (proj2 H6) in hnth. noconf hnth.
+          destruct heq. congruence.
+        ++ solve_all.
+        + constructor => //.
+          eapply erases_deps_mkApps_inv in etaΣ as [].
+          solve_all.
+Qed.
+

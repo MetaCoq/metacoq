@@ -328,116 +328,6 @@ Next Obligation.
   intros g. eapply EnvMap.EnvMap.repr_global_env.
 Qed.
 
-Import EGlobalEnv.
-
-Definition eprogram := 
-  (EAst.global_context * EAst.term).
-
-Import EEnvMap.GlobalContextMap (make, global_decls).
-
-Arguments EWcbvEval.eval {wfl} _ _ _.
-
-Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
-  EWcbvEval.eval (wfl:=wfl) p.1 p.2 t.
-
-Import EOptimizePropDiscr.
-
-Program Definition optimize_prop_discr_optimization : self_transform eprogram EAst.term (eval_eprogram EWcbvEval.default_wcbv_flags) (eval_eprogram EWcbvEval.opt_wcbv_flags) := 
-  {| name := "optimize_prop_discr"; 
-    transform p _ := 
-      (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
-    pre p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v
-    |}.
-
-Next Obligation.
-  intros [Σ t] [cle clt].
-  cbn in *. split.
-  move: cle. induction Σ at 1 3; cbn; auto.
-  move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
-  destruct a as [kn []]; cbn in * => //.
-  destruct Extract.E.cst_body => //. cbn in cla |- *.
-  now eapply EOptimizePropDiscr.closed_optimize.
-  now eapply EOptimizePropDiscr.closed_optimize.
-Qed.
-Next Obligation.
-  red. move=> [Σ t] /= v [cle clt] ev.
-  eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
-Qed.
-
-Lemma wf_glob_fresh Σ : wf_glob Σ -> EnvMap.EnvMap.fresh_globals Σ.
-Proof.
-  induction Σ. constructor; auto.
-  intros wf; depelim wf. constructor; auto.
-Qed.
-
-Definition eprogram_env := 
-  (EEnvMap.GlobalContextMap.t * EAst.term).
-
-Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
-  EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t.
-
-Program Definition remove_params (p : eprogram_env) : eprogram :=
-  (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2).
-
-Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : 
-  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
-  {| name := "remove_parameters";
-    transform p pre := remove_params p;
-    pre p := 
-    let decls := p.1.(global_decls) in
-     [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
-      EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
-    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
-Next Obligation.
-  intros fl [Σ t] [wfe etae etat cle clt].
-  simpl.
-  cbn -[ERemoveParams.strip] in *.
-  split.
-  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
-  rewrite forallb_map. eapply forallb_impl. intros.
-  destruct x as [kn []]; cbn in * => //.
-  destruct Extract.E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
-  now eapply ERemoveParams.closed_strip.
-  now eapply ERemoveParams.closed_strip.
-Qed.
-Next Obligation.
-  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
-  eapply ERemoveParams.strip_eval in ev; eauto. 
-Qed.
-
-Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
-  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
-  {| name := "remove_parameters_fast";
-    transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
-    pre p := 
-      let decls := p.1.(global_decls) in
-      [/\ wf_glob decls, EEtaExpanded.isEtaExp_env decls, 
-       EEtaExpanded.isEtaExp decls p.2, closed_env decls & ELiftSubst.closedn 0 p.2];
-    post p := (closed_env p.1 /\ ELiftSubst.closedn 0 p.2);
-    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
-Next Obligation.
-  intros fl [Σ t] [wfe etae etat cle clt].
-  simpl.
-  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
-  cbn -[ERemoveParams.strip] in *.
-  split.
-  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
-  rewrite forallb_map. eapply forallb_impl. intros.
-  destruct x as [kn []]; cbn in * => //.
-  destruct Extract.E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
-  now eapply ERemoveParams.closed_strip.
-  now eapply ERemoveParams.closed_strip.
-Qed.
-Next Obligation.
-  red. move=> ? [Σ t] /= v [wfe etae etat cle clt] ev.
-  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
-  eapply ERemoveParams.strip_eval in ev; eauto.
-Qed.
-
-
 Definition let_expansion_obseq (p : pcuic_program) (p' : pcuic_program) (v : term) (v' : term) :=
   v' = PCUICExpandLets.trans v.
 
@@ -529,6 +419,37 @@ Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wf�
      wf_env_map_repr := Σ.(trans_env_repr);
  |}.
 
+Import EGlobalEnv.
+
+Definition eprogram := 
+  (EAst.global_context * EAst.term).
+
+Import EEnvMap.GlobalContextMap (make, global_decls).
+
+Arguments EWcbvEval.eval {wfl} _ _ _.
+
+Definition closed_eprogram (p : eprogram) := 
+  closed_env p.1 && ELiftSubst.closedn 0 p.2.
+
+Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
+  EWcbvEval.eval (wfl:=wfl) p.1 p.2 t.
+
+Definition eprogram_env := 
+  (EEnvMap.GlobalContextMap.t * EAst.term).
+
+Definition closed_eprogram_env (p : eprogram_env) := 
+  let Σ := p.1.(global_decls) in
+  closed_env Σ && ELiftSubst.closedn 0 p.2.
+
+Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
+  EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t.
+
+Lemma wf_glob_fresh Σ : wf_glob Σ -> EnvMap.EnvMap.fresh_globals Σ.
+Proof.
+  induction Σ. constructor; auto.
+  intros wf; depelim wf. constructor; auto.
+Qed.
+  
 Program Definition erase_pcuic_program (p : pcuic_program) 
   (wfΣ : ∥ wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
@@ -547,6 +468,7 @@ Next Obligation.
   eapply wf_glob_fresh.
   eapply ERemoveParams.erase_global_decls_wf_glob.
 Qed.
+
 
 (* * The full correctness lemma of erasure from Template programs do λ-box
 
@@ -605,42 +527,278 @@ Import Extract.
 
 Definition expanded_eprogram (p : eprogram_env) := 
   let decls := p.1.(EEnvMap.GlobalContextMap.global_decls) in
-  EEtaExpanded.isEtaExp_env decls && EEtaExpanded.isEtaExp decls p.2.
+  EEtaExpandedFix.isEtaExp_env decls && EEtaExpandedFix.isEtaExp decls [] p.2.
 
+Definition expanded_eprogram_cstrs (p : eprogram_env) := 
+  let decls := p.1.(EEnvMap.GlobalContextMap.global_decls) in
+  EEtaExpanded.isEtaExp_env decls && EEtaExpanded.isEtaExp decls p.2.
+  
 Definition erase_program (p : pcuic_program) (wtp : ∥ wt_pcuic_program (cf:=config.extraction_checker_flags) p ∥) : eprogram_env :=
   erase_pcuic_program p (map_squash fst wtp) (map_squash snd wtp).
 
-Module EEtaExp.
-  Import EEtaExpanded.
+Module EtaExpE.
+  Import EAst ErasureFunction EEtaExpandedFix EDeps.
 
-  Lemma expanded_erase_program {cf : checker_flags} {Σ : global_env_ext} Σ' Γ Γ' t v :
-    Σ ;;; Γ |- t ⇝ℇ v ->
-    PCUICEtaExpand.expanded Σ.1 Γ' t ->
-    erases_global Σ Σ' ->
-    EEtaExpanded.isEtaExp Σ' v.
+  Definition expanded_constant_decl Σ (cb : constant_body) : Prop :=
+    on_Some_or_None (expanded Σ []) cb.(cst_body).
+      
+  Definition expanded_decl Σ d :=
+    match d with
+    | ConstantDecl cb => expanded_constant_decl Σ cb
+    | InductiveDecl idecl => True
+    end.
+      
+  Inductive expanded_global_declarations : forall (Σ : global_declarations), Prop :=
+  | expanded_global_nil : expanded_global_declarations []
+  | expanded_global_cons decl Σ : expanded_global_declarations Σ -> 
+    expanded_decl Σ decl.2 -> expanded_global_declarations (decl :: Σ).
+
+  Definition expanded_global_env := expanded_global_declarations.
+
+  Definition global_subset (Σ Σ' : global_declarations) := 
+    forall kn d, lookup_env Σ kn = Some d -> lookup_env Σ' kn = Some d.
+  
+  Lemma lookup_env_In d Σ : 
+    wf_glob Σ ->
+    lookup_env Σ d.1 = Some d.2 <-> In d Σ.
   Proof.
-    intros he; revert Γ'.
-    induction he using Extract.erases_forall_list_ind.
-    all:simp_eta => //; intros Γ' hi etaΣ.
-    - depind hi; solve_discr. solve_all. destruct args using rev_case; solve_discr. subst f6.
-      eapply IHhi; tea. reflexivity.
-      rewrite mkApps_app /= in H3. noconf H3.
-    - depind hi; solve_discr. eapply IHhe; tea.
-      
-      
+    intros wf.
+    split.
+    - induction Σ; cbn => //.
+      destruct (eqb_spec d.1 a.1). intros [=]. destruct a, d; cbn in *; intuition auto.
+      left; subst; auto. depelim wf.
+      intros hl; specialize (IHΣ wf hl); intuition auto.
+    - induction wf => /= //.
+      intros [eq|hin]; eauto. subst d.
+      now rewrite eqb_refl.
+      specialize (IHwf hin).
+      destruct (eqb_spec d.1 kn). subst kn.
+      eapply EExtends.lookup_env_Some_fresh in IHwf. contradiction.
+      exact IHwf.
+  Qed.
 
+  Lemma global_subset_In Σ Σ' : 
+    wf_glob Σ -> wf_glob Σ' ->
+    global_subset Σ Σ' <-> forall d, In d Σ -> In d Σ'.
+  Proof.
+    split.
+    - intros g d hin.
+      specialize (g d.1 d.2).
+      eapply lookup_env_In => //.
+      apply g. apply lookup_env_In => //.
+    - intros hd kn d hl.
+      eapply (lookup_env_In (kn, d)) in hl => //.
+      eapply (lookup_env_In (kn, d)) => //. eauto.
+  Qed.
 
-Lemma expanded_erase_program {cf : checker_flags} p (wtp : ∥ wt_pcuic_program (cf := config.extraction_checker_flags) p ∥) :
-  EtaExpPCUIC.expanded_pcuic_program p ->
-  expanded_eprogram (erase_program p wtp).
-Proof.
-  sq. intros exp.
-  unfold expanded_eprogram. apply/andP; split. todo "eta-expanded env".
-  unfold erase_program, erase_pcuic_program; cbn.
+  Lemma global_subset_cons d Σ Σ' : 
+    global_subset Σ Σ' ->
+    global_subset (d :: Σ) (d :: Σ').
+  Proof.
+    intros sub kn d'.
+    cbn. case: eqb_spec => [eq|neq] => //.
+    eapply sub.
+  Qed.
 
+  Lemma fresh_global_subset Σ Σ' kn : 
+    wf_glob Σ -> wf_glob Σ' ->
+    global_subset Σ Σ' ->
+    fresh_global kn Σ' -> fresh_global kn Σ.
+  Proof.
+    intros wfΣ wfΣ' sub fr.
+    unfold fresh_global in *.
+    eapply All_Forall, In_All.
+    intros [kn' d] hin. cbn.
+    intros eq; subst.
+    eapply global_subset_In in hin; tea.
+    eapply Forall_All in fr. eapply All_In in fr; tea.
+    destruct fr. cbn in H. congruence.
+  Qed.
 
+  Lemma global_subset_cons_right d Σ Σ' : 
+    wf_glob Σ -> wf_glob (d :: Σ') ->
+    global_subset Σ Σ' ->
+    global_subset Σ (d :: Σ').
+  Proof.
+    intros wf wf' gs.
+    assert (wf_glob Σ'). now depelim wf'.
+    rewrite (global_subset_In _ _ wf H) in gs.
+    rewrite global_subset_In //.
+    intros decl. specialize (gs decl).
+    intros hin; specialize (gs hin). cbn. now right.
+  Qed.
+    
+  Lemma lookup_erase_global (cf := config.extraction_checker_flags) {Σ : wf_env} {deps deps'} :
+    KernameSet.Subset deps deps' ->
+    global_subset (erase_global deps Σ) (erase_global deps' Σ).
+  Proof.
+    unfold erase_global.
+    destruct Σ as [[[univs Σ] wfΣ G wfG] map repr]. cbn in *. clear G wfG.
+    revert deps deps' wfΣ map repr.
+    induction Σ. cbn => //.
+    intros deps deps' wfΣ map repr sub.
+    destruct a as [kn' []]; cbn;
+    (set (decl := E.ConstantDecl _) || set (decl := E.InductiveDecl _)); hidebody decl;
+    set (eg := erase_global_decls _ _ _ _); hidebody eg;
+    set (eg' := erase_global_decls _ _ _ _); hidebody eg';
+    try (set (eg'' := erase_global_decls _ _ _ _); hidebody eg'');
+    try (set (eg''' := erase_global_decls _ _ _ _); hidebody eg''').
+    { destruct (KernameSet.mem) eqn:knm => /=.
+      + eapply KernameSet.mem_spec, sub, KernameSet.mem_spec in knm. rewrite knm.
+        apply global_subset_cons. eapply IHΣ.
+        intros x hin. eapply KernameSet.union_spec in hin.
+        eapply KernameSet.union_spec. destruct hin. left. now eapply sub.
+        right => //.
+      + destruct (KernameSet.mem kn' deps') eqn:eq'.
+        eapply global_subset_cons_right.
+        eapply ERemoveParams.erase_global_wf_glob.
+        constructor. eapply ERemoveParams.erase_global_wf_glob.
+        eapply ERemoveParams.erase_global_decls_fresh.
+        clear -wfΣ. destruct wfΣ. destruct X as [onu ond]; cbn in *.
+        now depelim ond.
+        eapply IHΣ.
+        intros x hin.
+        eapply KernameSet.union_spec. left. now eapply sub.
+        eapply IHΣ => //. }
+    { destruct (KernameSet.mem) eqn:knm => /=.
+      + eapply KernameSet.mem_spec, sub, KernameSet.mem_spec in knm. rewrite knm.
+        apply global_subset_cons. eapply IHΣ => //.
+      + destruct (KernameSet.mem kn' deps') eqn:eq'.
+        eapply global_subset_cons_right. eapply ERemoveParams.erase_global_wf_glob.
+        constructor. eapply ERemoveParams.erase_global_wf_glob.
+        eapply ERemoveParams.erase_global_decls_fresh.
+        clear -wfΣ. destruct wfΣ. destruct X as [onu ond]; cbn in *. now depelim ond.
+        eapply IHΣ. intros x hin. now eapply sub.
+        eapply IHΣ => //. }
+  Qed.
+  
+  Lemma expanded_weakening_global Σ deps deps' Γ t : 
+    KernameSet.Subset deps deps' ->
+    expanded (erase_global deps Σ) Γ t ->
+    expanded (erase_global deps' Σ) Γ t.
+  Proof.
+    intros hs.
+    eapply expanded_ind; intros; try solve [econstructor; eauto].
+    eapply expanded_tConstruct_app; tea.
+    destruct H. split; tea.
+    destruct d; split => //.
+    cbn in *. red in H.
+    eapply lookup_erase_global in H; tea.
+  Qed.
 
-Admitted.
+  Lemma expanded_erase (cf := config.extraction_checker_flags) {Σ : wf_env} univs wfΣ t wtp :
+    PCUICEtaExpand.expanded Σ [] t ->
+    let Σ' := make_wf_env_ext Σ univs wfΣ in
+    let et := (erase Σ' [] t wtp) in
+    let deps := EAstUtils.term_global_deps et in
+    EEtaExpandedFix.expanded (erase_global deps Σ) [] et.
+  Proof.
+    intros hexp Σ'.
+    have [wf] : ∥ wf Σ ∥.
+    { destruct wfΣ. sq. exact w. }
+    eapply (expanded_erases (Σ := (Σ, univs))); tea.
+    eapply (erases_erase (Σ := Σ')). cbn.
+    eapply (erases_deps_erase (Σ := Σ) univs wfΣ).
+  Qed.
+
+  Lemma expanded_erase_global (cf := config.extraction_checker_flags) deps {Σ: wf_env} :
+    EtaExpPCUIC.expanded_global_env Σ ->
+    expanded_global_env (erase_global deps Σ).
+  Proof.
+    intros etaΣ.
+    unfold erase_global.
+    destruct Σ as [Σ map repr]. cbn in *.
+    destruct Σ as [Σ wfΣ G isG]. cbn in *. clear G isG.
+    destruct Σ as [univs Σ]; cbn in *.
+    red. revert wfΣ. red in etaΣ. cbn in *.
+    revert deps map repr.
+    induction etaΣ; intros deps. cbn. constructor.
+    destruct decl as [kn []];
+    destruct (KernameSet.mem kn deps) eqn:eqkn; simpl; rewrite eqkn.
+    constructor; [eapply IHetaΣ; auto|].
+    red. cbn. red. cbn in *.
+    set (deps' := KernameSet.union _ _). hidebody deps'.
+    set (wfext := make_wf_env_ext _ _ _). hidebody wfext.
+    destruct H.
+    destruct c as [cst_na [cst_body|] cst_type cst_rel].
+    cbn in *.
+    eapply expanded_weakening_global. 
+    2:{ eapply expanded_erase; tea. }
+    set (et := erase _ _ _ _) in *.
+    unfold deps'. unfold hidebody. intros x hin.    
+    eapply KernameSet.union_spec. right => //.
+    now cbn.
+    intros.
+    eapply IHetaΣ.
+    intros map repr wfΣ.
+    constructor. eapply IHetaΣ.
+    red. cbn => //.
+    intros map repr wfΣ.
+    eapply IHetaΣ.
+  Qed.
+  
+  Lemma expanded_global_env_isEtaExp_env {Σ} : expanded_global_env Σ -> isEtaExp_env Σ.
+  Proof.
+    intros e; induction e; cbn => //.
+    rewrite IHe andb_true_r.
+    red in H; red. destruct decl as [kn []] => /= //.
+    cbn in H. red in H. unfold isEtaExp_constant_decl.
+    destruct (cst_body c); cbn in * => //.
+    now eapply expanded_isEtaExp.
+  Qed.
+
+  Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1 -?EEtaExpanded.isEtaExp_equation_1.
+
+  Lemma isEtaExpFix_isEtaExp Σ Γ t : isEtaExp Σ Γ t -> EEtaExpanded.isEtaExp Σ t.
+  Proof.
+    funelim (isEtaExp Σ Γ t); try solve [simp_eta => //].
+    - simp_eta in Heqcall. simp_eta.
+      intros Ha. eapply In_All in H. solve_all.
+    - simp_eta. rtoProp; intuition auto.
+    - simp_eta. rtoProp; intuition auto.
+      eapply In_All in H0; solve_all.
+    - eapply In_All in H. simp_eta; rtoProp; intuition auto. solve_all.
+    - eapply In_All in H. simp_eta; rtoProp; intuition auto.
+      move: H0; rewrite isEtaExp_mkApps // /=.
+      move=> /andP[] etaind etav.
+      rewrite EEtaExpanded.isEtaExp_Constructor. apply/andP; split. exact etaind.
+      solve_all.
+    - eapply In_All in H, H0. simp_eta in Heqcall.
+      clear Heqcall.
+      rewrite isEtaExp_mkApps // /= => /andP[] /andP[] etafix etamfix etav.
+      eapply EEtaExpanded.isEtaExp_mkApps_intro. simp_eta.
+      clear -H etamfix. solve_all.
+      solve_all.
+    - eapply In_All in H. clear Heqcall.
+      rewrite isEtaExp_mkApps // /= => /andP[] etarel etav.
+      eapply EEtaExpanded.isEtaExp_mkApps_intro. simp_eta. solve_all.
+    - eapply In_All in H0. clear Heqcall.
+      rewrite isEtaExp_mkApps // /= Heq => /andP[] etau etav.
+      eapply EEtaExpanded.isEtaExp_mkApps_intro; auto. solve_all.
+  Qed.
+
+  Lemma isEtaExpFix_env_isEtaExp_env Σ : isEtaExp_env Σ -> EEtaExpanded.isEtaExp_env Σ.
+  Proof.
+    induction Σ; cbn; auto.
+    move/andP => [] etaa etaΣ.
+    rewrite IHΣ // andb_true_r.
+    move: etaa. rewrite /isEtaExp_decl /EEtaExpanded.isEtaExp_decl.
+    destruct a.2 => //.
+    rewrite /isEtaExp_constant_decl /EEtaExpanded.isEtaExp_constant_decl.
+    destruct (E.cst_body c) => // /=.
+    eapply isEtaExpFix_isEtaExp.
+  Qed.
+
+  Lemma expanded_erase_program (cf := config.extraction_checker_flags) p (wtp : ∥ wt_pcuic_program p ∥) :
+    EtaExpPCUIC.expanded_pcuic_program p ->
+    expanded_eprogram (erase_program p wtp).
+  Proof.
+    intros [etaenv etat]. apply /andP; split.
+    eapply expanded_global_env_isEtaExp_env, expanded_erase_global, etaenv.
+    eapply expanded_isEtaExp, expanded_erase, etat.
+  Qed.
+
+End EtaExpE.
 
 Program Definition erase_transform : Transform.t pcuic_program eprogram_env term EAst.term eval_pcuic_program (eval_eprogram_env EWcbvEval.default_wcbv_flags) :=
  {| name := "erasure";
@@ -649,22 +807,24 @@ Program Definition erase_transform : Transform.t pcuic_program eprogram_env term
     transform p hp := erase_program p (proj1 hp) ;
     post p :=
       let decls := p.1.(global_decls) in
-      [/\ wf_glob decls, closed_env decls, expanded_eprogram p & ELiftSubst.closedn 0 p.2];
+      [/\ wf_glob decls, closed_eprogram_env p & expanded_eprogram p];
     obseq g g' v v' := let Σ := g.1 in Σ ;;; [] |- v ⇝ℇ v' |}.
 Next Obligation.
-  intros [Σ t] [[[wfext ht]] etap].
+  cbn -[erase_program].
+  intros p [wtp etap].
   destruct erase_program eqn:e.
-  intros decls. split.
-  unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-. 
-  eapply ERemoveParams.erase_global_wf_glob.
-  unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-. 
-  eapply ErasureFunction.erase_global_closed.
-  rewrite -e. cbn. now eapply expanded_erase_program.
-  unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-. 
-  eapply (ErasureFunction.erases_closed _ []). eapply ErasureFunction.erases_erase.
-  clear e. destruct ht as [T HT].
-  clear decls.
-  now eapply (@PCUICClosedTyp.subject_closed _ _) in HT.
+  split; cbn.
+  - unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-. 
+    eapply ERemoveParams.erase_global_wf_glob.
+  - apply/andP; split.
+    * unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-. 
+      eapply ErasureFunction.erase_global_closed.
+    * unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-. 
+      eapply (ErasureFunction.erases_closed _ []). eapply ErasureFunction.erases_erase.
+      clear e. destruct wtp as [[wfΣ [T HT]]].
+      now eapply (@PCUICClosedTyp.subject_closed _ _) in HT.
+  - rewrite -e. cbn.
+    now eapply EtaExpE.expanded_erase_program.
 Qed.
 
 Next Obligation.
@@ -681,6 +841,93 @@ Next Obligation.
   eexact hev.
 Qed.
 
+Import EOptimizePropDiscr.
+
+Program Definition optimize_prop_discr_optimization : self_transform eprogram EAst.term (eval_eprogram EWcbvEval.default_wcbv_flags) (eval_eprogram EWcbvEval.opt_wcbv_flags) := 
+  {| name := "optimize_prop_discr"; 
+    transform p _ := 
+      (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2);
+    pre := closed_eprogram;
+    post := closed_eprogram;
+    obseq g g' v v' := v' = EOptimizePropDiscr.optimize g.1 v
+    |}.
+
+Next Obligation.
+  move=> [Σ t] /andP[cle clt].
+  cbn in *. apply/andP; split.
+  move: cle. cbn. induction Σ at 1 3; cbn; auto.
+  move/andP => [] cla clg. rewrite (IHg clg) andb_true_r.
+  destruct a as [kn []]; cbn in * => //.
+  destruct Extract.E.cst_body => //. cbn in cla |- *.
+  now eapply EOptimizePropDiscr.closed_optimize.
+  now eapply EOptimizePropDiscr.closed_optimize.
+Qed.
+Next Obligation.
+  red. move=> [Σ t] /= v /andP[cle clt] ev.
+  eapply EOptimizePropDiscr.optimize_correct in ev; eauto.
+Qed.
+
+Program Definition remove_params (p : eprogram_env) : eprogram :=
+  (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2).
+
+Program Definition remove_params_optimization (fl : EWcbvEval.WcbvFlags) : 
+  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
+  {| name := "remove_parameters";
+    transform p pre := remove_params p;
+    pre p := 
+    let decls := p.1.(global_decls) in
+     [/\ wf_glob decls, closed_eprogram_env p & expanded_eprogram_cstrs p ];
+    post := closed_eprogram;
+    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
+Next Obligation.
+  move=> fl [Σ t] [wfe /andP[cle clt] etap].
+  simpl.
+  cbn -[ERemoveParams.strip] in *.
+  apply/andP; split; cbn.
+  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
+  rewrite forallb_map. eapply forallb_impl. intros.
+  destruct x as [kn []]; cbn in * => //.
+  destruct Extract.E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
+  now eapply ERemoveParams.closed_strip.
+  now eapply ERemoveParams.closed_strip.
+Qed.
+
+Next Obligation.
+  red. move=> ? [Σ t] /= v [wfe /andP[cle clt] etap] ev.
+  eapply ERemoveParams.strip_eval in ev; eauto.
+  all:move/andP: etap => [] => //.
+Qed.
+
+Program Definition remove_params_fast_optimization (fl : EWcbvEval.WcbvFlags) :
+  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) :=
+  {| name := "remove_parameters_fast";
+    transform p _ := (ERemoveParams.Fast.strip_env p.1, ERemoveParams.Fast.strip p.1 [] p.2);
+    pre p := 
+      let decls := p.1.(global_decls) in
+      [/\ wf_glob decls, closed_eprogram_env p & expanded_eprogram_cstrs p];
+    post := closed_eprogram;
+    obseq g g' v v' := v' = (ERemoveParams.strip g.1 v) |}.
+Next Obligation.
+  move=> fl [Σ t] [wfe /andP[cle clt] etap].
+  simpl.
+  apply/andP.
+  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
+  cbn -[ERemoveParams.strip] in *.
+  split.
+  move: cle. unfold closed_env. unfold ERemoveParams.strip_env.
+  rewrite forallb_map. eapply forallb_impl. intros.
+  destruct x as [kn []]; cbn in * => //.
+  destruct Extract.E.cst_body => //. cbn -[ERemoveParams.strip] in H0 |- *.
+  now eapply ERemoveParams.closed_strip.
+  now eapply ERemoveParams.closed_strip.
+Qed.
+Next Obligation.
+  red. move=> ? [Σ t] /= v [wfe /andP[cle clt] etap] ev.
+  rewrite -ERemoveParams.Fast.strip_fast -ERemoveParams.Fast.strip_env_fast.
+  eapply ERemoveParams.strip_eval in ev; eauto.
+  all:move/andP: etap => [] => //.
+Qed.
+
 Obligation Tactic := program_simpl.
 
 Local Notation " o ▷ o' " := (Transform.compose o o' _) (at level 50, left associativity).
@@ -693,11 +940,20 @@ Program Definition erasure_pipeline :=
   remove_params_optimization _ ▷ 
   optimize_prop_discr_optimization.
 
-Next Obligation.
-  destruct H. split => //. destruct X. simpl in w. exact X. all:todo "etaexp".
+Lemma expanded_eprogram_expanded_eprogram_cstrs p : 
+  expanded_eprogram p ->
+  expanded_eprogram_cstrs p.
+Proof.
+  move=> /andP[] etaenv etat.
+  apply /andP. split; [now eapply EtaExpE.isEtaExpFix_env_isEtaExp_env|
+  now eapply EtaExpE.isEtaExpFix_isEtaExp].
 Qed.
 
-Definition erase_program := run erasure_pipeline.
+Next Obligation.
+  destruct H. split => //. now eapply expanded_eprogram_expanded_eprogram_cstrs. 
+Qed.
+
+Definition run_erase_program := run erasure_pipeline.
 
 Program Definition erasure_pipeline_fast := 
   template_to_pcuic_transform ▷
@@ -706,10 +962,10 @@ Program Definition erasure_pipeline_fast :=
   remove_params_fast_optimization _ ▷ 
   optimize_prop_discr_optimization.
 Next Obligation.
-  destruct H; split => //. all:todo "etaexp".
+  destruct H; split => //. now eapply expanded_eprogram_expanded_eprogram_cstrs. 
 Qed.
 
-Definition erase_program_fast := run erasure_pipeline_fast.
+Definition run_erase_program_fast := run erasure_pipeline_fast.
 
 Local Open Scope string_scope.
 
@@ -719,10 +975,10 @@ Local Open Scope string_scope.
   Coq definition). *)
 Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := erase_program p (todo "wf_env and welltyped term") in
-  time "Pretty printing" print_program p'.
+  let p' := run_erase_program p (todo "wf_env and welltyped term") in
+  time "Pretty printing" EPretty.print_program p'.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := erase_program_fast p (todo "wf_env and welltyped term") in
-  time "pretty-printing" print_program p'.
+  let p' := run_erase_program_fast p (todo "wf_env and welltyped term") in
+  time "pretty-printing" EPretty.print_program p'.

@@ -1331,8 +1331,7 @@ Proof.
       eapply isPropositional_propositional; eauto.
       invs e. cbn in *.
       rewrite -eq_npars in e0.
-      rewrite skipn_length in H11; [lia |].
-      rewrite e0 in H11.
+      rewrite skipn_length e0 in H11.
       rewrite map_length.
       rewrite (@assumption_context_assumptions (bcontext y)) // ?rev_repeat in H11 => //.
       { eapply assumption_context_compare_decls. symmetry in a. exact a.
@@ -1410,7 +1409,7 @@ Proof.
          rewrite -eq_npars.
          eapply isPropositional_propositional; eauto.
          rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length.
-         rewrite skipn_length; [lia|]. rewrite e0.
+         rewrite skipn_length e0.
          replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
     with (context_assumptions (bcontext br)) by lia.  
          rewrite map_length.
@@ -1500,8 +1499,7 @@ Proof.
          { eapply subject_reduction. eauto. exact Hty.
            eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
 
-        rewrite eq_npars. rewrite skipn_length; [lia|].
-        rewrite e0.
+        rewrite eq_npars. rewrite List.skipn_length e0.
         replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
     with (context_assumptions (bcontext br)) by lia.
         subst n. rewrite map_length. 

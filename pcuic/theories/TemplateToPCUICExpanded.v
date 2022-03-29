@@ -21,12 +21,12 @@ Proof with eauto using expanded.
   intros Σ' wf exp. revert wf.
   induction exp; intros wf; cbn -[Σ']...
   all: try now (wf_inv wf []; eauto using expanded).
-  all: try now (wf_inv wf [[]]; eauto using expanded).
   - wf_inv wf ?. eapply expanded_tRel with (args := []). eauto. lia. econstructor.
   - wf_inv wf [[[]]]. eapply expanded_tRel. eauto. len. solve_all.
   - wf_inv wf [[[]]]. econstructor. solve_all.
   - wf_inv wf []. cbn. eapply expanded_mkApps with (args := [_]); cbn... econstructor. 
     eapply expanded_tRel with (args := []). reflexivity. lia. econstructor.
+  - try now (wf_inv wf [[]]; eauto using expanded).
   - wf_inv wf [[[]]].
     forward IHexp; eauto.
     eapply expanded_mkApps; eauto. 2:solve_all.
@@ -42,6 +42,7 @@ Proof with eauto using expanded.
     + cbn. inversion H0; subst. rewrite map2_bias_left_length. len. eapply H3. eapply r.
     + inversion H0; subst. inversion H; subst. eapply IHa1; eauto.
     + eapply template_to_pcuic_env; eauto.
+  - now (wf_inv wf [[]]; eauto using expanded).
   - wf_inv wf [[]]. wf_inv w ?. eapply expanded_tFix.
     + solve_all. revert H0. now rewrite mapi_cst_map rev_map_spec map_map.
     + solve_all.
@@ -51,4 +52,4 @@ Proof with eauto using expanded.
   - wf_inv wf ?. econstructor. solve_all.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.
-Qed. 
+Qed.

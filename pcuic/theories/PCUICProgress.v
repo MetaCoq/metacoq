@@ -472,6 +472,7 @@ Proof with eauto with wcbv; try congruence.
   - intros Σ wfΣ Γ _ n b b_ty b' s1 b'_ty _ Hb_ty IHb_ty Hb IHb Hb' IHb' Hax -> H.
     destruct (IHb Hax eq_refl) as [ [t' IH] | IH]; eauto with wcbv.
   - intros Σ wfΣ Γ _ t T B L s _ HT IHT Ht IHt HL Hax -> H.
+    clear HT IHT.
     induction HL in H, t, Ht, IHt |- *.
     + cbn. eauto.
     + cbn. eapply IHHL.
@@ -623,8 +624,8 @@ Proof.
     eapply closed_cofix_substl_subst_eq; eauto. rewrite closedn_mkApps in H1. solve_all.
 Qed.
 
-Hint Constructors value eval : wcbv.
-Hint Resolve value_final : wcbv.
+Global Hint Constructors value eval : wcbv.
+Global Hint Resolve value_final : wcbv.
 
 Lemma red1_eval {Σ : global_env_ext } t t' v : wf Σ ->
   closed t ->

@@ -11,7 +11,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
      
 From MetaCoq.Erasure Require Import EAstUtils EArities Extract Prelim ErasureCorrectness EDeps EExtends
-    ErasureFunction ELiftSubst.
+    ErasureFunction ELiftSubst ECSubst EWcbvEval.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -34,101 +34,6 @@ Set Warnings "-notation-overridden".
 Import E.
 Set Warnings "+notation-overridden".
 
-Lemma closedn_lift n k k' t : closedn k t -> closedn (k + n) (lift n k' t).
-Proof.
-  revert k.
-  induction t in n, k' |- * using EInduction.term_forall_list_ind; intros;
-    simpl in *; rewrite -> ?andb_and in *;
-    autorewrite with map;
-    simpl closed in *; solve_all;
-    unfold test_def, test_snd, test_predicate_k, test_branch_k in *;
-      try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
-
-  - elim (Nat.leb_spec k' n0); intros. simpl.
-    elim (Nat.ltb_spec); auto. apply Nat.ltb_lt in H. lia.
-    simpl. elim (Nat.ltb_spec); auto. intros.
-    apply Nat.ltb_lt in H. lia.
-  - solve_all. rewrite Nat.add_assoc. eauto.
-Qed.
-
-Lemma closedn_subst_eq s k k' t :
-  forallb (closedn k) s -> 
-  closedn (k + k' + #|s|) t =
-  closedn (k + k') (subst s k' t).
-Proof.
-  intros Hs. solve_all. revert Hs.
-  induction t in k' |- * using EInduction.term_forall_list_ind; intros;
-    simpl in *;
-    autorewrite with map => //;
-    simpl closed in *; try change_Sk;
-    unfold test_def, test_branch_k, test_predicate_k in *; simpl in *;
-    solve_all.
-
-  - elim (Nat.leb_spec k' n); intros. simpl.
-    destruct nth_error eqn:Heq.
-    -- rewrite closedn_lift.
-       now eapply nth_error_all in Heq; simpl; eauto; simpl in *.
-       eapply nth_error_Some_length in Heq.
-       eapply Nat.ltb_lt. lia.
-    -- simpl. elim (Nat.ltb_spec); auto. intros.
-       apply nth_error_None in Heq. symmetry. apply Nat.ltb_lt. lia.
-       apply nth_error_None in Heq. intros. symmetry. eapply Nat.ltb_nlt.
-       intros H'. lia.
-    -- simpl.
-      elim: Nat.ltb_spec; symmetry. apply Nat.ltb_lt. lia.
-      apply Nat.ltb_nlt. intro. lia.
-
-  - specialize (IHt (S k')).
-    rewrite <- Nat.add_succ_comm in IHt.
-    rewrite IHt //. 
-  - specialize (IHt2 (S k')).
-    rewrite <- Nat.add_succ_comm in IHt2.
-    rewrite IHt1 // IHt2 //.
-  - rewrite IHt //.
-    f_equal. eapply All_forallb_eq_forallb; tea. cbn.
-    intros. specialize (H (#|x.1| + k')).
-    rewrite Nat.add_assoc (Nat.add_comm k) in H.
-    now rewrite !Nat.add_assoc.
-  - eapply All_forallb_eq_forallb; tea. cbn.
-    intros. specialize (H (#|m| + k')).
-    now rewrite Nat.add_assoc (Nat.add_comm k) in H.
-  - eapply All_forallb_eq_forallb; tea. cbn.
-    intros. specialize (H (#|m| + k')).
-    now rewrite Nat.add_assoc (Nat.add_comm k) in H.
-Qed.
-
-Lemma closedn_subst s k t : 
-  forallb (closedn k) s -> closedn (#|s| + k) t -> 
-  closedn k (subst0 s t).
-Proof.
-  intros.
-  epose proof (closedn_subst_eq s k 0).
-  rewrite Nat.add_0_r in H1.
-  rewrite -H1 //. rewrite Nat.add_comm //.
-Qed.
-
-Lemma closed_csubst t k u : 
-  closed t -> 
-  closedn (S k) u -> 
-  closedn k (ECSubst.csubst t 0 u).
-Proof.
-  intros.
-  rewrite ECSubst.closed_subst //.
-  eapply closedn_subst => /= //.
-  rewrite andb_true_r. eapply closed_upwards; tea. lia.
-Qed.
-
-Lemma closed_substl ts k u : 
-  forallb (closedn 0) ts -> 
-  closedn (#|ts| + k) u -> 
-  closedn k (ECSubst.substl ts u).
-Proof.
-  induction ts in u |- *; cbn => //.
-  move/andP=> [] cla clts.
-  intros clu. eapply IHts => //.
-  eapply closed_csubst => //.
-Qed.
-
 Section optimize.
   Context (Σ : global_context).
 
@@ -141,7 +46,7 @@ Section optimize.
     | tLetIn na b b' => tLetIn na (optimize b) (optimize b')
     | tCase ind c brs =>
       let brs' := List.map (on_snd optimize) brs in
-      match ETyping.inductive_isprop_and_pars Σ (fst ind) with
+      match EGlobalEnv.inductive_isprop_and_pars Σ (fst ind) with
       | Some (true, npars) =>
         match brs' with
         | [(a, b)] => ECSubst.substl (repeat E.tBox #|a|) b
@@ -150,7 +55,7 @@ Section optimize.
       | _ => E.tCase ind (optimize c) brs'
       end
     | tProj p c =>
-      match ETyping.inductive_isprop_and_pars Σ p.1.1 with 
+      match EGlobalEnv.inductive_isprop_and_pars Σ p.1.1 with 
       | Some (true, _) => tBox
       | _ => tProj p (optimize c)
       end
@@ -210,7 +115,7 @@ Section optimize.
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    - move/andP: H => [] clt cll. destruct ETyping.inductive_isprop_and_pars as [[[|] _]|] => /= //.
+    - move/andP: H => [] clt cll. destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       rewrite IHt //.
       depelim X. cbn in *.
@@ -223,7 +128,7 @@ Section optimize.
       depelim cll. depelim cll. solve_all.
       rtoProp; solve_all. solve_all.
       rtoProp; solve_all. solve_all.
-    - destruct ETyping.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
+    - destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
   Qed.
  
   Lemma subst_csubst_comm l t k b : 
@@ -273,7 +178,7 @@ Section optimize.
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
     - unfold on_snd; cbn.
-      destruct ETyping.inductive_isprop_and_pars as [[[|] _]|] => /= //.
+      destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
       * f_equal; auto.
       * depelim X. simpl in *.
@@ -290,7 +195,7 @@ Section optimize.
         rewrite map_map_compose; solve_all.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
-    - destruct ETyping.inductive_isprop_and_pars as [[[|] _]|]=> //;
+    - destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|]=> //;
       now rewrite IHb.
   Qed.
 
@@ -306,27 +211,27 @@ Section optimize.
 
   Lemma optimize_iota_red pars args br :
     forallb (closedn 0) args ->
-    optimize (ETyping.iota_red pars args br) = ETyping.iota_red pars (map optimize args) (on_snd optimize br).
+    optimize (EGlobalEnv.iota_red pars args br) = EGlobalEnv.iota_red pars (map optimize args) (on_snd optimize br).
   Proof.
     intros cl.
-    unfold ETyping.iota_red.
+    unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.
     rewrite forallb_rev forallb_skipn //.
     now rewrite map_rev map_skipn.
   Qed.
   
-  Lemma optimize_fix_subst mfix : ETyping.fix_subst (map (map_def optimize) mfix) = map optimize (ETyping.fix_subst mfix).
+  Lemma optimize_fix_subst mfix : EGlobalEnv.fix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.fix_subst mfix).
   Proof.
-    unfold ETyping.fix_subst.
+    unfold EGlobalEnv.fix_subst.
     rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
     f_equal; auto.
   Qed.
 
-  Lemma optimize_cofix_subst mfix : ETyping.cofix_subst (map (map_def optimize) mfix) = map optimize (ETyping.cofix_subst mfix).
+  Lemma optimize_cofix_subst mfix : EGlobalEnv.cofix_subst (map (map_def optimize) mfix) = map optimize (EGlobalEnv.cofix_subst mfix).
   Proof.
-    unfold ETyping.cofix_subst.
+    unfold EGlobalEnv.cofix_subst.
     rewrite map_length.
     generalize #|mfix|.
     induction n; simpl; auto.
@@ -334,7 +239,7 @@ Section optimize.
   Qed.
 
   Lemma optimize_cunfold_fix mfix idx n f : 
-    forallb (closedn 0) (ETyping.fix_subst mfix) ->
+    forallb (closedn 0) (EGlobalEnv.fix_subst mfix) ->
     Ee.cunfold_fix mfix idx = Some (n, f) ->
     Ee.cunfold_fix (map (map_def optimize) mfix) idx = Some (n, optimize f).
   Proof.
@@ -348,7 +253,7 @@ Section optimize.
   Qed.
 
   Lemma optimize_cunfold_cofix mfix idx n f : 
-    forallb (closedn 0) (ETyping.cofix_subst mfix) ->
+    forallb (closedn 0) (EGlobalEnv.cofix_subst mfix) ->
     Ee.cunfold_cofix mfix idx = Some (n, f) ->
     Ee.cunfold_cofix (map (map_def optimize) mfix) idx = Some (n, optimize f).
   Proof.
@@ -387,6 +292,8 @@ Proof.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?. subst => //.
+  - rewrite is_box_tApp. move/IHev1 => ?. subst. cbn in i.
+    destruct EWcbvEval.with_guarded_fix => //.
   - destruct t => //.
 Qed. 
 
@@ -444,7 +351,7 @@ Definition optimize_decl Σ d :=
 Definition optimize_env (Σ : EAst.global_declarations) := 
   map (on_snd (optimize_decl Σ)) Σ.
 
-Import ETyping.
+Import EGlobalEnv.
 
 (* Lemma optimize_extends Σ Σ' : extends Σ Σ' ->
   optimize Σ t = optimize Σ' t. *)
@@ -467,155 +374,6 @@ Proof.
   destruct g; simpl; auto.
 Qed.
 
-Lemma isLambda_mkApps f l : ~~ isLambda f -> ~~ EAst.isLambda (mkApps f l).
-Proof.
-  induction l using rev_ind; simpl; auto => //.
-  intros isf; specialize (IHl isf).
-  now rewrite mkApps_app.
-Qed.
- 
-Lemma isFixApp_mkApps f l : ~~ Ee.isFixApp f -> ~~ Ee.isFixApp (mkApps f l).
-Proof.
-  unfold Ee.isFixApp.
-  erewrite <- (fst_decompose_app_rec _ l).
-  now rewrite /decompose_app decompose_app_rec_mkApps app_nil_r.
-Qed.
-
-Lemma isBox_mkApps f l : ~~ isBox f -> ~~ isBox (mkApps f l).
-Proof.
-  induction l using rev_ind; simpl; auto => //.
-  intros isf; specialize (IHl isf).
-  now rewrite mkApps_app.
-Qed.
-
-Lemma weakening_eval_env (wfl : Ee.WcbvFlags) {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  ∀ v t, Ee.eval Σ v t -> Ee.eval Σ' v t.
-Proof.
-  intros wf ex t v ev.
-  induction ev; try solve [econstructor; eauto using (extends_is_propositional wf ex)].
-  econstructor; eauto.
-  red in isdecl |- *. eauto using extends_lookup.
-Qed.
-
-Lemma closedn_mkApps k f args : closedn k (mkApps f args) = closedn k f && forallb (closedn k) args.
-Proof.
-  induction args in f |- *; simpl; auto.
-  ring. rewrite IHargs /=. ring. 
-Qed.
-
-
-Lemma closed_fix_subst mfix : 
-  forallb (EAst.test_def (closedn (#|mfix| + 0))) mfix ->
-  forallb (closedn 0) (fix_subst mfix).
-Proof.
-  solve_all.
-  unfold fix_subst.
-  move: #|mfix| => n.
-  induction n. constructor.
-  cbn. rewrite H IHn //.
-Qed.
-
-Lemma closed_cofix_subst mfix : 
-  forallb (EAst.test_def (closedn (#|mfix| + 0))) mfix ->
-  forallb (closedn 0) (cofix_subst mfix).
-Proof.
-  solve_all.
-  unfold cofix_subst.
-  move: #|mfix| => n.
-  induction n. constructor.
-  cbn. rewrite H IHn //.
-Qed.
-
-Lemma closed_cunfold_fix mfix idx n f : 
-  closed (EAst.tFix mfix idx) ->
-  Ee.cunfold_fix mfix idx = Some (n, f) ->
-  closed f.
-Proof.
-  move=> cl.
-  rewrite /Ee.cunfold_fix.
-  destruct nth_error eqn:heq => //.
-  cbn in cl.
-  have := (nth_error_forallb heq cl) => cld. 
-  move=> [=] _ <-.
-  eapply closed_substl. now eapply closed_fix_subst.
-  rewrite fix_subst_length.
-  apply cld.
-Qed.
-
-Lemma closed_cunfold_cofix mfix idx n f : 
-  closed (EAst.tCoFix mfix idx) ->
-  Ee.cunfold_cofix mfix idx = Some (n, f) ->
-  closed f.
-Proof.
-  move=> cl.
-  rewrite /Ee.cunfold_cofix.
-  destruct nth_error eqn:heq => //.
-  cbn in cl.
-  have := (nth_error_forallb heq cl) => cld. 
-  move=> [=] _ <-.
-  eapply closed_substl. now eapply closed_cofix_subst.
-  rewrite cofix_subst_length.
-  apply cld.
-Qed.
-
-(** Evaluation preserves closedness: *)
-Lemma eval_closed {wfl : Ee.WcbvFlags} Σ : 
-  closed_env Σ ->
-  forall t u, closed t -> Ee.eval Σ t u -> closed u.
-Proof.
-  move=> clΣ t u Hc ev. move: Hc.
-  induction ev; simpl in *; auto;
-    (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
-  - eapply IHev3. rewrite ECSubst.closed_subst //. auto.
-    eapply closedn_subst; tea. cbn. rewrite andb_true_r. auto. cbn. auto.
-  - eapply IHev2.
-    rewrite ECSubst.closed_subst; auto.
-    eapply closedn_subst; tea. cbn. rewrite andb_true_r. auto.
-  - specialize (IHev1 Hc).
-    move: IHev1; rewrite closedn_mkApps => /andP[] _ clargs.
-    apply IHev2. rewrite /iota_red.
-    eapply closed_substl. now rewrite forallb_rev forallb_skipn.
-    len.
-    rewrite e1. eapply nth_error_forallb in Hc'; tea.
-    now rewrite Nat.add_0_r in Hc'.
-  - subst brs. cbn in Hc'. rewrite andb_true_r in Hc'.
-    eapply IHev2. eapply closed_substl.
-    eapply All_forallb, All_repeat => //.
-    now rewrite repeat_length.
-  - eapply IHev3.
-    apply/andP.
-    split; [|easy].
-    specialize (IHev1 Hc).
-    rewrite closedn_mkApps in IHev1.
-    move/andP: IHev1 => [clfix clargs].
-    rewrite closedn_mkApps clargs andb_true_r.
-    eapply closed_cunfold_fix; tea.
-  - apply andb_true_iff.
-    split; [|easy].
-    solve_all.
-  - eapply IHev2. rewrite closedn_mkApps.
-    rewrite closedn_mkApps in IHev1. 
-    specialize (IHev1 Hc). move/andP: IHev1 => [Hfix Hargs].
-    repeat (apply/andP; split; auto).
-    eapply closed_cunfold_cofix; tea. 
-  - specialize (IHev1 Hc). eapply IHev2. rewrite closedn_mkApps in IHev1 *.
-     move/andP: IHev1 => [Hfix Hargs].
-    rewrite closedn_mkApps Hargs.
-    rewrite andb_true_r.
-    eapply closed_cunfold_cofix; tea.
-  - apply IHev.
-    move/(lookup_env_closed clΣ): isdecl.
-    now rewrite /closed_decl e /=.
-  - have := (IHev1 Hc).
-    rewrite closedn_mkApps /= => clargs.
-    eapply IHev2; eauto.
-    rewrite nth_nth_error.
-    destruct nth_error eqn:hnth => //.
-    eapply nth_error_forallb in clargs; tea.
-  - rtoProp; intuition auto.
-Qed.
-
 Lemma closed_iota_red pars c args brs br :
   forallb (closedn 0) args ->
   nth_error brs c = Some br ->
@@ -625,7 +383,7 @@ Lemma closed_iota_red pars c args brs br :
 Proof.
   intros clargs hnth hskip clbr.
   rewrite /iota_red.
-  eapply closed_substl => //.
+  eapply ECSubst.closed_substl => //.
   now rewrite forallb_rev forallb_skipn.
   now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
@@ -637,7 +395,7 @@ Lemma optimize_correct Σ t v :
   @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ) (optimize Σ t) (optimize Σ v).
 Proof.
   intros clΣ ev.
-  induction ev; simpl in *; try solve [econstructor; eauto].
+  induction ev; simpl in *.
 
   - move/andP => [] cla clt. econstructor; eauto.
   - move/andP => [] clf cla.
@@ -656,7 +414,7 @@ Proof.
     have := (eval_closed _ clΣ _ _ cld ev1); rewrite closedn_mkApps => /andP[] _ clargs.
     rewrite optimize_iota_red in IHev2.
     eapply eval_closed in ev1 => //.
-    destruct ETyping.inductive_isprop_and_pars as [[]|]eqn:isp => //. noconf e.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[]|]eqn:isp => //. noconf e.
     eapply Ee.eval_iota; eauto.
     now rewrite -is_propositional_optimize.
     rewrite nth_error_map e0 //. now len.
@@ -695,10 +453,12 @@ Proof.
     move: ev1 => /andP [] clfix clargs.
     eapply eval_closed in ev2; tas.
     rewrite optimize_mkApps in IHev1 |- *.
-    simpl in *. eapply Ee.eval_fix_value. auto. auto.
+    simpl in *. eapply Ee.eval_fix_value. auto. auto. auto.
     eapply optimize_cunfold_fix; eauto.
     eapply closed_fix_subst => //.
     now rewrite map_length. 
+  
+  - discriminate.
 
   - move/andP => [] cd clbrs. specialize (IHev1 cd).
     rewrite closedn_mkApps in IHev2.
@@ -709,7 +469,7 @@ Proof.
     { rewrite clargs clbrs !andb_true_r.
       eapply closed_cunfold_cofix; tea. }
     rewrite -> optimize_mkApps in IHev1, IHev2. simpl.
-    destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
     destruct brs as [|[a b] []]; simpl in *; auto.
     simpl in IHev1.
     eapply Ee.eval_cofix_case. tea.
@@ -727,7 +487,7 @@ Proof.
     move: (eval_closed _ clΣ _ _ cd ev1).
     rewrite closedn_mkApps; move/andP => [] clfix clargs. forward IHev2.
     { rewrite closedn_mkApps clargs andb_true_r. eapply closed_cunfold_cofix; tea. }
-    destruct ETyping.inductive_isprop_and_pars as [[[] pars]|] eqn:isp; auto.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp; auto.
     rewrite -> optimize_mkApps in IHev1, IHev2. simpl in *.
     econstructor; eauto.
     apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
@@ -745,7 +505,7 @@ Proof.
   - move=> cld.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => clargs.
-    destruct ETyping.inductive_isprop_and_pars as [[[] pars']|] eqn:isp => //.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars']|] eqn:isp => //.
     rewrite optimize_mkApps in IHev1.
     rewrite optimize_nth in IHev2.
     specialize (IHev1 cld).
@@ -765,8 +525,7 @@ Proof.
     destruct ev1; simpl in *; eauto.
     * destruct t => //; rewrite optimize_mkApps /=.
     * destruct t => /= //; rewrite optimize_mkApps /=;
-      rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) 
-        // (negbTE (isFixApp_mkApps _ _ _)) //.
+      rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) // /=; rewrite isFixApp_mkApps //.
     * destruct f0 => //.
       rewrite optimize_mkApps /=.
       unfold Ee.isFixApp in i.

@@ -36,6 +36,12 @@ Definition R_opt {A} (R : relation A) : relation (option A) :=
 Definition option_default {A B} (f : A -> B) (o : option A) (b : B) :=
   match o with Some x => f x | None => b end.
 
+Lemma option_default_ext {A B} (f : A -> B) x1 x2 d :
+  x1 = x2 -> option_default f x1 d = option_default f x2 d.
+Proof.
+  now intros ->.
+Qed.
+
 Lemma some_inj {A} {x y : A} : Some x = Some y -> x = y.
 Proof.
   now intros [=].

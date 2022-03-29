@@ -2,9 +2,8 @@
 From Coq Require Import CRelationClasses.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICLiftSubst
-     PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed 
-     PCUICClosedTyp PCUICCSubst 
-     PCUICSubstitution PCUICInversion.
+     PCUICUnivSubst PCUICTyping PCUICGlobalEnv PCUICReduction PCUICClosed PCUICCSubst
+     PCUICClosedTyp. (* Due to reliance on wf Σ instead of closed_env Σ *)
 
 Require Import ssreflect ssrbool.
 From Equations Require Import Equations.
@@ -525,8 +524,7 @@ Section Wcbv.
     now rewrite forallb_rev forallb_skipn //.
     simpl. rewrite List.rev_length /expand_lets /expand_lets_k.
     rewrite -(Nat.add_0_r #|skipn (ci_npar ci) args|).
-    rewrite skipn_length; [lia|].
-    rewrite hass.
+    rewrite skipn_length hass.
     replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
     with (context_assumptions (bcontext br)) by lia.
     move/andP: e => [cltx clb].
@@ -539,8 +537,7 @@ Section Wcbv.
       eapply (closedn_ctx_subst 0 0); cbn.
       rewrite closedn_subst_instance_context. now len.
       rewrite forallb_rev. solve_all. }
-    rewrite extended_subst_length Nat.add_0_r /= Nat.add_comm.
-    rewrite -hl.
+    rewrite extended_subst_length Nat.add_0_r /= Nat.add_comm -hl.
     eapply closedn_lift.
     rewrite inst_case_branch_context_length. 
     now rewrite Nat.add_0_r in clb.

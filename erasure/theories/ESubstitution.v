@@ -4,7 +4,7 @@ From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICLiftSubst PCUICTyping
      PCUICGlobalEnv PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution 
      PCUICWeakeningEnvConv PCUICWeakeningEnvTyp PCUICOnFreeVars PCUICElimination.
-From MetaCoq.Erasure Require Import ETyping Extract Prelim.
+From MetaCoq.Erasure Require Import EGlobalEnv Extract Prelim.
 
 Local Set Keyed Unification.
 

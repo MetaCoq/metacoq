@@ -1528,8 +1528,7 @@ Proof.
           rewrite /on_local_decl /= in wf.
           move: wf => [] /subject_closed //.
           rewrite is_open_term_closed //. }
-        rewrite skipn_length. lia.
-        simpl.
+        rewrite skipn_length; simpl.
         unshelve eapply (nth_error_All_local_env_over (n:=i)) in X.
         2:{ rewrite nth_error_app_lt //. apply Hnth. }
         destruct X as [_ [Xb Xt]].
@@ -1537,7 +1536,7 @@ Proof.
         forward Xb. rewrite skipn_app. unfold app_context. f_equal.
         assert(S i - #|Δ| = 0) by lia. rewrite H. apply skipn_0.
         now rewrite skipn_length in Xb; try lia.
-        rewrite skipn_length; lia.
+        now rewrite skipn_length.
       + simpl. assert(#|Δ'| + (n - #|Δ'|) = n) as -> by lia.
         reflexivity.
       + reflexivity.

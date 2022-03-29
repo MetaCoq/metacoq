@@ -3,8 +3,9 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect ECSubst.
 Require Import ssreflect.
+Import MCMonadNotation.
 
-(** * Typing derivations
+(** * Global environments 
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 
@@ -39,11 +40,36 @@ Definition declared_projection Σ (proj : projection) mdecl idecl pdecl : Prop :
 
 Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
   kn <> kn' ->
-  ETyping.lookup_env ((kn, d) :: Σ) kn' = ETyping.lookup_env Σ kn'.
+  EGlobalEnv.lookup_env ((kn, d) :: Σ) kn' = EGlobalEnv.lookup_env Σ kn'.
 Proof.
   simpl. change (eq_kername kn' kn) with (eqb kn' kn).
   destruct (eqb_spec kn' kn). subst => //. auto. 
 Qed.
+
+Section Lookups.
+  Context (Σ : global_declarations).
+
+  Definition lookup_minductive kn : option mutual_inductive_body :=
+    decl <- lookup_env Σ kn;; 
+    match decl with
+    | ConstantDecl _ => None
+    | InductiveDecl mdecl => ret mdecl
+    end.
+
+  Definition lookup_inductive kn : option (mutual_inductive_body * one_inductive_body) :=
+    mdecl <- lookup_minductive (inductive_mind kn) ;;
+    idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
+    ret (mdecl, idecl).
+  
+  Definition lookup_inductive_pars kn : option nat := 
+    mdecl <- lookup_minductive kn ;;
+    ret mdecl.(ind_npars).
+  
+  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
+    '(mdecl, idecl) <- lookup_inductive kn ;;
+    cdecl <- nth_error idecl.(ind_ctors) c ;;
+    ret (mdecl.(ind_npars), cdecl.2).
+End Lookups.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)
 
@@ -56,7 +82,6 @@ Definition inductive_isprop_and_pars Σ ind :=
     end
   | _ => None
   end.
-
 
 Definition closed_decl (d : EAst.global_decl) := 
   match d with
@@ -186,3 +211,69 @@ Definition tDummy := tVar "".
 
 Definition iota_red npar args (br : list name * term) :=
   substl (List.rev (List.skipn npar args)) br.2.
+
+
+  Class switchterm := 
+  { 
+  has_tBox : bool
+  ; has_tRel : bool
+  ; has_tVar : bool
+  ; has_tEvar : bool
+  ; has_tLambda : bool
+  ; has_tLetIn : bool
+  ; has_tApp : bool
+  ; has_tConst : bool
+  ; has_tConstruct : bool
+  ; has_tCase : bool
+  ; has_tProj : bool
+  ; has_tFix : bool
+  ; has_tCoFix : bool
+  }.
+  
+Section wf.
+  
+  Context {sw  : switchterm}.
+  Variable has_axioms : bool.
+  Variable Σ : global_context.
+
+  (* a term term is wellformed if
+    - it is closed up to k,
+    - it only contains constructos as indicated by sw,
+    - all occuring constructors are defined,
+    - all occuring constants are defined, and
+    - if has_axioms is false, all occuring constants have bodies *)
+  
+  Fixpoint wellformed k (t : term) : bool :=
+    match t with
+    | tRel i => has_tRel && Nat.ltb i k
+    | tEvar ev args => has_tEvar && List.forallb (wellformed k) args
+    | tLambda _ M => has_tLambda && wellformed (S k) M
+    | tApp u v => has_tApp && wellformed k u && wellformed k v
+    | tLetIn na b b' => has_tLetIn && wellformed k b && wellformed (S k) b'
+    | tCase ind c brs => has_tCase && 
+      let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
+      wellformed k c && brs'
+    | tProj p c => has_tProj && wellformed k c
+    | tFix mfix idx => has_tFix &&
+      let k' := List.length mfix + k in
+      List.forallb (test_def (wellformed k')) mfix
+    | tCoFix mfix idx => has_tCoFix &&
+      let k' := List.length mfix + k in
+      List.forallb (test_def (wellformed k')) mfix
+    | tBox => has_tBox
+    | tConst kn => has_tConst && match lookup_env Σ kn with Some (ConstantDecl d) => 
+        has_axioms || match d.(cst_body) with Some _ => true | _ => false end 
+        | _ => false end
+    | tConstruct ind c => has_tConstruct &&
+        match lookup_env Σ ind.(inductive_mind) with 
+        | Some (InductiveDecl mdecl) => 
+          match nth_error (ind_bodies mdecl) (inductive_ind ind) with 
+          | Some idecl => match nth_error (ind_ctors idecl) c with Some _ => true | _ => false end
+          | _ => false
+          end
+        | _ => false
+        end    
+    | tVar _ => has_tVar
+    end.
+
+End wf.

@@ -2,7 +2,7 @@
 From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import utils BasicAst Universes.
 From MetaCoq.PCUIC Require Import PCUICPrimitive.
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ECSubst ELiftSubst ETyping.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ECSubst ELiftSubst EGlobalEnv.
 (* EEtaExpanded.*)
 From Equations Require Import Equations.
 Set Equations Transparent.
@@ -21,14 +21,14 @@ Section WellScoped.
   Context (Σ : global_context).
 
   Definition lookup_constant kn : option constant_body :=
-    decl <- ETyping.lookup_env Σ kn;; 
+    decl <- EGlobalEnv.lookup_env Σ kn;; 
     match decl with
     | ConstantDecl decl => Some decl
     | InductiveDecl mdecl => None
     end.
   
   Definition lookup_minductive kn : option mutual_inductive_body :=
-    decl <- ETyping.lookup_env Σ kn;; 
+    decl <- EGlobalEnv.lookup_env Σ kn;; 
     match decl with
     | ConstantDecl _ => None
     | InductiveDecl mdecl => ret mdecl

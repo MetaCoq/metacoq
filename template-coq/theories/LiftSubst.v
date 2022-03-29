@@ -515,3 +515,13 @@ Lemma strip_casts_mkApps f l :
 Proof.
   intros Hf. rewrite strip_casts_mkApps_tApp //.
 Qed.
+
+Lemma subst_it_mkProd_or_LetIn n k ctx t :
+  subst n k (it_mkProd_or_LetIn ctx t) =
+  it_mkProd_or_LetIn (subst_context n k ctx) (subst n (length ctx + k) t).
+Proof.
+  induction ctx in n, k, t |- *; simpl; try congruence.
+  pose (subst_context_snoc n k ctx a). unfold snoc in e. rewrite e. clear e.
+  simpl. rewrite -> IHctx.
+  pose (subst_context_snoc n k ctx a). simpl. now destruct a as [na [b|] ty].
+Qed.

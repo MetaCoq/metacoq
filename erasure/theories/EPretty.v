@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import utils BasicAst.
-From MetaCoq.Erasure Require Import EAst EAstUtils ETyping.
+From MetaCoq.Erasure Require Import EAst EAstUtils EGlobalEnv.
 From MetaCoq.PCUIC Require Import PCUICPrimitive.
 
 (** * Pretty printing *)

@@ -82,20 +82,15 @@ struct
 
   (* NOTE: fails if it hits Prop or SProp *)
   let quote_nonprop_level (l : Univ.Level.t) : Universes0.Level.t =
-    if Univ.Level.is_prop l || Univ.Level.is_sprop l then
-      failwith "Prop or SProp found in levels"
-    else if Univ.Level.is_set l then Universes0.Level.Coq_lzero
+    if Univ.Level.is_set l then Universes0.Level.Coq_lzero
     else match Univ.Level.var_index l with
          | Some x -> Universes0.Level.Var (quote_int x)
          | None -> Universes0.Level.Level (string_to_list (Univ.Level.to_string l))
 
   let quote_level (l : Univ.Level.t) : (Universes0.PropLevel.t, Universes0.Level.t) Datatypes.sum =
-    if Univ.Level.is_prop l then Coq_inl Universes0.PropLevel.Coq_lProp
-    else if Univ.Level.is_sprop l then Coq_inl Universes0.PropLevel.Coq_lSProp
-    else (* NOTE: in this branch we know that [l] is neither [SProp] nor [Prop]*)
-      try Coq_inr (quote_nonprop_level l)
-      with e -> assert false
-    
+    try Coq_inr (quote_nonprop_level l)
+    with e -> assert false
+
   let quote_universe s : Universes0.Universe.t =
     match Univ.Universe.level s with
       Some l -> Universes0.Universe.of_levels (quote_level l)
@@ -175,16 +170,7 @@ struct
     match cs with
     | [] -> []
     | (l, ct, l') :: cs' ->
-       if (* ignore trivial constraints *)
-         (Univ.Level.is_prop l && (is_Le ct || is_Lt ct)) ||
-          (Univ.Level.is_prop l && is_Eq ct && Univ.Level.is_prop l')
-       then constraints_ cs'
-       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
-         Univ.Level.is_prop l' then failwith "Unsatisfiable constraint (l <= Prop)"
-       else if (* fail on unsatisfiable ones -- well-typed term is expected *)
-          Univ.Level.is_prop l then failwith "Unsatisfiable constraint (Prop = l')"
-        else (* NOTE:SPROP: we don't expect SProp to be in the constraint set *)
-         quote_univ_constraint (l,ct,l') :: constraints_ cs'
+      quote_univ_constraint (l,ct,l') :: constraints_ cs'
 
   let quote_univ_constraints (c : Univ.Constraints.t) : quoted_univ_constraints =
     let l = constraints_ (Univ.Constraints.elements c) in

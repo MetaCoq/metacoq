@@ -91,13 +91,13 @@ Section CheckerFlags.
     apply forallbP. intros x; apply wf_universe_levelP.
   Qed.
   
-  Lemma wf_universe_subst_instance_univ (Σ : global_env_ext) univs u l :
+  Lemma wf_universe_subst_instance_univ (Σ : global_env_ext) univs u s :
     wf Σ ->
-    wf_universe Σ l ->
+    wf_universe Σ s ->
     wf_universe_instance (Σ.1, univs) u ->
-    wf_universe (Σ.1, univs) (subst_instance u l). 
+    wf_universe (Σ.1, univs) (subst_instance u s). 
   Proof.
-    destruct l; simpl; auto. rename n into t. 
+    destruct s as [| |t]; cbnr.
     intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
     destruct l as [|s|n']; simpl; auto.
     - unfold global_ext_levels.

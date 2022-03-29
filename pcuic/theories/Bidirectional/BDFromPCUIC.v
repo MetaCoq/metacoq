@@ -17,7 +17,7 @@ Proof.
   destruct s1; cbnr; intros H1 H2; trivial; try now destruct H1.
   { now left. }
   destruct H2 as [|H2]; [now left|right].
-  unfold_rel_val.
+  unfold_rel_algexp.
   specialize (H1 v Hv); specialize (H2 v Hv).
   cbn in H2.
   lia.

@@ -130,8 +130,8 @@ Definition abstract_env_wf_universeb_correct (abstract_env_impl : Type)
   `{abstract_env_ext_prop abstract_env_impl}
    X {Σ} (wfΣ : abstract_env_ext_rel X Σ) u : wf_universeb Σ u = abstract_env_wf_universeb _ X u.
 Proof.
-  destruct u; auto.
-  destruct n. cbn. repeat rewrite for_all_elements.
+  destruct u as [| |t]; auto.
+  destruct t. cbn. repeat rewrite for_all_elements.
   induction (UnivExprSet.elements t_set); cbn; auto.
   rewrite <- IHl. erewrite <- abstract_env_level_mem_correct; eauto.
   reflexivity.

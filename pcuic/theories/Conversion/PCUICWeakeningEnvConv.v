@@ -39,7 +39,7 @@ Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
 Proof.
   intros Hctrs.
   destruct t, u; cbnr; trivial.
-  intros H; unfold_rel_val.
+  intros H; unfold_rel_algexp.
   apply H.
   eapply satisfies_subset; eauto.
 Qed.
@@ -50,7 +50,7 @@ Lemma eq_universe_subset {cf:checker_flags} ctrs ctrs' t u
 Proof.
   intros Hctrs.
   destruct t, u; cbnr; trivial.
-  intros H; unfold_rel_val.
+  intros H; unfold_rel_algexp.
   apply H.
   eapply satisfies_subset; eauto.
 Qed.
@@ -404,7 +404,7 @@ Proof.
   intros wfΣ ext [ | al]; auto.
   destruct u; cbn in *; try elim al.
   right.
-  unfold_rel_val.
+  unfold_rel_algexp.
   apply al.
   eapply satisfies_subset; eauto.
   apply global_ext_constraints_app, ext.

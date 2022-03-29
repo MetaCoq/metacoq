@@ -214,7 +214,7 @@ struct
     | Universes0.Universe.Coq_lSProp -> evd, Univ.Universe.sprop
     | Universes0.Universe.Coq_lProp -> evd, Univ.Universe.type0m
     | Universes0.Universe.Coq_lType u ->
-       let u = Universes0.Universe.t_set u in
+       let u = Universes0.t_set u in
        let ux_list = Universes0.UnivExprSet.elements u in
        let l = List.map unquote_level_expr ux_list in
        evd, List.fold_left Univ.Universe.sup (List.hd l) (List.tl l)

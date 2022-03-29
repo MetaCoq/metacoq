@@ -134,7 +134,7 @@ Proof.
   enough (~ (Universe.is_prop ps \/ Universe.is_sprop ps)).
   { clear -cu wfΣ allowed_elim H1.
     apply wf_ext_consistent in wfΣ as (val&sat).
-    unfold is_allowed_elimination, is_lSet, eq_universe, eq_val in *.
+    unfold is_allowed_elimination, is_lSet, eq_universe, eq_algexp in *.
     rewrite cu in allowed_elim.
     destruct (ind_kelim idecl); auto; destruct ps; cbn in *; try discriminate;
     intuition congruence. }

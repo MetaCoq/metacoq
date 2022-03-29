@@ -1047,7 +1047,7 @@ Proof.
       (smash_context [] (cstr_args c))) eqn:eqargs.
     apply (f_equal (@length _)) in eqargs.
     autorewrite with len in eqargs.
-    rewrite skipn_length in eqargs. autorewrite with len. simpl; lia.
+    rewrite skipn_length in eqargs. 
     autorewrite with len in eqargs. simpl in eqargs. lia.
     rewrite subst_context_snoc lift_context_snoc subst_context_snoc.
     simpl.
@@ -1068,7 +1068,6 @@ Proof.
         forward IH by lia; len.
         eapply (f_equal (@length _)) in eqargs.
         rewrite skipn_length in eqargs.
-        autorewrite with len. simpl; lia.
         autorewrite with len in eqargs. simpl in eqargs.
         eapply nth_error_alli in X; eauto. simpl in X.
         destruct X as [pdecl Hnth'].
@@ -1999,14 +1998,14 @@ Proof.
     forward X. cbn. rewrite andb_true_r. eapply redb.
     forward X. eapply hred.
     rewrite skipn_subst_context.
-    rewrite !skipn_length in X; autorewrite with len. lia.
+    rewrite !skipn_length in X.
     len in X. simpl in X.
     assert(context_assumptions Γ - (context_assumptions Γ - n) = n) by lia.
     rewrite H1 in X. apply X.
     epose proof (@closed_red_red_subst _ _ _ Δ [vdef na b ty]
        (skipn (context_assumptions Γ - n) (smash_context [] Γ)) _ _ _).
     rewrite subst_empty lift0_id lift0_context.
-    rewrite !skipn_length in X; autorewrite with len. lia.
+    rewrite !skipn_length in X; autorewrite with len. 
     autorewrite with len in X. simpl in X.
     assert(context_assumptions Γ - (context_assumptions Γ - n) = n) by lia.
     rewrite H1 in X. rewrite skipn_subst_context.

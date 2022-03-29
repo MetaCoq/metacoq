@@ -3553,7 +3553,7 @@ Proof.
     eapply closed_wf_local in wfΓ; tea.
     eapply closedn_ctx_decl in wfΓ; tea.
     move/andP: wfΓ=> /= [] _ cl.
-    rewrite skipn_length. eapply nth_error_Some_length in H. lia. 
+    rewrite skipn_length. eapply nth_error_Some_length in H.
     now apply closedn_on_free_vars.
     rewrite trans_decl_type.
     eapply type_Rel; eauto.
@@ -5216,8 +5216,7 @@ Proof.
       { rewrite /iota_red.
         eapply closedn_subst0 => //.
         now rewrite forallb_rev; apply forallb_skipn.
-        cbn; len. rewrite skipn_length; [lia|].
-        rewrite e0. 
+        cbn; len. rewrite skipn_length e0. 
         replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
     with (context_assumptions (bcontext br)) by lia.
         eauto. 

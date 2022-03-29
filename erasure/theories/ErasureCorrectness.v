@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.Erasure Require Import ELiftSubst ETyping EWcbvEval Extract Prelim
+From MetaCoq.Erasure Require Import ELiftSubst EGlobalEnv EWcbvEval Extract Prelim
      ESubstitution EInversion EArities EDeps.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICGlobalEnv PCUICAst
   PCUICAstUtils PCUICConversion PCUICSigmaCalculus
@@ -759,7 +759,7 @@ Qed.
 
 Lemma isPropositional_propositional Σ Σ' ind mdecl idecl mdecl' idecl' : 
   PCUICAst.declared_inductive Σ ind mdecl idecl ->
-  ETyping.declared_inductive Σ' ind mdecl' idecl' ->
+  EGlobalEnv.declared_inductive Σ' ind mdecl' idecl' ->
   erases_mutual_inductive_body mdecl mdecl' ->
   erases_one_inductive_body idecl idecl' ->
   forall b, isPropositional Σ ind b -> inductive_isprop_and_pars Σ' ind = Some (b, mdecl.(ind_npars)).
@@ -1331,8 +1331,7 @@ Proof.
       eapply isPropositional_propositional; eauto.
       invs e. cbn in *.
       rewrite -eq_npars in e0.
-      rewrite skipn_length in H11; [lia |].
-      rewrite e0 in H11.
+      rewrite skipn_length e0 in H11.
       rewrite map_length.
       rewrite (@assumption_context_assumptions (bcontext y)) // ?rev_repeat in H11 => //.
       { eapply assumption_context_compare_decls. symmetry in a. exact a.
@@ -1399,7 +1398,7 @@ Proof.
       invs H2.
       -- exists x2. split; eauto.
          constructor. econstructor. eauto. 2:eauto.
-         3:{ unfold ETyping.iota_red.
+         3:{ unfold EGlobalEnv.iota_red.
           rewrite ECSubst.substl_subst //.
           eapply Forall_rev, Forall_skipn.
           assert (Forall (closedn 0) args).
@@ -1410,7 +1409,7 @@ Proof.
          rewrite -eq_npars.
          eapply isPropositional_propositional; eauto.
          rewrite -e4 List.skipn_length - (Forall2_length H3) -List.skipn_length.
-         rewrite skipn_length; [lia|]. rewrite e0.
+         rewrite skipn_length e0.
          replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
     with (context_assumptions (bcontext br)) by lia.  
          rewrite map_length.
@@ -1500,8 +1499,7 @@ Proof.
          { eapply subject_reduction. eauto. exact Hty.
            eapply PCUICReduction.red_case_c. eapply wcbeval_red; eauto. }
 
-        rewrite eq_npars. rewrite skipn_length; [lia|].
-        rewrite e0.
+        rewrite eq_npars. rewrite List.skipn_length e0.
         replace (ci_npar ind + context_assumptions (bcontext br) - ci_npar ind)
     with (context_assumptions (bcontext br)) by lia.
         subst n. rewrite map_length. 
@@ -1637,7 +1635,7 @@ Proof.
 
         enough (Σ;;; [] ,,, subst_context (fix_subst mfix) 0 []
                 |- subst (fix_subst mfix) 0 dbody
-                ⇝ℇ ELiftSubst.subst (ETyping.fix_subst mfix') 0 (Extract.E.dbody x4)).
+                ⇝ℇ ELiftSubst.subst (EGlobalEnv.fix_subst mfix') 0 (Extract.E.dbody x4)).
         destruct p. destruct p.
 
         clear e3. rename H into e3.
@@ -1693,8 +1691,9 @@ Proof.
            constructor. eapply Ee.eval_fix.
            ++ eauto.
            ++ eauto.
+           ++ eauto.
            ++ rewrite <- Ee.closed_unfold_fix_cunfold_eq.
-              { unfold ETyping.unfold_fix. rewrite e -e4.
+              { unfold EGlobalEnv.unfold_fix. rewrite e -e4.
                 now rewrite (Forall2_length H4). }
               eapply eval_closed in e3; eauto.
               clear -e3 Hmfix'.
@@ -1723,7 +1722,7 @@ Proof.
            ++ eapply nth_error_all in a1; eauto. cbn in a1.
               eapply a1.
            ++ eapply All2_from_nth_error.
-              erewrite fix_subst_length, ETyping.fix_subst_length, All2_length; eauto.
+              erewrite fix_subst_length, EGlobalEnv.fix_subst_length, All2_length; eauto.
               intros.
               rewrite fix_subst_nth in H3. now rewrite fix_subst_length in H2.
               rewrite efix_subst_nth in H5. rewrite fix_subst_length in H2.
@@ -1793,6 +1792,7 @@ Proof.
            destruct (nth_error _ _) eqn:nth; [|congruence].
            eapply All2_nth_error_Some in X as (? & ? & ? & ? & ?); [|eauto].
            constructor. eapply Ee.eval_fix_value.
+           ++ eauto.
            ++ eauto.
            ++ eauto.
            ++ unfold Ee.cunfold_fix. now rewrite e0.
@@ -1876,7 +1876,7 @@ Proof.
         { eapply All2_nth_error_Some in X0 as X'; tea.
           destruct X' as [t' [nth' [bn [rar eb]]]].
           specialize (IHeval2 (E.tCase (ip, ci_npar ip) 
-            (E.mkApps (ELiftSubst.subst0 (ETyping.cofix_subst mfix') (E.dbody t')) L') brs')).
+            (E.mkApps (ELiftSubst.subst0 (EGlobalEnv.cofix_subst mfix') (E.dbody t')) L') brs')).
           forward IHeval2.
           econstructor; eauto.
           eapply erases_mkApps.
@@ -1888,7 +1888,7 @@ Proof.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.
-            erewrite cofix_subst_length, ETyping.cofix_subst_length, All2_length; eauto.
+            erewrite cofix_subst_length, EGlobalEnv.cofix_subst_length, All2_length; eauto.
             intros.
             rewrite cofix_subst_nth in H3. now rewrite cofix_subst_length in H2.
             rewrite ecofix_subst_nth in H8. rewrite cofix_subst_length in H2.
@@ -1995,7 +1995,7 @@ Proof.
         { eapply All2_nth_error_Some in X as X'; tea.
           destruct X' as [t' [nth' [bn [rar eb]]]].
           specialize (IHeval2 (E.tProj p
-            (E.mkApps (ELiftSubst.subst0 (ETyping.cofix_subst mfix') (E.dbody t')) L'))).
+            (E.mkApps (ELiftSubst.subst0 (EGlobalEnv.cofix_subst mfix') (E.dbody t')) L'))).
           forward IHeval2.
           econstructor; eauto.
           eapply erases_mkApps.
@@ -2007,7 +2007,7 @@ Proof.
           { rewrite app_context_nil_l. eapply subslet_cofix_subst; eauto.
             econstructor; eauto. }
           {eapply All2_from_nth_error.
-            erewrite cofix_subst_length, ETyping.cofix_subst_length, All2_length; eauto.
+            erewrite cofix_subst_length, EGlobalEnv.cofix_subst_length, All2_length; eauto.
             intros.
             rewrite cofix_subst_nth in H4. now rewrite cofix_subst_length in H1.
             rewrite ecofix_subst_nth in H7. rewrite cofix_subst_length in H1.
@@ -2145,7 +2145,7 @@ Proof.
     cbn. apply IHer, wf.
 Qed.
 
-Lemma erases_global_decls_fresh univs {Σ : global_declarations} kn Σ' : fresh_global kn Σ -> erases_global_decls univs Σ Σ' -> ETyping.fresh_global kn Σ'.
+Lemma erases_global_decls_fresh univs {Σ : global_declarations} kn Σ' : fresh_global kn Σ -> erases_global_decls univs Σ Σ' -> EGlobalEnv.fresh_global kn Σ'.
 Proof.
   induction 2; constructor; eauto; now depelim H.
 Qed.

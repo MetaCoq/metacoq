@@ -3,7 +3,7 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils BasicAst AstUtils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICInduction PCUICTyping
      PCUICSubstitution PCUICWcbvEval PCUICSR PCUICValidity.
-From MetaCoq.Erasure Require Import EAstUtils ELiftSubst ETyping EWcbvEval
+From MetaCoq.Erasure Require Import EAstUtils ELiftSubst EGlobalEnv EWcbvEval
      Extract Prelim.
 
 From Equations Require Import Equations.

@@ -41,7 +41,8 @@ EAstUtils
 ELiftSubst
 EInduction
 ECSubst
-ETyping
+EGlobalEnv
+EEnvMap
 EWcbvEval
 ESpineView
 EPretty

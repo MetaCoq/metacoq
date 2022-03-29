@@ -1,5 +1,5 @@
 From MetaCoq.Template Require Import config utils Kernames.
-From MetaCoq.Erasure Require Import ETyping EAst Extract.
+From MetaCoq.Erasure Require Import EGlobalEnv EAst Extract.
 
 Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.
 

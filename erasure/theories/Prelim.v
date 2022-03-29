@@ -86,7 +86,7 @@ Proof.
   unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
 Qed.
 
-Lemma value_app_inv L :
+Lemma value_app_inv {wfl : Ee.WcbvFlags} L :
   Ee.value (EAst.mkApps EAst.tBox L) ->
   L = nil.
 Proof.
@@ -120,9 +120,9 @@ Qed.
 
 Lemma efix_subst_nth mfix n :
   n < #|mfix| ->
-  nth_error (ETyping.fix_subst mfix) n = Some (EAst.tFix mfix (#|mfix| - n - 1)).
+  nth_error (EGlobalEnv.fix_subst mfix) n = Some (EAst.tFix mfix (#|mfix| - n - 1)).
 Proof.
-  unfold ETyping.fix_subst. generalize (#|mfix|).
+  unfold EGlobalEnv.fix_subst. generalize (#|mfix|).
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.
@@ -166,9 +166,9 @@ Qed.
 
 Lemma ecofix_subst_nth mfix n :
   n < #|mfix| ->
-  nth_error (ETyping.cofix_subst mfix) n = Some (EAst.tCoFix mfix (#|mfix| - n - 1)).
+  nth_error (EGlobalEnv.cofix_subst mfix) n = Some (EAst.tCoFix mfix (#|mfix| - n - 1)).
 Proof.
-  unfold ETyping.cofix_subst. generalize (#|mfix|).
+  unfold EGlobalEnv.cofix_subst. generalize (#|mfix|).
   intros m. revert n. induction m; cbn; intros.
   - destruct n; inv H.
   - destruct n.

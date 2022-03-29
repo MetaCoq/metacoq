@@ -1,4 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
+
+(* Eta expanded constructors only, see EEtaExpandedFix for the more involved definition where fixpoints are also eta-expanded. *)
+
 From Coq Require Import Utf8 Program.
 From MetaCoq.Template Require Import config utils Kernames EnvMap.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
@@ -11,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    ELiftSubst ESpineView ECSubst.
+    EGlobalEnv ELiftSubst ESpineView ECSubst EWcbvEvalInd.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -34,51 +37,7 @@ Set Warnings "-notation-overridden".
 Import E.
 Set Warnings "+notation-overridden".
 
-Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
-Proof.
-  induction l using rev_ind; simpl; auto.
-  rewrite mkApps_app /= IHl.
-  now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
-Qed.
-
-Section AllInP.
-  Context {A : Type}.
-
-  Equations forallb_InP (l : list A) (H : forall x : A, In x l -> bool) : bool :=
-  | nil, _ := true ;
-  | (cons x xs), H := (H x _) && (forallb_InP xs (fun x inx => H x _)).
-End AllInP.
-
-Lemma forallb_InP_spec {A} (f : A -> bool) (l : list A) :
-  forallb_InP l (fun x _ => f x) = List.forallb f l.
-Proof.
-  remember (fun x _ => f x) as g.
-  funelim (forallb_InP l g) => //; simpl. f_equal.
-  now rewrite (H0 f).
-Qed.
-
-Section MapInP.
-  Context {A B : Type}.
-
-  Equations map_InP (l : list A) (f : forall x : A, In x l -> B) : list B :=
-  map_InP nil _ := nil;
-  map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
-End MapInP.
-
-Lemma map_InP_spec {A B : Type} (f : A -> B) (l : list A) :
-  map_InP l (fun (x : A) _ => f x) = List.map f l.
-Proof.
-  remember (fun (x : A) _ => f x) as g.
-  funelim (map_InP l g) => //; simpl. f_equal. cbn in H.
-  now rewrite (H f0).
-Qed.
-
-Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) : 
-  In x l -> size (proj x) < S (list_size (size ∘ proj) l).
-Proof.
-  induction l; cbn => //.
-  intros [->|hin]. lia. specialize (IHl hin); lia.
-Qed.
+Import MCList (map_InP, map_InP_elim, map_InP_spec).
 
 Equations discr_construct (t : term) : Prop :=
 discr_construct (tConstruct ind n) := False ;
@@ -91,12 +50,7 @@ Inductive construct_view : term -> Type :=
 Equations construct_viewc t : construct_view t :=
 construct_viewc (tConstruct ind n) := view_construct ind n ;
 construct_viewc t := view_other t I.
-Lemma In_All {A} {P : A -> Type} l : 
-    (∀ x : A, In x l -> P x) -> All P l.
-Proof.
-  induction l; cbn; constructor; auto.
-Qed.
-  
+
 Ltac toAll := 
     repeat match goal with 
       | [ H : forall x, In x ?l -> _ |- _ ] => eapply In_All in H
@@ -106,29 +60,9 @@ Import ECSubst.
 
 Section isEtaExp.
   Context (Σ : global_declarations).
-  Definition lookup_minductive kn : option mutual_inductive_body :=
-    decl <- ETyping.lookup_env Σ kn;; 
-    match decl with
-    | ConstantDecl _ => None
-    | InductiveDecl mdecl => ret mdecl
-    end.
-
-  Definition lookup_inductive kn : option (mutual_inductive_body * one_inductive_body) :=
-    mdecl <- lookup_minductive (inductive_mind kn) ;;
-    idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
-    ret (mdecl, idecl).
-  
-  Definition lookup_inductive_pars kn : option nat := 
-    mdecl <- lookup_minductive kn ;;
-    ret mdecl.(ind_npars).
-  
-  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
-    '(mdecl, idecl) <- lookup_inductive kn ;;
-    cdecl <- nth_error idecl.(ind_ctors) c ;;
-    ret (mdecl.(ind_npars), cdecl.2).
     
   Definition isEtaExp_app ind c k :=
-    match lookup_constructor_pars_args ind c with
+    match EGlobalEnv.lookup_constructor_pars_args Σ ind c with
     | Some (npars, nargs) => leb (npars + nargs) k
     | None => false
     end.
@@ -196,7 +130,7 @@ Section isEtaExp.
   Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
   Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
   
-  Lemma isEtaExp_mkApps f v : ~~ isApp f ->
+  Lemma isEtaExp_mkApps_napp f v : ~~ isApp f ->
     isEtaExp (mkApps f v) = match construct_viewc f with 
       | view_construct ind i => isEtaExp_app ind i #|v| && forallb isEtaExp v
       | view_other t discr => isEtaExp f && forallb isEtaExp v
@@ -211,7 +145,7 @@ Section isEtaExp.
   Lemma isEtaExp_Constructor ind i v :
     isEtaExp (mkApps (EAst.tConstruct ind i) v) = isEtaExp_app ind i #|v| && forallb isEtaExp v.
   Proof.
-    rewrite isEtaExp_mkApps //.
+    rewrite isEtaExp_mkApps_napp //.
   Qed.
 
   Lemma isEtaExp_mkApps_intro t l : isEtaExp t -> All isEtaExp l -> isEtaExp (mkApps t l).
@@ -223,20 +157,20 @@ Section isEtaExp.
     rewrite (decompose_app_inv da) in et *.
     pose proof (decompose_app_notApp _ _ _ da).
     destruct l0. simp_eta.
-    - rewrite isEtaExp_mkApps //.
+    - rewrite isEtaExp_mkApps_napp //.
       destruct construct_viewc. cbn. len.
       rtoProp; repeat solve_all. cbn in et. simp isEtaExp in et.
       eapply isEtaExp_app_mon; tea; lia.
       eapply All_app_inv; eauto. rewrite et forallb_app /=.
       rtoProp; repeat solve_all.
-    - rewrite isEtaExp_mkApps in et => //.
+    - rewrite isEtaExp_mkApps_napp in et => //.
       destruct construct_viewc.
       rewrite -mkApps_app. rewrite isEtaExp_Constructor.
       cbn. cbn. rtoProp; solve_all.
       eapply isEtaExp_app_mon; tea. cbn. len. lia. now depelim H1.
       depelim H1. solve_all. eapply All_app_inv => //.
       eapply All_app_inv => //. eauto.
-      rewrite -mkApps_app. rewrite isEtaExp_mkApps //.
+      rewrite -mkApps_app. rewrite isEtaExp_mkApps_napp //.
       destruct (construct_viewc t0) => //.
       move/andP: et => [] -> /=. rtoProp; solve_all.
       rewrite forallb_app. rtoProp; repeat solve_all.
@@ -273,18 +207,18 @@ Section isEtaExp.
   Lemma isEtaExp_iota_red pars args br :
     forallb isEtaExp args ->
     isEtaExp br.2 ->
-    isEtaExp (ETyping.iota_red pars args br).
+    isEtaExp (EGlobalEnv.iota_red pars args br).
   Proof.
     intros etaargs etabr.
-    unfold ETyping.iota_red.
+    unfold EGlobalEnv.iota_red.
     rewrite isEtaExp_substl // forallb_rev forallb_skipn //.
   Qed.
   
   Lemma isEtaExp_fix_subst mfix : 
     forallb (isEtaExp ∘ dbody) mfix ->
-    forallb isEtaExp (ETyping.fix_subst mfix).
+    forallb isEtaExp (EGlobalEnv.fix_subst mfix).
   Proof.
-    unfold ETyping.fix_subst. generalize #|mfix|.
+    unfold EGlobalEnv.fix_subst. generalize #|mfix|.
     solve_all. solve_all. revert n.
     induction n; intros; simp_eta; constructor; auto.
     simp isEtaExp. solve_all.
@@ -292,9 +226,9 @@ Section isEtaExp.
 
   Lemma isEtaExp_cofix_subst mfix : 
     forallb (isEtaExp ∘ dbody) mfix ->
-    forallb isEtaExp (ETyping.cofix_subst mfix).
+    forallb isEtaExp (EGlobalEnv.cofix_subst mfix).
   Proof.
-    unfold ETyping.cofix_subst. generalize #|mfix|.
+    unfold EGlobalEnv.cofix_subst. generalize #|mfix|.
     solve_all. solve_all. revert n.
     induction n; intros; simp_eta; constructor; auto.
     simp isEtaExp. solve_all.
@@ -330,284 +264,61 @@ Section isEtaExp.
     now erewrite heq in heta.
   Qed.
 
-End isEtaExp.
-Global Hint Rewrite @forallb_InP_spec : isEtaExp.
-
-Module GlobalContextMap.
-  Record t := 
-  { global_decls :> global_declarations; 
-    map : EnvMap.t global_decl;
-    repr : EnvMap.repr global_decls map;
-    wf : EnvMap.fresh_globals global_decls }.
-  
-  Definition lookup_minductive Σ kn : option mutual_inductive_body :=
-    decl <- EnvMap.lookup kn Σ.(map);; 
-    match decl with
-    | ConstantDecl _ => None
-    | InductiveDecl mdecl => ret mdecl
+  Lemma isEtaExp_mkApps f u : isEtaExp (mkApps f u) -> 
+    let (hd, args) := decompose_app (mkApps f u) in
+    match construct_viewc hd with
+    | view_construct kn c => isEtaExp_app kn c #|args| && forallb isEtaExp args
+    | view_other u discr => isEtaExp hd && forallb isEtaExp args
     end.
-
-  Definition lookup_inductive Σ kn : option (mutual_inductive_body * one_inductive_body) :=
-    mdecl <- lookup_minductive Σ (inductive_mind kn) ;;
-    idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
-    ret (mdecl, idecl).
-  
-  Definition lookup_inductive_pars Σ kn : option nat := 
-    mdecl <- lookup_minductive Σ kn ;;
-    ret mdecl.(ind_npars).
-
-  Lemma lookup_inductive_pars_spec Σ kn : lookup_inductive_pars Σ kn = EEtaExpanded.lookup_inductive_pars Σ kn.
   Proof.
-    rewrite /lookup_inductive_pars /EEtaExpanded.lookup_inductive_pars.
-    rewrite /lookup_inductive /EEtaExpanded.lookup_inductive.
-    rewrite /lookup_minductive /EEtaExpanded.lookup_minductive.
-    rewrite (EnvMap.lookup_spec Σ.(global_decls)).
-    eapply wf. eapply repr. reflexivity.
+    destruct decompose_app eqn:da.
+    rewrite (decompose_app_inv da).
+    pose proof (decompose_app_notApp _ _ _ da).
+    destruct l. cbn -[isEtaExp].
+    intros eq; rewrite eq.
+    destruct (construct_viewc t0) => //. simp isEtaExp in eq; now rewrite eq.
+    assert (t1 :: l <> []) by congruence.
+    revert da H0. generalize (t1 :: l). clear t1 l; intros l.
+    intros da nnil.
+    rewrite isEtaExp_mkApps_napp //.
   Qed.
 
-  Program Definition make (g : global_declarations) (Hg : EnvMap.fresh_globals g): t :=
-    {| global_decls := g;
-       map := EnvMap.of_global_env g |}.
+  Arguments isEtaExp : simpl never.
 
-End GlobalContextMap.
-Coercion GlobalContextMap.global_decls : GlobalContextMap.t >-> global_declarations.
-
-(* 
-Section AllInP.
-  Context {A : Type}.
-
-  Equations forallb_InP (l : list A) (H : forall x : A, In x l -> bool) : bool :=
-  | nil, _ := true ;
-  | (cons x xs), H := (H x _) && (forallb_InP xs (fun x inx => H x _)).
-End AllInP.
-
-Lemma forallb_InP_spec {A} (f : A -> bool) (l : list A) :
-  forallb_InP l (fun x _ => f x) = List.forallb f l.
-Proof.
-  remember (fun x _ => f x) as g.
-  funelim (forallb_InP l g) => //; simpl. f_equal.
-  now rewrite (H0 f).
-Qed.
-
-Section MapInP.
-  Context {A B : Type}.
-
-  Equations map_InP (l : list A) (f : forall x : A, In x l -> B) : list B :=
-  map_InP nil _ := nil;
-  map_InP (cons x xs) f := cons (f x _) (map_InP xs (fun x inx => f x _)).
-End MapInP.
-
-Lemma map_InP_spec {A B : Type} (f : A -> B) (l : list A) :
-  map_InP l (fun (x : A) _ => f x) = List.map f l.
-Proof.
-  remember (fun (x : A) _ => f x) as g.
-  funelim (map_InP l g) => //; simpl. f_equal. cbn in H.
-  now rewrite (H f0).
-Qed.
-
-Lemma In_size {A B} {x : A} {l : list A} (proj : A -> B) (size : B -> nat) : 
-  In x l -> size (proj x) < S (list_size (size ∘ proj) l).
-Proof.
-  induction l; cbn => //.
-  intros [->|hin]. lia. specialize (IHl hin); lia.
-Qed.
-
-Equations discr_construct (t : term) : Prop :=
-discr_construct (tConstruct ind n) := False ;
-discr_construct _ := True.
-
-Inductive construct_view : term -> Type :=
-| view_construct : forall ind n, construct_view (tConstruct ind n)
-| view_other : forall t, discr_construct t -> construct_view t.
-
-Equations construct_viewc t : construct_view t :=
-construct_viewc (tConstruct ind n) := view_construct ind n ;
-construct_viewc t := view_other t I.
-
-Section isEtaExp.
-  Context (Σ : global_context).
-  Definition lookup_minductive kn : option mutual_inductive_body :=
-    decl <- ETyping.lookup_env Σ kn;; 
-    match decl with
-    | ConstantDecl _ => None
-    | InductiveDecl mdecl => ret mdecl
+  Lemma isEtaExp_tApp {f u} : isEtaExp (EAst.tApp f u) -> 
+    let (hd, args) := decompose_app (EAst.tApp f u) in
+    match construct_viewc hd with
+    | view_construct kn c =>
+      args <> [] /\ f = mkApps hd (remove_last args) /\ u = last args u /\ 
+      isEtaExp_app kn c #|args| && forallb isEtaExp args
+    | view_other _ discr => 
+      [&& isEtaExp hd, forallb isEtaExp args, isEtaExp f & isEtaExp u]
     end.
-
-  Definition lookup_inductive kn : option (mutual_inductive_body * one_inductive_body) :=
-    mdecl <- lookup_minductive (inductive_mind kn) ;;
-    idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
-    ret (mdecl, idecl).
-  
-  Definition lookup_inductive_pars kn : option nat := 
-    mdecl <- lookup_minductive kn ;;
-    ret mdecl.(ind_npars).
-  
-  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
-    '(mdecl, idecl) <- lookup_inductive kn ;;
-    cdecl <- nth_error idecl.(ind_ctors) c ;;
-    ret (mdecl.(ind_npars), cdecl.2).
-    
-  Definition isEtaExp_app ind c k :=
-    match lookup_constructor_pars_args ind c with
-    | Some (npars, nargs) => leb (npars + nargs) k
-    | None => false
-    end.
-    
-  Import TermSpineView.
-
-  Equations? isEtaExp (e : EAst.term) : bool
-    by wf e (fun x y : EAst.term => size x < size y) :=
-  | e with TermSpineView.view e := {
-    | tRel i => true
-    | tEvar ev args => forallb_InP args (fun x H => isEtaExp x)
-    | tLambda na M => isEtaExp M
-    | tApp u v napp nnil with construct_viewc u := 
-      { | view_construct ind i => isEtaExp_app ind i (List.length v) && forallb_InP v (fun x H => isEtaExp x)
-        | view_other _ _ => isEtaExp u && forallb_InP v (fun x H => isEtaExp x) }
-    | tLetIn na b b' => isEtaExp b && isEtaExp b'
-    | tCase ind c brs => isEtaExp c && forallb_InP brs (fun x H => isEtaExp x.2)
-    | tProj p c => isEtaExp c
-    | tFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
-    | tCoFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
-    | tBox => true
-    | tVar _ => true
-    | tConst _ => true
-    | tConstruct ind i => isEtaExp_app ind i 0 }.
   Proof.
-    all:try lia.
-    all:try apply (In_size); tea.
-    all:try lia.
-    - now apply (In_size id size). 
-    - rewrite size_mkApps.
-      change (fun x => size (id x)) with size in H. cbn.
-      now apply (In_size id size).
-    - now eapply size_mkApps_f.
-    - change (fun x => size (id x)) with size in H.
-      eapply (In_size id size) in H. unfold id in H.
-      change (fun x => size x) with size in H. 
-      pose proof (size_mkApps_l napp nnil). lia.
-    - eapply (In_size snd size) in H. cbn in H; lia.
-  Qed.
-  
-  Lemma isEtaExp_app_mon ind c i i' : i <= i' -> isEtaExp_app ind c i -> isEtaExp_app ind c i'.
-  Proof.
-    intros le.
-    unfold isEtaExp_app.
-    destruct lookup_constructor_pars_args as [[pars args]|]=> //.
-    do 2 elim: Nat.leb_spec => //. lia.
+    move/(isEtaExp_mkApps f [u]).
+    cbn -[decompose_app]. destruct decompose_app eqn:da.
+    destruct construct_viewc eqn:cv => //.
+    intros ->.
+    pose proof (decompose_app_inv da).
+    pose proof (decompose_app_notApp _ _ _ da).
+    destruct l using rev_case. cbn. intuition auto. solve_discr. noconf H.
+    rewrite mkApps_app in H. noconf H.
+    rewrite remove_last_app last_last. intuition auto.
+    destruct l; cbn in *; congruence.
+    pose proof (decompose_app_inv da).
+    pose proof (decompose_app_notApp _ _ _ da).
+    destruct l using rev_case. cbn. intuition auto. destruct t0 => //.
+    rewrite mkApps_app in H. noconf H.
+    move=> /andP[] etat. rewrite forallb_app => /andP[] etal /=.
+    rewrite andb_true_r => etaa. rewrite etaa andb_true_r.
+    rewrite etat etal. cbn. rewrite andb_true_r.
+    eapply isEtaExp_mkApps_intro; auto; solve_all.
   Qed.
 
 End isEtaExp.
 Global Hint Rewrite @forallb_InP_spec : isEtaExp.
-
-Opaque isEtaExp.
-
-Lemma In_All {A} {P : A -> Type} l : 
-(∀ x : A, In x l -> P x) -> All P l.
-Proof.
-induction l; cbn; constructor; auto.
-Qed.
-
-Ltac toAll := 
-repeat match goal with 
-  | [ H : forall x, In x ?l -> _ |- _ ] => eapply In_All in H
-end.
-
-Section something.
-
-Context (Σ : global_context).
-
-Hint Rewrite @forallb_InP_spec : isEtaExp.
-Transparent isEtaExp_unfold_clause_1.
-
-Lemma isEtaExp_mkApps_nonnil f v :
-  ~~ isApp f -> v <> [] ->
-  isEtaExp Σ (mkApps f v) = match construct_viewc f with 
-    | view_construct ind i => isEtaExp_app Σ ind i #|v| && forallb (isEtaExp Σ) v
-    | view_other t discr => isEtaExp Σ f && forallb (isEtaExp Σ) v
-  end.
-Proof.
-  rewrite isEtaExp_equation_1.
-  intros napp hv.
-  destruct (TermSpineView.view_mkApps (TermSpineView.view (mkApps f v)) napp hv) as [hna [hv' ->]].
-  cbn. destruct (construct_viewc f); cbn; simp isEtaExp => //.
-Qed.
-
-Lemma isEtaExp_mkApps f v : ~~ isApp f ->
-  isEtaExp Σ (mkApps f v) = match construct_viewc f with 
-    | view_construct ind i => isEtaExp_app Σ ind i #|v| && forallb (isEtaExp Σ) v
-    | view_other t discr => isEtaExp Σ f && forallb (isEtaExp Σ) v
-  end.
-Proof.
-  intros napp.
-  destruct v using rev_case; cbn.
-  - destruct construct_viewc; rewrite andb_true_r //.
-  - rewrite isEtaExp_mkApps_nonnil //. now destruct v; cbn; congruence.
-Qed.
-
-Lemma isEtaExp_Constructor ind i v :
-  isEtaExp Σ (mkApps (tConstruct ind i) v) = isEtaExp_app Σ ind i #|v| && forallb (isEtaExp Σ) v.
-Proof.
-  rewrite isEtaExp_mkApps //.
-Qed.
-
-Lemma isEtaExp_mkApps_intro t l : isEtaExp Σ t -> All (isEtaExp Σ) l -> isEtaExp Σ (mkApps t l).
-Proof.
-  revert t; induction l using rev_ind; auto.
-  intros t et a; eapply All_app in a as [].
-  depelim a0. clear a0.
-  destruct (decompose_app t) eqn:da.
-  rewrite (decompose_app_inv da) in et *.
-  pose proof (decompose_app_notApp _ _ _ da).
-  destruct l0. cbn.
-  - rewrite isEtaExp_mkApps //.
-    destruct construct_viewc. cbn. len.
-    rtoProp; repeat solve_all. cbn in et. simp isEtaExp in et.
-    eapply isEtaExp_app_mon; tea; lia.
-    eapply All_app_inv; eauto. rewrite et forallb_app /=.
-    rtoProp; repeat solve_all.
-  - rewrite isEtaExp_mkApps in et => //.
-    destruct construct_viewc.
-    rewrite -mkApps_app. rewrite isEtaExp_Constructor.
-    cbn. cbn. rtoProp; solve_all.
-    eapply isEtaExp_app_mon; tea. cbn. len. lia. now depelim H1.
-    depelim H1. solve_all. eapply All_app_inv => //.
-    eapply All_app_inv => //. eauto.
-    rewrite -mkApps_app. rewrite isEtaExp_mkApps //.
-    destruct (construct_viewc t0) => //.
-    move/andP: et => [] -> /=. rtoProp; solve_all.
-    rewrite forallb_app. rtoProp; repeat solve_all.
-    eapply All_app_inv; eauto.
-Qed.
-
-Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
-Proof.
-  induction l using rev_ind; simpl; auto.
-  rewrite mkApps_app /= IHl.
-  now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
-Qed.
-
-Lemma etaExp_csubst a k b : 
-  isEtaExp Σ a -> isEtaExp Σ b -> isEtaExp Σ (ECSubst.csubst a k b).
-Proof.
-  funelim (isEtaExp Σ b); cbn; simp isEtaExp; rewrite -?isEtaExp_equation_1; eauto;
-    toAll; repeat solve_all.
-  - intros. destruct Nat.compare => //.
-  - move/andP: H2 => [] etab etab'.
-    apply/andP. split; eauto.
-  - rtoProp. intuition eauto.
-    solve_all.
-  - move/andP: H1 => [] etaexp h.
-    rewrite csubst_mkApps /=.
-    rewrite isEtaExp_Constructor. solve_all.
-    rewrite map_length. rtoProp; solve_all. solve_all.
-  - rewrite csubst_mkApps /=.
-    move/andP: H2 => [] eu ev.
-    specialize (H _ k H1 eu).
-    eapply isEtaExp_mkApps_intro => //. solve_all.
-Qed.
-
-End something.
+Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
+Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 
 Definition isEtaExp_constant_decl Σ cb := 
   option_default (isEtaExp Σ) cb.(cst_body) true.
@@ -618,36 +329,89 @@ Definition isEtaExp_decl Σ d :=
   | InductiveDecl idecl => true
   end.
 
-Fixpoint isEtaExp_env (Σ : EAst.global_declarations) := 
+Fixpoint isEtaExp_env (Σ : global_declarations) := 
   match Σ with 
   | [] => true
   | decl :: Σ => isEtaExp_decl Σ decl.2 && isEtaExp_env Σ
   end.
 
-(* Lemma strip_extends Σ Σ' : extends Σ Σ' ->
-  strip Σ t = strip Σ' t. *)
-
-Lemma isEtaExp_tApp Σ f u : isEtaExp Σ (mkApps f u) -> 
-  let (hd, args) := decompose_app (mkApps f u) in
-  match construct_viewc hd with
-  | view_construct kn c => isEtaExp_app Σ kn c #|args| && forallb (isEtaExp Σ) args
-  | view_other u discr => isEtaExp Σ hd && forallb (isEtaExp Σ) args
-  end.
+Lemma isEtaExp_lookup_ext {Σ} {kn d}: 
+  isEtaExp_env Σ ->
+  lookup_env Σ kn = Some d ->
+  ∑ Σ', extends Σ' Σ × isEtaExp_decl Σ' d.
 Proof.
-  destruct decompose_app eqn:da.
-  rewrite (decompose_app_inv da).
-  pose proof (decompose_app_notApp _ _ _ da).
-  destruct l. cbn -[isEtaExp].
-  intros eq; rewrite eq.
-  destruct (construct_viewc t) => //. simp isEtaExp in eq; now rewrite eq.
-  assert (t0 :: l <> []) by congruence.
-  revert da H0. generalize (t0 :: l). clear t0 l; intros l.
-  intros da nnil.
-  rewrite isEtaExp_mkApps //.
-Qed. *)
+  induction Σ; cbn.
+  - move=> _; rewrite /declared_constant /lookup_env /= //.
+  - move=> /andP[] etaa etaΣ.
+    destruct a as [kn' d']; cbn in *.
+    rewrite /declared_constant /=.
+    case:eqb_specT => //.
+    * intros e; subst kn'. move=> [=]. intros ->.
+      exists Σ. split => //. now exists [(kn, d)].
+    * intros ne. move=> Hl. destruct (IHΣ etaΣ Hl) as [Σ' [ext eta]].
+      exists Σ'; split => //.
+      destruct ext as [Σ'' ->].
+      now exists ((kn', d')::Σ'').
+Qed.
+
+Lemma isEtaExp_app_extends Σ Σ' ind k n :
+  extends Σ Σ' ->
+  wf_glob Σ' -> 
+  isEtaExp_app Σ ind k n ->
+  isEtaExp_app Σ' ind k n.
+Proof.
+  rewrite /isEtaExp_app.
+  rewrite /lookup_constructor_pars_args /lookup_inductive /lookup_minductive.
+  move=> ext wf.
+  destruct (lookup_env Σ _) eqn:hl => //.
+  rewrite (extends_lookup wf ext hl) /= //.
+Qed.
+
+From MetaCoq.Erasure Require Import ELiftSubst.
+
+Lemma isEtaExp_extends Σ Σ' t : 
+  extends Σ Σ' ->
+  wf_glob Σ' ->
+  isEtaExp Σ t ->
+  isEtaExp Σ' t.
+Proof.
+  intros ext wf.
+  funelim (isEtaExp Σ t); simp_eta => //; rtoProp; intuition eauto; rtoProp; intuition auto.
+  - eapply In_All in H; solve_all.
+  - eapply isEtaExp_app_extends; tea.
+  - eapply In_All in H0. solve_all.
+  - eapply In_All in H; solve_all.
+  - eapply In_All in H; solve_all.
+  - eapply In_All in H; solve_all.
+    rewrite isEtaExp_Constructor //. rtoProp; intuition auto.
+    eapply isEtaExp_app_extends; tea.
+    solve_all.
+  - eapply In_All in H0. apply isEtaExp_mkApps_intro; eauto. solve_all.
+Qed.
+
+Lemma isEtaExp_extends_decl Σ Σ' t : 
+  extends Σ Σ' ->
+  wf_glob Σ' ->
+  isEtaExp_decl Σ t ->
+  isEtaExp_decl Σ' t.
+Proof.
+  intros ext wf; destruct t; cbn => //.
+  rewrite /isEtaExp_constant_decl; destruct (cst_body c) => /= //.
+  now eapply isEtaExp_extends.
+Qed.
+
+Lemma isEtaExp_lookup {Σ kn d}: 
+  isEtaExp_env Σ -> wf_glob Σ ->
+  lookup_env Σ kn = Some d ->
+  isEtaExp_decl Σ d.
+Proof.
+  move=> etaΣ wfΣ.
+  move/(isEtaExp_lookup_ext etaΣ) => [Σ' []] ext hd.
+  now eapply isEtaExp_extends_decl.
+Qed.
 
 From MetaCoq.Template Require Import config utils BasicAst Universes.
-From MetaCoq.Erasure Require Import EAst ETyping EAstUtils.
+From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils.
 
 Section expanded.
 
@@ -725,8 +489,6 @@ Proof.
 Qed.
 
 Local Hint Constructors expanded : core .
-Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp_equation_1 in H.
-Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 
 Lemma isEtaExp_app_expanded Σ ind idx n :
    isEtaExp_app Σ ind idx n = true <->

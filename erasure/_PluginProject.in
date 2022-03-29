@@ -108,8 +108,10 @@ src/eLiftSubst.ml
 src/eLiftSubst.mli
 src/eCSubst.mli
 src/eCSubst.ml
-src/eTyping.ml
-src/eTyping.mli
+src/eGlobalEnv.ml
+src/eGlobalEnv.mli
+src/eEnvMap.mli
+src/eEnvMap.ml
 src/extract.mli
 src/extract.ml
 src/eWcbvEval.mli

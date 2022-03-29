@@ -20,7 +20,7 @@ node[style=filled]
 "template-coq/TemplateMonad"[label="TemplateMonad", color=aquamarine]
 "erasure/EAst" -> "erasure/Extract"
 "template-coq/TemplateMonad/Common"[label="Common", color=aquamarine]
-"erasure/ELiftSubst" -> "erasure/ETyping"
+"erasure/ELiftSubst" -> "erasure/EGlobalEnv"
 "template-coq/UnivSubst" -> "template-coq/Extraction"
 "template-coq/utils/MCRelations"[label="MCRelations", color=aquamarine]
 "pcuic/PCUICInversion"[label="PCUICInversion", color=lemonchiffon1]
@@ -60,7 +60,7 @@ node[style=filled]
 "pcuic/PCUICAlpha"[label="PCUICAlpha", color=lemonchiffon1]
 "template-coq/utils/MCCompare"[label="MCCompare", color=aquamarine]
 "safechecker/PCUICSafeChecker" -> "safechecker/PCUICSafeRetyping"
-"erasure/ETyping" -> "erasure/EPretty"
+"erasure/EGlobalEnv" -> "erasure/EPretty"
 "template-coq/TemplateMonad/Extractable" -> "template-coq/Constants"
 "pcuic/PCUICTyping" -> "pcuic/PCUICNormal"
 "erasure/EArities" -> "erasure/Prelim"
@@ -183,7 +183,7 @@ node[style=filled]
 "template-coq/utils/MCArith"[label="MCArith", color=aquamarine]
 "pcuic/PCUICSN"[label="PCUICSN", color=lemonchiffon1]
 "template-coq/common/uGraph"[label="uGraph", color=aquamarine]
-"erasure/ETyping" -> "erasure/EWndEval"
+"erasure/EGlobalEnv" -> "erasure/EWndEval"
 "pcuic/PCUICSafeLemmata" -> "pcuic/PCUICSN"
 "template-coq/utils/wGraph"[label="wGraph", color=aquamarine]
 "template-coq/LiftSubst"[label="LiftSubst", color=aquamarine]
@@ -204,7 +204,7 @@ node[style=filled]
 "pcuic/PCUICInversion" -> "pcuic/PCUICPrincipality"
 "pcuic/PCUICReduction"[label="PCUICReduction", color=lemonchiffon1]
 "pcuic/PCUICReduction" -> "pcuic/PCUICCumulativity"
-"erasure/EAstUtils" -> "erasure/ETyping"
+"erasure/EAstUtils" -> "erasure/EGlobalEnv"
 "template-coq/TemplateMonad/Core" -> "template-coq/TemplateMonad"
 "pcuic/PCUICContextConversion" -> "pcuic/PCUICConversion"
 "erasure/EWcbvEval"[label="EWcbvEval", color=tan]
@@ -263,10 +263,10 @@ node[style=filled]
 "template-coq/TypingWf" -> "checker/Weakening"
 "erasure/EPretty" -> "erasure/SafeTemplateErasure"
 "template-coq/AstUtils" -> "pcuic/TemplateToPCUIC"
-"erasure/ETyping" -> "erasure/EWcbvEval"
+"erasure/EGlobalEnv" -> "erasure/EWcbvEval"
 "pcuic/PCUICConversion" -> "pcuic/PCUICRetyping"
 "erasure/ErasureCorrectness" -> "erasure/ErasureFunction"
-"erasure/ETyping"[label="ETyping", color=tan]
+"erasure/EGlobalEnv"[label="EGlobalEnv", color=tan]
 "erasure/ErasureCorrectness"[label="ErasureCorrectness", color=tan]
 "template-coq/utils" -> "template-coq/utils/wGraph"
 "pcuic/PCUICConfluence" -> "pcuic/PCUICContextConversion"

@@ -2,7 +2,7 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect ETyping.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv.
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.

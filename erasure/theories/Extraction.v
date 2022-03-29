@@ -14,7 +14,7 @@ Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst ETyping Extract ErasureFunction Erasure.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction ELiftSubst EGlobalEnv Extract ErasureFunction Erasure.
 
 Extraction Inline Equations.Prop.Classes.noConfusion.
 Extraction Inline Equations.Prop.Logic.eq_elim.
@@ -40,6 +40,6 @@ Cd "src".
 
 Separate Extraction ErasureFunction.erase Erasure
          (* The following directives ensure separate extraction does not produce name clashes *)
-         Coq.Strings.String utils Template.UnivSubst ELiftSubst ETyping.
+         Coq.Strings.String utils Template.UnivSubst ELiftSubst EGlobalEnv.
 
 Cd "..".

@@ -5616,12 +5616,12 @@
            points="1467.02,-610.18 1470.93,-615.99 1477.27,-607.5 "
            id="polygon12406" />
       </g>
-      <!-- erasure/ETyping -->
+      <!-- erasure/EGlobalEnv -->
       <g
          id="node127"
          class="node">
         <title
-           id="title12409">erasure/ETyping</title>
+           id="title12409">erasure/EGlobalEnv</title>
         <ellipse
            fill="#d2b48c"
            stroke="#d2b48c"
@@ -5636,14 +5636,14 @@
            y="-734.29999"
            font-family="Times, serif"
            font-size="14px"
-           id="text12413">ETyping</text>
+           id="text12413">EGlobalEnv</text>
       </g>
-      <!-- erasure/ETyping&#45;&gt;erasure/Extract -->
+      <!-- erasure/EGlobalEnv&#45;&gt;erasure/Extract -->
       <g
          id="edge193"
          class="edge">
         <title
-           id="title12416">erasure/ETyping-&gt;erasure/Extract</title>
+           id="title12416">erasure/EGlobalEnv-&gt;erasure/Extract</title>
         <path
            fill="none"
            stroke="#000000"
@@ -5677,12 +5677,12 @@
            font-size="14px"
            id="text12427">EWndEval</text>
       </g>
-      <!-- erasure/ETyping&#45;&gt;erasure/EWndEval -->
+      <!-- erasure/EGlobalEnv&#45;&gt;erasure/EWndEval -->
       <g
          id="edge183"
          class="edge">
         <title
-           id="title12430">erasure/ETyping-&gt;erasure/EWndEval</title>
+           id="title12430">erasure/EGlobalEnv-&gt;erasure/EWndEval</title>
         <path
            fill="none"
            stroke="#000000"
@@ -5694,12 +5694,12 @@
            points="1539.24,-685.59 1541.51,-678.97 1530.92,-679.03 "
            id="polygon12434" />
       </g>
-      <!-- erasure/ETyping&#45;&gt;erasure/EWcbvEval -->
+      <!-- erasure/EGlobalEnv&#45;&gt;erasure/EWcbvEval -->
       <g
          id="edge182"
          class="edge">
         <title
-           id="title12437">erasure/ETyping-&gt;erasure/EWcbvEval</title>
+           id="title12437">erasure/EGlobalEnv-&gt;erasure/EWcbvEval</title>
         <path
            fill="none"
            stroke="#000000"
@@ -5733,12 +5733,12 @@
            font-size="14px"
            id="text12448">EPretty</text>
       </g>
-      <!-- erasure/ETyping&#45;&gt;erasure/EPretty -->
+      <!-- erasure/EGlobalEnv&#45;&gt;erasure/EPretty -->
       <g
          id="edge173"
          class="edge">
         <title
-           id="title12451">erasure/ETyping-&gt;erasure/EPretty</title>
+           id="title12451">erasure/EGlobalEnv-&gt;erasure/EPretty</title>
         <path
            fill="none"
            stroke="#000000"
@@ -5857,12 +5857,12 @@
            points="601.91,-99.21 602.67,-92.26 592.35,-94.65 "
            id="polygon12497" />
       </g>
-      <!-- erasure/EReflect&#45;&gt;erasure/ETyping -->
+      <!-- erasure/EReflect&#45;&gt;erasure/EGlobalEnv -->
       <g
          id="edge179"
          class="edge">
         <title
-           id="title12500">erasure/EReflect-&gt;erasure/ETyping</title>
+           id="title12500">erasure/EReflect-&gt;erasure/EGlobalEnv</title>
         <path
            fill="none"
            stroke="#000000"
@@ -5896,12 +5896,12 @@
            font-size="14px"
            id="text12511">ELiftSubst</text>
       </g>
-      <!-- erasure/ELiftSubst&#45;&gt;erasure/ETyping -->
+      <!-- erasure/ELiftSubst&#45;&gt;erasure/EGlobalEnv -->
       <g
          id="edge178"
          class="edge">
         <title
-           id="title12514">erasure/ELiftSubst-&gt;erasure/ETyping</title>
+           id="title12514">erasure/ELiftSubst-&gt;erasure/EGlobalEnv</title>
         <path
            fill="none"
            stroke="#000000"
@@ -5986,12 +5986,12 @@
            points="1891.35,-838.1 1898.35,-838.1 1894.85,-828.1 "
            id="polygon12546" />
       </g>
-      <!-- erasure/EAstUtils&#45;&gt;erasure/ETyping -->
+      <!-- erasure/EAstUtils&#45;&gt;erasure/EGlobalEnv -->
       <g
          id="edge177"
          class="edge">
         <title
-           id="title12549">erasure/EAstUtils-&gt;erasure/ETyping</title>
+           id="title12549">erasure/EAstUtils-&gt;erasure/EGlobalEnv</title>
         <path
            fill="none"
            stroke="#000000"

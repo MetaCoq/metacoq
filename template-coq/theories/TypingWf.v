@@ -967,12 +967,12 @@ Section TypingWf.
       eapply declared_constructor_wf; eauto.
       now eapply Forall_decls_on_global_wf.
 
-    - destruct X2 as [wfret wps].
-      destruct X5 as [wfc wfapps].
+    - destruct X4 as [wfret wps].
+      destruct X7 as [wfc wfapps].
       eapply wf_mkApps_inv in wfapps.
       eapply All_app in wfapps as [wfp wfindices].
       assert (All (wf_decl Σ) predctx).
-      { now apply All_app in X3 as [? ?]. }
+      { now apply All_app in X5 as [? ?]. }
       split; [econstructor; simpl; eauto; solve_all|].
       eapply All2i_All2; tea; repeat intuition auto. 
       apply wf_mkApps. subst ptm. wf. apply wf_it_mkLambda_or_LetIn; auto.

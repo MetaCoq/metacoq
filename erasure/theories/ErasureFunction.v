@@ -1750,6 +1750,63 @@ Proof.
   - cbn. erewrite map_nth_error; eauto.
 Qed.
 
+Import EGlobalEnv.
+Lemma erase_global_decls_fresh kn deps Σ decls heq : 
+  let Σ' := erase_global_decls deps Σ decls heq in
+  PCUICTyping.fresh_global kn decls ->
+  fresh_global kn Σ'.
+Proof.
+  cbn.
+  revert deps Σ heq.
+  induction decls; [cbn; auto|].
+  - intros. red. constructor.
+  - destruct a as [kn' d]. intros. depelim H.
+    cbn in H, H0.
+    destruct d as []; simpl; destruct KernameSet.mem.
+    + cbn [EGlobalEnv.closed_env forallb]. cbn.
+      constructor => //. eapply IHdecls => //.
+    + eapply IHdecls => //.
+    + constructor; auto.
+      eapply IHdecls => //.
+    + eapply IHdecls => //.
+Qed.
+
+Lemma erase_global_fresh kn deps Σ : 
+  let Σ' := erase_global deps Σ in
+  PCUICTyping.fresh_global kn Σ.(declarations) ->
+  fresh_global kn Σ'.
+Proof.
+  unfold erase_global.
+  intros fr. now eapply erase_global_decls_fresh.
+Qed.
+
+Lemma erase_global_decls_wf_glob Σ deps decls heq :
+  let Σ' := erase_global_decls deps Σ decls heq in
+  wf_glob Σ'.
+Proof.
+  cbn.
+  revert deps Σ heq.
+  induction decls; [cbn; auto|].
+  { intros. constructor. }
+  intros. destruct a as [kn []]; simpl; destruct KernameSet.mem.
+  + constructor. eapply IHdecls => //.
+    eapply erase_global_decls_fresh; auto.
+    destruct Σ.(referenced_impl_wf).
+    destruct X. rewrite heq in o0. now depelim o0.
+  + cbn.
+    eapply IHdecls.
+  + constructor. eapply IHdecls.
+    eapply erase_global_decls_fresh.
+    destruct Σ.(referenced_impl_wf) as [[onu ond]].
+    rewrite heq in ond. now depelim ond.
+  + eapply IHdecls.
+Qed.
+
+Lemma erase_global_wf_glob Σ deps :
+  let Σ' := erase_global deps Σ in
+  wf_glob Σ'.
+Proof. eapply erase_global_decls_wf_glob. Qed.
+
 From MetaCoq.Erasure Require Import EEtaExpandedFix.
 
 Lemma All_map_All {A B C} {Q : C -> Type} {P : C -> A -> Prop}
@@ -1880,7 +1937,9 @@ Proof.
     + bang.
   - econstructor; eauto.
     solve_all. rewrite erase_brs_eq.
-    eapply All_map_All; tea. intros. eapply H0. cbn. intros x wx ? [exp' IH]. len. eauto.
+    eapply All_map_All; tea. intros. eapply H2. cbn. intros x wx ? [exp' IH]. len.
+    destruct IH.
+    eauto.
   - simp erase. destruct inspect as [b ise] eqn:hi. destruct b.
     + simp erase. constructor.
     + rewrite -hi -erase_equation_1.

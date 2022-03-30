@@ -12,7 +12,7 @@ Set Warnings "+notation-overridden".
 From Equations.Prop Require Import DepElim.
 Implicit Types cf : checker_flags.
 
-(* Source = Template, Target (unqualified) = Coq *)
+(* Source = Template, Target (unqualified) = PCUIC *)
 
 Module SEq := Template.TermEquality.
 Module ST := Template.Typing.

@@ -809,6 +809,8 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
     context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
     consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
     let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+    ctx_inst typing Σ Γ (p.(pparams) ++ indices)
+      (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->
     Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps ->
     is_allowed_elimination Σ idecl.(ind_kelim) ps ->
     Σ ;;; Γ |- c : mkApps (tInd ci.(ci_ind) p.(puinst)) (p.(pparams) ++ indices) ->
@@ -909,6 +911,18 @@ Section Typing_Spine_size.
   end.
 End Typing_Spine_size.
 
+Section CtxInstSize.
+  Context (typing : global_env_ext -> context -> term -> term -> Type)
+  (typing_size : forall {Σ Γ t T}, typing Σ Γ t T -> size).
+
+  Fixpoint ctx_inst_size {Σ Γ args Δ} (c : ctx_inst typing Σ Γ args Δ) : size :=
+  match c with
+  | ctx_inst_nil => 0
+  | ctx_inst_ass na t i inst Δ ty ctxi => ((typing_size _ _ _ _ ty) + (ctx_inst_size ctxi))%nat
+  | ctx_inst_def na b t inst Δ ctxi => S (ctx_inst_size ctxi)
+  end.
+
+End CtxInstSize.
 
 Definition typing_size `{checker_flags} {Σ Γ t T} (d : Σ ;;; Γ |- t : T) : size.
 Proof.
@@ -938,7 +952,8 @@ Proof.
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (S (wf_local_size _ typing_size _ a))).
   - exact (S (Nat.max d1 (Nat.max d2
-      (all2i_size _ (fun _ x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a0)))).
+    (Nat.max (ctx_inst_size _ typing_size c1)
+      (all2i_size _ (fun _ x y p => Nat.max (typing_size _ _ _ _ p.1.2) (typing_size _ _ _ _ p.2)) a0))))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
   - exact (S (Nat.max (Nat.max (wf_local_size _ typing_size _ a) (all_size _ (fun x  p => typing_size Σ _ _ _ p.π2) a0)) (all_size _ (fun x p => typing_size Σ _ _ _ p) a1))).
 Defined.
@@ -1166,6 +1181,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
         context_assumptions mdecl.(ind_params) = #|p.(pparams)| ->
         consistent_instance_ext Σ (ind_universes mdecl) p.(puinst) ->
         let predctx := case_predicate_context ci.(ci_ind) mdecl idecl p in
+        ctx_inst typing Σ Γ (p.(pparams) ++ indices)
+        (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->  
+        ctx_inst P Σ Γ (p.(pparams) ++ indices)
+        (List.rev (ind_params mdecl ,,, ind_indices idecl)@[p.(puinst)]) ->  
         forall pret : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps,
         P Σ (Γ ,,, predctx) p.(preturn) (tSort ps) ->
         PΓ Σ (Γ ,,, predctx) (typing_wf_local pret) ->
@@ -1413,6 +1432,23 @@ Proof.
     -- simpl in pΓ.
        eapply (X8 Σ wfΣ Γ (typing_wf_local H0) ci); eauto.
        ++ eapply (X14 _ _ _ H0); eauto. simpl; auto with arith. lia.
+       ++ clear -c1 X14.
+        assert (forall (Γ' : context) (t T : term) (Hty : Σ;;; Γ' |- t : T),
+           typing_size Hty <= ctx_inst_size _ (@typing_size _) c1 ->
+         P Σ Γ' t T).
+       { intros. eapply (X14 _ _ _ Hty). simpl.
+         change (fun (x : global_env_ext) (x0 : context) (x1 x2 : term)
+         (x3 : x;;; x0 |- x1 : x2) => typing_size x3) with (@typing_size cf).
+         lia. }
+       clear -X c1.
+       revert c1 X.
+       generalize (List.rev (subst_instance (puinst p) (ind_params mdecl ,,, ind_indices idecl))).
+       generalize (pparams p ++ indices).
+       intros l c ctxi IH; induction ctxi; constructor; eauto.
+       * eapply (IH _ _ _ t0); simpl; auto. lia.
+       * eapply IHctxi. intros. eapply (IH _ _ _ Hty). simpl. lia.
+       * eapply IHctxi. intros. eapply (IH _ _ _ Hty). simpl. lia.
+       
        ++ simpl in X13. simpl in pΓ. auto. eapply (X14 _ _ _ H); eauto. simpl; auto with arith.
        ++ simpl in *.
          eapply (X13 _ _ _ H); eauto. simpl. subst predctx. lia.

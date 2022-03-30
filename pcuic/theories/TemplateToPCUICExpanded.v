@@ -5,6 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICCasesContexts TemplateToPCUICCorrectness PCUICEtaExpand.
+
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
 (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) || 
 (apply WfAst.wf_mkApps_napp in H; [|easy]; try destruct H as p).
@@ -38,8 +39,12 @@ Proof with eauto using expanded.
   - wf_inv wf (mdecl' & idecl' & []). eapply forall_decls_declared_inductive in d; eauto. 2: now eapply template_to_pcuic_env.
     unfold Σ'.
     erewrite trans_lookup_inductive, declared_inductive_lookup; eauto.
-    econstructor; eauto. cbn. induction a1; cbn; econstructor.
-    + cbn. inversion H0; subst. rewrite map2_bias_left_length. len. eapply H3. eapply r.
+    econstructor; eauto. cbn.
+    + solve_all.
+    + cbn. induction a1; cbn; econstructor.
+      * split.
+        sq. cbn.
+      cbn. inversion H0; subst. rewrite map2_bias_left_length. len. eapply H3. eapply r.
     + inversion H0; subst. inversion H; subst. eapply IHa1; eauto.
     + eapply template_to_pcuic_env; eauto.
   - now (wf_inv wf [[]]; eauto using expanded).

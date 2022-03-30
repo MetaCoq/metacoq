@@ -2088,7 +2088,7 @@ Proof.
     depelim etaΣ.
     eauto.
     depelim etaΣ.
-    solve_all. rewrite -b2. len. eapply b1 => //.
+    solve_all. rewrite -b2. len. eapply H7 => //.
     exact a0.
   - intros Γ0 v etaΣ.
     move=> /erases_mkApps_inv; intros [(?&?&?&?&?&?&?)|(?&?&?&?&?)]; subst.

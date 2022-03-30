@@ -1,4 +1,4 @@
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping TemplateToPCUIC.
 
 Definition isConstruct t :=
    match t with tConstruct _ _ _ => true | _ => false end.
@@ -27,7 +27,12 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
 | expanded_tConst (c : kername) (u : Instance.t) : expanded Γ (tConst c u)
 | expanded_tInd (ind : inductive) (u : Instance.t) : expanded Γ (tInd ind u)
 | expanded_tCase (ci : case_info) (type_info:predicate term)
-        (discr:term) (branches : list (branch term)) : expanded Γ discr -> Forall (fun br => expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches -> expanded Γ (tCase ci type_info discr branches)
+        (discr:term) (branches : list (branch term)) : expanded Γ discr -> 
+        Forall (expanded Γ) type_info.(pparams) ->
+        Forall (fun br =>
+          ∥ All_fold (fun Δ d => ForOption (fun b => expanded (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
+          expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches -> 
+        expanded Γ (tCase ci type_info discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded Γ t -> expanded Γ (tProj proj t)
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) args d : 
   Forall (fun d => let ctx := rev_map (fun  d => 1 + d.(rarg)) mfix in expanded (ctx ++ Γ) d.(dbody)) mfix ->
@@ -44,6 +49,7 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
     expanded Γ (mkApps (tConstruct ind c u) args).
 
 End expanded.
+Derive Signature for expanded.
 
 Lemma expanded_ind :
 forall (Σ : global_env) (P : list nat -> term -> Prop),
@@ -72,13 +78,17 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
    (discr : term) (branches : list (branch term)),
  expanded Σ Γ discr ->
  P Γ discr ->
+ Forall (expanded Σ Γ) type_info.(pparams) ->
+ Forall (P Γ) type_info.(pparams) ->
  Forall
    (fun br : branch term =>
+   ∥ All_fold (fun Δ d => ForOption (fun b => expanded Σ (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
 	expanded Σ (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
   Forall
   (fun br : branch term =>
- P (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
- P Γ (tCase ci type_info discr branches)) ->
+    ∥ All_fold (fun Δ d => ForOption (fun b => P (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
+    P (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
+    P Γ (tCase ci type_info discr branches)) ->
 (forall (Γ : list nat) (proj : projection) (t : term),
  expanded Σ Γ t -> P Γ t -> P Γ (tProj proj t)) ->
 (forall (Γ : list nat) (mfix : mfixpoint term) (idx : nat) 
@@ -115,6 +125,12 @@ Proof.
   - eapply HEvar; eauto. clear - f H. induction H; econstructor; eauto.
   - eapply HApp; eauto. clear - f H0. induction H0; econstructor; eauto.
   - eapply HCase; eauto. induction H; econstructor; eauto.
+    clear -H1 f. induction H1; constructor; auto.
+    clear -H0 f.
+    revert H0. induction 1; constructor; auto.
+    split. destruct H as [[] ?]; constructor; auto.
+    clear -X f. induction X; constructor; auto. destruct p; constructor; auto.
+    now apply f.
   - assert (Forall (P Γ) args). { clear - H0 f. induction H0; econstructor; eauto. }
     eapply HFix; eauto.
     revert H. clear - f.
@@ -124,4 +140,263 @@ Proof.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
   - eapply HConstruct; eauto.
     clear - H1 f. induction H1; econstructor; eauto.
+Qed.
+
+Record expanded_constant_decl Σ (cb : constant_body) : Prop :=
+  { expanded_body : on_Some_or_None (expanded Σ []) cb.(cst_body);
+    expanded_type := expanded Σ [] cb.(cst_type) }.
+    
+Definition expanded_decl Σ d :=
+  match d with
+  | ConstantDecl cb => expanded_constant_decl Σ cb
+  | InductiveDecl idecl => True
+  end.
+    
+Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : global_declarations), Prop :=
+| expanded_global_nil : expanded_global_declarations univs []
+| expanded_global_cons decl Σ : expanded_global_declarations univs Σ -> 
+  expanded_decl {| universes := univs; declarations := Σ |} decl.2 ->
+  expanded_global_declarations univs (decl :: Σ).
+
+Definition expanded_global_env (g : global_env) :=
+  expanded_global_declarations g.(universes) g.(declarations).
+
+Definition expanded_pcuic_program (p : pcuic_program) :=
+  expanded_global_env p.1 /\ expanded p.1 [] p.2.
+
+
+From Coq Require Import ssreflect.
+From Equations Require Import Equations.
+
+From MetaCoq.PCUIC Require Import PCUICInductiveInversion PCUICLiftSubst PCUICSigmaCalculus.
+
+Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
+Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
+
+Lemma expanded_mkApps_expanded {Σ Γ f args} : 
+  expanded Σ Γ f -> All (expanded Σ Γ) args ->
+  expanded Σ Γ (mkApps f args).
+Proof.
+  intros.
+  destruct (isConstruct f || isFix f || isRel f) eqn:eqc.
+  destruct f => //.
+  - depelim H; solve_discr. eapply expanded_tRel; tea. cbn in Hle. lia. solve_all.
+    destruct args0 using rev_case; cbn in *; subst. cbn in H. congruence.
+    rewrite mkApps_app in H2; noconf H2.
+  - depelim H; solve_discr.
+    destruct args0 using rev_case; cbn in *; subst. cbn in H. congruence.
+    rewrite mkApps_app in H2; noconf H2.
+    eapply expanded_tConstruct_app; tea. cbn in H0. lia. solve_all.
+  - depelim H; solve_discr.
+    destruct args0 using rev_case; cbn in *; subst. cbn in H. congruence.
+    rewrite mkApps_app in H2; noconf H2.
+  - eapply expanded_mkApps. now rewrite eqc. auto. solve_all.
+Qed.
+
+Lemma expanded_lift Σ n k b Γ Δ Δ' : 
+  #|Γ| = k ->
+  #|Δ'| = n ->
+  expanded Σ (Γ ++ Δ) b -> 
+  expanded Σ (Γ ++ Δ' ++ Δ) (lift n k b).
+Proof.
+  intros Hk Hn.
+  remember (Γ ++ Δ)%list as Γ_.
+  intros exp; revert Γ n k Hn Hk HeqΓ_.
+  induction exp using expanded_ind; intros Γ' n' k Hn Hk ->.
+  all:try solve[ cbn; econstructor => // ].
+  2,7:try solve [cbn; econstructor => //; solve_all ].
+  - subst n'. rewrite lift_mkApps /=.
+    destruct (Nat.leb_spec k n).
+    * rewrite nth_error_app_ge in H. lia.
+      eapply expanded_tRel.
+      rewrite nth_error_app_ge; [lia|].
+      rewrite nth_error_app_ge; [lia|]. erewrite <- H. lia_f_equal.
+      now len. solve_all.
+    * eapply expanded_tRel.
+      rewrite nth_error_app_lt in H; [lia|].
+      rewrite nth_error_app_lt; [lia|]. tea. now len. solve_all.
+  - cbn. econstructor.
+    eapply (IHexp (0 :: Γ') n' (S k)); cbn; auto; lia.
+  - cbn. econstructor. apply IHexp1; auto.
+    eapply (IHexp2 (0 :: Γ') n' (S k)); cbn; auto; lia.
+  - rewrite lift_mkApps.
+    destruct (isConstruct (lift n' k f6) || isFix (lift n' k f6) || isRel (lift n' k f6)) eqn:eqc.
+    specialize (IHexp  _ _ _ Hn Hk eq_refl).
+    eapply expanded_mkApps_expanded => //. solve_all.
+    eapply expanded_mkApps => //. now rewrite eqc. now eapply IHexp. solve_all.
+  - cbn. econstructor. eauto. solve_all. cbn. solve_all.
+    solve_all.
+    specialize (H1 (repeat 0 #|bcontext x| ++ Γ') n' (#|bcontext x| + k) Hn).
+    forward H1. len.
+    forward H1. now rewrite app_assoc.
+    rewrite /id. rewrite app_assoc. apply H1.
+  - rewrite lift_mkApps. cbn.
+    eapply expanded_tFix.
+    + solve_all.
+      specialize (a 
+      (rev_map (fun d0 : def term => S (rarg d0))
+      (map (map_def (lift n' k) (lift n' (#|mfix| + k))) mfix) ++ Γ') n' (#|mfix| + k) Hn).
+      forward a. { rewrite rev_map_spec; len. }
+      forward a. { rewrite app_assoc. f_equal. f_equal.
+        rewrite !rev_map_spec. f_equal. now rewrite map_map_compose /=. }
+      rewrite app_assoc. eapply a.
+    + solve_all.
+    + destruct args => //.
+    + rewrite nth_error_map /= H4 //.
+    + len.
+  - cbn. constructor.
+    solve_all.
+    specialize (a (repeat 0 #|mfix| ++ Γ') n' (#|mfix| + k) Hn).
+    forward a. { len. }
+    forward a. { rewrite app_assoc //. }
+    rewrite app_assoc. eapply a.
+  - rewrite lift_mkApps. cbn.
+    eapply expanded_tConstruct_app; tea. now len.
+    solve_all.
+Qed.
+
+Lemma expanded_subst Σ a k b Γ Δ : 
+    #|Γ| = k ->
+  All (expanded Σ Δ) a -> expanded Σ (Γ ++ repeat 0 #|a| ++ Δ) b -> 
+  expanded Σ (Γ ++ Δ) (subst a k b).
+Proof.
+  intros Hk H.
+  remember (Γ ++ _ ++ Δ)%list as Γ_.
+  intros exp; revert Γ k Hk HeqΓ_.
+  induction exp using expanded_ind; intros Γ' k Hk ->.
+  all:try solve[ cbn; econstructor => // ].
+  2,7:solve[ cbn; econstructor => //; solve_all ].
+  - rewrite subst_mkApps /=.
+    destruct (Nat.leb_spec k n).
+    destruct (nth_error a _) eqn:hnth.
+    * eapply expanded_mkApps_expanded.
+      eapply nth_error_all in H; tea.  
+      eapply (expanded_lift Σ k 0 _ [] Δ Γ'); auto.
+      solve_all. 
+    * rewrite nth_error_app_ge in H0. lia.
+      eapply nth_error_None in hnth.
+      rewrite nth_error_app_ge in H0. rewrite repeat_length. lia.
+      rewrite repeat_length in H0.
+      eapply expanded_tRel. rewrite nth_error_app_ge. lia. erewrite <- H0.
+      lia_f_equal. len. solve_all.
+    * rewrite nth_error_app_lt in H0. lia.  
+      eapply expanded_tRel. rewrite nth_error_app_lt. lia. tea. now len.
+      solve_all.
+  - cbn. econstructor.
+    eapply (IHexp (0 :: Γ') (S k)); cbn; auto; lia.
+  - cbn. econstructor. apply IHexp1; auto.
+    eapply (IHexp2 (0 :: Γ') (S k)); cbn; auto; lia.
+  - rewrite subst_mkApps.
+    destruct (isConstruct (subst a k f6) || isFix (subst a k f6) || isRel (subst a k f6)) eqn:eqc.
+    specialize (IHexp  _ _ Hk eq_refl).
+    eapply expanded_mkApps_expanded => //. solve_all.
+    eapply expanded_mkApps => //. now rewrite eqc. now eapply IHexp. solve_all.
+  - cbn. econstructor. eauto. cbn. solve_all. solve_all.
+    specialize (H2 (repeat 0 #|bcontext x| ++ Γ') (#|bcontext x| + k)).
+    forward H2 by len.
+    forward H2. now rewrite app_assoc.
+    rewrite /id. rewrite app_assoc. apply H2.
+  - rewrite subst_mkApps. cbn.
+    eapply expanded_tFix.
+    + solve_all.
+      specialize (a0 
+      (rev_map (fun d0 : def term => S (rarg d0))
+      (map (map_def (subst a k) (subst a (#|mfix| + k))) mfix) ++ Γ') (#|mfix| + k)).
+      forward a0 by len.
+      forward a0. { rewrite app_assoc. f_equal. f_equal.
+        rewrite !rev_map_spec. f_equal. now rewrite map_map_compose /=. }
+      rewrite app_assoc. eapply a0.
+    + solve_all.
+    + now destruct args.
+    + rewrite nth_error_map /= H5 //.
+    + len. 
+  - cbn. constructor.
+    solve_all.
+    specialize (a0 (repeat 0 #|mfix| ++ Γ') (#|mfix| + k)).
+    forward a0 by len.
+    forward a0. { rewrite app_assoc //. }
+    rewrite app_assoc. eapply a0.
+  - rewrite subst_mkApps. cbn.
+    eapply expanded_tConstruct_app; tea. now len.
+    solve_all.
+Qed.
+
+Lemma All_fold_tip {A : Type} (P : list A -> A -> Type) {x} : All_fold P [x] -> P [] x.
+Proof.
+  intros a; now depelim a.
+Qed.
+
+Lemma expanded_let_expansion Σ (Δ : context) Γ t :
+  All_fold (fun Δ d => match d.(decl_body) with Some b => expanded Σ (repeat 0 #|Δ| ++ Γ) b | None => True end) Δ ->
+  expanded Σ (repeat 0 #|Δ| ++ Γ) t ->
+  expanded Σ (repeat 0 (context_assumptions Δ) ++ Γ) (expand_lets Δ t).
+Proof.
+  revert Γ t.
+  induction Δ using PCUICInduction.ctx_length_rev_ind.
+  - cbn; intros. now rewrite expand_lets_nil.
+  - intros Γ' t ha; destruct d as [na [b|] ty]; cbn; len; cbn.
+    * rewrite expand_lets_vdef /= //.
+      intros exp. relativize (context_assumptions Γ).
+      eapply H. now len.
+      { eapply All_fold_app_inv in ha as [].
+        depelim a. depelim a. cbn in y. cbn in a0.
+        rewrite /subst_context.
+        eapply PCUICParallelReduction.All_fold_fold_context_k.
+        eapply All_fold_impl; tea. cbn; intros.
+        destruct decl_body => //. len in X.
+        cbn. len. eapply expanded_subst. now rewrite repeat_length.
+        auto. cbn. now rewrite repeat_app /= -app_assoc /= in X. }
+      len.
+      rewrite repeat_app -app_assoc /= in exp.
+      eapply All_fold_app_inv in ha as []. eapply All_fold_tip in a. cbn in a.
+      eapply expanded_subst. rewrite repeat_length //. constructor; auto.
+      cbn. exact exp. now len.
+    * rewrite expand_lets_vass /= //.
+      rewrite !repeat_app -!app_assoc.
+      intros exp. relativize (context_assumptions Γ).
+      eapply H. lia.  
+      { eapply All_fold_app_inv in ha as [].
+        depelim a. depelim a. cbn in y. cbn in a0.
+        eapply All_fold_impl; tea. cbn; intros.
+        destruct decl_body => //. len in X.
+        now rewrite repeat_app /= -app_assoc /= in X. }
+      exact exp. lia.
+Qed.
+
+Require Import PCUICUnivSubst.
+
+Lemma subst_instance_isConstruct t u : isConstruct t@[u] = isConstruct t.
+Proof. destruct t => //. Qed.
+Lemma subst_instance_isRel t u : isRel t@[u] = isRel t.
+Proof. destruct t => //. Qed.
+Lemma subst_instance_isFix t u : isFix t@[u] = isFix t.
+Proof. destruct t => //. Qed.
+
+Lemma expanded_subst_instance Σ Γ t u : expanded Σ Γ t -> expanded Σ Γ t@[u].
+Proof.
+  induction 1 using PCUICEtaExpand.expanded_ind; cbn.
+  all:intros; rewrite ?subst_instance_mkApps.
+  all:try solve [econstructor; eauto 1].
+  - econstructor; eauto. now rewrite map_length. solve_all.
+  - econstructor; eauto. solve_all.
+  - econstructor; eauto. 2:solve_all.
+    rewrite subst_instance_isConstruct subst_instance_isFix subst_instance_isRel //.
+  - econstructor; eauto. cbn. solve_all.
+    solve_all. 
+  - cbn; eapply expanded_tFix. solve_all. 
+    rewrite rev_map_spec map_map_compose -rev_map_spec //.
+    solve_all. now destruct args => //.
+    rewrite nth_error_map H4 //.
+    now len.
+  - econstructor; eauto. solve_all.
+  - eapply expanded_tConstruct_app; tea. now len. solve_all.
+Qed.
+
+Lemma expanded_weakening Σ Γ t : expanded Σ Γ t -> forall Γ', expanded Σ (Γ ++ Γ') t.
+Proof.
+  induction 1 using PCUICEtaExpand.expanded_ind; cbn.
+  1:{ intros. eapply expanded_tRel; tea. rewrite nth_error_app_lt.
+     now eapply nth_error_Some_length in H. assumption.
+    solve_all. }
+  all:intros; try solve [econstructor; eauto 1; solve_all; try now rewrite app_assoc].
 Qed.

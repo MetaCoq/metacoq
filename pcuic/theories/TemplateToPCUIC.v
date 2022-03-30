@@ -49,6 +49,8 @@ Record global_env_map :=
 
 Definition global_env_ext_map := global_env_map * universes_decl.
 
+Definition pcuic_program : Type := global_env_ext_map * term.
+  
 Definition global_env_ext_map_global_env_ext (g : global_env_ext_map) : global_env_ext :=
   (trans_env_env (fst g), g.2).
 Coercion global_env_ext_map_global_env_ext : global_env_ext_map >-> global_env_ext.
@@ -207,3 +209,10 @@ Definition trans_global_env (d : Ast.Env.global_env) : global_env_map :=
 
 Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext_map :=
   (trans_global_env (fst Σ), snd Σ).
+
+Notation template_program := Ast.Env.program.
+
+Definition trans_template_program (p : template_program) : pcuic_program :=
+  let Σ' := trans_global (Ast.Env.empty_ext p.1) in 
+  (Σ', trans Σ' p.2).
+  

@@ -24,7 +24,7 @@ Import MCMonadNotation.
 Implicit Types (cf : checker_flags) (Σ : global_env_ext). (* Use {cf} to parameterize by checker_flags where needed *)
 
 (** Translation which expands the lets in constructor arguments contexts and the correspomding
-  branches of pattern-matchings, so that let-expansion becomse unnecessary on the resulting terms.
+  branches of pattern-matchings, so that let-expansion becomes unnecessary on the resulting terms.
 
   The proof of correctness is complicated by the fact that the translation is valid only on well-scoped
   terms, at the lowest level, so we carry around `on_free_vars` hypotheses everywhere. Reduction is 
@@ -5326,4 +5326,71 @@ Proof.
     
   - move=> clt. eapply eval_atom.
     destruct t => //.
+Qed.
+
+From MetaCoq.PCUIC Require Import PCUICEtaExpand.
+
+Lemma trans_isConstruct t : isConstruct t = isConstruct (trans t).
+Proof. destruct t => //. Qed.
+Lemma trans_isRel t : isRel t = isRel (trans t).
+Proof. destruct t => //. Qed.
+Lemma trans_isFix t : isFix t = isFix (trans t).
+Proof. destruct t => //. Qed.
+
+(** Let expansion preserves eta-expandedness *)
+
+Lemma expanded_expand_lets {Σ : global_env} Γ t :
+  expanded Σ Γ t -> 
+  expanded (trans_global_env Σ) Γ (PCUICExpandLets.trans t).
+Proof.
+  induction 1 using expanded_ind; cbn.
+  all:try constructor; auto.
+  - rewrite trans_mkApps /=. eapply expanded_tRel; tea. now len. solve_all.
+  - solve_all.
+  - rewrite trans_mkApps. constructor; eauto; [|solve_all].
+    now rewrite -trans_isConstruct -trans_isRel -trans_isFix.
+  - cbn. solve_all.
+  - do 2 eapply Forall_map. repeat toAll. eapply All_impl; tea. cbn.
+    intros x [expb IH].
+    rewrite trans_bcontext trans_bbody. len; cbn. rewrite /id.
+    split. sq. 
+    { have: (assumption_context (smash_context [] (trans_local (bcontext x)))) by pcuic.
+      clear. generalize (smash_context [] (trans_local (bcontext x))).
+      induction c; intros; constructor.
+      apply IHc. now depelim x0. 
+      destruct a as [na [b|] ty]; cbn; constructor => //.
+      now depelim x0. }
+    relativize (context_assumptions (bcontext x)).
+    destruct expb as [[] ?], IH as [[] ?].
+    eapply expanded_let_expansion.
+    { rewrite /subst_context. eapply PCUICParallelReduction.All_fold_fold_context_k.
+      do 2 eapply All_fold_map_context. cbn.
+      eapply All_fold_impl; tea; cbn. clear -H1. intros.
+      destruct x as [na [b|] ty] => /= //. len. cbn in H. depelim H.
+      eapply expanded_subst. now rewrite repeat_length.
+      eapply All_rev, All_map. solve_all. eapply expanded_subst_instance.
+      len. rewrite app_assoc -repeat_app.
+      now eapply expanded_weakening. }
+    len; exact e0.
+    now len.
+  - rewrite trans_mkApps. cbn. eapply expanded_tFix. solve_all.
+    rewrite rev_map_spec. rewrite rev_map_spec in b.
+    rewrite map_map_compose. cbn. exact b. solve_all.
+    destruct args => //. now rewrite nth_error_map H4. len. now cbn.
+  - solve_all.
+  - rewrite trans_mkApps; eapply expanded_tConstruct_app.
+    eapply (trans_declared_constructor (empty_ext Σ)) in H; tea. len.
+    cbn. now rewrite context_assumptions_smash_context context_assumptions_map /=.
+    solve_all.
+Qed.
+
+Lemma expanded_global_env_expand_lets Σ : 
+  PCUICEtaExpand.expanded_global_env Σ ->
+  EtaExpPCUIC.expanded_global_env (trans_global_env Σ).
+Proof. 
+  intros etaenv; induction etaenv; cbn; constructor; auto.
+  destruct decl as [kn []]; cbn in *; depelim H => //.
+  unfold PCUICExpandLets.trans_constant_body; cbn. constructor. cbn.
+  destruct (cst_body c); cbn => //. cbn in expanded_body.
+  now eapply expanded_expand_lets in expanded_body.
 Qed.

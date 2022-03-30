@@ -5,6 +5,7 @@
     Coq's conversion, the proof is essentially [eq_refl].
     All dependencies are also expanded.*)
 
+
 From Coq Require Import List PeanoNat Bool Lia.
 From MetaCoq.Template Require Export
      utils (* Utility functions *)
@@ -16,7 +17,8 @@ From MetaCoq.Template Require Export
      Induction     (* Induction *)
      LiftSubst     (* Lifting and substitution for terms *)
      UnivSubst     (* Substitution of universe instances *)
-     Typing        (* Typing judgment *).
+     Typing        (* Typing judgment *)
+     config        (* Typing configuration *) .
 
 Open Scope nat.
 Open Scope bs.
@@ -114,6 +116,7 @@ Section Eta.
     | tLambda na ty body => tLambda na ty (eta_expand (up Γ) body)
     | tLetIn na val ty body => tLetIn na (eta_expand Γ val) ty (eta_expand (up Γ) body)
     | tCase ci p disc brs =>
+        let p' := map_predicate id (eta_expand Γ) id p in
         let brs' := map (fun b => {| bcontext := bcontext b; bbody := eta_expand (repeat None #|b.(bcontext)| ++ Γ) b.(bbody) |}) brs in 
         tCase ci p (eta_expand Γ disc) brs'
     | tProj p t => tProj p (eta_expand Γ t)
@@ -205,7 +208,11 @@ Inductive expanded (Γ : list nat): term -> Prop :=
     ind_npars mind + context_assumptions (cstr_args cdecl) = 0 ->
     expanded Γ (tConstruct ind idx u)
 | expanded_tCase (ci : case_info) (type_info:predicate term)
-        (discr:term) (branches : list (branch term)) : expanded Γ discr -> Forall (fun br => expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches -> expanded Γ (tCase ci type_info discr branches)
+        (discr:term) (branches : list (branch term)) :     
+    expanded Γ discr ->
+    Forall (expanded Γ) type_info.(pparams) ->
+    Forall (fun br => expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches -> 
+    expanded Γ (tCase ci type_info discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded Γ t -> expanded Γ (tProj proj t)
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) args d : 
   d.(rarg) < context_assumptions (decompose_prod_assum []  d.(dtype)).1 ->
@@ -258,6 +265,8 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
    (discr : term) (branches : list (branch term)),
  expanded Σ Γ discr ->
  P Γ discr ->
+ Forall (expanded Σ Γ) type_info.(pparams) ->
+ Forall (P Γ) type_info.(pparams) ->
  Forall (fun br : branch term => expanded Σ (repeat 0 #|br.(bcontext)| ++ Γ) (bbody br)) branches ->
  Forall (fun br : branch term => P (repeat 0 #|br.(bcontext)| ++ Γ)%list (bbody br)) branches ->
  P Γ (tCase ci type_info discr branches)) ->
@@ -294,7 +303,9 @@ Proof.
   - eapply HEvar; eauto. clear - f all. induction all; econstructor; eauto.
   - eapply HApp; eauto.  destruct f0; cbn in *; eauto. 
     clear - f all; induction all; econstructor; eauto.
-  - eapply HCase; eauto. induction all; econstructor; eauto.
+  - eapply HCase; eauto.
+    induction H; econstructor; eauto.
+    induction all; econstructor; eauto.
   - assert (Forall (P Γ) args). { clear - f all. induction all; econstructor; eauto. }
     eapply HFix; eauto.
     revert H0. clear - f.
@@ -308,6 +319,38 @@ Qed.
 
 Local Hint Constructors expanded : core.
 
+Definition eta_expand_global_env g := 
+  {| Ast.Env.universes := g.(Ast.Env.universes); 
+    Ast.Env.declarations := eta_global_env g.(Ast.Env.declarations) |}.
+
+Record expanded_constant_decl Σ (cb : Ast.Env.constant_body) : Prop :=
+  { expanded_body : on_Some_or_None (expanded Σ []) cb.(Ast.Env.cst_body);
+    expanded_type := expanded Σ [] cb.(Ast.Env.cst_type) }.
+    
+Definition expanded_decl Σ d :=
+  match d with
+  | Ast.Env.ConstantDecl cb => expanded_constant_decl Σ cb
+  | Ast.Env.InductiveDecl idecl => True
+  end.
+    
+Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : Ast.Env.global_declarations), Prop :=
+| expanded_global_nil : expanded_global_declarations univs []
+| expanded_global_cons decl Σ : expanded_global_declarations univs Σ -> 
+  expanded_decl {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |} decl.2 ->
+  expanded_global_declarations univs (decl :: Σ).
+
+Definition expanded_global_env (g : Ast.Env.global_env) :=
+  expanded_global_declarations g.(Ast.Env.universes) g.(Ast.Env.declarations).
+
+Definition expanded_template_program (p : Ast.Env.program) :=
+  expanded_global_env p.1 /\ expanded p.1 [] p.2.
+
+Notation template_program := Ast.Env.program.
+
+Definition eta_expand_program (p : template_program) : template_program :=
+  let Σ' := eta_expand_global_env p.1 in 
+  (Σ', eta_expand p.1.(declarations) [] p.2).
+  
 Definition isFix_app t :=
   match fst (decompose_app t) with
   | tFix _ _ => true
@@ -483,7 +526,8 @@ Proof.
   - econstructor; eauto. rewrite app_comm_cons. eapply IHHexp2. 2: now simpl_list. eauto.  
   - econstructor; eauto. destruct t; cbn in *; eauto.
     solve_all.
-  - econstructor; eauto. solve_all.
+  - econstructor; eauto. solve_all. cbn in H0.
+    eapply All_map_inv in H0; solve_all. solve_all.
     specialize (b (repeat 0 #|bcontext x| ++ Γ')%list Γ'' Γ).
     autorewrite with list len in b. now  eapply b.
   - destruct t; invs H8.
@@ -529,8 +573,8 @@ Proof.
   - econstructor; eauto. rewrite app_comm_cons. eapply IHexpanded2. now simpl_list.
   - econstructor; eauto. destruct f7; cbn in *; eauto.
     solve_all.
-  - econstructor; eauto. solve_all.
-    specialize (a (repeat 0 #|bcontext x| ++ Γ')%list Γ'' Γ).
+  - econstructor; eauto. solve_all. cbn; solve_all.
+    solve_all. specialize (a (repeat 0 #|bcontext x| ++ Γ')%list Γ'' Γ).
     autorewrite with list len in a. now  eapply a.
   - eapply expanded_tFix. 
     + shelve.
@@ -1036,4 +1080,30 @@ Proof.
      revert H4. generalize (Typing.fix_context mfix). clear.
      induction #|mfix|; intros []; cbn; intros; try congruence; econstructor; eauto.
   - eapply typing_wf_local; eauto.
+Qed.
+
+Lemma expanded_irrel_global_env {Σ Σ' Γ t} :   
+  (* missing condition: same observations of constructor arguments lengths etc *)
+  expanded Σ Γ t -> expanded Σ' Γ t.
+Admitted.
+
+Lemma eta_expand_global_env_expanded {cf : checker_flags} g :
+  Typing.wf g ->
+  expanded_global_env (eta_expand_global_env g).
+Proof.
+  destruct g as [univs Σ]; cbn.
+  unfold expanded_global_env, eta_expand_global_env; cbn.
+  unfold Typing.wf, Typing.on_global_env. intros [onu ond].
+  cbn in *.
+  induction ond; try constructor.
+  destruct d as []; cbn; try constructor; auto. 1,3:todo "weakening of eta expansion".
+  all:red; cbn; auto.
+  do 2 red in o0.
+  split; cbn. destruct (Ast.Env.cst_body); simpl; auto.
+  set (Σ' := {| universes := univs; |}).
+  epose proof (eta_expand_expanded (Σ := Ast.Env.empty_ext Σ') [] [] t (Env.cst_type c)).
+  cbn in H.
+  do 2 (forward H; [todo "eta-expansion preserves well-formedness of global environments"|]).
+  forward H by constructor.
+  todo "weakening of eta expansion".
 Qed.

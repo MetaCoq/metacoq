@@ -12,6 +12,10 @@ From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags).
 
+(* The targe of the translation: well-typed environments and programs *)
+Definition wt_pcuic_program {cf : checker_flags} (p : pcuic_program) :=
+  wf_ext p.1 × ∑ T, typing p.1 [] p.2 T.
+  
 Coercion Ast.Env.fst_ctx : Ast.Env.global_env_ext >-> Ast.Env.global_env.
 
 Definition lengths := 
@@ -40,7 +44,6 @@ Definition plengths :=
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
     @smash_context_length, @context_assumptions_smash_context,
     @arities_context_length).
-  
 
 Lemma ind_predicate_context_length ind mdecl idecl :
   #|Ast.ind_predicate_context ind mdecl idecl| = S #|idecl.(Ast.Env.ind_indices)|.

@@ -116,65 +116,6 @@ Definition eval_template_program (p : Ast.Env.program) (v : Ast.term) :=
 Definition template_expand_obseq (p p' : template_program) (v v' : Ast.term) :=
   v' = EtaExpand.eta_expand p.1.(Ast.Env.declarations) [] v.
   
-Module EtaExpTemplate.
-  Import Ast.Env EtaExpand.
-  Definition eta_expand_global_env g := 
-    {| Ast.Env.universes := g.(Ast.Env.universes); 
-      Ast.Env.declarations := eta_global_env g.(Ast.Env.declarations) |}.
-
-  Record expanded_constant_decl Σ (cb : Ast.Env.constant_body) : Prop :=
-    { expanded_body : on_Some_or_None (expanded Σ []) cb.(Ast.Env.cst_body);
-      expanded_type := expanded Σ [] cb.(Ast.Env.cst_type) }.
-      
-  Definition expanded_decl Σ d :=
-    match d with
-    | Ast.Env.ConstantDecl cb => expanded_constant_decl Σ cb
-    | Ast.Env.InductiveDecl idecl => True
-    end.
-      
-  Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : Ast.Env.global_declarations), Prop :=
-  | expanded_global_nil : expanded_global_declarations univs []
-  | expanded_global_cons decl Σ : expanded_global_declarations univs Σ -> 
-    expanded_decl {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |} decl.2 ->
-    expanded_global_declarations univs (decl :: Σ).
-
-  Definition expanded_global_env (g : Ast.Env.global_env) :=
-    expanded_global_declarations g.(Ast.Env.universes) g.(Ast.Env.declarations).
-
-  Lemma expanded_irrel_global_env {Σ Σ' Γ t} :   
-    (* missing condition: same observations of constructor arguments lengths etc *)
-    expanded Σ Γ t -> expanded Σ' Γ t.
-  Admitted.
-
-  Lemma eta_expand_global_env_expanded {cf : checker_flags} g :
-    Typing.wf g ->
-    expanded_global_env (eta_expand_global_env g).
-  Proof.
-    destruct g as [univs Σ]; cbn.
-    unfold expanded_global_env, eta_expand_global_env; cbn.
-    unfold Typing.wf, Typing.on_global_env. intros [onu ond].
-    cbn in *.
-    induction ond; try constructor.
-    destruct d as []; cbn; try constructor; auto. 1,3:todo "weakening of eta expansion".
-    all:red; cbn => //.
-    do 2 red in o0.
-    split; cbn. destruct (Ast.Env.cst_body) => /= //.
-    set (Σ' := {| universes := univs; |}).
-    epose proof (eta_expand_expanded (Σ := Ast.Env.empty_ext Σ') [] [] t0 (Env.cst_type c)).
-    cbn in H.
-    do 2 (forward H; [todo "eta-expansion preserves well-formedness of global environments"|]).
-    forward H by constructor.
-    todo "weakening of eta expansion".
-  Qed.
-
-  Definition expanded_template_program (p : Ast.Env.program) :=
-    expanded_global_env p.1 /\ expanded p.1 [] p.2.
-End EtaExpTemplate.
-
-Definition eta_expand_program (p : template_program) : template_program :=
-  let Σ' := EtaExpTemplate.eta_expand_global_env p.1 in 
-  (Σ', EtaExpand.eta_expand p.1.(Ast.Env.declarations) [] p.2).
-
 Program Definition template_eta_expand {cf : checker_flags} : self_transform template_program Ast.term eval_template_program eval_template_program :=
  {| name := "eta-expansion of template program";
     pre p := ∥ wt_template_program p ∥;
@@ -203,45 +144,15 @@ Qed.
 
 Import PCUICAstUtils PCUICAst TemplateToPCUIC PCUICGlobalEnv PCUICTyping.
 
-Definition pcuic_program : Type := global_env_ext_map * term.
-  
-Definition wt_pcuic_program {cf : checker_flags} (p : pcuic_program) :=
-  wf_ext p.1 × ∑ T, typing p.1 [] p.2 T.
-
-Definition eval_pcuic_program (p : pcuic_program) (v : term) :=
-  PCUICWcbvEval.eval p.1.(trans_env_env) p.2 v.
-
 Definition template_to_pcuic_obseq (p : Ast.Env.program) (p' : pcuic_program) (v : Ast.term) (v' : term) :=
   let Σ := Ast.Env.empty_ext p.1 in v' = trans (trans_global Σ) v.
 
-Definition trans_template_program (p : template_program) : pcuic_program :=
-  let Σ' := trans_global (Ast.Env.empty_ext p.1) in 
-  (Σ', trans Σ' p.2).
 
 Import Transform TemplateToPCUICCorrectness.
 
 Module EtaExpPCUIC.
   Import PCUICAst.PCUICEnvironment PCUICEtaExpand TemplateToPCUIC TemplateToPCUICExpanded TemplateToPCUICCorrectness.
-
-  Record expanded_constant_decl Σ (cb : constant_body) : Prop :=
-    { expanded_body : on_Some_or_None (expanded Σ []) cb.(cst_body);
-      expanded_type := expanded Σ [] cb.(cst_type) }.
-      
-  Definition expanded_decl Σ d :=
-    match d with
-    | ConstantDecl cb => expanded_constant_decl Σ cb
-    | InductiveDecl idecl => True
-    end.
-      
-  Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : global_declarations), Prop :=
-  | expanded_global_nil : expanded_global_declarations univs []
-  | expanded_global_cons decl Σ : expanded_global_declarations univs Σ -> 
-    expanded_decl {| universes := univs; declarations := Σ |} decl.2 ->
-    expanded_global_declarations univs (decl :: Σ).
-
-  Definition expanded_global_env (g : global_env) :=
-    expanded_global_declarations g.(universes) g.(declarations).
-
+  
   Arguments trans_global_env : simpl never.
   Lemma expanded_trans_global_env {cf : checker_flags} {Σ} {wfΣ : Template.Typing.wf Σ} :
     EtaExpTemplate.expanded_global_env Σ ->
@@ -269,9 +180,6 @@ Module EtaExpPCUIC.
     eapply env_eq; reflexivity. rewrite -H //.
     eapply TypingWf.typing_wf in o2 as [] => //.
   Qed.
-
-  Definition expanded_pcuic_program (p : pcuic_program) :=
-    expanded_global_env p.1 /\ expanded p.1 [] p.2.
 
   Lemma expanded_trans_program {cf : checker_flags} p (t : wt_template_program p) :
     EtaExpTemplate.expanded_template_program p ->
@@ -336,52 +244,16 @@ Definition expand_lets_program (p : pcuic_program) :=
   ((build_global_env_map Σ', p.1.2), PCUICExpandLets.trans p.2).
 
 Import PCUICEtaExpand PCUICExpandLets PCUICExpandLetsCorrectness.
-
-Lemma trans_isConstruct t : isConstruct t = isConstruct (trans t).
-Proof. destruct t => //. Qed.
-Lemma trans_isRel t : isRel t = isRel (trans t).
-Proof. destruct t => //. Qed.
-Lemma trans_isFix t : isFix t = isFix (trans t).
-Proof. destruct t => //. Qed.
-
-Lemma expanded_expand_lets {Σ : global_env} Γ t : PCUICEtaExpand.expanded Σ Γ t -> PCUICEtaExpand.expanded (PCUICExpandLets.trans_global_env Σ) Γ (PCUICExpandLets.trans t).
-Proof.
-  induction 1 using PCUICEtaExpand.expanded_ind; cbn.
-  all:try constructor; auto.
-  - rewrite trans_mkApps /=. eapply expanded_tRel; tea. now len. solve_all.
-  - solve_all.
-  - rewrite trans_mkApps. constructor; eauto; [|solve_all].
-    now rewrite -trans_isConstruct -trans_isRel -trans_isFix.
-  - do 2 eapply Forall_map. repeat toAll. eapply All_impl; tea. cbn.
-    intros x [expb IH].
-    rewrite trans_bcontext trans_bbody. len; cbn. rewrite /id.
-    todo "needs a lemma".
-  - rewrite trans_mkApps. cbn. eapply expanded_tFix. solve_all.
-    rewrite rev_map_spec. rewrite rev_map_spec in b.
-    rewrite map_map_compose. cbn. exact b. solve_all.
-    destruct args => //. now rewrite nth_error_map H4. len. now cbn.
-  - solve_all.
-  - rewrite trans_mkApps; eapply expanded_tConstruct_app.
-    eapply (trans_declared_constructor (empty_ext Σ)) in H; tea. len.
-    cbn. now rewrite context_assumptions_smash_context context_assumptions_map /=.
-    solve_all.
-Qed.
     
 Lemma expanded_expand_lets_program {cf : checker_flags} p (wtp : wt_pcuic_program p) :
   EtaExpPCUIC.expanded_pcuic_program p ->
   EtaExpPCUIC.expanded_pcuic_program (expand_lets_program p).
 Proof.
   destruct p as [[Σ udecl] t]; intros [etaenv etat].
-  destruct wtp as [? [T HT]]. split.
-  cbn in *. destruct Σ as [[univs env] map repr]; cbn in *.
-  destruct w; cbn in *. clear T HT. red in o; cbn in *.
-  red in etaenv; cbn in *. clear etat. red. cbn.
-  { destruct o. clear o o0 map repr.
-    induction etaenv; cbn; constructor; auto. depelim o1; eauto.
-    destruct decl as [kn []]; cbn in *; depelim H => //.
-    unfold PCUICExpandLets.trans_constant_body; cbn. constructor. cbn.
-    destruct (cst_body c); cbn => //. cbn in expanded_body.
-    now eapply expanded_expand_lets in expanded_body. }
+  clear wtp. cbn in *.
+  split; cbn.
+  clear -etaenv.
+  
   cbn in *.
   now eapply expanded_expand_lets in etat.
 Qed.

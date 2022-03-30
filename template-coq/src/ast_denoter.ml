@@ -198,7 +198,7 @@ struct
       let dp = DirPath.make (List.map Id.of_string comps) in
       let idx = int_of_string last in
       (* TODO handle universes from workers *)
-      Univ.Level.make (Univ.Level.UGlobal.make dp "" idx)
+      Univ.Level.make (Univ.UGlobal.make dp "" idx)
     | Universes0.Level.Var n -> Univ.Level.var (unquote_int n)
 
   let unquote_level_expr (trm : Universes0.Level.t * quoted_int) : Univ.Universe.t =

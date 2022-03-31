@@ -786,7 +786,7 @@ Section Trans_Global.
       rewrite nth_error_map.
       destruct nth_error eqn:hnth => /= //.
       assert (wfty : WfAst.wf Σ (Ast.Env.ind_type o)).
-      { eapply declared_inductive_wf; eauto. eapply typing_wf_wf; eauto. split; eauto. }
+      { eapply declared_inductive_wf; eauto. eapply typing_wf_sigma; eauto. split; eauto. }
       generalize (trans_destArity Σ [] (Ast.Env.ind_type o) wfty wfΣ').
       destruct AstUtils.destArity as [[ctx ps]|] eqn:eq' => /= // -> //.
       now rewrite context_assumptions_map.
@@ -1221,14 +1221,7 @@ Section Trans_Global.
   Ltac wf_inv H := try apply WfAst.wf_inv in H; simpl in H; rdest.
 
   Lemma wf_wf_decl_pred : Typing.on_global_env (fun Σ => WfAst.wf_decl_pred Σ) Σ.
-  Proof.
-    move: (typing_wf_wf _ wfΣ).
-    eapply on_global_env_impl.
-    intros.
-    destruct T; simpl in *; auto.
-    destruct X0 as [s [Ht Hs]].
-    red. split; auto.
-  Qed.
+  Proof. now eapply typing_wf_sigma. Qed.
   Hint Resolve wf_wf_decl_pred : wf.
 
   Lemma nth_error_map2 {A B C} (f : A -> B -> C) n l l' a b :

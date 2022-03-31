@@ -493,8 +493,7 @@ Proof.
     eapply WfAst.wf_subst_instance.
     eapply declared_constant_wf in H.
     now rewrite H0 in H.
-    apply typing_wf_sigma in wfΣ.
-    now eapply on_global_wf_Forall_decls.
+    now apply typing_wf_sigma in wfΣ.
 
   - eapply IHev2.
     wf_inv wf [mdecl' [idecl' []]].
@@ -511,7 +510,7 @@ Proof.
       eapply (wf_case_branch_context_gen (ind:=(ci.(ci_ind), c))); tea.
       now eapply typing_wf_sigma.
       eapply declared_inductive_wf_ctors.
-      now eapply on_global_wf_Forall_decls, typing_wf_sigma.
+      now eapply typing_wf_sigma.
       apply H0. apply a1.
 
   - apply IHev2.
@@ -602,8 +601,7 @@ Proof.
     eapply IHev. apply WfAst.wf_subst_instance.
     eapply declared_constant_wf in H.
     now rewrite H0 in H.
-    apply typing_wf_sigma in wfΣ.
-    now eapply on_global_wf_Forall_decls.
+    now apply typing_wf_sigma in wfΣ.
 
   - wf_inv wf [mdecl' [idecl' [decli ?]]].
     pose proof (declared_inductive_inj decli (proj1 H0)) as []. subst mdecl' idecl'.
@@ -636,7 +634,7 @@ Proof.
         eapply (wf_case_branch_context_gen (ind:=(ci.(ci_ind), c))); tea.
         now eapply typing_wf_sigma.
         eapply declared_inductive_wf_ctors.
-        now eapply on_global_wf_Forall_decls, typing_wf_sigma.
+        now eapply typing_wf_sigma.
         apply H0. }
     rewrite (trans_iota_red Σ ci.(ci_ind) mdecl idecl) in IHev2.
     { eapply All2_length in a1. len in a1. }

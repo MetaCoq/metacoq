@@ -148,7 +148,7 @@ Definition wf_universe Σ s :=
   | Universe.lProp
   | Universe.lSProp => True
   | Universe.lType u =>
-    forall l, UnivExprSet.In l u -> LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ)
+    forall l, LevelExprSet.In l u -> LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ)
   end.
 
 Reserved Notation "'wf_local' Σ Γ " (at level 9, Σ, Γ at next level).

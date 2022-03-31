@@ -20,7 +20,7 @@ Section CheckerFlags.
   Lemma wf_universe_type0 Σ : wf_universe Σ Universe.type0.
   Proof.
     simpl.
-    intros l hin%UnivExprSet.singleton_spec.
+    intros l hin%LevelExprSet.singleton_spec.
     subst l. simpl.
     apply LS.union_spec. right; apply global_levels_Set.
   Qed.
@@ -28,7 +28,7 @@ Section CheckerFlags.
   Lemma wf_universe_type1 Σ : wf_universe Σ Universe.type1.
   Proof.
     simpl.
-    intros l hin%UnivExprSet.singleton_spec.
+    intros l hin%LevelExprSet.singleton_spec.
     subst l. simpl.
     apply LS.union_spec. right; apply global_levels_Set.
   Qed.
@@ -36,8 +36,8 @@ Section CheckerFlags.
   Lemma wf_universe_super {Σ u} : wf_universe Σ u -> wf_universe Σ (Universe.super u).
   Proof.
     destruct u; cbn.
-    1-2:intros _ l hin%UnivExprSet.singleton_spec; subst l; apply wf_universe_type1;
-     now apply UnivExprSet.singleton_spec.
+    1-2:intros _ l hin%LevelExprSet.singleton_spec; subst l; apply wf_universe_type1;
+     now apply LevelExprSet.singleton_spec.
     intros Hl.
     intros l hin. 
     eapply Universes.spec_map_succ in hin as [x' [int ->]].
@@ -48,7 +48,7 @@ Section CheckerFlags.
     wf_universe Σ (Universe.sup u u').
   Proof.
     destruct u, u'; cbn; auto.
-    intros Hu Hu' l [Hl|Hl]%UnivExprSet.union_spec.
+    intros Hu Hu' l [Hl|Hl]%LevelExprSet.union_spec.
     now apply (Hu _ Hl).
     now apply (Hu' _ Hl).
   Qed.
@@ -261,7 +261,7 @@ Section CheckerFlags.
 
     Definition wf_universeb (s : Universe.t) : bool :=
       match s with
-      | Universe.lType l => UnivExprSet.for_all (fun l => LevelSet.mem (UnivExpr.get_level l) (global_ext_levels Σ)) l
+      | Universe.lType l => LevelExprSet.for_all (fun l => LevelSet.mem (LevelExpr.get_level l) (global_ext_levels Σ)) l
       | _ => true
       end.
 
@@ -270,7 +270,7 @@ Section CheckerFlags.
     Proof.
       destruct u; simpl; try now constructor.
       eapply iff_reflect.
-      rewrite UnivExprSet.for_all_spec.
+      rewrite LevelExprSet.for_all_spec.
       split; intros.
       - intros l Hl; specialize (H l Hl).
         now eapply LS.mem_spec.
@@ -908,7 +908,7 @@ Qed.
   Proof.
     intros ond Ht; destruct u => //. 
     cbn in Ht. unfold closedu_universe, closedu_universe_levels.
-    eapply UnivExprSet.for_all_spec.
+    eapply LevelExprSet.for_all_spec.
     intros x y ?; subst; auto.
     intros i hi. specialize (Ht i hi).
     unfold closedu_level_expr.

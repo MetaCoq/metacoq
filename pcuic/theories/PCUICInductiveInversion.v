@@ -1805,11 +1805,11 @@ Section Betweenu.
     | _ => true
     end.
 
-  Definition betweenu_level_expr (s : UnivExpr.t) :=
-    betweenu_level (UnivExpr.get_level s).
+  Definition betweenu_level_expr (s : LevelExpr.t) :=
+    betweenu_level (LevelExpr.get_level s).
 
-  Definition betweenu_universe0 (u : AlgebraicExpr.t) :=
-    UnivExprSet.for_all betweenu_level_expr u.
+  Definition betweenu_universe0 (u : LevelAlgExpr.t) :=
+    LevelExprSet.for_all betweenu_level_expr u.
   
   Definition betweenu_universe (u : Universe.t) :=
     match u with 
@@ -2205,7 +2205,7 @@ Proof.
       constructor. lia.
     + do 6 red in Ra. rewrite checku in Ra.
       specialize  (Ra _ sat).
-      constructor. now rewrite !Universes.AlgebraicExpr.val_make in Ra.
+      constructor. now rewrite !Universes.LevelAlgExpr.val_make in Ra.
 Qed.
 
 Lemma All2_fold_inst {cf} {le} {Σ} {wfΣ : wf Σ} mdecl l v i i' u u' Γ' Γ : 

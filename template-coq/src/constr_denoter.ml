@@ -167,7 +167,7 @@ struct
         let num = int_of_string n in
         let dp = DirPath.make (List.map Id.of_string dp) in
         (* TODO handle univs created in workers *)
-        let l = Univ.Level.make (Univ.Level.UGlobal.make dp "" num) in
+        let l = Univ.Level.make (Univ.UGlobal.make dp "" num) in
         try
           let evm = Evd.add_global_univ evm l in
           if !strict_unquote_universe_mode then

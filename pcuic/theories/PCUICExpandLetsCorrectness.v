@@ -23,6 +23,8 @@ Import MCMonadNotation.
 
 Implicit Types (cf : checker_flags) (Σ : global_env_ext). (* Use {cf} to parameterize by checker_flags where needed *)
 
+Set Default Proof Using "Type*".
+
 (** Translation which expands the lets in constructor arguments contexts and the correspomding
   branches of pattern-matchings, so that let-expansion becomes unnecessary on the resulting terms.
 
@@ -5338,6 +5340,7 @@ Lemma trans_isFix t : isFix t = isFix (trans t).
 Proof. destruct t => //. Qed.
 
 (** Let expansion preserves eta-expandedness *)
+Set Printing Width 150.
 
 Lemma expanded_expand_lets {Σ : global_env} Γ t :
   expanded Σ Γ t -> 
@@ -5363,12 +5366,12 @@ Proof.
     relativize (context_assumptions (bcontext x)).
     destruct expb as [[] ?], IH as [[] ?].
     eapply expanded_let_expansion.
-    { rewrite /subst_context. eapply PCUICParallelReduction.All_fold_fold_context_k.
+    { rewrite /subst_context.
+      red; sq. eapply PCUICParallelReduction.All_fold_fold_context_k.
       do 2 eapply All_fold_map_context. cbn.
-      eapply All_fold_impl; tea; cbn. clear -H1. intros.
-      destruct x as [na [b|] ty] => /= //. len. cbn in H. depelim H.
+      eapply All_fold_impl; tea; cbn. clear -H1. intros ??; len; intros []; cbn; constructor.
       eapply expanded_subst. now rewrite repeat_length.
-      eapply All_rev, All_map. solve_all. eapply expanded_subst_instance.
+      eapply All_Forall, All_rev, All_map. solve_all. eapply expanded_subst_instance.
       len. rewrite app_assoc -repeat_app.
       now eapply expanded_weakening. }
     len; exact e0.
@@ -5384,13 +5387,52 @@ Proof.
     solve_all.
 Qed.
 
-Lemma expanded_global_env_expand_lets Σ : 
+Lemma expanded_trans_local {Σ} Γ ctx : 
+  expanded_context Σ Γ ctx -> expanded_context (trans_global_env Σ) Γ (trans_local ctx).
+Proof.
+  rewrite /expanded_context.
+  intros [a]; split.
+  eapply All_fold_map_context, All_fold_impl; tea; cbv beta; intros ??; cbn; intros []; 
+    constructor; len; auto using expanded_expand_lets.
+Qed.
+
+Lemma expanded_smash_context {Σ} Γ ctx : 
+  expanded_context Σ Γ ctx -> expanded_context Σ Γ (smash_context [] ctx).
+Proof.
+  rewrite /expanded_context.
+  intros [a].
+  forward (@smash_context_assumption_context nil ctx). constructor.
+  generalize (smash_context [] ctx). clear.
+  intros c a; induction a. repeat constructor. destruct IHa; sq.
+  now repeat constructor.
+Qed.
+
+Lemma wf_cons_inv {cf} univs (Σ : global_declarations) d : wf {| universes := univs; declarations := d :: Σ |} -> wf {| universes := univs; declarations := Σ |}.
+Proof.
+  intros []. split => //. now depelim o0.
+Qed.
+
+Lemma expanded_global_env_expand_lets {cf} Σ {wfΣ : wf Σ} :
   PCUICEtaExpand.expanded_global_env Σ ->
-  EtaExpPCUIC.expanded_global_env (trans_global_env Σ).
+  expanded_global_env (trans_global_env Σ).
 Proof. 
+  destruct Σ as [[univs Σ] udecl]. cbn. unfold expanded_global_env; cbn. 
   intros etaenv; induction etaenv; cbn; constructor; auto.
-  destruct decl as [kn []]; cbn in *; depelim H => //.
-  unfold PCUICExpandLets.trans_constant_body; cbn. constructor. cbn.
-  destruct (cst_body c); cbn => //. cbn in expanded_body.
-  now eapply expanded_expand_lets in expanded_body.
+  - forward IHetaenv by eapply wf_cons_inv; tea. auto.
+  - forward IHetaenv by eapply wf_cons_inv; tea.
+    destruct decl as [kn []]; cbn in *; depelim H => //.
+    * unfold PCUICExpandLets.trans_constant_body; cbn.
+      constructor. cbn.
+      destruct (cst_body c); cbn => //. cbn in expanded_body.
+      now eapply expanded_expand_lets in expanded_body.
+    * set (Σ' := {| T.PCUICEnvironment.universes := _; T.PCUICEnvironment.declarations := Σ |}) in *.
+      change {| T.PCUICEnvironment.universes := _ |} with (trans_global_env Σ').
+      constructor.
+      + cbn. apply (expanded_trans_local (Σ := (Σ', udecl)) _ _ expanded_params).
+      + cbn. solve_all. eapply All_mapi. eapply All_Alli; tea. intros n x [].
+        constructor. cbn. solve_all.
+        destruct H. constructor.
+        { cbn. eapply (expanded_trans_local (Σ := (Σ', udecl))) in expanded_cstr_args.
+          eapply (expanded_smash_context (Σ := (trans_global_env Σ', udecl))) in expanded_cstr_args.
+          now len. }
 Qed.

@@ -151,9 +151,9 @@ Record expanded_constant_decl Σ (cb : constant_body) : Prop :=
     (* expanded_type : expanded Σ [] cb.(Ast.Env.cst_type) }. *)
 
 Record expanded_constructor_decl Σ mdecl cdecl :=
-  { expanded_cstr_args : expanded_context Σ (repeat 0 (#|mdecl.(ind_params)| + #|mdecl.(ind_bodies)|)) cdecl.(cstr_args);
+  { expanded_cstr_args : expanded_context Σ (repeat 0 (#|mdecl.(ind_params)| + #|mdecl.(ind_bodies)|)) cdecl.(cstr_args) }.
     (* expanded_cstr_indices : All (expanded Σ []) cdecl.(cstr_indices); *)
-    expanded_cstr_type : expanded Σ (repeat 0 #|mdecl.(ind_bodies)|) cdecl.(cstr_type) }.
+    (* expanded_cstr_type : expanded Σ (repeat 0 #|mdecl.(ind_bodies)|) cdecl.(cstr_type) }. *)
     
 Record expanded_inductive_decl Σ mdecl idecl :=
   { (* expanded_ind_type : expanded Σ [] idecl.(ind_type); *)

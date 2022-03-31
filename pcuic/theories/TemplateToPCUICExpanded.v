@@ -233,3 +233,125 @@ Proof with eauto using expanded.
   - wf_inv wf [[[]]]. eapply forall_decls_declared_constructor in H; eauto. 2: now eapply template_to_pcuic_env.
     eapply expanded_tConstruct_app. eauto. cbn. unfold trans_local. now rewrite map_length context_assumptions_map. solve_all.
 Qed.
+
+
+Lemma wf_cons_inv {cf} univs (Σ : global_declarations) d : wf {| universes := univs; declarations := d :: Σ |} -> wf {| universes := univs; declarations := Σ |}.
+Proof.
+  intros []. split => //. now depelim o0.
+Qed.
+
+Lemma template_wf_cons_inv {cf} univs (Σ : Ast.Env.global_declarations) d : Typing.wf {| Ast.Env.universes := univs; Ast.Env.declarations := d :: Σ |} ->
+  let Σ' := {| Ast.Env.universes := univs; Ast.Env.declarations := Σ |} in
+  Typing.wf Σ' × Typing.on_global_decl (WfAst.wf_decl_pred) (Σ', Ast.universes_decl_of_decl d.2) d.1 d.2
+  × ST.on_udecl univs (Ast.universes_decl_of_decl d.2).
+Proof.
+  intros wf; split.
+  destruct wf. split => //. now depelim o0.
+  eapply typing_wf_wf in wf. depelim wf.
+  cbn in o0. depelim o0. cbn. split => //.
+  eapply TypingWf.on_global_decl_impl; tea. cbn.
+  intros. destruct T => //. red. red in X0. destruct X0. intuition auto.
+  cbn. split => //.
+Qed.
+
+Lemma trans_global_env_cons univs (Σ : Ast.Env.global_declarations) decl : 
+  trans_global_env {| S.Env.universes := univs; S.Env.declarations := decl :: Σ |} = 
+  let Σ' := trans_global_env {| S.Env.universes := univs; S.Env.declarations := Σ |} in 
+  add_global_decl Σ' (decl.1, trans_global_decl Σ' decl.2). 
+Proof. reflexivity. Qed.
+
+Arguments trans_global_env : simpl never.
+
+Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations) |}.
+Proof. now destruct Σ. Qed.
+
+Lemma eta_template_global_env Σ : Σ = {| S.Env.universes := Σ.(S.Env.universes); S.Env.declarations := Σ.(S.Env.declarations) |}.
+Proof. now destruct Σ. Qed.
+
+Lemma All_fold_map (P : context -> context_decl -> Type) (f : Ast.Env.context_decl -> context_decl) ctx :
+  All_fold P (map f ctx) <~> All_fold (fun Γ d => P (map f Γ) (f d)) ctx.
+Proof.
+  induction ctx.
+  - split; constructor.
+  - cbn. split; intros H; depelim H; constructor; auto; now apply IHctx.
+Qed.
+
+Lemma All_fold_All_mix_left (P : S.Env.context -> S.Env.context_decl -> Type) (Q : S.Env.context_decl -> Type) ctx :
+  All_fold P ctx -> 
+  All Q ctx ->
+  All_fold (fun Γ d => Q d × P Γ d) ctx.
+Proof.
+  induction 1; cbn; intros. constructor.
+  depelim X0. constructor; auto.
+Qed.
+
+Lemma expanded_trans_local {cf} {Σ} {wfΣ : Typing.wf Σ} Γ ctx : 
+  expanded_global_env (trans_global_env Σ) ->
+  All (WfAst.wf_decl Σ) ctx ->
+  EtaExpand.expanded_context Σ Γ ctx -> 
+  expanded_context (trans_global_env Σ) Γ (trans_local (trans_global_env Σ) ctx).
+Proof.
+  rewrite /expanded_context.
+  intros etaΣ wfctx [a]; split.
+  unfold trans_local.
+  eapply All_fold_map.
+  eapply All_fold_All_mix_left in a; tea.
+  eapply All_fold_impl; tea; cbv beta; intros ??; cbn; unfold WfAst.wf_decl; 
+    intros [wf Hd]; revert Hd wf; intros []; intros [];  constructor; len.
+  eapply trans_expanded in H; auto.
+Qed.
+
+Lemma wf_context_sorts {cf} {Σ ctx ctx' cunivs} {wfΣ : Typing.wf_ext Σ} :
+  Typing.sorts_local_ctx WfAst.wf_decl_pred Σ ctx ctx' cunivs -> 
+  All (WfAst.wf_decl Σ) ctx'.
+Proof.
+  induction ctx' in cunivs |- *; cbn; auto.
+  destruct a as [na [b|] ty].
+  intros [? []]. constructor; auto. eauto.
+  destruct cunivs => //.
+  intros [? []]. constructor; eauto. constructor; cbn; eauto.
+Qed.
+  
+Lemma expanded_trans_global_env {cf} Σ {wfΣ : Typing.wf_ext Σ} :
+  EtaExpand.expanded_global_env Σ ->
+  expanded_global_env (trans_global_env Σ).
+Proof. 
+  destruct Σ as [[univs Σ] udecl]. 
+  cbn -[trans_global_env]. unfold EtaExpand.expanded_global_env; cbn -[trans_global_env].
+  intros etaenv; induction etaenv.
+  - constructor; auto.
+  - destruct wfΣ as [wfΣ onudecl].
+    eapply template_wf_cons_inv in wfΣ as [].
+    forward IHetaenv by tea. split => //.
+    rewrite trans_global_env_cons. set (Σ' := trans_global_env _ ).
+    cbv zeta. constructor. apply IHetaenv.
+    cbn -[add_global_decl trans_global_env].
+    destruct decl as [kn []]; cbn in *; depelim H => //.
+    * unfold trans_constant_body; cbn.
+      constructor. cbn. destruct p.
+      red in o.
+      destruct (Ast.Env.cst_body c); cbn => //. cbn in expanded_body.
+      eapply trans_expanded in expanded_body; eauto.
+      rewrite -/Σ' in expanded_body. now rewrite -eta_global_env.
+      red in o. now destruct o.
+    * rewrite -eta_global_env.
+      constructor.
+      + cbn. eapply expanded_trans_local in expanded_params => //.
+        destruct p; destruct o. now eapply TypingWf.All_local_env_wf_decls.
+      + cbn. destruct p.
+        move: o.(Typing.onInductives). destruct o. intros oni.
+        eapply All_Forall. eapply Forall_All in expanded_ind_bodies.
+        eapply Alli_All_mix in oni; tea. clear expanded_ind_bodies.
+        eapply All_map, Alli_All; tea; cbv beta.
+        intros n oib []. move: (Typing.onConstructors o).
+        intros onc. red in onc.
+        destruct e as [expc]. constructor. eapply Forall_All in expc.
+        eapply All2_All_mix_left in onc; tea. clear expc. solve_all.
+        cbn. solve_all.
+        destruct a as [expargs expty]. constructor.
+        { cbn. eapply expanded_trans_local in expargs; eauto.
+          move: expargs. len.
+          move: b.(Typing.on_cargs) => onargs.
+          eapply @wf_context_sorts in onargs; tea.
+          cbn. split => /= //. exact w. }
+Qed.

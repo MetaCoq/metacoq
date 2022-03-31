@@ -96,6 +96,7 @@ theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
+theories/PCUICProgram.v
 
 theories/Bidirectional/BDEnvironmentTyping.v
 theories/Bidirectional/BDTyping.v

@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
-From MetaCoq.Template Require Import bytestring config utils BasicAst uGraph.
+From MetaCoq.Template Require Import Transform bytestring config utils BasicAst uGraph.
 From MetaCoq.Template Require Pretty Environment Typing WcbvEval EtaExpand.
 Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICTyping
@@ -21,267 +21,13 @@ Local Open Scope string_scope2.
      indices_matter := false;
      lets_in_constructor_types := true |}.
 
-(* Used to show timings of the ML execution *)
- 
-Definition time : forall {A B}, string -> (A -> B) -> A -> B :=
-  fun A B s f x => f x.
-
-Extract Constant time => 
-  "(fun c f x -> let s = Caml_bytestring.caml_string_of_bytestring c in Tm_util.time (Pp.str s) f x)".
-
 (* This is the total erasure function +
   let-expansion of constructor arguments and case branches +
   shrinking of the global environment dependencies +
   the optimization that removes all pattern-matches on propositions. *)
 
-Module Transform.
-  Section Opt.
-     Context {program program' : Type}.
-     Context {value value' : Type}.
-     Context {eval :  program -> value -> Type}.
-     Context {eval' : program' -> value' -> Type}.
-     
-     Definition preserves_eval pre (transform : forall p : program, pre p -> program') obseq :=
-      forall p v (pr : pre p),
-        eval p v ->
-        let p' := transform p pr in
-        exists v',
-        ∥ eval' p' v' × obseq p p' v v' ∥.
-
-    Record t := 
-    { name : string; 
-      pre : program -> Prop; 
-      transform : forall p : program, pre p -> program';
-      post : program' -> Prop;
-      correctness : forall input (p : pre input), post (transform input p);
-      obseq : program -> program' -> value -> value' -> Prop;
-      preservation : preserves_eval pre transform obseq; }.
-
-    Definition run (x : t) (p : program) (pr : pre x p) : program' := 
-      time x.(name) (fun _ => x.(transform) p pr) tt.
-
-  End Opt.
-  Arguments t : clear implicits.
-
-  Section Comp.
-    Context {program program' program'' : Type}.
-    Context {value value' value'' : Type}.
-    Context {eval : program -> value -> Type}.
-    Context {eval' : program' -> value' -> Type}.
-    Context {eval'' : program'' -> value'' -> Type}.
-    
-    Obligation Tactic := idtac.
-    Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'') 
-      (hpp : (forall p, o.(post) p -> o'.(pre) p)) : t program program'' value value'' eval eval'' :=
-      {| 
-        name := (o.(name) ^ " -> " ^ o'.(name))%bs;
-        transform p hp := run o' (run o p hp) (hpp _ (o.(correctness) _ hp));
-        pre := o.(pre);
-        post := o'.(post);
-        obseq g g' v v' := exists g'' v'', o.(obseq) g g'' v v'' × o'.(obseq) g'' g' v'' v'
-        |}.
-    Next Obligation.
-      intros o o' hpp inp pre.
-      eapply o'.(correctness).
-    Qed.
-    Next Obligation.
-      red. intros o o' hpp.
-      intros p v pr ev.
-      eapply o.(preservation) in ev; auto.
-      cbn in ev. destruct ev as [v' [ev]].
-      epose proof (o'.(preservation) (o.(transform) p pr) v').
-      specialize (H (hpp _ (o.(correctness) _ pr))).
-      destruct ev. specialize (H e).
-      destruct H as [v'' [[ev' obs']]].
-      exists v''. constructor. split => //.
-      exists (transform o p pr), v'. now split.
-    Qed.
-  End Comp.
-End Transform.
-
 Import Transform.
 Obligation Tactic := idtac.
-
-Definition self_transform program value eval eval' := Transform.t program program value value eval eval'.
-
-Definition template_program := Ast.Env.program.
-
-Definition wt_template_program {cf : checker_flags} (p : template_program) :=
-  let Σ := Ast.Env.empty_ext p.1 in
-  Template.Typing.wf_ext Σ × ∑ T, Typing.typing Σ [] p.2 T.
-
-Definition eval_template_program (p : Ast.Env.program) (v : Ast.term) :=
-  WcbvEval.eval p.1 p.2 v.  
-
-Definition template_expand_obseq (p p' : template_program) (v v' : Ast.term) :=
-  v' = EtaExpand.eta_expand p.1.(Ast.Env.declarations) [] v.
-  
-Program Definition template_eta_expand {cf : checker_flags} : self_transform template_program Ast.term eval_template_program eval_template_program :=
- {| name := "eta-expansion of template program";
-    pre p := ∥ wt_template_program p ∥;
-    transform p _ := eta_expand_program p;
-    post p := ∥ wt_template_program p ∥ /\ EtaExpTemplate.expanded_template_program p;
-    obseq := template_expand_obseq |}.
-Next Obligation.
-  intros cf [Σ t] [[wfext ht]].
-  cbn. split. split. todo "eta-expansion preserves wf ext and typing".
-  red.
-  destruct ht as [T ht].
-  split; cbn. eapply EtaExpTemplate.eta_expand_global_env_expanded. apply wfext.
-  eapply EtaExpTemplate.expanded_irrel_global_env.
-  epose proof (EtaExpand.eta_expand_expanded (Σ := Ast.Env.empty_ext Σ) [] [] t T).
-  forward H. apply wfext. specialize (H ht).
-  forward H by constructor. exact H.
-Qed.
-Next Obligation.
-  red. intros cf [Σ t] v [[]].
-  unfold eval_template_program.
-  cbn. intros ev.
-  exists (EtaExpand.eta_expand (Ast.Env.declarations Σ) [] v). split. split.
-  todo "eta-expansion preserves evaluation".
-  red. reflexivity.
-Qed.
-
-Import PCUICAstUtils PCUICAst TemplateToPCUIC PCUICGlobalEnv PCUICTyping.
-
-Definition template_to_pcuic_obseq (p : Ast.Env.program) (p' : pcuic_program) (v : Ast.term) (v' : term) :=
-  let Σ := Ast.Env.empty_ext p.1 in v' = trans (trans_global Σ) v.
-
-
-Import Transform TemplateToPCUICCorrectness.
-
-Module EtaExpPCUIC.
-  Import PCUICAst.PCUICEnvironment PCUICEtaExpand TemplateToPCUIC TemplateToPCUICExpanded TemplateToPCUICCorrectness.
-  
-  Arguments trans_global_env : simpl never.
-  Lemma expanded_trans_global_env {cf : checker_flags} {Σ} {wfΣ : Template.Typing.wf Σ} :
-    EtaExpTemplate.expanded_global_env Σ ->
-     let Σ' := trans_global_env Σ in
-    expanded_global_env Σ'.(trans_env_env).
-  Proof.
-    destruct Σ as [univs Σ]; cbn -[trans_global_env].
-    unfold expanded_global_env, EtaExpTemplate.expanded_global_env; cbn -[trans_global_env].
-    intros hexp; induction hexp. cbn. constructor; auto.
-    depelim wfΣ. cbn in *. simpl in *.
-    depelim o0.  
-    forward IHhexp. split. apply o. now cbn.
-    constructor => //.
-    red.
-    red in o2.
-    cbn. destruct d => /= //.
-    cbn in *. move: H.
-    intros []; split => //. cbn in *. red in o2.
-    destruct (Ast.Env.cst_body c); cbn in *; auto.
-    unshelve eapply trans_expanded in expanded_body0; tc. red. red. split => //.
-    cbn in *.
-    set (Σ' := trans_env_env (trans_global_env _)) in *.
-    set (Σ'' := {| universes := _ |}).
-    assert (Σ' = Σ'').
-    eapply env_eq; reflexivity. rewrite -H //.
-    eapply TypingWf.typing_wf in o2 as [] => //.
-  Qed.
-
-  Lemma expanded_trans_program {cf : checker_flags} p (t : wt_template_program p) :
-    EtaExpTemplate.expanded_template_program p ->
-    expanded_pcuic_program (trans_template_program p).
-  Proof.
-    intros [etaenv etat].
-    destruct t as [? [T HT]]. split.
-    unshelve eapply expanded_trans_global_env => //; tc. apply w.
-    unshelve eapply trans_expanded => //; tc. eapply w.
-    now unshelve eapply TypingWf.typing_wf in HT.
-  Qed.
-
-End EtaExpPCUIC.
-
-Lemma trans_template_program_wt {cf : checker_flags} p (wtp : wt_template_program p) : wt_pcuic_program (trans_template_program p).
-Proof.
-  move: p wtp.
-  intros [Σ t] [wfext ht].
-  unfold wt_pcuic_program, trans_template_program; cbn in *.
-  cbn. split. eapply template_to_pcuic_env_ext in wfext. apply wfext.
-  destruct ht as [T HT]. exists (trans (trans_global_env Σ) T).
-  eapply (template_to_pcuic_typing (Σ := Ast.Env.empty_ext Σ) []). apply wfext.
-  apply HT.
-Qed.
-
-Program Definition template_to_pcuic_transform {cf : checker_flags} : 
-  Transform.t template_program pcuic_program Ast.term term 
-  eval_template_program eval_pcuic_program :=
- {| name := "template to pcuic";
-    pre p := ∥ wt_template_program p ∥ /\ EtaExpTemplate.expanded_template_program p ;
-    transform p _ := trans_template_program p ;
-    post p := ∥ wt_pcuic_program p ∥ /\ EtaExpPCUIC.expanded_pcuic_program p;
-    obseq := template_to_pcuic_obseq |}.
-Next Obligation.
-  cbn. intros cf p [[wtp] etap].
-  split; [split|].
-  now eapply trans_template_program_wt.
-  now eapply EtaExpPCUIC.expanded_trans_program in etap.
-Qed.
-Next Obligation.
-  red. intros cf [Σ t] v [[]].
-  unfold eval_pcuic_program, eval_template_program.
-  cbn. intros ev.
-  unshelve eapply TemplateToPCUICWcbvEval.trans_wcbvEval in ev; eauto. apply X.
-  eexists; split; split; eauto. red. reflexivity.
-  eapply template_to_pcuic_env.
-  apply X. destruct X as [wfΣ [T HT]]. apply TypingWf.typing_wf in HT. apply HT. auto.
-Qed.
-
-Program Definition build_global_env_map (g : global_env) : global_env_map := 
-  {| trans_env_env := g; 
-     trans_env_map := EnvMap.EnvMap.of_global_env g.(declarations) |}.
-Next Obligation.
-  intros g. eapply EnvMap.EnvMap.repr_global_env.
-Qed.
-
-Definition let_expansion_obseq (p : pcuic_program) (p' : pcuic_program) (v : term) (v' : term) :=
-  v' = PCUICExpandLets.trans v.
-
-Definition expand_lets_program (p : pcuic_program) :=
-  let Σ' := PCUICExpandLets.trans_global p.1 in 
-  ((build_global_env_map Σ', p.1.2), PCUICExpandLets.trans p.2).
-
-Import PCUICEtaExpand PCUICExpandLets PCUICExpandLetsCorrectness.
-    
-Lemma expanded_expand_lets_program {cf : checker_flags} p (wtp : wt_pcuic_program p) :
-  EtaExpPCUIC.expanded_pcuic_program p ->
-  EtaExpPCUIC.expanded_pcuic_program (expand_lets_program p).
-Proof.
-  destruct p as [[Σ udecl] t]; intros [etaenv etat].
-  clear wtp. cbn in *.
-  split; cbn.
-  clear -etaenv.
-  
-  cbn in *.
-  now eapply expanded_expand_lets in etat.
-Qed.
-
-Program Definition pcuic_expand_lets_transform {cf : checker_flags} : 
-  self_transform pcuic_program term eval_pcuic_program eval_pcuic_program :=
- {| name := "let expansion in branches/constructors";
-    pre p := ∥ wt_pcuic_program p ∥ /\ EtaExpPCUIC.expanded_pcuic_program p ;
-    transform p hp := expand_lets_program p;
-    post p := ∥ wt_pcuic_program (cf:=PCUICExpandLetsCorrectness.cf' cf) p ∥ /\ EtaExpPCUIC.expanded_pcuic_program p;
-    obseq := let_expansion_obseq |}.
-Next Obligation.
-  intros cf [Σ t] [[[wfext ht]] etap].
-  cbn. split. sq. unfold build_global_env_map. unfold global_env_ext_map_global_env_ext. simpl.
-  split. eapply PCUICExpandLetsCorrectness.trans_wf_ext in wfext. apply wfext.
-  destruct ht as [T HT]. exists (PCUICExpandLets.trans T).
-  eapply (PCUICExpandLetsCorrectness.pcuic_expand_lets Σ []) => //.
-  apply wfext. apply PCUICExpandLetsCorrectness.trans_wf_ext in wfext. apply wfext.
-  now eapply expanded_expand_lets_program.
-Qed.
-Next Obligation.
-  red. intros cf [Σ t] v [[]].
-  unfold eval_pcuic_program.
-  cbn. intros ev. destruct X.
-  eapply (PCUICExpandLetsCorrectness.trans_wcbveval (Σ:=global_env_ext_map_global_env_ext Σ)) in ev.
-  eexists; split; split; eauto. red. reflexivity.
-  destruct s as [T HT]. now apply PCUICClosedTyp.subject_closed in HT.
-Qed.
 
 Obligation Tactic := program_simpl.
 
@@ -801,8 +547,6 @@ Next Obligation.
 Qed.
 
 Obligation Tactic := program_simpl.
-
-Local Notation " o ▷ o' " := (Transform.compose o o' _) (at level 50, left associativity).
 
 Program Definition erasure_pipeline := 
   template_eta_expand ▷

@@ -5436,3 +5436,19 @@ Proof.
           eapply (expanded_smash_context (Σ := (trans_global_env Σ', udecl))) in expanded_cstr_args.
           now len. }
 Qed.
+
+Definition wt_template_program {cf : checker_flags} (p : template_program) :=
+  let Σ := Ast.Env.empty_ext p.1 in
+  Template.Typing.wf_ext Σ × ∑ T, Typing.typing Σ [] p.2 T.
+
+Lemma expanded_trans_program {cf : checker_flags} p (t : wt_template_program p) :
+  EtaExpand.expanded_template_program p ->
+  expanded_pcuic_program (trans_template_program p).
+Proof.
+  intros [etaenv etat].
+  destruct t as [? [T HT]]. split.
+  unshelve eapply expanded_trans_global_env => //; tc.
+  unshelve eapply trans_expanded => //; tc. eapply w.
+  now unshelve eapply TypingWf.typing_wf in HT.
+  eapply expanded_trans_global_env => //.
+Qed.

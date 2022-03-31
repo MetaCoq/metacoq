@@ -1,7 +1,7 @@
 From Equations Require Import Equations.
 From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
-From MetaCoq.Template Require Ast TypingWf WfAst TermEquality EtaExpand.
+From MetaCoq.Template Require Ast TypingWf WfAst TermEquality EtaExpand TemplateProgram.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
@@ -167,7 +167,7 @@ Proof.
   intros wfΣ expΣ hl declc.
   eapply expanded_context_map2_bias_left => //.
   destruct (declared_constructor_expanded expΣ declc) as [Σ' [ext [expm expc]]].
-  destruct expm as [hp hb]. destruct expc as [hargs hty].
+  destruct expm as [hp hb]. destruct expc as [hargs].
   unfold cstr_branch_context.
   epose proof (expanded_let_expansion hp (t:=(subst_context
   (inds (inductive_mind ind) (abstract_instance (ind_universes mdecl))
@@ -354,4 +354,18 @@ Proof.
           move: b.(Typing.on_cargs) => onargs.
           eapply @wf_context_sorts in onargs; tea.
           cbn. split => /= //. exact w. }
+Qed.
+
+Import TemplateProgram.
+
+Lemma expanded_trans_program {cf : checker_flags} p (t : wt_template_program p) :
+  EtaExpand.expanded_program p ->
+  expanded_pcuic_program (trans_template_program p).
+Proof.
+  intros [etaenv etat].
+  destruct t as [? [T HT]]. split.
+  unshelve eapply expanded_trans_global_env => //; tc.
+  unshelve eapply trans_expanded => //; tc. eapply w.
+  now unshelve eapply TypingWf.typing_wf in HT.
+  eapply expanded_trans_global_env => //.
 Qed.

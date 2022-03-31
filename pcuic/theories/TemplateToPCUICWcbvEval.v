@@ -22,9 +22,6 @@ From MetaCoq.PCUIC Require Import TemplateToPCUIC TemplateToPCUICCorrectness.
 From MetaCoq.Template Require Import TypingWf WcbvEval.
 From MetaCoq.PCUIC Require Import PCUICCSubst PCUICCanonicity PCUICWcbvEval.
 
-Definition eval_pcuic_program (p : pcuic_program) (v : term) :=
-  PCUICWcbvEval.eval p.1.(trans_env_env) p.2 v.
-
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
   (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) || 
   (apply WfAst.wf_mkApps_napp in H; [|easy]; try destruct H as p).

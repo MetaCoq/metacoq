@@ -18,7 +18,8 @@ From MetaCoq.Template Require Export
      LiftSubst     (* Lifting and substitution for terms *)
      UnivSubst     (* Substitution of universe instances *)
      Typing        (* Typing judgment *)
-     config        (* Typing configuration *) .
+     config        (* Typing configuration *).
+
 
 Open Scope nat.
 Open Scope bs.
@@ -411,12 +412,10 @@ Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : Ast
 Definition expanded_global_env (g : Ast.Env.global_env) :=
   expanded_global_declarations g.(Ast.Env.universes) g.(Ast.Env.declarations).
 
-Definition expanded_template_program (p : Ast.Env.program) :=
+Definition expanded_program (p : Ast.Env.program) :=
   expanded_global_env p.1 /\ expanded p.1 [] p.2.
 
-Notation template_program := Ast.Env.program.
-
-Definition eta_expand_program (p : template_program) : template_program :=
+Definition eta_expand_program (p : Ast.Env.program) : Ast.Env.program :=
   let Σ' := eta_expand_global_env p.1 in 
   (Σ', eta_expand p.1.(declarations) [] p.2).
   

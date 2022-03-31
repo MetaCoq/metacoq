@@ -100,3 +100,10 @@ Ast_quoter
 Ast_denoter
 Plugin_core
 Run_extractable
+
+Transform
+TermEquality
+Typing0
+EtaExpand
+TemplateProgram
+

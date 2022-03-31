@@ -30,7 +30,7 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
         (discr:term) (branches : list (branch term)) : expanded Γ discr -> 
         Forall (expanded Γ) type_info.(pparams) ->
         Forall (fun br =>
-          ∥ All_fold (fun Δ d => ForOption (fun b => expanded (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
+          ∥ All_fold (fun Δ d => ForOption (fun b => expanded (repeat 0 #|Δ| ++ repeat 0 #|type_info.(pparams)|) b) d.(decl_body)) br.(bcontext) ∥ /\
           expanded (repeat 0 #|br.(bcontext)| ++ Γ) br.(bbody)) branches -> 
         expanded Γ (tCase ci type_info discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded Γ t -> expanded Γ (tProj proj t)
@@ -50,6 +50,9 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
 
 End expanded.
 Derive Signature for expanded.
+
+Definition expanded_context Σ Γ ctx :=
+  ∥ All_fold (fun Δ d => ForOption (expanded Σ (repeat 0 #|Δ| ++ Γ)) d.(decl_body)) ctx ∥.
 
 Lemma expanded_ind :
 forall (Σ : global_env) (P : list nat -> term -> Prop),
@@ -82,8 +85,8 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
  Forall (P Γ) type_info.(pparams) ->
  Forall
    (fun br : branch term =>
-   ∥ All_fold (fun Δ d => ForOption (fun b => expanded Σ (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
-	expanded Σ (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
+   expanded_context Σ (repeat 0 #|type_info.(pparams)|)  br.(bcontext) /\
+	 expanded Σ (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
   Forall
   (fun br : branch term =>
     ∥ All_fold (fun Δ d => ForOption (fun b => P (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
@@ -130,7 +133,8 @@ Proof.
     revert H0. induction 1; constructor; auto.
     split. destruct H as [[] ?]; constructor; auto.
     clear -X f. induction X; constructor; auto. destruct p; constructor; auto.
-    now apply f.
+    apply f. rewrite repeat_app. exact H.
+    eapply f, H.
   - assert (Forall (P Γ) args). { clear - H0 f. induction H0; econstructor; eauto. }
     eapply HFix; eauto.
     revert H. clear - f.
@@ -143,15 +147,28 @@ Proof.
 Qed.
 
 Record expanded_constant_decl Σ (cb : constant_body) : Prop :=
-  { expanded_body : on_Some_or_None (expanded Σ []) cb.(cst_body);
-    expanded_type := expanded Σ [] cb.(cst_type) }.
+  { expanded_body : on_Some_or_None (expanded Σ []) cb.(cst_body); }.
+    (* expanded_type : expanded Σ [] cb.(Ast.Env.cst_type) }. *)
+
+Record expanded_constructor_decl Σ mdecl cdecl :=
+  { expanded_cstr_args : expanded_context Σ (repeat 0 (#|mdecl.(ind_params)| + #|mdecl.(ind_bodies)|)) cdecl.(cstr_args);
+    (* expanded_cstr_indices : All (expanded Σ []) cdecl.(cstr_indices); *)
+    expanded_cstr_type : expanded Σ (repeat 0 #|mdecl.(ind_bodies)|) cdecl.(cstr_type) }.
     
+Record expanded_inductive_decl Σ mdecl idecl :=
+  { (* expanded_ind_type : expanded Σ [] idecl.(ind_type); *)
+    expanded_ind_ctors : Forall (expanded_constructor_decl Σ mdecl) idecl.(ind_ctors) }.
+
+Record expanded_minductive_decl Σ mdecl :=
+  { expanded_params : expanded_context Σ [] mdecl.(ind_params);
+    expanded_ind_bodies : Forall (expanded_inductive_decl Σ mdecl) mdecl.(ind_bodies) }.
+
 Definition expanded_decl Σ d :=
   match d with
   | ConstantDecl cb => expanded_constant_decl Σ cb
-  | InductiveDecl idecl => True
+  | InductiveDecl idecl => expanded_minductive_decl Σ idecl
   end.
-    
+        
 Inductive expanded_global_declarations (univs : ContextSet.t) : forall (Σ : global_declarations), Prop :=
 | expanded_global_nil : expanded_global_declarations univs []
 | expanded_global_cons decl Σ : expanded_global_declarations univs Σ -> 
@@ -257,7 +274,8 @@ Qed.
 
 Lemma expanded_subst Σ a k b Γ Δ : 
     #|Γ| = k ->
-  All (expanded Σ Δ) a -> expanded Σ (Γ ++ repeat 0 #|a| ++ Δ) b -> 
+  Forall (expanded Σ Δ) a -> 
+  expanded Σ (Γ ++ repeat 0 #|a| ++ Δ) b -> 
   expanded Σ (Γ ++ Δ) (subst a k b).
 Proof.
   intros Hk H.
@@ -270,7 +288,7 @@ Proof.
     destruct (Nat.leb_spec k n).
     destruct (nth_error a _) eqn:hnth.
     * eapply expanded_mkApps_expanded.
-      eapply nth_error_all in H; tea.  
+      eapply nth_error_forall in H; tea.  
       eapply (expanded_lift Σ k 0 _ [] Δ Γ'); auto.
       solve_all. 
     * rewrite nth_error_app_ge in H0. lia.
@@ -327,11 +345,12 @@ Proof.
 Qed.
 
 Lemma expanded_let_expansion Σ (Δ : context) Γ t :
-  All_fold (fun Δ d => match d.(decl_body) with Some b => expanded Σ (repeat 0 #|Δ| ++ Γ) b | None => True end) Δ ->
+  expanded_context Σ Γ Δ ->
   expanded Σ (repeat 0 #|Δ| ++ Γ) t ->
   expanded Σ (repeat 0 (context_assumptions Δ) ++ Γ) (expand_lets Δ t).
 Proof.
-  revert Γ t.
+  intros [ha].
+  revert Γ t ha.
   induction Δ using PCUICInduction.ctx_length_rev_ind.
   - cbn; intros. now rewrite expand_lets_nil.
   - intros Γ' t ha; destruct d as [na [b|] ty]; cbn; len; cbn.
@@ -339,16 +358,18 @@ Proof.
       intros exp. relativize (context_assumptions Γ).
       eapply H. now len.
       { eapply All_fold_app_inv in ha as [].
-        depelim a. depelim a. cbn in y. cbn in a0.
+        depelim a. depelim a. cbn in *.
         rewrite /subst_context.
         eapply PCUICParallelReduction.All_fold_fold_context_k.
         eapply All_fold_impl; tea. cbn; intros.
-        destruct decl_body => //. len in X.
-        cbn. len. eapply expanded_subst. now rewrite repeat_length.
-        auto. cbn. now rewrite repeat_app /= -app_assoc /= in X. }
+        depelim f.
+        destruct decl_body => //; constructor. depelim H1.
+        len in H1. cbn in H1.
+        cbn. len. eapply expanded_subst. now rewrite repeat_length. eauto.
+        auto. cbn. now rewrite repeat_app /= -app_assoc /= in H1. }
       len.
       rewrite repeat_app -app_assoc /= in exp.
-      eapply All_fold_app_inv in ha as []. eapply All_fold_tip in a. cbn in a.
+      eapply All_fold_app_inv in ha as []. eapply All_fold_tip in a. cbn in a. depelim a.
       eapply expanded_subst. rewrite repeat_length //. constructor; auto.
       cbn. exact exp. now len.
     * rewrite expand_lets_vass /= //.
@@ -356,10 +377,10 @@ Proof.
       intros exp. relativize (context_assumptions Γ).
       eapply H. lia.  
       { eapply All_fold_app_inv in ha as [].
-        depelim a. depelim a. cbn in y. cbn in a0.
+        depelim a. cbn in f. depelim a.
         eapply All_fold_impl; tea. cbn; intros.
-        destruct decl_body => //. len in X.
-        now rewrite repeat_app /= -app_assoc /= in X. }
+        destruct decl_body => //; constructor. depelim H0. len in H0. cbn in H0.
+        now rewrite repeat_app /= -app_assoc /= in H0. }
       exact exp. lia.
 Qed.
 

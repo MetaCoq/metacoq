@@ -31,7 +31,7 @@ Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
 
 Lemma eval_mkApps_inv Σ f args v :
   eval Σ (mkApps f args) v ->
-  ∑ f', eval Σ f f' ×  eval Σ (mkApps f' args) v.
+  ∑ f', eval Σ f f' × eval Σ (mkApps f' args) v.
 Proof.
   revert f v; induction args using rev_ind; cbn; intros f v.
   - intros ev. exists v. split => //. eapply eval_to_value in ev.

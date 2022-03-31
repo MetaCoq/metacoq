@@ -867,6 +867,8 @@ with typing_spine `{checker_flags} (Σ : global_env_ext) (Γ : context) : term -
     typing_spine Σ Γ (subst10 hd B) tl B' ->
     typing_spine Σ Γ T (cons hd tl) B'.
 
+Derive Signature for typing typing_spine.
+
 (** ** Typechecking of global environments *)
 
 Definition has_nparams npars ty :=

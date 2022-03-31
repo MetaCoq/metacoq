@@ -2162,6 +2162,22 @@ Qed.
 
 From MetaCoq.PCUIC Require Import PCUICClosed PCUICWeakeningEnvConv PCUICWeakeningEnvTyp.
 
+Lemma trans_subst_instance_decl u x : map_decl (subst_instance u) (trans_decl x) = trans_decl (map_decl (subst_instance u) x).
+Proof.
+  destruct x as [na [b|] ty]; cbn; rewrite /trans_decl /map_decl /=; now rewrite !trans_subst_instance.
+Qed.
+
+Lemma subst_telescope_subst_context s k Γ :
+  Env.subst_telescope s k (List.rev Γ) = List.rev (Env.subst_context s k Γ).
+Proof.
+  rewrite /Env.subst_telescope Env.subst_context_alt.
+  rewrite rev_mapi. apply mapi_rec_ext.
+  intros n [na [b|] ty] le le'; rewrite /= /Env.subst_decl /map_decl /=; 
+  rewrite List.rev_length Nat.add_0_r in le'; 
+  f_equal. f_equal. f_equal. lia. f_equal; lia.
+  f_equal; lia. 
+Qed.
+
 Theorem pcuic_to_template {cf} (Σ : SE.global_env_ext) Γ t T :
   ST.wf Σ ->
   ST.typing Σ Γ t T ->
@@ -2251,6 +2267,18 @@ Proof.
     + cbn. rewrite PCUICToTemplateCorrectness.context_assumptions_map map_length.
       rewrite (wf_predicate_length_pars H0).
       now rewrite (declared_minductive_ind_npars isdecl).
+    + move: X6.
+      cbn. rewrite -!map_app. rewrite /id.
+      rewrite map_map_compose.
+      set (mapd := map (fun x : context_decl => _) _).
+      replace mapd with (trans_local (ind_indices idecl ++ ind_params mdecl)@[puinst p]).
+      2:{ subst mapd. setoid_rewrite trans_subst_instance_decl. now rewrite -map_map_compose. }
+      rewrite -[List.rev (trans_local _)]map_rev.
+      clear. unfold app_context. change subst_instance_context with SE.subst_instance_context. unfold context.
+      rewrite -map_rev. set (ctx := map _ (List.rev _)). clearbody ctx.
+      now move: ctx; induction 1; cbn; constructor; auto; 
+        rewrite -(List.rev_involutive (map trans_decl Δ)) subst_telescope_subst_context -map_rev 
+          -(trans_subst_context [_]) -map_rev -PCUICSpine.subst_telescope_subst_context List.rev_involutive.
     + cbn [Ast.pparams Ast.pcontext trans_predicate].
       rewrite (trans_case_predicate_context Γ); tea.
       now rewrite -trans_local_app. 

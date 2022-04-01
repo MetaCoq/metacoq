@@ -1326,7 +1326,7 @@ Section Conversion.
 Qed.
   
   Lemma get_level_make l :
-    UnivExpr.get_level (UnivExpr.make l) = l.
+    LevelExpr.get_level (LevelExpr.make l) = l.
   Proof. now destruct l. Qed.
   
   Lemma compare_universeb_make_complete Σ (wfΣ : abstract_env_ext_rel X Σ) leq x y :
@@ -1337,8 +1337,8 @@ Qed.
   Proof.
     intros wfx wfy r.
     eapply compare_universeb_complete; eauto.
-    - intros ? ->%UnivExprSet.singleton_spec; auto.
-    - intros ? ->%UnivExprSet.singleton_spec; auto.
+    - intros ? ->%LevelExprSet.singleton_spec; auto.
+    - intros ? ->%LevelExprSet.singleton_spec; auto.
   Qed.
   
   Lemma eqb_universe_instance_complete Σ (wfΣ : abstract_env_ext_rel X Σ) u u' :

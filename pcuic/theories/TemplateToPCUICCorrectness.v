@@ -2075,7 +2075,7 @@ Lemma simpl_type_Case {H : checker_flags} {Σ : global_env_ext} {Γ} {ci : case_
   wf_predicate mdecl idecl p ->
   wf_local Σ (Γ,,, predctx) ->
   Σ;;; Γ,,, predctx |- preturn p : tSort ps ->
-  is_allowed_elimination Σ ps (ind_kelim idecl) ->
+  is_allowed_elimination Σ (ind_kelim idecl) ps ->
   Σ;;; Γ |- c : mkApps (tInd ci (puinst p)) (pparams p ++ indices) ->
   isCoFinite (ind_finite mdecl) = false ->
   let ptm := it_mkLambda_or_LetIn predctx (preturn p) in

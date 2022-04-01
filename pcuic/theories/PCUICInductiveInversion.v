@@ -239,7 +239,7 @@ Proof.
     rewrite dapp. do 3 f_equal.
     symmetry.
     change (eq_kername ind k) with (ReflectEq.eqb ind k) in eqk.
-    destruct (ReflectEq.eqb_spec ind k); auto. discriminate.
+    destruct (ReflectEq.eqb_spec ind k); auto.
     discriminate.
   - discriminate.
   - discriminate.
@@ -1805,11 +1805,11 @@ Section Betweenu.
     | _ => true
     end.
 
-  Definition betweenu_level_expr (s : UnivExpr.t) :=
-    betweenu_level (UnivExpr.get_level s).
+  Definition betweenu_level_expr (s : LevelExpr.t) :=
+    betweenu_level (LevelExpr.get_level s).
 
-  Definition betweenu_universe0 (u : Universe.nonEmptyUnivExprSet) :=
-    UnivExprSet.for_all betweenu_level_expr u.
+  Definition betweenu_universe0 (u : LevelAlgExpr.t) :=
+    LevelExprSet.for_all betweenu_level_expr u.
   
   Definition betweenu_universe (u : Universe.t) :=
     match u with 
@@ -2152,7 +2152,6 @@ Proof.
     rewrite H0 //. rewrite eqi' //.
     erewrite subst_instance_id_mdecl => //. eauto. } 
   eapply (subst_instance_ws_cumul_pb (Σ, v) _ (u' ++ u)) in cum; auto.
-  rewrite subst_instance_two in cum.
   rewrite !subst_instance_two in cum.
   rewrite subst_instance_two_context in cum.
   now rewrite subsu subsu' in cum.
@@ -2201,12 +2200,12 @@ Proof.
     specialize (IHl u u' Rl). do 2 forward IHl by lia.
     destruct a => //; intros x; rewrite ConstraintSetFact.add_iff;
     intros [<-|inx]; auto.
-    + do 2 red in Ra; rewrite checku in Ra;
+    + do 7 red in Ra; rewrite checku in Ra;
       specialize (Ra _ sat); simpl in Ra.
       constructor. lia.
-    + do 2 red in Ra. rewrite checku in Ra.
+    + do 6 red in Ra. rewrite checku in Ra.
       specialize  (Ra _ sat).
-      constructor. now rewrite !Universes.Universe.val_make in Ra.
+      constructor. now rewrite !Universes.LevelAlgExpr.val_make in Ra.
 Qed.
 
 Lemma All2_fold_inst {cf} {le} {Σ} {wfΣ : wf Σ} mdecl l v i i' u u' Γ' Γ : 

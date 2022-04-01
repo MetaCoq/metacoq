@@ -213,7 +213,7 @@ struct
     else
       not_supported_verb trm "unquote_level"
 
-  let unquote_univ_expr evm trm (* of type UnivExpr.t *) : Evd.evar_map * Univ.Universe.t =
+  let unquote_univ_expr evm trm (* of type LevelExpr.t *) : Evd.evar_map * Univ.Universe.t =
     let (h,args) = app_full trm [] in
     if constr_equall h c_pair then
       let l, b = unquote_pair trm in
@@ -241,7 +241,7 @@ struct
            (match args with
            | x :: _ :: [] -> 
              (let (h,args) = app_full x [] in
-              if constr_equall h tMktUnivExprSet then
+              if constr_equall h tMktLevelExprSet then
                 match args with
                 | x :: _ :: [] ->
                     (match unquote_list x with

@@ -46,8 +46,7 @@ Local Ltac ih :=
 
 Lemma banon_spec na : banon na -> na = {| binder_name := nAnon; binder_relevance := na.(binder_relevance) |}.
 Proof.
-  unfold banon, anon; destruct na; simpl; try congruence.
-  destruct binder_name; auto. congruence.
+  destruct na, binder_name; cbnr; discriminate.
 Qed.
 
 Lemma banon_eq_binder_annot na na' : banon na -> banon na' -> eq_binder_annot na na' -> na = na'.
@@ -1460,8 +1459,8 @@ Proof.
 Qed.
 
 Lemma nl_is_allowed_elimination {cf:checker_flags} (Σ : global_env_ext) ps kelim :
-  is_allowed_elimination Σ ps kelim ->
-  is_allowed_elimination (nlg Σ) ps kelim.
+  is_allowed_elimination Σ kelim ps ->
+  is_allowed_elimination (nlg Σ) kelim ps.
 Proof.
   now rewrite global_ext_constraints_nlg.
 Qed.

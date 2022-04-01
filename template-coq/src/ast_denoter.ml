@@ -212,8 +212,8 @@ struct
     | Universes0.Universe.Coq_lSProp -> evd, Sorts.sprop
     | Universes0.Universe.Coq_lProp -> evd, Sorts.prop
     | Universes0.Universe.Coq_lType u ->
-       let u = Universes0.Universe.t_set u in
-       let ux_list = Universes0.UnivExprSet.elements u in
+       let u = Universes0.t_set u in
+       let ux_list = Universes0.LevelExprSet.elements u in
        let l = List.map unquote_level_expr ux_list in
        let u = List.fold_left Univ.Universe.sup (List.hd l) (List.tl l) in
        evd, Sorts.sort_of_univ u

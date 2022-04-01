@@ -98,7 +98,7 @@ Proof.
   intros Hf. rewrite /decompose_app.
   destruct l. simpl. destruct f; try discriminate; auto.
   remember (mkApps f (t :: l)) eqn:Heq. simpl in Heq.
-  destruct f; simpl in *; subst; auto. discriminate.
+  destruct f; simpl in *; subst; auto.
 Qed.
 
 Lemma atom_decompose_app t : ~~ isApp t -> decompose_app t = (t, []).

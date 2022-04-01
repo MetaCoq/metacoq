@@ -1038,7 +1038,7 @@ Section Typecheck.
   Equations check_is_allowed_elimination
     (u : Universe.t) (wfu : forall Σ (wfΣ : abstract_env_ext_rel X Σ), wf_universe Σ u)
     (al : allowed_eliminations) :
-    typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), is_allowed_elimination Σ u al) :=
+    typing_result_comp (forall Σ (wfΣ : abstract_env_ext_rel X Σ), is_allowed_elimination Σ al u) :=
 
   check_is_allowed_elimination u wfu IntoSProp
     with inspect (Universe.is_sprop u) := {
@@ -1057,72 +1057,26 @@ Section Typecheck.
     } ;
   check_is_allowed_elimination u wfu IntoAny := ret _.
   Next Obligation.
-    rewrite /is_allowed_elimination /is_allowed_elimination0.
-    destruct check_univs ; auto.
-    intros val sat.
-    symmetry in e.
-    apply is_sprop_val with (v := val) in e.
-    now rewrite e.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
+    now rewrite H in e0.
   Qed.
   Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ; 
-    pose proof (heΣ _ wfΣ) as [heΣ]. sq.
-    apply wf_ext_consistent in heΣ as [v Hv].
-    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs in H.
-    specialize (H v Hv).
-    destruct u => //=.
+    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
+    now rewrite H in e0.
   Qed.
   Next Obligation.
-    unfold is_allowed_elimination, is_allowed_elimination0.
-    destruct check_univs; auto.
-    intros val sat.
-    unfold is_propositional in *.
-    destruct Universe.is_prop eqn:prop.
-    - apply is_prop_val with (v := val) in prop; rewrite prop; auto.
-    - destruct Universe.is_sprop eqn:sprop.
-      + apply is_sprop_val with (v := val) in sprop; rewrite sprop; auto.
-      + discriminate.
-  Qed.
-  Next Obligation.
-    destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ; 
-    pose proof (heΣ _ wfΣ) as [heΣ]. sq.
-    apply wf_ext_consistent in heΣ as [v Hv].
-    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs in H.
-    specialize (H v Hv).
-    destruct u => //=.
-  Qed.
-  Next Obligation.
-    specialize_Σ wfΣ; pose proof (heΣ _ wfΣ) as [heΣ]. sq.
-    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs.
-    intros val sat.
-    unfold is_propositional in *.
-    destruct Universe.is_prop eqn:prop.
-    - apply is_prop_val with (v := val) in prop; rewrite prop; auto.
-    - destruct Universe.is_sprop eqn:sprop.
-      + apply is_sprop_val with (v := val) in sprop; rewrite sprop; auto.
-      + symmetry in e. change (is_true (abstract_env_eq X u Universe.type0 )) in e.
-        erewrite <- (abstract_env_compare_universe_correct _ wfΣ Conv u Universe.type0 wfu) in e; eauto.
-        2: { apply wf_universe_type0. }
-          cbn in e. unfold eq_universe in e. rewrite nor_check_univs in e.
-          specialize (e val sat). now rewrite e. 
+    symmetry in e; toProp e; destruct e as [-> | e]; [auto|right].
+    specialize_Σ wfΣ; pose proof (heΣ _ wfΣ) as [heΣ].
+    eapply abstract_env_compare_universe_correct in e; eauto using wf_universe_type0.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ; 
     pose proof (heΣ _ wfΣ) as [heΣ]. sq.
     move: (heΣ) => /wf_ext_consistent [v Hv].
-    rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs in H.
-    destruct u => //=. 
-    cbn in e0. apply ssrbool.not_false_is_true. rewrite e0.  
-    eapply abstract_env_compare_universe_correct; eauto.
-    1 : apply wf_universe_type0.
-    cbn; unfold eq_universe, eq_universe0. rewrite nor_check_univs.
-    intros v' Hv'.
-    specialize (H v' Hv').
-    cbn in *.
-    now destruct (val v' n).
-  Qed.
-  Next Obligation.
-    now rewrite /is_allowed_elimination /is_allowed_elimination0 nor_check_univs.
+    symmetry in e0; toProp e0; destruct e0 as [e1 e0].
+    destruct H as [H|H]; [rewrite H in e1; discriminate e1 | clear e1].
+    apply diff_false_true. rewrite -e0.
+    eapply abstract_env_compare_universe_correct; eauto using wf_universe_type0.
   Qed.
   
   Notation wt_brs Γ ci mdecl idecl p ptm ctors brs n := 

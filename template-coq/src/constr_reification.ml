@@ -169,7 +169,7 @@ struct
   let tunivLe0 = ast "constraints.Le0"
   let tunivLt = ast "constraints.Lt"
   let tunivEq = ast "constraints.Eq"
-  let tMktUnivExprSet = ast "univexprset.mkt"
+  let tMktLevelExprSet = ast "levelexprset.mkt"
   let tBuild_Universe = ast "universe.build0"
   let tfrom_kernel_repr = ast "universe.from_kernel_repr"
   (* let tto_kernel_repr = ast "universe.to_kernel_repr" *)
@@ -178,8 +178,8 @@ struct
   let noprop_tSet = ast "noproplevel.lzero"
   let noprop_tLevel = ast "noproplevel.Level"
   let noprop_tLevelVar = ast "noproplevel.Var"
-  let univexpr_lProp = ast "univexpr.prop"
-  let univexpr_npe = ast "univexpr.npe"
+  let univexpr_lProp = ast "levelexpr.prop"
+  let univexpr_npe = ast "levelexpr.npe"
 
   (* let tunivcontext = resolve_symbol pkg_univ "universe_context" *)
   let tVariance = ast "variance.t"

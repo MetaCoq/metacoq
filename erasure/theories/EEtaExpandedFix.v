@@ -460,7 +460,6 @@ Section isEtaExp.
     - destruct nth_error eqn:Hn; cbn in H; try easy.
       eapply nth_error_Some_length in Hn. now eapply Nat.ltb_lt.
     - eapply a in b. 2: f_equal. revert b. now len.
-    - easy.
     - eapply a in b. 2: f_equal. revert b. now len.
     - cbn. solve_all. eapply a in b. 2: reflexivity. revert b. now len.
     - destruct nth_error eqn:Hn; cbn in H1; try easy.
@@ -793,7 +792,6 @@ Proof.
   - eapply andb_true_iff in H1 as []. destruct ind. econstructor; eauto.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2. 
     eapply In_All in H0. solve_all.
-  - congruence.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.

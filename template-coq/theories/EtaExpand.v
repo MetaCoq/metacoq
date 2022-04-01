@@ -99,18 +99,24 @@ Section Eta.
         | None => tVar ("Error: lookup of an inductive failed for "
                        ++ string_of_kername ind.(inductive_mind))
         end
-      | tFix def i => let def' := (map (fun d => 
-      let ctx := List.rev (mapi (fun (i : nat) d => Some (1 + d.(rarg), (lift0 i (dtype d)))) def) in
-      {| dname := dname d ; dtype := dtype d ; dbody := eta_expand (ctx ++  Γ) d.(dbody) ; rarg := rarg d |}) def) in 
-                      match nth_error def' i with
-                      | Some d => eta_fixpoint def' i d (map (eta_expand Γ) args)
-                      | None => tVar ("Error: lookup of a fixpoint failed for "
-                                       ++ string_of_term t)
-                      end
-      | tRel n => match nth_error Γ n with
-                  | Some (Some (c, ty)) => eta_single (tRel n) (map (eta_expand Γ) args) (lift0 (S n) ty) c 
-                  | _ => tRel n
-                  end
+      | tFix def i => 
+        let def' := 
+          map (fun d => 
+            let ctx := List.rev (mapi (fun (i : nat) d => Some (1 + d.(rarg), (lift0 i (dtype d)))) def) in
+            {| dname := dname d ; dtype := dtype d ; dbody := eta_expand (ctx ++  Γ) d.(dbody) ; rarg := rarg d |}) 
+            def
+        in 
+        match nth_error def' i with
+        | Some d => eta_fixpoint def' i d (map (eta_expand Γ) args)
+        | None => tVar ("Error: lookup of a fixpoint failed for "
+                          ++ string_of_term t)
+        end
+      | tRel n => 
+        match nth_error Γ n with
+        | Some (Some (c, ty)) => eta_single (tRel n) (map (eta_expand Γ) args) (lift0 (S n) ty) c 
+        | Some None => mkApps (tRel n) (map (eta_expand Γ) args)
+        | _ => tRel n
+        end
       | _ => mkApps (eta_expand Γ hd) (map (eta_expand Γ) args)
     end
     | tEvar n ts => tEvar n (map (eta_expand Γ) ts)
@@ -971,6 +977,9 @@ Proof.
       cbn in *. 
       destruct H4.
       rewrite <- context_assumptions_lift. subst. lia.
+      cbn. eapply expanded_mkApps. constructor.
+      now rewrite nth_error_map, E; cbn.
+      solve_all.
     + cbn in H. unfold eta_constructor in *.
       destruct lookup_global as [[] | ] eqn:E1; eauto.
       destruct nth_error eqn:E2; eauto.

@@ -32,7 +32,7 @@ Program Definition erasure_pipeline :
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false |}) := 
   (* Eta expansion of constructors and fixpoints *)
-  (* template_eta_expand ▷ *)
+  template_eta_expand ▷
   (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
   template_to_pcuic_transform ▷
   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
@@ -59,7 +59,7 @@ Eval simpl in post (guarded_to_unguarded_fix _).
 Definition run_erase_program := run erasure_pipeline.
 
 Program Definition erasure_pipeline_fast := 
-  (* template_eta_expand ▷ *)
+  template_eta_expand ▷
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
   erase_transform ▷ 
@@ -77,15 +77,12 @@ Local Open Scope string_scope.
   are welltyped (for speed). As such this should only be used for testing, or when we know that 
   the environment is wellformed and the term well-typed (e.g. when it comes directly from a 
   Coq definition). *)
-Program Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
+Definition erase_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := run_erase_program p _ in
+  let p' := run_erase_program p (sq (todo "assuming quoted environment and term are well-typed")) in
   time "Pretty printing" EPretty.print_program p'.
-Next Obligation.
-  sq. todo "assuming quoted environment and term are wellformed and properly eta-expanded".
-Qed.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)
   : string :=
-  let p' := run_erase_program_fast p (todo "wf_env and welltyped term") in
+  let p' := run_erase_program_fast p (sq (todo "wf_env and welltyped term")) in
   time "pretty-printing" EPretty.print_program p'.

@@ -37,9 +37,10 @@ Lemma leq_universe_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs'
     -> leq_universe ctrs t u -> leq_universe ctrs' t u.
 Proof.
-  intros Hctrs H. unfold leq_universe in *.
-  destruct check_univs; [|trivial].
-  intros v Hv. apply H.
+  intros Hctrs.
+  destruct t, u; cbnr; trivial.
+  intros H; unfold_univ_rel.
+  apply H.
   eapply satisfies_subset; eauto.
 Qed.
 
@@ -47,9 +48,10 @@ Lemma eq_universe_subset {cf:checker_flags} ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs'
     -> eq_universe ctrs t u -> eq_universe ctrs' t u.
 Proof.
-  intros Hctrs H. unfold eq_universe in *.
-  destruct check_univs; [|trivial].
-  intros v Hv. apply H.
+  intros Hctrs.
+  destruct t, u; cbnr; trivial.
+  intros H; unfold_univ_rel.
+  apply H.
   eapply satisfies_subset; eauto.
 Qed.
 
@@ -395,17 +397,17 @@ Qed.
 
 Lemma weakening_env_is_allowed_elimination `{CF:checker_flags} Σ Σ' φ u allowed :
   wf Σ' -> extends Σ Σ' ->
-  is_allowed_elimination (global_ext_constraints (Σ, φ)) u allowed ->
-  is_allowed_elimination (global_ext_constraints (Σ', φ)) u allowed.
+  is_allowed_elimination (global_ext_constraints (Σ, φ)) allowed u ->
+  is_allowed_elimination (global_ext_constraints (Σ', φ)) allowed u.
 Proof.
-  intros wfΣ ext al.
-  unfold is_allowed_elimination in *.
-  destruct check_univs; auto.
-  intros val sat.
-  unshelve epose proof (al val _) as al.
-  { eapply satisfies_subset; eauto.
-    apply global_ext_constraints_app, ext. }
-  destruct allowed; auto; cbn in *; destruct ?; auto.
+  destruct allowed; cbnr; trivial.
+  intros wfΣ ext [ | al]; auto.
+  destruct u; cbn in *; try elim al.
+  right.
+  unfold_univ_rel.
+  apply al.
+  eapply satisfies_subset; eauto.
+  apply global_ext_constraints_app, ext.
 Qed.
 
 #[global]

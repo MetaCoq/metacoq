@@ -254,7 +254,7 @@ Section Inversion.
        (wf_pctx : wf_local Σ (Γ ,,, predctx))
        (conv_pctx : eq_context_upto_names p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl))
        (pret_ty : Σ ;;; Γ ,,, predctx |- p.(preturn) : tSort ps)
-       (allowed_elim : is_allowed_elimination Σ ps idecl.(ind_kelim))
+       (allowed_elim : is_allowed_elimination Σ idecl.(ind_kelim) ps)
        (ind_inst : ctx_inst typing Σ Γ (p.(pparams) ++ indices)
                             (List.rev (subst_instance p.(puinst)
                                                       (ind_params mdecl ,,, ind_indices idecl))))

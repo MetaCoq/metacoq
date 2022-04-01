@@ -22,6 +22,8 @@ Create HintDb univ_subst.
 
 Local Ltac aa := rdest; eauto with univ_subst.
 
+Import NonEmptySetFacts.
+
 Lemma subst_instance_level_val u l v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
       (H2 : forall n, val v (nth n u Level.lzero) = valuation_poly v' n)
@@ -30,16 +32,16 @@ Proof.
   destruct l; cbn; try congruence. apply H2.
 Qed.
 
-Lemma eq_val v v'
+Lemma eq_valuation v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
       (H2 : forall n, valuation_poly v n = valuation_poly v' n)
-  : forall u : Universe.t, Universe.univ_val v u = Universe.univ_val v' u.
+  : forall u : Universe.t, Universe.to_cuniv v u = Universe.to_cuniv v' u.
 Proof.
-  intros []; cbnr. f_equal.
-  assert (He : forall e : UnivExpr.t, val v e = val v' e). {
+  intros [| | u]; cbnr. f_equal.
+  assert (He : forall e : LevelExpr.t, val v e = val v' e). {
     intros [[] b]; cbnr; rewrite ?H1 ?H2; reflexivity. }
   rewrite !val_fold_right.
-  induction ((List.rev (Universe.exprs n).2)); cbn; congruence.
+  induction ((List.rev (LevelAlgExpr.exprs u).2)); cbn; congruence.
 Qed.
 (*
 Lemma is_prop_subst_instance_level u l
@@ -52,43 +54,70 @@ Proof.
     destruct HH as [l [HH1 HH2]]. rewrite HH1. now apply ssrbool.negbTE.
 Qed. *)
 
-Lemma subst_instance_univ_val u l v v'
+Lemma subst_instance_level_expr_val u expr v v'
       (H1 : forall s, valuation_mono v s = valuation_mono v' s)
       (H2 : forall n, val v (nth n u Level.lzero) = valuation_poly v' n)
-  : Universe.univ_val v (subst_instance_univ u l) = Universe.univ_val v' l.
+  : val v (subst_instance_level_expr u expr) = val v' expr.
 Proof.
-  assert (He: forall e : UnivExpr.t, val v (subst_instance_level_expr u e) = val v' e). {
-    clear l. intros [[] b]; cbn; rewrite <- ?H1, <- ?H2; try reflexivity.
-    rewrite nth_nth_error.
-    destruct (le_lt_dec #|u| n) as [HH|HH].
-    + apply nth_error_None in HH; now rewrite !HH.
-    + apply nth_error_Some' in HH. destruct HH as [l HH]; rewrite !HH.
-      destruct l; cbnr. }
-  symmetry. 
-  destruct l; simpl; auto. f_equal.
+  destruct expr as [[] b]; cbnr.
+  { now rewrite <- H1. }
+  rewrite <- H2, nth_nth_error.
+  destruct nth_error; cbnr.
+Qed.
+
+Lemma subst_instance_univ0_val u exprs v v'
+      (H1 : forall s, valuation_mono v s = valuation_mono v' s)
+      (H2 : forall n, val v (nth n u Level.lzero) = valuation_poly v' n)
+  : val v (subst_instance_univ0 u exprs) = val v' exprs.
+Proof.
+  symmetry.
   apply val_caract. split.
-  - intros e Xe. unfold subst_instance_univ.
+  - intros e Xe.
     apply val_le_caract. eexists; split.
-    + apply Universe.map_spec. eexists; split; tea. reflexivity.
-    + now rewrite He.
-  - destruct ((val_caract (Universe.map (subst_instance_level_expr u) n) v _).p1 eq_refl)
-      as [_ [e [He1 He2]]].
-    apply Universe.map_spec in He1. destruct He1 as [e0 [He0 He1]]; subst.
-    eexists; split; tea. now rewrite <- He2, He.
+    + apply map_spec. eexists; split; tea. reflexivity.
+    + erewrite subst_instance_level_expr_val with (v':=v'); tea. reflexivity.
+  - destruct ((val_caract (map (subst_instance_level_expr u) exprs) v _).p1 eq_refl)
+      as [_ [e [He1 <-]]].
+    apply map_spec in He1 as [e0 [He0 ->]].
+    eexists; split; tea.
+    symmetry; now apply subst_instance_level_expr_val.
+Qed.
+
+Lemma subst_instance_univ_val u s v v'
+      (H1 : forall s, valuation_mono v s = valuation_mono v' s)
+      (H2 : forall n, val v (nth n u Level.lzero) = valuation_poly v' n)
+  : Universe.to_cuniv v (subst_instance_univ u s) = Universe.to_cuniv v' s.
+Proof.
+  destruct s as [ | | exprs]; cbnr.
+  f_equal; now apply subst_instance_univ0_val.
 Qed.
 
 Definition subst_instance_valuation (u : Instance.t) (v : valuation) :=
   {| valuation_mono := valuation_mono v ;
      valuation_poly := fun i => val v (nth i u Level.lzero) |}.
 
-Lemma subst_instance_univ_val' u l v
-  : Universe.univ_val v (subst_instance_univ u l) = Universe.univ_val (subst_instance_valuation u v) l.
+
+Lemma subst_instance_level_val' u l v
+  : val v (subst_instance_level u l) = val (subst_instance_valuation u v) l.
 Proof.
-  eapply subst_instance_univ_val; auto.
+  now apply subst_instance_level_val.
+Qed.
+   
+
+Lemma subst_instance_univ0_val' u exprs v
+  : val v (subst_instance_univ0 u exprs) = val (subst_instance_valuation u v) exprs.
+Proof.
+  now apply subst_instance_univ0_val.
 Qed.
 
-Lemma subst_instance_univ_make' (l : UnivExpr.t) u :
-  subst_instance u (Universe.make' l) = Universe.make' (subst_instance_level_expr u l).
+Lemma subst_instance_univ_val' u l v
+  : Universe.to_cuniv v (subst_instance_univ u l) = Universe.to_cuniv (subst_instance_valuation u v) l.
+Proof.
+  now apply subst_instance_univ_val.
+Qed.
+
+Lemma subst_instance_univ_make' (l : LevelExpr.t) u :
+  subst_instance u (LevelAlgExpr.make l) = LevelAlgExpr.make (subst_instance_level_expr u l).
 Proof. reflexivity. Qed.
 
 Lemma subst_instance_univ_make l u :
@@ -166,9 +195,9 @@ Qed.
 Instance eq_universe_SubstUnivPreserving {cf:checker_flags} φ :
   SubstUnivPreserving (eq_universe φ).
 Proof.
-  intros s u1 u2 hu.
-  unfold eq_universe in *; destruct check_univs; [|trivial].
-  intros v Hv; cbn.
+  intros [| | exprs]; cbnr.
+  intros u1 u2 hu.
+  unfold_univ_rel.
   assert (He : forall e, val v (subst_instance_level_expr u1 e)
                     = val v (subst_instance_level_expr u2 e)). {
     destruct e as [[] b]; cbnr.
@@ -186,17 +215,15 @@ Proof.
       rewrite nth_error_map in hu.
       destruct (nth_error u2 n); [discriminate|reflexivity]. }
   simpl.
-  destruct s; cbnr.
-  f_equal.
   apply val_caract; split.
-  - intros e Xe. apply Universe.map_spec in Xe as [e' [H1 H2]]; subst.
+  - intros e Xe. apply map_spec in Xe as [e' [H1 H2]]; subst.
     apply val_le_caract. eexists; split.
-    + apply Universe.map_spec; eexists; split; tea; reflexivity.
+    + apply map_spec; eexists; split; tea; reflexivity.
     + now rewrite He.
-  - destruct ((val_caract (Universe.map (subst_instance_level_expr u2) n) v _).p1 eq_refl)
+  - destruct ((val_caract (map (subst_instance_level_expr u2) exprs) v _).p1 eq_refl)
       as [_ [e [He1 He2]]]. rewrite <- He2.
-    apply Universe.map_spec in He1. destruct He1 as [e0 [He0 He1]]; subst.
-    eexists; split; [|eapply He]. eapply Universe.map_spec.
+    apply map_spec in He1. destruct He1 as [e0 [He0 He1]]; subst.
+    eexists; split; [|eapply He]. eapply map_spec.
     now eexists; split; tea.
 Qed.
 
@@ -204,9 +231,8 @@ Qed.
 Instance leq_universe_SubstUnivPreserving {cf:checker_flags} φ :
   SubstUnivPreserving (leq_universe φ).
 Proof.
-  intros s u1 u2 hu.
-  unfold leq_universe in *; destruct check_univs; [|trivial].
-  intros v Hv; cbn.
+  intros [| | exprs] u1 u2 hu; cbnr.
+  unfold_univ_rel.
   assert (He : forall e, val v (subst_instance_level_expr u1 e)
                     <= val v (subst_instance_level_expr u2 e)). {
     destruct e as [[] b]; cbnr.
@@ -224,24 +250,22 @@ Proof.
       rewrite nth_error_map in hu.
       destruct (nth_error u2 n); [discriminate|reflexivity]. }
   simpl.
-  destruct s; cbnr.
-  f_equal.
   rewrite Z.sub_0_r.
   eapply Nat2Z.inj_le.
-  remember (val v (subst_instance u2 n)) as val2 eqn:eq. symmetry in eq.
+  remember (val v (subst_instance u2 exprs)) as val2 eqn:eq. symmetry in eq.
   apply val_caract in eq.
   destruct eq.
   destruct H0 as [e [inet vale]].
-  apply Universe.map_spec in inet as [e' [H1 H2]]; subst.
-  remember (val v (subst_instance u1 n)) as val1 eqn:eq. symmetry in eq.
+  apply map_spec in inet as [e' [H1 H2]]; subst.
+  remember (val v (subst_instance u1 exprs)) as val1 eqn:eq. symmetry in eq.
   apply val_caract in eq as [eq' [e'' [ine'' vale'']]].
   subst val1.
-  apply Universe.map_spec in ine'' as [e0 [ine0 eq]].
+  apply map_spec in ine'' as [e0 [ine0 eq]].
   specialize (He e0). subst e''.
   etransitivity. 
   - eassumption.
   - eapply H.
-    eapply Universe.map_spec.
+    eapply map_spec.
     exists e0; split; auto.
 Qed.
 
@@ -281,19 +305,27 @@ Proof.
   rewrite nth_nth_error. destruct nth_error; cbnr.
 Qed.
 
+Lemma subst_instance_univ0_two u1 u2 exprs :
+  subst_instance_univ0 u1 (subst_instance_univ0 u2 exprs)
+  = subst_instance_univ0 (subst_instance u1 u2) exprs.
+Proof.
+  unfold subst_instance_univ0.
+  eapply eq_univ'.
+  intro l; split; intro Hl; apply map_spec in Hl as [l' [H1 H2]];
+    apply map_spec; subst.
+  - apply map_spec in H1 as [l'' [H1 H2]]; subst.
+    eexists; split; tea. apply subst_instance_level_expr_two.
+  - eexists; split. 2: symmetry; eapply subst_instance_level_expr_two.
+    apply map_spec. eexists; split; tea; reflexivity.
+Qed.
+
+
 Lemma subst_instance_univ_two u1 u2 s :
   subst_instance_univ u1 (subst_instance_univ u2 s)
   = subst_instance_univ (subst_instance u1 u2) s.
 Proof.
-  unfold subst_instance_univ. 
   destruct s; cbnr. f_equal.
-  eapply eq_univ'.
-  intro l; split; intro Hl; apply Universe.map_spec in Hl as [l' [H1 H2]];
-    apply Universe.map_spec; subst.
-  - apply Universe.map_spec in H1 as [l'' [H1 H2]]; subst.
-    eexists; split; tea. apply subst_instance_level_expr_two.
-  - eexists; split. 2: symmetry; eapply subst_instance_level_expr_two.
-    apply Universe.map_spec. eexists; split; tea; reflexivity.
+  apply subst_instance_univ0_two.
 Qed.
 
 Lemma subst_instance_two_instance u1 u2 (u : Instance.t) :
@@ -419,19 +451,19 @@ Proof.
 Qed.
 
 Lemma sup_subst_instance_univ0 u s1 s2 :
-  subst_instance u (Universe.sup0 s1 s2)
-  = Universe.sup0 (subst_instance u s1) (subst_instance u s2).
+  subst_instance u (LevelAlgExpr.sup s1 s2)
+  = LevelAlgExpr.sup (subst_instance u s1) (subst_instance u s2).
 Proof.
   apply eq_univ'. cbn.
   intro x; split; intro Hx.
-  + apply Universe.map_spec in Hx as [y [H H']]; subst.
-    apply UnivExprSet.union_spec.
-    apply UnivExprSet.union_spec in H as [H|H]; [left|right].
-    all: apply Universe.map_spec; eexists; split; tea; reflexivity.
-  + apply Universe.map_spec.
-    apply UnivExprSet.union_spec in Hx as [H|H];
-      apply Universe.map_spec in H as [y [H H']]; subst.
-    all: eexists; split; [eapply UnivExprSet.union_spec|reflexivity]; auto.
+  + apply map_spec in Hx as [y [H H']]; subst.
+    apply LevelExprSet.union_spec.
+    apply LevelExprSet.union_spec in H as [H|H]; [left|right].
+    all: apply map_spec; eexists; split; tea; reflexivity.
+  + apply map_spec.
+    apply LevelExprSet.union_spec in Hx as [H|H];
+      apply map_spec in H as [y [H H']]; subst.
+    all: eexists; split; [eapply LevelExprSet.union_spec|reflexivity]; auto.
 Qed.
 
 Lemma sup_subst_instance_univ u s1 s2 :
@@ -481,20 +513,14 @@ Qed.
 #[global] Hint Resolve subst_instance_cstrs_two
      satisfies_equal_sets satisfies_subsets : univ_subst.
 
-Lemma val0_subst_instance_level u l v
-  : val v (subst_instance_level u l) = val (subst_instance_valuation u v) l.
-Proof.
-  destruct l; aa; cbn.
-Qed.
-
 Lemma satisfies0_subst_instance_ctr u v c
   : satisfies0 v (subst_instance_cstr u c)
     <-> satisfies0 (subst_instance_valuation u v) c.
 Proof.
   destruct c as [[l1 []] l2]; unfold subst_instance_cstr; cbn;
     split; intro H; constructor; inv H.
-  all: rewrite <- ?val0_subst_instance_level; tea.
-  all: rewrite ?val0_subst_instance_level; tea.
+  all: rewrite <- ?subst_instance_level_val'; tea.
+  all: rewrite ?subst_instance_level_val'; tea.
 Qed.
 
 Lemma satisfies_subst_instance_ctr u v ctrs
@@ -762,23 +788,19 @@ Qed.
 
 Global Instance leq_universe_subst_instance {cf : checker_flags} : SubstUnivPreserved leq_universe.
 Proof.
-  intros φ φ' u HH t t' Htt'.
-  unfold leq_universe in *; case_eq check_univs;
-    [intro Hcf; rewrite Hcf in Htt'|trivial].
-  intros v Hv; cbn.
-  rewrite !subst_instance_univ_val'; tas.
-  apply Htt'. clear t t' Htt'.
+  intros φ φ' u HH [| | exprs] [| | exprs'] Hle; cbnr; trivial.
+  unfold_univ_rel eqn:H.
+  rewrite !subst_instance_univ0_val'; tas.
+  apply Hle.
   eapply satisfies_subst_instance; tea.
 Qed.
 
 Global Instance eq_universe_subst_instance {cf : checker_flags} : SubstUnivPreserved eq_universe.
 Proof.
-  intros φ φ' u HH t t' Htt'.
-  unfold eq_universe in *; case_eq check_univs;
-    [intro Hcf; rewrite Hcf in Htt'|trivial].
-  intros v Hv; cbn.
-  rewrite !subst_instance_univ_val'; tas.
-  apply Htt'. clear t t' Htt'.
+  intros φ φ' u HH [| | exprs] [| | exprs'] Hle; cbnr; trivial.
+  unfold_univ_rel eqn:H.
+  rewrite !subst_instance_univ0_val'; tas.
+  apply Hle.
   eapply satisfies_subst_instance; tea.
 Qed.
 
@@ -787,10 +809,10 @@ Lemma precompose_subst_instance Rle u i i' :
   <~> R_universe_instance (precompose Rle (subst_instance_univ u)) i i'.
 Proof.
   unfold R_universe_instance, subst_instance.
-  replace (map Universe.make (map (subst_instance_level u) i))
-    with (map (subst_instance_univ u) (map Universe.make i)).
-  1: replace (map Universe.make (map (subst_instance_level u) i'))
-      with (map (subst_instance_univ u) (map Universe.make i')).
+  replace (List.map Universe.make (List.map (subst_instance_level u) i))
+    with (List.map (subst_instance_univ u) (List.map Universe.make i)).
+  1: replace (List.map Universe.make (List.map (subst_instance_level u) i'))
+      with (List.map (subst_instance_univ u) (List.map Universe.make i')).
   1: split.
   1: apply Forall2_map_inv.
   1: apply Forall2_map.
@@ -805,15 +827,15 @@ Definition precompose_subst_instance__2 Rle u i i'
   := snd (precompose_subst_instance Rle u i i').
 
 Lemma subst_instance_level_expr_make u l : 
-  subst_instance_level_expr u (UnivExpr.make l) = UnivExpr.make (subst_instance_level u l).
+  subst_instance_level_expr u (LevelExpr.make l) = LevelExpr.make (subst_instance_level u l).
 Proof.
   destruct l; simpl; auto.
   rewrite nth_nth_error. now destruct nth_error.
 Qed.
 
 Lemma subst_instance_make'_make u l : 
-  subst_instance u (Universe.make' (UnivExpr.make l)) = 
-  Universe.make' (UnivExpr.make (subst_instance_level u l)).
+  subst_instance u (LevelAlgExpr.make (LevelExpr.make l)) =
+  LevelAlgExpr.make (LevelExpr.make (subst_instance_level u l)).
 Proof.
   now rewrite subst_instance_univ_make' subst_instance_level_expr_make.
 Qed.
@@ -881,13 +903,13 @@ Proof. apply eq_term_upto_univ_subst_preserved; cbn; try destruct pb; exact _. Q
 
 (** Now routine lemmas ... *)
 
-Lemma In_subst_instance x u (l : Universe.nonEmptyUnivExprSet) :
-  UnivExprSet.In x (subst_instance u l) <-> 
-  (exists x', UnivExprSet.In x' l /\ x = subst_instance u x').
+Lemma In_subst_instance x u (l : LevelAlgExpr.t) :
+  LevelExprSet.In x (subst_instance u l) <->
+  (exists x', LevelExprSet.In x' l /\ x = subst_instance u x').
 Proof.
   unfold subst_instance; cbn.
   unfold subst_instance_univ0.
-  now rewrite Universe.map_spec.
+  now rewrite map_spec.
 Qed.
 
 Lemma subst_instance_univ_super l u
@@ -909,7 +931,7 @@ Proof.
   * intros [x' [hin eq]]. subst x.
     apply In_subst_instance in hin as [y [hin eq]].
     subst x'.
-    exists (UnivExpr.succ y); cbn.
+    exists (LevelExpr.succ y); cbn.
     rewrite spec_map_succ. split.
     - exists y; auto.
     - destruct y as [[] ?]; cbn; auto.
@@ -1043,7 +1065,7 @@ Qed.
 Definition map_constructor_body' f c :=
   {| cstr_name := cstr_name c;
      cstr_args := map_context f (cstr_args c);
-     cstr_indices := map f (cstr_indices c);
+     cstr_indices := List.map f (cstr_indices c);
      cstr_type := f (cstr_type c);
      cstr_arity := cstr_arity c |}.
 
@@ -1057,8 +1079,8 @@ Definition map_one_inductive_body' fu f oib :=
     ind_sort := fu oib.(ind_sort);
     ind_type := f oib.(ind_type);
     ind_kelim := oib.(ind_kelim);
-    ind_ctors := map (map_constructor_body' f) oib.(ind_ctors);
-    ind_projs := map (on_snd f) oib.(ind_projs);
+    ind_ctors := List.map (map_constructor_body' f) oib.(ind_ctors);
+    ind_projs := List.map (on_snd f) oib.(ind_projs);
     ind_relevance := oib.(ind_relevance) |}.
 
 Global Instance subst_instance_inductive_body : UnivSubst one_inductive_body
@@ -1068,7 +1090,7 @@ Definition map_mutual_inductive_body' fu f mib :=
   {| ind_finite := mib.(ind_finite);
      ind_npars := mib.(ind_npars);
      ind_params := map_context f mib.(ind_params);
-     ind_bodies := map (map_one_inductive_body' fu f) mib.(ind_bodies);
+     ind_bodies := List.map (map_one_inductive_body' fu f) mib.(ind_bodies);
      ind_universes := mib.(ind_universes);
      ind_variance := mib.(ind_variance) |}.
 
@@ -1160,7 +1182,7 @@ Qed.
 
 Lemma iota_red_subst_instance pars p args br u :
   subst_instance u (iota_red pars p args br)
-  = iota_red pars (subst_instance u p) (map (subst_instance u) args) (map_branch (subst_instance u) id br).
+  = iota_red pars (subst_instance u p) (List.map (subst_instance u) args) (map_branch (subst_instance u) id br).
 Proof.
   unfold iota_red.
   rewrite subst_instance_subst -map_skipn -map_rev.
@@ -1169,7 +1191,7 @@ Proof.
 Qed.
 
 Lemma map_map2 {A B C D} (f : A -> B) (g : C -> D -> A) (l : list C) (l' : list D) :
-  map f (map2 g l l') =
+  List.map f (map2 g l l') =
   map2 (fun (x : C) (y : D) => f (g x y)) l l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; auto.
@@ -1177,7 +1199,7 @@ Proof.
 Qed.
 
 Lemma map2_map_r {A B C D} (f : B -> C) (g : A -> C -> D) (l : list A) (l' : list B) :
-  map2 g l (map f l') =
+  map2 g l (List.map f l') =
   map2 (fun x y => g x (f y)) l l'.
 Proof.
   induction l in l' |- *; destruct l'; simpl; auto.
@@ -1214,11 +1236,11 @@ Proof.
 Qed.
 
 Lemma subst_instance_to_extended_list u l
-  : map (subst_instance u) (to_extended_list l)
+  : List.map (subst_instance u) (to_extended_list l)
     = to_extended_list (subst_instance u l).
 Proof.
   - unfold to_extended_list, to_extended_list_k.
-    change [] with (map (subst_instance u) (@nil term)) at 2.
+    change [] with (List.map (subst_instance u) (@nil term)) at 2.
     unf_term. generalize (@nil term), 0. induction l as [|[aa [ab|] ac] bb].
     + reflexivity.
     + intros l n; cbn. now rewrite IHbb.
@@ -1314,7 +1336,7 @@ Qed.
 
 Lemma subst_instance_wf_branches cdecl u brs :
   wf_branches cdecl brs ->
-  wf_branches cdecl (map (map_branch (subst_instance u) id) brs).
+  wf_branches cdecl (List.map (map_branch (subst_instance u) id) brs).
 Proof.
   unfold wf_branches, wf_branches_gen.
   intros h. solve_all.
@@ -1324,7 +1346,7 @@ Qed.
 
 Lemma subst_instance_predicate_set_pparams u p params :
   subst_instance u (set_pparams p params) = 
-  set_pparams (subst_instance u p) (map (subst_instance u) params).
+  set_pparams (subst_instance u p) (List.map (subst_instance u) params).
 Proof. reflexivity. Qed.
 
 (* Lemma subst_instance_predicate_set_pcontext u p pcontext :
@@ -1464,16 +1486,15 @@ Qed.
 Lemma is_allowed_elimination_subst_instance {cf : checker_flags} (Σ : global_env_ext) univs inst u al :
   valid_constraints (global_ext_constraints (Σ.1, univs))
                     (subst_instance_cstrs inst Σ) ->
-  is_allowed_elimination Σ u al ->
-  is_allowed_elimination (global_ext_constraints (Σ.1, univs)) (subst_instance_univ inst u) al.
+  is_allowed_elimination Σ al u ->
+  is_allowed_elimination (global_ext_constraints (Σ.1, univs)) al (subst_instance_univ inst u).
 Proof.
-  intros val isal.
-  unfold is_allowed_elimination, is_allowed_elimination0 in *.
-  destruct check_univs eqn:cu; auto.
-  intros ? sat.
-  eapply satisfies_subst_instance in sat; eauto.
-  specialize (isal _ sat).
-  rewrite subst_instance_univ_val'; auto.
+  destruct al, u as [| | u]; trivial.
+  intros val [H|isal]; [cbn in H; discriminate | right].
+  unfold_univ_rel eqn:H.
+  eapply satisfies_subst_instance in Hv; eauto.
+  specialize (isal _ Hv).
+  rewrite subst_instance_univ0_val'; auto.
 Qed.
 
 Global Instance compare_decl_subst_instance {cf : checker_flags} pb Σ : SubstUnivPreserved (compare_decl pb Σ).
@@ -1546,10 +1567,10 @@ Proof.
 Qed.
 
 Lemma subst_instance_check_one_fix u mfix :
-  map
+  List.map
         (fun x : def term =>
         check_one_fix (map_def (subst_instance u) (subst_instance u) x)) mfix =
-  map check_one_fix mfix.
+  List.map check_one_fix mfix.
 Proof.
   apply map_ext. intros [na ty def rarg]; simpl.
   rewrite decompose_prod_assum_ctx.
@@ -1571,10 +1592,10 @@ Proof.
 Qed.
 
 Lemma subst_instance_check_one_cofix u mfix :
-  map
+  List.map
         (fun x : def term =>
         check_one_cofix (map_def (subst_instance u) (subst_instance u) x)) mfix =
-  map check_one_cofix mfix.
+  List.map check_one_cofix mfix.
 Proof.
   apply map_ext. intros [na ty def rarg]; simpl.
   rewrite decompose_prod_assum_ctx.
@@ -1633,13 +1654,13 @@ Proof.
   - apply hin.
 Qed. 
 
-Lemma wf_universe_subst_instance {cf : checker_flags} (Σ : global_env_ext) univs u l :
+Lemma wf_universe_subst_instance {cf : checker_flags} (Σ : global_env_ext) univs u s :
    wf Σ ->
-   wf_universe Σ l ->
+   wf_universe Σ s ->
    consistent_instance_ext (Σ.1, univs) Σ.2 u ->
-   wf_universe (Σ.1, univs) (subst_instance u l). 
+   wf_universe (Σ.1, univs) (subst_instance u s). 
 Proof.
-  destruct l; simpl; auto. rename n into t.
+  destruct s as [| | t]; cbnr.
   intros wfΣ Hl Hu e [[l n] [inl ->]]%In_subst_instance.
   destruct l as [|s|n']; simpl; auto.
   - unfold global_ext_levels.
@@ -1822,7 +1843,7 @@ Section SubstIdentity.
       clear sizeu vc.
       induction u; simpl; auto.
       move/andb_and: decl' => [ina au]. specialize (IHu au).
-      rewrite [map _ u]IHu. f_equal. clear au.
+      rewrite [List.map _ u]IHu. f_equal. clear au.
       destruct a; simpl; auto.
       eapply LevelSet.mem_spec in ina.
       eapply in_var_global_ext in ina; auto.
@@ -1837,7 +1858,7 @@ Section SubstIdentity.
 
   Lemma in_global_ext_subst_abs_level Σ l :
     wf_ext_wk Σ ->
-    LevelSet.In (UnivExpr.get_level l) (global_ext_levels Σ) ->
+    LevelSet.In (LevelExpr.get_level l) (global_ext_levels Σ) ->
     subst_instance (abstract_instance Σ.2) l = l.
   Proof.
     intros [wfΣ onu] cu.
@@ -1862,7 +1883,7 @@ Section SubstIdentity.
   Proof.
     intros wf cu.
     destruct u; simpl; auto. f_equal.
-    apply Universes.eq_univ'.
+    apply eq_univ'.
     simpl in cu.
     intros l.
     rewrite In_subst_instance.
@@ -1892,7 +1913,7 @@ Section SubstIdentity.
   Lemma wf_universe_type1 Σ : wf_universe Σ Universe.type1.
   Proof.
     simpl.
-    intros l hin%UnivExprSet.singleton_spec.
+    intros l hin%LevelExprSet.singleton_spec.
     subst l. simpl.
     apply LS.union_spec. right; apply global_levels_Set.
   Qed.
@@ -1900,8 +1921,8 @@ Section SubstIdentity.
   Lemma wf_universe_super {Σ u} : wf_universe Σ u -> wf_universe Σ (Universe.super u).
   Proof.
     destruct u; cbn.
-    1-2:intros _ l hin%UnivExprSet.singleton_spec; subst l; apply wf_universe_type1;
-     now apply UnivExprSet.singleton_spec.
+    1-2:intros _ l hin%LevelExprSet.singleton_spec; subst l; apply wf_universe_type1;
+     now apply LevelExprSet.singleton_spec.
     intros Hl.
     intros l hin. 
     eapply Universes.spec_map_succ in hin as [x' [int ->]].

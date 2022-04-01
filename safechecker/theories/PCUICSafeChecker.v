@@ -1989,13 +1989,13 @@ End monad_Alli_nth_forall.
 
     Next Obligation.
       unfold check_ind_sorts. simpl.
-      pose proof (check_constructors_smallerP X_ext cs u wfcs wfi).
+      pose proof (check_constructors_smallerP X_ext cs (Universe.lType u) wfcs wfi).
       rewrite -Heq_anonymous. specialize_Σ H0.  sq. split => //.
       match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
     Qed.
     Next Obligation.
       unfold check_ind_sorts. simpl.
-      pose proof (check_constructors_smallerP X_ext cs u wfcs wfi).
+      pose proof (check_constructors_smallerP X_ext cs (Universe.lType u) wfcs wfi).
       specialize_Σ H0. sq. split.
       match goal with [ H : reflect _ _ |- _ ] => destruct H => // end.
       rewrite -Heq_anonymous; auto.

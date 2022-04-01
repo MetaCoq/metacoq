@@ -136,7 +136,7 @@ Module PrintTermTree.
     | Universe.lType l =>
       if with_universes then
         ("Type(" ++
-           MCString.string_of_list string_of_level_expr (UnivExprSet.elements l) ++
+           MCString.string_of_list string_of_level_expr (LevelExprSet.elements l) ++
           ")")%bs
        else "Type"
     end.

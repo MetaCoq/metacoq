@@ -10,35 +10,27 @@ Implicit Types (cf : checker_flags).
 
 Ltac absurd :=
   match goal with
+  | [H: ~ True |- _] => elim (H I)
   | [H : False |- _] => elim H
+  | H: is_true false |- _ => discriminate H
+  | |- False -> _ => let H := fresh in intro H; elim H
+  | |- _ -> False -> _ => let H := fresh in intros ? H; elim H
+  | |- is_true false -> _ => let H := fresh in intro H; discriminate H
+  | |- _ -> is_true false -> _ => let H := fresh in intros ? H; discriminate H
   end.
 #[global]
 Hint Extern 10 => absurd : core.
+
 (** * Valuations *)
 
 (** A valuation is a universe level (nat) given for each
     universe variable (Level.t).
-    It is >= for polymorphic universes and > 0 for monomorphic universes. *)
+    It is >= for polymorphic concreteUniverses and > 0 for monomorphic concreteUniverses. *)
 Record valuation :=
   { valuation_mono : string -> positive ;
     valuation_poly : nat -> nat }.
 
-Inductive universes := 
-  | UProp 
-  | USProp
-  | UType (i : nat).
-Derive NoConfusion EqDec for universes.
-
 Class Evaluable (A : Type) := val : valuation -> A -> nat.
-
-(** This inductive classifies which eliminations are allowed for inductive types
-  in various sorts. *)
-Inductive allowed_eliminations : Set :=
-| IntoSProp
-| IntoPropSProp
-| IntoSetPropSProp
-| IntoAny.
-Derive NoConfusion EqDec for allowed_eliminations.
 
 
 (** Levels are Set or Level or Var *)
@@ -157,7 +149,7 @@ Module Level.
     | Level.Var n1, Level.Var n2 => ReflectEq.eqb n1 n2
     | _, _ => false
     end.
-  
+
   #[global, program] Instance reflect_level : ReflectEq Level.t := {
     eqb := eq_level
   }.
@@ -173,7 +165,7 @@ Module Level.
   Defined.
 
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
-  
+
   Definition eq_dec : forall (l1 l2 : t), {l1 = l2}+{l1 <> l2} := Classes.eq_dec.
 
 End Level.
@@ -183,46 +175,49 @@ Module LevelSetFact := WFactsOn Level LevelSet.
 Module LevelSetProp := WPropertiesOn Level LevelSet.
 Module LevelSetDecide := WDecide (LevelSet).
 Module LS := LevelSet.
-Ltac lsets := LevelSetDecide.fsetdec.
 
+Ltac lsets := LevelSetDecide.fsetdec.
 Notation "(=_lset)" := LevelSet.Equal (at level 0).
 Infix "=_lset" := LevelSet.Equal (at level 30).
 
-Definition LevelSet_pair x y
-  := LevelSet.add y (LevelSet.singleton x).
+Section LevelSetMoreFacts.
 
-Lemma LevelSet_pair_In x y z :
-  LevelSet.In x (LevelSet_pair y z) -> x = y \/ x = z.
-Proof.
-  intro H. apply LevelSetFact.add_iff in H.
-  destruct H; [intuition|].
-  apply LevelSetFact.singleton_1 in H; intuition.
-Qed.
+  Definition LevelSet_pair x y
+    := LevelSet.add y (LevelSet.singleton x).
 
-Definition LevelSet_mem_union (s s' : LevelSet.t) x :
-  LevelSet.mem x (LevelSet.union s s') <-> LevelSet.mem x s \/ LevelSet.mem x s'.
-Proof.
-  rewrite LevelSetFact.union_b.
-  apply orb_true_iff.
-Qed.
+  Lemma LevelSet_pair_In x y z :
+    LevelSet.In x (LevelSet_pair y z) -> x = y \/ x = z.
+  Proof.
+    intro H. apply LevelSetFact.add_iff in H.
+    destruct H; [intuition|].
+    apply LevelSetFact.singleton_1 in H; intuition.
+  Qed.
 
-Lemma LevelSet_In_fold_right_add x l :
-  In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
-Proof.
-  split.
-  - induction l; simpl => //.
-    intros [<-|H].
-    * eapply LevelSet.add_spec; left; auto.
-    * eapply LevelSet.add_spec; right; auto.
-  - induction l; simpl => //.
-    * now rewrite LevelSetFact.empty_iff.
-    * rewrite LevelSet.add_spec. intuition auto.
-Qed.
+  Definition LevelSet_mem_union (s s' : LevelSet.t) x :
+    LevelSet.mem x (LevelSet.union s s') <-> LevelSet.mem x s \/ LevelSet.mem x s'.
+  Proof.
+    rewrite LevelSetFact.union_b.
+    apply orb_true_iff.
+  Qed.
 
-Lemma LevelSet_union_empty s : LevelSet.Equal (LevelSet.union LevelSet.empty s) s.
-Proof.
-  intros x; rewrite LevelSet.union_spec. lsets.
-Qed.
+  Lemma LevelSet_In_fold_right_add x l :
+    In x l <-> LevelSet.In x (fold_right LevelSet.add LevelSet.empty l).
+  Proof.
+    split.
+    - induction l; simpl => //.
+      intros [<-|H].
+      * eapply LevelSet.add_spec; left; auto.
+      * eapply LevelSet.add_spec; right; auto.
+    - induction l; simpl => //.
+      * now rewrite LevelSetFact.empty_iff.
+      * rewrite LevelSet.add_spec. intuition auto.
+  Qed.
+
+  Lemma LevelSet_union_empty s : LevelSet.Equal (LevelSet.union LevelSet.empty s) s.
+  Proof.
+    intros x; rewrite LevelSet.union_spec. lsets.
+  Qed.
+End LevelSetMoreFacts.
 
 (* prop level is Prop or SProp *)
 Module PropLevel.
@@ -256,7 +251,7 @@ Module PropLevel.
 
 End PropLevel.
 
-Module UnivExpr.
+Module LevelExpr.
   (* npe = no prop expression *)
   Definition t := (Level.t * nat)%type.
 
@@ -267,7 +262,7 @@ Module UnivExpr.
 
   Definition get_level (e : t) : Level.t := fst e.
 
-  Definition get_noprop (e : UnivExpr.t) := Some (fst e).
+  Definition get_noprop (e : LevelExpr.t) := Some (fst e).
 
   Definition is_level (e : t) : bool :=
     match e with
@@ -294,8 +289,8 @@ Module UnivExpr.
   Definition eq_equiv : Equivalence eq := _.
 
   Inductive lt_ : t -> t -> Prop :=
-  | ltUnivExpr1 l n n' : (n < n')%nat -> lt_ (l, n) (l, n')
-  | ltUnivExpr2 l l' b b' : Level.lt l l' -> lt_ (l, b) (l', b').
+  | ltLevelExpr1 l n n' : (n < n')%nat -> lt_ (l, n) (l, n')
+  | ltLevelExpr2 l l' b b' : Level.lt l l' -> lt_ (l, b) (l', b').
 
   Definition lt := lt_.
 
@@ -327,7 +322,7 @@ Module UnivExpr.
   Proof.
     intros [? ?] [? ?]; cbn; repeat constructor.
     destruct (Level.compare_spec t0 t1); repeat constructor; tas.
-    subst. 
+    subst.
     destruct (Nat.compare_spec n n0); repeat constructor; tas. congruence.
   Qed.
 
@@ -338,135 +333,85 @@ Module UnivExpr.
   Definition eq_leibniz (x y : t) : eq x y -> x = y := id.
 
   Lemma val_make v l
-    : val v (UnivExpr.make l) = val v l.
+    : val v (LevelExpr.make l) = val v l.
   Proof.
     destruct l eqn:H; cbnr.
   Qed.
 
   Lemma val_make_npl v (l : Level.t)
-    : val v (UnivExpr.make l) = val v l.
+    : val v (LevelExpr.make l) = val v l.
   Proof.
     destruct l; cbnr.
   Qed.
 
-End UnivExpr.
+End LevelExpr.
 
-Module UnivExprSet := MSetList.MakeWithLeibniz UnivExpr.
-Module UnivExprSetFact := WFactsOn UnivExpr UnivExprSet.
-Module UnivExprSetProp := WPropertiesOn UnivExpr UnivExprSet.
+Module LevelExprSet := MSetList.MakeWithLeibniz LevelExpr.
+Module LevelExprSetFact := WFactsOn LevelExpr LevelExprSet.
+Module LevelExprSetProp := WPropertiesOn LevelExpr LevelExprSet.
 
 (* We have decidable equality w.r.t leibniz equality for sets of levels.
-  This means universes also have a decidable equality. *)
-#[global, program] Instance univexprset_reflect : ReflectEq UnivExprSet.t := 
-  { eqb := UnivExprSet.equal }.
+  This means concreteUniverses also have a decidable equality. *)
+#[global, program] Instance levelexprset_reflect : ReflectEq LevelExprSet.t :=
+  { eqb := LevelExprSet.equal }.
 Next Obligation.
-  destruct (UnivExprSet.equal x y) eqn:e; constructor.
-  eapply UnivExprSet.equal_spec in e.
-  now eapply UnivExprSet.eq_leibniz.
+  destruct (LevelExprSet.equal x y) eqn:e; constructor.
+  eapply LevelExprSet.equal_spec in e.
+  now eapply LevelExprSet.eq_leibniz.
   intros e'.
   subst y.
-  pose proof (@UnivExprSetFact.equal_1 x x).
+  pose proof (@LevelExprSetFact.equal_1 x x).
   forward H. reflexivity. congruence.
 Qed.
 
-#[global] Instance univexprset_eq_dec : Classes.EqDec UnivExprSet.t := Classes.eq_dec.
+#[global] Instance levelexprset_eq_dec : Classes.EqDec LevelExprSet.t := Classes.eq_dec.
 
-Module Universe.
-  (** A universe is a list of universe expressions which is:
-        - sorted
-        - without duplicate
-        - non empty *)
-  Record nonEmptyUnivExprSet
-           := { t_set : UnivExprSet.t ;
-                t_ne  : UnivExprSet.is_empty t_set = false }.
 
-  Derive NoConfusion for nonEmptyUnivExprSet.
 
-  (* We use uip on the is_empty condition *)
-  #[global, program] Instance univexprset_reflect : ReflectEq nonEmptyUnivExprSet := 
-    { eqb x y := eqb x.(t_set) y.(t_set) }.
-  Next Obligation.
-    destruct (eqb_spec (t_set x) (t_set y)); constructor.
-    destruct x, y; cbn in *. subst.
-    now rewrite (uip t_ne0 t_ne1).
-    intros e; subst x; apply H.
-    reflexivity.
-  Qed.
+Record nonEmptyLevelExprSet
+  := { t_set : LevelExprSet.t ;
+       t_ne  : LevelExprSet.is_empty t_set = false }.
 
-  #[global] Instance eq_dec_univ0 : EqDec Universe.nonEmptyUnivExprSet := eq_dec.
+Derive NoConfusion for nonEmptyLevelExprSet.
 
-  Inductive t_ :=
-    lProp | lSProp | lType (_ : nonEmptyUnivExprSet).
-  Derive NoConfusion for t_.
+(** This coercion allows to see the non-empty set as a regular [LevelExprSet.t] *)
+Coercion t_set : nonEmptyLevelExprSet >-> LevelExprSet.t.
 
-  Definition t := t_.
-
-  Coercion t_set : nonEmptyUnivExprSet >-> UnivExprSet.t.
-
-  Definition eqb (u1 u2 : t) : bool :=
-    match u1, u2 with
-    | lSProp, lSProp => true
-    | lProp, lProp => true
-    | lType e1, lType e2 => eqb e1 e2
-    | _,_ => false
-    end.
-  
-  #[global, program] Instance reflect_eq_universe : ReflectEq t := 
-    { eqb := eqb }.
-  Next Obligation.
-    destruct x, y; cbn; try constructor; auto; try congruence.
-    destruct (eqb_spec n n0); constructor. now f_equal.
-    congruence. 
-  Qed.
-
-  #[global] Instance eq_dec_univ : EqDec t := eq_dec.
-
-  Definition make' (e : UnivExpr.t) : nonEmptyUnivExprSet
-    := {| t_set := UnivExprSet.singleton e;
+Module NonEmptySetFacts.
+  Definition singleton (e : LevelExpr.t) : nonEmptyLevelExprSet
+    := {| t_set := LevelExprSet.singleton e;
           t_ne := eq_refl |}.
 
-  (** Create a universe representing the given level. *)
-  Definition make (l : Level.t) : t :=
-    lType (make' (UnivExpr.make l)).
-
-  Definition of_expr e := (lType (make' e)).
-
   Lemma not_Empty_is_empty s :
-    ~ UnivExprSet.Empty s -> UnivExprSet.is_empty s = false.
+    ~ LevelExprSet.Empty s -> LevelExprSet.is_empty s = false.
   Proof.
     intro H. apply not_true_is_false. intro H'.
-    apply H. now apply UnivExprSetFact.is_empty_2 in H'.
+    apply H. now apply LevelExprSetFact.is_empty_2 in H'.
   Qed.
 
-  Program Definition add (e : UnivExpr.t) (u : nonEmptyUnivExprSet) : nonEmptyUnivExprSet
-    := {| t_set := UnivExprSet.add e u |}.
+  Program Definition add (e : LevelExpr.t) (u : nonEmptyLevelExprSet) : nonEmptyLevelExprSet
+    := {| t_set := LevelExprSet.add e u |}.
   Next Obligation.
     apply not_Empty_is_empty; intro H.
-    eapply H. eapply UnivExprSet.add_spec.
+    eapply H. eapply LevelExprSet.add_spec.
     left; reflexivity.
   Qed.
 
-  Definition add_to_exprs (e : UnivExpr.t) (u : t) : t :=
-    match u with
-    | lSProp |lProp => u
-    | lType l => lType (add e l)
-    end.
-
   Lemma add_spec e u e' :
-    UnivExprSet.In e' (add e u) <-> e' = e \/ UnivExprSet.In e' u.
+    LevelExprSet.In e' (add e u) <-> e' = e \/ LevelExprSet.In e' u.
   Proof.
-    apply UnivExprSet.add_spec.
+    apply LevelExprSet.add_spec.
   Qed.
 
-  Definition add_list : list UnivExpr.t -> nonEmptyUnivExprSet -> nonEmptyUnivExprSet
+  Definition add_list : list LevelExpr.t -> nonEmptyLevelExprSet -> nonEmptyLevelExprSet
     := List.fold_left (fun u e => add e u).
 
   Lemma add_list_spec l u e :
-    UnivExprSet.In e (add_list l u) <-> In e l \/ UnivExprSet.In e u.
+    LevelExprSet.In e (add_list l u) <-> In e l \/ LevelExprSet.In e u.
   Proof.
     unfold add_list. rewrite <- fold_left_rev_right.
     etransitivity. 2:{ eapply or_iff_compat_r. etransitivity.
-                       2: apply @InA_In_eq with (A:=UnivExpr.t).
+                       2: apply @InA_In_eq with (A:=LevelExpr.t).
                        eapply InA_rev. }
     induction (List.rev l); cbn.
     - split. intuition. intros [H|H]; tas. invs H.
@@ -481,151 +426,76 @@ Module Universe.
         * apply add_spec; right. apply IHl0. now right.
   Qed.
 
-  Definition add_list_to_exprs (es : list UnivExpr.t) (u : t) : t :=
-    match u with
-    | lSProp |lProp => u
-    | lType l => lType (add_list es l)
-    end.
-
-  (** Test if the universe is a lub of levels or contains +n's. *)
-  Definition is_levels (u : t) : bool :=
-      match u with
-      | lProp | lSProp => true
-      | lType l =>  UnivExprSet.for_all UnivExpr.is_level l
-      end.
-
-  (** Test if the universe is a level or an algebraic universe. *)
-  Definition is_level (u : t) : bool :=
-    match u with
-    | lProp | lSProp => true
-    | lType l => (UnivExprSet.cardinal l =? 1)%nat && is_levels u
-    end.
-
-  Definition is_sprop (u : t) : bool :=
-    match u with
-      | lSProp => true
-      | _ => false
-    end.
-
-  Definition is_prop (u : t) : bool :=
-    match u with
-      | lProp => true
-      | _ => false
-    end.
-
-  Definition type0 : t := make Level.lzero.
-  Definition type1 : t := lType (make' UnivExpr.type1).
-
-  Definition of_levels (l : PropLevel.t + Level.t) : t :=
-    match l with
-    | inl PropLevel.lSProp => lSProp
-    | inl PropLevel.lProp => lProp
-    | inr l => lType (make' (l, 0%nat))
-    end.
-
-  (* Used for quoting. *)
-  Definition from_kernel_repr (e : Level.t * bool) (es : list (Level.t * bool)) : t
-    := lType (add_list (map UnivExpr.from_kernel_repr es)
-                (make' (UnivExpr.from_kernel_repr e))).
-
-  (* Definition uex_to_kernel_repr (e : UnivExpr.t) : Level.t * bool := *)
-  (*   match e with *)
-  (*   | UnivExpr.npe (l, b) => (NoPropLevel.to_level l, b) *)
-  (*   end. *)
-
-  (* Definition to_kernel_repr (u : t) : list (Level.t * bool) *)
-  (*   :=  map (UnivExpr.to_kernel_repr) (UnivExprSet.elements u). *)
-  (* match u with *)
-  (*      | lProp => [(Level.lProp, false)] *)
-  (*      | lSProp => [(Level.lSProp, false)] *)
-  (*      | lType l => map uex_to_kernel_repr (UnivExprSet.elements l) *)
-  (*      end. *)
-
-
-  (** The non empty / sorted / without dup list of univ expressions, the
-      components of the pair are the head and the tail of the (non empty) list *)
-  Program Definition exprs (u : nonEmptyUnivExprSet) : UnivExpr.t * list UnivExpr.t
-    := match UnivExprSet.elements u with
+  Program Definition to_nonempty_list (u : nonEmptyLevelExprSet) : LevelExpr.t * list LevelExpr.t
+    := match LevelExprSet.elements u with
        | [] => False_rect _ _
        | e :: l => (e, l)
        end.
   Next Obligation.
     destruct u as [u1 u2]; cbn in *. revert u2.
     apply eq_true_false_abs.
-    unfold UnivExprSet.is_empty, UnivExprSet.Raw.is_empty,
-    UnivExprSet.elements, UnivExprSet.Raw.elements in *.
+    unfold LevelExprSet.is_empty, LevelExprSet.Raw.is_empty,
+    LevelExprSet.elements, LevelExprSet.Raw.elements in *.
     rewrite <- Heq_anonymous; reflexivity.
   Qed.
 
-  Lemma exprs_make' e : Universe.exprs (Universe.make' e) = (e, []).
+  Lemma singleton_to_nonempty_list e : to_nonempty_list (singleton e) = (e, []).
   Proof. reflexivity. Defined.
 
-  (* Lemma exprs_make l : Universe.exprs (Universe.make l) = (UnivExpr.make l, []). *)
-  (* Proof. reflexivity. Defined. *)
-
-
-  Lemma exprs_spec u :
-    let '(e, u') := Universe.exprs u in
-    e :: u' = UnivExprSet.elements u.
+  Lemma to_nonempty_list_spec u :
+    let '(e, u') := to_nonempty_list u in
+    e :: u' = LevelExprSet.elements u.
   Proof.
     destruct u as [u1 u2].
-    pose (l := UnivExprSet.elements u1).
-    change (let '(e, u') :=
-                match l return l = UnivExprSet.elements u1 -> _ with
-                | [] => fun Heq_anonymous : [] = _ u1 =>
-                    False_rect (UnivExpr.t × list UnivExpr.t)
-                               (exprs_obligation_1
-                                  {| Universe.t_set := u1; Universe.t_ne := u2 |}
-                                  Heq_anonymous)
-                | e :: l0 => fun _ : e :: l0 = _ u1 => (e, l0)
-                end eq_refl in e :: u' = UnivExprSet.elements  u1).
-    set (e := eq_refl). clearbody e. change (l = UnivExprSet.elements u1) in e.
+    unfold to_nonempty_list; cbn.
+    set (l := LevelExprSet.elements u1). unfold l at 2 3 4.
+    set (e := (eq_refl: l = LevelExprSet.elements u1)); clearbody e.
     destruct l.
     - exfalso. revert u2. apply eq_true_false_abs.
-      unfold UnivExprSet.is_empty, UnivExprSet.Raw.is_empty,
-      UnivExprSet.elements, UnivExprSet.Raw.elements in *.
+      unfold LevelExprSet.is_empty, LevelExprSet.Raw.is_empty,
+      LevelExprSet.elements, LevelExprSet.Raw.elements in *.
       rewrite <- e; reflexivity.
-    - assumption.
+    - reflexivity.
   Qed.
 
-  Lemma exprs_spec' u :
-    (Universe.exprs u).1 :: (Universe.exprs u).2 = UnivExprSet.elements u.
+  Lemma to_nonempty_list_spec' u :
+    (to_nonempty_list u).1 :: (to_nonempty_list u).2 = LevelExprSet.elements u.
   Proof.
-    pose proof (exprs_spec u).
-    now destruct (Universe.exprs u).
+    pose proof (to_nonempty_list_spec u).
+    now destruct (to_nonempty_list u).
   Qed.
 
-  Lemma In_exprs (u : nonEmptyUnivExprSet) (e : UnivExpr.t) :
-    UnivExprSet.In e u
-    <-> e = (Universe.exprs u).1 \/ In e (Universe.exprs u).2.
+  Lemma In_to_nonempty_list (u : nonEmptyLevelExprSet) (e : LevelExpr.t) :
+    LevelExprSet.In e u
+    <-> e = (to_nonempty_list u).1 \/ In e (to_nonempty_list u).2.
   Proof.
-    etransitivity. symmetry. apply UnivExprSet.elements_spec1.
-    pose proof (Universe.exprs_spec' u) as H.
-    destruct (Universe.exprs u) as [e' l]; cbn in *.
+    etransitivity. symmetry. apply LevelExprSet.elements_spec1.
+    pose proof (to_nonempty_list_spec' u) as H.
+    destruct (to_nonempty_list u) as [e' l]; cbn in *.
     rewrite <- H; clear. etransitivity. apply InA_cons.
     eapply or_iff_compat_l. apply InA_In_eq.
   Qed.
 
-  Lemma In_exprs_rev (u : nonEmptyUnivExprSet) (e : UnivExpr.t) :
-    UnivExprSet.In e u
-    <-> e = (Universe.exprs u).1 \/ In e (List.rev (Universe.exprs u).2).
+  Lemma In_to_nonempty_list_rev (u : nonEmptyLevelExprSet) (e : LevelExpr.t) :
+    LevelExprSet.In e u
+    <-> e = (to_nonempty_list u).1 \/ In e (List.rev (to_nonempty_list u).2).
   Proof.
-    etransitivity. eapply In_exprs.
+    etransitivity. eapply In_to_nonempty_list.
     apply or_iff_compat_l. apply in_rev.
   Qed.
 
-  Definition map (f : UnivExpr.t -> UnivExpr.t) (u : nonEmptyUnivExprSet) : nonEmptyUnivExprSet :=
-    let '(e, l) := exprs u in
-    add_list (List.map f l) (make' (f e)).
+  Definition map (f : LevelExpr.t -> LevelExpr.t) (u : nonEmptyLevelExprSet) : nonEmptyLevelExprSet :=
+    let '(e, l) := to_nonempty_list u in
+    add_list (List.map f l) (singleton (f e)).
 
   Lemma map_spec f u e :
-    UnivExprSet.In e (map f u) <-> exists e0, UnivExprSet.In e0 u /\ e = (f e0).
+    LevelExprSet.In e (map f u) <-> exists e0, LevelExprSet.In e0 u /\ e = (f e0).
   Proof.
     unfold map. symmetry. etransitivity.
-    { eapply iff_ex; intro. eapply and_iff_compat_r. eapply In_exprs. }
-    destruct (exprs u) as [e' l]; cbn in *.
+    { eapply iff_ex; intro. eapply and_iff_compat_r. eapply In_to_nonempty_list. }
+    destruct (to_nonempty_list u) as [e' l]; cbn in *.
     symmetry. etransitivity. eapply add_list_spec.
-    etransitivity. eapply or_iff_compat_l. apply UnivExprSet.singleton_spec.
+    etransitivity. eapply or_iff_compat_l. apply LevelExprSet.singleton_spec.
     etransitivity. eapply or_iff_compat_r.
     apply in_map_iff. clear u. split.
     - intros [[e0 []]|H].
@@ -636,150 +506,194 @@ Module Universe.
       + left. exists xx. split; tas; congruence.
   Qed.
 
-  (** The universe strictly above FOR TYPING (not cumulativity) *)
-
-  Definition super (l : t) : t :=
-    match l with
-    | lSProp => type1
-    | lProp => type1
-    | lType l => lType (map UnivExpr.succ l)
-    end.
-
-  (** The l.u.b. of 2 non-prop universe sets *)
-  Program Definition sup0 (u v : nonEmptyUnivExprSet) : nonEmptyUnivExprSet :=
-    {| t_set := UnivExprSet.union u v |}.
+  Program Definition non_empty_union (u v : nonEmptyLevelExprSet) : nonEmptyLevelExprSet :=
+    {| t_set := LevelExprSet.union u v |}.
   Next Obligation.
     apply not_Empty_is_empty; intro H.
-    assert (HH: UnivExprSet.Empty u). {
+    assert (HH: LevelExprSet.Empty u). {
       intros x Hx. apply (H x).
-      eapply UnivExprSet.union_spec. now left. }
-    apply UnivExprSetFact.is_empty_1 in HH.
+      eapply LevelExprSet.union_spec. now left. }
+    apply LevelExprSetFact.is_empty_1 in HH.
     rewrite t_ne in HH; discriminate.
   Qed.
 
-  Definition sup (u v : t) : t :=
-    match u,v with
-    | lSProp, lProp => lProp
-    | lProp, lSProp => lProp
-    | (lSProp | lProp), u' => u'
-    | u', (lSProp | lProp) => u'
-    | lType l1, lType l2  => lType (sup0 l1 l2)
-    end.
-
-  Definition get_univ_exprs (u : t) (H1 : is_prop u = false) (H2 : is_sprop u = false) : nonEmptyUnivExprSet.
-  destruct u; try discriminate;easy. Defined.
-
-  (** Type of a product *)
-  Definition sort_of_product (domsort rangsort : t) :=
-    (* Prop and SProp impredicativity *)
-    if Universe.is_prop rangsort || Universe.is_sprop rangsort then rangsort
-    else Universe.sup domsort rangsort.
-
-  Lemma eqb_refl u : eqb u u.
-  Proof.
-    destruct u;auto.
-    now apply UnivExprSet.equal_spec.
-  Qed.
-
-  Lemma elements_not_empty (u : Universe.nonEmptyUnivExprSet) : UnivExprSet.elements u <> [].
+  Lemma elements_not_empty (u : nonEmptyLevelExprSet) : LevelExprSet.elements u <> [].
   Proof.
     destruct u as [u1 u2]; cbn; intro e.
-    unfold UnivExprSet.is_empty, UnivExprSet.elements,
-    UnivExprSet.Raw.elements in *.
+    unfold LevelExprSet.is_empty, LevelExprSet.elements,
+    LevelExprSet.Raw.elements in *.
     rewrite e in u2; discriminate.
   Qed.
 
-  Definition get_is_level (u : t) : option Level.t :=
-    match u with
-    | lSProp => None
-    | lProp => None
-    | lType l => match UnivExprSet.elements l with
-                 [(l, 0%nat)] => Some l
-               | _ => None
-               end
-    end.
 
-  Global Instance Evaluable' : Evaluable nonEmptyUnivExprSet
-    := fun v u => let '(e, u) := Universe.exprs u in
-               List.fold_left (fun n e => Nat.max (val v e) n) u (val v e).
-
-  Definition univ_val :=
-    fun v u => match u with
-            | lSProp => USProp
-            | lProp => UProp
-            | lType l => UType (val v l)
-            end.
-
-  Lemma val_make' v e
-    : val v (make' e) = val v e.
+  Lemma eq_univ (u v : nonEmptyLevelExprSet) :
+    u = v :> LevelExprSet.t -> u = v.
   Proof.
+    destruct u as [u1 u2], v as [v1 v2]; cbn. intros X; destruct X.
+    now rewrite (uip_bool _ _ u2 v2).
+  Qed.
+
+  Lemma eq_univ' (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.Equal u v -> u = v.
+  Proof.
+    intro H. now apply eq_univ, LevelExprSet.eq_leibniz.
+  Qed.
+
+  Lemma eq_univ'' (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.elements u = LevelExprSet.elements v -> u = v.
+  Proof.
+    intro H. apply eq_univ.
+    destruct u as [u1 u2], v as [v1 v2]; cbn in *; clear u2 v2.
+    destruct u1 as [u1 u2], v1 as [v1 v2]; cbn in *.
+    destruct H. now rewrite (uip_bool _ _ u2 v2).
+  Qed.
+
+  Lemma univ_expr_eqb_true_iff (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.equal u v <-> u = v.
+  Proof.
+    split.
+    - intros.
+      apply eq_univ'. now apply LevelExprSet.equal_spec.
+    - intros ->. now apply LevelExprSet.equal_spec.
+  Qed.
+
+  Lemma univ_expr_eqb_comm (u v : nonEmptyLevelExprSet) :
+    LevelExprSet.equal u v <-> LevelExprSet.equal v u.
+  Proof.
+    transitivity (u = v). 2: transitivity (v = u).
+    - apply univ_expr_eqb_true_iff.
+    - split; apply eq_sym.
+    - split; apply univ_expr_eqb_true_iff.
+  Qed.
+
+
+  Lemma LevelExprSet_for_all_false f u :
+    LevelExprSet.for_all f u = false -> LevelExprSet.exists_ (negb ∘ f) u.
+  Proof.
+    intro H. rewrite LevelExprSetFact.exists_b.
+    rewrite LevelExprSetFact.for_all_b in H.
+    all: try now intros x y [].
+    induction (LevelExprSet.elements u); cbn in *; [discriminate|].
+    apply andb_false_iff in H; apply orb_true_iff; destruct H as [H|H].
+    left; now rewrite H.
+    right; now rewrite IHl.
+  Qed.
+
+  Lemma LevelExprSet_For_all_exprs (P : LevelExpr.t -> Prop) (u : nonEmptyLevelExprSet)
+    : LevelExprSet.For_all P u
+      <-> P (to_nonempty_list u).1 /\ Forall P (to_nonempty_list u).2.
+  Proof.
+    etransitivity.
+    - eapply iff_forall; intro e. eapply imp_iff_compat_r.
+      apply In_to_nonempty_list.
+    - cbn; split.
+      + intro H. split. apply H. now left.
+        apply Forall_forall. intros x H0.  apply H; now right.
+      + intros [H1 H2] e [He|He]. subst e; tas.
+        eapply Forall_forall in H2; tea.
+  Qed.
+
+
+End NonEmptySetFacts.
+Import NonEmptySetFacts.
+
+
+Module LevelAlgExpr.
+  (** A universe / an algebraic expression is a list of universe expressions which is:
+        - sorted
+        - without duplicate
+        - non empty *)
+
+  Definition t := nonEmptyLevelExprSet.
+
+  (* We use uip on the is_empty condition *)
+  #[global, program] Instance levelexprset_reflect : ReflectEq t :=
+    { eqb x y := eqb x.(t_set) y.(t_set) }.
+  Next Obligation.
+    destruct (eqb_spec (t_set x) (t_set y)); constructor.
+    destruct x, y; cbn in *. subst.
+    now rewrite (uip t_ne0 t_ne1).
+    intros e; subst x; apply H.
     reflexivity.
   Qed.
 
-  Lemma val_make v l
-    : univ_val v (make l) = UType (val v l).
-  Proof.
-    destruct l; cbnr.
-  Qed.
+  #[global] Instance eq_dec_univ0 : EqDec t := eq_dec.
 
-  Lemma val_make_npl v (l : Level.t)
-    : univ_val v (make l) = UType (val v l).
-  Proof.
-    destruct l; cbnr.
-  Qed.
+  Definition make (e: LevelExpr.t) : t := singleton e.
+  Definition make' (l: Level.t) := singleton (LevelExpr.make l).
 
-  Lemma make_inj x y :
-    make x = make y -> x = y.
-  Proof.
-    destruct x, y; try now inversion 1.
-  Qed.
+  (** The non empty / sorted / without dup list of univ expressions, the
+    components of the pair are the head and the tail of the (non empty) list *)
+  Definition exprs : t -> LevelExpr.t * list LevelExpr.t := to_nonempty_list.
 
-End Universe.
+  Global Instance Evaluable : Evaluable LevelAlgExpr.t
+    := fun v u =>
+      let '(e, u) := LevelAlgExpr.exprs u in
+      List.fold_left (fun n e => Nat.max (val v e) n) u (val v e).
 
-Definition is_propositional u := 
-  Universe.is_prop u || Universe.is_sprop u.
+  (** Test if the universe is a lub of levels or contains +n's. *)
+  Definition is_levels (u : t) : bool :=
+    LevelExprSet.for_all LevelExpr.is_level u.
 
-(** This coercion allows to see the universes as a [UnivExprSet.t] *)
-Coercion Universe.t_set : Universe.nonEmptyUnivExprSet >-> UnivExprSet.t.
+  (** Test if the universe is a level or an algebraic universe. *)
+  Definition is_level (u : t) : bool :=
+    (LevelExprSet.cardinal u =? 1)%nat && is_levels u.
 
-Declare Scope univ_scope.
-Delimit Scope univ_scope with u.
 
-Notation "⟦ u ⟧_ v" := (Universe.univ_val v u) (at level 0, format "⟦ u ⟧_ v", v name) : univ_scope.
+  Definition succ : t -> t := map LevelExpr.succ.
+
+  (** The l.u.b. of 2 non-prop universe sets *)
+  Definition sup : t -> t -> t := non_empty_union.
+
+  Definition get_is_level (u : t) : option Level.t :=
+    match LevelExprSet.elements u with
+    | [(l, 0%nat)] => Some l
+    | _ => None
+    end.
+
+  Lemma val_make v e : val v (make e) = val v e.
+  Proof. reflexivity. Qed.
+
+  Lemma val_make' v l
+    : val v (make' l) = val v l.
+  Proof. reflexivity. Qed.
+
+End LevelAlgExpr.
 
 Ltac u :=
- change LevelSet.elt with Level.t in *;
- change UnivExprSet.elt with UnivExpr.t in *.
- (* change ConstraintSet.elt with UnivConstraint.t in *. *)
+  change LevelSet.elt with Level.t in *;
+  change LevelExprSet.elt with LevelExpr.t in *.
+  (* change ConstraintSet.elt with UnivConstraint.t in *. *)
 
 
-Lemma val_fold_right (u : Universe.nonEmptyUnivExprSet) v :
-  val v u = fold_right (fun e x => Nat.max (val v e) x) (val v (Universe.exprs u).1)
-                       (List.rev (Universe.exprs u).2).
+Lemma val_fold_right (u : LevelAlgExpr.t) v :
+  val v u = fold_right (fun e x => Nat.max (val v e) x) (val v (LevelAlgExpr.exprs u).1)
+                       (List.rev (LevelAlgExpr.exprs u).2).
 Proof.
-  unfold val at 1, Universe.Evaluable'.
-  destruct (Universe.exprs u).
+  unfold val at 1, LevelAlgExpr.Evaluable.
+  destruct (LevelAlgExpr.exprs u).
   now rewrite fold_left_rev_right.
 Qed.
 
-Lemma val_In_le (u : Universe.nonEmptyUnivExprSet) v e :
-  UnivExprSet.In e u -> val v e <= val v u.
+Lemma val_In_le (u : LevelAlgExpr.t) v e :
+  LevelExprSet.In e u -> val v e <= val v u.
 Proof.
   intro H. rewrite val_fold_right.
-  apply Universe.In_exprs_rev in H. destruct (Universe.exprs u); cbn in *.
-  clear -H. destruct H as [H|H].
-  - subst. induction (List.rev l); cbnr; lia.
+  apply In_to_nonempty_list_rev in H.
+  fold LevelAlgExpr.exprs in H; destruct (LevelAlgExpr.exprs u); cbn in *.
+  destruct H as [H|H].
+  - subst. induction (List.rev l); cbnr. lia.
   - induction (List.rev l); cbn; invs H.
     + u; lia.
     + specialize (IHl0 H0). lia.
 Qed.
 
-Lemma val_In_max (u : Universe.nonEmptyUnivExprSet) v :
-  exists e, UnivExprSet.In e u /\ val v e = val v u.
+Lemma val_In_max (u : LevelAlgExpr.t) v :
+  exists e, LevelExprSet.In e u /\ val v e = val v u.
 Proof.
   eapply iff_ex. {
-    intro. eapply and_iff_compat_r. apply Universe.In_exprs_rev. }
-  rewrite val_fold_right. destruct (Universe.exprs u) as [e l]; cbn in *.
+    intro. eapply and_iff_compat_r. apply In_to_nonempty_list_rev. }
+  rewrite val_fold_right. fold LevelAlgExpr.exprs; destruct (LevelAlgExpr.exprs u) as [e l]; cbn in *.
   clear. induction (List.rev l); cbn.
   - exists e. split; cbnr. left; reflexivity.
   - destruct IHl0 as [e' [H1 H2]].
@@ -791,15 +705,15 @@ Proof.
       destruct H1 as [H1|H1]; [now left|right]. now constructor 2.
 Qed.
 
-Lemma val_ge_caract (u : Universe.nonEmptyUnivExprSet) v k :
-  (forall e, UnivExprSet.In e u -> val v e <= k) <-> val v u <= k.
+Lemma val_ge_caract (u : LevelAlgExpr.t) v k :
+  (forall e, LevelExprSet.In e u -> val v e <= k) <-> val v u <= k.
 Proof.
   split.
   - eapply imp_iff_compat_r. {
       eapply iff_forall; intro. eapply imp_iff_compat_r.
-      apply Universe.In_exprs_rev. }
+      apply In_to_nonempty_list_rev. }
     rewrite val_fold_right.
-    destruct (Universe.exprs u) as [e l]; cbn; clear.
+    fold LevelAlgExpr.exprs; destruct (LevelAlgExpr.exprs u) as [e l]; cbn; clear.
     induction (List.rev l); cbn.
     + intros H. apply H. left; reflexivity.
     + intros H.
@@ -812,14 +726,14 @@ Proof.
   - intros H e He. eapply val_In_le in He. etransitivity; eassumption.
 Qed.
 
-Lemma val_le_caract (u : Universe.nonEmptyUnivExprSet) v k :
-  (exists e, UnivExprSet.In e u /\ k <= val v e) <-> k <= val v u.
+Lemma val_le_caract (u : LevelAlgExpr.t) v k :
+  (exists e, LevelExprSet.In e u /\ k <= val v e) <-> k <= val v u.
 Proof.
   split.
   - eapply imp_iff_compat_r. {
-      eapply iff_ex; intro. eapply and_iff_compat_r. apply Universe.In_exprs_rev. }
+      eapply iff_ex; intro. eapply and_iff_compat_r. apply In_to_nonempty_list_rev. }
     rewrite val_fold_right.
-    destruct (Universe.exprs u) as [e l]; cbn; clear.
+    fold LevelAlgExpr.exprs; destruct (LevelAlgExpr.exprs u) as [e l]; cbn; clear.
     induction (List.rev l); cbn.
     + intros H. destruct H as [e' [[H1|H1] H2]].
       * now subst.
@@ -835,10 +749,10 @@ Qed.
 
 
 
-Lemma val_caract (u : Universe.nonEmptyUnivExprSet) v k :
+Lemma val_caract (u : LevelAlgExpr.t) v k :
   val v u = k
-  <-> (forall e, UnivExprSet.In e u -> val v e <= k)
-    /\ exists e, UnivExprSet.In e u /\ val v e = k.
+  <-> (forall e, LevelExprSet.In e u -> val v e <= k)
+    /\ exists e, LevelExprSet.In e u /\ val v e = k.
 Proof.
   split.
   - intros <-; split.
@@ -851,159 +765,457 @@ Proof.
     exists e. split; tas. lia.
 Qed.
 
-Lemma val_add v e s
-  : val v (Universe.add e s) = Nat.max (val v e) (val v s).
+Lemma val_add v e (s: LevelAlgExpr.t)
+  : val v (add e s) = Nat.max (val v e) (val v s).
 Proof.
   apply val_caract. split.
-  - intros e' H. apply UnivExprSet.add_spec in H. destruct H as [H|H].
+  - intros e' H. apply LevelExprSet.add_spec in H. destruct H as [H|H].
     + subst. u; lia.
     + eapply val_In_le with (v:=v) in H. lia.
   - destruct (Nat.max_dec (val v e) (val v s)) as [H|H]; rewrite H; clear H.
-    + exists e. split; cbnr. apply UnivExprSetFact.add_1. reflexivity.
+    + exists e. split; cbnr. apply LevelExprSetFact.add_1. reflexivity.
     + destruct (val_In_max s v) as [e' [H1 H2]].
-      exists e'. split; tas. now apply UnivExprSetFact.add_2.
+      exists e'. split; tas. now apply LevelExprSetFact.add_2.
 Qed.
 
 Lemma val_sup v s1 s2 :
-  val v (Universe.sup0 s1 s2) = Nat.max (val v s1) (val v s2).
+  val v (LevelAlgExpr.sup s1 s2) = Nat.max (val v s1) (val v s2).
 Proof.
   eapply val_caract. cbn. split.
-  - intros e' H. eapply UnivExprSet.union_spec in H. destruct H as [H|H].
+  - intros e' H. eapply LevelExprSet.union_spec in H. destruct H as [H|H].
     + eapply val_In_le with (v:=v) in H. lia.
     + eapply val_In_le with (v:=v) in H. lia.
   - destruct (Nat.max_dec (val v s1) (val v s2)) as [H|H]; rewrite H; clear H.
     + destruct (val_In_max s1 v) as [e' [H1 H2]].
-      exists e'. split; tas. apply UnivExprSet.union_spec. now left.
+      exists e'. split; tas. apply LevelExprSet.union_spec. now left.
     + destruct (val_In_max s2 v) as [e' [H1 H2]].
-      exists e'. split; tas. apply UnivExprSet.union_spec. now right.
+      exists e'. split; tas. apply LevelExprSet.union_spec. now right.
 Qed.
 
 Ltac proper := let H := fresh in try (intros ? ? H; destruct H; reflexivity).
 
-Lemma for_all_elements (P : UnivExpr.t -> bool) u :
-  UnivExprSet.for_all P u = forallb P (UnivExprSet.elements u).
+Lemma for_all_elements (P : LevelExpr.t -> bool) u :
+  LevelExprSet.for_all P u = forallb P (LevelExprSet.elements u).
 Proof.
-  apply UnivExprSetFact.for_all_b; proper.
+  apply LevelExprSetFact.for_all_b; proper.
 Qed.
 
-Definition univ_val_max v1 v2 :=
-  match v1, v2 with
-  | UProp, UProp => UProp
-  | USProp, USProp => USProp
-  | UType v, UType v' => UType (Nat.max v v')
-  | _, UType _ => v2
-  | UType _, _ => v1
-  | UProp, USProp => UProp
-  | USProp, UProp => UProp
+
+Lemma levelalg_get_is_level_correct u l :
+  LevelAlgExpr.get_is_level u = Some l -> u = LevelAlgExpr.make' l.
+Proof.
+  intro H.
+  unfold LevelAlgExpr.get_is_level in *.
+  destruct (LevelExprSet.elements u) as [|l0 L] eqn:Hu1; [discriminate |].
+  destruct l0, L; try discriminate.
+  * destruct n; inversion H; subst.
+    apply eq_univ''; apply Hu1.
+  * destruct n; discriminate.
+Qed.
+
+
+Lemma sup0_comm x1 x2 :
+  LevelAlgExpr.sup x1 x2 = LevelAlgExpr.sup x2 x1.
+Proof.
+  apply eq_univ'; simpl. unfold LevelExprSet.Equal.
+  intros H. rewrite !LevelExprSet.union_spec. intuition.
+Qed.
+
+
+Declare Scope univ_scope.
+Delimit Scope univ_scope with u.
+
+(** Universes with linear hierarchy *)
+Section ConcreteUniverses.
+  Context {cf}.
+
+  Inductive concreteUniverses :=
+    | UProp
+    | USProp
+    | UType (i : nat).
+  Derive NoConfusion EqDec for concreteUniverses.
+
+  (** u + n <= u' *)
+  Definition leq_cuniverse_n n u u' :=
+    match u, u' with
+    | UProp, UProp
+    | USProp, USProp => (n = 0)%Z
+    | UType u, UType u' => (Z.of_nat u <= Z.of_nat u' - n)%Z
+    | UProp, UType u =>
+      if prop_sub_type then True else False
+    | _, _ => False
+    end.
+
+  Definition leq_cuniverse := leq_cuniverse_n 0.
+  Definition lt_cuniverse := leq_cuniverse_n 1.
+
+  Notation "x <_ n  y" := (leq_cuniverse_n n x y) (at level 10, n name) : univ_scope.
+  Notation "x < y" := (lt_cuniverse x y) : univ_scope.
+  Notation "x <= y" := (leq_cuniverse x y) : univ_scope.
+
+  Definition cuniv_sup u1 u2 :=
+    match u1, u2 with
+    | UProp, UProp => UProp
+    | USProp, USProp => USProp
+    | UType v, UType v' => UType (Nat.max v v')
+    | _, UType _ => u2
+    | UType _, _ => u1
+    | UProp, USProp => UProp
+    | USProp, UProp => UProp
+    end.
+
+  Definition is_uprop u := match u with UProp => True | _ => False end.
+  Definition is_usprop u := match u with USProp => True | _ => False end.
+  Definition is_uproplevel u := match u with USProp | UProp => True | _ => False end.
+  Definition is_uproplevel_or_set u := match u with USProp | UProp | UType 0 => True | _ => False end.
+  Definition is_utype u := match u with UType _ => True | _ => False end.
+
+  (** Type of a product *)
+  Definition cuniv_of_product domsort rangsort :=
+    match rangsort with
+    (* Prop and SProp impredicativity *)
+    | UProp | USProp => rangsort
+    | _ => cuniv_sup domsort rangsort
+    end.
+
+  Lemma cuniv_sup_comm u u' : cuniv_sup u u' = cuniv_sup u' u.
+  Proof. destruct u, u'; cbn; try congruence. f_equal; lia. Qed.
+
+  Lemma cuniv_sup_not_uproplevel u u' :
+    ~ is_uproplevel u -> ∑ n, cuniv_sup u u' = UType n.
+  Proof.
+    destruct u, u'; cbn; intros Hp; try absurd;
+    now eexists.
+  Qed.
+
+  Lemma cuniv_le_uprop_inv u : (u <= UProp)%u -> u = UProp.
+  Proof. destruct u; simpl; intros Hle; try absurd; now reflexivity. Qed.
+
+  Lemma cuniv_le_usprop_inv u : (u <= USProp)%u -> u = USProp.
+  Proof. destruct u; simpl; intros Hle; try absurd; now reflexivity. Qed.
+
+  Lemma cuniv_uprop_le_inv u : (UProp <= u)%u ->
+    (u = UProp \/ (prop_sub_type /\ exists n, u = UType n)).
+  Proof.
+    destruct u; simpl; intros Hle; [ left; reflexivity | absurd | right ].
+    destruct prop_sub_type; [| absurd].
+    split; [ trivial | now eexists ].
+  Qed.
+
+  Lemma cuniv_sup_mon u u' v v' : (u <= u')%u -> (UType v <= UType v')%u ->
+    (cuniv_sup u (UType v) <= cuniv_sup u' (UType v'))%u.
+  Proof.
+    destruct u, u'; simpl; intros Hle Hle'; try absurd;
+    lia.
+  Qed.
+
+  Lemma leq_cuniv_of_product_mon u u' v v' :
+    (u <= u')%u ->
+    (v <= v')%u ->
+    (cuniv_of_product u v <= cuniv_of_product u' v')%u.
+  Proof.
+    intros Hle1 Hle2.
+    destruct v, v'; cbn in Hle2 |- *; auto.
+    - destruct u'; cbn; assumption.
+    - apply cuniv_sup_mon; assumption.
+  Qed.
+
+  Lemma impredicative_cuniv_product {l u} :
+    is_uproplevel u ->
+    (cuniv_of_product l u <= u)%u.
+  Proof. now destruct u. Qed.
+
+
+  Global Instance leq_cuniverse_refl : Reflexive leq_cuniverse.
+  Proof.
+    intros []; cbnr; lia.
+  Qed.
+
+  Global Instance leq_cuniverse_n_trans n : Transitive (leq_cuniverse_n (Z.of_nat n)).
+  Proof.
+    intros [] [] []; cbnr; trivial; try absurd; lia.
+  Qed.
+
+  Global Instance leq_cuniverse_trans : Transitive leq_cuniverse.
+  Proof. apply (leq_cuniverse_n_trans 0). Qed.
+
+  Global Instance lt_cuniverse_trans : Transitive lt_cuniverse.
+  Proof. apply (leq_cuniverse_n_trans 1). Qed.
+
+  Global Instance leq_cuniverse_preorder : PreOrder leq_cuniverse :=
+    Build_PreOrder _ _ _.
+
+  Global Instance lt_cuniverse_str_order : StrictOrder lt_cuniverse.
+  Proof.
+    split.
+    - intros []; unfold complement; cbnr; lia.
+    - exact _.
+  Qed.
+
+  Global Instance leq_cuniverse_antisym : Antisymmetric _ eq leq_cuniverse.
+  Proof.
+    intros [] []; cbnr; try absurd.
+    intros. f_equal; lia.
+  Qed.
+
+End ConcreteUniverses.
+
+
+(** This inductive classifies which eliminations are allowed for inductive types
+  in various sorts. *)
+Inductive allowed_eliminations : Set :=
+  | IntoSProp
+  | IntoPropSProp
+  | IntoSetPropSProp
+  | IntoAny.
+Derive NoConfusion EqDec for allowed_eliminations.
+
+
+Definition is_allowed_elimination_cuniv (allowed : allowed_eliminations) : concreteUniverses -> Prop :=
+  match allowed with
+  | IntoSProp => is_usprop
+  | IntoPropSProp => is_uproplevel
+  | IntoSetPropSProp => is_uproplevel_or_set
+  | IntoAny => fun _ => True
   end.
 
+
+Module Universe.
+  Inductive t_ :=
+    lProp | lSProp | lType (_ : LevelAlgExpr.t).
+  Derive NoConfusion for t_.
+
+  Definition t := t_.
+
+  Definition eqb (u1 u2 : t) : bool :=
+    match u1, u2 with
+    | lSProp, lSProp => true
+    | lProp, lProp => true
+    | lType e1, lType e2 => eqb e1 e2
+    | _, _ => false
+    end.
+
+  #[global, program] Instance reflect_eq_universe : ReflectEq t :=
+    { eqb := eqb }.
+  Next Obligation.
+    destruct x, y; cbn; try constructor; auto; try congruence.
+    destruct (eqb_spec t0 t1); constructor. now f_equal.
+    congruence.
+  Qed.
+
+  #[global] Instance eq_dec_univ : EqDec t := eq_dec.
+
+  (** Create a universe representing the given level. *)
+  Definition make (l : Level.t) : t :=
+    lType (LevelAlgExpr.make (LevelExpr.make l)).
+
+  Definition of_expr e := (lType (LevelAlgExpr.make e)).
+
+  Definition add_to_exprs (e : LevelExpr.t) (u : t) : t :=
+    match u with
+    | lSProp | lProp => u
+    | lType l => lType (add e l)
+    end.
+
+  Definition add_list_to_exprs (es : list LevelExpr.t) (u : t) : t :=
+    match u with
+    | lSProp | lProp => u
+    | lType l => lType (add_list es l)
+    end.
+
+  (** Test if the universe is a lub of levels or contains +n's. *)
+  Definition is_levels (u : t) : bool :=
+    match u with
+    | lSProp | lProp => true
+    | lType l => LevelAlgExpr.is_levels l
+    end.
+
+  (** Test if the universe is a level or an algebraic universe. *)
+  Definition is_level (u : t) : bool :=
+    match u with
+    | lSProp | lProp => true
+    | lType l => LevelAlgExpr.is_level l
+    end.
+
+  Definition is_sprop (u : t) : bool :=
+    match u with
+      | lSProp => true
+      | _ => false
+    end.
+
+  Definition is_prop (u : t) : bool :=
+    match u with
+      | lProp => true
+      | _ => false
+    end.
+
+  Definition is_type_sort (u : t) : bool :=
+    match u with
+      | lType _ => true
+      | _ => false
+    end.
+
+  Definition type0 : t := make Level.lzero.
+  Definition type1 : t := lType (LevelAlgExpr.make LevelExpr.type1).
+
+  Definition of_levels (l : PropLevel.t + Level.t) : t :=
+    match l with
+    | inl PropLevel.lSProp => lSProp
+    | inl PropLevel.lProp => lProp
+    | inr l => lType (LevelAlgExpr.make' l)
+    end.
+
+  (* Used for quoting. *)
+  Definition from_kernel_repr (e : Level.t * bool) (es : list (Level.t * bool)) : t
+    := lType (add_list (List.map LevelExpr.from_kernel_repr es)
+                (LevelAlgExpr.make (LevelExpr.from_kernel_repr e))).
+
+  (* Definition uex_to_kernel_repr (e : LevelExpr.t) : Level.t * bool := *)
+  (*   match e with *)
+  (*   | LevelExpr.npe (l, b) => (NoPropLevel.to_level l, b) *)
+  (*   end. *)
+
+  (* Definition to_kernel_repr (u : t) : list (Level.t * bool) *)
+  (*   :=  map (LevelExpr.to_kernel_repr) (LevelExprSet.elements u). *)
+  (* match u with *)
+  (*      | lProp => [(Level.lProp, false)] *)
+  (*      | lSProp => [(Level.lSProp, false)] *)
+  (*      | lType l => map uex_to_kernel_repr (LevelExprSet.elements l) *)
+  (*      end. *)
+
+  (** The universe strictly above FOR TYPING (not cumulativity) *)
+
+  Definition super (l : t) : t :=
+    match l with
+    | lSProp => type1
+    | lProp => type1
+    | lType l => lType (LevelAlgExpr.succ l)
+    end.
+
+  Definition sup (u v : t) : t :=
+    match u,v with
+    | lSProp, lProp => lProp
+    | lProp, lSProp => lProp
+    | (lSProp | lProp), u' => u'
+    | u', (lSProp | lProp) => u'
+    | lType l1, lType l2  => lType (LevelAlgExpr.sup l1 l2)
+    end.
+
+  Definition get_univ_exprs (u : t) (H1 : is_prop u = false) (H2 : is_sprop u = false) : LevelAlgExpr.t.
+  destruct u; try discriminate; easy. Defined.
+
+  (** Type of a product *)
+  Definition sort_of_product (domsort rangsort : t) :=
+    (* Prop and SProp impredicativity *)
+    if Universe.is_prop rangsort || Universe.is_sprop rangsort then rangsort
+    else Universe.sup domsort rangsort.
+
+  Lemma eqb_refl u : eqb u u.
+  Proof.
+    destruct u; auto.
+    now apply LevelExprSet.equal_spec.
+  Qed.
+
+  Definition get_is_level (u : t) : option Level.t :=
+    match u with
+    | lSProp => None
+    | lProp => None
+    | lType l => LevelAlgExpr.get_is_level l
+    end.
+
+  Definition to_cuniv v u :=
+    match u with
+    | lSProp => USProp
+    | lProp => UProp
+    | lType l => UType (val v l)
+    end.
+
+  Lemma val_make v l
+    : to_cuniv v (make l) = UType (val v l).
+  Proof.
+    destruct l; cbnr.
+  Qed.
+
+  Lemma make_inj x y :
+    make x = make y -> x = y.
+  Proof.
+    destruct x, y; try now inversion 1.
+  Qed.
+
+End Universe.
+
+Definition is_propositional u :=
+  Universe.is_prop u || Universe.is_sprop u.
+
+Notation "⟦ u ⟧_ v" := (Universe.to_cuniv v u) (at level 0, format "⟦ u ⟧_ v", v name) : univ_scope.
+
+
 Lemma val_universe_sup v u1 u2 :
-  Universe.univ_val v (Universe.sup u1 u2) = univ_val_max (Universe.univ_val v u1) (Universe.univ_val v u2).
+  Universe.to_cuniv v (Universe.sup u1 u2) = cuniv_sup (Universe.to_cuniv v u1) (Universe.to_cuniv v u2).
 Proof.
   destruct u1 as [ | | l1]; destruct u2 as [ | | l2];cbn;try lia; auto.
   f_equal. apply val_sup.
 Qed.
 
 Lemma is_prop_val u :
-  Universe.is_prop u -> forall v, Universe.univ_val v u = UProp.
+  Universe.is_prop u -> forall v, Universe.to_cuniv v u = UProp.
 Proof.
   destruct u as [| | u];try discriminate;auto.
 Qed.
 
 Lemma is_sprop_val u :
-  Universe.is_sprop u -> forall v, Universe.univ_val v u = USProp.
+  Universe.is_sprop u -> forall v, Universe.to_cuniv v u = USProp.
 Proof.
   destruct u as [| | u];try discriminate;auto.
 Qed.
 
-(* 
-Lemma val_zero_exprs v (l : Universe.nonEmptyUnivExprSet) : 0 <= val v l.
+(*
+Lemma val_zero_exprs v (l : LevelAlgExpr.t) : 0 <= val v l.
 Proof.
   rewrite val_fold_right.
-  destruct (Universe.exprs l) as [e u']; clear l; cbn.
+  destruct (LevelAlgExpr.exprs l) as [e u']; clear l; cbn.
   induction (List.rev u'); simpl.
   - destruct e as [npl_expr].
     destruct npl_expr as [t b].
     cbn.
     assert (0 <= val v t) by apply Level.val_zero.
     destruct b;lia.
-  - pose proof (UnivExpr.val_zero a v); lia.
+  - pose proof (LevelExpr.val_zero a v); lia.
 Qed. *)
 
 
 Lemma val_is_prop u v :
-  Universe.univ_val v u = UProp <-> Universe.is_prop u.
+  Universe.to_cuniv v u = UProp <-> Universe.is_prop u.
 Proof.
   destruct u; auto;cbn in *; intuition congruence.
 Qed.
 
 Lemma val_is_sprop u v :
-  Universe.univ_val v u = USProp <-> Universe.is_sprop u.
+  Universe.to_cuniv v u = USProp <-> Universe.is_sprop u.
 Proof.
   destruct u;auto;cbn in *; intuition congruence.
 Qed.
 
 Lemma is_prop_and_is_sprop_val_false u :
-  Universe.is_prop u = false -> Universe.is_sprop u = false -> 
-  forall v, ∑ n, Universe.univ_val v u = UType n.
+  Universe.is_prop u = false -> Universe.is_sprop u = false ->
+  forall v, ∑ n, Universe.to_cuniv v u = UType n.
 Proof.
   intros Hp Hsp v.
   destruct u; try discriminate. simpl. eexists; eauto.
 Qed.
 
 Lemma val_is_prop_false u v n :
-  Universe.univ_val v u = UType n -> Universe.is_prop u = false.
+  Universe.to_cuniv v u = UType n -> Universe.is_prop u = false.
 Proof.
   pose proof (is_prop_val u) as H. destruct (Universe.is_prop u); cbnr.
   rewrite (H eq_refl v). discriminate.
 Qed.
 
-Lemma eq_univ (u v : Universe.nonEmptyUnivExprSet) :
-  u = v :> UnivExprSet.t -> u = v.
-Proof.
-  destruct u as [u1 u2], v as [v1 v2]; cbn. intros X; destruct X.
-  now rewrite (uip_bool _ _ u2 v2).
-Qed.
-
-Lemma eq_univ' (u v : Universe.nonEmptyUnivExprSet) :
-  UnivExprSet.Equal u v -> u = v.
-Proof.
-  intro H. now apply eq_univ, UnivExprSet.eq_leibniz.
-Qed.
-
-Lemma eq_univ'' (u v : Universe.nonEmptyUnivExprSet) :
-  UnivExprSet.elements u = UnivExprSet.elements v -> u = v.
-Proof.
-  intro H. apply eq_univ.
-  destruct u as [u1 u2], v as [v1 v2]; cbn in *; clear u2 v2.
-  destruct u1 as [u1 u2], v1 as [v1 v2]; cbn in *.
-  destruct H. now rewrite (uip_bool _ _ u2 v2).
-Qed.
-
 Lemma get_is_level_correct u l :
-  Universe.get_is_level u = Some l -> u = Universe.make l.
+  Universe.get_is_level u = Some l -> u = Universe.lType (LevelAlgExpr.make' l).
 Proof.
-  intro H.
-  destruct u eqn:Hu;cbn in *.
-  - inversion H;subst;reflexivity.
-  - inversion H;subst;reflexivity.
-  - unfold Universe.make.
-    destruct (UnivExprSet.elements _) as [|l0 L] eqn:Hu1; [discriminate|].
-    destruct l0, L; try discriminate.
-    * destruct n,n0;inversion H;subst.
-      apply f_equal.
-      apply eq_univ'';unfold UnivExpr.make.
-      cbn. simpl in Hu1. rewrite Hu1. reflexivity.
-    * destruct e,n0;inversion H;subst.
-Qed.
-
-Lemma univ_expr_eqb_true_iff (u v : Universe.nonEmptyUnivExprSet) :
-  UnivExprSet.equal u v <-> u = v.
-Proof.
-  split.
-  - intros.
-    apply eq_univ'. now apply UnivExprSet.equal_spec.
-  - intros ->. now apply UnivExprSet.equal_spec.
+  intro H; destruct u; cbnr; try discriminate.
+  f_equal; now apply levelalg_get_is_level_correct.
 Qed.
 
 Lemma eqb_true_iff u v :
@@ -1011,41 +1223,8 @@ Lemma eqb_true_iff u v :
 Proof.
   split. 2: intros ->; apply Universe.eqb_refl.
   intro H.
-  destruct u,v;auto;try discriminate.
+  destruct u, v;auto;try discriminate.
   apply f_equal. now apply univ_expr_eqb_true_iff.
-Qed.
-
-Lemma UnivExprSet_for_all_false f u :
-  UnivExprSet.for_all f u = false -> UnivExprSet.exists_ (negb ∘ f) u.
-Proof.
-  intro H. rewrite UnivExprSetFact.exists_b.
-  rewrite UnivExprSetFact.for_all_b in H.
-  all: try now intros x y [].
-  induction (UnivExprSet.elements u); cbn in *; [discriminate|].
-  apply andb_false_iff in H; apply orb_true_iff; destruct H as [H|H].
-  left; now rewrite H.
-  right; now rewrite IHl.
-Qed.
-
-Lemma UnivExprSet_For_all_exprs (P : UnivExpr.t -> Prop) (u : Universe.nonEmptyUnivExprSet)
-  : UnivExprSet.For_all P u
-    <-> P (Universe.exprs u).1 /\ Forall P (Universe.exprs u).2.
-Proof.
-  etransitivity.
-  - eapply iff_forall; intro e. eapply imp_iff_compat_r.
-    apply Universe.In_exprs.
-  - cbn; split.
-    + intro H. split. apply H. now left.
-      apply Forall_forall. intros x H0.  apply H; now right.
-    + intros [H1 H2] e [He|He]. subst e; tas.
-      eapply Forall_forall in H2; tea.
-Qed.
-
-Lemma sup0_comm x1 x2 :
-  Universe.sup0 x1 x2 = Universe.sup0 x2 x1.
-Proof.
-  apply eq_univ'; simpl. unfold UnivExprSet.Equal.
-  intros H. rewrite !UnivExprSet.union_spec. intuition.
 Qed.
 
 Lemma sup_comm x1 x2 :
@@ -1053,6 +1232,14 @@ Lemma sup_comm x1 x2 :
 Proof.
   destruct x1,x2;auto.
   cbn;apply f_equal;apply sup0_comm.
+Qed.
+
+Lemma is_not_prop_and_is_not_sprop u :
+  Universe.is_prop u = false -> Universe.is_sprop u = false ->
+  ∑ u', u = Universe.lType u'.
+Proof.
+  intros Hp Hsp.
+  destruct u; try discriminate. now eexists.
 Qed.
 
 Lemma is_prop_sort_sup x1 x2 :
@@ -1090,6 +1277,11 @@ Lemma is_sprop_sup_iff u s :
   (Universe.is_sprop u /\ Universe.is_sprop s).
 Proof. split;destruct u,s;intuition. Qed.
 
+Lemma is_type_sup_r s1 s2 :
+  Universe.is_type_sort s2 ->
+  Universe.is_type_sort (Universe.sup s1 s2).
+Proof. destruct s2; try absurd; destruct s1; cbnr; intros; absurd. Qed.
+
 Lemma is_prop_sort_prod x2 x3 :
   Universe.is_prop (Universe.sort_of_product x2 x3)
   -> Universe.is_prop x3.
@@ -1111,11 +1303,11 @@ Qed.
 Module ConstraintType.
   Inductive t_ : Set := Le (z : Z) | Eq.
   Derive NoConfusion EqDec for t_.
-  
+
   Definition t := t_.
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
-  
+
   Definition Le0 := Le 0.
   Definition Lt := Le 1.
 
@@ -1161,7 +1353,7 @@ End ConstraintType.
 
 Module UnivConstraint.
   Definition t : Set := Level.t * ConstraintType.t * Level.t.
-  
+
   Definition eq : t -> t -> Prop := eq.
   Definition eq_equiv : Equivalence eq := _.
 
@@ -1262,7 +1454,7 @@ Qed.
 
 Module Instance.
 
-  (** A universe instance represents a vector of argument universes
+  (** A universe instance represents a vector of argument concreteUniverses
       to a polymorphic definition (constant, inductive or constructor). *)
   Definition t : Set := list Level.t.
 
@@ -1318,11 +1510,11 @@ Module ContextSet.
 
   Definition equal (x y : t) : Prop :=
     x.1 =_lset y.1 /\ x.2 =_cset y.2.
-  
+
   Definition subset (x y : t) : Prop :=
     LevelSet.Subset (levels x) (levels y) /\
     ConstraintSet.Subset (constraints x) (constraints y).
-  
+
 End ContextSet.
 
 Notation "(=_cs)" := ContextSet.equal (at level 0).
@@ -1369,76 +1561,8 @@ Definition constraints_of_udecl u :=
   | Polymorphic_ctx ctx => snd (AUContext.repr ctx)
   end.
 
-Definition univ_le_n {cf:checker_flags} n u u' := 
-  match u, u' with
-  | UProp, UProp
-  | USProp, USProp => (n = 0)%Z
-  | UType u, UType u' => (Z.of_nat u <= Z.of_nat u' - n)%Z
-  | UProp, UType u => 
-    if prop_sub_type then True else False
-  | _, _ => False
-  end.
-
-Notation "x <_ n y" := (univ_le_n n x y) (at level 10, n name) : univ_scope.
-Notation "x < y" := (univ_le_n 1 x y) : univ_scope.
-Notation "x <= y" := (univ_le_n 0 x y) : univ_scope.
-
-Ltac lle := unfold univ_le_n in *.
-Ltac lled := lle; match goal with
-                  | H : prop_sub_type = true |- _ => rewrite H in *
-                  | H : prop_sub_type = false |- _ => rewrite H in *
-                  | H : is_true prop_sub_type |- _ => rewrite H in *
-                  | _ => destruct prop_sub_type eqn:?Hb
-                  end.
-
-Ltac prop_non_prop :=
-  match goal with
-  | |- context[ Universe.is_prop ?u || Universe.is_sprop ?u]  =>
-    destruct (Universe.is_prop u || Universe.is_sprop u)
-  | H : context[ Universe.is_prop ?u || Universe.is_sprop ?u] |- _ =>
-    destruct (Universe.is_prop u || Universe.is_sprop u)
-  end.
-
 Section Univ.
-  Context {cf:checker_flags}.
-
-  Global Instance lle_refl : Reflexive (univ_le_n 0).
-  Proof.
-    intro x. destruct x; simpl; lia.
-  Qed.
-
-  Lemma switch_minus (x y z : Z) : (x <= y - z <-> x + z <= y)%Z.
-  Proof. split; lia. Qed.
-
-
-  Global Instance le_n_trans n : Transitive (univ_le_n (Z.of_nat n)).
-  Proof.
-    intros [] [] []; unfold univ_le_n; simpl; try lia; try (destruct prop_sub_type; lia).
-  Qed.
-
-  Global Instance lle_trans : Transitive (univ_le_n 0).
-  Proof. apply (le_n_trans 0). Qed.
-
-  Global Instance llt_trans : Transitive (univ_le_n 1).
-  Proof. apply (le_n_trans 1). Qed.
-
-  (* Lemma llt_lt n m : (n < m)%u -> (n < m)%Z.
-  Proof. lled; lia. Qed.
-
-  Lemma lle_le n m : (n <= m)%u -> (n <= m)%Z.
-  Proof. lled; lia. Qed.
-
-  Lemma lt_llt n m : prop_sub_type -> (n < m)%Z -> (n < m)%u.
-  Proof. unfold llt. now intros ->. Qed.
-
-  Lemma le_lle n m : prop_sub_type -> (n <= m)%Z -> (n <= m)%u.
-  Proof. lled; [lia|discriminate]. Qed.
-
-  Lemma lt_llt' n m : (0 <= n)%Z -> (n < m)%Z -> (n < m)%u.
-  Proof. lled; lia. Qed.
-
-  Lemma le_lle' n m : (0 <= n)%Z -> (n <= m)%Z -> (n <= m)%u.
-  Proof. lled; lia. Qed. *)
+  Context {cf: checker_flags}.
 
   Inductive satisfies0 (v : valuation) : UnivConstraint.t -> Prop :=
   | satisfies0_Lt (l l' : Level.t) (z : Z) : (Z.of_nat (val v l) <= Z.of_nat (val v l') - z)%Z
@@ -1451,26 +1575,60 @@ Section Univ.
 
   Definition consistent ctrs := exists v, satisfies v ctrs.
 
-  Definition eq_universe0 (φ : ConstraintSet.t) u u' :=
-    forall v, satisfies v φ -> (Universe.univ_val v u = Universe.univ_val v u').
+  Definition leq0_levelalg_n n φ (u u' : LevelAlgExpr.t) :=
+    forall v, satisfies v φ -> (Z.of_nat (val v u) <= Z.of_nat (val v u') - n)%Z.
 
-  Definition leq_universe_n n (φ : ConstraintSet.t) u u' :=
-    forall v, satisfies v φ -> (univ_le_n n (Universe.univ_val v u) (Universe.univ_val v u'))%u.
+  Definition leq_levelalg_n n φ (u u' : LevelAlgExpr.t) :=
+    if check_univs then leq0_levelalg_n n φ u u' else True.
 
-  Definition leq_universe0 (φ : ConstraintSet.t) u u' :=
-    forall v, satisfies v φ -> (Universe.univ_val v u <= Universe.univ_val v u')%u.
+  Definition leq_universe_n_ {CS} leq_levelalg_n n (φ: CS) s s' :=
+    match s, s' with
+    | Universe.lProp,   Universe.lProp
+    | Universe.lSProp,  Universe.lSProp => (n = 0)%Z
+    | Universe.lType u, Universe.lType u' => leq_levelalg_n n φ u u'
+    | Universe.lProp,   Universe.lType u => prop_sub_type
+    | _, _ => False
+    end.
 
-  Lemma leq_universe0_leq_universe_n (φ : ConstraintSet.t) u u' :
-    leq_universe0 φ u u' <-> leq_universe_n 0 φ u u'.
+  Definition leq_universe_n := leq_universe_n_ leq_levelalg_n.
+
+  Definition leqb_universe_n_ leqb_levelalg_n b s s' :=
+    match s, s' with
+    | Universe.lProp,   Universe.lProp
+    | Universe.lSProp,  Universe.lSProp => negb b
+    | Universe.lType u, Universe.lType u' => leqb_levelalg_n b u u'
+    | Universe.lProp,   Universe.lType u => prop_sub_type
+    | _, _ => false
+    end.
+
+  Definition eq0_levelalg φ (u u' : LevelAlgExpr.t) :=
+    forall v, satisfies v φ -> val v u = val v u'.
+
+  Definition eq_levelalg φ (u u' : LevelAlgExpr.t) :=
+    if check_univs then eq0_levelalg φ u u' else True.
+
+  Definition eq_universe_ {CS} eq_levelalg (φ: CS) s s' :=
+    match s, s' with
+    | Universe.lProp,   Universe.lProp
+    | Universe.lSProp,  Universe.lSProp => True
+    | Universe.lType u, Universe.lType u' => eq_levelalg φ u u'
+    | _, _ => False
+    end.
+
+  Definition eq_universe := eq_universe_ eq_levelalg.
+
+  Definition lt_levelalg := leq_levelalg_n 1.
+  Definition leq_levelalg := leq_levelalg_n 0.
+  Definition lt_universe := leq_universe_n 1.
+  Definition leq_universe := leq_universe_n 0.
+
+  Lemma leq_levelalg_leq_levelalg_n (φ : ConstraintSet.t) u u' :
+    leq_levelalg φ u u' <-> leq_levelalg_n 0 φ u u'.
   Proof. intros. reflexivity. Qed.
 
-  Definition lt_universe := leq_universe_n 1.
-
-  Definition eq_universe φ u u'
-    := if check_univs then eq_universe0 φ u u' else True.
-
-  Definition leq_universe φ u u'
-    := if check_univs then leq_universe0 φ u u' else True.
+  Lemma leq_universe_leq_universe_n (φ : ConstraintSet.t) u u' :
+    leq_universe φ u u' <-> leq_universe_n 0 φ u u'.
+  Proof. intros. reflexivity. Qed.
 
   (* ctrs are "enforced" by φ *)
 
@@ -1490,185 +1648,216 @@ Section Univ.
     intros ctr Hc. apply Hv. now apply Hφ.
   Qed.
 
+  Lemma switch_minus (x y z : Z) : (x <= y - z <-> x + z <= y)%Z.
+  Proof. split; lia. Qed.
+
+  (* Lemma llt_lt n m : (n < m)%u -> (n < m)%Z.
+  Proof. lled; lia. Qed.
+
+  Lemma lle_le n m : (n <= m)%u -> (n <= m)%Z.
+  Proof. lled; lia. Qed.
+
+  Lemma lt_llt n m : prop_sub_type -> (n < m)%Z -> (n < m)%u.
+  Proof. unfold llt. now intros ->. Qed.
+
+  Lemma le_lle n m : prop_sub_type -> (n <= m)%Z -> (n <= m)%u.
+  Proof. lled; [lia|discriminate]. Qed.
+
+  Lemma lt_llt' n m : (0 <= n)%Z -> (n < m)%Z -> (n < m)%u.
+  Proof. lled; lia. Qed.
+
+  Lemma le_lle' n m : (0 <= n)%Z -> (n <= m)%Z -> (n <= m)%u.
+  Proof. lled; lia. Qed. *)
+
 
   (** **** Lemmas about eq and leq **** *)
 
-  Global Instance eq_universe0_refl φ : Reflexive (eq_universe0 φ).
+  Ltac unfold_univ_rel0 :=
+    unfold eq0_levelalg, leq0_levelalg_n in *;
+    intros v Hv; cbnr.
+
+  Ltac unfold_univ_rel :=
+    unfold eq_levelalg, leq_levelalg, lt_levelalg, leq_levelalg_n in *;
+    destruct check_univs; [unfold_univ_rel0 | trivial].
+
+
+  Global Instance eq_levelalg_refl φ : Reflexive (eq_levelalg φ).
   Proof.
-    intros vH s; reflexivity.
+    intros u; unfold_univ_rel.
   Qed.
 
   Global Instance eq_universe_refl φ : Reflexive (eq_universe φ).
   Proof.
-    intro s.
-    unfold eq_universe; destruct check_univs;
-      [apply eq_universe0_refl|constructor].
+    intros []; cbnr.
   Qed.
 
-  Global Instance leq_universe0_refl φ : Reflexive (leq_universe0 φ).
+  Global Instance leq_levelalg_n_refl φ : Reflexive (leq_levelalg φ).
   Proof.
-    intros s vH;cbn;reflexivity.
+    intros u; unfold_univ_rel. lia.
   Qed.
 
   Global Instance leq_universe_refl φ : Reflexive (leq_universe φ).
   Proof.
-    intro s.
-    unfold leq_universe; destruct check_univs;
-      [apply leq_universe0_refl|constructor].
+    intros []; cbnr.
   Qed.
 
-  Global Instance eq_universe0_sym φ : Symmetric (eq_universe0 φ).
+  Global Instance eq_levelalg_sym φ : Symmetric (eq_levelalg φ).
   Proof.
-    intros s s' e vH. symmetry ; eauto.
+    intros u u' H; unfold_univ_rel.
+    specialize (H v Hv); lia.
   Qed.
 
   Global Instance eq_universe_sym φ : Symmetric (eq_universe φ).
   Proof.
-    unfold eq_universe. destruct check_univs ; eauto.
-    eapply eq_universe0_sym.
+    intros [] []; cbnr; auto.
+    now symmetry.
   Qed.
 
-  Global Instance eq_universe0_trans φ : Transitive (eq_universe0 φ).
+  Global Instance eq_levelalg_trans φ : Transitive (eq_levelalg φ).
   Proof.
-    intros s1 s2 s3 h1 h2 v h.
-    etransitivity ; try eapply h1 ; eauto.
+    intros u u' u'' H1 H2; unfold_univ_rel.
+    specialize (H1 v Hv); specialize (H2 v Hv); lia.
   Qed.
 
   Global Instance eq_universe_trans φ : Transitive (eq_universe φ).
   Proof.
-    intros s1 s2 s3.
-    unfold eq_universe. destruct check_univs ; auto.
-    intros h1 h2.
-    eapply eq_universe0_trans ; eauto.
+    intros [] [] []; cbnr; trivial; try absurd.
+    etransitivity; eauto.
   Qed.
 
-  Global Instance leq_universe0_trans φ : Transitive (leq_universe0 φ).
+  Global Instance leq_levelalg_n_trans n φ : Transitive (leq_levelalg_n (Z.of_nat n) φ).
   Proof.
-    intros s1 s2 s3 h1 h2 v h. etransitivity.
-    - eapply h1. assumption.
-    - eapply h2. assumption.
+    intros u u' u'' H1 H2; unfold_univ_rel.
+    specialize (H1 v Hv); specialize (H2 v Hv); lia.
+  Qed.
+
+  Global Instance leq_universe_n_trans n φ : Transitive (leq_universe_n (Z.of_nat n) φ).
+  Proof.
+    intros [] [] []; cbnr; trivial; try absurd.
+    now etransitivity.
   Qed.
 
   Global Instance leq_universe_trans φ : Transitive (leq_universe φ).
+  Proof. apply (leq_universe_n_trans 0). Qed.
+
+  Global Instance lt_universe_trans φ : Transitive (lt_universe φ).
+  Proof. apply (leq_universe_n_trans 1). Qed.
+
+  Lemma eq0_leq0_levelalg φ u u' :
+    eq0_levelalg φ u u' <-> leq0_levelalg_n 0 φ u u' /\ leq0_levelalg_n 0 φ u' u.
   Proof.
-    intros s1 s2 s3.
-    unfold leq_universe. destruct check_univs ; auto.
-    intros h1 h2.
-    eapply leq_universe0_trans ; eauto.
+    split.
+    - intros H. split; unfold eq0_levelalg, leq_levelalg_n in *;
+      intros v Hv; specialize (H v Hv); lia.
+    - intros [H1 H2]. unfold eq0_levelalg, leq_levelalg_n in *.
+      intros v Hv. specialize (H1 v Hv); specialize (H2 v Hv); lia.
+  Qed.
+
+  Lemma eq_leq_levelalg φ u u' :
+    eq_levelalg φ u u' <-> leq_levelalg φ u u' /\ leq_levelalg φ u' u.
+  Proof.
+    split.
+    - intros H. split; unfold_univ_rel; specialize (H v Hv); lia.
+    - intros [H1 H2]. unfold_univ_rel. specialize (H1 v Hv); specialize (H2 v Hv); lia.
   Qed.
 
   Lemma eq_leq_universe φ u u' :
-    eq_universe0 φ u u' <-> leq_universe0 φ u u' /\ leq_universe0 φ u' u.
+    eq_universe φ u u' <-> leq_universe φ u u' /\ leq_universe φ u' u.
   Proof.
-    split.
-    intro H; split; intros v Hv; specialize (H v Hv); now rewrite H.
-    intros [H1 H2] v Hv; specialize (H1 v Hv); specialize (H2 v Hv).
-    unfold univ_le_n in *.
-    destruct (Universe.univ_val v u), (Universe.univ_val v u'); try now auto.
+    destruct u, u'; cbnr; intuition auto.
+    all: now apply eq_leq_levelalg.
   Qed.
 
-  Lemma leq_universe0_sup_l φ s1 s2 :
-    Universe.is_prop s1 = false -> Universe.is_sprop s1 = false -> 
-    leq_universe0 φ s1 (Universe.sup s1 s2).
+  Lemma leq_levelalg_sup0_l φ u1 u2 : leq_levelalg φ u1 (LevelAlgExpr.sup u1 u2).
+  Proof. unfold_univ_rel. rewrite val_sup; lia. Qed.
+
+  Lemma leq_levelalg_sup0_r φ u1 u2 : leq_levelalg φ u2 (LevelAlgExpr.sup u1 u2).
+  Proof. unfold_univ_rel. rewrite val_sup; lia. Qed.
+
+  Lemma leq_levelalg_sup0_mon φ u1 u1' u2 u2' : leq_levelalg φ u1 u1' -> leq_levelalg φ u2 u2' ->
+    leq_levelalg φ (LevelAlgExpr.sup u1 u2) (LevelAlgExpr.sup u1' u2').
   Proof.
-    intros H1 H2 v Hv.
-    specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
-    rewrite val_universe_sup Hzero. destruct (Universe.univ_val v s2); simpl; lia.
+    intros H1 H2; unfold_univ_rel.
+    specialize (H1 v Hv); specialize (H2 v Hv).
+    rewrite !val_sup. lia.
   Qed.
 
-  Lemma leq_universe0_sup_r φ s1 s2 :
-    Universe.is_prop s2 = false -> Universe.is_sprop s2 = false -> 
-    leq_universe0 φ s2 (Universe.sup s1 s2).
+  Lemma leq_universe_sup_l φ u1 s2 :
+    let s1 := Universe.lType u1 in
+    leq_universe φ s1 (Universe.sup s1 s2).
   Proof.
-    intros H1 H2 v Hv.
-    specialize (is_prop_and_is_sprop_val_false _ H1 H2 v) as [n Hzero].
-    rewrite val_universe_sup Hzero.
-    destruct (Universe.univ_val v s1); simpl; lia.
+    destruct s2 as [| | u2]; cbnr.
+    apply leq_levelalg_sup0_l.
   Qed.
 
-  Lemma leq_universe0_sup_l' φ (s1 s2 : Universe.nonEmptyUnivExprSet) :
-    leq_universe0 φ (Universe.lType s1) (Universe.lType (Universe.sup0 s1 s2)).
+  Lemma leq_universe_sup_r φ s1 u2 :
+    let s2 := Universe.lType u2 in
+    leq_universe φ s2 (Universe.sup s1 s2).
   Proof.
-    intros v Hv. cbn. rewrite val_sup. lia.
-  Qed.
-
-  Lemma leq_universe0_sup_r' φ (s1 s2 : Universe.nonEmptyUnivExprSet) :
-    leq_universe0 φ (Universe.lType s2) (Universe.lType (Universe.sup0 s1 s2)).
-  Proof.
-    intros v Hv. cbn. rewrite val_sup. lia.
+    destruct s1 as [| | u1]; cbnr.
+    apply leq_levelalg_sup0_r.
   Qed.
 
   Lemma leq_universe_product φ (s1 s2 : Universe.t)
     : leq_universe φ s2 (Universe.sort_of_product s1 s2).
   Proof.
-    unfold leq_universe; destruct check_univs; [cbn|constructor].
-    unfold Universe.sort_of_product.
-    destruct s2; cbn; try apply leq_universe0_refl.
-    destruct s1;cbn;try apply leq_universe0_refl.
-    apply leq_universe0_sup_r'.
+    destruct s2 as [| | u2].
+    - apply leq_universe_refl.
+    - apply leq_universe_refl.
+    - apply leq_universe_sup_r.
   Qed.
   (* Rk: [leq_universe φ s1 (sort_of_product s1 s2)] does not hold due to
      impredicativity. *)
 
   Global Instance eq_universe_leq_universe φ : subrelation (eq_universe φ) (leq_universe φ).
   Proof.
-    unfold eq_universe, leq_universe; destruct check_univs; [|intuition].
-    intros u u' HH v Hv. rewrite (HH v Hv). reflexivity.
+    intros u u'. apply eq_leq_universe.
   Qed.
 
-  Global Instance eq_universe0_equivalence φ : Equivalence (eq_universe0 φ) :=
-     {| Equivalence_Reflexive := _ ;
-        Equivalence_Symmetric := _;
-        Equivalence_Transitive := _ |}.
+  Global Instance eq_levelalg_equivalence φ : Equivalence (eq_levelalg φ) := Build_Equivalence _ _ _ _.
 
-  Global Instance eq_universe_equivalence φ : Equivalence (eq_universe φ) :=
-     {| Equivalence_Reflexive := eq_universe_refl _ ;
-        Equivalence_Symmetric := eq_universe_sym _;
-        Equivalence_Transitive := eq_universe_trans _ |}.
+  Global Instance leq_levelalg_preorder φ : PreOrder (leq_levelalg φ) :=
+    {| PreOrder_Transitive := leq_levelalg_n_trans 0 _ |}.
 
-  Global Instance leq_universe_preorder φ : PreOrder (leq_universe φ) :=
-     {| PreOrder_Reflexive := leq_universe_refl _ ;
-        PreOrder_Transitive := leq_universe_trans _ |}.
-
-  Global Instance llt_str_order : StrictOrder (univ_le_n 1).
+  Global Instance lt_levelalg_str_order {c: check_univs} φ (H: consistent φ) : StrictOrder (lt_levelalg φ).
   Proof.
     split.
-    - intros x H. destruct x; simpl in *; lia.
+    - intros u; unfold complement, lt_levelalg, leq_levelalg_n; cbn.
+      rewrite c; destruct H as [v Hv]; intros nH; specialize (nH v Hv); lia.
+    - apply (leq_levelalg_n_trans 1).
+  Qed.
+
+  Global Instance leq_levelalg_antisym φ
+    : Antisymmetric _ (eq_levelalg φ) (leq_levelalg φ).
+  Proof. intros t u tu ut. now apply eq_leq_levelalg. Qed.
+
+  Global Instance leq_levelalg_partial_order φ
+    : PartialOrder (eq_levelalg φ) (leq_levelalg φ).
+  Proof.
+    intros x y; split; apply eq_leq_levelalg.
+  Defined.
+
+
+  Global Instance eq_universe_equivalence φ : Equivalence (eq_universe φ) := Build_Equivalence _ _ _ _.
+
+  Global Instance leq_universe_preorder φ : PreOrder (leq_universe φ) := Build_PreOrder _ _ _.
+
+  Global Instance lt_universe_str_order {c: check_univs} φ (H: consistent φ) : StrictOrder (lt_universe φ).
+  Proof.
+    split.
+    - intros []; unfold complement; cbn; [lia|lia|].
+      apply @StrictOrder_Irreflexive; apply @lt_levelalg_str_order; assumption.
     - exact _.
-  Qed.
-
-
-  Global Instance lle_antisym : Antisymmetric _ eq (univ_le_n 0).
-  Proof.
-    intros [] []; simpl; try reflexivity; auto.
-    intros. f_equal; lia.
-  Qed.
-
-  Global Instance leq_universe0_antisym φ
-    : Antisymmetric _ (eq_universe0 φ) (leq_universe0 φ).
-  Proof.
-    intros t u tu ut. unfold leq_universe0, eq_universe0 in *.
-    red in tu, ut.
-    intros v sat.
-    specialize (tu _ sat).
-    specialize (ut _ sat).
-    simpl in tu, ut.
-    apply lle_antisym; tea.
   Qed.
 
   Global Instance leq_universe_antisym φ
     : Antisymmetric _ (eq_universe φ) (leq_universe φ).
-  Proof.
-    intros t u tu ut. unfold leq_universe, eq_universe in *.
-    destruct check_univs; [|trivial]. eapply leq_universe0_antisym; auto.
-  Qed.
+  Proof. intros t u tu ut. now apply eq_leq_universe. Qed.
 
   Global Instance leq_universe_partial_order φ
     : PartialOrder (eq_universe φ) (leq_universe φ).
   Proof.
-    intros x y; split. intros eqxy; split. now eapply eq_universe_leq_universe. red.
-    now eapply eq_universe_leq_universe, symmetry.
-    intros [l r]. now eapply leq_universe_antisym.
+    intros x y; split; apply eq_leq_universe.
   Defined.
 
   Definition eq_universe_leq_universe' φ u u'
@@ -1680,21 +1869,22 @@ Section Univ.
 
   (** Elimination restriction *)
 
-  Definition is_allowed_elimination0
-             φ (into : Universe.t) (allowed : allowed_eliminations) : Prop :=
-    forall v,
-      satisfies v φ ->
-      match allowed, Universe.univ_val v into with
-      | IntoSProp, USProp
-      | IntoPropSProp, (UProp | USProp)
-      | IntoSetPropSProp, (UProp | USProp | UType 0)
-      | IntoAny, _ => True
-      | _, _ => False
-      end.
-  
-  Definition is_allowed_elimination φ into allowed :=
-    if check_univs then is_allowed_elimination0 φ into allowed else True.
-  
+  Definition is_lSet φ s := eq_universe φ s Universe.type0.
+    (* Unfolded definition :
+    match s with
+    | Universe.lType u =>
+      if check_univs then forall v, satisfies v φ -> val v u = 0 else True
+    | _ => False
+    end. *)
+
+  Definition is_allowed_elimination φ allowed : Universe.t -> Prop :=
+    match allowed with
+    | IntoSProp => Universe.is_sprop
+    | IntoPropSProp => is_propositional
+    | IntoSetPropSProp => fun s => is_propositional s \/ is_lSet φ s
+    | IntoAny => fun s => True
+    end.
+
   (* Is [a] a subset of [a']? *)
   Definition allowed_eliminations_subset (a a' : allowed_eliminations) : bool :=
     match a, a' with
@@ -1705,11 +1895,315 @@ Section Univ.
     | _, _ => false
     end.
 
+  Lemma allowed_eliminations_subset_impl φ a a' s
+    : allowed_eliminations_subset a a' ->
+      is_allowed_elimination φ a s -> is_allowed_elimination φ a' s.
+  Proof.
+    destruct a, a'; cbnr; trivial;
+    destruct s; cbnr; trivial;
+    intros H1 H2; try absurd; constructor; trivial.
+  Qed.
+
 End Univ.
+
+Ltac unfold_univ_rel0 :=
+  unfold eq0_levelalg, leq0_levelalg_n in *;
+  intros v Hv; cbnr.
+
+Ltac unfold_univ_rel :=
+  unfold is_allowed_elimination, is_lSet,
+  leq_universe, eq_universe, leq_universe_n, leq_universe_n_, eq_universe_,
+  eq_levelalg, leq_levelalg, lt_levelalg, leq_levelalg_n in *;
+  destruct check_univs; [unfold_univ_rel0 | trivial].
+
+Tactic Notation "unfold_univ_rel" "eqn" ":"ident(H) :=
+  unfold is_allowed_elimination, is_lSet,
+  leq_universe, eq_universe, leq_universe_n, leq_universe_n_, eq_universe_,
+  eq_levelalg, leq_levelalg, lt_levelalg, leq_levelalg_n in *;
+  destruct check_univs eqn:H; [unfold_univ_rel0 | trivial].
+
+(* Ltac prop_non_prop :=
+  match goal with
+  | |- context[ Universe.is_prop ?u || Universe.is_sprop ?u]  =>
+    destruct (Universe.is_prop u || Universe.is_sprop u)
+  | H : context[ Universe.is_prop ?u || Universe.is_sprop ?u] |- _ =>
+    destruct (Universe.is_prop u || Universe.is_sprop u)
+  end. *)
+
+Ltac cong := intuition congruence.
+
+
+Lemma leq_universe_product_mon {cf} ϕ s1 s1' s2 s2' :
+  leq_universe ϕ s1 s1' ->
+  leq_universe ϕ s2 s2' ->
+  leq_universe ϕ (Universe.sort_of_product s1 s2) (Universe.sort_of_product s1' s2').
+Proof.
+  destruct s2 as [| | u2], s2' as [| | u2']; cbnr; try absurd;
+  destruct s1 as [| | u1], s1' as [| | u1']; cbnr; try absurd; trivial.
+  - intros _ H2; etransitivity; [apply H2 | apply leq_levelalg_sup0_r].
+  - apply leq_levelalg_sup0_mon.
+Qed.
+
+Lemma impredicative_product {cf} {ϕ l u} :
+  Universe.is_prop u ->
+  leq_universe ϕ (Universe.sort_of_product l u) u.
+Proof.
+  unfold Universe.sort_of_product.
+  intros ->. reflexivity.
+Qed.
+
+Section UniverseLemmas.
+  Context {cf: checker_flags}.
+
+  Lemma sup0_idem s : LevelAlgExpr.sup s s = s.
+  Proof.
+    apply eq_univ'; cbn.
+    intro; rewrite !LevelExprSet.union_spec. intuition.
+  Qed.
+
+  Lemma sup_idem s : Universe.sup s s = s.
+  Proof.
+    destruct s; cbn; auto.
+    apply f_equal.
+    apply sup0_idem.
+  Qed.
+
+  Lemma sort_of_product_idem s
+    : Universe.sort_of_product s s = s.
+  Proof.
+    unfold Universe.sort_of_product; destruct s; try reflexivity.
+    apply sup_idem.
+  Qed.
+
+  Lemma sup0_assoc s1 s2 s3 :
+    LevelAlgExpr.sup s1 (LevelAlgExpr.sup s2 s3) = LevelAlgExpr.sup (LevelAlgExpr.sup s1 s2) s3.
+  Proof.
+    apply eq_univ'; cbn. symmetry; apply LevelExprSetProp.union_assoc.
+  Qed.
+
+  Instance proper_sup0_eq_levelalg φ :
+    Proper (eq_levelalg φ ==> eq_levelalg φ ==> eq_levelalg φ) LevelAlgExpr.sup.
+  Proof.
+    intros u1 u1' H1 u2 u2' H2.
+    unfold_univ_rel.
+    specialize (H1 v Hv); specialize (H2 v Hv).
+    rewrite !val_sup. lia.
+  Qed.
+
+  Instance universe_sup_eq_universe φ :
+    Proper (eq_universe φ ==> eq_universe φ ==> eq_universe φ) Universe.sup.
+  Proof.
+    intros [| | u1] [| |u1'] H1 [| |u2] [| |u2'] H2; cbn in *; try absurd; auto.
+    now apply proper_sup0_eq_levelalg.
+  Qed.
+
+  Lemma sort_of_product_twice u s :
+    Universe.sort_of_product u (Universe.sort_of_product u s)
+    = Universe.sort_of_product u s.
+  Proof.
+    destruct u,s; cbnr.
+    now rewrite sup0_assoc sup0_idem.
+  Qed.
+End UniverseLemmas.
+
+
+Section no_prop_leq_type.
+  Context {cf: checker_flags}.
+  Context (ϕ : ConstraintSet.t).
+
+  Lemma succ_inj x y : LevelExpr.succ x = LevelExpr.succ y -> x = y.
+  Proof.
+    unfold LevelExpr.succ.
+    destruct x as [l n], y as [l' n']. simpl. congruence.
+  Qed.
+
+  Lemma spec_map_succ l x :
+    LevelExprSet.In x (LevelAlgExpr.succ l) <->
+    exists x', LevelExprSet.In x' l /\ x = LevelExpr.succ x'.
+  Proof.
+    rewrite map_spec. reflexivity.
+  Qed.
+
+  Lemma val_succ v l : val v (LevelExpr.succ l) = val v l + 1.
+  Proof.
+    destruct l as []; simpl. cbn. lia.
+  Qed.
+
+  Lemma val_map_succ v l : val v (LevelAlgExpr.succ l) = val v l + 1.
+  Proof.
+    pose proof (spec_map_succ l).
+    set (n := LevelAlgExpr.succ l) in *.
+    destruct (val_In_max l v) as [max [inmax eqv]]. rewrite <-eqv.
+    rewrite val_caract. split.
+    intros.
+    specialize (proj1 (H _) H0) as [x' [inx' eq]]. subst e.
+    rewrite val_succ. eapply (val_In_le _ v) in inx'. rewrite <- eqv in inx'.
+    simpl in *. unfold LevelExprSet.elt, LevelExpr.t in *. lia.
+    exists (LevelExpr.succ max). split. apply H.
+    exists max; split; auto.
+    now rewrite val_succ.
+  Qed.
+
+  Lemma leq_universe_super s s' :
+    leq_universe ϕ s s' ->
+    leq_universe ϕ (Universe.super s) (Universe.super s').
+  Proof.
+    destruct s as [| | u1], s' as [| | u1']; cbnr; try absurd;
+    intros H; unfold_univ_rel;
+    rewrite !val_map_succ. lia.
+    specialize (H v Hv). lia.
+  Qed.
+
+  Lemma leq_universe_props s1 s2 :
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ s1 s2 ->
+    match s1, s2 with
+    | Universe.lProp, Universe.lProp => True
+    | Universe.lSProp, Universe.lSProp => True
+    | Universe.lProp, Universe.lSProp => False
+    | Universe.lSProp, Universe.lProp => False
+    | Universe.lProp, Universe.lType _ => prop_sub_type
+    | Universe.lSProp, Universe.lType _ => False
+    | Universe.lType l, Universe.lType l' => True
+    | Universe.lType _, _ => False
+    end.
+  Proof.
+    destruct s1, s2; cbnr; trivial.
+  Qed.
+
+  Lemma leq_universe_prop_r s1 s2 :
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ s1 s2 ->
+    Universe.is_prop s2 -> Universe.is_prop s1.
+  Proof.
+    intros Hcf cu.
+    destruct s2; cbn; [ | absurd | absurd].
+    destruct s1; cbn; [ auto | absurd | absurd].
+  Qed.
+
+  Lemma leq_universe_sprop_r s1 s2 :
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ s1 s2 ->
+    Universe.is_sprop s2 -> Universe.is_sprop s1.
+  Proof.
+    intros Hcf cu.
+    destruct s2; cbn; [ absurd | | absurd].
+    destruct s1; cbn; [ absurd | auto | absurd].
+  Qed.
+
+  Lemma leq_universe_prop_no_prop_sub_type s1 s2 :
+    check_univs ->
+    prop_sub_type = false ->
+    consistent ϕ ->
+    leq_universe ϕ s1 s2 ->
+    Universe.is_prop s1 -> Universe.is_prop s2.
+  Proof.
+    intros Hcf ps cu.
+    destruct s1; cbn; [ | absurd | absurd].
+    rewrite ps.
+    destruct s2; cbn; [ auto | absurd | absurd].
+  Qed.
+
+  Lemma leq_universe_sprop_l s1 s2 :
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ s1 s2 ->
+    Universe.is_sprop s1 -> Universe.is_sprop s2.
+  Proof.
+    intros Hcf cu.
+    destruct s1; cbn; [ absurd | | absurd].
+    destruct s2; cbn; [ absurd | auto | absurd].
+  Qed.
+
+  Hint Resolve leq_universe_sprop_l leq_universe_sprop_r
+        leq_universe_prop_r
+        leq_universe_prop_no_prop_sub_type
+        : univ_lemmas.
+
+  Lemma leq_prop_prop {l l'} :
+    Universe.is_prop l -> Universe.is_prop l' ->
+    leq_universe ϕ l l'.
+  Proof.
+    destruct l, l'; cbnr; absurd.
+  Qed.
+
+  Lemma leq_sprop_sprop {l l'} :
+    Universe.is_sprop l -> Universe.is_sprop l' ->
+    leq_universe ϕ l l'.
+  Proof.
+    destruct l, l'; cbnr; absurd.
+  Qed.
+
+  Lemma leq_prop_is_prop_sprop {s1 s2} :
+    check_univs ->
+    prop_sub_type = false ->
+    consistent ϕ ->
+    leq_universe ϕ s1 s2 ->
+    is_propositional s1 <-> is_propositional s2.
+  Proof.
+    intros Hcf ps cu.
+    destruct s1, s2; cbn; try absurd; intros H; split; trivial.
+    now rewrite ps in H.
+  Qed.
+
+  Lemma is_prop_gt s1 s2 :
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ (Universe.super s1) s2 -> Universe.is_prop s2 -> False.
+  Proof.
+    intros Hcf cu Hleq Hprop.
+    apply leq_universe_prop_r in Hleq; tas.
+    now destruct s1.
+  Qed.
+
+  Lemma is_sprop_gt s1 s2 :
+    check_univs ->
+    consistent ϕ ->
+    leq_universe ϕ (Universe.super s1) s2 -> Universe.is_sprop s2 -> False.
+  Proof.
+    intros Hcf cu Hleq Hprop.
+    apply leq_universe_sprop_r in Hleq; tas.
+    now destruct s1.
+  Qed.
+
+End no_prop_leq_type.
+
+Definition compare_universe {cf} (pb : conv_pb) :=
+  match pb with
+  | Conv => eq_universe
+  | Cumul => leq_universe
+  end.
+
+#[global] Instance compare_universe_subrel {cf} pb Σ : RelationClasses.subrelation (eq_universe Σ) (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_refl {cf} pb Σ : RelationClasses.Reflexive (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_trans {cf} pb Σ : RelationClasses.Transitive (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
+#[global]
+Instance compare_universe_preorder {cf} pb Σ : RelationClasses.PreOrder (compare_universe pb Σ).
+Proof.
+  destruct pb; tc.
+Qed.
+
 
 (* This level is a hack used in plugings to generate fresh levels *)
 Definition fresh_level : Level.t := Level.Level "__metacoq_fresh_level__".
-(* This universe is a hack used in plugins to generate fresh universes *)
+(* This universe is a hack used in plugins to generate fresh concreteUniverses *)
 Definition fresh_universe : Universe.t := Universe.make fresh_level.
 
 (** * Universe substitution
@@ -1722,7 +2216,7 @@ Definition fresh_universe : Universe.t := Universe.make fresh_level.
 
 Class UnivSubst A := subst_instance : Instance.t -> A -> A.
 
-Notation "x @[ u ]" := (subst_instance u x) (at level 3, 
+Notation "x @[ u ]" := (subst_instance u x) (at level 3,
   format "x @[ u ]").
 
 #[global] Instance subst_instance_level : UnivSubst Level.t :=
@@ -1738,7 +2232,7 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
   fun u ctrs => ConstraintSet.fold (fun c => ConstraintSet.add (subst_instance_cstr u c))
                                 ctrs ConstraintSet.empty.
 
-#[global] Instance subst_instance_level_expr : UnivSubst UnivExpr.t :=
+#[global] Instance subst_instance_level_expr : UnivSubst LevelExpr.t :=
   fun u e => match e with
           | (Level.lzero, _)
           | (Level.Level _, _) => e
@@ -1749,8 +2243,8 @@ Notation "x @[ u ]" := (subst_instance u x) (at level 3,
             end
           end.
 
-#[global] Instance subst_instance_univ0 : UnivSubst Universe.nonEmptyUnivExprSet :=
-  fun u => Universe.map (subst_instance_level_expr u).
+#[global] Instance subst_instance_univ0 : UnivSubst LevelAlgExpr.t :=
+  fun u => map (subst_instance_level_expr u).
 
 #[global] Instance subst_instance_univ : UnivSubst Universe.t :=
   fun u e => match e with
@@ -1771,11 +2265,11 @@ Section Closedu.
     | _ => true
     end.
 
-  Definition closedu_level_expr (s : UnivExpr.t) :=
-    closedu_level (UnivExpr.get_level s).
+  Definition closedu_level_expr (s : LevelExpr.t) :=
+    closedu_level (LevelExpr.get_level s).
 
-  Definition closedu_universe_levels (u : Universe.nonEmptyUnivExprSet) :=
-    UnivExprSet.for_all closedu_level_expr u.
+  Definition closedu_universe_levels (u : LevelAlgExpr.t) :=
+    LevelExprSet.for_all closedu_level_expr u.
 
   Definition closedu_universe (u : Universe.t) :=
     match u with
@@ -1806,19 +2300,19 @@ Section UniverseClosedSubst.
     : closedu_universe 0 s -> subst_instance_univ u s = s.
   Proof.
     intro H.
-    destruct s;auto;cbn in *.
+    destruct s as [| | t]; cbnr.
     apply f_equal. apply eq_univ'.
-    destruct n as [ts H1].
+    destruct t as [ts H1].
     unfold closedu_universe_levels in *;cbn in *.
     intro e; split; intro He.
-    - apply Universe.map_spec in He. destruct He as [e' [He' X]].
+    - apply map_spec in He. destruct He as [e' [He' X]].
       rewrite closedu_subst_instance_level_expr in X.
-      apply UnivExprSet.for_all_spec in H; proper.
+      apply LevelExprSet.for_all_spec in H; proper.
       exact (H _ He').
-      now subst. 
-    - apply Universe.map_spec. exists e; split; tas.
+      now subst.
+    - apply map_spec. exists e; split; tas.
       symmetry; apply closedu_subst_instance_level_expr.
-      apply UnivExprSet.for_all_spec in H; proper. now apply H.
+      apply LevelExprSet.for_all_spec in H; proper. now apply H.
   Qed.
 
   Lemma closedu_subst_instance u t
@@ -1865,13 +2359,13 @@ Section SubstInstanceClosed.
     : closedu_universe #|u| s -> closedu_universe 0 (subst_instance_univ u s).
   Proof.
     intro H.
-    destruct s;cbnr.
-    destruct n as [l Hl].
-    apply UnivExprSet.for_all_spec; proper.
-    intros e He. eapply Universe.map_spec in He.
+    destruct s as [| |t]; cbnr.
+    destruct t as [l Hl].
+    apply LevelExprSet.for_all_spec; proper.
+    intros e He. eapply map_spec in He.
     destruct He as [e' [He' X]]; subst.
     apply subst_instance_level_expr_closedu.
-    apply UnivExprSet.for_all_spec in H; proper.
+    apply LevelExprSet.for_all_spec in H; proper.
     now apply H.
   Qed.
 
@@ -1896,14 +2390,14 @@ Definition string_of_level (l : Level.t) : string :=
   | Level.Var n => "Var" ^ string_of_nat n
   end.
 
-Definition string_of_level_expr (e : UnivExpr.t) : string :=
+Definition string_of_level_expr (e : LevelExpr.t) : string :=
   let '(l, n) := e in string_of_level l ^ (if n is 0 then "" else "+" ^ string_of_nat n).
 
 Definition string_of_sort (u : Universe.t) :=
   match u with
   | Universe.lSProp => "SProp"
   | Universe.lProp => "Prop"
-  | Universe.lType l => "Type(" ^ string_of_list string_of_level_expr (UnivExprSet.elements l) ^ ")"
+  | Universe.lType l => "Type(" ^ string_of_list string_of_level_expr (LevelExprSet.elements l) ^ ")"
   end.
 
 Definition string_of_universe_instance u :=
@@ -1943,8 +2437,8 @@ Definition print_lset t :=
 
 Definition print_constraint_type d :=
   match d with
-  | ConstraintType.Le n => 
-    if (n =? 0)%Z then "<=" else 
+  | ConstraintType.Le n =>
+    if (n =? 0)%Z then "<=" else
     if (n =? 1)%Z then "<" else
     if (n <? 0)%Z then "<=" ^ string_of_nat (Z.to_nat (Z.abs n)) ^ " + "
     else " + " ^ string_of_nat (Z.to_nat n) ^ " <= "
@@ -1955,329 +2449,3 @@ Definition print_constraint_set t :=
   print_list (fun '(l1, d, l2) => string_of_level l1 ^ " " ^
                          print_constraint_type d ^ " " ^ string_of_level l2)
              " /\ " (ConstraintSet.elements t).
- 
-Lemma val_universe_sup_not_prop vv v u :
-  Universe.is_prop v = false -> Universe.is_sprop v = false ->
-  ∑ n, Universe.univ_val vv (Universe.sup u v) = UType n.
-Proof.
-  intros Hp Hsp.
-  destruct u,v;cbn;try discriminate;try lia; try apply val_zero_exprs;
-  eexists; eauto.
-Qed.
-
-Lemma univ_le_prop_inv {cf:checker_flags} u : (u <= UProp)%u -> u = UProp.
-Proof. destruct u; simpl; try congruence; auto. Qed.
-
-Lemma univ_le_sprop_inv {cf:checker_flags} u : (u <= USProp)%u -> u = USProp.
-Proof. destruct u; simpl; try congruence; auto. Qed.
-
-Lemma univ_prop_le_inv {cf:checker_flags} u : (UProp <= u)%u -> 
-  (u = UProp \/ (prop_sub_type /\ exists n, u = UType n)).
-Proof. destruct u; simpl; try congruence; auto.
-  destruct prop_sub_type; firstorder auto.
-  right; split; auto. exists i. auto.
-Qed.
-
-Ltac cong := intuition congruence.
-
-Lemma univ_val_max_mon {cf:checker_flags} u u' v v' : (u <= u')%u -> (UType v <= UType v')%u -> 
-  (univ_val_max u (UType v) <= univ_val_max u' (UType v'))%u.
-Proof.
-  intros.
-  destruct u, u'; simpl in *; auto. lia. lia.
-Qed.
-
-Lemma leq_universe_product_mon {cf: checker_flags} ϕ u u' v v' :
-  leq_universe ϕ u u' ->
-  leq_universe ϕ v v' ->
-  leq_universe ϕ (Universe.sort_of_product u v) (Universe.sort_of_product u' v').
-Proof.
-  unfold leq_universe in *; destruct check_univs; [|trivial].
-  intros H1 H2 vv Hv. specialize (H1 _ Hv). specialize (H2 _ Hv).
-  cbn in *. unfold Universe.sort_of_product.
-  destruct (Universe.is_prop v) eqn:e, (Universe.is_prop v') eqn:f;
-    destruct (Universe.is_sprop v) eqn:e1, (Universe.is_sprop v') eqn:f1;
-    rewrite ?val_universe_sup;cbn; rewrite ?val_universe_sup; auto.
-  - destruct v;discriminate.
-  - apply is_prop_val with (v:=vv) in e.
-    specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n HH].
-    rewrite e HH.
-    rewrite e HH in H2. simpl in H2.
-    simpl. destruct (Universe.univ_val vv u') eqn:eq; simpl; auto.
-  - destruct v';discriminate.
-  - apply is_prop_val with (v:=vv) in f.
-    specialize (is_prop_and_is_sprop_val_false _ e e1 vv) as [n HH].
-    rewrite f in H2. eapply univ_le_prop_inv in H2. cong.
-  - apply is_sprop_val with (v:=vv) in e1.
-    specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n HH].
-    rewrite HH e1 in H2. now simpl in H2.
-  - apply is_sprop_val with (v:=vv) in f1.
-    specialize (is_prop_and_is_sprop_val_false _ e e1 vv) as [n HH].
-    rewrite f1 in H2. apply univ_le_sprop_inv in H2; cong.
-  - specialize (is_prop_and_is_sprop_val_false _ e e1 vv) as [n HH].
-    specialize (is_prop_and_is_sprop_val_false _ f f1 vv) as [n' HH'].
-    rewrite HH HH'. apply univ_val_max_mon; auto.
-    now rewrite <- HH, <- HH'.
-Qed.
-
-Lemma impredicative_product {cf:checker_flags} {ϕ l u} :
-  Universe.is_prop u ->
-  leq_universe ϕ (Universe.sort_of_product l u) u.
-Proof.
-  unfold Universe.sort_of_product.
-  intros ->. reflexivity.
-Qed.
-
-Section UniverseLemmas.
-  Context {cf:checker_flags}.
-
-  Ltac unfold_eq_universe
-    := unfold eq_universe in *; destruct check_univs; [intros v Hv|trivial].
-
-  Lemma sup0_idem s : Universe.sup0 s s = s.
-  Proof.
-    apply eq_univ'; cbn.
-    intro; rewrite !UnivExprSet.union_spec. intuition.
-  Qed.
-
-  Lemma sup_idem s : Universe.sup s s = s.
-  Proof.
-    destruct s;cbn;auto.
-    apply f_equal.
-    apply eq_univ'; cbn.
-    intro; rewrite !UnivExprSet.union_spec. intuition.
-  Qed.
-
-  Lemma sort_of_product_idem s
-    : Universe.sort_of_product s s = s.
-  Proof.
-    unfold Universe.sort_of_product.
-    destruct (Universe.is_prop s), (Universe.is_sprop s); trea;cbn.
-    apply sup_idem.
-  Qed.
-
-  Lemma sup0_assoc s1 s2 s3 :
-    Universe.sup0 s1 (Universe.sup0 s2 s3) = Universe.sup0 (Universe.sup0 s1 s2) s3.
-  Proof.
-    apply eq_univ'; cbn. symmetry; apply UnivExprSetProp.union_assoc.
-  Qed.
-
-  Instance universe_sup_eq_universe φ :
-    Proper (eq_universe φ ==> eq_universe φ ==> eq_universe φ) Universe.sup.
-  Proof.
-    intros s1 s1' H1 s2 s2' H2.
-    unfold_eq_universe. specialize (H1 v Hv). specialize (H2 v Hv).
-    rewrite !val_universe_sup.
-    now rewrite H1 H2.
-  Qed.
-
-  Lemma sort_of_product_twice u s :
-    Universe.sort_of_product u (Universe.sort_of_product u s)
-    = Universe.sort_of_product u s.
-  Proof.
-    destruct u,s;auto.
-    unfold Universe.sort_of_product;cbn.
-    now rewrite sup0_assoc sup0_idem.
-  Qed.
-End UniverseLemmas.
-
-
-Section no_prop_leq_type.
-  Context {cf:checker_flags}.
-  Context (ϕ : ConstraintSet.t).
-
-  Lemma succ_inj x y : UnivExpr.succ x = UnivExpr.succ y -> x = y.
-  Proof.
-    unfold UnivExpr.succ.
-    destruct x as [l n], y as [l' n']. simpl. congruence.
-  Qed.
-
-  Lemma spec_map_succ l x : 
-    UnivExprSet.In x (Universe.map UnivExpr.succ l) <-> 
-    exists x', UnivExprSet.In x' l /\ x = UnivExpr.succ x'.
-  Proof.
-    rewrite Universe.map_spec. reflexivity.
-  Qed.
-
-  Lemma val_succ v l : val v (UnivExpr.succ l) = val v l + 1.
-  Proof.
-    destruct l as []; simpl. cbn. lia. 
-  Qed.
-
-  Lemma val_map_succ v l : val v (Universe.map UnivExpr.succ l) = val v l + 1.
-  Proof.
-    remember (Universe.map UnivExpr.succ l) eqn:eq.
-    pose proof (spec_map_succ l). rewrite <- eq in H.
-    clear eq.
-    destruct (val_In_max l v) as [max [inmax eqv]]. rewrite <-eqv.
-    rewrite val_caract. split.
-    intros.
-    specialize (proj1 (H _) H0) as [x' [inx' eq]]. subst e.
-    rewrite val_succ. eapply (val_In_le _ v) in inx'. rewrite <- eqv in inx'.
-    simpl in *. unfold UnivExprSet.elt, UnivExpr.t in *. lia.
-    exists (UnivExpr.succ max). split. apply H.
-    exists max; split; auto.
-    now rewrite val_succ.
-  Qed.
-  
-  Lemma leq_universe_super u u' :
-    leq_universe ϕ u u' ->
-    leq_universe ϕ (Universe.super u) (Universe.super u').
-  Proof.
-    unfold leq_universe. destruct check_univs; [|trivial].
-    intros H v Hv. specialize (H v Hv). simpl in *.
-    destruct u as [| |], u' as  [| |]; lled; cbn -[Z.add] in *; try lia;
-    rewrite !val_map_succ; lia.
-  Qed.
-
-  Lemma leq_universe_props u1 u2 :
-    check_univs ->
-    consistent ϕ ->
-    leq_universe ϕ u1 u2 ->
-    match u1, u2 with
-    | Universe.lProp, Universe.lProp => True
-    | Universe.lSProp, Universe.lSProp => True
-    | Universe.lProp, Universe.lSProp => False
-    | Universe.lSProp, Universe.lProp => False
-    | Universe.lProp, Universe.lType _ => prop_sub_type
-    | Universe.lSProp, Universe.lType _ => False
-    | Universe.lType l, Universe.lType l' => True
-    | Universe.lType _, _ => False
-    end.
-  Proof.
-    intros cu [v Hv].
-    unfold leq_universe. rewrite cu.
-    intros Hle. specialize (Hle _ Hv).
-    destruct u1, u2; simpl; auto.
-    simpl in Hle. now destruct prop_sub_type.
-  Qed.
-
-  Lemma leq_universe_prop_r u1 u2 :
-    check_univs ->
-    consistent ϕ ->
-    leq_universe ϕ u1 u2 ->
-    Universe.is_prop u2 -> Universe.is_prop u1.
-  Proof.
-    intros Hcf cu le.
-    apply leq_universe_props in le; auto.
-    destruct u1, u2; simpl in *; auto.
-  Qed.
-
-  Lemma leq_universe_sprop_r u1 u2 :
-    check_univs ->
-    consistent ϕ ->
-    leq_universe ϕ u1 u2 ->
-    Universe.is_sprop u2 -> Universe.is_sprop u1.
-  Proof.
-    intros Hcf cu le.
-    apply leq_universe_props in le; auto.
-    destruct u1, u2; simpl in *; auto.
-  Qed.
-  
-  Lemma leq_universe_prop_no_prop_sub_type u1 u2 :
-    check_univs ->
-    prop_sub_type = false ->
-    consistent ϕ ->
-    leq_universe ϕ u1 u2 ->
-    Universe.is_prop u1 -> Universe.is_prop u2.
-  Proof.
-    intros Hcf cu ps le.
-    apply leq_universe_props in le; auto.
-    destruct u1, u2; simpl in *; auto.
-    cong.
-  Qed.
-
-  Lemma leq_universe_sprop_l u1 u2 :
-    check_univs ->
-    consistent ϕ ->
-    leq_universe ϕ u1 u2 ->
-    Universe.is_sprop u1 -> Universe.is_sprop u2.
-  Proof.
-    intros Hcf cu le.
-    apply leq_universe_props in le; auto.
-    destruct u1, u2; simpl in *; auto.
-  Qed.
-
-  Hint Resolve leq_universe_sprop_l leq_universe_sprop_r
-       leq_universe_prop_r
-       leq_universe_prop_no_prop_sub_type
-       : univ_lemmas.
-  
-  Lemma leq_prop_prop {l l'} :
-    Universe.is_prop l -> Universe.is_prop l' ->
-    leq_universe ϕ l l'.
-  Proof.
-    red. destruct check_univs; [|trivial].
-    intros H1 H2 v Hv. eapply is_prop_val in H1; eapply is_prop_val in H2.
-    rewrite -> H1, H2. lled; lia.
-  Qed.
-
-  Lemma leq_sprop_sprop {l l'} :
-    Universe.is_sprop l -> Universe.is_sprop l' ->
-    leq_universe ϕ l l'.
-  Proof.
-    red. destruct check_univs; [|trivial].
-    intros H1 H2 v Hv. eapply is_sprop_val in H1; eapply is_sprop_val in H2.
-    rewrite -> H1, H2. lled; lia.
-  Qed.
-  
-  Lemma leq_prop_is_prop_sprop {x s} :
-    check_univs ->
-    prop_sub_type = false ->
-    consistent ϕ ->
-    leq_universe ϕ x s ->
-    (Universe.is_prop s \/ Universe.is_sprop s <-> Universe.is_prop x \/ Universe.is_sprop x).
-  Proof.
-    intros H H0 H1 H2; split;intros Hor; destruct Hor; eauto with univ_lemmas.
-  Qed.
-
-  Lemma is_prop_gt l l' :
-    check_univs ->
-    consistent ϕ ->
-    leq_universe ϕ (Universe.super l) l' -> Universe.is_prop l' -> False.
-  Proof.
-    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
-    eapply is_prop_val with (v:=v) in H2. specialize (H1 _ Hv).
-    rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
-  Qed.
-  
-  Lemma is_sprop_gt l l' :
-    check_univs ->
-    consistent ϕ ->
-    leq_universe ϕ (Universe.super l) l' -> Universe.is_sprop l' -> False.
-  Proof.
-    intros Hcf [v Hv] H1 H2. rewrite /leq_universe Hcf in H1.
-    eapply is_sprop_val with (v:=v) in H2. specialize (H1 _ Hv).
-    rewrite H2 in H1. destruct l as [| |]; destruct l'; lled; cbn -[Z.add] in *; lia.
-  Qed.
-
-End no_prop_leq_type.
-
-Definition compare_universe {cf:checker_flags} (pb : conv_pb) :=
-  match pb with
-  | Conv => eq_universe
-  | Cumul => leq_universe
-  end.
-  
-#[global] Instance compare_universe_subrel {cf} pb Σ : RelationClasses.subrelation (eq_universe Σ) (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.
-
-#[global]
-Instance compare_universe_refl {cf} pb Σ : RelationClasses.Reflexive (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.
-
-#[global]
-Instance compare_universe_trans {cf} pb Σ : RelationClasses.Transitive (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.
-
-#[global]
-Instance compare_universe_preorder {cf} pb Σ : RelationClasses.PreOrder (compare_universe pb Σ).
-Proof.
-  destruct pb; tc.
-Qed.

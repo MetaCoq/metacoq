@@ -58,9 +58,9 @@ Definition abstract_env_wf_universeb {cf:checker_flags} (abstract_env_impl : Typ
   : abstract_env_impl -> Universe.t -> bool
   := fun X s => match s with
   | Universe.lType l =>
-    UnivExprSet.for_all
-        (fun l0 : UnivExprSet.elt =>
-        abstract_env_level_mem X (UnivExpr.get_level l0)) l
+    LevelExprSet.for_all
+        (fun l0 : LevelExprSet.elt =>
+        abstract_env_level_mem X (LevelExpr.get_level l0)) l
   | _ => true
   end.
 
@@ -130,9 +130,9 @@ Definition abstract_env_wf_universeb_correct (abstract_env_impl : Type)
   `{abstract_env_ext_prop abstract_env_impl}
    X {Σ} (wfΣ : abstract_env_ext_rel X Σ) u : wf_universeb Σ u = abstract_env_wf_universeb _ X u.
 Proof.
-  destruct u; auto.
-  destruct n. cbn. repeat rewrite for_all_elements.
-  induction (UnivExprSet.elements t_set); cbn; auto.
+  destruct u as [| |t]; auto.
+  destruct t. cbn. repeat rewrite for_all_elements.
+  induction (LevelExprSet.elements t_set); cbn; auto.
   rewrite <- IHl. erewrite <- abstract_env_level_mem_correct; eauto.
   reflexivity.
 Defined.

@@ -5,7 +5,9 @@ From MetaCoq.Template Require Ast TypingWf WfAst TermEquality EtaExpand Template
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICCasesContexts TemplateToPCUICCorrectness PCUICEtaExpand.
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration 
+     PCUICCasesContexts TemplateToPCUICCorrectness PCUICEtaExpand
+     PCUICProgram.
 
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
 (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) || 

@@ -55,7 +55,7 @@ Module Transform.
     Context {eval' : program' -> value' -> Prop}.
     Context {eval'' : program'' -> value'' -> Prop}.
     
-    Obligation Tactic := idtac.
+    Local Obligation Tactic := idtac.
     Program Definition compose (o : t program program' value value' eval eval') (o' : t program' program'' value' value'' eval' eval'') 
       (hpp : (forall p, o.(post) p -> o'.(pre) p)) : t program program'' value value'' eval eval'' :=
       {| 

@@ -1,4 +1,4 @@
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping TemplateToPCUIC.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping PCUICProgram TemplateToPCUIC.
 
 Definition isConstruct t :=
    match t with tConstruct _ _ _ => true | _ => false end.
@@ -55,71 +55,71 @@ Definition expanded_context Σ Γ ctx :=
   ∥ All_fold (fun Δ d => ForOption (expanded Σ (repeat 0 #|Δ| ++ Γ)) d.(decl_body)) ctx ∥.
 
 Lemma expanded_ind :
-forall (Σ : global_env) (P : list nat -> term -> Prop),
-(forall (Γ : list nat) (n m : nat) (args : list term),
- nth_error Γ n = Some m ->
- m <= #|args| -> Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps (tRel n) args)) ->
-(forall (Γ : list nat) (id : ident), P Γ (tVar id)) ->
-(forall (Γ : list nat) (ev : nat) (args : list term),
- Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tEvar ev args)) ->
-(forall (Γ : list nat) (s : Universe.t), P Γ (tSort s)) ->
-(forall (Γ : list nat) (na : aname) (ty body : term), P Γ (tProd na ty body)) ->
-(forall (Γ : list nat) (na : aname) (ty body : term),
- expanded Σ (0 :: Γ) body -> P (0 :: Γ) body -> P Γ (tLambda na ty body)) ->
-(forall (Γ : list nat) (na : aname) (def def_ty body : term),
- expanded Σ Γ def ->
- P Γ def ->
- expanded Σ (0 :: Γ) body ->
- P (0 :: Γ) body -> P Γ (tLetIn na def def_ty body)) ->
-(forall (Γ : list nat) (f6 : term) (args : list term),
-~ (isConstruct f6 || isFix f6 || isRel f6) ->
- expanded Σ Γ f6 ->
- P Γ f6 -> Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps f6 args)) ->
-(forall (Γ : list nat) (c : kername) (u : Instance.t), P Γ (tConst c u)) ->
-(forall (Γ : list nat) (ind : inductive) (u : Instance.t), P Γ (tInd ind u)) ->
-(forall (Γ : list nat) (ci : case_info) (type_info : predicate term)
-   (discr : term) (branches : list (branch term)),
- expanded Σ Γ discr ->
- P Γ discr ->
- Forall (expanded Σ Γ) type_info.(pparams) ->
- Forall (P Γ) type_info.(pparams) ->
- Forall
-   (fun br : branch term =>
-   expanded_context Σ (repeat 0 #|type_info.(pparams)|)  br.(bcontext) /\
-	 expanded Σ (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
+  forall (Σ : global_env) (P : list nat -> term -> Prop),
+  (forall (Γ : list nat) (n m : nat) (args : list term),
+  nth_error Γ n = Some m ->
+  m <= #|args| -> Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps (tRel n) args)) ->
+  (forall (Γ : list nat) (id : ident), P Γ (tVar id)) ->
+  (forall (Γ : list nat) (ev : nat) (args : list term),
+  Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (tEvar ev args)) ->
+  (forall (Γ : list nat) (s : Universe.t), P Γ (tSort s)) ->
+  (forall (Γ : list nat) (na : aname) (ty body : term), P Γ (tProd na ty body)) ->
+  (forall (Γ : list nat) (na : aname) (ty body : term),
+  expanded Σ (0 :: Γ) body -> P (0 :: Γ) body -> P Γ (tLambda na ty body)) ->
+  (forall (Γ : list nat) (na : aname) (def def_ty body : term),
+  expanded Σ Γ def ->
+  P Γ def ->
+  expanded Σ (0 :: Γ) body ->
+  P (0 :: Γ) body -> P Γ (tLetIn na def def_ty body)) ->
+  (forall (Γ : list nat) (f6 : term) (args : list term),
+  ~ (isConstruct f6 || isFix f6 || isRel f6) ->
+  expanded Σ Γ f6 ->
+  P Γ f6 -> Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps f6 args)) ->
+  (forall (Γ : list nat) (c : kername) (u : Instance.t), P Γ (tConst c u)) ->
+  (forall (Γ : list nat) (ind : inductive) (u : Instance.t), P Γ (tInd ind u)) ->
+  (forall (Γ : list nat) (ci : case_info) (type_info : predicate term)
+    (discr : term) (branches : list (branch term)),
+  expanded Σ Γ discr ->
+  P Γ discr ->
+  Forall (expanded Σ Γ) type_info.(pparams) ->
+  Forall (P Γ) type_info.(pparams) ->
   Forall
-  (fun br : branch term =>
-    ∥ All_fold (fun Δ d => ForOption (fun b => P (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
-    P (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
-    P Γ (tCase ci type_info discr branches)) ->
-(forall (Γ : list nat) (proj : projection) (t : term),
- expanded Σ Γ t -> P Γ t -> P Γ (tProj proj t)) ->
-(forall (Γ : list nat) (mfix : mfixpoint term) (idx : nat) 
-   (args : list term) (d : def term),
- Forall
-   (fun d0 : def term =>
-    let ctx := rev_map (fun d1 : def term => 1 + rarg d1) mfix in
-    expanded Σ (ctx ++ Γ) (dbody d0)) mfix ->
- Forall
+    (fun br : branch term =>
+    expanded_context Σ (repeat 0 #|type_info.(pparams)|)  br.(bcontext) /\
+    expanded Σ (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
+    Forall
+    (fun br : branch term =>
+      ∥ All_fold (fun Δ d => ForOption (fun b => P (repeat 0 (#|Δ| + #|type_info.(pparams)|)) b) d.(decl_body)) br.(bcontext) ∥ /\
+      P (repeat 0 #|bcontext br| ++ Γ) (bbody br)) branches ->
+      P Γ (tCase ci type_info discr branches)) ->
+  (forall (Γ : list nat) (proj : projection) (t : term),
+  expanded Σ Γ t -> P Γ t -> P Γ (tProj proj t)) ->
+  (forall (Γ : list nat) (mfix : mfixpoint term) (idx : nat) 
+    (args : list term) (d : def term),
+  Forall
     (fun d0 : def term =>
-     let ctx := rev_map (fun d1 : def term => 1 + rarg d1) mfix in
-     P (ctx ++ Γ) (dbody d0)) mfix ->
- Forall (expanded Σ Γ) args -> Forall (P Γ) args ->
- args <> [] ->
- nth_error mfix idx = Some d ->
- #|args| > rarg d -> P Γ (mkApps (tFix mfix idx) args)) ->
-(forall (Γ : list nat) (mfix : mfixpoint term) (idx : nat),
- Forall (fun d : def term => expanded Σ (repeat 0 #|mfix| ++ Γ) (dbody d))
-   mfix ->  Forall (fun d : def term => P (repeat 0 #|mfix| ++ Γ) (dbody d))
-   mfix  -> P Γ (tCoFix mfix idx)) ->
-(forall (Γ : list nat) (ind : inductive) (c : nat) 
-   (u : Instance.t) (mind : mutual_inductive_body)
-   (idecl : one_inductive_body) (cdecl : constructor_body) 
-   (args : list term),
- declared_constructor Σ (ind, c) mind idecl cdecl ->
- #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
- Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps (tConstruct ind c u) args)) ->
-forall (Γ : list nat) (t : term), expanded Σ Γ t -> P Γ t.
+      let ctx := rev_map (fun d1 : def term => 1 + rarg d1) mfix in
+      expanded Σ (ctx ++ Γ) (dbody d0)) mfix ->
+  Forall
+      (fun d0 : def term =>
+      let ctx := rev_map (fun d1 : def term => 1 + rarg d1) mfix in
+      P (ctx ++ Γ) (dbody d0)) mfix ->
+  Forall (expanded Σ Γ) args -> Forall (P Γ) args ->
+  args <> [] ->
+  nth_error mfix idx = Some d ->
+  #|args| > rarg d -> P Γ (mkApps (tFix mfix idx) args)) ->
+  (forall (Γ : list nat) (mfix : mfixpoint term) (idx : nat),
+  Forall (fun d : def term => expanded Σ (repeat 0 #|mfix| ++ Γ) (dbody d))
+    mfix ->  Forall (fun d : def term => P (repeat 0 #|mfix| ++ Γ) (dbody d))
+    mfix  -> P Γ (tCoFix mfix idx)) ->
+  (forall (Γ : list nat) (ind : inductive) (c : nat) 
+    (u : Instance.t) (mind : mutual_inductive_body)
+    (idecl : one_inductive_body) (cdecl : constructor_body) 
+    (args : list term),
+  declared_constructor Σ (ind, c) mind idecl cdecl ->
+  #|args| >= ind_npars mind + context_assumptions (cstr_args cdecl) ->
+  Forall (expanded Σ Γ) args -> Forall (P Γ) args -> P Γ (mkApps (tConstruct ind c u) args)) ->
+  forall (Γ : list nat) (t : term), expanded Σ Γ t -> P Γ t.
 Proof.
   intros Σ P HRel HVar HEvar HSort HProd HLamdba HLetIn HApp HConst HInd HCase HProj HFix HCoFix HConstruct.
   fix f 3.

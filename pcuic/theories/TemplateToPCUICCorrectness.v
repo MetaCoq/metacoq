@@ -5,16 +5,14 @@ From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnvConv PCUICSubstitution PCUICGeneration PCUICCasesContexts.
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnvConv 
+     PCUICSubstitution PCUICGeneration PCUICCasesContexts
+     PCUICProgram.
 
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags).
-
-(* The targe of the translation: well-typed environments and programs *)
-Definition wt_pcuic_program {cf : checker_flags} (p : pcuic_program) :=
-  wf_ext p.1 × ∑ T, typing p.1 [] p.2 T.
   
 Coercion Ast.Env.fst_ctx : Ast.Env.global_env_ext >-> Ast.Env.global_env.
 

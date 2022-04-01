@@ -5437,18 +5437,20 @@ Proof.
           now len. }
 Qed.
 
-Definition wt_template_program {cf : checker_flags} (p : template_program) :=
-  let Σ := Ast.Env.empty_ext p.1 in
-  Template.Typing.wf_ext Σ × ∑ T, Typing.typing Σ [] p.2 T.
+From MetaCoq.PCUIC Require Import PCUICProgram.
 
-Lemma expanded_trans_program {cf : checker_flags} p (t : wt_template_program p) :
-  EtaExpand.expanded_template_program p ->
-  expanded_pcuic_program (trans_template_program p).
+Definition expand_lets_program (p : pcuic_program) : pcuic_program :=
+  let Σ' := PCUICExpandLets.trans_global p.1 in 
+  ((build_global_env_map Σ', p.1.2), PCUICExpandLets.trans p.2).
+    
+Lemma expanded_expand_lets_program {cf : checker_flags} p (wtp : wt_pcuic_program p) :
+  expanded_pcuic_program p ->
+  expanded_pcuic_program (expand_lets_program p).
 Proof.
-  intros [etaenv etat].
-  destruct t as [? [T HT]]. split.
-  unshelve eapply expanded_trans_global_env => //; tc.
-  unshelve eapply trans_expanded => //; tc. eapply w.
-  now unshelve eapply TypingWf.typing_wf in HT.
-  eapply expanded_trans_global_env => //.
+  destruct p as [[Σ udecl] t]; intros [etaenv etat].
+  destruct wtp as [wfΣ wtp].
+  cbn in *. split; cbn.
+  now eapply (expanded_global_env_expand_lets (cf:=cf) (Σ, udecl)). 
+  cbn in *.
+  now eapply expanded_expand_lets in etat.
 Qed.

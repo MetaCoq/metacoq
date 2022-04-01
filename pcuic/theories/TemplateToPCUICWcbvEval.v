@@ -6,7 +6,7 @@ Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration
-     PCUICClosed PCUICCSubst.
+     PCUICClosed PCUICCSubst PCUICProgram.
 Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.

@@ -388,11 +388,20 @@ Proof.
   now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
 
-Lemma optimize_correct Σ t v :
+Definition disable_prop_cases fl := {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) |}.
+
+Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
+Proof.
+  induction l using rev_ind; cbn.
+  - now rewrite andb_true_r.
+  - rewrite mkApps_app /=. now destruct l => /= //; rewrite andb_false_r.
+Qed.
+
+Lemma optimize_correct {fl} Σ t v :
   closed_env Σ ->
-  @Ee.eval Ee.default_wcbv_flags Σ t v ->
+  @Ee.eval fl Σ t v ->
   closed t ->
-  @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ) (optimize Σ t) (optimize Σ v).
+  @Ee.eval (disable_prop_cases fl) (optimize_env Σ) (optimize Σ t) (optimize Σ v).
 Proof.
   intros clΣ ev.
   induction ev; simpl in *.
@@ -458,7 +467,15 @@ Proof.
     eapply closed_fix_subst => //.
     now rewrite map_length. 
   
-  - discriminate.
+  - move/andP => [] clf cla.
+    eapply eval_closed in ev1 => //.
+    eapply eval_closed in ev2; tas.
+    simpl in *. eapply Ee.eval_fix'. auto. auto.
+    eapply optimize_cunfold_fix; eauto.
+    eapply closed_fix_subst => //.
+    eapply IHev2; tea. eapply IHev3.
+    apply/andP; split => //.
+    eapply closed_cunfold_fix; tea.
 
   - move/andP => [] cd clbrs. specialize (IHev1 cd).
     rewrite closedn_mkApps in IHev2.
@@ -524,46 +541,17 @@ Proof.
     eapply Ee.eval_to_value in ev1.
     destruct ev1; simpl in *; eauto.
     * destruct t => //; rewrite optimize_mkApps /=.
-    * destruct t => /= //; rewrite optimize_mkApps /=;
-      rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) // /=; rewrite isFixApp_mkApps //.
+    * destruct with_guarded_fix.
+      + destruct t => /= //; rewrite optimize_mkApps /=;
+        rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) // /=; rewrite !isFixApp_mkApps //.
+      + destruct t => /= //; rewrite optimize_mkApps /=;
+        rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) // /=; rewrite !isFix_mkApps //.
     * destruct f0 => //.
       rewrite optimize_mkApps /=.
       unfold Ee.isFixApp in i.
       rewrite decompose_app_mkApps /= in i => //.
-      rewrite orb_true_r /= // in i.
+      destruct with_guarded_fix; try rewrite orb_true_r /= // in i.
+      discriminate.
   - destruct t => //.
     all:constructor; eauto.
-Qed.
-
-Lemma erase_opt_correct (wfl := Ee.default_wcbv_flags) (Σ : wf_env) univs wfext t v Σ' t' :
-  let Σext := make_wf_env_ext Σ univs wfext in
-  forall wt : ∀ Σ0 : global_env_ext, abstract_env_rel' Σext Σ0 → welltyped Σ0 [] t,
-  erase Σext [] t wt = t' ->
-  erase_global (term_global_deps t') Σ = Σ' ->
-  PCUICWcbvEval.eval Σ t v ->
-  ∃ v' : term, Σext;;; [] |- v ⇝ℇ v' ∧ 
-  ∥ @Ee.eval Ee.opt_wcbv_flags (optimize_env Σ') (optimize Σ' t') (optimize Σ' v') ∥.
-Proof.
-  intros Σext wt.
-  intros HΣ' Ht' ev.
-  pose proof (erases_erase wt); eauto.
-  rewrite HΣ' in H.
-  destruct (wt _ eq_refl) as [T wt'].
-  have [wfe] := wfext.
-  assert (includes_deps Σ Σ' (term_global_deps t')).
-  { rewrite <- Ht'.
-    eapply erase_global_includes.
-    intros.
-    eapply term_global_deps_spec in H; eauto.
-    eapply KernameSet.subset_spec.
-    intros x hin; auto. }
-  pose proof (erase_global_erases_deps wfe wt' H H0).
-  eapply (erases_correct Σext _ _ _ _ Σ') in ev; eauto.
-  destruct ev as [v' [ev evv]].
-  exists v'. split => //.
-  sq. apply optimize_correct; tea.
-  rewrite -Ht'.
-  eapply (erase_global_closed Σ (term_global_deps t')); tea.
-  clear HΣ'. eapply PCUICClosedTyp.subject_closed in wt'.
-  eapply erases_closed in H; tea.  
 Qed.

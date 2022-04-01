@@ -88,6 +88,7 @@ theories/PCUICSafeLemmata.v
 
 theories/PCUICEtaExpand.v
 
+theories/PCUICProgram.v
 theories/TemplateToPCUIC.v
 theories/TemplateToPCUICCorrectness.v
 theories/TemplateToPCUICWcbvEval.v
@@ -96,7 +97,7 @@ theories/PCUICToTemplate.v
 theories/PCUICToTemplateCorrectness.v
 theories/PCUICExpandLets.v
 theories/PCUICExpandLetsCorrectness.v
-theories/PCUICProgram.v
+theories/PCUICTransform.v
 
 theories/Bidirectional/BDEnvironmentTyping.v
 theories/Bidirectional/BDTyping.v

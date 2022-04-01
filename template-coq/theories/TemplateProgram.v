@@ -29,7 +29,7 @@ Definition eval_template_program (p : Ast.Env.program) (v : Ast.term) :=
 Definition template_expand_obseq (p p' : template_program) (v v' : Ast.term) :=
   v' = EtaExpand.eta_expand p.1.(Ast.Env.declarations) [] v.
   
-Obligation Tactic := idtac.
+Local Obligation Tactic := idtac.
 
 Program Definition template_eta_expand {cf : checker_flags} : self_transform template_program Ast.term eval_template_program eval_template_program :=
  {| name := "eta-expansion of template program";

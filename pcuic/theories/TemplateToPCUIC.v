@@ -1,7 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Uint63 FloatOps FloatAxioms.
 From MetaCoq.Template Require Import config utils AstUtils EnvMap.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICCases.
+From MetaCoq.Template Require TemplateProgram.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICCases PCUICProgram.
 
 Lemma to_Z_bounded_bool (i : Int63.int) : 
   ((0 <=? Uint63.to_Z i) && (Uint63.to_Z i <? wB))%Z.
@@ -11,10 +12,10 @@ Proof.
 Qed.
 
 Definition uint63_to_model (i : Int63.int) : uint63_model :=
-  exist _ (Uint63.to_Z i) (to_Z_bounded_bool i).
+  exist (Uint63.to_Z i) (to_Z_bounded_bool i).
 
 Definition float64_to_model (f : PrimFloat.float) : float64_model :=
-  exist _ (FloatOps.Prim2SF f) (FloatAxioms.Prim2SF_valid f).
+  exist (FloatOps.Prim2SF f) (FloatAxioms.Prim2SF_valid f).
 
 Section Map2Bias.
   Context {A B C} (f : A -> B -> C) (default : B).
@@ -29,7 +30,7 @@ Section Map2Bias.
 
   Lemma map2_bias_left_length l l' : #|map2_bias_left l l'| = #|l|.
   Proof.
-    induction l in l' |- *; destruct l'; simpl; auto.
+    induction l in l' |- *; destruct l'; simpl; auto; now rewrite IHl.
   Qed.
 
   Lemma map2_map2_bias_left l l' : #|l| = #|l'| -> map2_bias_left l l' = map2 f l l'.
@@ -39,42 +40,6 @@ Section Map2Bias.
     - intros [= hlen]. rewrite IHl; tas. reflexivity.
   Qed.
 End Map2Bias.
-
-(** Global environment with a map for efficient lookups *)
-
-Record global_env_map := 
-  { trans_env_env :> global_env;
-    trans_env_map : EnvMap.t global_decl; 
-    trans_env_repr : EnvMap.repr trans_env_env.(declarations) trans_env_map }.
-
-Definition global_env_ext_map := global_env_map * universes_decl.
-
-Definition pcuic_program : Type := global_env_ext_map * term.
-  
-Definition global_env_ext_map_global_env_ext (g : global_env_ext_map) : global_env_ext :=
-  (trans_env_env (fst g), g.2).
-Coercion global_env_ext_map_global_env_ext : global_env_ext_map >-> global_env_ext.
-
-Definition global_env_ext_map_global_env_map : global_env_ext_map -> global_env_map := fst.
-Coercion global_env_ext_map_global_env_map : global_env_ext_map >-> global_env_map.
-
-Module TransLookup.
-  Definition lookup_minductive (Σ : global_env_map) mind :=
-    match EnvMap.lookup mind Σ.(trans_env_map) with
-    | Some (InductiveDecl decl) => Some decl
-    | _ => None
-    end.
-
-  Definition lookup_inductive Σ ind :=
-    match lookup_minductive Σ (inductive_mind ind) with
-    | Some mdecl => 
-      match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
-      | Some idecl => Some (mdecl, idecl)
-      | None => None
-      end
-    | None => None
-    end.
-End TransLookup.
 
 Section Trans.
   Context (Σ : global_env_map).
@@ -210,9 +175,7 @@ Definition trans_global_env (d : Ast.Env.global_env) : global_env_map :=
 Definition trans_global (Σ : Ast.Env.global_env_ext) : global_env_ext_map :=
   (trans_global_env (fst Σ), snd Σ).
 
-Notation template_program := Ast.Env.program.
-
-Definition trans_template_program (p : template_program) : pcuic_program :=
+Definition trans_template_program (p : TemplateProgram.template_program) : pcuic_program :=
   let Σ' := trans_global (Ast.Env.empty_ext p.1) in 
   (Σ', trans Σ' p.2).
   

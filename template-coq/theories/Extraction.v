@@ -22,11 +22,13 @@ Extraction Blacklist Classes config uGraph Universes Ast String List Nat Int
 Set Warnings "-extraction-opaque-accessed".
 Set Warnings "-extraction-reserved-identifier".
 
-Cd "gen-src".
-
 From MetaCoq.Template Require Import TemplateMonad.Extractable config Induction
-     LiftSubst UnivSubst Pretty.
+     LiftSubst UnivSubst Pretty TemplateProgram.
 Import Init.Nat.
+
+Extract Constant Typing.guard_checking => "{ fix_guard = (fun _ _ _ -> true); cofix_guard = (fun _ _ _ -> true) }".
+
+Cd "gen-src".
 
 (* Silence the warnings for specifications axioms of int63 *)
 Set Warnings "-extraction-logical-axiom".
@@ -53,5 +55,8 @@ Extraction Library BasicAst.
 Extraction Library Reflect.
 Extraction Library Pretty.
 Extraction Library config.
+
+Recursive Extraction Library TemplateProgram.
+
 
 Cd "..".

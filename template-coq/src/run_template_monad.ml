@@ -474,6 +474,7 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
   | TmUnquote t ->
     begin
        try
+         debug Pp.(fun () -> str"Unquoting:" ++ Printer.pr_constr_env env evm t);
          let t = reduce_all env evm t in
          let evm, t' = denote_term env evm t in
          let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in

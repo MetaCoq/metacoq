@@ -6,13 +6,13 @@ Set Warnings "-notation-overridden".
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICUnivSubst PCUICTyping TemplateToPCUIC
      PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration
-     PCUICClosed PCUICCSubst.
+     PCUICClosed PCUICCSubst PCUICProgram.
 Set Warnings "+notation-overridden".
 
 From Equations.Prop Require Import DepElim.
 Implicit Types cf : checker_flags.
 
-(* Source = Template, Target (unqualified) = Coq *)
+(* Source = Template, Target (unqualified) = PCUIC *)
 
 Module SEq := Template.TermEquality.
 Module ST := Template.Typing.
@@ -22,14 +22,13 @@ From MetaCoq.PCUIC Require Import TemplateToPCUIC TemplateToPCUICCorrectness.
 From MetaCoq.Template Require Import TypingWf WcbvEval.
 From MetaCoq.PCUIC Require Import PCUICCSubst PCUICCanonicity PCUICWcbvEval.
 
-
 Tactic Notation "wf_inv" ident(H) simple_intropattern(p) :=
   (eapply WfAst.wf_inv in H; progress cbn in H; try destruct H as p) || 
   (apply WfAst.wf_mkApps_napp in H; [|easy]; try destruct H as p).
 
 Lemma eval_mkApps_inv Σ f args v :
   eval Σ (mkApps f args) v ->
-  ∑ f', eval Σ f f' ×  eval Σ (mkApps f' args) v.
+  ∑ f', eval Σ f f' × eval Σ (mkApps f' args) v.
 Proof.
   revert f v; induction args using rev_ind; cbn; intros f v.
   - intros ev. exists v. split => //. eapply eval_to_value in ev.

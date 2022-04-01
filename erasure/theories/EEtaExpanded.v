@@ -555,3 +555,44 @@ Proof.
     split. 2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.
 Qed.
+
+From MetaCoq.Erasure Require Import EEtaExpandedFix.
+
+Local Ltac simp_eta ::= simp isEtaExp; rewrite -?isEtaExp_equation_1 -?EEtaExpanded.isEtaExp_equation_1.
+
+Lemma isEtaExpFix_isEtaExp Σ Γ t : EEtaExpandedFix.isEtaExp Σ Γ t -> EEtaExpanded.isEtaExp Σ t.
+Proof.
+  funelim (isEtaExp Σ Γ t); try solve [simp_eta => //].
+  - simp_eta.
+    intros Ha. eapply In_All in H. solve_all.
+  - simp_eta. rtoProp; intuition auto.
+  - simp_eta. rtoProp; intuition auto.
+    eapply In_All in H0; solve_all.
+  - eapply In_All in H. simp_eta; rtoProp; intuition auto. solve_all.
+  - eapply In_All in H. simp_eta; rtoProp; intuition auto.
+    rewrite EEtaExpanded.isEtaExp_Constructor. apply/andP; split. exact H1.
+    solve_all.
+  - eapply In_All in H, H0. simp_eta.
+    move => /andP[] /andP[] etafix etamfix etav.
+    eapply EEtaExpanded.isEtaExp_mkApps_intro. simp_eta.
+    clear -H etamfix. solve_all. 
+    solve_all.
+  - eapply In_All in H. simp_eta.
+    move=> /andP[] etarel etav.
+    eapply EEtaExpanded.isEtaExp_mkApps_intro. simp_eta. solve_all.
+  - eapply In_All in H0. simp_eta.
+    move=> /andP[] etau etav.
+    eapply EEtaExpanded.isEtaExp_mkApps_intro; auto. solve_all.
+Qed.
+
+Lemma isEtaExpFix_env_isEtaExp_env Σ : isEtaExp_env Σ -> EEtaExpanded.isEtaExp_env Σ.
+Proof.
+  induction Σ; cbn; auto.
+  move/andP => [] etaa etaΣ.
+  rewrite IHΣ // andb_true_r.
+  move: etaa. rewrite /isEtaExp_decl /EEtaExpanded.isEtaExp_decl.
+  destruct a.2 => //.
+  rewrite /isEtaExp_constant_decl /EEtaExpanded.isEtaExp_constant_decl.
+  destruct (E.cst_body c) => // /=.
+  eapply isEtaExpFix_isEtaExp.
+Qed.

@@ -23,6 +23,7 @@ PCUICWfUniverses
 PCUICNormal
 PCUICPosition
 PCUICPretty
+PCUICProgram
 TemplateToPCUIC
 PCUICUnivSubst
 

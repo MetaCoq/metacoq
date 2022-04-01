@@ -10,7 +10,7 @@ From MetaCoq.Template Require Import utils.
 Import MCMonadNotation.
 Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
-#[local] Existing Instance extraction_checker_flags.
+#[local] Existing Instance config.extraction_checker_flags.
 
 Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.

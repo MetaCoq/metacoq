@@ -5,13 +5,15 @@ From MetaCoq.Template Require Ast TypingWf WfAst TermEquality.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCumulativity
      PCUICLiftSubst PCUICEquality PCUICReduction 
      PCUICUnivSubst PCUICTyping PCUICGlobalEnv TemplateToPCUIC
-     PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnvConv PCUICSubstitution PCUICGeneration PCUICCasesContexts.
+     PCUICWeakeningConv PCUICWeakeningTyp PCUICWeakeningEnvConv 
+     PCUICSubstitution PCUICGeneration PCUICCasesContexts
+     PCUICProgram.
 
 From Equations.Prop Require Import DepElim.
 From Equations Require Import Equations.
 
 Implicit Types (cf : checker_flags).
-
+  
 Coercion Ast.Env.fst_ctx : Ast.Env.global_env_ext >-> Ast.Env.global_env.
 
 Definition lengths := 
@@ -40,7 +42,6 @@ Definition plengths :=
     @fold_context_k_length, @cofix_subst_length, @fix_subst_length,
     @smash_context_length, @context_assumptions_smash_context,
     @arities_context_length).
-  
 
 Lemma ind_predicate_context_length ind mdecl idecl :
   #|Ast.ind_predicate_context ind mdecl idecl| = S #|idecl.(Ast.Env.ind_indices)|.
@@ -2310,8 +2311,8 @@ Proof.
     { eapply All2_length in X1; len in X1. } 
     rewrite (trans_case_predicate_context Σ) //.
     rewrite map_app.
-    specialize (X2 X7).
-    specialize (X5 X7).
+    specialize (X7 X9).
+    specialize (X5 X9).
     set (p' := trans_predicate _ _ _ _ _ _ _).
     eapply (simpl_type_Case (p:=p') (ps:=ps)) => //. 
     + cbn. rewrite map2_map2_bias_left; len.
@@ -2328,18 +2329,18 @@ Proof.
       eapply (trans_ind_predicate_context Σ) in X1.
       eapply (eq_annots_ind_predicate_context ci).
       eapply All2_Forall2 => //. exact X1.
-    + clear X6. 
-      rewrite trans_local_app in X2.
-      rewrite /predctx in X2.
-      rewrite trans_case_predicate_context in X2 => //.
-      now eapply typing_wf_local in X2.
-    + clear X6. cbn [preturn trans_predicate].
-      rewrite trans_local_app in X2.
-      rewrite /predctx in X2.
-      rewrite trans_case_predicate_context in X2 => //.
+    + clear X8. 
+      rewrite trans_local_app in X5.
+      rewrite /predctx in X5.
+      rewrite trans_case_predicate_context in X5 => //.
+    + clear X8. cbn [preturn trans_predicate].
+      specialize (X4 X9).
+      rewrite trans_local_app in X4.
+      rewrite /predctx in X4.
+      rewrite trans_case_predicate_context in X4 => //.
     + now rewrite global_ext_constraints_trans.
-    + cbn. clear X6.
-      now rewrite trans_mkApps map_app in X5.
+    + cbn. clear X8.
+      now rewrite trans_mkApps map_app in X7.
     + red. eapply All2_Forall2.
       eapply All2_map2_right.
       eapply All2_map.
@@ -2372,7 +2373,7 @@ Proof.
       rewrite [brctxty'.2]eqbty.
       rewrite [brctxty'.1]eqctx. 
       clear eqctx eqbty.
-      specialize (IHbod X7). specialize (IHty X7).
+      specialize (IHbod X9). specialize (IHty X9).
       rewrite trans_local_app in IHbod.
       rewrite trans_local_app in IHty => //.
 

@@ -36,6 +36,8 @@ theories/utils/ReflectEq.v
 # common
 theories/common/uGraph.v
 
+theories/Transform.v
+
 # Basic Ast files
 theories/utils.v
 theories/config.v
@@ -62,6 +64,7 @@ theories/Normal.v
 theories/WcbvEval.v
 theories/Checker.v
 theories/EtaExpand.v
+theories/TemplateProgram.v
 
 # The Template monad
 theories/TemplateMonad.v

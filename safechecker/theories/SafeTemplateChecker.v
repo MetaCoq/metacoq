@@ -3,7 +3,7 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.Template Require AstUtils Typing.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
-     TemplateToPCUIC PCUICSN BDToPCUIC.
+     TemplateToPCUIC PCUICSN BDToPCUIC PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl.
 
 Import MCMonadNotation.

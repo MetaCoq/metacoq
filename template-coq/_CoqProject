@@ -76,6 +76,3 @@ theories/Constants.v
 
 # Extract the extractable monad, built by _PluginProject
 theories/Extraction.v
-
-# A checker of well-formedness in MetaCoq and Coq
-theories/TemplateCheckWf.v

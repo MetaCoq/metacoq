@@ -32,7 +32,7 @@ Program Definition erasure_pipeline :
   TemplateProgram.eval_template_program
   (EProgram.eval_eprogram {| with_prop_case := false; with_guarded_fix := false |}) := 
   (* Eta expansion of constructors and fixpoints *)
-  template_eta_expand ▷
+  (* template_eta_expand ▷ *)
   (* Casts are removed, application is binary, case annotations are inferred from the global environment *)
   template_to_pcuic_transform ▷
   (* Branches of cases are expanded to bind only variables, constructor types are expanded accordingly *)
@@ -59,7 +59,7 @@ Eval simpl in post (guarded_to_unguarded_fix _).
 Definition run_erase_program := run erasure_pipeline.
 
 Program Definition erasure_pipeline_fast := 
-  template_eta_expand ▷
+  (* template_eta_expand ▷ *)
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
   erase_transform ▷ 
@@ -82,7 +82,7 @@ Program Definition erase_and_print_template_program {cf : checker_flags} (p : As
   let p' := run_erase_program p _ in
   time "Pretty printing" EPretty.print_program p'.
 Next Obligation.
-  sq. red. todo "assuming quoted environment and term are wellformed".
+  sq. todo "assuming quoted environment and term are wellformed and properly eta-expanded".
 Qed.
 
 Program Definition erase_fast_and_print_template_program {cf : checker_flags} (p : Ast.Env.program)

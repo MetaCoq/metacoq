@@ -113,6 +113,8 @@ struct
       Constr.DEFAULTcast
     else if constr_equall trm kNative then
       Constr.VMcast
+    else if constr_equall trm kRevertCast then
+      Constr.REVERTcast
     else
       not_supported_verb trm "unquote_cast_kind"
 
@@ -366,6 +368,7 @@ struct
   : (Constr.t, quoted_int, quoted_ident, quoted_name, quoted_sort, quoted_cast_kind, quoted_kernel_name, 
     quoted_inductive, quoted_relevance, quoted_univ_instance, quoted_proj, 
     quoted_int63, quoted_float64) structure_of_term =
+    (* debug (fun () -> Pp.(str "denote_term" ++ spc () ++ print_term t)) ; *)
     let (h,args) = app_full t [] in
     if constr_equall h tRel then
       match args with

@@ -24,9 +24,11 @@ PCUICNormal
 PCUICPosition
 PCUICPretty
 PCUICWcbvEval
+PCUICProgram
 TemplateToPCUIC
 PCUICExpandLets
 PCUICExpandLetsCorrectness
+PCUICTransform
 
 PCUICErrors
 PCUICEqualityDec
@@ -48,9 +50,12 @@ ESpineView
 EPretty
 Extract
 EEtaExpanded
+EEtaExpandedFix
 ERemoveParams
 ErasureFunction
 EOptimizePropDiscr
+EProgram
+ETransform
 Erasure
 
 G_metacoq_erasure

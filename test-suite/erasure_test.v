@@ -1,12 +1,7 @@
 From MetaCoq.Erasure Require Import Loader.
 From MetaCoq.Template Require Import Loader.
-Test MetaCoq Timing.
 Set MetaCoq Timing.
-
-Test MetaCoq Timing.
-
 Local Open Scope string_scope.
-
 
 MetaCoq Erase nat.
 (*
@@ -47,10 +42,10 @@ Import ListNotations.
 MetaCoq Erase (map negb [true; false]).
 
 Set Warnings "-abstract-large-number".
-Definition bignat := Eval compute in 10000.
+(* Definition bignat := Eval compute in 10000. *)
 Test MetaCoq Timing.
 
-MetaCoq Erase bignat.
+(* MetaCoq Erase bignat. *)
 
 From MetaCoq.TestSuite Require Import vs.
 MetaCoq Erase main.

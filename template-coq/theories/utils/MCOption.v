@@ -152,6 +152,7 @@ Qed.
 Inductive ForOption {A} (P : A -> Prop) : option A -> Prop :=
 | fo_Some : forall t, P t -> ForOption P (Some t)
 | fo_None : ForOption P None.
+Derive Signature for ForOption.
 
 Definition foroptb {A : Type} (p : A -> bool) (o : option A) : bool :=
   option_get true (option_map p o).

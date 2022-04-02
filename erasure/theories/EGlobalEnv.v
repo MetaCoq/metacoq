@@ -155,6 +155,20 @@ Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   | None => None
   end.
 
+Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
 Definition is_constructor_app_or_box t :=
   match t with
   | tBox => true
@@ -188,137 +202,3 @@ Definition tDummy := tVar "".
 
 Definition iota_red npar args (br : list name * term) :=
   substl (List.rev (List.skipn npar args)) br.2.
-
-Definition isSome {A} (o : option A) := 
-  match o with 
-  | None => false
-  | Some _ => true
-  end.
-
-Class ETermFlags := 
-  { has_tBox : bool
-  ; has_tRel : bool
-  ; has_tVar : bool
-  ; has_tEvar : bool
-  ; has_tLambda : bool
-  ; has_tLetIn : bool
-  ; has_tApp : bool
-  ; has_tConst : bool
-  ; has_tConstruct : bool
-  ; has_tCase : bool
-  ; has_tProj : bool
-  ; has_tFix : bool
-  ; has_tCoFix : bool
-  }.
-
-Class EEnvFlags := {
-  has_axioms : bool;
-  has_cstr_params : bool;
-  term_switches :> ETermFlags }.
-  
-Definition all_term_flags := 
-  {| has_tBox := true
-    ; has_tRel := true
-    ; has_tVar := true
-    ; has_tEvar := true
-    ; has_tLambda := true
-    ; has_tLetIn := true
-    ; has_tApp := true
-    ; has_tConst := true
-    ; has_tConstruct := true
-    ; has_tCase := true
-    ; has_tProj := true
-    ; has_tFix := true
-    ; has_tCoFix := true
-  |}.
-
-Definition all_env_flags := 
-  {| has_axioms := true; 
-     term_switches := all_term_flags;
-     has_cstr_params := true |}.
-    
-Section wf.
-  
-  Context {sw  : EEnvFlags}.
-  Variable Σ : global_context.
-
-  (* a term term is wellformed if
-    - it is closed up to k,
-    - it only contains constructos as indicated by sw,
-    - all occuring constructors are defined,
-    - all occuring constants are defined, and
-    - if has_axioms is false, all occuring constants have bodies *)
-  
-  Fixpoint wellformed k (t : term) : bool :=
-    match t with
-    | tRel i => has_tRel && Nat.ltb i k
-    | tEvar ev args => has_tEvar && List.forallb (wellformed k) args
-    | tLambda _ M => has_tLambda && wellformed (S k) M
-    | tApp u v => has_tApp && wellformed k u && wellformed k v
-    | tLetIn na b b' => has_tLetIn && wellformed k b && wellformed (S k) b'
-    | tCase ind c brs => has_tCase && 
-      let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
-      isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
-    | tProj p c => has_tProj && isSome (lookup_inductive Σ p.1.1) && wellformed k c
-    | tFix mfix idx => has_tFix &&
-      let k' := List.length mfix + k in
-      List.forallb (test_def (wellformed k')) mfix
-    | tCoFix mfix idx => has_tCoFix &&
-      let k' := List.length mfix + k in
-      List.forallb (test_def (wellformed k')) mfix
-    | tBox => has_tBox
-    | tConst kn => has_tConst && 
-      match lookup_constant Σ kn with
-      | Some d => has_axioms || isSome d.(cst_body)
-      | _ => false 
-      end
-    | tConstruct ind c => has_tConstruct && isSome (lookup_constructor Σ ind c)
-    | tVar _ => has_tVar
-    end.
-
-End wf.
-
-Definition wf_global_decl {sw : EEnvFlags} Σ d : bool :=
-  match d with
-  | ConstantDecl cb => option_default (fun b => wellformed Σ 0 b) cb.(cst_body) has_axioms
-  | InductiveDecl idecl => has_cstr_params || (idecl.(ind_npars) == 0)
-  end.
-
-Inductive wf_glob {efl : EEnvFlags} : global_declarations -> Prop :=
-| wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
-  wf_glob Σ ->
-  wf_global_decl Σ d ->
-  fresh_global kn Σ ->
-  wf_glob ((kn, d) :: Σ).
-Derive Signature for wf_glob.
-
-Implicit Types (efl : EEnvFlags).
-
-Lemma extends_lookup {efl} {Σ Σ' c decl} :
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  lookup_env Σ c = Some decl ->
-  lookup_env Σ' c = Some decl.
-Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      case: eqb_spec; intros e; subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
-Qed.
-
-Lemma extends_is_propositional {efl} {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  forall ind b, inductive_isprop_and_pars Σ ind = Some b -> inductive_isprop_and_pars Σ' ind = Some b.
-Proof.
-  intros wf ex ind b.
-  rewrite /inductive_isprop_and_pars.
-  destruct lookup_env eqn:lookup => //.
-  now rewrite (extends_lookup wf ex lookup).
-Qed.
-

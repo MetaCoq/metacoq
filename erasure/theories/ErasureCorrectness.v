@@ -28,29 +28,6 @@ Local Set Keyed Unification.
 
 Local Existing Instance config.extraction_checker_flags.
 
-(** Flags governing what can appear in the target asts and global environments *)
-
-Definition erased_term_flags := 
-  {| has_tBox := true
-    ; has_tRel := true
-    ; has_tVar := true
-    ; has_tEvar := true
-    ; has_tLambda := true
-    ; has_tLetIn := true
-    ; has_tApp := true
-    ; has_tConst := true
-    ; has_tConstruct := true
-    ; has_tCase := true
-    ; has_tProj := true
-    ; has_tFix := true
-    ; has_tCoFix := true
-  |}.
-
-Definition erased_env_flags := 
-  {| has_axioms := true; 
-     term_switches := erased_term_flags;
-     has_cstr_params := true |}.
-
 (** ** Prelim on arities and proofs *)
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :

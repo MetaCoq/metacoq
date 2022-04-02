@@ -832,7 +832,7 @@ Arguments eval_deterministic {_ _ _ _ _}.
 Arguments eval_unique {_ _ _ _}.
 
 Section WcbvEnv.
-  Context {wfl : WcbvFlags}.
+  Context {wfl : WcbvFlags} {efl : EEnvFlags}.
 
   Lemma weakening_eval_env {Σ Σ'} : 
     wf_glob Σ' -> extends Σ Σ' ->

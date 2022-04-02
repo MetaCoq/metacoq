@@ -192,12 +192,12 @@ Inductive global_decl :=
 | ConstantDecl : constant_body -> global_decl
 | InductiveDecl : mutual_inductive_body -> global_decl.
 
+
+(** A context of global declarations *)
+
 Definition global_declarations := list (kername * global_decl).
 
-(** A context of global declarations +
-    i.e. a global environment *)
-
-Definition global_context : Type := global_declarations.
+Notation global_context := global_declarations.
 
 (** *** Programs
 

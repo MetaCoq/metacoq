@@ -354,14 +354,14 @@ Proof.
       now exists ((kn', d')::Σ'').
 Qed.
 
-Lemma isEtaExp_app_extends Σ Σ' ind k n :
+Lemma isEtaExp_app_extends {efl : EEnvFlags} Σ Σ' ind k n :
   extends Σ Σ' ->
   wf_glob Σ' -> 
   isEtaExp_app Σ ind k n ->
   isEtaExp_app Σ' ind k n.
 Proof.
   rewrite /isEtaExp_app.
-  rewrite /lookup_constructor_pars_args /lookup_inductive /lookup_minductive.
+  rewrite /lookup_constructor_pars_args /lookup_constructor /lookup_inductive /lookup_minductive.
   move=> ext wf.
   destruct (lookup_env Σ _) eqn:hl => //.
   rewrite (extends_lookup wf ext hl) /= //.
@@ -369,7 +369,7 @@ Qed.
 
 From MetaCoq.Erasure Require Import ELiftSubst.
 
-Lemma isEtaExp_extends Σ Σ' t : 
+Lemma isEtaExp_extends {efl : EEnvFlags} Σ Σ' t : 
   extends Σ Σ' ->
   wf_glob Σ' ->
   isEtaExp Σ t ->
@@ -389,7 +389,7 @@ Proof.
   - eapply In_All in H0. apply isEtaExp_mkApps_intro; eauto. solve_all.
 Qed.
 
-Lemma isEtaExp_extends_decl Σ Σ' t : 
+Lemma isEtaExp_extends_decl {efl : EEnvFlags} {Σ Σ' t} : 
   extends Σ Σ' ->
   wf_glob Σ' ->
   isEtaExp_decl Σ t ->
@@ -400,7 +400,7 @@ Proof.
   now eapply isEtaExp_extends.
 Qed.
 
-Lemma isEtaExp_lookup {Σ kn d}: 
+Lemma isEtaExp_lookup {efl : EEnvFlags} {Σ kn d}: 
   isEtaExp_env Σ -> wf_glob Σ ->
   lookup_env Σ kn = Some d ->
   isEtaExp_decl Σ d.
@@ -440,6 +440,7 @@ Inductive expanded : term -> Prop :=
 | expanded_tBox : expanded tBox.
 
 End expanded.
+Derive Signature for expanded.
 
 Lemma expanded_ind :
 forall (Σ : global_declarations) (P : term -> Prop),
@@ -488,14 +489,30 @@ Proof.
   - eapply H10; eauto. clear - H14 f. induction H14; econstructor; cbn in *; eauto.
 Qed.
 
-Local Hint Constructors expanded : core .
+Local Hint Constructors expanded : core.
+
+Definition expanded_constant_decl Σ (cb : constant_body) : Prop :=
+  on_Some_or_None (expanded Σ) cb.(cst_body).
+    
+Definition expanded_decl Σ d :=
+  match d with
+  | ConstantDecl cb => expanded_constant_decl Σ cb
+  | InductiveDecl idecl => True
+  end.
+    
+Inductive expanded_global_declarations : forall (Σ : global_declarations), Prop :=
+| expanded_global_nil : expanded_global_declarations []
+| expanded_global_cons decl Σ : expanded_global_declarations Σ -> 
+  expanded_decl Σ decl.2 -> expanded_global_declarations (decl :: Σ).
+
+Definition expanded_global_env := expanded_global_declarations.
 
 Lemma isEtaExp_app_expanded Σ ind idx n :
    isEtaExp_app Σ ind idx n = true <->
    exists mind idecl cname c,
    declared_constructor Σ (ind, idx) mind idecl (cname, c) /\ n ≥ ind_npars mind + c.
 Proof.
-  unfold isEtaExp_app, lookup_constructor_pars_args, lookup_inductive, lookup_minductive.
+  unfold isEtaExp_app, lookup_constructor_pars_args, lookup_constructor, lookup_inductive, lookup_minductive.
   split.
   - intros H.
     destruct lookup_env as [[| mind] | ] eqn:E; cbn in H; try congruence.
@@ -554,6 +571,16 @@ Proof.
   - rewrite isEtaExp_Constructor. eapply andb_true_iff.
     split. 2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.
+Qed.
+
+Lemma expanded_global_env_isEtaExp_env {Σ} : expanded_global_env Σ -> isEtaExp_env Σ.
+Proof.
+  intros e; induction e; cbn => //.
+  rewrite IHe andb_true_r.
+  red in H; red. destruct decl as [kn []] => /= //.
+  cbn in H. red in H. unfold isEtaExp_constant_decl.
+  destruct (cst_body c); cbn in * => //.
+  now eapply expanded_isEtaExp.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpandedFix.

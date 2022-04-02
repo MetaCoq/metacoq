@@ -238,6 +238,23 @@ Definition isBox t :=
   | _ => false
   end.
 
+Definition is_box c :=
+  match head c with
+  | tBox => true
+  | _ => false
+  end.
+
+
+Lemma is_box_mkApps f a : is_box (mkApps f a) = is_box f.
+Proof.
+  now rewrite /is_box head_mkApps.
+Qed.
+
+Lemma is_box_tApp f a : is_box (tApp f a) = is_box f.
+Proof.
+  now rewrite /is_box head_tApp.
+Qed.
+
 Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
   "(" ^ string_of_name (dname def) ^ "," ^ f (dbody def) ^ ","
       ^ string_of_nat (rarg def) ^ ")".

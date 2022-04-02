@@ -38,12 +38,6 @@ Fixpoint mkAppBox c n :=
   | S n => mkAppBox (E.tApp c E.tBox) n
   end.
 
-Definition is_box c :=
-  match EAstUtils.head c with
-  | E.tBox => true
-  | _ => false
-  end.
-
 Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level).
 
 Definition erase_context (Γ : context) : list name :=

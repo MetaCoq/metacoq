@@ -186,7 +186,6 @@ Proof.
     clear - H1 f. induction H1; econstructor; eauto.
 Qed.
 
-
 Definition expanded_constant_decl Σ (cb : constant_body) : Prop :=
   on_Some_or_None (expanded Σ []) cb.(cst_body).
     
@@ -781,13 +780,14 @@ Lemma isEtaExp_app_expanded Σ ind idx n :
 Proof.
   unfold isEtaExp_app, lookup_constructor_pars_args, lookup_inductive, lookup_minductive.
   split.
-  - intros H.
+  - intros H. cbn in H.
     destruct lookup_env as [[| mind] | ] eqn:E; cbn in H; try congruence.
     destruct nth_error as [ idecl | ] eqn:E2; cbn in H; try congruence.
     destruct (nth_error (E.ind_ctors idecl) idx) as [ [cname ?] | ] eqn:E3; cbn in H; try congruence.
     repeat esplit.
     red. all: eauto. eapply leb_iff in H. lia.
   - intros (? & ? & ? & ? & [[]] & Hle).
+    cbn.
     rewrite H. cbn. rewrite H0. cbn. rewrite H1. cbn.
     eapply leb_iff. eauto.
 Qed.
@@ -880,7 +880,7 @@ Lemma lookup_inductive_pars_constructor_pars_args Σ {ind n pars args} :
   lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
 Proof.
   rewrite /lookup_constructor_pars_args /lookup_inductive_pars.
-  rewrite /lookup_inductive. destruct lookup_minductive => //.
+  unfold lookup_constructor, lookup_inductive. destruct lookup_minductive => //.
   cbn. do 2 destruct nth_error => //. congruence.
 Qed.
 
@@ -965,20 +965,20 @@ Proof.
       now exists ((kn', d')::Σ'').
 Qed.
 
-Lemma isEtaExp_app_extends Σ Σ' ind k n :
+Lemma isEtaExp_app_extends {efl : EEnvFlags} Σ Σ' ind k n :
   extends Σ Σ' ->
   wf_glob Σ' -> 
   isEtaExp_app Σ ind k n ->
   isEtaExp_app Σ' ind k n.
 Proof.
   rewrite /isEtaExp_app.
-  rewrite /lookup_constructor_pars_args /lookup_inductive /lookup_minductive.
+  rewrite /lookup_constructor_pars_args /lookup_constructor /lookup_inductive /lookup_minductive.
   move=> ext wf.
   destruct (lookup_env Σ _) eqn:hl => //.
   rewrite (extends_lookup wf ext hl) /= //.
 Qed.
 
-Lemma isEtaExp_extends Σ Σ' Γ t : 
+Lemma isEtaExp_extends {efl : EEnvFlags} Σ Σ' Γ t : 
   extends Σ Σ' ->
   wf_glob Σ' ->
   isEtaExp Σ Γ t ->
@@ -1003,7 +1003,7 @@ Proof.
   - eapply In_All in H0. apply isEtaExp_mkApps_intro; eauto. solve_all.
 Qed.
 
-Lemma isEtaExp_extends_decl Σ Σ' t : 
+Lemma isEtaExp_extends_decl {efl : EEnvFlags} Σ Σ' t : 
   extends Σ Σ' ->
   wf_glob Σ' ->
   isEtaExp_decl Σ t ->
@@ -1014,7 +1014,7 @@ Proof.
   now eapply isEtaExp_extends.
 Qed.
 
-Lemma isEtaExp_lookup {Σ kn d}: 
+Lemma isEtaExp_lookup {efl : EEnvFlags} {Σ kn d}: 
   isEtaExp_env Σ -> wf_glob Σ ->
   lookup_env Σ kn = Some d ->
   isEtaExp_decl Σ d.
@@ -1040,7 +1040,7 @@ Proof.
   intros. now eapply All_firstn.
 Qed.
 
-Lemma eval_etaexp {fl : Ee.WcbvFlags} {Σ a a'} : 
+Lemma eval_etaexp {fl : Ee.WcbvFlags} {efl : EEnvFlags} {Σ a a'} : 
   isEtaExp_env Σ ->
   wf_glob Σ ->
   Ee.eval Σ a a' -> isEtaExp Σ [] a -> isEtaExp Σ [] a'.
@@ -1463,7 +1463,7 @@ Proof.
   now simp_eta in he.
 Qed.
 
-Lemma neval_to_stuck_fix {Σ mfix idx t} :
+Lemma neval_to_stuck_fix {efl : EEnvFlags} {Σ mfix idx t} :
   isEtaExp_env Σ ->
   wf_glob Σ ->
   isEtaExp Σ [] t -> @eval opt_wcbv_flags Σ t (tFix mfix idx) -> False.
@@ -1473,7 +1473,7 @@ Proof.
   now apply isEtaExp_tFix in H.
 Qed.
 
-Lemma neval_to_stuck_fix_app {fl Σ mfix idx t args} :
+Lemma neval_to_stuck_fix_app {efl : EEnvFlags} {fl Σ mfix idx t args} :
   with_guarded_fix ->
   isEtaExp_env Σ ->
   wf_glob Σ ->
@@ -1762,7 +1762,7 @@ Proof.
     eapply eval_app_cong_tApp'. now eapply eval_to_value in evf''. exact e0. exact evres.
 Qed.
 
-Lemma All_eval_etaexp {fl : WcbvFlags} Σ l l' :
+Lemma All_eval_etaexp {fl : WcbvFlags} {efl : EEnvFlags} Σ l l' :
   isEtaExp_env Σ ->
   wf_glob Σ ->
   All2 (eval Σ) l l' -> forallb (isEtaExp Σ []) l -> forallb (isEtaExp Σ []) l'.
@@ -1786,7 +1786,7 @@ Proof.
   intros h. now apply isFix_mkApps.
 Qed.
 
-Lemma eval_opt_to_target {fl: WcbvFlags} Σ t v :
+Lemma eval_opt_to_target {fl: WcbvFlags} {efl : EEnvFlags} Σ t v :
   with_guarded_fix ->
   isEtaExp_env Σ ->
   wf_glob Σ ->

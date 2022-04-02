@@ -28,6 +28,29 @@ Local Set Keyed Unification.
 
 Local Existing Instance config.extraction_checker_flags.
 
+(** Flags governing what can appear in the target asts and global environments *)
+
+Definition erased_term_flags := 
+  {| has_tBox := true
+    ; has_tRel := true
+    ; has_tVar := true
+    ; has_tEvar := true
+    ; has_tLambda := true
+    ; has_tLetIn := true
+    ; has_tApp := true
+    ; has_tConst := true
+    ; has_tConstruct := true
+    ; has_tCase := true
+    ; has_tProj := true
+    ; has_tFix := true
+    ; has_tCoFix := true
+  |}.
+
+Definition erased_env_flags := 
+  {| has_axioms := true; 
+     term_switches := erased_term_flags;
+     has_cstr_params := true |}.
+
 (** ** Prelim on arities and proofs *)
 
 Lemma isErasable_subst_instance (Σ : global_env_ext) Γ T univs u :
@@ -476,6 +499,177 @@ Proof.
     rewrite <-H. rewrite fix_context_length in b0.
     eapply b0. eauto. now rewrite app_length fix_context_length.
 Qed.
+
+Section wellscoped.
+  Import PCUICAst.
+  
+  Definition lookup_constant Σ kn := 
+    match PCUICEnvironment.lookup_env Σ kn with
+    | Some (ConstantDecl d) => Some d
+    | _ => None
+    end.
+
+  Section Def.
+  Context (Σ : global_env).
+  Import ssrbool.
+
+  Fixpoint wellformed (t : term) : bool :=
+  match t with
+  | tRel i => true
+  | tEvar ev args => List.forallb (wellformed) args
+  | tLambda _ N M => wellformed N && wellformed M
+  | tApp u v => wellformed u && wellformed v
+  | tLetIn na b ty b' => wellformed b && wellformed ty && wellformed b'
+  | tCase ind p c brs => 
+    let brs' := forallb (wellformed ∘ bbody) brs in
+    isSome (lookup_inductive Σ ind.(ci_ind)) && wellformed c && brs'
+  | tProj p c => isSome (lookup_inductive Σ p.1.1) && wellformed c
+  | tFix mfix idx => 
+    List.forallb (test_def (wellformed) (wellformed)) mfix
+  | tCoFix mfix idx =>
+    List.forallb (test_def wellformed wellformed) mfix
+  | tConst kn _ => isSome (lookup_constant Σ kn)
+  | tConstruct ind c _ => isSome (lookup_constructor Σ ind c)
+  | tVar _ => true
+  | tInd ind _  => isSome (lookup_inductive Σ ind)
+  | tSort _ => true
+  | tProd na ty1 ty2 => wellformed ty1 && wellformed ty2
+  end.
+  End Def.
+
+  (* TODO Move *)
+  Lemma declared_constructor_lookup {Σ id mdecl idecl cdecl} :
+    declared_constructor Σ id mdecl idecl cdecl -> 
+    lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
+  Proof.
+    intros []. unfold lookup_constructor.
+    rewrite (declared_inductive_lookup_inductive (Σ := empty_ext Σ) H) /= H0 //.
+  Qed.
+
+  Lemma typing_wellformed :
+    env_prop (fun Σ Γ a A => wellformed Σ a)
+        (fun Σ Γ => True).
+  Proof.
+    eapply typing_ind_env; cbn; intros => //.
+    all:try rtoProp; intuition auto.
+    - red in H0. rewrite /lookup_constant H0 //.
+    - now rewrite (declared_inductive_lookup_inductive isdecl).
+    - rewrite (declared_constructor_lookup isdecl) //.
+    - now rewrite (declared_inductive_lookup_inductive isdecl).
+    - red in H8. eapply Forall2_All2 in H8.
+      eapply All2i_All2_mix_left in X5; tea. clear H8.
+      solve_all.
+    - now rewrite (declared_inductive_lookup_inductive isdecl).
+    - solve_all. destruct a as [s []].
+      unfold test_def. len in b0. now rewrite i b0.
+    - solve_all. destruct a as [s []].
+      unfold test_def. len in b0. now rewrite i b0.
+  Qed.
+
+  Lemma welltyped_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a} : welltyped Σ Γ a -> wellformed Σ a.
+  Proof.
+    intros []. eapply typing_wellformed; tea.
+  Qed.
+  
+End wellscoped.
+Import ssrbool.
+
+Section trans_lookups.
+  Context {Σ : global_env_ext} {Σ'} (g : globals_erased_with_deps Σ Σ').
+
+  Lemma trans_lookup_constant kn : isSome (lookup_constant Σ kn) -> isSome (EGlobalEnv.lookup_constant Σ' kn).
+  Proof.
+    unfold lookup_constant, EGlobalEnv.lookup_constant.
+    destruct (lookup_env Σ kn) as [[]|] eqn:hl => //.
+    eapply g in hl as [? []].
+    unfold EGlobalEnv.declared_constant in H. rewrite H //.
+  Qed.
+
+  Lemma trans_lookup_inductive kn : isSome (lookup_inductive Σ kn) -> isSome (EGlobalEnv.lookup_inductive Σ' kn).
+  Proof.
+    destruct g.
+    destruct (lookup_inductive Σ kn) as [[]|] eqn:hl => /= //.
+    specialize (H0 kn m o). forward H0.
+    move: hl. unfold lookup_inductive. 
+    destruct lookup_minductive eqn:hl => //.
+    destruct nth_error eqn:hnth => //. intros [= <- <-].
+    split => //. unfold lookup_minductive in hl.
+    unfold declared_minductive. destruct lookup_env as [[]|] => //. now noconf hl.
+    destruct H0 as [mdecl' [idecl' ?]].
+    unfold EGlobalEnv.lookup_inductive. cbn.
+    destruct H0 as [[] ?]. red in H0. rewrite H0 H1 //.
+  Qed.
+
+  Lemma trans_lookup_constructor kn c : isSome (lookup_constructor Σ kn c) -> isSome (EGlobalEnv.lookup_constructor Σ' kn c).
+  Proof.
+    destruct g.
+    unfold isSome. 
+    destruct (lookup_constructor Σ kn c) as [[[]]|] eqn:hl => /= //.
+    specialize (H0 kn m o).
+    move: hl. unfold lookup_constructor, lookup_inductive. 
+    destruct lookup_minductive eqn:hl => //.
+    destruct nth_error eqn:hnth => //.
+    destruct (nth_error (ind_ctors _) _) eqn:hnth' => //.
+    intros [= <- <- <-].
+    forward H0.
+    split => //. unfold lookup_minductive in hl.
+    unfold declared_minductive. destruct lookup_env as [[]|] => //. now noconf hl.
+    intros _.
+    destruct H0 as [mdecl' [idecl' ?]].
+    unfold EGlobalEnv.lookup_inductive. cbn.
+    destruct H0 as [[] ?]. red in H0. rewrite H0 H1 //.
+    destruct H2. eapply Forall2_All2 in H2.
+    eapply All2_nth_error_Some in H2 as [? []]; tea.
+    destruct e0. eapply Forall2_All2 in H2. eapply All2_nth_error_Some in H2 as [? []]; tea.
+    rewrite H1 in e. noconf e. rewrite e0 //.
+  Qed.
+End trans_lookups.
+
+Lemma erases_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a e} : welltyped Σ Γ a -> Σ ;;; Γ |- a ⇝ℇ e -> 
+  forall Σ', globals_erased_with_deps Σ Σ' -> @EGlobalEnv.wellformed erased_env_flags Σ' #|Γ| e.
+Proof.
+  intros wf.
+  generalize (welltyped_wellformed wf).
+  destruct wf. eapply subject_closed in X. move: X.
+  remember #|Γ| as Γl eqn:Heq.
+  intros cla wfa era.
+  revert Γ e wfa era Heq.
+  pattern Γl, a.
+  match goal with 
+  |- ?P Γl a => simpl; eapply (term_closedn_list_ind P); auto; clear
+  end; simpl; intros; subst k;
+    match goal with [H:erases _ _ _ _ |- _] => depelim H end; trivial;
+    simpl; try solve [solve_all].
+  - now apply Nat.ltb_lt.
+  - eapply trans_lookup_constant in wfa; tea.
+  - eapply trans_lookup_constructor in wfa; tea.
+  - move/andP: wfa => [] /andP[] lookup wfc wfbrs.
+    apply/andP. split. apply/andP. split; eauto.
+    eapply trans_lookup_inductive; tea.
+    eapply All_forallb. unfold tCaseBrsProp_k in X0.
+    eapply All2_All_mix_left in X1; eauto.
+    eapply forallb_All in wfbrs.
+    eapply All2_All_mix_left in X1; eauto.
+    close_Forall. intros [] []; move=> [] wf. cbn in *. intros.
+    solve_all. subst. rewrite map_length. eapply b; eauto. 
+    rewrite app_context_length. cbn.
+    now rewrite inst_case_branch_context_length.
+  - move/andP: wfa => [] hl hc.
+    apply/andP; split.
+    now eapply trans_lookup_inductive; tea. eauto.
+  - epose proof (All2_length X0). eapply forallb_All in wfa.
+    solve_all. 
+    destruct y ;  simpl in *; subst.
+    unfold EAst.test_def; simpl; eauto.
+    rewrite <- H0. rewrite fix_context_length in b.
+    eapply b. move/andP: b0 => //; eauto. intros []; eauto. eauto. now rewrite app_length fix_context_length. tea.
+  - epose proof (All2_length X0).
+    solve_all. destruct y ;  simpl in *; subst.
+    unfold EAst.test_def; simpl; eauto.
+    rewrite <-H0. rewrite fix_context_length in b.
+    eapply b. now move: b0 => /andP[]. eauto. now rewrite app_length fix_context_length. tea.
+Qed.
+
 
 Lemma eval_to_mkApps_tBox_inv {wfl:WcbvFlags} Σ t argsv :
   Σ ⊢ t ▷ E.mkApps E.tBox argsv ->
@@ -2150,7 +2344,7 @@ Proof.
   induction 2; constructor; eauto; now depelim H.
 Qed.
 
-Lemma erases_global_wf_glob {Σ : global_env} Σ' : wf Σ -> erases_global Σ Σ' -> wf_glob Σ'.
+Lemma erases_global_wf_glob {Σ : global_env} Σ' : wf Σ -> erases_global Σ Σ' -> @wf_glob erased_env_flags Σ'.
 Proof.
   destruct Σ as [univs Σ]; cbn in *.
   intros [onu wf] er; cbn in *.
@@ -2159,7 +2353,19 @@ Proof.
   - constructor.
   - cbn. depelim wf.
     constructor; eauto.
-    eapply erases_global_decls_fresh; tea.
+    2:eapply erases_global_decls_fresh; tea.
+    cbn. red in H.
+    do 2 red in o0.
+    destruct (cst_body cb).
+    destruct (E.cst_body cb') => //. cbn.
+    set (Σ'' := ({| universes := _ |}, _)) in *.
+    assert (PCUICTyping.wf_ext Σ'').
+    { split => //. }
+    epose proof (erases_wellformed (Σ:=Σ'') (Γ := []) (a:=t)).
+    forward H0. now eexists.
+    specialize (H0 H Σ'). eapply H0.
+    eapply erases_global_all_deps; tea. split => //.
+    destruct (E.cst_body cb') => //. 
   - depelim wf.
     constructor; eauto.
     eapply erases_global_decls_fresh; tea.

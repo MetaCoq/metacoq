@@ -926,3 +926,38 @@ Proof.
   - destruct t => //.
     all:constructor; eauto.
 Qed.
+
+From MetaCoq.Erasure Require Import EEtaExpanded.
+
+Lemma strip_declared_constructor {Σ : GlobalContextMap.t} {k mdecl idecl cdecl} : 
+  declared_constructor Σ.(GlobalContextMap.global_decls)  k mdecl idecl cdecl ->
+  declared_constructor (strip_env Σ) k (strip_inductive_decl mdecl) idecl cdecl.
+Proof.
+  intros [[] ?]; do 2 split => //.
+  red in H; red.
+  rewrite lookup_env_strip H //.
+Qed.
+
+Lemma lookup_inductive_pars_spec {Σ} {mind} {mdecl} : 
+  declared_minductive Σ mind mdecl ->
+  lookup_inductive_pars Σ mind = Some (ind_npars mdecl).
+Proof.
+  rewrite /declared_minductive /lookup_inductive_pars /lookup_minductive.
+  now intros -> => /=.
+Qed.
+
+Lemma strip_expanded {Σ : GlobalContextMap.t} {t} : expanded Σ t -> expanded (strip_env Σ) (strip Σ t).
+Proof.
+  induction 1 using expanded_ind.
+  all:try solve[simp_strip; constructor; eauto; solve_all].
+  - rewrite strip_mkApps_etaexp. now eapply expanded_isEtaExp.
+    eapply expanded_mkApps_expanded => //. solve_all.
+  - destruct proj as [[] ?]; simp_strip. constructor; eauto.
+  - rewrite strip_mkApps // /=.
+    rewrite (lookup_inductive_pars_spec (proj1 (proj1 H))).
+    eapply expanded_tConstruct_app.
+    eapply strip_declared_constructor; tea.
+    len. rewrite skipn_length. lia.
+    solve_all. eapply All_skipn. solve_all.
+Qed.
+

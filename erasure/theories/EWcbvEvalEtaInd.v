@@ -126,7 +126,7 @@ Class Qpreserves (Q : nat -> term -> Type) Σ :=
     qpres_qdummy :> Qdummy Q }.
 
 Lemma eval_preserve_mkApps_ind :
-∀ (wfl : WcbvFlags) (Σ : global_declarations) 
+∀ (wfl : WcbvFlags) {efl : EEnvFlags} (Σ : global_declarations) 
   (P' : term → term → Type)
   (Q : nat -> term -> Type)
   {Qpres : Qpreserves Q Σ}
@@ -641,7 +641,7 @@ Ltac destruct_nary_times :=
   | [ H : [× _, _, _, _ & _] |- _ ] => destruct H 
   end.
 
-Lemma eval_etaexp {fl : WcbvFlags} {Σ a a'} : 
+Lemma eval_etaexp {fl : WcbvFlags} {efl : EEnvFlags} {Σ a a'} : 
   isEtaExp_env Σ ->
   wf_glob Σ ->
   eval Σ a a' -> isEtaExp Σ a -> isEtaExp Σ a'.

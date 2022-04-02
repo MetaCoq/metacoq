@@ -723,3 +723,34 @@ Proof.
   eapply optimize_expanded_decl in H0.
   depelim wf; now eapply optimize_expanded_decl_irrel.
 Qed.
+
+Lemma optimize_wellformed {efl : EEnvFlags} Σ n t :
+  has_tBox ->
+  wf_glob Σ -> wellformed Σ n t -> wellformed Σ n (optimize Σ t).
+Proof.
+  intros wfΣ hbox.
+  induction t in n |- * using EInduction.term_forall_list_ind => //.
+  all:try solve [cbn; rtoProp; intuition auto; solve_all].
+  - cbn -[lookup_inductive]. move/and3P => [] hasc /andP[]hs ht hbrs.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|] => /= //.
+    destruct l as [|[br n'] [|l']] eqn:eql; simpl.
+    all:rewrite ?hasc ?hs /= ?andb_true_r.
+    rewrite IHt //.
+    depelim X. cbn in hbrs.
+    rewrite andb_true_r in hbrs.
+    specialize (i _ hbrs).
+    todo "wellformed substitution". (* eapply closed_substl. solve_all. eapply All_repeat => //. *)
+    (* now rewrite repeat_length. *)
+    cbn in hbrs; rtoProp; solve_all. depelim X; depelim X. solve_all.
+    do 2 depelim X. solve_all.
+    do 2 depelim X. solve_all.
+    rtoProp; solve_all. solve_all.
+    rtoProp; solve_all. solve_all.
+  - cbn -[lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
+    destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|] => /= //.
+    all:rewrite hasc hs /=; eauto.
+  - cbn. rtoProp; intuition auto; solve_all.
+    unfold test_def in *. len. eauto.
+  - cbn. rtoProp; intuition auto; solve_all.
+    unfold test_def in *. len. eauto.
+Qed.

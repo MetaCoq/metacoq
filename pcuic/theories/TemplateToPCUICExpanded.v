@@ -145,6 +145,7 @@ Proof.
   all:try solve [econstructor; eauto].
   - econstructor; eauto. solve_all. sq. eapply All_fold_impl; tea; cbn.
     intros ? ? []; constructor; auto. now rewrite <- repeat_app.
+  - eapply expanded_tFix; tea; eauto. solve_all.
   - eapply expanded_tConstruct_app; tea.
     eapply weakening_env_declared_constructor; tea. now eapply extends_decls_extends.
 Qed.
@@ -226,7 +227,9 @@ Proof with eauto using expanded.
     + eapply template_to_pcuic_env; eauto.
   - now (wf_inv wf [[]]; eauto using expanded).
   - wf_inv wf [[]]. wf_inv w ?. eapply expanded_tFix.
-    + solve_all. revert H0. now rewrite mapi_cst_map rev_map_spec map_map.
+    + solve_all.
+      * rewrite trans_isLambda //.
+      * revert H2. cbn. now rewrite mapi_cst_map rev_map_spec map_map.
     + solve_all.
     + destruct args; cbn; congruence.
     + now rewrite nth_error_map H5.

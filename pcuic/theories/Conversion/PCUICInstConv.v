@@ -1014,6 +1014,10 @@ Lemma inst_wf_fixpoint Σ f mfix :
   wf_fixpoint Σ (map (map_def (inst f) (inst (up #|mfix| f))) mfix).
 Proof.
   unfold wf_fixpoint, wf_fixpoint_gen.
+  move/andb_and => [] hmfix ho.
+  apply/andP; split.
+  { rewrite forallb_map; eapply forallb_impl; tea; cbn => x hx hl.
+    destruct (dbody x) => /= //. }
   rewrite map_map_compose.
   destruct (map_option_out (map check_one_fix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.

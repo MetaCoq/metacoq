@@ -733,6 +733,12 @@ Lemma rename_wf_fixpoint Σ f mfix :
   wf_fixpoint Σ (map (map_def (rename f) (rename (shiftn #|mfix| f))) mfix).
 Proof.
   unfold wf_fixpoint, wf_fixpoint_gen.
+  rewrite forallb_map.
+  move/andP => [] hmfix ho.
+  apply/andP; split. 
+  { eapply forallb_impl; tea. intros. cbn in H0.
+    now eapply isLambda_rename. }
+  move: ho.
   rewrite map_map_compose.
   destruct (map_option_out (map check_one_fix mfix)) as [[]|] eqn:hmap => //.
   eapply map_option_out_impl in hmap.

@@ -2709,10 +2709,13 @@ Lemma trans_wf_fixpoint Σ p n mfix :
 Proof.
   intros hmfix.
   unfold ST.wf_fixpoint, TT.wf_fixpoint, ST.wf_fixpoint_gen, TT.wf_fixpoint_gen.
-  rewrite map_map_compose.
-  rewrite (map_option_out_check_one_fix hmfix).
-  destruct map_option_out as [[]|] => //.
-  now rewrite (trans_check_rec_kind Σ).
+  f_equal.
+  - rewrite forallb_map /=.
+    setoid_rewrite trans_isLambda => //.
+  - rewrite map_map_compose.
+    rewrite (map_option_out_check_one_fix hmfix).
+    destruct map_option_out as [[]|] => //.
+    now rewrite (trans_check_rec_kind Σ).
 Qed.
 
 Lemma trans_wf_cofixpoint Σ mfix :
@@ -5377,6 +5380,7 @@ Proof.
     len; exact e0.
     now len.
   - rewrite trans_mkApps. cbn. eapply expanded_tFix. solve_all.
+    rewrite trans_isLambda //.
     rewrite rev_map_spec. rewrite rev_map_spec in b.
     rewrite map_map_compose. cbn. exact b. solve_all.
     destruct args => //. now rewrite nth_error_map H4. len. now cbn.

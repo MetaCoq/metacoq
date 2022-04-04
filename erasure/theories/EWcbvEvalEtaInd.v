@@ -2,7 +2,7 @@
 From Coq Require Import Utf8 Program ssreflect ssrbool.
 From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EWcbvEval EGlobalEnv
-   ECSubst EInduction EWcbvEvalInd EEtaExpanded.
+  EWellformed ECSubst EInduction EWcbvEvalInd EEtaExpanded.
 
 Set Asymmetric Patterns.
 From Equations Require Import Equations.

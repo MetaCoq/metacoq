@@ -138,6 +138,13 @@ Section EEnvFlags.
       unfold test_def, test_snd in *;
         try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
   Qed.
+  
+  Lemma wellformed_closed_decl {t} : wf_global_decl Σ t -> closed_decl t.
+  Proof.
+    destruct t => /= //.
+    destruct (cst_body c) => /= //.
+    eapply wellformed_closed.
+  Qed.
 
   Lemma wellformed_up {k t} : wellformed k t -> forall k', k <= k' -> wellformed k' t.
   Proof.
@@ -335,6 +342,15 @@ Section EEnvFlags.
   Qed.
 
 End EEnvFlags.
+
+Lemma wellformed_closed_env {efl} {Σ : global_declarations} : wf_glob Σ -> closed_env Σ.
+Proof.
+  induction 1; cbn; auto. 
+  apply/andP; split.
+  - unfold test_snd => /=.
+    now eapply wellformed_closed_decl.
+  - eapply IHwf_glob.
+Qed.
 
 Lemma extends_lookup {efl} {Σ Σ' c decl} :
   wf_glob Σ' ->

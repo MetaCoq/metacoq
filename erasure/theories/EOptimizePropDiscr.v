@@ -7,8 +7,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICSafeLemmata. (* for welltyped *)
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
 From MetaCoq.Erasure Require Import EAst EAstUtils EDeps EExtends
-    ELiftSubst ECSubst EWcbvEval Extract Prelim ErasureCorrectness 
-    ErasureFunction EArities.
+    ELiftSubst ECSubst EGlobalEnv EWellformed EWcbvEval Extract Prelim
+    ErasureFunction EArities EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -304,6 +304,8 @@ Proof.
   eexists; econstructor; eauto.
 Qed.
 
+Import ErasureCorrectness.
+
 Lemma erasable_tBox_value (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v :
   forall wt : Σ ;;; [] |- t : T,
   Σ |-p t ▷ v -> erases Σ [] v tBox -> ∥ isErasable Σ [] t ∥.
@@ -374,7 +376,7 @@ Proof.
 Qed.
 
 Lemma wellformed_optimize_extends {wfl: EEnvFlags} Σ t : 
-  forall n, wellformed Σ n t ->
+  forall n, EWellformed.wellformed Σ n t ->
   forall Σ', extends Σ Σ' -> wf_glob Σ' ->
   optimize Σ t = optimize Σ' t.
 Proof.
@@ -647,22 +649,6 @@ Proof.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.
 
-Lemma expanded_mkApps_expanded {Σ f args} : 
-  expanded Σ f -> All (expanded Σ) args ->
-  expanded Σ (mkApps f args).
-Proof.
-  intros.
-  destruct (isConstruct f) eqn:eqc.
-  destruct f => //.
-  - depelim H. 
-    destruct args0 using rev_case; cbn in *; subst. cbn in H. congruence.
-    rewrite mkApps_app in H2; noconf H2.
-    destruct args0 using rev_case; cbn in *; subst.
-    noconf H2. eapply expanded_tConstruct_app; tea. lia. solve_all.
-    rewrite mkApps_app in H2; noconf H2.
-  - eapply expanded_mkApps => //. now rewrite eqc. solve_all.
-Qed.
-
 Lemma optimize_expanded Σ t : expanded Σ t -> expanded Σ (optimize Σ t).
 Proof.
   induction 1 using expanded_ind.
@@ -725,10 +711,10 @@ Proof.
 Qed.
 
 Lemma optimize_wellformed {efl : EEnvFlags} Σ n t :
-  has_tBox ->
-  wf_glob Σ -> wellformed Σ n t -> wellformed Σ n (optimize Σ t).
+  has_tBox -> has_tRel ->
+  wf_glob Σ -> EWellformed.wellformed Σ n t -> EWellformed.wellformed Σ n (optimize Σ t).
 Proof.
-  intros wfΣ hbox.
+  intros wfΣ hbox hrel.
   induction t in n |- * using EInduction.term_forall_list_ind => //.
   all:try solve [cbn; rtoProp; intuition auto; solve_all].
   - cbn -[lookup_inductive]. move/and3P => [] hasc /andP[]hs ht hbrs.
@@ -739,8 +725,8 @@ Proof.
     depelim X. cbn in hbrs.
     rewrite andb_true_r in hbrs.
     specialize (i _ hbrs).
-    todo "wellformed substitution". (* eapply closed_substl. solve_all. eapply All_repeat => //. *)
-    (* now rewrite repeat_length. *)
+    eapply wellformed_substl => //. solve_all. eapply All_repeat => //.
+    now rewrite repeat_length.
     cbn in hbrs; rtoProp; solve_all. depelim X; depelim X. solve_all.
     do 2 depelim X. solve_all.
     do 2 depelim X. solve_all.
@@ -753,4 +739,97 @@ Proof.
     unfold test_def in *. len. eauto.
   - cbn. rtoProp; intuition auto; solve_all.
     unfold test_def in *. len. eauto.
+Qed.
+
+Import EWellformed.
+
+Lemma optimize_wellformed_irrel {efl : EEnvFlags} Σ t :
+  wf_glob Σ ->
+  forall n, wellformed Σ n t -> wellformed (optimize_env Σ) n t.
+Proof.
+  intros wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
+  all:try solve [intros; rtoProp; intuition eauto; solve_all].
+  - rewrite lookup_env_optimize //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct (cst_body c) => //.
+  - rewrite lookup_env_optimize //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. 
+  - rewrite lookup_env_optimize //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct nth_error => /= //.
+    intros; rtoProp; intuition auto; solve_all.
+  - rewrite lookup_env_optimize //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //.
+    rewrite andb_false_r => //.
+    destruct nth_error => /= //.
+    all:intros; rtoProp; intuition auto; solve_all.
+Qed.
+
+
+Lemma optimize_wellformed_decl_irrel {efl : EEnvFlags} Σ d :
+  wf_glob Σ ->
+  wf_global_decl Σ d -> wf_global_decl (optimize_env Σ) d.
+Proof.
+  intros wf; destruct d => /= //.
+  destruct (cst_body c) => /= //.
+  now eapply optimize_wellformed_irrel.
+Qed.
+
+Lemma optimize_decl_wf {efl : EEnvFlags} Σ :
+  has_tBox -> has_tRel -> wf_glob Σ -> 
+  forall d, wf_global_decl Σ d -> wf_global_decl (optimize_env Σ) (optimize_decl Σ d).
+Proof.
+  intros hasb hasr wf d.
+  intros hd.
+  eapply optimize_wellformed_decl_irrel; tea.
+  move: hd.
+  destruct d => /= //.
+  destruct (cst_body c) => /= //.
+  now eapply optimize_wellformed => //.
+Qed.
+
+Lemma fresh_global_optimize_env Σ kn : 
+  fresh_global kn Σ ->
+  fresh_global kn (optimize_env Σ).
+Proof.
+  induction 1; constructor; auto.
+Qed.
+
+Lemma optimize_env_wf {efl : EEnvFlags} Σ :
+  has_tBox -> has_tRel -> 
+  wf_glob Σ -> wf_glob (optimize_env Σ).
+Proof.
+  intros hasb hasrel.
+  induction 1; cbn; constructor; auto.
+  - cbn. eapply optimize_decl_wf => //.
+  - cbn. now eapply fresh_global_optimize_env.
+Qed.
+
+Definition optimize_program (p : eprogram) :=
+  (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2).
+
+Definition optimize_program_wf {efl} (p : eprogram) {hastbox : has_tBox} {hastrel : has_tRel} :
+  wf_eprogram efl p -> wf_eprogram efl (optimize_program p).
+Proof.
+  intros []; split.
+  now eapply optimize_env_wf.
+  cbn. eapply optimize_wellformed_irrel => //. now eapply optimize_wellformed.
+Qed.
+
+Definition optimize_program_expanded {efl} (p : eprogram) :
+  wf_eprogram efl p ->
+  expanded_eprogram_cstrs p -> expanded_eprogram_cstrs (optimize_program p).
+Proof.
+  unfold expanded_eprogram.
+  move=> [wfe wft] /andP[] etae etat.
+  apply/andP; split.
+  cbn. eapply expanded_global_env_isEtaExp_env, optimize_env_expanded => //.
+  now eapply isEtaExp_env_expanded_global_env.
+  eapply expanded_isEtaExp.
+  eapply optimize_expanded_irrel => //.
+  now apply optimize_expanded, isEtaExp_expanded.
 Qed.

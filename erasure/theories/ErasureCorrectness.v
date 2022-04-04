@@ -603,7 +603,7 @@ Section trans_lookups.
 End trans_lookups.
 
 Lemma erases_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a e} : welltyped Σ Γ a -> Σ ;;; Γ |- a ⇝ℇ e -> 
-  forall Σ', globals_erased_with_deps Σ Σ' -> @EGlobalEnv.wellformed erased_env_flags Σ' #|Γ| e.
+  forall Σ', globals_erased_with_deps Σ Σ' -> @EWellformed.wellformed EWellformed.all_env_flags Σ' #|Γ| e.
 Proof.
   intros wf.
   generalize (welltyped_wellformed wf).
@@ -646,7 +646,6 @@ Proof.
     rewrite <-H0. rewrite fix_context_length in b.
     eapply b. now move: b0 => /andP[]. eauto. now rewrite app_length fix_context_length. tea.
 Qed.
-
 
 Lemma eval_to_mkApps_tBox_inv {wfl:WcbvFlags} Σ t argsv :
   Σ ⊢ t ▷ E.mkApps E.tBox argsv ->
@@ -1966,7 +1965,7 @@ Proof.
            ++ eauto.
            ++ eauto.
            ++ eauto.
-           ++ unfold Ee.cunfold_fix. now rewrite e0.
+           ++ unfold EGlobalEnv.cunfold_fix. now rewrite e0.
            ++ eapply Forall2_length in H5. noconf e. lia.
               
         -- exists E.tBox.
@@ -2077,7 +2076,7 @@ Proof.
             - now eapply nth_error_forall in H2; eauto. }
           exists v'. split => //. split.
           eapply Ee.eval_cofix_case; tea.
-          rewrite /Ee.cunfold_cofix nth' //. f_equal.
+          rewrite /EGlobalEnv.cunfold_cofix nth' //. f_equal.
           f_equal.
           rewrite -(Ee.closed_cofix_substl_subst_eq (idx:=idx)) //. }
         { eapply eval_to_mkApps_tBox_inv in H1 as H'; subst L'; cbn in *. depelim hl'.
@@ -2196,7 +2195,7 @@ Proof.
             - now eapply nth_error_forall in H1; eauto. }
           exists v'. split => //. split.
           eapply Ee.eval_cofix_proj; tea.
-          rewrite /Ee.cunfold_cofix nth' //. f_equal.
+          rewrite /EGlobalEnv.cunfold_cofix nth' //. f_equal.
           f_equal.
           rewrite -(Ee.closed_cofix_substl_subst_eq (idx:=idx)) //. }
         { eapply eval_to_mkApps_tBox_inv in H3 as H'; subst L'; cbn in *. depelim hl'.
@@ -2321,7 +2320,9 @@ Proof.
   induction 2; constructor; eauto; now depelim H.
 Qed.
 
-Lemma erases_global_wf_glob {Σ : global_env} Σ' : wf Σ -> erases_global Σ Σ' -> @wf_glob erased_env_flags Σ'.
+Import EWellformed.
+
+Lemma erases_global_wf_glob {Σ : global_env} Σ' : wf Σ -> erases_global Σ Σ' -> @wf_glob all_env_flags Σ'.
 Proof.
   destruct Σ as [univs Σ]; cbn in *.
   intros [onu wf] er; cbn in *.

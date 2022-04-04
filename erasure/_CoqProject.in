@@ -30,7 +30,7 @@ theories/EExtends.v
 theories/EOptimizePropDiscr.v
 theories/EEtaExpandedFix.v
 theories/EEtaExpanded.v
-theories/ERemoveParams.v
 theories/EProgram.v
+theories/ERemoveParams.v
 theories/ETransform.v
 theories/Erasure.v

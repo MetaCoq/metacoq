@@ -9,7 +9,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
 
 From MetaCoq.Template Require Import config utils BasicAst Universes.
-From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EEnvMap EExtends.
+From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EEnvMap EExtends EWellformed.
 From MetaCoq.Erasure Require Import EWcbvEval EWcbvEvalInd.
 
 Set Default Proof Using "Type*".
@@ -557,19 +557,22 @@ Section isEtaExp.
     intros Hk Hnth Hcl. 
     remember (Γ ++ [1 + d.(EAst.rarg)] ++ Δ)%list as Γ_.
     funelim (isEtaExp Γ_ b); try simp_eta; eauto; try fold csubst;
-      try toAll; try now repeat solve_all; subst.
+      try toAll; try solve_all; subst.
     - intros. simp isEtaExp ; cbn. destruct (Nat.compare_spec #|Γ0| i) => //; simp_eta.
       + rewrite nth_error_app2 in H0; try lia; cbn in H0; try easy. subst. rewrite minus_diag in H0. cbn in H0. easy.
       + rewrite !nth_error_app2 in H0 |- *; cbn; try lia.
         erewrite option_default_ext; eauto. f_equal.
         destruct i; cbn; lia.
       + now rewrite !nth_error_app1 in H0 |- *; try lia.
-    - intros. solve_all. eapply a; eauto. solve_all.
+    - intros. eapply forallb_All in H1; eapply All_mix in H; tea.
+      eapply All_forallb, All_map, All_impl; tea; cbv beta.
+      intros x Hx. eapply Hx; eauto. apply Hx.
     - eapply H with (Γ := 0 :: Γ0); cbn -[isEtaExp]; eauto. 
     - solve_all. move/andP: H2 => [] etab etab'. simp_eta.
       apply/andP. split; eauto.
-      eapply H0 with (Γ := 0 :: Γ0); cbn; eauto.
-    - solve_all. rtoProp. intuition eauto.
+      eapply H; eauto. solve_all.
+      eapply H0 with (Γ := 0 :: Γ0); eauto. solve_all.
+    - rtoProp. intuition eauto.
       solve_all. rewrite app_assoc. eapply a; cbn-[isEtaExp]; eauto. now len. cbn.
       now rewrite app_assoc.
       solve_all.
@@ -581,9 +584,12 @@ Section isEtaExp.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
       rewrite map_length. rtoProp; solve_all.
-      solve_all.
-      eapply a; eauto.
-      solve_all.
+      rewrite forallb_map. 
+      eapply All_forallb. clear Heq0 Heq.
+      eapply All_impl; tea; cbv beta.
+      intros x Hx.
+      eapply Hx; eauto.
+      solve_all. apply Hx.
     - solve_all. rewrite csubst_mkApps /=.
       move/andP : H2 => [] /andP [] eu ef ev.
       rewrite isEtaExp_mkApps //.
@@ -599,31 +605,42 @@ Section isEtaExp.
         rewrite app_assoc. do 2 f_equal.
         rewrite !rev_map_spec. f_equal. rewrite map_map. now eapply map_ext.
         solve_all.      
-      + solve_all. eapply a; eauto. solve_all.
+      + eapply forallb_All in ev; eapply All_mix in H0; tea.
+        eapply All_forallb, All_map, All_impl; tea; cbv beta.
+        intros x Hx. eapply Hx; eauto. solve_all. apply Hx.
     - rewrite csubst_mkApps /=. rtoProp. destruct (Nat.compare_spec #|Γ0| n) => //; simp_eta.
       + rewrite isEtaExp_mkApps => //. cbn [expanded_head_viewc].
         rtoProp. repeat split; eauto.
-        * unfold isEtaExp_fixapp. rewrite Hnth. len. destruct H2 as [Hn H2].
-          subst. rewrite nth_error_app2 in Hn; try lia.
-          rewrite minus_diag in Hn. cbn in Hn. eapply Nat.ltb_lt.
-          eapply Nat.leb_le in Hn. lia.        
+        * unfold isEtaExp_fixapp. rewrite Hnth. len.
+          subst. rewrite nth_error_app2 in H1; try lia.
+          rewrite minus_diag in H1. cbn in H1. eapply Nat.ltb_lt.
+          eapply Nat.leb_le in H1. lia.        
         * cbn in Hcl. solve_all.
           now eapply expanded_weakening.
-        * destruct H2. solve_all. eapply a ;eauto. solve_all.          
+        * eapply forallb_All in H2. eapply All_mix in H; tea.
+          eapply All_forallb, All_map, All_impl; tea; cbv beta.
+          intros x Hx. eapply Hx; eauto. apply Hx.
       + rewrite isEtaExp_mkApps; eauto. cbn [expanded_head_viewc].
-        rtoProp. intros. destruct H2. split. 2:{ solve_all. eapply a; eauto. solve_all. }
-        rewrite !nth_error_app2 in H2 |- *; try lia.
-        rewrite (nth_error_app2 ([S (EAst.rarg d)])) in H2; cbn; try lia.
-        len.
+        rtoProp. intros.
+        split. 2:{
+          eapply forallb_All in H2; eapply All_mix in H; tea; clear H2.      
+          eapply All_forallb, All_map, All_impl; tea; cbv beta.
+          intros x Hx. eapply Hx; eauto. apply Hx. }
+        rewrite !nth_error_app2 in H1 |- *; cbn; try lia. len.
         erewrite option_default_ext. eauto. f_equal.
         destruct n; cbn; lia.
       + rewrite isEtaExp_mkApps; eauto. cbn [expanded_head_viewc].
-        intros. destruct H2.
-        rtoProp. split. 2:{ solve_all. eapply a; eauto. solve_all. }
+        intros. rtoProp. split. 2:{
+          eapply forallb_All in H2; eapply All_mix in H; tea; clear H2.      
+          eapply All_forallb, All_map, All_impl; tea; cbv beta.
+          intros x Hx. eapply Hx; eauto. apply Hx. }
         len.
-        now rewrite !nth_error_app1 in H2 |- *; try lia.
+        now rewrite !nth_error_app1 in H1 |- *; try lia.
     - intros. rtoProp. rewrite csubst_mkApps /=.
-      eapply isEtaExp_mkApps_intro => //. 2:{ solve_all. eapply a; eauto. solve_all. }
+      eapply isEtaExp_mkApps_intro => //.
+       2:{ eapply forallb_All in H3; eapply All_mix in H0; tea; clear H3.      
+        eapply All_map, All_impl; tea; cbv beta.
+        intros x Hx. eapply Hx; eauto. apply Hx. }
       eapply H; eauto.
   Qed.
   
@@ -718,11 +735,11 @@ Section isEtaExp.
   
   Lemma isEtaExp_cunfold_fix mfix idx n f : 
     forallb (isEtaExp (rev_map (S ∘ rarg) mfix) ∘ dbody) mfix ->
-    Ee.cunfold_fix mfix idx = Some (n, f) ->
+    EGlobalEnv.cunfold_fix mfix idx = Some (n, f) ->
     isEtaExp [] f.
   Proof.
     intros heta.
-    unfold Ee.cunfold_fix.
+    unfold EGlobalEnv.cunfold_fix.
     destruct nth_error eqn:heq => //.
     intros [= <- <-] => /=.
     eapply isEtaExp_fixsubstl.
@@ -732,11 +749,11 @@ Section isEtaExp.
   
   Lemma isEtaExp_cunfold_cofix mfix idx n f : 
     forallb (isEtaExp (repeat 0 #|mfix|) ∘ dbody) mfix ->
-    Ee.cunfold_cofix mfix idx = Some (n, f) ->
+    EGlobalEnv.cunfold_cofix mfix idx = Some (n, f) ->
     isEtaExp [] f.
   Proof.
     intros heta.
-    unfold Ee.cunfold_cofix.
+    unfold EGlobalEnv.cunfold_cofix.
     destruct nth_error eqn:heq => //.
     intros [= <- <-] => /=.
     eapply isEtaExp_substl.
@@ -1394,7 +1411,7 @@ Proof.
     * destruct p; solve_discr. noconf H3.
       right. len.
       move: e; unfold isEtaExp_fixapp.
-      unfold Ee.cunfold_fix. destruct nth_error eqn:hnth => //.
+      unfold EGlobalEnv.cunfold_fix. destruct nth_error eqn:hnth => //.
       intros [=]. rewrite H3. rewrite -(All2_length a0). eapply Nat.ltb_lt; lia.
     * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
   + eapply mkApps_eq in H1 as [? []] => //; subst.

@@ -11,8 +11,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    ELiftSubst ESpineView EOptimizePropDiscr EGlobalEnv EEnvMap 
-    EWcbvEval ErasureFunction EEtaExpanded ECSubst EWcbvEvalEtaInd.
+    ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap 
+    EWcbvEval ErasureFunction EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -174,7 +174,7 @@ Section strip.
     lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
   Proof.
     rewrite /lookup_constructor_pars_args /lookup_inductive_pars.
-    rewrite /lookup_inductive. destruct lookup_minductive => //.
+    rewrite /lookup_constructor /lookup_inductive. destruct lookup_minductive => //.
     cbn. do 2 destruct nth_error => //. congruence.
   Qed.
 
@@ -317,13 +317,13 @@ Section strip.
   Qed.
 
   Lemma strip_cunfold_fix mfix idx n f : 
-    forallb (closedn 0) (EGlobalEnv.fix_subst mfix) ->
+    forallb (closedn 0) (fix_subst mfix) ->
     forallb (isEtaExp Σ ∘ dbody) mfix ->
-    Ee.cunfold_fix mfix idx = Some (n, f) ->
-    Ee.cunfold_fix (map (map_def strip) mfix) idx = Some (n, strip f).
+    cunfold_fix mfix idx = Some (n, f) ->
+    cunfold_fix (map (map_def strip) mfix) idx = Some (n, strip f).
   Proof.
     intros hfix heta.
-    unfold Ee.cunfold_fix.
+    unfold cunfold_fix.
     rewrite nth_error_map.
     destruct nth_error eqn:heq.
     intros [= <- <-] => /=. f_equal.
@@ -336,13 +336,13 @@ Section strip.
 
   
   Lemma strip_cunfold_cofix mfix idx n f : 
-    forallb (closedn 0) (EGlobalEnv.cofix_subst mfix) ->
+    forallb (closedn 0) (cofix_subst mfix) ->
     forallb (isEtaExp Σ ∘ dbody) mfix ->
-    Ee.cunfold_cofix mfix idx = Some (n, f) ->
-    Ee.cunfold_cofix (map (map_def strip) mfix) idx = Some (n, strip f).
+    cunfold_cofix mfix idx = Some (n, f) ->
+    cunfold_cofix (map (map_def strip) mfix) idx = Some (n, strip f).
   Proof.
     intros hcofix heta.
-    unfold Ee.cunfold_cofix.
+    unfold cunfold_cofix.
     rewrite nth_error_map.
     destruct nth_error eqn:heq.
     intros [= <- <-] => /=. f_equal.
@@ -381,6 +381,9 @@ Definition strip_decl Σ d :=
 
 Definition strip_env Σ :=
   map (on_snd (strip_decl Σ)) Σ.(GlobalContextMap.global_decls).
+
+Definition strip_program (p : eprogram_env) : eprogram :=
+  (ERemoveParams.strip_env p.1, ERemoveParams.strip p.1 p.2).
 
 Import EGlobalEnv.
 
@@ -772,7 +775,7 @@ Proof.
   - red. now cbn.
 Qed.
 
-Lemma strip_eval {wfl:Ee.WcbvFlags} {Σ : GlobalContextMap.t} t v :
+Lemma strip_eval {efl : EEnvFlags} {wfl:Ee.WcbvFlags} {Σ : GlobalContextMap.t} t v :
   closed_env Σ ->
   isEtaExp_env Σ ->
   wf_glob Σ ->
@@ -946,6 +949,278 @@ Proof.
   now intros -> => /=.
 Qed.
 
+
+(* Stripping preserves well-formedness directly, not caring about eta-expansion *)
+Lemma strip_wellformed {Σ : GlobalContextMap.t} n t :
+  @wf_glob all_env_flags Σ -> 
+  @wellformed all_env_flags Σ n t -> 
+  @wellformed all_env_flags (strip_env Σ) n (strip Σ t).
+Proof.
+  intros wfΣ.
+  revert n.
+  funelim (strip Σ t); try intros n.
+  all:cbn -[strip]; simp_strip; intros.
+  all:try solve[rtoProp; intuition auto; toAll; solve_all].
+  - cbn -[strip]; simp_strip. intros; rtoProp; intuition auto.
+    rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
+    destruct g => /= //.
+  - cbn.
+    rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct nth_error => //. destruct nth_error => //.
+  - cbn -[strip].
+    rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct nth_error => //. rtoProp; intuition auto.
+    simp_strip. toAll; solve_all.
+  - cbn -[strip].
+    rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct nth_error => //. all:rtoProp; intuition auto.
+  - rtoProp; intuition auto. rewrite map_length. toAll; solve_all.
+  - rtoProp; intuition auto. rewrite map_length. toAll; solve_all.
+  - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
+    toAll; solve_all.
+  - move:H0; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
+    move: H1. cbn.
+    rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct nth_error => //. destruct nth_error => //.
+    toAll; solve_all. eapply All_skipn. solve_all.
+  - move:H0; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
+    move: H1. cbn.
+    rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct nth_error => //. destruct nth_error => //.
+    toAll; solve_all.
+Qed.
+
+Lemma strip_wellformed_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t :
+  wf_glob Σ ->
+  forall n, wellformed Σ n t -> wellformed (strip_env Σ) n t.
+Proof.
+  intros wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
+  all:try solve [intros; rtoProp; intuition eauto; solve_all].
+  - rewrite lookup_env_strip //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct (cst_body c) => //.
+  - rewrite lookup_env_strip //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. 
+    destruct nth_error => /= //.
+    destruct nth_error => /= //.
+  - rewrite lookup_env_strip //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //. subst g.
+    destruct nth_error => /= //.
+    intros; rtoProp; intuition auto; solve_all.
+  - rewrite lookup_env_strip //.
+    destruct lookup_env eqn:hl => // /=.
+    destruct g eqn:hg => /= //.
+    rewrite andb_false_r => //.
+    destruct nth_error => /= //.
+    all:intros; rtoProp; intuition auto; solve_all.
+Qed.
+
+Lemma strip_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
+  wf_glob Σ ->
+  wf_global_decl Σ d -> wf_global_decl (strip_env Σ) d.
+Proof.
+  intros wf; destruct d => /= //.
+  destruct (cst_body c) => /= //.
+  now eapply strip_wellformed_irrel.
+Qed.
+
+Definition switch_no_params (efl : EEnvFlags) :=
+  {| has_axioms := has_axioms; 
+     has_cstr_params := false;
+     term_switches := term_switches |}.
+
+Lemma strip_decl_wf (efl := all_env_flags) {Σ : GlobalContextMap.t} :
+  wf_glob Σ -> 
+  forall d, wf_global_decl Σ d -> 
+  wf_global_decl (sw := switch_no_params efl) (strip_env Σ) (strip_decl Σ d).
+Proof.
+  intros wf d.
+  destruct d => /= //.
+  destruct (cst_body c) => /= //.
+  now apply (strip_wellformed (Σ := Σ) 0 t).
+Qed.
+
+Lemma fresh_global_strip_env {Σ : GlobalContextMap.t} kn : 
+  fresh_global kn Σ ->
+  fresh_global kn (strip_env Σ).
+Proof.
+  unfold fresh_global. cbn. unfold strip_env.
+  induction (GlobalContextMap.global_decls Σ); cbn; constructor; auto. cbn.
+  now depelim H. depelim H. eauto. 
+Qed.
+
+From MetaCoq.Erasure Require Import EProgram.
+
+Lemma fresh_globals_cons_inv {Σ : global_context} {d} : EnvMap.fresh_globals (d :: Σ) -> EnvMap.fresh_globals Σ.
+Proof. intros H; now depelim H. Qed.
+
+Program Fixpoint strip_env' Σ : EnvMap.fresh_globals Σ -> global_context :=
+  match Σ with
+  | [] => fun _ => []
+  | hd :: tl => fun HΣ =>
+    let Σg := GlobalContextMap.make tl (fresh_globals_cons_inv HΣ) in 
+    on_snd (strip_decl Σg) hd :: strip_env' tl (fresh_globals_cons_inv HΣ) 
+  end.
+
+Lemma lookup_minductive_declared_minductive Σ ind mdecl : 
+  lookup_minductive Σ ind = Some mdecl <-> declared_minductive Σ ind mdecl.
+Proof.
+  unfold declared_minductive, lookup_minductive.
+  destruct lookup_env => /= //. destruct g => /= //; split => //; congruence.
+Qed.
+
+Lemma lookup_minductive_declared_inductive Σ ind mdecl idecl : 
+  lookup_inductive Σ ind = Some (mdecl, idecl) <-> declared_inductive Σ ind mdecl idecl.
+Proof.
+  unfold declared_inductive, lookup_inductive.
+  rewrite <- lookup_minductive_declared_minductive.
+  destruct lookup_minductive => /= //.
+  destruct nth_error eqn:hnth => //.
+  split. intros [=]. subst. split => //.
+  intros [[=] hnth']. subst. congruence.
+  split => //. intros [[=] hnth']. congruence.
+  split => //. intros [[=] hnth'].
+Qed.
+
+Lemma extends_lookup_inductive_pars {efl : EEnvFlags} {Σ Σ'} :
+  extends Σ Σ' -> wf_glob Σ' ->
+  forall ind t, lookup_inductive_pars Σ ind = Some t -> 
+    lookup_inductive_pars Σ' ind = Some t.
+Proof.
+  intros ext wf ind t.
+  rewrite /lookup_inductive_pars.
+  destruct (lookup_minductive Σ ind) eqn:hl => /= //.
+  intros [= <-].
+  apply lookup_minductive_declared_minductive in hl.
+  eapply EExtends.weakening_env_declared_minductive in hl; tea.
+  apply lookup_minductive_declared_minductive in hl. now rewrite hl.
+Qed.
+
+Lemma strip_extends {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  has_tApp ->
+  extends Σ Σ' -> wf_glob Σ' ->
+  forall n t, wellformed Σ n t -> strip Σ t = strip Σ' t.
+Proof.
+  intros hasapp hext hwf n t. revert n.
+  funelim (strip Σ t); intros ?n; simp_strip  => /= //.
+  all:try solve [intros; rtoProp; intuition auto; f_equal; auto; toAll; solve_all].
+  - intros; rtoProp; intuition auto.
+   move: H1; rewrite wellformed_mkApps // => /andP[] wfu wfargs.
+    rewrite strip_mkApps // Heq /=. f_equal; eauto. toAll; solve_all.
+  - rewrite wellformed_mkApps // => /andP[] wfc wfv.
+    rewrite strip_mkApps // /=.
+    rewrite GlobalContextMap.lookup_inductive_pars_spec in Heq.
+    eapply (extends_lookup_inductive_pars hext hwf) in Heq.
+    rewrite Heq. f_equal. f_equal.
+    toAll; solve_all.
+  - rewrite wellformed_mkApps // => /andP[] wfc wfv.
+    rewrite strip_mkApps // /=.
+    move: Heq.
+    rewrite GlobalContextMap.lookup_inductive_pars_spec.
+    unfold wellformed in wfc. move/andP: wfc => [] hacc hc.
+    unfold lookup_inductive_pars. destruct lookup_minductive eqn:heq => //.
+    unfold lookup_constructor, lookup_inductive in hc. rewrite heq /= // in hc.
+Qed.
+
+Lemma strip_decl_extends {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
+  has_tApp ->
+  extends Σ Σ' -> wf_glob Σ' ->
+  forall d, wf_global_decl Σ d -> strip_decl Σ d = strip_decl Σ' d.
+Proof.
+  intros hast ext wf []; cbn.
+  unfold strip_constant_decl.
+  destruct (EAst.cst_body c) eqn:hc => /= //.
+  intros hwf. f_equal. f_equal. f_equal.
+  eapply strip_extends => //. exact hwf.
+  intros _ => //.
+Qed.
+
+Lemma extends_wf_glob {efl : EEnvFlags} {Σ Σ'} : extends Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
+Proof.
+  intros [? ->].
+  induction x; cbn; auto.
+  intros wf; depelim wf. eauto.
+Qed.
+
+Lemma strip_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} : 
+  has_tApp ->
+  extends Σ Σ' ->
+  wf_glob Σ' -> 
+  List.map (on_snd (strip_decl Σ)) Σ.(GlobalContextMap.global_decls) =
+  List.map (on_snd (strip_decl Σ')) Σ.(GlobalContextMap.global_decls).
+Proof.
+  intros hast ext.
+  destruct Σ as [Σ map repr wf]; cbn in *.
+  move=> wfΣ.
+  assert (extends Σ Σ); auto. now exists [].
+  assert (wf_glob Σ).
+  { eapply extends_wf_glob. exact ext. tea. }
+  revert H H0.
+  generalize Σ at 1 3 5 6. intros Σ''.
+  induction Σ'' => //. cbn.
+  intros hin wfg. depelim wfg.
+  f_equal.
+  2:{ eapply IHΣ'' => //. destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //. }
+  unfold on_snd. cbn. f_equal.
+  eapply strip_decl_extends => //.
+  eapply extends_wf_global_decl. 3:tea. auto. cbn.
+  eapply extends_wf_glob; tea.
+  destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //.
+Qed.
+
+Lemma strip_env_eq (efl := all_env_flags) (Σ : GlobalContextMap.t) : wf_glob Σ -> strip_env Σ = strip_env' Σ.(GlobalContextMap.global_decls) Σ.(GlobalContextMap.wf).
+Proof.
+  intros wf.
+  unfold strip_env.
+  destruct Σ; cbn. cbn in wf.
+  induction global_decls in map, repr, wf0, wf |- * => //.
+  cbn. f_equal.
+  destruct a as [kn d]; unfold on_snd; cbn. f_equal. symmetry.
+  eapply strip_decl_extends => //. cbn. cbn. now exists [(kn, d)]. cbn. now depelim wf.
+  set (Σg' := GlobalContextMap.make global_decls (fresh_globals_cons_inv wf0)).
+  erewrite <- (IHglobal_decls (GlobalContextMap.map Σg') (GlobalContextMap.repr Σg')).
+  2:now depelim wf.
+  set (Σg := {| GlobalContextMap.global_decls := _ :: _ |}).
+  symmetry. eapply (strip_extends' (Σ := Σg') (Σ' := Σg)) => //.
+  cbn. now exists [a].
+Qed.
+
+Lemma strip_env_wf (efl := all_env_flags) {Σ : GlobalContextMap.t} :
+  wf_glob Σ -> wf_glob (efl := switch_no_params efl) (strip_env Σ).
+Proof.
+  intros wf.
+  rewrite (strip_env_eq _ wf).
+  destruct Σ as [Σ map repr fr]; cbn in *.
+  induction Σ in map, repr, fr, wf |- *.
+  - cbn. constructor.
+  - cbn.
+    set (Σg := GlobalContextMap.make Σ (fresh_globals_cons_inv fr)).
+    constructor; eauto.
+    eapply (IHΣ (GlobalContextMap.map Σg) (GlobalContextMap.repr Σg)). now depelim wf.
+    depelim wf. cbn.
+    rewrite -(strip_env_eq Σg). now cbn. cbn.
+    now eapply (strip_decl_wf (Σ:=Σg)).
+    rewrite -(strip_env_eq Σg). now depelim wf.
+    eapply fresh_global_strip_env. now depelim fr.
+Qed.
+
+Lemma strip_program_wf (efl := all_env_flags) (p : eprogram_env) :
+  wf_eprogram_env efl p ->
+  wf_eprogram (switch_no_params efl) (strip_program p).
+Proof.
+  intros []; split => //.
+  eapply (strip_env_wf H).
+  now eapply strip_wellformed.
+Qed.
+
 Lemma strip_expanded {Σ : GlobalContextMap.t} {t} : expanded Σ t -> expanded (strip_env Σ) (strip Σ t).
 Proof.
   induction 1 using expanded_ind.
@@ -961,3 +1236,51 @@ Proof.
     solve_all. eapply All_skipn. solve_all.
 Qed.
 
+Lemma strip_expanded_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t : wf_glob Σ -> expanded Σ t -> expanded (strip_env Σ) t.
+Proof.
+  intros wf; induction 1 using expanded_ind.
+  all:try solve[constructor; eauto; solve_all].
+  eapply expanded_tConstruct_app.
+  destruct H as [[H ?] ?].
+  split => //. split => //. red.
+  red in H. rewrite lookup_env_strip // /= H //. 1-2:eauto.
+  cbn. lia. solve_all.
+Qed.
+
+Lemma strip_expanded_decl {Σ : GlobalContextMap.t} t : expanded_decl Σ t -> expanded_decl (strip_env Σ) (strip_decl Σ t).
+Proof.
+  destruct t as [[[]]|] => /= //.
+  unfold expanded_constant_decl => /=.
+  apply strip_expanded.
+Qed.
+
+Lemma strip_env_expanded (efl := all_env_flags) {Σ : GlobalContextMap.t} :
+  wf_glob Σ -> expanded_global_env Σ -> expanded_global_env (strip_env Σ).
+Proof.
+  unfold expanded_global_env.
+  intros wf. rewrite strip_env_eq //.
+  destruct Σ as [Σ map repr wf']; cbn in *.
+  intros exp; induction exp in map, repr, wf', wf |- *; cbn.
+  - constructor; auto.
+  - set (Σ' := GlobalContextMap.make Σ (fresh_globals_cons_inv wf')).
+    constructor; auto.
+    eapply IHexp. eapply Σ'. now depelim wf. cbn. 
+    eapply (strip_expanded_decl (Σ := Σ')) in H.
+    rewrite -(strip_env_eq Σ'). cbn. now depelim wf.
+    exact H.
+Qed.
+
+Import EProgram.
+
+Lemma strip_program_expanded (efl := all_env_flags) (p : eprogram_env) :
+  wf_eprogram_env efl p ->
+  expanded_eprogram_env_cstrs p ->
+  expanded_eprogram_cstrs (strip_program p).
+Proof.
+  unfold expanded_eprogram_env_cstrs, expanded_eprogram_cstrs.
+  move=> [] wfe wft. move/andP => [] etaenv etap.
+  apply/andP; split.
+  eapply expanded_global_env_isEtaExp_env, strip_env_expanded => //.
+  now eapply isEtaExp_env_expanded_global_env.
+  now eapply expanded_isEtaExp, strip_expanded, isEtaExp_expanded.
+Qed.

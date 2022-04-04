@@ -14,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    EGlobalEnv ELiftSubst ESpineView ECSubst EWcbvEvalInd.
+    EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEvalInd.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -236,11 +236,11 @@ Section isEtaExp.
   
   Lemma isEtaExp_cunfold_fix mfix idx n f : 
     forallb (isEtaExp ∘ dbody) mfix ->
-    Ee.cunfold_fix mfix idx = Some (n, f) ->
+    EGlobalEnv.cunfold_fix mfix idx = Some (n, f) ->
     isEtaExp f.
   Proof.
     intros heta.
-    unfold Ee.cunfold_fix.
+    unfold EGlobalEnv.cunfold_fix.
     destruct nth_error eqn:heq => //.
     intros [= <- <-] => /=.
     apply isEtaExp_substl.
@@ -251,11 +251,11 @@ Section isEtaExp.
   
   Lemma isEtaExp_cunfold_cofix mfix idx n f : 
     forallb (isEtaExp ∘ dbody) mfix ->
-    Ee.cunfold_cofix mfix idx = Some (n, f) ->
+    EGlobalEnv.cunfold_cofix mfix idx = Some (n, f) ->
     isEtaExp f.
   Proof.
     intros heta.
-    unfold Ee.cunfold_cofix.
+    unfold EGlobalEnv.cunfold_cofix.
     destruct nth_error eqn:heq => //.
     intros [= <- <-] => /=.
     apply isEtaExp_substl.
@@ -583,6 +583,31 @@ Proof.
   now eapply expanded_isEtaExp.
 Qed.
 
+Lemma isEtaExp_env_expanded_global_env {Σ} : isEtaExp_env Σ -> expanded_global_env Σ.
+Proof.
+  induction Σ; cbn => /= //.
+  - constructor.
+  - move/andP=> [] etad etae; constructor; eauto. now apply IHΣ.
+    move: etad. destruct a.2; cbn in * => //. unfold isEtaExp_constant_decl, expanded_constant_decl.
+    destruct (cst_body c) => /= //. apply isEtaExp_expanded.
+Qed.
+
+Lemma expanded_mkApps_expanded {Σ f args} : 
+  expanded Σ f -> All (expanded Σ) args ->
+  expanded Σ (mkApps f args).
+Proof.
+  intros.
+  destruct (isConstruct f) eqn:eqc.
+  destruct f => //.
+  - depelim H. 
+    destruct args0 using rev_case; cbn in *; subst. cbn in H. congruence.
+    rewrite mkApps_app in H2; noconf H2.
+    destruct args0 using rev_case; cbn in *; subst.
+    noconf H2. eapply expanded_tConstruct_app; tea. lia. solve_all.
+    rewrite mkApps_app in H2; noconf H2.
+  - eapply expanded_mkApps => //. now rewrite eqc. solve_all.
+Qed.
+
 From MetaCoq.Erasure Require Import EEtaExpandedFix.
 
 Local Ltac simp_eta ::= simp isEtaExp; rewrite -?isEtaExp_equation_1 -?EEtaExpanded.isEtaExp_equation_1.
@@ -623,3 +648,4 @@ Proof.
   destruct (E.cst_body c) => // /=.
   eapply isEtaExpFix_isEtaExp.
 Qed.
+

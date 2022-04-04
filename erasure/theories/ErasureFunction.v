@@ -1081,10 +1081,10 @@ Proof.
     eapply Hdef; eauto.
 Qed.
 
-Lemma erase_global_erases_deps {Σ} {Σ' : EAst.global_declarations} {t et T} : 
+Lemma erase_global_erases_deps {Σ} {Σ' : EAst.global_declarations} {Γ t et T} : 
   wf_ext Σ ->
-  Σ;;; [] |- t : T ->
-  Σ;;; [] |- t ⇝ℇ et ->
+  Σ;;; Γ |- t : T ->
+  Σ;;; Γ |- t ⇝ℇ et ->
   includes_deps Σ Σ' (term_global_deps et) ->
   erases_deps Σ Σ' et.
 Proof.
@@ -2007,49 +2007,51 @@ Proof.
 Qed.
 
 Lemma erases_deps_erase (cf := config.extraction_checker_flags) {Σ : wf_env} univs (wfΣ : ∥ wf_ext (Σ, univs) ∥)
-  (Σ' := make_wf_env_ext Σ univs wfΣ) t 
-  (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ' Σ0 -> PCUICSafeLemmata.welltyped Σ0 [] t) :
-  let et := erase Σ' [] t wt in
+  (Σ' := make_wf_env_ext Σ univs wfΣ) Γ t 
+  (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ' Σ0 -> PCUICSafeLemmata.welltyped Σ0 Γ t) :
+  let et := erase Σ' Γ t wt in
   let deps := EAstUtils.term_global_deps et in
   erases_deps Σ (erase_global deps Σ) et.
 Proof.
   intros et deps. destruct wfΣ.
   pose proof (wt Σ' eq_refl). destruct H.
   eapply (erase_global_erases_deps w); tea.
-  eapply (erases_erase (Σ := Σ') (Γ := [])).
+  eapply (erases_erase (Σ := Σ') (Γ := Γ)).
   eapply erase_global_includes.
   intros.
   eapply term_global_deps_spec in H; eauto.
   assumption.
-  eapply (erases_erase (Σ := Σ') (Γ := [])).
+  eapply (erases_erase (Σ := Σ') (Γ := Γ)).
   eapply KernameSet.subset_spec. reflexivity. 
 Qed.
 
 Lemma erases_deps_erase_weaken (cf := config.extraction_checker_flags) {Σ : wf_env} univs
-  (wfΣ : ∥ wf_ext (Σ, univs) ∥)
+  (wfΣ : ∥ wf_ext (Σ, univs) ∥) Γ
   (Σ' := make_wf_env_ext Σ univs wfΣ) t 
-  (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ' Σ0 -> PCUICSafeLemmata.welltyped Σ0 [] t) 
+  (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ' Σ0 -> PCUICSafeLemmata.welltyped Σ0 Γ t) 
   deps :
-  let et := erase Σ' [] t wt in
+  let et := erase Σ' Γ t wt in
   let tdeps := EAstUtils.term_global_deps et in
   erases_deps Σ (erase_global (KernameSet.union deps tdeps) Σ) et.
 Proof.
   intros et tdeps. destruct wfΣ.
   pose proof (wt Σ' eq_refl). destruct H.
   eapply (erase_global_erases_deps w); tea.
-  eapply (erases_erase (Σ := Σ') (Γ := [])).
+  eapply (erases_erase (Σ := Σ') (Γ := Γ)).
   eapply erase_global_includes.
   intros.
   eapply term_global_deps_spec in H; eauto.
   assumption.
-  eapply (erases_erase (Σ := Σ') (Γ := [])).
+  eapply (erases_erase (Σ := Σ') (Γ := Γ)).
   eapply KernameSet.subset_spec. intros x hin. eapply KernameSet.union_spec. now right.
 Qed.
 
-Lemma erases_deps_wellformed (cf := config.extraction_checker_flags) {Σ} {Σ'} et :
+Import EWellformed.
+
+Lemma erases_deps_wellformed (cf := config.extraction_checker_flags) (efl := all_env_flags) {Σ} {Σ'} et :
   erases_deps Σ Σ' et ->
   forall n, ELiftSubst.closedn n et ->
-  @EGlobalEnv.wellformed erased_env_flags Σ' n et.
+  wellformed Σ' n et.
 Proof.
   intros ed.
   induction ed using erases_deps_forall_ind; intros => //; 
@@ -2066,13 +2068,47 @@ Proof.
     now destruct H0 as [-> ->].
 Qed.
 
+Lemma erase_wellformed (efl := all_env_flags) {Σ : wf_env} univs wfΣ {Γ t} wt
+  (Σ' := make_wf_env_ext Σ univs wfΣ) :
+  let t' := erase Σ' Γ t wt in
+  wellformed (erase_global (term_global_deps t') Σ) #|Γ| t'.
+Proof.
+  set (t' := erase _ _ _ _).
+  cbn.
+  epose proof (@erases_deps_erase Σ univs wfΣ Γ t wt).
+  cbn in H.
+  epose proof (erases_deps_wellformed _ H #|Γ|).
+  apply H0.
+  eapply (erases_closed _ Γ). eapply erases_erase.
+  destruct (wt _ eq_refl).
+  cbn in X. destruct wfΣ.
+  now eapply PCUICClosedTyp.subject_closed in X.
+Qed.
+
+Lemma erase_wellformed_weaken (efl := all_env_flags) {Σ : wf_env} univs wfΣ {Γ t} wt deps
+  (Σ' := make_wf_env_ext Σ univs wfΣ) :
+  let t' := erase Σ' Γ t wt in
+  wellformed (erase_global (KernameSet.union deps (term_global_deps t')) Σ) #|Γ| t'.
+Proof.
+  set (t' := erase _ _ _ _).
+  cbn.
+  epose proof (@erases_deps_erase_weaken Σ univs wfΣ Γ t wt deps).
+  cbn in H.
+  epose proof (erases_deps_wellformed _ H #|Γ|).
+  apply H0.
+  eapply (erases_closed _ Γ). eapply erases_erase.
+  destruct (wt _ eq_refl).
+  cbn in X. destruct wfΣ.
+  now eapply PCUICClosedTyp.subject_closed in X.
+Qed.
+
 Lemma erase_constant_body_correct'' {Σ : wf_env} {cb} {univs wfΣ}
-  (Σ' := make_wf_env_ext Σ univs wfΣ)
-  {onc : ∥ on_constant_decl (lift_typing typing) Σ' cb ∥} {body} deps :  
+(Σ' := make_wf_env_ext Σ univs wfΣ)
+{onc : ∥ on_constant_decl (lift_typing typing) Σ' cb ∥} {body} deps :  
   EAst.cst_body (fst (erase_constant_body Σ' cb onc)) = Some body ->
   ∥ ∑ t T, (Σ' ;;; [] |- t : T) * (Σ' ;;; [] |- t ⇝ℇ body) *
       (term_global_deps body = snd (erase_constant_body Σ' cb onc)) *
-      wellformed (sw:=erased_env_flags) (erase_global (KernameSet.union deps (term_global_deps body)) Σ) 0 body ∥.
+      wellformed (sw:=all_env_flags) (erase_global (KernameSet.union deps (term_global_deps body)) Σ) 0 body ∥.
 Proof.
   intros. destruct cb as [name [bod|] udecl]; simpl. intros.
   simpl in H. noconf H.
@@ -2085,22 +2121,15 @@ Proof.
   destruct (obl _ wfΣ'). sq.
   have er : (Σ, univs);;; [] |- bod ⇝ℇ erase (make_wf_env_ext Σ univs (sq w)) [] bod obl.
   { eapply (erases_erase (Σ:=Σ')). }
-  exists bod, A; intuition auto. simpl.
-  unfold Σ'. cbn.
-  2:now simpl in H.
-  epose proof (@erases_deps_erase_weaken Σ univs (sq w) bod obl deps).
-  cbn in H.
-  epose proof (erases_deps_wellformed _ H 0).
-  apply H0.
-  eapply (erases_closed _ []). eapply erases_erase.
-  now eapply PCUICClosedTyp.subject_closed in X.
+  exists bod, A; intuition auto. eapply erase_wellformed_weaken.
+  now simpl in H.
 Qed.
 
 Lemma erase_global_decl_wf_glob Σ deps decls heq :
   forall cb wfΣ hcb,
   let ecb := erase_constant_body (make_wf_env_ext Σ (cst_universes cb) wfΣ) cb hcb in
   let Σ' := erase_global_decls (KernameSet.union deps ecb.2) Σ decls heq in
-  @wf_global_decl erased_env_flags Σ' (EAst.ConstantDecl ecb.1).
+  @wf_global_decl all_env_flags Σ' (EAst.ConstantDecl ecb.1).
 Proof.
   intros cb wfΣ hcb.
   set (ecb := erase_constant_body _ _ _). cbn.
@@ -2115,7 +2144,7 @@ Qed.
 
 Lemma erase_global_decls_wf_glob Σ deps decls heq :
   let Σ' := erase_global_decls deps Σ decls heq in
-  @wf_glob erased_env_flags Σ'.
+  @wf_glob all_env_flags Σ'.
 Proof.
   cbn.
   revert deps Σ heq.
@@ -2137,7 +2166,7 @@ Qed.
 
 Lemma erase_global_wf_glob Σ deps :
   let Σ' := erase_global deps Σ in
-  @wf_glob erased_env_flags Σ'.
+  @wf_glob all_env_flags Σ'.
 Proof. eapply erase_global_decls_wf_glob. Qed.
 
 

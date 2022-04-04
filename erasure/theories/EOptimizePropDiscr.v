@@ -30,6 +30,12 @@ Hint Constructors eval : core.
 Section optimize.
   Context (Σ : global_context).
 
+  Definition is_box_fix mfix idx := 
+    match nth_error mfix idx with
+    | Some {| dbody := tBox |} => true
+    | _ => false
+    end.
+
   Fixpoint optimize (t : term) : term :=
     match t with
     | tRel i => tRel i
@@ -54,7 +60,8 @@ Section optimize.
       end
     | tFix mfix idx =>
       let mfix' := List.map (map_def optimize) mfix in
-      tFix mfix' idx
+      if is_box_fix mfix idx then tBox
+      else tFix mfix' idx
     | tCoFix mfix idx =>
       let mfix' := List.map (map_def optimize) mfix in
       tCoFix mfix' idx
@@ -121,6 +128,8 @@ Section optimize.
       rtoProp; solve_all. solve_all.
       rtoProp; solve_all. solve_all.
     - destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
+    - destruct is_box_fix => //.
+      cbn; auto; rewrite forallb_map; len; solve_all.
   Qed.
  
   Lemma subst_csubst_comm l t k b : 
@@ -159,16 +168,40 @@ Section optimize.
     apply subst_csubst_comm => //.
   Qed.
 
-  Lemma optimize_csubst a k b : 
+  (* Lemma is_box_fix_csubst a m n k : is_box_fix m n = is_box_fix (map (map_def (csubst a (#|m| + k))) m) n.
+  Proof.
+    unfold is_box_fix. rewrite nth_error_map. destruct nth_error as [[]|] => /=.
+     *)
+  Import EEtaExpanded.
+  Ltac solve_discr' := try solve_discr; repeat solve_discr_args; try congruence.
+
+  Lemma optimize_csubst {efl : EEnvFlags} a k i b : 
     closed a ->
+    wellformed Σ i b ->
     optimize (ECSubst.csubst a k b) = ECSubst.csubst (optimize a) k (optimize b).
   Proof.
-    induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
-    intros; try easy;
+    induction b in i, k |- * using EInduction.term_forall_list_ind; simpl; auto;
+    intros cl exp; try easy; 
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
     unfold test_def in *;
-    simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
+    simpl closed in *; try solve [depelim exp; try solve_discr'; simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     - destruct (k ?= n)%nat; auto.
+    - depelim exp.
+      * destruct args using rev_case; try congruence.
+        rewrite mkApps_app in H2. noconf H2.
+        eapply Forall_app in H1 as []. depelim H2.
+        f_equal; eauto. eapply IHb1; eauto. eapply expanded_mkApps_expanded; eauto; solve_all.
+      * destruct args using rev_case; try congruence. solve_discr.
+        rewrite mkApps_app in H2. noconf H2.
+        eapply Forall_app in H1 as []. depelim H2.
+        rewrite !csubst_mkApps /= !optimize_mkApps /=.
+        rewrite !csubst_mkApps /=. f_equal; eauto. f_equal. solve_all.
+        f_equal; eauto. eapply IHb1; eauto.
+         eapply expanded_mkApps_expanded; eauto; solve_all.
+
+      *
+         eauto.
+      eapply IHb1. auto.
     - unfold on_snd; cbn.
       destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|] => /= //.
       destruct l as [|[br n] [|l']] eqn:eql; simpl.
@@ -189,6 +222,9 @@ Section optimize.
       * rewrite ?map_map_compose; f_equal; eauto; solve_all.
     - destruct EGlobalEnv.inductive_isprop_and_pars as [[[|] _]|]=> //;
       now rewrite IHb.
+    - rewrite  !nth_error_map.
+      destruct nth_error => /= //.
+
   Qed.
 
   Lemma optimize_substl s t : 

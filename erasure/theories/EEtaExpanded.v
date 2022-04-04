@@ -432,7 +432,7 @@ Inductive expanded : term -> Prop :=
 | expanded_tEvar (ev : nat) (args : list term) : Forall expanded args -> expanded (tEvar ev args)
 | expanded_tLambda (na : name) (body : term) : expanded body -> expanded (tLambda na body)
 | expanded_tLetIn (na : name) (def : term)(body : term) : expanded def -> expanded body -> expanded (tLetIn na def body)
-| expanded_mkApps (f : term) (args : list term) : ~ isConstruct f -> expanded f -> Forall expanded args -> expanded (mkApps f args)
+| expanded_mkApps (f : term) (args : list term) : ~ isConstruct f -> args <> [] -> expanded f -> Forall expanded args -> expanded (mkApps f args)
 | expanded_tConst (c : kername) : expanded (tConst c)
 | expanded_tCase (ind : inductive) (pars : nat) (discr : term) (branches : list (list name × term)) : 
     expanded discr -> Forall (fun br => expanded br.2) branches -> expanded (tCase (ind, pars) discr branches)
@@ -462,7 +462,7 @@ forall (Σ : global_declarations) (P : term -> Prop),
  P def -> expanded Σ body -> P body -> P (tLetIn na def body)) ->
 (forall (f4 : term) (args : list term),
  ~ isConstruct f4 ->
- expanded Σ f4 -> P f4 -> Forall (expanded Σ) args -> Forall P args -> P (mkApps f4 args)) ->
+ expanded Σ f4 -> P f4 -> args <> [] -> Forall (expanded Σ) args -> Forall P args -> P (mkApps f4 args)) ->
 (forall c : kername, P (tConst c)) ->
 (forall (ind : inductive) (pars : nat) (discr : term)
    (branches : list (list name × term)),
@@ -490,7 +490,7 @@ Proof.
   fix f 2.
   intros t Hexp. destruct Hexp; eauto.
   - eapply H1; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H4; eauto. induction H13; econstructor; cbn in *; eauto.
+  - eapply H4; eauto. clear H13. induction H14; econstructor; cbn in *; eauto.
   - eapply H6; eauto. induction H12; econstructor; cbn in *; eauto.
   - eapply H8; eauto. induction H12; econstructor; cbn in *; intuition eauto.
   - eapply H9; eauto. induction H12; econstructor; cbn in *; eauto.
@@ -566,6 +566,7 @@ Proof.
     econstructor.
     + destruct u; inv Heq; eauto.
     + eauto.
+    + eauto.
     + eapply In_All in H0. solve_all.
 Qed.
 
@@ -604,6 +605,19 @@ Proof.
     destruct (cst_body c) => /= //. apply isEtaExp_expanded.
 Qed.
 
+Lemma solve_discr_args {t f args} : ~~ isApp t -> t = mkApps f args -> args = [] /\ f = t.
+Proof.
+  intros napp ->.
+  induction args using rev_ind; cbn in *; auto.
+  rewrite mkApps_app in napp. now cbn in napp.
+Qed.
+
+Ltac solve_discr_args := 
+  match goal with [ H : ?t = mkApps ?f ?args |- _ ] =>
+    destruct (@solve_discr_args t f args eq_refl H) as [-> ->] ||
+    destruct (@solve_discr_args t f args eq_refl H) as [-> ?]
+  end.
+
 Lemma expanded_mkApps_expanded {Σ f args} : 
   expanded Σ f -> All (expanded Σ) args ->
   expanded Σ (mkApps f args).
@@ -611,13 +625,11 @@ Proof.
   intros.
   destruct (isConstruct f) eqn:eqc.
   destruct f => //.
-  - depelim H. 
-    destruct args0 using rev_case; cbn in *; subst. cbn in H. congruence.
-    rewrite mkApps_app in H2; noconf H2.
-    destruct args0 using rev_case; cbn in *; subst.
-    noconf H2. eapply expanded_tConstruct_app; tea. lia. solve_all.
-    rewrite mkApps_app in H2; noconf H2.
-  - eapply expanded_mkApps => //. now rewrite eqc. solve_all.
+  - depelim H; try solve_discr_args => //.
+    noconf H3.
+    eapply expanded_tConstruct_app; tea. cbn in H0. lia. solve_all.
+  - destruct args using rev_ind; cbn => //.
+    eapply expanded_mkApps => //. now rewrite eqc. eapply app_tip_nil. solve_all.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpandedFix.

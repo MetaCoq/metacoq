@@ -39,7 +39,7 @@ Local Ltac anonify :=
 
 Local Ltac ih :=
   lazymatch goal with
-  | ih : forall (v : term) (napp : nat), _ -> _ -> eq_term_upto_univ_napp _ _ _ _ _ _ -> ?u = _
+  | ih : forall (pb : conv_pb) (v : term) (napp : nat), _ -> _ -> compare_term_upto_univ_napp _ _ _ _ _ _ -> ?u = _
     |- ?u = ?v =>
     eapply ih ; eassumption
   end.
@@ -59,38 +59,32 @@ Qed.
 Lemma nameless_eqctx_IH ctx ctx' :
   forallb (nameless_decl nameless) ctx ->
   forallb (nameless_decl nameless) ctx' ->
-  eq_context_gen eq eq ctx ctx' ->
+  eq_context_upto_names ctx ctx' ->
   ctx = ctx'.
 Proof.
   solve_all.
   induction X; auto.
-  all:destruct p; depelim H; depelim H0; auto; f_equal; subst; auto.
-  - unfold nameless_decl in i, i0; rtoProp.
-    f_equal.
-    eapply banon_eq_binder_annot; eauto.
-  - unfold nameless_decl in i, i0; rtoProp.
-    f_equal.
-    eapply banon_eq_binder_annot; eauto.
+  subst ; f_equal.
+  destruct r as [[]] ; depelim c ; subst; f_equal.
+  all: now unfold nameless_decl in * ; rtoProp ; eapply banon_eq_binder_annot.
 Qed.
 
-Lemma eq_context_gen_upto ctx ctx' :
-  eq_context_gen eq eq ctx ctx' ->
-  eq_context_upto empty_global_env eq eq ctx ctx'.
+Lemma eq_context_gen_upto pb ctx ctx' :
+  eq_context_upto_names ctx ctx' ->
+  eq_context_upto empty_global_env (fun _ => eq) pb ctx ctx'.
 Proof.
-  intros a; eapply All2_fold_impl; tea.
+  intros a; eapply All2_impl; tea.
   intros. destruct X; subst; constructor; auto; try reflexivity.
 Qed.
 
-Lemma nameless_eq_term_spec :
-  forall u v napp,
+Lemma nameless_compare_term_spec pb u v napp :
     nameless u ->
     nameless v ->
-    eq_term_upto_univ_napp empty_global_env eq eq napp u v ->
+    compare_term_upto_univ_napp empty_global_env (fun _ => eq) pb napp u v ->
     u = v.
 Proof.
-  intros u v napp hu hv e.
-  revert v napp hu hv e.
-  induction u using term_forall_list_ind ; intros v napp hu hv e.
+  intros hu hv e.
+  induction u in v, pb, napp, hu, hv, e |- * using term_forall_list_ind.
   all: dependent destruction e.
   all: cbn in hu, hv ; destruct_andb ; anonify.
   all: try reflexivity.
@@ -104,7 +98,7 @@ Proof.
       inversion X. subst.
       cbn in hu, hv. destruct_andb.
       f_equal.
-      * eapply H0 ; eauto.
+      * eapply H0 ; eauto.        
       * eapply IHl ; assumption.
   - f_equal ; try solve [ ih ].
     eapply eq_univ_make. assumption.
@@ -293,30 +287,24 @@ Proof.
   now rewrite global_variance_nl_sigma_mon.
 Qed.
 
-Lemma eq_context_nl_IH Σ Re ctx ctx' :
-  (forall (napp : nat) (t t' : term)
-        (Rle : Universe.t -> Universe.t -> Prop),
-      eq_term_upto_univ_napp Σ Re Rle napp t t' ->
-      eq_term_upto_univ_napp (nl_global_env Σ) Re Rle napp
-        (nl t) (nl t')) ->
-  eq_context_gen eq eq ctx ctx' ->
-  eq_context_gen eq eq
+Lemma eq_context_nl_IH ctx ctx' :
+  eq_context_upto_names ctx ctx' ->
+  eq_context_upto_names
     (map (map_decl_anon nl) ctx)
     (map (map_decl_anon nl) ctx').
 Proof.
-  intros aux H.
-  induction H; simpl; constructor; simpl; destruct p; simpl; 
-  intuition (constructor; auto); subst; reflexivity.
-Defined.
+  induction 1 ; cbn ; constructor ; destruct r ; auto.
+  all: constructor ; intuition.
+Qed.
 
-Lemma nl_eq_term_upto_univ :
-  forall Σ Re Rle napp t t',
-    eq_term_upto_univ_napp Σ Re Rle napp t t' ->
-    eq_term_upto_univ_napp (nl_global_env Σ) Re Rle napp (nl t) (nl t').
+Lemma nl_compare_term_upto_univ :
+  forall Σ R pb napp t t',
+    compare_term_upto_univ_napp Σ R pb napp t t' ->
+    compare_term_upto_univ_napp (nl_global_env Σ) R pb napp (nl t) (nl t').
 Proof.
-  intros Σ Re Rle napp t t' h.
-  revert napp t t' Rle h. fix aux 5.
-  intros napp t t' Rle h.
+  intros Σ R pb napp t t' h.
+  revert napp t t' pb h. fix aux 5.
+  intros napp t t' pb h.
   destruct h.
   all: simpl.
   all: try solve [ econstructor ; eauto ].
@@ -349,17 +337,15 @@ Proof.
     * destruct x, y; simpl in *. apply aux; auto.
 Qed.
 
-Lemma eq_context_nl Σ Re Rle ctx ctx' :
-  eq_context_gen (eq_term_upto_univ Σ Re Re)
-    (eq_term_upto_univ Σ Re Rle) ctx ctx' ->
-  eq_context_gen
-    (eq_term_upto_univ (nl_global_env Σ) Re Re)
-    (eq_term_upto_univ (nl_global_env Σ) Re Rle)
+Lemma eq_context_nl Σ R pb ctx ctx' :
+  eq_context_pb (fun pb' => compare_term_upto_univ Σ R pb') pb ctx ctx' ->
+  eq_context_pb
+    (fun pb' => compare_term_upto_univ (nl_global_env Σ) R pb') pb
     (nlctx ctx) (nlctx ctx').
 Proof.
   intros H.
-  induction H; constructor; simpl; destruct p; intuition 
-    (constructor; auto using nl_eq_term_upto_univ).
+  induction H; constructor; simpl; destruct r; intuition 
+    (constructor; auto using nl_compare_term_upto_univ).
 Qed.
 
 Lemma nl_leq_term {cf:checker_flags} Σ:
@@ -367,7 +353,7 @@ Lemma nl_leq_term {cf:checker_flags} Σ:
     leq_term Σ φ t t' ->
     leq_term (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
-  intros. apply nl_eq_term_upto_univ. assumption.
+  intros. apply nl_compare_term_upto_univ. assumption.
 Qed.
 
 Lemma nl_eq_term {cf:checker_flags} Σ:
@@ -375,35 +361,32 @@ Lemma nl_eq_term {cf:checker_flags} Σ:
     eq_term Σ φ t t' ->
     eq_term (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
-  intros. apply nl_eq_term_upto_univ. assumption.
+  intros. apply nl_compare_term_upto_univ. assumption.
 Qed.
 
-Lemma nl_compare_term {cf:checker_flags} le Σ:
+Lemma nl_compare_term {cf:checker_flags} pb Σ:
   forall φ t t',
-    compare_term le Σ φ t t' ->
-    compare_term le (nl_global_env Σ) φ (nl t) (nl t').
+    compare_term pb Σ φ t t' ->
+    compare_term pb (nl_global_env Σ) φ (nl t) (nl t').
 Proof.
-  destruct le; intros.
-  - apply nl_eq_term. assumption.
-  - apply nl_leq_term. assumption.
+  intros. apply nl_compare_term_upto_univ. assumption.
 Qed.
 
-Corollary eq_term_nl_eq :
-  forall u v,
-    eq_term_upto_univ empty_global_env eq eq u v ->
+Corollary compare_term_nl_eq pb u v :
+    compare_term_upto_univ empty_global_env (fun _ => eq) pb u v ->
     nl u = nl v.
 Proof.
-  intros u v h.
-  eapply nameless_eq_term_spec.
+  intros h.
+  eapply nameless_compare_term_spec.
   - eapply nl_spec.
   - eapply nl_spec.
-  - instantiate (1:=0). now eapply (nl_eq_term_upto_univ empty_global_env).
+  - instantiate (1:=0). now eapply (nl_compare_term_upto_univ empty_global_env).
 Qed.
 
 Local Ltac ih3 :=
   lazymatch goal with
-  | ih : forall Rle napp v, eq_term_upto_univ_napp _ _ _ _ (nl ?u) _ -> _
-    |- eq_term_upto_univ_napp _ _ _ _ ?u _ =>
+  | ih : forall pb napp v, compare_term_upto_univ_napp _ _ _ _ (nl ?u) _ -> _
+    |- compare_term_upto_univ_napp _ _ _ _ ?u _ =>
     eapply ih ; assumption
   end.
 
@@ -1374,7 +1357,7 @@ Lemma nl_conv {cf:checker_flags} :
 Proof.
   intros Σ Γ A B h.
   induction h.
-  - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
+  - constructor. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_eq_term.
     assumption.
   - eapply cumul_red_l. 2: eassumption.
@@ -1390,7 +1373,7 @@ Lemma nl_cumul {cf:checker_flags} :
 Proof.
   intros Σ Γ A B h.
   induction h.
-  - constructor. unfold leq_term_ext. rewrite global_ext_constraints_nlg.
+  - constructor. rewrite global_ext_constraints_nlg.
     unfold nlg. destruct Σ. apply nl_leq_term.
     assumption.
   - eapply cumul_red_l. 2: eassumption.

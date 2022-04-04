@@ -1472,15 +1472,15 @@ Proof.
     * now apply auxm.
 Defined.
 
-Lemma alpha_eq_on_free_vars P (Γ Δ : context) :
-  All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
+Lemma alpha_eq_on_free_vars P pb (Γ Δ : context) :
+  eq_context_pb (fun _ => eq) pb Γ Δ ->
   on_free_vars_ctx P Γ -> on_free_vars_ctx P Δ.
 Proof.
   induction 1; cbn; auto.
   rewrite !alli_app /= !andb_true_r.
   move/andP => [] IH hx.
   specialize (IHX IH).
-  unfold PCUICOnFreeVars.on_free_vars_ctx in IHX.
+  unfold on_free_vars_ctx in IHX.
   rewrite IHX /=.
   len in hx. len. rewrite -(All2_length X).
   destruct r; cbn in *; subst; auto.

@@ -2,7 +2,8 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICInduction
-     PCUICLiftSubst PCUICSigmaCalculus PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
+     PCUICEquality PCUICLiftSubst PCUICSigmaCalculus
+     PCUICTyping PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
      PCUICWeakeningConv PCUICWeakeningTyp
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICUnivSubst PCUICUnivSubstitutionConv.
@@ -733,7 +734,7 @@ Qed.
   Qed.
 
   Lemma closedu_compare_decls k Γ Δ :
-    All2 (PCUICEquality.compare_decls eq eq) Γ Δ ->
+    eq_context_upto_names Γ Δ ->
     test_context (closedu k) Γ = test_context (closedu k) Δ.
   Proof.
     induction 1; cbn; auto.

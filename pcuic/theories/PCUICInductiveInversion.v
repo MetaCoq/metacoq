@@ -57,7 +57,8 @@ Proof.
   eapply validity. eapply type_Construct; eauto.
 Qed.
 
-Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T : wf Σ ->
+Lemma type_tFix_inv {cf:checker_flags} (Σ : global_env_ext) Γ mfix idx T :
+  wf Σ ->
   Σ ;;; Γ |- tFix mfix idx : T ->
   { T' & { rarg & {f & (unfold_fix mfix idx = Some (rarg, f))  *
     wf_fixpoint Σ.1  mfix
@@ -474,25 +475,26 @@ Lemma mkApps_ind_typing_spine {cf:checker_flags} Σ Γ Γ' ind i
     (mkApps (tInd ind' i') args') ->
   ∑ instsubst, 
   [× make_context_subst (List.rev Γ') inst [] = Some instsubst,
-    #|inst| = context_assumptions Γ', ind = ind', R_ind_universes Σ ind #|args| i i',
+    #|inst| = context_assumptions Γ', ind = ind', R_ind_universes Σ Cumul ind #|args| i i',
     All2 (fun par par' => Σ ;;; Γ ⊢ par = par') (map (subst0 instsubst) args) args' &
     subslet Σ Γ instsubst Γ'].
 Proof.
   intros wfΣ wfΓ; revert args args' ind i ind' i' inst.
   revert Γ'. refine (ctx_length_rev_ind _ _ _); simpl.
   - intros args args' ind i ind' i' inst wat Hsp.
+    exists nil.
     depelim Hsp.
-    eapply ws_cumul_pb_Ind_l_inv in w as [i'' [args'' [? ?]]]; auto.
-    eapply invert_red_mkApps_tInd in c as [? [eq ?]]; auto. solve_discr.
-    exists nil. 
-    split; pcuic. clear i0.
+    2: now eapply invert_cumul_ind_prod in w.
+    eapply ws_cumul_pb_Ind_l_inv in w as [i'' [args'' [? ?]]].
+    eapply invert_red_mkApps_tInd in c as [? [eq ?]]. solve_discr.
+    split; pcuic.
+    clear i0.
     relativize (map (subst0 []) args).
     2:rewrite subst_empty_eq map_id //. clear i1.
     revert args' a0. clear -wfΣ wfΓ a.
-    induction a; intros args' H; depelim H; constructor.    
+    induction a; intros args' H; depelim H ; constructor.    
     transitivity y; auto. symmetry.
     now eapply red_conv. now eauto.
-    now eapply invert_cumul_ind_prod in w.
   - intros d Γ' IH args args' ind i ind' i' inst wat Hsp.
     rewrite it_mkProd_or_LetIn_app in Hsp.
     destruct d as [na [b|] ty]; simpl in *; rewrite /mkProd_or_LetIn /= in Hsp.
@@ -608,7 +610,7 @@ Lemma Construct_Ind_ind_eq {cf:checker_flags} {Σ} (wfΣ : wf Σ.1):
   declared_constructor Σ.1 (i, n) mdecl idecl cdecl ->
   (i = i') * 
   (* Universe instances match *)
-  R_ind_universes Σ i (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' *
+  R_ind_universes Σ Cumul i (context_assumptions (ind_params mdecl) + #|cstr_indices cdecl|) u u' *
   consistent_instance_ext Σ (ind_universes mdecl) u *    
   consistent_instance_ext Σ (ind_universes mdecl) u' *    
   (#|args| = (ind_npars mdecl + context_assumptions cdecl.(cstr_args))%nat) *
@@ -1305,9 +1307,9 @@ Proof.
   eapply into_closed_red; eauto.
 Qed.
 
-Lemma ws_cumul_pb_mkApps_tRel {cf} {Σ} {wfΣ : wf Σ} {Γ n d u u'} : 
+Lemma ws_cumul_pb_mkApps_tRel {cf} {Σ} {wfΣ : wf Σ} {pb Γ n d u u'} : 
   nth_error Γ n = Some d -> decl_body d = None ->
-  Σ ;;; Γ ⊢ mkApps (tRel n) u ≤ mkApps (tRel n) u' -> 
+  Σ ;;; Γ ⊢ mkApps (tRel n) u ≤[pb] mkApps (tRel n) u' -> 
   ws_cumul_pb_terms Σ Γ u u'.
 Proof.
   intros Hnth Hd cum.
@@ -1317,7 +1319,7 @@ Proof.
   eapply invert_red_mkApps_tRel in redr as [args'' [-> conv']]; eauto.
   eapply All2_trans. apply _.
   now eapply red_terms_ws_cumul_pb_terms.
-  eapply eq_term_upto_univ_mkApps_l_inv in leq as [u'' [l' [[eqrel eqargs] eq']]].
+  eapply compare_term_upto_univ_mkApps_l_inv in leq as [u'' [l' [[eqrel eqargs] eq']]].
   depelim eqrel. eapply mkApps_eq_inj in eq' as [_ ->] => //.
   etransitivity; [|symmetry; eapply red_terms_ws_cumul_pb_terms]; eauto.
   eapply closed_red_terms_open_right in conv.
@@ -1359,13 +1361,13 @@ Proof.
     eapply closed_red_terms_open_left in red; solve_all.
 Qed.
 
-Lemma ws_cumul_pb_mkApps_eq {cf} {Σ} {wfΣ : wf Σ} Γ f f' u u' : 
+Lemma ws_cumul_pb_mkApps_eq {cf} {Σ} {wfΣ : wf Σ} pb Γ f f' u u' : 
   is_closed_context Γ ->
   is_open_term Γ f ->
   is_open_term Γ f' ->
-  eq_term_upto_univ_napp Σ (eq_universe Σ) (leq_universe Σ) #|u| f f' ->
+  compare_term_upto_univ_napp Σ (fun pb' => compare_universe pb' Σ) pb #|u| f f' ->
   ws_cumul_pb_terms Σ Γ u u' ->
-  Σ ;;; Γ ⊢ mkApps f u ≤ mkApps f' u'.
+  Σ ;;; Γ ⊢ mkApps f u ≤[pb] mkApps f' u'.
 Proof.
   intros onΓ onf onf' eqf equ.
   eapply ws_cumul_pb_red.
@@ -1374,7 +1376,7 @@ Proof.
   split.
   eapply closed_red_mkApps; eauto.
   eapply closed_red_mkApps; eauto.
-  eapply eq_term_upto_univ_napp_mkApps.
+  eapply compare_term_upto_univ_napp_mkApps.
   now rewrite Nat.add_0_r -(All2_length redl).
   apply eq.
 Qed.
@@ -1407,9 +1409,9 @@ Qed.
 (* A variant where the codomain cumulativity is in the "larger" context.
    Not valid under contravariant subtyping.
 *)
-Lemma ws_cumul_pb_Prod_Prod_inv_l {cf} {Σ} {wfΣ : wf Σ} Γ na na' A B A' B' :
-  Σ ;;; Γ ⊢ tProd na A B ≤ tProd na' A' B' ->
-  [× eq_binder_annot na na', Σ ;;; Γ ⊢ A = A' & Σ ;;; Γ ,, vass na A ⊢ B ≤ B'].
+Lemma ws_cumul_pb_Prod_Prod_inv_l {cf} {Σ} {wfΣ : wf Σ} pb Γ na na' A B A' B' :
+  Σ ;;; Γ ⊢ tProd na A B ≤[pb] tProd na' A' B' ->
+  [× eq_binder_annot na na', Σ ;;; Γ ⊢ A = A' & Σ ;;; Γ ,, vass na A ⊢ B ≤[pb] B'].
 Proof.
   move/ws_cumul_pb_Prod_Prod_inv => []; split; auto.
   eapply ws_cumul_pb_ws_cumul_ctx; tea.
@@ -1438,15 +1440,15 @@ Proof.
 Qed.
 
 
-Lemma positive_cstr_arg_subst {cf} {Σ} {wfΣ : wf Σ} {ind mdecl idecl Γ t u u'} :
+Lemma positive_cstr_arg_subst {cf} {Σ} {wfΣ : wf Σ} {ind mdecl idecl pb Γ t u u'} :
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
+  R_opt_variance (fun pb' => compare_universe pb' Σ) pb (ind_variance mdecl) u u' ->
   closed_ctx (ind_arities mdecl ,,, Γ)@[u] ->
-  Σ ;;; subst_instance u (ind_arities mdecl) ,,, subst_instance u Γ ⊢ (subst_instance u t) ≤ (subst_instance u' t) ->
+  Σ ;;; subst_instance u (ind_arities mdecl) ,,, subst_instance u Γ ⊢ (subst_instance u t) ≤[pb] (subst_instance u' t) ->
   positive_cstr_arg mdecl Γ t ->
   (Σ ;;; subst_context (ind_subst mdecl ind u) 0 (subst_instance u Γ) ⊢ 
-    (subst (ind_subst mdecl ind u) #|Γ| (subst_instance u t)) ≤
+    (subst (ind_subst mdecl ind u) #|Γ| (subst_instance u t)) ≤[pb]
      subst (ind_subst mdecl ind u') #|Γ| (subst_instance u' t)).
 Proof.
   intros decli cu ru cl cum pos.
@@ -1553,12 +1555,12 @@ Proof.
       eapply closed_upwards; eauto; lia.
 Qed.
 
-Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
+Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' pb Γ}
    {i ind mdecl idecl cdecl ind_indices cs} :
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   on_constructor (lift_typing typing) (Σ.1, ind_universes mdecl) mdecl i idecl ind_indices cdecl cs -> 
-  R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
+  R_opt_variance (fun pb' => compare_universe pb' Σ) pb (ind_variance mdecl) u u' ->
   closed_ctx (subst_instance u (ind_params mdecl)) ->
   wf_local Σ (subst_instance u (ind_arities mdecl ,,, smash_context [] (ind_params mdecl) ,,, Γ)) ->
   All_local_env
@@ -1566,11 +1568,11 @@ Lemma positive_cstr_closed_args_subst_arities {cf} {Σ} {wfΣ : wf Σ} {u u' Γ}
            positive_cstr_arg mdecl ([] ,,, (smash_context [] (ind_params mdecl) ,,, Γ)) t)
       Γ ->
   assumption_context Γ ->
-  ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
+  ws_cumul_ctx_pb_rel pb Σ (subst_instance u (ind_arities mdecl) ,,,
       subst_instance u
         (smash_context [] (PCUICEnvironment.ind_params mdecl)))
    (subst_instance u Γ) (subst_instance u' Γ) -> 
-  ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+  ws_cumul_ctx_pb_rel pb Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
     (subst_context (ind_subst mdecl ind u) (context_assumptions (ind_params mdecl)) (subst_instance u Γ))
     (subst_context (ind_subst mdecl ind u') (context_assumptions (ind_params mdecl)) (subst_instance u' Γ)).
 Proof.
@@ -1610,12 +1612,12 @@ Proof.
   - elimtype False; now depelim ass.
 Qed.
 
-Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'} 
+Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {pb u u'} 
   {ind mdecl idecl cdecl} :
   declared_constructor Σ ind mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  R_opt_variance (eq_universe Σ) (leq_universe Σ) (ind_variance mdecl) u u' ->
- ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (ind_arities mdecl) ,,,
+  R_opt_variance (fun pb' => compare_universe pb' Σ) pb (ind_variance mdecl) u u' ->
+ ws_cumul_ctx_pb_rel pb Σ (subst_instance u (ind_arities mdecl) ,,,
     subst_instance u
       (smash_context [] (PCUICEnvironment.ind_params mdecl)))
  (smash_context []
@@ -1627,7 +1629,7 @@ Lemma positive_cstr_closed_args {cf} {Σ} {wfΣ : wf Σ} {u u'}
        (expand_lets_ctx (PCUICEnvironment.ind_params mdecl)
           (cstr_args cdecl)))) ->
 
-  ws_cumul_ctx_pb_rel Cumul Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
+  ws_cumul_ctx_pb_rel pb Σ (subst_instance u (smash_context [] (PCUICEnvironment.ind_params mdecl)))
       (subst_context (inds (inductive_mind ind.1) u (ind_bodies mdecl)) (context_assumptions (ind_params mdecl))
        (smash_context []
           (subst_instance u
@@ -2076,16 +2078,16 @@ Qed.
   i and i' by u and u'.
 *)
 
-Lemma ws_cumul_pb_inst_variance {cf} {le} {Σ} {wfΣ : wf Σ} {mdecl l v i i' u u' Γ} : 
+Lemma ws_cumul_pb_inst_variance {cf} {pb} {Σ} {wfΣ : wf Σ} {mdecl l v i i' u u' Γ} : 
   on_udecl_prop Σ (ind_universes mdecl) ->
   on_variance Σ (ind_universes mdecl) (Some l) ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
-  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
+  R_universe_instance_variance (fun pb' => compare_universe pb' Σ) Cumul l u u' ->
   forall t t',
-  (Σ.1, v) ;;; Γ@[i] ⊢ t@[i] ≤[le] t'@[i'] ->
-  Σ ;;; Γ@[u] ⊢ t@[u] ≤[le] t'@[u'].
+  (Σ.1, v) ;;; Γ@[i] ⊢ t@[i] ≤[pb] t'@[i'] ->
+  Σ ;;; Γ@[u] ⊢ t@[u] ≤[pb] t'@[u'].
 Proof.
   intros onu onv vari cu cu' Ru t t'.
   intros cum.
@@ -2155,23 +2157,47 @@ Proof.
     specialize (IHl u u' Rl). do 2 forward IHl by lia.
     destruct a => //; intros x; rewrite ConstraintSetFact.add_iff;
     intros [<-|inx]; auto.
-    + do 2 red in Ra; rewrite checku in Ra;
-      specialize (Ra _ sat); simpl in Ra.
-      constructor. lia.
-    + do 2 red in Ra. rewrite checku in Ra.
-      specialize  (Ra _ sat).
-      constructor. now rewrite !Universes.Universe.val_make in Ra.
+    + do 3 red in Ra ; rewrite checku in Ra;
+      specialize (Ra _ sat) ; cbn in Ra.
+      constructor ; lia.
+    + do 3 red in Ra; rewrite checku in Ra;
+      specialize  (Ra _ sat) ; cbn in Ra.
+      injection Ra.
+      constructor ; lia.
 Qed.
 
-Lemma All2_fold_inst {cf} {le} {Σ} {wfΣ : wf Σ} mdecl l v i i' u u' Γ' Γ : 
+Lemma R_universe_variance_impl R R' pb pb' v :
+subrelation (R Conv) (R' Conv) ->
+subrelation (R pb) (R' pb') ->
+subrelation (R_universe_variance R pb v)(R_universe_variance R' pb' v).
+Proof.
+  intros hRe hRle l l'.
+  now destruct v ; cbn.
+Qed.
+
+Lemma R_universe_instance_variance_impl R R' pb pb' l :
+  subrelation (R Conv) (R' Conv) ->
+  subrelation (R pb) (R' pb') ->
+  subrelation (R_universe_instance_variance R pb l)(R_universe_instance_variance R' pb' l).
+Proof.
+  intros hRe hRle u u'.
+  induction u in l, u' |- *.
+  1: now destruct u'.
+  destruct u' => //=.
+  destruct l; cbn.
+  all: intuition.
+  now eapply R_universe_variance_impl.
+Qed.
+
+Lemma All2_fold_inst {cf} {pb} {Σ} {wfΣ : wf Σ} mdecl l v i i' u u' Γ' Γ : 
   on_udecl_prop Σ (ind_universes mdecl) ->
   on_variance Σ (ind_universes mdecl) (Some l) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
   variance_universes (PCUICEnvironment.ind_universes mdecl) l = Some (v, i, i') ->
-  R_universe_instance_variance (eq_universe Σ) (leq_universe Σ) l u u' ->
-  ws_cumul_ctx_pb_rel le (Σ.1, v) (subst_instance i Γ') (subst_instance i Γ) (subst_instance i' Γ) ->
-  ws_cumul_ctx_pb_rel le Σ (subst_instance u Γ') (subst_instance u Γ) (subst_instance u' Γ).
+  R_universe_instance_variance (fun pb' => compare_universe pb' Σ) Cumul l u u' ->
+  ws_cumul_ctx_pb_rel pb (Σ.1, v) (subst_instance i Γ') (subst_instance i Γ) (subst_instance i' Γ) ->
+  ws_cumul_ctx_pb_rel pb Σ (subst_instance u Γ') (subst_instance u Γ) (subst_instance u' Γ).
 Proof.
   unfold cumul_ctx_rel.
   intros onu onv cu cu' vari Ru.
@@ -2186,12 +2212,10 @@ Proof.
     rewrite -subst_instance_app_ctx in a, a0. simpl in a0 |- *.
     depelim a0.
     constructor; auto. apply IHtl; auto.
-    red. split. 2:apply a. auto. constructor; try reflexivity.
+    red. split. 2:apply a. auto.
     rewrite -subst_instance_app_ctx.
-    eapply ws_cumul_pb_inst_variance; eauto.
-    rewrite -subst_instance_app_ctx.
-    cbn.
-    eapply ws_cumul_pb_inst_variance; eauto.
+    constructor ; try reflexivity.
+    all: eapply ws_cumul_pb_inst_variance ; eauto.
   - intros H; depelim H; simpl in *. depelim a.
     constructor; auto. 
     rewrite !is_closed_subst_inst // in i0 *.
@@ -2356,7 +2380,7 @@ Lemma inductive_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   declared_inductive Σ ind mdecl idecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
-  R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef ind) napp u u' ->
+  R_global_instance Σ (fun pb' => compare_universe pb' Σ) Cumul (IndRef ind) napp u u' ->
   forall Γ pars pars' parsubst parsubst',
   spine_subst Σ Γ pars parsubst (subst_instance u (ind_params mdecl)) ->
   spine_subst Σ Γ pars' parsubst' (subst_instance u' (ind_params mdecl)) ->  
@@ -2432,7 +2456,8 @@ Proof.
         rewrite !on_free_vars_ctx_app is_closed_subst_inst.
         rewrite expand_lets_smash_context /= //. len. }
     eapply All2_fold_inst in respv.
-    7:eauto. all:eauto. move: respv.
+    7:eauto.
+    all:eauto. move: respv.
     rewrite !expand_lets_smash_context.
     autorewrite with pcuic.
     rewrite !subst_instance_smash /= => args. cbn in args.
@@ -2588,7 +2613,7 @@ Lemma constructor_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   declared_constructor Σ c mdecl idecl cdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
-  R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef c.1) napp u u' ->
+  R_global_instance Σ (fun pb' => compare_universe pb' Σ) Cumul (IndRef c.1) napp u u' ->
   forall Γ pars pars' parsubst parsubst',
   spine_subst Σ Γ pars parsubst (subst_instance u (ind_params mdecl)) ->
   spine_subst Σ Γ pars' parsubst' (subst_instance u' (ind_params mdecl)) ->  
@@ -3023,7 +3048,7 @@ Lemma projection_cumulative_indices {cf} {Σ} {wfΣ : wf Σ} :
   on_udecl_prop Σ (ind_universes mdecl) ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
   consistent_instance_ext Σ (ind_universes mdecl) u' ->
-  R_global_instance Σ (eq_universe Σ) (leq_universe Σ) (IndRef p.1.1) (ind_npars mdecl) u u' ->
+  R_global_instance Σ (fun pb' => compare_universe pb' Σ) Cumul (IndRef p.1.1) (ind_npars mdecl) u u' ->
   Σ ;;; projection_context p.1.1 mdecl idecl u ⊢
     subst_instance u pdecl.2 ≤ subst_instance u' pdecl.2.
 Proof.

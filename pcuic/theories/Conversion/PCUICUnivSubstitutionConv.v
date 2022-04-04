@@ -117,12 +117,12 @@ Proof.
   - exact (IHu u1 u2 H).
 Qed.
 
-Lemma subst_equal_inst_global_inst Σ Re Rle gr napp :
-  RelationClasses.Reflexive Re ->
-  SubstUnivPreserving Re ->
-  RelationClasses.subrelation Re Rle ->
-  forall u u1 u2, R_universe_instance Re u1 u2 ->
-             R_global_instance Σ Re Rle gr napp (subst_instance u1 u)
+Lemma subst_equal_inst_global_inst Σ R pb gr napp :
+  RelationClasses.Reflexive (R Conv) ->
+  SubstUnivPreserving (R Conv) ->
+  RelationClasses.subrelation (R Conv) (R pb) ->
+  forall u u1 u2, R_universe_instance (R Conv) u1 u2 ->
+             R_global_instance Σ R pb gr napp (subst_instance u1 u)
                                     (subst_instance u2 u).
 Proof.
   intros reflRe hRe subr u u1 u2 Ru1u2.
@@ -138,28 +138,28 @@ Proof.
       now rewrite !subst_instance_univ_make in HH.
 Qed.
 
-Lemma eq_term_upto_univ_subst_instance Σ Re Rle napp :
-  RelationClasses.Reflexive Re ->
-  SubstUnivPreserving Re ->
-  RelationClasses.subrelation Re Rle ->
+Lemma eq_term_upto_univ_subst_instance Σ R pb napp :
+  RelationClasses.Reflexive (R Conv) ->
+  SubstUnivPreserving (R Conv) ->
+  RelationClasses.subrelation (R Conv) (R pb) ->
   forall t u1 u2,
-    R_universe_instance Re u1 u2 ->
-    eq_term_upto_univ_napp Σ Re Rle napp (subst_instance u1 t)
+    R_universe_instance (R Conv) u1 u2 ->
+    compare_term_upto_univ_napp Σ R pb napp (subst_instance u1 t)
                             (subst_instance u2 t).
 Proof.
   intros ref hRe subr t.
-  induction t in napp, Re, Rle, ref, hRe, subr |- * using term_forall_list_ind; intros u1 u2 hu.
+  induction t in napp, R, pb, ref, hRe, subr |- * using term_forall_list_ind; intros u1 u2 hu.
   all: cbn; try constructor; eauto using subst_equal_inst_inst.
   all: try eapply All2_map, All_All2; tea; cbn; intros; rdest; eauto.
-  all: try (eapply X0 || eapply IHt || eapply IHt1 || eapply IHt2 || eapply e || eapply e0); try typeclasses eauto; auto.
+  all: try (eapply X0 || eapply IHt || eapply IHt1 || eapply IHt2 || eapply c || eapply c0); try typeclasses eauto; auto.
   all: eauto using subst_equal_inst_global_inst.
   - rewrite /eq_predicate /=. intuition auto.
     * solve_all. eapply All_All2; tea; cbn; intros; rdest; eauto.
       eapply X; eauto. tc.
     * eapply subst_equal_inst_inst => //.
-    * solve_all. reflexivity.
+    * reflexivity.
     * eapply X => //.
-  - solve_all. reflexivity.
+  - reflexivity.
 Qed.
 
 #[global]
@@ -818,10 +818,9 @@ Proof.
   now rewrite subst_instance_univ_make' subst_instance_level_expr_make.
 Qed.
 
-Lemma precompose_subst_instance_global Σ Re Rle gr napp u i i' :
-  precompose (R_global_instance Σ Re Rle gr napp) (subst_instance u) i i'
-  <~> R_global_instance Σ (precompose Re (subst_instance_univ u))
-    (precompose Rle (subst_instance_univ u)) gr napp i i'.
+Lemma precompose_subst_instance_global Σ R pb gr napp u i i' :
+  precompose (R_global_instance Σ R pb gr napp) (subst_instance u) i i'
+  <~> R_global_instance Σ (fun pb' => precompose (R pb') (subst_instance_univ u)) pb gr napp i i'.
 Proof.
   unfold R_global_instance, R_opt_variance, subst_instance.
   destruct global_variance as [v|]; eauto using precompose_subst_instance.
@@ -838,46 +837,48 @@ Proof.
     * now rewrite !subst_instance_make'_make in H.
 Qed.
 
-Definition precompose_subst_instance_global__1 Σ Re Rle gr napp u i i'
-  := fst (precompose_subst_instance_global Σ Re Rle gr napp u i i').
+Definition precompose_subst_instance_global__1 Σ R pb gr napp u i i'
+  := fst (precompose_subst_instance_global Σ R pb gr napp u i i').
 
-Definition precompose_subst_instance_global__2 Σ Re Rle gr napp u i i'
-  := snd (precompose_subst_instance_global Σ Re Rle gr napp u i i').
+Definition precompose_subst_instance_global__2 Σ R pb gr napp u i i'
+  := snd (precompose_subst_instance_global Σ R pb gr napp u i i').
 
-Global Instance eq_term_upto_univ_subst_preserved {cf : checker_flags} Σ
-  (Re Rle : ConstraintSet.t -> Universe.t -> Universe.t -> Prop) napp
-  {he: SubstUnivPreserved Re} {hle: SubstUnivPreserved Rle}
-  : SubstUnivPreserved (fun φ => eq_term_upto_univ_napp Σ (Re φ) (Rle φ) napp).
+Global Instance compare_term_upto_univ_subst_preserved {cf : checker_flags} Σ pb
+  (R : conv_pb -> ConstraintSet.t -> Universe.t -> Universe.t -> Prop) napp
+  {he: SubstUnivPreserved (R Conv)} {hle: SubstUnivPreserved (R pb)}
+  : SubstUnivPreserved (fun φ => compare_term_upto_univ_napp Σ (fun pb' => R pb' φ) pb napp).
 Proof.
   intros φ φ' u HH t t'.
   specialize (he _ _ _ HH).
   specialize (hle _ _ _ HH).
   clear HH. cbn in he.
-  induction t in napp, t', Rle, hle |- * using term_forall_list_ind;
+  induction t in napp, t', pb, hle |- * using term_forall_list_ind;
     inversion 1; subst; cbn; constructor;
       eauto using precompose_subst_instance__2, R_universe_instance_impl'.
   all: try (apply All2_map; eapply All2_impl'; tea;
     eapply All_impl; eauto; cbn; intros; aa).
   - inv X.
     eapply precompose_subst_instance_global__2.
-    eapply R_global_instance_impl_same_napp; eauto.
+    eapply R_global_instance_impl_same_napp ; eauto.
+    all: eassumption.
   - inv X.
     eapply precompose_subst_instance_global__2.
     eapply R_global_instance_impl_same_napp; eauto.
+    all: eassumption.
   - destruct X2 as [? [? [? ?]]].
     repeat split; simpl; eauto; solve_all.
-    * eapply precompose_subst_instance.
-      eapply R_universe_instance_impl; eauto.
+    eapply precompose_subst_instance.
+    eapply R_universe_instance_impl; eauto.
 Qed.
 
 Lemma leq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (leq_term Σ).
-Proof. apply eq_term_upto_univ_subst_preserved; cbn; apply _. Qed.
+Proof. apply compare_term_upto_univ_subst_preserved; cbn; apply _. Qed.
 
 Lemma eq_term_subst_instance {cf : checker_flags} Σ : SubstUnivPreserved (eq_term Σ).
-Proof. apply eq_term_upto_univ_subst_preserved; cbn; exact _. Qed.
+Proof. apply compare_term_upto_univ_subst_preserved; cbn; exact _. Qed.
 
 Lemma compare_term_subst_instance {cf : checker_flags} pb Σ : SubstUnivPreserved (compare_term pb Σ).
-Proof. apply eq_term_upto_univ_subst_preserved; cbn; try destruct pb; exact _. Qed.
+Proof. apply compare_term_upto_univ_subst_preserved; cbn ; try destruct pb; exact _. Qed.
 
 (** Now routine lemmas ... *)
 
@@ -1484,7 +1485,8 @@ Qed.
 
 Global Instance compare_context_subst_instance {cf : checker_flags} pb Σ : SubstUnivPreserved (compare_context pb Σ).
 Proof.
-  intros φ φ' u HH Γ Γ' X. eapply All2_fold_map, All2_fold_impl; tea.
+  intros φ φ' u HH Γ Γ' X.
+   eapply All2_map, All2_impl; tea.
   intros. eapply compare_decl_subst_instance; eassumption.
 Qed.
 

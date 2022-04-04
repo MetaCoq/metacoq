@@ -168,21 +168,13 @@ Proof.
     /ws_cumul_pb_alt[u'' [v' [_ clu' clv uu'' vv' eq']]].
   eapply ws_cumul_pb_alt.
   destruct (red_confluence (Γ := exist Γ clΓ) (t:=exist u clu) uu' uu'') as [u'nf [ul ur]].
-  destruct pb; cbn in *.
-  { eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
-    eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
+  eapply red_compare_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
+    eapply red_compare_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
     exists tnf, unf.
     split; auto; eauto with fvs.
     - now transitivity t'.
     - now transitivity v'.
-    - now transitivity u'nf. }
-  { eapply red_eq_term_upto_univ_r in ul as [tnf [redtnf ?]]; tea; try tc.
-    eapply red_eq_term_upto_univ_l in ur as [unf [redunf ?]]; tea; try tc.
-    exists tnf, unf.
-    split; eauto with fvs.
-    - now transitivity t'.
-    - now transitivity v'.
-    - now transitivity u'nf. }
+    - now transitivity u'nf.
 Qed.
 
 Arguments wt_cumul_pb_dom {cf c Σ Γ T U}.

@@ -73,6 +73,8 @@ Ltac pcuic :=
 Instance All2_fold_len {A} P (Γ Δ : list A) : HasLen (All2_fold P Γ Δ) #|Γ| #|Δ| :=
   All2_fold_length.
 
+#[global] Instance All2_len {A} P (Γ Δ : list A) : HasLen (All2 P Γ Δ) #|Γ| #|Δ| := All2_length.
+
 Implicit Types (cf : checker_flags).
 
 (* TODO MOVE *)
@@ -223,19 +225,19 @@ Proof.
   all: match goal with | H : compare_decls _ _ _ _ |- _ => destruct H ; now constructor end.
 Qed.
 
-Lemma compare_decls_impl compare_term compare_term' pb :
+Lemma compare_decls_impl compare_term compare_term' pb pb' :
   subrelation (compare_term Conv) (compare_term' Conv) ->
-  subrelation (compare_term pb) (compare_term' pb) ->
+  subrelation (compare_term pb) (compare_term' pb') ->
   subrelation (compare_decls compare_term pb)
-    (compare_decls compare_term' pb).
+    (compare_decls compare_term' pb').
 Proof.
   intros he hle x y []; constructor; auto.
 Qed.
 
-Lemma eq_context_pb_impl compare_term compare_term' pb :
+#[global] Instance eq_context_pb_impl compare_term compare_term' pb pb' :
 subrelation (compare_term Conv) (compare_term' Conv) ->
-  subrelation (compare_term pb) (compare_term' pb) ->
-  subrelation (eq_context_pb compare_term pb) (eq_context_pb compare_term' pb).
+  subrelation (compare_term pb) (compare_term' pb') ->
+  subrelation (eq_context_pb compare_term pb) (eq_context_pb compare_term' pb').
 Proof.
   red.
   solve_all.
@@ -590,6 +592,21 @@ Section Impl.
       destruct t0; simpl; auto.
   Qed.
 
+  #[global]
+  Instance R_global_instance_impl_same Σ R R' pb pb' gr napp :
+    RelationClasses.subrelation (R Conv) (R' Conv) ->
+    RelationClasses.subrelation (R pb) (R' pb') ->
+    subrelation (R_global_instance Σ R pb gr napp) (R_global_instance Σ R' pb' gr napp).
+  Proof.
+    intros he hle t t'.
+    rewrite /R_global_instance /R_opt_variance.
+    destruct global_variance as [v|] eqn:glob.
+    - induction t in v, t' |- *; destruct v, t'; simpl; auto.
+      intros []; split; auto.
+      destruct t0; simpl; auto.
+    - eauto using R_universe_instance_impl'.
+  Qed.
+
   Lemma global_variance_empty gr napp env : env.(declarations) = [] -> global_variance env gr napp = None.
   Proof.
     destruct env; cbn => ->. destruct gr; auto.
@@ -637,6 +654,24 @@ Section Impl.
   Qed.
 
   #[global]
+  Instance compare_term_upto_univ_impl_same Σ R R' pb pb' napp :
+    RelationClasses.subrelation (R Conv) (R' Conv) ->
+    RelationClasses.subrelation (R pb) (R' pb') ->
+    subrelation (compare_term_upto_univ_napp Σ R pb napp) (compare_term_upto_univ_napp Σ R' pb' napp).
+  Proof.
+    intros he hle t t'.
+    induction t in pb, pb', hle, napp, t' |- * using term_forall_list_ind.
+    all: inversion 1; subst; constructor.
+    all: try solve [
+            eauto using R_universe_instance_impl'].
+    all: try solve [solve_all].
+    - eapply R_global_instance_impl_same. all:eauto.
+    - eapply R_global_instance_impl_same. all:eauto.
+    - unfold eq_predicate in *; eauto; solve_all.
+      eapply R_universe_instance_impl'; eauto.
+  Qed.
+
+  #[global]
   Instance compare_term_upto_univ_empty_impl Σ R R' pb pb' napp napp' :
     RelationClasses.subrelation (R Conv) (R' Conv) ->
     RelationClasses.subrelation (R Conv) (R' pb') ->
@@ -656,23 +691,13 @@ Section Impl.
   Qed.
 
   #[global]
-  Instance compare_term_upto_univ_conv_pb Σ R pb napp napp' :
-    RelationClasses.subrelation (R Conv) (R Cumul) ->
+  Instance eq_term_upto_univ_leq Σ R pb napp napp' :
+    RelationClasses.subrelation (R Conv) (R pb) ->
     napp <= napp' ->
     subrelation (compare_term_upto_univ_napp Σ R Conv napp) (compare_term_upto_univ_napp Σ R pb napp').
   Proof.
     intros.
     eapply compare_term_upto_univ_impl => //.
-    all: now destruct pb.
-  Qed.
-
-  #[global]
-  Instance eq_term_upto_univ_leq Σ R napp napp' :
-    RelationClasses.subrelation (R Conv) (R Cumul) ->
-    napp <= napp' ->
-    subrelation (compare_term_upto_univ_napp Σ R Conv napp) (compare_term_upto_univ_napp Σ R Cumul napp').
-  Proof.
-    exact _.
   Qed.
 
   #[global]
@@ -1007,7 +1032,7 @@ Qed.
 
 #[global]
 Instance R_global_instance_antisym Σ R pb (hRe : RelationClasses.Equivalence (R Conv)) gr napp :
-  RelationClasses.Antisymmetric _ (R Conv) (R Cumul) ->
+  RelationClasses.Antisymmetric _ (R Conv) (R pb) ->
   RelationClasses.Antisymmetric _ (R_global_instance Σ R Conv gr napp) (R_global_instance Σ R pb gr napp).
 Proof.
   intros hR u v.
@@ -1016,19 +1041,17 @@ Proof.
   induction u in l, v |- *; destruct v, l; simpl; auto.
   intros [at' uv] [ta vu]. split; auto.
   destruct t0; simpl in *; auto.
-  now destruct pb.
 Qed.  
 
 Lemma eq_term_upto_univ_antisym Σ R pb (hRe : RelationClasses.Equivalence (R Conv)) :
-  RelationClasses.Antisymmetric _ (R Conv) (R Cumul) ->
+  RelationClasses.Antisymmetric _ (R Conv) (R pb) ->
   Antisymmetric (compare_term_upto_univ Σ R Conv) (compare_term_upto_univ Σ R pb).
 Proof.
   intros hR u v. generalize 0; intros n h h'.
   induction u in v, n, h, h' |- * using term_forall_list_ind.
   all: simpl ; inversion h ; subst; inversion h' ;
        subst ; try constructor ; auto.
-  2-3: eapply RelationClasses.antisymmetry; eauto.
-  now destruct pb.
+  all: eapply RelationClasses.antisymmetry; eauto.
 Qed.
 
 #[global]
@@ -1449,19 +1472,20 @@ End UptoNames.
 
   (** ** ws_cumul_pb on contexts ** *)
 
-  (* Inductive rel_option {A B} (R : A -> B -> Type) : option A -> option B -> Type :=
+  (* TODO move *)
+  Inductive rel_option {A B} (R : A -> B -> Type) : option A -> option B -> Type :=
   | rel_some : forall a b, R a b -> rel_option R (Some a) (Some b)
   | rel_none : rel_option R None None.
 
   Derive Signature NoConfusion for rel_option.
 
-  Definition eq_decl_upto_gen Σ R pb d d' : Type :=
+  Definition compare_decl_upto Σ R pb d d' : Type :=
     eq_binder_annot d.(decl_name) d'.(decl_name) *
-    rel_option (eq_term_upto_univ Σ Re Re) d.(decl_body) d'.(decl_body) *
-    eq_term_upto_univ Σ Re Rle d.(decl_type) d'.(decl_type).
+    rel_option (compare_term_upto_univ Σ R Conv) d.(decl_body) d'.(decl_body) *
+    compare_term_upto_univ Σ R pb d.(decl_type) d'.(decl_type).
 
   (* TODO perhaps should be def *)
-  Lemma All2_eq_context_upto Σ Re Rle :
+  (* Lemma All2_eq_context_upto Σ Re Rle :
     subrelation (All2 (eq_decl_upto_gen Σ Re Rle)) (eq_context_upto Σ Re Rle).
   Proof.
     intros Γ Δ h.
@@ -1553,16 +1577,16 @@ End UptoNames.
       typeclasses eauto.
   Qed.
 
-  (* Lemma eq_context_upto_nth_error Σ Re Rle ctx ctx' n :
-    eq_context_upto Σ Re Rle ctx ctx' -> 
-    rel_option (eq_decl_upto_gen Σ Re Rle) (nth_error ctx n) (nth_error ctx' n).
+  Lemma eq_context_upto_nth_error Σ R pb ctx ctx' n :
+    eq_context_upto Σ R pb ctx ctx' -> 
+    rel_option (compare_decl_upto Σ R pb) (nth_error ctx n) (nth_error ctx' n).
   Proof.
     induction 1 in n |- *.
     - rewrite nth_error_nil. constructor.
     - destruct n; simpl; auto. 
-      constructor. depelim p; constructor; intuition auto;
+      constructor. depelim r; constructor; intuition auto;
       now constructor.
-  Qed.*)
+  Qed.
 
   Lemma eq_context_impl Σ R R' pb:
       RelationClasses.subrelation (R Conv) (R' Conv) ->

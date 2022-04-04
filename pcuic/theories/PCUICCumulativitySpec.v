@@ -9,20 +9,20 @@ Set Default Goal Selector "!".
 
 Implicit Types (cf : checker_flags).
 
-Definition cumul_predicate (cumul : context -> term -> term -> Type) Γ Re p p' :=
+Definition cumul_predicate (cumul : context -> term -> term -> Type) Γ R p p' :=
   All2 (cumul Γ) p.(pparams) p'.(pparams) *
-  (R_universe_instance Re p.(puinst) p'.(puinst) *
-  ((eq_context_gen eq eq p.(pcontext) p'.(pcontext)) *
+  (R_universe_instance R p.(puinst) p'.(puinst) *
+  ((eq_context_upto_names p.(pcontext) p'.(pcontext)) *
     cumul (Γ ,,, inst_case_predicate_context p) p.(preturn) p'.(preturn))).
 
 Reserved Notation " Σ ;;; Γ ⊢ t ≤s[ pb ] u" (at level 50, Γ, t, u at next level,
   format "Σ  ;;;  Γ  ⊢  t  ≤s[ pb ]  u").
 
 Definition cumul_Ind_univ {cf} (Σ : global_env_ext) pb i napp :=
-  R_opt_variance (eq_universe Σ) (compare_universe pb Σ) (global_variance Σ (IndRef i) napp).
+  R_opt_variance (fun pb' => compare_universe pb' Σ) pb (global_variance Σ (IndRef i) napp).
 
-Definition cumul_Construct_univ {cf} (Σ : global_env_ext) pb  i k napp :=
-  R_opt_variance (eq_universe Σ) (compare_universe pb Σ) (global_variance Σ (ConstructRef i k) napp).
+Definition cumul_Construct_univ {cf} (Σ : global_env_ext) pb i k napp :=
+  R_opt_variance (fun pb' => compare_universe pb' Σ) pb (global_variance Σ (ConstructRef i k) napp).
 
 (** * Definition of cumulativity and conversion relations *)
 
@@ -101,7 +101,7 @@ Inductive cumulSpec0 {cf : checker_flags} (Σ : global_env_ext) Γ (pb : conv_pb
     cumul_predicate (fun Γ t u => Σ ;;; Γ ⊢ t ≤s[Conv] u) Γ (compare_universe Conv Σ) p p' ->
     Σ ;;; Γ ⊢ c ≤s[Conv] c' ->
     All2 (fun br br' =>
-      eq_context_gen eq eq (bcontext br) (bcontext br') × 
+      eq_context_upto_names (bcontext br) (bcontext br') × 
       Σ ;;; Γ ,,, inst_case_branch_context p br ⊢ bbody br ≤s[Conv] bbody br'
     ) brs brs' ->
     Σ ;;; Γ ⊢ tCase indn p c brs ≤s[pb] tCase indn p' c' brs'
@@ -337,7 +337,7 @@ Lemma cumulSpec0_ind_all :
         cumulSpec0 Σ Γ Conv c c' -> P Conv Γ c c' ->
         All2
           (Trel_conj (fun br br' : branch term =>
-               eq_context_gen eq eq (bcontext br) (bcontext br') *
+               eq_context_upto_names (bcontext br) (bcontext br') *
                cumulSpec0 Σ (Γ,,, inst_case_branch_context p br) Conv
                  (bbody br) (bbody br')) 
             (fun br br' => P Conv (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' -> 
@@ -372,19 +372,19 @@ Lemma cumulSpec0_ind_all :
               eq_binder_annot (dname x) (dname y)) mfix mfix' ->
             P pb Γ (tCoFix mfix idx) (tCoFix mfix' idx)) ->
  
-      (* cumulativiity rules *)
+      (* cumulativity rules *)
       
       (forall (pb : conv_pb) 
             (Γ : context) (i : inductive) (u u' : list Level.t)
             (args args' : list term), 
-      R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (IndRef i) #|args| u u' ->
+      R_global_instance Σ (fun pb' => compare_universe pb' Σ) pb (IndRef i) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Conv Γ)) args args' ->
       P pb Γ (mkApps (tInd i u) args) (mkApps (tInd i u') args')) ->
 
     (forall (pb : conv_pb) 
       (Γ : context) (i : inductive) (k : nat) 
       (u u' : list Level.t) (args args' : list term), 
-      R_global_instance Σ (eq_universe Σ) (compare_universe pb Σ) (ConstructRef i k) #|args| u u' ->
+      R_global_instance Σ (fun pb' => compare_universe pb' Σ) pb (ConstructRef i k) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Conv Γ)) args args' ->
       P pb Γ (mkApps (tConstruct i k u) args)
               (mkApps (tConstruct i k u') args')) ->
@@ -404,24 +404,24 @@ Proof.
   move aux at top.
   destruct 1.
   - eapply X8; eauto.
-  - eapply X9; eauto.   
-  - eapply X10; eauto.   
+  - eapply X9; eauto.
+  - eapply X10; eauto.
   - eapply X20; eauto. clear -a aux.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
   - eapply X21; eauto. clear -a aux.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
-  - eapply X22; eauto. 
-  - eapply X23; eauto. 
+  - eapply X22; eauto.
+  - eapply X23; eauto.
   - eapply X11.
     revert args args' a.
     fix aux' 3; destruct 1; constructor; auto.
   - eapply X12; eauto.
-  - eapply X13; eauto.   
-  - eapply X14; eauto.   
-  - eapply X15; eauto.   
-  - eapply X16 ; eauto. 
+  - eapply X13; eauto.
+  - eapply X14; eauto.
+  - eapply X15; eauto.
+  - eapply X16 ; eauto.
     + unfold cumul_predicate in *. destruct c0 as [c0 [cuniv [ccontext creturn]]].
       repeat split ; eauto.
       * revert c0. generalize (pparams p), (pparams p').
@@ -554,7 +554,7 @@ Lemma convSpec0_ind_all :
         cumulSpec0 Σ Γ Conv c c' -> P Γ c c' ->
         All2
           (Trel_conj (fun br br' : branch term =>
-               eq_context_gen eq eq (bcontext br) (bcontext br') *
+               eq_context_upto_names (bcontext br) (bcontext br') *
                cumulSpec0 Σ (Γ,,, inst_case_branch_context p br) Conv
                  (bbody br) (bbody br')) 
             (fun br br' => P (Γ,,, inst_case_branch_context p br) (bbody br) (bbody br'))) brs brs' -> 
@@ -589,19 +589,19 @@ Lemma convSpec0_ind_all :
               eq_binder_annot (dname x) (dname y)) mfix mfix' ->
             P Γ (tCoFix mfix idx) (tCoFix mfix' idx)) ->
  
-      (* cumulativiity rules *)
+      (* cumulativity rules *)
       
       (forall  
             (Γ : context) (i : inductive) (u u' : list Level.t)
             (args args' : list term), 
-      R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (IndRef i) #|args| u u' ->
+      R_global_instance Σ (fun pb' => compare_universe pb' Σ) Conv (IndRef i) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Γ)) args args' ->
       P Γ (mkApps (tInd i u) args) (mkApps (tInd i u') args')) ->
 
     (forall  
       (Γ : context) (i : inductive) (k : nat) 
       (u u' : list Level.t) (args args' : list term), 
-      R_global_instance Σ (eq_universe Σ) (eq_universe Σ) (ConstructRef i k) #|args| u u' ->
+      R_global_instance Σ (fun pb' => compare_universe pb' Σ) Conv (ConstructRef i k) #|args| u u' ->
       All2 (Trel_conj (cumulSpec0 Σ Γ Conv) (P Γ)) args args' ->
       P Γ (mkApps (tConstruct i k u) args)
               (mkApps (tConstruct i k u') args')) ->

@@ -2,8 +2,9 @@
 From Coq Require Import Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst
-     PCUICLiftSubst PCUICTyping PCUICSigmaCalculus
-     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnvConv PCUICWeakeningEnvTyp 
+     PCUICLiftSubst PCUICTyping PCUICSigmaCalculus PCUICEquality
+     PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICWeakeningEnvConv
+     PCUICWeakeningEnvTyp 
      PCUICWeakeningConv PCUICWeakeningTyp PCUICInversion
      PCUICSubstitution PCUICReduction PCUICCumulativity PCUICGeneration
      PCUICUnivSubst PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp PCUICConfluence
@@ -181,30 +182,30 @@ Section Validity.
 
   Lemma eq_binder_annots_eq_ctx (Σ : global_env_ext) (Δ : context) (nas : list aname) :
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
-    PCUICEquality.eq_context_gen (PCUICEquality.eq_term Σ Σ) (PCUICEquality.eq_term Σ Σ) 
+    compare_context Conv Σ Σ
       (map2 set_binder_name nas Δ) Δ.
   Proof.
     induction Δ in nas |- * using PCUICInduction.ctx_length_rev_ind; simpl; intros hlen.
-    - depelim hlen. simpl. reflexivity.
+    - depelim hlen. simpl. unfold eq_context. reflexivity.
     - destruct nas as [|nas na] using rev_case => //;
       pose proof (All2_length hlen) as hlen';len in hlen'; simpl in hlen'; try lia.
       eapply All2_app_inv_l in hlen as (l1'&l2'&heq&alnas&allna).
       depelim allna. depelim allna.
       rewrite map2_app => /= //; try lia. unfold aname.
       eapply app_inj_tail in heq as [<- <-].
-      simpl. eapply All2_fold_app; auto.
-      constructor. constructor.
+      simpl. eapply All2_app.
+      1: intuition.
+      constructor. 2: constructor.
       destruct d as [na' [d|] ty]; constructor; cbn in *; auto;
       try reflexivity.
   Qed.
   
   Lemma eq_term_set_binder_name (Σ : global_env_ext) (Δ : context) T U (nas : list aname) :
     All2 (fun x y => eq_binder_annot x y.(decl_name)) nas Δ ->
-    PCUICEquality.eq_term Σ Σ T U ->
-    PCUICEquality.eq_term Σ Σ (it_mkProd_or_LetIn (map2 set_binder_name nas Δ) T) (it_mkProd_or_LetIn Δ U) .
+    eq_term Σ Σ T U ->
+    eq_term Σ Σ (it_mkProd_or_LetIn (map2 set_binder_name nas Δ) T) (it_mkProd_or_LetIn Δ U) .
   Proof.
     intros a; unshelve eapply eq_binder_annots_eq_ctx in a; tea.
-    eapply All2_fold_All2 in a.
     induction a in T, U |- *.
     - auto.
     - rewrite /= /mkProd_or_LetIn.

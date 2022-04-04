@@ -15,23 +15,18 @@ From Equations Require Import Equations.
 
 Implicit Types cf : checker_flags.
 
-Notation "`≡α`" := upto_names.
-Infix "≡α" := upto_names (at level 60).
-Notation "`≡Γ`" := (eq_context_upto empty_global_env eq eq).
-Infix "≡Γ" := (eq_context_upto empty_global_env eq eq) (at level 20, no associativity).
-
 #[global]
 Instance upto_names_terms_refl : CRelationClasses.Reflexive (All2 `≡α`).
 Proof. intro; apply All2_refl; reflexivity. Qed.
 
-Lemma eq_context_upto_empty_impl {cf} {Σ : global_env_ext} ctx ctx' :
+(* Lemma eq_context_upto_empty_impl {cf} {Σ : global_env_ext} ctx ctx' :
   ctx ≡Γ ctx' ->
-  eq_context_upto Σ (eq_universe Σ) (eq_universe Σ) ctx ctx'.
+  eq_context_upto Σ (fun pb' => compare_universe pb' Σ) Conv ctx ctx'.
 Proof.
-  intros; eapply All2_fold_impl; tea.
-  intros ???? []; constructor; subst; auto;
-  eapply eq_term_upto_univ_empty_impl; tea; tc.
-Qed.
+  intros; eapply All2_impl; tea.
+  intros ?? [] ; constructor ; subst ; auto;
+  eapply compare_term_upto_univ_empty_impl; tea; tc.
+Qed. *)
 
 Section Alpha.
   Context {cf:checker_flags}.

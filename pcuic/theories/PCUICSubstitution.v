@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssrbool.
 From MetaCoq.Template Require Import utils config.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduction
      PCUICLiftSubst PCUICEquality PCUICPosition PCUICCases PCUICSigmaCalculus
@@ -1227,31 +1228,22 @@ Proof.
   rewrite -{3}H. now rewrite simpl_subst_k.
 Qed.
 
-Lemma subst_compare_term {cf:checker_flags} le Σ (φ : ConstraintSet.t) (l : list term) (k : nat) (T U : term) :
-  compare_term le Σ φ T U -> compare_term le Σ φ (subst l k T) (subst l k U).
+Lemma subst_compare_decl `{checker_flags} {pb Σ ϕ l k d d'} :
+  compare_decl pb Σ ϕ d d' -> compare_decl pb Σ ϕ (subst_decl l k d) (subst_decl l k d').
 Proof.
-  destruct le; simpl.
-  - apply subst_eq_term.
-  - apply subst_leq_term. 
+  intros []; constructor; auto ; cbn in *.
+  all: now eapply subst_compare_term.
 Qed.
 
-Lemma subst_compare_decl `{checker_flags} {le Σ ϕ l k d d'} :
-  compare_decl le Σ ϕ d d' -> compare_decl le Σ ϕ (subst_decl l k d) (subst_decl l k d').
-Proof.
-  intros []; constructor; auto; destruct le; 
-    intuition eauto using subst_compare_term, subst_eq_term, subst_leq_term.
-Qed.
-
-Lemma subst_compare_context `{checker_flags} le Σ φ l l' n k :
-  compare_context le Σ φ l l' ->
-  compare_context le Σ φ (subst_context n k l) (subst_context n k l').
+Lemma subst_compare_context `{checker_flags} pb Σ φ l l' n k :
+  compare_context pb Σ φ l l' ->
+  compare_context pb Σ φ (subst_context n k l) (subst_context n k l').
 Proof.
   induction 1; rewrite ?subst_context_snoc /=; constructor; auto.
-  erewrite (All2_fold_length X). simpl.
-  apply (subst_compare_decl p).
+  erewrite (All2_length X). simpl.
+  now eapply subst_compare_decl.
 Qed.
 
-From Coq Require Import ssrbool.
 
 Section CtxReduction.
   Context {cf : checker_flags}.
@@ -1624,17 +1616,17 @@ Qed.
 
   (** The cumulativity relation is substitutive, yay! *)
 
-  Lemma substitution_untyped_cumul {Γ Γ' Γ'' s M N} :
+  Lemma substitution_untyped_cumul {pb Γ Γ' Γ'' s M N} :
     untyped_subslet Γ s Γ' ->
     is_open_term (Γ ,,, Γ' ,,, Γ'') M ->
     is_open_term (Γ ,,, Γ' ,,, Γ'') N ->
     on_ctx_free_vars (shiftnP #|Γ ,,, Γ' ,,, Γ''| xpred0) (Γ ,,, Γ' ,,, Γ'') ->
-    Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
-    Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
+    Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <=[pb] N ->
+    Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <=[pb] subst s #|Γ''| N.
   Proof.
     intros Hs onN onM onΓ h. induction h.
     - constructor.
-      now apply subst_leq_term.
+      now apply subst_compare_term.
     - epose proof (substitution_untyped_let_red Hs onN r); tea.
       eapply red_cumul_cumul; eauto.
       eapply IHh; tea. eapply red1_on_free_vars in r; tea.
@@ -1643,32 +1635,28 @@ Qed.
       eapply IHh; tea. eapply red1_on_free_vars in r; tea.
   Qed.
 
-  Lemma substitution_cumul0 {Γ na t u u' a} :
+  Lemma substitution_cumul0 {pb Γ na t u u' a} :
     on_ctx_free_vars (shiftnP #|Γ ,, vass na t| xpred0) (Γ ,, vass na t) ->
     is_open_term (Γ ,, vass na t) u ->
     is_open_term (Γ ,, vass na t) u' ->
-    Σ ;;; Γ ,, vass na t |- u <= u' ->
-    Σ ;;; Γ |- subst10 a u <= subst10 a u'.
+    Σ ;;; Γ ,, vass na t |- u <=[pb] u' ->
+    Σ ;;; Γ |- subst10 a u <=[pb] subst10 a u'.
   Proof.
     move=> onΓ onu onu' Hu.
-    pose proof (@substitution_untyped_cumul Γ [vass na t] [] [a] u u').
-    forward X.
-    { constructor. constructor. }
-    simpl in X. now apply X.
+    eapply (substitution_untyped_cumul (Γ' := [vass na t]) (Γ'' := [])) ; auto.
+    do 2 constructor.
   Qed.
 
-  Lemma substitution_cumul_let {Γ na t ty u u'} :
+  Lemma substitution_cumul_let {pb Γ na t ty u u'} :
   on_ctx_free_vars (shiftnP #|Γ ,, vdef na t ty| xpred0) (Γ ,, vdef na t ty) ->
   is_open_term (Γ ,, vdef na t ty) u ->
   is_open_term (Γ ,, vdef na t ty) u' ->
-  Σ ;;; Γ ,, vdef na t ty |- u <= u' ->
-    Σ ;;; Γ |- subst10 t u <= subst10 t u'.
+  Σ ;;; Γ ,, vdef na t ty |- u <=[pb] u' ->
+    Σ ;;; Γ |- subst10 t u <=[pb] subst10 t u'.
   Proof.
     move=> onΓ onu onu' Hu.
-    pose proof (@substitution_untyped_cumul Γ [vdef na t ty] [] [t] u u').
-    forward X.
-    { rewrite - {1}(subst_empty 0 t). constructor. constructor. }
-    simpl in X. now apply X.
+    eapply (substitution_untyped_cumul (Γ' := [vdef na t ty]) (Γ'' := [])) ; auto.
+    rewrite - {1}(subst_empty 0 t). do 2 constructor.
   Qed.
 
   Lemma usubst_well_subst {Γ σ Δ} : 
@@ -1864,17 +1852,11 @@ Proof.
     - intros t u cmp. 
       constructor. now eapply subst_compare_term.
     - move=> t u v red cum.
-      destruct le.
-      * eapply red_conv_conv.
-        eapply substitution_let_red; tea; eauto with wf; apply red.
-      * eapply red_cumul_cumul.
-        eapply substitution_let_red; tea; eauto with wf; apply red.
+      eapply red_cumul_cumul.
+      eapply substitution_let_red ; tea ; apply red.
     - move=> t u v red cum red'.
-      destruct le.
-      * eapply red_conv_conv_inv; tea.
-        eapply substitution_let_red; tea; apply red'.
-      * eapply red_cumul_cumul_inv; tea.
-        eapply substitution_let_red; tea; apply red'.
+      eapply red_cumul_cumul_inv ; tea.
+      eapply substitution_let_red ; tea ; eapply red'.
 Qed.
 
 Lemma substitution_cumul {cf} {Σ} {wfΣ : wf Σ} {Γ Γ' Γ'' s M N} :

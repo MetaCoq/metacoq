@@ -169,12 +169,12 @@ Definition dlet_ty na b B t (p : pos B) : pos (tLetIn na b B t) :=
 Definition dlet_in na b B t (p : pos t) : pos (tLetIn na b B t) :=
   exist (let_in :: proj1_sig p) (proj2_sig p).
 
-Lemma eq_context_upto_context_choice_term Σ Re Rle Γ Γ' c :
-  eq_context_upto Σ Re Rle Γ Γ' ->
-  rel_option (eq_term_upto_univ Σ Re (match c.2 with
-                                      | choose_decl_body => Re
-                                      | choose_decl_type => Rle
-                                      end) )
+Lemma eq_context_upto_context_choice_term Σ R pb Γ Γ' c :
+  eq_context_upto Σ R pb Γ Γ' ->
+  rel_option (compare_term_upto_univ Σ R (match c.2 with
+                                      | choose_decl_body => Conv
+                                      | choose_decl_type => pb
+                                      end))
              (context_choice_term Γ c)
              (context_choice_term Γ' c).
 Proof.
@@ -183,7 +183,7 @@ Proof.
   eapply eq_context_upto_nth_error with (ctx := Γ) (ctx' := Γ') (n := n) in eq.
   depelim eq; cbn in *.
   - rewrite H, H0.
-    destruct e as ((?&?)&?); cbn in *.
+    destruct c0 as ((?&?)&?); cbn in *.
     destruct a, b; cbn in *.
     destruct c; auto.
     constructor; auto.
@@ -191,14 +191,14 @@ Proof.
     constructor.
 Qed.
 
-Lemma eq_term_upto_valid_pos :
-  forall {Σ u v p Re Rle napp},
+Lemma compare_term_upto_valid_pos :
+  forall {Σ u v p R pb napp},
     validpos u p ->
-    eq_term_upto_univ_napp Σ Re Rle napp u v ->
+    compare_term_upto_univ_napp Σ R pb napp u v ->
     validpos v p.
 Proof.
-  intros Σ u v p Re Rle napp vp e.
-  induction p as [| c p ih ] in u, v, Re, Rle, napp, vp, e |- *.
+  intros Σ u v p R pb napp vp e.
+  induction p as [| c p ih ] in u, v, pb, napp, vp, e |- *.
   - reflexivity.
   - destruct c, u. all: try discriminate.
     all: try solve [
@@ -254,14 +254,14 @@ Proof.
       * simpl in *. eapply IHa. all: eauto.
 Qed.
 
-Lemma eq_term_valid_pos :
-  forall `{cf : checker_flags} {Σ G u v p},
+Lemma compare_term_valid_pos :
+  forall `{cf : checker_flags} {pb Σ G u v p},
     validpos u p ->
-    eq_term Σ G u v ->
+    compare_term pb Σ G u v ->
     validpos v p.
 Proof.
-  intros cf Σ G u v p vp e.
-  eapply eq_term_upto_valid_pos. all: eauto.
+  intros.
+  eapply compare_term_upto_valid_pos. all: eauto.
 Qed.
 
 Inductive positionR : position -> position -> Prop :=

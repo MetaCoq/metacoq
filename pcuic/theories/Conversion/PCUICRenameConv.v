@@ -178,13 +178,13 @@ Section Renaming.
 
 Context `{cf : checker_flags}.
 
-Lemma eq_term_upto_univ_rename Σ :
-  forall Re Rle napp u v f,
-    eq_term_upto_univ_napp Σ Re Rle napp u v ->
-    eq_term_upto_univ_napp Σ Re Rle napp (rename f u) (rename f v).
+Lemma compare_term_upto_univ_rename Σ :
+  forall R pb napp u v f,
+    compare_term_upto_univ_napp Σ R pb napp u v ->
+    compare_term_upto_univ_napp Σ R pb napp (rename f u) (rename f v).
 Proof.
-  intros Re Rle napp u v f h.
-  induction u in v, napp, Rle, f, h |- * using term_forall_list_ind.
+  intros R pb napp u v f h.
+  induction u in v, napp, pb, f, h |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try solve [
     simpl ; constructor ; eauto
@@ -197,10 +197,10 @@ Proof.
   - simpl. constructor. all: eauto.
     * rewrite /rename_predicate.
       destruct X; destruct e as [? [? [ectx ?]]].
-      rewrite (All2_fold_length ectx). red.
+      rewrite (All2_length ectx). red.
       intuition auto; simpl; solve_all.
     * red in X0. solve_all.
-      rewrite -(All2_fold_length a).
+      rewrite -(All2_length a).
       now eapply b0.
   - simpl. constructor.
     apply All2_length in a as e. rewrite <- e.
@@ -1107,7 +1107,7 @@ Lemma conv_renameP :
 Proof.
   intros P Σ Γ Δ f A B hΣ hf hA hB hΓ h.
   induction h.
-  - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.
+  - eapply cumul_refl. eapply compare_term_upto_univ_rename. assumption.
   - eapply cumul_red_l.
     + eapply red1_rename. all: try eassumption.
     + apply IHh.
@@ -1130,7 +1130,7 @@ Lemma cumul_renameP :
 Proof.
   intros P Σ Γ Δ f A B hΣ hf hA hB hΓ h.
   induction h.
-  - eapply cumul_refl. eapply eq_term_upto_univ_rename. assumption.
+  - eapply cumul_refl. eapply compare_term_upto_univ_rename. assumption.
   - eapply cumul_red_l.
     + eapply red1_rename. all: try eassumption.
     + apply IHh.

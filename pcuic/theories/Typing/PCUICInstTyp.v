@@ -179,8 +179,8 @@ Proof.
       + eapply All2_map. apply forallb_All in Hp, Hp'. eapply (All2_All_mix_left Hp) in Xparam. 
         eapply (All2_All_mix_right Hp') in Xparam.
         eapply All2_impl. 1: tea. cbn; intros. destruct X as [[X [X''' X']] X'']. apply X'; eauto.
-      + unfold preturn. cbn. rewrite (All2_fold_length Xcontext). eapply Xreturn; eauto.
-        ++ rewrite <- (All2_fold_length Xcontext). rewrite <- inst_case_predicate_context_length.
+      + unfold preturn. cbn. rewrite (All2_length Xcontext). eapply Xreturn; eauto.
+        ++ rewrite <- (All2_length Xcontext). rewrite <- inst_case_predicate_context_length.
             rewrite inst_case_predicate_context_inst; eauto. 
             eapply closed_subst_ext. 2: symmetry; apply up_Upn.
             eapply closed_subst_app; eauto. rewrite inst_inst_case_context; eauto. 
@@ -199,19 +199,19 @@ Proof.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add. 
             rewrite inst_case_predicate_context_length.   
-            rewrite (All2_fold_length Xcontext). eassumption.
+            rewrite (All2_length Xcontext). eassumption.
     * apply X1; eauto. 
     * rename X2 into Hbrsbrs'.
       apply forallb_All in Hbrs, Hbrs'. apply (All2_All_mix_left Hbrs) in Hbrsbrs'. clear Hbrs.   
       apply (All2_All_mix_right Hbrs') in Hbrsbrs'. clear Hbrs'.
       apply All2_map. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
-      destruct Heqxy as [[Hbcontext Hbody] Heqxy]. rewrite (All2_fold_length Hbcontext).
+      destruct Heqxy as [[Hbcontext Hbody] Heqxy]. rewrite (All2_length Hbcontext).
       split; eauto. 
       apply andb_and in Hx. destruct Hx as [Hx Hbodyx].
       apply andb_and in Hy. destruct Hy as [Hy Hbodyy].
       rewrite test_context_k_closed_on_free_vars_ctx in Hx. 
       apply Heqxy; eauto.
-      + rewrite <- (All2_fold_length Hbcontext). 
+      + rewrite <- (All2_length Hbcontext). 
       rewrite <- (inst_case_branch_context_length p).
       rewrite inst_case_branch_context_inst; eauto. 
       eapply closed_subst_ext. 2: symmetry; apply up_Upn.
@@ -233,7 +233,7 @@ Proof.
         unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add. 
         rewrite inst_case_branch_context_length.   
-        rewrite (All2_fold_length Hbcontext). eassumption.
+        rewrite (All2_length Hbcontext). eassumption.
    - eapply cumul_Proj; try apply X0; eauto.
    - cbn. eapply cumul_Fix. cbn in HfreeA, HfreeB.         
      apply (All2_All_mix_left HfreeA) in X. clear HfreeA.   

@@ -1859,14 +1859,14 @@ Proof.
     *  rewrite shiftnP_add in clb. rewrite <- fix_context_length in clb. rewrite <- app_length in clb. tea.
 Defined.
 
-Lemma eq_term_upto_univ_inst Σ :
-  forall Re Rle napp u v σ,
-    Reflexive Re -> Reflexive Rle ->
-    eq_term_upto_univ_napp Σ Re Rle napp u v ->
-    eq_term_upto_univ_napp Σ Re Rle napp u.[σ] v.[σ].
+Lemma compare_term_upto_univ_inst Σ :
+  forall R pb napp u v σ,
+    Reflexive (R Conv) -> Reflexive (R pb) ->
+    compare_term_upto_univ_napp Σ R pb napp u v ->
+    compare_term_upto_univ_napp Σ R pb napp u.[σ] v.[σ].
 Proof.
-  intros Re Rle napp u v σ hRe hRle h.
-  induction u in v, napp, Re, Rle, hRe, hRle, σ, h |- * using term_forall_list_ind.
+  intros R pb napp u v σ hRe hRle h.
+  induction u in v, napp, pb, hRe, hRle, σ, h |- * using term_forall_list_ind.
   all: dependent destruction h.
   all: try solve [
     simpl ; constructor ; eauto
@@ -1880,7 +1880,7 @@ Proof.
   - simpl. constructor. all: eauto.
   * rewrite /inst_predicate.
     destruct X; destruct e as [? [? [ectx ?]]].
-    rewrite (All2_fold_length ectx). red.
+    rewrite (All2_length ectx). red.
     intuition auto; simpl; solve_all.
   * induction X0 in a, brs' |- *.
     + inversion a. constructor.
@@ -1889,8 +1889,8 @@ Proof.
       constructor; eauto.
       split; eauto.
       simpl.
-      rewrite (All2_fold_length a0).
-      now eapply e1.
+      rewrite (All2_length a0).
+      now eapply c.
   - simpl. constructor.
     apply All2_length in a as e. rewrite <- e.
     generalize #|m|. intro k.
@@ -1899,6 +1899,28 @@ Proof.
     apply All2_length in a as e. rewrite <- e.
     generalize #|m|. intro k.
     eapply All2_map. simpl. solve_all.
+Qed.
+
+Lemma inst_cumul_gen {Σ : global_env_ext} {wfΣ : wf Σ} {pb Γ Δ σ A B} :
+  usubst Γ σ Δ ->
+  is_open_term Γ A ->
+  is_open_term Γ B ->
+  on_ctx_free_vars (shiftnP #|Γ| xpred0) Γ ->
+  Σ ;;; Γ |- A <=[pb] B ->
+  Σ ;;; Δ |- A.[σ] <=[pb] B.[σ].
+Proof.
+  intros hσ onA onB onΓ h.
+  induction h.
+  - eapply cumul_refl.
+    eapply compare_term_upto_univ_inst. all:try typeclasses eauto. assumption.
+  - eapply red_cumul_cumul.
+    + eapply red1_inst; tea.
+    + apply IHh; tea.
+      eapply red1_on_free_vars; tea.
+  - eapply red_cumul_cumul_inv.
+    + eapply red1_inst; tea.
+    + eapply IHh; eauto.
+      eapply red1_on_free_vars; tea.
 Qed.
 
 Lemma inst_conv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
@@ -1909,18 +1931,7 @@ Lemma inst_conv {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
   Σ ;;; Γ |- A = B ->
   Σ ;;; Δ |- A.[σ] = B.[σ].
 Proof.
-  intros hσ onA onB onΓ h.
-  induction h.
-  - eapply cumul_refl.
-    eapply eq_term_upto_univ_inst. all:try typeclasses eauto. assumption.
-  - eapply red_conv_conv.
-    + eapply red1_inst; tea.
-    + apply IHh; tea.
-      eapply red1_on_free_vars; tea. 
-  - eapply red_conv_conv_inv.
-    + eapply red1_inst; tea.
-    + eapply IHh; eauto.
-      eapply red1_on_free_vars; tea. 
+  apply inst_cumul_gen.
 Qed.
 
 Lemma inst_cumul {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
@@ -1931,18 +1942,7 @@ Lemma inst_cumul {Σ : global_env_ext} {wfΣ : wf Σ} {Γ Δ σ A B} :
   Σ ;;; Γ |- A <= B ->
   Σ ;;; Δ |- A.[σ] <= B.[σ].
 Proof.
-  intros hσ onA onB onΓ h.
-  induction h.
-  - eapply cumul_refl.
-    eapply eq_term_upto_univ_inst. all:try typeclasses eauto. assumption.
-  - eapply red_cumul_cumul.
-    + eapply red1_inst; tea.
-    + apply IHh; tea.
-      eapply red1_on_free_vars; tea.
-  - eapply red_cumul_cumul_inv.
-    + eapply red1_inst; tea.
-    + eapply IHh; eauto.
-      eapply red1_on_free_vars; tea.
+  apply inst_cumul_gen.
 Qed.
 
 Ltac inv_on_free_vars_decl :=

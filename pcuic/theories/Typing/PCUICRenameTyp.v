@@ -254,10 +254,10 @@ Proof.
        + eapply All2_map. apply forallb_All in Hp, Hp'. eapply (All2_All_mix_left Hp) in Xparam. 
          eapply (All2_All_mix_right Hp') in Xparam.
          eapply All2_impl. 1: tea. cbn; intros. destruct X as [[X [X''' X']] X'']. apply X'; eauto.
-       + unfold preturn. cbn. rewrite (All2_fold_length Xcontext). eapply Xreturn; eauto.
+       + unfold preturn. cbn. rewrite (All2_length Xcontext). eapply Xreturn; eauto.
          ++ rewrite app_context_length.
             eapply urenaming_ext; try apply shiftnP_add; try reflexivity. 
-            rewrite <- (All2_fold_length Xcontext).
+            rewrite <- (All2_length Xcontext).
             rewrite <- inst_case_predicate_context_length.
             rewrite test_context_k_closed_on_free_vars_ctx in Hcontext. 
             rewrite inst_case_predicate_context_rename; eauto. 
@@ -274,7 +274,7 @@ Proof.
             unfold is_open_term. rewrite app_length.
             rewrite <- shiftnP_add. 
             rewrite inst_case_predicate_context_length.   
-            rewrite (All2_fold_length Xcontext). eassumption.
+            rewrite (All2_length Xcontext). eassumption.
          ++ rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
             unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
             +++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.
@@ -285,14 +285,14 @@ Proof.
        apply forallb_All in Hbrs, Hbrs'. apply (All2_All_mix_left Hbrs) in Hbrsbrs'. clear Hbrs.   
        apply (All2_All_mix_right Hbrs') in Hbrsbrs'. clear Hbrs'.
        apply All2_map. eapply All2_impl. 1: tea. cbn; intros x y [[Hx Heqxy ] Hy].
-       destruct Heqxy as [[Hbcontext Hbody] Heqxy]. rewrite (All2_fold_length Hbcontext).
+       destruct Heqxy as [[Hbcontext Hbody] Heqxy]. rewrite (All2_length Hbcontext).
        split; eauto. 
        apply andb_and in Hx. destruct Hx as [Hx Hbodyx].
        apply andb_and in Hy. destruct Hy as [Hy Hbodyy].
        apply Heqxy; eauto.
        + rewrite app_context_length.
        eapply urenaming_ext; try apply shiftnP_add; try reflexivity. 
-       rewrite <- (All2_fold_length Hbcontext).
+       rewrite <- (All2_length Hbcontext).
        rewrite <- (inst_case_branch_context_length p).
        rewrite test_context_k_closed_on_free_vars_ctx in Hx. 
        rewrite inst_case_branch_context_rename; eauto. 
@@ -309,7 +309,7 @@ Proof.
         unfold is_open_term. rewrite app_length.
         rewrite <- shiftnP_add. 
         rewrite inst_case_branch_context_length.    
-        rewrite (All2_fold_length Hbcontext). eassumption.
+        rewrite (All2_length Hbcontext). eassumption.
       + rewrite test_context_k_closed_on_free_vars_ctx in Hcontext.
         unfold inst_case_predicate_context. apply on_free_vars_ctx_inst_case_context; eauto.
        ++ eapply All_forallb. apply All_map. apply forallb_All in Hp; eapply All_impl. 1: tea.

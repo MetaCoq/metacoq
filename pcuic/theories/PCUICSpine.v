@@ -79,7 +79,6 @@ Lemma eq_context_alpha_conv {cf} {Σ} {wfΣ : wf Σ} {Γ Γ'} :
 Proof.
   intros a.
   eapply eq_context_upto_empty_conv_context.
-  eapply All2_fold_All2.
   eapply (All2_impl a).
   intros ?? []; constructor; subst; auto; reflexivity.
 Qed.
@@ -3209,10 +3208,10 @@ Section WfEnv.
   Lemma ctx_inst_eq_context {Γ Δ : context} {args args'} :
     wf_local Σ (Γ ,,, List.rev Δ) ->
     PCUICTyping.ctx_inst
-          (fun (Σ : global_env_ext) (Γ : context) (u A : term) =>
-          forall v : term, upto_names' u v -> Σ;;; Γ |- v : A) Σ Γ args Δ ->  
+        (fun (Σ : global_env_ext) (Γ : context) (u A : term) =>
+        forall v : term, upto_names u v -> Σ;;; Γ |- v : A) Σ Γ args Δ ->  
     ctx_inst Σ Γ args Δ -> 
-    All2 upto_names' args args' ->
+    All2 upto_names args args' ->
     ctx_inst Σ Γ args' Δ.
   Proof.
     intros wf ctxi ctxi' a.

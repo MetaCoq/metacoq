@@ -56,11 +56,11 @@ Qed.
 Lemma leq_term_subset {cf:checker_flags} Σ ctrs ctrs' t u
   : ConstraintSet.Subset ctrs ctrs' -> leq_term Σ ctrs t u -> leq_term Σ ctrs' t u.
 Proof.
-  intro H. apply eq_term_upto_univ_impl; auto.
+  intro H. apply compare_term_upto_univ_impl; auto.
   - intros t' u'. eapply eq_universe_subset; assumption.
-  - intros t' u'. eapply leq_universe_subset; assumption.
   - intros t' u' eq. apply eq_universe_leq_universe'.
     eapply eq_universe_subset; eauto.
+  - intros t' u'. cbn. eapply leq_universe_subset; assumption.
 Qed.
 
 (** * Weakening lemmas w.r.t. the global environment *)
@@ -106,7 +106,7 @@ Lemma eq_term_subset {cf:checker_flags} Σ φ φ' t t'
   : ConstraintSet.Subset φ φ'
     -> eq_term Σ φ t t' -> eq_term Σ φ' t t'.
 Proof.
-  intro H. apply eq_term_upto_univ_impl; auto.
+  intro H. apply compare_term_upto_univ_impl; auto.
   all: intros u u'; eapply eq_universe_subset; assumption.
 Qed.
 
@@ -261,12 +261,12 @@ Proof.
 Qed.
 
 (** The definition of [R_global_instance] is defined so that it is weakenable. *)
-Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' gr napp :
+Lemma R_global_instance_weaken_env {cf:checker_flags} Σ Σ' R R' pb pb' gr napp :
   wf Σ' -> extends Σ Σ' ->
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  RelationClasses.subrelation Re Rle' ->
-  subrelation (R_global_instance Σ Re Rle gr napp) (R_global_instance Σ' Re' Rle' gr napp).
+  RelationClasses.subrelation (R Conv) (R' Conv) ->
+  RelationClasses.subrelation (R pb) (R' pb') ->
+  RelationClasses.subrelation (R Conv) (R' pb') ->
+  subrelation (R_global_instance Σ R pb gr napp) (R_global_instance Σ' R' pb' gr napp).
 Proof.
   intros wfΣ ext he hle hele t t'.
   rewrite /R_global_instance /R_opt_variance.
@@ -282,40 +282,29 @@ Proof.
 Qed.
 
 #[global]
-Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' Re Re' Rle Rle' napp :
+Instance eq_term_upto_univ_weaken_env {cf:checker_flags} Σ Σ' R R' pb pb' napp :
   wf Σ' -> extends Σ Σ' ->
-  RelationClasses.subrelation Re Re' ->
-  RelationClasses.subrelation Rle Rle' ->
-  RelationClasses.subrelation Re Rle' ->
-  CRelationClasses.subrelation (eq_term_upto_univ_napp Σ Re Rle napp)
-    (eq_term_upto_univ_napp Σ' Re' Rle' napp).
+  RelationClasses.subrelation (R Conv) (R' Conv) ->
+  RelationClasses.subrelation (R pb) (R' pb') ->
+  RelationClasses.subrelation (R Conv) (R' pb') ->
+  CRelationClasses.subrelation (compare_term_upto_univ_napp Σ R pb napp)
+    (compare_term_upto_univ_napp Σ' R' pb' napp).
 Proof.
   intros wfΣ ext he hele hle t t'.
-  induction t in napp, t', Rle, Rle', hle, hele |- * using PCUICInduction.term_forall_list_ind;
-    try (inversion 1; subst; constructor;
-         eauto using R_universe_instance_impl'; fail).
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
+  induction t in napp, t', pb, pb', hle, hele |- * using PCUICInduction.term_forall_list_ind.
+  all: inversion 1; subst; constructor.
+  all: try solve [eauto using R_universe_instance_impl'].
+  - eapply All2_impl'; tea.
     eapply All_impl; eauto.
-  - inversion 1; subst; constructor.
-    eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
-  - inversion 1; subst; constructor.
-    eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
-  - inversion 1; subst; destruct X as [? [? ?]]; constructor; eauto.
-    * destruct X2 as [? [? ?]].
-      constructor; intuition auto; solve_all.
-      + eauto using R_universe_instance_impl'.
-    * eapply All2_impl'; tea.
-      eapply All_impl; eauto.
-      cbn. intros x [? ?] y [? ?]. split; eauto.
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
-  - inversion 1; subst; constructor.
-    eapply All2_impl'; tea.
-    eapply All_impl; eauto.
-    cbn. intros x [? ?] y [[[? ?] ?] ?]. repeat split; eauto.
+  - eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
+  - eapply R_global_instance_weaken_env. 6:eauto. all:eauto.
+  - destruct X as [? [? ?]].
+    destruct X2 as [? [? ?]].
+    constructor; intuition auto; solve_all.
+    eauto using R_universe_instance_impl'.
+  - solve_all.
+  - solve_all.
+  - solve_all.
 Qed.
 
 Lemma weakening_env_red1 `{CF:checker_flags} Σ Σ' Γ M N :

@@ -35,7 +35,7 @@ Inductive expanded (Γ : list nat) : term -> Prop :=
         expanded Γ (tCase ci type_info discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded Γ t -> expanded Γ (tProj proj t)
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) args d : 
-  Forall (fun d => let ctx := rev_map (fun  d => 1 + d.(rarg)) mfix in expanded (ctx ++ Γ) d.(dbody)) mfix ->
+  Forall (fun d => isLambda d.(dbody) /\ let ctx := rev_map (fun  d => 1 + d.(rarg)) mfix in expanded (ctx ++ Γ) d.(dbody)) mfix ->
   Forall (expanded Γ) args ->
   args <> [] ->
   nth_error mfix idx = Some d ->
@@ -98,7 +98,7 @@ Lemma expanded_ind :
     (args : list term) (d : def term),
   Forall
     (fun d0 : def term =>
-      let ctx := rev_map (fun d1 : def term => 1 + rarg d1) mfix in
+      isLambda d0.(dbody) /\ let ctx := rev_map (fun d1 : def term => 1 + rarg d1) mfix in
       expanded Σ (ctx ++ Γ) (dbody d0)) mfix ->
   Forall
       (fun d0 : def term =>
@@ -138,7 +138,7 @@ Proof.
   - assert (Forall (P Γ) args). { clear - H0 f. induction H0; econstructor; eauto. }
     eapply HFix; eauto.
     revert H. clear - f.
-    generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
+    generalize mfix at 1 3. intros mfix0 H. induction H; econstructor; cbn in *; intuition eauto; split.
   - eapply HCoFix; eauto.
     revert H. clear - f.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
@@ -316,7 +316,7 @@ Proof.
     rewrite /id. rewrite app_assoc. apply H2.
   - rewrite subst_mkApps. cbn.
     eapply expanded_tFix.
-    + solve_all.
+    + solve_all. now eapply isLambda_subst.
       specialize (a0 
       (rev_map (fun d0 : def term => S (rarg d0))
       (map (map_def (subst a k) (subst a (#|mfix| + k))) mfix) ++ Γ') (#|mfix| + k)).
@@ -392,6 +392,8 @@ Lemma subst_instance_isRel t u : isRel t@[u] = isRel t.
 Proof. destruct t => //. Qed.
 Lemma subst_instance_isFix t u : isFix t@[u] = isFix t.
 Proof. destruct t => //. Qed.
+Lemma subst_instance_isLambda t u : isLambda t@[u] = isLambda t.
+Proof. destruct t => //. Qed.
 
 Lemma expanded_subst_instance Σ Γ t u : expanded Σ Γ t -> expanded Σ Γ t@[u].
 Proof.
@@ -404,7 +406,7 @@ Proof.
     rewrite subst_instance_isConstruct subst_instance_isFix subst_instance_isRel //.
   - econstructor; eauto. cbn. solve_all.
     solve_all. 
-  - cbn; eapply expanded_tFix. solve_all. 
+  - cbn; eapply expanded_tFix. solve_all. rewrite subst_instance_isLambda //.
     rewrite rev_map_spec map_map_compose -rev_map_spec //.
     solve_all. now destruct args => //.
     rewrite nth_error_map H4 //.

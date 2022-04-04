@@ -81,7 +81,7 @@ Section isEtaExp.
     | tLetIn na b b' => isEtaExp b && isEtaExp b'
     | tCase ind c brs => isEtaExp c && forallb_InP brs (fun x H => isEtaExp x.2)
     | tProj p c => isEtaExp c
-    | tFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
+    | tFix mfix idx => forallb_InP mfix (fun x H => isLambda x.(dbody) && isEtaExp x.(dbody))
     | tCoFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
     | tBox => true
     | tVar _ => true
@@ -180,13 +180,17 @@ Section isEtaExp.
   Lemma etaExp_csubst a k b : 
     isEtaExp a -> isEtaExp b -> isEtaExp (ECSubst.csubst a k b).
   Proof.
-    funelim (isEtaExp b); try simp_eta; eauto;
+    funelim (isEtaExp b); cbn -[isEtaExp]; try simp_eta; eauto;
       try toAll; repeat solve_all.
     - intros. simp isEtaExp ; cbn. destruct Nat.compare => //. simp_eta in H.
     - move/andP: H2 => [] etab etab'.
       apply/andP. split; eauto.
     - rtoProp. intuition eauto.
       solve_all.
+    - move/andP: b => [] etaexp h.
+      apply/andP; split.
+      now eapply isLambda_csubst.
+      eapply a0 => //.
     - move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
@@ -215,7 +219,7 @@ Section isEtaExp.
   Qed.
   
   Lemma isEtaExp_fix_subst mfix : 
-    forallb (isEtaExp ∘ dbody) mfix ->
+    forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
     forallb isEtaExp (EGlobalEnv.fix_subst mfix).
   Proof.
     unfold EGlobalEnv.fix_subst. generalize #|mfix|.
@@ -235,7 +239,7 @@ Section isEtaExp.
   Qed.
   
   Lemma isEtaExp_cunfold_fix mfix idx n f : 
-    forallb (isEtaExp ∘ dbody) mfix ->
+    forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
     EGlobalEnv.cunfold_fix mfix idx = Some (n, f) ->
     isEtaExp f.
   Proof.
@@ -246,7 +250,7 @@ Section isEtaExp.
     apply isEtaExp_substl.
     now apply isEtaExp_fix_subst.
     eapply forallb_nth_error in heta; tea.
-    now erewrite heq in heta.
+    erewrite heq in heta. now move/andP: heta.
   Qed.
   
   Lemma isEtaExp_cunfold_cofix mfix idx n f : 
@@ -381,6 +385,7 @@ Proof.
   - eapply isEtaExp_app_extends; tea.
   - eapply In_All in H0. solve_all.
   - eapply In_All in H; solve_all.
+    move/andP: b => [] -> /=. eauto.
   - eapply In_All in H; solve_all.
   - eapply In_All in H; solve_all.
     rewrite isEtaExp_Constructor //. rtoProp; intuition auto.
@@ -430,7 +435,8 @@ Inductive expanded : term -> Prop :=
 | expanded_tCase (ind : inductive) (pars : nat) (discr : term) (branches : list (list name × term)) : 
     expanded discr -> Forall (fun br => expanded br.2) branches -> expanded (tCase (ind, pars) discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded t -> expanded (tProj proj t)
-| expanded_tFix (mfix : mfixpoint term) (idx : nat) :  Forall (fun d => expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
+| expanded_tFix (mfix : mfixpoint term) (idx : nat) :  
+  Forall (fun d => isLambda d.(dbody) /\ expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : Forall (fun d => expanded d.(dbody)) mfix -> expanded (tCoFix mfix idx)
 | expanded_tConstruct_app ind idx mind idecl cname c args :
     declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
@@ -466,7 +472,7 @@ forall (Σ : global_declarations) (P : term -> Prop),
 (forall (proj : projection) (t : term),
  expanded Σ t -> P t -> P (tProj proj t)) ->
 (forall (mfix : mfixpoint term) (idx : nat),
- Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix  -> P (tFix mfix idx)) ->
+ Forall (fun d : def term => isLambda (dbody d) /\ expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix  -> P (tFix mfix idx)) ->
 (forall (mfix : mfixpoint term) (idx : nat),
  Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix ->
  P (tCoFix mfix idx)) ->
@@ -484,7 +490,7 @@ Proof.
   - eapply H1; eauto. induction H12; econstructor; cbn in *; eauto.
   - eapply H4; eauto. induction H13; econstructor; cbn in *; eauto.
   - eapply H6; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H8; eauto. induction H12; econstructor; cbn in *; eauto.
+  - eapply H8; eauto. induction H12; econstructor; cbn in *; intuition eauto.
   - eapply H9; eauto. induction H12; econstructor; cbn in *; eauto.
   - eapply H10; eauto. clear - H14 f. induction H14; econstructor; cbn in *; eauto.
 Qed.
@@ -545,7 +551,7 @@ Proof.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2. 
     eapply In_All in H0. solve_all.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
-    eapply In_All in H. solve_all.
+    eapply In_All in H. rtoProp; intuition auto; solve_all; now move/andP: b.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.
@@ -568,6 +574,7 @@ Proof.
     (try eapply forallb_Forall); 
     eauto).
   - eapply isEtaExp_mkApps_intro; eauto. solve_all.
+  - solve_all. rewrite H //.
   - rewrite isEtaExp_Constructor. eapply andb_true_iff.
     split. 2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.

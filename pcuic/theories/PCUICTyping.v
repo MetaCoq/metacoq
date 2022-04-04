@@ -104,6 +104,7 @@ Definition check_one_fix d :=
 
 Definition wf_fixpoint_gen
   (lookup: kername -> option global_decl) mfix :=
+  forallb (isLambda ∘ dbody) mfix &&
   let checks := map check_one_fix mfix in
   match map_option_out checks with
   | Some (ind :: inds) =>

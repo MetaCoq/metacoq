@@ -649,6 +649,11 @@ Proof.
 
 From MetaCoq.Erasure Require Import EEtaExpanded.
 
+Lemma isLambda_optimize Σ t : isLambda t -> isLambda (optimize Σ t).
+Proof. destruct t => //. Qed.
+Lemma isBox_optimize Σ t : isBox t -> isBox (optimize Σ t).
+Proof. destruct t => //. Qed.
+
 Lemma optimize_expanded Σ t : expanded Σ t -> expanded Σ (optimize Σ t).
 Proof.
   induction 1 using expanded_ind.
@@ -672,6 +677,9 @@ Proof.
   - cbn.
     destruct inductive_isprop_and_pars as [[[|] _]|] => /= //.
     constructor. all:constructor; auto.
+  - cbn. eapply expanded_tFix. solve_all.
+    rewrite isLambda_optimize //. now left.
+    rewrite isBox_optimize //. now right.
   - eapply expanded_tConstruct_app; tea.
     now len. solve_all.
 Qed.

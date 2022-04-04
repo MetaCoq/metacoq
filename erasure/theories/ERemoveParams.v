@@ -190,7 +190,8 @@ Section strip.
     unfold test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
     
-    - destruct Nat.compare => //. 
+    - destruct Nat.compare => //.
+    - f_equal. solve_all. move/andP: b => [] _ he. solve_all.
     - specialize (H a k H1 H2).
       rewrite !csubst_mkApps in H2 *.
       rewrite isEtaExp_mkApps_napp // in H3.
@@ -318,7 +319,7 @@ Section strip.
 
   Lemma strip_cunfold_fix mfix idx n f : 
     forallb (closedn 0) (fix_subst mfix) ->
-    forallb (isEtaExp Σ ∘ dbody) mfix ->
+    forallb (fun d =>  (isLambda (dbody d) || isBox (dbody d)) && isEtaExp Σ (dbody d)) mfix ->
     cunfold_fix mfix idx = Some (n, f) ->
     cunfold_fix (map (map_def strip) mfix) idx = Some (n, strip f).
   Proof.
@@ -326,10 +327,11 @@ Section strip.
     unfold cunfold_fix.
     rewrite nth_error_map.
     destruct nth_error eqn:heq.
-    intros [= <- <-] => /=. f_equal.
+    intros [= <- <-] => /=. f_equal. f_equal.
     rewrite strip_substl //.
     now apply isEtaExp_fix_subst.
-    solve_all. now eapply nth_error_all in heta; tea.
+    solve_all. eapply nth_error_all in heta; tea. cbn in heta.
+    rtoProp; intuition auto.
     f_equal. f_equal. apply strip_fix_subst.
     discriminate.
   Qed.
@@ -1221,6 +1223,8 @@ Proof.
   now eapply strip_wellformed.
 Qed.
 
+
+
 Lemma strip_expanded {Σ : GlobalContextMap.t} {t} : expanded Σ t -> expanded (strip_env Σ) (strip Σ t).
 Proof.
   induction 1 using expanded_ind.
@@ -1228,6 +1232,8 @@ Proof.
   - rewrite strip_mkApps_etaexp. now eapply expanded_isEtaExp.
     eapply expanded_mkApps_expanded => //. solve_all.
   - destruct proj as [[] ?]; simp_strip. constructor; eauto.
+  - simp_strip; constructor; eauto. solve_all. left.
+    rewrite -strip_isLambda //. rewrite -strip_isBox. now right.
   - rewrite strip_mkApps // /=.
     rewrite (lookup_inductive_pars_spec (proj1 (proj1 H))).
     eapply expanded_tConstruct_app.

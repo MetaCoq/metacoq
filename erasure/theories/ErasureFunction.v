@@ -1919,9 +1919,11 @@ Proof.
            eapply expanded_tFix.
            3:{ destruct args; cbn in *; congruence. }
           { rewrite erase_mfix_eq. solve_all. eapply All_map_All.
-            intros. eapply H0. intros. cbn in H |- *. destruct H.
-            eapply apply_expanded. eapply e1. eauto.
-            2: reflexivity. 2: eauto.
+            intros. eapply H0. intros. cbn in H |- *. destruct H as [[isl H] H'].
+            split. 3:reflexivity.
+            { eapply erases_isLambda. unshelve eapply erases_erase; tea. exact isl. }
+            eapply apply_expanded. eapply H'. eauto.
+            2: eauto.
             rewrite !rev_map_spec. do 2 f_equal. clear. 
             generalize (erase_obligation_13 Σ Γ mfix idx Hyp0).
             generalize (fix_context mfix). generalize mfix. clear.
@@ -2222,11 +2224,12 @@ Lemma expanded_weakening_global Σ deps deps' Γ t :
 Proof.
   intros hs.
   eapply expanded_ind; intros; try solve [econstructor; eauto].
-  eapply expanded_tConstruct_app; tea.
-  destruct H. split; tea.
-  destruct d; split => //.
-  cbn in *. red in H.
-  eapply lookup_erase_global in H; tea.
+  - eapply expanded_tFix; tea. solve_all.
+  - eapply expanded_tConstruct_app; tea.
+    destruct H. split; tea.
+    destruct d; split => //.
+    cbn in *. red in H.
+    eapply lookup_erase_global in H; tea.
 Qed.
 
 Lemma expanded_erase (cf := config.extraction_checker_flags) {Σ : wf_env} univs wfΣ t wtp :

@@ -214,7 +214,7 @@ Section fix_sigma.
     Unshelve.
     - eapply red_welltyped; sq.
       3:eapply Relation_Properties.clos_rtn1_rt in r; eassumption. all:eauto.
-  Qed.
+  Defined.
 
   Global Instance wf_hnf_subterm : WellFounded hnf_subterm_rel.
   Proof.
@@ -265,7 +265,7 @@ Section fix_sigma.
     Unshelve. intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto. 
               eapply redp_red in redt'; eapply red_welltyped; sq; eauto.
     Unshelve. eauto.  
-  Qed.
+  Defined.
 
   Global Instance wf_redp_subterm : WellFounded redp_subterm_rel.
   Proof.

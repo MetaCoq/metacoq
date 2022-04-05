@@ -519,11 +519,11 @@ Section Erase.
         E.tProj p c'
       | tFix mfix n :=
         let Γ' := (fix_context mfix ++ Γ)%list in
-        let mfix' := erase_mfix Γ' mfix _ in
+        let mfix' := erase_fix Γ' mfix _ in
         E.tFix mfix' n
       | tCoFix mfix n :=
         let Γ' := (fix_context mfix ++ Γ)%list in
-        let mfix' := erase_mfix Γ' mfix _ in
+        let mfix' := erase_cofix Γ' mfix _ in
         E.tCoFix mfix' n }
       (* erase Γ (tPrim p) Ht _ := E.tPrim (erase_prim p) *)
     } } 
@@ -545,14 +545,31 @@ Section Erase.
       let br' := erase (Γ ,,, inst_case_branch_context p br) (bbody br) _ in
       let brs' := erase_brs Γ p brs _ in
       (erase_context br.(bcontext), br') :: brs' }
-  where erase_mfix (Γ : context) (mfix : mfixpoint term)
+  
+  where erase_fix (Γ : context) (mfix : mfixpoint term)
     (Ht : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 ->
-          ∥ All (fun d => welltyped Σ0 Γ d.(dbody)) mfix ∥) : E.mfixpoint E.term :=
-  { erase_mfix Γ [] _ := [];
-    erase_mfix Γ (d :: mfix) Hmfix := 
+          ∥ All (fun d => isLambda d.(dbody) /\ welltyped Σ0 Γ d.(dbody)) mfix ∥) : E.mfixpoint E.term :=
+  { erase_fix Γ [] _ := [];
+    erase_fix Γ (d :: mfix) Hmfix := 
       let dbody' := erase Γ d.(dbody) _ in
+      let dbody' := if isBox dbody' then
+        match d.(dbody) with
+        (* We ensure that all fixpoint members start with a lambda, even a dummy one if the 
+           recursive definition is erased. *)
+        | tLambda na _ _ => E.tLambda (binder_name na) E.tBox
+        | _ => dbody'
+        end else dbody' in
       let d' := {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |} in
-      d' :: erase_mfix Γ mfix _ }
+      d' :: erase_fix Γ mfix _ }
+
+  where erase_cofix (Γ : context) (mfix : mfixpoint term)
+      (Ht : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 ->
+            ∥ All (fun d => welltyped Σ0 Γ d.(dbody)) mfix ∥) : E.mfixpoint E.term :=
+    { erase_cofix Γ [] _ := [];
+      erase_cofix Γ (d :: mfix) Hmfix := 
+        let dbody' := erase Γ d.(dbody) _ in
+        let d' := {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |} in
+        d' :: erase_cofix Γ mfix _ }
     .
   Proof. 
     all: try clear b'; try clear f';
@@ -590,13 +607,16 @@ Section Erase.
     - eapply inversion_Proj in Ht as (? & ? & ? & ? & ? & ? & ? & ? & ?); auto.
       eexists; eauto.
     - eapply inversion_Fix in Ht as (? & ? & ? & ? & ? & ?); auto.
-      sq. eapply All_impl; tea. cbn. intros d Ht; now eexists.
+      sq. destruct p. move/andP: i => [wffix _].
+      solve_all. now eexists.
     - eapply inversion_CoFix in Ht as (? & ? & ? & ? & ? & ?); auto.
       sq. eapply All_impl; tea. cbn. intros d Ht; now eexists.
     - sq. now depelim X.
     - sq. now depelim X.
     - sq. now depelim X.
     - sq. now depelim X.
+    - sq. now depelim X.
+    - clear dbody'0. specialize (Hmfix _ wfΣ'). sq. now depelim X.
     - sq. now depelim X.
     - sq. now depelim X.
   Qed.
@@ -622,20 +642,24 @@ Lemma erase_irrel (Σ : wf_env_ext) :
   (forall Γ t wt, forall wt', erase Σ Γ t wt = erase Σ Γ t wt') ×
   (forall Γ l wt, forall wt', erase_terms Σ Γ l wt = erase_terms Σ Γ l wt') ×
   (forall Γ p l wt, forall wt', erase_brs Σ Γ p l wt = erase_brs Σ Γ p l wt') ×
-  (forall Γ l wt, forall wt', erase_mfix Σ Γ l wt = erase_mfix Σ Γ l wt').
+  (forall Γ l wt, forall wt', erase_fix Σ Γ l wt = erase_fix Σ Γ l wt') ×
+  (forall Γ l wt, forall wt', erase_cofix Σ Γ l wt = erase_cofix Σ Γ l wt').
 Proof.
   apply: (erase_elim Σ
     (fun Γ t wt e => 
       forall wt' : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 ->  welltyped Σ0 Γ t, e = erase Σ Γ t wt')
     (fun Γ l awt e => forall wt', e = erase_terms Σ Γ l wt')
     (fun Γ p l awt e => forall wt', e = erase_brs Σ Γ p l wt')
-    (fun Γ l awt e => forall wt', e = erase_mfix Σ Γ l wt')); clear.
+    (fun Γ l awt e => forall wt', e = erase_fix Σ Γ l wt')
+    (fun Γ l awt e => forall wt', e = erase_cofix Σ Γ l wt')); clear.
   all:intros *; intros; simp_erase.
   all:try simp erase; try iserasableb_irrel; simp_erase => //.
   all:try clear he Heq.
   all:try bang.
   all:try solve [cbn; f_equal; eauto].
   all:try solve [cbn; repeat (f_equal; eauto)].
+  cbn. f_equal. f_equal. now rewrite (H (erase_obligation_19 Σ Γ d mfix wt')).
+  now rewrite (H0 (erase_obligation_20 Σ Γ d mfix wt')).
 Qed.
 
 Section map_All.
@@ -688,6 +712,7 @@ Proof.
       if is_box e then ∥ isErasable Σ Γ t ∥ else ∥ isErasable Σ Γ t ∥ -> False)
     (fun Γ l awt e => True)
     (fun Γ p l awt e => True)
+    (fun Γ l awt e => True)
     (fun Γ l awt e => True)); intros.
 
   all:try discriminate; auto.
@@ -723,9 +748,15 @@ Proof.
                        (erase_context (bcontext x) = x'.1)) l e)
     (fun Γ l awt e => All2
     (fun (d : def term) (d' : E.def E.term) =>
-     (binder_name (dname d) = E.dname d') *
-     (rarg d = E.rarg d'
-      × Σ;;; Γ |- dbody d ⇝ℇ E.dbody d')) l e)); intros.
+     [× binder_name (dname d) = E.dname d',
+        rarg d = E.rarg d',
+        isLambda (dbody d), E.isLambda (E.dbody d') &
+        Σ;;; Γ |- dbody d ⇝ℇ E.dbody d']) l e)
+    (fun Γ l awt e => All2
+      (fun (d : def term) (d' : E.def E.term) =>
+        (binder_name (dname d) = E.dname d') *
+        (rarg d = E.rarg d'
+         × Σ;;; Γ |- dbody d ⇝ℇ E.dbody d')) l e)) ; intros.
     all:try discriminate.
     all:try bang.
     all:try match goal with 
@@ -736,24 +767,40 @@ Proof.
     all: try solve [constructor; eauto].
   all:try destruct Σ.(wf_env_ext_wf) as [wfΣ].
   all: cbn in *; assert (wfΣ' : abstract_env_rel' Σ Σ) by reflexivity;
-  pose proof (abstract_env_ext_wf _ wfΣ') as [wf];
+  try constructor; auto;
+  try pose proof (abstract_env_ext_wf _ wfΣ') as [wf];
   specialize_Σ wfΣ'.
   
-  - constructor. clear Heq.
+  - clear Heq.
     eapply nisErasable_Propositional in Ht; auto.
 
   - cbn.
-    constructor; auto. 
     destruct (Ht _ wfΣ').
     destruct (inversion_Case _ _ X0) as [mdecl [idecl []]]; eauto.
     eapply elim_restriction_works; eauto.
     intros isp. eapply isErasable_Proof in isp. eauto.
 
-  - constructor; auto. clear Heq.
+  - clear Heq.
     destruct (Ht _ wfΣ') as [? Ht'].
     clear H. eapply inversion_Proj in Ht' as (?&?&?&?&?&?&?&?&?&?); auto.
     eapply elim_restriction_works_proj; eauto. exact d.
     intros isp. eapply isErasable_Proof in isp; eauto.
+
+  - cbn.
+    pose proof Hmfix as Hmfix'.
+    specialize (Hmfix' Σ eq_refl). destruct Hmfix'.
+    depelim X0. destruct a.
+    assert (exists na ty bod, dbody d = tLambda na ty bod).
+    { clear -H0. destruct (dbody d) => //. now do 3 eexists. }
+    destruct H2 as [na [ty [bod eq]]]. rewrite {1 3}eq /= //.
+    move: H. rewrite {1}eq.
+    set (et := erase _ _ _ _). clearbody et.
+    intros He. depelim He. cbn.
+    split => //. cbn. rewrite eq. now constructor.
+    split => //. cbn. rewrite eq.
+    destruct H1.
+    eapply Is_type_lambda in X1; tea. 2:pcuic. destruct X1.
+    now constructor.
 Qed.
 
 Transparent wf_reduction.
@@ -1793,13 +1840,33 @@ Proof.
   rewrite -H. eapply erase_irrel.
 Qed.
 
-Lemma erase_mfix_eq Σ Γ ts wt : 
-  erase_mfix Σ Γ ts wt = map_All (fun d wt => 
+Lemma erase_fix_eq Σ Γ ts wt : 
+  erase_fix Σ Γ ts wt = map_All (fun d wt => 
+    let dbody' := erase Σ _ (dbody d) (fun Σ abs => proj2 (wt Σ abs)) in
+    let dbody' := if isBox dbody' then
+        match d.(dbody) with
+        | tLambda na _ _ => E.tLambda (binder_name na) E.tBox
+        | _ => dbody'
+        end else dbody' 
+    in
+    {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |}) ts wt.
+Proof.
+  funelim (map_All _ ts wt); cbn; auto.
+  f_equal => //. f_equal => //.
+  rewrite (fst (erase_irrel _) _ _ _ (fun (Σ0 : global_env_ext) (abs : Σ0 = Σ) =>
+  (map_All_obligation_1 x xs h Σ0 abs).p2)).
+  destruct erase => //.
+  rewrite -H. eapply erase_irrel.
+Qed.
+
+Lemma erase_cofix_eq Σ Γ ts wt : 
+  erase_cofix Σ Γ ts wt = map_All (fun d wt => 
     let dbody' := erase Σ _ (dbody d) wt in
     {| E.dname := d.(dname).(binder_name); E.rarg := d.(rarg); E.dbody := dbody' |}) ts wt.
 Proof.
   funelim (map_All _ ts wt); cbn; auto.
-  f_equal => //. f_equal => //. apply erase_irrel.
+  f_equal => //. f_equal => //.
+  apply erase_irrel.
   rewrite -H. eapply erase_irrel.
 Qed.
 
@@ -1811,6 +1878,7 @@ Proof.
     (fun Γ t wt e => ~ (PCUICEtaExpand.isConstruct t || PCUICEtaExpand.isFix t || PCUICEtaExpand.isRel t) -> ~ (isConstruct e || isFix e || isRel e))
     (fun Γ l awt e => True)
     (fun Γ p l awt e => True)
+    (fun Γ l awt e => True)
     (fun Γ l awt e => True)); intros => //. bang.
 Qed.
 
@@ -1841,6 +1909,9 @@ Proof.
     + eexists. reflexivity.
     + now eapply H.
 Qed.
+
+Lemma isLambda_inv t : isLambda t -> exists na ty bod, t = tLambda na ty bod.
+Proof. destruct t => //; eauto. Qed.
 
 Lemma eta_expand_erase {Σ : wf_env_ext} Σ' {Γ t} 
   (wt : forall Σ0 : global_env_ext, abstract_env_rel' Σ Σ0 -> welltyped Σ0 Γ t) Γ' :
@@ -1918,24 +1989,33 @@ Proof.
         -- sq. cbn. eapply nth_error_map_All in H4 as [D Hnth].
            eapply expanded_tFix.
            3:{ destruct args; cbn in *; congruence. }
-          { rewrite erase_mfix_eq. solve_all. eapply All_map_All.
+          { rewrite erase_fix_eq. solve_all. eapply All_map_All.
             intros. eapply H0. intros. cbn in H |- *. destruct H as [[isl H] H'].
-            split. 3:reflexivity.
-            { eapply erases_isLambda. unshelve eapply erases_erase; tea. exact isl. }
+            2:reflexivity.
+            epose proof (erases_isLambda (@erases_erase Σ (fix_context mfix ++ Γ) (dbody x)
+            (fun (Σ0 : global_env_ext) (abs : Σ0 = Σ) => (rx Σ0 abs).p2)) isl).
+            destruct (isLambda_inv _ isl) as [na [ty [bod eq]]].
+            split.
+            rewrite {4}eq.
+            destruct isBox eqn:isb => //.
+            set (et := erase _ _ _ _) in *.
+            now rewrite orb_false_r in H1.
+            set (et := erase _ _ _ _) in *.
+            destruct isBox. rewrite eq. constructor. constructor.
             eapply apply_expanded. eapply H'. eauto.
-            2: eauto.
+            2:{ reflexivity. }
             rewrite !rev_map_spec. do 2 f_equal. clear. 
             generalize (erase_obligation_13 Σ Γ mfix idx Hyp0).
             generalize (fix_context mfix). generalize mfix. clear.
             intros. induction mfix; cbn; f_equal. eapply IHmfix.
           }
            { solve_all.  clear - deps H2. induction H2; econstructor; eauto. eapply p. eauto. }
-           { rewrite erase_mfix_eq. eapply Hnth. }
+           { rewrite erase_fix_eq. eapply Hnth. }
            rewrite map_erase_length. cbn. lia.
       * eapply typing_wf_local; eauto.
       * cbn; intros; subst. eapply welltyped_mkApps_inv; sq; eauto. 
   - econstructor; eauto.
-    solve_all. rewrite erase_mfix_eq.
+    solve_all. rewrite erase_cofix_eq.
     eapply All_map_All. intros. exact H0. intros x y wx [exp' IH]. len. eauto. eauto.
   - simp erase. destruct inspect as [b ise] eqn:hi. destruct b.
     + simp erase. constructor.
@@ -2050,9 +2130,36 @@ Qed.
 
 Import EWellformed.
 
+Section wffix.
+  Import EAst.
+  Fixpoint wf_fixpoints (t : term) : bool :=
+    match t with
+    | tRel i => true
+    | tEvar ev args => List.forallb (wf_fixpoints) args
+    | tLambda N M => wf_fixpoints M
+    | tApp u v => wf_fixpoints u && wf_fixpoints v
+    | tLetIn na b b' => wf_fixpoints b && wf_fixpoints b'
+    | tCase ind c brs => 
+      let brs' := forallb (wf_fixpoints ∘ snd) brs in
+      wf_fixpoints c && brs'
+    | tProj p c => wf_fixpoints c
+    | tFix mfix idx => 
+      List.forallb (fun d => (isLambda d.(dbody) || isBox d.(dbody)) && wf_fixpoints d.(dbody)) mfix
+    | tCoFix mfix idx =>
+      List.forallb (wf_fixpoints ∘ dbody) mfix
+    | tConst kn => true
+    | tConstruct ind c => true
+    | tVar _ => true
+    | tBox => true
+    end.
+
+End wffix.
+
+
 Lemma erases_deps_wellformed (cf := config.extraction_checker_flags) (efl := all_env_flags) {Σ} {Σ'} et :
   erases_deps Σ Σ' et ->
   forall n, ELiftSubst.closedn n et ->
+  wf_fixpoints et ->
   wellformed Σ' n et.
 Proof.
   intros ed.
@@ -2064,10 +2171,34 @@ Proof.
   - cbn in *. move/andP: H5 => [] cld clbrs.
     cbn. apply/andP; split. apply/andP; split. 
     * now destruct H0 as [-> ->].
-    * eauto.
-    * solve_all.
+    * now move/andP: H6.
+    * move/andP: H6; solve_all.
   - cbn in *. apply/andP; split; eauto.
     now destruct H0 as [-> ->].
+Qed.
+
+Lemma erases_wf_fixpoints Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' -> 
+  ErasureCorrectness.wellformed Σ t -> wf_fixpoints t'.
+Proof.
+  induction 1 using erases_forall_list_ind; cbn; auto; try solve [rtoProp; repeat solve_all].
+  - unfold test_def in *.
+    eapply Forall2_All2 in H.
+    eapply All2_All2_mix in X; tea. solve_all.
+    destruct b0; eapply erases_isLambda in H1; tea.
+  - unfold test_def in *. solve_all.
+Qed.
+
+Lemma erase_wf_fixpoints (efl := all_env_flags) {Σ : wf_env} univs wfΣ {Γ t} wt
+  (Σ' := make_wf_env_ext Σ univs wfΣ) :
+  let t' := erase Σ' Γ t wt in
+  wf_fixpoints t'.
+Proof.
+  cbn.
+  eapply erases_wf_fixpoints.
+  eapply erases_erase.
+  specialize (wt (Σ, univs) eq_refl).
+  destruct wfΣ.
+  now unshelve eapply welltyped_wellformed in wt. 
 Qed.
 
 Lemma erase_wellformed (efl := all_env_flags) {Σ : wf_env} univs wfΣ {Γ t} wt
@@ -2085,6 +2216,7 @@ Proof.
   destruct (wt _ eq_refl).
   cbn in X. destruct wfΣ.
   now eapply PCUICClosedTyp.subject_closed in X.
+  eapply erase_wf_fixpoints.
 Qed.
 
 Lemma erase_wellformed_weaken (efl := all_env_flags) {Σ : wf_env} univs wfΣ {Γ t} wt deps
@@ -2102,6 +2234,7 @@ Proof.
   destruct (wt _ eq_refl).
   cbn in X. destruct wfΣ.
   now eapply PCUICClosedTyp.subject_closed in X.
+  eapply erase_wf_fixpoints.
 Qed.
 
 Lemma erase_constant_body_correct'' {Σ : wf_env} {cb} {univs wfΣ}

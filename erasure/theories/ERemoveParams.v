@@ -319,7 +319,7 @@ Section strip.
 
   Lemma strip_cunfold_fix mfix idx n f : 
     forallb (closedn 0) (fix_subst mfix) ->
-    forallb (fun d =>  (isLambda (dbody d) || isBox (dbody d)) && isEtaExp Σ (dbody d)) mfix ->
+    forallb (fun d =>  isLambda (dbody d) && isEtaExp Σ (dbody d)) mfix ->
     cunfold_fix mfix idx = Some (n, f) ->
     cunfold_fix (map (map_def strip) mfix) idx = Some (n, strip f).
   Proof.
@@ -1223,8 +1223,6 @@ Proof.
   now eapply strip_wellformed.
 Qed.
 
-
-
 Lemma strip_expanded {Σ : GlobalContextMap.t} {t} : expanded Σ t -> expanded (strip_env Σ) (strip Σ t).
 Proof.
   induction 1 using expanded_ind.
@@ -1232,8 +1230,8 @@ Proof.
   - rewrite strip_mkApps_etaexp. now eapply expanded_isEtaExp.
     eapply expanded_mkApps_expanded => //. solve_all.
   - destruct proj as [[] ?]; simp_strip. constructor; eauto.
-  - simp_strip; constructor; eauto. solve_all. left.
-    rewrite -strip_isLambda //. rewrite -strip_isBox. now right.
+  - simp_strip; constructor; eauto. solve_all.
+    rewrite -strip_isLambda //.
   - rewrite strip_mkApps // /=.
     rewrite (lookup_inductive_pars_spec (proj1 (proj1 H))).
     eapply expanded_tConstruct_app.

@@ -81,7 +81,7 @@ Section isEtaExp.
     | tLetIn na b b' => isEtaExp b && isEtaExp b'
     | tCase ind c brs => isEtaExp c && forallb_InP brs (fun x H => isEtaExp x.2)
     | tProj p c => isEtaExp c
-    | tFix mfix idx => forallb_InP mfix (fun x H => (isLambda x.(dbody) || isBox x.(dbody)) && isEtaExp x.(dbody))
+    | tFix mfix idx => forallb_InP mfix (fun x H => isLambda x.(dbody) && isEtaExp x.(dbody))
     | tCoFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
     | tBox => true
     | tVar _ => true
@@ -189,10 +189,8 @@ Section isEtaExp.
       solve_all.
     - move/andP: b => [] etaexp h.
       apply/andP; split.
-      apply/orP. move: etaexp => /orP[H|H].
-      * left; now eapply isLambda_csubst.
-      * right; now eapply isBox_csubst.
-      * eapply a0 => //.
+      now eapply isLambda_csubst.
+      eapply a0 => //.
     - move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
@@ -221,7 +219,7 @@ Section isEtaExp.
   Qed.
   
   Lemma isEtaExp_fix_subst mfix : 
-    forallb (fun d => (isLambda (dbody d) || isBox d.(dbody)) && isEtaExp (dbody d)) mfix ->
+    forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
     forallb isEtaExp (EGlobalEnv.fix_subst mfix).
   Proof.
     unfold EGlobalEnv.fix_subst. generalize #|mfix|.
@@ -241,7 +239,7 @@ Section isEtaExp.
   Qed.
   
   Lemma isEtaExp_cunfold_fix mfix idx n f : 
-    forallb (fun d => (isLambda (dbody d) || isBox (dbody d)) && isEtaExp (dbody d)) mfix ->
+    forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
     EGlobalEnv.cunfold_fix mfix idx = Some (n, f) ->
     isEtaExp f.
   Proof.
@@ -438,7 +436,7 @@ Inductive expanded : term -> Prop :=
     expanded discr -> Forall (fun br => expanded br.2) branches -> expanded (tCase (ind, pars) discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded t -> expanded (tProj proj t)
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) :  
-  Forall (fun d => (isLambda d.(dbody) \/ isBox d.(dbody)) /\ expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
+  Forall (fun d => isLambda d.(dbody) /\ expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : Forall (fun d => expanded d.(dbody)) mfix -> expanded (tCoFix mfix idx)
 | expanded_tConstruct_app ind idx mind idecl cname c args :
     declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
@@ -474,7 +472,7 @@ forall (Σ : global_declarations) (P : term -> Prop),
 (forall (proj : projection) (t : term),
  expanded Σ t -> P t -> P (tProj proj t)) ->
 (forall (mfix : mfixpoint term) (idx : nat),
- Forall (fun d : def term => (isLambda (dbody d) \/ isBox (dbody d)) /\ expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix  -> P (tFix mfix idx)) ->
+ Forall (fun d : def term => isLambda (dbody d) /\ expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix  -> P (tFix mfix idx)) ->
 (forall (mfix : mfixpoint term) (idx : nat),
  Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix ->
  P (tCoFix mfix idx)) ->
@@ -555,7 +553,7 @@ Proof.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
     eapply In_All in H. rtoProp; intuition auto; solve_all.
     all: move/andP: b. 2:{ now intros []. }
-    move=> [] /orP[H|H]; intuition auto.
+    intuition auto.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.
@@ -579,8 +577,7 @@ Proof.
     (try eapply forallb_Forall); 
     eauto).
   - eapply isEtaExp_mkApps_intro; eauto. solve_all.
-  - solve_all; rewrite H1 /= //.
-    rewrite orb_true_r //.
+  - solve_all. now rewrite b H.
   - rewrite isEtaExp_Constructor. eapply andb_true_iff.
     split. 2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.

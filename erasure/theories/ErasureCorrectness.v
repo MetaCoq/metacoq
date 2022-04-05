@@ -148,8 +148,9 @@ Proof.
 
     eapply All2_impl. eapply All2_All_mix_left. eassumption. eassumption.
     intros. cbn in *.
-    decompose [prod] X2. intuition auto.
-    eapply b0.
+    destruct X5 as [[Ht IH] []].
+    split; intuition auto.
+    eapply IH.
     + subst types.
       eapply conv_context_app_same; auto.
     + eapply conv_context_wf_local_app; eauto.
@@ -191,6 +192,9 @@ Lemma erases_ext_eq Σ Σ' Γ Γ' t1 t1' t2 t2' :
 Proof.
   intros. now subst.
 Qed.
+
+Lemma isLambda_subst_instance t u : isLambda t -> isLambda t@[u].
+Proof. destruct t => //. Qed.
 
 Lemma erases_subst_instance0
   : env_prop (fun Σ Γ t T => wf_ext_wk Σ ->
@@ -259,9 +263,11 @@ Proof.
     eapply All2_map_left.
     eapply All2_impl. eapply All2_All_mix_left. eapply X1.
     exact X4.
-    intros; cbn in *. destruct X5. destruct p0. destruct p0.
-    destruct p. repeat split; eauto.
-    eapply e2 in e1.
+    intros; cbn in *. destruct X5.
+    destruct p as [p IH].
+    destruct a. split; auto.
+    now eapply isLambda_subst_instance.
+    eapply IH in e1.
     rewrite subst_instance_app in e1. subst types. 2:eauto.
     eapply erases_ctx_ext. eassumption. unfold app_context.
     f_equal.
@@ -466,7 +472,7 @@ Proof.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - epose proof (All2_length X0).
-    solve_all. destruct y ;  simpl in *; subst.
+    solve_all. destruct b. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
     rewrite <-H. rewrite fix_context_length in b0.
     eapply b0. eauto. now rewrite app_length fix_context_length.
@@ -502,7 +508,7 @@ Section wellscoped.
     isSome (lookup_inductive Σ ind.(ci_ind)) && wellformed c && brs'
   | tProj p c => isSome (lookup_inductive Σ p.1.1) && wellformed c
   | tFix mfix idx => 
-    List.forallb (test_def (wellformed) (wellformed)) mfix
+    List.forallb (test_def (wellformed) (fun b => (isLambda b) && wellformed b)) mfix
   | tCoFix mfix idx =>
     List.forallb (test_def wellformed wellformed) mfix
   | tConst kn _ => isSome (lookup_constant Σ kn)
@@ -537,8 +543,10 @@ Section wellscoped.
       eapply All2i_All2_mix_left in X5; tea. clear H8.
       solve_all.
     - now rewrite (declared_inductive_lookup_inductive isdecl).
-    - solve_all. destruct a as [s []].
-      unfold test_def. len in b0. now rewrite i b0.
+    - move/andb_and: H2 => [] hb _.
+      solve_all. destruct a as [s []].
+      unfold test_def. len in b0.
+      rewrite b0. now rewrite i b.
     - solve_all. destruct a as [s []].
       unfold test_def. len in b0. now rewrite i b0.
   Qed.
@@ -602,6 +610,13 @@ Section trans_lookups.
   Qed.
 End trans_lookups.
 
+Lemma erases_isLambda {Σ Γ t u} :
+  Σ ;;; Γ |- t ⇝ℇ u -> isLambda t -> EAst.isLambda u || EAstUtils.isBox u.
+Proof.
+  intros hf.
+  induction hf => //.
+Qed.
+
 Lemma erases_wellformed {Σ : global_env_ext} {wfΣ : wf Σ} {Γ a e} : welltyped Σ Γ a -> Σ ;;; Γ |- a ⇝ℇ e -> 
   forall Σ', globals_erased_with_deps Σ Σ' -> @EWellformed.wellformed EWellformed.all_env_flags Σ' #|Γ| e.
 Proof.
@@ -635,11 +650,12 @@ Proof.
     apply/andP; split.
     now eapply trans_lookup_inductive; tea. eauto.
   - epose proof (All2_length X0). eapply forallb_All in wfa.
-    solve_all. 
+    solve_all. destruct b.
     destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
-    rewrite <- H0. rewrite fix_context_length in b.
-    eapply b. move/andP: b0 => //; eauto. intros []; eauto. eauto. now rewrite app_length fix_context_length. tea.
+    rewrite <- H0. rewrite fix_context_length in b1.
+    move/andP: b0 => //; eauto. move=> [] wft /andP[] isl wf; eauto.
+    eapply b1; tea. now rewrite app_length fix_context_length.
   - epose proof (All2_length X0).
     solve_all. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
@@ -1806,7 +1822,7 @@ Proof.
         enough (Σ;;; [] ,,, subst_context (fix_subst mfix) 0 []
                 |- subst (fix_subst mfix) 0 dbody
                 ⇝ℇ ELiftSubst.subst (EGlobalEnv.fix_subst mfix') 0 (Extract.E.dbody x4)).
-        destruct p. destruct p.
+        destruct a2.
 
         clear e3. rename H into e3.
         -- cbn in e3. rename x5 into L.
@@ -1873,11 +1889,12 @@ Proof.
               change (?a = true) with (is_true a) in e3.
               simpl in e3 |- *. solve_all.
               rewrite app_context_nil_l in b.
-              eapply erases_closed in b. simpl in b.
+              destruct b as [eqb eqrar isl isl' e].
+              eapply erases_closed in e. simpl in e.
               rewrite <- H.
               unfold EAst.test_def. 
-              simpl in b.
-              rewrite fix_context_length in b.
+              simpl in e.
+              rewrite fix_context_length in e.
               now rewrite Nat.add_0_r.
               unfold test_def in a. apply andb_and in a as [_ Hbod].
               rewrite fix_context_length.
@@ -1886,7 +1903,7 @@ Proof.
               now eapply subject_closed in Ht.
           ++ auto.
            
-        -- cbn. destruct p. destruct p.
+        -- cbn. destruct a2 as [eqb eqrar isl isl' e5].
            eapply (erases_subst Σ [] (fix_context mfix) [] dbody (fix_subst mfix)) in e5; cbn; eauto.
            ++ eapply subslet_fix_subst. now eapply wf_ext_wf. all: eassumption.
            ++ eapply nth_error_all in a1; eauto. cbn in a1.
@@ -1960,7 +1977,7 @@ Proof.
            split; [eauto using erases_tApp, erases_mkApps|].
            unfold cunfold_fix in *.
            destruct (nth_error _ _) eqn:nth; [|congruence].
-           eapply All2_nth_error_Some in X as (? & ? & ? & ? & ?); [|eauto].
+           eapply All2_nth_error_Some in X as (?&?&[? ? ? ? ?]); [|eauto].
            constructor. eapply Ee.eval_fix_value.
            ++ eauto.
            ++ eauto.

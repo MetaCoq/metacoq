@@ -39,6 +39,12 @@ Lemma wf_fixpoint_red1_type {cf Σ} {wfΣ : wf Σ} Γ mfix mfix1 :
 Proof.
   intros wffix o.
   move: wffix; unfold wf_fixpoint, wf_fixpoint_gen.
+  move/andb_and => [] isl wf. apply/andP; split.
+  { clear wf. solve_all.
+    revert isl. 
+    induction o; depelim isl; constructor; auto. destruct p.
+    destruct c. noconf e. congruence. }
+  clear isl. move: wf.
   enough (forall inds, map_option_out (map check_one_fix mfix) = Some inds ->
      map_option_out (map check_one_fix mfix1) = Some inds) => //.
   destruct map_option_out. now specialize (H _ eq_refl) as ->.
@@ -79,6 +85,14 @@ Lemma wf_fixpoint_red1_body {cf Σ} {wfΣ : wf Σ} Γ mfix mfix1 :
 Proof.
   intros wffix o.
   move: wffix; unfold wf_fixpoint, wf_fixpoint_gen.
+  move/andb_and => [] isl wf. apply/andP; split.
+  { clear wf. solve_all.
+    revert isl. 
+    induction o; depelim isl; constructor; auto. destruct p.
+    destruct c. noconf e.
+    destruct (dbody hd) => //. depelim clrel_rel; solve_discr.
+    now rewrite H. now rewrite H. }
+  clear isl. move: wf.
   enough (map check_one_fix mfix = map check_one_fix mfix1) as -> => //.
   induction o.
   - simpl. f_equal.

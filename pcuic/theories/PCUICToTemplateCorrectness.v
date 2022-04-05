@@ -18,6 +18,7 @@ From MetaCoq.PCUIC Require Import PCUICEquality PCUICToTemplate.
 Import MCMonadNotation.
 
 Implicit Types cf : checker_flags. (* Use {cf} to parameterize by checker_flags where needed *)
+Set Default Proof Using "Type*".
 
 Require Import Equations.Prop.DepElim.
 From Equations Require Import Equations.
@@ -1780,8 +1781,11 @@ Proof.
   unfold ST.wf_fixpoint, ST.wf_fixpoint_gen, TT.wf_fixpoint.
   rewrite map_map_compose.
   rewrite map_option_out_check_one_fix.
-  destruct map_option_out as [[]|] => //.
-  now rewrite trans_check_rec_kind.
+  f_equal.
+  - rewrite forallb_map. apply forallb_ext => d.
+    rewrite /= trans_isLambda //.
+  - destruct map_option_out as [[]|] => //.
+    now rewrite trans_check_rec_kind.
 Qed.
 
 Lemma trans_wf_cofixpoint Σ mfix :

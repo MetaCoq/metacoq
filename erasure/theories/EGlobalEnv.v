@@ -49,6 +49,13 @@ Qed.
 Section Lookups.
   Context (Σ : global_declarations).
 
+  Definition lookup_constant kn : option constant_body :=
+    decl <- lookup_env Σ kn;; 
+    match decl with
+    | ConstantDecl cdecl => ret cdecl
+    | InductiveDecl mdecl => None
+    end.
+
   Definition lookup_minductive kn : option mutual_inductive_body :=
     decl <- lookup_env Σ kn;; 
     match decl with
@@ -65,9 +72,13 @@ Section Lookups.
     mdecl <- lookup_minductive kn ;;
     ret mdecl.(ind_npars).
   
-  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
+  Definition lookup_constructor kn c : option (mutual_inductive_body * one_inductive_body * (ident * nat)) :=
     '(mdecl, idecl) <- lookup_inductive kn ;;
     cdecl <- nth_error idecl.(ind_ctors) c ;;
+    ret (mdecl, idecl, cdecl).
+  
+  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
+    '(mdecl, idecl, cdecl) <- lookup_constructor kn c ;;
     ret (mdecl.(ind_npars), cdecl.2).
 End Lookups.
 
@@ -100,14 +111,6 @@ Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ
 Definition fresh_global kn (Σ : global_declarations) :=
   Forall (fun x => x.1 <> kn) Σ.
 
-Inductive wf_glob : global_declarations -> Prop :=
-| wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
-  wf_glob Σ ->
-  fresh_global kn Σ ->
-  wf_glob ((kn, d) :: Σ).
-Derive Signature for wf_glob.
-
 Lemma lookup_env_Some_fresh {Σ c decl} :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
@@ -119,32 +122,6 @@ Proof.
     now inv H2.
 Qed.
 
-Lemma extends_lookup {Σ Σ' c decl} :
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  lookup_env Σ c = Some decl ->
-  lookup_env Σ' c = Some decl.
-Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      case: eqb_spec; intros e; subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
-Qed.
-
-Lemma extends_is_propositional {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  forall ind b, inductive_isprop_and_pars Σ ind = Some b -> inductive_isprop_and_pars Σ' ind = Some b.
-Proof.
-  intros wf ex ind b.
-  rewrite /inductive_isprop_and_pars.
-  destruct lookup_env eqn:lookup => //.
-  now rewrite (extends_lookup wf ex lookup).
-Qed.
 
 (** ** Reduction *)
 
@@ -175,6 +152,20 @@ Definition cofix_subst (l : mfixpoint term) :=
 Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
   | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
   | None => None
   end.
 
@@ -211,69 +202,3 @@ Definition tDummy := tVar "".
 
 Definition iota_red npar args (br : list name * term) :=
   substl (List.rev (List.skipn npar args)) br.2.
-
-
-  Class switchterm := 
-  { 
-  has_tBox : bool
-  ; has_tRel : bool
-  ; has_tVar : bool
-  ; has_tEvar : bool
-  ; has_tLambda : bool
-  ; has_tLetIn : bool
-  ; has_tApp : bool
-  ; has_tConst : bool
-  ; has_tConstruct : bool
-  ; has_tCase : bool
-  ; has_tProj : bool
-  ; has_tFix : bool
-  ; has_tCoFix : bool
-  }.
-  
-Section wf.
-  
-  Context {sw  : switchterm}.
-  Variable has_axioms : bool.
-  Variable Σ : global_context.
-
-  (* a term term is wellformed if
-    - it is closed up to k,
-    - it only contains constructos as indicated by sw,
-    - all occuring constructors are defined,
-    - all occuring constants are defined, and
-    - if has_axioms is false, all occuring constants have bodies *)
-  
-  Fixpoint wellformed k (t : term) : bool :=
-    match t with
-    | tRel i => has_tRel && Nat.ltb i k
-    | tEvar ev args => has_tEvar && List.forallb (wellformed k) args
-    | tLambda _ M => has_tLambda && wellformed (S k) M
-    | tApp u v => has_tApp && wellformed k u && wellformed k v
-    | tLetIn na b b' => has_tLetIn && wellformed k b && wellformed (S k) b'
-    | tCase ind c brs => has_tCase && 
-      let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
-      wellformed k c && brs'
-    | tProj p c => has_tProj && wellformed k c
-    | tFix mfix idx => has_tFix &&
-      let k' := List.length mfix + k in
-      List.forallb (test_def (wellformed k')) mfix
-    | tCoFix mfix idx => has_tCoFix &&
-      let k' := List.length mfix + k in
-      List.forallb (test_def (wellformed k')) mfix
-    | tBox => has_tBox
-    | tConst kn => has_tConst && match lookup_env Σ kn with Some (ConstantDecl d) => 
-        has_axioms || match d.(cst_body) with Some _ => true | _ => false end 
-        | _ => false end
-    | tConstruct ind c => has_tConstruct &&
-        match lookup_env Σ ind.(inductive_mind) with 
-        | Some (InductiveDecl mdecl) => 
-          match nth_error (ind_bodies mdecl) (inductive_ind ind) with 
-          | Some idecl => match nth_error (ind_ctors idecl) c with Some _ => true | _ => false end
-          | _ => false
-          end
-        | _ => false
-        end    
-    | tVar _ => has_tVar
-    end.
-
-End wf.

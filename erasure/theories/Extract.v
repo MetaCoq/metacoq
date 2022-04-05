@@ -38,12 +38,6 @@ Fixpoint mkAppBox c n :=
   | S n => mkAppBox (E.tApp c E.tBox) n
   end.
 
-Definition is_box c :=
-  match EAstUtils.head c with
-  | E.tBox => true
-  | _ => false
-  end.
-
 Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level).
 
 Definition erase_context (Γ : context) : list name :=
@@ -86,10 +80,9 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                   All2
                     (fun (d : def term) (d' : E.def E.term) =>
-                     d.(dname).(binder_name) = E.dname d'
-                     × rarg d = E.rarg d'
-                       × Σ;;; Γ ,,, fix_context mfix |-
-                         dbody d ⇝ℇ E.dbody d') mfix mfix' ->
+                     [× d.(dname).(binder_name) = E.dname d', rarg d = E.rarg d',
+                      isLambda (dbody d), E.isLambda (E.dbody d') &
+                      Σ;;; Γ ,,, fix_context mfix |- dbody d ⇝ℇ E.dbody d']) mfix mfix' ->
                   Σ;;; Γ |- tFix mfix n ⇝ℇ E.tFix mfix' n
   | erases_tCoFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                     All2
@@ -146,9 +139,10 @@ Lemma erases_forall_list_ind
       (Hfix : forall Γ mfix n mfix',
           All2
             (fun d d' =>
-               (dname d).(binder_name) = E.dname d' ×
-               rarg d = E.rarg d' ×
-               Σ;;; app_context Γ (fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
+               [× (dname d).(binder_name) = E.dname d',
+                  rarg d = E.rarg d',
+                  isLambda (dbody d), E.isLambda (E.dbody d') &
+               Σ;;; app_context Γ (fix_context mfix) |- dbody d ⇝ℇ E.dbody d'])
             mfix mfix' ->
           Forall2 (fun d d' =>
                      P (app_context Γ (fix_context mfix))
@@ -198,7 +192,7 @@ Proof.
     revert mfix mfix'.
     fix f' 3.
     intros mfix mfix' []; [now constructor|].
-    constructor; [now apply f|now apply f'].
+    destruct a. constructor; [now apply f|now apply f'].
   - apply Hcofix; try assumption.
     revert X.
     generalize mfix at 1 3.

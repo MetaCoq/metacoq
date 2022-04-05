@@ -280,7 +280,7 @@ Inductive expanded (Γ : list nat): term -> Prop :=
 | expanded_tProj (proj : projection) (t : term) : expanded Γ t -> expanded Γ (tProj proj t)
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) args d : 
   d.(rarg) < context_assumptions (decompose_prod_assum []  d.(dtype)).1 ->
-  Forall (fun d => 
+  Forall (fun d => isLambda d.(dbody) /\
            let ctx := List.rev (mapi (fun (i : nat) d => 1 + d.(rarg)) mfix) in
           expanded (ctx ++ Γ) d.(dbody)) mfix ->
   Forall (expanded Γ) args ->
@@ -338,7 +338,7 @@ forall (Σ : global_env) (P : list nat -> term -> Prop),
  expanded Σ Γ t -> P Γ t -> P Γ (tProj proj t)) ->
 (forall Γ (mfix : mfixpoint term) (idx : nat) d args, 
   d.(rarg) < context_assumptions (decompose_prod_assum []  d.(dtype)).1 ->
-  Forall (fun d =>  let ctx := List.rev (mapi (fun (i : nat) d => 1 + d.(rarg)) mfix) in expanded Σ (ctx ++ Γ) d.(dbody)) mfix -> 
+  Forall (fun d => isLambda d.(dbody) /\ let ctx := List.rev (mapi (fun (i : nat) d => 1 + d.(rarg)) mfix) in expanded Σ (ctx ++ Γ) d.(dbody)) mfix -> 
   Forall (fun d => let ctx := List.rev (mapi (fun (i : nat) d => 1 + d.(rarg)) mfix) in P (ctx ++ Γ)%list d.(dbody)) mfix -> 
   Forall (expanded Σ Γ) args ->
   Forall (P Γ) args ->
@@ -373,7 +373,7 @@ Proof.
   - assert (Forall (P Γ) args). { clear - f all. induction all; econstructor; eauto. }
     eapply HFix; eauto.
     revert H0. clear - f.
-    generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
+    generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; intuition eauto; split.
   - eapply HCoFix; eauto.
     revert all. clear - f.
     generalize mfix at 1 3. intros mfix0 H.  induction H; econstructor; cbn in *; eauto; split.
@@ -466,7 +466,8 @@ Lemma expanded_mkApps_tFix Σ Γ mfix idx d args :
   d.(rarg) < context_assumptions (decompose_prod_assum []  d.(dtype)).1 ->
   nth_error mfix idx = Some d ->
   #|args| >= S (d.(rarg)) ->
-  Forall (fun d0 : def term => let ctx := List.rev (mapi (fun (_ : nat) (d1 : def term) => 1 + rarg d1) mfix) in expanded Σ (ctx ++ Γ) (dbody d0)) mfix ->
+  Forall (fun d0 : def term => isLambda d0.(dbody) /\
+    let ctx := List.rev (mapi (fun (_ : nat) (d1 : def term) => 1 + rarg d1) mfix) in expanded Σ (ctx ++ Γ) (dbody d0)) mfix ->
   Forall (expanded Σ Γ) args ->
   args <> [] ->
   expanded Σ Γ (mkApps (tFix mfix idx) args).
@@ -479,7 +480,7 @@ Qed.
   
 Lemma expanded_mkApps_tFix_inv Σ Γ mfix idx args :
   expanded Σ Γ (mkApps (tFix mfix idx) args) ->
-  Forall (fun d0 : def term => let ctx := List.rev (mapi (fun (_ : nat) (d1 : def term) => 1 + rarg d1) mfix) in expanded Σ (ctx ++ Γ) (dbody d0)) mfix.
+  Forall (fun d0 : def term => isLambda d0.(dbody) /\ let ctx := List.rev (mapi (fun (_ : nat) (d1 : def term) => 1 + rarg d1) mfix) in expanded Σ (ctx ++ Γ) (dbody d0)) mfix.
 Proof.
   induction args.
   - cbn. inversion 1.
@@ -576,6 +577,11 @@ Proof.
   now eapply context_assumptions_lift'.
 Qed.
 
+Lemma isLambda_unlift n k t : isLambda (lift n k t) -> isLambda t.
+Proof.
+  destruct t; auto.
+Qed.
+
 Lemma expanded_unlift {Σ : global_env} Γ' Γ'' Γ t Γgoal :
   expanded Σ (Γ' ++ Γ'' ++ Γ) (lift #|Γ''| #|Γ'| t) ->
   (Γ' ++ Γ)%list = Γgoal ->
@@ -609,7 +615,7 @@ Proof.
     eapply expanded_tFix. 
     + shelve.
     + eapply Forall_map_inv in H0, H1, H3. cbn in *. 
-      solve_all. rewrite app_assoc.      
+      solve_all. now apply isLambda_unlift in H0. rewrite app_assoc.      
       eapply b. autorewrite with list. f_equal. f_equal.
       rewrite mapi_map. eapply mapi_ext. intros. cbn. reflexivity.
       f_equal. now len.
@@ -885,7 +891,9 @@ Lemma wf_fixpoint_rarg :
 decl.(rarg) < context_assumptions (decompose_prod_assum []  decl.(dtype)).1.
 Proof.
   intros.
-  unfold wf_fixpoint in H2. destruct map_option_out eqn:E; try congruence.
+  unfold wf_fixpoint in H2.
+  eapply andb_and in H2. destruct H2 as [_ H2].
+  destruct map_option_out eqn:E; try congruence.
   destruct l eqn:E2; try congruence.
   rewrite <- E2 in *. clear E2 H2 k l0.
   induction mfix in l, E, H |- *.
@@ -908,6 +916,10 @@ Proof.
   intros H.
   depind H; eauto.
 Qed.
+
+Lemma isLambda_eta_expand Σ Γ t : 
+  isLambda t -> isLambda (eta_expand Σ Γ t).
+Proof. destruct t; auto. Qed.
 
 (* Lemma context_assumptions_decompose t :
 context_assumptions (decompose_prod_assum [] t).1 <=
@@ -1041,7 +1053,8 @@ Proof.
          eapply Forall_forall in H. 2:{ 
          eapply in_map_iff. eexists. split. reflexivity. eapply in_map_iff. eexists. split. cbn. reflexivity. eauto. }
          cbn in H.
-         revert H. len. intros H.
+         revert H. len. intros [Hl H]. split.
+         { eapply isLambda_unlift in Hl. now eapply isLambda_lift. }
 
          eapply typing_wf_fixpoint in X. eapply wf_fixpoint_rarg in X. 2: eauto. 2: eapply nth_error_In; eauto.
 
@@ -1140,10 +1153,15 @@ Proof.
     + shelve.
     + fold lift. rewrite !nth_error_map, H0. cbn. len. reflexivity.
     + len. rewrite seq_length. lia.
-    + fold lift. len. solve_all. destruct a as (? & ? & ?).
+    + fold lift. len.
+      assert (Forall (fun x => isLambda (dbody x)) mfix).
+      { apply andb_and in H2. destruct H2 as [isl _]. solve_all. }
+      solve_all.
+      { now eapply isLambda_lift, isLambda_eta_expand. }
+      destruct a as (? & ? & ?).
       rewrite !firstn_length. rewrite !Nat.min_l; try lia.
       eapply expanded_lift'.
-      5: eapply b0. 2: reflexivity. 2: now len.
+      5: eapply b. 2: reflexivity. 2: now len.
       2: now len.
       { rewrite map_app. f_equal. rewrite map_rev. f_equal. now rewrite !mapi_map, map_mapi. }
       eapply Forall2_app; solve_all.
@@ -1265,7 +1283,7 @@ Proof.
     eapply expanded_tConstruct. tea. cbn.
     unfold eta_context.
     rewrite context_assumptions_fold_context_k_defs //.
-  - eapply expanded_tFix; tea.
+  - eapply expanded_tFix; tea. solve_all.
   - eapply eta_declared_constructor in H as [Σ'' decl'].
     eapply expanded_tConstruct_app; tea. cbn.
     rewrite context_assumptions_fold_context_k_defs //.

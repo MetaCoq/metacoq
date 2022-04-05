@@ -2,10 +2,13 @@
 From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require PCUICWcbvEval.
-From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv.
+From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EReflect EGlobalEnv
+  EWellformed.
 
 From Equations Require Import Equations.
 Require Import ssreflect ssrbool.
+
+Set Default Proof Using "Type*".
 
 (** * Weak-head call-by-value evaluation strategy.
 
@@ -40,13 +43,6 @@ Definition isFixApp t :=
   | _ => false
   end.
 
-Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d =>
-    Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
-  | None => None
-  end.
-
 Definition isStuckFix t (args : list term) :=
   match t with
   | tFix mfix idx =>
@@ -62,13 +58,6 @@ Proof.
   revert f; induction l using rev_ind. simpl. intuition auto.
   simpl. intros. now rewrite mkApps_app in H.
 Qed.
-
-Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
-  match List.nth_error mfix idx with
-  | Some d =>
-    Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
-  | None => None
-  end.
 
 (* Tells if the evaluation relation should include match-prop and proj-prop reduction rules. *)
 Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : bool }.
@@ -388,7 +377,6 @@ Section Wcbv.
     f_equal. rewrite lift_closed // closed_subst //.
   Qed.
 
-
   Lemma closed_unfold_cofix_cunfold_eq mfix idx : 
     closed (tCoFix mfix idx) ->
     unfold_cofix mfix idx = cunfold_cofix mfix idx.
@@ -416,7 +404,6 @@ Section Wcbv.
         now rewrite mkApps_app.
       * easy.
   Qed.
-
   
   Lemma eval_mkApps_tFix_inv mfix idx args v :
    with_guarded_fix ->
@@ -832,7 +819,7 @@ Arguments eval_deterministic {_ _ _ _ _}.
 Arguments eval_unique {_ _ _ _}.
 
 Section WcbvEnv.
-  Context {wfl : WcbvFlags}.
+  Context {wfl : WcbvFlags} {efl : EEnvFlags}.
 
   Lemma weakening_eval_env {Σ Σ'} : 
     wf_glob Σ' -> extends Σ Σ' ->
@@ -1047,6 +1034,59 @@ Proof.
   - rtoProp; intuition auto.
 Qed.
 
+Ltac forward_keep H :=
+  match type of H with
+  ?X -> _ =>
+    let H' := fresh in 
+    assert (H' : X) ; [|specialize (H H')]
+  end.
+
+Lemma eval_wellformed (efl := all_env_flags) {wfl : WcbvFlags} Σ : 
+  wf_glob Σ ->
+  forall t u, wellformed Σ 0 t -> eval Σ t u -> wellformed Σ 0 u.
+Proof.
+  move=> clΣ t u Hc ev. move: Hc.
+  induction ev; simpl in *; auto;
+    (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
+  all:eauto using wellformed_csubst.
+  - specialize (IHev1 Hc').
+    move: IHev1; rewrite wellformed_mkApps // => /andP[] wfc wfargs.
+    apply IHev2.
+    eapply wellformed_iota_red_brs; tea => //.
+  - subst brs. cbn in Hc''. rewrite andb_true_r in Hc''.
+    eapply IHev2. eapply wellformed_substl => //.
+    eapply All_forallb, All_repeat => //.
+    now rewrite repeat_length.
+  - eapply IHev3. apply/andP; split; [|easy].
+    specialize (IHev1 Hc).
+    rewrite wellformed_mkApps // in IHev1.
+    move/andP: IHev1 => [clfix clargs].
+    rewrite wellformed_mkApps // clargs andb_true_r.
+    eapply wellformed_cunfold_fix; tea => //.
+  - apply andb_true_iff. split; [|easy]. solve_all.
+  - eapply IHev3. rtoProp. split; eauto.
+    eapply wellformed_cunfold_fix => //; tea. eauto.
+  - eapply IHev2. rewrite wellformed_mkApps //.
+    rewrite wellformed_mkApps // in IHev1. 
+    specialize (IHev1 Hc'). move/andP: IHev1 => [Hfix Hargs].
+    repeat (apply/andP; split; auto).
+    eapply wellformed_cunfold_cofix => //; tea. 
+  - specialize (IHev1 Hc'). eapply IHev2. rewrite wellformed_mkApps // in IHev1 *.
+    move/andP: IHev1 => [Hfix Hargs].
+    rewrite wellformed_mkApps // Hargs andb_true_r Hc /=.
+    eapply wellformed_cunfold_cofix; tea => //.
+  - apply IHev.
+    move/(lookup_env_wellformed clΣ): isdecl.
+    now rewrite /wf_global_decl /= e /=.
+  - have := (IHev1 Hc').
+    rewrite wellformed_mkApps // /= => clargs.
+    eapply IHev2; eauto.
+    rewrite nth_nth_error.
+    destruct nth_error eqn:hnth => //.
+    move/andP: clargs => [wfc wfargs].
+    eapply nth_error_forallb in wfargs; tea.
+  - rtoProp; intuition auto.
+Qed.
 
 Lemma remove_last_length {X} {l : list X} : 
   #|remove_last l| = match l with nil => 0 | _ => #|l| - 1 end.

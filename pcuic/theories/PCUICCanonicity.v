@@ -19,6 +19,8 @@ Local Existing Instance config.extraction_checker_flags.
 Require Import Equations.Prop.DepElim.
 Require Import ssreflect ssrbool.
 
+Set Default Proof Using "Type*".
+
 Lemma negb_False (p : bool) : negb p -> p -> False.
 Proof.
 intros n pos. rewrite pos in n => //.
@@ -148,7 +150,7 @@ Section Spines.
     destruct E as [kn [Hl Hcheck]].
     destruct l as [|hd tl].
     now rewrite nth_error_nil in Hl => //.
-    move/andP=> [eqhd checkrec].
+    move/and3P=> [hmfix eqhd checkrec].
     exists kn. split; auto.
     enough (hd = kn) as -> => //.
     clear -Hl eqhd.
@@ -156,6 +158,7 @@ Section Spines.
     destruct idx; simpl in Hl; [congruence|].
     eapply All_nth_error in eqhd; eauto.
     now eapply ReflectEq.eqb_eq in eqhd.
+    rewrite andb_false_r => //.
   Qed.
 
   Lemma wf_cofixpoint_inv mfix idx decl :

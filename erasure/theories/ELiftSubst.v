@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst.
-From MetaCoq.Erasure Require Import EAst EInduction.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction.
 Require Import ssreflect.
 
 (** * Lifting and substitution for the AST
@@ -297,6 +297,10 @@ Qed.
 Lemma isLambda_lift n k (bod : term) :
   isLambda bod = true -> isLambda (lift n k bod) = true.
 Proof. destruct bod; simpl; try congruence. Qed.
+
+Lemma isBox_lift n k (bod : term) :
+  isBox bod = isBox (lift n k bod).
+Proof. destruct bod; simpl; try congruence. destruct Nat.leb => //. Qed.
 
 #[global]
 Hint Resolve lift_isApp map_non_nil isLambda_lift : all.

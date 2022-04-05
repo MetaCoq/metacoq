@@ -14,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    EGlobalEnv ELiftSubst ESpineView ECSubst EWcbvEvalInd.
+    EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEvalInd.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -81,7 +81,7 @@ Section isEtaExp.
     | tLetIn na b b' => isEtaExp b && isEtaExp b'
     | tCase ind c brs => isEtaExp c && forallb_InP brs (fun x H => isEtaExp x.2)
     | tProj p c => isEtaExp c
-    | tFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
+    | tFix mfix idx => forallb_InP mfix (fun x H => isLambda x.(dbody) && isEtaExp x.(dbody))
     | tCoFix mfix idx => forallb_InP mfix (fun x H => isEtaExp x.(dbody))
     | tBox => true
     | tVar _ => true
@@ -180,13 +180,17 @@ Section isEtaExp.
   Lemma etaExp_csubst a k b : 
     isEtaExp a -> isEtaExp b -> isEtaExp (ECSubst.csubst a k b).
   Proof.
-    funelim (isEtaExp b); try simp_eta; eauto;
+    funelim (isEtaExp b); cbn -[isEtaExp]; try simp_eta; eauto;
       try toAll; repeat solve_all.
     - intros. simp isEtaExp ; cbn. destruct Nat.compare => //. simp_eta in H.
     - move/andP: H2 => [] etab etab'.
       apply/andP. split; eauto.
     - rtoProp. intuition eauto.
       solve_all.
+    - move/andP: b => [] etaexp h.
+      apply/andP; split.
+      now eapply isLambda_csubst.
+      eapply a0 => //.
     - move/andP: H1 => [] etaexp h.
       rewrite csubst_mkApps /=.
       rewrite isEtaExp_Constructor. solve_all.
@@ -215,7 +219,7 @@ Section isEtaExp.
   Qed.
   
   Lemma isEtaExp_fix_subst mfix : 
-    forallb (isEtaExp ∘ dbody) mfix ->
+    forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
     forallb isEtaExp (EGlobalEnv.fix_subst mfix).
   Proof.
     unfold EGlobalEnv.fix_subst. generalize #|mfix|.
@@ -235,27 +239,27 @@ Section isEtaExp.
   Qed.
   
   Lemma isEtaExp_cunfold_fix mfix idx n f : 
-    forallb (isEtaExp ∘ dbody) mfix ->
-    Ee.cunfold_fix mfix idx = Some (n, f) ->
+    forallb (fun d => isLambda (dbody d) && isEtaExp (dbody d)) mfix ->
+    EGlobalEnv.cunfold_fix mfix idx = Some (n, f) ->
     isEtaExp f.
   Proof.
     intros heta.
-    unfold Ee.cunfold_fix.
+    unfold EGlobalEnv.cunfold_fix.
     destruct nth_error eqn:heq => //.
     intros [= <- <-] => /=.
     apply isEtaExp_substl.
     now apply isEtaExp_fix_subst.
     eapply forallb_nth_error in heta; tea.
-    now erewrite heq in heta.
+    erewrite heq in heta. now move/andP: heta.
   Qed.
   
   Lemma isEtaExp_cunfold_cofix mfix idx n f : 
     forallb (isEtaExp ∘ dbody) mfix ->
-    Ee.cunfold_cofix mfix idx = Some (n, f) ->
+    EGlobalEnv.cunfold_cofix mfix idx = Some (n, f) ->
     isEtaExp f.
   Proof.
     intros heta.
-    unfold Ee.cunfold_cofix.
+    unfold EGlobalEnv.cunfold_cofix.
     destruct nth_error eqn:heq => //.
     intros [= <- <-] => /=.
     apply isEtaExp_substl.
@@ -354,14 +358,14 @@ Proof.
       now exists ((kn', d')::Σ'').
 Qed.
 
-Lemma isEtaExp_app_extends Σ Σ' ind k n :
+Lemma isEtaExp_app_extends {efl : EEnvFlags} Σ Σ' ind k n :
   extends Σ Σ' ->
   wf_glob Σ' -> 
   isEtaExp_app Σ ind k n ->
   isEtaExp_app Σ' ind k n.
 Proof.
   rewrite /isEtaExp_app.
-  rewrite /lookup_constructor_pars_args /lookup_inductive /lookup_minductive.
+  rewrite /lookup_constructor_pars_args /lookup_constructor /lookup_inductive /lookup_minductive.
   move=> ext wf.
   destruct (lookup_env Σ _) eqn:hl => //.
   rewrite (extends_lookup wf ext hl) /= //.
@@ -369,7 +373,7 @@ Qed.
 
 From MetaCoq.Erasure Require Import ELiftSubst.
 
-Lemma isEtaExp_extends Σ Σ' t : 
+Lemma isEtaExp_extends {efl : EEnvFlags} Σ Σ' t : 
   extends Σ Σ' ->
   wf_glob Σ' ->
   isEtaExp Σ t ->
@@ -381,6 +385,7 @@ Proof.
   - eapply isEtaExp_app_extends; tea.
   - eapply In_All in H0. solve_all.
   - eapply In_All in H; solve_all.
+    move/andP: b => [] -> /=. eauto.
   - eapply In_All in H; solve_all.
   - eapply In_All in H; solve_all.
     rewrite isEtaExp_Constructor //. rtoProp; intuition auto.
@@ -389,7 +394,7 @@ Proof.
   - eapply In_All in H0. apply isEtaExp_mkApps_intro; eauto. solve_all.
 Qed.
 
-Lemma isEtaExp_extends_decl Σ Σ' t : 
+Lemma isEtaExp_extends_decl {efl : EEnvFlags} {Σ Σ' t} : 
   extends Σ Σ' ->
   wf_glob Σ' ->
   isEtaExp_decl Σ t ->
@@ -400,7 +405,7 @@ Proof.
   now eapply isEtaExp_extends.
 Qed.
 
-Lemma isEtaExp_lookup {Σ kn d}: 
+Lemma isEtaExp_lookup {efl : EEnvFlags} {Σ kn d}: 
   isEtaExp_env Σ -> wf_glob Σ ->
   lookup_env Σ kn = Some d ->
   isEtaExp_decl Σ d.
@@ -425,12 +430,13 @@ Inductive expanded : term -> Prop :=
 | expanded_tEvar (ev : nat) (args : list term) : Forall expanded args -> expanded (tEvar ev args)
 | expanded_tLambda (na : name) (body : term) : expanded body -> expanded (tLambda na body)
 | expanded_tLetIn (na : name) (def : term)(body : term) : expanded def -> expanded body -> expanded (tLetIn na def body)
-| expanded_mkApps (f : term) (args : list term) : ~ isConstruct f -> expanded f -> Forall expanded args -> expanded (mkApps f args)
+| expanded_mkApps (f : term) (args : list term) : ~ isConstruct f -> args <> [] -> expanded f -> Forall expanded args -> expanded (mkApps f args)
 | expanded_tConst (c : kername) : expanded (tConst c)
 | expanded_tCase (ind : inductive) (pars : nat) (discr : term) (branches : list (list name × term)) : 
     expanded discr -> Forall (fun br => expanded br.2) branches -> expanded (tCase (ind, pars) discr branches)
 | expanded_tProj (proj : projection) (t : term) : expanded t -> expanded (tProj proj t)
-| expanded_tFix (mfix : mfixpoint term) (idx : nat) :  Forall (fun d => expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
+| expanded_tFix (mfix : mfixpoint term) (idx : nat) :  
+  Forall (fun d => isLambda d.(dbody) /\ expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : Forall (fun d => expanded d.(dbody)) mfix -> expanded (tCoFix mfix idx)
 | expanded_tConstruct_app ind idx mind idecl cname c args :
     declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
@@ -440,6 +446,7 @@ Inductive expanded : term -> Prop :=
 | expanded_tBox : expanded tBox.
 
 End expanded.
+Derive Signature for expanded.
 
 Lemma expanded_ind :
 forall (Σ : global_declarations) (P : term -> Prop),
@@ -453,7 +460,7 @@ forall (Σ : global_declarations) (P : term -> Prop),
  P def -> expanded Σ body -> P body -> P (tLetIn na def body)) ->
 (forall (f4 : term) (args : list term),
  ~ isConstruct f4 ->
- expanded Σ f4 -> P f4 -> Forall (expanded Σ) args -> Forall P args -> P (mkApps f4 args)) ->
+ expanded Σ f4 -> P f4 -> args <> [] -> Forall (expanded Σ) args -> Forall P args -> P (mkApps f4 args)) ->
 (forall c : kername, P (tConst c)) ->
 (forall (ind : inductive) (pars : nat) (discr : term)
    (branches : list (list name × term)),
@@ -465,7 +472,7 @@ forall (Σ : global_declarations) (P : term -> Prop),
 (forall (proj : projection) (t : term),
  expanded Σ t -> P t -> P (tProj proj t)) ->
 (forall (mfix : mfixpoint term) (idx : nat),
- Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix  -> P (tFix mfix idx)) ->
+ Forall (fun d : def term => isLambda (dbody d) /\ expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix  -> P (tFix mfix idx)) ->
 (forall (mfix : mfixpoint term) (idx : nat),
  Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix ->
  P (tCoFix mfix idx)) ->
@@ -481,21 +488,37 @@ Proof.
   fix f 2.
   intros t Hexp. destruct Hexp; eauto.
   - eapply H1; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H4; eauto. induction H13; econstructor; cbn in *; eauto.
+  - eapply H4; eauto. clear H13. induction H14; econstructor; cbn in *; eauto.
   - eapply H6; eauto. induction H12; econstructor; cbn in *; eauto.
-  - eapply H8; eauto. induction H12; econstructor; cbn in *; eauto.
+  - eapply H8; eauto. induction H12; econstructor; cbn in *; intuition eauto.
   - eapply H9; eauto. induction H12; econstructor; cbn in *; eauto.
   - eapply H10; eauto. clear - H14 f. induction H14; econstructor; cbn in *; eauto.
 Qed.
 
-Local Hint Constructors expanded : core .
+Local Hint Constructors expanded : core.
+
+Definition expanded_constant_decl Σ (cb : constant_body) : Prop :=
+  on_Some_or_None (expanded Σ) cb.(cst_body).
+    
+Definition expanded_decl Σ d :=
+  match d with
+  | ConstantDecl cb => expanded_constant_decl Σ cb
+  | InductiveDecl idecl => True
+  end.
+    
+Inductive expanded_global_declarations : forall (Σ : global_declarations), Prop :=
+| expanded_global_nil : expanded_global_declarations []
+| expanded_global_cons decl Σ : expanded_global_declarations Σ -> 
+  expanded_decl Σ decl.2 -> expanded_global_declarations (decl :: Σ).
+
+Definition expanded_global_env := expanded_global_declarations.
 
 Lemma isEtaExp_app_expanded Σ ind idx n :
    isEtaExp_app Σ ind idx n = true <->
    exists mind idecl cname c,
    declared_constructor Σ (ind, idx) mind idecl (cname, c) /\ n ≥ ind_npars mind + c.
 Proof.
-  unfold isEtaExp_app, lookup_constructor_pars_args, lookup_inductive, lookup_minductive.
+  unfold isEtaExp_app, lookup_constructor_pars_args, lookup_constructor, lookup_inductive, lookup_minductive.
   split.
   - intros H.
     destruct lookup_env as [[| mind] | ] eqn:E; cbn in H; try congruence.
@@ -528,7 +551,9 @@ Proof.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2. 
     eapply In_All in H0. solve_all.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
-    eapply In_All in H. solve_all.
+    eapply In_All in H. rtoProp; intuition auto; solve_all.
+    all: move/andP: b. 2:{ now intros []. }
+    intuition auto.
   - econstructor. rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. 
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.
@@ -538,6 +563,7 @@ Proof.
   - eapply andb_true_iff in H1 as []. rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.
     econstructor.
     + destruct u; inv Heq; eauto.
+    + eauto.
     + eauto.
     + eapply In_All in H0. solve_all.
 Qed.
@@ -551,9 +577,56 @@ Proof.
     (try eapply forallb_Forall); 
     eauto).
   - eapply isEtaExp_mkApps_intro; eauto. solve_all.
+  - solve_all. now rewrite b H.
   - rewrite isEtaExp_Constructor. eapply andb_true_iff.
     split. 2: eapply forallb_Forall.
     2: solve_all. eapply expanded_isEtaExp_app_; eauto.
+Qed.
+
+Lemma expanded_global_env_isEtaExp_env {Σ} : expanded_global_env Σ -> isEtaExp_env Σ.
+Proof.
+  intros e; induction e; cbn => //.
+  rewrite IHe andb_true_r.
+  red in H; red. destruct decl as [kn []] => /= //.
+  cbn in H. red in H. unfold isEtaExp_constant_decl.
+  destruct (cst_body c); cbn in * => //.
+  now eapply expanded_isEtaExp.
+Qed.
+
+Lemma isEtaExp_env_expanded_global_env {Σ} : isEtaExp_env Σ -> expanded_global_env Σ.
+Proof.
+  induction Σ; cbn => /= //.
+  - constructor.
+  - move/andP=> [] etad etae; constructor; eauto. now apply IHΣ.
+    move: etad. destruct a.2; cbn in * => //. unfold isEtaExp_constant_decl, expanded_constant_decl.
+    destruct (cst_body c) => /= //. apply isEtaExp_expanded.
+Qed.
+
+Lemma solve_discr_args {t f args} : ~~ isApp t -> t = mkApps f args -> args = [] /\ f = t.
+Proof.
+  intros napp ->.
+  induction args using rev_ind; cbn in *; auto.
+  rewrite mkApps_app in napp. now cbn in napp.
+Qed.
+
+Ltac solve_discr_args := 
+  match goal with [ H : ?t = mkApps ?f ?args |- _ ] =>
+    destruct (@solve_discr_args t f args eq_refl H) as [-> ->] ||
+    destruct (@solve_discr_args t f args eq_refl H) as [-> ?]
+  end.
+
+Lemma expanded_mkApps_expanded {Σ f args} : 
+  expanded Σ f -> All (expanded Σ) args ->
+  expanded Σ (mkApps f args).
+Proof.
+  intros.
+  destruct (isConstruct f) eqn:eqc.
+  destruct f => //.
+  - depelim H; try solve_discr_args => //.
+    noconf H3.
+    eapply expanded_tConstruct_app; tea. cbn in H0. lia. solve_all.
+  - destruct args using rev_ind; cbn => //.
+    eapply expanded_mkApps => //. now rewrite eqc. eapply app_tip_nil. solve_all.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpandedFix.
@@ -575,7 +648,7 @@ Proof.
   - eapply In_All in H, H0. simp_eta.
     move => /andP[] /andP[] etafix etamfix etav.
     eapply EEtaExpanded.isEtaExp_mkApps_intro. simp_eta.
-    clear -H etamfix. solve_all. 
+    clear -H etamfix. solve_all. rtoProp; intuition eauto.
     solve_all.
   - eapply In_All in H. simp_eta.
     move=> /andP[] etarel etav.
@@ -596,3 +669,4 @@ Proof.
   destruct (E.cst_body c) => // /=.
   eapply isEtaExpFix_isEtaExp.
 Qed.
+

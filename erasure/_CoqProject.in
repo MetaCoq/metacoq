@@ -12,6 +12,7 @@ theories/EWcbvEval.v
 # theories/EWtAst.v
 theories/EWndEval.v
 theories/EGlobalEnv.v
+theories/EWellformed.v
 theories/EEnvMap.v
 theories/EWcbvEvalInd.v
 theories/EWcbvEvalEtaInd.v
@@ -29,7 +30,7 @@ theories/EExtends.v
 theories/EOptimizePropDiscr.v
 theories/EEtaExpandedFix.v
 theories/EEtaExpanded.v
-theories/ERemoveParams.v
 theories/EProgram.v
+theories/ERemoveParams.v
 theories/ETransform.v
 theories/Erasure.v

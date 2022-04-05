@@ -26,7 +26,7 @@ Obligation Tactic := program_simpl.
 
 Import EWcbvEval.
 
-Program Definition erasure_pipeline :
+Program Definition erasure_pipeline (efl := EWellformed.all_env_flags) :
  Transform.t TemplateProgram.template_program EProgram.eprogram 
   Ast.term EAst.term
   TemplateProgram.eval_template_program
@@ -39,34 +39,36 @@ Program Definition erasure_pipeline :
   pcuic_expand_lets_transform ▷
   (* Erasure of proofs terms in Prop and types *)
   erase_transform ▷
-  (* Simulation of the guarded fixpoint rules with a single unguarded one: the only "stuck" fixpoints 
-     remaining are unapplied.  *)
+  (* Simulation of the guarded fixpoint rules with a single unguarded one: 
+    the only "stuck" fixpoints remaining are unapplied. 
+    This translation is a noop on terms and environments.  *)
   guarded_to_unguarded_fix eq_refl ▷
   (* Remove all constructor parameters *)
   remove_params_optimization ▷ 
-  (* Remove all cases of propositional content *)
-  optimize_prop_discr_optimization.
+  (* Remove all cases / projections on propositional content *)
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl).
+(* At the end of erasure we get a well-formed program (well-scoped globally and localy), without 
+   parameters in inductive declarations. The constructor applications are also expanded, and
+   the evaluation relation does not need to consider guarded fixpoints or case analyses on propositional
+   content. *)
 
 Next Obligation.
   destruct H. split => //. sq.
-  now eapply EProgram.expanded_eprogram_expanded_eprogram_cstrs. 
+  now eapply EProgram.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.
-
-(* For now we only give out that erased programs are closed, but 
-  they are also eta-expanded and well-scoped w.r.t. the global environment *)
-Eval simpl in post (guarded_to_unguarded_fix _).
 
 Definition run_erase_program := run erasure_pipeline.
 
-Program Definition erasure_pipeline_fast := 
+Program Definition erasure_pipeline_fast (efl := EWellformed.all_env_flags) := 
   template_eta_expand ▷
   template_to_pcuic_transform ▷
   pcuic_expand_lets_transform ▷
   erase_transform ▷ 
+  guarded_to_unguarded_fix eq_refl ▷
   remove_params_fast_optimization _ ▷ 
-  optimize_prop_discr_optimization.
+  optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl).
 Next Obligation.
-  destruct H; split => //. now eapply EProgram.expanded_eprogram_expanded_eprogram_cstrs. 
+  destruct H; split => //. now eapply EProgram.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.
 
 Definition run_erase_program_fast := run erasure_pipeline_fast.

@@ -157,3 +157,8 @@ Proof.
   rewrite mkApps_app /= IHl.
   now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
 Qed.
+
+Lemma isLambda_csubst a k t : isLambda t -> isLambda (csubst a k t).
+Proof. destruct t => //. Qed.
+Lemma isBox_csubst a k t : isBox t -> isBox (csubst a k t).
+Proof. destruct t => //. Qed.

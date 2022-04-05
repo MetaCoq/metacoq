@@ -909,7 +909,13 @@ Section Alpha.
           all: intros ? ? []; reflexivity.
         * revert wffix.
           unfold wf_fixpoint, wf_fixpoint_gen.
-          enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
+          move/andP => [] hm ho.
+          apply/andP; split.
+          { solve_all. move: b b3.
+            generalize (dbody x) (dbody y).
+            clear=> t t' isL eq.
+            destruct t => //. now depelim eq. }
+          move: ho; enough (map check_one_fix mfix = map check_one_fix mfix') as ->; auto.
           apply upto_names_check_fix. solve_all.
         + eapply All_nth_error in ihmfix as [s [Hs _]]; eauto. exists s; apply Hs.
         + apply eq_term_upto_univ_cumulSpec, eq_term_leq_term, upto_names_impl_eq_term.

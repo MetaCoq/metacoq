@@ -1,13 +1,10 @@
 From Coq Require Import Arith List.
 From Equations Require Import Equations.
 From MetaCoq.PCUIC Require Import
-     PCUICAst PCUICAstUtils PCUICTyping
-     PCUICInversion PCUICWeakeningEnvConv PCUICWeakeningEnvTyp.
+     PCUICAst PCUICAstUtils PCUICTyping PCUICInversion PCUICWeakeningEnvConv PCUICWeakeningEnvTyp.
 Set Warnings "-notation-overridden".
-From MetaCoq.Erasure Require Import
-     EAst EAstUtils ECSubst EInduction
-     ELiftSubst ESubstitution EGlobalEnv Extract
-     EWcbvEval Prelim.
+From MetaCoq.Erasure Require Import EAst EAstUtils ECSubst EInduction
+  ELiftSubst EGlobalEnv EWcbvEval Extract ESubstitution.
 From MetaCoq.Erasure Require EExtends.
 Set Warnings "+notation-overridden".
 From MetaCoq.Template Require Import config utils monad_utils.
@@ -640,7 +637,7 @@ Proof.
     depelim typ.
     depelim er.
     depelim all_deps.
-    destruct p as (?&?&?).
+    destruct a0 as [? ? ? ?].
     now constructor; eauto.
   - constructor.
     apply inversion_CoFix in wt as (?&?&?&?&?&?&?); eauto.

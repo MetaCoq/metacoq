@@ -236,6 +236,14 @@ Proof.
   intros []. red in H. now rewrite /lookup_minductive H H0.
 Qed.
 
+Lemma declared_constructor_lookup Σ id mdecl idecl cdecl :
+  declared_constructor Σ id mdecl idecl cdecl -> 
+  lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
+Proof.
+  intros []. unfold lookup_constructor.
+  rewrite (declared_inductive_lookup_inductive (Σ := empty_ext Σ) H) /= H0 //.
+Qed.
+
 Section OnInductives.
   Context {cf : checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl ind idecl}
     (decli : declared_inductive Σ ind mdecl idecl).

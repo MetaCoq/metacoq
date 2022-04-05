@@ -159,6 +159,11 @@ Proof.
   now setoid_rewrite <- PCUICSigmaCalculus.lift_rename.
 Qed.
 
+Lemma lift_isLambda n k t : isLambda t = isLambda (lift n k t).
+Proof.
+  destruct t => //.
+Qed.
+
 Lemma erases_weakening' (Σ : global_env_ext) (Γ Γ' Γ'' : context) (t T : term) t' :
     wf Σ ->
     wf_local Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') ->
@@ -247,8 +252,10 @@ Proof.
     eapply All2_map.
     eapply All2_impl. eapply All2_All_mix_left.
     eapply X1. eassumption. simpl.
-    intros [] []. simpl. intros [[Hs IH] [<- [<- IH']]].
+    intros [] []. simpl. intros [[Hs IH] [<- <- IH']].
     repeat split. unfold app_context in *.
+    eapply isLambda_lift => //.
+    eapply ELiftSubst.isLambda_lift => //.
     specialize (IH Γ (types ++ Γ') Γ'').
     subst types. rewrite app_length fix_context_length in IH.
     forward IH.
@@ -256,12 +263,12 @@ Proof.
       eapply All_mfix_wf in a; auto.
       rewrite lift_fix_context in a.
       now rewrite <- !app_assoc. }
-    forward IH by now rewrite app_assoc.
+    forward IH. now rewrite [_ ,,, _]app_assoc.
     rewrite lift_fix_context.
     rewrite lift_context_app - plus_n_O in IH.
     unfold app_context in IH. rewrite <- !app_assoc in IH.
     rewrite (All2_length X3) in IH |- *.
-    apply IH. apply IH'.
+    apply IH. apply e.
 
   - assert (HT : Σ;;; Γ ,,, Γ' |- PCUICAst.tCoFix mfix n : (decl.(dtype))).
     econstructor; eauto. eapply All_impl. eassumption. intros.
@@ -507,8 +514,10 @@ Proof.
       eapply All2_map.
       eapply All2_impl_In.
       eassumption.
-      intros. destruct H4 as (? & ? & ?).
+      intros. destruct H4 as [? ? ? ?]. 
       repeat split; eauto.
+      cbn. now eapply isLambda_subst.
+      now eapply ELiftSubst.isLambda_subst.
       eapply In_nth_error in H2 as [].
       eapply nth_error_all in X1; eauto.
       destruct X1 as [Hs IH].

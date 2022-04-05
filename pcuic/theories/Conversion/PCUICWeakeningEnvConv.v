@@ -456,6 +456,7 @@ Lemma extends_wf_fixpoint {cf:checker_flags} (Σ Σ' : global_env_ext) mfix : ex
 Proof.
   intros ext wfΣ'.
   unfold wf_fixpoint, wf_fixpoint_gen.
+  move/andb_and => [] -> /=.
   destruct map_option_out as [[|ind inds]|]; auto.
   move/andb_and => [->] /=.
   now apply extends_check_recursivity_kind.

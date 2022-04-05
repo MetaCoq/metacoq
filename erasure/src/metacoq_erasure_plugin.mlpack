@@ -45,6 +45,7 @@ EInduction
 ECSubst
 EGlobalEnv
 EEnvMap
+EWellformed
 EWcbvEval
 ESpineView
 EPretty

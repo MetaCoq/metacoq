@@ -5,7 +5,7 @@ From MetaCoq.Template Require Import Transform bytestring config utils BasicAst.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
 From MetaCoq.Erasure Require EAstUtils ErasureFunction ErasureCorrectness EPretty Extract.
-From MetaCoq.Erasure Require ErasureFunction EOptimizePropDiscr ERemoveParams EWcbvEval EDeps.
+From MetaCoq.Erasure Require ErasureFunction EWellformed EEtaExpanded EWcbvEval EDeps.
 
 Import bytestring.
 Local Open Scope bs.
@@ -23,22 +23,26 @@ Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wf�
      wf_env_map_repr := Σ.(trans_env_repr);
  |}.
 
-Import EGlobalEnv.
+Import EGlobalEnv EWellformed.
 
 Definition eprogram := (EAst.global_context * EAst.term).
+Definition eprogram_env := (EEnvMap.GlobalContextMap.t * EAst.term).
 
 Import EEnvMap.GlobalContextMap (make, global_decls).
 
 Arguments EWcbvEval.eval {wfl} _ _ _.
 
-Definition closed_eprogram (p : eprogram) := 
-  closed_env p.1 && ELiftSubst.closedn 0 p.2.
+Definition wf_eprogram (efl : EEnvFlags) (p : eprogram) :=
+  @wf_glob efl p.1 /\ @wellformed efl p.1 0 p.2.
+  
+Definition wf_eprogram_env (efl : EEnvFlags) (p : eprogram_env) :=
+  @wf_glob efl p.1.(global_decls) /\ @wellformed efl p.1.(global_decls) 0 p.2.
 
 Definition eval_eprogram (wfl : EWcbvEval.WcbvFlags) (p : eprogram) (t : EAst.term) := 
   ∥ EWcbvEval.eval (wfl:=wfl) p.1 p.2 t ∥.
 
-Definition eprogram_env := 
-  (EEnvMap.GlobalContextMap.t * EAst.term).
+Definition closed_eprogram (p : eprogram) := 
+  closed_env p.1 && ELiftSubst.closedn 0 p.2.
 
 Definition closed_eprogram_env (p : eprogram_env) := 
   let Σ := p.1.(global_decls) in
@@ -47,7 +51,9 @@ Definition closed_eprogram_env (p : eprogram_env) :=
 Definition eval_eprogram_env (wfl : EWcbvEval.WcbvFlags) (p : eprogram_env) (t : EAst.term) := 
   ∥ EWcbvEval.eval (wfl:=wfl) p.1.(global_decls) p.2 t ∥.
 
-Lemma wf_glob_fresh Σ : wf_glob Σ -> EnvMap.EnvMap.fresh_globals Σ.
+Import EWellformed.
+
+Lemma wf_glob_fresh {efl : EEnvFlags} Σ : wf_glob Σ -> EnvMap.EnvMap.fresh_globals Σ.
 Proof.
   induction Σ. constructor; auto.
   intros wf; depelim wf. constructor; auto.
@@ -76,11 +82,17 @@ Obligation Tactic := idtac.
 
 Import Extract.
 
-Definition expanded_eprogram (p : eprogram_env) := 
+Definition expanded_eprogram (p : eprogram) := 
+  EEtaExpandedFix.isEtaExp_env p.1 && EEtaExpandedFix.isEtaExp p.1 [] p.2.
+
+Definition expanded_eprogram_env (p : eprogram_env) := 
   let decls := p.1.(EEnvMap.GlobalContextMap.global_decls) in
   EEtaExpandedFix.isEtaExp_env decls && EEtaExpandedFix.isEtaExp decls [] p.2.
 
-Definition expanded_eprogram_cstrs (p : eprogram_env) := 
+Definition expanded_eprogram_cstrs (p : eprogram) := 
+  EEtaExpanded.isEtaExp_env p.1 && EEtaExpanded.isEtaExp p.1 p.2.
+
+Definition expanded_eprogram_env_cstrs (p : eprogram_env) := 
   let decls := p.1.(EEnvMap.GlobalContextMap.global_decls) in
   EEtaExpanded.isEtaExp_env decls && EEtaExpanded.isEtaExp decls p.2.
   
@@ -89,11 +101,20 @@ Definition erase_program (p : pcuic_program) (wtp : ∥ wt_pcuic_program (cf:=co
 
 Lemma expanded_erase_program (cf := config.extraction_checker_flags) p (wtp : ∥ wt_pcuic_program p ∥) :
   PCUICEtaExpand.expanded_pcuic_program p ->
-  expanded_eprogram (erase_program p wtp).
+  expanded_eprogram_env (erase_program p wtp).
 Proof.
   intros [etaenv etat]. apply /andP; split.
   eapply EEtaExpandedFix.expanded_global_env_isEtaExp_env, ErasureFunction.expanded_erase_global, etaenv.
   eapply EEtaExpandedFix.expanded_isEtaExp, ErasureFunction.expanded_erase, etat.
+Qed.
+
+Lemma expanded_eprogram_env_expanded_eprogram_cstrs p :
+  expanded_eprogram_env p ->
+  expanded_eprogram_env_cstrs p.
+Proof.
+  move=> /andP[] etaenv etat.
+  apply /andP. split; [now eapply EEtaExpanded.isEtaExpFix_env_isEtaExp_env|
+  now eapply EEtaExpanded.isEtaExpFix_isEtaExp].
 Qed.
 
 Lemma expanded_eprogram_expanded_eprogram_cstrs p :

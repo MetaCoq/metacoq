@@ -115,6 +115,8 @@ src/eCSubst.mli
 src/eCSubst.ml
 src/eGlobalEnv.ml
 src/eGlobalEnv.mli
+src/eWellformed.mli
+src/eWellformed.ml
 src/eEnvMap.mli
 src/eEnvMap.ml
 src/extract.mli

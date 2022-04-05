@@ -192,11 +192,10 @@ Definition eqb_context_decl (x y : context_decl) :=
   let (na', b', ty') := y in
   eqb na na' && eqb b b' && eqb ty ty'.
 
-#[global]
-Instance eq_ctx : ReflectEq context_decl.
-Proof.
-  refine {| eqb := eqb_context_decl |}.
-  intros.
+#[global, program]
+Instance eq_ctx : ReflectEq context_decl :=
+{| eqb := eqb_context_decl |}.
+Next Obligation.
   destruct x as [na b ty], y as [na' b' ty']. cbn -[eqb].
   destruct (eqb_spec na na'); subst;
     destruct (eqb_spec b b'); subst;

@@ -43,7 +43,7 @@ Next Obligation.
   all: unfold eq_prop_level.
   all: try solve [ constructor ; reflexivity ].
   all: try solve [ constructor ; discriminate ].
-Defined.
+Qed.
 
 Definition eq_levels (l1 l2 : PropLevel.t + Level.t) :=
   match l1, l2 with
@@ -61,7 +61,7 @@ Next Obligation.
   all:try (constructor; cong).
   cbn -[eqb]. destruct (eqb_spec t t0). subst; now constructor.
   constructor; cong.
-Defined.
+Qed.
 
 
 Definition eq_name na nb :=
@@ -81,7 +81,7 @@ Next Obligation.
   - cbn. constructor. discriminate.
   - unfold eq_name. destruct (eqb_spec i i0); nodec.
     constructor. f_equal. assumption.
-Defined.
+Qed.
 
 Definition eq_relevance r r' :=
   match r, r' with
@@ -99,7 +99,7 @@ Next Obligation.
   - cbn. constructor. discriminate.
   - cbn. constructor. discriminate.
   - simpl. now constructor.
-Defined.
+Qed.
 
 Definition eq_aname (na nb : binder_annot name) :=
   eqb na.(binder_name) nb.(binder_name) &&
@@ -113,7 +113,7 @@ Next Obligation.
   destruct (eqb_spec x.(binder_name) y.(binder_name));
   destruct (eqb_spec x.(binder_relevance) y.(binder_relevance));
   constructor; destruct x, y; simpl in *; cong.
-Defined.
+Qed.
 
 Definition eq_def {A} `{ReflectEq A} (d1 d2 : def A) : bool :=
   match d1, d2 with
@@ -133,7 +133,7 @@ Next Obligation.
   destruct (eqb_spec b1 b2) ; nodec.
   destruct (eqb_spec a1 a2) ; nodec.
   cbn. constructor. subst. reflexivity.
-Defined.
+Qed.
 
 Definition eq_cast_kind (c c' : cast_kind) : bool :=
   match c, c' with
@@ -149,7 +149,7 @@ Definition eq_cast_kind (c c' : cast_kind) : bool :=
 Next Obligation.
   induction x, y. all: cbn. all: nodec.
   all: left. all: reflexivity.
-Defined.
+Qed.
 
 #[global] Instance reflect_case_info : ReflectEq case_info := EqDec_ReflectEq case_info.
 
@@ -162,11 +162,10 @@ Definition eqb_context_decl {term : Type} (eqterm : term -> term -> bool)
   let (na', b', ty') := y in
   eqb na na' && eq_option eqterm b b' && eqterm ty ty'.
 
-#[global] Instance eq_decl_reflect {term} {Ht : ReflectEq term} : ReflectEq (BasicAst.context_decl term).
-Proof.
-  refine {| eqb := eqb_context_decl eqb |}.
-  intros.
-  destruct x as [na b ty], y as [na' b' ty']. cbn -[eqb].
+#[global, program] Instance eq_decl_reflect {term} {Ht : ReflectEq term} : ReflectEq (BasicAst.context_decl term) :=
+  {| eqb := eqb_context_decl eqb |}.
+Next Obligation.
+  intros. destruct x as [na b ty], y as [na' b' ty']. cbn -[eqb].
   change (eq_option eqb b b') with (eqb b b').
   destruct (eqb_spec na na'); subst;
     destruct (eqb_spec b b'); subst;
@@ -287,7 +286,7 @@ Module LevelSetsUIP.
     destruct (IHx1 y1); try constructor; auto; try congruence.
     destruct (eqb_spec t1 t3); try constructor; auto; try congruence.
     destruct (IHx2 y2); try constructor; auto; try congruence.
-  Qed.
+  Defined.
   
   Derive NoConfusion for LevelSet.Raw.tree.
   Derive Signature for LevelSet.Raw.bst.
@@ -342,7 +341,7 @@ Module ConstraintSetsUIP.
     destruct (IHx1 y1); try constructor; auto; try congruence.
     destruct (eqb_spec p p0); try constructor; auto; try congruence.
     destruct (IHx2 y2); try constructor; auto; try congruence.
-  Qed.
+  Defined.
 
   Definition eqb_ConstraintSet x y :=
     eqb (ConstraintSet.this x) (ConstraintSet.this y).

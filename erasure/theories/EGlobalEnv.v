@@ -85,14 +85,8 @@ End Lookups.
 (** Knowledge of propositionality status of an inductive type and parameters *)
 
 Definition inductive_isprop_and_pars Σ ind :=
-  match lookup_env Σ (inductive_mind ind) with
-  | Some (InductiveDecl mdecl) =>
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
-    | Some idecl => Some (idecl.(ind_propositional), mdecl.(ind_npars))
-    | None => None
-    end
-  | _ => None
-  end.
+  '(mdecl, idecl) <- lookup_inductive Σ ind ;;
+  ret (idecl.(ind_propositional), mdecl.(ind_npars)).
 
 Definition closed_decl (d : EAst.global_decl) := 
   match d with

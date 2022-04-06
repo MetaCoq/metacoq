@@ -374,7 +374,7 @@ Lemma extends_is_propositional {efl} {Σ Σ'} :
   forall ind b, inductive_isprop_and_pars Σ ind = Some b -> inductive_isprop_and_pars Σ' ind = Some b.
 Proof.
   intros wf ex ind b.
-  rewrite /inductive_isprop_and_pars.
+  rewrite /inductive_isprop_and_pars /lookup_inductive /lookup_minductive.
   destruct lookup_env eqn:lookup => //.
   now rewrite (extends_lookup wf ex lookup).
 Qed.

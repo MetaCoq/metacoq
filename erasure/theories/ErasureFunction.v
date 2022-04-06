@@ -2415,3 +2415,51 @@ Proof.
   intros map repr wfΣ.
   eapply IHetaΣ.
 Qed.
+
+(* Sanity checks: the [erase] function maximally erases terms *)
+Lemma erasable_tBox_value (wfl := Ee.default_wcbv_flags) (Σ : global_env_ext) (wfΣ : wf_ext Σ) t T v :
+  forall wt : Σ ;;; [] |- t : T,
+  Σ |-p t ▷ v -> erases Σ [] v E.tBox -> ∥ isErasable Σ [] t ∥.
+Proof.
+  intros.
+  depind H.
+  eapply Is_type_eval_inv; eauto. eexists; eauto.
+Qed.
+
+Lemma erase_eval_to_box (wfl := Ee.default_wcbv_flags) {Σ : wf_env} {univs wfext t v Σ' t' deps} :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : forall Σ0 : global_env_ext, abstract_env_rel' Σext Σ0 -> welltyped Σ0 [] t,
+  erase Σext [] t wt = t' ->
+  KernameSet.subset (term_global_deps t') deps ->
+  erase_global deps Σ = Σ' ->
+  PCUICWcbvEval.eval Σ t v ->
+  @Ee.eval Ee.default_wcbv_flags Σ' t' E.tBox -> ∥ isErasable Σext [] t ∥.
+Proof.
+  intros Σext wt.
+  intros.
+  destruct (erase_correct Σ univs wfext _ _ _ _ _ wt H H0 H1 X) as [ev [eg [eg']]].
+  pose proof (Ee.eval_deterministic H2 eg'). subst.
+  destruct wfext. destruct (wt _ eq_refl) as [T wt'].
+  eapply erasable_tBox_value; eauto.
+Qed.
+
+Lemma erase_eval_to_box_eager (wfl := Ee.default_wcbv_flags) {Σ : wf_env} {univs wfext t v Σ' t' deps} :
+  let Σext := make_wf_env_ext Σ univs wfext in
+  forall wt : forall Σ0 : global_env_ext, abstract_env_rel' Σext Σ0 -> welltyped Σ0 [] t,
+  erase Σext [] t wt = t' ->
+  KernameSet.subset (term_global_deps t') deps ->
+  erase_global deps Σ = Σ' ->
+  PCUICWcbvEval.eval Σ t v ->
+  @Ee.eval Ee.default_wcbv_flags Σ' t' E.tBox -> t' = E.tBox.
+Proof.
+  intros Σext wt.
+  intros.
+  destruct (erase_eval_to_box wt H H0 H1 X H2).
+  subst t'.
+  destruct (is_erasableb Σext [] t wt) eqn:heq.
+  simp erase. unfold inspect.
+  assert (exist (is_erasableb Σext [] t wt) eq_refl = exist true heq).
+  now destruct heq. rewrite H. simp erase => //.
+  elimtype False.
+  destruct (is_erasableb_reflect Σext [] t wt) => //. apply n. now sq.
+Qed.

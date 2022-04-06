@@ -45,16 +45,18 @@ Program Definition erasure_pipeline (efl := EWellformed.all_env_flags) :
   guarded_to_unguarded_fix eq_refl ▷
   (* Remove all constructor parameters *)
   remove_params_optimization ▷ 
+  (* Rebuild the efficient lookup table *)
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   (* Remove all cases / projections on propositional content *)
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl).
 (* At the end of erasure we get a well-formed program (well-scoped globally and localy), without 
    parameters in inductive declarations. The constructor applications are also expanded, and
    the evaluation relation does not need to consider guarded fixpoints or case analyses on propositional
-   content. *)
+   content. All fixpoint bodies start with a lambda as well. *)
 
 Next Obligation.
   destruct H. split => //. sq.
-  now eapply EProgram.expanded_eprogram_env_expanded_eprogram_cstrs. 
+  now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.
 
 Definition run_erase_program := run erasure_pipeline.
@@ -66,9 +68,10 @@ Program Definition erasure_pipeline_fast (efl := EWellformed.all_env_flags) :=
   erase_transform ▷ 
   guarded_to_unguarded_fix eq_refl ▷
   remove_params_fast_optimization _ ▷ 
+  rebuild_wf_env_transform (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) ▷
   optimize_prop_discr_optimization (efl := ERemoveParams.switch_no_params EWellformed.all_env_flags) (hastrel := eq_refl) (hastbox := eq_refl).
 Next Obligation.
-  destruct H; split => //. now eapply EProgram.expanded_eprogram_env_expanded_eprogram_cstrs. 
+  destruct H; split => //. now eapply ETransform.expanded_eprogram_env_expanded_eprogram_cstrs. 
 Qed.
 
 Definition run_erase_program_fast := run erasure_pipeline_fast.

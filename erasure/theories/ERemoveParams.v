@@ -407,7 +407,7 @@ Lemma is_propositional_strip (Σ : GlobalContextMap.t) ind :
     inductive_isprop_and_pars (strip_env Σ) ind = None
   end.
 Proof.
-  rewrite /inductive_isprop_and_pars.
+  rewrite /inductive_isprop_and_pars /lookup_inductive /lookup_minductive.
   rewrite lookup_env_strip.
   destruct lookup_env; simpl; auto.
   destruct g; simpl; auto. destruct nth_error => //.
@@ -716,7 +716,7 @@ Lemma lookup_inductive_pars_is_prop_and_pars Σ ind b pars :
   inductive_isprop_and_pars Σ ind = Some (b, pars) ->
   lookup_inductive_pars Σ (inductive_mind ind) = Some pars.
 Proof.
-  rewrite /inductive_isprop_and_pars /lookup_inductive_pars /lookup_minductive.
+  rewrite /inductive_isprop_and_pars /lookup_inductive_pars /lookup_inductive /lookup_minductive.
   destruct lookup_env => //.
   destruct g => /= //.
   destruct nth_error => //. congruence.
@@ -1061,9 +1061,6 @@ Qed.
 
 From MetaCoq.Erasure Require Import EProgram.
 
-Lemma fresh_globals_cons_inv {Σ : global_context} {d} : EnvMap.fresh_globals (d :: Σ) -> EnvMap.fresh_globals Σ.
-Proof. intros H; now depelim H. Qed.
-
 Program Fixpoint strip_env' Σ : EnvMap.fresh_globals Σ -> global_context :=
   match Σ with
   | [] => fun _ => []
@@ -1145,13 +1142,6 @@ Proof.
   intros _ => //.
 Qed.
 
-Lemma extends_wf_glob {efl : EEnvFlags} {Σ Σ'} : extends Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
-Proof.
-  intros [? ->].
-  induction x; cbn; auto.
-  intros wf; depelim wf. eauto.
-Qed.
-
 Lemma strip_extends' {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} : 
   has_tApp ->
   extends Σ Σ' ->
@@ -1164,7 +1154,7 @@ Proof.
   move=> wfΣ.
   assert (extends Σ Σ); auto. now exists [].
   assert (wf_glob Σ).
-  { eapply extends_wf_glob. exact ext. tea. }
+  { eapply EExtends.extends_wf_glob. exact ext. tea. }
   revert H H0.
   generalize Σ at 1 3 5 6. intros Σ''.
   induction Σ'' => //. cbn.
@@ -1174,7 +1164,7 @@ Proof.
   unfold on_snd. cbn. f_equal.
   eapply strip_decl_extends => //.
   eapply extends_wf_global_decl. 3:tea. auto. cbn.
-  eapply extends_wf_glob; tea.
+  eapply EExtends.extends_wf_glob; tea.
   destruct hin. exists (x ++ [(kn, d)]). rewrite -app_assoc /= //.
 Qed.
 

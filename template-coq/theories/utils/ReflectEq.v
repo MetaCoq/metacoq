@@ -111,36 +111,41 @@ Definition eq_option {A} (eqA : A -> A -> bool) (u v : option A) : bool :=
   | _, _ => false
   end.
 
-#[global] Instance reflect_option : forall {A}, ReflectEq A -> ReflectEq (option A).
+#[program, global] Instance reflect_option {A} {HA : ReflectEq A} : ReflectEq (option A) :=
+  {| eqb := eq_option eqb |}.
+Next Obligation.
 Proof.
-  intros A RA. refine {| eqb := eq_option eqb |}.
-  intros x y. destruct x, y.
+  destruct x, y.
   all: cbn.
   all: try solve [ constructor ; easy ].
   destruct (eqb_spec a a0) ; nodec.
   constructor. f_equal. assumption.
-Defined.
+Qed.
 
-Fixpoint eq_list {A} (eqA : A -> A -> bool) (l l' : list A) : bool :=
+Section eq_list.
+  Context {A} (eqA : A -> A -> bool).
+  Fixpoint eqb_list (l l' : list A) : bool :=
   match l, l' with
   | a :: l, a' :: l' =>
-    if eqA a a' then eq_list eqA l l'
+    if eqA a a' then eqb_list l l'
     else false
   | [], [] => true
   | _, _ => false
   end.
+End eq_list.
 
-#[global] Instance reflect_list : forall {A}, ReflectEq A -> ReflectEq (list A).
+#[program, global] Instance reflect_list {A} {RA : ReflectEq A} : ReflectEq (list A) :=
+  {| eqb := eqb_list eqb |}.
+Next Obligation.
 Proof.
-  intros A RA. refine {| eqb := eq_list eqb |}.
-  intro x. induction x ; intro y ; destruct y.
+  induction x in y |- * ; destruct y.
   - cbn. constructor. reflexivity.
   - cbn. constructor. discriminate.
   - cbn. constructor. discriminate.
   - cbn. destruct (eqb_spec a a0) ; nodec.
     destruct (IHx y) ; nodec.
     subst. constructor. reflexivity.
-Defined.
+Qed.
 
 #[global] Instance reflect_nat : ReflectEq nat := {
   eqb_spec := reflect_reflectProp_2 PeanoNat.Nat.eqb_spec

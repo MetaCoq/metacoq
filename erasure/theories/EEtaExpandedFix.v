@@ -10,13 +10,11 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 
 From MetaCoq.Template Require Import config utils BasicAst Universes.
 From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils EEnvMap EExtends EWellformed.
-From MetaCoq.Erasure Require Import EWcbvEval EWcbvEvalInd.
+From MetaCoq.Erasure Require Import EWcbvEvalInd EProgram EWcbvEval.
 
 Set Default Proof Using "Type*".
 
-Definition switch_unguarded_fix fl := 
-  {| with_prop_case := fl.(@with_prop_case);
-     with_guarded_fix := false |}.
+Definition switch_unguarded_fix fl : EWcbvEval.WcbvFlags := EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) false.
 
 Lemma eval_trans' {wfl : WcbvFlags} {Σ e e' e''} :
   eval Σ e e' -> eval Σ e' e'' -> e' = e''.
@@ -203,12 +201,21 @@ Inductive expanded_global_declarations : forall (Σ : global_declarations), Prop
 
 Definition expanded_global_env := expanded_global_declarations.
 
+Definition expanded_eprogram (p : eprogram) := 
+  expanded_global_env p.1 /\ expanded p.1 [] p.2.
+
+Definition expanded_eprogram_env (p : eprogram_env) := 
+  let decls := p.1.(EEnvMap.GlobalContextMap.global_decls) in
+  expanded_global_env decls /\ expanded p.1 [] p.2.
+
 Local Hint Constructors expanded : core.
 
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    ELiftSubst ESpineView ECSubst.
+    ELiftSubst ESpineView ECSubst EProgram.
+
+Arguments EWcbvEval.eval {wfl}.    
 
 Global Hint Rewrite repeat_length : len.
 
@@ -241,7 +248,7 @@ Local Existing Instance extraction_checker_flags.
 Ltac introdep := let H := fresh in intros H; depelim H.
 
 #[global]
-Hint Constructors Ee.eval : core.
+Hint Constructors eval : core.
 
 Set Warnings "-notation-overridden".
 Import E.
@@ -1066,10 +1073,10 @@ Proof.
   intros. now eapply All_firstn.
 Qed.
 
-Lemma eval_etaexp {fl : Ee.WcbvFlags} {efl : EEnvFlags} {Σ a a'} : 
+Lemma eval_etaexp {fl : WcbvFlags} {efl : EEnvFlags} {Σ a a'} : 
   isEtaExp_env Σ ->
   wf_glob Σ ->
-  Ee.eval Σ a a' -> isEtaExp Σ [] a -> isEtaExp Σ [] a'.
+  eval Σ a a' -> isEtaExp Σ [] a -> isEtaExp Σ [] a'.
 Proof.
   intros etaΣ wfΣ.
   induction 1 as [ | ? ? ? ? ? ? ? ? IHs | | | | ? ? ? ? ? ? ? ? ? ? ? IHs | ? ? ? ? ? ? ? ? ? ? ? IHs | ? ? ? ? ? ? ? ? ? ? IHs | | | | | | |   ] using eval_mkApps_rect.
@@ -1443,7 +1450,7 @@ Proof.
     * destruct p. subst f'. cbn in i.
       rewrite !negb_or in i.
       move/andP: i => [] /andP[] _ /=.
-      rewrite Ee.isFixApp_mkApps /= //. cbn. rewrite withguard //.
+      rewrite isFixApp_mkApps /= //. cbn. rewrite withguard //.
     * right. len. eapply isEtaExp_fixapp_mon; tea. lia.
   + eapply atom_mkApps in i. destruct i => //. cbn in H0. subst args.
     exists []. split; eauto.

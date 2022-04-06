@@ -43,6 +43,13 @@ Section EEnvFlags.
     intros Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
     split; eauto. eapply weakening_env_declared_inductive; eauto.
   Qed.
+  
+  Lemma extends_wf_glob {Σ Σ'} : extends Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
+  Proof.
+    intros [? ->].
+    induction x; cbn; auto.
+    intros wf; depelim wf. eauto.
+  Qed.
 
   Definition global_subset (Σ Σ' : global_declarations) := 
     forall kn d, lookup_env Σ kn = Some d -> lookup_env Σ' kn = Some d.

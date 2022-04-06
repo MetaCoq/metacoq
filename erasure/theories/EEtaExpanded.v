@@ -14,7 +14,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
 From MetaCoq.SafeChecker Require Import PCUICWfEnv.
      
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEvalInd.
+    EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEvalInd EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -512,6 +512,14 @@ Inductive expanded_global_declarations : forall (Σ : global_declarations), Prop
   expanded_decl Σ decl.2 -> expanded_global_declarations (decl :: Σ).
 
 Definition expanded_global_env := expanded_global_declarations.
+
+Definition expanded_eprogram_cstrs (p : eprogram) := 
+  EEtaExpanded.isEtaExp_env p.1 && EEtaExpanded.isEtaExp p.1 p.2.
+
+Definition expanded_eprogram_env_cstrs (p : eprogram_env) := 
+  let decls := p.1.(EEnvMap.GlobalContextMap.global_decls) in
+  EEtaExpanded.isEtaExp_env decls && EEtaExpanded.isEtaExp decls p.2.
+
 
 Lemma isEtaExp_app_expanded Σ ind idx n :
    isEtaExp_app Σ ind idx n = true <->

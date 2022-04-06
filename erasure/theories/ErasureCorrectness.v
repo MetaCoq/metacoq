@@ -951,8 +951,9 @@ Lemma isPropositional_propositional Σ Σ' ind mdecl idecl mdecl' idecl' :
   forall b, isPropositional Σ ind b -> inductive_isprop_and_pars Σ' ind = Some (b, mdecl.(ind_npars)).
 Proof.
   intros [] [] [_ indp] [].
-  intros b. unfold isPropositional, inductive_isprop_and_pars.
-  rewrite H H1 H0 H2. destruct destArity eqn:da => //.
+  intros b. unfold isPropositional, inductive_isprop_and_pars, 
+    EGlobalEnv.lookup_inductive, EGlobalEnv.lookup_minductive.
+  rewrite H H0 H1 /= H2. destruct destArity eqn:da => //.
   destruct p as [ctx s].
   destruct H4 as [_ [_ [_ isP]]].
   red in isP. rewrite da in isP.

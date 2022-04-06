@@ -251,7 +251,7 @@ Section Wcbv.
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
-    ((l = []) × atom t) + (value_head t × All value l) + (with_guarded_fix × isStuckFix t l × All value l).
+    ((l = []) /\ atom t) + (value_head t × All value l) + (with_guarded_fix × isStuckFix t l × All value l).
   Proof.
     intros H H'. generalize_eqs H'. revert t H. induction H' using value_values_ind.
     intros.
@@ -302,7 +302,7 @@ Section Wcbv.
     - destruct (mkApps_elim f' [a']).
       eapply value_mkApps_inv in IHeval1 => //.
       destruct IHeval1; intuition subst.
-      * rewrite -> a1 in *.
+      * rewrite -> H1 in *.
         simpl in *.
         apply (value_app f0 [a']). destruct with_guarded_fix;
         destruct f0; simpl in * |- *; try congruence;

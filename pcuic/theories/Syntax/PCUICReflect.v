@@ -246,11 +246,6 @@ Qed.
 #[global]
 Instance EqDec_term : EqDec term := ReflectEq_EqDec _.
 
-(** Avoid name clash with template's reflect term, namespace handlining bug in extraction. *)
-#[global]
-Instance reflect_pcuic_term : ReflectEq term :=
-  let h := EqDec_ReflectEq term in _.
-
 (** This is defined using reflect_list, so no issue of computing with proofs here. *)  
 #[global]
 Instance eqb_ctx : ReflectEq context := _.

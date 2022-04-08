@@ -1,7 +1,7 @@
 (* Distributed under the terms of the MIT license. *)
 (* For primitive integers and floats  *)
 From Coq Require Numbers.Cyclic.Int63.Int63 Floats.PrimFloat Floats.FloatAxioms.
-From MetaCoq.Template Require Import utils BasicAst Universes.
+From MetaCoq.Template Require Import utils BasicAst Universes Kernames.
 Require Import ssreflect.
 From Equations Require Import Equations.
 
@@ -12,12 +12,12 @@ Next Obligation.
   now apply (Numbers.Cyclic.Int63.Int63.eqb_spec x y) in eq.
   now apply (Numbers.Cyclic.Int63.Int63.eqb_false_spec x y) in eq.
 Qed.
- 
+
 Derive NoConfusion EqDec for SpecFloat.spec_float.
 
 Local Obligation Tactic := idtac.
 
-#[program,global] 
+#[program,global]
 Instance reflect_prim_float : ReflectEq PrimFloat.float :=
   { eqb x y := eqb (ReflectEq := EqDec_ReflectEq SpecFloat.spec_float) (FloatOps.Prim2SF x) (FloatOps.Prim2SF y) }.
 Next Obligation.
@@ -104,7 +104,7 @@ Qed.
 Definition eq_aname (na nb : binder_annot name) :=
   eqb na.(binder_name) nb.(binder_name) &&
   eqb na.(binder_relevance) nb.(binder_relevance).
-  
+
 #[global, program] Instance reflect_aname : ReflectEq aname := {
   eqb := eq_aname
 }.
@@ -151,12 +151,27 @@ Next Obligation.
   all: left. all: reflexivity.
 Qed.
 
-#[global] Instance reflect_case_info : ReflectEq case_info := EqDec_ReflectEq case_info.
+
+
+Definition eqb_case_info
+  (ci ci' : BasicAst.case_info) :=
+  let (ci_ind, ci_npar, ci_relevance) := ci in
+  let (ci_ind', ci_npar', ci_relevance') := ci' in
+  eqb ci_ind ci_ind' && eqb ci_npar ci_npar' && eqb ci_relevance ci_relevance'.
+
+#[global, program] Instance reflect_case_info : ReflectEq case_info :=
+  {| eqb := eqb_case_info |}.
+Next Obligation.
+  intros. destruct x as [ci_ind ci_npar ci_relevance], y as [ci_ind' ci_npar' ci_relevance']. cbn -[eqb].
+  destruct (eqb_spec ci_ind ci_ind'); subst;
+  destruct (eqb_spec ci_npar ci_npar'); subst;
+    destruct (eqb_spec ci_relevance ci_relevance'); subst; constructor; congruence.
+Qed.
 
 Derive NoConfusion NoConfusionHom for sig.
 Derive NoConfusion NoConfusionHom for prod.
 
-Definition eqb_context_decl {term : Type} (eqterm : term -> term -> bool) 
+Definition eqb_context_decl {term : Type} (eqterm : term -> term -> bool)
   (x y : BasicAst.context_decl term) :=
   let (na, b, ty) := x in
   let (na', b', ty') := y in
@@ -219,7 +234,7 @@ Derive NoConfusion EqDec for comparison.
 Lemma string_compare_irrel {s s'} {c} (H H' : string_compare s s' = c) : H = H'.
 Proof.
   apply uip.
-Qed.  
+Qed.
 
 Scheme le_ind_prop := Induction for le Sort Prop.
 
@@ -246,7 +261,7 @@ Proof.
 Qed.
 
 Require Import RelationClasses.
-    
+
 Lemma constraint_lt_irrel (x y : UnivConstraint.t) (l l' : UnivConstraint.lt_ x y) : l = l'.
 Proof.
   revert l'. induction l using constraint_lt_ind_dep.
@@ -266,15 +281,15 @@ Qed.
 
 Module LevelSetsUIP.
   Import LevelSet.Raw.
-  
-  Fixpoint levels_tree_eqb (x y : LevelSet.Raw.t) := 
+
+  Fixpoint levels_tree_eqb (x y : LevelSet.Raw.t) :=
   match x, y with
   | LevelSet.Raw.Leaf, LevelSet.Raw.Leaf => true
-  | LevelSet.Raw.Node h l o r, LevelSet.Raw.Node h' l' o' r' => 
+  | LevelSet.Raw.Node h l o r, LevelSet.Raw.Node h' l' o' r' =>
     eqb h h' && levels_tree_eqb l l' && eqb o o' && levels_tree_eqb r r'
   | _, _ => false
   end.
-  
+
   Scheme levels_tree_rect := Induction for LevelSet.Raw.tree Sort Type.
 
   #[global] Instance levels_tree_reflect : ReflectEq LevelSet.Raw.t.
@@ -287,13 +302,13 @@ Module LevelSetsUIP.
     destruct (eqb_spec t1 t3); try constructor; auto; try congruence.
     destruct (IHx2 y2); try constructor; auto; try congruence.
   Defined.
-  
+
   Derive NoConfusion for LevelSet.Raw.tree.
   Derive Signature for LevelSet.Raw.bst.
-  
+
   Definition eqb_LevelSet x y :=
     eqb (LevelSet.this x) (LevelSet.this y).
-  
+
   Lemma ok_irrel (x : t) (o o' : Ok x) : o = o'.
   Proof.
     unfold Ok in *.
@@ -322,10 +337,10 @@ End LevelSetsUIP.
 Module ConstraintSetsUIP.
   Import ConstraintSet.Raw.
 
-  Fixpoint cs_tree_eqb (x y : t) := 
+  Fixpoint cs_tree_eqb (x y : t) :=
     match x, y with
     | ConstraintSet.Raw.Leaf, ConstraintSet.Raw.Leaf => true
-    | ConstraintSet.Raw.Node h l o r, ConstraintSet.Raw.Node h' l' o' r' => 
+    | ConstraintSet.Raw.Node h l o r, ConstraintSet.Raw.Node h' l' o' r' =>
       eqb h h' && cs_tree_eqb l l' && eqb o o' && cs_tree_eqb r r'
     | _, _ => false
     end.
@@ -388,7 +403,7 @@ Definition eqb_universes_decl x y :=
   | Polymorphic_ctx cx, Polymorphic_ctx cy => eqb cx cy
   | _, _ => false
   end.
-  
+
 #[global] Instance reflect_universes_decl : ReflectEq universes_decl.
 Proof.
   refine {| eqb := eqb_universes_decl |}.

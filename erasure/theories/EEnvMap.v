@@ -45,6 +45,17 @@ Module GlobalContextMap.
     rewrite /lookup_inductive /EGlobalEnv.lookup_inductive.
     rewrite lookup_minductive_spec //.
   Qed.
+
+  Definition lookup_constructor Σ kn c : option (mutual_inductive_body * one_inductive_body * (ident * nat)) :=
+    '(mdecl, idecl) <- lookup_inductive Σ kn ;;
+    cdecl <- nth_error idecl.(ind_ctors) c ;;
+    ret (mdecl, idecl, cdecl).  
+
+  Lemma lookup_constructor_spec Σ kn : lookup_constructor Σ kn = EGlobalEnv.lookup_constructor Σ kn.
+  Proof.
+    rewrite /lookup_constructor /EGlobalEnv.lookup_constructor.
+    rewrite lookup_inductive_spec //.
+  Qed.
     
   Definition lookup_inductive_pars Σ kn : option nat := 
     mdecl <- lookup_minductive Σ kn ;;
@@ -65,6 +76,17 @@ Module GlobalContextMap.
   Proof.
     rewrite /inductive_isprop_and_pars /EGlobalEnv.inductive_isprop_and_pars.
     now rewrite lookup_inductive_spec.
+  Qed.
+
+  Definition constructor_isprop_pars_decl Σ (ind : inductive) (c : nat) :=
+    '(mdecl, idecl, cdecl) <- lookup_constructor Σ ind c ;;
+    ret (ind_propositional idecl, ind_npars mdecl, cdecl).
+  
+  Lemma constructor_isprop_pars_decl_spec Σ kn : 
+    constructor_isprop_pars_decl Σ kn = EGlobalEnv.constructor_isprop_pars_decl Σ kn.
+  Proof.
+    rewrite /constructor_isprop_pars_decl /EGlobalEnv.constructor_isprop_pars_decl.
+    rewrite lookup_constructor_spec //.
   Qed.
 
   Program Definition make (g : global_declarations) (Hg : EnvMap.fresh_globals g): t :=

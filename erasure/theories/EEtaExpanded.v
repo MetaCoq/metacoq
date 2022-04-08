@@ -139,7 +139,7 @@ Section isEtaExp.
     intros napp.
     destruct v using rev_case; simp_eta.
     - destruct construct_viewc; rewrite andb_true_r //.
-    - rewrite isEtaExp_mkApps_nonnil //. now destruct v; cbn; congruence.
+    - rewrite isEtaExp_mkApps_nonnil //.
   Qed.
 
   Lemma isEtaExp_Constructor ind i v :
@@ -634,7 +634,7 @@ Proof.
     noconf H3.
     eapply expanded_tConstruct_app; tea. cbn in H0. lia. solve_all.
   - destruct args using rev_ind; cbn => //.
-    eapply expanded_mkApps => //. now rewrite eqc. eapply app_tip_nil. solve_all.
+    eapply expanded_mkApps => //. now rewrite eqc. solve_all.
 Qed.
 
 From MetaCoq.Erasure Require Import EEtaExpandedFix.

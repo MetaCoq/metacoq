@@ -17,28 +17,6 @@ Definition and_assum {A B : Type} (f : A) (f' : A -> B) : A × B :=
 Lemma All_tip {A} {P : A -> Type} {a : A} : P a <~> All P [a].
 Proof. split; intros. repeat constructor; auto. now depelim X. Qed.
 
-Lemma eval_construct_size  {fl : WcbvFlags} [Σ kn c args e] : 
-  forall (ev : eval Σ (mkApps (tConstruct kn c) args) e),
-  ∑ args', (e = mkApps (tConstruct kn c) args') ×
-  All2 (fun x y => ∑ ev' : eval Σ x y, eval_depth ev' < eval_depth ev) args args'.
-Proof.
-  revert e; induction args using rev_ind; intros e.
-  - intros ev. depelim ev. exists []=> //.
-  - intros ev. revert ev.
-    rewrite mkApps_app /=.
-    intros ev.
-    depelim ev; try solve_discr.
-    destruct (IHargs _ ev1) as [? []]. solve_discr.
-    all:try specialize (IHargs _ ev1) as [? []]; try solve_discr.
-    * subst f'. 
-      exists (x0 ++ [a'])%list.
-      rewrite mkApps_app /= //.
-      cbn in i. split => //. eapply All2_app; eauto.
-      eapply All2_impl; tea. cbn. intros ? ? [ev' ?]. exists ev'. lia.
-      constructor. exists ev2. lia. constructor.
-    * now cbn in i.
-Qed.
-
 Section eval_mkApps_rect.
   
   Variables (wfl : WcbvFlags) (Σ : global_declarations) (P : term → term → Type).
@@ -65,13 +43,14 @@ Section eval_mkApps_rect.
           → eval Σ (ECSubst.csubst b0' 0 b1) res
           → P (ECSubst.csubst b0' 0 b1) res →
           P (tLetIn na b0 b1) res)
-    → (∀ (ind : Kernames.inductive) (pars : nat) (discr : term) 
+    → (∀ (ind : Kernames.inductive) (pars : nat) cdecl (discr : term) 
          (c : nat) (args : list term) (brs : list  (list BasicAst.name × term)) 
          (br : list BasicAst.name × term) (res : term),
           eval Σ discr (mkApps (tConstruct ind c) args)
           → P discr (mkApps (tConstruct ind c) args)
-          → inductive_isprop_and_pars Σ ind = Some (false, pars)
+          → constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl)
           → nth_error brs c = Some br
+          → #|args| = pars + cdecl.2 
           → #|skipn pars args| = #|br.1|
           → eval Σ (iota_red pars args br) res
           → P (iota_red pars args br) res
@@ -150,24 +129,40 @@ Section eval_mkApps_rect.
           → P body res → P (tConst c) res)
     → (∀ (i : inductive) (pars arg : nat) 
          (discr : term) (args : list term) 
-         (res : term),
+         (res : term) cdecl a,
           eval Σ discr (mkApps (tConstruct i 0) args)
           → P discr (mkApps (tConstruct i 0) args)
-          → inductive_isprop_and_pars Σ i = Some (false, pars)
-          → eval Σ (nth (pars + arg) args tDummy) res
-          → P (nth (pars + arg) args tDummy) res
+          → constructor_isprop_pars_decl Σ i 0 = Some (false, pars, cdecl) 
+          → #|args| = pars + cdecl.2 
+          -> nth_error args (pars + arg) = Some a
+          -> eval Σ a res
+          → P a res
           → P (tProj (i, pars, arg) discr) res)
+
     → (∀ (i : inductive) (pars arg : nat) (discr : term),
           with_prop_case
           → eval Σ discr tBox
           → P discr tBox
           → inductive_isprop_and_pars Σ i = Some (true, pars)
           → P (tProj (i, pars, arg) discr) tBox)
+
+    → (∀ ind c mdecl idecl cdecl f args a a',
+      lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+      forall (ev : eval Σ f (mkApps (tConstruct ind c) args)),
+      IH _ _ ev ->
+
+      P f (mkApps (tConstruct ind c) args) ->
+      #|args| < cstr_arity mdecl cdecl ->
+      eval Σ a a' ->
+      P a a' ->
+      P (tApp f a) (tApp (mkApps (tConstruct ind c) args) a'))
+
     → (∀ (f11 f' : term) a a' ,
         forall (ev : eval Σ f11 f'),
           P f11 f' ->
           IH _ _ ev
-          → ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f')
+          → ~~ (isLambda f' || (if with_guarded_fix then isFixApp f' else isFix f') || isBox f' 
+            || isConstructApp f')
           → eval Σ a a'
           → P a a'
           → P (tApp f11 a) (tApp f' a'))

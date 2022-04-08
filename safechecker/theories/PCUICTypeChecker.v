@@ -304,6 +304,8 @@ Section Typecheck.
     CoreTactics.equations_simpl; 
     try Tactics.program_solve_wf.
 
+  Opaque isconv_term. 
+
   (* replaces convert and convert_leq*)
   Equations convert (le : conv_pb) Γ t u
           (ht : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ t) 
@@ -349,6 +351,7 @@ Section Typecheck.
     specialize_Σ wfΣ.
     eapply isconv_term_complete in Hc; eauto.
   Qed.
+  Transparent isconv_term.
 
   Definition wt_decl (Σ : global_env_ext) Γ d :=
     match d with
@@ -999,7 +1002,7 @@ Section Typecheck.
     }
     repeat split; eauto. 
     - now rewrite mapi_length in e1.
-    - sq. eapply abstract_env_check_constraints_correct; eauto. 
+    - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
       now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ]. 
       eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
       solve_all.
@@ -1159,7 +1162,7 @@ Section Typecheck.
       eapply branch_helper in i; tea.
       specialize_Σ wfΣ; sq.
       now destruct i as [? []].
-    Defined.
+    Qed.
     Next Obligation.
       eapply branch_helper in i; tea.
       pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ; sq.

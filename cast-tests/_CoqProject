@@ -1,5 +1,8 @@
--I /nix/store/yr3virki972fmywfqylqh6lbwx7sc3cp-coq8.14-template-coq-dev/lib/coq/8.14/user-contrib/MetaCoq/Template/
--I /nix/store/ws9lv6wb9rsh8cwvrc6ix1f0k7g845vn-coq8.14-pcuic-dev/lib/coq/8.14/user-contrib/MetaCoq/PCUIC/
+-I ../template-coq/build
+-I ../safechecker/src
+-Q ../template-coq/theories MetaCoq.Template
+-Q ../pcuic/theories MetaCoq.PCUIC
+-Q ../safechecker/theories MetaCoq.SafeChecker
 -R . MetaCoq.CastTests
 
-dirty.v
+castcic.v

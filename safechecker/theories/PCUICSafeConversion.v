@@ -4795,6 +4795,9 @@ Qed.
           } ;
         | @exist None eq2 := False_rect _ _
         } ;
+      | ccview_unk m ui with inspect (decompose_stack ρ) := {
+        | @exist (args, ξ) eq' := Some (mkApps (tConst (m , unkId) ui) args)
+      } ;
       | ccview_other cred _ := None
       }
     }.
@@ -4866,6 +4869,16 @@ Qed.
       pose proof (red_welltyped _ hΣ (h _ wfΣ) r') as h'.
       eapply cored_red_cored.
       + constructor. eapply red_cofix_case. eauto.
+      + eapply red_case_c, r.
+    - clear H H0.
+      simpl_reduce_stack Σ wfΣ.
+      assert (r' : red Σ Γ (tCase ci p c brs)
+                     (tCase ci p (mkApps (tConst (m , "unk") ui) (decompose_stack ρ).1) brs))
+        by eapply red_case_c, r.
+      destruct (hΣ _ wfΣ) as [hΣ].
+      pose proof (red_welltyped _ hΣ (h _ wfΣ) r') as h'.
+      eapply cored_red_cored.
+      + constructor. todo "unk".
       + eapply red_case_c, r.
   Qed.
   

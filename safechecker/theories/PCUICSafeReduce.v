@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import RelationClasses.
-From MetaCoq.Template Require Import config utils.
+From MetaCoq.Template Require Import config utils Kernames.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICGeneration PCUICLiftSubst
      PCUICUnivSubst PCUICTyping PCUICPosition PCUICNormal
@@ -9,6 +9,8 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
      PCUICConfluence PCUICConversion
      PCUICOnFreeVars PCUICWellScopedCumulativity
      PCUICCanonicity.
+
+Require Import String.
 
 From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfReduction PCUICWfEnv.
 
@@ -26,6 +28,8 @@ Set Equations With UIP.
   Once extracted, this should roughly correspond to the OCaml implementation.
 
  *)
+
+ Notation unkId := "unk".
 
 (* From Program *)
 Notation " `  t " := (proj1_sig t) (at level 10, t at next level) : metacoq_scope.
@@ -407,19 +411,41 @@ Corollary R_Acc_aux :
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
+  Definition discr_castcic_const (id : ident) : Prop :=
+    match compare_ident "unk" id with
+    | Eq => False
+    | _ => True
+    end.
+
+  Inductive castcic_const_view : ident -> Type :=
+  | castcicview_unk : castcic_const_view unkId
+  | castcicview_other : forall id, discr_castcic_const id -> castcic_const_view id.
+
+  Definition castcic_const_viewc (id : ident) : castcic_const_view id :=
+    match id with
+    | unkId => castcicview_unk
+    | id => castcicview_other id I
+    end.
+
   Equations discr_construct_cofix (t : term) : Prop :=
     discr_construct_cofix (tConstruct ind n ui) := False ;
     discr_construct_cofix (tCoFix mfix idx) := False ;
+    discr_construct_cofix (tConst (m , id) ui) := discr_castcic_const id ;
     discr_construct_cofix _ := True.
 
   Inductive construct_cofix_view : term -> Type :=
   | ccview_construct : forall ind n ui, construct_cofix_view (tConstruct ind n ui)
   | ccview_cofix : forall mfix idx, construct_cofix_view (tCoFix mfix idx)
+  | ccview_unk : forall m ui, construct_cofix_view (tConst (m , "unk") ui)
   | ccview_other : forall t, discr_construct_cofix t -> construct_cofix_view t.
 
   Equations cc_viewc t : construct_cofix_view t :=
     cc_viewc (tConstruct ind n ui) := ccview_construct ind n ui ;
     cc_viewc (tCoFix mfix idx) := ccview_cofix mfix idx ;
+    cc_viewc (tConst (m , id) ui) with castcic_const_viewc id := {
+      | castcicview_unk := ccview_unk m ui ;
+      | castcicview_other id discr := ccview_other (tConst (m , id) ui) discr
+    } ;
     cc_viewc t := ccview_other t I.
 
   Equations discr_construct0_cofix (t : term) : Prop :=
@@ -514,6 +540,7 @@ Corollary R_Acc_aux :
                 rec reduce (tCase ci p (mkApps fn args) brs) π ;
               | @exist None bot := False_rect _ _
               } ;
+            | ccview_unk m ui := give (mkApps (tConst (m , unkId) ui) args) π ;
             | ccview_other t ht := give (tCase ci p (mkApps t args) brs) π
             }
           }
@@ -907,6 +934,15 @@ Corollary R_Acc_aux :
     unfold unfold_cofix in bot.
     rewrite e in bot.
     congruence.
+  Qed.
+  Next Obligation.
+    todo "tUnk".
+  Qed.
+  Next Obligation.
+    todo "tUnk".
+  Qed.
+  Next Obligation.
+    todo "tUnk".
   Qed.
   Next Obligation.
     clear eq reduce h.
@@ -1704,6 +1740,7 @@ Corollary R_Acc_aux :
       constructor.
       apply whnf_mkApps.
       now apply whne_case_noiota.
+    - todo "unk".
     - match type of eq with
       | _ = reduce ?x ?y ?z =>
         specialize (haux x y z);

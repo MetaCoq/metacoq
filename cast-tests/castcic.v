@@ -27,12 +27,7 @@ Program Definition eval_compute_cheat (cf := default_checker_flags)
     [] p'.2 (todo "welltyped") in
     PCUICToTemplate.trans tm.
 
-Definition pred (n : nat) : nat :=
-  match n with
-  | 0 => 0
-  | S m => m
-  end.
-MetaCoq Quote Recursively Definition foo := (pred (unk nat)).
+MetaCoq Quote Recursively Definition foo := (1 + pred (1 + (unk nat))).
 Definition foo' := Eval lazy in eval_compute_cheat foo Monomorphic_ctx.
 MetaCoq Unquote Definition foo'' := foo'.
 Print foo''.

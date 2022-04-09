@@ -365,16 +365,38 @@ Corollary R_Acc_aux :
 
   Obligation Tactic := obTac.
 
+  Definition discr_castcic_const (id : ident) : Prop :=
+    match compare_ident unkId id with
+    | Eq => False
+    | _ => True
+    end.
+
+  Inductive castcic_const_view : ident -> Type :=
+  | castcicview_unk : castcic_const_view unkId
+  | castcicview_other : forall id, discr_castcic_const id -> castcic_const_view id.
+
+  Definition castcic_const_viewc (id : ident) : castcic_const_view id :=
+    match id with
+    | unkId => castcicview_unk
+    | id => castcicview_other id I
+    end.
+
   Equations discr_construct (t : term) : Prop :=
     discr_construct (tConstruct ind n ui) := False ;
+    discr_construct (tConst (m , id) ui) := discr_castcic_const id ;
     discr_construct _ := True.
 
   Inductive construct_view : term -> Type :=
   | view_construct : forall ind n ui, construct_view (tConstruct ind n ui)
+  | view_unk : forall m ui, construct_view (tConst (m , unkId) ui)
   | view_other : forall t, discr_construct t -> construct_view t.
 
   Equations construct_viewc t : construct_view t :=
     construct_viewc (tConstruct ind n ui) := view_construct ind n ui ;
+    construct_viewc (tConst (m , id) ui) with castcic_const_viewc id := {
+      | castcicview_unk := view_unk m ui ;
+      | castcicview_other id discr := view_other (tConst (m , id) ui) discr
+    } ;
     construct_viewc t := view_other t I.
 
   (* Tailored view for _reduce_stack *)
@@ -411,22 +433,6 @@ Corollary R_Acc_aux :
     red_viewc (tProj p c) π := red_view_Proj p c π ;
     red_viewc t π := red_view_other t π I.
 
-  Definition discr_castcic_const (id : ident) : Prop :=
-    match compare_ident "unk" id with
-    | Eq => False
-    | _ => True
-    end.
-
-  Inductive castcic_const_view : ident -> Type :=
-  | castcicview_unk : castcic_const_view unkId
-  | castcicview_other : forall id, discr_castcic_const id -> castcic_const_view id.
-
-  Definition castcic_const_viewc (id : ident) : castcic_const_view id :=
-    match id with
-    | unkId => castcicview_unk
-    | id => castcicview_other id I
-    end.
-
   Equations discr_construct_cofix (t : term) : Prop :=
     discr_construct_cofix (tConstruct ind n ui) := False ;
     discr_construct_cofix (tCoFix mfix idx) := False ;
@@ -436,7 +442,7 @@ Corollary R_Acc_aux :
   Inductive construct_cofix_view : term -> Type :=
   | ccview_construct : forall ind n ui, construct_cofix_view (tConstruct ind n ui)
   | ccview_cofix : forall mfix idx, construct_cofix_view (tCoFix mfix idx)
-  | ccview_unk : forall m ui, construct_cofix_view (tConst (m , "unk") ui)
+  | ccview_unk : forall m ui, construct_cofix_view (tConst (m , unkId) ui)
   | ccview_other : forall t, discr_construct_cofix t -> construct_cofix_view t.
 
   Equations cc_viewc t : construct_cofix_view t :=
@@ -514,6 +520,10 @@ Corollary R_Acc_aux :
               | view_construct ind n ui with inspect (decompose_stack ρ') := {
                 | @exist (l, θ) eq4 :=
                   rec reduce fn (appstack args (App_l (mkApps (tConstruct ind n ui) l) :: ρ))
+                } ;
+              | view_unk m ui with inspect (decompose_stack ρ') := {
+                | @exist (l, θ) eq4 :=
+                  rec reduce fn (appstack args (App_l (mkApps (tConst (m , unkId) ui) l) :: ρ))
                 } ;
               | view_other t ht with inspect (decompose_stack ρ') := {
                 | @exist (l, θ) eq4 :=
@@ -784,6 +794,12 @@ Corollary R_Acc_aux :
     subst.
     rewrite decompose_stack_appstack. cbn.
     rewrite e. cbn. reflexivity.
+  Qed.
+  Next Obligation.
+    todo "unk".
+  Qed.
+  Next Obligation.
+    todo "unk".
   Qed.
   Next Obligation.
     case_eq (decompose_stack π). intros ll π' e.
@@ -1680,6 +1696,7 @@ Corollary R_Acc_aux :
       end.
       destruct (a _ wfΣ) as (?&?&?&?).
       now destruct x.
+    - todo "unk fix".
     - match type of eq3 with
       | context [ reduce ?x ?y ?z ] =>
         specialize (haux x y z);

@@ -921,6 +921,7 @@ Section Conversion.
                                                                (Γ ,,, stack_context θ) c [] _) := {
         | @exist (cred, ρ) eq3 with construct_viewc cred := {
           | view_construct ind n ui := Some (fn, appstack l (App_l (zipc (tConstruct ind n ui) ρ) :: θ)) ;
+          | view_unk m ui := Some (fn, appstack l (App_l (zipc (tConst (m , unkId) ui) ρ) :: θ)) ;
           | view_other cred h' := None
           }
         } ;
@@ -952,6 +953,7 @@ Section Conversion.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; try discriminate.
     all: noconf eq.
+    2: todo "unk fix".
     unfold zipp.
     pose proof (eq_sym eq2) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
@@ -1002,6 +1004,7 @@ Section Conversion.
     intros Γ mfix idx π h fn ξ eq Σ wfΣ.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
+    2: todo "unk fix".
     unfold zippx.
     pose proof (eq_sym eq2) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
@@ -1050,6 +1053,7 @@ Section Conversion.
     intros Γ mfix idx π h fn ξ eq Σ wfΣ.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
+    2: todo "unk fix".
     pose proof (eq_sym eq2) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
     rewrite !zipc_appstack. cbn.
@@ -1093,6 +1097,7 @@ Section Conversion.
     intros Γ mfix idx π h fn ξ eq Σ wfΣ.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros ; noconf eq.
+    2: todo "unk fix".
     pose proof (eq_sym eq2) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
     rewrite !zipc_appstack. cbn.
@@ -1135,6 +1140,7 @@ Section Conversion.
     intros Γ mfix idx π h fn ξ eq.
     revert eq.
     apply_funelim (unfold_one_fix Γ mfix idx π h); intros; noconf eq.
+    2: todo "unk fix".
     pose proof (eq_sym eq2) as eq.
     pose proof (decompose_stack_at_eq _ _ _ _ _ eq). subst.
     rewrite 2!decompose_stack_appstack. cbn.

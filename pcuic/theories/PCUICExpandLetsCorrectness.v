@@ -5437,10 +5437,6 @@ Proof.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICProgram.
-
-Definition expand_lets_program (p : pcuic_program) : pcuic_program :=
-  let Σ' := PCUICExpandLets.trans_global p.1 in 
-  ((build_global_env_map Σ', p.1.2), PCUICExpandLets.trans p.2).
     
 Lemma expanded_expand_lets_program {cf : checker_flags} p (wtp : wt_pcuic_program p) :
   expanded_pcuic_program p ->

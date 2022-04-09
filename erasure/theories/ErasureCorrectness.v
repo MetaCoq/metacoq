@@ -1358,8 +1358,6 @@ Proof.
   rewrite (edeclared_inductive_lookup H) /= H0 //.
 Qed.
 
-From MetaCoq.PCUIC Require PCUICExpandLetsCorrectness.
-
 Arguments inductive_isprop_and_pars : simpl never.
 
 Lemma erases_correct (wfl := default_wcbv_flags) Σ t T t' v Σ' :
@@ -1666,9 +1664,7 @@ Proof.
           with (context_assumptions (cstr_branch_context ind mdecl cdecl)).
          2:{ eapply assumption_context_assumptions.
              eapply (assumption_context_cstr_branch_context d). }
-         rewrite e0 /cstr_arity e1.
-         rewrite PCUICExpandLetsCorrectness.cstr_branch_context_assumptions.
-         lia.
+         rewrite e0 /cstr_arity e1 cstr_branch_context_assumptions; lia.
       -- eapply Is_type_app in X1 as []; auto.
          2:{ eapply subject_reduction_eval. 2:eassumption. eauto. }
          assert (ispind : inductive_isprop_and_pars Σ' ind = Some (true, ind_npars mdecl)).

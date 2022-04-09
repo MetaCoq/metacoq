@@ -1,6 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Int63 FloatOps FloatAxioms.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICTyping.
+From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICCases PCUICTyping PCUICProgram.
 
 (** This translation expands lets in constructor arguments, so that 
   iota reduction reduces to a simple substitution operation with no
@@ -107,3 +107,8 @@ Definition trans_global_env (d : PCUICEnvironment.global_env) : global_env :=
   
 Definition trans_global (Σ : PCUICEnvironment.global_env_ext) : global_env_ext :=
   (trans_global_env (fst Σ), snd Σ).
+
+Definition expand_lets_program (p : pcuic_program) : pcuic_program :=
+  let Σ' := PCUICExpandLets.trans_global p.1 in 
+  ((build_global_env_map Σ', p.1.2), PCUICExpandLets.trans p.2).
+  

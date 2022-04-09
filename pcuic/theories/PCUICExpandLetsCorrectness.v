@@ -1178,25 +1178,7 @@ Proof.
   now rewrite (declared_minductive_ind_npars declc).
 Qed.
 
-Lemma context_assumptions_map2_set_binder_name nas Γ :
-  #|nas| = #|Γ| ->
-  context_assumptions (map2 set_binder_name nas Γ) = context_assumptions Γ.
-Proof.
-  induction Γ in nas |- *; destruct nas; simpl; auto; try discriminate.
-  intros [=]. destruct (decl_body a); auto.
-  f_equal; auto.
-Qed.
-
 Require Import PCUICSpine.
-
-Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
-  SE.context_assumptions (PCUICCases.cstr_branch_context ci mdecl cdecl) =
-  SE.context_assumptions (SE.cstr_args cdecl).
-Proof.
-  rewrite /cstr_branch_context /PCUICEnvironment.expand_lets_ctx
-    /PCUICEnvironment.expand_lets_k_ctx.
-  now do 2 rewrite !SE.context_assumptions_subst_context ?SE.context_assumptions_lift_context.
-Qed.
 
 Lemma trans_reln l p Γ : map trans (SE.reln l p Γ) = 
   reln (map trans l) p (trans_local Γ).

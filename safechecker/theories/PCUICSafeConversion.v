@@ -921,7 +921,7 @@ Section Conversion.
                                                                (Γ ,,, stack_context θ) c [] _) := {
         | @exist (cred, ρ) eq3 with construct_viewc cred := {
           | view_construct ind n ui := Some (fn, appstack l (App_l (zipc (tConstruct ind n ui) ρ) :: θ)) ;
-          | view_unk m ui := Some (fn, appstack l (App_l (zipc (tConst (m , unkId) ui) ρ) :: θ)) ;
+          | view_unk m ui := Some (fn, appstack l (App_l (zipc (tUnk m ui) ρ) :: θ)) ;
           | view_other cred h' := None
           }
         } ;
@@ -4802,7 +4802,7 @@ Qed.
         | @exist None eq2 := False_rect _ _
         } ;
       | ccview_unk m ui with inspect (decompose_stack ρ) := {
-        | @exist (args, ξ) eq' := Some (mkApps (tConst (m , unkId) ui) args)
+        | @exist (args, ξ) eq' := Some (mkApps (tUnk m ui) args)
       } ;
       | ccview_other cred _ := None
       }
@@ -4879,7 +4879,7 @@ Qed.
     - clear H H0.
       simpl_reduce_stack Σ wfΣ.
       assert (r' : red Σ Γ (tCase ci p c brs)
-                     (tCase ci p (mkApps (tConst (m , "unk") ui) (decompose_stack ρ).1) brs))
+                     (tCase ci p (mkApps (tUnk m ui) (decompose_stack ρ).1) brs))
         by eapply red_case_c, r.
       destruct (hΣ _ wfΣ) as [hΣ].
       pose proof (red_welltyped _ hΣ (h _ wfΣ) r') as h'.

@@ -31,6 +31,9 @@ Set Equations With UIP.
 
  Notation unkId := "unk".
 
+ Notation tUnk m ui := (tConst (m , unkId) ui).
+
+
 (* From Program *)
 Notation " `  t " := (proj1_sig t) (at level 10, t at next level) : metacoq_scope.
 
@@ -388,7 +391,7 @@ Corollary R_Acc_aux :
 
   Inductive construct_view : term -> Type :=
   | view_construct : forall ind n ui, construct_view (tConstruct ind n ui)
-  | view_unk : forall m ui, construct_view (tConst (m , unkId) ui)
+  | view_unk : forall m ui, construct_view (tUnk m ui)
   | view_other : forall t, discr_construct t -> construct_view t.
 
   Equations construct_viewc t : construct_view t :=
@@ -442,7 +445,7 @@ Corollary R_Acc_aux :
   Inductive construct_cofix_view : term -> Type :=
   | ccview_construct : forall ind n ui, construct_cofix_view (tConstruct ind n ui)
   | ccview_cofix : forall mfix idx, construct_cofix_view (tCoFix mfix idx)
-  | ccview_unk : forall m ui, construct_cofix_view (tConst (m , unkId) ui)
+  | ccview_unk : forall m ui, construct_cofix_view (tUnk m ui)
   | ccview_other : forall t, discr_construct_cofix t -> construct_cofix_view t.
 
   Equations cc_viewc t : construct_cofix_view t :=
@@ -523,7 +526,7 @@ Corollary R_Acc_aux :
                 } ;
               | view_unk m ui with inspect (decompose_stack ρ') := {
                 | @exist (l, θ) eq4 :=
-                  rec reduce fn (appstack args (App_l (mkApps (tConst (m , unkId) ui) l) :: ρ))
+                  rec reduce fn (appstack args (App_l (mkApps (tUnk m ui) l) :: ρ))
                 } ;
               | view_other t ht with inspect (decompose_stack ρ') := {
                 | @exist (l, θ) eq4 :=
@@ -550,7 +553,7 @@ Corollary R_Acc_aux :
                 rec reduce (tCase ci p (mkApps fn args) brs) π ;
               | @exist None bot := False_rect _ _
               } ;
-            | ccview_unk m ui := give (mkApps (tConst (m , unkId) ui) args) π ;
+            | ccview_unk m ui := give (mkApps (tUnk m ui) args) π ;
             | ccview_other t ht := give (tCase ci p (mkApps t args) brs) π
             }
           }

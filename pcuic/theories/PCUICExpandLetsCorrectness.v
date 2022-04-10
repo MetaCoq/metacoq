@@ -1178,25 +1178,7 @@ Proof.
   now rewrite (declared_minductive_ind_npars declc).
 Qed.
 
-Lemma context_assumptions_map2_set_binder_name nas Γ :
-  #|nas| = #|Γ| ->
-  context_assumptions (map2 set_binder_name nas Γ) = context_assumptions Γ.
-Proof.
-  induction Γ in nas |- *; destruct nas; simpl; auto; try discriminate.
-  intros [=]. destruct (decl_body a); auto.
-  f_equal; auto.
-Qed.
-
 Require Import PCUICSpine.
-
-Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
-  SE.context_assumptions (PCUICCases.cstr_branch_context ci mdecl cdecl) =
-  SE.context_assumptions (SE.cstr_args cdecl).
-Proof.
-  rewrite /cstr_branch_context /PCUICEnvironment.expand_lets_ctx
-    /PCUICEnvironment.expand_lets_k_ctx.
-  now do 2 rewrite !SE.context_assumptions_subst_context ?SE.context_assumptions_lift_context.
-Qed.
 
 Lemma trans_reln l p Γ : map trans (SE.reln l p Γ) = 
   reln (map trans l) p (trans_local Γ).
@@ -5148,21 +5130,18 @@ Proof.
   apply trans_on_free_vars.
 Qed.
 
-Lemma isFixApp_mkApps f u : isFixApp (mkApps f u) = isFixApp f.
-Proof.
-  rewrite /isFixApp.
-  destruct (decompose_app f) eqn:dapp.
-  pose proof (decompose_app_notApp _ _ _ dapp).
-  eapply decompose_app_inv in dapp. subst f.
-  cbn. rewrite -mkApps_app. rewrite decompose_app_mkApps. destruct t => //.
-  now cbn. 
-Qed.
-
 Lemma isFixApp_trans f : isFixApp f = isFixApp (trans f).
 Proof.
   induction f => //. cbn.
   rewrite (isFixApp_mkApps (trans f1) [trans f2]).
   now rewrite (isFixApp_mkApps f1 [f2]).
+Qed.
+
+Lemma isConstructApp_trans f : isConstructApp f = isConstructApp (trans f).
+Proof.
+  induction f => //. cbn.
+  rewrite (isConstructApp_mkApps (trans f1) [trans f2]).
+  now rewrite (isConstructApp_mkApps f1 [f2]).
 Qed.
 
 Lemma trans_wcbveval {cf} {Σ} {wfΣ : wf Σ} t u : 
@@ -5195,9 +5174,12 @@ Proof.
     * eapply IHev1; eauto.
     * rewrite !nth_error_map e //.
     * eapply trans_declared_constructor; tea.
-    * len.
+    * len. rewrite e0 /cstr_arity.
+      cbn. rewrite context_assumptions_smash_context context_assumptions_map /= //.
+    * now rewrite e1.
+    * cbn. 
       rewrite trans_bcontext.
-      rewrite context_assumptions_smash_context context_assumptions_map //.
+      rewrite !context_assumptions_smash_context !context_assumptions_map //.
     * rewrite /iota_red.
       cbn -[expand_lets].
       rewrite expand_lets_assumption_context.
@@ -5221,10 +5203,10 @@ Proof.
       { rewrite /iota_red.
         eapply closedn_subst0 => //.
         now rewrite forallb_rev; apply forallb_skipn.
-        cbn; len. rewrite skipn_length e0. 
+        cbn; len. rewrite skipn_length e0 /cstr_arity -e1 e2. 
         replace (ci_npar ci + context_assumptions (bcontext br) - ci_npar ci)
-    with (context_assumptions (bcontext br)) by lia.
-        eauto. 
+          with (context_assumptions (bcontext br)) by lia.
+        eauto.
         }
       relativize (subst0 _ _). exact IHev2.
       rewrite /iota_red.
@@ -5250,8 +5232,11 @@ Proof.
       
   - cbn => cldiscr.
     specialize (IHev1 cldiscr). rewrite trans_mkApps in IHev1.
+    eapply trans_declared_constructor in d; tea.
     econstructor; tea.
-    rewrite nth_error_map e //.
+    { len. rewrite /cstr_arity e. cbn. 
+      rewrite context_assumptions_smash_context /= /cstr_arity context_assumptions_map //. }
+    rewrite nth_error_map e1 //.
     apply IHev2.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => onargs.
@@ -5325,8 +5310,18 @@ Proof.
     rewrite trans_mkApps in IHev2 => //.
   
   - move=> /= /andP[] clf cla.
+    rewrite trans_mkApps map_app.
+    eapply trans_declared_constructor in d; tea.
+    eapply eval_construct; tea.
+    + move: (IHev1 clf). rewrite trans_mkApps //.
+    + move: l; rewrite map_length /cstr_arity /= context_assumptions_smash_context
+       context_assumptions_map //.
+    + now eapply IHev2.
+  
+  - move=> /= /andP[] clf cla.
     eapply eval_app_cong; eauto.
     rewrite -isFixApp_trans.
+    rewrite -isConstructApp_trans.
     clear -i. induction f' => /= //.
     
   - move=> clt. eapply eval_atom.
@@ -5442,10 +5437,6 @@ Proof.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICProgram.
-
-Definition expand_lets_program (p : pcuic_program) : pcuic_program :=
-  let Σ' := PCUICExpandLets.trans_global p.1 in 
-  ((build_global_env_map Σ', p.1.2), PCUICExpandLets.trans p.2).
     
 Lemma expanded_expand_lets_program {cf : checker_flags} p (wtp : wt_pcuic_program p) :
   expanded_pcuic_program p ->

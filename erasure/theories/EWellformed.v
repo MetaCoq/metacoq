@@ -61,7 +61,7 @@ Definition all_term_flags :=
   |}.
 
 Definition all_env_flags := 
-  {| has_axioms := true; 
+  {| has_axioms := true;
      term_switches := all_term_flags;
      has_cstr_params := true |}.
     
@@ -367,6 +367,29 @@ Proof.
       inv wfΣ'. simpl in *.
       case: eqb_spec; intros e; subst; auto.
       apply lookup_env_Some_fresh in IHΣ''; contradiction.
+Qed.
+
+
+Lemma extends_lookup_constructor {efl} {Σ Σ'} : 
+  wf_glob Σ' -> extends Σ Σ' ->
+  forall ind c b, lookup_constructor Σ ind c = Some b -> 
+    lookup_constructor Σ' ind c = Some b.
+Proof.
+  intros wf ex ind c b.
+  rewrite /lookup_constructor /lookup_inductive /lookup_minductive.
+  destruct lookup_env eqn:lookup => //.
+  now rewrite (extends_lookup wf ex lookup).
+Qed.
+
+Lemma extends_constructor_isprop_pars_decl {efl} {Σ Σ'} : 
+  wf_glob Σ' -> extends Σ Σ' ->
+  forall ind c b, constructor_isprop_pars_decl Σ ind c = Some b -> 
+    constructor_isprop_pars_decl Σ' ind c = Some b.
+Proof.
+  intros wf ex ind c b.
+  rewrite /constructor_isprop_pars_decl.
+  destruct lookup_constructor eqn:lookup => //.
+  now rewrite (extends_lookup_constructor wf ex _ _ _ lookup).
 Qed.
 
 Lemma extends_is_propositional {efl} {Σ Σ'} : 

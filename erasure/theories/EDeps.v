@@ -326,12 +326,11 @@ Proof.
     intuition auto.
     apply erases_deps_mkApps_inv in H3 as (? & ?).
     apply IHev2.
-    rewrite nth_nth_error.
-    destruct nth_error eqn:nth; [|now constructor].
-    now eapply nth_error_forall in nth.
+    now eapply nth_error_forall in e1.
   - constructor.
   - depelim er.
     now constructor.
+  - depelim er. now constructor.
   - easy.
 Qed.
 
@@ -559,7 +558,7 @@ Lemma erases_declared_constructor {Σ : global_env_ext} Σ' kn k mind idecl cdec
   globals_erased_with_deps Σ Σ' ->
   exists mind' idecl', (* declared_inductive Σ' (kn, k).1 mind' idecl' ->
   erases_one_inductive_body idecl idecl' -> *)
-  declared_constructor Σ' (kn, k) mind' idecl' (cstr_name cdecl, cstr_arity cdecl) /\
+  declared_constructor Σ' (kn, k) mind' idecl' (cstr_name cdecl, PCUICEnvironment.cstr_arity cdecl) /\
   erases_one_inductive_body idecl idecl' /\
   erases_mutual_inductive_body mind mind'.
 Proof.

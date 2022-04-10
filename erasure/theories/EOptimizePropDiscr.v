@@ -285,6 +285,7 @@ Proof.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?. subst => //.
+  - rewrite is_box_tApp. move/IHev1 => ?. subst. solve_discr.
   - rewrite is_box_tApp. move/IHev1 => ?. subst. cbn in i.
     destruct EWcbvEval.with_guarded_fix => //.
   - destruct t => //.
@@ -465,6 +466,19 @@ Proof.
   destruct lookup_env as [[decl|]|] => //.
 Qed.
 
+Lemma is_propositional_cstr_optimize {efl : EEnvFlags} {Σ : GlobalContextMap.t} ind c : 
+  wf_glob Σ ->
+  constructor_isprop_pars_decl Σ ind c = constructor_isprop_pars_decl (optimize_env Σ) ind c.
+Proof.
+  rewrite /constructor_isprop_pars_decl => wf.
+  rewrite /lookup_constructor /lookup_inductive /lookup_minductive.
+  rewrite (lookup_env_optimize (inductive_mind ind) wf).
+  rewrite /GlobalContextMap.inductive_isprop_and_pars /GlobalContextMap.lookup_inductive
+    /GlobalContextMap.lookup_minductive.  
+  destruct lookup_env as [[decl|]|] => //.
+Qed.
+
+
 Lemma closed_iota_red pars c args brs br :
   forallb (closedn 0) args ->
   nth_error brs c = Some br ->
@@ -486,6 +500,24 @@ Proof.
   induction l using rev_ind; cbn.
   - now rewrite andb_true_r.
   - rewrite mkApps_app /=. now destruct l => /= //; rewrite andb_false_r.
+Qed.
+
+Lemma lookup_constructor_optimize {efl : EEnvFlags} {Σ : GlobalContextMap.t} {ind c} :
+  wf_glob Σ ->
+  lookup_constructor Σ ind c = lookup_constructor (optimize_env Σ) ind c.
+Proof.
+  intros wfΣ. rewrite /lookup_constructor /lookup_inductive /lookup_minductive.
+  rewrite lookup_env_optimize // /=. destruct lookup_env => // /=.
+  destruct g => //.
+Qed.
+
+Lemma constructor_isprop_pars_decl_inductive {Σ ind c} {prop pars cdecl} :
+  constructor_isprop_pars_decl Σ ind c = Some (prop, pars, cdecl)  -> 
+  inductive_isprop_and_pars Σ ind = Some (prop, pars).
+Proof.
+  rewrite /constructor_isprop_pars_decl /inductive_isprop_and_pars /lookup_constructor.
+  destruct lookup_inductive as [[mdecl idecl]|]=> /= //.
+  destruct nth_error => //. congruence.
 Qed.
 
 Lemma optimize_correct {efl : EEnvFlags} {fl} {Σ : GlobalContextMap.t} t v :
@@ -516,10 +548,11 @@ Proof.
     rewrite optimize_iota_red in IHev2.
     eapply eval_closed in ev1 => //.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    destruct inductive_isprop_and_pars as [[]|]eqn:isp => //. noconf e.
-    eapply eval_iota; eauto.
-    now rewrite -is_propositional_optimize.
-    rewrite nth_error_map e0 //. now len.
+    rewrite (constructor_isprop_pars_decl_inductive e).
+    eapply eval_iota; eauto. tea.
+    now rewrite -is_propositional_cstr_optimize.
+    rewrite nth_error_map e0 //. now len. cbn.
+    rewrite -e2. rewrite !skipn_length map_length //.
     eapply IHev2.
     eapply closed_iota_red => //; tea.
     eapply nth_error_forallb in clbrs; tea. cbn in clbrs.
@@ -622,19 +655,25 @@ Proof.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => clargs.
     rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars']|] eqn:isp => //.
+    rewrite (constructor_isprop_pars_decl_inductive e).
     rewrite optimize_mkApps in IHev1.
-    rewrite optimize_nth in IHev2.
     specialize (IHev1 cld).
-    eapply Ee.eval_proj; tea. noconf e.
-    now rewrite -is_propositional_optimize.
+    eapply Ee.eval_proj; tea.
+    now rewrite -is_propositional_cstr_optimize.
+    now len. rewrite nth_error_map e1 //.
     eapply IHev2.
-    rewrite nth_nth_error.
-    destruct nth_error eqn:hnth => //.
-    eapply nth_error_forallb in hnth; tea.
+    eapply nth_error_forallb in e1; tea.
 
   - rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
     now rewrite e.
+
+  - move/andP=> [] clf cla.
+    rewrite optimize_mkApps.
+    eapply eval_construct; tea.
+    rewrite -lookup_constructor_optimize //. exact e.
+    rewrite optimize_mkApps in IHev1. now eapply IHev1.
+    now len.
+    now eapply IHev2.
 
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).
@@ -643,19 +682,23 @@ Proof.
     destruct ev1; simpl in *; eauto.
     * destruct t => //; rewrite optimize_mkApps /=.
     * destruct with_guarded_fix.
-      + destruct t => /= //; rewrite optimize_mkApps /=;
-        rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) // /=; rewrite !isFixApp_mkApps //.
-      + destruct t => /= //; rewrite optimize_mkApps /=;
-        rewrite (negbTE (isLambda_mkApps _ _ _)) // (negbTE (isBox_mkApps _ _ _)) // /=; rewrite !isFix_mkApps //.
-    * destruct f0 => //.
-      rewrite optimize_mkApps /=.
-      unfold Ee.isFixApp in i.
-      rewrite decompose_app_mkApps /= in i => //.
-      destruct with_guarded_fix; try rewrite orb_true_r /= // in i.
-      discriminate.
+      + move: i. 
+        rewrite !negb_or.
+        rewrite optimize_mkApps !isFixApp_mkApps !isConstructApp_mkApps.
+        destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
+        rewrite !andb_true_r.
+        rtoProp; intuition auto.
+        destruct v => /= //. 
+        destruct v => /= //.
+      + move: i. 
+        rewrite !negb_or.
+        rewrite optimize_mkApps !isConstructApp_mkApps.
+        destruct args using rev_case => // /=. rewrite map_app !mkApps_app /= //.
+        destruct v => /= //. 
   - destruct t => //.
     all:constructor; eauto.
 Qed.
+
 (* 
 Lemma optimize_extends Σ Σ' : 
   wf_glob Σ' ->

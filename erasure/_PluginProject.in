@@ -74,8 +74,6 @@ src/templateToPCUIC.mli
 src/templateToPCUIC.ml
 src/pCUICExpandLets.mli
 src/pCUICExpandLets.ml
-src/pCUICExpandLetsCorrectness.mli
-src/pCUICExpandLetsCorrectness.ml
 src/pCUICProgram.mli
 src/pCUICProgram.ml
 src/pCUICTransform.mli

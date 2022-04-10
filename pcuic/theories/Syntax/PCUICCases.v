@@ -113,6 +113,14 @@ Proof. rewrite /cstr_branch_context. now len. Qed.
 #[global]
 Hint Rewrite cstr_branch_context_length : len.
 
+Lemma cstr_branch_context_assumptions ci mdecl cdecl : 
+  context_assumptions (cstr_branch_context ci mdecl cdecl) =
+  context_assumptions (cstr_args cdecl).
+Proof.
+  rewrite /cstr_branch_context /expand_lets_ctx /expand_lets_k_ctx.
+  now do 2 rewrite !context_assumptions_subst_context ?context_assumptions_lift_context.
+Qed.
+
 Definition pre_case_branch_context_gen ind mdecl cdecl params puinst : context :=
   inst_case_context params puinst (cstr_branch_context ind mdecl cdecl).
 

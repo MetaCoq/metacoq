@@ -88,6 +88,10 @@ Definition inductive_isprop_and_pars Σ ind :=
   '(mdecl, idecl) <- lookup_inductive Σ ind ;;
   ret (idecl.(ind_propositional), mdecl.(ind_npars)).
 
+Definition constructor_isprop_pars_decl Σ ind c :=
+  '(mdecl, idecl, cdecl) <- lookup_constructor Σ ind c ;;
+  ret (idecl.(ind_propositional), mdecl.(ind_npars), cdecl).
+  
 Definition closed_decl (d : EAst.global_decl) := 
   match d with
   | EAst.ConstantDecl cb => 

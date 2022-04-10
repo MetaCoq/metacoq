@@ -5,6 +5,7 @@ From MetaCoq.Template Require Import config utils Environment Ast AstUtils Refle
 
 Require Import ssreflect ssrbool.
 Require Import Equations.Prop.DepElim.
+From Equations Require Import Equations.
 
 (** * Weak-head call-by-value evaluation strategy.
 
@@ -75,6 +76,7 @@ Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
 
 Definition atom t :=
   match t with
+  | tInd _ _
   | tConstruct _ _ _
   | tFix _ _
   | tCoFix _ _
@@ -121,6 +123,8 @@ Definition isConstruct t :=
   | _ => false
   end.
 
+Definition isConstructApp t := isConstruct (decompose_app t).1.
+
 Definition isAssRel (Γ : context) x :=
   match x with
   | tRel i =>
@@ -158,6 +162,9 @@ Proof.
   simpl. intros. rewrite -AstUtils.mkApp_mkApps in H.
   unfold mkApp in H. destruct (mkApps f l); discriminate.
 Qed.
+
+Definition cstr_arity mdecl cdecl :=
+  (mdecl.(ind_npars) + context_assumptions cdecl.(cstr_args))%nat.
 
 Section Wcbv.
   
@@ -218,7 +225,7 @@ Section Wcbv.
       eval f (mkApps (tFix mfix idx) fixargsv) ->
       All2 eval args argsv ->
       cunfold_fix mfix idx = Some (narg, fn) ->
-      #|fixargsv ++ argsv| < narg ->
+      #|fixargsv ++ argsv| <= narg ->
       eval (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))
 
 
@@ -236,11 +243,20 @@ Section Wcbv.
       eval (tProj p (mkApps fn args)) res ->
       eval (tProj p discr) res
 
+  (** Constructor congruence: we do not allow over-applications *)
+  | eval_construct ind c u mdecl idecl cdecl f args args' : 
+    declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+    ~~ isApp f -> args <> [] ->
+    eval f (tConstruct ind c u) -> 
+    #|args| <= cstr_arity mdecl cdecl ->
+    All2 eval args args' ->
+    eval (mkApps f args) (mkApps (tConstruct ind c u) args')
+
   (** Non redex-producing heads applied to values are values *)
   | eval_app_cong f f' a a' :
-      ~~ isApp f -> ~~ is_empty a -> (* This ensures eval only applies to well-formed terms *)
+      ~~ isApp f -> a <> [] -> (* This ensures eval only applies to well-formed terms *)
       eval f f' ->
-      ~~ (isLambda f' || isFixApp f' || isArityHead f') ->
+      ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->      
       All2 eval a a' ->
       eval (tApp f a) (mkApps f' a')
 
@@ -254,6 +270,7 @@ Section Wcbv.
   (** Atoms are values (includes abstractions, cofixpoints and constructors
       along with type constructors) *)
   | eval_atom t : atom t -> eval t t.
+  Derive Signature for eval.
 
   (* Scheme Minimality for eval Sort Type. *)
   Definition eval_evals_ind :
@@ -311,7 +328,7 @@ Section Wcbv.
           All2 eval args argsv ->
           All2 P args argsv ->
           cunfold_fix mfix idx = Some (narg, fn) ->
-          #|fixargsv ++ argsv| < narg ->
+          #|fixargsv ++ argsv| <= narg ->
           P (mkApps f args) (mkApps (tFix mfix idx) (fixargsv ++ argsv))) ->
       (forall (ip : case_info) (mfix : mfixpoint term) (idx : nat) 
         (p : predicate term) discr (args : list term)
@@ -327,14 +344,25 @@ Section Wcbv.
           P discr (mkApps (tCoFix mfix idx) args) ->
           eval (tProj p (mkApps fn args)) res ->
           P (tProj p (mkApps fn args)) res -> P (tProj p discr) res) ->
+      
+      (forall ind c u mdecl idecl cdecl f args args',
+          declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+          ~~ isApp f -> args <> [] ->
+          eval f (tConstruct ind c u) -> 
+          P f (tConstruct ind c u) -> 
+          #|args| <= cstr_arity mdecl cdecl ->
+          All2 eval args args' ->
+          All2 P args args' ->
+          P (mkApps f args) (mkApps (tConstruct ind c u) args')) ->
+
       (forall f f' a a',
-          ~~ isApp f -> ~~ is_empty a ->
+          ~~ isApp f -> a <> [] ->
           eval f f' -> P f f' ->
-          ~~ (isLambda f' || isFixApp f' || isArityHead f') ->
+          ~~ (isLambda f' || isFixApp f' || isArityHead f' || isConstructApp f') ->
           All2 eval a a' -> All2 P a a' -> P (tApp f a) (mkApps f' a')) ->
       (forall t : term, atom t -> P t t) -> forall t t0 : term, eval t t0 -> P t t0.
   Proof.
-    intros P Hbeta Hlet Hcst Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcong Hatom.
+    intros P Hbeta Hlet Hcst Hcase Hproj Hfix Hstuckfix Hcofixcase Hcofixproj Happcstr Happcong Hatom.
     fix eval_evals_ind 3. destruct 1;
              try solve [match goal with [ H : _ |- _ ] =>
                              match type of H with
@@ -351,50 +379,54 @@ Section Wcbv.
       clear -a eval_evals_ind.
       revert args argsv a.
       fix aux 3; destruct 1; constructor; auto.
-    - eapply Happcong; auto. clear i0.
+    - eapply Happcstr; eauto. clear l n.
+      revert args args' a. fix aux 3; destruct 1; constructor; auto.
+    - eapply Happcong; auto. clear i0 n.
       revert a a' a0. fix aux 3; destruct 1; constructor; auto.
   Defined.
 
   (** Characterization of values for this reduction relation.
-      Only constructors and cofixpoints can accumulate arguments.
-      All other values are atoms and cannot have arguments:
-      - box
-      - abstractions
-      - constant constructors
-      - unapplied fixpoints and cofixpoints
+      Only constructors, cofixpoints and stuck fixpoints can accumulate arguments.
+      All other values are atoms and cannot have arguments.
+
+      This ensures that constructors cannot be overapplied.
+
    *)
 
-  Definition value_head x :=
-    isConstruct x || isCoFix x.
+
+  Variant value_head (nargs : nat) : term -> Type :=
+  | value_head_cstr ind c u mdecl idecl cdecl :
+    declared_constructor Σ (ind, c) mdecl idecl cdecl ->
+    nargs <= cstr_arity mdecl cdecl ->
+    value_head nargs (tConstruct ind c u)
+  | value_head_cofix mfix idx : value_head nargs (tCoFix mfix idx)
+  | value_head_ind ind u : value_head nargs (tInd ind u)
+  | value_head_fix mfix idx rarg fn : 
+    cunfold_fix mfix idx = Some (rarg, fn) ->
+    nargs <= rarg ->
+    value_head nargs (tFix mfix idx).
+  Derive Signature NoConfusion for value_head.
 
   Inductive value : term -> Type :=
   | value_atom t : atom t -> value t
-  | value_app t l : value_head t -> All value l -> value (mkApps t l)
-  | value_stuck_fix f args : All value args -> isStuckFix f args -> value (mkApps f args).
+  | value_app f args : value_head #|args| f -> args <> [] -> All value args -> value (mkApps f args).
+  Derive Signature for value.
 
   Lemma value_values_ind : forall P : term -> Type,
       (forall t, atom t -> P t) ->
-      (forall t l, value_head t -> All value l -> All P l -> P (mkApps t l)) ->
-      (forall f args,
-          All value args ->
-          All P args ->
-          isStuckFix f args ->
-          P (mkApps f args)) ->
+      (forall f args, value_head #|args| f -> args <> [] -> All value args -> All P args -> P (mkApps f args)) ->
       forall t : term, value t -> P t.
   Proof.
-    intros P ???.
+    intros P ??.
     fix value_values_ind 2. destruct 1.
     - apply X; auto.
-    - eapply X0; auto.
-      revert l a. fix aux 2. destruct 1. constructor; auto.
-      constructor. now eapply value_values_ind. now apply aux.
-    - eapply X1; eauto.
-      clear i. revert args a. fix aux 2. destruct 1. constructor; auto.
+    - eapply X0; auto; tea.
+      clear v n. revert args a. fix aux 2. destruct 1. constructor; auto.
       constructor. now eapply value_values_ind. now apply aux.
   Defined.
 
-  Lemma value_head_nApp {t} : value_head t -> ~~ isApp t.
-  Proof. destruct t; auto. Qed.
+  Lemma value_head_nApp {nargs t} : value_head nargs t -> ~~ isApp t.
+  Proof. destruct 1; auto. Qed.
   Hint Resolve value_head_nApp : core.
 
   Lemma isStuckfix_nApp {t args} : isStuckFix t args -> ~~ isApp t.
@@ -408,16 +440,15 @@ Section Wcbv.
   Lemma value_mkApps_inv t l :
     ~~ isApp t ->
     value (mkApps t l) ->
-    ((l = []) * atom t) + (value_head t * All value l) + (isStuckFix t l * All value l).
+    ((l = []) × atom t) + ([× l <> [], value_head #|l| t & All value l]).
   Proof.
     intros H H'. generalize_eq x (mkApps t l).
     revert t H. induction H' using value_values_ind.
     intros. subst.
     - now eapply atom_mkApps in H.
-    - intros * isapp appeq. move: (value_head_nApp H) => Ht.
-      apply mkApps_eq_inj in appeq; intuition subst; auto.
-    - intros * isapp appeq. move: (isStuckfix_nApp H) => Hf.
-      apply mkApps_eq_inj in appeq; intuition subst; auto.
+    - intros * isapp appeq. move: (value_head_nApp X) => Ht.
+      right. 
+      apply mkApps_eq_inj in appeq => //. intuition subst; auto => //.
   Qed.
   
   Lemma value_mkApps_values t l :
@@ -426,7 +457,7 @@ Section Wcbv.
     All value l.
   Proof.
     intros val not_app.
-    now apply value_mkApps_inv in val as [[(-> & ?)|]|].
+    now apply value_mkApps_inv in val as [(-> & ?)|[]].
   Qed.
 
   (** The codomain of evaluation is only values: *)
@@ -440,76 +471,97 @@ Section Wcbv.
     rewrite !decompose_app_mkApps // /=.
   Qed.
 
+  Lemma isConstructApp_mkApps f args : ~~ isApp f -> isConstructApp (mkApps f args) = isConstructApp f.
+  Proof.
+    move=> Hf.
+    rewrite /isConstructApp !decompose_app_mkApps // /=.
+    change f with (mkApps f []) at 2.
+    rewrite !decompose_app_mkApps // /=.
+  Qed.
+
+  Lemma is_nil {A} (l : list A) : (l = []) + (l <> []).
+  Proof.
+    destruct l; intuition congruence.
+  Qed.
+
+  Lemma All2_nil {A} {P} {l l' : list A} : All2 P l l' -> l <> [] -> l' <> [].
+  Proof.
+    induction 1; congruence.
+  Qed.
+  
+  Lemma All2_nil_rev {A} {P} {l l' : list A} : All2 P l l' -> l' <> [] -> l <> [].
+  Proof.
+    induction 1; congruence.
+  Qed.
+  
   Lemma eval_to_value e e' : eval e e' -> value e'.
   Proof.
     intros eve. induction eve using eval_evals_ind; simpl; intros; auto using value.
 
-    - eapply value_stuck_fix.
-      + apply All_app_inv.
-        * now eapply value_mkApps_values.
-        * now eapply All2_All_right.
-      + unfold isStuckFix.
-        rewrite H0. now eapply Nat.ltb_lt.
+    - apply All2_right in X0.
+      destruct (is_nil (fixargsv ++ argsv)).
+      { rewrite e /=. now apply value_atom. }
+      eapply value_app => //.
+      + econstructor; tea.
+      + apply All_app_inv => //.
+        now eapply value_mkApps_values.
 
     - apply All2_right in X0.
+      eapply value_app; auto.
+      econstructor; tea. rewrite -(All2_length X) //.
+      now eapply All2_nil.
+    
+    - eapply All2_right in X0.
       depelim IHeve.
       destruct t; simpl in * |- *; try congruence.
-      eapply value_app; auto.
-      eapply value_app; auto.
-      rewrite -mkApps_app.
-      eapply value_app. auto.
-      eapply All_app_inv; auto.
-      rewrite -mkApps_app.
-      eapply value_stuck_fix.
-      eapply All_app_inv; auto.
-      rewrite isFixApp_mkApps in H1.
-      destruct f0; auto.
-      destruct f0; auto.
-      simpl in i. rewrite /isFixApp in H1. simpl in H1.
-      rewrite orb_true_r orb_true_l in H1. easy.
+      eapply value_app => //. now constructor. now eapply All2_nil.
+      eapply value_app => //. now constructor. now eapply All2_nil.
+      rewrite -mkApps_app. eapply value_app.
+      rewrite !negb_or in H1.
+      pose proof (value_head_nApp v).
+      rewrite isConstructApp_mkApps // isFixApp_mkApps // in H1.
+      destruct v.
+      * rewrite /isConstructApp /= in H1. rtoProp; intuition auto.
+      * constructor.
+      * constructor => //.
+      * rewrite /isFixApp /= in H1. rtoProp; intuition auto.
+      * eapply All2_nil in X; tea. destruct args; cbn; congruence.
+      * eapply All_app_inv; tea.
   Qed.
 
-  Lemma value_head_spec t :
-    implb (value_head t) (~~ (isLambda t || isFixApp t || isArityHead t)).
+  Lemma value_head_spec n t :
+    value_head n t -> (~~ (isLambda t || isArityHead t)).
   Proof.
-    destruct t; simpl; intuition auto; eapply implybT.
+    now destruct 1; simpl.
   Qed.
 
-  Lemma value_head_final t :
-    value_head t ->
-    ~~ (isLambda t || isFixApp t || isArityHead t) ->
-    eval t t.
+  Lemma value_head_final n t :
+    value_head n t -> eval t t.
   Proof.
-    destruct t; intros vt nt; try discriminate.
+    destruct 1.
+    - now constructor.
     - now eapply eval_atom.
     - now eapply eval_atom.
+    - now eapply eval_atom. 
   Qed.
 
   Lemma value_final e : value e -> eval e e.
   Proof.
     induction 1 using value_values_ind; simpl; auto using value.
     - now constructor.
-    - assert (All2 eval l l).
-      { induction X0; constructor; auto. eapply IHX0. now inversion X. }
-      move/implyP: (value_head_spec t).
-      move/(_ H) => Ht.
-      induction l using rev_ind. simpl.
-      now eapply value_head_final.
-      eapply All_app in X as [Hl Hx]. inv Hx.
-      eapply All_app in X0 as [Hl' Hx']. inv Hx'.
-      eapply All2_app_r in X1 as [Hl'' Hx''].
-      pose proof (value_head_nApp H).
-      rewrite -{1}mkApps_tApp => //. rewrite is_empty_app /= // andb_false_r //.
-      eapply eval_app_cong; auto. rewrite is_empty_app /= andb_false_r //.
-      now eapply value_head_final.
-      eapply All2_app; auto.
-    - destruct f; try discriminate.
-      unfold isStuckFix in *.
-      destruct (cunfold_fix _ _) as [(? & ?)|] eqn:uf; [|easy].
-      eapply Nat.ltb_lt in H.
-      eapply (eval_fix_value _ _ _ []); tea => //.
-      + now eapply eval_atom.
-      + now eapply All_All2.
+    - assert (All2 eval args args).
+      { clear -X1; induction X1; constructor; auto. }
+      destruct X.
+      * eapply eval_construct; tea => //.
+        now constructor.
+      * rewrite -{1}mkApps_tApp => //. destruct args => //.
+        eapply eval_app_cong => //.
+        now constructor.
+      * rewrite -{1}mkApps_tApp => //. destruct args => //.
+        eapply eval_app_cong => //.
+        now constructor.
+      * eapply eval_fix_value with (fixargsv := []). 4:tea. auto.
+        now constructor. exact X2. now cbn.
   Qed.
 
   Lemma eval_atom_inj t t' : atom t -> eval t t' -> t = t'.
@@ -524,21 +576,21 @@ Section Wcbv.
       depelim a.
       apply atom_mkApps in H1 as (-> & ?).
       cbn in *. reflexivity.
+    
+    - eapply atom_mkApps in Ha as [-> ato].
+      rewrite (IHeval ato).
+      now depelim a.
   Qed.
 
-  Derive Signature for eval.
-  
   Lemma eval_to_stuck_fix_inv mfix idx narg fn t args :
     cunfold_fix mfix idx = Some (narg, fn) ->
     eval t (mkApps (tFix mfix idx) args) ->
-    args = [] \/ #|args| < narg.
+    args = [] \/ #|args| <= narg.
   Proof.
     intros uf ev.
     apply eval_to_value in ev.
-    apply value_mkApps_inv in ev as [[(-> & ?)|]|]; try easy.
-    - unfold isStuckFix in *.
-      rewrite uf in p.
-      destruct p. eapply Nat.ltb_lt in i. lia.
+    apply value_mkApps_inv in ev as [(-> & ?)|[eqargs vh eva]]; try easy.
+    depelim vh. rewrite uf in e. noconf e. intuition auto.
   Qed.
 
   Lemma eval_LetIn {n b ty t v} :
@@ -576,7 +628,7 @@ Section Wcbv.
   Lemma eval_mkApps_cong f f' l l' :
     ~~ isApp f ->
     eval f f' ->
-    value_head f' ->
+    value_head #|l| f' ->
     All2 eval l l' ->
     eval (mkApps f l) (mkApps f' l').
   Proof.
@@ -584,10 +636,18 @@ Section Wcbv.
     depelim evl. intros. eapply evf.
     eapply All2_app_inv_l in evl as [? [? [? ?]]].
     intuition auto. subst. depelim b. depelim b.
-    rewrite -mkApps_tApp => //. rewrite is_empty_app /= andb_false_r //.
-    eapply eval_app_cong; auto.  rewrite is_empty_app /= andb_false_r //.
-    destruct f'; auto.
-    eapply All2_app; auto.
+    cbn in vf'; destruct vf'.
+    - eapply eval_construct; tea. apply app_tip_nil. now eapply All2_app.
+    - rewrite -mkApps_tApp => //. rewrite is_empty_app /= andb_false_r //.
+      eapply eval_app_cong; auto. eapply app_tip_nil.
+      eapply All2_app; auto.
+    - rewrite -mkApps_tApp => //. rewrite is_empty_app /= andb_false_r //.
+      eapply eval_app_cong; auto. eapply app_tip_nil.
+      eapply All2_app; auto.
+    - eapply eval_fix_value with (fixargsv := []) (argsv := x0 ++ [y]). 4:tea.
+      all: move=> //.
+      eapply All2_app; auto. cbn. len. len in l0. cbn in l0.
+      now rewrite -(All2_length a).
   Qed.
 
 End Wcbv.

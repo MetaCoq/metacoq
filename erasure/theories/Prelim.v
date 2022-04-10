@@ -86,22 +86,19 @@ Proof.
   unfold decompose_app. simpl. now rewrite (IHt1 [t2]).
 Qed.
 
-Lemma value_app_inv {wfl : Ee.WcbvFlags} L :
-  Ee.value (EAst.mkApps EAst.tBox L) ->
+Lemma value_app_inv {wfl : Ee.WcbvFlags} Σ L :
+  Ee.value Σ (EAst.mkApps EAst.tBox L) ->
   L = nil.
 Proof.
   intros. depelim X.
   - destruct L using rev_ind.
     reflexivity.
     rewrite emkApps_snoc in i. inv i.
-  - destruct (EAstUtils.mkApps_elim t l). EAstUtils.solve_discr.
-    rewrite Ee.value_head_spec in i.
-    move/andb_and: i => [H H'].
+  - destruct (EAstUtils.mkApps_elim f args). EAstUtils.solve_discr.
+    eapply value_head_spec' in v.
+    move/andb_and: v => [H H'].
     eapply Ee.atom_mkApps in H' as [H1 _].
-    destruct n, L; discriminate.
-  - unfold Ee.isStuckFix in i. destruct f; try now inversion i.
-    assert (EAstUtils.decompose_app (EAst.mkApps (EAst.tFix m n) args) = EAstUtils.decompose_app (EAst.mkApps EAst.tBox L)) by congruence.
-    rewrite !EAstUtils.decompose_app_mkApps in H; eauto. inv H.
+    destruct n0, L; discriminate.
 Qed.
 
 (** ** Prelim on fixpoints *)

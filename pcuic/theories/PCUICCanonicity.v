@@ -769,7 +769,7 @@ Section WeakNormalization.
 
   Transparent construct_cofix_discr.
 
-  Lemma value_whnf t : closed t -> value t -> wh_normal Σ [] t.
+  Lemma value_whnf t : closed t -> value Σ t -> wh_normal Σ [] t.
   Proof.
     intros cl ev.
     induction ev in cl |- * using value_values_ind.
@@ -780,20 +780,14 @@ Section WeakNormalization.
       destruct unfold_fix as [[rarg body]|] => /= //.
       now rewrite nth_error_nil.
     - eapply (whnf_cofixapp _ _ [] _ _ []).
-    - unfold value_head in H. destruct t => //.
-      (*constructor; eapply whne_mkApps.
-      cbn in H; destruct lookup_env eqn:eq => //.
-      destruct g => //. destruct c => //. destruct cst_body0 => //.
-      eapply whne_const; eauto.*)
-    - destruct f => //. cbn in H.
-      destruct cunfold_fix as [[rarg body]|] eqn:unf => //.
+    - destruct X => //.
       pose proof cl as cl'.
       rewrite closedn_mkApps in cl'. move/andP: cl' => [clfix _].
-      rewrite -closed_unfold_fix_cunfold_eq in unf => //.
-      rewrite /unfold_fix in unf.
-      destruct nth_error eqn:nth => //. noconf unf.
+      rewrite -closed_unfold_fix_cunfold_eq in e => //.
+      rewrite /unfold_fix in e.
+      destruct nth_error eqn:nth => //. noconf e.
       eapply whnf_fixapp. rewrite /unfold_fix nth.
-      eapply Nat.leb_le in H. now eapply nth_error_None.
+      now eapply nth_error_None.
   Qed.
 
   Lemma eval_whne t t' : closed t -> eval Σ t t' -> wh_normal Σ [] t'.
@@ -1042,7 +1036,7 @@ Section WeakNormalization.
   Qed.
 
   Lemma value_axiom_free Σ' t :
-    value t ->
+    value Σ' t ->
     axiom_free_value Σ' [] t.
   Proof.
     intros val.
@@ -1052,15 +1046,12 @@ Section WeakNormalization.
       destruct ?; auto.
       destruct ?; auto.
     - rewrite axiom_free_value_mkApps.
-      destruct t; cbn in *; congruence.
-    - rewrite axiom_free_value_mkApps.
-      destruct f; try discriminate.
+      rewrite app_nil_r.
+      destruct X; try constructor.
       cbn.
-      unfold isStuckFix, cunfold_fix in H.
+      unfold isStuckFix, cunfold_fix in e.
       destruct nth_error; auto.
-      rewrite nth_overflow; auto.
-      rewrite app_nil_r map_length; auto.
-      toProp; auto.
+      rewrite nth_overflow; auto. len. now noconf e.
   Qed.
 
   (** Evaluation on well-typed terms corresponds to reduction.
@@ -1069,6 +1060,8 @@ Section WeakNormalization.
       - it does not check that fixpoints that are applied to enough arguments
         have a constructor at their recursive argument as it is ensured by typing
         + canonicity. *)
+
+  Import PCUICGlobalEnv.
 
   Lemma wcbeval_red t ty u :
     Σ ;;; [] |- t : ty ->
@@ -1129,15 +1122,17 @@ Section WeakNormalization.
 
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Case in Ht; auto. destruct_sigma Ht.
+      destruct (declared_inductive_inj d isdecl); subst mdecl0 idecl0.
       destruct c0.
       specialize (IHHe1 _ scrut_ty).
       assert (red Σ [] (tCase ci p discr brs) (iota_red ci.(ci_npar) p args br)).
-      { redt _.
+      { clear X. redt _.
         eapply red_case; eauto.
         eapply All2_refl; intros; eauto. red.
         eapply All2_refl; split; reflexivity.
-        eapply red1_red. destruct p => //.
-        eapply red_iota; tea. }
+        eapply red1_red. destruct p => /= //.
+        eapply red_iota; tea.
+        rewrite e0 /cstr_arity eq_npars e2 //. }
       specialize (X X0).
       redt _; eauto.
 
@@ -1177,10 +1172,10 @@ Section WeakNormalization.
           rewrite closedn_mkApps in X0.
           move/andP: X0 => [clfix clargs].
           now eapply forallb_All in clargs. }
-        assert (All value (argsv ++ [av])).
+        assert (All (value Σ) (argsv ++ [av])).
         { eapply All_app_inv; [|constructor; [|constructor]].
           eapply eval_to_value in He1.
-          eapply value_mkApps_inv in He1 as [[[-> Hat]|[vh vargs]]|[hstuck vargs]] => //.
+          eapply value_mkApps_inv in He1 as [[-> Hat]|[vh vargs]] => //.
           now eapply eval_to_value in He2. }
         solve_all.
         eapply nth_error_all in X3; eauto. simpl in X3.
@@ -1226,6 +1221,11 @@ Section WeakNormalization.
     - eapply inversion_App in Ht as (? & ? & ? & Hf & Ha & Ht); auto.
       specialize (IHHe1 _ Hf).
       specialize (IHHe2 _ Ha).
+      rewrite mkApps_app /=. now eapply red_app.
+    
+    - eapply inversion_App in Ht as (? & ? & ? & Hf & Ha & Ht); auto.
+      specialize (IHHe1 _ Hf).
+      specialize (IHHe2 _ Ha).
       now eapply red_app.
   Qed.
 
@@ -1238,7 +1238,7 @@ Section WeakNormalization.
 
   Lemma value_canonical {t i u args} :
     Σ ;;; [] |- t : mkApps (tInd i u) args ->
-    value t ->
+    value Σ t ->
     construct_cofix_discr (head t).
   Proof.
     intros Ht Hvalue.

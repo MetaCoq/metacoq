@@ -47,6 +47,10 @@ Proof.
       exists f'; split => //.
       rewrite mkApps_app.
       eapply eval_fix_value; tea.
+    + specialize (IHargs _ _ ev1) as [f' [evf' ev]].
+      exists f'; split => //.
+      rewrite mkApps_app.
+      eapply eval_construct; tea.
     + specialize (IHargs _ _ ev1) as [f'' [evf' ev]].
       exists f''; split => //.
       rewrite mkApps_app.
@@ -89,6 +93,8 @@ Proof.
     eapply eval_fix; tea.
   - pose proof (eval_eval evf eva1); subst.
     eapply eval_fix_value; tea.
+  - pose proof (eval_eval evf eva1); subst.
+    eapply eval_construct; tea.
   - pose proof (eval_eval evf eva1); subst.
     eapply eval_app_cong; tea.
   - now cbn in i.
@@ -174,10 +180,8 @@ Lemma eval_to_stuck_fix_inv {Σ mfix idx narg fn t args} :
 Proof.
   intros uf ev.
   apply eval_to_value in ev.
-  apply value_mkApps_inv in ev as [[(-> & ?)|]|]; try (cbn; easy).
-  unfold isStuckFix in *.
-  rewrite uf in p.
-  destruct p. now eapply Nat.leb_le in i.
+  apply value_mkApps_inv in ev as [(-> & ?)|[]]; try (cbn; easy).
+  depelim v. rewrite uf in e. now noconf e.
 Qed.
 
 Lemma eval_stuck_fix {Σ mfix idx narg fn args args'} :
@@ -201,7 +205,7 @@ Proof.
 Qed.
  
 Lemma eval_value_cong Σ f x y res : 
-  value f -> 
+  value Σ f -> 
   eval Σ x y ->
   eval Σ (tApp f y) res ->
   eval Σ (tApp f x) res.
@@ -215,12 +219,14 @@ Proof.
   - pose proof (eval_eval X0 X1_2). subst av.
     eapply eval_fix_value; tea.
   - pose proof (eval_eval X0 X1_2). subst a'.
+    eapply eval_construct; tea.
+  - pose proof (eval_eval X0 X1_2). subst a'.
     eapply eval_app_cong; tea.
   - now cbn in i.
 Qed.
 
 Lemma eval_mkApps_value_cong Σ f x y res : 
-  value f -> 
+  value Σ f -> 
   All2 (eval Σ) x y ->
   eval Σ (mkApps f y) res ->
   eval Σ (mkApps f x) res.
@@ -266,10 +272,9 @@ Proof.
       rewrite -mkApps_app.
       eapply eval_stuck_fix. eapply All2_app; tea.
       { eapply eval_to_value in X.
-        eapply value_mkApps_inv in X as  [[(-> & ?)|]|]; auto.
-        destruct p. eapply All_All2_refl, All_impl; tea; cbv beta.
-        intros. now eapply value_final.
-        destruct p. eapply All_All2_refl, All_impl; tea; cbv beta.
+        eapply value_mkApps_inv in X as  [(-> & ?)|[]]; auto.
+        depelim v. rewrite e in H; noconf H.
+        eapply All_All2_refl, All_impl; tea; cbv beta.
         intros. now eapply value_final. }
       tea. len.
       rewrite -mkApps_app in X1.
@@ -425,17 +430,9 @@ Proof.
   now rewrite Sfst_decompose_app_rec.
 Qed.
 
-Lemma isFixApp_mkApps f l : isFixApp (mkApps f l) = isFixApp f.
-Proof.
-  unfold isFixApp.
-  erewrite <- (fst_decompose_app_rec _ []).
-  rewrite /decompose_app decompose_app_rec_mkApps.
-  now rewrite fst_decompose_app_rec.
-Qed.
-
 Lemma eval_mkApps_cong Σ f args : 
-  value f -> All value args ->
-  ~~ (isLambda f || isFixApp f || isArityHead f) ->
+  value Σ f -> All (value Σ) args ->
+  ~~ (isLambda f || isFixApp f || isArityHead f || isConstructApp f) ->
   eval Σ (mkApps f args) (mkApps f args).
 Proof.
   intros vf a. move: a.
@@ -450,8 +447,8 @@ Proof.
     destruct args using rev_case; cbn in hf' => //.
     rewrite !mkApps_app /= orb_false_r in hf'.
     rewrite -[tApp _ _](mkApps_app _ _ [x0]) in hf'.
-    rewrite isFixApp_mkApps in hf'. rewrite hf'.
-    now rewrite orb_true_r orb_true_l.
+    rewrite isFixApp_mkApps isConstructApp_mkApps in hf'.
+    move/orP: hf' => [] ->; now rewrite !orb_true_r.
 Qed.
 
 Lemma isLambda_mkApps {f args} : args <> [] -> ~~ isLambda (mkApps f args).
@@ -550,7 +547,11 @@ Proof.
     wf_inv wf [hfix hargs].
     eapply WfAst.wf_mkApps => //.
     eapply wf_cunfold_cofix; tea. now depelim hfix.
-    
+
+  - wf_inv wf [hf ha].
+    apply WfAst.wf_mkApps => //. constructor.
+    solve_all.
+  
   - wf_inv wf [[[hf ?]] ha].
     eapply WfAst.wf_mkApps; eauto.
     eapply All2_All_mix_left in X0; tea.
@@ -558,6 +559,33 @@ Proof.
 
   - auto.
 Qed.
+
+Lemma value_mkApps_tFix Σ mfix idx args rarg fn :
+  cunfold_fix mfix idx = Some (rarg, fn) ->
+  #|args| <= rarg -> 
+  All (value Σ) args ->
+  value Σ (mkApps (tFix mfix idx) args).
+Proof.
+  intros hc hargs vargs.
+  destruct (is_nil args).
+  - subst args. constructor => //.
+  - eapply value_app => //. econstructor; tea.
+Qed.
+
+Definition heads (t : Ast.term) := (AstUtils.decompose_app t).1.
+
+(* 
+Lemma trans_head Σ t : head (trans Σ t) = trans Σ (heads t).
+Proof.
+  rewrite /head /heads.
+  destruct t => /= //. *)
+ 
+(* Lemma trans_isFixApp Σ t : isFixApp (trans (trans_global_env Σ) t) -> WcbvEval.isFixApp t.
+Proof.
+  rewrite /isFixApp /WcbvEval.isFixApp.
+  destruct t => /= //. rewrite head_mkApps.
+  destruct t => //.
+  cbn. *)
 
 Lemma trans_wcbvEval {cf} {Σ} {wfΣ : ST.wf Σ} T U :
   let Σ' := trans_global_env Σ in
@@ -616,9 +644,18 @@ Proof.
     reflexivity.
     rewrite nth_error_map H /=. reflexivity.
     len. rewrite H1.
-    { eapply All2_length in a1. len in a1.
+    { rewrite /cstr_arity. cbn.
+      eapply All2_length in a1. len in a1.
       rewrite /bctx case_branch_context_assumptions //.
       rewrite /trans_branch /=.
+      rewrite context_assumptions_map. f_equal.
+      todo "ci_npar ci invariant". }
+    { eapply All2_length in a1. len in a1.
+      todo "ind_npars". }
+    { eapply All2_length in a1. len in a1.
+      rewrite /bctx.
+      rewrite /trans_branch /=.
+      rewrite context_assumptions_map. f_equal.
       rewrite map2_map2_bias_left. len.
       rewrite PCUICCases.map2_set_binder_name_context_assumptions. len.
       len. now rewrite context_assumptions_map. }
@@ -641,14 +678,15 @@ Proof.
 
   - wf_inv wf hdiscr.
     destruct indnpararg as ((?&?)&?).
-    cbn in *; eapply eval_proj; tea.
+    todo "projs".
+    (*cbn in *; eapply eval_proj; tea.
     rewrite trans_mkApps in IHev1. 
     now eapply IHev1.
     rewrite nth_error_map H //.
     eapply IHev2.
     eapply eval_wf in ev1; tea.
     eapply WfAst.wf_mkApps_inv in ev1.
-    eapply nth_error_all in ev1; tea.
+    eapply nth_error_all in ev1; tea.*)
 
   - rewrite trans_mkApps.
     eapply WfAst.wf_mkApps_napp in wf as []; tea.
@@ -686,18 +724,14 @@ Proof.
     eapply eval_mkApps_value_cong => //.
     eapply All2_map. eapply All2_All_mix_left in X0; tea.
     eapply All2_impl; tea; cbv beta. intuition eauto.
-    eapply eval_mkApps. now eapply value_final.
-    eapply value_final.
     rewrite -mkApps_app.
-    eapply value_stuck_fix.
+    eapply trans_cunfold_fix in H0; tea.
+    eapply value_final. cbn. eapply value_mkApps_tFix; tea. len. len in H1.
     eapply All_app_inv.
-    { apply value_mkApps_inv in IHev as [[(-> & ?)|]|]; try (cbn; easy). }
+    { apply value_mkApps_inv in IHev as [(-> & ?)|[]]; try (cbn; easy). }
     eapply All2_All_mix_left in X0; tea.
     eapply All_map, All2_All_right; tea; cbv beta.
     { intuition auto. eapply eval_to_value; tea. }
-    unfold isStuckFix; cbn.
-    eapply trans_cunfold_fix in H0; tea. rewrite H0. len.
-    eapply Nat.leb_le. len in H1.
     now wf_inv w0 x.
   
   - wf_inv wf [mdecl' [idecl' [decli ?]]].
@@ -730,6 +764,14 @@ Proof.
     econstructor.
     eapply WfAst.wf_mkApps => //.
     eapply wf_cunfold_cofix; tea.
+  - wf_inv wf [wff wfa].
+    rewrite !trans_mkApps.
+    eapply forall_decls_declared_constructor in H; tea.
+    eapply eval_mkApps_Construct; tea. now eapply IHev. len.
+    { move: H2; unfold WcbvEval.cstr_arity, cstr_arity. cbn.
+      rewrite context_assumptions_map //. }
+    solve_all.
+
   - wf_inv wf [[[] ?] ?].
     eapply All2_All_mix_left in X; tea.
     rewrite trans_mkApps.
@@ -740,28 +782,23 @@ Proof.
     eapply All2_map.
     eapply All2_impl; tea; cbv beta.
     intuition eauto.
-    eapply eval_mkApps_cong.
+    eapply eval_mkApps_cong => //.
     { eapply eval_to_value; tea. }
     { eapply All_map, All2_All_right; tea; cbv beta; intuition auto. now eapply eval_to_value. }
-    eapply eval_wf in ev; tea.
-    clear -Σ' ev H1.
-    destruct f' => //. cbn. cbn in H1.
-    rewrite orb_false_r in H1. inv ev.
-    apply/negP => hp.
-    assert (map (trans Σ') args <> []).
-    { intros ha; apply H0. destruct args; cbn in *; congruence. }
-    move/negPf: (isLambda_mkApps (f:=trans Σ' f') H2) => hf. rewrite hf in hp.
-    move/negPf: (isArityHead_mkApps (f:=trans Σ' f') H2) => hf'. rewrite hf' in hp.
-    rewrite orb_false_r /= in hp.
-    rewrite isFixApp_mkApps in hp.
-    move/negP: H1 => H1. apply H1.
-    rewrite AstUtils.mkApps_tApp //.
-    rewrite H //. unfold AstUtils.is_empty. destruct args; try congruence => //.
-    auto. rewrite SisFixApp_mkApps.
-    eapply isFixApp_trans in hp => //.
-    rewrite H //.
-    cbn. destruct TransLookup.lookup_inductive as [[mdecl idecl]|]=> //.
-    
+    move: H1. rewrite !negb_or.
+    eapply WcbvEval.eval_to_value in ev.
+    destruct ev. destruct t => //.
+    pose proof (WcbvEval.value_head_nApp _ v).
+    rewrite trans_mkApps isFixApp_mkApps WcbvEval.isFixApp_mkApps // WcbvEval.isConstructApp_mkApps //.
+    pose proof (WcbvEval.value_head_spec _ _ _ v).
+    destruct v => /= //; rtoProp; intuition auto.
+    eapply isLambda_mkApps. destruct args => //.
+    eapply isArityHead_mkApps. destruct args => //.
+    rewrite isConstructApp_mkApps //.
+    eapply isLambda_mkApps. destruct args => //.
+    eapply isArityHead_mkApps. destruct args => //.
+    rewrite isConstructApp_mkApps //.
+      
   - eapply eval_atom.
     destruct t => //.
 Qed.

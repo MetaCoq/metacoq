@@ -58,18 +58,12 @@ Ltac toAll :=
 
 Import ECSubst.
 
-Class EtaExpFlag := mkEtaExpFlags { strict_eta : bool }.
-Definition strong_eta_flag := {| strict_eta := true |}.
-Definition weak_eta_flag := {| strict_eta := false |}.
-
 Section isEtaExp.
-  Context {etafl : EtaExpFlag}.
   Context (Σ : global_declarations).
   
   Definition isEtaExp_app ind c k :=
     match EGlobalEnv.lookup_constructor_pars_args Σ ind c with
-    | Some (npars, nargs) =>
-      (if strict_eta then eqb else leb) (npars + nargs) k
+    | Some (npars, nargs) => leb (npars + nargs) k
     | None => false
     end.
     
@@ -116,7 +110,6 @@ Tactic Notation "simp_eta" "in" hyp(H) := simp isEtaExp in H; rewrite -?isEtaExp
 Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 
 Section isEtaExp.
-  Context {efl : EtaExpFlag}.
   Context (Σ : global_context).
   Notation isEtaExp := (isEtaExp Σ).
 
@@ -231,8 +224,6 @@ Section isEtaExp.
 End isEtaExp.
 
 Section WeakEtaExp.
-  Context (efl := weak_eta_flag).
-  Existing Instance efl.
   Context (Σ : global_context).
   Notation isEtaExp := (isEtaExp Σ).
 

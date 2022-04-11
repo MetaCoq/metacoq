@@ -174,63 +174,58 @@ Section EEnvFlags.
     - solve_all. rewrite Nat.add_assoc. eauto.
   Qed.
 
-  Lemma wellformed_subst_eq {s k k' t} {hast : has_tRel} :
+  Lemma wellformed_subst_eq {s k k' t} :
     forallb (wellformed k) s -> 
-    wellformed (k + k' + #|s|) t =
+    wellformed (k + k' + #|s|) t ->
     wellformed (k + k') (subst s k' t).
   Proof.
     intros Hs. solve_all. revert Hs.
-    induction t in k' |- * using EInduction.term_forall_list_ind; intros;
-      simpl in *;
+    induction t in H, k' |- * using EInduction.term_forall_list_ind; intros;
+      simpl in *; auto;
       autorewrite with map => //;
       simpl wellformed in *; try change_Sk;
       unfold test_def in *; simpl in *;
+      rtoProp; intuition auto;
       solve_all.
 
     - elim (Nat.leb_spec k' n); intros. simpl.
       destruct nth_error eqn:Heq.
-      -- simpl. rewrite hast /=. rewrite wellformed_lift.
+      -- simpl. rewrite wellformed_lift //.
         now eapply nth_error_all in Heq; simpl; eauto; simpl in *.
-        eapply nth_error_Some_length in Heq.
-        eapply Nat.ltb_lt. lia.
-      -- simpl. elim (Nat.ltb_spec); auto. intros. f_equal.
-        apply nth_error_None in Heq. symmetry. apply Nat.ltb_lt. lia.
-        apply nth_error_None in Heq. intros. symmetry. f_equal. eapply Nat.ltb_nlt.
-        intros H'. lia.
-      -- simpl. f_equal.
-        elim: Nat.ltb_spec; symmetry. apply Nat.ltb_lt. lia.
-        apply Nat.ltb_nlt. intro. lia.
+      -- simpl. elim (Nat.ltb_spec); auto. rtoProp; intuition auto.
+        apply nth_error_None in Heq. intros.
+        rewrite H.
+        apply Nat.ltb_lt in H0. lia.
+      -- simpl. f_equal. rewrite H /=.
+        elim: Nat.ltb_spec => //. intros. apply Nat.ltb_lt in H0. lia.
     - f_equal. simpl. solve_all.
       specialize (IHt (S k')).
       rewrite <- Nat.add_succ_comm in IHt.
       rewrite IHt //. 
     - specialize (IHt2 (S k')).
       rewrite <- Nat.add_succ_comm in IHt2.
-      rewrite IHt1 // IHt2 //.
-    - rewrite IHt //.
-      f_equal. f_equal. eapply All_forallb_eq_forallb; tea. cbn.
-      intros. specialize (H (#|x.1| + k')).
-      rewrite Nat.add_assoc (Nat.add_comm k) in H.
-      now rewrite !Nat.add_assoc.
-    - f_equal. eapply All_forallb_eq_forallb; tea. cbn.
-      intros. specialize (H (#|m| + k')).
-      now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
-    - f_equal. eapply All_forallb_eq_forallb; tea. cbn.
-      intros. specialize (H (#|m| + k')).
-      now rewrite !Nat.add_assoc !(Nat.add_comm k) in H |- *.
+      eapply IHt2; auto.
+    - specialize (a (#|x.1| + k')) => //.
+      rewrite Nat.add_assoc (Nat.add_comm k) in a.
+      rewrite !Nat.add_assoc. eapply a => //.
+      now rewrite !Nat.add_assoc in b.
+    - intros. specialize (a (#|m| + k')).
+      now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
+    - intros. specialize (a (#|m| + k')).
+      now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
   Qed.
 
-  Lemma wellformed_subst s k t {hast : has_tRel}: 
+  Lemma wellformed_subst s k t :
     forallb (wellformed k) s -> wellformed (#|s| + k) t -> 
     wellformed k (subst0 s t).
   Proof.
     intros.
     unshelve epose proof (wellformed_subst_eq (k':=0) (t:=t) H); auto.
     rewrite Nat.add_0_r in H1.
-    rewrite -H1 // Nat.add_comm //.
+    now rewrite Nat.add_comm in H1.
   Qed.
 
-  Lemma wellformed_csubst t k u {hast : has_tRel} : 
+  Lemma wellformed_csubst t k u :
     wellformed 0 t -> 
     wellformed (S k) u -> 
     wellformed k (ECSubst.csubst t 0 u).
@@ -242,7 +237,7 @@ Section EEnvFlags.
     rewrite andb_true_r. eapply wellformed_up; tea. lia.
   Qed.
 
-  Lemma wellformed_substl ts k u {hast : has_tRel}: 
+  Lemma wellformed_substl ts k u :
     forallb (wellformed 0) ts -> 
     wellformed (#|ts| + k) u -> 
     wellformed k (ECSubst.substl ts u).
@@ -275,7 +270,7 @@ Section EEnvFlags.
     cbn. rewrite H IHn // hasco //.
   Qed.
 
-  Lemma wellformed_cunfold_fix mfix idx n f {hast : has_tRel} : 
+  Lemma wellformed_cunfold_fix mfix idx n f :
     wellformed 0 (EAst.tFix mfix idx) ->
     cunfold_fix mfix idx = Some (n, f) ->
     wellformed 0 f.
@@ -291,7 +286,7 @@ Section EEnvFlags.
     apply cld.
   Qed.
 
-  Lemma wellformed_cunfold_cofix mfix idx n f {hast : has_tRel} : 
+  Lemma wellformed_cunfold_cofix mfix idx n f :
     wellformed 0 (EAst.tCoFix mfix idx) ->
     cunfold_cofix mfix idx = Some (n, f) ->
     wellformed 0 f.
@@ -307,7 +302,7 @@ Section EEnvFlags.
     apply cld.
   Qed.
 
-  Lemma wellformed_iota_red pars c args brs br {hast : has_tRel}:
+  Lemma wellformed_iota_red pars c args brs br :
     forallb (wellformed 0) args ->
     nth_error brs c = Some br ->
     #|skipn pars args| = #|br.1| ->
@@ -321,7 +316,7 @@ Section EEnvFlags.
     now rewrite List.rev_length hskip Nat.add_0_r.
   Qed.
 
-  Lemma wellformed_iota_red_brs pars c args brs br {hast : has_tRel}:
+  Lemma wellformed_iota_red_brs pars c args brs br :
     forallb (wellformed 0) args ->
     nth_error brs c = Some br ->
     #|skipn pars args| = #|br.1| ->

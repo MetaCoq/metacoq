@@ -661,7 +661,7 @@ Section Wcbv.
         noconf IHev1.
         pose proof e0. rewrite e4 in H. noconf H.
         pose proof e as e'. rewrite e3 in e'. noconf e'.
-        rewrite (uip e e3), (uip e0 e4), (uip e1 e5), (uip e2 e6).
+        rewrite -> (uip e e3), (uip e0 e4), (uip e1 e5), (uip e2 e6).
         specialize (IHev2 _ ev'2); noconf IHev2.
         reflexivity.
     - depelim ev'; try go.
@@ -1165,54 +1165,52 @@ Definition mk_env_flags has_ax has_pars tfl :=
   {| has_axioms := has_ax;
      has_cstr_params := has_pars;
      term_switches := tfl |}.
-    
-Lemma eval_wellformed has_ax has_pars (efl := mk_env_flags has_ax has_pars all_term_flags)
-  {wfl : WcbvFlags} Σ : 
+  
+Global Hint Rewrite andb_true_r andb_false_r : simplifications.
+Global Hint Rewrite orb_false_r orb_true_r : simplifications.
+
+Tactic Notation "sim" "in" hyp(H) :=
+  repeat (cbn in H; autorewrite with simplifications in H).
+Ltac sim := repeat (cbn ; autorewrite with simplifications).
+
+Lemma eval_wellformed {efl : EEnvFlags} {has_app : has_tApp} {wfl : WcbvFlags} Σ : 
   wf_glob Σ ->
   forall t u, wellformed Σ 0 t -> eval Σ t u -> wellformed Σ 0 u.
 Proof.
   move=> clΣ t u Hc ev. move: Hc.
   induction ev; simpl in *; auto;
     (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
-  all:eauto using wellformed_csubst.
-  - specialize (IHev1 Hc').
-    move: IHev1. rewrite wellformed_mkApps // => /andP[] wfc wfargs.
-    apply IHev2.
+  all:intros; intuition auto; rtoProp; intuition auto; rtoProp; eauto using wellformed_csubst.
+  - eapply IHev2; eauto.
     eapply wellformed_iota_red_brs; tea => //.
-  - subst brs. cbn in Hc''. rewrite andb_true_r in Hc''.
-    eapply IHev2. eapply wellformed_substl => //.
+    rewrite wellformed_mkApps // in H2. move/andP: H2 => [] //.
+  - subst brs. eapply IHev2. sim in H0.
+    eapply wellformed_substl => //.
     eapply All_forallb, All_repeat => //.
     now rewrite repeat_length.
   - eapply IHev3. apply/andP; split; [|easy].
-    specialize (IHev1 Hc).
-    rewrite wellformed_mkApps // in IHev1.
-    move/andP: IHev1 => [clfix clargs].
+    rewrite wellformed_mkApps // in H. rewrite Hc /=.
+    move/andP: H => [clfix clargs].
     rewrite wellformed_mkApps // clargs andb_true_r.
     eapply wellformed_cunfold_fix; tea => //.
-  - apply andb_true_iff. split; [|easy]. solve_all.
-  - eapply IHev3. rtoProp. split; eauto.
-    eapply wellformed_cunfold_fix => //; tea. eauto.
+  - eapply IHev3 => //. rtoProp; intuition auto.
+    eapply wellformed_cunfold_fix => //; tea. cbn. rewrite H H1 //.
   - eapply IHev2. rewrite wellformed_mkApps //.
-    rewrite wellformed_mkApps // in IHev1. 
-    specialize (IHev1 Hc'). move/andP: IHev1 => [Hfix Hargs].
+    rewrite wellformed_mkApps // in H2. 
+    move/andP: H2 => [Hfix Hargs].
     repeat (apply/andP; split; auto).
     eapply wellformed_cunfold_cofix => //; tea. 
-  - specialize (IHev1 Hc'). eapply IHev2. rewrite wellformed_mkApps // in IHev1 *.
-    move/andP: IHev1 => [Hfix Hargs].
-    rewrite wellformed_mkApps // Hargs andb_true_r Hc /=.
+  - eapply IHev2. rewrite wellformed_mkApps // in H *.
+    move/andP: H => [Hfix Hargs].
+    rewrite wellformed_mkApps // Hargs andb_true_r Hc Hc' /=.
     eapply wellformed_cunfold_cofix; tea => //.
   - apply IHev.
     move/(lookup_env_wellformed clΣ): isdecl.
     now rewrite /wf_global_decl /= e /=.
-  - have := (IHev1 Hc').
-    rewrite wellformed_mkApps // /= => clargs.
+  - move: H; rewrite wellformed_mkApps // /= => clargs.
     eapply IHev2; eauto.
-    move/andP: clargs => [wfc wfargs].
+    move/andP: clargs => [/andP[] hasc wfc wfargs].
     eapply nth_error_forallb in wfargs; tea.
-  - have := IHev1 Hc.
-    rewrite !wellformed_mkApps // /=.
-    now move/andP => [] -> -> /=.
-  - rtoProp; intuition auto.
 Qed.
 
 Lemma remove_last_length {X} {l : list X} : 

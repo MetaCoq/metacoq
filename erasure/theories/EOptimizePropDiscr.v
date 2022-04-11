@@ -364,7 +364,7 @@ Lemma wellformed_optimize_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t :
 Proof.
   induction t using EInduction.term_forall_list_ind; cbn -[lookup_constant lookup_inductive
     GlobalContextMap.inductive_isprop_and_pars]; intros => //.
-  all:rtoProp; intuition auto.  
+  all:unfold wf_fix_gen in *; rtoProp; intuition auto.  
   all:f_equal; eauto; solve_all.
   - rewrite !GlobalContextMap.inductive_isprop_and_pars_spec.
     assert (map (on_snd (optimize Σ)) l = map (on_snd (optimize Σ')) l) as -> by solve_all.
@@ -857,9 +857,9 @@ Proof.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
     destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
     all:rewrite hasc hs /=; eauto.
-  - cbn. rtoProp; intuition auto; solve_all.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.
-  - cbn. rtoProp; intuition auto; solve_all.
+  - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.
 Qed.
 
@@ -870,7 +870,7 @@ Lemma optimize_wellformed_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t :
   forall n, wellformed Σ n t -> wellformed (optimize_env Σ) n t.
 Proof.
   intros wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
-  all:try solve [intros; rtoProp; intuition eauto; solve_all].
+  all:try solve [intros; unfold wf_fix_gen in *; rtoProp; intuition eauto; solve_all].
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
@@ -890,7 +890,6 @@ Proof.
     destruct nth_error => /= //.
     all:intros; rtoProp; intuition auto; solve_all.
 Qed.
-
 
 Lemma optimize_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
   wf_glob Σ ->

@@ -764,7 +764,7 @@ Section Wcbv.
       pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).
       noconf H. noconf IHev1.
       pose proof e as e'. rewrite e2 in e'; noconf e'.
-      rewrite (uip e e2), (uip e0 e3).
+      rewrite -> (uip e e2), (uip e0 e3).
       pose proof e4 as e4'. rewrite e1 in e4'; noconf e4'.
       rewrite (uip e1 e4).
       now specialize (IHev2 _ ev'2); noconf IHev2.
@@ -1173,11 +1173,12 @@ Tactic Notation "sim" "in" hyp(H) :=
   repeat (cbn in H; autorewrite with simplifications in H).
 Ltac sim := repeat (cbn ; autorewrite with simplifications).
 
-Lemma eval_wellformed {efl : EEnvFlags} {has_app : has_tApp} {wfl : WcbvFlags} Σ : 
+Lemma eval_wellformed {efl : EEnvFlags} {wfl : WcbvFlags} Σ : 
+  forall (has_app : has_tApp), (* necessary due to mkApps *)
   wf_glob Σ ->
   forall t u, wellformed Σ 0 t -> eval Σ t u -> wellformed Σ 0 u.
 Proof.
-  move=> clΣ t u Hc ev. move: Hc.
+  move=> has_app clΣ t u Hc ev. move: Hc.
   induction ev; simpl in *; auto;
     (move/andP=> [/andP[Hc Hc'] Hc''] || move/andP=> [Hc Hc'] || move=>Hc); auto.
   all:intros; intuition auto; rtoProp; intuition auto; rtoProp; eauto using wellformed_csubst.

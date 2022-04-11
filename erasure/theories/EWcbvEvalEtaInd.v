@@ -44,24 +44,22 @@ Section OnSubterm.
   Derive Signature for on_subterms.
 End OnSubterm.
 
-Class Qdummy (Q : nat -> term -> Type) := qdummy : forall n, Q n tDummy.
-#[export] Hint Mode Qdummy ! : typeclass_instances.
-
 Class Qpres {etfl : ETermFlags} (Q : nat -> term -> Type) := qpres : forall n t, Q n t -> on_subterms Q n t.
 #[export] Hint Mode Qpres - ! : typeclass_instances.
 
 Class Qapp {etfl : ETermFlags} (Q : nat -> term -> Type) := qapp : has_tApp -> forall n f args, Q n (mkApps f args) <~> Q n f × All (Q n) args.
 #[export] Hint Mode Qapp - ! : typeclass_instances.
 
-Class Qcase {etfl : ETermFlags} (Q : nat -> term -> Type) := qcase : has_tCase -> forall n ci discr brs, Q n (tCase ci discr brs) <~> Q n discr × All (fun br => Q (#|br.1| + n) br.2) brs.
+Class Qcase {etfl : ETermFlags} (Q : nat -> term -> Type) := qcase : has_tCoFix -> has_tCase -> forall n ci discr brs, Q n (tCase ci discr brs) <~> 
+  Q n discr × All (fun br => Q (#|br.1| + n) br.2) brs.
 #[export] Hint Mode Qcase - ! : typeclass_instances.
 
 Class Qproj {etfl : ETermFlags} (Q : nat -> term -> Type) := qproj : has_tProj -> forall n p discr, Q n (tProj p discr) <~> Q n discr.
 #[export] Hint Mode Qproj - ! : typeclass_instances.
 
-Class Qfix {etfl : ETermFlags} (Q : nat -> term -> Type) := qfix : has_tFix -> forall n mfix idx, Q n (tFix mfix idx) <~> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix.
+Class Qfix {etfl : ETermFlags} (Q : nat -> term -> Type) := qfix : has_tFix -> forall n mfix idx, idx < #|mfix| -> Q n (tFix mfix idx) <~> All (fun d => Q (#|mfix| + n) d.(dbody)) mfix.
 #[export] Hint Mode Qfix - ! : typeclass_instances.
-Class Qcofix {etfl : ETermFlags} (Q : nat -> term -> Type) := qcofix : has_tCoFix -> forall n mfix idx, Q n (tCoFix mfix idx) <~>  All (fun d => Q (#|mfix| + n) d.(dbody)) mfix.
+Class Qcofix {etfl : ETermFlags} (Q : nat -> term -> Type) := qcofix : has_tCoFix -> forall n mfix idx, idx < #|mfix| -> Q n (tCoFix mfix idx) <~>  All (fun d => Q (#|mfix| + n) d.(dbody)) mfix.
 #[export] Hint Mode Qcofix - ! : typeclass_instances.
 Class Qsubst (Q : nat -> term -> Type) := qsubst : forall t l, Q (#|l|) t -> All (Q 0) l -> Q 0 (substl l t).
 #[export] Hint Mode Qsubst ! : typeclass_instances.
@@ -77,17 +75,19 @@ Class Qcofixs (Q : nat -> term -> Type) := qcofixs : forall mfix idx, Q 0 (tCoFi
 Lemma Qfix_subst {etfl : ETermFlags} mfix Q : has_tFix -> Qfix Q -> All (λ d : def term, Q (#|mfix| + 0) (dbody d)) mfix -> All (Q 0) (fix_subst mfix).
 Proof.
   intros hasfix qfix; unfold fix_subst.
-  generalize #|mfix| at 2. intros n hfix.
-  induction n; constructor; auto.
-  now eapply qfix.
+  generalize (Nat.le_refl #|mfix|).
+  generalize #|mfix| at 1 4.
+  induction n. intros. constructor; auto.
+  intros. constructor. eapply qfix => //. eapply IHn. lia. exact X. 
 Qed.
 
 Lemma Qcofix_subst {etfl : ETermFlags} mfix Q : has_tCoFix -> Qcofix Q -> All (λ d : def term, Q (#|mfix| + 0) (dbody d)) mfix -> All (Q 0) (cofix_subst mfix).
 Proof.
-  intros hascofix qfix; unfold cofix_subst.
-  generalize #|mfix| at 2. intros n hfix.
-  induction n; constructor; auto.
-  now eapply qfix.
+  intros hasfix qfix; unfold cofix_subst.
+  generalize (Nat.le_refl #|mfix|).
+  generalize #|mfix| at 1 4.
+  induction n. intros. constructor; auto.
+  intros. constructor. eapply qfix => //. eapply IHn. lia. exact X. 
 Qed.
 
 #[export] Instance Qsubst_Qfixs {etfl : ETermFlags} Q : Qpres Q -> Qfix Q -> Qsubst Q -> Qfixs Q.
@@ -138,8 +138,7 @@ Class Qpreserves {etfl : ETermFlags} (Q : nat -> term -> Type) Σ :=
     qpres_qproj :> Qproj Q;
     qpres_qsubst :> Qsubst Q;
     qpres_qfix :> Qfix Q;
-    qpres_qcofix :> Qcofix Q;
-    qpres_qdummy :> Qdummy Q }.
+    qpres_qcofix :> Qcofix Q }.
 
 Lemma eval_preserve_mkApps_ind :
 ∀ (wfl : WcbvFlags) {efl : EEnvFlags} (Σ : global_declarations) 
@@ -261,6 +260,7 @@ Lemma eval_preserve_mkApps_ind :
                 → (∀ (p : projection) (mfix : mfixpoint term) 
                      (idx : nat) (args : list term) 
                      (narg : nat) discr (fn res : term),
+                     has_tProj ->
                      cunfold_cofix mfix idx = Some (narg, fn)
                      -> isEtaExp Σ fn
                      -> forallb (isEtaExp Σ) args
@@ -280,6 +280,7 @@ Lemma eval_preserve_mkApps_ind :
                     → (∀ (i : inductive) cdecl (pars arg : nat) 
                          (discr : term) (args : list term)  a
                          (res : term),
+                         has_tProj ->
                          eval Σ discr
                            (mkApps (tConstruct i 0) args)
                          → P discr (mkApps (tConstruct i 0) args)
@@ -291,6 +292,7 @@ Lemma eval_preserve_mkApps_ind :
                          → P' (tProj (i, pars, arg) discr) res)
                       → (∀ (i : inductive) (pars arg : nat) 
                            (discr : term),
+                           has_tProj ->
                            with_prop_case
                            → eval Σ discr tBox
                              → P discr tBox
@@ -517,7 +519,9 @@ Proof.
     assert (qa : Q 0 (tCase ip (mkApps fn args) brs)).
     { pose proof (ev1' := ev1). eapply P'Q in ev1' => //.
       eapply qapp in ev1' as [hfix qargs] => //.
-      unshelve eapply (qcase _ _ _ _ _).2 => //. auto. split => //.
+      unshelve eapply (qcase _ _ _ _ _ _).2 => //.
+      { now eapply qpres in hfix; depelim hfix. } auto.
+      split => //.
       eapply qapp => //. split => //.
       eapply (qcofixs mfix idx) in hfix; tea. 
       clear ev1'; ih. }

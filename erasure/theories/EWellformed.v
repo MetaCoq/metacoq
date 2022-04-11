@@ -67,7 +67,7 @@ Definition all_env_flags :=
     
 Section wf.
   
-  Context {sw  : EEnvFlags}.
+  Context {efl  : EEnvFlags}.
   Variable Σ : global_context.
 
   (* a term term is wellformed if
@@ -76,6 +76,10 @@ Section wf.
     - all occuring constructors are defined,
     - all occuring constants are defined, and
     - if has_axioms is false, all occuring constants have bodies *)
+
+  Definition wf_fix_gen (wf : nat -> term -> bool) k mfix idx := 
+    let k' := List.length mfix + k in      
+    (idx <? #|mfix|) && List.forallb (test_def (wf k')) mfix.
   
   Fixpoint wellformed k (t : term) : bool :=
     match t with
@@ -88,12 +92,8 @@ Section wf.
       let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
       isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
     | tProj p c => has_tProj && isSome (lookup_inductive Σ p.1.1) && wellformed k c
-    | tFix mfix idx => has_tFix &&
-      let k' := List.length mfix + k in
-      List.forallb (test_def (wellformed k')) mfix
-    | tCoFix mfix idx => has_tCoFix &&
-      let k' := List.length mfix + k in
-      List.forallb (test_def (wellformed k')) mfix
+    | tFix mfix idx => has_tFix && wf_fix_gen wellformed k mfix idx
+    | tCoFix mfix idx => has_tCoFix && wf_fix_gen wellformed k mfix idx
     | tBox => has_tBox
     | tConst kn => has_tConst && 
       match lookup_constant Σ kn with
@@ -106,6 +106,16 @@ Section wf.
 
 End wf.
 
+Notation wf_fix Σ := (wf_fix_gen (wellformed Σ)).
+
+Lemma wf_fix_inv {efl : EEnvFlags} Σ k mfix idx : reflect (idx < #|mfix| /\ forallb (test_def (wellformed Σ (#|mfix| + k))) mfix) (wf_fix Σ k mfix idx).
+Proof.
+  unfold wf_fix.
+  destruct (idx <? #|mfix|) eqn:lt; cbn; [|econstructor].
+  destruct forallb; constructor. now eapply Nat.ltb_lt in lt.
+  now eapply Nat.ltb_lt in lt.
+  now eapply Nat.ltb_nlt in lt.
+Qed.
 
 Definition wf_global_decl {sw : EEnvFlags} Σ d : bool :=
   match d with
@@ -135,7 +145,7 @@ Section EEnvFlags.
       simpl in * ; rewrite -> ?andb_and in *;
       autorewrite with map;
       simpl wellformed in *; intuition auto;
-      unfold test_def, test_snd in *;
+      unfold wf_fix, test_def, test_snd in *;
         try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
   Qed.
   
@@ -152,7 +162,7 @@ Section EEnvFlags.
       simpl in * ; rewrite -> ?andb_and in *;
       autorewrite with map;
       simpl wellformed in *; intuition auto;
-      unfold test_def, test_snd in *;
+      unfold wf_fix, test_def, test_snd in *;
         try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
     eapply Nat.ltb_lt. now eapply Nat.ltb_lt in H2.
   Qed.
@@ -164,7 +174,7 @@ Section EEnvFlags.
       simpl in *; rewrite -> ?andb_and in *;
       autorewrite with map;
       simpl closed in *; solve_all;
-      unfold test_def, test_snd in *;
+      unfold wf_fix, test_def, test_snd in *;
         try solve [simpl lift; simpl closed; f_equal; auto; repeat (rtoProp; simpl in *; solve_all)]; try easy.
 
     - elim (Nat.leb_spec k' n0); intros. simpl; rewrite H0 /=.
@@ -172,6 +182,10 @@ Section EEnvFlags.
       simpl; rewrite H0 /=. elim (Nat.ltb_spec); auto. intros.
       apply Nat.ltb_lt in H1. lia.
     - solve_all. rewrite Nat.add_assoc. eauto.
+    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
+      rewrite Nat.add_assoc; eauto.
+    - len. move/andP: H1 => [] -> ha. cbn. solve_all.
+      rewrite Nat.add_assoc; eauto.
   Qed.
 
   Lemma wellformed_subst_eq {s k k' t} :
@@ -184,7 +198,7 @@ Section EEnvFlags.
       simpl in *; auto;
       autorewrite with map => //;
       simpl wellformed in *; try change_Sk;
-      unfold test_def in *; simpl in *;
+      unfold wf_fix, test_def in *; simpl in *;
       rtoProp; intuition auto;
       solve_all.
 
@@ -209,9 +223,11 @@ Section EEnvFlags.
       rewrite Nat.add_assoc (Nat.add_comm k) in a.
       rewrite !Nat.add_assoc. eapply a => //.
       now rewrite !Nat.add_assoc in b.
-    - intros. specialize (a (#|m| + k')).
-      now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
-    - intros. specialize (a (#|m| + k')).
+    - intros. now len.
+    - specialize (a (#|m| + k')).
+      len. now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
+    - intros. now len.
+    - specialize (a (#|m| + k')); len.
       now rewrite !Nat.add_assoc !(Nat.add_comm k) in a, b |- *.
   Qed.
 
@@ -252,22 +268,24 @@ Section EEnvFlags.
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (fix_subst mfix).
   Proof.
-    solve_all.
-    unfold fix_subst.
-    move: #|mfix| => n.
-    induction n. constructor.
-    cbn. rewrite H IHn //. now rewrite hast.
+    intros hm. unfold fix_subst.
+    generalize (le_refl #|mfix|).
+    move: {1 3}#|mfix| => n.
+    induction n => //.
+    intros hn. cbn. rewrite hast /=. rewrite /wf_fix_gen hm /= andb_true_r.
+    apply/andP; split. apply Nat.ltb_lt. lia. apply IHn. lia.
   Qed.
 
   Lemma wellformed_cofix_subst mfix {hasco : has_tCoFix}: 
     forallb (EAst.test_def (wellformed (#|mfix| + 0))) mfix ->
     forallb (wellformed 0) (cofix_subst mfix).
   Proof.
-    solve_all.
-    unfold cofix_subst.
-    move: #|mfix| => n.
-    induction n. constructor.
-    cbn. rewrite H IHn // hasco //.
+    intros hm. unfold cofix_subst.
+    generalize (le_refl #|mfix|).
+    move: {1 3}#|mfix| => n.
+    induction n => //.
+    intros hn. cbn. rewrite hasco /=. rewrite /wf_fix_gen hm /= andb_true_r.
+    apply/andP; split. apply Nat.ltb_lt. lia. apply IHn. lia.
   Qed.
 
   Lemma wellformed_cunfold_fix mfix idx n f :
@@ -278,7 +296,7 @@ Section EEnvFlags.
     move=> cl.
     rewrite /cunfold_fix.
     destruct nth_error eqn:heq => //.
-    cbn in cl. move/andP: cl => [hastf cl].
+    cbn in cl. move/andP: cl => [hastf /andP[] hidx cl].
     have := (nth_error_forallb heq cl) => cld. 
     move=> [=] _ <-.
     eapply wellformed_substl => //. now eapply wellformed_fix_subst.
@@ -294,7 +312,7 @@ Section EEnvFlags.
     move=> cl.
     rewrite /cunfold_cofix.
     destruct nth_error eqn:heq => //.
-    cbn in cl. move/andP: cl => [hastf cl].
+    cbn in cl. move/andP: cl => [hastf /andP[] _ cl].
     have := (nth_error_forallb heq cl) => cld. 
     move=> [=] _ <-.
     eapply wellformed_substl => //. now eapply wellformed_cofix_subst.
@@ -403,8 +421,10 @@ Lemma extends_wellformed {efl} {Σ Σ'} :
 Proof.
   intros wf ex t.
   induction t using EInduction.term_forall_list_ind; cbn => //; intros; rtoProp; intuition auto; solve_all.
-  all:destruct lookup_env eqn:hl => //; rewrite (extends_lookup wf ex hl).
-  all:destruct g => //.
+  all:try destruct lookup_env eqn:hl => //; try rewrite (extends_lookup wf ex hl).
+  all:try destruct g => //.
+  - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
+  - move/andP: H0 => [] hn hf. unfold wf_fix. rewrite hn /=. solve_all.
 Qed.
 
 Lemma extends_wf_global_decl {efl} {Σ Σ'} : 

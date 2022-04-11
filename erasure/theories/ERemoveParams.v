@@ -803,7 +803,7 @@ Proof.
     rewrite vc. rewrite -mkApps_app !map_app //. 
 Qed.
 
-#[export] Instance Qpreserves_closedn Σ : closed_env Σ ->
+#[export] Instance Qpreserves_closedn (efl := all_env_flags) Σ : closed_env Σ ->
   Qpreserves (fun n x => closedn n x) Σ.
 Proof.
   intros clΣ.
@@ -814,16 +814,16 @@ Proof.
     eapply on_letin; rtoProp; intuition auto.
     eapply on_app; rtoProp; intuition auto.
     eapply on_case; rtoProp; intuition auto. solve_all.
-    eapply on_fix. solve_all.
+    eapply on_fix. solve_all. solve_all.
     eapply on_cofix; solve_all.
   - red. intros kn decl.
     move/(lookup_env_closed clΣ).
     unfold closed_decl. destruct EAst.cst_body => //.
-  - red. move=> n t args. rewrite closedn_mkApps. 
+  - red. move=> hasapp n t args. rewrite closedn_mkApps. 
     split; intros; rtoProp; intuition auto; solve_all.
-  - red. move=> n ci discr brs. simpl.
+  - red. move=> hascase n ci discr brs. simpl.
     split; intros; rtoProp; intuition auto; solve_all.
-  - red. move=> n p discr. simpl.
+  - red. move=> hasproj n p discr. simpl.
     split; intros; rtoProp; intuition auto; solve_all.
   - red. move=> t args clt cll.
     eapply closed_substl. solve_all. now rewrite Nat.add_0_r.
@@ -831,10 +831,9 @@ Proof.
     split; intros; rtoProp; intuition auto; solve_all.
   - red. move=> n mfix idx. cbn.
     split; intros; rtoProp; intuition auto; solve_all.
-  - red. now cbn.
 Qed.
 
-Lemma strip_eval {efl : EEnvFlags} {wfl:Ee.WcbvFlags} {Σ : GlobalContextMap.t} t v :
+Lemma strip_eval (efl := all_env_flags) {wfl:Ee.WcbvFlags} {Σ : GlobalContextMap.t} t v :
   closed_env Σ ->
   isEtaExp_env Σ ->
   wf_glob Σ ->
@@ -850,7 +849,7 @@ Proof.
   { intros. eapply eval_closed; tea. }
   all:intros; simpl in *.
   (* 1-15: try solve [econstructor; eauto]. *)
-  all:repeat destruct_nary_times.
+  all:repeat destruct_nary_times => //.
   - rewrite strip_tApp //.
     econstructor; eauto.
 
@@ -959,14 +958,14 @@ Proof.
   
   - simp_strip.
     rewrite strip_mkApps // /= in e0.
-    rewrite (constructor_isprop_pars_decl_lookup H1) in e0.
+    rewrite (constructor_isprop_pars_decl_lookup H2) in e0.
     eapply Ee.eval_proj; eauto.
-    move: (@is_propositional_cstr_strip Σ i 0). now rewrite H1. simpl.
-    len. rewrite skipn_length. cbn in H2. lia.
-    rewrite nth_error_skipn nth_error_map /= H3 //.
+    move: (@is_propositional_cstr_strip Σ i 0). now rewrite H2. simpl.
+    len. rewrite skipn_length. cbn in H3. lia.
+    rewrite nth_error_skipn nth_error_map /= H4 //.
 
   - simp_strip. eapply Ee.eval_proj_prop => //.
-    move: (is_propositional_strip Σ i); now rewrite H2.
+    move: (is_propositional_strip Σ i); now rewrite H3.
 
   - rewrite !strip_tApp //.
     eapply Ee.eval_app_cong; tea.
@@ -1020,7 +1019,7 @@ Proof.
   revert n.
   funelim (strip Σ t); try intros n.
   all:cbn -[strip]; simp_strip; intros.
-  all:try solve[rtoProp; intuition auto; toAll; solve_all].
+  all:try solve[unfold wf_fix_gen in *; rtoProp; intuition auto; toAll; solve_all].
   - cbn -[strip]; simp_strip. intros; rtoProp; intuition auto.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g => /= //.
@@ -1037,8 +1036,8 @@ Proof.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. all:rtoProp; intuition auto.
-  - rtoProp; intuition auto. rewrite map_length. toAll; solve_all.
-  - rtoProp; intuition auto. rewrite map_length. toAll; solve_all.
+  - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
+  - unfold wf_fix in *. rewrite map_length; rtoProp; intuition auto. toAll; solve_all.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
     toAll; solve_all.
   - move:H0; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
@@ -1060,7 +1059,7 @@ Lemma strip_wellformed_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t :
   forall n, wellformed Σ n t -> wellformed (strip_env Σ) n t.
 Proof.
   intros wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
-  all:try solve [intros; rtoProp; intuition eauto; solve_all].
+  all:try solve [intros; unfold wf_fix in *; rtoProp; intuition eauto; solve_all].
   - rewrite lookup_env_strip //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
@@ -1168,9 +1167,9 @@ Lemma strip_extends {efl : EEnvFlags} {Σ Σ' : GlobalContextMap.t} :
 Proof.
   intros hasapp hext hwf n t. revert n.
   funelim (strip Σ t); intros ?n; simp_strip  => /= //.
-  all:try solve [intros; rtoProp; intuition auto; f_equal; auto; toAll; solve_all].
+  all:try solve [intros; unfold wf_fix in *; rtoProp; intuition auto; f_equal; auto; toAll; solve_all].
   - intros; rtoProp; intuition auto.
-   move: H1; rewrite wellformed_mkApps // => /andP[] wfu wfargs.
+    move: H1; rewrite wellformed_mkApps // => /andP[] wfu wfargs.
     rewrite strip_mkApps // Heq /=. f_equal; eauto. toAll; solve_all.
   - rewrite wellformed_mkApps // => /andP[] wfc wfv.
     rewrite strip_mkApps // /=.

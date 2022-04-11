@@ -2144,9 +2144,9 @@ Section wffix.
       wf_fixpoints c && brs'
     | tProj p c => wf_fixpoints c
     | tFix mfix idx => 
-      List.forallb (fun d => (isLambda d.(dbody) || isBox d.(dbody)) && wf_fixpoints d.(dbody)) mfix
+      (idx <? #|mfix|) && List.forallb (fun d => (isLambda d.(dbody) || isBox d.(dbody)) && wf_fixpoints d.(dbody)) mfix
     | tCoFix mfix idx =>
-      List.forallb (wf_fixpoints ∘ dbody) mfix
+      (idx <? #|mfix|) && List.forallb (wf_fixpoints ∘ dbody) mfix
     | tConst kn => true
     | tConstruct ind c => true
     | tVar _ => true
@@ -2164,7 +2164,7 @@ Lemma erases_deps_wellformed (cf := config.extraction_checker_flags) (efl := all
 Proof.
   intros ed.
   induction ed using erases_deps_forall_ind; intros => //; 
-   try solve [cbn in *; rtoProp; intuition eauto; solve_all].
+   try solve [cbn in *; unfold wf_fix in *; rtoProp; intuition eauto; solve_all].
   - cbn. red in H0. rewrite H0 //.
   - cbn -[lookup_constructor].
     cbn. now destruct H0 as [[-> ->] ->].
@@ -2181,11 +2181,12 @@ Lemma erases_wf_fixpoints Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' ->
   ErasureCorrectness.wellformed Σ t -> wf_fixpoints t'.
 Proof.
   induction 1 using erases_forall_list_ind; cbn; auto; try solve [rtoProp; repeat solve_all].
-  - unfold test_def in *.
+  - move/andP => []. rewrite (All2_length X) => -> /=. unfold test_def in *.
     eapply Forall2_All2 in H.
     eapply All2_All2_mix in X; tea. solve_all.
     destruct b0; eapply erases_isLambda in H1; tea.
-  - unfold test_def in *. solve_all.
+  - move/andP => []. rewrite (All2_length X) => -> /=.
+    unfold test_def in *. solve_all.
 Qed.
 
 Lemma erase_wf_fixpoints (efl := all_env_flags) {Σ : wf_env} univs wfΣ {Γ t} wt
@@ -2243,7 +2244,7 @@ Lemma erase_constant_body_correct'' {Σ : wf_env} {cb} {univs wfΣ}
   EAst.cst_body (fst (erase_constant_body Σ' cb onc)) = Some body ->
   ∥ ∑ t T, (Σ' ;;; [] |- t : T) * (Σ' ;;; [] |- t ⇝ℇ body) *
       (term_global_deps body = snd (erase_constant_body Σ' cb onc)) *
-      wellformed (sw:=all_env_flags) (erase_global (KernameSet.union deps (term_global_deps body)) Σ) 0 body ∥.
+      wellformed (efl:=all_env_flags) (erase_global (KernameSet.union deps (term_global_deps body)) Σ) 0 body ∥.
 Proof.
   intros. destruct cb as [name [bod|] udecl]; simpl. intros.
   simpl in H. noconf H.

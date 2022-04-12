@@ -40,6 +40,7 @@ Inductive wf {Σ} : term -> Type :=
 | wf_tConstruct i k u : wf (tConstruct i k u)
 | wf_tCase ci p c brs mdecl idecl :
     declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+    ci.(ci_npar) = mdecl.(ind_npars) ->
     wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
     #|pparams p| = context_assumptions (ind_params mdecl) ->
     All wf (pparams p) -> wf (preturn p) ->
@@ -48,7 +49,9 @@ Inductive wf {Σ} : term -> Type :=
       wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
       wf (bbody br)) idecl.(ind_ctors) brs ->
     wf (tCase ci p c brs)
-| wf_tProj p t : wf t -> wf (tProj p t)
+| wf_tProj p t : 
+  wf t ->
+  wf (tProj p t)
 | wf_tFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix ->
                    wf (tFix mfix k)
 | wf_tCoFix mfix k : All (fun def => wf def.(dtype) × wf def.(dbody)) mfix -> wf (tCoFix mfix k).
@@ -75,6 +78,7 @@ Definition wf_Inv Σ (t : term) : Type :=
   | tCase ci p c brs => 
     ∑ mdecl idecl, 
     [× declared_inductive Σ ci.(ci_ind) mdecl idecl,
+       ci.(ci_npar) = mdecl.(ind_npars),
        wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl),
        #|pparams p| = context_assumptions (ind_params mdecl),
        All (wf Σ) (pparams p),
@@ -131,13 +135,16 @@ Lemma term_wf_forall_list_ind Σ :
       P (tConstruct i n u)) ->
     (forall (ci : case_info) (p : predicate term) mdecl idecl,
         declared_inductive Σ ci.(ci_ind) mdecl idecl ->
+        ci.(ci_npar) = mdecl.(ind_npars) ->
         #|pparams p| = context_assumptions (ind_params mdecl) ->
         wf_nactx p.(pcontext) (ind_predicate_context ci.(ci_ind) mdecl idecl) ->
         tCasePredProp P P p -> forall t : term, P t -> forall l : list (branch term),
         All2 (fun cdecl br => 
           wf_nactx br.(bcontext) (cstr_branch_context ci.(ci_ind) mdecl cdecl) ×
           P (bbody br)) idecl.(ind_ctors) l -> P (tCase ci p t l)) ->
-    (forall (s : projection) (t : term), P t -> P (tProj s t)) ->
+    (forall (s : projection) (t : term), 
+    
+      P t -> P (tProj s t)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tFix m n)) ->
     (forall (m : mfixpoint term) (n : nat), tFixProp P P m -> P (tCoFix m n)) ->
     (* (forall i, P (tInt i)) ->

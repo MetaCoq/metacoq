@@ -203,11 +203,13 @@ Section Wcbv.
       eval (tCase ci p discr brs) res
 
   (** Proj *)
-  | eval_proj indnpararg discr args u a res :
-      eval discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
-      nth_error args (indnpararg.1.2 + indnpararg.2) = Some a ->
+  | eval_proj proj discr args u a res mdecl idecl cdecl pdecl :
+      declared_projection Σ proj mdecl idecl cdecl pdecl ->
+      eval discr (mkApps (tConstruct proj.1.1 0 u) args) ->
+      #|args| = cstr_arity mdecl cdecl ->
+      nth_error args (proj.1.2 + proj.2) = Some a ->
       eval a res ->
-      eval (tProj indnpararg discr) res
+      eval (tProj proj discr) res
            
   (** Fix unfolding, with guard *)
   | eval_fix f mfix idx fixargsv args argsv narg fn res :
@@ -301,13 +303,16 @@ Section Wcbv.
           #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
           eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res -> 
           P (tCase ci p discr brs) res) ->
-      (forall (indnpararg : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)
-              (a res : term),
-          eval discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
-          P discr (mkApps (tConstruct indnpararg.1.1 0 u) args) ->
-          nth_error args (indnpararg.1.2 + indnpararg.2) = Some a -> 
-          eval a res -> P a res ->
-          P (tProj indnpararg discr) res) ->
+      (forall (proj : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)
+              a mdecl idecl cdecl pdecl res,
+          declared_projection Σ proj mdecl idecl cdecl pdecl ->
+          eval discr (mkApps (tConstruct proj.1.1 0 u) args) ->
+          P discr (mkApps (tConstruct proj.1.1 0 u) args) ->
+          #|args| = cstr_arity mdecl cdecl ->
+          nth_error args (proj.1.2 + proj.2) = Some a ->
+          eval a res ->
+          P a res ->
+          P (tProj proj discr) res) ->
       (forall (f : term) (mfix : mfixpoint term) (idx : nat) (fixargsv args argsv : list term)
              (narg : nat) (fn res : term),
         ~~ isApp f ->
@@ -340,7 +345,7 @@ Section Wcbv.
           P (tCase ip p (mkApps fn args) brs) res -> P (tCase ip p discr brs) res) ->
       (forall (p : projection) (mfix : mfixpoint term) (idx : nat) discr (args : list term) (narg : nat) (fn res : term),
           cunfold_cofix mfix idx = Some (narg, fn) ->
-          eval discr(mkApps (tCoFix mfix idx) args) ->
+          eval discr (mkApps (tCoFix mfix idx) args) ->
           P discr (mkApps (tCoFix mfix idx) args) ->
           eval (tProj p (mkApps fn args)) res ->
           P (tProj p (mkApps fn args)) res -> P (tProj p discr) res) ->

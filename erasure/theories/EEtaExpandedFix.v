@@ -477,12 +477,6 @@ Section isEtaExp.
     - rewrite isEtaExp_mkApps => //. rewrite Heq. rtoProp; repeat solve_all.
   Qed.
 
-(*   Lemma expanded_lift Γ' Γ'' Γ t :
-    isEtaExp (Γ' ++ Γ)%list t ->
-    isEtaExp (Γ' ++ Γ'' ++ Γ)%list (lift #|Γ''| #|Γ'| t).
-  Proof.
-  Admitted.
- *)
   Lemma isEtaExp_closed Γ t : 
     isEtaExp Γ t -> closedn #|Γ| t.
   Proof.
@@ -1562,13 +1556,6 @@ Proof.
     move=> /andP[] _ hargs.
     eapply nth_error_forallb in H2; tea.
 Qed.
-
-(* Lemma isEtaExp_eval Σ {wfl : WcbvFlags} t v  :
-eval Σ t v -> isEtaExp Σ [] t -> isEtaExp Σ [] v.
-Admitted.
-
-Local Arguments eval : clear implicits.
-*)
 
 Lemma mkApps_eq f args a t : ~~ isApp f -> mkApps f args = tApp a t ->
   args <> [] /\ a = (mkApps f (remove_last args)) /\ t = last args t.

@@ -758,7 +758,7 @@ Section WfRed.
       eapply nth_error_all in X; eauto.
     - simpl in *. econstructor; eauto. cbn.
       now rewrite -(OnOne2_length X).
-      cbn. clear H0. induction X; constructor; inv X1; intuition auto.
+      cbn. clear H1. induction X; constructor; inv X1; intuition auto.
     - econstructor; eauto; simpl in *.
       apply IHred1; eauto.
       apply All_app_inv => //.
@@ -825,7 +825,7 @@ Section WfRed.
     - destruct t; try reflexivity. discriminate.
     - destruct l; simpl in *; congruence.
     - eapply All2_map_right_inv in X5. econstructor; eauto; solve_all.
-      now rewrite map_length in H0.
+      now rewrite map_length in H1.
   Qed.
 
   Lemma declared_projection_wf (p : projection)
@@ -1127,7 +1127,7 @@ Section TypingWf.
         f_equal; solve_all; eauto.
     - now noconf H1.
     - now noconf H1.
-    - now noconf H1.
+    - now noconf H2.
   Qed.
 
   Lemma mkApps_tApp f args :

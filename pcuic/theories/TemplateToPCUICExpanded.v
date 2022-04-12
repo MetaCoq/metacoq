@@ -222,8 +222,8 @@ Proof with eauto using expanded.
         - now eapply template_to_pcuic_env.
         - len. eapply All2_length in a2. len in a2.
         - split; tea. cbn; rewrite nth_error_map. erewrite Hi => //.
-        - cbn. tea. rewrite context_assumptions_map. now rewrite e. }
-      * cbn. rewrite map2_bias_left_length. now eapply e0.
+        - cbn. tea. rewrite context_assumptions_map. now rewrite e0. }
+      * cbn. rewrite map2_bias_left_length. now eapply e1.
     + eapply template_to_pcuic_env; eauto.
   - now (wf_inv wf [[]]; eauto using expanded).
   - wf_inv wf [[]]. wf_inv w ?. eapply expanded_tFix.

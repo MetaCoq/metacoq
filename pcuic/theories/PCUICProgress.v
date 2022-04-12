@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICEquality PCUICAst PCUICAstUtils
   PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICArities
@@ -33,7 +34,7 @@ Proof.
       rewrite closed_unfold_cofix_cunfold_eq. eauto.
       enough (closed (mkApps (tCoFix mfix idx) args)) as Hcl by (rewrite closedn_mkApps in Hcl; solve_all).
       eapply eval_closed. eauto.
-      2: eauto. eapply @subject_closed with (Γ := []); eauto. eapply cinv.
+      2: eauto. eapply @subject_closed with (Γ := []); eauto. eapply cinv. tea.
     }
     edestruct IHeval2 as (c & u & args0 & IH); eauto using subject_reduction.
     exists c, u, args0. etransitivity; eauto.
@@ -286,7 +287,7 @@ Proof.
  destruct @inversion_Prod_size with (H0 := Hprod) as (s1 & s2 & H1 & H2 & Hs1 & Hs2 & Hsub); [ eauto | ]. 
  eapply X4. 6:eauto. 4: exact HA. all: eauto.
  - intros. eapply (IH _ _ Hf). lia.
- - Unshelve. 2:exact Hf. intros. eapply IH. rewrite H. lia.
+ - Unshelve. 2:exact Hf. intros. eapply (IH _ _ Ht'). lia.
  - clear sz_A. induction L in A', Hf, (* HA, sz_A, *) Ht, HL, t, Hf, IH (*, s' *) |- *. 
    + inversion HL; subst. inversion X13. econstructor. econstructor; eauto. eauto. eauto. eauto. eauto. eauto.
      econstructor. 1,2: eapply isType_apply; eauto. eapply ws_cumul_pb_refl.
@@ -457,18 +458,6 @@ Proof.
 Qed.
 
 Local Hint Constructors value red1 : wcbv.
-
-From Coq Require Import ssreflect.
-Lemma cum_length {cf : checker_flags} {Σ : global_env_ext} {wfΣ : wf Σ} ind u args Γ na' A' B' : 
-  Σ ;;; Γ ⊢ it_mkProd_or_LetIn Γ (mkApps (tInd ind u) args) ≤ tProd na' A' B' -> 
-  context_assumptions Γ >= 1.
-Proof.
-  induction Γ using ctx_length_rev_ind; cbn.
-  intros. now eapply invert_cumul_ind_prod in X.
-  destruct d as [na [b|] ty]. 
-  - rewrite it_mkProd_or_LetIn_app /= //. admit.
-  - admit.
-Admitted.
 
 Definition axiom_free Σ :=
   forall c decl, declared_constant Σ c decl -> cst_body decl <> None. (* TODO: consolidate with PCUICConsistency *)

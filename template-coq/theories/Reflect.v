@@ -292,16 +292,16 @@ Module LevelSetsUIP.
 
   Scheme levels_tree_rect := Induction for LevelSet.Raw.tree Sort Type.
 
-  #[global] Instance levels_tree_reflect : ReflectEq LevelSet.Raw.t.
-  Proof.
-    refine {| eqb := levels_tree_eqb |}.
+  #[global, program] Instance levels_tree_reflect : ReflectEq LevelSet.Raw.t :=
+   {| eqb := levels_tree_eqb |}.
+  Next Obligation.
     induction x using levels_tree_rect; destruct y; try constructor; auto; try congruence.
     cbn [levels_tree_eqb].
     destruct (eqb_spec t0 t2); try constructor; auto; try congruence.
     destruct (IHx1 y1); try constructor; auto; try congruence.
     destruct (eqb_spec t1 t3); try constructor; auto; try congruence.
     destruct (IHx2 y2); try constructor; auto; try congruence.
-  Defined.
+  Qed.
 
   Derive NoConfusion for LevelSet.Raw.tree.
   Derive Signature for LevelSet.Raw.bst.
@@ -322,16 +322,16 @@ Module LevelSetsUIP.
       apply lt_level_irrel.
   Qed.
 
-  #[global] Instance reflect_LevelSet : ReflectEq LevelSet.t.
-  Proof.
-    refine {| eqb := eqb_LevelSet |}.
+  #[global,program] Instance reflect_LevelSet : ReflectEq LevelSet.t :=
+   {| eqb := eqb_LevelSet |}.
+  Next Obligation.
     intros [thisx okx] [thisy oky].
     unfold eqb_LevelSet.
     cbn -[eqb].
     destruct (eqb_spec thisx thisy); subst; constructor.
     - f_equal. apply ok_irrel.
     - congruence.
-  Defined.
+  Qed.
 End LevelSetsUIP.
 
 Module ConstraintSetsUIP.
@@ -347,16 +347,16 @@ Module ConstraintSetsUIP.
 
   Scheme cs_tree_rect := Induction for ConstraintSet.Raw.tree Sort Type.
 
-  #[global] Instance cs_tree_reflect : ReflectEq ConstraintSet.Raw.t.
-  Proof.
-    refine {| eqb := cs_tree_eqb |}.
+  #[global,program] Instance cs_tree_reflect : ReflectEq ConstraintSet.Raw.t :=
+   {| eqb := cs_tree_eqb |}.
+  Next Obligation.
     induction x using cs_tree_rect; destruct y; try constructor; auto; try congruence.
     cbn [cs_tree_eqb].
     destruct (eqb_spec t0 t1); try constructor; auto; try congruence.
     destruct (IHx1 y1); try constructor; auto; try congruence.
     destruct (eqb_spec p p0); try constructor; auto; try congruence.
     destruct (IHx2 y2); try constructor; auto; try congruence.
-  Defined.
+  Qed.
 
   Definition eqb_ConstraintSet x y :=
     eqb (ConstraintSet.this x) (ConstraintSet.this y).
@@ -377,16 +377,16 @@ Module ConstraintSetsUIP.
       apply constraint_lt_irrel.
   Qed.
 
-  #[global] Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t.
-  Proof.
-    refine {| eqb := eqb_ConstraintSet |}.
+  #[global,program] Instance reflect_ConstraintSet : ReflectEq ConstraintSet.t :=
+   {| eqb := eqb_ConstraintSet |}.
+  Next Obligation.
     intros [thisx okx] [thisy oky].
     unfold eqb_ConstraintSet. cbn.
     cbn -[eqb].
     destruct (eqb_spec thisx thisy); subst; constructor.
     - f_equal. apply ok_irrel.
     - congruence.
-  Defined.
+  Qed.
 
 End ConstraintSetsUIP.
 
@@ -404,12 +404,12 @@ Definition eqb_universes_decl x y :=
   | _, _ => false
   end.
 
-#[global] Instance reflect_universes_decl : ReflectEq universes_decl.
-Proof.
-  refine {| eqb := eqb_universes_decl |}.
-  unfold eqb_universes_decl.
-  intros [] []; finish_reflect.
-Defined.
+#[global,program] Instance reflect_universes_decl : ReflectEq universes_decl :=
+ {| eqb := eqb_universes_decl |}.
+ Next Obligation.
+   unfold eqb_universes_decl.
+   intros [] []; finish_reflect.
+Qed.
 
 Definition eqb_allowed_eliminations x y :=
   match x, y with
@@ -420,11 +420,11 @@ Definition eqb_allowed_eliminations x y :=
   | _, _ => false
   end.
 
-#[global] Instance reflect_allowed_eliminations : ReflectEq allowed_eliminations.
-Proof.
-  refine {| eqb := eqb_allowed_eliminations |}.
-  intros [] []; simpl; constructor; congruence.
-Defined.
+#[global,program] Instance reflect_allowed_eliminations : ReflectEq allowed_eliminations :=
+ {| eqb := eqb_allowed_eliminations |}.
+Next Obligation.
+ intros [] []; simpl; constructor; congruence.
+Qed.
 
 Local Infix "==?" := eqb (at level 20).
 
@@ -436,8 +436,8 @@ Definition eqb_Variance x y :=
   | _, _ => false
   end.
 
-#[global] Instance reflect_Variance : ReflectEq Variance.t.
-Proof.
-  refine {| eqb := eqb_Variance |}.
+#[global,program] Instance reflect_Variance : ReflectEq Variance.t :=
+ {| eqb := eqb_Variance |}.
+Next Obligation.
   intros [] []; constructor; congruence.
-Defined.
+Qed.

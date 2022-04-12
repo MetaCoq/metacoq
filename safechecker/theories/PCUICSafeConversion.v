@@ -3807,9 +3807,7 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; 
     specialize_Σ wfΣ.
     eapply inv_reduced_discriminees_case in H as [[<-]]; eauto.
-    change (eqb ci ci) with (eq_dec_to_bool ci ci) in eq5.
-    rewrite eq_dec_to_bool_refl in eq5.
-    congruence.
+    now destruct (eqb_spec ci ci).
   Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as []. pose proof h2 as h2'.

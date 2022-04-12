@@ -708,6 +708,8 @@ Section Conversion.
          (mkpack Γ s t1 π1 t2 π2 h2) ->
        Ret s' Γ t1' π1' t2' π2'.
 
+  Notation expand aux := (fun a b c d e f g h i => aux _ _ _ _ _ _ _ _ _) (only parsing).
+
   Local Notation yes := (Success _) (only parsing).
   Local Notation no := (fun e => Error e _) (only parsing).
 
@@ -1947,7 +1949,7 @@ Qed.
       | Success h2
         with isconv_branches Γ ci
               p c (brs1 ++ [{|bcontext := m; bbody := br|}]) brs2 π _
-              p' c' (brs1' ++ [{| bcontext := m'; bbody := br'|}]) brs2' π' _ hx hp _ _ := {
+              p' c' (brs1' ++ [{| bcontext := m'; bbody := br'|}]) brs2' π' _ hx hp _ (expand aux) := {
         | Success h3 := yes ;
         | Error e h'' := no e
         } ;
@@ -2040,13 +2042,12 @@ Qed.
       now unfold app_context; rewrite app_assoc.
   Qed.
   Next Obligation.
-    unshelve eapply aux. all: try eassumption.
     clear aux.
     lazymatch goal with
     | h : R _ _ ?r1 |- R _ _ ?r2 =>
-      assert (e : r1 = r2)
+      assert (er : r1 = r2)
     end.
-    { clear H0.
+    { clear i.
       match goal with
       | |- {| wth := ?x |} = _ =>
         generalize x
@@ -2056,8 +2057,8 @@ Qed.
       f_equal.
       eapply proof_irrelevance.
     }
-    rewrite <- e. assumption.
-  Defined. 
+    rewrite <- er. assumption.
+  Qed. 
   Next Obligation.
     destruct (case_conv_brs_inv h p' c' brs1' brs2' _ h') as [[mdecl [idecl [decli eqp eqp' eqm clm clm']]]]; tea.
     specialize_Σ wfΣ. 
@@ -2096,13 +2097,10 @@ Qed.
     : ConversionResult (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ ws_cumul_pb_brs Σ (Γ ,,, stack_context π) p brs brs' ∥) :=
 
     isconv_branches' Γ ci p c brs π h ci' p' c' brs' π' h' hx hp eci aux :=
-      isconv_branches Γ ci p c [] brs π _ p' c' [] brs' π' _ _ _ _ _.
+      isconv_branches Γ ci p c [] brs π _ p' c' [] brs' π' _ _ _ _ (expand aux).
   Next Obligation.
     constructor. constructor.
   Qed.
-  Next Obligation.
-    unshelve eapply aux. all: eassumption.
-  Defined.
 
   (* Factorise notions of fixpoints *)
   Inductive fix_kind :=
@@ -2168,7 +2166,7 @@ Qed.
           isws_cumul_pb_fix_types fk Γ idx
             (mfix1 ++ [u]) mfix2 π _
             (mfix1' ++ [v]) mfix2' π' _
-            hx _ _
+            hx _ (expand aux)
         := {
         | Success h3 := yes ;
         | Error e h'' := no e
@@ -2250,12 +2248,11 @@ Qed.
     Unshelve. all: eauto. 
   Qed.
   Next Obligation.
-    unshelve eapply aux. all: try eassumption.
     clear aux.
     lazymatch goal with
     | h : R _ _ ?r1 |- R _ _ ?r2 =>
       rename h into hr ;
-      assert (e : r1 = r2)
+      assert (e0 : r1 = r2)
     end.
     { clear hr.
       match goal with
@@ -2267,8 +2264,8 @@ Qed.
       f_equal.
       eapply proof_irrelevance.
     }
-    rewrite <- e. assumption.
-  Defined.
+    rewrite <- e0. assumption.
+  Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ.
@@ -2367,7 +2364,7 @@ Qed.
     with isws_cumul_pb_fix_bodies fk Γ idx
            (mfix1 ++ [u]) mfix2 π _
            (mfix1' ++ [v]) mfix2' π' _
-           hx _ _ _
+           hx _ _ (expand aux)
     := {
     | Success h3 := yes ;
     | Error e h'' := no e
@@ -2530,12 +2527,11 @@ Qed.
     rewrite <- !app_assoc. simpl. assumption.
   Qed.
   Next Obligation.
-    unshelve eapply aux. all: try eassumption.
     clear aux.
     lazymatch goal with
     | h : R _ _ ?r1 |- R _ _ ?r2 =>
       rename h into hr ;
-      assert (e : r1 = r2)
+      assert (e0 : r1 = r2)
     end.
     { clear hr.
       match goal with
@@ -2547,8 +2543,8 @@ Qed.
       f_equal.
       eapply proof_irrelevance.
     }
-    rewrite <- e. assumption.
-  Defined.
+    rewrite <- e0. assumption.
+  Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     specialize_Σ wfΣ.
@@ -2604,14 +2600,14 @@ Qed.
       isws_cumul_pb_fix_types fk Γ idx
         [] mfix π _
         [] mfix' π' _
-        hx _ _
+        hx _ (expand aux)
     := {
     | Success h1
       with
         isws_cumul_pb_fix_bodies fk Γ idx
           [] mfix π _
           [] mfix' π' _
-          hx _ _ _
+          hx _ _ (expand aux)
       := {
       | Success h2 := yes ;
       | Error e h'' := no e
@@ -2619,12 +2615,6 @@ Qed.
     | Error e h'' := no e
     }.
 
-  Next Obligation.
-    unshelve eapply aux. all: eassumption.
-  Defined.
-  Next Obligation.
-    unshelve eapply aux. all: eassumption.
-  Defined.
   Next Obligation.
     destruct h1 as [h1], h2 as [h2].
     constructor.
@@ -4622,7 +4612,7 @@ Qed.
     : ConversionResult (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ws_cumul_pb_terms Σ (Γ,,, stack_context π1) l1 l2∥) by struct l1 :=
     _isconv_args' leq Γ t1 args1 (u1 :: l1) π1 h1 hπ1 t2 (u2 :: l2) π2 h2 hπ2 hx aux
     with aux u1 u2 args1 l1 (App_r t2 :: (appstack l2 π2)) _ _ _ _ Conv _ I I I := {
-    | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ := {
+    | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ (expand aux) := {
       | Success H2 := yes ;
       | Error e herr :=
         no (
@@ -4670,15 +4660,13 @@ Qed.
     rewrite mkApps_app. eauto.
   Qed.
   Next Obligation.
-    eapply aux. all: auto.
-    - cbn. simpl in H0. destruct H0 as [eq hp].
-      rewrite app_length in H. cbn in H. lia.
-    - instantiate (1 := h2'). simpl in H0. destruct H0 as [eq hp].
-      rewrite app_length in H. cbn in H.
+    rewrite app_length in h. cbn in h. lia.
+  Qed.
+  Next Obligation.
+    rewrite app_length in h. cbn in h.
       simpl. split.
-      + rewrite mkApps_app in eq. assumption.
-      + subst x y.
-        rewrite !stack_position_cons, !stack_position_appstack.
+      + rewrite mkApps_app in H. assumption.
+      + rewrite !stack_position_cons, !stack_position_appstack.
         rewrite <- !app_assoc. apply positionR_poscat.
         assert (h' : forall n m, positionR (repeat app_l n ++ [app_r]) (repeat app_l m)).
         { clear. intro n. induction n ; intro m.
@@ -4689,7 +4677,7 @@ Qed.
         }
         simpl.
         rewrite <- repeat_snoc.
-        apply (h' #|a1| (S #|l1|)).
+        apply (h' #|d| (S #|l1|)).
   Defined.
   Next Obligation.
     specialize_Σ wfΣ.

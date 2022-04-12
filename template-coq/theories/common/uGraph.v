@@ -2901,6 +2901,7 @@ Proof.
   now rewrite eqc eqv.
 Qed.
 
+
 Require Import SetoidTactics.
 
 #[global] Instance is_graph_of_uctx_proper {cf : checker_flags} G : Proper ((=_cs) ==> iff) (is_graph_of_uctx G).
@@ -2915,6 +2916,18 @@ Qed.
 
 
 
+Instance full_subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) full_subgraph.
+Proof.
+  unshelve apply: proper_sym_impl_iff_2.
+  move=> g1 g1' /[dup] eq1 [eqv1 [eqe1 eqs1]]  g2 g2' /[dup] eq2 [eqv2 [eqe2 eqs2]].
+  move=> [] ??? lsp_dom; constructor.
+  + by rewrite <- eqv1, <- eqv2.
+  + by rewrite <- eqe1, <- eqe2.
+  + by rewrite <- eqs1, <- eqs2.
+  + move=> ????; rewrite <- eq1, <- eq2.
+    apply lsp_dom; unfold wGraph.V; by [rewrite eqv1| rewrite eqv2].
+Qed.
+
 Definition graph_extend (G1 G2 : universes_graph) :
   full_subgraph G1 G2 ->
   acyclic_no_loop G2 -> 
@@ -2927,23 +2940,24 @@ Definition graph_extend (G1 G2 : universes_graph) :
          ∑ v', gc_satisfies v' uctx2.2 ×
                             forall x, VSet.In x G1.1.1 -> val v x = val v' x.
 Proof.
-  move=> embed acG2 uctx1 uctx2 guctx1 guctx2 eqG1 eqG2 v /make_graph_spec.
+  move=> embed acG2 uctx1 uctx2 guctx1 guctx2 eqG1 eqG2 v /make_graph_spec HGl.
+  move: acG2 => /(acyclic_no_loop_proper _ _ eqG2) acG2.
+  move: embed=> /(full_subgraph_proper _ _ eqG1 _ _ eqG2) embed.
   pose proof (invG1 := make_graph_invariants uctx1 guctx1).
-  rewrite <- eqG1 in invG1.
   pose proof (invG2 := make_graph_invariants uctx2 guctx2).
-  rewrite <- eqG2 in invG2.
-  move=> /correct_labelling_proper HGl.
-  symmetry in eqG1.
-  specialize (HGl _ _ eqG1 eq_refl).
   pose (l := labelling_of_valuation v).
-  pose (Gl := relabel_on G1 G2 l).
+  pose (Gl := relabel_on (make_graph uctx1) (make_graph uctx2) l).
   pose (l' := to_label ∘ (lsp Gl (wGraph.s Gl))).
+  pose proof (H := extends_correct_labelling _ _ l HGl embed acG2).
   exists (valuation_of_labelling l'); split.
   - apply/make_graph_spec.
-    pose proof (extends_correct_labelling G1 G2 l HGl embed acG2).
-    pose proof (valuation_labelling_eq uctx2 _ H). 
-    apply/correct_labelling_proper; [symmetry; eassumption| reflexivity|].
-    pose proof (valuation_labelling_eq uctx2). 
-    (labelling_of_valuation v)
-
-valuation_labelling_eq
+    pose proof (H0 := valuation_labelling_eq uctx2 _ H); simpl in H0.
+    split.
+    + rewrite H0; [by case: invG2| by case: H].
+    + move=> e ein; move: (@edges_vertices _ invG2 _ ein)=> [??].
+      rewrite !H0 //; move: H => [_ h]; apply: h=> //.
+  - move=> x; move: eqG1=> [-> _] xin.
+    rewrite (val_valuation_of_labelling _ uctx2 ltac:(reflexivity))=> //.
+    + by apply: (vertices_sub _ _ embed).
+    + rewrite /l' extends_labelling //.
+Qed.

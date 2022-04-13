@@ -111,7 +111,7 @@ Import EWcbvEval (WcbvFlags, with_prop_case, with_guarded_fix).
 
 Program Definition guarded_to_unguarded_fix {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} (wguard : with_guarded_fix) :
   Transform.t eprogram_env eprogram_env EAst.term EAst.term 
-    (eval_eprogram_env fl) (eval_eprogram_env (EEtaExpandedFix.switch_unguarded_fix fl)) :=
+    (eval_eprogram_env fl) (eval_eprogram_env (EWcbvEval.switch_unguarded_fix fl)) :=
   {| name := "switching to unguarded fixpoints";
     transform p pre := p;
     pre p := wf_eprogram_env efl p /\ EEtaExpandedFix.expanded_eprogram_env p;
@@ -223,4 +223,28 @@ Next Obligation.
   eexists; split => //. red. sq; auto. cbn. apply wfe.
   eapply wellformed_closed_env, wfe.
   eapply wellformed_closed, wfe.
+Qed.
+
+From MetaCoq.Erasure Require Import EInlineProjections.
+
+Program Definition inline_projections_optimization {fl : WcbvFlags} (efl := all_env_flags)
+  {hastrel : has_tRel} {hastbox : has_tBox} :
+  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) := 
+  {| name := "primitive projection inlining"; 
+    transform p _ := EInlineProjections.optimize_program p ; 
+    pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
+    post p := wf_eprogram (disable_projections_env_flag efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
+    obseq g g' v v' := v' = EInlineProjections.optimize g.1 v |}.
+
+Next Obligation.
+  move=> fl efl hastrel hastbox [Σ t] [wfp etap].
+  cbn in *. split.
+  - now eapply optimize_program_wf.
+  - now eapply optimize_program_expanded.
+Qed.
+Next Obligation.
+  red. move=> fl hastrel hastbox [Σ t] /= v [wfe wft] [ev].
+  eapply EInlineProjections.optimize_correct in ev; eauto.
+  eexists; split => //. red. sq; auto. cbn. apply wfe.
+  cbn. eapply wfe.
 Qed.

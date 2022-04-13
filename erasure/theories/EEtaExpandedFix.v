@@ -14,8 +14,6 @@ From MetaCoq.Erasure Require Import EWcbvEvalInd EProgram EWcbvEval.
 
 Set Default Proof Using "Type*".
 
-Definition switch_unguarded_fix fl : EWcbvEval.WcbvFlags := EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) false.
-
 Lemma eval_trans' {wfl : WcbvFlags} {Σ e e' e''} :
   eval Σ e e' -> eval Σ e' e'' -> e' = e''.
 Proof.
@@ -83,9 +81,9 @@ Inductive expanded (Γ : list nat): term -> Prop :=
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : 
   Forall (fun d => expanded (repeat 0 #|mfix| ++ Γ) d.(dbody)) mfix ->
   expanded Γ (tCoFix mfix idx)
-| expanded_tConstruct_app ind idx mind idecl cname c args :
-    declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
-    #|args| >= ind_npars mind + c -> 
+| expanded_tConstruct_app ind idx mind idecl cdecl args :
+    declared_constructor Σ (ind, idx) mind idecl cdecl ->
+    #|args| >= ind_npars mind + cdecl.(cstr_nargs) -> 
     Forall (expanded Γ) args ->
     expanded Γ (mkApps (tConstruct ind idx) args)
 | expanded_tBox : expanded Γ tBox.
@@ -158,10 +156,10 @@ Lemma expanded_ind :
     → (∀ (Γ : list nat) (ind : inductive) 
          (idx : nat) (mind : mutual_inductive_body) 
          (idecl : one_inductive_body) 
-         (cname : ident) (c : nat) 
+         cdecl
          (args : list term),
-          declared_constructor Σ (ind, idx) mind idecl (cname, c)
-        → #|args| ≥ ind_npars mind + c
+          declared_constructor Σ (ind, idx) mind idecl cdecl
+        → #|args| ≥ ind_npars mind + cdecl.(cstr_nargs)
         → Forall (expanded Σ Γ) args
         → Forall (P Γ) args
         → P Γ (mkApps (tConstruct ind idx) args))
@@ -803,8 +801,8 @@ Ltac simp_eta := simp isEtaExp; rewrite -?isEtaExp_equation_1.
 
 Lemma isEtaExp_app_expanded Σ ind idx n :
    isEtaExp_app Σ ind idx n = true <->
-   exists mind idecl cname c,
-   declared_constructor Σ (ind, idx) mind idecl (cname, c) /\ n ≥ ind_npars mind + c.
+   exists mind idecl cdecl,
+   declared_constructor Σ (ind, idx) mind idecl cdecl /\ n ≥ cstr_arity mind cdecl.
 Proof.
   unfold isEtaExp_app, lookup_constructor_pars_args, lookup_inductive, lookup_minductive.
   split.
@@ -813,15 +811,15 @@ Proof.
     destruct nth_error as [ idecl | ] eqn:E2; cbn in H; try congruence.
     destruct (nth_error (E.ind_ctors idecl) idx) as [ [cname ?] | ] eqn:E3; cbn in H; try congruence.
     repeat esplit.
-    red. all: eauto. eapply leb_iff in H. lia.
-  - intros (? & ? & ? & ? & [[]] & Hle).
+    red. all: eauto. eapply leb_iff in H. unfold cstr_arity; cbn. lia.
+  - intros (? & ? & ? & [[]] & Hle).
     cbn.
     rewrite H. cbn. rewrite H0. cbn. rewrite H1. cbn.
     eapply leb_iff. eauto.
 Qed.
 
-Lemma expanded_isEtaExp_app_ Σ ind idx n  mind idecl cname c :
-   declared_constructor Σ (ind, idx) mind idecl (cname, c) -> n ≥ ind_npars mind + c ->
+Lemma expanded_isEtaExp_app_ Σ ind idx n  mind idecl cdecl :
+   declared_constructor Σ (ind, idx) mind idecl cdecl -> n ≥ cstr_arity mind cdecl ->
    isEtaExp_app Σ ind idx n = true.
 Proof.
   intros. eapply isEtaExp_app_expanded. eauto 8.
@@ -834,7 +832,7 @@ Proof.
   - eapply expanded_tRel_app with (args := []). destruct (nth_error); invs H. f_equal. eapply Nat.eqb_eq in H1; eauto. cbn. lia. econstructor.
   - rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. eapply In_All in H. econstructor. solve_all.
   - eapply andb_true_iff in H1 as []; eauto.
-  - eapply isEtaExp_app_expanded in H as (? & ? & ? & ? & ? & ?).
+  - eapply isEtaExp_app_expanded in H as (? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app with (args := []); eauto.
   - eapply andb_true_iff in H1 as []. destruct ind. econstructor; eauto.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2. 
@@ -843,7 +841,7 @@ Proof.
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.
     rewrite forallb_InP_spec in H1. eapply forallb_Forall in H1.
-    eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ? & ?).
+    eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app; eauto. solve_all.
   - rtoProp. rewrite forallb_InP_spec in H2. rewrite forallb_InP_spec in H3. eapply In_All in H. eapply In_All in H0. 
     unfold isEtaExp_fixapp in H1. destruct nth_error eqn:E; try congruence.
@@ -2290,7 +2288,7 @@ Proof.
           destruct H8 as [[i' n'] [hnth heq]].
           cbn in hnth.
           rewrite (proj2 H6) in hnth. noconf hnth.
-          destruct heq. congruence.
+          destruct heq. cbn in *. congruence.
         ++ solve_all.
         + constructor => //.
           eapply erases_deps_mkApps_inv in etaΣ as [].

@@ -211,7 +211,7 @@ Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' 
   end.
 
 Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
-  Forall2 (fun cdecl '(i', n') => cdecl.(PCUICEnvironment.cstr_arity) = n' /\ cdecl.(cstr_name) = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
+  Forall2 (fun cdecl cstr => cdecl.(PCUICEnvironment.cstr_arity) = cstr.(E.cstr_nargs) /\ cdecl.(cstr_name) = cstr.(E.cstr_name)) oib.(ind_ctors) oib'.(E.ind_ctors) /\
   Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
@@ -283,9 +283,9 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' discr ->
     Forall (fun br => erases_deps Σ Σ' br.2) brs ->
     erases_deps Σ Σ' (E.tCase p discr brs)
-| erases_deps_tProj p mdecl idecl mdecl' idecl' t :
-    declared_inductive Σ p.1.1 mdecl idecl ->
-    EGlobalEnv.declared_inductive Σ' p.1.1 mdecl' idecl' ->
+| erases_deps_tProj p mdecl idecl cdecl pdecl mdecl' idecl' cdecl' pdecl' t :
+    declared_projection Σ p mdecl idecl cdecl pdecl ->
+    EGlobalEnv.declared_projection Σ' p mdecl' idecl' cdecl' pdecl' ->
     erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' t ->

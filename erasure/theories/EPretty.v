@@ -115,7 +115,7 @@ Module PrintTermTree.
       match lookup_ind_decl Σ i k with
       | Some oib =>
         match nth_error oib.(ind_ctors) l with
-        | Some (na, _) => na
+        | Some cstr => cstr.(cstr_name)
         | None =>
           "UnboundConstruct(" ^ string_of_inductive ind ^ "," ^ string_of_nat l ^ ")"
         end
@@ -136,7 +136,7 @@ Module PrintTermTree.
         let brs := combine brs oib.(ind_ctors) in
         parens top ("match " ^ print_term Γ true false t ^
                     " with " ^ nl ^
-                    print_list (fun '(b, (na, _)) => (na : String.t) ^ " " ^ b)
+                    print_list (fun '(b, cstr) => (cstr.(cstr_name) : String.t) ^ " " ^ b)
                     (nl ^ " | ") brs ^ nl ^ "end" ^ nl)
       | None =>
         "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
@@ -188,7 +188,8 @@ Module PrintTermTree.
     let params := string_of_nat npars ^ " parameters" in
     let prop := if body.(ind_propositional) then "propositional" else "computational" in
     let kelim := pr_allowed_elim body.(ind_kelim) in
-    let ctors := print_list (fun idn => "| " ^ (idn.1 : ident) ^ " " ^ string_of_nat idn.2 ^ " arguments") nl body.(ind_ctors) in
+    let ctors := print_list (fun cstr => "| " ^ (cstr.(cstr_name) : ident) ^ " " ^ 
+      string_of_nat cstr.(cstr_nargs) ^ " arguments") nl body.(ind_ctors) in
     let projs :=
     match body.(ind_projs) return Tree.t with
     | [] => ""

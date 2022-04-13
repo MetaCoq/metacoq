@@ -133,8 +133,10 @@ src/eOptimizePropDiscr.mli
 src/eOptimizePropDiscr.ml
 src/eProgram.mli
 src/eProgram.ml
-src/eEtaExpandedFix.mli
-src/eEtaExpandedFix.ml
+# src/eEtaExpandedFix.mli
+# src/eEtaExpandedFix.ml
+src/eInlineProjections.mli
+src/eInlineProjections.ml
 src/eTransform.mli
 src/eTransform.ml
 src/erasure.mli

@@ -172,19 +172,28 @@ Notation " Γ ,, d " := (snoc Γ d) (at level 20, d at next level) : erasure.
 
 (** *** Environments *)
 
+Record constructor_body := 
+  mkConstructor {
+    cstr_name : ident;
+    cstr_nargs : nat (* arity, w/o lets, w/o parameters *)
+  }.
+
 (** See [one_inductive_body] from [declarations.ml]. *)
 Record one_inductive_body : Set := {
   ind_name : ident;
   ind_propositional : bool; (* True iff the inductive lives in Prop *)
   ind_kelim : allowed_eliminations; (* Allowed eliminations *)
-  ind_ctors : list (ident * nat (* arity, w/o lets, w/o parameters *));
-  ind_projs : list (ident) (* names of projections, if any. *) }.
+  ind_ctors : list constructor_body;
+  ind_projs : list ident (* names of projections, if any. *) }.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
   ind_npars : nat;
   ind_bodies : list one_inductive_body }.
 
+Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : constructor_body) := 
+  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.  
+  
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := { cst_body : option term }.
 

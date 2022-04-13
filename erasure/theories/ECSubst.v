@@ -60,13 +60,13 @@ Proof.
     + now destruct (Nat.leb_spec k n); try lia.  
 Qed.
 
-Lemma substl_subst s u : Forall (fun x => closed x) s ->
+Lemma substl_subst s u : forallb (closedn 0) s ->
   substl s u = subst s 0 u.
 Proof.
   unfold substl.
   induction s in u |- *; cbn; intros H.
   - now rewrite subst_empty.
-  - invs H. rewrite IHs; try eassumption.
+  - move/andP: H => [cla cls]. rewrite IHs; try eassumption.
     rewrite closed_subst; try eassumption.
     change (a :: s) with ([a] ++ s).
     rewrite subst_app_decomp. cbn.
@@ -157,6 +157,43 @@ Proof.
   rewrite mkApps_app /= IHl.
   now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
 Qed.
+
+Lemma csubst_closed t k x : closedn k x -> csubst t k x = x.
+Proof.
+  induction x in k |- * using EInduction.term_forall_list_ind; simpl; auto.
+  all:try solve [intros; f_equal; solve_all; eauto].
+  intros Hn. eapply Nat.ltb_lt in Hn.
+  - destruct (Nat.compare_spec k n); try lia. reflexivity.
+  - move/andP => []. intros. f_equal; solve_all; eauto.
+  - move/andP => []. intros. f_equal; solve_all; eauto.
+  - move/andP => []. intros. f_equal; solve_all; eauto.
+    destruct x0; cbn in *. f_equal; auto.
+Qed.
+
+Lemma subst_csubst_comm l t k b : 
+  forallb (closedn 0) l -> closed t ->
+  subst l 0 (csubst t (#|l| + k) b) = 
+  csubst t k (subst l 0 b).
+Proof.
+  intros hl cl.
+  rewrite !closed_subst //.
+  rewrite distr_subst. f_equal.
+  symmetry. solve_all.
+  rewrite subst_closed //.
+  eapply closed_upwards; tea. lia. 
+Qed.
+
+Lemma substl_csubst_comm l t k b : 
+  forallb (closedn 0) l -> closed t ->
+  substl l (csubst t (#|l| + k) b) = 
+  csubst t k (substl l b).
+Proof.
+  intros hl cl.
+  rewrite substl_subst //.
+  rewrite substl_subst //. 
+  apply subst_csubst_comm => //.
+Qed.
+
 
 Lemma isLambda_csubst a k t : isLambda t -> isLambda (csubst a k t).
 Proof. destruct t => //. Qed.

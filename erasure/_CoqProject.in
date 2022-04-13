@@ -32,5 +32,6 @@ theories/EEtaExpandedFix.v
 theories/EEtaExpanded.v
 theories/EProgram.v
 theories/ERemoveParams.v
+theories/EInlineProjections.v
 theories/ETransform.v
 theories/Erasure.v

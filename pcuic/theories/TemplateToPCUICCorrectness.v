@@ -235,7 +235,7 @@ Proof.
   induction wft using WfAst.term_wf_forall_list_ind; cbn; auto; try solve [f_equal; solve_all].
   rewrite !trans_lookup_inductive.
   unshelve epose proof (trans_lookup_inductive (Σ := trans_global_env Σ) ci _); tc.
-  eapply PCUICWeakeningEnvConv.extends_decls_wf; tea. rewrite {}H1.
+  eapply PCUICWeakeningEnvConv.extends_decls_wf; tea. rewrite {}H2.
   destruct H as [H hnth]. red in H.
   generalize (trans_lookup_env (inductive_mind ci)).
   move: H.
@@ -867,8 +867,8 @@ Section Trans_Global.
     - constructor. apply trans_R_global_instance; auto.
     - constructor. apply trans_R_global_instance; auto.
     - red in X, X0.
-      destruct wt as [mdecl' [idecl' [decli hpctx lenpar eqpars eqret eqc eqbrs]]].
-      destruct wu as [mdecl'' [idecl'' [decli' hpctx' lenpars' eqpars' eqret' eqc' eqbrs']]].
+      destruct wt as [mdecl' [idecl' [decli hci hpctx lenpar eqpars eqret eqc eqbrs]]].
+      destruct wu as [mdecl'' [idecl'' [decli' hci' hpctx' lenpars' eqpars' eqret' eqc' eqbrs']]].
       destruct (declared_inductive_inj decli decli'). subst.
       eapply forall_decls_declared_inductive in decli; tea.
       rewrite trans_lookup_inductive.
@@ -1502,7 +1502,7 @@ Section Trans_Global.
       econstructor. simpl in H. discriminate.
 
     - rewrite trans_mkApps; eauto with wf; simpl.
-      destruct a as [isdecl hpctx lenpar wfpar wfret wfc wfbrs].
+      destruct a as [isdecl hci hpctx lenpar wfpar wfret wfc wfbrs].
       destruct (declared_inductive_inj isdecl (proj1 H0)). subst x x0.
       eapply forall_decls_declared_inductive in isdecl; tea.
       rewrite trans_lookup_inductive.
@@ -1525,7 +1525,7 @@ Section Trans_Global.
       apply trans_unfold_fix; eauto.
       now apply trans_is_constructor.
 
-    - destruct a as [isdecl hpctx lenpar wfpar wfret wfc wfbrs].
+    - destruct a as [isdecl hci hpctx lenpar wfpar wfret wfc wfbrs].
       eapply forall_decls_declared_inductive in isdecl; tea.
       rewrite trans_lookup_inductive.
       rewrite (declared_inductive_lookup isdecl).
@@ -1553,7 +1553,7 @@ Section Trans_Global.
 
     - constructor. apply IHX. constructor; hnf; simpl; auto. auto.
 
-    - destruct a as [isdecl hpctx lenpar wfpar wfret wfc wfbrs].
+    - destruct a as [isdecl hci hpctx lenpar wfpar wfret wfc wfbrs].
       eapply forall_decls_declared_inductive in isdecl; tea.
       rewrite trans_lookup_inductive.
       rewrite (declared_inductive_lookup isdecl).
@@ -1561,7 +1561,7 @@ Section Trans_Global.
       apply OnOne2_map. apply (OnOne2_All_mix_left wfpar) in X. clear wfpar.
       solve_all.
 
-    - destruct a as [isdecl' hpctx wfpar wfret wfc wfbrs].
+    - destruct a as [isdecl' hci hpctx wfpar wfret wfc wfbrs].
       destruct (declared_inductive_inj isdecl isdecl').
       subst x x0.
       eapply forall_decls_declared_inductive in isdecl; tea.
@@ -1575,12 +1575,12 @@ Section Trans_Global.
       eapply All_app_inv => //.
       eapply declared_inductive_wf_case_predicate_context => //.
     
-    - destruct a as [isdecl hpctx wfpar wfret wfc wfbrs].
+    - destruct a as [isdecl hci hpctx wfpar wfret wfc wfbrs].
       eapply forall_decls_declared_inductive in isdecl; tea.
       rewrite trans_lookup_inductive (declared_inductive_lookup isdecl).
       constructor. cbn. apply IHX => //. 
 
-    - destruct a as [isdecl' hpctx lenpar wfpar wfret wfc wfbrs].
+    - destruct a as [isdecl' hci hpctx lenpar wfpar wfret wfc wfbrs].
       destruct (declared_inductive_inj isdecl isdecl').
       subst x x0.
       eapply forall_decls_declared_inductive in isdecl; tea.
@@ -2542,15 +2542,14 @@ Proof.
     cbn.
     unfold test_predicate_k. cbn.
     unfold Ast.test_predicate. cbn.
-    pose proof (All2_length X). len in H1.
+    pose proof (All2_length X). len in H2.
     intros; rtoProp. intuition auto.
     * solve_all.
-    * len.
-      rewrite map2_map2_bias_left.
-      rewrite PCUICCases.ind_predicate_context_length. cbn. len.
+    * len. rewrite map2_map2_bias_left.
+      { rewrite PCUICCases.ind_predicate_context_length. cbn. len. }
       eapply PCUICInstConv.closed_ctx_args.
-      rewrite PCUICCases.ind_predicate_context_length. cbn. len.
-      rewrite H0.
+      { rewrite PCUICCases.ind_predicate_context_length. cbn. len. }
+      rewrite H1.
       relativize (Ast.Env.context_assumptions _).
       eapply (closed_ind_predicate_context wfΣ' H).
       cbn. now rewrite context_assumptions_map.
@@ -2570,7 +2569,7 @@ Proof.
       rewrite map2_map2_bias_left. len.
       apply/andP; split.
       { eapply PCUICInstConv.closed_ctx_args; len.
-        rewrite H0.
+        rewrite H1.
         relativize (Ast.Env.context_assumptions _).
         eapply (PCUICClosedTyp.closed_cstr_branch_context (Σ := trans_global (Ast.Env.empty_ext Σ)) (i:=c)); cbn; tea.
         split; cbn; tea. now rewrite nth_error_map hnth.
@@ -2592,7 +2591,7 @@ Lemma trans_cumul_ctx_rel {cf} {Σ : Ast.Env.global_env_ext} Γ Δ Δ' :
   All (WfAst.wf_decl Σ) (Ast.Env.app_context Γ Δ') ->
   cumul_ctx_rel Σ' (trans_local Σ' Γ) (trans_local Σ' Δ) (trans_local Σ' Δ').
 Proof.
-  intros Σ' wfΣ wfΣ'. 
+  intros Σ' wfΣ wfΣ'.
   induction 1; cbn; constructor; auto.
   inv_on_free_vars.
   apply IHX => //. now depelim X0. now depelim X1.

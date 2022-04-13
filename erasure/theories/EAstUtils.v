@@ -22,7 +22,7 @@ Proof.
 Qed.
 
 Lemma decompose_app_mkApps f l :
-  isApp f = false -> decompose_app (mkApps f l) = (f, l).
+  ~~ isApp f -> decompose_app (mkApps f l) = (f, l).
 Proof.
   intros Hf. unfold decompose_app. rewrite decompose_app_rec_mkApps. rewrite app_nil_r.
   destruct f; simpl in *; (discriminate || reflexivity).

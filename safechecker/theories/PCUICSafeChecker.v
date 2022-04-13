@@ -1654,7 +1654,51 @@ Defined.
       end
     end.
 
-    Next Obligation.
+
+  Lemma wf_decl_universes_subst_instance Σ udecl udecl' d u : 
+    wf_ext (Σ, udecl) ->
+    wf_universe_instance (Σ, udecl') u ->
+    wf_decl_universes (Σ, udecl) d ->
+    wf_decl_universes (Σ, udecl') d@[u].
+  Proof.
+    intros [wfΣ onud] cu.
+    destruct d => /=; rewrite /wf_decl_universes /on_decl_universes /= .
+    move/andP => [] ondbody ontype.
+    apply/andP; split. 
+    2:{ eapply (wf_universes_inst (Σ := (Σ, udecl')) udecl); cbn => //. apply onud. }
+    destruct decl_body as [|] => /= //.
+    eapply (wf_universes_inst (Σ := (Σ, udecl')) udecl); cbn => //. apply onud.
+  Qed.
+
+  Lemma wf_ctx_universes_subst_instance Σ udecl udecl' Γ u : 
+    wf_ext (Σ, udecl) ->
+    wf_universe_instance (Σ, udecl') u ->
+    wf_ctx_universes (Σ, udecl) Γ ->
+    wf_ctx_universes (Σ, udecl') Γ@[u].
+  Proof.
+    intros wfΣ cu.
+    induction Γ; cbn => //.
+    move/andP=> [] wfa wfΓ.
+    rewrite [forallb _ _](IHΓ wfΓ) andb_true_r.
+    eapply wf_decl_universes_subst_instance; tea.
+  Qed.
+
+  Lemma wf_local_wf_ctx_universes {Σ Γ} : wf_ext Σ -> 
+    wf_local Σ Γ -> wf_ctx_universes Σ Γ.
+  Proof.
+    intros wfΣ. unfold wf_ctx_universes.
+    induction 1 => //. cbn. rewrite IHX andb_true_r.
+    destruct t0 as [s Hs]. move/typing_wf_universes: Hs => /andP[] //.
+    cbn. move/typing_wf_universes: t1 => /=; rewrite /wf_decl_universes /on_decl_universes /= => -> /= //.
+  Qed.
+
+  Lemma wf_ctx_universes_app {Σ Γ Δ} : 
+    wf_ctx_universes Σ (Γ ,,, Δ) = wf_ctx_universes Σ Γ && wf_ctx_universes Σ Δ.
+  Proof.
+    now rewrite /wf_ctx_universes /app_context forallb_app andb_comm.
+  Qed.
+  
+  Next Obligation.
       sq. by [].
     Qed.
     Next Obligation.
@@ -1662,29 +1706,78 @@ Defined.
       specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
       destruct Xprop as [Xprop ?]; eauto. 
       unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto. 
-      sq. todo "wf_universe stuff". 
+      sq. symmetry in Heq_anonymous.
+      destruct H0. specialize (H0 _ wfΣ0).
+      apply abstract_env_ext_wf in H0. destruct H0.
+      eapply variance_universes_spec in Heq_anonymous; tea.
+      eapply wf_ctx_universes_subst_instance; tea. 
+      destruct Heq_anonymous. now eapply consistent_instance_ext_wf in c.
+      destruct wfΓ.
+      eapply wf_local_smash_end in a.
+      eapply wf_local_expand_lets in a.
+      eapply wf_local_wf_ctx_universes in a; tea.
+      rewrite wf_ctx_universes_app in a. move/andP: a => [] //.
     Qed. 
     Next Obligation.
       pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
       specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
       destruct Xprop as [Xprop ?]; eauto. 
-      unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto. 
-      sq. todo "wf_universe stuff". 
-    Qed.
-      Next Obligation.      pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
-      specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
-      destruct Xprop as [Xprop ?]; eauto. 
-      unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto. 
-      sq. todo "wf_universe stuff". 
-       Qed.
-      Next Obligation.       
+      unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto.
+      sq.
+      symmetry in Heq_anonymous.
+      destruct H0. specialize (H0 _ wfΣ0).
+      apply abstract_env_ext_wf in H0. destruct H0.
+      eapply variance_universes_spec in Heq_anonymous; tea.
+      eapply wf_ctx_universes_subst_instance; tea. 
+      destruct Heq_anonymous. now eapply consistent_instance_ext_wf in c0.
+      destruct wfΓ.
+      eapply wf_local_smash_end in a.
+      eapply wf_local_expand_lets in a.
+      eapply wf_local_wf_ctx_universes in a; tea.
+      rewrite wf_ctx_universes_app in a. move/andP: a => [] //.
+    Qed. 
+
+    Next Obligation.
       pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
       specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
       destruct Xprop as [Xprop ?]; eauto. 
       unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto. 
-      sq. todo "wf_universe stuff". 
-      Qed.
-      Next Obligation.
+      sq.
+      symmetry in Heq_anonymous.
+      destruct H0. specialize (H0 _ wfΣ0).
+      apply abstract_env_ext_wf in H0. destruct H0.
+      eapply variance_universes_spec in Heq_anonymous; tea.
+      destruct Heq_anonymous as [c c0]. 
+      destruct wfΓ as [wfargs wfinds]. eapply ctx_inst_wt in wfinds.
+      solve_all. destruct H0 as [T wt].
+      rewrite -app_context_assoc in wt.
+      eapply typing_expand_lets in wt.
+      eapply wf_universes_inst. eauto. eapply wfX.
+      now eapply consistent_instance_ext_wf in c.
+      cbn. eapply typing_wf_universes in wt; eauto.
+      move/andP: wt => [] //.
+    Qed.
+    Next Obligation.
+      pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
+      specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
+      destruct Xprop as [Xprop ?]; eauto. 
+      unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto. 
+      sq.
+      symmetry in Heq_anonymous.
+      destruct H0. specialize (H0 _ wfΣ0).
+      apply abstract_env_ext_wf in H0. destruct H0.
+      eapply variance_universes_spec in Heq_anonymous; tea.
+      destruct Heq_anonymous as [c c0]. 
+      destruct wfΓ as [wfargs wfinds]. eapply ctx_inst_wt in wfinds.
+      solve_all. destruct H0 as [T wt].
+      rewrite -app_context_assoc in wt.
+      eapply typing_expand_lets in wt.
+      eapply wf_universes_inst. eauto. eapply wfX.
+      now eapply consistent_instance_ext_wf in c0.
+      cbn. eapply typing_wf_universes in wt; eauto.
+      move/andP: wt => [] //.
+    Qed.
+    Next Obligation.
       pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
       destruct Xprop as [Xprop ?]; eauto. 
       specialize (Xprop Σ0 wfΣ0). specialize_Σ Xprop. sq.
@@ -2039,8 +2132,40 @@ End monad_Alli_nth_forall.
   Next Obligation.
     sq. discriminate.
   Qed.
-  Next Obligation. todo "wf_universe stuff". Qed.
-  Next Obligation. todo "wf_universe stuff". Qed.
+  Next Obligation.
+    pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
+    specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
+    destruct H0 as [Xprop ?]; eauto. 
+    unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto.
+    sq. symmetry in Heq_anonymous.
+    specialize (Xprop _ wfΣ0).
+    apply abstract_env_ext_wf in Xprop. destruct Xprop.
+    eapply variance_universes_spec in Heq_anonymous as [cu cu']; tea.
+    eapply wf_ctx_universes_subst_instance; tea. 
+    now eapply consistent_instance_ext_wf in cu.
+    move/wf_local_smash_end: wfΓ.
+    rewrite -[_ ,,, _]app_context_nil_l app_context_assoc.
+    move/wf_local_expand_lets; rewrite app_context_nil_l.
+    move/wf_local_wf_ctx_universes. rewrite wf_ctx_universes_app.
+    move/andP => [] //.
+  Qed. 
+  Next Obligation.
+    pose proof (abstract_env_exists X) as [[Σ0 wfΣ0]]. 
+    specialize (mdeclvar _ wfΣ0). specialize_Σ wfΣ0.
+    destruct H0 as [Xprop ?]; eauto. 
+    unshelve erewrite (abstract_env_ext_irr _ _ (Xprop _ _)); eauto.
+    sq. symmetry in Heq_anonymous.
+    specialize (Xprop _ wfΣ0).
+    apply abstract_env_ext_wf in Xprop. destruct Xprop.
+    eapply variance_universes_spec in Heq_anonymous as [cu cu']; tea.
+    eapply wf_ctx_universes_subst_instance; tea. 
+    now eapply consistent_instance_ext_wf in cu'.
+    move/wf_local_smash_end: wfΓ.
+    rewrite -[_ ,,, _]app_context_nil_l app_context_assoc.
+    move/wf_local_expand_lets; rewrite app_context_nil_l.
+    move/wf_local_wf_ctx_universes. rewrite wf_ctx_universes_app.
+    move/andP => [] //.
+  Qed.    
   Next Obligation.
     destruct eq as [? ?]; eauto. specialize_Σ H. 
     specialize_Σ H1. 

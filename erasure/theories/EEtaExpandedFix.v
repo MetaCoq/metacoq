@@ -14,8 +14,6 @@ From MetaCoq.Erasure Require Import EWcbvEvalInd EProgram EWcbvEval.
 
 Set Default Proof Using "Type*".
 
-Definition switch_unguarded_fix fl : EWcbvEval.WcbvFlags := EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) false.
-
 Lemma eval_trans' {wfl : WcbvFlags} {Σ e e' e''} :
   eval Σ e e' -> eval Σ e' e'' -> e' = e''.
 Proof.
@@ -2290,7 +2288,7 @@ Proof.
           destruct H8 as [[i' n'] [hnth heq]].
           cbn in hnth.
           rewrite (proj2 H6) in hnth. noconf hnth.
-          destruct heq. congruence.
+          destruct heq. cbn in *. congruence.
         ++ solve_all.
         + constructor => //.
           eapply erases_deps_mkApps_inv in etaΣ as [].

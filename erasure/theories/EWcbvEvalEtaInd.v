@@ -179,7 +179,7 @@ Lemma eval_preserve_mkApps_ind :
            → P discr (mkApps (tConstruct ind c) args)
            → constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl)
                → nth_error brs c = Some br
-               → #|args| = pars + cdecl.2 
+               → #|args| = pars + cdecl.(cstr_nargs) 
                  → #|skipn pars args| = #|br.1|
                  -> Q #|br.1| br.2
                    → eval Σ (iota_red pars args br) res
@@ -285,7 +285,7 @@ Lemma eval_preserve_mkApps_ind :
                            (mkApps (tConstruct i 0) args)
                          → P discr (mkApps (tConstruct i 0) args)
                          → constructor_isprop_pars_decl Σ i 0 = Some (false, pars, cdecl) 
-                         → #|args| = pars + cdecl.2
+                         → #|args| = pars + cdecl.(cstr_nargs)
                          -> nth_error args (pars + arg) = Some a
                          -> eval Σ a res
                          → P a res

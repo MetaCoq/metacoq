@@ -34,9 +34,10 @@ Definition declared_constructor Σ cstr mdecl idecl cdecl : Prop :=
   declared_inductive Σ (fst cstr) mdecl idecl /\
   List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
-Definition declared_projection Σ (proj : projection) mdecl idecl pdecl : Prop :=
-  declared_inductive Σ (fst (fst proj)) mdecl idecl /\
-  List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl.
+Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl : Prop :=
+  declared_constructor Σ (fst (fst proj), 0) mdecl idecl cdecl /\
+  List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
+  proj.1.2 = ind_npars mdecl.
 
 Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
   kn <> kn' ->
@@ -80,7 +81,63 @@ Section Lookups.
   Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
     '(mdecl, idecl, cdecl) <- lookup_constructor kn c ;;
     ret (mdecl.(ind_npars), cdecl.(cstr_nargs)).
+
+  Definition lookup_projection (p : projection) : option (mutual_inductive_body * one_inductive_body * constructor_body * ident) :=
+    '(mdecl, idecl, cdecl) <- lookup_constructor p.1.1 0 ;;
+    pdecl <- nth_error idecl.(ind_projs) p.2 ;;
+    ret (mdecl, idecl, cdecl, pdecl).
+  
 End Lookups.
+
+Lemma declared_minductive_lookup {Σ ind mdecl} :
+  declared_minductive Σ ind mdecl ->
+  lookup_minductive Σ ind = Some mdecl.
+Proof. 
+  rewrite /declared_minductive /lookup_minductive.
+  intros -> => /= //.
+Qed.
+
+Lemma declared_inductive_lookup {Σ ind mdecl idecl} :
+  declared_inductive Σ ind mdecl idecl ->
+  lookup_inductive Σ ind = Some (mdecl, idecl).
+Proof.
+  rewrite /declared_inductive /lookup_inductive.
+  intros []. rewrite (declared_minductive_lookup H) /= H0 //.
+Qed.
+
+Lemma declared_constructor_lookup {Σ id mdecl idecl cdecl} :
+  declared_constructor Σ id mdecl idecl cdecl -> 
+  lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
+Proof.
+  intros []. unfold lookup_constructor.
+  rewrite (declared_inductive_lookup H) /= H0 //.
+Qed.
+
+Lemma declared_projection_lookup {Σ p mdecl idecl cdecl pdecl} :
+  declared_projection Σ p mdecl idecl cdecl pdecl -> 
+  lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl).
+Proof.
+  intros [hc [hp hn]]. unfold lookup_projection.
+  rewrite (declared_constructor_lookup hc) /= hp //.
+Qed.
+
+(** Nested lookups *)
+
+Lemma lookup_projection_lookup_constructor {Σ p mdecl idecl cdecl pdecl} :
+  lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
+  lookup_constructor Σ p.1.1 0 = Some (mdecl, idecl, cdecl).
+Proof.
+  rewrite /lookup_projection; destruct lookup_constructor as [[[? ?] ?]|]=> //=.
+  now destruct nth_error => //.
+Qed.
+
+Lemma lookup_constructor_lookup_inductive {Σ kn c mdecl idecl cdecl} :
+  lookup_constructor Σ kn c = Some (mdecl, idecl, cdecl) ->
+  lookup_inductive Σ kn = Some (mdecl, idecl).
+Proof.
+  rewrite /lookup_constructor; destruct lookup_inductive as [[? ?]|]=> //=.
+  now destruct nth_error => //.
+Qed.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)
 

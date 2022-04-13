@@ -61,11 +61,14 @@ Proof.
   simpl. intros. now rewrite mkApps_app in H.
 Qed.
 
-Definition cstr_arity (mdecl : mutual_inductive_body) cdecl := 
-  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.
-
 (* Tells if the evaluation relation should include match-prop and proj-prop reduction rules. *)
 Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : bool }.
+
+Definition disable_prop_cases fl : WcbvFlags :=
+  {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) |}.
+
+Definition switch_unguarded_fix fl : WcbvFlags := 
+  EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) false.
 
 Definition default_wcbv_flags := {| with_prop_case := true ; with_guarded_fix := true |}.
 Definition opt_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := true |}.
@@ -274,7 +277,7 @@ Section Wcbv.
    Lemma value_mkApps_inv t l :
      ~~ isApp t ->
      value (mkApps t l) ->
-     ((l = []) × atom t) + ([× l <> [], value_head #|l| t & All value l]).
+     ((l = []) /\ atom t) + ([× l <> [], value_head #|l| t & All value l]).
    Proof.
      intros H H'. generalize_eq x (mkApps t l).
      revert t H. induction H' using value_values_ind.
@@ -319,8 +322,7 @@ Section Wcbv.
      - destruct (mkApps_elim f' [a']).
        eapply value_mkApps_inv in IHev1 => //.
        destruct IHev1 as [?|[]]; intuition subst.
-       * rewrite a0.
-         simpl. rewrite a0 in i. simpl in *.
+       * rewrite H in i |- *. simpl in *.
          apply (value_app f0 [a']). 
          destruct f0; simpl in * |- *; try congruence.
          + rewrite !negb_or /= in i; rtoProp; intuition auto.

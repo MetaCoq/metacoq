@@ -363,6 +363,7 @@ Lemma wellformed_optimize_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t :
   optimize Σ t = optimize Σ' t.
 Proof.
   induction t using EInduction.term_forall_list_ind; cbn -[lookup_constant lookup_inductive
+    lookup_projection
     GlobalContextMap.inductive_isprop_and_pars]; intros => //.
   all:unfold wf_fix_gen in *; rtoProp; intuition auto.  
   all:f_equal; eauto; solve_all.
@@ -374,7 +375,10 @@ Proof.
     destruct l0 => //. destruct p0 => //. f_equal; eauto.
     all:f_equal; eauto; solve_all.
   - rewrite !GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (extends_inductive_isprop_and_pars H0 H1 H3).
+    rewrite (extends_inductive_isprop_and_pars H0 H1).
+    destruct (lookup_projection) as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl => //.
+    eapply lookup_projection_lookup_constructor in hl.
+    eapply lookup_constructor_lookup_inductive in hl. now rewrite hl.
     destruct inductive_isprop_and_pars as [[[]]|] => //.
     all:f_equal; eauto.
 Qed.
@@ -492,8 +496,6 @@ Proof.
   now rewrite forallb_rev forallb_skipn.
   now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
-
-Definition disable_prop_cases fl := {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) |}.
 
 Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
 Proof.

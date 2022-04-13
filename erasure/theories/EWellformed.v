@@ -91,7 +91,7 @@ Section wf.
     | tCase ind c brs => has_tCase && 
       let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
       isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
-    | tProj p c => has_tProj && isSome (lookup_inductive Σ p.1.1) && wellformed k c
+    | tProj p c => has_tProj && isSome (lookup_projection Σ p) && wellformed k c
     | tFix mfix idx => has_tFix && wf_fix_gen wellformed k mfix idx
     | tCoFix mfix idx => has_tCoFix && wf_fix_gen wellformed k mfix idx
     | tBox => has_tBox

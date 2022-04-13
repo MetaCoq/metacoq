@@ -191,6 +191,9 @@ Record mutual_inductive_body := {
   ind_npars : nat;
   ind_bodies : list one_inductive_body }.
 
+Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : constructor_body) := 
+  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.  
+  
 (** See [constant_body] from [declarations.ml] *)
 Record constant_body := { cst_body : option term }.
 

@@ -296,7 +296,7 @@ Section Typecheck.
     conv_pb_relb_gen pb equ eqlu u u' = 
     conv_pb_relb_gen pb equ' eqlu' u u'.
    now destruct pb.
-  Defined.   
+  Qed.   
 
   Obligation Tactic := simpl in *; 
     Tactics.program_simplify;
@@ -2386,7 +2386,7 @@ Section Typecheck.
   Proof.
     unfold  check_recursivity_kind. 
     erewrite <- abstract_env_lookup_correct; eauto.
-  Defined.
+  Qed.
 
   Definition abstract_wf_fixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
      wf_fixpoint_gen (abstract_env_lookup X) mfix =
@@ -2396,7 +2396,7 @@ Section Typecheck.
     destruct (map_option_out (map check_one_fix mfix)); simpl; eauto.
     induction l; eauto.
     erewrite abstract_check_recursivity_kind; eauto. 
-  Defined. 
+  Qed. 
 
   Definition abstract_wf_cofixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
      wf_cofixpoint_gen (abstract_env_lookup X) mfix =
@@ -2406,7 +2406,7 @@ Section Typecheck.
     destruct (map_option_out (map check_one_cofix mfix)); simpl; eauto.
     induction l; eauto.
     erewrite abstract_check_recursivity_kind; eauto. 
-  Defined. 
+  Qed. 
 
   (* tFix *)
   Next Obligation.

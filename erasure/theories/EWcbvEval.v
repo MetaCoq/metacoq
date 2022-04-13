@@ -61,8 +61,8 @@ Proof.
   simpl. intros. now rewrite mkApps_app in H.
 Qed.
 
-Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : Kernames.ident × nat) := 
-  (mdecl.(ind_npars) + cdecl.2)%nat.
+Definition cstr_arity (mdecl : mutual_inductive_body) cdecl := 
+  (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.
 
 (* Tells if the evaluation relation should include match-prop and proj-prop reduction rules. *)
 Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : bool }.
@@ -101,7 +101,7 @@ Section Wcbv.
       eval discr (mkApps (tConstruct ind c) args) ->
       constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl) ->
       nth_error brs c = Some br ->
-      #|args| = pars + cdecl.2 ->
+      #|args| = pars + cdecl.(cstr_nargs) ->
       #|skipn pars args| = #|br.1| ->
       eval (iota_red pars args br) res ->
       eval (tCase (ind, pars) discr brs) res
@@ -166,7 +166,7 @@ Section Wcbv.
   | eval_proj i pars cdecl arg discr args a res :
       eval discr (mkApps (tConstruct i 0) args) ->
       constructor_isprop_pars_decl Σ i 0 = Some (false, pars, cdecl) ->
-      #|args| = pars + cdecl.2 ->
+      #|args| = pars + cdecl.(cstr_nargs) ->
       nth_error args (pars + arg) = Some a ->
       eval a res ->
       eval (tProj (i, pars, arg) discr) res

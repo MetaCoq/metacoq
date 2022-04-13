@@ -558,7 +558,7 @@ Lemma erases_declared_constructor {Σ : global_env_ext} Σ' kn k mind idecl cdec
   globals_erased_with_deps Σ Σ' ->
   exists mind' idecl', (* declared_inductive Σ' (kn, k).1 mind' idecl' ->
   erases_one_inductive_body idecl idecl' -> *)
-  declared_constructor Σ' (kn, k) mind' idecl' (cstr_name cdecl, PCUICEnvironment.cstr_arity cdecl) /\
+  declared_constructor Σ' (kn, k) mind' idecl' (mkConstructor (PCUICEnvironment.cstr_name cdecl) (PCUICEnvironment.cstr_arity cdecl)) /\
   erases_one_inductive_body idecl idecl' /\
   erases_mutual_inductive_body mind mind'.
 Proof.
@@ -572,7 +572,7 @@ Proof.
   destruct H4 as (? & ? & ? & ? & ?).
   eapply Forall2_nth_error_Some_l in H1 as ([] & ? & ? & ?); subst; eauto.
   eexists. eexists. split; [ | split]; eauto.
-  repeat eapply conj; try eassumption.
+  repeat eapply conj; try eassumption. cbn in *. now rewrite H8, H9.
 Qed.
 
 Lemma erases_deps_single Σ Σ' Γ t T et :

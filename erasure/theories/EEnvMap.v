@@ -46,7 +46,7 @@ Module GlobalContextMap.
     rewrite lookup_minductive_spec //.
   Qed.
 
-  Definition lookup_constructor Σ kn c : option (mutual_inductive_body * one_inductive_body * (ident * nat)) :=
+  Definition lookup_constructor Σ kn c : option (mutual_inductive_body * one_inductive_body * constructor_body) :=
     '(mdecl, idecl) <- lookup_inductive Σ kn ;;
     cdecl <- nth_error idecl.(ind_ctors) c ;;
     ret (mdecl, idecl, cdecl).  

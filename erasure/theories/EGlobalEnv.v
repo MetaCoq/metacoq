@@ -72,21 +72,21 @@ Section Lookups.
     mdecl <- lookup_minductive kn ;;
     ret mdecl.(ind_npars).
   
-  Definition lookup_constructor kn c : option (mutual_inductive_body * one_inductive_body * (ident * nat)) :=
+  Definition lookup_constructor kn c : option (mutual_inductive_body * one_inductive_body * constructor_body) :=
     '(mdecl, idecl) <- lookup_inductive kn ;;
     cdecl <- nth_error idecl.(ind_ctors) c ;;
     ret (mdecl, idecl, cdecl).
   
   Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
     '(mdecl, idecl, cdecl) <- lookup_constructor kn c ;;
-    ret (mdecl.(ind_npars), cdecl.2).
+    ret (mdecl.(ind_npars), cdecl.(cstr_nargs)).
 End Lookups.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)
 
 Lemma lookup_constructor_pars_args_cstr_arity Σ ind c mdecl idecl cdecl : 
   lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
-  lookup_constructor_pars_args Σ ind c = Some (mdecl.(ind_npars), cdecl.2).
+  lookup_constructor_pars_args Σ ind c = Some (mdecl.(ind_npars), cdecl.(cstr_nargs)).
 Proof.
   rewrite /lookup_constructor_pars_args => -> /= //.
 Qed.
@@ -202,8 +202,6 @@ Proof.
   unfold cofix_subst. generalize (tCoFix mfix). intros.
   induction mfix; simpl; auto.
 Qed.
-
-Definition tDummy := tVar "".
 
 Definition iota_red npar args (br : list name * term) :=
   substl (List.rev (List.skipn npar args)) br.2.

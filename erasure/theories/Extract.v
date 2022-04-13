@@ -211,7 +211,7 @@ Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' 
   end.
 
 Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
-  Forall2 (fun cdecl '(i', n') => cdecl.(PCUICEnvironment.cstr_arity) = n' /\ cdecl.(cstr_name) = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
+  Forall2 (fun cdecl cstr => cdecl.(PCUICEnvironment.cstr_arity) = cstr.(E.cstr_nargs) /\ cdecl.(cstr_name) = cstr.(E.cstr_name)) oib.(ind_ctors) oib'.(E.ind_ctors) /\
   Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 

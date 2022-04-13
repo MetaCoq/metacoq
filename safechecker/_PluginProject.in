@@ -12,6 +12,8 @@ src/eqdepFacts.ml
 # From template
 src/ssrbool.ml
 src/ssrbool.mli
+src/ssreflect.ml
+src/ssreflect.mli
 src/uGraph0.ml
 src/uGraph0.mli
 src/wGraph.ml

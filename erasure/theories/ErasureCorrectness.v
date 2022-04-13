@@ -513,8 +513,10 @@ Section wellscoped.
     isSome (lookup_inductive Σ ind.(ci_ind)) && wellformed c && brs'
   | tProj p c => isSome (lookup_inductive Σ p.1.1) && wellformed c
   | tFix mfix idx => 
+    (idx <? #|mfix|) &&
     List.forallb (test_def (wellformed) (fun b => (isLambda b) && wellformed b)) mfix
   | tCoFix mfix idx =>
+    (idx <? #|mfix|) &&
     List.forallb (test_def wellformed wellformed) mfix
   | tConst kn _ => isSome (lookup_constant Σ kn)
   | tConstruct ind c _ => isSome (lookup_constructor Σ ind c)
@@ -548,10 +550,12 @@ Section wellscoped.
       eapply All2i_All2_mix_left in X5; tea. clear H8.
       solve_all.
     - now rewrite (declared_inductive_lookup_inductive isdecl).
+    - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
       solve_all. destruct a as [s []].
       unfold test_def. len in b0.
       rewrite b0. now rewrite i b.
+    - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - solve_all. destruct a as [s []].
       unfold test_def. len in b0. now rewrite i b0.
   Qed.
@@ -654,17 +658,23 @@ Proof.
   - move/andP: wfa => [] hl hc.
     apply/andP; split.
     now eapply trans_lookup_inductive; tea. eauto.
-  - epose proof (All2_length X0). eapply forallb_All in wfa.
+  - epose proof (All2_length X0). 
+    unfold EWellformed.wf_fix_gen.
+    rewrite -H0. move/andP: wfa => [] ->.
+    move/forallb_All. cbn. intros wfa.
     solve_all. destruct b.
     destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
-    rewrite <- H0. rewrite fix_context_length in b1.
+    rewrite fix_context_length in b1.
     move/andP: b0 => //; eauto. move=> [] wft /andP[] isl wf; eauto.
     eapply b1; tea. now rewrite app_length fix_context_length.
   - epose proof (All2_length X0).
+    unfold EWellformed.wf_fix_gen.
+    rewrite -H0. move/andP: wfa => [] ->.
+    move/forallb_All. cbn. intros wfa.
     solve_all. destruct y ;  simpl in *; subst.
     unfold EAst.test_def; simpl; eauto.
-    rewrite <-H0. rewrite fix_context_length in b.
+    rewrite fix_context_length in b.
     eapply b. now move: b0 => /andP[]. eauto. now rewrite app_length fix_context_length. tea.
 Qed.
 

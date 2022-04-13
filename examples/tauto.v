@@ -737,7 +737,7 @@ Proof.
   - f_equal.
     f_equal; solve_all.
     unfold predicate_size. simpl. f_equal; auto.
-    f_equal; auto. clear H0. induction a; simpl; auto.
+    f_equal; auto. clear H0 H1. induction a; simpl; auto.
     unfold branch_size.
     clear -X1.
     induction X1; simpl; auto.

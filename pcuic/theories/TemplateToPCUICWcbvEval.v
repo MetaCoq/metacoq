@@ -512,7 +512,7 @@ Proof.
   - apply IHev2.
     wf_inv wf H. specialize (IHev1 wf).
     wf_inv IHev1 [hc hargs].
-    eapply nth_error_all in H; tea.
+    eapply nth_error_all in hargs; tea.
 
   - eapply IHev2.
     wf_inv wf [Hf Hargs].
@@ -572,21 +572,6 @@ Proof.
   - eapply value_app => //. econstructor; tea.
 Qed.
 
-Definition heads (t : Ast.term) := (AstUtils.decompose_app t).1.
-
-(* 
-Lemma trans_head Σ t : head (trans Σ t) = trans Σ (heads t).
-Proof.
-  rewrite /head /heads.
-  destruct t => /= //. *)
- 
-(* Lemma trans_isFixApp Σ t : isFixApp (trans (trans_global_env Σ) t) -> WcbvEval.isFixApp t.
-Proof.
-  rewrite /isFixApp /WcbvEval.isFixApp.
-  destruct t => /= //. rewrite head_mkApps.
-  destruct t => //.
-  cbn. *)
-
 Lemma trans_wcbvEval {cf} {Σ} {wfΣ : ST.wf Σ} T U :
   let Σ' := trans_global_env Σ in
   wf Σ' ->
@@ -644,14 +629,11 @@ Proof.
     reflexivity.
     rewrite nth_error_map H /=. reflexivity.
     len. rewrite H1.
-    { rewrite /cstr_arity. cbn.
+    { rewrite /cstr_arity e. cbn.
       eapply All2_length in a1. len in a1.
       rewrite /bctx case_branch_context_assumptions //.
       rewrite /trans_branch /=.
-      rewrite context_assumptions_map. f_equal.
-      todo "ci_npar ci invariant". }
-    { eapply All2_length in a1. len in a1.
-      todo "ind_npars". }
+      rewrite context_assumptions_map //. }
     { eapply All2_length in a1. len in a1.
       rewrite /bctx.
       rewrite /trans_branch /=.
@@ -677,16 +659,20 @@ Proof.
     apply IHev2.
 
   - wf_inv wf hdiscr.
-    destruct indnpararg as ((?&?)&?).
-    todo "projs".
-    (*cbn in *; eapply eval_proj; tea.
-    rewrite trans_mkApps in IHev1. 
-    now eapply IHev1.
-    rewrite nth_error_map H //.
-    eapply IHev2.
-    eapply eval_wf in ev1; tea.
-    eapply WfAst.wf_mkApps_inv in ev1.
-    eapply nth_error_all in ev1; tea.*)
+    destruct proj as ((?&?)&?).
+    cbn in *; eapply eval_proj; tea.
+    * destruct H. cbn in d. 
+      eapply forall_decls_declared_constructor in d; tea.
+    * rewrite trans_mkApps in IHev1. 
+      now eapply IHev1.
+    * cbn. len. rewrite H0 /WcbvEval.cstr_arity. f_equal.
+      now rewrite context_assumptions_map.
+    * cbn. symmetry; eapply H.
+    * rewrite nth_error_map H1 //.
+    * eapply IHev2.
+      eapply eval_wf in ev1; tea.
+      eapply WfAst.wf_mkApps_inv in ev1.
+      eapply nth_error_all in ev1; tea.
 
   - rewrite trans_mkApps.
     eapply WfAst.wf_mkApps_napp in wf as []; tea.

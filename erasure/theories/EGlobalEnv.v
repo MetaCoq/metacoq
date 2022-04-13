@@ -84,6 +84,13 @@ End Lookups.
 
 (** Knowledge of propositionality status of an inductive type and parameters *)
 
+Lemma lookup_constructor_pars_args_cstr_arity Σ ind c mdecl idecl cdecl : 
+  lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+  lookup_constructor_pars_args Σ ind c = Some (mdecl.(ind_npars), cdecl.2).
+Proof.
+  rewrite /lookup_constructor_pars_args => -> /= //.
+Qed.
+
 Definition inductive_isprop_and_pars Σ ind :=
   '(mdecl, idecl) <- lookup_inductive Σ ind ;;
   ret (idecl.(ind_propositional), mdecl.(ind_npars)).

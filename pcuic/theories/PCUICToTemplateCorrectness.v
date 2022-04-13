@@ -651,10 +651,11 @@ Section wtsub.
     | tProd na A B => wt Γ A × wt (Γ ,, vass na A) B
     | tLetIn na b ty b' => [× wt Γ b, wt Γ ty & wt (Γ ,, vdef na b ty) b']
     | tApp f a => wt Γ f × wt Γ a
-    | tCase ci p c brs => 
+    | tCase ci p c brs =>
       All (wt Γ) p.(pparams) ×
       ∑ mdecl idecl, 
       [× declared_inductive Σ ci mdecl idecl,
+         ci.(ci_npar) = mdecl.(ind_npars),
          consistent_instance_ext Σ (PCUICEnvironment.ind_universes mdecl) (PCUICAst.puinst p),
          wf_predicate mdecl idecl p,
          All2 (PCUICEquality.compare_decls eq eq) (PCUICCases.ind_predicate_context ci mdecl idecl) (PCUICAst.pcontext p),
@@ -1008,7 +1009,7 @@ Proof.
   - now eapply WfAst.wf_mkApp.
   - cbn. destruct b as [mdecl [idecl []]].
     destruct X as [? []]. red in X0. econstructor; cbn; eauto; tea.
-    eapply trans_declared_inductive in d; tea.
+    eapply trans_declared_inductive in d; tea. now cbn. cbn.
     eapply trans_ind_predicate_context_eq => //. now symmetry.
     rewrite map_length. cbn. rewrite context_assumptions_map //. 
     destruct w. now rewrite -(declared_minductive_ind_npars (proj1 d)).

@@ -793,16 +793,6 @@ Proof.
     eapply nth_error_repeat. lia.
 Qed.
 
-(* Lemma expanded_eta_single_app {Σ Γ} t args args' ty count :
-  expanded Σ Γ (eta_single t args ty count) ->
-  expanded Σ Γ (eta_single t (args ++ args') ty count).
-Proof.
-  unfold eta_single. rewrite !expanded_fold_lambda.
-  rewrite !combine_length, !mapi_length, !firstn_length,  !List.skipn_length.
-  intros H.
-Admitted.  
- *)
-
  Lemma to_extended_list_k_map_subst:
   forall n (k : nat) (c : context) k',
     #|c| + k' <= k ->

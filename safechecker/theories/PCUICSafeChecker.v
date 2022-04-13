@@ -2318,8 +2318,7 @@ End monad_Alli_nth_forall.
       check_bodies <- monad_Alli_nth_forall mdecl.(ind_bodies) (fun i oib Hoib => check_one_ind_body X X_ext kn mdecl _ check_pars onarities check_var i oib Hoib);; 
       ret (Build_on_inductive_sq  check_bodies check_pars check_npars _)
     end.
-  Solve All Obligations with todo "ff".
-  (* Next Obligation.
+  Next Obligation.
     specialize_Σ H0. sq. unfold on_constant_decl; rewrite <- Heq_anonymous.
     eassumption.
   Qed.
@@ -2339,7 +2338,7 @@ End monad_Alli_nth_forall.
     specialize_Σ wfΣ0. 
     sq. now erewrite (abstract_env_ext_irr _ _ pf).
     Unshelve. eauto.   
-  Qed.  *)
+  Qed. 
 
   Import EnvMap.
 
@@ -2510,14 +2509,14 @@ End monad_Alli_nth_forall.
   Obligation Tactic := Program.Tactics.program_simpl.
 
   Program Definition typecheck_program (p : program) φ
-    : EnvCheck X_env_ext_type (∑ A, ∥ wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥) :=
-    let Σ := fst p in
-    '(exist X pf) <- check_wf_ext (Σ, φ) ;;
+    : EnvCheck X_env_ext_type (∑ A, ∑ X:X_env_ext_type, ∥ abstract_env_ext_rel X (p.1, φ) × 
+                                                          wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥) :=
+    '(exist X pf) <- check_wf_ext (p.1, φ) ;;
     inft <- infer_term X p.2 ;;
     ret (inft.π1; _).
-  Next Obligation.
+  Next Obligation. exists x. 
     cbn. specialize_Σ pf. pose proof (abstract_env_ext_wf _ pf).
-    sq. split; eauto.
+    sq. split; auto.
   Qed.
 
 End CheckEnv.

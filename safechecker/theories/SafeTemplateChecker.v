@@ -13,11 +13,12 @@ Definition trans_program (p : Ast.Env.program) : program :=
   (Σ', trans Σ' p.2).
 
 Program Definition infer_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ
-  : EnvCheck wf_env_ext (let p' := trans_program p in ∑ A, ∥ (p'.1, φ) ;;; [] |- p'.2 : A ∥) :=
+  : EnvCheck wf_env_ext (let p' := trans_program p in ∑ A, ∑ X : wf_env_ext , 
+    ∥ (p'.1, φ) = X.(wf_env_ext_referenced).(referenced_impl_env_ext) × wf_ext (p'.1, φ) ×  (p'.1, φ) ;;; [] |- p'.2 : A ∥) :=
   p <- typecheck_program optimized_abstract_env_impl (trans_program p) φ ;;
   ret (p.π1 ; _).
-Next Obligation.
-  sq. destruct X. eapply infering_typing; tea. eapply w. constructor.
+Next Obligation. exists X. 
+  sq. destruct X0; split; eauto. destruct p1; split; eauto.  eapply infering_typing; tea. eapply w. constructor.
 Qed.
 
 Program Definition infer_and_print_template_program {cf : checker_flags} {nor : normalizing_flags} (p : Ast.Env.program) φ

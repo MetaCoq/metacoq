@@ -470,6 +470,7 @@ Section CheckEnv.
     - intros i; rewrite ConstraintSetFact.empty_iff //.
     - red. rewrite /univs_ext_constraints /=. rewrite CS_union_empty.
       apply wfΣ.
+    - move=> v hv; exists v; split; [move=> ? /CS.empty_spec [] | move=> ?? //].
   Qed.
 
   Program Definition check_wf_env_ext (Σ : global_env) (id : kername) (wfΣ : ∥ wf Σ ∥) (G : universes_graph)
@@ -2485,5 +2486,3 @@ Section CheckEnv.
 End CheckEnv.
 
 (* Print Assumptions typecheck_program. *)
-
-o

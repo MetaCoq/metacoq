@@ -496,7 +496,13 @@ Section wellscoped.
     | Some (ConstantDecl d) => Some d
     | _ => None
     end.
-
+  Import MCMonadNotation.
+  
+  Definition lookup_projection Σ (p : projection) :=
+    '(mdecl, idecl, cdecl) <- lookup_constructor Σ p.1.1 0 ;;
+    pdecl <- nth_error idecl.(ind_projs) p.2 ;;
+    ret (mdecl, idecl, cdecl, pdecl).
+    
   Section Def.
   Context (Σ : global_env).
   Import ssrbool.
@@ -511,7 +517,7 @@ Section wellscoped.
   | tCase ind p c brs => 
     let brs' := forallb (wellformed ∘ bbody) brs in
     isSome (lookup_inductive Σ ind.(ci_ind)) && wellformed c && brs'
-  | tProj p c => isSome (lookup_inductive Σ p.1.1) && wellformed c
+  | tProj p c => isSome (lookup_projection Σ p) && wellformed c
   | tFix mfix idx => 
     (idx <? #|mfix|) &&
     List.forallb (test_def (wellformed) (fun b => (isLambda b) && wellformed b)) mfix
@@ -536,6 +542,17 @@ Section wellscoped.
     rewrite (declared_inductive_lookup_inductive (Σ := empty_ext Σ) H) /= H0 //.
   Qed.
 
+
+  (* TODO Move *)
+  Lemma declared_projection_lookup {Σ p mdecl idecl cdecl pdecl} :
+    declared_projection Σ p mdecl idecl cdecl pdecl -> 
+    lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl).
+  Proof.
+    intros [hc [hp hn]]. unfold lookup_projection.
+    rewrite (declared_constructor_lookup hc) /= hp //.
+  Qed.
+
+  Arguments lookup_projection : simpl never.
   Lemma typing_wellformed :
     env_prop (fun Σ Γ a A => wellformed Σ a)
         (fun Σ Γ => True).
@@ -549,7 +566,7 @@ Section wellscoped.
     - red in H8. eapply Forall2_All2 in H8.
       eapply All2i_All2_mix_left in X5; tea. clear H8.
       solve_all.
-    - now rewrite (declared_inductive_lookup_inductive isdecl).
+    - now rewrite (declared_projection_lookup isdecl).
     - now eapply nth_error_Some_length, Nat.ltb_lt in H0.
     - move/andb_and: H2 => [] hb _.
       solve_all. destruct a as [s []].
@@ -617,6 +634,37 @@ Section trans_lookups.
     destruct e0. eapply Forall2_All2 in H2. eapply All2_nth_error_Some in H2 as [? []]; tea.
     rewrite H1 in e. noconf e. rewrite e0 //.
   Qed.
+
+  Lemma trans_lookup_projection p : 
+    isSome (lookup_projection Σ p) -> 
+    isSome (EGlobalEnv.lookup_projection Σ' p).
+  Proof.
+    destruct g.
+    unfold isSome. 
+    case E: lookup_projection => [[[[mdecl idecl] cdecl] pdecl]|] // _.
+    move: E. rewrite /lookup_projection /EGlobalEnv.lookup_projection /lookup_constructor 
+      /lookup_inductive /EGlobalEnv.lookup_constructor /EGlobalEnv.lookup_inductive.
+    destruct lookup_minductive eqn:hl => //.
+    destruct nth_error eqn:hnth => //.
+    destruct (nth_error (ind_ctors _) _) eqn:hnth' => //.
+    cbn -[nth_error].
+    destruct (nth_error (ind_projs _) _) eqn:hnth'' => //.
+    intros [= <- <- <- <-].
+    specialize (H0 p.1.1 m o).
+    forward H0.
+    split => //. unfold lookup_minductive in hl.
+    unfold declared_minductive. destruct lookup_env as [[]|] => //. now noconf hl.
+    destruct H0 as [mdecl' [idecl' ?]].
+    unfold EGlobalEnv.lookup_inductive. cbn -[nth_error].
+    destruct H0 as [[] ?]. red in H0. rewrite H0 H1 //.
+    destruct H2. eapply Forall2_All2 in H2.
+    eapply All2_nth_error_Some in H2 as [? []]; tea.
+    destruct e0. eapply Forall2_All2 in H2. eapply All2_nth_error_Some in H2 as [? []]; tea.
+    rewrite H1 in e. noconf e. rewrite e0 //.
+    destruct H4 as [H4 _].
+    eapply Forall2_All2 in H4. eapply All2_nth_error_Some in H4 as [? []]; tea.
+    now rewrite e.
+  Qed.
 End trans_lookups.
 
 Lemma erases_isLambda {Σ Γ t u} :
@@ -656,8 +704,9 @@ Proof.
     rewrite app_context_length. cbn.
     now rewrite inst_case_branch_context_length.
   - move/andP: wfa => [] hl hc.
-    apply/andP; split.
-    now eapply trans_lookup_inductive; tea. eauto.
+    apply/andP; split. 
+    now eapply trans_lookup_projection in hl.
+    eauto.
   - epose proof (All2_length X0). 
     unfold EWellformed.wf_fix_gen.
     rewrite -H0. move/andP: wfa => [] ->.
@@ -975,15 +1024,6 @@ Proof.
   rewrite isP. intros ->. f_equal. f_equal. now rewrite indp.
 Qed.
 
-Lemma declared_inductive_lookup_inductive {Σ ind mdecl idecl} :
-  EGlobalEnv.declared_inductive Σ ind mdecl idecl ->
-  EGlobalEnv.lookup_inductive Σ ind = Some (mdecl, idecl).
-Proof.
-  rewrite /EGlobalEnv.declared_inductive /EGlobalEnv.lookup_inductive.
-  intros []. red in H. rewrite /EGlobalEnv.lookup_minductive H /= H0 //.
-Qed.
-
-
 Lemma isPropositional_propositional_cstr Σ Σ' ind c mdecl idecl cdecl mdecl' idecl' : 
   wf Σ ->
   PCUICAst.declared_constructor Σ (ind, c) mdecl idecl cdecl ->
@@ -992,7 +1032,7 @@ Lemma isPropositional_propositional_cstr Σ Σ' ind c mdecl idecl cdecl mdecl' i
   erases_one_inductive_body idecl idecl' ->
   forall b, isPropositional Σ ind b -> 
   constructor_isprop_pars_decl Σ' ind c = 
-  Some (b, mdecl.(ind_npars), (cdecl.(cstr_name), context_assumptions cdecl.(cstr_args))).
+  Some (b, mdecl.(ind_npars), EAst.mkConstructor cdecl.(cstr_name) (context_assumptions cdecl.(cstr_args))).
 Proof.
   intros wfΣ [decli declc] decli' em ei b isp.
   pose proof decli as decli''.
@@ -1001,12 +1041,12 @@ Proof.
   rewrite /inductive_isprop_and_pars.
   unfold constructor_isprop_pars_decl.
   unfold EGlobalEnv.lookup_constructor.
-  rewrite (declared_inductive_lookup_inductive decli') /=.
+  rewrite (declared_inductive_lookup decli') /=.
   intros [= <- <-].
   destruct ei. clear H0.
   eapply Forall2_nth_error_Some in H as [cdecl' []]; tea.
   rewrite H //. f_equal. f_equal.
-  destruct cdecl'. destruct H0. subst. f_equal.
+  destruct cdecl'. cbn in *. destruct H0. subst. f_equal.
   assert (declared_constructor Σ (ind, c) mdecl idecl cdecl).
   split => //.
   destruct (on_declared_constructor H0) as [[] [? []]].
@@ -1014,7 +1054,7 @@ Proof.
 Qed.
 
 Lemma is_assumption_context_spec Γ :
-is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
+  is_true (is_assumption_context Γ) <-> PCUICLiftSubst.assumption_context Γ.
 Proof.
  induction Γ; cbn.
  - split; econstructor.
@@ -1597,7 +1637,7 @@ Proof.
         eapply assumption_context_subst_context.
         apply (declared_constructor_assumption_context d). }
       rewrite ECSubst.substl_subst //.
-      { eapply All_Forall, All_repeat. econstructor. }
+      { eapply forallb_repeat. econstructor. }
       replace (ind_npars mdecl + #|bcontext br| - ind_npars mdecl) 
       with #|bcontext br| in H11 by lia. eauto.
       }
@@ -1659,11 +1699,11 @@ Proof.
          constructor. econstructor. eauto. 2:eauto.
          4:{ unfold EGlobalEnv.iota_red.
           rewrite ECSubst.substl_subst //.
-          eapply Forall_rev, Forall_skipn.
-          assert (Forall (closedn 0) args).
+          rewrite forallb_rev forallb_skipn //.
+          assert (forallb (closedn 0) args).
           { move/eval_closed: H; tea.
             move/(_ (subject_closed scrut_ty)).
-            rewrite closedn_mkApps /=. solve_all. } 
+            now rewrite closedn_mkApps /=. }
           solve_all. eapply (erases_closed _ []); tea. } 
          rewrite -eq_npars.
          eapply isPropositional_propositional_cstr; eauto.
@@ -1748,7 +1788,7 @@ Proof.
          cbn in *.
 
          rewrite ECSubst.substl_subst.
-         { eapply All_Forall, All_repeat. econstructor. }
+         { eapply forallb_repeat. econstructor. }
 
          rewrite rev_repeat in H10.
          
@@ -1783,12 +1823,14 @@ Proof.
       * exists EAst.tBox.
         destruct (declared_inductive_inj decli d) as [<- <-].
         assert (isprop : inductive_isprop_and_pars Σ' i = Some (true, ind_npars mdecl)).
-        { eapply isPropositional_propositional. exact d. all:eauto. eapply isErasable_Propositional; eauto. }
+        { eapply isPropositional_propositional. exact d. all:eauto. apply decli'.
+          eapply isErasable_Propositional; eauto. }
         split.
         eapply Is_type_app in X as []; eauto. 2:{ rewrite -mkApps_app. eapply subject_reduction_eval; eauto. }
         rewrite -mkApps_app in X.
 
         eapply tConstruct_no_Type in X; eauto. eapply H3 in X as [? []]; eauto.
+        2:{ exact d. }
         2: split; auto; now exists []; destruct Σ.
         destruct d0 as (? & ? & ?).
         
@@ -1818,11 +1860,12 @@ Proof.
             destruct (declared_inductive_inj d d0); subst mdecl0 idecl0.
             eapply Ee.eval_proj; eauto.
             eapply isPropositional_propositional_cstr; eauto.
-            cbn. destruct p. rewrite -lenx5 //.
+            apply decli'. cbn. destruct p. rewrite -lenx5 //.
         -- exists EAst.tBox.
           destruct (declared_inductive_inj decli d) as [<- <-].
           assert (isprop : inductive_isprop_and_pars Σ' i = Some (true, ind_npars mdecl)).
-        { eapply isPropositional_propositional; eauto. eapply (isErasable_Propositional (args:=[])); eauto. }
+        { eapply isPropositional_propositional; eauto. apply d. apply decli'.
+          eapply (isErasable_Propositional (args:=[])); eauto. }
             split.
             eapply Is_type_app in X as []; eauto. 2:{ eapply subject_reduction_eval; [|eauto]; eauto. }
 
@@ -1834,8 +1877,7 @@ Proof.
             erewrite nth_error_skipn. eassumption.
             eapply All_impl.
             eassumption.
-            eapply isErasable_Proof. eauto.
-
+            eapply isErasable_Proof. reflexivity. eauto.
             constructor. eapply eval_proj_prop => //.
             pose proof (Ee.eval_to_value _ _ _ Hty_vc').
             eapply value_app_inv in X0. subst. eassumption.
@@ -2357,12 +2399,12 @@ Proof.
         constructor. eapply Ee.eval_construct; tea.
         eapply (edeclared_constructor_lookup H9).
         rewrite -(Forall2_length H7).
-        rewrite /Ee.cstr_arity.
+        rewrite /EAst.cstr_arity.
         destruct (declared_constructor_inj H8 d) as [? []]. subst mdecl0 idecl0 cdecl0.
         destruct H8, H9, H11 as [Hc _].
         eapply Forall2_nth_error_Some in Hc as [? []]; tea.
         rewrite H14 in H11. noconf H11.
-        destruct cdecl' as [cname cargs]; cbn.
+        destruct cdecl' as [cname cargs]; cbn. cbn in *.
         destruct H15 as [<- _].
         destruct H10 as [_ <-].
         move: l. rewrite /cstr_arity.
@@ -2477,6 +2519,38 @@ Qed.
 
 Import EWellformed.
 
+Lemma erases_mutual_inductive_body_wf (efl := all_env_flags) {Σ univs Σ' kn mib mib'} :
+  erases_mutual_inductive_body mib mib' ->
+  let udecl := PCUICLookup.universes_decl_of_decl (InductiveDecl mib) in
+  on_global_decl (PCUICEnvTyping.lift_typing typing) ({| universes := univs; declarations := Σ |}, udecl) kn
+       (InductiveDecl mib) ->
+  wf_global_decl Σ' (E.InductiveDecl mib').
+Proof.
+  intros [] udecl [].
+  cbn. unfold wf_minductive => /=. cbn. clear -H onInductives.
+  repeat toAll.
+  revert H. subst udecl.
+  generalize (E.ind_bodies mib').
+  induction onInductives; intros l a; depelim a; constructor; eauto.
+  destruct e. unfold wf_inductive, wf_projections.
+  destruct H0 as [Hprojs _].
+  depelim Hprojs. rewrite H1 => //.
+  rewrite H2.
+  pose proof (onProjections p).
+  forward X. { congruence. }
+  destruct (ind_ctors hd) as [|ctor []] eqn:hctors => //.
+  depelim H. rewrite H1.
+  depelim H0. cbn. destruct X.
+  destruct H. rewrite -H. 
+  rewrite H3 in on_projs_all. cbn in on_projs_all.
+  eapply Forall2_length in Hprojs. rewrite Hprojs in on_projs_all.
+  rewrite on_projs_all.
+  pose proof (onConstructors p).
+  rewrite hctors in X. red in X.
+  depelim X. destruct o. rewrite cstr_args_length.
+  apply eqb_refl.
+Qed. 
+
 Lemma erases_global_wf_glob {Σ : global_env} Σ' : wf Σ -> erases_global Σ Σ' -> @wf_glob all_env_flags Σ'.
 Proof.
   destruct Σ as [univs Σ]; cbn in *.
@@ -2501,5 +2575,6 @@ Proof.
     destruct (E.cst_body cb') => //. 
   - depelim wf.
     constructor; eauto.
-    eapply erases_global_decls_fresh; tea.
+    now eapply erases_mutual_inductive_body_wf.
+    now eapply erases_global_decls_fresh; tea.
 Qed.

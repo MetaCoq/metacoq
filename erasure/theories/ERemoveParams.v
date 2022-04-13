@@ -1,18 +1,9 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames EnvMap.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
-     PCUICTyping PCUICInversion PCUICGeneration
-     PCUICConfluence PCUICConversion 
-     PCUICCumulativity PCUICSR PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
-
-From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
-     
+From MetaCoq.Template Require Import config utils Kernames BasicAst EnvMap.     
 From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
     ELiftSubst ESpineView EGlobalEnv EWellformed EEnvMap 
-    EWcbvEval ErasureFunction EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
+    EWcbvEval EEtaExpanded ECSubst EWcbvEvalEtaInd EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -554,7 +545,7 @@ Module Fast.
       | a :: args := (strip [] a) :: strip_args args
     }
     
-    where strip_brs (t : list (list name × term)) : list (list name × term) :=
+    where strip_brs (t : list (list BasicAst.name × term)) : list (list BasicAst.name × term) :=
     { | [] := [] 
       | a :: args := (a.1, (strip [] a.2)) :: strip_brs args }
       
@@ -872,13 +863,13 @@ Proof.
     econstructor; eauto.
     * rewrite nth_error_map H3 //.
     * len. cbn in H4, H5. rewrite skipn_length. lia.
-    * cbn -[strip]. rewrite skipn_0. len. now cbn in H5.
+    * cbn -[strip]. rewrite skipn_0. len.
     * cbn -[strip].
       have etaargs : forallb (isEtaExp Σ) args.
-      { rewrite isEtaExp_Constructor in i7.
-        now move/andP: i7 => []. }
+      { rewrite isEtaExp_Constructor in i6.
+        now move/andP: i6 => []. }
       rewrite strip_iota_red // in e.
-      rewrite closedn_mkApps in i5. now move/andP: i5.
+      rewrite closedn_mkApps in i4. now move/andP: i4.
       cbn. now eapply nth_error_forallb in H; tea.
   
   - subst brs. cbn in H4.
@@ -978,7 +969,7 @@ Proof.
     eapply Ee.eval_mkApps_Construct; tea.
     + rewrite lookup_constructor_strip H //.
     + now constructor.
-    + rewrite /Ee.cstr_arity /=.
+    + rewrite /cstr_arity /=.
       move: H0; rewrite /cstr_arity /=.
       rewrite skipn_length map_length => ->. lia.
     + cbn in H0. eapply All2_skipn, All2_map.
@@ -1018,24 +1009,26 @@ Proof.
   intros wfΣ.
   revert n.
   funelim (strip Σ t); try intros n.
-  all:cbn -[strip]; simp_strip; intros.
+  all:cbn -[strip lookup_constructor lookup_inductive]; simp_strip; intros.
   all:try solve[unfold wf_fix_gen in *; rtoProp; intuition auto; toAll; solve_all].
   - cbn -[strip]; simp_strip. intros; rtoProp; intuition auto.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g => /= //.
-  - cbn.
+  - cbn -[strip] in *.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. destruct nth_error => //.
   - cbn -[strip].
-    rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
+    rewrite lookup_env_strip. cbn in H1. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. rtoProp; intuition auto.
     simp_strip. toAll; solve_all.
-  - cbn -[strip].
+  - cbn -[strip] in H0 |- *.
     rewrite lookup_env_strip. destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => //. all:rtoProp; intuition auto.
+    destruct EAst.ind_ctors => //.
+    destruct nth_error => //.
   - unfold wf_fix_gen in *. rewrite map_length. rtoProp; intuition auto. toAll; solve_all.
   - unfold wf_fix in *. rewrite map_length; rtoProp; intuition auto. toAll; solve_all.
   - move:H1; rewrite !wellformed_mkApps //. rtoProp; intuition auto.
@@ -1079,7 +1072,9 @@ Proof.
     destruct g eqn:hg => /= //.
     rewrite andb_false_r => //.
     destruct nth_error => /= //.
+    destruct EAst.ind_ctors => /= //.
     all:intros; rtoProp; intuition auto; solve_all.
+    destruct nth_error => //.
 Qed.
 
 Lemma strip_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
@@ -1099,7 +1094,7 @@ Definition switch_no_params (efl : EEnvFlags) :=
 Lemma strip_decl_wf (efl := all_env_flags) {Σ : GlobalContextMap.t} :
   wf_glob Σ -> 
   forall d, wf_global_decl Σ d -> 
-  wf_global_decl (sw := switch_no_params efl) (strip_env Σ) (strip_decl Σ d).
+  wf_global_decl (efl := switch_no_params efl) (strip_env Σ) (strip_decl Σ d).
 Proof.
   intros wf d.
   destruct d => /= //.
@@ -1283,7 +1278,8 @@ Proof.
     rewrite (lookup_inductive_pars_spec (proj1 (proj1 H))).
     eapply expanded_tConstruct_app.
     eapply strip_declared_constructor; tea.
-    len. rewrite skipn_length. lia.
+    len. rewrite skipn_length /= /EAst.cstr_arity /=.
+    rewrite /EAst.cstr_arity in H0. lia.
     solve_all. eapply All_skipn. solve_all.
 Qed.
 
@@ -1295,7 +1291,7 @@ Proof.
   destruct H as [[H ?] ?].
   split => //. split => //. red.
   red in H. rewrite lookup_env_strip // /= H //. 1-2:eauto.
-  cbn. lia. solve_all.
+  cbn. rewrite /EAst.cstr_arity in H0. lia. solve_all.
 Qed.
 
 Lemma strip_expanded_decl {Σ : GlobalContextMap.t} t : expanded_decl Σ t -> expanded_decl (strip_env Σ) (strip_decl Σ t).

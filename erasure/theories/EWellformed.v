@@ -91,7 +91,7 @@ Section wf.
     | tCase ind c brs => has_tCase && 
       let brs' := List.forallb (fun br => wellformed (#|br.1| + k) br.2) brs in
       isSome (lookup_inductive Σ ind.1) && wellformed k c && brs'
-    | tProj p c => has_tProj && isSome (lookup_inductive Σ p.1.1) && wellformed k c
+    | tProj p c => has_tProj && isSome (lookup_projection Σ p) && wellformed k c
     | tFix mfix idx => has_tFix && wf_fix_gen wellformed k mfix idx
     | tCoFix mfix idx => has_tCoFix && wf_fix_gen wellformed k mfix idx
     | tBox => has_tBox
@@ -117,10 +117,26 @@ Proof.
   now eapply Nat.ltb_nlt in lt.
 Qed.
 
-Definition wf_global_decl {sw : EEnvFlags} Σ d : bool :=
+Definition wf_projections idecl :=
+  match idecl.(ind_projs) with
+  | [] => true
+  | _ =>
+    match idecl.(ind_ctors) with
+    | [cstr] => #|idecl.(ind_projs)| == cstr.(cstr_nargs)
+    | _ => false
+    end
+  end.
+
+Definition wf_inductive (idecl : one_inductive_body) :=
+  wf_projections idecl.
+
+Definition wf_minductive {efl : EEnvFlags} (mdecl : mutual_inductive_body) :=
+  (has_cstr_params || (mdecl.(ind_npars) == 0)) && forallb wf_inductive mdecl.(ind_bodies).
+
+Definition wf_global_decl {efl : EEnvFlags} Σ d : bool :=
   match d with
   | ConstantDecl cb => option_default (fun b => wellformed Σ 0 b) cb.(cst_body) has_axioms
-  | InductiveDecl idecl => has_cstr_params || (idecl.(ind_npars) == 0)
+  | InductiveDecl idecl => wf_minductive idecl
   end.
 
 Inductive wf_glob {efl : EEnvFlags} : global_declarations -> Prop :=

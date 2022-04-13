@@ -50,10 +50,10 @@ ESpineView
 EPretty
 Extract
 EEtaExpanded
-EEtaExpandedFix
 ERemoveParams
 ErasureFunction
 EOptimizePropDiscr
+EInlineProjections
 EProgram
 ETransform
 Erasure

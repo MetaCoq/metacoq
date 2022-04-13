@@ -61,11 +61,14 @@ Proof.
   simpl. intros. now rewrite mkApps_app in H.
 Qed.
 
-Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : Kernames.ident × nat) := 
-  (mdecl.(ind_npars) + cdecl.2)%nat.
-
 (* Tells if the evaluation relation should include match-prop and proj-prop reduction rules. *)
 Class WcbvFlags := { with_prop_case : bool ; with_guarded_fix : bool }.
+
+Definition disable_prop_cases fl : WcbvFlags :=
+  {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) |}.
+
+Definition switch_unguarded_fix fl : WcbvFlags := 
+  EWcbvEval.Build_WcbvFlags fl.(@with_prop_case) false.
 
 Definition default_wcbv_flags := {| with_prop_case := true ; with_guarded_fix := true |}.
 Definition opt_wcbv_flags := {| with_prop_case := false ; with_guarded_fix := true |}.
@@ -101,7 +104,7 @@ Section Wcbv.
       eval discr (mkApps (tConstruct ind c) args) ->
       constructor_isprop_pars_decl Σ ind c = Some (false, pars, cdecl) ->
       nth_error brs c = Some br ->
-      #|args| = pars + cdecl.2 ->
+      #|args| = pars + cdecl.(cstr_nargs) ->
       #|skipn pars args| = #|br.1| ->
       eval (iota_red pars args br) res ->
       eval (tCase (ind, pars) discr brs) res
@@ -166,7 +169,7 @@ Section Wcbv.
   | eval_proj i pars cdecl arg discr args a res :
       eval discr (mkApps (tConstruct i 0) args) ->
       constructor_isprop_pars_decl Σ i 0 = Some (false, pars, cdecl) ->
-      #|args| = pars + cdecl.2 ->
+      #|args| = pars + cdecl.(cstr_nargs) ->
       nth_error args (pars + arg) = Some a ->
       eval a res ->
       eval (tProj (i, pars, arg) discr) res
@@ -274,7 +277,7 @@ Section Wcbv.
    Lemma value_mkApps_inv t l :
      ~~ isApp t ->
      value (mkApps t l) ->
-     ((l = []) × atom t) + ([× l <> [], value_head #|l| t & All value l]).
+     ((l = []) /\ atom t) + ([× l <> [], value_head #|l| t & All value l]).
    Proof.
      intros H H'. generalize_eq x (mkApps t l).
      revert t H. induction H' using value_values_ind.
@@ -319,8 +322,7 @@ Section Wcbv.
      - destruct (mkApps_elim f' [a']).
        eapply value_mkApps_inv in IHev1 => //.
        destruct IHev1 as [?|[]]; intuition subst.
-       * rewrite a0.
-         simpl. rewrite a0 in i. simpl in *.
+       * rewrite H in i |- *. simpl in *.
          apply (value_app f0 [a']). 
          destruct f0; simpl in * |- *; try congruence.
          + rewrite !negb_or /= in i; rtoProp; intuition auto.

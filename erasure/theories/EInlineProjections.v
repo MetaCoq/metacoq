@@ -1,13 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
-     PCUICTyping PCUICInversion
-     PCUICSafeLemmata. (* for welltyped *)
-From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
-From MetaCoq.Erasure Require Import EAst EAstUtils EDeps EExtends
-    ELiftSubst ECSubst EGlobalEnv EWellformed EWcbvEval Extract Prelim
+From MetaCoq.Template Require Import config utils Kernames BasicAst.
+From MetaCoq.Erasure Require Import EAst EAstUtils EExtends
+    ELiftSubst ECSubst EGlobalEnv EWellformed EWcbvEval Extract
     EEnvMap EArities EProgram.
 
 Local Open Scope string_scope.
@@ -27,6 +22,48 @@ Ltac introdep := let H := fresh in intros H; depelim H.
 #[global]
 Hint Constructors eval : core.
 
+(** Allow everything in terms *)
+Local Existing Instance all_env_flags.
+
+Arguments lookup_projection : simpl never.
+Arguments GlobalContextMap.lookup_projection : simpl never.
+
+Lemma lookup_inductive_wellformed {efl : EEnvFlags} Σ (kn : kername) 
+  (decl : mutual_inductive_body) :
+  wf_glob Σ → lookup_minductive Σ kn = Some decl → wf_minductive decl.
+Proof.
+  intros wfΣ.
+  rewrite /lookup_minductive. 
+  destruct lookup_env as [[]|] eqn:hl => //=.
+  intros [= <-]. now eapply lookup_env_wellformed in hl.
+Qed.
+
+Lemma wellformed_projection_args {efl : EEnvFlags} {Σ p mdecl idecl cdecl pdecl} : 
+  wf_glob Σ ->
+  lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
+  p.2 < cdecl.(cstr_nargs).
+Proof.
+  intros wfΣ.
+  rewrite /lookup_projection /lookup_constructor /lookup_inductive.
+  destruct lookup_minductive eqn:hl => //=.
+  eapply lookup_inductive_wellformed in hl; eauto.
+  move: hl. unfold wf_minductive.
+  destruct nth_error eqn:hnth => //.
+  destruct ind_ctors as [|? []] eqn:hnth' => //.
+  destruct (nth_error (ind_projs _) _) eqn:hnth'' => //.
+  intros wf [= <- <- <- <-].
+  move: wf => /andP[] _.
+  move/(nth_error_forallb hnth). rewrite /wf_inductive /wf_projections.
+  destruct ind_projs => //. now rewrite nth_error_nil in hnth''.
+  rewrite hnth'. cbn. move/(@eqb_eq nat). intros <-.
+  eapply nth_error_Some_length in hnth''. now cbn in hnth''.
+  destruct (nth_error (ind_projs _) _) eqn:hnth'' => //.
+  move=> /andP[] _.
+  move/(nth_error_forallb hnth). rewrite /wf_inductive /wf_projections.
+  destruct ind_projs => //. now rewrite nth_error_nil in hnth''.
+  rewrite hnth' //.
+Qed.
+
 Section optimize.
   Context (Σ : GlobalContextMap.t).
 
@@ -37,19 +74,11 @@ Section optimize.
     | tLambda na M => tLambda na (optimize M)
     | tApp u v => tApp (optimize u) (optimize v)
     | tLetIn na b b' => tLetIn na (optimize b) (optimize b')
-    | tCase ind c brs =>
-      let brs' := List.map (on_snd optimize) brs in
-      match GlobalContextMap.inductive_isprop_and_pars Σ (fst ind) with
-      | Some (true, npars) =>
-        match brs' with
-        | [(a, b)] => ECSubst.substl (repeat tBox #|a|) b
-        | _ => tCase ind (optimize c) brs'
-        end
-      | _ => tCase ind (optimize c) brs'
-      end
+    | tCase ind c brs => tCase ind (optimize c) (map (on_snd optimize) brs)
     | tProj p c =>
-      match GlobalContextMap.inductive_isprop_and_pars Σ p.1.1 with 
-      | Some (true, _) => tBox
+      match GlobalContextMap.lookup_projection Σ p with 
+      | Some (mdecl, idecl, cdecl, pdecl) => 
+        tCase p.1 (optimize c) [(unfold cdecl.(cstr_nargs) (fun n => nAnon), tRel (cdecl.(cstr_nargs) - S p.2))]
       | _ => tProj p (optimize c)
       end
     | tFix mfix idx =>
@@ -71,146 +100,89 @@ Section optimize.
     now rewrite mkApps_app /= IHl map_app /= mkApps_app /=.
   Qed.
 
-  Lemma map_repeat {A B} (f : A -> B) x n : map f (repeat x n) = repeat (f x) n.
-  Proof.
-    now induction n; simpl; auto; rewrite IHn.
-  Qed.
-  
   Lemma map_optimize_repeat_box n : map optimize (repeat tBox n) = repeat tBox n.
   Proof. by rewrite map_repeat. Qed.
 
-  Import ECSubst.
+  (* move to globalenv *)
 
-  Lemma csubst_mkApps {a k f l} : csubst a k (mkApps f l) = mkApps (csubst a k f) (map (csubst a k) l).
-  Proof.
-    induction l using rev_ind; simpl; auto.
-    rewrite mkApps_app /= IHl.
-    now rewrite -[EAst.tApp _ _](mkApps_app _ _ [_]) map_app.
-  Qed.
 
-  Lemma csubst_closed t k x : closedn k x -> csubst t k x = x.
+  Lemma wf_optimize t k : 
+    wf_glob Σ ->
+    wellformed Σ k t -> wellformed Σ k (optimize t).
   Proof.
-    induction x in k |- * using EInduction.term_forall_list_ind; simpl; auto.
-    all:try solve [intros; f_equal; solve_all; eauto].
-    intros Hn. eapply Nat.ltb_lt in Hn.
-    - destruct (Nat.compare_spec k n); try lia. reflexivity.
-    - move/andP => []. intros. f_equal; solve_all; eauto.
-    - move/andP => []. intros. f_equal; solve_all; eauto.
-    - move/andP => []. intros. f_equal; solve_all; eauto.
-      destruct x0; cbn in *. f_equal; auto.
-  Qed.
-
-  Lemma closed_optimize t k : closedn k t -> closedn k (optimize t).
-  Proof.
+    intros wfΣ.
     induction t in k |- * using EInduction.term_forall_list_ind; simpl; auto;
     intros; try easy;
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    unfold test_def in *;
+    unfold wf_fix_gen, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    - move/andP: H => [] clt cll. 
-      destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
-      destruct l as [|[br n] [|l']] eqn:eql; simpl.
-      rewrite IHt //.
-      depelim X. cbn in *.
-      rewrite andb_true_r in cll.
-      specialize (i _ cll).
-      eapply closed_substl. solve_all. eapply All_repeat => //.
-      now rewrite repeat_length.
-      rtoProp; solve_all. depelim cll. solve_all.
-      depelim cll. depelim cll. solve_all.
-      depelim cll. depelim cll. solve_all.
-      rtoProp; solve_all. solve_all.
-      rtoProp; solve_all. solve_all.
-    - destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|]; cbn; auto.
+    - move/andP: H => [] /andP[] -> clt cll /=.
+      rewrite IHt //=. solve_all.
+    - rewrite GlobalContextMap.lookup_projection_spec.
+      destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl; auto => //.
+      simpl.
+      have arglen := wellformed_projection_args wfΣ hl.
+      apply lookup_projection_lookup_constructor, lookup_constructor_lookup_inductive in hl.
+      rewrite hl /= andb_true_r.
+      rewrite IHt //=; len. apply Nat.ltb_lt.
+      lia.
+    - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
+    - len. rtoProp; solve_all. rewrite forallb_map; solve_all.
   Qed.
  
-  Lemma subst_csubst_comm l t k b : 
-    forallb (closedn 0) l -> closed t ->
-    subst l 0 (csubst t (#|l| + k) b) = 
-    csubst t k (subst l 0 b).
-  Proof.
-    intros hl cl.
-    rewrite !closed_subst //.
-    rewrite distr_subst. f_equal.
-    symmetry. solve_all.
-    rewrite subst_closed //.
-    eapply closed_upwards; tea. lia. 
-  Qed.
-
-  Lemma substl_subst s t : 
-    forallb (closedn 0) s ->
-    substl s t = subst s 0 t.
-  Proof.
-    induction s in t |- *; cbn; auto.
-    intros _. now rewrite subst_empty.
-    move/andP=> []cla cls.
-    rewrite (subst_app_decomp [_]).
-    cbn. rewrite lift_closed //.
-    rewrite closed_subst //. now eapply IHs.
-  Qed.
-
-  Lemma substl_csubst_comm l t k b : 
-    forallb (closedn 0) l -> closed t ->
-    substl l (csubst t (#|l| + k) b) = 
-    csubst t k (substl l b).
-  Proof.
-    intros hl cl.
-    rewrite substl_subst //.
-    rewrite substl_subst //.
-    apply subst_csubst_comm => //.
-  Qed.
-
-  Lemma optimize_csubst a k b : 
-    closed a ->
+  Lemma optimize_csubst {a k b} n : 
+    wf_glob Σ ->
+    wellformed Σ (k + n) b ->
     optimize (ECSubst.csubst a k b) = ECSubst.csubst (optimize a) k (optimize b).
   Proof.
+    intros wfΣ.
     induction b in k |- * using EInduction.term_forall_list_ind; simpl; auto;
-    intros cl; try easy; 
+    intros wft; try easy; 
     rewrite -> ?map_map_compose, ?compose_on_snd, ?compose_map_def, ?map_length;
-    unfold test_def in *;
+    unfold wf_fix, test_def in *;
     simpl closed in *; try solve [simpl subst; simpl closed; f_equal; auto; rtoProp; solve_all]; try easy.
-    - destruct (k ?= n)%nat; auto.
-    - destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
-      destruct l as [|[br n] [|l']] eqn:eql; simpl.
-      all:unfold on_snd; cbn.
-      * f_equal; auto.
-      * depelim X. simpl in *.
-        rewrite e //.
-        assert (#|br| = #|repeat tBox #|br| |). now rewrite repeat_length.
-        rewrite {2}H.
-        rewrite substl_csubst_comm //.
-        solve_all. eapply All_repeat => //.
-        now eapply closed_optimize.
-      * depelim X. depelim X.
-        f_equal; eauto.
-        unfold on_snd; cbn. f_equal; eauto.
-        f_equal; eauto.
-        f_equal; eauto. f_equal; eauto.
-        rewrite map_map_compose; solve_all.
-      * rewrite ?map_map_compose; f_equal; eauto; solve_all.
-      * rewrite ?map_map_compose; f_equal; eauto; solve_all.
-    - destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|]=> //;
-      now rewrite IHb.
+    - destruct (k ?= n0)%nat; auto.
+    - move/andP: wft => [] /andP[] hi hb hl. rewrite IHb. f_equal. unfold on_snd; solve_all.
+      repeat toAll. f_equal. solve_all. unfold on_snd; cbn. f_equal.
+      rewrite a0 //. now rewrite -Nat.add_assoc.
+    - move/andP: wft => [] hp hb.
+      rewrite GlobalContextMap.lookup_projection_spec.
+      destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl => /= //.
+      f_equal; eauto. f_equal. len. f_equal.
+      have arglen := wellformed_projection_args wfΣ hl.
+      case: Nat.compare_spec. lia. lia.
+      auto.
+    - f_equal. move/andP: wft => [hidx hb].
+      solve_all. unfold map_def. f_equal.
+      eapply a0. now rewrite -Nat.add_assoc.
+    - f_equal. move/andP: wft => [hidx hb].
+      solve_all. unfold map_def. f_equal.
+      eapply a0. now rewrite -Nat.add_assoc.
   Qed.
 
   Lemma optimize_substl s t : 
-    forallb (closedn 0) s ->
+    wf_glob Σ ->
+    forallb (wellformed Σ 0) s ->
+    wellformed Σ #|s| t ->
     optimize (substl s t) = substl (map optimize s) (optimize t).
   Proof.
-    induction s in t |- *; simpl; auto.
-    move/andP => [] cla cls.
-    rewrite IHs //. f_equal.
-    now rewrite optimize_csubst.
+    intros wfΣ. induction s in t |- *; simpl; auto.
+    move/andP => [] cla cls wft.
+    rewrite IHs //. eapply wellformed_csubst => //.
+    f_equal. rewrite (optimize_csubst (S #|s|)) //.
   Qed.
 
   Lemma optimize_iota_red pars args br :
-    forallb (closedn 0) args ->
+    wf_glob Σ ->
+    forallb (wellformed Σ 0) args ->
+    wellformed Σ #|skipn pars args| br.2 ->
     optimize (EGlobalEnv.iota_red pars args br) = EGlobalEnv.iota_red pars (map optimize args) (on_snd optimize br).
   Proof.
-    intros cl.
+    intros wfΣ wfa wfbr.
     unfold EGlobalEnv.iota_red.
     rewrite optimize_substl //.
     rewrite forallb_rev forallb_skipn //.
+    now rewrite List.rev_length.
     now rewrite map_rev map_skipn.
   Qed.
   
@@ -233,79 +205,42 @@ Section optimize.
   Qed.
 
   Lemma optimize_cunfold_fix mfix idx n f : 
-    forallb (closedn 0) (EGlobalEnv.fix_subst mfix) ->
+    wf_glob Σ ->
+    wellformed Σ 0 (tFix mfix idx) ->
     cunfold_fix mfix idx = Some (n, f) ->
     cunfold_fix (map (map_def optimize) mfix) idx = Some (n, optimize f).
   Proof.
-    intros hfix.
+    intros wfΣ hfix.
     unfold cunfold_fix.
     rewrite nth_error_map.
-    destruct nth_error.
+    cbn in hfix. move/andP: hfix => [] hidx hfix. 
+    destruct nth_error eqn:hnth => //.
     intros [= <- <-] => /=. f_equal.
-    now rewrite optimize_substl // optimize_fix_subst.
-    discriminate.
+    rewrite optimize_substl //. eapply wellformed_fix_subst => //.
+    rewrite fix_subst_length.
+    eapply nth_error_forallb in hfix; tea. now rewrite Nat.add_0_r in hfix.
+    now rewrite optimize_fix_subst.
   Qed.
 
   Lemma optimize_cunfold_cofix mfix idx n f : 
-    forallb (closedn 0) (EGlobalEnv.cofix_subst mfix) ->
+    wf_glob Σ ->
+    wellformed Σ 0 (tCoFix mfix idx) ->
     cunfold_cofix mfix idx = Some (n, f) ->
     cunfold_cofix (map (map_def optimize) mfix) idx = Some (n, optimize f).
   Proof.
-    intros hcofix.
+    intros wfΣ hfix.
     unfold cunfold_cofix.
     rewrite nth_error_map.
-    destruct nth_error.
+    cbn in hfix. move/andP: hfix => [] hidx hfix. 
+    destruct nth_error eqn:hnth => //.
     intros [= <- <-] => /=. f_equal.
-    now rewrite optimize_substl // optimize_cofix_subst.
-    discriminate.
-  Qed.
-
-  Lemma optimize_nth {n l d} : 
-    optimize (nth n l d) = nth n (map optimize l) (optimize d).
-  Proof.
-    induction l in n |- *; destruct n; simpl; auto.
+    rewrite optimize_substl //. eapply wellformed_cofix_subst => //.
+    rewrite cofix_subst_length.
+    eapply nth_error_forallb in hfix; tea. now rewrite Nat.add_0_r in hfix.
+    now rewrite optimize_cofix_subst.
   Qed.
 
 End optimize.
-
-Lemma is_box_inv b : is_box b -> ∑ args, b = mkApps tBox args.
-Proof.
-  unfold is_box, EAstUtils.head.
-  destruct decompose_app eqn:da.
-  simpl. destruct t => //.
-  eapply decompose_app_inv in da. subst.
-  eexists; eauto.
-Qed.
-
-Lemma eval_is_box {wfl:WcbvFlags} Σ t u : Σ ⊢ t ▷ u -> is_box t -> u = EAst.tBox.
-Proof.
-  intros ev; induction ev => //.
-  - rewrite is_box_tApp.
-    intros isb. intuition congruence.
-  - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
-  - rewrite is_box_tApp. move/IHev1 => ?; solve_discr.
-  - rewrite is_box_tApp. move/IHev1 => ?. subst => //.
-  - rewrite is_box_tApp. move/IHev1 => ?. subst. solve_discr.
-  - rewrite is_box_tApp. move/IHev1 => ?. subst. cbn in i.
-    destruct EWcbvEval.with_guarded_fix => //.
-  - destruct t => //.
-Qed. 
-
-Lemma isType_tSort {cf:checker_flags} {Σ : global_env_ext} {Γ l A} {wfΣ : wf Σ} : Σ ;;; Γ |- tSort (Universe.make l) : A -> isType Σ Γ (tSort (Universe.make l)).
-Proof.
-  intros HT.
-  eapply inversion_Sort in HT as [l' [wfΓ Hs]]; auto.
-  eexists; econstructor; eauto.
-Qed.
-
-Lemma isType_it_mkProd {cf:checker_flags} {Σ : global_env_ext} {Γ na dom codom A} {wfΣ : wf Σ} :   
-  Σ ;;; Γ |- tProd na dom codom : A -> 
-  isType Σ Γ (tProd na dom codom).
-Proof.
-  intros HT.
-  eapply inversion_Prod in HT as (? & ? & ? & ? & ?); auto.
-  eexists; econstructor; eauto.
-Qed.
 
 Definition optimize_constant_decl Σ cb := 
   {| cst_body := option_map (optimize Σ) cb.(cst_body) |}.
@@ -331,30 +266,15 @@ Program Fixpoint optimize_env' Σ : EnvMap.fresh_globals Σ -> global_context :=
 
 Import EGlobalEnv EExtends.
 
-(* Lemma extends_is_propositional {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  forall ind, 
-  match inductive_isprop_and_pars Σ ind with
-  | Some b => inductive_isprop_and_pars Σ' ind = Some b
-  | None => inductive_isprop_and_pars Σ' ind = None
-  end.
-Proof.
-  intros wf ex ind.
-  rewrite /inductive_isprop_and_pars.
-  destruct lookup_env eqn:lookup => //.
-  now rewrite (extends_lookup wf ex lookup).
-
-Qed. *)
-
-Lemma extends_inductive_isprop_and_pars {efl : EEnvFlags} {Σ Σ' ind} : extends Σ Σ' -> wf_glob Σ' ->
-  isSome (lookup_inductive Σ ind) -> 
-  inductive_isprop_and_pars Σ ind = inductive_isprop_and_pars Σ' ind.
+Lemma extends_lookup_projection {efl : EEnvFlags} {Σ Σ' p} : extends Σ Σ' -> wf_glob Σ' ->
+  isSome (lookup_projection Σ p) -> 
+  lookup_projection Σ p = lookup_projection Σ' p.
 Proof.
   intros ext wf; cbn.
-  unfold inductive_isprop_and_pars.
-  destruct lookup_env as [[]|] eqn:hl => //.
-  rewrite (extends_lookup wf ext hl).
-  destruct nth_error => //.
+  unfold lookup_projection.
+  destruct lookup_constructor as [[[mdecl idecl] cdecl]|] eqn:hl => //.
+  simpl.
+  rewrite (extends_lookup_constructor wf ext _ _ _ hl) //.
 Qed.
 
 Lemma wellformed_optimize_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t : 
@@ -363,24 +283,13 @@ Lemma wellformed_optimize_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t :
   optimize Σ t = optimize Σ' t.
 Proof.
   induction t using EInduction.term_forall_list_ind; cbn -[lookup_constant lookup_inductive
-    lookup_projection
-    GlobalContextMap.inductive_isprop_and_pars]; intros => //.
+    GlobalContextMap.lookup_projection]; intros => //.
   all:unfold wf_fix_gen in *; rtoProp; intuition auto.  
   all:f_equal; eauto; solve_all.
-  - rewrite !GlobalContextMap.inductive_isprop_and_pars_spec.
-    assert (map (on_snd (optimize Σ)) l = map (on_snd (optimize Σ')) l) as -> by solve_all.
-    rewrite (extends_inductive_isprop_and_pars H0 H1 H2).
-    destruct inductive_isprop_and_pars as [[[]]|].
-    destruct map => //. f_equal; eauto.
-    destruct l0 => //. destruct p0 => //. f_equal; eauto.
-    all:f_equal; eauto; solve_all.
-  - rewrite !GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (extends_inductive_isprop_and_pars H0 H1).
-    destruct (lookup_projection) as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl => //.
-    eapply lookup_projection_lookup_constructor in hl.
-    eapply lookup_constructor_lookup_inductive in hl. now rewrite hl.
-    destruct inductive_isprop_and_pars as [[[]]|] => //.
-    all:f_equal; eauto.
+  - rewrite !GlobalContextMap.lookup_projection_spec.
+    rewrite -(extends_lookup_projection H0 H1 H3).
+    destruct lookup_projection as [[[[]]]|]. f_equal; eauto.
+    now cbn in H3.
 Qed.
 
 Lemma wellformed_optimize_decl_extends {wfl: EEnvFlags} {Σ : GlobalContextMap.t} t : 
@@ -497,6 +406,8 @@ Proof.
   now rewrite List.rev_length hskip Nat.add_0_r.
 Qed.
 
+Definition disable_prop_cases fl := {| with_prop_case := false; with_guarded_fix := fl.(@with_guarded_fix) |}.
+
 Lemma isFix_mkApps t l : isFix (mkApps t l) = isFix t && match l with [] => true | _ => false end.
 Proof.
   induction l using rev_ind; cbn.
@@ -513,6 +424,14 @@ Proof.
   destruct g => //.
 Qed.
 
+Lemma lookup_projection_optimize {efl : EEnvFlags} {Σ : GlobalContextMap.t} {p} :
+  wf_glob Σ ->
+  lookup_projection Σ p = lookup_projection (optimize_env Σ) p.
+Proof.
+  intros wfΣ. rewrite /lookup_projection.
+  rewrite -lookup_constructor_optimize //.
+Qed.
+
 Lemma constructor_isprop_pars_decl_inductive {Σ ind c} {prop pars cdecl} :
   constructor_isprop_pars_decl Σ ind c = Some (prop, pars, cdecl)  -> 
   inductive_isprop_and_pars Σ ind = Some (prop, pars).
@@ -522,152 +441,190 @@ Proof.
   destruct nth_error => //. congruence.
 Qed.
 
-Lemma optimize_correct {efl : EEnvFlags} {fl} {Σ : GlobalContextMap.t} t v :
-  wf_glob Σ ->
-  closed_env Σ ->
-  @Ee.eval fl Σ t v ->
-  closed t ->
-  @Ee.eval (disable_prop_cases fl) (optimize_env Σ) (optimize Σ t) (optimize Σ v).
+Lemma constructor_isprop_pars_decl_constructor {Σ ind c} {mdecl idecl cdecl} :
+  lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+  constructor_isprop_pars_decl Σ ind c = Some (ind_propositional idecl, ind_npars mdecl, cdecl).
 Proof.
-  intros wfΣ clΣ ev.
+  rewrite /constructor_isprop_pars_decl. intros -> => /= //.
+Qed.
+
+Lemma wf_mkApps Σ k f args : reflect (wellformed Σ k f /\ forallb (wellformed Σ k) args) (wellformed Σ k (mkApps f args)).
+Proof.
+  rewrite wellformed_mkApps //. eapply andP.
+Qed.
+
+Lemma substl_closed s t : closed t -> substl s t = t.
+Proof.
+  induction s in t |- *; cbn => //.
+  intros clt. rewrite csubst_closed //. now apply IHs.
+Qed.
+
+Lemma substl_rel s k a : 
+  closed a ->
+  nth_error s k = Some a ->
+  substl s (tRel k) = a.
+Proof.
+  intros cla.
+  induction s in k |- *.
+  - rewrite nth_error_nil //.
+  - destruct k => //=.
+    * intros [= ->]. rewrite substl_closed //.
+    * intros hnth. now apply IHs. 
+Qed.
+
+Lemma optimize_correct (efl := all_env_flags) {fl} {Σ : GlobalContextMap.t} t v :
+  wf_glob Σ ->
+  @eval fl Σ t v ->
+  wellformed Σ 0 t ->
+  @eval fl (optimize_env Σ) (optimize Σ t) (optimize Σ v).
+Proof.
+  intros wfΣ ev.
   induction ev; simpl in *.
 
   - move/andP => [] cla clt. econstructor; eauto.
   - move/andP => [] clf cla.
-    eapply eval_closed in ev2; tea.
-    eapply eval_closed in ev1; tea.
+    eapply eval_wellformed in ev2; tea => //.
+    eapply eval_wellformed in ev1; tea => //.
     econstructor; eauto.
-    rewrite optimize_csubst // in IHev3.
-    apply IHev3. eapply closed_csubst => //.
+    rewrite -(optimize_csubst _ 1) //.
+    apply IHev3. eapply wellformed_csubst => //.
 
-  - move/andP => [] clb0 clb1. rewrite optimize_csubst in IHev2.
-    now eapply eval_closed in ev1.
-    econstructor; eauto. eapply IHev2, closed_csubst => //.
-    now eapply eval_closed in ev1.
+  - move/andP => [] clb0 clb1.
+    intuition auto.
+    eapply eval_wellformed in ev1; tea => //.
+    forward IHev2 by eapply wellformed_csubst => //.
+    econstructor; eauto. rewrite -(optimize_csubst _ 1) //.
 
-  - move/andP => [] cld clbrs. rewrite optimize_mkApps in IHev1.
-    have := (eval_closed _ clΣ _ _ cld ev1); rewrite closedn_mkApps => /andP[] _ clargs.
-    rewrite optimize_iota_red in IHev2.
-    eapply eval_closed in ev1 => //.
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (constructor_isprop_pars_decl_inductive e).
-    eapply eval_iota; eauto. tea.
-    now rewrite -is_propositional_cstr_optimize.
-    rewrite nth_error_map e0 //. now len. cbn.
-    rewrite -e2. rewrite !skipn_length map_length //.
-    eapply IHev2.
-    eapply closed_iota_red => //; tea.
-    eapply nth_error_forallb in clbrs; tea. cbn in clbrs.
-    now rewrite Nat.add_0_r in clbrs.
+  - move/andP => [] /andP[] hl wfd wfbrs. rewrite optimize_mkApps in IHev1.
+    eapply eval_wellformed in ev1 => //.
+    move/wf_mkApps: ev1 => [] wfc' wfargs.
+    eapply nth_error_forallb in wfbrs; tea.
+    rewrite Nat.add_0_r in wfbrs.
+    forward IHev2. eapply wellformed_iota_red; tea => //.
+    rewrite optimize_iota_red in IHev2 => //. now rewrite e2.
+    econstructor; eauto.
+    rewrite -is_propositional_cstr_optimize //. tea.
+    rewrite nth_error_map e0 //. len. len.
   
-  - move/andP => [] cld clbrs.
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite e e0 /=.
-    subst brs. cbn in clbrs. rewrite Nat.add_0_r andb_true_r in clbrs.
-    rewrite optimize_substl in IHev2. 
-    eapply All_forallb, All_repeat => //.
-    rewrite map_optimize_repeat_box in IHev2.
-    apply IHev2.
-    eapply closed_substl.
-    eapply All_forallb, All_repeat => //.
-    now rewrite repeat_length Nat.add_0_r.
+  - move/andP => [] /andP[] hl wfd wfbrs.
+    forward IHev2. eapply wellformed_substl; tea => //.
+    rewrite forallb_repeat //. len.
+    rewrite e0 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
+    rewrite optimize_substl in IHev2 => //.
+    rewrite forallb_repeat //. len.
+    rewrite e0 /= Nat.add_0_r in wfbrs. now move/andP: wfbrs.
+    eapply eval_iota_sing => //; eauto.
+    rewrite -is_propositional_optimize //.
+    rewrite e0 //. simpl.
+    rewrite map_repeat in IHev2 => //.
 
   - move/andP => [] clf cla. rewrite optimize_mkApps in IHev1.
     simpl in *.
-    eapply eval_closed in ev1 => //.
-    rewrite closedn_mkApps in ev1.
-    move: ev1 => /andP [] clfix clargs.
-    eapply Ee.eval_fix; eauto.
+    eapply eval_wellformed in ev1 => //.
+    move/wf_mkApps: ev1 => [] wff wfargs.
+    eapply eval_fix; eauto.
     rewrite map_length.
     eapply optimize_cunfold_fix; tea.
-    eapply closed_fix_subst. tea.
     rewrite optimize_mkApps in IHev3. apply IHev3.
-    rewrite closedn_mkApps clargs.
-    eapply eval_closed in ev2; tas. rewrite ev2 /= !andb_true_r.
-    eapply closed_cunfold_fix; tea.
+    rewrite wellformed_mkApps // wfargs.
+    eapply eval_wellformed in ev2; tas => //. rewrite ev2 /= !andb_true_r.
+    eapply wellformed_cunfold_fix; tea.
 
   - move/andP => [] clf cla.
-    eapply eval_closed in ev1 => //.
-    rewrite closedn_mkApps in ev1.
-    move: ev1 => /andP [] clfix clargs.
-    eapply eval_closed in ev2; tas.
+    eapply eval_wellformed in ev1 => //.
+    move/wf_mkApps: ev1 => [] clfix clargs.
+    eapply eval_wellformed in ev2; tas => //.
     rewrite optimize_mkApps in IHev1 |- *.
-    simpl in *. eapply Ee.eval_fix_value. auto. auto. auto.
+    simpl in *. eapply eval_fix_value. auto. auto. auto.
     eapply optimize_cunfold_fix; eauto.
-    eapply closed_fix_subst => //.
     now rewrite map_length. 
   
   - move/andP => [] clf cla.
-    eapply eval_closed in ev1 => //.
-    eapply eval_closed in ev2; tas.
-    simpl in *. eapply Ee.eval_fix'. auto. auto.
+    eapply eval_wellformed in ev1 => //.
+    eapply eval_wellformed in ev2; tas => //.
+    simpl in *. eapply eval_fix'. auto. auto.
     eapply optimize_cunfold_fix; eauto.
-    eapply closed_fix_subst => //.
     eapply IHev2; tea. eapply IHev3.
     apply/andP; split => //.
-    eapply closed_cunfold_fix; tea.
+    eapply wellformed_cunfold_fix; tea. now cbn.
 
-  - move/andP => [] cd clbrs. specialize (IHev1 cd).
-    rewrite closedn_mkApps in IHev2.
-    move: (eval_closed _ clΣ _ _ cd ev1).
-    rewrite closedn_mkApps.
-    move/andP => [] clfix clargs.
+  - move/andP => [] /andP[] hl cd clbrs. specialize (IHev1 cd).
+    eapply eval_wellformed in ev1; tea => //.
+    move/wf_mkApps: ev1 => [] wfcof wfargs.
     forward IHev2.
-    { rewrite clargs clbrs !andb_true_r.
-      eapply closed_cunfold_cofix; tea. }
-    rewrite -> optimize_mkApps in IHev1, IHev2. simpl.
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec in IHev2 |- *.
-    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp => //.
-    destruct brs as [|[a b] []]; simpl in *; auto.
-    simpl in IHev1.
-    eapply Ee.eval_cofix_case. tea.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    apply IHev2.
-    eapply Ee.eval_cofix_case; tea.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    simpl in *.
-    eapply Ee.eval_cofix_case; tea.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    eapply Ee.eval_cofix_case; tea.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
+    rewrite hl wellformed_mkApps // /= wfargs clbrs !andb_true_r.
+    eapply wellformed_cunfold_cofix; tea => //.
+    rewrite !optimize_mkApps /= in IHev1, IHev2.
+    eapply eval_cofix_case. tea.
+    eapply optimize_cunfold_cofix; tea.
+    exact IHev2.
+
+  - move/andP => [] hl hd.
+    rewrite GlobalContextMap.lookup_projection_spec in IHev2 |- *.
+    destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl' => //.
+    eapply eval_wellformed in ev1 => //.
+    move/wf_mkApps: ev1 => [] wfcof wfargs.
+    forward IHev2.
+    { rewrite /= wellformed_mkApps // wfargs andb_true_r.
+      eapply wellformed_cunfold_cofix; tea. }
+    rewrite optimize_mkApps /= in IHev1.
+    eapply eval_cofix_case. eauto.
+    eapply optimize_cunfold_cofix; tea.
+    rewrite optimize_mkApps in IHev2 => //.
     
-  - intros cd. specialize (IHev1 cd).
-    move: (eval_closed _ clΣ _ _ cd ev1).
-    rewrite closedn_mkApps; move/andP => [] clfix clargs. forward IHev2.
-    { rewrite closedn_mkApps clargs andb_true_r. eapply closed_cunfold_cofix; tea. }
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec in IHev2 |- *.
-    destruct EGlobalEnv.inductive_isprop_and_pars as [[[] pars]|] eqn:isp; auto.
-    rewrite -> optimize_mkApps in IHev1, IHev2. simpl in *.
-    econstructor; eauto.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-    rewrite -> optimize_mkApps in IHev1, IHev2. simpl in *.
-    econstructor; eauto.
-    apply optimize_cunfold_cofix; tea. eapply closed_cofix_subst; tea.
-  
   - rewrite /declared_constant in isdecl.
     move: (lookup_env_optimize c wfΣ).
     rewrite isdecl /= //.
     intros hl.
     econstructor; tea. cbn. rewrite e //.
     apply IHev.
-    eapply lookup_env_closed in clΣ; tea.
-    move: clΣ. rewrite /closed_decl e //.
+    eapply lookup_env_wellformed in wfΣ; tea.
+    move: wfΣ. rewrite /wf_global_decl /= e //.
   
-  - move=> cld.
-    eapply eval_closed in ev1; tea.
-    move: ev1; rewrite closedn_mkApps /= => clargs.
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    rewrite (constructor_isprop_pars_decl_inductive e).
-    rewrite optimize_mkApps in IHev1.
-    specialize (IHev1 cld).
-    eapply Ee.eval_proj; tea.
-    now rewrite -is_propositional_cstr_optimize.
-    now len. rewrite nth_error_map e1 //.
-    eapply IHev2.
-    eapply nth_error_forallb in e1; tea.
+  - move=> /andP[] iss cld.
+    rewrite GlobalContextMap.lookup_projection_spec.
+    eapply eval_wellformed in ev1; tea => //.
+    move/wf_mkApps: ev1 => [] wfc wfargs.
+    destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
+    pose proof (lookup_projection_lookup_constructor hl').
+    rewrite (constructor_isprop_pars_decl_constructor H) in e. noconf e.
+    forward IHev1 by auto.
+    forward IHev2. eapply nth_error_forallb in wfargs; tea.
+    rewrite optimize_mkApps /= in IHev1.
+    eapply eval_iota; tea.
+    rewrite /constructor_isprop_pars_decl -lookup_constructor_optimize // H //= //.
+    rewrite H0; reflexivity. cbn. reflexivity. len. len.
+    rewrite skipn_length. lia.
+    unfold iota_red. cbn.
+    rewrite (substl_rel _ _ (optimize Σ a)) => //.
+    { eapply nth_error_forallb in wfargs; tea.
+      eapply wf_optimize in wfargs => //.
+      now eapply wellformed_closed in wfargs. }
+    pose proof (wellformed_projection_args wfΣ hl'). cbn in H1.
+    rewrite nth_error_rev. len. rewrite skipn_length. lia. 
+    rewrite List.rev_involutive. len. rewrite skipn_length.
+    rewrite nth_error_skipn nth_error_map.
+    rewrite e0.
+    assert((ind_npars mdecl + cstr_nargs cdecl - ind_npars mdecl) = cstr_nargs cdecl) by lia.
+    rewrite H2. 
+    eapply (f_equal (option_map (optimize Σ))) in e1.
+    cbn in e1. rewrite -e1. f_equal. f_equal. lia.
 
-  - rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    now rewrite e.
+  - move=> /andP[] iss cld.
+    rewrite GlobalContextMap.lookup_projection_spec.
+    destruct lookup_projection as [[[[mdecl idecl] cdecl'] pdecl]|] eqn:hl' => //.
+    pose proof (lookup_projection_lookup_constructor hl').
+    simpl in H. 
+    move: e. rewrite /inductive_isprop_and_pars.
+    rewrite (lookup_constructor_lookup_inductive H) /=.
+    intros [= eq <-].
+    eapply eval_iota_sing => //; eauto.
+    rewrite -is_propositional_optimize // /inductive_isprop_and_pars
+      (lookup_constructor_lookup_inductive H) //=. congruence.
+    have lenarg := wellformed_projection_args wfΣ hl'.
+    rewrite (substl_rel _ _ tBox) => //.
+    { rewrite nth_error_repeat //. len. }
+    now constructor.
 
   - move/andP=> [] clf cla.
     rewrite optimize_mkApps.
@@ -679,8 +636,8 @@ Proof.
 
   - move/andP => [] clf cla.
     specialize (IHev1 clf). specialize (IHev2 cla).
-    eapply Ee.eval_app_cong; eauto.
-    eapply Ee.eval_to_value in ev1.
+    eapply eval_app_cong; eauto.
+    eapply eval_to_value in ev1.
     destruct ev1; simpl in *; eauto.
     * destruct t => //; rewrite optimize_mkApps /=.
     * destruct with_guarded_fix.
@@ -701,19 +658,6 @@ Proof.
     all:constructor; eauto.
 Qed.
 
-(* 
-Lemma optimize_extends Σ Σ' : 
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  forall t b, optimize Σ t = b -> optimize Σ' t = b.
-Proof.
-  intros wf ext.
-  induction t using EInduction.term_forall_list_ind; cbn => //.
-  all:try solve [f_equal; solve_all].
-  destruct inductive_isp
-  rewrite (extends_is_propositional wf ext).
- *)
-
 From MetaCoq.Erasure Require Import EEtaExpanded.
 
 Lemma isLambda_optimize Σ t : isLambda t -> isLambda (optimize Σ t).
@@ -728,24 +672,11 @@ Proof.
   all:rewrite ?optimize_mkApps.
   - eapply expanded_mkApps_expanded => //. solve_all.
   - cbn -[GlobalContextMap.inductive_isprop_and_pars].
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    destruct inductive_isprop_and_pars as [[[|] _]|] => /= //.
-    2-3:constructor; eauto; solve_all.
-    destruct branches eqn:heq.
-    constructor; eauto; solve_all. cbn.
-    destruct l => /=.
-    eapply isEtaExp_expanded.
-    eapply isEtaExp_substl. eapply forallb_repeat => //.
-    destruct branches as [|[]]; cbn in heq; noconf heq.
-    cbn -[isEtaExp] in *. depelim H1. cbn in H1.
-    now eapply expanded_isEtaExp.
-    constructor; eauto; solve_all.
-    depelim H1. depelim H1. do 2 (constructor; intuition auto).
-    solve_all.
-  - cbn -[GlobalContextMap.inductive_isprop_and_pars].
-    rewrite GlobalContextMap.inductive_isprop_and_pars_spec.
-    destruct inductive_isprop_and_pars as [[[|] _]|] => /= //.
-    constructor. all:constructor; auto.
+    rewrite GlobalContextMap.lookup_projection_spec.
+    destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] => /= //.
+    2:constructor; eauto; solve_all.
+    destruct proj as [[ind npars] arg].
+    econstructor; eauto. repeat constructor.
   - cbn. eapply expanded_tFix. solve_all.
     rewrite isLambda_optimize //.
   - eapply expanded_tConstruct_app; tea.
@@ -834,31 +765,45 @@ Proof.
   now unshelve eapply (optimize_expanded_decl (Σ:=Σ')).
 Qed.
 
+Definition disable_projections_term_flags (et : ETermFlags) := 
+  {| has_tBox := has_tBox
+    ; has_tRel := has_tRel
+    ; has_tVar := has_tVar
+    ; has_tEvar := has_tEvar
+    ; has_tLambda := has_tLambda
+    ; has_tLetIn := has_tLetIn
+    ; has_tApp := has_tApp
+    ; has_tConst := has_tConst
+    ; has_tConstruct := has_tConstruct
+    ; has_tCase := true
+    ; has_tProj := false
+    ; has_tFix := has_tFix
+    ; has_tCoFix := has_tCoFix
+  |}.
+
+Definition disable_projections_env_flag (efl : EEnvFlags) := 
+  {| has_axioms := true;
+     term_switches := disable_projections_term_flags term_switches;
+     has_cstr_params := true |}.
+
 Lemma optimize_wellformed {efl : EEnvFlags} {Σ : GlobalContextMap.t} n t :
   has_tBox -> has_tRel ->
-  wf_glob Σ -> EWellformed.wellformed Σ n t -> EWellformed.wellformed Σ n (optimize Σ t).
+  wf_glob Σ -> EWellformed.wellformed Σ n t -> 
+  EWellformed.wellformed (efl := disable_projections_env_flag efl) Σ n (optimize Σ t).
 Proof.
-  intros wfΣ hbox hrel.
+  intros hbox hrel wfΣ.
   induction t in n |- * using EInduction.term_forall_list_ind => //.
   all:try solve [cbn; rtoProp; intuition auto; solve_all].
-  - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/and3P => [] hasc /andP[]hs ht hbrs.
-    destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
-    destruct l as [|[br n'] [|l']] eqn:eql; simpl.
-    all:rewrite ?hasc ?hs /= ?andb_true_r.
-    rewrite IHt //.
-    depelim X. cbn in hbrs.
-    rewrite andb_true_r in hbrs.
-    specialize (i _ hbrs).
-    eapply wellformed_substl => //. solve_all. eapply All_repeat => //.
-    now rewrite repeat_length.
-    cbn in hbrs; rtoProp; solve_all. depelim X; depelim X. solve_all.
-    do 2 depelim X. solve_all.
-    do 2 depelim X. solve_all.
-    rtoProp; solve_all. solve_all.
-    rtoProp; solve_all. solve_all.
-  - cbn -[GlobalContextMap.inductive_isprop_and_pars lookup_inductive]. move/andP => [] /andP[]hasc hs ht.
-    destruct GlobalContextMap.inductive_isprop_and_pars as [[[|] _]|] => /= //.
-    all:rewrite hasc hs /=; eauto.
+  - simpl. destruct lookup_constant => //.
+    move/andP => [] hasc _ => //. now rewrite hasc.
+  - cbn. move/andP => [] /andP[] hast hl wft.
+    rewrite GlobalContextMap.lookup_projection_spec.
+    destruct lookup_projection as [[[[mdecl idecl] cdecl] pdecl]|] eqn:hl'; auto => //.
+    simpl. 
+    rewrite (lookup_constructor_lookup_inductive (lookup_projection_lookup_constructor hl')) /=.
+    rewrite hrel IHt //= andb_true_r.
+    have hargs' := wellformed_projection_args wfΣ hl'.
+    apply Nat.ltb_lt. len.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
     unfold test_def in *. len. eauto.
   - cbn. unfold wf_fix; rtoProp; intuition auto; solve_all. now len.
@@ -869,14 +814,14 @@ Import EWellformed.
 
 Lemma optimize_wellformed_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} t :
   wf_glob Σ ->
-  forall n, wellformed Σ n t -> wellformed (optimize_env Σ) n t.
+  forall n, wellformed (efl := disable_projections_env_flag efl) Σ n t -> 
+  wellformed (efl := disable_projections_env_flag efl) (optimize_env Σ) n t.
 Proof.
   intros wfΣ. induction t using EInduction.term_forall_list_ind; cbn => //.
   all:try solve [intros; unfold wf_fix_gen in *; rtoProp; intuition eauto; solve_all].
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
-    destruct g eqn:hg => /= //. subst g.
-    destruct (cst_body c) => //.
+    destruct g eqn:hg => /= //.
   - rewrite lookup_env_optimize //.
     destruct lookup_env eqn:hl => // /=.
     destruct g eqn:hg => /= //. 
@@ -885,17 +830,12 @@ Proof.
     destruct g eqn:hg => /= //. subst g.
     destruct nth_error => /= //.
     intros; rtoProp; intuition auto; solve_all.
-  - rewrite lookup_env_optimize //.
-    destruct lookup_env eqn:hl => // /=.
-    destruct g eqn:hg => /= //.
-    rewrite andb_false_r => //.
-    destruct nth_error => /= //.
-    all:intros; rtoProp; intuition auto; solve_all.
 Qed.
 
 Lemma optimize_wellformed_decl_irrel {efl : EEnvFlags} {Σ : GlobalContextMap.t} d :
   wf_glob Σ ->
-  wf_global_decl Σ d -> wf_global_decl (optimize_env Σ) d.
+  wf_global_decl (efl:= disable_projections_env_flag efl) Σ d -> 
+  wf_global_decl (efl := disable_projections_env_flag efl) (optimize_env Σ) d.
 Proof.
   intros wf; destruct d => /= //.
   destruct (cst_body c) => /= //.
@@ -904,15 +844,18 @@ Qed.
 
 Lemma optimize_decl_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
   has_tBox -> has_tRel -> wf_glob Σ -> 
-  forall d, wf_global_decl Σ d -> wf_global_decl (optimize_env Σ) (optimize_decl Σ d).
+  forall d, wf_global_decl Σ d -> 
+  wf_global_decl (efl := disable_projections_env_flag efl) (optimize_env Σ) (optimize_decl Σ d).
 Proof.
   intros hasb hasr wf d.
   intros hd.
-  eapply optimize_wellformed_decl_irrel; tea.
+  eapply optimize_wellformed_decl_irrel; tea; eauto.
   move: hd.
   destruct d => /= //.
   destruct (cst_body c) => /= //.
-  now eapply optimize_wellformed => //.
+  intros hwf. eapply optimize_wellformed => //. auto.
+  destruct efl => //. destruct m => //. cbn. unfold wf_minductive.
+  cbn. move/andP => [] hp //.
 Qed.
 
 Lemma fresh_global_optimize_env {Σ : GlobalContextMap.t} kn : 
@@ -926,7 +869,7 @@ Qed.
 
 Lemma optimize_env_wf {efl : EEnvFlags} {Σ : GlobalContextMap.t} :
   has_tBox -> has_tRel -> 
-  wf_glob Σ -> wf_glob (optimize_env Σ).
+  wf_glob Σ -> wf_glob (efl := disable_projections_env_flag efl) (optimize_env Σ).
 Proof.
   intros hasb hasrel.
   intros wfg. rewrite optimize_env_eq //.
@@ -940,10 +883,10 @@ Proof.
 Qed.
 
 Definition optimize_program (p : eprogram_env) :=
-  (EOptimizePropDiscr.optimize_env p.1, EOptimizePropDiscr.optimize p.1 p.2).
+  (optimize_env p.1, optimize p.1 p.2).
 
-Definition optimize_program_wf {efl} (p : eprogram_env) {hastbox : has_tBox} {hastrel : has_tRel} :
-  wf_eprogram_env efl p -> wf_eprogram efl (optimize_program p).
+Definition optimize_program_wf {efl : EEnvFlags} (p : eprogram_env) {hastbox : has_tBox} {hastrel : has_tRel} :
+  wf_eprogram_env efl p -> wf_eprogram (disable_projections_env_flag efl) (optimize_program p).
 Proof.
   intros []; split.
   now eapply optimize_env_wf.

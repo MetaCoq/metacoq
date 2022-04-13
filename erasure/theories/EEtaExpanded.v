@@ -472,9 +472,9 @@ Inductive expanded : term -> Prop :=
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) :  
   Forall (fun d => isLambda d.(dbody) /\ expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : Forall (fun d => expanded d.(dbody)) mfix -> expanded (tCoFix mfix idx)
-| expanded_tConstruct_app ind idx mind idecl cname c args :
-    declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
-    #|args| >= ind_npars mind + c -> 
+| expanded_tConstruct_app ind idx mind idecl cdecl args :
+    declared_constructor Σ (ind, idx) mind idecl cdecl ->
+    #|args| >= cstr_arity mind cdecl -> 
     Forall expanded args ->
     expanded (mkApps (tConstruct ind idx) args)
 | expanded_tBox : expanded tBox.
@@ -511,10 +511,10 @@ forall (Σ : global_declarations) (P : term -> Prop),
  Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix ->
  P (tCoFix mfix idx)) ->
 (forall (ind : inductive) (idx : nat) (mind : mutual_inductive_body)
-   (idecl : one_inductive_body) (cname : ident) (c : nat) 
+   (idecl : one_inductive_body) cdecl
    (args : list term),
- declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
- #|args| >= ind_npars mind + c -> Forall (expanded Σ) args -> Forall P args -> P (mkApps (tConstruct ind idx) args)) ->
+ declared_constructor Σ (ind, idx) mind idecl cdecl ->
+ #|args| >= cstr_arity mind cdecl -> Forall (expanded Σ) args -> Forall P args -> P (mkApps (tConstruct ind idx) args)) ->
 (P tBox) ->
 forall t : term, expanded Σ t -> P t.
 Proof. 
@@ -557,8 +557,8 @@ Definition expanded_eprogram_env_cstrs (p : eprogram_env) :=
 
 Lemma isEtaExp_app_expanded Σ ind idx n :
    isEtaExp_app Σ ind idx n = true <->
-   exists mind idecl cname c,
-   declared_constructor Σ (ind, idx) mind idecl (cname, c) /\ n ≥ ind_npars mind + c.
+   exists mind idecl cdecl,
+   declared_constructor Σ (ind, idx) mind idecl cdecl /\ n ≥ cstr_arity mind cdecl.
 Proof.
   unfold isEtaExp_app, lookup_constructor_pars_args, lookup_constructor, lookup_inductive, lookup_minductive.
   split.
@@ -567,14 +567,14 @@ Proof.
     destruct nth_error as [ idecl | ] eqn:E2; cbn in H; try congruence.
     destruct (nth_error (E.ind_ctors idecl) idx) as [ [cname ?] | ] eqn:E3; cbn in H; try congruence.
     repeat esplit.
-    red. all: eauto. eapply leb_iff in H. lia.
-  - intros (? & ? & ? & ? & [[]] & Hle).
+    red. all: eauto. unfold cstr_arity; cbn. eapply leb_iff in H. lia.
+  - intros (? & ? & ? & [[]] & Hle).
     rewrite H. cbn. rewrite H0. cbn. rewrite H1. cbn.
     eapply leb_iff. eauto.
 Qed.
 
-Lemma expanded_isEtaExp_app_ Σ ind idx n  mind idecl cname c :
-   declared_constructor Σ (ind, idx) mind idecl (cname, c) -> n ≥ ind_npars mind + c ->
+Lemma expanded_isEtaExp_app_ Σ ind idx n mind idecl cdecl :
+   declared_constructor Σ (ind, idx) mind idecl cdecl -> n ≥ cstr_arity mind cdecl ->
    isEtaExp_app Σ ind idx n = true.
 Proof.
   intros. eapply isEtaExp_app_expanded. eauto 8.
@@ -587,7 +587,7 @@ Proof.
   - rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. eapply In_All in H.
     econstructor. solve_all.
   - eapply andb_true_iff in H1 as []; eauto.
-  - eapply isEtaExp_app_expanded in H as (? & ? & ? & ? & ? & ?).
+  - eapply isEtaExp_app_expanded in H as (? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app with (args := []); eauto.
   - eapply andb_true_iff in H1 as []. destruct ind. econstructor; eauto.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2. 
@@ -600,7 +600,7 @@ Proof.
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.
     rewrite forallb_InP_spec in H1. eapply forallb_Forall in H1.
-    eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ? & ?).
+    eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app; eauto. solve_all.
   - eapply andb_true_iff in H1 as []. rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.
     econstructor.

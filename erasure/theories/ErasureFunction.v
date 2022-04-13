@@ -827,7 +827,7 @@ Qed.
 
 Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
   (* Projection and constructor types are types, hence always erased *)
-  let ctors := map (fun cdecl => (cdecl.(cstr_name), cdecl.(cstr_arity))) oib.(ind_ctors) in
+  let ctors := map (fun cdecl => EAst.mkConstructor cdecl.(cstr_name) cdecl.(cstr_arity)) oib.(ind_ctors) in
   let projs := map (fun '(x, y) => x) oib.(ind_projs) in
   let is_propositional := 
     match destArity [] oib.(ind_type) with
@@ -1202,13 +1202,25 @@ Proof.
     elimtype False. destruct H0 as [cst [declc _]].
     { red in declc. destruct d as [[[d _] _] _]. red in d. rewrite d in declc. noconf declc. }
     destruct H0 as [mib [mib' [declm [declm' em]]]].
-    destruct d. pose proof em as em'. destruct em'.
-    eapply Forall2_nth_error_left in H5 as (x' & ? & ?); eauto.
-    econstructor; eauto. split; eauto.
-    
-    eauto.
-    destruct H0 as [[? ?] ?]. red in H0, declm. rewrite H0 in declm. now noconf declm.
-    destruct H0 as [[? ?] ?]. red in H0, declm. rewrite H0 in declm. now noconf declm.
+    assert (mib = x0).
+    { destruct d as [[[]]].
+      red in H0, declm. rewrite H0 in declm. now noconf declm. } 
+    subst x0.
+    pose proof em as em'. destruct em'.
+    eapply Forall2_nth_error_left in H0 as (x' & ? & ?); eauto.
+    2:{ apply d. }
+    simpl in *.
+    destruct (ind_ctors x1) => //. noconf H3.
+    set (H1' := H5). destruct H1' as [].
+    set (d' := d). destruct d' as [[[]]].
+    eapply Forall2_All2 in H3. eapply All2_nth_error_Some in H3 as [? [? []]]; tea.
+    destruct H6 as [Hprojs _].
+    eapply Forall2_All2 in Hprojs. eapply All2_nth_error_Some in Hprojs as [? []]; tea.
+    2:eapply d.
+    econstructor; tea. all:eauto.
+    split => //. 2:split; eauto.
+    split; eauto. split; eauto.
+    rewrite -H4. symmetry; apply d.
     
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.
@@ -1270,6 +1282,8 @@ Proof.
     eapply lookup_env_Some_fresh in H. subst kn; contradiction.
   - econstructor; eauto.
     red. destruct H. split; eauto.
+    destruct d0; split; eauto.
+    destruct d0; split; eauto.
     inv wfΣ. inv X.
     red in H |- *.
     rewrite -H. simpl. unfold lookup_env; simpl; destruct (eqb_spec (inductive_mind p.1.1) kn); try congruence.
@@ -1404,18 +1418,17 @@ Proof.
 Qed.
 
 Lemma erases_mutual {Σ mdecl m} : 
-  wf Σ ->
-  declared_minductive Σ mdecl m ->
+  on_inductive (lift_typing typing) (Σ, ind_universes m) mdecl m ->
   erases_mutual_inductive_body m (erase_mutual_inductive_body m).
 Proof.
+  intros oni.
   destruct m; constructor; simpl; auto.
-  eapply on_declared_minductive in H; auto. simpl in H. clear X.
-  eapply onInductives in H; simpl in *.
+  eapply onInductives in oni; simpl in *.
   assert (Alli (fun i oib => 
     match destArity [] oib.(ind_type) with Some _ => True | None => False end) 0 ind_bodies0).
   { eapply Alli_impl; eauto.
     simpl. intros n x []. simpl in *. rewrite ind_arity_eq.
-    rewrite !destArity_it_mkProd_or_LetIn /= //. } clear H.
+    rewrite !destArity_it_mkProd_or_LetIn /= //. } clear oni.
   induction X; constructor; auto.
   destruct hd; constructor; simpl; auto.
   clear.
@@ -1526,8 +1539,10 @@ Proof.
           simpl. rewrite sub.
           red. cbn. rewrite eq_kername_refl.
           reflexivity.
-          eapply erases_mutual. exact wfΣ.
-          rewrite /declared_minductive /= /lookup_env e /=; rewrite -> eq_kername_refl => //. }
+          assert (declared_minductive Σ kn m).
+          { red. unfold lookup_env. rewrite e. cbn. now rewrite eqb_refl. }
+          eapply on_declared_minductive in H0; tea.
+          now eapply erases_mutual. }
 
     * intros ikn Hi.
       set (Σp := {| universes := Σ.(universes); declarations := g |}).
@@ -1778,7 +1793,9 @@ Qed.
 Lemma erase_global_declared_constructor (Σ : wf_env) ind c mind idecl cdecl deps :
    declared_constructor Σ (ind, c) mind idecl cdecl ->
    KernameSet.In ind.(inductive_mind) deps -> 
-   EGlobalEnv.declared_constructor (erase_global deps Σ) (ind, c) (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl) (cdecl.(cstr_name), cdecl.(cstr_arity)).
+   EGlobalEnv.declared_constructor (erase_global deps Σ) (ind, c) 
+    (erase_mutual_inductive_body mind) (erase_one_inductive_body idecl) 
+    (EAst.mkConstructor cdecl.(cstr_name) cdecl.(cstr_arity)).
 Proof.
   intros [[]] Hin.
   cbn in *. split. split. 
@@ -2038,7 +2055,7 @@ Proof.
            { rewrite map_erase_length. destruct H4 as ((? & ? & ? & ? & ?) & ? & ?).
            unshelve edestruct @declared_constructor_inv as (? & ? & ?); eauto.
            shelve. eapply weaken_env_prop_typing. 
-           2: erewrite <- cstr_args_length; eauto; lia.
+           2:{ cbn. erewrite <- cstr_args_length; eauto; lia. }
            eapply wf.
            }
            solve_all. clear - deps H2.
@@ -2155,7 +2172,6 @@ Section wffix.
 
 End wffix.
 
-
 Lemma erases_deps_wellformed (cf := config.extraction_checker_flags) (efl := all_env_flags) {Σ} {Σ'} et :
   erases_deps Σ Σ' et ->
   forall n, ELiftSubst.closedn n et ->
@@ -2173,8 +2189,8 @@ Proof.
     * now destruct H0 as [-> ->].
     * now move/andP: H6.
     * move/andP: H6; solve_all.
-  - cbn in *. apply/andP; split; eauto.
-    now destruct H0 as [-> ->].
+  - cbn -[lookup_projection] in *. apply/andP; split; eauto.
+    now rewrite (declared_projection_lookup H0).
 Qed.
 
 Lemma erases_wf_fixpoints Σ Γ t t' : Σ;;; Γ |- t ⇝ℇ t' -> 
@@ -2261,7 +2277,7 @@ Proof.
   now simpl in H.
 Qed.
 
-Lemma erase_global_decl_wf_glob Σ deps decls heq :
+Lemma erase_global_cst_decl_wf_glob Σ deps decls heq :
   forall cb wfΣ hcb,
   let ecb := erase_constant_body (make_wf_env_ext Σ (cst_universes cb) wfΣ) cb hcb in
   let Σ' := erase_global_decls (KernameSet.union deps ecb.2) Σ decls heq in
@@ -2278,6 +2294,25 @@ Proof.
   destruct p. rewrite e in i. exact i.  
 Qed.
 
+Lemma erase_global_ind_decl_wf_glob {Σ : wf_env} {deps decls kn m} (heq : declarations Σ = decls) :
+  on_inductive (lift_typing typing) (Σ, ind_universes m) kn m ->
+  let m' := erase_mutual_inductive_body m in
+  let Σ' := erase_global_decls deps Σ decls heq in
+  @wf_global_decl all_env_flags Σ' (EAst.InductiveDecl m').
+Proof.
+  set (m' := erase_mutual_inductive_body m).
+  set (Σ' := erase_global_decls _ _ _ _). simpl.
+  intros oni.
+  pose proof (referenced_impl_wf Σ) as [wfΣ].
+  assert (erases_mutual_inductive_body m (erase_mutual_inductive_body m)).
+  { eapply (erases_mutual (mdecl:=kn)); tea. }
+  eapply (erases_mutual_inductive_body_wf (univs := Σ.(universes)) (Σ := decls) (kn := kn) (Σ' := Σ')) in H; tea.
+  simpl. rewrite -heq.
+  destruct Σ ; cbn in *.
+  destruct wf_env_referenced; cbn in *.
+  now destruct referenced_impl_env; cbn in *.
+Qed.
+
 Lemma erase_global_decls_wf_glob Σ deps decls heq :
   let Σ' := erase_global_decls deps Σ decls heq in
   @wf_glob all_env_flags Σ'.
@@ -2287,13 +2322,16 @@ Proof.
   induction decls; [cbn; auto|].
   { intros. constructor. }
   intros. destruct a as [kn []]; simpl; destruct KernameSet.mem.
-  + constructor. eapply IHdecls => //. eapply erase_global_decl_wf_glob; auto.
+  + constructor. eapply IHdecls => //. eapply erase_global_cst_decl_wf_glob; auto.
     eapply erase_global_decls_fresh; auto.
     destruct Σ.(referenced_impl_wf).
     destruct X. rewrite heq in o0. now depelim o0.
   + cbn.
     eapply IHdecls.
-  + constructor. eapply IHdecls. constructor.
+  + constructor. eapply IHdecls.
+    destruct Σ.(referenced_impl_wf) as [[onu ond]].
+    rewrite heq in ond. depelim ond.
+    eapply (erase_global_ind_decl_wf_glob (kn:=kn)); tea.
     eapply erase_global_decls_fresh.
     destruct Σ.(referenced_impl_wf) as [[onu ond]].
     rewrite heq in ond. now depelim ond.
@@ -2332,7 +2370,7 @@ Proof.
       eapply erase_global_wf_glob.
       unfold decl. unfold hidebody.
       constructor. eapply erase_global_wf_glob.
-      eapply erase_global_decl_wf_glob.
+      eapply erase_global_cst_decl_wf_glob.
       depelim wfΣ. depelim w. cbn in o0. depelim o0.
       eapply erase_global_decls_fresh => //.
       eapply IHΣ.
@@ -2344,7 +2382,10 @@ Proof.
       apply EExtends.global_subset_cons. eapply IHΣ => //.
     + destruct (KernameSet.mem kn' deps') eqn:eq'.
       eapply EExtends.global_subset_cons_right. eapply erase_global_wf_glob.
-      constructor. eapply erase_global_wf_glob. constructor.
+      constructor. eapply erase_global_wf_glob.
+      depelim wfΣ.
+      eapply (erase_global_ind_decl_wf_glob (kn:=kn')). cbn.
+      depelim w. now depelim o0.
       eapply erase_global_decls_fresh => //.
       clear -wfΣ. destruct wfΣ. destruct X as [onu ond]; cbn in *. now depelim ond.
       eapply IHΣ. intros x hin. now eapply sub.

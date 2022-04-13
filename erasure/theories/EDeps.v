@@ -378,9 +378,9 @@ Lemma erases_deps_forall_ind Σ Σ'
         Forall (fun br : _ × Extract.E.term => erases_deps Σ Σ' br.2) brs ->
         Forall (fun br => P br.2) brs ->
         P (Extract.E.tCase p discr brs))
-  (Hproj : forall (p : projection) mdecl idecl mdecl' idecl' (t : Extract.E.term),
-        PCUICAst.declared_inductive Σ p.1.1 mdecl idecl ->
-        EGlobalEnv.declared_inductive Σ' p.1.1 mdecl' idecl' ->
+  (Hproj : forall (p : projection) mdecl idecl cdecl pdecl mdecl' idecl' cdecl' pdecl' (t : Extract.E.term),
+        PCUICAst.declared_projection Σ p mdecl idecl cdecl pdecl ->
+        EGlobalEnv.declared_projection Σ' p mdecl' idecl' cdecl' pdecl' ->
         erases_mutual_inductive_body mdecl mdecl' ->
         erases_one_inductive_body idecl idecl' ->
         erases_deps Σ Σ' t -> P t -> P (Extract.E.tProj p t))
@@ -520,20 +520,21 @@ Proof.
     destruct H as [H _].
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
   - econstructor; eauto.
-    destruct H as [H H'].
-    split; eauto. red in H |- *.
-    inv wfΣ. unfold PCUICEnvironment.lookup_env.
-    simpl.
+    destruct H as [[[declm decli] declc] [declp hp]].
+    repeat split; eauto.
+    inv wfΣ. unfold PCUICAst.declared_minductive in *.
+    unfold PCUICEnvironment.lookup_env.
+    simpl in *.
     change (eq_kername (inductive_mind p.1.1) kn) with (ReflectEq.eqb (inductive_mind p.1.1) kn); auto.
     destruct (ReflectEq.eqb_spec (inductive_mind p.1.1) kn). subst.
-    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H; eauto. contradiction.
-    apply H.
-    destruct H0 as [H0 H0'].
-    split; eauto. red in H0 |- *.
-    inv wfΣ. simpl.
+    eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in declm; eauto. contradiction.
+    apply declm.
+    destruct H0 as [[[]]]. destruct a.
+    repeat split; eauto.
+    inv wfΣ. simpl. unfold declared_minductive. cbn.
     change (eq_kername (inductive_mind p.1.1) kn) with (ReflectEq.eqb (inductive_mind p.1.1) kn); auto.
     destruct (ReflectEq.eqb_spec (inductive_mind p.1.1) kn); auto. subst.
-    destruct H as [H _].
+    destruct H as [[[]]].
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
 Qed.
 
@@ -558,7 +559,7 @@ Lemma erases_declared_constructor {Σ : global_env_ext} Σ' kn k mind idecl cdec
   globals_erased_with_deps Σ Σ' ->
   exists mind' idecl', (* declared_inductive Σ' (kn, k).1 mind' idecl' ->
   erases_one_inductive_body idecl idecl' -> *)
-  declared_constructor Σ' (kn, k) mind' idecl' (cstr_name cdecl, PCUICEnvironment.cstr_arity cdecl) /\
+  declared_constructor Σ' (kn, k) mind' idecl' (mkConstructor (PCUICEnvironment.cstr_name cdecl) (PCUICEnvironment.cstr_arity cdecl)) /\
   erases_one_inductive_body idecl idecl' /\
   erases_mutual_inductive_body mind mind'.
 Proof.
@@ -572,7 +573,7 @@ Proof.
   destruct H4 as (? & ? & ? & ? & ?).
   eapply Forall2_nth_error_Some_l in H1 as ([] & ? & ? & ?); subst; eauto.
   eexists. eexists. split; [ | split]; eauto.
-  repeat eapply conj; try eassumption.
+  repeat eapply conj; try eassumption. cbn in *. now rewrite H8, H9.
 Qed.
 
 Lemma erases_deps_single Σ Σ' Γ t T et :
@@ -620,9 +621,14 @@ Proof.
 
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj2 Σer _ _ _ (proj1 (proj1 d))) as (? & ? & ? & ?).
-    econstructor; eauto. eapply d.   
-    destruct d as [[[declm decli] declc] _]. destruct H1. destruct H0.
-    eapply Forall2_All2 in H1. eapply All2_nth_error in H1; eauto.
+    destruct d as [[[declm decli] declc] [declp hp]].
+    set (H1' := H1). destruct H1'.
+    eapply Forall2_All2 in H2. eapply All2_nth_error_Some in H2 as [bod' [hnth' ebod']]; eauto.
+    set (H1' := ebod'). destruct H1' as [Hctors [Hprojs _]].
+    eapply Forall2_All2 in Hctors. eapply All2_nth_error_Some in Hctors as [ctor' [hnth'' [Hctor' Hctor'']]]; eauto.
+    eapply Forall2_All2 in Hprojs. eapply All2_nth_error_Some in Hprojs as [proj' [hnthp ?]]; eauto.
+    econstructor; eauto. repeat split; eauto.
+    repeat split; eauto. cbn. apply H0. now rewrite <- H3, hp.
  
   - constructor.
     apply inversion_Fix in wt as (?&?&?&?&?&?&?); eauto.

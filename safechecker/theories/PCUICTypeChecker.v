@@ -296,13 +296,15 @@ Section Typecheck.
     conv_pb_relb_gen pb equ eqlu u u' = 
     conv_pb_relb_gen pb equ' eqlu' u u'.
    now destruct pb.
-  Defined.   
+  Qed.   
 
   Obligation Tactic := simpl in *; 
     Tactics.program_simplify;
     (* try unsquash_wf_env; *)
     CoreTactics.equations_simpl; 
     try Tactics.program_solve_wf.
+
+  Opaque isconv_term. 
 
   (* replaces convert and convert_leq*)
   Equations convert (le : conv_pb) Γ t u
@@ -349,6 +351,7 @@ Section Typecheck.
     specialize_Σ wfΣ.
     eapply isconv_term_complete in Hc; eauto.
   Qed.
+  Transparent isconv_term.
 
   Definition wt_decl (Σ : global_env_ext) Γ d :=
     match d with
@@ -373,12 +376,12 @@ Section Typecheck.
       eapply validity_wf ; eauto.
       sq.
       now eapply infering_typing. 
-    Defined.
+    Qed.
     Next Obligation.
       specialize_Σ wfΣ. sq.
       econstructor ; tea.
       now eapply closed_red_red.
-    Defined.
+    Qed.
     Next Obligation.
       destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
@@ -404,7 +407,7 @@ Section Typecheck.
     Next Obligation.
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
       now eapply infering_sort_isType.
-    Defined.
+    Qed.
     Next Obligation.
       destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       pose (hΣ _ wfΣ). specialize_Σ wfΣ. sq.
@@ -931,7 +934,7 @@ Section Typecheck.
     inspect (abstract_env_lookup X ind.(inductive_mind)) := {
       | @exist (Some (InductiveDecl decl)) _ 
           with inspect (nth_error decl.(ind_bodies) ind.(inductive_ind)) := {
-            | @exist (Some body) _ => ret _ ;
+            | @exist (Some body) _ => ret (decl; (body; _)) ;
             | @exist None _ => raise (UndeclaredInductive ind)
           };
       | @exist _ _ := raise (UndeclaredInductive ind) ;
@@ -942,33 +945,32 @@ Section Typecheck.
     depelim X2. 
     unfold declared_minductive in H. erewrite <- e0 in H.   
     congruence. 
-  Defined.
+  Qed.
   Next Obligation.
-    exists decl, body. intros. 
     erewrite <- abstract_env_lookup_correct in e; eauto. 
     now split.
-  Defined.
+  Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct in e1; eauto.  
     depelim X2. 
     unfold declared_minductive in H. erewrite <- e1 in H.   
     congruence.     
-  Defined. 
+  Qed. 
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
     erewrite <- abstract_env_lookup_correct in e0; eauto.  
     depelim X2. 
     unfold declared_minductive in H. erewrite <- e0 in H.   
     congruence.
-  Defined.  
+  Qed.  
   
   Definition abstract_env_level_mem_forallb {Σ} (wfΣ : abstract_env_ext_rel X Σ) u : 
     forallb (level_mem Σ) u = forallb (abstract_env_level_mem X) u.
   Proof. 
     induction u; eauto; cbn.
     erewrite <- abstract_env_level_mem_correct; eauto. intuition. 
-  Defined.  
+  Qed.  
 
   Equations check_consistent_instance  uctx (wfg : forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ global_uctx_invariants (global_ext_uctx (Σ.1, uctx)) ∥) 
     u
@@ -1000,7 +1002,7 @@ Section Typecheck.
     }
     repeat split; eauto. 
     - now rewrite mapi_length in e1.
-    - sq. eapply abstract_env_check_constraints_correct; eauto. 
+    - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
       now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ]. 
       eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
       solve_all.
@@ -1160,7 +1162,7 @@ Section Typecheck.
       eapply branch_helper in i; tea.
       specialize_Σ wfΣ; sq.
       now destruct i as [? []].
-    Defined.
+    Qed.
     Next Obligation.
       eapply branch_helper in i; tea.
       pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ; sq.
@@ -1180,7 +1182,7 @@ Section Typecheck.
       split.
       * now eapply All2_fold_All2 in check_eq_bcontext.
       * now destruct i as [? []].
-    Defined.
+    Qed.
     Next Obligation.
       apply absurd. intros; specialize_Σ wfΣ; sq.
       now depelim H.
@@ -1354,7 +1356,7 @@ Section Typecheck.
 
   infer Γ HΓ (tApp t u) :=
     ty <- infer Γ HΓ t ;;
-    pi <- reduce_to_prod Γ ty.π1 _ ;;
+    pi <- reduce_to_prod (X_type := X_type) Γ ty.π1 _ ;;
     bdcheck infer Γ HΓ u pi.π2.π1 _ ;;
     ret (subst10 u pi.π2.π2.π1; _) ;
 
@@ -1385,7 +1387,7 @@ Section Typecheck.
 
   infer Γ HΓ (tCase ci p c brs) :=
     cty <- infer Γ HΓ c ;;
-    I <- reduce_to_ind Γ cty.π1 _ ;;
+    I <- reduce_to_ind (X_type := X_type) Γ cty.π1 _ ;;
     (*let (ind';(u;(args;H))) := I in*)
     let ind' := I.π1 in let u := I.π2.π1 in let args := I.π2.π2.π1 in
     check_eq_true (eqb ci.(ci_ind) ind')
@@ -1400,7 +1402,7 @@ Section Typecheck.
                   (Msg "not the right number of parameters") ;;
     (* check_eq_true (eqb (ind_relevance idecl) ci.(ci_relevance))
                   (Msg "invalid relevance annotation on case") ;; *)
-    (*let '(params, indices) := chop ci.(ci_npar) args in *)
+    (* let '(params, indices) := chop ci.(ci_npar) args in *)
     let chop_args := chop ci.(ci_npar) args
     in let params := chop_args.1 in let indices := chop_args.2 in
     cu <- check_consistent_instance (ind_universes mdecl) _ p.(puinst) ;;
@@ -1427,7 +1429,7 @@ Section Typecheck.
         | exist None _ := raise (Msg "projection not found") ;
         | exist (Some pdecl) HH =>
             c_ty <- infer Γ HΓ c ;;
-            I <- reduce_to_ind Γ c_ty.π1 _ ;;
+            I <- reduce_to_ind (X_type := X_type) Γ c_ty.π1 _ ;;
             (*let (ind';(u;(args;H))) := I in*)
             let ind' := I.π1 in let u := I.π2.π1 in let args := I.π2.π2.π1 in
             check_eq_true (eqb ind ind')
@@ -1457,7 +1459,7 @@ Section Typecheck.
       guarded <- check_eq_true (abstract_env_cofixguard X Γ mfix) (Msg "Unguarded cofixpoint") ;;
       wfcofix <- check_eq_true (wf_cofixpoint_gen (abstract_env_lookup X) mfix) (Msg "Ill-formed cofixpoint: not producing values in a mutually coinductive family") ;;
       ret (dtype decl; _)
-    } .
+    }.
 
   (* infer Γ HΓ (tPrim _) := raise (Msg "Primitive types are not supported"). *)
 
@@ -1567,7 +1569,6 @@ Section Typecheck.
     Unshelve. all: eauto.  
   Qed.
   (* tApp *)
-  Next Obligation. exact X_type. Defined.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ].
     specialize_Σ wfΣ ; sq. 
@@ -1731,12 +1732,11 @@ Section Typecheck.
   Qed.
 
   (* tCase *)
-  Next Obligation. exact X_type. Defined.
-  Next Obligation.
+  Next Obligation. 
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply infering_typing, validity in X0 as []; eauto.
     eexists; eauto using validity_wf.
-  Defined.
+  Qed.
   Next Obligation.
     cbn in *. pose proof (heΣ _ wfΣ) as [heΣ]. specialize_Σ wfΣ ; sq. 
     eapply global_uctx_invariants_ext.
@@ -1902,7 +1902,7 @@ Section Typecheck.
   Qed.
 
   Next Obligation.
-    intros; clearbody isty wfp.
+    intros; clearbody isty wfp. cbn.
     destruct cty as [A cty].
     subst ind' u args mdecl idecl isdecl.
     destruct I as [ind' [u [args s]]].
@@ -2261,13 +2261,12 @@ Section Typecheck.
   Obligation Tactic := Program.Tactics.program_simplify ; eauto 2.
 
   (* tProj *)
-  Next Obligation. Defined.
   Next Obligation. 
     pose proof (heΣ _ wfΣ) as [heΣ].   
     cbn in *. specialize_Σ wfΣ ; sq. 
     eapply validity_wf ; eauto. sq. 
     now eapply infering_typing. 
-  Defined.
+  Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [heΣ].   
     cbn in *. specialize_Σ wfΣ ; sq. 
@@ -2387,7 +2386,7 @@ Section Typecheck.
   Proof.
     unfold  check_recursivity_kind. 
     erewrite <- abstract_env_lookup_correct; eauto.
-  Defined.
+  Qed.
 
   Definition abstract_wf_fixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
      wf_fixpoint_gen (abstract_env_lookup X) mfix =
@@ -2397,7 +2396,7 @@ Section Typecheck.
     destruct (map_option_out (map check_one_fix mfix)); simpl; eauto.
     induction l; eauto.
     erewrite abstract_check_recursivity_kind; eauto. 
-  Defined. 
+  Qed. 
 
   Definition abstract_wf_cofixpoint mfix Σ (wfΣ: abstract_env_ext_rel X Σ): 
      wf_cofixpoint_gen (abstract_env_lookup X) mfix =
@@ -2407,7 +2406,7 @@ Section Typecheck.
     destruct (map_option_out (map check_one_cofix mfix)); simpl; eauto.
     induction l; eauto.
     erewrite abstract_check_recursivity_kind; eauto. 
-  Defined. 
+  Qed. 
 
   (* tFix *)
   Next Obligation.

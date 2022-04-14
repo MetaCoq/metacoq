@@ -2508,17 +2508,21 @@ End monad_Alli_nth_forall.
 
   Obligation Tactic := Program.Tactics.program_simpl.
 
-  Program Definition typecheck_program (p : program) φ
-    : EnvCheck X_env_ext_type (∑ A, ∑ X:X_env_ext_type, ∥ abstract_env_ext_rel X (p.1, φ) × 
-                                                          wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥) :=
-    '(exist X pf) <- check_wf_ext (p.1, φ) ;;
-    inft <- infer_term X p.2 ;;
-    ret (inft.π1; _).
-  Next Obligation. exists x. 
-    cbn. specialize_Σ pf. pose proof (abstract_env_ext_wf _ pf).
+  Definition EnvCheck_X_env_ext_type {cf:checker_flags} := EnvCheck X_env_ext_type. 
+
+  Instance Monad_EnvCheck_X_env_ext_type {cf:checker_flags} : Monad EnvCheck_X_env_ext_type := _.
+
+ Program Definition typecheck_program (p : program) φ
+    : EnvCheck_X_env_ext_type (∑ A, { X: X_env_ext_type | ∥ abstract_env_ext_rel X (p.1, φ) × 
+                                                          wf_ext (p.1, φ) × (p.1, φ) ;;; [] |- p.2 ▹ A ∥}) :=
+    '(exist xx pf) <- check_wf_ext (p.1, φ) ;;
+    inft <- infer_term xx p.2 ;;
+    ret (inft.π1; (exist xx _)).
+  Next Obligation.
+    cbn in *. specialize_Σ pf. pose proof (abstract_env_ext_wf _ pf).
     sq. split; auto.
   Qed.
 
-End CheckEnv.
+  End CheckEnv.
 
 (* Print Assumptions typecheck_program. *)

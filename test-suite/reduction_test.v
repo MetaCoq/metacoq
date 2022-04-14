@@ -19,7 +19,9 @@ Definition typecheck_template (cf := default_checker_flags)
   let p' := trans_program p in 
     match 
       infer_template_program (cf:=cf) p Monomorphic_ctx
-    with CorrectDecl X => X.π1
+    with CorrectDecl X => 
+      X.π1
+      (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_referenced).(referenced_impl_env_ext) *)
     | _ => todo "foo"
   end.
 
@@ -37,16 +39,17 @@ MetaCoq Quote Recursively Definition foo :=
 (* (forall (n:nat), nat).  *)
 (* (fix f (n : nat) : nat := 0). *)
 (* (fun t:nat => fun u : unit => t = t). *)
-(* (match 100 with 0 => 1 | S n => n end). *)
+(match 100 with 0 => 1 | S n => n end).
 (* (fun t => match t with tt => 0 end). *)
 (* (match todo "foo" with 0 => 1 | S n => n end). *)
-((fun x => x + 1) 4).
+(* Set.  *)
+(* ((fun x => x + 1) 4). *)
 
 Definition default_normal : @normalizing_flags default_checker_flags.
 now econstructor.
 Defined. 
 
-Definition bar := Eval lazy in @typecheck_template default_normal foo.
+Time Definition bar := Eval lazy in @typecheck_template default_normal foo.
 
 MetaCoq Unquote Definition unbar := (PCUICToTemplate.trans bar).
 
@@ -58,11 +61,7 @@ Program Definition eval_compute (cf := default_checker_flags)
   let p' := trans_program p in 
   let Σ' := TemplateToPCUIC.trans_global_env p.1 in
   let redtm := reduce_term RedFlags.default 
-    (* working with the optimized env does not compute for the moment *)
-    (* optimized_abstract_env_ext_impl A.π2.π1 *)
-    canonical_abstract_env_ext_impl 
-    {| referenced_impl_env_ext := (p'.1 , φ);
-       referenced_impl_ext_wf := (todo "wf") |}
+    optimized_abstract_env_ext_impl (proj1_sig A.π2)
     [] p'.2 _ in 
   inl (PCUICToTemplate.trans redtm)
 | EnvError Σ (AlreadyDeclared id) =>
@@ -71,9 +70,9 @@ Program Definition eval_compute (cf := default_checker_flags)
   inr ("Type error: " ^ string_of_type_error Σ e ^ ", while checking " ^ id)
 end.
 Next Obligation.
-  sq. destruct X0 as [? [? X0]]. pose (typing_wf_local X0).
-  econstructor. eauto. 
-Qed.
+  sq. destruct H0 as [? [? H0]]. pose (typing_wf_local H0).
+  econstructor. rewrite <- e. eauto.
+Qed.  
 
 Program Definition eval_compute_cheat (cf := default_checker_flags) 
 (nor : normalizing_flags)
@@ -86,8 +85,6 @@ Program Definition eval_compute_cheat (cf := default_checker_flags)
     [] p'.2 (todo "welltyped") in
     PCUICToTemplate.trans tm.
 
-Definition bar'' := Eval lazy in eval_compute default_normal foo Monomorphic_ctx.
+Time Definition bar'' := Eval lazy in eval_compute default_normal foo Monomorphic_ctx.
 
 MetaCoq Unquote Definition bar''' := (match bar'' with inl x => x | inr  _ => todo "" end).
-
-Check (eq_refl : bar''' = 5).

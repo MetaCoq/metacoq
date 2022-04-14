@@ -18,6 +18,7 @@ castprop.v
 # CheckerTest.v disabled
 cofix.v
 vs.v
+reduction_test.v
 erasure_live_test.v
 erasure_test.v
 evars.v

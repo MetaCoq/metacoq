@@ -258,7 +258,7 @@ Qed.
   Next Obligation.
     split.
     - symmetry in look.
-      etransitivity. erewrite abstract_env_lookup_correct; eauto.
+      etransitivity. erewrite (abstract_env_lookup_correct X); eauto.
       reflexivity.
     - now symmetry.
   Defined.

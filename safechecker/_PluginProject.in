@@ -6,10 +6,6 @@ src/META.coq-metacoq-safechecker
 # src/classes0.mli
 # src/classes0.ml
 
-# From Coq's stdlib
-src/eqdepFacts.mli
-src/eqdepFacts.ml
-
 # From template
 src/ssrbool.ml
 src/ssrbool.mli
@@ -31,8 +27,8 @@ src/pCUICCases.mli
 src/pCUICCases.ml
 # src/eqDecInstances.ml
 # src/eqDecInstances.mli
-src/pCUICInduction.mli
-src/pCUICInduction.ml
+# src/pCUICInduction.mli
+# src/pCUICInduction.ml
 src/pCUICReflect.mli
 src/pCUICReflect.ml
 src/pCUICEquality.mli

@@ -1,6 +1,3 @@
-Int0
-MSetAVL
-EqdepFacts
 Utils
 Ssrbool
 WGraph
@@ -15,7 +12,6 @@ Relation_Properties
 PCUICAst
 PCUICCases
 PCUICAstUtils
-PCUICInduction
 PCUICReflect
 PCUICEquality
 PCUICTyping

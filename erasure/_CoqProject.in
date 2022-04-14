@@ -22,7 +22,6 @@ theories/EAll.v
 theories/Extraction.v
 theories/Prelim.v
 theories/ESubstitution.v
-theories/EInversion.v
 theories/EArities.v
 theories/ErasureCorrectness.v
 theories/ErasureFunction.v

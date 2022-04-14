@@ -1,12 +1,8 @@
 (* Distributed under the terms of the MIT license. *)
 From Coq Require Import Utf8 Program.
 From MetaCoq.Template Require Import config utils Kernames.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
-     PCUICTyping PCUICInversion
-     PCUICSafeLemmata. (* for welltyped *)
-From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst ECSubst EGlobalEnv.
+From MetaCoq.PCUIC Require Import PCUICTactics.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.

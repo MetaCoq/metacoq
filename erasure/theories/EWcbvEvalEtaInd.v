@@ -372,7 +372,7 @@ Proof.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_construct' in ev1 as [ex []]. solve_discr.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat.
       split. eapply X; tea; (apply and_assum; [ih|hp' P'Q]).
       iheta q.
@@ -381,7 +381,7 @@ Proof.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_construct' in ev1 as [ex []]. solve_discr.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       assert (ql : Q 0 (tLambda na b)).
       { eapply P'Q; tea. ih. }
@@ -444,7 +444,7 @@ Proof.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_construct' in ev1 as [ex []]. solve_discr.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       pose proof (ev1' := ev1). eapply P'Q in ev1' => //. 2:{ clear ev1'; ih. }
       eapply qapp in ev1' as [hfix qargs] => //.
@@ -478,7 +478,7 @@ Proof.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_construct' in ev1 as [ex []]. solve_discr.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat.
       assert (isEtaExp Σ (tApp (mkApps (tFix mfix idx) argsv) av)).
       { rewrite -[tApp _ _](mkApps_app _ _ [av]).
@@ -494,7 +494,7 @@ Proof.
     destruct (construct_viewc hd) eqn:cv.
     * move=> [] argsn [] ha [] ht /andP[] etaind etaargs.
       clear IH; rewrite ha in ev1. elimtype False.
-      eapply eval_construct' in ev1 as [ex []]. solve_discr.
+      eapply eval_mkApps_Construct_inv in ev1 as [ex []]. solve_discr.
     * move=> /and4P [] etat0 etaargs etaa etat. 
       assert (qav : Q 0 av).
       { eapply P'Q; tea; ih. }
@@ -661,7 +661,7 @@ Proof.
       assert (eval_depth ev1 = eval_depth ev1) by reflexivity.
       set (ev1' := ev1). change ev1 with ev1' in H at 1. clearbody ev1'. move: H.
       subst f. exfalso.
-      eapply eval_construct' in ev1' as [? [hf' hargs']]. subst f'.
+      eapply eval_mkApps_Construct_inv in ev1' as [? [hf' hargs']]. subst f'.
       clear IH; move: i; rewrite !negb_or isConstructApp_mkApps /= !andb_false_r //.      
     * move=> /and4P [] etat0 etaargs etaa etat. 
       split. eapply (X12 _ _ _ _ ev1); tea. 

@@ -133,18 +133,6 @@ Section Lemmata.
 
   Context (Σ : global_env_ext).
 
-  Inductive welltyped Σ Γ t : Prop :=
-  | iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
-
-  Arguments iswelltyped {Σ Γ t A} h.
-
-  Definition isType_welltyped {Γ T}
-    : isType Σ Γ T -> welltyped Σ Γ T.
-  Proof.
-    intros []. now econstructor.
-  Qed.
-  Hint Resolve isType_welltyped : pcuic.
-
   Lemma ws_cumul_pb_zippx :
     forall {wfΣ : wf Σ} le Γ u v ρ,
       closedn_stack #|Γ| ρ ->

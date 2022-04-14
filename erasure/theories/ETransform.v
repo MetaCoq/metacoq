@@ -13,6 +13,12 @@ Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract 
     EAst Transform ERemoveParams.
 Import EEnvMap EGlobalEnv EWellformed.
 
+Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wfΣ : ∥ PCUICTyping.wf Σ ∥) : wf_env := 
+  {| wf_env_referenced := {| referenced_impl_env := Σ.(trans_env_env); referenced_impl_wf := wfΣ |} ;
+     wf_env_map := Σ.(trans_env_map);
+     wf_env_map_repr := Σ.(trans_env_repr);
+ |}.
+
 Program Definition erase_pcuic_program (p : pcuic_program) 
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=

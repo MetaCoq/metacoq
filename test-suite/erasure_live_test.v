@@ -2,6 +2,9 @@ From Coq Require Import Recdef.
 From MetaCoq.Template Require Import TemplateMonad Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
 From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN TemplateToPCUIC PCUICToTemplate.
+
+From MetaCoq.Erasure Require Import Erasure.
+
 From Coq Require Import String.
 Local Open Scope string_scope.
 
@@ -10,8 +13,6 @@ Import MCMonadNotation.
 Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
 #[local] Existing Instance config.extraction_checker_flags.
-
-From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl SafeTemplateChecker PCUICSafeConversion. 
 
 Definition test (p : Ast.Env.program) : string :=
   erase_and_print_template_program p.

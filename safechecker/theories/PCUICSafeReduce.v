@@ -1502,9 +1502,19 @@ Corollary R_Acc_aux :
         ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥
       ).
     clear -wfΣ.
-    intros t π h aux haux.
-    funelim (_reduce_stack Γ t π h aux).
+    intros t π h aux.
+    apply_funelim (_reduce_stack Γ t π h aux); clear -wfΣ.
     all: simpl.
+    all: intros *.
+    all: repeat match goal with 
+      [ |- (forall (t' : term) (π' : stack)
+         (hR : forall Σ,
+               abstract_env_ext_rel X Σ -> R Σ _ _ _), { _ : _ | _ }) -> _ ] => intros reduce
+    | [ |- (forall (t' : term) (π' : stack)
+        (hR : forall Σ,
+          abstract_env_ext_rel X Σ -> R Σ _ _ _), _) -> _ ] => intros haux
+          | [ |- _ ] => intros ?
+    end.
     all: try match goal with
              | |- context[False_rect _ ?f] => destruct f
              end.
@@ -1518,7 +1528,8 @@ Corollary R_Acc_aux :
       assumption.
     - clear Heq.
       revert discr.
-      funelim (red_discr t π). all: intros [].
+      revert h reduce haux; apply_funelim (red_discr t π); clear -wfΣ.
+      all: intros; try destruct discr.
       all: try solve [ constructor ; constructor ].
       all: try solve [
         unfold zipp ; case_eq (decompose_stack π) ; intros ;
@@ -1574,7 +1585,7 @@ Corollary R_Acc_aux :
     - unfold zipp. case_eq (decompose_stack π). intros.
       constructor. constructor. eapply whne_mkApps. econstructor.
       rewrite <- eq. cbn.
-      cbn in H. inversion H. reflexivity.
+      cbn in H. inversion e. reflexivity.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;

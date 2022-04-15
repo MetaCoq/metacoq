@@ -19,7 +19,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICAriti
 
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeConversion PCUICWfEnv.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICWfEnv.
 
 (** Allow reduction to run inside Coq *)
 Transparent Acc_intro_generator.

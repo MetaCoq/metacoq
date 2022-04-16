@@ -3,18 +3,8 @@
 (* Eta expanded constructors only, see EEtaExpandedFix for the more involved definition where fixpoints are also eta-expanded. *)
 
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames EnvMap.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
-     PCUICTyping PCUICInversion PCUICGeneration
-     PCUICConfluence PCUICConversion 
-     PCUICCumulativity PCUICSR PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
-
-From MetaCoq.SafeChecker Require Import PCUICWfEnv.
-     
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEvalInd EProgram.
+From MetaCoq.Template Require Import config utils Kernames EnvMap BasicAst.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -31,11 +21,7 @@ Local Existing Instance extraction_checker_flags.
 Ltac introdep := let H := fresh in intros H; depelim H.
 
 #[global]
-Hint Constructors Ee.eval : core.
-
-Set Warnings "-notation-overridden".
-Import E.
-Set Warnings "+notation-overridden".
+Hint Constructors eval : core.
 
 Import MCList (map_InP, map_InP_elim, map_InP_spec).
 
@@ -255,7 +241,7 @@ Section WeakEtaExp.
       destruct construct_viewc.
       rewrite -mkApps_app. rewrite isEtaExp_Constructor.
       cbn. cbn. rtoProp; solve_all.
-      eapply isEtaExp_app_mon; tea. cbn. len. lia. now depelim H1.
+      eapply isEtaExp_app_mon; tea. cbn. len. now depelim H1.
       depelim H1. solve_all. eapply All_app_inv => //.
       eapply All_app_inv => //. eauto.
       rewrite -mkApps_app. rewrite isEtaExp_mkApps_napp //.
@@ -449,9 +435,6 @@ Proof.
   now eapply isEtaExp_extends_decl.
 Qed.
 
-From MetaCoq.Template Require Import config utils BasicAst Universes.
-From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils.
-
 Section expanded.
 
 Variable Σ : global_declarations.
@@ -565,7 +548,7 @@ Proof.
   - intros H.
     destruct lookup_env as [[| mind] | ] eqn:E; cbn in H; try congruence.
     destruct nth_error as [ idecl | ] eqn:E2; cbn in H; try congruence.
-    destruct (nth_error (E.ind_ctors idecl) idx) as [ [cname ?] | ] eqn:E3; cbn in H; try congruence.
+    destruct (nth_error (ind_ctors idecl) idx) as [ [cname ?] | ] eqn:E3; cbn in H; try congruence.
     repeat esplit.
     red. all: eauto. unfold cstr_arity; cbn. eapply leb_iff in H. lia.
   - intros (? & ? & ? & [[]] & Hle).
@@ -708,7 +691,7 @@ Proof.
   move: etaa. rewrite /isEtaExp_decl /EEtaExpanded.isEtaExp_decl.
   destruct a.2 => //.
   rewrite /isEtaExp_constant_decl /EEtaExpanded.isEtaExp_constant_decl.
-  destruct (E.cst_body c) => // /=.
+  destruct (cst_body c) => // /=.
   eapply isEtaExpFix_isEtaExp.
 Qed.
 

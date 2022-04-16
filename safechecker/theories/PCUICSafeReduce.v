@@ -1109,14 +1109,11 @@ Corollary R_Acc_aux :
         * reflexivity.
   Defined.
 
-  Definition tyarg := 
-    ∑ t π, forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (t,π)).
-  
   Equations reduce_stack_full (t : term) (π : stack) (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (t,π))) :
     { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' }
-    by wf ((t; π; h) : tyarg) (fun (x y : tyarg) => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ (x.π1, x.π2.π1) (y.π1, y.π2.π1))
-    :=
-    reduce_stack_full t π h := _reduce_stack Γ t π h (fun t' π' hr => reduce_stack_full t' π' (fun Σ wfΣ => welltyped_R_pres Σ wfΣ Γ _ _ (h Σ wfΣ) (hr Σ wfΣ))).
+    by wf (t, π) (fun (x y : term * stack) => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ x y) :=
+    reduce_stack_full t π h := _reduce_stack Γ t π h (fun t' π' hr => reduce_stack_full t' π' (fun Σ wfΣ' => welltyped_R_pres Σ wfΣ' Γ _ _ (h Σ wfΣ') (hr Σ wfΣ'))).
+
   End reducewf.
 
   (* Equations reduce_stack_full (Γ : context) (t : term) (π : stack)

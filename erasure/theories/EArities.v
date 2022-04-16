@@ -608,7 +608,7 @@ Qed.
 
 Lemma Is_type_eval_inv (Σ : global_env_ext) t v:
   wf_ext Σ ->
-  PCUICSafeLemmata.welltyped Σ [] t ->
+  welltyped Σ [] t ->
   PCUICWcbvEval.eval Σ t v ->
   isErasable Σ [] v ->
   ∥ isErasable Σ [] t ∥.

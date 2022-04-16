@@ -10,8 +10,8 @@ From MetaCoq.Template Require Import utils BasicAst Universes.
 Declare Scope erasure.
 Local Open Scope erasure.
 
-(* todo reuse the one of BasicASt *)
 Record def (term : Set) := { dname : name; dbody : term; rarg : nat }.
+Derive NoConfusion for def.
 Arguments dname {term} d.
 Arguments dbody {term} d.
 Arguments rarg {term} d.
@@ -40,6 +40,8 @@ Inductive term : Set :=
 | tFix       : mfixpoint term -> nat -> term
 | tCoFix     : mfixpoint term -> nat -> term.
 (* | tPrim      : prim_val term -> term. *)
+
+Derive NoConfusion for term.
 
 Bind Scope erasure with term.
 

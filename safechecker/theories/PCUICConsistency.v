@@ -182,7 +182,7 @@ Proof.
       auto.
     - cbn.
       auto. }
-  pose proof (iswelltyped _ _ _ _ typ_false) as wt.
+  pose proof (iswelltyped typ_false) as wt.
   set (_Σ' := Build_referenced_impl_ext cf Σext (sq wf')). cbn in *. 
   unshelve epose proof (hnf_sound (X_type := canonical_abstract_env_ext_impl) (X := _Σ') (Γ := []) (t := tApp t False_ty) Σext eq_refl) as [r].
   1: cbn; intros; subst; exact wt.

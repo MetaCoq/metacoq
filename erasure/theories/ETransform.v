@@ -23,19 +23,15 @@ Program Definition erase_pcuic_program (p : pcuic_program)
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
   let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) wfΣ) in
-  let wfe' := ErasureFunction.make_wf_env_ext wfe p.1.2 wfΣ in
-  let t := ErasureFunction.erase wfe' nil p.2 _ in
-  let Σ' := ErasureFunction.erase_global (EAstUtils.term_global_deps t) wfe in
+  let wfext := ErasureFunction.make_wf_env_ext wfe p.1.2 wfΣ in
+  let t := ErasureFunction.erase wfext nil p.2
+    (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
+  let Σ' := ErasureFunction.erase_global_fast (EAstUtils.term_global_deps t) wfe in
   (EEnvMap.GlobalContextMap.make Σ' _, t).
-  
+
 Next Obligation.
-  sq. destruct wt as [T Ht].
-  cbn in *. subst. now exists T.
-Qed.
-Next Obligation.
-  unfold ErasureFunction.erase_global.
   eapply wf_glob_fresh.
-  eapply ErasureFunction.erase_global_decls_wf_glob.
+  eapply ErasureFunction.erase_global_fast_wf_glob.
 Qed.
 
 Obligation Tactic := idtac.
@@ -50,8 +46,9 @@ Lemma expanded_erase_program (cf := config.extraction_checker_flags) p (wtp : �
   EEtaExpandedFix.expanded_eprogram_env (erase_program p wtp).
 Proof.
   intros [etaenv etat]. split.
-  eapply ErasureFunction.expanded_erase_global, etaenv.
-  eapply ErasureFunction.expanded_erase, etat.
+  unfold erase_program, erase_pcuic_program.
+  eapply ErasureFunction.expanded_erase_global_fast, etaenv.
+  eapply ErasureFunction.expanded_erase_fast, etat.
 Qed.
 
 Lemma expanded_eprogram_env_expanded_eprogram_cstrs p :
@@ -64,16 +61,6 @@ Proof.
   - eapply EEtaExpanded.isEtaExpFix_env_isEtaExp_env. now eapply EEtaExpandedFix.expanded_global_env_isEtaExp_env.
   - eapply EEtaExpanded.isEtaExpFix_isEtaExp. now eapply EEtaExpandedFix.expanded_isEtaExp.
 Qed.
-
-(* Lemma expanded_eprogram_expanded_eprogram_cstrs p :
-  expanded_eprogram p ->
-  expanded_eprogram_cstrs p.
-Proof.
-  move=> /andP[] etaenv etat.
-  apply /andP. split; [now eapply EEtaExpanded.isEtaExpFix_env_isEtaExp_env|
-  now eapply EEtaExpanded.isEtaExpFix_isEtaExp].
-Qed. *)
-
 
 Program Definition erase_transform : Transform.t pcuic_program eprogram_env PCUICAst.term EAst.term 
   eval_pcuic_program (eval_eprogram_env EWcbvEval.default_wcbv_flags) :=
@@ -88,9 +75,10 @@ Next Obligation.
   intros p [wtp etap].
   destruct erase_program eqn:e.
   split; cbn.
-  - unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-.
+  - unfold erase_program, erase_pcuic_program in e. simpl. cbn in e. injection e. intros <- <-.
     split. 
-    eapply ErasureFunction.erase_global_wf_glob. eapply ErasureFunction.erase_wellformed.
+    eapply ErasureFunction.erase_global_fast_wf_glob.
+    eapply ErasureFunction.erase_wellformed_fast.
   - rewrite -e. cbn.
     now eapply expanded_erase_program.
 Qed.
@@ -102,7 +90,9 @@ Next Obligation.
   unfold erase_program, erase_pcuic_program in e. simpl in e. injection e; intros <- <-.
   simpl. clear e. cbn in *.
   set (Σ' := build_wf_env_from_env _ _).
-  eapply (ErasureFunction.erase_correct Σ' Σ.2 _ _ _ _ _ (EAstUtils.term_global_deps _)) in ev; try reflexivity.
+  eapply (ErasureFunction.erase_correct Σ' Σ.2 _ _ _ _ _ (EAstUtils.term_global_deps _)) in ev.
+  4:{ rewrite -ErasureFunction.erase_global_fast_spec. reflexivity. }
+  all:trea.
   2:eapply Kernames.KernameSet.subset_spec; reflexivity.
   destruct ev as [v' [he [hev]]]. exists v'; split => //.
   red. cbn.

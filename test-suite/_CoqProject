@@ -18,6 +18,7 @@ bug8.v
 bugkncst.v
 case.v
 castprop.v
+hott_example.v
 # CheckerTest.v disabled
 cofix.v
 vs.v

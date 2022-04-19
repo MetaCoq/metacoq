@@ -396,6 +396,38 @@ Next Obligation. apply fake_guard_correct. Defined.
 
 
 
+Lemma gc_of_constraints_of_uctx `{checker_flags} uctx gcstrs :
+  gc_of_constraints uctx.2 = Some gcstrs ->
+  gc_of_uctx uctx = Some (uctx.1, gcstrs).
+Proof. rewrite /gc_of_uctx=> -> //=. Qed.
+
+
+Lemma acyclic_no_loop_add_uctx uctx gph :
+  wGraph.acyclic_no_loop (add_uctx uctx gph) -> wGraph.acyclic_no_loop gph.
+Proof.
+  move=> hext v p.
+  have @embed_uctx : forall x y, wGraph.EdgeOf gph x y -> wGraph.EdgeOf (add_uctx uctx gph) x y.
+  { refine (fun x y '(existT w he) => existT _ w _).
+    abstract (apply/add_cstrs_spec; right; apply/add_level_edges_spec; right=> //).
+  }
+  etransitivity; last apply: (hext v (wGraph.map_path embed_uctx p)).
+  apply: Z.ge_le; apply: wGraph.weight_map_path2.
+  move=> ??[??]; rewrite /embed_uctx /=; lia.
+Qed.
+
+
+Lemma consistent_extension_on_union X cstrs
+  (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
+  consistent_extension_on X cstrs ->
+  consistent_extension_on X (CS.union cstrs X.2).
+Proof.
+  move=> hext v /[dup] vsat /hext [v' [v'sat v'eq]].
+  exists v'; split=> //.
+  apply/PCUICUnivSubstitutionConv.satisfies_union; split=> //.
+  move=> c hc. destruct (wfX c hc).
+  destruct (vsat c hc); constructor; rewrite -!v'eq //.
+Qed.
+
 Program Global Instance canonical_abstract_env_prop {cf:checker_flags} :
   @abstract_env_prop _ _ _ canonical_abstract_env_ext_struct canonical_abstract_env_struct.
 Next Obligation. now sq. Qed.
@@ -411,6 +443,7 @@ Next Obligation.
   set (gph := (graph_of_wf X).π1) in *. clearbody gph. simpl in HG.
   move: HG=> /on_SomeP [[uctx1 uctx2] [Huctx HG]].
   pose proof (gcinv := gc_of_uctx_invariants _ _ Huctx H0).
+  pose proof (invG := make_graph_invariants _ gcinv).
   destruct (gc_of_uctx_union _ _ _ _ Hudecl Huctx) as [gcsExt [uctxExtEq hgcs]].
   pose proof (HG' := add_uctx_make_graph t uctx1 t0 uctx2).
   set (uctxExt := (LS.union t uctx1, GCS.union t0 uctx2)) in HG'.
@@ -418,7 +451,7 @@ Next Obligation.
   { rewrite /uctxExt /global_gc_uctx_invariants /=; rewrite <- hgcs.
     apply: (gc_of_uctx_invariants _ _ uctxExtEq). }
   pose proof (invG' := make_graph_invariants _ gcExtinv).
-  move: Huctx; rewrite /gc_of_uctx.
+  move: (Huctx); rewrite /gc_of_uctx.
   case_eq (gc_of_constraints (global_uctx X).2) => //=.
   intros Σctrs HΣctrs [=]; subst.
   unfold gc_of_uctx in Hudecl; move: Hudecl.
@@ -437,7 +470,27 @@ Next Obligation.
   erewrite is_acyclic_proper; last eassumption.
   clear H1 H0 H45; split.
   + move=> [] h consistent_ext ; split; first by rewrite -{1}HG HG'.
-    admit.
+    apply/wGraph.is_full_subgraph_spec.
+    symmetry in HG.
+    refine (@consistent_on_full_subgraph _ (global_uctx X) (uctx_of_udecl udecl)
+                                        (global_levels X, uctx2)
+                                        (levels_of_udecl udecl, t0)
+                                        gph
+                                        _
+                                        _
+                                        gcinv
+                                        Huctx
+                                        (gc_of_constraints_of_uctx (uctx_of_udecl udecl) _ Hctrs)
+                                        HG
+           ).
+    * move: h=> /wGraph.is_acyclic_spec.
+      rewrite -HG' -HG.
+      apply: acyclic_no_loop_add_uctx.
+    * apply: consistent_extension_on_union.
+      pose proof (referenced_impl_wf X); sq.
+      apply: PCUICUnivSubstitutionConv.levels_global_constraint.
+      unfold uctx_of_udecl=> /=.
+      exact consistent_ext.
   + move=> [acG'] /wGraph.is_full_subgraph_spec H1; split; first by rewrite -HG' HG.
     rewrite  -HG' HG in invG'.
     move: acG' => /wGraph.is_acyclic_correct acG'.
@@ -453,8 +506,7 @@ Next Obligation.
       move=> ??; apply GoodConstraintSet.for_all_spec in vextsat; last by move=> ??->.
       apply: vextsat; apply/GoodConstraintSet.union_spec; by left.
     * move=> l Hl; apply extendsv.
-      case: HG=> eq1 _ ; rewrite eq1 /=.
-      apply/VSet.union_spec; by left.
+      case: HG=> eq1 _ ; rewrite eq1 //=.
   Qed.
 
 Program Global Instance optimized_abstract_env_prop {cf:checker_flags} :

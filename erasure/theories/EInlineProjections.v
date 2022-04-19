@@ -41,7 +41,7 @@ Qed.
 Lemma wellformed_projection_args {efl : EEnvFlags} {Σ p mdecl idecl cdecl pdecl} : 
   wf_glob Σ ->
   lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
-  p.2 < cdecl.(cstr_nargs).
+  p.(proj_arg) < cdecl.(cstr_nargs).
 Proof.
   intros wfΣ.
   rewrite /lookup_projection /lookup_constructor /lookup_inductive.
@@ -78,7 +78,7 @@ Section optimize.
     | tProj p c =>
       match GlobalContextMap.lookup_projection Σ p with 
       | Some (mdecl, idecl, cdecl, pdecl) => 
-        tCase p.1 (optimize c) [(unfold cdecl.(cstr_nargs) (fun n => nAnon), tRel (cdecl.(cstr_nargs) - S p.2))]
+        tCase (p.(proj_ind), p.(proj_npars)) (optimize c) [(unfold cdecl.(cstr_nargs) (fun n => nAnon), tRel (cdecl.(cstr_nargs) - S p.(proj_arg)))]
       | _ => tProj p (optimize c)
       end
     | tFix mfix idx =>
@@ -593,7 +593,7 @@ Proof.
     rewrite optimize_mkApps /= in IHev1.
     eapply eval_iota; tea.
     rewrite /constructor_isprop_pars_decl -lookup_constructor_optimize // H //= //.
-    rewrite H0; reflexivity. cbn. reflexivity. len. len.
+    rewrite H0 H1; reflexivity. cbn. reflexivity. len. len.
     rewrite skipn_length. lia.
     unfold iota_red. cbn.
     rewrite (substl_rel _ _ (optimize Σ a)) => //.
@@ -604,9 +604,9 @@ Proof.
     rewrite nth_error_rev. len. rewrite skipn_length. lia. 
     rewrite List.rev_involutive. len. rewrite skipn_length.
     rewrite nth_error_skipn nth_error_map.
-    rewrite e0.
+    rewrite e0 -H1.
     assert((ind_npars mdecl + cstr_nargs cdecl - ind_npars mdecl) = cstr_nargs cdecl) by lia.
-    rewrite H2. 
+    rewrite H3.
     eapply (f_equal (option_map (optimize Σ))) in e1.
     cbn in e1. rewrite -e1. f_equal. f_equal. lia.
 

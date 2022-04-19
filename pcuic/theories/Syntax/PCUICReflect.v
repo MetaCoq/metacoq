@@ -311,6 +311,21 @@ Proof.
   unfold eqb_constructor_body; cbn -[eqb]. finish_reflect.
 Qed.
   
+Definition eqb_projection_body (x y : projection_body) :=
+  (x.(proj_name), x.(proj_type), x.(proj_relevance)) == 
+  (y.(proj_name), y.(proj_type), y.(proj_relevance)).
+
+#[program, global]
+Instance reflect_projection_body : ReflectEq projection_body :=
+  {| eqb := eqb_projection_body |}.
+Next Obligation.
+Proof.
+  unfold eqb_projection_body.
+  case: eqb_spec.
+  destruct x, y; cbn in *. constructor; auto. congruence.
+  unfold eqb_constructor_body; cbn -[eqb]. finish_reflect.
+Qed.
+
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   x.(ind_name) ==? y.(ind_name) &&
   x.(ind_indices) ==? y.(ind_indices) &&

@@ -212,9 +212,9 @@ Inductive red1 (Σ : global_env) (Γ : context) : term -> term -> Type :=
     red1 Σ Γ (tConst c u) (subst_instance u body)
 
 (** Proj *)
-| red_proj i pars narg args u arg:
-    nth_error args (pars + narg) = Some arg ->
-    red1 Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg
+| red_proj p u args arg:
+    nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+    red1 Σ Γ (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg
 
 
 | abs_red_l na M M' N : red1 Σ Γ M M' -> red1 Σ Γ (tLambda na M N) (tLambda na M' N)
@@ -312,10 +312,9 @@ Lemma red1_ind_all :
         declared_constant Σ c decl ->
         forall u : Instance.t, cst_body decl = Some body -> P Γ (tConst c u) (subst_instance u body)) ->
 
-       (forall (Γ : context) (i : inductive) (pars narg : nat) (args : list term) (u : Instance.t)
-         (arg : term),
-           nth_error args (pars + narg) = Some arg ->
-           P Γ (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg) ->
+       (forall (Γ : context) p (args : list term) (u : Instance.t) (arg : term),
+           nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+           P Γ (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg) ->
 
        (forall (Γ : context) (na : aname) (M M' N : term),
         red1 Σ Γ M M' -> P Γ M M' -> P Γ (tLambda na M N) (tLambda na M' N)) ->
@@ -827,9 +826,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 
 | type_Proj p c u :
     forall mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
-    Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
+    Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
     #|args| = ind_npars mdecl ->
-    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u pdecl.2)
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (subst_instance u pdecl.(proj_type))
 
 | type_Fix mfix n decl :
     fix_guard Σ Γ mfix ->
@@ -1210,10 +1209,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
           mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
         on_global_env (lift_typing P) Σ.1 -> 
         PΓ Σ Γ wfΓ ->
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-        P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
+        Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
+        P Σ Γ c (mkApps (tInd p.(proj_ind) u) args) ->
         #|args| = ind_npars mdecl ->
-        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
+        P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u pdecl.(proj_type)))) ->
 
     (forall Σ (wfΣ : wf Σ) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in

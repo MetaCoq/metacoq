@@ -47,7 +47,7 @@ Section strip.
     | tCase ind c brs =>
       let brs' := map_InP brs (fun x H => (x.1, strip x.2)) in
       EAst.tCase (ind.1, 0) (strip c) brs'
-    | tProj (ind, pars, args) c => EAst.tProj (ind, 0, args) (strip c)
+    | tProj p c => EAst.tProj {| proj_ind := p.(proj_ind); proj_npars := 0; proj_arg := p.(proj_arg) |} (strip c)
     | tFix mfix idx =>
       let mfix' := map_InP mfix (fun d H => {| dname := dname d; dbody := strip d.(dbody); rarg := d.(rarg) |}) in
       EAst.tFix mfix' idx
@@ -524,7 +524,7 @@ Module Fast.
     | app, tCase ind c brs =>
         let brs' := strip_brs brs in
         mkApps (EAst.tCase (ind.1, 0) (strip [] c) brs') app
-    | app, tProj (ind, pars, args) c => mkApps (EAst.tProj (ind, 0, args) (strip [] c)) app
+    | app, tProj p c => mkApps (EAst.tProj {| proj_ind := p.(proj_ind); proj_npars := 0; proj_arg := p.(proj_arg) |} (strip [] c)) app
     | app, tFix mfix idx =>
         let mfix' := strip_defs mfix in
         mkApps (EAst.tFix mfix' idx) app
@@ -947,12 +947,12 @@ Proof.
     rewrite strip_mkApps // /= in e0.
     rewrite (constructor_isprop_pars_decl_lookup H2) in e0.
     eapply eval_proj; eauto.
-    move: (@is_propositional_cstr_strip Σ i 0). now rewrite H2. simpl.
+    move: (@is_propositional_cstr_strip Σ p.(proj_ind) 0). now rewrite H2. simpl.
     len. rewrite skipn_length. cbn in H3. lia.
     rewrite nth_error_skipn nth_error_map /= H4 //.
 
   - simp_strip. eapply eval_proj_prop => //.
-    move: (is_propositional_strip Σ i); now rewrite H3.
+    move: (is_propositional_strip Σ p.(proj_ind)); now rewrite H3.
 
   - rewrite !strip_tApp //.
     eapply eval_app_cong; tea.
@@ -1267,7 +1267,6 @@ Proof.
   all:try solve[simp_strip; constructor; eauto; solve_all].
   - rewrite strip_mkApps_etaexp. now eapply expanded_isEtaExp.
     eapply expanded_mkApps_expanded => //. solve_all.
-  - destruct proj as [[] ?]; simp_strip. constructor; eauto.
   - simp_strip; constructor; eauto. solve_all.
     rewrite -strip_isLambda //.
   - rewrite strip_mkApps // /=.

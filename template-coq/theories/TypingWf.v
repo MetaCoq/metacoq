@@ -612,7 +612,7 @@ Record wf_inductive_body Σ idecl := {
   wf_ind_ctors : All (fun cdecl => WfAst.wf Σ (cstr_type cdecl)) (ind_ctors idecl);
   wf_ind_ctor_args : All (fun cs => All (wf_decl Σ) (cstr_args cs)) idecl.(ind_ctors);
   wf_ind_ctors_indices : All (fun cdecl => All (WfAst.wf Σ) (cstr_indices cdecl)) (ind_ctors idecl);
-  wf_ind_projs : All (fun pdecl => WfAst.wf Σ pdecl.2) (ind_projs idecl)
+  wf_ind_projs : All (fun pdecl => WfAst.wf Σ pdecl.(proj_type)) (ind_projs idecl)
 }.
 
 Section WfLookup.
@@ -829,10 +829,10 @@ Section WfRed.
   Qed.
 
   Lemma declared_projection_wf (p : projection)
-          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) cdecl (pdecl : ident * term) :
+          (mdecl : mutual_inductive_body) (idecl : one_inductive_body) cdecl pdecl :
       declared_projection Σ p mdecl idecl cdecl pdecl ->
       on_global_env wf_decl_pred Σ ->
-      WfAst.wf Σ (snd pdecl).
+      WfAst.wf Σ pdecl.(proj_type).
   Proof.
     intros isdecl X.
     destruct isdecl as [[[Hmdecl Hidecl] Hcdecl] Hpdecl].
@@ -979,11 +979,10 @@ Section TypingWf.
       apply All_app_inv; auto.
     - split. wf. apply wf_subst. solve_all. constructor. wf.
       apply wf_mkApps_inv in b. apply All_rev. solve_all.
-      subst ty. eapply declared_projection_wf in isdecl; eauto.
+      eapply declared_projection_wf in isdecl; eauto.
       now eapply wf_subst_instance.
       now eapply Forall_decls_on_global_wf.
  
-
     - subst types.
       clear H.
       split.

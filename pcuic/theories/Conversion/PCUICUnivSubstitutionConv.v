@@ -1080,7 +1080,7 @@ Definition map_one_inductive_body' fu f oib :=
     ind_type := f oib.(ind_type);
     ind_kelim := oib.(ind_kelim);
     ind_ctors := List.map (map_constructor_body' f) oib.(ind_ctors);
-    ind_projs := List.map (on_snd f) oib.(ind_projs);
+    ind_projs := List.map (map_projection_body 0 (fun _ => f)) oib.(ind_projs);
     ind_relevance := oib.(ind_relevance) |}.
 
 Global Instance subst_instance_inductive_body : UnivSubst one_inductive_body

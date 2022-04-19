@@ -1270,13 +1270,12 @@ Proof.
     eapply cumul_prop_trans; eauto.
     eapply cumul_prop_mkApps_Ind_inv in X2 => //.
     destruct (declared_projection_inj a isdecl) as [<- [<- [<- <-]]].
-    subst ty. 
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity X1)) as [ps [argss [_ cu]]]; eauto.
     destruct (isType_mkApps_Ind_inv _ isdecl X0 (validity a0)) as [? [? [_ cu']]]; eauto.
     epose proof (wf_projection_context _ _ isdecl c1).
     epose proof (wf_projection_context _ _ isdecl c2).
-    transitivity (subst0 (c0 :: List.rev args') (subst_instance u pdecl'.2)).
-    eapply (@substitution_untyped_cumul_prop_cumul Σ Γ (projection_context p.1.1 mdecl' idecl' u)) => //.
+    transitivity (subst0 (c0 :: List.rev args') (subst_instance u pdecl'.(proj_type))).
+    eapply (@substitution_untyped_cumul_prop_cumul Σ Γ (projection_context p.(proj_ind) mdecl' idecl' u)) => //.
     * cbn -[projection_context on_free_vars_ctx].
       eapply is_closed_context_weaken; tas. fvs. now eapply wf_local_closed_context in X3.
     * cbn -[projection_context on_free_vars_ctx].
@@ -1292,7 +1291,7 @@ Proof.
     * constructor => //. symmetry; constructor => //; fvs.
       { now eapply leq_term_eq_term_prop_impl. }
       { now eapply All2_rev. }
-    * eapply (@substitution_cumul_prop Σ Γ (projection_context p.1.1 mdecl' idecl' u') []) => //.
+    * eapply (@substitution_cumul_prop Σ Γ (projection_context p.(proj_ind) mdecl' idecl' u') []) => //.
       { apply (projection_subslet Σ _ _ _ _ _ _ _ _ _ a wfΣ a0 (validity a0)). }
       eapply cumul_prop_subst_instance; eauto.
       cbn -[projection_context on_free_vars_ctx]; eapply is_closed_context_weaken => //; fvs.

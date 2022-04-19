@@ -360,17 +360,21 @@ Proof.
   apply ReflectEq.eqb_refl.
 Qed.
 
-Definition projection : Set := inductive * nat (* params *) * nat (* argument *).
+Record projection := mkProjection
+  { proj_ind : inductive;
+    proj_npars : nat; (* Number of (non-let) parameters *)
+    proj_arg : nat (* Argument to project *) }.
 
-Definition eq_projection (p p' : projection) := eqb p p'.
+Definition eq_projection (p p' : projection) := 
+  (p.(proj_ind), p.(proj_npars), p.(proj_arg)) == (p'.(proj_ind), p'.(proj_npars), p'.(proj_arg)).
 
 #[global, program] Instance reflect_eq_projection : ReflectEq projection := {
   eqb := eq_projection
 }.
 Next Obligation.
   unfold eq_projection.
-  case: eqb_spec ; nodec.
-  cbn. now constructor.
+  case: eqb_spec ; nodec. destruct x, y; cbn.
+  now constructor.
 Qed.
 
 Lemma eq_projection_refl i : eq_projection i i.

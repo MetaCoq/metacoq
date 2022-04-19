@@ -69,6 +69,7 @@ Register MetaCoq.Template.Kernames.MPbound as metacoq.ast.MPbound.
 Register MetaCoq.Template.Kernames.MPdot as metacoq.ast.MPdot.
 Register MetaCoq.Template.Kernames.inductive as metacoq.ast.inductive.
 Register MetaCoq.Template.Kernames.mkInd as metacoq.ast.mkInd.
+Register MetaCoq.Template.Kernames.mkProjection as metacoq.ast.mkProjection.
 Register MetaCoq.Template.Kernames.global_reference as metacoq.ast.global_reference.
 Register MetaCoq.Template.Kernames.VarRef as metacoq.ast.VarRef.
 Register MetaCoq.Template.Kernames.ConstRef as metacoq.ast.ConstRef.
@@ -204,6 +205,8 @@ Register MetaCoq.Template.Ast.Env.context as metacoq.ast.context.
 
 Register MetaCoq.Template.Ast.Env.constructor_body as metacoq.ast.constructor_body.
 Register MetaCoq.Template.Ast.Env.Build_constructor_body as metacoq.ast.Build_constructor_body.
+Register MetaCoq.Template.Ast.Env.Build_projection_body as metacoq.ast.Build_projection_body.
+Register MetaCoq.Template.Ast.Env.projection_body as metacoq.ast.projection_body.
 Register MetaCoq.Template.Ast.Env.one_inductive_body as metacoq.ast.one_inductive_body.
 Register MetaCoq.Template.Ast.Env.Build_one_inductive_body as metacoq.ast.Build_one_inductive_body.
 Register MetaCoq.Template.Ast.Env.mutual_inductive_body as metacoq.ast.mutual_inductive_body.

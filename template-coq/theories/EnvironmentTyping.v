@@ -354,11 +354,7 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     (* Constraints from udecl between *global* universes
        are implied by the constraints in univs *)
     Definition valid_on_mono_udecl (univs : ContextSet.t) ϕ :=
-      let univs_cstr := ContextSet.constraints univs in
-      forall v, satisfies v univs_cstr ->
-           exists v', satisfies v' (constraints_of_udecl ϕ)
-                 /\ LevelSet.For_all (fun l => val v l = val v' l)
-                                    (ContextSet.levels univs).
+      consistent_extension_on univs (constraints_of_udecl ϕ).
 
     (* Check that: *)
     (*   - declared levels are fresh *)

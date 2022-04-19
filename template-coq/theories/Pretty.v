@@ -117,6 +117,7 @@ Module PrintTermTree.
 
   Section env.
   Context (Σ : global_env_ext).
+  Context (with_universes : bool).
 
   Definition print_def {A} (f : A -> t) (g : A -> t) (def : def A) :=
     string_of_name (binder_name (dname def)) ^ " { struct " ^ string_of_nat (rarg def) ^ " }" ^
@@ -128,6 +129,17 @@ Module PrintTermTree.
     let ctx' := fix_context defs in
     print_list (print_def (print_term Γ true) (print_term (fresh_names Σ Γ ctx') true))
                (nl ^ " with ") defs.
+  Definition print_universe u :=
+    match u with
+    | Universe.lProp => "Prop"
+    | Universe.lSProp => "SProp"
+    | Universe.lType l =>
+      if with_universes then
+        ("Type(" ++
+           MCString.string_of_list string_of_level_expr (LevelExprSet.elements l) ++
+          ")")%bs
+       else "Type"
+    end.
 
   (* TODO: SPROP: we ignore relevance on printing, maybe add print config? *)
   Fixpoint print_term (Γ : list ident) (top : bool) (t : term) {struct t} : Tree.t :=
@@ -139,7 +151,7 @@ Module PrintTermTree.
     end
   | tVar n => "Var(" ^ n ^ ")"
   | tEvar ev args => "Evar(" ^ string_of_nat ev ^ "[]" (* TODO *)  ^ ")"
-  | tSort s => string_of_sort s
+  | tSort s => print_universe s
   | tCast c k t => parens top (print_term Γ true c ^ ":"  ^ print_term Γ true t)
   | tProd na dom codom =>
     let na' := (fresh_name Σ Γ na.(binder_name) (Some dom)) in
@@ -279,9 +291,41 @@ Module PrintTermTree.
     oib.(ind_name) ^ spars ^ sinds ^ print_term Γinds true (tSort oib.(ind_sort)) ^ ":=" ^ nl ^
     if short then "..."
     else print_list (print_one_cstr Γpars mib) nl oib.(ind_ctors).
+  
+  Definition print_one_cstr_entry Γ (mie : mutual_inductive_entry) (c : ident × term) : t :=
+    c.1 ^ " : " ^ print_term Γ true c.2.
+    
+  Definition print_one_ind_entry (short : bool) Γ (mie : mutual_inductive_entry) (oie : one_inductive_entry) : t :=
+    let '(Γpars, spars) := print_context Γ mie.(mind_entry_params) in
+    oie.(mind_entry_typename) ^ spars ^ print_term Γpars true oie.(mind_entry_arity) ^ ":=" ^ nl ^
+    if short then "..."
+    else print_list (print_one_cstr_entry Γpars mie) nl (combine oie.(mind_entry_consnames) oie.(mind_entry_lc)).
   End env.
 
-  Fixpoint print_env_aux (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
+  Definition universes_decl_of_universes_entry e :=
+    match e with
+    | Monomorphic_entry ctx => Monomorphic_ctx
+    | Polymorphic_entry names uctx => Polymorphic_ctx (names, UContext.constraints uctx)
+    end.
+
+  Definition print_mib Σ with_universes (short : bool) (mib : mutual_inductive_body) : t :=
+    let Σ' := (Σ, mib.(ind_universes)) in
+    let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
+      ("Inductive " ^ 
+      print_list (print_one_ind Σ' with_universes short names mib) nl mib.(ind_bodies) ^ "." ^ nl).
+
+  Definition mie_arities_context mie := 
+    rev_map (fun ind => vass (mkBindAnn (nNamed ind.(mind_entry_typename)) Relevant) 
+      (it_mkProd_or_LetIn mie.(mind_entry_params) ind.(mind_entry_arity))) 
+      mie.(mind_entry_inds).
+    
+  Definition print_mie Σ with_universes (short : bool) (mie : mutual_inductive_entry) : t :=
+    let Σ' := (Σ, universes_decl_of_universes_entry mie.(mind_entry_universes)) in
+    let names := fresh_names Σ' [] (mie_arities_context mie) in
+      ("Inductive " ^ 
+      print_list (print_one_ind_entry Σ' with_universes short names mie) nl mie.(mind_entry_inds) ^ "." ^ nl).
+    
+  Fixpoint print_env_aux with_universes (short : bool) (prefix : nat) (Σ : global_env) (acc : t) : t := 
     match prefix with 
     | 0 => match Σ.(declarations) with [] => acc | _ => ("..." ^ nl ^ acc) end
     | S n => 
@@ -289,40 +333,39 @@ Module PrintTermTree.
       match Σ.(declarations) with
       | [] => acc
       | (kn, InductiveDecl mib) :: Σ => 
-        let Σ' := ({| Env.universes := univs; declarations := Σ |}, mib.(ind_universes)) in
-        let names := fresh_names Σ' [] (arities_context mib.(ind_bodies)) in
-        print_env_aux short n Σ'.1
-          ("Inductive " ^ 
-          print_list (print_one_ind Σ' short names mib) nl mib.(ind_bodies) ^ "." ^ 
-          nl ^ acc)
+        let Σ := {| Env.universes := univs; declarations := Σ |} in
+        print_env_aux with_universes short n Σ (print_mib Σ with_universes short mib ^ acc)
       | (kn, ConstantDecl cb) :: Σ =>
         let Σ' := ({| Env.universes := univs; declarations := Σ |}, cb.(cst_universes)) in
-        print_env_aux short n Σ'.1
+        print_env_aux with_universes short n Σ'.1
           ((match cb.(cst_body) with 
             | Some _ => "Definition "
             | None => "Axiom "
-          end) ^ string_of_kername kn ^ " : " ^ print_term Σ' nil true cb.(cst_type) ^
+          end) ^ string_of_kername kn ^ " : " ^ print_term Σ' with_universes nil true cb.(cst_type) ^
           match cb.(cst_body) with
           | Some b => 
             if short then ("..." ^ nl)
-            else (" := " ^ nl ^ print_term Σ' nil true b ^ "." ^ nl)
+            else (" := " ^ nl ^ print_term Σ' with_universes nil true b ^ "." ^ nl)
           | None => "."
           end ^ acc)
       end
     end.
 
-  Definition print_env (short : bool) (prefix : nat) Σ := 
-    print_env_aux short prefix Σ (Tree.string "").
+  Definition print_env with_universes (short : bool) (prefix : nat) Σ := 
+    print_env_aux with_universes short prefix Σ (Tree.string "").
 
-  Definition print_program (short : bool) (prefix : nat) (p : program) : t := 
-    print_env short prefix (fst p) ^ nl ^ print_term (empty_ext (fst p)) nil true (snd p). 
+  Definition print_program with_universes (short : bool) (prefix : nat) (p : program) : t := 
+    print_env with_universes short prefix (fst p) ^ nl ^ print_term (empty_ext (fst p)) with_universes nil true (snd p). 
 
 End PrintTermTree.
 
-Definition print_term Σ Γ top := Tree.to_string ∘ PrintTermTree.print_term Σ Γ top.
+Definition print_mie Σ with_universes short := Tree.to_string ∘ PrintTermTree.print_mie Σ with_universes short.
+Definition print_mib Σ with_universes short := Tree.to_string ∘ PrintTermTree.print_mib Σ with_universes short.
+
+Definition print_term Σ Γ top := Tree.to_string ∘ PrintTermTree.print_term Σ true Γ top.
 
 Definition print_env (short : bool) (prefix : nat) Σ := 
-  Tree.to_string (PrintTermTree.print_env short prefix Σ).
+  Tree.to_string (PrintTermTree.print_env true short prefix Σ).
 
 Definition print_program (short : bool) (prefix : nat) (p : program) : string := 
-  Tree.to_string (PrintTermTree.print_program short prefix p).
+  Tree.to_string (PrintTermTree.print_program true short prefix p).

@@ -3,8 +3,9 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EAstUtils ELiftSubst EReflect ECSubst.
 Require Import ssreflect.
+Import MCMonadNotation.
 
-(** * Typing derivations
+(** * Global environments 
 
   Inductive relations for reduction, conversion and typing of CIC terms.
 
@@ -39,25 +40,65 @@ Definition declared_projection Σ (proj : projection) mdecl idecl pdecl : Prop :
 
 Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
   kn <> kn' ->
-  ETyping.lookup_env ((kn, d) :: Σ) kn' = ETyping.lookup_env Σ kn'.
+  EGlobalEnv.lookup_env ((kn, d) :: Σ) kn' = EGlobalEnv.lookup_env Σ kn'.
 Proof.
   simpl. change (eq_kername kn' kn) with (eqb kn' kn).
   destruct (eqb_spec kn' kn). subst => //. auto. 
 Qed.
 
+Section Lookups.
+  Context (Σ : global_declarations).
+
+  Definition lookup_constant kn : option constant_body :=
+    decl <- lookup_env Σ kn;; 
+    match decl with
+    | ConstantDecl cdecl => ret cdecl
+    | InductiveDecl mdecl => None
+    end.
+
+  Definition lookup_minductive kn : option mutual_inductive_body :=
+    decl <- lookup_env Σ kn;; 
+    match decl with
+    | ConstantDecl _ => None
+    | InductiveDecl mdecl => ret mdecl
+    end.
+
+  Definition lookup_inductive kn : option (mutual_inductive_body * one_inductive_body) :=
+    mdecl <- lookup_minductive (inductive_mind kn) ;;
+    idecl <- nth_error mdecl.(ind_bodies) (inductive_ind kn) ;;
+    ret (mdecl, idecl).
+  
+  Definition lookup_inductive_pars kn : option nat := 
+    mdecl <- lookup_minductive kn ;;
+    ret mdecl.(ind_npars).
+  
+  Definition lookup_constructor kn c : option (mutual_inductive_body * one_inductive_body * (ident * nat)) :=
+    '(mdecl, idecl) <- lookup_inductive kn ;;
+    cdecl <- nth_error idecl.(ind_ctors) c ;;
+    ret (mdecl, idecl, cdecl).
+  
+  Definition lookup_constructor_pars_args kn c : option (nat * nat) := 
+    '(mdecl, idecl, cdecl) <- lookup_constructor kn c ;;
+    ret (mdecl.(ind_npars), cdecl.2).
+End Lookups.
+
 (** Knowledge of propositionality status of an inductive type and parameters *)
 
+Lemma lookup_constructor_pars_args_cstr_arity Σ ind c mdecl idecl cdecl : 
+  lookup_constructor Σ ind c = Some (mdecl, idecl, cdecl) ->
+  lookup_constructor_pars_args Σ ind c = Some (mdecl.(ind_npars), cdecl.2).
+Proof.
+  rewrite /lookup_constructor_pars_args => -> /= //.
+Qed.
+
 Definition inductive_isprop_and_pars Σ ind :=
-  match lookup_env Σ (inductive_mind ind) with
-  | Some (InductiveDecl mdecl) =>
-    match nth_error mdecl.(ind_bodies) (inductive_ind ind) with 
-    | Some idecl => Some (idecl.(ind_propositional), mdecl.(ind_npars))
-    | None => None
-    end
-  | _ => None
-  end.
+  '(mdecl, idecl) <- lookup_inductive Σ ind ;;
+  ret (idecl.(ind_propositional), mdecl.(ind_npars)).
 
-
+Definition constructor_isprop_pars_decl Σ ind c :=
+  '(mdecl, idecl, cdecl) <- lookup_constructor Σ ind c ;;
+  ret (idecl.(ind_propositional), mdecl.(ind_npars), cdecl).
+  
 Definition closed_decl (d : EAst.global_decl) := 
   match d with
   | EAst.ConstantDecl cb => 
@@ -75,14 +116,6 @@ Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ
 Definition fresh_global kn (Σ : global_declarations) :=
   Forall (fun x => x.1 <> kn) Σ.
 
-Inductive wf_glob : global_declarations -> Prop :=
-| wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
-  wf_glob Σ ->
-  fresh_global kn Σ ->
-  wf_glob ((kn, d) :: Σ).
-Derive Signature for wf_glob.
-
 Lemma lookup_env_Some_fresh {Σ c decl} :
   lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
 Proof.
@@ -94,32 +127,6 @@ Proof.
     now inv H2.
 Qed.
 
-Lemma extends_lookup {Σ Σ' c decl} :
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  lookup_env Σ c = Some decl ->
-  lookup_env Σ' c = Some decl.
-Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      case: eqb_spec; intros e; subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
-Qed.
-
-Lemma extends_is_propositional {Σ Σ'} : 
-  wf_glob Σ' -> extends Σ Σ' ->
-  forall ind b, inductive_isprop_and_pars Σ ind = Some b -> inductive_isprop_and_pars Σ' ind = Some b.
-Proof.
-  intros wf ex ind b.
-  rewrite /inductive_isprop_and_pars.
-  destruct lookup_env eqn:lookup => //.
-  now rewrite (extends_lookup wf ex lookup).
-Qed.
 
 (** ** Reduction *)
 
@@ -150,6 +157,20 @@ Definition cofix_subst (l : mfixpoint term) :=
 Definition unfold_cofix (mfix : mfixpoint term) (idx : nat) :=
   match List.nth_error mfix idx with
   | Some d => Some (d.(rarg), subst0 (cofix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cunfold_fix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (fix_subst mfix) d.(dbody))
+  | None => None
+  end.
+
+Definition cunfold_cofix (mfix : mfixpoint term) (idx : nat) :=
+  match List.nth_error mfix idx with
+  | Some d =>
+    Some (d.(rarg), substl (cofix_subst mfix) d.(dbody))
   | None => None
   end.
 

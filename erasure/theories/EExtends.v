@@ -1,81 +1,127 @@
+From Coq Require Import ssreflect.
+From Equations Require Import Equations.
 From MetaCoq.Template Require Import config utils Kernames.
-From MetaCoq.Erasure Require Import ETyping EAst Extract.
+From MetaCoq.Erasure Require Import EGlobalEnv EAst Extract EWellformed.
 
-Definition extends (Σ Σ' : global_declarations) := ∑ Σ'', Σ' = (Σ'' ++ Σ)%list.
+Section EEnvFlags.
+  Context (efl : EEnvFlags).
 
-Definition fresh_global kn (Σ : global_declarations) :=
-  Forall (fun x => x.1 <> kn) Σ.
+  Lemma weakening_env_declared_constant :
+    forall Σ cst decl,
+      declared_constant Σ cst decl ->
+      forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
+  Proof.
+    intros Σ cst decl H0 Σ' X2 H2.
+    eapply extends_lookup; eauto.
+  Qed.
 
-Inductive wf_glob : global_declarations -> Type :=
-| wf_glob_nil : wf_glob []
-| wf_glob_cons kn d Σ : 
-  wf_glob Σ ->
-  fresh_global kn Σ ->
-  wf_glob ((kn, d) :: Σ).
-Derive Signature for wf_glob.
+  Lemma weakening_env_declared_minductive :
+    forall Σ ind decl,
+      declared_minductive Σ ind decl ->
+      forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
+  Proof.
+    intros Σ cst decl H0 Σ' X2 H2.
+    eapply extends_lookup; eauto.
+  Qed.
 
-Lemma lookup_env_Some_fresh {Σ c decl} :
-  lookup_env Σ c = Some decl -> ~ (fresh_global c Σ).
-Proof.
-  induction Σ; cbn. 1: congruence.
-  destruct (eqb_spec c a.1); subst.
-  - intros [= <-] H2. invs H2.
-    contradiction.
-  - intros H1 H2. apply IHΣ; tas.
-    now inv H2.
-Qed.
+  Lemma weakening_env_declared_inductive:
+    forall Σ ind mdecl decl,
+      declared_inductive Σ mdecl ind decl ->
+      forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_inductive Σ' mdecl ind decl.
+  Proof.
+    intros Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split.
+    eapply weakening_env_declared_minductive; eauto.
+    eauto.
+  Qed.
 
-Lemma extends_lookup {Σ Σ' c decl} :
-  wf_glob Σ' ->
-  extends Σ Σ' ->
-  lookup_env Σ c = Some decl ->
-  lookup_env Σ' c = Some decl.
-Proof.
-  intros wfΣ' [Σ'' ->]. simpl.
-  induction Σ'' in wfΣ', c, decl |- *.
-  - simpl. auto.
-  - specialize (IHΣ'' c decl). forward IHΣ''.
-    + now inv wfΣ'.
-    + intros HΣ. specialize (IHΣ'' HΣ).
-      inv wfΣ'. simpl in *.
-      destruct (eqb_spec c kn); subst; auto.
-      apply lookup_env_Some_fresh in IHΣ''; contradiction.
-Qed.
+  Lemma weakening_env_declared_constructor :
+    forall Σ ind mdecl idecl decl,
+      declared_constructor Σ idecl ind mdecl decl ->
+      forall Σ', wf_glob Σ' -> extends Σ Σ' ->
+      declared_constructor Σ' idecl ind mdecl decl.
+  Proof.
+    intros Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
+    split; eauto. eapply weakening_env_declared_inductive; eauto.
+  Qed.
+  
+  Lemma extends_wf_glob {Σ Σ'} : extends Σ Σ' -> wf_glob Σ' -> wf_glob Σ.
+  Proof.
+    intros [? ->].
+    induction x; cbn; auto.
+    intros wf; depelim wf. eauto.
+  Qed.
 
-Lemma weakening_env_declared_constant :
-  forall Σ cst decl,
-    declared_constant Σ cst decl ->
-    forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_constant Σ' cst decl.
-Proof.
-  intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
-Qed.
+  Definition global_subset (Σ Σ' : global_declarations) := 
+    forall kn d, lookup_env Σ kn = Some d -> lookup_env Σ' kn = Some d.
 
-Lemma weakening_env_declared_minductive :
-  forall Σ ind decl,
-    declared_minductive Σ ind decl ->
-    forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_minductive Σ' ind decl.
-Proof.
-  intros Σ cst decl H0 Σ' X2 H2.
-  eapply extends_lookup; eauto.
-Qed.
+  Lemma lookup_env_In d Σ : 
+    wf_glob Σ ->
+    lookup_env Σ d.1 = Some d.2 <-> In d Σ.
+  Proof.
+    intros wf.
+    split.
+    - induction Σ; cbn => //.
+      destruct (eqb_spec d.1 a.1). intros [=]. destruct a, d; cbn in *; intuition auto.
+      left; subst; auto. depelim wf.
+      intros hl; specialize (IHΣ wf hl); intuition auto.
+    - induction wf => /= //.
+      intros [eq|hin]; eauto. subst d.
+      now rewrite eqb_refl.
+      specialize (IHwf hin).
+      destruct (eqb_spec d.1 kn). subst kn.
+      eapply lookup_env_Some_fresh in IHwf. contradiction.
+      exact IHwf.
+  Qed.
 
-Lemma weakening_env_declared_inductive:
-  forall Σ ind mdecl decl,
-    declared_inductive Σ mdecl ind decl ->
-    forall Σ', wf_glob Σ' -> extends Σ Σ' -> declared_inductive Σ' mdecl ind decl.
-Proof.
-  intros Σ cst decl H0 [Hmdecl Hidecl] Σ' X2 H2. split.
-  eapply weakening_env_declared_minductive; eauto.
-  eauto.
-Qed.
+  Lemma global_subset_In Σ Σ' : 
+    wf_glob Σ -> wf_glob Σ' ->
+    global_subset Σ Σ' <-> forall d, In d Σ -> In d Σ'.
+  Proof.
+    split.
+    - intros g d hin.
+      specialize (g d.1 d.2).
+      eapply lookup_env_In => //.
+      apply g. apply lookup_env_In => //.
+    - intros hd kn d hl.
+      eapply (lookup_env_In (kn, d)) in hl => //.
+      eapply (lookup_env_In (kn, d)) => //. eauto.
+  Qed.
 
-Lemma weakening_env_declared_constructor :
-  forall Σ ind mdecl idecl decl,
-    declared_constructor Σ idecl ind mdecl decl ->
-    forall Σ', wf_glob Σ' -> extends Σ Σ' ->
-    declared_constructor Σ' idecl ind mdecl decl.
-Proof.
-  intros Σ cst mdecl idecl cdecl [Hidecl Hcdecl] Σ' X2 H2.
-  split; eauto. eapply weakening_env_declared_inductive; eauto.
-Qed.
+  Lemma global_subset_cons d Σ Σ' : 
+    global_subset Σ Σ' ->
+    global_subset (d :: Σ) (d :: Σ').
+  Proof.
+    intros sub kn d'.
+    cbn. case: eqb_spec => [eq|neq] => //.
+    eapply sub.
+  Qed.
+
+  Lemma fresh_global_subset Σ Σ' kn : 
+    wf_glob Σ -> wf_glob Σ' ->
+    global_subset Σ Σ' ->
+    fresh_global kn Σ' -> fresh_global kn Σ.
+  Proof.
+    intros wfΣ wfΣ' sub fr.
+    unfold fresh_global in *.
+    eapply All_Forall, In_All.
+    intros [kn' d] hin. cbn.
+    intros eq; subst.
+    eapply global_subset_In in hin; tea.
+    eapply Forall_All in fr. eapply All_In in fr; tea.
+    destruct fr. cbn in H. congruence.
+  Qed.
+
+  Lemma global_subset_cons_right d Σ Σ' : 
+    wf_glob Σ -> wf_glob (d :: Σ') ->
+    global_subset Σ Σ' ->
+    global_subset Σ (d :: Σ').
+  Proof.
+    intros wf wf' gs.
+    assert (wf_glob Σ'). now depelim wf'.
+    rewrite (global_subset_In _ _ wf H) in gs.
+    rewrite global_subset_In //.
+    intros decl. specialize (gs decl).
+    intros hin; specialize (gs hin). cbn. now right.
+  Qed.
+
+End EEnvFlags.

@@ -164,6 +164,103 @@ module CaseCompat =
     case_branches_contexts_gen mib ci u pars brs
 end
 
+module RetypeMindEntry =
+  struct
+
+  open Entries
+  open Names
+  open Univ
+
+  let retype env evm c = 
+    Typing.type_of env evm (EConstr.of_constr c)
+
+  let retype_decl env evm decl =
+    match decl with
+    | Context.Rel.Declaration.LocalAssum (na, ty) ->
+      let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
+      evm, Context.Rel.Declaration.LocalAssum (na, ty)
+    | Context.Rel.Declaration.LocalDef (na, b, ty) ->
+      let evm, b = Typing.solve_evars env evm (EConstr.of_constr b) in
+      let evm, ty = Typing.solve_evars env evm (EConstr.of_constr ty) in
+      let evm = Typing.check env evm b ty in
+      evm, Context.Rel.Declaration.LocalDef (na, b, ty)
+    
+  let retype_context env evm ctx = 
+    let env, evm, ctx = Context.Rel.fold_outside (fun decl (env, evm, ctx) ->
+      let evm, d = retype_decl env evm decl in
+      (EConstr.push_rel d env, evm, d :: ctx)) 
+      ctx ~init:(env, evm, [])
+    in evm, ctx
+
+  let infer_mentry_univs env evm mind =
+    let pars = mind.mind_entry_params in
+    let evm, pars' = retype_context env evm pars in
+    let envpars = Environ.push_rel_context pars env in
+    let evm, arities =
+      List.fold_left 
+        (fun (evm, ctx) oib -> 
+          let ty = oib.mind_entry_arity in
+          let evm, s = retype envpars evm ty in
+          let ty = Term.it_mkProd_or_LetIn ty pars in
+          (evm, Context.Rel.Declaration.LocalAssum (Context.annotR (Name oib.mind_entry_typename), ty) :: ctx))
+        (evm, []) mind.mind_entry_inds
+    in
+    let env = Environ.push_rel_context arities env in
+    let env = Environ.push_rel_context pars env in
+    let evm =
+      List.fold_left 
+        (fun evm oib ->
+          let evm, cstrsu = 
+            List.fold_left (fun (evm, sort) cstr ->
+              let evm, cstrty = retype env evm cstr in
+              let _, cstrsort = Reduction.dest_arity env (EConstr.to_constr evm cstrty) in
+              (evm, Univ.sup sort (Sorts.univ_of_sort cstrsort)))
+            (evm, Univ.type0m_univ) oib.mind_entry_lc
+          in 
+          let _, indsort = Reduction.dest_arity env oib.mind_entry_arity in
+          let cstrsort = Sorts.sort_of_univ cstrsu in
+          (* Hacky, but we don't have a good way to enfore max() <= max() constraints yet *)
+          let evm = try Evd.set_leq_sort env evm cstrsort indsort with e -> evm in
+          evm)
+        evm mind.mind_entry_inds
+    in
+    evm, mind
+
+  let nf_mentry_univs evm mind =
+    let pars = List.map EConstr.Unsafe.to_rel_decl (Evarutil.nf_rel_context_evar evm (List.map EConstr.of_rel_decl mind.mind_entry_params)) in
+    let nf_evar c = EConstr.Unsafe.to_constr (Evarutil.nf_evar evm (EConstr.of_constr c)) in
+    let inds =
+      List.map
+          (fun oib -> 
+            let arity = nf_evar oib.mind_entry_arity in
+            let cstrs = List.map nf_evar oib.mind_entry_lc in
+            { oib with mind_entry_arity = arity; mind_entry_lc = cstrs })
+         mind.mind_entry_inds
+      in
+      { mind with mind_entry_params = pars; mind_entry_inds = inds }
+
+  let infer_mentry_univs env evm mind = 
+    let evm = 
+      match mind.mind_entry_universes with
+      | Entries.Monomorphic_entry ctx ->
+        Evd.merge_context_set (UState.UnivFlexible false) evm ctx
+      | Entries.Polymorphic_entry (names, uctx) ->
+        let uctx' = ContextSet.of_context uctx in
+        Evd.merge_context_set (UState.UnivFlexible false) evm uctx'
+    in
+    let evm, mind = infer_mentry_univs env evm mind in
+    let evm = Evd.minimize_universes evm in
+    let mind = nf_mentry_univs evm mind in
+    let ctx, mind = 
+      match mind.mind_entry_universes with
+      | Entries.Monomorphic_entry ctx ->
+        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Monomorphic_entry ctx }
+      | Entries.Polymorphic_entry (names, uctx) ->
+        let uctx' = Evd.to_universe_context evm in
+        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_entry (names, uctx') }
+    in ctx, mind
+end 
+
 type ('term, 'name, 'nat) adef = { adname : 'name; adtype : 'term; adbody : 'term; rarg : 'nat }
 
 type ('term, 'name, 'nat) amfixpoint = ('term, 'name, 'nat) adef list

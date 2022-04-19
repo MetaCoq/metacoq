@@ -156,7 +156,7 @@ type template_monad =
   | TmLemmaTerm of Constr.t * Constr.t
   | TmAxiom of Constr.t * Constr.t * Constr.t
   | TmAxiomTerm of Constr.t * Constr.t
-  | TmMkInductive of Constr.t
+  | TmMkInductive of Constr.t * Constr.t
   | TmVariable of Constr.t * Constr.t
 
   | TmFreshName of Constr.t
@@ -339,7 +339,7 @@ let next_action env evd (pgm : constr) : template_monad * _ =
 
   else if eq_gr ptmMkInductive then
     match args with
-    | mind::[] -> (TmMkInductive mind, universes)
+    | inferu :: mind :: [] -> (TmMkInductive (inferu, mind), universes)
     | _ -> monad_failure "tmMkInductive" 1
   else if eq_gr ptmVariable then
     match args with
@@ -347,7 +347,7 @@ let next_action env evd (pgm : constr) : template_monad * _ =
     | _ -> monad_failure "tmVariable" 2
   else if eq_gr ttmInductive then
     match args with
-    | mind::[] -> (TmMkInductive mind, universes)
+    | inferu :: mind::[] -> (TmMkInductive (inferu, mind), universes)
     | _ -> monad_failure "tmInductive" 1
   else if eq_gr ptmUnquote then
     match args with

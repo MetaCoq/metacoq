@@ -24,13 +24,15 @@ PCUICNormal
 PCUICPosition
 PCUICPretty
 PCUICWcbvEval
+PCUICProgram
 TemplateToPCUIC
 PCUICExpandLets
-PCUICExpandLetsCorrectness
+PCUICTransform
 
 PCUICErrors
 PCUICEqualityDec
 PCUICWfEnv
+PCUICWfEnvImpl
 PCUICUnivSubst
 PCUICSafeReduce
 PCUICSafeRetyping
@@ -40,15 +42,20 @@ EAstUtils
 ELiftSubst
 EInduction
 ECSubst
-ETyping
+EGlobalEnv
+EEnvMap
+EWellformed
 EWcbvEval
 ESpineView
 EPretty
 Extract
 EEtaExpanded
+EEtaExpandedFix
 ERemoveParams
 ErasureFunction
 EOptimizePropDiscr
+EProgram
+ETransform
 Erasure
 
 G_metacoq_erasure

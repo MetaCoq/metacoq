@@ -77,9 +77,6 @@ let of_mib (env : Environ.env) (t : Names.MutInd.t) (mib : Plugin_core.mutual_in
     let indsort = Q.quote_sort (inductive_sort oib) in      
     let (reified_ctors,acc) =
       List.fold_left (fun (ls,acc) (nm,ty,ar) ->
-          Tm_util.debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                      bool !Quoter.opt_hnf_ctor_types)) ;
-          let ty = if !Quoter.opt_hnf_ctor_types then Quoter.hnf_type envind ty else ty in
           let ty = quote_term acc ty in
           ((quote_ident nm, qargctx, Array.to_list qindices, ty, quote_int ar) :: ls, acc))
         ([],acc) named_ctors
@@ -132,10 +129,11 @@ let get_constant_body b =
 (* note(gmm): code taken from quoter.ml (quote_entry_aux) *)
 let of_constant_body (env : Environ.env) (cd : Plugin_core.constant_body) : Ast0.Env.constant_body =
   let open Declarations in
-  let {const_body = body; const_type = typ; const_universes = univs} = cd in
+  let {const_body = body; const_type = typ; const_universes = univs; const_relevance = rel} = cd in
   Ast0.Env.({cst_type = quote_term env typ;
          cst_body = Option.map (quote_term env) (get_constant_body body);
-         cst_universes = quote_universes_decl univs None})
+         cst_universes = quote_universes_decl univs None;
+         cst_relevance = quote_relevance rel})
 
 (* what about the overflow?
   efficiency? extract to bigint using Coq directives and convert to int here? *)
@@ -232,8 +230,8 @@ let rec interp_tm (t : 'a coq_TM) : 'a tm =
   | Coq_tmQuoteConstant (kn, b) ->
     tmBind (tmQuoteConstant (unquote_kn kn) b)
            (fun x -> Obj.magic (tmOfConstantBody x))
-  | Coq_tmInductive i ->
-    tmMap (fun _ -> Obj.magic ()) (tmInductive (to_mie i))
+  | Coq_tmInductive (inferu, i) ->
+    tmMap (fun _ -> Obj.magic ()) (tmInductive (unquote_bool inferu) (to_mie i))
   | Coq_tmExistingInstance k ->
     Obj.magic (tmExistingInstance (unquote_global_reference k))
   | Coq_tmInferInstance t ->

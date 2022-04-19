@@ -61,7 +61,7 @@ val tmQuoteInductive : kername -> (Names.MutInd.t * mutual_inductive_body) optio
 val tmQuoteUniverses : UGraph.t tm
 val tmQuoteConstant : kername -> bool -> constant_body tm
 
-val tmInductive : mutual_inductive_entry -> unit tm
+val tmInductive : bool -> mutual_inductive_entry -> unit tm
 
 val tmExistingInstance : global_reference -> unit tm
 val tmInferInstance : term -> term option tm

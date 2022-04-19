@@ -9,8 +9,13 @@ theories/ESpineView.v
 theories/EPretty.v
 theories/ECSubst.v
 theories/EWcbvEval.v
+# theories/EWtAst.v
 theories/EWndEval.v
-theories/ETyping.v
+theories/EGlobalEnv.v
+theories/EWellformed.v
+theories/EEnvMap.v
+theories/EWcbvEvalInd.v
+theories/EWcbvEvalEtaInd.v
 theories/Extract.v
 theories/EDeps.v
 theories/EAll.v
@@ -23,6 +28,9 @@ theories/ErasureCorrectness.v
 theories/ErasureFunction.v
 theories/EExtends.v
 theories/EOptimizePropDiscr.v
-theories/ERemoveParams.v
+theories/EEtaExpandedFix.v
 theories/EEtaExpanded.v
+theories/EProgram.v
+theories/ERemoveParams.v
+theories/ETransform.v
 theories/Erasure.v

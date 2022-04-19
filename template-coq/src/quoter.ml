@@ -31,9 +31,6 @@ let toDecl (old: Name.t Context.binder_annot * ((Constr.constr) option) * Constr
 let getType env (t:Constr.t) : Constr.t =
     EConstr.to_constr Evd.empty (Retyping.get_type_of env Evd.empty (EConstr.of_constr t))
 
-(* TODO: remove? *)
-let opt_hnf_ctor_types = ref false
-
 let hnf_type env ty =
   let rec hnf_type continue ty =
     match Constr.kind ty with
@@ -147,7 +144,7 @@ sig
     -> quoted_variance list option
     -> quoted_mutual_inductive_body
 
-  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_constant_body
+  val mk_constant_body : t (* type *) -> t option (* body *) -> quoted_universes_decl -> quoted_relevance -> quoted_constant_body
 
   val mk_inductive_decl : quoted_mutual_inductive_body -> quoted_global_decl
 
@@ -209,7 +206,7 @@ struct
             (Univ.LSet.add p levels, Univ.Constraint.add (x, Univ.Eq, p) cstrs)) rest acc)
         eqs (levels, cstrs)
     in
-    let levels = Univ.LSet.remove Univ.Level.set levels in
+    let levels = Univ.LSet.add Univ.Level.set levels in
     let levels = Univ.LSet.remove Univ.Level.prop levels in
     let levels = Univ.LSet.remove Univ.Level.sprop levels in
     let cstrs = Univ.Constraint.remove (Univ.Level.prop, Univ.Lt, Univ.Level.set) cstrs in
@@ -385,8 +382,6 @@ struct
           let indsort = Q.quote_sort (inductive_sort oib) in
           let (reified_ctors,acc) =
             List.fold_left (fun (ls,acc) (nm,(ctx, ty),ar) ->
-              debug (fun () -> Pp.(str "opt_hnf_ctor_types:" ++ spc () ++
-                                  bool !opt_hnf_ctor_types)) ;
               let ty = Term.it_mkProd_or_LetIn ty ctx in
               let ctx, concl = Term.decompose_prod_assum ty in
               let argctx, parsctx =
@@ -400,7 +395,6 @@ struct
                 let envconcl = push_rel_context argctx envcstr in
                 quote_terms quote_term acc envconcl args
               in
-              let ty = if !opt_hnf_ctor_types then hnf_type (snd envind) ty else ty in
               let (ty,acc) = quote_term acc envind ty in
               ((Q.quote_ident nm, qargctx, Array.to_list qindices, ty, Q.quote_int ar) :: ls, acc))
               ([],acc) named_ctors
@@ -536,7 +530,8 @@ struct
                   Feedback.msg_debug (str"Exception raised while checking type of " ++ KerName.print kn);
                   raise e)
             in
-            let cst_bdy = Q.mk_constant_body ty tm uctx in
+            let rel = Q.quote_relevance cd.const_relevance in
+            let cst_bdy = Q.mk_constant_body ty tm uctx rel in
             let decl = Q.mk_constant_decl cst_bdy in            
             constants := (Q.quote_kn kn, decl) :: !constants
           end
@@ -626,6 +621,7 @@ since  [absrt_info] is a private type *)
   let quote_constant_body bypass env evm cd =
     let ty, body = quote_constant_body_aux bypass env evm cd in
     Q.mk_constant_body ty body (quote_universes_decl cd.const_universes None)
+      (Q.quote_relevance cd.const_relevance)
 
   let quote_constant_entry bypass env evm cd =
     let (ty, body) = quote_constant_body_aux bypass env evm cd in

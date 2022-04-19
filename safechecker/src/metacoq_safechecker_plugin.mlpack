@@ -22,12 +22,14 @@ PCUICWfUniverses
 PCUICNormal
 PCUICPosition
 PCUICPretty
+PCUICProgram
 TemplateToPCUIC
 PCUICUnivSubst
 
 PCUICErrors
 PCUICEqualityDec
 PCUICWfEnv
+PCUICWfEnvImpl
 PCUICSafeReduce
 PCUICSafeConversion
 PCUICTypeChecker

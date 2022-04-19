@@ -11,24 +11,16 @@ Implicit Types (cf : checker_flags) (Σ : global_env_ext).
 
 (** Preliminary lemmata missing from MetaCoq *)
 Lemma is_allowed_elimination_monotone `{checker_flags} Σ s1 s2 allowed :
-  leq_universe Σ s1 s2 -> is_allowed_elimination Σ s2 allowed -> is_allowed_elimination Σ s1 allowed.
+  leq_universe Σ s1 s2 -> is_allowed_elimination Σ allowed s2 -> is_allowed_elimination Σ allowed s1.
 Proof.
-  intros le elim.
-  unfold is_allowed_elimination in elim |- *.
-  red in le.
-  destruct check_univs ; auto.
-  unfold is_allowed_elimination0 in elim |- *.
-  intros v satisf.
-  specialize (le v satisf).
-  specialize (elim v satisf).
-  destruct allowed ; auto.
-  all: destruct (⟦s1⟧_v)%u.
-  all: destruct (⟦s2⟧_v)%u.
-  all: auto.
-  all: red in le ; auto.
-  rewrite Z.sub_0_r in le.
-  apply Nat2Z.inj_le in le.
-  destruct le ; auto.
+  destruct allowed, s2; cbnr; trivial;
+  destruct s1; cbnr; intros H1 H2; trivial; try now destruct H1.
+  { now left. }
+  destruct H2 as [|H2]; [now left|right].
+  unfold_univ_rel.
+  specialize (H1 v Hv); specialize (H2 v Hv).
+  cbn in H2.
+  lia.
 Qed.
 
 Lemma ctx_inst_length {ty Σ Γ args Δ} :

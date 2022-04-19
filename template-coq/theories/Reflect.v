@@ -151,21 +151,6 @@ Next Obligation.
   all: left. all: reflexivity.
 Defined.
 
-(* TODO: move *)
-Lemma eq_universe_iff (u v : Universe.nonEmptyUnivExprSet) :
-  u = v <-> u = v :> UnivExprSet.t.
-Proof.
-  destruct u, v; cbn; split. now inversion 1.
-  intros ->. f_equal. apply uip.
-Qed.
-Lemma eq_universe_iff' (u v : Universe.nonEmptyUnivExprSet) :
-  u = v <-> UnivExprSet.elements u = UnivExprSet.elements v.
-Proof.
-  etransitivity. apply eq_universe_iff.
-  destruct u as [[u1 u2] ?], v as [[v1 v2] ?]; cbn; clear; split.
-  now inversion 1. intros ->. f_equal. apply uip.
-Qed.
-
 #[global] Instance reflect_case_info : ReflectEq case_info := EqDec_ReflectEq case_info.
 
 Derive NoConfusion NoConfusionHom for sig.

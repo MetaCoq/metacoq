@@ -236,6 +236,14 @@
 | [BDUnique]         | Inferred types are unique (up to reductions)
 | [BDStrengthening]  | Bidirectional typing can be strengthened (variables not appearing in a term can be removed from the context while keeping typability)
 
+[BDEnvironmentTyping]: ./Bidirectional/BDEnvironmentTyping.v
+[BDTyping]: ./Bidirectional/BDTyping.v
+[BDToPCUIC]: ./Bidirectional/BDToPCUIC.v
+[BDFromPCUIC]: ./Bidirectional/BDFromPCUIC.v
+[BDUnique]: ./Bidirectional/BDUnique.v
+[BDStrengthening]: ./Bidirectional/BDStrengthening.v
+
+
 
 ## Preliminaries for Safe Checker
 

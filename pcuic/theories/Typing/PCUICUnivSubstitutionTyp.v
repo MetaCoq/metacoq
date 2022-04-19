@@ -334,6 +334,9 @@ Proof.
       now len.
     + red; rewrite <- wffix.
       unfold wf_fixpoint, wf_fixpoint_gen.
+      f_equal. 
+      { rewrite forallb_map. solve_all. cbn. 
+        destruct (dbody x) => //. }
       rewrite map_map_compose.
       now rewrite subst_instance_check_one_fix.
 

@@ -288,11 +288,21 @@ let unquote_mutual_inductive_entry env evm trm (* of type mutual_inductive_entry
   else
     not_supported_verb trm "unquote_mutual_inductive_entry"
 
-
-let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (mind: Constr.t) : unit =
+let declare_inductive (env: Environ.env) (evm: Evd.evar_map) (infer_univs : bool) (mind: Constr.t) : Evd.evar_map =
   let mind = reduce_all env evm mind in
-  let evm, mind = unquote_mutual_inductive_entry env evm mind in
-  ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind Names.Id.Map.empty [])
+  let evm' = Evd.from_env env in
+  let evm', mind = unquote_mutual_inductive_entry env evm' mind in
+  let evm, mind = 
+    if infer_univs then
+      let ctx, mind = Tm_util.RetypeMindEntry.infer_mentry_univs env evm' mind in
+      debug (fun () -> Pp.(str "Declaring universe context " ++ Univ.pr_universe_context_set (Level.pr) ctx));
+      DeclareUctx.declare_universe_context ~poly:false ctx; 
+      Evd.merge_context_set Evd.UnivRigid evm ctx, mind
+    else evm, mind
+  in
+  let names = Id.Map.empty in
+  ignore (DeclareInd.declare_mutual_inductive_with_eliminations mind names []);
+  evm
 
 let not_in_tactic s =
   CErrors.user_err  (str ("You can not use " ^ s ^ " in a tactic."))
@@ -451,13 +461,15 @@ let rec run_template_program_rec ~poly ?(intactic=false) (k : Constr.t Plugin_co
     let evm,trm = denote_term env evm (reduce_all env evm trm) in
     Plugin_core.run ~st (Plugin_core.tmEval red trm) env evm
       (fun ~st env evm trm -> k ~st env evm (quote_term env trm))
-  | TmMkInductive mind ->
-    declare_inductive env evm mind;
+  | TmMkInductive (b, mind) ->
+    let infer_univs = unquote_bool (reduce_all env evm b) in
+    let evm = declare_inductive env evm infer_univs mind in
     let env = Global.env () in
     k ~st env evm (Lazy.force unit_tt)
   | TmUnquote t ->
     begin
        try
+         debug Pp.(fun () -> str"Unquoting:" ++ Printer.pr_constr_env env evm t);
          let t = reduce_all env evm t in
          let evm, t' = denote_term env evm t in
          let typ = Retyping.get_type_of env evm (EConstr.of_constr t') in

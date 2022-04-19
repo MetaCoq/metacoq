@@ -3,7 +3,7 @@ From Coq Require Import Program.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTyping
      PCUICElimination PCUICWcbvEval.
-From MetaCoq.Erasure Require EAst ETyping.
+From MetaCoq.Erasure Require EAst EGlobalEnv.
 
 Module E := EAst.
 
@@ -36,12 +36,6 @@ Fixpoint mkAppBox c n :=
   match n with
   | 0 => c
   | S n => mkAppBox (E.tApp c E.tBox) n
-  end.
-
-Definition is_box c :=
-  match EAstUtils.head c with
-  | E.tBox => true
-  | _ => false
   end.
 
 Reserved Notation "Σ ;;; Γ |- s ⇝ℇ t" (at level 50, Γ, s, t at next level).
@@ -86,10 +80,9 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
   | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                   All2
                     (fun (d : def term) (d' : E.def E.term) =>
-                     d.(dname).(binder_name) = E.dname d'
-                     × rarg d = E.rarg d'
-                       × Σ;;; Γ ,,, fix_context mfix |-
-                         dbody d ⇝ℇ E.dbody d') mfix mfix' ->
+                     [× d.(dname).(binder_name) = E.dname d', rarg d = E.rarg d',
+                      isLambda (dbody d), E.isLambda (E.dbody d') &
+                      Σ;;; Γ ,,, fix_context mfix |- dbody d ⇝ℇ E.dbody d']) mfix mfix' ->
                   Σ;;; Γ |- tFix mfix n ⇝ℇ E.tFix mfix' n
   | erases_tCoFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
                     All2
@@ -146,9 +139,10 @@ Lemma erases_forall_list_ind
       (Hfix : forall Γ mfix n mfix',
           All2
             (fun d d' =>
-               (dname d).(binder_name) = E.dname d' ×
-               rarg d = E.rarg d' ×
-               Σ;;; app_context Γ (fix_context mfix) |- dbody d ⇝ℇ E.dbody d')
+               [× (dname d).(binder_name) = E.dname d',
+                  rarg d = E.rarg d',
+                  isLambda (dbody d), E.isLambda (E.dbody d') &
+               Σ;;; app_context Γ (fix_context mfix) |- dbody d ⇝ℇ E.dbody d'])
             mfix mfix' ->
           Forall2 (fun d d' =>
                      P (app_context Γ (fix_context mfix))
@@ -198,7 +192,7 @@ Proof.
     revert mfix mfix'.
     fix f' 3.
     intros mfix mfix' []; [now constructor|].
-    constructor; [now apply f|now apply f'].
+    destruct a. constructor; [now apply f|now apply f'].
   - apply Hcofix; try assumption.
     revert X.
     generalize mfix at 1 3.
@@ -217,7 +211,7 @@ Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' 
   end.
 
 Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
-  Forall2 (fun cdecl '(i', n') => cdecl.(cstr_arity) = n' /\ cdecl.(cstr_name) = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
+  Forall2 (fun cdecl '(i', n') => cdecl.(PCUICEnvironment.cstr_arity) = n' /\ cdecl.(cstr_name) = i') oib.(ind_ctors) oib'.(E.ind_ctors) /\
   Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
@@ -271,19 +265,19 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' (E.tApp hd arg)
 | erases_deps_tConst kn cb cb' :
     declared_constant Σ kn cb ->
-    ETyping.declared_constant Σ' kn cb' ->
+    EGlobalEnv.declared_constant Σ' kn cb' ->
     erases_constant_body (Σ, cst_universes cb) cb cb' ->
     (forall body, E.cst_body cb' = Some body -> erases_deps Σ Σ' body) ->
     erases_deps Σ Σ' (E.tConst kn)
 | erases_deps_tConstruct ind c mdecl idecl cdecl mdecl' idecl' cdecl' :
     PCUICAst.declared_constructor Σ (ind, c) mdecl idecl cdecl ->
-    ETyping.declared_constructor Σ' (ind, c) mdecl' idecl' cdecl' ->
+    EGlobalEnv.declared_constructor Σ' (ind, c) mdecl' idecl' cdecl' ->
     erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' (E.tConstruct ind c)
 | erases_deps_tCase p mdecl idecl mdecl' idecl' discr brs :
     declared_inductive Σ (fst p) mdecl idecl ->
-    ETyping.declared_inductive Σ' (fst p) mdecl' idecl' ->
+    EGlobalEnv.declared_inductive Σ' (fst p) mdecl' idecl' ->
     erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' discr ->
@@ -291,7 +285,7 @@ Inductive erases_deps (Σ : global_env) (Σ' : E.global_declarations) : E.term -
     erases_deps Σ Σ' (E.tCase p discr brs)
 | erases_deps_tProj p mdecl idecl mdecl' idecl' t :
     declared_inductive Σ p.1.1 mdecl idecl ->
-    ETyping.declared_inductive Σ' p.1.1 mdecl' idecl' ->
+    EGlobalEnv.declared_inductive Σ' p.1.1 mdecl' idecl' ->
     erases_mutual_inductive_body mdecl mdecl' ->
     erases_one_inductive_body idecl idecl' ->
     erases_deps Σ Σ' t ->

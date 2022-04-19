@@ -1,7 +1,6 @@
 (* Distributed under the terms of the MIT license. *)
 From MetaCoq.Template Require Import utils BasicAst Kernames.
 From MetaCoq.Erasure Require Import EAst.
-From MetaCoq.PCUIC Require PCUICPrimitive.
 Require Import ssreflect ssrbool.
 
 
@@ -23,7 +22,7 @@ Proof.
 Qed.
 
 Lemma decompose_app_mkApps f l :
-  isApp f = false -> decompose_app (mkApps f l) = (f, l).
+  ~~ isApp f -> decompose_app (mkApps f l) = (f, l).
 Proof.
   intros Hf. unfold decompose_app. rewrite decompose_app_rec_mkApps. rewrite app_nil_r.
   destruct f; simpl in *; (discriminate || reflexivity).
@@ -238,6 +237,23 @@ Definition isBox t :=
   | tBox => true
   | _ => false
   end.
+
+Definition is_box c :=
+  match head c with
+  | tBox => true
+  | _ => false
+  end.
+
+
+Lemma is_box_mkApps f a : is_box (mkApps f a) = is_box f.
+Proof.
+  now rewrite /is_box head_mkApps.
+Qed.
+
+Lemma is_box_tApp f a : is_box (tApp f a) = is_box f.
+Proof.
+  now rewrite /is_box head_tApp.
+Qed.
 
 Definition string_of_def {A : Set} (f : A -> string) (def : def A) :=
   "(" ^ string_of_name (dname def) ^ "," ^ f (dbody def) ^ ","

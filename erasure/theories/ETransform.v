@@ -13,23 +13,25 @@ Import PCUICAst (term) PCUICProgram PCUICTransform (eval_pcuic_program) Extract 
     EAst Transform ERemoveParams.
 Import EEnvMap EGlobalEnv EWellformed.
 
+Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wfΣ : ∥ PCUICTyping.wf Σ ∥) : wf_env := 
+  {| wf_env_referenced := {| referenced_impl_env := Σ.(trans_env_env); referenced_impl_wf := wfΣ |} ;
+     wf_env_map := Σ.(trans_env_map);
+     wf_env_map_repr := Σ.(trans_env_repr);
+ |}.
+
 Program Definition erase_pcuic_program (p : pcuic_program) 
   (wfΣ : ∥ PCUICTyping.wf_ext (H := config.extraction_checker_flags) p.1 ∥)
   (wt : ∥ ∑ T, PCUICTyping.typing (H := config.extraction_checker_flags) p.1 [] p.2 T ∥) : eprogram_env :=
   let wfe := build_wf_env_from_env p.1.1 (map_squash (PCUICTyping.wf_ext_wf _) wfΣ) in
-  let wfe' := ErasureFunction.make_wf_env_ext wfe p.1.2 wfΣ in
-  let t := ErasureFunction.erase wfe' nil p.2 _ in
-  let Σ' := ErasureFunction.erase_global (EAstUtils.term_global_deps t) wfe in
+  let wfext := ErasureFunction.make_wf_env_ext wfe p.1.2 wfΣ in
+  let t := ErasureFunction.erase wfext nil p.2
+    (fun Σ wfΣ => let '(sq (T; ty)) := wt in PCUICTyping.iswelltyped ty) in
+  let Σ' := ErasureFunction.erase_global_fast (EAstUtils.term_global_deps t) wfe in
   (EEnvMap.GlobalContextMap.make Σ' _, t).
-  
+
 Next Obligation.
-  sq. destruct wt as [T Ht].
-  cbn in *. subst. now exists T.
-Qed.
-Next Obligation.
-  unfold ErasureFunction.erase_global.
   eapply wf_glob_fresh.
-  eapply ErasureFunction.erase_global_decls_wf_glob.
+  eapply ErasureFunction.erase_global_fast_wf_glob.
 Qed.
 
 Obligation Tactic := idtac.
@@ -44,8 +46,9 @@ Lemma expanded_erase_program (cf := config.extraction_checker_flags) p (wtp : �
   EEtaExpandedFix.expanded_eprogram_env (erase_program p wtp).
 Proof.
   intros [etaenv etat]. split.
-  eapply ErasureFunction.expanded_erase_global, etaenv.
-  eapply ErasureFunction.expanded_erase, etat.
+  unfold erase_program, erase_pcuic_program.
+  eapply ErasureFunction.expanded_erase_global_fast, etaenv.
+  eapply ErasureFunction.expanded_erase_fast, etat.
 Qed.
 
 Lemma expanded_eprogram_env_expanded_eprogram_cstrs p :
@@ -58,16 +61,6 @@ Proof.
   - eapply EEtaExpanded.isEtaExpFix_env_isEtaExp_env. now eapply EEtaExpandedFix.expanded_global_env_isEtaExp_env.
   - eapply EEtaExpanded.isEtaExpFix_isEtaExp. now eapply EEtaExpandedFix.expanded_isEtaExp.
 Qed.
-
-(* Lemma expanded_eprogram_expanded_eprogram_cstrs p :
-  expanded_eprogram p ->
-  expanded_eprogram_cstrs p.
-Proof.
-  move=> /andP[] etaenv etat.
-  apply /andP. split; [now eapply EEtaExpanded.isEtaExpFix_env_isEtaExp_env|
-  now eapply EEtaExpanded.isEtaExpFix_isEtaExp].
-Qed. *)
-
 
 Program Definition erase_transform : Transform.t pcuic_program eprogram_env PCUICAst.term EAst.term 
   eval_pcuic_program (eval_eprogram_env EWcbvEval.default_wcbv_flags) :=
@@ -82,9 +75,10 @@ Next Obligation.
   intros p [wtp etap].
   destruct erase_program eqn:e.
   split; cbn.
-  - unfold erase_program, erase_pcuic_program in e. simpl. injection e. intros <- <-.
+  - unfold erase_program, erase_pcuic_program in e. simpl. cbn in e. injection e. intros <- <-.
     split. 
-    eapply ErasureFunction.erase_global_wf_glob. eapply ErasureFunction.erase_wellformed.
+    eapply ErasureFunction.erase_global_fast_wf_glob.
+    eapply ErasureFunction.erase_wellformed_fast.
   - rewrite -e. cbn.
     now eapply expanded_erase_program.
 Qed.
@@ -96,7 +90,9 @@ Next Obligation.
   unfold erase_program, erase_pcuic_program in e. simpl in e. injection e; intros <- <-.
   simpl. clear e. cbn in *.
   set (Σ' := build_wf_env_from_env _ _).
-  eapply (ErasureFunction.erase_correct Σ' Σ.2 _ _ _ _ _ (EAstUtils.term_global_deps _)) in ev; try reflexivity.
+  eapply (ErasureFunction.erase_correct Σ' Σ.2 _ _ _ _ _ (EAstUtils.term_global_deps _)) in ev.
+  4:{ rewrite -ErasureFunction.erase_global_fast_spec. reflexivity. }
+  all:trea.
   2:eapply Kernames.KernameSet.subset_spec; reflexivity.
   destruct ev as [v' [he [hev]]]. exists v'; split => //.
   red. cbn.
@@ -111,7 +107,7 @@ Import EWcbvEval (WcbvFlags, with_prop_case, with_guarded_fix).
 
 Program Definition guarded_to_unguarded_fix {fl : EWcbvEval.WcbvFlags} {efl : EEnvFlags} (wguard : with_guarded_fix) :
   Transform.t eprogram_env eprogram_env EAst.term EAst.term 
-    (eval_eprogram_env fl) (eval_eprogram_env (EEtaExpandedFix.switch_unguarded_fix fl)) :=
+    (eval_eprogram_env fl) (eval_eprogram_env (EWcbvEval.switch_unguarded_fix fl)) :=
   {| name := "switching to unguarded fixpoints";
     transform p pre := p;
     pre p := wf_eprogram_env efl p /\ EEtaExpandedFix.expanded_eprogram_env p;
@@ -223,4 +219,28 @@ Next Obligation.
   eexists; split => //. red. sq; auto. cbn. apply wfe.
   eapply wellformed_closed_env, wfe.
   eapply wellformed_closed, wfe.
+Qed.
+
+From MetaCoq.Erasure Require Import EInlineProjections.
+
+Program Definition inline_projections_optimization {fl : WcbvFlags} (efl := all_env_flags)
+  {hastrel : has_tRel} {hastbox : has_tBox} :
+  Transform.t eprogram_env eprogram EAst.term EAst.term (eval_eprogram_env fl) (eval_eprogram fl) := 
+  {| name := "primitive projection inlining"; 
+    transform p _ := EInlineProjections.optimize_program p ; 
+    pre p := wf_eprogram_env efl p /\ EEtaExpanded.expanded_eprogram_env_cstrs p;
+    post p := wf_eprogram (disable_projections_env_flag efl) p /\ EEtaExpanded.expanded_eprogram_cstrs p;
+    obseq g g' v v' := v' = EInlineProjections.optimize g.1 v |}.
+
+Next Obligation.
+  move=> fl efl hastrel hastbox [Σ t] [wfp etap].
+  cbn in *. split.
+  - now eapply optimize_program_wf.
+  - now eapply optimize_program_expanded.
+Qed.
+Next Obligation.
+  red. move=> fl hastrel hastbox [Σ t] /= v [wfe wft] [ev].
+  eapply EInlineProjections.optimize_correct in ev; eauto.
+  eexists; split => //. red. sq; auto. cbn. apply wfe.
+  cbn. eapply wfe.
 Qed.

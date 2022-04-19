@@ -3,18 +3,8 @@
 (* Eta expanded constructors only, see EEtaExpandedFix for the more involved definition where fixpoints are also eta-expanded. *)
 
 From Coq Require Import Utf8 Program.
-From MetaCoq.Template Require Import config utils Kernames EnvMap.
-From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils
-     PCUICReflect PCUICWeakeningEnvConv PCUICWeakeningEnvTyp
-     PCUICTyping PCUICInversion PCUICGeneration
-     PCUICConfluence PCUICConversion 
-     PCUICCumulativity PCUICSR PCUICSafeLemmata
-     PCUICValidity PCUICPrincipality PCUICElimination PCUICSN.
-
-From MetaCoq.SafeChecker Require Import PCUICWfEnv.
-     
-From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EArities Extract Prelim
-    EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEvalInd EProgram.
+From MetaCoq.Template Require Import config utils Kernames EnvMap BasicAst.
+From MetaCoq.Erasure Require Import EAst EAstUtils EInduction EGlobalEnv EWellformed ELiftSubst ESpineView ECSubst EWcbvEval EWcbvEvalInd EProgram.
 
 Local Open Scope string_scope.
 Set Asymmetric Patterns.
@@ -31,11 +21,7 @@ Local Existing Instance extraction_checker_flags.
 Ltac introdep := let H := fresh in intros H; depelim H.
 
 #[global]
-Hint Constructors Ee.eval : core.
-
-Set Warnings "-notation-overridden".
-Import E.
-Set Warnings "+notation-overridden".
+Hint Constructors eval : core.
 
 Import MCList (map_InP, map_InP_elim, map_InP_spec).
 
@@ -255,7 +241,7 @@ Section WeakEtaExp.
       destruct construct_viewc.
       rewrite -mkApps_app. rewrite isEtaExp_Constructor.
       cbn. cbn. rtoProp; solve_all.
-      eapply isEtaExp_app_mon; tea. cbn. len. lia. now depelim H1.
+      eapply isEtaExp_app_mon; tea. cbn. len. now depelim H1.
       depelim H1. solve_all. eapply All_app_inv => //.
       eapply All_app_inv => //. eauto.
       rewrite -mkApps_app. rewrite isEtaExp_mkApps_napp //.
@@ -449,9 +435,6 @@ Proof.
   now eapply isEtaExp_extends_decl.
 Qed.
 
-From MetaCoq.Template Require Import config utils BasicAst Universes.
-From MetaCoq.Erasure Require Import EAst EGlobalEnv EAstUtils.
-
 Section expanded.
 
 Variable Σ : global_declarations.
@@ -472,9 +455,9 @@ Inductive expanded : term -> Prop :=
 | expanded_tFix (mfix : mfixpoint term) (idx : nat) :  
   Forall (fun d => isLambda d.(dbody) /\ expanded d.(dbody)) mfix -> expanded (tFix mfix idx)
 | expanded_tCoFix (mfix : mfixpoint term) (idx : nat) : Forall (fun d => expanded d.(dbody)) mfix -> expanded (tCoFix mfix idx)
-| expanded_tConstruct_app ind idx mind idecl cname c args :
-    declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
-    #|args| >= ind_npars mind + c -> 
+| expanded_tConstruct_app ind idx mind idecl cdecl args :
+    declared_constructor Σ (ind, idx) mind idecl cdecl ->
+    #|args| >= cstr_arity mind cdecl -> 
     Forall expanded args ->
     expanded (mkApps (tConstruct ind idx) args)
 | expanded_tBox : expanded tBox.
@@ -511,10 +494,10 @@ forall (Σ : global_declarations) (P : term -> Prop),
  Forall (fun d : def term => expanded Σ (dbody d)) mfix ->  Forall (fun d : def term => P (dbody d)) mfix ->
  P (tCoFix mfix idx)) ->
 (forall (ind : inductive) (idx : nat) (mind : mutual_inductive_body)
-   (idecl : one_inductive_body) (cname : ident) (c : nat) 
+   (idecl : one_inductive_body) cdecl
    (args : list term),
- declared_constructor Σ (ind, idx) mind idecl (cname, c) ->
- #|args| >= ind_npars mind + c -> Forall (expanded Σ) args -> Forall P args -> P (mkApps (tConstruct ind idx) args)) ->
+ declared_constructor Σ (ind, idx) mind idecl cdecl ->
+ #|args| >= cstr_arity mind cdecl -> Forall (expanded Σ) args -> Forall P args -> P (mkApps (tConstruct ind idx) args)) ->
 (P tBox) ->
 forall t : term, expanded Σ t -> P t.
 Proof. 
@@ -557,24 +540,24 @@ Definition expanded_eprogram_env_cstrs (p : eprogram_env) :=
 
 Lemma isEtaExp_app_expanded Σ ind idx n :
    isEtaExp_app Σ ind idx n = true <->
-   exists mind idecl cname c,
-   declared_constructor Σ (ind, idx) mind idecl (cname, c) /\ n ≥ ind_npars mind + c.
+   exists mind idecl cdecl,
+   declared_constructor Σ (ind, idx) mind idecl cdecl /\ n ≥ cstr_arity mind cdecl.
 Proof.
   unfold isEtaExp_app, lookup_constructor_pars_args, lookup_constructor, lookup_inductive, lookup_minductive.
   split.
   - intros H.
     destruct lookup_env as [[| mind] | ] eqn:E; cbn in H; try congruence.
     destruct nth_error as [ idecl | ] eqn:E2; cbn in H; try congruence.
-    destruct (nth_error (E.ind_ctors idecl) idx) as [ [cname ?] | ] eqn:E3; cbn in H; try congruence.
+    destruct (nth_error (ind_ctors idecl) idx) as [ [cname ?] | ] eqn:E3; cbn in H; try congruence.
     repeat esplit.
-    red. all: eauto. eapply leb_iff in H. lia.
-  - intros (? & ? & ? & ? & [[]] & Hle).
+    red. all: eauto. unfold cstr_arity; cbn. eapply leb_iff in H. lia.
+  - intros (? & ? & ? & [[]] & Hle).
     rewrite H. cbn. rewrite H0. cbn. rewrite H1. cbn.
     eapply leb_iff. eauto.
 Qed.
 
-Lemma expanded_isEtaExp_app_ Σ ind idx n  mind idecl cname c :
-   declared_constructor Σ (ind, idx) mind idecl (cname, c) -> n ≥ ind_npars mind + c ->
+Lemma expanded_isEtaExp_app_ Σ ind idx n mind idecl cdecl :
+   declared_constructor Σ (ind, idx) mind idecl cdecl -> n ≥ cstr_arity mind cdecl ->
    isEtaExp_app Σ ind idx n = true.
 Proof.
   intros. eapply isEtaExp_app_expanded. eauto 8.
@@ -587,7 +570,7 @@ Proof.
   - rewrite forallb_InP_spec in H0. eapply forallb_Forall in H0. eapply In_All in H.
     econstructor. solve_all.
   - eapply andb_true_iff in H1 as []; eauto.
-  - eapply isEtaExp_app_expanded in H as (? & ? & ? & ? & ? & ?).
+  - eapply isEtaExp_app_expanded in H as (? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app with (args := []); eauto.
   - eapply andb_true_iff in H1 as []. destruct ind. econstructor; eauto.
     rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2. 
@@ -600,7 +583,7 @@ Proof.
     eapply In_All in H. solve_all.
   - eapply andb_true_iff in H0 as []. eapply In_All in H.
     rewrite forallb_InP_spec in H1. eapply forallb_Forall in H1.
-    eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ? & ?).
+    eapply isEtaExp_app_expanded in H0 as (? & ? & ? & ? & ?).
     eapply expanded_tConstruct_app; eauto. solve_all.
   - eapply andb_true_iff in H1 as []. rewrite forallb_InP_spec in H2. eapply forallb_Forall in H2.
     econstructor.
@@ -708,7 +691,7 @@ Proof.
   move: etaa. rewrite /isEtaExp_decl /EEtaExpanded.isEtaExp_decl.
   destruct a.2 => //.
   rewrite /isEtaExp_constant_decl /EEtaExpanded.isEtaExp_constant_decl.
-  destruct (E.cst_body c) => // /=.
+  destruct (cst_body c) => // /=.
   eapply isEtaExpFix_isEtaExp.
 Qed.
 

@@ -1083,7 +1083,40 @@ Corollary R_Acc_aux :
       now rewrite <- H2.
   Qed.
 
-  Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
+  Section reducewf.
+    Context (Γ : context).
+    
+    Notation sigmaarg :=
+      (sigma (fun t => sigma (fun π => forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ (zipc t π)))).
+
+    Local Instance wf_proof : WellFounded (fun x y : sigmaarg => 
+        forall Σ, abstract_env_ext_rel X Σ -> R Σ Γ (pr1 x, pr1 (pr2 x)) (pr1 y, pr1 (pr2 y))).
+    Proof.
+      intros [t [π wt]].
+      (* We fuel the accessibility proof to run reduction inside Coq. *)
+      unshelve eapply (Acc_intro_generator
+        (R:=fun x y : sigmaarg => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ (x.(pr1), x.(pr2).(pr1)) (y.(pr1), y.(pr2).(pr1)))
+        (P:=fun x : sigmaarg => forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (x.(pr1), x.(pr2).(pr1))))
+        (fun x y Px Hy => _) 1000 _ {| pr1 := t; pr2 := {| pr1 := π; pr2 := wt |} |} wt).
+      - cbn in *. intros. destruct y as [t' [π' wt']]. cbn. now apply wt'.
+      - cbn in *. intros.
+        destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+        destruct (hΣ _ wfΣ) as [hΣ]. pose proof (R_Acc Γ (t0.(pr1), t0.(pr2).(pr1)) H).
+        clear -H0. destruct t0 as [t [π wt]].
+        cbn in *. revert wt.
+        depind H0. intros wt. constructor. intros. eapply H0. 
+        * cbn in H1. exact H1.
+        * reflexivity.
+  Defined.
+
+  Equations reduce_stack_full (t : term) (π : stack) (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (t,π))) :
+    { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' }
+    by wf (t, π) (fun (x y : term * stack) => forall Σ (wfΣ : abstract_env_ext_rel X Σ), R Σ Γ x y) :=
+    reduce_stack_full t π h := _reduce_stack Γ t π h (fun t' π' hr => reduce_stack_full t' π' (fun Σ wfΣ' => welltyped_R_pres Σ wfΣ' Γ _ _ (h Σ wfΣ') (hr Σ wfΣ'))).
+
+  End reducewf.
+
+  (* Equations reduce_stack_full (Γ : context) (t : term) (π : stack)
            (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zip (t,π))) :
            { t' : term * stack | forall Σ (wfΣ : abstract_env_ext_rel X Σ), Req Σ Γ t' (t, π) /\ Pr t' π /\ Pr' t' } :=
     reduce_stack_full Γ t π h :=
@@ -1110,7 +1143,6 @@ Corollary R_Acc_aux :
           inversion H1. subst. inversion H2. subst. clear H1 H2.
           intros. cbn. rewrite H3. eauto.
   Defined.
-  (* We fuel the accessibility proof to run reduction inside Coq. *)
   Next Obligation.
     revert h. generalize (t, π).
     refine (Acc_intro_generator
@@ -1120,7 +1152,7 @@ Corollary R_Acc_aux :
     - simpl in *. eapply welltyped_R_pres; eauto.
     - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
       destruct (hΣ _ wfΣ) as [hΣ]. eapply R_Acc; eassumption.
-  Defined.
+  Defined. *)
 
   Definition reduce_stack Γ t π h :=
     let '(exist ts _) := reduce_stack_full Γ t π h in ts.
@@ -1279,7 +1311,7 @@ Corollary R_Acc_aux :
     induction hx using Acc_ind'.
     cbn. eapply h. assumption.
   Qed.
-
+  
   Lemma reduce_stack_prop :
     forall Γ t π h (P : term × stack -> term × stack -> Prop),
       (forall t π h aux,
@@ -1290,28 +1322,17 @@ Corollary R_Acc_aux :
     intros Γ t π h P hP.
     unfold reduce_stack.
     case_eq (reduce_stack_full Γ t π h).
-    funelim (reduce_stack_full Γ t π h).
-    intros [t' ρ] ? e.
+    apply_funelim (reduce_stack_full Γ t π h); clear -hP.
+    intros t π wt ih [t' ρ] ? e.
     match type of e with
     | _ = ?u =>
       change (P (t, π) (` u))
     end.
     rewrite <- e.
-    set ((reduce_stack_full_obligations_obligation_2 Γ t π h)).
-    set ((reduce_stack_full_obligations_obligation_3 Γ t π h)).
-    match goal with
-    | |- P ?p (` (@Fix_F ?A ?R ?rt ?f ?t ?ht ?w)) =>
-      set (Q := fun x (y : rt x) => forall (w :forall Σ, abstract_env_ext_rel X Σ ->  welltyped Σ Γ (zip x)), P x (` (y w))) ;
-      set (fn := @Fix_F A R rt f t ht)
-    end.
-    clearbody w.
-    revert w.
-    change (Q (t, π) fn).
-    subst fn.
-    eapply Fix_F_prop.
-    intros [? ?] aux H. subst Q. simpl. intros w.
-    eapply hP. intros t'0 π' hR.
-    eapply H.
+    apply hP. intros t'0 π' hR.
+    specialize (ih _ _ hR).
+    set (r := reduce_stack_full _ _ _ _) in *.
+    eapply (ih _ (proj2_sig r)). clearbody r. now destruct r.
   Qed.
 
   Lemma decompose_stack_at_appstack_None l s n :
@@ -1502,9 +1523,19 @@ Corollary R_Acc_aux :
         ∥whnf flags Σ (Γ ,,, stack_context ρ) (zipp u ρ)∥
       ).
     clear -wfΣ.
-    intros t π h aux haux.
-    funelim (_reduce_stack Γ t π h aux).
+    intros t π h aux.
+    apply_funelim (_reduce_stack Γ t π h aux); clear -wfΣ.
     all: simpl.
+    all: intros *.
+    all: repeat match goal with 
+      [ |- (forall (t' : term) (π' : stack)
+         (hR : forall Σ,
+               abstract_env_ext_rel X Σ -> R Σ _ _ _), { _ : _ | _ }) -> _ ] => intros reduce
+    | [ |- (forall (t' : term) (π' : stack)
+        (hR : forall Σ,
+          abstract_env_ext_rel X Σ -> R Σ _ _ _), _) -> _ ] => intros haux
+          | [ |- _ ] => intros ?
+    end.
     all: try match goal with
              | |- context[False_rect _ ?f] => destruct f
              end.
@@ -1518,7 +1549,8 @@ Corollary R_Acc_aux :
       assumption.
     - clear Heq.
       revert discr.
-      funelim (red_discr t π). all: intros [].
+      revert h reduce haux; apply_funelim (red_discr t π); clear -wfΣ.
+      all: intros; try destruct discr.
       all: try solve [ constructor ; constructor ].
       all: try solve [
         unfold zipp ; case_eq (decompose_stack π) ; intros ;
@@ -1574,7 +1606,7 @@ Corollary R_Acc_aux :
     - unfold zipp. case_eq (decompose_stack π). intros.
       constructor. constructor. eapply whne_mkApps. econstructor.
       rewrite <- eq. cbn.
-      cbn in H. inversion H. reflexivity.
+      cbn in H. inversion e. reflexivity.
     - match goal with
       | |- context [ reduce ?x ?y ?z ] =>
         case_eq (reduce x y z) ;

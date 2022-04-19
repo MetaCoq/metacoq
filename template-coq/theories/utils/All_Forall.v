@@ -3228,3 +3228,7 @@ Proof.
   - intros H; depind H; constructor; auto.
 Qed.
 
+Lemma All_remove_last {A} (P : A -> Type) l : All P l -> All P (remove_last l).
+Proof.
+  intros. now eapply All_firstn.
+Qed.

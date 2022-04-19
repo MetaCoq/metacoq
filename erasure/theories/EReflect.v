@@ -1,3 +1,4 @@
+From Coq Require Import ssreflect ssrbool.
 From MetaCoq.Template Require Import utils BasicAst Reflect.
 From MetaCoq.Erasure Require Import EAst EInduction.
 From Equations Require Import Equations.
@@ -109,15 +110,29 @@ Instance ReflectEq_term : ReflectEq.ReflectEq _ :=
 Definition eqb_constant_body (x y : constant_body) :=
   eqb (cst_body x) (cst_body y).
 
-#[global]
-Instance reflect_constant_body : ReflectEq constant_body.
+#[global, program]
+Instance reflect_constant_body : ReflectEq constant_body := 
+  {| eqb := eqb_constant_body |}.
+Next Obligation.
 Proof.
-  refine {| eqb := eqb_constant_body |}.
-  intros [] [].
+  revert x y; intros [] [].
   unfold eqb_constant_body.
   cbn -[eqb].
   finish_reflect.
-Defined.
+Qed.
+
+Definition eqb_constructor_body (x y : constructor_body) :=
+  (x.(cstr_name), x.(cstr_nargs)) == (y.(cstr_name), y.(cstr_nargs)).
+
+#[global, program]
+Instance reflect_constructor_body : ReflectEq constructor_body := 
+  {| eqb := eqb_constructor_body |}.
+Next Obligation.
+Proof.
+  unfold eqb_constructor_body.
+  destruct x, y; cbn.
+  case: eqb_spec; intros H; constructor; congruence.
+Qed.
 
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   let (n, i, k, c, p) := x in
@@ -137,11 +152,12 @@ Definition eqb_mutual_inductive_body (x y : mutual_inductive_body) :=
   let (n', b') := y in
   eqb n n' && eqb b b'.
 
-#[global]
-Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body.
+#[global, program]
+Instance reflect_mutual_inductive_body : ReflectEq mutual_inductive_body := 
+  {| eqb := eqb_mutual_inductive_body |}.
+Next Obligation.  
 Proof.
-  refine {| eqb := eqb_mutual_inductive_body |}.
-  intros [] [].
+  revert x y; intros [] [].
   unfold eqb_mutual_inductive_body; finish_reflect.
 Defined.
 
@@ -152,10 +168,12 @@ Definition eqb_global_decl x y :=
   | _, _ => false
   end.
 
-#[global]
-Instance reflect_global_decl : ReflectEq global_decl.
+#[global, program]
+Instance reflect_global_decl : ReflectEq global_decl :=
+  {| eqb := eqb_global_decl |}.
+Next Obligation.
 Proof.
-  refine {| eqb := eqb_global_decl |}.
+  revert x y.
   unfold eqb_global_decl.
   intros [] []; finish_reflect.
 Defined.

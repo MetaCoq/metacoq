@@ -316,7 +316,6 @@ Definition unlift_opt_pred (P : global_env_ext -> context -> option term -> term
   (global_env_ext -> context -> term -> term -> Type) :=
   fun Σ Γ t T => P Σ Γ (Some t) T.
 
-
 Module PCUICTypingDef <: EnvironmentTyping.Typing PCUICTerm PCUICEnvironment PCUICEnvTyping PCUICConversionParSpec PCUICConversionSpec.
 
   Definition typing := @typing.
@@ -335,6 +334,18 @@ Module PCUICDeclarationTyping :=
     PCUICTypingDef
     PCUICLookup.
 Include PCUICDeclarationTyping.
+
+Inductive welltyped {cf} Σ Γ t : Prop :=
+| iswelltyped A : Σ ;;; Γ |- t : A -> welltyped Σ Γ t.
+
+Arguments iswelltyped {cf Σ Γ t A} h.
+
+Definition isType_welltyped {cf Σ} {Γ T}
+  : isType Σ Γ T -> welltyped Σ Γ T.
+Proof.
+  intros []. now econstructor.
+Qed.
+Global Hint Resolve isType_welltyped : pcuic.
 
 Definition isWfArity {cf:checker_flags} Σ (Γ : context) T :=
   (isType Σ Γ T × { ctx & { s & (destArity [] T = Some (ctx, s)) } }).

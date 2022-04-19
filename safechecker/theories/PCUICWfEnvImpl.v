@@ -83,6 +83,14 @@ Axiom guard_impl : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bo
 Axiom guard_correct : forall fix_cofix Σ Γ mfix,
   guard fix_cofix Σ Γ mfix <-> guard_impl fix_cofix Σ Γ mfix.
 
+
+Definition fake_guard_impl : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bool
+  := fun fix_cofix Σ Γ mfix => true.
+
+Axiom fake_guard_correct : forall fix_cofix Σ Γ mfix,
+  guard fix_cofix Σ Γ mfix <-> fake_guard_impl fix_cofix Σ Γ mfix.
+
+  
 Definition init_env : global_env := {| universes := (LS.singleton Level.lzero , CS.empty); declarations := [] |}.
 
 Definition on_global_univ_init_env : on_global_univs init_env.
@@ -180,13 +188,6 @@ Record wf_env_ext {cf:checker_flags} := {
   wf_env_ext_map_repr :> EnvMap.repr (referenced_impl_env_ext wf_env_ext_referenced).(declarations) wf_env_ext_map;
 }.
 
-(*
- Definition fake_guard_impl : FixCoFix -> global_env_ext -> context -> mfixpoint term -> bool
-  := fun fix_cofix Σ Γ mfix => true.
-
-  Axiom fake_guard_correct : forall fix_cofix Σ Γ mfix,
-  guard fix_cofix Σ Γ mfix <-> fake_guard_impl fix_cofix Σ Γ mfix.
-*)
 
 Global Instance optimized_abstract_env_ext_struct {cf:checker_flags} :
   abstract_env_ext_struct wf_env_ext :=
@@ -196,7 +197,7 @@ Global Instance optimized_abstract_env_ext_struct {cf:checker_flags} :
      abstract_env_level_mem X := abstract_env_level_mem X.(wf_env_ext_referenced);
      abstract_env_ext_wf_universeb X := abstract_env_ext_wf_universeb X.(wf_env_ext_referenced);
      abstract_env_check_constraints X := abstract_env_check_constraints X.(wf_env_ext_referenced);
-     abstract_env_guard X := abstract_env_guard X.(wf_env_ext_referenced);
+     abstract_env_guard := fun Σ fix_cofix => fake_guard_impl fix_cofix (wf_env_ext_referenced Σ);
      abstract_env_ext_rel X := abstract_env_ext_rel X.(wf_env_ext_referenced);
   |}.
 
@@ -391,7 +392,7 @@ Next Obligation. pose (referenced_impl_ext_wf X). sq.
 Next Obligation. now rewrite (abstract_env_compare_universe_correct X.(wf_env_ext_referenced)). Defined.
 Next Obligation. now rewrite (abstract_env_compare_global_instance_correct X.(wf_env_ext_referenced)); eauto. Defined.
 Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_ext_referenced)); eauto. Defined.
-Next Obligation. now rewrite (abstract_env_guard_correct X.(wf_env_ext_referenced)); eauto. Defined.
+Next Obligation. apply fake_guard_correct. Defined.
 
 
 

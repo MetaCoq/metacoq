@@ -3,9 +3,8 @@ From Coq Require Import Program ssreflect ssrbool.
 From Equations Require Import Equations.
 From MetaCoq.Template Require Import Transform bytestring config utils BasicAst.
 From MetaCoq.PCUIC Require PCUICAst PCUICAstUtils PCUICProgram.
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl.
-From MetaCoq.Erasure Require EAstUtils EPretty.
-From MetaCoq.Erasure Require EWellformed EEnvMap EWcbvEval EDeps.
+(* From MetaCoq.SafeChecker Require Import PCUICErrors PCUICWfEnvImpl. *)
+From MetaCoq.Erasure Require EAstUtils EPretty EWellformed EEnvMap EWcbvEval.
 
 Import bytestring.
 Local Open Scope bs.
@@ -14,14 +13,6 @@ Local Open Scope string_scope2.
 Import Transform.
 
 Obligation Tactic := program_simpl.
-
-Import PCUICProgram.
-
-Definition build_wf_env_from_env {cf : checker_flags} (Σ : global_env_map) (wfΣ : ∥ PCUICTyping.wf Σ ∥) : wf_env := 
-  {| wf_env_referenced := {| referenced_impl_env := Σ.(trans_env_env); referenced_impl_wf := wfΣ |} ;
-     wf_env_map := Σ.(trans_env_map);
-     wf_env_map_repr := Σ.(trans_env_repr);
- |}.
 
 Import EGlobalEnv EWellformed.
 

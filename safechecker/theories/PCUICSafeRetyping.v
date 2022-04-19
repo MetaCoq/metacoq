@@ -19,7 +19,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICAriti
 
 From MetaCoq.PCUIC Require Import BDTyping BDToPCUIC BDFromPCUIC BDUnique.
 
-From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICSafeConversion PCUICWfEnv.
+From MetaCoq.SafeChecker Require Import PCUICErrors PCUICSafeReduce PCUICWfEnv.
 
 (** Allow reduction to run inside Coq *)
 Transparent Acc_intro_generator.
@@ -258,7 +258,7 @@ Qed.
   Next Obligation.
     split.
     - symmetry in look.
-      etransitivity. erewrite abstract_env_lookup_correct; eauto.
+      etransitivity. erewrite (abstract_env_lookup_correct X); eauto.
       reflexivity.
     - now symmetry.
   Defined.

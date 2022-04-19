@@ -70,6 +70,7 @@ Section Conversion.
   Local Definition hΣ Σ (wfΣ : abstract_env_ext_rel X Σ) :
     ∥ wf Σ ∥ := abstract_env_ext_sq_wf _ _ _ wfΣ. 
 
+  Set Equations Transparent.
   Set Equations With UIP.
 
   Inductive state :=
@@ -488,19 +489,19 @@ Section Conversion.
     intro H. apply ssrbool.introP.
     - intuition.
     - destruct b; intuition.
-  Defined.
+  Qed.
 
   Definition wf_universe_iff  Σ u :
     wf_universeb Σ u <-> wf_universe Σ u.
   Proof.  
     symmetry; apply reflect_iff. eapply wf_universe_reflect.
-  Defined. 
+  Qed. 
 
   Definition wf_universe_instance_iff  Σ u :
     wf_universeb_instance Σ u <-> wf_universe_instance Σ u.
   Proof.  
     symmetry; apply reflect_iff. eapply wf_universe_instanceP.
-  Defined. 
+  Qed. 
 
   Notation conv_stack_ctx Γ π1 π2 :=
     (forall Σ, abstract_env_ext_rel X Σ -> ∥ (Σ ⊢ Γ ,,, stack_context π1 = Γ ,,, stack_context π2) ∥).
@@ -706,6 +707,8 @@ Section Conversion.
          (mkpack Γ s' t1' π1' t2' π2' h2')
          (mkpack Γ s t1 π1 t2 π2 h2) ->
        Ret s' Γ t1' π1' t2' π2'.
+
+  Notation expand aux := (fun a b c d e f g h i => aux _ _ _ _ _ _ _ _ _) (only parsing).
 
   Local Notation yes := (Success _) (only parsing).
   Local Notation no := (fun e => Error e _) (only parsing).
@@ -1587,7 +1590,7 @@ Qed.
     + eapply red_const. erewrite abstract_env_lookup_correct; eauto.
     + specialize (hx _ wfΣ). clear -hx wΣ. sq.  fvs. 
     Unshelve. all : eauto. 
-  Defined. 
+  Qed. 
   Next Obligation.
     (* Contraposition of previous goal *)
     apply h; clear h. intros Σ wfΣ. 
@@ -1600,7 +1603,7 @@ Qed.
     + eapply red_const. erewrite abstract_env_lookup_correct; eauto.
     + specialize (hx _ wfΣ). sq; fvs. 
     Unshelve. eauto. 
-  Defined. 
+  Qed. 
   Next Obligation.
     (* Both c and c' are axioms. Either they are different constants or they are not
        convertible because the universes are different. *)
@@ -1627,22 +1630,22 @@ Qed.
     eapply eqb_universe_instance_complete in r; auto.
   Qed.
   (* Why Solve All Obligations is not working here ??? *)
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ H. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ H. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
-  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Defined. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ H. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ H. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
+  Next Obligation. solve_unfold_constants aux eq1 eq2 Σ wfΣ. Qed. 
   
   Lemma welltyped_zipc_tCase_brs_length Σ (wfΣ : abstract_env_ext_rel X Σ) Γ ci motive discr brs π :
     welltyped Σ Γ (zipc (tCase ci motive discr brs) π) ->
@@ -1734,7 +1737,7 @@ Qed.
     pose proof (heΣ _ wfΣ). specialize (cc _ wfΣ). sq. 
     constructor; fvs. 
     - constructor.
-  Defined.
+  Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; 
     pose proof (hΣ _ wfΣ). specialize (H _ wfΣ). sq.
@@ -1946,7 +1949,7 @@ Qed.
       | Success h2
         with isconv_branches Γ ci
               p c (brs1 ++ [{|bcontext := m; bbody := br|}]) brs2 π _
-              p' c' (brs1' ++ [{| bcontext := m'; bbody := br'|}]) brs2' π' _ hx hp _ _ := {
+              p' c' (brs1' ++ [{| bcontext := m'; bbody := br'|}]) brs2' π' _ hx hp _ (expand aux) := {
         | Success h3 := yes ;
         | Error e h'' := no e
         } ;
@@ -2039,13 +2042,12 @@ Qed.
       now unfold app_context; rewrite app_assoc.
   Qed.
   Next Obligation.
-    unshelve eapply aux. all: try eassumption.
     clear aux.
     lazymatch goal with
     | h : R _ _ ?r1 |- R _ _ ?r2 =>
-      assert (e : r1 = r2)
+      assert (er : r1 = r2)
     end.
-    { clear H0.
+    { clear i.
       match goal with
       | |- {| wth := ?x |} = _ =>
         generalize x
@@ -2055,7 +2057,7 @@ Qed.
       f_equal.
       eapply proof_irrelevance.
     }
-    rewrite <- e. assumption.
+    rewrite <- er. assumption.
   Qed. 
   Next Obligation.
     destruct (case_conv_brs_inv h p' c' brs1' brs2' _ h') as [[mdecl [idecl [decli eqp eqp' eqm clm clm']]]]; tea.
@@ -2095,12 +2097,9 @@ Qed.
     : ConversionResult (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ ws_cumul_pb_brs Σ (Γ ,,, stack_context π) p brs brs' ∥) :=
 
     isconv_branches' Γ ci p c brs π h ci' p' c' brs' π' h' hx hp eci aux :=
-      isconv_branches Γ ci p c [] brs π _ p' c' [] brs' π' _ _ _ _ _.
+      isconv_branches Γ ci p c [] brs π _ p' c' [] brs' π' _ _ _ _ (expand aux).
   Next Obligation.
     constructor. constructor.
-  Qed.
-  Next Obligation.
-    unshelve eapply aux. all: eassumption.
   Qed.
 
   (* Factorise notions of fixpoints *)
@@ -2167,7 +2166,7 @@ Qed.
           isws_cumul_pb_fix_types fk Γ idx
             (mfix1 ++ [u]) mfix2 π _
             (mfix1' ++ [v]) mfix2' π' _
-            hx _ _
+            hx _ (expand aux)
         := {
         | Success h3 := yes ;
         | Error e h'' := no e
@@ -2249,12 +2248,11 @@ Qed.
     Unshelve. all: eauto. 
   Qed.
   Next Obligation.
-    unshelve eapply aux. all: try eassumption.
     clear aux.
     lazymatch goal with
     | h : R _ _ ?r1 |- R _ _ ?r2 =>
       rename h into hr ;
-      assert (e : r1 = r2)
+      assert (e0 : r1 = r2)
     end.
     { clear hr.
       match goal with
@@ -2266,7 +2264,7 @@ Qed.
       f_equal.
       eapply proof_irrelevance.
     }
-    rewrite <- e. assumption.
+    rewrite <- e0. assumption.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2366,7 +2364,7 @@ Qed.
     with isws_cumul_pb_fix_bodies fk Γ idx
            (mfix1 ++ [u]) mfix2 π _
            (mfix1' ++ [v]) mfix2' π' _
-           hx _ _ _
+           hx _ _ (expand aux)
     := {
     | Success h3 := yes ;
     | Error e h'' := no e
@@ -2488,7 +2486,7 @@ Qed.
       + eapply IHh.
       + eapply r0. 2:lia.
         clear - wΣ IHh. fvs. 
-  Defined. 
+  Qed. 
   Next Obligation.
     rewrite <- app_assoc. simpl. eauto.
   Qed.
@@ -2529,12 +2527,11 @@ Qed.
     rewrite <- !app_assoc. simpl. assumption.
   Qed.
   Next Obligation.
-    unshelve eapply aux. all: try eassumption.
     clear aux.
     lazymatch goal with
     | h : R _ _ ?r1 |- R _ _ ?r2 =>
       rename h into hr ;
-      assert (e : r1 = r2)
+      assert (e0 : r1 = r2)
     end.
     { clear hr.
       match goal with
@@ -2546,7 +2543,7 @@ Qed.
       f_equal.
       eapply proof_irrelevance.
     }
-    rewrite <- e. assumption.
+    rewrite <- e0. assumption.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2603,14 +2600,14 @@ Qed.
       isws_cumul_pb_fix_types fk Γ idx
         [] mfix π _
         [] mfix' π' _
-        hx _ _
+        hx _ (expand aux)
     := {
     | Success h1
       with
         isws_cumul_pb_fix_bodies fk Γ idx
           [] mfix π _
           [] mfix' π' _
-          hx _ _ _
+          hx _ _ (expand aux)
       := {
       | Success h2 := yes ;
       | Error e h'' := no e
@@ -2618,12 +2615,6 @@ Qed.
     | Error e h'' := no e
     }.
 
-  Next Obligation.
-    unshelve eapply aux. all: eassumption.
-  Qed.
-  Next Obligation.
-    unshelve eapply aux. all: eassumption.
-  Qed.
   Next Obligation.
     destruct h1 as [h1], h2 as [h2].
     constructor.
@@ -3192,14 +3183,11 @@ Qed.
       1:now eapply ws_cumul_ctx_pb_closed_left in hx.
       eapply on_free_vars_ctx_inst_case_context; trea.
       fvs.
-(*    - eapply eqb_universe_instance_spec in eq_insts; eauto. 
-      destruct (case_conv_preds_inv _ wfΣ h1 _ _ _ h2 hx eq_insts (conv_params Σ wfΣ)) as []; tea.
-     *)
      - destruct (case_conv_preds_inv _ wfΣ h1 _ _ _ h2 hx (conv_params Σ wfΣ)) as []; tea.
        destruct X1 as [mdecl [idecl []]]. eauto. 
      - destruct (case_conv_preds_inv _ wfΣ h1 _ _ _ h2 hx (conv_params Σ wfΣ)) as []; tea.
        destruct X1 as [mdecl [idecl []]]. eauto. 
-  Defined.
+  Qed.
   Next Obligation.
     unfold zipp in conv_ret; simpl in conv_ret.
     destruct (case_conv_preds_inv _ wfΣ h1 _ _ _ h2 hx (conv_params Σ wfΣ)) as []; tea. 
@@ -3211,7 +3199,7 @@ Qed.
     now destruct X0 as [mdecl [idecl []]].
     - now destruct X0 as [mdecl [idecl []]].
     - now destruct X0 as [mdecl [idecl []]].
-  Defined.
+  Qed.
   Next Obligation.
     unfold zipp in not_conv_ret; simpl in not_conv_ret.
     contradiction not_conv_ret.
@@ -3809,9 +3797,7 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; 
     specialize_Σ wfΣ.
     eapply inv_reduced_discriminees_case in H as [[<-]]; eauto.
-    change (eqb ci ci) with (eq_dec_to_bool ci ci) in eq5.
-    rewrite eq_dec_to_bool_refl in eq5.
-    congruence.
+    now destruct (eqb_spec ci ci).
   Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as []. pose proof h2 as h2'.
@@ -4626,7 +4612,7 @@ Qed.
     : ConversionResult (forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ws_cumul_pb_terms Σ (Γ,,, stack_context π1) l1 l2∥) by struct l1 :=
     _isconv_args' leq Γ t1 args1 (u1 :: l1) π1 h1 hπ1 t2 (u2 :: l2) π2 h2 hπ2 hx aux
     with aux u1 u2 args1 l1 (App_r t2 :: (appstack l2 π2)) _ _ _ _ Conv _ I I I := {
-    | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ _ := {
+    | Success H1 with _isconv_args' leq Γ t1 (args1 ++ [u1]) l1 π1 _ _ (tApp t2 u2) l2 π2 _ _ _ (expand aux) := {
       | Success H2 := yes ;
       | Error e herr :=
         no (
@@ -4665,23 +4651,22 @@ Qed.
     split. 1: reflexivity.
     rewrite !stack_position_cons.
     eapply positionR_poscat. constructor.
-  Defined.
+  Qed.
   Next Obligation.
     rewrite 2!stack_context_appstack.
     eauto.
   Qed.
   Next Obligation.
     rewrite mkApps_app. eauto.
-  Defined.
+  Qed.
   Next Obligation.
-    simpl in H0. destruct H0 as [eq hp].
-    rewrite app_length in H. cbn in H.
-    eapply aux. all: auto.
-    - cbn. lia.
-    - instantiate (1 := h2'). simpl. split.
-      + rewrite mkApps_app in eq. assumption.
-      + subst x y.
-        rewrite !stack_position_cons, !stack_position_appstack.
+    rewrite app_length in h. cbn in h. lia.
+  Qed.
+  Next Obligation.
+    rewrite app_length in h. cbn in h.
+      simpl. split.
+      + rewrite mkApps_app in H. assumption.
+      + rewrite !stack_position_cons, !stack_position_appstack.
         rewrite <- !app_assoc. apply positionR_poscat.
         assert (h' : forall n m, positionR (repeat app_l n ++ [app_r]) (repeat app_l m)).
         { clear. intro n. induction n ; intro m.
@@ -4692,7 +4677,7 @@ Qed.
         }
         simpl.
         rewrite <- repeat_snoc.
-        apply (h' #|a1| (S #|l1|)).
+        apply (h' #|d| (S #|l1|)).
   Defined.
   Next Obligation.
     specialize_Σ wfΣ.
@@ -4703,7 +4688,7 @@ Qed.
     rewrite stack_context_appstack in H1.
     destruct H2 as [H2].
     constructor; constructor; auto.
-  Defined.
+  Qed.
   Next Obligation.
     apply herr; clear herr. intros Σ wfΣ. specialize_Σ wfΣ.
     destruct H as [H]; depelim H.
@@ -4753,14 +4738,13 @@ Qed.
     eauto.
   Qed.
   Next Obligation.
-    specialize (aux Reduction) as h. cbn in h.
-    eapply h. all: auto.
+    eapply (aux Reduction). all: auto.
     pose proof (decompose_stack_eq _ _ _ (eq_sym eq1)). subst.
     instantiate (1 := h2').
     simpl in H0. destruct H0 as [eq hp].
     unshelve eapply R_positionR. 2: assumption.
     simpl. rewrite eq. reflexivity.
-  Qed.
+  Defined.
   (* The obligation tactic wipes out a useful hypothesis here? *)
   Obligation Tactic := idtac.
   Next Obligation.
@@ -5718,16 +5702,30 @@ Qed.
     _isconv Fallback Γ t1 π1 h1 t2 π2 h2 aux :=
       λ { | leq | hx | r1 | r2 | hd := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 hd hx aux }.
 
+    Lemma welltyped_R_zipc Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
+      forall x y : pack Γ, welltyped Σ Γ (zipc (tm1 x) (stk1 x)) -> R Γ y x -> welltyped Σ Γ (zipc (tm1 y) (stk1 y)).
+    Proof.
+      intros x y H HR.
+      pose proof (heΣ := heΣ _ wfΣ).
+      pose proof (hΣ := hΣ _ wfΣ). cbn.
+      sq. 
+      destruct x, y; cbn in *.
+      (* dependent induction HR.
+      - eapply cored_welltyped. all: eauto.
+        cbn in *. specialize_Σ wfΣ. destruct H.
+      - simpl in H1. revert H1; intros [= H2 _].
+        now rewrite <- H2. *)
+    Admitted.
+
   Equations(noeqns) isconv_full (s : state) (Γ : context)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
     : Ret s Γ t1 π1 t2 π2 :=
 
-    isconv_full s Γ t1 π1 h1 t2 π2 h2 hx :=
+    isconv_full s Γ t1 π1 h1 t2 π2 h2 hx _ :=
       Fix_F (R := R Γ)
             (fun '(mkpack s' t1' π1' t2' π2' h2') =>
               wtp Γ t1' π1' ->
-              wtp Γ t2' π2' ->
               Ret s' Γ t1' π1' t2' π2'
             )
             (fun pp f => _)
@@ -5735,15 +5733,25 @@ Qed.
             _ _ _ _.
   Next Obligation.
     unshelve eapply _isconv. all: try assumption.
-    intros s' t1' π1' t2' π2' h1' h2' hx' hR.
-    destruct pp.
-    assert (wth0 = H0) by apply proof_irrelevance. simpl in hR. subst.
-    specialize (f (mkpack Γ s' t1' π1' t2' π2' h2') hR). cbn in f.
-    eapply f ; assumption.
-  Qed.
+    - destruct pp; cbn in *; eauto.
+    - intros s' t1' π1' t2' π2' h1' h2' hx' hR.
+    specialize (f (mkpack Γ s' t1' π1' t2' π2' h2') hR).
+    eapply f ; try assumption.
+  Defined.
   Next Obligation.
-    apply R_Acc. assumption.
-  Qed.
+  match goal with | |- Acc _ ?X => set (u := X) end.
+  revert h1.  
+  change ((forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ (zipc (tm1 u) (stk1 u))) -> Acc (R Γ) u).
+  generalize u.
+  refine (Acc_intro_generator
+            (R:=R Γ)
+            (P:=fun u => forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (zipc (tm1 u) (stk1 u)))
+            (fun x y Px Hy => _) 1000 _); intros.
+  - simpl in *. eapply welltyped_R_zipc; eauto.
+  - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
+    destruct (hΣ _ wfΣ) as [hΣ]. eapply R_Acc; eassumption.
+  Defined.
+
   
   Inductive ConversionResultSummary :=
   | ConvSuccess : ConversionResultSummary
@@ -5788,7 +5796,7 @@ Qed.
     destruct (h1 _ H), (hΣ _ H) as [wΣ].
     sq. eapply ws_cumul_ctx_pb_refl. 
     fvs.
-  Defined.
+  Qed.
   
   Theorem isconv_term_sound :
     forall Σ (wfΣ : abstract_env_ext_rel X Σ) Γ leq t1 h1 t2 h2,
@@ -5812,3 +5820,34 @@ Qed.
   Transparent reduce_stack.
   
 End Conversion.
+
+(*
+From MetaCoq.SafeChecker Require Import PCUICWfEnvImpl.
+Definition default_normal : @normalizing_flags default_checker_flags.
+now econstructor.
+Defined.
+
+Lemma test_conv :
+match
+  isconv_term (cf := default_checker_flags) 
+    (nor := default_normal)
+     canonical_abstract_env_ext_impl
+    {|
+      referenced_impl_env_ext :=
+        ({|
+           universes :=
+             (LevelSet.add Level.lzero LevelSet.empty, ConstraintSet.empty);
+           declarations := []
+         |}, Monomorphic_ctx);
+      referenced_impl_ext_wf := todo "foo"
+    |} [] Cumul (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
+    (todo "") (tSort (Universe.lType (Universe.make' (Level.lzero, 0))))
+    (todo "")
+with
+| ConvSuccess => "success"
+| ConvError _ => todo "foo"
+end = "success".
+Proof.
+  lazy. reflexivity.
+Defined.
+*)

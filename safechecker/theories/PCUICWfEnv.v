@@ -118,9 +118,12 @@ Class abstract_env_prop {cf:checker_flags} (abstract_env_impl abstract_env_ext_i
     consistent udecl.2 <-> abstract_env_is_consistent uctx ;
   abstract_env_is_consistent_uctx_correct X Σ uctx udecl :
     abstract_env_rel X Σ ->
+    global_uctx_invariants (global_uctx Σ) ->
     global_uctx_invariants (global_ext_uctx (Σ, udecl)) ->
     gc_of_uctx (uctx_of_udecl udecl) = Some uctx ->
-    consistent ((Σ,udecl):global_env_ext) <-> abstract_env_is_consistent_uctx X uctx ;
+    (consistent ((Σ,udecl):global_env_ext) /\
+       consistent_extension_on Σ (uctx_of_udecl udecl).2)
+    <-> abstract_env_is_consistent_uctx X uctx ;
   abstract_env_univ_correct X {Σ} (wfΣ : abstract_env_rel X Σ) :
     (Σ:ContextSet.t) = abstract_env_univ X
   }.

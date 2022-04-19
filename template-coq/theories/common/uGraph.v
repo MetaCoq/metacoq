@@ -7,6 +7,7 @@ Import ConstraintType.
 
 Import MCMonadNotation.
 
+
 Arguments Z.add : simpl nomatch.
 Arguments Nat.leb : simpl nomatch.
 Arguments Nat.eqb : simpl nomatch.
@@ -296,6 +297,12 @@ Definition gcs_equal x y : Prop :=
 
 Infix "=_gcs" := gcs_equal (at level 200).
 Notation "(=_gcs)" := gcs_equal (at level 0).
+
+Instance GCS_For_all_Proper f : Proper (GCS.eq ==> iff) (GCS.For_all f).
+Proof.
+  move=> s s' eq; split; move=> h x hx; apply h; by rewrite eq + rewrite <- eq.
+Qed.
+
 
 Definition GoodConstraintSet_pair x y
   := GoodConstraintSet.add y (GoodConstraintSet.singleton x).
@@ -675,6 +682,13 @@ Definition gc_of_uctx `{checker_flags} (uctx : ContextSet.t)
   : option (VSet.t * GoodConstraintSet.t)
   := ctrs <- gc_of_constraints uctx.2 ;;
      ret (uctx.1, ctrs).
+
+Lemma gc_of_uctx_of_constraints `{checker_flags} uctx gctx :
+  gc_of_uctx uctx = Some gctx ->
+  gc_of_constraints uctx.2 = Some gctx.2.
+Proof.
+  rewrite/gc_of_uctx; case: (gc_of_constraints _)=> //= ? [=] <- //.
+Qed.
 
 Lemma gc_of_constraint_iff `{cf:checker_flags} ctrs0 ctrs gc
       (HH : gc_of_constraints ctrs0 = Some ctrs)
@@ -2856,6 +2870,19 @@ Section AddLevelsCstrs.
       split.
   Qed.
 
+  Lemma gc_of_uctx_union `{checker_flags} uctx1 uctx2 gc1 gc2 :
+    gc_of_uctx uctx1 = Some gc1 -> gc_of_uctx uctx2 = Some gc2 ->
+    ∑ gc, gc_of_uctx (ContextSet.union uctx1 uctx2) = Some (LevelSet.union gc1.1 gc2.1, gc ) /\ GCS.eq gc (GCS.union gc1.2 gc2.2).
+  Proof.
+    unfold gc_of_uctx.
+    pose proof (H' := gc_of_constraints_union uctx1.2 uctx2.2).
+    move=> eq1 eq2; move: eq1 eq2 H'.
+    case: (gc_of_constraints _) => //?.
+    case: (gc_of_constraints _) => //?.
+    case: (gc_of_constraints _) => //=? [=] <- [=] <- /=.
+    eexists; split; [reflexivity| eassumption].
+  Qed.
+
 End AddLevelsCstrs.
 
 #[global] Instance proper_add_level_edges levels : Morphisms.Proper (wGraph.EdgeSet.Equal ==> wGraph.EdgeSet.Equal)%signature (add_level_edges levels).
@@ -2964,4 +2991,59 @@ Proof.
     rewrite (val_valuation_of_labelling _ uctx2 ltac:(reflexivity))=> //.
     + by apply: (vertices_sub _ _ embed).
     + rewrite /l' extends_labelling //.
+Qed.
+
+
+Lemma add_uctx_make_graph2 uctx1 uctx2 :
+  add_uctx uctx2 (make_graph uctx1) =_g make_graph (VSet.union uctx2.1 uctx1.1, GCS.union uctx2.2 uctx1.2).
+Proof. destruct uctx1, uctx2; apply: add_uctx_make_graph. Qed.
+
+Lemma gc_of_uctx_levels `{checker_flags} udecl uctx :
+  gc_of_uctx udecl = Some uctx -> ContextSet.levels udecl = uctx.1.
+Proof.
+  rewrite /gc_of_uctx.
+  case: (gc_of_constraints _)=> //= ? [=] <- //.
+Qed.
+
+Lemma consistent_on_full_subgraph `{checker_flags}
+      udecl uext uctx uctx' G `{acyclic_no_loop G} :
+  consistent_extension_on udecl (ConstraintSet.union uext.2 udecl.2) ->
+  global_gc_uctx_invariants uctx ->
+  gc_of_uctx udecl = Some uctx ->
+  gc_of_uctx uext = Some uctx' ->
+  G =_g make_graph uctx ->
+  full_subgraph G (add_uctx uctx' G).
+Proof.
+  move=> cext guctx udecleq uexteq Geq.
+  constructor.
+  - apply: VSetProp.union_subset_2.
+  - move=> x hx.
+    apply/add_cstrs_spec; right.
+    apply/add_level_edges_spec; by right.
+  - reflexivity.
+  - case: (Geq) => VGeq _ x y.
+    rewrite /wGraph.V /= VGeq Geq add_uctx_make_graph2.
+    set uctx'' := (_ , _).
+    pose proof (invG := make_graph_invariants uctx guctx).
+    rewrite Geq in H0.
+    unshelve refine (@labelling_ext_lsp _ _ _ _ _ x y).
+
+    move=> l1 /[dup] hl1 /make_graph_spec'.
+    set v1 := (valuation_of_labelling _).
+    pose proof (h := gc_of_constraints_spec v1 udecl.2); move: h.
+    rewrite (gc_of_uctx_of_constraints _ _ udecleq) /=.
+    move=> h /h /(cext _) [v' [+ v'val]].
+    move=> /gc_of_constraints_spec.
+    epose (g := gc_of_constraints_union uext.2 udecl.2).
+    move: g.
+    rewrite (gc_of_uctx_of_constraints _ _ udecleq)
+            (gc_of_uctx_of_constraints _ _ uexteq) /=.
+    case: (gc_of_constraints _)=> [gcs|] //= gcseq.
+    unfold gc_satisfies; move=> /GCS.for_all_spec.
+    rewrite {gcs}gcseq=> /GCS.for_all_spec /(make_graph_spec uctx'') hv'.
+    exists (labelling_of_valuation v'); split=> //.
+    move=> z hz; rewrite -val_labelling_of_valuation.
+
+    rewrite (gc_of_uctx_levels _ _ udecleq) in v'val.
+    rewrite -v'val // /v1 (val_valuation_of_labelling (make_graph uctx) uctx) //.
 Qed.

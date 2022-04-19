@@ -1620,6 +1620,13 @@ Section Univ.
         satisfies v' cstr /\
           LevelSet.For_all (fun l => val v l = val v' l) (ContextSet.levels cs).
 
+  Lemma consistent_extension_on_empty Σ :
+    consistent_extension_on Σ CS.empty.
+  Proof.
+    move=> v hv; exists v; split; [move=> ? /CS.empty_spec[]| move=> ??//].
+  Qed.
+
+
   Definition leq0_levelalg_n n φ (u u' : LevelAlgExpr.t) :=
     forall v, satisfies v φ -> (Z.of_nat (val v u) <= Z.of_nat (val v u') - n)%Z.
 

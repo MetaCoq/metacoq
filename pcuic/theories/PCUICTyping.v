@@ -441,7 +441,7 @@ Existing Class wf.
 #[global]
 Hint Mode wf + + : typeclass_intances.
 
-Lemma wf_env_non_var_levels Σ  `{checker_flags} (hΣ : ∥ wf Σ ∥) :
+Lemma wf_env_non_var_levels (Σ : global_env) `{checker_flags} (hΣ : ∥ wf Σ ∥) :
   LS.For_all (negb ∘ Level.is_var) (PCUICLookup.global_levels Σ).
 Proof. now destruct hΣ as [[[_ [? _]] _]]. Qed.
 

@@ -690,6 +690,12 @@ Proof.
   rewrite/gc_of_uctx; case: (gc_of_constraints _)=> //= ? [=] <- //.
 Qed.
 
+Lemma gc_of_constraints_of_uctx `{checker_flags} uctx gcstrs :
+  gc_of_constraints uctx.2 = Some gcstrs ->
+  gc_of_uctx uctx = Some (uctx.1, gcstrs).
+Proof. rewrite /gc_of_uctx=> -> //=. Qed.
+
+
 Lemma gc_of_constraint_iff `{cf:checker_flags} ctrs0 ctrs gc
       (HH : gc_of_constraints ctrs0 = Some ctrs)
 : GoodConstraintSet.In gc ctrs
@@ -2717,6 +2723,36 @@ Section AddLevelsCstrs.
     unfold Equal_graph. split => //. split => //.
     now rewrite add_cstrs_union /= add_level_edges_add_cstrs_comm add_level_edges_union.
   Qed.
+
+  Section AddUctxAcyclic.
+    Context (G : wGraph.t) (uctx : VSet.t × GoodConstraintSet.t).
+
+    #[local]
+     Obligation Tactic := idtac.
+
+    #[program]
+    Definition add_uctx_map_edge : forall x y, wGraph.EdgeOf G x y -> wGraph.EdgeOf (add_uctx uctx G) x y :=
+      fun x y '(existT w he) => existT _ w _.
+    Next Obligation.
+      intros. apply/add_cstrs_spec; right; apply/add_level_edges_spec; right=> //.
+    Qed.
+
+    Lemma add_uctx_edge_weight :
+      forall x y e, ((add_uctx_map_edge x y e).π1 >= e.π1)%Z.
+    Proof.
+      move=> ??[??]; rewrite /add_uctx_map_edge /=; lia.
+    Qed.
+
+    Lemma acyclic_no_loop_add_uctx :
+      wGraph.acyclic_no_loop (add_uctx uctx G) -> wGraph.acyclic_no_loop G.
+    Proof.
+      move=> hext v p; etransitivity.
+      - apply: Z.ge_le; apply: wGraph.weight_map_path2; apply: add_uctx_edge_weight.
+      - apply: (hext v (wGraph.map_path add_uctx_map_edge p)).
+  Qed.
+
+  End AddUctxAcyclic.
+
     
   Definition gc_result_eq (x y : option GoodConstraintSet.t) :=
     match x, y with

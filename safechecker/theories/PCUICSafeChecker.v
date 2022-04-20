@@ -324,17 +324,6 @@ Section CheckEnv.
   Section UniverseChecks.
   Obligation Tactic := idtac.
 
-  (* Lemma abstract_env_non_var_levels X : *)
-  (*   LS.For_all (negb ∘ Level.is_var) *)
-  (*              (global_levels (abstract_env_univ X)). *)
-  (* Proof. *)
-  (*   abstract_env_univ_correct *)
-  (*     case: abstract_env_wf X. *)
-
-  Lemma wf_env_non_var_levels Σ  `{checker_flags} (hΣ : ∥ wf Σ ∥) :
-    LS.For_all (negb ∘ Level.is_var) (PCUICLookup.global_levels Σ).
-  Proof. now destruct hΣ as [[[_ [? _]] _]]. Qed.
-
   Lemma consistent_extension_on_global Σ uctx :
     consistent_extension_on (global_uctx Σ) uctx ->
     consistent_extension_on Σ uctx.
@@ -381,7 +370,7 @@ Section CheckEnv.
     - clear -H H1. apply LevelSet.for_all_spec in H.
       2: now intros x y [].
       intros l Hl Hlglob.
-      move: (wf_env_non_var_levels _ (heΣ _ _ H1) l Hlglob).
+      move: (wf_env_non_var_levels Σ (heΣ _ _ H1) l Hlglob).
       now rewrite (H l Hl).
     - erewrite <- abstract_env_univ_correct in HH; eauto.
     - pose (HΣ := abstract_env_wf _ H1); sq.

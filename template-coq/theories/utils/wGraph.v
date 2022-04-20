@@ -144,6 +144,8 @@ Module Nbar.
   (*   destruct n; cbn; [|intuition]. *)
   (*   destruct n. lia. intros _. eexists; reflexivity. *)
   (* Qed. *)
+  Lemma add_finite z1 z2 : Some (z1 + z2)%Z = Some z1 + Some z2.
+  Proof. reflexivity. Qed.
 
   Definition add_assoc n m p : n + (m + p) = n + m + p.
   Proof.
@@ -3102,7 +3104,8 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
   Lemma to_label_to_nat n : to_label (Some n) = Z.to_nat n.
   Proof. by []. Qed.
 
-  Section RelabelWrt.
+  Module RelabelWrtEdge.
+  Section RelabelWrtEdge.
     Context G `{invG:invariants G} `{acG:acyclic_no_loop G}.
 
     Section BuildLabelling.
@@ -3146,20 +3149,6 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
       Definition stdl : labelling := (fun x : V.t => to_label (lsp G (s G) x)).
 
       Definition dxy := Z.to_nat (Z.of_nat (stdl y) - Z.of_nat (stdl x) - nxy).
-
-      (* Lemma dxy_nbar : *)
-      (*   (lsp G (s G) x + lsp G x y + Some (Z.of_nat dxy) <= lsp G (s G) y)%nbar. *)
-      (* Proof. *)
-      (*   destruct (Z_of_to_label_s G x hx) as [nx [eqlspx [nxpos eqnx]]]. *)
-      (*   destruct (Z_of_to_label_s G y hy) as [ny [eqlspy [nypos eqny]]]. *)
-      (*   pose proof (H1 := lsp_codistance G (s G) x y). *)
-      (*   move E: (lsp G x y) H1 hxy=> [?|]; *)
-      (*   rewrite /dxy/stdl eqnx eqny eqlspx eqlspy //=. *)
-      (*   lia. *)
-      (* Qed. *)
-
-      Lemma add_finite z1 z2 : Some (z1 + z2) = (Some z1 + Some z2)%nbar.
-      Proof. reflexivity. Qed.
 
       Lemma dxy_bound :
         (lsp G x (s G) + Some (Z.of_nat (dxy + stdl x)) <= Some 0)%nbar.
@@ -3222,93 +3211,8 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
 
     End RelabelCoefs.
 
-    (* Section RelabelCoefs. *)
-    (*   Context (x y : V.t) (hx : VSet.In x (V G)) (hy : VSet.In y (V G)) *)
-    (*           (nxy : Z) (hxy : lsp G x y = Some nxy). *)
-    (*   Definition stdl : labelling := (fun x : V.t => to_label (lsp G (s G) x)). *)
-
-    (*   Definition dxy := Z.of_nat (stdl y) - Z.of_nat (stdl x) - nxy. *)
-
-    (*   Lemma dxy_nbar : *)
-    (*     Some dxy = (lsp G (s G) y - lsp G (s G) x - lsp G x y)%nbar. *)
-    (*   Proof. *)
-    (*     destruct (Z_of_to_label_s G x hx) as [nx [eqlspx [nxpos eqnx]]]. *)
-    (*     destruct (Z_of_to_label_s G y hy) as [ny [eqlspy [nypos eqny]]]. *)
-    (*     rewrite /dxy/stdl eqnx eqny eqlspx eqlspy hxy //=. *)
-    (*   Qed. *)
-
-    (*   Lemma dxy_pos : 0 <= dxy. *)
-    (*   Proof. *)
-    (*     pose proof (H1 := lsp_codistance G (s G) x y). *)
-    (*     destruct (lsp_s G x hx) as [nx [eqx hnx]]. *)
-    (*     destruct (lsp_s G y hy) as [ny [eqy hny]]. *)
-    (*     move: hnx hny; destruct nx, ny=> //=. *)
-    (*     all: move: H1; rewrite /dxy /stdl eqx eqy hxy ; cbn; try lia. *)
-    (*     all: destruct nxy; try lia; rewrite positive_nat_Z -Pos2Z.add_pos_neg; lia. *)
-    (*   Qed. *)
-
-    (*   Lemma dxy_bound : *)
-    (*     (lsp G x (s G) + Some (Z.of_nat (Z.to_nat dxy + stdl x)) <= Some 0)%nbar. *)
-    (*   Proof. *)
-    (*     destruct (Z_of_to_label_s G x hx) as [nx [eqlspx [nxpos eqnx]]]. *)
-    (*     destruct (Z_of_to_label_s G y hy) as [ny [eqlspy [nypos eqny]]]. *)
-    (*     have: (lsp G x (s G) + Some dxy + lsp G (s G) x <= Some 0)%nbar. *)
-    (*     - pose proof (lsp_codistance G x (s G) y). *)
-    (*       case E: (lsp G x (s G)) H => //. *)
-    (*       rewrite dxy_nbar !hxy !eqlspx eqlspy /=; lia. *)
-    (*     - pose proof (dxy_pos). *)
-    (*       rewrite Nat2Z.inj_add Z2Nat.id // /stdl eqnx eqlspx -add_assoc //. *)
-    (*   Qed.           *)
-
-    (*   Definition l' := r stdl x (Z.to_nat dxy). *)
-
-    (*   Lemma l'_correct : correct_labelling G l'. *)
-    (*   Proof. *)
-    (*     apply: r_correct; [apply: lsp_correctness | apply: dxy_bound]. *)
-    (*   Qed. *)
-
-    (*   Lemma add_finite z1 z2 : Some (z1 + z2) = (Some z1 + Some z2)%nbar. *)
-    (*   Proof. reflexivity. Qed. *)
-      
-    (*   Lemma to_label_add z k : (Some 0 <= z)%nbar -> (to_label z + k)%nat = to_label (z + Some (Z.of_nat k))%nbar. *)
-    (*   Proof.  *)
-    (*     move: z=> [[|?|?]|] //=; case: k=> //=; lia. *)
-    (*   Qed. *)
-
-    (*   Lemma to_label_mon z1 z2 : (z1 <= z2)%nbar -> (to_label z1 <= to_label z2)%nat.  *)
-    (*   Proof. move: z1 z2=> [[|?|?]|] [[|?|?]|] //=; lia. Qed. *)
-
-    (*   Lemma l'_on_x : l' x = (stdl x + Z.to_nat dxy)%nat. *)
-    (*   Proof. *)
-    (*     destruct (Z_of_to_label_s G x hx) as [nx [eqlspx [nxpos eqnx]]]. *)
-    (*     pose proof (dxy_pos). *)
-    (*     rewrite /l'/r/stdl lsp_xx Nat2Z.inj_add Z2Nat.id //; cbn -[to_label]. *)
-    (*     rewrite Z.add_comm add_finite to_label_add !eqlspx // Z2Nat.id //. *)
-    (*     rewrite Z_of_to_label_pos //. *)
-    (*     apply: max_r. apply: to_label_mon=> /=; lia. *)
-    (*   Qed. *)
-
-    (*   Lemma l'_on_y : l' y = stdl y. *)
-    (*   Proof. *)
-    (*     apply: max_l. *)
-    (*     pose proof (dxy_pos). *)
-    (*     destruct (Z_of_to_label_s G x hx) as [nx [eqlspx [nxpos eqnx]]]. *)
-    (*     destruct (Z_of_to_label_s G y hy) as [ny [eqlspy [nypos eqny]]]. *)
-    (*     rewrite /l'/r Nat2Z.inj_add Z2Nat.id // add_finite add_assoc dxy_nbar /stdl eqnx hxy eqlspx eqlspy. *)
-    (*     apply: to_label_mon=> /=; lia. *)
-    (*   Qed.         *)
-
-
-    (*   Lemma l'_diff : *)
-    (*     Z.of_nat (l' y) - Z.of_nat (l' x) = nxy. *)
-    (*   Proof. *)
-    (*     pose proof (dxy_pos). *)
-    (*     rewrite l'_on_x l'_on_y Nat2Z.inj_add Z2Nat.id // /dxy; lia. *)
-    (*   Qed. *)
-
-    (* End RelabelCoefs. *)
-
-  End RelabelWrt.
+  End RelabelWrtEdge.
+  End RelabelWrtEdge.
 
   Lemma labelling_ext_lsp
         G1 G2  `{acyclic_no_loop G1} `{invariants G1}
@@ -3325,9 +3229,9 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
                | None => (nxy2  - 1)%Z end).
     assert (hbound : (lsp G1 vx vy <= Some n)%nbar)
       by (unfold n; case: (lsp _ _ _)=> //; reflexivity).
-    pose proof (hl := l'_correct _ vx vy hvx hvy _ hbound).
+    pose proof (hl := RelabelWrtEdge.l'_correct _ vx vy hvx hvy _ hbound).
     move: (hext _ hl)=> [l' [hl' ll']].
-    pose proof (hdiff := l'_diff _ vx vy hvx hvy _ hbound).
+    pose proof (hdiff := RelabelWrtEdge.l'_diff _ vx vy hvx hvy _ hbound).
     move: hdiff.  rewrite ll' // ll' // /n.
     pose proof (h := correct_labelling_lsp G2 eqlsp2 l' hl').
     case eqlsp1: (lsp _ _ _)=> [nxy1|]; first cbn; lia.

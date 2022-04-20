@@ -1613,6 +1613,16 @@ Section Univ.
   Definition satisfies v : ConstraintSet.t -> Prop :=
     ConstraintSet.For_all (satisfies0 v).
 
+  Lemma satisfies_union v φ1 φ2 :
+    satisfies v (CS.union φ1 φ2)
+    <-> (satisfies v φ1 /\ satisfies v φ2).
+  Proof.
+    unfold satisfies. split.
+    - intros H; split; intros c Hc; apply H; now apply CS.union_spec.
+    - intros [H1 H2] c Hc; apply CS.union_spec in Hc; destruct Hc; auto.
+  Qed.
+
+
   Definition consistent ctrs := exists v, satisfies v ctrs.
 
   Definition consistent_extension_on cs cstr :=
@@ -1626,6 +1636,17 @@ Section Univ.
     move=> v hv; exists v; split; [move=> ? /CS.empty_spec[]| move=> ??//].
   Qed.
 
+  Lemma consistent_extension_on_union X cstrs
+    (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
+    consistent_extension_on X cstrs ->
+    consistent_extension_on X (CS.union cstrs X.2).
+  Proof.
+    move=> hext v /[dup] vsat /hext [v' [v'sat v'eq]].
+    exists v'; split=> //.
+    apply/satisfies_union; split=> //.
+    move=> c hc. destruct (wfX c hc).
+    destruct (vsat c hc); constructor; rewrite -!v'eq //.
+  Qed.
 
   Definition leq0_levelalg_n n φ (u u' : LevelAlgExpr.t) :=
     forall v, satisfies v φ -> (Z.of_nat (val v u) <= Z.of_nat (val v u') - n)%Z.

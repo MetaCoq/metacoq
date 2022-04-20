@@ -395,39 +395,6 @@ Next Obligation. now rewrite (abstract_env_check_constraints_correct X.(wf_env_e
 Next Obligation. apply fake_guard_correct. Defined.
 
 
-
-Lemma gc_of_constraints_of_uctx `{checker_flags} uctx gcstrs :
-  gc_of_constraints uctx.2 = Some gcstrs ->
-  gc_of_uctx uctx = Some (uctx.1, gcstrs).
-Proof. rewrite /gc_of_uctx=> -> //=. Qed.
-
-
-Lemma acyclic_no_loop_add_uctx uctx gph :
-  wGraph.acyclic_no_loop (add_uctx uctx gph) -> wGraph.acyclic_no_loop gph.
-Proof.
-  move=> hext v p.
-  have @embed_uctx : forall x y, wGraph.EdgeOf gph x y -> wGraph.EdgeOf (add_uctx uctx gph) x y.
-  { refine (fun x y '(existT w he) => existT _ w _).
-    abstract (apply/add_cstrs_spec; right; apply/add_level_edges_spec; right=> //).
-  }
-  etransitivity; last apply: (hext v (wGraph.map_path embed_uctx p)).
-  apply: Z.ge_le; apply: wGraph.weight_map_path2.
-  move=> ??[??]; rewrite /embed_uctx /=; lia.
-Qed.
-
-
-Lemma consistent_extension_on_union X cstrs
-  (wfX : forall c, CS.In c X.2 -> LS.In c.1.1 X.1 /\ LS.In c.2 X.1) :
-  consistent_extension_on X cstrs ->
-  consistent_extension_on X (CS.union cstrs X.2).
-Proof.
-  move=> hext v /[dup] vsat /hext [v' [v'sat v'eq]].
-  exists v'; split=> //.
-  apply/PCUICUnivSubstitutionConv.satisfies_union; split=> //.
-  move=> c hc. destruct (wfX c hc).
-  destruct (vsat c hc); constructor; rewrite -!v'eq //.
-Qed.
-
 Program Global Instance canonical_abstract_env_prop {cf:checker_flags} :
   @abstract_env_prop _ _ _ canonical_abstract_env_ext_struct canonical_abstract_env_struct.
 Next Obligation. now sq. Qed.

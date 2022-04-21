@@ -1,5 +1,5 @@
 From Coq Require Import Recdef.
-From MetaCoq.Template Require Import TemplateMonad Loader.
+From MetaCoq.Template Require Import TemplateMonad bytestring Loader.
 (* From MetaCoq.SafeChecker Require Import SafeTemplateChecker. *)
 From MetaCoq.PCUIC Require Import PCUICEquality PCUICAst PCUICReflect PCUICSafeLemmata PCUICTyping PCUICNormal PCUICAstUtils PCUICSN TemplateToPCUIC PCUICToTemplate.
 From Coq Require Import String.
@@ -10,6 +10,10 @@ Import MCMonadNotation.
 Unset MetaCoq Debug.
 (* We're doing erasure assuming no Prop <= Type rule and lets can appear in constructor types. *)
 #[local] Existing Instance extraction_checker_flags.
+
+From MetaCoq.TestSuite Require hott_example.
+
+(* MetaCoq Quote Recursively Definition qequiv_adjointify := @isequiv_adjointify. *)
 
 From MetaCoq.SafeChecker Require Import PCUICEqualityDec PCUICWfReduction PCUICErrors PCUICSafeReduce PCUICTypeChecker PCUICSafeChecker PCUICWfEnv PCUICWfEnvImpl SafeTemplateChecker PCUICSafeConversion. 
 
@@ -34,12 +38,13 @@ Definition dummy (n : nat) : nat := match n with 0 => 1 | S n => n end.
 Set Primitive Projections. 
 
 MetaCoq Quote Recursively Definition foo := 
+  @hott_example.isequiv_adjointify.
 (* plus. *)
 (* (fun n m => n + m). *)
 (* (forall (n:nat), nat).  *)
 (* (fix f (n : nat) : nat := 0). *)
 (* (fun t:nat => fun u : unit => t = t). *)
-(match 100 with 0 => 1 | S n => n end).
+(* (match 100 with 0 => 1 | S n => n end). *)
 (* (fun t => match t with tt => 0 end). *)
 (* (match todo "foo" with 0 => 1 | S n => n end). *)
 (* Set.  *)
@@ -51,6 +56,7 @@ Defined.
 
 Time Definition bar := Eval lazy in @typecheck_template default_normal foo.
 
+Unset MetaCoq Strict Unquote Universe Mode.
 MetaCoq Unquote Definition unbar := (PCUICToTemplate.trans bar).
 
 Program Definition eval_compute (cf := default_checker_flags) 

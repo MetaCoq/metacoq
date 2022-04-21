@@ -61,7 +61,7 @@ Coercion declared_constructor_inductive : declared_constructor >-> declared_indu
 
 Lemma declared_projection_constructor {Σ ind mdecl idecl cdecl pdecl} :
   declared_projection Σ ind mdecl idecl cdecl pdecl ->
-  declared_constructor Σ (ind.1.1, 0) mdecl idecl cdecl.
+  declared_constructor Σ (ind.(proj_ind), 0) mdecl idecl cdecl.
 Proof. now intros []. Qed.
 Coercion declared_projection_constructor : declared_projection >-> declared_constructor.
 

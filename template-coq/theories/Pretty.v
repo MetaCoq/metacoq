@@ -233,17 +233,11 @@ Module PrintTermTree.
               ^ string_of_predicate string_of_term p ^ "," ^ 
               string_of_list (pretty_string_of_branch string_of_term) brs ^ ")"
     end
-  | tProj (mkInd mind i as ind, pars, k) c =>
-    match lookup_ind_decl Σ mind i with
-    | Some oib =>
-      match nth_error oib.(ind_projs) k with
-      | Some (na, _) => print_term Γ false c ^ ".(" ^ na ^ ")"
-      | None =>
-        "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
-                       ^ print_term Γ true c ^ ")"
-      end
+  | tProj p c =>
+    match lookup_projection Σ p with
+    | Some (mdecl, idecl, cdecl, pdecl) => print_term Γ false c ^ ".(" ^ pdecl.(proj_name) ^ ")"
     | None =>
-      "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+      "UnboundProj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars) ^ "," ^ string_of_nat p.(proj_arg) ^ ","
                      ^ print_term Γ true c ^ ")"
     end
 

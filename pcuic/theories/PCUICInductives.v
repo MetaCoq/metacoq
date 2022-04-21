@@ -227,23 +227,6 @@ Proof.
   + rewrite List.rev_length. lia.
 Qed.
 
-
-Lemma declared_inductive_lookup_inductive {Σ ind mdecl idecl} :
-  declared_inductive Σ ind mdecl idecl ->
-  lookup_inductive Σ ind = Some (mdecl, idecl).
-Proof.
-  rewrite /declared_inductive /lookup_inductive.
-  intros []. red in H. now rewrite /lookup_minductive H H0.
-Qed.
-
-Lemma declared_constructor_lookup Σ id mdecl idecl cdecl :
-  declared_constructor Σ id mdecl idecl cdecl -> 
-  lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
-Proof.
-  intros []. unfold lookup_constructor.
-  rewrite (declared_inductive_lookup_inductive (Σ := empty_ext Σ) H) /= H0 //.
-Qed.
-
 Section OnInductives.
   Context {cf : checker_flags} {Σ : global_env} {wfΣ : wf Σ} {mdecl ind idecl}
     (decli : declared_inductive Σ ind mdecl idecl).
@@ -385,7 +368,7 @@ End OnInductives.
 Fixpoint projs_inst ind npars k x : list term :=
   match k with
   | 0 => []
-  | S k' => tProj (ind, npars, k') x :: projs_inst ind npars k' x
+  | S k' => tProj (mkProjection ind npars k') x :: projs_inst ind npars k' x
   end.
 
 Lemma subst_instance_projs u i p n :
@@ -394,16 +377,16 @@ Proof.
   induction n; simpl; auto. f_equal; auto.
 Qed.
 
-Lemma projs_inst_subst s k i pars arg t :
-  map (subst s k) (projs_inst i pars arg t)  =
-  projs_inst i pars arg (subst s k t).
+Lemma projs_inst_subst s k ind pars arg t :
+  map (subst s k) (projs_inst ind pars arg t)  =
+  projs_inst ind pars arg (subst s k t).
 Proof.
   induction arg; simpl; auto.
   f_equal; auto.
 Qed.
 
-Lemma projs_inst_skipn {i pars arg t} n :
-  skipn n (projs_inst i pars arg t) = projs_inst i pars (arg - n) t.
+Lemma projs_inst_skipn {ind pars arg t} n :
+  skipn n (projs_inst ind pars arg t) = projs_inst ind pars (arg - n) t.
 Proof.
   induction arg in n |- *; simpl; auto.
   - now rewrite skipn_nil.
@@ -490,7 +473,7 @@ Qed.
 
 Lemma nth_error_projs_inst ind npars k x n :
   n < k ->
-  nth_error (projs_inst ind npars k x) n = Some (tProj (ind, npars, k - S n) x).
+  nth_error (projs_inst ind npars k x) n = Some (tProj (mkProjection ind npars (k - S n)) x).
 Proof.
   induction k in n |- *; simpl; auto. lia.
   destruct n.
@@ -993,11 +976,8 @@ Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} 
           binder_name := nNamed (ind_name idecl);
           binder_relevance := ind_relevance idecl |} in
   forall c, ind_ctors idecl = [c] ->
-  Alli
-          (fun (i : nat) (_ : context_decl) =>
-          ∑ pdecl : ident × term,
-            nth_error (ind_projs idecl)
-              (context_assumptions (cstr_args c) - S i) =
+  Alli (fun (i : nat) (_ : context_decl) =>
+     ∑ pdecl, nth_error (ind_projs idecl) (context_assumptions (cstr_args c) - S i) =
             Some pdecl) 0 (smash_context [] (cstr_args c)) ->
   forall i: nat,
   let indsubst:= inds (inductive_mind ind)
@@ -1005,13 +985,13 @@ Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} 
                 (ind_bodies mdecl) in
   forall (IH: forall i0 : nat,
        i0 < i ->
-       forall x : ident × term,
+       forall x,
        nth_error (ind_projs idecl) i0 = Some x ->
       isType (Σ.1, ind_universes mdecl)
            (smash_context [] (ind_params mdecl),,
             vass indb
               (mkApps (tInd ind (abstract_instance (ind_universes mdecl)))
-                 (to_extended_list (smash_context [] (ind_params mdecl))))) x.2
+                 (to_extended_list (smash_context [] (ind_params mdecl))))) x.(proj_type)
          × (∑ decl : context_decl,
               [× nth_error (smash_context [] (cstr_args c))
                   (context_assumptions (cstr_args c) - S i0) = Some decl,
@@ -1022,7 +1002,7 @@ Lemma declared_projections_subslet_ind {cf:checker_flags} {Σ : global_env_ext} 
                 wf_local (Σ.1, ind_universes mdecl)
                   (arities_context (ind_bodies mdecl),,, ind_params mdecl,,,
                    smash_context [] (cstr_args c)),
-               projection_type mdecl ind i0 (decl_type decl) = x.2 &
+               projection_type mdecl ind i0 (decl_type decl) = x.(proj_type) &
                projection_type mdecl ind i0 (decl_type decl) =
                projection_type' mdecl ind i0 (decl_type decl)])),
   on_projections mdecl (inductive_mind ind) (inductive_ind ind)
@@ -1098,7 +1078,7 @@ Proof.
         reflexivity. autorewrite with len.
         simpl.
         rewrite context_assumptions_smash_context /= //.
-        assert(subst_instance (abstract_instance (ind_universes mdecl)) pdecl.2 = pdecl.2) as ->.
+        assert(subst_instance (abstract_instance (ind_universes mdecl)) pdecl.(proj_type) = pdecl.(proj_type)) as ->.
         { eapply (isType_subst_instance_id (Σ.1, ind_universes mdecl)); eauto with pcuic.
           eapply declared_inductive_wf_ext_wk; eauto with pcuic. }
         destruct IH as [isTy [decl [nthdecl _ _ eqpdecl ptyeq]]].
@@ -1158,7 +1138,7 @@ Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind i
     on_projections mdecl (inductive_mind ind) (inductive_ind ind)
       idecl (ind_indices idecl) cs ->
     Alli (fun i pdecl =>
-    isType (Σ.1, ind_universes mdecl) (projection_context_gen ind mdecl idecl) pdecl.2 *
+    isType (Σ.1, ind_universes mdecl) (projection_context_gen ind mdecl idecl) pdecl.(proj_type) *
       ∑ decl,
         [× nth_error (smash_context [] (cstr_args cs))
           (context_assumptions (cstr_args cs) - S i) = Some decl,
@@ -1169,7 +1149,7 @@ Lemma declared_projections {cf:checker_flags} {Σ : global_env_ext} {mdecl ind i
         wf_local (Σ.1, ind_universes mdecl)
           (arities_context (ind_bodies mdecl) ,,,
             ind_params mdecl ,,, smash_context [] (cstr_args cs)),
-        (projection_type mdecl ind i decl.(decl_type) = pdecl.2) &
+        (projection_type mdecl ind i decl.(decl_type) = pdecl.(proj_type)) &
         (projection_type mdecl ind i decl.(decl_type) =
             projection_type' mdecl ind  i decl.(decl_type))])%type
       0 (ind_projs idecl)
@@ -1186,7 +1166,7 @@ Proof.
   set (eos := CoreTactics.the_end_of_the_section).
   intros i. Subterm.rec_wf_rel IH i lt. clear eos.
   rename pr1 into i. simpl; clear H0.
-  set (p := ((ind, ind_npars mdecl), i)).
+  set (p := mkProjection ind (ind_npars mdecl) i).
   intros pdecl Hp. simpl.
   assert (hnth': nth_error (ind_ctors idecl) 0 = Some c) by
     (rewrite Heq //).
@@ -1485,9 +1465,9 @@ Lemma declared_projection_type {cf:checker_flags} {Σ : global_env_ext} {mdecl i
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   let u := abstract_instance (ind_universes mdecl) in
   isType (Σ.1, ind_universes mdecl)
-    ((vass {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |} (mkApps (tInd p.1.1 u)
+    ((vass {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |} (mkApps (tInd p.(proj_ind) u)
           (to_extended_list (smash_context [] (ind_params mdecl)))))::
-        smash_context [] (ind_params mdecl)) pdecl.2.
+        smash_context [] (ind_params mdecl)) pdecl.(proj_type).
 Proof.
   intros wfΣ declp.
   destruct (on_declared_projection declp) as [oni onp].
@@ -1509,26 +1489,25 @@ Qed.
 Lemma declared_projection_type_and_eq {cf:checker_flags} {Σ : global_env_ext} {mdecl idecl p cdecl pdecl} :
   forall (wfΣ : wf Σ.1) (Hdecl : declared_projection Σ p mdecl idecl cdecl pdecl),
   let u := abstract_instance (ind_universes mdecl) in
-  let oib := declared_inductive_inv weaken_env_prop_typing wfΣ wfΣ (let (x, _) := Hdecl in x) in
   (ind_ctors idecl = [cdecl]) *
   isType (Σ.1, ind_universes mdecl)
     ((vass {| binder_name := nNamed idecl.(ind_name); binder_relevance := idecl.(ind_relevance) |}
-      (mkApps (tInd p.1.1 u)
+      (mkApps (tInd p.(proj_ind) u)
           (to_extended_list (smash_context [] (ind_params mdecl)))))::
-      smash_context [] (ind_params mdecl)) pdecl.2 *
+      smash_context [] (ind_params mdecl)) pdecl.(proj_type) *
   ∑ decl,
     [× nth_error (smash_context [] (cstr_args cdecl))
-      (context_assumptions (cstr_args cdecl) - S p.2) = Some decl,
+      (context_assumptions (cstr_args cdecl) - S p.(proj_arg)) = Some decl,
       isType (Σ.1, ind_universes mdecl)
         (arities_context (ind_bodies mdecl) ,,, ind_params mdecl ,,,
-          skipn (context_assumptions (cstr_args cdecl) - p.2)
+          skipn (context_assumptions (cstr_args cdecl) - p.(proj_arg))
             (smash_context [] (cstr_args cdecl))) decl.(decl_type),
       (wf_local (Σ.1, ind_universes mdecl)
         (arities_context (ind_bodies mdecl) ,,,
           ind_params mdecl ,,, smash_context [] (cstr_args cdecl))),
-      (projection_type mdecl p.1.1 p.2 decl.(decl_type) = pdecl.2) &
-      (projection_type mdecl p.1.1 p.2 decl.(decl_type) =
-        projection_type' mdecl p.1.1 p.2 decl.(decl_type))%type].
+      (projection_type mdecl p.(proj_ind) p.(proj_arg) decl.(decl_type) = pdecl.(proj_type)) &
+      (projection_type mdecl p.(proj_ind) p.(proj_arg) decl.(decl_type) =
+        projection_type' mdecl p.(proj_ind) p.(proj_arg) decl.(decl_type))%type].
 Proof.
   intros wfΣ declp.
   destruct (on_declared_projection declp) as [oni onp].
@@ -1644,7 +1623,7 @@ Lemma wf_projection_context {cf:checker_flags} (Σ : global_env_ext) {mdecl idec
   wf Σ.1 ->
   declared_projection Σ p mdecl idecl cdecl pdecl ->
   consistent_instance_ext Σ (ind_universes mdecl) u ->
-  wf_local Σ (projection_context p.1.1 mdecl idecl u).
+  wf_local Σ (projection_context p.(proj_ind) mdecl idecl u).
 Proof.
   move=> wfΣ decli.
   pose proof (on_declared_projection decli) as [[onmind eqctr] onind].
@@ -1787,9 +1766,9 @@ Qed.
 Lemma projection_subslet {cf:checker_flags} Σ Γ mdecl idecl u c p cdecl pdecl args :
   declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
   wf Σ.1 ->
-  Σ ;;; Γ |- c : mkApps (tInd p.1.1 u) args ->
-  isType Σ Γ (mkApps (tInd p.1.1 u) args) ->
-  subslet Σ Γ (c :: List.rev args) (projection_context p.1.1 mdecl idecl u).
+  Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
+  isType Σ Γ (mkApps (tInd p.(proj_ind) u) args) ->
+  subslet Σ Γ (c :: List.rev args) (projection_context p.(proj_ind) mdecl idecl u).
 Proof.
   intros declp wfΣ Hc Ha.
   destruct (on_declared_projection declp) as [[onind eqctr] y].

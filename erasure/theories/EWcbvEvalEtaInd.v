@@ -277,28 +277,24 @@ Lemma eval_preserve_mkApps_ind :
                            cst_body decl = Some body
                            → eval Σ body res
                              → P body res → P' (tConst c) res)
-                    → (∀ (i : inductive) cdecl (pars arg : nat) 
-                         (discr : term) (args : list term)  a
-                         (res : term),
+                    → (∀ p cdecl (discr : term) (args : list term) a (res : term),
                          has_tProj ->
                          eval Σ discr
-                           (mkApps (tConstruct i 0) args)
-                         → P discr (mkApps (tConstruct i 0) args)
-                         → constructor_isprop_pars_decl Σ i 0 = Some (false, pars, cdecl) 
-                         → #|args| = pars + cdecl.(cstr_nargs)
-                         -> nth_error args (pars + arg) = Some a
+                           (mkApps (tConstruct p.(proj_ind) 0) args)
+                         → P discr (mkApps (tConstruct p.(proj_ind) 0) args)
+                         → constructor_isprop_pars_decl Σ p.(proj_ind) 0 = Some (false, p.(proj_npars), cdecl) 
+                         → #|args| = p.(proj_npars) + cdecl.(cstr_nargs)
+                         -> nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a
                          -> eval Σ a res
                          → P a res
-                         → P' (tProj (i, pars, arg) discr) res)
-                      → (∀ (i : inductive) (pars arg : nat) 
-                           (discr : term),
+                         → P' (tProj p discr) res)
+                      → (∀ p (discr : term),
                            has_tProj ->
                            with_prop_case
                            → eval Σ discr tBox
                              → P discr tBox
-                               → inductive_isprop_and_pars Σ i = Some (true, pars)
-                                 → P' (tProj (i, pars, arg) discr)
-                                     tBox) →
+                               → inductive_isprop_and_pars Σ p.(proj_ind) = Some (true, p.(proj_npars))
+                                 → P' (tProj p discr) tBox) →
   (∀ (f11 f' : term) a a',
      forall (ev : eval Σ f11 f'), 
      P f11 f' ->  
@@ -575,7 +571,7 @@ Proof.
       { eapply nth_error_all in qargs; tea. }
       clear ev1'; ih. }
     assert (isEtaExp Σ a).
-    { assert (isEtaExp Σ (mkApps (tConstruct i 0) args)) by iheta q.
+    { assert (isEtaExp Σ (mkApps (tConstruct p.(proj_ind) 0) args)) by iheta q.
       move: H; simp_eta.
       rewrite isEtaExp_mkApps_napp // /=.
       move=> /andP[] etaapp etaargs.

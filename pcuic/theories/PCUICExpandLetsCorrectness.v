@@ -431,12 +431,16 @@ Proof.
       eapply on_free_vars_ctx_impl; tea.
       intros. eapply closedP_mon; tea. lia.
   - f_equal. rewrite H0 //.
-  - f_equal. rewrite !map_map_compose. red in X, X0. solve_all.
-    rewrite a //. solve_all.
-    rewrite b1 //. solve_all.
-  - f_equal. rewrite !map_map_compose. solve_all.
-    rewrite a //. solve_all.
-    rewrite b1 //. solve_all.
+  - f_equal. rewrite !map_map_compose. red in X, X0.
+    repeat toAll. eapply All_map_eq, All_impl; tea.
+    cbn. rtoProp; intuition auto.
+    unfold map_def; cbn. f_equal. rewrite a //. solve_all.
+    rewrite b1 //. solve_all. cbn. now len.
+  - f_equal. rewrite !map_map_compose. 
+    repeat toAll. eapply All_map_eq, All_impl; tea.
+    cbn. rtoProp; intuition auto.
+    unfold map_def; cbn. f_equal. rewrite a //. solve_all.
+    rewrite b //. solve_all. now len.
 Qed.
 
 Lemma trans_subst_ctx (Γ : context) xs k t :
@@ -488,7 +492,7 @@ Proof.
     unfold tFixProp in X. rewrite !map_map_compose. solve_all.
   - f_equal.
     unfold tFixProp in X.
-    rewrite !map_map_compose; solve_all.
+    rewrite !map_map_compose. autorewrite with map. solve_all_one.
 Qed.
 
 Lemma trans_subst_instance_ctx Γ u :
@@ -542,10 +546,10 @@ Proof.
 Qed.
 
 Lemma trans_declared_projection Σ p mdecl idecl cdecl pdecl :
-  let ind := (inductive_ind (fst (fst p))) in
+  let ind := (inductive_ind p.(proj_ind)) in
   S.declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
   T.declared_projection (trans_global Σ).1 p (trans_minductive_body mdecl) (trans_one_ind_body mdecl ind idecl) 
-    (trans_constructor_body ind mdecl cdecl) (on_snd trans pdecl).
+    (trans_constructor_body ind mdecl cdecl) (trans_projection_body pdecl).
 Proof.
   intros ind []. split; [|split].
   - now apply trans_declared_constructor.
@@ -553,8 +557,6 @@ Proof.
     destruct H0.
     destruct pdecl, p.
     cbn in *.
-    change (Some (i, trans t)) with
-      (Some((fun '(x, y) => (x, trans y)) (i,t))).
     now apply map_nth_error.
   - now destruct mdecl;cbn in *.
 Qed.
@@ -3417,7 +3419,7 @@ Definition map_trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
      ind_sort := d.(PCUICEnvironment.ind_sort);
      ind_kelim := d.(PCUICEnvironment.ind_kelim);
      ind_ctors := List.map map_trans_constructor_body d.(PCUICEnvironment.ind_ctors);
-     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(PCUICEnvironment.ind_projs) |}.
+     ind_projs := List.map trans_projection_body d.(PCUICEnvironment.ind_projs) |}.
 
 Definition map_trans_minductive_body md :=
   {| ind_finite := md.(PCUICEnvironment.ind_finite);
@@ -3763,7 +3765,7 @@ Proof.
         eapply (typing_expand_lets (Σ := trans_global Σ) _ _ _ (tSort ps)).
         now rewrite trans_local_app in IHbty.
 
-  - rewrite (trans_subst (shiftnP #|projection_context p.1.1 mdecl idecl u| xpred0) (shiftnP #|Γ| xpred0)).
+  - rewrite (trans_subst (shiftnP #|projection_context p.(proj_ind) mdecl idecl u| xpred0) (shiftnP #|Γ| xpred0)).
     { rewrite /projection_context /=; len. cbn.
       destruct (declared_projection_type_and_eq _ isdecl) as [[] ?].
       eapply isType_is_open_term in i. cbn in i; len in i.
@@ -3771,7 +3773,7 @@ Proof.
     { generalize (subject_is_open_term X1). move/type_is_open_term: X1.
       now rewrite on_free_vars_mkApps /= forallb_rev => -> ->. }
     rewrite trans_subst_instance /= map_rev.
-    change (trans ty) with ((on_snd trans pdecl).2).
+    change (trans (proj_type pdecl)) with (trans_projection_body pdecl).(proj_type).
     eapply type_Proj.
     + now apply trans_declared_projection.
     + rewrite trans_mkApps in X2; eauto.
@@ -4968,9 +4970,9 @@ Proof.
       { eapply wf_local_closed_context in wfargs.
         move: wfargs; rewrite -app_context_assoc => /onfvs_app. now len. }
       rewrite nth_error_map. rewrite context_assumptions_smash_context /= context_assumptions_map /=.
-      destruct nth_error eqn:hnth => /= //. intros []; split; auto.
-      rewrite H. destruct x => //.
-      destruct x => /= //. cbn in H0. subst t.
+      destruct nth_error eqn:hnth => /= //. intros [onna onty onrel]; split; auto.
+      simpl. rewrite onty.
+      destruct x => /= //. cbn in *. subst proj_type0.
       set (ind := {| inductive_mind := kn; inductive_ind := n |}) in *.
       rewrite -(trans_inds ind).
       have fvsdecl : on_free_vars
@@ -5232,11 +5234,11 @@ Proof.
       
   - cbn => cldiscr.
     specialize (IHev1 cldiscr). rewrite trans_mkApps in IHev1.
-    eapply trans_declared_constructor in d; tea.
+    eapply trans_declared_projection in d; tea.
     econstructor; tea.
     { len. rewrite /cstr_arity e. cbn. 
       rewrite context_assumptions_smash_context /= /cstr_arity context_assumptions_map //. }
-    rewrite nth_error_map e1 //.
+    rewrite nth_error_map e0 //.
     apply IHev2.
     eapply eval_closed in ev1; tea.
     move: ev1; rewrite closedn_mkApps /= => onargs.
@@ -5437,7 +5439,7 @@ Proof.
 Qed.
 
 From MetaCoq.PCUIC Require Import PCUICProgram.
-    
+
 Lemma expanded_expand_lets_program {cf : checker_flags} p (wtp : wt_pcuic_program p) :
   expanded_pcuic_program p ->
   expanded_pcuic_program (expand_lets_program p).

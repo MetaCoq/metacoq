@@ -213,14 +213,13 @@ Section Wcbv.
     eval (tCase ci p discr brs) res
  
   (** Proj *)
-  | eval_proj i pars arg discr args u a res mdecl idecl cdecl :
-      declared_constructor Σ (i, 0) mdecl idecl cdecl ->
-      eval discr (mkApps (tConstruct i 0 u) args) ->
+  | eval_proj p discr args u a res mdecl idecl cdecl pdecl :
+      declared_projection Σ p mdecl idecl cdecl pdecl ->
+      eval discr (mkApps (tConstruct p.(proj_ind) 0 u) args) ->
       #|args| = cstr_arity mdecl cdecl ->
-      pars = mdecl.(ind_npars) ->
-      nth_error args (pars + arg) = Some a ->
+      nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
       eval a res ->
-      eval (tProj (i, pars, arg) discr) res
+      eval (tProj p discr) res
 
   (** Fix unfolding, with guard *)
   | eval_fix f mfix idx argsv a av fn res :
@@ -389,15 +388,14 @@ Section Wcbv.
     context_assumptions (cdecl.(cstr_args)) = context_assumptions br.(bcontext) ->
     All value args ->
     red1 (tCase ci p (mkApps (tConstruct ci.(ci_ind) c u) args) brs) (iota_red ci.(ci_npar) p args br)
-  | red_proj_in discr discr' i pars arg : 
-    red1 discr discr' -> red1 (tProj (i, pars, arg) discr)  (tProj (i, pars, arg) discr')
-  | red_proj i pars arg args u a mdecl idecl cdecl :
-    declared_constructor Σ (i, 0) mdecl idecl cdecl ->
-    pars = mdecl.(ind_npars) ->
+  | red_proj_in discr discr' p : 
+    red1 discr discr' -> red1 (tProj p discr) (tProj p discr')
+  | red_proj p args u a mdecl idecl cdecl pdecl :
+    declared_projection Σ p mdecl idecl cdecl pdecl ->
     #|args| = cstr_arity mdecl cdecl ->
-    nth_error args (pars + arg) = Some a ->
+    nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
     All value args ->
-    red1 (tProj (i, pars, arg) (mkApps (tConstruct i 0 u) args)) a
+    red1 (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) a
   | red_fix mfix idx argsv a fn :
     All value argsv ->
     value a ->
@@ -956,13 +954,14 @@ Section Wcbv.
         apply (f_equal pr1) in IHev1 as apps_eq; cbn in *.
         apply mkApps_eq_inj in apps_eq as (eq1 & eq2); try easy.
         noconf eq1. noconf eq2. noconf IHev1.
-        pose proof e4. rewrite e1 in H. noconf H.
+        pose proof (declared_projection_inj d d0) as [? [? []]].
+        subst mdecl0 idecl0 cdecl0 pdecl0.
+        assert (d = d0) as -> by apply declared_projection_unique.
+        pose proof e2. rewrite e0 in H. noconf H.
         specialize (IHev2 _ ev'2); noconf IHev2.
-        pose proof (declared_constructor_inj d d0) as [<- [<- <-]].
-        assert (d = d0) as -> by apply declared_constructor_unique.
-        assert (e = e2) as -> by now apply uip.
-        assert (e0 = e3) as -> by now apply uip.
-        now assert (e1 = e4) as -> by now apply uip.
+        assert (e = e1) as -> by now apply uip.
+        assert (e0 = e2) as -> by now apply uip.
+        reflexivity.
     - depelim ev'; try go.
       + specialize (IHev1 _ ev'1).
         pose proof (mkApps_eq_inj (f_equal pr1 IHev1) eq_refl eq_refl) as (? & <-).

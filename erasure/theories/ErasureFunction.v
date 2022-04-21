@@ -923,7 +923,7 @@ Qed.
 Definition erase_one_inductive_body (oib : one_inductive_body) : E.one_inductive_body :=
   (* Projection and constructor types are types, hence always erased *)
   let ctors := map (fun cdecl => EAst.mkConstructor cdecl.(cstr_name) cdecl.(cstr_arity)) oib.(ind_ctors) in
-  let projs := map (fun '(x, y) => x) oib.(ind_projs) in
+  let projs := map (fun pdecl => EAst.mkProjection pdecl.(proj_name)) oib.(ind_projs) in
   let is_propositional := 
     match destArity [] oib.(ind_type) with
     | Some (_, u) => is_propositional u
@@ -1228,7 +1228,7 @@ Proof.
     
   - apply inversion_Proj in wt as (?&?&?&?&?&?&?&?&?&?); eauto.
     destruct (proj1 d).
-    specialize (H0 (inductive_mind p.1.1)). forward H0.
+    specialize (H0 (inductive_mind p.(proj_ind))). forward H0.
     now rewrite KernameSet.singleton_spec. red in H0. destruct H0.
     elimtype False. destruct H0 as [cst [declc _]].
     { red in declc. destruct d as [[[d _] _] _]. red in d. rewrite d in declc. noconf declc. }
@@ -1317,7 +1317,7 @@ Proof.
     destruct d0; split; eauto.
     inv wfΣ. inv X.
     red in H |- *.
-    rewrite -H. simpl. unfold lookup_env; simpl; destruct (eqb_spec (inductive_mind p.1.1) kn); try congruence.
+    rewrite -H. simpl. unfold lookup_env; simpl; destruct (eqb_spec (inductive_mind p.(proj_ind)) kn); try congruence.
     eapply lookup_env_Some_fresh in H. subst kn. contradiction.
 Qed.
 
@@ -1467,7 +1467,6 @@ Proof.
   cbn in *.
   intuition auto.
   induction ind_projs0; constructor; auto.
-  destruct a; auto.
   unfold isPropositionalArity.
   destruct destArity as [[? ?]|] eqn:da; auto.
 Qed.
@@ -3063,7 +3062,7 @@ Proof.
     specialize (Hind X_type' X' hl).
     unfold PCUICSafeRetyping.principal_type_type in *.
     eapply elim_inspect => y eq.
-    assert (abstract_env_lookup X (inductive_mind ind) = abstract_env_lookup X' (inductive_mind ind)).
+    assert (abstract_env_lookup X (inductive_mind p.(proj_ind)) = abstract_env_lookup X' (inductive_mind p.(proj_ind))).
     { epose proof (abstract_env_ext_exists X) as [[Σ wfΣ]].
       epose proof (abstract_env_ext_wf X wfΣ) as [hwfΣ].
       epose proof (abstract_env_ext_exists X') as [[Σ' wfΣ']].
@@ -3081,10 +3080,10 @@ Proof.
     eapply elim_inspect => nth eq'.
     cbn in eq', e0. destruct nth as [[]|] => //.
     simp infer.
-    set (obl4 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_33 X_type _ _ _ _ _ _ _ _ _ Σ wfΣ)) in *.
-    set (obl3 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_33 X_type' _ _ _ _ _ _ _ _ _ Σ wfΣ)).
-    set (obl1 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_32 X_type _ _ _ _ _ _ _ Σ wfΣ)) in *; cbn in obl1.
-    set (obl2 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_32 X_type' _ _ _ _ _ _ _ Σ wfΣ)) in *; cbn in obl2.
+    set (obl4 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_33 X_type _ _ _ _ _ _ _ Σ wfΣ)) in *.
+    set (obl3 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_33 X_type' _ _ _ _ _ _ _ Σ wfΣ)).
+    set (obl1 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_32 X_type _ _ _ _ _ Σ wfΣ)) in *; cbn in obl1.
+    set (obl2 := (fun Σ wfΣ => PCUICSafeRetyping.infer_obligations_obligation_32 X_type' _ _ _ _ _ Σ wfΣ)) in *; cbn in obl2.
     specialize (Hind wf' obl2).
     set (t'' := (infer X_type' _ _ _ _ _)) in *.
     cbn in obl3. unfold PCUICSafeRetyping.principal_type_type in obl3 |- *.

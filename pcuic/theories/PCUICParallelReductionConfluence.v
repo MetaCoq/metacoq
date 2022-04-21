@@ -761,22 +761,23 @@ Section Rho.
       let brs' := map_brs_wf rho Γ p' brs _ in 
         tCase ci p' x' brs' } };
 
-  rho Γ (tProj (i, pars, narg) x) with inspect (decompose_app x) := {
+  rho Γ (tProj p x) with inspect (decompose_app x) := {
     | exist (f, args) eqx with view_construct0_cofix f :=
-    | construct0_cofix_construct ind u with inspect (nth_error (map_terms rho Γ args _) (pars + narg)) := { 
+    | construct0_cofix_construct ind u with 
+        inspect (nth_error (map_terms rho Γ args _) (p.(proj_npars) + p.(proj_arg))) := { 
       | exist (Some arg1) eq => 
-        if eq_inductive i ind then arg1
-        else tProj (i, pars, narg) (rho Γ x);
-      | exist None neq => tProj (i, pars, narg) (rho Γ x) }; 
+        if eq_inductive p.(proj_ind) ind then arg1
+        else tProj p (rho Γ x);
+      | exist None neq => tProj p (rho Γ x) }; 
     | construct0_cofix_cofix mfix idx := 
       let args' := map_terms rho Γ args _ in
       let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
-      let mfix' := map_fix_rho (t:=tProj (i, pars, narg) x) rho Γ mfixctx mfix _ in
+      let mfix' := map_fix_rho (t:=tProj p x) rho Γ mfixctx mfix _ in
       match nth_error mfix' idx with
-      | Some d => tProj (i, pars, narg) (mkApps (subst0 (cofix_subst mfix') (dbody d)) args')
-      | None =>  tProj (i, pars, narg) (rho Γ x)
+      | Some d => tProj p (mkApps (subst0 (cofix_subst mfix') (dbody d)) args')
+      | None =>  tProj p (rho Γ x)
       end;
-    | construct0_cofix_other f nconscof => tProj (i, pars, narg) (rho Γ x) } ;
+    | construct0_cofix_other f nconscof => tProj p (rho Γ x) } ;
   rho Γ (tConst c u) with lookup_env Σ c := { 
     | Some (ConstantDecl decl) with decl.(cst_body) := { 
       | Some body => subst_instance u body; 
@@ -1118,25 +1119,25 @@ Section Rho.
     destruct t; simpl in d => //.
   Qed.
 
-  Lemma rho_app_proj Γ ind pars arg x :
-    rho Γ (tProj (ind, pars, arg) x) =
+  Lemma rho_app_proj Γ p x :
+    rho Γ (tProj p x) =
     let (f, args) := decompose_app x in
     match f with
     | tConstruct ind' 0 u => 
-      if eq_inductive ind ind' then
-        match nth_error args (pars + arg) with
+      if eq_inductive p.(proj_ind) ind' then
+        match nth_error args (p.(proj_npars) + p.(proj_arg)) with
         | Some arg1 => rho Γ arg1
-        | None => tProj (ind, pars, arg) (rho Γ x)
+        | None => tProj p (rho Γ x)
         end
-      else tProj (ind, pars, arg) (rho Γ x)
+      else tProj p (rho Γ x)
     | tCoFix mfix idx =>
       match nth_error mfix idx with
       | Some d => 
         let fn := (subst0 (map (rho Γ) (cofix_subst mfix))) (rho (Γ ,,, fold_fix_context rho Γ [] mfix) (dbody d)) in
-        tProj (ind, pars, arg) (mkApps fn (map (rho Γ) args))
-      | None => tProj (ind, pars, arg) (rho Γ x)
+        tProj p (mkApps fn (map (rho Γ) args))
+      | None => tProj p (rho Γ x)
       end
-    | _ => tProj (ind, pars, arg) (rho Γ x)
+    | _ => tProj p (rho Γ x)
     end.
   Proof.
     autorewrite with rho.
@@ -2140,7 +2141,7 @@ Section Rho.
         now rewrite !map_map_compose in H0. simp rho.
 
     - (* Proj construct/cofix reduction *)
-      simpl; simp rho. destruct s as [[ind pars] n]. 
+      simpl.
       rewrite !rho_app_proj.
       destruct decompose_app as [f a] eqn:decapp.
       erewrite (decompose_app_rename decapp).
@@ -2150,7 +2151,7 @@ Section Rho.
       rewrite rename_mkApps in H.
 
       destruct f; simpl; auto.
-      * destruct n0; simpl; auto.
+      * destruct n; simpl; auto.
         destruct eq_inductive eqn:eqi; simpl; auto.
         rewrite nth_error_map.
         destruct nth_error eqn:hnth; simpl; auto.
@@ -3957,9 +3958,9 @@ Section Rho.
     - simpl in *. inv_on_free_vars. rewrite rho_app_proj.
       rewrite decompose_app_mkApps; auto.
       change eq_inductive with (@eqb inductive _).
-      destruct (eqb_specT i i) => //.
+      case: eqb_specT => // => _.
       eapply All2_nth_error_Some_right in heq_nth_error as [t' [? ?]]; eauto.
-      simpl in y. rewrite e0. simpl.
+      simpl in y. rewrite e. simpl.
       auto. eapply y => //. 
       eapply nth_error_forallb in b; tea.
     
@@ -4261,7 +4262,7 @@ Section Rho.
 
     - (* Proj *)
       simpl.
-      destruct p as [[ind pars] arg].
+      destruct p as [ind pars arg].
       rewrite rho_app_proj.
       specialize (impl_impl_forall_Γ' H H0 _ predΓ'0).
       rename impl_impl_forall_Γ' into Hc.

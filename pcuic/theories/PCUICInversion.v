@@ -295,10 +295,9 @@ Section Inversion.
       Σ ;;; Γ |- tProj p c : T ->
       ∑ u mdecl idecl cdecl pdecl args,
         declared_projection Σ p mdecl idecl cdecl pdecl ×
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ×
+        Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ×
         #|args| = ind_npars mdecl ×
-        let ty := snd pdecl in
-        Σ ;;; Γ ⊢ (subst0 (c :: List.rev args)) (subst_instance u ty) ≤ T.
+        Σ ;;; Γ ⊢ (subst0 (c :: List.rev args)) pdecl.(proj_type)@[u] ≤ T.
   Proof.
     intros Γ p c T h. invtac h.
   Qed.

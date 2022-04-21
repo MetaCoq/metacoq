@@ -1422,21 +1422,21 @@ Section Typecheck.
       _ _ _ 0 idecl.(ind_ctors) brs _ ;;
       ret (mkApps ptm (indices ++ [c]); _) ;
 
-  infer Γ HΓ (tProj (ind, n, k) c) with lookup_ind_decl ind := {
+  infer Γ HΓ (tProj p c) with lookup_ind_decl p.(proj_ind) := {
     | TypeError_comp e absurd := raise e ;
     | Checked_comp (mdecl;(idecl;decl))
-      with inspect (nth_error idecl.(ind_projs) k) := {
+      with inspect (nth_error idecl.(ind_projs) p.(proj_arg)) := {
         | exist None _ := raise (Msg "projection not found") ;
         | exist (Some pdecl) HH =>
             c_ty <- infer Γ HΓ c ;;
             I <- reduce_to_ind (X_type := X_type) Γ c_ty.π1 _ ;;
             (*let (ind';(u;(args;H))) := I in*)
             let ind' := I.π1 in let u := I.π2.π1 in let args := I.π2.π2.π1 in
-            check_eq_true (eqb ind ind')
-                          (NotConvertible X Γ (tInd ind u) (tInd ind' u)) ;;
-            check_eq_true (ind_npars mdecl =? n)
+            check_eq_true (eqb p.(proj_ind) ind')
+                          (NotConvertible X Γ (tInd p.(proj_ind) u) (tInd ind' u)) ;;
+            check_eq_true (ind_npars mdecl =? p.(proj_npars))
                           (Msg "not the right number of parameters") ;;
-            let ty := snd pdecl in
+            let ty := pdecl.(proj_type) in
             ret (subst0 (c :: List.rev args) (subst_instance u ty); _)
     }};
 
@@ -2274,17 +2274,17 @@ Section Typecheck.
     eapply onProjections in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
     
-    eapply infer_Proj with (pdecl := (i1, t)).
+    eapply infer_Proj with (pdecl0 := pdecl).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
       now apply Nat.eqb_eq.
-    - cbn. destruct (ssrbool.elimT (eqb_specT ind I)); [assumption|].
+    - cbn. destruct (ssrbool.elimT (eqb_specT p.(proj_ind) I)); [assumption|].
       econstructor ; tea.
       now apply closed_red_red.
     - eapply type_reduction_closed in X2; eauto.
       2: now apply infering_typing.
       eapply validity in X2; eauto.
-      destruct (ssrbool.elimT (eqb_specT ind I)); auto.
+      destruct (ssrbool.elimT (eqb_specT p.(proj_ind) I)); auto.
       unshelve eapply (PCUICInductives.isType_mkApps_Ind_inv _ decl _) in X2 as [parsubst [argsubst [sp sp' cu]]]; eauto.
       pose proof (Hl := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp)).
       pose proof (Hr := PCUICContextSubst.context_subst_length2 (PCUICSpine.inst_ctx_subst sp')).
@@ -2312,7 +2312,7 @@ Section Typecheck.
     destruct H1 as [[] []].
     cbn in * ; subst.
     eapply declared_inductive_inj in decl as [-> ->] ; tea.
-    eapply Nat.eqb_refl.
+    now eapply Nat.eqb_eq.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].

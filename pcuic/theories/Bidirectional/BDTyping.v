@@ -102,10 +102,9 @@ Inductive infering `{checker_flags} (Σ : global_env_ext) (Γ : context) : term 
 
 | infer_Proj p c u mdecl idecl cdecl pdecl args :
   declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
-  Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
+  Σ ;;; Γ |- c ▹{p.(proj_ind)} (u,args) ->
   #|args| = ind_npars mdecl ->
-  let ty := snd pdecl in
-  Σ ;;; Γ |- tProj p c ▹ subst0 (c :: List.rev args) (subst_instance u ty)
+  Σ ;;; Γ |- tProj p c ▹ subst0 (c :: List.rev args) (subst_instance u pdecl.(proj_type))
 
 | infer_Fix mfix n decl :
   fix_guard Σ Γ mfix ->
@@ -418,11 +417,10 @@ Section BidirectionalInduction.
     (forall (Γ : context) (p : projection) (c : term) u
       mdecl idecl cdecl pdecl args,
       declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
-      Σ ;;; Γ |- c ▹{fst (fst p)} (u,args) ->
-      Pind Γ (fst (fst p)) c u args ->
+      Σ ;;; Γ |- c ▹{p.(proj_ind)} (u,args) ->
+      Pind Γ p.(proj_ind) c u args ->
       #|args| = ind_npars mdecl ->
-      let ty := snd pdecl in
-      Pinfer Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
+      Pinfer Γ (tProj p c) (subst0 (c :: List.rev args) pdecl.(proj_type)@[u])) ->
 
     (forall (Γ : context) (mfix : mfixpoint term) (n : nat) decl,
       fix_guard Σ Γ mfix ->

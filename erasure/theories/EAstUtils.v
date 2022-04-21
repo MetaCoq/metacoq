@@ -335,8 +335,8 @@ Fixpoint string_of_term (t : term) : string :=
   | tCase (ind, i) t brs =>
     "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
             ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
-  | tProj (ind, i, k) c =>
-    "Proj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
+  | tProj p c =>
+    "Proj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars) ^ "," ^ string_of_nat p.(proj_arg) ^ ","
             ^ string_of_term c ^ ")"
   | tFix l n => "Fix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
   | tCoFix l n => "CoFix(" ^ (string_of_list (string_of_def string_of_term) l) ^ "," ^ string_of_nat n ^ ")"
@@ -360,7 +360,7 @@ Fixpoint term_global_deps (t : EAst.term) :=
      List.fold_left (fun acc x => KernameSet.union (term_global_deps (EAst.dbody x)) acc) mfix
       KernameSet.empty
   | EAst.tProj p c => 
-    KernameSet.union (KernameSet.singleton (inductive_mind (fst (fst p))))
+    KernameSet.union (KernameSet.singleton (inductive_mind p.(proj_ind)))
       (term_global_deps c)
   | _ => KernameSet.empty
   end.

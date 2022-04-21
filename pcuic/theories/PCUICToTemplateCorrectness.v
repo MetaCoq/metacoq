@@ -402,7 +402,7 @@ Qed.
 Lemma trans_declared_projection Σ p mdecl idecl cdecl pdecl :
   S.declared_projection Σ.1 p mdecl idecl cdecl pdecl ->
   T.declared_projection (trans_global Σ).1 p (trans_minductive_body mdecl) (trans_one_ind_body idecl) 
-    (trans_constructor_body cdecl) (on_snd trans pdecl).
+    (trans_constructor_body cdecl) (trans_projection_body pdecl).
 Proof.
   intros []. split; [|split].
   - now apply trans_declared_constructor.
@@ -410,8 +410,6 @@ Proof.
     destruct H0.
     destruct pdecl, p.
     cbn in *.
-    change (Some (i, trans t)) with
-      (Some((fun '(x, y) => (x, trans y)) (i,t))).
     now apply map_nth_error.
   - now destruct mdecl;cbn in *.
 Qed.
@@ -2308,19 +2306,13 @@ Proof.
         rewrite -/brctxty -/ptm in H5. cbn in H5. clearbody brctxty.
         subst brctxty. rewrite -trans_local_app. cbn. apply IHbty.
 
-  - rewrite trans_subst.
-    rewrite trans_subst_instance.
-    cbn.
-    rewrite map_rev.
-    change (trans ty) with ((on_snd trans pdecl).2).
+  - rewrite trans_subst trans_subst_instance /= map_rev.
+    change (trans (proj_type pdecl)) with (trans_projection_body pdecl).(Ast.Env.proj_type).
     eapply TT.type_Proj.
     + now apply trans_declared_projection.
     + rewrite trans_mkApps in X2.
       assumption.
-    + rewrite map_length.
-      rewrite H.
-      destruct mdecl.
-      reflexivity.
+    + rewrite map_length H. now destruct mdecl.  
   - rewrite trans_dtype. simpl.
     eapply TT.type_Fix; auto.
     + now rewrite fix_guard_trans.

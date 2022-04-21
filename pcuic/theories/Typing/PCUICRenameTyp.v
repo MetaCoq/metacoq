@@ -977,7 +977,7 @@ Proof.
           relativize #|bcontext br|; [eapply urenaming_context, Hf|len].
           now rewrite case_branch_context_length. }
     * rewrite /predctx case_predicate_context_length //.
-  - intros Σ wfΣ Γ wfΓ p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc e ty
+  - intros Σ wfΣ Γ wfΓ p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc e
            P Δ f hf.
     simpl. eapply meta_conv.
     + econstructor.

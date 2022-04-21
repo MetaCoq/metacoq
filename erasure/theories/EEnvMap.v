@@ -57,9 +57,10 @@ Module GlobalContextMap.
     rewrite lookup_inductive_spec //.
   Qed.
 
-  Definition lookup_projection Σ (p : projection) : option (mutual_inductive_body * one_inductive_body * constructor_body * ident) :=
-    '(mdecl, idecl, cdecl) <- lookup_constructor Σ p.1.1 0 ;;
-    pdecl <- nth_error idecl.(ind_projs) p.2 ;;
+  Definition lookup_projection Σ (p : projection) :
+    option (mutual_inductive_body * one_inductive_body * constructor_body * projection_body) :=
+    '(mdecl, idecl, cdecl) <- lookup_constructor Σ p.(proj_ind) 0 ;;
+    pdecl <- nth_error idecl.(ind_projs) p.(proj_arg) ;;
     ret (mdecl, idecl, cdecl, pdecl).
 
   Lemma lookup_projection_spec Σ kn : lookup_projection Σ kn = EGlobalEnv.lookup_projection Σ kn.

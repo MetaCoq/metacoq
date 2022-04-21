@@ -166,20 +166,20 @@ Section Wcbv.
       eval (tConst c) res
 
   (** Proj *)
-  | eval_proj i pars cdecl arg discr args a res :
-      eval discr (mkApps (tConstruct i 0) args) ->
-      constructor_isprop_pars_decl Σ i 0 = Some (false, pars, cdecl) ->
-      #|args| = pars + cdecl.(cstr_nargs) ->
-      nth_error args (pars + arg) = Some a ->
+  | eval_proj p cdecl discr args a res :
+      eval discr (mkApps (tConstruct p.(proj_ind) 0) args) ->
+      constructor_isprop_pars_decl Σ p.(proj_ind) 0 = Some (false, p.(proj_npars), cdecl) ->
+      #|args| = p.(proj_npars) + cdecl.(cstr_nargs) ->
+      nth_error args (p.(proj_npars) + p.(proj_arg)) = Some a ->
       eval a res ->
-      eval (tProj (i, pars, arg) discr) res
+      eval (tProj p discr) res
 
   (** Proj *)
-  | eval_proj_prop i pars arg discr :
+  | eval_proj_prop p discr :
       with_prop_case ->
       eval discr tBox ->
-      inductive_isprop_and_pars Σ i = Some (true, pars) ->
-      eval (tProj (i, pars, arg) discr) tBox
+      inductive_isprop_and_pars Σ p.(proj_ind) = Some (true, p.(proj_npars)) ->
+      eval (tProj p discr) tBox
 
   (** Constructor congruence: we do not allow over-applications *)
   | eval_construct ind c mdecl idecl cdecl f args a a' : 
@@ -776,7 +776,7 @@ Section Wcbv.
     - depelim ev'; try go.
       specialize (IHev _ ev'). noconf IHev.
       rewrite (uip e e0).
-      now rewrite (uip i0 i2).
+      now rewrite (uip i i0).
     - depelim ev'; try go.
       + move: (IHev1 _ ev'1).
         eapply DepElim.simplification_sigma1 => heq IHev1'.

@@ -180,13 +180,18 @@ Record constructor_body :=
     cstr_nargs : nat (* arity, w/o lets, w/o parameters *)
   }.
 
+Record projection_body :=
+  mkProjection {
+    proj_name : ident;
+  }.
+  
 (** See [one_inductive_body] from [declarations.ml]. *)
 Record one_inductive_body : Set := {
   ind_name : ident;
   ind_propositional : bool; (* True iff the inductive lives in Prop *)
   ind_kelim : allowed_eliminations; (* Allowed eliminations *)
   ind_ctors : list constructor_body;
-  ind_projs : list ident (* names of projections, if any. *) }.
+  ind_projs : list projection_body (* names of projections, if any. *) }.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {

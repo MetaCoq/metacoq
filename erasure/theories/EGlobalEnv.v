@@ -35,9 +35,9 @@ Definition declared_constructor Σ cstr mdecl idecl cdecl : Prop :=
   List.nth_error idecl.(ind_ctors) (snd cstr) = Some cdecl.
 
 Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl : Prop :=
-  declared_constructor Σ (fst (fst proj), 0) mdecl idecl cdecl /\
-  List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
-  proj.1.2 = ind_npars mdecl.
+  declared_constructor Σ (proj.(proj_ind), 0) mdecl idecl cdecl /\
+  List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
+  proj.(proj_npars) = ind_npars mdecl.
 
 Lemma elookup_env_cons_fresh {kn d Σ kn'} : 
   kn <> kn' ->
@@ -82,9 +82,10 @@ Section Lookups.
     '(mdecl, idecl, cdecl) <- lookup_constructor kn c ;;
     ret (mdecl.(ind_npars), cdecl.(cstr_nargs)).
 
-  Definition lookup_projection (p : projection) : option (mutual_inductive_body * one_inductive_body * constructor_body * ident) :=
-    '(mdecl, idecl, cdecl) <- lookup_constructor p.1.1 0 ;;
-    pdecl <- nth_error idecl.(ind_projs) p.2 ;;
+  Definition lookup_projection (p : projection) : 
+    option (mutual_inductive_body * one_inductive_body * constructor_body * projection_body) :=
+    '(mdecl, idecl, cdecl) <- lookup_constructor p.(proj_ind) 0 ;;
+    pdecl <- nth_error idecl.(ind_projs) p.(proj_arg) ;;
     ret (mdecl, idecl, cdecl, pdecl).
   
 End Lookups.
@@ -125,7 +126,7 @@ Qed.
 
 Lemma lookup_projection_lookup_constructor {Σ p mdecl idecl cdecl pdecl} :
   lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl) ->
-  lookup_constructor Σ p.1.1 0 = Some (mdecl, idecl, cdecl).
+  lookup_constructor Σ p.(proj_ind) 0 = Some (mdecl, idecl, cdecl).
 Proof.
   rewrite /lookup_projection; destruct lookup_constructor as [[[? ?] ?]|]=> //=.
   now destruct nth_error => //.

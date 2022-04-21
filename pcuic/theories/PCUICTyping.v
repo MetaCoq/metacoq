@@ -252,9 +252,9 @@ Inductive typing `{checker_flags} (Σ : global_env_ext) (Γ : context) : term ->
 
 | type_Proj : forall p c u mdecl idecl cdecl pdecl args,
     declared_projection Σ p mdecl idecl cdecl pdecl ->
-    Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
+    Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
     #|args| = ind_npars mdecl ->
-    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) (snd pdecl)@[u]
+    Σ ;;; Γ |- tProj p c : subst0 (c :: List.rev args) pdecl.(proj_type)@[u]
 
 | type_Fix : forall mfix n decl,
     wf_local Σ Γ ->
@@ -710,10 +710,10 @@ Lemma typing_ind_env_app_size `{cf : checker_flags} :
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
          mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
        Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
-       Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-       P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
+       Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
+       P Σ Γ c (mkApps (tInd p.(proj_ind) u) args) ->
        #|args| = ind_npars mdecl ->
-       let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
+       P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u pdecl.(proj_type)))) ->
 
    (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
        let types := fix_context mfix in
@@ -1182,10 +1182,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
         Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-        P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
+        Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
+        P Σ Γ c (mkApps (tInd p.(proj_ind) u) args) ->
         #|args| = ind_npars mdecl ->
-        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
+        P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u pdecl.(proj_type)))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in

@@ -1139,7 +1139,7 @@ Section WeakNormalization.
     - epose proof (subject_reduction Σ [] _ _ _ wfΣ Ht).
       apply inversion_Proj in Ht; auto; destruct_sigma Ht.
       specialize (IHHe1 _ t).
-      assert (red Σ [] (tProj (i, pars, arg) discr) a).
+      assert (red Σ [] (tProj p discr) a).
       { redt _.
         eapply red_proj_c; eauto.
         eapply red1_red; constructor; auto. }

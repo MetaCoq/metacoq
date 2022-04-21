@@ -525,15 +525,13 @@ Proof.
     inv wfΣ. unfold PCUICAst.declared_minductive in *.
     unfold PCUICEnvironment.lookup_env.
     simpl in *.
-    change (eq_kername (inductive_mind p.1.1) kn) with (ReflectEq.eqb (inductive_mind p.1.1) kn); auto.
-    destruct (ReflectEq.eqb_spec (inductive_mind p.1.1) kn). subst.
+    destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn). subst.
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in declm; eauto. contradiction.
     apply declm.
     destruct H0 as [[[]]]. destruct a.
     repeat split; eauto.
     inv wfΣ. simpl. unfold declared_minductive. cbn.
-    change (eq_kername (inductive_mind p.1.1) kn) with (ReflectEq.eqb (inductive_mind p.1.1) kn); auto.
-    destruct (ReflectEq.eqb_spec (inductive_mind p.1.1) kn); auto. subst.
+    destruct (ReflectEq.eqb_spec (inductive_mind p.(proj_ind)) kn); auto. subst.
     destruct H as [[[]]].
     eapply PCUICWeakeningEnvConv.lookup_env_Some_fresh in H. eauto. contradiction.
 Qed.

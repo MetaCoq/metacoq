@@ -758,10 +758,10 @@ Lemma whne_red1_ind
           RedFlags.iota flags = false ->
           unfold_cofix mfix idx = Some (narg, fn) ->
           P (tProj p (mkApps (tCoFix mfix idx) args)) (tProj p (mkApps fn args)))
-      (Hproj_noiota : forall i pars narg args u arg,
+      (Hproj_noiota : forall p args u arg,
           RedFlags.iota flags = false ->
-          nth_error args (pars + narg) = Some arg ->
-          P (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args)) arg)
+          nth_error args (p.(proj_npars) + p.(proj_arg)) = Some arg ->
+          P (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args)) arg)
       (Hproj_discr_noiota : forall p c c',
           RedFlags.iota flags = false ->
           red1 Σ Γ c c' ->

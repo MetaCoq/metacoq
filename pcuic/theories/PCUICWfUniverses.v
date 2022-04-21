@@ -1159,7 +1159,7 @@ Qed.
       destruct X1 as [[[? ?] ?] ?] => //.
       red in o0.
       destruct nth_error eqn:heq => //. 
-      subst ty. destruct o0  as [_ ->].
+      destruct o0  as [_ ->].
       rewrite wf_universes_mkApps {1}/wf_universes /= -!/(wf_universes _ _)
         wf_universeb_instance_forall in H1.
       move/andP: H1 => [/wf_universe_instanceP wfu wfargs].

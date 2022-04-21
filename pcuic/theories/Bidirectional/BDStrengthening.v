@@ -442,7 +442,7 @@ Section OnFreeVars.
         auto.
     
     - intros until args.
-      move => ? _ ? largs ? ? ? ?.
+      move => ? _ ? largs ? ? ?.
       apply on_free_vars_subst0.
       + cbn ; apply /andP ; split ; auto.
         rewrite forallb_rev.

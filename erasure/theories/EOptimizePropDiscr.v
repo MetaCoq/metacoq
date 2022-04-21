@@ -48,7 +48,7 @@ Section optimize.
       | _ => tCase ind (optimize c) brs'
       end
     | tProj p c =>
-      match GlobalContextMap.inductive_isprop_and_pars Σ p.1.1 with 
+      match GlobalContextMap.inductive_isprop_and_pars Σ p.(proj_ind) with 
       | Some (true, _) => tBox
       | _ => tProj p (optimize c)
       end

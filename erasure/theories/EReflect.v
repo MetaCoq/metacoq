@@ -133,6 +133,18 @@ Proof.
   destruct x, y; cbn.
   case: eqb_spec; intros H; constructor; congruence.
 Qed.
+Definition eqb_projection_body (x y : projection_body) :=
+  x.(proj_name) == y.(proj_name).
+
+#[global, program]
+Instance reflect_projection_body : ReflectEq projection_body := 
+  {| eqb := eqb_projection_body |}.
+Next Obligation.
+Proof.
+  unfold eqb_projection_body.
+  destruct x, y; cbn.
+  case: eqb_spec; intros H; constructor; congruence.
+Qed.
 
 Definition eqb_one_inductive_body (x y : one_inductive_body) :=
   let (n, i, k, c, p) := x in

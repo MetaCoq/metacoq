@@ -139,6 +139,7 @@ struct
   let tname = ast "name"
   let tIndTy = ast "inductive"
   let tmkInd = ast "mkInd"
+  let tmkProjection = ast "mkProjection"
   let tcase_info = ast "case_info"
   let mk_case_info = ast "mk_case_info"
 
@@ -210,6 +211,8 @@ struct
   let (cFinite,cCoFinite,cBiFinite) = (ast "Finite", ast "CoFinite", ast "BiFinite")
   let tconstructor_body = ast "constructor_body"
   let tBuild_constructor_body = ast "Build_constructor_body"
+  let tprojection_body = ast "projection_body" 
+  let tBuild_projection_body = ast "Build_projection_body"
   let tone_inductive_body = ast "one_inductive_body"
   let tBuild_one_inductive_body = ast "Build_one_inductive_body"
   let tBuild_mutual_inductive_body = ast "Build_mutual_inductive_body"

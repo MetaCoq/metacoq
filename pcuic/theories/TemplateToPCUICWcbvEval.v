@@ -659,15 +659,12 @@ Proof.
     apply IHev2.
 
   - wf_inv wf hdiscr.
-    destruct proj as ((?&?)&?).
     cbn in *; eapply eval_proj; tea.
-    * destruct H. cbn in d. 
-      eapply forall_decls_declared_constructor in d; tea.
+    * eapply forall_decls_declared_projection in H; tea.
     * rewrite trans_mkApps in IHev1. 
       now eapply IHev1.
     * cbn. len. rewrite H0 /WcbvEval.cstr_arity. f_equal.
       now rewrite context_assumptions_map.
-    * cbn. symmetry; eapply H.
     * rewrite nth_error_map H1 //.
     * eapply IHev2.
       eapply eval_wf in ev1; tea.

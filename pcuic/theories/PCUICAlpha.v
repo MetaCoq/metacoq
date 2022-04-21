@@ -826,7 +826,7 @@ Section Alpha.
         eapply All2_app. apply All2_refl; reflexivity.
         repeat constructor. now apply upto_names_impl_eq_term.
 
-    - intros p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc H ty Δ v e e'; invs e.
+    - intros p c u mdecl idecl cdecl pdecl isdecl args X X0 hc ihc H Δ v e e'; invs e.
       eapply type_Cumul'.
       + econstructor. all: try eassumption.
         eapply ihc; tea.

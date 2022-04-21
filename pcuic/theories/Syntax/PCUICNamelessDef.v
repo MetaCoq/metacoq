@@ -123,6 +123,11 @@ Definition nl_constructor_body c :=
      cstr_type := nl c.(cstr_type);
      cstr_arity := c.(cstr_arity) |}.
 
+Definition nl_projection_body p :=
+  {| proj_name := p.(proj_name) ;   
+     proj_type := nl p.(proj_type);
+     proj_relevance := p.(proj_relevance) |}.
+    
 Definition nl_one_inductive_body o :=
   Build_one_inductive_body
     o.(ind_name)
@@ -131,7 +136,7 @@ Definition nl_one_inductive_body o :=
     (nl o.(ind_type))
     o.(ind_kelim)
     (map nl_constructor_body o.(ind_ctors))
-    (map (fun '(x,y) => (x, nl y)) o.(ind_projs))
+    (map nl_projection_body o.(ind_projs))
     o.(ind_relevance).
 
 Definition nl_mutual_inductive_body m :=

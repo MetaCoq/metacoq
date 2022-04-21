@@ -1,4 +1,5 @@
 (* Distributed under the terms of the MIT license. *)
+From Coq Require Import ssreflect.
 From MetaCoq.Template Require Import config utils BasicAst Universes Environment.
 From Equations Require Import Equations.
 
@@ -24,9 +25,69 @@ Module Lookup (T : Term) (E : EnvironmentSig T).
 
   Definition declared_projection Σ (proj : projection) mdecl idecl cdecl pdecl
   : Prop :=
-    declared_constructor Σ (fst (fst proj), 0) mdecl idecl cdecl /\
-    List.nth_error idecl.(ind_projs) (snd proj) = Some pdecl /\
-    mdecl.(ind_npars) = snd (fst proj).
+    declared_constructor Σ (proj.(proj_ind), 0) mdecl idecl cdecl /\
+    List.nth_error idecl.(ind_projs) proj.(proj_arg) = Some pdecl /\
+    mdecl.(ind_npars) = proj.(proj_npars).
+
+  Definition lookup_minductive Σ mind :=
+    match lookup_env Σ mind with
+    | Some (InductiveDecl decl) => Some decl
+    | _ => None
+    end.
+  
+  Definition lookup_inductive Σ ind :=
+    match lookup_minductive Σ (inductive_mind ind) with
+    | Some mdecl => 
+      match nth_error mdecl.(ind_bodies) (inductive_ind ind) with
+      | Some idecl => Some (mdecl, idecl)
+      | None => None
+      end
+    | None => None
+    end.
+  
+  Definition lookup_constructor Σ ind k :=
+    match lookup_inductive Σ ind with
+    | Some (mdecl, idecl) => 
+      match nth_error idecl.(ind_ctors) k with
+      | Some cdecl => Some (mdecl, idecl, cdecl)
+      | None => None
+      end
+    | _ => None
+    end.
+
+  Definition lookup_projection Σ p :=
+    match lookup_constructor Σ p.(proj_ind) 0 with
+    | Some (mdecl, idecl, cdecl) => 
+      match nth_error idecl.(ind_projs) p.(proj_arg) with
+      | Some pdecl => Some (mdecl, idecl, cdecl, pdecl)
+      | None => None
+      end
+    | _ => None
+    end.
+    
+  Lemma declared_inductive_lookup {Σ ind mdecl idecl} :
+    declared_inductive Σ ind mdecl idecl ->
+    lookup_inductive Σ ind = Some (mdecl, idecl).
+  Proof.
+    rewrite /declared_inductive /lookup_inductive.
+    intros []. red in H. now rewrite /lookup_minductive H H0.
+  Qed.
+
+  Lemma declared_constructor_lookup {Σ id mdecl idecl cdecl} :
+    declared_constructor Σ id mdecl idecl cdecl -> 
+    lookup_constructor Σ id.1 id.2 = Some (mdecl, idecl, cdecl).
+  Proof.
+    intros []. unfold lookup_constructor.
+    rewrite (declared_inductive_lookup (Σ := Σ) H) /= H0 //.
+  Qed.
+
+  Lemma declared_projection_lookup {Σ p mdecl idecl cdecl pdecl} :
+    declared_projection Σ p mdecl idecl cdecl pdecl -> 
+    lookup_projection Σ p = Some (mdecl, idecl, cdecl, pdecl).
+  Proof.
+    intros [? []]. unfold lookup_projection.
+    rewrite (declared_constructor_lookup (Σ := Σ) H) /= H0 //.
+  Qed.
 
   Definition on_udecl_decl {A} (F : universes_decl -> A) d : A :=
   match d with
@@ -616,21 +677,24 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
       the instances of parameters and the inductive value without considering the 
       presence of let bindings. *)
 
-    Definition on_projection mdecl mind i cdecl (k : nat) (p : ident * term) :=
+    Record on_proj mdecl mind i k (p : projection_body) decl :=
+      { on_proj_name : (* All projections are be named after a constructor argument. *)
+          binder_name (decl_name decl) = nNamed p.(proj_name);
+        on_proj_type : 
+          (** The stored projection type already has the references to the inductive
+              type substituted along with the previous arguments replaced by projections. *)
+          let u := abstract_instance mdecl.(ind_universes) in
+          let ind := {| inductive_mind := mind; inductive_ind := i |} in
+          p.(proj_type) = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
+            (subst (projs ind mdecl.(ind_npars) k) 0 
+              (lift 1 k (decl_type decl)));
+        on_proj_relevance : p.(proj_relevance) = decl.(decl_name).(binder_relevance) }.
+
+    Definition on_projection mdecl mind i cdecl (k : nat) (p : projection_body) :=
       let Γ := smash_context [] (cdecl.(cstr_args) ++ mdecl.(ind_params)) in
       match nth_error Γ (context_assumptions cdecl.(cstr_args) - S k) with
       | None => False
-      | Some decl => 
-        let u := abstract_instance mdecl.(ind_universes) in
-        let ind := {| inductive_mind := mind; inductive_ind := i |} in
-        (** The stored projection type already has the references to the inductive
-          type substituted along with the previous arguments replaced by projections.
-          All projections must also be named.
-          *)
-        (binder_name (decl_name decl) = nNamed (fst p)) /\
-        (snd p = subst (inds mind u mdecl.(ind_bodies)) (S (ind_npars mdecl))
-              (subst (projs ind mdecl.(ind_npars) k) 0 
-                (lift 1 k (decl_type decl))))
+      | Some decl => on_proj mdecl mind i k p decl
       end.
 
     Record on_projections mdecl mind i idecl (ind_indices : context) cdecl :=
@@ -682,12 +746,12 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         (** The inductive is declared in the impredicative sort Prop *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        allowed_eliminations_subset kelim (elim_sort_prop_ind cdecls)
+        (allowed_eliminations_subset kelim (elim_sort_prop_ind cdecls) : Type)
       else if Universe.is_sprop ind_sort then
         (** The inductive is declared in the impredicative sort SProp *)
         (** No universe-checking to do: any size of constructor argument is allowed,
             however elimination restrictions apply. *)
-        allowed_eliminations_subset kelim (elim_sort_sprop_ind cdecls)
+        (allowed_eliminations_subset kelim (elim_sort_sprop_ind cdecls) : Type)
       else
         (** The inductive is predicative: check that all constructors arguments are
             smaller than the declared universe. *)

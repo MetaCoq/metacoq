@@ -14,7 +14,7 @@ Lemma declared_projection_closed_ind {cf:checker_flags} {Σ : global_env} {wfΣ 
   Forall_decls_typing
   (fun _ (Γ : context) (t T : term) =>
   closedn #|Γ| t && closedn #|Γ| T) Σ ->
-  closedn (S (ind_npars mdecl)) pdecl.2.
+  closedn (S (ind_npars mdecl)) pdecl.(proj_type).
 Proof.
   intros isdecl X0.
   pose proof (declared_projection_inv weaken_env_prop_closed wfΣ X0 isdecl) as onp.
@@ -38,9 +38,9 @@ Proof.
     induction l; simpl; auto. }
   rewrite inds_length.
   eapply closedn_subst0.
-  { clear. unfold projs. induction p.2; simpl; auto. }
+  { clear. unfold projs. induction p.(proj_arg); simpl; auto. }
   rewrite projs_length /=.
-  eapply (@closed_upwards (ind_npars mdecl + #|ind_bodies mdecl| + p.2 + 1)).
+  eapply (@closed_upwards (ind_npars mdecl + #|ind_bodies mdecl| + p.(proj_arg) + 1)).
   2:lia.
   eapply closedn_lift.
   clear -parslen isdecl Heq' onpars X.
@@ -142,7 +142,7 @@ Proof.
     destruct (ind_ctors x) as [|cdecl []] eqn:hcdecl; try contradiction.
     apply on_projs in X.
     assert (Alli (fun i pdecl => declared_projection Σ 
-     (({| inductive_mind := mind; inductive_ind := n |}, mdecl.(ind_npars)), i) mdecl x cdecl pdecl)
+      (mkProjection {| inductive_mind := mind; inductive_ind := n |} mdecl.(ind_npars) i) mdecl x cdecl pdecl)
       0 (ind_projs x)).
     { eapply forall_nth_error_Alli.
       intros. split; auto. split; auto. cbn. now rewrite hcdecl. }
@@ -310,11 +310,9 @@ Proof.
   now simpl in cli.
 Qed.
 
-
-
 Lemma declared_projection_closed {cf:checker_flags} {Σ : global_env} {wfΣ : wf Σ}{mdecl idecl p cdecl pdecl} : 
   declared_projection Σ p mdecl idecl cdecl pdecl ->
-  closedn (S (ind_npars mdecl)) pdecl.2.
+  closedn (S (ind_npars mdecl)) pdecl.(proj_type).
 Proof.
   intros; eapply declared_projection_closed_ind; eauto.
   eapply (env_prop_sigma typecheck_closed); eauto.
@@ -677,7 +675,7 @@ Qed.
 Lemma declared_projection_closed_type {cf:checker_flags} 
   {Σ mdecl idecl p cdecl pdecl} {wfΣ : wf Σ} :
   declared_projection Σ p mdecl idecl cdecl pdecl ->
-  closedn (S (ind_npars mdecl)) pdecl.2.
+  closedn (S (ind_npars mdecl)) pdecl.(proj_type).
 Proof.
   intros decl.
   now eapply declared_projection_closed in decl.

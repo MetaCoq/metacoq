@@ -637,12 +637,12 @@ Lemma declared_projection_projs_nonempty `{cf : checker_flags} {Σ : global_env_
 Proof.
   intros. destruct H. destruct H0.
   destruct (ind_projs idecl); try congruence. destruct p.
-  cbn in *. destruct n; inv H0.
+  cbn in *. destruct proj_arg; inv H0.
 Qed.
 
 Lemma elim_restriction_works_proj_kelim1 `{cf : checker_flags} (Σ : global_env_ext) Γ T p c mind idecl :
   wf Σ ->
-  declared_inductive (fst Σ) (fst (fst p)) mind idecl ->
+  declared_inductive (fst Σ) p.(proj_ind) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
   (Is_proof Σ Γ (tProj p c) -> False) -> ind_kelim idecl = IntoAny.
 Proof.
@@ -660,9 +660,9 @@ Qed.
 
 Lemma elim_restriction_works_proj `{cf : checker_flags} (Σ : global_env_ext) Γ  p c mind idecl T :
   check_univs -> wf_ext Σ ->
-  declared_inductive (fst Σ) (fst (fst p)) mind idecl ->
+  declared_inductive (fst Σ) p.(proj_ind) mind idecl ->
   Σ ;;; Γ |- tProj p c : T ->
-  (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ (fst (fst p)).
+  (Is_proof Σ Γ (tProj p c) -> False) -> Informative Σ p.(proj_ind).
 Proof.
   intros cu; intros. eapply elim_restriction_works_kelim; eauto.
   eapply elim_restriction_works_proj_kelim1 in H0; eauto.

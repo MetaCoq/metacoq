@@ -291,7 +291,7 @@ Proof.
            1: apply wf_local_closed_context ; tea.
            eapply subject_is_open_term ; tea.
 
-  - intros ? c u mdecl idecl cdecl [] isdecl args ? ? ? Cumc ? ty.
+  - intros ? c u mdecl idecl cdecl pdecl isdecl args ? ? ? Cumc ?.
     apply conv_infer_ind in Cumc as (ui'&args'&[]) ; auto.
     eexists.
     split.
@@ -302,8 +302,8 @@ Proof.
       eapply All2_length.
       eassumption.
 
-    + assert (Σ ;;; Γ |- c : mkApps (tInd p.1.1 ui') args')
-        by (apply infering_ind_typing in i0 ; auto).
+    + assert (Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) ui') args')
+        by (apply infering_ind_typing in i ; auto).
       assert (consistent_instance_ext Σ (ind_universes mdecl) u).
         { destruct isdecl.
           apply validity in X1 as [].
@@ -334,7 +334,6 @@ Proof.
       * cbn -[projection_context].
         apply weaken_ws_cumul_pb ; auto.
         1: apply wf_local_closed_context ; auto.
-        change t with (i,t).2.
         eapply projection_cumulative_indices ; eauto.
         2: now easy.
         eapply (weaken_lookup_on_global_env' _ _ (InductiveDecl _)) => //.

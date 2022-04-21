@@ -30,8 +30,8 @@ Fixpoint print_all_kns (t : Ast.term) : TM unit :=
   | tConst c _ => tmMsg (string_of_kername c)
   | tInd i _ => tmMsg (string_of_kername i.(inductive_mind))
   | tConstruct i _ _ => tmMsg (string_of_kername i.(inductive_mind))
-  | tProj (i,_,_) b =>
-    tmBind (tmMsg (string_of_kername i.(inductive_mind))) (fun _ => print_all_kns b)
+  | tProj p b =>
+    tmBind (tmMsg (string_of_kername p.(proj_ind).(inductive_mind))) (fun _ => print_all_kns b)
   | _ => tmReturn tt
   end.
 
@@ -68,7 +68,7 @@ Set Universe Polymorphism.
 Record Info  :=
 { type : ident
 ; ctor : ident
-; fields : list (ident * term)
+; fields : list projection_body
 }.
 
 Fixpoint countTo (n : nat) : list nat :=
@@ -87,24 +87,24 @@ Require Import Coq.Bool.Bool.
 
 
 (* check to see if Var 0 is referenced in any of the terms *)
-Definition mentions (v : nat) (ls : list (ident * term)) : bool :=
+Definition mentions (v : nat) (ls : list projection_body) : bool :=
   false.
 
 Definition nAnon := {| binder_name := nAnon; binder_relevance := Relevant |}.
 Definition nNamed s := {| binder_name := nNamed s; binder_relevance := Relevant |}.
 
-Definition mkLens (At : term) (fields : list (ident * term)) (i : nat)
+Definition mkLens (At : term) (fields : list projection_body) (i : nat)
 : option (ident * term) :=
   match At with
   | tInd ind args =>
     let ctor := tConstruct ind 0 args in
     match nth_error fields i with
     | None => None
-    | Some (name, Bt) =>
+    | Some {| proj_name := name; proj_type := Bt |} =>
       if mentions 1 (skipn (S i) fields)
       then None
       else
-        let p (x : nat) : projection := (ind, 0, x) in
+        let p (x : nat) : projection := {| proj_ind := ind; proj_npars := 0; proj_arg := x |} in
         let get_body := tProj (p i) (tRel 0) in
         let f x :=
             let this := tProj (p x) (tRel 0) in

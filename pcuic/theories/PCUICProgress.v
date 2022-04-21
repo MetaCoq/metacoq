@@ -234,10 +234,10 @@ forall (P : global_env_ext -> context -> term -> term -> Type)
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
         mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
       Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
-      Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-      P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
+      Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
+      P Σ Γ c (mkApps (tInd p.(proj_ind) u) args) ->
       #|args| = ind_npars mdecl ->
-      let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
+      P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (pdecl.(proj_type)@[u]))) ->
 
   (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
       let types := fix_context mfix in
@@ -414,10 +414,10 @@ Lemma typing_ind_env `{cf : checker_flags} :
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (p : projection) (c : term) u
           mdecl idecl cdecl pdecl (isdecl : declared_projection Σ.1 p mdecl idecl cdecl pdecl) args,
         Forall_decls_typing P Σ.1 -> PΓ Σ Γ ->
-        Σ ;;; Γ |- c : mkApps (tInd (fst (fst p)) u) args ->
-        P Σ Γ c (mkApps (tInd (fst (fst p)) u) args) ->
+        Σ ;;; Γ |- c : mkApps (tInd p.(proj_ind) u) args ->
+        P Σ Γ c (mkApps (tInd p.(proj_ind) u) args) ->
         #|args| = ind_npars mdecl ->
-        let ty := snd pdecl in P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u ty))) ->
+        P Σ Γ (tProj p c) (subst0 (c :: List.rev args) (subst_instance u pdecl.(proj_type)))) ->
 
     (forall Σ (wfΣ : wf Σ.1) (Γ : context) (wfΓ : wf_local Σ Γ) (mfix : list (def term)) (n : nat) decl,
         let types := fix_context mfix in
@@ -691,8 +691,8 @@ Proof with eauto with wcbv; try congruence.
       eapply inversion_CoFix in t as (? & ? & ? & ? & ? & ? & ?); eauto.
       left. eexists. eapply red_cofix_case. unfold cunfold_cofix. rewrite e. reflexivity.
       eapply value_mkApps_inv in IHv as [[-> ]|[]]; eauto.
-  - intros Σ wfΣ Γ _ ((i, pars), arg) c u mdecl idecl cdecl pdecl Hcon args Hargs _ Hc IHc
-           Hlen ty Hax -> H.
+  - intros Σ wfΣ Γ _ p c u mdecl idecl cdecl pdecl Hcon args Hargs _ Hc IHc
+           Hlen Hax -> H.
     destruct (IHc Hax eq_refl) as [[t' IH] | IH]; eauto with wcbv; clear IHc.
     pose proof IH as Hval.
     eapply PCUICCanonicity.value_canonical in IH; eauto.
@@ -701,13 +701,11 @@ Proof with eauto with wcbv; try congruence.
     destruct (decompose_app c) as [h l]. 
     cbn - [decompose_app] in *.
     destruct h; inv IH.
-    + red in Hcon. cbn in *.
-      eapply invert_Proj_Construct in H as H_; sq; eauto. destruct H_ as (-> & -> & Hl).
+    + eapply invert_Proj_Construct in H as H_; sq; eauto. destruct H_ as (<- & -> & Hl).
       left. eapply nth_error_Some' in Hl as [x Hx].
-      eexists. destruct Hcon as [? []].
+      eexists.
       eapply red_proj; eauto.
-      rewrite /cstr_arity.
-      now eapply (typing_constructor_arity_exact d) in Hc.
+      now eapply (typing_constructor_arity_exact Hcon) in Hc.
       eapply value_mkApps_inv in Hval as [[-> Hval] | [? ? Hval]]; eauto.
     + left. eapply inversion_Proj in H as (? & ? & ? & ? & ? & ? & ? & ? & ? & ?); eauto.
       eapply PCUICValidity.inversion_mkApps in t as (? & ? & ?); eauto.
@@ -786,8 +784,8 @@ Proof.
     all:tea. eapply All_All2_refl. solve_all. now eapply value_final.
   - inversion Heval; subst; clear Heval. all:cbn in Hty; solve_all. all: now econstructor; eauto with wcbv.
   - all:cbn in Hty; solve_all. eapply eval_proj; tea.
-    eapply value_final. eapply value_app; auto. econstructor; tea.
-    rewrite e0; lia.
+    eapply value_final. eapply value_app; auto. econstructor; tea. eapply d.
+    rewrite e; lia.
   - eapply eval_fix; eauto.
     + eapply value_final. eapply value_app; auto. econstructor.
       rewrite <- closed_unfold_fix_cunfold_eq, e. reflexivity. 2:eauto.

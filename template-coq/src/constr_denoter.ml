@@ -303,13 +303,11 @@ struct
 
   let unquote_proj (qp : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
     let (h,args) = app_full qp [] in
-    match args with
-    | tyin::tynat::indpars::idx::[] ->
-      let (h',args') = app_full indpars [] in
-      (match args' with
-       | tyind :: tynat :: ind :: n :: [] -> (ind, n, idx)
-       | _ -> bad_term_verb qp "unquote_proj")
-    | _ -> bad_term_verb qp "unquote_proj"
+    if constr_equall h tmkProjection then
+      match args with
+      | ind :: nm :: num :: [] -> (ind, nm, num)
+      | _ -> bad_term_verb qp "unquote_proj"
+    else not_supported_verb qp "unquote_proj"
 
   let unquote_inductive trm : inductive =
     let (h,args) = app_full trm [] in

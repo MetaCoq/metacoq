@@ -940,11 +940,11 @@ Section Lemmata.
   Qed.
 
   Lemma Proj_red_cond :
-    forall Γ i pars narg i' c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-      nth_error l (pars + narg) <> None.
+    forall Γ p i' c u l,
+      welltyped Σ Γ (tProj p (mkApps (tConstruct i' c u) l)) ->
+      nth_error l (p.(proj_npars) + p.(proj_arg)) <> None.
   Proof.
-    intros Γ i pars narg i' c u l [T h].
+    intros Γ p i' c u l [T h].
     apply PCUICInductiveInversion.invert_Proj_Construct in h as (<-&->&?).
     2: now sq.
     now apply nth_error_Some.
@@ -1057,11 +1057,11 @@ Section Lemmata.
   Qed.
 
   Lemma Proj_Construct_ind_eq :
-    forall Γ i i' pars narg c u l,
-      welltyped Σ Γ (tProj (i, pars, narg) (mkApps (tConstruct i' c u) l)) ->
-      i = i'.
+    forall Γ p i' c u l,
+      welltyped Σ Γ (tProj p (mkApps (tConstruct i' c u) l)) ->
+      p.(proj_ind) = i'.
   Proof.
-    intros Γ i i' pars narg c u l [T h].
+    intros Γ p i' c u l [T h].
     now apply PCUICInductiveInversion.invert_Proj_Construct in h.
   Qed.
 

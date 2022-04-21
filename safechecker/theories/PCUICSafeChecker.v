@@ -1913,7 +1913,7 @@ Section CheckEnv.
     (i : nat) (idecl : one_inductive_body) (indices : context)
     (cdecl : constructor_body) (cs : constructor_univs)
     (oncs : forall Σ, abstract_env_ext_rel X_ext Σ ->  ∥ on_constructors (lift_typing typing) Σ mdecl i idecl indices [cdecl] [cs] ∥)
-    (k : nat) (p : ident × term) (hnth : nth_error idecl.(ind_projs) k = Some p)
+    (k : nat) p (hnth : nth_error idecl.(ind_projs) k = Some p)
     (heq : #|idecl.(ind_projs)| = context_assumptions cdecl.(cstr_args))
     : typing_result (forall Σ, abstract_env_ext_rel X_ext Σ -> ∥ on_projection mdecl mind i cdecl k p ∥) :=
     let Γ :=  smash_context [] (cdecl.(cstr_args) ++ ind_params mdecl) in
@@ -1921,9 +1921,11 @@ Section CheckEnv.
     | Some decl =>
       let u := abstract_instance (ind_universes mdecl) in
       let ind := {| inductive_mind := mind; inductive_ind := i |} in
-      check_na <- check_eq_true (eqb (binder_name (decl_name decl)) (nNamed p.1))
+      check_na <- check_eq_true (eqb (binder_name (decl_name decl)) (nNamed p.(proj_name)))
         (Msg "Projection name does not match argument binder name");;
-      check_eq <- check_eq_true (eqb p.2
+      check_rel <- check_eq_true (eqb (binder_relevance (decl_name decl)) p.(proj_relevance))
+        (Msg "Projection relevance does not match argument binder relevance");;
+      check_eq <- check_eq_true (eqb p.(proj_type)
           (subst (inds mind u (ind_bodies mdecl)) (S (ind_npars mdecl))
           (subst0 (projs ind (ind_npars mdecl) k) (lift 1 k (decl_type decl)))))
         (Msg "Projection type does not match argument type") ;;
@@ -1932,6 +1934,7 @@ Section CheckEnv.
     end.
   Next Obligation.
     eapply eqb_eq in check_na.
+    eapply eqb_eq in check_rel.
     eapply eqb_eq in check_eq.
     sq.
     red. rewrite -Heq_anonymous. simpl. split; auto.

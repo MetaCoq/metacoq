@@ -117,6 +117,10 @@ Section Trans.
       cstr_indices := map trans d.(Ast.Env.cstr_indices); 
       cstr_type := trans d.(Ast.Env.cstr_type);
       cstr_arity := d.(Ast.Env.cstr_arity) |}.
+  Definition trans_projection_body (d : Ast.Env.projection_body) :=
+    {| proj_name := d.(Ast.Env.proj_name); 
+        proj_type := trans d.(Ast.Env.proj_type);
+        proj_relevance := d.(Ast.Env.proj_relevance) |}.
 
   Definition trans_one_ind_body (d : Ast.Env.one_inductive_body) :=
     {| ind_name := d.(Ast.Env.ind_name);
@@ -126,7 +130,7 @@ Section Trans.
       ind_type := trans d.(Ast.Env.ind_type);
       ind_kelim := d.(Ast.Env.ind_kelim);
       ind_ctors := List.map trans_constructor_body d.(Ast.Env.ind_ctors);
-      ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(Ast.Env.ind_projs) |}.
+      ind_projs := List.map trans_projection_body d.(Ast.Env.ind_projs) |}.
 
   Definition trans_constant_body bd :=
     {| cst_type := trans bd.(Ast.Env.cst_type); 

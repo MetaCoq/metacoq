@@ -185,7 +185,7 @@ struct
 
   (*val unquote_univ_instance :  quoted_univ_instance -> Univ.Instance.t *)
   let unquote_proj (q : quoted_proj) : (quoted_inductive * quoted_int * quoted_int) =
-    let (ind, ps), idx = q in
+    let { proj_ind = ind; proj_npars = ps; proj_arg = idx } = q in
     (ind, ps, idx)
 
   let unquote_level (trm : Universes0.Level.t) : Univ.Level.t =

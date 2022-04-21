@@ -341,11 +341,11 @@ Qed.
           ret (mkApps ptm (List.skipn ci.(ci_npar) indargs.π2.π2.π1 ++ [c]));
         | exist (TypeError_comp _ _) _ => ! };
 
-    infer Γ wfΓ (tProj (ind, n, k) c) wt with inspect (@lookup_ind_decl ind) :=
-      { | exist (Checked d) _ with inspect (nth_error d.π2.π1.(ind_projs) k) :=
+    infer Γ wfΓ (tProj p c) wt with inspect (@lookup_ind_decl p.(proj_ind)) :=
+      { | exist (Checked d) _ with inspect (nth_error d.π2.π1.(ind_projs) p.(proj_arg)) :=
         { | exist (Some pdecl) _ with inspect (reduce_to_ind Γ (infer Γ wfΓ c _) _) :=
           { | exist (Checked_comp indargs) _ => 
-              let ty := snd pdecl in
+              let ty := pdecl.(proj_type) in
               ret (subst0 (c :: List.rev (indargs.π2.π2.π1)) (subst_instance indargs.π2.π1 ty));
             | exist (TypeError_comp _ _) _ => ! };
          | exist None _ => ! };
@@ -652,10 +652,9 @@ Qed.
   Next Obligation.
   cbn in *. intros.
   set (H := λ (Σ0 : global_env_ext) (wfΣ0 : abstract_env_ext_rel X Σ0),
-  infer_obligations_obligation_32 Γ ind n k c
-                                   wt Σ0 wfΣ0) in indargs. cbn in *. 
+  infer_obligations_obligation_32 Γ p c wt Σ0 wfΣ0) in indargs. cbn in *. 
   set (infer _ wfΓ c H) in *. unfold H in *. clear H.
-  pose proof p.π2 as p02. 
+  pose proof p0.π2 as p02. 
   destruct indargs as (?&?&?&?).
     destruct d as (?&?&isdecl).
     clear e.
@@ -687,12 +686,11 @@ Qed.
     cbn in *. 
     set (H := (λ (Σ0 : global_env_ext) 
     (wfΣ0 : abstract_env_ext_rel X Σ0),
-    infer_obligations_obligation_32 Γ ind n k c wt
-      Σ0 wfΣ0)) in a0.
+    infer_obligations_obligation_32 Γ p c wt Σ0 wfΣ0)) in a0.
       cbn in *. 
       set (infer _ wfΓ c H) in *.
       unfold H in *. clear H e1. 
-       destruct p.
+    destruct p0.
     cbn -[lookup_ind_decl] in *.
     pose proof wt; pose proof wfΓ.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].

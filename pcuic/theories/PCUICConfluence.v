@@ -2200,7 +2200,7 @@ Section PredRed.
       eapply (All2_impl X3); unfold on_Trel; intuition auto; repeat inv_on_free_vars_xpredT; eauto with fvs.
       eapply red_step. econstructor; eauto. eauto.
 
-    - transitivity (tProj (i, pars, narg) (mkApps (tConstruct i 0 u) args1)).
+    - transitivity (tProj p (mkApps (tConstruct p.(proj_ind) 0 u) args1)).
       eapply red_proj_c; eauto.
       cbn in H1. repeat inv_on_free_vars_xpredT.
       eapply red_mkApps; [|solve_all]. auto.

@@ -133,7 +133,7 @@ struct
      quote_ident (Label.to_id (KerName.label kn)))
 
   let quote_inductive (kn, i) = { inductive_mind = kn ; inductive_ind = i }
-  let quote_proj ind p a = ((ind,p),a)
+  let quote_proj ind p a = { proj_ind = ind; proj_npars = p; proj_arg = a }
 
   let quote_constraint_type = function
     | Univ.Lt -> Universes0.ConstraintType.Le 1
@@ -278,19 +278,22 @@ struct
   let mkMonomorphic_ctx () = Universes0.Monomorphic_ctx
   let mkPolymorphic_ctx tm = Universes0.Polymorphic_ctx tm
 
-  let mk_one_inductive_body (id, indices, sort, ty, kel, ctr, proj, relevance) =
-    let ctr = List.map (fun (name, args, indices, ty, arity) -> 
+  let mk_one_inductive_body (id, indices, sort, ty, kel, ctrs, projs, relevance) =
+    let ctrs = List.map (fun (name, args, indices, ty, arity) -> 
       { cstr_name = name; 
         cstr_args = args;
         cstr_indices = indices;
         cstr_type = ty;
-        cstr_arity = arity }) ctr in
+        cstr_arity = arity }) ctrs in
+    let projs = List.map (fun (proj_name, proj_relevance, proj_type) -> 
+        { proj_name; proj_relevance; proj_type }) projs in
     { ind_name = id; ind_type = ty;
       ind_indices = indices;
       ind_sort = sort;
       ind_kelim = kel; 
-      ind_ctors = ctr;
-      ind_projs = proj; ind_relevance = relevance }
+      ind_ctors = ctrs;
+      ind_projs = projs; 
+      ind_relevance = relevance }
 
   let mk_mutual_inductive_body finite npars params inds uctx variance =
     {ind_finite = finite;

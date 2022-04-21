@@ -131,7 +131,7 @@ sig
       t list (* indices in the conclusion *) *
       t (* constr type *) * 
       quoted_int (* arity (w/o lets) *)) list *
-    (quoted_ident * t (* projection type *)) list *
+    (quoted_ident * quoted_relevance *  t (* projection type *)) list *
     quoted_relevance -> 
     quoted_one_inductive_body
 
@@ -407,10 +407,11 @@ struct
                                         Context.Rel.instance Constr.mkRel 0 ctxwolet) in
                 let indbinder = Context.Rel.Declaration.LocalAssum (Context.annotR (Names.Name id),indty) in
                 let envpars = push_rel_context (indbinder :: ctxwolet) env in
-                let ps, acc = CArray.fold_right2 (fun cst pb (ls,acc) ->
+                let ps, acc = CArray.fold_right3 (fun cst pb rel (ls,acc) ->
                   let (ty, acc) = quote_term acc envpars pb in
                   let na = Q.quote_ident (Names.Label.to_id cst) in
-                  ((na, ty) :: ls, acc)) csts ps ([],acc)
+                  let rel = Q.quote_relevance rel in
+                  ((na, rel, ty) :: ls, acc)) csts ps relevance ([],acc)
                 in ps, acc
             | _ -> [], acc
           in

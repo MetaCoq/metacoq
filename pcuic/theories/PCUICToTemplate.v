@@ -64,7 +64,12 @@ Definition trans_constructor_body (d : PCUICEnvironment.constructor_body) :=
      cstr_indices := map trans d.(PCUICEnvironment.cstr_indices); 
      cstr_type := trans d.(PCUICEnvironment.cstr_type);
      cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.
-      
+
+Definition trans_projection_body (d : PCUICEnvironment.projection_body) :=
+ {| proj_name := d.(PCUICEnvironment.proj_name); 
+    proj_type := trans d.(PCUICEnvironment.proj_type);
+    proj_relevance := d.(PCUICEnvironment.proj_relevance) |}.
+          
 Definition trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
   {| ind_name := d.(PCUICEnvironment.ind_name);
      ind_relevance := d.(PCUICEnvironment.ind_relevance);
@@ -73,7 +78,7 @@ Definition trans_one_ind_body (d : PCUICEnvironment.one_inductive_body) :=
      ind_sort := d.(PCUICEnvironment.ind_sort);
      ind_kelim := d.(PCUICEnvironment.ind_kelim);
      ind_ctors := List.map trans_constructor_body d.(PCUICEnvironment.ind_ctors);
-     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(PCUICEnvironment.ind_projs) |}.
+     ind_projs := List.map trans_projection_body d.(PCUICEnvironment.ind_projs) |}.
 
 Definition trans_constant_body bd :=
   {| cst_type := trans bd.(PCUICEnvironment.cst_type); cst_body := option_map trans bd.(PCUICEnvironment.cst_body);

@@ -73,8 +73,8 @@ Inductive erases (Σ : global_env_ext) (Γ : context) : term -> E.term -> Prop :
           (fun (x : branch term) (x' : list name × E.term) =>
           Σ;;; Γ ,,, inst_case_branch_context p x |- bbody x ⇝ℇ snd x' × erase_context (bcontext x) = fst x') brs brs' ->
         Σ;;; Γ |- tCase ci p c brs ⇝ℇ E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'
-  | erases_tProj : forall (p : (inductive × nat) × nat) (c : term) (c' : E.term),
-                   let ind := fst (fst p) in
+  | erases_tProj : forall p (c : term) (c' : E.term),
+                   let ind := p.(proj_ind) in
                    Informative Σ ind ->
                    Σ;;; Γ |- c ⇝ℇ c' -> Σ;;; Γ |- tProj p c ⇝ℇ E.tProj p c'
   | erases_tFix : forall (mfix : mfixpoint term) (n : nat) (mfix' : list (E.def E.term)),
@@ -131,7 +131,7 @@ Lemma erases_forall_list_ind
           Forall2 (fun br br' => P (Γ ,,, inst_case_branch_context p br) (bbody br) br'.2) brs brs' ->
           P Γ (tCase ci p c brs) (E.tCase (ci.(ci_ind), ci.(ci_npar)) c' brs'))
       (Hproj : forall Γ p c c',
-          let ind := p.1.1 in
+          let ind := p.(proj_ind) in
           PCUICElimination.Informative Σ ind ->
           Σ;;; Γ |- c ⇝ℇ c' ->
           P Γ c c' ->
@@ -212,7 +212,7 @@ Definition erases_constant_body (Σ : global_env_ext) (cb : constant_body) (cb' 
 
 Definition erases_one_inductive_body (oib : one_inductive_body) (oib' : E.one_inductive_body) :=
   Forall2 (fun cdecl cstr => cdecl.(PCUICEnvironment.cstr_arity) = cstr.(E.cstr_nargs) /\ cdecl.(cstr_name) = cstr.(E.cstr_name)) oib.(ind_ctors) oib'.(E.ind_ctors) /\
-  Forall2 (fun '(i,t) i' => i = i') oib.(ind_projs) oib'.(E.ind_projs) /\
+  Forall2 (fun 'i i' => i.(PCUICEnvironment.proj_name) = i'.(E.proj_name)) oib.(ind_projs) oib'.(E.ind_projs) /\
   oib'.(E.ind_name) = oib.(ind_name) /\
   oib'.(E.ind_kelim) = oib.(ind_kelim) /\ 
   isPropositionalArity oib.(ind_type) oib'.(E.ind_propositional).

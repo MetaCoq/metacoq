@@ -4882,7 +4882,7 @@ Qed.
             (h : forall Σ (wfΣ : abstract_env_ext_rel X Σ), welltyped Σ Γ (tProj p c)) : option term :=
 
     unfold_one_proj Γ p c h with p := {
-    | (i, pars, narg) with inspect (reduce_stack RedFlags.default _ X Γ c [] _) := {
+    | mkProjection i pars narg with inspect (reduce_stack RedFlags.default _ X Γ c [] _) := {
       | @exist (cred, ρ) eq with cc0_viewc cred := {
         | cc0view_construct ind' ui with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (nth_error args (pars + narg)) := {
@@ -4893,7 +4893,7 @@ Qed.
         | cc0view_cofix mfix idx with inspect (decompose_stack ρ) := {
           | @exist (args, ξ) eq' with inspect (unfold_cofix mfix idx) := {
             | @exist (Some (rarg, fn)) eq2 :=
-              Some (tProj (i, pars, narg) (mkApps fn args)) ;
+              Some (tProj p (mkApps fn args)) ;
             | @exist None eq2 := False_rect _ _
             }
           } ;
@@ -4917,7 +4917,7 @@ Qed.
     2: auto.
     2: apply red_proj_c, r.
     apply PCUICInductiveInversion.invert_Proj_Construct in typ as (<-&_&?); auto.
-    apply eq_sym, nth_error_None in eq2.
+    apply eq_sym, nth_error_None in eq2. cbn in H.
     lia.
   Qed.
   Next Obligation.
@@ -4943,21 +4943,23 @@ Qed.
     revert e.
     funelim (unfold_one_proj Γ p c h).
     all: intros eq'' ; noconf eq''.
-    - clear H H0 H1.
+    - set (p := {| proj_ind := i; proj_npars := pars; proj_arg := narg |}).
+       clear H H0 H1.
       simpl_reduce_stack Σ wfΣ.
-      pose proof (red_proj_c (i, pars, narg) _ _ r) as r'.
+      pose proof (red_proj_c p _ _ r) as r'.
       destruct (hΣ _ wfΣ) as [hΣ].
       pose proof (red_welltyped _ hΣ (h _ wfΣ) r') as h'.
       apply Proj_Construct_ind_eq in h' ; auto. subst.
       eapply cored_red_cored.
-      + constructor. eapply red_proj. eauto.
+      + constructor. eapply (red_proj _ _ p). eauto.
       + eapply red_proj_c, r.
     - match type of eq'' with
       | _ = False_rect _ ?f => destruct f
       end.
-    - clear H H0 H1.
+    -  set (p := {| proj_ind := i; proj_npars := pars; proj_arg := narg |}).
+      clear H H0 H1.
       simpl_reduce_stack Σ wfΣ.
-      pose proof (red_proj_c (i, pars, narg) _ _ r) as r'.
+      pose proof (red_proj_c p _ _ r) as r'.
       destruct (hΣ _ wfΣ) as [hΣ].
       pose proof (red_welltyped _ hΣ (h _ wfΣ) r') as h'.
       eapply cored_red_cored.
@@ -5265,24 +5267,24 @@ Qed.
     : ConversionResult (conv_term leq Γ t1 π1 t2 π2) :=
     _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 ir1 ir2 hdiscr hx aux
     with inspect (reducible_head Γ t1 π1 h1) := {
-    | @exist (Some (rt1, ρ1)) eq1 with inspect (decompose_stack ρ1) := {
-      | @exist (l1, θ1) eq2
+    | exist (Some (rt1, ρ1)) eq1 with inspect (decompose_stack ρ1) := {
+      | exist (l1, θ1) eq2
         with inspect (reduce_stack RedFlags.nodelta _ X (Γ ,,, stack_context ρ1) rt1 (appstack l1 []) _) := {
-        | @exist (rt1', θ1') eq3 :=
+        | exist (rt1', θ1') eq3 :=
           isconv_prog leq rt1' (θ1' ++ θ1) t2 π2 aux
         }
       } ;
-    | @exist None nored1 with inspect (reducible_head Γ t2 π2 h2) := {
-      | @exist (Some (rt2, ρ2)) eq1 with inspect (decompose_stack ρ2) := {
-        | @exist (l2, θ2) eq2
+    | exist None nored1 with inspect (reducible_head Γ t2 π2 h2) := {
+      | exist (Some (rt2, ρ2)) eq1 with inspect (decompose_stack ρ2) := {
+        | exist (l2, θ2) eq2
           with inspect (reduce_stack RedFlags.nodelta _ X (Γ ,,, stack_context ρ2) rt2 (appstack l2 []) _) := {
-          | @exist (rt2', θ2') eq3 :=
+          | exist (rt2', θ2') eq3 :=
             isconv_prog leq t1 π1 rt2' (θ2' ++ θ2) aux
           }
         } ;
-      | @exist None nored2 with inspect (eqb_termp_napp_gen leq (abstract_env_eq X) (abstract_env_leq X) (abstract_env_compare_global_instance X) #|(decompose_stack π1).1| t1 t2) := {
-        | @exist true eq1 := isconv_args leq t1 π1 t2 π2 aux;
-        | @exist false noteq :=
+      | exist None nored2 with inspect (eqb_termp_napp_gen leq (abstract_env_eq X) (abstract_env_leq X) (abstract_env_compare_global_instance X) #|(decompose_stack π1).1| t1 t2) := {
+        | exist true eq1 := isconv_args leq t1 π1 t2 π2 aux;
+        | exist false noteq :=
           no (
               HeadMismatch
                 leq
@@ -5722,10 +5724,11 @@ Qed.
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
     : Ret s Γ t1 π1 t2 π2 :=
 
-    isconv_full s Γ t1 π1 h1 t2 π2 h2 hx _ :=
+    isconv_full s Γ t1 π1 h1 t2 π2 h2 hx :=
       Fix_F (R := R Γ)
             (fun '(mkpack s' t1' π1' t2' π2' h2') =>
               wtp Γ t1' π1' ->
+              wtp Γ t2' π2' ->
               Ret s' Γ t1' π1' t2' π2'
             )
             (fun pp f => _)
@@ -5733,14 +5736,14 @@ Qed.
             _ _ _ _.
   Next Obligation.
     unshelve eapply _isconv. all: try assumption.
-    - destruct pp; cbn in *; eauto.
-    - intros s' t1' π1' t2' π2' h1' h2' hx' hR.
-    specialize (f (mkpack Γ s' t1' π1' t2' π2' h2') hR).
-    eapply f ; try assumption.
+    intros s' t1' π1' t2' π2' h1' h2' hx' hR.
+    eapply (f (mkpack Γ s' t1' π1' t2' π2' h2')); tea.
+    destruct pp.
+    assert (wth0 = H0) by apply proof_irrelevance. simpl in hR. subst. exact hR.
   Defined.
   Next Obligation.
   match goal with | |- Acc _ ?X => set (u := X) end.
-  revert h1.  
+  revert h1. 
   change ((forall Σ, abstract_env_ext_rel X Σ -> welltyped Σ Γ (zipc (tm1 u) (stk1 u))) -> Acc (R Γ) u).
   generalize u.
   refine (Acc_intro_generator

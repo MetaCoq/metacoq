@@ -350,9 +350,10 @@ struct
       constr_mkApp (tBuild_constructor_body, [| a ; b ; to_coq_listl tTerm c ; d ; e |])) ls in
     to_coq_listl tconstructor_body ctors
 
-  let mk_proj_list d =
-    to_coq_list (prodl tident tTerm)
-                (List.map (fun (a, b) -> pairl tident tTerm a b) d)
+  let mk_proj_list ps =
+    let projs = List.map (fun (a,b,c) -> 
+      constr_mkApp (tBuild_projection_body, [| a ; b ; c |])) ps in
+    to_coq_listl tprojection_body projs
 
   let quote_dirpath dp =
     let l = DirPath.repr dp in
@@ -369,10 +370,8 @@ struct
     pairl tmodpath tident (quote_modpath (KerName.modpath kn))
       (quote_ident (Label.to_id (KerName.label kn)))
 
-
-  (* useful? *)
   let quote_proj ind pars args =
-    pair (prodl tIndTy tnat) (Lazy.force tnat) (pairl tIndTy tnat ind pars) args
+    constr_mkApp (tmkProjection, [| ind; pars; args |])
 
   let mk_one_inductive_body (na, indices, sort, ty, sf, ctors, projs, relevance) =
     let ctors = mk_ctor_list ctors in

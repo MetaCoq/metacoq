@@ -205,9 +205,9 @@ Section Wcbv.
   (** Proj *)
   | eval_proj proj discr args u a res mdecl idecl cdecl pdecl :
       declared_projection Σ proj mdecl idecl cdecl pdecl ->
-      eval discr (mkApps (tConstruct proj.1.1 0 u) args) ->
+      eval discr (mkApps (tConstruct proj.(proj_ind) 0 u) args) ->
       #|args| = cstr_arity mdecl cdecl ->
-      nth_error args (proj.1.2 + proj.2) = Some a ->
+      nth_error args (proj.(proj_npars) + proj.(proj_arg)) = Some a ->
       eval a res ->
       eval (tProj proj discr) res
            
@@ -303,13 +303,13 @@ Section Wcbv.
           #|args| = (ci.(ci_npar) + context_assumptions bctx)%nat ->
           eval (iota_red npar args bctx br) res -> P (iota_red npar args bctx br) res -> 
           P (tCase ci p discr brs) res) ->
-      (forall (proj : ((inductive × nat) × nat)) (discr : term) (args : list term) (u : Instance.t)
+      (forall proj (discr : term) (args : list term) (u : Instance.t)
               a mdecl idecl cdecl pdecl res,
           declared_projection Σ proj mdecl idecl cdecl pdecl ->
-          eval discr (mkApps (tConstruct proj.1.1 0 u) args) ->
-          P discr (mkApps (tConstruct proj.1.1 0 u) args) ->
+          eval discr (mkApps (tConstruct proj.(proj_ind) 0 u) args) ->
+          P discr (mkApps (tConstruct proj.(proj_ind) 0 u) args) ->
           #|args| = cstr_arity mdecl cdecl ->
-          nth_error args (proj.1.2 + proj.2) = Some a ->
+          nth_error args (proj.(proj_npars) + proj.(proj_arg)) = Some a ->
           eval a res ->
           P a res ->
           P (tProj proj discr) res) ->

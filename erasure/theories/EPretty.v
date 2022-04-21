@@ -142,18 +142,14 @@ Module PrintTermTree.
         "Case(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_term t ^ ","
                 ^ string_of_list (fun b => string_of_term (snd b)) brs ^ ")"
       end
-    | tProj (mkInd mind i as ind, pars, k) c =>
-      match lookup_ind_decl Σ mind i with
-      | Some oib =>
-        match nth_error oib.(ind_projs) k with
-        | Some na => print_term Γ false false c ^ ".(" ^ na ^ ")"
-        | None =>
-          "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
-                        ^ print_term Γ true false c ^ ")"
-        end
+    | tProj p c =>
+      match lookup_projection Σ p with
+      | Some (mdecl, idecl, cdecl, pdecl) =>
+        print_term Γ false false c ^ ".(" ^ pdecl.(proj_name) ^ ")"
       | None =>
-        "UnboundProj(" ^ string_of_inductive ind ^ "," ^ string_of_nat i ^ "," ^ string_of_nat k ^ ","
-                      ^ print_term Γ true false c ^ ")"
+        "UnboundProj(" ^ string_of_inductive p.(proj_ind) ^ "," ^ string_of_nat p.(proj_npars) 
+          ^ "," ^ string_of_nat p.(proj_arg) ^ ","
+          ^ print_term Γ true false c ^ ")"
       end
 
 
@@ -193,7 +189,7 @@ Module PrintTermTree.
     let projs :=
     match body.(ind_projs) return Tree.t with
     | [] => ""
-    | _ => nl ^ "projections: " ^ print_list (fun x => x : ident) ", " body.(ind_projs) 
+    | _ => nl ^ "projections: " ^ print_list (fun x => x.(proj_name)) ", " body.(ind_projs) 
     end
     in
     "Inductive " ^ body.(ind_name) ^ "(" ^ params ^ "," ^ prop ^ ", elimination " ^ kelim ^ ") := " ^ nl ^ ctors ^ projs.

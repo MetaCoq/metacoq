@@ -66,7 +66,12 @@ Definition trans_constructor_body i (mdecl : mutual_inductive_body) (d : PCUICEn
         (it_mkProd_or_LetIn args
           (trans_cstr_concl mdecl i args indices));
      cstr_arity := d.(PCUICEnvironment.cstr_arity) |}.
-      
+
+Definition trans_projection_body (d : PCUICEnvironment.projection_body) :=
+ {| proj_name := d.(PCUICEnvironment.proj_name); 
+    proj_type := trans d.(PCUICEnvironment.proj_type);
+    proj_relevance := d.(PCUICEnvironment.proj_relevance) |}.
+
 Definition trans_one_ind_body mdecl i (d : PCUICEnvironment.one_inductive_body) :=
   {| ind_name := d.(PCUICEnvironment.ind_name);
      ind_relevance := d.(PCUICEnvironment.ind_relevance);
@@ -75,7 +80,7 @@ Definition trans_one_ind_body mdecl i (d : PCUICEnvironment.one_inductive_body) 
      ind_sort := d.(PCUICEnvironment.ind_sort);
      ind_kelim := d.(PCUICEnvironment.ind_kelim);
      ind_ctors := List.map (trans_constructor_body i mdecl) d.(PCUICEnvironment.ind_ctors);
-     ind_projs := List.map (fun '(x, y) => (x, trans y)) d.(PCUICEnvironment.ind_projs) |}.
+     ind_projs := List.map trans_projection_body d.(PCUICEnvironment.ind_projs) |}.
 
 Definition trans_minductive_body md :=
   {| ind_finite := md.(PCUICEnvironment.ind_finite);

@@ -2994,20 +2994,21 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
                (lsp G2 v1 v2 <= lsp G1 v1 v2)%nbar
     }.
 
-  Local Instance reflectEq_vertices : ReflectEq (VSet.E.t).
+  #[refine, local]
+  Instance reflectEq_vertices : ReflectEq (VSet.E.t) :=
+    Build_ReflectEq (VSet.E.t)
+                    (fun x y => if VSet.E.compare x y is Eq then true else false)
+                    _.
   Proof.
-    exists (fun x y => if VSet.E.compare x y is Eq then true else false).
     move=> x y. move: (VSet.E.compare_spec x y) => [->||].
     1: by apply: reflectP.
     all: move=> p; apply: reflectF=> eq; move: p; rewrite eq.
     all: have := (@irreflexivity _ _ (@StrictOrder_Irreflexive _ _ VSet.E.lt_strorder) y)=> //.
   Qed.
 
-  Local Instance reflectEq_nbar: ReflectEq Nbar.t.
-  Proof.
-    apply: reflect_option.
-    apply: EqDec_ReflectEq.
-  Qed.
+  #[local]
+  Instance reflectEq_nbar: ReflectEq Nbar.t :=
+    @reflect_option Z (EqDec_ReflectEq _).
 
   (* Defined for completeness, but clearly not what should be used in practice *)
   Definition is_full_subgraph (G1 G2 : t) : bool :=

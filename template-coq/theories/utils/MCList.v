@@ -1227,7 +1227,7 @@ Section SplitPrefix.
 
   Lemma split_prefix_is_prefix l1 l2 :
     let '(prefix, l1', l2') := split_prefix l1 l2 in
-    (l1 = prefix ++ l1') * (l2 = prefix ++ l2').
+    (l1 = prefix ++ l1') /\ (l2 = prefix ++ l2').
   Proof.
     funelim (split_prefix l1 l2).
     1,2: simp split_prefix; now split.
@@ -1292,7 +1292,7 @@ Section SplitSuffix.
 
   Lemma split_suffix_is_suffix l1 l2 :
     let '(l1', l2', suffix) := split_suffix l1 l2 in
-    (l1 = l1' ++ suffix) * (l2 = l2' ++ suffix).
+    (l1 = l1' ++ suffix) /\ (l2 = l2' ++ suffix).
   Proof.
     unfold split_suffix.
     pose proof (y := split_prefix_is_prefix (rev l1) (rev l2)).

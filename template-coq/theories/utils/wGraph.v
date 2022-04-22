@@ -3006,9 +3006,16 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     all: have := (@irreflexivity _ _ (@StrictOrder_Irreflexive _ _ VSet.E.lt_strorder) y)=> //.
   Qed.
 
+  #[refine, local]
+  Instance reflectEq_Z : ReflectEq Z :=
+    Build_ReflectEq Z Z.eqb _.
+  Proof.
+   intros; apply reflect_reflectProp; apply Z.eqb_spec.
+  Qed.
+
   #[local]
   Instance reflectEq_nbar: ReflectEq Nbar.t :=
-    @reflect_option Z (EqDec_ReflectEq _).
+    @reflect_option Z _.
 
   (* Defined for completeness, but clearly not what should be used in practice *)
   Definition is_full_subgraph (G1 G2 : t) : bool :=

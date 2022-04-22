@@ -238,9 +238,8 @@ Proof.
         rewrite context_assumptions_rev context_assumptions_subst_instance.
         erewrite PCUICDeclarationTyping.onNpars.
         2: eapply on_declared_minductive ; eauto.
-        rewrite (firstn_app_left _ 0).
-        1: by rewrite Nat.add_0_r ; destruct wfpred.
-        by apply app_nil_r.
+        rewrite firstn_app_left //.
+        now destruct wfpred.
       
       * replace #|x1| with #|pparams p ++ indices|.
         1: assumption.

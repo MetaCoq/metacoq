@@ -297,6 +297,12 @@ Definition gcs_equal x y : Prop :=
 Infix "=_gcs" := gcs_equal (at level 200).
 Notation "(=_gcs)" := gcs_equal (at level 0).
 
+Global Instance proper_pair_levels_gcs : Proper ((=_lset) ==> GoodConstraintSet.Equal ==> (=_gcs)) (@pair LevelSet.t GoodConstraintSet.t).
+Proof.
+  intros l l' eq gcs gcs' eq'.
+  split; cbn; auto.
+Qed.
+
 Definition GoodConstraintSet_pair x y
   := GoodConstraintSet.add y (GoodConstraintSet.singleton x).
 

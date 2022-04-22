@@ -15,9 +15,6 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICTactics PCUICInduc
      PCUICConversion PCUICInversion PCUICContexts PCUICArities
      PCUICSpine PCUICInductives PCUICWellScopedCumulativity PCUICValidity.
 
-From MetaCoq.PCUIC Require PCUICParallelReductionConfluence.
-(* for nth_error lemma. should move *)
-
 Require Import Equations.Type.Relation_Properties.
 Require Import Equations.Prop.DepElim.     
 From Equations Require Import Equations.
@@ -744,9 +741,8 @@ Proof.
       clear Hargs.
       rewrite !map_map_compose !map_app.
       rewrite -map_map_compose.
-      rewrite (firstn_app_left _ 0).
+      rewrite (firstn_app_left).
       { rewrite !map_length to_extended_list_k_length. lia. }
-      rewrite /= app_nil_r.
       rewrite skipn_all_app_eq ?lengths //.
       rewrite !map_map_compose.
       assert (#|cdecl.(cstr_args)| <= #|isubst|).
@@ -3357,7 +3353,7 @@ Proof.
   eapply isType_mkApps_Ind_inv in X; tea.
   destruct X as [parsubst [argsubst [sppars spargs parslen argslen cu]]].
   epose proof (isType_case_predicate (puinst p) (pparams p) ps wfΓ isdecl cu wfps).
-  rewrite (firstn_app_left _ 0) /= ?app_nil_r in sppars.
+  rewrite (firstn_app_left) /= ?app_nil_r in sppars.
   now rewrite (wf_predicate_length_pars wfp).
   eapply spine_subst_smash in sppars;tea. specialize (X sppars).
   eapply isType_it_mkProd_or_LetIn; eauto.

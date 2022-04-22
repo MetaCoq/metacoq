@@ -2,7 +2,7 @@
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICTyping PCUICAst PCUICAstUtils PCUICTactics
   PCUICWeakeningConv PCUICWeakeningTyp PCUICSubstitution PCUICGeneration PCUICArities
-  PCUICWcbvEval PCUICSR PCUICInversion
+  PCUICWcbvEval PCUICSR PCUICInversion PCUICViews
   PCUICUnivSubstitutionConv PCUICUnivSubstitutionTyp
   PCUICElimination PCUICSigmaCalculus PCUICContextConversion
   PCUICUnivSubst PCUICWeakeningEnvConv PCUICWeakeningEnvTyp

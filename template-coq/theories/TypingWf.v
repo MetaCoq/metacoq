@@ -1200,7 +1200,7 @@ Section TypingWf.
     rewrite mkApp_mkApps in eq.
     destruct (decompose_app_inv Σ _ _ _ _ wf eq) as [n [ng [stripeq stripf]]].
     apply eq_tip_skipn in stripeq. destruct stripeq as [l' [eqargs eqn]].
-    subst n args. rewrite (firstn_app_left _ 0) // /= app_nil_r in stripf. subst f.
+    subst n args. rewrite firstn_app_left // in stripf. subst f.
     eapply wf_mkApps_napp in wf as [wff' wfl] => //.
     rewrite (strip_casts_mkApps_napp_wf Σ) //.
     now rewrite mkApp_mkApps -mkApps_app map_app.

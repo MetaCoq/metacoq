@@ -2994,35 +2994,31 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
                (lsp G2 v1 v2 <= lsp G1 v1 v2)%nbar
     }.
 
-  #[refine, local]
+  Local Obligation Tactic := idtac.
+  Local Unset Program Cases.
+  #[program, local]
   Instance reflectEq_vertices : ReflectEq (VSet.E.t) :=
     Build_ReflectEq (VSet.E.t)
                     (fun x y => if VSet.E.compare x y is Eq then true else false)
                     _.
-  Proof.
+  Next Obligation.
     move=> x y. move: (VSet.E.compare_spec x y) => [->||].
     1: by apply: reflectP.
     all: move=> p; apply: reflectF=> eq; move: p; rewrite eq.
     all: have := (@irreflexivity _ _ (@StrictOrder_Irreflexive _ _ VSet.E.lt_strorder) y)=> //.
   Qed.
 
-  #[refine, local]
+  #[program, local]
   Instance reflectEq_Z : ReflectEq Z :=
     Build_ReflectEq Z Z.eqb _.
-  Proof.
+  Next Obligation.
    intros; apply reflect_reflectProp; apply Z.eqb_spec.
   Qed.
 
   #[local]
   Instance reflectEq_nbar: ReflectEq Nbar.t :=
-    @reflect_option Z _.
+    @reflect_option Z reflectEq_Z.
 
-  (* Defined for completeness, but clearly not what should be used in practice *)
-  Definition is_full_subgraph (G1 G2 : t) : bool :=
-    VSet.subset (V G1) (V G2) &&
-      EdgeSet.subset (E G1) (E G2) &&
-      (s G1 == s G2) &&
-      VSet.for_all (fun x => VSet.for_all (fun y => lsp G1 x y == lsp G2 x y) (V G1)) (V G1).
 
   Definition full_subgraph_on_edge {G1 G2} :
     full_subgraph G1 G2 ->
@@ -3031,6 +3027,13 @@ Module WeightedGraph (V : UsualOrderedType) (VSet : MSetInterface.S with Module 
     move=> embed x y [w ine]; exists w.
     exact (edges_sub _ _ embed _ ine).
   Defined.
+
+    (* Defined for completeness, but clearly not what should be used in practice *)
+  Definition is_full_subgraph (G1 G2 : t) : bool :=
+    VSet.subset (V G1) (V G2) &&
+      EdgeSet.subset (E G1) (E G2) &&
+      (s G1 == s G2) &&
+      VSet.for_all (fun x => VSet.for_all (fun y => lsp G1 x y == lsp G2 x y) (V G1)) (V G1).
 
   Lemma is_full_subgraph_spec G1 G2 :
     is_full_subgraph G1 G2 <-> full_subgraph G1 G2.

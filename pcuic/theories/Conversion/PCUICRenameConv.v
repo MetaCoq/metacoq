@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICCases P
   PCUICLiftSubst PCUICUnivSubst PCUICCumulativity
   PCUICReduction PCUICGlobalEnv PCUICClosed PCUICEquality PCUICRenameDef PCUICWeakeningEnvConv
   PCUICSigmaCalculus PCUICClosed PCUICOnFreeVars PCUICGuardCondition
-  PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp
+  PCUICWeakeningEnvTyp PCUICClosedConv PCUICClosedTyp PCUICViews
   PCUICTyping.
 
 Require Import ssreflect ssrbool.
@@ -20,6 +20,34 @@ Set Keyed Unification.
 
 Set Default Goal Selector "!".
 
+Lemma isConstruct_app_rename r t :
+  isConstruct_app t = isConstruct_app (rename r t).
+Proof.
+  unfold isConstruct_app. unfold decompose_app. generalize (@nil term) at 1.
+  change (@nil term) with (map (rename r) []). generalize (@nil term).
+  induction t; simpl; auto.
+  intros l l0. specialize (IHt1 (t2 :: l) (t2 :: l0)).
+  now rewrite IHt1.
+Qed.
+
+Lemma is_constructor_rename x l r : is_constructor x l = is_constructor x (map (rename r) l).
+Proof.
+  rewrite /is_constructor nth_error_map.
+  elim: nth_error_spec => //.
+  move=> n hnth xl /=.
+  now apply isConstruct_app_rename.
+Qed.
+
+Lemma isFixLambda_app_rename r t : ~~ isFixLambda_app t -> ~~ isFixLambda_app (rename r t).
+Proof.
+  induction t; simpl; auto.
+  destruct t1; simpl in *; auto.
+Qed.
+
+Lemma construct_cofix_rename r t : discr_construct_cofix t -> discr_construct_cofix (rename r t).
+Proof.
+  destruct t; simpl; try congruence.
+Qed.
 
 Lemma rename_mkApps :
   forall f t l,
@@ -28,6 +56,20 @@ Proof.
   intros f t l.
   autorewrite with sigma. f_equal.
 Qed.
+
+Lemma decompose_app_rec_rename r t l :
+  forall hd args, 
+  decompose_app_rec t l = (hd, args) ->
+  decompose_app_rec (rename r t) (map (rename r) l) = (rename r hd, map (rename r) args).
+Proof.
+  induction t in l |- *; simpl; try intros hd args [= <- <-]; auto.
+  intros hd args e. now apply (IHt1 _ _ _ e).
+Qed.
+
+Lemma decompose_app_rename {r t hd args} :
+  decompose_app t = (hd, args) ->
+  decompose_app (rename r t) = (rename r hd, map (rename r) args).
+Proof. apply decompose_app_rec_rename. Qed.
 
 Lemma rename_subst_instance :
   forall u t f,
@@ -477,57 +519,6 @@ Proof.
 Qed.
 
 (* TODO MOVE *)
-Lemma decompose_app_rename :
-  forall f t u l,
-    decompose_app t = (u, l) ->
-    decompose_app (rename f t) = (rename f u, map (rename f) l).
-Proof.
-  assert (aux : forall f t u l acc,
-    decompose_app_rec t acc = (u, l) ->
-    decompose_app_rec (rename f t) (map (rename f) acc) =
-    (rename f u, map (rename f) l)
-  ).
-  { intros f t u l acc h.
-    induction t in acc, h |- *.
-    all: try solve [ simpl in * ; inversion h ; reflexivity ].
-    simpl. simpl in h. specialize IHt1 with (1 := h). assumption.
-  }
-  intros f t u l.
-  unfold decompose_app.
-  eapply aux.
-Qed.
-
-(* TODO MOVE *)
-Lemma isConstruct_app_rename :
-  forall t f,
-    isConstruct_app t ->
-    isConstruct_app (rename f t).
-Proof.
-  intros t f h.
-  unfold isConstruct_app in *.
-  case_eq (decompose_app t). intros u l e.
-  apply decompose_app_rename with (f := f) in e as e'.
-  rewrite e'. rewrite e in h. simpl in h.
-  simpl.
-  destruct u. all: try discriminate.
-  simpl. reflexivity.
-Qed.
-
-(* TODO MOVE *)
-Lemma is_constructor_rename :
-  forall n l f,
-    is_constructor n l ->
-    is_constructor n (map (rename f) l).
-Proof.
-  intros n l f h.
-  unfold is_constructor in *.
-  rewrite nth_error_map.
-  destruct nth_error.
-  - simpl. apply isConstruct_app_rename. assumption.
-  - simpl. discriminate.
-Qed.
-
-(* TODO MOVE *)
 Lemma rename_unfold_cofix :
   forall mfix idx narg fn f,
     unfold_cofix mfix idx = Some (narg, fn) ->
@@ -555,6 +546,7 @@ Definition rename_constructor_body mdecl f c :=
   map_constructor_body #|mdecl.(ind_params)| #|mdecl.(ind_bodies)|
    (fun k => rename (shiftn k f)) c.
 
+(* TODO move *)   
 Lemma map2_set_binder_name_fold bctx f Γ :
   #|bctx| = #|Γ| ->
   map2 set_binder_name bctx (fold_context_k f Γ) =
@@ -990,7 +982,7 @@ Proof using cf.
   - rewrite 2!rename_mkApps. simpl.
     econstructor.
     + eapply rename_unfold_fix. eassumption.
-    + eapply is_constructor_rename. assumption.
+    + rewrite -is_constructor_rename. assumption.
   - rewrite 2!rename_mkApps. simpl.
     eapply red_cofix_case.
     eapply rename_unfold_cofix. eassumption.

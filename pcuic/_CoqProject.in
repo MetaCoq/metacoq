@@ -22,6 +22,7 @@ theories/Syntax/PCUICLiftSubst.v
 theories/Syntax/PCUICTactics.v
 theories/Syntax/PCUICUnivSubst.v
 theories/Syntax/PCUICClosed.v
+theories/Syntax/PCUICViews.v
 
 theories/Conversion/PCUICNamelessConv.v
 theories/Conversion/PCUICRenameConv.v

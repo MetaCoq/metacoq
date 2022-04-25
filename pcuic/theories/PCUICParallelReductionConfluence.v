@@ -5,7 +5,7 @@ From MetaCoq.PCUIC Require Import PCUICAst PCUICOnOne PCUICAstUtils PCUICTactics
      PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction 
      PCUICReflect PCUICInduction PCUICClosed PCUICClosedConv PCUICClosedTyp PCUICDepth PCUICOnFreeVars
      PCUICRenameDef PCUICRenameConv PCUICInstDef PCUICInstConv PCUICWeakeningConv PCUICWeakeningTyp
-     PCUICParallelReduction.
+     PCUICViews PCUICParallelReduction.
      
 
 Require Import ssreflect ssrbool.
@@ -39,120 +39,6 @@ Proof.
   induction m in l |- *; simpl; auto. rewrite IHm. simpl. auto with arith.
 Qed.
 
-Fixpoint isFixLambda_app (t : term) : bool :=
-match t with
-| tApp (tFix _ _) _ => true
-| tApp (tLambda _ _ _) _ => true 
-| tApp f _ => isFixLambda_app f
-| _ => false
-end.
-
-Inductive fix_lambda_app_view : term -> term -> Type :=
-| fix_lambda_app_fix mfix i l a : fix_lambda_app_view (mkApps (tFix mfix i) l) a
-| fix_lambda_app_lambda na ty b l a : fix_lambda_app_view (mkApps (tLambda na ty b) l) a
-| fix_lambda_app_other t a : ~~ isFixLambda_app (tApp t a) -> fix_lambda_app_view t a.
-Derive Signature for fix_lambda_app_view.
-
-Lemma view_lambda_fix_app (t u : term) : fix_lambda_app_view t u.
-Proof.
-  induction t; try solve [apply fix_lambda_app_other; simpl; auto].
-  apply (fix_lambda_app_lambda na t1 t2 [] u).
-  destruct IHt1.
-  pose proof (fix_lambda_app_fix mfix i (l ++ [t2]) a).
-  change (tApp (mkApps (tFix mfix i) l) t2) with (mkApps (mkApps (tFix mfix i) l) [t2]).
-  now rewrite -mkApps_app.
-  pose proof (fix_lambda_app_lambda na ty b (l ++ [t2]) a).
-  change (tApp (mkApps (tLambda na ty b) l) t2) with (mkApps (mkApps (tLambda na ty b) l) [t2]).
-  now rewrite -mkApps_app.
-  destruct t; try solve [apply fix_lambda_app_other; simpl; auto].
-  apply (fix_lambda_app_fix mfix idx [] u).
-Defined.
-
-Lemma eq_pair_transport {A B} (x y : A) (t : B y) (eq : y = x) : 
-  (x; eq_rect _ (fun x => B x) t _ eq) = (y; t) :> ∑ x, B x. 
-Proof.
-  now destruct eq. 
-Qed.
-
-Lemma view_lambda_fix_app_fix_app_sigma mfix idx l a : 
-  ((mkApps (tFix mfix idx) l); view_lambda_fix_app (mkApps (tFix mfix idx) l) a) =   
-  ((mkApps (tFix mfix idx) l); fix_lambda_app_fix mfix idx l a) :> ∑ t, fix_lambda_app_view t a.
-Proof.
-  induction l using rev_ind; simpl; auto.
-  rewrite {1 2}mkApps_app.
-  simpl. dependent rewrite IHl.
-  change (tApp (mkApps (tFix mfix idx) l) x) with (mkApps (mkApps (tFix mfix idx) l) [x]).
-  now rewrite eq_pair_transport.
-Qed.
-
-Lemma view_lambda_fix_app_lambda_app_sigma na ty b l a : 
-  ((mkApps (tLambda na ty b) l); view_lambda_fix_app (mkApps (tLambda na ty b) l) a) =   
-  ((mkApps (tLambda na ty b) l); fix_lambda_app_lambda na ty b l a) :> ∑ t, fix_lambda_app_view t a.
-Proof.
-  induction l using rev_ind; simpl; auto.
-  rewrite {1 2}mkApps_app.
-  simpl. dependent rewrite IHl.
-  change (tApp (mkApps (tLambda na ty b) l) x) with (mkApps (mkApps (tLambda na ty b) l) [x]).
-  now rewrite eq_pair_transport.
-Qed.
-
-Set Equations With UIP.
-
-Lemma view_lambda_fix_app_fix_app mfix idx l a : 
-  view_lambda_fix_app (mkApps (tFix mfix idx) l) a =   
-  fix_lambda_app_fix mfix idx l a.
-Proof.
-  pose proof (view_lambda_fix_app_fix_app_sigma mfix idx l a).
-  now noconf H.
-Qed.
-
-Lemma view_lambda_fix_app_lambda_app na ty b l a : 
-  view_lambda_fix_app (mkApps (tLambda na ty b) l) a =   
-  fix_lambda_app_lambda na ty b l a.
-Proof.
-  pose proof (view_lambda_fix_app_lambda_app_sigma na ty b l a).
-  now noconf H.
-Qed.
-
-#[global]
-Hint Rewrite view_lambda_fix_app_fix_app view_lambda_fix_app_lambda_app : rho.
-
-Equations construct_cofix_discr (t : term) : bool :=
-construct_cofix_discr (tConstruct _ _ _) => true;
-construct_cofix_discr (tCoFix _ _) => true;
-construct_cofix_discr _ => false.
-Transparent construct_cofix_discr.
-
-Equations discr_construct_cofix (t : term) : Prop :=
-  { | tConstruct _ _ _ => False;
-    | tCoFix _ _ => False;
-    | _ => True }.
-Transparent discr_construct_cofix.
-
-Inductive construct_cofix_view : term -> Type :=
-| construct_cofix_construct ind u i : construct_cofix_view (tConstruct ind u i)
-| construct_cofix_cofix mfix idx : construct_cofix_view (tCoFix mfix idx)
-| construct_cofix_other t : discr_construct_cofix t -> construct_cofix_view t.
-
-Equations view_construct_cofix (t : term) : construct_cofix_view t :=
-{ | tConstruct ind u i => construct_cofix_construct ind u i;
-  | tCoFix mfix idx => construct_cofix_cofix mfix idx;
-  | t => construct_cofix_other t I }.
-
-Equations discr_construct0_cofix (t : term) : Prop :=
-  { | tConstruct _ u _ => u <> 0;
-    | tCoFix _ _ => False;
-    | _ => True }.
-Transparent discr_construct0_cofix.
-Inductive construct0_cofix_view : term -> Type :=
-| construct0_cofix_construct ind i : construct0_cofix_view (tConstruct ind 0 i)
-| construct0_cofix_cofix mfix idx : construct0_cofix_view (tCoFix mfix idx)
-| construct0_cofix_other t : discr_construct0_cofix t -> construct0_cofix_view t.
-
-Equations view_construct0_cofix (t : term) : construct0_cofix_view t :=
-{ | tConstruct ind 0 i => construct0_cofix_construct ind i;
-  | tCoFix mfix idx => construct0_cofix_cofix mfix idx;
-  | t => construct0_cofix_other t _ }.
 
 Lemma fix_context_gen_assumption_context k Γ : assumption_context (fix_context_gen k Γ).
 Proof.
@@ -173,31 +59,6 @@ Proof.
   intros H; induction H in n, d |- * ; destruct n; simpl; try congruence; eauto.
   now move=> [<-] //.
 Qed.
-
-Lemma decompose_app_rec_rename r t l :
-  forall hd args, 
-  decompose_app_rec t l = (hd, args) ->
-  decompose_app_rec (rename r t) (map (rename r) l) = (rename r hd, map (rename r) args).
-Proof.
-  induction t in l |- *; simpl; try intros hd args [= <- <-]; auto.
-  intros hd args e. now apply (IHt1 _ _ _ e).
-Qed.
-
-Lemma decompose_app_rename {r t hd args} :
-  decompose_app t = (hd, args) ->
-  decompose_app (rename r t) = (rename r hd, map (rename r) args).
-Proof. apply decompose_app_rec_rename. Qed.
-
-Lemma mkApps_eq_decompose_app {t t' l l'} :
-  mkApps t l = mkApps t' l' ->
-  decompose_app_rec t l = decompose_app_rec t' l'.
-Proof.
-  induction l in t, t', l' |- *; simpl.
-  - intros ->. rewrite !decompose_app_rec_mkApps.
-    now rewrite app_nil_r.
-  - intros H. apply (IHl _ _ _ H).
-Qed.
-
 
 Lemma atom_mkApps {t l} : atom (mkApps t l) -> atom t /\ l = [].
 Proof.
@@ -226,28 +87,6 @@ Ltac solve_discr ::=
         | [ H : is_true (pred_atom _) |- _ ] => discriminate
         | [ H : is_true (pred_atom (mkApps _ _)) |- _ ] => destruct (pred_atom_mkApps H); subst; try discriminate
         end)).
-
-Lemma is_constructor_app_ge n l l' : is_constructor n l -> is_constructor n (l ++ l').
-Proof.
-  unfold is_constructor. destruct nth_error eqn:Heq.
-  rewrite nth_error_app_lt ?Heq //; eauto using nth_error_Some_length.
-  discriminate.
-Qed.
-
-Lemma is_constructor_prefix n args args' : 
-  ~~ is_constructor n (args ++ args') ->
-  ~~ is_constructor n args.
-Proof.
-  rewrite /is_constructor.
-  elim: nth_error_spec. rewrite app_length.
-  move=> i hi harg. elim: nth_error_spec.
-  move=> i' hi' hrarg'.
-  rewrite nth_error_app_lt in hi; eauto. congruence.
-  auto.
-  rewrite app_length. move=> ge _.
-  elim: nth_error_spec; intros; try lia. auto.
-Qed.
-    
 
 Section Pred1_inversion.
   
@@ -867,46 +706,6 @@ Section Rho.
 
   Hint Rewrite map_fix_rho_map fold_fix_context_wf_fold : rho.
 
-  Lemma mkApps_tApp f a l : mkApps (tApp f a) l = mkApps f (a :: l).
-  Proof. reflexivity. Qed.
-
-  Lemma tApp_mkApps f a : tApp f a = mkApps f [a].
-  Proof. reflexivity. Qed.
-
-  Lemma isFixLambda_app_mkApps t l : isFixLambda_app t -> isFixLambda_app (mkApps t l).
-  Proof. 
-    induction l using rev_ind; simpl; auto.
-    rewrite mkApps_app. 
-    intros isf. specialize (IHl isf).
-    simpl. rewrite IHl. destruct (mkApps t l); auto.
-  Qed.
-
-  Definition isFixLambda (t : term) : bool :=
-    match t with
-    | tFix _ _ => true
-    | tLambda _ _ _ => true
-    | _ => false
-    end.
-
-  Inductive fix_lambda_view : term -> Type :=
-  | fix_lambda_lambda na b t : fix_lambda_view (tLambda na b t)
-  | fix_lambda_fix mfix i : fix_lambda_view (tFix mfix i)
-  | fix_lambda_other t : ~~ isFixLambda t -> fix_lambda_view t.
-
-  Lemma view_fix_lambda (t : term) : fix_lambda_view t.
-  Proof.
-    destruct t; repeat constructor.
-  Qed.
-  
-  Lemma isFixLambda_app_mkApps' t l x : isFixLambda t -> isFixLambda_app (tApp (mkApps t l) x).
-  Proof. 
-    induction l using rev_ind; simpl; auto.
-    destruct t; auto. simpl => //.
-    intros isl. specialize (IHl isl).
-    simpl in IHl.
-    now rewrite mkApps_app /=. 
-  Qed.
-
   Ltac discr_mkApps H := 
     let Hf := fresh in let Hargs := fresh in
     rewrite ?tApp_mkApps -?mkApps_app in H;
@@ -915,7 +714,7 @@ Section Rho.
         eapply (mkApps_nApp_inj _ _ _ []) in H as [Hf Hargs]);
         [noconf Hf|reflexivity].
 
-  Set Equations With UIP. (* This allows to use decidable ws_cumul_pb on terms. *)
+  Set Equations With UIP. (* This allows to use decidable equality on terms. *)
 
   (* Most of this is discrimination, we should have a more robust tactic to  
     solve this. *)
@@ -929,19 +728,6 @@ Section Rho.
       change (mkApps (tApp (tLambda na ty b) a) l) with
         (mkApps (tLambda na ty b) (a :: l)).
       now simp rho.
-  Qed.
-  
-  Lemma bool_pirr (b b' : bool) (p q : b = b') : p = q.
-  Proof. noconf p. now noconf q. Qed.
-
-  Lemma view_lambda_fix_app_other t u (H : ~~ isFixLambda_app (tApp t u)) :
-    view_lambda_fix_app t u = fix_lambda_app_other t u H.
-  Proof.
-    induction t; simpl; f_equal; try apply bool_pirr.
-    simpl in H => //.
-    specialize (IHt1 H).
-    rewrite IHt1. destruct t1; auto.
-    simpl in H => //.
   Qed.
 
   Lemma rho_app_lambda' Γ na ty b l :
@@ -1205,82 +991,8 @@ Section Rho.
     simpl. rewrite IHacc. reflexivity.
   Qed.
 
-  Section All2i.
-    (** A special notion of All2 just for this proof *)
-
-    Hint Constructors All2i : pcuic.
-
-    Inductive All2i_ctx {A B : Type} (R : nat -> A -> B -> Type) : list A -> list B -> Type :=
-      All2i_ctx_nil : All2i_ctx R [] []
-    | All2i_ctx_cons : forall (x : A) (y : B) (l : list A) (l' : list B),
-            R (List.length l) x y -> All2i_ctx R l l' -> All2i_ctx R (x :: l) (y :: l').
-    Hint Constructors All2i_ctx : core pcuic.
-
-    Lemma All2i_ctx_app {A B} (P : nat -> A -> B -> Type) l0 l0' l1 l1' :
-      All2i_ctx P l0' l1' ->
-      All2i_ctx (fun n => P (n + #|l0'|)) l0 l1 ->
-      All2i_ctx P (l0 ++ l0') (l1 ++ l1').
-    Proof.
-      intros H. induction 1; simpl. apply H.
-      constructor. now rewrite app_length. apply IHX.
-    Qed.
-
-    Lemma All2i_ctx_length {A B} (P : nat -> A -> B -> Type) l l' :
-      All2i_ctx P l l' -> #|l| = #|l'|.
-    Proof. induction 1; simpl; lia. Qed.
-
-    Lemma All2i_ctx_impl {A B} (P Q : nat -> A -> B -> Type) l l' :
-      All2i_ctx P l l' -> (forall n x y, P n x y -> Q n x y) -> All2i_ctx Q l l'.
-    Proof. induction 1; simpl; auto. Qed.
-
-    Lemma All2i_ctx_rev {A B} (P : nat -> A -> B -> Type) l l' :
-      All2i_ctx P l l' ->
-      All2i_ctx (fun n => P (#|l| - S n)) (List.rev l) (List.rev l').
-    Proof.
-      induction 1. constructor. simpl List.rev.
-      apply All2i_ctx_app. repeat constructor. simpl. rewrite Nat.sub_0_r. auto.
-      simpl. eapply All2i_ctx_impl; eauto. intros. simpl in X0. now rewrite Nat.add_1_r.
-    Qed.
-    
-    Lemma All2i_rev_ctx {A B} (R : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
-      All2i_ctx R l l' -> All2i R 0 (List.rev l) (List.rev l').
-    Proof.
-      induction 1. simpl. constructor.
-      simpl. apply All2i_app => //. simpl. rewrite List.rev_length. pcuic.
-    Qed.
-
-    Lemma All2i_rev_ctx_gen {A B} (R : nat -> A -> B -> Type) (n : nat) (l : list A) (l' : list B) :
-      All2i R n l l' -> All2i_ctx (fun m => R (n + m)) (List.rev l) (List.rev l').
-    Proof.
-      induction 1. simpl. constructor.
-      simpl. eapply All2i_ctx_app. constructor. now rewrite Nat.add_0_r. constructor.
-      eapply All2i_ctx_impl; eauto. intros.
-      simpl in *. rewrite [S _]Nat.add_succ_comm in X0. now rewrite Nat.add_1_r.
-    Qed.
-
-    Lemma All2i_rev_ctx_inv {A B} (R : nat -> A -> B -> Type) (l : list A) (l' : list B) :
-      All2i R 0 l l' -> All2i_ctx R (List.rev l) (List.rev l').
-    Proof.
-      intros. eapply All2i_rev_ctx_gen in X. simpl in X. apply X.
-    Qed.
-
-    Lemma All2i_mapi_rec {A B C D} (R : nat -> A -> B -> Type)
-          (l : list C) (l' : list D) (f : nat -> C -> A) (g : nat -> D -> B) n :
-      All2i (fun n x y => R n (f n x) (g n y)) n l l' ->
-      All2i R n (mapi_rec f l n) (mapi_rec g l' n).
-    Proof.
-      induction 1; constructor; auto.
-    Qed.
-
-    Lemma All2i_trivial {A B} (R : nat -> A -> B -> Type) (H : forall n x y, R n x y) n l l' :
-      #|l| = #|l'| -> All2i R n l l'.
-    Proof.
-      induction l in n, l' |- *; destruct l'; simpl; try discriminate; intros; constructor; auto.
-    Qed.
-  End All2i.
-
   Definition pres_bodies Γ Δ σ :=
-    All2i_ctx
+    All2i_len
      (fun n decl decl' => (decl_body decl' = option_map (fun x => x.[⇑^n σ]) (decl_body decl)))
      Γ Δ.
 
@@ -1443,7 +1155,7 @@ Section Rho.
   Qed.
   
   Lemma shift_renaming Γ Δ ctx ctx' r :
-    All2i_ctx (fun n decl decl' => (decl_body decl' = option_map (fun x => x.[ren (shiftn n r)]) (decl_body decl)))
+    All2i_len (fun n decl decl' => (decl_body decl' = option_map (fun x => x.[ren (shiftn n r)]) (decl_body decl)))
           ctx ctx' ->
     renaming Γ Δ r ->
     renaming (Γ ,,, ctx) (Δ ,,, ctx') (shiftn #|ctx| r).
@@ -1546,34 +1258,6 @@ Section Rho.
     apply IH.
   Qed.
 
-  Lemma isConstruct_app_rename r t :
-    isConstruct_app t = isConstruct_app (rename r t).
-  Proof.
-    unfold isConstruct_app. unfold decompose_app. generalize (@nil term) at 1.
-    change (@nil term) with (map (rename r) []). generalize (@nil term).
-    induction t; simpl; auto.
-    intros l l0. specialize (IHt1 (t2 :: l) (t2 :: l0)).
-    now rewrite IHt1.
-  Qed.
-
-  Lemma is_constructor_rename x l r : is_constructor x l = is_constructor x (map (rename r) l).
-  Proof.
-    rewrite /is_constructor nth_error_map.
-    elim: nth_error_spec => //.
-    move=> n hnth xl /=.
-    now apply isConstruct_app_rename.
-  Qed.
-
-  Lemma isFixLambda_app_rename r t : ~~ isFixLambda_app t -> ~~ isFixLambda_app (rename r t).
-  Proof.
-    induction t; simpl; auto.
-    destruct t1; simpl in *; auto.
-  Qed.
-
-  Lemma construct_cofix_rename r t : discr_construct_cofix t -> discr_construct_cofix (rename r t).
-  Proof.
-    destruct t; simpl; try congruence.
-  Qed.
   Transparent fold_context.
 
   Lemma fold_context_mapi_context f g (Γ : context) : 
@@ -1739,7 +1423,7 @@ Section Rho.
 
   Lemma pres_bodies_rename Γ Δ r ctx :
     renaming Γ Δ r ->
-    All2i_ctx
+    All2i_len
       (fun (n : nat) (decl decl' : context_decl) =>
         decl_body decl' =
         option_map (fun x : term => x.[ren (shiftn n r)]) (decl_body decl))
@@ -1756,7 +1440,7 @@ Section Rho.
   
   Lemma pres_bodies_rename' Γ Δ r ctx :
     renaming Γ Δ r ->
-    All2i_ctx
+    All2i_len
       (fun (n : nat) (decl decl' : context_decl) =>
         decl_body decl' =
         option_map (fun x : term => x.[ren (shiftn n r)]) (decl_body decl))
@@ -3467,11 +3151,6 @@ Section Rho.
     now rewrite on_ctx_free_vars_app addnP_xpredT => /andP[].
   Qed.
 
-  Lemma eqb_refl {A} `{ReflectEq A} (x : A) : eqb x x.
-  Proof.
-    case: eqb_spec => //.
-  Qed.
-
   Lemma pred1_ctx_over_refl_gen Γ Γ' Δ :
     pred1_ctx Σ Γ Γ' ->
     pred1_ctx_over Σ Γ Γ' Δ Δ.
@@ -3576,17 +3255,6 @@ Section Rho.
     All_decls P d (map_decl f d').
   Proof.
     case; constructor => //.
-  Qed.
-
-  Lemma construct_cofix_discr_match {A} t cstr (cfix : mfixpoint term -> nat -> A) default :
-    construct_cofix_discr t = false ->
-    match t with
-    | tConstruct ind c _ => cstr ind c
-    | tCoFix mfix idx => cfix mfix idx
-    | _ => default
-    end = default.
-  Proof.
-    destruct t => //.
   Qed.
 
   Theorem triangle_gen :

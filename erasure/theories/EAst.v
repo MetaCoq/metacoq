@@ -179,12 +179,14 @@ Record constructor_body :=
     cstr_name : ident;
     cstr_nargs : nat (* arity, w/o lets, w/o parameters *)
   }.
+Derive NoConfusion for constructor_body.
 
 Record projection_body :=
   mkProjection {
     proj_name : ident;
   }.
-  
+Derive NoConfusion for projection_body.
+
 (** See [one_inductive_body] from [declarations.ml]. *)
 Record one_inductive_body : Set := {
   ind_name : ident;
@@ -192,11 +194,13 @@ Record one_inductive_body : Set := {
   ind_kelim : allowed_eliminations; (* Allowed eliminations *)
   ind_ctors : list constructor_body;
   ind_projs : list projection_body (* names of projections, if any. *) }.
+Derive NoConfusion for one_inductive_body.
 
 (** See [mutual_inductive_body] from [declarations.ml]. *)
 Record mutual_inductive_body := {
   ind_npars : nat;
   ind_bodies : list one_inductive_body }.
+Derive NoConfusion for mutual_inductive_body.
 
 Definition cstr_arity (mdecl : mutual_inductive_body) (cdecl : constructor_body) := 
   (mdecl.(ind_npars) + cdecl.(cstr_nargs))%nat.  
@@ -207,6 +211,7 @@ Record constant_body := { cst_body : option term }.
 Inductive global_decl :=
 | ConstantDecl : constant_body -> global_decl
 | InductiveDecl : mutual_inductive_body -> global_decl.
+Derive NoConfusion for global_decl.
 
 
 (** A context of global declarations *)

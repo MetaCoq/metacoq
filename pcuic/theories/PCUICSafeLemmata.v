@@ -1064,7 +1064,29 @@ Section Lemmata.
     intros Γ p i' c u l [T h].
     now apply PCUICInductiveInversion.invert_Proj_Construct in h.
   Qed.
-
 End Lemmata.
+
+Lemma welltyped_brs {cf} (Σ : global_env_ext) (HΣ :∥ wf_ext Σ ∥)  Γ ci p t2 brs T : Σ ;;; Γ |- tCase ci p t2 brs : T -> 
+    ∥ All (fun br => welltyped Σ (Γ ,,, inst_case_branch_context p br) (bbody br)) brs ∥.
+Proof.
+  intros Ht. destruct HΣ. constructor.
+  eapply inversion_Case in Ht as (mdecl & idecl & decli & indices & data & hty); auto.
+  destruct data.
+  eapply validity in scrut_ty.
+  eapply forall_nth_error_All => i br hnth.
+  eapply All2i_nth_error_r in brs_ty; tea.
+  destruct brs_ty as [cdecl [hnthc [eqctx [wfbctxty [tyb _]]]]].
+  have declc: declared_constructor Σ (ci, i) mdecl idecl cdecl.
+  { split; auto. }
+  have wfbr : wf_branch cdecl br.
+  { eapply Forall2_All2 in wf_brs. eapply All2_nth_error in wf_brs; tea. }
+  have wfΓ : wf_local Σ Γ.
+  { eapply typing_wf_local in pret_ty. now eapply All_local_env_app_inv in pret_ty as []. }
+  epose proof (wf_case_inst_case_context ps indices decli scrut_ty wf_pred pret_ty conv_pctx
+    _ _ _ declc wfbr eqctx) as [wfictx eqictx].
+  eexists.
+  eapply closed_context_conversion; tea.
+  now symmetry.
+Qed.
 
 #[global] Hint Resolve isType_welltyped : pcuic.

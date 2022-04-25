@@ -1111,10 +1111,18 @@ Proof.
   rewrite IHx. now rewrite app_comm_cons.
 Qed.
 
-Lemma firstn_app_left (A : Type) (n : nat) (l1 l2 : list A) k :
+Lemma firstn_app_left_rem (A : Type) (n : nat) (l1 l2 : list A) k :
   k = #|l1| + n ->
   firstn k (l1 ++ l2) = l1 ++ firstn n l2.
 Proof. intros ->; apply firstn_app_2. Qed.
+
+Lemma firstn_app_left {A} n (l l' : list A) : 
+  n = #|l| ->  
+  firstn n (l ++ l') = l.
+Proof.
+  intros ->.
+  rewrite firstn_app firstn_all Nat.sub_diag firstn_0 // app_nil_r //.
+Qed.
 
 Lemma skipn_all_app_eq {A} n (l l' : list A) : n = #|l| -> skipn n (l ++ l') = l'.
 Proof.

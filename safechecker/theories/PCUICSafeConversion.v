@@ -4051,9 +4051,7 @@ Qed.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     eapply inv_reduced_body_proj in H; eauto.
     destruct H as [(<-&?&?)].
-    rewrite PCUICParallelReductionConfluence.eqb_refl in eq5. discriminate.
-    (* rewrite eq_prod_refl in eq5.
-      eauto using eq_prod_refl, Nat.eqb_refl, eq_string_refl, eq_inductive_refl. *)
+    now rewrite eqb_refl in eq5.
   Qed.
   Next Obligation.
     pose proof (heΣ _ wfΣ) as [].
@@ -4536,8 +4534,7 @@ Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     eapply inv_stuck_fixes in H as [[<-]]; eauto.
-    rewrite PCUICParallelReductionConfluence.eqb_refl in idx_uneq.
-    congruence.
+    now rewrite eqb_refl in idx_uneq.
   Qed.
 
   (* tCoFix *)
@@ -4583,7 +4580,7 @@ Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     eapply inv_stuck_cofixes in H as [(<-&?&?)]; eauto.
-    rewrite PCUICParallelReductionConfluence.eqb_refl in idx_uneq.
+    rewrite eqb_refl in idx_uneq.
     congruence.
   Qed.
 
@@ -5640,7 +5637,7 @@ Qed.
          2: { intros; apply iff_reflect. eapply (abstract_env_compare_universe_correct _ _ leq); apply wf_universe_iff; eauto.  
             all: apply wf_universe_iff; eauto. 
          }
-         rewrite PCUICParallelReductionConfluence.eqb_refl in noteq.
+         rewrite eqb_refl in noteq.
          apply All2_length in rargs1.
          rewrite <- rargs1 in H3. 
          apply ssrbool.not_false_is_true. rewrite noteq.
@@ -5660,7 +5657,7 @@ Qed.
          apply inversion_Construct in typ2 as (?&?&?&?&?&?&?); auto.
          apply consistent_instance_ext_wf in c0.
          apply consistent_instance_ext_wf in c.
-         rewrite !PCUICParallelReductionConfluence.eqb_refl in noteq.
+         rewrite !eqb_refl in noteq.
          apply All2_length in rargs1.
          rewrite <- rargs1 in H4.
          apply ssrbool.not_false_is_true. rewrite noteq. cbn. 
@@ -5678,7 +5675,7 @@ Qed.
     all: inversion r2; subst; clear r2.
     all: inversion s2; subst; clear s2.
     all: destruct hdiscr.
-    all: try now rewrite PCUICParallelReductionConfluence.eqb_refl in noteq.
+    all: try now rewrite eqb_refl in noteq.
     - zip fold in h1.
       eapply welltyped_context in h1; eauto.
       destruct h1 as (?&typ).

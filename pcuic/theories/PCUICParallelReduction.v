@@ -1229,7 +1229,7 @@ Qed.
       rewrite 2!rename_mkApps. simpl. inv_on_free_vars.
       econstructor; tas.
       3:eapply rename_unfold_fix; tea.
-      3:eapply is_constructor_rename; tea.
+      3:rewrite -is_constructor_rename; tea.
       + rewrite !rename_fix_context.
         eapply forall_P; tea.
         eapply on_free_vars_fix_context; solve_all.

@@ -37,14 +37,6 @@ Definition atom t :=
   | _ => false
   end.
 
-Definition isFixApp t := isFix (head t).
-Definition isConstructApp t := isConstruct (head t).
-
-Lemma isFixApp_mkApps f l : isFixApp (mkApps f l) = isFixApp f.
-Proof. rewrite /isFixApp head_mkApps //. Qed.
-Lemma isConstructApp_mkApps f l : isConstructApp (mkApps f l) = isConstructApp f.
-Proof. rewrite /isConstructApp head_mkApps //. Qed.
-
 Definition isStuckFix t (args : list term) :=
   match t with
   | tFix mfix idx =>
@@ -486,23 +478,23 @@ Section Wcbv.
       * invs i.
   Qed.
 
-  Derive NoConfusionHom for EAst.global_decl.
-
-  Lemma Forall_Forall2_refl :
-    forall (A : Type) (R : A -> A -> Prop) (l : list A),
-    Forall (fun x : A => R x x) l -> Forall2 R l l.
+  Lemma value_app_inv L : value (mkApps tBox L) -> L = nil.
   Proof.
-    induction 1; constructor; auto.
+    intros. depelim X.
+    - destruct L using rev_ind.
+      reflexivity.
+      rewrite mkApps_app in i. inv i.
+    - EAstUtils.solve_discr. depelim v.
   Qed.
 
-  (* Lemma value_head_spec_impl t :
-    value_head t) (~~ (isLambda t || (if with_guarded_fix then isFixApp t else isFix t) || isBox t)).
+  Lemma eval_to_mkApps_tBox_inv t argsv :
+    eval t (mkApps tBox argsv) ->
+    argsv = [].
   Proof.
-    destruct with_guarded_fix;
-    destruct t; simpl; intuition auto; eapply implyb.
-  Qed. *)
-
-  Derive Signature for Forall.
+    intros ev.
+    apply eval_to_value in ev.
+    now apply value_app_inv in ev.
+  Qed.
 
   Lemma eval_stuck_Fix {f mfix idx args args'} :
     with_guarded_fix ->
@@ -1512,3 +1504,4 @@ Proof.
   specialize (IHx e _ H' H). simpl.
   rewrite mkApps_app. simpl. econstructor; eauto.
 Qed.
+

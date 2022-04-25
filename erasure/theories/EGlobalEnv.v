@@ -90,6 +90,13 @@ Section Lookups.
   
 End Lookups.
 
+Lemma declared_constant_lookup {Σ kn cdecl} :
+  declared_constant Σ kn cdecl ->
+  lookup_constant Σ kn = Some cdecl.
+Proof.
+  unfold declared_constant, lookup_constant. now intros ->.
+Qed.
+
 Lemma declared_minductive_lookup {Σ ind mdecl} :
   declared_minductive Σ ind mdecl ->
   lookup_minductive Σ ind = Some mdecl.
@@ -152,10 +159,12 @@ Qed.
 Definition inductive_isprop_and_pars Σ ind :=
   '(mdecl, idecl) <- lookup_inductive Σ ind ;;
   ret (idecl.(ind_propositional), mdecl.(ind_npars)).
+Arguments inductive_isprop_and_pars : simpl never.
 
 Definition constructor_isprop_pars_decl Σ ind c :=
   '(mdecl, idecl, cdecl) <- lookup_constructor Σ ind c ;;
   ret (idecl.(ind_propositional), mdecl.(ind_npars), cdecl).
+Arguments constructor_isprop_pars_decl : simpl never.
   
 Definition closed_decl (d : EAst.global_decl) := 
   match d with

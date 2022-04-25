@@ -310,6 +310,9 @@ Module Environment (T : Term).
     {| universes := Σ.(universes);
        declarations := decl :: Σ.(declarations) |}.
       
+  Lemma eta_global_env Σ : Σ = {| universes := Σ.(universes); declarations := Σ.(declarations) |}.
+  Proof. now destruct Σ. Qed.
+  
   (** A context of global declarations + global universe constraints,
       i.e. a global environment *)
 

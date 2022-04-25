@@ -157,8 +157,20 @@ Section Conversion.
     eapply H0. eapply r; eauto. 
   Qed.
 
-  Definition eqt u v :=
-    forall Σ (wfΣ : abstract_env_ext_rel X Σ), ∥ eq_term Σ Σ u v ∥.
+  Import PCUICAlpha.
+
+  Definition eqt u v := ∥ u ≡α v ∥.
+
+  Lemma eqt_eqterm {Σ} {wfΣ : abstract_env_ext_rel X Σ} {u v} :
+    u ≡α v -> eq_term Σ Σ u v.
+  Proof.
+    intros eq.
+    eapply upto_names_eq_term_refl; tc.
+    exact eq.
+  Qed.
+
+  Local Instance eqt_refl : RelationClasses.Reflexive eqt.
+  Proof. red. intros x; constructor. reflexivity. Qed.
 
   Lemma eq_term_valid_pos :
     forall {u v p},
@@ -168,13 +180,14 @@ Section Conversion.
   Proof.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     intros u v p vp e.
-    destruct (e _ wfΣ) as [e']. 
-    eapply eq_term_valid_pos. all: eauto.
+    destruct e as [e']. 
+    eapply eq_term_valid_pos. all: eauto. now eapply eqt_eqterm.
+    Unshelve. all:eauto.
   Qed.
 
   Definition weqt {Γ} (u v : wterm Γ) :=
     eqt (` u) (` v).
-
+  
   Equations R_aux (Γ : context) :
     (∑ t : term, pos t × (∑ w : wterm Γ, pos (` w) × state)) ->
     (∑ t : term, pos t × (∑ w : wterm Γ, pos (` w) × state)) -> Prop :=
@@ -210,32 +223,31 @@ Section Conversion.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     rewrite R_aux_equation_1.
     unshelve eapply dlexmod_Acc.
-    - intros x y [e]; eauto.  constructor. eapply compare_term_sym.
-      erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
-    - intros x y z [e1] [e2]; eauto. constructor. 
-      erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.  eapply compare_term_trans. all: eauto.
+    - intros x y [e]; eauto.  constructor. now symmetry.
+    - intros x y z [e1] [e2]; eauto. constructor. now etransitivity; tea.
     - intro u. eapply Subterm.wf_lexprod.
       + intro. eapply posR_Acc.
       + intros [w' q'].
         unshelve eapply dlexmod_Acc.
-        * intros x y [e]; eauto. constructor.
-        erewrite (abstract_env_ext_irr _ _ wfΣ); eauto. eapply compare_term_sym. assumption.
-        * intros x y z [e1] [e2]; eauto. constructor. 
-        erewrite (abstract_env_ext_irr _ _ wfΣ); eauto. eapply compare_term_trans. all: eauto.
+        * intros x y [e]; eauto. constructor. now symmetry.
+        * intros x y z [e1] [e2]; eauto. constructor.
+          now etransitivity; tea. 
         * intros [t' h']. eapply Subterm.wf_lexprod.
           -- intro. eapply posR_Acc.
           -- intro. eapply stateR_Acc.
         * intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]]; eauto. 
           eexists _,_. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
           intuition eauto using sq.
-          constructor. eapply compare_term_trans. all: eauto.
-        * intros x. exists (fun  _ _ => sq (compare_term_refl _ _ _)).
+          constructor. etransitivity; tea.
+        * intros x.
+          exists (@eqt_refl _).
+          unfold weqt, eqt.
           intros [[q'' h] ?].
           unfold R_aux_obligations_obligation_2.
           simpl. f_equal. f_equal.
           eapply uip.
         * cbn. intros x x' [[q'' h] ?] e.
-          destruct (e _ wfΣ) as [e'].
+          destruct e as [e'].
           unfold R_aux_obligations_obligation_2.
           simpl. f_equal. f_equal.
           eapply uip.
@@ -244,7 +256,7 @@ Section Conversion.
           simpl. f_equal. f_equal.
           eapply uip.
         * intros [t1 ht1] [t2 ht2] e [[q1 hq1] s1] [[q2 hq2] s2] h.
-          destruct (e _ wfΣ) as [e'].
+          destruct e as [e'].
           simpl in *.
           dependent destruction h. 
           -- left. unfold posR in *. simpl in *. assumption.
@@ -257,13 +269,13 @@ Section Conversion.
     - intros x x' y [e] [y' [x'' [r [[e1] [e2]]]]]; eauto.
       intros. erewrite (abstract_env_ext_irr _ _ wfΣ); eauto.
       eexists _,_. intuition eauto using sq.
-      constructor. eapply compare_term_trans. all: eauto.
-    - intros x. exists (fun  _ _ => sq (compare_term_refl _ _ _)). intros [[q' h] [? [? ?]]].
+      constructor. etransitivity; eauto.
+    - intros x. exists (@eqt_refl _). intros [[q' h] [? [? ?]]].
       unfold R_aux_obligations_obligation_1.
       simpl. f_equal. f_equal.
       eapply uip.
     - intros x x' [[q' h] [? [? ?]]] e.
-      destruct (e _ _) as [e']; eauto. 
+      destruct e as [e']; eauto. 
       unfold R_aux_obligations_obligation_1.
       simpl. f_equal. f_equal.
       eapply uip.
@@ -274,7 +286,7 @@ Section Conversion.
     - intros x x' e
              [[p1 hp1] [[u hu] [[q1 hq1] s1]]]
              [[p2 hp2] [[v hv] [[q2 hq2] s2]]] hl.
-      destruct (e _ _) as [e']; eauto. 
+      destruct e as [e']; eauto. 
       simpl in *.
       dependent destruction hl.
       + left. unfold posR in *.
@@ -322,6 +334,42 @@ Section Conversion.
   Qed.
 
   Notation eq_term Σ t u := (eq_term Σ Σ t u).
+  
+  Lemma R_aux_irrelevance Γ x y z : 
+    ((x.π1; x.π2.1), (existT (fun x => pos x × state) (` x.π2.2.π1) x.π2.2.π2)) = 
+    ((y.π1; y.π2.1), (existT (fun x => pos x × state) (` y.π2.2.π1) y.π2.2.π2)) ->
+    R_aux Γ z x -> R_aux Γ z y.
+  Proof.
+    destruct x as [t [pt [w [pw s]]]], y as [t' [pt' [w' [pw' s']]]].
+    destruct z as [tz [ptz [wz [pwz sz]]]].
+    cbn. intros [=]. subst. noconf H1. destruct w as [w wt], w' as [w' wt'].
+    cbn in *. subst w'. noconf H3.
+    unfold R_aux.
+    intros hr. depelim hr.
+    - now constructor.
+    - cbn in H.
+      eapply right_dlexmod with e. cbn.
+      depelim H.
+      * constructor. exact H.
+      * constructor 2.
+        depelim H.
+        + now constructor.
+        + eapply right_dlexmod with e0. cbn in H.
+          depelim H.
+          { constructor 1. cbn. exact H. }
+          { constructor 2. exact H. }
+  Qed.
+
+  Lemma R_irrelevance Γ x y z : 
+    (x.(st), x.(tm1), x.(stk1), x.(tm2), x.(stk2)) = 
+    (y.(st), y.(tm1), y.(stk1), y.(tm2), y.(stk2)) ->
+    R Γ z x -> R Γ z y.
+  Proof.
+    destruct x, y; cbn.
+    intros [=]; subst.
+    unfold R. eapply R_aux_irrelevance; cbn.
+    reflexivity.
+  Qed.
 
   Lemma R_cored :
     forall Γ p1 p2,
@@ -334,19 +382,19 @@ Section Conversion.
 
   Lemma R_aux_positionR :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) s1 s2,
-      (forall Σ (wfΣ : abstract_env_ext_rel X Σ), eq_term Σ t1 t2) ->
+      eqt t1 t2 ->
       positionR (` p1) (` p2) ->
       R_aux Γ (t1 ; (p1, s1)) (t2 ; (p2, s2)).
   Proof.
     intros Γ t1 t2 p1 p2 [? [? ?]] s2 e h.
     unshelve eright.
-    - constructor. eauto.
+    - eauto.
     - left. unfold posR. simpl. assumption.
   Qed.
 
   Lemma R_positionR :
     forall Γ p1 p2,
-      (forall Σ (wfΣ : abstract_env_ext_rel X Σ), eq_term Σ (pzt p1) (pzt p2)) ->
+      (eqt (pzt p1) (pzt p2)) ->
       positionR (` (pps1 p1)) (` (pps1 p2)) ->
       R Γ p1 p2.
   Proof.
@@ -358,7 +406,7 @@ Section Conversion.
 
   Lemma R_aux_cored2 :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
-      (forall Σ (wfΣ : abstract_env_ext_rel X Σ), eq_term Σ t1 t2) ->
+      (eqt t1 t2) ->
       ` p1 = ` p2 ->
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), cored' Σ Γ (` w1) (` w2)) ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
@@ -366,7 +414,7 @@ Section Conversion.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 h.
     cbn in e2. cbn in h. subst.
     unshelve eright.
-    - constructor. eauto. 
+    - auto.
     - unfold R_aux_obligations_obligation_1. simpl.
       match goal with
       | |- context [ exist p2 ?hp1 ] =>
@@ -379,7 +427,7 @@ Section Conversion.
 
   Lemma R_cored2 :
     forall Γ p1 p2,
-      (forall Σ (wfΣ : abstract_env_ext_rel X Σ), eq_term Σ (pzt p1) (pzt p2)) ->
+      (eqt (pzt p1) (pzt p2)) ->
       ` (pps1 p1) = ` (pps1 p2) ->
       (forall Σ (wfΣ : abstract_env_ext_rel X Σ), 
           cored Σ Γ (` (pwt p1)) (` (pwt p2))) ->
@@ -394,16 +442,16 @@ Section Conversion.
 
   Lemma R_aux_positionR2 :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2,
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ t1 t2) ->
+      (eqt t1 t2) ->
       ` p1 = ` p2 ->
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ (` w1) (` w2)) ->
+      (eqt (` w1) (` w2)) ->
       positionR (` q1) (` q2) ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
   Proof.
     intros Γ t1 t2 [p1 hp1] [p2 hp2] [t1' h1'] [t2' h2'] q1 q2 s1 s2 e1 e2 e3 h.
     cbn in e2. cbn in e3. subst.
     unshelve eright.
-    - constructor. eauto.
+    - auto.
     - unfold R_aux_obligations_obligation_1. simpl.
       match goal with
       | |- context [ exist p2 ?hp1 ] =>
@@ -412,15 +460,15 @@ Section Conversion.
       rewrite e.
       right.
       unshelve eright.
-      + constructor. eauto.
+      + auto.
       + left. unfold posR. simpl. assumption.
   Qed.
 
   Lemma R_positionR2 :
     forall Γ p1 p2,
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ (pzt p1) (pzt p2)) ->
+      (eqt (pzt p1) (pzt p2)) ->
       ` (pps1 p1) = ` (pps1 p2) ->
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ (` (pwt p1)) (` (pwt p2))) ->
+      (eqt (` (pwt p1)) (` (pwt p2))) ->
       positionR (` (pps2 p1)) (` (pps2 p2)) ->
       R Γ p1 p2.
   Proof.
@@ -431,9 +479,9 @@ Section Conversion.
 
   Lemma R_aux_stateR :
     forall Γ t1 t2 (p1 : pos t1) (p2 : pos t2) w1 w2 q1 q2 s1 s2 ,
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ t1 t2) ->
+      (eqt t1 t2) ->
       ` p1 = ` p2 ->
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ (` w1) (` w2)) ->
+      (eqt (` w1) (` w2)) ->
       ` q1 = ` q2 ->
       stateR s1 s2 ->
       R_aux Γ (t1 ; (p1, (w1 ; (q1, s1)))) (t2 ; (p2, (w2 ; (q2, s2)))).
@@ -442,7 +490,7 @@ Section Conversion.
            e1 e2 e3 e4 h.
     cbn in e2. cbn in e3. cbn in e4. subst.
     unshelve eright.
-    - constructor. eauto.
+    - auto.
     - unfold R_aux_obligations_obligation_1. simpl.
       match goal with
       | |- context [ exist p2 ?hp1 ] =>
@@ -451,7 +499,7 @@ Section Conversion.
       rewrite e.
       right.
       unshelve eright.
-      + constructor. eauto.
+      + auto.
       + unfold R_aux_obligations_obligation_2. simpl.
         match goal with
         | |- context [ exist q2 ?hq1 ] =>
@@ -463,9 +511,9 @@ Section Conversion.
 
   Lemma R_stateR :
     forall Γ p1 p2,
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ (pzt p1) (pzt p2)) ->
+      (eqt (pzt p1) (pzt p2)) ->
       ` (pps1 p1) = ` (pps1 p2) ->
-      (forall Σ, abstract_env_ext_rel X Σ -> eq_term Σ (` (pwt p1)) (` (pwt p2))) ->
+      (eqt (` (pwt p1)) (` (pwt p2))) ->
       ` (pps2 p1) = ` (pps2 p2) ->
       stateR (st p1) (st p2) ->
       R Γ p1 p2.
@@ -739,7 +787,7 @@ Section Conversion.
     (repack (isconv_args_raw leq t1 π1 t2 π2 aux)) (only parsing).
   Notation isconv_fallback leq t1 π1 t2 π2 aux :=
     (repack (isconv_fallback_raw leq t1 π1 t2 π2 aux)) (only parsing).
-
+  
   Equations(noeqns) _isconv_red (Γ : context) (leq : conv_pb)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
             (t2 : term) (π2 : stack) (h2 : wtp Γ t2 π2)
@@ -819,7 +867,7 @@ Section Conversion.
       end.
       + assert (ee2 := eq2). rewrite ee in ee2. inversion ee2. subst.
         unshelve eapply R_stateR.
-        * simpl. rewrite stack_cat_appstack. reflexivity.
+        * simpl. rewrite stack_cat_appstack. red. reflexivity.
         * simpl. rewrite stack_cat_appstack. reflexivity.
         * simpl. rewrite stack_cat_appstack. reflexivity.
         * simpl. rewrite stack_cat_appstack. reflexivity.
@@ -1927,6 +1975,7 @@ Qed.
       Unshelve. all: eauto. 
   Qed.
 
+
   Equations isconv_branches (Γ : context)
     (ci : case_info)
     (p : predicate term) (c : term) (brs1 brs2 : list (branch term))
@@ -2042,22 +2091,10 @@ Qed.
       now unfold app_context; rewrite app_assoc.
   Qed.
   Next Obligation.
-    clear aux.
-    lazymatch goal with
-    | h : R _ _ ?r1 |- R _ _ ?r2 =>
-      assert (er : r1 = r2)
-    end.
-    { clear i.
-      match goal with
-      | |- {| wth := ?x |} = _ =>
-        generalize x
-      end.
-      rewrite <- !app_assoc. simpl.
-      intro w.
-      f_equal.
-      eapply proof_irrelevance.
-    }
-    rewrite <- er. assumption.
+    clear aux. unfold isconv_branches_obligations_obligation_13.
+    eapply R_irrelevance. 2:tea. cbn.
+    f_equal. f_equal. 2:{ f_equal. now rewrite <-app_assoc. } 
+    f_equal. f_equal. f_equal. now rewrite <- app_assoc.
   Qed. 
   Next Obligation.
     destruct (case_conv_brs_inv h p' c' brs1' brs2' _ h') as [[mdecl [idecl [decli eqp eqp' eqm clm clm']]]]; tea.
@@ -2249,22 +2286,8 @@ Qed.
   Qed.
   Next Obligation.
     clear aux.
-    lazymatch goal with
-    | h : R _ _ ?r1 |- R _ _ ?r2 =>
-      rename h into hr ;
-      assert (e0 : r1 = r2)
-    end.
-    { clear hr.
-      match goal with
-      | |- {| wth := ?x |} = _ =>
-        generalize x
-      end.
-      rewrite <- !app_assoc. simpl.
-      intro w.
-      f_equal.
-      eapply proof_irrelevance.
-    }
-    rewrite <- e0. assumption.
+    eapply R_irrelevance; tea; cbn.
+    now rewrite <- !app_assoc.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -2528,22 +2551,8 @@ Qed.
   Qed.
   Next Obligation.
     clear aux.
-    lazymatch goal with
-    | h : R _ _ ?r1 |- R _ _ ?r2 =>
-      rename h into hr ;
-      assert (e0 : r1 = r2)
-    end.
-    { clear hr.
-      match goal with
-      | |- {| wth := ?x |} = _ =>
-        generalize x
-      end.
-      rewrite <- !app_assoc. simpl.
-      intro w.
-      f_equal.
-      eapply proof_irrelevance.
-    }
-    rewrite <- e0. assumption.
+    eapply R_irrelevance; tea; cbn.
+    now rewrite <- !app_assoc.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
@@ -5701,20 +5710,23 @@ Qed.
     _isconv Fallback Γ t1 π1 h1 t2 π2 h2 aux :=
       λ { | leq | hx | r1 | r2 | hd := _isconv_fallback Γ leq t1 π1 h1 t2 π2 h2 r1 r2 hd hx aux }.
 
-    Lemma welltyped_R_zipc Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
-      forall x y : pack Γ, welltyped Σ Γ (zipc (tm1 x) (stk1 x)) -> R Γ y x -> welltyped Σ Γ (zipc (tm1 y) (stk1 y)).
-    Proof.
-      intros x y H HR.
-      pose proof (heΣ := heΣ _ wfΣ).
-      pose proof (hΣ := hΣ _ wfΣ). cbn.
-      sq. 
-      destruct x, y; cbn in *.
-      (* dependent induction HR.
-      - eapply cored_welltyped. all: eauto.
-        cbn in *. specialize_Σ wfΣ. destruct H.
-      - simpl in H1. revert H1; intros [= H2 _].
-        now rewrite <- H2. *)
-    Admitted.
+  Lemma welltyped_R_zipc Σ (wfΣ : abstract_env_ext_rel X Σ) Γ :
+    forall x y : pack Γ, welltyped Σ Γ (zipc (tm1 x) (stk1 x)) -> R Γ y x -> welltyped Σ Γ (zipc (tm1 y) (stk1 y)).
+  Proof.
+    intros x y H HR.
+    pose proof (heΣ := heΣ _ wfΣ).
+    pose proof (hΣ := hΣ _ wfΣ). cbn.
+    sq. 
+    destruct x, y; cbn in *.
+    depind HR.
+    - cbn in *. specialize_Σ wfΣ.
+      eapply cored'_postpone in H as [u' [cor eq]].
+      eapply cored_welltyped in cor; tea.
+      destruct eq as [eq].
+      eapply welltyped_alpha; tea. symmetry. exact eq.
+    - simpl in *. destruct e. eapply welltyped_alpha; tea.
+      now symmetry.
+  Qed.
 
   Equations(noeqns) isconv_full (s : state) (Γ : context)
             (t1 : term) (π1 : stack) (h1 : wtp Γ t1 π1)
@@ -5735,8 +5747,7 @@ Qed.
     unshelve eapply _isconv. all: try assumption.
     intros s' t1' π1' t2' π2' h1' h2' hx' hR.
     eapply (f (mkpack Γ s' t1' π1' t2' π2' h2')); tea.
-    destruct pp.
-    assert (wth0 = H0) by apply proof_irrelevance. simpl in hR. subst. exact hR.
+    destruct pp. eapply R_irrelevance; tea; cbn. reflexivity.
   Defined.
   Next Obligation.
   match goal with | |- Acc _ ?X => set (u := X) end.
@@ -5751,7 +5762,6 @@ Qed.
   - destruct (abstract_env_ext_exists X) as [[Σ wfΣ]].
     destruct (hΣ _ wfΣ) as [hΣ]. eapply R_Acc; eassumption.
   Defined.
-
   
   Inductive ConversionResultSummary :=
   | ConvSuccess : ConversionResultSummary

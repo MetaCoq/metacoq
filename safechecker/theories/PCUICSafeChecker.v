@@ -209,7 +209,7 @@ Section OnUdecl.
       rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
       intros x Hx. apply In_Var_global_ext_poly. len.
     - destruct wfext as [onX onu]. simpl in *.
-      destruct onu as [_ [_ sat]].
+      destruct onu as [_ [_ [sat _]]].
       do 2 red in sat.
       unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
       red. destruct check_univs => //.
@@ -238,7 +238,7 @@ Section OnUdecl.
       rewrite [mapi_rec _ _ _]mapi_unfold forallb_unfold /= //.
       intros x Hx. apply In_Var_global_ext_poly. len.
     - destruct wfext as [onX onu]. simpl in *.
-      destruct onu as [_ [_ sat]].
+      destruct onu as [_ [_ [sat _]]].
       do 2 red in sat.
       unfold PCUICLookup.global_ext_constraints in sat. simpl in sat.
       red. destruct check_univs => //.
@@ -324,13 +324,22 @@ Section CheckEnv.
   Section UniverseChecks.
   Obligation Tactic := idtac.
 
+  Lemma consistent_extension_on_global Σ uctx :
+    consistent_extension_on (global_uctx Σ) uctx ->
+    consistent_extension_on Σ uctx.
+  Proof.
+    move=> hext v {}/hext [v' [satv' eqv']].
+    exists v'; split=> // x hx; apply: eqv'.
+    apply/LevelSet.union_spec; by left.
+  Qed.
+
   Program Definition check_udecl id X (udecl : universes_decl)
     : EnvCheck X_env_ext_type (∑ uctx', gc_of_uctx (uctx_of_udecl udecl) = Some uctx' /\
                          forall Σ : global_env, abstract_env_rel X Σ -> ∥ on_udecl Σ udecl ∥) :=
     let levels := levels_of_udecl udecl in
     let global_levels := global_levels (abstract_env_univ X) in
     let all_levels := LevelSet.union levels global_levels in
-    check_eq_true_lazy (LevelSet.for_all (fun l => negb (LevelSet.mem l global_levels)) levels)
+    check_eq_true_lazy (LevelSet.for_all (fun l => Level.is_var l) levels)
        (fun _ => (abstract_env_empty_ext X, IllFormedDecl id (Msg ("non fresh level in " ^ print_lset levels))));;
     check_eq_true_lazy (ConstraintSet.for_all (fun '(l1, _, l2) => LevelSet.mem l1 all_levels && LevelSet.mem l2 all_levels) (constraints_of_udecl udecl))
        (fun _ => (abstract_env_empty_ext X, IllFormedDecl id (Msg ("non declared level in " ^ print_lset levels ^
@@ -348,50 +357,45 @@ Section CheckEnv.
     rewrite <- Huctx.
     split; auto.
     assert (HH: ConstraintSet.For_all
-                  (fun '(l1, _, l2) =>
-                     LevelSet.In l1 (LevelSet.union (levels_of_udecl udecl) (global_levels (abstract_env_univ X))) /\
-                     LevelSet.In l2 (LevelSet.union (levels_of_udecl udecl) (global_levels (abstract_env_univ X))))
-                  (constraints_of_udecl udecl)). {
+                  (declared_cstr_levels (LS.union (levels_of_udecl udecl) (global_levels (abstract_env_univ X))))
+                  (constraints_of_udecl udecl)).
+    {
       clear -H0. apply ConstraintSet.for_all_spec in H0.
       2: now intros x y [].
       intros [[l ct] l'] Hl. specialize (H0 _ Hl). simpl in H0.
       apply andb_true_iff in H0. destruct H0 as [H H0].
       apply LevelSet.mem_spec in H. apply LevelSet.mem_spec in H0.
       now split. }
-   repeat split.
+    intros Σ H1; split; last (split; last split).
     - clear -H H1. apply LevelSet.for_all_spec in H.
       2: now intros x y [].
-      intros l Hl. specialize (H l Hl).
-      apply negb_true_iff in H. 
-      erewrite <- abstract_env_univ_correct in H; eauto.
-      now apply LevelSetFact.not_mem_iff in H.
-    - erewrite <- abstract_env_univ_correct in HH; eauto. 
-    - clear - HH Huctx H1 H2. unfold gc_of_uctx, uctx_of_udecl in *.
-      simpl in *.
-      unfold satisfiable_udecl.
-      change (consistent ((Σ , udecl) : global_env_ext)).
-      pose (abstract_env_wf _ H1). sq. 
-      erewrite abstract_env_is_consistent_uctx_correct; eauto.
-      + rename s into HΣ.
-        apply wf_global_uctx_invariants in HΣ.
-        split.
-        * clear -HΣ. cbn. apply LevelSet.union_spec; right.
-          apply HΣ.
-        * intros [[l ct] l'] Hl.
-          apply ConstraintSet.union_spec in Hl. destruct Hl.
-        erewrite <- abstract_env_univ_correct in HH; eauto. 
-        apply (HH _ H). clear -H HΣ ct. destruct HΣ as [_ HΣ].
-        specialize (HΣ (l, ct, l') H).
-        split; apply LevelSet.union_spec; right; apply HΣ.
-  Qed. 
+      intros l Hl Hlglob.
+      move: (wf_env_non_var_levels Σ (heΣ _ _ H1) l Hlglob).
+      now rewrite (H l Hl).
+    - erewrite <- abstract_env_univ_correct in HH; eauto.
+    - pose (HΣ := abstract_env_wf _ H1); sq.
+      apply wf_global_uctx_invariants in HΣ.
+      enough (satisfiable_udecl Σ udecl /\ valid_on_mono_udecl (global_uctx Σ) udecl).
+      1: case: H3; split=> //; apply: consistent_extension_on_global=> //.
+      
+      eapply abstract_env_is_consistent_uctx_correct; eauto=> //.
+      split.
+      * apply LevelSet.union_spec; right ; apply HΣ.
+      * intros [[l ct] l'] [Hl|Hl]%CS.union_spec.
+        + erewrite <- abstract_env_univ_correct in HH; eauto.
+          apply (HH _ Hl).
+        + clear -Hl HΣ ct. destruct HΣ as [_ HΣ].
+          specialize (HΣ (l, ct, l') Hl).
+          split; apply LevelSet.union_spec; right; apply HΣ.
+  Defined.
 
-  Definition check_wf_env_ext_prop X X_ext ext := 
+  Definition check_wf_env_ext_prop X X_ext ext :=
       (forall Σ : global_env, abstract_env_rel X Σ -> abstract_env_ext_rel X_ext (Σ, ext))
       /\ (forall Σ : global_env_ext, abstract_env_ext_rel X_ext Σ -> abstract_env_rel X Σ.1).
-  
+
   Program Definition make_abstract_env_ext X (id : kername) (ext : universes_decl)
     :
-    EnvCheck X_env_ext_type ({ X_ext | check_wf_env_ext_prop X X_ext ext})  :=  
+    EnvCheck X_env_ext_type ({ X_ext | check_wf_env_ext_prop X X_ext ext})  :=
     match ext with
     | Monomorphic_ctx => ret (exist (abstract_env_empty_ext X) _)
     | Polymorphic_ctx _ =>

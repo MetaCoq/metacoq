@@ -441,6 +441,10 @@ Existing Class wf.
 #[global]
 Hint Mode wf + + : typeclass_intances.
 
+Lemma wf_env_non_var_levels (Σ : global_env) `{checker_flags} (hΣ : ∥ wf Σ ∥) :
+  LS.For_all (negb ∘ Level.is_var) (PCUICLookup.global_levels Σ).
+Proof. now destruct hΣ as [[[_ [? _]] _]]. Qed.
+
 Definition wf_ext `{checker_flags} := on_global_env_ext (lift_typing typing).
 Existing Class wf_ext.
 #[global]
@@ -456,7 +460,7 @@ Hint Resolve wf_ext_wf : core.
 
 Lemma wf_ext_consistent {cf:checker_flags} Σ :
   wf_ext Σ -> consistent Σ.
-Proof. intros [? [? [? ?]]]; assumption. Qed.
+Proof. intros [_ [_ [_ [? _]]]]; assumption. Qed.
 #[global]
 Hint Resolve wf_ext_consistent : core.
 

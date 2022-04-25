@@ -40,6 +40,7 @@ Inductive dlexmod {A} {B : A -> Type}
     forall x x' y y' (e : eA x x'),
       leB x' (coe _ _ e y) y' ->
       dlexmod leA eA coe leB (x;y) (x';y').
+Derive Signature for dlexmod.
 
 Notation "x ⊩ R1 ⨶ R2" :=
   (dlexprod R1 (fun x => R2)) (at level 20, right associativity).
@@ -98,8 +99,6 @@ Proof.
     + left. assumption.
     + right. eapply hB ; eassumption.
 Qed.
-
-Derive Signature for dlexmod.
 
 Lemma acc_dlexmod A B
       (leA : A -> A -> Prop) (eA : A -> A -> Prop)

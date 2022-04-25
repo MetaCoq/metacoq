@@ -483,6 +483,11 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
     Definition satisfiable_udecl (univs : ContextSet.t) φ
       := consistent (univs_ext_constraints (ContextSet.constraints univs) φ).
 
+    (* Constraints from udecl between *global* universes
+       are implied by the constraints in univs *)
+    Definition valid_on_mono_udecl (univs : ContextSet.t) ϕ :=
+      consistent_extension_on univs (constraints_of_udecl ϕ).
+
     (* Check that: *)
     (*   - declared levels are fresh *)
     (*   - all levels used in constraints are declared *)
@@ -492,7 +497,8 @@ Module DeclarationTyping (T : Term) (E : EnvironmentSig T)
         let all_levels := LevelSet.union levels global_levels in
         LevelSet.For_all (fun l => ~ LevelSet.In l global_levels) levels
         /\ ConstraintSet.For_all (declared_cstr_levels all_levels) (constraints_of_udecl udecl)
-        /\ satisfiable_udecl univs udecl.
+        /\ satisfiable_udecl univs udecl
+        /\ valid_on_mono_udecl univs udecl.
 
     (** Positivity checking of the inductive, ensuring that the inductive itself 
       can only appear at the right of an arrow in each argument's types. *)

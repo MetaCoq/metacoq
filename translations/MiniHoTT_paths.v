@@ -138,7 +138,7 @@ Notation "g 'o' f" := (compose g%function f%function) (at level 40, left associa
 Definition composeD {A B C} (g : forall b, C b) (f : A -> B) := fun x : A => g (f x).
 Global Arguments composeD {A B C}%type_scope (g f)%function_scope x.
 #[global]
-Hint Unfold composeD.
+Hint Unfold composeD : core.
 Notation "g 'oD' f" := (composeD g f) (at level 40, left associativity) : function_scope.
 
 Notation "x = y :> A" := (paths A x y) : type_scope.
@@ -270,7 +270,7 @@ Arguments center A {_}.
 
 Class Funext := { isequiv_apD10 : forall (A : Type) (P : A -> Type) f g, IsEquiv (@apD10 A P f g) }.
 
-Existing Instance isequiv_apD10.
+#[export] Existing Instance isequiv_apD10.
 
 Definition path_forall `{Funext} {A : Type} {P : A -> Type} (f g : forall x : A, P x) : f == g -> f = g
   := (@apD10 A P f g)^-1.
@@ -1316,6 +1316,7 @@ Hint Resolve
   inv_pp inv_V
  : path_hints.
 
+#[global]
 Hint Rewrite
 @concat_p1
 @concat_1p
@@ -3042,7 +3043,7 @@ Definition equiv_path_sigma `(P : A -> Type) (u v : sigT P)
   := BuildEquiv _ _ (path_sigma_uncurried P u v) _.
 
 (* A contravariant version of [isequiv_path_sigma'] *)
-Instance isequiv_path_sigma_contra `{P : A -> Type} {u v : sigT P}
+#[export] Instance isequiv_path_sigma_contra `{P : A -> Type} {u v : sigT P}
   : IsEquiv (path_sigma_uncurried_contra P u v) | 0.
   unshelve eapply (isequiv_adjointify (path_sigma_uncurried_contra P u v)).
   - intros []. exists 1. reflexivity.

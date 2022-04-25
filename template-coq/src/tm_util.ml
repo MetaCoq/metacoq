@@ -192,6 +192,16 @@ module RetypeMindEntry =
       ctx ~init:(env, evm, [])
     in evm, ctx
 
+  let sup_sort s1 s2 = 
+    let open Sorts in
+    match s1, s2 with
+  | (_, SProp) -> assert false (* template SProp not allowed *)
+  | (SProp, s) | (Prop, s) | (s, Prop) -> s
+  | (Set, Set) -> Sorts.set
+  | (Set, Type u) | (Type u, Set) -> Sorts.sort_of_univ (Universe.sup u Universe.type0)
+  | (Type u, Type v) -> Sorts.sort_of_univ (Universe.sup u v)
+
+
   let infer_mentry_univs env evm mind =
     let pars = mind.mind_entry_params in
     let evm, pars' = retype_context env evm pars in
@@ -210,15 +220,14 @@ module RetypeMindEntry =
     let evm =
       List.fold_left 
         (fun evm oib ->
-          let evm, cstrsu = 
+          let evm, cstrsort = 
             List.fold_left (fun (evm, sort) cstr ->
               let evm, cstrty = retype env evm cstr in
               let _, cstrsort = Reduction.dest_arity env (EConstr.to_constr evm cstrty) in
-              (evm, Univ.sup sort (Sorts.univ_of_sort cstrsort)))
-            (evm, Univ.type0m_univ) oib.mind_entry_lc
-          in 
+              (evm, sup_sort sort cstrsort))
+            (evm, Sorts.prop) oib.mind_entry_lc
+          in
           let _, indsort = Reduction.dest_arity env oib.mind_entry_arity in
-          let cstrsort = Sorts.sort_of_univ cstrsu in
           (* Hacky, but we don't have a good way to enfore max() <= max() constraints yet *)
           let evm = try Evd.set_leq_sort env evm cstrsort indsort with e -> evm in
           evm)
@@ -242,9 +251,9 @@ module RetypeMindEntry =
   let infer_mentry_univs env evm mind = 
     let evm = 
       match mind.mind_entry_universes with
-      | Entries.Monomorphic_entry ctx ->
-        Evd.merge_context_set (UState.UnivFlexible false) evm ctx
-      | Entries.Polymorphic_entry (names, uctx) ->
+      | Entries.Monomorphic_ind_entry -> evm
+      | Entries.Template_ind_entry uctx -> evm
+      | Entries.Polymorphic_ind_entry uctx ->
         let uctx' = ContextSet.of_context uctx in
         Evd.merge_context_set (UState.UnivFlexible false) evm uctx'
     in
@@ -253,11 +262,13 @@ module RetypeMindEntry =
     let mind = nf_mentry_univs evm mind in
     let ctx, mind = 
       match mind.mind_entry_universes with
-      | Entries.Monomorphic_entry ctx ->
-        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Monomorphic_entry ctx }
-      | Entries.Polymorphic_entry (names, uctx) ->
+      | Entries.Monomorphic_ind_entry ->
+        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Monomorphic_ind_entry }
+      | Entries.Template_ind_entry ctx ->
+        Evd.universe_context_set evm, { mind with mind_entry_universes = Entries.Template_ind_entry ctx }
+      | Entries.Polymorphic_ind_entry uctx ->
         let uctx' = Evd.to_universe_context evm in
-        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_entry (names, uctx') }
+        Univ.ContextSet.empty, { mind with mind_entry_universes = Entries.Polymorphic_ind_entry uctx' }
     in ctx, mind
 end 
 

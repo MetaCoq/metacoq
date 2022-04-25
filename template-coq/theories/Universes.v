@@ -1498,7 +1498,7 @@ Module AUContext.
     (u, (mapi (fun i _ => Level.Var i) u, cst)).
 
   Definition levels (uctx : t) : LevelSet.t :=
-    LevelSetProp.of_list (fst (repr uctx)).
+    LevelSetProp.of_list (fst (snd (repr uctx))).
 
   #[local]
   Existing Instance EqDec_ReflectEq.

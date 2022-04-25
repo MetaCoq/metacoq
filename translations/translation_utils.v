@@ -39,7 +39,7 @@ Inductive tsl_result A :=
 Arguments Success {_} _.
 Arguments Error {_} _.
 
-Instance tsl_monad : Monad tsl_result :=
+#[export] Instance tsl_monad : Monad tsl_result :=
   {| ret A a := Success a ;
      bind A B m f :=
        match m with
@@ -48,7 +48,7 @@ Instance tsl_monad : Monad tsl_result :=
        end
   |}.
 
-Instance monad_exc : MonadExc tsl_error tsl_result :=
+#[export] Instance monad_exc : MonadExc tsl_error tsl_result :=
   { raise A e := Error e;
     catch A m f :=
       match m with

@@ -9,7 +9,7 @@ Require Import Equations.Prop.DepElim.
 (* todo: make wf arguments implicit *)
 Section Inversion.
 
-  Context `{checker_flags}.
+  Context {cf : checker_flags}.
   Context (Σ : global_env_ext).
   Context (wfΣ : wf Σ).
 

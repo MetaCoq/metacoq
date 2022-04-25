@@ -113,8 +113,6 @@ struct
       Constr.DEFAULTcast
     else if constr_equall trm kNative then
       Constr.VMcast
-    else if constr_equall trm kRevertCast then
-      Constr.REVERTcast
     else
       not_supported_verb trm "unquote_cast_kind"
 

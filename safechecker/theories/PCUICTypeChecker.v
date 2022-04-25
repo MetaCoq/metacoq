@@ -1001,11 +1001,10 @@ Section Typecheck.
       intros x; simpl. erewrite <- abstract_env_level_mem_correct; eauto.
     }
     repeat split; eauto. 
-    - now rewrite mapi_length in e1.
-    - sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
-      now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ]. 
-      eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
-      solve_all.
+    sq. unshelve eapply (abstract_env_check_constraints_correct X); eauto.
+    now apply nor_check_univs. pose proof (abstract_env_ext_wf _ wfΣ) as [HΣ]. 
+    eapply (subst_global_uctx_invariants (u := u)) in wfg; eauto. apply wfg.
+    solve_all.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ; 
@@ -1034,7 +1033,7 @@ Section Typecheck.
   Qed.
   Next Obligation.
     destruct (abstract_env_ext_exists X) as [[Σ wfΣ]]; specialize_Σ wfΣ.
-    now rewrite mapi_length in e1.
+    intuition auto.
   Qed.
   
   Equations check_is_allowed_elimination
@@ -2274,7 +2273,7 @@ Section Typecheck.
     eapply onProjections in oni.
     destruct ind_ctors as [|? []] eqn:hctors => //.
     
-    eapply infer_Proj with (pdecl0 := pdecl).
+    eapply infer_Proj with (pdecl := pdecl).
     - split. split. eassumption. cbn. rewrite hctors. reflexivity.
       split. symmetry; eassumption. cbn in *.
       now apply Nat.eqb_eq.

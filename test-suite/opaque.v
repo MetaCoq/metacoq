@@ -27,8 +27,8 @@ Proof.
   split;eexists;eexists;cbn; now intuition.
 Qed.
 
-Time MetaCoq Run (t <- tmQuoteRecTransp Nat.le_add_r false ;;
+Time MetaCoq Run (t <- tmQuoteRecTransp PeanoNat.Nat.le_add_r false ;;
                   tmDefinition "add_comm_syn" t). (* quote respecting transparency *)
 
-Time MetaCoq Run (t <- tmQuoteRec Nat.le_add_r ;;
+Time MetaCoq Run (t <- tmQuoteRec PeanoNat.Nat.le_add_r ;;
                   tmDefinition "add_comm_syn'" t). (* quote ignoring transparency settings  *)

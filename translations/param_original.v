@@ -165,7 +165,7 @@ MetaCoq Run (typ <- tmQuote (forall A, A -> A) ;;
 
 
 
-Instance param : Translation :=
+#[export] Instance param : Translation :=
   {| tsl_id := tsl_ident ;
      tsl_tm := fun ΣE t => ret (tsl_rec1 (snd ΣE) t) ;
      (* Implement and Implement Existing cannot be used with this translation *)

@@ -2986,9 +2986,7 @@ Proof.
   intuition.
 Qed.
 
-
-
-Instance full_subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) full_subgraph.
+#[global] Instance full_subgraph_proper : Proper ((=_g) ==> (=_g) ==> iff) full_subgraph.
 Proof.
   unshelve apply: proper_sym_impl_iff_2.
   move=> g1 g1' /[dup] eq1 [eqv1 [eqe1 eqs1]]  g2 g2' /[dup] eq2 [eqv2 [eqe2 eqs2]].

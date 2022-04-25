@@ -1269,7 +1269,7 @@ Section SplitPrefix.
     move=> [tl [= -> ->]]; split=> //; now exists tl.
   Qed.
 
-  Local Notation "'Simp'" := ltac:(simp split_prefix) : ssripat_scope.
+  Local Notation "'Simp'" := ltac:(simp split_prefix) (only parsing) : ssripat_scope.
 
   Lemma split_prefix_maximal l1 l2 l :
     is_prefix l l1 -> is_prefix l l2 ->

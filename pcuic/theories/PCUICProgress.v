@@ -105,7 +105,7 @@ Proof.
   intros Hf Ht. simpl in Hf.
   specialize (IHu (tApp f a) T).
   epose proof (IHu Hf) as (T' & H' & s' & H1 & H2 & H3 & H4); tea. 
-  edestruct @inversion_App_size with (H0 := H') as (na' & A' & B' & s_ & Hf' & Ha & HA & Hs1 & Hs2 & Hs3 & HA'''); tea.
+  edestruct @inversion_App_size with (H := H') as (na' & A' & B' & s_ & Hf' & Ha & HA & Hs1 & Hs2 & Hs3 & HA'''); tea.
   exists (tProd na' A' B'). exists Hf'. exists s_. exists HA. 
   split. rewrite <- H2. lia.
   split. rewrite <- Nat.le_max_l, <- H2. lia.
@@ -284,7 +284,7 @@ Proof.
  pose proof (@inversion_mkApps cf) as Happs. specialize Happs with (H := Ht).
  forward Happs; eauto.
  destruct (Happs _ Hprod) as (A' & Hf & s' & HA & sz_f & sz_A & HL).
- destruct @inversion_Prod_size with (H0 := Hprod) as (s1 & s2 & H1 & H2 & Hs1 & Hs2 & Hsub); [ eauto | ]. 
+ destruct @inversion_Prod_size with (H := Hprod) as (s1 & s2 & H1 & H2 & Hs1 & Hs2 & Hsub); [ eauto | ]. 
  eapply X4. 6:eauto. 4: exact HA. all: eauto.
  - intros. eapply (IH _ _ Hf). lia.
  - Unshelve. 2:exact Hf. intros. eapply (IH _ _ Ht'). lia.

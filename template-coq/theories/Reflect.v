@@ -5,8 +5,8 @@ From MetaCoq.Template Require Import utils BasicAst Universes Kernames.
 Require Import ssreflect.
 From Equations Require Import Equations.
 
-#[program,global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Int63.int :=
-  { eqb := Numbers.Cyclic.Int63.Int63.eqb }.
+#[program,global] Instance reflect_prim_int : ReflectEq Numbers.Cyclic.Int63.Uint63.int :=
+  { eqb := Numbers.Cyclic.Int63.Uint63.eqb }.
 Next Obligation.
   destruct (Uint63.eqb x y) eqn:eq; constructor.
   now apply (Numbers.Cyclic.Int63.Uint63.eqb_spec x y) in eq.

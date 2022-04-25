@@ -26,7 +26,10 @@ Definition typecheck_template (cf := default_checker_flags)
     with CorrectDecl X => 
       X.π1
       (* PCUICPretty.print_env true 10 X.π2.π1.(wf_env_ext_referenced).(referenced_impl_env_ext) *)
-    | _ => todo "foo"
+    | EnvError Σ (AlreadyDeclared id) =>
+      todo ("Already declared: " ^ id)
+    | EnvError Σ (IllFormedDecl id e) =>
+      todo ("Type error: " ^ string_of_type_error (empty_ext p'.1) e ^ ", while checking " ^ id)
   end.
 
 Definition aa := Set.

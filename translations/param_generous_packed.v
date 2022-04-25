@@ -37,7 +37,7 @@ Fixpoint refresh_universes (t : term) {struct t} :=
 
 Local Instance tit : config.checker_flags
   := config.type_in_type.
-Existing Instance Checker.default_fuel.
+#[export] Existing Instance Checker.default_fuel.
 
 (* if b it is the first translation, else the second *)
 Fixpoint tsl_rec (fuel : nat) (Σ : global_env_ext) (E : tsl_table) (Γ : context)
@@ -136,7 +136,7 @@ where "'tsl_ty_param'" := (fun fuel Σ E Γ t =>
 
 
 
-Instance tsl_param : Translation
+#[export] Instance tsl_param : Translation
   := {| tsl_id := tsl_ident ;
         tsl_tm := fun ΣE => tsl_term fuel (fst ΣE) (snd ΣE) [] ;
         tsl_ty := Some (fun ΣE => tsl_ty_param fuel (fst ΣE) (snd ΣE) []) ;
